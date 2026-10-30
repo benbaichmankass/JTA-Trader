@@ -2,6 +2,29 @@
 
 > **Doc status:** `unknown` · category `evidence` · last verified `2026-10-16` · registered in [`../../DOCUMENT-INDEX.md`](../../DOCUMENT-INDEX.md) · lane `P5-PROP-PROGRAMME` (manager dispatch, weekly planning 2026-10-14) · map: [`RESEARCH-MAP.md`](RESEARCH-MAP.md) · roadmap `L-PROP` · **Tier-1 document: it proposes tests; every roster, sizing or switch change it leads to is Tier-3 with an evidence record.**
 
+## Programme review 2026-10-28 (lane PROGRAMME-REVIEW-20261028) — TRADING track
+
+Population: research units with a result row generated 2026-10-21T19:30Z..2026-10-28T19:30Z (`research_ops_checks.py --kind programme_review --since 7d`, 1,480 units read, 0 unreadable): **445 units, 412 graded** (70 pass, 50 indeterminate, 292 fail), 285 with a programme field and 160 without (live_strategy 70, regime 27, ml_health 21, macro 20, infra 13, new_strategy_prop 8, none 1). This review assigns the 160 by what they ask, not by the field (map section). Every PASS below is a discovery until its confirmation unit passes. **Cost basis:** about 36 of the 70 PASS rows are crypto-harness runs charged 7.5 bps round-trip (MEASURED from each result's argv); only RQ-20261028-001 carried the measured Bybit-linear 11.0 bps. A lever A/B delta is nearly fee-neutral (both arms pay it); an absolute Stage-0 or breadth PASS is not.
+
+**Graded in the window: 49 with `programme: P5`** (4 pass, 37 fail, 8 indeterminate).
+
+**What was learned**
+- **For prop pace, the trend Donchian family transfers and fast mean-reversion does not.** The PASSes: `eth_prop` as declared on baskets B and C (`1b57-01/-02`); D55 with a 6.0 trail beating D20 on the 4h pool (`f679-03`); the pullback harness at its defaults on 4h across six alt perps (`326f-11`). The FAILs: the squeeze time stop (`7c2b-11`), squeeze at 1h (`326f-10`) and 2h (`4b82`), the 1h pullback transfer (`7c2b-14`), fade range gating, and the management variants on fast bars. The cost stack bites hardest on fast bars. All of this ran at 7.5 bps on Binance proxies, so the P3 re-cost unit gates its use.
+- **breakout_2 sizing was applied.** `config/accounts.yaml::breakout_2.risk.risk_pct` reads **0.0035** (read 2026-10-28), so last week's "not applied" is closed. Rung 2 (`7c2b-12`) is INDETERMINATE: realised n 517 against its registered floor of 785. Re-running the same simulation adds no information; a bigger ledger is the only fix.
+- `comms/prop_survival/` holds records for `trend_donchian_eth_4h`, `eth_prop`, `sol_4h` and `sol_prop` (files listed by this review, not read or re-graded; whether that closes P5-GATE-BRK-read is the manager's check).
+
+**Diagnoses.** Squeeze/fade/pullback at 1h-2h: **cost drag** (n is large; signs are consistently negative). Rung 2: **power**.
+
+**Next 3-4 weeks**
+
+| # | node | decision | on PASS | on FAIL | cost | pre-mortem |
+|---|---|---|---|---|---|---|
+| 1 | P3 `P3-Q8-recost-11bps-eth4h` (feeds P5) | can the 1h/4h breadth cells enter the P5-Q6 candidate pool | P5-Q6 EV/survival gate on surviving cells | the prop breadth pool is empty at the real fee | cpu_light | prop venues' fee is not Bybit's; the prop gate must re-cost at the firm's own stack |
+| 2 | `P5-RG1025-trend-pooled` (ready) | the pooled D55/trail read across 1h/2h/4h | sizing proposal | close the configuration | research-ops | pooled legs overlap in time |
+| 3 | P1 confirmations (BE floor, loss-cut) | prop EV grid with a left-tail lever | EV grid unit | — | after P1 | — |
+
+**Feeds.** P3 -> P5: breadth cells only after re-costing. P1 -> P5: loss-cut and BE-floor confirmations go to the EV grid.
+
 ## Programme review 2026-10-21 (lane RESEARCH-PROGRAMME-REVIEW-1021)
 
 Population: units whose `grading.graded_at` is 2026-10-14..2026-10-21 and whose file names this programme (`programme:` or `programme_node.programme`), read from `research/queue/*.yaml` on main at 2026-10-21 ~18Z. Units with no programme field (486 of the 657 graded in the window) are counted in the research map, not here.

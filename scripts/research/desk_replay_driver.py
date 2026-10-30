@@ -493,7 +493,8 @@ def _r(x: Optional[float], nd: int = 4) -> Optional[float]:
 
 def b2_random_timing(points: List[Point], freq: Dict[Tuple, float], seed: int,
                      slip: float) -> np.ndarray:
-    """Per-point mean dR over B2_DRAWS draws: Claude's action mix, applied at random valid bars of the same trade.
+    """Per-point mean dR over B2_DRAWS draws: Claude's action mix, applied at a random bar drawn from one fixed
+    horizon (causal since 2026-10-29; the legacy draw was uniform over the trade's own remaining bars).
     A drawn non-hold action with no valid bar on that trade scores 0 (it could not be applied) and is not hidden.
     The draw itself is the shared `intervention_controls.matched_random_intervention`."""
     kinds = [s for s in freq if s != ("hold",)]
@@ -501,8 +502,10 @@ def b2_random_timing(points: List[Point], freq: Dict[Tuple, float], seed: int,
     for p in points:
         tb = {}
         for s in kinds:
+            # POSITIONAL (bar offset j from the decision point), NaN where the action cannot apply: the shared draw
+            # is causal and reads an offset as a bar (PI-20261029-IFMPNGJK-0003), so the list is never compacted.
             vals = [dR(p, s, j, slip) for j in range(len(p.path["idx"]) - 1)]
-            tb[s] = np.array([v for v in vals if v is not None], dtype=float)
+            tb[s] = np.array([np.nan if v is None else v for v in vals], dtype=float)
         table.append(tb)
     return matched_random_intervention(table, freq, seed + 2, B2_DRAWS)
 

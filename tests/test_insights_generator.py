@@ -571,3 +571,24 @@ def test_gemini_call_logs_error_body_on_persistent_429(
     assert any(
         "RequestsPerMinute" in rec.getMessage() for rec in caplog.records
     ), f"Quota message missing from logs: {[r.getMessage() for r in caplog.records]}"
+
+
+def test_real_anthropic_call_is_a_hard_refusal(monkeypatch):
+    """No API credits may be spent: the SDK path raises and never imports anthropic."""
+    import sys
+    import pytest
+    sys.modules.pop("anthropic", None)
+    with pytest.raises(generator.AnthropicApiDisabled):
+        generator._call_anthropic("claude-sonnet-4-6", [], "hi")
+    assert "anthropic" not in sys.modules
+
+
+def test_anthropic_mode_without_a_seam_serves_template_not_the_api(monkeypatch, caplog):
+    """INSIGHTS_MODEL_MODE=anthropic left in a VM env must not call the API and must be loud."""
+    called = []
+    monkeypatch.setattr(generator, "_call_anthropic", lambda *a: called.append(a))
+    monkeypatch.setenv("INSIGHTS_MODEL_MODE", "anthropic")
+    with caplog.at_level("ERROR"):
+        generator.generate("summary")
+    assert called == []
+    assert any("DISABLED" in r.getMessage() for r in caplog.records)

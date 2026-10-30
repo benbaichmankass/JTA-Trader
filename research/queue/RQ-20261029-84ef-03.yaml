@@ -1,0 +1,128 @@
+id: RQ-20261029-84ef-03
+title: 'Equity/ETF DAILY bars: does long-only Donchian-20 (with and without a 20-bar time stop) clear Stage 0 on 14 ETFs where the weekly bar
+  passed?'
+status: done
+cadence: once
+roadmap:
+- L-TIMEFRAMES
+- L-REGIME
+theme: timeframes
+priority: 2
+kind: experiment
+compute: cpu_light
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 4.0
+  est_minutes: 60
+  basis: Estimate from comparable harness_stage0 runs of 2026-10-18..26 scaled by cells x arms x bars; the first run replaces it.
+  why_runner: harness_stage0.py fetches keyless public candles and runs the repo harnesses; these symbols/bars are not in the metis-market-data
+    allowlist, so no idle published-data backend can hold it; CPU only.
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+question: On Yahoo daily candles for 14 ETFs (SPY, QQQ, IWM, GLD, SLV, TLT, IEF, USO, GDX, TQQQ, QLD, SPLG, IAUM, SCHA) over the longest available
+  history up to 2026-10-25 (days 7300), does LO (--long-only) or LO_TS20 (--long-only;--timeout-bars=20) pass the pooled Stage-0 rule?
+why_this_matters: 'Programme node P7-Q4-indeterminate and P7-Q6-weekly-etf: ef5d-05 passed at the weekly bar; the plan''s own fallback for the
+  weekly bar being too slow for a Stage-0 verdict is 1d bars with a time stop of 5-20 trading days on the same symbols and rules. Daily bars multiply
+  n ~5x so the verdict is not carried by a handful of weekly trades. Seven of the 14 are one equity-beta factor (P3-Q3 overlap node) so breadth
+  is read with that in mind; the futures proxies are excluded on purpose (Yahoo continuous series, not a re-entry candidate).'
+power:
+  expected_n: 700
+  min_detectable_effect: 0.3
+  effect_units: sd
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: ef5d-05 weekly produced trades on ~17 cells over ~20 years; at 1d the same cells yield several times as many entries; folds 6; floor
+    20 per cell, 39 pooled.
+  feasibility:
+    source: none
+    accrual_basis: Re-measurement on freshly fetched public candles over a pinned window; nothing accrues.
+practice_precedent: 'M4, M5 (docs/reference/trading-and-model-practice-principles.md): pre-registered rule, selection-deflated across the timeframes
+  tried'
+decision_rule:
+  id: RULE-RQ20261029-84EF-03-ETF-DAILY-LONG
+  registered_at: '2026-10-29'
+  registered_before_run: true
+  statistic: 'harness_stage0.py --family trend --timeframe 1d, --non-crypto-source yfinance, 14 ETFs; arms fixed now: LO=--long-only; LO_TS20=--long-only;--timeout-bars=20;
+    no baseline.'
+  rule: 'PASS iff LO or LO_TS20 passes the pooled Stage-0 rule (pooled n >= 39, pooled net_r > 0, >= 4 of 6 folds, >= half the powered cells pass)
+    -> the daily ETF long arm is fold-consistent; next unit is the equity-beta-collapsed overlap read against the alpaca_paper 1d trend legs (P7-Q6-weekly-etf),
+    then a re-entry case under MD-PROMOTE-S0-S1 with a holdout; no roster edit. FAIL iff both fail with pooled n >= 39 -> the ETF edge lives only
+    at the weekly bar; recorded on P7-Q4. INDETERMINATE otherwise; cells under the floor are named, the floor is never lowered. Verdicts are the
+    script''s own (scripts/research/harness_stage0.py, grades fixed by these flags): per CELL pass iff n >= n_floor AND net_r > 0 AND >= fold_majority
+    of the calendar folds net > 0, fail iff n >= n_floor and not, indeterminate iff n < n_floor; per ARM pass iff pooled n >= pooled_n_floor AND
+    pooled net_r > 0 AND pooled folds >= fold_majority AND >= breadth_frac of the POWERED cells pass (and, with --baseline, beats the baseline''s
+    pooled net R/trade by >= delta), indeterminate iff pooled n < pooled_n_floor or < 2 powered cells or < half the declared cells measured (a
+    fetch/harness fault is recorded per cell, never dropped), fail otherwise. Holm-corrected one-sided t p-values are REPORTED, not graded. Thresholds
+    are not changed after any result.'
+  what_it_does_not_do: Does not edit config/strategies.yaml, config/accounts.yaml or any roster; does not tune beyond the fixed arms listed; is
+    not a promotion case. Candles are Binance USD-M (a PROXY for Bybit linear) with the harness's own venue-aware fee + slippage + funding cost
+    stack (execution_costs.resolve_cost_policy), so every R is net of cost; the funding term is a directionless magnitude (execution_costs P1).
+value:
+  usd_at_stake_per_month: 90
+  confidence: 0.3
+  bucket: frontier
+  basis: 'stand-in (07 node P7-Q4/Q6 weight): equity long arm on the alpaca books; an estimate.'
+run:
+  command:
+  - python3
+  - scripts/research/harness_stage0.py
+  - --family
+  - trend
+  - --symbols
+  - SPY,QQQ,IWM,GLD,SLV,TLT,IEF,USO,GDX,TQQQ,QLD,SPLG,IAUM,SCHA
+  - --timeframe
+  - 1d
+  - --days
+  - '7300'
+  - --end
+  - '2026-10-25'
+  - --arm
+  - LO=--long-only
+  - --arm
+  - LO_TS20=--long-only;--timeout-bars=20
+  - --non-crypto-source
+  - yfinance
+  - --folds
+  - '6'
+  - --fold-majority
+  - '4'
+  - --n-floor
+  - '20'
+  - --pooled-n-floor
+  - '39'
+  - --breadth-frac
+  - '0.5'
+  - --rule-id
+  - RULE-RQ20261029-84EF-03-ETF-DAILY-LONG
+  - --data-dir
+  - '{out_dir}/data'
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 330
+  inputs:
+    research_unit: RQ-20261029-84ef-03
+programme: P7
+related:
+- RQ-20261018-ef5d-05
+- scripts/research/harness_stage0.py
+programme_node:
+  programme: P7
+  node: P7-Q6-weekly-etf
+  goal: G1
+  after: []
+last_dispatched_at: '2026-10-29T18:59:22+00:00'
+grading:
+  attested: RULE-RQ20261029-84EF-03-ETF-DAILY-LONG
+  auto: true
+  decision_rule_id: RULE-RQ20261029-84EF-03-ETF-DAILY-LONG
+  evidence:
+  - research/results/RQ-20261029-84ef-03/40935931206.jsonl
+  graded_at: '2026-10-30'
+  grader: scripts/research/queue_grade.py
+  reason: 1 row(s), all measured, all pass
+  rows: 1
+  verdict: pass

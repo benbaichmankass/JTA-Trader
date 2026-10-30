@@ -2,7 +2,7 @@
 
 > **Doc status:** `unknown` · category `unknown` · last verified `never` · registered in [`docs/DOCUMENT-INDEX.md`](../../DOCUMENT-INDEX.md) · **nobody has verified this document's status — do not act on it as current**
 
-The operator's scratch pad is a Google Doc titled "Metis — Ideas inbox", which the manager reads with the Google Drive connector. The manager copies each new bullet here **verbatim**, at most once a day during a regular check-in. It then triages every row into exactly one of:
+The operator's scratch pad is a Google Doc titled "JTA Trader — Ideas inbox" (formerly "Metis — Ideas inbox"; match either title), which the manager reads with the Google Drive connector. The manager copies each new bullet here **verbatim**, at most once a day during a regular check-in. It then triages every row into exactly one of:
 - a `research/queue` unit (theme and priority per `research/queue/PLANNING.md`; an idea too vague to test gets a scoping unit);
 - a `MANAGER-CHECKLIST.json` row (a build);
 - `killed`, with a stated reason.

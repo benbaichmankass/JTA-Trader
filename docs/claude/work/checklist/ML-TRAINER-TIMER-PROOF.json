@@ -1,0 +1,21 @@
+{
+  "id": "ML-TRAINER-TIMER-PROOF",
+  "title": "[MODEL] I3: prove the nightly cycle retrains (08:22Z cycle_end trained 0 / already_done 72; staleness 5 stale, 2 never trained of 72); invariant alerting when the day's first cycle trains 0",
+  "phase": "W44",
+  "state": "queued",
+  "owner": "manager",
+  "lane": null,
+  "model": "sonnet",
+  "ceiling_usd": 5,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [],
+  "blocked_on": [],
+  "note": "Plan docs/plans/ml-live-promotion-plan-2026-10-29.md section 6 I3. MEASURED /api/bot/ml/status 2026-10-28 20:56Z: timer active, last trigger 00:31Z, next 2026-10-29 00:52Z; last_cycle trained 0, carried_done 66, refusals 6.  [21:45Z relay #21020] PREMISE PARTLY REFUTED: cycle 2026-10-28 00:53-01:24Z trained 66 (skipped 6, failed 0, rc 0); the trained-0 08:22Z cycle is a same-day re-run (already_done 72). Row narrows to the invariant (alert when the first cycle of a UTC day trains 0) + resolving 5 stale / 2 never-trained.",
+  "updated_at": "2026-10-28T21:45:09Z",
+  "updated_by": "session_01AFoLuNJWA5pu5sGQqcm5s3",
+  "roadmap": [
+    "M25"
+  ],
+  "_seq": 763
+}

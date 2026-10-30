@@ -200,6 +200,12 @@ CADENCE_REGISTRY: dict[str, dict] = {
                "per 6 h), so a quiet wake leaves no receipt by design; a stopped or crashing wake is observed by "
                "claude-run-failure-alert and by the hourly live-review routine, which still runs as the backstop",
     },
+    "counterfactual-grade-closed.yml": {
+        "receipt": None,
+        "why": "writes main only when an order package closed since the last run (one record per package), so a quiet hour leaves no "
+               "receipt by design; a crashing run is observed by claude-run-failure-alert and a closed package without a record in "
+               "comms/research/counterfactual_grades/ is the staleness signal",
+    },
     "live-review-rows-mirror.yml": {
         "receipt": None,
         "why": "writes main only when live-review/rows carries a review_id main lacks, so a quiet mirror leaves no receipt by design; "

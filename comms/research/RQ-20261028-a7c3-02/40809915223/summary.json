@@ -1,0 +1,320 @@
+{
+  "leg": "trend_donchian_xrp_4h",
+  "grade": {
+    "verdict": "fail",
+    "label": "incumbent_stands",
+    "baseline": "A",
+    "candidates": {
+      "MM05": {
+        "net_r": 10.0995,
+        "delta_net_r": -3.6292,
+        "max_drawdown_r": 4.7062,
+        "max_drawdown_cap": 6.2649,
+        "folds_ge_incumbent": 3,
+        "passes": false,
+        "lever_fired": true,
+        "tp_doctrine": {
+          "declared_tp_r": 3,
+          "reach_ge_6r": 0.0,
+          "satisfies_reach_floor": false,
+          "note": "tp_r >= 50 (or undeclared) is the sentinel: non-compliant by definition; reach is P(mfe_r >= 6) over this arm's own trades"
+        }
+      }
+    },
+    "fold_majority": 5,
+    "n_floor": 39,
+    "dd_tol_frac": 0.35,
+    "control": null,
+    "delta_r_per_trade": 0.0,
+    "delta_r_bar": 0.0,
+    "why": "no candidate clears net R / fold / drawdown: the incumbent exit stands"
+  },
+  "arms": {
+    "A": {
+      "reach_ge_6r": 0.0,
+      "n": 68,
+      "net_r": 13.7287,
+      "net_r_fee_only": 14.9077,
+      "max_drawdown_r": 4.6407,
+      "by_outcome": {
+        "stale_stop": 29,
+        "trail_stop": 5,
+        "take_profit": 18,
+        "stop": 16
+      },
+      "mean_bars_held": 8.015,
+      "net_r_per_capital_day": 0.1511,
+      "cost_stack": {
+        "fee_bps_roundtrip": 11.0,
+        "slippage_bps_roundtrip": 3.0,
+        "funding_bps_per_window": 1.0
+      },
+      "params": {
+        "donchian": 20,
+        "atr_stop_mult": 2.0,
+        "trail_mult": 5.0,
+        "min_confidence": 0.8,
+        "stale_exit_bars": 8,
+        "stale_exit_below_r": 0.0,
+        "trail_decay_arm_r": 2.0,
+        "trail_decay_stall_bars": 0,
+        "trail_decay_tight_mult": 2.5,
+        "skip_hours": "0",
+        "vol_skip_above_pctl": 0.9,
+        "vol_skip_below_pctl": 0.0,
+        "vol_pctl_window": 200
+      },
+      "data_start": "2020-07-01 00:00:00+00:00",
+      "data_end": "2026-10-26 20:00:00+00:00",
+      "folds": [
+        {
+          "fold": 1,
+          "start": "2020-07-01 00:00:00+00:00",
+          "end": "2021-07-20 19:59:50+00:00",
+          "trades": 7,
+          "net_r": 2.5849
+        },
+        {
+          "fold": 2,
+          "start": "2021-07-20 19:59:50+00:00",
+          "end": "2022-08-09 15:59:40+00:00",
+          "trades": 13,
+          "net_r": 5.6156
+        },
+        {
+          "fold": 3,
+          "start": "2022-08-09 15:59:40+00:00",
+          "end": "2023-08-29 11:59:30+00:00",
+          "trades": 12,
+          "net_r": -1.8793
+        },
+        {
+          "fold": 4,
+          "start": "2023-08-29 11:59:30+00:00",
+          "end": "2024-09-17 07:59:20+00:00",
+          "trades": 10,
+          "net_r": 2.9698
+        },
+        {
+          "fold": 5,
+          "start": "2024-09-17 07:59:20+00:00",
+          "end": "2025-10-07 03:59:10+00:00",
+          "trades": 9,
+          "net_r": -3.2958
+        },
+        {
+          "fold": 6,
+          "start": "2025-10-07 03:59:10+00:00",
+          "end": "2026-10-26 23:59:00+00:00",
+          "trades": 17,
+          "net_r": 7.7338
+        }
+      ],
+      "argv": [
+        "/opt/hostedtoolcache/Python/3.11.17/x64/bin/python3",
+        "/home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_trend.py",
+        "--donchian",
+        "20",
+        "--data",
+        "<data>",
+        "--symbol",
+        "XRPUSDT",
+        "--resample",
+        "4h",
+        "--atr-period",
+        "14",
+        "--atr-stop-mult",
+        "2",
+        "--trail-mult",
+        "5.0",
+        "--min-confidence",
+        "0.8",
+        "--fee-bps-roundtrip",
+        "11.0",
+        "--emit-trades",
+        "comms/research/RQ-20261028-a7c3-02/40809915223/arms/A__trades.jsonl",
+        "--json",
+        "comms/research/RQ-20261028-a7c3-02/40809915223/arms/A__bt.json",
+        "--stale-exit-bars",
+        "8",
+        "--stale-exit-below-r",
+        "0.0",
+        "--side-filter",
+        "short",
+        "--trail-decay-arm-r",
+        "2.0",
+        "--trail-decay-tight-mult",
+        "2.5",
+        "--skip-hours",
+        "0",
+        "--vol-skip-above-pctl",
+        "0.9",
+        "--tp-cap-pct",
+        "0.099",
+        "--tp-r",
+        "3",
+        "--start",
+        "2020-07-01",
+        "--end",
+        "2026-10-26 23:59"
+      ]
+    },
+    "MM05": {
+      "reach_ge_6r": 0.0,
+      "n": 68,
+      "net_r": 10.0995,
+      "net_r_fee_only": 11.293,
+      "max_drawdown_r": 4.7062,
+      "by_outcome": {
+        "stale_stop": 30,
+        "trail_stop": 13,
+        "take_profit": 9,
+        "stop": 16
+      },
+      "mean_bars_held": 8.324,
+      "net_r_per_capital_day": 0.1071,
+      "cost_stack": {
+        "fee_bps_roundtrip": 11.0,
+        "slippage_bps_roundtrip": 3.0,
+        "funding_bps_per_window": 1.0
+      },
+      "params": {
+        "donchian": 20,
+        "atr_stop_mult": 2.0,
+        "trail_mult": 5.0,
+        "min_confidence": 0.8,
+        "stale_exit_bars": 8,
+        "stale_exit_below_r": 0.0,
+        "trail_decay_arm_r": 2.0,
+        "trail_decay_stall_bars": 0,
+        "trail_decay_tight_mult": 2.5,
+        "skip_hours": "0",
+        "vol_skip_above_pctl": 0.9,
+        "vol_skip_below_pctl": 0.0,
+        "vol_pctl_window": 200,
+        "tp_revision": "donchian_measured_move",
+        "tp_revision_width_mult": 0.5,
+        "tp_revisions_applied": 498,
+        "tp_revisions_clamped": 280
+      },
+      "data_start": "2020-07-01 00:00:00+00:00",
+      "data_end": "2026-10-26 20:00:00+00:00",
+      "folds": [
+        {
+          "fold": 1,
+          "start": "2020-07-01 00:00:00+00:00",
+          "end": "2021-07-20 19:59:50+00:00",
+          "trades": 7,
+          "net_r": 0.5412
+        },
+        {
+          "fold": 2,
+          "start": "2021-07-20 19:59:50+00:00",
+          "end": "2022-08-09 15:59:40+00:00",
+          "trades": 13,
+          "net_r": 5.8064
+        },
+        {
+          "fold": 3,
+          "start": "2022-08-09 15:59:40+00:00",
+          "end": "2023-08-29 11:59:30+00:00",
+          "trades": 12,
+          "net_r": -1.3927
+        },
+        {
+          "fold": 4,
+          "start": "2023-08-29 11:59:30+00:00",
+          "end": "2024-09-17 07:59:20+00:00",
+          "trades": 10,
+          "net_r": 1.1279
+        },
+        {
+          "fold": 5,
+          "start": "2024-09-17 07:59:20+00:00",
+          "end": "2025-10-07 03:59:10+00:00",
+          "trades": 9,
+          "net_r": -4.3321
+        },
+        {
+          "fold": 6,
+          "start": "2025-10-07 03:59:10+00:00",
+          "end": "2026-10-26 23:59:00+00:00",
+          "trades": 17,
+          "net_r": 8.3491
+        }
+      ],
+      "argv": [
+        "/opt/hostedtoolcache/Python/3.11.17/x64/bin/python3",
+        "/home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_trend.py",
+        "--donchian",
+        "20",
+        "--data",
+        "<data>",
+        "--symbol",
+        "XRPUSDT",
+        "--resample",
+        "4h",
+        "--atr-period",
+        "14",
+        "--atr-stop-mult",
+        "2",
+        "--trail-mult",
+        "5.0",
+        "--min-confidence",
+        "0.8",
+        "--fee-bps-roundtrip",
+        "11.0",
+        "--emit-trades",
+        "comms/research/RQ-20261028-a7c3-02/40809915223/arms/MM05__trades.jsonl",
+        "--json",
+        "comms/research/RQ-20261028-a7c3-02/40809915223/arms/MM05__bt.json",
+        "--stale-exit-bars",
+        "8",
+        "--stale-exit-below-r",
+        "0.0",
+        "--side-filter",
+        "short",
+        "--trail-decay-arm-r",
+        "2.0",
+        "--trail-decay-tight-mult",
+        "2.5",
+        "--skip-hours",
+        "0",
+        "--vol-skip-above-pctl",
+        "0.9",
+        "--tp-cap-pct",
+        "0.099",
+        "--tp-r",
+        "3",
+        "--tp-revision",
+        "donchian_measured_move",
+        "--tp-revision-width-mult",
+        "0.5",
+        "--start",
+        "2020-07-01",
+        "--end",
+        "2026-10-26 23:59"
+      ]
+    }
+  },
+  "window": {
+    "start": "2020-07-01",
+    "end": "2026-10-26 23:59",
+    "fetch_days": 2330,
+    "feed": {
+      "source": "binance",
+      "ticker": "XRPUSDT",
+      "interval": "240",
+      "resample": "4h"
+    },
+    "fold_edges": [
+      "2020-07-01 00:00:00+00:00",
+      "2021-07-20 19:59:50+00:00",
+      "2022-08-09 15:59:40+00:00",
+      "2023-08-29 11:59:30+00:00",
+      "2024-09-17 07:59:20+00:00",
+      "2025-10-07 03:59:10+00:00",
+      "2026-10-26 23:59:00+00:00"
+    ]
+  }
+}

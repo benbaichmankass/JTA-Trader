@@ -29,7 +29,7 @@ regime_debt_matrix = pytest.importorskip("regime_debt_matrix")
 # to 0 too even though they aren't equities.
 COMMISSION_FREE = [
     "SPY", "QQQ", "TQQQ", "QLD", "GLD", "IWM", "TLT",
-    "IEF", "SLV", "USO", "GDX", "SPLG", "IAUM", "SCHA",
+    "IEF", "SLV", "USO", "GDX", "SPYM", "IAUM", "SCHA",
 ]
 # Venues that genuinely charge: the estimator default must be preserved.
 FEE_BEARING = ["BTCUSDT", "ETHUSDT", "SOLUSDT", "MES", "MGC", "MHG", "EURUSD"]

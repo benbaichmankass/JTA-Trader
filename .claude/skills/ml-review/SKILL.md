@@ -155,6 +155,8 @@ is always noise / expected variation), run the discriminating test, and record w
   - Score each as (decision value if it passes) × p(pass) × (powered at the registered design?) ÷ (cost and time to a verdict).
   - Combine A-questions with the frontier scan's kept candidates.
   - Prefer real-money legs, order-changing consumers and the broken C4 hop over another variant in a crowded cell (C8).
+  - Every experiment filed as a unit names its consumer and the decision it would change (`ml_consumer:`,
+    `research/queue/PLANNING.md` § 1c); the station it serves is in `docs/plans/ml-pipeline-design-2026-10-29.md` § 1.
 - **Stages.**
   - Cite the gate packet (`ready`, `blocking[]`) **and** the C3 decision value.
   - A head that changes no order is a wiring-or-retire question, not a promotion question.

@@ -1,7 +1,7 @@
 """The firm's rules on a live-review / desk AMEND of an open prop position (DESK-2-RISK-GATE).
 
 ``RiskManager.approve_amend`` / ``approve_action`` (``src/runtime/live_review_intent.py``) decide
-what every account decides: tighten-only, the noise floor, one amend per bar, the account mode, the
+what every account decides: tighten-only, the noise floor, idempotency per review_id, the account mode, the
 strategy's ``execution: shadow``, both brackets kept, and the account's own fresh-entry check for an
 action that adds risk (which carries the daily-DD switch's block on new risk). A prop account adds
 the FIRM's rules on top (desk design § 3.2), and this module is that layer:

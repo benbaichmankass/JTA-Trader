@@ -282,8 +282,17 @@ def _donchian_measured_move(*, direction: str, entry: float, risk: float, bars: 
     ts = bars["timestamp"]
     ts = (pd.to_datetime(ts, unit="ms", utc=True) if pd.api.types.is_numeric_dtype(ts)
           else pd.to_datetime(ts, utc=True))
-    at_or_before = (ts <= t_entry).to_numpy().nonzero()[0]
-    start = int(at_or_before[-1]) if len(at_or_before) else 0
+    # The entry bar must itself be CLOSED. A package built on the forming bar
+    # (entry_bar_closed=false) has no closed bar holding entry_time, and
+    # anchoring on the last bar BEFORE it projects from the PRE-breakout channel
+    # edge -- already broken -- so the target lands a few ticks from entry
+    # (pkg-a04b68a15ea14d19, 2026-10-29: 0.26R, closed in 90 s). The harness
+    # (scripts/backtest_trend.py) first revises after the entry bar closes, with
+    # the breakout bar inside the channel. No closed entry bar = could not look.
+    at = (ts == t_entry).to_numpy().nonzero()[0]
+    if not len(at):
+        return None
+    start = int(at[-1])
     return measured_move_path(bars["high"].to_numpy(), bars["low"].to_numpy(), start=start,
                               end=len(bars) - 1, n=n, direction=direction,
                               width_mult=width_mult)

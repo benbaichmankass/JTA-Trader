@@ -38,7 +38,8 @@ def test_matched_random_equals_legacy_draw_for_draw():
     rng = np.random.default_rng(1)
     table = [{CLOSE: rng.normal(size=6), ("partial_close",): np.array([])} for _ in range(8)]
     freq = {HOLD: 0.6, CLOSE: 0.3, ("partial_close",): 0.1}
-    assert np.array_equal(matched_random_intervention(table, freq, 7, 200), _legacy_b2(table, freq, 7, 200))
+    assert np.array_equal(matched_random_intervention(table, freq, 7, 200, mode="legacy_own_length"),
+                          _legacy_b2(table, freq, 7, 200))
 
 
 def test_matched_random_action_rate_and_inapplicable_scores_zero():
@@ -47,6 +48,34 @@ def test_matched_random_action_rate_and_inapplicable_scores_zero():
     assert abs(out.mean() - 0.25) < 0.03              # expected action rate x dR
     empty = matched_random_intervention([{CLOSE: np.array([])}], {HOLD: 0.0, CLOSE: 1.0}, 3, 50)
     assert empty[0] == 0.0                             # could not be applied -> 0, not hidden
+
+
+def test_legacy_draw_leaks_the_trades_final_length_and_causal_does_not():
+    """PI-20261029-IFMPNGJK-0003. Only offset 0 pays (+1 R). A trade that will live 2 bars and one that will live 20
+    are identical at the decision bar. The legacy draw (uniform over the trade's own bars) acts at offset 0 with
+    probability 1/remaining-life, so it 'knows' which trade is long: 10x apart. The causal draw cannot tell them
+    apart: both read 1/horizon."""
+    short = {CLOSE: np.r_[1.0, np.zeros(1)]}
+    long_ = {CLOSE: np.r_[1.0, np.zeros(19)]}
+    freq = {HOLD: 0.0, CLOSE: 1.0}
+    leg = matched_random_intervention([short, long_], freq, 11, 20000, mode="legacy_own_length")
+    assert leg[0] > 0.45 and leg[1] < 0.06                   # ~1/2 vs ~1/20: depends on the final length
+    cau = matched_random_intervention([short, long_], freq, 11, 20000, horizon=10)
+    assert abs(cau[0] - 0.1) < 0.01 and abs(cau[1] - 0.1) < 0.01  # 1/horizon for both
+
+
+def test_causal_draw_past_the_exit_or_on_an_inapplicable_bar_scores_zero():
+    freq = {HOLD: 0.0, CLOSE: 1.0}
+    ended = matched_random_intervention([{CLOSE: np.array([1.0])}], freq, 5, 4000, horizon=4)
+    assert abs(ended[0] - 0.25) < 0.03                       # only j=0 exists; j=1..3 land after the exit -> 0
+    nan_bar = matched_random_intervention([{CLOSE: np.array([np.nan, 1.0])}], freq, 5, 4000, horizon=2)
+    assert abs(nan_bar[0] - 0.5) < 0.03
+
+
+def test_unknown_b2_mode_is_refused():
+    import pytest
+    with pytest.raises(ValueError):
+        matched_random_intervention([{CLOSE: np.ones(3)}], {HOLD: 0.5, CLOSE: 0.5}, 1, 10, mode="uniform")
 
 
 def test_matched_random_beats_nothing_when_actions_are_worthless():

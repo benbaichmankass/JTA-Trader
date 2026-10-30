@@ -1,0 +1,7 @@
+{
+  "tier": 3,
+  "landing": "hold",
+  "hold_reason": "tier_2_3_needs_approval",
+  "hold_text": "Lane REMOVE-PER-BAR-CAP (dispatched by Manager Session 2026-10-29c, session_01AFoLuKwNMzjtn2CH2kVd86). Order-path change, operator-directed 2026-10-29 ~10:45Z (verbatim on row REMOVE-PER-BAR-CAP): removes the one-action-per-package-per-bar cap from live_review_intent.decide_amend/decide_action (every account's approve_amend/approve_action), the auto-mandate bound one_action_per_bar in live_review_apply, ltr_auto_mandate.BOUNDS + the MD-LTR-ADA-AUTO bounds text, and every doc/skill/mandate that stated it; idempotency per review_id / directed record id replaces it. Tier 3 by path only because src/units/accounts/risk.py is in TIER3_PATHS: the change there is its approve_amend DOCSTRING; its logic lives in live_review_intent (Tier 2). Held for the manager to merge and deploy (Tier-2 deploy to ict-trader-live / the VM apply path).",
+  "why": "REMOVE-PER-BAR-CAP: no per-bar / time-window in-trade action cap anywhere; duplicate guard = idempotency per review_id; new no-action-rate-cap-guard."
+}

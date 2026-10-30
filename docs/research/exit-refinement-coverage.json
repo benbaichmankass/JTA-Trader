@@ -2520,7 +2520,7 @@
    "strategy": "gld_pullback_1h",
    "symbol": "GLD",
    "tf": "1h",
-   "execution": "live",
+   "execution": "disabled",
    "exploded_from": "equities 1h fleet (gld/spy/qqq/tlt pullback; slv/uso trend)",
    "trail_geometry": {
     "status": "honest_negative",
@@ -3841,6 +3841,60 @@
     "status": "blocked",
     "ref": "DESK-17 2026-10-26: claude_desk is the desk's leg -- every exit (TP level, stop, in-trade revision, close) is a per-proposal desk decision, not a parametric lever, so there is no harness book to sweep until desk decisions accrue (DESK-6/DESK-18) and grade (DESK-9). Revisit when DESK-9 has graded desk-leg trades."
    }
+  },
+  {
+   "strategy": "trend_donchian_1h",
+   "symbol": "BTCUSDT",
+   "tf": "1h",
+   "execution": "live",
+   "trail_geometry": {
+    "status": "honest_negative",
+    "ref": "m20 sweep corpus (docs/research/m20-sweep-corpus.jsonl) run 2026-08-10T22:28Z, leg trend_donchian_1h, tp_cap_pct 0.099 (live parity), split 2025-07-01, base_trades_OOS 168: cell trail6 verdict is_oos_fail. Recorded 2026-10-28 when the leg returned to the bybit_1 demo floor (OPERATOR-DECISIONS-20261028 item 2); the row had been absent, so the verdict was not in the matrix. Note the sweep's base book was unprofitable (net R IS -34.2, OOS -21.2)."
+   },
+   "stale_stop": {
+    "status": "honest_negative",
+    "ref": "m20 sweep corpus (docs/research/m20-sweep-corpus.jsonl) run 2026-08-10T22:28Z, leg trend_donchian_1h, tp_cap_pct 0.099 (live parity), split 2025-07-01, base_trades_OOS 168: cell stale8_lt0R verdict is_oos_fail. Recorded 2026-10-28 when the leg returned to the bybit_1 demo floor (OPERATOR-DECISIONS-20261028 item 2); the row had been absent, so the verdict was not in the matrix. Note the sweep's base book was unprofitable (net R IS -34.2, OOS -21.2)."
+   },
+   "giveback_stop": {
+    "status": "honest_negative",
+    "ref": "m20 sweep corpus (docs/research/m20-sweep-corpus.jsonl) run 2026-08-10T22:28Z, leg trend_donchian_1h, tp_cap_pct 0.099 (live parity), split 2025-07-01, base_trades_OOS 168: cell gb1R_afterMFE2R verdict is_oos_fail. Recorded 2026-10-28 when the leg returned to the bybit_1 demo floor (OPERATOR-DECISIONS-20261028 item 2); the row had been absent, so the verdict was not in the matrix. Note the sweep's base book was unprofitable (net R IS -34.2, OOS -21.2)."
+   },
+   "exit_ladder": {
+    "status": "pending",
+    "ref": "Re-enabled 2026-10-28 on the bybit_1 demo floor (OPERATOR-DECISIONS-20261028 item 2). Same unit and params as trend_donchian, but no sweep has been run on this leg's own row; trend_donchian's verdicts are NOT inherited. Owed: exit-refinement pass."
+   },
+   "exit_head_ml": {
+    "status": "pending",
+    "ref": "Re-enabled 2026-10-28 on the bybit_1 demo floor (OPERATOR-DECISIONS-20261028 item 2). Same unit and params as trend_donchian, but no sweep has been run on this leg's own row; trend_donchian's verdicts are NOT inherited. Owed: exit-refinement pass."
+   },
+   "trail_decay": {
+    "status": "honest_negative",
+    "ref": "m20 sweep corpus (docs/research/m20-sweep-corpus.jsonl) run 2026-08-10T22:28Z, leg trend_donchian_1h, tp_cap_pct 0.099 (live parity), split 2025-07-01, base_trades_OOS 168: cell decay_stall6_t2.5 verdict is_oos_fail. Recorded 2026-10-28 when the leg returned to the bybit_1 demo floor (OPERATOR-DECISIONS-20261028 item 2); the row had been absent, so the verdict was not in the matrix. Note the sweep's base book was unprofitable (net R IS -34.2, OOS -21.2)."
+   },
+   "regime_flip_exit": {
+    "status": "pending",
+    "ref": "Re-enabled 2026-10-28 on the bybit_1 demo floor (OPERATOR-DECISIONS-20261028 item 2). Same unit and params as trend_donchian, but no sweep has been run on this leg's own row; trend_donchian's verdicts are NOT inherited. Owed: exit-refinement pass."
+   },
+   "vol_trail": {
+    "status": "pending",
+    "ref": "LIVE-PARITY EVIDENCE EXISTS FOR THIS BLOCKED CELL: m20 sweep corpus (docs/research/m20-sweep-corpus.jsonl) run 2026-08-10T22:28Z, leg trend_donchian_1h, tp_cap_pct 0.099 (live parity), split 2025-07-01, base_trades_OOS 168: cell vt_hot90_t2.5 verdict PASS (gate IS+OOS, wf 4/6, d_net_r OOS +15.5). Still ungradeable as a pass: the sweep's base book is unprofitable (net R IS -34.2, OOS -21.2), so the lever reduces losses on a losing base rather than improving a validated edge, and the sibling live leg trend_donchian (same unit and params) carries vol_trail as honest_negative at its own 2026-08-15 live-parity re-sweep. Neither a negative nor a pass is asserted; owed: an exit-refinement pass on this leg's own row."
+   },
+   "bracket_geometry": {
+    "status": "pending",
+    "ref": "Re-enabled 2026-10-28 on the bybit_1 demo floor (OPERATOR-DECISIONS-20261028 item 2). Same unit and params as trend_donchian, but no sweep has been run on this leg's own row; trend_donchian's verdicts are NOT inherited. Owed: exit-refinement pass."
+   },
+   "tp_extend": {
+    "status": "pending",
+    "ref": "Re-enabled 2026-10-28 on the bybit_1 demo floor (OPERATOR-DECISIONS-20261028 item 2). Same unit and params as trend_donchian, but no sweep has been run on this leg's own row; trend_donchian's verdicts are NOT inherited. Owed: exit-refinement pass."
+   },
+   "tp_retarget": {
+    "status": "pending",
+    "ref": "Re-enabled 2026-10-28 on the bybit_1 demo floor (OPERATOR-DECISIONS-20261028 item 2). Same unit and params as trend_donchian, but no sweep has been run on this leg's own row; trend_donchian's verdicts are NOT inherited. Owed: exit-refinement pass."
+   },
+   "stop_geometry": {
+    "status": "pending",
+    "ref": "Re-enabled 2026-10-28 on the bybit_1 demo floor (OPERATOR-DECISIONS-20261028 item 2). Same unit and params as trend_donchian, but no sweep has been run on this leg's own row; trend_donchian's verdicts are NOT inherited. Owed: exit-refinement pass."
+   }
   }
  ],
  "tp_geometry_legend": {
@@ -3851,9 +3905,9 @@
   "ABSENT_means_unrecorded": "⚠️ A MISSING tp_geometry MEANS 'WE DID NOT LOOK', NOT 'presumably fine'. Absence collapses three different conditions — (a) measured at live parity and nobody stamped it, (b) measured on the pre-cutover no-TP default, which is the DEFAULT EXPECTATION for anything dated before the cutover, and (c) nobody looked. The reassuring reading is the one that is wrong for most of the population. The roll-up counts these as `unrecorded` and reports the fraction rather than listing marked cells, so completeness is never inferred from the cells that happen to carry a value.",
   "_coverage_2026_08_16": "170 of 416 cells (40.9%) carry a value: live_parity 167, no_take_profit 3, absent 246. Measured directly off this file. The roll-up's own figure is over the LIVE-leg population (a different, smaller denominator) — both are correct and neither is the other.",
   "_remaining_work": "Stamping the 246 absent cells is NOT done here and must not be guessed from dates: BL-20260814-TP-GEOMETRY-RECORDED-ON-2-PERCENT-OF-CELLS-SO-ABSENCE-CANNOT-MEAN-ANYTHING criterion (2) requires each cell's own `ref` to establish live_parity or no_take_profit, with `unrecorded` stamped only where the ref establishes neither. A date is a proxy, and that row exists because a proxy was trusted.",
-  "_unstamped_ceiling": 416,
+  "_unstamped_ceiling": 420,
   "_ceiling_raised_2026_10_27": "311 -> 416 (+105): the demo-floor rule flipped 12 legs execution: shadow -> live in config/strategies.yaml, so their cells now count as live (12 legs x the matrix lever columns); no cell was un-stamped. Operator rule 2026-10-27, relayed by the manager.",
-  "_unstamped_ceiling_note": "272 -> 311 on 2026-10-25 (lane OLD-PR-FOLLOWUPS-1025, merging main into PR #11933): +39 live `stop_geometry` cells (MI-278 U3) added to the 272 ceiling main already carried; measured via `python3 scripts/research/m20_coverage_rollup.py --check`: 311 (the PR's original +44 was against a 229 base; 3 ict_scalp legs and others have since left the live denominator, and the new live soak alias trend_donchian_xrp_adx25 carries one mirrored stop_geometry n/a cell). The ratchet is doing its job: a new column of silent cells is declared in the diff. MI-278 REASONING, PRESERVED (see `_unstamped_ceiling_note_mi278`): the new stop_geometry cells are unstamped on purpose, neither legend value is true of the ict_scalp family. PRIOR NOTES, PRESERVED: 267 -> 272 on 2026-10-22 (lane OPERATOR-DECISIONS-1022): +11 cells for the NEW live soak alias trend_donchian_xrp_adx25 (bybit_1 only), each MIRRORED from the incumbent trend_donchian_xrp_4h row including its tp_geometry stamps; the incumbent's row carries 5 unstamped cells, so the alias adds 5. Measured via `python3 scripts/research/m20_coverage_rollup.py --check` on this diff: 272. PRIOR NOTES, PRESERVED: 193 -> 191 on 2026-10-02 (lane M20-EXITS-4): two cells (trend_donchian_xrp_4h/giveback_stop, ief_pullback_1d/trail_geometry) were re-swept at live parity and stamped tp_geometry=live_parity with base counts as fields; no leg left the denominator. PRIOR NOTES, PRESERVED: 229 -> 193 on 2026-09-28 (lane EXIT-OPS), and the REASON matters more than the number, same discipline as every prior move on this field. Six legs were demoted live -> shadow in this diff (PI-20260924-TJTOJHYE-0001: trend_donchian_ada_4h/avax_4h/sol_4h; PI-20260922-UTN353OZ-0001: ict_scalp_5m/sol_5m/avax_5m), taking their cells out of the live_only denominator. Leaving the ceiling at 229 would have left slack in which a live cell could silently lose its tp_geometry stamp with the guard still green -- exactly the loosening this field exists to make visible rather than absorb silently. Measured via `python3 scripts/research/m20_coverage_rollup.py --check` on this diff: unstamped-live count is 193 with the six rows `shadow`. PRIOR NOTES, PRESERVED: STAYED 229 on 2026-09-22 (avax_pullback_2h promotion declined same day); 234 -> 229 on 2026-08-24 (slv_trend_1h demoted, 5 unstamped cells left the denominator).",
+  "_unstamped_ceiling_note": "428 -> 420 on 2026-10-29 (lane STRATEGY-STATUS-MODEL, PR #21038, merged with main incl. #21007): gld_pullback_1h retired by record (enabled: false, operator Q4 \"Retire gld, re-home 3 later (Recommended)\"), so its 8 unstamped live cells left the live denominator; measured via `python3 scripts/research/m20_coverage_rollup.py --check` on the merged tree: 420. PRIOR NOTES, PRESERVED: 272 -> 311 on 2026-10-25 (lane OLD-PR-FOLLOWUPS-1025, merging main into PR #11933): +39 live `stop_geometry` cells (MI-278 U3) added to the 272 ceiling main already carried; measured via `python3 scripts/research/m20_coverage_rollup.py --check`: 311 (the PR's original +44 was against a 229 base; 3 ict_scalp legs and others have since left the live denominator, and the new live soak alias trend_donchian_xrp_adx25 carries one mirrored stop_geometry n/a cell). The ratchet is doing its job: a new column of silent cells is declared in the diff. MI-278 REASONING, PRESERVED (see `_unstamped_ceiling_note_mi278`): the new stop_geometry cells are unstamped on purpose, neither legend value is true of the ict_scalp family. PRIOR NOTES, PRESERVED: 267 -> 272 on 2026-10-22 (lane OPERATOR-DECISIONS-1022): +11 cells for the NEW live soak alias trend_donchian_xrp_adx25 (bybit_1 only), each MIRRORED from the incumbent trend_donchian_xrp_4h row including its tp_geometry stamps; the incumbent's row carries 5 unstamped cells, so the alias adds 5. Measured via `python3 scripts/research/m20_coverage_rollup.py --check` on this diff: 272. PRIOR NOTES, PRESERVED: 193 -> 191 on 2026-10-02 (lane M20-EXITS-4): two cells (trend_donchian_xrp_4h/giveback_stop, ief_pullback_1d/trail_geometry) were re-swept at live parity and stamped tp_geometry=live_parity with base counts as fields; no leg left the denominator. PRIOR NOTES, PRESERVED: 229 -> 193 on 2026-09-28 (lane EXIT-OPS), and the REASON matters more than the number, same discipline as every prior move on this field. Six legs were demoted live -> shadow in this diff (PI-20260924-TJTOJHYE-0001: trend_donchian_ada_4h/avax_4h/sol_4h; PI-20260922-UTN353OZ-0001: ict_scalp_5m/sol_5m/avax_5m), taking their cells out of the live_only denominator. Leaving the ceiling at 229 would have left slack in which a live cell could silently lose its tp_geometry stamp with the guard still green -- exactly the loosening this field exists to make visible rather than absorb silently. Measured via `python3 scripts/research/m20_coverage_rollup.py --check` on this diff: unstamped-live count is 193 with the six rows `shadow`. PRIOR NOTES, PRESERVED: STAYED 229 on 2026-09-22 (avax_pullback_2h promotion declined same day); 234 -> 229 on 2026-08-24 (slv_trend_1h demoted, 5 unstamped cells left the denominator).",
   "_ceiling_raised_2026_10_07": "191 -> 267 (+76) in the diff that adds the tp_extend / tp_retarget columns (GEOM-B1-HARNESS): 38 live legs x 2 new columns, every one `pending` or `blocked:no_harness_levers`, i.e. NOTHING has been measured for them yet, so there is no geometry to stamp and stamping one would be a guess. The ratchet is meant to make a growing unmeasured population visible to the reviewer, and this is that. Each cell is stamped `live_parity` by the sweep that first measures it (m20_fleet_exit_sweep passes --tp-cap-pct 0.099 by default), which lowers this number again.",
   "_unstamped_ceiling_note_mi278": "RAISED 229 -> 273 on 2026-09-12 (MI-278 U3), +44 = exactly the live `stop_geometry` cells added in the same change. The ratchet is doing its job: a new column of silent cells must be declared in the diff. [!] I DID NOT STAMP THEM, AND THAT IS NOT LAZINESS -- NEITHER LEGEND VALUE IS TRUE OF THIS FAMILY. `scripts/research/m20_fleet_exit_sweep.py` states it directly: `base_args` applies `--tp-cap-pct` only to a family in `LIVE_TP_CAPPED_FAMILIES` (= CLAMPING_FAMILIES: donchian, pullback, fade, squeeze) 'because only those live units carry `_TP_SENTINEL_CAP_PCT`', and it warns in terms that 'stamping `live_parity` off the flag alone is how a scalp round would self-report a geometry its harness never received'. `ict_scalp` is NOT in that set, so the harness never receives the cap -- `live_parity` would be a false stamp. And `no_take_profit` is equally false: these legs DO have a take-profit (`tp_at_r`, which is the very thing MI-278 swept). [!] SO ABSENCE HERE IS A FOURTH CONDITION THE LEGEND DOES NOT COVER -- 'the clamp does not apply to this family, so there is no TP geometry to record' -- distinct from all three of (a) measured at parity and unstamped, (b) measured on the no-TP default, (c) nobody looked. That is a collapsed state in this very field, filed as BL-20260912-TP-GEOMETRY-HAS-NO-VALUE-FOR-A-FAMILY-THE-LIVE-CLAMP-DOES-NOT-APPLY-TO. [!] NOTE THE 8 PRE-EXISTING ict_scalp `bracket_geometry` CELLS CARRY NO STAMP EITHER, for the same reason -- this change extends a gap rather than creating one, and the gap is structural, not clerical."
  },

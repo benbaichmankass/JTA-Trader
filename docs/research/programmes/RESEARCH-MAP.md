@@ -6,6 +6,33 @@
 
 How this fits the work system: a programme is a *plan*, not a third category of work (CLAUDE.md § "Two categories"). Each question below becomes a `research/queue/` unit and each build a checklist row, every one carrying a `roadmap` milestone ref. Full plan per programme: `01-ACTIVE-TRADE-MANAGEMENT.md`, `02-AI-TRADER.md`, `03-STRATEGY-IMPROVEMENT.md` (lane P3-STRATEGY-PROGRAMME), `04-MACRO-SLEEVE.md` (lane P4-MACRO-PROGRAMME) and `05-PROP.md` (lane P5-PROP-PROGRAMME) are all landed (2026-10-14); none is owed.
 
+## Programme review 2026-10-28 (lane PROGRAMME-REVIEW-20261028)
+
+Population: research units with a result row generated 2026-10-21T19:30Z..2026-10-28T19:30Z (`research_ops_checks.py --kind programme_review --since 7d`, 1,480 units read, 0 unreadable): **445 units, 412 graded** (70 pass, 50 indeterminate, 292 fail), 285 with a programme field and 160 without (live_strategy 70, regime 27, ml_health 21, macro 20, infra 13, new_strategy_prop 8, none 1). This review assigns the 160 by what they ask, not by the field (map section). Every PASS below is a discovery until its confirmation unit passes. **Cost basis:** about 36 of the 70 PASS rows are crypto-harness runs charged 7.5 bps round-trip (MEASURED from each result's argv); only RQ-20261028-001 carried the measured Bybit-linear 11.0 bps. A lever A/B delta is nearly fee-neutral (both arms pay it); an absolute Stage-0 or breadth PASS is not.
+
+**Unprogrammed clusters, assigned by what they ask:** `live_strategy` 70 (Stage-0 re-validations `c56e`/`be01`/`bda2`/`008` and desk entry units `e535`/`fe57`/`8a01`/`a3f1` go to P3; desk lifecycle `bf56`/`8b01`/`d1f5` and TP compliance `bea9` go to P1; the giveback census `9807-01` goes to P1); `regime` 27 (single-leg vol/ADX levers `ae17`/`3a84`/`326f` go to P3 Q5); `ml_health` 21 to P2; `macro` 20 (calendar-event types) to P4; `infra` 13 to P6; `new_strategy_prop` 8 to P3/P5.
+
+**Two tracks, three sentences each**
+- **TRADING.** The week's strongest result is negative and consistent. Tightening stops on the declared wide-trail legs loses R: about 140 mechanical lever units with 6 passes (chance rate), and the desk's Claude management −0.159 R vs hold driven by 981 tightens. What survives is selective or entry-side: the direction filter confirmed on a disjoint window, the BE floor and CHOP-gated trail awaiting confirmation, the TP-extend compliance, and trend-Donchian breadth across ~17 alt perps. All breadth evidence is priced at 7.5 bps, not the venue's 11.0, so the top TRADING test is a re-cost, not a new idea. The 5 bybit_1 flips in #20966 are mostly window drift for the trend legs (diagnosed by 3 units) and a second, independent FAIL for the two scalps, whose retirement case is the operator's.
+- **MODEL.** No learner beats the shipped LightGBM regime head (0 of 23 arms) and the direction heads do not beat the prior at 1h. New information moves log-loss (range-vol on all three symbols), so the lever is information and targets, not capacity. The cost gate's refusal of all 9 setup-metalabel heads is a data refusal (gross frozen datasets), not a measured loss: the meta-label line has no answer at the cost basis that matters until PI-20261028-V8KBRR5H-0004 rebuilds them. MODEL runnable supply is 0. That is a **build gap** (the cost-net rebuild, #20967's labels on main, a cross-asset feature block), not an authoring gap; this review files the three gated nodes rather than more learner arms.
+
+**Feed table (state 2026-10-28)**
+
+| feed | from -> to | what | destination | state |
+|---|---|---|---|---|
+| tighten-loses belief | P1 -> P2 | "tighten" is the negative class; in-trade state is the information | `P2-desk-checkin-exit-head` | waiting on #20967 |
+| desk priced labels (12,500 check-ins) | P1 -> P2 | action-value target | `P2-desk-checkin-exit-head` | waiting on #20967 |
+| cost-net datasets | P6 -> P2 | a cost basis for every head | `P2-Q2-costnet-metalabel-regate` | build PI-20261028-V8KBRR5H-0004 |
+| no head beats its prior net of cost | P2 -> P1/P3 | nothing is a gate yet; no Tier-3 candidate | — | stated, nothing filed |
+| breadth at 11.0 bps | P3 -> P5, P1 | candidate legs for the P5-Q6 pool, and exit processing | `P3-Q8-recost-11bps-eth4h` | authored |
+| #20966 flip diagnosis | P3 -> manager | keep on floor vs retirement case | `P3-RECOST-flip-*` x3 | authored |
+| loss-cut / BE floor | P1 -> P5 | left-tail levers for the prop EV grid | P1 confirmations | authored |
+| PPI tilt | P4 -> P3 | release-day tilt on spy/qqq 1d trend legs | `P4-Q2-ppi-rty-econ` (re-point) | ready; lever `MACRO-EVENT-RANKTILT` |
+| daily long-only Donchian | P7 -> P3, P1 | a new position-trade family | `P7-Q5-confirm` disjoint-symbol check | research-ops |
+| proxy-symbol fee | P6 -> P3/P5/P7 | breadth symbols priced at the venue fee | build question for the manager | filed in the review record handoff |
+
+The 2026-10-21 feed rows: momentum-levers live is still `landed_unproven` (MOMENTUM-LEVERS-LIVE); breakout_2 sizing is now **applied** (0.35%); the family-breadth units have landed (above); the daily-Donchian and ATR-percentile re-asks have landed (P7 section); `ml_health` supply is still build-bound.
+
 ## Programme review 2026-10-21 (lane RESEARCH-PROGRAMME-REVIEW-1021)
 
 **Population:** every unit in `research/queue/*.yaml` with `grading.graded_at` 2026-10-14..2026-10-21, read on main at ~18Z:

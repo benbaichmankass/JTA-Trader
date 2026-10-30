@@ -1,5 +1,11 @@
 <!-- Filled-in template. Delete sections that don't apply. -->
 
+## Gates this adds or changes
+
+<!-- Required (CLAUDE-RULES-CANONICAL § "No new gates"). For each gate: what it blocks, where (file:line), why, how to remove it. Adding one needs the operator's permission. If none, write "Gates: none". -->
+
+Gates: none
+
 ## Summary
 
 <!-- 1-3 sentences. What changed and why. -->

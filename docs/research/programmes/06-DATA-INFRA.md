@@ -6,6 +6,19 @@
 
 ---
 
+## Programme review 2026-10-28 (lane PROGRAMME-REVIEW-20261028) — INFRA / MODEL plumbing
+
+Population: research units with a result row generated 2026-10-21T19:30Z..2026-10-28T19:30Z (`research_ops_checks.py --kind programme_review --since 7d`, 1,480 units read, 0 unreadable): **445 units, 412 graded** (70 pass, 50 indeterminate, 292 fail), 285 with a programme field and 160 without (live_strategy 70, regime 27, ml_health 21, macro 20, infra 13, new_strategy_prop 8, none 1). This review assigns the 160 by what they ask, not by the field (map section). Every PASS below is a discovery until its confirmation unit passes. **Cost basis:** about 36 of the 70 PASS rows are crypto-harness runs charged 7.5 bps round-trip (MEASURED from each result's argv); only RQ-20261028-001 carried the measured Bybit-linear 11.0 bps. A lever A/B delta is nearly fee-neutral (both arms pay it); an absolute Stage-0 or breadth PASS is not.
+
+**Graded in the window: 5 with `programme: P6`** (3 pass, 1 indeterminate, 1 not graded), plus 13 unprogrammed `infra` units (7 pass, 6 not graded), assigned here: queue integrity, result readability, starvation, roadmap refs, dependency probes. The research machinery's self-checks pass.
+
+**What was learned / what binds.** This week's binding constraints for P1-P3 are **data and cost-basis plumbing, not research supply**:
+1. **Cost basis in research harnesses.** Binance-proxy breadth symbols resolve to `DEFAULT_FEE_BPS_ROUNDTRIP` 7.5 (`src/runtime/execution_costs.py`) because `profile_loader` does not know them; rostered Bybit symbols resolve to 11.0. About 36 of 70 PASSes this week carry 7.5. The fix is a research-side choice (proxy symbols priced at the venue they would trade on). It is filed as a build question for the manager, not changed here (cost constants are the L-LADDER owner's).
+2. **Cost-net ML datasets** (PI-20261028-V8KBRR5H-0004): the MODEL track's top blocker.
+3. **The 1m and derivatives archives** (`DATA-KLINE-ARCHIVE`, `DATA-DERIV-ARCHIVE`) are still queued at 14 days (follow-through oldest-open list). That is a schedule-or-kill call for the manager, not a re-file.
+
+**Next 3-4 weeks.** No unit; the three builds above in that order. **Feeds:** P6 -> P2 (cost-net rebuild), P6 -> P3/P5 (proxy-symbol fee).
+
 ## 0. Operator direction (2026-10-14 ~21:35Z, verbatim, relayed by the manager)
 
 > "Ok, we may need a specific roadmap milestone or sub-work-plan for data infra - of that's the blocker, then we need to renovate the infra to make sure we're ingesting enough of the vast open source data resources, processing, labeling, and learning from that data so that our mls can actually learn and improve"

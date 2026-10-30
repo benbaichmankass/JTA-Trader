@@ -2,7 +2,7 @@
   "id": "LEVEL-TRAIL-R-GATE",
   "title": "Harness: --trail-level-min-r (latch the level-triggered tight trail only once peak R >= N)",
   "phase": "Research",
-  "state": "landed_unproven",
+  "state": "done",
   "owner": "unassigned (filed by EXITS-GIVEBACK-W43)",
   "lane": "EXITS-GIVEBACK-W43",
   "model": null,
@@ -13,9 +13,9 @@
     19739
   ],
   "blocked_on": [],
-  "note": "[2026-10-22 EXITS-GIVEBACK-W43] Instrument for blocked unit RQ-20261022-eba2-11 (Q10 variant: level AND R). --trail-level and --trail-decay-arm-r are independent tighteners composing by minimum (OR); the operator's framing needs AND. BUILD: --trail-level-min-r R in backtest_pullback.py and backtest_trend.py (src/research/trail_levers.py owns the rule; default 0 = byte-identical). DONE WHEN: tests show default byte-identity and that a level touch before peak R reaches N does not latch while a touch after does; exit_lever_ablation.py accepts the arm string used in eba2-11. [2026-10-23 EXIT-BUILDS-W43] BUILT in PR #19739 (merged != observed). Flags default-off, byte-identical (old-vs-new main on armed configs), tests/test_exit_builds_w43.py. Unit(s) eba2-11 moved out of blocked/, dispatch_queue dry run would_dispatch. CLOSES (done) when eba2-11 lands its first result carrying the new flag in its recorded argv.",
-  "updated_at": "2026-10-23T17:04:56Z",
-  "updated_by": "session_01WJ6zAKX6HBJBgdJWsCd6P3",
+  "note": "[2026-10-22 EXITS-GIVEBACK-W43] Instrument for blocked unit RQ-20261022-eba2-11 (Q10 variant: level AND R). --trail-level and --trail-decay-arm-r are independent tighteners composing by minimum (OR); the operator's framing needs AND. BUILD: --trail-level-min-r R in backtest_pullback.py and backtest_trend.py (src/research/trail_levers.py owns the rule; default 0 = byte-identical). DONE WHEN: tests show default byte-identity and that a level touch before peak R reaches N does not latch while a touch after does; exit_lever_ablation.py accepts the arm string used in eba2-11. [2026-10-23 EXIT-BUILDS-W43] BUILT in PR #19739 (merged != observed). Flags default-off, byte-identical (old-vs-new main on armed configs), tests/test_exit_builds_w43.py. Unit(s) eba2-11 moved out of blocked/, dispatch_queue dry run would_dispatch. CLOSES (done) when eba2-11 lands its first result carrying the new flag in its recorded argv. [2026-10-30 DAILY-REVIEW-TRIAGE-20261030] DONE: eba2-11 measured results on main (research/results/<unit>/ read_state measured); argv carries trail-level-min-r.",
+  "updated_at": "2026-10-30T06:11:30Z",
+  "updated_by": "session_01AFoLuL99YDu1fHUkJvG55s",
   "roadmap": [
     "L-ATM"
   ],

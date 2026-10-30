@@ -1,0 +1,109 @@
+{
+  "verdict": "fail",
+  "read_state": "measured",
+  "population": "eia_natgas_storage releases (live feed + survey-consensus backfill, one row per release date) joined to UNG daily closes",
+  "n": 541,
+  "measurement": {
+    "kind": "eia_natgas_storage",
+    "symbol": "UNG",
+    "snapshot_files": [
+      "comms/macro/econ_calendar_snapshots.jsonl",
+      "comms/macro/econ_calendar_snapshots_survey_backfill.jsonl"
+    ],
+    "releases": 566,
+    "releases_with_value": 566,
+    "price_bars": 4916,
+    "first_release": "2015-01-08",
+    "last_release": "2026-10-22",
+    "release_start": null,
+    "release_end": null,
+    "anchor_shift_td": 0,
+    "releases_after_window": 566,
+    "rows": [
+      {
+        "horizon_days": 1,
+        "n": 566,
+        "ic": -0.043667,
+        "ic_t": -1.038,
+        "overlap_factor": 1.0,
+        "n_eff": 566.0,
+        "ic_t_eff": -1.038,
+        "pearson": -0.017928,
+        "sign_hit_rate": 0.497207,
+        "mean_fwd_return": 0.000509
+      }
+    ],
+    "summary": {
+      "max_n": 566,
+      "min_honest_n": 12,
+      "sufficient_history": true,
+      "any_flagged_horizon": false,
+      "any_flagged_horizon_overlap_corrected": false,
+      "strongest_ic_horizon_days": 1,
+      "strongest_ic": -0.043667,
+      "strongest_ic_t": -1.038,
+      "strongest_ic_t_eff": -1.038,
+      "t_flag": 2.0,
+      "verdict": "no_edge_at_tested_horizons"
+    },
+    "rule": {
+      "primary": [
+        1
+      ],
+      "min_n": 100,
+      "t_bar": 2.4,
+      "expected_sign": "negative"
+    },
+    "per_horizon": [
+      {
+        "horizon_days": 1,
+        "n": 566,
+        "ic": -0.043667,
+        "ic_t_eff": -1.038,
+        "n_ok": true,
+        "t_reached": false,
+        "sign_ok": true
+      }
+    ],
+    "sign_book": {
+      "horizon_days": 1,
+      "cost_frac_roundtrip": 0.00125,
+      "book_net": {
+        "n": 541,
+        "mean": 0.00035915,
+        "t": 0.288
+      },
+      "floor_all_long_net": {
+        "n": 541,
+        "mean": -0.00084408,
+        "t": -0.675
+      },
+      "book_minus_floor": {
+        "n": 541,
+        "mean": 0.00120323,
+        "t": 0.65
+      },
+      "book_hit_rate": 0.4898,
+      "cost_stack": {
+        "cost_symbol": "UNG",
+        "fee_bps_roundtrip": 7.5,
+        "fee_source": "execution_costs.DEFAULT_FEE_BPS_ROUNDTRIP (venue rate unset)",
+        "slippage_bps_roundtrip": 5.0,
+        "funding_bps_per_window": 0.0,
+        "funding_applied": false,
+        "total_bps_roundtrip": 12.5,
+        "cost_frac": 0.00125
+      }
+    },
+    "ic_grade": {
+      "verdict": "fail",
+      "note": "no pre-registered horizon reached the t-bar in the expected sign"
+    },
+    "trade_rule": {
+      "horizon": 1,
+      "min_n": 100,
+      "t_bar": 2.0
+    }
+  },
+  "note": "sign book mean 0.00035915 (t 0.288) vs t-bar 2.0; all-long floor -0.00084408"
+}

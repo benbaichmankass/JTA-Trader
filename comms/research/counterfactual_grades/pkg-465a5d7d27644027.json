@@ -1,0 +1,2087 @@
+{
+ "schema_version": 2,
+ "order_package_id": "pkg-465a5d7d27644027",
+ "strategy": "ada_pullback_2h",
+ "symbol": "ADAUSDT",
+ "side": "short",
+ "graded_at": "2026-10-29T19:09:50Z",
+ "biases": [
+  "stop fills at its price (+ half round-trip slippage); a gap fills at the open",
+  "a touch is not a fill: stop / TP need price to trade THROUGH the level (calibrated on one stop fill, n=1)",
+  "intrabar order unknown: stop checked before TP; rule triggers and trails take effect from the next bar",
+  "path stitched from the finest candles served (1m ~16h, 5m ~3.5d, 15m ~10d); older parts use coarser bars",
+  "entry is the actual fill, shared by every arm; R unit = INITIAL risk (exit_plan.stop)",
+  "an unresolved arm is marked at the last close and costed as closed there (resolved=false)",
+  "post-exit bars end at t_close + horizon (leg max-hold, else a per-timeframe default); an arm open there is unresolved and never in a verdict",
+  "post-exit excursions start at the first bar opening after the close; the bar containing the exit is excluded",
+  "funding = policy default x windows held (ESTIMATED); account % = current equity less actual P&L (ESTIMATED)",
+  "alt-bracket arms hold the risk budget constant (wider stop => smaller size); margin and lot size not modelled"
+ ],
+ "status": "graded",
+ "reason": null,
+ "bracket": {
+  "entry_pkg": 0.2062,
+  "stop0": 0.21090357,
+  "stop0_source": "exit_plan.stop|risk_per_unit",
+  "tp": 0.18738571,
+  "tp_r": 4.0,
+  "r_dist": 0.004703570000000018,
+  "atr": 0.0031357142857142872,
+  "trail_mult": 5.0
+ },
+ "legs": [
+  {
+   "account_id": "bybit_2",
+   "trade_id": 6735,
+   "account_class": "real_money",
+   "qty": 635.0,
+   "entry_fill": 0.2059,
+   "exit_price": 0.2016,
+   "exit_reason": "sl",
+   "risk_usd": 2.986767,
+   "pnl_usd_journal": 2.6579,
+   "pnl_usd_venue": 2.65792233,
+   "closed_at": "2026-10-29T10:47:53.103000+00:00",
+   "provenance": "MEASURED",
+   "equity_pre_usd": 191.63
+  },
+  {
+   "account_id": "bybit_1",
+   "trade_id": 6734,
+   "account_class": "paper",
+   "qty": 197072.0,
+   "entry_fill": 0.2062,
+   "exit_price": 0.1984,
+   "exit_reason": "operator_flatten_reconciled",
+   "risk_usd": 926.941947,
+   "pnl_usd_journal": 1537.1616,
+   "pnl_usd_venue": 1436.14436965,
+   "closed_at": "2026-10-29T08:23:30.653721+00:00",
+   "provenance": "MEASURED",
+   "equity_pre_usd": null
+  },
+  {
+   "account_id": "bybit_portfolio",
+   "trade_id": 6736,
+   "account_class": "paper",
+   "qty": 191363.0,
+   "entry_fill": 0.2059,
+   "exit_price": 0.2015,
+   "exit_reason": "sl",
+   "risk_usd": 900.089266,
+   "pnl_usd_journal": 841.9972,
+   "pnl_usd_venue": 820.13579975,
+   "closed_at": "2026-10-29T10:47:53.107000+00:00",
+   "provenance": "MEASURED",
+   "equity_pre_usd": 57705.45
+  }
+ ],
+ "path": {
+  "bars": 1934,
+  "bars_by_tf": {
+   "1m": 1000,
+   "5m": 798,
+   "15m": 136
+  },
+  "first_bar": "2026-10-24T22:00:00Z",
+  "last_bar": "2026-10-29T19:10:00Z",
+  "t_entry": "2026-10-24T22:00:55Z",
+  "t_close": "2026-10-29T10:47:53Z"
+ },
+ "actions": [
+  {
+   "kind": "set_stop",
+   "level": 0.2062,
+   "source": "operator",
+   "time_provenance": "ESTIMATED(~06:30Z)",
+   "ts": "2026-10-29T06:30:00Z"
+  },
+  {
+   "kind": "set_stop",
+   "level": 0.2015,
+   "source": "operator",
+   "time_provenance": "ESTIMATED(~07:35Z)",
+   "ts": "2026-10-29T07:35:00Z"
+  }
+ ],
+ "arms": [
+  {
+   "arm_id": "actual",
+   "family": "actual",
+   "label": "ACTUAL (journal / venue closed-pnl)",
+   "params": {},
+   "resolved": true,
+   "exit": {
+    "ts": "2026-10-29T10:47:53.103000+00:00",
+    "px": 0.2016,
+    "reason": "sl"
+   },
+   "gross_r": null,
+   "cost_r": null,
+   "net_r": 0.8899,
+   "per_account": {
+    "bybit_2": {
+     "pnl_usd": 2.6579,
+     "pct_of_account": 1.387,
+     "account_class": "real_money"
+    },
+    "bybit_1": {
+     "pnl_usd": 1436.1444,
+     "pct_of_account": null,
+     "account_class": "paper"
+    },
+    "bybit_portfolio": {
+     "pnl_usd": 820.1358,
+     "pct_of_account": 1.4212,
+     "account_class": "paper"
+    }
+   },
+   "provenance": "MEASURED",
+   "note": "venue closed_pnl is booked net of the OPEN fee only; the simulated arms use the full recorded round trip",
+   "delta_vs_replayed_actual_r": 0.0687,
+   "delta_vs_actual_r": 0.0
+  },
+  {
+   "arm_id": "replayed_actual",
+   "family": "baseline",
+   "label": "Actual management replayed (like-for-like baseline)",
+   "params": {
+    "actions": 2
+   },
+   "resolved": true,
+   "exit": {
+    "ts": "2026-10-29T10:47:00Z",
+    "px": 0.2015,
+    "reason": "stop",
+    "fills": [
+     {
+      "frac": 1.0,
+      "px": 0.2015,
+      "reason": "stop"
+     }
+    ]
+   },
+   "gross_r": 0.9355,
+   "cost_r": {
+    "fee": 0.0482,
+    "slip": 0.0066,
+    "funding": 0.0595
+   },
+   "net_r": 0.8212,
+   "per_account": {
+    "bybit_2": {
+     "pnl_usd": 2.4528,
+     "pct_of_account": 1.28,
+     "account_class": "real_money"
+    },
+    "bybit_1": {
+     "pnl_usd": 761.2267,
+     "pct_of_account": null,
+     "account_class": "paper"
+    },
+    "bybit_portfolio": {
+     "pnl_usd": 739.1747,
+     "pct_of_account": 1.2809,
+     "account_class": "paper"
+    }
+   },
+   "provenance": "ESTIMATED",
+   "delta_vs_replayed_actual_r": 0.0,
+   "delta_vs_actual_r": -0.0687,
+   "delta_vs_replayed_actual_usd": {
+    "bybit_2": 0.0,
+    "bybit_1": 0.0,
+    "bybit_portfolio": 0.0
+   }
+  },
+  {
+   "arm_id": "original_brackets",
+   "family": "entry_brackets",
+   "label": "Original SL/TP, no in-trade action (own trail only)",
+   "params": {},
+   "resolved": false,
+   "exit": {
+    "ts": "2026-10-29T19:10:00Z",
+    "px": 0.2016,
+    "reason": "open_at_data_end",
+    "fills": [
+     {
+      "frac": 1.0,
+      "px": 0.2016,
+      "reason": "open_at_data_end"
+     }
+    ]
+   },
+   "gross_r": 0.9142,
+   "cost_r": {
+    "fee": 0.0482,
+    "slip": 0.0066,
+    "funding": 0.0641
+   },
+   "net_r": 0.7954,
+   "per_account": {
+    "bybit_2": {
+     "pnl_usd": 2.3756,
+     "pct_of_account": 1.2397,
+     "account_class": "real_money"
+    },
+    "bybit_1": {
+     "pnl_usd": 737.2674,
+     "pct_of_account": null,
+     "account_class": "paper"
+    },
+    "bybit_portfolio": {
+     "pnl_usd": 715.9094,
+     "pct_of_account": 1.2406,
+     "account_class": "paper"
+    }
+   },
+   "provenance": "ESTIMATED",
+   "delta_vs_replayed_actual_r": -0.0258,
+   "delta_vs_actual_r": -0.0945,
+   "delta_vs_replayed_actual_usd": {
+    "bybit_2": -0.0772,
+    "bybit_1": -23.9593,
+    "bybit_portfolio": -23.2653
+   }
+  },
+  {
+   "arm_id": "alt_sl0.75x_tp2R",
+   "family": "alt_brackets",
+   "label": "SL 0.75x original distance, TP 2R",
+   "params": {
+    "sl_mult": 0.75,
+    "tp_r": 2.0
+   },
+   "resolved": true,
+   "exit": {
+    "ts": "2026-10-28T20:00:00Z",
+    "px": 0.20972768,
+    "reason": "stop",
+    "fills": [
+     {
+      "frac": 1.0,
+      "px": 0.20972768,
+      "reason": "stop"
+     }
+    ]
+   },
+   "gross_r": -1.085,
+   "cost_r": {
+    "fee": 0.0642,
+    "slip": 0.0088,
+    "funding": 0.0686
+   },
+   "net_r": -1.2266,
+   "per_account": {
+    "bybit_2": {
+     "pnl_usd": -3.6635,
+     "pct_of_account": -1.9118,
+     "account_class": "real_money"
+    },
+    "bybit_1": {
+     "pnl_usd": -1136.9597,
+     "pct_of_account": null,
+     "account_class": "paper"
+    },
+    "bybit_portfolio": {
+     "pnl_usd": -1104.023,
+     "pct_of_account": -1.9132,
+     "account_class": "paper"
+    }
+   },
+   "provenance": "ESTIMATED",
+   "delta_vs_replayed_actual_r": -2.0478,
+   "delta_vs_actual_r": -2.1165,
+   "delta_vs_replayed_actual_usd": {
+    "bybit_2": -6.1163,
+    "bybit_1": -1898.1864,
+    "bybit_portfolio": -1843.1977
+   }
+  },
+  {
+   "arm_id": "alt_sl0.75x_tp3R",
+   "family": "alt_brackets",
+   "label": "SL 0.75x original distance, TP 3R",
+   "params": {
+    "sl_mult": 0.75,
+    "tp_r": 3.0
+   },
+   "resolved": true,
+   "exit": {
+    "ts": "2026-10-28T20:00:00Z",
+    "px": 0.20972768,
+    "reason": "stop",
+    "fills": [
+     {
+      "frac": 1.0,
+      "px": 0.20972768,
+      "reason": "stop"
+     }
+    ]
+   },
+   "gross_r": -1.085,
+   "cost_r": {
+    "fee": 0.0642,
+    "slip": 0.0088,
+    "funding": 0.0686
+   },
+   "net_r": -1.2266,
+   "per_account": {
+    "bybit_2": {
+     "pnl_usd": -3.6635,
+     "pct_of_account": -1.9118,
+     "account_class": "real_money"
+    },
+    "bybit_1": {
+     "pnl_usd": -1136.9597,
+     "pct_of_account": null,
+     "account_class": "paper"
+    },
+    "bybit_portfolio": {
+     "pnl_usd": -1104.023,
+     "pct_of_account": -1.9132,
+     "account_class": "paper"
+    }
+   },
+   "provenance": "ESTIMATED",
+   "delta_vs_replayed_actual_r": -2.0478,
+   "delta_vs_actual_r": -2.1165,
+   "delta_vs_replayed_actual_usd": {
+    "bybit_2": -6.1163,
+    "bybit_1": -1898.1864,
+    "bybit_portfolio": -1843.1977
+   }
+  },
+  {
+   "arm_id": "alt_sl0.75x_tp4R",
+   "family": "alt_brackets",
+   "label": "SL 0.75x original distance, TP 4R",
+   "params": {
+    "sl_mult": 0.75,
+    "tp_r": 4.0
+   },
+   "resolved": true,
+   "exit": {
+    "ts": "2026-10-28T20:00:00Z",
+    "px": 0.20972768,
+    "reason": "stop",
+    "fills": [
+     {
+      "frac": 1.0,
+      "px": 0.20972768,
+      "reason": "stop"
+     }
+    ]
+   },
+   "gross_r": -1.085,
+   "cost_r": {
+    "fee": 0.0642,
+    "slip": 0.0088,
+    "funding": 0.0686
+   },
+   "net_r": -1.2266,
+   "per_account": {
+    "bybit_2": {
+     "pnl_usd": -3.6635,
+     "pct_of_account": -1.9118,
+     "account_class": "real_money"
+    },
+    "bybit_1": {
+     "pnl_usd": -1136.9597,
+     "pct_of_account": null,
+     "account_class": "paper"
+    },
+    "bybit_portfolio": {
+     "pnl_usd": -1104.023,
+     "pct_of_account": -1.9132,
+     "account_class": "paper"
+    }
+   },
+   "provenance": "ESTIMATED",
+   "delta_vs_replayed_actual_r": -2.0478,
+   "delta_vs_actual_r": -2.1165,
+   "delta_vs_replayed_actual_usd": {
+    "bybit_2": -6.1163,
+    "bybit_1": -1898.1864,
+    "bybit_portfolio": -1843.1977
+   }
+  },
+  {
+   "arm_id": "alt_sl0.75x_tp5R",
+   "family": "alt_brackets",
+   "label": "SL 0.75x original distance, TP 5R",
+   "params": {
+    "sl_mult": 0.75,
+    "tp_r": 5.0
+   },
+   "resolved": true,
+   "exit": {
+    "ts": "2026-10-28T20:00:00Z",
+    "px": 0.20972768,
+    "reason": "stop",
+    "fills": [
+     {
+      "frac": 1.0,
+      "px": 0.20972768,
+      "reason": "stop"
+     }
+    ]
+   },
+   "gross_r": -1.085,
+   "cost_r": {
+    "fee": 0.0642,
+    "slip": 0.0088,
+    "funding": 0.0686
+   },
+   "net_r": -1.2266,
+   "per_account": {
+    "bybit_2": {
+     "pnl_usd": -3.6635,
+     "pct_of_account": -1.9118,
+     "account_class": "real_money"
+    },
+    "bybit_1": {
+     "pnl_usd": -1136.9597,
+     "pct_of_account": null,
+     "account_class": "paper"
+    },
+    "bybit_portfolio": {
+     "pnl_usd": -1104.023,
+     "pct_of_account": -1.9132,
+     "account_class": "paper"
+    }
+   },
+   "provenance": "ESTIMATED",
+   "delta_vs_replayed_actual_r": -2.0478,
+   "delta_vs_actual_r": -2.1165,
+   "delta_vs_replayed_actual_usd": {
+    "bybit_2": -6.1163,
+    "bybit_1": -1898.1864,
+    "bybit_portfolio": -1843.1977
+   }
+  },
+  {
+   "arm_id": "alt_sl0.75x_tp6R",
+   "family": "alt_brackets",
+   "label": "SL 0.75x original distance, TP 6R",
+   "params": {
+    "sl_mult": 0.75,
+    "tp_r": 6.0
+   },
+   "resolved": true,
+   "exit": {
+    "ts": "2026-10-28T20:00:00Z",
+    "px": 0.20972768,
+    "reason": "stop",
+    "fills": [
+     {
+      "frac": 1.0,
+      "px": 0.20972768,
+      "reason": "stop"
+     }
+    ]
+   },
+   "gross_r": -1.085,
+   "cost_r": {
+    "fee": 0.0642,
+    "slip": 0.0088,
+    "funding": 0.0686
+   },
+   "net_r": -1.2266,
+   "per_account": {
+    "bybit_2": {
+     "pnl_usd": -3.6635,
+     "pct_of_account": -1.9118,
+     "account_class": "real_money"
+    },
+    "bybit_1": {
+     "pnl_usd": -1136.9597,
+     "pct_of_account": null,
+     "account_class": "paper"
+    },
+    "bybit_portfolio": {
+     "pnl_usd": -1104.023,
+     "pct_of_account": -1.9132,
+     "account_class": "paper"
+    }
+   },
+   "provenance": "ESTIMATED",
+   "delta_vs_replayed_actual_r": -2.0478,
+   "delta_vs_actual_r": -2.1165,
+   "delta_vs_replayed_actual_usd": {
+    "bybit_2": -6.1163,
+    "bybit_1": -1898.1864,
+    "bybit_portfolio": -1843.1977
+   }
+  },
+  {
+   "arm_id": "alt_sl1x_tp2R",
+   "family": "alt_brackets",
+   "label": "SL 1x original distance, TP 2R",
+   "params": {
+    "sl_mult": 1.0,
+    "tp_r": 2.0
+   },
+   "resolved": true,
+   "exit": {
+    "ts": "2026-10-29T02:10:00Z",
+    "px": 0.19679286,
+    "reason": "tp",
+    "fills": [
+     {
+      "frac": 1.0,
+      "px": 0.19679286,
+      "reason": "tp"
+     }
+    ]
+   },
+   "gross_r": 1.9362,
+   "cost_r": {
+    "fee": 0.0482,
+    "slip": 0.0,
+    "funding": 0.0548
+   },
+   "net_r": 1.8333,
+   "per_account": {
+    "bybit_2": {
+     "pnl_usd": 5.4755,
+     "pct_of_account": 2.8574,
+     "account_class": "real_money"
+    },
+    "bybit_1": {
+     "pnl_usd": 1699.3293,
+     "pct_of_account": null,
+     "account_class": "paper"
+    },
+    "bybit_portfolio": {
+     "pnl_usd": 1650.1012,
+     "pct_of_account": 2.8595,
+     "account_class": "paper"
+    }
+   },
+   "provenance": "ESTIMATED",
+   "delta_vs_replayed_actual_r": 1.0121,
+   "delta_vs_actual_r": 0.9434,
+   "delta_vs_replayed_actual_usd": {
+    "bybit_2": 3.0227,
+    "bybit_1": 938.1026,
+    "bybit_portfolio": 910.9265
+   }
+  },
+  {
+   "arm_id": "alt_sl1x_tp3R",
+   "family": "alt_brackets",
+   "label": "SL 1x original distance, TP 3R",
+   "params": {
+    "sl_mult": 1.0,
+    "tp_r": 3.0
+   },
+   "resolved": false,
+   "exit": {
+    "ts": "2026-10-29T19:10:00Z",
+    "px": 0.2016,
+    "reason": "open_at_data_end",
+    "fills": [
+     {
+      "frac": 1.0,
+      "px": 0.2016,
+      "reason": "open_at_data_end"
+     }
+    ]
+   },
+   "gross_r": 0.9142,
+   "cost_r": {
+    "fee": 0.0482,
+    "slip": 0.0066,
+    "funding": 0.0641
+   },
+   "net_r": 0.7954,
+   "per_account": {
+    "bybit_2": {
+     "pnl_usd": 2.3756,
+     "pct_of_account": 1.2397,
+     "account_class": "real_money"
+    },
+    "bybit_1": {
+     "pnl_usd": 737.2674,
+     "pct_of_account": null,
+     "account_class": "paper"
+    },
+    "bybit_portfolio": {
+     "pnl_usd": 715.9094,
+     "pct_of_account": 1.2406,
+     "account_class": "paper"
+    }
+   },
+   "provenance": "ESTIMATED",
+   "delta_vs_replayed_actual_r": -0.0258,
+   "delta_vs_actual_r": -0.0945,
+   "delta_vs_replayed_actual_usd": {
+    "bybit_2": -0.0772,
+    "bybit_1": -23.9593,
+    "bybit_portfolio": -23.2653
+   }
+  },
+  {
+   "arm_id": "alt_sl1x_tp4R",
+   "family": "alt_brackets",
+   "label": "SL 1x original distance, TP 4R",
+   "params": {
+    "sl_mult": 1.0,
+    "tp_r": 4.0
+   },
+   "resolved": false,
+   "exit": {
+    "ts": "2026-10-29T19:10:00Z",
+    "px": 0.2016,
+    "reason": "open_at_data_end",
+    "fills": [
+     {
+      "frac": 1.0,
+      "px": 0.2016,
+      "reason": "open_at_data_end"
+     }
+    ]
+   },
+   "gross_r": 0.9142,
+   "cost_r": {
+    "fee": 0.0482,
+    "slip": 0.0066,
+    "funding": 0.0641
+   },
+   "net_r": 0.7954,
+   "per_account": {
+    "bybit_2": {
+     "pnl_usd": 2.3756,
+     "pct_of_account": 1.2397,
+     "account_class": "real_money"
+    },
+    "bybit_1": {
+     "pnl_usd": 737.2674,
+     "pct_of_account": null,
+     "account_class": "paper"
+    },
+    "bybit_portfolio": {
+     "pnl_usd": 715.9094,
+     "pct_of_account": 1.2406,
+     "account_class": "paper"
+    }
+   },
+   "provenance": "ESTIMATED",
+   "delta_vs_replayed_actual_r": -0.0258,
+   "delta_vs_actual_r": -0.0945,
+   "delta_vs_replayed_actual_usd": {
+    "bybit_2": -0.0772,
+    "bybit_1": -23.9593,
+    "bybit_portfolio": -23.2653
+   }
+  },
+  {
+   "arm_id": "alt_sl1x_tp5R",
+   "family": "alt_brackets",
+   "label": "SL 1x original distance, TP 5R",
+   "params": {
+    "sl_mult": 1.0,
+    "tp_r": 5.0
+   },
+   "resolved": false,
+   "exit": {
+    "ts": "2026-10-29T19:10:00Z",
+    "px": 0.2016,
+    "reason": "open_at_data_end",
+    "fills": [
+     {
+      "frac": 1.0,
+      "px": 0.2016,
+      "reason": "open_at_data_end"
+     }
+    ]
+   },
+   "gross_r": 0.9142,
+   "cost_r": {
+    "fee": 0.0482,
+    "slip": 0.0066,
+    "funding": 0.0641
+   },
+   "net_r": 0.7954,
+   "per_account": {
+    "bybit_2": {
+     "pnl_usd": 2.3756,
+     "pct_of_account": 1.2397,
+     "account_class": "real_money"
+    },
+    "bybit_1": {
+     "pnl_usd": 737.2674,
+     "pct_of_account": null,
+     "account_class": "paper"
+    },
+    "bybit_portfolio": {
+     "pnl_usd": 715.9094,
+     "pct_of_account": 1.2406,
+     "account_class": "paper"
+    }
+   },
+   "provenance": "ESTIMATED",
+   "delta_vs_replayed_actual_r": -0.0258,
+   "delta_vs_actual_r": -0.0945,
+   "delta_vs_replayed_actual_usd": {
+    "bybit_2": -0.0772,
+    "bybit_1": -23.9593,
+    "bybit_portfolio": -23.2653
+   }
+  },
+  {
+   "arm_id": "alt_sl1x_tp6R",
+   "family": "alt_brackets",
+   "label": "SL 1x original distance, TP 6R",
+   "params": {
+    "sl_mult": 1.0,
+    "tp_r": 6.0
+   },
+   "resolved": false,
+   "exit": {
+    "ts": "2026-10-29T19:10:00Z",
+    "px": 0.2016,
+    "reason": "open_at_data_end",
+    "fills": [
+     {
+      "frac": 1.0,
+      "px": 0.2016,
+      "reason": "open_at_data_end"
+     }
+    ]
+   },
+   "gross_r": 0.9142,
+   "cost_r": {
+    "fee": 0.0482,
+    "slip": 0.0066,
+    "funding": 0.0641
+   },
+   "net_r": 0.7954,
+   "per_account": {
+    "bybit_2": {
+     "pnl_usd": 2.3756,
+     "pct_of_account": 1.2397,
+     "account_class": "real_money"
+    },
+    "bybit_1": {
+     "pnl_usd": 737.2674,
+     "pct_of_account": null,
+     "account_class": "paper"
+    },
+    "bybit_portfolio": {
+     "pnl_usd": 715.9094,
+     "pct_of_account": 1.2406,
+     "account_class": "paper"
+    }
+   },
+   "provenance": "ESTIMATED",
+   "delta_vs_replayed_actual_r": -0.0258,
+   "delta_vs_actual_r": -0.0945,
+   "delta_vs_replayed_actual_usd": {
+    "bybit_2": -0.0772,
+    "bybit_1": -23.9593,
+    "bybit_portfolio": -23.2653
+   }
+  },
+  {
+   "arm_id": "alt_sl1.25x_tp2R",
+   "family": "alt_brackets",
+   "label": "SL 1.25x original distance, TP 2R",
+   "params": {
+    "sl_mult": 1.25,
+    "tp_r": 2.0
+   },
+   "resolved": false,
+   "exit": {
+    "ts": "2026-10-29T19:10:00Z",
+    "px": 0.2016,
+    "reason": "open_at_data_end",
+    "fills": [
+     {
+      "frac": 1.0,
+      "px": 0.2016,
+      "reason": "open_at_data_end"
+     }
+    ]
+   },
+   "gross_r": 0.7314,
+   "cost_r": {
+    "fee": 0.0385,
+    "slip": 0.0053,
+    "funding": 0.0513
+   },
+   "net_r": 0.6363,
+   "per_account": {
+    "bybit_2": {
+     "pnl_usd": 1.9005,
+     "pct_of_account": 0.9918,
+     "account_class": "real_money"
+    },
+    "bybit_1": {
+     "pnl_usd": 589.8139,
+     "pct_of_account": null,
+     "account_class": "paper"
+    },
+    "bybit_portfolio": {
+     "pnl_usd": 572.7275,
+     "pct_of_account": 0.9925,
+     "account_class": "paper"
+    }
+   },
+   "provenance": "ESTIMATED",
+   "delta_vs_replayed_actual_r": -0.1849,
+   "delta_vs_actual_r": -0.2536,
+   "delta_vs_replayed_actual_usd": {
+    "bybit_2": -0.5523,
+    "bybit_1": -171.4128,
+    "bybit_portfolio": -166.4472
+   }
+  },
+  {
+   "arm_id": "alt_sl1.25x_tp3R",
+   "family": "alt_brackets",
+   "label": "SL 1.25x original distance, TP 3R",
+   "params": {
+    "sl_mult": 1.25,
+    "tp_r": 3.0
+   },
+   "resolved": false,
+   "exit": {
+    "ts": "2026-10-29T19:10:00Z",
+    "px": 0.2016,
+    "reason": "open_at_data_end",
+    "fills": [
+     {
+      "frac": 1.0,
+      "px": 0.2016,
+      "reason": "open_at_data_end"
+     }
+    ]
+   },
+   "gross_r": 0.7314,
+   "cost_r": {
+    "fee": 0.0385,
+    "slip": 0.0053,
+    "funding": 0.0513
+   },
+   "net_r": 0.6363,
+   "per_account": {
+    "bybit_2": {
+     "pnl_usd": 1.9005,
+     "pct_of_account": 0.9918,
+     "account_class": "real_money"
+    },
+    "bybit_1": {
+     "pnl_usd": 589.8139,
+     "pct_of_account": null,
+     "account_class": "paper"
+    },
+    "bybit_portfolio": {
+     "pnl_usd": 572.7275,
+     "pct_of_account": 0.9925,
+     "account_class": "paper"
+    }
+   },
+   "provenance": "ESTIMATED",
+   "delta_vs_replayed_actual_r": -0.1849,
+   "delta_vs_actual_r": -0.2536,
+   "delta_vs_replayed_actual_usd": {
+    "bybit_2": -0.5523,
+    "bybit_1": -171.4128,
+    "bybit_portfolio": -166.4472
+   }
+  },
+  {
+   "arm_id": "alt_sl1.25x_tp4R",
+   "family": "alt_brackets",
+   "label": "SL 1.25x original distance, TP 4R",
+   "params": {
+    "sl_mult": 1.25,
+    "tp_r": 4.0
+   },
+   "resolved": false,
+   "exit": {
+    "ts": "2026-10-29T19:10:00Z",
+    "px": 0.2016,
+    "reason": "open_at_data_end",
+    "fills": [
+     {
+      "frac": 1.0,
+      "px": 0.2016,
+      "reason": "open_at_data_end"
+     }
+    ]
+   },
+   "gross_r": 0.7314,
+   "cost_r": {
+    "fee": 0.0385,
+    "slip": 0.0053,
+    "funding": 0.0513
+   },
+   "net_r": 0.6363,
+   "per_account": {
+    "bybit_2": {
+     "pnl_usd": 1.9005,
+     "pct_of_account": 0.9918,
+     "account_class": "real_money"
+    },
+    "bybit_1": {
+     "pnl_usd": 589.8139,
+     "pct_of_account": null,
+     "account_class": "paper"
+    },
+    "bybit_portfolio": {
+     "pnl_usd": 572.7275,
+     "pct_of_account": 0.9925,
+     "account_class": "paper"
+    }
+   },
+   "provenance": "ESTIMATED",
+   "delta_vs_replayed_actual_r": -0.1849,
+   "delta_vs_actual_r": -0.2536,
+   "delta_vs_replayed_actual_usd": {
+    "bybit_2": -0.5523,
+    "bybit_1": -171.4128,
+    "bybit_portfolio": -166.4472
+   }
+  },
+  {
+   "arm_id": "alt_sl1.25x_tp5R",
+   "family": "alt_brackets",
+   "label": "SL 1.25x original distance, TP 5R",
+   "params": {
+    "sl_mult": 1.25,
+    "tp_r": 5.0
+   },
+   "resolved": false,
+   "exit": {
+    "ts": "2026-10-29T19:10:00Z",
+    "px": 0.2016,
+    "reason": "open_at_data_end",
+    "fills": [
+     {
+      "frac": 1.0,
+      "px": 0.2016,
+      "reason": "open_at_data_end"
+     }
+    ]
+   },
+   "gross_r": 0.7314,
+   "cost_r": {
+    "fee": 0.0385,
+    "slip": 0.0053,
+    "funding": 0.0513
+   },
+   "net_r": 0.6363,
+   "per_account": {
+    "bybit_2": {
+     "pnl_usd": 1.9005,
+     "pct_of_account": 0.9918,
+     "account_class": "real_money"
+    },
+    "bybit_1": {
+     "pnl_usd": 589.8139,
+     "pct_of_account": null,
+     "account_class": "paper"
+    },
+    "bybit_portfolio": {
+     "pnl_usd": 572.7275,
+     "pct_of_account": 0.9925,
+     "account_class": "paper"
+    }
+   },
+   "provenance": "ESTIMATED",
+   "delta_vs_replayed_actual_r": -0.1849,
+   "delta_vs_actual_r": -0.2536,
+   "delta_vs_replayed_actual_usd": {
+    "bybit_2": -0.5523,
+    "bybit_1": -171.4128,
+    "bybit_portfolio": -166.4472
+   }
+  },
+  {
+   "arm_id": "alt_sl1.25x_tp6R",
+   "family": "alt_brackets",
+   "label": "SL 1.25x original distance, TP 6R",
+   "params": {
+    "sl_mult": 1.25,
+    "tp_r": 6.0
+   },
+   "resolved": false,
+   "exit": {
+    "ts": "2026-10-29T19:10:00Z",
+    "px": 0.2016,
+    "reason": "open_at_data_end",
+    "fills": [
+     {
+      "frac": 1.0,
+      "px": 0.2016,
+      "reason": "open_at_data_end"
+     }
+    ]
+   },
+   "gross_r": 0.7314,
+   "cost_r": {
+    "fee": 0.0385,
+    "slip": 0.0053,
+    "funding": 0.0513
+   },
+   "net_r": 0.6363,
+   "per_account": {
+    "bybit_2": {
+     "pnl_usd": 1.9005,
+     "pct_of_account": 0.9918,
+     "account_class": "real_money"
+    },
+    "bybit_1": {
+     "pnl_usd": 589.8139,
+     "pct_of_account": null,
+     "account_class": "paper"
+    },
+    "bybit_portfolio": {
+     "pnl_usd": 572.7275,
+     "pct_of_account": 0.9925,
+     "account_class": "paper"
+    }
+   },
+   "provenance": "ESTIMATED",
+   "delta_vs_replayed_actual_r": -0.1849,
+   "delta_vs_actual_r": -0.2536,
+   "delta_vs_replayed_actual_usd": {
+    "bybit_2": -0.5523,
+    "bybit_1": -171.4128,
+    "bybit_portfolio": -166.4472
+   }
+  },
+  {
+   "arm_id": "alt_sl1.5x_tp2R",
+   "family": "alt_brackets",
+   "label": "SL 1.5x original distance, TP 2R",
+   "params": {
+    "sl_mult": 1.5,
+    "tp_r": 2.0
+   },
+   "resolved": false,
+   "exit": {
+    "ts": "2026-10-29T19:10:00Z",
+    "px": 0.2016,
+    "reason": "open_at_data_end",
+    "fills": [
+     {
+      "frac": 1.0,
+      "px": 0.2016,
+      "reason": "open_at_data_end"
+     }
+    ]
+   },
+   "gross_r": 0.6095,
+   "cost_r": {
+    "fee": 0.0321,
+    "slip": 0.0044,
+    "funding": 0.0427
+   },
+   "net_r": 0.5303,
+   "per_account": {
+    "bybit_2": {
+     "pnl_usd": 1.5837,
+     "pct_of_account": 0.8265,
+     "account_class": "real_money"
+    },
+    "bybit_1": {
+     "pnl_usd": 491.5116,
+     "pct_of_account": null,
+     "account_class": "paper"
+    },
+    "bybit_portfolio": {
+     "pnl_usd": 477.2729,
+     "pct_of_account": 0.8271,
+     "account_class": "paper"
+    }
+   },
+   "provenance": "ESTIMATED",
+   "delta_vs_replayed_actual_r": -0.2909,
+   "delta_vs_actual_r": -0.3596,
+   "delta_vs_replayed_actual_usd": {
+    "bybit_2": -0.8691,
+    "bybit_1": -269.7151,
+    "bybit_portfolio": -261.9018
+   }
+  },
+  {
+   "arm_id": "alt_sl1.5x_tp3R",
+   "family": "alt_brackets",
+   "label": "SL 1.5x original distance, TP 3R",
+   "params": {
+    "sl_mult": 1.5,
+    "tp_r": 3.0
+   },
+   "resolved": false,
+   "exit": {
+    "ts": "2026-10-29T19:10:00Z",
+    "px": 0.2016,
+    "reason": "open_at_data_end",
+    "fills": [
+     {
+      "frac": 1.0,
+      "px": 0.2016,
+      "reason": "open_at_data_end"
+     }
+    ]
+   },
+   "gross_r": 0.6095,
+   "cost_r": {
+    "fee": 0.0321,
+    "slip": 0.0044,
+    "funding": 0.0427
+   },
+   "net_r": 0.5303,
+   "per_account": {
+    "bybit_2": {
+     "pnl_usd": 1.5837,
+     "pct_of_account": 0.8265,
+     "account_class": "real_money"
+    },
+    "bybit_1": {
+     "pnl_usd": 491.5116,
+     "pct_of_account": null,
+     "account_class": "paper"
+    },
+    "bybit_portfolio": {
+     "pnl_usd": 477.2729,
+     "pct_of_account": 0.8271,
+     "account_class": "paper"
+    }
+   },
+   "provenance": "ESTIMATED",
+   "delta_vs_replayed_actual_r": -0.2909,
+   "delta_vs_actual_r": -0.3596,
+   "delta_vs_replayed_actual_usd": {
+    "bybit_2": -0.8691,
+    "bybit_1": -269.7151,
+    "bybit_portfolio": -261.9018
+   }
+  },
+  {
+   "arm_id": "alt_sl1.5x_tp4R",
+   "family": "alt_brackets",
+   "label": "SL 1.5x original distance, TP 4R",
+   "params": {
+    "sl_mult": 1.5,
+    "tp_r": 4.0
+   },
+   "resolved": false,
+   "exit": {
+    "ts": "2026-10-29T19:10:00Z",
+    "px": 0.2016,
+    "reason": "open_at_data_end",
+    "fills": [
+     {
+      "frac": 1.0,
+      "px": 0.2016,
+      "reason": "open_at_data_end"
+     }
+    ]
+   },
+   "gross_r": 0.6095,
+   "cost_r": {
+    "fee": 0.0321,
+    "slip": 0.0044,
+    "funding": 0.0427
+   },
+   "net_r": 0.5303,
+   "per_account": {
+    "bybit_2": {
+     "pnl_usd": 1.5837,
+     "pct_of_account": 0.8265,
+     "account_class": "real_money"
+    },
+    "bybit_1": {
+     "pnl_usd": 491.5116,
+     "pct_of_account": null,
+     "account_class": "paper"
+    },
+    "bybit_portfolio": {
+     "pnl_usd": 477.2729,
+     "pct_of_account": 0.8271,
+     "account_class": "paper"
+    }
+   },
+   "provenance": "ESTIMATED",
+   "delta_vs_replayed_actual_r": -0.2909,
+   "delta_vs_actual_r": -0.3596,
+   "delta_vs_replayed_actual_usd": {
+    "bybit_2": -0.8691,
+    "bybit_1": -269.7151,
+    "bybit_portfolio": -261.9018
+   }
+  },
+  {
+   "arm_id": "alt_sl1.5x_tp5R",
+   "family": "alt_brackets",
+   "label": "SL 1.5x original distance, TP 5R",
+   "params": {
+    "sl_mult": 1.5,
+    "tp_r": 5.0
+   },
+   "resolved": false,
+   "exit": {
+    "ts": "2026-10-29T19:10:00Z",
+    "px": 0.2016,
+    "reason": "open_at_data_end",
+    "fills": [
+     {
+      "frac": 1.0,
+      "px": 0.2016,
+      "reason": "open_at_data_end"
+     }
+    ]
+   },
+   "gross_r": 0.6095,
+   "cost_r": {
+    "fee": 0.0321,
+    "slip": 0.0044,
+    "funding": 0.0427
+   },
+   "net_r": 0.5303,
+   "per_account": {
+    "bybit_2": {
+     "pnl_usd": 1.5837,
+     "pct_of_account": 0.8265,
+     "account_class": "real_money"
+    },
+    "bybit_1": {
+     "pnl_usd": 491.5116,
+     "pct_of_account": null,
+     "account_class": "paper"
+    },
+    "bybit_portfolio": {
+     "pnl_usd": 477.2729,
+     "pct_of_account": 0.8271,
+     "account_class": "paper"
+    }
+   },
+   "provenance": "ESTIMATED",
+   "delta_vs_replayed_actual_r": -0.2909,
+   "delta_vs_actual_r": -0.3596,
+   "delta_vs_replayed_actual_usd": {
+    "bybit_2": -0.8691,
+    "bybit_1": -269.7151,
+    "bybit_portfolio": -261.9018
+   }
+  },
+  {
+   "arm_id": "alt_sl1.5x_tp6R",
+   "family": "alt_brackets",
+   "label": "SL 1.5x original distance, TP 6R",
+   "params": {
+    "sl_mult": 1.5,
+    "tp_r": 6.0
+   },
+   "resolved": false,
+   "exit": {
+    "ts": "2026-10-29T19:10:00Z",
+    "px": 0.2016,
+    "reason": "open_at_data_end",
+    "fills": [
+     {
+      "frac": 1.0,
+      "px": 0.2016,
+      "reason": "open_at_data_end"
+     }
+    ]
+   },
+   "gross_r": 0.6095,
+   "cost_r": {
+    "fee": 0.0321,
+    "slip": 0.0044,
+    "funding": 0.0427
+   },
+   "net_r": 0.5303,
+   "per_account": {
+    "bybit_2": {
+     "pnl_usd": 1.5837,
+     "pct_of_account": 0.8265,
+     "account_class": "real_money"
+    },
+    "bybit_1": {
+     "pnl_usd": 491.5116,
+     "pct_of_account": null,
+     "account_class": "paper"
+    },
+    "bybit_portfolio": {
+     "pnl_usd": 477.2729,
+     "pct_of_account": 0.8271,
+     "account_class": "paper"
+    }
+   },
+   "provenance": "ESTIMATED",
+   "delta_vs_replayed_actual_r": -0.2909,
+   "delta_vs_actual_r": -0.3596,
+   "delta_vs_replayed_actual_usd": {
+    "bybit_2": -0.8691,
+    "bybit_1": -269.7151,
+    "bybit_portfolio": -261.9018
+   }
+  },
+  {
+   "arm_id": "less_without_action_1",
+   "family": "less_management",
+   "label": "Without action 1 (2026-10-29T06:30:00Z stop->0.2062); kept: 0.2015",
+   "params": {
+    "removed": 1,
+    "kept": 1
+   },
+   "resolved": true,
+   "exit": {
+    "ts": "2026-10-29T10:47:00Z",
+    "px": 0.2015,
+    "reason": "stop",
+    "fills": [
+     {
+      "frac": 1.0,
+      "px": 0.2015,
+      "reason": "stop"
+     }
+    ]
+   },
+   "gross_r": 0.9355,
+   "cost_r": {
+    "fee": 0.0482,
+    "slip": 0.0066,
+    "funding": 0.0595
+   },
+   "net_r": 0.8212,
+   "per_account": {
+    "bybit_2": {
+     "pnl_usd": 2.4528,
+     "pct_of_account": 1.28,
+     "account_class": "real_money"
+    },
+    "bybit_1": {
+     "pnl_usd": 761.2267,
+     "pct_of_account": null,
+     "account_class": "paper"
+    },
+    "bybit_portfolio": {
+     "pnl_usd": 739.1747,
+     "pct_of_account": 1.2809,
+     "account_class": "paper"
+    }
+   },
+   "provenance": "ESTIMATED",
+   "delta_vs_replayed_actual_r": 0.0,
+   "delta_vs_actual_r": -0.0687,
+   "delta_vs_replayed_actual_usd": {
+    "bybit_2": 0.0,
+    "bybit_1": 0.0,
+    "bybit_portfolio": 0.0
+   }
+  },
+  {
+   "arm_id": "less_without_action_2",
+   "family": "less_management",
+   "label": "Without action 2 (2026-10-29T07:35:00Z stop->0.2015); kept: 0.2062",
+   "params": {
+    "removed": 2,
+    "kept": 1
+   },
+   "resolved": true,
+   "exit": {
+    "ts": "2026-10-29T15:56:00Z",
+    "px": 0.2062,
+    "reason": "stop",
+    "fills": [
+     {
+      "frac": 1.0,
+      "px": 0.2062,
+      "reason": "stop"
+     }
+    ]
+   },
+   "gross_r": -0.0638,
+   "cost_r": {
+    "fee": 0.0482,
+    "slip": 0.0066,
+    "funding": 0.0623
+   },
+   "net_r": -0.1808,
+   "per_account": {
+    "bybit_2": {
+     "pnl_usd": -0.5401,
+     "pct_of_account": -0.2819,
+     "account_class": "real_money"
+    },
+    "bybit_1": {
+     "pnl_usd": -167.6238,
+     "pct_of_account": null,
+     "account_class": "paper"
+    },
+    "bybit_portfolio": {
+     "pnl_usd": -162.7679,
+     "pct_of_account": -0.2821,
+     "account_class": "paper"
+    }
+   },
+   "provenance": "ESTIMATED",
+   "delta_vs_replayed_actual_r": -1.002,
+   "delta_vs_actual_r": -1.0707,
+   "delta_vs_replayed_actual_usd": {
+    "bybit_2": -2.9929,
+    "bybit_1": -928.8505,
+    "bybit_portfolio": -901.9426
+   }
+  },
+  {
+   "arm_id": "more_rule_1R_to_0R",
+   "family": "more_management",
+   "label": "stop to break-even at +1R",
+   "params": {
+    "trigger_r": 1.0,
+    "level_r": 0.0
+   },
+   "resolved": true,
+   "exit": {
+    "ts": "2026-10-26T14:50:00Z",
+    "px": 0.2062,
+    "reason": "stop",
+    "fills": [
+     {
+      "frac": 1.0,
+      "px": 0.2062,
+      "reason": "stop"
+     }
+    ]
+   },
+   "gross_r": -0.0638,
+   "cost_r": {
+    "fee": 0.0482,
+    "slip": 0.0066,
+    "funding": 0.0223
+   },
+   "net_r": -0.1408,
+   "per_account": {
+    "bybit_2": {
+     "pnl_usd": -0.4206,
+     "pct_of_account": -0.2195,
+     "account_class": "real_money"
+    },
+    "bybit_1": {
+     "pnl_usd": -130.5465,
+     "pct_of_account": null,
+     "account_class": "paper"
+    },
+    "bybit_portfolio": {
+     "pnl_usd": -126.7647,
+     "pct_of_account": -0.2197,
+     "account_class": "paper"
+    }
+   },
+   "provenance": "ESTIMATED",
+   "delta_vs_replayed_actual_r": -0.962,
+   "delta_vs_actual_r": -1.0307,
+   "delta_vs_replayed_actual_usd": {
+    "bybit_2": -2.8734,
+    "bybit_1": -891.7732,
+    "bybit_portfolio": -865.9394
+   }
+  },
+  {
+   "arm_id": "more_rule_1.5R_to_0R",
+   "family": "more_management",
+   "label": "stop to break-even at +1.5R",
+   "params": {
+    "trigger_r": 1.5,
+    "level_r": 0.0
+   },
+   "resolved": true,
+   "exit": {
+    "ts": "2026-10-29T15:56:00Z",
+    "px": 0.2062,
+    "reason": "stop",
+    "fills": [
+     {
+      "frac": 1.0,
+      "px": 0.2062,
+      "reason": "stop"
+     }
+    ]
+   },
+   "gross_r": -0.0638,
+   "cost_r": {
+    "fee": 0.0482,
+    "slip": 0.0066,
+    "funding": 0.0623
+   },
+   "net_r": -0.1808,
+   "per_account": {
+    "bybit_2": {
+     "pnl_usd": -0.5401,
+     "pct_of_account": -0.2819,
+     "account_class": "real_money"
+    },
+    "bybit_1": {
+     "pnl_usd": -167.6238,
+     "pct_of_account": null,
+     "account_class": "paper"
+    },
+    "bybit_portfolio": {
+     "pnl_usd": -162.7679,
+     "pct_of_account": -0.2821,
+     "account_class": "paper"
+    }
+   },
+   "provenance": "ESTIMATED",
+   "delta_vs_replayed_actual_r": -1.002,
+   "delta_vs_actual_r": -1.0707,
+   "delta_vs_replayed_actual_usd": {
+    "bybit_2": -2.9929,
+    "bybit_1": -928.8505,
+    "bybit_portfolio": -901.9426
+   }
+  },
+  {
+   "arm_id": "more_rule_2R_to_1R",
+   "family": "more_management",
+   "label": "lock +1R at +2R",
+   "params": {
+    "trigger_r": 2.0,
+    "level_r": 1.0
+   },
+   "resolved": true,
+   "exit": {
+    "ts": "2026-10-29T05:19:00Z",
+    "px": 0.20149643,
+    "reason": "stop",
+    "fills": [
+     {
+      "frac": 1.0,
+      "px": 0.20149643,
+      "reason": "stop"
+     }
+    ]
+   },
+   "gross_r": 0.9362,
+   "cost_r": {
+    "fee": 0.0482,
+    "slip": 0.0066,
+    "funding": 0.0565
+   },
+   "net_r": 0.825,
+   "per_account": {
+    "bybit_2": {
+     "pnl_usd": 2.464,
+     "pct_of_account": 1.2858,
+     "account_class": "real_money"
+    },
+    "bybit_1": {
+     "pnl_usd": 764.7031,
+     "pct_of_account": null,
+     "account_class": "paper"
+    },
+    "bybit_portfolio": {
+     "pnl_usd": 742.5503,
+     "pct_of_account": 1.2868,
+     "account_class": "paper"
+    }
+   },
+   "provenance": "ESTIMATED",
+   "delta_vs_replayed_actual_r": 0.0038,
+   "delta_vs_actual_r": -0.0649,
+   "delta_vs_replayed_actual_usd": {
+    "bybit_2": 0.0112,
+    "bybit_1": 3.4764,
+    "bybit_portfolio": 3.3756
+   }
+  },
+  {
+   "arm_id": "more_rule_ladder_be1_lock2",
+   "family": "more_management",
+   "label": "ladder: BE at +1R, then lock +1R at +2R",
+   "params": {},
+   "resolved": true,
+   "exit": {
+    "ts": "2026-10-26T14:50:00Z",
+    "px": 0.2062,
+    "reason": "stop",
+    "fills": [
+     {
+      "frac": 1.0,
+      "px": 0.2062,
+      "reason": "stop"
+     }
+    ]
+   },
+   "gross_r": -0.0638,
+   "cost_r": {
+    "fee": 0.0482,
+    "slip": 0.0066,
+    "funding": 0.0223
+   },
+   "net_r": -0.1408,
+   "per_account": {
+    "bybit_2": {
+     "pnl_usd": -0.4206,
+     "pct_of_account": -0.2195,
+     "account_class": "real_money"
+    },
+    "bybit_1": {
+     "pnl_usd": -130.5465,
+     "pct_of_account": null,
+     "account_class": "paper"
+    },
+    "bybit_portfolio": {
+     "pnl_usd": -126.7647,
+     "pct_of_account": -0.2197,
+     "account_class": "paper"
+    }
+   },
+   "provenance": "ESTIMATED",
+   "delta_vs_replayed_actual_r": -0.962,
+   "delta_vs_actual_r": -1.0307,
+   "delta_vs_replayed_actual_usd": {
+    "bybit_2": -2.8734,
+    "bybit_1": -891.7732,
+    "bybit_portfolio": -865.9394
+   }
+  },
+  {
+   "arm_id": "more_atr_trail_1.5x",
+   "family": "more_management",
+   "label": "ATR trail 1.5 x ATR(entry) behind the extreme",
+   "params": {
+    "k": 1.5
+   },
+   "resolved": true,
+   "exit": {
+    "ts": "2026-10-25T17:15:00Z",
+    "px": 0.20690357,
+    "reason": "stop",
+    "fills": [
+     {
+      "frac": 1.0,
+      "px": 0.20690357,
+      "reason": "stop"
+     }
+    ]
+   },
+   "gross_r": -0.2134,
+   "cost_r": {
+    "fee": 0.0482,
+    "slip": 0.0066,
+    "funding": 0.0105
+   },
+   "net_r": -0.2786,
+   "per_account": {
+    "bybit_2": {
+     "pnl_usd": -0.8321,
+     "pct_of_account": -0.4342,
+     "account_class": "real_money"
+    },
+    "bybit_1": {
+     "pnl_usd": -258.2533,
+     "pct_of_account": null,
+     "account_class": "paper"
+    },
+    "bybit_portfolio": {
+     "pnl_usd": -250.772,
+     "pct_of_account": -0.4346,
+     "account_class": "paper"
+    }
+   },
+   "provenance": "ESTIMATED",
+   "delta_vs_replayed_actual_r": -1.0998,
+   "delta_vs_actual_r": -1.1685,
+   "delta_vs_replayed_actual_usd": {
+    "bybit_2": -3.2849,
+    "bybit_1": -1019.48,
+    "bybit_portfolio": -989.9467
+   }
+  },
+  {
+   "arm_id": "more_atr_trail_2x",
+   "family": "more_management",
+   "label": "ATR trail 2 x ATR(entry) behind the extreme",
+   "params": {
+    "k": 2.0
+   },
+   "resolved": true,
+   "exit": {
+    "ts": "2026-10-26T14:55:00Z",
+    "px": 0.20677143,
+    "reason": "stop",
+    "fills": [
+     {
+      "frac": 1.0,
+      "px": 0.20677143,
+      "reason": "stop"
+     }
+    ]
+   },
+   "gross_r": -0.1853,
+   "cost_r": {
+    "fee": 0.0482,
+    "slip": 0.0066,
+    "funding": 0.0224
+   },
+   "net_r": -0.2624,
+   "per_account": {
+    "bybit_2": {
+     "pnl_usd": -0.7836,
+     "pct_of_account": -0.4089,
+     "account_class": "real_money"
+    },
+    "bybit_1": {
+     "pnl_usd": -243.2013,
+     "pct_of_account": null,
+     "account_class": "paper"
+    },
+    "bybit_portfolio": {
+     "pnl_usd": -236.156,
+     "pct_of_account": -0.4092,
+     "account_class": "paper"
+    }
+   },
+   "provenance": "ESTIMATED",
+   "delta_vs_replayed_actual_r": -1.0836,
+   "delta_vs_actual_r": -1.1523,
+   "delta_vs_replayed_actual_usd": {
+    "bybit_2": -3.2364,
+    "bybit_1": -1004.428,
+    "bybit_portfolio": -975.3307
+   }
+  },
+  {
+   "arm_id": "more_atr_trail_3x",
+   "family": "more_management",
+   "label": "ATR trail 3 x ATR(entry) behind the extreme",
+   "params": {
+    "k": 3.0
+   },
+   "resolved": true,
+   "exit": {
+    "ts": "2026-10-28T20:00:00Z",
+    "px": 0.20990714,
+    "reason": "stop",
+    "fills": [
+     {
+      "frac": 1.0,
+      "px": 0.20990714,
+      "reason": "stop"
+     }
+    ]
+   },
+   "gross_r": -0.8519,
+   "cost_r": {
+    "fee": 0.0482,
+    "slip": 0.0066,
+    "funding": 0.0514
+   },
+   "net_r": -0.9581,
+   "per_account": {
+    "bybit_2": {
+     "pnl_usd": -2.8616,
+     "pct_of_account": -1.4933,
+     "account_class": "real_money"
+    },
+    "bybit_1": {
+     "pnl_usd": -888.0874,
+     "pct_of_account": null,
+     "account_class": "paper"
+    },
+    "bybit_portfolio": {
+     "pnl_usd": -862.3603,
+     "pct_of_account": -1.4944,
+     "account_class": "paper"
+    }
+   },
+   "provenance": "ESTIMATED",
+   "delta_vs_replayed_actual_r": -1.7793,
+   "delta_vs_actual_r": -1.848,
+   "delta_vs_replayed_actual_usd": {
+    "bybit_2": -5.3144,
+    "bybit_1": -1649.3141,
+    "bybit_portfolio": -1601.535
+   }
+  },
+  {
+   "arm_id": "more_atr_trail_4x",
+   "family": "more_management",
+   "label": "ATR trail 4 x ATR(entry) behind the extreme",
+   "params": {
+    "k": 4.0
+   },
+   "resolved": true,
+   "exit": {
+    "ts": "2026-10-29T16:08:00Z",
+    "px": 0.20804286,
+    "reason": "stop",
+    "fills": [
+     {
+      "frac": 1.0,
+      "px": 0.20804286,
+      "reason": "stop"
+     }
+    ]
+   },
+   "gross_r": -0.4556,
+   "cost_r": {
+    "fee": 0.0482,
+    "slip": 0.0066,
+    "funding": 0.0624
+   },
+   "net_r": -0.5727,
+   "per_account": {
+    "bybit_2": {
+     "pnl_usd": -1.7107,
+     "pct_of_account": -0.8927,
+     "account_class": "real_money"
+    },
+    "bybit_1": {
+     "pnl_usd": -530.9008,
+     "pct_of_account": null,
+     "account_class": "paper"
+    },
+    "bybit_portfolio": {
+     "pnl_usd": -515.5211,
+     "pct_of_account": -0.8934,
+     "account_class": "paper"
+    }
+   },
+   "provenance": "ESTIMATED",
+   "delta_vs_replayed_actual_r": -1.3939,
+   "delta_vs_actual_r": -1.4626,
+   "delta_vs_replayed_actual_usd": {
+    "bybit_2": -4.1635,
+    "bybit_1": -1292.1275,
+    "bybit_portfolio": -1254.6958
+   }
+  },
+  {
+   "arm_id": "more_peer_bybit_1_operator_flatten_reconciled",
+   "family": "more_management",
+   "label": "Close 100% at 2026-10-29T08:23:30Z (what bybit_1 did: operator_flatten_reconciled)",
+   "params": {
+    "account": "bybit_1",
+    "ts": "2026-10-29T08:23:30Z"
+   },
+   "resolved": true,
+   "exit": {
+    "ts": "2026-10-29T08:24:00Z",
+    "px": 0.1986,
+    "reason": "close",
+    "fills": [
+     {
+      "frac": 1.0,
+      "px": 0.1986,
+      "reason": "close"
+     }
+    ]
+   },
+   "gross_r": 1.552,
+   "cost_r": {
+    "fee": 0.0482,
+    "slip": 0.0066,
+    "funding": 0.0582
+   },
+   "net_r": 1.4391,
+   "per_account": {
+    "bybit_2": {
+     "pnl_usd": 4.2982,
+     "pct_of_account": 2.243,
+     "account_class": "real_money"
+    },
+    "bybit_1": {
+     "pnl_usd": 1333.9444,
+     "pct_of_account": null,
+     "account_class": "paper"
+    },
+    "bybit_portfolio": {
+     "pnl_usd": 1295.3012,
+     "pct_of_account": 2.2447,
+     "account_class": "paper"
+    }
+   },
+   "provenance": "ESTIMATED",
+   "delta_vs_replayed_actual_r": 0.6179,
+   "delta_vs_actual_r": 0.5492,
+   "delta_vs_replayed_actual_usd": {
+    "bybit_2": 1.8454,
+    "bybit_1": 572.7177,
+    "bybit_portfolio": 556.1265
+   }
+  }
+ ],
+ "random_control": {
+  "n": 300,
+  "class": "stop_tighten x2",
+  "mean_r": -0.1472,
+  "p10_r": -0.7748,
+  "p50_r": -0.2893,
+  "p90_r": 0.7954,
+  "p_random_ge_replayed_actual": 0.08,
+  "note": "random control uses unresolved marks where the path ends open (see resolved flags)"
+ },
+ "fidelity": {
+  "replayed_exit": {
+   "ts": "2026-10-29T10:47:00Z",
+   "px": 0.2015
+  },
+  "actual_exit": {
+   "ts": "2026-10-29T10:47:53.103000+00:00",
+   "px": 0.2016
+  },
+  "replayed_actual_net_r": 0.8212,
+  "actual_net_r": 0.8899,
+  "abs_gap_r": 0.0687
+ },
+ "post_exit": {
+  "horizon": {
+   "seconds": 518400.0,
+   "hours": 144.0,
+   "source": "default_by_timeframe",
+   "timeframe": "2h",
+   "end": "2026-11-04T10:47:53Z"
+  },
+  "horizon_reached": false,
+  "mfe_r": 0.4039,
+  "mae_r": -1.4882,
+  "tp_reach": {
+   "reached": null,
+   "bars": null,
+   "seconds": null
+  },
+  "wider_sl_arms": [
+   {
+    "arm_id": "alt_sl1.25x_tp2R",
+    "sl_mult": 1.25,
+    "tp_r": 2.0,
+    "survived": null,
+    "resolved": false,
+    "net_r": null,
+    "marked_net_r_unresolved": 0.6363,
+    "exit_reason": "open_at_data_end",
+    "delta_vs_actual_r": null,
+    "provenance": "unverified"
+   },
+   {
+    "arm_id": "alt_sl1.25x_tp3R",
+    "sl_mult": 1.25,
+    "tp_r": 3.0,
+    "survived": null,
+    "resolved": false,
+    "net_r": null,
+    "marked_net_r_unresolved": 0.6363,
+    "exit_reason": "open_at_data_end",
+    "delta_vs_actual_r": null,
+    "provenance": "unverified"
+   },
+   {
+    "arm_id": "alt_sl1.25x_tp4R",
+    "sl_mult": 1.25,
+    "tp_r": 4.0,
+    "survived": null,
+    "resolved": false,
+    "net_r": null,
+    "marked_net_r_unresolved": 0.6363,
+    "exit_reason": "open_at_data_end",
+    "delta_vs_actual_r": null,
+    "provenance": "unverified"
+   },
+   {
+    "arm_id": "alt_sl1.25x_tp5R",
+    "sl_mult": 1.25,
+    "tp_r": 5.0,
+    "survived": null,
+    "resolved": false,
+    "net_r": null,
+    "marked_net_r_unresolved": 0.6363,
+    "exit_reason": "open_at_data_end",
+    "delta_vs_actual_r": null,
+    "provenance": "unverified"
+   },
+   {
+    "arm_id": "alt_sl1.25x_tp6R",
+    "sl_mult": 1.25,
+    "tp_r": 6.0,
+    "survived": null,
+    "resolved": false,
+    "net_r": null,
+    "marked_net_r_unresolved": 0.6363,
+    "exit_reason": "open_at_data_end",
+    "delta_vs_actual_r": null,
+    "provenance": "unverified"
+   },
+   {
+    "arm_id": "alt_sl1.5x_tp2R",
+    "sl_mult": 1.5,
+    "tp_r": 2.0,
+    "survived": null,
+    "resolved": false,
+    "net_r": null,
+    "marked_net_r_unresolved": 0.5303,
+    "exit_reason": "open_at_data_end",
+    "delta_vs_actual_r": null,
+    "provenance": "unverified"
+   },
+   {
+    "arm_id": "alt_sl1.5x_tp3R",
+    "sl_mult": 1.5,
+    "tp_r": 3.0,
+    "survived": null,
+    "resolved": false,
+    "net_r": null,
+    "marked_net_r_unresolved": 0.5303,
+    "exit_reason": "open_at_data_end",
+    "delta_vs_actual_r": null,
+    "provenance": "unverified"
+   },
+   {
+    "arm_id": "alt_sl1.5x_tp4R",
+    "sl_mult": 1.5,
+    "tp_r": 4.0,
+    "survived": null,
+    "resolved": false,
+    "net_r": null,
+    "marked_net_r_unresolved": 0.5303,
+    "exit_reason": "open_at_data_end",
+    "delta_vs_actual_r": null,
+    "provenance": "unverified"
+   },
+   {
+    "arm_id": "alt_sl1.5x_tp5R",
+    "sl_mult": 1.5,
+    "tp_r": 5.0,
+    "survived": null,
+    "resolved": false,
+    "net_r": null,
+    "marked_net_r_unresolved": 0.5303,
+    "exit_reason": "open_at_data_end",
+    "delta_vs_actual_r": null,
+    "provenance": "unverified"
+   },
+   {
+    "arm_id": "alt_sl1.5x_tp6R",
+    "sl_mult": 1.5,
+    "tp_r": 6.0,
+    "survived": null,
+    "resolved": false,
+    "net_r": null,
+    "marked_net_r_unresolved": 0.5303,
+    "exit_reason": "open_at_data_end",
+    "delta_vs_actual_r": null,
+    "provenance": "unverified"
+   }
+  ],
+  "verdict": {
+   "verdict": null,
+   "r_diff": null,
+   "resolved": false,
+   "n_held_arms": 15,
+   "n_unresolved": 15,
+   "basis_arm": null,
+   "provenance": "unverified"
+  }
+ }
+}

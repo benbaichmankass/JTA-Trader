@@ -1,0 +1,21 @@
+{
+  "based_on": "20261029T145757808240Z-797b0a3a.json",
+  "due_when": {
+    "check_every_days": 3,
+    "clears_when": "the two stop moves are attributed (first-bar fallback vs since-entry trail) from the VM's stop-change history, with the evidence named",
+    "kind": "observation",
+    "last_checked": "2026-10-29"
+  },
+  "id": "PI-20261029-35TCG3ME-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "audit",
+    "ref": "lane SINCE-ENTRY-WINDOW-FIX 2026-10-29 (manager session_01AFoLuKwNMzjtn2CH2kVd86)",
+    "rerun": "scripts/ops/diag_fetch.sh 'journal?table=order_packages&limit=500' | python3 -c \"import sys,json;[print(r['order_package_id'],r['direction'],r['entry'],r['sl'],json.loads(r['meta']).get('risk_per_unit')) for r in json.load(sys.stdin) if r['order_package_id'] in ('pkg-d752b5099eab4317','pkg-11c1100f6cbb4667')]\""
+  },
+  "severity": "medium",
+  "state": "done",
+  "terminal_reason": "Attributed 2026-10-29 from /api/diag/position_path_history (+ live-review packets), lane NON-TPSL-CLOSES-20261029. BOTH moves happened inside the ENTRY bar, once, and never again: pkg-d752b509 (ETH short) sl_price 2348.67714286 (sl_r -0.6748) is already the value on its first path row (bar 13:00Z, first_seen 13:49:21Z, entry 13:49:14Z) and identical on all 6 later bars; pkg-11c1100f (SOL long) packet LR-20261028T0832Z still shows the initial 101.72392857 at bars_held=199, and the 08:00Z bar row (first_seen 08:30:37Z) and every later bar show 101.8475 (sl_r -0.9061) -> moved between 08:32Z and 08:59Z. A single early tighten followed by 5-6 flat bars is the first-bar pre-entry-frame signature (bars_held=199) fixed by #21322, not a since-entry trail (which would keep ratcheting). The exact extreme was NOT replayed (no stop-change log exists; path history keeps only the last pass per bar) so mechanism is 'consistent with', MEASURED for timing. Both trades closed at the tightened stop (trades 6765 -0.96%, 6763 -1.11%), i.e. the pre-entry tighten cost them roughly 0.33R and 0.09R of room vs the initial stop; M20 trail evidence note only, no live exposure.",
+  "tier": 1,
+  "what": "[exits] SINCE-ENTRY-WINDOW-FIX follow-up. Pre-fix, exit_levers.since_entry returned the full ~200-bar PRE-ENTRY frame in the first bar of every trade, and the chandelier ratchet took its extreme from it (a short's stop could tighten off a pre-entry low). Measured over the 183 live-review packets on main + live-review/rows (2026-10-25..29): 5 packages read bars_held 199 in their first bar (pkg-11c1100f6cbb4667, pkg-29c8e90b80c24835, pkg-d752b5099eab4317, pkg-7eef4f1e1cf44df9, pkg-3df9800bf7f04882). Of those, 3 still carry their initial stop (entry +/- risk_per_unit); 2 had the stop moved: pkg-d752b5099eab4317 (trend_donchian_eth short, sl 2359.39 -> 2348.68) and pkg-11c1100f6cbb4667 (trend_donchian_sol_prop long, sl 101.7239 -> 101.8475). CHECK: whether each move happened in the first bar (pre-entry extreme) or later (a legitimate since-entry trail), from the stop-change log / position_path_history for those two packages; if first-bar, grade the cost and note it on the M20 trail evidence. Both are closed, so no live exposure remains."
+}

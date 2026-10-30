@@ -2208,6 +2208,18 @@ class Coordinator:
                 pkg, sized_qty, account_name=account.name,
             )
 
+            # ML-REAL-MONEY-OVERLAY shadow scoring (annotate only, I7): logs the
+            # would-be reduce-only overlay multiplier for legs a committed
+            # ml/overlay/ artifact covers. Its result is NEVER applied -- a bare
+            # statement by design (tests/test_overlay_shadow.py checks the AST).
+            from src.runtime.overlay_shadow import record_overlay_shadow
+            record_overlay_shadow(pkg, account_name=account.name)
+            # ML-REAL-MONEY-OVERLAY Tier-3 apply path: REDUCE-ONLY, and only for a
+            # strategy listed `mode: reduce` in config/overlay_policy.yaml (default annotate =
+            # qty unchanged). Evidence: RQ-20261029-5785-02 (TD family PASS).
+            from src.runtime.overlay_shadow import apply_overlay_reduce
+            sized_qty = apply_overlay_reduce(pkg, sized_qty, account_name=account.name)
+
             # M9 news influence (default-off, gated by NEWS_INFLUENCE_MODE).
             # Reductive only — shrinks the qty toward a floor when the news (and
             # any imminent event) opposes the trade's direction, never enlarges.
@@ -4448,7 +4460,12 @@ def _emit_execution_failure_ping(
     Drops a JSON payload into ``runtime_logs/pending_pings/`` so the
     Telegram bot's ~5 s job-queue tick delivers it to the operator.
     Never raises — diagnostics must not crash the order path.
+
+    ``claude_desk`` packages are pinged by ``execute.log_rejection_to_journal`` (every refusal, once), so this
+    skips them rather than ping twice.
     """
+    if getattr(pkg, "strategy", None) == "claude_desk":
+        return
     try:
         from src.runtime.execution_diagnostics import enqueue_execution_failure
         enqueue_execution_failure(

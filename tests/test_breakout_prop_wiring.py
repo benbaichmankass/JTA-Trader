@@ -95,8 +95,9 @@ def test_prop_account_config():
     # breakout_1 is breached and RETIRED, so its roster is empty. breakout_2 is
     # the live Breakout account and carries the _prop twins.
     assert a["strategies"] == []
-    assert set(_accounts()["breakout_2"]["strategies"]) == {
-        "trend_donchian_sol_prop", "trend_donchian_eth_prop"}
+    # 2026-10-29 (Tier-3, operator): trend_donchian_sol_prop pulled (V2 gate EV < 0,
+    # comms/prop_survival/v2/); eth_prop stays. REVERT: add sol_prop back to this set.
+    assert set(_accounts()["breakout_2"]["strategies"]) == {"trend_donchian_eth_prop"}
     assert set(a["symbols"]) == {"SOLUSDT", "ETHUSDT"}
 
 

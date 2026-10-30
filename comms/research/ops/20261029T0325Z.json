@@ -1,0 +1,290 @@
+{
+ "run": "RESEARCH-OPS-2026-10-29-0250",
+ "finished_at": "2026-10-29T03:25:00Z",
+ "by": "research-ops lane dispatched by session_01AFoLuKnBxnMFgVRUw3Ldmm",
+ "floor": 36,
+ "floor_basis": "computed_floor(fired_24h 45)",
+ "authoring_queue_depth": null,
+ "idle_backends": [
+  "github_runner_data",
+  "kaggle_cpu",
+  "trainer",
+  "kaggle",
+  "runpod"
+ ],
+ "needs_review_triaged": 0,
+ "needs_review_left": 29,
+ "throughput": {
+  "runnable_before": 58,
+  "runnable_after": 58,
+  "queued": 148,
+  "fired_24h": 45,
+  "results_landed_24h": 46,
+  "hours_since_last_dispatch": 0.9,
+  "idle_alarm": false
+ },
+ "mechanism": {
+  "dispatch_receipt": "ok (run 40802828806 success, fired 3)",
+  "collector": "ok",
+  "stranded_stamp_prs": [],
+  "incident": null,
+  "dispatcher_cause": "see dispatcher_cause block",
+  "prs": {
+   "20993": "merged 2026-10-28T23:41Z",
+   "21045": "merged 2026-10-28T23:55Z",
+   "20995": "closed unmerged 2026-10-28T23:58Z (already closed; newer receipts landed)"
+  }
+ },
+ "dispatcher_cause": {
+  "window": "cycles 2026-10-28 19:06Z..2026-10-29 01:50Z; 19:53Z and 21:08Z cycles not read (no utilization receipt on main, logs not pulled)",
+  "cycles": [
+   {
+    "run": "40750034448",
+    "t": "19:06Z",
+    "fired": 0,
+    "reason": "repo-queued cap (17 > 10), per PR #20993 body + receipt"
+   },
+   {
+    "run": "40767274192",
+    "t": "21:46Z",
+    "fired": 0,
+    "reason": "INFRA YIELD (1 system-actions run queued); repo queued 153 (cap 10) also over"
+   },
+   {
+    "run": "40783226527",
+    "t": "23:15Z",
+    "fired": "1 (starvation floor lifted the repo-queued block; 126 queued)",
+    "reason": "repo-queued cap, floor 1.5h (pre-#20993 value in that run)"
+   },
+   {
+    "run": "40791003764",
+    "t": "00:16Z",
+    "fired": 0,
+    "reason": "INFRA YIELD (1 system-actions run queued); repo queued 38, 28 listener runs not counted"
+   },
+   {
+    "run": "40802828806",
+    "t": "01:50Z",
+    "fired": 3,
+    "reason": "none: recovered"
+   }
+  ],
+  "verdict": "both: repo-queued cap and infra yield; runner pool saturated (dispatch/land jobs waited 14-50 min for a runner). Thresholds unchanged.",
+  "filed": "PI-20261029-HOPS0250-0001"
+ },
+ "unblock_or_retire": {
+  "before": 17,
+  "after": 16,
+  "threshold": 10,
+  "threshold_changed": false,
+  "dispositions": {
+   "retired": [
+    {
+     "unit": "RQ-20261007-240",
+     "reason": "fee-only ORB harness cannot enter a promotion corpus; config-level, family orb stays open; successor to be authored after PI-20261007-ZKGGKTAG-0001"
+    }
+   ],
+   "re_scoped": [
+    {
+     "unit": "RQ-20261007-032",
+     "note": "trend_donchian_1h now enabled; remaining blockers vwap (disabled), turtle_soup (no_harness)"
+    },
+    {
+     "unit": "RQ-20261007-031",
+     "note": "velotrade_1 roster now present in accounts.yaml; still needs >=2 closed round trips (not verified) and a cost-stack arg on velotrade_fit_sweep.py (no edit made to the unit file)"
+    }
+   ],
+   "unblocked": [],
+   "owned_build_still_open_edge_unmet": {
+    "REGIME-WEIGHT-VARIANTS": [
+     "RQ-20260927-006",
+     "RQ-20260927-007",
+     "RQ-20260927-008",
+     "RQ-20260927-009"
+    ],
+    "FUNDING-OI-DATASETS-ETH-SOL": [
+     "RQ-20260929-109",
+     "RQ-20260929-110"
+    ],
+    "ROUTE-RESEARCH-DATA-ROUTES": [
+     "RQ-20261007-018",
+     "RQ-20261007-019"
+    ],
+    "DATA-KLINE-ARCHIVE": [
+     "RQ-20260930-505"
+    ],
+    "REGIME-WF-VERDICT-WRAPPER+REGIME-VOL-LABELS-EXPORT": [
+     "RQ-20260928-ae17-01"
+    ],
+    "RQ-EVIDENCE-006-KEYSET": [
+     "RQ-20260922-006"
+    ],
+    "MACRO-BACKFILL-E5": [
+     "RQ-20260928-010"
+    ],
+    "PI-20261004-APBY4NTV-0001": [
+     "RQ-20261007-033"
+    ],
+    "flip_exit cell (PI-CROSS-SIGNAL)": [
+     "RQ-20261007-044"
+    ]
+   },
+   "honest_note": "these units fit none of unblock/re-scope/retire: the named edge is correctly stated, owned and unmet; the count cannot fall without a build lane. Filed PI-20261029-HOPS0250-0002."
+  }
+ },
+ "results_read": {
+  "pass": 2,
+  "fail": 1,
+  "indeterminate": 0,
+  "units": [
+   "RQ-20261028-a7c3-01 pass (discovery)",
+   "RQ-20260928-019 no_action_warranted",
+   "RQ-20261022-3a84-12 fail (the blocked_over_age check itself: 17 > 10)"
+  ],
+  "note": "window since 2026-10-28T21:05Z holds 5 units with rows; 2 ungraded rows in the window"
+ },
+ "unlocked": [],
+ "retired": [
+  {
+   "unit": "RQ-20261007-240",
+   "reason": "see unblock_or_retire"
+  }
+ ],
+ "levers_filed": [
+  {
+   "lever": "build-drain lane for owned blocked builds",
+   "ref": "PI-20261029-HOPS0250-0002"
+  }
+ ],
+ "units_authored": [],
+ "followups_filed": [
+  {
+   "what": "a7c3-01 X6 confirmation",
+   "ref": "PI-20261029-HOPS0250-0003"
+  },
+  {
+   "what": "dispatcher yield decision",
+   "ref": "PI-20261029-HOPS0250-0001"
+  }
+ ],
+ "authoring": {
+  "queue_depth": null,
+  "nodes_drafted": 0,
+  "skipped_on_purpose": true,
+  "nodes": [],
+  "theme_shortfall": {
+   "regime": 1,
+   "ml_health": 6,
+   "new_strategy_prop": 5
+  },
+  "note": "budget went to step A/B named steps; shortfalls are build-blocked (regime) or MODEL track thin (runnable_by_track MODEL 1)"
+ },
+ "prior_calls_scorecard": [
+  {
+   "call": "RQ-20261028-b37d-01 both VL25/VL35 pass",
+   "p": 0.4,
+   "outcome": "unresolved",
+   "check_rerun": "no results dir yet (not run)",
+   "action_happened": false
+  },
+  {
+   "call": "MODEL runnable_by_track stays 0",
+   "p": 0.8,
+   "outcome": "miss",
+   "check_rerun": "research_ops_checks.py: MODEL 1",
+   "action_happened": false
+  },
+  {
+   "call": "needs_review stays 28",
+   "p": 0.85,
+   "outcome": "miss",
+   "check_rerun": "queue_grade --health: 29 (trend 28,28,28,28 in records; +1 unowned RQ-20261027-fe57-03)",
+   "action_happened": true
+  }
+ ],
+ "checks": {
+  "packet_as_of": "2026-10-29T02:50:46Z",
+  "since": "2026-10-28T21:05:00Z",
+  "runnable_by_track": {
+   "TRADING": 49,
+   "MODEL": 1,
+   "INFRA": 8
+  },
+  "fails_without_next": 0,
+  "followups": {
+   "emitted": 1,
+   "fired": 1,
+   "not_fired_queued": 1
+  },
+  "needs_review": 29,
+  "could_not_look": [
+   "19:53Z and 21:08Z dispatch cycles' deferral reason",
+   "velotrade_1 closed round-trip count"
+  ]
+ },
+ "analysis": {
+  "rows_opened": [
+   "RQ-20261028-a7c3-01",
+   "RQ-20260928-019",
+   "RQ-20261022-3a84-12"
+  ],
+  "trading": {
+   "meaning": [
+    "a7c3-01 X6 tp_extend on ada_pullback_2h: +2.39R on 91.43R baseline (2.6%), 5/6 folds, lever fired, but reach_ge_6r 0.0 so the TP-doctrine reach floor is unmet; so it is a discovery with a small effect, not a Tier-3 case, until a disjoint-window confirmation passes",
+    "019 ada_pullback_2h M20 sweep: 0 of 25 cells pass, holdout no_discovery; so exit levers add nothing on this leg beyond X6's tp_extend"
+   ],
+   "fail_diagnoses": [],
+   "next_tests": [
+    {
+     "id_or_node": "X6 confirmation on a disjoint window",
+     "decision_changed": "whether tp_extend X6 becomes a Tier-3 proposal for ada_pullback_2h",
+     "on_pass": "Tier-3 note for manager",
+     "on_fail": "X6 stays a one-leg discovery",
+     "premortem": "gain 2.6% may sit inside window noise"
+    }
+   ]
+  },
+  "model": {
+   "meaning": [],
+   "fail_diagnoses": [],
+   "next_tests": []
+  },
+  "cross_track": [],
+  "surprises": [
+   "the SLO check unit RQ-20261022-3a84-12 grades as a FAIL every cycle; it is the same signal as blocked_over_age, not a research result"
+  ]
+ },
+ "calls": [
+  {
+   "call": "blocked_over_age on the next research-slo run reads 16",
+   "p": 0.85,
+   "check": {
+    "command": "python3 -c \"import sys;sys.path.insert(0,'.');from scripts.research import infra_selftest as t;print(t.blocked_over_age()['measurement']['over_age'])\"",
+    "rule": "== 16 unless a build row closes",
+    "resolves_when": "2026-10-29"
+   }
+  },
+  {
+   "call": "next 4 dispatch cycles include >= 1 with fired_this_cycle 0 due to infra yield",
+   "p": 0.5,
+   "check": {
+    "command": "grep 'deferred every fire' in Grade and dispatch logs",
+    "rule": "count >= 1",
+    "resolves_when": "2026-10-30"
+   }
+  }
+ ],
+ "not_run": [
+  "C: needs_review triage writes (29 left, 25 owned, UNOWNED 1: RQ-20261027-fe57-03)"
+ ],
+ "limits": [
+  "19:53Z/21:08Z cycles not read",
+  "pytest not run"
+ ],
+ "handoff": [
+  "Manager: PI-20261029-HOPS0250-0001 (infra-yield rule decision for Thursday) and -0002 (build-drain lane; blocked_over_age cannot fall without it)",
+  "UNOWNED needs_review RQ-20261027-fe57-03 and UNGRADED RQ-20261022-3a84-13, RQ-20261024-0142-18/-19 (in grace 7)",
+  "MODEL runnable 1; ml_health share 6 unmet",
+  "due pipeline items unrouted: see python3 scripts/ops/pipeline.py --due"
+ ]
+}

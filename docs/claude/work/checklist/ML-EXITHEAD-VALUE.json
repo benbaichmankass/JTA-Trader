@@ -1,0 +1,31 @@
+{
+  "id": "ML-EXITHEAD-VALUE",
+  "title": "[MODEL] B4/P5: decision value of exit-head-donchian-1h-v1 (live close on trend_donchian/_eth/_sol, outside registry) vs B0 on paths corpus, net of cost; register it as a registry row",
+  "phase": "W44",
+  "state": "landed_unproven",
+  "owner": "manager",
+  "lane": null,
+  "model": "sonnet",
+  "ceiling_usd": 8,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [],
+  "blocked_on": [],
+  "note": "Plan docs/plans/ml-live-promotion-plan-2026-10-29.md section 3 P5: KEEP iff dR/trade>=0 and trade-clustered 95% CI LB > -0.02R net; else Tier-3 de-risk proposal exit_head_action -> annotate (data-backed, manager may ship+notify). MEASURED: /api/bot/config 20:56Z exit_head_model exit-head-donchian-1h-v1 threshold 0.1 action close on 3 legs; 0 registry rows with that id.  [21:25Z] Registration is a named prerequisite of P6 (ML-HOLDBIAS-EXIT-MODEL); folds review proposal R-P5 (PI-20261028-GNVUF1ES-0002).  BASIS: the 95% CI and -0.02R are pre-registered THRESHOLDS, not measurements; evaluation population = the paths corpus (the six-money-leg corpus is 2627 trades / 50926 bar-states, RQ-20261024-09a6-01) restricted to and widened for trend_donchian/_eth/_sol 1h. [2026-10-29 16:00Z lane ML-AM-NEXT-LIVE] B4 measured. BTC FAILS (RQ-20260927-002 pooled -0.0141 R/trade, n_oos=1041, 1/3 folds) -> annotate #21290 MERGED. SOL FAILS even in-sample (issue #21295, n=286 trades, -0.0246 R/trade) -> annotate #21316 MERGED. ETH in-sample only (+0.0215 R/trade, n=583, issue #21294) -> INDETERMINATE, keeps close; OOS walk-forward PI-20261029-IFMPNGJK-0004. Registry registration not done (manager decision). Merged, NOT observed: closes when GET /api/bot/config shows strategies.trend_donchian.exit_head_action=annotate and strategies.trend_donchian_sol.exit_head_action=annotate after the manager's deploy, and no new 'exit_head' close reason on those two legs.",
+  "updated_at": "2026-10-29T16:12:54Z",
+  "updated_by": "session_01AFoLuN7GVCEJnGiFMpNGJK",
+  "roadmap": [
+    "M25"
+  ],
+  "priority_rank": 1,
+  "observation": {
+    "what": "trend_donchian and trend_donchian_sol run exit_head_action annotate in production (scored + logged, close not applied)",
+    "how_to_check": "GET /api/bot/config: strategies.trend_donchian.exit_head_action and strategies.trend_donchian_sol.exit_head_action == annotate; and no new closed trade on those two legs with close reason exit_head after the deploy",
+    "due_by": "2026-10-31"
+  },
+  "writeback": {
+    "roadmap": "none: M25/M-ML milestone lines are owned by the manager; the B4 outcome is on this row and ML-AM-NEXT-LIVE",
+    "arch": "none: no architecture change -- a per-leg config value moved within the existing two-gate model; registered in docs/reference/shadowed-features.yaml"
+  },
+  "_seq": 759
+}

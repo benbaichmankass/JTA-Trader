@@ -92,10 +92,19 @@ def test_adds_are_capped_at_the_fresh_entry_size():
         == "fresh_entry_check:GROSS_EXPOSURE_CAP"
 
 
+def test_no_per_bar_cap_on_trade_actions():
+    """REMOVE-PER-BAR-CAP: a move_tp then a partial_close on the same bar, two review ids, both pass."""
+    a = _d(_ti("move_tp", new_tp=0.185, review_id="LR-20261025T1805Z-P"))
+    b = _d(_ti("partial_close", size_fraction=0.5, review_id="LR-20261025T1830Z-P"),
+           _view(applied_review_ids=("LR-20261025T1805Z-P",)))
+    assert a.ok and b.ok, (a, b)
+
+
 def test_common_refusals():
     assert _d(_ti("close"), dry=True).reason == lri.R_DRY
     assert _d(_ti("close"), _view(strategy_execution="shadow")).reason == lri.R_SHADOW
-    assert _d(_ti("close"), _view(last_amend_bar="2026-10-25T18:00:00Z")).reason == lri.R_RATE
+    rid = _ti("close").review_id
+    assert _d(_ti("close"), _view(applied_review_ids=(rid,))).reason == lri.R_DUPLICATE
     assert _d(_ti("tighten_sl")).reason == lri.R_NOT_TRADE_ACTION
     assert _d(_ti("partial_close", size_fraction=1.0)).reason == lri.R_BAD_INPUT
 
@@ -356,9 +365,13 @@ def test_materialized_evidence_is_used_only_when_absent(tmp_path, monkeypatch):
 
 # --------------------------------------------------------------- the VM rows watcher + paper scope
 
-def test_the_rows_watcher_dispatches_every_trade_action_and_a_paper_row():
-    """The watcher used to send only tighten_sl, so no trade action could ever reach the VM."""
+def test_the_rows_watcher_dispatches_every_trade_action_and_a_paper_row(monkeypatch):
+    """The watcher used to send only tighten_sl, so no trade action could ever reach the VM.
+    Tests the path a class takes once it GRADUATES (every class is advice only until its own test passes,
+    operator 2026-10-28; tests/test_tighten_advice_only.py), so the advice-only set is emptied here."""
+    from src.runtime import live_review_rows as rows_lib
     from src.runtime import live_review_rows_watch as w
+    monkeypatch.setattr(rows_lib, "ADVICE_ONLY_ACTIONS", ())
     for a in lri.TRADE_ACTIONS:
         assert w.dispatchable({"recommendation": {"action": a}, "disposition": {"route": "recommended"}}) is None
     assert w.dispatchable({"recommendation": {"action": "hold"}, "disposition": {"route": "none"}}) == "action_hold"

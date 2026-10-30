@@ -1,0 +1,52 @@
+{
+  "unit": "RQ-20261029-84ef-03",
+  "run_id": "40935931206",
+  "commit_sha": "c6de36fb97d291e290d7f93464a8a44d9b5afc63",
+  "run_url": "https://github.com/benbaichmankass/JTA-Trader/actions/runs/40935931206",
+  "timeout_minutes": 330,
+  "commands": [
+    {
+      "index": 0,
+      "argv": [
+        "python3",
+        "scripts/research/harness_stage0.py",
+        "--family",
+        "trend",
+        "--symbols",
+        "SPY,QQQ,IWM,GLD,SLV,TLT,IEF,USO,GDX,TQQQ,QLD,SPLG,IAUM,SCHA",
+        "--timeframe",
+        "1d",
+        "--days",
+        "7300",
+        "--end",
+        "2026-10-25",
+        "--arm",
+        "LO=--long-only",
+        "--arm",
+        "LO_TS20=--long-only;--timeout-bars=20",
+        "--non-crypto-source",
+        "yfinance",
+        "--folds",
+        "6",
+        "--fold-majority",
+        "4",
+        "--n-floor",
+        "20",
+        "--pooled-n-floor",
+        "39",
+        "--breadth-frac",
+        "0.5",
+        "--rule-id",
+        "RULE-RQ20261029-84EF-03-ETF-DAILY-LONG",
+        "--data-dir",
+        "comms/research/RQ-20261029-84ef-03/40935931206/data",
+        "--out",
+        "comms/research/RQ-20261029-84ef-03/40935931206"
+      ],
+      "log": "comms/research/RQ-20261029-84ef-03/40935931206/logs/cmd-0.log",
+      "exit_code": 0,
+      "seconds": 35.4
+    }
+  ],
+  "all_ok": true
+}

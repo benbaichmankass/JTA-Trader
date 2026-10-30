@@ -234,10 +234,10 @@ BASELINE_2026_10_06: dict[str, frozenset[str]] = {
     # reached by 0.9% (eth, n=1004) / 1.9% (sol, n=370) of uncapped harness trades
     # in REACH_EVIDENCE -- re-run the guard for the live figures. The debt was
     # always there; this line now names it.
+    # 2026-10-29 (Tier-3, operator): trend_donchian_sol_prop pulled from breakout_2/tradeify_1/velotrade_1
+    # (V2 prop gate, PR #21204), so its three debt lines are removed with the roster.
     "breakout_2/trend_donchian_eth_prop": ER,
-    "breakout_2/trend_donchian_sol_prop": ER,
     "tradeify_1/trend_donchian_eth_prop": ER,
-    "tradeify_1/trend_donchian_sol_prop": ER,
     # velotrade_1 was rostered by #16705 (VELOTRADE-GOLIVE, Tier-3 HELD) on
     # 2026-10-06, hours before this guard existed, so its two routings are
     # day-one debt of the same class as tradeify_1's -- not a roster change
@@ -245,7 +245,6 @@ BASELINE_2026_10_06: dict[str, frozenset[str]] = {
     # run against main at 233c9c28 (PR #16739), which is the positive control
     # for the NEW-routing branch.
     "velotrade_1/trend_donchian_eth_prop": ER,   # R -> ER 2026-10-15, TP-REACH-FLOOR (above)
-    "velotrade_1/trend_donchian_sol_prop": ER,
     # ── mirror (paper_role: portfolio) ──────────────────────────────────────
     "bybit_portfolio/ada_pullback_2h": R,
     "bybit_portfolio/trend_donchian_eth_4h": E,  # 2026-10-18 tp_revision declared (TIER3-PACKETS-1018); entry_tp still the 50 R sentinel
@@ -257,7 +256,6 @@ BASELINE_2026_10_06: dict[str, frozenset[str]] = {
     "alpaca_options_paper/slv_pullback_1d": R,  # 2026-10-22 tp_r 3.5 declared (OPERATOR-DECISIONS-1022); tp_revision still undeclared
     "alpaca_options_paper/slv_trend_1h": ER,
     "alpaca_paper/gdx_pullback_1d": R,  # 2026-10-22 tp_r 3.5 declared (OPERATOR-DECISIONS-1022); tp_revision still undeclared
-    "alpaca_paper/iaum_pullback_1d": R,  # 2026-10-22 tp_r 3.5 declared (OPERATOR-DECISIONS-1022); tp_revision still undeclared
     "alpaca_paper/ief_pullback_1d": R,  # 2026-10-22 tp_r 3.5 declared (OPERATOR-DECISIONS-1022); tp_revision still undeclared
     "alpaca_paper/iwm_trend_long_1d": R,
     "alpaca_paper/qld_trend_long_1d": ER,
@@ -269,18 +267,15 @@ BASELINE_2026_10_06: dict[str, frozenset[str]] = {
     "alpaca_paper/spy_trend_long_1d": R,
     "alpaca_paper/tlt_pullback_1d": R,  # 2026-10-22 tp_r 3.5 declared (OPERATOR-DECISIONS-1022); tp_revision still undeclared
     "alpaca_paper/tqqq_trend_long_1d": ER,
-    "bybit_1/ada_pullback_2h": R,
-    "bybit_1/trend_donchian_1h": ER,
-    "bybit_1/trend_donchian_eth_4h": E,  # 2026-10-18 tp_revision declared (TIER3-PACKETS-1018); entry_tp still the 50 R sentinel
     # 2026-10-15 PROP-GATE-PARITY: the two prop legs enter the Stage-1 soak on bybit_1 with the
     # SAME exit recipe they run on the prop books (declared 6 R target, TP-REACH-FLOOR fail), so
     # they inherit the breakout_2 debt lines above verbatim. A visible, deliberate line.
+    "alpaca_paper/iaum_pullback_1d": R,  # 2026-10-22 tp_r 3.5 declared (OPERATOR-DECISIONS-1022); tp_revision still undeclared
+    "bybit_1/trend_donchian_1h": ER,
     "bybit_1/trend_donchian_eth_prop": ER,
-    "bybit_1/trend_donchian_sol_prop": ER,
     # 2026-10-22 OPERATOR-DECISIONS-1022: the incumbent leaves bybit_1 for its soak alias (same tp_r 3,
     # plus the declared ADX trail); tp_revision is still undeclared, so the debt is unchanged.
     "bybit_1/trend_donchian_xrp_adx25": R,
-    "bybit_1/xrp_pullback_2h": R,
     # 2026-10-27 DESK-8-SHORT-HOLD-S0 (operator-approved bybit_1 Stage-1 mechanics re-roster): both carry a real
     # declared entry TP (tp_at_r 1.5, ATR-buffered SL); tp_revision is undeclared (ict_scalp.monitor() returns no
     # TP verdict; eth_15m's stale-exit is a close, not a TP move). A visible, deliberate line; exit-refinement owns it.
@@ -310,7 +305,6 @@ BASELINE_2026_10_06: dict[str, frozenset[str]] = {
     "bybit_1/trend_donchian_eth": ER,
     "bybit_1/trend_donchian_sol": ER,
     "bybit_1/trend_donchian_sol_4h": ER,
-    "bybit_1/trend_donchian_xrp_4h": R,
     "bybit_1/turtle_soup": ER,
     # 2026-10-26 DESK-17: the claude_desk leg (bybit_1 paper soak only, execution: shadow). Its TP is NOT a
     # config field: every package carries the desk proposal's OWN level (schema-required tp.level + basis +

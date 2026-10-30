@@ -12,14 +12,20 @@ clause on the row at the pinned commit, refuses a duplicate review_id through
 ``runtime_logs/live_review/dispatch_state.json``, and hands over to
 ``live_review_apply.py``, where each account decides through its own
 ``RiskManager.approve_amend`` and the venue is read back. This file only
-decides WHEN to call it: once per new ``review_id`` whose recommendation is a
-``tighten_sl`` or (LTR-ALL-ACTIONS, mandate ``MD-TRADE-DESK``, 2026-10-26) one of
-the trade actions -- close, partial_close, move_tp, widen_sl, change_size,
+decides WHEN to call it: once per new ``review_id`` whose recommendation is
+(LTR-ALL-ACTIONS, mandate ``MD-TRADE-DESK``, 2026-10-26) one of the trade actions -- close, partial_close, move_tp, widen_sl, change_size,
 add_entry -- on a dispatchable route, on ANY account class, paper included
 (operator 2026-10-26: "All accounts now", "Real-money, prop and paper at once").
 ``hold``, ``operator_ask`` / ``none`` routes and ``flag_mechanics`` are logged
 ``not_dispatchable`` and never sent, so they cannot trip the dispatcher's
-refusal ping.
+refusal ping. A class in ``rows_lib.ADVICE_ONLY_ACTIONS`` is ADVICE ONLY: on any route it is
+logged ``advice_only`` and never sent (tighten_sl: operator 2026-10-28 ~20:35Z, "Advice-only
+tightens (Recommended)"; every in-trade class: operator 2026-10-28 ~21:07Z, "Advice-only until
+tested"). A class graduates by leaving that tuple, citing its passed test. ONE exception, per package:
+an active ``kind: ltr_auto_apply`` entry in config/mandates.yaml that scopes the row's
+order_package_id and action (``src/runtime/ltr_auto_mandate.py``; MD-LTR-ADA-AUTO, operator
+2026-10-29 "VM applies it directly") makes that row a candidate; the receipt carries
+``auto_mandate``, and the apply enforces that entry's bounds.
 
 Cadence: ``ensure_started()`` (called from ``record_position_telemetry``,
 which only runs while packages are open) starts ONE daemon thread, once, in
@@ -58,6 +64,15 @@ hands an in-trade action to ``live_review_apply.run()``; a ``propose_entry`` is
 refused, named, while ``MD-TRADE-DESK``'s entry_generation is blocked. Its
 receipts: ``desk_intake`` (``runtime_logs/desk/intake.jsonl``),
 ``desk_intake_status`` and ``desk_watch_status`` (this loop's fetch state).
+
+TRADE-ACTION-FAST-PATH (2026-10-29): a SECOND daemon thread, ``directed-actions-watch``, fetches
+``directed/actions`` into ``refs/live-review/directed/actions`` every ``directed_actions.POLL_S`` s (its own
+thread, so a long rows dispatch never delays an operator-directed action) and, when the tip moved or the
+last pass left a record pending, runs ``scripts/ops/directed_action.py vm-pass --ref <tip>`` as a
+subprocess. That pass validates each operator/manager-directed record (refused without the operator's
+verbatim quote) and hands it to ``live_review_apply.run()``. Receipts: ``directed_actions``
+(``runtime_logs/directed_actions/receipts.jsonl``), ``directed_actions_status`` and
+``directed_actions_watch_status`` (this thread's fetch state).
 """
 from __future__ import annotations
 
@@ -72,7 +87,9 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Callable, Dict, Optional, Tuple
 
+from src.runtime import directed_actions
 from src.runtime import live_review_rows as rows_lib
+from src.runtime import ltr_auto_mandate
 
 logger = logging.getLogger(__name__)
 
@@ -89,6 +106,9 @@ DISPATCH_TIMEOUT_S = 600
 DESK_BRANCH = "desk/decisions"
 DESK_LOCAL_REF = f"refs/live-review/{DESK_BRANCH}"
 DESK_INTAKE = ROOT / "scripts" / "ops" / "desk_intake.py"
+DIRECTED_BRANCH = directed_actions.BRANCH
+DIRECTED_LOCAL_REF = f"refs/live-review/{DIRECTED_BRANCH}"
+DIRECTED = ROOT / "scripts" / "ops" / "directed_action.py"
 
 _started = False
 _start_lock = threading.Lock()
@@ -148,12 +168,19 @@ def _dispatch(review_id: str, ref: str) -> Dict[str, Any]:
 
 
 #: tighten_sl plus the trade-desk actions (LTR-ALL-ACTIONS); every one is re-checked by the dispatcher.
+#: rows_lib.ADVICE_ONLY_ACTIONS (every in-trade class until it graduates, operator 2026-10-28) is checked FIRST and is never sent.
 DISPATCHABLE_ACTIONS = ("tighten_sl", "close", "partial_close", "move_tp", "widen_sl", "change_size", "add_entry")
 
 
-def dispatchable(row: Dict[str, Any]) -> Optional[str]:
-    """None when the row is an apply candidate; else why it is not (logged, never sent)."""
+def dispatchable(row: Dict[str, Any],
+                 auto: Callable[[Dict[str, Any]], Optional[str]] = ltr_auto_mandate.exception_for) -> Optional[str]:
+    """None when the row is an apply candidate; else why it is not (logged, never sent).
+    An advice-only class returns rows_lib.ADVICE_ONLY_VERDICT on every route: recorded as advice, never executed,
+    UNLESS an active per-package auto mandate (``ltr_auto_mandate``, read from config/mandates.yaml) scopes this
+    row's order_package_id and action (MD-LTR-ADA-AUTO, operator 2026-10-29): then it is a candidate like any other."""
     rec = row.get("recommendation") or {}
+    if rec.get("action") in rows_lib.ADVICE_ONLY_ACTIONS and not auto(row):
+        return rows_lib.ADVICE_ONLY_VERDICT
     if rec.get("action") not in DISPATCHABLE_ACTIONS:
         return f"action_{rec.get('action')}"
     route = (row.get("disposition") or {}).get("route")
@@ -257,7 +284,13 @@ def run_pass(git: Git = _git, dispatch: Callable[[str, str], Dict[str, Any]] = _
                                "seen_at": first.isoformat()}
         _proof(lambda fp: fp.record_row(row, at=first))
         why = dispatchable(row)
-        if why:
+        auto_id = ltr_auto_mandate.exception_for(row) if why is None else None
+        if auto_id:
+            rec["auto_mandate"] = auto_id
+        if why == rows_lib.ADVICE_ONLY_VERDICT:
+            rec.update(verdict=why, detail=f"advice only: {(row.get('recommendation') or {}).get('action')} "
+                                           f"level {(row.get('recommendation') or {}).get('level')} not executed")
+        elif why:
             rec.update(verdict="not_dispatchable", detail=why)
         else:
             res = dispatch(rid, tip)
@@ -362,6 +395,70 @@ def run_desk_pass(git: Git = _git, intake: Callable[[str], Dict[str, Any]] = _de
     return status
 
 
+def _directed_vm_pass(tip: str) -> Dict[str, Any]:
+    """Run the directed-action pass at the pinned tip. Never raises."""
+    try:
+        r = subprocess.run([sys.executable, str(DIRECTED), "vm-pass", "--ref", tip],
+                           cwd=ROOT, capture_output=True, text=True, timeout=DISPATCH_TIMEOUT_S)
+    except (OSError, subprocess.SubprocessError) as exc:
+        return {"exit": 3, "detail": f"directed pass did not run: {type(exc).__name__}"}
+    summary: Dict[str, Any] = {}
+    for ln in (r.stdout or "").splitlines():
+        if ln.startswith("{"):
+            try:
+                summary = json.loads(ln)
+            except ValueError:
+                pass
+    return {"exit": r.returncode, "handled": summary.get("handled"), "pending": summary.get("pending"),
+            "detail": summary.get("detail") or (r.stderr or "").strip()[-200:] or None}
+
+
+def directed_log_dir() -> Path:
+    from src.utils.paths import repo_root
+    return Path(repo_root()) / "runtime_logs" / "directed_actions"
+
+
+def run_directed_pass(git: Git = _git, vm_pass: Callable[[str], Dict[str, Any]] = _directed_vm_pass,
+                      now_fn: Callable[[], datetime] = _now, logs: Optional[Path] = None) -> Dict[str, Any]:
+    """One fetch of directed/actions -> the directed pass, only when the tip moved or the last pass could
+    not finish (exit 3: a record is pending a retry). Idempotency per record id lives in the pass."""
+    d = logs or directed_log_dir()
+    status_path = d / "watch_status.json"
+    prev = _load(status_path) or {}
+    status: Dict[str, Any] = {"pass_at": now_fn().isoformat()}
+    rc, out = git("fetch", "--quiet", "--no-write-fetch-head", "origin",
+                  f"+refs/heads/{DIRECTED_BRANCH}:{DIRECTED_LOCAL_REF}")
+    if rc != 0:
+        absent = "couldn't find remote ref" in out
+        status.update(fetch_state="branch_absent" if absent else "could_not_fetch", detail=out[-200:],
+                      tip=prev.get("tip"), pass_exit=prev.get("pass_exit"))
+        _write_json(status_path, status)
+        return status
+    rc, tip = git("rev-parse", DIRECTED_LOCAL_REF)
+    if rc != 0:
+        status.update(fetch_state="could_not_read", detail=tip[-200:])
+        _write_json(status_path, status)
+        return status
+    status.update(fetch_state="fetched", tip=tip)
+    if tip == prev.get("tip") and prev.get("pass_exit") in (0, 1, 2):
+        status.update(directed_pass="unchanged", pass_exit=prev.get("pass_exit"))
+    else:
+        res = vm_pass(tip)
+        status.update(directed_pass="ran", pass_exit=res.get("exit"), handled=res.get("handled"),
+                      pending=res.get("pending"), detail=res.get("detail"))
+    _write_json(status_path, status)
+    return status
+
+
+def _directed_loop() -> None:
+    while True:
+        try:
+            run_directed_pass()
+        except Exception:  # noqa: BLE001 — contained; the next pass tries again (no halting)
+            logger.warning("rows-watch: run_directed_pass failed", exc_info=True)
+        time.sleep(directed_actions.POLL_S)
+
+
 def _loop() -> None:
     _proof(lambda fp: fp.ensure_seeded())
     while True:
@@ -385,6 +482,7 @@ def ensure_started(force: bool = False) -> bool:
             if _started:
                 return False
             threading.Thread(target=_loop, name="ltr-rows-watch", daemon=True).start()
+            threading.Thread(target=_directed_loop, name="directed-actions-watch", daemon=True).start()
             _started = True
             return True
         finally:

@@ -1,0 +1,33 @@
+{
+  "id": "TRADE-COUNTERFACTUAL-GRADER",
+  "title": "Standing counterfactual grader for every closed order package (one decision = one trade): replay the actual price path and grade, in $ and % per account and in R, net of the full cost stack, the ACTUAL outcome against (a) the original entry brackets untouched, (b) alternative entry brackets (TP/SL grid around the declared ones), (c) no active management, (d) less / more active management (each in-trade action skipped, earlier, later; break-even/trail variants), (e) every reviewer or desk recommendation that was NOT applied, (f) a matched random intervention; book-level $ with the real sizer where BOOK-SIM-REAL-SIZER exists. Runs on every close, writes one graded record per package, feeds /performance-review and the AM graduation rule (RULE-AM-RISK-ADJUSTED-V1)",
+  "phase": null,
+  "state": "landed_unproven",
+  "owner": null,
+  "lane": "session_01AFoLuMqPkgvJifpQr7xU72",
+  "model": "sonnet",
+  "ceiling_usd": 12,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [
+    21256
+  ],
+  "blocked_on": [],
+  "note": "Basis: n=1 order package (ADA pkg-465a5d7d27644027), 3 account legs, window 2026-10-29 05:00Z..10:51Z. Lane archived; #21256 merged 2026-10-29 15:28Z (hourly per-close job). Post-exit horizon gap split to GRADER-POST-EXIT-HORIZON.",
+  "priority_rank": 2,
+  "updated_at": "2026-10-29T19:05:33Z",
+  "updated_by": "Manager Session 2026-10-29c",
+  "roadmap": [
+    "L-LADDER"
+  ],
+  "observation": {
+    "what": "a graded record under comms/research/counterfactual_grades/ for each package closed after 2026-10-29 15:28Z",
+    "how_to_check": "ls comms/research/counterfactual_grades/ vs closed packages since the merge",
+    "due_by": "2026-10-31"
+  },
+  "writeback": {
+    "roadmap": "none: tooling",
+    "arch": "none"
+  },
+  "_seq": 808
+}

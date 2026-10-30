@@ -63,7 +63,7 @@ logger = logging.getLogger(__name__)
 ROOT = Path(__file__).resolve().parents[2]
 WAKE_SCRIPT = ROOT / "scripts" / "ops" / "live_review_wake.py"
 RECEIPT_NAME = "ltr_wake_post_receipt.json"
-REPO = "benbaichmankass/Metis-Insights"
+REPO = "benbaichmankass/JTA-Trader"
 API = "https://api.github.com"
 EXTRAHEADER_KEY = "http.https://github.com/.extraheader"
 #: At most one due computation per this many seconds (the telemetry pass is ~30 s).

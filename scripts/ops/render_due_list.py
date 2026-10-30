@@ -101,7 +101,7 @@ _QUEUE_WATCH_RECEIPT = Path("docs/claude/work/MANAGER-QUEUE-WATCH.json")
 # absorbing a whole missed day.
 _PROBE_STALE_SLACK_H = 6.0
 
-REPO = "benbaichmankass/Metis-Insights"
+REPO = os.environ.get("GITHUB_REPOSITORY", "benbaichmankass/JTA-Trader")  # tolerant of the JTA Trader repo rename
 _API = "https://api.github.com"
 
 #: Source read states. `not_applicable` is NOT `read` — it means the source

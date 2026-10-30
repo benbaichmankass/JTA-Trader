@@ -35,7 +35,7 @@ from src.web.api import web_sessions as ws
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 logger = logging.getLogger(__name__)
 
-RP_NAME = "Metis Insights"
+RP_NAME = "JTA Trader"
 GOOGLE_CLOCK_SKEW_SECONDS = 10
 _DEFAULT_ORIGIN = "https://benbaichmankass.github.io"
 

@@ -1,0 +1,15 @@
+{
+  "due_when": {
+    "due_date": "2026-10-31",
+    "kind": "date"
+  },
+  "id": "PI-20261030-NLSZ8A5M-0003",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "Old manager Manager Session 2026-10-29d relay (trig_016oQzDS95nKLzvcPLqGWRrc) of a reviewer helper report at 02:20Z; filed by Manager Session 2026-10-30a",
+    "rerun": "curl -sS 'https://api.github.com/repos/benbaichmankass/JTA-Trader/issues/17895/comments?since=2026-10-30T02:00:00Z&per_page=100' | python3 -c \"import json,sys;[print(c['id'],c['user']['login'],c['created_at']) for c in json.load(sys.stdin) if 'ltr-wake' in c['body']]\""
+  },
+  "state": "queued",
+  "what": "DUPLICATE ltr-wake posters. At 02:02Z the VM posted an ltr-wake (comment 6513121248) for 3 new_peak events; at 02:04Z github-actions[bot] posted a second wake for the SAME events (comment 6513144245, review ids 0202Z) with degraded packets (bybit_orders unreachable, no pandas on runner). The two producers (VM live_review_wake and .github/workflows/live-review-wake.yml) need a shared dedupe keyed on (order_package_id, event, level) like desk-wake's packet_id/bar dedupe, and the runner path must not post a degraded packet when the VM already posted."
+}

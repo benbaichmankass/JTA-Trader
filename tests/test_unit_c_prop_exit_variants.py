@@ -185,8 +185,9 @@ def test_routed_to_breakout_2_and_breakout_1_retired():
     # breakout_1 was retired (roster cleared) 2026-10-07; breakout_2 carries them.
     assert _accounts()["breakout_1"]["strategies"] == []
     a = _accounts()["breakout_2"]
-    for name in _VARIANTS:
-        assert name in a["strategies"]
+    # 2026-10-29 (Tier-3, operator): sol_prop pulled from breakout_2 (V2 prop gate); the variant stays defined.
+    assert "trend_donchian_eth_prop" in a["strategies"]
+    assert "trend_donchian_sol_prop" not in a["strategies"]
 
 
 def test_descriptions_and_changelog_present():

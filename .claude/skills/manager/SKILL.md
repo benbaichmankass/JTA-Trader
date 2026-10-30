@@ -119,6 +119,13 @@ each **one marker, one lane, never spawn twice for the same id**; a `could_not_*
   row. Never commit a packet or table yourself from the comment text. `packet_state` `could_not_commit` / `evidence_conflict` → no reviewer;
   an incident (the VM receipt `ltr_wake_post_receipt` and the poller run name the http code). An `ltr-mirror-refused` comment (a row the
   mirror refused on `packet_sha` or a missing cited file) is an incident: repair the branch file from the generator's bytes, never by hand.
+  **Event `mandate_cadence`** (a per-package auto-apply mandate, `kind: ltr_auto_apply` in `config/mandates.yaml`, first MD-LTR-ADA-AUTO,
+  operator 2026-10-29): the VM emits it for the scoped open package once per `review_cadence_minutes` slot after the bar boundary, with
+  the packet committed first; dispatch the reviewer exactly as above, packet inline, and the VM applies its `recommended` row within the
+  mandate's bounds. **Never run your own timer/scheduled watch that starts a reviewer without a marker** (the LTR-ADA-WATCH
+  `evidence_missing` failure, 2026-10-29: only the wake poster commits packets). To review a package regularly, the operator grants a
+  cadence on its mandate; there is no reviewer-commit or system-action packet route (runner queues are 15-50 min; operator 2026-10-29
+  "we need to make sure the design doesn't increase latency on the round trip decisions").
 - **`desk-wake` / `desk-trigger-wake`** (operator 2026-10-26/27): `create_session` exactly as `.claude/skills/trading-desk/SKILL.md` § 6b
   specifies (Sonnet, auto, `desk/decisions`, depth-1 sparse checkout, WAKE PROMPT verbatim; the trigger kind adds the packet-id line). Do
   not read the packet. `could_not_commit` http 403 → tell the operator.
@@ -254,6 +261,10 @@ A Tier-1 lane self-lands: `.github/pr-landing/<slug>.json` (`tier: 1`, `landing:
 Review"), the lane re-declares `landing: hold` with `hold_reason: operator_asked_to_hold`, reports the exact refused command in one line,
 and the manager lands it. Tier-2/3 lane PRs always carry `landing: hold` (manager for Tier 2, the operator's recorded approval for Tier 3).
 
+### No new gates (operator, 2026-10-29, binding)
+
+Never add, and never dispatch a lane to add, a gate (approval step, hold, readiness condition, cap, flag, review step) without the operator's explicit permission; read ambiguous friction as less; green Tier-1/2 deploys are automatic; every design doc or approval packet opens with "Gates this adds or changes" (or `Gates: none`) and the popup names them. Canonical § "No new gates without the operator's permission".
+
 ### Recurring dispatches
 
 - **`PERF-FOLLOWUP-<ISO week>`** (operator, 2026-10-10): when a `/performance-review` PR merges, dispatch ONE lane on the `perf-followup`
@@ -324,7 +335,7 @@ time and the word `running`. Record on the row the model, fresh-vs-resume, and t
 **Operator, 2026-09-29, verbatim:** *"In general, part of your job is closing finished sessions, that falls under the management
 mandate."* A finished lane that stays open keeps costing (A9: $37.13 → $50.78 after merging; ~300 unarchived on 2026-10-18).
 0. **Scope: this project's sessions only** (operator, 2026-10-18; a sweep once archived 9 sessions of another project): a project repo
-   (Metis-Insights, ict-trading-bot, ict-trader-dashboard, ict-trader-android), environment `env_01A9rfUVrcEo1i5pKP1kWnp3`, or a mention in
+   (JTA Trader = repo slug `Metis-Insights` until the operator renames it, ict-trading-bot, ict-trader-dashboard, ict-trader-android), environment `env_01A9rfUVrcEo1i5pKP1kWnp3`, or a mention in
    a manager log. A foreign repo is never eligible; archive only what `lane_reconcile.py` lists (never its "LEFT ALONE" block).
 1. Archiving a finished lane is the **manager's** job; never ask the operator to close one ("whenever suits you" is a violation), and do not
    tell a lane to idle on CI — the manager merges, the lane stops.
@@ -563,7 +574,7 @@ The review routine IS the periodic check; its prompt names `GET /api/bot/work/re
 6. **Roadmap hook**: `roadmap_map.py --report`, work its findings (§ "The roadmap loop").
 
 **Prep always runs, and the scratch pad feeds it (operator, 2026-10-21, binding)** — the daily-review prep happens whether or not the
-operator joins. Every run: **reads the scratch pad** (Google Doc "Metis — Ideas inbox" via the Drive connector), copies each new item
+operator joins. Every run: **reads the scratch pad** (Google Doc "JTA Trader — Ideas inbox", formerly "Metis — Ideas inbox"; match EITHER title, the operator renames the doc, via the Drive connector), copies each new item
 verbatim into `docs/claude/work/IDEAS.md` and triages it that run into a checklist row, a `research/queue` unit, or `killed` with a reason;
 **publishes a short work-plan status** (what moved/is running, where work was left off, decisions waiting, scratch-pad items and homes,
 next step on the standing priorities); **sends it to @claude_ict_comms_bot** with `send-ping` plus one "review ready" reminder.

@@ -26,8 +26,10 @@ than R15's, not weaker:
   * the evidence is a committed record the RESOLVER re-reads here, from the
     merge-base configs, and must independently FIRE on (A5);
   * the author is the workflow, not a session (A7);
-  * and the edit may only ever REMOVE (A2). The worst case of a wrong verdict is
-    less exposure, never more.
+  * and the edit may only ever REMOVE (A2) -- plus, since STRATEGY-STATUS-MODEL
+    (operator 2026-10-28), the one paper add a demotion carries: the cut leg back
+    onto its GENERAL PAPER account. The worst case of a wrong verdict is still
+    less real-money exposure, never more.
 
 ⚠️ **AND IT IS NOT ARMED BY EXISTING.** A8 requires `autoland: true` on the
 GRANTED mandate entry. No entry in `config/mandates.yaml` carries it as this
@@ -332,6 +334,28 @@ def roster_removals(base_doc: Optional[Dict[str, Any]],
     return out
 
 
+def roster_additions(base_doc: Optional[Dict[str, Any]],
+                     head_doc: Optional[Dict[str, Any]]) -> Dict[str, List[str]]:
+    """`{account: [legs added]}`, order-preserving, from the two parsed docs."""
+    base_r, head_r = _rosters(base_doc), _rosters(head_doc)
+    out: Dict[str, List[str]] = {}
+    for acct, legs in head_r.items():
+        new = [lg for lg in legs if lg not in set(base_r.get(acct, []))]
+        if new:
+            out[acct] = new
+    return out
+
+
+def moved_back(removals: Dict[str, List[str]], additions: Dict[str, List[str]]) -> Dict[str, List[str]]:
+    """The ONE addition this route admits (STRATEGY-STATUS-MODEL, operator 2026-10-28): a leg cut from a Stage-2
+    real-money roster in this diff, returned to a GENERAL PAPER account (``mr.DEMO_FLOOR_ACCOUNTS``). A production
+    leg is not on general paper, so the demotion MOVES it back there. That is paper money: the worst case of a
+    wrong verdict on the real-money side is still less exposure, never more."""
+    cut_live = {lg for a, v in removals.items() if a in STAGE2_LIVE for lg in v}
+    return {a: [lg for lg in v if lg in cut_live] for a, v in additions.items()
+            if a in mr.DEMO_FLOOR_ACCOUNTS and all(lg in cut_live for lg in v)}
+
+
 def check_cut_only(root: Path, mb: str) -> Tuple[List[str], List[str], Dict[str, List[str]]]:
     fails, notes = [], []
     base_doc = _yaml_text(blob(root, mb, ACCOUNTS_REL))
@@ -353,6 +377,11 @@ def check_cut_only(root: Path, mb: str) -> Tuple[List[str], List[str], Dict[str,
     for acct, gone in removals.items():
         cfg = (expected.get("accounts") or {}).get(acct) or {}
         cfg["strategies"] = [lg for lg in (cfg.get("strategies") or []) if lg not in set(gone)]
+    # The demotion's move back onto general paper, appended (as r4_demotion_gate.add_to_roster writes it).
+    back = moved_back(removals, roster_additions(base_doc, head_doc))
+    for acct, legs in back.items():
+        cfg = (expected.get("accounts") or {}).get(acct) or {}
+        cfg["strategies"] = list(cfg.get("strategies") or []) + legs
     if expected != head_doc:
         fails.append(
             f"A2 {ACCOUNTS_REL} changes by MORE than roster removals. Filtering the removed "
@@ -368,7 +397,9 @@ def check_cut_only(root: Path, mb: str) -> Tuple[List[str], List[str], Dict[str,
                      f"prop roster edit is not this route's to land.")
     if not fails:
         notes.append("A2 pure roster removal: "
-                     + "; ".join(f"{a} -{','.join(v)}" for a, v in sorted(removals.items())))
+                     + "; ".join(f"{a} -{','.join(v)}" for a, v in sorted(removals.items()))
+                     + "".join(f"; {a} +{','.join(v)} (moved back to general paper)"
+                               for a, v in sorted(back.items())))
     return fails, notes, removals
 
 
@@ -571,9 +602,17 @@ def check_evidence(root: Path, mb: str, changed: List[str],
                 f"here, on its own reading of the committed record.")
             continue
         prop = res.get("proposal") or {}
-        if prop.get("roster_add"):
-            fails.append(f"A5 {leg}: the resolver's proposal ADDS to {sorted(prop['roster_add'])}. "
-                         f"This route may only remove.")
+        bad_add = sorted(a for a in (prop.get("roster_add") or {}) if a not in mr.DEMO_FLOOR_ACCOUNTS)
+        if bad_add:
+            fails.append(f"A5 {leg}: the resolver's proposal ADDS to {bad_add}. "
+                         f"This route may only remove (and move a demoted leg back to general paper).")
+        want_back = sorted(a for a in (prop.get("roster_add") or {}) if a in mr.DEMO_FLOOR_ACCOUNTS)
+        head_doc = _yaml_text(blob(root, _GRADED, ACCOUNTS_REL))
+        got_back = sorted(a for a, v in roster_additions(_yaml_text(blob(root, mb, ACCOUNTS_REL)),
+                                                         head_doc).items() if leg in v)
+        if want_back != got_back:
+            fails.append(f"A5 {leg}: the resolver moves it back to {want_back} but the diff adds it to "
+                         f"{got_back}. The edit must be exactly what was authorized.")
         proposed = sorted(prop.get("roster_remove") or {})
         if proposed != accts:
             fails.append(f"A5 {leg}: the resolver proposes removing from {proposed} but the diff "

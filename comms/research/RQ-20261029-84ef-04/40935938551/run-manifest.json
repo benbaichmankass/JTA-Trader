@@ -1,0 +1,52 @@
+{
+  "unit": "RQ-20261029-84ef-04",
+  "run_id": "40935938551",
+  "commit_sha": "c6de36fb97d291e290d7f93464a8a44d9b5afc63",
+  "run_url": "https://github.com/benbaichmankass/JTA-Trader/actions/runs/40935938551",
+  "timeout_minutes": 330,
+  "commands": [
+    {
+      "index": 0,
+      "argv": [
+        "python3",
+        "scripts/research/harness_stage0.py",
+        "--family",
+        "trend",
+        "--symbols",
+        "BTCUSDT,ETHUSDT,SOLUSDT,XRPUSDT,ADAUSDT,AVAXUSDT,BNBUSDT,DOGEUSDT,LINKUSDT,LTCUSDT,BCHUSDT,DOTUSDT,NEARUSDT,ATOMUSDT,FILUSDT,TRXUSDT,ETCUSDT",
+        "--timeframe",
+        "1w",
+        "--days",
+        "2700",
+        "--start",
+        "2020-01-01",
+        "--end",
+        "2026-10-25",
+        "--arm",
+        "W10=--donchian=10",
+        "--arm",
+        "W20=--donchian=20",
+        "--folds",
+        "6",
+        "--fold-majority",
+        "4",
+        "--n-floor",
+        "8",
+        "--pooled-n-floor",
+        "39",
+        "--breadth-frac",
+        "0.5",
+        "--rule-id",
+        "RULE-RQ20261029-84EF-04-WEEKLY-CRYPTO-17",
+        "--data-dir",
+        "comms/research/RQ-20261029-84ef-04/40935938551/data",
+        "--out",
+        "comms/research/RQ-20261029-84ef-04/40935938551"
+      ],
+      "log": "comms/research/RQ-20261029-84ef-04/40935938551/logs/cmd-0.log",
+      "exit_code": 0,
+      "seconds": 1661.3
+    }
+  ],
+  "all_ok": true
+}

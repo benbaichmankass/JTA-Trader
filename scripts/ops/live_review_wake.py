@@ -51,6 +51,10 @@ WATCHDOG_CFG = ROOT / "scripts" / "research" / "research_watchdog.yaml"
 MARKER = "ltr-wake"
 #: Events that never wake the manager (the hourly routine covers them).
 NO_WAKE_EVENTS = {"daily_floor"}
+#: Deduped on package|event|level only, never by the per-event cooldown: the per-package auto mandate's
+#: review cadence (MD-LTR-ADA-AUTO) is one wake per slot, and its level IS the slot, so a late wake for
+#: one slot must not hold back the next one (latency of the round trip, operator 2026-10-29).
+LEVEL_DEDUPED_EVENTS = {"mandate_cadence"}
 #: At most one wake per package+event in this window, unless the event is
 #: cooldown-exempt in config (giveback, mechanics). INFERRED default: one 2h bar.
 COOLDOWN_MIN = 120
@@ -66,7 +70,7 @@ MAX_BODY_CHARS = 60000
 #: packet dropped ``"sd_r":null`` and the mirror refused the row: packet_sha mismatch).
 ROWS_BRANCH = "live-review/rows"
 PACKETS_DIR = "comms/live_review/packets"
-REPO = "benbaichmankass/Metis-Insights"
+REPO = os.environ.get("GITHUB_REPOSITORY", "benbaichmankass/JTA-Trader")  # tolerant of the JTA Trader repo rename
 API = "https://api.github.com"
 HTTP_TIMEOUT_S = 15
 
@@ -143,7 +147,8 @@ def plan(doc: Any, posted: List[dict], cfg: Dict[str, Any], now: datetime) -> Di
             if _key(e) in seen:
                 continue
             prev = last_by.get(f"{e['order_package_id']}|{name}")
-            if prev and name not in cfg["exempt"] and now - prev < timedelta(minutes=COOLDOWN_MIN):
+            if prev and name not in cfg["exempt"] and name not in LEVEL_DEDUPED_EVENTS \
+                    and now - prev < timedelta(minutes=COOLDOWN_MIN):
                 continue
             g = grouped.setdefault(_key(e), dict(e, accounts=[]))
             if d.get("account_id") not in g["accounts"]:
@@ -409,7 +414,7 @@ def main(argv: Optional[List[str]] = None) -> int:
     args = ap.parse_args(argv)
     args.pr = args.pr or ops_flags_pr()
     now = datetime.now(timezone.utc)
-    repo = os.environ.get("GITHUB_REPOSITORY", "benbaichmankass/Metis-Insights")
+    repo = os.environ.get("GITHUB_REPOSITORY", "benbaichmankass/JTA-Trader")
     doc = json.loads(Path(args.from_file).read_text()) if args.from_file else fetch_due()
     posted = read_posted(repo, args.pr) if args.live else []
     if posted is None:

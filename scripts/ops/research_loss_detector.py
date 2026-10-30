@@ -428,7 +428,7 @@ def _self_test() -> int:
 def main(argv: Optional[list[str]] = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--repo", default=os.environ.get("GITHUB_REPOSITORY",
-                                                     "benbaichmankass/Metis-Insights"))
+                                                     "benbaichmankass/JTA-Trader"))
     ap.add_argument("--ref", default="origin/main")
     ap.add_argument("--stuck-hours", type=float, default=6.0)
     ap.add_argument("--lookback-days", type=int, default=14)

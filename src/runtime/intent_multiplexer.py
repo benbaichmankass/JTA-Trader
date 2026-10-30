@@ -348,7 +348,7 @@ def _default_intent_builders() -> Dict[str, IntentBuilder]:
         # fee-robust (pooled book Sharpe 3.88). Each is the sole strategy on
         # its symbol, so arbitration never fires.
         "iwm_trend_long_1d": iwm_trend_long_1d_signal_builder,
-        # Cheap-share proxy cells (paper soak) — SPLG (~$84 SPY proxy) +
+        # Cheap-share proxy cells (paper soak) — SPYM (~$84 SPY proxy) +
         # SCHA (~$35 IWM proxy) long-only trend (trend_donchian) + IAUM
         # (~$41 GLD proxy) bidirectional pullback (htf_pullback_trend_2h).
         "splg_trend_long_1d": splg_trend_long_1d_signal_builder,

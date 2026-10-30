@@ -1,0 +1,22 @@
+{
+  "id": "DESK-GATE-OFFLINE-PATH",
+  "title": "Desk entry gate (MD-TRADE-DESK entry_generation.blocked_until, DESK-13) restated on a pre-registered offline replay corpus instead of n>=30 live graded proposals, graded on the operator objective (net $/% and R on a common R unit, risk term)",
+  "phase": null,
+  "state": "queued",
+  "owner": "manager",
+  "lane": null,
+  "model": "claude-opus-5-5",
+  "ceiling_usd": 8,
+  "spend_usd": null,
+  "tier": 3,
+  "prs": [],
+  "blocked_on": [],
+  "note": "Filed by lane SYSTEM-CONFORMANCE-AUDIT 2026-10-29 (Manager Session 2026-10-29c; operator ~07:30Z audit ask, verbatim on WEEKLY-PLANNING). Evidence: docs/reviews/2026-10-29-system-conformance-audit.md \u00a72.1-2.2 / top-10 #3,#5. MEASURED: comms/desk/decisions.jsonl 90 (10-26..29): 84 no_trade, 6 propose_entry (3 probes); role_grade.json n_priced_gradeable 2, vs_random INDETERMINATE (n=2<30). scripts/ops/desk_grade.py:111 passes on 95% CI of mean net_r > 0, no risk or $ term; baseline R atr_stop_1x vs proposal's own planned R. Done when: a Tier-3 proposal restates the gate on a replay corpus (DESK-LIFECYCLE-S0 pairs + DESK-18D judged set) with a risk term and like-for-like R, registered before its run. Relates DESK-13-MANDATE, DESK-18D-JUDGE-2, RISK-OBJECTIVE-AUDIT.",
+  "priority_rank": 3,
+  "roadmap": [
+    "L-DESK-V1"
+  ],
+  "updated_at": "2026-10-29T07:33:15Z",
+  "updated_by": "session_01AFoLuLR4k6vdJP5WxbrTSS",
+  "_seq": 785
+}
