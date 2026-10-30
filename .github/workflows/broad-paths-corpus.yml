@@ -38,7 +38,7 @@ concurrency:
 
 jobs:
   plan:
-    if: github.event_name == 'workflow_dispatch' || contains(github.event.issue.labels.*.name, 'broad-paths-corpus-request')
+    if: github.event_name == 'workflow_dispatch' || (contains(github.event.issue.labels.*.name, 'broad-paths-corpus-request') && (github.event.issue.user.login == github.repository_owner || github.event.issue.user.login == 'github-actions[bot]'))
     runs-on: ubuntu-latest
     timeout-minutes: 20
     outputs:
@@ -103,7 +103,7 @@ jobs:
 
   merge:
     needs: [plan, shard]
-    if: always() && needs.plan.result == 'success'
+    if: always() && needs.plan.result == 'success' && (github.event_name == 'workflow_dispatch' || (contains(github.event.issue.labels.*.name, 'broad-paths-corpus-request') && (github.event.issue.user.login == github.repository_owner || github.event.issue.user.login == 'github-actions[bot]')))
     runs-on: ubuntu-latest
     timeout-minutes: 95
     permissions:
