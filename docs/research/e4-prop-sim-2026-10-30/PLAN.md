@@ -1,5 +1,7 @@
 # E4-PROP-SIM — plan, committed BEFORE any cell is run
 
+> **Doc status:** `unknown` · category `evidence` · last verified `never` · registered in [`docs/DOCUMENT-INDEX.md`](../../DOCUMENT-INDEX.md) · lane DESK-18G-EVENT-ENTRIES
+
 Rule: RULE-P5-GATE-BRK-PER-LEG-V2 (unit RQ-20261029-9a2c-01), applied unchanged (thresholds, ceilings c = 1 - 2F/W, n >= 88, 5 seeds x 1000 lives,
 dd switch 0.8, `--sizing start`, the account's configured risk_pct, ruleset leverage caps, CONTESTED handling). Harness = docs/research/prop-replacement-2026-10-30
 (`run_cells.sh`, `aggregate.py`, `scripts/research/prop_ev_sim.py`), copied here with the leg name and paths changed only.

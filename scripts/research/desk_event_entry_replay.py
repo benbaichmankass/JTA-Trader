@@ -315,7 +315,7 @@ def run_confirm(root: Path, out: Path) -> Dict[str, Any]:
     ev = detect(root, mkt)["E4"]
     lo, hi = gr._epoch(window[0]), gr._epoch(window[1])
     r = score_class(mkt, ev, window)
-    rows = r.pop("_rows", [])
+    r.pop("_rows", None)
     s3 = r.get("S3_ci95") or {}
     ci = s3.get("ci") or [None, None]
     n = r.get("n", 0)

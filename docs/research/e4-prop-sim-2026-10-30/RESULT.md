@@ -1,6 +1,6 @@
 # E4-PROP-SIM — E4 through RULE-P5-GATE-BRK-PER-LEG-V2 (2026-10-30)
 
-> **Doc status:** `live` · category `research` · last verified `2026-10-30` · lane DESK-18G-EVENT-ENTRIES (Tier 1, research only; no config, roster, order or mode)
+> **Doc status:** `unknown` · category `evidence` · last verified `never` · registered in [`docs/DOCUMENT-INDEX.md`](../../DOCUMENT-INDEX.md) · lane DESK-18G-EVENT-ENTRIES (Tier 1, research only; no config, roster, order or mode)
 
 Operator ~22:10Z popup (via Manager Session 2026-10-30c), verbatim: "Prop sim + bybit_1 demo (Recommended)". **Gates this adds or changes: none.**
 Plan and ledgers were committed before any cell ran (`96fea9a39`, `PLAN.md`). Harness = the PROP-REPLACEMENT lane's (`run_cells.sh`, `aggregate.py`, `scripts/research/prop_ev_sim.py`), unchanged

@@ -66,7 +66,8 @@ def main() -> int:
             for r in rs:
                 fh.write(json.dumps(r) + "\n")
     for name, rs in (("full", full), ("365d", t365)):
-        d = [r for r in rs if r["window"] == "dev"]; h = [r for r in rs if r["window"] == "holdout"]
+        d = [r for r in rs if r["window"] == "dev"]
+        h = [r for r in rs if r["window"] == "holdout"]
         print(name, len(rs), "dev", len(d), round(float(np.mean([r["driver_net_r"] for r in d])), 4) if d else None,
               "holdout", len(h), round(float(np.mean([r["driver_net_r"] for r in h])), 4) if h else None,
               rs[0]["entry_time"], rs[-1]["entry_time"])

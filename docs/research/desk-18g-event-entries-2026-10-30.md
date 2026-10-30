@@ -1,6 +1,6 @@
 # DESK-18G — do entries triggered by a funding or open-interest shock beat a random entry?
 
-> **Doc status:** `live` · category `research` · last verified `2026-10-30` · lane DESK-18G-EVENT-ENTRIES (Tier 1, research tooling only)
+> **Doc status:** `unknown` · category `evidence` · last verified `never` · registered in [`docs/DOCUMENT-INDEX.md`](../DOCUMENT-INDEX.md) · lane DESK-18G-EVENT-ENTRIES (Tier 1, research tooling only)
 
 Operator 2026-10-30 ~21:40Z, popup answer verbatim "Event-driven entries". Unit `research/queue/blocked/RQ-20261030-e18g-01.yaml`
 (rule `RULE-RQ20261030-E18G-01-DESK-EVENT-ENTRIES`) was committed and pushed (`e89911492`, 21:53Z) **before the first score**. Harness
