@@ -1,0 +1,108 @@
+{
+ "schema_version": 1,
+ "review_id": "LR-20261030T1332Z-pkg-64d4fa5ab0c34305",
+ "reviewed_at": "2026-10-30T13:38:00Z",
+ "order_package_id": "pkg-64d4fa5ab0c34305",
+ "trade_id": null,
+ "leg": "iaum_pullback_1d",
+ "accounts": [
+  "alpaca_paper"
+ ],
+ "trigger": {
+  "event": "r_milestone",
+  "level": 2.0,
+  "l0_snapshot_at": "2026-10-30T13:32:13Z"
+ },
+ "info_cutoff_at": "2026-10-30T13:32:53Z",
+ "state": {
+  "open_r": 2.1412,
+  "peak_r": 2.1412,
+  "peak_provenance": "estimated",
+  "giveback_r": 0.0,
+  "bars_held": 11,
+  "sl": 41.31285714,
+  "tp": 37.350955,
+  "atr_now_over_entry": 1.0426,
+  "regime_cell_now": null,
+  "regime_cell_entry": null
+ },
+ "features_at_review": {
+  "atr_now_over_entry": 1.0426,
+  "bars_since_peak": 0,
+  "giveback_r": 0.0,
+  "open_r": 2.1412,
+  "peak_r": 2.1412,
+  "r_to_stop": 2.0,
+  "r_to_target": 1.9366
+ },
+ "mechanics": {
+  "evidence": "package sl 41.31285714 / tp 37.350955 agree with every readable account",
+  "verdict": "match"
+ },
+ "options": [
+  {
+   "action": "hold",
+   "level": null,
+   "n": 0,
+   "mean_r": null,
+   "sd_r": null,
+   "worst_r": null,
+   "net": true
+  }
+ ],
+ "outcome_table_source": "comms/live_review/tables/LR-20261030T1332Z-pkg-64d4fa5ab0c34305.json",
+ "recommendation": {
+  "action": "hold",
+  "level": null,
+  "level_atr": null,
+  "ev_delta_r": null,
+  "worst_case_delta_r": null,
+  "basis": "judgement",
+  "confidence": "anecdote",
+  "evidence_source": "judgement",
+  "judgement_confidence": 0.55,
+  "reason": "Mechanics match (SL 41.31/TP 37.35). Hold cell n=0 and all tighten cells no_candles, so the call is judgement. Trade is at its peak (+2.14R, giveback 0, bars_since_peak 0), 1.94R from TP and 2.0R from SL on a 1d leg in chop (ADX 19, ATR ratio 1.04, inside 0.67-1.5). Nothing has turned yet: no failed structure, no vol expansion, no event. A tighten would be advice-only and unmeasured, and the 1d trail still protects the open gain; the stop is a full 2R away so the downside of holding is the giveback, but locking gains on a trade that has not pulled back is not supported by any packet evidence. Correlated short book (10 open shorts, MGC x2 and SLV metals-linked) is a portfolio-level concern, not a reason to cut this paper package alone. Revisit on the first pullback from peak or at the next milestone."
+ },
+ "judge_prior": null,
+ "applied": false,
+ "apply_policy": {
+  "bound_r": 0.25,
+  "within_bound": null,
+  "tighten_r": null
+ },
+ "shadow_policy": {
+  "bound_r": 0.5,
+  "within_bound": null,
+  "would_apply": null,
+  "tighten_r": null
+ },
+ "context_flags": [
+  "judgement: hold n=0 insufficient_n, tighten cells no_candles, nothing measured",
+  "thin_corpus: comms/strategy_evidence/runs/2026-10-22-odc1022 has 8 trades, 5 side-excluded (long), 3 never reached peak, 0 comparable; gap for this leg",
+  "correlated_exposure: 10 other open shorts incl. metals-linked MGC x2 and SLV, plus ETH x2, BTC, SOL, XRP, ADA, AVAX",
+  "regime: chop, ADX 19.0, ATR ratio 1.04 (no overlay trigger)",
+  "missing_inputs: regime.vol_now, regime.cell_entry, context.news, context.live_vs_backtest",
+  "tighten_bias: stop-at-price fills flatter any tighten",
+  "alpaca_paper: no apply path, row is a record"
+ ],
+ "account_reads": [
+  {
+   "account_id": "alpaca_paper",
+   "account_class": "paper",
+   "read": "no_action",
+   "evidence": "alpaca_orders: SL 41.31 / TP 37.35, position True; no apply path for this exchange yet (LTR-9 / none)"
+  }
+ ],
+ "disposition": {
+  "route": "none",
+  "mandate": null,
+  "action_issue": null,
+  "applied_at": null,
+  "verified_readback": null
+ },
+ "model": "sonnet-tier (repo-less reviewer)",
+ "session": "session_01AFoLuLr3vWiZ8L7QscTPEy",
+ "prompt_sha": null,
+ "skill_sha": null,
+ "packet_sha": "0a79ef51e025966222bef080dc7fdd0d9ce7ec236f34f9b2937c3306b00923d6"
+}
