@@ -1,0 +1,24 @@
+{
+  "based_on": "20261030T002432406542Z-efc7dc9a.json",
+  "due_when": {
+    "clears_when": "the PR is merged, ict-git-sync has pulled it onto the VM, and the VM's config/overlay_policy.yaml reads mode annotate for eth_4h + sol_prop and reduce for xrp_4h + eth_prop (overlay_policy_mode is read on every call, so no restart is needed)",
+    "kind": "event"
+  },
+  "id": "PI-20261030-XME2GXW7-0001",
+  "next_action": "check_observation",
+  "observation": {
+    "due_by": "2026-10-31",
+    "how_to_check": "vm-diag relay (skill diag-data): read the VM tree's config/overlay_policy.yaml at origin/main HEAD, and log_file?name=overlay_shadow&lines=200 for both legs still being scored",
+    "what": "VM config/overlay_policy.yaml reads mode annotate for trend_donchian_eth_4h + trend_donchian_sol_prop and reduce for trend_donchian_xrp_4h + trend_donchian_eth_prop, after PR #21553 merges and ict-git-sync pulls it"
+  },
+  "origin": {
+    "kind": "session",
+    "ref": "lane ML-REAL-MONEY-OVERLAY (session_01AFoLuKnxrXwUfkxME2GXW7) / canary #21213 observe check #5",
+    "rerun": "vm-diag-request body: log_file?name=overlay_shadow&lines=200 ; read entry_vs_bar_close_bps per strategy_id (non-zero only on legs without decision_bar: closed)"
+  },
+  "routed_to": "lane OVERLAY-ANNOTATE-ETH4H-SOLPROP (Manager Session 2026-10-30b)",
+  "severity": "medium",
+  "state": "routed",
+  "tier": 3,
+  "what": "ML-REAL-MONEY-OVERLAY serve-parity gap on FORMING-bar legs (MEASURED live 2026-10-29, relay #21439): trend_donchian_eth_4h and trend_donchian_sol_prop set no decision_bar: closed, so they enter mid-bar, while the overlay scores the last CLOSED bar. First live eth_4h package pkg-a04b68a15ea14d19 (20:46Z short): pkg_entry 2260.18 vs decision-bar (16:00-20:00) close 2337.17 = -329 bps. The V2 evidence corpus is closed-bar (entry == decision-bar close), so on these 2 legs the live features are ~one bar staler than the validated distribution; the closed-bar legs (xrp_4h, eth_prop) read 0.0 bps = exact parity. No order was changed (every package so far scored p_win > tau, x1.0). Options for the manager/operator (Tier 3): (a) drop eth_4h and sol_prop from config/overlay_policy.yaml (back to annotate) until they decide on the closed bar; (b) switch those legs to decision_bar: closed (DECISION-BAR-MATCH RQ-20261022-4de5-01 already recommended SWITCH_TO_CLOSED); (c) re-grade the overlay on a forming-bar corpus for those legs. DECISION 2026-10-30T07:43Z: option (a) chosen -- operator popup answer verbatim \"Annotate both out (Recommended)\" (to Manager Session 2026-10-30b; recorded on checklist row ML-REAL-MONEY-OVERLAY). Implemented by lane OVERLAY-ANNOTATE-ETH4H-SOLPROP on branch claude/overlay-annotate-eth4h-solprop: config/overlay_policy.yaml sets trend_donchian_eth_4h and trend_donchian_sol_prop to mode: annotate (still scored + logged to overlay_shadow.jsonl, which keys on the artifact's legs_gate); xrp_4h and eth_prop stay reduce. Open until observed on the VM."
+}

@@ -1,0 +1,2612 @@
+{
+  "verdict": "pass",
+  "read_state": "measured",
+  "population": "test corpus tmb-8b924106949b (corpus v1: config-exact harness runs with --emit-paths of ['trend_donchian_eth_4h', 'trend_donchian_xrp_4h', 'xrp_pullback_2h', 'ada_pullback_2h', 'trend_donchian_eth_prop', 'trend_donchian_sol_prop'], window 2020-07-01 .. 2026-10-15 23:59): 2627 trades on 6 legs passing the peak_r==mfe_r parity control; as traded (harness paths), full cost stack, 6 purged calendar folds by entry",
+  "n": 2627,
+  "measurement": {
+    "schema": "tm_bench/1",
+    "selfcheck": {
+      "pass": true,
+      "checks": [
+        {
+          "check": "synthetic: frozen corpus re-reads to the same corpus_id",
+          "pass": true,
+          "detail": "tmb-4e14430561be, 900 trades"
+        },
+        {
+          "check": "synthetic: B0 - B0 == 0 exactly",
+          "pass": true,
+          "detail": "0.0"
+        },
+        {
+          "check": "synthetic: engine replays B0 to the harness exit_r on >= 99% of trades",
+          "pass": true,
+          "detail": "1.0"
+        },
+        {
+          "check": "synthetic: action-value ceiling >= every labelled action per trade",
+          "pass": true,
+          "detail": "max excess 0.00e+00"
+        },
+        {
+          "check": "synthetic: census oracle == first_passage_paths.census",
+          "pass": true,
+          "detail": ""
+        },
+        {
+          "check": "synthetic-planted: frozen corpus re-reads to the same corpus_id",
+          "pass": true,
+          "detail": "tmb-a164b47a7dde, 900 trades"
+        },
+        {
+          "check": "synthetic-planted: B0 - B0 == 0 exactly",
+          "pass": true,
+          "detail": "0.0"
+        },
+        {
+          "check": "synthetic-planted: engine replays B0 to the harness exit_r on >= 99% of trades",
+          "pass": true,
+          "detail": "1.0"
+        },
+        {
+          "check": "synthetic-planted: action-value ceiling >= every labelled action per trade",
+          "pass": true,
+          "detail": "max excess 0.00e+00"
+        },
+        {
+          "check": "synthetic-planted: census oracle == first_passage_paths.census",
+          "pass": true,
+          "detail": ""
+        },
+        {
+          "check": "planted: lgbm action-value beats B0 (CI lower > 0)",
+          "pass": true,
+          "detail": "0.35714 [0.28196, 0.43509]"
+        },
+        {
+          "check": "null: lgbm action-value does not pass on a driftless walk (CI lower <= 0)",
+          "pass": true,
+          "detail": "null 0.01765 [-0.09948, 0.12778]"
+        },
+        {
+          "check": "null: logit action-value does not pass on a driftless walk (CI lower <= 0)",
+          "pass": true,
+          "detail": "null -0.0332 [-0.19162, 0.10508]"
+        },
+        {
+          "check": "cross-symbol purge leaves no overlapping train trade",
+          "pass": true,
+          "detail": "0 leaks; purged [20, 23, 23, 23, 22, 22]"
+        },
+        {
+          "check": "same trade_key in train and test is de-duplicated",
+          "pass": true,
+          "detail": ""
+        }
+      ]
+    },
+    "test_corpus": {
+      "corpus_id": "tmb-8b924106949b",
+      "source": "corpus v1: config-exact harness runs with --emit-paths of ['trend_donchian_eth_4h', 'trend_donchian_xrp_4h', 'xrp_pullback_2h', 'ada_pullback_2h', 'trend_donchian_eth_prop', 'trend_donchian_sol_prop'], window 2020-07-01 .. 2026-10-15 23:59",
+      "legs": [
+        {
+          "leg": "trend_donchian_eth_4h",
+          "n_trade_rows": 275,
+          "n_path_rows": 3594,
+          "n_trades": 275,
+          "n_without_path": 0,
+          "n_exit_r_mismatch_gross_r": 0,
+          "parity_n": 275,
+          "parity_share": 1.0,
+          "c_exit_vs_harness_slippage_median_gap_r": 0.00015,
+          "state": "included",
+          "timeframe": "4h"
+        },
+        {
+          "leg": "trend_donchian_xrp_4h",
+          "n_trade_rows": 68,
+          "n_path_rows": 545,
+          "n_trades": 68,
+          "n_without_path": 0,
+          "n_exit_r_mismatch_gross_r": 0,
+          "parity_n": 68,
+          "parity_share": 1.0,
+          "c_exit_vs_harness_slippage_median_gap_r": 0.00015,
+          "state": "included",
+          "timeframe": "4h"
+        },
+        {
+          "leg": "xrp_pullback_2h",
+          "n_trade_rows": 394,
+          "n_path_rows": 16870,
+          "n_trades": 394,
+          "n_without_path": 0,
+          "n_exit_r_mismatch_gross_r": 0,
+          "parity_n": 394,
+          "parity_share": 1.0,
+          "c_exit_vs_harness_slippage_median_gap_r": 0.00015,
+          "state": "included",
+          "timeframe": "2h"
+        },
+        {
+          "leg": "ada_pullback_2h",
+          "n_trade_rows": 402,
+          "n_path_rows": 8876,
+          "n_trades": 402,
+          "n_without_path": 0,
+          "n_exit_r_mismatch_gross_r": 0,
+          "parity_n": 402,
+          "parity_share": 1.0,
+          "c_exit_vs_harness_slippage_median_gap_r": 0.00015,
+          "state": "included",
+          "timeframe": "2h"
+        },
+        {
+          "leg": "trend_donchian_eth_prop",
+          "n_trade_rows": 1085,
+          "n_path_rows": 15381,
+          "n_trades": 1085,
+          "n_without_path": 0,
+          "n_exit_r_mismatch_gross_r": 0,
+          "parity_n": 1085,
+          "parity_share": 1.0,
+          "c_exit_vs_harness_slippage_median_gap_r": 0.00011,
+          "state": "included",
+          "timeframe": "1h"
+        },
+        {
+          "leg": "trend_donchian_sol_prop",
+          "n_trade_rows": 403,
+          "n_path_rows": 8287,
+          "n_trades": 403,
+          "n_without_path": 0,
+          "n_exit_r_mismatch_gross_r": 0,
+          "parity_n": 403,
+          "parity_share": 1.0,
+          "c_exit_vs_harness_slippage_median_gap_r": 0.00015,
+          "state": "included",
+          "timeframe": "1h"
+        }
+      ],
+      "failed": [],
+      "runs": {
+        "trend_donchian_eth_4h": {
+          "argv": [
+            "/opt/hostedtoolcache/Python/3.11.17/x64/bin/python3",
+            "/home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_trend.py",
+            "--donchian",
+            "20",
+            "--data",
+            "<data>",
+            "--symbol",
+            "ETHUSDT",
+            "--resample",
+            "4h",
+            "--atr-period",
+            "14",
+            "--atr-stop-mult",
+            "1.5",
+            "--trail-mult",
+            "6.0",
+            "--min-confidence",
+            "0.6",
+            "--fee-bps-roundtrip",
+            "11.0",
+            "--emit-trades",
+            "comms/research/RQ-20261030-824b-01/41023664029/tm_bench_v1_66j6z8ys/trend_donchian_eth_4h__trades.jsonl",
+            "--json",
+            "comms/research/RQ-20261030-824b-01/41023664029/tm_bench_v1_66j6z8ys/trend_donchian_eth_4h__bt.json",
+            "--trail-decay-stall-bars",
+            "10",
+            "--trail-decay-tight-mult",
+            "1.8",
+            "--tp-cap-pct",
+            "0.099",
+            "--tp-r",
+            "50.0",
+            "--tp-revision",
+            "donchian_measured_move",
+            "--tp-revision-width-mult",
+            "0.5",
+            "--start",
+            "2020-07-01",
+            "--end",
+            "2026-10-15 23:59",
+            "--emit-paths",
+            "comms/research/RQ-20261030-824b-01/41023664029/tm_bench_v1_66j6z8ys/trend_donchian_eth_4h__paths.jsonl"
+          ],
+          "feed": {
+            "source": "binance",
+            "ticker": "ETHUSDT",
+            "interval": "240",
+            "resample": "4h"
+          },
+          "cost_policy": {
+            "fee_bps_roundtrip": 11.0,
+            "slippage_bps_roundtrip": 3.0,
+            "funding_bps_per_window": 1.0
+          }
+        },
+        "trend_donchian_xrp_4h": {
+          "argv": [
+            "/opt/hostedtoolcache/Python/3.11.17/x64/bin/python3",
+            "/home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_trend.py",
+            "--donchian",
+            "20",
+            "--data",
+            "<data>",
+            "--symbol",
+            "XRPUSDT",
+            "--resample",
+            "4h",
+            "--atr-period",
+            "14",
+            "--atr-stop-mult",
+            "2",
+            "--trail-mult",
+            "5.0",
+            "--min-confidence",
+            "0.8",
+            "--fee-bps-roundtrip",
+            "11.0",
+            "--emit-trades",
+            "comms/research/RQ-20261030-824b-01/41023664029/tm_bench_v1_66j6z8ys/trend_donchian_xrp_4h__trades.jsonl",
+            "--json",
+            "comms/research/RQ-20261030-824b-01/41023664029/tm_bench_v1_66j6z8ys/trend_donchian_xrp_4h__bt.json",
+            "--stale-exit-bars",
+            "8",
+            "--stale-exit-below-r",
+            "0.0",
+            "--side-filter",
+            "short",
+            "--trail-decay-arm-r",
+            "2.0",
+            "--trail-decay-tight-mult",
+            "2.5",
+            "--skip-hours",
+            "0",
+            "--vol-skip-above-pctl",
+            "0.9",
+            "--tp-cap-pct",
+            "0.099",
+            "--tp-r",
+            "3",
+            "--start",
+            "2020-07-01",
+            "--end",
+            "2026-10-15 23:59",
+            "--emit-paths",
+            "comms/research/RQ-20261030-824b-01/41023664029/tm_bench_v1_66j6z8ys/trend_donchian_xrp_4h__paths.jsonl"
+          ],
+          "feed": {
+            "source": "binance",
+            "ticker": "XRPUSDT",
+            "interval": "240",
+            "resample": "4h"
+          },
+          "cost_policy": {
+            "fee_bps_roundtrip": 11.0,
+            "slippage_bps_roundtrip": 3.0,
+            "funding_bps_per_window": 1.0
+          }
+        },
+        "xrp_pullback_2h": {
+          "argv": [
+            "/opt/hostedtoolcache/Python/3.11.17/x64/bin/python3",
+            "/home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_pullback.py",
+            "--trend-lookback",
+            "40",
+            "--pullback-lookback",
+            "10",
+            "--pullback-frac",
+            "0.5",
+            "--data",
+            "<data>",
+            "--symbol",
+            "XRPUSDT",
+            "--resample",
+            "2h",
+            "--atr-period",
+            "14",
+            "--atr-stop-mult",
+            "2.5",
+            "--trail-mult",
+            "6.0",
+            "--min-confidence",
+            "0.0",
+            "--fee-bps-roundtrip",
+            "11.0",
+            "--emit-trades",
+            "comms/research/RQ-20261030-824b-01/41023664029/tm_bench_v1_66j6z8ys/xrp_pullback_2h__trades.jsonl",
+            "--json",
+            "comms/research/RQ-20261030-824b-01/41023664029/tm_bench_v1_66j6z8ys/xrp_pullback_2h__bt.json",
+            "--adx-min",
+            "25",
+            "--tp-cap-pct",
+            "0.099",
+            "--tp-r",
+            "3.0",
+            "--start",
+            "2020-07-01",
+            "--end",
+            "2026-10-15 23:59",
+            "--emit-paths",
+            "comms/research/RQ-20261030-824b-01/41023664029/tm_bench_v1_66j6z8ys/xrp_pullback_2h__paths.jsonl"
+          ],
+          "feed": {
+            "source": "binance",
+            "ticker": "XRPUSDT",
+            "interval": "120",
+            "resample": "2h"
+          },
+          "cost_policy": {
+            "fee_bps_roundtrip": 11.0,
+            "slippage_bps_roundtrip": 3.0,
+            "funding_bps_per_window": 1.0
+          }
+        },
+        "ada_pullback_2h": {
+          "argv": [
+            "/opt/hostedtoolcache/Python/3.11.17/x64/bin/python3",
+            "/home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_pullback.py",
+            "--trend-lookback",
+            "40",
+            "--pullback-lookback",
+            "10",
+            "--pullback-frac",
+            "0.618",
+            "--data",
+            "<data>",
+            "--symbol",
+            "ADAUSDT",
+            "--resample",
+            "2h",
+            "--atr-period",
+            "14",
+            "--atr-stop-mult",
+            "1.5",
+            "--trail-mult",
+            "5.0",
+            "--min-confidence",
+            "0.0",
+            "--fee-bps-roundtrip",
+            "11.0",
+            "--emit-trades",
+            "comms/research/RQ-20261030-824b-01/41023664029/tm_bench_v1_66j6z8ys/ada_pullback_2h__trades.jsonl",
+            "--json",
+            "comms/research/RQ-20261030-824b-01/41023664029/tm_bench_v1_66j6z8ys/ada_pullback_2h__bt.json",
+            "--adx-min",
+            "28",
+            "--vol-skip-below-pctl",
+            "0.1",
+            "--vol-skip-above-pctl",
+            "0.95",
+            "--tp-cap-pct",
+            "0.099",
+            "--tp-r",
+            "4",
+            "--start",
+            "2020-07-01",
+            "--end",
+            "2026-10-15 23:59",
+            "--emit-paths",
+            "comms/research/RQ-20261030-824b-01/41023664029/tm_bench_v1_66j6z8ys/ada_pullback_2h__paths.jsonl"
+          ],
+          "feed": {
+            "source": "binance",
+            "ticker": "ADAUSDT",
+            "interval": "120",
+            "resample": "2h"
+          },
+          "cost_policy": {
+            "fee_bps_roundtrip": 11.0,
+            "slippage_bps_roundtrip": 3.0,
+            "funding_bps_per_window": 1.0
+          }
+        },
+        "trend_donchian_eth_prop": {
+          "argv": [
+            "/opt/hostedtoolcache/Python/3.11.17/x64/bin/python3",
+            "/home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_trend.py",
+            "--donchian",
+            "20",
+            "--data",
+            "<data>",
+            "--symbol",
+            "ETHUSDT",
+            "--resample",
+            "1h",
+            "--atr-period",
+            "14",
+            "--atr-stop-mult",
+            "2.5",
+            "--trail-mult",
+            "3.5",
+            "--min-confidence",
+            "0.6",
+            "--fee-bps-roundtrip",
+            "11.0",
+            "--emit-trades",
+            "comms/research/RQ-20261030-824b-01/41023664029/tm_bench_v1_66j6z8ys/trend_donchian_eth_prop__trades.jsonl",
+            "--json",
+            "comms/research/RQ-20261030-824b-01/41023664029/tm_bench_v1_66j6z8ys/trend_donchian_eth_prop__bt.json",
+            "--trail-decay-arm-r",
+            "2.99",
+            "--trail-decay-stall-bars",
+            "10",
+            "--trail-decay-tight-mult",
+            "1.8",
+            "--tp-cap-pct",
+            "0.099",
+            "--tp-r",
+            "6.0",
+            "--start",
+            "2020-07-01",
+            "--end",
+            "2026-10-15 23:59",
+            "--emit-paths",
+            "comms/research/RQ-20261030-824b-01/41023664029/tm_bench_v1_66j6z8ys/trend_donchian_eth_prop__paths.jsonl"
+          ],
+          "feed": {
+            "source": "binance",
+            "ticker": "ETHUSDT",
+            "interval": "60",
+            "resample": "1h"
+          },
+          "cost_policy": {
+            "fee_bps_roundtrip": 11.0,
+            "slippage_bps_roundtrip": 3.0,
+            "funding_bps_per_window": 1.0
+          }
+        },
+        "trend_donchian_sol_prop": {
+          "argv": [
+            "/opt/hostedtoolcache/Python/3.11.17/x64/bin/python3",
+            "/home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_trend.py",
+            "--donchian",
+            "20",
+            "--data",
+            "<data>",
+            "--symbol",
+            "SOLUSDT",
+            "--resample",
+            "1h",
+            "--atr-period",
+            "14",
+            "--atr-stop-mult",
+            "2.5",
+            "--trail-mult",
+            "3.5",
+            "--min-confidence",
+            "0.8",
+            "--fee-bps-roundtrip",
+            "11.0",
+            "--emit-trades",
+            "comms/research/RQ-20261030-824b-01/41023664029/tm_bench_v1_66j6z8ys/trend_donchian_sol_prop__trades.jsonl",
+            "--json",
+            "comms/research/RQ-20261030-824b-01/41023664029/tm_bench_v1_66j6z8ys/trend_donchian_sol_prop__bt.json",
+            "--long-only",
+            "--tp-cap-pct",
+            "0.099",
+            "--tp-r",
+            "6.0",
+            "--start",
+            "2020-07-01",
+            "--end",
+            "2026-10-15 23:59",
+            "--emit-paths",
+            "comms/research/RQ-20261030-824b-01/41023664029/tm_bench_v1_66j6z8ys/trend_donchian_sol_prop__paths.jsonl"
+          ],
+          "feed": {
+            "source": "binance",
+            "ticker": "SOLUSDT",
+            "interval": "60",
+            "resample": "1h"
+          },
+          "cost_policy": {
+            "fee_bps_roundtrip": 11.0,
+            "slippage_bps_roundtrip": 3.0,
+            "funding_bps_per_window": 1.0
+          }
+        }
+      },
+      "parity_ok": true
+    },
+    "corpus_id": "tmb-8b924106949b",
+    "train_corpus_id": null,
+    "n_trades": 2627,
+    "n_states": 50926,
+    "n_oos_trades": 2627,
+    "engine": "scripts/research/counterfactual_grader.py::simulate+net_of (CF-B0 cf_core not on main 2026-10-30)",
+    "engine_fidelity": {
+      "share_within_tol": 0.9026,
+      "tol_r": 0.01
+    },
+    "oracle": {
+      "census_best_close_saving_r_per_trade": 0.7562,
+      "census": {
+        "n_trades": 2627,
+        "exit_reasons": {
+          "trail_stop": 1198,
+          "stop": 933,
+          "take_profit": 459,
+          "stale_stop": 29,
+          "timeout": 8
+        },
+        "n_states": 50926,
+        "as_traded_label_rate": 0.5724,
+        "oracle_best_close_saving_r_per_trade": 0.7562,
+        "net_r_per_trade": 0.1315
+      },
+      "action_value_ceiling_r_per_trade_all": 0.91304,
+      "action_value_ceiling_r_per_trade_oos": 0.91304
+    },
+    "folds": {
+      "k": 6,
+      "embargo_hours_by_leg": {
+        "ada_pullback_2h": 304.0,
+        "trend_donchian_eth_4h": 368.0,
+        "trend_donchian_eth_prop": 77.0,
+        "trend_donchian_sol_prop": 178.0,
+        "trend_donchian_xrp_4h": 100.0,
+        "xrp_pullback_2h": 400.0
+      },
+      "rule": "train trade purged if [entry, exit + leg max hold] overlaps the test fold window (any symbol); train trade_keys present in the test corpus dropped",
+      "per_fold": [
+        {
+          "fold": 0,
+          "lo": "2020-07-02 15:00:00+00:00",
+          "hi": "2021-07-20 07:50:00+00:00",
+          "test": 462,
+          "train": 2165,
+          "n_purged": 0,
+          "n_dedup": 0
+        },
+        {
+          "fold": 1,
+          "lo": "2021-07-20 07:50:00+00:00",
+          "hi": "2022-08-07 00:40:00+00:00",
+          "test": 432,
+          "train": 2183,
+          "n_purged": 12,
+          "n_dedup": 0
+        },
+        {
+          "fold": 2,
+          "lo": "2022-08-07 00:40:00+00:00",
+          "hi": "2023-08-24 17:30:00+00:00",
+          "test": 438,
+          "train": 2178,
+          "n_purged": 11,
+          "n_dedup": 0
+        },
+        {
+          "fold": 3,
+          "lo": "2023-08-24 17:30:00+00:00",
+          "hi": "2024-09-10 10:20:00+00:00",
+          "test": 417,
+          "train": 2192,
+          "n_purged": 18,
+          "n_dedup": 0
+        },
+        {
+          "fold": 4,
+          "lo": "2024-09-10 10:20:00+00:00",
+          "hi": "2025-09-28 03:10:00+00:00",
+          "test": 438,
+          "train": 2179,
+          "n_purged": 10,
+          "n_dedup": 0
+        },
+        {
+          "fold": 5,
+          "lo": "2025-09-28 03:10:00+00:00",
+          "hi": "2026-10-15 20:00:00+00:00",
+          "test": 440,
+          "train": 2175,
+          "n_purged": 12,
+          "n_dedup": 0
+        }
+      ]
+    },
+    "action_enum": [
+      "hold",
+      "close",
+      "partial_close_50",
+      "tighten_sl_be",
+      "tighten_sl_atr1",
+      "tighten_sl_atr2",
+      "tp_pull_in_0p5r",
+      "tp_pull_in_1r"
+    ],
+    "checkin_grid": [
+      "every_bar",
+      "every_4",
+      "every_4+triggers",
+      "triggers_only"
+    ],
+    "entry_source": "E1",
+    "arms": [
+      {
+        "arm_id": "B0_hold",
+        "n": 2627,
+        "read_state": "measured",
+        "net_r": 0.13149,
+        "b0_net_r": 0.13149,
+        "delta_vs_b0_r": 0.0,
+        "ci95": [
+          0.0,
+          0.0
+        ],
+        "p_one_sided": 1.0,
+        "folds": {
+          "0": 0.0,
+          "1": 0.0,
+          "2": 0.0,
+          "3": 0.0,
+          "4": 0.0,
+          "5": 0.0
+        },
+        "folds_positive": 0,
+        "action_rate": 0.0,
+        "delta_acted_r": null,
+        "n_acted": 0,
+        "n_invalid_scored_hold": 0,
+        "maxdd_per_leg": {
+          "ada_pullback_2h": {
+            "n": 402,
+            "b0_maxdd_r": 21.897,
+            "arm_maxdd_r": 21.897,
+            "ok": true
+          },
+          "trend_donchian_eth_4h": {
+            "n": 275,
+            "b0_maxdd_r": 20.703,
+            "arm_maxdd_r": 20.703,
+            "ok": true
+          },
+          "trend_donchian_eth_prop": {
+            "n": 1085,
+            "b0_maxdd_r": 27.475,
+            "arm_maxdd_r": 27.475,
+            "ok": true
+          },
+          "trend_donchian_sol_prop": {
+            "n": 403,
+            "b0_maxdd_r": 12.919,
+            "arm_maxdd_r": 12.919,
+            "ok": true
+          },
+          "trend_donchian_xrp_4h": {
+            "n": 68,
+            "b0_maxdd_r": 4.641,
+            "arm_maxdd_r": 4.641,
+            "ok": true
+          },
+          "xrp_pullback_2h": {
+            "n": 394,
+            "b0_maxdd_r": 16.499,
+            "arm_maxdd_r": 16.499,
+            "ok": true
+          }
+        },
+        "maxdd_ok": true,
+        "net_r_per_capital_day": 0.09039,
+        "b0_net_r_per_capital_day": 0.09039,
+        "strata": {
+          "pullback|vol_hi|crypto": {
+            "n": 404,
+            "delta_r": 0.0
+          },
+          "pullback|vol_lo|crypto": {
+            "n": 301,
+            "delta_r": 0.0
+          },
+          "pullback|vol_mid|crypto": {
+            "n": 91,
+            "delta_r": 0.0
+          },
+          "trend_donchian|vol_hi|crypto": {
+            "n": 471,
+            "delta_r": 0.0
+          },
+          "trend_donchian|vol_lo|crypto": {
+            "n": 575,
+            "delta_r": 0.0
+          },
+          "trend_donchian|vol_mid|crypto": {
+            "n": 785,
+            "delta_r": 0.0
+          }
+        },
+        "provenance": "ESTIMATED (harness paths, engine replay, full cost stack)",
+        "b0_minus_b0_r": 0.0
+      },
+      {
+        "arm_id": "B1_best_static_rule",
+        "n": 2627,
+        "read_state": "measured",
+        "net_r": 0.11675,
+        "b0_net_r": 0.13149,
+        "delta_vs_b0_r": -0.01474,
+        "ci95": [
+          -0.04282,
+          0.01175
+        ],
+        "p_one_sided": 0.853,
+        "folds": {
+          "0": -0.02918,
+          "1": -0.01165,
+          "2": 0.03982,
+          "3": -0.06198,
+          "4": 0.00011,
+          "5": -0.02693
+        },
+        "folds_positive": 2,
+        "action_rate": 1.0,
+        "delta_acted_r": -0.01474,
+        "n_acted": 2627,
+        "n_invalid_scored_hold": 0,
+        "maxdd_per_leg": {
+          "ada_pullback_2h": {
+            "n": 402,
+            "b0_maxdd_r": 21.897,
+            "arm_maxdd_r": 20.833,
+            "ok": true
+          },
+          "trend_donchian_eth_4h": {
+            "n": 275,
+            "b0_maxdd_r": 20.703,
+            "arm_maxdd_r": 14.684,
+            "ok": true
+          },
+          "trend_donchian_eth_prop": {
+            "n": 1085,
+            "b0_maxdd_r": 27.475,
+            "arm_maxdd_r": 13.212,
+            "ok": true
+          },
+          "trend_donchian_sol_prop": {
+            "n": 403,
+            "b0_maxdd_r": 12.919,
+            "arm_maxdd_r": 12.701,
+            "ok": true
+          },
+          "trend_donchian_xrp_4h": {
+            "n": 68,
+            "b0_maxdd_r": 4.641,
+            "arm_maxdd_r": 5.791,
+            "ok": false
+          },
+          "xrp_pullback_2h": {
+            "n": 394,
+            "b0_maxdd_r": 16.499,
+            "arm_maxdd_r": 14.336,
+            "ok": true
+          }
+        },
+        "maxdd_ok": false,
+        "net_r_per_capital_day": 0.08025,
+        "b0_net_r_per_capital_day": 0.09039,
+        "strata": {
+          "pullback|vol_hi|crypto": {
+            "n": 404,
+            "delta_r": -0.08707
+          },
+          "pullback|vol_lo|crypto": {
+            "n": 301,
+            "delta_r": 0.00817
+          },
+          "pullback|vol_mid|crypto": {
+            "n": 91,
+            "delta_r": -0.03612
+          },
+          "trend_donchian|vol_hi|crypto": {
+            "n": 471,
+            "delta_r": -0.02543
+          },
+          "trend_donchian|vol_lo|crypto": {
+            "n": 575,
+            "delta_r": 0.00809
+          },
+          "trend_donchian|vol_mid|crypto": {
+            "n": 785,
+            "delta_r": 0.00587
+          }
+        },
+        "provenance": "ESTIMATED (harness paths, engine replay, full cost stack)",
+        "chosen_by_leg_fold": {
+          "ada_pullback_2h": {
+            "0": "lock1_at_2r",
+            "1": "chandelier_3atr",
+            "2": "chandelier_3atr",
+            "3": "lock1_at_2r",
+            "4": "lock1_at_2r",
+            "5": "chandelier_3atr"
+          },
+          "trend_donchian_eth_4h": {
+            "0": "be_lock_ladder",
+            "1": "be_at_1r",
+            "2": "be_at_1r",
+            "3": "be_at_1r",
+            "4": "be_at_1r",
+            "5": "be_at_1r"
+          },
+          "trend_donchian_eth_prop": {
+            "0": "channel_20",
+            "1": "channel_20",
+            "2": "channel_20",
+            "3": "channel_20",
+            "4": "channel_20",
+            "5": "channel_20"
+          },
+          "trend_donchian_sol_prop": {
+            "0": "be_at_1r",
+            "1": "lock1_at_2r",
+            "2": "lock1_at_2r",
+            "3": "lock1_at_2r",
+            "4": "lock1_at_2r",
+            "5": "lock1_at_2r"
+          },
+          "trend_donchian_xrp_4h": {
+            "0": "lock1_at_2r",
+            "1": "be_lock_ladder",
+            "2": "lock1_at_2r",
+            "3": "lock1_at_2r",
+            "4": "lock1_at_2r",
+            "5": "lock1_at_2r"
+          },
+          "xrp_pullback_2h": {
+            "0": "lock1_at_2r",
+            "1": "lock1_at_2r",
+            "2": "lock1_at_2r",
+            "3": "lock1_at_2r",
+            "4": "lock1_at_2r",
+            "5": "lock1_at_2r"
+          }
+        },
+        "grid": [
+          "be_at_1r",
+          "lock1_at_2r",
+          "be_lock_ladder",
+          "chandelier_2atr",
+          "chandelier_3atr",
+          "channel_10",
+          "channel_20"
+        ],
+        "checkin": "continuous (rule)"
+      },
+      {
+        "arm_id": "B2_distance_logit@every_bar",
+        "n": 2627,
+        "read_state": "measured",
+        "net_r": 0.13048,
+        "b0_net_r": 0.13149,
+        "delta_vs_b0_r": -0.00101,
+        "ci95": [
+          -0.0068,
+          0.00423
+        ],
+        "p_one_sided": 0.607,
+        "folds": {
+          "0": 0.00013,
+          "1": 0.0,
+          "2": -0.00014,
+          "3": -0.00709,
+          "4": -0.00218,
+          "5": 0.00288
+        },
+        "folds_positive": 2,
+        "action_rate": 0.0388,
+        "delta_acted_r": -0.02596,
+        "n_acted": 102,
+        "n_invalid_scored_hold": 0,
+        "maxdd_per_leg": {
+          "ada_pullback_2h": {
+            "n": 402,
+            "b0_maxdd_r": 21.897,
+            "arm_maxdd_r": 21.897,
+            "ok": true
+          },
+          "trend_donchian_eth_4h": {
+            "n": 275,
+            "b0_maxdd_r": 20.703,
+            "arm_maxdd_r": 20.703,
+            "ok": true
+          },
+          "trend_donchian_eth_prop": {
+            "n": 1085,
+            "b0_maxdd_r": 27.475,
+            "arm_maxdd_r": 27.134,
+            "ok": true
+          },
+          "trend_donchian_sol_prop": {
+            "n": 403,
+            "b0_maxdd_r": 12.919,
+            "arm_maxdd_r": 12.538,
+            "ok": true
+          },
+          "trend_donchian_xrp_4h": {
+            "n": 68,
+            "b0_maxdd_r": 4.641,
+            "arm_maxdd_r": 4.641,
+            "ok": true
+          },
+          "xrp_pullback_2h": {
+            "n": 394,
+            "b0_maxdd_r": 16.499,
+            "arm_maxdd_r": 20.151,
+            "ok": false
+          }
+        },
+        "maxdd_ok": false,
+        "net_r_per_capital_day": 0.09081,
+        "b0_net_r_per_capital_day": 0.09039,
+        "strata": {
+          "pullback|vol_hi|crypto": {
+            "n": 404,
+            "delta_r": 0.00198
+          },
+          "pullback|vol_lo|crypto": {
+            "n": 301,
+            "delta_r": -0.00652
+          },
+          "pullback|vol_mid|crypto": {
+            "n": 91,
+            "delta_r": -0.03588
+          },
+          "trend_donchian|vol_hi|crypto": {
+            "n": 471,
+            "delta_r": -0.00057
+          },
+          "trend_donchian|vol_lo|crypto": {
+            "n": 575,
+            "delta_r": 0.00907
+          },
+          "trend_donchian|vol_mid|crypto": {
+            "n": 785,
+            "delta_r": -0.00404
+          }
+        },
+        "provenance": "ESTIMATED (harness paths, engine replay, full cost stack)",
+        "b4_matched_random": {
+          "mode": "causal",
+          "delta_vs_b0_r": -0.00389,
+          "margin_r": 0.00288,
+          "margin_ci95": [
+            -0.00355,
+            0.00828
+          ],
+          "p_random_ge_arm": 0.0
+        },
+        "p_star_by_fold": {
+          "0": 0.9,
+          "1": 0.9,
+          "2": 0.9,
+          "3": 0.9,
+          "4": 0.9,
+          "5": 0.9
+        },
+        "checkin": "every_bar"
+      },
+      {
+        "arm_id": "B6_vol_rescale@every_bar",
+        "n": 2627,
+        "read_state": "measured",
+        "net_r": 0.12775,
+        "b0_net_r": 0.13149,
+        "delta_vs_b0_r": -0.00374,
+        "ci95": [
+          -0.0098,
+          0.00168
+        ],
+        "p_one_sided": 0.897,
+        "folds": {
+          "0": -0.00504,
+          "1": -0.00127,
+          "2": -0.00692,
+          "3": -0.01347,
+          "4": 0.00659,
+          "5": -0.0027
+        },
+        "folds_positive": 1,
+        "action_rate": 0.0666,
+        "delta_acted_r": -0.05613,
+        "n_acted": 175,
+        "n_invalid_scored_hold": 0,
+        "maxdd_per_leg": {
+          "ada_pullback_2h": {
+            "n": 402,
+            "b0_maxdd_r": 21.897,
+            "arm_maxdd_r": 21.897,
+            "ok": true
+          },
+          "trend_donchian_eth_4h": {
+            "n": 275,
+            "b0_maxdd_r": 20.703,
+            "arm_maxdd_r": 20.215,
+            "ok": true
+          },
+          "trend_donchian_eth_prop": {
+            "n": 1085,
+            "b0_maxdd_r": 27.475,
+            "arm_maxdd_r": 25.505,
+            "ok": true
+          },
+          "trend_donchian_sol_prop": {
+            "n": 403,
+            "b0_maxdd_r": 12.919,
+            "arm_maxdd_r": 12.774,
+            "ok": true
+          },
+          "trend_donchian_xrp_4h": {
+            "n": 68,
+            "b0_maxdd_r": 4.641,
+            "arm_maxdd_r": 4.641,
+            "ok": true
+          },
+          "xrp_pullback_2h": {
+            "n": 394,
+            "b0_maxdd_r": 16.499,
+            "arm_maxdd_r": 16.776,
+            "ok": false
+          }
+        },
+        "maxdd_ok": false,
+        "net_r_per_capital_day": 0.08782,
+        "b0_net_r_per_capital_day": 0.09039,
+        "strata": {
+          "pullback|vol_hi|crypto": {
+            "n": 404,
+            "delta_r": -0.00357
+          },
+          "pullback|vol_lo|crypto": {
+            "n": 301,
+            "delta_r": 7e-05
+          },
+          "pullback|vol_mid|crypto": {
+            "n": 91,
+            "delta_r": -0.00172
+          },
+          "trend_donchian|vol_hi|crypto": {
+            "n": 471,
+            "delta_r": -0.0148
+          },
+          "trend_donchian|vol_lo|crypto": {
+            "n": 575,
+            "delta_r": -0.00394
+          },
+          "trend_donchian|vol_mid|crypto": {
+            "n": 785,
+            "delta_r": 0.00126
+          }
+        },
+        "provenance": "ESTIMATED (harness paths, engine replay, full cost stack)",
+        "checkin": "every_bar"
+      },
+      {
+        "arm_id": "lgbm_action_value@every_bar",
+        "n": 2627,
+        "read_state": "measured",
+        "net_r": 0.08073,
+        "b0_net_r": 0.13149,
+        "delta_vs_b0_r": -0.05075,
+        "ci95": [
+          -0.08909,
+          -0.01208
+        ],
+        "p_one_sided": 0.997,
+        "folds": {
+          "0": -0.04082,
+          "1": -0.06755,
+          "2": -0.06088,
+          "3": -0.1092,
+          "4": -0.01149,
+          "5": -0.01831
+        },
+        "folds_positive": 0,
+        "action_rate": 0.847,
+        "delta_acted_r": -0.05992,
+        "n_acted": 2225,
+        "n_invalid_scored_hold": 100,
+        "maxdd_per_leg": {
+          "ada_pullback_2h": {
+            "n": 402,
+            "b0_maxdd_r": 21.897,
+            "arm_maxdd_r": 16.457,
+            "ok": true
+          },
+          "trend_donchian_eth_4h": {
+            "n": 275,
+            "b0_maxdd_r": 20.703,
+            "arm_maxdd_r": 10.649,
+            "ok": true
+          },
+          "trend_donchian_eth_prop": {
+            "n": 1085,
+            "b0_maxdd_r": 27.475,
+            "arm_maxdd_r": 15.874,
+            "ok": true
+          },
+          "trend_donchian_sol_prop": {
+            "n": 403,
+            "b0_maxdd_r": 12.919,
+            "arm_maxdd_r": 15.638,
+            "ok": false
+          },
+          "trend_donchian_xrp_4h": {
+            "n": 68,
+            "b0_maxdd_r": 4.641,
+            "arm_maxdd_r": 3.754,
+            "ok": true
+          },
+          "xrp_pullback_2h": {
+            "n": 394,
+            "b0_maxdd_r": 16.499,
+            "arm_maxdd_r": 22.726,
+            "ok": false
+          }
+        },
+        "maxdd_ok": false,
+        "net_r_per_capital_day": 0.06881,
+        "b0_net_r_per_capital_day": 0.09039,
+        "strata": {
+          "pullback|vol_hi|crypto": {
+            "n": 404,
+            "delta_r": -0.11796
+          },
+          "pullback|vol_lo|crypto": {
+            "n": 301,
+            "delta_r": -0.06871
+          },
+          "pullback|vol_mid|crypto": {
+            "n": 91,
+            "delta_r": -0.13969
+          },
+          "trend_donchian|vol_hi|crypto": {
+            "n": 471,
+            "delta_r": -0.01634
+          },
+          "trend_donchian|vol_lo|crypto": {
+            "n": 575,
+            "delta_r": -0.00961
+          },
+          "trend_donchian|vol_mid|crypto": {
+            "n": 785,
+            "delta_r": -0.04975
+          }
+        },
+        "provenance": "ESTIMATED (harness paths, engine replay, full cost stack)",
+        "b4_matched_random": {
+          "mode": "causal",
+          "delta_vs_b0_r": -0.04973,
+          "margin_r": -0.00102,
+          "margin_ci95": [
+            -0.02823,
+            0.02563
+          ],
+          "p_random_ge_arm": 0.516
+        },
+        "act_threshold": 0.05,
+        "p_holm_family": 1.0,
+        "checkin": "every_bar",
+        "s_offline": {
+          "verdict": "fail",
+          "why": "gain_ge_0.03_over_max_b0_b1=False, ci_lo_gt_0=False, folds_ge_5=False, maxdd_ok=False, capday_ok=False, beats_b2=False, beats_own_b4=False, holm_p_lt_0.05=False"
+        }
+      },
+      {
+        "arm_id": "logit_action_value@every_bar",
+        "n": 2627,
+        "read_state": "measured",
+        "net_r": -0.00554,
+        "b0_net_r": 0.13149,
+        "delta_vs_b0_r": -0.13703,
+        "ci95": [
+          -0.19244,
+          -0.08509
+        ],
+        "p_one_sided": 1.0,
+        "folds": {
+          "0": -0.09029,
+          "1": -0.17062,
+          "2": -0.13272,
+          "3": -0.22941,
+          "4": -0.0664,
+          "5": -0.14018
+        },
+        "folds_positive": 0,
+        "action_rate": 0.965,
+        "delta_acted_r": -0.142,
+        "n_acted": 2535,
+        "n_invalid_scored_hold": 0,
+        "maxdd_per_leg": {
+          "ada_pullback_2h": {
+            "n": 402,
+            "b0_maxdd_r": 21.897,
+            "arm_maxdd_r": 18.542,
+            "ok": true
+          },
+          "trend_donchian_eth_4h": {
+            "n": 275,
+            "b0_maxdd_r": 20.703,
+            "arm_maxdd_r": 8.278,
+            "ok": true
+          },
+          "trend_donchian_eth_prop": {
+            "n": 1085,
+            "b0_maxdd_r": 27.475,
+            "arm_maxdd_r": 28.409,
+            "ok": false
+          },
+          "trend_donchian_sol_prop": {
+            "n": 403,
+            "b0_maxdd_r": 12.919,
+            "arm_maxdd_r": 14.815,
+            "ok": false
+          },
+          "trend_donchian_xrp_4h": {
+            "n": 68,
+            "b0_maxdd_r": 4.641,
+            "arm_maxdd_r": 5.482,
+            "ok": false
+          },
+          "xrp_pullback_2h": {
+            "n": 394,
+            "b0_maxdd_r": 16.499,
+            "arm_maxdd_r": 29.568,
+            "ok": false
+          }
+        },
+        "maxdd_ok": false,
+        "net_r_per_capital_day": -0.01591,
+        "b0_net_r_per_capital_day": 0.09039,
+        "strata": {
+          "pullback|vol_hi|crypto": {
+            "n": 404,
+            "delta_r": -0.24109
+          },
+          "pullback|vol_lo|crypto": {
+            "n": 301,
+            "delta_r": -0.10585
+          },
+          "pullback|vol_mid|crypto": {
+            "n": 91,
+            "delta_r": -0.20761
+          },
+          "trend_donchian|vol_hi|crypto": {
+            "n": 471,
+            "delta_r": -0.231
+          },
+          "trend_donchian|vol_lo|crypto": {
+            "n": 575,
+            "delta_r": -0.01214
+          },
+          "trend_donchian|vol_mid|crypto": {
+            "n": 785,
+            "delta_r": -0.12236
+          }
+        },
+        "provenance": "ESTIMATED (harness paths, engine replay, full cost stack)",
+        "b4_matched_random": {
+          "mode": "causal",
+          "delta_vs_b0_r": -0.0897,
+          "margin_r": -0.04733,
+          "margin_ci95": [
+            -0.07527,
+            -0.02105
+          ],
+          "p_random_ge_arm": 0.994
+        },
+        "act_threshold": 0.6,
+        "p_holm_family": 1.0,
+        "checkin": "every_bar",
+        "s_offline": {
+          "verdict": "fail",
+          "why": "gain_ge_0.03_over_max_b0_b1=False, ci_lo_gt_0=False, folds_ge_5=False, maxdd_ok=False, capday_ok=False, beats_b2=False, beats_own_b4=False, holm_p_lt_0.05=False"
+        }
+      },
+      {
+        "arm_id": "B2_distance_logit@every_4",
+        "n": 2627,
+        "read_state": "measured",
+        "net_r": 0.13141,
+        "b0_net_r": 0.13149,
+        "delta_vs_b0_r": -8e-05,
+        "ci95": [
+          -0.00409,
+          0.00297
+        ],
+        "p_one_sided": 0.468,
+        "folds": {
+          "0": 0.0,
+          "1": 0.0,
+          "2": -0.00526,
+          "3": 0.00224,
+          "4": 0.00222,
+          "5": 0.00042
+        },
+        "folds_positive": 3,
+        "action_rate": 0.0194,
+        "delta_acted_r": -0.00415,
+        "n_acted": 51,
+        "n_invalid_scored_hold": 0,
+        "maxdd_per_leg": {
+          "ada_pullback_2h": {
+            "n": 402,
+            "b0_maxdd_r": 21.897,
+            "arm_maxdd_r": 21.897,
+            "ok": true
+          },
+          "trend_donchian_eth_4h": {
+            "n": 275,
+            "b0_maxdd_r": 20.703,
+            "arm_maxdd_r": 20.703,
+            "ok": true
+          },
+          "trend_donchian_eth_prop": {
+            "n": 1085,
+            "b0_maxdd_r": 27.475,
+            "arm_maxdd_r": 29.854,
+            "ok": false
+          },
+          "trend_donchian_sol_prop": {
+            "n": 403,
+            "b0_maxdd_r": 12.919,
+            "arm_maxdd_r": 12.611,
+            "ok": true
+          },
+          "trend_donchian_xrp_4h": {
+            "n": 68,
+            "b0_maxdd_r": 4.641,
+            "arm_maxdd_r": 4.641,
+            "ok": true
+          },
+          "xrp_pullback_2h": {
+            "n": 394,
+            "b0_maxdd_r": 16.499,
+            "arm_maxdd_r": 16.499,
+            "ok": true
+          }
+        },
+        "maxdd_ok": false,
+        "net_r_per_capital_day": 0.09081,
+        "b0_net_r_per_capital_day": 0.09039,
+        "strata": {
+          "pullback|vol_hi|crypto": {
+            "n": 404,
+            "delta_r": 0.00031
+          },
+          "pullback|vol_lo|crypto": {
+            "n": 301,
+            "delta_r": 0.0007
+          },
+          "pullback|vol_mid|crypto": {
+            "n": 91,
+            "delta_r": 0.0014
+          },
+          "trend_donchian|vol_hi|crypto": {
+            "n": 471,
+            "delta_r": -0.00081
+          },
+          "trend_donchian|vol_lo|crypto": {
+            "n": 575,
+            "delta_r": 0.00326
+          },
+          "trend_donchian|vol_mid|crypto": {
+            "n": 785,
+            "delta_r": -0.00276
+          }
+        },
+        "provenance": "ESTIMATED (harness paths, engine replay, full cost stack)",
+        "b4_matched_random": {
+          "mode": "causal",
+          "delta_vs_b0_r": -0.0021,
+          "margin_r": 0.00202,
+          "margin_ci95": [
+            -0.00238,
+            0.00528
+          ],
+          "p_random_ge_arm": 0.0
+        },
+        "p_star_by_fold": {
+          "0": 0.9,
+          "1": 0.9,
+          "2": 0.9,
+          "3": 0.9,
+          "4": 0.9,
+          "5": 0.9
+        },
+        "checkin": "every_4"
+      },
+      {
+        "arm_id": "B6_vol_rescale@every_4",
+        "n": 2627,
+        "read_state": "measured",
+        "net_r": 0.12689,
+        "b0_net_r": 0.13149,
+        "delta_vs_b0_r": -0.0046,
+        "ci95": [
+          -0.0108,
+          0.00051
+        ],
+        "p_one_sided": 0.9545,
+        "folds": {
+          "0": -0.00388,
+          "1": -0.00177,
+          "2": -0.00896,
+          "3": -0.0167,
+          "4": 0.00498,
+          "5": -0.00187
+        },
+        "folds_positive": 1,
+        "action_rate": 0.0495,
+        "delta_acted_r": -0.09296,
+        "n_acted": 130,
+        "n_invalid_scored_hold": 0,
+        "maxdd_per_leg": {
+          "ada_pullback_2h": {
+            "n": 402,
+            "b0_maxdd_r": 21.897,
+            "arm_maxdd_r": 21.897,
+            "ok": true
+          },
+          "trend_donchian_eth_4h": {
+            "n": 275,
+            "b0_maxdd_r": 20.703,
+            "arm_maxdd_r": 20.215,
+            "ok": true
+          },
+          "trend_donchian_eth_prop": {
+            "n": 1085,
+            "b0_maxdd_r": 27.475,
+            "arm_maxdd_r": 26.696,
+            "ok": true
+          },
+          "trend_donchian_sol_prop": {
+            "n": 403,
+            "b0_maxdd_r": 12.919,
+            "arm_maxdd_r": 12.467,
+            "ok": true
+          },
+          "trend_donchian_xrp_4h": {
+            "n": 68,
+            "b0_maxdd_r": 4.641,
+            "arm_maxdd_r": 4.641,
+            "ok": true
+          },
+          "xrp_pullback_2h": {
+            "n": 394,
+            "b0_maxdd_r": 16.499,
+            "arm_maxdd_r": 16.925,
+            "ok": false
+          }
+        },
+        "maxdd_ok": false,
+        "net_r_per_capital_day": 0.08722,
+        "b0_net_r_per_capital_day": 0.09039,
+        "strata": {
+          "pullback|vol_hi|crypto": {
+            "n": 404,
+            "delta_r": -0.00281
+          },
+          "pullback|vol_lo|crypto": {
+            "n": 301,
+            "delta_r": -0.00192
+          },
+          "pullback|vol_mid|crypto": {
+            "n": 91,
+            "delta_r": -0.00787
+          },
+          "trend_donchian|vol_hi|crypto": {
+            "n": 471,
+            "delta_r": -0.01684
+          },
+          "trend_donchian|vol_lo|crypto": {
+            "n": 575,
+            "delta_r": -0.00472
+          },
+          "trend_donchian|vol_mid|crypto": {
+            "n": 785,
+            "delta_r": 0.00126
+          }
+        },
+        "provenance": "ESTIMATED (harness paths, engine replay, full cost stack)",
+        "checkin": "every_4"
+      },
+      {
+        "arm_id": "lgbm_action_value@every_4",
+        "n": 2627,
+        "read_state": "measured",
+        "net_r": 0.07775,
+        "b0_net_r": 0.13149,
+        "delta_vs_b0_r": -0.05374,
+        "ci95": [
+          -0.0888,
+          -0.01779
+        ],
+        "p_one_sided": 0.9985,
+        "folds": {
+          "0": -0.01611,
+          "1": -0.10082,
+          "2": -0.02966,
+          "3": -0.12887,
+          "4": -0.00957,
+          "5": -0.04374
+        },
+        "folds_positive": 0,
+        "action_rate": 0.753,
+        "delta_acted_r": -0.07137,
+        "n_acted": 1978,
+        "n_invalid_scored_hold": 99,
+        "maxdd_per_leg": {
+          "ada_pullback_2h": {
+            "n": 402,
+            "b0_maxdd_r": 21.897,
+            "arm_maxdd_r": 20.503,
+            "ok": true
+          },
+          "trend_donchian_eth_4h": {
+            "n": 275,
+            "b0_maxdd_r": 20.703,
+            "arm_maxdd_r": 13.378,
+            "ok": true
+          },
+          "trend_donchian_eth_prop": {
+            "n": 1085,
+            "b0_maxdd_r": 27.475,
+            "arm_maxdd_r": 18.193,
+            "ok": true
+          },
+          "trend_donchian_sol_prop": {
+            "n": 403,
+            "b0_maxdd_r": 12.919,
+            "arm_maxdd_r": 16.199,
+            "ok": false
+          },
+          "trend_donchian_xrp_4h": {
+            "n": 68,
+            "b0_maxdd_r": 4.641,
+            "arm_maxdd_r": 4.071,
+            "ok": true
+          },
+          "xrp_pullback_2h": {
+            "n": 394,
+            "b0_maxdd_r": 16.499,
+            "arm_maxdd_r": 25.126,
+            "ok": false
+          }
+        },
+        "maxdd_ok": false,
+        "net_r_per_capital_day": 0.06483,
+        "b0_net_r_per_capital_day": 0.09039,
+        "strata": {
+          "pullback|vol_hi|crypto": {
+            "n": 404,
+            "delta_r": -0.08624
+          },
+          "pullback|vol_lo|crypto": {
+            "n": 301,
+            "delta_r": -0.10338
+          },
+          "pullback|vol_mid|crypto": {
+            "n": 91,
+            "delta_r": -0.12401
+          },
+          "trend_donchian|vol_hi|crypto": {
+            "n": 471,
+            "delta_r": -0.04278
+          },
+          "trend_donchian|vol_lo|crypto": {
+            "n": 575,
+            "delta_r": -0.00802
+          },
+          "trend_donchian|vol_mid|crypto": {
+            "n": 785,
+            "delta_r": -0.04989
+          }
+        },
+        "provenance": "ESTIMATED (harness paths, engine replay, full cost stack)",
+        "b4_matched_random": {
+          "mode": "causal",
+          "delta_vs_b0_r": -0.05258,
+          "margin_r": -0.00115,
+          "margin_ci95": [
+            -0.02567,
+            0.02397
+          ],
+          "p_random_ge_arm": 0.544
+        },
+        "act_threshold": 0.05,
+        "p_holm_family": 1.0,
+        "checkin": "every_4",
+        "s_offline": {
+          "verdict": "fail",
+          "why": "gain_ge_0.03_over_max_b0_b1=False, ci_lo_gt_0=False, folds_ge_5=False, maxdd_ok=False, capday_ok=False, beats_b2=False, beats_own_b4=False, holm_p_lt_0.05=False"
+        }
+      },
+      {
+        "arm_id": "logit_action_value@every_4",
+        "n": 2627,
+        "read_state": "measured",
+        "net_r": -0.00373,
+        "b0_net_r": 0.13149,
+        "delta_vs_b0_r": -0.13521,
+        "ci95": [
+          -0.18647,
+          -0.08354
+        ],
+        "p_one_sided": 1.0,
+        "folds": {
+          "0": -0.0977,
+          "1": -0.16065,
+          "2": -0.13033,
+          "3": -0.22737,
+          "4": -0.06074,
+          "5": -0.14127
+        },
+        "folds_positive": 0,
+        "action_rate": 0.9547,
+        "delta_acted_r": -0.14163,
+        "n_acted": 2508,
+        "n_invalid_scored_hold": 0,
+        "maxdd_per_leg": {
+          "ada_pullback_2h": {
+            "n": 402,
+            "b0_maxdd_r": 21.897,
+            "arm_maxdd_r": 16.539,
+            "ok": true
+          },
+          "trend_donchian_eth_4h": {
+            "n": 275,
+            "b0_maxdd_r": 20.703,
+            "arm_maxdd_r": 8.278,
+            "ok": true
+          },
+          "trend_donchian_eth_prop": {
+            "n": 1085,
+            "b0_maxdd_r": 27.475,
+            "arm_maxdd_r": 29.606,
+            "ok": false
+          },
+          "trend_donchian_sol_prop": {
+            "n": 403,
+            "b0_maxdd_r": 12.919,
+            "arm_maxdd_r": 14.933,
+            "ok": false
+          },
+          "trend_donchian_xrp_4h": {
+            "n": 68,
+            "b0_maxdd_r": 4.641,
+            "arm_maxdd_r": 5.382,
+            "ok": false
+          },
+          "xrp_pullback_2h": {
+            "n": 394,
+            "b0_maxdd_r": 16.499,
+            "arm_maxdd_r": 27.901,
+            "ok": false
+          }
+        },
+        "maxdd_ok": false,
+        "net_r_per_capital_day": -0.0101,
+        "b0_net_r_per_capital_day": 0.09039,
+        "strata": {
+          "pullback|vol_hi|crypto": {
+            "n": 404,
+            "delta_r": -0.22954
+          },
+          "pullback|vol_lo|crypto": {
+            "n": 301,
+            "delta_r": -0.10679
+          },
+          "pullback|vol_mid|crypto": {
+            "n": 91,
+            "delta_r": -0.17114
+          },
+          "trend_donchian|vol_hi|crypto": {
+            "n": 471,
+            "delta_r": -0.23067
+          },
+          "trend_donchian|vol_lo|crypto": {
+            "n": 575,
+            "delta_r": -0.01642
+          },
+          "trend_donchian|vol_mid|crypto": {
+            "n": 785,
+            "delta_r": -0.12314
+          }
+        },
+        "provenance": "ESTIMATED (harness paths, engine replay, full cost stack)",
+        "b4_matched_random": {
+          "mode": "causal",
+          "delta_vs_b0_r": -0.09841,
+          "margin_r": -0.0368,
+          "margin_ci95": [
+            -0.06093,
+            -0.01383
+          ],
+          "p_random_ge_arm": 0.976
+        },
+        "act_threshold": 0.6,
+        "p_holm_family": 1.0,
+        "checkin": "every_4",
+        "s_offline": {
+          "verdict": "fail",
+          "why": "gain_ge_0.03_over_max_b0_b1=False, ci_lo_gt_0=False, folds_ge_5=False, maxdd_ok=False, capday_ok=False, beats_b2=False, beats_own_b4=False, holm_p_lt_0.05=False"
+        }
+      },
+      {
+        "arm_id": "B2_distance_logit@every_4+triggers",
+        "n": 2627,
+        "read_state": "measured",
+        "net_r": 0.13097,
+        "b0_net_r": 0.13149,
+        "delta_vs_b0_r": -0.00052,
+        "ci95": [
+          -0.00628,
+          0.00417
+        ],
+        "p_one_sided": 0.542,
+        "folds": {
+          "0": 0.00013,
+          "1": 0.0,
+          "2": -0.00322,
+          "3": -0.00504,
+          "4": 0.0028,
+          "5": 0.00195
+        },
+        "folds_positive": 3,
+        "action_rate": 0.0305,
+        "delta_acted_r": -0.0171,
+        "n_acted": 80,
+        "n_invalid_scored_hold": 0,
+        "maxdd_per_leg": {
+          "ada_pullback_2h": {
+            "n": 402,
+            "b0_maxdd_r": 21.897,
+            "arm_maxdd_r": 21.897,
+            "ok": true
+          },
+          "trend_donchian_eth_4h": {
+            "n": 275,
+            "b0_maxdd_r": 20.703,
+            "arm_maxdd_r": 20.703,
+            "ok": true
+          },
+          "trend_donchian_eth_prop": {
+            "n": 1085,
+            "b0_maxdd_r": 27.475,
+            "arm_maxdd_r": 28.568,
+            "ok": false
+          },
+          "trend_donchian_sol_prop": {
+            "n": 403,
+            "b0_maxdd_r": 12.919,
+            "arm_maxdd_r": 12.586,
+            "ok": true
+          },
+          "trend_donchian_xrp_4h": {
+            "n": 68,
+            "b0_maxdd_r": 4.641,
+            "arm_maxdd_r": 4.641,
+            "ok": true
+          },
+          "xrp_pullback_2h": {
+            "n": 394,
+            "b0_maxdd_r": 16.499,
+            "arm_maxdd_r": 17.391,
+            "ok": false
+          }
+        },
+        "maxdd_ok": false,
+        "net_r_per_capital_day": 0.09074,
+        "b0_net_r_per_capital_day": 0.09039,
+        "strata": {
+          "pullback|vol_hi|crypto": {
+            "n": 404,
+            "delta_r": 0.00198
+          },
+          "pullback|vol_lo|crypto": {
+            "n": 301,
+            "delta_r": 0.00231
+          },
+          "pullback|vol_mid|crypto": {
+            "n": 91,
+            "delta_r": -0.03786
+          },
+          "trend_donchian|vol_hi|crypto": {
+            "n": 471,
+            "delta_r": -0.00057
+          },
+          "trend_donchian|vol_lo|crypto": {
+            "n": 575,
+            "delta_r": 0.00696
+          },
+          "trend_donchian|vol_mid|crypto": {
+            "n": 785,
+            "delta_r": -0.00402
+          }
+        },
+        "provenance": "ESTIMATED (harness paths, engine replay, full cost stack)",
+        "b4_matched_random": {
+          "mode": "causal",
+          "delta_vs_b0_r": -0.00285,
+          "margin_r": 0.00233,
+          "margin_ci95": [
+            -0.00337,
+            0.00696
+          ],
+          "p_random_ge_arm": 0.0
+        },
+        "p_star_by_fold": {
+          "0": 0.9,
+          "1": 0.9,
+          "2": 0.9,
+          "3": 0.9,
+          "4": 0.9,
+          "5": 0.9
+        },
+        "checkin": "every_4+triggers"
+      },
+      {
+        "arm_id": "B6_vol_rescale@every_4+triggers",
+        "n": 2627,
+        "read_state": "measured",
+        "net_r": 0.12775,
+        "b0_net_r": 0.13149,
+        "delta_vs_b0_r": -0.00374,
+        "ci95": [
+          -0.00989,
+          0.00131
+        ],
+        "p_one_sided": 0.9135,
+        "folds": {
+          "0": -0.00504,
+          "1": -0.00127,
+          "2": -0.00692,
+          "3": -0.01347,
+          "4": 0.00659,
+          "5": -0.0027
+        },
+        "folds_positive": 1,
+        "action_rate": 0.0666,
+        "delta_acted_r": -0.05613,
+        "n_acted": 175,
+        "n_invalid_scored_hold": 0,
+        "maxdd_per_leg": {
+          "ada_pullback_2h": {
+            "n": 402,
+            "b0_maxdd_r": 21.897,
+            "arm_maxdd_r": 21.897,
+            "ok": true
+          },
+          "trend_donchian_eth_4h": {
+            "n": 275,
+            "b0_maxdd_r": 20.703,
+            "arm_maxdd_r": 20.215,
+            "ok": true
+          },
+          "trend_donchian_eth_prop": {
+            "n": 1085,
+            "b0_maxdd_r": 27.475,
+            "arm_maxdd_r": 25.505,
+            "ok": true
+          },
+          "trend_donchian_sol_prop": {
+            "n": 403,
+            "b0_maxdd_r": 12.919,
+            "arm_maxdd_r": 12.774,
+            "ok": true
+          },
+          "trend_donchian_xrp_4h": {
+            "n": 68,
+            "b0_maxdd_r": 4.641,
+            "arm_maxdd_r": 4.641,
+            "ok": true
+          },
+          "xrp_pullback_2h": {
+            "n": 394,
+            "b0_maxdd_r": 16.499,
+            "arm_maxdd_r": 16.776,
+            "ok": false
+          }
+        },
+        "maxdd_ok": false,
+        "net_r_per_capital_day": 0.08782,
+        "b0_net_r_per_capital_day": 0.09039,
+        "strata": {
+          "pullback|vol_hi|crypto": {
+            "n": 404,
+            "delta_r": -0.00357
+          },
+          "pullback|vol_lo|crypto": {
+            "n": 301,
+            "delta_r": 7e-05
+          },
+          "pullback|vol_mid|crypto": {
+            "n": 91,
+            "delta_r": -0.00172
+          },
+          "trend_donchian|vol_hi|crypto": {
+            "n": 471,
+            "delta_r": -0.0148
+          },
+          "trend_donchian|vol_lo|crypto": {
+            "n": 575,
+            "delta_r": -0.00394
+          },
+          "trend_donchian|vol_mid|crypto": {
+            "n": 785,
+            "delta_r": 0.00126
+          }
+        },
+        "provenance": "ESTIMATED (harness paths, engine replay, full cost stack)",
+        "checkin": "every_4+triggers"
+      },
+      {
+        "arm_id": "lgbm_action_value@every_4+triggers",
+        "n": 2627,
+        "read_state": "measured",
+        "net_r": 0.08856,
+        "b0_net_r": 0.13149,
+        "delta_vs_b0_r": -0.04293,
+        "ci95": [
+          -0.07942,
+          -0.00849
+        ],
+        "p_one_sided": 0.991,
+        "folds": {
+          "0": -0.02841,
+          "1": -0.06223,
+          "2": -0.05362,
+          "3": -0.12536,
+          "4": 0.02334,
+          "5": -0.01642
+        },
+        "folds_positive": 1,
+        "action_rate": 0.8161,
+        "delta_acted_r": -0.0526,
+        "n_acted": 2144,
+        "n_invalid_scored_hold": 113,
+        "maxdd_per_leg": {
+          "ada_pullback_2h": {
+            "n": 402,
+            "b0_maxdd_r": 21.897,
+            "arm_maxdd_r": 17.504,
+            "ok": true
+          },
+          "trend_donchian_eth_4h": {
+            "n": 275,
+            "b0_maxdd_r": 20.703,
+            "arm_maxdd_r": 10.274,
+            "ok": true
+          },
+          "trend_donchian_eth_prop": {
+            "n": 1085,
+            "b0_maxdd_r": 27.475,
+            "arm_maxdd_r": 18.733,
+            "ok": true
+          },
+          "trend_donchian_sol_prop": {
+            "n": 403,
+            "b0_maxdd_r": 12.919,
+            "arm_maxdd_r": 13.013,
+            "ok": false
+          },
+          "trend_donchian_xrp_4h": {
+            "n": 68,
+            "b0_maxdd_r": 4.641,
+            "arm_maxdd_r": 3.754,
+            "ok": true
+          },
+          "xrp_pullback_2h": {
+            "n": 394,
+            "b0_maxdd_r": 16.499,
+            "arm_maxdd_r": 22.143,
+            "ok": false
+          }
+        },
+        "maxdd_ok": false,
+        "net_r_per_capital_day": 0.07427,
+        "b0_net_r_per_capital_day": 0.09039,
+        "strata": {
+          "pullback|vol_hi|crypto": {
+            "n": 404,
+            "delta_r": -0.10415
+          },
+          "pullback|vol_lo|crypto": {
+            "n": 301,
+            "delta_r": -0.08174
+          },
+          "pullback|vol_mid|crypto": {
+            "n": 91,
+            "delta_r": -0.11735
+          },
+          "trend_donchian|vol_hi|crypto": {
+            "n": 471,
+            "delta_r": -0.00948
+          },
+          "trend_donchian|vol_lo|crypto": {
+            "n": 575,
+            "delta_r": 0.00022
+          },
+          "trend_donchian|vol_mid|crypto": {
+            "n": 785,
+            "delta_r": -0.03958
+          }
+        },
+        "provenance": "ESTIMATED (harness paths, engine replay, full cost stack)",
+        "b4_matched_random": {
+          "mode": "causal",
+          "delta_vs_b0_r": -0.05162,
+          "margin_r": 0.0087,
+          "margin_ci95": [
+            -0.01603,
+            0.03322
+          ],
+          "p_random_ge_arm": 0.182
+        },
+        "act_threshold": 0.05,
+        "p_holm_family": 1.0,
+        "checkin": "every_4+triggers",
+        "s_offline": {
+          "verdict": "fail",
+          "why": "gain_ge_0.03_over_max_b0_b1=False, ci_lo_gt_0=False, folds_ge_5=False, maxdd_ok=False, capday_ok=False, beats_b2=False, beats_own_b4=False, holm_p_lt_0.05=False"
+        }
+      },
+      {
+        "arm_id": "logit_action_value@every_4+triggers",
+        "n": 2627,
+        "read_state": "measured",
+        "net_r": -0.00789,
+        "b0_net_r": 0.13149,
+        "delta_vs_b0_r": -0.13938,
+        "ci95": [
+          -0.19529,
+          -0.08704
+        ],
+        "p_one_sided": 1.0,
+        "folds": {
+          "0": -0.09637,
+          "1": -0.17074,
+          "2": -0.13289,
+          "3": -0.23081,
+          "4": -0.07047,
+          "5": -0.14213
+        },
+        "folds_positive": 0,
+        "action_rate": 0.9612,
+        "delta_acted_r": -0.14501,
+        "n_acted": 2525,
+        "n_invalid_scored_hold": 0,
+        "maxdd_per_leg": {
+          "ada_pullback_2h": {
+            "n": 402,
+            "b0_maxdd_r": 21.897,
+            "arm_maxdd_r": 18.77,
+            "ok": true
+          },
+          "trend_donchian_eth_4h": {
+            "n": 275,
+            "b0_maxdd_r": 20.703,
+            "arm_maxdd_r": 8.278,
+            "ok": true
+          },
+          "trend_donchian_eth_prop": {
+            "n": 1085,
+            "b0_maxdd_r": 27.475,
+            "arm_maxdd_r": 30.696,
+            "ok": false
+          },
+          "trend_donchian_sol_prop": {
+            "n": 403,
+            "b0_maxdd_r": 12.919,
+            "arm_maxdd_r": 14.798,
+            "ok": false
+          },
+          "trend_donchian_xrp_4h": {
+            "n": 68,
+            "b0_maxdd_r": 4.641,
+            "arm_maxdd_r": 5.382,
+            "ok": false
+          },
+          "xrp_pullback_2h": {
+            "n": 394,
+            "b0_maxdd_r": 16.499,
+            "arm_maxdd_r": 30.911,
+            "ok": false
+          }
+        },
+        "maxdd_ok": false,
+        "net_r_per_capital_day": -0.02209,
+        "b0_net_r_per_capital_day": 0.09039,
+        "strata": {
+          "pullback|vol_hi|crypto": {
+            "n": 404,
+            "delta_r": -0.24456
+          },
+          "pullback|vol_lo|crypto": {
+            "n": 301,
+            "delta_r": -0.11127
+          },
+          "pullback|vol_mid|crypto": {
+            "n": 91,
+            "delta_r": -0.19919
+          },
+          "trend_donchian|vol_hi|crypto": {
+            "n": 471,
+            "delta_r": -0.23452
+          },
+          "trend_donchian|vol_lo|crypto": {
+            "n": 575,
+            "delta_r": -0.01435
+          },
+          "trend_donchian|vol_mid|crypto": {
+            "n": 785,
+            "delta_r": -0.12358
+          }
+        },
+        "provenance": "ESTIMATED (harness paths, engine replay, full cost stack)",
+        "b4_matched_random": {
+          "mode": "causal",
+          "delta_vs_b0_r": -0.09337,
+          "margin_r": -0.046,
+          "margin_ci95": [
+            -0.07155,
+            -0.01916
+          ],
+          "p_random_ge_arm": 0.988
+        },
+        "act_threshold": 0.6,
+        "p_holm_family": 1.0,
+        "checkin": "every_4+triggers",
+        "s_offline": {
+          "verdict": "fail",
+          "why": "gain_ge_0.03_over_max_b0_b1=False, ci_lo_gt_0=False, folds_ge_5=False, maxdd_ok=False, capday_ok=False, beats_b2=False, beats_own_b4=False, holm_p_lt_0.05=False"
+        }
+      },
+      {
+        "arm_id": "B2_distance_logit@triggers_only",
+        "n": 2627,
+        "read_state": "measured",
+        "net_r": 0.13069,
+        "b0_net_r": 0.13149,
+        "delta_vs_b0_r": -0.00079,
+        "ci95": [
+          -0.00651,
+          0.00386
+        ],
+        "p_one_sided": 0.5915,
+        "folds": {
+          "0": 0.00013,
+          "1": 0.0,
+          "2": -0.00399,
+          "3": -0.00551,
+          "4": 0.00257,
+          "5": 0.00176
+        },
+        "folds_positive": 3,
+        "action_rate": 0.0278,
+        "delta_acted_r": -0.02853,
+        "n_acted": 73,
+        "n_invalid_scored_hold": 0,
+        "maxdd_per_leg": {
+          "ada_pullback_2h": {
+            "n": 402,
+            "b0_maxdd_r": 21.897,
+            "arm_maxdd_r": 21.897,
+            "ok": true
+          },
+          "trend_donchian_eth_4h": {
+            "n": 275,
+            "b0_maxdd_r": 20.703,
+            "arm_maxdd_r": 20.703,
+            "ok": true
+          },
+          "trend_donchian_eth_prop": {
+            "n": 1085,
+            "b0_maxdd_r": 27.475,
+            "arm_maxdd_r": 28.725,
+            "ok": false
+          },
+          "trend_donchian_sol_prop": {
+            "n": 403,
+            "b0_maxdd_r": 12.919,
+            "arm_maxdd_r": 12.586,
+            "ok": true
+          },
+          "trend_donchian_xrp_4h": {
+            "n": 68,
+            "b0_maxdd_r": 4.641,
+            "arm_maxdd_r": 4.641,
+            "ok": true
+          },
+          "xrp_pullback_2h": {
+            "n": 394,
+            "b0_maxdd_r": 16.499,
+            "arm_maxdd_r": 17.519,
+            "ok": false
+          }
+        },
+        "maxdd_ok": false,
+        "net_r_per_capital_day": 0.09049,
+        "b0_net_r_per_capital_day": 0.09039,
+        "strata": {
+          "pullback|vol_hi|crypto": {
+            "n": 404,
+            "delta_r": 0.00167
+          },
+          "pullback|vol_lo|crypto": {
+            "n": 301,
+            "delta_r": 0.00231
+          },
+          "pullback|vol_mid|crypto": {
+            "n": 91,
+            "delta_r": -0.03927
+          },
+          "trend_donchian|vol_hi|crypto": {
+            "n": 471,
+            "delta_r": -0.00057
+          },
+          "trend_donchian|vol_lo|crypto": {
+            "n": 575,
+            "delta_r": 0.00619
+          },
+          "trend_donchian|vol_mid|crypto": {
+            "n": 785,
+            "delta_r": -0.00405
+          }
+        },
+        "provenance": "ESTIMATED (harness paths, engine replay, full cost stack)",
+        "b4_matched_random": {
+          "mode": "causal",
+          "delta_vs_b0_r": -0.00282,
+          "margin_r": 0.00203,
+          "margin_ci95": [
+            -0.00371,
+            0.00663
+          ],
+          "p_random_ge_arm": 0.0
+        },
+        "p_star_by_fold": {
+          "0": 0.9,
+          "1": 0.9,
+          "2": 0.9,
+          "3": 0.9,
+          "4": 0.9,
+          "5": 0.9
+        },
+        "checkin": "triggers_only"
+      },
+      {
+        "arm_id": "B6_vol_rescale@triggers_only",
+        "n": 2627,
+        "read_state": "measured",
+        "net_r": 0.12775,
+        "b0_net_r": 0.13149,
+        "delta_vs_b0_r": -0.00374,
+        "ci95": [
+          -0.00929,
+          0.00137
+        ],
+        "p_one_sided": 0.9055,
+        "folds": {
+          "0": -0.00504,
+          "1": -0.00127,
+          "2": -0.00692,
+          "3": -0.01347,
+          "4": 0.00659,
+          "5": -0.0027
+        },
+        "folds_positive": 1,
+        "action_rate": 0.0666,
+        "delta_acted_r": -0.05613,
+        "n_acted": 175,
+        "n_invalid_scored_hold": 0,
+        "maxdd_per_leg": {
+          "ada_pullback_2h": {
+            "n": 402,
+            "b0_maxdd_r": 21.897,
+            "arm_maxdd_r": 21.897,
+            "ok": true
+          },
+          "trend_donchian_eth_4h": {
+            "n": 275,
+            "b0_maxdd_r": 20.703,
+            "arm_maxdd_r": 20.215,
+            "ok": true
+          },
+          "trend_donchian_eth_prop": {
+            "n": 1085,
+            "b0_maxdd_r": 27.475,
+            "arm_maxdd_r": 25.505,
+            "ok": true
+          },
+          "trend_donchian_sol_prop": {
+            "n": 403,
+            "b0_maxdd_r": 12.919,
+            "arm_maxdd_r": 12.774,
+            "ok": true
+          },
+          "trend_donchian_xrp_4h": {
+            "n": 68,
+            "b0_maxdd_r": 4.641,
+            "arm_maxdd_r": 4.641,
+            "ok": true
+          },
+          "xrp_pullback_2h": {
+            "n": 394,
+            "b0_maxdd_r": 16.499,
+            "arm_maxdd_r": 16.776,
+            "ok": false
+          }
+        },
+        "maxdd_ok": false,
+        "net_r_per_capital_day": 0.08782,
+        "b0_net_r_per_capital_day": 0.09039,
+        "strata": {
+          "pullback|vol_hi|crypto": {
+            "n": 404,
+            "delta_r": -0.00357
+          },
+          "pullback|vol_lo|crypto": {
+            "n": 301,
+            "delta_r": 7e-05
+          },
+          "pullback|vol_mid|crypto": {
+            "n": 91,
+            "delta_r": -0.00172
+          },
+          "trend_donchian|vol_hi|crypto": {
+            "n": 471,
+            "delta_r": -0.0148
+          },
+          "trend_donchian|vol_lo|crypto": {
+            "n": 575,
+            "delta_r": -0.00394
+          },
+          "trend_donchian|vol_mid|crypto": {
+            "n": 785,
+            "delta_r": 0.00126
+          }
+        },
+        "provenance": "ESTIMATED (harness paths, engine replay, full cost stack)",
+        "checkin": "triggers_only"
+      },
+      {
+        "arm_id": "lgbm_action_value@triggers_only",
+        "n": 2627,
+        "read_state": "measured",
+        "net_r": 0.09111,
+        "b0_net_r": 0.13149,
+        "delta_vs_b0_r": -0.04037,
+        "ci95": [
+          -0.07429,
+          -0.00798
+        ],
+        "p_one_sided": 0.991,
+        "folds": {
+          "0": -0.0092,
+          "1": -0.04706,
+          "2": -0.08164,
+          "3": -0.15443,
+          "4": 0.06513,
+          "5": -0.02239
+        },
+        "folds_positive": 1,
+        "action_rate": 0.7282,
+        "delta_acted_r": -0.05544,
+        "n_acted": 1913,
+        "n_invalid_scored_hold": 107,
+        "maxdd_per_leg": {
+          "ada_pullback_2h": {
+            "n": 402,
+            "b0_maxdd_r": 21.897,
+            "arm_maxdd_r": 14.933,
+            "ok": true
+          },
+          "trend_donchian_eth_4h": {
+            "n": 275,
+            "b0_maxdd_r": 20.703,
+            "arm_maxdd_r": 10.274,
+            "ok": true
+          },
+          "trend_donchian_eth_prop": {
+            "n": 1085,
+            "b0_maxdd_r": 27.475,
+            "arm_maxdd_r": 32.825,
+            "ok": false
+          },
+          "trend_donchian_sol_prop": {
+            "n": 403,
+            "b0_maxdd_r": 12.919,
+            "arm_maxdd_r": 9.871,
+            "ok": true
+          },
+          "trend_donchian_xrp_4h": {
+            "n": 68,
+            "b0_maxdd_r": 4.641,
+            "arm_maxdd_r": 4.546,
+            "ok": true
+          },
+          "xrp_pullback_2h": {
+            "n": 394,
+            "b0_maxdd_r": 16.499,
+            "arm_maxdd_r": 26.362,
+            "ok": false
+          }
+        },
+        "maxdd_ok": false,
+        "net_r_per_capital_day": 0.07489,
+        "b0_net_r_per_capital_day": 0.09039,
+        "strata": {
+          "pullback|vol_hi|crypto": {
+            "n": 404,
+            "delta_r": -0.09183
+          },
+          "pullback|vol_lo|crypto": {
+            "n": 301,
+            "delta_r": -0.10922
+          },
+          "pullback|vol_mid|crypto": {
+            "n": 91,
+            "delta_r": -0.00764
+          },
+          "trend_donchian|vol_hi|crypto": {
+            "n": 471,
+            "delta_r": -0.04841
+          },
+          "trend_donchian|vol_lo|crypto": {
+            "n": 575,
+            "delta_r": -0.00568
+          },
+          "trend_donchian|vol_mid|crypto": {
+            "n": 785,
+            "delta_r": -0.01188
+          }
+        },
+        "provenance": "ESTIMATED (harness paths, engine replay, full cost stack)",
+        "b4_matched_random": {
+          "mode": "causal",
+          "delta_vs_b0_r": -0.04314,
+          "margin_r": 0.00277,
+          "margin_ci95": [
+            -0.02104,
+            0.02595
+          ],
+          "p_random_ge_arm": 0.38
+        },
+        "act_threshold": 0.05,
+        "p_holm_family": 1.0,
+        "checkin": "triggers_only",
+        "s_offline": {
+          "verdict": "fail",
+          "why": "gain_ge_0.03_over_max_b0_b1=False, ci_lo_gt_0=False, folds_ge_5=False, maxdd_ok=False, capday_ok=False, beats_b2=False, beats_own_b4=False, holm_p_lt_0.05=False"
+        }
+      },
+      {
+        "arm_id": "logit_action_value@triggers_only",
+        "n": 2627,
+        "read_state": "measured",
+        "net_r": 0.01294,
+        "b0_net_r": 0.13149,
+        "delta_vs_b0_r": -0.11855,
+        "ci95": [
+          -0.16715,
+          -0.07156
+        ],
+        "p_one_sided": 1.0,
+        "folds": {
+          "0": -0.09179,
+          "1": -0.16214,
+          "2": -0.11387,
+          "3": -0.19093,
+          "4": -0.08034,
+          "5": -0.07792
+        },
+        "folds_positive": 0,
+        "action_rate": 0.8652,
+        "delta_acted_r": -0.13701,
+        "n_acted": 2273,
+        "n_invalid_scored_hold": 0,
+        "maxdd_per_leg": {
+          "ada_pullback_2h": {
+            "n": 402,
+            "b0_maxdd_r": 21.897,
+            "arm_maxdd_r": 25.532,
+            "ok": false
+          },
+          "trend_donchian_eth_4h": {
+            "n": 275,
+            "b0_maxdd_r": 20.703,
+            "arm_maxdd_r": 7.453,
+            "ok": true
+          },
+          "trend_donchian_eth_prop": {
+            "n": 1085,
+            "b0_maxdd_r": 27.475,
+            "arm_maxdd_r": 30.475,
+            "ok": false
+          },
+          "trend_donchian_sol_prop": {
+            "n": 403,
+            "b0_maxdd_r": 12.919,
+            "arm_maxdd_r": 17.107,
+            "ok": false
+          },
+          "trend_donchian_xrp_4h": {
+            "n": 68,
+            "b0_maxdd_r": 4.641,
+            "arm_maxdd_r": 3.773,
+            "ok": true
+          },
+          "xrp_pullback_2h": {
+            "n": 394,
+            "b0_maxdd_r": 16.499,
+            "arm_maxdd_r": 28.586,
+            "ok": false
+          }
+        },
+        "maxdd_ok": false,
+        "net_r_per_capital_day": 0.02603,
+        "b0_net_r_per_capital_day": 0.09039,
+        "strata": {
+          "pullback|vol_hi|crypto": {
+            "n": 404,
+            "delta_r": -0.23347
+          },
+          "pullback|vol_lo|crypto": {
+            "n": 301,
+            "delta_r": -0.12144
+          },
+          "pullback|vol_mid|crypto": {
+            "n": 91,
+            "delta_r": -0.14896
+          },
+          "trend_donchian|vol_hi|crypto": {
+            "n": 471,
+            "delta_r": -0.19477
+          },
+          "trend_donchian|vol_lo|crypto": {
+            "n": 575,
+            "delta_r": -0.01657
+          },
+          "trend_donchian|vol_mid|crypto": {
+            "n": 785,
+            "delta_r": -0.08373
+          }
+        },
+        "provenance": "ESTIMATED (harness paths, engine replay, full cost stack)",
+        "b4_matched_random": {
+          "mode": "causal",
+          "delta_vs_b0_r": -0.08181,
+          "margin_r": -0.03674,
+          "margin_ci95": [
+            -0.05902,
+            -0.01521
+          ],
+          "p_random_ge_arm": 0.986
+        },
+        "act_threshold": 0.6,
+        "p_holm_family": 1.0,
+        "checkin": "triggers_only",
+        "s_offline": {
+          "verdict": "fail",
+          "why": "gain_ge_0.03_over_max_b0_b1=False, ci_lo_gt_0=False, folds_ge_5=False, maxdd_ok=False, capday_ok=False, beats_b2=False, beats_own_b4=False, holm_p_lt_0.05=False"
+        }
+      },
+      {
+        "arm_id": "B3_desk",
+        "read_state": "not_available",
+        "reason": "no --desk-policy file (DESK-LABEL-JOIN not landed)"
+      },
+      {
+        "arm_id": "B5_rescore_exit",
+        "read_state": "not_available",
+        "reason": "the entry model does not replay point-in-time from the harness emit"
+      }
+    ]
+  },
+  "note": "tm_bench score/reproduce: selfcheck pass; B0-B0 0.0; census oracle 0.7562 vs 0.756 +- 0.005; n 2627"
+}
