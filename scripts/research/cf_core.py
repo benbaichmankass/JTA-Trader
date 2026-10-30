@@ -273,6 +273,9 @@ def _delta(arm: dict, base: Optional[dict], key: str) -> None:
 
 
 RANDOM_MODES = ("legacy_own_length", "causal")
+#: CF-RANDOM-CAUSAL-DEFAULT (2026-10-30): the control must not know the trade's own exit time. ``legacy_own_length`` stays
+#: selectable (``--random-mode legacy_own_length``) only to reproduce records graded before this flip.
+DEFAULT_RANDOM_MODE = "causal"
 
 
 def random_usable_bars(bars: Sequence[dict], *, t_entry: float, t_close: float, horizon_s: float, mode: str) -> List[dict]:
@@ -288,13 +291,13 @@ def random_usable_bars(bars: Sequence[dict], *, t_entry: float, t_close: float, 
 def grade_package(pkg: dict, legs_in: List[dict], bars: List[dict], reviews: List[dict], actions: List[dict],
                   equity_now: Dict[str, Optional[float]], venue: Dict[str, dict],
                   graded_at: Optional[str] = None, n_random: int = N_RANDOM, horizon: Optional[dict] = None,
-                  random_mode: str = "legacy_own_length") -> dict:
+                  random_mode: str = DEFAULT_RANDOM_MODE) -> dict:
     """Pure: one graded record for one closed package. See counterfactual_grader.py's docstring for the schema.
 
-    ``random_mode``: ``legacy_own_length`` (default: the pre-lift live behaviour, byte-identical) draws the random
-    intervention times from [t_entry, t_close) -- the trade's OWN realised length, known only at its exit (lookahead).
-    ``causal`` draws them from [t_entry, t_entry + horizon), a per-leg constant; an action landing after the trade has
-    closed simply never applies. Bulk consumers pass ``causal`` (see ``random_usable_bars``)."""
+    ``random_mode``: ``causal`` (default since CF-RANDOM-CAUSAL-DEFAULT) draws the random intervention times from
+    [t_entry, t_entry + horizon), a per-leg constant; an action landing after the trade has closed simply never applies.
+    ``legacy_own_length`` (explicit flag only, to reproduce pre-flip records) draws them from [t_entry, t_close) -- the
+    trade's OWN realised length, known only at its exit (lookahead). See ``random_usable_bars``."""
     base = {"schema_version": SCHEMA_VERSION, "order_package_id": pkg["order_package_id"],
             "strategy": pkg.get("strategy_name"), "symbol": pkg.get("symbol"), "side": str(pkg.get("direction") or "").lower(),
             "graded_at": graded_at or lrc._iso(datetime.now(timezone.utc).timestamp()), "biases": BIASES}
@@ -458,8 +461,7 @@ def grade_package(pkg: dict, legs_in: List[dict], bars: List[dict], reviews: Lis
               "p10_r": q(0.10), "p50_r": q(0.50), "p90_r": q(0.90),
               "p_random_ge_replayed_actual": round(sum(1 for x in nets if x >= rep["net_r"]) / len(nets), 4),
               "note": "random control uses unresolved marks where the path ends open (see resolved flags)"}
-        if random_mode == "causal":
-            rc["mode"] = "causal"
+        rc["mode"] = random_mode       # records graded before CF-RANDOM-CAUSAL-DEFAULT carry no ``mode``: they are legacy_own_length
 
     for a in arms:
         if a["arm_id"] == "actual":

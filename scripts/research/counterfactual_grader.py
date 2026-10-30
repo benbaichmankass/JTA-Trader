@@ -24,7 +24,7 @@ ARMS (every one replayed over the same committed price path, net of fee + slippa
   more_management   rule-based: stop to break-even at +1R / +1.5R; lock +1R at +2R; the BE+lock ladder; ATR trails
                     k x ATR(entry) with k in {1.5, 2, 3, 4}; plus every recorded-but-not-applied review call.
   random_control    N=300 matched random interventions of the SAME class as the applied actions (same count of
-                    stop-tightens, drawn uniformly in time and level between the live stop and the market). Reports
+                    stop-tightens, drawn uniformly in time (over [t_entry, t_entry + horizon): never the trade's own exit) and level between the live stop and the market). Reports
                     mean / p10 / p50 / p90 and ``p_random_ge_replayed_actual``.
 
 STATED BIASES (also written into every record)
@@ -54,7 +54,8 @@ SCHEMA of ``comms/research/counterfactual_grades/<order_package_id>.json``  (``s
   arms      [{arm_id, family, label, params, resolved, exit{ts,px,reason}, gross_r, cost_r{fee,slip,funding}, net_r,
               per_account{acct:{pnl_usd, pct_of_account}}, delta_vs_replayed_actual_r, delta_vs_actual_r,
               delta_vs_replayed_actual_usd{acct}, provenance}]
-  random_control  {n, class, mean_r, p10_r, p50_r, p90_r, p_random_ge_replayed_actual}
+  random_control  {n, class, mean_r, p10_r, p50_r, p90_r, p_random_ge_replayed_actual, mode}   mode "causal" (default since
+                  CF-RANDOM-CAUSAL-DEFAULT); a record without ``mode`` was drawn on the legacy window (the trade's own length)
   fidelity  {replayed_actual_net_r, actual_net_r, abs_gap_r}
   post_exit {horizon{seconds, hours, source, timeframe, end}, horizon_reached, mfe_r, mae_r, tp_reach{reached, bars, seconds},
              wider_sl_arms[{arm_id, sl_mult, tp_r, survived, resolved, net_r, exit_reason, delta_vs_actual_r}],
@@ -81,7 +82,7 @@ sys.path.insert(0, str(REPO))
 sys.path.insert(0, str(REPO / "scripts" / "research"))
 
 import live_review_counterfactual as lrc  # noqa: E402  (extend, do not duplicate: _num/_ts/_iso/initial_stop/_meta/fetch_diag)
-from cf_core import (ATR_K, BIASES, DEFAULT_HORIZON_H, FALLBACK_HORIZON_H, N_RANDOM, SCHEMA_VERSION, SL_MULTS, TF_SEC, TP_RS,  # noqa: E402,F401
+from cf_core import (ATR_K, BIASES, DEFAULT_HORIZON_H, DEFAULT_RANDOM_MODE, RANDOM_MODES, FALLBACK_HORIZON_H, N_RANDOM, SCHEMA_VERSION, SL_MULTS, TF_SEC, TP_RS,  # noqa: E402,F401
                      VERDICT_TOL_R, _arm, _delta, cost_model, grade_package, net_of, post_exit_block, resolve_horizon, simulate,
                      stitch_bars)  # ONE ENGINE (CF-B0): lifted to scripts/research/cf_core.py; re-exported so every caller is unchanged
 
@@ -203,7 +204,7 @@ def read_reviews() -> List[dict]:
 
 
 def grade_live(pkg_id: str, packages: Dict[str, dict], trades: Dict[int, dict], reviews: List[dict],
-               equity: Dict[str, Optional[float]]) -> dict:
+               equity: Dict[str, Optional[float]], random_mode: str = DEFAULT_RANDOM_MODE) -> dict:
     pkg = packages[pkg_id]
     legs = [t for t in trades.values() if t.get("order_package_id") == pkg_id]
     if not legs:
@@ -227,7 +228,8 @@ def grade_live(pkg_id: str, packages: Dict[str, dict], trades: Dict[int, dict], 
             if v:
                 venue[t["account_id"]] = v
     rvs = [r for r in reviews if r.get("order_package_id") == pkg_id]
-    return grade_package(pkg, legs, bars, rvs, actions, equity, venue, horizon=resolve_horizon(pkg, strategy_config(pkg.get("strategy_name"))))
+    return grade_package(pkg, legs, bars, rvs, actions, equity, venue, horizon=resolve_horizon(pkg, strategy_config(pkg.get("strategy_name"))),
+                         random_mode=random_mode)
 
 
 def load_sources() -> Tuple[Dict[str, dict], Dict[int, dict]]:
@@ -268,6 +270,8 @@ def main(argv: Optional[List[str]] = None) -> int:
     ap.add_argument("--all-closed", action="store_true", help="grade every closed package whose horizon has passed and that has no (current) record")
     ap.add_argument("--max", type=int, default=20, help="cap per run for --all-closed")
     ap.add_argument("--write", action="store_true")
+    ap.add_argument("--random-mode", choices=RANDOM_MODES, default=DEFAULT_RANDOM_MODE,
+                    help="random_control draw window; legacy_own_length leaks the trade's own exit time -- only to reproduce old records")
     a = ap.parse_args(argv)
     if not (a.package or a.all_closed):
         ap.error("give --package or --all-closed")
@@ -289,7 +293,7 @@ def main(argv: Optional[List[str]] = None) -> int:
         if pid not in packages:
             print(f"{pid}: not in the latest 150 packages", file=sys.stderr)
             continue
-        rec = grade_live(pid, packages, trades, reviews, equity)
+        rec = grade_live(pid, packages, trades, reviews, equity, random_mode=a.random_mode)
         print(f"{pid}: {rec['status']} {rec.get('reason') or ''}")
         if a.write and rec["status"] == "graded":
             OUT_DIR.mkdir(parents=True, exist_ok=True)
