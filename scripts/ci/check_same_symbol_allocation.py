@@ -67,10 +67,12 @@ GRANDFATHERED: Dict[str, Dict[str, Any]] = {
     # due date, one leg renamed. bybit_2 / bybit_portfolio keep the incumbent (entries below).
     "bybit_1/XRPUSDT": {"legs": ["trend_donchian_xrp_adx25", "xrp_pullback_2h"],
                         "unit": "RQ-20261015-1631-02", "due": "2026-10-29"},
+    # EXTENDED 7d to 2026-11-06 for bybit_2 + bybit_portfolio (same exact leg set), Manager Session 2026-10-30c relaying the operator,
+    # ~16:35Z 2026-10-30, popup answer verbatim: "Extend 7d + fix lane (Recommended)". Lane XRP-SAME-SYMBOL-ALLOCATION produces the record.
     "bybit_2/XRPUSDT": {"legs": ["trend_donchian_xrp_4h", "xrp_pullback_2h"],
-                        "unit": "RQ-20261015-1631-02", "due": "2026-10-29"},
+                        "unit": "RQ-20261015-1631-02", "due": "2026-11-06"},
     "bybit_portfolio/XRPUSDT": {"legs": ["trend_donchian_xrp_4h", "xrp_pullback_2h"],
-                                "unit": "RQ-20261015-1631-02", "due": "2026-10-29"},
+                                "unit": "RQ-20261015-1631-02", "due": "2026-11-06"},
     # Blocked units: the harness cannot run these legs yet (see each unit's blocked_on). Dated for the unblock + a run.
     "ib_paper/MGC": {"legs": ["ict_scalp_mgc_15m", "mgc_pullback_1d", "mgc_trend_1h"],
                      "unit": "RQ-20261015-1631-03", "due": "2026-11-30"},
