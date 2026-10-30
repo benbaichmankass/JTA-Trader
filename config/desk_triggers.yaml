@@ -9,6 +9,11 @@
 # Symbols watched. The claude_desk leg trades only its own symbols: (config/strategies.yaml), so a trigger on any
 # other symbol yields a shadow label (still a training row); keep this to the leg's symbols to spend only on
 # tradable wakes.
+# Hourly scan WAKE cadence (read live per pass by scripts/ops/desk_wake_marker.py::scan_wake_every_h; same operator answer
+# as max_per_day below): the hourly packet is still built and landed EVERY hour, but the desk-wake marker is posted only on
+# bars whose UTC hour % N == 0. Skipped bars read receipt state skipped_by_cadence. 1 = every hour (the old behaviour).
+scan_wake_every_h: 2
+
 symbols: [BTCUSDT, ETHUSDT, SOLUSDT, XRPUSDT, ADAUSDT, AVAXUSDT]
 timeframe: 5m              # the detectors' bars AND the triggered packet's timeframe
 horizons: [3, 6, 12]       # the packet's base-rate horizons on that timeframe (12 x 5m = 1 h: the short-hold cap)
@@ -29,7 +34,9 @@ detectors:
 # Rate limits and dedupe (a firing that is limited is still LOGGED as a label, with why it did not wake).
 cooldown_min: 30           # per symbol, after a wake
 max_per_hour: 2            # all symbols
-max_per_day: 12            # all symbols (UTC day): the daily cost ceiling below
-# Cost line: MEASURED $/wake for a fresh Sonnet desk session, 2026-10-26, n=4 ($0.45, $0.34, $0.45, $0.47;
+max_per_day: 4             # all symbols (UTC day): the daily cost ceiling below
+# Operator 2026-10-30 ~10:12Z, popup answer verbatim: "Desk: every 2h, cap triggers". Was 12. MEASURED basis: 00:00-10:05Z
+# that day, 11 hourly + 12 triggered wakes, all no_trade, at $0.30-0.35 each.
+# Cost line: MEASURED $/wake for a fresh Sonnet desk session, 2026-10-26, n=4 ($0.45, $0.34, $0.45, $0.47; 2026-10-30 desk wakes $0.30-0.35;
 # get_session().usage, trading-desk SKILL § 6b). The receipt states fired_today x this and the ceiling.
 cost_per_wake_usd: 0.43

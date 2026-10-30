@@ -25,7 +25,8 @@ Every hour wakes (crypto is 24/7): no market or activity gate. The marker's ``co
 Dedupe is on the packet id and on the bar.
 
 States: ``posted`` (``producer`` ``vm`` when this pass built it, ``latency_s`` from the packet's
-``built_at``) · ``already_recorded`` · ``awaiting_wake`` · ``wake_missing`` · ``could_not_build``
+``built_at``) · ``skipped_by_cadence`` (the packet landed, the bar is not a wake bar: ``scan_wake_every_h``,
+operator 2026-10-30) · ``already_recorded`` · ``awaiting_wake`` · ``wake_missing`` · ``could_not_build``
 (``reason``, ``attempts``) · ``could_not_commit`` (``http_code``) · ``could_not_post`` (``http_code``) ·
 ``could_not_look`` (``reason``, incl. ``stale_packet``). NO HALTING: every failure is a receipt state, the
 next pass retries (bounded per bar), and the workflow fallback covers a VM that cannot commit.
@@ -287,6 +288,9 @@ def run_once(fetch: Fetch = _get,
                         reason="desk/decisions write refused or failed (the workflow fallback covers this)")
         entry = mm.build_entry(stage, sha, now)
         entry["poster"] = "vm"
+        if not mm.wake_due(entry["bar"]):
+            return done("skipped_by_cadence", packet_id=entry["packet_id"], commit=sha, bar=entry["bar"],
+                        every_h=mm.scan_wake_every_h())
         if mm.plan_post(entry, markers) != "post":
             return done("already_posted", packet_id=entry["packet_id"], commit=sha)
         pcode, pdata = http("POST", f"{API}/repos/{REPO}/issues/{pr}/comments",
@@ -315,6 +319,10 @@ def run_once(fetch: Fetch = _get,
                     latency_s=latency_s(posted_at, built))
     if pid in recorded_packet_ids(text):
         return done("already_recorded")
+    pbar = mm.bar_of(ptr["info_cutoff_at"])
+    if not mm.wake_due(pbar):
+        return done("skipped_by_cadence", bar=pbar, every_h=mm.scan_wake_every_h(),
+                    reason="the packet landed; no wake by design on this bar (config/desk_triggers.yaml scan_wake_every_h)")
     age = now - built
     if age < timedelta(minutes=WAKE_GRACE_MIN):
         return done("awaiting_wake")

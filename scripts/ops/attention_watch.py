@@ -388,6 +388,13 @@ def probe_desk_row_missing(now: datetime) -> dict:
     age_min = (now - built).total_seconds() / 60
     if pid in have:
         return {"status": OK, "read_state": "read", "detail": f"newest desk packet {pid} has a decision row"}
+    try:
+        from scripts.ops.desk_wake_marker import bar_of, scan_wake_every_h, wake_due  # noqa: PLC0415
+        if not wake_due(bar_of(str(ptr["info_cutoff_at"]))):
+            return {"status": OK, "read_state": "read",
+                    "detail": f"newest desk packet {pid} is on a bar skipped_by_cadence (scan_wake_every_h {scan_wake_every_h()}): no wake, no row, by design"}
+    except Exception:  # noqa: BLE001 — cadence unreadable: fall through to the strict check
+        pass
     if age_min <= DESK_ROW_MISSING_MIN:
         return {"status": OK, "read_state": "read",
                 "detail": f"newest desk packet {pid} is {age_min:.0f} min old, inside the {DESK_ROW_MISSING_MIN} min wake window"}

@@ -20,6 +20,9 @@ PRIMARY producer and this workflow the fallback, so at most one wake is posted p
 A failed build posts no wake: the job's failure step runs ``fail``, which posts one ``could_not_build``
 incident marker (named step, run url) per bar.
 
+Cadence (operator 2026-10-30, ``scan_wake_every_h`` in config/desk_triggers.yaml): the packet lands every hour, but the
+marker is posted only on bars whose UTC hour % N == 0; the other bars are ``skipped_by_cadence``, never a silent gap.
+
 Usage:
   desk_wake_marker.py gate [--ref origin/desk/decisions] [--github-output FILE]
   desk_wake_marker.py post --stage DIR --commit SHA [--run-url URL] [--live]
@@ -54,6 +57,28 @@ def _iso(t: datetime) -> str:
 def bar_of(cutoff: str) -> str:
     d = datetime.fromisoformat(cutoff.replace("Z", "+00:00")).astimezone(timezone.utc)
     return _iso(d.replace(minute=0, second=0, microsecond=0))
+
+
+CONFIG = ROOT / "config" / "desk_triggers.yaml"
+
+
+def scan_wake_every_h(path: Optional[Path] = None) -> int:
+    """The hourly scan WAKE cadence in hours (``scan_wake_every_h`` in config/desk_triggers.yaml), read live on every
+    call. Operator 2026-10-30 ~10:12Z: "Desk: every 2h, cap triggers". The packet is still built and landed EVERY hour
+    (off the trade path is not off the data path); only the wake marker is gated. An unreadable or invalid value reads
+    as 1 (wake every hour, the pre-2026-10-30 behaviour): a config fault never silences the desk."""
+    try:
+        import yaml
+        n = int((yaml.safe_load((path or CONFIG).read_text()) or {}).get("scan_wake_every_h", 1))
+        return n if n >= 1 else 1
+    except Exception:  # noqa: BLE001 — a config fault wakes more, never less
+        return 1
+
+
+def wake_due(bar: str, every: Optional[int] = None) -> bool:
+    """True when the packet's bar (``YYYY-MM-DDTHH:MM:SSZ``) is a wake bar: its UTC hour % every == 0."""
+    n = every if every is not None else scan_wake_every_h()
+    return datetime.fromisoformat(bar.replace("Z", "+00:00")).hour % n == 0
 
 
 def parse_markers(comments: Optional[list]) -> List[dict]:
@@ -233,6 +258,8 @@ def main(argv: Optional[List[str]] = None) -> int:
     else:
         bar = _iso(now.replace(minute=0, second=0, microsecond=0))
         verdict, body = plan_fail(bar, markers), render_fail(a.step, bar, now, a.run_url)
+    if a.cmd == "post" and verdict == "post" and not wake_due(entry["bar"]):
+        verdict = "skipped_by_cadence"
     print(f"desk-wake-marker {a.cmd}: {verdict}")
     if verdict != "post":
         return 0
