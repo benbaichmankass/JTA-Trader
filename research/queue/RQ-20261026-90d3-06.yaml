@@ -1,6 +1,6 @@
 id: RQ-20261026-90d3-06
 title: 'Dead-money exits on avax_pullback_2h: does a stale exit (8 / 12 / 20 bars below +0.5 R) or a +1 R break-even floor beat the declared exit?'
-status: queued
+status: done
 cadence: once
 roadmap:
 - L-ATM
@@ -107,3 +107,16 @@ related:
 - scripts/research/exit_lever_ablation.py
 - RESEARCH-AUTHOR-20261026-0030
 last_dispatched_at: '2026-10-30T14:56:56+00:00'
+grading:
+  attested: RULE-RQ2026102690d306-STALEBE
+  auto: true
+  decision_rule_id: RULE-RQ2026102690d306-STALEBE
+  evidence:
+  - research/results/RQ-20261026-90d3-06/41068786218.jsonl
+  graded_at: '2026-10-30'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail
