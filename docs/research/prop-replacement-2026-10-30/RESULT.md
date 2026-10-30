@@ -1,5 +1,7 @@
 # PROP-REPLACEMENT: is there a prop leg to replace trend_donchian_eth_prop? (2026-10-30)
 
+> **Doc status:** `unknown` · category `evidence` · last verified `never` · registered in [`docs/DOCUMENT-INDEX.md`](../../DOCUMENT-INDEX.md) · **nobody has verified this document's status — do not act on it as current**
+
 Lane PROP-REPLACEMENT (Tier 1 research; no config, no orders). Dispatched by Manager Session 2026-10-30c. Operator 2026-10-30: "Keep eth_prop until a replacement".
 
 ## Answer
