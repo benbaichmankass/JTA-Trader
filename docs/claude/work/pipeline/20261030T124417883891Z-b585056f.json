@@ -1,0 +1,18 @@
+{
+  "due_when": {
+    "clears_when": "the cause is named (open-and-automerge job log for run 41032574592 shows whether enablePullRequestAutoMerge succeeded; GraphQL autoMergeRequest on #21573 history) and either fixed (job fails loudly when arming does not take) or killed with a reason",
+    "due_date": "2026-11-02",
+    "kind": "date"
+  },
+  "id": "PI-20261030-9KC5G3FG-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "Manager Session 2026-10-30c (session_01AFoLuJEaf7dNfk9kc5g3fG) check-in 12:29Z",
+    "rerun": "list open PRs whose .github/pr-landing/<slug>.json says landing: self, with all checks success and mergeable_state clean for > 30 min; each one is an instance (mcp pull_request_read get + get_check_runs)"
+  },
+  "severity": "medium",
+  "state": "queued",
+  "tier": 1,
+  "what": "Self-land auto-merge did not fire on PR #21573 (lane OVERLAY-ANNOTATE-ETH4H-SOLPROP, landing: self, automerge request file + merge-slot claim present, open-and-automerge check SUCCESS at 09:20Z). All 6 checks were green by 09:40Z and mergeable_state was clean, yet the PR sat unmerged until the manager merged it by hand at ~12:12Z (cb6fb25), ~2.5 h late. The lane's post_turn_summary read 'waiting on automerge to land'. MEASURED by Manager Session 2026-10-30c via pull_request_read get/get_check_runs. Unknown: whether GitHub auto-merge was ever actually armed on the PR (the open-and-automerge job reported success), or whether it was armed and then dropped. A silent self-land stall strands Tier-1 work and the lane that waits on it. Next: dispatch a small lane to root-cause from the job log, at the next lane slot."
+}
