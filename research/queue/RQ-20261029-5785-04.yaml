@@ -1,7 +1,7 @@
 id: RQ-20261029-5785-04
 title: 'ML-REAL-MONEY-OVERLAY refine 2/3 -- NESTED SELECTION: does the overlay still pass when the configuration
   is chosen inside each outer CPCV training set (the PBO 0.75 concern)?'
-status: queued
+status: done
 cadence: once
 roadmap:
 - L-ML-LIVE
@@ -122,13 +122,19 @@ ml_consumer:
 last_dispatched_at: '2026-10-29T14:01:02+00:00'
 grading:
   attested: RULE-ML-OVERLAY-NESTED-SELECT-V1
-  auto: true
+  auto: false
   decision_rule_id: RULE-ML-OVERLAY-NESTED-SELECT-V1
   evidence:
+  - comms/research/RQ-20261029-5785-04/local-nested-20261029/measurement.json
   - research/results/RQ-20261029-5785-04/40887343795.jsonl
   graded_at: '2026-10-30'
-  grader: scripts/research/queue_grade.py
-  needs_review: true
-  reason: 'verdicts not unanimous-mechanical: [''fail'', ''pass'']'
+  grader: lane RESEARCH-GRADE-20261030 (hand-graded from the committed local run)
+  needs_review: false
+  reason: 'Rule applied per family as registered. TD PASS: nested OOS policy passes V2 (a)-(e) on n_gate=1830 and the modal config''s holdout CONFIRMS (n=105,
+    delta +0.0327 R, LB95 +0.0119). PB2H INDETERMINATE (holdout n=43 < 100; nested delta -0.0155 R, 1 of 6 folds). Unit PASS by the top-level ''at least one
+    family passed'' convention; only TD can ship. Modal config for TD is C1.0/q0.2 at share 0.267 (4 of 15 outer splits), NOT the shipped V2 primary C0.1/q0.2
+    (2 of 15) -> per the rule a candidate for a new rule version, never a silent swap; the shipped artifact is NOT confirmed by this PASS. Nothing is changed;
+    the decision is filed as PI-20261030-0261030B-0001. CAVEAT: landed workflow rows (run 40887343795) are the plain V2 verdict (run.command omits --refine);
+    this grade reads the committed local run, not re-run by this lane.'
   rows: 2
-  verdict: null
+  verdict: pass

@@ -1,0 +1,118 @@
+{
+ "by_exit_reason": {
+  "stale_stop": {
+   "mismatch_mean_abs_gap_r": null,
+   "mismatch_mean_gap_r": null,
+   "n": 29,
+   "pass": 29,
+   "pass_rate": 1.0
+  },
+  "stop": {
+   "mismatch_mean_abs_gap_r": null,
+   "mismatch_mean_gap_r": null,
+   "n": 933,
+   "pass": 933,
+   "pass_rate": 1.0
+  },
+  "take_profit": {
+   "mismatch_mean_abs_gap_r": null,
+   "mismatch_mean_gap_r": null,
+   "n": 459,
+   "pass": 459,
+   "pass_rate": 1.0
+  },
+  "timeout": {
+   "mismatch_mean_abs_gap_r": null,
+   "mismatch_mean_gap_r": null,
+   "n": 8,
+   "pass": 8,
+   "pass_rate": 1.0
+  },
+  "trail_stop": {
+   "mismatch_mean_abs_gap_r": null,
+   "mismatch_mean_gap_r": null,
+   "n": 1198,
+   "pass": 1198,
+   "pass_rate": 1.0
+  }
+ },
+ "by_leg": {
+  "ada_pullback_2h": {
+   "mismatch_mean_abs_gap_r": null,
+   "mismatch_mean_gap_r": null,
+   "n": 402,
+   "pass": 402,
+   "pass_rate": 1.0
+  },
+  "trend_donchian_eth_4h": {
+   "mismatch_mean_abs_gap_r": null,
+   "mismatch_mean_gap_r": null,
+   "n": 275,
+   "pass": 275,
+   "pass_rate": 1.0
+  },
+  "trend_donchian_eth_prop": {
+   "mismatch_mean_abs_gap_r": null,
+   "mismatch_mean_gap_r": null,
+   "n": 1085,
+   "pass": 1085,
+   "pass_rate": 1.0
+  },
+  "trend_donchian_sol_prop": {
+   "mismatch_mean_abs_gap_r": null,
+   "mismatch_mean_gap_r": null,
+   "n": 403,
+   "pass": 403,
+   "pass_rate": 1.0
+  },
+  "trend_donchian_xrp_4h": {
+   "mismatch_mean_abs_gap_r": null,
+   "mismatch_mean_gap_r": null,
+   "n": 68,
+   "pass": 68,
+   "pass_rate": 1.0
+  },
+  "xrp_pullback_2h": {
+   "mismatch_mean_abs_gap_r": null,
+   "mismatch_mean_gap_r": null,
+   "n": 394,
+   "pass": 394,
+   "pass_rate": 1.0
+  }
+ },
+ "engine": "scripts/research/cf_core.py::simulate+net_of (CF-B0)",
+ "mismatch_cause": {},
+ "mismatch_cause_by_exit_reason": {
+  "stale_stop": {},
+  "stop": {},
+  "take_profit": {},
+  "timeout": {},
+  "trail_stop": {}
+ },
+ "overall": {
+  "mismatch_mean_abs_gap_r": null,
+  "mismatch_mean_gap_r": null,
+  "n": 2627,
+  "pass": 2627,
+  "pass_rate": 1.0
+ },
+ "population": {
+  "compared": "replayed GROSS R vs harness exit_r",
+  "corpus_id": "tmb-8b924106949b",
+  "legs": [
+   "ada_pullback_2h",
+   "trend_donchian_eth_4h",
+   "trend_donchian_eth_prop",
+   "trend_donchian_sol_prop",
+   "trend_donchian_xrp_4h",
+   "xrp_pullback_2h"
+  ],
+  "n_corpus": 2627,
+  "n_sampled": 2627,
+  "seed": 11,
+  "source": "frozen corpus tmb-8b924106949b (harness runs of the six v1 legs; regenerate: python3 scripts/research/tm_bench.py corpus --test-corpus v1 --out <dir>)",
+  "tol_r": 0.01
+ },
+ "schema": "cf_fidelity/1",
+ "tol_r": 0.01
+}

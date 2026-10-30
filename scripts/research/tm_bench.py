@@ -95,14 +95,14 @@ for _p in (REPO, REPO / "scripts", REPO / "scripts" / "research"):
     if str(_p) not in sys.path:
         sys.path.insert(0, str(_p))
 import capital_efficiency  # noqa: E402  (the ONE net R per capital-day)
-import counterfactual_grader as _engine  # noqa: E402  (ONE ENGINE: simulate + net_of; repoint to cf_core when CF-B0 lands)
+import cf_core as _engine  # noqa: E402  (ONE ENGINE: simulate + net_of, lifted by CF-B0; the live grader imports the same module)
 import first_passage_paths as fpp  # noqa: E402  (corpus, parity, events, census oracle -- the 09a6-01 construction)
 from first_passage import Logit  # noqa: E402
 from intervention_controls import HOLD, boot_ci_by_group, matched_random_intervention  # noqa: E402
 
 ENGINE_SIMULATE = _engine.simulate
 ENGINE_NET_OF = _engine.net_of
-ENGINE_SOURCE = "scripts/research/counterfactual_grader.py::simulate+net_of (CF-B0 cf_core not on main 2026-10-30)"
+ENGINE_SOURCE = "scripts/research/cf_core.py::simulate+net_of (CF-B0)"
 
 SCHEMA = "tm_bench/1"
 V1_LEGS = ["trend_donchian_eth_4h", "trend_donchian_xrp_4h", "xrp_pullback_2h", "ada_pullback_2h",
@@ -253,6 +253,14 @@ def engine_bars(t: dict) -> List[dict]:
     for j in range(n):
         op = o[j] if o is not None and np.isfinite(o[j]) else (c[j - 1] if j else 0.0)
         cl = t["exit_r"] if j == n - 1 else c[j]
+        if j == n - 1:
+            # The harness fills a bracket/trail exit AT its level even when that level is beyond the exit bar's open (its trail
+            # level is evaluated on the exit bar itself: stop_r[exit bar] can sit above the bar's own high). The engine rightly
+            # gap-fills at the open, so replaying the harness's fill needs the open at the level. MEASURED 2026-10-30 (CF-B0,
+            # cf_fidelity.py, 1,000 of corpus v1): 96/441 trail_stop and 1/169 take_profit exits, ~0.29 R each, were this gap.
+            lvl = next((x for x in (t["stop_r"][j], t["target_r"][j]) if np.isfinite(x) and abs(x - t["exit_r"]) <= 1e-3), None)  # emitted levels are rounded to 4 dp
+            if lvl is not None:
+                op = lvl
         hi = np.nanmax([t["fav"][j], op, cl])
         lo = np.nanmin([t["adv"][j], op, cl])
         bars.append({"time": j * sec, "dur": sec, "open": q + op, "high": q + hi + TOUCH_EPS_R,

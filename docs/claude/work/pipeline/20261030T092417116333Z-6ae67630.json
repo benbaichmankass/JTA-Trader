@@ -1,0 +1,15 @@
+{
+  "due_when": {
+    "due_date": "2026-11-06",
+    "kind": "date"
+  },
+  "id": "PI-20261030-0261030B-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "research",
+    "ref": "lane RESEARCH-GRADE-20261030; research/queue/RQ-20261029-5785-03.yaml, -04.yaml",
+    "rerun": "grep -L -e '--refine' research/queue/RQ-20261029-5785-0[345].yaml; python3 scripts/research/result_disposition_check.py --list"
+  },
+  "state": "queued",
+  "what": "RQ-20261029-5785-03/-04 (ML-REAL-MONEY-OVERLAY refine 1/3, 2/3): run.command omits --refine calibration|nested, so the workflow runs (40877509986, 40887343795) landed the plain V2 verdict (PB2H FAIL, TD PASS) under the refine rule ids; the registered statistics exist only in the committed local runs comms/research/RQ-20261029-5785-0{3,4}/local-*-20261029/. Graded from those (03: PB2H INDETERMINATE n=796 holdout n=43<100, TD NOT_CALIBRATED; 04: PB2H INDETERMINATE, TD nested PASS + holdout CONFIRMS n=105, modal config C1.0/q0.2 share 0.267 = 4 of 15 outer splits, NOT the shipped V2 primary C0.1/q0.2 which was selected in 2 of 15). Per the rule a PASS with a different modal config is a candidate for a new rule version, never a silent swap. TWO FOLLOW-UPS: (1) fix the units' run.command (or the dispatch glue) so a re-run reproduces the local figures; check refine 3/3 (RQ-20261029-5785-05, if authored) for the same omission; (2) decide, with the operator, whether the weak modal share (0.267) justifies a V3 re-registration or the shipped primary stays -- changes no config today."
+}

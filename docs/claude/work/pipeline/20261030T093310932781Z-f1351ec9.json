@@ -1,0 +1,15 @@
+{
+  "due_when": {
+    "clears_when": "the manager triages harness fill-convention bias for the trend legs (Tier-3 if it changes a leg's promotion evidence); CF-B1-BULK-BACKTEST also reads it",
+    "kind": "event"
+  },
+  "id": "PI-20261030-GINELIFT-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "lane CF-B0-ENGINE-LIFT, comms/research/CF-B0-ENGINE-LIFT/fidelity_before_adapter_fix_n2627.json",
+    "rerun": "python3 scripts/research/cf_fidelity.py --corpus v1 --n 5000 --out <dir>  # needs the pre-fix adapter: git show 4125d42:scripts/research/tm_bench.py"
+  },
+  "state": "queued",
+  "what": "backtest_trend.py fills trail_stop/take_profit exits AT the level even when the exit bar opened through it (no gap-fill rule). MEASURED 2026-10-30 on corpus v1 (2,627 trades, six money legs): on 255 trail_stop + 1 take_profit exits (9.7% of trades, mostly trend_donchian_eth_4h and _eth_prop) the engine's gap-fill at the open is lower than the harness exit_r by a mean 0.30 R, i.e. ~0.029 R/trade of harness exit optimism pooled (the stop-first sign: 'stop' and 'stale_stop' exits are unaffected). Every TM-BENCH delta is vs the replayed B0 so it cancels there, but any Stage-0 net R of those legs carries it. Decide: add the gap rule to the harness (min(level, open) for a long stop) and re-run the affected legs' Stage-0 evidence, or record it as a stated bias on those records."
+}

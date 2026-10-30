@@ -1,0 +1,18 @@
+{
+  "based_on": "20261030T054158370136Z-2aac855d.json",
+  "due_when": {
+    "clears_when": "the TM-BENCH runner unit RQ-20261030-824b-01 lands a result (its engine_fidelity is the population to break down), or CF-B0-ENGINE-LIFT lands cf_core",
+    "kind": "event"
+  },
+  "id": "PI-20261030-TMBENCH-0001",
+  "next_action": "check_observation",
+  "origin": {
+    "kind": "session",
+    "ref": "lane TM-BENCH (session_01AFoLuMfDpakKxF5zHGsPv2), measurement.engine_fidelity",
+    "rerun": "python3 scripts/research/tm_bench.py score --test-corpus v1 --rule reproduce --out <dir>  # measurement.engine_fidelity"
+  },
+  "routed_to": "CF-B0-ENGINE-LIFT (its fidelity check owns engine bias)",
+  "state": "done",
+  "terminal_reason": "Diagnosed and fixed by CF-B0-ENGINE-LIFT (2026-10-30). On corpus v1 (tmb-8b924106949b, all 2,627 trades) the pre-fix replay matched the harness exit_r within 0.01 R on 90.26% (2,371/2,627). The 256 mismatches were 255 trail_stop and 1 take_profit exits (ETH legs: eth_4h, eth_prop; 1 on sol_prop); stop, stale_stop and timeout exits matched 100%, so the suspected stale/timeout causes were wrong. Cause: the harness (scripts/backtest_trend.py::_stop_or_target) fills a trail/TP exit AT its level with no gap rule, while cf_core.simulate fills at the open when the bar opened through the level (engine rule correct and unchanged). Fixed in tm_bench.engine_bars (exit bar open set to the harness fill level): fidelity 2,627/2,627 = 100% (comms/research/CF-B0-ENGINE-LIFT/fidelity_*.json; rerun: python3 scripts/research/cf_fidelity.py --corpus v1). The harness-side optimism is filed as PI-20261030-GINELIFT-0001.",
+  "what": "TM-BENCH engine fidelity on corpus v1 is 90.3% (MEASURED in-session 2026-10-30, 2,627 trades): the engine replay of each leg's own management (counterfactual_grader.simulate fed the emitted stop_r/target_r per bar) matches the harness exit_r within 0.01 R on 90.3% of trades; synthetic corpora 100%. Every bench delta is vs the REPLAYED B0 so a shared bias cancels, but the ~10% mismatch (suspected: engine gap-fills at the open vs harness fills at the level; stale/timeout/trail exits at the exit-bar close) is unexplained. Diagnose by exit_reason and leg; fix the adapter (tm_bench.engine_bars/leg_actions) if it is the adapter, else record it as an engine bias for CF-B0-ENGINE-LIFT's fidelity check."
+}
