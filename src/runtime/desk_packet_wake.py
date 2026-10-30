@@ -122,6 +122,16 @@ def _ts(v: Any) -> Optional[datetime]:
         return None
 
 
+def latency_s(posted: Optional[datetime], built: Optional[datetime]) -> Optional[float]:
+    """Seconds from the packet's ``built_at`` to the wake post, never negative. The builder stamps
+    ``built_at = max(its clock, info_cutoff_at)``, so a packet whose cutoff is ahead of the post clock reads
+    as built AFTER it was posted (MEASURED -59.8 s on the 2026-10-28 receipt); that is 0 s of latency, not a
+    negative one. None when either stamp is unreadable."""
+    if posted is None or built is None:
+        return None
+    return round(max(0.0, (posted - built).total_seconds()), 1)
+
+
 def _get(url: str, auth: Optional[str]) -> Tuple[Optional[int], Any]:
     """(status, parsed JSON, or text for a .jsonl, or None). Raw media type: the file body."""
     headers = {"Accept": "application/vnd.github.raw+json", "User-Agent": "metis-desk-packet-wake-vm"}
@@ -290,7 +300,7 @@ def run_once(fetch: Fetch = _get,
         return done("posted", producer="vm", packet_id=entry["packet_id"], packet_sha=entry["packet_sha"],
                     commit=sha, posted_at=posted_at.isoformat(), context=entry["context"],
                     comment_url=(pdata or {}).get("html_url") if isinstance(pdata, dict) else None,
-                    latency_s=round((posted_at - (_ts(entry["built_at"]) or posted_at)).total_seconds(), 1))
+                    latency_s=latency_s(posted_at, _ts(entry["built_at"])))
 
     # ---- OBSERVE the newest packet already on the branch
     rec.update(packet_id=pid, packet_sha=ptr.get("packet_sha"), built_at=ptr["built_at"],
@@ -302,7 +312,7 @@ def run_once(fetch: Fetch = _get,
         rec["last_posted"] = info
         return done("posted", producer=mine[-1].get("poster") or "packet-job", posted_at=info["posted_at"],
                     commit=info["commit"],
-                    latency_s=round((posted_at - built).total_seconds(), 1) if posted_at else None)
+                    latency_s=latency_s(posted_at, built))
     if pid in recorded_packet_ids(text):
         return done("already_recorded")
     age = now - built

@@ -1,0 +1,97 @@
+# Hand-authored 2026-10-29 by lane ML-DATA-RATE-PATH (Tier 1), dispatched by Manager Session 2026-10-29d (session_01AFoLuJUkhLNmykA1AEHrkh).
+# Decision rule registered BEFORE any run. Design: docs/research/ml-data-rate-path-2026-10-29.md section 2. Gates: none.
+id: RQ-20261029-7294-03
+title: 'Q-SEL1-BROAD: does a take/skip head trained on broad-universe harness entries (label = net R at the leg''s own bracket) beat take-all on
+  the six money legs'' entries, net of cost, against a matched random skip and the strategy''s own confidence threshold?'
+status: blocked
+cadence: once
+theme: ml_health
+priority: 2
+programme: P2
+roadmap:
+- L-ML-LIVE
+kind: experiment
+practice_precedent: 'T1, T3, M6 (docs/reference/trading-and-model-practice-principles.md); ML-PROGRAMME-2026-10-28 Q-SEL1 (review R-P1 calls
+  net take/skip "the real test" for entry heads).'
+question: 'Train a LightGBM classifier P(net_r > 0 | entry features) and a regressor of net_r at entry (features from --emit-features at entry
+  time only) on corpus v2 train folds plus v1 train folds; skip an entry when the predicted net R < 0 with the threshold chosen on train
+  folds. Test on the v1 money-leg entries of the held-out fold (trend_donchian_eth_4h, trend_donchian_xrp_4h, xrp_pullback_2h, ada_pullback_2h,
+  trend_donchian_eth_prop, trend_donchian_sol_prop). Six calendar folds by entry, purged by [entry, exit] across symbols, embargo = the leg
+  max hold. Does the selected book beat take-all per opportunity?'
+why_this_matters: 'Entry selection is the lever with the most labels: every harness trade is one, at zero Claude cost, while the paused regime /
+  direction learners had no consumer acting on them (P6). The consumer (advisory_sizing) already acts on entries.'
+power:
+  expected_n: 2627
+  min_detectable_effect: 0.033
+  effect_units: metric
+  sd: 0.6
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: 'n MEASURED (v1 census). Per-opportunity sd of (selected - take-all) = sd(net_r) x sqrt(skip share); with net_r sd ~1.2 R and a ~25
+    percent skip share, ~0.6 R ESTIMATED. MDE at 80 percent = 2.80 x 0.6 / sqrt(2627) = 0.033 R; power at +0.03 R ~0.73, stated, not hidden.'
+  feasibility:
+    source: none
+    accrual_basis: Replays history; nothing accrues.
+decision_rule:
+  id: RULE-RQ20261029-7294-03-QSEL1-BROAD
+  registered_at: '2026-10-29'
+  registered_before_run: true
+  statistic: 'Pooled OOS (net R of the selected book - net R of take-all) / number of opportunities, trade-cluster bootstrap 95 percent CI
+    (2,000), per-fold sign, max drawdown, net R per capital-day; the same delta for a matched random skip at the head''s skip rate per fold
+    (200 draws) and for the best confidence threshold chosen on train folds.'
+  rule: 'INDETERMINATE IF test entries < 2,000 OR the skip share is < 5 percent or > 60 percent on more than 2 folds. PASS IF delta >= +0.03 R per
+    opportunity AND CI lower bound > 0 AND >= 5 of 6 folds positive AND max DD <= take-all AND net R per capital-day >= take-all AND the head
+    beats the matched random skip (p <= 0.05) AND the confidence threshold. PASS -> one Tier-3 packet: shadow the head into advisory_sizing for
+    the money legs (skip -> downsize first). FAIL IF CI upper bound < +0.03: this configuration (these entry features, this corpus) does not
+    select; the next variant is the ledger corpus with catalog features (Q-SEL1 as filed). A FAIL closes the configuration, not the family.
+    INDETERMINATE otherwise. Thresholds are not changed after any result.'
+  min_n: 2,000 test entries
+intervention_controls:
+  hold_to_bracket: true
+  matched_random: {draws: 200}
+  best_static: {grid: [confidence_p50, confidence_p60, confidence_p70], excludes_test_folds: true}
+  bootstrap_group: trade
+ml_consumer:
+  consumer: src/runtime/advisory_sizing.py
+  decision: downsize or skip entries on the money legs
+  legs:
+  - trend_donchian_eth_4h
+  - trend_donchian_xrp_4h
+  - xrp_pullback_2h
+  - ada_pullback_2h
+  - trend_donchian_eth_prop
+  - trend_donchian_sol_prop
+  book: money
+compute: cpu_light
+value:
+  bucket: ai_trader
+  usd_at_stake_per_month: 300
+  confidence: 0.2
+  basis: 'stand-in: entry selection on the five bybit_2 legs plus the prop leg; not a P&L measurement.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 4.0
+  est_minutes: 40
+  why_runner: Harness emits from keyless public candles; one row per trade (small); no trainer data.
+  basis: ESTIMATED; ~90k training rows, LightGBM on CPU, six folds.
+blocked_on:
+- kind: work_item
+  ref: ML-DATA-BROAD-PATHS
+  what: Corpus v2 with --emit-features entry rows does not exist.
+  clears_when: the corpus v2 manifest lands with --emit-features rows for >= 10,000 de-duplicated trades.
+- kind: work_item
+  ref: TM-BENCH
+  what: The shared fold file with the cross-symbol purge lives in tm_bench.py, which does not exist on main 2026-10-29.
+  clears_when: 'tm_bench.py writes the fold file; then set run.command to [python3, scripts/research/tm_bench.py, select, --train-corpus, v1+v2,
+    --test-corpus, v1, --random-draws, 200, --folds, 6, --n-boot, 2000, --out, {out_dir}], git mv to research/queue/, remove blocked_on, status: queued.'
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- ML-DATA-RATE-PATH
+- docs/plans/ML-PROGRAMME-2026-10-28.md (Q-SEL1)
+what_it_does_not_do: Registers or serves nothing; changes no config or sizing; places no order. Harness entries on other symbols are training
+  data only; the test population is the money legs as traded.

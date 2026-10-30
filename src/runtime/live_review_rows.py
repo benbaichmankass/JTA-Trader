@@ -21,6 +21,20 @@ from typing import Any, Callable, Dict, Iterable, List, Optional, Tuple
 REVIEWS_PATH = "comms/live_review/reviews.jsonl"
 ROWS_DIR = "comms/live_review/rows"
 
+#: Actions a review row (or a desk decision) may RECOMMEND but no automatic path may EXECUTE.
+#: Operator 2026-10-28 ~20:35Z, popup verbatim "Advice-only tightens (Recommended)", on the evidence of
+#: LTR-TIGHTEN-OPTIMIZE (comms/research/ltr_tighten_optimize/verdict.json; DESK-LIFECYCLE-S0, PR #20967):
+#: no stop-tighten cell or rule beat hold-to-bracket net of cost. Read by live_review_rows_watch,
+#: live_review_dispatch and desk_intake; each logs the row as ADVICE_ONLY_VERDICT so it stays graded.
+#: 2026-10-28 ~21:07Z EXTENDED to every in-trade class (operator popup to ask A1, verbatim "Advice-only until
+#: tested", relayed by Manager session_01AFoLuJi1vLTnYv9LbP6539; row DESK-V1-MGMT-ADVICE-ONLY): each class is
+#: recorded and graded but not executed until its OWN registered test passes (OOS, vs hold AND a matched random
+#: intervention of the same class, net of cost; docs/plans/desk-v1-production-plan-2026-10-29.md § 5b).
+#: GRADUATION = removing ONE class from this tuple AND from MD-TRADE-DESK functions.in_trade.advice_only in the
+#: same PR, citing that class's committed passed-test record (tests/test_tighten_advice_only.py pins equality).
+ADVICE_ONLY_ACTIONS = ("tighten_sl", "widen_sl", "move_tp", "partial_close", "close", "change_size", "add_entry")
+ADVICE_ONLY_VERDICT = "advice_only"
+
 #: ``git(*args) -> (returncode, stdout-or-stderr)``, the live_review_rows_watch seam.
 Git = Callable[..., Tuple[int, str]]
 

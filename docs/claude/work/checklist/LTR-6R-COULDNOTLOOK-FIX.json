@@ -2,21 +2,27 @@
   "id": "LTR-6R-COULDNOTLOOK-FIX",
   "title": "Live-review apply: a failed market read in the noise-floor probe returns refuse/bad_input instead of could_not_look; IB reads use clientId 498, which is already in use on the VM",
   "phase": null,
-  "state": "in_flight",
+  "state": "queued",
   "owner": null,
-  "lane": "session_01R87MC4VcvYAxZLhELeAvLC",
+  "lane": null,
   "model": "claude-sonnet-5-5",
   "ceiling_usd": 5,
   "spend_usd": null,
   "tier": 3,
   "prs": [],
   "blocked_on": [],
-  "note": "Found by the manager (01MdQiC8) in VM dry-run #20165, 2026-10-25 20:37Z, VM at 81a0b836. 12 verdicts across 8 open packages. Bybit (6 legs: xrp and ada on bybit_1, bybit_2, bybit_portfolio): approve within_bounds, correct. Alpaca (4): no_amend_path (3) and would_loosen (1), correct. ib_paper (mgc_pullback_1d, mhg_pullback_1d): refuse bad_input, WRONG. The IB OHLCV read failed with Error 326, clientId 498 already in use, and then the circuit breaker tripped. The probe's new_sl was None, so approve_amend's 'new_sl is None -> refuse(R_BAD_INPUT)' check in src/runtime/live_review_intent.py fired before the mark/atr could_not_look check. Fix: (1) when new_sl is None because mark or atr is missing, return could_not_look:<missing>; keep bad_input for a genuinely malformed intent. Add a test. (2) Give the live-review apply path's IB market-data reads a dedicated clientId that does not collide, or read IB candles through the trader's existing feed; check which process holds 498. Gate: the operator's popup ~19:57Z ties the MD-LIVE-TIGHTEN-SL grant and the apply flip to a dry-run correct for every account. Closing observation: a re-run of live-review-dry-run shows could_not_look, not bad_input, for any unreadable account, or a successful IB read.",
+  "note": "Found by the manager (01MdQiC8) in VM dry-run #20165, 2026-10-25 20:37Z, VM at 81a0b836. 12 verdicts across 8 open packages. Bybit (6 legs: xrp and ada on bybit_1, bybit_2, bybit_portfolio): approve within_bounds, correct. Alpaca (4): no_amend_path (3) and would_loosen (1), correct. ib_paper (mgc_pullback_1d, mhg_pullback_1d): refuse bad_input, WRONG. The IB OHLCV read failed with Error 326, clientId 498 already in use, and then the circuit breaker tripped. The probe's new_sl was None, so approve_amend's 'new_sl is None -> refuse(R_BAD_INPUT)' check in src/runtime/live_review_intent.py fired before the mark/atr could_not_look check. Fix: (1) when new_sl is None because mark or atr is missing, return could_not_look:<missing>; keep bad_input for a genuinely malformed intent. Add a test. (2) Give the live-review apply path's IB market-data reads a dedicated clientId that does not collide, or read IB candles through the trader's existing feed; check which process holds 498. Gate: the operator's popup ~19:57Z ties the MD-LIVE-TIGHTEN-SL grant and the apply flip to a dry-run correct for every account. Closing observation: a re-run of live-review-dry-run shows could_not_look, not bad_input, for any unreadable account, or a successful IB read. 2026-10-29 review WR-20261029-0544Z: in_flight 3+ days with no PR and its lane gone (inflight alarm breached); back to queued for re-dispatch with a fresh brief.",
   "priority_rank": 2,
-  "updated_at": "2026-10-25T20:39:41Z",
-  "updated_by": "session_01MdQiC8UqKBLj287KWFWN71",
+  "updated_at": "2026-10-29T05:54:09Z",
+  "updated_by": "session_01AFoLuKnKedoAhJU1x4MZDp",
   "roadmap": [
     "L-DESK"
+  ],
+  "lane_history": [
+    {
+      "lane": "session_01R87MC4VcvYAxZLhELeAvLC",
+      "archived_at": "2026-10-29T05:54:09Z"
+    }
   ],
   "_seq": 694
 }

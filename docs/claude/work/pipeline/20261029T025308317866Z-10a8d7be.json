@@ -1,0 +1,18 @@
+{
+  "due_when": {
+    "clears_when": "blocked_over_age <= 10 on research-slo, or each remaining blocked unit has a build lane in flight",
+    "due_date": "2026-10-31",
+    "kind": "date"
+  },
+  "id": "PI-20261029-HOPS0250-0002",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "RESEARCH-OPS-20261029-0250",
+    "rerun": "python3 -c \"import sys;sys.path.insert(0,'.');from scripts.research import infra_selftest as t;print(t.blocked_over_age()['measurement'])\""
+  },
+  "severity": "medium",
+  "state": "queued",
+  "tier": 1,
+  "what": "[research-ops 2026-10-29 02:50Z] BLOCKED UNITS HAVE OWNER ROWS BUT NO EXECUTOR: 17 units >21 d in research/queue/blocked/ (blocked_over_age 17 vs <=10 SLO). 14 wait on build rows still `queued` 8-19 d: REGIME-WEIGHT-VARIANTS (4 units), FUNDING-OI-DATASETS-ETH-SOL (2), ROUTE-RESEARCH-DATA-ROUTES (018,019,505 via DATA-KLINE-ARCHIVE), REGIME-WF-VERDICT-WRAPPER+REGIME-VOL-LABELS-EXPORT (ae17-01), RQ-EVIDENCE-006-KEYSET (006, owner unassigned), MACRO-BACKFILL-E5 (010), PI-20261004-APBY4NTV-0001 window input (033), flip_exit cell in m20_fleet_exit_sweep (044). Without a build lane the count cannot fall; the dispositions this pass: 1 retired (RQ-20261007-240), 2 re-scoped notes (032, 031), 0 unblocked (every named edge re-probed, unmet). Ask: a BUILD-DRAIN lane for the Tier-1 tooling rows (window input, flip cell, E5 landing, keyset)."
+}

@@ -313,6 +313,15 @@ STATUS_EXPLICIT: Dict[str, Tuple[str, str, str]] = {
     # Their output rows are validated by scripts/ops/blind_grade.py (tests/test_blind_grade.py) and
     # the CJ-3 pilot ran them to 50 + 50 store rows. A text edit changes prompt_sha, which is the
     # label version (design § 3.4). Go `superseded` if the grade moves to a different producer.
+    # Written 2026-10-28 by lane RENAME-JTA-TRADER (session_01AFoLuKQVFhUAn8ihFQdB3W), which wrote it
+    # from the operator's rename decision: the operator steps, the do-not-rename list and the
+    # dashboard follow-up. Step 1 was done by the operator the same day. Goes `history` once the
+    # dashboard repo and VM remotes are settled.
+    "docs/runbooks/jta-trader-rename.md": (
+        "live",
+        "read:RENAME-lane-authored-it-2026-10-28-from-operator-decision",
+        "JTA Trader rename: operator steps, do-not-rename list, dashboard follow-up",
+    ),
     ".claude/skills/performance-review/BLIND-GRADE-BRIEF.md": (
         "live",
         "read:CJ-3-lane-authored-it-2026-10-26-rows-validated-by-blind_grade",

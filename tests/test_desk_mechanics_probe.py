@@ -1,4 +1,4 @@
-"""DESK-18E mechanics probe: <= 2 labelled demo trades, no EV claim, excluded from every edge statistic."""
+"""DESK-18E mechanics probe: <= PROBE_MAX labelled demo trades (2, then 3 on the operator's 2026-10-28 A2 re-authorization), no EV claim, excluded from every edge statistic."""
 from __future__ import annotations
 
 import copy
@@ -56,12 +56,12 @@ def test_a_probe_with_an_ev_claim_or_wrong_shape_is_refused(mutate, needle):
     assert needle in " ".join(e.value.problems)
 
 
-def test_a_probe_must_be_on_a_leg_symbol_and_is_capped_at_two():
+def test_a_probe_must_be_on_a_leg_symbol_and_is_capped():
     with pytest.raises(dw.Refused):
         compile_(scope=dict(SCOPE, symbols=["AVAXUSDT"]))
-    compile_(probe_rows=1)
+    compile_(probe_rows=dw.PROBE_MAX - 1)
     with pytest.raises(dw.Refused) as e:
-        compile_(probe_rows=2)
+        compile_(probe_rows=dw.PROBE_MAX)
     assert "cap" in " ".join(e.value.problems)
 
 
@@ -76,18 +76,18 @@ def test_a_normal_proposal_still_needs_its_ev_claim():
     assert any("expected_r_net" in x for x in dw.row_problems(row, p, SCHEMA))
 
 
-def test_the_guard_refuses_a_third_probe_row(tmp_path):
+def test_the_guard_refuses_a_probe_row_past_the_cap(tmp_path):
     row, p = compile_()
     dec = tmp_path / "decisions.jsonl"
     rows = []
-    for i in range(3):
+    for i in range(dw.PROBE_MAX + 1):
         r = copy.deepcopy(row)
         r["decision_id"] = f"DD-X{i}"
         rows.append(json.dumps(r))
     dec.write_text("\n".join(rows) + "\n")
     out = cdr.findings(decisions=dec, touches=tmp_path / "t.jsonl", packets=tmp_path / "pk", outcomes=tmp_path / "o.jsonl",
                        consumed=tmp_path / "c.jsonl")
-    assert any("exceed the cap of 2" in x for x in out)
+    assert any(f"exceed the cap of {dw.PROBE_MAX}" in x for x in out)
 
 
 def test_intake_refuses_a_probe_while_a_real_money_account_carries_the_leg():

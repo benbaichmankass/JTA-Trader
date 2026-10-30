@@ -1058,7 +1058,9 @@ def backpressure(research_names: Dict[str, str], *, max_inflight: int, max_queue
 #: slots held by Guards / pytest-run; the last fire had been 05:12Z, so the watchdog saw 141 min idle. A cap that
 #: can defer forever is a halt (Prime Directive 7), so once nothing has been dispatched for this long the
 #: repo-queued block is lifted for EXACTLY ONE fire per cycle. Infra yield and an unreadable ``gh`` are untouched.
-STARVATION_HOURS = 1.5
+#: 1.5 h -> 0.75 h (lane RESEARCH-RUNNER-IDLE, 2026-10-28): the watchdog escalates at 60 min idle, so a 1.5 h floor could
+#: never lift before the page; MEASURED 19:06Z: 17 queued > 10, newest stamp 1.15 h old < 1.5, 36 units deferred, 0 fired.
+STARVATION_HOURS = 0.75
 
 
 def starvation_override(pressure: Dict[str, Any], jobs: List[Any], now: datetime,

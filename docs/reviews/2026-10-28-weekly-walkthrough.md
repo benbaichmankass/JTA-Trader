@@ -514,4 +514,118 @@ Ranked by expected value per cost. Each carries `p` and a pre-registered check i
 - Practice refresh (sibling lane).
 - No send-ping. The manager relays the brief, and the lane's report goes to the manager.
 
+### Addendum (~21:30Z): gate packets from trainer pull #21005
+
+The C6 packet flags that were could-not-look at publish time have now been read:
+
+| head | stage | ready | blocking | live AUC | note |
+|---|---|---|---|---|---|
+| btc-regime-15m-lgbm-fc-pcv-v2 | advisory | true | — | 0.721 | parity 42/42 |
+| mes-regime-5m-lgbm-v2 | advisory | true | — | 0.755 | changes 0 legs |
+| sol-regime-15m-lgbm-fc-pcv-v2 | advisory | false | sample_sufficiency (2 trades) | 0.695 | changes 0 legs |
+| **btc-regime-15m-lgbm-fc-pcv-v1** | shadow | **true** | — | 0.651 | shadow sibling of the advisory fc-pcv-v2 |
+| **btc-regime-1h-lgbm-v2** | shadow | **true** | — | 0.599 | no 1h router cell, so it changes 0 legs |
+| btc-regime-15m-lgbm-yz-v1 | shadow | false | live_parity (`vol_bucket` dead live) | 0.709 | |
+
+On every head, `cost_net` reads `insufficient_data`.
+
+**Disposition: no promotion recommended.** Two shadow heads are `ready: true`, but every gate they pass is a classification gate.
+- fc-pcv-v1 would duplicate an advisory head that is already better on live AUC.
+- 1h-v2 has no consumer.
+
+Either becomes a promotion question only after P5 (`PI-20261028-GNVUF1ES-0002`) prices a decision value. Recorded on `PI-20261018-WH81NW96-0003` (done); `PI-20260925-D9FNL9SC-0001` (done) records that live_parity now computes.
 <!-- ML-FRONTIER-PREP:END -->
+
+<!-- PRACTICE-REFRESH:BEGIN -->
+## TRADING + MODEL — weekly practice refresh (lane `PRACTICE-REFRESH-20261028`, session_01AFoLuJpe2bJTErX7QGAmaS)
+
+Tier 1, read-only on production; nothing queued, no config changes. Full evidence:
+[`docs/research/practice-review-trade-mgmt-and-ai-2026-10-28.md` § 10](../research/practice-review-trade-mgmt-and-ai-2026-10-28.md).
+Canonical list revised in place: [`docs/reference/trading-and-model-practice-principles.md`](../reference/trading-and-model-practice-principles.md).
+
+**TRADING:** 6 sources (2 read in full); **deltas:** T11 added (vol-scaled sizing helps tails everywhere, but Sharpe only for risk assets [S56]),
+T12 added (no-trade buffer [S57]), T2 and T3 strengthened (crypto stop-loss momentum [S62]; funding is part of the exit's cost [S61]).
+**Gaps filed:** `IB-PAPER-ETF-LEGS-NO-ROWS`, `SPLG-TICKER-DEAD`.
+
+**MODEL:** 4 sources (abstract level); **deltas:** M11 added (measure an LLM decision's repeatability before grading its edge [S58, S59]),
+M6 strengthened [S53], R3 tension noted [S63]. **Gaps filed:** none new; the exit-head registry gap (queued since 2026-09-08) is **escalated**.
+
+### Demo-floor data generation — population: 57 rostered leg × floor cells, trades created 2026-10-21T19Z → 10-28T19Z (`/api/diag/journal`, 3 × 1000 rows paged)
+
+| Account | Cells | Cells with ≥1 row | Fills | Rejected |
+|---|---|---|---|---|
+| bybit_1 | 31 | 19 | 20 | 7 |
+| alpaca_paper | 15 | 1 | **0** | 3 |
+| ib_paper | 11 | 2 | **1** | 14 |
+
+- **Blocked:**
+  - ib_paper spy, qqq and iwm `_trend_long_1d` plus tlt_pullback_1d: **no ib_paper row ever** (2026-07-21 onward), while the same legs journal on Alpaca. Row filed.
+  - `splg_trend_long_1d`: **SPLG became SPYM on 2025-10-31**. Empty bars and a raise every tick, and no audit row. Row filed with the exact Tier-3 change.
+  - `mgc_trend_1h`: 13/13 rejected (7 shadow, then 6 flip-suppressed by mgc_pullback_1d's short).
+  - The bybit_1 margin refusals (`available_usd=0.00`, 10-20 and 10-27) have **cleared**: none since 10-27 18:07Z, and 7 entries on 10-28. The sizing basis stays open on `BYBIT1-SIZING-COLLATERAL-BASIS`.
+- **Quiet by design:** the daily equity and futures legs, the 4h donchians and the chop-only legs. Every eval reason is "no setup / no breakout / regime not chop".
+- `trend_donchian_1h` is retired by record but still listed on bybit_1, so it is quiet by retirement.
+
+### Is it learning? — population: 97 registry rows (mirror, 72 s old) + 23 trainer dataset dirs + the shadow log 10-24→10-28
+
+- **market_features:** the chain works end to end (52 models retrained in 7 d, 22 heads scoring, 3 advisory).
+- **Trade-level families** (setup_candidates, conviction_meta, trade_outcomes): they retrain, but **0 score live**. `setup_candidates` retrains on a dataset **frozen since 08-04**.
+- **Desk judgments:** in a dataset (627 rows), but no family trains on them.
+- **LTR review rows:** `review_journal` = **0 rows**.
+- **Exit heads:** they can close trades, but sit **outside the registry**, with their dataset frozen since 09-07.
+- **Last trainer cycle:** trained 0 models (72 already done).
+
+### Gaps for Thursday (proposals; 13 in § 10.7). Top of the list:
+
+1. **TRADING:** ib_paper ETF legs silently produce no rows (filed, Tier 2).
+2. **TRADING:** SPLG → SPYM (filed, Tier 3: operator yes/no).
+3. **MODEL:** exit heads close trades from outside the registry, with a frozen dataset (escalated, M10).
+4. **MODEL:** trade-level families never score, and `review_journal` is empty (M1/M10).
+5. **TRADING:** a suppressed opposing intent leaves no outcome record; propose a virtual per-leg ledger (T12/R3).
+6. **MODEL:** desk/LTR recommendations are never re-run for repeatability (M11).
+7. **TRADING:** LTR in-trade triggers are R-denominated only, with no ATR twin arm (T4).
+8. **BOTH:** health-review has no per-leg × floor liveness check, and a raising builder leaves no audit row (R6).
+<!-- PRACTICE-REFRESH:END -->
+
+---
+
+# RESEARCH PROGRAMMES — lane PROGRAMME-REVIEW-20261028 (Tier 1; held PR, manager merges)
+
+**Headline:** on the declared wide-trail legs, tightening the stop loses R. Two instruments agree, so P1 moves its value from tightening gates to loss-cut, TP and entry selectivity. The top TRADING test is a re-cost: about 36 of this week's 70 PASSes were priced at 7.5 bps, against the 11.0 the venue charges. MODEL's binding constraint is builds, not learners.
+
+**Population:** units with a result row generated 2026-10-21T19:30Z..2026-10-28T19:30Z. That is 445 units, of which 412 are graded (70 pass, 50 indeterminate, 292 fail); 285 carry a programme field and 160 do not. The 160 are assigned in [`RESEARCH-MAP.md`](../research/programmes/RESEARCH-MAP.md). Record: [`comms/research/programme_review/20261028.json`](../../comms/research/programme_review/20261028.json). Per-programme reasoning sits in each plan's "Programme review 2026-10-28" section.
+
+### 0. Prior calls
+The 2026-10-21 review stated no probabilities, so Brier is INDETERMINATE. I graded 9 forward claims by outcome: **5 hit, 2 miss, 1 unresolved, 1 void.** Hits: the Q11 transfers came by leg and vol control (eba2-01/-04); Q3.1 was not re-asked early; ml_health stayed build-bound; breadth separated trend from pullback; breakout_2 sizing was applied (`risk_pct` 0.0035). Misses: the lever variants (0 of 11 passed), and "no new macro unit" (34 macro units were graded anyway). Unresolved: the MOMENTUM-LEVERS-LIVE declares (row still `landed_unproven`). **Ranking error:** last week ranked 11 tightening variants ahead of the label transfers. The variants were draws from a family now at about a 4% pass rate. The week's most informative P1 result, the desk full run, was on no plan.
+
+### 1. CHECKS (from `research_ops_checks.py --kind programme_review --since 7d`)
+| check | value |
+|---|---|
+| graded 7d by track | TRADING 73 pass / 29 indet. / 300 fail / 13 no-action · MODEL 10 / 25 / 31 · INFRA 7 pass |
+| runnable by track | TRADING 41 · **MODEL 0** · INFRA 4 |
+| fails without a next unit | 31 (the packet's list; this review's diagnoses cover the large clusters) |
+| programme coverage | 0 uncovered plan questions in P1..P7 |
+| follow-through (programme-review) | cohort 9 filed, 1 done, 8 open; backlog 16 open, median age 9 d, 0 without an owner |
+| could not look | previous_calls (no prior record existed); #20967 artefacts are not on main |
+
+### 2. ANALYSIS: the five shifts
+1. **P1 TRADING: tightening loses.** About 129 of 140 exit-management lever units FAILED, and the 6 lever PASSes come at the rate chance alone produces. The desk full run (#20967) is −0.159 R vs hold on Claude entries; 981 tightens were worth −0.097 R each and holds were worth +0.142 R. One mechanism: these legs earn in the right tail. What survives is selective or entry-side. The direction filter is CONFIRMED on a disjoint window (RQ-20261028-001), though only at n(A) 39. The BE floor and the CHOP-gated trail are authored for confirmation. Not retired, because the family policy governs that; it is down-ranked.
+2. **P3 TRADING: re-cost before reuse.** Trend-Donchian breadth transfers to about 17 alt perps and 2h pullback does not, but all of it ran at 7.5 bps. In #20966 the 3 trend-leg flips are window drift by the fee-isolated read, and 3 units now test drift against decay. The 2 scalps failed twice, on independent instruments: a retirement case goes to the operator.
+3. **P2 MODEL: information over capacity.** 0 of 23 learner arms beat the shipped LightGBM regime head. Range-vol information moves log-loss on all 3 symbols. The #20869 refusal of the 9 setup-metalabel heads is a gross-data refusal, not a measured loss.
+4. **P4:** PPI to ES/SPY is the one macro survivor, about 3 of 34. Its useful form is a tilt on the rostered spy/qqq 1d trend legs.
+5. **P7:** daily long-only Donchian is fold-consistent on 12 perps and transfers to a new basket.
+
+### 3. Decisions (ranked; every one is a node or handoff)
+| call | decision | tier | pre-registered check | ending |
+|---|---|---|---|---|
+| eth_4h breadth survives 11.0 bps, p 0.75 | authored `P3-Q8-recost-11bps-eth4h` | 1 | its grading verdict by 2026-11-04 | node unit |
+| C75 confirms, p 0.25 | authored `P1-ATM-ed1c10-c75-confirm` | 1 | verdict | node unit |
+| ≥ 2 of 3 flips are window drift, p 0.55 | authored `P3-RECOST-flip-*` x3 | 1 | verdicts | node units |
+| loss-cut on ada_pb passes, p 0.15 | authored `P1-Q4-desk-losscut-ada-pb` | 1 | verdict | node unit |
+| no regime-head learner arm passes next week, p 0.9 | no new learner nodes | 1 | count of passing "Regime head" units | record call |
+| cost-net rebuild done by 11-04, p 0.3 | `P2-Q2-costnet-metalabel-regate` waits on it | — | pipeline item state | gated node |
+| ict_scalp eth/xrp 15m retirement case | proposal for the operator | 3 (operator) | — | handoff |
+| proxy-symbol fee in research harnesses | build question | manager | — | handoff |
+
+### 4. Not done
+13 ready authoring-queue nodes were not turned into units. They are Tier-3 declare drafts or research-ops follow-ups, ranked in the record's handoff. I filed no checklist row: the two builds named (proxy-symbol fee, cross-asset feature block) need the manager's call on owner and scope first.

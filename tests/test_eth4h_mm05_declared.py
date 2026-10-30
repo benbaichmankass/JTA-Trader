@@ -33,8 +33,10 @@ def test_declared_rule_and_width_resolve_exactly_as_tested():
     assert leg["atr_stop_mult"] == 1.5 and leg["trail_mult"] == 6.0 and leg["donchian"] == 20
 
 
-def test_leg_on_all_three_accounts_and_pair_stays_equal():
+def test_leg_on_live_and_mirror_not_general_paper_and_pair_stays_equal():
+    # STRATEGY-STATUS-MODEL (2026-10-28): a production leg trades on real money + mirror, not on bybit_1.
     a = _accounts()
-    for acct in ("bybit_2", "bybit_portfolio", "bybit_1"):
+    for acct in ("bybit_2", "bybit_portfolio"):
         assert LEG in a[acct]["strategies"]
+    assert LEG not in a["bybit_1"]["strategies"]
     assert a["bybit_2"]["strategies"] == a["bybit_portfolio"]["strategies"]

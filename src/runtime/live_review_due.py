@@ -70,6 +70,8 @@ TELEMETRY_EVENTS = ("r_milestone", "new_peak", "giveback", "near_target")
 MARKET_EVENTS = ("swing", "vol_regime", "funding", "calendar")
 
 #: Pre-screen events (LTR-PRACTICE-REDESIGN): evaluated only when configured.
+#: The per-package auto mandate's review cadence (src/runtime/ltr_auto_mandate.py::CADENCE_EVENT).
+CADENCE_EVENT = "mandate_cadence"
 PRESCREEN_EVENTS = ("adverse_r", "stall", "momentum_flip", "structure_break")
 
 _TF_RE = re.compile(r"_(\d+)(m|h|d)$")
@@ -753,8 +755,15 @@ def summarize_could_not_look(coverage: List[Dict[str, Any]]) -> Dict[str, Any]:
 def compute_due(rows: List[Dict[str, Any]], reviews: List[Dict[str, Any]],
                 cfg: Dict[str, Any], now: Optional[datetime] = None,
                 market: Optional[Dict[str, Dict[str, Any]]] = None,
-                mechanics_rows: Optional[List[Dict[str, Any]]] = None) -> Dict[str, Any]:
+                mechanics_rows: Optional[List[Dict[str, Any]]] = None,
+                cadence: Optional[Dict[str, Dict[str, Any]]] = None) -> Dict[str, Any]:
     """Due packages from OPEN telemetry rows. Pure; no I/O.
+
+    ``cadence`` maps order_package_id -> {mandate, minutes} for packages a per-package auto mandate
+    scopes (``ltr_auto_mandate.cadence``; MD-LTR-ADA-AUTO, operator 2026-10-29). Each such OPEN package
+    gets the event ``mandate_cadence`` once per ``minutes`` slot, level = the slot's start (UTC ISO), so
+    the VM wake poster builds + commits its packet and wakes a reviewer on that cadence after the bar
+    boundary. Deduped like every event (a review answering the slot; a review already made this bar).
 
     ``market`` maps order_package_id -> the inputs ``market_events`` reads; a
     package missing from it reports every market event as could_not_look.
@@ -792,6 +801,10 @@ def compute_due(rows: List[Dict[str, Any]], reviews: List[Dict[str, Any]],
         if cnl:
             cnl_total += 1
         coverage.append(_coverage_entry(row, tf, cnl, ps_names))
+        cad = (cadence or {}).get(pkg)
+        if cad:
+            slot = bar_start(now, int(cad["minutes"]) * 60).isoformat()
+            mk = mk + [(CADENCE_EVENT, slot, f"{cad['mandate']}: auto-apply review every {cad['minutes']} min")]
         for name, level, why in candidate_events(row, prior, cfg, now, floor_accounts) + mk:
             if name == "mechanics" and level == VENUE_LEVEL:
                 # Not the plain fired-set: a repeat of the SAME divergence is quiet, a
@@ -1131,7 +1144,14 @@ def live_review_due(db_path: Optional[str] = None,
     less = [dict(p, telemetry_absent=True, lifecycle="open")
             for p in jo.get("packages", []) if p["order_package_id"] not in have]
     market = read_market_context(open_rows + less, cfg, now, db_path, funding_db_path, calendar_path)
-    res = compute_due(open_rows + less, rv["rows"], cfg, now, market=market, mechanics_rows=mech_rows)
+    try:
+        from src.runtime import ltr_auto_mandate
+        cad = ltr_auto_mandate.cadence(now=now)
+    except Exception:  # noqa: BLE001  # allow-silent: no cadence = no auto-mandate wake; every other event stands
+        cad = {}
+    env["mandate_cadence"] = cad
+    res = compute_due(open_rows + less, rv["rows"], cfg, now, market=market, mechanics_rows=mech_rows,
+                      cadence=cad)
     env.update(res)
     env["open_count"] = len(open_rows) + len(less)
     env["open_count_complete"] = jo["state"] == "read"

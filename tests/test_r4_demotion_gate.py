@@ -27,7 +27,7 @@ accounts:
   bybit_1:
     exchange: bybit
     account_class: paper
-    strategies: [{LEG}, {OTHER}]
+    strategies: [paper_only_leg]   # production legs are NOT on general paper (STRATEGY-STATUS-MODEL)
   bybit_2:
     exchange: bybit
     account_class: real_money
@@ -41,7 +41,7 @@ accounts:
     exchange: alpaca
     account_class: paper
     strategies:
-      - {EQ}              # paper soak
+      - paper_only_eq     # paper soak
   alpaca_live:
     exchange: alpaca
     account_class: real_money
@@ -139,7 +139,8 @@ def test_fixture_thresholds_are_what_the_tests_assume(root):
 def test_apply_demotes_a_leg_with_both_windows_below_p10_from_live_and_mirror(root):
     r = root()
     out = g.run(_recent(real={LEG: _entry(LEG, [-6.0, -6.0])}), root=r, apply=True)
-    assert out["demoted"] == [{"leg": LEG, "accounts": ["bybit_2", "bybit_portfolio"]}]
+    assert out["demoted"] == [{"leg": LEG, "accounts": ["bybit_2", "bybit_portfolio"],
+                               "moved_back_to": ["bybit_1"]}]
     assert _roster(r, "bybit_2") == [OTHER]
     assert _roster(r, "bybit_2") == _roster(r, "bybit_portfolio")   # mirror equality holds
     assert LEG in _roster(r, "bybit_1")                              # back on the soak book
@@ -183,9 +184,10 @@ def test_mirror_source_carries_the_call_when_real_money_abstains(root):
 def test_block_form_roster_on_alpaca_live(root):
     r = root()
     out = g.run(_recent(real={EQ: _entry(EQ, [-6.0, -6.0])}), root=r, apply=True)
-    assert out["demoted"] == [{"leg": EQ, "accounts": ["alpaca_live", "alpaca_portfolio"]}]
+    assert out["demoted"] == [{"leg": EQ, "accounts": ["alpaca_live", "alpaca_portfolio"],
+                               "moved_back_to": ["alpaca_paper"]}]
     assert not _roster(r, "alpaca_live") and not _roster(r, "alpaca_portfolio")
-    assert _roster(r, "alpaca_paper") == [EQ]
+    assert _roster(r, "alpaca_paper") == ["paper_only_eq", EQ]
     assert "# real money" in (r / "config/accounts.yaml").read_text()   # prose kept
 
 
@@ -332,17 +334,32 @@ def test_refused_when_the_mandate_is_only_proposed(root):
     assert (r / "config/accounts.yaml").read_text() == before
 
 
-def test_refused_when_the_cut_would_add_to_the_soak_book(root):
-    text = ACCOUNTS_TEXT.replace(f"strategies: [{LEG}, {OTHER}]", f"strategies: [{OTHER}]", 1)
-    r = root(accounts_text=text)
+def test_the_cut_moves_the_leg_back_onto_general_paper(root):
+    """REVERSED by STRATEGY-STATUS-MODEL (operator 2026-10-28). This used to pin R-DERISK-ADD for a cut that would
+    add the leg to bybit_1; a production leg is now OFF general paper, so that add IS the demotion (paper money)."""
+    r = root()
     out = g.run(_recent(real={LEG: _entry(LEG, [-6.0, -6.0])}), root=r, apply=True)
-    assert out["refused"][0]["clause"] == "R-DERISK-ADD"
-    assert LEG in _roster(r, "bybit_2")
+    assert out["refused"] == []
+    assert LEG not in _roster(r, "bybit_2") and LEG not in _roster(r, "bybit_portfolio")
+    assert _roster(r, "bybit_1") == ["paper_only_leg", LEG]
 
 
-def test_apply_proposal_refuses_any_addition(root):
+def test_apply_proposal_refuses_an_addition_off_general_paper(root):
     with pytest.raises(ValueError, match="ADDS"):
-        g.apply_proposal(root(), {"roster_add": {"bybit_1": [LEG]}, "roster_remove": {}}, LEG)
+        g.apply_proposal(root(), {"roster_add": {"bybit_2": [LEG]}, "roster_remove": {}}, LEG)
+
+
+def test_add_to_roster_flow_and_block_forms_and_refusals():
+    flow = yaml.safe_load(g.add_to_roster(ACCOUNTS_TEXT, "bybit_1", LEG))["accounts"]
+    assert flow["bybit_1"]["strategies"] == ["paper_only_leg", LEG]
+    assert flow["bybit_2"]["strategies"] == [OTHER, LEG]   # the next account is untouched
+    block = yaml.safe_load(g.add_to_roster(ACCOUNTS_TEXT, "alpaca_paper", EQ))["accounts"]
+    assert block["alpaca_paper"]["strategies"] == ["paper_only_eq", EQ]
+    assert block["alpaca_live"]["strategies"] == [EQ]
+    with pytest.raises(ValueError):
+        g.add_to_roster(ACCOUNTS_TEXT, "bybit_1", "paper_only_leg")   # already there
+    with pytest.raises(ValueError):
+        g.add_to_roster(ACCOUNTS_TEXT, "no_such_account", LEG)
 
 
 # ── the text edit ──────────────────────────────────────────────────────────
@@ -358,7 +375,7 @@ def test_remove_does_not_reach_into_the_next_account():
     parsed = yaml.safe_load(out)["accounts"]
     assert not parsed["alpaca_live"]["strategies"]
     assert parsed["alpaca_portfolio"]["strategies"] == [EQ]
-    assert parsed["alpaca_paper"]["strategies"] == [EQ]
+    assert parsed["alpaca_paper"]["strategies"] == ["paper_only_eq"]
 
 
 def test_every_real_stage2_leg_can_be_cut_exactly_from_the_real_file():

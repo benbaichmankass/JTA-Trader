@@ -1,0 +1,33 @@
+{
+  "id": "RESEARCH-AUTHOR-TIMEFRAMES-20261029",
+  "title": "Research SLO breach theme_share_min_ratio 0.48 < 0.5 (17:12Z): author pre-registered research/queue units for the starved 'timeframes' theme (2.4% of 7d fires vs 4.5% weight), and if supply allows 'new_strategy_prop' (0.57) and 'regime' (0.60)",
+  "phase": null,
+  "state": "landed_unproven",
+  "owner": null,
+  "lane": "session_01AFoLuJQRVwZ3KtV9HWWTaq",
+  "model": "sonnet",
+  "ceiling_usd": 4,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [
+    21356
+  ],
+  "blocked_on": [],
+  "note": "Dispatched 17:16Z on research-SLO breach (theme_share_min_ratio 0.48<0.5, ops-flags comment 6503419827). Same-day per manager SKILL research SLO escalation. Basis: 2.4% = 12 of 505 themed research fires over the 7-day window ending 2026-10-29 (n=505, comms/research/health/2026-10-29.json latest.evidence.per_theme.timeframes); 4.5% = that theme's weight_share in scripts/research/research_slo.yaml. #21356 merged 061f9e19 18:21Z by the manager (research/queue is a declared hold): 5 pre-registered timeframes units (84ef-01..05) on harness_stage0, all would_dispatch; new_strategy_prop/regime not authored. Lane archived.",
+  "priority_rank": 1,
+  "updated_at": "2026-10-29T18:21:03Z",
+  "updated_by": "Manager Session 2026-10-29c",
+  "roadmap": [
+    "L-TIMEFRAMES"
+  ],
+  "observation": {
+    "what": "research SLO theme_share_min_ratio back to ok (>= 0.5) once the 5 timeframes units 84ef-01..05 fire",
+    "how_to_check": "comms/research/health/<date>.json latest.evidence.per_theme.timeframes ratio, or the next research-slo comment on the ops-flags PR",
+    "due_by": "2026-10-31"
+  },
+  "writeback": {
+    "roadmap": "none: supply fix",
+    "arch": "none"
+  },
+  "_seq": 824
+}

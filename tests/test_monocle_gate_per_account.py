@@ -88,12 +88,14 @@ def test_paper_soak_leg_never_blocks_live(journal, audit):
 
     gate, scope = pl._open_package_round(_sig(ROSTER_STRAT, ROSTER_SYM), None)
 
+    # STRATEGY-STATUS-MODEL (2026-10-28): a production leg is no longer on bybit_1's roster, so the bybit_1
+    # leg (the position left open when it moved off general paper) is outside the round entirely: the round
+    # PASSES unchanged to every account that declares the leg -- live + mirror, never bybit_1.
+    declaring = sm._accounts_declaring(ROSTER_STRAT)
+    assert {"bybit_2", "bybit_portfolio"} <= declaring and "bybit_1" not in declaring
     assert gate is None
-    assert {"bybit_2", "bybit_portfolio"} <= scope
-    assert "bybit_1" not in scope
-    assert scope == sm._accounts_declaring(ROSTER_STRAT) - {"bybit_1"}
-    assert audit[-1]["event"] == "open_package_scoped"
-    assert audit[-1]["held_by_account"] == {"bybit_1": "pkg-soak"}
+    assert scope is None
+    assert not any(r.get("event") == "open_package_scoped" for r in audit)   # nothing to narrow
 
 
 def test_soak_leg_with_an_elected_scope(journal, audit):

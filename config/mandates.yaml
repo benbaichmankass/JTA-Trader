@@ -1126,7 +1126,7 @@ mandates:
       - "OR basis: judgement -- the LTR-0 cell is `insufficient_n`; the reviewer's call applies, with a recorded confidence in [0, 1] and a one-line reason, logged as judgement and graded against the realised outcome (LTR-5)"
       - mechanics.verdict == match
       - config/live_trade_review.yaml apply_mode == apply for the account (global apply covers all accounts)
-      - the account's approve_amend returns approve or clip (tighten-only, >= min_buffer_atr x ATR beyond the mark, <= 1 amend per package per closed bar, account live, leg not shadow); could_not_look never applies
+      - the account's approve_amend returns approve or clip (tighten-only, >= min_buffer_atr x ATR beyond the mark, a review_id never applied twice (no per-bar action cap [removed 2026-10-29, operator, row REMOVE-PER-BAR-CAP]), account live, leg not shadow); could_not_look never applies
     never: [widen a stop, move a TP, change size, close or partial-close, add an entry, act on a read that could not look, act on a mechanics mismatch, act on a judgement without a recorded confidence and reason, write mode or execution]
     notify: trade-update ping tagged with the mandate per applied account; ONE ping per refuse / no-op / apply_failed on a real-money or prop account; ONE flag after 3 consecutive could_not_look cycles; brief section 1 line with the review row and table path
     review_rule: >-
@@ -1168,7 +1168,7 @@ mandates:
       a confidence; the table is used when it's there. Every call is graded
       against the actual outcome so models can learn how much weight to give
       Claude." Guardrails unchanged (tighten-only, min_buffer_atr noise floor,
-      one amend per package per bar, mechanics match, per-account
+      one amend per package per bar [removed 2026-10-29, operator, row REMOVE-PER-BAR-CAP], mechanics match, per-account
       approve_amend, could_not_look never applies). Committed by the manager
       with auto mode switched off by the operator for this edit (~07:40Z).
       SECOND AMENDMENT 2026-10-26 ~10:45Z (rows branch + pinned commit), same manager
@@ -1238,6 +1238,21 @@ mandates:
         what: the live trade review -- managing OPEN order packages (live-trade-review SKILL; REVIEWER-BRIEF for a repo-less reviewer)
         actions: [tighten_sl, close, partial_close, move_tp, widen_sl, change_size, add_entry]
         state: armed (apply_mode in config/live_trade_review.yaml decides per account)
+        # ADVICE ONLY (operator popup 2026-10-28 ~20:35Z, relayed by Manager session_01AFoLuJi1vLTnYv9LbP6539,
+        # verbatim "Advice-only tightens (Recommended)"): tighten_sl may be RECOMMENDED and is graded, but no
+        # automatic path executes it (src/runtime/live_review_rows.py::ADVICE_ONLY_ACTIONS; the rows watcher,
+        # live_review_dispatch.py and desk_intake.py log it advice_only). Evidence:
+        # comms/research/ltr_tighten_optimize/verdict.json over DESK-LIFECYCLE-S0 (#20967): 981 Claude tightens
+        # -0.097 R [-0.140, -0.047] net of the full cost stack; no registered tighten rule beat hold OOS.
+        # EXTENDED 2026-10-28 ~21:07Z to EVERY in-trade class (operator popup to ask A1, verbatim "Advice-only
+        # until tested", relayed by Manager session_01AFoLuJi1vLTnYv9LbP6539; row DESK-V1-MGMT-ADVICE-ONLY;
+        # evidence DESK-LIFECYCLE-S0 #20967: Claude whole-trade management -0.159 / -0.124 R vs hold). Each
+        # class is recorded and graded, never executed, until its OWN registered test passes under the risk-adjusted
+        # rule RULE-AM-RISK-ADJUSTED-V1 (operator 2026-10-29; docs/ARCHITECTURE-CANONICAL.md § "Active management"
+        # clause 4; scripts/research/am_risk_adjusted.py). GRADUATION = remove ONE class here AND from rows_lib.ADVICE_ONLY_ACTIONS in one PR citing its
+        # passed-test record (tests/test_tighten_advice_only.py pins equality). Entries, the claude_desk
+        # max-hold exit and venue brackets are not in_trade actions and are unaffected.
+        advice_only: [tighten_sl, widen_sl, move_tp, partial_close, close, change_size, add_entry]
       entry_generation:
         what: desk-generated NEW entries from the desk's scan packet (trading-desk SKILL)
         actions: [propose_entry]
@@ -1273,7 +1288,7 @@ mandates:
       - the row carries the action's own target (tighten_sl / widen_sl / move_tp a price level; partial_close a size_fraction in (0, 1); change_size a size_multiplier > 0 and != 1; add_entry a size_fraction > 0)
       - mechanics.verdict == match
       - config/live_trade_review.yaml apply_mode == apply for the account
-      - the account's own approve_amend / approve_action returns approve or clip. Its checks are the account's OWN and are never bypassed - a tighten is tighten-only beyond the min_buffer_atr noise floor; a widened stop and any added size pass the same risk check a fresh entry would (account live, leg not shadow, the daily-DD switch's block on new risk, the gross-exposure cap, total size <= the size a fresh entry at the stop in force would get); every result keeps BOTH brackets; one action per package per closed bar; could_not_look never applies
+      - the account's own approve_amend / approve_action returns approve or clip. Its checks are the account's OWN and are never bypassed - a tighten is tighten-only beyond the min_buffer_atr noise floor; a widened stop and any added size pass the same risk check a fresh entry would (account live, leg not shadow, the daily-DD switch's block on new risk, the gross-exposure cap, total size <= the size a fresh entry at the stop in force would get); every result keeps BOTH brackets; a review_id never applies twice (no per-bar action cap [removed 2026-10-29, operator, row REMOVE-PER-BAR-CAP]); could_not_look never applies
       - entry_generation additionally needs its blocked_until cleared
     never: [act on a read that could not look, act on a mechanics mismatch, act without a recorded reason and either a confidence or a table basis, write mode or execution, remove or null a stop-loss or a take-profit on any action (move_tp / tighten_sl / widen_sl MOVE a bracket and never delete one; a partial_close or change_size leaves the remaining position with BOTH brackets; an add_entry is placed with both brackets; a close removes the position, not just its brackets), leave a leg without a REAL take-profit (TP doctrine -- no sentinel, no TP through the mark), bypass an account's per-trade risk limit / sizing cap / exposure cap / daily-DD switch, route one account's action through another account's executor, place a desk-generated entry before entry_generation's blocked_until clears]
     notify: trade-update ping tagged with the mandate per applied account; ONE ping per refuse / no_action_path / apply_failed on a real-money or prop account; ONE flag after 3 consecutive could_not_look cycles; brief section 1 line with the decision row
@@ -1336,4 +1351,135 @@ mandates:
     never: >-
       Never auto-renewed and never extended by a session. Never any real-money, mirror or prop account, risk cap, mode or sizing. Never removes an SL or a TP.
 
-proposed: []
+  # ── PER-PACKAGE AUTO-APPLY (kind: ltr_auto_apply; operator 2026-10-29) ─────
+  #
+  # A PER-PACKAGE EXCEPTION to MD-TRADE-DESK functions.in_trade.advice_only: the
+  # live reviewer's recommendation on ONE order package is executed by the VM
+  # rows watcher (live_review_rows_watch -> live_review_dispatch -> live_review_apply),
+  # every in-trade class. Read by ONE module, src/runtime/ltr_auto_mandate.py,
+  # keyed on this entry (never a default-off flag: no third gate). Every other
+  # package stays advice-only, unchanged. Fields:
+  #   kind: ltr_auto_apply · package_scope.order_package_id (one package) ·
+  #   package_scope.actions · review_cadence_minutes (the VM wake poster's
+  #   mandate_cadence event for the open package) · expires_on_event · bounds
+  #   (ltr_auto_mandate.BOUNDS, each enforced in live_review_apply.py) ·
+  #   expired_at (set by whoever records the close; absent = active).
+  - id: MD-LTR-ADA-AUTO
+    kind: ltr_auto_apply
+    grants: the live reviewer's recommendation on order package pkg-465a5d7d27644027 (the ADA short) is applied automatically by the VM, every in-trade action class, on every account carrying the package
+    direction: mixed
+    direction_note: >-
+      Same as MD-TRADE-DESK: a tighten / close / reduce de-risks, a widen / add
+      adds risk, a move_tp changes the exit. Not a ladder mandate; the resolver
+      refuses `mixed` and has nothing to measure here.
+    proposed_by: manager session_01AFoLuKwNMzjtn2CH2kVd86 (Manager Session 2026-10-29c), on the operator's ask
+    proposed_at: '2026-10-29'
+    granted_by: operator (Ben)
+    granted_at: '2026-10-29'
+    source: >-
+      Checklist row MD-LTR-ADA-AUTO (docs/claude/work/checklist/MD-LTR-ADA-AUTO.json,
+      manager branch claude/mgr-ada-am-case, self-landing to main). OPERATOR
+      2026-10-29 ~07:40Z, verbatim: "I want to put a standing mandate for ltr
+      lanes recommendations on this trade to be applied automatically". Popup
+      answers, verbatim: scope = "Every action"; mechanism = "VM applies it
+      directly". Design constraint ~07:45Z, verbatim: "The reason for the
+      current design that the lanes don't commit is so they don't need to read
+      the repo to make a decision - we need to make sure the design doesn't
+      increase latency on the round trip decisions". Transcribed by lane
+      MD-LTR-ADA-AUTO (session_01AFoLuLbY3ViuCFwrJbmcyV) in a `landing: hold`
+      PR the manager merges after the operator's Tier-2 OK; the lane holds no
+      authorization of its own.
+    parent: MD-TRADE-DESK
+    package_scope:
+      order_package_id: pkg-465a5d7d27644027
+      # Stage-2 equality: the live leg and its mirror move together, and the
+      # demo floor carries the same package. The apply acts on EVERY account
+      # carrying the package (gather_legs), each through its own RiskManager;
+      # this list is the record of who that is at grant time, not a filter.
+      accounts: [bybit_2, bybit_portfolio, bybit_1]
+      actions: [tighten_sl, widen_sl, move_tp, partial_close, close, change_size, add_entry]
+    mechanism: >-
+      VM applies it directly: the VM wake poster emits a mandate_cadence ltr-wake
+      for the open package every review_cadence_minutes after the bar boundary,
+      with the packet committed byte-exact to live-review/rows BEFORE posting
+      (LTR-PACKET-ECHO); the reviewer is dispatched by reference with the packet
+      inline, reads nothing from the repo and writes only its row; the VM rows
+      watcher (~45 s poll) dispatches a `recommended` row through
+      live_review_dispatch.py --ref to live_review_apply.py --mandate MD-LTR-ADA-AUTO.
+    review_cadence_minutes: 120
+    expires_on_event: order_package_closed
+    expired_at: '2026-10-29T10:47:53Z'
+    expired_reason: order_package_closed -- pkg-465a5d7d27644027 closed (bybit_2 trade 6735 stopped at 0.2016 at 10:47:53Z; mirror 6736 closed 10:51:04Z), recorded per on_expiry by lane REMOVE-PER-BAR-CAP at the manager's direction
+    on_expiry: >-
+      Nothing to disarm: a closed package is refused by the apply and gets no
+      cadence. The closing session records expired_at here and closes row
+      MD-LTR-ADA-AUTO; never extended to another package by a session.
+    fires_when:
+      - a committed live-review row for pkg-465a5d7d27644027 on live-review/rows, read at a pinned commit, whose action is in package_scope.actions and whose route is recommended or auto_applied
+      - MD-TRADE-DESK's package-level clauses hold (mechanics match, a reason, a judgement confidence in [0, 1] or a table EV, the action's own target)
+      - config/live_trade_review.yaml apply_mode == apply for the account, and the account's own approve_amend / approve_action returns approve or clip
+      - every bound below holds
+    bounds:
+      - both_brackets -- both brackets exist at the venue after every action (TP doctrine clause 3); a tighten, widen, move_tp or reduce that leaves either unread is apply_failed
+      - widen_within_1r -- a widen_sl never puts the stop beyond the original entry risk (-1R = entry -/+ order_packages.meta.risk_per_unit); unread risk refuses the widen
+      - tp_live_target -- the TP stays a live predictive target (beyond the mark, beyond entry, never the 50R sentinel)
+      - idempotent_per_review_id -- a row applies at most once (the same review_id is refused); there is NO per-bar or time-window action cap [removed 2026-10-29, operator, row REMOVE-PER-BAR-CAP]
+      - venue_readback -- every leg is read back from the venue; a mismatch is apply_failed
+      - one_ping_per_action -- ONE Telegram trade-update per action naming account(s), symbol, action, level and review_id
+    never: [act on any other package, act on a read that could not look, act on a mechanics mismatch, remove or null a stop-loss or a take-profit, widen a stop beyond -1R, bypass an account's own risk manager / sizing cap / exposure cap / daily-DD switch, route one account's action through another's executor, write mode or execution, commit a packet from a reviewer]
+    notify: ONE trade-update ping per applied action (account(s), symbol, action, level, review_id); ONE ping per refuse / apply_failed on a real-money account (the apply's existing alerts); brief section 1 line with the row
+    revert: >-
+      Delete this entry (or set expired_at): the package returns to advice-only
+      on the next watcher pass. An applied close, partial close or filled size
+      change cannot be undone; a moved bracket can be moved back by the
+      operator's amend-position-sl system-action.
+
+proposed:
+
+  # ── PROPOSED, NOT GRANTED ──────────────────────────────────────────────────
+  # A session may PROPOSE a mandate; only the operator GRANTS one (CLAUDE.md
+  # § The daily sync). Nothing below authorizes anything until the operator
+  # moves it to `mandates:` with `granted_by` / `granted_at` / `source`.
+
+  - id: MD-ML-OVERLAY-CANARY
+    grants: arm_and_demote_reduce_only_ml_overlay_canary
+    direction: derisk_only
+    proposed_by: session_01AFoLuJ3Z8WoJgLG7jVvqha
+    proposed_at: '2026-10-29'
+    source: >-
+      Lane ML-PIPELINE-DESIGN, dispatched by Manager Session 2026-10-29c (session_01AFoLuKwNMzjtn2CH2kVd86) under
+      the operator's system-first rule (docs/claude/work/checklist/_header.json priorities.system_first); design
+      docs/plans/ml-pipeline-design-2026-10-29.md § 5 (stations 5-6 of the ML assembly line).
+    recurrence: >-
+      Every ML overlay that clears its gate needs the same two steps on every leg it covers: arm a reduce-only
+      canary, and demote it to shadow when its decay alarm trips. Without a mandate each is its own Tier-3 popup,
+      per leg and per retrain.
+    fires_when: >-
+      (ARM) An ML overlay registry row has a committed evidence record showing it cleared BOTH
+      RULE-ML-OVERLAY-NONINFERIOR-V1 and RULE-AM-RISK-ADJUSTED-V1, registered before the run, per leg and pooled,
+      net of the full cost stack, against a drawn same-rate random arm; its shadow parity check on the live serve
+      path passed (every trained feature present, non-default and equal; the score re-computes); and a CUSUM
+      monitor with a declared false-alarm rate is running for it. Then the manager may set that leg's
+      `advisory_policy` to `mode: downsize` with `size_floor` >= 0.5 and promote the row to `advisory`.
+      (DEMOTE) That overlay's CUSUM trips, or its parity check fails. Then the manager may demote the row to
+      `shadow` (or set the leg's `advisory_policy` back to annotate).
+    bar:
+      evidence_rules: [RULE-ML-OVERLAY-NONINFERIOR-V1, RULE-AM-RISK-ADJUSTED-V1]
+      random_arm: same-rate, drawn, >= 1000 draws
+      size_floor_min: 0.5
+      soak: mechanical, 1-2 clean downsized trades (OPERATING-PLAN § 2), never a sample size or a date
+    cap:
+      basis: at most one leg armed per manager action; every armed leg listed in the brief's section 1
+      max_auto_share: unstated -- the operator sets it at grant time
+    blocked_until: >-
+      The first ML overlay (row ML-REAL-MONEY-OVERLAY) passes both rules AND the operator approves its first
+      canary as a Tier-3 decision. RULE-ML-OVERLAY-NONINFERIOR-V1 was not yet registered when this was proposed.
+    never: >-
+      Never sizes UP (factor <= 1.0 always) and never zero (size_floor >= 0.5). Never edits config/accounts.yaml
+      (`mode:`, rosters), a risk cap, sizing formulas, an SL or a TP. Never arms a leg on the live account without
+      its mirror carrying the same policy (Stage-2 equality). Never arms on a fee-only corpus. Never a new
+      execution gate: it decides what may be CHANGED without asking, not what RUNS. Never carries `autoland`.
+    evidence_required: >-
+      The evidence record for both rules, the parity read, the CUSUM's declared false-alarm rate, and for every
+      use an immediate operator notification (what changed, evidence, merged/deployed/observed, the one-line
+      revert) plus the brief's section 1.

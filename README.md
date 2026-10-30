@@ -1,4 +1,4 @@
-# ICT Trading Bot
+# JTA Trader
 
 Python-based ICT trading bot focused on ICT concepts such as fair value gaps (FVG), order blocks (OB), swing structure, market structure shifts, and kill zones. It runs a **multi-strategy roster** coordinated by the intent/decider layer, each member gated by a per-strategy `execution: live | shadow` switch (S9, 2026-05-24): `live` members trade real money on accounts that route them; `shadow` members run and **log** order packages for data collection but never send a live order.
 

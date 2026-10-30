@@ -1,0 +1,102 @@
+id: RQ-20261028-e1a7-01
+title: 'Tighten cells on the STRATEGY legs (leg family x timeframe): on a multi-year config-exact corpus of each real-money leg, does a stop-tighten in the BLOCK cell (open < +1 R or new stop below breakeven) lose vs hold, and is the ALLOW cell (open >= +1 R and new stop >= breakeven, >= 1 ATR from price) within 0.05 R of hold?'
+status: blocked
+cadence: once
+theme: live_strategy
+priority: 2
+roadmap:
+- L-ATM
+kind: experiment
+practice_precedent: 'T2, T4, T8 (docs/reference/trading-and-model-practice-principles.md): evaluate a stop per leg and per regime, size it from volatility, isolate the exit with fixed entries.'
+intervention_controls:
+  hold_to_bracket: true
+  # per-tighten ablation is already paired against hold; matched-random = the same tighten count and level offset at random check-ins of the same trade
+  matched_random: {draws: 100}
+  best_static: {grid: [breakeven, atr_trail, structure, giveback, losscut], excludes_test_folds: true}
+  bootstrap_group: week
+question: >-
+  For each leg on bybit_2's strategies roster (re-parse config/accounts.yaml at run time; on 2026-10-28 that roster is ada_pullback_2h, xrp_pullback_2h,
+  trend_donchian_eth_4h, trend_donchian_xrp_4h and trend_donchian_sol_prop), using a config-exact Stage-0 corpus on its own timeframe over 2020-01-01..2026-10-27
+  that emits per-trade paths, price every comparable review state with scripts/research/live_review_outcomes.py. The state grid is peak_r in {0.5, 1, 1.5, 2, 3}
+  and open_r = peak_r. The tightens are r:-0.5, r:0, r:+0.5, atr:1, atr:2 and atr:3. The question is the mean dR of tighten vs hold in two cells: BLOCK
+  (open < +1 R, or the new stop below breakeven) and ALLOW (open >= +1 R, the new stop >= breakeven and >= 1 ATR from price). It is asked per leg and pooled by
+  family (pullback vs donchian trend).
+why_this_matters: >-
+  LTR-TIGHTEN-OPTIMIZE (docs/research/ltr-tighten-optimize-2026-10-28.md, evidence comms/research/ltr_tighten_optimize/) found on the DESK-LIFECYCLE-S0 crypto 1h
+  corpus that Claude's tightens lose -0.142 R [-0.221, -0.064] in the BLOCK cell and sit at -0.008 R [-0.126, +0.105] in ALLOW-with-buffer. That split was
+  chosen AFTER seeing the slices. The corpus holds no strategy legs and only one timeframe, while the live LTR tightens the strategy legs. On the legs' own
+  committed Stage-0 records (55-61 trades each) every cell is below the tool's n floor of 20 per side (MEASURED 2026-10-28 for ada_pullback_2h and
+  xrp_pullback_2h at peak 1 R: 8-19 comparable trades). So the leg-family read needs a longer corpus: that is this unit. The lane proposed ADVICE-ONLY for
+  tighten_sl (Tier 3). This unit decides whether a restricted auto-tighten (ALLOW only) could be re-enabled on the legs it would govern.
+power:
+  expected_n: 400
+  min_detectable_effect: 0.10
+  effect_units: R
+  sd: 0.74
+  design: paired
+  alpha: 0.05
+  power: 0.8
+  basis: >-
+    The paired dR sd of a single tighten vs hold is 0.74 R in the S0 corpus (MEASURED: comms/research/ltr_tighten_optimize/tighten_rows.jsonl, 981 rows).
+    (2.8 x 0.74 / 0.10)^2 = 429 comparable trade-states per family. The expected corpus is ~6.8 years x ~60 trades per leg-year on the 2h legs and ~25 on the 4h legs, about 1,600 trades, with
+    roughly a quarter comparable at each peak level. That is an ESTIMATE from the committed 1y records; the first run replaces it. Below 429 per family the
+    unit grades indeterminate, never FAIL.
+  feasibility:
+    source: none
+    accrual_basis: Historical public candles only; nothing accrues. The build is the blocker, not the data.
+decision_rule:
+  id: RULE-RQ20261028-E1A7-01-LEG-TIGHTEN-CELLS
+  registered_at: '2026-10-28'
+  registered_before_run: true
+  statistic: >-
+    Per leg and per family: dR = tighten net R - hold net R on the same comparable trade (live_review_outcomes.py method: SL-first, a gap fills at the open,
+    the recorded fee and slippage kept, funding rescaled, --stop-fill-slip-r 0.05 reported as a sensitivity). The mean and the 95% CI come from a bootstrap
+    clustered on the trade's entry ISO week (10,000 draws, seed 20261028). Each trade counts once per cell, at its first comparable state.
+  rule: >-
+    Graded per family, Bonferroni over 2 families. CONFIRM_BLOCK if BLOCK has n >= 429 and a 97.5% CI upper bound < 0. CONFIRM_ALLOW if ALLOW has n >= 429
+    and a 97.5% CI lower bound > -0.05 R. REFUTE_ALLOW if ALLOW's 97.5% CI upper bound < -0.05 R: auto-tightening costs even late on this family, which
+    argues for advice-only. INDETERMINATE otherwise. Per-leg cells are reported, not graded. Numbers are fixed before the run.
+  what_it_does_not_do: >-
+    Edits no config, live-review policy or mandate. The ALLOW/BLOCK split is a Tier-3 proposal to the operator. This unit is its out-of-sample test on the
+    strategy legs, not an apply.
+blocked_on:
+- kind: work_item
+  ref: LTR-TIGHTEN-OPTIMIZE
+  what: >-
+    No single command produces a multi-year, config-exact per-leg corpus with per-trade paths and then runs live_review_outcomes.py over the state grid.
+    harness_stage0.py emits trades but has no state-grid pricing mode, and live_review_outcomes.py reads one committed evidence record at a time.
+  clears_when: >-
+    A wrapper (e.g. scripts/research/leg_tighten_cells.py) chains harness_stage0 (per leg, its own timeframe, --emit-trades) into live_review_outcomes over the
+    grid, with a test. Then git mv this file to research/queue/, remove blocked_on and set status: queued.
+compute: cpu_light
+value:
+  usd_at_stake_per_month: 150
+  confidence: 0.2
+  bucket: structural
+  basis: 'stand-in: governs whether the live auto-tighten policy is restricted, kept or advice-only on the real-money legs; an estimate, not a measurement.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 4.0
+  est_minutes: 90
+  basis: 'Estimate: 5 legs x ~7y of 2h/4h candles plus about 30 grid cells of pricing per leg; the first run replaces it.'
+run:
+  command:
+  - python3
+  - scripts/research/leg_tighten_cells.py
+  - --out
+  - '{out_dir}'
+  inputs:
+    research_unit: RQ-20261028-e1a7-01
+  timeout_minutes: 180
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- scripts/research/live_review_outcomes.py
+- scripts/research/harness_stage0.py
+- scripts/research/ltr_tighten_optimize.py
+- docs/research/ltr-tighten-optimize-2026-10-28.md
+- LTR-TIGHTEN-OPTIMIZE
+last_dispatched_at: null

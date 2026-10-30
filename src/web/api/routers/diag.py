@@ -396,6 +396,9 @@ _EXIT_LADDER_SOAK_LOG = runtime_logs_dir() / "exit_ladder_soak.jsonl"
 _FC_GEOMETRY_SOAK_LOG = runtime_logs_dir() / "fc_geometry_soak.jsonl"
 _EXIT_LEVER_SOAK_LOG = runtime_logs_dir() / "exit_lever_soak.jsonl"
 _VOL_TRAIL_SHADOW_LOG = runtime_logs_dir() / "vol_trail_shadow.jsonl"
+# ML-REAL-MONEY-OVERLAY shadow scoring (src/runtime/overlay_shadow.py): one row per account per scored
+# package, annotate-only. Allowlisted in the SAME PR as its writer (the read-surface defect class above).
+_OVERLAY_SHADOW_LOG = runtime_logs_dir() / "overlay_shadow.jsonl"
 _TARGET_EXTENSION_SOAK_LOG = runtime_logs_dir() / "target_extension_soak.jsonl"
 # The protection RE-ASSERT soak (2026-08-23). At the default `annotate` mode
 # this is the exact row list to review before flipping PROTECTION_REASSERT_MODE
@@ -609,6 +612,13 @@ _LTR_ROWS_WATCH_STATUS = Path(repo_root()) / "runtime_logs" / "live_review" / "r
 _DESK_INTAKE_LOG = Path(repo_root()) / "runtime_logs" / "desk" / "intake.jsonl"
 _DESK_INTAKE_STATUS = Path(repo_root()) / "runtime_logs" / "desk" / "intake_status.json"
 _DESK_WATCH_STATUS = Path(repo_root()) / "runtime_logs" / "live_review" / "desk_watch_status.json"
+# TRADE-ACTION-FAST-PATH (2026-10-29): one receipt line per operator/manager-directed trade action (verdict,
+# per-account executor result + venue read-back, latencies), the last directed pass, and the watcher's
+# directed/actions fetch state. Same anchors as the writers (scripts/ops/directed_action.py::log_dir,
+# src.runtime.live_review_rows_watch.directed_log_dir).
+_DIRECTED_ACTIONS_LOG = Path(repo_root()) / "runtime_logs" / "directed_actions" / "receipts.jsonl"
+_DIRECTED_ACTIONS_STATUS = Path(repo_root()) / "runtime_logs" / "directed_actions" / "pass_status.json"
+_DIRECTED_ACTIONS_WATCH_STATUS = Path(repo_root()) / "runtime_logs" / "directed_actions" / "watch_status.json"
 # DESK-PAPER-ACCOUNTS (2026-10-27): the claude_desk leg's own ledger -- one line per accepted proposal that ended
 # without a package (expired_unfilled, e.g. waiting on a closed ETF/CME market; a refused bracket). Written by
 # src/units/strategies/claude_desk.py::record (ledger_path()).
@@ -666,6 +676,10 @@ _LOG_FILES: dict[str, Path] = {
     "desk_intake": _DESK_INTAKE_LOG,
     "desk_intake_status": _DESK_INTAKE_STATUS,
     "desk_watch_status": _DESK_WATCH_STATUS,
+    # TRADE-ACTION-FAST-PATH: what happened to each directed trade action on the VM, and how fast.
+    "directed_actions": _DIRECTED_ACTIONS_LOG,
+    "directed_actions_status": _DIRECTED_ACTIONS_STATUS,
+    "directed_actions_watch_status": _DIRECTED_ACTIONS_WATCH_STATUS,
     "desk_leg": _DESK_LEG_LEDGER,
     "ltr_first_proof": _LTR_FIRST_PROOF,
     "status": _STATUS_JSON,
@@ -733,6 +747,7 @@ _LOG_FILES: dict[str, Path] = {
     # first would-fire trade.
     "exit_lever_soak": _EXIT_LEVER_SOAK_LOG,
     "vol_trail_shadow": _VOL_TRAIL_SHADOW_LOG,
+    "overlay_shadow": _OVERLAY_SHADOW_LOG,
     "target_extension_soak": _TARGET_EXTENSION_SOAK_LOG,
     "protection_reassert_soak": _PROTECTION_REASSERT_SOAK_LOG,
     "stray_oca_soak": _STRAY_OCA_SOAK_LOG,

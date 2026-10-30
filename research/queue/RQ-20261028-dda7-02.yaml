@@ -1,6 +1,6 @@
 id: RQ-20261028-dda7-02
 title: 'Multi-window walk-forward of trend_donchian (BTCUSDT 1h) at the 11.0 bps cost stack (window-drift flip, hand-authored)'
-status: queued
+status: done
 cadence: once
 kind: experiment
 theme: live_strategy
@@ -48,3 +48,4 @@ last_dispatched_at: null
 roadmap:
 - L-LADDER
 practice_precedent: 'docs/reference/trading-and-model-practice-principles.md (walk-forward across several windows; judge the edge ex its single best fold); skill: .claude/skills/backtesting/SKILL.md, Is n enough, and is the edge concentrated in one fold'
+result: "GRADED 2026-10-28 against RULE-WF-RECOST-trend_donchian, run session-local (lane WF-RECOST-DDA7). Verdict FAIL: n=224, net_r_oos +3.02R, best fold +19.91R, net_r_oos_ex_max_fold -16.89R, folds_positive 2/6 (folds [19.9073, -11.7108, -4.5104, 15.0074, -5.6122, -10.0648]), fee 11.0 bps asserted in record and bt.json, fidelity approximate. Leg stays on its Stage-1 floor (bybit_1); not a retirement. Row: research/results/RQ-20261028-dda7-02/session_01AFoLuNAvm4Xfk9FftW4jnY.jsonl; raw record + trades: docs/research/wf-recost-dda7-2026-10-28/RQ-20261028-dda7-02/."

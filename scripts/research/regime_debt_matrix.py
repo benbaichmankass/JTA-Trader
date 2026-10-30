@@ -233,6 +233,12 @@ _PB_LEVER_FLAG = {
     "trail_vol_below_pctl": "--trail-vol-below-pctl", "trail_vol_above_pctl": "--trail-vol-above-pctl",
     "trail_vol_tight_mult": "--trail-vol-tight-mult", "vol_pctl_window": "--vol-pctl-window",
     "side_filter": "--side-filter",  # see the note on _TREND_LEVER_FLAG above
+    # M20 P4.1 trail-decay: backtest_pullback.py models it (--trail-decay-*) but this
+    # map did not forward it, so eth_pullback_2h (which declares stall/tight_mult)
+    # graded `approximate` for a WIRING reason only (lane ML-VOLGATE-WF-ETH-BTC).
+    "trail_decay_arm_r": "--trail-decay-arm-r",
+    "trail_decay_stall_bars": "--trail-decay-stall-bars",
+    "trail_decay_tight_mult": "--trail-decay-tight-mult",
     # MOMENTUM-LEVERS-LIVE (2026-10-18), as on _TREND_LEVER_FLAG.
     "trail_adx_below": "--trail-adx-below",
     "trail_adx_falling_bars": "--trail-adx-falling-bars",

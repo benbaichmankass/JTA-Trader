@@ -81,17 +81,17 @@ def test_outbound_tickets_project_over_order_packages(isolated_db: Path) -> None
     from src.prop import prop_journal
 
     db = Database()  # creates order_packages + the rest of the schema
-    # `trend_donchian_sol_prop` is READ FROM the live breakout_1 roster, not
+    # `trend_donchian_eth_prop` is READ FROM the live breakout_1 roster, not
     # asserted here — this test is about the order_packages projection, not
     # about which legs are routed. It named the BASE `trend_donchian_sol` until
     # 2026-08-23, when the Tier-3 de-dup (#10165) removed the base twins from
     # breakout_1; the projection then correctly excluded the row and this test
     # failed. That failure was the change working, not a regression.
     db.insert_order_package({
-        "order_package_id": "pkg-test-sol",
-        "strategy_name": "trend_donchian_sol_prop",  # a breakout_2 prop strategy (breakout_1 retired 2026-10-07)
-        "symbol": "SOLUSDT", "direction": "long",
-        "entry": 73.0, "sl": 71.0, "tp": 80.0, "status": "orphaned",
+        "order_package_id": "pkg-test-eth",
+        "strategy_name": "trend_donchian_eth_prop",  # a breakout_2 prop strategy (breakout_1 retired 2026-10-07; sol_prop pulled 2026-10-29)
+        "symbol": "ETHUSDT", "direction": "long",
+        "entry": 2400.0, "sl": 2350.0, "tp": 2550.0, "status": "orphaned",
     })
     # A leg that is NOT on the roster, so the account scoping is pinned in BOTH
     # directions — without this the test would still pass if the projection
@@ -104,11 +104,11 @@ def test_outbound_tickets_project_over_order_packages(isolated_db: Path) -> None
     })
     rows = prop_journal.list_outbound_tickets(account_id="breakout_2")
     by_id = {r["order_package_id"]: r for r in rows}
-    assert "pkg-test-sol" in by_id, "canonical order_package must appear with no sidecar"
+    assert "pkg-test-eth" in by_id, "canonical order_package must appear with no sidecar"
     assert "pkg-not-routed-here" not in by_id, (
         "the projection must scope to the account's own roster")
-    r = by_id["pkg-test-sol"]
-    assert r["symbol"] == "SOLUSDT"
+    r = by_id["pkg-test-eth"]
+    assert r["symbol"] == "ETHUSDT"
     assert r["status"] == "orphaned"   # falls back to the order-package status
     assert r["message"] is None        # no sidecar message yet — still visible
 

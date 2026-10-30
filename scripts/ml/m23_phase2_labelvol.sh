@@ -169,7 +169,7 @@ EVAL_SHARDS=(
   "BTCUSDT|1h" "ETHUSDT|1h" "SOLUSDT|1h"
   "ADAUSDT|15m" "AVAXUSDT|15m" "XRPUSDT|15m"
   "SPY|1d" "QQQ|1d" "GLD|1d" "TLT|1d" "IWM|1d" "SLV|1d" "IEF|1d"
-  "TQQQ|1d" "QLD|1d" "SPLG|1d" "IAUM|1d" "MGC|1d" "MHG|1d"
+  "TQQQ|1d" "QLD|1d" "SPYM|1d" "IAUM|1d" "MGC|1d" "MHG|1d"
 )
 declare -a MR_PATH_LIST=()
 declare -a MR_SKIPPED=()

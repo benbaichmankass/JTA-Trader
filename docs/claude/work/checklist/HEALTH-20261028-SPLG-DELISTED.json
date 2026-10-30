@@ -1,0 +1,19 @@
+{
+  "id": "HEALTH-20261028-SPLG-DELISTED",
+  "title": "splg_trend_long_1d is dead on alpaca_paper: SPLG was renamed SPYM (delisted ticker); move the leg's symbol to SPYM",
+  "phase": "floor",
+  "state": "queued",
+  "owner": "manager",
+  "lane": null,
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 3,
+  "prs": [],
+  "blocked_on": [],
+  "note": "[HEALTH-REVIEW-20261028] MEASURED: trader journal 2026-10-28 19:07-19:15Z logs 'alpaca: empty bars for SPLG 1d (feed=iex)' then 'strategy splg_trend_long_1d raised ... no candle data' every tick, so the rostered alpaca_paper leg never evaluates (DEMO-FLOOR rule: every non-retired leg trades). Yahoo chart API 2026-10-28: SPLG -> 'No data found, symbol may be delisted'; SPYM -> NYSEArca ETF with firstTradeDate 1132065000 (2005-11-15), the SPDR Portfolio S&P 500 inception, i.e. the same fund under its new ticker (PI-20261026-RESEARCH-0002 and the E4 corpus manifest saw the SPLG Yahoo 404 but did not name the cause). EXACT CHANGE (Tier 3, data-backed: a ticker rename, same fund and history): SPLG -> SPYM in config/strategies.yaml (splg_trend_long_1d symbols, ~L2687), config/instruments.yaml (SPLG block ~L541), config/accounts.yaml alpaca_paper + alpaca_options_paper symbols lists (~L1275, ~L1716), config/regime_coverage_exemptions.yaml L261 text, config/strategy_descriptions.json; keep the leg id (renaming the id breaks its history joins). Premortem: the journal/grading joins on symbol would split SPLG vs SPYM history; check that the soak/perf readers key on strategy id, not symbol. Closes when the trader journal shows splg_trend_long_1d evaluating SPYM bars (an _eval audit row) on alpaca_paper.",
+  "updated_at": "2026-10-28T19:30:18Z",
+  "updated_by": "session_01AFoLuK9sfam8pmqP2UuRgz",
+  "roadmap": "L-OPS",
+  "_seq": 755
+}

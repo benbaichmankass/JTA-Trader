@@ -1,0 +1,15 @@
+{
+  "due_when": {
+    "due_date": "2026-10-31",
+    "kind": "date"
+  },
+  "id": "PI-20261030-NLSZ8A5M-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "Old manager Manager Session 2026-10-29d relay (trig_016oQzDS95nKLzvcPLqGWRrc) of a reviewer helper report at 02:20Z; filed by Manager Session 2026-10-30a",
+    "rerun": "git show origin/live-review/rows:comms/live_review/packets/LR-20261030T0201Z-pkg-591f76d3005e4cc8.json | python3 -c \"import json,sys;d=json.load(sys.stdin);print(json.dumps(d.get('packet',d).get('mechanics'),indent=1))\""
+  },
+  "state": "queued",
+  "what": "FALSE mechanics 'match' with zero accounts compared (collapsed state, canonical rule 2). LTR packet LR-20261030T0201Z-pkg-591f76d3005e4cc8 reports mechanics verdict 'match' while its evidence says 3 account(s) could not be read (bybit_1 diag exit 3; tradeify_1/velotrade_1 status carries no positions field; breakout_2 '1 open' with no SL/TP comparison). A verdict over 0 compared accounts must read could_not_look. Fix in scripts/ops/live_review_packet.py mechanics verdict + a test with all-unreadable accounts."
+}

@@ -914,9 +914,15 @@ def _decide(leg: str, frm: str, to: str, account: str, root: Path,
         ctx["caveats"].append(PROVISIONAL_CAVEAT)
 
     adds, removes = _delta(leg, frm, to, account, exchange, rosters)
-    if direction == "derisk_only" and adds:
+    # ... and S2 -> S1 MOVES it back: re-adding it to its general paper account is paper money, part of the
+    # demotion, not added risk.
+    moved_back = [SOAK_ACCOUNT.get(exchange)] if (frm, to) == ("S2", "S1") else []
+    if direction == "derisk_only" and [a for a in adds if a not in moved_back]:
         raise _Refuse("R-DERISK-ADD", f"{mid} is derisk_only and this edit ADDS {leg} to {adds}")
-    if direction == "add_risk" and removes:
+    # STRATEGY-STATUS-MODEL (operator 2026-10-28): S1 -> S2 MOVES a leg -- off its general paper account
+    # onto real money + the mirror -- so that one removal is part of the promotion, not a second edit.
+    moved_off = [SOAK_ACCOUNT.get(exchange)] if (frm, to) == ("S1", "S2") else []
+    if direction == "add_risk" and [a for a in removes if a not in moved_off]:
         raise _Refuse("R-TRANSITION", f"{mid} is add_risk; this edit removes from {removes}")
     if not adds and not removes:
         raise _Refuse("R-NO-OP", f"{leg} is already where {frm} -> {to} would put it")
@@ -955,7 +961,9 @@ def _delta(leg: str, frm: str, to: str, account: str, exchange: str,
     if (frm, to) == ("S0", "S1"):
         return ([account] if not on(account) else []), []
     if (frm, to) == ("S1", "S2"):
-        return [a for a in stage2 if not on(a)], []
+        # Production is NOT on general paper (STRATEGY-STATUS-MODEL, operator 2026-10-28; strategy-status-guard).
+        soak = SOAK_ACCOUNT.get(exchange)
+        return [a for a in stage2 if not on(a)], ([soak] if soak and on(soak) else [])
     if (frm, to) == ("S2", "S1"):
         soak = SOAK_ACCOUNT.get(exchange)
         adds = [soak] if soak and not on(soak) else []

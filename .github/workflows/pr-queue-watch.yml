@@ -316,7 +316,7 @@ jobs:
           python3 - <<'COMBINE'
           import json, pathlib
           rows = []
-          for path, repo in (("/tmp/open-prs.json", "benbaichmankass/Metis-Insights"),
+          for path, repo in (("/tmp/open-prs.json", "${{ github.repository }}"),
                              ("/tmp/dash-prs.json", "benbaichmankass/ict-trader-dashboard")):
               f = pathlib.Path(path)
               if not f.exists():

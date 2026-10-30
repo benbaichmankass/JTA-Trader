@@ -91,6 +91,9 @@ LR_DUE_SEEN = REPO_ROOT / "runtime_logs" / "live_review_due_seen.json"
 LR_CONFIG = REPO_ROOT / "config" / "live_trade_review.yaml"
 LR_REVIEWS_REL = "comms/live_review/reviews.jsonl"
 LR_ROWS_REF = "refs/live-review/live-review/rows"   # the VM watcher's own fetch namespace
+DESK_REF = "refs/live-review/desk/decisions"   # the VM rows watcher's fetch of the desk branch (DESK-4-INTAKE)
+DESK_POINTER = "comms/desk/latest_scan.json"
+DESK_DECISIONS = "comms/desk/decisions.jsonl"
 RECEIPT = REPO_ROOT / "runtime_logs" / "attention_watch_receipt.json"
 
 CHECKLIST = REPO_ROOT / "docs" / "claude" / "work" / "MANAGER-CHECKLIST.json"
@@ -104,6 +107,7 @@ RESEARCH_MAX_HOURS = 36      # dispatcher lands results several times a day when
 INFLIGHT_STALE_DAYS = 3      # an in_flight row nobody has touched in 3 days is not in flight
 MANAGER_SILENT_HOURS = 30    # one daily review + 6h grace
 DESK_WAKE_POST_MAX_HOURS = 3  # the VM producer writes its receipt every pass (~2 min); 3 h silent = it stopped
+DESK_ROW_MISSING_MIN = 15    # a desk packet this old with no decision row: the wake did not run (G1, MEASURED 7 h on 2026-10-28)
 REALERT_HOURS = 24
 TOP_N = 8
 #: The mechanical soak (operator 2026-10-15): ``passed`` is a promotion candidate,
@@ -351,6 +355,45 @@ def probe_desk_wake_post(now: datetime) -> dict:
     if state in ("wake_missing", "could_not_build", "could_not_commit", "could_not_post"):
         return {"status": BREACHED, "detail": f"desk wake trigger: {state} — {doc.get('reason') or doc.get('step') or ''}"}
     return {"status": OK, "detail": f"desk packet+wake producer ran {hours:.1f}h ago; state {state}"}
+
+
+def probe_desk_row_missing(now: datetime) -> dict:
+    """The newest desk packet on ``desk/decisions`` with no decision row after ``DESK_ROW_MISSING_MIN`` minutes.
+
+    The producer receipt reads ``posted`` once the wake marker is up, whether or not a wake session ever ran,
+    so it cannot see this. Reads the branch the VM rows watcher already fetches. Every branch it could not
+    read is ``unknown`` with ``read_state: could_not_look`` in the detail, never ``ok`` (a count of 0 rows
+    would be a lie): an unreadable ref, pointer or rows file, or an unparseable ``built_at``."""
+    ptr_text = _git("show", f"{DESK_REF}:{DESK_POINTER}")
+    rows_text = _git("show", f"{DESK_REF}:{DESK_DECISIONS}")
+    if ptr_text is None or rows_text is None:
+        gone = [n for n, t in (("pointer", ptr_text), ("decisions.jsonl", rows_text)) if t is None]
+        return {"status": UNKNOWN, "read_state": "could_not_look",
+                "detail": f"read_state could_not_look: {DESK_REF} {' and '.join(gone)} not readable on this host"}
+    try:
+        ptr = json.loads(ptr_text)
+        pid = str(ptr["packet_id"])
+        built = datetime.fromisoformat(str(ptr["built_at"]).replace("Z", "+00:00"))
+        if built.tzinfo is None:
+            built = built.replace(tzinfo=timezone.utc)
+    except (ValueError, KeyError, TypeError):
+        return {"status": UNKNOWN, "read_state": "could_not_look",
+                "detail": "read_state could_not_look: latest_scan pointer has no parseable packet_id/built_at"}
+    have = set()
+    for line in rows_text.splitlines():
+        try:
+            have.add(json.loads(line).get("packet_id"))
+        except (ValueError, AttributeError):
+            continue
+    age_min = (now - built).total_seconds() / 60
+    if pid in have:
+        return {"status": OK, "read_state": "read", "detail": f"newest desk packet {pid} has a decision row"}
+    if age_min <= DESK_ROW_MISSING_MIN:
+        return {"status": OK, "read_state": "read",
+                "detail": f"newest desk packet {pid} is {age_min:.0f} min old, inside the {DESK_ROW_MISSING_MIN} min wake window"}
+    return {"status": BREACHED, "read_state": "read",
+            "detail": f"desk packet {pid} landed {age_min:.0f} min ago and has no decision row "
+                      f"(bound {DESK_ROW_MISSING_MIN} min): the wake did not run or did not write"}
 
 
 def _lr_thresholds(path: Path | None = None) -> tuple[float, float] | None:
@@ -759,6 +802,7 @@ def build(now: datetime | None = None, persist_seen: bool = True) -> dict:
             "manager": probe_manager(now),
             "report": probe_report(now),
             "desk_wake_post": probe_desk_wake_post(now),
+            "desk_row_missing": probe_desk_row_missing(now),
             "live_review_due_stale": probe_live_review_due_stale(now, persist=persist_seen),
             # TRAIL-PAUSE-PULSE: prop_trail_paused_<account>, one per executor
             # account with a state dir on this host; see prop_trail_watch.py.
@@ -781,6 +825,7 @@ PROBE_LABEL = {
     "manager": "manager's register not written",
     "report": "scheduled work report missing or broken",
     "desk_wake_post": "the desk packet+wake trigger stopped (producer silent, wake missing, or packet build/commit/post failing)",
+    "desk_row_missing": "a desk packet landed more than 15 min ago and no desk decision row followed (the wake did not run or did not write)",
     "live_review_due_stale": "live trade review gone quiet (a due package unreviewed past the bound, or reviews on live-review/rows not reaching main)",
     **prop_trail_watch.LABELS,
     **prop_silence.LABELS,

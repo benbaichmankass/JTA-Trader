@@ -1,0 +1,40 @@
+{
+  "unit": "RQ-20261025-3947-17",
+  "run_id": "41005470726",
+  "commit_sha": "a36cb7f2f9364b5e7d4bf3adf125f3a05b8a5a6e",
+  "run_url": "https://github.com/benbaichmankass/JTA-Trader/actions/runs/41005470726",
+  "timeout_minutes": 60,
+  "commands": [
+    {
+      "index": 0,
+      "argv": [
+        "python3",
+        "scripts/research/macro_event_study_run.py",
+        "--kind",
+        "core_cpi_yoy",
+        "--snapshots",
+        "comms/macro/econ_calendar_snapshots.jsonl,comms/macro/econ_calendar_snapshots_survey_backfill.jsonl",
+        "--symbol",
+        "ZN=F",
+        "--horizons",
+        "1,3,5",
+        "--primary-horizons",
+        "1,3,5",
+        "--min-n",
+        "100",
+        "--t-bar",
+        "3.0",
+        "--expected-sign",
+        "either",
+        "--population",
+        "core_cpi_yoy releases (live feed + survey-consensus backfill) joined to ZN=F daily closes",
+        "--out",
+        "comms/research/RQ-20261025-3947-17/41005470726"
+      ],
+      "log": "comms/research/RQ-20261025-3947-17/41005470726/logs/cmd-0.log",
+      "exit_code": 0,
+      "seconds": 1.3
+    }
+  ],
+  "all_ok": true
+}

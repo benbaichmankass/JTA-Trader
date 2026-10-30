@@ -93,7 +93,7 @@ _GEMINI_FALLBACK_MODELS = [
 _VALID_ENDPOINTS = {"summary", "recent", "strategy", "health"}
 
 # Generator mode. `template` (default) is provider-free and produces
-# deterministic rule-based prose; `anthropic` calls the Claude API;
+# deterministic rule-based prose; `anthropic` is DISABLED (hard refusal, see `_call_anthropic`);
 # `gemini` calls the Google Generative Language API. Other providers
 # can be added later by branching in generate() — the cache + history
 # + usage surfaces are provider-agnostic.
@@ -140,46 +140,30 @@ def _now_iso() -> str:
 # ---------------------------------------------------------------------------
 
 
+class AnthropicApiDisabled(RuntimeError):
+    """The Anthropic Messages API path is closed: nothing may spend API credits."""
+
+
+_ANTHROPIC_DISABLED_MSG = (
+    "the Anthropic API path is DISABLED (operator 2026-10-27/28: nothing in this system "
+    "spends Anthropic API credits; Claude runs only on the plan). Use "
+    "INSIGHTS_MODEL_MODE=template or gemini."
+)
+
+
 def _call_anthropic(
     model_id: str,
     system_blocks: list[dict[str, Any]],
     user_text: str,
 ) -> dict[str, Any]:
-    """Call the Anthropic Messages API.
+    """HARD REFUSAL. This used to call the Anthropic Messages API with the VM's
+    prepaid ``ANTHROPIC_API_KEY``; that spends API credits, which the operator
+    closed on 2026-10-27 ("No API: plan sessions only"), re-confirmed 2026-10-28.
 
-    Returns a dict with ``text``, ``input_tokens``, ``output_tokens``,
-    ``cache_creation_input_tokens``, ``cache_read_input_tokens``. Lazy
-    import means the SDK is not loaded at module-import time — this
-    is what keeps ``tests/test_insights_router.py`` happy (the router
-    must not pull in anthropic).
+    Kept as a function (not deleted) so the ``anthropic`` mode and the
+    ``anthropic_call`` test seam keep their shape; the SDK is never imported.
     """
-    import anthropic  # noqa: F401  (lazy on purpose)
-
-    client = anthropic.Anthropic()  # picks up ANTHROPIC_API_KEY from env
-    resp = client.messages.create(
-        model=model_id,
-        max_tokens=_MAX_OUTPUT_TOKENS,
-        system=system_blocks,
-        messages=[{"role": "user", "content": user_text}],
-    )
-    text = ""
-    for block in resp.content or []:
-        # SDK returns ContentBlock objects with a .type and .text on
-        # text blocks; we only care about text output.
-        if getattr(block, "type", None) == "text":
-            text += getattr(block, "text", "") or ""
-    u = resp.usage
-    return {
-        "text": text.strip(),
-        "input_tokens": int(getattr(u, "input_tokens", 0) or 0),
-        "output_tokens": int(getattr(u, "output_tokens", 0) or 0),
-        "cache_creation_input_tokens": int(
-            getattr(u, "cache_creation_input_tokens", 0) or 0
-        ),
-        "cache_read_input_tokens": int(
-            getattr(u, "cache_read_input_tokens", 0) or 0
-        ),
-    }
+    raise AnthropicApiDisabled(_ANTHROPIC_DISABLED_MSG)
 
 
 # ---------------------------------------------------------------------------
@@ -436,7 +420,14 @@ def generate(
         return None
 
     mode = _mode()
-    model_id = _model_for(endpoint)
+    if mode == "anthropic" and anthropic_call is None:
+        # Env still asks for the closed provider. Do not call it and do not kill the
+        # read-only analyst: serve the provider-free template, loudly, every tick.
+        logger.error(
+            "insights.generator: INSIGHTS_MODEL_MODE=anthropic refused - %s "
+            "Serving the template analyst instead.", _ANTHROPIC_DISABLED_MSG)
+        mode = "template"
+    model_id = template_analyst.MODEL_ID if mode == "template" else _model_for(endpoint)
 
     # Budget gate only applies to paid-provider modes. The template
     # mode never spends, so skipping the check keeps the analyst alive

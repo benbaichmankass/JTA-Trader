@@ -1,0 +1,21 @@
+{
+  "id": "RM-AM-TP-PULLIN-PRODUCER",
+  "title": "Live producer for the stall_pull_in TP retarget (src/runtime/tp_revision.py rule + monitor merge in trend_donchian and htf_pullback, parity test vs the harness --tp-retarget-mode stall_pull_in) - inert until declared",
+  "phase": null,
+  "state": "queued",
+  "owner": "lane (Opus)",
+  "lane": null,
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 2,
+  "prs": [],
+  "blocked_on": [],
+  "note": "Evidence that motivates it: RQ-20261019-017 stall_pull_in R1 PASS on trend_donchian_xrp_4h (16.55 vs 14.30 R, n 68, MEASURED). Units RQ-20261028-a7c3-05 (xrp_pullback_2h) and -06 (ada_pullback_2h) test it on the pullback unit. Today tp_revision registers only donchian_measured_move and tp_extend (grep 2026-10-28), so a PASS is not declarable. DESK \u00a7 5b class: move_tp pull-in. Tier 2 by path (order-path code, inert by config).",
+  "updated_at": "2026-10-28T21:24:34Z",
+  "updated_by": "session_01AFoLuMfbQGw8MoevpjjwwW",
+  "roadmap": [
+    "L-ATM"
+  ],
+  "_seq": 777
+}

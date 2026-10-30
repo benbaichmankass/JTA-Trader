@@ -1,0 +1,21 @@
+{
+  "id": "RM-AM-EXIT-ML-WIRING",
+  "title": "Wire the conservative hold-biased exit model (ML-LIVE-PROMOTION-PLAN P6, rows ML-EXIT-ACTIONGRID-LABELS / ML-HOLDBIAS-EXIT-MODEL) into the LTR apply path per real-money leg: advice-only first, demo floor first, per-class apply per DESK \u00a7 5b",
+  "phase": null,
+  "state": "queued",
+  "owner": "this plan's owner (manager dispatches; Opus build lane)",
+  "lane": null,
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 2,
+  "prs": [],
+  "blocked_on": [],
+  "note": "Operator 2026-10-28 ~21:05Z verbatim: 'regarding the active management milestone - I'll settle for a conservative production ML that will mostly recommend holding outside of edge cases'. Split agreed with lane ML-LIVE-PROMOTION-PLAN (session_01AFoLuNJWA5pu5sGQqcm5s3, ~21:10Z): THEY own the model spec (docs/plans/ml-live-promotion-plan-2026-10-29.md P6: action space, label pricing, pre-registered gate); THIS row owns the wiring: model output (hold default + full bracket action space: tighten/widen SL, TP extend/pull-in, partial, close; both brackets always present) -> a LiveReviewIntent row with basis 'model' -> live_review_apply.py under MD-TRADE-DESK -> each account's RiskManager. Order: (1) shadow on bybit_1 / alpaca_paper (demo floor) recording advice + priced outcome, (2) per-class execute only after that class passes DESK \u00a7 5b (per-class apply_mode = row DESK-V1-CLASS-GATES), (3) real money only on the operator's OK. tighten_sl stays advice-only (operator ~20:35Z). Starts when P6's model passes its own registered gate; the wiring can be built against a stub (constant hold) now. MEASURED context from ML-LIVE-PROMOTION-PLAN: labels.jsonl priced hold-vs-close at now_r <= -0.5: hold beat close +0.089 R [-0.08, +0.28] (n 160) - the loss-cut pocket is not shown to pay.",
+  "updated_at": "2026-10-28T21:24:34Z",
+  "updated_by": "session_01AFoLuMfbQGw8MoevpjjwwW",
+  "roadmap": [
+    "L-ATM"
+  ],
+  "_seq": 776
+}

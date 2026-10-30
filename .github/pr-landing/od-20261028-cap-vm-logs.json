@@ -1,0 +1,7 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "hold_reason": "tier_2_3_needs_approval",
+  "hold_text": "Tier-2: adds the cap-vm-logs system-action (deletes stale rotated logs; changes journald config) and edits the system-actions allowlist. Operator decided the VM disk work in the manager's chat 2026-10-28 ~20:00Z; the manager merges and files the action, the lane does not.",
+  "why": "No allowlisted action caps runtime_logs or journald. New dry-run-default action; runtime_logs deletes only stale rotated logs; journald needs a one-time operator sudoers entry and refuses without it."
+}

@@ -1,0 +1,33 @@
+{
+  "id": "NON-TPSL-CLOSES-20261029",
+  "title": "Root-cause and fix 3 live closes that were not TP/SL/strategy: pkg-d752b5099eab4317 stuck_strategy_watchdog, pkg-29c8e90b80c24835 stuck_cascade_recovered, pkg-11c1100f6cbb4667 reconciler_filled; plus pkg-1f69590887ac44e9 marked rejected yet carrying a position_telemetry row",
+  "phase": null,
+  "state": "landed_unproven",
+  "owner": null,
+  "lane": "session_01AFoLuMEqsNC179LqLHLQnh",
+  "model": "sonnet",
+  "ceiling_usd": 6,
+  "spend_usd": null,
+  "tier": 2,
+  "prs": [
+    21373
+  ],
+  "blocked_on": [],
+  "note": "Found by lane SINCE-ENTRY-WINDOW-FIX (session_01AFoLuKHzZkZGP635TCg3Me, PR #21322 body) 2026-10-29. Per session-start contract any close that is not TP/SL/strategy-close is a bug. Each: pull the order_package + journal + journalctl around close, name the path that closed it, fix or file the exact Tier-2/3 fix. Related: PI-20261029-35TCG3ME-0001 (stop-move attribution on d752b509 and 11c1100f) - fold in. Queued, not dispatched (pacing 2026-10-29: weekly 32%, ~2.8x sustainable). 2026-10-29 lane: ROOT CAUSES (all 4 are bookkeeping, no wrong-way trade): trades 6765/6764/6763 were genuine venue SL fills (exit_reason=sl, source venue_bracket_order, exchange_fill); only order_packages.close_reason kept the label of the path that noticed the close. (1) d752b509: _watchdog_stuck_strategies saw the position flat at 18:02:49Z before the reconciler's flat-confirm window elapsed (reconciler_last=flat_pending_confirm), stamped pkg+trade stuck_strategy_watchdog; fill ~1 min earlier (closed_at ok). (2) 29c8e90b: _netting_apply_close closed trade 6764 at 12:14:37Z and never cascaded the package -> _sweep_stuck_linked_packages stamped stuck_cascade_recovered (known gap BL-20260822-SEVEN-OF-EIGHT). (3) 11c1100f: _close_trade_from_order_status/reconciler stamped reconciler_filled; _sweep_exit_label_from_bracket_order later relabelled the TRADE to sl but never the package. (4) 1f69590887ac44e9: trend_donchian_1h is execution:shadow; package open ~7 min so position_telemetry/path_history wrote 14 passes (by design for open packages), then _sweep_unlinked_packages path (1) relabelled it 'rejected' (risk-refused) because it matched the shadow refusal row before path (1.5) shadow_expired. FIX (b, plus one cascade gap a): sweep carries trade sl/tp label onto closed package (meta.pre_label_close_reason kept); _netting_apply_close now cascades package; path (1) skips execution:shadow refusal rows. Tests tests/test_non_tpsl_closes_package_labels.py (9/10 fail pre-fix). Stop-move PI-20261029-35TCG3ME-0001 closed done (both tightens inside entry bar). CLOSES WHEN: PR merged+deployed, then diag journal shows the 3 packages close_reason=sl and pkg-1f69 reads shadow_expired on next sweep (it is >14d? no: <14d, healed by sweep; pkg-1f69 stays 'rejected' historically - relabel not backfilled).",
+  "priority_rank": 1,
+  "updated_at": "2026-10-29T19:02:14Z",
+  "updated_by": "Manager Session 2026-10-29c",
+  "roadmap": [
+    "L-OPS"
+  ],
+  "observation": {
+    "what": "packages pkg-d752b5099eab4317, pkg-29c8e90b80c24835, pkg-11c1100f6cbb4667 read close_reason=sl after deploy",
+    "how_to_check": "scripts/ops/diag_fetch.sh \"journal?table=order_packages&limit=300\" and read close_reason for the three ids",
+    "due_by": "2026-11-01"
+  },
+  "writeback": {
+    "roadmap": "none: bookkeeping label fix, no milestone line changes",
+    "arch": "none: no architecture section changes"
+  },
+  "_seq": 823
+}

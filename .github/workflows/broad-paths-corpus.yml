@@ -1,0 +1,175 @@
+name: broad-paths-corpus
+
+# Corpus v2 (lane ML-DATA-BROAD-PATHS, 2026-10-30): the six money-leg configs run config-exact on a frozen
+# 60-perp Binance Vision universe, with --emit-trades --emit-paths --emit-features, de-duplicated on trade_key.
+# Spec: docs/research/ml-data-rate-path-2026-10-29.md section 2. Generator: scripts/research/broad_paths_corpus.py.
+#
+# Runs on GitHub-hosted runners, keyless public candles, no VM, no Claude, no API credits. Tier-1: reads the repo,
+# writes only comms/research/broad_paths/<corpus_id>/manifest.json (landed via commit-to-main). The corpus rows
+# (trades.jsonl.gz, paths.jsonl.gz) are an Actions artifact, not the repo (about a few hundred MB).
+#
+# Trigger: open an issue labelled `broad-paths-corpus-request` (the way a Claude-on-web session dispatches; there is
+# no workflow_dispatch tool) or workflow_dispatch. The issue body is not read.
+#
+# no-durable-result: corpus generator, computes no verdict; its only durable output is the manifest, landed in-job by commit-to-main
+#
+# Gates: none. This adds no approval step, hold, cap or CI refusal.
+
+on:
+  workflow_dispatch:
+    inputs:
+      shards:
+        description: "Number of shard jobs (symbols are dealt round-robin)."
+        required: false
+        default: "6"
+      max_parallel:
+        description: "Concurrent shard jobs. Default 3: research_compute.yaml caps github_runner at 3."
+        required: false
+        default: "3"
+  issues:
+    types: [opened]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: broad-paths-corpus
+  cancel-in-progress: false
+
+jobs:
+  plan:
+    if: github.event_name == 'workflow_dispatch' || (contains(github.event.issue.labels.*.name, 'broad-paths-corpus-request') && (github.event.issue.user.login == github.repository_owner || github.event.issue.user.login == 'github-actions[bot]'))
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    outputs:
+      matrix: ${{ steps.m.outputs.matrix }}
+      shards: ${{ steps.m.outputs.shards }}
+      corpus_id: ${{ steps.u.outputs.corpus_id }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install --quiet requests
+      - name: Freeze the universe
+        id: u
+        run: |
+          set -euo pipefail
+          python3 scripts/research/broad_paths_corpus.py --self-test
+          python3 scripts/research/broad_paths_corpus.py universe --out universe.json
+          echo "corpus_id=$(python3 -c "import json;print(json.load(open('universe.json'))['corpus_id'])")" >> "$GITHUB_OUTPUT"
+      - name: Shard matrix
+        id: m
+        env:
+          SHARDS: ${{ inputs.shards || '6' }}
+        run: |
+          python3 -c "import json,os;n=int(os.environ['SHARDS']);print('matrix='+json.dumps({'shard':list(range(n))}))" >> "$GITHUB_OUTPUT"
+          echo "shards=${SHARDS}" >> "$GITHUB_OUTPUT"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: broad-paths-universe
+          path: universe.json
+          retention-days: 30
+
+  shard:
+    needs: plan
+    runs-on: ubuntu-latest
+    timeout-minutes: 300
+    strategy:
+      fail-fast: false
+      max-parallel: ${{ fromJSON(inputs.max_parallel || '3') }}
+      matrix: ${{ fromJSON(needs.plan.outputs.matrix) }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install --quiet numpy pandas pyyaml requests python-dotenv
+      - uses: actions/download-artifact@v4
+        with:
+          name: broad-paths-universe
+      - name: Run this shard (every symbol x the six legs; a cell that cannot run is recorded, never fatal)
+        run: |
+          python3 scripts/research/broad_paths_corpus.py shard --universe universe.json \
+            --shard ${{ matrix.shard }} --of ${{ needs.plan.outputs.shards }} --out out
+      - uses: actions/upload-artifact@v4
+        with:
+          name: broad-paths-shard-${{ matrix.shard }}
+          path: out
+          retention-days: 30
+          if-no-files-found: error
+
+  merge:
+    needs: [plan, shard]
+    if: always() && needs.plan.result == 'success' && (github.event_name == 'workflow_dispatch' || (contains(github.event.issue.labels.*.name, 'broad-paths-corpus-request') && (github.event.issue.user.login == github.repository_owner || github.event.issue.user.login == 'github-actions[bot]')))
+    runs-on: ubuntu-latest
+    timeout-minutes: 95
+    permissions:
+      contents: write
+      pull-requests: write
+      issues: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          # commit-to-main pushes with the checkout credential; the PAT makes the landing PR run required checks.
+          token: ${{ secrets.BRANCH_PROTECTION_TOKEN }}
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install --quiet requests
+      - uses: actions/download-artifact@v4
+        with:
+          path: collected
+      - name: Merge, de-duplicate on trade_key, write the manifest
+        id: merge
+        run: |
+          set -euo pipefail
+          mkdir -p shards
+          for d in collected/broad-paths-shard-*; do mv "$d" "shards/$(basename "$d")"; done
+          CID="${{ needs.plan.outputs.corpus_id }}"
+          OUT="comms/research/broad_paths/${CID}"
+          mkdir -p "$OUT"
+          python3 scripts/research/broad_paths_corpus.py merge --universe collected/broad-paths-universe/universe.json \
+            --shards shards --out "merged" --git-sha "${GITHUB_SHA}" --run-id "${GITHUB_RUN_ID}"
+          mv merged/manifest.json "$OUT/manifest.json"
+          python3 - "$OUT/manifest.json" <<'PY'
+          import json, sys
+          c = json.load(open(sys.argv[1]))["counts"]
+          print(c)
+          # Not a gate: the done-test of lane ML-DATA-BROAD-PATHS, stated so a short corpus is loud, not silent.
+          if c["trades_deduplicated"] < 10000:
+              print("::warning::fewer than 10,000 de-duplicated trades: the corpus is below the unit-1 minimum")
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: broad-paths-${{ needs.plan.outputs.corpus_id }}-data
+          path: merged/data
+          retention-days: 90
+          if-no-files-found: error
+      - name: Land the manifest on main
+        uses: ./.github/actions/commit-to-main
+        with:
+          token: ${{ secrets.BRANCH_PROTECTION_TOKEN }}
+          paths: comms/research/broad_paths/${{ needs.plan.outputs.corpus_id }}/manifest.json
+          message: "corpus: broad-paths v2 manifest ${{ needs.plan.outputs.corpus_id }} (run ${{ github.run_id }})"
+          pr-title: "corpus: broad-paths v2 manifest ${{ needs.plan.outputs.corpus_id }}"
+          pr-body: |
+            Automated landing of the corpus v2 manifest (lane ML-DATA-BROAD-PATHS). Rows stay in the
+            Actions artifact `broad-paths-${{ needs.plan.outputs.corpus_id }}-data` of run ${{ github.run_id }}.
+          verify-merged: "true"
+      - name: Report on the dispatching issue
+        if: always() && github.event_name == 'issues'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const p = `comms/research/broad_paths/${{ needs.plan.outputs.corpus_id }}/manifest.json`;
+            const c = fs.existsSync(p) ? JSON.stringify(JSON.parse(fs.readFileSync(p)).counts, null, 1) : '(no manifest)';
+            await github.rest.issues.createComment({owner: context.repo.owner, repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: `broad-paths-corpus run ${context.runId}\n\n\`\`\`\n${c}\n\`\`\``});
+            await github.rest.issues.update({owner: context.repo.owner, repo: context.repo.repo,
+              issue_number: context.issue.number, state: 'closed'});

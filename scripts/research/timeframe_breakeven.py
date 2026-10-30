@@ -83,7 +83,7 @@ sys.path[:0] = [str(REPO), str(REPO / "scripts")]
 #: Crypto perps the books trade (config/accounts.yaml rosters + symbols, read 2026-10-18): Bybit linear.
 CRYPTO_CORE = ("BTCUSDT", "ETHUSDT", "SOLUSDT", "XRPUSDT", "ADAUSDT", "AVAXUSDT")
 #: Alpaca equities/ETFs on a live-mode roster (alpaca_live / alpaca_paper / alpaca_portfolio / options paper).
-EQUITY = ("SPY", "QQQ", "IWM", "GLD", "SLV", "TLT", "IEF", "USO", "GDX", "TQQQ", "QLD", "SPLG", "IAUM", "SCHA")
+EQUITY = ("SPY", "QQQ", "IWM", "GLD", "SLV", "TLT", "IEF", "USO", "GDX", "TQQQ", "QLD", "SPYM", "IAUM", "SCHA")
 #: IBKR micro futures on ib_paper (Yahoo continuous-contract proxies ES=F / GC=F / HG=F via the fetcher's map).
 FUTURES = ("MES", "MGC", "MHG")
 

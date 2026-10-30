@@ -1,0 +1,24 @@
+{
+  "id": "BOOK-SIM-REAL-SIZER",
+  "title": "Book-level $ simulation with the production sizer: replay a corpus through each account's real sizing, caps and costs and report $/% P&L, max drawdown and worst-5% outcomes per account and per book (the measurement of record for RULE-AM-RISK-ADJUSTED-V1)",
+  "phase": null,
+  "state": "queued",
+  "owner": null,
+  "lane": null,
+  "model": "claude-sonnet-5-5",
+  "ceiling_usd": 15,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [
+    21283
+  ],
+  "blocked_on": [],
+  "note": "Created 2026-10-29 by manager: the 2026-10-29 conformance audit (docs/reviews/2026-10-29-system-conformance-audit.md finding 1.1, row table 1.1) names this row as owner and 'in flight', but NO row existed on the register (checked docs/claude/work/checklist/ on main and the register branch). Operator 2026-10-29 ~13:00Z: do not wait for it to decide; queue a retest once it is ready (row AM-REGRADE-BOOKSIM). [2026-10-29 lane AM-RISK-ADJUSTED-RULE, MEASURED gap] scripts/backtest_system.py simulates ONE shared netted book on ONE symbol. Its sizer MIRRORS RiskManager.position_size (re-implemented as _risk_qty) instead of importing it. scripts/research/nbook_portfolio.py runs N books over one tick stream with the same mirrored sizer. Neither models daily_dd_switch or a multi-symbol account roster (bybit_2 is 5 legs on 4 symbols), and neither applies a harness exit lever: --be-floor-r lives only in the per-strategy harnesses. Grader hook ready: am_risk_adjusted.grade_risk_adjusted(basis='book_usd_sim') grades per-account $ books (net $ in the net_r field) and sets graduation_eligible. Blocks RQ-20261029-1f39-01 (with HARNESS-BE-RANDOM-CONTROL).",
+  "priority_rank": 2,
+  "updated_at": "2026-10-29T14:02:48Z",
+  "updated_by": "session_01AFoLuMV1Qgi2fjJegsxr3r",
+  "roadmap": [
+    "L-AM-STANDARD"
+  ],
+  "_seq": 816
+}

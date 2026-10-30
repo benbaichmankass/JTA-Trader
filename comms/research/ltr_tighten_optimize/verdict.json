@@ -1,0 +1,326 @@
+{
+ "schema": "ltr_tighten_optimize/verdict/v1",
+ "lane": "LTR-TIGHTEN-OPTIMIZE",
+ "session": "session_01AFoLuLLDoFfA4BGgKq4MZL",
+ "dispatched_by": "session_01AFoLuJi1vLTnYv9LbP6539",
+ "doc": "docs/research/ltr-tighten-optimize-2026-10-28.md",
+ "source_corpus": {
+  "path": "comms/research/desk_lifecycle/full-c4e/",
+  "pr": 20967,
+  "branch_head": "da6f32d400a22c0cd592a8f5be399ef3ee81982d",
+  "candle_manifest_matches_s0_score_json": true
+ },
+ "cost_stack": "fee 11.0 bps + slippage 3.0 bps round trip + funding 1.0 bps / 8h (execution_costs via desk_lifecycle_driver.run); +0.05 R per moved-stop exit reported as sensitivity",
+ "provenance": "MEASURED",
+ "q1_slices": {
+  "population": "981 tighten_sl check-ins over the walked trades of comms/research/desk_lifecycle/full-c4e",
+  "reproduction": {
+   "committed": 981,
+   "recomputed": 981,
+   "mismatched_or_missing": 0,
+   "extra": 0
+  },
+  "all": {
+   "n": 981,
+   "mean_dR": -0.0967,
+   "ci95": [
+    -0.1396,
+    -0.0466
+   ]
+  },
+  "losing_cells_ci_below_0_examples": [
+   "now_r:0..0.5",
+   "now_r:0.5..1",
+   "new_stop_level:below_BE",
+   "first_tighten:True",
+   "trend:with",
+   "trigger:r+0.5",
+   "held:1-3",
+   "held:4-11"
+  ],
+  "cells_n_ge_10": 79,
+  "cells_ci_above_0": 0,
+  "cells_ci_below_0": 29,
+  "selected_cells": {
+   "now_r:0..0.5": {
+    "n": 135,
+    "mean_dR": -0.1945,
+    "ci95": [
+     -0.3333,
+     -0.0574
+    ]
+   },
+   "now_r:0.5..1": {
+    "n": 419,
+    "mean_dR": -0.1287,
+    "ci95": [
+     -0.2176,
+     -0.0389
+    ]
+   },
+   "now_r:1..2": {
+    "n": 379,
+    "mean_dR": -0.0316,
+    "ci95": [
+     -0.1153,
+     0.0497
+    ]
+   },
+   "now_r:>=2": {
+    "n": 28,
+    "mean_dR": 0.0474,
+    "ci95": [
+     -0.1246,
+     0.2754
+    ]
+   },
+   "new_stop_level:below_BE": {
+    "n": 331,
+    "mean_dR": -0.1773,
+    "ci95": [
+     -0.2793,
+     -0.0728
+    ]
+   },
+   "new_stop_level:at_BE": {
+    "n": 142,
+    "mean_dR": -0.0835,
+    "ci95": [
+     -0.2091,
+     0.0447
+    ]
+   },
+   "new_stop_level:>=+0.5R": {
+    "n": 271,
+    "mean_dR": -0.0205,
+    "ci95": [
+     -0.1061,
+     0.0656
+    ]
+   },
+   "first_tighten:True": {
+    "n": 503,
+    "mean_dR": -0.1428,
+    "ci95": [
+     -0.2252,
+     -0.06
+    ]
+   },
+   "first_tighten:False": {
+    "n": 478,
+    "mean_dR": -0.0482,
+    "ci95": [
+     -0.1133,
+     0.0185
+    ]
+   },
+   "trend:with": {
+    "n": 335,
+    "mean_dR": -0.1455,
+    "ci95": [
+     -0.2414,
+     -0.0594
+    ]
+   },
+   "new_stop_dist_ATR:<1ATR": {
+    "n": 400,
+    "mean_dR": -0.0889,
+    "ci95": [
+     -0.1468,
+     -0.0246
+    ]
+   },
+   "new_stop_dist_ATR:1..2ATR": {
+    "n": 529,
+    "mean_dR": -0.091,
+    "ci95": [
+     -0.1725,
+     -0.0103
+    ]
+   }
+  },
+  "post_hoc_split": {
+   "note": "chosen AFTER seeing the slices; confirmation units RQ-20261028-e1a7-01 / -02",
+   "ALLOW(open>=1R and new stop>=BE)": {
+    "n": 401,
+    "mean_dR": -0.031,
+    "ci95": [
+     -0.103,
+     0.037
+    ]
+   },
+   "ALLOW + live 1-ATR buffer": {
+    "n": 191,
+    "mean_dR": -0.008,
+    "ci95": [
+     -0.126,
+     0.105
+    ]
+   },
+   "BLOCK (complement)": {
+    "n": 580,
+    "mean_dR": -0.142,
+    "ci95": [
+     -0.221,
+     -0.064
+    ]
+   },
+   "live 1-ATR buffer alone": {
+    "n": 581,
+    "mean_dR": -0.102,
+    "ci95": [
+     -0.17,
+     -0.028
+    ]
+   }
+  }
+ },
+ "q2_rules": {
+  "registration": "docs/research/ltr-tighten-optimize-2026-10-28.md section 2 at commit fe99c3711",
+  "registration_sha256": "c979d0168836c03a5092583268ffe5b1c4f47d476719d05b9fb57f1cef219a28",
+  "grid_size": 61,
+  "train": {
+   "population": "696 filled entries (claude + random) of comms/research/desk_lifecycle/full-c4e with entry bar < 2026-03-01",
+   "selected": "structure(X=1,n=24)",
+   "stats": {
+    "n": 696,
+    "mean_dR": 0.009379451565335982,
+    "ci95": [
+     -0.015057649183245689,
+     0.03318561210355105
+    ]
+   },
+   "rules_beating_hold": 4
+  },
+  "test": {
+   "population": "344 filled entries (test)",
+   "structure(X=1,n=24)": {
+    "n": 344,
+    "mean_dR": 0.015380958872409416,
+    "ci95": [
+     -0.019087507158045636,
+     0.0468162261629034
+    ],
+    "ci975": [
+     -0.024749213736925298,
+     0.05214344936264702
+    ],
+    "with_stop_slip": [
+     -0.02321875866570531,
+     0.0416690716935519
+    ]
+   },
+   "losscut(Y=-0.5,T=1)": {
+    "n": 344,
+    "mean_dR": 0.005223168469281215,
+    "ci95": [
+     -0.04367839958625229,
+     0.05464797876852435
+    ],
+    "ci975": [
+     -0.05178106504017948,
+     0.061058862013502975
+    ],
+    "with_stop_slip": [
+     -0.04367839958625229,
+     0.05464797876852435
+    ]
+   }
+  },
+  "fresh": {
+   "population": "420 filled entries (fresh)",
+   "structure(X=1,n=24)": {
+    "n": 420,
+    "mean_dR": 0.009186873600479145,
+    "ci95": [
+     -0.026500508149658427,
+     0.03718377794452472
+    ],
+    "ci975": [
+     -0.03231282152440997,
+     0.040089208461282395
+    ],
+    "with_stop_slip": [
+     -0.03041176719313601,
+     0.03276937392751465
+    ]
+   },
+   "losscut(Y=-0.5,T=1)": {
+    "n": 420,
+    "mean_dR": -0.013388248455259105,
+    "ci95": [
+     -0.09986135434019869,
+     0.07306669840546177
+    ],
+    "ci975": [
+     -0.10500936099909738,
+     0.08237203417952871
+    ],
+    "with_stop_slip": [
+     -0.09986135434019869,
+     0.07306669840546177
+    ]
+   }
+  },
+  "verdicts": {
+   "structure(X=1,n=24)": "indeterminate",
+   "losscut(Y=-0.5,T=1)": "indeterminate"
+  },
+  "reported_not_graded": {
+   "breakeven(X=1,off=0)": {
+    "train": [
+     -0.046,
+     [
+      -0.092,
+      0.002
+     ]
+    ],
+    "test": [
+     -0.008,
+     [
+      -0.049,
+      0.027
+     ]
+    ],
+    "fresh": [
+     -0.041,
+     [
+      -0.087,
+      -0.005
+     ]
+    ]
+   },
+   "fresh_rules_ci_below_0": 16,
+   "rules_ci_above_0_test_or_fresh": 0
+  }
+ },
+ "q3_live": {
+  "population": "comms/live_review/reviews.jsonl on main (124 rows) UNION origin/live-review/rows (reviews.jsonl + rows/*.json) = 125 unique review_ids, 2026-10-25T16:30Z..2026-10-28T17:15Z",
+  "recommendation_counts": {
+   "hold": 53,
+   "no_recommendation": 47,
+   "flag_mechanics": 23,
+   "close": 2,
+   "tighten_sl": 0
+  },
+  "tighten_recommended": 0,
+  "tighten_applied_in_rows": 0,
+  "priced_tighten_options": {
+   "rows": 5,
+   "packages": 3,
+   "tighten_below_hold": 4,
+   "note": "xrp_pullback_2h (open 0.04, peak 0.38): hold +0.97 vs tighten +0.42..+0.44 (n 21); avax_pullback_2h x3 (open -0.36..-0.76, peak 0.17): hold +0.51 vs tighten +0.20 (n 31); htf_pullback_trend_2h (open -0.20, peak 0.05): hold -0.01 vs tighten +0.04 (n 34). All five sit in the BLOCK cell (open < +1 R); the reviewer held on all five."
+  },
+  "not_read": "runtime_logs/live_review/applied.jsonl on the VM (the apply's own writeback). The apply acts only on row recommendations, so 0 tighten recommendations implies 0 LTR tighten applies (INFERRED)."
+ },
+ "recommendation": {
+  "choice": "advice-only for tighten_sl",
+  "tier": 3,
+  "status": "proposal_to_operator",
+  "exact_change": "Under MD-TRADE-DESK, dispatch a tighten_sl row as recommend (never auto-apply) on every account; every other action class unchanged. Revert: re-allow apply for tighten_sl.",
+  "evidence": "live gate cell (>=1 ATR) -0.102 R [-0.170,-0.028] n 581; BLOCK -0.142 [-0.221,-0.064] n 580; ALLOW (post hoc) -0.031 [-0.103,+0.037] n 401; mechanical breakeven at +1R on FRESH -0.041 [-0.087,-0.005] n 420; best TRAIN-selected rule indeterminate on TEST (+0.015) and FRESH (+0.009); 0 of 79 tighten cells and 0 of 61 rules have a CI above 0",
+  "fallback": "restrict auto-apply to open_r >= +1.0 AND new stop >= breakeven AND >= 1 ATR from price (-0.008 R [-0.126,+0.105] n 191, post hoc): expect a small cost, not a gain",
+  "reopen_when": "RQ-20261028-e1a7-01 or -02 reads CONFIRM_ALLOW / KEEP_RESTRICTION",
+  "immediate_effect": "none measurable: 0 live tighten recommendations to date"
+ }
+}

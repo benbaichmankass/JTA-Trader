@@ -101,7 +101,7 @@ def test_yfinance_is_never_reached_by_the_auto_chain():
 # The 18 distinct symbols behind the 25 `no_free_lane_candle_feed` cells.
 _BLOCKED_SYMBOLS = frozenset({
     "GDX", "GLD", "IAUM", "IEF", "IWM", "MES", "MGC", "MHG", "QLD",
-    "QQQ", "SCHA", "SLV", "SPLG", "SPY", "TLT", "TQQQ", "USO", "XAUUSD",
+    "QQQ", "SCHA", "SLV", "SPYM", "SPY", "TLT", "TQQQ", "USO", "XAUUSD",
 })
 
 
@@ -212,7 +212,7 @@ def test_no_affordability_candidate_collides_with_a_roster_symbol():
     """A candidate that shadows a live roster symbol would silently re-point it."""
     from ml.datasets.adapters.yfinance_offvm import _DEFAULT_TICKER_MAP
     roster = {"SPY", "QQQ", "GLD", "IWM", "TLT", "IEF", "SLV", "USO", "GDX",
-              "SPLG", "IAUM", "SCHA", "QLD", "TQQQ", "SH", "PSQ", "TBF", "TBX"}
+              "SPYM", "IAUM", "SCHA", "QLD", "TQQQ", "SH", "PSQ", "TBF", "TBX"}
     collisions = sorted(set(_AFFORDABILITY_CANDIDATES) & roster)
     assert not collisions, f"candidate list shadows roster symbols: {collisions}"
     # and every candidate really is in the map (catches a typo in either list)

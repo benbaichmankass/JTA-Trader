@@ -100,6 +100,12 @@ Stated limit: a ``widen_sl`` on a TRAILING leg can be re-tightened by the leg's 
 next monitor pass (the trail ratchets from the running extreme). The widened level is recorded as
 the leg's ``notes.sl_floor`` so no older, tighter floor drags it back.
 
+DIRECTED ACTIONS (TRADE-ACTION-FAST-PATH, operator 2026-10-29): an intent carrying ``directed_by`` comes
+from ``scripts/ops/directed_action.py`` (an operator/manager-directed record, ``src/runtime/directed_actions.py``).
+Its authority is the operator's verbatim quote, checked in place of the mandate (refused without one); every
+account decision and executor below is unchanged. A ``target_account_id`` (+ ``target_trade_id``) limits it to
+that account's (trade's) leg, and then the shared package stop never moves.
+
 Exit codes: 0 ok · 1 an apply did not verify · 2 refused / bad input · 3 could not look.
 
 Usage:
@@ -128,13 +134,14 @@ import os
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 _REPO_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 if _REPO_ROOT not in sys.path:
     sys.path.insert(0, _REPO_ROOT)
 
 from src.runtime import live_review_intent as lri  # noqa: E402
+from src.runtime import ltr_auto_mandate  # noqa: E402
 
 EXIT_OK, EXIT_FAILED, EXIT_REFUSED, EXIT_UNREADABLE = 0, 1, 2, 3
 APPLIED_LOG = Path(_REPO_ROOT) / "runtime_logs" / "live_review" / "applied.jsonl"
@@ -292,11 +299,19 @@ def _notes(raw: Any) -> Dict[str, Any]:
         return {}
 
 
-def last_review_bar(notes: Dict[str, Any]) -> Optional[str]:
-    for a in reversed(notes.get("sl_amends") or []):
-        if isinstance(a, dict) and a.get("source") == lri.PROVENANCE and a.get("bar"):
-            return str(a["bar"])
-    return None
+def applied_review_ids(notes: Dict[str, Any]) -> Tuple[str, ...]:
+    """Every review_id / directed record id that already acted on this leg: a tighten (``sl_amends``), a
+    trade action (``live_review_actions``) or the recorded floor (``sl_floor``; a prop ticket's ``meta``).
+    The idempotency guard (``lri.R_DUPLICATE``): an identical recommendation never applies twice. It is
+    NOT a count cap -- two different reviews on one bar both act (row REMOVE-PER-BAR-CAP, operator
+    2026-10-29)."""
+    ids = {str(a["review_id"]) for key in ("sl_amends", "live_review_actions")
+           for a in (notes.get(key) or []) if isinstance(a, dict) and a.get("source") == lri.PROVENANCE
+           and a.get("review_id")}
+    fl = notes.get("sl_floor")
+    if isinstance(fl, dict) and fl.get("source") == lri.PROVENANCE and fl.get("review_id"):
+        ids.add(str(fl["review_id"]))
+    return tuple(sorted(ids))
 
 
 def tightest(direction: str, *levels: Optional[float]) -> Optional[float]:
@@ -321,7 +336,7 @@ def gather_legs(db, pkg: Dict[str, Any]) -> List[Dict[str, Any]]:
         notes = _notes(t.get("notes"))
         out.append({"kind": "trade", "account_id": t.get("account_id"), "row": t,
                     "leg_sl": tightest(direction, t.get("stop_loss"), lri.sl_floor_from(notes)),
-                    "last_bar": last_review_bar(notes)})
+                    "review_ids": applied_review_ids(notes)})
     try:
         tickets = _prop_tickets(pkg_id)
     except Exception as exc:  # noqa: BLE001 — could not look is its own entry
@@ -333,8 +348,7 @@ def gather_legs(db, pkg: Dict[str, Any]) -> List[Dict[str, Any]]:
         out.append({"kind": "ticket", "account_id": tk.get("account_id"), "row": tk,
                     "leg_sl": tightest(direction, trail.get("resting_sl") or tk.get("sl"),
                                        lri.sl_floor_from(meta)),
-                    "last_bar": (meta.get("sl_floor") or {}).get("bar")
-                    if isinstance(meta.get("sl_floor"), dict) else None})
+                    "review_ids": applied_review_ids(meta)})
     return out
 
 
@@ -395,6 +409,9 @@ def _exec_bybit(db, leg: Dict[str, Any], pkg: Dict[str, Any], level: float,
     if not lri.is_tighter(direction, level, before["venue_sl"]):
         return {"result": X_REFUSED, "detail": f"resting venue stop {before['venue_sl']} is already at or "
                                                f"inside {level}"}
+    # BOTH brackets (TP doctrine clause 3): the TP must rest before the send and still rest after it.
+    if _venue_tp(client, cfg, sym, direction, t.get("tp_order_id")).get("venue_tp") is None:
+        return {"result": X_COULD_NOT_LOOK, "detail": f"{lri.R_BRACKETS}:tp not read at the venue before the tighten"}
     sent = aps._send_modify(t, sl=level, side=direction, qty=_f(t.get("position_size")),
                             cur_sl=_f(t.get("stop_loss")) or _f(pkg.get("sl")), cur_tp=_f(pkg.get("tp")))
     after = aps._venue_state(client, cfg, sym, direction, t.get("sl_order_id"))
@@ -405,6 +422,7 @@ def _exec_bybit(db, leg: Dict[str, Any], pkg: Dict[str, Any], level: float,
     if not aps.same_level(after.get("venue_sl"), level, tol):
         return {"result": X_APPLY_FAILED, "detail": f"venue reads {after.get('venue_sl')!r} after the amend",
                 "send": sent}
+    tp_after = _venue_tp(client, cfg, sym, direction, t.get("tp_order_id")).get("venue_tp")
     now = datetime.now(timezone.utc).isoformat()
     notes = _notes(t.get("notes"))
     amends = notes.get("sl_amends") if isinstance(notes.get("sl_amends"), list) else []
@@ -417,7 +435,10 @@ def _exec_bybit(db, leg: Dict[str, Any], pkg: Dict[str, Any], level: float,
     # looser than it (order_monitor._apply_update -> held_by_floor).
     notes["sl_floor"] = {"level": level, "source": lri.PROVENANCE, "review_id": intent.review_id, "at": now}
     db.update_trade(int(t["id"]), {"stop_loss": level, "notes": dump_capped(notes, 2000)})
-    return {"result": X_APPLIED, "venue_after": after.get("venue_sl")}
+    if tp_after is None:   # the stop moved and is journaled; the missing TP is a failure, never a success
+        return {"result": X_APPLY_FAILED, "detail": f"{lri.R_BRACKETS}:tp not read at the venue after the tighten",
+                "send": sent, "venue_after": after.get("venue_sl")}
+    return {"result": X_APPLIED, "venue_after": after.get("venue_sl"), "venue_tp_after": tp_after}
 
 
 def _exec_alpaca(db, leg: Dict[str, Any], level: float,
@@ -495,7 +516,10 @@ def _exec_phone(leg: Dict[str, Any], level: float, intent: lri.LiveReviewIntent)
 def _ping(pkg: Dict[str, Any], account_id: str, level: Optional[float], intent: lri.LiveReviewIntent) -> None:
     """The SL-moved ping the monitor sends on a trail move. Kind
     ``trade-update``: ``execution_diagnostics`` routes it to the TRADES channel
-    through ``src.runtime.telegram_channels``."""
+    through ``src.runtime.telegram_channels``. A DIRECTED action pings ONCE per record instead
+    (``scripts/ops/directed_action.py``), so it is not pinged per account here."""
+    if intent.directed_by is not None:
+        return
     try:
         from src.runtime.execution_diagnostics import enqueue_trade_update
 
@@ -508,6 +532,46 @@ def _ping(pkg: Dict[str, Any], account_id: str, level: Optional[float], intent: 
                                       f"mandate {intent.mandate} · review {intent.review_id}"])
     except Exception as exc:  # noqa: BLE001 — the amend already landed
         print(f">>> live-review-apply: trade-update ping failed (amend stands): {exc}")
+
+
+R_AUTO_BOUND = "auto_mandate_bound"   # + ":<bound>:<why>" -- a per-package auto mandate's bound refused it
+
+
+def auto_bound_refusal(intent: lri.LiveReviewIntent, pkg: Dict[str, Any],
+                       st: Dict[str, Any]) -> Optional[tuple]:
+    """The package-level bounds of a per-package auto mandate (``ltr_auto_mandate.BOUNDS``), checked once
+    for the package before any account. Pure over ``st``. None = they hold; else (exit, detail).
+    ``both_brackets`` / ``venue_readback`` bind in the executors (a missing bracket or a mismatched read
+    is apply_failed) and ``tp_live_target`` for a move_tp in ``lri.decide_action``; this adds the rest."""
+    pid = intent.order_package_id
+    if str(intent.review_id or "") in ((st.get("auto_review_ids") or {}).get(pid) or []):
+        return EXIT_REFUSED, f"{R_AUTO_BOUND}:idempotent_per_review_id:{intent.review_id} already acted on {pid}"
+    direction = intent.direction
+    if intent.action != "close":
+        tp, mark = _f(pkg.get("tp")), _f(intent.mark)
+        if tp is None:
+            return EXIT_REFUSED, f"{R_AUTO_BOUND}:both_brackets:package has no take-profit"
+        if mark is not None and intent.action != "move_tp" and ((tp >= mark) if direction == "short" else (tp <= mark)):
+            return EXIT_REFUSED, f"{R_AUTO_BOUND}:tp_live_target:tp {tp:g} is not beyond the mark {mark:g}"
+    if intent.action == "widen_sl":
+        from src.runtime.r_provenance import declared_initial_risk
+
+        entry, risk, new_sl = _f(pkg.get("entry")), declared_initial_risk(pkg.get("meta")), _f(intent.new_sl)
+        if entry is None or risk is None or new_sl is None:
+            return EXIT_REFUSED, (f"{R_AUTO_BOUND}:widen_within_1r:entry/risk_per_unit unread "
+                                  f"(entry={entry}, risk={risk}); a widen is never applied blind")
+        limit = entry + risk if direction == "short" else entry - risk
+        if lri.is_looser(direction, new_sl, limit, tol=max(abs(limit) * 1e-9, 1e-12)):
+            return EXIT_REFUSED, f"{R_AUTO_BOUND}:widen_within_1r:{new_sl:g} is beyond -1R ({limit:g})"
+    return None
+
+
+def _ping_action(pkg: Dict[str, Any], applied: List[tuple], intent: lri.LiveReviewIntent) -> None:
+    """ONE trade-update ping for an action applied under a per-package auto mandate: every account it
+    landed on, the symbol, the action, the level and the review_id (bound one_ping_per_action)."""
+    levels = {lvl for _, lvl in applied}
+    accounts = ",".join(aid for aid, _ in applied)
+    _ping(pkg, accounts, levels.pop() if len(levels) == 1 else None, intent)
 
 
 def _alert(pkg: Dict[str, Any], account_id: str, line: str) -> None:
@@ -620,7 +684,7 @@ def _decide_trade_action(intent: lri.LiveReviewIntent, leg: Dict[str, Any], pkg:
         stop = _f(intent.new_sl) if intent.action == "widen_sl" else leg["leg_sl"]
         fresh = _fresh_entry(aid, cfg, pkg, intent, stop, tp)
     view = lri.AmendAccountView(account_id=aid, account_class=cls, strategy_execution=execution,
-                                leg_sl=leg["leg_sl"], last_amend_bar=leg.get("last_bar"), entry=entry,
+                                leg_sl=leg["leg_sl"], applied_review_ids=leg.get("review_ids") or (), entry=entry,
                                 leg_tp=tp, position_size=size, fresh_ok=fresh[0], fresh_reason=fresh[1],
                                 max_qty=fresh[2], extra=leg_extra(leg, pkg))
     return _risk_manager(aid, cfg).approve_action(intent, view)
@@ -879,11 +943,17 @@ def _exec_trade_action(db, leg: Dict[str, Any], pkg: Dict[str, Any], cls: str, v
 def run(intent: lri.LiveReviewIntent, *, apply: bool = False, db=None,
         accounts: Optional[Dict[str, Any]] = None, strategies: Optional[Dict[str, Any]] = None,
         review_cfg: Optional[Dict[str, Any]] = None, granted: Optional[set] = None,
-        write_log: bool = True, state: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+        write_log: bool = True, state: Optional[Dict[str, Any]] = None,
+        mandates_doc: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
     """One apply cycle for one intent. ``state`` (per package+account
     could-not-look streaks and the once-only alert keys) is loaded from and
     saved to :data:`STATE_FILE` on an ``apply`` run when not passed in; a
-    dry run never writes it."""
+    dry run never writes it.
+
+    ``--mandate`` may name a per-package AUTO mandate (``kind: ltr_auto_apply``, MD-LTR-ADA-AUTO): it is
+    granted only while ``ltr_auto_mandate.scoping`` finds it active in ``config/mandates.yaml``
+    (``mandates_doc`` in tests) for THIS package and action, and its bounds (:func:`auto_bound_refusal`,
+    the executors' bracket read-backs) bind; every applied action then pings ONCE, not per account."""
     db = db or _open_db()
     accounts = accounts if accounts is not None else _accounts()
     strategies = strategies if strategies is not None else _strategies()
@@ -903,11 +973,42 @@ def run(intent: lri.LiveReviewIntent, *, apply: bool = False, db=None,
         mandate_ok = False
     if not trade_action and intent.mandate not in lri.TIGHTEN_MANDATE_IDS:
         mandate_ok = False
+    # A per-package auto mandate: granted only while the FILE scopes this package and action.
+    auto_doc = mandates_doc if mandates_doc is not None else ltr_auto_mandate.load()
+    auto = None
+    if intent.mandate and ltr_auto_mandate.is_auto_mandate(intent.mandate, auto_doc):
+        scoped = ltr_auto_mandate.scoping(intent.order_package_id, intent.action, auto_doc)
+        auto = scoped if scoped is not None and str(scoped["id"]) == str(intent.mandate) else None
+        mandate_ok = auto is not None
+        out["auto_mandate"] = intent.mandate if auto else None
+        if auto is None:
+            out.update(exit=EXIT_REFUSED, detail=f"mandate {intent.mandate} does not scope "
+                                                 f"{intent.order_package_id} / {intent.action}")
+            return out
+        bound = auto_bound_refusal(intent, pkg, st)
+        if bound:
+            out.update(exit=bound[0], detail=bound[1])
+            key = f"{intent.order_package_id}|auto_bound|{intent.review_id}"
+            if apply and bound[0] == EXIT_REFUSED and not (st.setdefault("alerted", {})).get(key):
+                st["alerted"][key] = datetime.now(timezone.utc).isoformat()
+                _alert(pkg, ",".join(sorted({str(lg.get("account_id")) for lg in gather_legs(db, pkg)})) or "?",
+                       f"{intent.action} not applied under {intent.mandate}: {bound[1]}")
+                if persist:
+                    _save_state(st)
+            return out
+    auto_applied: List[tuple] = []
     # The mandate's package-level clauses (mechanics match; table EV bounds OR a
     # judgement confidence + reason -- LTR-JUDGEMENT-APPLY; for a trade action
     # also a reason and its target -- LTR-ALL-ACTIONS). None = they hold.
     precondition = (lri.trade_action_precondition(intent) if trade_action
                     else lri.mandate_precondition(intent))
+    if intent.directed_by is not None:
+        # An operator/manager-DIRECTED action (TRADE-ACTION-FAST-PATH): the authority is the operator's
+        # verbatim quote, not a mandate, and is refused without one. Each account still decides below.
+        from src.runtime import directed_actions
+
+        precondition = directed_actions.precondition(intent)
+        mandate_ok = precondition is None
     out["mandate_precondition"] = precondition
     execution = str((strategies.get(pkg.get("strategy_name")) or {}).get("execution") or "live")
     streaks = st.setdefault("could_not_look", {})
@@ -923,7 +1024,16 @@ def run(intent: lri.LiveReviewIntent, *, apply: bool = False, db=None,
         out["flags"].append({"account_id": aid, "kind": kind, "line": line})
         _alert(pkg, aid, line)
 
-    for leg in gather_legs(db, pkg):
+    legs = gather_legs(db, pkg)
+    if intent.target_account_id:   # a directed record scoped to one account / trade: the others are untouched
+        from src.runtime import directed_actions
+
+        legs = [lg for lg in legs if directed_actions.leg_in_scope(lg, intent)]
+        if not legs:
+            out.update(exit=EXIT_REFUSED, detail=f"{directed_actions.R_SCOPE_EMPTY}:{intent.target_account_id}"
+                                                 f"/{intent.target_trade_id or '*'}")
+            return out
+    for leg in legs:
         aid = leg["account_id"]
         rec: Dict[str, Any] = {"account_id": aid, "leg_kind": leg["kind"]}
         if leg["kind"] == "prop_unreadable":
@@ -951,7 +1061,7 @@ def run(intent: lri.LiveReviewIntent, *, apply: bool = False, db=None,
             v = _decide_trade_action(intent, leg, pkg, cfg, cls, execution)
         else:
             view = lri.AmendAccountView(account_id=aid, account_class=cls, strategy_execution=execution,
-                                        leg_sl=leg["leg_sl"], last_amend_bar=leg.get("last_bar"),
+                                        leg_sl=leg["leg_sl"], applied_review_ids=leg.get("review_ids") or (),
                                         extra=leg_extra(leg, pkg))
             v = _risk_manager(aid, cfg).approve_amend(intent, view)
             if v.ok and (cls == "other" or (cls == "alpaca" and leg["kind"] != "trade")):
@@ -1006,7 +1116,10 @@ def run(intent: lri.LiveReviewIntent, *, apply: bool = False, db=None,
                     rec["read"] = "applied"
                     if leg["kind"] == "trade" and not trade_action:
                         trade_applied[str(leg["row"].get("id"))] = v.level
-                    _ping(pkg, aid, v.level, intent)
+                    if auto is not None:
+                        auto_applied.append((aid, v.level))
+                    else:
+                        _ping(pkg, aid, v.level, intent)
                 elif result == X_APPLY_FAILED:
                     alert_once(aid, money, "apply_failed", f"apply_failed: {rec['executor'].get('detail')}")
                     out["exit"] = max(out["exit"], EXIT_FAILED)
@@ -1020,13 +1133,22 @@ def run(intent: lri.LiveReviewIntent, *, apply: bool = False, db=None,
     # each applied leg is held at ITS OWN applied level (notes.sl_floor) and the
     # trail keeps working for the untouched legs -- account-scoped execution.
     levels = set(trade_applied.values())
-    if n_trade_legs and len(trade_applied) == n_trade_legs and len(levels) == 1:
+    if n_trade_legs and len(trade_applied) == n_trade_legs and len(levels) == 1 and not intent.target_account_id:
         lvl = levels.pop()
         if lri.is_tighter(intent.direction, lvl, _f(pkg.get("sl")) or lvl):
             db.update_order_package(pkg["order_package_id"], {"sl": lvl})
             out["package_sl_moved"] = True
 
     applied_any = any(a.get("executed") for a in out["accounts"])
+    if auto is not None and apply:
+        if auto_applied:
+            _ping_action(pkg, auto_applied, intent)
+        if any((a.get("executor") or {}).get("result") in (X_APPLIED, X_APPLY_FAILED) for a in out["accounts"]):
+            # idempotency per review_id (never a per-bar cap): THIS row never applies twice
+            done = st.setdefault("auto_review_ids", {}).setdefault(intent.order_package_id, [])
+            if intent.review_id not in done:
+                done.append(intent.review_id)
+                del done[:-200]
     out["writeback"] = {
         "review_id": intent.review_id, "order_package_id": intent.order_package_id,
         "packet_sha": intent.packet_sha, "evidence": intent.evidence_path,

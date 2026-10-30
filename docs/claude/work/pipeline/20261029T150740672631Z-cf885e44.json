@@ -1,0 +1,17 @@
+{
+  "due_when": {
+    "clears_when": "desk_lifecycle_driver.matched_random draws at a rate that does not depend on the trade's own check-in count, with a test",
+    "kind": "event"
+  },
+  "id": "PI-20261029-IFMPNGJK-0005",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "lane ML-AM-NEXT-LIVE (session_01AFoLuN7GVCEJnGiFMpNGJK), causal-matched-random inventory",
+    "rerun": "grep -n 'q = len(acts) / n' scripts/research/desk_lifecycle_driver.py"
+  },
+  "severity": "medium",
+  "state": "queued",
+  "tier": 1,
+  "what": "desk_lifecycle_driver.matched_random (M1; also used by am_class_regrade) fires at a per-check-in rate q = Claude's non-hold actions / Claude's check-ins ON THIS TRADE. The number of check-ins is the trade's own life, so the rate carries a milder form of the own-length leak fixed in intervention_controls B2 (PI-20261029-IFMPNGJK-0003, test_legacy_draw_leaks_the_trades_final_length_and_causal_does_not). No landed verdict rests on it (comms/research/causal-matched-random/inventory-2026-10-29.json: RQ-20261028-d1f5-02 fails on dR vs hold, n=473/465 trades; RQ-20261029-1f39-02 every class fails R1-R3). Fix before the next lifecycle/regrade run: a pooled rate (sum of actions / sum of check-ins over the arm's trades) or the intervention_controls causal draw, with a test."
+}

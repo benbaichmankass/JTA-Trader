@@ -14,15 +14,21 @@
   ],
   "blocked_on": [],
   "note": "[2026-10-13 AUTO-WAVE1] .github/workflows/pytest-rerun.yml (workflow_run on pytest-run) + scripts/ci/pytest_rerun.py. Reruns ONCE per head sha only when the Run tests step was cancelled at the job timeout (timeout read from pytest-run.yml minus 3 min) or the job died before tests started; never a failed test step, a superseded head, or attempt >1. Built, not yet observed live.",
-  "updated_at": "2026-10-13T10:00:35Z",
-  "updated_by": "session_AUTO-WAVE1",
+  "updated_at": "2026-10-30T06:13:02Z",
+  "updated_by": "session_01AFoLuL99YDu1fHUkJvG55s",
   "roadmap": [
     "L-OPS"
   ],
   "observation": {
     "what": "AUTO-PYTEST-RERUN built and measured against its estimate",
     "how_to_check": "cancel a run on a scratch PR: exactly one rerun, then its own result stands",
-    "due_by": "2026-10-27"
+    "due_by": "2026-11-06T00:00Z",
+    "redated": {
+      "on": "2026-10-30",
+      "from": "2026-10-27",
+      "by": "DAILY-REVIEW-TRIAGE-20261030",
+      "reason": "PR #17844 merged. Needs a cancelled pytest-run on a scratch PR; not exercised this run."
+    }
   },
   "writeback": {
     "roadmap": "none: CI reliability tooling",

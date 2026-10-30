@@ -1,0 +1,18 @@
+{
+  "due_when": {
+    "clears_when": "scripts/research/ : join script emitting ts, features, target=sign(value(close)-value(hold)); then author the node's unit",
+    "due_date": "2026-11-05",
+    "kind": "date"
+  },
+  "id": "PI-20261029-IHFQDB3W-0004",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "Daily research authoring lane 2026-10-29",
+    "rerun": "python3 scripts/ci/check_research_queue_health.py | grep 'H1-THEME ml_health'"
+  },
+  "severity": "medium",
+  "state": "queued",
+  "tier": 1,
+  "what": "[research-authoring] ML exit-head dataset join: desk lifecycle labels (comms/research/desk_lifecycle/full-c4e/labels.jsonl, 12,500 rows) carry value/counterfactual per check-in but no timestamp and no per-bar path state (peak, bars-since-peak, momentum, ADX slope, vol ratio); entries.jsonl has symbol + bar index i + week. A script must rebuild per-check-in features from the bars and emit a ts-indexed jsonl so an ml_bakeoff unit (node P2-desk-checkin-exit-head, ml_health, value 250) can run. Until then ml_health has 0 runnable units (H1-THEME short 6)."
+}

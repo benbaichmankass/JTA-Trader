@@ -1,0 +1,134 @@
+id: RQ-20261029-84ef-05
+title: 'Daily LONG-only lookback neighbourhood: do Donchian-10 and Donchian-40 also pass beside the Donchian-20 lead on seventeen perps (is the
+  lead a plateau or a spike)?'
+status: done
+cadence: once
+roadmap:
+- L-TIMEFRAMES
+- L-REGIME
+theme: timeframes
+priority: 2
+kind: experiment
+compute: cpu_long
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 4.0
+  est_minutes: 120
+  basis: Estimate from comparable harness_stage0 runs of 2026-10-18..26 scaled by cells x arms x bars; the first run replaces it.
+  why_runner: harness_stage0.py fetches keyless public candles and runs the repo harnesses; these symbols/bars are not in the metis-market-data
+    allowlist, so no idle published-data backend can hold it; CPU only.
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+question: On Binance USD-M daily candles for 17 perps over 2020-06-01..2026-10-25 (--long-only, trail_mult 5.0), do L10 (donchian 10) and L40
+  (donchian 40) each pass the pooled Stage-0 rule, as L20 (donchian 20) is expected to?
+why_this_matters: 'The daily LONG-20 lead has been found on one lookback only. A real trend edge is a plateau in the lookback; a spike at 20 is
+  a parameter-selection artefact (practice precedent M4: selection-deflated across what was tried). The arms are fixed now (10, 20, 40 = half
+  and double the lead), the whole neighbourhood is reported, and the rule asks for the plateau, not for the best arm. Population is the seventeen
+  perps already used by f679-05 and 1b57-15, stated so no one reads it as fresh data.'
+power:
+  expected_n: 700
+  min_detectable_effect: 0.3
+  effect_units: sd
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: f679-05 LONG-20 n~425 on twelve perps; seventeen perps and three lookbacks (shorter lookbacks add entries); folds 6; floor 20 per cell,
+    39 pooled.
+  feasibility:
+    source: none
+    accrual_basis: Re-measurement on freshly fetched public candles over a pinned window; nothing accrues.
+practice_precedent: 'M4, M5 (docs/reference/trading-and-model-practice-principles.md): pre-registered rule, selection-deflated across the timeframes
+  tried'
+decision_rule:
+  id: RULE-RQ20261029-84EF-05-LONG-DAILY-PLATEAU
+  registered_at: '2026-10-29'
+  registered_before_run: true
+  statistic: 'harness_stage0.py --family trend --timeframe 1d on 17 perps; arms fixed now: L10=--long-only;--donchian=10; L20=--long-only;--donchian=20;
+    L40=--long-only;--donchian=40; no baseline.'
+  rule: 'PASS iff L10, L20 AND L40 each pass the pooled Stage-0 rule (pooled n >= 39, pooled net_r > 0, >= 4 of 6 folds, >= half the powered cells
+    pass) -> the daily long-only edge is a lookback plateau, not a spike at 20; recorded on 07 s1 and P7-Q5. PARTIAL iff L20 passes and exactly
+    one of L10/L40 passes -> the lead is a ridge at one side; recorded with which side. FAIL iff L20 fails with pooled n >= 39 -> the prior L20
+    passes do not survive seventeen perps; recorded on P7-Q5. INDETERMINATE otherwise; cells under the floor are named, the floor is never lowered.
+    Verdicts are the script''s own (scripts/research/harness_stage0.py, grades fixed by these flags): per CELL pass iff n >= n_floor AND net_r
+    > 0 AND >= fold_majority of the calendar folds net > 0, fail iff n >= n_floor and not, indeterminate iff n < n_floor; per ARM pass iff pooled
+    n >= pooled_n_floor AND pooled net_r > 0 AND pooled folds >= fold_majority AND >= breadth_frac of the POWERED cells pass (and, with --baseline,
+    beats the baseline''s pooled net R/trade by >= delta), indeterminate iff pooled n < pooled_n_floor or < 2 powered cells or < half the declared
+    cells measured (a fetch/harness fault is recorded per cell, never dropped), fail otherwise. Holm-corrected one-sided t p-values are REPORTED,
+    not graded. Thresholds are not changed after any result.'
+  what_it_does_not_do: Does not edit config/strategies.yaml, config/accounts.yaml or any roster; does not tune beyond the fixed arms listed; is
+    not a promotion case. Candles are Binance USD-M (a PROXY for Bybit linear) with the harness's own venue-aware fee + slippage + funding cost
+    stack (execution_costs.resolve_cost_policy), so every R is net of cost; the funding term is a directionless magnitude (execution_costs P1).
+value:
+  usd_at_stake_per_month: 80
+  confidence: 0.3
+  bucket: frontier
+  basis: 'stand-in (07 node P7-Q5 weight): parameter-robustness of the daily arm''s lead; an estimate.'
+run:
+  command:
+  - python3
+  - scripts/research/harness_stage0.py
+  - --family
+  - trend
+  - --symbols
+  - BTCUSDT,ETHUSDT,SOLUSDT,XRPUSDT,ADAUSDT,AVAXUSDT,BNBUSDT,DOGEUSDT,LINKUSDT,LTCUSDT,BCHUSDT,DOTUSDT,NEARUSDT,ATOMUSDT,FILUSDT,TRXUSDT,ETCUSDT
+  - --timeframe
+  - 1d
+  - --days
+  - '2500'
+  - --start
+  - '2020-06-01'
+  - --end
+  - '2026-10-25'
+  - --param
+  - trail_mult=5.0
+  - --arm
+  - L10=--long-only;--donchian=10
+  - --arm
+  - L20=--long-only;--donchian=20
+  - --arm
+  - L40=--long-only;--donchian=40
+  - --folds
+  - '6'
+  - --fold-majority
+  - '4'
+  - --n-floor
+  - '20'
+  - --pooled-n-floor
+  - '39'
+  - --breadth-frac
+  - '0.5'
+  - --rule-id
+  - RULE-RQ20261029-84EF-05-LONG-DAILY-PLATEAU
+  - --data-dir
+  - '{out_dir}/data'
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 330
+  inputs:
+    research_unit: RQ-20261029-84ef-05
+programme: P7
+related:
+- RQ-20261026-f679-05
+- RQ-20261026-1b57-15
+- RQ-20261018-ef5d-06
+- scripts/research/harness_stage0.py
+programme_node:
+  programme: P7
+  node: P7-Q5-confirm
+  goal: G1
+  after: []
+last_dispatched_at: '2026-10-29T20:23:49+00:00'
+grading:
+  attested: RULE-RQ20261029-84EF-05-LONG-DAILY-PLATEAU
+  auto: true
+  decision_rule_id: RULE-RQ20261029-84EF-05-LONG-DAILY-PLATEAU
+  evidence:
+  - research/results/RQ-20261029-84ef-05/40944907719.jsonl
+  graded_at: '2026-10-30'
+  grader: scripts/research/queue_grade.py
+  reason: 1 row(s), all measured, all pass
+  rows: 1
+  verdict: pass

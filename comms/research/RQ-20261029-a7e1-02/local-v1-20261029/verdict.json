@@ -1,0 +1,1196 @@
+{
+ "rule": "RULE-AM-STATIC-PARTIAL-V1",
+ "variants": [
+  3,
+  6,
+  12,
+  24
+ ],
+ "fraction": 0.5,
+ "families": {
+  "TD": {
+   "state": "FAIL",
+   "why": "no variant passes RULE-AM-RISK-ADJUSTED-V1 (K-corrected) + non-inferiority",
+   "accounts_risk_pct": {
+    "bybit_1": 0.0075,
+    "bybit_2": 0.015,
+    "bybit_portfolio": 0.015,
+    "breakout_2": 0.0035,
+    "tradeify_1": 0.005,
+    "velotrade_1": 0.005
+   },
+   "main": {
+    "n": 1831,
+    "rule_params": {
+     "id": "RULE-AM-RISK-ADJUSTED-V1",
+     "registered_at": "2026-10-29",
+     "max_r_cost_per_trade": 0.05,
+     "min_dd_cut_pct": 0.15,
+     "min_cvar5_cut_pct": 0.15,
+     "cvar_tail": 0.05,
+     "cvar_basis": "book_iso_week_of_exit",
+     "folds": 6,
+     "fold_majority": 4,
+     "fold_min_risk_cut_pct": 0.0,
+     "n_floor": 39,
+     "random_control": "required",
+     "min_control_beat_frac": 0.9875,
+     "measurement_of_record": "book_usd_sim_per_account (row BOOK-SIM-REAL-SIZER)",
+     "reported_measurements": [
+      "giveback_r_mean_p95 (peak MFE R - realised net R, per trade)",
+      "net_pnl_pct_per_account_and_book (net of the full cost stack)",
+      "net_pnl_usd_per_account_and_book (only from a book_usd_sim; never committed from a per-trade translation, and balances are never committed to this public repo)"
+     ]
+    },
+    "variants": {
+     "3": {
+      "k_bars": 3,
+      "fire_rate": 0.876,
+      "delta_mean": -0.0678,
+      "delta_lb_month_block_alpha_over_k": -0.0996,
+      "noninferior": false,
+      "r_cost_per_trade": 0.067793,
+      "dd_cut_pct": 0.186591,
+      "cvar5_week_cut_pct": 0.242718,
+      "folds_held": 2,
+      "n_folds": 6,
+      "clauses": {
+       "R1_cost": false,
+       "R2_risk_cut": true,
+       "R3_folds": false,
+       "R4_control": false
+      },
+      "am_verdict": "fail",
+      "am_label": "fails_R1_R3",
+      "random_beat_frac": 0.0,
+      "random_mean_delta_p50": 0.0258,
+      "random_mean_delta_p90": 0.0338,
+      "baseline_book": {
+       "n": 1831,
+       "net_r": 231.0811,
+       "max_drawdown_r": 27.7765,
+       "cvar5_week_r": -5.144229,
+       "cvar5_trade_r": -1.128735,
+       "weeks": 329,
+       "giveback": {
+        "n_measured": 1831,
+        "n_missing_mfe": 0,
+        "mean_r": 1.051484,
+        "p95_r": 1.623809
+       }
+      },
+      "candidate_book": {
+       "n": 1831,
+       "net_r": 106.952728,
+       "max_drawdown_r": 22.593643,
+       "cvar5_week_r": -3.89563,
+       "cvar5_trade_r": -1.08589,
+       "weeks": 329,
+       "giveback": {
+        "n_measured": 1831,
+        "n_missing_mfe": 0,
+        "mean_r": 1.119277,
+        "p95_r": 2.220397
+       }
+      },
+      "pnl_by_account": {
+       "bybit_1": {
+        "basis": "per_trade_translation_not_book_result",
+        "risk_pct_per_trade": 0.0075,
+        "cost_pct_return_per_trade": 0.050845,
+        "baseline_net_return_pct": 173.3108,
+        "candidate_net_return_pct": 80.2145,
+        "baseline_max_dd_pct": 20.8324,
+        "candidate_max_dd_pct": 16.9452
+       },
+       "bybit_2": {
+        "basis": "per_trade_translation_not_book_result",
+        "risk_pct_per_trade": 0.015,
+        "cost_pct_return_per_trade": 0.10169,
+        "baseline_net_return_pct": 346.6216,
+        "candidate_net_return_pct": 160.4291,
+        "baseline_max_dd_pct": 41.6647,
+        "candidate_max_dd_pct": 33.8905
+       },
+       "bybit_portfolio": {
+        "basis": "per_trade_translation_not_book_result",
+        "risk_pct_per_trade": 0.015,
+        "cost_pct_return_per_trade": 0.10169,
+        "baseline_net_return_pct": 346.6216,
+        "candidate_net_return_pct": 160.4291,
+        "baseline_max_dd_pct": 41.6647,
+        "candidate_max_dd_pct": 33.8905
+       },
+       "breakout_2": {
+        "basis": "per_trade_translation_not_book_result",
+        "risk_pct_per_trade": 0.0035,
+        "cost_pct_return_per_trade": 0.023728,
+        "baseline_net_return_pct": 80.8784,
+        "candidate_net_return_pct": 37.4335,
+        "baseline_max_dd_pct": 9.7218,
+        "candidate_max_dd_pct": 7.9078
+       },
+       "tradeify_1": {
+        "basis": "per_trade_translation_not_book_result",
+        "risk_pct_per_trade": 0.005,
+        "cost_pct_return_per_trade": 0.033897,
+        "baseline_net_return_pct": 115.5406,
+        "candidate_net_return_pct": 53.4764,
+        "baseline_max_dd_pct": 13.8882,
+        "candidate_max_dd_pct": 11.2968
+       },
+       "velotrade_1": {
+        "basis": "per_trade_translation_not_book_result",
+        "risk_pct_per_trade": 0.005,
+        "cost_pct_return_per_trade": 0.033897,
+        "baseline_net_return_pct": 115.5406,
+        "candidate_net_return_pct": 53.4764,
+        "baseline_max_dd_pct": 13.8882,
+        "candidate_max_dd_pct": 11.2968
+       }
+      },
+      "passes_main": false
+     },
+     "6": {
+      "k_bars": 6,
+      "fire_rate": 0.7384,
+      "delta_mean": -0.0609,
+      "delta_lb_month_block_alpha_over_k": -0.0899,
+      "noninferior": false,
+      "r_cost_per_trade": 0.060879,
+      "dd_cut_pct": 0.163922,
+      "cvar5_week_cut_pct": 0.145189,
+      "folds_held": 2,
+      "n_folds": 6,
+      "clauses": {
+       "R1_cost": false,
+       "R2_risk_cut": true,
+       "R3_folds": false,
+       "R4_control": false
+      },
+      "am_verdict": "fail",
+      "am_label": "fails_R1_R3",
+      "random_beat_frac": 0.0,
+      "random_mean_delta_p50": 0.0217,
+      "random_mean_delta_p90": 0.0304,
+      "baseline_book": {
+       "n": 1831,
+       "net_r": 231.0811,
+       "max_drawdown_r": 27.7765,
+       "cvar5_week_r": -5.144229,
+       "cvar5_trade_r": -1.128735,
+       "weeks": 329,
+       "giveback": {
+        "n_measured": 1831,
+        "n_missing_mfe": 0,
+        "mean_r": 1.051484,
+        "p95_r": 1.623809
+       }
+      },
+      "candidate_book": {
+       "n": 1831,
+       "net_r": 119.612183,
+       "max_drawdown_r": 23.223309,
+       "cvar5_week_r": -4.397346,
+       "cvar5_trade_r": -1.114193,
+       "weeks": 329,
+       "giveback": {
+        "n_measured": 1831,
+        "n_missing_mfe": 0,
+        "mean_r": 1.112363,
+        "p95_r": 2.171762
+       }
+      },
+      "pnl_by_account": {
+       "bybit_1": {
+        "basis": "per_trade_translation_not_book_result",
+        "risk_pct_per_trade": 0.0075,
+        "cost_pct_return_per_trade": 0.045659,
+        "baseline_net_return_pct": 173.3108,
+        "candidate_net_return_pct": 89.7091,
+        "baseline_max_dd_pct": 20.8324,
+        "candidate_max_dd_pct": 17.4175
+       },
+       "bybit_2": {
+        "basis": "per_trade_translation_not_book_result",
+        "risk_pct_per_trade": 0.015,
+        "cost_pct_return_per_trade": 0.091318,
+        "baseline_net_return_pct": 346.6216,
+        "candidate_net_return_pct": 179.4183,
+        "baseline_max_dd_pct": 41.6647,
+        "candidate_max_dd_pct": 34.835
+       },
+       "bybit_portfolio": {
+        "basis": "per_trade_translation_not_book_result",
+        "risk_pct_per_trade": 0.015,
+        "cost_pct_return_per_trade": 0.091318,
+        "baseline_net_return_pct": 346.6216,
+        "candidate_net_return_pct": 179.4183,
+        "baseline_max_dd_pct": 41.6647,
+        "candidate_max_dd_pct": 34.835
+       },
+       "breakout_2": {
+        "basis": "per_trade_translation_not_book_result",
+        "risk_pct_per_trade": 0.0035,
+        "cost_pct_return_per_trade": 0.021308,
+        "baseline_net_return_pct": 80.8784,
+        "candidate_net_return_pct": 41.8643,
+        "baseline_max_dd_pct": 9.7218,
+        "candidate_max_dd_pct": 8.1282
+       },
+       "tradeify_1": {
+        "basis": "per_trade_translation_not_book_result",
+        "risk_pct_per_trade": 0.005,
+        "cost_pct_return_per_trade": 0.03044,
+        "baseline_net_return_pct": 115.5406,
+        "candidate_net_return_pct": 59.8061,
+        "baseline_max_dd_pct": 13.8882,
+        "candidate_max_dd_pct": 11.6117
+       },
+       "velotrade_1": {
+        "basis": "per_trade_translation_not_book_result",
+        "risk_pct_per_trade": 0.005,
+        "cost_pct_return_per_trade": 0.03044,
+        "baseline_net_return_pct": 115.5406,
+        "candidate_net_return_pct": 59.8061,
+        "baseline_max_dd_pct": 13.8882,
+        "candidate_max_dd_pct": 11.6117
+       }
+      },
+      "passes_main": false
+     },
+     "12": {
+      "k_bars": 12,
+      "fire_rate": 0.4997,
+      "delta_mean": -0.0343,
+      "delta_lb_month_block_alpha_over_k": -0.0576,
+      "noninferior": false,
+      "r_cost_per_trade": 0.034303,
+      "dd_cut_pct": 0.172397,
+      "cvar5_week_cut_pct": 0.069432,
+      "folds_held": 4,
+      "n_folds": 6,
+      "clauses": {
+       "R1_cost": true,
+       "R2_risk_cut": true,
+       "R3_folds": true,
+       "R4_control": false
+      },
+      "am_verdict": "fail",
+      "am_label": "fails_R4",
+      "random_beat_frac": 0.0,
+      "random_mean_delta_p50": 0.0143,
+      "random_mean_delta_p90": 0.0234,
+      "baseline_book": {
+       "n": 1831,
+       "net_r": 231.0811,
+       "max_drawdown_r": 27.7765,
+       "cvar5_week_r": -5.144229,
+       "cvar5_trade_r": -1.128735,
+       "weeks": 329,
+       "giveback": {
+        "n_measured": 1831,
+        "n_missing_mfe": 0,
+        "mean_r": 1.051484,
+        "p95_r": 1.623809
+       }
+      },
+      "candidate_book": {
+       "n": 1831,
+       "net_r": 168.272507,
+       "max_drawdown_r": 22.987919,
+       "cvar5_week_r": -4.787055,
+       "cvar5_trade_r": -1.125812,
+       "weeks": 329,
+       "giveback": {
+        "n_measured": 1831,
+        "n_missing_mfe": 0,
+        "mean_r": 1.085787,
+        "p95_r": 1.98173
+       }
+      },
+      "pnl_by_account": {
+       "bybit_1": {
+        "basis": "per_trade_translation_not_book_result",
+        "risk_pct_per_trade": 0.0075,
+        "cost_pct_return_per_trade": 0.025727,
+        "baseline_net_return_pct": 173.3108,
+        "candidate_net_return_pct": 126.2044,
+        "baseline_max_dd_pct": 20.8324,
+        "candidate_max_dd_pct": 17.2409
+       },
+       "bybit_2": {
+        "basis": "per_trade_translation_not_book_result",
+        "risk_pct_per_trade": 0.015,
+        "cost_pct_return_per_trade": 0.051454,
+        "baseline_net_return_pct": 346.6216,
+        "candidate_net_return_pct": 252.4088,
+        "baseline_max_dd_pct": 41.6647,
+        "candidate_max_dd_pct": 34.4819
+       },
+       "bybit_portfolio": {
+        "basis": "per_trade_translation_not_book_result",
+        "risk_pct_per_trade": 0.015,
+        "cost_pct_return_per_trade": 0.051454,
+        "baseline_net_return_pct": 346.6216,
+        "candidate_net_return_pct": 252.4088,
+        "baseline_max_dd_pct": 41.6647,
+        "candidate_max_dd_pct": 34.4819
+       },
+       "breakout_2": {
+        "basis": "per_trade_translation_not_book_result",
+        "risk_pct_per_trade": 0.0035,
+        "cost_pct_return_per_trade": 0.012006,
+        "baseline_net_return_pct": 80.8784,
+        "candidate_net_return_pct": 58.8954,
+        "baseline_max_dd_pct": 9.7218,
+        "candidate_max_dd_pct": 8.0458
+       },
+       "tradeify_1": {
+        "basis": "per_trade_translation_not_book_result",
+        "risk_pct_per_trade": 0.005,
+        "cost_pct_return_per_trade": 0.017152,
+        "baseline_net_return_pct": 115.5406,
+        "candidate_net_return_pct": 84.1363,
+        "baseline_max_dd_pct": 13.8882,
+        "candidate_max_dd_pct": 11.494
+       },
+       "velotrade_1": {
+        "basis": "per_trade_translation_not_book_result",
+        "risk_pct_per_trade": 0.005,
+        "cost_pct_return_per_trade": 0.017152,
+        "baseline_net_return_pct": 115.5406,
+        "candidate_net_return_pct": 84.1363,
+        "baseline_max_dd_pct": 13.8882,
+        "candidate_max_dd_pct": 11.494
+       }
+      },
+      "passes_main": false
+     },
+     "24": {
+      "k_bars": 24,
+      "fire_rate": 0.1584,
+      "delta_mean": -0.015,
+      "delta_lb_month_block_alpha_over_k": -0.028,
+      "noninferior": false,
+      "r_cost_per_trade": 0.015043,
+      "dd_cut_pct": 0.064436,
+      "cvar5_week_cut_pct": 0.011028,
+      "folds_held": 0,
+      "n_folds": 6,
+      "clauses": {
+       "R1_cost": true,
+       "R2_risk_cut": false,
+       "R3_folds": false,
+       "R4_control": false
+      },
+      "am_verdict": "fail",
+      "am_label": "fails_R2_R3",
+      "random_beat_frac": 0.0,
+      "random_mean_delta_p50": 0.0046,
+      "random_mean_delta_p90": 0.0106,
+      "baseline_book": {
+       "n": 1831,
+       "net_r": 231.0811,
+       "max_drawdown_r": 27.7765,
+       "cvar5_week_r": -5.144229,
+       "cvar5_trade_r": -1.128735,
+       "weeks": 329,
+       "giveback": {
+        "n_measured": 1831,
+        "n_missing_mfe": 0,
+        "mean_r": 1.051484,
+        "p95_r": 1.623809
+       }
+      },
+      "candidate_book": {
+       "n": 1831,
+       "net_r": 203.536994,
+       "max_drawdown_r": 25.986703,
+       "cvar5_week_r": -5.087499,
+       "cvar5_trade_r": -1.128735,
+       "weeks": 329,
+       "giveback": {
+        "n_measured": 1831,
+        "n_missing_mfe": 0,
+        "mean_r": 1.066527,
+        "p95_r": 1.764643
+       }
+      },
+      "pnl_by_account": {
+       "bybit_1": {
+        "basis": "per_trade_translation_not_book_result",
+        "risk_pct_per_trade": 0.0075,
+        "cost_pct_return_per_trade": 0.011282,
+        "baseline_net_return_pct": 173.3108,
+        "candidate_net_return_pct": 152.6527,
+        "baseline_max_dd_pct": 20.8324,
+        "candidate_max_dd_pct": 19.49
+       },
+       "bybit_2": {
+        "basis": "per_trade_translation_not_book_result",
+        "risk_pct_per_trade": 0.015,
+        "cost_pct_return_per_trade": 0.022565,
+        "baseline_net_return_pct": 346.6216,
+        "candidate_net_return_pct": 305.3055,
+        "baseline_max_dd_pct": 41.6647,
+        "candidate_max_dd_pct": 38.9801
+       },
+       "bybit_portfolio": {
+        "basis": "per_trade_translation_not_book_result",
+        "risk_pct_per_trade": 0.015,
+        "cost_pct_return_per_trade": 0.022565,
+        "baseline_net_return_pct": 346.6216,
+        "candidate_net_return_pct": 305.3055,
+        "baseline_max_dd_pct": 41.6647,
+        "candidate_max_dd_pct": 38.9801
+       },
+       "breakout_2": {
+        "basis": "per_trade_translation_not_book_result",
+        "risk_pct_per_trade": 0.0035,
+        "cost_pct_return_per_trade": 0.005265,
+        "baseline_net_return_pct": 80.8784,
+        "candidate_net_return_pct": 71.2379,
+        "baseline_max_dd_pct": 9.7218,
+        "candidate_max_dd_pct": 9.0953
+       },
+       "tradeify_1": {
+        "basis": "per_trade_translation_not_book_result",
+        "risk_pct_per_trade": 0.005,
+        "cost_pct_return_per_trade": 0.007522,
+        "baseline_net_return_pct": 115.5406,
+        "candidate_net_return_pct": 101.7685,
+        "baseline_max_dd_pct": 13.8882,
+        "candidate_max_dd_pct": 12.9934
+       },
+       "velotrade_1": {
+        "basis": "per_trade_translation_not_book_result",
+        "risk_pct_per_trade": 0.005,
+        "cost_pct_return_per_trade": 0.007522,
+        "baseline_net_return_pct": 115.5406,
+        "candidate_net_return_pct": 101.7685,
+        "baseline_max_dd_pct": 13.8882,
+        "candidate_max_dd_pct": 12.9934
+       }
+      },
+      "passes_main": false
+     }
+    }
+   },
+   "holdout": {
+    "n": 111,
+    "rule_params": {
+     "id": "RULE-AM-RISK-ADJUSTED-V1",
+     "registered_at": "2026-10-29",
+     "max_r_cost_per_trade": 0.05,
+     "min_dd_cut_pct": 0.15,
+     "min_cvar5_cut_pct": 0.15,
+     "cvar_tail": 0.05,
+     "cvar_basis": "book_iso_week_of_exit",
+     "folds": 3,
+     "fold_majority": 2,
+     "fold_min_risk_cut_pct": 0.0,
+     "n_floor": 39,
+     "random_control": "required",
+     "min_control_beat_frac": 0.9875,
+     "measurement_of_record": "book_usd_sim_per_account (row BOOK-SIM-REAL-SIZER)",
+     "reported_measurements": [
+      "giveback_r_mean_p95 (peak MFE R - realised net R, per trade)",
+      "net_pnl_pct_per_account_and_book (net of the full cost stack)",
+      "net_pnl_usd_per_account_and_book (only from a book_usd_sim; never committed from a per-trade translation, and balances are never committed to this public repo)"
+     ]
+    },
+    "variants": {
+     "3": {
+      "k_bars": 3,
+      "fire_rate": 0.8739,
+      "delta_mean": -0.0802,
+      "delta_lb_month_block_alpha_over_k": -0.1346,
+      "noninferior": false,
+      "r_cost_per_trade": 0.080213,
+      "dd_cut_pct": 0.518104,
+      "cvar5_week_cut_pct": 0.293272,
+      "folds_held": 0,
+      "n_folds": 3,
+      "clauses": {
+       "R1_cost": false,
+       "R2_risk_cut": true,
+       "R3_folds": false,
+       "R4_control": false
+      },
+      "am_verdict": "fail",
+      "am_label": "fails_R1_R3",
+      "random_beat_frac": 0.0,
+      "random_mean_delta_p50": 0.0053,
+      "random_mean_delta_p90": 0.0384,
+      "baseline_book": {
+       "n": 111,
+       "net_r": 30.0833,
+       "max_drawdown_r": 6.4389,
+       "cvar5_week_r": -2.65385,
+       "cvar5_trade_r": -1.079517,
+       "weeks": 26,
+       "giveback": {
+        "n_measured": 111,
+        "n_missing_mfe": 0,
+        "mean_r": 1.099316,
+        "p95_r": 2.114193
+       }
+      },
+      "candidate_book": {
+       "n": 111,
+       "net_r": 21.179655,
+       "max_drawdown_r": 3.102881,
+       "cvar5_week_r": -1.87555,
+       "cvar5_trade_r": -1.05745,
+       "weeks": 26,
+       "giveback": {
+        "n_measured": 111,
+        "n_missing_mfe": 0,
+        "mean_r": 1.179529,
+        "p95_r": 2.247488
+       }
+      },
+      "pnl_by_account": null,
+      "confirms": false
+     },
+     "6": {
+      "k_bars": 6,
+      "fire_rate": 0.7297,
+      "delta_mean": -0.1128,
+      "delta_lb_month_block_alpha_over_k": -0.1846,
+      "noninferior": false,
+      "r_cost_per_trade": 0.112781,
+      "dd_cut_pct": 0.133913,
+      "cvar5_week_cut_pct": 0.0768,
+      "folds_held": 0,
+      "n_folds": 3,
+      "clauses": {
+       "R1_cost": false,
+       "R2_risk_cut": false,
+       "R3_folds": false,
+       "R4_control": false
+      },
+      "am_verdict": "fail",
+      "am_label": "fails_R1_R2_R3",
+      "random_beat_frac": 0.0,
+      "random_mean_delta_p50": 0.0057,
+      "random_mean_delta_p90": 0.0418,
+      "baseline_book": {
+       "n": 111,
+       "net_r": 30.0833,
+       "max_drawdown_r": 6.4389,
+       "cvar5_week_r": -2.65385,
+       "cvar5_trade_r": -1.079517,
+       "weeks": 26,
+       "giveback": {
+        "n_measured": 111,
+        "n_missing_mfe": 0,
+        "mean_r": 1.099316,
+        "p95_r": 2.114193
+       }
+      },
+      "candidate_book": {
+       "n": 111,
+       "net_r": 17.564588,
+       "max_drawdown_r": 5.576649,
+       "cvar5_week_r": -2.450035,
+       "cvar5_trade_r": -1.075033,
+       "weeks": 26,
+       "giveback": {
+        "n_measured": 111,
+        "n_missing_mfe": 0,
+        "mean_r": 1.212097,
+        "p95_r": 2.306254
+       }
+      },
+      "pnl_by_account": null,
+      "confirms": false
+     },
+     "12": {
+      "k_bars": 12,
+      "fire_rate": 0.5045,
+      "delta_mean": -0.0364,
+      "delta_lb_month_block_alpha_over_k": -0.0937,
+      "noninferior": false,
+      "r_cost_per_trade": 0.036436,
+      "dd_cut_pct": 0.034011,
+      "cvar5_week_cut_pct": 0.122943,
+      "folds_held": 0,
+      "n_folds": 3,
+      "clauses": {
+       "R1_cost": true,
+       "R2_risk_cut": false,
+       "R3_folds": false,
+       "R4_control": false
+      },
+      "am_verdict": "fail",
+      "am_label": "fails_R2_R3",
+      "random_beat_frac": 0.0,
+      "random_mean_delta_p50": 0.0069,
+      "random_mean_delta_p90": 0.0415,
+      "baseline_book": {
+       "n": 111,
+       "net_r": 30.0833,
+       "max_drawdown_r": 6.4389,
+       "cvar5_week_r": -2.65385,
+       "cvar5_trade_r": -1.079517,
+       "weeks": 26,
+       "giveback": {
+        "n_measured": 111,
+        "n_missing_mfe": 0,
+        "mean_r": 1.099316,
+        "p95_r": 2.114193
+       }
+      },
+      "candidate_book": {
+       "n": 111,
+       "net_r": 26.038889,
+       "max_drawdown_r": 6.219907,
+       "cvar5_week_r": -2.327579,
+       "cvar5_trade_r": -1.075633,
+       "weeks": 26,
+       "giveback": {
+        "n_measured": 111,
+        "n_missing_mfe": 0,
+        "mean_r": 1.135752,
+        "p95_r": 2.133533
+       }
+      },
+      "pnl_by_account": null,
+      "confirms": false
+     },
+     "24": {
+      "k_bars": 24,
+      "fire_rate": 0.0991,
+      "delta_mean": 0.0047,
+      "delta_lb_month_block_alpha_over_k": -0.0189,
+      "noninferior": true,
+      "r_cost_per_trade": -0.004667,
+      "dd_cut_pct": -0.057506,
+      "cvar5_week_cut_pct": 0.032262,
+      "folds_held": 0,
+      "n_folds": 3,
+      "clauses": {
+       "R1_cost": true,
+       "R2_risk_cut": false,
+       "R3_folds": false,
+       "R4_control": false
+      },
+      "am_verdict": "fail",
+      "am_label": "fails_R2_R3",
+      "random_beat_frac": 0.0,
+      "random_mean_delta_p50": 0.003,
+      "random_mean_delta_p90": 0.0193,
+      "baseline_book": {
+       "n": 111,
+       "net_r": 30.0833,
+       "max_drawdown_r": 6.4389,
+       "cvar5_week_r": -2.65385,
+       "cvar5_trade_r": -1.079517,
+       "weeks": 26,
+       "giveback": {
+        "n_measured": 111,
+        "n_missing_mfe": 0,
+        "mean_r": 1.099316,
+        "p95_r": 2.114193
+       }
+      },
+      "candidate_book": {
+       "n": 111,
+       "net_r": 30.601375,
+       "max_drawdown_r": 6.809174,
+       "cvar5_week_r": -2.568231,
+       "cvar5_trade_r": -1.079517,
+       "weeks": 26,
+       "giveback": {
+        "n_measured": 111,
+        "n_missing_mfe": 0,
+        "mean_r": 1.094649,
+        "p95_r": 2.114193
+       }
+      },
+      "pnl_by_account": null,
+      "confirms": false
+     }
+    }
+   }
+  },
+  "PB2H": {
+   "state": "FAIL",
+   "why": "no variant passes RULE-AM-RISK-ADJUSTED-V1 (K-corrected) + non-inferiority",
+   "accounts_risk_pct": {
+    "bybit_2": 0.015,
+    "bybit_portfolio": 0.015
+   },
+   "main": {
+    "n": 796,
+    "rule_params": {
+     "id": "RULE-AM-RISK-ADJUSTED-V1",
+     "registered_at": "2026-10-29",
+     "max_r_cost_per_trade": 0.05,
+     "min_dd_cut_pct": 0.15,
+     "min_cvar5_cut_pct": 0.15,
+     "cvar_tail": 0.05,
+     "cvar_basis": "book_iso_week_of_exit",
+     "folds": 6,
+     "fold_majority": 4,
+     "fold_min_risk_cut_pct": 0.0,
+     "n_floor": 39,
+     "random_control": "required",
+     "min_control_beat_frac": 0.9875,
+     "measurement_of_record": "book_usd_sim_per_account (row BOOK-SIM-REAL-SIZER)",
+     "reported_measurements": [
+      "giveback_r_mean_p95 (peak MFE R - realised net R, per trade)",
+      "net_pnl_pct_per_account_and_book (net of the full cost stack)",
+      "net_pnl_usd_per_account_and_book (only from a book_usd_sim; never committed from a per-trade translation, and balances are never committed to this public repo)"
+     ]
+    },
+    "variants": {
+     "3": {
+      "k_bars": 3,
+      "fire_rate": 0.9045,
+      "delta_mean": -0.0979,
+      "delta_lb_month_block_alpha_over_k": -0.1603,
+      "noninferior": false,
+      "r_cost_per_trade": 0.097934,
+      "dd_cut_pct": 0.026091,
+      "cvar5_week_cut_pct": 0.33145,
+      "folds_held": 2,
+      "n_folds": 6,
+      "clauses": {
+       "R1_cost": false,
+       "R2_risk_cut": true,
+       "R3_folds": false,
+       "R4_control": false
+      },
+      "am_verdict": "fail",
+      "am_label": "fails_R1_R3",
+      "random_beat_frac": 0.0,
+      "random_mean_delta_p50": -0.019,
+      "random_mean_delta_p90": -0.0075,
+      "baseline_book": {
+       "n": 796,
+       "net_r": 114.3337,
+       "max_drawdown_r": 25.6141,
+       "cvar5_week_r": -4.341131,
+       "cvar5_trade_r": -1.11203,
+       "weeks": 301,
+       "giveback": {
+        "n_measured": 796,
+        "n_missing_mfe": 0,
+        "mean_r": 0.955799,
+        "p95_r": 2.684139
+       }
+      },
+      "candidate_book": {
+       "n": 796,
+       "net_r": 36.378553,
+       "max_drawdown_r": 24.945807,
+       "cvar5_week_r": -2.902264,
+       "cvar5_trade_r": -1.058972,
+       "weeks": 301,
+       "giveback": {
+        "n_measured": 796,
+        "n_missing_mfe": 0,
+        "mean_r": 1.053733,
+        "p95_r": 2.361462
+       }
+      },
+      "pnl_by_account": {
+       "bybit_2": {
+        "basis": "per_trade_translation_not_book_result",
+        "risk_pct_per_trade": 0.015,
+        "cost_pct_return_per_trade": 0.146901,
+        "baseline_net_return_pct": 171.5005,
+        "candidate_net_return_pct": 54.5678,
+        "baseline_max_dd_pct": 38.4211,
+        "candidate_max_dd_pct": 37.4187
+       },
+       "bybit_portfolio": {
+        "basis": "per_trade_translation_not_book_result",
+        "risk_pct_per_trade": 0.015,
+        "cost_pct_return_per_trade": 0.146901,
+        "baseline_net_return_pct": 171.5005,
+        "candidate_net_return_pct": 54.5678,
+        "baseline_max_dd_pct": 38.4211,
+        "candidate_max_dd_pct": 37.4187
+       }
+      },
+      "passes_main": false
+     },
+     "6": {
+      "k_bars": 6,
+      "fire_rate": 0.7877,
+      "delta_mean": -0.0946,
+      "delta_lb_month_block_alpha_over_k": -0.1522,
+      "noninferior": false,
+      "r_cost_per_trade": 0.094633,
+      "dd_cut_pct": 0.088589,
+      "cvar5_week_cut_pct": 0.23517,
+      "folds_held": 2,
+      "n_folds": 6,
+      "clauses": {
+       "R1_cost": false,
+       "R2_risk_cut": true,
+       "R3_folds": false,
+       "R4_control": false
+      },
+      "am_verdict": "fail",
+      "am_label": "fails_R1_R3",
+      "random_beat_frac": 0.0,
+      "random_mean_delta_p50": -0.0167,
+      "random_mean_delta_p90": -0.0024,
+      "baseline_book": {
+       "n": 796,
+       "net_r": 114.3337,
+       "max_drawdown_r": 25.6141,
+       "cvar5_week_r": -4.341131,
+       "cvar5_trade_r": -1.11203,
+       "weeks": 301,
+       "giveback": {
+        "n_measured": 796,
+        "n_missing_mfe": 0,
+        "mean_r": 0.955799,
+        "p95_r": 2.684139
+       }
+      },
+      "candidate_book": {
+       "n": 796,
+       "net_r": 39.006069,
+       "max_drawdown_r": 23.344965,
+       "cvar5_week_r": -3.320226,
+       "cvar5_trade_r": -1.07683,
+       "weeks": 301,
+       "giveback": {
+        "n_measured": 796,
+        "n_missing_mfe": 0,
+        "mean_r": 1.050432,
+        "p95_r": 2.355513
+       }
+      },
+      "pnl_by_account": {
+       "bybit_2": {
+        "basis": "per_trade_translation_not_book_result",
+        "risk_pct_per_trade": 0.015,
+        "cost_pct_return_per_trade": 0.141949,
+        "baseline_net_return_pct": 171.5005,
+        "candidate_net_return_pct": 58.5091,
+        "baseline_max_dd_pct": 38.4211,
+        "candidate_max_dd_pct": 35.0174
+       },
+       "bybit_portfolio": {
+        "basis": "per_trade_translation_not_book_result",
+        "risk_pct_per_trade": 0.015,
+        "cost_pct_return_per_trade": 0.141949,
+        "baseline_net_return_pct": 171.5005,
+        "candidate_net_return_pct": 58.5091,
+        "baseline_max_dd_pct": 38.4211,
+        "candidate_max_dd_pct": 35.0174
+       }
+      },
+      "passes_main": false
+     },
+     "12": {
+      "k_bars": 12,
+      "fire_rate": 0.6168,
+      "delta_mean": -0.0624,
+      "delta_lb_month_block_alpha_over_k": -0.1148,
+      "noninferior": false,
+      "r_cost_per_trade": 0.062367,
+      "dd_cut_pct": 0.059342,
+      "cvar5_week_cut_pct": 0.140831,
+      "folds_held": 0,
+      "n_folds": 6,
+      "clauses": {
+       "R1_cost": false,
+       "R2_risk_cut": false,
+       "R3_folds": false,
+       "R4_control": false
+      },
+      "am_verdict": "fail",
+      "am_label": "fails_R1_R2_R3",
+      "random_beat_frac": 0.0,
+      "random_mean_delta_p50": -0.0141,
+      "random_mean_delta_p90": 0.0025,
+      "baseline_book": {
+       "n": 796,
+       "net_r": 114.3337,
+       "max_drawdown_r": 25.6141,
+       "cvar5_week_r": -4.341131,
+       "cvar5_trade_r": -1.11203,
+       "weeks": 301,
+       "giveback": {
+        "n_measured": 796,
+        "n_missing_mfe": 0,
+        "mean_r": 0.955799,
+        "p95_r": 2.684139
+       }
+      },
+      "candidate_book": {
+       "n": 796,
+       "net_r": 64.689188,
+       "max_drawdown_r": 24.094107,
+       "cvar5_week_r": -3.729765,
+       "cvar5_trade_r": -1.082105,
+       "weeks": 301,
+       "giveback": {
+        "n_measured": 796,
+        "n_missing_mfe": 0,
+        "mean_r": 1.018167,
+        "p95_r": 2.317219
+       }
+      },
+      "pnl_by_account": {
+       "bybit_2": {
+        "basis": "per_trade_translation_not_book_result",
+        "risk_pct_per_trade": 0.015,
+        "cost_pct_return_per_trade": 0.09355,
+        "baseline_net_return_pct": 171.5005,
+        "candidate_net_return_pct": 97.0338,
+        "baseline_max_dd_pct": 38.4211,
+        "candidate_max_dd_pct": 36.1412
+       },
+       "bybit_portfolio": {
+        "basis": "per_trade_translation_not_book_result",
+        "risk_pct_per_trade": 0.015,
+        "cost_pct_return_per_trade": 0.09355,
+        "baseline_net_return_pct": 171.5005,
+        "candidate_net_return_pct": 97.0338,
+        "baseline_max_dd_pct": 38.4211,
+        "candidate_max_dd_pct": 36.1412
+       }
+      },
+      "passes_main": false
+     },
+     "24": {
+      "k_bars": 24,
+      "fire_rate": 0.4347,
+      "delta_mean": -0.0464,
+      "delta_lb_month_block_alpha_over_k": -0.0924,
+      "noninferior": false,
+      "r_cost_per_trade": 0.046405,
+      "dd_cut_pct": -0.046432,
+      "cvar5_week_cut_pct": 0.10286,
+      "folds_held": 0,
+      "n_folds": 6,
+      "clauses": {
+       "R1_cost": true,
+       "R2_risk_cut": false,
+       "R3_folds": false,
+       "R4_control": false
+      },
+      "am_verdict": "fail",
+      "am_label": "fails_R2_R3",
+      "random_beat_frac": 0.0,
+      "random_mean_delta_p50": -0.0094,
+      "random_mean_delta_p90": 0.0059,
+      "baseline_book": {
+       "n": 796,
+       "net_r": 114.3337,
+       "max_drawdown_r": 25.6141,
+       "cvar5_week_r": -4.341131,
+       "cvar5_trade_r": -1.11203,
+       "weeks": 301,
+       "giveback": {
+        "n_measured": 796,
+        "n_missing_mfe": 0,
+        "mean_r": 0.955799,
+        "p95_r": 2.684139
+       }
+      },
+      "candidate_book": {
+       "n": 796,
+       "net_r": 77.394991,
+       "max_drawdown_r": 26.803413,
+       "cvar5_week_r": -3.894602,
+       "cvar5_trade_r": -1.088178,
+       "weeks": 301,
+       "giveback": {
+        "n_measured": 796,
+        "n_missing_mfe": 0,
+        "mean_r": 1.002205,
+        "p95_r": 2.375475
+       }
+      },
+      "pnl_by_account": {
+       "bybit_2": {
+        "basis": "per_trade_translation_not_book_result",
+        "risk_pct_per_trade": 0.015,
+        "cost_pct_return_per_trade": 0.069608,
+        "baseline_net_return_pct": 171.5005,
+        "candidate_net_return_pct": 116.0925,
+        "baseline_max_dd_pct": 38.4211,
+        "candidate_max_dd_pct": 40.2051
+       },
+       "bybit_portfolio": {
+        "basis": "per_trade_translation_not_book_result",
+        "risk_pct_per_trade": 0.015,
+        "cost_pct_return_per_trade": 0.069608,
+        "baseline_net_return_pct": 171.5005,
+        "candidate_net_return_pct": 116.0925,
+        "baseline_max_dd_pct": 38.4211,
+        "candidate_max_dd_pct": 40.2051
+       }
+      },
+      "passes_main": false
+     }
+    }
+   },
+   "holdout": {
+    "n": 45,
+    "verdict": "indeterminate",
+    "why": "n 45 < 100"
+   }
+  }
+ },
+ "legs": [
+  {
+   "leg": "trend_donchian_eth_4h",
+   "n_trade_rows": 275,
+   "n_path_rows": 3594,
+   "n_trades": 275,
+   "n_without_path": 0,
+   "n_exit_r_mismatch_gross_r": 0,
+   "parity_n": 275,
+   "parity_share": 1.0,
+   "c_exit_vs_harness_slippage_median_gap_r": 0.00015,
+   "state": "included"
+  },
+  {
+   "leg": "trend_donchian_xrp_4h",
+   "n_trade_rows": 68,
+   "n_path_rows": 545,
+   "n_trades": 68,
+   "n_without_path": 0,
+   "n_exit_r_mismatch_gross_r": 0,
+   "parity_n": 68,
+   "parity_share": 1.0,
+   "c_exit_vs_harness_slippage_median_gap_r": 0.00015,
+   "state": "included"
+  },
+  {
+   "leg": "trend_donchian_eth_prop",
+   "n_trade_rows": 1085,
+   "n_path_rows": 15381,
+   "n_trades": 1085,
+   "n_without_path": 0,
+   "n_exit_r_mismatch_gross_r": 0,
+   "parity_n": 1085,
+   "parity_share": 1.0,
+   "c_exit_vs_harness_slippage_median_gap_r": 0.00011,
+   "state": "included"
+  },
+  {
+   "leg": "trend_donchian_sol_prop",
+   "n_trade_rows": 403,
+   "n_path_rows": 8287,
+   "n_trades": 403,
+   "n_without_path": 0,
+   "n_exit_r_mismatch_gross_r": 0,
+   "parity_n": 403,
+   "parity_share": 1.0,
+   "c_exit_vs_harness_slippage_median_gap_r": 0.00015,
+   "state": "included"
+  },
+  {
+   "leg": "ada_pullback_2h",
+   "n_trade_rows": 402,
+   "n_path_rows": 8876,
+   "n_trades": 402,
+   "n_without_path": 0,
+   "n_exit_r_mismatch_gross_r": 0,
+   "parity_n": 402,
+   "parity_share": 1.0,
+   "c_exit_vs_harness_slippage_median_gap_r": 0.00015,
+   "state": "included"
+  },
+  {
+   "leg": "xrp_pullback_2h",
+   "n_trade_rows": 394,
+   "n_path_rows": 16870,
+   "n_trades": 394,
+   "n_without_path": 0,
+   "n_exit_r_mismatch_gross_r": 0,
+   "parity_n": 394,
+   "parity_share": 1.0,
+   "c_exit_vs_harness_slippage_median_gap_r": 0.00015,
+   "state": "included"
+  }
+ ],
+ "holdout_legs": [
+  {
+   "leg": "trend_donchian_eth_4h",
+   "n_trade_rows": 23,
+   "n_path_rows": 298,
+   "n_trades": 23,
+   "n_without_path": 0,
+   "n_exit_r_mismatch_gross_r": 0,
+   "parity_n": 23,
+   "parity_share": 1.0,
+   "c_exit_vs_harness_slippage_median_gap_r": 0.00015,
+   "state": "included"
+  },
+  {
+   "leg": "trend_donchian_xrp_4h",
+   "n_trade_rows": 6,
+   "n_path_rows": 53,
+   "n_trades": 6,
+   "n_without_path": 0,
+   "n_exit_r_mismatch_gross_r": 0,
+   "parity_n": 6,
+   "parity_share": 1.0,
+   "c_exit_vs_harness_slippage_median_gap_r": 0.00015,
+   "state": "included"
+  },
+  {
+   "leg": "trend_donchian_eth_prop",
+   "n_trade_rows": 90,
+   "n_path_rows": 1184,
+   "n_trades": 90,
+   "n_without_path": 0,
+   "n_exit_r_mismatch_gross_r": 0,
+   "parity_n": 90,
+   "parity_share": 1.0,
+   "c_exit_vs_harness_slippage_median_gap_r": 0.00011,
+   "state": "included"
+  },
+  {
+   "leg": "trend_donchian_sol_prop",
+   "n_trade_rows": 0,
+   "n_path_rows": 0,
+   "n_trades": 0,
+   "n_without_path": 0,
+   "n_exit_r_mismatch_gross_r": 0,
+   "parity_n": 0,
+   "parity_share": null,
+   "c_exit_vs_harness_slippage_median_gap_r": null,
+   "state": "parity_failed"
+  },
+  {
+   "leg": "ada_pullback_2h",
+   "n_trade_rows": 28,
+   "n_path_rows": 532,
+   "n_trades": 28,
+   "n_without_path": 0,
+   "n_exit_r_mismatch_gross_r": 0,
+   "parity_n": 28,
+   "parity_share": 1.0,
+   "c_exit_vs_harness_slippage_median_gap_r": 0.00015,
+   "state": "included"
+  },
+  {
+   "leg": "xrp_pullback_2h",
+   "n_trade_rows": 21,
+   "n_path_rows": 1289,
+   "n_trades": 21,
+   "n_without_path": 0,
+   "n_exit_r_mismatch_gross_r": 0,
+   "parity_n": 21,
+   "parity_share": 1.0,
+   "c_exit_vs_harness_slippage_median_gap_r": 0.00015,
+   "state": "included"
+  }
+ ],
+ "n_trades": 2627
+}

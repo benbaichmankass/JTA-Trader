@@ -1,0 +1,104 @@
+{
+ "account_bounds": [
+  {
+   "account_class": "paper",
+   "account_id": "bybit_1",
+   "evidence": "bybit_orders: SL 1.2848 / TP 1.3383, position True; would_apply = the shared amend reaches this leg, NOT that its RiskManager approved (LTR-6 gap)",
+   "read": null,
+   "read_basis": "depends on the recommendation: no_action for hold/no_recommendation, else see read_if_amend",
+   "read_if_amend": "would_apply"
+  }
+ ],
+ "assembled_by": "generator scripts/ops/live_review_packet.py",
+ "context": {
+  "calendar": {
+   "events_next_24h": [],
+   "state": "no_event_classes_for_symbol"
+  },
+  "correlated_open_packages": [
+   {
+    "direction": "long",
+    "order_package_id": "pkg-32a5162bbbdd4ef6",
+    "symbol": "SPY"
+   }
+  ],
+  "direction": "long",
+  "funding": null,
+  "news": {
+   "adjustment": -0.000582,
+   "decision": "neutral",
+   "ts": "2026-10-29T14:45:41.459884+00:00",
+   "veto": false
+  },
+  "previous_review": {
+   "action": "close",
+   "review_id": "LR-20261029T1646Z-pkg-5d74ca7451d64ebe",
+   "reviewed_at": "2026-10-29T16:48:00Z",
+   "route": null
+  },
+  "symbol": "XRPUSDT"
+ },
+ "cost": {
+  "basis": null
+ },
+ "features_at_review": {
+  "atr_now_over_entry": 1.4137,
+  "bars_since_peak": 5,
+  "giveback_r": 1.0624,
+  "open_r": -0.5101,
+  "peak_r": 0.5522,
+  "r_to_stop": 0.4899,
+  "r_to_target": 2.0101
+ },
+ "info_cutoff_at": "2026-10-29T17:18:56Z",
+ "leg": "ict_scalp_xrp_15m",
+ "mechanics": {
+  "evidence": "package sl 1.28483286 / tp 1.33825071 agree with every readable account",
+  "verdict": "match"
+ },
+ "missing_inputs": [
+  {
+   "field": "regime.vol_now",
+   "reason": "calm/volatile buckets use frozen edges held only in the VM model registry; not reachable read-only from a session"
+  },
+  {
+   "field": "regime.cell_entry",
+   "reason": "entry meta regime='transitional' vol_regime='unknown': not both known"
+  },
+  {
+   "field": "priced_options",
+   "reason": "open_r/peak_r/atr_stop_mult not available for this package"
+  },
+  {
+   "field": "context.funding",
+   "reason": "Bybit public funding API is geo-blocked from session networks and no read-only diag route carries funding_now; needs a diag route"
+  },
+  {
+   "field": "context.live_vs_backtest",
+   "reason": "per-leg live-vs-backtest verdict not assembled by this generator yet"
+  }
+ ],
+ "order_package_id": "pkg-5d74ca7451d64ebe",
+ "packet_version": 2,
+ "priced_options": null,
+ "regime": {
+  "adx_now": 25.4562,
+  "atr_now_over_entry": 1.4137,
+  "cell_entry": null,
+  "cell_now": null,
+  "trend_now": "trending"
+ },
+ "review_id": "LR-20261029T1718Z-pkg-5d74ca7451d64ebe",
+ "state": {
+  "atr_now_over_entry": 1.4137,
+  "bars_held": 11,
+  "giveback_r": 1.0624,
+  "open_r": -0.5101,
+  "peak_provenance": "estimated",
+  "peak_r": 0.5522,
+  "regime_cell_entry": null,
+  "regime_cell_now": null,
+  "sl": 1.28483286,
+  "tp": 1.33825071
+ }
+}
