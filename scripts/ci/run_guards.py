@@ -77,6 +77,9 @@ HARNESS_PATHS = (
 #               argv        — the command
 #               allow_fail  — report but never fail the job (advisory step)
 #               pr_only     — only on a pull_request event
+#               pr_skip_unless — a `when` dict; the step is skipped ONLY on a
+#                             pull_request event whose diff matches none of it.
+#                             Every other event (push, dispatch, --all) runs it.
 #               git_clean   — after running argv, assert this path is unmodified
 #               hint        — extra operator guidance printed on failure
 #             `{changed_files}` in an argv element is replaced with the
@@ -1356,7 +1359,16 @@ GUARDS: List[Dict[str, Any]] = [
             # fail is the "green that checked nothing" this repo has a rule
             # about -- so it proves it can catch a flat series first.
             ["python3", "scripts/ci/check_candle_fixture_variance.py", "--self-test"],
-            ["python3", "scripts/ci/check_candle_fixture_variance.py"],
+            # GH-CAPACITY-INFRA-RUNNER (2026-10-30): the whole-tree scan reads every
+            # tracked csv/jsonl/parquet (MEASURED: ~5 min of a ~13 min guards job on a
+            # data-only automation PR). It grades only files of those suffixes, so a PR
+            # diff touching none of them cannot change its verdict. `pr_skip_unless`
+            # skips ONLY on a pull_request event; push / dispatch / --all still run it.
+            {"argv": ["python3", "scripts/ci/check_candle_fixture_variance.py"],
+             "pr_skip_unless": {"globs": [
+                 "**/*.csv", "**/*.jsonl", "**/*.parquet",
+                 "scripts/ci/check_candle_fixture_variance.py", "scripts/candle_variance.py",
+             ]}},
         ],
     },
     {
@@ -2789,6 +2801,12 @@ def run_guard(
             step = {"argv": step}
         if step.get("pr_only") and ctx.get("event_name") != "pull_request":
             print(f"    (skipped: pull_request-only step) {' '.join(step['argv'])}", flush=True)
+            continue
+        if (step.get("pr_skip_unless") is not None
+                and ctx.get("event_name") == "pull_request" and not no_diff_scope
+                and not is_relevant(step["pr_skip_unless"], changed)):
+            print("    (skipped: step not relevant to this pull_request diff; push/dispatch "
+                  f"still run it) {' '.join(step['argv'])}", flush=True)
             continue
         # A per-STEP relevance clause: used where a guard must always exercise
         # its self-test but only scan on a relevant diff.

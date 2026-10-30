@@ -256,3 +256,33 @@ def test_the_caveat_does_NOT_subtract_the_changed_set() -> None:
         "tree_dirty subtracts the changed set again — a file both committed "
         "and dirty will read as covered while its uncommitted edits are not"
     )
+
+
+class TestPrSkipUnless:
+    """`pr_skip_unless` (GH-CAPACITY-INFRA-RUNNER): skip ONLY on a PR diff that
+    matches nothing; every other event still runs the step."""
+
+    GATE = {"globs": ["**/*.csv"]}
+
+    def test_irrelevant_pr_diff_skips(self):
+        guard = _guard([{"argv": FAIL, "pr_skip_unless": self.GATE}])
+        assert rg.run_guard(guard, CTX, ["comms/x.json"]) is None
+
+    def test_relevant_pr_diff_runs(self):
+        guard = _guard([{"argv": FAIL, "pr_skip_unless": self.GATE}])
+        assert rg.run_guard(guard, CTX, ["data/a.csv"]) is not None
+
+    def test_push_still_runs_with_empty_changed(self):
+        guard = _guard([{"argv": FAIL, "pr_skip_unless": self.GATE}])
+        ctx = dict(CTX, event_name="push")
+        assert rg.run_guard(guard, ctx, [], no_diff_scope=True) is not None
+
+    def test_merge_group_still_runs(self):
+        guard = _guard([{"argv": FAIL, "pr_skip_unless": self.GATE}])
+        ctx = dict(CTX, event_name="merge_group")
+        assert rg.run_guard(guard, ctx, ["comms/x.json"]) is not None
+
+    def test_candle_scan_is_gated_but_self_test_is_not(self):
+        g = next(x for x in rg.GUARDS if x["name"] == "candle-fixture-variance-guard")
+        steps = [s if isinstance(s, dict) else {"argv": s} for s in g["steps"]]
+        assert [("pr_skip_unless" in s) for s in steps] == [False, True]

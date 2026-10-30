@@ -1,128 +1,31 @@
 {
-  "generated_at": "2026-10-30T06:19:47Z",
-  "overall": "findings",
+  "generated_at": "2026-10-30T18:12:41Z",
+  "overall": "could_not_read",
   "produced_by": {
-    "run_id": "41011782087",
+    "run_id": "41103876703",
     "workflow": "research-loss-detector"
   },
   "questions": {
     "A_stuck_research_prs": {
       "findings": [],
-      "population": "9 open PRs; 4 automation/*; 3 carry research; 1 automation/* carry none (not graded here)",
+      "population": "12 open PRs; 8 automation/*; 4 carry research; 4 automation/* carry none (not graded here)",
       "state": "clean",
       "threshold_hours": 6.0
     },
     "B_unlanded_result_runs": {
-      "findings": [
-        {
-          "conclusion": "failure",
-          "created_at": "2026-10-30T02:55:09Z",
-          "result_job": [
-            "failure"
-          ],
-          "run_id": "40994427469",
-          "run_url": "https://github.com/benbaichmankass/JTA-Trader/actions/runs/40994427469",
-          "workflow": "m20-exit-lever-sweep.yml"
-        },
-        {
-          "conclusion": "failure",
-          "created_at": "2026-10-30T00:16:29Z",
-          "result_job": [
-            "failure"
-          ],
-          "run_id": "40978648245",
-          "run_url": "https://github.com/benbaichmankass/JTA-Trader/actions/runs/40978648245",
-          "workflow": "m20-exit-lever-sweep.yml"
-        },
-        {
-          "conclusion": "failure",
-          "created_at": "2026-10-24T12:47:07Z",
-          "result_job": [
-            "failure"
-          ],
-          "run_id": "40095366642",
-          "run_url": "https://github.com/benbaichmankass/JTA-Trader/actions/runs/40095366642",
-          "workflow": "m20-exit-lever-sweep.yml"
-        },
-        {
-          "conclusion": "failure",
-          "created_at": "2026-10-17T07:59:13Z",
-          "result_job": [
-            "failure"
-          ],
-          "run_id": "39015656806",
-          "run_url": "https://github.com/benbaichmankass/JTA-Trader/actions/runs/39015656806",
-          "workflow": "m20-exit-lever-sweep.yml"
-        },
-        {
-          "conclusion": "failure",
-          "created_at": "2026-10-16T21:13:07Z",
-          "result_job": [
-            "failure"
-          ],
-          "run_id": "38967815725",
-          "run_url": "https://github.com/benbaichmankass/JTA-Trader/actions/runs/38967815725",
-          "workflow": "m20-exit-lever-sweep.yml"
-        }
-      ],
-      "lost": [
-        {
-          "conclusion": "failure",
-          "created_at": "2026-10-30T02:55:09Z",
-          "result_job": [
-            "failure"
-          ],
-          "run_id": "40994427469",
-          "run_url": "https://github.com/benbaichmankass/JTA-Trader/actions/runs/40994427469",
-          "workflow": "m20-exit-lever-sweep.yml"
-        },
-        {
-          "conclusion": "failure",
-          "created_at": "2026-10-30T00:16:29Z",
-          "result_job": [
-            "failure"
-          ],
-          "run_id": "40978648245",
-          "run_url": "https://github.com/benbaichmankass/JTA-Trader/actions/runs/40978648245",
-          "workflow": "m20-exit-lever-sweep.yml"
-        },
-        {
-          "conclusion": "failure",
-          "created_at": "2026-10-24T12:47:07Z",
-          "result_job": [
-            "failure"
-          ],
-          "run_id": "40095366642",
-          "run_url": "https://github.com/benbaichmankass/JTA-Trader/actions/runs/40095366642",
-          "workflow": "m20-exit-lever-sweep.yml"
-        },
-        {
-          "conclusion": "failure",
-          "created_at": "2026-10-17T07:59:13Z",
-          "result_job": [
-            "failure"
-          ],
-          "run_id": "39015656806",
-          "run_url": "https://github.com/benbaichmankass/JTA-Trader/actions/runs/39015656806",
-          "workflow": "m20-exit-lever-sweep.yml"
-        },
-        {
-          "conclusion": "failure",
-          "created_at": "2026-10-16T21:13:07Z",
-          "result_job": [
-            "failure"
-          ],
-          "run_id": "38967815725",
-          "run_url": "https://github.com/benbaichmankass/JTA-Trader/actions/runs/38967815725",
-          "workflow": "m20-exit-lever-sweep.yml"
-        }
-      ],
-      "pending_merge": [],
-      "population": "93 completed run(s) of 7 workflow(s) calling ./.github/actions/research-result since 2026-10-16 (dukascopy-span-probe.yml, ict-scalp-exit-sweep.yml, m20-exit-lever-sweep.yml, research-exit-head-build.yml, research-exit-head-replay-trainer.yml, research-harness-dispatch.yml, soak-book-grade-weekly.yml); 745 produced no result by design (skipped); 1686 result file(s) on origin/main",
-      "state": "findings"
+      "error": "GET https://api.github.com/repos/benbaichmankass/JTA-Trader/actions/runs/38967815725/jobs?per_page=100: HTTP Error 502: Bad Gateway",
+      "findings": null,
+      "state": "could_not_read"
     },
     "C_expiring_unlanded_artifacts": {
       "findings": [
+        {
+          "artifact": "gdelt-panel-2026-10",
+          "artifact_id": 12638576340,
+          "expires_at": "2026-11-02T09:01:09Z",
+          "run_id": "40296135089",
+          "workflow": "news-gdelt-panel.yml"
+        },
         {
           "artifact": "gdelt-panel-2026-10",
           "artifact_id": 12592331670,
@@ -136,16 +39,9 @@
           "expires_at": "2026-10-31T08:11:42Z",
           "run_id": "40076981889",
           "workflow": "news-gdelt-panel.yml"
-        },
-        {
-          "artifact": "gdelt-panel-2026-10",
-          "artifact_id": 12488644558,
-          "expires_at": "2026-10-30T08:36:27Z",
-          "run_id": "39925688446",
-          "workflow": "news-gdelt-panel.yml"
         }
       ],
-      "population": "2578 artifact(s) listed, 2578 unexpired, 1762 expire within 72.0h across 1742 run(s); 3 of those from research workflows (news-gdelt-panel.yml); a landed copy = run id named on origin/main in research/results, a commit message, or a file under research/**, docs/research/**, runtime_logs/replay_pregate/**",
+      "population": "2513 artifact(s) listed, 2513 unexpired, 1755 expire within 72.0h across 1728 run(s); 3 of those from research workflows (news-gdelt-panel.yml); a landed copy = run id named on origin/main in research/results, a commit message, or a file under research/**, docs/research/**, runtime_logs/replay_pregate/**",
       "state": "findings"
     }
   },
