@@ -54,6 +54,31 @@ detectors return identical events on history truncated at 2026-04-01 (both class
 * The random null is vol-matched by ATR% decile only, not by hour of day.
 * Per-symbol events share market shocks; the weekly cluster handles it, and symbol-level numbers are not independent.
 
+## Held-out confirm (unit `RQ-20261030-e18g-02`, registered `4ddd50600` before the score; scored once) — verdict: PASS
+
+Operator 2026-10-30 ~22:00Z (via Manager Session 2026-10-30c), popup answer verbatim "Held-out confirm, as-is (Recommended)". Bar = the operator's DESK-13 gate
+(row DESK-13-MANDATE): an out-of-sample edge vs the random-entry baseline, net of the full cost stack, n >= 30 — PASS iff n >= 30 AND paired mean > 0 AND the
+95% weekly-cluster CI lower bound > 0. The +0.25 R bar does not apply. E4 frozen exactly as scored on DEV (same detector, thresholds, side rule, entry, bracket, horizon,
+costs, seed; `detect()` and `score_class()` unchanged; no 5-minute entry, no sweep).
+
+Window 2024-11-01..2025-10-25, time-disjoint from DEV, never scored by any DESK-18 arm (judged-2 units e72b-01/-02 name it but are blocked with no result, and are a different instrument).
+Open-interest point-in-time coverage: Binance Vision daily metrics from 2024-10-18, 2,256 files for six symbols, no gaps. Population: 856 E4 events, 52 ISO weeks (529 long, 327 short; 23 events fell outside the window edge).
+
+| measure | value |
+|---|---|
+| **S3 (paired mean vs random, per event)** | **+0.184 R**, 95% CI **[+0.092, +0.274]**, 97.5% CI [+0.077, +0.286] |
+| mean net R of the E4 entries (S1) | **+0.022 R** |
+| random null (same side and geometry, vol-matched) | −0.163 R |
+| direction rule alone (vs same-time side-averaged baseline) | +0.113 [+0.041, +0.181] |
+| MDE (iid / cluster) | 0.13 / 0.13 R |
+
+DEV vs held-out, same code: S3 +0.157 vs +0.184; S1 −0.006 vs +0.022; null −0.163 vs −0.163; direction-alone +0.076 [−0.007, +0.165] vs +0.113 [+0.041, +0.181]. The two windows agree in sign and size.
+
+**What PASS means, and does not.** E4 beats a same-model random entry out of sample, net of the full cost stack, with n 856: the DESK-13 gate as the operator worded it. It does **not** show a profitable
+strategy: **the absolute net R per trade is +0.022 R** (about break-even), and the margin over random exists mostly because this bracket's random null is −0.16 R. Of the +0.18 R, about +0.11 R is the
+direction rule and the rest is entering during an open-interest shock. It tests the TRIGGER, a mechanical rule; it says nothing about the LLM desk's judgement. Cost sensitivity is unmeasured: a
+0.022 R mean is smaller than a plausible error in the slippage assumption (Binance candles stand in for Bybit; entry is at least one 1h bar after the event, no live-fill modelling). The manager brings the desk-on-prop decision to the operator with these numbers.
+
 ## Best next step
 
 E4 is the only information-bearing lever so far, but its measured size (+0.157 R, 0.09 R under the bar) does not clear DESK-13. Two cheap, separate registrations
