@@ -410,7 +410,8 @@ def path_stats(trades: List[Dict[str, Any]]) -> Optional[Dict[str, Any]]:
 def build_record(name: str, cfg: Dict[str, Any], *, workdir: str,
                  days: int, folds: int,
                  research_emits: bool = False,
-                 window_days_source: str = "--days") -> Dict[str, Any]:
+                 window_days_source: str = "--days",
+                 window: Optional[tuple] = None) -> Dict[str, Any]:
     """Produce one leg's evidence record. Never raises on a leg-level failure."""
     import regime_debt_matrix as rdm  # local: pulls pandas transitively
 
@@ -472,7 +473,8 @@ def build_record(name: str, cfg: Dict[str, Any], *, workdir: str,
         # Opt-in only: the default call is byte-identical to before, so any
         # caller (or test double) of run_one without the kwarg is unaffected.
         row = rdm.run_one(name, cfg, workdir, days=days,
-                          **({"research_emits": True} if research_emits else {}))
+                          **({"research_emits": True} if research_emits else {}),
+                          **({"window": window} if window else {}))
     except Exception as e:  # noqa: BLE001 - a leg-level failure must not stop the sweep
         rec["coverage_state"] = "harness_failed"
         rec["error"] = f"{type(e).__name__}: {e}"
@@ -569,8 +571,12 @@ def build_record(name: str, cfg: Dict[str, Any], *, workdir: str,
         "data_start": bt.get("data_start"),
         "data_end": bt.get("data_end"),
         "git_sha": _git_sha(),
+        # Replays THIS measurement: the pinned window, not "the last N days".
         "argv": ["python3", GENERATOR, "--strategy", name,
-                 "--days", str(days), "--folds", str(folds)],
+                 "--days", str(days), "--folds", str(folds)]
+                + (["--window-start", str(bt["data_start"]),
+                    "--window-end", str(bt["data_end"])]
+                   if bt.get("data_start") and bt.get("data_end") else []),
     }
     rec["decision_rule"] = {
         "id": DECISION_RULE_ID,
@@ -806,6 +812,11 @@ def main(argv: Optional[List[str]] = None) -> int:
                     help="Window in days. Default: each leg's committed record's "
                          f"own window_days, else {DEFAULT_DAYS} (STAGE0-REPRO-GAP).")
     ap.add_argument("--folds", type=int, default=DEFAULT_FOLDS)
+    ap.add_argument("--window-start", default=None,
+                    help="Replay a pinned window: a record's reproduce.data_start "
+                         "(needs --window-end). Default: the last --days days.")
+    ap.add_argument("--window-end", default=None,
+                    help="Replay a pinned window: a record's reproduce.data_end.")
     ap.add_argument("--out", default=str(OUT_DIR))
     ap.add_argument("--workdir", default=None,
                     help="Where harness output lands, and therefore what "
@@ -821,6 +832,10 @@ def main(argv: Optional[List[str]] = None) -> int:
                          "Grading is unchanged; off = byte-identical.")
     a = ap.parse_args(argv)
 
+    if bool(a.window_start) != bool(a.window_end):
+        print("--window-start and --window-end go together", file=sys.stderr)
+        return 2
+    window = (a.window_start, a.window_end) if a.window_start else None
     legs = load_legs()
     names = a.strategy or sorted(legs)
     missing = [n for n in names if n not in legs]
@@ -854,7 +869,7 @@ def main(argv: Optional[List[str]] = None) -> int:
         days, days_src = resolve_window_days(n, out_dir, a.days)
         rec = build_record(n, legs[n], workdir=wd, days=days, folds=a.folds,
                            research_emits=a.research_emits,
-                           window_days_source=days_src)
+                           window_days_source=days_src, window=window)
         counts[rec["coverage_state"]] += 1
         _, decision = write_record(rec, out_dir, refusal_dir=Path(wd))
         if decision != "write":

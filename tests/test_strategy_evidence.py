@@ -479,3 +479,42 @@ def test_committed_measured_records_from_the_pinning_builder_carry_the_pins():
            and not all((r.get("reproduce") or {}).get(k) not in (None, "", [])
                        for k in bse.REPRODUCE_KEYS if k != "git_sha")]
     assert not bad, f"measured records without reproduce pins: {bad}"
+
+
+def test_window_flags_reach_run_one_and_must_come_in_pairs(tmp_path, monkeypatch):
+    seen: dict = {}
+    mod = types.ModuleType("regime_debt_matrix")
+    mod.classify = lambda cfg: "pullback"
+
+    def run_one(name, cfg, workdir, days=365, window=None):
+        seen["window"] = window
+        raise RuntimeError("stop after capture")
+
+    mod.run_one = run_one
+    monkeypatch.setitem(sys.modules, "regime_debt_matrix", mod)
+    w = ["2025-10-28 00:00:00+00:00", "2026-10-27 23:00:00+00:00"]
+    bse.main(["--strategy", _VICTIM, "--window-start", w[0], "--window-end", w[1],
+              "--out", str(tmp_path / "o"), "--workdir", str(tmp_path / "r")])
+    assert seen["window"] == tuple(w)
+    assert bse.main(["--strategy", _VICTIM, "--window-start", w[0],
+                     "--out", str(tmp_path / "o"), "--workdir", str(tmp_path / "r")]) == 2
+
+
+def test_trim_csv_keeps_every_source_row_inside_the_last_leg_bar(tmp_path):
+    spec = importlib.util.spec_from_file_location(
+        "rdm_real", ROOT / "scripts" / "research" / "regime_debt_matrix.py")
+    rdm = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(rdm)
+    csv = tmp_path / "d.csv"
+    rows = ["timestamp,open,high,low,close,volume"] + [
+        f"2026-01-01 {h:02d}:00:00+00:00,1,1,1,1,1" for h in range(24)]
+    csv.write_text("\n".join(rows) + "\n")
+    # 4h leg bars: start 04:00, last leg bar opens 12:00 -> keep 04:00..15:00 (12 rows)
+    kept = rdm.trim_csv_to_window(str(csv), "2026-01-01 04:00:00+00:00",
+                                  "2026-01-01 12:00:00+00:00", "4h")
+    assert kept == 12
+    lines = csv.read_text().strip().splitlines()[1:]
+    assert lines[0].startswith("2026-01-01 04:00") and lines[-1].startswith("2026-01-01 15:00")
+    import pytest
+    with pytest.raises(RuntimeError):
+        rdm.trim_csv_to_window(str(csv), "2027-01-01", "2027-01-02", "4h")
