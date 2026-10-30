@@ -4,7 +4,7 @@
   "phase": null,
   "state": "in_flight",
   "owner": "manager",
-  "lane": "session_01AFoLuKnxrXwUfkxME2GXW7",
+  "lane": null,
   "model": "claude-opus-5-5",
   "ceiling_usd": 20,
   "spend_usd": null,
@@ -15,12 +15,18 @@
     21213
   ],
   "blocked_on": [],
-  "note": "DEPLOYED: runtime-config git_sha 7955bba7c (contains d2a4ae11), verdict CURRENT, 12:16:39Z. The canary is live on the 4 TD legs. Not yet observed: the first overlay_reduce on a low-scored TD entry (filled, not rejected for min lot).",
+  "note": "DEPLOYED: runtime-config git_sha 7955bba7c (contains d2a4ae11), verdict CURRENT, 12:16:39Z. The canary is live on the 4 TD legs. Not yet observed: the first overlay_reduce on a low-scored TD entry (filled, not rejected for min lot). OPERATOR DECISION 2026-10-30T07:43Z (popup to Manager Session 2026-10-30b, verbatim answer: \"Annotate both out (Recommended)\") on PI-20261030-XME2GXW7-0001: remove trend_donchian_eth_4h and trend_donchian_sol_prop from config/overlay_policy.yaml (back to annotate) until those legs decide on the closed bar. Basis: MEASURED -329 bps entry-vs-decision-bar gap on eth_4h pkg-a04b68a15ea14d19 (relay #21439); closed-bar legs xrp_4h/eth_prop read 0.0 bps. No order affected so far (every multiplier x1.0). Prior lane session_01AFoLuKnxrXwUfkxME2GXW7 archived (spend $70.40 vs $20 ceiling, over). Fresh Opus lane OVERLAY-ANNOTATE-ETH4H-SOLPROP dispatched for the config edit.",
   "priority_rank": 1,
-  "updated_at": "2026-10-29T12:17:03Z",
-  "updated_by": "session_01AFoLuKwNMzjtn2CH2kVd86",
+  "updated_at": "2026-10-30T07:44:07Z",
+  "updated_by": "session_01AFoLuKe1M26JqmpKg3rYdo",
   "roadmap": [
     "L-ML-LIVE"
+  ],
+  "lane_history": [
+    {
+      "lane": "session_01AFoLuKnxrXwUfkxME2GXW7",
+      "archived_at": "2026-10-30T07:44:07Z"
+    }
   ],
   "_seq": 786
 }
