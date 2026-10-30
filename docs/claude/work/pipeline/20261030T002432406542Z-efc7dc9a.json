@@ -1,0 +1,17 @@
+{
+  "due_when": {
+    "clears_when": "the manager/operator picks (a), (b) or (c) and it lands; or kill with a reason (e.g. the stale-by-one-bar features are judged immaterial, with a measurement)",
+    "kind": "event"
+  },
+  "id": "PI-20261030-XME2GXW7-0001",
+  "next_action": "ask_operator",
+  "origin": {
+    "kind": "session",
+    "ref": "lane ML-REAL-MONEY-OVERLAY (session_01AFoLuKnxrXwUfkxME2GXW7) / canary #21213 observe check #5",
+    "rerun": "vm-diag-request body: log_file?name=overlay_shadow&lines=200 ; read entry_vs_bar_close_bps per strategy_id (non-zero only on legs without decision_bar: closed)"
+  },
+  "severity": "medium",
+  "state": "queued",
+  "tier": 3,
+  "what": "ML-REAL-MONEY-OVERLAY serve-parity gap on FORMING-bar legs (MEASURED live 2026-10-29, relay #21439): trend_donchian_eth_4h and trend_donchian_sol_prop set no decision_bar: closed, so they enter mid-bar, while the overlay scores the last CLOSED bar. First live eth_4h package pkg-a04b68a15ea14d19 (20:46Z short): pkg_entry 2260.18 vs decision-bar (16:00-20:00) close 2337.17 = -329 bps. The V2 evidence corpus is closed-bar (entry == decision-bar close), so on these 2 legs the live features are ~one bar staler than the validated distribution; the closed-bar legs (xrp_4h, eth_prop) read 0.0 bps = exact parity. No order was changed (every package so far scored p_win > tau, x1.0). Options for the manager/operator (Tier 3): (a) drop eth_4h and sol_prop from config/overlay_policy.yaml (back to annotate) until they decide on the closed bar; (b) switch those legs to decision_bar: closed (DECISION-BAR-MATCH RQ-20261022-4de5-01 already recommended SWITCH_TO_CLOSED); (c) re-grade the overlay on a forming-bar corpus for those legs."
+}
