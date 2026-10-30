@@ -1,6 +1,6 @@
 # DESK-AM-REFOCUS: why desk/LTR judgement has not added value, and the judgement-desk design
 
-> **Doc status:** `live` · category `research` · last verified `2026-10-30` · row `DESK-AM-REFOCUS` · lane session_01AFoLuLYH6B5e8LJSBB8q9x (dispatched by Manager Session 2026-10-30c)
+> **Doc status:** `unknown` · category `evidence` · last verified `never` · registered in [`docs/DOCUMENT-INDEX.md`](../DOCUMENT-INDEX.md) · row `DESK-AM-REFOCUS` · lane session_01AFoLuLYH6B5e8LJSBB8q9x (dispatched by Manager Session 2026-10-30c)
 
 **Gates this adds or changes:** none. No `mode:`, no `execution:`, no `*_ENABLED` flag, no new apply path. Every in-trade class stays advice-only (`ARCHITECTURE-CANONICAL` § "Active management" clause 4); `MD-TRADE-DESK`'s armed scope is unchanged.
 
