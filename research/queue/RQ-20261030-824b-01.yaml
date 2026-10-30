@@ -1,0 +1,128 @@
+# Hand-authored 2026-10-30 by lane TM-BENCH (Tier 1), dispatched by Manager Session 2026-10-30a (session_01AFoLuN7eK1S1a4nLsZ8A5m).
+# Decision rule registered BEFORE any runner run. Gates: none.
+id: RQ-20261030-824b-01
+title: 'TM-BENCH v1 re-entry test: does scripts/research/tm_bench.py pass its selfcheck, score HOLD against itself as exactly 0, and reproduce
+  the 0.756 R/trade hindsight-oracle saving on the six money legs as traded (corpus v1)?'
+status: queued
+cadence: once
+theme: ml_health
+priority: 1
+programme: P2
+roadmap:
+- L-ML-LIVE
+- L-ATM
+kind: experiment
+practice_precedent: 'M6 + T1 (docs/reference/trading-and-model-practice-principles.md): purged, embargoed walk-forward grouped by trade; every
+  arm judged against hold-to-exit AND a causal matched random intervention (scripts/research/intervention_controls.py). Bench spec:
+  docs/plans/ML-PROGRAMME-2026-10-28.md section 4.2 and section 5 row 1.'
+question: 'On corpus v1 (config-exact harness runs with --emit-paths of trend_donchian_eth_4h, trend_donchian_xrp_4h, xrp_pullback_2h,
+  ada_pullback_2h, trend_donchian_eth_prop, trend_donchian_sol_prop over 2020-07-01 .. 2026-10-15 23:59, the RQ-20261024-09a6-01 population),
+  does tm_bench.py score (a) pass its selfcheck (engine fidelity, HOLD = 0, action-value ceiling, census oracle identity, planted/null
+  learner controls, cross-symbol purge), (b) score the B0 hold policy against itself as exactly 0.0 R through the same scorer, and (c)
+  reproduce the census oracle best-close saving of 0.756 R/trade within 0.005? B0-B6 and the logit / LightGBM action-value wrappers are
+  scored and reported beside it under the section 1.4 check-in grid; they are not graded here.'
+why_this_matters: 'TM-BENCH defines the numbers every later trade-management verdict rests on (Q-TM1/2/3/6/9/10, B3, DESK-22). Its
+  re-entry test (checklist row TM-BENCH) is this run. A PASS unblocks RQ-20261029-7294-01/-02 (the action-value head that
+  ML-AM-NEXT-LIVE proposes next) on a scorer whose zero and ceiling are verified on the real population, not only on synthetic paths.'
+power:
+  expected_n: 2627
+  min_detectable_effect: 0.005
+  effect_units: R
+  sd: 0.0
+  design: reproduction
+  alpha: 0.05
+  power: 0.8
+  basis: 'A reproduction, not a sampling test: the census oracle is a deterministic function of the emitted paths (MEASURED 0.7562 on
+    2,627 trades, research/results/RQ-20261024-09a6-01/40143286436.jsonl, census.__pooled__). A harness change since 2026-10-24 that
+    moves the emit moves it; the tolerance 0.005 R is the row''s.'
+  feasibility:
+    source: none
+    accrual_basis: Replays history through config-exact harness runs on keyless public candles for a pinned window; nothing accrues.
+decision_rule:
+  id: RULE-RQ20261030-824B-01-TMBENCH-REPRODUCE
+  registered_at: '2026-10-30'
+  registered_before_run: true
+  statistic: 'tm_bench selfcheck pass/fail; B0_hold b0_minus_b0_r (sum of the hold policy''s paired dR over every OOS trade); measurement.oracle.census_best_close_saving_r_per_trade
+    on corpus v1; every leg''s parity state.'
+  rule: 'PASS IF selfcheck passes AND b0_minus_b0_r == 0.0 exactly AND |census oracle - 0.756| <= 0.005 AND every v1 leg is included
+    (peak_r == mfe_r parity on >= 99% of its trades). PASS -> row TM-BENCH closes done; RQ-20261029-7294-01 and -02 have their TM-BENCH
+    blocker cleared (their own other blockers stand). FAIL IF selfcheck passes and every leg is included but b0_minus_b0_r != 0 or the
+    oracle misses 0.756 by more than 0.005: the bench (or the harness emit since 2026-10-24) does not reproduce the programme''s
+    reference number; the row stays open on a diagnosis, nothing downstream is unblocked. INDETERMINATE IF the selfcheck fails, a leg''s
+    harness run fails or a leg fails parity. Thresholds are not changed after any result.'
+  min_n: 2,000 trades on corpus v1
+intervention_controls:
+  hold_to_bracket: true
+  matched_random:
+    draws: 200
+  best_static:
+    grid:
+    - be_at_1r
+    - lock1_at_2r
+    - be_lock_ladder
+    - chandelier_2atr
+    - chandelier_3atr
+    - channel_10
+    - channel_20
+    excludes_test_folds: true
+  bootstrap_group: trade
+ml_consumer:
+  consumer: src/runtime/exit_head_apply.py
+  decision: which scorer of record the in-trade action-value head (hold / close / tighten on money-leg open trades) is judged on before it can act
+  legs:
+  - trend_donchian_eth_4h
+  - trend_donchian_xrp_4h
+  - xrp_pullback_2h
+  - ada_pullback_2h
+  - trend_donchian_eth_prop
+  - trend_donchian_sol_prop
+  book: money
+compute: cpu_long
+value:
+  bucket: ai_trader
+  usd_at_stake_per_month: 400
+  confidence: 0.3
+  basis: 'stand-in: the bench gates every trade-management model unit; the prize is the 0.756 R/trade oracle gap (ML-PROGRAMME section
+    1.2), not a P&L measurement of this unit.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 4.0
+  est_minutes: 90
+  why_runner: Keyless public candles plus config-exact harness runs; reads no trainer data; LightGBM on CPU.
+  basis: 'MEASURED in-session 2026-10-30 (see the lane report on row TM-BENCH): six harness passes with candle fetch plus labelling and
+    scoring; ESTIMATED headroom x2 for the runner.'
+run:
+  workflow: research-script-run.yml
+  command:
+  - python3
+  - scripts/research/tm_bench.py
+  - score
+  - --test-corpus
+  - v1
+  - --rule
+  - reproduce
+  - --folds
+  - '6'
+  - --n-boot
+  - '2000'
+  - --random-draws
+  - '200'
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 240
+  inputs:
+    research_unit: RQ-20261030-824b-01
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- docs/claude/work/checklist/TM-BENCH.json
+- docs/plans/ML-PROGRAMME-2026-10-28.md (section 4.2, section 5 row 1)
+- docs/research/ml-data-rate-path-2026-10-29.md (section 1 row A)
+- research/queue/blocked/RQ-20261029-7294-01.yaml
+- research/queue/blocked/RQ-20261029-7294-02.yaml
+what_it_does_not_do: 'Grades no model: the learner and baseline arms are reported, not graded (S-OFFLINE is computed per learner arm for
+  information only). Changes no config, places no order. The engine is counterfactual_grader.simulate until CF-B0-ENGINE-LIFT lands
+  cf_core.'

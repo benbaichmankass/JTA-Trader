@@ -104,14 +104,14 @@ jobs:
           # requirements-backtest.txt pins as the first that returns SPY/GDX rows.
           pip install yfinance==1.7.0
       - name: Install the ml_bakeoff learners (catboost / tabicl / tabpfn / torch) and probe them
-        # ML-NONGBDT-RUNNERS (2026-10-22). Only for a unit that runs ml_bakeoff.py; every other unit skips the ~1 GB torch wheel.
+        # ML-NONGBDT-RUNNERS (2026-10-22). Only for a unit that runs ml_bakeoff.py (or tm_bench.py, TM-BENCH 2026-10-30); every other unit skips the ~1 GB torch wheel.
         # Absent, lightgbm/catboost/tabicl/tabpfn/torch_gru all landed `unavailable` on this backend. A failed install is reported
         # by the probe line below and the unit still runs (an unavailable arm is a recorded fact, never a halt).
         continue-on-error: true
         env:
           UNIT: ${{ inputs.research_unit }}
         run: |
-          if grep -qs "ml_bakeoff" "research/queue/${UNIT}.yaml"; then
+          if grep -qsE "ml_bakeoff|tm_bench" "research/queue/${UNIT}.yaml"; then   # tm_bench: its LightGBM action-value wrapper (TM-BENCH)
             pip install --extra-index-url https://download.pytorch.org/whl/cpu -r scripts/research/requirements-learners.txt
             python3 scripts/research/probe_learners.py --backend github_runner
           else
