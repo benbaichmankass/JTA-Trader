@@ -1,0 +1,17 @@
+{
+  "due_when": {
+    "due_date": "2026-11-13",
+    "kind": "date"
+  },
+  "id": "PI-20261030-JSBB8Q9X-0002",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "lane DESK-AM-REFOCUS (session_01AFoLuLYH6B5e8LJSBB8q9x), manager dispatch 2026-10-30c",
+    "rerun": "python3 scripts/research/desk_am_judgement_grade.py --live --write  # RULE-DESK-AM-JUDGEMENT-V1; reads comms/live_review/reviews.jsonl rows with a forecast from 2026-10-31"
+  },
+  "severity": "high",
+  "state": "queued",
+  "tier": 1,
+  "what": "First forward grade of the judgement desk (RULE-DESK-AM-JUDGEMENT-V1, docs/research/desk-am-refocus-diagnosis-2026-10-30.md section 3): per-package d_hold and d_mech net of cost, forecast Brier and hit rate. Expected 'accruing' (n_packages < 30) at the first run; record n, calibration and by-action means on row DESK-AM-REFOCUS, and re-date until n_packages >= 30 resolves pass/fail/indeterminate. Also check rows with trigger.event judgement_cadence exist once PR #21732 is deployed (else the cadence is not observed)."
+}
