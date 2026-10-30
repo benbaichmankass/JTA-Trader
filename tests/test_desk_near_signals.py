@@ -31,7 +31,7 @@ def test_every_current_rostered_leg_resolves_to_a_unit():
     # name-family rule in desk_near_signals.UNIT_ORDER, so the desk reads them as `unlooked` (loud, never quiet).
     # Pinned as the KNOWN gap, not as acceptable: pipeline item filed to add their families. A NEW unresolved leg fails.
     # 2026-10-30 (E4-DEMO-LEG): e4_oi_shock_1h joins the bybit_1 demo. Its trigger is an open-interest shock, which no
-    # candle probe can see, so the desk reads it `unlooked` (loud). Known gap, filed in docs/claude/work/PIPELINE.jsonl.
+    # candle probe can see, so the desk reads it `unlooked` (loud). Known gap, filed as PI-20261030-VGDEM8YS-0002.
     assert unresolved == ["e4_oi_shock_1h", "fade_breakout_4h", "fvg_range_15m", "squeeze_breakout_4h", "turtle_soup"]
 
 

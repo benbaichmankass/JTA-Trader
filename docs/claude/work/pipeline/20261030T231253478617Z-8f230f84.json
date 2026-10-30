@@ -1,0 +1,17 @@
+{
+  "due_when": {
+    "due_date": "2026-11-03",
+    "kind": "date"
+  },
+  "id": "PI-20261030-VGDEM8YS-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "lane E4-DEMO-LEG (session_01AFoLuLAkH5ZS2evGDem8Ys), manager dispatch 2026-10-30c, PR #21730",
+    "rerun": "test -f comms/strategy_evidence/e4_oi_shock_1h.json && echo linked || echo 'NOT linked: record is comms/strategy_evidence/e4_oi_shock.json, leg is e4_oi_shock_1h'"
+  },
+  "severity": "medium",
+  "state": "queued",
+  "tier": 1,
+  "what": "E4's absolute Stage-0 evidence record (verdict FAIL, RQ-20261030-e18g-03, PR #21720) is written as comms/strategy_evidence/e4_oi_shock.json, but the live leg is named e4_oi_shock_1h (PR #21730). Tooling that resolves comms/strategy_evidence/<leg>.json therefore cannot see the fail verdict for the rostered leg (roster-promotion guards pass today only because bybit_1 is not a risk-bearing roster). Fix: the record's owner (DESK-18G) re-emits it under the leg name with the live config_fingerprint once #21730 merges; a second copy in #21730 would conflict with #21720."
+}
