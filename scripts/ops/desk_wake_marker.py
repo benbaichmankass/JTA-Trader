@@ -70,7 +70,7 @@ def scan_wake_every_h(path: Optional[Path] = None) -> int:
     try:
         import yaml
         n = int((yaml.safe_load((path or CONFIG).read_text()) or {}).get("scan_wake_every_h", 1))
-        return n if n >= 1 else 1
+        return max(n, 1)
     except Exception:  # noqa: BLE001 — a config fault wakes more, never less
         return 1
 
