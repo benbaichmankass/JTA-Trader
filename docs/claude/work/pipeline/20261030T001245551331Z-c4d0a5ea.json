@@ -1,0 +1,15 @@
+{
+  "due_when": {
+    "due_date": "2026-11-01",
+    "kind": "date"
+  },
+  "id": "PI-20261030-A1AEHRKH-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "ML-DATA-RATE-PATH lane report (PR #21435), Manager Session 2026-10-29d",
+    "rerun": "grep -n 'ml-volgate-wf-2026-10-29' docs/DOCUMENT-INDEX.md"
+  },
+  "state": "queued",
+  "what": "docs/DOCUMENT-INDEX.md (~line 165) carries a docs/research/ml-volgate-wf-2026-10-29/README.md row inside the generator-exempt table (registered 1377 vs population 1376), and document_index.py --write refuses to regenerate on pre-existing unowned bases. Reported by lane ML-DATA-RATE-PATH 2026-10-30T00:11Z (PR #21435). Fix: move/remove the stray row so registered == population and --write runs clean."
+}

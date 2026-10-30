@@ -1,0 +1,105 @@
+# Hand-authored 2026-10-29 by lane ML-DATA-RATE-PATH (Tier 1), dispatched by Manager Session 2026-10-29d (session_01AFoLuJUkhLNmykA1AEHrkh).
+# Decision rule registered BEFORE any run. Design: docs/research/ml-data-rate-path-2026-10-29.md section 2. Gates: none.
+id: RQ-20261029-7294-01
+title: 'DATA-TRANSFER: does training the action-value model on broad-universe harness paths (corpus v2, 60 perps x the six money-leg configs)
+  improve its out-of-sample prediction on the six money legs as traded, against training on the money legs alone?'
+status: blocked
+cadence: once
+theme: ml_health
+priority: 1
+programme: P2
+roadmap:
+- L-ML-LIVE
+kind: experiment
+practice_precedent: 'M6 + T1 (docs/reference/trading-and-model-practice-principles.md): purged, embargoed walk-forward grouped by trade; the
+  candidate and baseline share learner, folds, cost stack and test rows, so only the training data differs. Design rules from
+  docs/plans/counterfactual-everywhere-DESIGN-2026-10-29.md section 1.2 (leakage rules 1-5).'
+question: 'Corpus v1 = the six money legs as traded (trend_donchian_eth_4h, trend_donchian_xrp_4h, xrp_pullback_2h, ada_pullback_2h,
+  trend_donchian_eth_prop, trend_donchian_sol_prop; 2,627 trades / 50,926 bar-states, RQ-20261024-09a6-01 census). Corpus v2 = the same six
+  configs run config-exact on the frozen 60-perp list of row ML-DATA-BROAD-PATHS (de-duplicated on trade_key). TM-BENCH action-value
+  labels (per (trade, bar, action) net-R advantage over hold, full cost stack). Learner: the TM-BENCH LightGBM action-value wrapper with
+  fixed hyper-parameters (no tuning on test folds). Arms: A0 train on v1 train folds only; A25 / A100 / A400 add a random (seeded,
+  trade-grouped) 25 / 100 / 400 percent of v1-train-size from v2 train folds (A400 capped at all of v2). Test rows are ALWAYS the v1 money-leg
+  rows of the held-out fold. Six calendar folds by entry; any train row (v1 or v2, any symbol) whose [entry, exit + horizon] overlaps the
+  test fold window is purged, embargo = the leg max hold. Does the largest arm cut OOS prediction error versus A0?'
+why_this_matters: 'Operator 2026-10-29: models must not wait for live trades. The harnesses already generate trades at ~1,400 per symbol-config
+  in seconds (MEASURED, DOGEUSDT 1h 5.7 s). Whether that volume helps the money legs is the open question; if it does not transfer, the
+  data-rate path for in-trade models is the counterfactual arm grid on the money legs own history instead (source B). This unit decides
+  which corpus Q-TM1 (RQ-20261029-7294-02) trains on.'
+power:
+  expected_n: 2627
+  min_detectable_effect: 0.02
+  effect_units: metric
+  sd: 0.25
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: 'Test population MEASURED 2,627 trades / 50,926 states (RQ-20261024-09a6-01 census). Effect = relative MSE reduction; per-trade sd of
+    the relative MSE difference is not measured, 0.25 is ESTIMATED (a comparable information test on the same population, 09a6-01, resolved
+    +0.0023 nats with 6/6 folds positive). Power is carried by trades, not states (trade-cluster bootstrap).'
+  feasibility:
+    source: none
+    accrual_basis: Replays history through config-exact harness runs on keyless public candles; nothing accrues.
+decision_rule:
+  id: RULE-RQ20261029-7294-01-DATA-TRANSFER
+  registered_at: '2026-10-29'
+  registered_before_run: true
+  statistic: 'Trade-weighted OOS MSE of the per-action advantage prediction on v1 test rows, per arm; relative reduction R = 1 - MSE(A400)/MSE(A0)
+    pooled, trade-cluster bootstrap 95 percent CI (2,000 resamples), per-fold sign; monotonicity across A0 -> A25 -> A100 -> A400. Reported,
+    not graded: the S-OFFLINE policy delta of A400 vs A0 (net R/trade vs B0), per-leg rows with their n.'
+  rule: 'INDETERMINATE IF v1 test trades < 2,000 OR v2 de-duplicated trades < 10,000 OR TM-BENCH selfcheck fails. PASS IF R >= 0.02 AND CI lower
+    bound > 0 AND R > 0 in >= 4 of 6 folds AND MSE rises in at most 1 of the 3 nested steps. PASS -> Q-TM1 (7294-02) trains on v1+v2 and
+    ML-DATA-BROAD-PATHS widens to every harness family. FAIL IF CI upper bound < 0.02: broad-universe paths do not transfer to the money legs at
+    this configuration; 7294-02 trains on v1 only and the data-rate path for in-trade models becomes the cf arm grid on v1 (CF-B1). A FAIL
+    closes this configuration (60 perps, money-leg configs, these features), not the family. INDETERMINATE otherwise. Thresholds are not
+    changed after any result.'
+  min_n: 2,000 v1 test trades; 10,000 v2 trades
+intervention_controls:
+  not_applicable: 'an information test of training data; no exit action is graded here. The policy arms and their matched random control are graded in RQ-20261029-7294-02.'
+ml_consumer:
+  consumer: src/runtime/exit_head_apply.py
+  decision: which corpus the in-trade action-value head trains on before it can act (hold / close / tighten) on money-leg open trades
+  legs:
+  - trend_donchian_eth_4h
+  - trend_donchian_xrp_4h
+  - xrp_pullback_2h
+  - ada_pullback_2h
+  - trend_donchian_eth_prop
+  - trend_donchian_sol_prop
+  book: money
+compute: cpu_long
+value:
+  bucket: ai_trader
+  usd_at_stake_per_month: 400
+  confidence: 0.35
+  basis: 'stand-in: decides the training corpus of the next active-management ML candidate (ML-AM-NEXT-LIVE); the prize is the 0.756 R/trade
+    hindsight-oracle gap on 2,627 trades (ML-PROGRAMME section 1.3), not a P&L measurement of this unit.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 8.0
+  est_minutes: 180
+  why_runner: Keyless public candles plus harness runs; reads no trainer data; LightGBM on CPU fits within a runner.
+  basis: 'ESTIMATED: corpus v2 ~1.7M states; four arms x six folds of LightGBM on CPU.'
+blocked_on:
+- kind: work_item
+  ref: ML-DATA-BROAD-PATHS
+  what: Corpus v2 (frozen 60-perp list x six money-leg configs, emit-paths, trade_key de-dup, manifest) does not exist.
+  clears_when: comms/research/broad_paths/<corpus_id>/manifest.json lands with >= 10,000 de-duplicated trades and the shards are fetchable by a runner.
+- kind: work_item
+  ref: TM-BENCH
+  what: scripts/research/tm_bench.py does not exist (no file on main 2026-10-29); it owns the action-value labels, folds, cross-symbol purge and the LightGBM wrapper.
+  clears_when: 'tm_bench.py selfcheck passes on corpus v1 and accepts --train-corpus / --test-corpus; then set run.command to
+    [python3, scripts/research/tm_bench.py, transfer, --test-corpus, v1, --train-corpus, v2, --fractions, 0,0.25,1,4, --folds, 6, --n-boot, 2000,
+    --out, {out_dir}], git mv this file to research/queue/, remove blocked_on and set status: queued.'
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- ML-DATA-RATE-PATH
+- ML-AM-NEXT-LIVE
+- docs/plans/ML-PROGRAMME-2026-10-28.md (Q-TM5, section 5 rows 1-2)
+- docs/plans/counterfactual-everywhere-DESIGN-2026-10-29.md
+what_it_does_not_do: Trains nothing that is registered or served, changes no config, places no order. It grades prediction error, not money;
+  the money test is 7294-02. Harness paths are not live paths.
