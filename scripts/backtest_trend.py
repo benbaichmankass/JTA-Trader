@@ -839,20 +839,27 @@ def run_backtest(df: pd.DataFrame, *, donchian: int, atr_period: int,
         # entry_override remainder check -- tests/test_backtest_trend_live_tp.py
         # pins that each direction has exactly one site. Reads the CURRENT
         # `trail` at call time.
-        def _stop_or_target(h: float, lo: float):
+        def _stop_or_target(h: float, lo: float, o: Optional[float] = None):
+            # HARNESS-TRAIL-GAPFILL: a stop or target touched on a bar that OPENS
+            # beyond it fills at the OPEN, not at the level -- the cf_core rule
+            # (scripts/research/cf_core.py::simulate: min(stop, open) long,
+            # max(stop, open) short; max/min for the target). `o` is None only
+            # for the entry_override remainder check (no bar open exists there).
             if direction == "long":
                 if lo <= trail:                       # SL-first (conservative)
-                    return trail, ("trail_stop" if trail > sl else "stop")
+                    px = trail if o is None else min(trail, o)
+                    return px, ("trail_stop" if trail > sl else "stop")
                 if tp_price is not None and h >= tp_price:
                     # Checked AFTER the stop so the conservative SL-first
                     # intrabar convention is unchanged: a bar that trades
                     # through both still takes the stop.
-                    return tp_price, "take_profit"
+                    return (tp_price if o is None else max(tp_price, o)), "take_profit"
             else:
                 if h >= trail:
-                    return trail, ("trail_stop" if trail < sl else "stop")
+                    px = trail if o is None else max(trail, o)
+                    return px, ("trail_stop" if trail < sl else "stop")
                 if tp_price is not None and lo <= tp_price:
-                    return tp_price, "take_profit"
+                    return (tp_price if o is None else min(tp_price, o)), "take_profit"
             return None
 
         _rest_hit = None
@@ -882,7 +889,7 @@ def run_backtest(df: pd.DataFrame, *, donchian: int, atr_period: int,
                         else entry - bank_at_r * risk)
                 if (bh >= rung) if direction == "long" else (bl <= rung):
                     banked = True
-            _hit = _stop_or_target(bh, bl)
+            _hit = _stop_or_target(bh, bl, float(df["open"].iloc[j]))
             if _hit is not None:
                 exit_price, exit_reason = _hit
                 exit_idx = j

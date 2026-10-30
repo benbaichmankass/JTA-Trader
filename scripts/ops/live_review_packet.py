@@ -559,15 +559,15 @@ def build_packet(pkg: str, s: Snapshot, now: datetime, *, write_tables: bool = F
     corr = [{"order_package_id": o, "symbol": (s.packages.get(o) or {}).get("symbol"), "direction": (s.packages.get(o) or {}).get("direction")}
             for o in open_package_ids(s) if o != pkg and (s.packages.get(o) or {}).get("direction") == direction]
     prev = None
-    if REVIEWS.exists():
-        for line in REVIEWS.read_text().splitlines():
-            try:
-                r = json.loads(line)
-            except ValueError:
-                continue
-            if r.get("order_package_id") == pkg:
-                prev = {"review_id": r["review_id"], "reviewed_at": r.get("reviewed_at"),
-                        "action": (r.get("recommendation") or {}).get("action"), "route": (r.get("recommendation") or {}).get("route")}
+    try:
+        from src.runtime import live_review_due as _lrd
+        mine = [r for r in _lrd.read_reviews_merged(str(REVIEWS))["rows"] if r.get("order_package_id") == pkg]
+        mine.sort(key=lambda r: str(r.get("reviewed_at") or ""))
+    except Exception:  # noqa: BLE001  # allow-silent: no previous_review beats a failed packet
+        mine = []
+    for r in mine[-1:]:
+        prev = {"review_id": r.get("review_id"), "reviewed_at": r.get("reviewed_at"),
+                "action": (r.get("recommendation") or {}).get("action"), "route": (r.get("recommendation") or {}).get("route")}
     miss("context.live_vs_backtest", "per-leg live-vs-backtest verdict not assembled by this generator yet")
 
     reads = [t for k, t in s.read_at.items()]
