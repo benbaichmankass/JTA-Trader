@@ -1,0 +1,17 @@
+{
+  "due_when": {
+    "due_date": "2026-11-04",
+    "kind": "date"
+  },
+  "id": "PI-20261030-FL55G326-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "lane XRP-SAME-SYMBOL-ALLOCATION (session_01AFoLuJ6pqD3uHdfL55G326), manager dispatch 2026-10-30c",
+    "rerun": "python3 - <<'X'\nimport pathlib\nr=pathlib.Path('.')\nfor ri in sorted(r.glob('comms/research/*/*/record-inputs.json')):\n    u,run=ri.parent.parent.name,ri.parent.name\n    if run.isdigit() and not (r/'research/results'/u/f'{run}.jsonl').exists(): print(u,run)\nX\n# expect the 7 runs listed in `what`; then: grep -n recollect .github/workflows/research-queue-dispatch.yml"
+  },
+  "severity": "medium",
+  "state": "queued",
+  "tier": 1,
+  "what": "No workflow calls scripts/research/collect_runner_results.py --recollect-orphans (only collect(), in research-queue-dispatch.yml, which skips any run whose comms/research/<unit>/<run>/run-manifest.json is already on main). So a run whose artifact dir reached main before its E5 record was written is stranded forever: the unit grades off stale producer_failed rows. Found via RQ-20261015-1631-02 (run 40148577750; its record was emitted by hand in #21663, and runs 40148576330 and 40148578991 are emitted in this PR's branch). Seven more orphans remain that recollect REFUSES (research_result.py --emit): RQ-20261007-080/38747768830, RQ-20261014-470a-11/38663651638, 39707652763, 40809912795, RQ-20261026-bf56-02/40710666532, RQ-20261026-bf56-03/40733370814, RQ-20261026-e535-03/40603772459. Refusal reasons seen: verdict vocabulary / 'not_applicable' on a measured read_state, and read_state no_data with population.n 15 (must be null). Those need a per-unit look, not a blanket re-emit. FIX CANDIDATE (not wired; the manager decides): call --recollect-orphans from research-queue-dispatch.yml after collect(), warn-not-fail on refusals."
+}
