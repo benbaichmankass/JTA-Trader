@@ -67,10 +67,7 @@ GRANDFATHERED: Dict[str, Dict[str, Any]] = {
     # due date, one leg renamed. bybit_2 / bybit_portfolio keep the incumbent (entries below).
     "bybit_1/XRPUSDT": {"legs": ["trend_donchian_xrp_adx25", "xrp_pullback_2h"],
                         "unit": "RQ-20261015-1631-02", "due": "2026-10-29"},
-    "bybit_2/XRPUSDT": {"legs": ["trend_donchian_xrp_4h", "xrp_pullback_2h"],
-                        "unit": "RQ-20261015-1631-02", "due": "2026-10-29"},
-    "bybit_portfolio/XRPUSDT": {"legs": ["trend_donchian_xrp_4h", "xrp_pullback_2h"],
-                                "unit": "RQ-20261015-1631-02", "due": "2026-10-29"},
+    # bybit_2 / bybit_portfolio XRPUSDT: grandfather REMOVED 2026-10-30; covered by comms/same_symbol_allocation/xrpusdt-bybit_2-bybit_portfolio.json.
     # Blocked units: the harness cannot run these legs yet (see each unit's blocked_on). Dated for the unblock + a run.
     "ib_paper/MGC": {"legs": ["ict_scalp_mgc_15m", "mgc_pullback_1d", "mgc_trend_1h"],
                      "unit": "RQ-20261015-1631-03", "due": "2026-11-30"},
