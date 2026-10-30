@@ -11,7 +11,7 @@ _spec.loader.exec_module(G)
 
 
 def _bars(rows, t0=0, step=3600):
-    return [{"time": t0 + i * step, "open": o, "high": h, "low": l, "close": c} for i, (o, h, l, c) in enumerate(rows)]
+    return [{"time": t0 + i * step, "open": o, "high": h, "low": lo, "close": c} for i, (o, h, lo, c) in enumerate(rows)]
 
 
 FC = {"target_px": 110.0, "invalidation_px": 95.0, "horizon_bars": 3, "timeframe": "1h", "p_target": 0.5}
