@@ -1,0 +1,15 @@
+{
+  "due_when": {
+    "due_date": "2026-11-06",
+    "kind": "date"
+  },
+  "id": "PI-20261030-20261030-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "research",
+    "ref": "lane RESEARCH-GRADE-20261030; research/templates/roster-walkforward.yaml decision_rule",
+    "rerun": "grep -l 'net-of-cost OOS R' research/queue/*.yaml | xargs grep -l 'research-harness-dispatch.yml' | wc -l; python3 scripts/research/result_disposition_check.py --list"
+  },
+  "state": "queued",
+  "what": "ROSTER-WALKFORWARD UNITS STILL CANNOT GRADE (re-filed: PI-20261006-1VPYTX8E-0001 was bulk-killed 2026-10-29 'value unknown', the defect was not fixed). research/templates/roster-walkforward.yaml registers RULE-TPL-ROSTER-WALKFORWARD-NET-OF-COST on 'net-of-cost OOS R' but routes to research-harness-dispatch.yml, whose mapper (scripts/research/harness_dispatch_result.py) grades only 'net_total_r > 0 AND n_trades >= N' and emits wiring_only; the payload carries a WHOLE-WINDOW net_total_r, no OOS split. MEASURED 2026-10-30 (lane RESEARCH-GRADE-20261030) on the 4 newest landings: RQ-20261029-020 (ada, n=29, -4.06R), -021 (eth_prop, n=36, -6.00R), RQ-20261030-005 (fade_breakout_4h BTC 4h, n=43, -6.95R), -012 (fvg_range_15m BTC 15m, n=181, -49.27R) -- all whole-window, none the registered statistic. n<39 units are indeterminate by the rule regardless; the n>=39 pair cannot be called PASS/FAIL without re-scoping the rule. DECIDE: (a) re-register the template on the mapper's shape for future runs, or (b) add an OOS figure to the payload / route to a walk-forward harness. Each weekly landing re-creates the needs_review otherwise (15+ owned units already). Legs involved are bybit_1 (Stage-1 floor) only; no real-money exposure."
+}
