@@ -159,3 +159,21 @@ def test_reduce_policy_only_on_artifact_gate_legs():
     for leg, v in pol.items():
         if str(v.get("mode", "")).lower() == "reduce":
             assert leg in arts.get(v.get("artifact"), set()), (leg, v)
+
+
+def test_committed_policy_forming_bar_legs_annotate_closed_bar_legs_reduce():
+    """PI-20261030-XME2GXW7-0001 (operator 2026-10-30, "Annotate both out"): the two FORMING-bar legs read
+    annotate from the committed policy (no size change even on a cutting score); the closed-bar legs keep reduce.
+    All four stay artifact gate legs, so they are still scored and logged to overlay_shadow.jsonl."""
+    gate = set(ovs._load_artifacts().get("trend_donchian_eth_4h", {}).get("legs_gate") or [])
+    for leg in ("trend_donchian_eth_4h", "trend_donchian_sol_prop"):
+        assert ovs.overlay_policy_mode(leg) == "annotate", leg
+        assert leg in gate, leg
+        pkg = SimpleNamespace(strategy=leg, meta={"_overlay_shadow": {"action": "annotate",
+                                                                      "would_be_multiplier": 0.5}})
+        assert ovs.apply_overlay_reduce(pkg, 10.0) == 10.0, leg
+    for leg in ("trend_donchian_xrp_4h", "trend_donchian_eth_prop"):
+        assert ovs.overlay_policy_mode(leg) == "reduce", leg
+        pkg = SimpleNamespace(strategy=leg, meta={"_overlay_shadow": {"action": "annotate",
+                                                                      "would_be_multiplier": 0.5}})
+        assert ovs.apply_overlay_reduce(pkg, 10.0) == 5.0, leg

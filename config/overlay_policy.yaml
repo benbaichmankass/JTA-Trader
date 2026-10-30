@@ -21,9 +21,14 @@
 #   not listed. Caveat: the model ranks; its probabilities are not calibrated (holdout Brier 0.2472 vs 0.2462).
 # DEMOTION: scripts/ops/overlay_cusum.py (Bernoulli CUSUM on the mirror's reduced trades, H 2.0) -> delete the
 #   alarming legs below.
-# ROLLBACK (one line per leg): delete the leg's entry (back to annotate).
+# ROLLBACK (one line per leg): delete the leg's entry, or set `mode: annotate` (back to annotate).
+# ANNOTATE (operator 2026-10-30T07:43Z, popup "Annotate both out (Recommended)", PI-20261030-XME2GXW7-0001):
+#   eth_4h and sol_prop enter on the FORMING bar, but the overlay scores the last CLOSED bar (MEASURED -329 bps,
+#   eth_4h pkg-a04b68a15ea14d19, relay #21439; the closed-bar legs xrp_4h / eth_prop read 0.0 bps). They are
+#   out of reduce until they decide on the closed bar. They are still scored and logged to overlay_shadow.jsonl
+#   (that is keyed on the artifact's legs_gate, not on this file).
 strategies:
-  trend_donchian_eth_4h: {mode: reduce, artifact: overlay_td.json}
+  trend_donchian_eth_4h: {mode: annotate, artifact: overlay_td.json}
   trend_donchian_xrp_4h: {mode: reduce, artifact: overlay_td.json}
   trend_donchian_eth_prop: {mode: reduce, artifact: overlay_td.json}
-  trend_donchian_sol_prop: {mode: reduce, artifact: overlay_td.json}
+  trend_donchian_sol_prop: {mode: annotate, artifact: overlay_td.json}
