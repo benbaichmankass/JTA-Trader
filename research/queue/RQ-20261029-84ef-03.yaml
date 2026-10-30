@@ -1,7 +1,7 @@
 id: RQ-20261029-84ef-03
 title: 'Equity/ETF DAILY bars: does long-only Donchian-20 (with and without a 20-bar time stop) clear Stage 0 on 14 ETFs where the weekly bar
   passed?'
-status: queued
+status: done
 cadence: once
 roadmap:
 - L-TIMEFRAMES
@@ -115,3 +115,14 @@ programme_node:
   goal: G1
   after: []
 last_dispatched_at: '2026-10-29T18:59:22+00:00'
+grading:
+  attested: RULE-RQ20261029-84EF-03-ETF-DAILY-LONG
+  auto: true
+  decision_rule_id: RULE-RQ20261029-84EF-03-ETF-DAILY-LONG
+  evidence:
+  - research/results/RQ-20261029-84ef-03/40935931206.jsonl
+  graded_at: '2026-10-30'
+  grader: scripts/research/queue_grade.py
+  reason: 1 row(s), all measured, all pass
+  rows: 1
+  verdict: pass

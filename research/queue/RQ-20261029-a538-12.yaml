@@ -1,6 +1,6 @@
 id: RQ-20261029-a538-12
 title: 'Prop TP geometry: does tp_r 4 or 3 beat the declared 6R on eth_pullback_prop_2h net of the prop cost stack?'
-status: queued
+status: done
 cadence: once
 roadmap:
 - L-PROP
@@ -105,3 +105,16 @@ related:
 practice_precedent: 'M4, M5 (docs/reference/trading-and-model-practice-principles.md): pre-registered arm grid, every arm counted, baseline =
   the declared leg'
 last_dispatched_at: '2026-10-30T00:16:18+00:00'
+grading:
+  attested: RULERQ20261029A53812
+  auto: true
+  decision_rule_id: RULERQ20261029A53812
+  evidence:
+  - research/results/RQ-20261029-a538-12/40978645701.jsonl
+  graded_at: '2026-10-30'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail

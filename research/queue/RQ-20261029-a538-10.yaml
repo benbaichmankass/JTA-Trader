@@ -1,6 +1,6 @@
 id: RQ-20261029-a538-10
 title: 'Prop stop width: does SL x1.25 (3.125 ATR) or x0.8 (2.0 ATR) beat the declared 2.5 ATR on eth_pullback_prop_2h net of the prop cost stack?'
-status: queued
+status: done
 cadence: once
 roadmap:
 - L-PROP
@@ -106,3 +106,16 @@ related:
 practice_precedent: 'M4, M5 (docs/reference/trading-and-model-practice-principles.md): pre-registered arm grid, every arm counted, baseline =
   the declared leg'
 last_dispatched_at: '2026-10-29T22:53:09+00:00'
+grading:
+  attested: RULERQ20261029A53810
+  auto: true
+  decision_rule_id: RULERQ20261029A53810
+  evidence:
+  - research/results/RQ-20261029-a538-10/40969217761.jsonl
+  graded_at: '2026-10-30'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail

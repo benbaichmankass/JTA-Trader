@@ -5,7 +5,7 @@ id: RQ-20261029-008
 title: 'Q8 breadth, 8-fold re-cut: does trend_donchian_xrp_4h AS DECLARED clear the pooled Stage-0 rule
   on the six new perps (BNB, DOGE, LINK, LTC, BCH, DOT) when the fold clause is read at 8 calendar folds
   (>= 5) instead of 6 (>= 4)?'
-status: queued
+status: done
 cadence: once
 roadmap:
 - L-LADDER
@@ -151,3 +151,13 @@ generated:
   params:
     node: P3-RG1025-q8-breadth-diagnosis
 last_dispatched_at: '2026-10-29T20:23:59+00:00'
+grading:
+  auto: true
+  decision_rule_id: RULE-P3-RG1025-Q8-XRP4H-8FOLD
+  evidence:
+  - research/results/RQ-20261029-008/40948695250.jsonl
+  graded_at: '2026-10-30'
+  grader: scripts/research/queue_grade.py
+  reason: 1 row(s), all measured, all pass
+  rows: 1
+  verdict: pass

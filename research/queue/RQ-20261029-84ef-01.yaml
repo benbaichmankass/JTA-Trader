@@ -1,7 +1,7 @@
 id: RQ-20261029-84ef-01
 title: 'Daily LONG-only Donchian-20 exit geometry on twelve perps: does an 8-ATR trail or a 60-bar time stop beat the 5-ATR trail the LONG filter
   was found at?'
-status: queued
+status: done
 cadence: once
 roadmap:
 - L-TIMEFRAMES
@@ -125,3 +125,16 @@ programme_node:
   goal: G1
   after: []
 last_dispatched_at: '2026-10-29T18:59:22+00:00'
+grading:
+  attested: RULE-RQ20261029-84EF-01-LONG-DAILY-EXITS
+  auto: true
+  decision_rule_id: RULE-RQ20261029-84EF-01-LONG-DAILY-EXITS
+  evidence:
+  - research/results/RQ-20261029-84ef-01/40935934802.jsonl
+  graded_at: '2026-10-30'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail
