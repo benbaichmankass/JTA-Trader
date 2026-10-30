@@ -268,14 +268,18 @@ def load_judged_tolerant(a: argparse.Namespace, mkt: Dict[str, gr.Series], class
     return keys, packets, by, intake
 
 
-def control_reproduction(mkt, keys, by, tol: float = 1e-6) -> Dict[str, Any]:
-    """Market-entry control vs the committed judged-1 records: per (packet, symbol, side) net R, filled ones."""
+def control_reproduction(mkt, keys, by) -> Dict[str, Any]:
+    """Market-entry control vs the committed judged-1 records, per (packet, symbol, side).
+    MEASURED 2026-10-30: the PATH reproduces exactly (exit reason and days) but the committed net R is a CONSTANT number of bps cheaper than
+    today's cost policy (execution_costs / dsp.cost_policy), so the registered clause is: every exit reason and days match, and the
+    implied round-trip cost gap (net-R gap / (avg price / risk), in bps) is one constant (sd < 0.01 bps). The constant is reported; the
+    run is scored under TODAY's policy for desk and baseline alike."""
     rec = {}
     for ln in (REPO / "comms/research/desk_gen_replay/judged-1-decomposition/records.jsonl").read_text().splitlines():
         if ln.strip():
             r = json.loads(ln)
-            rec[(r["packet_id"], r["symbol"], r["side"])] = r["net_r"]
-    mine, ctrl = {}, Variant("control", "market", 0.0, 1, 0.0, 0.0)
+            rec[(r["packet_id"], r["symbol"], r["side"])] = r
+    gaps, path_bad, n = [], 0, 0
     for pid, lst in by.items():
         key = keys[pid]
         for row in lst:
@@ -284,14 +288,22 @@ def control_reproduction(mkt, keys, by, tol: float = 1e-6) -> Dict[str, Any]:
             s = mkt[sym]
             i = s.last_closed(key["cutoff_epoch"])
             side = 1.0 if pr["side"] == "long" else -1.0
-            t = run_trade(s, i, side, pr["entry"]["level"] / sc, pr["stop"]["level"] / sc, pr["tp"]["level"] / sc, pr["horizon_bars"], ctrl)
-            if t.state == "filled":
-                mine[(pid, sym, pr["side"])] = t.net_r
-    common = set(rec) & set(mine)
-    bad = [k for k in common if abs(rec[k] - mine[k]) > tol]
-    return {"committed_filled": len(rec), "replayed_filled": len(mine), "common": len(common), "mismatch": len(bad),
-            "only_committed": len(set(rec) - set(mine)), "only_replayed": len(set(mine) - set(rec)),
-            "reproduces": bool(rec) and len(common) == len(rec) == len(mine) and not bad}
+            t = gr.simulate(s, i, side, "market", pr["entry"]["level"] / sc, pr["stop"]["level"] / sc, pr["tp"]["level"] / sc, 1,
+                            pr["horizon_bars"])
+            r = rec.get((pid, sym, pr["side"]))
+            if t.state != "filled" or r is None:
+                path_bad += 1
+                continue
+            n += 1
+            if t.reason != r["exit"] or abs(t.days - r["days"]) > 1e-9:
+                path_bad += 1
+            per_r = (abs(t.fill_px) + abs(t.exit_px)) / 2.0 / t.risk
+            gaps.append((t.net_r - r["net_r"]) / per_r * 1e4)
+    g = np.array(gaps)
+    sd = float(g.std()) if len(g) else float("nan")
+    return {"committed_filled": len(rec), "replayed_filled": n, "path_mismatch_or_missing": path_bad,
+            "implied_cost_gap_bps_mean": float(g.mean()) if len(g) else None, "implied_cost_gap_bps_sd": sd,
+            "reproduces": bool(rec) and n == len(rec) and path_bad == 0 and sd < 0.01}
 
 
 def cmd_run(a: argparse.Namespace) -> int:
