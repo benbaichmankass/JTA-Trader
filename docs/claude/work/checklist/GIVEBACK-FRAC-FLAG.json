@@ -2,7 +2,7 @@
   "id": "GIVEBACK-FRAC-FLAG",
   "title": "Harness: fractional giveback exit --giveback-frac (exit when open R falls to f x peak once peak >= giveback-min-mfe-r)",
   "phase": "Research",
-  "state": "landed_unproven",
+  "state": "done",
   "owner": "unassigned (filed by EXITS-GIVEBACK-W43)",
   "lane": "EXITS-GIVEBACK-W43",
   "model": null,
@@ -13,9 +13,9 @@
     19739
   ],
   "blocked_on": [],
-  "note": "[2026-10-22 EXITS-GIVEBACK-W43] Instrument for blocked units RQ-20261022-eba2-05/-06. Every giveback stop tested (RQ-20261019-004/-018) is an ABSOLUTE R; the census measures giveback as a SHARE of peak. BUILD: --giveback-frac F in backtest_pullback.py and backtest_trend.py (default 0 = off, byte-identical), exit at the bar close when open R <= F x peak_r once peak_r >= --giveback-min-mfe-r. DONE WHEN: tests show off-by-default byte-identity and a planted peak-then-fade path exits at F x peak; exit_lever_ablation.py accepts the arm string used in eba2-05. [2026-10-23 EXIT-BUILDS-W43] BUILT in PR #19739 (merged != observed). Flags default-off, byte-identical (old-vs-new main on armed configs), tests/test_exit_builds_w43.py. Unit(s) eba2-05/-06 moved out of blocked/, dispatch_queue dry run would_dispatch. CLOSES (done) when eba2-05/-06 lands its first result carrying the new flag in its recorded argv.",
-  "updated_at": "2026-10-23T17:04:55Z",
-  "updated_by": "session_01WJ6zAKX6HBJBgdJWsCd6P3",
+  "note": "[2026-10-22 EXITS-GIVEBACK-W43] Instrument for blocked units RQ-20261022-eba2-05/-06. Every giveback stop tested (RQ-20261019-004/-018) is an ABSOLUTE R; the census measures giveback as a SHARE of peak. BUILD: --giveback-frac F in backtest_pullback.py and backtest_trend.py (default 0 = off, byte-identical), exit at the bar close when open R <= F x peak_r once peak_r >= --giveback-min-mfe-r. DONE WHEN: tests show off-by-default byte-identity and a planted peak-then-fade path exits at F x peak; exit_lever_ablation.py accepts the arm string used in eba2-05. [2026-10-23 EXIT-BUILDS-W43] BUILT in PR #19739 (merged != observed). Flags default-off, byte-identical (old-vs-new main on armed configs), tests/test_exit_builds_w43.py. Unit(s) eba2-05/-06 moved out of blocked/, dispatch_queue dry run would_dispatch. CLOSES (done) when eba2-05/-06 lands its first result carrying the new flag in its recorded argv. [2026-10-30 DAILY-REVIEW-TRIAGE-20261030] DONE: eba2-05/-06 measured results on main (research/results/<unit>/ read_state measured); argv carries giveback-frac.",
+  "updated_at": "2026-10-30T06:11:30Z",
+  "updated_by": "session_01AFoLuL99YDu1fHUkJvG55s",
   "roadmap": [
     "L-ATM"
   ],

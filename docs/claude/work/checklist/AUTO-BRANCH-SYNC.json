@@ -14,15 +14,21 @@
   ],
   "blocked_on": [],
   "note": "[2026-10-13 AUTO-WAVE1] .github/workflows/branch-sync.yml (push to main, 90s debounce) + scripts/ci/branch_sync.py: update-branch (merge commit) for open same-repo claude/* PRs that are behind, declare tier 1 self, carry no landing:hold label and touch no Tier-2/3 path; conflicts get one comment per head; max 10 per run. REQUIRES the BRANCH_PROTECTION_TOKEN secret (GITHUB_TOKEN updates raise no checks) - without it the job refuses and updates nothing. Built, not yet observed live.",
-  "updated_at": "2026-10-13T10:00:37Z",
-  "updated_by": "session_AUTO-WAVE1",
+  "updated_at": "2026-10-30T06:13:02Z",
+  "updated_by": "session_01AFoLuL99YDu1fHUkJvG55s",
   "roadmap": [
     "L-OPS"
   ],
   "observation": {
     "what": "AUTO-BRANCH-SYNC built and measured against its estimate",
     "how_to_check": "a scratch PR left behind main gains main's head within one workflow run after a main push",
-    "due_by": "2026-10-27"
+    "due_by": "2026-11-06T00:00Z",
+    "redated": {
+      "on": "2026-10-30",
+      "from": "2026-10-27",
+      "by": "DAILY-REVIEW-TRIAGE-20261030",
+      "reason": "PR #17846 merged. No scratch-PR test run this lane; observation needs one left-behind PR after a main push."
+    }
   },
   "writeback": {
     "roadmap": "none: ops automation, no milestone status change",

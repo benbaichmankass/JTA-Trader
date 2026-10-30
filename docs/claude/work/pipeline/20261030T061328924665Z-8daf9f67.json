@@ -1,0 +1,15 @@
+{
+  "due_when": {
+    "due_date": "2026-11-02",
+    "kind": "date"
+  },
+  "id": "PI-20261030-UKJVG55S-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "DAILY-REVIEW-TRIAGE-20261030 (blocker_watch NOT_RUNNING triage)",
+    "rerun": "python3 scripts/research/dispatch_queue.py --json | python3 -c \"import json,sys;d=json.load(sys.stdin);print([x for x in d['decisions'] if x['id'] in ('RQ-20261016-7ea6-01','RQ-20261026-e535-03')])\""
+  },
+  "state": "queued",
+  "what": "RQ-20261016-7ea6-01 (GLD/GDX pairs HOLDOUT, 2006-05..2016-10, read once; gates R-HOLDOUT at Gate 2 for pairs_gld_gdx) is queued 14 days, never dispatched: run.workflow is 'session-local', which dispatch_queue.py reports as 'not a workflow file (retarget to research-script-run.yml)'. Its owner row PAIRS-HOLDOUT-DRIVER was dropped in the 2026-10-29 bulk reset (value unknown), so nothing builds the wrapper (fetch GLD/GDX 2006-05..2016-10 via fetch_backtest_candles.py, run backtest_pairs.py ONCE at the registered args, write verdict.json) and retargets the unit. Decide: re-open PAIRS-HOLDOUT-DRIVER and build, or retire the unit and say pairs_gld_gdx has no holdout path. Also: RQ-20261026-e535-03 is dispatched-but-resultless (cadence once, ran 2026-10-27T23:40Z, status queued, no result dir); it is owned by DESK-18-GEN-REPLAY-S0 / DESK-18B-JUDGE-RUN, so no new row."
+}

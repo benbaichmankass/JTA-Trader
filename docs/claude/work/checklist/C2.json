@@ -18,9 +18,15 @@
   "observation": {
     "what": "A dukascopy-span-probe.yml run lands a readable record on main, or research-workflow-landing-guard BASELINE debt drops below 17",
     "how_to_check": "grep -ril dukascopy research/results; python3 scripts/ci/check_research_workflow_landing.py",
-    "due_by": "2026-10-29"
+    "due_by": "2026-11-06T00:00Z",
+    "redated": {
+      "on": "2026-10-30",
+      "from": "2026-10-29",
+      "by": "DAILY-REVIEW-TRIAGE-20261030",
+      "reason": "research-workflow-landing-guard still baseline_debt=17 (not < 17); research/results contains dukascopy mentions (e.g. RQ-20261019-028) but none is shown to come from dukascopy-span-probe.yml."
+    }
   },
-  "updated_at": "2026-10-15T06:36:06Z",
-  "updated_by": "session_019p3X1tJAdUdV2dKaw9no8r",
+  "updated_at": "2026-10-30T06:13:02Z",
+  "updated_by": "session_01AFoLuL99YDu1fHUkJvG55s",
   "_seq": 17
 }
