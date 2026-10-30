@@ -58,7 +58,7 @@ class Mapping(NamedTuple):
 
 
 #: OUR symbol -> the Dukascopy instrument the adjudication assigned it.
-#: Several of our symbols share an instrument (SPLG->SPY, IAUM->GLD,
+#: Several of our symbols share an instrument (SPYM->SPY, IAUM->GLD,
 #: SCHA->IWM, MGC->XAU_USD); that is deliberate and is why the span probe keys
 #: its measurements by INSTRUMENT while this table keys by SYMBOL.
 SYMBOL_TO_INSTRUMENT: Dict[str, Mapping] = {
@@ -76,7 +76,7 @@ SYMBOL_TO_INSTRUMENT: Dict[str, Mapping] = {
     "XAUUSD": Mapping("INSTRUMENT_FX_METALS_XAU_USD", REL_RELAXED,
                       "the relaxed form was needed; an exact substring missed it"),
     # --- adjudicated proxies: a DIFFERENT instrument ------------------------
-    "SPLG": Mapping("INSTRUMENT_ETF_CFD_US_SPY_US_USD", REL_PROXY,
+    "SPYM": Mapping("INSTRUMENT_ETF_CFD_US_SPY_US_USD", REL_PROXY,
                     "close: same index, different share price + expense ratio"),
     "IAUM": Mapping("INSTRUMENT_ETF_CFD_US_GLD_US_USD", REL_PROXY,
                     "close: same underlying (gold), different vehicle"),
@@ -140,7 +140,7 @@ def instruments_with_symbols() -> Dict[str, Dict[str, object]]:
     """Invert the map to instrument -> {serves:[symbols], relation:str}.
 
     The span probe measures DEPTH per instrument, not per symbol: probing
-    ``SPY`` and ``SPLG`` separately would issue twice the requests to learn one
+    ``SPY`` and ``SPYM`` separately would issue twice the requests to learn one
     fact. The composite relation (e.g. ``same_ticker_cfd+proxy``) is built here
     so the probe never has to re-derive it.
     """
@@ -167,7 +167,7 @@ def _self_test() -> int:
        == "INSTRUMENT_ETF_CFD_US_SPY_US_USD")
     ck("resolution is case/space insensitive", resolve(" spy ").state == STATE_MAPPED)
     ck("a proxy carries the PROXY relation, not same_ticker",
-       resolve("SPLG").relation == REL_PROXY)
+       resolve("SPYM").relation == REL_PROXY)
     ck("XAUUSD is marked `relaxed`, not silently equated with an exact hit",
        resolve("XAUUSD").relation == REL_RELAXED)
 
@@ -184,8 +184,8 @@ def _self_test() -> int:
        "Mowi" in (resolve("MHG").reason or ""))
 
     inv = instruments_with_symbols()
-    ck("SPY and SPLG share ONE instrument (probe once, not twice)",
-       set(inv["INSTRUMENT_ETF_CFD_US_SPY_US_USD"]["serves"]) == {"SPY", "SPLG"})
+    ck("SPY and SPYM share ONE instrument (probe once, not twice)",
+       set(inv["INSTRUMENT_ETF_CFD_US_SPY_US_USD"]["serves"]) == {"SPY", "SPYM"})
     ck("a shared instrument's relation is composite",
        inv["INSTRUMENT_ETF_CFD_US_SPY_US_USD"]["relation"] == "same_ticker_cfd+proxy")
     ck("11 distinct instruments cover 15 symbols",

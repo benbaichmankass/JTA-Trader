@@ -1,0 +1,15 @@
+{
+  "due_when": {
+    "due_date": "2026-11-02",
+    "kind": "date"
+  },
+  "id": "PI-20261030-NLSZ8A5M-0005",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "Manager Session 2026-10-30a, 05:52Z daily review",
+    "rerun": "curl -sS 'https://api.github.com/search/issues?q=repo:benbaichmankass/JTA-Trader+is:issue+is:open+label:system-action+%22hold-merge+alarm%22' | python3 -c \"import json,sys;print(json.load(sys.stdin)['total_count'])\""
+  },
+  "state": "queued",
+  "what": "Hold-merge alarm (JC-CA-04) never reaches Telegram. ROOT CAUSE (MEASURED 2026-10-30 05:57Z): .github/workflows/pr-landing-hold-merge-alarm.yml opens its send-ping issue with GH_TOKEN=${{ github.token }} (line 63, 'gh issue create --label system-action' line 133); GitHub does not trigger workflows from events created by GITHUB_TOKEN, so system-actions never runs on them. Evidence: 463 open system-action issues titled 'send-ping: PR #N hold-merge alarm (JC-CA-04)' authored by github-actions[bot], 0 comments (e.g. #21414, created 2026-10-29T21:44Z); a send-ping filed under the operator account (#21360) was processed and closed in 67 s. PI-20261009-KR9P9ZKE-0001 noticed the pile-up (171 then) and was killed without this cause. Fix options: send the ping directly from the alarm workflow (the send-ping script with the Telegram secret) instead of via an issue, or use a PAT/App token for the issue; then close the 463 stale issues as moot. Tier 1 (CI/observability)."
+}

@@ -531,17 +531,20 @@ instruments:
   # Each tracks the SAME underlying as its expensive sibling, so the validated
   # strategy transfers (backtest evidence: trainer-vm-diag 2026-07-07). Same
   # whole-share / 2dp / alpaca profile as SPY/GLD/IWM.
-  #   SPLG  — SPDR Portfolio S&P 500 (~$84): identical S&P 500 index as SPY.
+  #   SPYM  — SPDR Portfolio S&P 500 (~$84): identical S&P 500 index as SPY.
+  #           RENAMED from SPLG by the issuer (2026-10-28 operator decision, Tier-3): the old ticker no
+  #           longer resolves at the data vendors (corpus-manifest: SPLG 'possibly delisted'). Leg id
+  #           `splg_trend_long_1d` is KEPT (journal/ledger continuity); only the traded symbol moved.
   #   IAUM  — iShares Gold Trust Micro (~$41): same spot gold as GLD.
   #   SCHA  — Schwab US Small-Cap (~$35): broad small-cap proxy for IWM's
   #           Russell 2000 (0.99 return corr; a DIFFERENT index, so revalidated
   #           on its own series — marginal edge, observe-only paper soak).
   # All three list on NYSE Arca (primary_exchange: ARCA), same as SPY/GLD/IWM.
   # ------------------------------------------------------------------
-  SPLG:
+  SPYM:
     exchange: alpaca
     category: spot
-    base_asset: SPLG
+    base_asset: SPYM
     asset_class: equity        # SPDR Portfolio S&P 500 ETF — S&P 500 index proxy for SPY
     quote_currency: USD
     settlement_currency: USD

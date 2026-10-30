@@ -608,7 +608,7 @@ def _selftest() -> int:
     # THE LOAD-BEARING ONE: the rung must only ever ADD legs. Every symbol
     # dukascopy already maps keeps the feed it had, so the committed corpus
     # stays comparable and no existing verdict is re-based onto a new source.
-    for _s, _iv in (("SPY", "D"), ("GLD", "D"), ("QQQ", "D"), ("SPLG", "D"),
+    for _s, _iv in (("SPY", "D"), ("GLD", "D"), ("QQQ", "D"), ("SPYM", "D"),
                     ("GDX", "D"), ("IWM", "D"), ("SLV", "D"), ("TLT", "D"),
                     ("IEF", "D"), ("IAUM", "D"), ("SCHA", "D"), ("USO", "D")):
         chk(f"{_s} still routes to dukascopy (corpus stays comparable)",

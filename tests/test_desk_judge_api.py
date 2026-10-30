@@ -130,3 +130,12 @@ def test_429_is_retried(tmp_path):
     fc = AlwaysFail(ApiErr(429, "rate_limit_error", "slow"))
     dja.run(a, client=fc, sleep=lambda s: None)
     assert len(fc.calls) == 3
+
+
+def test_cli_and_client_are_disabled():
+    """Nothing may spend Anthropic API credits (operator 2026-10-27/28): both entry points refuse."""
+    import pytest
+    with pytest.raises(SystemExit, match="DISABLED"):
+        dja.make_client()
+    with pytest.raises(SystemExit, match="DISABLED"):
+        dja.main(["--packets", "p", "--protocol", "q", "--out", "o", "--n", "1", "--max-usd", "1"])

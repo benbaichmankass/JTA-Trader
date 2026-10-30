@@ -1,0 +1,41 @@
+{
+  "id": "ADA-AM-CASE",
+  "title": "Operator 2026-10-29 ~06:05Z on the open bybit_2 ADAUSDT short (pkg-465a5d7d27644027): should the bracket move to bank R? Price hold vs partial/TP-pull-in/tighten on the leg's FULL Stage-0 history (the LTR table reads a 61-trade 12-month corpus -> every state insufficient_n), and close that corpus gap so in-trade questions on this leg are priced",
+  "phase": null,
+  "state": "landed_unproven",
+  "owner": "manager",
+  "lane": null,
+  "model": "claude-sonnet-5-5",
+  "ceiling_usd": 8,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [
+    21147,
+    21159,
+    21160
+  ],
+  "blocked_on": [],
+  "note": "Basis: n=1 order package (pkg-465a5d7d27644027), 3 account legs (bybit_1, bybit_2, mirror), window 2026-10-29 05:00Z..10:51Z.",
+  "priority_rank": 2,
+  "updated_at": "2026-10-29T12:55:26Z",
+  "updated_by": "Manager Session 2026-10-29c",
+  "roadmap": [
+    "L-AM-STANDARD"
+  ],
+  "writeback": {
+    "roadmap": "L-AM-STANDARD: ADA open-short question answered (no option beats hold net of cost at n>=floor; partial cost 0.04-0.15R EV; break-even stop applied by operator decision); LTR corpus gap root-caused (build_strategy_evidence DEFAULT_DAYS=365), ADA long corpus landed via #21159; packet default + 4 legs open (PI-20261029-KXR1VUPP-0002)",
+    "arch": "none: read-path tooling only; no component or contract changed"
+  },
+  "observation": {
+    "what": "#21159 merged, then the VM ltr-wake packet prices ADA options from the long corpus (n >= 20 comparable) instead of insufficient_n",
+    "how_to_check": "next LR-*-pkg-465a5d7d27644027 (or any ada_pullback_2h) row on live-review/rows: outcome table population.corpus_trades >= 400 and hold.state != insufficient_n; requires PI-20261029-KXR1VUPP-0002 (Tier-2 packet change) shipped",
+    "due_by": "2026-11-05T00:00Z"
+  },
+  "lane_history": [
+    {
+      "lane": "session_01AFoLuM62Hx5BkbKXr1vupp",
+      "archived_at": "2026-10-29T06:41:17Z"
+    }
+  ],
+  "_seq": 781
+}

@@ -189,6 +189,12 @@ class LightGBMRegressionPredictor(Predictor):
         # contract is `regime_spec = None`, so the live shadow path scores
         # them on the unenriched trade-signal row.
         self.regime_spec = None
+        # A `setup_candidates` head's frozen serve spec (vol_bucket edges per
+        # symbol + windows; `ml.experiments.runner._attach_serve_spec`). The live
+        # path (`src.runtime.setup_features`) rebuilds the decision-time row from
+        # it. `None` for every other head, which then sees the row unchanged.
+        spec = state.get("serve_spec")
+        self.serve_spec = dict(spec) if isinstance(spec, Mapping) else None
 
     def predict(self, row: Mapping[str, Any]) -> float:
         import numpy as np  # noqa: PLC0415

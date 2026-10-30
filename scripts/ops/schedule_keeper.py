@@ -53,7 +53,7 @@ import urllib.request
 from typing import Optional
 
 UTC = dt.timezone.utc
-REPO = os.environ.get("GITHUB_REPOSITORY", "benbaichmankass/Metis-Insights")
+REPO = os.environ.get("GITHUB_REPOSITORY", "benbaichmankass/JTA-Trader")
 KEEPER_ACTOR = "github-actions[bot]"
 
 #: The validators whose SLOT matters. stale_hours = "no completed run for this

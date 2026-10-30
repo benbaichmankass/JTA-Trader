@@ -227,3 +227,16 @@ def test_commit_packet_retries_when_the_tip_moved_and_gives_up_on_other_errors(t
 
 def test_kick_is_a_noop_off_the_live_trader():
     assert dw.kick() is False
+
+
+def test_latency_is_never_negative():
+    """MEASURED -59.8 s on 2026-10-28: built_at = max(clock, info_cutoff_at) can sit after the post."""
+    t = NOW
+    assert dw.latency_s(t, t + timedelta(seconds=59.8)) == 0.0
+    assert dw.latency_s(t + timedelta(seconds=90), t) == 90.0
+    assert dw.latency_s(None, t) is None and dw.latency_s(t, None) is None
+
+
+def test_posted_marker_before_built_at_reads_zero_latency(tmp_path):
+    rec = run(tmp_path, Net(built_ago=timedelta(minutes=4), markers=[posted(at=NOW - timedelta(minutes=5))]))
+    assert rec["state"] == "posted" and rec["latency_s"] == 0.0

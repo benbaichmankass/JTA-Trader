@@ -186,7 +186,7 @@ def tick_size_for(symbol: str) -> float | None:
 # net −0.457R was a fee-model artifact, not a real cost (M24 net-R re-grade,
 # `docs/research/M24-net-r-regrade-findings-2026-07-17.md`; resolved 2026-07-29).
 # All 14 (alpaca, spot) roster rows (SPY/QQQ/IWM/GLD/SLV/GDX/IAUM/IEF/QLD/TQQQ/
-# SPLG/SCHA/USO/TLT) are commission-free regardless of underlying asset_class —
+# SPYM/SCHA/USO/TLT) are commission-free regardless of underlying asset_class —
 # so this keys on the VENUE, not the asset class.
 _COMMISSION_FREE_VENUES: set[tuple[str, str]] = {("alpaca", "spot")}
 _ROUNDTRIP_FEE_BPS_CACHE: dict[str, float] | None = None

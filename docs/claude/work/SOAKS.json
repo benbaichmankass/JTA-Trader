@@ -1,6 +1,6 @@
 {
  "_comment": "SOAK CONTRACTS \u2014 mechanical definitions of done (1-2 clean trades, no calendar), NOT state. State is computed live by scripts/ops/soak_state.py::soak_states(). Guarded by scripts/ci/check_soak_contracts.py.",
- "as_of": "2026-10-27",
+ "as_of": "2026-10-28",
  "soaks": [
   {
    "account": "alpaca_paper",
@@ -910,6 +910,28 @@
    ],
    "design": "mechanical",
    "fail_rule": "the most recent graded trade is a mechanical fault (a checklist item fails, or a reconciler / watchdog / orphan close) -> fix, then re-soak",
+   "id": "SOAK-stage1-bybit_1-trend_donchian_1h",
+   "kind": "stage1",
+   "leg": "trend_donchian_1h",
+   "metric": "clean closed trades on bybit_1/trend_donchian_1h (each = one entry + one journaled exit)",
+   "monitoring": "ONGOING, not soak exit criteria: realized cost vs the Stage-0 model (R3, scripts/ops/r3_cost_fidelity.py) and live-vs-backtest (scripts/research/live_vs_backtest.py) feed the Gate-2 demotion signal and the underperformer first step",
+   "n_needed": 1,
+   "pass_rule": "1 clean trade(s) since the last mechanical fault, each clearing every checklist item",
+   "started": "2026-10-14",
+   "verifies": "live MECHANICS: the signal fires, the order is placed with the right size and side, a real SL and TP rest at the venue, management works, the exit is journaled with a reason, and the fill and fees are recorded"
+  },
+  {
+   "account": "bybit_1",
+   "checklist": [
+    "signal_fired",
+    "order_size_side",
+    "bracket_real_at_venue",
+    "management_no_fault",
+    "exit_journaled",
+    "fill_and_fees"
+   ],
+   "design": "mechanical",
+   "fail_rule": "the most recent graded trade is a mechanical fault (a checklist item fails, or a reconciler / watchdog / orphan close) -> fix, then re-soak",
    "id": "SOAK-stage1-bybit_1-trend_donchian_ada_4h",
    "kind": "stage1",
    "leg": "trend_donchian_ada_4h",
@@ -1294,26 +1316,6 @@
    "verifies": "live MECHANICS: the signal fires, the order is placed with the right size and side, a real SL and TP rest at the venue, management works, the exit is journaled with a reason, and the fill and fees are recorded"
   },
   {
-   "account": "bybit_1",
-   "checklist": [
-    "signal_fired",
-    "package_complete",
-    "sized_and_routed_dry"
-   ],
-   "design": "not_soaking",
-   "fail_rule": "the most recent package is incomplete or not recorded dry -> fix, then re-soak",
-   "id": "SOAK-shadow-trend_donchian_1h",
-   "kind": "shadow",
-   "leg": "trend_donchian_1h",
-   "metric": "shadow order packages for trend_donchian_1h (any rostered account)",
-   "monitoring": "ONGOING, not soak exit criteria: realized cost vs the Stage-0 model (R3, scripts/ops/r3_cost_fidelity.py) and live-vs-backtest (scripts/research/live_vs_backtest.py) feed the Gate-2 demotion signal and the underperformer first step",
-   "n_needed": 1,
-   "pass_rule": "1 complete shadow package(s), each clearing every checklist item",
-   "recommended_fix": "enabled: false \u2014 nothing runs it; retire the strategy block or re-roster it with a fresh contract",
-   "started": "2026-06-01",
-   "verifies": "shadow MECHANICS: the signal fires, the package is complete (side, entry, real SL and TP), and every rostered account sizes it and records it DRY"
-  },
-  {
    "account": "-",
    "checklist": [
     "signal_fired",
@@ -1331,6 +1333,26 @@
    "pass_rule": "1 complete shadow package(s), each clearing every checklist item",
    "recommended_fix": "enabled: false \u2014 nothing runs it; retire the strategy block or re-roster it with a fresh contract",
    "started": "2026-05-24",
+   "verifies": "shadow MECHANICS: the signal fires, the package is complete (side, entry, real SL and TP), and every rostered account sizes it and records it DRY"
+  },
+  {
+   "account": "bybit_1",
+   "checklist": [
+    "signal_fired",
+    "package_complete",
+    "sized_and_routed_dry"
+   ],
+   "design": "not_soaking",
+   "fail_rule": "the most recent package is incomplete or not recorded dry -> fix, then re-soak",
+   "id": "SOAK-shadow-trend_donchian_1h",
+   "kind": "shadow",
+   "leg": "trend_donchian_1h",
+   "metric": "shadow order packages for trend_donchian_1h (any rostered account)",
+   "monitoring": "ONGOING, not soak exit criteria: realized cost vs the Stage-0 model (R3, scripts/ops/r3_cost_fidelity.py) and live-vs-backtest (scripts/research/live_vs_backtest.py) feed the Gate-2 demotion signal and the underperformer first step",
+   "n_needed": 1,
+   "pass_rule": "1 complete shadow package(s), each clearing every checklist item",
+   "recommended_fix": "enabled: false \u2014 nothing runs it; retire the strategy block or re-roster it with a fresh contract",
+   "started": "2026-06-01",
    "verifies": "shadow MECHANICS: the signal fires, the package is complete (side, entry, real SL and TP), and every rostered account sizes it and records it DRY"
   },
   {

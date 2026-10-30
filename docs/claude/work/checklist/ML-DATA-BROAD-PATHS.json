@@ -1,0 +1,30 @@
+{
+  "id": "ML-DATA-BROAD-PATHS",
+  "title": "Corpus v2: harness-generated trade + path corpus over a frozen 60-perp broadened universe (six money-leg configs, emit-trades/paths/features, trade_key de-dup, manifest) -- source A of the data-rate path",
+  "phase": null,
+  "state": "done",
+  "owner": "manager",
+  "lane": "session_01AFoLuMPuKnJPRPPZDgUY7e",
+  "model": "sonnet",
+  "ceiling_usd": 10,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [
+    21448,
+    21486
+  ],
+  "blocked_on": [],
+  "note": "Dispatched 00:12Z by Manager Session 2026-10-29d: fresh Sonnet lane session_01AFoLuMPuKnJPRPPZDgUY7e, ceiling $10, the single week's-priority slot (ML). 2026-10-30 build in PR #21448 (generator scripts/research/broad_paths_corpus.py + workflow broad-paths-corpus.yml, label broad-paths-corpus-request). MEASURED locally: universe freeze 44 s (1,056 USDT-M dirs, 895 perps, 310 qualify, first 60, corpus_id bp2-f4271084b120 at 2026-10-30); DOGEUSDT x six legs 4m40 incl. fetches, ~2,500 trades. NOT done: re-entry test (manifest on main, >=10,000 de-duplicated trades) needs the runner dispatch after merge; unblocks RQ-20261029-7294-01 and -03 only when it lands. 2026-10-30 03:25Z run 40986177880 (issue #21460): universe + 6/6 shards OK, merge job FAILED (no requests in the merge job; my bug). Shard artifacts exist but the rerun would use the old workflow, so a fresh run follows the fix PR. Local merge test on the DOGEUSDT shard: 2,569 trades, 6 cells. Manager rotated to session_01AFoLuN7eK1S1a4nLsZ8A5m. DONE 2026-10-30. Corpus v2 landed: comms/research/broad_paths/bp2-f4271084b120/manifest.json (run 40999208713, issue #21489). MEASURED from the manifest on main: 146,158 trades, 0 duplicates removed (expected: each (leg, symbol) cell is distinct), 2,717,938 path rows, 360/360 (symbol, leg) cells run, 0 could_not_run, 60 symbols (1,656..2,696 trades each), per leg: eth_prop 59,010; ada_pb_2h 22,855; sol_prop 22,730; xrp_pb_2h 22,174; eth_4h 15,172; xrp_4h 4,217. Full harness cost stack, net_r + cost fields on every trade. Rows are an Actions artifact broad-paths-bp2-f4271084b120-data of run 40999208713 (90-day retention), NOT in the repo; regenerable from hash_inputs + git_sha. Caveats: counts are harness trades on the pinned window 2020-07-01..2026-09-30, not edge; the universe is the 60 oldest listings (ties at the archive start 2020-01 ordered by symbol). Unblocks RQ-20261029-7294-01 and -03 (their v2 >= 10,000 floor is met; each still needs its own blocker, TM-BENCH folds). PRs #21448, #21486.",
+  "priority_rank": 1,
+  "updated_at": "2026-10-30T05:13:35Z",
+  "updated_by": "session_01AFoLuMPuKnJPRPPZDgUY7e",
+  "roadmap": [
+    "L-ML-LIVE",
+    "L-DATA"
+  ],
+  "writeback": {
+    "roadmap": "L-ML-LIVE / L-DATA: source A of the data-rate path is built and run (146,158 de-duplicated trades over 60 perps x six money-leg configs); the RQ-20261029-7294-01/-03 corpus precondition is met",
+    "arch": "none: research tooling only, no component changed"
+  },
+  "_seq": 835
+}

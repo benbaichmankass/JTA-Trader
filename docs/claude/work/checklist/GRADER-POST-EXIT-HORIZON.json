@@ -1,0 +1,33 @@
+{
+  "id": "GRADER-POST-EXIT-HORIZON",
+  "title": "Counterfactual grader looks PAST the exit: extend every graded package's price path after the close (until each alt arm resolves, capped at the leg's own max-hold or a stated horizon) and add a post-exit block (MFE/MAE after exit in R, did price later reach the original TP, would SL x1.25/1.5 have survived and to what net R, 'exited early' vs 'exit saved R'), so every trade review answers both 'should we have exited sooner' and 'did we exit too early'",
+  "phase": null,
+  "state": "landed_unproven",
+  "owner": null,
+  "lane": "session_01AFoLuHuUD1xp18s1fTpp2L",
+  "model": "sonnet",
+  "ceiling_usd": 5,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [
+    21386
+  ],
+  "blocked_on": [],
+  "note": "Operator 2026-10-29 ~19:05Z, verbatim: \"when we are reviewing trades, we are not only reviewing till when the trade ended, but also after, so that we know if we are exiting too early, which is also a possibility.\" Example: XRP pkg-5d74ca7451d64ebe stopped at -1R after reviews advised close; would a wider stop have turned it into a winner? Measured gap: comms/research/counterfactual_grades/pkg-465a5d7d27644027.json path last_bar 11:14Z vs t_close 10:51Z (23 min of post-exit data), so alt arms that hold longer are marked unresolved at the last bar. Extends TRADE-COUNTERFACTUAL-GRADER (#21256, scripts/research/counterfactual_grader.py); feeds RULE-AM-RISK-ADJUSTED-V1 and /performance-review.  PR #21386 (draft): post_exit block + horizon landed in the grader; XRP pkg-5d74ca7451d64ebe not answerable until 2026-10-31T18:33Z (1.25x/3R arm stopped at -1.06R in the 37 min observed; 1.5x unresolved).  MERGED 9fd6c4e7 (#21386), not yet observed. CLOSES WHEN: after 2026-10-31T18:33Z the hourly counterfactual-grade-closed run re-grades comms/research/counterfactual_grades/pkg-5d74ca7451d64ebe.json with post_exit.horizon_reached=true and a resolved verdict (the XRP answer: did a 1.25x/3R stop turn). Interim: 1.25x/3R arm stopped -1.06R in 37 min observed; 1.5x unresolved.",
+  "priority_rank": 1,
+  "updated_at": "2026-10-29T20:50:45Z",
+  "updated_by": "session_01AFoLuHuUD1xp18s1fTpp2L",
+  "roadmap": [
+    "L-AM-STANDARD"
+  ],
+  "observation": {
+    "what": "XRP pkg-5d74ca7451d64ebe re-graded by the hourly job after its 48h post-exit horizon, with post_exit.horizon_reached=true and a resolved verdict",
+    "how_to_check": "read comms/research/counterfactual_grades/pkg-5d74ca7451d64ebe.json on main: post_exit.horizon_reached, post_exit.verdict, post_exit.wider_sl_arms (alt_sl1.25x_tp3R)",
+    "due_by": "2026-11-01"
+  },
+  "writeback": {
+    "roadmap": "none: tooling-only change to the counterfactual grader, no milestone line moves",
+    "arch": "none: no architecture section describes the grader record schema"
+  },
+  "_seq": 825
+}

@@ -81,6 +81,39 @@ goals:
 
 milestones:
   # ── G1 ──────────────────────────────────────────────────────────────────
+  - id: L-AM-STANDARD
+    goal: G1
+    name: "WEEK PRIORITY 3 -- active management on every real-money strategy, as a standard (target 2026-11-04)"
+    status: active
+    week_priority: 3
+    target: 2026-11-04
+    where: >-
+      Opened 2026-10-28 ~21:10Z (lane ROADMAP-PRIORITIES-AM-PRINCIPLE, manager dispatch). Operator, verbatim (~20:55Z, row
+      WEEKLY-PLANNING note): "(3) Active management: mature, stable infra (triggers, reviews, updates). Week milestone: every
+      real-money strategy has basic active-management mechanics in production, as a standard". THE PRINCIPLE (operator
+      2026-10-28, binding; docs/ARCHITECTURE-CANONICAL.md § "Active management"): "active management isn't only tightening -
+      it can be any movement in either bracket triggered by developments in the live market data" / "SL tightening is just
+      one lever". The action space is SL tighten / widen / move-to-structure, TP extend / pull-in / revise, partial / full
+      close, and hold; every action is triggered by live market data (structure, vol/ATR, momentum, regime, events,
+      liquidity levels); both brackets always exist. GRADUATION RULE: each action class stays advice-only until its OWN
+      test, registered before the run and net of the full cost stack, beats hold; then it may be executed (Tier-3 /
+      mandate). Evidence to date covers tightening only, and it loses (DESK-LIFECYCLE-S0 #20967 merged; LTR-TIGHTEN-OPTIMIZE
+      #21003 held); every other class is untested and is judged on its own merits (Programme 01 Q15). Operator (~21:05Z):
+      "I'll settle for a conservative production ML that will mostly recommend holding outside of edge cases". Plan of
+      record due 2026-10-29 05:30Z from lane ACTIVE-MGMT-REAL-MONEY-PLAN.
+    next: >-
+      Done-condition (by 2026-11-04): every real-money leg (re-parse config/accounts.yaml for the roster, never quote it)
+      runs the active-management mechanics in production -- live review on its bar, a recommendation over the full action
+      space recorded per package, the apply path with per-account readback, both brackets present -- with every non-hold
+      class advice-only unless its own registered net-of-cost test passed. Infra maturity: triggers, reviews and updates
+      run without a halt and are observed on at least one live package per real-money account. Measure: the live-review
+      records (comms/live_review/) re-read per leg, never quoted.
+    no_rows_reason: >-
+      opened 2026-10-28; the build rows are filed from lane ACTIVE-MGMT-REAL-MONEY-PLAN's plan (due 2026-10-29 05:30Z) at
+      the 06:17Z planning session; until then the in-trade work runs under L-ATM and L-DESK
+    architecture: ["Active management", "TP doctrine"]
+    owner: manager
+    reviewed: 2026-10-28
   - id: L-ATM
     goal: G1
     name: Active trade management -- brackets as predictions (merges M20 + M31)
@@ -125,7 +158,10 @@ milestones:
       2026-10-25 (LTR-2-RECORDS, done; landed with LTR-3 in #20121): live trade review records layer -- comms/live_review/{reviews,outcomes}.jsonl +
       comms/schema/live_review.schema.json + live-review-records-guard; applied 0.25R bound and shadow 0.5R arm on every row.
       The 9 real rows of the first live run (LTR-3 skill, 2026-10-25 16:16Z) validate; LTR-3 added no_recommendation, record_only and per-account account_reads.
-    architecture: ["TP doctrine"]
+      2026-10-28 (operator, binding): active management is any evidence-backed move of either bracket, not only
+      tightening; each action class graduates on its own test (docs/ARCHITECTURE-CANONICAL.md § "Active management").
+      This week's production standard is L-AM-STANDARD.
+    architecture: ["TP doctrine", "Active management"]
     owner: manager
     reviewed: 2026-10-14
   - id: L-LADDER
@@ -141,6 +177,8 @@ milestones:
     next: >-
       Close B5/MANDATE-ARM on the first recorded promotion or decline; replace the provisional 5 bps with a measured value (E62);
       act on every passed / mechanical_fail soak (SOAK-REDEFINE: the soak is mechanical, 1-2 clean trades); keep the 'Walk-forward re-run' units flowing.
+      2026-10-28 ~21:05Z: the operator adopted a strategy status model -- in testing / in production / inactive. Lane
+      STRATEGY-STATUS-MODEL owns the operating-plan § 2 amendment; this milestone reads that section once it lands.
     architecture: ["Promotion ladder, mandates and the roadmap loop"]
     owner: manager
     reviewed: 2026-10-22
@@ -320,6 +358,53 @@ milestones:
     owner: manager
     reviewed: 2026-10-14
   # ── G4 ──────────────────────────────────────────────────────────────────
+  - id: L-ML-LIVE
+    goal: G4
+    name: "WEEK PRIORITY 1 -- ML in live trading loops within days, plus ML infra and ops (target 2026-11-01)"
+    status: active
+    week_priority: 1
+    target: 2026-11-01
+    where: >-
+      Opened 2026-10-28 ~21:10Z (lane ROADMAP-PRIORITIES-AM-PRINCIPLE, manager dispatch). Operator, verbatim (~20:55Z, row
+      WEEKLY-PLANNING note): "(1) ML R&D: get a handful of ML models into live trading loops within days, with a concrete
+      promotion plan; validate and extend ML infra/ops". On in-trade ML (~21:05Z): "I'll settle for a conservative
+      production ML that will mostly recommend holding outside of edge cases" -- see § "Active management" for the
+      per-action-class graduation rule. Promotion still runs the ladder (docs/plans/OPERATING-PLAN-2026-09-21.md); the
+      strategy status model (in testing / in production / inactive, adopted ~21:05Z) is being written into the operating
+      plan by lane STRATEGY-STATUS-MODEL. Plan of record due 2026-10-29 05:30Z from lane ML-LIVE-PROMOTION-PLAN.
+    next: >-
+      Done-condition (target 2026-11-01): a handful of ML models change a live decision in a trading loop (advisory or
+      executed, each on its own committed evidence record), with the promotion plan committed and the ML infra/ops checks
+      (serve parity, freshness, drift, registry) validated on the live path. Measure: models whose output reached an order
+      decision, re-read from the decision records, never quoted.
+    no_rows_reason: >-
+      opened 2026-10-28; the build rows are filed from lane ML-LIVE-PROMOTION-PLAN's plan (due 2026-10-29 05:30Z) at the
+      06:17Z planning session; existing ML work stays under M25 / M14 / M9
+    owner: manager
+    reviewed: 2026-10-28
+  - id: L-DESK-V1
+    goal: G4
+    name: "WEEK PRIORITY 2 -- trading desk production-ready V1 by the end of the week (target 2026-11-04)"
+    status: active
+    week_priority: 2
+    target: 2026-11-04
+    where: >-
+      Opened 2026-10-28 ~21:10Z (lane ROADMAP-PRIORITIES-AM-PRINCIPLE, manager dispatch). Operator, verbatim (~20:55Z, row
+      WEEKLY-PLANNING note): "(2) Trading desk: production-ready V1 by end of week". The desk's in-trade role follows
+      § "Active management": the full action space, advice-only per class until its own test passes; tightening is tested
+      and loses (#20967). Long-run desk history stays on L-DESK. Plan of record due 2026-10-29 05:30Z from lane
+      DESK-V1-PRODUCTION-PLAN.
+    next: >-
+      Done-condition (by 2026-11-04): the desk V1 runs in production on its rostered books without operator relay --
+      scheduled wakes, records, grading and the per-account apply path observed end to end -- with its scope and
+      acceptance checks stated in the DESK-V1-PRODUCTION-PLAN plan. Measure: desk decision and outcome records
+      (comms/desk/), re-read, never quoted.
+    no_rows_reason: >-
+      opened 2026-10-28; the V1 build rows are filed from lane DESK-V1-PRODUCTION-PLAN's plan (due 2026-10-29 05:30Z) at
+      the 06:17Z planning session; existing desk rows stay under L-DESK
+    architecture: ["Active management"]
+    owner: manager
+    reviewed: 2026-10-28
   - id: L-REGIME
     goal: G4
     name: Regime program -- know when each strategy is primed

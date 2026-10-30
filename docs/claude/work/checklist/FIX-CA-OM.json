@@ -16,9 +16,15 @@
   "observation": {
     "what": "a real close passes the FIX-CA-02..06 order_monitor paths (e.g. a 10148 PendingCancel not graded refused_by_venue) with no order_monitor ERROR",
     "how_to_check": "/api/diag/journalctl?unit=ict-trader-live.service grep order_monitor ERROR|PendingCancel",
-    "due_by": "2026-10-29"
+    "due_by": "2026-11-06T00:00Z",
+    "redated": {
+      "on": "2026-10-30",
+      "from": "2026-10-29",
+      "by": "DAILY-REVIEW-TRIAGE-20261030",
+      "reason": "deployed (#13251); needs a real close through the order_monitor FIX-CA-02..06 paths; no journalctl read this run."
+    }
   },
-  "updated_at": "2026-10-15T06:36:08Z",
-  "updated_by": "session_019p3X1tJAdUdV2dKaw9no8r",
+  "updated_at": "2026-10-30T06:13:03Z",
+  "updated_by": "session_01AFoLuL99YDu1fHUkJvG55s",
   "_seq": 156
 }

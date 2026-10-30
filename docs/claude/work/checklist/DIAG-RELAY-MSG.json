@@ -2,7 +2,7 @@
   "id": "DIAG-RELAY-MSG",
   "title": "vm-diag-snapshot.yml generic failure comment names infrastructure causes without checking which step failed",
   "phase": null,
-  "state": "queued",
+  "state": "dropped",
   "owner": "ops lane",
   "lane": null,
   "model": null,
@@ -11,8 +11,8 @@
   "tier": 1,
   "prs": [],
   "blocked_on": [],
-  "note": "[2026-10-11 ROUTE-AND-ASK-TRIAGE] Owns PI-20260922-DIAG-RELAY-ERROR-MESSAGE-NAMES-THE-WRONG-CAUSE. MEASURED 2026-10-11: the missing-checkout root cause is fixed (.github/workflows/vm-diag-snapshot.yml:180 uses actions/checkout@v4), but the generic comment at line ~845 still asserts 'The request parsed fine, so this is an infrastructure failure' and lists VM_SSH_KEY/token causes whatever step failed. Fix: name the failed step from steps.<id>.outcome. Closes on a deliberately failed run per leg (VM leg, post-processing leg) whose comment names the right step.",
-  "updated_at": "2026-10-11T05:59:25Z",
-  "updated_by": "session_01BFAVovnP4UK5phrpVWnYsR",
+  "note": "[2026-10-11 ROUTE-AND-ASK-TRIAGE] Owns PI-20260922-DIAG-RELAY-ERROR-MESSAGE-NAMES-THE-WRONG-CAUSE. MEASURED 2026-10-11: the missing-checkout root cause is fixed (.github/workflows/vm-diag-snapshot.yml:180 uses actions/checkout@v4), but the generic comment at line ~845 still asserts 'The request parsed fine, so this is an infrastructure failure' and lists VM_SSH_KEY/token causes whatever step failed. Fix: name the failed step from steps.<id>.outcome. Closes on a deliberately failed run per leg (VM leg, post-processing leg) whose comment names the right step. [2026-10-29 BACKLOG-RESET-20261029] dropped: bulk reset 2026-10-29: value unknown (operator). Re-open by setting state=queued if the value is later known.",
+  "updated_at": "2026-10-29T11:31:40Z",
+  "updated_by": "session_01AFoLuKwNMzjtn2CH2kVd86",
   "_seq": 392
 }

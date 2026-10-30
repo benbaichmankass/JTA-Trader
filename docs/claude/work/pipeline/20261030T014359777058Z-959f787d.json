@@ -1,0 +1,15 @@
+{
+  "due_when": {
+    "due_date": "2026-10-31",
+    "kind": "date"
+  },
+  "id": "PI-20261030-A1AEHRKH-0002",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "LTR reviewer session_01AFoLuK1aMVtmwwgo5x3LaR row bc3bad1 on live-review/rows; Manager Session 2026-10-29d",
+    "rerun": "git show origin/live-review/rows:comms/live_review/reviews.jsonl | grep -c LR-20261030T0134Z-pkg-591f76d3005e4cc8"
+  },
+  "state": "queued",
+  "what": "Two ETHUSDT shorts share bybit_1 (pkg-591f76d3005e4cc8 trend_donchian_eth_prop and pkg-dc7c0c141d2c42c9 trend_donchian_eth). LTR packet LR-20261030T0134Z reports mechanics MISMATCH: venue SL 2313.83 vs package SL 2281.2475; 2313.83 equals pkg-dc7c's package stop. INFERRED (not checked): one net Bybit position per symbol per account, so two packages on one symbol/account share one stop, or the packet read attributes the other package's stop. Reviewer row bc3bad1 routed operator_ask. Root-cause which, and fix (per-package position isolation or the read's attribution). bybit_1 is paper; the same leg runs on 3 prop accounts."
+}

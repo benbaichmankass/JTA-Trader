@@ -1,0 +1,60 @@
+name: counterfactual-grade-closed
+
+# TRADE-COUNTERFACTUAL-GRADER (operator 2026-10-29): every CLOSED order package is replayed against counterfactual
+# brackets and management (scripts/research/counterfactual_grader.py) and ONE graded record per package lands in
+# comms/research/counterfactual_grades/<order_package_id>.json. A package is graded only once its post-exit horizon has
+# passed (leg max-hold, else a per-timeframe default; GRADER-POST-EXIT-HORIZON) and re-graded when its record predates
+# that horizon or the current schema (scripts/research/counterfactual_grader.py::due_for_grading). Cap 20 per run.
+# A grading failure is a warning, never a stop (Prime Directive rule 7). Tier 1: read-only replay + a data commit.
+
+on:
+  schedule:
+    - cron: "17 * * * *"
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: counterfactual-grade-closed
+  cancel-in-progress: false
+
+jobs:
+  grade:
+    runs-on: ubuntu-latest
+    timeout-minutes: 110  # commit-to-main verify-merged waits up to 80 min (tests/test_commit_to_main_callers.py)
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+          token: ${{ secrets.BRANCH_PROTECTION_TOKEN }}
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Grade newly closed packages
+        id: grade
+        continue-on-error: true
+        env:
+          DIAG_READ_TOKEN: ${{ secrets.DIAG_READ_TOKEN }}
+        run: |
+          pip install --quiet pyyaml
+          python3 scripts/research/counterfactual_grader.py --live --all-closed --write \
+            || { echo "::warning::counterfactual_grader failed; nothing lands this hour"; exit 0; }
+          if [ -n "$(git status --porcelain comms/research/counterfactual_grades)" ]; then echo "changed=1" >> "$GITHUB_OUTPUT"; else echo "changed=0" >> "$GITHUB_OUTPUT"; fi
+
+      - name: Land on main (one self-landing PR)
+        if: steps.grade.outputs.changed == '1'
+        uses: ./.github/actions/commit-to-main
+        with:
+          token: ${{ secrets.BRANCH_PROTECTION_TOKEN }}
+          paths: comms/research/counterfactual_grades
+          # records are idempotent by file name: on a stale-branch conflict adopt main's copy
+          refresh-command: git fetch -q origin main && git checkout FETCH_HEAD -- comms/research/counterfactual_grades || true
+          message: "counterfactual-grades: grade newly closed order packages"
+          pr-title: "counterfactual-grades: grade newly closed order packages"
+          pr-body: "Automated (auto-merge): one graded counterfactual record per newly closed order package. scripts/research/counterfactual_grader.py."
+          verify-merged: "true"

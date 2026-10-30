@@ -1,0 +1,91 @@
+diff --git a/webapp/src/lib/api.ts b/webapp/src/lib/api.ts
+index 87f8802..53a0eae 100644
+--- a/webapp/src/lib/api.ts
++++ b/webapp/src/lib/api.ts
+@@ -50,6 +50,7 @@ export interface Position {
+   entryPrice?: number | null;
+   unrealizedPnl?: number | null;
+   unrealizedPnlSource?: string | null;
++  unrealizedPnlProvenance?: string | null;
+   openedAt?: string | null;
+   stopLoss?: number | null;
+   takeProfit?: number | null;
+diff --git a/webapp/src/lib/ws.ts b/webapp/src/lib/ws.ts
+index a68c11d..b3fa902 100644
+--- a/webapp/src/lib/ws.ts
++++ b/webapp/src/lib/ws.ts
+@@ -34,7 +34,7 @@ export interface MarketHandlers {
+    * **Use it to REFRESH uPnL on rows you already have. Never to decide which
+    * rows exist** — REST (`/api/bot/positions`) is the authority on membership.
+    */
+-  onPositions?: (positions: Position[]) => void;
++  onPositions?: (positions: Position[], scope?: "all" | "symbols") => void;
+   onStatus?: (status: MarketStatus) => void;
+ }
+ 
+@@ -71,6 +71,9 @@ export class MarketStream {
+       interval: this.interval,
+       limit: String(this.limit),
+       include_paper: "true",
++      // Whole-book positions frame (bot LIVE-NUMBERS-STREAMING): live count + uPnL
++      // for EVERY row, not just the charted symbol. Older servers ignore it.
++      scope: "all",
+     });
+     const url = `${getBotWsUrl()}/ws/market?${q.toString()}`;
+     this.handlers.onStatus?.("connecting");
+@@ -95,7 +98,7 @@ export class MarketStream {
+       if (msg?.type === "candles" && Array.isArray(msg.candles)) {
+         this.handlers.onCandles?.(msg.symbol, msg.interval, msg.candles as Candle[]);
+       } else if (msg?.type === "positions" && Array.isArray(msg.positions)) {
+-        this.handlers.onPositions?.(msg.positions as Position[]);
++        this.handlers.onPositions?.(msg.positions as Position[], msg.scope);
+       }
+     };
+     this.ws.onclose = () => {
+diff --git a/webapp/src/routes/Overview.svelte b/webapp/src/routes/Overview.svelte
+index 478f943..538ae8a 100644
+--- a/webapp/src/routes/Overview.svelte
++++ b/webapp/src/routes/Overview.svelte
+@@ -91,6 +91,7 @@
+ 
+   let stream: MarketStream | null = null;
+   let pollTimer: ReturnType<typeof setInterval> | null = null;
++  let lastMembershipRefresh = 0;
+   let refreshing = $state(false);
+   let lastUpdated = $state<number | null>(null);
+ 
+@@ -305,7 +306,7 @@
+       onCandles: (sym, _iv, cs) => {
+         candlesBySymbol = { ...candlesBySymbol, [sym]: cs };
+       },
+-      onPositions: (ps) => {
++      onPositions: (ps, scope) => {
+         // MERGE uPnL onto the REST rows — NEVER replace the row SET.
+         //
+         // The server SCOPES this frame to the subscribed symbols
+@@ -331,12 +332,24 @@
+         // the code did not do. Cost of the fix: a position opened between REST
+         // polls appears up to one poll interval late, which is strictly better
+         // than silently dropping positions that exist.
++        // Whole-book frame (scope "all"): if the SET of open ids differs from the
++        // REST rows, a trade opened/closed — re-read REST at once (throttled 2 s)
++        // instead of waiting for the 15 s poll, so the count is live too.
++        if (scope === "all" && ps) {
++          const a = new Set(ps.map((p) => String(p.id ?? "")));
++          const b = new Set(positions.map((p) => String(p.id ?? "")));
++          const same = a.size === b.size && [...a].every((id) => b.has(id));
++          if (!same && Date.now() - lastMembershipRefresh > 2000) {
++            lastMembershipRefresh = Date.now();
++            api.positions().then((v) => { positions = v; lastUpdated = Date.now(); }).catch(() => {});
++          }
++        }
+         if (!ps || !ps.length) return;
+         const live = new Map(ps.map((p) => [String(p.id ?? ""), p]));
+         positions = positions.map((p) => {
+           const w = live.get(String(p.id ?? ""));
+           return w
+-            ? { ...p, unrealizedPnl: w.unrealizedPnl, unrealizedPnlSource: w.unrealizedPnlSource }
++            ? { ...p, unrealizedPnl: w.unrealizedPnl, unrealizedPnlSource: w.unrealizedPnlSource, unrealizedPnlProvenance: w.unrealizedPnlProvenance }
+             : p;
+         });
+       },

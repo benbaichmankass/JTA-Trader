@@ -327,7 +327,7 @@ def main(argv: Optional[List[str]] = None) -> int:
             print(f"::warning::rows-branch row {x['review_id']} refused by the schema, not mirrored: {x['why']}", file=sys.stderr)
     if args.flag_pr:
         import os
-        state = flag_once(res["skipped"], os.environ.get("GITHUB_REPOSITORY", "benbaichmankass/Metis-Insights"),
+        state = flag_once(res["skipped"], os.environ.get("GITHUB_REPOSITORY", "benbaichmankass/JTA-Trader"),
                           args.flag_pr, os.environ.get("RUN_URL", ""))
         print(f"flag: {state}", file=sys.stderr)
         if state.startswith("could_not"):

@@ -1,0 +1,15 @@
+{
+  "due_when": {
+    "due_date": "2026-10-30",
+    "kind": "date"
+  },
+  "id": "PI-20261029-Q17QWHDZ-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "lane ML-SERVE-SETUP-FEATURES session_01AFoLuM3NoUTHiuQ17qwhdZ (B2)",
+    "rerun": "grep -n '_bar_index_at_or_before(bar_ts, tr\\[\"entry_ts\"\\])' ml/datasets/families/setup_candidates.py  # then on the trainer: compare v022 live rows' ts to each trade's signal-bar open"
+  },
+  "state": "queued",
+  "what": "[MODEL, P1 eval validity, INFERRED from code, not measured on data] setup_candidates live/live_paper eval rows locate a real trade at `_bar_index_at_or_before(bar_ts, trades.timestamp)`. market_raw `ts` is the bar OPEN time (bybit_offvm._ms_to_iso), and a live fill lands after the signal bar CLOSES, so the located bar is the bar that was FORMING at the fill: its close, vol and momentum postdate the decision (a one-bar lookahead on the eval side only). Train rows (backtest, entry_price=closes[e]) and the B2 serve path (last CLOSED bar) use the signal bar. If confirmed, P1 (b)-(d) on live_holdout score the head on features it never sees at serve. Check: for v022, compare each live row's `ts` with the trade's signal-bar open (order_packages / signals logged_at) and count rows offset by one bar; fix = locate at the last bar whose CLOSE <= entry (ts + tf <= entry_ts), rebuild, re-gate."
+}

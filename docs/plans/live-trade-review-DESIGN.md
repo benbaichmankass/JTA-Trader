@@ -169,7 +169,7 @@ The numbers above are now the tool's. See row `LTR-0-CONDITIONAL-OUTCOMES`. **Re
 
 - **Tighten only, never widen.** `amend_position_sl.py` already refuses a looser stop against the package stop, every leg's `trades.stop_loss` and every resting venue stop (exit 2).
 - **Never add risk:** no size change, no new entry, no re-entry, no TP move farther away under a mandate.
-- **A noise floor:** the new stop must sit at least `min_buffer_atr` (proposed 1.0 × the leg's ATR) beyond the mark, and at most one amend per package per closed bar. **BUILD (LTR-6), enforced inside the script**, not only in the prompt.
+- **A noise floor:** the new stop must sit at least `min_buffer_atr` (proposed 1.0 × the leg's ATR) beyond the mark. ~~and at most one amend per package per closed bar~~ [removed 2026-10-29, operator, row REMOVE-PER-BAR-CAP]: no operator decision approved a count cap; the duplicate guard is idempotency per review_id. **BUILD (LTR-6), enforced inside the script**, not only in the prompt.
 - **Never on a read that could not look** (exit 3), and never when venue and journal disagree; that is `flag_mechanics`.
 - **Mirror identical by construction:** the amend moves the shared `order_packages.sl` and every leg of the package (live + mirror + soak). That is what the script does today.
 - **Prime Directive:** the reviewer never writes `mode:`, never sets `execution: shadow`, never halts anything, and never closes a position on its own.

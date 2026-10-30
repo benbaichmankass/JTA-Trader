@@ -450,7 +450,7 @@ from scripts.ops.research_slo_view import latest_status, table_lines  # noqa: E4
 # ── GitHub reads + effects ───────────────────────────────────────────────────────────────────────────────
 class Gh:
     def __init__(self) -> None:
-        self.repo = os.environ.get("GITHUB_REPOSITORY", "benbaichmankass/Metis-Insights")
+        self.repo = os.environ.get("GITHUB_REPOSITORY", "benbaichmankass/JTA-Trader")
 
     def _gh(self, args: List[str]) -> Optional[str]:
         for _ in range(3):

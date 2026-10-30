@@ -5,121 +5,209 @@
     "by_category": [
      {
       "category": "suggestive",
-      "hit_rate": 0.5,
-      "mean": 0.3083,
-      "n": 2
+      "hit_rate": 0.333,
+      "mean": 0.0741,
+      "n": 3
      }
     ],
     "dropped_unpriced": 0,
-    "n": 2,
-    "verdict": "INDETERMINATE (needs >= 2 ranked categories with n >= 5 each; have [('suggestive', 2)])"
+    "n": 3,
+    "verdict": "INDETERMINATE (needs >= 2 ranked categories with n >= 5 each; have [('suggestive', 3)])"
    },
    "optimism_expected_minus_realised": {
     "ci95": [
-     -26.8071,
-     26.7906
+     -5.1048,
+     5.6899
     ],
-    "hit_rate": 0.5,
-    "mean": -0.0083,
-    "n": 2,
+    "hit_rate": 0.667,
+    "mean": 0.2926,
+    "n": 3,
     "worst": -2.1174
    },
    "p_hit": {
-    "brier": 0.26,
-    "brier_ref": 0.25,
+    "brier": 0.2142,
+    "brier_ref": 0.2222,
     "dropped_unpriced": 0,
-    "hit_rate": 0.5,
-    "mean_confidence": 0.4,
-    "n": 2,
-    "overconfidence_gap": -0.1,
+    "hit_rate": 0.3333,
+    "mean_confidence": 0.3833,
+    "n": 3,
+    "overconfidence_gap": 0.05,
     "reliability": [
      {
       "bucket": "[0.0,0.5]",
-      "mean_confidence": 0.4,
-      "n": 2,
-      "realised_hit_rate": 0.5
+      "mean_confidence": 0.383,
+      "n": 3,
+      "realised_hit_rate": 0.333
      }
     ],
-    "skill": -0.04,
-    "verdict": "INDETERMINATE (n=2 < 10)"
+    "skill": 0.0363,
+    "verdict": "INDETERMINATE (n=3 < 10)"
    }
   },
   "population": {
    "by_outcome_kind": {
-    "awaiting_outcome_row": 1,
-    "not_computable": 68,
-    "replayed": 2
+    "awaiting_outcome_row": 3,
+    "not_computable": 121,
+    "replayed": 3
    },
    "by_role_action": {
-    "entry_generation/no_trade": 66,
-    "entry_generation/propose_entry": 5
+    "entry_generation/no_trade": 118,
+    "entry_generation/propose_entry": 9
    },
-   "n_decisions": 71,
-   "n_no_trade": 66,
-   "n_pre_cutoff_or_gate_ineligible": 2,
-   "n_priced_gradeable": 2,
-   "n_proposals": 5,
-   "n_proposals_awaiting": 1,
+   "n_decisions": 127,
+   "n_no_trade": 118,
+   "n_pre_cutoff_or_gate_ineligible": 3,
+   "n_priced_gradeable": 3,
+   "n_proposals": 9,
+   "n_proposals_awaiting": 3,
    "n_proposals_expired_unfilled": 0,
-   "n_proposals_priced": 2,
+   "n_proposals_priced": 3,
    "not_computable_reasons": {
-    "mechanics probe: excluded from edge replay": 2,
-    "no_trade/watch_note label is the best baseline bracket from the same packet (design \u00a7 8.1); priced by DESK-20 on the DESK-7 harness, not built yet": 66
+    "mechanics probe: excluded from edge replay": 3,
+    "no_trade/watch_note label is the best baseline bracket from the same packet (design \u00a7 8.1); priced by DESK-20 on the DESK-7 harness, not built yet": 118
    }
   },
   "vs_random": {
    "baseline_missing": 0,
    "ci95": [
-    -28.2756,
-    25.9427
+    -6.6066,
+    4.0414
    ],
-   "hit_rate": 0.5,
-   "mean": -1.1664,
-   "n": 2,
+   "hit_rate": 0.333,
+   "mean": -1.2826,
+   "n": 3,
    "r_unit_note": "baseline R is atr_stop_1x; the proposal's R is its own planned risk",
-   "verdict": "INDETERMINATE (n=2 < 30)",
+   "verdict": "INDETERMINATE (n=3 < 30)",
    "worst": -3.3
   }
  },
- "generated_at": "2026-10-28T20:11:58Z",
+ "generated_at": "2026-10-30T07:04:33Z",
  "live_review_calibration": {
-  "hold/all": {
-   "brier": 0.2889,
+  "close/all": {
+   "brier": 0.1946,
    "brier_ref": 0.0,
    "dropped_unpriced": 0,
-   "hit_rate": 0.0,
-   "mean_confidence": 0.5357,
-   "n": 7,
-   "overconfidence_gap": 0.5357,
+   "hit_rate": 1.0,
+   "mean_confidence": 0.5593,
+   "n": 14,
+   "overconfidence_gap": -0.4407,
    "reliability": [
     {
      "bucket": "[0.5,0.7]",
-     "mean_confidence": 0.536,
-     "n": 7,
-     "realised_hit_rate": 0.0
+     "mean_confidence": 0.559,
+     "n": 14,
+     "realised_hit_rate": 1.0
     }
    ],
    "skill": null,
-   "verdict": "INDETERMINATE (n=7 < 10)"
+   "verdict": "UNDERCONFIDENT"
+  },
+  "close/judgement": {
+   "brier": 0.1946,
+   "brier_ref": 0.0,
+   "dropped_unpriced": 0,
+   "hit_rate": 1.0,
+   "mean_confidence": 0.5593,
+   "n": 14,
+   "overconfidence_gap": -0.4407,
+   "reliability": [
+    {
+     "bucket": "[0.5,0.7]",
+     "mean_confidence": 0.559,
+     "n": 14,
+     "realised_hit_rate": 1.0
+    }
+   ],
+   "skill": null,
+   "verdict": "UNDERCONFIDENT"
+  },
+  "hold/all": {
+   "brier": 0.3062,
+   "brier_ref": 0.1371,
+   "dropped_unpriced": 0,
+   "hit_rate": 0.1639,
+   "mean_confidence": 0.5648,
+   "n": 61,
+   "overconfidence_gap": 0.4008,
+   "reliability": [
+    {
+     "bucket": "[0.5,0.7]",
+     "mean_confidence": 0.56,
+     "n": 59,
+     "realised_hit_rate": 0.169
+    },
+    {
+     "bucket": "[0.7,0.9]",
+     "mean_confidence": 0.7,
+     "n": 2,
+     "realised_hit_rate": 0.0
+    }
+   ],
+   "skill": -1.2342,
+   "verdict": "OVERCONFIDENT"
   },
   "hold/judgement": {
-   "brier": 0.2889,
-   "brier_ref": 0.0,
+   "brier": 0.3062,
+   "brier_ref": 0.1371,
    "dropped_unpriced": 0,
-   "hit_rate": 0.0,
-   "mean_confidence": 0.5357,
-   "n": 7,
-   "overconfidence_gap": 0.5357,
+   "hit_rate": 0.1639,
+   "mean_confidence": 0.5648,
+   "n": 61,
+   "overconfidence_gap": 0.4008,
    "reliability": [
     {
      "bucket": "[0.5,0.7]",
-     "mean_confidence": 0.536,
-     "n": 7,
+     "mean_confidence": 0.56,
+     "n": 59,
+     "realised_hit_rate": 0.169
+    },
+    {
+     "bucket": "[0.7,0.9]",
+     "mean_confidence": 0.7,
+     "n": 2,
      "realised_hit_rate": 0.0
     }
    ],
+   "skill": -1.2342,
+   "verdict": "OVERCONFIDENT"
+  },
+  "tighten_sl/all": {
+   "brier": 0.1796,
+   "brier_ref": 0.0,
+   "dropped_unpriced": 0,
+   "hit_rate": 1.0,
+   "mean_confidence": 0.5767,
+   "n": 3,
+   "overconfidence_gap": -0.4233,
+   "reliability": [
+    {
+     "bucket": "[0.5,0.7]",
+     "mean_confidence": 0.577,
+     "n": 3,
+     "realised_hit_rate": 1.0
+    }
+   ],
    "skill": null,
-   "verdict": "INDETERMINATE (n=7 < 10)"
+   "verdict": "INDETERMINATE (n=3 < 10)"
+  },
+  "tighten_sl/judgement": {
+   "brier": 0.1796,
+   "brier_ref": 0.0,
+   "dropped_unpriced": 0,
+   "hit_rate": 1.0,
+   "mean_confidence": 0.5767,
+   "n": 3,
+   "overconfidence_gap": -0.4233,
+   "reliability": [
+    {
+     "bucket": "[0.5,0.7]",
+     "mean_confidence": 0.577,
+     "n": 3,
+     "realised_hit_rate": 1.0
+    }
+   ],
+   "skill": null,
+   "verdict": "INDETERMINATE (n=3 < 10)"
   }
  },
  "live_review_use_rules": {
@@ -142,13 +230,16 @@
    "worst_dr": null
   },
   "close": {
-   "ci95": null,
-   "hit_rate": null,
-   "mean_dr": null,
-   "n": 0,
-   "n_applied": 0,
-   "verdict": "HOLD_SCOPE (INDETERMINATE: n=0 < 20)",
-   "worst_dr": null
+   "ci95": [
+    0.7278,
+    1.0969
+   ],
+   "hit_rate": 1.0,
+   "mean_dr": 0.9123,
+   "n": 14,
+   "n_applied": 2,
+   "verdict": "HOLD_SCOPE (INDETERMINATE: n=14 < 20)",
+   "worst_dr": 0.4009
   },
   "move_tp": {
    "ci95": null,
@@ -169,13 +260,16 @@
    "worst_dr": null
   },
   "tighten_sl": {
-   "ci95": null,
-   "hit_rate": null,
-   "mean_dr": null,
-   "n": 0,
+   "ci95": [
+    0.7323,
+    0.9471
+   ],
+   "hit_rate": 1.0,
+   "mean_dr": 0.8397,
+   "n": 3,
    "n_applied": 0,
-   "verdict": "HOLD_SCOPE (INDETERMINATE: n=0 < 20)",
-   "worst_dr": null
+   "verdict": "HOLD_SCOPE (INDETERMINATE: n=3 < 20)",
+   "worst_dr": 0.8147
   },
   "tp_revise": {
    "ci95": null,
@@ -199,56 +293,47 @@
  "no_trade": {
   "abstain_value_all_overlapping": {
    "ci95": [
-    0.3216,
-    2.3381
+    0.6151,
+    2.3592
    ],
-   "hit_rate": 0.792,
-   "mean": 1.3298,
-   "n": 24,
-   "worst": -2.9985
+   "hit_rate": 0.683,
+   "mean": 1.4871,
+   "n": 63,
+   "worst": -3.0874
   },
   "abstain_value_independent": {
    "ci95": [
-    -30.3873,
-    35.7716
+    -2.3326,
+    4.6336
    ],
-   "hit_rate": 1.0,
-   "mean": 2.6922,
-   "n": 2,
-   "worst": 0.0887
+   "hit_rate": 0.667,
+   "mean": 1.1505,
+   "n": 6,
+   "worst": -3.0874
   },
-  "abstain_vs_random_mean": 1.1729,
+  "abstain_vs_random_mean": 0.7747,
   "awaiting_ready_at": [
-   "2026-10-28T22:01:00+00:00",
-   "2026-10-28T23:01:00+00:00",
-   "2026-10-29T00:02:00+00:00",
-   "2026-10-29T08:02:00+00:00",
-   "2026-10-29T13:39:00+00:00",
-   "2026-10-29T16:31:00+00:00",
-   "2026-10-29T17:43:00+00:00",
-   "2026-10-29T18:35:00+00:00",
-   "2026-10-29T19:38:00+00:00",
-   "2026-10-29T20:02:00+00:00",
-   "2026-10-29T21:02:00+00:00",
-   "2026-10-29T22:02:00+00:00",
-   "2026-10-29T23:01:00+00:00",
-   "2026-10-30T00:02:00+00:00",
-   "2026-10-30T01:02:00+00:00",
-   "2026-10-30T02:03:00+00:00",
-   "2026-10-30T03:03:00+00:00",
-   "2026-10-30T04:04:00+00:00",
-   "2026-10-30T05:01:00+00:00",
-   "2026-10-30T06:02:00+00:00",
-   "2026-10-30T07:01:00+00:00",
+   "2026-10-30T07:36:00+00:00",
+   "2026-10-30T08:01:00+00:00",
    "2026-10-30T08:03:00+00:00",
    "2026-10-30T09:01:00+00:00",
+   "2026-10-30T09:03:00+00:00",
+   "2026-10-30T10:02:00+00:00",
    "2026-10-30T10:02:00+00:00",
    "2026-10-30T11:02:00+00:00",
+   "2026-10-30T11:03:00+00:00",
+   "2026-10-30T12:02:00+00:00",
    "2026-10-30T12:03:00+00:00",
+   "2026-10-30T13:02:00+00:00",
    "2026-10-30T13:03:00+00:00",
    "2026-10-30T14:01:00+00:00",
+   "2026-10-30T14:02:00+00:00",
    "2026-10-30T15:02:00+00:00",
+   "2026-10-30T15:05:00+00:00",
+   "2026-10-30T16:01:00+00:00",
    "2026-10-30T16:02:00+00:00",
+   "2026-10-30T17:01:00+00:00",
+   "2026-10-30T18:02:00+00:00",
    "2026-10-30T20:01:00+00:00",
    "2026-10-30T21:02:00+00:00",
    "2026-10-30T22:02:00+00:00",
@@ -260,84 +345,115 @@
    "2026-10-31T04:02:00+00:00",
    "2026-10-31T05:02:00+00:00",
    "2026-10-31T06:01:00+00:00",
-   "2026-10-31T07:01:00+00:00"
+   "2026-10-31T07:01:00+00:00",
+   "2026-10-31T10:01:00+00:00",
+   "2026-10-31T11:01:00+00:00",
+   "2026-10-31T12:02:00+00:00",
+   "2026-10-31T20:02:00+00:00",
+   "2026-10-31T21:02:00+00:00",
+   "2026-10-31T23:14:00+00:00",
+   "2026-11-01T00:18:00+00:00",
+   "2026-11-01T02:02:00+00:00",
+   "2026-11-01T03:05:00+00:00",
+   "2026-11-01T04:01:00+00:00",
+   "2026-11-01T05:01:00+00:00",
+   "2026-11-01T06:01:00+00:00",
+   "2026-11-01T07:03:00+00:00",
+   "2026-11-01T08:02:00+00:00",
+   "2026-11-01T09:01:00+00:00",
+   "2026-11-01T10:02:00+00:00",
+   "2026-11-01T11:01:00+00:00",
+   "2026-11-01T12:01:00+00:00",
+   "2026-11-01T13:03:00+00:00",
+   "2026-11-01T14:03:00+00:00",
+   "2026-11-01T16:02:00+00:00",
+   "2026-11-01T19:02:00+00:00"
   ],
   "could_not_look_reasons": {},
-  "hindsight_best_cell_mean": 0.6835,
+  "hindsight_best_cell_mean": 2.0842,
   "horizon_bars": 12,
   "limits": "overlapping hourly windows (verdict uses the independent subset); cell-average baseline, not the best trade; hindsight_best_cell is an upper bound, never graded; abstain vs random is ~ the round-trip cost by symmetry (context only)",
-  "n_awaiting": 42,
+  "n_awaiting": 55,
   "n_could_not_look": 0,
-  "n_independent": 2,
-  "n_independent_recorded": 5,
-  "n_priced": 24,
+  "n_independent": 6,
+  "n_independent_recorded": 7,
+  "n_priced": 63,
   "n_priced_without_listed_alternative": 0,
-  "n_recorded": 66,
-  "n_without_near_signals": 24,
+  "n_recorded": 118,
+  "n_without_near_signals": 48,
   "near_signal_mean_r_independent": {
-   "ci95": null,
-   "hit_rate": null,
-   "mean": null,
-   "n": 0,
-   "worst": null
+   "ci95": [
+    -0.7537,
+    0.6987
+   ],
+   "hit_rate": 0.667,
+   "mean": -0.0275,
+   "n": 15,
+   "worst": -3.2121
   },
   "state": "insufficient_n",
-  "verdict": "INSUFFICIENT_N (2 independent < 20)"
+  "verdict": "INSUFFICIENT_N (6 independent < 20)"
  },
  "rows": [
   {
    "class": "propose_entry vs random entry",
-   "eta_earliest": "2026-11-04",
-   "eta_note": "25 more call(s) at 4.455/day + 1.0d to price; earliest, assumes each prices",
-   "n_graded": 2,
+   "eta_earliest": "2026-11-06",
+   "eta_note": "21 more call(s) at 3.494/day + 1.0d to price; earliest, assumes each prices",
+   "n_graded": 3,
    "n_needed": 30,
-   "n_not_yet_graded": 3,
-   "n_recorded": 5,
+   "n_not_yet_graded": 6,
+   "n_recorded": 9,
    "not_yet_graded_breakdown": {
-    "awaiting_horizon": 1,
+    "awaiting_horizon": 3,
     "expired_unfilled": 0,
-    "pre_cutoff_or_gate_ineligible": 2
+    "pre_cutoff_or_gate_ineligible": 3
    },
-   "recorded_per_day_7d": 4.455,
+   "recorded_per_day_7d": 3.494,
    "role": "entry_generation",
    "state": "insufficient_n",
-   "verdict": "INDETERMINATE (n=2 < 30)"
+   "verdict": "INDETERMINATE (n=3 < 30)"
   },
   {
-   "abstain_value_mean_r": 2.6922,
+   "abstain_value_mean_r": 1.1505,
    "class": "no_trade vs entering (counterfactual)",
    "eta_earliest": "2026-11-08",
-   "eta_note": "15 more call(s) at 2.0/day + 3d to price; earliest, assumes each prices",
-   "n_graded": 2,
+   "eta_note": "13 more call(s) at 2.0/day + 3d to price; earliest, assumes each prices",
+   "n_graded": 6,
    "n_needed": 20,
-   "n_not_yet_graded": 64,
-   "n_priced_overlapping": 24,
-   "n_recorded": 66,
+   "n_not_yet_graded": 112,
+   "n_priced_overlapping": 63,
+   "n_recorded": 118,
    "not_yet_graded_breakdown": {
-    "awaiting_horizon": 42,
-    "priced_but_overlapping_not_independent": 22
+    "awaiting_horizon": 55,
+    "priced_but_overlapping_not_independent": 57
    },
    "recorded_per_day_7d": 2.0,
    "role": "entry_generation",
    "state": "insufficient_n",
-   "verdict": "INSUFFICIENT_N (2 independent < 20)"
+   "verdict": "INSUFFICIENT_N (6 independent < 20)"
   },
   {
-   "ci95_delta_r": null,
+   "ci95_delta_r": [
+    0.7323,
+    0.9471
+   ],
    "class": "tighten_sl",
-   "eta_earliest": null,
-   "eta_note": "no recorded call in the last 7 days: no accrual to extrapolate",
-   "mean_delta_r": null,
+   "eta_earliest": "2026-11-03",
+   "eta_note": "16 more call(s) at 5.488/day + 1.0d to price; earliest, assumes each prices",
+   "mean_delta_r": 0.8397,
    "n_applied": 0,
-   "n_graded": 0,
+   "n_graded": 3,
    "n_needed": 20,
-   "n_not_yet_graded": 0,
-   "n_recorded": 0,
-   "not_yet_graded_breakdown": {},
-   "recorded_per_day_7d": null,
+   "n_not_yet_graded": 1,
+   "n_recorded": 4,
+   "not_yet_graded_breakdown": {
+    "replay_mismatch": 1,
+    "trade_open": 1
+   },
+   "recorded_per_day_7d": 5.488,
    "role": "in_trade (live review)",
-   "state": "no_data",
-   "verdict": "HOLD_SCOPE (INDETERMINATE: n=0 < 20)"
+   "state": "insufficient_n",
+   "verdict": "HOLD_SCOPE (INDETERMINATE: n=3 < 20)"
   },
   {
    "ci95_delta_r": null,
@@ -374,23 +490,27 @@
    "verdict": "HOLD_SCOPE (INDETERMINATE: n=0 < 20)"
   },
   {
-   "ci95_delta_r": null,
+   "ci95_delta_r": [
+    0.7278,
+    1.0969
+   ],
    "class": "close",
-   "eta_earliest": "2026-11-11",
-   "eta_note": "18 more call(s) at 1.437/day + 1.0d to price; earliest, assumes each prices",
-   "mean_delta_r": null,
-   "n_applied": 0,
-   "n_graded": 0,
+   "eta_earliest": "2026-11-01",
+   "eta_note": "5 more call(s) at 5.273/day + 1.0d to price; earliest, assumes each prices",
+   "mean_delta_r": 0.9123,
+   "n_applied": 2,
+   "n_graded": 14,
    "n_needed": 20,
-   "n_not_yet_graded": 2,
-   "n_recorded": 2,
+   "n_not_yet_graded": 1,
+   "n_recorded": 15,
    "not_yet_graded_breakdown": {
-    "no_trade_row": 2
+    "replay_mismatch": 1,
+    "trade_open": 1
    },
-   "recorded_per_day_7d": 1.437,
+   "recorded_per_day_7d": 5.273,
    "role": "in_trade (live review)",
    "state": "insufficient_n",
-   "verdict": "HOLD_SCOPE (INDETERMINATE: n=0 < 20)"
+   "verdict": "HOLD_SCOPE (INDETERMINATE: n=14 < 20)"
   },
   {
    "ci95_delta_r": null,
@@ -463,19 +583,19 @@
   {
    "calibration_n": null,
    "class": "hold (vs close-at-review, ESTIMATED)",
-   "eta_earliest": "2026-10-28",
-   "eta_note": "-33 more call(s) at 16.803/day + 2.0d to price; earliest, assumes each prices",
-   "mean_delta_r": -0.9989,
-   "n_graded": 8,
+   "eta_earliest": null,
+   "eta_note": "already at n_needed",
+   "mean_delta_r": -0.5919,
+   "n_graded": 73,
    "n_needed": 20,
    "n_not_yet_graded": 45,
-   "n_recorded": 53,
+   "n_recorded": 118,
    "not_yet_graded_breakdown": {
     "trade_still_open_or_not_joined": 45
    },
-   "recorded_per_day_7d": 16.803,
+   "recorded_per_day_7d": 25.611,
    "role": "in_trade (live review)",
-   "state": "insufficient_n",
+   "state": "graded",
    "verdict": null
   },
   {
@@ -485,7 +605,7 @@
    "n_graded": 0,
    "n_needed": null,
    "n_not_yet_graded": 0,
-   "n_recorded": 23,
+   "n_recorded": 30,
    "not_yet_graded_breakdown": {},
    "recorded_per_day_7d": null,
    "role": "in_trade (live review)",
@@ -499,7 +619,7 @@
    "n_graded": 0,
    "n_needed": null,
    "n_not_yet_graded": 0,
-   "n_recorded": 46,
+   "n_recorded": 54,
    "not_yet_graded_breakdown": {},
    "recorded_per_day_7d": null,
    "role": "in_trade (live review)",

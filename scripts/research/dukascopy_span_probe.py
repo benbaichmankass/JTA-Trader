@@ -79,7 +79,7 @@ import dukascopy_instruments as _dk  # noqa: E402  (path shimmed above)
 #: different instrument than the fetcher actually pulls.
 #:
 #: Keyed by INSTRUMENT, not by our symbol, because several symbols share one
-#: (SPLG->SPY, IAUM->GLD, SCHA->IWM, MGC->XAU_USD); a per-symbol loop would
+#: (SPYM->SPY, IAUM->GLD, SCHA->IWM, MGC->XAU_USD); a per-symbol loop would
 #: double the requests while measuring the same thing.
 INSTRUMENTS: Dict[str, Dict[str, object]] = _dk.instruments_with_symbols()
 

@@ -1,0 +1,7 @@
+{
+  "tier": 3,
+  "landing": "hold",
+  "hold_reason": "tier_2_3_needs_approval",
+  "hold_text": "Tier 3, operator-approved: popup 2026-10-28 ~20:35Z in the manager's chat, verbatim \"Advice-only tightens (Recommended)\". Touches the VM rows watcher (src/runtime/live_review_rows_watch.py, live trader), scripts/ops/live_review_dispatch.py, scripts/ops/desk_intake.py and config/mandates.yaml (MD-TRADE-DESK in_trade advice_only). The manager merges and deploys (ict-git-sync pull + ict-trader-live restart) and verifies the post-state. It is a de-risking change: it removes an automatic action and adds none.",
+  "why": "Make tighten_sl advice only on every automatic path, on the LTR-TIGHTEN-OPTIMIZE evidence (comms/research/ltr_tighten_optimize/verdict.json, #21003; DESK-LIFECYCLE-S0, #20967): 981 Claude tightens -0.097 R [-0.140, -0.047] net of cost, and no registered tighten rule beat hold out of sample."
+}

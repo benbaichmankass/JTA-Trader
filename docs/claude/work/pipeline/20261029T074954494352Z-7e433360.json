@@ -1,0 +1,18 @@
+{
+  "due_when": {
+    "clears_when": "P1 re-graded on a v022 whose eval book has >=200 initial-risk rows and <=20% of live closed trades excluded, OR the cause of the missing initial-risk record on 245 of 324 BTC live closed trades is established and either backfilled or ruled out",
+    "due_date": "2026-10-30",
+    "kind": "date"
+  },
+  "id": "PI-20261029-MLP1-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "lane ML-P1-COSTNET-REBUILD (B1), 2026-10-29",
+    "rerun": "python3 scripts/ml/p1_costnet_grade.py (see docs/research/ml-p1-costnet-rebuild-2026-10-29.md) after rebuilding v022 with scripts/ml/p1_costnet_rebuild.sh"
+  },
+  "severity": "high",
+  "state": "queued",
+  "tier": 1,
+  "what": "[ML-P1] P1 read INDETERMINATE (n_eval 144 < 200; 72.4% of the 3-symbol live closed book has no declared initial risk: BTC 62 initial_risk / 245 stored-stop / 17 unit_fallback, ETH 35/0/0, SOL 3/0/0). The head's point estimate on the 144 clean rows is positive and clears (a)-(d), so the unlock is DATA, not the model. First: query trades.order_package_id and order_packages.meta.risk_per_unit coverage by month for BTC real closed trades to see whether the 245 are unlinked, pre-dating the field, or recoverable from order_packages.sl/entry. If recoverable, backfill the initial-risk read in the builder (never from the trail-overwritten stop). Then rebuild v022, retrain, regrade."
+}

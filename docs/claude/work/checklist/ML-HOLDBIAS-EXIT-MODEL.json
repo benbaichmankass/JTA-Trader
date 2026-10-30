@@ -1,0 +1,21 @@
+{
+  "id": "ML-HOLDBIAS-EXIT-MODEL",
+  "title": "[MODEL] P6: exit-holdbias-v1 conservative hold-biased management model (default HOLD, act only if best action beats hold by >=0.15R); gate vs hold-to-bracket + matched random on held-out real-money-leg paths, net of cost",
+  "phase": "W44",
+  "state": "queued",
+  "owner": "manager",
+  "lane": null,
+  "model": "sonnet",
+  "ceiling_usd": 10,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [],
+  "blocked_on": [],
+  "note": "Plan docs/plans/ml-live-promotion-plan-2026-10-29.md section 2a (reconciled 21:20Z): per-class graduation = DESK-V1 plan section 5b (PR #21023), no parallel gate; hold needs none; every non-hold class advice-only until section 5b passes per leg x regime. Model-level sanity to ship as advice producer: as-if-applied >= hold-to-bracket (LB > -0.01R/trade), advice rate <= 15%, no leg < -0.05R/trade. Depends on ML-EXIT-ACTIONGRID-LABELS. LTR wiring + rollout owned by ACTIVE-MGMT-REAL-MONEY-PLAN.  BASIS: -0.01R, 15% and -0.05R are pre-registered THRESHOLDS, not measurements; evaluated on held-out corpus-B folds (real-money legs' Stage-0 paths, base corpus 2627 trades, RQ-20261024-09a6-01) plus corpus A (507 trades, labels.jsonl 12500 rows).",
+  "updated_at": "2026-10-28T23:06:08Z",
+  "updated_by": "session_01AFoLuNJWA5pu5sGQqcm5s3",
+  "roadmap": [
+    "M25"
+  ],
+  "_seq": 770
+}

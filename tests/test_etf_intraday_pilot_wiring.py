@@ -83,7 +83,9 @@ def test_yaml_entries_pin_validated_params():
     cfg = yaml.safe_load(open("config/strategies.yaml"))["strategies"]
     # GLD 1h — bidirectional pullback (gld_pullback_1d clone, 1h)
     gld = cfg["gld_pullback_1h"]
-    assert gld["execution"] == "live" and gld["enabled"] is True
+    # RETIRED 2026-10-28 (STRATEGY-STATUS-MODEL, operator Q4): enabled: false is the retirement record; the
+    # validated params below are kept verbatim for the re-entry test.
+    assert gld["execution"] == "live" and gld["enabled"] is False
     assert "long_only" not in gld  # bidirectional
     assert gld["symbols"] == ["GLD"]
     assert gld["signal_prefixes"] == ["gld_pullback_1h"]

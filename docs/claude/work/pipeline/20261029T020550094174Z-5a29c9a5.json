@@ -1,0 +1,18 @@
+{
+  "due_when": {
+    "clears_when": "a reviewer dispatch whose prompt is < 3 KB writes a validator-clean row (live-review-records-guard) on live-review/rows",
+    "due_date": "2026-11-02",
+    "kind": "date"
+  },
+  "id": "PI-20261029-RUW3LDMM-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "Manager Session 2026-10-29a (session_01AFoLuKnBxnMFgVRUw3Ldmm), LTR wakes 01:49Z/01:50Z/02:00Z/02:01Z on ops-flags #17895",
+    "rerun": "count create_session calls with title 'Lane: LIVE-REVIEW-*' per day x prompt size (len of .claude/skills/live-trade-review/REVIEWER-BRIEF.md + packet block)"
+  },
+  "severity": "medium",
+  "state": "queued",
+  "tier": 1,
+  "what": "[ltr] Manager-side LTR reviewer dispatch pastes the 31 KB REVIEWER-BRIEF + packet verbatim into every create_session prompt (~40k output tokens per reviewer, 4 reviewers 01:49-02:05Z 2026-10-29). Proposal: reviewer reads the brief by get_file_contents at a pinned main sha + the packet from live-review/rows (already committed byte-exact), or the VM spawns reviewers itself; brief text then only names the sha."
+}

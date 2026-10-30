@@ -1,0 +1,21 @@
+{
+  "id": "RM-AM-TRAIL-EXPECTED-DETECTOR",
+  "title": "Detector: an open real-money/prop position whose MFE passed its leg's trail activation (X R) but whose resting SL has not moved for >= 2 closed bars raises ONE red flag (invariant in scripts/ops/system_invariants.py or attention_watch)",
+  "phase": null,
+  "state": "queued",
+  "owner": "lane (Opus)",
+  "lane": null,
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [],
+  "blocked_on": [],
+  "note": "Gap from the infra checklist in docs/plans/real-money-active-mgmt-plan-2026-10-29.md \u00a7 2 (alerts): nothing today fails if a declared trail silently stops amending (exit-refinement SKILL definition-of-done item 3: a DETECTOR). Inputs exist: position_telemetry (peak_r, open_r, bars_held), order_packages.meta (atr, trail_mult, atr_stop_mult), venue SL snapshot (LTR-MECHANICS-VENUE-SNAPSHOT). Activation R per leg = (trail_mult - atr_stop_mult)/atr_stop_mult (INFERRED from the monitor code; the detector must recompute the candidate stop exactly as monitor() does, by importing it, never re-deriving). Collapsed-state contract: could_not_look is its own state. Tier 1 (read path + alert). Cost ~$8.",
+  "updated_at": "2026-10-28T21:11:48Z",
+  "updated_by": "session_01AFoLuMfbQGw8MoevpjjwwW",
+  "roadmap": [
+    "L-ATM"
+  ],
+  "_seq": 766
+}

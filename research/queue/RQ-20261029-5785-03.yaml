@@ -1,0 +1,135 @@
+id: RQ-20261029-5785-03
+title: 'ML-REAL-MONEY-OVERLAY refine 1/3 -- CALIBRATION: do the overlay''s probabilities carry skill over the training
+  base rate once an isotonic calibrator is fit inside each CPCV training set?'
+status: queued
+cadence: once
+roadmap:
+- L-ML-LIVE
+theme: ml_health
+priority: 1
+kind: experiment
+question: V2 PASSED the TD family on ranking, but the scores are not calibrated (blind holdout Brier 0.2472 vs a
+  constant 0.2462). With the logistic fit on the earlier 75% of each CPCV training set and an isotonic calibrator
+  on the later 25%, is the out-of-sample Brier score of the calibrated probability on the family's gate trades lower
+  than the training-base-rate forecast (month-block bootstrap one-sided 95% LB of the per-trade Brier gain > 0),
+  and is it also lower on the blind 2019-12..2020-06 holdout?
+why_this_matters: 'Operator 2026-10-29 ~08:38Z via the manager: "Deploy shadow and continue testing to refine".
+  V2''s caveat is that the model ranks but does not predict. A calibrated probability is the precondition for any
+  graded (non-binary) sizing use and for reading the shadow p_win in the live log as a probability. The shipped
+  decision is a quantile threshold, so a monotone calibration leaves the shipped decisions unchanged; this unit
+  measures probability skill only.'
+power:
+  expected_n: 2600
+  min_detectable_effect: 0.02
+  effect_units: r_per_trade
+  sd: 0.3
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: 'Gate population = the real-money legs'' OOS trades: RQ-20261024-09a6-01 measured ada 402 + xrp 394 (PB2H,
+    796) and eth_4h 275 + xrp_4h 68 + eth_prop 1085 + sol_prop 403 (TD, 1831) over 2020-07..2026-10. A reduce of
+    20% of trades at 0.5x moves delta by at most 0.1 x |mean R of reduced|, so the margin -0.02 R is about 0.2 x
+    a reduced-set mean of 1 R; per-trade R sd ~1.5 gives a LB half-width of ~0.3 x 1.5 x 1.645 / sqrt(n) ~ 0.02-0.03
+    on n 800-1800 (an ESTIMATE). Below 200 gate trades -> INDETERMINATE, never FAIL. POWER METADATA corrected 2026-10-29
+    after V1''s run, for the queue schema only (no decision-rule change): design one_sample on the per-trade delta
+    vs 0; sd 0.3 is the sd of the DELTA (zero on taken trades, 0.5 x R on reduced), not of R -- consistent with
+    V1''s measured TD LB half-width (0.0114 = 1.645 x sd / sqrt(1830) -> sd ~0.30). At MDE 0.02 R this needs n ~1,400-1,800:
+    the pooled n and TD (1,830) clear it, PB2H alone (796) does not.'
+  feasibility:
+    source: none
+    accrual_basis: Replays pinned history on freshly fetched public candles; nothing accrues.
+decision_rule:
+  id: RULE-ML-OVERLAY-CALIBRATION-V1
+  registered_at: '2026-10-29'
+  registered_before_run: true
+  statistic: 'scripts/research/ml_overlay_noninferior.py --refine calibration (V2 corpus, features, families and
+    primary config C 0.1 unchanged). Per CPCV split (6x2, purge, 7-day embargo): logistic on the earlier 75% of
+    the training rows by entry time, isotonic (PAV) calibrator on the later 25%, both scoring the test block; constant
+    forecast = that split''s training base rate. Per gate trade: mean over its 5 OOS paths of the raw, calibrated
+    and constant Brier terms. Holdout: logistic on the earlier 75% of the whole main-window pool, calibrator on
+    the later 25%, scoring the V2 holdout gate trades.'
+  rule: Per family. CALIBRATED iff the month-block one-sided 95% LB of mean(Brier_const - Brier_cal) over the main-window
+    gate trades > 0 AND the holdout Brier_cal < Brier_const (training base rate). INDETERMINATE if the holdout has
+    < 100 gate trades. NOT_CALIBRATED otherwise. A CALIBRATED family may report p_win as a probability (the shadow
+    log); NOT_CALIBRATED keeps it a rank score. Neither result changes the shipped quantile decisions or the V2
+    verdict.
+  what_it_does_not_do: Changes no decision, threshold or config; it is not a re-grade of V2.
+intervention_controls:
+  not_applicable: an entry-size meta-label, not an in-trade action; the matched random control is check (c) and
+    the take-all baseline is the hold-equivalent.
+compute: cpu_light
+value:
+  bucket: own_losses
+  usd_at_stake_per_month: 200
+  confidence: 0.2
+  basis: 'stand-in: the real-money book''s losing-trade tail; an estimate, not a measurement.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 2.0
+  est_minutes: 30
+  why_runner: Fetches keyless public candles for a pinned window; reads no trainer data.
+  basis: 13 harness legs (~4 min for 6 in RQ-20261024-09a6-01) plus 14 CPCV evaluations (estimate).
+run:
+  command:
+  - python3
+  - scripts/research/ml_overlay_noninferior.py
+  - --family
+  - PB2H:ada_pullback_2h+,xrp_pullback_2h+,eth_pullback_2h,sol_pullback_2h,avax_pullback_2h
+  - --family
+  - TD:trend_donchian_eth_4h+,trend_donchian_xrp_4h+,trend_donchian_eth_prop+,trend_donchian_sol_prop+,trend_donchian_sol_4h,trend_donchian_ada_4h,trend_donchian_avax_4h,trend_donchian_xrp_adx25
+  - --start
+  - '2020-07-01'
+  - --end
+  - 2026-10-15 23:59
+  - --days
+  - '2330'
+  - --reference-corpus
+  - comms/research/RQ-20261024-09a6-01/40143286436/first_passage_paths_4b_c03_b
+  - --parity-basis
+  - trade
+  - --holdout-start
+  - '2017-09-01'
+  - --holdout-end
+  - 2020-06-30 23:59
+  - --holdout-days
+  - '3500'
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 120
+  inputs:
+    research_unit: RQ-20261029-5785-03
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- RQ-20261029-5785-02
+- RQ-20261029-5785-01
+- scripts/research/ml_overlay_noninferior.py
+practice_precedent: 'M1, M2, M4, M5, M6, M9, M10 (docs/reference/trading-and-model-practice-principles.md): a supervised
+  meta-label secondary model over the leg''s own rule, cost-net path labels, CPCV with purge and embargo, every
+  configuration counted, graded against take-all and a same-rate random control'
+ml_consumer:
+  consumer: src/runtime/overlay_features.py
+  decision: whether the shadow log may report p_win as a probability and any graded (non-binary) reduce on the 4
+    TD legs
+  legs:
+  - trend_donchian_eth_4h
+  - trend_donchian_xrp_4h
+  - trend_donchian_eth_prop
+  - trend_donchian_sol_prop
+  book: money
+last_dispatched_at: '2026-10-29T14:00:56+00:00'
+grading:
+  attested: RULE-ML-OVERLAY-CALIBRATION-V1
+  auto: true
+  decision_rule_id: RULE-ML-OVERLAY-CALIBRATION-V1
+  evidence:
+  - research/results/RQ-20261029-5785-03/40877509986.jsonl
+  graded_at: '2026-10-30'
+  grader: scripts/research/queue_grade.py
+  needs_review: true
+  reason: 'verdicts not unanimous-mechanical: [''fail'', ''pass'']'
+  rows: 2
+  verdict: null

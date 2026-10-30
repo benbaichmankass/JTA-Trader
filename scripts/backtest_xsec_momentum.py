@@ -304,6 +304,7 @@ def run_backtest(panel: pd.DataFrame, *, formation: int, skip: int,
                  funding: Optional[Dict[str, pd.Series]] = None,
                  funding_threshold: float = 0.0,
                  funding_aware: bool = False,
+                 funding_series: Optional[Dict[str, pd.Series]] = None,
                  ) -> Dict[str, Any]:
     """Run the weekly long/short cross-sectional momentum book over the panel.
 
@@ -326,6 +327,20 @@ def run_backtest(panel: pd.DataFrame, *, formation: int, skip: int,
     slip_map = costs["slippage_bps_roundtrip"]
     fund_map = costs["funding_bps_per_window"]
     funding_total = 0.0
+    # REAL funding (runner-fetched settled rates): ``funding_series[sym]`` is a
+    # day-indexed Series of the SUMMED settled fundingRate over that UTC day
+    # (fraction, e.g. 0.0003). A symbol with a series is charged SIGNED per held
+    # leg -- ``w * rate`` -- so a long pays positive funding and a short
+    # receives it; a symbol WITHOUT one keeps the flat directionless
+    # ``funding_bps_per_window`` drag and is listed in ``funding_flat_symbols``
+    # (never a silent zero). A day missing from a present series charges 0 and
+    # is counted in ``funding_missing_leg_days``.
+    fseries = {s: v for s, v in (funding_series or {}).items() if s in col_idx}
+    sym_stats: Dict[str, Dict[str, float]] = {
+        s: {"gross": 0.0, "funding": 0.0, "turnover_cost": 0.0, "n_trades": 0, "held_days": 0}
+        for s in cols}
+    funding_real_leg_days = 0
+    funding_missing_leg_days = 0
 
     daily: List[Tuple[date, float, int]] = []
     rebal_records: List[Dict[str, Any]] = []
@@ -381,6 +396,16 @@ def run_backtest(panel: pd.DataFrame, *, formation: int, skip: int,
                                         slip_bps=slip_map)
             turnover_total_fee_only += rebal_cost_fee_only
             turnover_total += rebal_cost
+            for sname in set(prev_w) | set(new_w):
+                pw, nw = prev_w.get(sname, 0.0), new_w.get(sname, 0.0)
+                st = sym_stats.get(sname)
+                if st is None:
+                    continue
+                st["turnover_cost"] += abs(nw - pw) * (
+                    (fee_bps / 10_000.0) * fee_mult + slip_map.get(sname, 0.0) / 10_000.0)
+                # a TRADE = a leg opened or flipped (flat->held, or sign change)
+                if nw != 0.0 and (pw == 0.0 or (pw > 0) != (nw > 0)):
+                    st["n_trades"] += 1
             cur_w = new_w
             prev_w = new_w
             rebal_records.append({
@@ -409,8 +434,21 @@ def run_backtest(panel: pd.DataFrame, *, formation: int, skip: int,
                     book_r += w * (c_now / c_prev - 1.0)
                     n_legs += 1
                     # Perp funding on the held notional, one daily bar = 3 windows.
-                    funding_cost += (abs(w) * fund_map.get(s, 0.0) / 10_000.0
-                                     * FUNDING_WINDOWS_PER_DAY)
+                    if s in fseries:
+                        fr = fseries[s].get(day_ts)
+                        if fr is None or pd.isna(fr):
+                            leg_fund = 0.0
+                            funding_missing_leg_days += 1
+                        else:
+                            leg_fund = w * float(fr)  # long pays +rate, short receives it
+                            funding_real_leg_days += 1
+                    else:
+                        leg_fund = (abs(w) * fund_map.get(s, 0.0) / 10_000.0
+                                    * FUNDING_WINDOWS_PER_DAY)
+                    funding_cost += leg_fund
+                    sym_stats[s]["gross"] += w * (c_now / c_prev - 1.0)
+                    sym_stats[s]["funding"] += leg_fund
+                    sym_stats[s]["held_days"] += 1
         gross_sum += book_r
         funding_total += funding_cost
         net_r = book_r - rebal_cost - funding_cost
@@ -446,6 +484,20 @@ def run_backtest(panel: pd.DataFrame, *, formation: int, skip: int,
         "net_total_return_fee_only": round(net_sum_fee_only, 8),
         "turnover_cost_total": round(turnover_total, 8),
         "funding_cost_total": round(funding_total, 8),
+        "funding_basis": {
+            "real_series_symbols": sorted(fseries),
+            "funding_flat_symbols": sorted(s for s in cols if s not in fseries),
+            "real_leg_days": funding_real_leg_days,
+            "missing_leg_days": funding_missing_leg_days,
+            "sign_convention": "signed per held leg: long pays +rate, short receives",
+        },
+        "per_symbol": {
+            s: {"gross_return": round(v["gross"], 8),
+                "funding_cost": round(v["funding"], 8),
+                "turnover_cost": round(v["turnover_cost"], 8),
+                "net_return": round(v["gross"] - v["funding"] - v["turnover_cost"], 8),
+                "n_trades": int(v["n_trades"]), "held_days": int(v["held_days"])}
+            for s, v in sym_stats.items()},
         "turnover_cost_total_fee_only": round(turnover_total_fee_only, 8),
         "mean_gross_exposure": round(
             statistics.fmean([r["gross_weight"] for r in rebal_records]), 6)

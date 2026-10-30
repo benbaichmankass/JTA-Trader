@@ -1,0 +1,51 @@
+Fetching ETHUSDT 60 candles 2023-06-18 -> 2026-10-30 (source=binance_vision) …
+  vision monthly 2023-06: 720 bars (312 kept)
+  vision monthly 2023-07: 744 bars (1056 kept)
+  vision monthly 2023-08: 744 bars (1800 kept)
+  vision monthly 2023-09: 720 bars (2520 kept)
+  vision monthly 2023-10: 744 bars (3264 kept)
+  vision monthly 2023-11: 720 bars (3984 kept)
+  vision monthly 2023-12: 744 bars (4728 kept)
+  vision monthly 2024-01: 744 bars (5472 kept)
+  vision monthly 2024-02: 696 bars (6168 kept)
+  vision monthly 2024-03: 744 bars (6912 kept)
+  vision monthly 2024-04: 720 bars (7632 kept)
+  vision monthly 2024-05: 744 bars (8376 kept)
+  vision monthly 2024-06: 720 bars (9096 kept)
+  vision monthly 2024-07: 744 bars (9840 kept)
+  vision monthly 2024-08: 744 bars (10584 kept)
+  vision monthly 2024-09: 720 bars (11304 kept)
+  vision monthly 2024-10: 744 bars (12048 kept)
+  vision monthly 2024-11: 720 bars (12768 kept)
+  vision monthly 2024-12: 744 bars (13512 kept)
+  vision monthly 2025-01: 744 bars (14256 kept)
+  vision monthly 2025-02: 672 bars (14928 kept)
+  vision monthly 2025-03: 744 bars (15672 kept)
+  vision monthly 2025-04: 720 bars (16392 kept)
+  vision monthly 2025-05: 744 bars (17136 kept)
+  vision monthly 2025-06: 720 bars (17856 kept)
+  vision monthly 2025-07: 744 bars (18600 kept)
+  vision monthly 2025-08: 744 bars (19344 kept)
+  vision monthly 2025-09: 720 bars (20064 kept)
+  vision monthly 2025-10: 744 bars (20808 kept)
+  vision monthly 2025-11: 720 bars (21528 kept)
+  vision monthly 2025-12: 744 bars (22272 kept)
+  vision monthly 2026-01: 744 bars (23016 kept)
+  vision monthly 2026-02: 672 bars (23688 kept)
+  vision monthly 2026-03: 744 bars (24432 kept)
+  vision monthly 2026-04: 720 bars (25152 kept)
+  vision monthly 2026-05: 744 bars (25896 kept)
+  vision monthly 2026-06: 720 bars (26616 kept)
+  vision monthly 2026-07: 744 bars (27360 kept)
+  vision monthly 2026-08: 744 bars (28104 kept)
+  vision monthly 2026-09: 720 bars (28824 kept)
+  vision daily 2026-10: 29472 bars kept so far
+Wrote 29472 rows (2023-06-18 -> 2026-10-27) to /tmp/exit_lever_ablation_76rai7lb/trend_donchian_eth_prop__data.csv
+[A] /opt/hostedtoolcache/Python/3.11.17/x64/bin/python3 /home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_trend.py --donchian 20 --data <data> --symbol ETHUSDT --resample 1h --atr-period 14 --atr-stop-mult 2.5 --trail-mult 3.5 --min-confidence 0.6 --fee-bps-roundtrip 7.5 --emit-trades comms/research/RQ-20261029-a538-11/40978643545/arms/A__trades.jsonl --json comms/research/RQ-20261029-a538-11/40978643545/arms/A__bt.json --trail-decay-arm-r 2.99 --trail-decay-stall-bars 10 --trail-decay-tight-mult 1.8 --tp-cap-pct 0.099 --tp-r 6.0 --slippage-bps-roundtrip 5.0 --funding-bps-per-window 1.0 --start 2023-06-01 --end 2026-10-15 23:00
+[SL125] /opt/hostedtoolcache/Python/3.11.17/x64/bin/python3 /home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_trend.py --donchian 20 --data <data> --symbol ETHUSDT --resample 1h --atr-period 14 --atr-stop-mult 3.125 --trail-mult 3.5 --min-confidence 0.6 --fee-bps-roundtrip 7.5 --emit-trades comms/research/RQ-20261029-a538-11/40978643545/arms/SL125__trades.jsonl --json comms/research/RQ-20261029-a538-11/40978643545/arms/SL125__bt.json --trail-decay-arm-r 2.99 --trail-decay-stall-bars 10 --trail-decay-tight-mult 1.8 --tp-cap-pct 0.099 --tp-r 6.0 --slippage-bps-roundtrip 5.0 --funding-bps-per-window 1.0 --start 2023-06-01 --end 2026-10-15 23:00
+[SL80] /opt/hostedtoolcache/Python/3.11.17/x64/bin/python3 /home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_trend.py --donchian 20 --data <data> --symbol ETHUSDT --resample 1h --atr-period 14 --atr-stop-mult 2.0 --trail-mult 3.5 --min-confidence 0.6 --fee-bps-roundtrip 7.5 --emit-trades comms/research/RQ-20261029-a538-11/40978643545/arms/SL80__trades.jsonl --json comms/research/RQ-20261029-a538-11/40978643545/arms/SL80__bt.json --trail-decay-arm-r 2.99 --trail-decay-stall-bars 10 --trail-decay-tight-mult 1.8 --tp-cap-pct 0.099 --tp-r 6.0 --slippage-bps-roundtrip 5.0 --funding-bps-per-window 1.0 --start 2023-06-01 --end 2026-10-15 23:00
+{
+ "verdict": "fail",
+ "label": "incumbent_stands",
+ "why": "no candidate clears net R / fold / drawdown: the incumbent exit stands"
+}

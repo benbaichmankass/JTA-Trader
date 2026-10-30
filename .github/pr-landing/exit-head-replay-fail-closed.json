@@ -1,0 +1,5 @@
+{
+  "tier": 1,
+  "landing": "self",
+  "why": "CI fix: research-exit-head-replay-trainer.yml used a shared /tmp data csv + meta and ignored the fetch's exit code, so a refused SOLUSDT fetch (issue #21270) replayed trend_donchian_sol on the previous run's BTCUSDT candles and reported success. Per-strategy files, cleared before the fetch, and a failed fetch exits 4. No runtime or order-path change."
+}

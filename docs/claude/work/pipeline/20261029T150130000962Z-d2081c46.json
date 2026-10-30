@@ -1,0 +1,17 @@
+{
+  "due_when": {
+    "clears_when": "a research/results record grades the ETH walk-forward under the B4 rule",
+    "kind": "event"
+  },
+  "id": "PI-20261029-IFMPNGJK-0004",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "lane ML-AM-NEXT-LIVE (session_01AFoLuN7GVCEJnGiFMpNGJK), issue #21294",
+    "rerun": "grep -n 'exit_head_action' config/strategies.yaml"
+  },
+  "severity": "medium",
+  "state": "queued",
+  "tier": 1,
+  "what": "trend_donchian_eth keeps exit_head_action: close on an IN-SAMPLE-only read: the live exit-head-donchian-1h-v1 replay on ETHUSDT 1h (583 trades, 2021-10-25..2026-10-27, issue #21294) gives delta +12.55 gross R (+0.0215 R/trade), but the artifact trained on ETH rows through 2026-07-07 and records no train_end. The B4 KEEP rule needs an out-of-sample read: run RQ-20260927-002's 3-fold embargoed walk-forward recipe (scripts/research/exit_head_walkforward_multifold.py) on ETHUSDT trend_donchian_eth trades and apply the B4 rule (dR/trade >= 0 AND trade-clustered 95% LB > -0.02 R). FAIL -> annotate, as BTC (#21290) and SOL."
+}

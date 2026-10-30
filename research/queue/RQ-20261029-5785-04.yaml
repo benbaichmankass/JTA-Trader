@@ -1,0 +1,134 @@
+id: RQ-20261029-5785-04
+title: 'ML-REAL-MONEY-OVERLAY refine 2/3 -- NESTED SELECTION: does the overlay still pass when the configuration
+  is chosen inside each outer CPCV training set (the PBO 0.75 concern)?'
+status: queued
+cadence: once
+roadmap:
+- L-ML-LIVE
+theme: ml_health
+priority: 1
+kind: experiment
+question: V2 counted 6 configurations and fixed the primary in advance, but PBO over them read 0.75. If each outer
+  CPCV split instead chooses its configuration from the same 6-config grid using only its own training rows (a purged,
+  embargoed 5-fold time split inside them, scored by mean delta net R on training gate trades), does the resulting
+  out-of-sample policy pass V2's checks (a)-(e) on the main window, and does the modal selected configuration also
+  confirm (a)-(d) on the blind holdout?
+why_this_matters: 'Operator 2026-10-29 ~08:38Z via the manager: "Deploy shadow and continue testing to refine".
+  A PBO of 0.75 with every configuration passing means the ranking among configurations is unstable, not that the
+  primary is bad. Nested selection puts that selection inside the out-of-sample loop, so a PASS no longer rests
+  on having picked the primary in advance, and the selection frequencies show whether the primary is what an honest
+  selector chooses.'
+power:
+  expected_n: 2600
+  min_detectable_effect: 0.02
+  effect_units: r_per_trade
+  sd: 0.3
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: 'Gate population = the real-money legs'' OOS trades: RQ-20261024-09a6-01 measured ada 402 + xrp 394 (PB2H,
+    796) and eth_4h 275 + xrp_4h 68 + eth_prop 1085 + sol_prop 403 (TD, 1831) over 2020-07..2026-10. A reduce of
+    20% of trades at 0.5x moves delta by at most 0.1 x |mean R of reduced|, so the margin -0.02 R is about 0.2 x
+    a reduced-set mean of 1 R; per-trade R sd ~1.5 gives a LB half-width of ~0.3 x 1.5 x 1.645 / sqrt(n) ~ 0.02-0.03
+    on n 800-1800 (an ESTIMATE). Below 200 gate trades -> INDETERMINATE, never FAIL. POWER METADATA corrected 2026-10-29
+    after V1''s run, for the queue schema only (no decision-rule change): design one_sample on the per-trade delta
+    vs 0; sd 0.3 is the sd of the DELTA (zero on taken trades, 0.5 x R on reduced), not of R -- consistent with
+    V1''s measured TD LB half-width (0.0114 = 1.645 x sd / sqrt(1830) -> sd ~0.30). At MDE 0.02 R this needs n ~1,400-1,800:
+    the pooled n and TD (1,830) clear it, PB2H alone (796) does not.'
+  feasibility:
+    source: none
+    accrual_basis: Replays pinned history on freshly fetched public candles; nothing accrues.
+decision_rule:
+  id: RULE-ML-OVERLAY-NESTED-SELECT-V1
+  registered_at: '2026-10-29'
+  registered_before_run: true
+  statistic: 'scripts/research/ml_overlay_noninferior.py --refine nested (V2 corpus, features, families, the same
+    6-config GRID C {0.1,1.0} x q {0.10,0.20,0.30}, multiplier 0.5). Outer: CPCV 6x2, purge, 7-day embargo. Inner,
+    per outer split, on its training rows only: 5 equal calendar folds, purged and embargoed, each config scored
+    by mean delta net R on the inner test gate trades; ties go to the lower grid index. The chosen config is fit
+    on the outer training rows and decides the outer test block. Holdout: the modal selected config, fit on the
+    whole main-window pool, scores the V2 holdout gate trades.'
+  rule: Per family. PASS iff the nested out-of-sample policy passes V2's (a)-(e) on the main-window gate trades
+    AND the modal config's holdout CONFIRMS (a)-(d). INDETERMINATE if the holdout has < 100 gate trades. FAIL otherwise.
+    Report the selection frequency per config and the modal share. A PASS whose modal config is the V2 primary confirms
+    the shipped artifact; a PASS with a different modal config is a candidate for a new rule version, never a silent
+    swap of the artifact.
+  what_it_does_not_do: Changes no config or artifact; it is not a re-grade of V2.
+intervention_controls:
+  not_applicable: an entry-size meta-label, not an in-trade action; the matched random control is check (c) and
+    the take-all baseline is the hold-equivalent.
+compute: cpu_light
+value:
+  bucket: own_losses
+  usd_at_stake_per_month: 200
+  confidence: 0.2
+  basis: 'stand-in: the real-money book''s losing-trade tail; an estimate, not a measurement.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 2.0
+  est_minutes: 30
+  why_runner: Fetches keyless public candles for a pinned window; reads no trainer data.
+  basis: 13 harness legs (~4 min for 6 in RQ-20261024-09a6-01) plus 14 CPCV evaluations (estimate).
+run:
+  command:
+  - python3
+  - scripts/research/ml_overlay_noninferior.py
+  - --family
+  - PB2H:ada_pullback_2h+,xrp_pullback_2h+,eth_pullback_2h,sol_pullback_2h,avax_pullback_2h
+  - --family
+  - TD:trend_donchian_eth_4h+,trend_donchian_xrp_4h+,trend_donchian_eth_prop+,trend_donchian_sol_prop+,trend_donchian_sol_4h,trend_donchian_ada_4h,trend_donchian_avax_4h,trend_donchian_xrp_adx25
+  - --start
+  - '2020-07-01'
+  - --end
+  - 2026-10-15 23:59
+  - --days
+  - '2330'
+  - --reference-corpus
+  - comms/research/RQ-20261024-09a6-01/40143286436/first_passage_paths_4b_c03_b
+  - --parity-basis
+  - trade
+  - --holdout-start
+  - '2017-09-01'
+  - --holdout-end
+  - 2020-06-30 23:59
+  - --holdout-days
+  - '3500'
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 120
+  inputs:
+    research_unit: RQ-20261029-5785-04
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- RQ-20261029-5785-02
+- RQ-20261029-5785-01
+- scripts/research/ml_overlay_noninferior.py
+practice_precedent: 'M1, M2, M4, M5, M6, M9, M10 (docs/reference/trading-and-model-practice-principles.md): a supervised
+  meta-label secondary model over the leg''s own rule, cost-net path labels, CPCV with purge and embargo, every
+  configuration counted, graded against take-all and a same-rate random control'
+ml_consumer:
+  consumer: src/runtime/overlay_features.py
+  decision: keep or replace the shipped overlay_td.json configuration that halves size on the 4 TD legs
+  legs:
+  - trend_donchian_eth_4h
+  - trend_donchian_xrp_4h
+  - trend_donchian_eth_prop
+  - trend_donchian_sol_prop
+  book: money
+last_dispatched_at: '2026-10-29T14:01:02+00:00'
+grading:
+  attested: RULE-ML-OVERLAY-NESTED-SELECT-V1
+  auto: true
+  decision_rule_id: RULE-ML-OVERLAY-NESTED-SELECT-V1
+  evidence:
+  - research/results/RQ-20261029-5785-04/40887343795.jsonl
+  graded_at: '2026-10-30'
+  grader: scripts/research/queue_grade.py
+  needs_review: true
+  reason: 'verdicts not unanimous-mechanical: [''fail'', ''pass'']'
+  rows: 2
+  verdict: null

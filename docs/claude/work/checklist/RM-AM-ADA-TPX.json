@@ -1,0 +1,21 @@
+{
+  "id": "RM-AM-ADA-TPX",
+  "title": "ada_pullback_2h: TP-revision mechanic (tp_extend X6 anchored at 4R) - unit RQ-20261028-a7c3-01, then Tier-3 declare on bybit_2 + bybit_portfolio + bybit_1 if it passes",
+  "phase": null,
+  "state": "queued",
+  "owner": "manager",
+  "lane": null,
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 3,
+  "prs": [],
+  "blocked_on": [],
+  "note": "Evidence state: trail 5x ATR (stop 1.5x) is the only in-trade mechanic; TP 4R reachable (guard reach 0.241, n 253) but tp_revision fails (rule_undeclared). Unit RQ-20261028-a7c3-01 (pre-registered 2026-10-28, cpu_light ~25 min) settles it. On PASS + doctrine read: exact diff = add under ada_pullback_2h in config/strategies.yaml 'tp_revision: {rule: tp_extend, extend_r: 1.0, approach_frac: 0.85, max_extends: 3}'; one revertible PR; operator approval needed (real money; not a data-backed promotion, a doctrine-compliance change that the unit shows P&L-neutral). Revert = delete the block. Also open, not proposed: vol_trail vt_hot90_t2.5 passed_unshipped (fresh-holdout unit RQ-20260930-901 queued) and the loss-cut unit P1-Q4-desk-losscut-ada-pb (#20994).",
+  "updated_at": "2026-10-28T21:11:49Z",
+  "updated_by": "session_01AFoLuMfbQGw8MoevpjjwwW",
+  "roadmap": [
+    "L-ATM"
+  ],
+  "_seq": 768
+}

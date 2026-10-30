@@ -1,0 +1,16 @@
+{
+  "due_when": {
+    "clears_when": "the TM-BENCH runner unit RQ-20261030-824b-01 lands a result (its engine_fidelity is the population to break down), or CF-B0-ENGINE-LIFT lands cf_core",
+    "kind": "event"
+  },
+  "id": "PI-20261030-TMBENCH-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "lane TM-BENCH (session_01AFoLuMfDpakKxF5zHGsPv2), measurement.engine_fidelity",
+    "rerun": "python3 scripts/research/tm_bench.py score --test-corpus v1 --rule reproduce --out <dir>  # measurement.engine_fidelity"
+  },
+  "routed_to": "CF-B0-ENGINE-LIFT (its fidelity check owns engine bias)",
+  "state": "routed",
+  "what": "TM-BENCH engine fidelity on corpus v1 is 90.3% (MEASURED in-session 2026-10-30, 2,627 trades): the engine replay of each leg's own management (counterfactual_grader.simulate fed the emitted stop_r/target_r per bar) matches the harness exit_r within 0.01 R on 90.3% of trades; synthetic corpora 100%. Every bench delta is vs the REPLAYED B0 so a shared bias cancels, but the ~10% mismatch (suspected: engine gap-fills at the open vs harness fills at the level; stale/timeout/trail exits at the exit-bar close) is unexplained. Diagnose by exit_reason and leg; fix the adapter (tm_bench.engine_bars/leg_actions) if it is the adapter, else record it as an engine bias for CF-B0-ENGINE-LIFT's fidelity check."
+}

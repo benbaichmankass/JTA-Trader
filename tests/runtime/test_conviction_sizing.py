@@ -198,3 +198,30 @@ def test_runtime_flags_conviction_gate_is_mode_not_enabled():
     assert "_conviction_sizing_direction" in src
     assert "CONVICTION_SIZING_ENABLED" not in src
     assert "CONVICTION_SIZING_DISABLED" not in src
+
+
+# --------------------------------------------------------------------------- #
+# soak log carries the conviction COMPONENTS (MB-20260618-XA-D2B)
+# --------------------------------------------------------------------------- #
+
+
+def test_soak_log_carries_component_inputs(tmp_path, monkeypatch):
+    import json
+
+    monkeypatch.setattr("src.utils.paths.runtime_logs_dir", lambda: tmp_path)
+    meta = {"conviction": {
+        "conviction": 0.6, "inputs_used": {"c_strat": 0.6},
+        "weights_used": {"c_strat": 1.0}, "note": "partial_inputs",
+        "provenance": {"c_strat": {"source": "x"}},
+    }}
+    pkg = _Pkg(meta=meta)
+    cs.annotate_conviction_sizing(pkg, 5.0, account_name="a", balance_usd=10000.0)
+    row = json.loads((tmp_path / "conviction_sizing.jsonl").read_text().splitlines()[-1])
+    assert row["inputs_used"] == {"c_strat": 0.6}
+    assert "c_reg" not in row["inputs_used"]  # absence is now visible, not silent
+    assert row["blend_note"] == "partial_inputs"
+
+
+def test_components_read_state_when_no_stamp():
+    out = cs._conviction_components(_Pkg(conviction=None))
+    assert out["inputs_used"] is None  # None = could not look, never {}

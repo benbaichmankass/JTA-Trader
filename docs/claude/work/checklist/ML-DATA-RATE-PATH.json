@@ -1,0 +1,31 @@
+{
+  "id": "ML-DATA-RATE-PATH",
+  "title": "ML that does not wait for live trades: design and pre-register the path that trains and grades models on data the system can generate NOW (harness-generated trade corpora across the broadened universe, desk counterfactual labels, bar-level per-symbol labels), replacing the paused regime/direction learner variants",
+  "phase": null,
+  "state": "landed_unproven",
+  "owner": "manager",
+  "lane": "session_01AFoLuK1oV8xe4bbnhb7QMi",
+  "model": "claude-opus-5-5",
+  "ceiling_usd": 10,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [],
+  "blocked_on": [],
+  "note": "#21435 merged 00:11Z (8e07b2dc) by Manager Session 2026-10-29d. Lane session_01AFoLuK1oV8xe4bbnhb7QMi archived, spend $8.56 (Opus, ceiling $10). Filed rows ML-DATA-BROAD-PATHS (dispatched 00:12Z) and TM-BENCH (queued; waits for a second slot under the one-lane rule). Lane-reported DOCUMENT-INDEX defect filed as PI-20261030-A1AEHRKH-0001.",
+  "priority_rank": 1,
+  "updated_at": "2026-10-30T00:12:55Z",
+  "updated_by": "Manager Session 2026-10-29d",
+  "roadmap": [
+    "L-ML-LIVE"
+  ],
+  "writeback": {
+    "roadmap": "L-ML-LIVE: data-rate path designed; ranked sources + rows ML-DATA-BROAD-PATHS, TM-BENCH + units RQ-20261029-7294-01..03 registered (no milestone state change until TM-BENCH selfcheck lands)",
+    "arch": "none: research design, rows and queue registrations only"
+  },
+  "observation": {
+    "what": "the PR adding docs/research/ml-data-rate-path-2026-10-29.md, rows ML-DATA-BROAD-PATHS + TM-BENCH and units RQ-20261029-7294-01..03 is merged to main and ML-DATA-BROAD-PATHS has a lane",
+    "how_to_check": "git cat-file -e origin/main:research/queue/blocked/RQ-20261029-7294-01.yaml && python3 -c \"import json;print(json.load(open(\\\"docs/claude/work/checklist/ML-DATA-BROAD-PATHS.json\\\"))[\\\"state\\\"])\"",
+    "due_by": "2026-10-31"
+  },
+  "_seq": 785
+}

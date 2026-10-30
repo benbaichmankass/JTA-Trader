@@ -187,9 +187,19 @@
    "date": "2026-07-12",
    "ref": "M20 E3 — ML exit head LIVE (exit-head-donchian-1h-v1, below_half_r@tau0.10), operator-approved Tier-3",
    "summary": "Declared exit_head_model/threshold/action: the monitor closes a position when the advisory-stage LightGBM exit head reads P(holding pays) < 0.10 AND the position is below +0.5R at bar close (proven trades are never touched - the chandelier trail owns them). Evidence: E1.5 purged walk-forward beats actual exits on net_R AND maxDD AND net_R/pos-day in 5/5 folds incl. the 2023/2024 trend years (aggregate 133.9 vs 73.7 net_R at ~half the drawdown/hold time); beats the swept hard levers everywhere; live n=15 sign-agrees. Live influence additionally gated on the mirrored artifact's stage=advisory (promotion gate). Rollback: delete the three exit_head_* lines (and/or demote the artifact stage)."
+  },
+  {
+   "date": "2026-10-29",
+   "ref": "ML-AM-NEXT-LIVE / ML-EXITHEAD-VALUE (B4), Tier-3 data-backed de-risk; RQ-20260927-002 (research/results/RQ-20260927-002/36302273043.jsonl)",
+   "summary": "exit_head_action close -> annotate (scored + logged, not applied). The exit head fails the B4 KEEP rule (dR/trade >= 0): 3-fold embargoed walk-forward pooled -0.0141 R/trade over 1,041 OOS BTCUSDT 1h trades, 1 of 3 folds positive, net of the full cost stack; full-window paired -0.099 R/trade over 353 trades. Revert: exit_head_action: close."
   }
  ],
  "trend_donchian_1h": [
+  {
+   "date": "2026-10-28",
+   "ref": "OPERATOR-DECISIONS-20261028 item 2 - re-enabled on the bybit_1 demo floor, Tier-3 (hold PR)",
+   "summary": "enabled:true, execution:live (was enabled:false, execution:shadow). bybit_1 demo only (already on its roster; not bybit_2/bybit_portfolio), per the DEMO-FLOOR RULE. Same symbol/params as the live trend_donchian, so the two legs fire together and share the symbol budget through slice_allocation. Rollback: enabled:false."
+  },
   {
    "date": "2026-06-01",
    "ref": "Retired (enabled:false) — A/B config adopted into live (this PR) - Tier-3",
@@ -238,6 +248,11 @@
    "date": "2026-07-12",
    "ref": "M20 fleet sweep — stale_exit_bars 8 -> 12 (walk-forward 6/6), Tier-3",
    "summary": "Fleet-wide config-exact sweep (runtime_logs/m20_fleet/2026-07-12): the 12-bar <0R stale-stop beats-or-ties base on net_R AND maxDD in 6/6 yearly walk-forward folds (2021-2026), vs 4/6 for the shipped 8-bar cell. Same conditional shape (close only when still below 0R at bar close); the longer patience window keeps more eventual winners. ETH stays at 8 (its 12-bar cell scored 3/6)."
+  },
+  {
+   "date": "2026-10-29",
+   "ref": "ML-AM-NEXT-LIVE / ML-EXITHEAD-VALUE (B4), Tier-3 data-backed de-risk; exit-head replay issue #21295 (run 40887209578), research/results/_unattributed",
+   "summary": "exit_head_action close -> annotate (scored + logged, not applied). The live exit head fails the B4 KEEP rule (dR/trade >= 0) even in-sample: SOLUSDT 1h, 286 trades 2021-10..2026-10, delta -7.05 gross R (-0.0246 R/trade), identical per-trade cost on both arms. Revert: exit_head_action: close."
   }
  ],
  "trend_donchian_eth": [

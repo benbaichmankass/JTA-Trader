@@ -1,0 +1,22 @@
+{
+  "id": "VM-DB-BACKUP-PRUNE",
+  "title": "Delete the OLDER 2026-10-17 trade_journal.db backup (bak-own-fill-exits-20261017T072240Z, ~2 GB) on the trader VM; keep the newer (T072615Z) as the rollback copy",
+  "phase": null,
+  "state": "queued",
+  "owner": null,
+  "lane": null,
+  "model": "claude-sonnet-5-5",
+  "ceiling_usd": 3,
+  "spend_usd": null,
+  "tier": 2,
+  "prs": [],
+  "blocked_on": [],
+  "note": "OPERATOR DECISION 2026-10-29 ~05:25Z by popup: \"Keep newest, delete older (Recommended)\". MEASURED #21107: / 78% (11G free); backups /data/bot-data/trade_journal.db.bak-own-fill-exits-20261017T072240Z (1997.4 MB) and ...T072615Z (1997.5 MB). No system-action on the allowlist deletes a DB backup (docs/claude/system-actions.md read 05:26Z); cap-vm-logs never touches databases. Build: either a narrow allowlisted action that deletes exactly one named backup path matching trade_journal.db.bak-* (refuses the live DB, -wal, -shm, and anything outside /data/bot-data), dry-run default, or fold it into CAP-VM-LOGS-ROOT-FIX. Then dry-run, apply, and re-run disk-usage-report. Filed by Manager Session 2026-10-29b.",
+  "priority_rank": 3,
+  "updated_at": "2026-10-29T05:23:52Z",
+  "updated_by": "session_01AFoLuKnKedoAhJU1x4MZDp",
+  "roadmap": [
+    "L-OPS"
+  ],
+  "_seq": 781
+}

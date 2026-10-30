@@ -893,8 +893,9 @@ class RiskManager:
         ``AmendAccountView``. Returns an ``AmendVerdict`` -- approve / clip /
         refuse / could_not_look, with a reason. It enforces tighten-only, the
         ``min_buffer_atr`` noise floor (the larger of the intent's and this
-        account's own ``risk.live_review_min_buffer_atr``), one amend per
-        package per closed bar, the account mode and the strategy's
+        account's own ``risk.live_review_min_buffer_atr``), idempotency per
+        review_id (the same review never applies twice; there is NO per-bar
+        or time-window action cap, row REMOVE-PER-BAR-CAP), the account mode and the strategy's
         ``execution: shadow``. The daily-DD switch is NOT consulted: a tighten
         only reduces risk, so it has ``evaluate(..., opening=False)``
         semantics (manager decision 2026-10-25). Never a halt; never writes
