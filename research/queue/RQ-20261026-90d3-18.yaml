@@ -1,6 +1,6 @@
 id: RQ-20261026-90d3-18
 title: 'Break-even floor on eth_pullback_prop_2h: does moving the stop to entry once the trade reaches +0.75 / +1.0 / +1.5 R beat the declared exit?'
-status: queued
+status: done
 cadence: once
 roadmap:
 - L-ATM
@@ -104,3 +104,16 @@ related:
 - scripts/research/exit_lever_ablation.py
 - RESEARCH-AUTHOR-20261026-0030
 last_dispatched_at: '2026-10-30T13:00:49+00:00'
+grading:
+  attested: RULE-RQ2026102690d318-BEFLOOR
+  auto: true
+  decision_rule_id: RULE-RQ2026102690d318-BEFLOOR
+  evidence:
+  - research/results/RQ-20261026-90d3-18/41059747677.jsonl
+  graded_at: '2026-10-30'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail
