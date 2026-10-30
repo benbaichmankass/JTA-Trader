@@ -79,11 +79,9 @@ Tier-1 research code: keyless public candles via the config-exact harnesses; no 
 from __future__ import annotations
 
 import argparse
-import glob
 import gzip
 import hashlib
 import json
-import math
 import sys
 import tempfile
 from pathlib import Path
@@ -99,7 +97,7 @@ for _p in (REPO, REPO / "scripts", REPO / "scripts" / "research"):
 import capital_efficiency  # noqa: E402  (the ONE net R per capital-day)
 import counterfactual_grader as _engine  # noqa: E402  (ONE ENGINE: simulate + net_of; repoint to cf_core when CF-B0 lands)
 import first_passage_paths as fpp  # noqa: E402  (corpus, parity, events, census oracle -- the 09a6-01 construction)
-from first_passage import Logit, TF_MIN  # noqa: E402
+from first_passage import Logit  # noqa: E402
 from intervention_controls import HOLD, boot_ci_by_group, matched_random_intervention  # noqa: E402
 
 ENGINE_SIMULATE = _engine.simulate
@@ -421,7 +419,7 @@ def _fit_lgbm(X: np.ndarray, y: np.ndarray, seed: int):
     return lgb.train(dict(LGBM_PARAMS, seed=seed), lgb.Dataset(X, label=y), num_boost_round=LGBM_ROUNDS)
 
 
-def fit_learners(trades, ev, labs, tr_idx: List[int], kinds: Sequence[str], seed: int) -> Dict[str, Any]:
+def fit_learners(ev, labs, tr_idx: List[int], kinds: Sequence[str], seed: int) -> Dict[str, Any]:
     rows = [i for i in tr_idx if ev[i]["n"]]
     if not rows:
         return {}
@@ -618,7 +616,7 @@ def score(test: Dict[str, Any], train: Optional[Dict[str, Any]], *, k: int, n_bo
             continue
         tr = f["train"]
         trlabs = {i: lab_tr(i) for i in tr} if not same else {i: labs[i] for i in tr}
-        fold_models[f["fold"]] = fit_learners(TR, ev_tr, trlabs, tr, list(kinds) + ["b2"], seed)
+        fold_models[f["fold"]] = fit_learners(ev_tr, trlabs, tr, list(kinds) + ["b2"], seed)
         fold_medwin[f["fold"]] = med_win(TR, tr)
         mdl = fold_models[f["fold"]]
         best_p, best_v = B2_P_GRID[0], -1e9      # p* for B2 on the TRAIN fold, every-bar check-ins
