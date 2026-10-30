@@ -2108,8 +2108,14 @@ accounts:
       min_active_days: 0
     backtest_ruleset: prop_rulesets/breakout_turbo_1step.yaml
     account_size_usd: 5000
-    strategies:                        # breakout_1's legs, each kept only if its Turbo fit did not FAIL
-      - trend_donchian_eth_prop        # Turbo fit RQ-20261005-851 / -853: NULL (ev > 0 every seed), kept
+    strategies: []                     # breakout_1's legs, each kept only if its Turbo fit did not FAIL; empty since 2026-10-30
+      # was: - trend_donchian_eth_prop  # Turbo fit RQ-20261005-851 / -853: NULL (ev > 0 every seed), kept
+      # REMOVED 2026-10-30 (Tier-3, operator popup ~15:55Z, verbatim: "Demote to bybit_1 (Recommended)"; lane ETH-PROP-DEMOTE):
+      # trend_donchian_eth_prop. It fails its pre-registered RULE-WF-RECOST (1095d, 6 folds) under the gap-fixed harness
+      # (+2.32 net, 3/6 folds positive, -7.30 with the best fold removed; was +29.13 on the old harness) and the 365d D1
+      # check reads -4.12 (PR #21644, comms/strategy_evidence/recheck/). Demotion stops at the Stage-1 floor: the leg
+      # stays on bybit_1. No open position or non-terminal ticket on this account at removal (/api/bot/prop/tickets +
+      # /api/bot/prop/status read 2026-10-30 ~16:00Z). REVERT: re-add `- trend_donchian_eth_prop` to this list.
       # REMOVED 2026-10-29 (Tier-3, operator: "1, but we also need to send it for refinement/improvment"): trend_donchian_sol_prop. Evidence: comms/prop_survival/v2/trend_donchian_sol_prop.v2.json (PR #21204). REVERT: re-add `- trend_donchian_sol_prop` here.
     symbols: [ETHUSDT, SOLUSDT]
     risk:
@@ -2170,10 +2176,16 @@ accounts:
       min_active_days: 0               # no minimum trading days.
     backtest_ruleset: prop_rulesets/tradeify_247_1step.yaml
     account_size_usd: 10000
-    strategies:                        # the memo's B3 book (§ 3.1): one leg per
+    strategies: []                     # the memo's B3 book (§ 3.1): one leg per
                                        # symbol, so the no-hedging rule cannot be
-                                       # tripped by two of our own legs.
-      - trend_donchian_eth_prop        # ETH 1h (n=169, net R +13.03 after Tradeify costs)
+                                       # tripped by two of our own legs. Empty since 2026-10-30.
+      # was: - trend_donchian_eth_prop  # ETH 1h (n=169, net R +13.03 after Tradeify costs)
+      # REMOVED 2026-10-30 (Tier-3, operator popup ~15:55Z, verbatim: "Demote to bybit_1 (Recommended)"; lane ETH-PROP-DEMOTE):
+      # trend_donchian_eth_prop. It fails its pre-registered RULE-WF-RECOST (1095d, 6 folds) under the gap-fixed harness
+      # (+2.32 net, 3/6 folds positive, -7.30 with the best fold removed; was +29.13 on the old harness) and the 365d D1
+      # check reads -4.12 (PR #21644, comms/strategy_evidence/recheck/). Demotion stops at the Stage-1 floor: the leg
+      # stays on bybit_1. No open position or non-terminal ticket on this account at removal (/api/bot/prop/tickets +
+      # /api/bot/prop/status read 2026-10-30 ~16:00Z). REVERT: re-add `- trend_donchian_eth_prop` to this list.
       # REMOVED 2026-10-29 (Tier-3, operator: "1, but we also need to send it for refinement/improvment"): trend_donchian_sol_prop. Evidence: comms/prop_survival/v2/trend_donchian_sol_prop.v2.json (PR #21204). REVERT: re-add `- trend_donchian_sol_prop` here.
                                        # of the ETH+SOL book (Tier-3, data-backed under the
                                        # operator's standing authorization of 2026-09-27; decided
@@ -2273,12 +2285,18 @@ accounts:
       min_active_days: 5               # 5 QUALIFYING days (each >= +0.8% of the initial balance, realised, 00:30-00:30 UTC).
     backtest_ruleset: prop_rulesets/velotrade_classic_1step.yaml
     account_size_usd: 5000
-    strategies:                        # VELOTRADE-GOLIVE roster (Tier-3, HELD). Lane VELOTRADE-FIT: unit RQ-20261006-062,
+    strategies: []                     # VELOTRADE-GOLIVE roster (Tier-3, HELD); empty since 2026-10-30. Lane VELOTRADE-FIT: unit RQ-20261006-062,
                                        # rule RULE-RQ1006-VELOTRADE-FIT (registered before grading, commit 3769f2b1f):
                                        # GO_LIVE on all 5 seeds at risk_pct 0.005 -- P(daily-loss breach)/life 0.000,
                                        # worst realised day -$78 vs the $160 line, max entry gap 6.6d, EV/life +$167..+$188.
                                        # Operator 2026-10-06 06:40Z: risk-qualified legs go live; 5-qualifying-days tuned after.
-      - trend_donchian_eth_prop        # evidence: comms/strategy_evidence/trend_donchian_eth_prop.json
+      # was: - trend_donchian_eth_prop  # evidence: comms/strategy_evidence/trend_donchian_eth_prop.json
+      # REMOVED 2026-10-30 (Tier-3, operator popup ~15:55Z, verbatim: "Demote to bybit_1 (Recommended)"; lane ETH-PROP-DEMOTE):
+      # trend_donchian_eth_prop. It fails its pre-registered RULE-WF-RECOST (1095d, 6 folds) under the gap-fixed harness
+      # (+2.32 net, 3/6 folds positive, -7.30 with the best fold removed; was +29.13 on the old harness) and the 365d D1
+      # check reads -4.12 (PR #21644, comms/strategy_evidence/recheck/). Demotion stops at the Stage-1 floor: the leg
+      # stays on bybit_1. No open position or non-terminal ticket on this account at removal (/api/bot/prop/tickets +
+      # /api/bot/prop/status read 2026-10-30 ~16:00Z). REVERT: re-add `- trend_donchian_eth_prop` to this list.
       # REMOVED 2026-10-29 (Tier-3, operator: "1, but we also need to send it for refinement/improvment"): trend_donchian_sol_prop. Evidence: comms/prop_survival/v2/trend_donchian_sol_prop.v2.json (PR #21204). REVERT: re-add `- trend_donchian_sol_prop` here.
     symbols: [ETHUSDT, SOLUSDT]
     risk:

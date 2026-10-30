@@ -40,7 +40,8 @@ def test_tradeify_goes_live_with_the_eth_sol_roster_at_half_percent():
     # EV +$179 vs +$58; not a 0.70 pass). Pinned so a roster change is a visible decision.
     # 2026-10-29 (Tier-3, operator): trend_donchian_sol_prop pulled from tradeify_1 (V2 prop gate EV < 0,
     # comms/prop_survival/v2/). `symbols:` keeps SOLUSDT (additive pull list, not a gate). REVERT: re-add sol_prop here.
-    assert t["strategies"] == ["trend_donchian_eth_prop"]
+    # 2026-10-30 (Tier-3, operator "Demote to bybit_1 (Recommended)", PR #21644): eth_prop off every prop roster; it stays on bybit_1. REVERT: re-add it here.
+    assert t["strategies"] == []
     assert t["symbols"] == ["ETHUSDT", "SOLUSDT"]
     assert t["risk"]["risk_pct"] == 0.005
     assert t["risk"]["max_dd_pct"] == 0.06 and t["risk"]["daily_loss_pct"] == 0.03
@@ -63,7 +64,7 @@ def test_one_leg_per_symbol_so_our_own_legs_cannot_hedge():
     for leg in ACCOUNTS["tradeify_1"]["strategies"]:
         s = blocks[leg].get("symbols") or [blocks[leg].get("symbol")]
         syms.extend(x for x in s if x)
-    assert len(syms) == len(set(syms)) == 1, syms     # ETH only since the 2026-10-29 sol_prop pull
+    assert len(syms) == len(set(syms)), syms          # no two legs on one symbol (roster empty since 2026-10-30)
     assert set(syms) <= set(ACCOUNTS["tradeify_1"]["symbols"])
 
 

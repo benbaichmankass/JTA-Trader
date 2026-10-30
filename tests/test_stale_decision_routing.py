@@ -64,7 +64,7 @@ ROLLUP = _rollup()
 # The three states, and the one that must never collapse.
 # --------------------------------------------------------------------------
 
-def test_prop_is_its_own_class_not_folded_into_real_money_or_paper() -> None:
+def test_prop_is_its_own_class_not_folded_into_real_money_or_paper(monkeypatch) -> None:
     """`breakout_1` is `account_class: prop`, live — a third class.
 
     A prop-only leg must grade `prop`. Folding it into `real_money` overstates
@@ -81,13 +81,31 @@ def test_prop_is_its_own_class_not_folded_into_real_money_or_paper() -> None:
     fundable account is the thing worth catching.
     """
     routing = ROLLUP._funding_by_leg()
-    assert ROLLUP._leg_funding("trend_donchian_eth_prop", routing) == "prop"
+    # ANCHOR MOVED AGAIN 2026-10-30 (Tier-3, operator "Demote to bybit_1 (Recommended)", PR #21644):
+    # trend_donchian_eth_prop left breakout_2 / tradeify_1 / velotrade_1 and no prop account rosters
+    # any leg, so the live config has no prop anchor left. eth_prop is now a MOVEMENT assertion (it
+    # must not read `prop` again without a roster change), and the prop class is pinned below on a
+    # fixture config. REVERT: when eth_prop is re-added to a prop roster, restore `== "prop"` here.
+    assert ROLLUP._leg_funding("trend_donchian_eth_prop", routing) == "paper"  # bybit_1, the Stage-1 floor
+    import src.config.accounts_loader as accounts_loader
+    monkeypatch.setattr(accounts_loader, "load_accounts_dict", lambda *a, **k: {
+        "prop_x": {"account_class": "prop", "mode": "live", "strategies": ["leg_p", "leg_rp"]},
+        "paper_x": {"account_class": "paper", "mode": "live", "strategies": ["leg_p", "leg_pp"]},
+        "real_x": {"account_class": "real_money", "mode": "live", "strategies": ["leg_rp"]},
+        "prop_dry": {"account_class": "prop", "mode": "dry_run", "strategies": ["leg_dry"]},
+    })
+    fx = ROLLUP._funding_by_leg()
+    assert ROLLUP._leg_funding("leg_p", fx) == "prop"         # prop beats paper, never folded into it
+    assert ROLLUP._leg_funding("leg_rp", fx) == "real_money"  # real_money beats prop
+    assert ROLLUP._leg_funding("leg_pp", fx) == "paper"
+    assert ROLLUP._leg_funding("leg_dry", fx) == "paper"      # a dry_run prop account places no order
+    monkeypatch.undo()
     # ANCHOR RESTORED 2026-10-05: trend_donchian_sol_prop left tradeify_1 (#16598, RQ-20261005-807
     # FAIL alone) and was re-added the same day as part of the ETH+SOL book (Tier-3, data-backed:
     # RQ-20261005-902 INACTIVITY_SAFE_IMPROVEMENT, PR #16624), so it routes to a prop account again.
     # MOVED 2026-10-15 (PROMOTE-PROP-LEGS, Tier-3, operator pre-authorized): trend_donchian_sol_prop
     # joined bybit_2 (real money), and a leg grades at its highest money-at-risk route, so it now
-    # reads `real_money` -- never `prop`, which would understate it. eth_prop stays the prop anchor.
+    # reads `real_money` -- never `prop`, which would understate it.
     assert ROLLUP._leg_funding("trend_donchian_sol_prop", routing) == "real_money"
     # Since 2026-10-05 (SOAK-GATE1, Stage-0 FAIL) bybit_1 no longer declares it,
     # so it reads `unresolved`; it must still never read `prop` again.

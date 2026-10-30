@@ -72,16 +72,25 @@ def test_journal_ticket_and_fill_roundtrip(isolated_db: Path) -> None:
     assert len(fills) == 1 and fills[0]["pnl"] == 108.75
 
 
-def test_outbound_tickets_project_over_order_packages(isolated_db: Path) -> None:
+def test_outbound_tickets_project_over_order_packages(isolated_db: Path, monkeypatch) -> None:
     """Regression for the wiring bug: a prop ticket lives in order_packages
     (the canonical store). The 'tickets sent' view must surface it even when
     the prop_tickets sidecar has NO matching row (e.g. emitted before the
     sidecar existed) — i.e. don't read a parallel empty table."""
     from src.units.db.database import Database
     from src.prop import prop_journal
+    import src.config.accounts_loader as accounts_loader
+
+    # The roster is a FIXTURE since 2026-10-30: trend_donchian_eth_prop was demoted to
+    # bybit_1 (Tier-3, operator "Demote to bybit_1 (Recommended)", PR #21644) and no prop
+    # account rosters any leg, so reading the live roster would leave nothing to project.
+    monkeypatch.setattr(accounts_loader, "load_accounts_dict", lambda *a, **k: {
+        "breakout_2": {"exchange": "breakout", "type": "prop", "account_class": "prop",
+                       "strategies": ["trend_donchian_eth_prop"]},
+    })
 
     db = Database()  # creates order_packages + the rest of the schema
-    # `trend_donchian_eth_prop` is READ FROM the live breakout_1 roster, not
+    # `trend_donchian_eth_prop` was READ FROM the live roster until 2026-10-30 (fixture above), not
     # asserted here — this test is about the order_packages projection, not
     # about which legs are routed. It named the BASE `trend_donchian_sol` until
     # 2026-08-23, when the Tier-3 de-dup (#10165) removed the base twins from

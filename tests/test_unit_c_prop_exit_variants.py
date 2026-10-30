@@ -186,8 +186,11 @@ def test_routed_to_breakout_2_and_breakout_1_retired():
     assert _accounts()["breakout_1"]["strategies"] == []
     a = _accounts()["breakout_2"]
     # 2026-10-29 (Tier-3, operator): sol_prop pulled from breakout_2 (V2 prop gate); the variant stays defined.
-    assert "trend_donchian_eth_prop" in a["strategies"]
-    assert "trend_donchian_sol_prop" not in a["strategies"]
+    # 2026-10-30 (Tier-3, operator "Demote to bybit_1 (Recommended)", PR #21644): eth_prop off every prop roster; it stays on bybit_1. REVERT: re-add it here.
+    # Both variants stay defined in strategies.yaml; neither is on a prop roster.
+    for name in _VARIANTS:
+        assert name not in a["strategies"]
+    assert "trend_donchian_eth_prop" in _accounts()["bybit_1"]["strategies"]  # the Stage-1 floor
 
 
 def test_descriptions_and_changelog_present():

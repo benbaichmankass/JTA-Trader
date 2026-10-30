@@ -1061,7 +1061,9 @@ def grade_v2(results: Dict[str, Any]) -> Tuple[str, str]:
 # ---------------------------------------------------------------------------
 # breakout_1 retired 2026-10-07 (empty roster); breakout_2 is the live Breakout book.
 # sol_prop pulled from breakout_2 2026-10-29 (Tier-3, V2 prop gate); re-add it here with the roster.
-BOOKS = {"breakout_2": ("trend_donchian_eth_prop",)}
+# eth_prop demoted to bybit_1 2026-10-30 (Tier-3, operator "Demote to bybit_1 (Recommended)"; PR #21644): the book is
+# empty, so `--book` now refuses (no legs) rather than score a book nobody trades. REVERT: restore the tuple with the roster.
+BOOKS = {"breakout_2": ()}
 # `--book breakout_1` is still named by queued research units (RQ-20260928-015). The legs'
 # evidence records are per-leg, not per-account, so the retired book scores identically on
 # breakout_2's roster; the alias keeps those units runnable.

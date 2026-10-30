@@ -97,7 +97,8 @@ def test_prop_account_config():
     assert a["strategies"] == []
     # 2026-10-29 (Tier-3, operator): trend_donchian_sol_prop pulled (V2 gate EV < 0,
     # comms/prop_survival/v2/); eth_prop stays. REVERT: add sol_prop back to this set.
-    assert set(_accounts()["breakout_2"]["strategies"]) == {"trend_donchian_eth_prop"}
+    # 2026-10-30 (Tier-3, operator "Demote to bybit_1 (Recommended)", PR #21644): eth_prop off every prop roster; it stays on bybit_1. REVERT: re-add it here.
+    assert _accounts()["breakout_2"]["strategies"] == []
     assert set(a["symbols"]) == {"SOLUSDT", "ETHUSDT"}
 
 

@@ -36,7 +36,8 @@ def test_velotrade_1_is_live_with_the_fit_roster():
     assert a["mode"] == "live"            # VELOTRADE-GOLIVE: tickets emitted; orders still gated (kill switch + enabled symbols)
     # VELOTRADE-GOLIVE roster (RQ-20261006-002 / RULE-RQ1006-VELOTRADE-FIT)
     # 2026-10-29 (Tier-3, operator): sol_prop pulled (V2 prop gate). REVERT: re-add it here.
-    assert a["strategies"] == ["trend_donchian_eth_prop"]
+    # 2026-10-30 (Tier-3, operator "Demote to bybit_1 (Recommended)", PR #21644): eth_prop off every prop roster; it stays on bybit_1. REVERT: re-add it here.
+    assert a["strategies"] == []
     assert a["symbols"] == ["ETHUSDT", "SOLUSDT"]
     assert a["exchange"] == "breakout" and a["type"] == "prop" and a["account_class"] == "prop"
     assert a["backtest_ruleset"] == "prop_rulesets/velotrade_classic_1step.yaml"
