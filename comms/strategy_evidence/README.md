@@ -205,3 +205,27 @@ python3 scripts/ops/build_strategy_evidence.py                    # every enable
 
 Needs `pandas` (the harnesses do); a fresh sandbox has none. Fetches candles from
 `data.binance.vision` for `*USDT` and Yahoo otherwise.
+
+## ⚠️ A rebuild is only a re-check if it measures the SAME window (STAGE0-REPRO-GAP, 2026-10-30)
+
+A record's window is "the last `window_days` days before the run", so a rebuild
+that runs on a different day or at a different `--days` value measures a different
+window. On 2026-10-30 a re-check rebuilt every trend record at the 365d default.
+That gave `trend_donchian_eth_4h` n 51 / −9.57 against the committed n 135 / +44.64,
+which was measured at 1095d, and the gap was read as "the committed record does not
+reproduce". At the record's own window it reproduces exactly. Two changes follow:
+
+- An omitted `--days` now uses **the committed record's own `window_days`**, and only
+  falls back to 365 when there is no record. `reproduce.window_days_source` says which
+  one applied.
+- Every measured record carries a **`reproduce`** block: `window_days`, `folds`,
+  `data_start`, `data_end`, `git_sha` and `argv`. `argv` replays the pinned window:
+
+```bash
+python3 scripts/ops/build_strategy_evidence.py --strategy <leg> \
+    --window-start "<reproduce.data_start>" --window-end "<reproduce.data_end>"
+```
+
+For a record written before this change, the window is in
+`cost_stack.source` (the run's `__bt.json` `data_start` / `data_end`).
+`tests/test_strategy_evidence.py` fails on a record from this builder that lacks the pins.

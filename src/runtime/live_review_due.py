@@ -57,7 +57,7 @@ import os
 import re
 import sqlite3
 from datetime import datetime, timedelta, timezone
-from typing import Any, Dict, Iterable, List, Optional, Set, Tuple
+from typing import Any, Callable, Dict, Iterable, List, Optional, Set, Tuple
 
 CONFIG_REL = os.path.join("config", "live_trade_review.yaml")
 REVIEWS_REL = os.path.join("comms", "live_review", "reviews.jsonl")
@@ -152,6 +152,54 @@ def read_reviews(path: Optional[str] = None) -> Dict[str, Any]:
     except OSError as exc:
         return {"state": "unreadable", "rows": [], "bad_lines": 0, "error": str(exc)}
     return {"state": "read", "rows": rows, "bad_lines": bad}
+
+
+def read_branch_rows(git: Optional[Callable[..., Tuple[int, str]]] = None) -> Dict[str, Any]:
+    """Rows on the ``live-review/rows`` branch, from the ref the rows watcher already fetches.
+
+    Reviewers write there; main sees them only after the rows mirror + git-sync (~15-20 min), so a
+    due computation over main alone re-wakes a package a review row already answered
+    (LTR-DUE-MIRROR-LAG). Reads the LOCAL ref (no fetch: no network on a request path); same
+    reader as the watcher (``live_review_rows.read_at``). ``state`` read / could_not_look.
+    """
+    try:
+        from src.runtime import live_review_rows as rows_lib
+        from src.runtime import live_review_rows_watch as watch
+        g = git or watch._git
+        rc, tip = g("rev-parse", watch.LOCAL_REF)
+        if rc != 0:
+            return {"state": "could_not_look", "rows": [], "reason": f"branch_ref_absent: {tip[-120:]}"}
+        got = rows_lib.read_at(tip, g)
+        if got.get("state") != "ok":
+            return {"state": "could_not_look", "rows": [], "reason": f"branch_unreadable: {got.get('detail')}"}
+        return {"state": "read", "rows": got["rows"], "tip": tip}
+    except Exception as exc:  # noqa: BLE001  # allow-silent: surfaced as branch_state could_not_look; main-only stands
+        return {"state": "could_not_look", "rows": [], "reason": f"branch_error: {type(exc).__name__}: {exc}"}
+
+
+def merge_branch_rows(main_rows: List[Dict[str, Any]], branch_rows: Iterable[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    """Main's rows plus branch rows whose review_id main lacks (deduped by review_id)."""
+    have = {r.get("review_id") for r in main_rows if r.get("review_id")}
+    extra = [r for r in branch_rows if r.get("review_id") and r["review_id"] not in have]
+    return list(main_rows) + extra
+
+
+def read_reviews_merged(path: Optional[str] = None,
+                        branch: Optional[Callable[[], Dict[str, Any]]] = None) -> Dict[str, Any]:
+    """:func:`read_reviews` plus the branch rows; ``branch_state`` / ``branch_added`` say what it did.
+    A branch read that fails leaves the main-only answer (never blocks a wake)."""
+    rv = read_reviews(path)
+    br = (branch or read_branch_rows)()
+    rv["branch_state"] = br["state"]
+    rv["branch_reason"] = br.get("reason")
+    rv["branch_added"] = 0
+    if br["state"] == "read" and rv["state"] != "unreadable":
+        merged = merge_branch_rows(rv["rows"], br["rows"])
+        rv["branch_added"] = len(merged) - len(rv["rows"])
+        rv["rows"] = merged
+        if rv["state"] == "absent" and merged:
+            rv["state"] = "read"
+    return rv
 
 
 def _review_index(rows: Iterable[Dict[str, Any]]) -> Dict[str, Dict[str, Any]]:
@@ -1097,8 +1145,10 @@ def live_review_due(db_path: Optional[str] = None,
                     reviews_path: Optional[str] = None,
                     now: Optional[datetime] = None,
                     funding_db_path: Optional[str] = None,
-                    calendar_path: Optional[str] = None) -> Dict[str, Any]:
-    """The route payload. Never raises."""
+                    calendar_path: Optional[str] = None,
+                    branch: Optional[Callable[[], Dict[str, Any]]] = None) -> Dict[str, Any]:
+    """The route payload. Never raises. With the default reviews path the prior-review index also
+    holds the rows on ``live-review/rows`` that main lacks (``branch`` overrides that read)."""
     now = now or datetime.now(timezone.utc)
     env: Dict[str, Any] = {
         "generated_at": now.isoformat(), "read_state": "could_not_look",
@@ -1114,7 +1164,12 @@ def live_review_due(db_path: Optional[str] = None,
     env["events_not_evaluated"] = list(cfg.get("not_evaluated") or [])
     env["thresholds_source"] = CONFIG_REL.replace(os.sep, "/")
 
-    rv = read_reviews(reviews_path)
+    if reviews_path is None or branch is not None:
+        rv = read_reviews_merged(reviews_path, branch)
+        env["branch_state"], env["branch_reason"] = rv["branch_state"], rv["branch_reason"]
+        env["branch_rows_added"] = rv["branch_added"]
+    else:
+        rv = read_reviews(reviews_path)
     env["reviews_state"] = rv["state"]
     env["review_bad_lines"] = rv["bad_lines"]
     if rv["state"] == "unreadable":

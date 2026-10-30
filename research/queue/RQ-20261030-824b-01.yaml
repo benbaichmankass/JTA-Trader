@@ -3,7 +3,7 @@
 id: RQ-20261030-824b-01
 title: 'TM-BENCH v1 re-entry test: does scripts/research/tm_bench.py pass its selfcheck, score HOLD against itself as exactly 0, and reproduce
   the 0.756 R/trade hindsight-oracle saving on the six money legs as traded (corpus v1)?'
-status: queued
+status: done
 cadence: once
 theme: ml_health
 priority: 1
@@ -130,3 +130,14 @@ what_it_does_not_do: 'Grades no model: the learner and baseline arms are reporte
   information only). Changes no config, places no order. The engine is counterfactual_grader.simulate until CF-B0-ENGINE-LIFT lands
   cf_core.'
 last_dispatched_at: '2026-10-30T08:58:55+00:00'
+grading:
+  attested: RULE-RQ20261030-824B-01-TMBENCH-REPRODUCE
+  auto: true
+  decision_rule_id: RULE-RQ20261030-824B-01-TMBENCH-REPRODUCE
+  evidence:
+  - research/results/RQ-20261030-824b-01/41023664029.jsonl
+  graded_at: '2026-10-30'
+  grader: scripts/research/queue_grade.py
+  reason: 1 row(s), all measured, all pass
+  rows: 1
+  verdict: pass
