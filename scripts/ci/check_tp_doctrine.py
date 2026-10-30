@@ -316,7 +316,7 @@ BASELINE_2026_10_06: dict[str, frozenset[str]] = {
     "bybit_1/claude_desk": ER,
     # 2026-10-30 E4-DEMO-LEG (Tier-3, operator-approved bybit_1 demo only): the frozen E4 rule carries a REAL
     # declared entry TP (tp_r 2.0 = 3.0 ATR14 on the 1.5 ATR14 stop, the level the held-out replay scored,
-    # RQ-20261030-e18g-02 / PR #21720). tp_revision is undeclared ON PURPOSE: a TP revision is a different rule
+    # RQ-20261030-e18g-02 / PR #21720; the leg's absolute Stage 0 FAILED, it is a demo mechanics test only). tp_revision is undeclared ON PURPOSE: a TP revision is a different rule
     # than the one that passed, and active management is advice-only until its own test passes (ARCHITECTURE
     # § "Active management"). A visible, deliberate line; exit-refinement owns it (exit-refinement-coverage row).
     "bybit_1/e4_oi_shock_1h": R,

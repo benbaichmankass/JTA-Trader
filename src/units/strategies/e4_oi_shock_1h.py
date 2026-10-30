@@ -13,9 +13,11 @@ THE RULE, FROZEN (research/queue/blocked/RQ-20261030-e18g-02.yaml; the replay
   bracket   from the cutoff close: SL 1.5 x ATR14, TP 3.0 x ATR14 (R:R 2), ATR14 = SMA of the true
             range over 14 bars (``desk_scan_packet.atr_series``). Time stop: the close of the 24th
             bar after the entry (``monitor``).
-EVIDENCE   held-out 2024-11-01..2025-10-25, six USDT perps, 856 events: S3 vs a same-model random
-           entry +0.184 R, 95 % weekly-cluster CI +0.092..+0.274, net of the full cost stack;
-           absolute mean net R +0.022 R (PR #21720).
+EVIDENCE   held-out 2024-11-01..2025-10-25, six USDT perps, 856 events, net of the full cost stack (PR #21720):
+           RELATIVE (vs a same-model random entry, RQ-20261030-e18g-02) PASS, S3 +0.184 R, CI +0.092..+0.274;
+           ABSOLUTE (Stage 0, RQ-20261030-e18g-03, comms/strategy_evidence/e4_oi_shock.json) FAIL, mean net R
+           +0.022, CI -0.072..+0.110. NOT a Stage-0 pass: on the bybit_1 demo as a MECHANICS test only, by the
+           operator's choice after the fail ("Keep building demo leg", 2026-10-30).
 TP          a real predictive level: the frozen rule's 3.0 ATR target (declared as ``tp_r: 2.0`` on the
             1.5 ATR stop, so the TP doctrine scan reads it) is the level the replay scored (its hits are
             what the S3 measures); ``monitor`` never retargets it -- a TP revision is a different rule,

@@ -3256,9 +3256,14 @@ strategies:
   # e4_oi_shock_1h — the E4 open-interest-shock continuation rule, FROZEN as scored (row E4-DEMO-LEG, Tier 3,
   # OPERATOR-APPROVED for bybit_1 DEMO only: popup 2026-10-30 ~22:10Z, verbatim "Prop sim + bybit_1 demo
   # (Recommended)", relayed by Manager Session 2026-10-30c). Rule: research/queue/blocked/RQ-20261030-e18g-02.yaml,
-  # scripts/research/desk_event_entry_replay.py (PR #21720). EVIDENCE (DESK-13 held-out gate, registered before the
-  # run): 2024-11-01..2025-10-25, six USDT perps, 856 events, S3 vs a same-model random entry +0.184 R, 95 %
-  # weekly-cluster CI +0.092..+0.274, net of the full cost stack; absolute mean net R +0.022 R.
+  # scripts/research/desk_event_entry_replay.py (PR #21720). EVIDENCE, BOTH HALVES (held-out 2024-11-01..2025-10-25,
+  # six USDT perps, 856 events, net of the full cost stack):
+  #   * RELATIVE (DESK-13 gate, RQ-20261030-e18g-02): PASS -- S3 vs a same-model random entry +0.184 R, 95 % CI +0.092..+0.274.
+  #   * ABSOLUTE (Stage 0, RQ-20261030-e18g-03, record comms/strategy_evidence/e4_oi_shock.json): FAIL -- mean net R
+  #     +0.022, 95 % weekly-cluster CI -0.072..+0.110; 3 of 5 quarterly folds positive. The leg has NOT passed Stage 0.
+  # WHY IT IS ON A BOOK ANYWAY (stated exception, operator): after the Stage-0 fail the operator chose, popup ~22:35Z
+  # verbatim, "Keep building demo leg" -- bybit_1 DEMO only, as a MECHANICS test (paper money). It is not a promotion
+  # candidate and not a prop candidate (Manager Session 2026-10-30c). Nothing here may be read as edge evidence.
   # Detector: 1h change of 5-min open interest, z >= 3 vs the previous 7 days, one per symbol per 6 h, known_at =
   # row time + 5 min; decided on the 1h bar closing at the next boundary; side = sign of that bar's return; market
   # entry; SL 1.5 / TP 3.0 ATR14 from the cutoff close; 24-bar time stop (monitor). Live OI: src/runtime/oi_feed.py
