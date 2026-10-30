@@ -1,0 +1,145 @@
+# Hand-authored 2026-10-30 by lane RESEARCH-AUTHOR-SLO-20261030 (Tier 1), dispatched by Manager Session 2026-10-30b. Decision rule registered BEFORE any runner run. Gates: none.
+id: RQ-20261030-41cc-25
+title: 'Direction at 1h without calendar features: does regularised LightGBM beat the class prior when hour_of_day and dayofweek are removed?'
+status: queued
+cadence: once
+theme: ml_health
+priority: 2
+kind: experiment
+question: On the latest 40,000 1h bars of BTCUSDT, ETHUSDT and SOLUSDT, with calendar features removed, does LightGBM (regularised) beat the class
+  prior by >= 0.002 nats of direction log-loss on the CV mean on all three symbols?
+why_this_matters: 'Companion to the 1h direction unit with calendar features: any direction lift that lives only in the session clock is a calendar
+  effect the existing session skips already price, not new information. Lane RESEARCH-AUTHOR-SLO-20261030.'
+power:
+  expected_n: 24000
+  min_detectable_effect: 0.1
+  effect_units: sd
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: 'tail_rows 40000 with min_train_frac 0.4 leaves ~24000 out-of-sample rows over 5 folds per symbol; d=0.1 paired needs ~785 rows; bars
+    are autocorrelated so effective n is lower: the rule requires the same-direction CV mean on EVERY symbol. expected_n is an ESTIMATE, not a
+    measurement.'
+  feasibility:
+    source: none
+    accrual_basis: 'Fixed by construction (tail_rows of a nightly-rebuilt shard): n does not grow with waiting, so an underpowered result is reported
+      as such and the follow-up is a larger or different dataset, not a re-run.'
+decision_rule:
+  id: RULERQ2026103041cc25
+  registered_at: '2026-10-30'
+  registered_before_run: true
+  statistic: Paired per-fold difference in multiclass log-loss (baseline minus learner, positive = learner better) on identical purged folds (5,
+    embargo 24 rows), mean over folds, per symbol.
+  rule: 'PASS IF LightGBM regularised beats the class prior by >= +0.002 nats on the CV mean on ALL THREE 1h symbols. FAIL IF it does not beat
+    the prior by >= 0 on the CV mean on ANY symbol (this configuration only: the direction-information line stays open). INDETERMINATE otherwise,
+    or if folds < 3 or a shard is unavailable. Thresholds are not changed after any result.'
+  min_n: 3 usable CV folds per symbol; reported n_rows per symbol.
+  what_it_does_not_do: Builds, calibrates and serves nothing, promotes nothing, touches no config; a log-loss PASS is not edge and not a P&L figure,
+    and the head's advisory stage is unchanged. A FAIL closes this configuration only; the learner family is not retired.
+compute: auto
+value:
+  bucket: ai_trader
+  usd_at_stake_per_month: 150
+  confidence: 0.25
+  basis: 'stand-in: gates whether the head is worth advancing on the money legs; not a measured P&L'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  published_data: metis-market-data
+  peak_memory_gb: 4.0
+  est_minutes: 40
+  basis: 'Estimate, NOT measured: 3 shards x 1 arm x 5 folds on published shards, comparable to RQ-20261028-2a2e-11 (20 min at 40,000 tail rows);
+    compute: auto routes it to the Kaggle CPU kernel.'
+ml_bakeoff:
+  task: classification
+  metric: logloss
+  higher_is_better: false
+  dataset:
+    kind: jsonl
+    groups:
+      BTCUSDT_1h:
+        path: datasets-out/market_features/BTCUSDT/1h/v002/data.jsonl
+      ETHUSDT_1h:
+        path: datasets-out/market_features/ETHUSDT/1h/v002/data.jsonl
+      SOLUSDT_1h:
+        path: datasets-out/market_features/SOLUSDT/1h/v002/data.jsonl
+    ts_col: ts
+    target: direction_label
+    features:
+    - rolling_log_return_vol
+    - log_return
+    - log_return_lag_1
+    - log_return_lag_2
+    tail_rows: 40000
+  cv:
+    folds: 5
+    embargo_rows: 24
+    min_train_frac: 0.4
+  baseline: prior
+  controls: []
+  candidates:
+  - lgbm_reg
+  learners:
+    prior:
+      kind: prior
+    lgbm_reg:
+      kind: lightgbm
+      params:
+        learning_rate: 0.03
+        min_child_samples: 300
+        n_estimators: 100
+        num_leaves: 7
+        reg_lambda: 10.0
+  rule:
+    min_folds: 3
+    pass_if:
+    - group:
+      - BTCUSDT_1h
+      - ETHUSDT_1h
+      - SOLUSDT_1h
+      op: '>='
+      value: 0.002
+      vs: baseline
+      window: cv
+    fail_if_no_candidate_reaches:
+    - group: any
+      op: '>='
+      value: 0.0
+      vs: baseline
+      window: cv
+run:
+  command:
+  - python3
+  - scripts/research/ml_bakeoff.py
+  - --unit
+  - '{unit}'
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 60
+  inputs:
+    research_unit: RQ-20261030-41cc-25
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+roadmap:
+- M25
+related:
+- RQ-20261028-2a2e-11
+- scripts/research/ml_bakeoff.py
+- RQ-20261027-3e41-15
+programme: P2
+ml_consumer:
+  consumer: src/runtime/regime_shadow.py
+  decision: whether the regime head may advance candidate -> shadow -> advisory as the vol/trend gate input on the rostered real-money legs (it
+    acts only through the regime router, never an order)
+  legs:
+  - trend_donchian_eth_4h
+  - trend_donchian_xrp_4h
+  - xrp_pullback_2h
+  - ada_pullback_2h
+  book: money
+practice_precedent: 'M6 (docs/reference/trading-and-model-practice-principles.md): purged, embargoed walk-forward CV with a class-prior baseline;
+  a log-loss lift is reported per symbol, never pooled.'
+intervention_controls:
+  not_applicable: a model-quality bake-off on a static published shard, not an in-trade action or active-management intervention
