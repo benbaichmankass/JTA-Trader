@@ -1,7 +1,7 @@
 id: RQ-20261029-5785-03
 title: 'ML-REAL-MONEY-OVERLAY refine 1/3 -- CALIBRATION: do the overlay''s probabilities carry skill over the training
   base rate once an isotonic calibrator is fit inside each CPCV training set?'
-status: queued
+status: done
 cadence: once
 roadmap:
 - L-ML-LIVE
@@ -123,13 +123,18 @@ ml_consumer:
 last_dispatched_at: '2026-10-29T14:00:56+00:00'
 grading:
   attested: RULE-ML-OVERLAY-CALIBRATION-V1
-  auto: true
+  auto: false
   decision_rule_id: RULE-ML-OVERLAY-CALIBRATION-V1
   evidence:
+  - comms/research/RQ-20261029-5785-03/local-calibration-20261029/measurement.json
   - research/results/RQ-20261029-5785-03/40877509986.jsonl
   graded_at: '2026-10-30'
-  grader: scripts/research/queue_grade.py
-  needs_review: true
-  reason: 'verdicts not unanimous-mechanical: [''fail'', ''pass'']'
+  grader: lane RESEARCH-GRADE-20261030 (hand-graded from the committed local run)
+  needs_review: false
+  reason: 'Rule applied per family as registered. PB2H INDETERMINATE (holdout n=43 < 100). TD NOT_CALIBRATED: main cal_gain_lb95 -0.0075 <= 0 and holdout
+    Brier_cal 0.2546 > Brier_const 0.2488 (holdout n=105). No family CALIBRATED, so the unit is FAIL by the V2 top-level convention; p_win stays a rank score,
+    never a probability. Changes no decision, threshold or config (rule: what_it_does_not_do). NOT a retirement of the overlay or any family. CAVEAT: the
+    landed workflow rows (run 40877509986) are the plain V2 verdict under this rule id (run.command omits --refine); this grade reads the committed local
+    run''s measurement.json, not re-run by this lane. Defect owned by PI-20261030-0261030B-0001.'
   rows: 2
-  verdict: null
+  verdict: fail
