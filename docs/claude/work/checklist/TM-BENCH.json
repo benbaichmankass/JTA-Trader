@@ -2,22 +2,40 @@
   "id": "TM-BENCH",
   "title": "TM-BENCH: the one trade-management bench (frozen corpus, purged trade-grouped folds, action-value labeler, B0-B6 incl. causal matched random, selfcheck, logit + LightGBM action-value wrappers, --train-corpus/--test-corpus)",
   "phase": null,
-  "state": "in_flight",
+  "state": "landed_unproven",
   "owner": "manager",
-  "lane": "session_01AFoLuMfDpakKxF5zHGsPv2",
+  "lane": null,
   "model": "opus",
   "ceiling_usd": 15,
-  "spend_usd": null,
+  "spend_usd": 10.74,
   "tier": 1,
-  "prs": [],
+  "prs": [
+    21518
+  ],
   "blocked_on": [],
-  "note": "Filed by lane ML-DATA-RATE-PATH 2026-10-29 from docs/plans/ML-PROGRAMME-2026-10-28.md section 5 row 1 (proposed there, never filed; grep of docs/claude/work/checklist 2026-10-29 found no TM-BENCH row). Model opus, ceiling $15. One engine: the labeler imports the cf core from CF-B0-ENGINE-LIFT or the ML-EXIT-ACTIONGRID-LABELS replay, whichever lands first; never rebuilt. Added by this lane: --train-corpus/--test-corpus and the cross-symbol purge (docs/research/ml-data-rate-path-2026-10-29.md section 1 row A). Unblocks RQ-20261029-7294-01/02/03 (Q-TM1 = ML-AM-NEXT-LIVE's next candidate). Re-entry test: a runner unit lands selfcheck pass, B0-B0 = 0, oracle saving 0.756 R/trade +- 0.005 on the 6-leg population. Gates: none. roadmap L-ML-LIVE, L-ATM. Dispatched 2026-10-30T05:15Z by Manager Session 2026-10-30a: fresh Opus lane session_01AFoLuMfDpakKxF5zHGsPv2, ceiling $15; one-lane rule (week's priority) with the ML-DATA-BROAD-PATHS slot freed (manifest bp2-f4271084b120 on main, 146,158 trades).",
+  "note": "Filed by lane ML-DATA-RATE-PATH 2026-10-29 from docs/plans/ML-PROGRAMME-2026-10-28.md section 5 row 1 (proposed there, never filed; grep of docs/claude/work/checklist 2026-10-29 found no TM-BENCH row). Model opus, ceiling $15. One engine: the labeler imports the cf core from CF-B0-ENGINE-LIFT or the ML-EXIT-ACTIONGRID-LABELS replay, whichever lands first; never rebuilt. Added by this lane: --train-corpus/--test-corpus and the cross-symbol purge (docs/research/ml-data-rate-path-2026-10-29.md section 1 row A). Unblocks RQ-20261029-7294-01/02/03 (Q-TM1 = ML-AM-NEXT-LIVE's next candidate). Re-entry test: a runner unit lands selfcheck pass, B0-B0 = 0, oracle saving 0.756 R/trade +- 0.005 on the 6-leg population. Gates: none. roadmap L-ML-LIVE, L-ATM. Dispatched 2026-10-30T05:15Z by Manager Session 2026-10-30a: fresh Opus lane session_01AFoLuMfDpakKxF5zHGsPv2, ceiling $15; one-lane rule (week's priority) with the ML-DATA-BROAD-PATHS slot freed (manifest bp2-f4271084b120 on main, 146,158 trades). Merged 2026-10-30T07:26Z as 4125d42 (#21518, manager hold-merge by Manager Session 2026-10-30b; all 5 checks green on head 7a2302a). Lane archived, final spend $10.74 of $15. Not built: the select subcommand needed by RQ-20261029-7294-03. Engine-fidelity gap 90.3% filed as PI-20261030-TMBENCH-0001 (routed to CF-B0-ENGINE-LIFT).",
   "priority_rank": 1,
-  "updated_at": "2026-10-30T05:15:30Z",
-  "updated_by": "session_01AFoLuN7eK1S1a4nLsZ8A5m",
+  "updated_at": "2026-10-30T08:06:20Z",
+  "updated_by": "session_01AFoLuKe1M26JqmpKg3rYdo",
   "roadmap": [
     "L-ML-LIVE",
     "L-ATM"
   ],
+  "closes_when": "RQ-20261030-824b-01 lands a result graded pass on RULE-RQ20261030-824B-01-TMBENCH-REPRODUCE",
+  "lane_history": [
+    {
+      "lane": "session_01AFoLuMfDpakKxF5zHGsPv2",
+      "archived_at": "2026-10-30T07:26:48Z"
+    }
+  ],
+  "writeback": {
+    "roadmap": "none: research tooling landed; L-ML-LIVE/L-ATM move only when RQ-20261030-824b-01 grades",
+    "arch": "none: research-only script, no runtime component or contract changed"
+  },
+  "observation": {
+    "what": "runner unit RQ-20261030-824b-01 lands a result graded pass on RULE-RQ20261030-824B-01-TMBENCH-REPRODUCE (selfcheck pass, B0-B0 = 0, census oracle 0.756 +- 0.005 R/trade on the 6-leg v1 corpus)",
+    "how_to_check": "python3 scripts/research/result_disposition_check.py --list | grep 824b-01, or read research/results/ for RQ-20261030-824b-01 and its grade",
+    "due_by": "2026-11-02"
+  },
   "_seq": 836
 }
