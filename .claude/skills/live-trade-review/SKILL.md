@@ -123,6 +123,7 @@ The operator, relayed by the manager on 2026-10-25 at about 16:20Z: the **repo**
 | `cost` | the cost basis behind the priced options |
 | `account_bounds` | the per-account read (§ 0.2) |
 | `info_cutoff_at` | when the newest input was read |
+| `context_v3` | (packet v3, DESK-AM-REFOCUS 2026-10-30) `chart` (recent bars, swings, since-entry range), `htf` (the next timeframe up), `book` (every other open package), `exit_plan` (what HOLD does), `live_vs_backtest`; the discretionary context the judgement in REVIEWER-BRIEF § 2b reads |
 
 - **The reviewer reads the packet and judges. It does not go and research.** The row carries `packet_sha`, the sha256 of the packet's canonical JSON (`sort_keys`, compact separators). The validator refuses a `packet_sha` that does not match the committed packet. That makes every decision joinable to exactly what was seen.
 - **Until the generator `scripts/ops/live_review_packet.py` exists**, the reviewer assembles the packet by hand from the § 1 reads and § 2 inputs, in this exact shape, and writes `assembled_by: hand`.
@@ -152,6 +153,8 @@ The operator, relayed by the manager on 2026-10-25 at about 16:20Z: the **repo**
 > - **partial close** or **full close**.
 >
 > Both brackets always stay. The advice-only rule (§ 0.0) covers `tighten_sl` ONLY: its evidence is about tightening and nothing else. **Do not read it as "prefer hold".** Every other lever keeps its route and mandate and is judged on its own merits.
+
+> **The judgement, not the table (DESK-AM-REFOCUS, 2026-10-30).** Steps 2 to 5 are evidence and bookkeeping. The call itself is the discretionary trader's view of THIS trade from the `context_v3` packet, with a falsifiable `forecast` that the validator requires on judged rows from 2026-10-31. Procedure: [`REVIEWER-BRIEF.md`](REVIEWER-BRIEF.md) § 2b. Diagnosis and the pre-registered grade `RULE-DESK-AM-JUDGEMENT-V1`: [`docs/research/desk-am-refocus-diagnosis-2026-10-30.md`](../../../docs/research/desk-am-refocus-diagnosis-2026-10-30.md).
 
 ### Step 1. Mechanics first
 

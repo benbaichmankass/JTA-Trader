@@ -32,7 +32,7 @@ Each package block in the comment is:
 > **The question is the BEST TRADING DECISION NOW** (operator 2026-10-27 ~07:05Z, relayed by the manager; supersedes "price every option from the leg's own Stage-0 history" as the frame): keep holding, let go, change the brackets, partial close, add quantity? In-trade management is **not** judged by fidelity to the strategy. The leg's outcome tables (`live_review_outcomes.py`) stay as EVIDENCE, quoted with their n, never as a constraint on the call. Rows `LTR-BEST-DECISION-FRAMING`, `DESK-SHORT-HOLD-LANE`.
 
 1. **Mechanics first.** `packet.mechanics.verdict` != `match` → action `flag_mechanics`, basis `mechanics`, route `operator_ask` (real money / prop). No exit judgement on a broken trade.
-2. **Price from the table, never by hand.** Copy `options` from `packet.priced_options.options` / `table` exactly: the tool's `n`, `mean_r`, `sd_r`, `worst_r`. A number not in the packet does not go in the row.
+2. **Copy the table, never re-price it by hand.** Copy `options` from `packet.priced_options.options` / `table` exactly: the tool's `n`, `mean_r`, `sd_r`, `worst_r`. A number not in the packet does not go in the row. **The table is one piece of evidence, not the decision** (§ 2b): it prices only hold and tighten, and its hold cell is the leg's whole peak-then-pullback population, not this trade's state. Restating it is not a review.
 3. **Thin cells are decided by judgement** (operator 2026-10-26). If the HOLD cell or the candidate cell has n below `n_floor`, make the call yourself: `basis: judgement`, `evidence_source: judgement`, `judgement_confidence` (your calibrated probability that the call beats holding), a one-line `reason`, and `ev_delta_r` / `worst_case_delta_r` / both `tighten_r` set to `null`. Quote the thin cells in `context_flags`, never as measured. **On a real-money or prop package you MUST make a call**: `hold`, `tighten_sl` (advice only) or any trade action of step 5, each `basis: judgement` with the confidence and reason. `hold` + `judgement` is a real, graded call; a hold with no confidence and reason is the banned silent collapse. `no_recommendation` is allowed there ONLY as `basis: could_not_look` with a `reason` (the packet is unreadable or a required input is null). `insufficient_n` / `default_hold` are refused by the validator on real-money/prop rows.
 4. **Overlay** (each item needs packet evidence, as `"<kind>: <evidence>"` in `context_flags`): a regime/vol change since entry, an ATR ratio >= 1.5 or <= 0.67, funding, a calendar event, correlated exposure, `missing_inputs`. An overlay may downgrade or turn a tighten into an operator ask. It never manufactures a tighten.
 5. **Classify at the PACKAGE level** (never per-account risk): `hold` (a measured HOLD cell, `basis: ev_positive`; or a thin cell, `basis: judgement`) · `tighten_sl(level)` · the trade actions `close` · `partial_close` · `move_tp` · `widen_sl` · `change_size` · `add_entry` (operator 2026-10-26, `MD-TRADE-DESK`: *"all trade actions, as long as they have reasoning and confidence attached"*) · `no_recommendation` · `flag_mechanics` · `tp_revise` (legacy spelling, always `route: operator_ask`; write `move_tp` instead).
@@ -51,6 +51,44 @@ Each package block in the comment is:
    - **No table at all (`table: null`) → no tighten** (the VM refuses a tighten whose table is not committed). Use `no_recommendation`.
 7. **`account_reads`:** one entry per account in `accounts`, copied from `packet.account_bounds` (`would_apply` / `refused_by_account_risk` / `unknown` / `no_action`; `no_action` for hold / no_recommendation). Never fabricate `would_apply`.
 
+## 2b. The judgement: you are the discretionary trader above the mechanical system (DESK-AM-REFOCUS, 2026-10-30)
+
+> **Operator, 2026-10-30 (verbatim):** *"It just should be assessing each trade and managing it, we don't need it just for applying mechanical rules - the system already does that"*.
+
+The strategy already runs its brackets, its trail and its time stop, and if you do nothing the trade runs to them. **Your value is only the judgement those rules cannot make.** Diagnosis and evidence: `docs/research/desk-am-refocus-diagnosis-2026-10-30.md`. Over 240 reviews to 2026-10-30, the reasons restated the table and stated no expectation, so not one call could be checked on its own terms.
+
+**Read the market for THIS trade before you look at the table.** The packet's `context_v3` block (when present; `null` blocks are could-not-look, name them in `context_flags`) gives you:
+
+| block | what it gives you |
+|---|---|
+| `chart.bars` | recent closed bars on the leg's timeframe |
+| `chart.htf` | the next timeframe up: its trend and swings |
+| `chart.swings` / `chart.since_entry` | swing levels and the high/low since entry, with distances in ATR |
+| `book` | every other open package, either side, with its R |
+| `exit_plan` | the strategy's own stop, target and trail, i.e. what HOLD actually does |
+| `live_vs_backtest` | how this leg has traded live against its own backtest |
+| `context.calendar` / `context.news` | scheduled events and the news score |
+
+**Then answer, in this order:**
+
+1. **What is price doing relative to this trade's thesis?** Use structure on both timeframes, the trend, volatility, and the level that woke you. Say what changed since entry, or since the previous review.
+2. **What do you expect next, and where are you wrong?** Write the `forecast` (every key required):
+   - `thesis`: one or two sentences in your words. A table restatement is refused in grading.
+   - `direction`: relative to the trade (`with_trade` / `against_trade` / `flat`).
+   - `target_px`: the price you expect to trade first.
+   - `p_target`: your calibrated probability of reaching it.
+   - `invalidation_px`: the price that proves the view wrong.
+   - `horizon_bars` on `timeframe`: how long the view has to play out.
+   - `evidence`: the packet fields you used.
+
+   Every forecast is graded on what actually traded next (direction, Brier of `p_target`). Calibration is how the models learn how much weight your view deserves.
+3. **Does the view beat what HOLD will do?** Compare it with `exit_plan`, the bracket the strategy will run. If HOLD already expresses your view (the target and stop are where you would put them), `hold` + `judgement` is the right call, with the forecast. Otherwise name the bracket move or reduction that expresses it: `move_tp` to your target, `widen_sl` / a structure stop at your invalidation, `partial_close` / `close` when you expect the move against. The action must follow from the forecast.
+4. **Book and events.** A view on one trade that is really the same bet as three others (`book`), or that sits across a scheduled event, is said in `context_flags` and can change the size of the call.
+
+Every in-trade class stays **advice only** (step 5): your call is recorded, graded against HOLD and against the mechanical rule net of cost (`RULE-DESK-AM-JUDGEMENT-V1`), and executed only once its class passes its own test. That is why the forecast matters: it is the label.
+
+**A `judgement_cadence` wake** (the VM's regular judgement slot) may carry SEVERAL package blocks. Review each one and write one row per package. Read them together first: they are one book.
+
 ## 3. The output: ONE row, exactly this shape
 
 - `review_id` = `packet.review_id`; `packet_sha` = the block's `packet_sha`; `outcome_table_source` = `table_path` (or `null` with no table).
@@ -61,6 +99,7 @@ Each package block in the comment is:
   - `basis: judgement` <=> `evidence_source: judgement`, with a numeric `judgement_confidence` in [0, 1] and a non-empty `reason`;
   - a non-judgement `tighten_sl` records `tighten_r` on both arms;
   - `insufficient_n` <=> `no_recommendation`, and on a real-money/prop row neither `insufficient_n` nor `default_hold` is accepted; `no_recommendation` there needs `basis: could_not_look` + `reason`;
+  - from 2026-10-31T00:00Z a judged row (`basis` `judgement`, `ev_positive` or `preference_within_bound`) carries a `forecast` (§ 2b) with `target_px` != `invalidation_px`; a `mechanics` / `could_not_look` / `record_only` row leaves it out;
   - an option with `n == 0` has null numbers;
   - `account_reads` covers exactly `accounts`, once each;
   - `review_id` ends with `-` + the row's own `order_package_id` (`LR-<ts>-pkg-6a8e…` carries `order_package_id: pkg-6a8e…`). Copy the id, package id, leg, accounts and state from ONE packet block, never mixed across blocks (2026-10-26 a row was written with one package's id and another's body; the append-only branch cannot take it back, and the mirror now refuses and skips it).
@@ -172,7 +211,17 @@ Each package block in the comment is:
  "session": "session_EXAMPLE",
  "prompt_sha": null,
  "skill_sha": null,
- "packet_sha": "0000000000000000000000000000000000000000000000000000000000000000"
+ "packet_sha": "0000000000000000000000000000000000000000000000000000000000000000",
+ "forecast": {
+  "thesis": "2h lower high at 0.2042 held twice and the 4h trend is still down; the bounce is a retest, so price resumes lower toward the 0.1874 target before the stop",
+  "direction": "with_trade",
+  "target_px": 0.1874,
+  "p_target": 0.45,
+  "invalidation_px": 0.2042,
+  "horizon_bars": 8,
+  "timeframe": "2h",
+  "evidence": ["chart.swings: lower high 0.2042 (2 touches)", "chart.htf: 4h trend down", "book: no other short crypto-beta package"]
+ }
 }
 ```
 
@@ -225,7 +274,8 @@ Each package block in the comment is:
       "session": {"type": "string", "minLength": 1},
       "prompt_sha": {"type": ["string", "null"]},
       "skill_sha": {"type": ["string", "null"]},
-      "packet_sha": {"_comment": "LTR-3 / manager 2026-10-25: sha256 of the canonical JSON (sort_keys, compact) of the decision packet the reviewer judged, stored at comms/live_review/packets/<review_id>.json, so each decision joins to exactly what was seen. Optional until the packet generator (scripts/ops/live_review_packet.py) exists.", "type": ["string", "null"], "pattern": "^[0-9a-f]{64}$"}
+      "packet_sha": {"_comment": "LTR-3 / manager 2026-10-25: sha256 of the canonical JSON (sort_keys, compact) of the decision packet the reviewer judged, stored at comms/live_review/packets/<review_id>.json, so each decision joins to exactly what was seen. Optional until the packet generator (scripts/ops/live_review_packet.py) exists.", "type": ["string", "null"], "pattern": "^[0-9a-f]{64}$"},
+      "forecast": {"_comment": "DESK-AM-REFOCUS (2026-10-30, docs/research/desk-am-refocus-diagnosis-2026-10-30.md section 2): the reviewer's own falsifiable view of THIS trade, written before the outcome. direction is relative to the trade (with_trade = price moves in the position's favour). Graded by RULE-DESK-AM-JUDGEMENT-V1 (direction hit, Brier of p_target, the action vs HOLD net of cost) and joined into ml claude_judgments as fc_* columns. Required on judged rows reviewed from FORECAST_RULE_FROM (scripts/ci/check_live_review_records.py); absent or null on a mechanics / could_not_look / record_only row. Prices only, never a size.", "type": ["object", "null"], "additionalProperties": false, "required": ["thesis", "direction", "target_px", "p_target", "invalidation_px", "horizon_bars", "timeframe"], "properties": {"thesis": {"type": "string", "minLength": 1}, "direction": {"type": "string", "enum": ["with_trade", "against_trade", "flat"]}, "target_px": {"type": "number"}, "p_target": {"type": "number", "minimum": 0, "maximum": 1}, "invalidation_px": {"type": "number"}, "horizon_bars": {"type": "integer", "minimum": 1}, "timeframe": {"type": "string", "enum": ["5m", "15m", "30m", "1h", "2h", "4h", "1d"]}, "evidence": {"type": "array", "items": {"type": "string"}}}}
     }
   },
   "outcomes": {
