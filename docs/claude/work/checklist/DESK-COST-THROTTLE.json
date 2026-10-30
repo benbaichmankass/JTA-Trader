@@ -2,21 +2,29 @@
   "id": "DESK-COST-THROTTLE",
   "title": "Usage throttle (operator 2026-10-30 ~10:12Z): desk hourly scan -> every 2 h (even UTC hours) and desk event triggers capped at 4/day, enforced by the system, not by manager memory",
   "phase": null,
-  "state": "in_flight",
+  "state": "landed_unproven",
   "owner": "manager",
   "lane": "DESK-COST-THROTTLE",
   "model": "sonnet",
   "ceiling_usd": 4,
   "spend_usd": null,
   "tier": 2,
-  "prs": [],
+  "prs": [
+    21593
+  ],
   "blocked_on": [],
   "note": "OPERATOR 2026-10-30 ~10:12Z (popup to Manager Session 2026-10-30b, multi-select verbatim): \"Desk: every 2h, cap triggers\", \"Drop 4-h LTR backstop\", \"Research routines can also be throttled down\". Basis (MEASURED from list_sessions, sessions created 2026-10-30 00:00-10:05Z, n=100 read): 11 hourly desk wakes + 12 desk-trigger wakes, all no_trade; per-wake cost $0.30-0.35 (n=5 get_session reads). Applied immediately by the manager: (a) LTR 4-h backstop trig_01Bchsugftspk4uZhHR1ncK8 disabled; (b) daily authoring trig_01PHFNiKyeRUMLJj1DgYzmuy -> every other day (53 5 */2 * *); research-ops stays daily (research_ops_age SLO); (c) INTERIM manager rule until this row lands: dispatch desk-wake markers only for even UTC hours and at most 4 desk-trigger-wakes per UTC day (odd-hour packets still land = data kept). This row makes (c) systemic: config/desk_triggers.yaml max_per_day 12 -> 4 and an hourly-scan cadence knob (every 2 h) in the packet-wake producer, read live if possible. Gates: none (a cost cadence, not a trading gate).",
   "priority_rank": 1,
-  "updated_at": "2026-10-30T10:25:51Z",
+  "updated_at": "2026-10-30T10:58:04Z",
   "updated_by": "DESK-COST-THROTTLE",
   "roadmap": [
     "L-OPS"
   ],
+  "writeback": "DESK-COST-THROTTLE: packet still lands hourly; desk-wake marker on even UTC hours only (scan_wake_every_h: 2, read live); event triggers capped at 4/UTC day. Cadence needs ict-trader-live restart; cap is live on git sync. PR #21593.",
+  "observation": {
+    "what": "an odd-hour bar lands a packet with no wake and receipt skipped_by_cadence; triggers stop at 4/day",
+    "how_to_check": "after the restart: /api/diag/log_file?name=desk_wake_post_receipt on an odd UTC hour reads state skipped_by_cadence with the packet on desk/decisions and no desk-wake marker on the ops-flags PR; runtime_logs/desk/trigger_labels.jsonl shows day_cap after the 4th wake of a UTC day",
+    "due_by": "2026-11-02"
+  },
   "_seq": 840
 }
