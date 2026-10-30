@@ -623,6 +623,12 @@ _DIRECTED_ACTIONS_WATCH_STATUS = Path(repo_root()) / "runtime_logs" / "directed_
 # without a package (expired_unfilled, e.g. waiting on a closed ETF/CME market; a refused bracket). Written by
 # src/units/strategies/claude_desk.py::record (ledger_path()).
 _DESK_LEG_LEDGER = Path(repo_root()) / "runtime_logs" / "desk" / "desk_leg.jsonl"
+# E4-DEMO-LEG (2026-10-30): the live open-interest feed's per-symbol status (newest row, age, span,
+# read_state fresh/stale/could_not_look; graded by scripts/ops/oi_feed_freshness.py) and the E4 leg's
+# one line per decided (symbol, 1h cutoff). Same anchor as the writers (src/runtime/oi_feed.py::store_dir,
+# strategy_signal_builders.e4_oi_shock_1h_signal_builder).
+_OI_FEED_STATUS = Path(repo_root()) / "runtime_logs" / "oi_feed" / "status.json"
+_E4_DECISIONS_LOG = Path(repo_root()) / "runtime_logs" / "oi_feed" / "e4_decisions.jsonl"
 # LTR first-proof pings (operator 2026-10-26): which stages are proven / seeded,
 # when, the latency from the previous stage. Same anchor as the writer
 # (src.runtime.ltr_first_proof.state_path).
@@ -681,6 +687,8 @@ _LOG_FILES: dict[str, Path] = {
     "directed_actions_status": _DIRECTED_ACTIONS_STATUS,
     "directed_actions_watch_status": _DIRECTED_ACTIONS_WATCH_STATUS,
     "desk_leg": _DESK_LEG_LEDGER,
+    "oi_feed_status": _OI_FEED_STATUS,
+    "e4_decisions": _E4_DECISIONS_LOG,
     "ltr_first_proof": _LTR_FIRST_PROOF,
     "status": _STATUS_JSON,
     "heartbeat": _HEARTBEAT,

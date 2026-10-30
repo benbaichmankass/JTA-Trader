@@ -68,3 +68,8 @@ symbol_budget_trades: 1.0
 declared_slices:
   bybit_1:
     claude_desk: 0.5
+    # E4-DEMO-LEG (2026-10-30, Tier-3 sizing meaning, bybit_1 DEMO only; operator popup "Prop sim + bybit_1
+    # demo (Recommended)"): the E4 event leg fires on six symbols that already carry pooled strategy legs, so
+    # without its own budget an open slice of another leg would shrink or refuse it and the 1-2 trade mechanics
+    # soak could not complete. Same 0.5 as the desk leg. ROLLBACK: delete this line (it joins the pooled split).
+    e4_oi_shock_1h: 0.5

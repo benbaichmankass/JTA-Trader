@@ -314,6 +314,12 @@ BASELINE_2026_10_06: dict[str, frozenset[str]] = {
     # no_target / no_tp_verdict. A visible, deliberate line until the scan measures proposal TPs
     # (design § 3.7 "check_tp_doctrine.py measures the desk leg on the proposals' tp.basis"; row DESK-17).
     "bybit_1/claude_desk": ER,
+    # 2026-10-30 E4-DEMO-LEG (Tier-3, operator-approved bybit_1 demo only): the frozen E4 rule carries a REAL
+    # declared entry TP (tp_r 2.0 = 3.0 ATR14 on the 1.5 ATR14 stop, the level the held-out replay scored,
+    # RQ-20261030-e18g-02 / PR #21720). tp_revision is undeclared ON PURPOSE: a TP revision is a different rule
+    # than the one that passed, and active management is advice-only until its own test passes (ARCHITECTURE
+    # § "Active management"). A visible, deliberate line; exit-refinement owns it (exit-refinement-coverage row).
+    "bybit_1/e4_oi_shock_1h": R,
     # 2026-10-27 DESK-PAPER-ACCOUNTS: the same leg rostered on the two other paper books (operator verbatim, chat
     # ~15:58Z: "I do want to have the desk live on the other paper accounts as well, so Alpaca and IB."). Same reason
     # as the line above, not new debt: the TP is each proposal's own level (desk-records-guard), revised through

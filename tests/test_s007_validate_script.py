@@ -151,6 +151,7 @@ def test_run_checks_strategies_match_roster():
     # shadow on bybit_1; emits only accepted desk proposals.
     assert names == {
         "claude_desk",
+        "e4_oi_shock_1h",  # 2026-10-30 E4-DEMO-LEG (Tier-3): the E4 OI-shock leg, bybit_1 demo
         "turtle_soup", "vwap", "ict_scalp_5m", "trend_donchian", "fade_breakout_4h",
         "squeeze_breakout_4h", "fvg_range_15m", "htf_pullback_trend_2h", "trend_donchian_1h",
         "mes_trend_long_1d", "mgc_pullback_1d", "mhg_pullback_1d",
