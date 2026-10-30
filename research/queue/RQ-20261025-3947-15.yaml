@@ -1,6 +1,6 @@
 id: RQ-20261025-3947-15
 title: 'Macro event study: does the retail_sales_mom surprise predict ZN=F forward returns at 1-5 trading days?'
-status: queued
+status: done
 cadence: once
 roadmap:
 - M28
@@ -87,3 +87,16 @@ related:
 - comms/macro/econ_calendar_snapshots.jsonl
 - RESEARCH-AUTHOR-1025PM
 last_dispatched_at: '2026-10-30T04:02:19+00:00'
+grading:
+  attested: RULE-RQ20261025394715-RETAILSALESMOM
+  auto: true
+  decision_rule_id: RULE-RQ20261025394715-RETAILSALESMOM
+  evidence:
+  - research/results/RQ-20261025-3947-15/41000646161.jsonl
+  graded_at: '2026-10-30'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail

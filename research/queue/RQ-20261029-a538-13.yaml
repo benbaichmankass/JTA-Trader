@@ -1,6 +1,6 @@
 id: RQ-20261029-a538-13
 title: 'Prop trail: does a 5.0 or 2.5 ATR trail beat the declared 3.5 on eth_pullback_prop_2h net of the prop cost stack?'
-status: queued
+status: done
 cadence: once
 roadmap:
 - L-PROP
@@ -104,3 +104,16 @@ related:
 practice_precedent: 'M4, M5 (docs/reference/trading-and-model-practice-principles.md): pre-registered arm grid, every arm counted, baseline =
   the declared leg'
 last_dispatched_at: '2026-10-30T02:54:56+00:00'
+grading:
+  attested: RULERQ20261029A53813
+  auto: true
+  decision_rule_id: RULERQ20261029A53813
+  evidence:
+  - research/results/RQ-20261029-a538-13/40994418601.jsonl
+  graded_at: '2026-10-30'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail
