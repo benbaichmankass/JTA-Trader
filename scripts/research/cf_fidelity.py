@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# wiring: manual — CF-B0 fidelity check; re-run: python3 scripts/research/cf_fidelity.py --corpus v1 --n 1000 --out <dir>
+# wiring: manual-only - CF-B0 fidelity check, run by hand or by the bulk-run lane: python3 scripts/research/cf_fidelity.py --corpus v1 --n 1000 --out <dir>
 """Engine fidelity on backtest jobs (CF-B0-ENGINE-LIFT, design § 4.3 "Fidelity first").
 
 For each sampled backtest trade, replay the leg's OWN management through the ONE engine (``cf_core.simulate`` fed the
@@ -30,7 +30,7 @@ import tm_bench  # noqa: E402
 TOL_R = 0.01
 
 
-def classify(t: dict, sim: dict, gap: float) -> str:
+def classify(t: dict, sim: dict) -> str:
     """What the engine did relative to the harness's exit bar. Heuristic labels, each backed by a measured field."""
     last = sim["fills"][-1] if sim["fills"] else None
     if last is None:
@@ -53,7 +53,7 @@ def check(trades: List[dict], cost, tol: float = TOL_R) -> Dict[str, Any]:
         net0, info = tm_bench.replay(t, tm_bench.engine_bars(t), tm_bench._cm(t, cost))
         gap = info["gross_r"] - t["exit_r"]
         rows.append({"leg": t["leg"], "exit_reason": t["exit_reason"], "gap": float(gap), "ok": bool(abs(gap) <= tol), "gap_f": float(gap),
-                     "why": None if abs(gap) <= tol else classify(t, info["sim"], gap)})
+                     "why": None if abs(gap) <= tol else classify(t, info["sim"])})
     return {"rows": rows}
 
 

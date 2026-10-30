@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# wiring: library — historical bar source + paged package reader for cf_core consumers (CF-B0-ENGINE-LIFT); no scheduler.
+# wiring: manual-only - library for the CF-B1/CF-B2 bulk runners (not yet built); exercised by tests/test_cf_core.py
 """cf_bars: price paths and package pages for the counterfactual engine, for HISTORY (the live grader's ``fetch_candles``
 reaches back only ~16h at 1m).
 
