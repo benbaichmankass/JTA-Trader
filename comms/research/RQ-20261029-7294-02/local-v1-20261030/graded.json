@@ -1,0 +1,405 @@
+{
+ "verdict": "fail",
+ "why": "every graded lgbm arm: CI upper - bar < +0.03 R/trade",
+ "bar_r": 0.0,
+ "b1_delta_r": -0.03684,
+ "b1_ci95": [
+  -0.05535,
+  -0.02051
+ ],
+ "b1_folds": {
+  "0": -0.03181,
+  "1": -0.04577,
+  "2": 0.00279,
+  "3": -0.0595,
+  "4": -0.02463,
+  "5": -0.06347
+ },
+ "arms": [
+  {
+   "arm_id": "lgbm_action_value@every_bar",
+   "verdict": "fail",
+   "delta_vs_b0_r": -0.07892,
+   "ci95_vs_b0": [
+    -0.11605,
+    -0.04185
+   ],
+   "gain_vs_bar_r": -0.07892,
+   "ci95_vs_bar": [
+    -0.11605,
+    -0.04185
+   ],
+   "folds_beating_bar": 0,
+   "action_rate": 0.6989,
+   "n_acted": 1836,
+   "delta_acted_r": -0.11292,
+   "act_threshold_by_fold": {
+    "0": 0.1,
+    "1": 0.1,
+    "2": 0.1,
+    "3": 0.1,
+    "4": 0.1,
+    "5": 0.05
+   },
+   "b2_delta_r": -0.00352,
+   "twin_delta_r": -0.14946,
+   "b4": {
+    "mode": "causal",
+    "delta_vs_b0_r": -0.05404,
+    "margin_r": -0.02488,
+    "margin_ci95": [
+     -0.04837,
+     -0.00029
+    ],
+    "p_random_ge_arm": 0.994
+   },
+   "p_one_sided": 1.0,
+   "p_holm": 1.0,
+   "maxdd_per_leg": {
+    "ada_pullback_2h": {
+     "n": 402,
+     "b0_maxdd_r": 21.897,
+     "arm_maxdd_r": 21.726,
+     "ok": true
+    },
+    "trend_donchian_eth_4h": {
+     "n": 275,
+     "b0_maxdd_r": 20.703,
+     "arm_maxdd_r": 10.292,
+     "ok": true
+    },
+    "trend_donchian_eth_prop": {
+     "n": 1085,
+     "b0_maxdd_r": 27.475,
+     "arm_maxdd_r": 30.583,
+     "ok": false
+    },
+    "trend_donchian_sol_prop": {
+     "n": 403,
+     "b0_maxdd_r": 12.919,
+     "arm_maxdd_r": 12.36,
+     "ok": true
+    },
+    "trend_donchian_xrp_4h": {
+     "n": 68,
+     "b0_maxdd_r": 4.641,
+     "arm_maxdd_r": 3.977,
+     "ok": true
+    },
+    "xrp_pullback_2h": {
+     "n": 394,
+     "b0_maxdd_r": 16.499,
+     "arm_maxdd_r": 23.441,
+     "ok": false
+    }
+   },
+   "capday": [
+    0.04499,
+    0.09039
+   ],
+   "checks": {
+    "gain_ge_0.03": false,
+    "ci_lo_minus_bar_gt_0": false,
+    "folds_ge_5": false,
+    "maxdd_le_b0": false,
+    "capday_ge_b0": false,
+    "beats_b2": false,
+    "beats_b4_causal": false,
+    "beats_twin_by_0.01": true,
+    "holm_p_lt_0.05": false,
+    "beats_b5": null
+   }
+  },
+  {
+   "arm_id": "lgbm_action_value@every_4",
+   "verdict": "fail",
+   "delta_vs_b0_r": -0.06722,
+   "ci95_vs_b0": [
+    -0.10016,
+    -0.0336
+   ],
+   "gain_vs_bar_r": -0.06722,
+   "ci95_vs_bar": [
+    -0.10016,
+    -0.0336
+   ],
+   "folds_beating_bar": 0,
+   "action_rate": 0.6947,
+   "n_acted": 1825,
+   "delta_acted_r": -0.09676,
+   "act_threshold_by_fold": {
+    "0": 0.05,
+    "1": 0.02,
+    "2": 0.05,
+    "3": 0.05,
+    "4": 0.05,
+    "5": 0.05
+   },
+   "b2_delta_r": -0.00154,
+   "twin_delta_r": -0.13671,
+   "b4": {
+    "mode": "causal",
+    "delta_vs_b0_r": -0.06203,
+    "margin_r": -0.00519,
+    "margin_ci95": [
+     -0.02806,
+     0.01893
+    ],
+    "p_random_ge_arm": 0.7
+   },
+   "p_one_sided": 1.0,
+   "p_holm": 1.0,
+   "maxdd_per_leg": {
+    "ada_pullback_2h": {
+     "n": 402,
+     "b0_maxdd_r": 21.897,
+     "arm_maxdd_r": 19.314,
+     "ok": true
+    },
+    "trend_donchian_eth_4h": {
+     "n": 275,
+     "b0_maxdd_r": 20.703,
+     "arm_maxdd_r": 13.919,
+     "ok": true
+    },
+    "trend_donchian_eth_prop": {
+     "n": 1085,
+     "b0_maxdd_r": 27.475,
+     "arm_maxdd_r": 34.861,
+     "ok": false
+    },
+    "trend_donchian_sol_prop": {
+     "n": 403,
+     "b0_maxdd_r": 12.919,
+     "arm_maxdd_r": 12.975,
+     "ok": false
+    },
+    "trend_donchian_xrp_4h": {
+     "n": 68,
+     "b0_maxdd_r": 4.641,
+     "arm_maxdd_r": 4.462,
+     "ok": true
+    },
+    "xrp_pullback_2h": {
+     "n": 394,
+     "b0_maxdd_r": 16.499,
+     "arm_maxdd_r": 11.616,
+     "ok": true
+    }
+   },
+   "capday": [
+    0.05279,
+    0.09039
+   ],
+   "checks": {
+    "gain_ge_0.03": false,
+    "ci_lo_minus_bar_gt_0": false,
+    "folds_ge_5": false,
+    "maxdd_le_b0": false,
+    "capday_ge_b0": false,
+    "beats_b2": false,
+    "beats_b4_causal": false,
+    "beats_twin_by_0.01": true,
+    "holm_p_lt_0.05": false,
+    "beats_b5": null
+   }
+  },
+  {
+   "arm_id": "lgbm_action_value@every_4+triggers",
+   "verdict": "fail",
+   "delta_vs_b0_r": -0.05944,
+   "ci95_vs_b0": [
+    -0.09384,
+    -0.02708
+   ],
+   "gain_vs_bar_r": -0.05944,
+   "ci95_vs_bar": [
+    -0.09384,
+    -0.02708
+   ],
+   "folds_beating_bar": 0,
+   "action_rate": 0.7309,
+   "n_acted": 1920,
+   "delta_acted_r": -0.08133,
+   "act_threshold_by_fold": {
+    "0": 0.02,
+    "1": 0.1,
+    "2": 0.05,
+    "3": 0.05,
+    "4": 0.1,
+    "5": 0.05
+   },
+   "b2_delta_r": -0.00228,
+   "twin_delta_r": -0.14174,
+   "b4": {
+    "mode": "causal",
+    "delta_vs_b0_r": -0.05906,
+    "margin_r": -0.00038,
+    "margin_ci95": [
+     -0.0239,
+     0.0233
+    ],
+    "p_random_ge_arm": 0.526
+   },
+   "p_one_sided": 1.0,
+   "p_holm": 1.0,
+   "maxdd_per_leg": {
+    "ada_pullback_2h": {
+     "n": 402,
+     "b0_maxdd_r": 21.897,
+     "arm_maxdd_r": 23.045,
+     "ok": false
+    },
+    "trend_donchian_eth_4h": {
+     "n": 275,
+     "b0_maxdd_r": 20.703,
+     "arm_maxdd_r": 10.292,
+     "ok": true
+    },
+    "trend_donchian_eth_prop": {
+     "n": 1085,
+     "b0_maxdd_r": 27.475,
+     "arm_maxdd_r": 22.384,
+     "ok": true
+    },
+    "trend_donchian_sol_prop": {
+     "n": 403,
+     "b0_maxdd_r": 12.919,
+     "arm_maxdd_r": 10.078,
+     "ok": true
+    },
+    "trend_donchian_xrp_4h": {
+     "n": 68,
+     "b0_maxdd_r": 4.641,
+     "arm_maxdd_r": 4.626,
+     "ok": true
+    },
+    "xrp_pullback_2h": {
+     "n": 394,
+     "b0_maxdd_r": 16.499,
+     "arm_maxdd_r": 15.34,
+     "ok": true
+    }
+   },
+   "capday": [
+    0.06033,
+    0.09039
+   ],
+   "checks": {
+    "gain_ge_0.03": false,
+    "ci_lo_minus_bar_gt_0": false,
+    "folds_ge_5": false,
+    "maxdd_le_b0": false,
+    "capday_ge_b0": false,
+    "beats_b2": false,
+    "beats_b4_causal": false,
+    "beats_twin_by_0.01": true,
+    "holm_p_lt_0.05": false,
+    "beats_b5": null
+   }
+  },
+  {
+   "arm_id": "lgbm_action_value@triggers_only",
+   "verdict": "fail",
+   "delta_vs_b0_r": -0.05606,
+   "ci95_vs_b0": [
+    -0.08685,
+    -0.02613
+   ],
+   "gain_vs_bar_r": -0.05606,
+   "ci95_vs_bar": [
+    -0.08685,
+    -0.02613
+   ],
+   "folds_beating_bar": 0,
+   "action_rate": 0.6582,
+   "n_acted": 1729,
+   "delta_acted_r": -0.08517,
+   "act_threshold_by_fold": {
+    "0": 0.02,
+    "1": 0.1,
+    "2": 0.05,
+    "3": 0.05,
+    "4": 0.1,
+    "5": 0.05
+   },
+   "b2_delta_r": -0.00244,
+   "twin_delta_r": -0.08024,
+   "b4": {
+    "mode": "causal",
+    "delta_vs_b0_r": -0.04738,
+    "margin_r": -0.00868,
+    "margin_ci95": [
+     -0.02975,
+     0.01324
+    ],
+    "p_random_ge_arm": 0.852
+   },
+   "p_one_sided": 1.0,
+   "p_holm": 1.0,
+   "maxdd_per_leg": {
+    "ada_pullback_2h": {
+     "n": 402,
+     "b0_maxdd_r": 21.897,
+     "arm_maxdd_r": 20.631,
+     "ok": true
+    },
+    "trend_donchian_eth_4h": {
+     "n": 275,
+     "b0_maxdd_r": 20.703,
+     "arm_maxdd_r": 12.385,
+     "ok": true
+    },
+    "trend_donchian_eth_prop": {
+     "n": 1085,
+     "b0_maxdd_r": 27.475,
+     "arm_maxdd_r": 26.418,
+     "ok": true
+    },
+    "trend_donchian_sol_prop": {
+     "n": 403,
+     "b0_maxdd_r": 12.919,
+     "arm_maxdd_r": 11.435,
+     "ok": true
+    },
+    "trend_donchian_xrp_4h": {
+     "n": 68,
+     "b0_maxdd_r": 4.641,
+     "arm_maxdd_r": 4.626,
+     "ok": true
+    },
+    "xrp_pullback_2h": {
+     "n": 394,
+     "b0_maxdd_r": 16.499,
+     "arm_maxdd_r": 27.469,
+     "ok": false
+    }
+   },
+   "capday": [
+    0.0607,
+    0.09039
+   ],
+   "checks": {
+    "gain_ge_0.03": false,
+    "ci_lo_minus_bar_gt_0": false,
+    "folds_ge_5": false,
+    "maxdd_le_b0": false,
+    "capday_ge_b0": false,
+    "beats_b2": false,
+    "beats_b4_causal": false,
+    "beats_twin_by_0.01": true,
+    "holm_p_lt_0.05": false,
+    "beats_b5": null
+   }
+  }
+ ],
+ "engine": "scripts/research/cf_core.py::simulate+net_of (CF-B0)",
+ "engine_fidelity": {
+  "share_within_tol": 1.0,
+  "tol_r": 0.01
+ },
+ "oracle": {
+  "census_best_close_saving_r_per_trade": 0.7562,
+  "action_value_ceiling_r_per_trade_oos": 0.8617
+ }
+}

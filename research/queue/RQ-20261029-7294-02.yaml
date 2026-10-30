@@ -3,7 +3,7 @@
 id: RQ-20261029-7294-02
 title: 'Q-TM1: does a GBDT action-value exit/tighten policy beat the incumbent (hold-to-bracket and the best rule lever) on the six money legs
   as traded, net of cost, under S-OFFLINE and against its own causal matched random control?'
-status: blocked
+status: done
 cadence: once
 theme: ml_health
 priority: 1
@@ -12,7 +12,6 @@ roadmap:
 - L-ML-LIVE
 - L-ATM
 kind: experiment
-requires_result: {unit: RQ-20261029-7294-01}
 practice_precedent: 'T1, T2, T3, T8, M6 (docs/reference/trading-and-model-practice-principles.md); ML-PROGRAMME-2026-10-28 section 1.3 S-OFFLINE
   and section 4.3 Q-TM1 (fitted-Q folded in as an arm).'
 question: 'On TM-BENCH (money-leg test rows of corpus v1: trend_donchian_eth_4h, trend_donchian_xrp_4h, xrp_pullback_2h, ada_pullback_2h,
@@ -82,14 +81,62 @@ routing:
   est_minutes: 150
   why_runner: Harness paths from keyless public candles; no trainer data; GBDT on CPU.
   basis: ESTIMATED from the 09a6-01 run (60 min est, six legs) plus four action heads x six folds.
-blocked_on:
-- kind: work_item
-  ref: TM-BENCH
-  what: scripts/research/tm_bench.py does not exist on main 2026-10-29 (labels, baselines B0-B6, causal B4, folds, LightGBM and logit action-value wrappers).
-  clears_when: 'tm_bench.py selfcheck passes and B0-B4 are scored on corpus v1; RQ-20261029-7294-01 has a verdict. Then set run.command to
-    [python3, scripts/research/tm_bench.py, score, --policy, gbdt_action_value, --train-corpus, <v1 or v1+v2 per 7294-01>, --test-corpus, v1,
-    --rule, s_offline, --twin, logit_action_value, --random-draws, 200, --folds, 6, --n-boot, 2000, --out, {out_dir}], git mv to research/queue/,
-    remove blocked_on, status: queued.'
+pre_run_amendment:
+  registered_at: '2026-10-30T10:47Z'
+  registered_before_run: true
+  by: lane ML-AM-NEXT-LIVE-QTM1-20261030 (session_01AFoLuJGraZiXdpUH2znxfX), dispatched by Manager Session 2026-10-30b
+  why: 'RQ-20261029-7294-01 cannot reach a verdict: corpus v2 (ML-DATA-BROAD-PATHS) does not exist on 2026-10-30. A non-PASS
+    of 7294-01 selects v1 only under the registered rule ("v1+v2 on PASS, v1 only otherwise"). This run therefore trains on
+    v1 only. If 7294-01 PASSes later, v1+v2 is a NEW configuration and a new unit, not a re-grade of this one.'
+  binds:
+  - 'Training corpus: v1 only (same-corpus purged folds; train trades are the v1 trades outside the test fold window + embargo).'
+  - 'Engine: scripts/research/cf_core.py (gap-correct; #21582 / 30b6f8f, fidelity 2,627/2,627). Every number in the verdict
+    is on this engine basis, not on the backtest_trend.py trail fill (which reads ~0.029 R/trade optimistic on the ETH legs,
+    PI-20261030-GINELIFT-0001).'
+  - 'Action set: the TM-BENCH closed enum (the action-grid labels it owns): close, partial_close_50, tighten_sl_be,
+    tighten_sl_atr1, tighten_sl_atr2, tp_pull_in_0p5r, tp_pull_in_1r. This is a superset of the four actions named in the
+    question; the two TP pull-ins are kept because the dispatch asks for all action classes priced per check-in vs hold.
+    The ML-EXIT-ACTIONGRID-LABELS row (desk_lifecycle_driver --action-grid, widen / extend classes) is NOT built; widen and
+    TP-extend are not in this test.'
+  - 'Margin: per fold, chosen on the TRAIN fold from {0.0, 0.02, 0.05, 0.1, 0.2} R by in-sample value of the first action
+    (tm_bench --act-margin-grid).'
+  - 'Graded arms: lgbm_action_value at each of the 4 TM-BENCH check-in cells (every_bar, every_4, every_4+triggers,
+    triggers_only). Holm is applied across these 4 lgbm arms (p_one_sided of each; replaces "Holm across the four actions",
+    which a first-action policy does not produce). PASS needs at least one arm to clear every clause after Holm.
+    B1 = TM-BENCH best static rule per leg, leave-fold-out (the 7-rule TM-BENCH grid; replaces the intervention_controls
+    grid above, which TM-BENCH does not implement). The linear twin = logit_action_value at the same cell.'
+  - 'B5 (re-score exit) is not_available in TM-BENCH (the entry model does not replay point-in-time). The PASS clause
+    "beats B5" therefore cannot be met: the best this run can grade is INDETERMINATE (all other PASS clauses met,
+    reported as pass_pending_b5). The FAIL clause (CI upper bound of policy - max(B0, B1) < +0.03) is unaffected.'
+  - 'CI of policy - max(B0, B1): B0 delta is 0 by construction; with bar = max(0, B1 delta pooled), the CI is the arm CI
+    vs B0 shifted by bar (bar is a pooled constant chosen leave-fold-out; stated approximation).'
+  - 'Grader: scripts/research/qtm1_grade.py applies this rule to the tm_bench verdict.json. Thresholds are not changed after
+    any result.'
+run:
+  workflow: research-script-run.yml
+  command:
+  - python3
+  - scripts/research/tm_bench.py
+  - score
+  - --test-corpus
+  - v1
+  - --rule
+  - s_offline
+  - --learners
+  - lgbm_action_value,logit_action_value
+  - --act-margin-grid
+  - 0,0.02,0.05,0.1,0.2
+  - --folds
+  - '6'
+  - --n-boot
+  - '2000'
+  - --random-draws
+  - '200'
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 240
+  inputs:
+    research_unit: RQ-20261029-7294-02
 lands:
   store: research/results/
   assert_field: read_state
@@ -101,3 +148,4 @@ related:
 - docs/plans/ML-PROGRAMME-2026-10-28.md (Q-TM1)
 what_it_does_not_do: Registers, serves or promotes nothing; changes no config; places no order. A PASS produces an evidence record for one
   Tier-3 packet, it does not graduate any action class.
+last_dispatched_at: '2026-10-30T10:47:52+00:00'

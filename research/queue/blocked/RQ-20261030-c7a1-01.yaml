@@ -1,0 +1,100 @@
+# Hand-authored 2026-10-30 by lane ML-AM-NEXT-LIVE-QTM1-20261030 (Tier 1), dispatched by Manager Session 2026-10-30b (session_01AFoLuKe1M26JqmpKg3rYdo).
+# Decision rule registered BEFORE any run. Follows the FAIL of RQ-20261029-7294-02 (Q-TM1). Gates: none.
+id: RQ-20261030-c7a1-01
+title: 'Q-TM1b: is the TM-BENCH per-action advantage PREDICTABLE out of fold at all (rank calibration vs a shuffled control), and does an
+  action-value policy restricted to the action classes that are, with its act margin chosen on INNER out-of-fold predictions, beat hold on
+  the six money legs net of cost?'
+status: blocked
+cadence: once
+theme: ml_health
+priority: 1
+programme: P1
+roadmap:
+- L-ML-LIVE
+- L-ATM
+kind: experiment
+practice_precedent: 'T1, T3, M6 (docs/reference/trading-and-model-practice-principles.md): nested walk-forward (thresholds chosen on inner
+  out-of-fold predictions, never on in-sample fits); ML-PROGRAMME-2026-10-28 section 1.3 S-OFFLINE.'
+question: 'Same corpus, engine, cost stack, folds and baselines as RQ-20261029-7294-02 (TM-BENCH corpus v1, cf_core, six money legs, 2,627
+  trades). STAGE A (gate): per action class, the trade-clustered Spearman correlation between the out-of-fold LightGBM predicted advantage and
+  the realized label at every state, against the same statistic with labels permuted within trade (200 permutations). STAGE B (policy): an
+  lgbm_action_value policy over ONLY the classes with a Stage-A CI lower bound > the permutation p95, act margin chosen per outer fold on
+  INNER 3-fold out-of-fold predictions of the outer train set (grid 0, 0.02, 0.05, 0.1, 0.2, 0.3 R), at the 4 TM-BENCH check-in cells.'
+why_this_matters: 'Q-TM1 (7294-02) FAILED: every arm -0.056..-0.079 R/trade and WORSE than its own causal matched random, acting on 66-73
+  percent of trades with a margin chosen on in-sample predictions. Two of three diagnoses are testable cheaply: (a) the margin was chosen on
+  predictions of rows the model was fit on (optimistic, so it over-acts); (b) argmax over 7 noisy regressions adversely selects the action
+  with the largest positive error. Stage A says whether ANY class carries out-of-fold signal on the R1 state before more policy runs are
+  spent; a no-signal Stage A points the next unit at the FEATURE block (the common factor of four negatives: d6e7-06, RQ-20260927-002,
+  a7e1-01, 7294-02), not the learner.'
+power:
+  expected_n: 2627
+  min_detectable_effect: 0.03
+  effect_units: metric
+  sd: 0.45
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: 'n MEASURED (7294-02 run, 2,627 trades / 50,926 states). Paired sd INFERRED as 7294-02 (every_bar CI half-width 0.037 R at n=2,627 implies
+    sd ~0.97 for the over-acting arm; a restricted arm acts less, 0.45 is the 7294-02 registration). Stage A is carried by trades (cluster bootstrap).'
+  feasibility:
+    source: none
+    accrual_basis: Replays history; nothing accrues.
+decision_rule:
+  id: RULE-RQ20261030-c7a1-01-QTM1B
+  registered_at: '2026-10-30'
+  registered_before_run: true
+  statistic: 'Stage A: per action class, OOS trade-clustered Spearman rho (2,000 resamples) and the within-trade permutation p95. Stage B: as
+    RULE-RQ20261029-7294-02-QTM1-SOFFLINE amended (pooled OOS R/trade minus max(B0, B1), CI, folds, maxDD per leg, capital-day, B2, causal B4,
+    logit twin, Holm across the 4 cells), graded by scripts/research/qtm1_grade.py.'
+  rule: 'INDETERMINATE IF test trades < 2,000 OR TM-BENCH selfcheck fails. STAGE A FAIL (no class with CI lower > permutation p95): the R1
+    state carries no out-of-fold action-value signal; Stage B is not run; the next unit changes the FEATURE block (market context / level
+    structure), not the learner. Otherwise Stage B under the 7294-02 rule: PASS impossible while B5 is not_available (reads INDETERMINATE
+    pass_pending_b5); FAIL IF every arm''s CI upper - max(0, B1) < +0.03. A FAIL closes this configuration, not the family. Thresholds are
+    not changed after any result.'
+  min_n: 2,000 test trades
+intervention_controls:
+  hold_to_bracket: true
+  matched_random: {draws: 200}
+  best_static: {grid: [be_at_1r, lock1_at_2r, be_lock_ladder, chandelier_2atr, chandelier_3atr, channel_10, channel_20], excludes_test_folds: true}
+  bootstrap_group: trade
+ml_consumer:
+  consumer: src/runtime/exit_head_apply.py
+  decision: hold / close / tighten on open trades of the money legs (advice-only per class until graduation)
+  legs:
+  - trend_donchian_eth_4h
+  - trend_donchian_xrp_4h
+  - xrp_pullback_2h
+  - ada_pullback_2h
+  - trend_donchian_eth_prop
+  - trend_donchian_sol_prop
+  book: money
+compute: cpu_long
+value:
+  bucket: ai_trader
+  usd_at_stake_per_month: 600
+  confidence: 0.1
+  basis: 'stand-in: the 0.86 R/trade OOS action-value ceiling (MEASURED, 7294-02) on the money legs; not a P&L measurement.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 8.0
+  est_minutes: 45
+  why_runner: Harness paths from keyless public candles; no trainer data; GBDT on CPU.
+  basis: MEASURED 7294-02 took 11 min 19 s on 4 cores; inner 3-fold fits roughly x3 the learner time.
+blocked_on:
+- kind: work_item
+  ref: ML-AM-NEXT-LIVE
+  what: 'tm_bench.py has no Stage-A calibration output, no --inner-folds margin selection and no --actions restriction (2026-10-30).'
+  clears_when: 'tm_bench.py score accepts --inner-folds 3 and --calibration (writes per-action OOS rho + permutation p95) and restricts the
+    lgbm arm to the Stage-A-passing classes; selfcheck passes. Then add run.command, git mv to research/queue/, remove blocked_on, status: queued.'
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- ML-AM-NEXT-LIVE
+- RQ-20261029-7294-02
+- ML-EXIT-ACTIONGRID-LABELS
+- docs/plans/ML-PROGRAMME-2026-10-28.md (Q-TM1, Q-TM2)
+what_it_does_not_do: Registers, serves or promotes nothing; changes no config; places no order. Widen / TP-extend classes stay untested
+  until ML-EXIT-ACTIONGRID-LABELS builds them.
