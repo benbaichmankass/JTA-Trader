@@ -1,0 +1,105 @@
+{
+ "schema_version": 2,
+ "strategy": "e4_oi_shock",
+ "symbol": "ADAUSDT,AVAXUSDT,BTCUSDT,ETHUSDT,SOLUSDT,XRPUSDT",
+ "timeframe": "1h",
+ "config_fingerprint": "not_applicable: research arm, no live config (E4-DEMO-LEG will create one)",
+ "basis": "heldout_window",
+ "coverage_state": "measured",
+ "fidelity": "research_harness_not_live_code",
+ "omitted_levers": [
+  "Bybit venue (Binance candles stand in)",
+  "live fills / latency",
+  "bracket and horizon tuning (one fixed bracket)"
+ ],
+ "net_r_oos": 18.7948,
+ "expectancy_r_oos": 0.022,
+ "n_trades_oos": 856,
+ "expectancy_ci95": [
+  -0.0722,
+  0.1097
+ ],
+ "folds": 5,
+ "fold_detail": [
+  {
+   "fold": 1,
+   "label": "2024Q4",
+   "trades": 162,
+   "net_r": 4.3714,
+   "expectancy_r": 0.027,
+   "start": "2024-11-01T14:00:00+00:00",
+   "end": "2024-12-31T14:00:00+00:00"
+  },
+  {
+   "fold": 2,
+   "label": "2025Q1",
+   "trades": 208,
+   "net_r": 17.1657,
+   "expectancy_r": 0.0825,
+   "start": "2025-01-01T00:00:00+00:00",
+   "end": "2025-03-31T10:00:00+00:00"
+  },
+  {
+   "fold": 3,
+   "label": "2025Q2",
+   "trades": 221,
+   "net_r": -0.4578,
+   "expectancy_r": -0.0021,
+   "start": "2025-04-01T08:00:00+00:00",
+   "end": "2025-06-30T20:00:00+00:00"
+  },
+  {
+   "fold": 4,
+   "label": "2025Q3",
+   "trades": 218,
+   "net_r": 6.7971,
+   "expectancy_r": 0.0312,
+   "start": "2025-07-01T09:00:00+00:00",
+   "end": "2025-09-30T18:00:00+00:00"
+  },
+  {
+   "fold": 5,
+   "label": "2025Q4",
+   "trades": 47,
+   "net_r": -9.0816,
+   "expectancy_r": -0.1932,
+   "start": "2025-10-01T09:00:00+00:00",
+   "end": "2025-10-24T14:00:00+00:00"
+  }
+ ],
+ "folds_positive": 3,
+ "window_days": 358,
+ "fee_bps_roundtrip": 11.0,
+ "path_stats": {
+  "series_location": "source_run (the per-trade rows, in order, with driver_net_r)",
+  "n": 856,
+  "max_drawdown_r": 28.0513,
+  "final_equity_r": 18.7948,
+  "worst_trade_r": -1.5286,
+  "best_trade_r": 1.9832,
+  "ordering": "by entry_time ascending",
+  "not_a_verdict": "Descriptive only."
+ },
+ "cost_stack": {
+  "fees": 11.0,
+  "slippage": 3.0,
+  "funding": 1.0,
+  "unit": "bps_roundtrip (funding: bps per funding window)",
+  "source": "scripts/research/desk_gen_replay_driver.py cost_policy + execution_costs.roundtrip_cost_r"
+ },
+ "decision_rule": {
+  "id": "RULE-RQ20261030-E18G-03-E4-STAGE0-ABSOLUTE",
+  "rule": "PASS iff n >= 30 AND mean net R per trade > 0 AND the 95% ISO-week cluster CI lower bound > 0 on the held-out window, net of the full cost stack. Registered 2026-10-30 (commit 6326055a0) after the point estimate (+0.022 R) but before the CI was read.",
+  "registered_at": "2026-10-30",
+  "verdict": "fail"
+ },
+ "param_selection_provenance": "DEV 2025-11-01..2026-09-15 then frozen; held-out is out-of-sample (RQ-20261030-e18g-01/-02)",
+ "generated_at": "2026-10-30T22:13:25.381255+00:00",
+ "generated_by": "scripts/research/e4_stage0.py",
+ "source_run": "docs/research/e4-prop-sim-2026-10-30/ledgers/e4_full.jsonl",
+ "error": null,
+ "harness": "event_oi_shock",
+ "venue_bracket_arm": null,
+ "rebaseline_history": [],
+ "demo_only_note": "Stage-0 verdict fail. This record is NOT a promotion: it names no roster."
+}
