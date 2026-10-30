@@ -1,0 +1,15 @@
+{
+  "due_when": {
+    "due_date": "2026-11-02",
+    "kind": "date"
+  },
+  "id": "PI-20261030-56Z4JYMX-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "lane HARNESS-TRAIL-GAPFILL (session_01AFoLuKbVndnNJu56Z4jYMX)",
+    "rerun": "python3 scripts/ops/build_strategy_evidence.py --strategy trend_donchian_eth_4h --out /tmp/ev --workdir /tmp/ev/runs  # compare n_trades_oos/net_r_oos with comms/strategy_evidence/trend_donchian_eth_4h.json"
+  },
+  "state": "queued",
+  "what": "Committed Stage-0 trend records are not reproducible by the UNCHANGED harness: rebuilding trend_donchian_eth_4h today (old code, default 1095d/4 folds) gives n=51, net_r_oos -9.57 (fail) vs committed n=135, +44.64 (pass); trend_donchian_sol_4h 33 vs 116 trades, sol_prop 63 vs 395, qld/qqq/tqqq pass->fail. Cause not established (fetch window, feed, fold basis or cost stack). Until it is, 'pass' on these records cannot be re-checked and promotion evidence for them is unverified. See comms/strategy_evidence/recheck/2026-10-30-harness-trail-gapfill.md."
+}
