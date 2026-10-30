@@ -50,7 +50,6 @@ from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Iterable
 
-import requests
 
 REPO = Path(__file__).resolve().parents[2]
 sys.path[:0] = [str(REPO / "scripts" / "research"), str(REPO / "scripts" / "ops"), str(REPO / "scripts"), str(REPO)]
@@ -74,6 +73,7 @@ _MONTH = re.compile(r"-1h-(\d{4}-\d{2})\.zip$")
 
 def _s3_list(prefix: str, delimiter: str = "/") -> list[str]:
     """All keys / common prefixes under ``prefix`` (paginated). Raises on an HTTP error."""
+    import requests  # only the universe stage lists S3; the merge job installs no HTTP client
     out, marker = [], ""
     while True:
         r = None
