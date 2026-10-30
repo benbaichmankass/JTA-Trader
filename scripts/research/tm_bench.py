@@ -134,6 +134,7 @@ LGBM_PARAMS = {"objective": "regression", "learning_rate": 0.05, "num_leaves": 3
                "bagging_fraction": 0.8, "bagging_freq": 1, "feature_fraction": 0.8, "lambda_l2": 1.0, "verbose": -1,
                "num_threads": 4}
 S_OFFLINE = {"min_gain_r": 0.03, "min_folds": 5}
+INNER_MARGIN_GRID = (0.0, 0.02, 0.05, 0.1, 0.2, 0.3)   # RQ-20261030-c7a1-01 (Q-TM1b) registered grid
 SYNTH_SUBSTEPS = 100
 
 
@@ -462,9 +463,15 @@ def learner_scores(kind: str, model, X: np.ndarray, med: np.ndarray) -> Optional
 
 
 # --------------------------------------------------------------------------- scoring
-def first_action(scores: Optional[np.ndarray], mask: np.ndarray, thr: float) -> Optional[Tuple[int, str]]:
+def first_action(scores: Optional[np.ndarray], mask: np.ndarray, thr: float,
+                 allowed: Optional[Sequence[int]] = None) -> Optional[Tuple[int, str]]:
+    """First check-in state whose best predicted action beats `thr`. `allowed` = column indices into ACTIONS (None = all)."""
     if scores is None or not len(mask):
         return None
+    if allowed is not None:
+        if not len(allowed):
+            return None
+        scores = np.where(np.isin(np.arange(scores.shape[1]), list(allowed))[None, :], scores, -np.inf)
     for s in np.nonzero(mask)[0]:
         j = int(np.argmax(scores[s]))
         if scores[s, j] > thr:
@@ -571,10 +578,60 @@ def _stratum(t: dict, terc: Tuple[float, float]) -> str:
     return f"{t['family']}|{v}|{asset}"
 
 
+def _rank(x: np.ndarray) -> np.ndarray:
+    return pd.Series(x).rank(method="average").to_numpy()
+
+
+def calibrate(pred: Dict[str, np.ndarray], lab: Dict[str, np.ndarray], tid: np.ndarray, rng, n_boot: int,
+              n_perm: int) -> Dict[str, Any]:
+    """Stage A (RQ-20261030-c7a1-01): per action class, the OOS Spearman rho between predicted advantage and realized label
+    over every state, a trade-clustered bootstrap CI (trades resampled with multiplicity; ranks fixed on the pooled rows, the
+    weighted Pearson of those ranks is recomputed per resample from per-trade sums), and a null = the same rho with labels
+    permuted WITHIN trade (`n_perm` draws; a within-trade shuffle leaves the label ranks as a multiset so ranks are reused).
+    `pred` / `lab` rows must be sorted by trade id `tid` (0..n_trades-1, contiguous)."""
+    nt = int(tid.max()) + 1 if len(tid) else 0
+    out: Dict[str, Any] = {}
+    for a, p in pred.items():
+        y = lab[a]
+        rx, ry = _rank(p), _rank(y)
+        zx, zy = rx - rx.mean(), ry - ry.mean()
+        den = float(np.sqrt((zx ** 2).sum() * (zy ** 2).sum()))
+        rho = float((zx * zy).sum() / den) if den > 0 else None
+        if rho is None:
+            out[a] = {"read_state": "unmeasured", "reason": "constant predictions or labels", "pass": False}
+            continue
+        cols = [np.bincount(tid, weights=w, minlength=nt) for w in (np.ones(len(tid)), rx, ry, rx * rx, ry * ry, rx * ry)]
+        cn, sx, sy, sxx, syy, sxy = cols
+        boots = []
+        for _ in range(n_boot):
+            w = np.bincount(rng.integers(0, nt, nt), minlength=nt).astype(float)
+            N = w @ cn
+            mx, my = (w @ sx) / N, (w @ sy) / N
+            vx, vy, cv = (w @ sxx) / N - mx * mx, (w @ syy) / N - my * my, (w @ sxy) / N - mx * my
+            if vx > 0 and vy > 0:
+                boots.append(cv / np.sqrt(vx * vy))
+        null = []
+        for _ in range(n_perm):
+            order = np.lexsort((rng.random(len(tid)), tid))
+            ryp = ry[order]
+            null.append(float((zx * (ryp - ryp.mean())).sum() / den))
+        lo, hi = (float(np.percentile(boots, 2.5)), float(np.percentile(boots, 97.5))) if boots else (None, None)
+        p95 = float(np.percentile(null, 95))
+        out[a] = {"read_state": "measured", "rho": round(rho, 5), "ci95": [round(lo, 5), round(hi, 5)] if boots else None,
+                  "perm_null_p95": round(p95, 5), "perm_null_sd": round(float(np.std(null)), 5), "n_states": int(len(tid)),
+                  "n_trades": int(nt), "n_boot": len(boots), "n_perm": n_perm, "pass": bool(boots and lo > p95)}
+    return out
+
+
 def score(test: Dict[str, Any], train: Optional[Dict[str, Any]], *, k: int, n_boot: int, draws: int, seed: int,
           cost, kinds: Sequence[str], desk_policy: Optional[Dict[str, str]] = None,
           checkins: Sequence[str] = tuple(CHECKINS), act_margin_r: float = ACT_MARGIN_R,
-          logit_act_p: float = LOGIT_ACT_P, act_margin_grid: Sequence[float] = ()) -> Dict[str, Any]:
+          logit_act_p: float = LOGIT_ACT_P, act_margin_grid: Sequence[float] = (),
+          calibration: bool = False, inner_folds: int = 0, actions: Optional[Sequence[str]] = None,
+          n_perm: int = 200) -> Dict[str, Any]:
+    """`calibration`: Stage-A per-action OOS rank calibration of the lgbm arm. `inner_folds` N > 0: the lgbm act margin is chosen per
+    outer fold on N-fold out-of-fold predictions of the OUTER TRAIN set (no outer test row is touched; grid = `act_margin_grid` or
+    INNER_MARGIN_GRID). `actions`: restrict the lgbm arm to these classes, or ["stage_a"] = the classes passing Stage A."""
     T = test["trades"]
     same = train is None
     TR = T if same else train["trades"]
@@ -644,6 +701,61 @@ def score(test: Dict[str, Any], train: Optional[Dict[str, Any]], *, k: int, n_bo
     arms: List[Dict[str, Any]] = []
     oos = [(f["fold"], i) for f in fl["folds"] if f["fold"] in fold_models for i in f["test"]]
 
+    calib: Optional[Dict[str, Any]] = None
+    if calibration or (actions and list(actions) == ["stage_a"]):
+        if "lgbm_action_value" not in kinds:
+            raise ValueError("calibration / --actions stage_a need the lgbm_action_value learner")
+        P = {a: [] for a in ACTIONS}
+        Lb = {a: [] for a in ACTIONS}
+        tids: List[np.ndarray] = []
+        nt_ = 0
+        for f, i in oos:
+            mdl = fold_models[f].get("lgbm_action_value")
+            if not ev[i]["n"] or mdl is None or (isinstance(mdl, dict) and "unavailable" in mdl):
+                continue
+            sc_ = learner_scores("lgbm_action_value", mdl, ev[i]["X1"], fold_models[f]["_med"])
+            for j, a in enumerate(ACTIONS):
+                P[a].append(sc_[:, j])
+                Lb[a].append(np.nan_to_num(labs[i]["labels"][a], nan=0.0))
+            tids.append(np.full(ev[i]["n"], nt_))
+            nt_ += 1
+        if tids:
+            calib = {"definition": "OOS Spearman rho(predicted advantage, realized label) over every state of every OOS trade; "
+                                   "CI = trade-clustered bootstrap; null = labels permuted within trade; pass = CI lower > null p95",
+                     "n_oos_trades_with_states": nt_,
+                     "actions": calibrate({a: np.concatenate(P[a]) for a in ACTIONS}, {a: np.concatenate(Lb[a]) for a in ACTIONS},
+                                          np.concatenate(tids), np.random.default_rng(seed + 17), n_boot, n_perm)}
+            calib["passing"] = [a for a in ACTIONS if calib["actions"][a].get("pass")]
+    allowed: Optional[List[int]] = None
+    if actions:
+        names = calib["passing"] if list(actions) == ["stage_a"] and calib else ([] if list(actions) == ["stage_a"] else list(actions))
+        bad = [a for a in names if a not in ACTIONS]
+        if bad:
+            raise ValueError(f"unknown action classes {bad}; valid: {list(ACTIONS)}")
+        allowed = [ACTIONS.index(a) for a in names]
+
+    inner_oof: Dict[int, Dict[int, np.ndarray]] = {}
+    if inner_folds > 0 and "lgbm_action_value" in kinds:
+        for f in fl["folds"]:
+            if f["fold"] not in fold_models:
+                continue
+            sub = [TR[i] for i in f["train"]]
+            ifl = make_folds(sub, sub, inner_folds, True)
+            oof: Dict[int, np.ndarray] = {}
+            for g in ifl["folds"]:
+                if not g["test"] or not g["train"]:
+                    continue
+                gtr = [f["train"][x] for x in g["train"]]
+                m_ = fit_learners(ev_tr, {i: lab_tr(i) for i in gtr}, gtr, ["lgbm_action_value"], seed)
+                mdl = m_.get("lgbm_action_value")
+                if mdl is None or (isinstance(mdl, dict) and "unavailable" in mdl):
+                    continue
+                for x in g["test"]:
+                    j = f["train"][x]
+                    if ev_tr[j]["n"]:
+                        oof[j] = learner_scores("lgbm_action_value", mdl, ev_tr[j]["X1"], m_["_med"])
+            inner_oof[f["fold"]] = oof
+
     def rec(i, fold, act):
         if act is None:
             return {"i": i, "fold": fold, "d": 0.0, "act": None, "s": -1, "stratum": _stratum(T[i], terc)}
@@ -697,7 +809,25 @@ def score(test: Dict[str, Any], train: Optional[Dict[str, Any]], *, k: int, n_bo
         for kind in kinds:
             recs, unavailable = [], None
             thr_by_fold: Dict[int, float] = {}
-            if kind == "lgbm_action_value" and act_margin_grid:
+            lgbm = kind == "lgbm_action_value"
+            if lgbm and allowed is not None and not allowed:
+                cell_arms.append({"arm_id": f"{kind}@{cell}", "read_state": "not_run",
+                                  "reason": "Stage A: no action class passed; Stage B is not run (RULE-RQ20261030-c7a1-01-QTM1B)"})
+                continue
+            if lgbm and inner_folds > 0:
+                grid = list(act_margin_grid) or list(INNER_MARGIN_GRID)
+                for f in fold_models:
+                    if f not in inner_oof:
+                        continue
+                    val = {m: 0.0 for m in grid}
+                    for j, sc_tr in inner_oof[f].items():
+                        mk_tr = checkin_mask(TR[j], cell, fold_medwin[f].get(TR[j]["leg"]))
+                        for m in grid:
+                            act = first_action(sc_tr, mk_tr, m, allowed)
+                            if act is not None:
+                                val[m] += float(np.nan_to_num(lab_tr(j)["labels"][act[1]][act[0]], nan=0.0))
+                    thr_by_fold[f] = max(grid, key=lambda m: (val[m], m))
+            elif lgbm and act_margin_grid:
                 # RQ-20261029-7294-02: the act margin is chosen on the TRAIN fold (in-sample value of the first action)
                 for f in fold_models:
                     mdl = fold_models[f].get(kind)
@@ -708,7 +838,7 @@ def score(test: Dict[str, Any], train: Optional[Dict[str, Any]], *, k: int, n_bo
                         sc_tr = learner_scores(kind, mdl, ev_tr[j]["X1"], fold_models[f]["_med"])
                         mk_tr = checkin_mask(TR[j], cell, fold_medwin[f].get(TR[j]["leg"]))
                         for m in act_margin_grid:
-                            act = first_action(sc_tr, mk_tr, m)
+                            act = first_action(sc_tr, mk_tr, m, allowed)
                             if act is not None:
                                 val[m] += float(np.nan_to_num(lab_tr(j)["labels"][act[1]][act[0]], nan=0.0))
                     thr_by_fold[f] = max(act_margin_grid, key=lambda m: (val[m], m))
@@ -718,13 +848,17 @@ def score(test: Dict[str, Any], train: Optional[Dict[str, Any]], *, k: int, n_bo
                 if isinstance(mdl, dict) and "unavailable" in mdl:
                     unavailable = mdl["unavailable"]
                 thr = thr_by_fold.get(f, act_margin_r) if kind == "lgbm_action_value" else logit_act_p
-                recs.append(rec(i, f, first_action(sc, masks[i], thr)))
+                recs.append(rec(i, f, first_action(sc, masks[i], thr, allowed if lgbm else None)))
             if unavailable:
                 cell_arms.append({"arm_id": f"{kind}@{cell}", "read_state": "unavailable", "reason": unavailable})
                 continue
             arm = summarize_arm(f"{kind}@{cell}", T, recs, rng, n_boot, b4_for(recs, labs, masks, seed + 3, draws),
                                 extra={"act_threshold": act_margin_r if kind == "lgbm_action_value" else logit_act_p,
-                                       "act_threshold_by_fold": thr_by_fold or None})
+                                       "act_threshold_by_fold": thr_by_fold or None,
+                                       "act_margin_selection": ("inner_oof" if lgbm and inner_folds > 0 else
+                                                                "train_in_sample" if lgbm and act_margin_grid else "fixed"),
+                                       "inner_folds": inner_folds if lgbm else None,
+                                       "actions_allowed": [ACTIONS[j] for j in allowed] if lgbm and allowed is not None else None})
             fam_ps[arm["arm_id"]] = arm["p_one_sided"]
             cell_arms.append(arm)
         if desk_policy is not None:
@@ -762,7 +896,8 @@ def score(test: Dict[str, Any], train: Optional[Dict[str, Any]], *, k: int, n_bo
                 {kk: (len(vv) if kk in ("test", "train") else vv) for kk, vv in f.items()} for f in fl["folds"]]},
             "fold_assignment": {T[i]["trade_key"]: f["fold"] for f in fl["folds"] for i in f["test"]},
             "action_enum": list(ALL_ACTIONS), "checkin_grid": list(checkins), "entry_source": "E1",
-            "arms": arms, "_labs": labs, "_oracle": oracle_ceiling, "_trades": T}
+            "calibration": calib, "actions_allowed": None if allowed is None else [ACTIONS[j] for j in allowed],
+            "inner_folds": inner_folds, "arms": arms, "_labs": labs, "_oracle": oracle_ceiling, "_trades": T}
 
 
 def s_offline(arm: Dict[str, Any], arms: List[Dict[str, Any]]) -> Tuple[str, str]:
@@ -868,7 +1003,8 @@ def selfcheck(verbose: bool = True) -> Dict[str, Any]:
                            f"{bc['corpus_id']}, {len(bc['trades'])} trades"))
             bc["trades"] = bc["trades"][:300]
             r = score(bc, None, k=6, n_boot=200, draws=50, seed=7, cost=cost,
-                      kinds=("lgbm_action_value", "logit_action_value"), checkins=("every_bar", "every_4+triggers"))
+                      kinds=("lgbm_action_value", "logit_action_value"), checkins=("every_bar", "every_4+triggers"),
+                      calibration=True, n_perm=50)
             res[spec] = r
             b0 = next(a for a in r["arms"] if a["arm_id"] == "B0_hold")
             checks.append((f"{spec}: B0 - B0 == 0 exactly", b0["delta_vs_b0_r"] == 0.0 and b0["b0_minus_b0_r"] == 0.0,
@@ -899,6 +1035,10 @@ def selfcheck(verbose: bool = True) -> Dict[str, Any]:
             checks.append(("null: lgbm action-value does not pass on a driftless walk (CI lower <= 0)",
                            nl.get("read_state") == "measured" and nl["ci95"][0] <= 0,
                            f"null {nl.get('delta_vs_b0_r')} {nl.get('ci95')}"))
+            cal_n, cal_p = res["synthetic"]["calibration"], res["synthetic-planted"]["calibration"]
+            checks.append(("Stage A: planted corpus has a passing action class, driftless null has none",
+                           len(cal_p["passing"]) >= 1 and cal_n["passing"] == [],
+                           f"planted passes {cal_p['passing']}; null passes {cal_n['passing']}"))
             lo = next((a for a in res["synthetic"]["arms"] if a.get("arm_id") == "logit_action_value@every_bar"), {})
             checks.append(("null: logit action-value does not pass on a driftless walk (CI lower <= 0)",
                            lo.get("read_state") == "measured" and lo["ci95"][0] <= 0,
@@ -964,6 +1104,10 @@ def main(argv: Optional[List[str]] = None) -> int:
     ap.add_argument("--act-margin", type=float, default=ACT_MARGIN_R, help="lgbm: act if best predicted dR > this (R)")
     ap.add_argument("--act-margin-grid", default="", help="lgbm: choose the act margin per fold on TRAIN rows from this grid (R)")
     ap.add_argument("--logit-act-p", type=float, default=LOGIT_ACT_P, help="logit: act if best P(dR > 0) > this")
+    ap.add_argument("--calibration", action="store_true", help="Stage A: per-action OOS rank rho + within-trade permutation p95")
+    ap.add_argument("--inner-folds", type=int, default=0, help="lgbm act margin chosen on N inner out-of-fold predictions of the outer train set")
+    ap.add_argument("--actions", default="", help="restrict the lgbm arm: comma list of action classes, or 'stage_a' (the Stage-A passers)")
+    ap.add_argument("--n-perm", type=int, default=200)
     ap.add_argument("--write-labels", action="store_true")
     ap.add_argument("--out", default=None)
     a = ap.parse_args(argv)
@@ -1007,7 +1151,9 @@ def main(argv: Optional[List[str]] = None) -> int:
         r = score(test, train, k=a.folds, n_boot=a.n_boot, draws=a.random_draws, seed=a.seed, cost=cost,
                   kinds=[s for s in a.learners.split(",") if s], desk_policy=desk,
                   checkins=[s for s in a.checkins.split(",") if s], act_margin_r=a.act_margin, logit_act_p=a.logit_act_p,
-                  act_margin_grid=[float(x) for x in a.act_margin_grid.split(",") if x])
+                  act_margin_grid=[float(x) for x in a.act_margin_grid.split(",") if x],
+                  calibration=a.calibration, inner_folds=a.inner_folds,
+                  actions=[x for x in a.actions.split(",") if x] or None, n_perm=a.n_perm)
         if a.write_labels:
             with gzip.open(out / "labels.jsonl.gz", "wt", encoding="utf-8") as fh:
                 for t, L in zip(r["_trades"], r["_labs"]):
@@ -1036,9 +1182,12 @@ def main(argv: Optional[List[str]] = None) -> int:
             why = "; ".join(parts)
         elif a.rule == "s_offline":
             vs = [x["s_offline"]["verdict"] for x in r["arms"] if "s_offline" in x]
-            verdict = ("pass" if any(v.startswith("pass") for v in vs) else
+            stage_a_fail = r.get("actions_allowed") == [] and bool(r.get("calibration")) and len(test["trades"]) >= 2000
+            verdict = ("fail" if stage_a_fail and sc["pass"] else
+                       "pass" if any(v.startswith("pass") for v in vs) else
                        "fail" if vs and all(v == "fail" for v in vs) else "indeterminate")
-            why = f"S-OFFLINE per learner arm: {vs}"
+            why = ("STAGE A FAIL: no action class has OOS rho CI lower > permutation p95; Stage B not run" if stage_a_fail
+                   else f"S-OFFLINE per learner arm: {vs}")
         else:
             verdict, why = "measured", "scored; no rule applied"
     v = {"verdict": verdict, "read_state": "measured" if test["trades"] else "unmeasured", "population": pop,

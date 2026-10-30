@@ -113,3 +113,52 @@ def test_transfer_end_to_end():
         t["trade_key"] += "|broad"
     tr = tb.transfer(test, train, [0.0, 1.0], k=3, n_boot=50, seed=1, cost=COST)
     assert set(tr["mse_by_fraction"]) == {"0.0", "1.0"} and tr["n_test_trades"] > 0
+
+
+def _score_q1b(planted: bool, **kw):
+    _c, bc = _bench(planted=planted, n=150)
+    return tb.score(bc, None, k=4, n_boot=100, draws=20, seed=3, cost=COST, kinds=("lgbm_action_value",),
+                    checkins=("every_bar",), n_perm=50, **kw)
+
+
+def test_calibration_null_fails_and_planted_passes():
+    pytest.importorskip("lightgbm")
+    null = _score_q1b(False, calibration=True)["calibration"]
+    planted = _score_q1b(True, calibration=True)["calibration"]
+    assert set(null["actions"]) == set(tb.ACTIONS)
+    assert null["passing"] == [] and len(planted["passing"]) >= 1
+    a = planted["actions"][planted["passing"][0]]
+    assert a["ci95"][0] > a["perm_null_p95"] and a["n_perm"] == 50
+
+
+def test_stage_a_fail_skips_stage_b_and_actions_restrict():
+    pytest.importorskip("lightgbm")
+    r = _score_q1b(False, calibration=True, actions=["stage_a"])
+    arm = next(a for a in r["arms"] if a["arm_id"] == "lgbm_action_value@every_bar")
+    assert r["actions_allowed"] == [] and arm["read_state"] == "not_run"
+    r2 = _score_q1b(True, inner_folds=2, actions=["close"], act_margin_grid=[0.0, 0.1])
+    arm2 = next(a for a in r2["arms"] if a["arm_id"] == "lgbm_action_value@every_bar")
+    assert arm2["actions_allowed"] == ["close"] and arm2["act_margin_selection"] == "inner_oof"
+    with pytest.raises(ValueError):
+        _score_q1b(True, actions=["nope"])
+
+
+def test_first_action_allowed_mask():
+    sc = np.array([[0.5, 0.9, 0.1] + [0.0] * 4])
+    mask = np.array([True])
+    assert tb.first_action(sc, mask, 0.0) == (0, tb.ACTIONS[1])
+    assert tb.first_action(sc, mask, 0.0, allowed=[0, 2]) == (0, tb.ACTIONS[0])
+    assert tb.first_action(sc, mask, 0.0, allowed=[]) is None
+
+
+def test_inner_margin_selected_per_outer_fold():
+    """--inner-folds selects one margin per outer fold from the grid, tagged `inner_oof` (the inner OOF scores are built only from
+    the outer train indices in score(); that is a code-structure fact, not something this test can perturb)."""
+    pytest.importorskip("lightgbm")
+    _c, bc = _bench(planted=True, n=150)
+    kw = dict(k=4, n_boot=20, draws=5, seed=3, cost=COST, kinds=("lgbm_action_value",), checkins=("every_bar",),
+              inner_folds=2, act_margin_grid=[0.0, 0.1, 0.3])
+    base = tb.score(bc, None, **kw)
+    arm = next(a for a in base["arms"] if a["arm_id"] == "lgbm_action_value@every_bar")
+    assert arm["act_margin_selection"] == "inner_oof" and set(arm["act_threshold_by_fold"].values()) <= {0.0, 0.1, 0.3}
+    assert len(arm["act_threshold_by_fold"]) == 4

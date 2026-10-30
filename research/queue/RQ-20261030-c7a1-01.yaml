@@ -4,7 +4,7 @@ id: RQ-20261030-c7a1-01
 title: 'Q-TM1b: is the TM-BENCH per-action advantage PREDICTABLE out of fold at all (rank calibration vs a shuffled control), and does an
   action-value policy restricted to the action classes that are, with its act margin chosen on INNER out-of-fold predictions, beat hold on
   the six money legs net of cost?'
-status: blocked
+status: queued
 cadence: once
 theme: ml_health
 priority: 1
@@ -81,12 +81,38 @@ routing:
   est_minutes: 45
   why_runner: Harness paths from keyless public candles; no trainer data; GBDT on CPU.
   basis: MEASURED 7294-02 took 11 min 19 s on 4 cores; inner 3-fold fits roughly x3 the learner time.
-blocked_on:
-- kind: work_item
-  ref: ML-AM-NEXT-LIVE
-  what: 'tm_bench.py has no Stage-A calibration output, no --inner-folds margin selection and no --actions restriction (2026-10-30).'
-  clears_when: 'tm_bench.py score accepts --inner-folds 3 and --calibration (writes per-action OOS rho + permutation p95) and restricts the
-    lgbm arm to the Stage-A-passing classes; selfcheck passes. Then add run.command, git mv to research/queue/, remove blocked_on, status: queued.'
+run:
+  workflow: research-script-run.yml
+  command:
+  - python3
+  - scripts/research/tm_bench.py
+  - score
+  - --test-corpus
+  - v1
+  - --rule
+  - s_offline
+  - --learners
+  - lgbm_action_value,logit_action_value
+  - --calibration
+  - --actions
+  - stage_a
+  - --inner-folds
+  - '3'
+  - --act-margin-grid
+  - 0,0.02,0.05,0.1,0.2,0.3
+  - --folds
+  - '6'
+  - --n-boot
+  - '2000'
+  - --n-perm
+  - '200'
+  - --random-draws
+  - '200'
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 240
+  inputs:
+    research_unit: RQ-20261030-c7a1-01
 lands:
   store: research/results/
   assert_field: read_state
