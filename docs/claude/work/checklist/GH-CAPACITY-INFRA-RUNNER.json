@@ -10,16 +10,10 @@
   "spend_usd": null,
   "tier": 2,
   "prs": [],
-  "blocked_on": [
-    {
-      "kind": "observation",
-      "ref": "GH-CAPACITY-INFRA-FIRST",
-      "what": "re-measure: after-snapshot ~24h after #18225 merges -- infra queued->started wait for system-actions, phone-executor-apk and diag relays; if infra still waits > ~10 min, re-raise this row"
-    }
-  ],
-  "note": "Re-ranked 2 (manager 08:17Z): measured 20+ min queue on an order-path system-action (#21201) behind 90 CI runs; see GH-CAPACITY-INFRA-FIRST note. Live-review applies go VM-side (rows watcher) and are not affected; operator/manager system-actions are.",
-  "updated_at": "2026-10-29T08:15:05Z",
-  "updated_by": "session_01AFoLuKwNMzjtn2CH2kVd86",
+  "blocked_on": [],
+  "note": "Re-ranked 2 (manager 08:17Z): measured 20+ min queue on an order-path system-action (#21201) behind 90 CI runs; see GH-CAPACITY-INFRA-FIRST note. Live-review applies go VM-side (rows watcher) and are not affected; operator/manager system-actions are. [2026-10-30 16:45Z Manager Session 2026-10-30c] UNBLOCKED: the observation's re-raise condition is met (MEASURED today): GitHub Actions 16 queued + 12 in_progress among the last 40 runs; research-script-run started nothing 14:05Z->15:38Z with 60 runnable (watchdog incident backend:github_runner@20261030T1516Z); system-action #21201 waited 20+ min earlier. Operator popup ~16:45Z verbatim: \"Dispatch now (Recommended)\".",
+  "updated_at": "2026-10-30T16:46:06Z",
+  "updated_by": "session_01AFoLuJEaf7dNfk9kc5g3fG",
   "roadmap": [
     "L-OPS"
   ],
