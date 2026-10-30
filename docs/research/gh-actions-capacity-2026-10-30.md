@@ -1,6 +1,6 @@
 # GitHub Actions capacity — measurement, 2026-10-30 (lane GH-CAPACITY-INFRA-RUNNER)
 
-> **Doc status:** `live` · category `measurement` · Gates this adds or changes: **none** (one guard step is skipped on a PR diff it cannot be affected by; push / dispatch / merge_group still run it).
+> Gates this adds or changes: **none** (one guard step is skipped on a PR diff it cannot be affected by; push / dispatch / merge_group still run it).
 
 **Population.** Every workflow run created 2026-10-29T17:00Z → 2026-10-30T17:00Z via `actions/runs` (6,210 unique runs, all completed at read time; run-level wall = `updated_at − run_started_at`, which **includes queue wait**, so it overstates runner time). Queue wait below is job-level (`started_at − created_at`) over a **sample of ≤30 non-cancelled runs per workflow** (n shown), not a census.
 
