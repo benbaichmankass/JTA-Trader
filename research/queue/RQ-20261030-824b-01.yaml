@@ -90,8 +90,10 @@ routing:
   peak_memory_gb: 4.0
   est_minutes: 90
   why_runner: Keyless public candles plus config-exact harness runs; reads no trainer data; LightGBM on CPU.
-  basis: 'MEASURED in-session 2026-10-30 (see the lane report on row TM-BENCH): six harness passes with candle fetch plus labelling and
-    scoring; ESTIMATED headroom x2 for the runner.'
+  basis: 'MEASURED in-session 2026-10-30 on a 4-core cloud container: the same command took 12 min 12 s wall end to end (candle fetch,
+    six harness passes, labelling 50,926 states x 7 actions, scoring every arm, selfcheck); ESTIMATED headroom x2-3 for the runner.
+    The in-session run is NOT the result of record (it read: selfcheck pass, B0-B0 0.0, census oracle 0.7562, 6/6 legs parity 1.0);
+    this unit is.'
 run:
   workflow: research-script-run.yml
   command:
