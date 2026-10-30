@@ -176,7 +176,6 @@ def test_historical_bars_window_shape_and_the_no_bars_state():
 
 # ---- fidelity adapter (PI-20261030-TMBENCH-0001): the harness fills a trail exit AT its level even past the exit bar's open
 def _trade_dict(exit_r, stop_last, tgt_last, o_last):
-    nan = float("nan")
     return {"entry_over_risk": 100.0, "tfm": 240, "bars": 3, "symbol": "ETHUSDT", "cost_fee_r": 0.01, "leg": "x",
             "exit_reason": "trail_stop", "exit_r": exit_r,
             "c_r": [0.2, 0.4, exit_r], "o_r": [0.0, 0.2, o_last], "fav": [0.5, 0.8, 1.0], "adv": [-0.1, 0.1, 0.9],
