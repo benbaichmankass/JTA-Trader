@@ -108,7 +108,10 @@ def fetch(root: Path, window: str) -> None:
     with ThreadPoolExecutor(32) as ex:
         ok = sum(ex.map(one, jobs))
     print(f"fetched {ok}/{len(jobs)} event files")
-    gr.fetch_market(root / "candles", list(SYMS))
+    from scripts.research import desk_replay_driver as d7   # the driver's one Binance Vision route, with days reaching back to FETCH_FROM
+    days = int((datetime.now(timezone.utc) - lo).days) + 2
+    for s in SYMS:
+        d7.fetch_candles(s, gr.SCAN_TF, days, root / "candles" / f"{s}_{gr.SCAN_TF}.csv")
 
 
 def ceil_hour(k: int) -> int:
@@ -297,6 +300,33 @@ def run_all(root: Path, window_name: str, out: Path) -> Dict[str, Any]:
     return res
 
 
+CONFIRM_UNIT = "RQ-20261030-e18g-02"
+CONFIRM_RULE = "RULE-RQ20261030-E18G-02-DESK-E4-HELDOUT-CONFIRM"
+
+
+def run_confirm(root: Path, out: Path) -> Dict[str, Any]:
+    """The frozen E4 arm on the HOLDOUT window, scored ONCE. detect() and score_class() are the DEV code, unchanged.
+    PASS iff n >= N_MIN AND the paired S3 mean vs B3 > 0 AND the 95% weekly-cluster CI lower bound > 0 (the operator's DESK-13 gate:
+    out-of-sample edge vs the random-entry baseline, net of the full cost stack). The S3 +0.25 R bar does NOT apply here."""
+    window = HOLDOUT
+    mkt, missing = gr.load_market(root / "candles", list(SYMS))
+    if missing:
+        raise SystemExit(f"candles missing for {missing}: refusing to score a partial universe")
+    ev = detect(root, mkt)["E4"]
+    lo, hi = gr._epoch(window[0]), gr._epoch(window[1])
+    r = score_class(mkt, ev, window)
+    rows = r.pop("_rows", [])
+    s3 = r.get("S3_ci95") or {}
+    ci = s3.get("ci") or [None, None]
+    n = r.get("n", 0)
+    verdict = "NO_DATA" if not n else ("PASS" if n >= N_MIN and s3["mean"] > 0 and ci[0] > 0 else "FAIL")
+    res = {"unit": CONFIRM_UNIT, "rule": CONFIRM_RULE, "window": [w.isoformat() for w in window], "events_in_window": sum(1 for e in ev if lo <= e["cutoff"] < hi),
+           "arm": "E4 frozen", "result": r, "verdict": verdict, "first_event": min((e["cutoff"] for e in ev if lo <= e["cutoff"] < hi), default=None)}
+    out.mkdir(parents=True, exist_ok=True)
+    (out / "event_entry_confirm_holdout.json").write_text(json.dumps(res, indent=1, default=str))
+    return res
+
+
 def _fwd_sign(ser: gr.Series, i: int) -> float:
     k = i + 1
     j = min(k + HORIZON - 1, len(ser.c) - 1)
@@ -309,7 +339,7 @@ def _controls_ok(c: Dict[str, Any]) -> bool:
 
 def main(argv: Optional[List[str]] = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
-    ap.add_argument("mode", choices=("fetch", "run"))
+    ap.add_argument("mode", choices=("fetch", "run", "confirm"))
     ap.add_argument("--root", required=True, help="cache dir for fetched event files and candles")
     ap.add_argument("--out", default=None)
     ap.add_argument("--window", choices=("dev", "holdout"), default="dev")
@@ -317,6 +347,11 @@ def main(argv: Optional[List[str]] = None) -> int:
     root = Path(a.root)
     if a.mode == "fetch":
         fetch(root, a.window)
+        return 0
+    if a.mode == "confirm":
+        res = run_confirm(root, Path(a.out or root / "out"))
+        print(json.dumps({k: res[k] for k in ("window", "events_in_window", "verdict")}, indent=1))
+        print(json.dumps({x: res["result"].get(x) for x in ("n", "n_long", "n_short", "mean_net_r", "mean_b3", "S3_ci95", "S3", "S3_dir_vs_B1", "mde_iid_r", "mde_cluster_r", "excluded")}, default=str))
         return 0
     res = run_all(root, a.window, Path(a.out or root / "out"))
     print(json.dumps({k: res[k] for k in ("window", "events_detected", "events_in_window", "verdict", "no_lookahead_prefix_identical")}, indent=1))
