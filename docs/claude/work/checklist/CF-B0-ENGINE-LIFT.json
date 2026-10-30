@@ -2,9 +2,9 @@
   "id": "CF-B0-ENGINE-LIFT",
   "title": "Counterfactual engine lift: importable cf_core (no live fetch), paged historical bar source, causal random_control check, fidelity check on 1,000 backtest jobs",
   "phase": null,
-  "state": "queued",
+  "state": "landed_unproven",
   "owner": null,
-  "lane": null,
+  "lane": "CF-B0-ENGINE-LIFT",
   "model": "sonnet",
   "ceiling_usd": 6,
   "spend_usd": null,
@@ -13,10 +13,19 @@
   "blocked_on": [],
   "note": "Phase from docs/plans/counterfactual-everywhere-DESIGN-2026-10-29.md \u00a7 5 (parent COUNTERFACTUAL-EVERYWHERE). No gates added.",
   "priority_rank": 1,
-  "updated_at": "2026-10-29T21:23:47Z",
-  "updated_by": "session_01AFoLuLpoWiu1SEu6vTJpKk",
+  "updated_at": "2026-10-30T09:33:32Z",
+  "updated_by": "CF-B0-ENGINE-LIFT",
   "roadmap": [
     "L-AM-STANDARD"
   ],
+  "writeback": {
+    "roadmap": "L-AM-STANDARD: cf_core is the one importable offline counterfactual engine (live grader + tm_bench share it); fidelity vs harness exit_r 2,627/2,627 on corpus v1 after an adapter fix; harness-side trail-fill optimism filed as PI-20261030-GINELIFT-0001",
+    "arch": "none: scripts/research module lift, no runtime component or contract changed"
+  },
+  "observation": {
+    "what": "the hourly counterfactual-grade-closed workflow still grades newly closed packages after the cf_core lift (run succeeds, no ImportError)",
+    "how_to_check": "list runs of .github/workflows/counterfactual-grade-closed.yml after the merge: conclusion success, and a comms/research/counterfactual_grades/*.json record graded_at later than the merge",
+    "due_by": "2026-11-02"
+  },
   "_seq": 826
 }
