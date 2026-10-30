@@ -12,8 +12,8 @@
   "prs": [],
   "blocked_on": [],
   "note": "Operator 2026-10-25 ~10:25Z (chat, verbatim): \"I just want to make sure that the overhead changes aren't putting any work at risk - as long as it's fine that your not subscribed, then let's make that change.\" Risk check: lanes stay subscribed to their own PRs and fix red CI; lanes wake the manager on green for hold PRs; the 3-hourly check-in lands any green PR waiting on the manager; a lane is never archived while it owns an unmerged PR. Worst case of a missed wake is one check-in interval of merge delay, no dropped work. Rule in .claude/skills/manager/SKILL.md \u00a7 Manager <-> lane.",
-  "updated_at": "2026-10-25T10:30:04Z",
-  "updated_by": "session_01XhMPopphHY7qu8H8NqJqqC",
+  "updated_at": "2026-10-30T06:13:04Z",
+  "updated_by": "session_01AFoLuL99YDu1fHUkJvG55s",
   "roadmap": [
     "L-OPS"
   ],
@@ -24,7 +24,13 @@
   "observation": {
     "what": "the next manager session grows context slower than ~150k tokens/h (2026-10-25 baseline, session_01XhMPop: 75k->587k in 3.3h) and no lane PR waits on the manager more than one check-in interval",
     "how_to_check": "get_session used_tokens vs created_at on the next Manager Session at its first rotation; open PRs with landing hold older than 3h at each check-in",
-    "due_by": "2026-10-28T00:00Z"
+    "due_by": "2026-11-02T00:00Z",
+    "redated": {
+      "on": "2026-10-30",
+      "from": "2026-10-28T00:00Z",
+      "by": "DAILY-REVIEW-TRIAGE-20261030",
+      "reason": "get_session on the current manager (Manager Session 2026-10-30a): 516k tokens used in ~4h since created_at, i.e. ~129k/h (< 150k/h) but it is mid-session, not a first-rotation reading; check at its rotation."
+    }
   },
   "_seq": 652
 }

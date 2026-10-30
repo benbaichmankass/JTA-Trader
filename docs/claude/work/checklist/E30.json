@@ -17,9 +17,15 @@
   "observation": {
     "what": "paper pnlCoverage > 0.30 and a pairs_* close with exit_price_source=exchange_fill",
     "how_to_check": "GET /api/bot/stats paper pnlCoverage; /api/diag/journal?table=trades for pairs_* exit_price_source",
-    "due_by": "2026-10-29"
+    "due_by": "2026-11-06T00:00Z",
+    "redated": {
+      "on": "2026-10-30",
+      "from": "2026-10-29",
+      "by": "DAILY-REVIEW-TRIAGE-20261030",
+      "reason": "read /api/bot/stats 2026-10-30: paper pnlCoverage 0.3901 (> 0.30, clause 1 met; 648 measured of the paper population). Clause 2 not evidenced: the diag journal trades rows expose no exit_price_source field, and the 1000-row window's 300 pairs_* closes are all bybit_1."
+    }
   },
-  "updated_at": "2026-10-15T06:36:07Z",
-  "updated_by": "session_019p3X1tJAdUdV2dKaw9no8r",
+  "updated_at": "2026-10-30T06:13:03Z",
+  "updated_by": "session_01AFoLuL99YDu1fHUkJvG55s",
   "_seq": 62
 }

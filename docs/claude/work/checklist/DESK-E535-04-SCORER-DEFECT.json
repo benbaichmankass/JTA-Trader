@@ -14,15 +14,21 @@
   ],
   "blocked_on": [],
   "note": "MERGED (PR #20811). Not yet observed: closes when the re-dispatched RQ-20261026-e535-04 lands a result under research/results/RQ-20261026-e535-04/ with counts.filled_in_subset about 441 and design.stopping_rule_respected true (local re-run: n 441, mean +0.073, S3 -0.091, INDETERMINATE).",
-  "updated_at": "2026-10-28T06:10:23Z",
-  "updated_by": "session_01AFoLuLbyLcHuTAD693tELF",
+  "updated_at": "2026-10-30T06:13:03Z",
+  "updated_by": "session_01AFoLuL99YDu1fHUkJvG55s",
   "roadmap": [
     "L-DESK"
   ],
   "observation": {
     "what": "the re-dispatched RQ-20261026-e535-04 lands a result with counts.filled_in_subset about 441 (not 0) and design.stopping_rule_respected true",
     "how_to_check": "read research/results/RQ-20261026-e535-04/*.jsonl newest row: measurement.counts and measurement.design",
-    "due_by": "2026-10-30"
+    "due_by": "2026-11-06T00:00Z",
+    "redated": {
+      "on": "2026-10-30",
+      "from": "2026-10-30",
+      "by": "DAILY-REVIEW-TRIAGE-20261030",
+      "reason": "research/results/RQ-20261026-e535-04: the second dispatch (run 40658829510) landed read_state producer_failed, not the expected filled_in_subset ~441; the first row has stopping_rule_respected false. Unit status queued, last_dispatched 2026-10-28. Needs another fix/re-dispatch."
+    }
   },
   "writeback": {
     "roadmap": "none: no L-DESK milestone moves; a scorer plumbing fix that re-arms an existing unit with its decision rule untouched",
