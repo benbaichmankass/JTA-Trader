@@ -1,6 +1,6 @@
 id: RQ-20261029-a538-01
 title: 'Daily LONG-only Donchian lookback on twelve perps: does a 30- or 55-day channel beat the 20-day channel the LONG filter was found at?'
-status: queued
+status: done
 cadence: once
 roadmap:
 - L-TIMEFRAMES
@@ -112,3 +112,16 @@ related:
 - RQ-20261026-1b57-15
 - RQ-20261029-84ef-01
 last_dispatched_at: '2026-10-29T22:53:09+00:00'
+grading:
+  attested: RULE-RQ20261029A53801
+  auto: true
+  decision_rule_id: RULE-RQ20261029A53801
+  evidence:
+  - research/results/RQ-20261029-a538-01/40969212342.jsonl
+  graded_at: '2026-10-30'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail

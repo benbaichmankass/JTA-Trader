@@ -1,7 +1,7 @@
 id: RQ-20261029-84ef-02
 title: 'Bar transfer of the LONG filter: does long-only Donchian-20 at the 4h bar (the live legs'' bar) beat the two-sided 4h breakout on the
   six core perps?'
-status: queued
+status: done
 cadence: once
 roadmap:
 - L-TIMEFRAMES
@@ -120,3 +120,16 @@ programme_node:
   goal: G1
   after: []
 last_dispatched_at: '2026-10-29T20:23:47+00:00'
+grading:
+  attested: RULE-RQ20261029-84EF-02-LONG-4H
+  auto: true
+  decision_rule_id: RULE-RQ20261029-84EF-02-LONG-4H
+  evidence:
+  - research/results/RQ-20261029-84ef-02/40944904997.jsonl
+  graded_at: '2026-10-30'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail
