@@ -162,7 +162,6 @@ markers that were cheaper to lie to than to satisfy — `new-table-wiring-guard`
 |---|---|---|
 | `docs/claude/DUE.md` | `scripts/ops/render_due_list.py` | verified: generator exists and names the file |
 | `docs/claude/READOUT.md` | `scripts/ops/constraint_readout.py` | verified: generator exists and names the file |
-| `docs/research/desk-18f-maker-fills-2026-10-30.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
 | `docs/research/ml-volgate-wf-2026-10-29/README.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
 | `docs/strategy-coverage-matrix.md` | `scripts/check_strategy_coverage.py` | verified: generator exists and names the file |
 | `docs/training-population-matrix.md` | `scripts/check_training_population.py` | verified: generator exists and names the file |
@@ -643,6 +642,7 @@ real top-level `docs/*.md` and fails if the population builder cannot see it.
 | `docs/research/D2-spike-A-pooled-labels-evidence-2026-07-06.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
 | `docs/research/EXIT-GEOMETRY-REBUILD-SESSION-PROMPT.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
 | `docs/research/desk-18e-live-proposal-rate-2026-10-27.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
+| `docs/research/desk-18f-maker-fills-2026-10-30.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
 | `docs/research/desk-edge-program-2026-10-27.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
 | `docs/research/desk-maker-fills-2026-10-27.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
 | `docs/research/desk-event-calendar-scope-2026-10-28.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
