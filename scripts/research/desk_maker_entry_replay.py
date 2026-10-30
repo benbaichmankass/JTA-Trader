@@ -246,18 +246,66 @@ def decide(res: Dict[str, Any]) -> Dict[str, Any]:
             "reopens_DESK_18D": any_clear}
 
 
+def load_judged_tolerant(a: argparse.Namespace, mkt: Dict[str, gr.Series], classes: Dict[str, List[str]]):
+    """gr._load_judged WITHOUT its abort on a packet-sha mismatch. MEASURED 2026-10-30: every re-derived judged-1 packet keeps its
+    id but has a different sha (candle/builder drift since 2026-10-27; git history is shallow so the cause is not established).
+    The drift is COUNTED and printed, and the replacement evidence is `control_reproduction`: the market-entry control must
+    reproduce the committed per-proposal net R of judged-1-decomposition/records.jsonl, else the verdict is INDETERMINATE."""
+    keys = {k["packet_id"]: k for k in json.loads(Path(a.mask_key).read_text())["keys"]}
+    want = {json.loads(ln)["packet_id"] for ln in Path(a.proposals).read_text().splitlines() if ln.strip()}
+    packets, drift = {}, 0
+    for pid in sorted(want & set(keys)):
+        k = keys[pid]
+        m, _ = gr.build_masked_packet(mkt, classes, k["cutoff_epoch"], k["index"], a.seed)
+        if m["meta"]["packet_id"] != pid:
+            raise ValueError(f"packet id changed for {pid}")
+        drift += int(bool(k.get("packet_sha")) and gr.cdr.packet_sha(m) != k["packet_sha"])
+        packets[pid] = m
+    by, intake = gr.read_proposals(Path(a.proposals), packets)
+    intake["packet_sha_drift"] = drift
+    intake["packets_rederived"] = len(packets)
+    intake["valid_proposals"] = sum(len(v) for v in by.values())
+    return keys, packets, by, intake
+
+
+def control_reproduction(mkt, keys, by, tol: float = 1e-6) -> Dict[str, Any]:
+    """Market-entry control vs the committed judged-1 records: per (packet, symbol, side) net R, filled ones."""
+    rec = {}
+    for ln in (REPO / "comms/research/desk_gen_replay/judged-1-decomposition/records.jsonl").read_text().splitlines():
+        if ln.strip():
+            r = json.loads(ln)
+            rec[(r["packet_id"], r["symbol"], r["side"])] = r["net_r"]
+    mine, ctrl = {}, Variant("control", "market", 0.0, 1, 0.0, 0.0)
+    for pid, lst in by.items():
+        key = keys[pid]
+        for row in lst:
+            pr = row["proposal"]
+            sym, sc = key["alias"][pr["symbol"]], float(key["price_scale"][pr["symbol"]])
+            s = mkt[sym]
+            i = s.last_closed(key["cutoff_epoch"])
+            side = 1.0 if pr["side"] == "long" else -1.0
+            t = run_trade(s, i, side, pr["entry"]["level"] / sc, pr["stop"]["level"] / sc, pr["tp"]["level"] / sc, pr["horizon_bars"], ctrl)
+            if t.state == "filled":
+                mine[(pid, sym, pr["side"])] = t.net_r
+    common = set(rec) & set(mine)
+    bad = [k for k in common if abs(rec[k] - mine[k]) > tol]
+    return {"committed_filled": len(rec), "replayed_filled": len(mine), "common": len(common), "mismatch": len(bad),
+            "only_committed": len(set(rec) - set(mine)), "only_replayed": len(set(mine) - set(rec)),
+            "reproduces": bool(rec) and len(common) == len(rec) == len(mine) and not bad}
+
+
 def cmd_run(a: argparse.Namespace) -> int:
     mkt, missing, classes, note, src = gr._prepare(a)
     if missing:
         print(json.dumps({"error": f"candles missing for {missing}"}))
         return 2
-    got, err = gr._load_judged(a, mkt, classes)
-    if err:
-        print(json.dumps(err))
-        return 2
-    keys, packets, by, intake = got
+    keys, packets, by, intake = load_judged_tolerant(a, mkt, classes)
     s_ref = next(iter(mkt.values()))
     res: Dict[str, Any] = {"unit": UNIT_ID, "rule": RULE_ID, "intake": intake, "candles": src, "arms": {}, "sensitivities": {}}
+    res["control_reproduction"] = control_reproduction(mkt, keys, by)
+    print(json.dumps({"intake": intake, "control_reproduction": res["control_reproduction"]}), flush=True)
+    if a.intake_only:
+        return 0
     ctrl = Variant("control_market_taker", "market", 0.0, 1, 0.0, 0.0)
     res["control_market"] = score_variant(mkt, keys, by, ctrl, True, a.seed)
     for name, off in ARMS.items():
@@ -278,6 +326,9 @@ def cmd_run(a: argparse.Namespace) -> int:
         res["sensitivities"][f"offset={off}"] = score_variant(
             mkt, keys, by, make_variant(f"offset={off}", "limit", off, WINDOW_BARS, MAKER_FEE_BPS, False, s_ref), False, a.seed)
     res["decision"] = decide(res)
+    if not res["control_reproduction"]["reproduces"]:
+        res["decision"]["verdict"] = "INDETERMINATE_INSTRUMENT_DID_NOT_REPRODUCE"
+        res["decision"]["reopens_DESK_18D"] = False
     out = Path(a.out)
     out.mkdir(parents=True, exist_ok=True)
     (out / "maker_entry_result.json").write_text(json.dumps(res, indent=1, sort_keys=True, default=float))
@@ -360,6 +411,7 @@ def main(argv: Optional[List[str]] = None) -> int:
     r.add_argument("--proposals", default=str(REPO / "comms/research/desk_gen_replay/judged-1/proposals.jsonl"))
     r.add_argument("--mask-key", default=str(REPO / "comms/research/desk_gen_replay/judged-1/mask-key.json"))
     r.add_argument("--packets", default=None)
+    r.add_argument("--intake-only", action="store_true", help="re-derive, count valid proposals, check the control; score NO maker arm")
     r.set_defaults(fn=cmd_run)
     a = ap.parse_args(argv)
     return a.fn(a)
