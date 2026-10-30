@@ -2,21 +2,30 @@
   "id": "HARNESS-TRAIL-GAPFILL",
   "title": "backtest_trend.py trail_stop exits fill at the trail level with no gap rule (optimistic ~0.029 R/trade pooled, 0.30 R on 9.7% of trades, mostly eth_4h / eth_prop; MEASURED by CF-B0 on corpus v1, 2,627 trades): add the gap-fill rule (fill at the open when the bar opens through the stop, as cf_core does) and re-check every committed Stage-0 evidence record for the affected legs net of the change",
   "phase": null,
-  "state": "queued",
+  "state": "landed_unproven",
   "owner": "manager",
-  "lane": null,
+  "lane": "session_01AFoLuKbVndnNJu56Z4jYMX",
   "model": "sonnet",
   "ceiling_usd": 6,
   "spend_usd": null,
   "tier": 1,
   "prs": [],
   "blocked_on": [],
-  "note": "Filed by Manager Session 2026-10-30b from CF-B0-ENGINE-LIFT (PR #21582) finding PI-20261030-GINELIFT-0001. Priority system_first (a defect in the system that produces promotion evidence). Done = harness gap rule + a re-run table per affected leg (old vs new net R, n), each committed Stage-0 record re-checked against its pre-registered rule; any leg whose verdict flips goes to the manager as a Tier-3 de-risk (demote) proposal, never silently. Promotion evidence on these legs is suspect in the favourable direction until this lands. Gates: none.",
+  "note": "Gap rule landed in scripts/backtest_trend.py + planted-gap test. True-open parity vs cf_core on corpus v1: old 2371/2627, new 2627/2627. Re-check (same data, old vs new, 21 trend records): pass->fail flips spy_trend_long_1d and trend_donchian_eth_prop; trend_donchian_eth_4h fails under old AND new on today data (committed record not reproducible: n 135 vs 51) -- Tier-3 demote proposal in PR body, config untouched. CLOSES WHEN: PR merged on main and the baseline-irreproducibility finding is dispositioned by the manager.",
   "priority_rank": 2,
-  "updated_at": "2026-10-30T10:04:00Z",
-  "updated_by": "session_01AFoLuKe1M26JqmpKg3rYdo",
+  "updated_at": "2026-10-30T13:58:07Z",
+  "updated_by": "session_01AFoLuKbVndnNJu56Z4jYMX",
   "roadmap": [
     "L-AM-STANDARD"
   ],
+  "writeback": {
+    "roadmap": "L-AM-STANDARD: backtest_trend.py now gap-fills at the open (cf_core parity 2627/2627 on corpus v1 with true opens, was 2371); re-check table in comms/strategy_evidence/recheck/2026-10-30-harness-trail-gapfill.*",
+    "arch": "none: research harness only, no runtime component changed"
+  },
+  "observation": {
+    "what": "PR merged to main with CI green, and the manager has dispositioned the Tier-3 proposal (eth_prop, spy_trend_long_1d) and PI-20261030-56Z4JYMX-0001",
+    "how_to_check": "git log origin/main -- scripts/backtest_trend.py shows the gap-fill commit; python3 scripts/ops/pipeline.py --due lists PI-20261030-56Z4JYMX-0001 as routed or done",
+    "due_by": "2026-11-02"
+  },
   "_seq": 840
 }

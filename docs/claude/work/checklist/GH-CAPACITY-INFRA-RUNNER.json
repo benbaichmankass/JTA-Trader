@@ -2,24 +2,26 @@
   "id": "GH-CAPACITY-INFRA-RUNNER",
   "title": "Dedicated runner capacity for infra workflows (system-actions, vm-ops, deploy, diag relays, phone-executor-apk)",
   "phase": null,
-  "state": "queued",
-  "owner": "manager",
+  "state": "in_flight",
+  "owner": "lane GH-CAPACITY-INFRA-RUNNER",
   "lane": null,
   "model": null,
   "ceiling_usd": null,
   "spend_usd": null,
   "tier": 2,
-  "prs": [],
+  "prs": [
+    21672
+  ],
   "blocked_on": [
     {
       "kind": "observation",
-      "ref": "GH-CAPACITY-INFRA-FIRST",
-      "what": "re-measure: after-snapshot ~24h after #18225 merges -- infra queued->started wait for system-actions, phone-executor-apk and diag relays; if infra still waits > ~10 min, re-raise this row"
+      "ref": "GH-CAPACITY-INFRA-RUNNER-REMEASURE",
+      "what": "24h after merge: re-measure Guards run-guards step on automation PRs (was 802s) and job queue waits per docs/research/gh-actions-capacity-2026-10-30.md; secret_scan (461s local) is the next candidate, a manager/operator decision"
     }
   ],
-  "note": "Re-ranked 2 (manager 08:17Z): measured 20+ min queue on an order-path system-action (#21201) behind 90 CI runs; see GH-CAPACITY-INFRA-FIRST note. Live-review applies go VM-side (rows watcher) and are not affected; operator/manager system-actions are.",
-  "updated_at": "2026-10-29T08:15:05Z",
-  "updated_by": "session_01AFoLuKwNMzjtn2CH2kVd86",
+  "note": "Re-ranked 2 (manager 08:17Z): measured 20+ min queue on an order-path system-action (#21201) behind 90 CI runs; see GH-CAPACITY-INFRA-FIRST note. Live-review applies go VM-side (rows watcher) and are not affected; operator/manager system-actions are. [2026-10-30 16:45Z Manager Session 2026-10-30c] UNBLOCKED: the observation's re-raise condition is met (MEASURED today): GitHub Actions 16 queued + 12 in_progress among the last 40 runs; research-script-run started nothing 14:05Z->15:38Z with 60 runnable (watchdog incident backend:github_runner@20261030T1516Z); system-action #21201 waited 20+ min earlier. Operator popup ~16:45Z verbatim: \"Dispatch now (Recommended)\". 2026-10-30 lane: measured (docs/research/gh-actions-capacity-2026-10-30.md). PR-CI cancel-in-progress already existed; 68% of PR runs are automation/*; Guards run-guards step ~13 min on data-only PRs; candle scan now pr_skip_unless (PR #21672); secret_scan is the larger step and is not scoped. Operator-only: concurrency ceiling is a plan setting.",
+  "updated_at": "2026-10-30T17:31:10Z",
+  "updated_by": "session_01AFoLuJEaf7dNfk9kc5g3fG",
   "roadmap": [
     "L-OPS"
   ],

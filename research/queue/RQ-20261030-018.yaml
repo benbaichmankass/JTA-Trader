@@ -75,7 +75,7 @@ grading:
   - research/results/RQ-20261030-018/41030130730.jsonl
   graded_at: '2026-10-30'
   grader: scripts/research/queue_grade.py
-  needs_review: true
-  reason: 'verdicts not unanimous-mechanical: [''wiring_only'']'
+  needs_review: false
+  reason: 'session triage 2026-10-30 RESEARCH-OPS-20261030-1450: the landed row carries the generic wiring rule RULE-E7-HARNESS-DISPATCHABLE, so the grader could not map it; the unit''s own rule RULE-TPL-ROSTER-WALKFORWARD-NET-OF-COST applied verbatim to the row''s measurement: net_total_r -13.7365 <= 0 with n=46 >= 39 (data 2026-05-03..2026-10-29, win 21.74%, expectancy -0.2986 R/trade) -> FAIL. Cost basis is whatever harness_dispatch_result.py mapped (not re-verified here). Per the rule: configuration closed (htf_pullback_trend_2h, this window); the confirmatory re-run is the next weekly generated unit; two consecutive FAILs are a Gate-2 demotion INPUT, never a demotion by this unit.'''
   rows: 1
-  verdict: null
+  verdict: fail

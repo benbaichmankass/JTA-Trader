@@ -1,0 +1,26 @@
+{
+  "id": "PROP-REPLACEMENT",
+  "title": "Qualify a replacement prop leg for breakout_2/tradeify_1/velotrade_1 (eth_prop fails its walk-forward rule under the gap-fixed harness; v1 p_breach 0.93): run the v2 prop gate (RULE-P5-GATE-BRK-PER-LEG-V2, unit RQ-20261029-9a2c-01) and the gap-fixed Stage-0 for sol_4h, eth_4h and any other prop-eligible leg; bring a passing leg to the operator as a Tier-3 swap with PR #21660",
+  "phase": null,
+  "state": "done",
+  "owner": null,
+  "lane": null,
+  "model": "claude-sonnet-5-5",
+  "ceiling_usd": 6,
+  "spend_usd": 3,
+  "tier": 1,
+  "prs": [],
+  "blocked_on": [],
+  "note": "OPERATOR DECISIONS 2026-10-30 (popups to Manager Session 2026-10-30c), verbatim: ~15:55Z eth_prop \"Demote to bybit_1 (Recommended)\"; ~16:35Z on 'after the demotion no prop account trades anything' -> \"Pause and rethink\"; ~16:40Z prop plan -> \"Keep eth_prop until a replacement\". So: trend_donchian_eth_prop STAYS on breakout_2/tradeify_1/velotrade_1; demotion PR #21660 (lane ETH-PROP-DEMOTE) is held unmerged and ships TOGETHER with the replacement add once a leg passes. Evidence: PR #21644 (eth_prop RULE-WF-RECOST gap-fixed n 516 +2.32, 3/6 folds, ex-max -7.30 FAIL); comms/prop_survival/*.json v1 (eth_prop p_breach 0.934; sol_4h EV 195/p 0.48; eth_4h EV 95/p 0.63). Done = v2 gate + gap-fixed Stage-0 verdicts committed per candidate; a passing leg proposed as one Tier-3 PR (add + #21660); or none passes and the operator is told. Gates: none. [2026-10-30 lane PROP-REPLACEMENT] RESULT: none passes everything. eth_4h and sol_4h PASS v2 primary (3y, current stack) on breakout_2/tradeify_1/velotrade_1 but 365d EV is negative on all 3 accounts (INDETERMINATE n=51/34) = CONTESTED -> DE-RISK per RULE-P5-GATE-BRK-PER-LEG-V2. eth_prop on the gap-fixed ledger FAILS v2 primary on all 3 accounts (EV -8/-54/-12). Live soak counts not verified (no VM path). Table: docs/research/prop-replacement-2026-10-30/RESULT.md. Operator choice: keep eth_prop (status quo), or accept a CONTESTED de-risked sol_4h add with #21660.",
+  "priority_rank": 1,
+  "updated_at": "2026-10-30T17:10:06Z",
+  "updated_by": "session_01AFoLuJEaf7dNfk9kc5g3fG",
+  "roadmap": [
+    "L-AM-STANDARD"
+  ],
+  "writeback": {
+    "roadmap": "L-AM-STANDARD: no passing prop replacement; eth_4h and sol_4h PASS v2 3y but are CONTESTED on 365d (n 51/34 < 88); eth_prop FAILS v2 on the gap-fixed ledger. Result docs/research/prop-replacement-2026-10-30/RESULT.md",
+    "arch": "none: no component changed"
+  },
+  "_seq": 845
+}

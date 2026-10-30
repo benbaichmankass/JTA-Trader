@@ -77,7 +77,7 @@ def _cases() -> dict:
                  "time_provenance": "ESTIMATED"}] if k % 2 else []
         hz = {"seconds": 6 * 3600.0, "hours": 6.0, "source": "test", "timeframe": "15m"}
         out["grade"].append(cg.grade_package(pkg, [leg], bars, [], acts, {"bybit_2": 200.0}, {}, graded_at=GRADED_AT,
-                                             n_random=25, horizon=hz))
+                                             n_random=25, horizon=hz, random_mode="legacy_own_length"))   # the golden pins the pre-lift (legacy) draw
     return json.loads(json.dumps(out, sort_keys=True))
 
 
@@ -129,7 +129,7 @@ def test_causal_random_control_never_reads_the_exit_time_and_the_legacy_one_does
         cf_core.random_usable_bars(bars, t_close=T0, mode="bogus", **kw)
 
 
-def test_grade_package_causal_mode_is_labelled_and_the_default_record_is_unlabelled():
+def test_grade_package_default_random_mode_is_causal_and_legacy_needs_the_explicit_flag():
     import json as _j
     pkg = {"order_package_id": "pkg-c", "strategy_name": "s", "symbol": "ADAUSDT", "direction": "short", "entry": 100.0, "sl": 100.0,
            "tp": 96.0, "exit_plan": _j.dumps({"stop": {"price": 101.0}}), "meta": {"atr": 0.5, "trail_mult": 5.0}}
@@ -141,8 +141,12 @@ def test_grade_package_causal_mode_is_labelled_and_the_default_record_is_unlabel
     hz = {"seconds": 6 * 3600.0, "hours": 6.0, "source": "test", "timeframe": "15m"}
     a = cg.grade_package(pkg, [leg], bars, [], acts, {"bybit_2": 200.0}, {}, graded_at=GRADED_AT, n_random=20, horizon=hz)
     b_ = cg.grade_package(pkg, [leg], bars, [], acts, {"bybit_2": 200.0}, {}, graded_at=GRADED_AT, n_random=20, horizon=hz,
-                          random_mode="causal")
-    assert "mode" not in a["random_control"] and b_["random_control"]["mode"] == "causal"
+                          random_mode="legacy_own_length")
+    assert cg.DEFAULT_RANDOM_MODE == "causal"                      # FAILS on the old (legacy) default
+    assert a["random_control"]["mode"] == "causal" and b_["random_control"]["mode"] == "legacy_own_length"
+    explicit = cg.grade_package(pkg, [leg], bars, [], acts, {"bybit_2": 200.0}, {}, graded_at=GRADED_AT, n_random=20, horizon=hz,
+                                random_mode="causal")
+    assert a["random_control"] == explicit["random_control"]            # the default IS causal (window invariance: random_usable_bars test)
 
 
 # ---- cf_bars

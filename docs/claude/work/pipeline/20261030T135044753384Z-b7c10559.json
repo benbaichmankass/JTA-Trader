@@ -1,0 +1,18 @@
+{
+  "due_when": {
+    "clears_when": "a second ltr-wake for the same package within one bar of a review whose row is on live-review/rows but not yet on main no longer fires (test with a fixture row only on the branch), or the item is killed with a reason",
+    "due_date": "2026-11-03",
+    "kind": "date"
+  },
+  "id": "PI-20261030-9KC5G3FG-0002",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "Manager Session 2026-10-30c (session_01AFoLuJEaf7dNfk9kc5g3fG), ops-flags #17895 comments 6524066609 and 6524404374",
+    "rerun": "for each package on ops-flags #17895 ltr-wake comments today, compare consecutive wake times with the previous review row's commit time on live-review/rows; a wake within 30 min whose packet previous_review is older than that row is an instance"
+  },
+  "severity": "medium",
+  "state": "queued",
+  "tier": 2,
+  "what": "LTR duplicate wake from mirror lag (MEASURED 2026-10-30 by Manager Session 2026-10-30c): src/runtime/live_review_due.py builds its prior-review index (cooldown, fired events, last reviewed peak) from comms/live_review/reviews.jsonl on the VM working tree (main via ict-git-sync), while reviewers write rows to the live-review/rows branch, which reach main only through live-review-rows-mirror (#21621 landed 13:47Z) and then git-sync (~5 min). Instance: pkg-64d4fa5ab0c34305 (iaum_pullback_1d, alpaca_paper) reviewed at 13:34Z (row LR-20261030T1332Z, commit 17291da, peak 2.14R); at 13:48Z the due-check still read the 2026-10-29 review (peak 1.80R) and fired new_peak @ peak 2.32R ('vs last reviewed 1.80'), so a second reviewer was spawned 16 min later (~$0.40) and the packet's previous_review field was stale. Every row written within ~15-20 min of a further price move can re-wake the same package; on real-money packages this doubles reviewer cost and shows reviewers a wrong previous_review. Fix candidates: (a) the due-check also reads rows from live-review/rows (the VM rows watcher already reads that branch for applies), or (b) record 'reviewer dispatched for review_id X' at wake-post time so the cooldown/peak baseline advances before the row is mirrored."
+}
