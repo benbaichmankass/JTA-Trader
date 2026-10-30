@@ -2,7 +2,7 @@
   "id": "ML-DATA-RATE-PATH",
   "title": "ML that does not wait for live trades: design and pre-register the path that trains and grades models on data the system can generate NOW (harness-generated trade corpora across the broadened universe, desk counterfactual labels, bar-level per-symbol labels), replacing the paused regime/direction learner variants",
   "phase": null,
-  "state": "in_flight",
+  "state": "landed_unproven",
   "owner": "manager",
   "lane": "session_01AFoLuK1oV8xe4bbnhb7QMi",
   "model": "claude-opus-5-5",
@@ -11,12 +11,21 @@
   "tier": 1,
   "prs": [],
   "blocked_on": [],
-  "note": "Dispatched 23:06Z by Manager Session 2026-10-29d: fresh Opus lane session_01AFoLuK1oV8xe4bbnhb7QMi, ceiling $10, the single week's-priority slot (spend_meter KEEP 1 at 35%/21:37Z, net 6.2 pp/day). Inputs named: counterfactual-everywhere design (#21418, merged 23:05Z), ML-AM-NEXT-LIVE close-out, causal matched-random fix #21320.",
+  "note": "OPERATOR, Thursday planning 2026-10-29 ~06:45Z, verbatim: \"if the review suggests that we stop, like, I'm definitely open to suggestions for other directions that we can go towards improving the strategies and MLs, but it can't just be waiting for more data. That's clearly not going to happen at a pace that's relevant. We haven't built a system that's capable of generating its own trades fast enough. There needs to be a path here, and we need to figure out what it is. So it's good if we're figuring out that what we're doing now isn't working, but we also have to figure out what will work.\" DECISIONS in the same turn: ML order P5 (price the heads) -> P3/P1 in parallel, P2 after RULE-AM-RISK-ADJUSTED-V1 lands; executed as plan steps B1/B2/B3 (dispatched 06:35Z), B4 after B1. A conservative, mostly-hold ML live by end of week is the goal. The review's P6 is accepted: pause new regime_label/direction_label learner variants (43 of 50 units last week, 0 of 23 arms beat the shipped head). Their research-ops intake is replaced by THIS row's output. Deliverable: a ranked list of data sources the system can generate at scale (with n per week each would add, net-of-cost labelling, leakage risk), and the first 2-3 pre-registered units/rows, by Fri 10-30. [2026-10-29 lane ML-DATA-RATE-PATH session_01AFoLuK1oV8xe4bbnhb7QMi] DELIVERABLE: docs/research/ml-data-rate-path-2026-10-29.md (Gates: none). RANKED SOURCES: (1) harness-generated trade+path corpora over a frozen 60-perp universe -- MEASURED DOGEUSDT 1h 6y = 1,421 trades / 27,984 bar-states in 5.7 s, 900 Binance Vision USDT-M perp dirs; backlog ESTIMATED ~90k trades / ~1.7M states in week 1 (34x the 2,627-trade paths corpus); (2) cf_trade arm replays -- 352,063 jobs / 271,090 distinct trades (reproduced); (3) bar-level labels -- largest raw n, only the vol head is a live consumer (P6 pauses direction/regime); (4) desk labels -- 12,500 from 398 packets, half Claude-judged, plan-bound so not a scale source; (5) live cf replays -- 3 graded, fidelity anchor only. NEW ROWS: ML-DATA-BROAD-PATHS (sonnet $10), TM-BENCH (opus $15, from ML-PROGRAMME section 5 row 1, never filed). UNITS (blocked on those rows, rules registered): RQ-20261029-7294-01 DATA-TRANSFER (broad vs money-only training, tested on money legs), -02 Q-TM1 GBDT action-value under S-OFFLINE (ML-AM-NEXT-LIVE's next candidate), -03 Q-SEL1-BROAD take/skip. Order: ML-DATA-BROAD-PATHS || CF-B0 -> TM-BENCH -> 7294-01 -> 7294-02. CLOSES WHEN: the PR merges and ML-DATA-BROAD-PATHS is dispatched. [manager dispatch record, merged from main] Dispatched 23:06Z by Manager Session 2026-10-29d: fresh Opus lane session_01AFoLuK1oV8xe4bbnhb7QMi, ceiling $10, the single week's-priority slot (spend_meter KEEP 1 at 35%/21:37Z, net 6.2 pp/day). Inputs named: counterfactual-everywhere design (#21418, merged 23:05Z), ML-AM-NEXT-LIVE close-out, causal matched-random fix #21320.",
   "priority_rank": 1,
-  "updated_at": "2026-10-29T23:06:08Z",
-  "updated_by": "Manager Session 2026-10-29d",
+  "updated_at": "2026-10-29T23:32:37Z",
+  "updated_by": "session_01AFoLuK1oV8xe4bbnhb7QMi",
   "roadmap": [
     "L-ML-LIVE"
   ],
+  "writeback": {
+    "roadmap": "L-ML-LIVE: data-rate path designed; ranked sources + rows ML-DATA-BROAD-PATHS, TM-BENCH + units RQ-20261029-7294-01..03 registered (no milestone state change until TM-BENCH selfcheck lands)",
+    "arch": "none: research design, rows and queue registrations only"
+  },
+  "observation": {
+    "what": "the PR adding docs/research/ml-data-rate-path-2026-10-29.md, rows ML-DATA-BROAD-PATHS + TM-BENCH and units RQ-20261029-7294-01..03 is merged to main and ML-DATA-BROAD-PATHS has a lane",
+    "how_to_check": "git cat-file -e origin/main:research/queue/blocked/RQ-20261029-7294-01.yaml && python3 -c \"import json;print(json.load(open(\\\"docs/claude/work/checklist/ML-DATA-BROAD-PATHS.json\\\"))[\\\"state\\\"])\"",
+    "due_by": "2026-10-31"
+  },
   "_seq": 785
 }

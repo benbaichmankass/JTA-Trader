@@ -1,0 +1,23 @@
+{
+  "id": "TM-BENCH",
+  "title": "TM-BENCH: the one trade-management bench (frozen corpus, purged trade-grouped folds, action-value labeler, B0-B6 incl. causal matched random, selfcheck, logit + LightGBM action-value wrappers, --train-corpus/--test-corpus)",
+  "phase": null,
+  "state": "queued",
+  "owner": "manager",
+  "lane": null,
+  "model": "opus",
+  "ceiling_usd": 15,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [],
+  "blocked_on": [],
+  "note": "Filed by lane ML-DATA-RATE-PATH 2026-10-29 from docs/plans/ML-PROGRAMME-2026-10-28.md section 5 row 1 (proposed there, never filed; grep of docs/claude/work/checklist 2026-10-29 found no TM-BENCH row). Model opus, ceiling $15. One engine: the labeler imports the cf core from CF-B0-ENGINE-LIFT or the ML-EXIT-ACTIONGRID-LABELS replay, whichever lands first; never rebuilt. Added by this lane: --train-corpus/--test-corpus and the cross-symbol purge (docs/research/ml-data-rate-path-2026-10-29.md section 1 row A). Unblocks RQ-20261029-7294-01/02/03 (Q-TM1 = ML-AM-NEXT-LIVE's next candidate). Re-entry test: a runner unit lands selfcheck pass, B0-B0 = 0, oracle saving 0.756 R/trade +- 0.005 on the 6-leg population. Gates: none. roadmap L-ML-LIVE, L-ATM.",
+  "priority_rank": 1,
+  "updated_at": "2026-10-29T23:19:22Z",
+  "updated_by": "session_01AFoLuK1oV8xe4bbnhb7QMi",
+  "roadmap": [
+    "L-ML-LIVE",
+    "L-ATM"
+  ],
+  "_seq": 836
+}
