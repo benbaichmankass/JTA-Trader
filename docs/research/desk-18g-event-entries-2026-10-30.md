@@ -41,7 +41,7 @@ detectors return identical events on history truncated at 2026-04-01 (both class
 | Funding settlements | Binance Vision monthly, 2020-09.. | yes (`fundingTime`) | scored (E3) |
 | Open interest | Binance Vision daily metrics, 5-minute, from 2021-12 | yes with +5 min lag | scored (E4) |
 | Exchange listings / delistings | 2017-07..2026-10 (`comms/research/desk_event_calendar/ann_*.json`) | yes | `no_edge` on the six majors (prior study); not re-run |
-| Macro calendar (CPI/NFP/FOMC/PPI/PCE) | `comms/macro/econ_calendar_snapshots*.jsonl`, scheduled dates back to 1951 | schedule is public in advance, but only ~8 of 58 window rows were first observed before their date (the rest are backfill) | **not scored**: about 40 distinct dates in the window, MDE about 0.66 R against a 0.25 bar; direction would have to be the post-release reaction, which the 1h price packet already sees |
+| Macro calendar (CPI/NFP/FOMC/PPI/PCE) | `comms/macro/econ_calendar_snapshots*.jsonl`, scheduled dates back to 1951 | schedule is public in advance, but only 10 of 58 window events were first observed before their date (the rest are backfill) | **not scored**: about 40 distinct dates in the window, MDE about 0.66 R against a 0.25 bar; direction would have to be the post-release reaction, which the 1h price packet already sees |
 | News (GDELT hourly panel) | `comms/news_alpha/gdelt_panel`, 2023-10 onward, ingest-time stamped | yes by ingest time | **available, no trigger registered**; adding one after seeing these results would be a forking path |
 | Token unlocks / upgrades | forward-only / hand-curated | no | not backfillable (prior study) |
 
