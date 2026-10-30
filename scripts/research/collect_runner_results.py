@@ -48,6 +48,7 @@ ambient token, writes only comms/research/** and research/results/**.
 from __future__ import annotations
 
 import argparse
+import ast
 import json
 import re
 import subprocess
@@ -172,6 +173,13 @@ def _scalar_n(rec: Dict[str, Any]) -> Dict[str, Any]:
     `together` count (the combined-book sample the unit's power rule reads), else `null`; the per-arm detail
     stays in the run's measurement.json. Anything else passes through for research_result.py to judge."""
     n = rec.get("n")
+    if isinstance(n, str) and n.lstrip().startswith("{"):
+        # record-inputs.json carries the per-arm dict as its str() (script_run stringifies every field), so a dict `n`
+        # reaches the recollect path as text; without this the orphan re-emit refused it (run 40148577750, 2026-10-30).
+        try:
+            n = ast.literal_eval(n)
+        except (ValueError, SyntaxError):
+            return rec
     if not isinstance(n, dict):
         return rec
     together = n.get("together")

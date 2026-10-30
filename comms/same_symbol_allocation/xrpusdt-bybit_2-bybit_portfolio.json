@@ -1,0 +1,17 @@
+{
+  "kind": "allocation_weights",
+  "covers": [{"account": "bybit_2", "symbol": "XRPUSDT"}, {"account": "bybit_portfolio", "symbol": "XRPUSDT"}],
+  "legs": ["trend_donchian_xrp_4h", "xrp_pullback_2h"],
+  "weights": {"trend_donchian_xrp_4h": 0.523686, "xrp_pullback_2h": 0.476314},
+  "inputs": [
+    "src/runtime/allocator_ev.py backtest_input (c_bt = 0.5 + expectancy_r_oos, comms/strategy_evidence/<leg>.json, coverage_state measured) -> compute_conviction -> allocation_weights (score_i / sum score)",
+    "head_to_head RQ-20261015-1631-02 run 40148577750 (reported, not in the weights)"
+  ],
+  "recorded_at": "2026-10-30",
+  "basis": "The allocator's own score blend (config/slice_allocation.yaml weights) evaluated over the only factor available offline, c_bt. c_bt: trend_donchian_xrp_4h 0.6677 (expectancy_r_oos 0.1677), xrp_pullback_2h 0.6073 (expectancy_r_oos 0.1073), both net of fee 11 bps + slippage 3 bps + funding 1 bps/window, evidence generated 2026-10-28. compute_conviction renormalises over present inputs, so each score equals c_bt; weights = score / sum = 0.523686 / 0.476314.",
+  "population": "OOS per comms/strategy_evidence/{trend_donchian_xrp_4h,xrp_pullback_2h}.json (harness trend / pullback, generated 2026-10-28); head-to-head OOS from 2025-01-01 on XRPUSDT 5m, n_oos 74 (trend solo), 115 (pullback solo), 165 (together).",
+  "not_in_basis": "c_strat, c_setup, c_wr, c_reg are stamped per intent at runtime, and c_live reads runtime trade_journal.db (VM only), so none was available here. Not read, not invented. allocator_soak: 0 contests between these legs in the last 500 records (RQ-20261015-1631-02 why_this_matters), so the split is rarely exercised.",
+  "head_to_head_reported": {"trend_donchian_xrp_4h_solo_net_r_per_capital_day": -0.156145, "xrp_pullback_2h_solo_net_r_per_capital_day": 0.011603, "together": 0.004436, "caveat": "the trend arm's capital-days are 18.9 against 388.8 for pullback, so per-capital-day figures are not comparable across arms; the unit's rule forbids a winner"},
+  "applies_to_runtime": "no. This is the record the guard reads. Live allocation on bybit_2 / bybit_portfolio is unchanged (election in src/runtime/intents.py); the record changes no config, roster or sizing.",
+  "supersede_with": "slice support (lane NETTED-SLICES) for these accounts, or a refreshed record once c_live / c_strat are readable."
+}

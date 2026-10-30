@@ -1,7 +1,7 @@
 # comms/same_symbol_allocation/
 
 Allocation-weights records for `same-symbol-allocation-guard` (`scripts/ci/check_same_symbol_allocation.py`). One `*.json`
-per shared (account, symbol) leg set. Empty until the first is written.
+per shared (account, symbol) leg set. First record: `xrpusdt-bybit_2-bybit_portfolio.json` (2026-10-30; allocator `c_bt` factor only, its `not_in_basis` says what was unreadable).
 
 ```json
 {"kind": "allocation_weights", "covers": [{"account": "bybit_1", "symbol": "XRPUSDT"}],
