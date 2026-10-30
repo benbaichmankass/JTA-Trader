@@ -150,6 +150,7 @@ def order_package(cfg: dict, candles_df: Any = None, oi_rows: Optional[Sequence[
         "confidence": float(_p(cfg, "confidence")),
         "meta": {
             "strategy_name": NAME, "timeframe": "1h", "rule": "RULE-RQ20261030-E18G-02 (E4 frozen)",
+            "risk_per_unit": float(_p(cfg, "sl_atr")) * atr,
             "decision_cutoff": cutoff, "oi_event_ts": ev["ts"], "oi_event_known_at": ev["known"],
             "oi_event_z": ev["z"], "last_bar_return": ret, "atr14": atr,
             "sl_atr": float(_p(cfg, "sl_atr")), "tp_r": float(_p(cfg, "tp_r")),
@@ -166,11 +167,31 @@ def _now() -> float:
     return time.time()
 
 
+def _telemetry(meta: dict, candles_df: Any, open_pkg: dict) -> None:
+    """M31 position telemetry, the same hook as squeeze_breakout_4h.monitor. Swallows everything."""
+    try:
+        if candles_df is None or len(candles_df) == 0:
+            return
+        from src.runtime.exit_levers import since_entry
+        from src.runtime.position_telemetry import record_position_telemetry
+
+        direction = str(open_pkg.get("direction") or meta.get("direction") or "")
+        record_position_telemetry(
+            candles_df=candles_df, atr=meta.get("atr14"), open_pkg=open_pkg, meta=meta,
+            window=since_entry(candles_df, open_pkg), direction=direction,
+            current_price=float(candles_df["close"].iloc[-1]), stop=open_pkg.get("sl"),
+            target=open_pkg.get("tp"), strategy=NAME)
+    except Exception:  # noqa: BLE001 -- telemetry must never break the time stop
+        pass
+
+
 def monitor(cfg: dict, candles_df: Any, open_pkg: dict) -> Optional[dict]:
     """The 24-bar time stop: close once the 24th 1h bar after the entry has closed (the replay exits at
-    that bar's close). The resting SL/TP are the rest of the plan; no trail, no retarget. Never raises."""
+    that bar's close). The resting SL/TP are the rest of the plan; no trail, no retarget. Never raises.
+    Also records peak-R position telemetry (observe-only; it reads nothing back and cannot alter the exit)."""
     try:
         meta = open_pkg.get("meta") or {}
+        _telemetry(meta, candles_df, open_pkg)
         stop_at = meta.get("time_stop_at")
         if stop_at is None:
             cut = meta.get("decision_cutoff")

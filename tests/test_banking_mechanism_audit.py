@@ -51,7 +51,8 @@ def test_population_is_enabled_and_live(mod):
     # 54 -> 55 on 2026-10-28: trend_donchian_1h re-enabled live on the bybit_1 demo (OPERATOR-DECISIONS-20261028 item 2).
     # 55 -> 54 on 2026-10-28: gld_pullback_1h retired by record (enabled: false; STRATEGY-STATUS-MODEL, operator Q4
     # "Retire gld, re-home 3 later (Recommended)"). It was on no roster since 2026-10-05.
-    assert len(legs) == 54, f"population drifted from the 2026-10-28 denominator: {len(legs)}"
+    # 54 -> 55 on 2026-10-30: e4_oi_shock_1h joins the bybit_1 demo (E4-DEMO-LEG; a mechanics test, Stage 0 FAILED).
+    assert len(legs) == 55, f"population drifted from the 2026-10-30 denominator: {len(legs)}"
     for name, cfg in legs.items():
         assert cfg.get("enabled") is True, name
         assert str(cfg.get("execution", "live")).lower() == "live", name
