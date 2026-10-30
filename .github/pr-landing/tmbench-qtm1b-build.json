@@ -1,5 +1,7 @@
 {
   "tier": 1,
-  "landing": "self",
-  "why": "Research tooling only: scripts/research/tm_bench.py gains --calibration (Stage-A per-action OOS rho + within-trade permutation p95), --inner-folds (margin chosen on inner out-of-fold predictions of the outer train set) and --actions (restrict the lgbm arm); tests and selfcheck extended; research unit RQ-20261030-c7a1-01 (Q-TM1b) gets run.command and moves from blocked/ to queue/ with its pre-registered rule unchanged. No config, roster, order or mode change."
+  "landing": "hold",
+  "why": "Research tooling only: scripts/research/tm_bench.py gains --calibration (Stage-A per-action OOS rho + within-trade permutation p95), --inner-folds (margin chosen on inner out-of-fold predictions of the outer train set) and --actions (restrict the lgbm arm); tests and selfcheck extended; research unit RQ-20261030-c7a1-01 (Q-TM1b) gets run.command and moves from blocked/ to queue/ with its pre-registered rule unchanged. No config, roster, order or mode change. Held for the manager's merge: the guard will not self-land a queue-unit registration (research/queue/RQ-20261030-c7a1-01.yaml moved out of blocked/).",
+  "hold_reason": "unvouchable_paths",
+  "hold_text": "research/queue/RQ-20261030-c7a1-01.yaml is a queue unit moved out of blocked/ (a registration the guard cannot vouch for); the manager reads it and merges. Everything else is Tier-1 research tooling."
 }
