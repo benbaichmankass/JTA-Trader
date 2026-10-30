@@ -4,7 +4,7 @@
 id: RQ-20261018-001
 title: 'Same-symbol overlap read, SOLUSDT (bybit_2 book): per-leg OOS net R per capital-day, solo vs shared
   slot, for trend_donchian_sol_4h and trend_donchian_sol_prop'
-status: queued
+status: done
 cadence: once
 roadmap:
 - M18
@@ -116,14 +116,9 @@ grading:
   decision_rule_id: RULE-P3-Q8-SOL4H-OVERLAP-REPORT
   evidence:
   - research/results/RQ-20261018-001/39164271863.jsonl
+  - research/results/RQ-20261018-001/40148578991.jsonl
   graded_at: '2026-10-30'
   grader: scripts/research/queue_grade.py
-  needs_review: true
-  owner: RESEARCH-OPS-20261021-2047
-  owner_reason: 'producer_failed: no 5m candle source for SOLUSDT (the overlap harness needs one). Lever:
-    a SOL 5m source or a per-symbol instrument decision (programme node P3-Q8-new-symbols, authoring queue);
-    not a verdict, rule not applicable until it runs. Same signature as RQ-20261015-1631-01/-02 (research-ops
-    2026-10-24: ETH and XRP 5m also unresolved); lever noted once on SAME-SYMBOL-ALLOCATION.'
-  reason: 'read_state not unanimously measured: [''producer_failed'']'
+  reason: 1 row(s), all measured, all pass (1 earlier producer_failed / re-graded wiring_only row(s) superseded)
   rows: 1
-  verdict: null
+  verdict: pass
