@@ -84,6 +84,10 @@ DECLARED_LIGHT = {
         "lane container or a GitHub runner. Its queue units declare compute cpu_light / cpu_long (backend "
         "github_runner only, scripts/research/research_compute.yaml), never needs_vm_data, so it is never "
         "routed to the 6 GB trainer and never shares memory with a trainer job.",
+    "scripts/research/tm_bench.py":
+        "TM-BENCH trade-management bench: fits LightGBM / logit action-value heads on harness paths replayed from "
+        "public Binance Vision candles in a lane container or a GitHub runner. Its queue units declare compute "
+        "cpu_long (backend github_runner), never needs_vm_data, so it is never routed to the 6 GB trainer.",
     "scripts/ml/export_exit_head.py":
         "reads a trained model and writes an artifact; fits nothing. Its heavy "
         "work happens inside train_exit_head.py, which locks.",

@@ -142,11 +142,11 @@ def build_trades(leg: str, path_rows: List[dict], trade_rows: List[dict], tf: Op
             "leg": leg, "family": _family(leg), "symbol": t.get("symbol"), "tfm": tfm, "trade_key": k,
             "entry_time": pd.Timestamp(t["entry_time"]), "exit_time": pd.Timestamp(t["exit_time"]),
             "exit_reason": str(t.get("exit_reason") or rows[-1].get("exit_reason")),
-            "exit_r": exit_r, "net_r": float(t["net_r"]), "c_exit": cx,
+            "exit_r": exit_r, "net_r": float(t["net_r"]), "c_exit": cx, "entry_over_risk": entry / risk,
             "cost_fee_r": float(t.get("cost_fee_r") or 0.0), "cost_slippage_r": float(t.get("cost_slippage_r") or 0.0),
             "cost_funding_r": float(t.get("cost_funding_r") or 0.0),
             "bars": len(rows), "open_r": g("open_r"), "peak_r": g("peak_r"), "bsp": g("bars_since_peak"),
-            "off": g("bar_offset"), "c_r": g("c_r"), "fav": g("fav_r"), "adv": g("adv_r"),
+            "off": g("bar_offset"), "o_r": g("o_r"), "c_r": g("c_r"), "fav": g("fav_r"), "adv": g("adv_r"),
             "stop_r": g("stop_r"), "target_r": g("target_r"), "d_stop": g("dist_to_stop_r"),
             "d_target": g("dist_to_target_r"), "atr_r": g("atr_r"), "adx": g("adx_14")})
     share = par_ok / par_n if par_n else None
