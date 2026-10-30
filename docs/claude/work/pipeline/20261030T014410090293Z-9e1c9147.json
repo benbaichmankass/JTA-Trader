@@ -1,0 +1,15 @@
+{
+  "due_when": {
+    "due_date": "2026-10-31",
+    "kind": "date"
+  },
+  "id": "PI-20261030-A1AEHRKH-0003",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "LTR row f87dbb1 (LR-20261030T0031Z) on live-review/rows; Manager Session 2026-10-29d",
+    "rerun": "grep -n 'bybit_open_orders' scripts/ops/live_review_packet.py | head -3"
+  },
+  "state": "queued",
+  "what": "VM packet builder's bybit_orders read for bybit_1 fails intermittently: diag bybit_open_orders exit 3, ict-bot.duckdns.org unreachable FROM THE VM (packets LR-20261030T0031Z and LR-20261030T0135Z for pkg-dc7c; the 0134Z pkg-591f read worked). Effect: live reviews end could_not_look on mechanics. Root-cause why the VM's own call to its public host fails (hairpin/DNS/Caddy) and read locally instead."
+}
