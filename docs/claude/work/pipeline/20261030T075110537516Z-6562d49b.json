@@ -6,6 +6,11 @@
   },
   "id": "PI-20261030-XME2GXW7-0001",
   "next_action": "check_observation",
+  "observation": {
+    "due_by": "2026-10-31",
+    "how_to_check": "vm-diag relay (skill diag-data): read the VM tree's config/overlay_policy.yaml at origin/main HEAD, and log_file?name=overlay_shadow&lines=200 for both legs still being scored",
+    "what": "VM config/overlay_policy.yaml reads mode annotate for trend_donchian_eth_4h + trend_donchian_sol_prop and reduce for trend_donchian_xrp_4h + trend_donchian_eth_prop, after PR #21553 merges and ict-git-sync pulls it"
+  },
   "origin": {
     "kind": "session",
     "ref": "lane ML-REAL-MONEY-OVERLAY (session_01AFoLuKnxrXwUfkxME2GXW7) / canary #21213 observe check #5",
