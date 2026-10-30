@@ -35,7 +35,7 @@ health_vocabulary:
   batch_level_only: producer-level liveness/vacuity, not per input
   unmeasured: no null-rate or staleness metric exists for this input today (provenance.UNMEASURED_MARKER = "unmeasured"; never read as healthy)
 population:
-  inputs: 334
+  inputs: 335
   by_family_kind:
     ml/ml_feature: 105
     regime_macro/cross_asset: 6
@@ -49,7 +49,7 @@ population:
     strategy/candle: 7
     strategy/config_threshold: 13
     strategy/derived_indicator: 35
-    strategy/feed: 10
+    strategy/feed: 11
     strategy/journal: 3
     strategy/ml_output: 4
   health_by_family_state:
@@ -60,7 +60,7 @@ population:
     regime_macro/unmeasured: 139
     strategy/measured: 4
     strategy/unmeasured: 68
-  strategy_modules: 16
+  strategy_modules: 17
   ml_models: 76
 strategy_modules:
   claude_desk:
@@ -83,6 +83,28 @@ strategy_modules:
       accounts_yaml_roster_entries: 1
       timeframes:
         proposal: 1
+  e4_oi_shock_1h:
+    file: src/units/strategies/e4_oi_shock_1h.py
+    # E4-DEMO-LEG (2026-10-30): the frozen E4 open-interest-shock rule. Reads the closed 1h frame
+    # (fetch_candles, decision_bar: closed) and the live OI store (feed.oi_bybit_5m). Health: unmeasured.
+    candle_columns:
+    - close
+    - high
+    - low
+    - timestamp
+    runtime_imports:
+    - src.runtime.closed_bars
+    - src.runtime.oi_feed
+    legs:
+      strategy_ids: 1
+      enabled: 1
+      enabled_live: 1
+      enabled_shadow: 0
+      disabled: 0
+      accounts_yaml_rostered_legs: 1
+      accounts_yaml_roster_entries: 1
+      timeframes:
+        1h: 1
   fade_breakout_4h:
     file: src/units/strategies/fade_breakout_4h.py
     candle_columns:
@@ -2795,6 +2817,23 @@ inputs:
   health:
     state: unmeasured
     detail: unmeasured (pairs soak events)
+- id: feed.oi_bybit_5m
+  name: live open interest, Bybit linear 5-minute (oi_feed)
+  family: strategy
+  kind: feed
+  definition: src.runtime.oi_feed.refresh(symbol) -- GET /v5/market/open-interest intervalTime=5min, stored per symbol in runtime_logs/oi_feed/<SYMBOL>.json
+    as [ts, oi, seen, bf] with point-in-time known_at (oi_feed.known_at); 7-day warm-up from the venue's own history
+  source: src/runtime/oi_feed.py
+  read_at:
+  - src/units/strategies/e4_oi_shock_1h.py
+  - src/runtime/strategy_signal_builders.py
+  timeframe: 5m rows, decided per closed 1h bar
+  freshness: 'status.json read_state fresh/stale/could_not_look (stale after 20 min); graded by scripts/ops/oi_feed_freshness.py (workflow oi-feed-freshness, every 2 h)'
+  used_by:
+  - e4_oi_shock_1h
+  health:
+    state: unmeasured
+    detail: 'not yet observed on the VM (lands with row E4-DEMO-LEG); /api/diag/log_file?name=oi_feed_status'
 - id: feed.candles_primary
   name: primary OHLCV candles (fetch_candles)
   family: strategy

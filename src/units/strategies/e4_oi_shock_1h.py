@@ -57,8 +57,8 @@ def detect_events(rows: Sequence[Sequence[Any]], cfg: Optional[dict] = None,
     population variance of the previous ``oi_window`` changes, a not-ok change counts as 0 in the
     window). ``known_at(row)`` defaults to ``oi_feed.known_at``."""
     if known_at is None:
-        from src.runtime import oi_feed
-        known_at = oi_feed.known_at
+        from src.runtime.oi_feed import known_at as _feed_known_at
+        known_at = _feed_known_at
     lag, w = int(_p(cfg, "oi_lag_rows")), int(_p(cfg, "oi_window"))
     zmin, cool, span = float(_p(cfg, "oi_z")), float(_p(cfg, "oi_cooldown_s")), float(_p(cfg, "oi_max_window_span_s"))
     rows = [r for r in rows if r and float(r[1]) > 0]
