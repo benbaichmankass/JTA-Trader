@@ -5,50 +5,50 @@
     "by_category": [
      {
       "category": "suggestive",
-      "hit_rate": 0.333,
-      "mean": 0.0741,
-      "n": 3
+      "hit_rate": 0.6,
+      "mean": 0.8548,
+      "n": 5
      }
     ],
     "dropped_unpriced": 0,
-    "n": 3,
-    "verdict": "INDETERMINATE (needs >= 2 ranked categories with n >= 5 each; have [('suggestive', 3)])"
+    "n": 5,
+    "verdict": "INDETERMINATE (needs >= 2 ranked categories with n >= 5 each; have [('suggestive', 5)])"
    },
    "optimism_expected_minus_realised": {
     "ci95": [
-     -5.1048,
-     5.6899
+     -2.904,
+     1.8945
     ],
-    "hit_rate": 0.667,
-    "mean": 0.2926,
-    "n": 3,
-    "worst": -2.1174
+    "hit_rate": 0.4,
+    "mean": -0.5048,
+    "n": 5,
+    "worst": -2.3055
    },
    "p_hit": {
-    "brier": 0.2142,
-    "brier_ref": 0.2222,
+    "brier": 0.3245,
+    "brier_ref": 0.24,
     "dropped_unpriced": 0,
-    "hit_rate": 0.3333,
-    "mean_confidence": 0.3833,
-    "n": 3,
-    "overconfidence_gap": 0.05,
+    "hit_rate": 0.6,
+    "mean_confidence": 0.35,
+    "n": 5,
+    "overconfidence_gap": -0.25,
     "reliability": [
      {
       "bucket": "[0.0,0.5]",
-      "mean_confidence": 0.383,
-      "n": 3,
-      "realised_hit_rate": 0.333
+      "mean_confidence": 0.35,
+      "n": 5,
+      "realised_hit_rate": 0.6
      }
     ],
-    "skill": 0.0363,
-    "verdict": "INDETERMINATE (n=3 < 10)"
+    "skill": -0.3521,
+    "verdict": "INDETERMINATE (n=5 < 10)"
    }
   },
   "population": {
    "by_outcome_kind": {
-    "awaiting_outcome_row": 3,
+    "awaiting_outcome_row": 1,
     "not_computable": 127,
-    "replayed": 3
+    "replayed": 5
    },
    "by_role_action": {
     "entry_generation/no_trade": 124,
@@ -57,11 +57,11 @@
    "n_decisions": 133,
    "n_no_trade": 124,
    "n_pre_cutoff_or_gate_ineligible": 3,
-   "n_priced_gradeable": 3,
+   "n_priced_gradeable": 5,
    "n_proposals": 9,
-   "n_proposals_awaiting": 3,
+   "n_proposals_awaiting": 1,
    "n_proposals_expired_unfilled": 0,
-   "n_proposals_priced": 3,
+   "n_proposals_priced": 5,
    "not_computable_reasons": {
     "mechanics probe: excluded from edge replay": 3,
     "no_trade/watch_note label is the best baseline bracket from the same packet (design \u00a7 8.1); priced by DESK-20 on the DESK-7 harness, not built yet": 124
@@ -70,18 +70,18 @@
   "vs_random": {
    "baseline_missing": 0,
    "ci95": [
-    -6.6066,
-    4.0414
+    -2.8463,
+    2.3432
    ],
-   "hit_rate": 0.333,
-   "mean": -1.2826,
-   "n": 3,
+   "hit_rate": 0.6,
+   "mean": -0.2515,
+   "n": 5,
    "r_unit_note": "baseline R is atr_stop_1x; the proposal's R is its own planned risk",
-   "verdict": "INDETERMINATE (n=3 < 30)",
+   "verdict": "INDETERMINATE (n=5 < 30)",
    "worst": -3.3
   }
  },
- "generated_at": "2026-10-30T12:43:06Z",
+ "generated_at": "2026-10-30T13:02:20Z",
  "live_review_calibration": {
   "close/all": {
    "brier": 0.1946,
@@ -311,9 +311,8 @@
    "n": 6,
    "worst": -3.0874
   },
-  "abstain_vs_random_mean": 0.7391,
+  "abstain_vs_random_mean": 0.7404,
   "awaiting_ready_at": [
-   "2026-10-30T13:02:00+00:00",
    "2026-10-30T13:03:00+00:00",
    "2026-10-30T14:01:00+00:00",
    "2026-10-30T14:02:00+00:00",
@@ -366,10 +365,11 @@
    "2026-11-01T21:03:00+00:00",
    "2026-11-01T22:02:00+00:00",
    "2026-11-01T23:03:00+00:00",
-   "2026-11-02T00:02:00+00:00"
+   "2026-11-02T00:02:00+00:00",
+   "2026-11-02T01:02:00+00:00"
   ],
   "could_not_look_reasons": {},
-  "hindsight_best_cell_mean": 2.2045,
+  "hindsight_best_cell_mean": 2.2349,
   "horizon_bars": 12,
   "limits": "overlapping hourly windows (verdict uses the independent subset); cell-average baseline, not the best trade; hindsight_best_cell is an upper bound, never graded; abstain vs random is ~ the round-trip cost by symmetry (context only)",
   "n_awaiting": 54,
@@ -397,20 +397,20 @@
   {
    "class": "propose_entry vs random entry",
    "eta_earliest": "2026-11-07",
-   "eta_note": "21 more call(s) at 3.202/day + 1.0d to price; earliest, assumes each prices",
-   "n_graded": 3,
+   "eta_note": "21 more call(s) at 3.187/day + 1.0d to price; earliest, assumes each prices",
+   "n_graded": 5,
    "n_needed": 30,
-   "n_not_yet_graded": 6,
+   "n_not_yet_graded": 4,
    "n_recorded": 9,
    "not_yet_graded_breakdown": {
-    "awaiting_horizon": 3,
+    "awaiting_horizon": 1,
     "expired_unfilled": 0,
     "pre_cutoff_or_gate_ineligible": 3
    },
-   "recorded_per_day_7d": 3.202,
+   "recorded_per_day_7d": 3.187,
    "role": "entry_generation",
    "state": "insufficient_n",
-   "verdict": "INDETERMINATE (n=3 < 30)"
+   "verdict": "INDETERMINATE (n=5 < 30)"
   },
   {
    "abstain_value_mean_r": 1.1505,
@@ -438,7 +438,7 @@
    ],
    "class": "tighten_sl",
    "eta_earliest": "2026-11-03",
-   "eta_note": "15 more call(s) at 5.187/day + 1.0d to price; earliest, assumes each prices",
+   "eta_note": "15 more call(s) at 5.116/day + 1.0d to price; earliest, assumes each prices",
    "mean_delta_r": 0.8397,
    "n_applied": 0,
    "n_graded": 3,
@@ -449,7 +449,7 @@
     "replay_mismatch": 1,
     "trade_open": 2
    },
-   "recorded_per_day_7d": 5.187,
+   "recorded_per_day_7d": 5.116,
    "role": "in_trade (live review)",
    "state": "insufficient_n",
    "verdict": "HOLD_SCOPE (INDETERMINATE: n=3 < 20)"
@@ -495,7 +495,7 @@
    ],
    "class": "close",
    "eta_earliest": "2026-11-01",
-   "eta_note": "5 more call(s) at 4.87/day + 1.0d to price; earliest, assumes each prices",
+   "eta_note": "5 more call(s) at 4.849/day + 1.0d to price; earliest, assumes each prices",
    "mean_delta_r": 0.9123,
    "n_applied": 2,
    "n_graded": 14,
@@ -506,7 +506,7 @@
     "replay_mismatch": 1,
     "trade_open": 2
    },
-   "recorded_per_day_7d": 4.87,
+   "recorded_per_day_7d": 4.849,
    "role": "in_trade (live review)",
    "state": "insufficient_n",
    "verdict": "HOLD_SCOPE (INDETERMINATE: n=14 < 20)"
@@ -592,7 +592,7 @@
    "not_yet_graded_breakdown": {
     "trade_still_open_or_not_joined": 48
    },
-   "recorded_per_day_7d": 24.987,
+   "recorded_per_day_7d": 24.919,
    "role": "in_trade (live review)",
    "state": "graded",
    "verdict": null
