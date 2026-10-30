@@ -1,0 +1,18 @@
+{
+  "due_when": {
+    "clears_when": "the fallback re-checks the bar after fetch and exits already_recorded (test with a branch that gains the bar's packet between gate and commit), or killed with a reason",
+    "due_date": "2026-11-04",
+    "kind": "date"
+  },
+  "id": "PI-20261030-9KC5G3FG-0003",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "Manager Session 2026-10-30c, ops-flags #17895 comment 6524704523",
+    "rerun": "gh run list -w desk-scan-packet.yml; for each failed run, check whether desk/decisions already had a packet for that bar from producer vm (a could_not_build with a same-bar vm packet is an instance)"
+  },
+  "severity": "low",
+  "state": "queued",
+  "tier": 1,
+  "what": "desk-scan-packet.yml fallback races the VM producer and raises a FALSE could_not_build incident (MEASURED 2026-10-30, run 41066584342, ops-flags #17895 comment 6524704523). Bar 14:00Z: the VM landed DP-20261030T1402Z-scan-1h on desk/decisions (dcf08475c) and posted the desk-wake at 14:02:18Z; the fallback, started earlier, built its own DP-20261030T1401Z-scan-1h, its push was rejected (fetch first), the rebase conflicted on comms/desk/latest_scan.json, and the job posted could_not_build at 14:03:36Z. No data lost, wake fired once (from the VM). Defect: the fallback's gate (desk_wake_marker.py gate) runs only at job start; it must re-check after fetch, before commit, and exit 'already_recorded' when a packet for the bar exists. Also check why schedule-keeper dispatched the fallback at ~14:01Z when the VM producer starts >=1 min into the hour."
+}
