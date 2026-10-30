@@ -1,0 +1,464 @@
+{
+  "leg": "avax_pullback_2h",
+  "grade": {
+    "verdict": "fail",
+    "label": "incumbent_stands",
+    "baseline": "A",
+    "candidates": {
+      "TV95": {
+        "net_r": 2.376,
+        "delta_net_r": -4.808,
+        "max_drawdown_r": 22.0936,
+        "max_drawdown_cap": 24.7786,
+        "folds_ge_incumbent": 2,
+        "passes": false,
+        "lever_fired": true,
+        "tp_doctrine": {
+          "declared_tp_r": 50.0,
+          "reach_ge_6r": 0.0021,
+          "satisfies_reach_floor": null,
+          "note": "tp_r >= 50 (or undeclared) is the sentinel: non-compliant by definition; reach is P(mfe_r >= 6) over this arm's own trades"
+        }
+      },
+      "TV90": {
+        "net_r": 1.3808,
+        "delta_net_r": -5.8032,
+        "max_drawdown_r": 21.189,
+        "max_drawdown_cap": 24.7786,
+        "folds_ge_incumbent": 0,
+        "passes": false,
+        "lever_fired": true,
+        "tp_doctrine": {
+          "declared_tp_r": 50.0,
+          "reach_ge_6r": 0.0021,
+          "satisfies_reach_floor": null,
+          "note": "tp_r >= 50 (or undeclared) is the sentinel: non-compliant by definition; reach is P(mfe_r >= 6) over this arm's own trades"
+        }
+      }
+    },
+    "fold_majority": 4,
+    "n_floor": 39,
+    "dd_tol_frac": 0.35,
+    "control": null,
+    "delta_r_per_trade": 0.02,
+    "delta_r_bar": 9.3,
+    "why": "no candidate clears net R / fold / drawdown: the incumbent exit stands"
+  },
+  "arms": {
+    "A": {
+      "reach_ge_6r": 0.0022,
+      "n": 465,
+      "net_r": 7.184,
+      "net_r_fee_only": 14.8576,
+      "max_drawdown_r": 18.3545,
+      "by_outcome": {
+        "take_profit": 114,
+        "stop": 140,
+        "trail_stop": 210,
+        "timeout": 1
+      },
+      "mean_bars_held": 17.77,
+      "net_r_per_capital_day": 0.0104,
+      "cost_stack": {
+        "fee_bps_roundtrip": 11.0,
+        "slippage_bps_roundtrip": 3.0,
+        "funding_bps_per_window": 1.0
+      },
+      "params": {
+        "trend_lookback": 40,
+        "pullback_lookback": 10,
+        "pullback_frac": 0.5,
+        "atr_stop_mult": 2.0,
+        "trail_mult": 5.0,
+        "min_confidence": 0.0,
+        "vol_skip_above_pctl": 0.0,
+        "vol_skip_below_pctl": 0.1,
+        "vol_pctl_window": 200,
+        "adx_min": 25.0,
+        "adx_period": 14
+      },
+      "data_start": "2020-09-23 06:00:00+00:00",
+      "data_end": "2026-10-15 22:00:00+00:00",
+      "folds": [
+        {
+          "fold": 1,
+          "start": "2020-09-23 06:00:00+00:00",
+          "end": "2021-09-27 04:59:50+00:00",
+          "trades": 73,
+          "net_r": -4.8688
+        },
+        {
+          "fold": 2,
+          "start": "2021-09-27 04:59:50+00:00",
+          "end": "2022-10-01 03:59:40+00:00",
+          "trades": 89,
+          "net_r": 5.0035
+        },
+        {
+          "fold": 3,
+          "start": "2022-10-01 03:59:40+00:00",
+          "end": "2023-10-05 02:59:30+00:00",
+          "trades": 76,
+          "net_r": 6.9746
+        },
+        {
+          "fold": 4,
+          "start": "2023-10-05 02:59:30+00:00",
+          "end": "2024-10-08 01:59:20+00:00",
+          "trades": 88,
+          "net_r": 7.3841
+        },
+        {
+          "fold": 5,
+          "start": "2024-10-08 01:59:20+00:00",
+          "end": "2025-10-12 00:59:10+00:00",
+          "trades": 70,
+          "net_r": 0.2949
+        },
+        {
+          "fold": 6,
+          "start": "2025-10-12 00:59:10+00:00",
+          "end": "2026-10-15 23:59:00+00:00",
+          "trades": 69,
+          "net_r": -7.6053
+        }
+      ],
+      "argv": [
+        "/opt/hostedtoolcache/Python/3.11.17/x64/bin/python3",
+        "/home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_pullback.py",
+        "--trend-lookback",
+        "40",
+        "--pullback-lookback",
+        "10",
+        "--pullback-frac",
+        "0.5",
+        "--data",
+        "<data>",
+        "--symbol",
+        "AVAXUSDT",
+        "--resample",
+        "2h",
+        "--atr-period",
+        "14",
+        "--atr-stop-mult",
+        "2",
+        "--trail-mult",
+        "5.0",
+        "--min-confidence",
+        "0.0",
+        "--fee-bps-roundtrip",
+        "11.0",
+        "--emit-trades",
+        "comms/research/RQ-20261030-41cc-04/41111403810/arms/A__trades.jsonl",
+        "--json",
+        "comms/research/RQ-20261030-41cc-04/41111403810/arms/A__bt.json",
+        "--adx-min",
+        "25",
+        "--vol-skip-below-pctl",
+        "0.1",
+        "--trail-decay-arm-r",
+        "4.86",
+        "--trail-decay-stall-bars",
+        "6",
+        "--trail-decay-tight-mult",
+        "2.5",
+        "--tp-cap-pct",
+        "0.099",
+        "--tp-r",
+        "50.0",
+        "--start",
+        "2020-07-01",
+        "--end",
+        "2026-10-15 23:59"
+      ]
+    },
+    "TV95": {
+      "reach_ge_6r": 0.0021,
+      "n": 478,
+      "net_r": 2.376,
+      "net_r_fee_only": 10.0676,
+      "max_drawdown_r": 22.0936,
+      "by_outcome": {
+        "take_profit": 110,
+        "stop": 126,
+        "trail_stop": 241,
+        "timeout": 1
+      },
+      "mean_bars_held": 17.082,
+      "net_r_per_capital_day": 0.0035,
+      "cost_stack": {
+        "fee_bps_roundtrip": 11.0,
+        "slippage_bps_roundtrip": 3.0,
+        "funding_bps_per_window": 1.0
+      },
+      "params": {
+        "trend_lookback": 40,
+        "pullback_lookback": 10,
+        "pullback_frac": 0.5,
+        "atr_stop_mult": 2.0,
+        "trail_mult": 5.0,
+        "min_confidence": 0.0,
+        "vol_skip_above_pctl": 0.0,
+        "vol_skip_below_pctl": 0.1,
+        "vol_pctl_window": 200,
+        "trail_vol_above_pctl": 0.95,
+        "trail_vol_below_pctl": 0.0,
+        "trail_vol_tight_mult": 2.0,
+        "adx_min": 25.0,
+        "adx_period": 14
+      },
+      "data_start": "2020-09-23 06:00:00+00:00",
+      "data_end": "2026-10-15 22:00:00+00:00",
+      "folds": [
+        {
+          "fold": 1,
+          "start": "2020-09-23 06:00:00+00:00",
+          "end": "2021-09-27 04:59:50+00:00",
+          "trades": 75,
+          "net_r": -5.3024
+        },
+        {
+          "fold": 2,
+          "start": "2021-09-27 04:59:50+00:00",
+          "end": "2022-10-01 03:59:40+00:00",
+          "trades": 92,
+          "net_r": 5.3427
+        },
+        {
+          "fold": 3,
+          "start": "2022-10-01 03:59:40+00:00",
+          "end": "2023-10-05 02:59:30+00:00",
+          "trades": 77,
+          "net_r": 7.2113
+        },
+        {
+          "fold": 4,
+          "start": "2023-10-05 02:59:30+00:00",
+          "end": "2024-10-08 01:59:20+00:00",
+          "trades": 91,
+          "net_r": 7.1496
+        },
+        {
+          "fold": 5,
+          "start": "2024-10-08 01:59:20+00:00",
+          "end": "2025-10-12 00:59:10+00:00",
+          "trades": 72,
+          "net_r": -2.035
+        },
+        {
+          "fold": 6,
+          "start": "2025-10-12 00:59:10+00:00",
+          "end": "2026-10-15 23:59:00+00:00",
+          "trades": 71,
+          "net_r": -9.9913
+        }
+      ],
+      "argv": [
+        "/opt/hostedtoolcache/Python/3.11.17/x64/bin/python3",
+        "/home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_pullback.py",
+        "--trend-lookback",
+        "40",
+        "--pullback-lookback",
+        "10",
+        "--pullback-frac",
+        "0.5",
+        "--data",
+        "<data>",
+        "--symbol",
+        "AVAXUSDT",
+        "--resample",
+        "2h",
+        "--atr-period",
+        "14",
+        "--atr-stop-mult",
+        "2",
+        "--trail-mult",
+        "5.0",
+        "--min-confidence",
+        "0.0",
+        "--fee-bps-roundtrip",
+        "11.0",
+        "--emit-trades",
+        "comms/research/RQ-20261030-41cc-04/41111403810/arms/TV95__trades.jsonl",
+        "--json",
+        "comms/research/RQ-20261030-41cc-04/41111403810/arms/TV95__bt.json",
+        "--adx-min",
+        "25",
+        "--vol-skip-below-pctl",
+        "0.1",
+        "--trail-decay-arm-r",
+        "4.86",
+        "--trail-decay-stall-bars",
+        "6",
+        "--trail-decay-tight-mult",
+        "2.5",
+        "--tp-cap-pct",
+        "0.099",
+        "--tp-r",
+        "50.0",
+        "--trail-vol-above-pctl",
+        "0.95",
+        "--trail-vol-tight-mult",
+        "2.0",
+        "--start",
+        "2020-07-01",
+        "--end",
+        "2026-10-15 23:59"
+      ]
+    },
+    "TV90": {
+      "reach_ge_6r": 0.0021,
+      "n": 476,
+      "net_r": 1.3808,
+      "net_r_fee_only": 9.1126,
+      "max_drawdown_r": 21.189,
+      "by_outcome": {
+        "take_profit": 113,
+        "stop": 141,
+        "trail_stop": 221,
+        "timeout": 1
+      },
+      "mean_bars_held": 17.328,
+      "net_r_per_capital_day": 0.002,
+      "cost_stack": {
+        "fee_bps_roundtrip": 11.0,
+        "slippage_bps_roundtrip": 3.0,
+        "funding_bps_per_window": 1.0
+      },
+      "params": {
+        "trend_lookback": 40,
+        "pullback_lookback": 10,
+        "pullback_frac": 0.5,
+        "atr_stop_mult": 2.0,
+        "trail_mult": 5.0,
+        "min_confidence": 0.0,
+        "vol_skip_above_pctl": 0.0,
+        "vol_skip_below_pctl": 0.1,
+        "vol_pctl_window": 200,
+        "trail_vol_above_pctl": 0.9,
+        "trail_vol_below_pctl": 0.0,
+        "trail_vol_tight_mult": 2.5,
+        "adx_min": 25.0,
+        "adx_period": 14
+      },
+      "data_start": "2020-09-23 06:00:00+00:00",
+      "data_end": "2026-10-15 22:00:00+00:00",
+      "folds": [
+        {
+          "fold": 1,
+          "start": "2020-09-23 06:00:00+00:00",
+          "end": "2021-09-27 04:59:50+00:00",
+          "trades": 74,
+          "net_r": -5.7688
+        },
+        {
+          "fold": 2,
+          "start": "2021-09-27 04:59:50+00:00",
+          "end": "2022-10-01 03:59:40+00:00",
+          "trades": 90,
+          "net_r": 4.4314
+        },
+        {
+          "fold": 3,
+          "start": "2022-10-01 03:59:40+00:00",
+          "end": "2023-10-05 02:59:30+00:00",
+          "trades": 78,
+          "net_r": 6.513
+        },
+        {
+          "fold": 4,
+          "start": "2023-10-05 02:59:30+00:00",
+          "end": "2024-10-08 01:59:20+00:00",
+          "trades": 90,
+          "net_r": 5.5082
+        },
+        {
+          "fold": 5,
+          "start": "2024-10-08 01:59:20+00:00",
+          "end": "2025-10-12 00:59:10+00:00",
+          "trades": 73,
+          "net_r": -0.5143
+        },
+        {
+          "fold": 6,
+          "start": "2025-10-12 00:59:10+00:00",
+          "end": "2026-10-15 23:59:00+00:00",
+          "trades": 71,
+          "net_r": -8.7896
+        }
+      ],
+      "argv": [
+        "/opt/hostedtoolcache/Python/3.11.17/x64/bin/python3",
+        "/home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_pullback.py",
+        "--trend-lookback",
+        "40",
+        "--pullback-lookback",
+        "10",
+        "--pullback-frac",
+        "0.5",
+        "--data",
+        "<data>",
+        "--symbol",
+        "AVAXUSDT",
+        "--resample",
+        "2h",
+        "--atr-period",
+        "14",
+        "--atr-stop-mult",
+        "2",
+        "--trail-mult",
+        "5.0",
+        "--min-confidence",
+        "0.0",
+        "--fee-bps-roundtrip",
+        "11.0",
+        "--emit-trades",
+        "comms/research/RQ-20261030-41cc-04/41111403810/arms/TV90__trades.jsonl",
+        "--json",
+        "comms/research/RQ-20261030-41cc-04/41111403810/arms/TV90__bt.json",
+        "--adx-min",
+        "25",
+        "--vol-skip-below-pctl",
+        "0.1",
+        "--trail-decay-arm-r",
+        "4.86",
+        "--trail-decay-stall-bars",
+        "6",
+        "--trail-decay-tight-mult",
+        "2.5",
+        "--tp-cap-pct",
+        "0.099",
+        "--tp-r",
+        "50.0",
+        "--trail-vol-above-pctl",
+        "0.9",
+        "--trail-vol-tight-mult",
+        "2.5",
+        "--start",
+        "2020-07-01",
+        "--end",
+        "2026-10-15 23:59"
+      ]
+    }
+  },
+  "window": {
+    "start": "2020-07-01",
+    "end": "2026-10-15 23:59",
+    "fetch_days": 2330,
+    "feed": {
+      "source": "binance",
+      "ticker": "AVAXUSDT",
+      "interval": "120",
+      "resample": "2h"
+    },
+    "fold_edges": [
+      "2020-09-23 06:00:00+00:00",
+      "2021-09-27 04:59:50+00:00",
+      "2022-10-01 03:59:40+00:00",
+      "2023-10-05 02:59:30+00:00",
+      "2024-10-08 01:59:20+00:00",
+      "2025-10-12 00:59:10+00:00",
+      "2026-10-15 23:59:00+00:00"
+    ]
+  }
+}
