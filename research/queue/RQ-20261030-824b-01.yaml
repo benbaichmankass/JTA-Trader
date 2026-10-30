@@ -26,15 +26,16 @@ why_this_matters: 'TM-BENCH defines the numbers every later trade-management ver
   ML-AM-NEXT-LIVE proposes next) on a scorer whose zero and ceiling are verified on the real population, not only on synthetic paths.'
 power:
   expected_n: 2627
-  min_detectable_effect: 0.005
+  min_detectable_effect: 0.03
   effect_units: R
-  sd: 0.0
-  design: reproduction
+  sd: 0.45
+  design: one_sample
   alpha: 0.05
   power: 0.8
-  basis: 'A reproduction, not a sampling test: the census oracle is a deterministic function of the emitted paths (MEASURED 0.7562 on
-    2,627 trades, research/results/RQ-20261024-09a6-01/40143286436.jsonl, census.__pooled__). A harness change since 2026-10-24 that
-    moves the emit moves it; the tolerance 0.005 R is the row''s.'
+  basis: 'The graded clauses are deterministic (the census oracle and B0-B0 are functions of the emitted paths: MEASURED 0.7562 on
+    2,627 trades, research/results/RQ-20261024-09a6-01/40143286436.jsonl, census.__pooled__), so this block powers what the bench is
+    FOR on this population: a policy-vs-B0 paired dR of +0.03 R/trade (S-OFFLINE) at the paired per-trade sd 0.40-0.51 R INFERRED in
+    ML-PROGRAMME section 2.2 from d6e7-06''s CIs (0.45 used). n = 2,627 trades (MEASURED, 09a6-01 census) clears the one-sample floor.'
   feasibility:
     source: none
     accrual_basis: Replays history through config-exact harness runs on keyless public candles for a pinned window; nothing accrues.
