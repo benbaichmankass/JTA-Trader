@@ -1,23 +1,23 @@
 {
  "schema": 1,
- "as_of": "2026-10-30T06:30:33Z",
+ "as_of": "2026-10-30T07:24:38Z",
  "producer": "scripts/research/research_slo.py",
  "config": "scripts/research/research_slo.yaml",
  "counts": {
-  "ok": 14,
-  "breach": 2,
+  "ok": 13,
+  "breach": 3,
   "could_not_look": 0
  },
  "latest": [
   {
    "slo": "runnable_floor",
-   "state": "ok",
-   "value": 57,
+   "state": "breach",
+   "value": 56,
    "op": ">=",
-   "threshold": 57,
+   "threshold": 58,
    "what": "runnable units >= the computed floor (queue_throughput.computed_floor: max(25, ceil(fired_24h x 19/24)))",
    "evidence": {
-    "fired_24h_stamps": 72,
+    "fired_24h_stamps": 73,
     "queued": 173,
     "basis": "queue_replenish.runnable(); floor = queue_throughput.computed_floor(fired_24h)",
     "read_state": "measured"
@@ -31,7 +31,7 @@
    "threshold": 24,
    "what": "units fired in the last 24 h (sum of `dispatched` over comms/research/utilization/ records)",
    "evidence": {
-    "dispatch_runs_24h": 21,
+    "dispatch_runs_24h": 20,
     "basis": "sum(len(dispatched)) over comms/research/utilization records in 24 h",
     "read_state": "measured"
    }
@@ -39,7 +39,7 @@
   {
    "slo": "lands_24h",
    "state": "ok",
-   "value": 78,
+   "value": 75,
    "op": ">=",
    "threshold": 12,
    "what": "result rows landed in the last 24 h whose read_state is a verdict (not producer_failed / no_data)",
@@ -231,7 +231,7 @@
   {
    "slo": "dispatcher_age_h",
    "state": "ok",
-   "value": 0.56,
+   "value": 1.46,
    "op": "<=",
    "threshold": 3,
    "what": "hours since the newest dispatcher utilization record on main (one per dispatch cycle that ran; lands ~1 h late)",
@@ -244,7 +244,7 @@
   {
    "slo": "collector_age_h",
    "state": "ok",
-   "value": 0.11,
+   "value": 1.01,
    "op": "<=",
    "threshold": 6,
    "what": "hours since the newest commit on main touching research/results/ (a result landed)",
@@ -257,12 +257,12 @@
   {
    "slo": "grader_age_h",
    "state": "ok",
-   "value": 4.48,
+   "value": 0.81,
    "op": "<=",
    "threshold": 14,
    "what": "hours since the last SUCCESSFUL research-queue-grade.yml run (GitHub; could_not_look without a token)",
    "evidence": {
-    "newest": "2026-10-30T02:01:55+00:00",
+    "newest": "2026-10-30T06:35:52+00:00",
     "basis": "last successful research-queue-grade.yml run",
     "read_state": "measured"
    }
@@ -270,7 +270,7 @@
   {
    "slo": "research_ops_age_h",
    "state": "breach",
-   "value": 14.84,
+   "value": 15.74,
    "op": "<=",
    "threshold": 8,
    "what": "hours since the newest research-ops pass record (comms/research/ops/*.json finished_at); the pass runs 4x/day",
@@ -300,7 +300,7 @@
   {
    "slo": "hold_pr_wait_h",
    "state": "ok",
-   "value": 0.61,
+   "value": 1.51,
    "op": "<=",
    "threshold": 24,
    "what": "hours the oldest open non-automation PR adding research/queue/ unit files has waited (hold PRs)",
@@ -309,7 +309,7 @@
     "oldest": [
      {
       "pr": 21518,
-      "hours": 0.61,
+      "hours": 1.51,
       "title": "TM-BENCH: the one trade-management bench (tm_bench.py) + runner unit RQ-20261030-824b-01"
      }
     ],
@@ -320,6 +320,10 @@
  ],
  "alert_state": {
   "open": {
+   "runnable_floor": {
+    "since": "2026-10-30T07:24:38Z",
+    "state": "breach"
+   },
    "authoring_supply_ratio_7d": {
     "since": "2026-10-30T00:24:34Z",
     "state": "breach"
@@ -329,7 +333,7 @@
     "state": "breach"
    }
   },
-  "last_alert": "2026-10-30T00:24:34Z",
+  "last_alert": "2026-10-30T07:24:38Z",
   "suppressed_by_watchdog": []
  },
  "runs": [
@@ -406,6 +410,25 @@
    ],
    "alert": null,
    "delivered": null
+  },
+  {
+   "at": "2026-10-30T07:24:38Z",
+   "counts": {
+    "ok": 13,
+    "breach": 3,
+    "could_not_look": 0
+   },
+   "not_ok": [
+    "runnable_floor",
+    "authoring_supply_ratio_7d",
+    "research_ops_age_h"
+   ],
+   "alert": "change",
+   "delivered": {
+    "telegram": true,
+    "ops_flags_comment": true,
+    "ops_flags_pr": 17895
+   }
   }
  ]
 }
