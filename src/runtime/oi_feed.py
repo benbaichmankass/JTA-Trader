@@ -56,16 +56,23 @@ PAGE = 200
 #: plus the 6 h cooldown chain before it; warm up to this span and keep a margin beyond it.
 WARMUP_S = 7 * 86400 + 8 * 3600
 KEEP_S = 9 * 86400
-MAX_BACKFILL_PAGES = 16
+#: Warm-up / gap pages per refresh. The refresh runs INSIDE the trading tick, so a cold start is spread
+#: over several ticks (16 pages = the full 7-day warm-up in ~4 refreshes) instead of one long one.
+PAGES_PER_REFRESH = 4
 #: Newest row older than this -> ``stale`` (the venue publishes a row every 5 min).
 STALE_AFTER_S = 20 * 60
 MIN_REFRESH_S = 50.0
+#: After a failed venue read, the symbol is not asked again for this long (a dead venue must not cost
+#: every tick its timeouts). The status says could_not_look / stale meanwhile; nothing halts.
+FAIL_BACKOFF_S = 300.0
+HTTP_TIMEOUT_S = 4.0
 #: How long after a 1h boundary the E4 decision waits for the hour's last OI row (see POINT IN TIME).
 DECISION_WAIT_S = 240.0
 
 _LOCK = threading.Lock()
 _LAST_REFRESH: Dict[str, float] = {}
 _UNFILLABLE: Dict[str, set] = {}
+_FAILED_AT: Dict[str, float] = {}
 
 Getter = Callable[[str, float], Any]
 
@@ -124,7 +131,7 @@ def parse_page(payload: Any) -> List[tuple]:
 
 
 def fetch_page(symbol: str, *, end_s: Optional[float] = None, limit: int = PAGE,
-               getter: Optional[Getter] = None, timeout: float = 10.0) -> List[tuple]:
+               getter: Optional[Getter] = None, timeout: float = HTTP_TIMEOUT_S) -> List[tuple]:
     """One page of 5-minute open interest ending at ``end_s`` (default: now). Raises when every
     base fails -- the caller turns that into a ``could_not_look`` status."""
     q = {"category": "linear", "symbol": symbol.upper(), "intervalTime": "5min", "limit": int(limit)}
@@ -217,7 +224,8 @@ def refresh(symbol: str, *, now: Optional[float] = None, getter: Optional[Getter
     now = time.time() if now is None else float(now)
     with _LOCK:
         rows = load(sym)
-        if not force and now - _LAST_REFRESH.get(sym, -1e18) < MIN_REFRESH_S:
+        backing_off = now - _FAILED_AT.get(sym, -1e18) < FAIL_BACKOFF_S
+        if not force and (backing_off or now - _LAST_REFRESH.get(sym, -1e18) < MIN_REFRESH_S):
             st = grade(rows, now, None)
             st["rows"] = rows
             return st
@@ -228,7 +236,7 @@ def refresh(symbol: str, *, now: Optional[float] = None, getter: Optional[Getter
             merge(rows, fresh, seen=now, backfill=not rows)
             # Warm-up: page back until the span covers WARMUP_S (venue history, marked bf=1).
             pages = 0
-            while rows and rows[-1][0] - rows[0][0] < WARMUP_S and pages < MAX_BACKFILL_PAGES:
+            while rows and rows[-1][0] - rows[0][0] < WARMUP_S and pages < PAGES_PER_REFRESH:
                 older = fetch_page(sym, end_s=rows[0][0] - 1, getter=getter)
                 pages += 1
                 if not merge(rows, older, seen=now, backfill=True):
@@ -236,8 +244,7 @@ def refresh(symbol: str, *, now: Optional[float] = None, getter: Optional[Getter
             # A hole (process down longer than the 50-row page): fill it from the venue, marked as
             # backfill. A hole the venue itself has is remembered and not re-asked every tick.
             gap_end = _first_gap_end(rows, since=now - WARMUP_S, skip=_UNFILLABLE.get(sym, set()))
-            pages = 0
-            while gap_end is not None and pages < MAX_BACKFILL_PAGES:
+            while gap_end is not None and pages < PAGES_PER_REFRESH:
                 older = fetch_page(sym, end_s=gap_end, getter=getter)
                 pages += 1
                 if not merge(rows, older, seen=now, backfill=True):
@@ -245,6 +252,7 @@ def refresh(symbol: str, *, now: Optional[float] = None, getter: Optional[Getter
                 gap_end = _first_gap_end(rows, since=now - WARMUP_S, skip=_UNFILLABLE.get(sym, set()))
         except Exception as exc:  # noqa: BLE001 -- no halting: report, retry next tick
             err = f"{type(exc).__name__}: {exc}"[:300]
+            _FAILED_AT[sym] = now
             logger.warning("oi_feed: %s refresh failed: %s", sym, err)
         rows = [r for r in rows if r[0] >= now - KEEP_S]
         try:

@@ -191,10 +191,15 @@ class _Venue:
 def test_refresh_warms_up_from_venue_history_and_grades_fresh(tmp_path, monkeypatch):
     monkeypatch.setenv("OI_FEED_DIR", str(tmp_path))
     oi_feed._LAST_REFRESH.clear()
+    oi_feed._FAILED_AT.clear()
     now = float(T0 + 120)
     v = _Venue(now)
     st = oi_feed.refresh("BTCUSDT", now=now, getter=v)
-    assert st["read_state"] == "fresh" and st["warm"] is True
+    assert st["read_state"] == "fresh" and st["warm"] is False      # warm-up is spread over ticks
+    assert v.calls == 1 + oi_feed.PAGES_PER_REFRESH
+    for _ in range(3):
+        st = oi_feed.refresh("BTCUSDT", now=now, getter=v, force=True)
+    assert st["warm"] is True
     assert st["span_s"] >= oi_feed.WARMUP_S
     assert all(r[3] == 1 for r in st["rows"])            # history fetched after the fact = backfill
     doc = json.loads((tmp_path / "status.json").read_text())
@@ -209,8 +214,22 @@ def test_refresh_warms_up_from_venue_history_and_grades_fresh(tmp_path, monkeypa
 def test_refresh_failure_is_could_not_look_never_fresh(tmp_path, monkeypatch):
     monkeypatch.setenv("OI_FEED_DIR", str(tmp_path))
     oi_feed._LAST_REFRESH.clear()
+    oi_feed._FAILED_AT.clear()
     st = oi_feed.refresh("ETHUSDT", now=float(T0), getter=_Venue(T0, fail=True))
     assert st["read_state"] == "could_not_look" and st["n_rows"] == 0 and "down" in st["last_error"]
+
+
+def test_a_dead_venue_is_not_asked_every_tick(tmp_path, monkeypatch):
+    monkeypatch.setenv("OI_FEED_DIR", str(tmp_path))
+    oi_feed._LAST_REFRESH.clear()
+    oi_feed._FAILED_AT.clear()
+    v = _Venue(T0, fail=True)
+    oi_feed.refresh("SOLUSDT", now=float(T0), getter=v)
+    n = v.calls
+    oi_feed.refresh("SOLUSDT", now=float(T0) + oi_feed.MIN_REFRESH_S + 1, getter=v)
+    assert v.calls == n                                   # backing off
+    oi_feed.refresh("SOLUSDT", now=float(T0) + oi_feed.FAIL_BACKOFF_S + 1, getter=v)
+    assert v.calls > n
 
 
 def test_stale_store_is_graded_stale():
