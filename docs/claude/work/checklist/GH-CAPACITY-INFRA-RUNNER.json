@@ -2,8 +2,8 @@
   "id": "GH-CAPACITY-INFRA-RUNNER",
   "title": "Dedicated runner capacity for infra workflows (system-actions, vm-ops, deploy, diag relays, phone-executor-apk)",
   "phase": null,
-  "state": "queued",
-  "owner": "manager",
+  "state": "in_flight",
+  "owner": "lane GH-CAPACITY-INFRA-RUNNER",
   "lane": null,
   "model": null,
   "ceiling_usd": null,
@@ -13,12 +13,12 @@
   "blocked_on": [
     {
       "kind": "observation",
-      "ref": "GH-CAPACITY-INFRA-FIRST",
-      "what": "re-measure: after-snapshot ~24h after #18225 merges -- infra queued->started wait for system-actions, phone-executor-apk and diag relays; if infra still waits > ~10 min, re-raise this row"
+      "ref": "GH-CAPACITY-INFRA-RUNNER-REMEASURE",
+      "what": "24h after merge: re-measure Guards run-guards step on automation PRs (was 802s) and job queue waits per docs/research/gh-actions-capacity-2026-10-30.md"
     }
   ],
-  "note": "Re-ranked 2 (manager 08:17Z): measured 20+ min queue on an order-path system-action (#21201) behind 90 CI runs; see GH-CAPACITY-INFRA-FIRST note. Live-review applies go VM-side (rows watcher) and are not affected; operator/manager system-actions are.",
-  "updated_at": "2026-10-29T08:15:05Z",
+  "note": "Re-ranked 2 (manager 08:17Z): measured 20+ min queue on an order-path system-action (#21201) behind 90 CI runs; see GH-CAPACITY-INFRA-FIRST note. Live-review applies go VM-side (rows watcher) and are not affected; operator/manager system-actions are. 2026-10-30 lane: measured (docs/research/gh-actions-capacity-2026-10-30.md). PR-CI cancel-in-progress already existed; 68% of PR runs are automation/*; Guards run-guards step ~13 min on data-only PRs, candle-fixture scan now pr_skip_unless. Observation: re-measure Guards step + queue wait ~24h after merge. Operator-only: concurrency ceiling is a plan setting.",
+  "updated_at": "2026-10-30T17:08:40Z",
   "updated_by": "session_01AFoLuKwNMzjtn2CH2kVd86",
   "roadmap": [
     "L-OPS"
