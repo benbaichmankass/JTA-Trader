@@ -1,0 +1,83 @@
+id: RQ-20261030-e18g-03
+title: 'E4 absolute Stage-0 (operator: E4 is a STRATEGY): frozen E4, held-out window 2024-11-01..2025-10-25: is the mean net R per trade > 0 with the 95% weekly-cluster CI lower bound > 0, net of the full
+  cost stack (fee 11.0 + slippage 3.0 bps round trip + funding 1.0 bp per 8h window)?'
+status: blocked
+cadence: once
+theme: live_strategy
+priority: 1
+roadmap:
+- L-DESK
+kind: experiment
+question: Take the 856 filled E4 brackets of the held-out window (the ledger docs/research/e4-prop-sim-2026-10-30/ledgers/e4_full.jsonl, rows with window=holdout; frozen arm, unchanged). Is the mean of
+  driver_net_r (gross R minus execution_costs.roundtrip_cost_r with the driver's cost_policy) above 0 with the 95% ISO-week cluster bootstrap CI lower bound above 0 (10,000 draws, seed 20261030)? Scored
+  once.
+why_this_matters: 'Operator ~22:20Z via Manager Session 2026-10-30c, popup verbatim: "1, but try refining the desk - we already have a research pipeline for developing strategies bur we want the desk to
+  be going active management that also helps train the mls". E4 is a STRATEGY, not the desk, and a strategy needs an ABSOLUTE Stage-0 pass (RULE-D1-STAGE0-NET-OF-FULL-COST family), not only a beat-random
+  pass (RQ-20261030-e18g-02 PASS: S3 +0.184 R). DISCLOSURE (RULE ONE): this rule is registered AFTER the held-out run printed mean net R +0.022 per trade (n 856); the CI of that mean was NOT read before
+  registration. The point estimate is far below the MDE, so the prior is stated here: P(PASS) about 10-15%. If it FAILS, E4 stays demo-only and is not a prop candidate.'
+power:
+  expected_n: 856
+  min_detectable_effect: 0.14
+  effect_units: R
+  sd: 1.5
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: 'n = 856 held-out filled brackets, 52 ISO weeks (counted before any CI was read). sd of per-trade net R inferred at 1.5 R (observed in e18g-01/-02). MDE = 2.8 x 1.5 / sqrt(856) = 0.14 R iid, about
+    0.14 R clustered (DEV/held-out cluster ratio 1.0-1.06). The known point estimate +0.022 R is 0.16 of the MDE: a PASS needs the true mean to be well above that, and a FAIL does not rule out a small positive
+    edge (<= +0.1 R).'
+  feasibility:
+    source: none
+    accrual_basis: 'Not accrual-bound: public history; scored once.'
+decision_rule:
+  id: RULE-RQ20261030-E18G-03-E4-STAGE0-ABSOLUTE
+  registered_at: '2026-10-30'
+  registered_before_run: true
+  statistic: 'Population: held-out E4 filled brackets (window=holdout rows of e4_full.jsonl). x_i = driver_net_r. Mean and ISO-week cluster bootstrap 95% CI. Harness: scripts/research/desk_event_entry_replay.py
+    (detect, score_class engine) via scripts/research/e4_prop_ledger.py and scripts/research/e4_stage0.py. Cost stack: fee 11.0 + slippage 3.0 bps round trip + funding 1.0 bp per 8h window (cost_policy
+    for the symbol, read from the code at run time and printed). Reported, not decisive: the same on the DEV ledger, fold (quarter) split of the held-out window, fee-only net R.'
+  rule: 'PASS iff n >= 30 AND mean net R per trade > 0 AND the 95% weekly-cluster CI lower bound > 0. FAIL otherwise. A PASS licenses writing comms/strategy_evidence/e4_oi_shock.json with decision_rule
+    verdict pass; it does not touch a roster. A FAIL: the record is written with verdict fail, E4 stays demo-only and is NOT a prop candidate. Scored once.'
+  what_it_does_not_do: No config, roster, order or mode change. Binance candles stand in for Bybit; entry at least one 1h bar after the event; no live-fill modelling; one fixed bracket.
+masked_replay:
+  population: not applicable - a mechanical rule arm, no LLM judge and no masked packet; no model spend.
+  construction: n/a
+  unmask_key: n/a
+  leak_controls: Event detectors read only data stamped at or before known_at; the decision cutoff is the next 1h boundary and the engine reads bars after it only for the outcome. Prefix-identity control
+    (history truncated at 2026-04-01 gives identical events) and oracle/anti-oracle/random-side controls are part of the verdict.
+  novelty: not scored.
+practice_precedent: docs/research/desk-event-calendar-scope-2026-10-28.md (event classes, PIT survey) and docs/research/desk-18f-maker-fills-2026-10-30.md (S3 bar, paired same-model baseline, 97.5% decisive
+  CI)
+compute: cpu_light
+value:
+  usd_at_stake_per_month: 500
+  confidence: 0.05
+  bucket: ai_trader
+  basis: 'stand-in, not a measurement: as RQ-20261030-f18f-01; prior P(clear) below 10%.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 2.0
+  est_minutes: 2
+  basis: 'estimate: about 860 events x 200 draws of at most 24 bars.'
+run:
+  command:
+  - python3
+  - scripts/research/e4_stage0.py
+  - '{out_dir}'
+  inputs:
+    research_unit: RQ-20261030-e18g-03
+  timeout_minutes: 120
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+blocked_on:
+- kind: manager_release
+  ref: E57
+  what: new queue units hold for the manager (E57); the lane runs the harness locally on the registered rule and the manager releases or retires this file.
+  clears_when: the manager moves this file to research/queue/ (or retires it) after the PR lands.
+related:
+- RQ-20261030-e18g-02
+- RQ-20261030-e18g-01
+last_dispatched_at: null
