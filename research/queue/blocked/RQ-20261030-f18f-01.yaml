@@ -1,0 +1,94 @@
+id: RQ-20261030-f18f-01
+title: 'Desk maker-fill entries (DESK-18F): re-entered as resting limits, do judged-1''s valid proposals beat a random entry under the SAME maker model by S3 >= +0.25 R (97.5% weekly-cluster CI lower bound > 0), net of the full cost stack, with non-fills counted as no-trade?'
+status: blocked
+cadence: once
+theme: live_strategy
+priority: 1
+roadmap:
+- L-DESK
+kind: experiment
+question: >-
+  Take every valid propose_entry row of comms/research/desk_gen_replay/judged-1/proposals.jsonl (the DEV sample; 732 rows, 6 crypto USDT perps, window 2025-11-01 .. 2026-09-15). Keep each proposal's side, stop level, target level and horizon exactly as proposed.
+  Replace the market entry with a resting limit at L = E - side x offset x ATR14(cutoff), E the proposal's entry level, valid for 4 hourly bars after the cutoff. Does the mean of (slot value minus the same-model random-entry slot mean) reach +0.25 R with a 97.5% weekly-cluster CI lower bound above 0
+  for at least one of the two arms (offset 0.00 ATR; offset 0.25 ATR), where a slot that does not fill, or is refused, is a NO-TRADE worth 0 R and stays in the denominator on both sides of the pair?
+why_this_matters: >-
+  Operator 2026-10-30 ~20:45Z, popup answer verbatim "Maker fills": the lever chosen for row DESK-18D-JUDGE-2's pending question (which structural lever to build so a packet arm can clear S3 >= +0.25 R on the DEV sample). Judged-1 at the market: S3 +0.006 R CI [-0.19, +0.19], random-entry null -0.112 R pooled.
+  Maker entries save fee (taker 5.5 bps to maker 2.0 bps on the entry leg) and the entry slippage, about 5 bps of ~12.3 bps round trip. The prior unit RQ-20261027-a3f1-01 MEASURED about +2 bps per entry (taker-fallback policy, random entries on Bybit prints); at a 1 ATR stop that is a few hundredths of an R, so the prior is a FAIL, stated here before the run.
+power:
+  expected_n: 732
+  min_detectable_effect: 0.15
+  effect_units: R
+  sd: 1.4
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: >-
+    n is the COUNT of valid judged-1 proposals read by the driver's intake step (a count taken before any replay; nothing is scored to obtain it). The sd of the paired difference is INFERRED at 1.4 R from judged-1's MEASURED pooled sd 1.378 (RQ-20261026-e535-03 power block); the run records the OBSERVED sd and MDE.
+    MDE = 2.8 x 1.4 / sqrt(732) iid, wider under the weekly cluster. The bar is +0.25 R, so a PASS is well above the MDE; a true effect of +0.10 R is NOT detectable here and an INDETERMINATE or FAIL does not rule it out.
+  feasibility:
+    source: none
+    accrual_basis: >-
+      Not accrual-bound: the sample is the committed judged-1 proposals (already judged, so the registration of this rule before the first score is what keeps the test honest). Replay is CPU only and needs Binance Vision candles for the six symbols.
+decision_rule:
+  id: RULE-RQ20261030-F18F-01-DESK-MAKER-ENTRY
+  registered_at: '2026-10-30'
+  registered_before_run: true
+  statistic: >-
+    Population: all valid propose_entry rows of judged-1 under the driver's intake (read_proposals: max 2 per packet, refused rows already removed and counted). Engine: desk_gen_replay_driver.simulate unchanged (a limit fills only when a bar's low (long) / high (short) trades STRICTLY through L inside the window, a gap fills at the open, a fill bar credits no target, stop before target in a bar, horizon counted from the fill bar), stop and target at the proposal's ABSOLUTE levels;
+    a fill whose stop is within 0.1 ATR14 or on the wrong side, or whose target is already passed, is refused (NO-TRADE). MAKER MODEL: window W = 4 bars; entry fee MAKER 2.0 bps per side (Bybit published non-VIP schedule, UNVERIFIED on our account), exit fee the symbol's taker half of cost_policy (5.5 bps); entry slippage 0 (a limit fills at its price), exit slippage the half of cost_policy (1.5 bps); funding unchanged. Net R = gross R minus execution_costs.roundtrip_cost_r with those legs.
+    Slot value x_i = net R if filled, 0.0 if unfilled or refused; unresolved (data end) slots are excluded and counted. Pair: b_i = mean slot value of 200 random-entry draws (seed 20261026 + 7) with proposal i's geometry (side, stop and target distance in ATR14 from E, horizon) at random eligible hourly cutoffs of the SAME symbol and fold, entered with the SAME limit model (so b_i includes the baseline's own non-fills as 0).
+    S3 = mean over slots of d_i = x_i - b_i. CIs: weekly-cluster bootstrap (ISO week is the resampling unit), 10,000 draws, seed 20261026; the decisive interval is the 97.5% one (two decisive arms: Bonferroni). Arms (offset in ATR14 inside E): A = 0.00, B = 0.25. Reported, not decisive: the control (market entry, driver's own taker costs) reproducing judged-1's S3, S1 per slot and per fill, S3 per fill,
+    fill rate and the baseline's fill rate, the random null, per fold, per side, and sensitivities: maker fee 3.5 and 5.5 bps, entry slippage kept, window 1 and 12 bars, offset 0.50.
+  rule: >-
+    AN ARM CLEARS S3 IF its S3 (per slot) >= +0.25 R AND the 97.5% cluster CI lower bound > 0. VERDICT S3_CLEARED IF at least one arm clears (and the control reproduces: all 732 market-entry replays match the committed judged-1 records in exit reason and days, and the implied round-trip cost gap versus those records is one constant (sd < 0.01 bps); else INDETERMINATE, instrument did not reproduce. MEASURED before registration, by an intake-only run that scores no maker arm: path identical, the committed net R is a constant 3.5 bps round trip cheaper than today's cost policy (11.0 fee + 3.0 slippage bps), every re-derived packet sha differs from the committed one (1,498 of 1,498, cause not established: git history is shallow) while packet ids match. Scoring uses today's cost policy for the desk and the baseline alike.); S3_NOT_CLEARED otherwise, reported with the best arm's number, n, fill rate, CI and its distance from the bar.
+    A clearing arm is a DEV-sample discovery, not an edge: it re-opens row DESK-18D-JUDGE-2 (the judged-2 held-out confirm, a fresh-seed window, rule registered before that run) and nothing else. It never advances a leg, touches a roster or sends an order.
+  what_it_does_not_do: >-
+    No config, roster, order, mode or sizing change; not a Tier-3 case. It does not verify the maker fee, queue position, latency or post-only rejects (probe (b) of docs/research/desk-maker-fills-2026-10-27.md does). It prices an ENTRY lever only: the take-profit leg stays a taker exit (a resting TP is a separate, unmeasured lever).
+masked_replay:
+  population: the judged-1 valid proposals (masked packets, the same six symbols; aliases resolved by the committed mask key); candles are Binance Vision SPOT klines, the driver's route.
+  construction: >-
+    `desk_maker_entry_replay.py run` re-derives each judged packet from the candles and refuses on a sha mismatch (candle drift), exactly as `desk_gen_replay_driver.py score` does.
+  unmask_key: comms/research/desk_gen_replay/judged-1/mask-key.json (public; judged-1 is closed).
+  leak_controls: >-
+    The proposals were written by a judge that saw only the masked packet; the random baseline uses the same symbol, fold and entry model. The DEV sample was already scored at the market, so every choice here (arms, window, fee, rule) is fixed in this file BEFORE the first maker score.
+  novelty: not scored here.
+practice_precedent: 'docs/research/desk-maker-fills-2026-10-27.md (maker vs taker entry, strict trade-through fill, non-fills priced as no-trade, adverse selection stated) and docs/research/desk-18c-edge-optimization-2026-10-27.md (exploration-set discipline: a rule registered before the first score)'
+compute: cpu_light
+value:
+  usd_at_stake_per_month: 500
+  confidence: 0.05
+  bucket: ai_trader
+  basis: 'stand-in, not a measurement: as RQ-20261027-e72b-01; the prior P(clear) is below 5% (savings of about 5 bps per entry vs a bar of 0.25 R).'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 2.0
+  est_minutes: 60
+  basis: 'estimate: 732 proposals x 200 draws x about 14 variants of at most 96 bars on one core, plus packet re-derivation.'
+run:
+  command:
+  - python3
+  - scripts/research/desk_maker_entry_replay.py
+  - run
+  - --out
+  - '{out_dir}'
+  - --fetch
+  inputs:
+    research_unit: RQ-20261030-f18f-01
+  timeout_minutes: 180
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+blocked_on:
+- kind: manager_release
+  ref: E57
+  what: new queue units hold for the manager (E57); the lane runs the harness locally on the registered rule and the manager releases or retires this file.
+  clears_when: the manager moves this file to research/queue/ (or retires it) after the PR lands.
+related:
+- RQ-20261026-e535-03
+- RQ-20261027-e72b-01
+- RQ-20261027-a3f1-01
+- scripts/research/desk_maker_entry_replay.py
+- docs/research/desk-18f-maker-fills-2026-10-30.md
+last_dispatched_at: null
