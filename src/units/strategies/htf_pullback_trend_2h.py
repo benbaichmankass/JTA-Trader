@@ -73,6 +73,8 @@ from typing import Any, Dict, Optional
 
 import pandas as pd
 
+from src.runtime.trail_cross import trail_cross_verdict
+from src.runtime.exit_levers import closed_frame
 from src.runtime.tp_venue_cap import (  # the ONE owner of the clamp
     TP_VENUE_CAP_PCT as _TP_SENTINEL_CAP_PCT)
 from src.runtime.tp_revision import declared_rule, merge_verdict, plan_tp_revision
@@ -749,7 +751,7 @@ def monitor(cfg, candles_df, open_pkg):
         or _coerce_float(cfg_dict.get("trail_mult"))
         or float(_DEFAULTS["trail_mult"])
     )
-    window = _since_entry(candles_df, open_pkg)
+    window = _since_entry(closed_frame(candles_df, meta, cfg_dict), open_pkg)  # harness: closed bars
     # M20 P4.1 trail-decay lever — shared runtime helper; see
     # trend_donchian.monitor for the contract (YAML-declared per leg /
     # annotate-only undeclared; fail-safe to the base mult).
@@ -825,13 +827,15 @@ def monitor(cfg, candles_df, open_pkg):
         if direction == "long":
             ext = float(window["high"].max())
             candidate = ext - trail_mult * atr
-            if candidate > sl and candidate < current_price:
-                _trail = {"sl": round(candidate, 8)}
+            if candidate > sl:
+                _trail = ({"sl": round(candidate, 8)} if candidate < current_price
+                          else trail_cross_verdict(direction, candidate, sl, current_price))
         else:
             ext = float(window["low"].min())
             candidate = ext + trail_mult * atr
-            if candidate < sl and candidate > current_price:
-                _trail = {"sl": round(candidate, 8)}
+            if candidate < sl:
+                _trail = ({"sl": round(candidate, 8)} if candidate > current_price
+                          else trail_cross_verdict(direction, candidate, sl, current_price))
     except (KeyError, ValueError, TypeError):
         _trail = None
     return merge_verdict(_trail, _tp_rev)

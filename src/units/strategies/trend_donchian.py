@@ -57,6 +57,7 @@ from typing import Any, Dict, Optional
 
 import pandas as pd
 
+from src.runtime.trail_cross import trail_cross_verdict
 from src.runtime.tp_revision import merge_verdict, plan_tp_revision
 from src.runtime.tp_venue_cap import (  # the ONE owner of the clamp
     TP_VENUE_CAP_PCT as _TP_SENTINEL_CAP_PCT)
@@ -958,15 +959,20 @@ def _trail_verdict(meta, cfg_dict, open_pkg, candles_df, current_price, directio
         if direction == "long":
             ext = float(window["high"].max())
             candidate = ext - trail_mult * atr
-            # Ratchet up only; never above the current price.
-            if candidate > sl and candidate < current_price:
-                return {"sl": round(candidate, 8)}
+            # Ratchet up only. Through the price = the harness has exited
+            # (TRAIL-RATCHET-AUDIT): close, do not keep the looser stop.
+            if candidate > sl:
+                if candidate < current_price:
+                    return {"sl": round(candidate, 8)}
+                return trail_cross_verdict(direction, candidate, sl, current_price)
         else:
             ext = float(window["low"].min())
             candidate = ext + trail_mult * atr
-            # Ratchet down only; never below the current price.
-            if candidate < sl and candidate > current_price:
-                return {"sl": round(candidate, 8)}
+            # Ratchet down only; through the price = close (see long side).
+            if candidate < sl:
+                if candidate > current_price:
+                    return {"sl": round(candidate, 8)}
+                return trail_cross_verdict(direction, candidate, sl, current_price)
     except (KeyError, ValueError, TypeError):
         return None
 
