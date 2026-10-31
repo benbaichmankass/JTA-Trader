@@ -16533,3 +16533,21 @@ nodes:
     usd_at_stake_per_month: 200
     confidence: 0.2
   needs_authoring: 'C8 full close: does a triggered exit-now (thesis invalidated, regime flip, event) beat hold net of cost on each leg as traded (not the fixed bracket the Q8 line failed on)? Register the rule before the run; grade per leg, real-money legs first; both brackets must remain.'
+- id: P1-VOLWIN-desk-wake
+  goal: G1
+  theme: live_strategy
+  roadmap: [L-DESK, L-AM-STANDARD]
+  value: {usd_at_stake_per_month: 200, confidence: 0.15}
+  after:
+  - {unit: RQ-20261031-28bf-01, verdict: pass}
+  needs_authoring: >-
+    DESIGN NOTE node (not code). GATED on VOL-WINDOW stage A (RQ-20261031-28bf-01) naming >= 1 qualifying cell. Author ONE design note
+    (docs/plans, registered per the document index) plus, if the note holds, one research unit that replays it: a trading-desk trigger
+    that wakes the desk at the qualifying windows on the qualifying symbols (DST-aware clock, a few minutes before the window start,
+    with the first-5/15-minute read delivered at the signal bar), so the desk can judge an entry as it already judges setups and
+    open trades. The note states: the trigger source (a clock schedule from the qualifying-cell table, not a new gate; a wake that
+    does not decide what runs), the packet the desk receives (window, symbol, stage-A rule, its net-R and CI, the vol ratio, the
+    current regime and spread), the decision it makes (take / skip / size per the existing desk contract in .claude/skills/trading-desk),
+    the cost per wake, and the replay: desk entries vs the mechanical stage-A rule vs matched-random entries at the same windows, net of
+    the full cost stack, on stage A's confirmation folds (scripts/research/desk_event_entry_replay.py is the nearest existing driver).
+    Gates this adds or changes: none intended (a wake is not an execution gate; the note must say so). Not authored if stage A fails.
