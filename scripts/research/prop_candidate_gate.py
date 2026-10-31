@@ -23,7 +23,6 @@ from __future__ import annotations
 
 import argparse
 import json
-import statistics as st
 import subprocess
 import sys
 import tempfile
@@ -32,8 +31,8 @@ from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-import prop_ev_sim as pes  # noqa: E402
-import prop_gate as pg  # noqa: E402
+import prop_ev_sim as pes
+import prop_gate as pg
 
 ARM_P = "P=--fee-bps-roundtrip=8;--slippage-bps-roundtrip=3;--funding-bps-per-window=5;--funding-window-hours=24"
 ACCOUNTS = ("breakout_2", "tradeify_1", "velotrade_1")
@@ -136,7 +135,7 @@ def _synth_ledger(path: Path, mean_gross: float, n: int = 120) -> None:
 
 def _self_test() -> int:
     assert candidate_verdict([]) [0] == "INDETERMINATE"
-    mk = lambda v, win="3y", n=200, ev=1.0: {"window": win, "arm": "cur", "n": n, "v3_verdict": v, "ev_median_usd": ev}  # noqa: E731
+    mk = lambda v, win="3y", n=200, ev=1.0: {"window": win, "arm": "cur", "n": n, "v3_verdict": v, "ev_median_usd": ev}
     ok3 = [mk("PASS") for _ in ACCOUNTS]
     assert candidate_verdict(ok3)[0] == "PASS"
     assert candidate_verdict(ok3[:2] + [mk("FAIL_EDGE")])[0] == "FAIL"

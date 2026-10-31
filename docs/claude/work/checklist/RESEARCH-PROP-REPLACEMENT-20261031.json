@@ -12,7 +12,19 @@
   "prs": [],
   "blocked_on": [],
   "note": "RUN NOTE 2026-10-31 (Sonnet lane, dispatched by Manager Session 2026-10-31a). Authored 15 pre-registered units RQ-20261031-a4e7-01..15 (rules registered before any run). JOB 1 prop replacement: a4e7-01 trend_donchian_xrp_4h, -02 xrp_pullback_2h, -03 ada_pullback_2h, -04 trend_donchian_sol_4h refresh, each via new scripts/research/prop_candidate_gate.py (exit_lever_ablation stage0 at the prop stack, then prop_gate V3 on breakout_2/tradeify_1/velotrade_1; 3y + trailing 365d; self-tested on a synthetic ledger, the harness fetch itself NOT run here). PASS on all 3 accounts at 3y/cur and not CONTESTED on 365d -> manager brings ONE Tier-3 swap PR (batch denominator k of 4; tie-break fixed before the run). Expected: n ~46-135 so most outcomes are FAIL_EDGE/INDETERMINATE by power, stated in each unit. JOB 2 MODEL: a4e7-05..14 ml_bakeoff units (ExtraTrees/HGB/calibrated-logit/CatBoost/MLP/slow-LGBM non-inferiority or lift on BTC/ETH/SOL regime and direction heads, embargo-96 leakage control, recent-window skill); MODEL runnable 3 -> 13 by research_ops_checks.py (dry-run dispatch confirms would_dispatch for all 10; ml_bakeoff self-test OK). JOB 3: vol_window_scan.py gains --lengths and --rules (self-test case 5 added, OK); a4e7-15 runs 120/240 min C15/F15/O15 on 10 low-cost lanes; programme node P3-VOLWIN-A2-longer-hold marked AUTHORED. Closes when: a4e7-01..04 results are read (observation: comms/research/RQ-20261031-a4e7-0N/verdict.json landed).",
-  "updated_at": "2026-10-31T23:02:06Z",
+  "updated_at": "2026-10-31T23:16:11Z",
   "updated_by": "session_01AFoLuJZpYowJTHyq6Pxa7T",
+  "roadmap": [
+    "L-PROP"
+  ],
+  "writeback": {
+    "roadmap": "none: research authoring only, no milestone line changed (outcomes write back when a4e7-01..04 are graded)",
+    "arch": "none: no component changed"
+  },
+  "observation": {
+    "what": "verdicts of RQ-20261031-a4e7-01..04 (prop candidates) landed as comms/research/<unit>/<run>/verdict.json",
+    "how_to_check": "python3 scripts/research/research_ops_checks.py --since 7d",
+    "due_by": "2026-11-07"
+  },
   "_seq": 856
 }
