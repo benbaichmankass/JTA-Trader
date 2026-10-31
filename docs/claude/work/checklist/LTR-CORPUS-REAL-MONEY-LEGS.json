@@ -18,11 +18,16 @@
   "roadmap": [
     "L-AM-STANDARD"
   ],
-  "updated_at": "2026-10-31T10:27:13Z",
+  "updated_at": "2026-10-31T10:59:24Z",
   "updated_by": "session_01AFoLuKcjgyBdWeA73z9NtW",
   "writeback": {
     "roadmap": "L-AM-STANDARD: full-history LTR corpora for all 7 real-money/prop legs; packet --corpus auto records corpus_source",
     "arch": "none: no architecture change (offline research data + packet read path)"
+  },
+  "observation": {
+    "what": "first judgement_cadence live-review packet after deploy has priced_options.corpus_source == ltr_full_history with n >= 20 comparable trades in the cell the review uses",
+    "how_to_check": "read the newest comms/live_review/packets/*.json (or live-review/rows branch) for a real-money/prop package: priced_options.corpus_source, .corpus_trades, .population.comparable >= 20",
+    "due_by": "2026-11-03T00:00Z"
   },
   "_seq": 786
 }
