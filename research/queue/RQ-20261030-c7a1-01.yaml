@@ -4,7 +4,7 @@ id: RQ-20261030-c7a1-01
 title: 'Q-TM1b: is the TM-BENCH per-action advantage PREDICTABLE out of fold at all (rank calibration vs a shuffled control), and does an
   action-value policy restricted to the action classes that are, with its act margin chosen on INNER out-of-fold predictions, beat hold on
   the six money legs net of cost?'
-status: queued
+status: done
 cadence: once
 theme: ml_health
 priority: 1
@@ -125,3 +125,16 @@ related:
 what_it_does_not_do: Registers, serves or promotes nothing; changes no config; places no order. Widen / TP-extend classes stay untested
   until ML-EXIT-ACTIONGRID-LABELS builds them.
 last_dispatched_at: '2026-10-30T22:53:36+00:00'
+grading:
+  attested: RULE-RQ20261030-c7a1-01-QTM1B
+  auto: true
+  decision_rule_id: RULE-RQ20261030-c7a1-01-QTM1B
+  evidence:
+  - research/results/RQ-20261030-c7a1-01/41134401720.jsonl
+  graded_at: '2026-10-31'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail
