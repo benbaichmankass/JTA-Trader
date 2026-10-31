@@ -1,0 +1,18 @@
+{
+  "due_when": {
+    "clears_when": "a conflicted automation PR whose content is already on main is closed (or rebuilt) by automation with no manager action, observed once",
+    "due_date": "2026-11-03",
+    "kind": "date"
+  },
+  "id": "PI-20261030-9KC5G3FG-0004",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "Manager Session 2026-10-30c, ops-flags #17895 comment 6532272736",
+    "rerun": "list open automation/* PRs with mergeable_state dirty; for each, git merge --no-commit origin/main and check whether every conflicting file already exists on main with the PR's content (an instance = yes)"
+  },
+  "severity": "low",
+  "state": "queued",
+  "tier": 1,
+  "what": "Research automation PRs go stale-conflicted because their content already landed on main by another route, and nothing closes them: the watchdog escalates conflicted_automation with 'no self-heal available'. MEASURED 2026-10-30 (Manager Session 2026-10-30c): #21655 (results batch, dispatcher run 41079828093) conflicted add/add on research/results/RQ-20261030-41cc-25/41076199664.jsonl and all 5 of its result rows were already on main; #21649 (liveness receipt) conflicted on docs/claude/work/research-queue-dispatch-receipt.json, rewritten every run; #21657 (replenish run 41082774046) conflicted add/add on RQ-20261030-021/022/024 because later units took those ids. Manager closed all three by hand. Fix: the watchdog (or the commit-to-main action) closes an automation PR whose added files are all byte-identical on main, or whose only conflict is a superseded receipt, and a replenish PR whose ids collide is regenerated instead of left open."
+}

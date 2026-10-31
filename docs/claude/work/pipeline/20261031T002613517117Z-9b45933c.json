@@ -1,0 +1,18 @@
+{
+  "due_when": {
+    "clears_when": "a full-checkout regeneration matches the committed ledger, or the diff is landed with each changed leg named and the e4 'why' text corrected, or killed with a reason",
+    "due_date": "2026-11-03",
+    "kind": "date"
+  },
+  "id": "PI-20261031-9KC5G3FG-0003",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "Manager Session 2026-10-30c, lane DESK-18G report on PR #21720",
+    "rerun": "regenerate comms/research/trial_ledger.json with its generator on a full clone at origin/main and diff; any change in stage0_verdict for an existing leg is an instance"
+  },
+  "severity": "medium",
+  "state": "queued",
+  "tier": 1,
+  "what": "comms/research/trial_ledger.json may be STALE: lane DESK-18G (PR #21720, 2026-10-31 ~00:25Z) reports that regenerating it in a session sandbox changes 38 other legs' entries and moves stage0_pass from 31 to 28; the lane hand-added only the e4_oi_shock entry instead of regenerating. Either the committed ledger no longer matches the evidence records it summarises (3 legs read pass that should not), or the sandbox regeneration lacks inputs. Also the hand-added e4_oi_shock entry's 'why' text says 'source_run not readable ... NOT a fail' while its stage0_verdict is fail (generator boilerplate contradicting the field). Determine which; regenerate on a full checkout and diff leg by leg; name any leg whose stage0 status changes."
+}
