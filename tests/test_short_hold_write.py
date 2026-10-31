@@ -209,3 +209,42 @@ def test_external_context_goes_to_training_and_feed_gap_files(remote):
     assert gap["feed_gap"] == "bybit_live_funding_rate" and gap["gap_class"] == "funding"
     (row,) = [json.loads(x) for x in _git(remote["lane"], "show", f"{tip}:{sw.REVIEWS}").splitlines()]
     assert any(f.startswith("external_context: 1 source") for f in row["context_flags"])
+
+
+def test_a_could_not_look_mechanics_read_is_still_judged_and_routes_to_the_operator():
+    """DESK-HANDOFF-PROTOCOL step 0: a failed read is not a broken trade."""
+    env = envelope(verdict="could_not_look")
+    row = sw.compile_row(draft(action="close", reason="structure broke"), env, now=NOW)
+    assert row["disposition"]["route"] == "operator_ask" and valid(row, env) == []
+    hold = sw.compile_row(draft(), env, now=NOW)
+    assert hold["disposition"]["route"] == "none"
+
+
+def _desk_env(**dh):
+    env = envelope()
+    env["packet"]["leg"] = "claude_desk"
+    env["packet"]["desk_handoff"] = {"read_state": "read", "prior_decision_id": "DD-20261031T0400Z-scan-1h-1", **dh}
+    env["packet_sha"] = sw.packet_sha(env["packet"])
+    return env
+
+
+def test_a_desk_trade_row_carries_the_linked_handoff():
+    env = _desk_env()
+    row = sw.compile_row(draft(handoff_verdict="confirm"), env, now=NOW)
+    assert row["handoff"] == {"prior_decision_id": "DD-20261031T0400Z-scan-1h-1", "verdict": "confirm",
+                              "reason": "5m higher lows intact", "read_state": "read"}
+    assert valid(row, env) == []
+    ex = sw.compile_row(draft(action="close", handoff_verdict="exit", reason="thesis dead"), env, now=NOW)
+    assert valid(ex, env) == []
+
+
+@pytest.mark.parametrize("d", [draft(), draft(handoff_verdict="maybe"), draft(handoff_verdict="exit"),
+                               draft(action="close", handoff_verdict="confirm")])
+def test_a_desk_trade_needs_a_valid_handoff_verdict(d):
+    with pytest.raises(sw.Refused):
+        sw.compile_row(d, _desk_env(), now=NOW)
+
+
+def test_a_non_desk_trade_takes_no_handoff_verdict():
+    with pytest.raises(sw.Refused, match="only for a desk-opened trade"):
+        sw.compile_row(draft(handoff_verdict="confirm"), envelope(), now=NOW)

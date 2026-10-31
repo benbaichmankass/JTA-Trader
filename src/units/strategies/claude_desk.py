@@ -34,8 +34,9 @@ What this module decides (pure; the builder in ``strategy_signal_builders`` does
   ``entry_type_unsupported`` and recorded (the multiplexer path places at the signal price; a
   resting-entry adapter is follow-up work, filed on row DESK-17).
 
-* **Max hold.** A proposal's ``max_hold_min`` (required and <= 60 on a live row: the short-hold kind,
-  operator 2026-10-27 *"get in and get out quickly"*) rides in the package meta; ``monitor()`` closes the
+* **Max hold.** A proposal's OPTIONAL ``max_hold_min`` (no upper cap since DESK-HANDOFF-PROTOCOL, operator
+  2026-10-30: the cap lifts because every later wake owns the position through the hand-off record; it was
+  required and <= 60 on a live row 2026-10-27..10-31) rides in the package meta; ``monitor()`` closes the
   trade at market once that many minutes have passed since the package opened (reason ``max_hold``).
 
 Otherwise ``monitor()`` returns ``None``: the venue bracket is the plan, and the desk's in-trade decisions
@@ -305,7 +306,7 @@ def exclusive_hold_refusal(strategy: Any, current_signed_qty: Any, desk_holds_op
       the desk's own) -> ``desk_symbol_held``: the desk enters only a flat symbol, so it never nets into a strategy's
       position and its max-hold close can never flatten one;
     * another leg's package while the desk holds an open trade on the symbol -> ``symbol_held_by_desk_leg``
-      (the desk's hold is <= 60 min; the strategy's next signal is evaluated fresh);
+      (the desk holds for its thesis; the strategy's next signal is evaluated fresh once the desk trade closes);
     * ``desk_holds_open is None`` (the journal could not be read) -> ``symbol_held_by_desk_leg:unreadable`` (fail
       closed: "could not look" is never read as flat)."""
     if str(strategy or "") == NAME:

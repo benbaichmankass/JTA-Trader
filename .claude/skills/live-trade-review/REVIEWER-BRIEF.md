@@ -93,6 +93,28 @@ Every in-trade class stays **advice only** (step 5): your call is recorded, grad
 - **A package whose entry reads `packet_state: omitted_too_large`** was left out of the comment only because of its size. If its `evidence_state` is `committed` or `exists`, the wake poster has already landed the packet and table byte-exact. This is the ONE exception to "read nothing from your checkout": read them with `git fetch -q --depth 1 origin live-review/rows`, then `git show origin/live-review/rows:comms/live_review/packets/<review_id>.json` (and `tables/<review_id>.json`), and judge the package as if its block were inline. With no committed evidence, there is no review for that package: say so in your report.
 - `trigger` on each row is that entry's `judgement_cadence` event and its `level` (the slot start), copied exactly.
 
+## 2c. A desk-opened trade: CONFIRM, REVISE or EXIT (DESK-HANDOFF-PROTOCOL, 2026-10-31)
+
+> **Operator, popup 2026-10-30 ~22:30Z (verbatim):** *"We can lift it completely if we have a protocol for trade desk hand-offs"*. The desk's own trades (`leg: claude_desk`) no longer have a 60-minute cap, and every desk wake is a fresh session, so **you own this trade now**.
+
+A packet that carries **`desk_handoff`** is a position the desk opened. That block gives you:
+- `opening`: the desk's thesis, `forecast` (target, p, invalidation, horizon) and `exit_plan`;
+- `chain_tail`: the latest views on the position (each with its action, verdict, reason and forecast);
+- `prior_decision_id`: the newest record in the chain.
+
+Judge it as any trade (§ 2, § 2b), **against that record**, then write `handoff`:
+- `verdict` (`confirm` / `revise` / `exit`):
+  - `confirm`: the thesis and plan stand.
+  - `revise`: something changed (a new target, invalidation, horizon or plan). `reason` says what and why, and your `forecast` carries the new view.
+  - `exit`: the thesis is dead. The action is `close`, and only `exit` goes with `close`.
+- `prior_decision_id`: copied exactly from `desk_handoff.prior_decision_id`. This keeps one chain per position, and the validator checks it against the committed packet.
+- `reason`: one line, required on `revise`.
+- `read_state`: copied from `desk_handoff.read_state`.
+
+When `desk_handoff.read_state` is `could_not_look` (the record or the chain could not be read), still judge the trade, and write `handoff` with `read_state: could_not_look` and `prior_decision_id` as given (it may be `null`). The position keeps its venue SL/TP whatever you write: never a silent orphan, never a halt.
+
+A packet with no `desk_handoff` gets no `handoff` key.
+
 ## 3. The output: ONE row, exactly this shape
 
 - `review_id` = `packet.review_id`; `packet_sha` = the block's `packet_sha`; `outcome_table_source` = `table_path` (or `null` with no table).
@@ -104,6 +126,7 @@ Every in-trade class stays **advice only** (step 5): your call is recorded, grad
   - a non-judgement `tighten_sl` records `tighten_r` on both arms;
   - `insufficient_n` <=> `no_recommendation`, and on a real-money/prop row neither `insufficient_n` nor `default_hold` is accepted; `no_recommendation` there needs `basis: could_not_look` + `reason`;
   - from 2026-10-31T00:00Z a judged row (`basis` `judgement`, `ev_positive` or `preference_within_bound`) carries a `forecast` (§ 2b) with `target_px` != `invalidation_px`; a `mechanics` / `could_not_look` / `record_only` row leaves it out;
+  - when the committed packet carries `desk_handoff`, the row carries `handoff` (§ 2c): `prior_decision_id` equals the packet's, `revise` has a reason, and `exit` <=> `close`;
   - an option with `n == 0` has null numbers;
   - `account_reads` covers exactly `accounts`, once each;
   - `review_id` ends with `-` + the row's own `order_package_id` (`LR-<ts>-pkg-6a8e…` carries `order_package_id: pkg-6a8e…`). Copy the id, package id, leg, accounts and state from ONE packet block, never mixed across blocks (2026-10-26 a row was written with one package's id and another's body; the append-only branch cannot take it back, and the mirror now refuses and skips it).
@@ -279,6 +302,7 @@ Every in-trade class stays **advice only** (step 5): your call is recorded, grad
       "prompt_sha": {"type": ["string", "null"]},
       "skill_sha": {"type": ["string", "null"]},
       "packet_sha": {"_comment": "LTR-3 / manager 2026-10-25: sha256 of the canonical JSON (sort_keys, compact) of the decision packet the reviewer judged, stored at comms/live_review/packets/<review_id>.json, so each decision joins to exactly what was seen. Optional until the packet generator (scripts/ops/live_review_packet.py) exists.", "type": ["string", "null"], "pattern": "^[0-9a-f]{64}$"},
+      "handoff": {"_comment": "DESK-HANDOFF-PROTOCOL (operator 2026-10-30 ~22:30Z: the desk max-hold cap lifts only with a hand-off protocol): on a desk-opened package (a packet carrying desk_handoff) every review CONFIRMs, REVISEs (with a reason) or EXITs the position against the opening desk record and the newest view, and links prior_decision_id to the packet's desk_handoff.prior_decision_id (the newest live-review row on the package, else the opening desk decision_id): one chain per position. Required when the committed packet carries desk_handoff (scripts/ci/check_live_review_records.py::handoff_problems); absent otherwise. read_state could_not_look = the packet's hand-off read failed: prior_decision_id may be null, the review still judges, the position keeps its venue SL/TP.", "type": ["object", "null"], "additionalProperties": false, "required": ["prior_decision_id", "verdict", "reason", "read_state"], "properties": {"prior_decision_id": {"type": ["string", "null"], "pattern": "^(DD|LR)-[0-9]{8}T[0-9]{4}Z-.+$"}, "verdict": {"type": "string", "enum": ["confirm", "revise", "exit"]}, "reason": {"type": ["string", "null"]}, "read_state": {"type": "string", "enum": ["read", "could_not_look"]}}},
       "forecast": {"_comment": "DESK-AM-REFOCUS (2026-10-30, docs/research/desk-am-refocus-diagnosis-2026-10-30.md section 2): the reviewer's own falsifiable view of THIS trade, written before the outcome. direction is relative to the trade (with_trade = price moves in the position's favour). Graded by RULE-DESK-AM-JUDGEMENT-V1 (direction hit, Brier of p_target, the action vs HOLD net of cost) and joined into ml claude_judgments as fc_* columns. Required on judged rows reviewed from FORECAST_RULE_FROM (scripts/ci/check_live_review_records.py); absent or null on a mechanics / could_not_look / record_only row. Prices only, never a size.", "type": ["object", "null"], "additionalProperties": false, "required": ["thesis", "direction", "target_px", "p_target", "invalidation_px", "horizon_bars", "timeframe"], "properties": {"thesis": {"type": "string", "minLength": 1}, "direction": {"type": "string", "enum": ["with_trade", "against_trade", "flat"]}, "target_px": {"type": "number"}, "p_target": {"type": "number", "minimum": 0, "maximum": 1}, "invalidation_px": {"type": "number"}, "horizon_bars": {"type": "integer", "minimum": 1}, "timeframe": {"type": "string", "enum": ["5m", "15m", "30m", "1h", "2h", "4h", "1d"]}, "evidence": {"type": "array", "items": {"type": "string"}}}}
     }
   },

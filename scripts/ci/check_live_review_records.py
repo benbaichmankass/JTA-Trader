@@ -308,10 +308,45 @@ def packet_blob_problems(row: dict, blob: bytes) -> list[str]:
     if not sha:
         return []
     try:
-        got = hashlib.sha256(json.dumps(json.loads(blob), sort_keys=True, separators=(",", ":")).encode()).hexdigest()
+        packet = json.loads(blob)
+        got = hashlib.sha256(json.dumps(packet, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
     except ValueError:
         return [f"packet for {row.get('review_id')} is not JSON"]
-    return [] if got == sha else [f"packet_sha does not match {row.get('review_id')}.json"]
+    if got != sha:
+        return [f"packet_sha does not match {row.get('review_id')}.json"]
+    return handoff_problems(row, packet)
+
+
+#: DESK-HANDOFF-PROTOCOL (operator 2026-10-30 ~22:30Z, verbatim "We can lift it completely if we have a protocol
+#: for trade desk hand-offs"). Keyed on the COMMITTED PACKET, not a date: a packet the generator built with a
+#: ``desk_handoff`` block (a desk-opened package) needs a row that confirms / revises / exits the position and
+#: links to the newest record in its chain, so the chain is checked by machine against what the reviewer saw.
+HANDOFF_VERDICTS = ("confirm", "revise", "exit")
+
+
+def handoff_problems(row: dict, packet: dict) -> list[str]:
+    dh = packet.get("desk_handoff") if isinstance(packet, dict) else None
+    if not isinstance(dh, dict):
+        return []
+    ho = row.get("handoff")
+    if not isinstance(ho, dict):
+        return ["a desk-opened package (packet carries desk_handoff) needs `handoff`: {prior_decision_id, verdict "
+                "confirm|revise|exit, reason, read_state} (REVIEWER-BRIEF section 2c)"]
+    out: list[str] = []
+    verdict, action = ho.get("verdict"), (row.get("recommendation") or {}).get("action")
+    if verdict == "revise" and not str(ho.get("reason") or "").strip():
+        out.append("handoff verdict revise needs a reason (what changed against the prior view)")
+    if (verdict == "exit") != (action == "close"):
+        out.append(f"handoff verdict {verdict!r} with action {action!r}: exit <=> close")
+    if dh.get("read_state") == "read":
+        if ho.get("read_state") != "read":
+            out.append("handoff.read_state must copy the packet's desk_handoff.read_state (read)")
+        if ho.get("prior_decision_id") != dh.get("prior_decision_id"):
+            out.append(f"handoff.prior_decision_id {ho.get('prior_decision_id')!r} != the packet's "
+                       f"desk_handoff.prior_decision_id {dh.get('prior_decision_id')!r} (one chain per position)")
+    elif ho.get("read_state") != "could_not_look":
+        out.append("the packet's desk_handoff could not be read: handoff.read_state is could_not_look")
+    return out
 
 
 def _rows(path: Path):

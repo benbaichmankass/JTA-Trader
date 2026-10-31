@@ -55,8 +55,8 @@ _spec.loader.exec_module(desk_write)
 
 # check_tp_doctrine.py's TP-REACH-FLOOR: a target reached < 10% of the time is the sentinel by another name.
 REACH_FLOOR = 0.10
-#: A live desk proposal is the short-hold kind (operator 2026-10-27, "get in and get out quickly"); shared with desk_write.
-SHORT_HOLD_MAX_MIN = desk_write.SHORT_HOLD_MAX_MIN
+#: The live max_hold_min <= 60 cap was removed by DESK-HANDOFF-PROTOCOL (operator 2026-10-30 ~22:30Z: "We can lift it
+#: completely if we have a protocol for trade desk hand-offs"); desk_write.live_proposal_problems is the shared rule.
 PACKET_SCHEMA = REPO / "comms/schema/desk_packet.schema.json"
 DECISION_SCHEMA = REPO / "comms/schema/desk_decision.schema.json"
 DESK = REPO / "comms/desk"
@@ -387,6 +387,9 @@ def proposal_problems(r: dict, scan: dict | None) -> list[str]:
     elif r["judge_prior"] is None:
         out.append("propose_entry requires judge_prior (P(TP before SL))")
     out += desk_write.live_proposal_problems(r)
+    pr = r.get("proposal") or {}
+    if "forecast" in pr or "exit_plan" in pr:  # DESK-HANDOFF-PROTOCOL (a): checked on any row that carries one
+        out += desk_write.handoff_record_problems(pr)
     if not probe and (pr["expected_r_net"] is None or not pr["expected_r_net"] < tp_r):
         out.append("expected_r_net cannot reach the proposal's own gross best case (tp R)")
     if scan is None:
@@ -1005,10 +1008,12 @@ def _self_test() -> int:
         LIVE = lambda r: (r.update(label_source="live", intent_id="INT-9"), r["disposition"].update(route="submitted"),  # noqa: E731
                           r["proposal"].update(max_hold_min=45), r["proposal"]["entry"].update(type="market"))
         expect("a live proposal submitted with an intent passes", dp(_mut(E, LIVE)), False)
-        expect("a live proposal without max_hold_min is refused (the short-hold kind)",
-               dp(_mut(E, lambda r: (LIVE(r), r["proposal"].pop("max_hold_min")))), True)
-        expect("a live proposal holding past 60 min is refused",
-               dp(_mut(E, lambda r: (LIVE(r), r["proposal"].update(max_hold_min=61)))), True)
+        expect("a live proposal without max_hold_min passes (no time stop: the hand-off protocol owns it)",
+               dp(_mut(E, lambda r: (LIVE(r), r["proposal"].pop("max_hold_min")))), False)
+        expect("a live proposal holding a day passes (the 60-min cap is lifted)",
+               dp(_mut(E, lambda r: (LIVE(r), r["proposal"].update(max_hold_min=1440)))), False)
+        expect("a live proposal with max_hold_min 0 is refused",
+               dp(_mut(E, lambda r: (LIVE(r), r["proposal"].update(max_hold_min=0)))), True)
         expect("a live proposal with a limit entry is refused (the leg places at market)",
                dp(_mut(E, lambda r: (LIVE(r), r["proposal"]["entry"].update(type="limit")))), True)
         expect("a shadow proposal may carry max_hold_min", dp(_mut(E, lambda r: r["proposal"].update(max_hold_min=240))), False)

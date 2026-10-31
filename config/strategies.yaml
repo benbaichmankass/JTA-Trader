@@ -3204,7 +3204,8 @@ strategies:
   # the decision_id in meta. No size: each account's RiskManager sizes it. Desk intake accepts a proposal only
   # while every account rostering this leg is a demo account in MD-TRADE-DESK.functions.entry_generation.demo_accounts;
   # every other account stays behind its blocked_until (DESK-13). A filled trade is closed at market after the
-  # proposal's max_hold_min (monitor()), and managed every 5m by its per-trade session (config/short_hold.yaml).
+  # proposal's OPTIONAL max_hold_min (monitor(); no cap since DESK-HANDOFF-PROTOCOL 2026-10-31), managed every 5m by its
+  # per-trade session (config/short_hold.yaml) and then by the 4h judgement_cadence review (the hand-off protocol).
   # Rostered on bybit_1 ONLY (the Alpaca half is row DESK-17B). ROLLBACK: delete this block and the roster entry.
   claude_desk:
     model: null

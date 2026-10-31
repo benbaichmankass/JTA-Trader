@@ -15,7 +15,8 @@ A refusal prints the reasons and writes nothing. There is no flag that skips val
 LIVE vs SHADOW (the bybit_1 demo flip, operator popup 2026-10-27 "Yes, live on bybit_1 demo now (Recommended)"):
 a `propose_entry` is written `label_source: live`, `route: submitted` with an `intent_id` exactly when, on
 origin/main, the claude_desk leg in config/strategies.yaml is `enabled: true` + `execution: live` and the
-proposal's symbol is in the leg's `symbols:`; it then needs `max_hold_min` <= 60 and a `market` entry. Every
+proposal's symbol is in the leg's `symbols:`; it then needs a `market` entry (no max-hold cap since DESK-HANDOFF-PROTOCOL,
+operator 2026-10-30: `max_hold_min` is an optional time stop the desk may set). Every
 other row stays shadow (record-only). Which ACCOUNTS may trade it is not decided here: desk intake
 (scripts/ops/desk_intake.py) admits it only while every account rostering the leg is a demo account in
 MD-TRADE-DESK's entry_generation.demo_accounts, and each account's RiskManager sizes it.
@@ -43,7 +44,11 @@ SCHEMA = "comms/schema/desk_decision.schema.json"
 SENTINEL_R_FLOOR = 50.0  # src/runtime/target_expectation.py
 VENUE_CAP_FRACTION = 0.099  # copy of src/runtime/tp_venue_cap.py (this file is stdlib-only); tests/test_desk_wake_write.py pins equality
 REACH_FLOOR = 0.10
-SHORT_HOLD_MAX_MIN = 60  # a live desk proposal is the short-hold kind (operator 2026-10-27); the guard imports it
+# DESK-HANDOFF-PROTOCOL (operator popup 2026-10-30 ~22:30Z, verbatim "We can lift it completely if we have a protocol
+# for trade desk hand-offs"): the live max_hold_min <= 60 cap is GONE. Every proposal instead carries its hand-off
+# record -- a falsifiable `forecast` (the same object as the live review's) and an `exit_plan` -- so every later wake
+# that touches the position can confirm, revise or exit it (src/runtime/desk_handoff.py).
+HANDOFF_DRAFT_KEYS = {"invalidation_px", "exit_plan"}
 DESK_LEG = "claude_desk"
 # Mechanics probe (operator 2026-10-27 popup "Mechanics probe (Recommended)", DESK-18E): at most PROBE_MAX labelled demo trades,
 # no EV claim, excluded from every edge statistic via training.exclusion_reasons. A probe row is basis `mechanics` on a live
@@ -236,13 +241,14 @@ def is_live(action: str, symbol: str | None, scope: dict | None) -> bool:
 
 
 def live_proposal_problems(row: dict) -> list[str]:
-    """A live desk proposal (it trades on the bybit_1 demo) is the short-hold kind. Shared with the guard."""
+    """A live desk proposal (it trades on the demo/paper books) enters at market; any max_hold_min is >= 1. Shared
+    with the guard."""
     if row.get("label_source") != "live" or row.get("action") != "propose_entry" or not isinstance(row.get("proposal"), dict):
         return []
     pr, out = row["proposal"], []
     mh = pr.get("max_hold_min")
-    if not isinstance(mh, int) or isinstance(mh, bool) or not 1 <= mh <= SHORT_HOLD_MAX_MIN:
-        out.append(f"a live proposal is the short-hold kind: max_hold_min is required, 1..{SHORT_HOLD_MAX_MIN} (got {mh!r})")
+    if mh is not None and (not isinstance(mh, int) or isinstance(mh, bool) or mh < 1):
+        out.append(f"max_hold_min is an optional time stop in whole minutes >= 1 (got {mh!r}); there is no upper cap")
     if (pr.get("entry") or {}).get("type") != "market":
         out.append("a live proposal enters at `market` (the claude_desk leg refuses limit/stop as entry_type_unsupported)")
     return out
@@ -288,10 +294,10 @@ def compile_row(draft: dict, pointer: dict, packet: dict, schema: dict, *, now: 
         d = draft.get("proposal")
         if not isinstance(d, dict):
             raise Refused(["propose_entry needs a `proposal` object"])
-        keys = {"symbol", "side", "horizon_bars", "entry", "stop", "tp", "expected_r_net", "thesis"}
+        keys = {"symbol", "side", "horizon_bars", "entry", "stop", "tp", "expected_r_net", "thesis"} | HANDOFF_DRAFT_KEYS
         if set(d) - {"max_hold_min"} != keys:
             raise Refused([f"proposal keys must be exactly {sorted(keys)} plus optional max_hold_min (venue_class, "
-                           f"timeframe, novelty and onboarding are derived from the packet); got {sorted(d)}"])
+                           f"timeframe, novelty, onboarding and the forecast are derived); got {sorted(d)}"])
         u = universe.get(d["symbol"])
         if u is None:
             raise Refused([f"proposal symbol {d['symbol']} is not in the scan packet's universe"])
@@ -306,6 +312,12 @@ def compile_row(draft: dict, pointer: dict, packet: dict, schema: dict, *, now: 
                     "onboarding": "onboarded" if u["tier"] == "full" else "pending"}
         if "max_hold_min" in d:
             proposal["max_hold_min"] = d["max_hold_min"]
+        # (a) the hand-off record: compiled, so the forecast cannot disagree with the bracket it describes.
+        proposal["forecast"] = {"thesis": d["thesis"], "direction": "with_trade", "target_px": (d["tp"] or {}).get("level"),
+                                "p_target": (d["tp"] or {}).get("p_hit"), "invalidation_px": d["invalidation_px"],
+                                "horizon_bars": d["horizon_bars"], "timeframe": u["timeframe"],
+                                "evidence": [f"proposal {d['symbol']} {d['side']} on the {u['timeframe']} scan {pid}"]}
+        proposal["exit_plan"] = d["exit_plan"]  # both checked by proposal_problems -> handoff_record_problems
 
     def priced(symbol, side, horizon, level, chosen):
         h = history_row(packet, symbol, side, horizon) if isinstance(horizon, int) else None
@@ -502,6 +514,30 @@ def external_problems(row: dict) -> list[str]:
     return out
 
 
+def handoff_record_problems(pr: dict) -> list[str]:
+    """(a) The opening hand-off record: a forecast whose target is the TP, whose p is p_hit and whose invalidation
+    sits between the entry and the stop (inclusive of the stop: the thesis is wrong no later than the stop), plus a
+    non-empty exit plan. Required on every new proposal (compile_row); checked on any row that carries one."""
+    fc, out = pr.get("forecast"), []
+    if not isinstance(fc, dict):
+        return ["a proposal carries its hand-off forecast (DESK-HANDOFF-PROTOCOL)"]
+    try:
+        e, sl, tp, inv = (float(x) for x in (pr["entry"]["level"], pr["stop"]["level"], pr["tp"]["level"],
+                                              fc.get("invalidation_px")))
+    except (TypeError, ValueError, KeyError):
+        return ["invalidation_px is a price (a number)"]
+    long_ = pr.get("side") == "long"
+    if not ((sl <= inv < e) if long_ else (e < inv <= sl)):
+        out.append(f"invalidation_px {inv} must sit between the entry and the stop "
+                   f"({'stop <= invalidation < entry' if long_ else 'entry < invalidation <= stop'})")
+    if fc.get("target_px") != tp or fc.get("p_target") != pr["tp"].get("p_hit") or fc.get("direction") != "with_trade":
+        out.append("forecast target_px / p_target / direction must be the proposal's tp level / p_hit / with_trade")
+    if not str(pr.get("exit_plan") or "").strip():
+        out.append("exit_plan is required: how the trade is exited (brackets, any time stop, what would make you "
+                   "exit early) -- the next wake owns the position from it")
+    return out
+
+
 def proposal_problems(row: dict, packet: dict) -> list[str]:
     out: list[str] = []
     pr = row["proposal"]
@@ -516,6 +552,8 @@ def proposal_problems(row: dict, packet: dict) -> list[str]:
         out.append(f"TP doctrine: tp sits at or beyond the venue cap ({VENUE_CAP_FRACTION:.1%} from entry)")
     if pr["tp"]["p_hit"] < REACH_FLOOR or pr["tp"]["p_hit"] >= 1:
         out.append(f"TP doctrine: tp.p_hit must be in [{REACH_FLOOR}, 1)")
+    if "forecast" in pr or "exit_plan" in pr:
+        out += handoff_record_problems(pr)
     if is_probe(row):
         if pr["expected_r_net"] is not None:
             out.append("a mechanics probe carries no EV claim: expected_r_net is null")

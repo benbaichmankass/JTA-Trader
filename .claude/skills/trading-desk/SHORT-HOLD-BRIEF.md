@@ -43,7 +43,12 @@ No envelope yet → wait one cycle (§ 5) and look again. Three cycles with no e
 
 **The question is never "is this what the strategy would do"** (operator 2026-10-27 ~07:05Z): keep holding? let go? change the brackets? partial close? add quantity? The answer is the best trading decision, so the ML can learn from it. The leg's priced history (`packet.priced_options`) is evidence, never a constraint.
 
-1. **Mechanics first.** `mechanics.verdict` ≠ `match` → `flag_mechanics` (the only call; it routes to the operator). No exit judgement on a broken trade.
+1. **Mechanics first.** `mechanics.verdict` `mismatch` → `flag_mechanics` (the only call; it routes to the operator). No exit judgement on a broken trade. `could_not_look` (a read failed, nothing was seen to disagree) → still judge the trade; the script routes any non-`hold` call to the operator (`operator_ask`) instead of applying it, and the trade keeps its venue SL/TP (DESK-HANDOFF-PROTOCOL step 0, 2026-10-31).
+1b. **A desk-opened trade (`packet.desk_handoff` present): you own it now.** Read `desk_handoff.opening` (the desk's thesis, `forecast` with target / p / invalidation / horizon, and `exit_plan`) and `chain_tail` (the views since). Your draft adds `"handoff_verdict"`:
+   - `confirm`: the thesis stands;
+   - `revise`: something changed, and your `reason` says what;
+   - `exit`: the thesis is dead; this goes with `close`, and only `exit` goes with `close`.
+   The script links your row to `desk_handoff.prior_decision_id`, so there is one chain per position. There is no max-hold cap on a desk trade (operator 2026-10-30), so this session ends at its hard cap and the 4-hourly `judgement_cadence` review takes the position over from your last row.
 2. **Decide ONE of:**
    - `hold` — the thesis still holds; the brackets are right where they are.
    - `tighten_sl` (`level`) — lock in progress or cut risk: the stop moves toward the mark, stays on the loss side of it, and sits at least ~1 × the 5m `atr` from the mark (closer gets stopped by noise).
@@ -52,7 +57,7 @@ No envelope yet → wait one cycle (§ 5) and look again. Three cycles with no e
    - `change_size` (`size_multiplier` > 0, ≠ 1; > 1 adds, < 1 reduces) — add when the trade is working and the next leg of the move is likelier than not net of a round trip; each account's own risk manager checks an add as it would a fresh entry.
    - `close` — the thesis failed while the stop is not hit (structure broke, the move stalled past the hold you expected, a calendar event lands inside the hold).
 3. **Every call carries** a one-to-three-sentence `reason` naming what in the envelope drives it, and `judgement_confidence` = your probability that this call beats holding (for `hold`: that holding beats the best alternative). `confidence`: `measured` only when a priced cell with n ≥ `n_floor` supports you, else `suggestive` or `anecdote`.
-4. **A short hold is short.** These legs are built for ≤ 1 h. Past the leg's expected hold with no progress, holding needs a reason too.
+4. **Hold for the thesis, not the clock.** The 15m scalp legs are built for ≤ 1 h; a desk trade is held as long as its `forecast.horizon_bars` and `exit_plan` say. Past the expected hold with no progress, holding needs a reason too.
 5. Do not repeat a call that has already been applied: read `packet.state` (`sl`, `tp`) before re-proposing the same move.
 
 ## 4. The draft (the script derives everything else)
@@ -65,7 +70,7 @@ Write `/tmp/draft.json` with only these keys:
 
 With an outside source: add `"external_context":[{"query_or_url":"…","source":"…","retrieved_at":"2026-10-27T09:06:10Z","extracted":{"…":…},"summary":"…","content":"…","gap_class":"funding","feed_gap":"bybit_live_funding_rate","why_packet_insufficient":"…","influence":"supporting"}]`.
 
-`action` ∈ `hold` · `tighten_sl` · `move_tp` · `partial_close` · `change_size` · `close` · `flag_mechanics`. `level` only on `tighten_sl` / `move_tp` (a price). `size_fraction` only on `partial_close`; `size_multiplier` only on `change_size`. `context_flags`: optional strings, each `"<kind>: <evidence from the envelope>"`.
+`action` ∈ `hold` · `tighten_sl` · `move_tp` · `partial_close` · `change_size` · `close` · `flag_mechanics`. `handoff_verdict` (`confirm` / `revise` / `exit`) is required when the packet has `desk_handoff`, and only then. `level` only on `tighten_sl` / `move_tp` (a price). `size_fraction` only on `partial_close`; `size_multiplier` only on `change_size`. `context_flags`: optional strings, each `"<kind>: <evidence from the envelope>"`.
 
 **`external_context`** (only when you used an outside source): a list, one entry per source, each with exactly `query_or_url`, `source`, `retrieved_at` (UTC, when you read it; it may be after the packet's `info_cutoff_at` but never after your decision: the rule is `retrieved_at` ≤ the row's `reviewed_at`, operator 2026-10-27 'Use judged_at'), `summary` (one line of what it said), `content` (the text you read, kept short: only its sha256 is stored), `gap_class` (`news` | `funding` | `orderbook` | `calendar` | `onchain` | `macro` | `other`), `feed_gap` (a snake_case NAME for the feed we lack; reuse it for the same missing feed), `extracted` (the field/value pairs you actually used, e.g. `{"funding_rate_8h": 0.0003}`), `why_packet_insufficient`, `influence` (`decisive` / `supporting` / `checked_only`). The script stores the values point-in-time for training and writes one feed-gap row per entry: a recurring decisive gap is how a missing feed gets wired into the packet.
 

@@ -22,7 +22,8 @@ DRAFT = {"action": "propose_entry", "mechanics_probe": True, "confidence": "anec
                       "entry": {"type": "market", "level": 100.0, "good_till_bars": 2},
                       "stop": {"level": 97.0, "basis": "swing_level"},
                       "tp": {"level": 104.0, "basis": "swing_level", "p_hit": 0.4},
-                      "expected_r_net": None, "thesis": "mechanics probe", "max_hold_min": 45}}
+                      "expected_r_net": None, "thesis": "mechanics probe", "max_hold_min": 45,
+                      "invalidation_px": 97.0, "exit_plan": "brackets plus a 45-min time stop"}}
 
 
 def compile_(draft=DRAFT, scope=SCOPE, probe_rows=0):
