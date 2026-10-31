@@ -189,17 +189,17 @@ def lower_bound(n: int, mean: float, sd: float, alpha_one_sided: float) -> float
 # ---- trades for one window ---------------------------------------------------------------------------------------
 def rule_trades(w: dict[str, np.ndarray], rule: str, nb: int) -> dict[str, np.ndarray] | None:
     """Per-day (side, entry_price, entry_epoch) for `rule`; days with no signal are absent. None if the rule needs more bars."""
-    O, H, L, C, st = w["O"], w["H"], w["L"], w["C"], w["start"]
+    OP, H, L, C, st = w["O"], w["H"], w["L"], w["C"], w["start"]
     if rule in ("C5", "F5"):
         if nb < 2:
             return None
-        sig = np.sign(C[:, 0] / O[:, 0] - 1.0)
+        sig = np.sign(C[:, 0] / OP[:, 0] - 1.0)
         side = sig if rule == "C5" else -sig
         k = np.full(len(st), 1)
     elif rule in ("C15", "F15"):
         if nb < 4:
             return None
-        sig = np.sign(C[:, 2] / O[:, 0] - 1.0)
+        sig = np.sign(C[:, 2] / OP[:, 0] - 1.0)
         side = sig if rule == "C15" else -sig
         k = np.full(len(st), 3)
     elif rule == "O15":
@@ -220,7 +220,7 @@ def rule_trades(w: dict[str, np.ndarray], rule: str, nb: int) -> dict[str, np.nd
         raise ValueError(rule)
     m = side != 0
     rows = np.arange(len(st))
-    return {"side": side[m], "entry": O[rows, k][m], "entry_t": (st + k * BAR_S)[m], "idx": rows[m]}
+    return {"side": side[m], "entry": OP[rows, k][m], "entry_t": (st + k * BAR_S)[m], "idx": rows[m]}
 
 
 def window_cells(sym: str, name: str, L: int, w: dict[str, np.ndarray], cost: dict[str, Any], fold_of, edges: np.ndarray,
