@@ -1,0 +1,20 @@
+{
+  "based_on": "20261030T214324326996Z-19371e27.json",
+  "due_when": {
+    "clears_when": "the cause is named with the cost-policy git history, and judged-1 is either confirmed consistent or re-scored, or killed with a reason",
+    "due_date": "2026-11-04",
+    "kind": "date"
+  },
+  "id": "PI-20261030-9KC5G3FG-0005",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "Manager Session 2026-10-30c, lane DESK-18F-MAKER-FILLS report (PR #21719)",
+    "rerun": "re-derive net_r for the 732 judged-1 proposals with src/runtime/execution_costs.resolve_cost_policy at HEAD and diff against the committed judged-1 net_r; a constant non-zero offset is an instance"
+  },
+  "severity": "medium",
+  "state": "killed",
+  "terminal_reason": "duplicate: the same finding is tracked on checklist row DESK-18G-JUDGED1-INTEGRITY (filed by lane DESK-18F-MAKER-FILLS, landed with PR #21719); one home only.",
+  "tier": 1,
+  "what": "Committed judged-1 desk replay net R is a CONSTANT 3.5 bps round trip cheaper than today's cost policy (sd 1e-14 across 732 proposals; reported by lane DESK-18F-MAKER-FILLS, PR #21719, 2026-10-30). Either the cost policy changed after the judged-1 run (record then stale) or the judged-1 scorer used a cheaper stack (record flattered, favourable direction). Determine which; if the record is flattered, re-score judged-1 and any verdict built on it under the current policy and note the change on DESK-18-GEN-REPLAY-S0."
+}

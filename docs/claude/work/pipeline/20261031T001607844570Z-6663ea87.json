@@ -1,0 +1,18 @@
+{
+  "due_when": {
+    "clears_when": "the test passes on main with the root cause named in the fixing PR, or killed with a reason",
+    "due_date": "2026-11-02",
+    "kind": "date"
+  },
+  "id": "PI-20261031-9KC5G3FG-0002",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "Manager Session 2026-10-30c, lane E4-DEMO-LEG report (PR #21730)",
+    "rerun": "python3 -m pytest tests/test_econ_calendar_snapshot_backfill.py -q on origin/main; a failure is an instance"
+  },
+  "severity": "medium",
+  "state": "queued",
+  "tier": 1,
+  "what": "tests/test_econ_calendar_snapshot_backfill.py::TestIdProbe::test_probe_is_a_diagnostic_not_a_fallback FAILS on origin/main (reported by lane E4-DEMO-LEG, 2026-10-31 ~00:15Z, reproduced on main without its PR). A red test on main either masks a real regression in the econ-calendar snapshot backfill or is a stale test; either way every pytest-run is now trusting a known failure. Root-cause it and fix the code or the test; do not skip or quarantine it."
+}
