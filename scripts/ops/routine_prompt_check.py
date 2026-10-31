@@ -26,11 +26,11 @@ import sys
 SESSION_RE = re.compile(r"session_[A-Za-z0-9]{20,}")
 # old name only counts when it is a GitHub slug: owner/<old> or github.com/.../<old>
 OLD_SLUG_RE = re.compile(
-    r"(?:github\.com/[\w.-]+/|\b[\w.-]+/)(ict-trading-bot|metis-insights)\b", re.I
+    r"(?:github\.com/[\w.-]+/|\b[\w.-]+/)(ict-trading-bot|metis-insights)\b", re.IGNORECASE
 )
 # runtime identifiers that deliberately keep old names (CLAUDE.md § Repo identity)
 RUNTIME_OK_RE = re.compile(
-    r"(/home/ubuntu/ict-trading-bot|/opt/ict-trading-bot|ict-bot\.duckdns\.org)", re.I
+    r"(/home/ubuntu/ict-trading-bot|/opt/ict-trading-bot|ict-bot\.duckdns\.org)", re.IGNORECASE
 )
 
 
@@ -74,7 +74,11 @@ def check(doc):
 
 
 def main(argv):
-    src = open(argv[1]).read() if len(argv) > 1 and argv[1] != "-" else sys.stdin.read()
+    if len(argv) > 1 and argv[1] != "-":
+        with open(argv[1]) as fh:
+            src = fh.read()
+    else:
+        src = sys.stdin.read()
     dec, docs, i = json.JSONDecoder(), [], 0
     src = src.strip()
     while i < len(src):
