@@ -1,0 +1,7 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "hold_reason": "tier_2_3_needs_approval",
+  "why": "Order-path change in src/runtime/order_monitor.py: the modify fan-out now treats a leg's own synced trades.stop_loss as a tighten-only floor (same mechanism as notes.sl_floor), so a trail candidate looser than a leg's own stop is never sent to that leg. Only removes a loosening; a tightening candidate still reaches every leg (negative-control test). Also carries the TRAIL-RATCHET-AUDIT RESULT.md and closes the checklist row as landed_unproven. Needs the manager's land and a post-deploy observation.",
+  "hold_text": "Tier-2 order-path change in order_monitor; the manager lands it after green CI and observes the deploy."
+}
