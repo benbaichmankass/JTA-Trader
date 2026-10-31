@@ -1,5 +1,9 @@
 # Prop gate edge-sensitivity: rule V3 and the re-grade of every recorded V2 verdict
 
+> **Doc status:** `unknown` · category `evidence` · last verified `never` · registered in [`docs/DOCUMENT-INDEX.md`](../../DOCUMENT-INDEX.md) · lane PROP-GATE-EDGE-SENSITIVE (Tier 1, evidence tooling; no config, roster, order or mode)
+
+**Gates this adds or changes:** tightens the prop EV/survival gate (V2 -> V3: adds the edge CI clause). Dispatched by Manager Session 2026-10-31a with the operator's authority (PI-20261030-9KC5G3FG-0007); the prop superset rule already requires prop legs to clear at least the real-money bar.
+
 Lane PROP-GATE-EDGE-SENSITIVE · 2026-10-31 · PI-20261030-9KC5G3FG-0007 · Tier 1 (evidence tooling; no roster, config or order path touched).
 
 ## ⚠️ The currently rostered prop leg no longer passes (Tier-3 call for the operator)
