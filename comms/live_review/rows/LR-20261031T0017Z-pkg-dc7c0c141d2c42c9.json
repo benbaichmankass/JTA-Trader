@@ -1,0 +1,104 @@
+{
+ "schema_version": 1,
+ "review_id": "LR-20261031T0017Z-pkg-dc7c0c141d2c42c9",
+ "reviewed_at": "2026-10-31T00:30:00Z",
+ "order_package_id": "pkg-dc7c0c141d2c42c9",
+ "trade_id": null,
+ "leg": "trend_donchian_eth",
+ "accounts": [
+  "bybit_1"
+ ],
+ "trigger": {
+  "event": "judgement_cadence",
+  "level": "2026-10-31T00:00:00+00:00",
+  "l0_snapshot_at": null
+ },
+ "info_cutoff_at": "2026-10-31T00:17:13Z",
+ "state": {
+  "atr_now_over_entry": 0.8861,
+  "bars_held": 28,
+  "giveback_r": 1.2258,
+  "open_r": 0.2379,
+  "peak_provenance": "estimated",
+  "peak_r": 1.4637,
+  "regime_cell_entry": "chop/volatile",
+  "regime_cell_now": null,
+  "sl": 2289.84,
+  "tp": 2035.24187
+ },
+ "features_at_review": {
+  "atr_now_over_entry": 0.8861,
+  "bars_since_peak": 22,
+  "giveback_r": 1.2258,
+  "open_r": 0.2379,
+  "peak_r": 1.4637,
+  "r_to_stop": 0.7742,
+  "r_to_target": 3.6344
+ },
+ "mechanics": {
+  "evidence": "1 account(s) could not be read",
+  "verdict": "could_not_look"
+ },
+ "options": [
+  {
+   "action": "hold",
+   "level": null,
+   "n": 19,
+   "mean_r": null,
+   "sd_r": null,
+   "worst_r": null,
+   "net": null
+  }
+ ],
+ "outcome_table_source": "comms/live_review/tables/LR-20261031T0017Z-pkg-dc7c0c141d2c42c9.json",
+ "recommendation": {
+  "action": "flag_mechanics",
+  "level": null,
+  "level_atr": null,
+  "ev_delta_r": null,
+  "worst_case_delta_r": null,
+  "basis": "mechanics",
+  "confidence": "anecdote",
+  "evidence_source": "none",
+  "judgement_confidence": null,
+  "reason": "mechanics verdict could_not_look: bybit_orders read failed (diag unreachable). Flagged per brief, no exit judgement."
+ },
+ "judge_prior": null,
+ "applied": false,
+ "apply_policy": {
+  "bound_r": 0.25,
+  "within_bound": null,
+  "tighten_r": null
+ },
+ "shadow_policy": {
+  "bound_r": 0.5,
+  "within_bound": null,
+  "would_apply": null,
+  "tighten_r": null
+ },
+ "context_flags": [
+  "mechanics: could_not_look, diag bybit_open_orders unreachable",
+  "missing_inputs: bybit_orders read, regime.vol_now, context.funding",
+  "book: short +0.24R after peak 1.46R (giveback 1.23R), 1h chop/transitional, stop 2289.84 / tp 2035.24 unverified at venue"
+ ],
+ "account_reads": [
+  {
+   "account_id": "bybit_1",
+   "account_class": "paper",
+   "read": "no_action",
+   "evidence": "bybit_orders read failed: diag bybit_open_orders: exit 3 ('bybit_open_orders' \u2014 https://ict-bot.duckdns.org -> unreachable. Use the issue relay only if every candidate is 'unreachable'; an 'answered_*"
+  }
+ ],
+ "disposition": {
+  "route": "operator_ask",
+  "mandate": null,
+  "action_issue": null,
+  "applied_at": null,
+  "verified_readback": null
+ },
+ "model": "sonnet-tier (repo-less reviewer)",
+ "session": "session_01AFoLuMNw3bmkGq3LQPUcTW",
+ "prompt_sha": null,
+ "skill_sha": null,
+ "packet_sha": "509532e9a991cfb22e513a7db7ed87d217011a89e3001c2414523a2d210f5ab7"
+}

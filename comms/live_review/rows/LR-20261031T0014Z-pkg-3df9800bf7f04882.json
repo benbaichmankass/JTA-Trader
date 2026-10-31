@@ -1,0 +1,123 @@
+{
+ "schema_version": 1,
+ "review_id": "LR-20261031T0014Z-pkg-3df9800bf7f04882",
+ "reviewed_at": "2026-10-31T00:30:00Z",
+ "order_package_id": "pkg-3df9800bf7f04882",
+ "trade_id": null,
+ "leg": "slv_trend_1h",
+ "accounts": [
+  "alpaca_paper"
+ ],
+ "trigger": {
+  "event": "judgement_cadence",
+  "level": "2026-10-31T00:00:00+00:00",
+  "l0_snapshot_at": null
+ },
+ "info_cutoff_at": "2026-10-31T00:14:38Z",
+ "state": {
+  "atr_now_over_entry": 0.9937,
+  "bars_held": 16,
+  "giveback_r": 0.6919,
+  "open_r": 3.7613,
+  "peak_provenance": "estimated",
+  "peak_r": 4.4532,
+  "regime_cell_entry": null,
+  "regime_cell_now": null,
+  "sl": 45.93642857,
+  "tp": 42.48215
+ },
+ "features_at_review": {
+  "atr_now_over_entry": 0.9937,
+  "bars_since_peak": 1,
+  "giveback_r": 0.6919,
+  "open_r": 3.7613,
+  "peak_r": 4.4532,
+  "r_to_stop": 1.9748,
+  "r_to_target": 3.1104
+ },
+ "mechanics": {
+  "evidence": "package sl 45.93642857 / tp 42.48215 agree with every readable account",
+  "verdict": "match"
+ },
+ "options": [
+  {
+   "action": "hold",
+   "level": null,
+   "n": 2,
+   "mean_r": null,
+   "sd_r": null,
+   "worst_r": null,
+   "net": null
+  }
+ ],
+ "outcome_table_source": "comms/live_review/tables/LR-20261031T0014Z-pkg-3df9800bf7f04882.json",
+ "recommendation": {
+  "action": "tighten_sl",
+  "level": 45.3,
+  "level_atr": 1.55,
+  "ev_delta_r": null,
+  "worst_case_delta_r": null,
+  "basis": "judgement",
+  "confidence": "anecdote",
+  "evidence_source": "judgement",
+  "judgement_confidence": 0.55,
+  "reason": "Short at +3.76R (peak 4.45R) after a ~7 ATR 1h drop; stop 45.94 gives back ~1.9R. A stop above the bounce high 44.96 and the 45.0 area (45.30, 1.55 ATR) locks ~2.7R with the downtrend intact and a closed-market weekend gap ahead; ATR ratio 0.99 so not vol-expanded.",
+  "size_fraction": null
+ },
+ "judge_prior": null,
+ "applied": false,
+ "apply_policy": {
+  "bound_r": 0.25,
+  "within_bound": null,
+  "tighten_r": null
+ },
+ "shadow_policy": {
+  "bound_r": 0.5,
+  "within_bound": null,
+  "would_apply": null,
+  "tighten_r": null
+ },
+ "context_flags": [
+  "judgement: hold n=2 insufficient_n (not measured); tighten cells invalid_level/could_not_look",
+  "regime: 1h ADX 46 and 4h ADX 44 trending down; atr_now_over_entry 0.99",
+  "book: 4 precious-metal shorts open (SLV, IAUM, MGC x2) each ~+2.8 to +3.8R = one bet, concentration flagged",
+  "live_vs_backtest: mirror BELOW_BACKTEST -7.4R on 1 closed trade (anecdote)",
+  "tighten_bias: stop-at-price fills flatter any tighten; weekend gap fills at open",
+  "missing_inputs: bybit_orders read, regime.vol_now, regime.cell_entry"
+ ],
+ "account_reads": [
+  {
+   "account_id": "alpaca_paper",
+   "account_class": "paper",
+   "read": "unknown",
+   "evidence": "alpaca_orders: SL 45.93 / TP 42.48, position True; no apply path for this exchange yet (LTR-9 / none)"
+  }
+ ],
+ "disposition": {
+  "route": "recommended",
+  "mandate": "MD-LIVE-TIGHTEN-SL",
+  "action_issue": null,
+  "applied_at": null,
+  "verified_readback": null
+ },
+ "model": "sonnet-tier (repo-less reviewer)",
+ "session": "session_01AFoLuMNw3bmkGq3LQPUcTW",
+ "prompt_sha": null,
+ "skill_sha": null,
+ "packet_sha": "9046007c3386bd17409527789ab1a376d52fa0d46aeef52e1ab151eb091f4028",
+ "forecast": {
+  "thesis": "Downtrend intact on 1h and 4h (lower highs, new low 44.125 broken through 44.305); I expect one more leg to ~43.7 before a reclaim of 45.3 invalidates.",
+  "direction": "with_trade",
+  "target_px": 43.7,
+  "p_target": 0.4,
+  "invalidation_px": 45.3,
+  "horizon_bars": 20,
+  "timeframe": "1h",
+  "evidence": [
+   "chart.swings: low 44.305 broken",
+   "chart.htf: 4h trending, ADX 44",
+   "exit_plan: sl 45.936 / tp 42.482",
+   "book: 4 metal shorts"
+  ]
+ }
+}

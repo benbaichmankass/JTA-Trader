@@ -1,0 +1,102 @@
+{
+ "schema_version": 1,
+ "review_id": "LR-20261031T0015Z-pkg-6a8e3fb325464be3",
+ "reviewed_at": "2026-10-31T00:30:00Z",
+ "order_package_id": "pkg-6a8e3fb325464be3",
+ "trade_id": null,
+ "leg": "gld_pullback_1h",
+ "accounts": [
+  "alpaca_paper",
+  "alpaca_portfolio"
+ ],
+ "trigger": {
+  "event": "judgement_cadence",
+  "level": "2026-10-31T00:00:00+00:00",
+  "l0_snapshot_at": null
+ },
+ "info_cutoff_at": "2026-10-31T00:15:44Z",
+ "state": {
+  "atr_now_over_entry": null,
+  "bars_held": null,
+  "giveback_r": null,
+  "open_r": null,
+  "peak_provenance": "unverified",
+  "peak_r": null,
+  "regime_cell_entry": null,
+  "regime_cell_now": null,
+  "sl": 414.53875,
+  "tp": 461.32723
+ },
+ "features_at_review": {
+  "atr_now_over_entry": null,
+  "bars_since_peak": null,
+  "giveback_r": null,
+  "open_r": null,
+  "peak_r": null,
+  "r_to_stop": null,
+  "r_to_target": null
+ },
+ "mechanics": {
+  "evidence": "alpaca_paper: venue SL 416.09 != package SL 414.53875",
+  "verdict": "mismatch"
+ },
+ "options": [],
+ "outcome_table_source": null,
+ "recommendation": {
+  "action": "flag_mechanics",
+  "level": null,
+  "level_atr": null,
+  "ev_delta_r": null,
+  "worst_case_delta_r": null,
+  "basis": "mechanics",
+  "confidence": "anecdote",
+  "evidence_source": "none",
+  "judgement_confidence": null,
+  "reason": "mechanics mismatch: alpaca_paper venue SL 416.09 != package SL 414.53875 (TP 461.27 vs 461.327); the packet has no state or chart, so no exit judgement."
+ },
+ "judge_prior": null,
+ "applied": false,
+ "apply_policy": {
+  "bound_r": 0.25,
+  "within_bound": null,
+  "tighten_r": null
+ },
+ "shadow_policy": {
+  "bound_r": 0.5,
+  "within_bound": null,
+  "would_apply": null,
+  "tighten_r": null
+ },
+ "context_flags": [
+  "mechanics: mismatch, alpaca_paper venue SL 416.09 vs package 414.539",
+  "alpaca_portfolio shows no position (SL None / TP None)",
+  "missing_inputs: state, priced_options, context_v3.chart, context_v3.htf",
+  "previous review 2026-10-30T08:15Z also flag_mechanics: unresolved >16h"
+ ],
+ "account_reads": [
+  {
+   "account_id": "alpaca_paper",
+   "account_class": "paper",
+   "read": "no_action",
+   "evidence": "alpaca_orders: SL 416.09 / TP 461.27, position True; no apply path for this exchange yet (LTR-9 / none)"
+  },
+  {
+   "account_id": "alpaca_portfolio",
+   "account_class": "paper",
+   "read": "no_action",
+   "evidence": "alpaca_orders: SL None / TP None, position False; no apply path for this exchange yet (LTR-9 / none)"
+  }
+ ],
+ "disposition": {
+  "route": "operator_ask",
+  "mandate": null,
+  "action_issue": null,
+  "applied_at": null,
+  "verified_readback": null
+ },
+ "model": "sonnet-tier (repo-less reviewer)",
+ "session": "session_01AFoLuMNw3bmkGq3LQPUcTW",
+ "prompt_sha": null,
+ "skill_sha": null,
+ "packet_sha": "172aeb74049e708e931a5e5ea13e0265555847151f0d5fbe64acf54bf41daef0"
+}

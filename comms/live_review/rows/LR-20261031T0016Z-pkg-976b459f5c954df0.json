@@ -1,0 +1,123 @@
+{
+ "schema_version": 1,
+ "review_id": "LR-20261031T0016Z-pkg-976b459f5c954df0",
+ "reviewed_at": "2026-10-31T00:30:00Z",
+ "order_package_id": "pkg-976b459f5c954df0",
+ "trade_id": null,
+ "leg": "mhg_pullback_1d",
+ "accounts": [
+  "ib_paper"
+ ],
+ "trigger": {
+  "event": "judgement_cadence",
+  "level": "2026-10-31T00:00:00+00:00",
+  "l0_snapshot_at": null
+ },
+ "info_cutoff_at": "2026-10-31T00:16:25Z",
+ "state": {
+  "atr_now_over_entry": 0.79,
+  "bars_held": 31,
+  "giveback_r": 0.4188,
+  "open_r": 0.3299,
+  "peak_provenance": "estimated",
+  "peak_r": 0.7487,
+  "regime_cell_entry": null,
+  "regime_cell_now": null,
+  "sl": 6.75394643,
+  "tp": 5.9641695
+ },
+ "features_at_review": {
+  "atr_now_over_entry": 0.79,
+  "bars_since_peak": 5,
+  "giveback_r": 0.4188,
+  "open_r": 0.3299,
+  "peak_r": 0.7487,
+  "r_to_stop": 0.7349,
+  "r_to_target": 1.6444
+ },
+ "mechanics": {
+  "evidence": "package sl 6.75394643 / tp 5.9641695 agree with every readable account",
+  "verdict": "match"
+ },
+ "options": [
+  {
+   "action": "hold",
+   "level": null,
+   "n": 0,
+   "mean_r": null,
+   "sd_r": null,
+   "worst_r": null,
+   "net": null
+  }
+ ],
+ "outcome_table_source": "comms/live_review/tables/LR-20261031T0016Z-pkg-976b459f5c954df0.json",
+ "recommendation": {
+  "action": "hold",
+  "level": null,
+  "level_atr": null,
+  "ev_delta_r": null,
+  "worst_case_delta_r": null,
+  "basis": "judgement",
+  "confidence": "anecdote",
+  "evidence_source": "judgement",
+  "judgement_confidence": 0.55,
+  "reason": "Short +0.33R (peak +0.75R) in a daily chop; stop 6.754 sits just above the 6.7295 swing high and the target 5.96 is 1.6R away, so HOLD already expresses my view; price is sitting on the 6.51 support cluster and a break targets 6.37.",
+  "size_fraction": null
+ },
+ "judge_prior": null,
+ "applied": false,
+ "apply_policy": {
+  "bound_r": 0.25,
+  "within_bound": null,
+  "tighten_r": null
+ },
+ "shadow_policy": {
+  "bound_r": 0.5,
+  "within_bound": null,
+  "would_apply": null,
+  "tighten_r": null
+ },
+ "context_flags": [
+  "judgement: hold n=0 insufficient_n (not measured)",
+  "regime: 1d ADX 12 chop, weekly chop; atr ratio 0.79 (contracting)",
+  "book: independent of the metal/crypto shorts only loosely (copper is metal beta)",
+  "bars_held 31 days, stale pullback trade",
+  "calendar: none; Sat 2026-10-31 futures shut until Sunday evening",
+  "missing_inputs: bybit_orders read, regime.vol_now, regime.cell_entry, context.news"
+ ],
+ "account_reads": [
+  {
+   "account_id": "ib_paper",
+   "account_class": "paper",
+   "read": "no_action",
+   "evidence": "ib_orders: SL 6.754 / TP 5.964, position True; no apply path for this exchange yet (LTR-9 / none)"
+  }
+ ],
+ "disposition": {
+  "route": "none",
+  "mandate": null,
+  "action_issue": null,
+  "applied_at": null,
+  "verified_readback": null
+ },
+ "model": "sonnet-tier (repo-less reviewer)",
+ "session": "session_01AFoLuMNw3bmkGq3LQPUcTW",
+ "prompt_sha": null,
+ "skill_sha": null,
+ "packet_sha": "393c64d3044320a0e6da1834190a03f724a111d41254b625c75fe59076691487",
+ "forecast": {
+  "thesis": "Price is on the 6.51 support cluster inside a range; I lean to a break to the 6.371 low before a rally over 6.70.",
+  "direction": "with_trade",
+  "target_px": 6.371,
+  "p_target": 0.45,
+  "invalidation_px": 6.7,
+  "horizon_bars": 5,
+  "timeframe": "1d",
+  "evidence": [
+   "chart.swings: lows 6.525/6.5075 cluster, 6.371",
+   "chart.htf: 1w chop",
+   "exit_plan: sl 6.754 / tp 5.964",
+   "features: open_r 0.33, r_to_stop 0.73"
+  ]
+ }
+}

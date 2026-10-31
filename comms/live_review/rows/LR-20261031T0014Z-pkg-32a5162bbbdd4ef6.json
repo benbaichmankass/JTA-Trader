@@ -1,0 +1,122 @@
+{
+ "schema_version": 1,
+ "review_id": "LR-20261031T0014Z-pkg-32a5162bbbdd4ef6",
+ "reviewed_at": "2026-10-31T00:30:00Z",
+ "order_package_id": "pkg-32a5162bbbdd4ef6",
+ "trade_id": null,
+ "leg": "spy_trend_long_1d",
+ "accounts": [
+  "alpaca_paper"
+ ],
+ "trigger": {
+  "event": "judgement_cadence",
+  "level": "2026-10-31T00:00:00+00:00",
+  "l0_snapshot_at": null
+ },
+ "info_cutoff_at": "2026-10-31T00:14:12Z",
+ "state": {
+  "atr_now_over_entry": 0.8166,
+  "bars_held": 63,
+  "giveback_r": 1.1921,
+  "open_r": 0.0046,
+  "peak_provenance": "estimated",
+  "peak_r": 1.1967,
+  "regime_cell_entry": null,
+  "regime_cell_now": null,
+  "sl": 746.86714286,
+  "tp": 830.42638
+ },
+ "features_at_review": {
+  "atr_now_over_entry": 0.8166,
+  "bars_since_peak": 17,
+  "giveback_r": 1.1921,
+  "open_r": 0.0046,
+  "peak_r": 1.1967,
+  "r_to_stop": 0.4079,
+  "r_to_target": 3.4424
+ },
+ "mechanics": {
+  "evidence": "package sl 746.86714286 / tp 830.42638 agree with every readable account",
+  "verdict": "match"
+ },
+ "options": [
+  {
+   "action": "hold",
+   "level": null,
+   "n": 6,
+   "mean_r": null,
+   "sd_r": null,
+   "worst_r": null,
+   "net": null
+  }
+ ],
+ "outcome_table_source": "comms/live_review/tables/LR-20261031T0014Z-pkg-32a5162bbbdd4ef6.json",
+ "recommendation": {
+  "action": "hold",
+  "level": null,
+  "level_atr": null,
+  "ev_delta_r": null,
+  "worst_case_delta_r": null,
+  "basis": "judgement",
+  "confidence": "anecdote",
+  "evidence_source": "judgement",
+  "judgement_confidence": 0.5,
+  "reason": "Round trip: peak +1.20R, now ~0R after Friday's drop below the 758.68/760.65 daily lows; stop 746.87 already sits just under the 749.68 weekly low, so HOLD expresses my view (wrong below it) at 0.41R risk with a 3.4R target; closing saves little.",
+  "size_fraction": null
+ },
+ "judge_prior": null,
+ "applied": false,
+ "apply_policy": {
+  "bound_r": 0.25,
+  "within_bound": null,
+  "tighten_r": null
+ },
+ "shadow_policy": {
+  "bound_r": 0.5,
+  "within_bound": null,
+  "would_apply": null,
+  "tighten_r": null
+ },
+ "context_flags": [
+  "judgement: hold n=6 (floor 20) insufficient_n, not measured",
+  "regime: 1d ADX 13.7 chop, weekly transitional; structure now lower lows against a long",
+  "book: correlated long USO (-0.81R); rest of book is short crypto/metals, SPY long is the only equity-beta long",
+  "calendar: Sat 2026-10-31, cash market shut; Monday gap risk is covered only by the venue stop",
+  "missing_inputs: regime.vol_now, regime.cell_entry, context.news"
+ ],
+ "account_reads": [
+  {
+   "account_id": "alpaca_paper",
+   "account_class": "paper",
+   "read": "no_action",
+   "evidence": "alpaca_orders: SL 746.87 / TP 830.43, position True; no apply path for this exchange yet (LTR-9 / none)"
+  }
+ ],
+ "disposition": {
+  "route": "none",
+  "mandate": null,
+  "action_issue": null,
+  "applied_at": null,
+  "verified_readback": null
+ },
+ "model": "sonnet-tier (repo-less reviewer)",
+ "session": "session_01AFoLuMNw3bmkGq3LQPUcTW",
+ "prompt_sha": null,
+ "skill_sha": null,
+ "packet_sha": "18f37dcef36c375b1a81620d80a9d54982e2e39463a115af09b431190022fc7e",
+ "forecast": {
+  "thesis": "Trend long has round-tripped to ~0R and broke the last two daily swing lows; I expect a test of the 749.7 weekly low (sitting just above the 746.87 stop) before any reclaim, ~50/50 it holds.",
+  "direction": "against_trade",
+  "target_px": 749.675,
+  "p_target": 0.5,
+  "invalidation_px": 774.405,
+  "horizon_bars": 5,
+  "timeframe": "1d",
+  "evidence": [
+   "chart.swings: lows 758.68, 760.65 broken; weekly low 749.675",
+   "chart.htf: 1w transitional, ADX 20",
+   "exit_plan.sl_now 746.867 / tp 830.43",
+   "features: open_r 0.0046, peak_r 1.1967, r_to_stop 0.41"
+  ]
+ }
+}

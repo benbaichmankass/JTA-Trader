@@ -1,0 +1,122 @@
+{
+ "schema_version": 1,
+ "review_id": "LR-20261031T0016Z-pkg-d76f1b15923e4282",
+ "reviewed_at": "2026-10-31T00:30:00Z",
+ "order_package_id": "pkg-d76f1b15923e4282",
+ "trade_id": null,
+ "leg": "mgc_trend_1h",
+ "accounts": [
+  "ib_paper"
+ ],
+ "trigger": {
+  "event": "judgement_cadence",
+  "level": "2026-10-31T00:00:00+00:00",
+  "l0_snapshot_at": null
+ },
+ "info_cutoff_at": "2026-10-31T00:16:52Z",
+ "state": {
+  "atr_now_over_entry": 1.3719,
+  "bars_held": 14,
+  "giveback_r": 0.1388,
+  "open_r": 2.9103,
+  "peak_provenance": "estimated",
+  "peak_r": 3.0491,
+  "regime_cell_entry": null,
+  "regime_cell_now": null,
+  "sl": 3938.07142857,
+  "tp": 3596.1613
+ },
+ "features_at_review": {
+  "atr_now_over_entry": 1.3719,
+  "bars_since_peak": 1,
+  "giveback_r": 0.1388,
+  "open_r": 2.9103,
+  "peak_r": 3.0491,
+  "r_to_stop": 1.4612,
+  "r_to_target": 7.847
+ },
+ "mechanics": {
+  "evidence": "package sl 3938.07142857 / tp 3596.1613 agree with every readable account",
+  "verdict": "match"
+ },
+ "options": [
+  {
+   "action": "hold",
+   "level": null,
+   "n": 7,
+   "mean_r": null,
+   "sd_r": null,
+   "worst_r": null,
+   "net": null
+  }
+ ],
+ "outcome_table_source": "comms/live_review/tables/LR-20261031T0016Z-pkg-d76f1b15923e4282.json",
+ "recommendation": {
+  "action": "hold",
+  "level": null,
+  "level_atr": null,
+  "ev_delta_r": null,
+  "worst_case_delta_r": null,
+  "basis": "judgement",
+  "confidence": "anecdote",
+  "evidence_source": "judgement",
+  "judgement_confidence": 0.55,
+  "reason": "Short +2.91R, peak 3.05R, trend intact (1h ADX 41, 4h ADX 43) with ATR expanded 1.37x; the 3938 stop is 2.7 ATR away, wide enough for the expanded noise, so tightening would be mechanical. HOLD expresses the view; concentration is the metals book's issue, handled via IAUM/SLV.",
+  "size_fraction": null
+ },
+ "judge_prior": null,
+ "applied": false,
+ "apply_policy": {
+  "bound_r": 0.25,
+  "within_bound": null,
+  "tighten_r": null
+ },
+ "shadow_policy": {
+  "bound_r": 0.5,
+  "within_bound": null,
+  "would_apply": null,
+  "tighten_r": null
+ },
+ "context_flags": [
+  "judgement: hold n=7 insufficient_n (not measured)",
+  "regime: atr_now_over_entry 1.37 (ratio >=1.5 not met), 1h and 4h trending down",
+  "book: part of 4 precious-metal shorts (+ mgc_pullback_1d, SLV, IAUM) = one bet",
+  "calendar: none; weekend, MGC reopens Sunday evening so gap risk",
+  "missing_inputs: bybit_orders read, regime.vol_now, regime.cell_entry"
+ ],
+ "account_reads": [
+  {
+   "account_id": "ib_paper",
+   "account_class": "paper",
+   "read": "no_action",
+   "evidence": "ib_orders: SL 3938.1 / TP 3596.2, position True; no apply path for this exchange yet (LTR-9 / none)"
+  }
+ ],
+ "disposition": {
+  "route": "none",
+  "mandate": null,
+  "action_issue": null,
+  "applied_at": null,
+  "verified_readback": null
+ },
+ "model": "sonnet-tier (repo-less reviewer)",
+ "session": "session_01AFoLuMNw3bmkGq3LQPUcTW",
+ "prompt_sha": null,
+ "skill_sha": null,
+ "packet_sha": "e2192f47032c3bd3806bbb13fd85a0b3d65c4cfde8a2b1d5768e1bc58195f036",
+ "forecast": {
+  "thesis": "Consolidating 3880-3912 just above the 3879 low in a strong downtrend; I expect a break to 3840 before a close above 3915.",
+  "direction": "with_trade",
+  "target_px": 3840.0,
+  "p_target": 0.4,
+  "invalidation_px": 3915.0,
+  "horizon_bars": 12,
+  "timeframe": "1h",
+  "evidence": [
+   "chart.swings: low 3900.3 broken, last low 3879.3",
+   "chart.htf: 4h trending ADX 43",
+   "exit_plan: sl 3938.07 / tp 3596.16",
+   "book: 4 metal shorts"
+  ]
+ }
+}

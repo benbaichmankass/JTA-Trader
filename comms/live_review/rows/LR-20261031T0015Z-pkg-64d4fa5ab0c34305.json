@@ -1,0 +1,123 @@
+{
+ "schema_version": 1,
+ "review_id": "LR-20261031T0015Z-pkg-64d4fa5ab0c34305",
+ "reviewed_at": "2026-10-31T00:30:00Z",
+ "order_package_id": "pkg-64d4fa5ab0c34305",
+ "trade_id": null,
+ "leg": "iaum_pullback_1d",
+ "accounts": [
+  "alpaca_paper"
+ ],
+ "trigger": {
+  "event": "judgement_cadence",
+  "level": "2026-10-31T00:00:00+00:00",
+  "l0_snapshot_at": null
+ },
+ "info_cutoff_at": "2026-10-31T00:15:24Z",
+ "state": {
+  "atr_now_over_entry": 1.0426,
+  "bars_held": 11,
+  "giveback_r": 0.0894,
+  "open_r": 2.7573,
+  "peak_provenance": "estimated",
+  "peak_r": 2.8467,
+  "regime_cell_entry": null,
+  "regime_cell_now": null,
+  "sl": 40.60285714,
+  "tp": 37.350955
+ },
+ "features_at_review": {
+  "atr_now_over_entry": 1.0426,
+  "bars_since_peak": 0,
+  "giveback_r": 0.0894,
+  "open_r": 2.7573,
+  "peak_r": 2.8467,
+  "r_to_stop": 1.9106,
+  "r_to_target": 1.3206
+ },
+ "mechanics": {
+  "evidence": "package sl 40.60285714 / tp 37.350955 agree with every readable account",
+  "verdict": "match"
+ },
+ "options": [
+  {
+   "action": "hold",
+   "level": null,
+   "n": 0,
+   "mean_r": null,
+   "sd_r": null,
+   "worst_r": null,
+   "net": null
+  }
+ ],
+ "outcome_table_source": "comms/live_review/tables/LR-20261031T0015Z-pkg-64d4fa5ab0c34305.json",
+ "recommendation": {
+  "action": "partial_close",
+  "level": null,
+  "level_atr": null,
+  "ev_delta_r": null,
+  "worst_case_delta_r": null,
+  "basis": "judgement",
+  "confidence": "anecdote",
+  "evidence_source": "judgement",
+  "judgement_confidence": 0.55,
+  "reason": "Short +2.76R at the low of a ~3% gold drop that broke the 39.49/39.50 weekly double bottom; stop 40.60 is 3.7 ATR away so a weekend reversal could give back ~1.9R, and this is one of four correlated metal shorts. Bank half now and let the rest run to 37.35, which keeps both brackets.",
+  "size_fraction": 0.5
+ },
+ "judge_prior": null,
+ "applied": false,
+ "apply_policy": {
+  "bound_r": 0.25,
+  "within_bound": null,
+  "tighten_r": null
+ },
+ "shadow_policy": {
+  "bound_r": 0.5,
+  "within_bound": null,
+  "would_apply": null,
+  "tighten_r": null
+ },
+ "context_flags": [
+  "judgement: hold n=0 insufficient_n, tighten could_not_look (not measured)",
+  "book: SLV, MGC x2 and IAUM shorts are the same gold/silver bet, ~+11R open combined",
+  "regime: 1d chop ADX 19, weekly trending ADX 31; atr_now_over_entry 1.04",
+  "live_vs_backtest: realMoney INSUFFICIENT_N -1.47R on 1 trade (anecdote)",
+  "calendar: Sat 2026-10-31, cash market shut",
+  "missing_inputs: bybit_orders read, regime.vol_now, regime.cell_entry, context.news"
+ ],
+ "account_reads": [
+  {
+   "account_id": "alpaca_paper",
+   "account_class": "paper",
+   "read": "unknown",
+   "evidence": "alpaca_orders: SL 40.6 / TP 37.35, position True; no apply path for this exchange yet (LTR-9 / none)"
+  }
+ ],
+ "disposition": {
+  "route": "recommended",
+  "mandate": "MD-TRADE-DESK",
+  "action_issue": null,
+  "applied_at": null,
+  "verified_readback": null
+ },
+ "model": "sonnet-tier (repo-less reviewer)",
+ "session": "session_01AFoLuMNw3bmkGq3LQPUcTW",
+ "prompt_sha": null,
+ "skill_sha": null,
+ "packet_sha": "44ce42c02f897db47380e2012a9ccfac8aff3da709cb048ae46f045b53c0383a",
+ "forecast": {
+  "thesis": "After a one-day ~3% flush through weekly support I expect a retest of the broken 39.50 area before the next leg down; the retest is invalidated if price keeps falling to 37.90 first.",
+  "direction": "against_trade",
+  "target_px": 39.5,
+  "p_target": 0.5,
+  "invalidation_px": 37.9,
+  "horizon_bars": 3,
+  "timeframe": "1d",
+  "evidence": [
+   "chart.htf: 1w lows 39.49/39.50 broken",
+   "features: open_r 2.757, bars_since_peak 0",
+   "exit_plan: sl 40.603 / tp 37.351",
+   "book: 4 metal shorts"
+  ]
+ }
+}

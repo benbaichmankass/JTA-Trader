@@ -1,0 +1,94 @@
+{
+ "schema_version": 1,
+ "review_id": "LR-20261031T0015Z-pkg-4e74f4bdc6d44735",
+ "reviewed_at": "2026-10-31T00:30:00Z",
+ "order_package_id": "pkg-4e74f4bdc6d44735",
+ "trade_id": null,
+ "leg": "trend_donchian_1h",
+ "accounts": [
+  "bybit_1"
+ ],
+ "trigger": {
+  "event": "judgement_cadence",
+  "level": "2026-10-31T00:00:00+00:00",
+  "l0_snapshot_at": null
+ },
+ "info_cutoff_at": "2026-10-31T00:15:01Z",
+ "state": {
+  "atr_now_over_entry": 0.9869,
+  "bars_held": 28,
+  "giveback_r": 0.6972,
+  "open_r": 1.0207,
+  "peak_provenance": "estimated",
+  "peak_r": 1.7178,
+  "regime_cell_entry": "transitional/volatile",
+  "regime_cell_now": null,
+  "sl": 79165.38571429,
+  "tp": 70960.5976
+ },
+ "features_at_review": {
+  "atr_now_over_entry": 0.9869,
+  "bars_since_peak": 5,
+  "giveback_r": 0.6972,
+  "open_r": 1.0207,
+  "peak_r": 1.7178,
+  "r_to_stop": 1.3028,
+  "r_to_target": 4.3747
+ },
+ "mechanics": {
+  "evidence": "1 account(s) could not be read",
+  "verdict": "could_not_look"
+ },
+ "options": [],
+ "outcome_table_source": null,
+ "recommendation": {
+  "action": "flag_mechanics",
+  "level": null,
+  "level_atr": null,
+  "ev_delta_r": null,
+  "worst_case_delta_r": null,
+  "basis": "mechanics",
+  "confidence": "anecdote",
+  "evidence_source": "none",
+  "judgement_confidence": null,
+  "reason": "mechanics verdict could_not_look: bybit_orders read failed (diag unreachable); no priced table. Flagged per brief, no exit judgement."
+ },
+ "judge_prior": null,
+ "applied": false,
+ "apply_policy": {
+  "bound_r": 0.25,
+  "within_bound": null,
+  "tighten_r": null
+ },
+ "shadow_policy": {
+  "bound_r": 0.5,
+  "within_bound": null,
+  "would_apply": null,
+  "tighten_r": null
+ },
+ "context_flags": [
+  "mechanics: could_not_look, diag bybit_open_orders unreachable",
+  "missing_inputs: priced_options, bybit_orders read, regime.vol_now, context.funding",
+  "book: short at +1.02R (peak 1.72R), 1h ADX 32 trending, stop 79165 / tp 70961 unverified at venue"
+ ],
+ "account_reads": [
+  {
+   "account_id": "bybit_1",
+   "account_class": "paper",
+   "read": "no_action",
+   "evidence": "bybit_orders read failed: diag bybit_open_orders: exit 3 ('bybit_open_orders' \u2014 https://ict-bot.duckdns.org -> unreachable. Use the issue relay only if every candidate is 'unreachable'; an 'answered_*"
+  }
+ ],
+ "disposition": {
+  "route": "operator_ask",
+  "mandate": null,
+  "action_issue": null,
+  "applied_at": null,
+  "verified_readback": null
+ },
+ "model": "sonnet-tier (repo-less reviewer)",
+ "session": "session_01AFoLuMNw3bmkGq3LQPUcTW",
+ "prompt_sha": null,
+ "skill_sha": null,
+ "packet_sha": "782119c3215c9d60a11d25b0c77e81e698eaf18c12cf2035c1a291df14f0f164"
+}
