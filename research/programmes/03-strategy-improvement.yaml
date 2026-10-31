@@ -1941,6 +1941,23 @@ nodes:
     related:
     - COST-STACK-RECOST-SWEEP
     - scripts/research/exit_lever_ablation.py
+- id: P3-VOLWIN-A2-longer-hold
+  goal: G1
+  theme: timeframes
+  roadmap: [L-LADDER, L-DESK]
+  value: {usd_at_stake_per_month: 120, confidence: 0.1}
+  after:
+  - {unit: RQ-20261031-28bf-01, verdict: fail}
+  needs_authoring: >-
+    FIRST TEST FAILED -> VARIANT (RESEARCH-OPS-20261031-2110). Stage A (RQ-20261031-28bf-01, 8128 cells, 149 vol-stable, 0 shortlisted; the 34
+    top vol-stable cells all had confirmation mean net R < 0, best SLV us_open 60 min C5 -0.021 R n 829, -0.46 bps) found real, stable volatility
+    excess but no net directional edge at 15-60 min holds: follow (C) and fade (F) both lose, mean -0.27 R across the top 34 -- the signature of a
+    friction-dominated short hold, not of an unstable window. DIAGNOSIS to test: cost drag at short length (R unit = the window's own range, so a
+    15-min window's cost is a large share of R). ONE unit, rules fixed before the run: same vol_window_scan.py harness, rules C15/F15/O15 only,
+    lengths 120 and 240 min (a new --lengths flag, self-tested), the lowest-cost lanes only (SPY QQQ GLD SLV IAUM MES MGC USO and BTC ETH), the
+    same folds, gate V, n_floor and Bonferroni. PASS (>= 1 cell qualifies) -> author the three VOLWIN nodes on those cells; FAIL -> the window
+    family is closed at 5m-grid entries up to 240 min and the volatility-excess table goes to the desk as calendar context only. Decision changed:
+    whether any window strategy/ML/desk branch is built at all.
 - id: P3-VOLWIN-s0-breakout
   goal: G1
   theme: timeframes
