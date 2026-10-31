@@ -301,3 +301,97 @@ def test_workflow_post_step_skips_an_odd_bar(tmp_path, capsys, every_2h):
     stage = make_stage(tmp_path)
     assert mm.main(["post", "--stage", str(stage), "--commit", "c" * 40]) == 0
     assert "skipped_by_cadence" in capsys.readouterr().out
+
+
+# ---- TRIGGER-FIRST-REVIEWS (operator 2026-10-31): a scan wake bar wakes only on a material change ------------------
+
+def _pk(open_ids=(), near=(), px=None, atr=2.0, near_read="read"):
+    items = [{"order_package_id": i, "leg": "l", "symbol": "BTCUSDT", "status": "open", "bars_to_signal": None}
+             for i in open_ids]
+    items += [{"order_package_id": None, "leg": lg, "symbol": s, "side": "long", "status": "near_signal",
+               "bars_to_signal": 1} for lg, s in near]
+    uni = [{"symbol": s, "tier": "full", "last_close": p, "atr": atr} for s, p in (px or {"BTCUSDT": 100.0}).items()]
+    return {"universe": uni, "system_book": {"read_state": "read", "near_signals_read_state": near_read, "items": items},
+            "desk_book": {"read_state": "read", "items": []}}
+
+
+@pytest.fixture
+def gate_on(_reset):
+    dw.marker_module().CONFIG.write_text("scan_wake_every_h: 1\nscan_wake_min_move_atr: 0.5\n")
+
+
+def _fp(**kw):
+    return dw.marker_module().packet_fingerprint(_pk(**kw))
+
+
+def test_material_change_rules():
+    mm = dw.marker_module()
+    base = _fp(open_ids=["a"])
+    assert mm.material_change(base, base, 0.5)[0] is False                       # identical: nothing new
+    assert mm.material_change(_fp(open_ids=["a"], px={"BTCUSDT": 100.9}), base, 0.5)[0] is False   # 0.45 ATR
+    wake, why = mm.material_change(_fp(open_ids=["a"], px={"BTCUSDT": 101.0}), base, 0.5)          # 0.5 ATR: at threshold
+    assert wake and "moved 0.50 ATR" in why
+    assert mm.material_change(_fp(open_ids=["a", "b"]), base, 0.5)[1].startswith("open-position change")
+    assert mm.material_change(_fp(open_ids=["a"], near=[("x", "ETHUSDT")]), base, 0.5)[1].startswith("new near-signal")
+    with_near = _fp(open_ids=["a"], near=[("x", "ETHUSDT")])
+    assert mm.material_change(with_near, with_near, 0.5)[0] is False             # an already-woken near-signal is not new
+    assert mm.material_change(base, None, 0.5)[0] and mm.material_change(base, base, None)[0]      # unknowns wake
+    assert mm.material_change(_fp(open_ids=["a"], near_read="could_not_look"), base, 0.5)[0]        # unread book wakes
+    assert mm.material_change(_fp(open_ids=["a"], atr=None), base, 0.5)[1].endswith("move unmeasurable")
+
+
+def _woken_marker(fp, pid="DP-prev", bar="2026-10-26T16:00:00Z"):
+    return dict(posted(pid, NEXT - timedelta(hours=1)), bar=bar, context={"fingerprint": fp})
+
+
+def _produce_pk(tmp_path, net, pk):
+    stage = make_stage(tmp_path)
+    (stage / "comms/desk/packets/DP-20261026T1703Z-scan-1h.json").write_text(json.dumps(pk))
+    return dw.run_once(fetch=net.fetch, auth_fn=lambda: "Basic eA==", http=net.http, now_fn=lambda: NEXT,
+                       receipt=tmp_path / "r.json", pr_fn=lambda: 17895, build_fn=lambda n, t: (stage, None),
+                       commit_fn=lambda st, pid, a, h: ("c" * 40, None))
+
+
+def test_unchanged_packet_lands_but_posts_no_wake(tmp_path, gate_on):
+    net = Net(markers=[_woken_marker(_fp(open_ids=["a"]))])
+    rec = _produce_pk(tmp_path, net, _pk(open_ids=["a"], px={"BTCUSDT": 100.4}))
+    assert rec["state"] == "skipped_nothing_new" and net.posts == [] and "nothing new" in rec["reason"]
+    assert rec["last_skipped"]["packet_id"] == "DP-20261026T1703Z-scan-1h"
+
+
+def test_changed_packet_still_wakes_and_carries_its_fingerprint(tmp_path, gate_on):
+    net = Net(markers=[_woken_marker(_fp(open_ids=["a"]))])
+    rec = _produce_pk(tmp_path, net, _pk(open_ids=["a"], px={"BTCUSDT": 101.5}))
+    assert rec["state"] == "posted" and len(net.posts) == 1
+    m = dw.marker_module().parse_markers([{"body": json.loads(net.posts[0][2])["body"]}])[0]
+    assert m["context"]["fingerprint"]["px"] == {"BTCUSDT": 101.5}
+
+
+def test_first_wake_with_no_prior_fingerprint_posts(tmp_path, gate_on):
+    rec = _produce_pk(tmp_path, Net(markers=[posted("DP-old", NEXT - timedelta(hours=2))]), _pk(open_ids=["a"]))
+    assert rec["state"] == "posted"                                               # an older marker without a fingerprint
+
+
+def test_nothing_new_skip_is_not_reported_as_a_missing_wake_on_later_passes(tmp_path, gate_on):
+    net = Net(markers=[_woken_marker(_fp(open_ids=["a"]))])
+    _produce_pk(tmp_path, net, _pk(open_ids=["a"]))
+    later = Net(markers=net.markers, built_ago=timedelta(minutes=30))
+    later.ptr.update(packet_id="DP-20261026T1703Z-scan-1h", info_cutoff_at="2026-10-26T17:03:00Z",
+                     built_at="2026-10-26T17:03:30Z")
+    rec = dw.run_once(fetch=later.fetch, auth_fn=lambda: None, http=later.http,
+                      now_fn=lambda: NEXT + timedelta(minutes=30), receipt=tmp_path / "r.json", pr_fn=lambda: 17895)
+    assert rec["state"] == "skipped_nothing_new"
+
+
+def test_workflow_post_step_skips_an_unchanged_packet(tmp_path, capsys, gate_on, monkeypatch):
+    mm = dw.marker_module()
+    stage = make_stage(tmp_path)
+    (stage / "comms/desk/packets/DP-20261026T1703Z-scan-1h.json").write_text(json.dumps(_pk(open_ids=["a"])))
+    body = mm.render_wake(dict(bar="2026-10-26T16:00:00Z", packet_id="DP-prev", packet_sha="x" * 64, path="p",
+                               built_at="t", commit="c" * 40, poster="vm",
+                               context=dict(open_positions=1, open_desk_proposals=0, near_signals=0, calendar_events=[],
+                                            unread=[], fingerprint=_fp(open_ids=["a"]))), NOW)
+    monkeypatch.setattr(mm, "_read_markers", lambda repo, pr: mm.parse_markers([{"body": body}]))
+    monkeypatch.setattr("live_review_wake.ops_flags_pr", lambda: 17895, raising=False)
+    assert mm.main(["post", "--stage", str(stage), "--commit", "c" * 40, "--pr", "17895", "--live"]) == 0
+    assert "skipped_nothing_new" in capsys.readouterr().out
