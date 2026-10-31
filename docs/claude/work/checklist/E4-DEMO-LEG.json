@@ -15,7 +15,7 @@
   "blocked_on": [],
   "note": "[Manager Session 2026-10-30c, 2026-10-31 ~01:40Z] PR #21730 MERGED (3be577099c54), DEPLOYED (diag version 00:19Z trader_git_sha 3be577099c), OBSERVED partly: oi_feed fresh on 6 of 6 symbols at 00:25Z (~2,201 rows each), e4_decisions logged one line per symbol at the 01:00Z cutoff (decision none, no event). First demo trade not yet seen (held-out rate ~2.3 events/day over 6 symbols). Lane cost USD 21.54 vs ceiling 12 (overspend, noted). Lane archived.",
   "priority_rank": 1,
-  "updated_at": "2026-10-31T01:40:36Z",
+  "updated_at": "2026-10-31T03:19:40Z",
   "updated_by": "session_01AFoLuJEaf7dNfk9kc5g3fG",
   "roadmap": [
     "L-DESK"
@@ -24,6 +24,10 @@
     "what": "first clean e4_oi_shock_1h demo trade on bybit_1: an order package then a journaled exit (tp, sl or e4_time_stop_24h), per SOAK-stage1-bybit_1-e4_oi_shock_1h (n_needed 1)",
     "how_to_check": "diag log_file?name=e4_decisions for a decision != none, then the journal order package and its close reason",
     "due_by": "2026-11-02"
+  },
+  "writeback": {
+    "roadmap": "none: E4 is a demo-only mechanics leg whose Stage 0 FAILED; it moves no L-DESK milestone",
+    "arch": "none: a new strategy leg in the existing registry; no architecture section changes"
   },
   "_seq": 849
 }
