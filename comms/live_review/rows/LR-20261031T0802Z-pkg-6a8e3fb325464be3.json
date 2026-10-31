@@ -1,0 +1,102 @@
+{
+ "schema_version": 1,
+ "review_id": "LR-20261031T0802Z-pkg-6a8e3fb325464be3",
+ "reviewed_at": "2026-10-31T08:12:00Z",
+ "order_package_id": "pkg-6a8e3fb325464be3",
+ "trade_id": null,
+ "leg": "gld_pullback_1h",
+ "accounts": [
+  "alpaca_paper",
+  "alpaca_portfolio"
+ ],
+ "trigger": {
+  "event": "judgement_cadence",
+  "level": "2026-10-31T08:00:00+00:00",
+  "l0_snapshot_at": "2026-10-31T08:00:23.172626+00:00"
+ },
+ "info_cutoff_at": "2026-10-31T08:02:49Z",
+ "state": {
+  "atr_now_over_entry": null,
+  "bars_held": null,
+  "giveback_r": null,
+  "open_r": null,
+  "peak_provenance": "unverified",
+  "peak_r": null,
+  "regime_cell_entry": null,
+  "regime_cell_now": null,
+  "sl": 414.53875,
+  "tp": 461.32723
+ },
+ "features_at_review": {
+  "atr_now_over_entry": null,
+  "bars_since_peak": null,
+  "giveback_r": null,
+  "open_r": null,
+  "peak_r": null,
+  "r_to_stop": null,
+  "r_to_target": null
+ },
+ "mechanics": {
+  "evidence": "alpaca_paper: venue SL 416.09 != package SL 414.53875",
+  "verdict": "mismatch"
+ },
+ "options": [],
+ "outcome_table_source": null,
+ "recommendation": {
+  "action": "flag_mechanics",
+  "level": null,
+  "level_atr": null,
+  "ev_delta_r": null,
+  "worst_case_delta_r": null,
+  "basis": "mechanics",
+  "confidence": "anecdote",
+  "evidence_source": "none",
+  "judgement_confidence": null,
+  "reason": "alpaca_paper venue SL 416.09 != package SL 414.53875: mechanics mismatch, so no exit judgement on this trade. Prior review (LR-20261031T0410Z) was the same flag_mechanics with forecast null, so there is no prior forecast to grade; same known venue-vs-package stop difference (row PAPER-STOP-MISMATCH-ROOTCAUSE). State, chart, HTF, news and table are all missing from the packet."
+ },
+ "judge_prior": null,
+ "applied": false,
+ "apply_policy": {
+  "bound_r": 0.25,
+  "within_bound": null,
+  "tighten_r": null
+ },
+ "shadow_policy": {
+  "bound_r": 0.5,
+  "within_bound": null,
+  "would_apply": null,
+  "tighten_r": null
+ },
+ "context_flags": [
+  "mechanics: alpaca_paper venue SL 416.09 != package SL 414.53875",
+  "prior_review: flag_mechanics with forecast null (nothing to grade)",
+  "missing_inputs: state.sl/tp, state.open_r, regime.*, priced_options, context.news, context_v3.chart, context_v3.htf",
+  "known_issue: PAPER-STOP-MISMATCH-ROOTCAUSE (paper account only)"
+ ],
+ "account_reads": [
+  {
+   "account_id": "alpaca_paper",
+   "account_class": "paper",
+   "read": "unknown",
+   "evidence": "alpaca_orders: SL 416.09 / TP 461.27, position True; no apply path for this exchange yet (LTR-9 / none)"
+  },
+  {
+   "account_id": "alpaca_portfolio",
+   "account_class": "paper",
+   "read": "unknown",
+   "evidence": "alpaca_orders: SL None / TP None, position False; no apply path for this exchange yet (LTR-9 / none)"
+  }
+ ],
+ "disposition": {
+  "route": "operator_ask",
+  "mandate": null,
+  "action_issue": null,
+  "applied_at": null,
+  "verified_readback": null
+ },
+ "model": "sonnet-tier (repo-less reviewer)",
+ "session": "session_01AFoLuMiTY1eUre6PZYbLxC",
+ "prompt_sha": null,
+ "skill_sha": null,
+ "packet_sha": "49cae659827f385dedeb3dc588e205506bb1ee3cd2668ac78e08a96726592aa1"
+}

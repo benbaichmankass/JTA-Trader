@@ -1,0 +1,120 @@
+{
+ "schema_version": 1,
+ "review_id": "LR-20261031T0804Z-pkg-bba44210885c4180",
+ "reviewed_at": "2026-10-31T08:12:00Z",
+ "order_package_id": "pkg-bba44210885c4180",
+ "trade_id": null,
+ "leg": "trend_donchian_ada_4h",
+ "accounts": [
+  "bybit_1"
+ ],
+ "trigger": {
+  "event": "judgement_cadence",
+  "level": "2026-10-31T08:00:00+00:00",
+  "l0_snapshot_at": "2026-10-31T07:59:51.833421+00:00"
+ },
+ "info_cutoff_at": "2026-10-31T08:04:02Z",
+ "state": {
+  "atr_now_over_entry": 1.1059,
+  "bars_held": 9,
+  "giveback_r": 1.0248,
+  "open_r": -0.2379,
+  "peak_provenance": "estimated",
+  "peak_r": 0.7869,
+  "regime_cell_entry": null,
+  "regime_cell_now": null,
+  "sl": 0.20172857,
+  "tp": 0.1719108
+ },
+ "features_at_review": {
+  "atr_now_over_entry": 1.1059,
+  "bars_since_peak": 7,
+  "giveback_r": 1.0248,
+  "open_r": -0.2379,
+  "peak_r": 0.7869,
+  "r_to_stop": 0.7621,
+  "r_to_target": 1.9663
+ },
+ "mechanics": {
+  "evidence": "package sl 0.20172857 / tp 0.1719108 agree with every readable account",
+  "verdict": "match"
+ },
+ "options": [
+  {
+   "action": "hold",
+   "level": null,
+   "n": 13,
+   "mean_r": null,
+   "sd_r": null,
+   "worst_r": null,
+   "net": null
+  }
+ ],
+ "outcome_table_source": "comms/live_review/tables/LR-20261031T0804Z-pkg-bba44210885c4180.json",
+ "recommendation": {
+  "action": "hold",
+  "level": null,
+  "level_atr": null,
+  "ev_delta_r": null,
+  "worst_case_delta_r": null,
+  "basis": "judgement",
+  "confidence": "anecdote",
+  "evidence_source": "judgement",
+  "judgement_confidence": 0.58,
+  "reason": "Hold cell n=13 < floor 20 (thin, not measured); judgement. Prior forecast (hold, target 0.1899 / invalidation 0.1956, 6x4h) held: price 0.1932, the bar since the review closed 0.1932 with a 0.1942 high, neither 0.1899 nor a close above 0.1956 occurred, so it is unresolved and inside its horizon. Carry it, p_target 0.40->0.38. -0.24R with SL 0.76R away, 1d ADX 27.8 trending down; news decision 'reduce' (-0.19, 2026-10-30) agrees with the short, not a reason to cut it. The bracket already expresses the view."
+ },
+ "judge_prior": null,
+ "applied": false,
+ "apply_policy": {
+  "bound_r": 0.25,
+  "within_bound": null,
+  "tighten_r": null
+ },
+ "shadow_policy": {
+  "bound_r": 0.5,
+  "within_bound": null,
+  "would_apply": null,
+  "tighten_r": null
+ },
+ "context_flags": [
+  "judgement: hold n=13 thin, not measured; tighten cells invalid_level",
+  "news: decision reduce adjustment -0.1859 (2026-10-30), same direction as the short",
+  "correlated_exposure: crypto shorts ETH x2, SOL, XRP x2, BTC",
+  "missing_inputs: regime.vol_now, regime.cell_entry, context.funding"
+ ],
+ "account_reads": [
+  {
+   "account_id": "bybit_1",
+   "account_class": "paper",
+   "read": "no_action",
+   "evidence": "bybit_orders: SL 0.2017 / TP 0.1719, position True; would_apply = the shared amend reaches this leg, NOT that its RiskManager approved (LTR-6 gap)"
+  }
+ ],
+ "disposition": {
+  "route": "none",
+  "mandate": null,
+  "action_issue": null,
+  "applied_at": null,
+  "verified_readback": null
+ },
+ "model": "sonnet-tier (repo-less reviewer)",
+ "session": "session_01AFoLuMiTY1eUre6PZYbLxC",
+ "prompt_sha": null,
+ "skill_sha": null,
+ "packet_sha": "d1d60effcdffeed8bc2d73503e9d71f9ef3e9da6a5cfc5a2325b9d0180866bf8",
+ "forecast": {
+  "thesis": "ADA keeps failing at the 0.1956 swing high while 1d ADX ~28 trends down; a retest of the 0.1899 low is a bit less than even odds within the horizon.",
+  "direction": "with_trade",
+  "target_px": 0.1899,
+  "p_target": 0.38,
+  "invalidation_px": 0.1956,
+  "horizon_bars": 5,
+  "timeframe": "4h",
+  "evidence": [
+   "context.previous_review.forecast: 0.1899 untouched, no close above 0.1956",
+   "chart.bars_ohlc: last bar 0.1926-0.1942 close 0.1932",
+   "chart.htf: 1d trending ADX 27.75",
+   "context.news: decision reduce adjustment -0.1859"
+  ]
+ }
+}

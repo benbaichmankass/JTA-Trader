@@ -1,0 +1,119 @@
+{
+ "schema_version": 1,
+ "review_id": "LR-20261031T0803Z-pkg-92d1cafe559b4309",
+ "reviewed_at": "2026-10-31T08:12:00Z",
+ "order_package_id": "pkg-92d1cafe559b4309",
+ "trade_id": null,
+ "leg": "uso_trend_1h",
+ "accounts": [
+  "alpaca_paper"
+ ],
+ "trigger": {
+  "event": "judgement_cadence",
+  "level": "2026-10-31T08:00:00+00:00",
+  "l0_snapshot_at": "2026-10-31T07:59:52.997456+00:00"
+ },
+ "info_cutoff_at": "2026-10-31T08:03:09Z",
+ "state": {
+  "atr_now_over_entry": 0.9309,
+  "bars_held": 8,
+  "giveback_r": 1.3725,
+  "open_r": -0.8138,
+  "peak_provenance": "estimated",
+  "peak_r": 0.5587,
+  "regime_cell_entry": null,
+  "regime_cell_now": null,
+  "sl": 167.93,
+  "tp": 180.28
+ },
+ "features_at_review": {
+  "atr_now_over_entry": 0.9309,
+  "bars_since_peak": 4,
+  "giveback_r": 1.3725,
+  "open_r": -0.8138,
+  "peak_r": 0.5587,
+  "r_to_stop": 0.1862,
+  "r_to_target": 4.8138
+ },
+ "mechanics": {
+  "evidence": "package sl 167.93 / tp 180.28 agree with every readable account",
+  "verdict": "match"
+ },
+ "options": [
+  {
+   "action": "hold",
+   "level": null,
+   "n": 40,
+   "mean_r": 0.9747,
+   "sd_r": 1.7686,
+   "worst_r": -1.0488,
+   "net": true
+  }
+ ],
+ "outcome_table_source": "comms/live_review/tables/LR-20261031T0803Z-pkg-92d1cafe559b4309.json",
+ "recommendation": {
+  "action": "hold",
+  "level": null,
+  "level_atr": null,
+  "ev_delta_r": null,
+  "worst_case_delta_r": null,
+  "basis": "ev_positive",
+  "confidence": "measured",
+  "evidence_source": "table",
+  "judgement_confidence": null,
+  "reason": "Prior forecast (hold, target 170.51 / invalidation 167.93, 8x1h) is unresolved: price is 168.39 on a flat last print (Saturday, market shut), neither 170.51 nor 167.93 touched and no bars have traded since, so I carry it with p_target 0.33->0.30. Hold cell n=40 mean +0.97R measured; every tighten cell is invalid_level because the stop is already 0.19R away (0.4 ATR), so the strategy's own SL is the tight option and a widen would just add risk into a Monday gap. Open -0.81R."
+ },
+ "judge_prior": null,
+ "applied": false,
+ "apply_policy": {
+  "bound_r": 0.25,
+  "within_bound": null,
+  "tighten_r": null
+ },
+ "shadow_policy": {
+  "bound_r": 0.5,
+  "within_bound": null,
+  "would_apply": null,
+  "tighten_r": null
+ },
+ "context_flags": [
+  "weekend_gap: Saturday, ETF closed; stop 0.19R away can fill through on the Monday open",
+  "correlated_exposure: only long in an otherwise short book",
+  "tighten cells invalid_level (stop already inside every candidate)"
+ ],
+ "account_reads": [
+  {
+   "account_id": "alpaca_paper",
+   "account_class": "paper",
+   "read": "no_action",
+   "evidence": "alpaca_orders: SL 167.93 / TP 180.28, position True; no apply path for this exchange yet (LTR-9 / none)"
+  }
+ ],
+ "disposition": {
+  "route": "none",
+  "mandate": null,
+  "action_issue": null,
+  "applied_at": null,
+  "verified_readback": null
+ },
+ "model": "sonnet-tier (repo-less reviewer)",
+ "session": "session_01AFoLuMiTY1eUre6PZYbLxC",
+ "prompt_sha": null,
+ "skill_sha": null,
+ "packet_sha": "5a527364e8f010ced33c57022c5dd202e19fd328b5de0411b46cd5fe0e9f9922",
+ "forecast": {
+  "thesis": "USO gave back its bounce to 168.39 under 4h chop; the market is shut, so nothing resolves until Monday and a reclaim of 170.51 is less likely than a stop test.",
+  "direction": "with_trade",
+  "target_px": 170.51,
+  "p_target": 0.3,
+  "invalidation_px": 167.93,
+  "horizon_bars": 8,
+  "timeframe": "1h",
+  "evidence": [
+   "context.previous_review.forecast: 170.51 and 167.93 untouched",
+   "chart.bars_ohlc: last bar flat 168.39 (market closed)",
+   "chart.htf: 4h chop ADX 18",
+   "priced_options: hold n=40 mean +0.9747R"
+  ]
+ }
+}

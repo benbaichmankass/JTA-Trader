@@ -1,0 +1,109 @@
+{
+ "schema_version": 1,
+ "review_id": "LR-20261031T0802Z-pkg-4e74f4bdc6d44735",
+ "reviewed_at": "2026-10-31T08:12:00Z",
+ "order_package_id": "pkg-4e74f4bdc6d44735",
+ "trade_id": null,
+ "leg": "trend_donchian_1h",
+ "accounts": [
+  "bybit_1"
+ ],
+ "trigger": {
+  "event": "judgement_cadence",
+  "level": "2026-10-31T08:00:00+00:00",
+  "l0_snapshot_at": "2026-10-31T08:00:21.852820+00:00"
+ },
+ "info_cutoff_at": "2026-10-31T08:02:30Z",
+ "state": {
+  "atr_now_over_entry": 0.6339,
+  "bars_held": 36,
+  "giveback_r": 0.7144,
+  "open_r": 1.0034,
+  "peak_provenance": "estimated",
+  "peak_r": 1.7178,
+  "regime_cell_entry": "transitional/volatile",
+  "regime_cell_now": null,
+  "sl": 79165.38571429,
+  "tp": 70960.5976
+ },
+ "features_at_review": {
+  "atr_now_over_entry": 0.6339,
+  "bars_since_peak": 13,
+  "giveback_r": 0.7144,
+  "open_r": 1.0034,
+  "peak_r": 1.7178,
+  "r_to_stop": 1.2856,
+  "r_to_target": 4.3919
+ },
+ "mechanics": {
+  "evidence": "package sl 79165.38571429 / tp 70960.5976 agree with every readable account",
+  "verdict": "match"
+ },
+ "options": [],
+ "outcome_table_source": null,
+ "recommendation": {
+  "action": "hold",
+  "level": null,
+  "level_atr": null,
+  "ev_delta_r": null,
+  "worst_case_delta_r": null,
+  "basis": "judgement",
+  "confidence": "anecdote",
+  "evidence_source": "judgement",
+  "judgement_confidence": 0.6,
+  "reason": "No priced table, so no tighten; call is judgement. Prior forecast (hold, target 76275.1 / invalidation 77607.1, 12x1h) held: since it, highs <=77464.3 and lows >=77060.1, so neither level was touched and it is inside its horizon; price 77304 is ranging 77060-77607 under the swing high, 4h ADX 28 trending down. Carry it, p_target 0.42->0.38. +1.0R open (peak 1.72), SL 79165 is 5 ATR away but it is the strategy's own 2.5-ATR plan and the 5-ATR trail will tighten it as price falls; I see no structure beyond 77607 that beats it."
+ },
+ "judge_prior": null,
+ "applied": false,
+ "apply_policy": {
+  "bound_r": 0.25,
+  "within_bound": null,
+  "tighten_r": null
+ },
+ "shadow_policy": {
+  "bound_r": 0.5,
+  "within_bound": null,
+  "would_apply": null,
+  "tighten_r": null
+ },
+ "context_flags": [
+  "judgement: priced_options null, no hold cell",
+  "correlated_exposure: 11 of 13 other open packages are shorts (crypto and metals); only SPY and USO are long",
+  "missing_inputs: priced_options, regime.vol_now, context.funding"
+ ],
+ "account_reads": [
+  {
+   "account_id": "bybit_1",
+   "account_class": "paper",
+   "read": "no_action",
+   "evidence": "bybit_orders: SL 79165.4 / TP 70960.6, position True; would_apply = the shared amend reaches this leg, NOT that its RiskManager approved (LTR-6 gap)"
+  }
+ ],
+ "disposition": {
+  "route": "none",
+  "mandate": null,
+  "action_issue": null,
+  "applied_at": null,
+  "verified_readback": null
+ },
+ "model": "sonnet-tier (repo-less reviewer)",
+ "session": "session_01AFoLuMiTY1eUre6PZYbLxC",
+ "prompt_sha": null,
+ "skill_sha": null,
+ "packet_sha": "39a1e89c618d8a68dc12c7ed5fb4f360294a333a4fc3b24b032bdd3a35a8b26b",
+ "forecast": {
+  "thesis": "BTC ranges under the 77607 swing high while 4h ADX ~28 stays trending down; a break of 77060 and a retest of the 76275 low is slightly less than even odds within the horizon.",
+  "direction": "with_trade",
+  "target_px": 76275.1,
+  "p_target": 0.38,
+  "invalidation_px": 77607.1,
+  "horizon_bars": 8,
+  "timeframe": "1h",
+  "evidence": [
+   "context.previous_review.forecast: neither 76275.1 nor 77607.1 touched",
+   "chart.bars_ohlc: highs <=77464.3, lows >=77060.1",
+   "chart.htf: 4h trending ADX 28.0",
+   "exit_plan: SL 79165.4 / TP 70960.6"
+  ]
+ }
+}

@@ -1,0 +1,120 @@
+{
+ "schema_version": 1,
+ "review_id": "LR-20261031T0804Z-pkg-dc7c0c141d2c42c9",
+ "reviewed_at": "2026-10-31T08:12:00Z",
+ "order_package_id": "pkg-dc7c0c141d2c42c9",
+ "trade_id": null,
+ "leg": "trend_donchian_eth",
+ "accounts": [
+  "bybit_1"
+ ],
+ "trigger": {
+  "event": "judgement_cadence",
+  "level": "2026-10-31T08:00:00+00:00",
+  "l0_snapshot_at": "2026-10-31T07:59:51.661323+00:00"
+ },
+ "info_cutoff_at": "2026-10-31T08:04:40Z",
+ "state": {
+  "atr_now_over_entry": 0.4523,
+  "bars_held": 36,
+  "giveback_r": 1.2007,
+  "open_r": 0.263,
+  "peak_provenance": "estimated",
+  "peak_r": 1.4637,
+  "regime_cell_entry": "chop/volatile",
+  "regime_cell_now": null,
+  "sl": 2289.84,
+  "tp": 2035.24187
+ },
+ "features_at_review": {
+  "atr_now_over_entry": 0.4523,
+  "bars_since_peak": 30,
+  "giveback_r": 1.2007,
+  "open_r": 0.263,
+  "peak_r": 1.4637,
+  "r_to_stop": 0.7993,
+  "r_to_target": 3.6093
+ },
+ "mechanics": {
+  "evidence": "package sl 2289.84 / tp 2035.24187 agree with every readable account",
+  "verdict": "match"
+ },
+ "options": [
+  {
+   "action": "hold",
+   "level": null,
+   "n": 19,
+   "mean_r": null,
+   "sd_r": null,
+   "worst_r": null,
+   "net": null
+  }
+ ],
+ "outcome_table_source": "comms/live_review/tables/LR-20261031T0804Z-pkg-dc7c0c141d2c42c9.json",
+ "recommendation": {
+  "action": "hold",
+  "level": null,
+  "level_atr": null,
+  "ev_delta_r": null,
+  "worst_case_delta_r": null,
+  "basis": "judgement",
+  "confidence": "anecdote",
+  "evidence_source": "judgement",
+  "judgement_confidence": 0.57,
+  "reason": "Hold cell n=19 < floor 20 (thin, not measured); judgement. Prior forecast (hold, target 2208.17 / invalidation 2262.22, 12x1h) held: since it, 1h lows >=2235.36 and highs <=2248.28, so neither level was touched and it is inside its horizon; price 2243 sits in the 2235-2251 range under the 4h 2262 lower high, 4h ADX 31 trending down. Carry it, p_target 0.42->0.38 because the range is tightening (ATR ratio 0.45). +0.26R open (peak 1.46, 30 bars ago), SL 2289.84 is 0.8R away and TP far: the plan fits the view; a tighter stop would sit inside range noise."
+ },
+ "judge_prior": null,
+ "applied": false,
+ "apply_policy": {
+  "bound_r": 0.25,
+  "within_bound": null,
+  "tighten_r": null
+ },
+ "shadow_policy": {
+  "bound_r": 0.5,
+  "within_bound": null,
+  "would_apply": null,
+  "tighten_r": null
+ },
+ "context_flags": [
+  "judgement: hold n=19 thin, not measured; tighten cells invalid_level",
+  "atr_ratio: atr_now_over_entry 0.45 (<=0.67, volatility contraction)",
+  "correlated_exposure: same ETH short as trend_donchian_eth_4h on bybit_2, plus the whole short book",
+  "missing_inputs: regime.vol_now, context.funding"
+ ],
+ "account_reads": [
+  {
+   "account_id": "bybit_1",
+   "account_class": "paper",
+   "read": "no_action",
+   "evidence": "bybit_orders: SL 2289.84 / TP 2035.24, position True; would_apply = the shared amend reaches this leg, NOT that its RiskManager approved (LTR-6 gap)"
+  }
+ ],
+ "disposition": {
+  "route": "none",
+  "mandate": null,
+  "action_issue": null,
+  "applied_at": null,
+  "verified_readback": null
+ },
+ "model": "sonnet-tier (repo-less reviewer)",
+ "session": "session_01AFoLuMiTY1eUre6PZYbLxC",
+ "prompt_sha": null,
+ "skill_sha": null,
+ "packet_sha": "9feb24918585727610b50c3a9ae75d365ee52996c25b2cfe48a94d55453917b8",
+ "forecast": {
+  "thesis": "1h range 2235-2251 beneath the 4h lower high 2262 with ADX ~31 trending down favours a break of 2235 toward 2208, but ATR is contracting so it may take most of the horizon.",
+  "direction": "with_trade",
+  "target_px": 2208.17,
+  "p_target": 0.38,
+  "invalidation_px": 2262.22,
+  "horizon_bars": 10,
+  "timeframe": "1h",
+  "evidence": [
+   "context.previous_review.forecast: 2208.17 and 2262.22 untouched",
+   "chart.bars_ohlc: lows >=2235.36 highs <=2248.28",
+   "chart.htf: 4h trending ADX 31.3",
+   "exit_plan: SL 2289.84 / TP 2035.24"
+  ]
+ }
+}

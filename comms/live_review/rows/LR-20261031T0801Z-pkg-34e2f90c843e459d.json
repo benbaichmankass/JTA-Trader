@@ -1,0 +1,136 @@
+{
+ "schema_version": 1,
+ "review_id": "LR-20261031T0801Z-pkg-34e2f90c843e459d",
+ "reviewed_at": "2026-10-31T08:12:00Z",
+ "order_package_id": "pkg-34e2f90c843e459d",
+ "trade_id": null,
+ "leg": "trend_donchian_xrp_4h",
+ "accounts": [
+  "bybit_2",
+  "bybit_portfolio"
+ ],
+ "trigger": {
+  "event": "judgement_cadence",
+  "level": "2026-10-31T08:00:00+00:00",
+  "l0_snapshot_at": "2026-10-31T07:59:51.782126+00:00"
+ },
+ "info_cutoff_at": "2026-10-31T08:01:26Z",
+ "state": {
+  "atr_now_over_entry": 1.14,
+  "bars_held": 8,
+  "giveback_r": 0.9507,
+  "open_r": -0.1525,
+  "peak_provenance": "estimated",
+  "peak_r": 0.7982,
+  "regime_cell_entry": null,
+  "regime_cell_now": null,
+  "sl": 1.28502857,
+  "tp": 1.1152578
+ },
+ "features_at_review": {
+  "atr_now_over_entry": 1.14,
+  "bars_since_peak": 6,
+  "giveback_r": 0.9507,
+  "open_r": -0.1525,
+  "peak_r": 0.7982,
+  "r_to_stop": 0.8475,
+  "r_to_target": 2.7471
+ },
+ "mechanics": {
+  "evidence": "order_packages status=closed close_reason=stale_stop; package sl 1.28502857 / tp 1.1152578 agree with every readable account",
+  "verdict": "match"
+ },
+ "options": [
+  {
+   "action": "hold",
+   "level": null,
+   "n": 20,
+   "mean_r": 1.0159,
+   "sd_r": 1.3417,
+   "worst_r": -1.0838,
+   "net": true
+  },
+  {
+   "action": "tighten_sl",
+   "level": null,
+   "n": 20,
+   "mean_r": 0.4927,
+   "sd_r": 0.7177,
+   "worst_r": -0.1841,
+   "net": true
+  }
+ ],
+ "outcome_table_source": "comms/live_review/tables/LR-20261031T0801Z-pkg-34e2f90c843e459d.json",
+ "recommendation": {
+  "action": "hold",
+  "level": null,
+  "level_atr": null,
+  "ev_delta_r": null,
+  "worst_case_delta_r": null,
+  "basis": "ev_positive",
+  "confidence": "measured",
+  "evidence_source": "table",
+  "judgement_confidence": null,
+  "reason": "Prior forecast (hold, target 1.2286 / invalidation 1.2736, 6x4h) held: since it, highs <=1.2617 and lows >=1.2419, so neither level was touched and it is still inside its horizon; price 1.2458 is mid-range with 1d chop ADX 18.5, so I carry it with p_target 0.38->0.35. Hold cell n=20 (at floor) mean +1.02R measured vs tighten atr:2.0 +0.49R; SL 1.2850 is 0.85R away and is the strategy's own plan. Note the venue read shows no position or SL/TP and order_packages says closed (stale_stop): if the package is already flat this hold is moot."
+ },
+ "judge_prior": null,
+ "applied": false,
+ "apply_policy": {
+  "bound_r": 0.25,
+  "within_bound": null,
+  "tighten_r": null
+ },
+ "shadow_policy": {
+  "bound_r": 0.5,
+  "within_bound": null,
+  "would_apply": null,
+  "tighten_r": null
+ },
+ "context_flags": [
+  "mechanics_note: bybit_orders SL None / TP None, position False and order_packages status=closed close_reason=stale_stop while the verdict reads match: package may already be closed (manager: verify)",
+  "correlated_exposure: e4_oi_shock_1h XRPUSDT short (bybit_1) is the same XRP bet; book is short-heavy (11 of 13 others)",
+  "tighten_bias: stop-at-price fills flatter any tighten",
+  "hold cell n=20 equals n_floor 20 (measured, at the floor)"
+ ],
+ "account_reads": [
+  {
+   "account_id": "bybit_2",
+   "account_class": "real_money",
+   "read": "no_action",
+   "evidence": "bybit_orders: SL None / TP None, position False; no apply path for this exchange yet (LTR-9 / none)"
+  },
+  {
+   "account_id": "bybit_portfolio",
+   "account_class": "paper",
+   "read": "no_action",
+   "evidence": "bybit_orders: SL None / TP None, position False; no apply path for this exchange yet (LTR-9 / none)"
+  }
+ ],
+ "disposition": {
+  "route": "none",
+  "mandate": null,
+  "action_issue": null,
+  "applied_at": null,
+  "verified_readback": null
+ },
+ "model": "sonnet-tier (repo-less reviewer)",
+ "session": "session_01AFoLuMiTY1eUre6PZYbLxC",
+ "prompt_sha": null,
+ "skill_sha": null,
+ "packet_sha": "c38189e124a4fef62a12bdacfb90c1da18432f28285d0d593007b0dae8007677",
+ "forecast": {
+  "thesis": "Price is mid-range between the 1.2286 low and 1.2736 high; 4h still leans down but 1d is chop, so a retest of 1.2286 is a bit less than even odds before the 1.2736 high.",
+  "direction": "with_trade",
+  "target_px": 1.2286,
+  "p_target": 0.35,
+  "invalidation_px": 1.2736,
+  "horizon_bars": 5,
+  "timeframe": "4h",
+  "evidence": [
+   "context.previous_review.forecast: neither 1.2286 nor 1.2736 touched",
+   "chart.bars_ohlc: highs <=1.2617, lows >=1.2419",
+   "chart.htf: 1d chop ADX 18.5",
+   "priced_options: hold n=20 mean +1.0159R"
+  ]
+ }
+}

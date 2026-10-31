@@ -1,0 +1,110 @@
+{
+ "schema_version": 1,
+ "review_id": "LR-20261031T0803Z-pkg-a819d2ab2f254b74",
+ "reviewed_at": "2026-10-31T08:12:00Z",
+ "order_package_id": "pkg-a819d2ab2f254b74",
+ "trade_id": null,
+ "leg": "e4_oi_shock_1h",
+ "accounts": [
+  "bybit_1"
+ ],
+ "trigger": {
+  "event": "judgement_cadence",
+  "level": "2026-10-31T08:00:00+00:00",
+  "l0_snapshot_at": "2026-10-31T07:59:53.069362+00:00"
+ },
+ "info_cutoff_at": "2026-10-31T08:03:31Z",
+ "state": {
+  "atr_now_over_entry": null,
+  "bars_held": 0,
+  "giveback_r": null,
+  "open_r": -0.148,
+  "peak_provenance": "estimated",
+  "peak_r": null,
+  "regime_cell_entry": null,
+  "regime_cell_now": null,
+  "sl": 1.2570357142857143,
+  "tp": 1.2185285714285714
+ },
+ "features_at_review": {
+  "atr_now_over_entry": null,
+  "bars_since_peak": null,
+  "giveback_r": null,
+  "open_r": -0.148,
+  "peak_r": null,
+  "r_to_stop": 0.852,
+  "r_to_target": 2.148
+ },
+ "mechanics": {
+  "evidence": "package sl 1.2570357142857143 / tp 1.2185285714285714 agree with every readable account",
+  "verdict": "match"
+ },
+ "options": [],
+ "outcome_table_source": null,
+ "recommendation": {
+  "action": "hold",
+  "level": null,
+  "level_atr": null,
+  "ev_delta_r": null,
+  "worst_case_delta_r": null,
+  "basis": "judgement",
+  "confidence": "anecdote",
+  "evidence_source": "judgement",
+  "judgement_confidence": 0.58,
+  "reason": "No priced table, no Stage-0 record; judgement. Prior forecast (hold, target 1.2334 / invalidation 1.2617, 12x1h) held: price 1.2458 vs entry 1.2442, highs since <=1.2493 and lows >=1.2419, so neither level was touched and it is inside its horizon; 1h range-bound with a 4h transitional ADX 23. Carry it, p_target 0.45->0.40. The 24-bar time stop and both brackets (SL 1.2570 / TP 1.2185) already express the view; nothing in the packet beats the strategy's own plan on a demo mechanics soak."
+ },
+ "judge_prior": null,
+ "applied": false,
+ "apply_policy": {
+  "bound_r": 0.25,
+  "within_bound": null,
+  "tighten_r": null
+ },
+ "shadow_policy": {
+  "bound_r": 0.5,
+  "within_bound": null,
+  "would_apply": null,
+  "tighten_r": null
+ },
+ "context_flags": [
+  "judgement: priced_options null",
+  "correlated_exposure: duplicates the trend_donchian_xrp_4h XRPUSDT short (bybit_2) and the short-heavy book",
+  "missing_inputs: regime.atr_now_over_entry, priced_options, context.funding",
+  "state: bars_held 0 although the prior review was 3h ago (counter not advancing)"
+ ],
+ "account_reads": [
+  {
+   "account_id": "bybit_1",
+   "account_class": "paper",
+   "read": "no_action",
+   "evidence": "bybit_orders: SL 1.257 / TP 1.2185, position True; would_apply = the shared amend reaches this leg, NOT that its RiskManager approved (LTR-6 gap)"
+  }
+ ],
+ "disposition": {
+  "route": "none",
+  "mandate": null,
+  "action_issue": null,
+  "applied_at": null,
+  "verified_readback": null
+ },
+ "model": "sonnet-tier (repo-less reviewer)",
+ "session": "session_01AFoLuMiTY1eUre6PZYbLxC",
+ "prompt_sha": null,
+ "skill_sha": null,
+ "packet_sha": "e70e53307435cafa4b411f9c84a6d83bdd782f6c48cee2bd3fdbeda2af1a60c3",
+ "forecast": {
+  "thesis": "1h stays range-bound 1.2334-1.2617 under the lower high; a drift to the 1.2334 range low before the 24-bar time stop is a bit less than even odds.",
+  "direction": "with_trade",
+  "target_px": 1.2334,
+  "p_target": 0.4,
+  "invalidation_px": 1.2617,
+  "horizon_bars": 10,
+  "timeframe": "1h",
+  "evidence": [
+   "context.previous_review.forecast: 1.2334 and 1.2617 untouched",
+   "chart.bars_ohlc: highs <=1.2493 lows >=1.2419",
+   "chart.htf: 4h transitional ADX 23",
+   "exit_plan: SL 1.25704 / TP 1.21853, tp_r 2.0"
+  ]
+ }
+}

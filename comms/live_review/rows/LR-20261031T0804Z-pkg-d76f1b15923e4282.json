@@ -1,0 +1,121 @@
+{
+ "schema_version": 1,
+ "review_id": "LR-20261031T0804Z-pkg-d76f1b15923e4282",
+ "reviewed_at": "2026-10-31T08:12:00Z",
+ "order_package_id": "pkg-d76f1b15923e4282",
+ "trade_id": null,
+ "leg": "mgc_trend_1h",
+ "accounts": [
+  "ib_paper"
+ ],
+ "trigger": {
+  "event": "judgement_cadence",
+  "level": "2026-10-31T08:00:00+00:00",
+  "l0_snapshot_at": "2026-10-31T07:59:52.796905+00:00"
+ },
+ "info_cutoff_at": "2026-10-31T08:04:21Z",
+ "state": {
+  "atr_now_over_entry": 1.3719,
+  "bars_held": 14,
+  "giveback_r": 0.1388,
+  "open_r": 2.9103,
+  "peak_provenance": "estimated",
+  "peak_r": 3.0491,
+  "regime_cell_entry": null,
+  "regime_cell_now": null,
+  "sl": 3938.07142857,
+  "tp": 3596.1613
+ },
+ "features_at_review": {
+  "atr_now_over_entry": 1.3719,
+  "bars_since_peak": 1,
+  "giveback_r": 0.1388,
+  "open_r": 2.9103,
+  "peak_r": 3.0491,
+  "r_to_stop": 1.4612,
+  "r_to_target": 7.847
+ },
+ "mechanics": {
+  "evidence": "package sl 3938.07142857 / tp 3596.1613 agree with every readable account",
+  "verdict": "match"
+ },
+ "options": [
+  {
+   "action": "hold",
+   "level": null,
+   "n": 7,
+   "mean_r": null,
+   "sd_r": null,
+   "worst_r": null,
+   "net": null
+  }
+ ],
+ "outcome_table_source": "comms/live_review/tables/LR-20261031T0804Z-pkg-d76f1b15923e4282.json",
+ "recommendation": {
+  "action": "tighten_sl",
+  "level": 3925.0,
+  "level_atr": 2.01,
+  "ev_delta_r": null,
+  "worst_case_delta_r": null,
+  "basis": "judgement",
+  "confidence": "anecdote",
+  "evidence_source": "judgement",
+  "judgement_confidence": 0.55,
+  "reason": "Hold cell n=7 < floor 20 (thin, not measured); judgement. Prior forecast (tighten_sl to 3925, target 3850 / invalidation 3925, 24x1h) held: price 3884.4, lows >=3879.3 so 3850 not reached, highs <=3897.2 so 3925 not reached; it is unresolved and inside its horizon, and the advice-only SL move was not applied (live SL still 3938.07, 2.7 ATR away). +2.91R open (peak 3.05) with ATR ratio 1.37 and 4h ADX 43 trending; the futures market is closed over the weekend, so lock ~+1.8R at 3925 (2.0 ATR above price, above the 3912.5 bounce high) against a Sunday-open gap on the metals-short cluster. Continue the forecast."
+ },
+ "judge_prior": null,
+ "applied": false,
+ "apply_policy": {
+  "bound_r": 0.25,
+  "within_bound": null,
+  "tighten_r": null
+ },
+ "shadow_policy": {
+  "bound_r": 0.5,
+  "within_bound": null,
+  "would_apply": null,
+  "tighten_r": null
+ },
+ "context_flags": [
+  "judgement: hold n=7 < n_floor 20 (thin, not measured); tighten cells could_not_look",
+  "atr_ratio: atr_now_over_entry 1.37 (>=1.5 not reached)",
+  "weekend_gap: Saturday, MGC reopens Sunday evening; open +2.91R on a correlated metals-short cluster",
+  "correlated_exposure: SLV, IAUM, MGC pullback, MHG shorts",
+  "prior_review: tighten_sl 3925 was advice-only and not applied; live SL still 3938.07"
+ ],
+ "account_reads": [
+  {
+   "account_id": "ib_paper",
+   "account_class": "paper",
+   "read": "unknown",
+   "evidence": "ib_orders: SL 3938.1 / TP 3596.2, position True; no apply path for this exchange yet (LTR-9 / none)"
+  }
+ ],
+ "disposition": {
+  "route": "recommended",
+  "mandate": "MD-LIVE-TIGHTEN-SL",
+  "action_issue": null,
+  "applied_at": null,
+  "verified_readback": null
+ },
+ "model": "sonnet-tier (repo-less reviewer)",
+ "session": "session_01AFoLuMiTY1eUre6PZYbLxC",
+ "prompt_sha": null,
+ "skill_sha": null,
+ "packet_sha": "bf1846948bda557b8f5123fd994b6a7add938a5ddbe3418ce0fb9c1e6428bc9c",
+ "forecast": {
+  "thesis": "4h ADX 43 downtrend with shallow giveback, lower highs at 3912/3906; likely continues lower but a weekend gap against the metals-short cluster is the main risk, so part of the gain is locked.",
+  "direction": "with_trade",
+  "target_px": 3850.0,
+  "p_target": 0.45,
+  "invalidation_px": 3925.0,
+  "horizon_bars": 24,
+  "timeframe": "1h",
+  "evidence": [
+   "context.previous_review.forecast: 3850 and 3925 untouched",
+   "chart.swings: highs 4009.4, lows 3900.3",
+   "chart.htf: 4h trending ADX 43.05",
+   "book: MGC pullback also short, plus SLV/IAUM/MHG"
+  ]
+ }
+}

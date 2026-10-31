@@ -1,0 +1,120 @@
+{
+ "schema_version": 1,
+ "review_id": "LR-20261031T0802Z-pkg-3df9800bf7f04882",
+ "reviewed_at": "2026-10-31T08:12:00Z",
+ "order_package_id": "pkg-3df9800bf7f04882",
+ "trade_id": null,
+ "leg": "slv_trend_1h",
+ "accounts": [
+  "alpaca_paper"
+ ],
+ "trigger": {
+  "event": "judgement_cadence",
+  "level": "2026-10-31T08:00:00+00:00",
+  "l0_snapshot_at": "2026-10-31T07:59:52.943875+00:00"
+ },
+ "info_cutoff_at": "2026-10-31T08:02:08Z",
+ "state": {
+  "atr_now_over_entry": 0.9937,
+  "bars_held": 16,
+  "giveback_r": 0.6919,
+  "open_r": 3.7613,
+  "peak_provenance": "estimated",
+  "peak_r": 4.4532,
+  "regime_cell_entry": null,
+  "regime_cell_now": null,
+  "sl": 45.93642857,
+  "tp": 42.48215
+ },
+ "features_at_review": {
+  "atr_now_over_entry": 0.9937,
+  "bars_since_peak": 1,
+  "giveback_r": 0.6919,
+  "open_r": 3.7613,
+  "peak_r": 4.4532,
+  "r_to_stop": 1.9748,
+  "r_to_target": 3.1104
+ },
+ "mechanics": {
+  "evidence": "package sl 45.93642857 / tp 42.48215 agree with every readable account",
+  "verdict": "match"
+ },
+ "options": [
+  {
+   "action": "hold",
+   "level": null,
+   "n": 2,
+   "mean_r": null,
+   "sd_r": null,
+   "worst_r": null,
+   "net": null
+  }
+ ],
+ "outcome_table_source": "comms/live_review/tables/LR-20261031T0802Z-pkg-3df9800bf7f04882.json",
+ "recommendation": {
+  "action": "tighten_sl",
+  "level": 45.4,
+  "level_atr": 1.79,
+  "ev_delta_r": null,
+  "worst_case_delta_r": null,
+  "basis": "judgement",
+  "confidence": "anecdote",
+  "evidence_source": "judgement",
+  "judgement_confidence": 0.52,
+  "reason": "Prior forecast (tighten_sl to 45.40, target 44.0 / invalidation 45.4, 24x1h) held: price 44.595 bounced off the 44.125 low but never reached 44.0 or 45.4, so it is unresolved and inside its horizon; the prior SL move was advice-only and the live SL is still 45.936, 2.97 ATR above price. Hold cell n=2 thin. +3.76R open (peak 4.45) on a metals short with the US ETF market shut until Monday: lock the gain at 45.40 (1.79 ATR above price, ~+2.6R on a 0.68 R unit) against a weekend gap on a cluster of correlated shorts; cost if the downtrend simply continues is small. Continue the same forecast."
+ },
+ "judge_prior": null,
+ "applied": false,
+ "apply_policy": {
+  "bound_r": 0.25,
+  "within_bound": null,
+  "tighten_r": null
+ },
+ "shadow_policy": {
+  "bound_r": 0.5,
+  "within_bound": null,
+  "would_apply": null,
+  "tighten_r": null
+ },
+ "context_flags": [
+  "judgement: hold n=2 < n_floor 20 (thin, not measured); tighten cells could_not_look",
+  "weekend_gap: Saturday, US ETF closed until Monday; open +3.76R on a correlated metals-short cluster",
+  "correlated_exposure: SLV, IAUM, MGC x2, MHG shorts, plus crypto shorts",
+  "prior_review: tighten_sl 45.40 was advice-only and not applied; live SL still 45.936"
+ ],
+ "account_reads": [
+  {
+   "account_id": "alpaca_paper",
+   "account_class": "paper",
+   "read": "unknown",
+   "evidence": "alpaca_orders: SL 45.93 / TP 42.48, position True; no apply path for this exchange yet (LTR-9 / none)"
+  }
+ ],
+ "disposition": {
+  "route": "recommended",
+  "mandate": "MD-LIVE-TIGHTEN-SL",
+  "action_issue": null,
+  "applied_at": null,
+  "verified_readback": null
+ },
+ "model": "sonnet-tier (repo-less reviewer)",
+ "session": "session_01AFoLuMiTY1eUre6PZYbLxC",
+ "prompt_sha": null,
+ "skill_sha": null,
+ "packet_sha": "713e2fc98d364023f7c471625aa890c2abd386b3c12c838576d6db4d856fa09c",
+ "forecast": {
+  "thesis": "1h/4h downtrend intact after the 47.63 peak; price bounced off 44.125 but the lower-high structure holds, so continuation to 44.0 is slightly less than even odds while the weekend gap risk sits against the whole metals-short cluster.",
+  "direction": "with_trade",
+  "target_px": 44.0,
+  "p_target": 0.45,
+  "invalidation_px": 45.4,
+  "horizon_bars": 24,
+  "timeframe": "1h",
+  "evidence": [
+   "context.previous_review.forecast: 44.0 and 45.4 untouched",
+   "chart.swings: lows 44.305/44.125, high 47.63",
+   "chart.htf: 4h trending",
+   "book: SLV, IAUM, MGC x2, MHG shorts = one metals bet"
+  ]
+ }
+}
