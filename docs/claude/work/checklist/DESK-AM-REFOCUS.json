@@ -2,7 +2,7 @@
   "id": "DESK-AM-REFOCUS",
   "title": "Refocus the Claude desk on discretionary active management of every open trade (judgement above the mechanical rules) that trains the ML exit/AM heads; entries continue",
   "phase": null,
-  "state": "in_flight",
+  "state": "done",
   "owner": "session_01AFoLuLYH6B5e8LJSBB8q9x",
   "lane": "DESK-AM-REFOCUS",
   "model": null,
@@ -11,17 +11,20 @@
   "tier": 2,
   "prs": [
     21727,
-    21731,
     21732
   ],
   "blocked_on": [],
-  "note": "[2026-10-30 22:40Z lane DESK-AM-REFOCUS, dispatched by Manager Session 2026-10-30c session_01AFoLuJEaf7dNfk9kc5g3fG; ceiling $15] Row created by the lane: the dispatch said 'the row note has the scope' but no DESK-AM-REFOCUS row existed on main at b159f7586 (checked 22:17Z and 22:35Z). Scope recorded from the dispatch: (1) DIAGNOSE (2) DESIGN the judgement desk (3) BUILD first increment; wakes stay ON (22:25Z scope correction per dispatch). DIAGNOSIS landed: docs/research/desk-am-refocus-diagnosis-2026-10-30.md. Headline: inputs + instructions are primary (LTR packet 4.8 KB with NO candles, options priced for hold/tighten only, hold cell mis-conditioned; brief = numbers only from the table, no forecast field; 240 LTR rows: 131 hold/55 no_rec/33 flag/15 close/6 tighten, 43 real-money/prop rows 0 judged moves); every blind test (bf56-02/-03, DESK-LIFECYCLE-S0) and Q-TM1 were MASKED (no symbol/date/HTF/news/book) so informed judgement has never been tested; desk = 136 entry rows, 0 in-trade; entries capped 60 min => 93% no_trade.  [2026-10-30 ~23:55Z lane] BUILT increment 1, in 3 PRs.\n#21727 (Tier 1, self-land): diagnosis doc, the row, and grader scripts/research/desk_am_judgement_grade.py.\n#21731 (Tier 1, self-land; rebase after #21727): packet v3 context_v3 (chart, htf, book, exit_plan, live_vs_backtest) in scripts/ops/live_review_packet.py; REVIEWER-BRIEF section 2b (judgement + required forecast); schema/validator forecast rule from 2026-10-31T00:00Z (short-hold exempt); design section 2 + RULE-DESK-AM-JUDGEMENT-V1 section 3, registered before any forecast row. Verified on LIVE data over 15 open packages: chart/htf 14, book/exit/lvb 15, median packet 9.8 KB.\n#21732 (Tier 2, landing hold, manager merges + deploys): judgement_cadence due event (30m/1h/2h 4h, 4h 8h, 1d 24h, UTC slots), one book reviewer per all-cadence marker, claude_judgments fc_* columns. Revert = delete the config block.\nProposed to the operator, NOT changed: lift the live desk-entry max_hold_min <= 60 cap (Tier 3).\nFiled: PI-20261030-JSBB8Q9X-0001 (paper live-vs-backtest gap), PI-20261030-JSBB8Q9X-0002 (first forward grade, due 2026-11-13).\nlanded_unproven closes when: after #21732 is deployed, a judgement_cadence ltr-wake yields valid rows with a forecast on real open trades.  [2026-10-30 ~23:00Z lane] OPERATOR ANSWERS (popup ~22:30Z, relayed verbatim by Manager Session 2026-10-30c):\n(1) Cadence: \"Every 4h (~$20/day)\". Applied in #21732: judgement_cadence.hours_by_timeframe = 4 for every timeframe 30m-1d. The book-wake batching stays as the cost form: one reviewer per slot writes one row per package, so each package is still judged every 4h. Per-package sessions are a one-line recipe change if the manager prefers them.\n(2) Desk entry hold cap: \"We can lift it completely if we have a protocol for trade desk hand-offs\". The 60-min max_hold_min cap goes entirely on bybit_1 demo; no real money or prop. It is CONDITIONAL on the hand-off protocol a-e (manager trigger 22:25Z) and lands in the same PR as the protocol or after it, never before. Filed as row DESK-HANDOFF-PROTOCOL. Not built in this lane: the $15 ceiling is spent.",
+  "note": "[Manager Session 2026-10-30c, 2026-10-31 ~03:25Z] DONE. MERGED #21727, #21732 (b4b8cf54); #21731 superseded. DEPLOYED: judgement_cadence fired at the 2026-10-31T00:00Z slot (ltr-wake comment 6536366225, 10 packages). OBSERVED: one book reviewer wrote 10 rows with trigger.event judgement_cadence and forecasts on live-review/rows at 7daff6dda (~USD 0.92); BTC/ETH/SOL got no judgement because of the order-read timeout, fixed in #21750 (merged 01:14Z). Lane cost USD 23.60 vs ceiling 15 (overspend). The lane's own close-out PR #21744 failed roadmap-map-guard (no writeback) after the lane was archived; superseded by this record.",
   "priority_rank": 1,
-  "updated_at": "2026-10-30T22:54:11Z",
-  "updated_by": "session_01AFoLuLYH6B5e8LJSBB8q9x",
+  "updated_at": "2026-10-31T03:20:30Z",
+  "updated_by": "session_01AFoLuJEaf7dNfk9kc5g3fG",
   "roadmap": [
     "L-DESK",
     "L-ATM"
   ],
+  "writeback": {
+    "roadmap": "none: milestone text unchanged; increment 1 (judgement_cadence book review with forecasts) recorded on this row and in docs/research/desk-am-refocus-diagnosis-2026-10-30.md",
+    "arch": "none here: the packet v3 / forecast contract change gets its ARCHITECTURE-CANONICAL Change-log row in #21756 (DESK-HANDOFF-PROTOCOL)"
+  },
   "_seq": 846
 }
