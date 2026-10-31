@@ -1,0 +1,18 @@
+{
+  "due_when": {
+    "clears_when": "a replacement prop candidate passes its pre-registered Stage-0 rule net of the prop cost stack AND the prop superset (EV/survival vs the firm DD limits), so the manager can bring the swap (pull trend_donchian_eth_prop, add the replacement) to the operator as one Tier-3 PR",
+    "due_date": "2026-11-07",
+    "kind": "date"
+  },
+  "id": "PI-20261031-TD4QC5GP-0005",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "Manager Session 2026-10-31a (session_01AFoLuJwBvR58WBtD4qc5Gp); RQ-20261031-422a-01 FAIL (pooled n 8507, mean +0.005 R, cluster-bootstrap ci_lo -0.032 R; ETH-only n 1171 mean +0.024 R, CI incl. 0), graded by RESEARCH-OPS-20261031-2110 (#21977)",
+    "rerun": "python3 scripts/research/research_ops_checks.py --kind programme_review --since 7d  (look for a passing prop-candidate unit), and re-read config/accounts.yaml prop rosters"
+  },
+  "severity": "medium",
+  "state": "queued",
+  "tier": 3,
+  "what": "OPERATOR DECISION 2026-10-31 ~22:35Z (popup, verbatim: \"2 until we have a replacement\" = 'Keep on prop anyway' until a replacement exists): trend_donchian_eth_prop STAYS on the prop rosters despite its pre-registered widened-edge rule (RULE-RQ-20261031-422a-01-WIDENED-EDGE) failing - net R indistinguishable from zero at prop cost. Recorded against the failed rule. WORK: find a replacement prop leg - author pre-registered prop-candidate units (Stage 0 net of the full prop cost stack, then the prop EV/survival superset vs comms/prop_survival/<leg>.json firm DD limits); the research lane rule in the refill routine picks this up. When one passes, bring ONE Tier-3 swap PR (pull eth_prop, add the replacement, mirror rules per OPERATING-PLAN) to the operator. Until then no change to rosters."
+}
