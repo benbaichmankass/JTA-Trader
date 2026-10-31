@@ -6,6 +6,10 @@
 
 Lane PROP-GATE-EDGE-SENSITIVE · 2026-10-31 · PI-20261030-9KC5G3FG-0007 · Tier 1 (evidence tooling; no roster, config or order path touched).
 
+## Operator decisions (popups in Manager Session 2026-10-31a, ~08:50Z, verbatim)
+- trend_donchian_eth_prop: **"Keep, and get more evidence"** -> the leg stays rostered on breakout_2 / tradeify_1 / velotrade_1 **below the V3 bar by operator choice**. The evidence is the pre-registered unit `research/queue/RQ-20261031-422a-01.yaml` (longest ETH history + config-exact twins, pooled with a month-cluster bootstrap; PASS -> V3 re-grade, FAIL -> pull-from-prop proposal to the operator, INCONCLUSIVE -> the n that settles it).
+- V3 gate: **"Merge V3 (Recommended)"** -> this PR is approved to merge (the manager merges; landing hold).
+
 ## ⚠️ The currently rostered prop leg no longer passes (Tier-3 call for the operator)
 
 `config/accounts.yaml` (re-parsed 2026-10-31): `breakout_2`, `tradeify_1` and `velotrade_1` each roster `trend_donchian_eth_prop`.

@@ -1,0 +1,66 @@
+id: RQ-20261031-422a-01
+title: 'trend_donchian_eth_prop widened-evidence edge: V3 net-of-cost edge (95% CI lower bound > 0?) on the longest ETH history plus config-exact twins on other liquid USDT perps, prop stack, multi-window, cluster-bootstrap CI'
+status: queued
+cadence: once
+kind: experiment
+theme: new_strategy_prop
+priority: 1
+roadmap:
+- L-DESK
+question: 'Does trend_donchian_eth_prop have a positive net-of-cost per-trade edge whose 95% CI lower bound is above 0 when the evidence is widened? The V3 prop gate (RULE-P5-GATE-BRK-PER-LEG-V3, PR #21851) graded it FAIL_EDGE on 12/12 cells at n=517 (3y, +0.055 R, CI [-0.054, +0.164]) and n=165 (365d). Operator, ~08:50Z 2026-10-31, popup "Keep, and get more evidence": the leg stays rostered on breakout_2/tradeify_1/velotrade_1 below the V3 bar while this runs. Arms, all on the canonical cost-complete harness (scripts/research/exit_lever_ablation.py --grade stage0, arm P = the prop stack 8 bps fee + 3 bps slippage + 5 bps funding per 24 h): (1) OWN-LONG the leg''s own ETHUSDT from 2020-01-01 to 2026-10-11 20:00 (as far back as the harness'' Binance Vision fetch has ETH); (2) OWN-COMMON ETHUSDT from 2021-02-01; (3) config-exact TWINS - the same strategies.yaml block with only symbols[0] replaced (--symbol) - on BTCUSDT, SOLUSDT, BNBUSDT, XRPUSDT, DOGEUSDT, LINKUSDT, AVAXUSDT, ADAUSDT over the common window 2021-02-01..2026-10-11 20:00. Reported: edge (mean net R, 95% CI) per symbol, and POOLED over OWN-COMMON + all twins with a calendar-MONTH cluster bootstrap (2000 draws, seed 1), because trades in one month are correlated. Driver: scripts/research/widened_edge_pool.py. Prior work cited: RQ-20261015-1bf3-05 (the 1095 d own-symbol Stage-0 record this widens), RQ-20261029-9a2c-01 + docs/research/prop-gate-edge-regrade-2026-10-31/ (the V3 FAIL_EDGE), research/queue/RQ-20260922-002 family of eth_prop re-costs; this is a wider window and a family-level pool, not another draw on the same 3y ledger.'
+why_this_matters: 'The only rostered prop leg is below the V3 bar by operator choice (keep, get more evidence). Its V2-era PASSes were never evidence of edge. A pooled family estimate at several times the n either clears the bar (the leg is re-graded on the prop accounts) or gives the manager a data-backed pull-from-prop proposal for the operator. Without this the leg sits below the bar indefinitely.'
+power:
+  expected_n: 3000
+  min_detectable_effect: 0.1
+  effect_units: R
+  sd: 1.2
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: 'Per-trade net-R sd is about 1.2 (eth_prop 3y: SE 0.055 at n=517). Detecting a +0.1 R mean at 95%/80% needs about (2.8*1.2/0.1)^2 = ~1100 independent trades; the pooled sample is expected to be a few thousand trades over 9 symbols x ~5.7 y but month-clustered, so the effective n is lower - the cluster bootstrap reports it. If the pooled lower bound is <= 0 at n < 400 the unit is INCONCLUSIVE, not FAIL.'
+  feasibility:
+    source: none
+    accrual_basis: Re-measure of public price history (Binance Vision) at the prop cost stack; nothing accrues.
+decision_rule:
+  id: RULE-RQ-20261031-422a-01-WIDENED-EDGE
+  registered_at: '2026-10-31T09:30:00Z'
+  registered_before_run: true
+  statistic: 'From scripts/research/widened_edge_pool.py verdict.json: pooled = OWN-COMMON + all twin symbols that ran, net R per trade at arm P; pooled mean and the 2.5th percentile of a calendar-month cluster bootstrap of the mean (2000 draws, seed 1) = pooled.ci_lo; own_long.mean_r = the ETH 2020-2026 mean net R (iid CI reported beside it); per-symbol means reported, never selected among (no best-of-N). A twin that could not run is recorded as could_not_run and left out of the pool, stated in the result.'
+  rule: 'PASS IF pooled.ci_lo > 0 AND own_long.mean_r > 0 (the ETH estimate does not contradict the pool) -> re-grade trend_donchian_eth_prop on the prop accounts under V3 using the widened ledger (the manager files that re-grade; this unit changes no roster). FAIL IF pooled.ci_lo <= 0 AND pooled n >= 400 -> the manager brings a pull-from-prop proposal for trend_donchian_eth_prop to the operator (Tier 3); the FAIL closes this configuration on this window and cost stack, not the trend family. INCONCLUSIVE otherwise (pooled read_state not ok, own_long not ok, or pooled n < 400): the result states the n that would settle it (about (2.8*sd/0.1)^2 independent trades).'
+  what_it_does_not_do: 'Changes no roster, params, risk, sizing or config. Is not a promotion case. Does not use live-book P&L. Does not grade EV per account life (prop_ev_sim); that follows a PASS. Twins are config-exact copies, not tuned per symbol; per-symbol results are descriptive.'
+  min_n: '400'
+compute: cpu_long
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 2.0
+  est_minutes: 80
+  basis: 'Ten harness runs (own-long, own-common, 8 twins), each a ~2000 d public candle fetch and one backtest; RQ-20261015-1bf3-05 took about 45 min for one ~1100 d run, so about 80 min with fetches in parallel with nothing else.'
+value:
+  bucket: information
+  usd_at_stake_per_month: 300
+  confidence: 0.4
+  basis: 'settles whether the one rostered prop leg stays or is proposed for pull; stand-in figure, no balances stated'
+run:
+  workflow: research-script-run.yml
+  timeout_minutes: 150
+  command:
+  - python3
+  - scripts/research/widened_edge_pool.py
+  - --leg
+  - trend_donchian_eth_prop
+  - --out
+  - '{out_dir}'
+  inputs:
+    research_unit: RQ-20261031-422a-01
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+practice_precedent: 'R1 and T1 of docs/reference/trading-and-model-practice-principles.md (judge an edge ex a single window; track every configuration tried); config-exact twins as a family-level pooled estimate, never best-of-N'
+related:
+- research/queue/RQ-20261015-1bf3-05.yaml
+- research/queue/RQ-20261029-9a2c-01.yaml
+- docs/research/prop-gate-edge-regrade-2026-10-31/RESULT.md
+- docs/claude/work/checklist/PROP-GATE-EDGE-SENSITIVE.json
+- scripts/research/widened_edge_pool.py
