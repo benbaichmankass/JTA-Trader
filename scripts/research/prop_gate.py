@@ -28,7 +28,7 @@ from typing import Any
 
 REPO = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-import prop_ev_sim as pes
+import prop_ev_sim as pes  # noqa: E402
 
 RULE_V2 = "RULE-P5-GATE-BRK-PER-LEG-V2"
 RULE_V3 = "RULE-P5-GATE-BRK-PER-LEG-V3"

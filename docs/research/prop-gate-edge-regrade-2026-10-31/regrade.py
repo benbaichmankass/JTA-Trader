@@ -14,8 +14,8 @@ from pathlib import Path
 HERE = Path(__file__).resolve().parent
 REPO = HERE.parents[2]
 sys.path.insert(0, str(REPO / "scripts/research"))
-import prop_ev_sim as pes
-import prop_gate as pg
+import prop_ev_sim as pes  # noqa: E402
+import prop_gate as pg  # noqa: E402
 
 SOURCES = [  # (dir, record leg name fn)
     ("docs/research/prop-gate-rerun-2026-10-29/RQ-20261029-9a2c-01", None),
