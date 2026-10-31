@@ -15,7 +15,7 @@
   "blocked_on": [],
   "note": "Closing observation: the first judgement_cadence packet after deploy whose context.previous_review.forecast is non-null, with a reviewer row that states whether that forecast held.",
   "priority_rank": 1,
-  "updated_at": "2026-10-31T06:48:02Z",
+  "updated_at": "2026-10-31T07:12:56Z",
   "updated_by": "session_01AFoLuJwBvR58WBtD4qc5Gp",
   "roadmap": [
     "L-DESK",
@@ -24,6 +24,11 @@
   "writeback": {
     "roadmap": "none: packet field addition inside L-DESK/L-ATM",
     "arch": "none: packet field addition, no architecture section changes"
+  },
+  "observation": {
+    "what": "A judgement_cadence packet built after deploy carries context.previous_review.forecast non-null for a package whose prior review row had a forecast, and the reviewer row states whether it held",
+    "how_to_check": "Read a post-deploy judgement_cadence packet (comms/live_review/packets/<review_id>.json on live-review/rows, or the ltr-wake comment) for a package with 2+ reviews: previous_review.forecast must equal the prior row forecast in reviews.jsonl; and the new row reason says whether it held",
+    "due_by": "2026-11-03"
   },
   "_seq": 850
 }
