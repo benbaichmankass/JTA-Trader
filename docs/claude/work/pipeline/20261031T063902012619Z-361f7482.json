@@ -1,0 +1,18 @@
+{
+  "due_when": {
+    "clears_when": "the ml_health / regime / prop theme shortfalls are met by authored units, or each short theme is named blocked on a specific build row, or the lead confirmations are queued on a forward-accrual window",
+    "due_date": "2026-11-07",
+    "kind": "date"
+  },
+  "id": "PI-20261031-YEIYJWC5-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "Daily research authoring lane 2026-10-31, PR #21822",
+    "rerun": "python3 scripts/ci/check_research_queue_health.py (H1-THEME lines) and the leg x lever cell matrix over research/queue exit_lever_ablation units"
+  },
+  "severity": "low",
+  "state": "queued",
+  "tier": 1,
+  "what": "After PR #21822 the runnable floor is met (76 vs 73) but themes stay short: ml_health 0 of 10, regime 8, new_strategy_prop 6, infra 3, timeframes 1. The exit_lever_ablation grid is nearly saturated for rostered legs (13 legs x 12 levers: only skip-hours and a few eth/sol/avax/prop cells were open, now authored), so further supply needs new instruments (LIVE-BT-STAGE-B journal join, MOMENTUM-LEVERS-LIVE) or ML units with a named consumer once P2-Q2-costnet-metalabel-regate / P2-desk-checkin-exit-head builds land. Leads 3a84-01 (DI on xrp_pullback_2h) and 4b82-14 (cold-vol skip on eth_pullback_2h) cannot be confirmed on a disjoint window: the whole history is used; confirmation needs forward accrual or another leg. UNVERIFIED: I read only ~12 of the 40 authoring-queue nodes in full; the claim that the rest are notes/Tier-3 packets or build-gated is an inference from their titles."
+}
