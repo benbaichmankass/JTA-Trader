@@ -80,10 +80,95 @@ JUDGEMENT_EVENT = "judgement_cadence"
 _TF_LABEL = {300: "5m", 900: "15m", 1800: "30m", 3600: "1h", 7200: "2h", 14400: "4h", 86400: "1d"}
 
 
+SKIPPED_CLOSED = "skipped_closed_market"
+SKIPPED_NOTHING_NEW = "skipped_nothing_new"
+
+
+def package_market_state(symbol: Any, now: datetime) -> Tuple[bool, str, str]:
+    """``(open, asset_class, why)`` for the package's instrument at *now*, from the one session helper
+    (``src.runtime.market_hours``). Crypto perps are always open. An unreadable helper or an asset class it
+    does not model reads OPEN, with the reason: a review that fires is the safe side (Prime Directive)."""
+    try:
+        from src.runtime.market_hours import ASSET_CLASSES, asset_class_for_symbol, is_market_open
+        cls = asset_class_for_symbol(str(symbol or ""))
+        if cls not in ASSET_CLASSES:
+            return True, str(cls), f"asset class {cls!r} not modelled: treated as open"
+        return bool(is_market_open(cls, now)), cls, f"{cls} market {'open' if is_market_open(cls, now) else 'closed'}"
+    except Exception as exc:  # noqa: BLE001  # allow-silent: reported in `why`; a review fires
+        return True, "unknown", f"market_hours_unreadable: {type(exc).__name__}: {exc}: treated as open"
+
+
+def _history_points(ctx: Optional[Dict[str, Any]]) -> Optional[List[Tuple[datetime, float, Optional[float]]]]:
+    """``(bar_ts, last_price, atr)`` per path-history bar with a price and a timestamp, oldest first; None when
+    the history could not be read."""
+    hist = (ctx or {}).get("history")
+    if hist is None:
+        return None
+    out = []
+    for h in hist:
+        ts, px = _parse_ts(h.get("bar_ts")), _f(h.get("last_price"))
+        if ts is not None and px is not None:
+            out.append((ts, px, _f(h.get("atr"))))
+    out.sort(key=lambda t: t[0])
+    return out
+
+
+def package_novelty(prior: Dict[str, Any], ctx: Optional[Dict[str, Any]], min_move_atr: float,
+                    now: datetime, tf: int) -> Tuple[bool, str]:
+    """``(something_new, why)`` since this package's last review. NEW means at least one closed bar of the
+    leg's timeframe since the last review AND the price moved >= ``min_move_atr`` x ATR since then (price
+    at the last review = the newest path-history bar at or before it; now = the newest bar). Anything this
+    cannot establish (never reviewed, no history, no ATR) reads NEW with the reason: a skipped review must
+    be a measured skip, never a blind one."""
+    last = prior["last"]
+    if last is None:
+        return True, "never reviewed"
+    if bar_start(now, tf) <= last:
+        return False, f"no closed {_TF_LABEL.get(tf, str(tf) + 's')} bar since the last review ({last.isoformat()})"
+    pts = _history_points(ctx)
+    if not pts:
+        return True, "move unreadable (path history unavailable): reviewing"
+    before = [p for p in pts if p[0] <= last]
+    if not before:
+        return True, "move unreadable (no history bar at or before the last review): reviewing"
+    atr = next((a for _, _, a in reversed(pts) if a and a > 0), None)
+    if atr is None:
+        return True, "move unreadable (no ATR in path history): reviewing"
+    move = abs(pts[-1][1] - before[-1][1]) / atr
+    if move >= min_move_atr:
+        return True, f"new closed bar and price moved {move:.2f} ATR >= {min_move_atr:g} since the last review"
+    return False, f"new closed bar but price moved {move:.2f} ATR < {min_move_atr:g} since the last review"
+
+
+def scheduled_slot_skip(name: str, symbol: Any, order_package_id: Any, prior: Dict[str, Any],
+                        ctx: Optional[Dict[str, Any]], min_move_atr: Optional[float], now: datetime,
+                        tf: int) -> Optional[Dict[str, Any]]:
+    """The skip record for a SCHEDULED slot (judgement_cadence, daily_floor) that must not fire, else None.
+    Closed market: no scheduled slot of either kind. Nothing new (``min_move_atr`` configured): no
+    judgement_cadence slot; ``daily_floor`` is the backstop and fires on an open market regardless.
+    Event triggers never come through here."""
+    is_open, cls, why = package_market_state(symbol, now)
+    base = {"order_package_id": order_package_id, "event": name, "symbol": symbol, "asset_class": cls}
+    if not is_open:
+        return dict(base, state=SKIPPED_CLOSED, reason=why)
+    if name == JUDGEMENT_EVENT and min_move_atr is not None:
+        new, nwhy = package_novelty(prior, ctx, min_move_atr, now, tf)
+        if not new:
+            return dict(base, state=SKIPPED_NOTHING_NEW, reason=nwhy)
+    return None
+
+
 def judgement_cadence_event(prior: Dict[str, Any], cfg: Dict[str, Any], now: datetime,
-                            tf: int) -> Optional[Tuple[str, Any, str]]:
+                            tf: int, row: Optional[Dict[str, Any]] = None,
+                            ctx: Optional[Dict[str, Any]] = None,
+                            skips: Optional[List[Dict[str, Any]]] = None) -> Optional[Tuple[str, Any, str]]:
     """``(judgement_cadence, slot_start_iso, why)`` when this package's slot has had no review, else None.
-    Timeframes absent from ``hours_by_timeframe`` (the 5m/15m short-hold lane) get no slot."""
+    Timeframes absent from ``hours_by_timeframe`` (the 5m/15m short-hold lane) get no slot.
+
+    TRIGGER-FIRST (operator 2026-10-31): with ``row`` given, a slot is also withheld when the package's market
+    is CLOSED, or (``min_move_atr`` configured) when nothing is new since its last review. A withheld slot is
+    appended to ``skips`` with its reason (``skipped_closed_market`` / ``skipped_nothing_new``); it is never
+    silent and never read as reviewed."""
     c = cfg["events"].get(JUDGEMENT_EVENT)
     if not isinstance(c, dict):
         return None
@@ -93,7 +178,17 @@ def judgement_cadence_event(prior: Dict[str, Any], cfg: Dict[str, Any], now: dat
     slot = bar_start(now, int(float(hours) * 3600))
     if prior["last"] is not None and prior["last"] >= slot:
         return None
+    if row is not None:
+        mv = _f(c.get("min_move_atr"))
+        skip = scheduled_slot_skip(JUDGEMENT_EVENT, row.get("symbol"), row.get("order_package_id"), prior, ctx,
+                                   mv, now, tf)
+        if skip is not None:
+            if skips is not None:
+                skips.append(dict(skip, slot=slot.isoformat()))
+            return None
     return (JUDGEMENT_EVENT, slot.isoformat(), f"judgement slot every {hours:g}h: no review since {slot.isoformat()}")
+
+
 PRESCREEN_EVENTS = ("adverse_r", "stall", "momentum_flip", "structure_break")
 
 _TF_RE = re.compile(r"_(\d+)(m|h|d)$")
@@ -848,6 +943,7 @@ def compute_due(rows: List[Dict[str, Any]], reviews: List[Dict[str, Any]],
     default_tf = str(cfg.get("default_timeframe", "2h"))
 
     due: List[Dict[str, Any]] = []
+    skipped_slots: List[Dict[str, Any]] = []
     cooled = 0
     cnl_total = 0
     coverage: List[Dict[str, Any]] = []
@@ -878,10 +974,16 @@ def compute_due(rows: List[Dict[str, Any]], reviews: List[Dict[str, Any]],
         # Only reviewed accounts (the daily_floor list, the wake's own account set), and never on a package
         # an auto mandate already reviews on its own cadence (mandate_cadence above).
         jc = None if (cad or str(row.get("account_id")) not in floor_accounts) \
-            else judgement_cadence_event(prior, cfg, now, tf)
+            else judgement_cadence_event(prior, cfg, now, tf, row, (market or {}).get(pkg), skipped_slots)
         if jc:
             mk = mk + [jc]
         for name, level, why in candidate_events(row, prior, cfg, now, floor_accounts) + mk:
+            if name == "daily_floor":
+                # TRIGGER-FIRST: a scheduled slot never fires for a closed market (open-market floor still fires).
+                skip = scheduled_slot_skip(name, row.get("symbol"), pkg, prior, None, None, now, tf)
+                if skip is not None:
+                    skipped_slots.append(dict(skip, slot=str(level)))
+                    continue
             if name == "mechanics" and level == VENUE_LEVEL:
                 # Not the plain fired-set: a repeat of the SAME divergence is quiet, a
                 # changed one is due again. Rows with a null level are covered too.
@@ -943,6 +1045,7 @@ def compute_due(rows: List[Dict[str, Any]], reviews: List[Dict[str, Any]],
             "events_could_not_look": [],
         })
     return {"due": due, "due_count": len(due), "suppressed_by_cooldown": cooled,
+            "skipped_slots": skipped_slots, "skipped_slots_count": len(skipped_slots),
             "packages_with_events_could_not_look": cnl_total,
             "event_coverage": coverage,
             "could_not_look_summary": summarize_could_not_look(coverage),

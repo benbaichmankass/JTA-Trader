@@ -403,7 +403,8 @@ def probe_desk_row_missing(now: datetime) -> dict:
                       f"(bound {DESK_ROW_MISSING_MIN} min): the wake did not run or did not write"}
 
 
-def probe_desk_orphan(now: datetime, *, open_pkgs: list[dict] | None = None, reviews: list[dict] | None = None) -> dict:
+def probe_desk_orphan(now: datetime, *, open_pkgs: list[dict] | None = None, reviews: list[dict] | None = None,
+                      cfg: dict | None = None) -> dict:
     """DESK-HANDOFF-PROTOCOL (d): an open desk-opened position (``claude_desk``) with no desk decision -- the opening
     row or any live-review row on the package -- inside the judgement cadence + slack. A flag, never a gate: the
     position keeps its venue SL/TP. A journal or reviews read that fails is ``unknown`` (never ``ok``)."""
@@ -434,8 +435,9 @@ def probe_desk_orphan(now: datetime, *, open_pkgs: list[dict] | None = None, rev
         except Exception as exc:  # noqa: BLE001  # allow-silent: surfaced as unknown / could_not_look
             return {"status": UNKNOWN, "read_state": "could_not_look",
                     "detail": f"read_state could_not_look: live-review rows ({type(exc).__name__}: {exc})"}
-    bad = desk_handoff.orphans(open_pkgs, reviews, now)
-    bound = desk_handoff.CADENCE_HOURS + desk_handoff.SLACK_HOURS
+    cadence_h, skip_closed = desk_handoff.trigger_first_bound(cfg)
+    bad = desk_handoff.orphans(open_pkgs, reviews, now, cadence_hours=cadence_h, skip_closed_markets=skip_closed)
+    bound = cadence_h + desk_handoff.SLACK_HOURS
     if bad:
         names = ", ".join(f"{o['order_package_id']} {o['symbol']} ({o['age_h']}h)" if o["age_h"] is not None
                           else f"{o['order_package_id']} {o['symbol']} (last decision unreadable)" for o in bad[:5])
@@ -1160,11 +1162,18 @@ def _self_test() -> int:
     today = now.date()
     pk = {"order_package_id": "pkg-d1", "strategy_name": "claude_desk", "symbol": "BTCUSDT",
           "created_at": "2026-10-04T00:00:00Z", "meta": "{}"}
+    gate_off = {"events": {"judgement_cadence": {"hours_by_timeframe": {"2h": 4}}, "daily_floor": {"hours": 24}}}
+    gate_on = {"events": {"judgement_cadence": {"hours_by_timeframe": {"2h": 4}, "min_move_atr": 0.5},
+                          "daily_floor": {"hours": 24}}}
     check("desk_orphan: a desk position with no decision in 5h breaches",
-          probe_desk_orphan(now, open_pkgs=[pk], reviews=[])["status"] == BREACHED)
+          probe_desk_orphan(now, open_pkgs=[pk], reviews=[], cfg=gate_off)["status"] == BREACHED)
+    check("desk_orphan: trigger-first, 7h without a decision is within the daily-floor bound",
+          probe_desk_orphan(now, open_pkgs=[dict(pk, created_at="2026-10-04T00:00:00Z")], reviews=[],
+                            cfg=gate_on)["status"] == OK)
     check("desk_orphan: a review 1h ago owns it",
           probe_desk_orphan(now, open_pkgs=[pk], reviews=[{"order_package_id": "pkg-d1",
-                                                           "reviewed_at": "2026-10-04T06:00:00Z"}])["status"] == OK)
+                                                           "reviewed_at": "2026-10-04T06:00:00Z"}],
+                            cfg=gate_off)["status"] == OK)
     check("desk_orphan: no open desk positions is ok", probe_desk_orphan(now, open_pkgs=[], reviews=[])["status"] == OK)
     ao = {"id": "PI-20261001-x-0001", "state": "queued", "next_action": "ask_operator",
           "what": "decide X", "due_when": {"kind": "date", "due_date": "2026-10-01"}}
