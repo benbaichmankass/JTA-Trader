@@ -26,7 +26,7 @@ from __future__ import annotations
 
 import json
 from datetime import datetime, timedelta, timezone
-from typing import Any, Dict, Iterable, List, Optional
+from typing import Any, Dict, Iterable, List, Optional, Tuple
 
 DESK_LEG = "claude_desk"
 VERDICTS = ("confirm", "revise", "exit")
@@ -139,9 +139,27 @@ def last_decision_at(pkg: Dict[str, Any], reviews: Iterable[Dict[str, Any]]) -> 
     return max(times) if times else None
 
 
+def trigger_first_bound(cfg: Optional[Dict[str, Any]] = None) -> Tuple[float, bool]:
+    """``(cadence_hours, skip_closed_markets)`` for the orphan probe. With the trigger-first gate on
+    (``judgement_cadence.min_move_atr`` set, TRIGGER-FIRST-REVIEWS 2026-10-31) a quiet package is deliberately not
+    reviewed on the 4h slot, so the guaranteed look is the ``daily_floor`` (hours), and a closed-market package is
+    not an orphan at all. Gate off or config unreadable: the old 4h bound, markets not exempted."""
+    try:
+        from src.runtime.live_review_due import load_config  # noqa: PLC0415
+        ev = (cfg or load_config())["events"]
+        if (ev.get("judgement_cadence") or {}).get("min_move_atr") is not None:
+            return float((ev.get("daily_floor") or {}).get("hours", 24)), True
+    except Exception:  # noqa: BLE001  # allow-silent: unreadable config = the stricter, older bound
+        pass
+    return CADENCE_HOURS, False
+
+
 def orphans(open_pkgs: Iterable[Dict[str, Any]], reviews: Iterable[Dict[str, Any]], now: datetime, *,
-            cadence_hours: float = CADENCE_HOURS, slack_hours: float = SLACK_HOURS) -> List[Dict[str, Any]]:
+            cadence_hours: float = CADENCE_HOURS, slack_hours: float = SLACK_HOURS,
+            skip_closed_markets: bool = False) -> List[Dict[str, Any]]:
     """Open desk packages with no desk decision inside cadence + slack. Pure; a flag, never a gate.
+    ``skip_closed_markets``: a package whose market is closed at *now* gets no scheduled slot (trigger-first) and is
+    not listed.
 
     A package whose last decision time cannot be read is listed with ``last_decision_at: None`` (could not look
     is never read as owned)."""
@@ -151,6 +169,10 @@ def orphans(open_pkgs: Iterable[Dict[str, Any]], reviews: Iterable[Dict[str, Any
     for p in open_pkgs:
         if str(p.get("strategy_name") or p.get("strategy") or "") != DESK_LEG:
             continue
+        if skip_closed_markets:
+            from src.runtime.live_review_due import package_market_state  # noqa: PLC0415
+            if not package_market_state(p.get("symbol"), now)[0]:
+                continue
         last = last_decision_at(p, reviews)
         if last is None or now - last > bound:
             out.append({"order_package_id": p.get("order_package_id"), "symbol": p.get("symbol"),
