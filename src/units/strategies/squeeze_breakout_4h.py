@@ -44,6 +44,8 @@ from typing import Any, Dict, Optional
 
 import pandas as pd
 
+from src.runtime.trail_cross import trail_cross_verdict
+from src.runtime.exit_levers import closed_frame
 from src.runtime.tp_venue_cap import (  # the ONE owner of the clamp
     TP_VENUE_CAP_PCT as _TP_SENTINEL_CAP_PCT)
 from src.units.strategies._base import require_candles
@@ -323,7 +325,7 @@ def monitor(cfg, candles_df, open_pkg):
         or float(_DEFAULTS["trail_mult"])
     )
 
-    window = _since_entry(candles_df, open_pkg)
+    window = _since_entry(closed_frame(candles_df, meta, cfg_dict), open_pkg)  # harness: closed bars
     # M31 P2 — position telemetry (observe-only); see trend_donchian.monitor
     # for the contract. Hooked HERE because `window` is already the since-entry
     # frame the ratchet below takes its extreme from, so the peak recorded is
@@ -350,13 +352,17 @@ def monitor(cfg, candles_df, open_pkg):
         if direction == "long":
             ext = float(window["high"].max())
             candidate = ext - trail_mult * atr
-            if candidate > sl and candidate < current_price:
-                return {"sl": round(candidate, 8)}
+            if candidate > sl:
+                if candidate < current_price:
+                    return {"sl": round(candidate, 8)}
+                return trail_cross_verdict(direction, candidate, sl, current_price)
         else:
             ext = float(window["low"].min())
             candidate = ext + trail_mult * atr
-            if candidate < sl and candidate > current_price:
-                return {"sl": round(candidate, 8)}
+            if candidate < sl:
+                if candidate > current_price:
+                    return {"sl": round(candidate, 8)}
+                return trail_cross_verdict(direction, candidate, sl, current_price)
     except (KeyError, ValueError, TypeError):
         return None
 
