@@ -1,0 +1,119 @@
+{
+ "schema_version": 1,
+ "review_id": "LR-20261031T0411Z-pkg-d76f1b15923e4282",
+ "reviewed_at": "2026-10-31T04:20:00Z",
+ "order_package_id": "pkg-d76f1b15923e4282",
+ "trade_id": null,
+ "leg": "mgc_trend_1h",
+ "accounts": [
+  "ib_paper"
+ ],
+ "trigger": {
+  "event": "judgement_cadence",
+  "level": "2026-10-31T04:00:00+00:00",
+  "l0_snapshot_at": null
+ },
+ "info_cutoff_at": "2026-10-31T04:11:59Z",
+ "state": {
+  "atr_now_over_entry": 1.3719,
+  "bars_held": 14,
+  "giveback_r": 0.1388,
+  "open_r": 2.9103,
+  "peak_provenance": "estimated",
+  "peak_r": 3.0491,
+  "regime_cell_entry": null,
+  "regime_cell_now": null,
+  "sl": 3938.07142857,
+  "tp": 3596.1613
+ },
+ "features_at_review": {
+  "atr_now_over_entry": 1.3719,
+  "bars_since_peak": 1,
+  "giveback_r": 0.1388,
+  "open_r": 2.9103,
+  "peak_r": 3.0491,
+  "r_to_stop": 1.4612,
+  "r_to_target": 7.847
+ },
+ "mechanics": {
+  "evidence": "package sl 3938.07142857 / tp 3596.1613 agree with every readable account",
+  "verdict": "match"
+ },
+ "options": [
+  {
+   "action": "hold",
+   "level": null,
+   "n": 7,
+   "mean_r": null,
+   "sd_r": null,
+   "worst_r": null,
+   "net": true
+  }
+ ],
+ "outcome_table_source": "comms/live_review/tables/LR-20261031T0411Z-pkg-d76f1b15923e4282.json",
+ "judge_prior": null,
+ "applied": false,
+ "apply_policy": {
+  "bound_r": 0.25,
+  "within_bound": null,
+  "tighten_r": null
+ },
+ "shadow_policy": {
+  "bound_r": 0.5,
+  "within_bound": null,
+  "would_apply": null,
+  "tighten_r": null
+ },
+ "model": "sonnet-tier (repo-less reviewer)",
+ "session": "session_01AFoLuJSaihcPQ9EqtC94vK",
+ "prompt_sha": null,
+ "skill_sha": null,
+ "packet_sha": "b1687d912e44275712de5b3321acbbf34531ecd0c5c986c2abb7af5f63d8fd4b",
+ "recommendation": {
+  "action": "tighten_sl",
+  "level": 3925.0,
+  "level_atr": 2.01,
+  "ev_delta_r": null,
+  "worst_case_delta_r": null,
+  "reason": "Hold cell n=7 thin. +2.91R (peak 3.05) with ATR ratio 1.37 expanding; Saturday-closed metals gap risk on a cluster of correlated shorts; stop 3938 is 2.7 ATR away, 3925 locks ~+1.2R.",
+  "basis": "judgement",
+  "confidence": "anecdote",
+  "evidence_source": "judgement",
+  "judgement_confidence": 0.5
+ },
+ "forecast": {
+  "thesis": "4h ADX 43 downtrend with shallow giveback; likely continues lower, but a Sunday gap against the metals-short cluster is the main risk, so lock part of the gain.",
+  "direction": "with_trade",
+  "target_px": 3850.0,
+  "p_target": 0.45,
+  "invalidation_px": 3925.0,
+  "horizon_bars": 24,
+  "timeframe": "1h",
+  "evidence": [
+   "chart.htf: 4h ADX 43 trending",
+   "chart.swings: swing high 3900.3 (0.79 ATR)",
+   "book: MGC pullback also short, plus SLV/IAUM/MHG"
+  ]
+ },
+ "context_flags": [
+  "judgement: hold n=7 thin, not measured",
+  "book: precious-metals shorts are one bet; weekend gap risk",
+  "atr_ratio 1.37 (below 1.5 overlay threshold)",
+  "prev_review: hold at 00:30Z, no forecast; still +2.9R"
+ ],
+ "account_reads": [
+  {
+   "account_id": "ib_paper",
+   "account_class": "paper",
+   "read": "unknown",
+   "evidence": "ib_orders: SL 3938.1 / TP 3596.2, position True; no apply path for this exchange yet (LTR-9 / none)"
+  }
+ ],
+ "disposition": {
+  "route": "recommended",
+  "mandate": "MD-LIVE-TIGHTEN-SL",
+  "action_issue": null,
+  "applied_at": null,
+  "verified_readback": null
+ }
+}

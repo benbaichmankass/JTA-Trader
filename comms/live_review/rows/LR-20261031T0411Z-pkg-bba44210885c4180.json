@@ -1,0 +1,118 @@
+{
+ "schema_version": 1,
+ "review_id": "LR-20261031T0411Z-pkg-bba44210885c4180",
+ "reviewed_at": "2026-10-31T04:20:00Z",
+ "order_package_id": "pkg-bba44210885c4180",
+ "trade_id": null,
+ "leg": "trend_donchian_ada_4h",
+ "accounts": [
+  "bybit_1"
+ ],
+ "trigger": {
+  "event": "judgement_cadence",
+  "level": "2026-10-31T04:00:00+00:00",
+  "l0_snapshot_at": null
+ },
+ "info_cutoff_at": "2026-10-31T04:11:38Z",
+ "state": {
+  "atr_now_over_entry": 1.1556,
+  "bars_held": 8,
+  "giveback_r": 1.0797,
+  "open_r": -0.2928,
+  "peak_provenance": "estimated",
+  "peak_r": 0.7869,
+  "regime_cell_entry": null,
+  "regime_cell_now": null,
+  "sl": 0.20172857,
+  "tp": 0.1719108
+ },
+ "features_at_review": {
+  "atr_now_over_entry": 1.1556,
+  "bars_since_peak": 6,
+  "giveback_r": 1.0797,
+  "open_r": -0.2928,
+  "peak_r": 0.7869,
+  "r_to_stop": 0.7072,
+  "r_to_target": 2.0212
+ },
+ "mechanics": {
+  "evidence": "package sl 0.20172857 / tp 0.1719108 agree with every readable account",
+  "verdict": "match"
+ },
+ "options": [
+  {
+   "action": "hold",
+   "level": null,
+   "n": 13,
+   "mean_r": null,
+   "sd_r": null,
+   "worst_r": null,
+   "net": true
+  }
+ ],
+ "outcome_table_source": "comms/live_review/tables/LR-20261031T0411Z-pkg-bba44210885c4180.json",
+ "judge_prior": null,
+ "applied": false,
+ "apply_policy": {
+  "bound_r": 0.25,
+  "within_bound": null,
+  "tighten_r": null
+ },
+ "shadow_policy": {
+  "bound_r": 0.5,
+  "within_bound": null,
+  "would_apply": null,
+  "tighten_r": null
+ },
+ "model": "sonnet-tier (repo-less reviewer)",
+ "session": "session_01AFoLuJSaihcPQ9EqtC94vK",
+ "prompt_sha": null,
+ "skill_sha": null,
+ "packet_sha": "edd0547148ec8ee819520895a0c618c23cbfdfa4200cb8d22eb0f06827a5682f",
+ "recommendation": {
+  "action": "hold",
+  "level": null,
+  "level_atr": null,
+  "ev_delta_r": null,
+  "worst_case_delta_r": null,
+  "reason": "Hold cell n=13 thin (<20). -0.29R, SL 0.7R away; 1d trend down and 4h reclaim of 0.1956 not yet seen.",
+  "basis": "judgement",
+  "confidence": "anecdote",
+  "evidence_source": "judgement",
+  "judgement_confidence": 0.58
+ },
+ "forecast": {
+  "thesis": "ADA bounced to 0.1954 against a falling 1d; failure at the 0.1956 swing high targets the 0.1899 low.",
+  "direction": "with_trade",
+  "target_px": 0.1899,
+  "p_target": 0.4,
+  "invalidation_px": 0.1956,
+  "horizon_bars": 6,
+  "timeframe": "4h",
+  "evidence": [
+   "chart.swings: high 0.1956, low 0.1899",
+   "chart.htf: 1d trending ADX 27.8",
+   "exit_plan: SL 0.20173 / TP 0.17191"
+  ]
+ },
+ "context_flags": [
+  "judgement: hold n=13 thin, not measured",
+  "book: one of six correlated crypto shorts",
+  "prev_review: hold at 00:49Z, no forecast to track"
+ ],
+ "account_reads": [
+  {
+   "account_id": "bybit_1",
+   "account_class": "paper",
+   "read": "no_action",
+   "evidence": "bybit_orders: SL 0.2017 / TP 0.1719, position True; would_apply = the shared amend reaches this leg, NOT that its RiskManager approved (LTR-6 gap)"
+  }
+ ],
+ "disposition": {
+  "route": "none",
+  "mandate": null,
+  "action_issue": null,
+  "applied_at": null,
+  "verified_readback": null
+ }
+}

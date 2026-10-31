@@ -1,0 +1,124 @@
+{
+ "schema_version": 1,
+ "review_id": "LR-20261031T0409Z-pkg-34e2f90c843e459d",
+ "reviewed_at": "2026-10-31T04:20:00Z",
+ "order_package_id": "pkg-34e2f90c843e459d",
+ "trade_id": null,
+ "leg": "trend_donchian_xrp_4h",
+ "accounts": [
+  "bybit_2",
+  "bybit_portfolio"
+ ],
+ "trigger": {
+  "event": "judgement_cadence",
+  "level": "2026-10-31T04:00:00+00:00",
+  "l0_snapshot_at": null
+ },
+ "info_cutoff_at": "2026-10-31T04:09:35Z",
+ "state": {
+  "atr_now_over_entry": 1.1715,
+  "bars_held": 8,
+  "giveback_r": 1.0206,
+  "open_r": -0.2223,
+  "peak_provenance": "estimated",
+  "peak_r": 0.7982,
+  "regime_cell_entry": null,
+  "regime_cell_now": null,
+  "sl": 1.28502857,
+  "tp": 1.1152578
+ },
+ "features_at_review": {
+  "atr_now_over_entry": 1.1715,
+  "bars_since_peak": 6,
+  "giveback_r": 1.0206,
+  "open_r": -0.2223,
+  "peak_r": 0.7982,
+  "r_to_stop": 0.7777,
+  "r_to_target": 2.817
+ },
+ "mechanics": {
+  "evidence": "package sl 1.28502857 / tp 1.1152578 agree with every readable account",
+  "verdict": "match"
+ },
+ "options": [
+  {
+   "action": "hold",
+   "level": null,
+   "n": 20,
+   "mean_r": 1.0159,
+   "sd_r": 1.3417,
+   "worst_r": -1.0838,
+   "net": true
+  }
+ ],
+ "outcome_table_source": "comms/live_review/tables/LR-20261031T0409Z-pkg-34e2f90c843e459d.json",
+ "judge_prior": null,
+ "applied": false,
+ "apply_policy": {
+  "bound_r": 0.25,
+  "within_bound": null,
+  "tighten_r": null
+ },
+ "shadow_policy": {
+  "bound_r": 0.5,
+  "within_bound": null,
+  "would_apply": null,
+  "tighten_r": null
+ },
+ "model": "sonnet-tier (repo-less reviewer)",
+ "session": "session_01AFoLuJSaihcPQ9EqtC94vK",
+ "prompt_sha": null,
+ "skill_sha": null,
+ "packet_sha": "f92b6daf1585b19610ceefe88ca5b701af3f1f6d5a47500b34dc0cf7a2a0318d",
+ "recommendation": {
+  "action": "hold",
+  "level": null,
+  "level_atr": null,
+  "ev_delta_r": null,
+  "worst_case_delta_r": null,
+  "reason": "Hold cell n=20 (at floor) mean +1.02R measured; stop 0.78R away, 4h lower highs intact; 1d chop lowers conviction.",
+  "basis": "ev_positive",
+  "confidence": "measured",
+  "evidence_source": "table"
+ },
+ "forecast": {
+  "thesis": "Price sits mid-range between 1.2286 low and 1.2736 high; 4h trend still down but 1d is chop, so continuation is slightly below even odds.",
+  "direction": "with_trade",
+  "target_px": 1.2286,
+  "p_target": 0.38,
+  "invalidation_px": 1.2736,
+  "horizon_bars": 6,
+  "timeframe": "4h",
+  "evidence": [
+   "chart.swings: low 1.2286, since-entry high 1.2736",
+   "chart.htf: 1d chop ADX 18.5",
+   "exit_plan: SL 1.28503 / TP 1.11526"
+  ]
+ },
+ "context_flags": [
+  "book: one of six correlated crypto shorts",
+  "htf: 1d chop (ADX 18.5) weakens the trend thesis",
+  "prev_review: hold at 00:06Z, no forecast to track"
+ ],
+ "account_reads": [
+  {
+   "account_id": "bybit_2",
+   "account_class": "real_money",
+   "read": "no_action",
+   "evidence": "bybit_orders: SL 1.285 / TP 1.1153, position True; would_apply = the shared amend reaches this leg, NOT that its RiskManager approved (LTR-6 gap)"
+  },
+  {
+   "account_id": "bybit_portfolio",
+   "account_class": "paper",
+   "read": "no_action",
+   "evidence": "bybit_orders: SL 1.285 / TP 1.1153, position True; would_apply = the shared amend reaches this leg, NOT that its RiskManager approved (LTR-6 gap)"
+  }
+ ],
+ "disposition": {
+  "route": "none",
+  "mandate": null,
+  "action_issue": null,
+  "applied_at": null,
+  "verified_readback": null
+ }
+}

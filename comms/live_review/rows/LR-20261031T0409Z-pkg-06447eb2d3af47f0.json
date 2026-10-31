@@ -1,0 +1,124 @@
+{
+ "schema_version": 1,
+ "review_id": "LR-20261031T0409Z-pkg-06447eb2d3af47f0",
+ "reviewed_at": "2026-10-31T04:20:00Z",
+ "order_package_id": "pkg-06447eb2d3af47f0",
+ "trade_id": null,
+ "leg": "trend_donchian_eth_4h",
+ "accounts": [
+  "bybit_2",
+  "bybit_portfolio"
+ ],
+ "trigger": {
+  "event": "judgement_cadence",
+  "level": "2026-10-31T04:00:00+00:00",
+  "l0_snapshot_at": null
+ },
+ "info_cutoff_at": "2026-10-31T04:09:09Z",
+ "state": {
+  "atr_now_over_entry": 0.9977,
+  "bars_held": 7,
+  "giveback_r": 0.9483,
+  "open_r": -0.5158,
+  "peak_provenance": "estimated",
+  "peak_r": 0.4325,
+  "regime_cell_entry": null,
+  "regime_cell_now": null,
+  "sl": 2273.04142857,
+  "tp": 2065.635
+ },
+ "features_at_review": {
+  "atr_now_over_entry": 0.9977,
+  "bars_since_peak": 6,
+  "giveback_r": 0.9483,
+  "open_r": -0.5158,
+  "peak_r": 0.4325,
+  "r_to_stop": 0.4842,
+  "r_to_target": 2.526
+ },
+ "mechanics": {
+  "evidence": "package sl 2273.04142857 / tp 2065.635 agree with every readable account",
+  "verdict": "match"
+ },
+ "options": [
+  {
+   "action": "hold",
+   "level": null,
+   "n": 44,
+   "mean_r": 1.0576,
+   "sd_r": 2.1789,
+   "worst_r": -1.0838,
+   "net": true
+  }
+ ],
+ "outcome_table_source": "comms/live_review/tables/LR-20261031T0409Z-pkg-06447eb2d3af47f0.json",
+ "judge_prior": null,
+ "applied": false,
+ "apply_policy": {
+  "bound_r": 0.25,
+  "within_bound": null,
+  "tighten_r": null
+ },
+ "shadow_policy": {
+  "bound_r": 0.5,
+  "within_bound": null,
+  "would_apply": null,
+  "tighten_r": null
+ },
+ "model": "sonnet-tier (repo-less reviewer)",
+ "session": "session_01AFoLuJSaihcPQ9EqtC94vK",
+ "prompt_sha": null,
+ "skill_sha": null,
+ "packet_sha": "0dcb5da92d8609f5e8658ac3dfa4410649686c0fd74ebac43717922c7b6ee7ca",
+ "recommendation": {
+  "action": "hold",
+  "level": null,
+  "level_atr": null,
+  "ev_delta_r": null,
+  "worst_case_delta_r": null,
+  "reason": "Hold cell n=44 mean +1.06R measured; bracket (SL 2273, TP 2066) already expresses a continued 1d downtrend; bounce stalled under 2262 swing high.",
+  "basis": "ev_positive",
+  "confidence": "measured",
+  "evidence_source": "table"
+ },
+ "forecast": {
+  "thesis": "4h bounce capped under the 2262 lower high while 1d ADX 29.9 trending down; expect retest of the 2174 low before 2262 fails.",
+  "direction": "with_trade",
+  "target_px": 2174.34,
+  "p_target": 0.4,
+  "invalidation_px": 2262.22,
+  "horizon_bars": 6,
+  "timeframe": "4h",
+  "evidence": [
+   "chart.swings: lower high 2262.22 (0.51 ATR above)",
+   "chart.htf: 1d trending, ADX 29.9",
+   "exit_plan: SL 2273.04 / TP 2065.64"
+  ]
+ },
+ "context_flags": [
+  "book: ETH short also open on bybit_1 (pkg-dc7c0c14); six crypto shorts (ETH x2, BTC, XRP, ADA, SOL) are one beta bet",
+  "book: 00:00Z broad up-move hit crypto shorts; open_r -0.52 vs peak +0.43",
+  "prev_review: flag_mechanics at 00:06Z carried no forecast; mechanics now match"
+ ],
+ "account_reads": [
+  {
+   "account_id": "bybit_2",
+   "account_class": "real_money",
+   "read": "no_action",
+   "evidence": "bybit_orders: SL 2273.04 / TP 2065.64, position True; would_apply = the shared amend reaches this leg, NOT that its RiskManager approved (LTR-6 gap)"
+  },
+  {
+   "account_id": "bybit_portfolio",
+   "account_class": "paper",
+   "read": "no_action",
+   "evidence": "bybit_orders: SL 2273.04 / TP 2065.64, position True; would_apply = the shared amend reaches this leg, NOT that its RiskManager approved (LTR-6 gap)"
+  }
+ ],
+ "disposition": {
+  "route": "none",
+  "mandate": null,
+  "action_issue": null,
+  "applied_at": null,
+  "verified_readback": null
+ }
+}

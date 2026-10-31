@@ -1,0 +1,118 @@
+{
+ "schema_version": 1,
+ "review_id": "LR-20261031T0409Z-pkg-3df9800bf7f04882",
+ "reviewed_at": "2026-10-31T04:20:00Z",
+ "order_package_id": "pkg-3df9800bf7f04882",
+ "trade_id": null,
+ "leg": "slv_trend_1h",
+ "accounts": [
+  "alpaca_paper"
+ ],
+ "trigger": {
+  "event": "judgement_cadence",
+  "level": "2026-10-31T04:00:00+00:00",
+  "l0_snapshot_at": null
+ },
+ "info_cutoff_at": "2026-10-31T04:09:58Z",
+ "state": {
+  "atr_now_over_entry": 0.9937,
+  "bars_held": 16,
+  "giveback_r": 0.6919,
+  "open_r": 3.7613,
+  "peak_provenance": "estimated",
+  "peak_r": 4.4532,
+  "regime_cell_entry": null,
+  "regime_cell_now": null,
+  "sl": 45.93642857,
+  "tp": 42.48215
+ },
+ "features_at_review": {
+  "atr_now_over_entry": 0.9937,
+  "bars_since_peak": 1,
+  "giveback_r": 0.6919,
+  "open_r": 3.7613,
+  "peak_r": 4.4532,
+  "r_to_stop": 1.9748,
+  "r_to_target": 3.1104
+ },
+ "mechanics": {
+  "evidence": "package sl 45.93642857 / tp 42.48215 agree with every readable account",
+  "verdict": "match"
+ },
+ "options": [
+  {
+   "action": "hold",
+   "level": null,
+   "n": 2,
+   "mean_r": null,
+   "sd_r": null,
+   "worst_r": null,
+   "net": true
+  }
+ ],
+ "outcome_table_source": "comms/live_review/tables/LR-20261031T0409Z-pkg-3df9800bf7f04882.json",
+ "judge_prior": null,
+ "applied": false,
+ "apply_policy": {
+  "bound_r": 0.25,
+  "within_bound": null,
+  "tighten_r": null
+ },
+ "shadow_policy": {
+  "bound_r": 0.5,
+  "within_bound": null,
+  "would_apply": null,
+  "tighten_r": null
+ },
+ "model": "sonnet-tier (repo-less reviewer)",
+ "session": "session_01AFoLuJSaihcPQ9EqtC94vK",
+ "prompt_sha": null,
+ "skill_sha": null,
+ "packet_sha": "279efebbf54af82c97cb9f3f3d04545c0d2af9024c83984ce52bab324dd29f51",
+ "recommendation": {
+  "action": "tighten_sl",
+  "level": 45.4,
+  "level_atr": 1.79,
+  "ev_delta_r": null,
+  "worst_case_delta_r": null,
+  "reason": "Hold cell n=2 thin. +3.76R open (peak 4.45) on a metals short; Saturday market closed so Sunday-open gap risk against the whole precious-metals short cluster; locking ~+1.4R at 45.40 (1.8 ATR above) costs little if trend continues.",
+  "basis": "judgement",
+  "confidence": "anecdote",
+  "evidence_source": "judgement",
+  "judgement_confidence": 0.55
+ },
+ "forecast": {
+  "thesis": "1h/4h downtrend intact after the 47.63 peak; price at 44.6 bounced off 44.23, but the cluster is exposed to a weekend gap so protect most of the gain.",
+  "direction": "with_trade",
+  "target_px": 44.0,
+  "p_target": 0.45,
+  "invalidation_px": 45.4,
+  "horizon_bars": 24,
+  "timeframe": "1h",
+  "evidence": [
+   "chart.swings: low 44.305, 44.125 since entry",
+   "chart.htf: 4h trending",
+   "book: SLV, IAUM, MGC x2, MHG shorts = one metals bet"
+  ]
+ },
+ "context_flags": [
+  "judgement: hold n=2 thin, not measured",
+  "book: SLV/IAUM/MGC/MHG precious-metals shorts are one bet; weekend gap risk",
+  "prev_review: tighten_sl at 00:30Z (no forecast); giveback now 0.69R"
+ ],
+ "account_reads": [
+  {
+   "account_id": "alpaca_paper",
+   "account_class": "paper",
+   "read": "unknown",
+   "evidence": "alpaca_orders: SL 45.93 / TP 42.48, position True; no apply path for this exchange yet (LTR-9 / none)"
+  }
+ ],
+ "disposition": {
+  "route": "recommended",
+  "mandate": "MD-LIVE-TIGHTEN-SL",
+  "action_issue": null,
+  "applied_at": null,
+  "verified_readback": null
+ }
+}

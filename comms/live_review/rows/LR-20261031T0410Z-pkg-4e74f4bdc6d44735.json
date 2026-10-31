@@ -1,0 +1,108 @@
+{
+ "schema_version": 1,
+ "review_id": "LR-20261031T0410Z-pkg-4e74f4bdc6d44735",
+ "reviewed_at": "2026-10-31T04:20:00Z",
+ "order_package_id": "pkg-4e74f4bdc6d44735",
+ "trade_id": null,
+ "leg": "trend_donchian_1h",
+ "accounts": [
+  "bybit_1"
+ ],
+ "trigger": {
+  "event": "judgement_cadence",
+  "level": "2026-10-31T04:00:00+00:00",
+  "l0_snapshot_at": null
+ },
+ "info_cutoff_at": "2026-10-31T04:10:20Z",
+ "state": {
+  "atr_now_over_entry": 0.8381,
+  "bars_held": 32,
+  "giveback_r": 0.6437,
+  "open_r": 1.0741,
+  "peak_provenance": "estimated",
+  "peak_r": 1.7178,
+  "regime_cell_entry": "transitional/volatile",
+  "regime_cell_now": null,
+  "sl": 79165.38571429,
+  "tp": 70960.5976
+ },
+ "features_at_review": {
+  "atr_now_over_entry": 0.8381,
+  "bars_since_peak": 9,
+  "giveback_r": 0.6437,
+  "open_r": 1.0741,
+  "peak_r": 1.7178,
+  "r_to_stop": 1.3563,
+  "r_to_target": 4.3212
+ },
+ "mechanics": {
+  "evidence": "package sl 79165.38571429 / tp 70960.5976 agree with every readable account",
+  "verdict": "match"
+ },
+ "options": [],
+ "outcome_table_source": null,
+ "judge_prior": null,
+ "applied": false,
+ "apply_policy": {
+  "bound_r": 0.25,
+  "within_bound": null,
+  "tighten_r": null
+ },
+ "shadow_policy": {
+  "bound_r": 0.5,
+  "within_bound": null,
+  "would_apply": null,
+  "tighten_r": null
+ },
+ "model": "sonnet-tier (repo-less reviewer)",
+ "session": "session_01AFoLuJSaihcPQ9EqtC94vK",
+ "prompt_sha": null,
+ "skill_sha": null,
+ "packet_sha": "64ead551abf6d3eaccf8ec1ac99985700c92f4b3804859c7f3ab17f7d5b93b69",
+ "recommendation": {
+  "action": "hold",
+  "level": null,
+  "level_atr": null,
+  "ev_delta_r": null,
+  "worst_case_delta_r": null,
+  "reason": "No priced table; +1.07R with SL 79165 well above (1.36R away); 4h trend down and price under the 77607 swing high.",
+  "basis": "judgement",
+  "confidence": "anecdote",
+  "evidence_source": "judgement",
+  "judgement_confidence": 0.62
+ },
+ "forecast": {
+  "thesis": "BTC bounced from 76275 to 77.5k and rejected at 77607; 4h ADX 27 trending down, so retest of the 76275 low is slightly more likely than not before 77607 breaks.",
+  "direction": "with_trade",
+  "target_px": 76275.1,
+  "p_target": 0.42,
+  "invalidation_px": 77607.1,
+  "horizon_bars": 12,
+  "timeframe": "1h",
+  "evidence": [
+   "chart.swings: high 77607.1, low 76275.1",
+   "chart.htf: 4h trending ADX 27.2",
+   "exit_plan: SL 79165 / TP 70961"
+  ]
+ },
+ "context_flags": [
+  "missing: priced_options null (no table)",
+  "book: one of six correlated crypto shorts",
+  "prev_review: hold at 01:08Z, no forecast to track"
+ ],
+ "account_reads": [
+  {
+   "account_id": "bybit_1",
+   "account_class": "paper",
+   "read": "no_action",
+   "evidence": "bybit_orders: SL 79165.4 / TP 70960.6, position True; would_apply = the shared amend reaches this leg, NOT that its RiskManager approved (LTR-6 gap)"
+  }
+ ],
+ "disposition": {
+  "route": "none",
+  "mandate": null,
+  "action_issue": null,
+  "applied_at": null,
+  "verified_readback": null
+ }
+}
