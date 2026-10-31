@@ -9,11 +9,14 @@
   "ceiling_usd": 5,
   "spend_usd": null,
   "tier": 3,
-  "prs": [],
+  "prs": [
+    21897,
+    21898
+  ],
   "blocked_on": [],
-  "note": "SCOPE ADD, operator 2026-10-29 ~11:50Z verbatim: \"If the strategy wants to move the stop loss to above the current price on a long or below the current price on a short, then the implication there is that we should be getting out of the trade, right? Like, that means we should close it ... maybe that should be the flow here, instead of ignoring those movements.\" Manager agrees in principle: a trail candidate beyond price means the strategy's own exit has been hit; ignoring it leaves the live leg on a looser stop than the Stage-0 harness (which exits on that bar or the next open). ADD: (a) per leg, what the Stage-0 harness does when the trail candidate crosses price (exit at bar close vs next open) \u2014 live must match; (b) MEASURE how often live ignored such a candidate (the 'candidate < current_price' / 'candidate > current_price' branch in fade_breakout_4h, trend_donchian, squeeze_breakout_4h and any other trail), population stated; (c) the exact Tier-3 change: when the candidate crosses price, close at market via the trade-action path with close_reason strategy_close (not a stop amend), harness-matched timing. Bring (a)-(c) to the manager; the change goes to the operator for a yes/no. Ceiling raised to $5.",
+  "note": "SCOPE ADD, operator 2026-10-29 ~11:50Z verbatim: \"If the strategy wants to move the stop loss to above the current price on a long or below the current price on a short, then the implication there is that we should be getting out of the trade, right? Like, that means we should close it ... maybe that should be the flow here, instead of ignoring those movements.\" Manager agrees in principle: a trail candidate beyond price means the strategy's own exit has been hit; ignoring it leaves the live leg on a looser stop than the Stage-0 harness (which exits on that bar or the next open). ADD: (a) per leg, what the Stage-0 harness does when the trail candidate crosses price (exit at bar close vs next open) \u2014 live must match; (b) MEASURE how often live ignored such a candidate (the 'candidate < current_price' / 'candidate > current_price' branch in fade_breakout_4h, trend_donchian, squeeze_breakout_4h and any other trail), population stated; (c) the exact Tier-3 change: when the candidate crosses price, close at market via the trade-action path with close_reason strategy_close (not a stop amend), harness-matched timing. Bring (a)-(c) to the manager; the change goes to the operator for a yes/no. Ceiling raised to $5. [Manager Session 2026-10-31a, 12:29Z] Dispatched (Sonnet, fresh, 5 USD) by the 12:28Z refill: system-first row, the weekend switch freed review capacity for a second build lane (operator 2026-10-31).",
   "priority_rank": 3,
-  "updated_at": "2026-10-31T12:57:28Z",
+  "updated_at": "2026-10-31T13:10:50Z",
   "updated_by": "session_01AFoLuHor8CYXWYYC3TYfLg",
   "roadmap": [
     "L-LADDER"
@@ -27,5 +30,11 @@
     "how_to_check": "PR 21897 merged and deployed; trader log shows no looser per-leg sl send; PR 21898 decision recorded; position_path_history sl_price still monotone per package",
     "due_by": "2026-11-07T00:00Z"
   },
+  "lane_history": [
+    {
+      "lane": "session_01AFoLuHor8CYXWYYC3TYfLg",
+      "archived_at": "2026-10-31T13:10:50Z"
+    }
+  ],
   "_seq": 812
 }

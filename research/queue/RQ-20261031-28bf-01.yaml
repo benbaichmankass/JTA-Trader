@@ -1,0 +1,147 @@
+id: RQ-20261031-28bf-01
+title: >-
+  VOL-WINDOW stage A (scan): across 6 crypto perps, 6 US ETFs and MES/MGC, which repeatable clock windows (session opens/closes, funding times,
+  168 hour-of-week slots; 15/30/60 min) are stably more volatile than baseline AND directionally predictable early in the window, net of the
+  full cost stack, on held-out folds after a multiple-testing correction?
+status: queued
+cadence: once
+theme: timeframes
+priority: 2
+kind: experiment
+question: >-
+  On 5-minute candles 2020-01-01..2026-10-30 (Binance USD-M as the proxy for Bybit linear for BTC/ETH/SOL/XRP/ADA/AVAX; Dukascopy for
+  SPY/QQQ/GLD/SLV/USO/IAUM and the MES/MGC proxies, whatever each lane actually serves), is there a (symbol, window, rule) cell where (1) the
+  window's RMS 5-minute volatility is >= 1.5x the symbol's own all-windows baseline in >= 2 of 3 discovery folds AND >= 2 of 3 confirmation
+  folds, and (2) one of five pre-specified rules (follow / fade the first 5 or 15 minutes; break of the first-15-minute range), entered after
+  the signal and held to the window end, has a confirmation-fold mean net R whose Bonferroni-over-the-shortlist lower confidence bound is
+  > 0 on >= 150 held-out trades with >= 2 of 3 confirmation folds net positive? Reported either way: every shortlisted cell, the top
+  vol-stable windows by ratio, the symbols with no data.
+why_this_matters: >-
+  Operator 2026-10-31 (verbatim excerpt on checklist row VOL-WINDOW-RESEARCH): "find those, like, volatile times in the markets and see if
+  we can get a strategy that does short trades just during those specific times ... It doesn't even need to be opening hours, just where we can
+  find like specific repeatable hours that have a lot of volatility, where we can think we can identify it regularly enough to capitalize
+  on that." Stage A decides whether any such window exists before a strategy, an ML head or a desk wake is built on it (follow-on nodes
+  P3-VOLWIN-s0-breakout, P2-VOLWIN-direction-head, P1-VOLWIN-desk-wake are authored only on a pass). Prior art that this does NOT repeat:
+  RQ-20260930-504/505 (<=1h discovery grid on the roster strategies at default params, FAIL at taker cost), ef5d-08/09 (compression and sweep
+  at 1h, FAIL), ef5d-10 (ORB, blocked on the fee-only harness), row IR-INTRADAY-SEASONALITY-HARNESS (the clock-entry build, which this driver
+  covers for the scan). The difference: those traded a strategy at every bar; this conditions on a clock window first and asks whether the
+  window itself carries a stable volatility excess and a predictable early direction.
+practice_precedent: >-
+  M4, M5 (docs/reference/trading-and-model-practice-principles.md): pre-registered rule, discovery/confirmation split with a purge, and a
+  selection-deflated multiple-testing correction across every cell tried; none (house-specific) for the window grid itself.
+power:
+  expected_n: 800
+  min_detectable_effect: 0.2
+  effect_units: sd
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: >-
+    Per cell the confirmation set is ~3.3 years of one trade a day: ~1,200 for a crypto cell (24/7), ~830 for an equity cell (weekdays). At the
+    corrected one-sided alpha 0.05/M with M of order 10 to 100 (z of about 2.6 to 3.3) the minimum detectable effect is about
+    (z_a + 0.84)/sqrt(n) = 0.1 to 0.12 sd at n 1,200 and 0.12 to 0.14 sd at n 830; 0.2 sd is stated as a round bound. expected_n is an ESTIMATE
+    (days in the confirmation half x trade-days per week), not a measurement.
+  feasibility:
+    source: none
+    accrual_basis: >-
+      Re-measurement on freshly fetched public 5m candles over a pinned window; nothing accrues. The window is bounded by listing dates
+      (SOL/AVAX 2020-09) and by what the Dukascopy lane serves for each non-crypto symbol (named per symbol in the record).
+decision_rule:
+  id: RULE-VOLWIN-A-SCAN
+  registered_at: '2026-10-31'
+  registered_before_run: true
+  statistic: >-
+    scripts/research/vol_window_scan.py (self-tested), 5m candles. WINDOWS: anchors us_open 09:30 ET, us_close (window ends 16:00 ET), globex_open
+    18:00 ET, london_open 08:00 London, asia_open_00z (09:00 JST = 00:00Z = funding 00Z), funding_08z, funding_16z x lengths 15/30/60 min, plus the
+    168 UTC hour-of-week slots at 60 min; DST-aware; one occurrence per day; a day with a gap in the window's bars is skipped. VOL RATIO per fold:
+    RMS 5m log-return of the window / RMS over all aligned same-length windows of that symbol. RULES (enter at the open of the bar after the
+    signal, exit at the window's last close): C5, C15 (follow the first 5/15 min), F5, F15 (fade), O15 (first 5m close beyond the first-15-min
+    range, L >= 30 only). COST: per symbol execution_costs.resolve_fee_bps_roundtrip + resolve_cost_policy (slippage) + perp funding magnitude
+    per 8h boundary crossed (funding_windows_crossed parity-checked in the self-test); a 2x-cost stress is reported, not graded. R UNIT: trailing
+    median of the previous 20 occurrences' window high-low range in bps (causal); net R = net bps / R. FOLDS: 6 calendar folds of 2020-01-01..
+    2026-10-31 (folds 1-3 discovery, 4-6 confirmation / held out), +-1 day embargo at each fold edge.
+  rule: >-
+    Fixed now: theta 1.5, n_floor 150, alpha 0.05, folds 6, rules and windows as above; flags --vol-ratio 1.5 --n-floor 150 --alpha 0.05 --folds 6.
+    GATE V: vol ratio >= theta in >= 2 of 3 discovery folds AND >= 2 of 3 confirmation folds. SHORTLIST: gate V AND discovery n >= n_floor AND
+    discovery mean net R > 0 with one-sided p <= 0.05 (uncorrected; normal approximation, n >= 150). M = shortlist size (>= 1). QUALIFY:
+    shortlisted AND confirmation n >= n_floor AND mean - z(1 - 0.05/M) * se > 0 on the confirmation folds AND >= 2 of 3 confirmation folds
+    mean net R > 0. Also reported: the same test at M = every (symbol, window, rule) cell evaluated (qualifies_under_all_cells_correction), the
+    expected uncorrected false shortlist (alpha x vol-stable cells), and the 95% two-sided CI. OUTPUT: the ranked table of qualifying cells
+    (symbol, window, length, rule, n, mean net R and bps, CI, lower bound, folds positive, per-fold vol ratios), in verdict.json and SUMMARY.md.
+    PASS iff >= 1 cell qualifies -> author the three conditional nodes in programmes 03, 02 and 01 (P3-VOLWIN-s0-breakout,
+    P2-VOLWIN-direction-head, P1-VOLWIN-desk-wake) on exactly the qualifying cells, treating any cell that qualifies only under the
+    shortlist correction (not under the all-cells one) as a LEAD that the Stage-0 unit must confirm by its own pre-registered rule. FAIL iff the
+    crypto core (>= 4 of 6 perps) measured and no cell qualifies -> the three nodes are retired with this verdict as the stated reason, and the
+    volatility-excess finding (vol_stable_top_by_ratio) is kept for the desk's calendar judgement; this closes the CONFIGURATION (these five
+    rules, these windows, the 5m grid), not the family. INDETERMINATE (fewer than 4 of 6 core perps measured) -> re-run on a fixed data lane,
+    never lower a threshold. Thresholds are not changed after any result.
+  what_it_does_not_do: >-
+    Does not edit config/strategies.yaml, config/accounts.yaml or any roster; is not a promotion case or a backtest of a strategy (no stops, no
+    sizing, one time-exit trade a day); does not use scripts/backtest_orb.py or src/backtest/backtester.py; does not tune any threshold or rule
+    after seeing results; crypto candles are Binance USD-M, a PROXY for Bybit linear, and the funding term is a directionless magnitude; the
+    ETF/futures lanes are CFD proxies (IAUM->GLD, MES->S&P index, MGC->XAU), so their cells are Stage-0 leads even on a pass. Symbols with no data
+    are named and skipped, never substituted.
+compute: cpu_long
+value:
+  usd_at_stake_per_month: 300
+  confidence: 0.15
+  bucket: structural
+  basis: >-
+    stand-in: a new short-hold time-window book at the per-leg risk of the demo floor, plus the desk calendar value of knowing the volatile
+    windows; an estimate, not a measurement.
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 4.0
+  est_minutes: 90
+  basis: >-
+    14 symbols x 5m candles over 6.8 years (~700k bars each for 24/7 symbols): the keyless fetch dominates (Binance monthly zips; Dukascopy is the
+    slow lane); the scan is vectorised numpy, ~189 windows x 5 rules per symbol. Estimate from a synthetic self-test (2 symbols x 4 years, 3 anchors
+    + hour-of-week, 13 s).
+  why_runner: >-
+    The driver fetches public candles through scripts/ops/fetch_backtest_candles.py and the 5m series are not in metis-market-data (15m+1h only).
+run:
+  command:
+  - python3
+  - scripts/research/vol_window_scan.py
+  - --symbols
+  - BTCUSDT,ETHUSDT,SOLUSDT,XRPUSDT,ADAUSDT,AVAXUSDT,SPY,QQQ,GLD,SLV,USO,IAUM,MES,MGC
+  - --days
+  - '2500'
+  - --start
+  - '2020-01-01'
+  - --end
+  - '2026-10-31'
+  - --folds
+  - '6'
+  - --vol-ratio
+  - '1.5'
+  - --n-floor
+  - '150'
+  - --alpha
+  - '0.05'
+  - --non-crypto-source
+  - dukascopy
+  - --rule-id
+  - RULE-VOLWIN-A-SCAN
+  - --data-dir
+  - '{out_dir}/data'
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 240
+  inputs:
+    research_unit: RQ-20261031-28bf-01
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+roadmap:
+- L-DESK
+- L-TIMEFRAMES
+programme: P7
+related:
+- VOL-WINDOW-RESEARCH
+- IR-INTRADAY-SEASONALITY-HARNESS
+- scripts/research/vol_window_scan.py
+- research/programmes/07-timeframes.yaml
+- RQ-20261018-ef5d-10

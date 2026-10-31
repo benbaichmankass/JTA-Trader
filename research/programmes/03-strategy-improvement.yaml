@@ -1941,3 +1941,23 @@ nodes:
     related:
     - COST-STACK-RECOST-SWEEP
     - scripts/research/exit_lever_ablation.py
+- id: P3-VOLWIN-s0-breakout
+  goal: G1
+  theme: timeframes
+  roadmap: [L-LADDER, L-DESK]
+  value: {usd_at_stake_per_month: 300, confidence: 0.15}
+  after:
+  - {unit: RQ-20261031-28bf-01, verdict: pass}
+  needs_authoring: >-
+    GATED on VOL-WINDOW stage A (RQ-20261031-28bf-01, row VOL-WINDOW-RESEARCH) naming >= 1 qualifying cell. Author ONE Stage-0 unit
+    for a time-window breakout / continuation strategy on exactly the qualifying (symbol, window, rule) cells, no others: entry rule as
+    stage A's qualifying rule PLUS a protective stop and a real predictive take-profit (the TP doctrine; a time-exit-only strategy is not a
+    Stage-0 leg), both brackets fixed BEFORE the run from the stage-A cells and not tuned; the full cost stack (execution_costs fee +
+    slippage + perp funding; scripts/backtest_orb.py and src/backtest/backtester.py are excluded, so the window logic runs in a new
+    cost-complete harness or an extension of scripts/research/vol_window_scan.py with --emit-trades, self-tested); a NEW date window
+    that stage A never saw where data allows (stage A confirmed on 2023-2026 folds; the Stage-0 run adds the post-stage-A months as they
+    accrue, or a placebo set of non-qualifying windows as the matched-random control); fold-majority and breadth across the qualifying
+    symbols; Holm across cells. A cell that qualified only under the shortlist (not the all-cells) correction is a LEAD the unit must
+    confirm on its own rule. PASS -> a re-entry case for the Stage-1 demo floor (bybit_1 for crypto, alpaca_paper / ib_paper for the
+    rest) under MD-PROMOTE-S0-S1, built as a new evidence record; never a roster edit from this node. FAIL -> closes the CONFIGURATION
+    (these brackets on these cells), not the window finding. Not authored if stage A fails: retire this node with that verdict as the reason.
