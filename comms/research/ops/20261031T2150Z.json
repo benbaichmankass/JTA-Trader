@@ -1,0 +1,43 @@
+{
+  "run": "RESEARCH-OPS-20261031-2110", "finished_at": "2026-10-31T21:50:00Z", "by": "research-ops lane (Manager Session 2026-10-31a dispatch)",
+  "floor": 72, "floor_basis": "computed_floor(fired_24h 90) per research_ops_checks packet; health file earlier read 76 at fired 95", "authoring_queue_depth": 40,
+  "idle_backends": [], "needs_review_triaged": 1, "needs_review_left": 31,
+  "throughput": {"runnable_before": 63, "runnable_after": 93, "queued": 237, "fired_24h": 90, "results_landed_24h": 80, "hours_since_last_dispatch": 1.2, "idle_alarm": false},
+  "mechanism": {"dispatch_receipt": "ok (tree read; last dispatch 19:58Z)", "collector": "ok except one producer_failed row (422a-01, harness schema bug, fixed)", "stranded_stamp_prs": [], "incident": null},
+  "results_read": {"pass": 8, "fail": 15, "indeterminate": 1, "units": ["28bf-01 fail", "422a-01 fail(hand-graded)", "c6fc-01/03/05 pass", "d5dd-01..20 9 fail 3 pass 1 indet", "3ef3-07/08/16/17/18 fail"]},
+  "unlocked": [], "retired": [{"unit": "P3-VOLWIN-s0-breakout, P2-VOLWIN-direction-head, P1-VOLWIN-desk-wake", "reason": "stage A RQ-20261031-28bf-01 FAIL; nodes computed moot (after verdict pass)"}],
+  "levers_filed": [], "units_authored": ["RQ-20261031-7b6f-01..30"], "followups_filed": ["P3-VOLWIN-A2-longer-hold (programme 03 node)", "checklist RESEARCH-OPS-20261031-2110 Tier-3 note: pull-from-prop proposal for trend_donchian_eth_prop"],
+  "authoring": {"queue_depth": 40, "nodes_drafted": 1, "nodes": ["P3-VOLWIN-A2-longer-hold"], "theme_shortfall": {"ml_health": "MODEL track runnable 4"}},
+  "not_run": ["C: blocked/ audit (blocker_watch.py not run, budget)"],
+  "limits": ["github-actions MCP down; workflow runs read from tree only (read_state tree_only)", "pytest absent", "run_guards.py exceeded 120s foreground; decision-rule guard and throughput ran clean"],
+  "prior_calls_scorecard": [
+    {"call": "RQ-20261031-c6fc-01 lands a measured verdict", "p": 0.85, "outcome": "hit", "action_happened": true},
+    {"call": "at least 2 of c6fc-02..08 PASS", "p": 0.35, "outcome": "hit", "action_happened": true, "note": "c6fc-03 and c6fc-05 passed; others unread"},
+    {"call": "runnable_floor SLO ok on next run", "p": 0.6, "outcome": "miss", "action_happened": true, "note": "63 vs 72; fired_24h rose to 90, 30 PASS/FAIL results/h drain outpaces authoring"}
+  ],
+  "checks": {"packet_as_of": "2026-10-31T21:09Z", "since": "2026-10-31T11:40Z", "runnable_by_track": {"TRADING": 58, "MODEL": 4, "INFRA": 1}, "fails_without_next": 6, "needs_review": 32, "could_not_look": ["workflow run list (MCP down)"]},
+  "analysis": {
+    "rows_opened": ["RQ-20261031-28bf-01", "RQ-20261031-422a-01", "RQ-20261031-c6fc-03"],
+    "trading": {
+      "meaning": [
+        "VOL-WINDOW stage A: 149 of 8128 cells have a stable volatility excess but 0 shortlisted and 0 of the top 34 are positive on confirmation (mean -0.27 R; best SLV us_open 60m C5 -0.021 R, n 829) -> volatile windows exist and are repeatable, but nothing directional is capturable at 15-60 min holds net of cost; follow and fade both lose, which points to friction not a mistimed rule. So: no window strategy/ML/desk branch is built on this evidence.",
+        "eth_prop widened edge: pooled 8 twins + own, n 8507, mean +0.005 R, ci_lo -0.032 -> the donchian ETH prop leg is indistinguishable from zero net R at prop cost; the widened sample removed the sample-size excuse (ETH-only n 1171 mean +0.024, CI includes 0). So: Tier-3 pull-from-prop proposal is the registered next step (manager, checklist row note).",
+        "ADX-ceiling lever AX40/AX50 passed on eth_pullback_2h and xrp_pullback_2h (c6fc-03/05), now 4 of 10 legs; chosen from a multi-arm batch (batches: d5dd 3 pass of 13; c6fc 3 of 3 transfers) -> a lead until its disjoint-window confirmation passes; 7b6f-01..08 test the remaining legs."
+      ],
+      "fail_diagnoses": [
+        {"cluster": "VOL-WINDOW stage A", "hypotheses": ["noise", "cost drag at short holds", "rules too crude", "idea wrong"], "test": "same harness at 120/240 min on low-cost lanes", "survivor": "cost", "next": "P3-VOLWIN-A2-longer-hold"},
+        {"cluster": "P4 macro calendar event studies 3ef3/d5dd 12-16 (7 of 7 fail)", "hypotheses": ["noise", "power", "surprise definition"], "test": "none authored: both branches of another single-indicator study lead to the same action (no macro leg)", "survivor": "idea/power", "next": "no action, because VOI ~0 until a pooled-indicator unit is designed (programme 04)"}
+      ],
+      "next_tests": [{"id_or_node": "RQ-20261031-7b6f-01..30", "decision_changed": "which legs get a lever-declare Tier-3 note", "on_pass": "one disjoint-window confirmation each", "on_fail": "close the leg x grid only", "premortem": "a batch of 30 at ~15% pass produces ~4 discoveries; the multiple-testing denominator is 30"}]
+    },
+    "model": {"meaning": ["MODEL runnable is 4 of 63; d5dd-17/18 passed (HAR-RV features, shallow LightGBM at 15m/1h), d5dd-19 indeterminate, d5dd-01/20 fail -> the regime head is more sensitive to features than to regularisation depth, but no consumer decision is linked yet"], "fail_diagnoses": [], "next_tests": []},
+    "cross_track": [{"from": "TRADING", "finding": "stage A shows vol-excess windows are stable but directionless net of cost", "feeds": "regime head features (hour-of-week vol ratio) as an input, not a trade rule; node P2 only if A2 passes"}],
+    "surprises": ["the 30-unit lever batch is the cheapest runnable supply but is all TRADING; the MODEL shortfall is unaddressed this pass"]
+  },
+  "calls": [
+    {"call": "at least 3 of 7b6f-01..08 (AX40/AX50 transfers) PASS", "p": 0.3, "check": {"command": "python3 scripts/research/research_ops_checks.py --since 2026-11-01", "rule": "count pass among 7b6f-01..08", "resolves_when": "2026-11-03"}},
+    {"call": "P3-VOLWIN-A2 passes (any 120/240 min cell qualifies)", "p": 0.1, "check": {"command": "python3 scripts/research/queue_replenish.py --programme-state", "rule": "node unit closed pass", "resolves_when": "2026-11-10"}},
+    {"call": "runnable stays >= computed floor at the 02:47Z pass", "p": 0.5, "check": {"command": "python3 scripts/ci/check_research_queue_throughput.py --json", "rule": "runnable >= floor", "resolves_when": "2026-11-01"}}
+  ],
+  "handoff": ["Manager: Tier-3 pull-from-prop proposal for trend_donchian_eth_prop (rule of RQ-20261031-422a-01 FAIL)", "Author P3-VOLWIN-A2-longer-hold (needs --lengths flag in vol_window_scan.py, self-tested)", "MODEL track runnable 4: author ml_health units next pass", "blocker_watch.py audit not run this pass", "31 needs_review owned, not re-triaged"]
+}

@@ -107,10 +107,15 @@ def main(argv=None) -> int:
         verdict = "FAIL"
     else:
         verdict = "INCONCLUSIVE"
-    res["verdict"] = verdict
-    res["read_state"] = "ok"
+    # script_run.py's collector accepts only lowercase verdicts, read_state "measured", and a non-empty
+    # population + an explicit n; the first run (RQ-20261031-422a-01) wrote "FAIL"/"ok" and landed producer_failed.
+    res["verdict"] = {"PASS": "pass", "FAIL": "fail"}.get(verdict, "indeterminate")
+    res["read_state"] = "measured"
+    res["n"] = p.get("n")
+    res["population"] = (f"{a.leg}: pooled own-common + {len(res['per_symbol'])} twin symbols, net R per trade at arm P, "
+                         f"{p.get('clusters')} calendar-month clusters")
     (out / "verdict.json").write_text(json.dumps(res, indent=1))
-    print(json.dumps({k: res[k] for k in ("own_long", "own_common", "pooled", "verdict")}, indent=1))
+    print(json.dumps({k: res[k] for k in ("own_long", "own_common", "pooled", "verdict", "read_state", "n")}, indent=1))
     return 0
 
 
