@@ -1,0 +1,111 @@
+# Hand-authored 2026-10-31 by RESEARCH-AUTHORING-20261031-SAMEDAY (Tier 1), dispatched by Manager Session 2026-10-31a (runnable_floor breach 13:05Z, 67 vs 71). Decision rule registered BEFORE any run. Gates: none.
+id: RQ-20261031-d5dd-09
+title: 'Thesis-keyed TP extension (X4/X5: 4 R target, extend 0.5 R on approach) on trend_donchian_eth_prop: does X4 or X5 beat the declared leg net of cost
+  2020-07-01..2026-10-15?'
+status: queued
+cadence: once
+theme: new_strategy_prop
+priority: 2
+kind: experiment
+programme: P5
+roadmap:
+- L-PROP
+question: 'On trend_donchian_eth_prop over 2020-07-01..2026-10-15, does any of the arms X4, X5 (Thesis-keyed TP extension (X4/X5: 4 R target, extend 0.5
+  R on approach)) beat the declared leg (A) by the registered materiality bar in >= 4 of 6 folds, with drawdown within the registered tolerance, net of
+  the harness cost stack?'
+why_this_matters: 'TP-doctrine: a TP that moves with the thesis is the compliant form; the prop EV gate rewards fatter winners only if drawdown stays inside
+  the firm limit, which the maxDD clause tests. Prior art checked 2026-10-31 (grep research/queue + research/queue/blocked for this leg and lever): tp-extend-r
+  and tp-thesis are on record only for ada_pullback_2h (RQ-20261016-008) and a few pullback legs; none on any prop leg.'
+power:
+  expected_n: 80
+  min_detectable_effect: 0.45
+  effect_units: sd
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: 'd=0.45 at alpha 0.05 / power 0.8 needs (1.96+0.8416)^2/0.45^2 = 38.8 -> 39 trades (the repo standing E35 floor). expected_n=80 is an ESTIMATE
+    from sibling units on this leg family, NOT a measurement; below 39 the unit grades INDETERMINATE, never FAIL. The R bar is a materiality bar, not a
+    significance test: a PASS is a discovery lead and a FAIL closes the configuration only.'
+  feasibility:
+    source: none
+    accrual_basis: Re-measurement on freshly fetched public candles over a pinned window; nothing accrues.
+decision_rule:
+  id: RULERQ20261031d5dd09
+  registered_at: '2026-10-31'
+  registered_before_run: true
+  statistic: 'scripts/research/exit_lever_ablation.py --leg trend_donchian_eth_prop --grade replace, window 2020-07-01 .. 2026-10-15 23:59, 6 equal calendar
+    folds by entry time, net of the full cost stack the harness resolves per venue (execution_costs.resolve_cost_policy, recorded per arm as cost_stack).
+    Arms fixed now: A = the leg as declared in config/strategies.yaml; candidates X4, X5. Per arm: n, net_total_r, max_drawdown_r, net R per fold.'
+  rule: 'INDETERMINATE IF n(A) < 39 or IF every candidate arm is byte-identical to A (the lever never fired). A candidate C PASSES iff net_r(C) > net_r(A)
+    AND delta >= 0.02 R x n(A) AND net R(C) >= net R(A) in >= 4 of 6 folds AND maxDD(C) <= maxDD(A) x 1.35. PASS IF one or more pass: the best by net R
+    is named (denominator: 2 candidate arm(s) here) and the follow-up is ONE confirmation unit on a disjoint window, then a live-producer check and a Tier-3
+    declare PROPOSAL with the mirror in the same PR (a note for the manager, never a config edit). FAIL IF none passes with n(A) >= 39: THIS arm grid is
+    closed on trend_donchian_eth_prop for this window and the lever FAMILY is NOT retired (scripts/research/family_retirement_policy.yaml); the record names
+    the arm that moved closest. Thresholds and the arm grid are not changed after any result.'
+  what_it_does_not_do: 'Edits no config and no roster, places no order, is not a promotion case. A PASS also needs a live producer for the lever and a Tier-3
+    declare. The arm grid is the whole search: no arm is added after the run, and the baseline is the declared leg, not a tuned one.'
+intervention_controls:
+  not_applicable: a parameter-width ablation of the declared entry/exit geometry run through the harness, not an in-trade action or active-management intervention
+compute: cpu_light
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 4.0
+  est_minutes: 40
+  why_runner: Fetches keyless public candles for a pinned window; reads no trainer data and no published shard; CPU only.
+  basis: Estimate from comparable exit_lever_ablation runs of 2026-10-26..29; the first run replaces it.
+value:
+  usd_at_stake_per_month: 200
+  confidence: 0.1
+  bucket: structural
+  basis: planning weight for a lever cell on a rostered or prop-sized leg; an estimate, not a measurement
+run:
+  command:
+  - python3
+  - scripts/research/exit_lever_ablation.py
+  - --leg
+  - trend_donchian_eth_prop
+  - --arm
+  - A=
+  - --arm
+  - X4=--tp-target-r=4;--tp-extend-r=0.5;--tp-approach-frac=0.85;--tp-max-extends=1;--tp-thesis=native
+  - --arm
+  - X5=--tp-target-r=4;--tp-extend-r=0.5;--tp-approach-frac=0.85;--tp-max-extends=3;--tp-thesis=native
+  - --days
+  - '2330'
+  - --start
+  - '2020-07-01'
+  - --end
+  - 2026-10-15 23:59
+  - --grade
+  - replace
+  - --baseline
+  - A
+  - --delta-r
+  - '0'
+  - --delta-r-per-trade
+  - '0.02'
+  - --folds
+  - '6'
+  - --fold-majority
+  - '4'
+  - --dd-tol-frac
+  - '0.35'
+  - --n-floor
+  - '39'
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 120
+  inputs:
+    research_unit: RQ-20261031-d5dd-09
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- RQ-20261030-41cc-03
+- RQ-20261031-c6fc-01
+practice_precedent: 'M4, M5 (docs/reference/trading-and-model-practice-principles.md): pre-registered arm grid, every arm counted, baseline = the declared
+  leg'
+what_it_does_not_do: 'Not a promotion case and not a config edit: a PASS only licenses a confirmation unit and then a Tier-3 proposal note; a FAIL closes
+  this arm grid on this window and does not retire the lever family.'

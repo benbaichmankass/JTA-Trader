@@ -1,0 +1,101 @@
+# Hand-authored 2026-10-31 by RESEARCH-AUTHORING-20261031-SAMEDAY (Tier 1), dispatched by Manager Session 2026-10-31a (runnable_floor breach 13:05Z, 67 vs 71). Decision rule registered BEFORE any run. Gates: none.
+id: RQ-20261031-d5dd-02
+title: 'ADX ceiling entry skip (AX30/AX40) on qqq_trend_long_1d: does AX30 or AX40 beat the declared leg net of cost the daily lane window to 2026-10-27?'
+status: queued
+cadence: once
+theme: regime
+priority: 2
+kind: experiment
+programme: P2
+roadmap:
+- L-REGIME
+question: On qqq_trend_long_1d over the daily lane window to 2026-10-27, does any of the arms AX30, AX40 (ADX ceiling entry skip (AX30/AX40)) beat the declared
+  leg (B) by the registered materiality bar in >= 3 of 4 folds, with drawdown within the registered tolerance, net of the harness cost stack?
+why_this_matters: 'Trend entries into an already-extended trend (high ADX) is the regime condition the donchian family loses on in crypto legs (adx-max
+  appears in 20 units); QQQ has no read. Prior art checked 2026-10-31 (grep research/queue + research/queue/blocked for this leg and lever): qqq_trend_long_1d
+  has only a trail-decay cell (1016-019); the spy sibling adx-max read is 2a2e-12.'
+power:
+  expected_n: 40
+  min_detectable_effect: 0.45
+  effect_units: sd
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: 'd=0.45 at alpha 0.05 / power 0.8 needs (1.96+0.8416)^2/0.45^2 = 38.8 -> 39 trades (the repo standing E35 floor). expected_n=40 is an ESTIMATE
+    from sibling units on this leg family, NOT a measurement; below 39 the unit grades INDETERMINATE, never FAIL. The R bar is a materiality bar, not a
+    significance test: a PASS is a discovery lead and a FAIL closes the configuration only.'
+  feasibility:
+    source: none
+    accrual_basis: Re-measurement on freshly fetched public candles over a pinned window; nothing accrues.
+decision_rule:
+  id: RULERQ20261031d5dd02
+  registered_at: '2026-10-31'
+  registered_before_run: true
+  statistic: 'scripts/research/exit_lever_ablation.py --leg qqq_trend_long_1d --grade sweep, up to 7300 days ending 2026-10-27 (what the keyless daily lane
+    serves; the realised window is recorded), 4 default calendar folds, net of the full cost stack the harness resolves for the venue (recorded per arm
+    as cost_stack). Arms fixed now: B = the leg as declared; candidates AX30, AX40. Per arm: n, net_total_r, max_drawdown_r, net R per fold.'
+  rule: 'INDETERMINATE IF n(B) < 39 (underpowered: no verdict; never FAIL on thin n) or IF every candidate arm is byte-identical to B (the lever never fired).
+    A candidate C PASSES iff dR(C vs B) >= 1.0 R AND dDD <= 0 AND fold_wins >= 3 of 4. PASS IF any candidate passes (best = highest dR): a LEAD, followed
+    by ONE confirmation unit on a disjoint window with the same statistic and bar; only a confirmed pass becomes a Tier-3 PROPOSAL note on the owning checklist
+    row for the manager, never a config edit. FAIL IF none passes with n(B) >= 39: this configuration is closed on this window and the record names the
+    arm that moved closest (the lever family stays open; a family retirement needs a review record per family_retirement_policy.yaml). The bar, the drawdown
+    clause, the fold majority, the 39 floor and the arm values are not changed after any result.'
+  what_it_does_not_do: 'Edits no config and no roster, places no order, is not a promotion case. A PASS also needs a live producer for the lever and a Tier-3
+    declare. The arm grid is the whole search: no arm is added after the run, and the baseline is the declared leg, not a tuned one.'
+intervention_controls:
+  not_applicable: a parameter-width ablation of the declared entry/exit geometry run through the harness, not an in-trade action or active-management intervention
+compute: cpu_light
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 4.0
+  est_minutes: 25
+  why_runner: Fetches keyless public candles for a pinned window; reads no trainer data and no published shard; CPU only.
+  basis: Estimate from comparable exit_lever_ablation runs of 2026-10-26..29; the first run replaces it.
+value:
+  usd_at_stake_per_month: 150
+  confidence: 0.1
+  bucket: own_losses
+  basis: planning weight for a lever cell on a rostered or prop-sized leg; an estimate, not a measurement
+run:
+  command:
+  - python3
+  - scripts/research/exit_lever_ablation.py
+  - --leg
+  - qqq_trend_long_1d
+  - --arm
+  - B=
+  - --arm
+  - AX30=--adx-max=30
+  - --arm
+  - AX40=--adx-max=40
+  - --days
+  - '7300'
+  - --end
+  - '2026-10-27'
+  - --grade
+  - sweep
+  - --baseline
+  - B
+  - --delta-r
+  - '1.0'
+  - --fold-majority
+  - '3'
+  - --n-floor
+  - '39'
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 90
+  inputs:
+    research_unit: RQ-20261031-d5dd-02
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- RQ-20261030-41cc-03
+- RQ-20261031-c6fc-01
+practice_precedent: 'M4, M5 (docs/reference/trading-and-model-practice-principles.md): pre-registered arm grid, every arm counted, baseline = the declared
+  leg'
+what_it_does_not_do: 'Not a promotion case and not a config edit: a PASS only licenses a confirmation unit and then a Tier-3 proposal note; a FAIL closes
+  this arm grid on this window and does not retire the lever family.'
