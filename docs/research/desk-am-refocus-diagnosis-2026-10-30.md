@@ -106,3 +106,107 @@ There are 14 live LTR `close` outcomes in `comms/live_review/outcomes.jsonl`, wi
 | **Action set** | In-trade enum is broad on paper but only hold/tighten are priced. Entries are capped at 60 min, so the cost stack dominates. | secondary (entries: primary) |
 
 **What this does not show.** It does not show that informed judgement adds value. No test has given the judge the context, so that question is **open**. The design below is built so the live desk answers it, graded and pre-registered, rather than assuming it.
+
+---
+
+## 2. Design: the judgement desk
+
+DECIDED by this lane within the dispatch. Items marked **operator** are preferences for the operator.
+
+### 2.1 One desk, one in-trade function
+
+The in-trade function stays the live trade review. It is the desk's in-trade role (`trading-desk` SKILL § 2, `MD-TRADE-DESK`), so there is still one schema, one apply path and one grade. What changes is **what it is asked and when**. No new store and no new mandate.
+
+### 2.2 Cadence: a regular judgement slot for every open trade, plus the existing triggers
+
+- **New due event `judgement_cadence`.** Every open package becomes due once its last review is older than `hours_by_timeframe[tf]`. The level is the slot start, so all packages share one slot and arrive in **one wake**. The existing mechanical triggers stay on (22:25Z scope correction: wakes stay ON).
+- **Cadence (DECIDED by the operator, popup ~22:30Z 2026-10-30, verbatim "Every 4h (~$20/day)"):** every timeframe from 30m to 1d, every 4 h. 5m/15m short-hold trades keep their own lane.
+- **One book wake per slot, not one session per package.** A `judgement_cadence` wake carries every due package's packet, and ONE reviewer reads them as a book and writes one row per package. The manager recipe changes to match.
+- **Cost (INFERRED, from the measured $0.30–0.35 per Sonnet wake on a ~53 KB packet).** A 4-hourly book wake is 6 wakes/day. With ~15 open packages at ~10 KB each (MEASURED median 9.8 KB, § 2.3) the context is ~150 KB, so a wake is likely $0.50–0.80: **≈ $3–5/day**. Per-package sessions at the same cadence would be ≈ $30/day. **Operator:** whether 4 h is the right default for 1h/2h legs.
+- **Comment budget.** The wake comment holds 60k chars. With today's ~10 KB packets plus tables, a book wake spans several comments; the poster splits them (Tier-2 increment).
+
+### 2.3 The packet: what a trader looks at (`packet_version` 3, `context_v3`)
+
+Built by `scripts/ops/live_review_packet.py`. Every block is a pure read of routes the generator already uses, plus `api/bot/performance/recent`.
+
+| block | content | MEASURED on live data, 2026-10-30 ~23:10Z, 15 open packages |
+|---|---|---|
+| `chart` | last 16 closed bars on the leg timeframe; 3 swing highs and 3 swing lows with distance in ATR; high/low since entry | 14 of 15 (gld_pullback_1h: timeframe not in meta, named in `missing_inputs`) |
+| `htf` | the next timeframe up (1h→4h, 2h/4h→1d, 1d→weekly built from daily): last 8 bars, swings, ADX trend label | 14 of 15 |
+| `book` | every other open package, either side: symbol, direction, leg, open_r | 15 of 15 (14 others each) |
+| `exit_plan` | entry, stop/TP now, the leg's declared exit levers, the package `exit_plan_state` — i.e. what HOLD actually does | 15 of 15 |
+| `live_vs_backtest` | `scripts/research/live_vs_backtest.py` verdict for the leg, realMoney and mirror books | 15 of 15 read. Only Stage-2 legs have a verdict; testing legs read `NO_LIVE_TRADES` (a gap, § 4) |
+
+Median packet 9.8 KB, of which `context_v3` is 4.0 KB. The v2 packet was ~5.8 KB.
+
+**Still not in the packet (§ 4):**
+- a live-vs-backtest read for paper legs;
+- funding for perps (no route);
+- the live volatility bucket;
+- how similar trades played out *from this state*. The priced table is still mis-conditioned; it is quoted as evidence, never as the decision.
+
+### 2.4 The brief: a reasoned view and a falsifiable forecast (`REVIEWER-BRIEF.md` § 2b)
+
+The reviewer reads the market first, then writes a `forecast` with these fields:
+- `thesis`;
+- `direction` relative to the trade;
+- `target_px` and `p_target`;
+- `invalidation_px`;
+- `horizon_bars` on `timeframe`;
+- `evidence`.
+
+The action must follow from the forecast, and HOLD is defined by `exit_plan`. **The validator requires a forecast** on every judged row reviewed from 2026-10-31T00:00Z (`scripts/ci/check_live_review_records.py::forecast_problems`). The short-hold lane is exempt.
+
+This is a record-schema rule, **not an execution gate**: nothing trades or stops trading because of it.
+
+### 2.5 Entries continue
+
+The scan wake is unchanged (every 2 h, triggers capped at 4/day).
+
+**Operator** (Tier 3, proposed, not changed): the live desk-entry cap `max_hold_min` ≤ 60 is why 93% of entry rows are `no_trade` (§ 1.5). A cap at the scan's 4-bar horizon (≤ 240 min) would let the desk price live entries on rows that are not dominated by the round-trip cost. That needs the DESK-13 evidence path for anything real-money. On demo it is the operator's call.
+
+### 2.6 Training rows the ML heads can learn from
+
+- **No new store.** The rows ARE `comms/live_review/reviews.jsonl` (canonical, mirrored from `live-review/rows`). The packet is joinable by `packet_sha`.
+- `ml/datasets/families/claude_judgments.py` adds these columns (in the held Tier-2 PR: the landing guard names that file Tier-2):
+  - `fc_direction`, `fc_p_target`, `fc_horizon_bars`;
+  - `fc_target_r` and `fc_invalidation_r`, rebased to R from the mark at review time, + in the trade's favour;
+  - `trigger_event`, so cadence and mechanical wakes can be told apart.
+- **Labels:**
+  - the action's `delta_r` vs hold (LTR-5);
+  - the forecast outcome (§ 3).
+- **What this links to:**
+  - **ML-AM-NEXT-LIVE:** Q-TM1's diagnosis is "the features do not select the value". These rows add a teacher's view of *context* features: the forecast plus the v3 packet.
+  - **AM-REGRADE-BOOKSIM / AM-RISK-ADJUSTED-RULE:** graduation of any class still goes only through `RULE-AM-RISK-ADJUSTED-V1` on the book simulator.
+  - **LTR-* rows:** the same schema and route.
+
+---
+
+## 3. Pre-registered grade: RULE-DESK-AM-JUDGEMENT-V1
+
+Registered 2026-10-30, **before any row carries a forecast**. Computed by `scripts/research/desk_am_judgement_grade.py`.
+
+- **Population.** Live-review rows with a `forecast`, reviewed from 2026-10-31T00:00Z, on CLOSED packages.
+- **Unit.** The order package. Its judged rows are averaged first, so one trade reviewed many times counts once.
+- **Comparators, net of the full cost stack** (LTR-5 replay, `live_review_counterfactual.price_review`, stop-first inside a bar):
+  - **HOLD** = the untouched strategy bracket and trail. `d_hold` = the call minus HOLD.
+  - **MECH** = the same review re-priced as the mechanical rule: tighten to breakeven when in profit with the stop behind entry, else hold. This is bf56-02's B3 choice in all 4 folds. `d_mech` = `d_hold` minus MECH's own delta.
+- **Statistic.** The mean of the package means of `d_hold`, with a 95% CI from a package bootstrap (10,000 draws, seed 20261031). The mean of `d_mech` is reported beside it.
+- **PASS:** n_packages ≥ 30 AND the CI lower bound of `d_hold` > 0 AND mean `d_mech` > 0.
+- **FAIL:** n_packages ≥ 30 AND (mean `d_hold` ≤ 0 OR the CI upper bound < 0).
+- **Otherwise:** `indeterminate` at n ≥ 30, `accruing` below it.
+- **Reported, never gating:**
+  - each action class's mean `d_hold`;
+  - forecast calibration: hit = target before invalidation within the horizon; Brier vs the 0.25 constant reference;
+  - unresolved forecasts.
+- **What a PASS does and does not do.** A PASS says informed judgement beats HOLD and the mechanical rule on live trades. It **graduates nothing**: each in-trade class still needs its own `RULE-AM-RISK-ADJUSTED-V1` test on the book simulator (`ARCHITECTURE-CANONICAL` § "Active management" clause 4). A FAIL means the context did not rescue the judgement, and the desk's in-trade wakes go back to the cost table for the operator.
+- The numbers above (30, 10,000, the seed, the MECH rule, the forecast rule date) are not changed after any result.
+
+---
+
+## 4. Not done / known gaps (each filed)
+
+- **Live-vs-backtest for testing legs.** `live_vs_backtest.py` judges only the realMoney/mirror books, so a paper leg reads `NO_LIVE_TRADES`.
+- **Perp funding and the live vol bucket.** Unchanged, still named in `missing_inputs`.
+- **The priced table's hold cell is not conditioned on the current state** (§ 1.2). Still open, PI-20261028-KD5SQ3JJ-0002 (pricing close/partial).
+- **`judgement_cadence`, the multi-comment wake split and the manager's book-wake recipe** are the Tier-2 increment (held PR).

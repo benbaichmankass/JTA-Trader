@@ -204,7 +204,7 @@ def test_generated_packet_passes_the_validators_sha_check():
     d = Path(__import__("tempfile").mkdtemp())
     (d / f"{p['review_id']}.json").write_text(json.dumps(p, indent=1, sort_keys=True))
     assert v.packet_problems({"review_id": p["review_id"], "packet_sha": L.packet_sha(p)}, d) == []
-    assert p["packet_version"] == 2 and p["info_cutoff_at"] == "2026-10-25T16:16:30Z"
+    assert p["packet_version"] == 3 and p["info_cutoff_at"] == "2026-10-25T16:16:30Z"
     # golden v1 keys are a subset of the v2 keys
     assert set(GOLD[ADA]) - {"assembled_by"} <= set(p)
 
@@ -251,3 +251,59 @@ def test_open_set_is_the_union_of_sources():
     s.packages["e"] = {"order_package_id": "e", "status": "open"}
     s.trades = [{"order_package_id": "f", "status": "open"}]
     assert L.open_package_ids(s) == ["a", "c", "e", "f"]
+
+
+# ----------------------------------------------------------------------------- context_v3 (DESK-AM-REFOCUS)
+
+def _bars(closes, t0=1_700_000_000, step=7200):
+    return [{"time": t0 + i * step, "open": c, "high": c + 1.0, "low": c - 1.0, "close": c} for i, c in enumerate(closes)]
+
+
+def test_swings_finds_the_pivots_newest_first():
+    closes = [10, 11, 12, 13, 12, 11, 10, 9, 10, 11, 12, 11, 10]
+    sw = L.swings(_bars(closes), k=2, lookback=60)
+    assert [h["px"] for h in sw["highs"]] == [13.0, 14.0]   # high = close + 1
+    assert sw["lows"][0]["px"] == 8.0 and sw["lows"][0]["bars_ago"] == 5
+
+
+def test_chart_block_is_compact_and_null_without_bars():
+    assert L.chart_block([], 1.0) is None
+    c = L.chart_block(_bars(list(range(40))), 2.0)
+    assert len(c["bars_ohlc"]) == L.CHART_BARS and c["bars_ohlc"][-1][4] == 39.0
+    assert all(x["dist_atr"] is not None for x in c["swings"]["highs"] + c["swings"]["lows"])
+
+
+def test_since_entry_reads_only_bars_after_the_open():
+    b = _bars([10, 20, 12, 13, 14])
+    se = L.since_entry(b, b[2]["time"], 1.0)
+    assert se["bars"] == 3 and se["high"] == 15.0 and se["low"] == 11.0
+    assert L.since_entry(b, None, 1.0) is None
+
+
+def test_book_lists_other_open_packages_on_both_sides():
+    s = _snap(telemetry={"rows": [
+        {"order_package_id": "pkg-a", "lifecycle": "open", "strategy": "x", "symbol": "ADAUSDT", "direction": "short", "open_r": 0.5},
+        {"order_package_id": "pkg-b", "lifecycle": "open", "strategy": "y", "symbol": "XRPUSDT", "direction": "long", "open_r": -0.2}]})
+    book = L.book_block(s, "pkg-a")
+    assert book == [["XRPUSDT", "long", "y", -0.2]]
+
+
+def test_packet_carries_context_v3_and_names_what_it_could_not_read():
+    s = _snap(telemetry={"rows": []})
+    s.packages["pkg-z"] = {"order_package_id": "pkg-z", "strategy_name": "ada_pullback_2h", "symbol": "ADAUSDT",
+                           "direction": "short", "entry": "1.0", "sl": "1.1", "tp": "0.8", "status": "open",
+                           "close_reason": None, "meta": json.dumps({"timeframe": "2h", "atr_stop_mult": 1.5})}
+    s.candles["ADAUSDT|2h"] = {"candles": [], "error": "no_data"}
+    p = _build("pkg-z", s)
+    c3 = p["context_v3"]
+    assert c3["chart"] is None and c3["htf"] is None and c3["live_vs_backtest"] is None
+    assert c3["exit_plan"]["sl_now"] == 1.1 and c3["exit_plan"]["declared"] == {"atr_stop_mult": 1.5, "timeframe": "2h"}
+    names = {m["field"] for m in p["missing_inputs"]}
+    assert {"context_v3.chart", "context_v3.htf", "context_v3.live_vs_backtest"} <= names
+
+
+def test_weekly_drops_the_unfinished_week():
+    t0 = int(datetime(2026, 10, 5, tzinfo=timezone.utc).timestamp())   # a Monday
+    daily = [{"time": t0 + i * 86400, "open": i, "high": i + 2, "low": i - 2, "close": i + 1} for i in range(16)]
+    w = L.weekly(daily)
+    assert len(w) == 2 and w[0]["open"] == 0 and w[0]["close"] == 7 and w[0]["high"] == 8 and w[1]["low"] == 5

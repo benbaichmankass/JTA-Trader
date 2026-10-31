@@ -181,7 +181,8 @@ def trade_action_problems(rec: dict) -> list[str]:
 #: packet gave. Earlier rows are history (they carry a null level and the due side infers it).
 DUE_EVENTS = ("r_milestone", "new_peak", "giveback", "near_target", "daily_floor",
               "swing", "vol_regime", "funding", "calendar", "mechanics",
-              "adverse_r", "stall", "momentum_flip", "structure_break", "mandate_cadence")
+              "adverse_r", "stall", "momentum_flip", "structure_break", "mandate_cadence",
+              "judgement_cadence")
 TRIGGER_LEVEL_RULE_FROM = "2026-10-27T00:00:00Z"
 
 
@@ -197,6 +198,35 @@ def trigger_problems(row: dict) -> list[str]:
     if event == "manual" and level is not None:
         return ["trigger.event manual takes no level (a level means this answers a due event: name that event)"]
     return []
+
+
+#: DESK-AM-REFOCUS (2026-10-30, docs/research/desk-am-refocus-diagnosis-2026-10-30.md): over the 240
+#: rows to 2026-10-30 no reason stated an expectation ("expect" 0, "will" 0), so no call could be
+#: falsified on its own terms. From this instant a JUDGED row (a call argued from the market, i.e. basis
+#: judgement / ev_positive / preference_within_bound) carries a ``forecast``: thesis, direction relative
+#: to the trade, target and invalidation prices, p_target and a horizon. The short-hold lane
+#: (trigger.event short_hold, its own 5m-bar brief) is exempt; it may still carry one.
+FORECAST_RULE_FROM = "2026-10-31T00:00:00Z"
+FORECAST_BASES = ("judgement", "ev_positive", "preference_within_bound")
+
+
+def forecast_problems(row: dict) -> list[str]:
+    fc = row.get("forecast")
+    rec = row.get("recommendation") or {}
+    out: list[str] = []
+    if fc is None:
+        if (str(row.get("reviewed_at") or "") >= FORECAST_RULE_FROM
+                and rec.get("basis") in FORECAST_BASES
+                and (row.get("trigger") or {}).get("event") != "short_hold"):
+            out.append(f"a judged row (basis {rec.get('basis')}) needs a forecast: thesis, direction, target_px, "
+                       "p_target, invalidation_px, horizon_bars, timeframe (REVIEWER-BRIEF section 2b)")
+        return out
+    if not isinstance(fc, dict):
+        return out  # the schema check already named the type
+    tgt, inv = fc.get("target_px"), fc.get("invalidation_px")
+    if _is_num(tgt) and _is_num(inv) and tgt == inv:
+        out.append("forecast.target_px equals forecast.invalidation_px (a forecast needs two different prices)")
+    return out
 
 
 def row_problems(row: dict, kind: str, schema: dict) -> list[str]:
@@ -251,6 +281,7 @@ def row_problems(row: dict, kind: str, schema: dict) -> list[str]:
     out += trade_action_problems(rec)
     out += money_call_problems(row)
     out += trigger_problems(row)
+    out += forecast_problems(row)
     accts = [a["account_id"] for a in row["account_reads"]]
     if len(accts) != len(set(accts)):
         out.append("account_reads names an account more than once")
@@ -452,6 +483,22 @@ def _self_test() -> int:
     expect("a manual row with no level passes", mut(GOOD_REVIEW, trig("manual", None)), "reviews", False)
     expect("a pre-rule due event with a null level is history, not refused",
            mut(GOOD_REVIEW, trig("mechanics", None, "2026-10-26T22:16:00Z")), "reviews", False)
+    FC = {"thesis": "4h higher low holds; momentum resumes into the prior swing high", "direction": "with_trade",
+          "target_px": 105.0, "p_target": 0.55, "invalidation_px": 98.5, "horizon_bars": 6, "timeframe": "2h"}
+    def fc_rule(fc, at="2026-10-31T01:00:00Z", event="judgement_cadence", level="2026-10-31T00:00:00+00:00"):
+        return lambda r: (judged(r), r["trigger"].update(event=event, level=level), r.update(reviewed_at=at),
+                          (r.update(forecast=dict(fc)) if fc is not None else None))
+    expect("a judged row after the forecast rule with no forecast is refused",
+           mut(GOOD_REVIEW, fc_rule(None)), "reviews", True)
+    expect("a judged row after the forecast rule with a forecast passes", mut(GOOD_REVIEW, fc_rule(FC)), "reviews", False)
+    expect("a forecast missing p_target is refused",
+           mut(GOOD_REVIEW, fc_rule({k: v for k, v in FC.items() if k != "p_target"})), "reviews", True)
+    expect("a forecast whose target equals its invalidation is refused",
+           mut(GOOD_REVIEW, fc_rule(dict(FC, invalidation_px=105.0))), "reviews", True)
+    expect("a short-hold judged row is exempt from the forecast rule",
+           mut(GOOD_REVIEW, fc_rule(None, event="short_hold", level=1)), "reviews", False)
+    expect("a judged row before the forecast rule needs no forecast",
+           mut(GOOD_REVIEW, fc_rule(None, at="2026-10-30T23:00:00Z")), "reviews", False)
     expect("a review_id naming another package than the row's is refused",
            mut(GOOD_REVIEW, lambda r: r.update(order_package_id="pkg-2")), "reviews", True)
     expect("missing account_reads is refused", mut(GOOD_REVIEW, lambda r: r.pop("account_reads")), "reviews", True)

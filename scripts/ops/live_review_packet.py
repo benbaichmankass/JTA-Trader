@@ -47,7 +47,7 @@ from typing import Any, Callable, Dict, List, Optional, Tuple
 REPO = Path(__file__).resolve().parents[2]
 if str(REPO) not in sys.path:
     sys.path.insert(0, str(REPO))  # `src.runtime.regime` (the live detector) must import when run as a script
-PACKET_VERSION = 2  # v1 = the hand-built packets; v2 is a strict superset of their keys
+PACKET_VERSION = 3  # v1 = the hand-built packets; v2 is a strict superset of their keys; v3 adds context_v3 (DESK-AM-REFOCUS)
 GENERATOR = "scripts/ops/live_review_packet.py"
 PUBLIC_BASE = "https://ict-bot.duckdns.org"
 PACKETS_DIR = REPO / "comms" / "live_review" / "packets"
@@ -117,6 +117,7 @@ def collect(wanted: Optional[List[str]] = None, *, max_pages: int = 3, diag: Cal
     read("alpaca_orders", diag, "alpaca_open_orders")
     read("ib_orders", diag, "ib_open_orders")
     read("news", public, "api/bot/news/recent?limit=60")
+    read("perf_recent", public, "api/bot/performance/recent?n=200")  # context_v3.live_vs_backtest
     for acct in ("breakout_2", "tradeify_1", "velotrade_1"):
         read(f"prop_status:{acct}", public, f"api/bot/prop/status?account_id={acct}")
 
@@ -285,6 +286,183 @@ def trend_now(bars: List[dict]) -> Tuple[Optional[str], Optional[float]]:
         return None, None
     r = detect_regime(pd.DataFrame(bars))
     return (r["regime"] if r["regime"] != "unknown" else None), r.get("adx")
+
+
+# ----------------------------------------------------------------------------- context_v3 (DESK-AM-REFOCUS)
+#
+# The discretionary context a trader manages a position with (docs/research/desk-am-refocus-diagnosis-2026-10-30.md
+# section 1.2: the v2 packet carried no candles, no higher timeframe and no book, so the reviewer could only restate the
+# priced table). Pure functions of reads already taken; a block it cannot fill is null with a missing_inputs entry.
+
+HTF_OF = {"5m": "1h", "15m": "1h", "30m": "4h", "1h": "4h", "2h": "1d", "4h": "1d", "1d": "1w"}  # 1w: built from 1d bars (the candles route has no 1w)
+CHART_BARS = 16   # leg-timeframe bars shown (16h of 1h, ~5 days of 4h); swings + since_entry cover further back
+HTF_BARS = 8
+SWING_LOOKBACK = 60
+SWING_K = 2       # a pivot is the extreme of the K bars either side
+
+
+def _sig(v: Any, n: int = 6) -> Optional[float]:
+    f = _f(v)
+    return None if f is None else float(f"{f:.{n}g}")
+
+
+def _candles(s: "Snapshot", symbol: str, tf: str, limit: int = 200) -> Any:
+    key = f"{symbol}|{tf}"
+    if key not in s.candles:
+        try:
+            s.candles[key] = _public(f"api/bot/candles?symbol={symbol}&interval={tf}&limit={limit}")
+        except Exception as exc:  # allow-silent: becomes a missing input
+            s.candles[key] = {"candles": [], "error": str(exc)[:120]}
+    return s.candles[key]
+
+
+def weekly(daily: List[dict]) -> List[dict]:
+    """ISO-week bars from closed daily bars; the current, unfinished week is dropped."""
+    weeks: Dict[Tuple[int, int], List[dict]] = {}
+    for c in daily:
+        weeks.setdefault(datetime.fromtimestamp(c["time"], timezone.utc).isocalendar()[:2], []).append(c)
+    keys = sorted(weeks)[:-1]
+    return [{"time": weeks[k][0]["time"], "open": weeks[k][0]["open"], "high": max(c["high"] for c in weeks[k]),
+             "low": min(c["low"] for c in weeks[k]), "close": weeks[k][-1]["close"]} for k in keys]
+
+
+def swings(bars: List[dict], k: int = SWING_K, lookback: int = SWING_LOOKBACK) -> Dict[str, List[dict]]:
+    """Pivot highs / lows over the last ``lookback`` closed bars, newest first (bars_ago 0 = the last closed bar)."""
+    w = bars[-lookback:]
+    highs, lows = [], []
+    for i in range(k, len(w) - k):
+        hi, lo = w[i]["high"], w[i]["low"]
+        if all(hi >= w[j]["high"] for j in range(i - k, i + k + 1)):
+            highs.append({"px": _sig(hi), "bars_ago": len(w) - 1 - i})
+        if all(lo <= w[j]["low"] for j in range(i - k, i + k + 1)):
+            lows.append({"px": _sig(lo), "bars_ago": len(w) - 1 - i})
+    return {"highs": highs[::-1][:3], "lows": lows[::-1][:3]}
+
+
+def _with_dist(levels: List[dict], last: float, atr: Optional[float]) -> List[dict]:
+    return [dict(x, dist_atr=None if not atr else round((x["px"] - last) / atr, 2)) for x in levels]
+
+
+def chart_block(bars: List[dict], atr: Optional[float], n: int = CHART_BARS) -> Optional[dict]:
+    if not bars:
+        return None
+    last = bars[-1]["close"]
+    sw = swings(bars)
+    return {"bars_ohlc": [[c["time"], _sig(c["open"]), _sig(c["high"]), _sig(c["low"]), _sig(c["close"])] for c in bars[-n:]],
+            "bars_note": "[epoch_s, open, high, low, close], closed bars only, oldest first",
+            "last_close": _sig(last), "atr": _sig(atr),
+            "swings": {"highs": _with_dist(sw["highs"], last, atr), "lows": _with_dist(sw["lows"], last, atr)}}
+
+
+def since_entry(bars: List[dict], opened_ts: Optional[float], atr: Optional[float]) -> Optional[dict]:
+    if not bars or opened_ts is None:
+        return None
+    w = [c for c in bars if c["time"] >= opened_ts - 1]
+    if not w:
+        return None
+    last = bars[-1]["close"]
+    hi, lo = max(c["high"] for c in w), min(c["low"] for c in w)
+    return {"bars": len(w), "high": _sig(hi), "low": _sig(lo),
+            "high_dist_atr": None if not atr else round((hi - last) / atr, 2),
+            "low_dist_atr": None if not atr else round((lo - last) / atr, 2)}
+
+
+def _ts(v: Any) -> Optional[float]:
+    """Epoch seconds of a journal timestamp ('2026-10-30 12:00:00', ISO with or without Z); naive reads as UTC."""
+    try:
+        d = datetime.fromisoformat(str(v).strip().replace("Z", "+00:00"))
+    except ValueError:
+        return None
+    return (d if d.tzinfo else d.replace(tzinfo=timezone.utc)).timestamp()
+
+
+def _opened_ts(p: Optional[dict], trades: List[dict]) -> Optional[float]:
+    cands = [(p or {}).get(k) for k in ("created_at", "opened_at")]
+    cands += [t.get(k) for t in trades for k in ("entry_time", "opened_at", "created_at")]
+    for v in cands:
+        if v and _ts(v) is not None:
+            return _ts(v)
+    return None
+
+
+def book_block(s: "Snapshot", pkg: str) -> List[dict]:
+    """Every OTHER open package, either side: the book this trade sits in (the v2 field kept same-direction ids only)."""
+    tel = {r.get("order_package_id"): r for r in (s.get("telemetry") or {}).get("rows", []) if r.get("lifecycle") == "open"}
+    out = []
+    for o in open_package_ids(s):
+        if o == pkg:
+            continue
+        p = s.packages.get(o) or {}
+        t = tel.get(o) or {}
+        d = p.get("direction") or t.get("direction")
+        out.append([p.get("symbol") or t.get("symbol"), d, p.get("strategy_name") or t.get("strategy"),
+                    _sig(t.get("open_r"), 3)])
+    return out
+
+
+BOOK_NOTE = "[symbol, direction, leg, open_r (null = not measured)] per OTHER open package, either side"
+
+
+EXIT_META_KEYS = ("atr", "atr_period", "atr_stop_mult", "trail_mult", "trail_atr_mult", "trail_activation_r", "tp_r",
+                  "tp_intent", "max_hold_bars", "time_stop_bars", "breakeven_r", "timeframe")
+
+
+def exit_plan_block(p: Optional[dict], meta: dict, entry: Optional[float], sl: Optional[float], tp: Optional[float]) -> dict:
+    """What HOLD actually does: the strategy's own brackets and declared exit levers (copied, never inferred)."""
+    eps = {k: v for k, v in _json((p or {}).get("exit_plan_state")).items()
+           if k in ("stop", "targets", "trailing_stop", "final_trailing", "time_decay_minutes", "residual_qty")}
+    return {"entry": _sig(entry), "sl_now": _sig(sl), "tp_now": _sig(tp),
+            "sl_initial": _sig(meta.get("sl_initial") or meta.get("initial_sl")),
+            "declared": {k: meta[k] for k in EXIT_META_KEYS if k in meta},
+            "exit_plan_state": eps or None}
+
+
+def live_vs_backtest_block(s: "Snapshot", leg: str) -> Optional[dict]:
+    recent = s.get("perf_recent")
+    if not recent:
+        return None
+    try:
+        sys.path.insert(0, str(REPO / "scripts" / "research"))
+        import live_vs_backtest as lvb
+        rows = lvb.run(recent, [(None, leg)])
+    except Exception as exc:  # allow-silent: becomes a missing input
+        return {"read_state": "could_not_look", "reason": str(exc)[:160]}
+    keep = ("book", "verdict", "closed", "r_trades", "live_r", "p5", "p50", "p95", "live_percentile",
+            "backtest_n", "backtest_expectancy_r", "why")
+    return {"read_state": "read", "rows": [{k: r.get(k) for k in keep if k in r} for r in rows]}
+
+
+def context_v3(s: "Snapshot", pkg: str, view: dict, meta: dict, symbol: Optional[str],
+               tf: Optional[str], bars: List[dict], atr_now: Optional[float], entry: Optional[float],
+               sl: Optional[float], tp: Optional[float], leg: str, now: datetime,
+               miss: Callable[[str, str], None]) -> dict:
+    chart = chart_block(bars, atr_now)
+    if chart is None:
+        miss("context_v3.chart", "no closed candles on the leg timeframe (route unreachable or timeframe unrecorded)")
+    else:
+        chart["timeframe"] = tf
+        chart["since_entry"] = since_entry(bars, _opened_ts(view["package"], view["trades"]), atr_now)
+        if chart["since_entry"] is None:
+            miss("context_v3.chart.since_entry", "package open time not in the journal reads")
+    htf = None
+    htf_tf = HTF_OF.get(tf or "")
+    if chart is not None and htf_tf and symbol:
+        if htf_tf == "1w":
+            hb = weekly(bars)
+        else:
+            hb = _closed_bars((_candles(s, symbol, htf_tf, 120) or {}).get("candles") or [], htf_tf, now)
+        if hb:
+            h_atr = atr_sma(hb, 14)
+            t_now, adx = trend_now(hb)
+            hc = chart_block(hb, h_atr, HTF_BARS)
+            htf = dict(hc, timeframe=htf_tf, trend_now=t_now, adx_now=_sig(adx, 4))
+    if htf is None:
+        miss("context_v3.htf", f"no closed candles on the higher timeframe {htf_tf!r}" if htf_tf else f"no higher timeframe mapped for {tf!r}")
+    lvb_ = live_vs_backtest_block(s, leg)
+    if lvb_ is None:
+        miss("context_v3.live_vs_backtest", "api/bot/performance/recent not read")
+    return {"chart": chart, "htf": htf, "book": book_block(s, pkg), "book_note": BOOK_NOTE,
+            "exit_plan": exit_plan_block(view["package"], meta, entry, sl, tp), "live_vs_backtest": lvb_}
 
 
 # ----------------------------------------------------------------------------- the packet
@@ -502,15 +680,10 @@ def build_packet(pkg: str, s: Snapshot, now: datetime, *, write_tables: bool = F
 
     # --- candles: ATR now / trend now
     tf = meta.get("timeframe")
-    atr_ratio = trend = adx = None
+    atr_ratio = trend = adx = a_now = None
+    bars: List[dict] = []
     if symbol and tf in TF_SECONDS:
-        cd = s.candles.get(f"{symbol}|{tf}")
-        if cd is None and f"{symbol}|{tf}" not in s.candles:
-            try:
-                cd = _public(f"api/bot/candles?symbol={symbol}&interval={tf}&limit=200")
-            except Exception as exc:  # allow-silent: becomes a missing input
-                cd = {"candles": [], "error": str(exc)[:120]}
-            s.candles[f"{symbol}|{tf}"] = cd
+        cd = _candles(s, symbol, tf)
         bars = _closed_bars((cd or {}).get("candles") or [], tf, now)
         a_now = atr_sma(bars, int(meta.get("atr_period") or 14))
         a_entry = _f(meta.get("atr"))
@@ -568,7 +741,9 @@ def build_packet(pkg: str, s: Snapshot, now: datetime, *, write_tables: bool = F
     for r in mine[-1:]:
         prev = {"review_id": r.get("review_id"), "reviewed_at": r.get("reviewed_at"),
                 "action": (r.get("recommendation") or {}).get("action"), "route": (r.get("recommendation") or {}).get("route")}
-    miss("context.live_vs_backtest", "per-leg live-vs-backtest verdict not assembled by this generator yet")
+    ctx3 = context_v3(s, pkg, view, meta, symbol, tf, bars, a_now, entry, sl, tp, leg, now, miss)
+    if ctx3["live_vs_backtest"] is None:
+        miss("context.live_vs_backtest", "per-leg live-vs-backtest read failed (api/bot/performance/recent); see context_v3")
 
     reads = [t for k, t in s.read_at.items()]
     cutoff = max(reads) if reads else now.strftime("%Y-%m-%dT%H:%M:%SZ")
@@ -578,6 +753,7 @@ def build_packet(pkg: str, s: Snapshot, now: datetime, *, write_tables: bool = F
         "context": {"calendar": cal, "correlated_open_packages": corr,
                     "funding": None if perp else {"state": "not_applicable"}, "news": news,
                     "previous_review": prev, "symbol": symbol, "direction": direction},
+        "context_v3": ctx3,
         "cost": cost,
         "features_at_review": {"atr_now_over_entry": atr_ratio, "bars_since_peak": tel.get("bars_since_peak") if tel else pos_r.get("barsSincePeak"),
                                "giveback_r": giveback, "open_r": open_r, "peak_r": peak_r,

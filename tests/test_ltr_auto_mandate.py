@@ -344,8 +344,9 @@ def test_a_scoped_open_package_is_due_once_per_cadence_slot():
     answered = old + [{"order_package_id": "pkg-1", "reviewed_at": (NOW - timedelta(hours=1)).isoformat(),
                        "trigger": {"event": "mandate_cadence", "level": ev["level"]}, "state": {}}]
     assert lrd.compute_due([_due_row()], answered, cfg, NOW, cadence=CAD)["due_count"] == 0
-    # unscoped packages get no cadence event
-    assert lrd.compute_due([_due_row()], old, cfg, NOW)["due_count"] == 0
+    # unscoped packages get no mandate cadence event (they may get the DESK-AM-REFOCUS judgement slot instead)
+    unscoped = lrd.compute_due([_due_row()], old, cfg, NOW)
+    assert not [e for d in unscoped["due"] for e in d["events"] if e["event"] == "mandate_cadence"]
 
 
 def test_the_cadence_wake_is_deduped_by_slot_not_held_by_the_cooldown():

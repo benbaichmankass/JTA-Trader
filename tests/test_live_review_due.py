@@ -12,7 +12,9 @@ import yaml
 from src.runtime import live_review_due as lrd
 
 NOW = datetime(2026, 10, 25, 14, 4, tzinfo=timezone.utc)
-CFG = lrd.load_config()
+CFG_LIVE = lrd.load_config()
+# the pre-existing cases pin the trigger events; the judgement slot (DESK-AM-REFOCUS) has its own cases below
+CFG = {**CFG_LIVE, "events": {k: v for k, v in CFG_LIVE["events"].items() if k != "judgement_cadence"}}
 
 
 def row(**kw):
@@ -220,7 +222,8 @@ def test_telemetry_less_real_money_package_can_be_due_on_daily_floor(tmp_path):
     out = lrd.live_review_due(db_path=db, reviews_path=str(tmp_path / "none.jsonl"), now=NOW)
     due = {d["order_package_id"]: d for d in out["due"]}
     assert "pkg-4" in due  # bybit_2 trade row, never reviewed -> daily_floor needs no telemetry
-    assert [e["event"] for e in due["pkg-4"]["events"]] == ["daily_floor"]
+    # + the DESK-AM-REFOCUS judgement slot, which also needs no telemetry
+    assert [e["event"] for e in due["pkg-4"]["events"]] == ["daily_floor", "judgement_cadence"]
     assert due["pkg-4"]["telemetry_state"] == "telemetry_absent"
     assert due["pkg-4"]["telemetry_stale"] is None
     assert "pkg-2" not in due  # no account known -> no floor; still listed, not dropped
@@ -353,3 +356,49 @@ def test_branch_read_failure_falls_back_to_main_only(tmp_path):
     assert boom["state"] == "could_not_look" and boom["rows"] == []
     raising = lrd.read_branch_rows(git=lambda *a, **k: (_ for _ in ()).throw(RuntimeError("x")))
     assert raising["state"] == "could_not_look"
+
+
+# ----------------------------------------------------------------------------- DESK-AM-REFOCUS judgement_cadence
+
+def _prior(last=None):
+    return {"fired": set(), "last": last, "peak": None, "mech": None}
+
+
+def test_judgement_cadence_is_one_utc_slot_per_timeframe():
+    now = datetime(2026, 10, 31, 9, 30, tzinfo=timezone.utc)
+    ev = lrd.judgement_cadence_event(_prior(), CFG_LIVE, now, 7200)                 # 2h leg: 4h slots
+    assert ev[0] == "judgement_cadence" and ev[1] == "2026-10-31T08:00:00+00:00"
+    # operator 2026-10-30: every timeframe every 4h
+    assert lrd.judgement_cadence_event(_prior(), CFG_LIVE, now, 14400)[1] == "2026-10-31T08:00:00+00:00"
+    assert lrd.judgement_cadence_event(_prior(), CFG_LIVE, now, 86400)[1] == "2026-10-31T08:00:00+00:00"
+
+
+def test_a_review_inside_the_slot_satisfies_it_and_short_hold_timeframes_get_none():
+    now = datetime(2026, 10, 31, 9, 30, tzinfo=timezone.utc)
+    assert lrd.judgement_cadence_event(_prior(datetime(2026, 10, 31, 8, 5, tzinfo=timezone.utc)), CFG_LIVE, now, 7200) is None
+    assert lrd.judgement_cadence_event(_prior(datetime(2026, 10, 31, 7, 55, tzinfo=timezone.utc)), CFG_LIVE, now, 7200) is not None
+    assert lrd.judgement_cadence_event(_prior(), CFG_LIVE, now, 900) is None          # 15m: the short-hold lane
+    assert lrd.judgement_cadence_event(_prior(), {"events": {}}, now, 7200) is None   # block removed = reverted
+
+
+def test_judgement_cadence_reaches_the_due_list_and_dedupes_on_its_slot():
+    now = datetime(2026, 10, 31, 9, 30, tzinfo=timezone.utc)
+    row = {"order_package_id": "pkg-jc", "strategy": "ada_pullback_2h", "account_id": "bybit_2", "lifecycle": "open",
+           "open_r": 0.2, "peak_r": 0.3, "updated_at": now.isoformat()}
+    due = lrd.compute_due([row], [], CFG_LIVE, now=now)
+    evs = [e for d in due["due"] for e in d["events"] if e["event"] == "judgement_cadence"]
+    assert len(evs) == 1 and evs[0]["level"] == "2026-10-31T08:00:00+00:00"
+    answered = {"order_package_id": "pkg-jc", "reviewed_at": "2026-10-31T09:31:00Z",
+                "trigger": {"event": "judgement_cadence", "level": "2026-10-31T08:00:00+00:00"}}
+    again = lrd.compute_due([row], [answered], CFG_LIVE, now=now + timedelta(minutes=5))
+    assert not [e for d in again["due"] for e in d["events"] if e["event"] == "judgement_cadence"]
+
+
+def test_judgement_cadence_skips_unreviewed_accounts_and_mandate_scoped_packages():
+    now = datetime(2026, 10, 31, 9, 30, tzinfo=timezone.utc)
+    row = {"order_package_id": "pkg-jc", "strategy": "ada_pullback_2h", "lifecycle": "open",
+           "open_r": 0.2, "peak_r": 0.3, "updated_at": now.isoformat()}
+    jc = lambda res: [e for d in res["due"] for e in d["events"] if e["event"] == "judgement_cadence"]  # noqa: E731
+    assert not jc(lrd.compute_due([dict(row, account_id="oanda_practice")], [], CFG_LIVE, now=now))
+    cad = {"pkg-jc": {"mandate": "MD-X", "minutes": 60}}
+    assert not jc(lrd.compute_due([dict(row, account_id="bybit_2")], [], CFG_LIVE, now=now, cadence=cad))

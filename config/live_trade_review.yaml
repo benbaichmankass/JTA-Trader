@@ -118,6 +118,13 @@ due:
       bars: 3
       min_atr: 1.0
       cooldown_bars: 3
+    judgement_cadence:
+      # DESK-AM-REFOCUS (2026-10-30): the judgement desk looks at EVERY open package on a regular slot,
+      # not only when a mechanical rule fires. Slots are UTC-aligned so every package of a timeframe is due
+      # together and rides ONE wake (a book review). A review since the slot began satisfies it.
+      # Remove this block to revert. 5m/15m are absent on purpose: the short-hold lane manages them.
+      # Operator 2026-10-30 ~22:30Z popup, verbatim: "Every 4h (~$20/day)" -- every timeframe, every 4h.
+      hours_by_timeframe: {30m: 4, 1h: 4, 2h: 4, 4h: 4, 1d: 4}
     structure_break:
       # A CLOSED bar's close beyond the since-entry extreme close against the
       # position (the trade's own structure) by more than buffer_atr x ATR,
