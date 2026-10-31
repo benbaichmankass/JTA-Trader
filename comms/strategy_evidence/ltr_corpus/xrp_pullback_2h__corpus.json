@@ -1,0 +1,35 @@
+{
+  "leg": "xrp_pullback_2h",
+  "purpose": "full-history per-trade corpus for the live-trade-review outcome table (scripts/research/live_review_outcomes.py --corpus auto); NOT a promotion-evidence record (the Stage-0 gate reads comms/strategy_evidence/xrp_pullback_2h.json)",
+  "produced_by": "scripts/research/exit_lever_ablation.py --leg xrp_pullback_2h arm A (the leg as declared in config/strategies.yaml; closed-bar harness)",
+  "builder": "scripts/research/build_ltr_corpus.py (mode harness)",
+  "source_file": "comms/research/RQ-20261022-4b82-05/40090264368/data/XRPUSDT_120.csv",
+  "decision_bar": "closed",
+  "data_start": "2020-04-03 00:00:00+00:00",
+  "data_end": "2026-10-20 14:00:00+00:00",
+  "n_trades": 404,
+  "net_total_r": 33.0556,
+  "fee_bps_roundtrip": 11.0,
+  "slippage_bps_roundtrip": 3.0,
+  "funding_bps_per_window": 1.0,
+  "params": {
+    "decision_bar": "closed",
+    "timeframe": "2h",
+    "symbols": [
+      "XRPUSDT"
+    ],
+    "trend_lookback": 40,
+    "pullback_lookback": 10,
+    "pullback_frac": 0.5,
+    "atr_period": 14,
+    "atr_stop_mult": 2.5,
+    "trail_mult": 6.0,
+    "tp_r": 3.0,
+    "min_confidence": 0.0,
+    "adx_min": 25
+  },
+  "config_fingerprint": "sha256:42646f63eb55a5c543e24db22af82448",
+  "trades_sha256": "6ef64553cecbdfd392fcf9f22d2684a496e00fd2bb382e4b1ef649b24943c6b9",
+  "staleness": "regenerate when the leg's declared params or decision_bar change (config_fingerprint no longer matches comms/strategy_evidence/xrp_pullback_2h.json) or when the cost stack moves",
+  "candles": "comms/research/RQ-20261022-4b82-05/40090264368/data/XRPUSDT_120.csv"
+}

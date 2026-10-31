@@ -147,6 +147,9 @@ def _span_days(path: str) -> int:
         return 0
 
 
+_BYBIT_INTERVAL = {"1h": "60", "2h": "120", "4h": "240", "1d": "D"}
+
+
 def find_candles(symbol: str, timeframe: str, repo: Path = REPO, widest_span: bool = False) -> Optional[str]:
     """The widest committed candle file for this symbol+timeframe, or None.
 
@@ -157,6 +160,12 @@ def find_candles(symbol: str, timeframe: str, repo: Path = REPO, widest_span: bo
     if widest_span:
         # provenance: cpath — same selection, reported as res["candles"]
         hits += glob.glob(str(repo / "comms" / "research" / "*" / "*" / "data" / f"{symbol}_{timeframe}.csv"))
+        # the Bybit-interval spelling of the same pulls (XRPUSDT_120.csv = 2h): same columns, and the only
+        # files that reach back before 2021 for several legs
+        code = _BYBIT_INTERVAL.get(timeframe)
+        if code:
+            # provenance: cpath — same selection, reported as res["candles"]
+            hits += glob.glob(str(repo / "comms" / "research" / "*" / "*" / "data" / f"{symbol}_{code}.csv"))
         # provenance: cpath — same selection, reported as res["candles"]
         return max(hits, key=lambda p: (_span_days(p), p)) if hits else None
 
@@ -476,7 +485,10 @@ def main(argv: Optional[List[str]] = None) -> int:
     if cpath is None and trades:
         sym = trades[0].get("symbol")
         tf = json.loads((REPO / "comms" / "strategy_evidence" / f"{a.leg}.json").read_text()).get("timeframe")
-        cpath = find_candles(sym, tf, widest_span=a.corpus == "auto") if sym and tf else None
+        # the widest-span search belongs to the full-history corpus; a leg that fell back to its evidence
+        # source_run keeps the candle selection that run was built with
+        full = a.corpus == "auto" and str(src).startswith(LTR_CORPUS_DIR)
+        cpath = find_candles(sym, tf, widest_span=full) if sym and tf else None
     candles = load_candles(cpath) if cpath else None
     res = build_table(trades, candles, side=a.side, open_r=a.open_r, peak_r=a.peak_r,
                       bars_held=a.bars_held, atr_stop_mult=a.atr_stop_mult,
