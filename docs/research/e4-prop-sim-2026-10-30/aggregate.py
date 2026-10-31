@@ -4,6 +4,7 @@
 # file only points it at this directory. Output (summary.json, v2 columns) is unchanged -- the v3 edge clause is
 # applied by docs/research/prop-gate-edge-regrade-2026-10-31/regrade.py.
 import sys
+
 sys.path.insert(0, "scripts/research")
 import prop_gate
 

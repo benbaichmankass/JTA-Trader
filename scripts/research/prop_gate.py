@@ -24,11 +24,11 @@ import statistics as st
 import subprocess
 import sys
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 REPO = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-import prop_ev_sim as pes  # noqa: E402
+import prop_ev_sim as pes
 
 RULE_V2 = "RULE-P5-GATE-BRK-PER-LEG-V2"
 RULE_V3 = "RULE-P5-GATE-BRK-PER-LEG-V3"
@@ -43,14 +43,14 @@ ACCT = {  # size, ceiling
 }
 # the cells' simulator parameters (run_cells.sh of the three research dirs)
 SIM = {
-    "breakout_2": dict(rs="breakout_turbo_1step", risk=0.0035, ven=(8.0, 3.0, 0.00033)),
-    "tradeify_1": dict(rs="tradeify_247_1step", risk=0.005, ven=(8.0, 3.0, 0.00033)),
-    "velotrade_1": dict(rs="velotrade_classic_1step", risk=0.005, ven=(6.0, 3.0, 0.0005)),
+    "breakout_2": {"rs": "breakout_turbo_1step", "risk": 0.0035, "ven": (8.0, 3.0, 0.00033)},
+    "tradeify_1": {"rs": "tradeify_247_1step", "risk": 0.005, "ven": (8.0, 3.0, 0.00033)},
+    "velotrade_1": {"rs": "velotrade_classic_1step", "risk": 0.005, "ven": (6.0, 3.0, 0.0005)},
 }
 CUR = (11.0, 3.0, 0.0003)
 
 
-def arm_costs(acct: str, arm: str) -> "pes.CostConfig":
+def arm_costs(acct: str, arm: str) -> pes.CostConfig:
     c, s, sw = CUR if arm == "cur" else SIM[acct]["ven"]
     return pes.CostConfig(mode="breakout", commission_bps_rt=c, slippage_bps_rt=s, swap_daily=sw, swap_model="prorated")
 
@@ -61,7 +61,7 @@ def lev_cap(acct: str, leg: str) -> int:
 
 
 # ---------------------------------------------------------------- v3 edge clause
-def edge_ci(net_r: List[float]) -> Dict[str, Any]:
+def edge_ci(net_r: list[float]) -> dict[str, Any]:
     n = len(net_r)
     if n < 2:
         return {"n": n, "mean_r": None, "ci_lo": None, "ci_hi": None, "read_state": "n<2"}
@@ -71,12 +71,12 @@ def edge_ci(net_r: List[float]) -> Dict[str, Any]:
             "ci_hi": round(m + Z95 * se, 5), "read_state": "ok"}
 
 
-def ledger_net_r(rows: List[Dict[str, Any]], acct: str, arm: str) -> List[float]:
+def ledger_net_r(rows: list[dict[str, Any]], acct: str, arm: str) -> list[float]:
     trades, _, _ = pes.build_trades({"x": rows}, arm_costs(acct, arm))
     return [t.net_r for t in trades]
 
 
-def demean_rows(rows: List[Dict[str, Any]], acct: str, arm: str) -> List[Dict[str, Any]]:
+def demean_rows(rows: list[dict[str, Any]], acct: str, arm: str) -> list[dict[str, Any]]:
     """Same ledger, gross_r shifted so mean net R == 0 under this arm's costs."""
     m = st.fmean(ledger_net_r(rows, acct, arm))
     out = []
@@ -89,7 +89,7 @@ def demean_rows(rows: List[Dict[str, Any]], acct: str, arm: str) -> List[Dict[st
     return out
 
 
-def grade_v3(v2_verdict: str, edge: Dict[str, Any]) -> str:
+def grade_v3(v2_verdict: str, edge: dict[str, Any]) -> str:
     """v3 verdict from the v2 verdict and the edge CI. Only a v2 PASS can be downgraded."""
     if v2_verdict != "PASS":
         return v2_verdict
@@ -100,10 +100,10 @@ def grade_v3(v2_verdict: str, edge: Dict[str, Any]) -> str:
 
 
 # ---------------------------------------------------------------- v2 grading (moved verbatim from the aggregate.py copies)
-def aggregate_v2(root: str, leg_prefix: str = "", leg_suffix: str = "") -> List[Dict[str, Any]]:
-    cells: Dict[tuple, list] = {}
-    for f in sorted(glob.glob(root + "cells/*.json")):
-        leg, win, acct, arm, s = f.split("/")[-1][:-5].split("__")
+def aggregate_v2(root: str, leg_prefix: str = "", leg_suffix: str = "") -> list[dict[str, Any]]:
+    cells: dict[tuple, list] = {}
+    for f in sorted(glob.glob(root + "cells/*.json")):  # provenance: root — the caller-declared research dir, not a discovered input
+        leg, win, acct, arm, s = f.split("/")[-1][:-5].split("__")  # provenance: root — cell name is leg__win__acct__arm__seed
         with open(f) as fh:
             d = json.load(fh)
         p = d["results"]["path"]
@@ -140,7 +140,7 @@ def run_aggregate(root: str, leg_prefix: str = "", leg_suffix: str = "") -> None
 
 
 # ---------------------------------------------------------------- null-EV simulation (one seed, the cells' protocol)
-def null_cell(rows: List[Dict[str, Any]], leg: str, acct: str, arm: str, out_json: Path, work: Path, seed: int = 1) -> Dict[str, Any]:
+def null_cell(rows: list[dict[str, Any]], leg: str, acct: str, arm: str, out_json: Path, work: Path, seed: int = 1) -> dict[str, Any]:
     work.mkdir(parents=True, exist_ok=True)
     led = work / f"{leg}__{acct}__{arm}.null.jsonl"
     led.write_text("\n".join(json.dumps(r) for r in demean_rows(rows, acct, arm)) + "\n")

@@ -8,7 +8,7 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts/research"))
-import prop_gate as pg  # noqa: E402
+import prop_gate as pg
 
 ACCOUNTS = ("breakout_2", "tradeify_1", "velotrade_1")
 
