@@ -1,0 +1,23 @@
+{
+  "id": "LTR-PREV-FORECAST",
+  "title": "Live-review packet previous_review carries the prior row's forecast (and thesis), so each judgement_cadence review continues the last one instead of starting cold (handoff 2026-10-31 \u00a7 5, PI-20261031-9KC5G3FG-0004 named there but never filed)",
+  "phase": null,
+  "state": "in_flight",
+  "owner": "manager",
+  "lane": "session_01AFoLuJkLZx1wnFWtq8RReU",
+  "model": "claude-sonnet-5-5",
+  "ceiling_usd": 6,
+  "spend_usd": null,
+  "tier": 2,
+  "prs": [],
+  "blocked_on": [],
+  "note": "[Manager Session 2026-10-31a, 06:25Z] Week's priority (judgement desk, operator 2026-10-30). Locus MEASURED: scripts/ops/live_review_packet.py ~L766-777 builds previous_review = {review_id, reviewed_at, action, route} only; the prior row's forecast is dropped, so a strategy-opened trade's next review cannot grade or continue its last call. Done = packet previous_review includes the prior row's forecast fields (+ thesis/one-line reasoning if present), test added, deployed, and one later judgement_cadence packet OBSERVED carrying it. One lane while no fresh usage reading (one-lane rule).",
+  "priority_rank": 1,
+  "updated_at": "2026-10-31T06:20:34Z",
+  "updated_by": "session_01AFoLuJwBvR58WBtD4qc5Gp",
+  "roadmap": [
+    "L-DESK",
+    "L-ATM"
+  ],
+  "_seq": 850
+}
