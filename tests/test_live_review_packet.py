@@ -374,3 +374,19 @@ def test_packet_previous_review_is_the_newest_row_with_its_forecast(monkeypatch)
     s.packages["pkg-d"]["strategy_name"] = "ada_pullback_2h"
     pr = _build("pkg-d", s)["context"]["previous_review"]
     assert pr["review_id"] == "LR-b" and pr["forecast"] == {"thesis": "new"}
+
+
+def test_sibling_slice_legs_are_not_read_as_this_packages_bracket():
+    """PI-20261031-TD4QC5GP-0004: two qty-scoped Partial legs on one symbol; last-leg-wins filed a false mismatch."""
+    acct = {"accounts": [{"account_id": "bybit_1", "read_state": "orders_read", "result": {
+        "positions": [{"symbol": "XRPUSDT", "side": "Sell", "size": 3.0}],
+        "orders": [
+            {"symbol": "XRPUSDT", "order_id": "mine-sl", "stop_order_type": "PartialStopLoss", "trigger_price": 1.2521},
+            {"symbol": "XRPUSDT", "order_id": "mine-tp", "stop_order_type": "PartialTakeProfit", "trigger_price": 1.2421},
+            {"symbol": "XRPUSDT", "order_id": "sib-sl", "stop_order_type": "PartialStopLoss", "trigger_price": 1.257},
+            {"symbol": "XRPUSDT", "order_id": "sib-tp", "stop_order_type": "PartialTakeProfit", "trigger_price": 1.2185}]}}]}
+    s = _snap(bybit_orders=acct)
+    v = L._venue_exit_prices(s, "bybit_1", "bybit", "XRPUSDT", "short", "mine-sl", "mine-tp")
+    assert (v["sl"], v["tp"], v["ambiguous"]) == (1.2521, 1.2421, False)
+    v = L._venue_exit_prices(s, "bybit_1", "bybit", "XRPUSDT", "short", None, None)
+    assert (v["sl"], v["tp"], v["ambiguous"]) == (None, None, True)

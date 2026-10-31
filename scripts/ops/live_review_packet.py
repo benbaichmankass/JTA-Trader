@@ -203,8 +203,15 @@ def _close(a: Optional[float], b: Optional[float]) -> bool:
 
 # ----------------------------------------------------------------------------- venue reads
 
-def _venue_exit_prices(s: Snapshot, account: str, exchange: str, symbol: str, direction: str) -> dict:
-    """Resting SL/TP and position presence for one account on one symbol, or could-not-look."""
+def _venue_exit_prices(s: Snapshot, account: str, exchange: str, symbol: str, direction: str,
+                       sl_order_id: Optional[str] = None, tp_order_id: Optional[str] = None) -> dict:
+    """Resting SL/TP and position presence for one account on one symbol, or could-not-look.
+
+    Bybit ``position_model: slices`` accounts hold SEVERAL qty-scoped Partial legs per symbol (one per package),
+    so "the" symbol SL does not exist. Legs are matched by the trade's own ``sl_order_id`` / ``tp_order_id``
+    (PI-20261031-TD4QC5GP-0004: last-leg-wins read a SIBLING package's bracket as this package's and filed a
+    false mismatch). With several legs and no id match the level is ``None`` and ``ambiguous`` is set; a mismatch
+    is never asserted from a leg that is not this package's."""
     exit_side = "buy" if direction == "short" else "sell"
     src = {"bybit": "bybit_orders", "alpaca": "alpaca_orders", "interactive_brokers": "ib_orders"}.get(exchange)
     if src is None:
@@ -220,17 +227,32 @@ def _venue_exit_prices(s: Snapshot, account: str, exchange: str, symbol: str, di
     if exchange == "bybit":
         res = acct.get("result") or {}
         pos = next((p for p in res.get("positions", []) if p.get("symbol") == symbol and (p.get("size") or 0) > 0), None)
+        sl_legs, tp_legs = [], []
         for o in res.get("orders", []):
             if o.get("symbol") != symbol:
                 continue
             kind = str(o.get("stop_order_type") or "")
             if "StopLoss" in kind:
-                sl = _f(o.get("trigger_price"))
+                sl_legs.append(o)
             elif "TakeProfit" in kind:
-                tp = _f(o.get("trigger_price"))
-        if sl is None and pos:
+                tp_legs.append(o)
+
+        def _pick(legs, oid):
+            hit = [o for o in legs if oid and o.get("order_id") == oid]
+            if hit:
+                return _f(hit[0].get("trigger_price")), False
+            if len(legs) == 1 and not oid:
+                return _f(legs[0].get("trigger_price")), False
+            if not legs:
+                return None, False
+            # legs exist but none is provably this package's (id unknown or not resting): do not guess
+            return None, True
+        sl, amb_sl = _pick(sl_legs, sl_order_id)
+        tp, amb_tp = _pick(tp_legs, tp_order_id)
+        ambiguous = amb_sl or amb_tp
+        if not sl_legs and sl is None and pos:
             sl = _f(pos.get("stop_loss"))
-        if tp is None and pos:
+        if not tp_legs and tp is None and pos:
             tp = _f(pos.get("take_profit"))
         pos_present = pos is not None
     elif exchange == "alpaca":
@@ -253,7 +275,8 @@ def _venue_exit_prices(s: Snapshot, account: str, exchange: str, symbol: str, di
             elif o.get("order_type") == "LMT":
                 tp = _f(o.get("lmt_price"))
         pos_present = sl is not None or tp is not None
-    return {"state": "read", "position": pos_present, "sl": sl, "tp": tp, "src": src}
+    return {"state": "read", "position": pos_present, "sl": sl, "tp": tp, "src": src,
+            "ambiguous": bool(exchange == "bybit" and ambiguous)}
 
 
 # ----------------------------------------------------------------------------- candles: ATR and regime
@@ -558,8 +581,9 @@ def _mechanics(s: Snapshot, view: dict, accts: List[dict], sl: Optional[float], 
             if ref:
                 item["phone_amend"] = ref
         else:
-            v = _venue_exit_prices(s, aid, ex or "", symbol, direction)
             tr = a.get("trade")
+            v = _venue_exit_prices(s, aid, ex or "", symbol, direction,
+                                   (tr or {}).get("sl_order_id"), (tr or {}).get("tp_order_id"))
             trade_open = (tr or {}).get("status") == "open" or (a.get("telemetry") or {}).get("lifecycle") == "open"
             if v["state"] != "read":
                 looked_fail += 1
@@ -569,13 +593,15 @@ def _mechanics(s: Snapshot, view: dict, accts: List[dict], sl: Optional[float], 
                     bad += 1
                     ev.append(f"{aid}: journal open but no {symbol} position/protection at the venue")
                 elif trade_open:
-                    if sl is not None and not _close(v["sl"], sl):
+                    if sl is not None and v["sl"] is not None and not _close(v["sl"], sl):
                         bad += 1
                         ev.append(f"{aid}: venue SL {v['sl']} != package SL {sl}")
                     if tp is not None and v["tp"] is not None and not _close(v["tp"], tp):
                         bad += 1
                         ev.append(f"{aid}: venue TP {v['tp']} != package TP {tp}")
-                    if tp is not None and v["tp"] is None:
+                    if v.get("ambiguous"):
+                        ev.append(f"{aid}: several {symbol} bracket legs rest at the venue and none matches this package's order ids; levels not compared")
+                    elif tp is not None and v["tp"] is None:
                         ev.append(f"{aid}: no resting TP found at the venue read")
                 elif v["position"]:
                     bad += 1
