@@ -21,9 +21,9 @@ def test_money_legs_are_exactly_production_or_prop_and_every_one_has_a_family():
     t = ss.table()
     for leg in legs:
         assert t[leg]["status"] == ss.PRODUCTION or leg in legs  # prop legs are money legs without 'production'
-    assert all(t[l]["status"] != ss.INACTIVE for l in legs)
+    assert all(t[lg]["status"] != ss.INACTIVE for lg in legs)
     fams = s1.money_families()
-    assert sorted(l for v in fams.values() for l in v) == sorted(legs)      # every leg in exactly one family
+    assert sorted(lg for v in fams.values() for lg in v) == sorted(legs)      # every leg in exactly one family
     assert all(f.rsplit("_", 1)[-1] == legs[v[0]]["timeframe"] for f, v in fams.items())  # key carries config tf
 
 

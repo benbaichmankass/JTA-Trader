@@ -2,7 +2,7 @@ family: leg-corpus-s1
 weight: 10
 kind: experiment
 cadence: weekly
-theme: ml_health
+theme: live_strategy
 priority: 2
 compute: cpu_light
 roadmap:
@@ -17,10 +17,6 @@ why_this_matters: >-
   Station S1 of the ML line (docs/plans/ml-pipeline-design-2026-10-29.md): a model can only be trained and gated
   on the legs that carry money if their corpus exists, is fresh and is the bracket the leg trades. The one-off run
   artifact it replaces went stale and carried a mislabelled timeframe. Row ML-LINE-S1-CORPUS.
-ml_consumer:
-  consumer: ML-LINE-S1-CORPUS
-  decision: supplies the pooled-by-family ml/datasets family (leg_corpus) every later ML-line station trains and gates on
-  book: money
 power:
   expected_n: 1
   min_detectable_effect: 1.0

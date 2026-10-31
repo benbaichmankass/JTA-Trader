@@ -13,10 +13,19 @@
   "blocked_on": [],
   "note": "[2026-10-31 lane session_01AFoLuJwBvR58WBtD4qc5Gp] Timeframe defect VERIFIED FIXED AT SOURCE: backtest_trend/pullback write timeframe=args.resample or args.timeframe (FP-TF-LABEL); a --resample 4h run reads 4h in bt.json; the '1h' labels are in the old run artifact only. BUILT: scripts/research/leg_corpus_s1.py (per-family producer, money legs re-parsed from config, station metrics), research/templates/leg-corpus-s1.yaml + units RQ-20261031-020..023 (one per family incl. pullback_1d/iaum, which ran locally: n=41, tf equal, params hash equal), ml/datasets/families/leg_corpus.py (+tests). OBSERVATION THAT CLOSES: first producer run of each unit lands a <=7d corpus for every money leg (verdict.json coverage 7/7 across the 4 units).",
   "priority_rank": 2,
-  "updated_at": "2026-10-31T18:08:04Z",
+  "updated_at": "2026-10-31T18:22:15Z",
   "updated_by": "session_01AFoLuJwBvR58WBtD4qc5Gp",
   "roadmap": [
     "L-ML-LIVE"
   ],
+  "writeback": {
+    "roadmap": "none: L-ML-LIVE where/next are owned by the manager's roadmap pass; this row only adds the standing S1 producer and dataset family, the closing observation below is what moves it",
+    "arch": "none: Tier-1 research tooling, a read-only ml/datasets family and generated queue units; no runtime component, path or contract changed"
+  },
+  "observation": {
+    "what": "the four leg-corpus-s1 units (RQ-20261031-020..023) each land read_state measured; the union of their verdict.json coverage lists is every money leg with a corpus <= 7 days old and bt.json timeframe equal to config",
+    "how_to_check": "ls research/results/RQ-20261031-02*/; python3 scripts/research/leg_corpus_s1.py --list-families; read verdict.json measurement.coverage in comms/research/RQ-20261031-02*/<run_id>/",
+    "due_by": "2026-11-07"
+  },
   "_seq": 782
 }

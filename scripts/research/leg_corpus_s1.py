@@ -39,7 +39,7 @@ import json
 import sys
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional
 
 REPO = Path(__file__).resolve().parents[2]
 for _p in (str(REPO), str(REPO / "scripts"), str(REPO / "scripts" / "research"), str(REPO / "scripts" / "ops")):
@@ -179,7 +179,7 @@ def run_family(family: str, out: Path, *, days: int, start: Optional[str], end: 
             trades = read_jsonl(d / "trades.jsonl")
             metas[leg] = leg_meta(leg, cfgs[leg], family, trades, info["bt"], now,
                                   {k: v for k, v in info["feed"].items() if k in ("source", "interval", "resample")})
-        except Exception as exc:  # noqa: BLE001 -- contained per leg, reported (no-halting rule)
+        except Exception as exc:  # noqa: BLE001  # allow-silent: contained per leg and recorded as state=producer_failed with the reason in meta.json + verdict (no-halting rule)
             metas[leg] = {"leg": leg, "family": family, "state": "producer_failed", "reason": repr(exc)[:400]}
         (d / "meta.json").write_text(json.dumps(metas[leg], indent=2, sort_keys=True))
         print(f"{leg:26} {metas[leg]['state']:16} n={metas[leg].get('n_trades')} "
