@@ -164,7 +164,9 @@ Check three things:
 - Does the leg's own trail geometry explain the current stop?
 - Do venue, journal, telemetry and prop tickets agree that the trade is open?
 
-If any of these fails, the recommendation is `flag_mechanics` (basis `mechanics`, route `operator_ask` for real-money or prop), with the evidence in `mechanics.evidence`. **No exit judgment is made on a broken trade.** `options` may be left empty. A mechanics flag goes to the order-path owner through the manager. It is a bug, not an exit call.
+If any of these fails (`mechanics.verdict: mismatch`), the recommendation is `flag_mechanics` (basis `mechanics`, route `operator_ask` for real-money or prop), with the evidence in `mechanics.evidence`. **No exit judgment is made on a broken trade.** `options` may be left empty. A mechanics flag goes to the order-path owner through the manager. It is a bug, not an exit call.
+
+**A failed read is not a broken trade** (DESK-HANDOFF-PROTOCOL step 0, 2026-10-31). When a check could not be made (`mechanics.verdict: could_not_look`, e.g. the venue order read timed out), the trade still gets its judgement and its `forecast`: record the verdict as given, flag it in `context_flags`, and route any non-`hold` action `operator_ask` (a `hold` routes `none`). The VM dispatches only `mechanics: match` rows, so nothing auto-applies on an unread trade, and the position keeps its venue SL/TP. MEASURED: the 2026-10-31 00:00Z book review gave BTC/ETH/SOL on bybit_1 no judgement because `bybit_open_orders` timed out, while all three held full-size venue SL and TP (manager, 00:24Z).
 
 ### Step 2. Price the options from history: quote the tool, never a hand calculation
 
@@ -287,7 +289,7 @@ The actions are `hold` · `tighten_sl(level)` · `tp_revise(level)` (Tier 3, the
 | `add_entry` | `size_fraction` > 0 (of the open size) | same as `change_size` > 1 | the fresh-entry check above |
 
 - **Overlays may manufacture these calls; they still need evidence.** Unlike a tighten (Step 3), a close, a TP move or a widen is often driven by what the backtest could not see. Name the overlay in `context_flags` and in the `reason`.
-- **Mechanics first still binds.** No trade action on a `mismatch` or `could_not_look` row: that is `flag_mechanics`.
+- **Mechanics first still binds.** No trade action on a `mismatch` row: that is `flag_mechanics`. On a `could_not_look` row the action is judged and recorded but routes `operator_ask`, never `recommended` (Step 1).
 - **Package-level, never per-account** (§ 0.2). You never pick accounts, never size by one account's balance, never skip an account. Each account's `RiskManager.approve_action` decides inside its own limits; an account with no executor for the action refuses it as `no_action_path:<action>` and says so in `account_reads`.
 - **Route.** Under `apply_mode: apply` and a granted `MD-TRADE-DESK`, a trade action with mechanics `match` and its reason + confidence (or table basis) is applied exactly like a tighten (§ 3 Step 7, `live-review-apply` with the row's `review_id`), `route: auto_applied`. A widen or an add is not special-cased by you: the accounts' own checks are what bounds it.
 - **Grading.** LTR-5 prices every class hold-vs-action (`scripts/research/live_review_counterfactual.py`, method `paired_replay_v1:<action>`), and `live_review_grade.py` calibrates and gives each class its own use rule (operator-adopted review rule on `MD-LIVE-TIGHTEN-SL`). Your confidence is graded; state the one you hold.
