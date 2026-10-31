@@ -18,3 +18,11 @@ Required fields (fail closed; a PR body is not a record):
 
 The directory is empty by design today: `trend_donchian_eth_prop` and `trend_donchian_sol_prop` are
 grandfathered by name (grandfather exemption lapses 2026-11-07 / 2026-12-11, row `PROP-GATE-PARITY`; the soak itself is mechanical, 1-2 clean trades, OPERATING-PLAN § 2). Programme 05 nodes `P5-GATE-*` (research/programmes/05-prop.yaml) produce the per-leg inputs for these records.
+
+## Rule V3 — the edge clause (2026-10-31, lane PROP-GATE-EDGE-SENSITIVE)
+
+V2 PASSes a zero-edge random walk (PI-20261030-9KC5G3FG-0007). `RULE-P5-GATE-BRK-PER-LEG-V3` = V2 **and** the ledger's net-of-cost
+per-trade edge has a 95% CI lower bound > 0, and every verdict reports the zero-edge null EV. One implementation:
+`scripts/research/prop_gate.py`; self-test `tests/test_prop_gate_edge.py`; rule text registered in
+`research/queue/RQ-20261029-9a2c-01.yaml` (`amendments:`); re-grade of every recorded V2 verdict in
+`docs/research/prop-gate-edge-regrade-2026-10-31/RESULT.md`. A V2 record here is **not** evidence of edge unless the re-grade says V3 PASS.

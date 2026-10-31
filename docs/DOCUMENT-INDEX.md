@@ -1008,6 +1008,7 @@ real top-level `docs/*.md` and fails if the population builder cannot see it.
 | `docs/research/programmes/01-ACTIVE-TRADE-MANAGEMENT.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | Programme 01 plan (brackets as predictions): goal + measure, Q1-Q7 ladders, 4-week backlog; units RQ-20261014-9807-01..05. |
 | `docs/research/programmes/03-STRATEGY-IMPROVEMENT.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | Programme 03 plan (every leg pulls its own weight): Stage-0 capital-day census, S0-C fresh-window confirmation rule, Q1-Q8 ladders, 4-week backlog; units RQ-20261014-470a-01..12, row PAIRS-R-SCALE. |
 | `docs/research/programmes/RESEARCH-MAP.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | The five research programmes, their measures, cross-programme feeds and infra needs (weekly planning 2026-10-14). |
+| `docs/research/prop-gate-edge-regrade-2026-10-31/RESULT.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
 | `docs/research/reduce-fill-qty-2026-10-12.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
 | `docs/research/replace-grade-control-regrade-2026-10-24.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
 | `docs/research/repo-private-transition-2026-10-08.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
