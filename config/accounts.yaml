@@ -227,7 +227,14 @@ accounts:
                                        # pick-one. bybit_1 first; bybit_2 + bybit_portfolio
                                        # together after 1-2 clean multi-slice trades here
                                        # (mirror equality test). ROLLBACK: delete this line.
-    strategies: [trend_donchian_1h, trend_donchian_xrp_adx25, trend_donchian_eth_prop, claude_desk, ict_scalp_eth_15m, ict_scalp_xrp_15m, avax_pullback_2h, eth_pullback_2h, eth_pullback_prop_2h, sol_pullback_2h, fade_breakout_4h, fvg_range_15m, htf_pullback_trend_2h, ict_scalp_5m, ict_scalp_avax_5m, ict_scalp_sol_5m, ict_scalp_sol_15m, ict_scalp_xrp_5m, squeeze_breakout_4h, trend_donchian, trend_donchian_ada_4h, trend_donchian_avax_4h, trend_donchian_eth, trend_donchian_sol, trend_donchian_sol_4h, turtle_soup]
+    strategies: [trend_donchian_1h, trend_donchian_xrp_adx25, trend_donchian_eth_prop, claude_desk, ict_scalp_eth_15m, ict_scalp_xrp_15m, avax_pullback_2h, eth_pullback_2h, eth_pullback_prop_2h, sol_pullback_2h, fade_breakout_4h, fvg_range_15m, htf_pullback_trend_2h, ict_scalp_5m, ict_scalp_avax_5m, ict_scalp_sol_5m, ict_scalp_sol_15m, ict_scalp_xrp_5m, squeeze_breakout_4h, trend_donchian, trend_donchian_ada_4h, trend_donchian_avax_4h, trend_donchian_eth, trend_donchian_sol, trend_donchian_sol_4h, turtle_soup, e4_oi_shock_1h]
+                                        # 2026-10-30 E4-DEMO-LEG (Tier-3, OPERATOR-APPROVED for bybit_1 DEMO only: popup
+                                        # verbatim "Prop sim + bybit_1 demo (Recommended)", Manager Session 2026-10-30c):
+                                        # e4_oi_shock_1h -- the frozen E4 OI-shock continuation rule. Its Stage 0 (absolute)
+                                        # FAILED (comms/strategy_evidence/e4_oi_shock.json, mean +0.022 R, CI -0.072..+0.110);
+                                        # the operator kept it as a demo MECHANICS test (popup ~22:35Z "Keep building demo leg").
+                                        # 1-2 clean trades (SOAK-stage1-bybit_1-e4_oi_shock_1h). Not a promotion candidate.
+                                        # NOT on bybit_2 / bybit_portfolio / any prop roster. ROLLBACK: drop the name.
                                         # 2026-10-28 STRATEGY-STATUS-MODEL (Tier-3, HELD for the operator; operator decision "Adopt; build it this
                                         # week", relayed by the manager): three statuses -- testing (general paper: bybit_1 / alpaca_paper /
                                         # ib_paper), production (real money + its paper-portfolio mirror, NOT general paper), inactive

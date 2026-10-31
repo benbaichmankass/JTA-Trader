@@ -43,7 +43,8 @@ def _declare(monkeypatch):
 
 def test_yaml_declares_the_desk_slice_and_the_leg_scope_is_all_six():
     raw = yaml.safe_load((REPO / "config/slice_allocation.yaml").read_text())
-    assert raw["declared_slices"] == {"bybit_1": {"claude_desk": 0.5}}
+    # e4_oi_shock_1h added 2026-10-30 (E4-DEMO-LEG; bybit_1 demo mechanics test, same 0.5 budget).
+    assert raw["declared_slices"] == {"bybit_1": {"claude_desk": 0.5, "e4_oi_shock_1h": 0.5}}
     strat = yaml.safe_load((REPO / "config/strategies.yaml").read_text())["strategies"]["claude_desk"]
     assert strat["symbols"][:6] == SIX and strat["account_symbols"]["bybit_1"] == SIX
     acc = yaml.safe_load((REPO / "config/accounts.yaml").read_text())["accounts"]
@@ -56,7 +57,7 @@ def test_yaml_declares_the_desk_slice_and_the_leg_scope_is_all_six():
 def test_loader_reads_the_real_file():
     ae.load_allocation_config(force=True)
     cfg = ae.load_allocation_config()
-    assert cfg["declared_slices"] == {"bybit_1": {"claude_desk": 0.5}}
+    assert cfg["declared_slices"] == {"bybit_1": {"claude_desk": 0.5, "e4_oi_shock_1h": 0.5}}
 
 
 def test_desk_is_not_blocked_when_a_strategy_leg_spent_the_pooled_budget():

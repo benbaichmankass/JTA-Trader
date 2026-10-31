@@ -1905,6 +1905,28 @@
    "recommended_fix": "on no account roster \u2014 nothing runs it; retire the strategy block or re-roster it with a fresh contract",
    "started": "2026-07-07",
    "verifies": "shadow MECHANICS: the signal fires, the package is complete (side, entry, real SL and TP), and every rostered account sizes it and records it DRY"
+  },
+  {
+   "account": "bybit_1",
+   "checklist": [
+    "signal_fired",
+    "order_size_side",
+    "bracket_real_at_venue",
+    "management_no_fault",
+    "exit_journaled",
+    "fill_and_fees"
+   ],
+   "design": "mechanical",
+   "fail_rule": "the most recent graded trade is a mechanical fault (a checklist item fails, or a reconciler / watchdog / orphan close) -> fix, then re-soak",
+   "id": "SOAK-stage1-bybit_1-e4_oi_shock_1h",
+   "kind": "stage1",
+   "leg": "e4_oi_shock_1h",
+   "metric": "clean closed trades on bybit_1/e4_oi_shock_1h (each = one entry + one journaled exit: tp, sl or the e4_time_stop_24h strategy close)",
+   "monitoring": "ONGOING, not soak exit criteria: realized cost vs the Stage-0 model (R3, scripts/ops/r3_cost_fidelity.py), live-vs-backtest (scripts/research/live_vs_backtest.py), and the OI feed's freshness (scripts/ops/oi_feed_freshness.py) feed the Gate-2 demotion signal",
+   "n_needed": 1,
+   "pass_rule": "1 clean trade(s) since the last mechanical fault, each clearing every checklist item",
+   "started": "2026-10-30",
+   "verifies": "live MECHANICS: an E4 OI event at a 1h cutoff fires the signal, the market order is placed with the right size and side, the frozen 1.5 / 3.0 ATR14 SL and TP rest at the venue, the 24-bar time stop closes it if neither is hit, the exit is journaled with a reason, and the fill and fees are recorded"
   }
  ]
 }

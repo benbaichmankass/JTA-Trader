@@ -6306,3 +6306,128 @@ def claude_desk_signal_builder(settings: dict) -> Dict[str, Any]:
         "confidence": pkg["confidence"],
         "meta": meta,
     })
+
+
+def e4_oi_shock_1h_signal_builder(settings: dict) -> Dict[str, Any]:
+    """E4 open-interest-shock continuation (row E4-DEMO-LEG; the frozen RQ-20261030-e18g-02 rule).
+
+    Every tick: refresh this symbol's live open-interest store (``src.runtime.oi_feed``, rate-limited,
+    point-in-time ``known_at``). Once per CLOSED 1h bar per symbol (the decision-bar ledger keyed
+    ``e4_oi_shock_1h:<SYMBOL>``): if an E4 event's cutoff is that bar's close, emit a market package
+    on the side of the bar's return with the frozen 1.5 / 3.0 ATR14 bracket
+    (``src.units.strategies.e4_oi_shock_1h``). The OI row that closes the hour may land a little after
+    the boundary, so the decision waits up to ``oi_feed.DECISION_WAIT_S`` for it (not recorded meanwhile);
+    a row seen later than that rolls to the next cutoff, as point-in-time requires. An unreadable
+    feed decides nothing and retries. Each decided bar is one line in
+    ``runtime_logs/oi_feed/e4_decisions.jsonl``. Honours ``enabled``.
+    """
+    import json as _json
+    import time as _time
+    from pathlib import Path as _Path
+
+    from src.runtime import oi_feed
+    from src.runtime.market_data import fetch_candles
+    from src.units.strategies import e4_oi_shock_1h as e4
+    from src.units.strategies import load_strategy_config
+
+    name = e4.NAME
+    symbol = str(settings.get("SYMBOL", settings.get("symbol", "")) or "").upper()
+
+    def _none(reason: str, **extra: Any) -> Dict[str, Any]:
+        return _with_signal_package(name, {"symbol": symbol, "side": "none",
+                                           "meta": {"strategy_name": name, "reason": reason, **extra}})
+
+    try:
+        vcfg = (load_strategy_config() or {}).get(name) or {}
+    except Exception as exc:  # noqa: BLE001
+        return _none(f"config_unreadable: {exc}")
+    if not bool(vcfg.get("enabled", False)):
+        return _none("disabled_in_yaml")
+    if symbol not in {str(s).upper() for s in (vcfg.get("symbols") or [])}:
+        return _none("symbol_not_in_scope")
+
+    now = _time.time()
+    feed = oi_feed.refresh(symbol, now=now)
+    timeframe = "1h"
+    key = f"{name}:{symbol}"
+    skip = _closed_window_skip(timeframe, vcfg, name=key, now=now)
+    if skip is not None:
+        return _none(skip)
+    rows = feed.get("rows") or []
+    if not rows:
+        return _none("oi_could_not_look", oi_error=feed.get("last_error"))
+    boundary = (now // 3600) * 3600
+    if max(float(r[0]) for r in rows) + oi_feed.BAR_S < boundary and now - boundary < oi_feed.DECISION_WAIT_S:
+        return _none("oi_row_for_cutoff_pending")
+
+    exchange = _build_killzone_exchange(settings)
+    candles_df = fetch_candles(symbol, timeframe, exchange_client=exchange, limit=200, bypass_cache=True)
+    if candles_df is None:
+        raise RuntimeError(f"{name}: no candle data for symbol={symbol} timeframe={timeframe}.")
+    _fetched_df = candles_df
+    candles_df, skip = _decision_frame(candles_df, timeframe, vcfg, name=key, now=now, record=False)
+    if skip is not None:
+        return _none(skip)
+    catchup_age = _closed_catchup_age(candles_df, timeframe, vcfg, now)
+    # Only rows known at the decision cutoff take part (oi_feed.known_at: a row seen too late rolls on).
+    usable = [r for r in rows if oi_feed.known_at(r) <= boundary]
+    cfg: Dict[str, Any] = {"symbol": symbol, **vcfg}
+
+    def _log(outcome: Dict[str, Any]) -> None:
+        try:
+            p = oi_feed.store_dir() / "e4_decisions.jsonl"
+            _Path(p).parent.mkdir(parents=True, exist_ok=True)
+            with open(p, "a", encoding="utf-8") as fh:
+                fh.write(_json.dumps({"at": round(now, 1), "symbol": symbol, "cutoff": int(boundary),
+                                      "oi_rows": len(usable), "oi_read_state": feed.get("read_state"),
+                                      "oi_newest_age_s": feed.get("newest_age_s"), **outcome}) + "\n")
+        except Exception:  # noqa: BLE001
+            logger.exception("%s: decision log write failed", name)
+
+    try:
+        pkg = e4.order_package(cfg, candles_df=candles_df, oi_rows=usable)
+    except ValueError as exc:
+        _record_closed_decision(key, candles_df, timeframe, vcfg, now)
+        _log({"decision": "none", "reason": str(exc)})
+        try:
+            log_signal(_stamp_regime({"event": f"{name}_eval", "strategy": name, "symbol": symbol,
+                                      "timeframe": timeframe, "side": "none", "reason": str(exc)}, candles_df))
+        except Exception:  # noqa: BLE001
+            logger.exception("%s: dedicated audit emit failed", name)
+        return _none(str(exc))
+    _record_closed_decision(key, candles_df, timeframe, vcfg, now)
+
+    if catchup_age is not None:
+        from src.runtime import decision_bar_ledger as _ledger
+        try:
+            _cur = float(_fetched_df["close"].iloc[-1])
+        except Exception:  # noqa: BLE001
+            _cur = None
+        _ok, _why = _ledger.catchup_price_check(
+            pkg["direction"], pkg["entry"], pkg["sl"], pkg.get("tp"), _cur,
+            float(vcfg.get("decision_bar_catchup_max_drift_stop_frac") or _ledger.DEFAULT_MAX_DRIFT_STOP_FRAC))
+        if not _ok:
+            _log({"decision": "skipped", "reason": f"closed_bar_catchup_stale_price: {_why}"})
+            return _none(f"closed_bar_catchup_stale_price: {_why}")
+
+    side = "buy" if pkg["direction"] == "long" else "sell"
+    meta = pkg.get("meta") or {}
+    _log({"decision": side, "z": meta.get("oi_event_z"), "oi_event_ts": meta.get("oi_event_ts"),
+          "entry": pkg["entry"], "sl": pkg["sl"], "tp": pkg["tp"]})
+    logger.info("%s: %s signal at %s (cutoff %s, OI z %s; entry=%s sl=%s tp=%s)", name, side, symbol,
+                meta.get("decision_cutoff"), meta.get("oi_event_z"), pkg["entry"], pkg["sl"], pkg["tp"])
+    try:
+        log_signal(_stamp_regime({"event": f"{name}_eval", "strategy": name, "symbol": symbol,
+                                  "timeframe": timeframe, "side": side, "entry": pkg["entry"],
+                                  "stop_loss": pkg["sl"], "take_profit": pkg["tp"],
+                                  "confidence": pkg["confidence"]}, candles_df))
+    except Exception:  # noqa: BLE001
+        logger.exception("%s: dedicated audit emit failed", name)
+    sig = {
+        "symbol": symbol, "side": side, "price": pkg["entry"], "entry_price": pkg["entry"],
+        "stop_loss": pkg["sl"], "take_profit": pkg["tp"], "pattern": name,
+        "meta": {**meta, "strategy_name": name, "confidence": pkg["confidence"],
+                 "direction": pkg["direction"], "timeframe": timeframe},
+    }
+    _stamp_regime_on_meta(sig.setdefault("meta", {}), candles_df, symbol=symbol, timeframe=timeframe)
+    return _with_signal_package(name, sig)

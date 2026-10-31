@@ -167,8 +167,11 @@ def test_every_enabled_leg_now_routes_except_turtle_soup():
     # (its offline Stage 0 is the desk replay, DESK-18, not this matrix).
     # 54 -> 55 on 2026-10-28: trend_donchian_1h re-enabled live on the bybit_1 demo (OPERATOR-DECISIONS-20261028 item 2); it routes like trend_donchian.
     # 55 -> 54 on 2026-10-28: gld_pullback_1h retired by record (STRATEGY-STATUS-MODEL, operator Q4).
-    assert len(legs) == 54
-    assert unrouted == ["claude_desk", "turtle_soup"]
+    # 54 -> 55 on 2026-10-30: e4_oi_shock_1h (E4-DEMO-LEG). Correctly UNROUTED, like claude_desk: an
+    # open-interest EVENT rule with no harness-family params; its Stage 0 is the event replay
+    # (scripts/research/desk_event_entry_replay.py, PR #21720), not this matrix.
+    assert len(legs) == 55
+    assert unrouted == ["claude_desk", "e4_oi_shock_1h", "turtle_soup"]
 
 
 # --------------------------------------------------------------------------

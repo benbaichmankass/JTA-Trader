@@ -30,7 +30,9 @@ def test_every_current_rostered_leg_resolves_to_a_unit():
     # 2026-10-27 (DEMO-FLOOR RULE, Tier-3 held PR): these four legs were put on the bybit_1 demo floor and have no
     # name-family rule in desk_near_signals.UNIT_ORDER, so the desk reads them as `unlooked` (loud, never quiet).
     # Pinned as the KNOWN gap, not as acceptable: pipeline item filed to add their families. A NEW unresolved leg fails.
-    assert unresolved == ["fade_breakout_4h", "fvg_range_15m", "squeeze_breakout_4h", "turtle_soup"]
+    # 2026-10-30 (E4-DEMO-LEG): e4_oi_shock_1h joins the bybit_1 demo. Its trigger is an open-interest shock, which no
+    # candle probe can see, so the desk reads it `unlooked` (loud). Known gap, filed as PI-20261030-VGDEM8YS-0002.
+    assert unresolved == ["e4_oi_shock_1h", "fade_breakout_4h", "fvg_range_15m", "squeeze_breakout_4h", "turtle_soup"]
 
 
 def test_the_desk_leg_is_not_in_the_system_book():

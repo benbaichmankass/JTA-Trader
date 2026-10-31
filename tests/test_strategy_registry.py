@@ -239,7 +239,9 @@ def test_real_yaml_loads():
     # soak alias of trend_donchian_xrp_4h declaring the ADX-tightened trail.
     # 56 → 57 by claude_desk (2026-10-26, DESK-17, Tier-3): the trading desk's own leg,
     # execution: shadow on bybit_1; emits only accepted desk proposals.
-    assert len(strategies) == 57
+    # 57 → 58 by e4_oi_shock_1h (2026-10-30, E4-DEMO-LEG, Tier-3, operator-approved bybit_1 demo):
+    # the frozen E4 open-interest-shock continuation rule (PR #21720 held-out PASS).
+    assert len(strategies) == 58
 
 
 def test_real_yaml_has_required_strategies():
@@ -288,6 +290,8 @@ def test_real_yaml_has_required_strategies():
         "ict_scalp_mgc_15m",
         # DESK-17 (2026-10-26, Tier-3): the desk leg, execution: shadow, bybit_1.
         "claude_desk",
+        # E4-DEMO-LEG (2026-10-30, Tier-3): the E4 OI-shock leg, execution: live, bybit_1 demo only.
+        "e4_oi_shock_1h",
     }
 
 

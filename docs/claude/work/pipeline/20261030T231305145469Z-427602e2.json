@@ -1,0 +1,17 @@
+{
+  "due_when": {
+    "due_date": "2026-11-06",
+    "kind": "date"
+  },
+  "id": "PI-20261030-VGDEM8YS-0002",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "lane E4-DEMO-LEG (session_01AFoLuLAkH5ZS2evGDem8Ys), PR #21730",
+    "rerun": "python3 -m pytest -q tests/test_desk_near_signals.py::test_every_current_rostered_leg_resolves_to_a_unit  # e4_oi_shock_1h pinned unresolved"
+  },
+  "severity": "low",
+  "state": "queued",
+  "tier": 1,
+  "what": "scripts/ops/desk_near_signals.py has no unit rule for e4_oi_shock_1h, so the desk scan packet reads the leg `unlooked` (loud, pinned in tests/test_desk_near_signals.py). Its trigger is an open-interest z-score, not a candle pattern, so a near-signal probe needs the live OI store (src/runtime/oi_feed.py, runtime_logs/oi_feed/<SYM>.json) in the packet: probe = latest 1h OI-change z vs the 3.0 threshold. Same known-gap family as fade_breakout_4h / fvg_range_15m / squeeze_breakout_4h / turtle_soup."
+}
