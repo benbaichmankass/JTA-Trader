@@ -3,7 +3,7 @@ title: >-
   VOL-WINDOW stage A (scan): across 6 crypto perps, 6 US ETFs and MES/MGC, which repeatable clock windows (session opens/closes, funding times,
   168 hour-of-week slots; 15/30/60 min) are stably more volatile than baseline AND directionally predictable early in the window, net of the
   full cost stack, on held-out folds after a multiple-testing correction?
-status: queued
+status: done
 cadence: once
 theme: timeframes
 priority: 2
@@ -146,3 +146,16 @@ related:
 - research/programmes/07-timeframes.yaml
 - RQ-20261018-ef5d-10
 last_dispatched_at: '2026-10-31T17:06:58+00:00'
+grading:
+  attested: RULE-VOLWIN-A-SCAN
+  auto: true
+  decision_rule_id: RULE-VOLWIN-A-SCAN
+  evidence:
+  - research/results/RQ-20261031-28bf-01/41222945053.jsonl
+  graded_at: '2026-10-31'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail
