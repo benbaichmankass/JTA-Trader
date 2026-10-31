@@ -1,0 +1,44 @@
+{
+  "unit": "RQ-20261031-28bf-01",
+  "run_id": "41222945053",
+  "commit_sha": "818f26adb89d8fbb3d18baca22fef1c4f0e10799",
+  "run_url": "https://github.com/benbaichmankass/JTA-Trader/actions/runs/41222945053",
+  "timeout_minutes": 240,
+  "commands": [
+    {
+      "index": 0,
+      "argv": [
+        "python3",
+        "scripts/research/vol_window_scan.py",
+        "--symbols",
+        "BTCUSDT,ETHUSDT,SOLUSDT,XRPUSDT,ADAUSDT,AVAXUSDT,SPY,QQQ,GLD,SLV,USO,IAUM,MES,MGC",
+        "--days",
+        "2500",
+        "--start",
+        "2020-01-01",
+        "--end",
+        "2026-10-31",
+        "--folds",
+        "6",
+        "--vol-ratio",
+        "1.5",
+        "--n-floor",
+        "150",
+        "--alpha",
+        "0.05",
+        "--non-crypto-source",
+        "dukascopy",
+        "--rule-id",
+        "RULE-VOLWIN-A-SCAN",
+        "--data-dir",
+        "comms/research/RQ-20261031-28bf-01/41222945053/data",
+        "--out",
+        "comms/research/RQ-20261031-28bf-01/41222945053"
+      ],
+      "log": "comms/research/RQ-20261031-28bf-01/41222945053/logs/cmd-0.log",
+      "exit_code": 0,
+      "seconds": 1728.4
+    }
+  ],
+  "all_ok": true
+}
