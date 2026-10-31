@@ -12,7 +12,8 @@
 # Hourly scan WAKE cadence (read live per pass by scripts/ops/desk_wake_marker.py::scan_wake_every_h; same operator answer
 # as max_per_day below): the hourly packet is still built and landed EVERY hour, but the desk-wake marker is posted only on
 # bars whose UTC hour % N == 0. Skipped bars read receipt state skipped_by_cadence. 1 = every hour (the old behaviour).
-scan_wake_every_h: 2
+# WEEKEND-TRIGGER-ONLY 2026-10-31: operator 'Yes, until Mon 13:30Z'; restore Mon 2026-11-02 13:30Z (row WEEKEND-TRIGGER-ONLY)
+scan_wake_every_h: 24
 
 symbols: [BTCUSDT, ETHUSDT, SOLUSDT, XRPUSDT, ADAUSDT, AVAXUSDT]
 timeframe: 5m              # the detectors' bars AND the triggered packet's timeframe

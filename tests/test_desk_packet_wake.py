@@ -274,7 +274,9 @@ def test_cadence_is_read_live_from_config_and_a_fault_wakes_every_hour(tmp_path)
     cfg.write_text(": : not yaml [")
     assert mm.scan_wake_every_h(cfg) == 1
     assert mm.scan_wake_every_h(tmp_path / "missing.yaml") == 1
-    assert mm.scan_wake_every_h(mm.ROOT / "config" / "desk_triggers.yaml") == 2  # the shipped config
+    import yaml  # the shipped config is read, not pinned (24 during WEEKEND-TRIGGER-ONLY, 2 otherwise)
+    shipped = mm.ROOT / "config" / "desk_triggers.yaml"
+    assert mm.scan_wake_every_h(shipped) == max(int(yaml.safe_load(shipped.read_text())["scan_wake_every_h"]), 1)
 
 
 def test_odd_hour_lands_the_packet_but_posts_no_wake(tmp_path, every_2h):
