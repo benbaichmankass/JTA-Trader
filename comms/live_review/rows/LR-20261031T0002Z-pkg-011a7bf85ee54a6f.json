@@ -1,0 +1,107 @@
+{
+ "schema_version": 1,
+ "review_id": "LR-20261031T0002Z-pkg-011a7bf85ee54a6f",
+ "reviewed_at": "2026-10-31T00:04:34Z",
+ "order_package_id": "pkg-011a7bf85ee54a6f",
+ "trade_id": null,
+ "leg": "mgc_pullback_1d",
+ "accounts": [
+  "ib_paper"
+ ],
+ "trigger": {
+  "event": "new_peak",
+  "level": 2.5,
+  "l0_snapshot_at": null
+ },
+ "info_cutoff_at": "2026-10-31T00:02:04Z",
+ "state": {
+  "atr_now_over_entry": null,
+  "bars_held": 10,
+  "giveback_r": 0.0484,
+  "open_r": 2.8135,
+  "peak_provenance": "estimated",
+  "peak_r": 2.8619,
+  "regime_cell_entry": null,
+  "regime_cell_now": null,
+  "sl": 4160.32857143,
+  "tp": 3766.9909
+ },
+ "features_at_review": {
+  "atr_now_over_entry": null,
+  "bars_since_peak": 0,
+  "giveback_r": 0.0484,
+  "open_r": 2.8135,
+  "peak_r": 2.8619,
+  "r_to_stop": 2.6183,
+  "r_to_target": 1.1141
+ },
+ "mechanics": {
+  "evidence": "1 account(s) could not be read",
+  "verdict": "could_not_look"
+ },
+ "options": [
+  {
+   "action": "hold",
+   "level": null,
+   "n": 0,
+   "mean_r": null,
+   "sd_r": null,
+   "worst_r": null,
+   "net": null
+  }
+ ],
+ "outcome_table_source": "comms/live_review/tables/LR-20261031T0002Z-pkg-011a7bf85ee54a6f.json",
+ "recommendation": {
+  "action": "flag_mechanics",
+  "level": null,
+  "level_atr": null,
+  "ev_delta_r": null,
+  "worst_case_delta_r": null,
+  "basis": "mechanics",
+  "confidence": "anecdote",
+  "evidence_source": "none",
+  "judgement_confidence": null,
+  "reason": "ib_orders read failed (mechanics could_not_look), so no exit action is routed. Basis judgement if the read is restored: hold beats tighten or partial (p~0.6). Open 2.81R, peak 2.86R, giveback 0.05R, 2.62R to stop and 1.11R to the real TP; a tighten to the 1.5 ATR level (+1.86R) gives up the 1.11R still to the target and the 2-ATR swing is momentum in the trade's favour. Hold cell n=0, tighten cells could_not_look: not measured."
+ },
+ "judge_prior": null,
+ "applied": false,
+ "apply_policy": {
+  "bound_r": 0.25,
+  "within_bound": null,
+  "tighten_r": null
+ },
+ "shadow_policy": {
+  "bound_r": 0.5,
+  "within_bound": null,
+  "would_apply": null,
+  "tighten_r": null
+ },
+ "context_flags": [
+  "judgement: hold cell n=0 < floor 20 and tighten cells could_not_look (no_candles); thin, not measured",
+  "trigger: also r_milestone 2.0 (open 2.81R) and swing close-to-close 147 >= 2 x ATR 70.26, reviewed as one package decision",
+  "missing_inputs: ib_orders read failed; atr_now_over_entry, regime cells null",
+  "correlated_exposure: 10 open short packages incl. pkg-d76f1b15923e4282 (MGC) and SLV/IAUM shorts",
+  "tighten_bias: stop-at-price fills flatter any tighten",
+  "previous_review: hold (LR-20261030T0411Z-pkg-011a7bf85ee54a6f)"
+ ],
+ "account_reads": [
+  {
+   "account_id": "ib_paper",
+   "account_class": "paper",
+   "read": "unknown",
+   "evidence": "ib_paper ib_orders read_state=could_not_look"
+  }
+ ],
+ "disposition": {
+  "route": "operator_ask",
+  "mandate": null,
+  "action_issue": null,
+  "applied_at": null,
+  "verified_readback": null
+ },
+ "model": "sonnet-tier (repo-less reviewer)",
+ "session": "session_01AFoLuM2rYM7mehv5GhdsLz",
+ "prompt_sha": null,
+ "skill_sha": null,
+ "packet_sha": "77bfdeab258401a3ae32f5a8c3b1a6cdc869a4db2426c3c89f07ba2bc988bbea"
+}
