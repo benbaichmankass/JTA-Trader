@@ -114,6 +114,25 @@
     "haircut_bonferroni_gt_0": false
    }
   },
+  "e4_oi_shock": {
+   "N_basis": "n_configs_upper_bound (no per-trade series on any config)",
+   "N_used": 1,
+   "coverage_state": "measured",
+   "expectancy_r_oos": 0.022,
+   "family": "event_oi_shock",
+   "fidelity": "research_harness_not_live_code",
+   "leg": "e4_oi_shock",
+   "n_configs": 1,
+   "n_trades_oos": 856,
+   "net_r_oos": 18.7948,
+   "param_selection_provenance": "DEV 2025-11-01..2026-09-15 then frozen; held-out is out-of-sample (RQ-20261030-e18g-01/-02)",
+   "real_money": false,
+   "source_run": "docs/research/e4-prop-sim-2026-10-30/ledgers/e4_full.jsonl",
+   "stage0_rule": "RULE-RQ20261030-E18G-03-E4-STAGE0-ABSOLUTE",
+   "stage0_verdict": "fail",
+   "state": "no_series",
+   "why": "coverage_state='measured'; source_run not readable -- no per-trade series, no deflated statistic (we could not look; NOT a fail)"
+  },
   "eth_pullback_2h": {
    "N_basis": "partial: 5 return-correlation clusters over 36 configs with a series + 28 without a series counted at face value (upper bound)",
    "N_used": 33,
@@ -11142,7 +11161,7 @@
  "report_only_basis": "operator decision 2026-10-16, PROMOTION-BAR-MULTIPLICITY: \"Measure first (Recommended)\" -- no bar, mandate, roster or config changes on this ledger",
  "schema_version": 1,
  "summary": {
-  "evidence_records": 54,
+  "evidence_records": 55,
   "real_money_legs": [
    "xrp_pullback_2h",
    "trend_donchian_eth_4h",

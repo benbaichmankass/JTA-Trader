@@ -646,6 +646,9 @@ real top-level `docs/*.md` and fails if the population builder cannot see it.
 | `docs/research/desk-am-refocus-diagnosis-2026-10-30.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
 | `docs/research/desk-edge-program-2026-10-27.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
 | `docs/research/desk-maker-fills-2026-10-27.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
+| `docs/research/e4-prop-sim-2026-10-30/PLAN.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
+| `docs/research/e4-prop-sim-2026-10-30/RESULT.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
+| `docs/research/desk-18g-event-entries-2026-10-30.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
 | `docs/research/desk-event-calendar-scope-2026-10-28.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
 | `docs/research/desk-lifecycle-factorial-2026-10-28.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
 | `docs/research/gh-actions-capacity-2026-10-30.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |

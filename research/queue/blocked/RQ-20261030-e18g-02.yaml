@@ -1,0 +1,85 @@
+id: RQ-20261030-e18g-02
+title: 'Desk E4 held-out confirm (DESK-18G, operator DESK-13 gate): the E4 open-interest-shock continuation arm, FROZEN exactly as scored on DEV, on the time-disjoint window 2024-11-01..2025-10-25: is the paired mean net R vs the same-model random entry > 0 with the 95% weekly-cluster CI lower bound > 0 and n >= 30?'
+status: blocked
+cadence: once
+theme: live_strategy
+priority: 1
+roadmap:
+- L-DESK
+kind: experiment
+question: >-
+  Run the E4 arm EXACTLY as scored on DEV in RQ-20261030-e18g-01 (same detector, thresholds z>=3 / 7-day grid / 6 h cooldown, known_at = metrics time + 5 min, decision cutoff = next 1h boundary, side = sign of the last closed 1h bar, market entry at the next open, SL 1.5 / TP 3.0 ATR14, 24-bar time stop, 200 vol-matched random draws per event outside 24 bars of any event, seed 20261030, ISO-week cluster bootstrap 10,000 draws) on the HELD-OUT window 2024-11-01 .. 2025-10-25 (cutoffs), six crypto USDT perps. Code is `desk_event_entry_replay.py confirm`; detect() and score_class() are the DEV code, unchanged. Score ONCE. No 5-minute entry, no horizon sweep, no tuning.
+why_this_matters: >-
+  Manager Session 2026-10-30c, operator popup answer verbatim (~22:00Z): "Held-out confirm, as-is (Recommended)". DEV result (RQ-20261030-e18g-01): E4 n 763, S3 +0.157 R, CI97.5 [+0.044, +0.276], below the +0.25 R discovery bar but with a CI lower bound above 0. The bar HERE is the operator's DESK-13 gate (row DESK-13-MANDATE, "Beat random entries only"): an out-of-sample edge vs the random-entry baseline, net of the full cost stack, n >= 30. PASS means the manager brings the desk-on-prop change to the operator; FAIL retires the lever. Window: 2024-11-01 .. 2025-10-25 is time-disjoint from DEV (2025-11-01 ..) and was never scored by any DESK-18 arm (the judged-2 units RQ-20261027-e72b-01/-02 that name it are blocked and have no result; they use a different instrument, masked LLM packets). Open-interest point-in-time coverage: Binance Vision daily metrics from 2024-10-18 (14 days of warm-up before the window), 2,256 daily files for six symbols fetched with no gaps. Prior stated before the run: DEV effect was half timing, half unproven direction, so a pass is plausible but below 50%.
+power:
+  expected_n: 856
+  min_detectable_effect: 0.22
+  effect_units: R
+  sd: 1.5
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: >-
+    n is the COUNT of held-out E4 events (detector run on the fetched OI and candle files only, before any outcome was computed): 856 events in 52 ISO weeks (529 long, 327 short; ADA 137, AVAX 140, BTC 143, ETH 153, SOL 149, XRP 134). sd of the paired difference INFERRED at 1.5 R from DEV (observed). MDE iid = 2.8 x 1.5 / sqrt(856) = 0.14 R; with the DEV weekly-cluster ratio (cluster/iid = 1.06) about 0.15 R. The DEV point estimate (+0.157) is at the MDE, so P(PASS) if the true effect equals the DEV estimate is about 80%, and about 50% if the true effect is half of it; a PASS needs only mean > 0 with CI lower > 0, a true effect below about +0.08 R is likely to read FAIL and is not ruled out by it.
+  feasibility:
+    source: none
+    accrual_basis: >-
+      Not accrual-bound: public history. Window fixed in advance; scored once.
+decision_rule:
+  id: RULE-RQ20261030-E18G-02-DESK-E4-HELDOUT-CONFIRM
+  registered_at: '2026-10-30'
+  registered_before_run: true
+  statistic: >-
+    Population: every E4 event with decision cutoff in 2024-11-01 .. 2025-10-25 (unresolved at data end excluded and counted). Slot value x_i = net R of the market bracket (refused = 0), full cost stack (driver simulate unchanged). b_i = mean of 200 random vol-matched same-symbol cutoffs outside 24 bars of any E4 event, event i's own side and geometry. S3 = mean(x_i - b_i), 95% ISO-week cluster bootstrap CI (10,000 draws, seed 20261030). Reported, not decisive: S1, S3 vs the same-time side-averaged baseline B1 (the direction rule alone), per symbol, MDE, n long/short, the 97.5% CI.
+  rule: >-
+    PASS iff n >= 30 AND S3 mean > 0 AND the 95% weekly-cluster CI lower bound > 0. FAIL otherwise (including a positive mean with the lower bound at or below 0). NO_DATA if no events resolve. The +0.25 R discovery bar does NOT apply. Run once: no re-run, no parameter change, no second window on this outcome. PASS => the manager brings the desk-on-prop change to the operator (the desk itself is not shown to be an edge by this; this tests the E4 trigger). FAIL => the event-entry lever is retired.
+  what_it_does_not_do: >-
+    No config, roster, order, mode or sizing change; it does not make E4 a strategy and does not promote anything. It tests the trigger rule as a mechanical arm, with Binance candles standing in for Bybit, entry at least one 1h bar after the event, and no latency or live-fill modelling.
+masked_replay:
+  population: not applicable - a mechanical rule arm, no LLM judge and no masked packet; no model spend.
+  construction: n/a
+  unmask_key: n/a
+  leak_controls: >-
+    Event detectors read only data stamped at or before known_at; the decision cutoff is the next 1h boundary and the engine reads bars after it only for the outcome. Prefix-identity control (history truncated at 2026-04-01 gives identical events) and oracle/anti-oracle/random-side controls are part of the verdict.
+  novelty: not scored.
+practice_precedent: 'docs/research/desk-event-calendar-scope-2026-10-28.md (event classes, PIT survey) and docs/research/desk-18f-maker-fills-2026-10-30.md (S3 bar, paired same-model baseline, 97.5% decisive CI)'
+compute: cpu_light
+value:
+  usd_at_stake_per_month: 500
+  confidence: 0.05
+  bucket: ai_trader
+  basis: 'stand-in, not a measurement: as RQ-20261030-f18f-01; prior P(clear) below 10%.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 2.0
+  est_minutes: 20
+  basis: 'estimate: about 860 events x 200 draws of at most 24 bars.'
+run:
+  command:
+  - python3
+  - scripts/research/desk_event_entry_replay.py
+  - confirm
+  - --root
+  - '{out_dir}/cache'
+  - --out
+  - '{out_dir}'
+  inputs:
+    research_unit: RQ-20261030-e18g-02
+  timeout_minutes: 120
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+blocked_on:
+- kind: manager_release
+  ref: E57
+  what: new queue units hold for the manager (E57); the lane runs the harness locally on the registered rule and the manager releases or retires this file.
+  clears_when: the manager moves this file to research/queue/ (or retires it) after the PR lands.
+related:
+- RQ-20261030-e18g-01
+- RQ-20261030-f18f-01
+- RQ-20261027-e72b-01
+- scripts/research/desk_event_entry_replay.py
+- docs/research/desk-event-calendar-scope-2026-10-28.md
+last_dispatched_at: null

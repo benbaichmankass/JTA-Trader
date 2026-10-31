@@ -1,0 +1,85 @@
+id: RQ-20261030-e18g-01
+title: 'Desk event-driven entries (DESK-18G): do entries triggered ONLY by a point-in-time funding shock (E3) or open-interest shock (E4), with a stated direction rule, beat a same-model random entry by S3 >= +0.25 R (97.5% weekly-cluster CI lower bound > 0), net of the full cost stack, on the DEV window?'
+status: blocked
+cadence: once
+theme: live_strategy
+priority: 1
+roadmap:
+- L-DESK
+kind: experiment
+question: >-
+  DEV window cutoffs 2025-11-01 .. 2026-09-15 (six crypto USDT perps ADA AVAX BTC ETH SOL XRP, Binance Vision 1h candles via the driver's route). Event E3: a Binance USD-M funding settlement with |z| >= 2 against the previous 90 settlements, known_at = fundingTime, side AGAINST the funding sign. Event E4: 1h change of sumOpenInterest with z >= 3 against the previous 2016 5-minute-grid 1h changes (7 days), contiguous grid, at most one per symbol per 6 h, known_at = metrics row time + 5 min, side = sign of the last CLOSED 1h bar return at the decision cutoff.
+  Decision cutoff = first 1h boundary at or after known_at; entry = next bar open (market); bracket SL 1.5 ATR14, TP 3.0 ATR14 from the cutoff close, time stop 24 bars; engine desk_gen_replay_driver.simulate unchanged. For each class, is S3 = mean over events of (event net R minus the mean net R of 200 random same-symbol, same-ATR%-decile cutoffs OUTSIDE 24 bars of any event of the class, with the event row's own side and geometry) >= +0.25 R with the 97.5% weekly-cluster CI lower bound above 0? A refused slot is no-trade = 0 R on both sides.
+why_this_matters: >-
+  Operator 2026-10-30 ~21:40Z, popup answer verbatim "Event-driven entries", after DESK-18F (maker fills, PR #21719) read S3 +0.007 R: the desk equals a random short (723 of 732 proposals short), a cost lever cancels against the baseline, so the lever must add INFORMATION the 1h price packet cannot see. Clearing the DESK-13 gate (out-of-sample edge vs the random baseline, net of cost, n >= 30) is what lets the desk trade the 3 prop accounts. Prior stated before the run: docs/research/desk-event-calendar-scope-2026-10-28.md measured these classes on 5-minute bars at fixed horizons; E4 gross excess about +14 bps against 12.3 bps cost, no class a candidate, so the prior P(clear) is low (below 10%).
+power:
+  expected_n: 763
+  min_detectable_effect: 0.22
+  effect_units: R
+  sd: 1.5
+  design: one_sample
+  alpha: 0.025
+  power: 0.8
+  basis: >-
+    n is the COUNT of detected events inside the DEV window, taken BEFORE any outcome was computed (detector run on the fetched funding and open-interest files only): E3 283 events (248 long, 35 short; 43 ISO weeks), E4 763 events (402 long, 361 short; 47 weeks). sd of the paired difference INFERRED at 1.5 R from DESK-18F's observed 1.55-1.66 R. MDE iid = 2.8 x 1.5 / sqrt(n): E3 0.25 R (at the bar; weekly-cluster design effect 2.25 makes it about 0.37 R, so E3 is UNDERPOWERED for +0.25 R: power about 50% at the bar), E4 0.15 R iid, about 0.22 R clustered. A true +0.10 R is not detectable; INDETERMINATE or FAIL does not rule it out. Events of the six symbols share market shocks, so the weekly cluster is the unit.
+  feasibility:
+    source: none
+    accrual_basis: >-
+      Not accrual-bound: funding and open-interest history is public and arbitrary-range. Macro calendar (about 40 distinct CPI/NFP/FOMC/PPI/PCE dates in the window, mostly backfilled so first-observed-before-scheduled is unproven) has an MDE near 0.66 R and is NOT scored. GDELT news panel (comms/news_alpha/gdelt_panel, 2023-10 onward) is available but no trigger is registered here; not scored.
+decision_rule:
+  id: RULE-RQ20261030-E18G-01-DESK-EVENT-ENTRIES
+  registered_at: '2026-10-30'
+  registered_before_run: true
+  statistic: >-
+    Population: every E3 and E4 event whose decision cutoff lies in 2025-11-01 .. 2026-09-15 (events of one class on one symbol are separate slots; unresolved at data end excluded and counted). Slot value x_i = net R of the market bracket (refused = 0). Pair b_i = mean slot value of 200 draws (seed 20261030) at random eligible cutoffs of the same symbol, same ATR%-decile (driver vol_matched_pool over the window), more than 24 bars from every event of the class, with event i's side and geometry. S3 = mean(x_i - b_i). CIs: ISO-week cluster bootstrap, 10,000 draws, seed 20261030; the decisive interval is 97.5% (two decisive arms E3, E4: Bonferroni). Reported, not decisive: S1 (mean net R), S3 vs the same-time side-averaged baseline B1 (what the direction rule adds), per symbol, MDE, n long/short.
+  rule: >-
+    AN ARM CLEARS IF n >= 30 AND S3 >= +0.25 R AND the 97.5% cluster CI lower bound > 0. VERDICT S3_CLEARED IF at least one arm clears AND the controls hold (oracle side clears; anti-oracle S3 < 0; random-side does not clear; the detectors return identical events on a history truncated at 2026-04-01); else INDETERMINATE_INSTRUMENT if a control fails; S3_NOT_CLEARED otherwise, reported with each arm's n, S3, CI and distance from the bar. A clearing arm is a DEV discovery, not an edge: it re-opens ONLY the held-out run on 2024-11-01 .. 2025-10-25 (same code, --window holdout, rule unchanged, run once) and then a forward read. It never touches a roster, config, order or mode.
+  what_it_does_not_do: >-
+    No config, roster, order, mode or sizing change. Does not test the macro calendar, news, listings, unlocks or a different bracket (a bracket sensitivity would be a new registration). Binance candles stand in for Bybit. Entry is at least one 1h bar after the event is known, so a fast-decaying event edge is under-measured (the 5-minute study's horizon was 1h-24h).
+masked_replay:
+  population: not applicable - a mechanical rule arm, no LLM judge and no masked packet; no model spend.
+  construction: n/a
+  unmask_key: n/a
+  leak_controls: >-
+    Event detectors read only data stamped at or before known_at; the decision cutoff is the next 1h boundary and the engine reads bars after it only for the outcome. Prefix-identity control (history truncated at 2026-04-01 gives identical events) and oracle/anti-oracle/random-side controls are part of the verdict.
+  novelty: not scored.
+practice_precedent: 'docs/research/desk-event-calendar-scope-2026-10-28.md (event classes, PIT survey) and docs/research/desk-18f-maker-fills-2026-10-30.md (S3 bar, paired same-model baseline, 97.5% decisive CI)'
+compute: cpu_light
+value:
+  usd_at_stake_per_month: 500
+  confidence: 0.05
+  bucket: ai_trader
+  basis: 'stand-in, not a measurement: as RQ-20261030-f18f-01; prior P(clear) below 10%.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 2.0
+  est_minutes: 30
+  basis: 'estimate: about 1,050 events x 200 draws of at most 24 bars, plus three control passes at 40 draws.'
+run:
+  command:
+  - python3
+  - scripts/research/desk_event_entry_replay.py
+  - run
+  - --root
+  - '{out_dir}/cache'
+  - --out
+  - '{out_dir}'
+  inputs:
+    research_unit: RQ-20261030-e18g-01
+  timeout_minutes: 120
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+blocked_on:
+- kind: manager_release
+  ref: E57
+  what: new queue units hold for the manager (E57); the lane runs the harness locally on the registered rule and the manager releases or retires this file.
+  clears_when: the manager moves this file to research/queue/ (or retires it) after the PR lands.
+related:
+- RQ-20261030-f18f-01
+- RQ-20261027-e72b-01
+- scripts/research/desk_event_entry_replay.py
+- docs/research/desk-event-calendar-scope-2026-10-28.md
+last_dispatched_at: null
