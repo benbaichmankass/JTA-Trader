@@ -1,0 +1,18 @@
+{
+  "due_when": {
+    "clears_when": "a judgement_cadence packet's previous_review carries the prior row's forecast and the reviewer row records confirm/revise against it, observed once, or killed with a reason",
+    "due_date": "2026-11-03",
+    "kind": "date"
+  },
+  "id": "PI-20261031-9KC5G3FG-0004",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "Manager Session 2026-10-30c, 04:00Z book review report",
+    "rerun": "read context.previous_review in the newest committed packet for any package with a prior forecast-bearing row on live-review/rows; a missing forecast is an instance"
+  },
+  "severity": "medium",
+  "state": "queued",
+  "tier": 1,
+  "what": "Live-review packets carry previous_review as {action, review_id, reviewed_at, route} only, WITHOUT the previous review's forecast (direction, target, horizon, p) or thesis. So a judgement_cadence reviewer cannot track or confirm/revise the prior call (MEASURED 2026-10-31 04:15Z: LR-20261031T0411Z-pkg-bba44210885c4180 previous_review lacks the forecast that LR-20261031T0046Z wrote; the 04:00Z book reviewer reported 'previous reviews carried no forecasts' across 10 packages although the 00:00Z rows had them). The hand-off protocol (#21756) chains desk-OPENED positions only; strategy-opened trades under the 4h judgement desk get no continuity. Fix: scripts/ops/live_review_packet.py previous_review carries the prior row's forecast + reason excerpt, and the REVIEWER-BRIEF asks for confirm/revise against it (same shape as the desk hand-off)."
+}
