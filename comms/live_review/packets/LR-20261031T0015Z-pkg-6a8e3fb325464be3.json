@@ -1,0 +1,266 @@
+{
+ "account_bounds": [
+  {
+   "account_class": "paper",
+   "account_id": "alpaca_paper",
+   "evidence": "alpaca_orders: SL 416.09 / TP 461.27, position True; no apply path for this exchange yet (LTR-9 / none)",
+   "read": null,
+   "read_basis": "depends on the recommendation: no_action for hold/no_recommendation, else see read_if_amend",
+   "read_if_amend": "unknown"
+  },
+  {
+   "account_class": "paper",
+   "account_id": "alpaca_portfolio",
+   "evidence": "alpaca_orders: SL None / TP None, position False; no apply path for this exchange yet (LTR-9 / none)",
+   "read": null,
+   "read_basis": "depends on the recommendation: no_action for hold/no_recommendation, else see read_if_amend",
+   "read_if_amend": "unknown"
+  }
+ ],
+ "assembled_by": "generator scripts/ops/live_review_packet.py",
+ "context": {
+  "calendar": {
+   "events_next_24h": [],
+   "state": "no_event_classes_for_symbol"
+  },
+  "correlated_open_packages": [
+   {
+    "direction": "long",
+    "order_package_id": "pkg-32a5162bbbdd4ef6",
+    "symbol": "SPY"
+   },
+   {
+    "direction": "long",
+    "order_package_id": "pkg-92d1cafe559b4309",
+    "symbol": "USO"
+   }
+  ],
+  "direction": "long",
+  "funding": {
+   "state": "not_applicable"
+  },
+  "news": null,
+  "previous_review": {
+   "action": "flag_mechanics",
+   "review_id": "LR-20261030T0812Z-pkg-6a8e3fb325464be3",
+   "reviewed_at": "2026-10-30T08:15:00Z",
+   "route": null
+  },
+  "symbol": "GLD"
+ },
+ "context_v3": {
+  "book": [
+   [
+    "MGC",
+    "short",
+    "mgc_pullback_1d",
+    2.81
+   ],
+   [
+    "ETHUSDT",
+    "short",
+    "trend_donchian_eth_4h",
+    -0.595
+   ],
+   [
+    "AVAXUSDT",
+    "short",
+    "trend_donchian_avax_4h",
+    -0.516
+   ],
+   [
+    "SPY",
+    "long",
+    "spy_trend_long_1d",
+    0.0046
+   ],
+   [
+    "XRPUSDT",
+    "short",
+    "trend_donchian_xrp_4h",
+    -0.428
+   ],
+   [
+    "SLV",
+    "short",
+    "slv_trend_1h",
+    3.76
+   ],
+   [
+    "BTCUSDT",
+    "short",
+    "trend_donchian_1h",
+    1.02
+   ],
+   [
+    "IAUM",
+    "short",
+    "iaum_pullback_1d",
+    2.76
+   ],
+   [
+    "USO",
+    "long",
+    "uso_trend_1h",
+    -0.814
+   ],
+   [
+    "MHG",
+    "short",
+    "mhg_pullback_1d",
+    0.33
+   ],
+   [
+    "ADAUSDT",
+    "short",
+    "trend_donchian_ada_4h",
+    -0.412
+   ],
+   [
+    "MGC",
+    "short",
+    "mgc_trend_1h",
+    2.91
+   ],
+   [
+    "ETHUSDT",
+    "short",
+    "trend_donchian_eth",
+    0.238
+   ],
+   [
+    "SOLUSDT",
+    "short",
+    "trend_donchian_sol_4h",
+    0.0997
+   ]
+  ],
+  "book_note": "[symbol, direction, leg, open_r (null = not measured)] per OTHER open package, either side",
+  "chart": null,
+  "exit_plan": {
+   "declared": {},
+   "entry": null,
+   "exit_plan_state": null,
+   "sl_initial": null,
+   "sl_now": 414.539,
+   "tp_now": 461.327
+  },
+  "htf": null,
+  "live_vs_backtest": {
+   "read_state": "read",
+   "rows": [
+    {
+     "backtest_expectancy_r": 0.3648900000000002,
+     "backtest_n": 90,
+     "book": "realMoney",
+     "closed": 0,
+     "live_r": null,
+     "r_trades": 0,
+     "verdict": "NO_LIVE_TRADES",
+     "why": "no closed trade with an R basis on this book"
+    },
+    {
+     "backtest_expectancy_r": 0.3648900000000002,
+     "backtest_n": 90,
+     "book": "mirror",
+     "closed": 4,
+     "live_percentile": 11.7,
+     "live_r": -3.5289,
+     "p5": -4.2735,
+     "p50": 0.8788,
+     "p95": 9.1881,
+     "r_trades": 4,
+     "verdict": "INSUFFICIENT_N",
+     "why": null
+    }
+   ]
+  }
+ },
+ "cost": {
+  "basis": null
+ },
+ "features_at_review": {
+  "atr_now_over_entry": null,
+  "bars_since_peak": null,
+  "giveback_r": null,
+  "open_r": null,
+  "peak_r": null,
+  "r_to_stop": null,
+  "r_to_target": null
+ },
+ "info_cutoff_at": "2026-10-31T00:15:44Z",
+ "leg": "gld_pullback_1h",
+ "mechanics": {
+  "evidence": "alpaca_paper: venue SL 416.09 != package SL 414.53875",
+  "verdict": "mismatch"
+ },
+ "missing_inputs": [
+  {
+   "field": "state.sl/tp",
+   "reason": "order_packages row not in the paged journal read; falling back to the trade row"
+  },
+  {
+   "field": "read:bybit_orders",
+   "reason": "diag bybit_open_orders: exit 3 ('bybit_open_orders' \u2014 https://ict-bot.duckdns.org -> unreachable. Use the issue relay only if every candidate is 'unreachable'; an 'answered_*' means the web-api is UP "
+  },
+  {
+   "field": "state.open_r",
+   "reason": "no position_telemetry row for this package (telemetry covers the donchian/pullback family) and no /api/bot/positions row"
+  },
+  {
+   "field": "regime.atr_now_over_entry",
+   "reason": "package timeframe not recorded in meta"
+  },
+  {
+   "field": "regime.trend_now",
+   "reason": "package timeframe not recorded in meta"
+  },
+  {
+   "field": "regime.vol_now",
+   "reason": "calm/volatile buckets use frozen edges held only in the VM model registry; not reachable read-only from a session"
+  },
+  {
+   "field": "regime.cell_entry",
+   "reason": "entry meta regime=None vol_regime=None: not both known"
+  },
+  {
+   "field": "priced_options",
+   "reason": "open_r/peak_r/atr_stop_mult not available for this package"
+  },
+  {
+   "field": "context.news",
+   "reason": "no news decision for this symbol in the last 60 records (or news read failed)"
+  },
+  {
+   "field": "context_v3.chart",
+   "reason": "no closed candles on the leg timeframe (route unreachable or timeframe unrecorded)"
+  },
+  {
+   "field": "context_v3.htf",
+   "reason": "no higher timeframe mapped for None"
+  }
+ ],
+ "order_package_id": "pkg-6a8e3fb325464be3",
+ "packet_version": 3,
+ "priced_options": null,
+ "regime": {
+  "adx_now": null,
+  "atr_now_over_entry": null,
+  "cell_entry": null,
+  "cell_now": null,
+  "trend_now": null
+ },
+ "review_id": "LR-20261031T0015Z-pkg-6a8e3fb325464be3",
+ "state": {
+  "atr_now_over_entry": null,
+  "bars_held": null,
+  "giveback_r": null,
+  "open_r": null,
+  "peak_provenance": "unverified",
+  "peak_r": null,
+  "regime_cell_entry": null,
+  "regime_cell_now": null,
+  "sl": 414.53875,
+  "tp": 461.32723
+ }
+}
