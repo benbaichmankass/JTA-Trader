@@ -1,0 +1,251 @@
+{
+ "run": "RESEARCH-OPS-2026-10-31-1120",
+ "finished_at": "2026-10-31T11:40:00Z",
+ "by": "session_01AFoLuMceoFGoQBWDN19q2E (dispatched by session_01AFoLuJwBvR58WBtD4qc5Gp)",
+ "floor": 72,
+ "floor_basis": "computed_floor(fired_24h 90)",
+ "authoring_queue_depth": 40,
+ "idle_backends": [],
+ "needs_review_triaged": 4,
+ "needs_review_left": 27,
+ "throughput": {
+  "runnable_before": 65,
+  "runnable_after": 73,
+  "queued": 213,
+  "fired_24h": 90,
+  "results_landed_24h": 84,
+  "hours_since_last_dispatch": 1.4,
+  "idle_alarm": false
+ },
+ "mechanism": {
+  "dispatch_receipt": "ok (last dispatch 1.3 h before the packet)",
+  "collector": "ok (84 landed/24h, 0 unreadable)",
+  "stranded_stamp_prs": [],
+  "incident": null,
+  "read_state": "tree_only for workflow runs and PR list (not listed); watchdog not re-read"
+ },
+ "results_read": {
+  "pass": 1,
+  "fail": 2,
+  "indeterminate": 3,
+  "units": [
+   "RQ-20261028-b37d-01",
+   "RQ-20261029-7294-02",
+   "RQ-20261030-018",
+   "RQ-20261030-025",
+   "RQ-20261030-031",
+   "RQ-20261030-ea4a-01"
+  ],
+  "note": "the 6 units of result_disposition_check --list (UNOWNED 4 + UNGRADED 2 -> 0/0); rows opened for all 6"
+ },
+ "dispositions": {
+  "RQ-20261028-b37d-01": "PASS (plateau) applied verbatim; configuration: VL25 and VL35 both clear. A lead, forward re-run filed PI-20261031-10311120-0001",
+  "RQ-20261029-7294-02": "FAIL; configuration closed: v1-corpus GBDT action-value head; family stays open; next test = corpus-v2 retrain (7294-01 unresolvable until corpus v2)",
+  "RQ-20261030-018": "FAIL (net -13.74 R, n 46): configuration closed: htf_pullback_trend_2h weekly walk-forward; family stays open; next test = the confirmatory re-run the rule queues; second consecutive FAIL (also last week) is a Gate-2 demotion INPUT for the manager",
+  "RQ-20261030-025": "INDETERMINATE (n 35 < 39)",
+  "RQ-20261030-031": "INDETERMINATE (n 19 < 39)",
+  "RQ-20261030-ea4a-01": "INDETERMINATE: producer_failed, --days 1064 left the 2020-07..2023-05 window empty (harness argv defect); re-run RQ-20261031-c6fc-01"
+ },
+ "unlocked": [],
+ "retired": [],
+ "blocked_audit": {
+  "blocker_watch": "ran; NOT_RUNNING/UNPROVEN_OVERDUE rows are not re-audited (counted in handoff)",
+  "blocked_over_age": 5,
+  "kept": {
+   "RQ-20261007-018": "owner PI-20261007-X9UFEF4U-0001 (funding fetcher)",
+   "RQ-20261007-019": "same PI (basis instrument)",
+   "RQ-20261008-901": "owner checklist EXIT-HEAD-PULLBACK-DRIVER, due 2026-11-07",
+   "RQ-20261009-900": "clause 1 now CLEAR (736c-01 pass); grader + S1 floor decision outstanding, filed PI-20261031-10311121-0002 (due 2026-11-07)",
+   "RQ-20261009-901": "waits on 9-900 PASS and the tp-policy-overlay lever"
+  },
+  "note": "no config-level retirement this pass: all five carry a named owner and lever; the SLO threshold (max 10) was not touched, over_age 5 <= 10"
+ },
+ "levers_filed": [
+  {
+   "lever": "RQ-20261009-900 verdict grader + run.command",
+   "ref": "PI-20261031-10311121-0002"
+  },
+  {
+   "lever": "b37d forward-window confirmation",
+   "ref": "PI-20261031-10311120-0001"
+  }
+ ],
+ "units_authored": [
+  "RQ-20261031-c6fc-01",
+  "RQ-20261031-c6fc-02",
+  "RQ-20261031-c6fc-03",
+  "RQ-20261031-c6fc-04",
+  "RQ-20261031-c6fc-05",
+  "RQ-20261031-c6fc-06",
+  "RQ-20261031-c6fc-07",
+  "RQ-20261031-c6fc-08"
+ ],
+ "followups_filed": [
+  "PI-20261031-10311120-0001",
+  "PI-20261031-10311121-0002"
+ ],
+ "authoring": {
+  "queue_depth": 40,
+  "nodes_drafted": 0,
+  "skipped_on_purpose": true,
+  "nodes": [],
+  "theme_shortfall": {},
+  "note": "the 40 ready nodes are Tier-3 declare packets, notes or build-gated asks (read ~10 asks in full, rest by title: UNVERIFIED); the floor was met by 8 hand units (1 harness-defect re-run + 7 sibling-leg transfers of the 41cc PASS levers, deduped against every exit_lever_ablation cell in research/queue). VOL-WINDOW-RESEARCH's stage-A unit was not duplicated."
+ },
+ "not_run": [
+  "A: workflow-run list and open-PR list (MCP not queried; read_state tree_only)"
+ ],
+ "limits": [
+  "follow_through script and per-FAIL-cluster diagnoses of the 25 fails_without_next not run (budget): only the 6 landed results were opened",
+  "power label read as 'accruing' not re-checked against expected_n except for the 6 units (n read from rows)"
+ ],
+ "prior_calls_scorecard": [
+  {
+   "call": "RQ-20261030-ea4a-01 PASSes",
+   "p": 0.35,
+   "check_rerun": "research_ops_checks.py --since 2026-10-30",
+   "outcome": "miss",
+   "action_happened": true,
+   "lesson": "producer_failed: authored --days 1064 for a window starting 2020-07; confirmation units must copy --days from the source unit (2330). Authoring defect, not a market result"
+  },
+  {
+   "call": "blocked_over_age <= 4 at next slo run",
+   "p": 0.8,
+   "check_rerun": "infra_selftest.blocked_over_age",
+   "outcome": "miss",
+   "action_happened": true,
+   "lesson": "reads 5 (max 10); the 4 retirements last pass did not outpace units ageing past 21 d"
+  },
+  {
+   "call": "next htf_pullback_trend_2h walk-forward also fails (net<=0, n>=39)",
+   "p": 0.55,
+   "check_rerun": "read RQ-2026110* roster-walkforward",
+   "outcome": "hit",
+   "action_happened": false,
+   "lesson": "RQ-20261030-018 net -13.74 R n 46 (read a week early: that is the same weekly cohort; the 11-08 resolves_when is unchanged for the next one)"
+  }
+ ],
+ "checks": {
+  "packet_as_of": "2026-10-31T11:19Z",
+  "since": "2026-10-30T15:25Z",
+  "runnable_by_track": {
+   "TRADING": 59,
+   "MODEL": 1,
+   "INFRA": 5
+  },
+  "graded_by_window": {
+   "packet": "21 pass / 27 fail / 1 indeterminate of 64 units with rows"
+  },
+  "fails_without_next": 25,
+  "followups": {
+   "fired": 2,
+   "graded_fail": 1
+  },
+  "needs_review": 27,
+  "could_not_look": []
+ },
+ "analysis": {
+  "rows_opened": [
+   "RQ-20261028-b37d-01",
+   "RQ-20261029-7294-02",
+   "RQ-20261030-018",
+   "RQ-20261030-025",
+   "RQ-20261030-031",
+   "RQ-20261030-ea4a-01"
+  ],
+  "trading": {
+   "meaning": [
+    "avax_4h vol-skip-below-0.3: both neighbours (0.25, 0.35) beat B by ~+21 R with lower drawdown at 3/4 folds, so the 3e41-03 lead is a plateau not a single-point optimum; but all arms share one window (2020..2026-10-26) so it is still a discovery from a >=3-cell batch, so it needs forward accrual (PI-...0001) before any Tier-3 note.",
+    "htf_pullback_trend_2h net -13.7 R (n 46) on 2026-05..10 and a FAIL last week: two reads of the same 6-month window are not two independent FAILs, so treat the Gate-2 input as one, not two, until data past 2026-10-29 accrues."
+   ],
+   "fail_diagnoses": [
+    {
+     "cluster": "ea4a-01 producer_failed",
+     "hypotheses": [
+      "noise",
+      "harness defect",
+      "idea wrong"
+     ],
+     "test": "c6fc-01 with --days 2330",
+     "survivor": "harness",
+     "next": "RQ-20261031-c6fc-01"
+    }
+   ],
+   "next_tests": [
+    {
+     "id_or_node": "RQ-20261031-c6fc-02..08",
+     "decision_changed": "whether a 41cc PASS lever (cooldown, ADX ceiling, skip-hours, vol-conditioned trail, vol skip) is queued for a Tier-3 declare note on a sibling leg or stays a one-leg observation",
+     "on_pass": "note on the owning row naming the 41cc denominator (4 of 15)",
+     "on_fail": "leg x lever configuration closed, lever family open",
+     "premortem": "all 7 share the 2020-2026 window of their source so they are transfers, not confirmations; a PASS can still be a window artifact"
+    }
+   ]
+  },
+  "model": {
+   "meaning": [
+    "GBDT action-value exit head is worse than hold on 4/4 arms, 0/6 folds, and worse than matched random, so on corpus v1 a learned exit head is adverse selection: the rule lever / hold bracket stays the incumbent and a head is not a gate."
+   ],
+   "fail_diagnoses": [
+    {
+     "cluster": "7294-02 GBDT action value",
+     "hypotheses": [
+      "noise",
+      "power",
+      "label/state leakage-free but features uninformative",
+      "idea wrong"
+     ],
+     "test": "corpus-v2 retrain (7294-01)",
+     "survivor": "idea-or-features (power is ample: 2,627 trades, CI excludes 0)",
+     "next": "7294-01 (unresolvable until a corpus v2)"
+    }
+   ],
+   "next_tests": []
+  },
+  "cross_track": [
+   {
+    "from": "MODEL",
+    "finding": "learned exit head loses to hold with CI below 0 on v1 corpus",
+    "feeds": "P2-desk-checkin-exit-head node: do not author a learner variant without a new corpus"
+   }
+  ],
+  "surprises": [
+   "c6fc-01's defect was an authoring error by the previous pass, found only because the producer log was opened"
+  ]
+ },
+ "calls": [
+  {
+   "call": "RQ-20261031-c6fc-01 lands a measured verdict (not producer_failed)",
+   "p": 0.85,
+   "check": {
+    "command": "python3 scripts/research/result_disposition_check.py --list; ls research/results/RQ-20261031-c6fc-01",
+    "rule": "read_state measured",
+    "resolves_when": "2026-11-02"
+   }
+  },
+  {
+   "call": "at least 2 of the 7 transfer units c6fc-02..08 PASS",
+   "p": 0.35,
+   "check": {
+    "command": "python3 scripts/research/research_ops_checks.py --since 2026-10-31",
+    "rule": "count of pass among c6fc-02..08",
+    "resolves_when": "2026-11-03"
+   }
+  },
+  {
+   "call": "runnable_floor SLO reads ok on the next research-slo run",
+   "p": 0.6,
+   "check": {
+    "command": "python3 scripts/research/research_slo.py",
+    "rule": "runnable >= computed floor",
+    "resolves_when": "2026-11-01"
+   }
+  }
+ ],
+ "handoff": [
+  "blocker_watch UNPROVEN_OVERDUE rows (owners are the manager's; counted not re-audited)",
+  "pipeline --due routing is the manager's: 462 due, 68 unrouted at 11:3xZ",
+  "25 fails_without_next undiagnosed (3947-02/07/09/10, 90d3-07/16, ...)",
+  "RQ-20261009-900 grader (PI-20261031-10311121-0002)",
+  "VOL-WINDOW-RESEARCH stage-A unit lands separately; do not duplicate"
+ ]
+}
