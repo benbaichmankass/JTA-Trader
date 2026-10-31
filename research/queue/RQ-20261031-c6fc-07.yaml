@@ -1,0 +1,108 @@
+# Hand-authored 2026-10-31 by RESEARCH-OPS-20261031-1120 (Tier 1). Transfer of 41cc-30 PASS on sol_pullback_2h. Decision rule registered BEFORE any runner run (same statistic and bar as RQ-20261030-41cc-30).
+cadence: once
+compute: cpu_light
+decision_rule:
+  id: RULERQ20261031C6FC07
+  registered_at: '2026-10-31'
+  registered_before_run: true
+  rule: 'INDETERMINATE IF n(A) < 39 or IF every candidate arm is byte-identical to A (the lever never fired). A candidate C PASSES iff net_r(C) > net_r(A)
+    AND delta >= 0.02 R x n(A) AND net R(C) >= net R(A) in >= 4 of 6 folds AND maxDD(C) <= maxDD(A) x 1.35. PASS IF one or more pass: the best by net R
+    is named (the denominator is the 2 candidate arms here) and the follow-up is ONE confirmation unit on a disjoint window, then a live-producer check
+    and a Tier-3 declare PROPOSAL with the mirror in the same PR, never a config edit. FAIL IF none passes with n(A) >= 39: THIS arm grid is closed on eth_pullback_2h
+    for this window and the lever FAMILY is NOT retired (scripts/research/family_retirement_policy.yaml); the record names the arm that moved closest. Thresholds
+    and the arm grid are not changed after any result.'
+  statistic: 'scripts/research/exit_lever_ablation.py --leg eth_pullback_2h --grade replace, window 2020-07-01 .. 2026-10-15 23:59, 6 equal calendar folds
+    by entry time, net of the full cost stack the harness resolves per venue (execution_costs.resolve_cost_policy, recorded per arm as cost_stack). Arms
+    fixed now: A = the leg as declared in config/strategies.yaml; candidates VH95, VH85. Per arm: n, net_total_r, max_drawdown_r, net R per fold.'
+  what_it_does_not_do: 'Edits no config and no roster, places no order, is not a promotion case. A PASS also needs a live producer for the lever and a Tier-3
+    declare. The arm grid is the whole search: no arm is added after the run, and the baseline is the declared leg, not a tuned one.'
+id: RQ-20261031-c6fc-07
+intervention_controls:
+  not_applicable: a parameter-width ablation of the declared entry/exit geometry run through the harness, not an in-trade action or active-management intervention
+kind: experiment
+lands:
+  assert_field: read_state
+  min_rows: 1
+  store: research/results/
+power:
+  alpha: 0.05
+  basis: 'd=0.45 at alpha 0.05 / power 0.8 needs (1.96+0.8416)^2/0.45^2 = 38.8 -> 39 trades (the repo standing E35 floor). expected_n=80 is an ESTIMATE
+    from sibling units on this leg family (a538-07..15), NOT a measurement; below 39 the unit grades INDETERMINATE, never FAIL. The 0.02 R x n bar is a
+    materiality bar, not a powered effect: a PASS is a discovery lead and a FAIL closes the configuration only.'
+  design: one_sample
+  effect_units: sd
+  expected_n: 80
+  feasibility:
+    accrual_basis: Re-measurement on freshly fetched public candles over a pinned window; nothing accrues.
+    source: none
+  min_detectable_effect: 0.45
+  power: 0.8
+practice_precedent: 'M4, M5 (docs/reference/trading-and-model-practice-principles.md): pre-registered arm grid, every arm counted, baseline = the declared
+  leg'
+priority: 3
+programme: P3
+question: 'On eth_pullback_2h, same arms, window, folds and bar as the source unit (41cc-30 PASS on sol_pullback_2h): does any arm beat the declared leg
+  A by >= 0.02 R x n(A), in >= 4 of 6 folds, maxDD <= 1.35 x A, net of the harness cost stack?'
+related:
+- RQ-20261030-41cc-30
+roadmap:
+- L-REGIME
+routing:
+  basis: Estimate from comparable exit_lever_ablation runs of 2026-10-26..29 (a538-*); the first run replaces it.
+  est_minutes: 40
+  needs_gpu: false
+  needs_trainer_resident_data: false
+  peak_memory_gb: 4.0
+  why_runner: Fetches keyless public candles for a pinned window; reads no trainer data; CPU only.
+run:
+  command:
+  - python3
+  - scripts/research/exit_lever_ablation.py
+  - --leg
+  - eth_pullback_2h
+  - --arm
+  - A=
+  - --arm
+  - VH95=--vol-skip-above-pctl=0.95
+  - --arm
+  - VH85=--vol-skip-above-pctl=0.85
+  - --days
+  - '2330'
+  - --start
+  - '2020-07-01'
+  - --end
+  - 2026-10-15 23:59
+  - --grade
+  - replace
+  - --baseline
+  - A
+  - --delta-r
+  - '0'
+  - --delta-r-per-trade
+  - '0.02'
+  - --folds
+  - '6'
+  - --fold-majority
+  - '4'
+  - --dd-tol-frac
+  - '0.35'
+  - --n-floor
+  - '39'
+  - --out
+  - '{out_dir}'
+  inputs:
+    research_unit: RQ-20261031-c6fc-07
+  timeout_minutes: 150
+status: queued
+theme: regime
+title: 'TRANSFER of the top-volatility skip (VH95/VH85) lever to eth_pullback_2h: does it beat the declared leg net of cost over 2020-07-01..2026-10-15
+  (41cc-30 PASS on sol_pullback_2h; which sibling legs does the PASS carry to)?'
+value:
+  basis: planning weight for a lever cell on a leg that is rostered or prop-sized; an estimate, not a measurement
+  bucket: structural
+  confidence: 0.1
+  usd_at_stake_per_month: 100
+why_this_matters: '41cc-30 PASS on sol_pullback_2h, chosen from a multi-arm batch (41cc: 15 lever units, 4 pass 11 fail). A lever that passes on one leg
+  is a discovery; a sibling-leg transfer separates a leg-specific artifact (FAIL here) from a lever that carries across the pullback / donchian families
+  (PASS here). PASS = a lead for a Tier-3 note on the owning row, never a config edit; FAIL closes this leg x lever configuration only, the lever family
+  stays open. Decision it changes: whether the lever is queued for a Tier-3 declare note on eth_pullback_2h or stays a one-leg observation.'

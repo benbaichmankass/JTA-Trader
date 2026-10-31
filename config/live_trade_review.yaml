@@ -125,6 +125,19 @@ due:
       # Remove this block to revert. 5m/15m are absent on purpose: the short-hold lane manages them.
       # Operator 2026-10-30 ~22:30Z popup, verbatim: "Every 4h (~$20/day)" -- every timeframe, every 4h.
       hours_by_timeframe: {30m: 4, 1h: 4, 2h: 4, 4h: 4, 1d: 4}
+      # TRIGGER-FIRST (operator 2026-10-31: "have more trigger-based events and not waste capacity on regular
+      # reviews if there's nothing new really to review"). The event triggers below stay the primary path. A
+      # SCHEDULED slot (this one and daily_floor) is withheld, with a receipt reason in `skipped_slots`
+      # (skipped_closed_market / skipped_nothing_new), when (a) the package's market is CLOSED (equity/ETF outside
+      # RTH, CME futures in the weekend or daily break; crypto never), or (b) here only: nothing is new since its
+      # last review = no closed bar of the leg's timeframe since then, or price moved < min_move_atr x ATR since then.
+      # daily_floor is the open-market backstop and skips only for (a). Remove min_move_atr to drop (b).
+      # Default 0.5 ATR: MEASURED on live-review/rows (comms/live_review/rows/*.json + reviews.jsonl, 158 rows,
+      # 2026-10-25..31): 113 consecutive same-package review pairs over 34 packages. |change in open_r| < 0.25R ->
+      # the recommended action changed 14 of 68 times (21%); >= 0.25R -> 22 of 45 (49%). 2026-10-31 alone: 39 rows,
+      # 23 of them hold. R (the stop distance) is about 1-2 ATR on these legs, so 0.5 ATR is about 0.25-0.5R, the
+      # knee of that table. ESTIMATED (action change is a proxy for "something was new"); revisit with the skipped_slots log.
+      min_move_atr: 0.5
     structure_break:
       # A CLOSED bar's close beyond the since-entry extreme close against the
       # position (the trade's own structure) by more than buffer_atr x ATR,

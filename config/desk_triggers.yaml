@@ -13,6 +13,12 @@
 # as max_per_day below): the hourly packet is still built and landed EVERY hour, but the desk-wake marker is posted only on
 # bars whose UTC hour % N == 0. Skipped bars read receipt state skipped_by_cadence. 1 = every hour (the old behaviour).
 scan_wake_every_h: 2
+# TRIGGER-FIRST (operator 2026-10-31: "have more trigger-based events and not waste capacity on regular reviews if there's
+# nothing new really to review"). A scan bar that is a wake bar still wakes only if the packet differs materially from the
+# LAST WOKEN packet: an open-position change, a new near-signal, or a symbol that moved >= this many ATR (same default as
+# live_trade_review.yaml judgement_cadence.min_move_atr). Otherwise receipt state skipped_nothing_new; the packet still lands
+# every hour. The event triggers below are unchanged. Remove this line to wake on every cadence bar again.
+scan_wake_min_move_atr: 0.5
 
 symbols: [BTCUSDT, ETHUSDT, SOLUSDT, XRPUSDT, ADAUSDT, AVAXUSDT]
 timeframe: 5m              # the detectors' bars AND the triggered packet's timeframe

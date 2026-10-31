@@ -52,6 +52,8 @@ GENERATOR = "scripts/ops/live_review_packet.py"
 PUBLIC_BASE = "https://ict-bot.duckdns.org"
 PACKETS_DIR = REPO / "comms" / "live_review" / "packets"
 TABLES_DIR = REPO / "comms" / "live_review" / "tables"
+#: full-history per-leg corpora (build: scripts/research/build_ltr_corpus.py); ``--corpus auto`` prefers them
+LTR_CORPUS_DIR = "comms/strategy_evidence/ltr_corpus"
 REVIEWS = REPO / "comms" / "live_review" / "reviews.jsonl"
 PRICE_TOL = 5e-4  # relative: a venue trigger is rounded to the tick; 0.05% separates a tick from a real move
 CLASS_ORDER = {"real_money": 0, "prop": 1, "paper": 2}
@@ -619,7 +621,10 @@ def _price(leg: str, side: str, tel: dict, atr_mult: Optional[float], review_id:
     if tel.get("open_r") is None or tel.get("peak_r") is None or atr_mult is None:
         return None, "open_r/peak_r/atr_stop_mult not available for this package"
     cmd = [sys.executable, str(REPO / "scripts/research/live_review_outcomes.py"), "--leg", leg, "--side", side,
-           "--open-r", str(tel["open_r"]), "--peak-r", str(tel["peak_r"]), "--atr-stop-mult", str(atr_mult), "--json"]
+           "--open-r", str(tel["open_r"]), "--peak-r", str(tel["peak_r"]), "--atr-stop-mult", str(atr_mult), "--json",
+           # the leg's committed full-history corpus (comms/strategy_evidence/ltr_corpus/) when it has one, else
+           # the evidence record's source_run; the packet records which one priced it (corpus_source)
+           "--corpus", "auto"]
     if tel.get("bars_held") is not None:
         cmd += ["--bars-held", str(int(tel["bars_held"]))]
     out = subprocess.run(cmd, capture_output=True, text=True, cwd=REPO, timeout=300)
@@ -632,7 +637,11 @@ def _price(leg: str, side: str, tel: dict, atr_mult: Optional[float], review_id:
         (REPO / rel).write_text(json.dumps(table, indent=2) + "\n")
     if tables_out is not None:
         tables_out[rel] = table
-    return {"biases": table["biases"], "corpus": table["corpus"], "n_floor": table["n_floor"], "options": table["options"],
+    full = str(table["corpus"]).startswith(LTR_CORPUS_DIR)
+    return {"biases": table["biases"], "corpus": table["corpus"],
+            "corpus_source": "ltr_full_history" if full else "evidence_source_run",
+            "corpus_trades": (table.get("population") or {}).get("corpus_trades"),
+            "candles": table.get("candles"), "n_floor": table["n_floor"], "options": table["options"],
             "population": table["population"], "read_state": table["read_state"], "source": rel}, None
 
 
