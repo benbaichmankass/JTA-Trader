@@ -1708,6 +1708,14 @@ def _apply_update(db, open_pkg: dict, verdict: Dict[str, Any],
             leg_floor = sl_floor_from(leg.get("notes"))
             if floor_blocks(leg.get("direction"), leg_updates["sl"], leg_floor):
                 leg_updates.pop("sl")
+            # TRAIL-RATCHET-AUDIT: the ratchet inside each strategy monitor compares a
+            # candidate to the PACKAGE stop, which does not move while any sibling leg's
+            # amend failed. A leg that already applied a tighter stop must not be sent a
+            # looser one: its own synced `trades.stop_loss` is the floor too.
+            elif floor_blocks(leg.get("direction"), leg_updates["sl"],
+                              _coerce_float(leg.get("stop_loss"))):
+                leg_floor = _coerce_float(leg.get("stop_loss"))
+                leg_updates.pop("sl")
         if not leg_updates:
             logger.info(
                 "order_monitor: pkg=%s trade=%s account=%s held at its sl_floor %s "

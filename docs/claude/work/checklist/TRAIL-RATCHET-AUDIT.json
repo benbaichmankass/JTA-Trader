@@ -2,7 +2,7 @@
   "id": "TRAIL-RATCHET-AUDIT",
   "title": "Prove every live trailing stop (chandelier / ATR / BE / vol- and momentum-tightened trails, crypto, equities, futures, prop phone/DXtrade trails) only ever tightens: (1) list every trail implementation and show its ratchet condition; (2) MEASURE on live data (stop history per trade, e.g. position_path_history sl per bar + venue amend logs) that no stop ever moved away from price, with the population stated; fix any path that can loosen",
   "phase": null,
-  "state": "queued",
+  "state": "landed_unproven",
   "owner": null,
   "lane": null,
   "model": "sonnet",
@@ -13,10 +13,14 @@
   "blocked_on": [],
   "note": "SCOPE ADD, operator 2026-10-29 ~11:50Z verbatim: \"If the strategy wants to move the stop loss to above the current price on a long or below the current price on a short, then the implication there is that we should be getting out of the trade, right? Like, that means we should close it ... maybe that should be the flow here, instead of ignoring those movements.\" Manager agrees in principle: a trail candidate beyond price means the strategy's own exit has been hit; ignoring it leaves the live leg on a looser stop than the Stage-0 harness (which exits on that bar or the next open). ADD: (a) per leg, what the Stage-0 harness does when the trail candidate crosses price (exit at bar close vs next open) \u2014 live must match; (b) MEASURE how often live ignored such a candidate (the 'candidate < current_price' / 'candidate > current_price' branch in fade_breakout_4h, trend_donchian, squeeze_breakout_4h and any other trail), population stated; (c) the exact Tier-3 change: when the candidate crosses price, close at market via the trade-action path with close_reason strategy_close (not a stop amend), harness-matched timing. Bring (a)-(c) to the manager; the change goes to the operator for a yes/no. Ceiling raised to $5.",
   "priority_rank": 3,
-  "updated_at": "2026-10-29T11:50:17Z",
-  "updated_by": "session_01AFoLuKwNMzjtn2CH2kVd86",
+  "updated_at": "2026-10-31T12:41:13Z",
+  "updated_by": "session_01AFoLuHor8CYXWYYC3TYfLg",
   "roadmap": [
     "L-LADDER"
   ],
+  "writeback": {
+    "roadmap": "L-LADDER: audit done; the trail close-on-cross is Tier-3 held for the operator",
+    "arch": "none: no component changed in this PR (Tier-2 guard is in order_monitor)"
+  },
   "_seq": 812
 }
