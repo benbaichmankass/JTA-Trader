@@ -127,6 +127,24 @@ case "${_configured}" in
   *)  _candidates+=("${_configured}" "${_CANONICAL_DIAG_BASE}") ;;
 esac
 
+# PER-PATH TIMEOUT (PI-20261031-9KC5G3FG-0001, 2026-10-31). A flat
+# `--max-time 10` cut off `/api/diag/bybit_open_orders`, which takes ~10 s
+# because it reads every Bybit account at the venue. In the 00:00Z judgement
+# book run that timeout made the order read fail, every bybit_1 package's
+# mechanics read `could_not_look`, and BTC/ETH/SOL got no judgement. The VM
+# was answering the whole time; the manager verified at 00:24Z that all three
+# held full-size venue SL and TP. So the venue and journal routes get a budget
+# that fits them, and everything else keeps the 10 s that made the issue relay
+# the fast fallback. `DIAG_FETCH_MAX_TIME` overrides both (a number of seconds).
+case "$path" in
+  bybit_open_orders*|alpaca_open_orders*|ib_open_orders*|*open_orders*) _max_time=45 ;;
+  journal*|position_telemetry*|audit*) _max_time=30 ;;
+  *) _max_time=10 ;;
+esac
+if [[ "${DIAG_FETCH_MAX_TIME:-}" =~ ^[0-9]+$ ]] && [ "${DIAG_FETCH_MAX_TIME}" -gt 0 ]; then
+  _max_time="${DIAG_FETCH_MAX_TIME}"
+fi
+
 cfg="$(mktemp)"
 chmod 600 "$cfg"
 trap 'rm -f "$cfg"' EXIT
@@ -145,10 +163,17 @@ for base in "${_candidates[@]}"; do
   _body="$(mktemp)"
   _http=000
   set +e
-  _http="$(curl -sS --fail --max-time 10 -K "$cfg" \
-             -o "$_body" -w '%{http_code}' "${base}/api/diag/${path}" 2>/dev/null)"
+  # `%{time_connect}` separates "never connected" from "connected, then ran out
+  # of time": a timeout on a host that ACCEPTED the connection is a slow route,
+  # not a network outage, and must not read as `unreachable`.
+  _w="$(curl -sS --fail --max-time "$_max_time" -K "$cfg" \
+             -o "$_body" -w '%{http_code} %{time_connect}' "${base}/api/diag/${path}" 2>/dev/null)"
   _rc=$?
   set -e
+  _http="${_w%% *}"
+  _tconn="0"
+  case "$_w" in *" "*) _tconn="${_w#* }" ;; esac
+  [ -n "$_http" ] || _http=000
   if [ "$_rc" -eq 0 ]; then
     cat "$_body"; rm -f "$_body"
     # Say which base served, on stderr so it never pollutes the JSON. A reader
@@ -163,7 +188,17 @@ for base in "${_candidates[@]}"; do
   # naming a cause no code path tested is worse than no message: it sends the
   # reader to diagnose the wrong system. `answered_*` means the host is UP.
   case "$_http" in
-    000) _stage="unreachable"; _why="never reached a host (curl rc ${_rc}: DNS, egress, or timeout) — this is the only case that implicates the network" ;;
+    000)
+      if [ "$_rc" -eq 28 ] && awk -v t="$_tconn" 'BEGIN { exit !(t + 0 > 0) }'; then
+        _stage="timed_out_after_connect"
+        _why="the host ACCEPTED the connection (connect ${_tconn} s) but did not finish answering within ${_max_time} s (curl rc 28) — a slow route on an answering host, NOT a network outage; raise DIAG_FETCH_MAX_TIME for this path"
+      elif [ "$_rc" -eq 28 ]; then
+        _stage="unreachable"
+        _why="timed out after ${_max_time} s before any connection was made (curl rc 28) — this is the only case that implicates the network"
+      else
+        _stage="unreachable"
+        _why="never reached a host (curl rc ${_rc}: DNS, egress, or connection refused) — this is the only case that implicates the network"
+      fi ;;
     401|403) _stage="answered_${_http}"; _why="the host ANSWERED and rejected the bearer — DIAG_READ_TOKEN is wrong or expired, NOT an outage" ;;
     404) _stage="answered_404"; _why="the host ANSWERED; the route does not exist — check the path form (pass 'version', not '/api/diag/version') before suspecting the VM" ;;
     5*) _stage="answered_${_http}"; _why="the host ANSWERED with a server error — the web-api is up but this route failed" ;;
@@ -175,5 +210,5 @@ done
 
 # The summary reports the STATUS PER CANDIDATE rather than a menu of guesses,
 # so a reader can tell at a glance whether the VM is implicated at all.
-echo "diag_fetch: no candidate served '${path}' — ${_stages}. Use the issue relay only if every candidate is 'unreachable'; an 'answered_*' means the web-api is UP and the problem is this request." >&2
+echo "diag_fetch: no candidate served '${path}' — ${_stages}. Use the issue relay only if every candidate is 'unreachable'; an 'answered_*' or 'timed_out_after_connect' means the web-api is UP and the problem is this request." >&2
 exit 3

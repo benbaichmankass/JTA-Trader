@@ -317,3 +317,69 @@ def test_a_real_diag_path_is_not_refused(tmp_path, path):
     assert proc.returncode == 0, proc.stderr
     assert urls, "a legitimate diag path was never dialled"
     assert "/api/diag/api/" not in urls[0], f"doubled path built: {urls[0]}"
+
+
+# --------------------------------------------------------------------------
+# PER-PATH TIMEOUT + "TIMED OUT ON AN ANSWERING HOST" (PI-20261031-9KC5G3FG-0001)
+#
+# 2026-10-31 00:00Z: `/api/diag/bybit_open_orders` takes ~10 s, the flat
+# `--max-time 10` cut it off, and the live-review packet read every bybit_1
+# package's mechanics as could_not_look. The VM was answering throughout.
+# --------------------------------------------------------------------------
+
+def _run_timeout(tmp_path: Path, *, path: str, time_connect: str, env_extra=None):
+    """Shim curl to time out (rc 28, status 000) and log its --max-time."""
+    bindir = tmp_path / "bin"
+    bindir.mkdir()
+    log = tmp_path / "maxtime.txt"
+    shim = bindir / "curl"
+    shim.write_text(
+        "#!/usr/bin/env bash\n"
+        "prev=\"\"\n"
+        "for a in \"$@\"; do\n"
+        f"  if [ \"$prev\" = \"--max-time\" ]; then echo \"$a\" >> {log}; fi\n"
+        "  prev=\"$a\"\n"
+        "done\n"
+        f"echo -n '000 {time_connect}'\nexit 28\n"
+    )
+    shim.chmod(0o755)
+    env = dict(os.environ)
+    env["PATH"] = f"{bindir}:{env['PATH']}"
+    env.pop("DIAG_BASE_URL", None)
+    env.pop("DIAG_FETCH_MAX_TIME", None)
+    env["DIAG_READ_TOKEN"] = "tok"
+    env.update(env_extra or {})
+    proc = subprocess.run([str(_SCRIPT), path], capture_output=True, text=True, env=env, cwd=_REPO_ROOT)
+    return proc, log.read_text().split() if log.exists() else []
+
+
+@pytest.mark.parametrize("path,expected", [
+    ("bybit_open_orders", "45"),
+    ("alpaca_open_orders", "45"),
+    ("journal?table=trades&limit=10", "30"),
+    ("version", "10"),
+])
+def test_max_time_is_per_path(tmp_path, path, expected):
+    _proc, seen = _run_timeout(tmp_path, path=path, time_connect="0.120")
+    assert seen and set(seen) == {expected}, seen
+
+
+def test_max_time_env_override(tmp_path):
+    _proc, seen = _run_timeout(tmp_path, path="version", time_connect="0", env_extra={"DIAG_FETCH_MAX_TIME": "90"})
+    assert set(seen) == {"90"}, seen
+
+
+def test_a_timeout_after_connect_is_not_called_unreachable(tmp_path):
+    """The host accepted the connection, then the route ran long: not an outage."""
+    proc, _ = _run_timeout(tmp_path, path="bybit_open_orders", time_connect="0.084")
+    assert proc.returncode == 3
+    assert "-> timed_out_after_connect" in proc.stderr, proc.stderr
+    assert "-> unreachable" not in proc.stderr, proc.stderr
+    assert "NOT a network outage" in proc.stderr
+
+
+def test_a_timeout_before_connect_is_still_unreachable(tmp_path):
+    proc, _ = _run_timeout(tmp_path, path="bybit_open_orders", time_connect="0.000000")
+    assert proc.returncode == 3
+    assert "-> unreachable" in proc.stderr, proc.stderr
+    assert "before any connection" in proc.stderr

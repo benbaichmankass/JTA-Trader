@@ -78,3 +78,41 @@ def test_the_reviewer_never_writes_the_packet_or_the_table():
     assert "Your ONE write is your row file" in write and "evidence_missing" in write
     assert "= the block's `packet` object" not in write and "`table_path` = the block's `table` object" not in write
     assert "ADDS only `comms/live_review/rows/<review_id>.json`" in write   # the git-data path writes one file too
+
+
+def test_a_could_not_look_mechanics_row_is_still_judged_and_never_dispatched(tmp_path, monkeypatch):
+    """DESK-HANDOFF-PROTOCOL step 0: a failed order read is judged, with a forecast, and routes to the operator.
+
+    2026-10-31 00:00Z: BTC/ETH/SOL on bybit_1 got no judgement because the order read timed out
+    (mechanics could_not_look -> flag_mechanics). The brief now judges such a row; the VM dispatcher
+    still never executes a row whose mechanics is not `match`.
+    """
+    assert "`could_not_look` (a read FAILED" in BRIEF
+    assert "every other action → `operator_ask`, never `recommended`" in BRIEF
+    v = _load("clr2", "scripts/ci/check_live_review_records.py")
+    d = _load("lrd2", "scripts/ops/live_review_dispatch.py")
+    row = _json_block("### Worked example")
+    row["mechanics"] = {"verdict": "could_not_look", "evidence": "bybit_orders read failed: diag bybit_open_orders: exit 3"}
+    row["context_flags"].append("mechanics_unread: bybit_orders read failed")
+    row["reviewed_at"] = "2026-10-31T04:03:00Z"
+    row["disposition"]["route"] = "operator_ask"
+    packet = {"review_id": row["review_id"], "order_package_id": row["order_package_id"], "state": row["state"]}
+    pk = tmp_path / "packets"
+    pk.mkdir()
+    (pk / f"{row['review_id']}.json").write_text(json.dumps(packet))
+    row["packet_sha"] = hashlib.sha256(
+        json.dumps(packet, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
+    rv, oc = tmp_path / "reviews.jsonl", tmp_path / "outcomes.jsonl"
+    rv.write_text(json.dumps(row, separators=(",", ":")) + "\n")
+    oc.write_text("")
+    monkeypatch.setattr(v, "PACKETS", pk)
+    assert v.findings(rv, oc) == []
+    # the forecast is required on it like any judged row
+    no_fc = dict(row)
+    no_fc.pop("forecast")
+    rv.write_text(json.dumps(no_fc, separators=(",", ":")) + "\n")
+    assert any("needs a forecast" in f for f in map(str, v.findings(rv, oc)))
+    # and even if a reviewer wrote `recommended`, the VM refuses to execute it
+    row["disposition"]["route"] = "recommended"
+    plan, refusal = d.check_row(row, json.dumps({"read_state": "thin"}))
+    assert plan is None and "mechanics_could_not_look" in str(refusal)
