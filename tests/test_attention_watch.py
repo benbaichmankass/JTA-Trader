@@ -323,6 +323,9 @@ def _ptr_cut(minutes_ago, cutoff, pid="DP-1"):
 
 def test_desk_row_missing_ok_on_a_bar_skipped_by_cadence(monkeypatch):
     """scan_wake_every_h 2: an odd-hour packet has no wake and so no row, by design; an even one still breaches."""
+    # pin the cadence this case is about: the shipped value is temporarily 24 (WEEKEND-TRIGGER-ONLY, restore Mon 2026-11-02 13:30Z)
+    import scripts.ops.desk_wake_marker as _dwm
+    monkeypatch.setattr(_dwm, "scan_wake_every_h", lambda path=None: 2)
     monkeypatch.setattr(a, "_git", _desk_git(_ptr_cut(300, "2026-10-28T13:31:00Z"), ""))
     p = a.probe_desk_row_missing(_DNOW)
     assert p["status"] == a.OK and "skipped_by_cadence" in p["detail"]

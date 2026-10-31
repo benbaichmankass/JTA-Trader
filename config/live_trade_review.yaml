@@ -124,7 +124,8 @@ due:
       # together and rides ONE wake (a book review). A review since the slot began satisfies it.
       # Remove this block to revert. 5m/15m are absent on purpose: the short-hold lane manages them.
       # Operator 2026-10-30 ~22:30Z popup, verbatim: "Every 4h (~$20/day)" -- every timeframe, every 4h.
-      hours_by_timeframe: {30m: 4, 1h: 4, 2h: 4, 4h: 4, 1d: 4}
+      # WEEKEND-TRIGGER-ONLY 2026-10-31: operator 'Yes, until Mon 13:30Z'; restore Mon 2026-11-02 13:30Z (row WEEKEND-TRIGGER-ONLY)
+      hours_by_timeframe: {}
       # TRIGGER-FIRST (operator 2026-10-31: "have more trigger-based events and not waste capacity on regular
       # reviews if there's nothing new really to review"). The event triggers below stay the primary path. A
       # SCHEDULED slot (this one and daily_floor) is withheld, with a receipt reason in `skipped_slots`
