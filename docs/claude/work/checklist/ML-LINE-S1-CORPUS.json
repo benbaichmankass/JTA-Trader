@@ -10,12 +10,13 @@
   "spend_usd": null,
   "tier": 1,
   "prs": [
-    21960
+    21960,
+    21966
   ],
   "blocked_on": [],
-  "note": "[2026-10-31 lane session_01AFoLuJwBvR58WBtD4qc5Gp] Timeframe defect VERIFIED FIXED AT SOURCE: backtest_trend/pullback write timeframe=args.resample or args.timeframe (FP-TF-LABEL); a --resample 4h run reads 4h in bt.json; the '1h' labels are in the old run artifact only. BUILT: scripts/research/leg_corpus_s1.py (per-family producer, money legs re-parsed from config, station metrics), research/templates/leg-corpus-s1.yaml + units RQ-20261031-020..023 (one per family incl. pullback_1d/iaum, which ran locally: n=41, tf equal, params hash equal), ml/datasets/families/leg_corpus.py (+tests). OBSERVATION THAT CLOSES: first producer run of each unit lands a <=7d corpus for every money leg (verdict.json coverage 7/7 across the 4 units).",
+  "note": "[2026-10-31 lane session_01AFoLuJwBvR58WBtD4qc5Gp] Timeframe defect VERIFIED FIXED AT SOURCE: backtest_trend/pullback write timeframe=args.resample or args.timeframe (FP-TF-LABEL); a --resample 4h run reads 4h in bt.json; the '1h' labels are in the old run artifact only. BUILT: scripts/research/leg_corpus_s1.py (per-family producer, money legs re-parsed from config, station metrics), research/templates/leg-corpus-s1.yaml + units RQ-20261031-020..023 (one per family incl. pullback_1d/iaum, which ran locally: n=41, tf equal, params hash equal), ml/datasets/families/leg_corpus.py (+tests). OBSERVATION THAT CLOSES: first producer run of each unit lands a <=7d corpus for every money leg (verdict.json coverage 7/7 across the 4 units). [2026-10-31 manager decision] leg-corpus-s1 template weight is 1 (a standing refresh must not skew the research allocator). Coverage station metric (money legs with a corpus <= 7d / money legs) stays on the row: if coverage is below 7/7 one week after landing, raise the weight. Re-cut PR: #21966 (supersedes #21960).",
   "priority_rank": 2,
-  "updated_at": "2026-10-31T18:55:36Z",
+  "updated_at": "2026-10-31T21:06:52Z",
   "updated_by": "session_01AFoLuJV2KtzyNPoYFQ56pS",
   "roadmap": [
     "L-ML-LIVE"

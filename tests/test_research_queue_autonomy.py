@@ -65,9 +65,11 @@ def test_every_template_generates_valid_units_deterministically():
 def test_weights_follow_the_operators_priorities():
     weights = {t[2]["family"]: int(t[2]["weight"]) for t in queue_replenish.load_templates(REPO)}
     assert weights == {"prop-fit-breakout": 30, "m20-exit-lever": 25, "e35-bracket": 20,
-                       "roster-walkforward": 15, "macro-valuation": 10}
+                       "roster-walkforward": 15, "macro-valuation": 10,
+                       "leg-corpus-s1": 1}   # manager decision 2026-10-31: a standing refresh, must not skew the split
     assert queue_replenish.allocate(20, weights, {k: 99 for k in weights}) == \
-        {"prop-fit-breakout": 6, "m20-exit-lever": 5, "e35-bracket": 4, "roster-walkforward": 3, "macro-valuation": 2}
+        {"prop-fit-breakout": 6, "m20-exit-lever": 5, "e35-bracket": 4, "roster-walkforward": 3, "macro-valuation": 2,
+         "leg-corpus-s1": 0}
 
 
 def test_generated_units_dedupe_against_the_committed_queue():
