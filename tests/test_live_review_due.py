@@ -223,7 +223,10 @@ def test_telemetry_less_real_money_package_can_be_due_on_daily_floor(tmp_path):
     due = {d["order_package_id"]: d for d in out["due"]}
     assert "pkg-4" in due  # bybit_2 trade row, never reviewed -> daily_floor needs no telemetry
     # + the DESK-AM-REFOCUS judgement slot, which also needs no telemetry
-    assert [e["event"] for e in due["pkg-4"]["events"]] == ["daily_floor", "judgement_cadence"]
+    # the judgement slot rides along only while the shipped config declares hours for the leg's timeframe
+    shipped_slots = (lrd.load_config()["events"].get("judgement_cadence") or {}).get("hours_by_timeframe") or {}
+    want = ["daily_floor"] + (["judgement_cadence"] if shipped_slots else [])
+    assert [e["event"] for e in due["pkg-4"]["events"]] == want
     assert due["pkg-4"]["telemetry_state"] == "telemetry_absent"
     assert due["pkg-4"]["telemetry_stale"] is None
     assert "pkg-2" not in due  # no account known -> no floor; still listed, not dropped
@@ -360,24 +363,31 @@ def test_branch_read_failure_falls_back_to_main_only(tmp_path):
 
 # ----------------------------------------------------------------------------- DESK-AM-REFOCUS judgement_cadence
 
+# The slot mechanics are tested against an explicit cadence, not the shipped value: the shipped hours may be
+# emptied temporarily (WEEKEND-TRIGGER-ONLY 2026-10-31 -> restore Mon 2026-11-02 13:30Z) and must stay editable.
+CFG_CAD = {**CFG_LIVE, "events": {**CFG_LIVE["events"], "judgement_cadence": {
+    **(CFG_LIVE["events"].get("judgement_cadence") or {}),       # keep the shipped min_move_atr etc.
+    "hours_by_timeframe": {"30m": 4, "1h": 4, "2h": 4, "4h": 4, "1d": 4}}}}
+
+
 def _prior(last=None):
     return {"fired": set(), "last": last, "peak": None, "mech": None}
 
 
 def test_judgement_cadence_is_one_utc_slot_per_timeframe():
     now = datetime(2026, 10, 31, 9, 30, tzinfo=timezone.utc)
-    ev = lrd.judgement_cadence_event(_prior(), CFG_LIVE, now, 7200)                 # 2h leg: 4h slots
+    ev = lrd.judgement_cadence_event(_prior(), CFG_CAD, now, 7200)                 # 2h leg: 4h slots
     assert ev[0] == "judgement_cadence" and ev[1] == "2026-10-31T08:00:00+00:00"
     # operator 2026-10-30: every timeframe every 4h
-    assert lrd.judgement_cadence_event(_prior(), CFG_LIVE, now, 14400)[1] == "2026-10-31T08:00:00+00:00"
-    assert lrd.judgement_cadence_event(_prior(), CFG_LIVE, now, 86400)[1] == "2026-10-31T08:00:00+00:00"
+    assert lrd.judgement_cadence_event(_prior(), CFG_CAD, now, 14400)[1] == "2026-10-31T08:00:00+00:00"
+    assert lrd.judgement_cadence_event(_prior(), CFG_CAD, now, 86400)[1] == "2026-10-31T08:00:00+00:00"
 
 
 def test_a_review_inside_the_slot_satisfies_it_and_short_hold_timeframes_get_none():
     now = datetime(2026, 10, 31, 9, 30, tzinfo=timezone.utc)
-    assert lrd.judgement_cadence_event(_prior(datetime(2026, 10, 31, 8, 5, tzinfo=timezone.utc)), CFG_LIVE, now, 7200) is None
-    assert lrd.judgement_cadence_event(_prior(datetime(2026, 10, 31, 7, 55, tzinfo=timezone.utc)), CFG_LIVE, now, 7200) is not None
-    assert lrd.judgement_cadence_event(_prior(), CFG_LIVE, now, 900) is None          # 15m: the short-hold lane
+    assert lrd.judgement_cadence_event(_prior(datetime(2026, 10, 31, 8, 5, tzinfo=timezone.utc)), CFG_CAD, now, 7200) is None
+    assert lrd.judgement_cadence_event(_prior(datetime(2026, 10, 31, 7, 55, tzinfo=timezone.utc)), CFG_CAD, now, 7200) is not None
+    assert lrd.judgement_cadence_event(_prior(), CFG_CAD, now, 900) is None          # 15m: the short-hold lane
     assert lrd.judgement_cadence_event(_prior(), {"events": {}}, now, 7200) is None   # block removed = reverted
 
 
@@ -385,12 +395,12 @@ def test_judgement_cadence_reaches_the_due_list_and_dedupes_on_its_slot():
     now = datetime(2026, 10, 31, 9, 30, tzinfo=timezone.utc)
     row = {"order_package_id": "pkg-jc", "strategy": "ada_pullback_2h", "account_id": "bybit_2", "lifecycle": "open",
            "open_r": 0.2, "peak_r": 0.3, "updated_at": now.isoformat()}
-    due = lrd.compute_due([row], [], CFG_LIVE, now=now)
+    due = lrd.compute_due([row], [], CFG_CAD, now=now)
     evs = [e for d in due["due"] for e in d["events"] if e["event"] == "judgement_cadence"]
     assert len(evs) == 1 and evs[0]["level"] == "2026-10-31T08:00:00+00:00"
     answered = {"order_package_id": "pkg-jc", "reviewed_at": "2026-10-31T09:31:00Z",
                 "trigger": {"event": "judgement_cadence", "level": "2026-10-31T08:00:00+00:00"}}
-    again = lrd.compute_due([row], [answered], CFG_LIVE, now=now + timedelta(minutes=5))
+    again = lrd.compute_due([row], [answered], CFG_CAD, now=now + timedelta(minutes=5))
     assert not [e for d in again["due"] for e in d["events"] if e["event"] == "judgement_cadence"]
 
 
@@ -399,9 +409,18 @@ def test_judgement_cadence_skips_unreviewed_accounts_and_mandate_scoped_packages
     row = {"order_package_id": "pkg-jc", "strategy": "ada_pullback_2h", "lifecycle": "open",
            "open_r": 0.2, "peak_r": 0.3, "updated_at": now.isoformat()}
     jc = lambda res: [e for d in res["due"] for e in d["events"] if e["event"] == "judgement_cadence"]  # noqa: E731
-    assert not jc(lrd.compute_due([dict(row, account_id="oanda_practice")], [], CFG_LIVE, now=now))
+    assert not jc(lrd.compute_due([dict(row, account_id="oanda_practice")], [], CFG_CAD, now=now))
     cad = {"pkg-jc": {"mandate": "MD-X", "minutes": 60}}
-    assert not jc(lrd.compute_due([dict(row, account_id="bybit_2")], [], CFG_LIVE, now=now, cadence=cad))
+    assert not jc(lrd.compute_due([dict(row, account_id="bybit_2")], [], CFG_CAD, now=now, cadence=cad))
+
+
+def test_shipped_cadence_hours_drive_the_event_not_a_pinned_value():
+    """Reads the shipped config: empty hours -> no slot event for any timeframe; declared hours -> one."""
+    now = datetime(2026, 10, 31, 9, 30, tzinfo=timezone.utc)
+    hours = (CFG_LIVE["events"].get("judgement_cadence") or {}).get("hours_by_timeframe") or {}
+    for label, tf in (("30m", 1800), ("1h", 3600), ("2h", 7200), ("4h", 14400), ("1d", 86400)):
+        ev = lrd.judgement_cadence_event(_prior(), CFG_LIVE, now, tf)
+        assert (ev is None) == (not hours.get(label)), label
 
 
 # ----------------------------------------------------------------------------- TRIGGER-FIRST-REVIEWS (2026-10-31)
@@ -487,7 +506,7 @@ def test_trigger_first_without_min_move_atr_only_the_market_gate_applies():
 
 
 def test_trigger_first_compute_due_records_skips_and_daily_floor_skips_only_closed_markets():
-    cfg = dict(CFG_LIVE)
+    cfg = dict(CFG_CAD)   # explicit cadence hours: the shipped hours may be temporarily empty (WEEKEND-TRIGGER-ONLY)
     floor = (cfg["events"]["daily_floor"].get("accounts") or ["bybit_2"])[0]
     row = {"order_package_id": "pkg-spy", "strategy": "ada_pullback_2h", "symbol": "SPY", "account_id": floor,
            "lifecycle": "open", "open_r": 0.1, "peak_r": 0.1}
