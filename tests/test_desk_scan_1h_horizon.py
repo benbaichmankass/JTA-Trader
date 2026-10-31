@@ -10,7 +10,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts" / "ops"))
 
 import desk_scan_packet as dsp  # noqa: E402
 
-LIVE_HOLD_CAP_MIN = 60  # desk_write.SHORT_HOLD_MAX_MIN
+LIVE_HOLD_CAP_MIN = 60  # the 1-bar row still prices a 60-min hold; the cap itself was lifted 2026-10-31 (DESK-HANDOFF-PROTOCOL)
 
 
 def test_default_horizons_include_a_row_that_fits_the_live_hold_cap():

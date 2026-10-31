@@ -155,6 +155,15 @@ def test_exit_plan_has_no_live_reader():
         # "Nothing reads it" and "nothing on the live path reads it" were the same
         # sentence until today and are not any more.
         os.path.join("src", "research", "stop_attribution.py"),
+        # DESK-HANDOFF-PROTOCOL, 2026-10-31 — RE-ESTABLISHED, not waived. `desk_handoff.py`
+        # reads the string key `exit_plan` from a DESK DECISION ROW (`proposal.exit_plan`
+        # on `desk/decisions`, the desk's free-text plan for its own trade), and copies it
+        # into the live-review packet's `desk_handoff` block for the next reviewer. It never
+        # reads the `order_packages.exit_plan` / `exit_plan_state` columns, imports nothing
+        # from `src/runtime/exit_plan.py`, and is called only by the packet builder and
+        # attention_watch (no monitor, coordinator or order path). MI-163's verdict on the
+        # COLUMN and its levers is unchanged: still no live reader.
+        os.path.join("src", "runtime", "desk_handoff.py"),
     }
     offenders = []
     for root, _dirs, files in os.walk(os.path.join(_REPO, "src")):

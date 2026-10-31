@@ -56,7 +56,8 @@ SCHEMA = "comms/schema/live_review.schema.json"
 ACTIONS = ("hold", "tighten_sl", "move_tp", "partial_close", "change_size", "close", "flag_mechanics")
 CONFIDENCE = ("measured", "suggestive", "anecdote")
 DRAFT_KEYS = {"action", "level", "size_fraction", "size_multiplier", "reason", "judgement_confidence", "confidence",
-              "context_flags", "session", "external_context"}
+              "context_flags", "session", "external_context", "handoff_verdict"}
+HANDOFF_VERDICTS = ("confirm", "revise", "exit")  # DESK-HANDOFF-PROTOCOL: required when the packet carries desk_handoff
 EXTERNAL = "comms/live_review/short_hold/external_context.jsonl"
 FEED_GAPS = "comms/live_review/short_hold/feed_gaps.jsonl"
 INFLUENCE = ("decisive", "supporting", "checked_only")
@@ -123,8 +124,20 @@ def compile_row(draft: dict, env: dict, *, now: datetime) -> dict:
     if act not in ACTIONS:
         problems.append(f"action must be one of {ACTIONS}, got {act!r}")
     mech = packet.get("mechanics") or {}
-    if mech.get("verdict") != "match" and act != "flag_mechanics":
+    # mismatch: the only call is flag_mechanics. could_not_look (a read failed, nothing seen to disagree) is still
+    # judged; any non-hold action then routes operator_ask (DESK-HANDOFF-PROTOCOL step 0, 2026-10-31).
+    unread = mech.get("verdict") == "could_not_look"
+    if mech.get("verdict") != "match" and not unread and act != "flag_mechanics":
         problems.append(f"mechanics verdict is {mech.get('verdict')!r}: the only call is flag_mechanics")
+    dh = packet.get("desk_handoff") if isinstance(packet.get("desk_handoff"), dict) else None
+    hv = draft.get("handoff_verdict")
+    if dh is not None and hv not in HANDOFF_VERDICTS:
+        problems.append(f"a desk-opened trade: handoff_verdict must be one of {HANDOFF_VERDICTS} "
+                        "(confirm / revise / exit the opening thesis; SHORT-HOLD-BRIEF)")
+    if dh is not None and hv in HANDOFF_VERDICTS and (hv == "exit") != (act == "close"):
+        problems.append(f"handoff_verdict {hv!r} with action {act!r}: exit <=> close")
+    if dh is None and hv is not None:
+        problems.append("handoff_verdict is only for a desk-opened trade (the packet has no desk_handoff)")
     reason = str(draft.get("reason") or "").strip()
     conf = draft.get("judgement_confidence")
     if not reason:
@@ -144,7 +157,8 @@ def compile_row(draft: dict, env: dict, *, now: datetime) -> dict:
     pkg = packet["order_package_id"]
     rid = packet["review_id"]
     hold_like = act in ("hold", "flag_mechanics")
-    route = "operator_ask" if act == "flag_mechanics" else ("none" if act == "hold" else "recommended")
+    route = "operator_ask" if act == "flag_mechanics" else ("none" if act == "hold" else
+                                                            ("operator_ask" if unread else "recommended"))
     mandate = None if hold_like else ("MD-LIVE-TIGHTEN-SL" if act == "tighten_sl" else "MD-TRADE-DESK")
     bounds = packet.get("account_bounds") or []
     level = draft.get("level") if act in ("tighten_sl", "move_tp") else None
@@ -183,6 +197,9 @@ def compile_row(draft: dict, env: dict, *, now: datetime) -> dict:
                         "verified_readback": None},
         "model": MODEL_TIER, "session": str(draft.get("session") or "unknown"), "prompt_sha": None, "skill_sha": None,
         "packet_sha": env.get("packet_sha"),
+        **({"handoff": {"prior_decision_id": dh.get("prior_decision_id"), "verdict": hv, "reason": reason,
+                        "read_state": dh.get("read_state") if dh.get("read_state") in ("read", "could_not_look")
+                        else "could_not_look"}} if dh is not None else {}),
     }
 
 

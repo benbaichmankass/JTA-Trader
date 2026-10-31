@@ -636,6 +636,38 @@ def _price(leg: str, side: str, tel: dict, atr_mult: Optional[float], review_id:
             "population": table["population"], "read_state": table["read_state"], "source": rel}, None
 
 
+DESK_LEG = "claude_desk"
+DESK_DECISIONS = "comms/desk/decisions.jsonl"
+
+
+def _desk_rows() -> Optional[List[dict]]:
+    """Every desk decision row: main's mirror plus the ``desk/decisions`` branch tip (newer). None = could not look."""
+    texts = []
+    try:
+        texts.append((REPO / DESK_DECISIONS).read_text())
+    except OSError:
+        pass
+    try:
+        out = subprocess.run(["git", "-C", str(REPO), "show", f"origin/desk/decisions:{DESK_DECISIONS}"],
+                             capture_output=True, text=True, timeout=30)
+        if out.returncode == 0:
+            texts.append(out.stdout)
+    except (OSError, subprocess.SubprocessError):
+        pass
+    if not texts:
+        return None
+    rows: Dict[str, dict] = {}
+    for t in texts:
+        for ln in t.splitlines():
+            try:
+                r = json.loads(ln)
+            except ValueError:
+                continue
+            if isinstance(r, dict) and r.get("decision_id"):
+                rows[r["decision_id"]] = r
+    return list(rows.values())
+
+
 def build_packet(pkg: str, s: Snapshot, now: datetime, *, write_tables: bool = False,
                  cfg: Optional[Dict[str, dict]] = None, price: bool = True,
                  tables_out: Optional[Dict[str, dict]] = None) -> dict:
@@ -732,9 +764,11 @@ def build_packet(pkg: str, s: Snapshot, now: datetime, *, write_tables: bool = F
     corr = [{"order_package_id": o, "symbol": (s.packages.get(o) or {}).get("symbol"), "direction": (s.packages.get(o) or {}).get("direction")}
             for o in open_package_ids(s) if o != pkg and (s.packages.get(o) or {}).get("direction") == direction]
     prev = None
+    all_reviews: Optional[List[dict]] = None
     try:
         from src.runtime import live_review_due as _lrd
-        mine = [r for r in _lrd.read_reviews_merged(str(REVIEWS))["rows"] if r.get("order_package_id") == pkg]
+        all_reviews = _lrd.read_reviews_merged(str(REVIEWS))["rows"]
+        mine = [r for r in all_reviews if r.get("order_package_id") == pkg]
         mine.sort(key=lambda r: str(r.get("reviewed_at") or ""))
     except Exception:  # noqa: BLE001  # allow-silent: no previous_review beats a failed packet
         mine = []
@@ -744,6 +778,13 @@ def build_packet(pkg: str, s: Snapshot, now: datetime, *, write_tables: bool = F
     ctx3 = context_v3(s, pkg, view, meta, symbol, tf, bars, a_now, entry, sl, tp, leg, now, miss)
     if ctx3["live_vs_backtest"] is None:
         miss("context.live_vs_backtest", "per-leg live-vs-backtest read failed (api/bot/performance/recent); see context_v3")
+
+    handoff = None
+    if leg == DESK_LEG:  # DESK-HANDOFF-PROTOCOL (b): the opening desk record + the chain, for every wake
+        from src.runtime import desk_handoff as _dh
+        handoff = _dh.handoff_block(pkg, meta, _desk_rows(), all_reviews)
+        if handoff["read_state"] != "read":
+            miss("desk_handoff", "; ".join(handoff["missing"]) or "could not look")
 
     reads = [t for k, t in s.read_at.items()]
     cutoff = max(reads) if reads else now.strftime("%Y-%m-%dT%H:%M:%SZ")
@@ -755,6 +796,7 @@ def build_packet(pkg: str, s: Snapshot, now: datetime, *, write_tables: bool = F
                     "previous_review": prev, "symbol": symbol, "direction": direction},
         "context_v3": ctx3,
         "cost": cost,
+        **({"desk_handoff": handoff} if handoff is not None else {}),
         "features_at_review": {"atr_now_over_entry": atr_ratio, "bars_since_peak": tel.get("bars_since_peak") if tel else pos_r.get("barsSincePeak"),
                                "giveback_r": giveback, "open_r": open_r, "peak_r": peak_r,
                                "r_to_stop": tv("r_to_stop", "rToStop"), "r_to_target": tv("r_to_target", "rToTarget")},

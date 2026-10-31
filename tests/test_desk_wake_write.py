@@ -46,7 +46,8 @@ PROPOSE = {"action": "propose_entry", "session": "s", "confidence": "suggestive"
            "rationale": "r", "weighed": [{"symbol": "ETHUSDT", "side": "short", "horizon_bars": 12, "level": 105.0}],
            "proposal": {"symbol": "ETHUSDT", "side": "long", "horizon_bars": 12,
                         "entry": {"type": "limit", "level": 99.0, "good_till_bars": 3}, "stop": {"level": 96.0, "basis": "swing_level"},
-                        "tp": {"level": 105.0, "basis": "swing_level", "p_hit": 0.4}, "expected_r_net": 0.15, "thesis": "t"}}
+                        "tp": {"level": 105.0, "basis": "swing_level", "p_hit": 0.4}, "expected_r_net": 0.15, "thesis": "t",
+                        "invalidation_px": 96.0, "exit_plan": "brackets; exit early on a close below 97"}}
 NO_TRADE = {"action": "no_trade", "confidence": "suggestive", "basis": "ev_positive", "rationale": "r",
             "weighed": [{"symbol": "ETHUSDT", "side": "long", "horizon_bars": 12, "level": 99.0}]}
 

@@ -36,7 +36,8 @@ DRAFT = {"action": "propose_entry", "session": "s", "confidence": "suggestive", 
                       "entry": {"type": "market", "level": 100.0, "good_till_bars": 2},
                       "stop": {"level": 97.0, "basis": "swing_level"},
                       "tp": {"level": 104.0, "basis": "swing_level", "p_hit": 0.4},
-                      "expected_r_net": 0.1, "thesis": "t", "max_hold_min": 45}}
+                      "expected_r_net": 0.1, "thesis": "t", "max_hold_min": 45,
+                      "invalidation_px": 97.5, "exit_plan": "brackets plus a 45-min time stop"}}
 
 
 def _packet():
@@ -84,8 +85,7 @@ def test_everything_else_stays_a_shadow_row(scope, tmp_path):
 
 
 @pytest.mark.parametrize("mutate,needle", [
-    (lambda d: d["proposal"].pop("max_hold_min"), "max_hold_min is required"),
-    (lambda d: d["proposal"].update(max_hold_min=90), "max_hold_min is required"),
+    (lambda d: d["proposal"].update(max_hold_min=0), "max_hold_min"),
     (lambda d: d["proposal"]["entry"].update(type="limit"), "enters at `market`"),
 ])
 def test_a_live_proposal_must_be_the_short_hold_kind(mutate, needle, tmp_path):
@@ -178,3 +178,42 @@ def test_monitor_closes_at_market_once_max_hold_has_passed():
     assert cd.max_hold_verdict(pkg, NOW - timedelta(minutes=1)) is None
     assert cd.max_hold_verdict({"created_at": opened.isoformat(), "meta": {}}, NOW) is None  # no max hold: bracket only
     assert cd.max_hold_verdict({"meta": {"max_hold_min": 45}}, NOW) is None  # unreadable open time: bracket holds
+
+
+@pytest.mark.parametrize("mh", [None, 61, 240, 2880])
+def test_the_60_minute_cap_is_lifted(mh, tmp_path):
+    """DESK-HANDOFF-PROTOCOL (operator 2026-10-30 ~22:30Z): no max_hold_min cap on a live proposal; it is optional."""
+    d = copy.deepcopy(DRAFT)
+    if mh is None:
+        d["proposal"].pop("max_hold_min")
+    else:
+        d["proposal"]["max_hold_min"] = mh
+    row, p = compile_(draft=d)
+    assert row["label_source"] == "live"
+    assert dw.row_problems(row, p, SCHEMA) == [] and guard(row, p, tmp_path) == []
+
+
+def test_every_proposal_carries_its_handoff_record():
+    row, _ = compile_()
+    fc = row["proposal"]["forecast"]
+    assert fc["target_px"] == row["proposal"]["tp"]["level"] and fc["p_target"] == row["proposal"]["tp"]["p_hit"]
+    assert fc["direction"] == "with_trade" and fc["invalidation_px"] == 97.5 and row["proposal"]["exit_plan"]
+
+
+@pytest.mark.parametrize("mutate,needle", [
+    (lambda d: d["proposal"].pop("exit_plan"), "proposal keys must be exactly"),
+    (lambda d: d["proposal"].update(exit_plan=" "), "exit_plan is required"),
+    (lambda d: d["proposal"].update(invalidation_px=96.0), "between the entry and the stop"),
+    (lambda d: d["proposal"].update(invalidation_px=100.5), "between the entry and the stop"),
+])
+def test_a_proposal_without_a_valid_handoff_record_is_refused(mutate, needle, tmp_path):
+    d = copy.deepcopy(DRAFT)
+    mutate(d)
+    try:
+        row, p = compile_(draft=d)
+    except dw.Refused as e:
+        problems = e.problems
+    else:
+        problems = dw.row_problems(row, p, SCHEMA)
+        assert any(needle in x for x in guard(row, p, tmp_path)), "the guard agrees with the writer"
+    assert any(needle in x for x in problems), problems

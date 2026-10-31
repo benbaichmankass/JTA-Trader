@@ -89,8 +89,9 @@ def test_scan_kind_has_no_package_and_carries_the_books():
 def test_proposal_has_no_size_field_and_a_predictive_tp():
     props = DS["decisions"]["properties"]["proposal"]["properties"]
     assert not m.SIZE_KEYS & set(props)
-    # every field required except max_hold_min (optional on old rows; required <= 60 on a live row by the guard)
-    assert set(DS["decisions"]["properties"]["proposal"]["required"]) == set(props) - {"max_hold_min"}
+    # every field required except max_hold_min (an optional time stop, no cap) and the hand-off record
+    # (forecast + exit_plan: absent on rows before DESK-HANDOFF-PROTOCOL, compiled on every new row by desk_write)
+    assert set(DS["decisions"]["properties"]["proposal"]["required"]) == set(props) - {"max_hold_min", "forecast", "exit_plan"}
     assert {"level", "basis", "p_hit"} == set(props["tp"]["required"])
     assert "trail" not in DS["enums"]["tp_basis"]
 
