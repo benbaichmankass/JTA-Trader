@@ -403,6 +403,49 @@ def probe_desk_row_missing(now: datetime) -> dict:
                       f"(bound {DESK_ROW_MISSING_MIN} min): the wake did not run or did not write"}
 
 
+def probe_desk_orphan(now: datetime, *, open_pkgs: list[dict] | None = None, reviews: list[dict] | None = None) -> dict:
+    """DESK-HANDOFF-PROTOCOL (d): an open desk-opened position (``claude_desk``) with no desk decision -- the opening
+    row or any live-review row on the package -- inside the judgement cadence + slack. A flag, never a gate: the
+    position keeps its venue SL/TP. A journal or reviews read that fails is ``unknown`` (never ``ok``)."""
+    from src.runtime import desk_handoff  # noqa: PLC0415
+    if open_pkgs is None:
+        try:
+            import sqlite3  # noqa: PLC0415
+
+            from src.utils.paths import trade_journal_db_path  # noqa: PLC0415
+            conn = sqlite3.connect(f"file:{trade_journal_db_path()}?mode=ro", uri=True)
+            try:
+                conn.row_factory = sqlite3.Row
+                open_pkgs = [dict(r) for r in conn.execute(
+                    "SELECT order_package_id, strategy_name, symbol, created_at, meta FROM order_packages "
+                    "WHERE status = 'open' AND strategy_name = ?", (desk_handoff.DESK_LEG,))]
+            finally:
+                conn.close()
+        except Exception as exc:  # noqa: BLE001  # allow-silent: surfaced as unknown / could_not_look
+            return {"status": UNKNOWN, "read_state": "could_not_look",
+                    "detail": f"read_state could_not_look: journal open desk packages ({type(exc).__name__}: {exc})"}
+    if reviews is None:
+        try:
+            from src.runtime.live_review_due import read_reviews_merged  # noqa: PLC0415
+            rv = read_reviews_merged(None)
+            if rv.get("state") == "unreadable":
+                raise RuntimeError(str(rv.get("error")))
+            reviews = rv["rows"]
+        except Exception as exc:  # noqa: BLE001  # allow-silent: surfaced as unknown / could_not_look
+            return {"status": UNKNOWN, "read_state": "could_not_look",
+                    "detail": f"read_state could_not_look: live-review rows ({type(exc).__name__}: {exc})"}
+    bad = desk_handoff.orphans(open_pkgs, reviews, now)
+    bound = desk_handoff.CADENCE_HOURS + desk_handoff.SLACK_HOURS
+    if bad:
+        names = ", ".join(f"{o['order_package_id']} {o['symbol']} ({o['age_h']}h)" if o["age_h"] is not None
+                          else f"{o['order_package_id']} {o['symbol']} (last decision unreadable)" for o in bad[:5])
+        return {"status": BREACHED, "read_state": "read",
+                "detail": f"{len(bad)} of {len(open_pkgs)} open desk position(s) with no desk decision in {bound:g}h: "
+                          f"{names}. Each keeps its venue SL/TP; the next judgement_cadence wake should own it"}
+    return {"status": OK, "read_state": "read",
+            "detail": f"{len(open_pkgs)} open desk position(s), each with a desk decision inside {bound:g}h"}
+
+
 def _lr_thresholds(path: Path | None = None) -> tuple[float, float] | None:
     """(due_stale_minutes, rows_lag_minutes) from config/live_trade_review.yaml ``watch:``."""
     try:
@@ -810,6 +853,7 @@ def build(now: datetime | None = None, persist_seen: bool = True) -> dict:
             "report": probe_report(now),
             "desk_wake_post": probe_desk_wake_post(now),
             "desk_row_missing": probe_desk_row_missing(now),
+            "desk_orphan": probe_desk_orphan(now),
             "live_review_due_stale": probe_live_review_due_stale(now, persist=persist_seen),
             # TRAIL-PAUSE-PULSE: prop_trail_paused_<account>, one per executor
             # account with a state dir on this host; see prop_trail_watch.py.
@@ -833,6 +877,7 @@ PROBE_LABEL = {
     "report": "scheduled work report missing or broken",
     "desk_wake_post": "the desk packet+wake trigger stopped (producer silent, wake missing, or packet build/commit/post failing)",
     "desk_row_missing": "a desk packet landed more than 15 min ago and no desk decision row followed (the wake did not run or did not write)",
+    "desk_orphan": "a desk-opened position has had no desk decision inside the 4h judgement cadence + 1h slack (an orphan: it keeps its venue SL/TP, but nobody owns it)",
     "live_review_due_stale": "live trade review gone quiet (a due package unreviewed past the bound, or reviews on live-review/rows not reaching main)",
     **prop_trail_watch.LABELS,
     **prop_silence.LABELS,
@@ -1113,6 +1158,14 @@ def _self_test() -> int:
 
     now = datetime(2026, 10, 4, 7, 0, tzinfo=timezone.utc)
     today = now.date()
+    pk = {"order_package_id": "pkg-d1", "strategy_name": "claude_desk", "symbol": "BTCUSDT",
+          "created_at": "2026-10-04T00:00:00Z", "meta": "{}"}
+    check("desk_orphan: a desk position with no decision in 5h breaches",
+          probe_desk_orphan(now, open_pkgs=[pk], reviews=[])["status"] == BREACHED)
+    check("desk_orphan: a review 1h ago owns it",
+          probe_desk_orphan(now, open_pkgs=[pk], reviews=[{"order_package_id": "pkg-d1",
+                                                           "reviewed_at": "2026-10-04T06:00:00Z"}])["status"] == OK)
+    check("desk_orphan: no open desk positions is ok", probe_desk_orphan(now, open_pkgs=[], reviews=[])["status"] == OK)
     ao = {"id": "PI-20261001-x-0001", "state": "queued", "next_action": "ask_operator",
           "what": "decide X", "due_when": {"kind": "date", "due_date": "2026-10-01"}}
     old = {"id": "PI-20260920-x-0001", "state": "queued", "next_action": "dispatch_lane",

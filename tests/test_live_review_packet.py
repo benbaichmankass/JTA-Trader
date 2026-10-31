@@ -307,3 +307,38 @@ def test_weekly_drops_the_unfinished_week():
     daily = [{"time": t0 + i * 86400, "open": i, "high": i + 2, "low": i - 2, "close": i + 1} for i in range(16)]
     w = L.weekly(daily)
     assert len(w) == 2 and w[0]["open"] == 0 and w[0]["close"] == 7 and w[0]["high"] == 8 and w[1]["low"] == 5
+
+
+def _desk_snap():
+    s = _snap(telemetry={"rows": []})
+    s.packages["pkg-d"] = {"order_package_id": "pkg-d", "strategy_name": "claude_desk", "symbol": "BTCUSDT",
+                           "direction": "long", "entry": "100", "sl": "97", "tp": "106", "status": "open",
+                           "close_reason": None, "meta": json.dumps({"timeframe": "1h", "decision_id": "DD-20261025T1500Z-scan-1h-1"})}
+    s.candles["BTCUSDT|1h"] = {"candles": [], "error": "no_data"}
+    return s
+
+
+def test_a_desk_package_packet_carries_the_handoff_block(monkeypatch):
+    """DESK-HANDOFF-PROTOCOL (b): every wake on a desk-opened position gets the opening record and the chain."""
+    row = {"decision_id": "DD-20261025T1500Z-scan-1h-1", "proposal": {"symbol": "BTCUSDT", "side": "long",
+           "forecast": {"target_px": 106.0}, "exit_plan": "brackets", "entry": {"level": 100}, "stop": {"level": 97},
+           "tp": {"level": 106}}}
+    monkeypatch.setattr(L, "_desk_rows", lambda: [row])
+    p = _build("pkg-d", _desk_snap())
+    dh = p["desk_handoff"]
+    assert dh["opening"]["decision_id"] == row["decision_id"] and dh["opening"]["exit_plan"] == "brackets"
+    assert dh["prior_decision_id"] in (row["decision_id"],) or dh["prior_decision_id"].startswith("LR-")
+
+
+def test_a_desk_packet_whose_record_cannot_be_read_says_so(monkeypatch):
+    monkeypatch.setattr(L, "_desk_rows", lambda: None)
+    p = _build("pkg-d", _desk_snap())
+    assert p["desk_handoff"]["read_state"] == "could_not_look"
+    assert "desk_handoff" in {m["field"] for m in p["missing_inputs"]}
+
+
+def test_a_strategy_package_packet_has_no_handoff_block(monkeypatch):
+    monkeypatch.setattr(L, "_desk_rows", lambda: [])
+    s = _desk_snap()
+    s.packages["pkg-d"]["strategy_name"] = "ada_pullback_2h"
+    assert "desk_handoff" not in _build("pkg-d", s)

@@ -1,7 +1,8 @@
 # Short-hold lane (DESK-SHORT-HOLD-LANE): the legs whose packages get ONE Claude session for the life of the trade.
 # Read by src/runtime/short_hold_wake.py (the VM trigger + 5-min packets). Operator goal 2026-10-27 (approved,
 # manager relay): Claude manages a <= 1 h trade from one session; design docs/plans/claude-trading-desk-DESIGN.md
-# § 6.2/6.3 "per-trade spawned lane". First the desk's own Claude-originated trades (claude_desk; operator
+# § 6.2/6.3 "per-trade spawned lane". A desk trade has no max-hold cap since DESK-HANDOFF-PROTOCOL (2026-10-31): the
+# lane manages its first hard_cap_minutes, then the 4h judgement_cadence review owns it (src/runtime/desk_handoff.py). First the desk's own Claude-originated trades (claude_desk; operator
 # 2026-10-27 ~07:05Z: the lane is leg-agnostic and asks for the best trading decision), then the 15m scalp legs
 # rostered by lane DESK-8-SHORT-HOLD (bybit_1, demo money). A leg listed here that is not rostered, or is
 # execution: shadow, simply never opens a package. This list gates nothing about trading: it only decides which
