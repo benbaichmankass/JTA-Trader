@@ -118,12 +118,12 @@ def _starts_how(dow: int, hour: int, d0: date, d1: date) -> np.ndarray:
     return np.asarray(out, dtype=np.int64)
 
 
-def window_specs(anchors: tuple[str, ...] | None, how: bool, d0: date, d1: date):
+def window_specs(anchors: tuple[str, ...] | None, how: bool, d0: date, d1: date, lengths: tuple[int, ...] = LENGTHS):
     """Yield (name, length_min, starts_utc_epoch)."""
     for a in ANCHORS:
         if anchors is not None and a[0] not in anchors:
             continue
-        for L in LENGTHS:
+        for L in lengths:
             yield a[0], L, _starts_for_anchor(a, L, d0, d1)
     if how:
         for dw in range(7):
@@ -279,14 +279,14 @@ def scan_symbol(sym: str, bars: dict[str, np.ndarray], cfg: dict[str, Any]) -> l
     d0 = datetime.fromtimestamp(max(t0, int(bars["ts"][0])), tz=timezone.utc).date() - timedelta(days=1)
     d1 = datetime.fromtimestamp(min(t1, int(bars["ts"][-1])), tz=timezone.utc).date() + timedelta(days=1)
     base_vol: dict[int, np.ndarray] = {}
-    for L in LENGTHS:
+    for L in cfg["lengths"]:
         step = L * 60
         first = (int(bars["ts"][0]) // step + 1) * step
         starts = np.arange(first, int(bars["ts"][-1]), step, dtype=np.int64)
         wb = extract(bars, starts, L // 5)
         base_vol[L] = vol_by_fold(wb, fold_of, k_folds) if wb is not None else np.full(k_folds, np.nan)
     out: list[dict[str, Any]] = []
-    for name, L, starts in window_specs(cfg["anchors"], cfg["how"], d0, d1):
+    for name, L, starts in window_specs(cfg["anchors"], cfg["how"], d0, d1, cfg["lengths"]):
         w = extract(bars, starts, L // 5)
         if w is None or len(w["start"]) < 100:
             continue
@@ -361,7 +361,8 @@ def run(a: argparse.Namespace) -> dict[str, Any]:
     t1 = int(datetime.fromisoformat(a.end).replace(tzinfo=timezone.utc).timestamp())
     cfg = {"folds": a.folds, "t0": t0, "t1": t1, "vol_ratio": a.vol_ratio, "n_floor": a.n_floor, "alpha": a.alpha,
            "embargo_days": a.embargo_days, "anchors": tuple(a.anchors.split(",")) if a.anchors else None,
-           "how": not a.no_hour_of_week, "rules": RULES}
+           "how": not a.no_hour_of_week, "rules": tuple(a.rules.split(",")) if a.rules else RULES,
+           "lengths": tuple(int(x) for x in a.lengths.split(",")) if a.lengths else LENGTHS}
     symbols = [s.strip() for s in a.symbols.split(",") if s.strip()]
     given = dict(x.split("=", 1) for x in (a.data_csv or []))
     data_dir = Path(a.data_dir or (Path(a.out) / "data"))
@@ -411,7 +412,7 @@ def run(a: argparse.Namespace) -> dict[str, Any]:
                  "Crypto candles are Binance USD-M (PROXY for Bybit linear); funding is a directionless magnitude per 8h boundary crossed."),
         "decision_rule_id": a.rule_id, "data_inputs": sorted(set(inputs)),
         "measurement": {"thresholds": {"folds": a.folds, "vol_ratio": a.vol_ratio, "n_floor": a.n_floor, "alpha": a.alpha,
-                                       "embargo_days": a.embargo_days, "lengths_min": list(LENGTHS), "rules": list(RULES)},
+                                       "embargo_days": a.embargo_days, "lengths_min": list(cfg["lengths"]), "rules": list(cfg["rules"])},
                         "counts": {k: v for k, v in g.items() if k != "qualifying"},
                         "symbol_status": status, "symbols_without_data": [s for s, v in status.items() if v["state"] != "measured"],
                         "ranked_qualifying_cells": ranked, "shortlisted_cells": shortlist[:200], "vol_stable_top_by_ratio": vol_top},
@@ -490,7 +491,7 @@ def _self_test() -> int:
         _synth(8, 1500, False).to_csv(tdp / "NULLUSDT.csv", index=False)
         ns = argparse.Namespace(symbols="PLANTUSDT,NULLUSDT,GHOSTUSDT", days=0, start="2022-01-01", end="2026-02-01", folds=6,
                                 vol_ratio=1.5, n_floor=150, alpha=0.05, embargo_days=1, anchors="funding_16z,funding_08z,us_open",
-                                no_hour_of_week=False, data_csv=[f"PLANTUSDT={tdp/'PLANTUSDT.csv'}", f"NULLUSDT={tdp/'NULLUSDT.csv'}"],
+                                no_hour_of_week=False, lengths=None, rules=None, data_csv=[f"PLANTUSDT={tdp/'PLANTUSDT.csv'}", f"NULLUSDT={tdp/'NULLUSDT.csv'}"],
                                 data_dir=str(tdp), no_fetch=True, non_crypto_source="yfinance", rule_id="SELFTEST", out=str(tdp / "out"))
         out = run(ns)
         ranked = out["measurement"]["ranked_qualifying_cells"]
@@ -504,6 +505,17 @@ def _self_test() -> int:
         assert all(v is not None and v >= 1.5 for v in top["vol_ratio_by_fold"][:3]), top["vol_ratio_by_fold"]
         assert top["cost"]["perp"] and top["cost"]["fee_bps_rt"] > 0 and top["cost"]["slip_bps_rt"] > 0, top["cost"]
         assert (Path(td) / "out" / "verdict.json").exists() and out["decision_rule_id"] == "SELFTEST"
+        # 5. --lengths / --rules: only the requested lengths and rules are evaluated (2026-10-31, P3-VOLWIN-A2-longer-hold)
+        assert {L for _n, L, _s in window_specs(("us_open",), False, date(2023, 1, 2), date(2023, 1, 6), (120, 240))} == {120, 240}
+        ns2 = argparse.Namespace(**{**vars(ns), "lengths": "120,240", "rules": "C15,O15", "no_hour_of_week": True,
+                                    "anchors": "funding_16z,us_open", "out": str(tdp / "out2")})
+        out2 = run(ns2)
+        th = out2["measurement"]["thresholds"]
+        assert th["lengths_min"] == [120, 240] and th["rules"] == ["C15", "O15"], th
+        assert out2["measurement"]["counts"]["cells_evaluated"] > 0, out2["measurement"]["counts"]
+        for r in out2["measurement"]["shortlisted_cells"] + out2["measurement"]["ranked_qualifying_cells"]:
+            assert r["length_min"] in (120, 240) and r["rule"] in ("C15", "O15"), r
+        assert 60 not in (th["lengths_min"]) and not any(str(r["window"]).startswith("how_") for r in out2["measurement"]["shortlisted_cells"])
     print("vol_window_scan self-test OK")
     return 0
 
@@ -520,6 +532,8 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--alpha", type=float, default=0.05)
     ap.add_argument("--embargo-days", type=float, default=1.0)
     ap.add_argument("--anchors", default=None, help="comma subset of anchor names (tests); default all")
+    ap.add_argument("--lengths", default=None, help="comma list of window lengths in minutes (multiples of 5, >= 15); default 15,30,60")
+    ap.add_argument("--rules", default=None, help="comma subset of C5,C15,F5,F15,O15; default all")
     ap.add_argument("--no-hour-of-week", action="store_true")
     ap.add_argument("--non-crypto-source", choices=("yfinance", "dukascopy"), default="dukascopy")
     ap.add_argument("--data-csv", action="append", default=None, metavar="SYM=PATH")
@@ -535,6 +549,10 @@ def main(argv: list[str] | None = None) -> int:
         ap.error("--out is required")
     if a.folds % 2:
         ap.error("--folds must be even (discovery / confirmation halves)")
+    if a.lengths and any(int(x) % 5 or int(x) < 15 for x in a.lengths.split(",")):
+        ap.error("--lengths must be multiples of 5 minutes, each >= 15")
+    if a.rules and any(x not in RULES for x in a.rules.split(",")):
+        ap.error(f"--rules must be a subset of {RULES}")
     v = run(a)
     print(json.dumps({k: v[k] for k in ("verdict", "read_state", "n", "note")}, indent=2))
     return 0

@@ -1,0 +1,94 @@
+# Hand-authored 2026-10-31 by lane RESEARCH-PROP-REPLACEMENT-20261031 (Tier 1, Sonnet), dispatched by Manager Session 2026-10-31a. Decision rule registered BEFORE any run. Gates: none.
+id: RQ-20261031-a4e7-03
+title: 'Prop replacement candidate ada_pullback_2h: Stage 0 at the prop cost stack (fee 8 / slip 3 / funding 5 bps) then RULE-P5-GATE-BRK-PER-LEG-V3 on
+  breakout_2, tradeify_1 and velotrade_1, 1110 d and trailing 365 d'
+status: queued
+cadence: once
+kind: experiment
+theme: new_strategy_prop
+priority: 1
+roadmap:
+- L-PROP
+question: 'Does ada_pullback_2h (real-money Stage-0 PASS at bybit_2, the strongest recorded (net_r_oos +31.5 R, n 61, faithful); pullback family) clear
+  the prop superset as a one-leg book on all three prop accounts: V2 breach ceiling and EV > 0 at every seed AND a net-of-cost per-trade edge whose 95%
+  CI lower bound is > 0, on the 2023-10-13..2026-10-11 ledger at the prop stack, and is the trailing 365 d not negative (n >= 88)?'
+why_this_matters: 'Operator 2026-10-31 (pipeline PI-20261031-TD4QC5GP-0005, verbatim): "2 until we have a replacement" = trend_donchian_eth_prop stays on
+  the prop rosters only until a replacement passes. trend_donchian_eth_prop fails the widened-edge rule RQ-20261031-422a-01 (pooled n 8507, mean +0.005
+  R, ci_lo -0.032) and fails V2 on the gap-fixed ledger. This is one of four pre-registered candidates (a4e7-01..04), each graded on its own rule with the
+  batch denominator stated; none is selected among by P&L. Prior: docs/research/prop-replacement-2026-10-30/RESULT.md (eth_4h FAIL_EDGE; sol_4h narrow V3
+  survivor, CONTESTED on 365d).'
+power:
+  expected_n: 120
+  min_detectable_effect: 0.3
+  effect_units: R
+  sd: 1.2
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: 'Per-trade net-R sd about 1.2; n about 100 to 130 trades on a 3-year 2h/4h leg (recorded OOS n 46 to 135). The 95% CI half-width at n=120 is about
+    0.21 R, so only an edge of about 0.3 R or more can have a lower bound above 0: most outcomes will be FAIL_EDGE or INDETERMINATE by construction, which
+    is the honest reading of a thin leg. expected_n is an ESTIMATE from the recorded OOS n, not a measurement.'
+  feasibility:
+    source: none
+    accrual_basis: Re-measure of public price history at the prop stack; nothing accrues. If n < 88 on 3y the verdict is INDETERMINATE and the leg is not
+      a candidate until it accrues.
+decision_rule:
+  id: RULE-RQ-20261031-a4e7-03-PROP-CANDIDATE
+  registered_at: '2026-10-31T23:00:00Z'
+  registered_before_run: true
+  statistic: 'scripts/research/prop_candidate_gate.py (self-tested; chains exit_lever_ablation.py --grade stage0 arm P = fee 8 / slip 3 / funding 5 bps
+    per 24 h on ADAUSDT, 2023-10-13..2026-10-11 20:00, with scripts/research/prop_gate.py V2 + V3 and prop_ev_sim.py, 5 seeds x 1000 lives, one-leg book
+    at each account configured risk_pct, daily-DD switch 0.8, arms cur and ven). Windows: 3y = the whole ledger; 365d = entries >= 2025-10-11 20:00. Verdict
+    per cell: prop_gate.grade_v3.'
+  rule: PASS iff the V3 verdict is PASS on ALL THREE accounts on the 3y window and arm cur (V2 ceiling and EV>0 at every seed AND edge CI lower bound >
+    0). CONTESTED (reported as FAIL for routing) iff that holds but the 365d window has n >= 88 and median EV < 0 on >= 2 accounts. FAIL if any 3y/cur account
+    is FAIL or FAIL_EDGE. INDETERMINATE (verdict indeterminate) if n < 88 on 3y or the harness failed (read_state producer_failed). Thresholds are not changed
+    after any result; the ven arm is reported, not graded.
+  min_n: 88 trades on the 3y window
+  proposal_mapping: 'PASS -> the manager brings ONE Tier-3 swap PR to the operator: pull trend_donchian_eth_prop from breakout_2 / tradeify_1 / velotrade_1
+    and add this leg with the SAME risk_pct and mirror rules per OPERATING-PLAN, citing this record and the batch denominator (k PASS of 4). If more than
+    one candidate PASSes, the PR proposes the one with the higher worst-seed EV percent at breakout_2 on the 3y cur cell, stated before either result is
+    read. Nothing is applied by this unit; the leg must also be on the soak path (a Stage-1 mechanical count of 1 to 2 clean trades).'
+  what_it_does_not_do: Changes no roster, risk, sizing or config; reads no live book P&L; prices the leg ALONE (the gate population), not the account book;
+    a PASS is a discovery with a batch denominator of 4, not a confirmation.
+compute: cpu_long
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 3.0
+  est_minutes: 45
+  basis: One harness run (about 1100 d public candle fetch plus a backtest, about 45 min in RQ-20261015-1bf3-05) then 60 prop_ev_sim cells (about 65 s each
+    over 4 procs, about 17 min); estimate, not measured for this leg.
+value:
+  bucket: information
+  usd_at_stake_per_month: 300
+  confidence: 0.15
+  basis: 'stand-in: decides whether a replacement for the one rostered prop leg exists; no balances stated'
+run:
+  workflow: research-script-run.yml
+  timeout_minutes: 150
+  command:
+  - python3
+  - scripts/research/prop_candidate_gate.py
+  - --leg
+  - ada_pullback_2h
+  - --out
+  - '{out_dir}'
+  inputs:
+    research_unit: RQ-20261031-a4e7-03
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+practice_precedent: 'docs/reference/trading-and-model-practice-principles.md (judge an edge ex a single window; track every configuration tried): four candidates
+  fixed before any run, denominator stated'
+related:
+- PI-20261031-TD4QC5GP-0005
+- RQ-20261031-422a-01
+- RQ-20261029-9a2c-01
+- docs/research/prop-replacement-2026-10-30/RESULT.md
+- scripts/research/prop_gate.py
+- comms/prop_survival/README.md
+programme: P5
+intervention_controls:
+  not_applicable: offline prop survival simulation; no in-trade action is evaluated

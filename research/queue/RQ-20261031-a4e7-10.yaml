@@ -1,0 +1,141 @@
+# Hand-authored 2026-10-31 by lane RESEARCH-PROP-REPLACEMENT-20261031 (Tier 1, Sonnet), dispatched by Manager Session 2026-10-31a. Decision rule registered BEFORE any run. Gates: none.
+id: RQ-20261031-a4e7-10
+title: 'Direction head at 1h: does ExtraTrees beat the class prior on log-loss on BTC, ETH and SOL?'
+status: queued
+cadence: once
+theme: ml_health
+priority: 2
+kind: experiment
+programme: P2
+roadmap:
+- M25
+question: On the latest 60,000 1h bars of BTCUSDT, ETHUSDT and SOLUSDT, is `et` better than prior by at least 0.001 nats on the CV mean log-loss on ALL
+  three symbols?
+why_this_matters: Tree ensembles with heavy randomisation are the strongest classical learners on noisy small-signal targets; the 1h direction null was
+  measured with boosting and the logit only.
+ml_consumer:
+  consumer: src/runtime/regime_shadow.py
+  decision: whether the direction head family/horizon advances candidate -> shadow, or the price-only null is extended; acts through no order path
+  legs:
+  - trend_donchian_eth_4h
+  - trend_donchian_xrp_4h
+  - xrp_pullback_2h
+  - ada_pullback_2h
+  book: money
+power:
+  expected_n: 36000
+  min_detectable_effect: 0.1
+  effect_units: sd
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: 'tail_rows 60000 with min_train_frac 0.4 leaves ~36000 out-of-sample rows over 5 folds per symbol; d=0.1 paired needs ~785 rows; bars are autocorrelated
+    so effective n is lower: the rule requires the same-direction CV mean on EVERY symbol. expected_n is an ESTIMATE, not a measurement.'
+  feasibility:
+    source: none
+    accrual_basis: 'Fixed by construction (tail_rows of a nightly-rebuilt shard): n does not grow with waiting, so an underpowered result is reported as
+      such and the follow-up is a different dataset, not a re-run.'
+decision_rule:
+  id: RULERQ20261031a4e710
+  registered_at: '2026-10-31'
+  registered_before_run: true
+  statistic: Paired per-fold difference in log-loss (prior minus et, positive = et better) on identical purged folds (5, embargo 24 rows), mean over folds,
+    per symbol.
+  rule: PASS IF et minus prior is >= 0.001 nats on the CV mean on ALL of BTCUSDT, ETHUSDT and SOLUSDT. FAIL IF it is below 0.0 nats on EVERY symbol (every
+    candidate evaluated); a mixed result (some symbols pass, not all) is INDETERMINATE and reported per symbol. INDETERMINATE if folds < 3, a shard is stale/unavailable
+    or the arm is unavailable. Thresholds are not changed after any result.
+  min_n: 3 usable CV folds per symbol; reported n_rows per symbol.
+  what_it_does_not_do: 'Builds, serves and promotes nothing, touches no config; a log-loss PASS is not edge and not a P&L figure. A FAIL closes this configuration
+    only, not the learner family. Batch: 10 units in a4e7-05..14, each reported on its own rule; none selected among.'
+intervention_controls:
+  not_applicable: a model-quality bake-off on a static published shard, not an in-trade action or active-management intervention
+compute: auto
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  published_data: metis-market-data
+  peak_memory_gb: 3.0
+  est_minutes: 30
+  basis: 'Estimate, NOT measured: 3 shards x 2 arms x 5 folds on published shards, comparable to RQ-20261030-41cc-26; compute: auto routes it to the Kaggle
+    CPU kernel.'
+value:
+  bucket: ai_trader
+  usd_at_stake_per_month: 150
+  confidence: 0.2
+  basis: 'stand-in: gates whether the head is worth advancing on the money legs; not a measured P&L'
+run:
+  command:
+  - python3
+  - scripts/research/ml_bakeoff.py
+  - --unit
+  - '{unit}'
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 60
+  inputs:
+    research_unit: RQ-20261031-a4e7-10
+ml_bakeoff:
+  task: classification
+  metric: logloss
+  higher_is_better: false
+  dataset:
+    kind: jsonl
+    groups:
+      BTCUSDT_1h:
+        path: datasets-out/market_features/BTCUSDT/1h/v002/data.jsonl
+      ETHUSDT_1h:
+        path: datasets-out/market_features/ETHUSDT/1h/v002/data.jsonl
+      SOLUSDT_1h:
+        path: datasets-out/market_features/SOLUSDT/1h/v002/data.jsonl
+    ts_col: ts
+    target: direction_label
+    features:
+    - rolling_log_return_vol
+    - log_return
+    - log_return_lag_1
+    - log_return_lag_2
+    - hour_of_day
+    - dayofweek
+    tail_rows: 60000
+  cv:
+    folds: 5
+    embargo_rows: 24
+    min_train_frac: 0.4
+  baseline: prior
+  controls: []
+  candidates:
+  - et
+  learners:
+    prior:
+      kind: prior
+    et:
+      kind: sklearn_extratrees
+      params: {}
+  rule:
+    min_folds: 3
+    pass_if:
+    - group:
+      - BTCUSDT_1h
+      - ETHUSDT_1h
+      - SOLUSDT_1h
+      vs: baseline
+      window: cv
+      op: '>='
+      value: 0.001
+    fail_if_no_candidate_reaches:
+    - group: any
+      vs: baseline
+      window: cv
+      op: '>='
+      value: 0.0
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+practice_precedent: 'M6 (docs/reference/trading-and-model-practice-principles.md): purged, embargoed walk-forward CV; a log-loss lift is reported per symbol,
+  never pooled; the control arm is the strongest classical feature set, not only the class prior.'
+related:
+- RQ-20261031-d5dd-20
+- RQ-20261030-41cc-26
+- scripts/research/ml_bakeoff.py
+- research/programmes/02-ai-trader.yaml
