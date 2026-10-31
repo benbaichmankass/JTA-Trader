@@ -84,6 +84,8 @@ The strategy already runs its brackets, its trail and its time stop, and if you 
    - `evidence`: the packet fields you used.
 
    Every forecast is graded on what actually traded next (direction, Brier of `p_target`). Calibration is how the models learn how much weight your view deserves.
+
+   **Continue the last call (LTR-PREV-FORECAST, 2026-10-31).** When the packet's `context.previous_review` is not null, it carries the previous review's `forecast` (verbatim, `thesis` inside it; `null` when that row wrote none) and its `reason` (cut to 400 chars). Before you write yours, say in your `reason` whether that forecast held (was `target_px` or `invalidation_px` touched, did price go the way `direction` said, inside `horizon_bars`?), then either carry it forward (same target and invalidation, updated `p_target`) or revise it and say what changed. `previous_review.forecast: null` means there is nothing to grade; start fresh and do not invent a prior view.
 3. **Does the view beat what HOLD will do?** Compare it with `exit_plan`, the bracket the strategy will run. If HOLD already expresses your view (the target and stop are where you would put them), `hold` + `judgement` is the right call, with the forecast. Otherwise name the bracket move or reduction that expresses it: `move_tp` to your target, `widen_sl` / a structure stop at your invalidation, `partial_close` / `close` when you expect the move against. The action must follow from the forecast.
 4. **Book and events.** A view on one trade that is really the same bet as three others (`book`), or that sits across a scheduled event, is said in `context_flags` and can change the size of the call.
 

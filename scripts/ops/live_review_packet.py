@@ -668,6 +668,25 @@ def _desk_rows() -> Optional[List[dict]]:
     return list(rows.values())
 
 
+PREV_REASON_MAX = 400  # chars of the prior row's recommendation.reason carried into previous_review (packet size)
+
+
+def previous_review_block(r: dict) -> dict:
+    """The packet's ``context.previous_review`` for the newest prior review row on a package.
+
+    The first four keys are the original shape. ``forecast`` is the prior row's ``forecast`` object verbatim (its
+    ``thesis`` is inside it), or an explicit None when that row carries none (mechanics / record_only / pre-rule
+    rows): never a fabricated value. ``reason`` is the prior recommendation's reason, cut to PREV_REASON_MAX."""
+    rec = r.get("recommendation") or {}
+    fc = r.get("forecast")
+    reason = rec.get("reason")
+    if isinstance(reason, str) and len(reason) > PREV_REASON_MAX:
+        reason = reason[:PREV_REASON_MAX - 1] + "\u2026"
+    return {"review_id": r.get("review_id"), "reviewed_at": r.get("reviewed_at"),
+            "action": rec.get("action"), "route": rec.get("route"),
+            "forecast": fc if isinstance(fc, dict) and fc else None, "reason": reason}
+
+
 def build_packet(pkg: str, s: Snapshot, now: datetime, *, write_tables: bool = False,
                  cfg: Optional[Dict[str, dict]] = None, price: bool = True,
                  tables_out: Optional[Dict[str, dict]] = None) -> dict:
@@ -773,8 +792,7 @@ def build_packet(pkg: str, s: Snapshot, now: datetime, *, write_tables: bool = F
     except Exception:  # noqa: BLE001  # allow-silent: no previous_review beats a failed packet
         mine = []
     for r in mine[-1:]:
-        prev = {"review_id": r.get("review_id"), "reviewed_at": r.get("reviewed_at"),
-                "action": (r.get("recommendation") or {}).get("action"), "route": (r.get("recommendation") or {}).get("route")}
+        prev = previous_review_block(r)
     ctx3 = context_v3(s, pkg, view, meta, symbol, tf, bars, a_now, entry, sl, tp, leg, now, miss)
     if ctx3["live_vs_backtest"] is None:
         miss("context.live_vs_backtest", "per-leg live-vs-backtest read failed (api/bot/performance/recent); see context_v3")

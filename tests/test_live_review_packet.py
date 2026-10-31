@@ -342,3 +342,35 @@ def test_a_strategy_package_packet_has_no_handoff_block(monkeypatch):
     s = _desk_snap()
     s.packages["pkg-d"]["strategy_name"] = "ada_pullback_2h"
     assert "desk_handoff" not in _build("pkg-d", s)
+
+
+def test_previous_review_carries_the_prior_forecast_verbatim():
+    """LTR-PREV-FORECAST: the prior row's forecast (thesis inside) reaches the next reviewer, original keys unchanged."""
+    fc = {"thesis": "bounce stalls under 98.5", "direction": "with_trade", "target_px": 92.32, "p_target": 0.42,
+          "invalidation_px": 98.54, "horizon_bars": 6, "timeframe": "4h", "evidence": ["chart.swings"]}
+    row = {"review_id": "LR-1", "reviewed_at": "2026-10-31T10:00:00Z", "forecast": fc,
+           "recommendation": {"action": "hold", "route": "none", "reason": "x" * 1000}}
+    pr = L.previous_review_block(row)
+    assert pr["forecast"] == fc
+    assert (pr["review_id"], pr["reviewed_at"], pr["action"], pr["route"]) == ("LR-1", "2026-10-31T10:00:00Z", "hold", "none")
+    assert len(pr["reason"]) == L.PREV_REASON_MAX
+
+
+def test_previous_review_without_a_forecast_is_an_explicit_null():
+    for row in ({"review_id": "LR-0", "recommendation": {"action": "hold"}},
+                {"review_id": "LR-0", "forecast": None, "recommendation": {"action": "hold"}}):
+        pr = L.previous_review_block(row)
+        assert "forecast" in pr and pr["forecast"] is None and pr["reason"] is None
+
+
+def test_packet_previous_review_is_the_newest_row_with_its_forecast(monkeypatch):
+    from src.runtime import live_review_due as lrd
+    old = {"order_package_id": "pkg-d", "review_id": "LR-a", "reviewed_at": "2026-10-31T08:00:00Z", "forecast": {"thesis": "old"}}
+    new = {"order_package_id": "pkg-d", "review_id": "LR-b", "reviewed_at": "2026-10-31T09:00:00Z",
+           "forecast": {"thesis": "new"}, "recommendation": {"action": "hold", "reason": "r"}}
+    monkeypatch.setattr(lrd, "read_reviews_merged", lambda path: {"rows": [new, old]})
+    monkeypatch.setattr(L, "_desk_rows", lambda: [])
+    s = _desk_snap()
+    s.packages["pkg-d"]["strategy_name"] = "ada_pullback_2h"
+    pr = _build("pkg-d", s)["context"]["previous_review"]
+    assert pr["review_id"] == "LR-b" and pr["forecast"] == {"thesis": "new"}
