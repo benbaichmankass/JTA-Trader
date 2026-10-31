@@ -2,21 +2,32 @@
   "id": "LTR-CORPUS-REAL-MONEY-LEGS",
   "title": "Full-history LTR corpora (<leg>__trades.jsonl + <leg>__corpus.json) for every real-money and prop leg, so live reviews price options from tables (n>=20 per cell) instead of judgement",
   "phase": null,
-  "state": "in_flight",
+  "state": "done",
   "owner": "manager",
   "lane": "session_01AFoLuKcjgyBdWeA73z9NtW",
   "model": "claude-sonnet-5-5",
   "ceiling_usd": 10,
   "spend_usd": null,
   "tier": 1,
-  "prs": [],
+  "prs": [
+    21867
+  ],
   "blocked_on": [],
-  "note": "MEASURED 09:23Z on the first MD-LTR-ADA-AUTO packet: the VM packet generator prices ADA from comms/strategy_evidence/runs/2026-10-28/ada_pullback_2h__trades.jsonl (61 trades, 14 comparable shorts -> every cell insufficient_n, n_floor 20), NOT the full-history corpus (comms/strategy_evidence/ltr_corpus/ada_pullback_2h, #21159). So the auto-apply reviewer decides on judgement only. Scope add: point live_review_packet.py --corpus auto at the full-history corpus for every real-money/prop leg. [Manager Session 2026-10-31a, 10:00Z] Dispatched (Sonnet, fresh, 10 USD) as the one build lane: week's priority (judgement desk). Motivation MEASURED: the 08:00Z book review (11 pkgs, 63c14da1cd13) made 4 of 8 holds and both tightens on judgement for lack of priced cells. Scope adds the packet builder --corpus auto switch (Tier 2, landing hold).",
+  "note": "Built 2026-10-31 (PR 21867, Tier 2 hold). Corpora: ada 406, xrp_pullback_2h 404, eth_4h 446 (forming, fee re-costed), sol_prop 589 (forming, re-costed), eth_prop 1182, xrp_4h 74, iaum 68. xrp_4h (16 comparable shorts) and iaum (15) stay insufficient_n: their whole history is that short. CLOSING OBSERVATION: first judgement_cadence packet after deploy whose priced_options.corpus_source == ltr_full_history with n >= 20 in the cell the review uses. [Manager Session 2026-10-31a, 12:08Z] DONE: MERGED #21867 (d2127a60); DEPLOYED via git-sync (packet builder is a subprocess script); OBSERVED in event-triggered packet LR-20261031T1204Z-pkg-06447eb2d3af47f0 (ETH 4h, bybit_2, structure_break): priced_options.corpus_source=ltr_full_history, corpus comms/strategy_evidence/ltr_corpus/trend_donchian_eth_4h__trades.jsonl, hold cell n=128 (was n=44 at 08:00Z), reviewer row 247f954d493a. Lane cost 2.96 USD vs 10 ceiling.",
   "priority_rank": 2,
   "roadmap": [
     "L-AM-STANDARD"
   ],
-  "updated_at": "2026-10-31T10:00:38Z",
+  "updated_at": "2026-10-31T12:07:29Z",
   "updated_by": "session_01AFoLuJwBvR58WBtD4qc5Gp",
+  "writeback": {
+    "roadmap": "L-AM-STANDARD: full-history LTR corpora for all 7 real-money/prop legs; packet --corpus auto records corpus_source",
+    "arch": "none: no architecture change (offline research data + packet read path)"
+  },
+  "observation": {
+    "what": "first judgement_cadence live-review packet after deploy has priced_options.corpus_source == ltr_full_history with n >= 20 comparable trades in the cell the review uses",
+    "how_to_check": "read the newest comms/live_review/packets/*.json (or live-review/rows branch) for a real-money/prop package: priced_options.corpus_source, .corpus_trades, .population.comparable >= 20",
+    "due_by": "2026-11-03T00:00Z"
+  },
   "_seq": 786
 }

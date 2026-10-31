@@ -129,3 +129,16 @@ def test_the_schema_admits_the_handoff_object():
     assert v.row_problems(row, "reviews", schema) == []
     row["handoff"]["verdict"] = "maybe"
     assert v.row_problems(row, "reviews", schema)
+
+
+def test_trigger_first_orphan_bound_is_the_daily_floor_and_closed_markets_are_not_orphans():
+    cfg = lrd.load_config(str(ROOT / "config/live_trade_review.yaml"))
+    hours, skip_closed = dh.trigger_first_bound(cfg)
+    assert skip_closed and hours == float(cfg["events"]["daily_floor"]["hours"])
+    off = {"events": {"judgement_cadence": {"hours_by_timeframe": {"2h": 4}}, "daily_floor": {"hours": 24}}}
+    assert dh.trigger_first_bound(off) == (dh.CADENCE_HOURS, False)                     # gate off: the old 4h bound
+    sun = datetime(2026, 11, 1, 12, 0, tzinfo=timezone.utc)
+    pkgs = [{"order_package_id": "etf", "strategy_name": dh.DESK_LEG, "symbol": "SPY", "created_at": "2026-10-30T12:00:00Z"},
+            {"order_package_id": "btc", "strategy_name": dh.DESK_LEG, "symbol": "BTCUSDT", "created_at": "2026-10-30T12:00:00Z"}]
+    assert [o["order_package_id"] for o in dh.orphans(pkgs, [], sun)] == ["etf", "btc"]
+    assert [o["order_package_id"] for o in dh.orphans(pkgs, [], sun, skip_closed_markets=True)] == ["btc"]
