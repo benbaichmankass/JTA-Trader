@@ -1,0 +1,18 @@
+{
+  "due_when": {
+    "clears_when": "an ltr-wake marker entry for a Stage-2 package lists both the live account and its mirror",
+    "due_date": "2026-11-07",
+    "kind": "date"
+  },
+  "id": "PI-20261031-TD4QC5GP-0003",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "Manager Session 2026-10-31a (session_01AFoLuJwBvR58WBtD4qc5Gp), LTR book review 2026-10-31T08:00Z, rows commit 63c14da1cd13 on live-review/rows (reviewer session_01AFoLuMiTY1eUre6PZYbLxC)",
+    "rerun": "read the accounts field of a Stage-2 entry in the next ltr-wake comment on ops-flags #17895"
+  },
+  "severity": "low",
+  "state": "queued",
+  "tier": 1,
+  "what": "ltr-wake marker entries list only the primary account per package, while the packets carry the mirror accounts too (bybit_portfolio, alpaca_portfolio) in account_bounds (REPORTED by the 08:00Z book reviewer). The marker should name every account carrying the package so a reader of the comment sees the whole exposure."
+}
