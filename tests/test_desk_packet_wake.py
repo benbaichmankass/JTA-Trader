@@ -308,8 +308,8 @@ def test_workflow_post_step_skips_an_odd_bar(tmp_path, capsys, every_2h):
 def _pk(open_ids=(), near=(), px=None, atr=2.0, near_read="read"):
     items = [{"order_package_id": i, "leg": "l", "symbol": "BTCUSDT", "status": "open", "bars_to_signal": None}
              for i in open_ids]
-    items += [{"order_package_id": None, "leg": l, "symbol": s, "side": "long", "status": "near_signal",
-               "bars_to_signal": 1} for l, s in near]
+    items += [{"order_package_id": None, "leg": lg, "symbol": s, "side": "long", "status": "near_signal",
+               "bars_to_signal": 1} for lg, s in near]
     uni = [{"symbol": s, "tier": "full", "last_close": p, "atr": atr} for s, p in (px or {"BTCUSDT": 100.0}).items()]
     return {"universe": uni, "system_book": {"read_state": "read", "near_signals_read_state": near_read, "items": items},
             "desk_book": {"read_state": "read", "items": []}}
@@ -346,7 +346,7 @@ def _woken_marker(fp, pid="DP-prev", bar="2026-10-26T16:00:00Z"):
 
 def _produce_pk(tmp_path, net, pk):
     stage = make_stage(tmp_path)
-    (stage / f"comms/desk/packets/DP-20261026T1703Z-scan-1h.json").write_text(json.dumps(pk))
+    (stage / "comms/desk/packets/DP-20261026T1703Z-scan-1h.json").write_text(json.dumps(pk))
     return dw.run_once(fetch=net.fetch, auth_fn=lambda: "Basic eA==", http=net.http, now_fn=lambda: NEXT,
                        receipt=tmp_path / "r.json", pr_fn=lambda: 17895, build_fn=lambda n, t: (stage, None),
                        commit_fn=lambda st, pid, a, h: ("c" * 40, None))

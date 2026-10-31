@@ -15,7 +15,7 @@
   "blocked_on": [],
   "note": "[Manager Session 2026-10-31a, ~10:45Z] OPERATOR DECISION 2026-10-31, verbatim excerpt: 'Maybe in general, that should be the workflow, like, have more trigger-based events and not waste capacity on regular reviews if there's nothing new really to review.' Popup answer verbatim: 'Yes, build it (Recommended)'. Target: live before Mon 2026-11-02 13:30Z when the weekend switch (WEEKEND-TRIGGER-ONLY) is restored, so the restore brings back the new rule, not the fixed 4h slot. Locus: src/runtime/live_review_due.py judgement_cadence_event (+ daily_floor) and scripts/ops/desk_wake_marker.py.  [lane TRIGGER-FIRST-REVIEWS, 2026-10-31] PR #21883 (Tier 2, landing hold; replaces #21881, rebuilt on a fresh branch). NOT yet merged or deployed. CLOSING OBSERVATION: after the Mon 2026-11-02 13:30Z weekend-switch restore, the first weekday slot where the live-review due check lists a closed-market or nothing-new package in skipped_slots with its reason (skipped_closed_market / skipped_nothing_new) while a package that moved >= 0.5 ATR is reviewed; and a desk bar with receipt state skipped_nothing_new. Default 0.5 ATR ESTIMATED on 113 pairs / 34 packages (rows 2026-10-25..31).",
   "priority_rank": 1,
-  "updated_at": "2026-10-31T11:31:49Z",
+  "updated_at": "2026-10-31T11:52:11Z",
   "updated_by": "session_01AFoLuMayLRYRMLq9QJKt9W",
   "roadmap": [
     "L-DESK",
@@ -24,6 +24,11 @@
   "writeback": {
     "roadmap": "L-DESK/L-ATM: scheduled review slots and the desk scan wake are trigger-first (closed market = no slot; fire only when something is new) - done in this PR",
     "arch": "docs/ARCHITECTURE-CANONICAL.md dated row 2026-10-31 TRIGGER-FIRST-REVIEWS (review pipeline cadence contract)"
+  },
+  "observation": {
+    "what": "After the Mon 2026-11-02 13:30Z weekend-switch restore, the first weekday slot where the live-review due check lists a closed-market or nothing-new package in skipped_slots with its reason (skipped_closed_market / skipped_nothing_new) while a package that moved >= 0.5 ATR is reviewed; and a desk scan bar with receipt state skipped_nothing_new.",
+    "how_to_check": "GET /api/diag/live_review_due (skipped_slots, skipped_slots_count) and /api/diag/log_file?name=desk_wake_post_receipt (state) on a weekday after the restore.",
+    "due_by": "2026-11-04"
   },
   "_seq": 853
 }
