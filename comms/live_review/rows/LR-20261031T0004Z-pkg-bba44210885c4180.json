@@ -1,0 +1,110 @@
+{
+ "schema_version": 1,
+ "review_id": "LR-20261031T0004Z-pkg-bba44210885c4180",
+ "reviewed_at": "2026-10-31T00:06:00Z",
+ "order_package_id": "pkg-bba44210885c4180",
+ "trade_id": null,
+ "leg": "trend_donchian_ada_4h",
+ "accounts": [
+  "bybit_1"
+ ],
+ "trigger": {
+  "event": "structure_break",
+  "level": "2026-10-30T20:00:00+00:00",
+  "l0_snapshot_at": "2026-10-31T00:04:14Z"
+ },
+ "info_cutoff_at": "2026-10-31T00:04:14Z",
+ "state": {
+  "atr_now_over_entry": 1.2,
+  "bars_held": 7,
+  "giveback_r": 1.1895,
+  "open_r": -0.4026,
+  "peak_provenance": "estimated",
+  "peak_r": 0.7869,
+  "regime_cell_entry": null,
+  "regime_cell_now": null,
+  "sl": 0.20172857,
+  "tp": 0.1719108
+ },
+ "features_at_review": {
+  "atr_now_over_entry": 1.2,
+  "bars_since_peak": 5,
+  "giveback_r": 1.1895,
+  "open_r": -0.4026,
+  "peak_r": 0.7869,
+  "r_to_stop": 0.5974,
+  "r_to_target": 2.131
+ },
+ "mechanics": {
+  "verdict": "could_not_look",
+  "evidence": "1 account(s) could not be read"
+ },
+ "options": [
+  {
+   "action": "hold",
+   "level": null,
+   "n": 13,
+   "mean_r": null,
+   "sd_r": null,
+   "worst_r": null,
+   "net": null
+  }
+ ],
+ "outcome_table_source": "comms/live_review/tables/LR-20261031T0004Z-pkg-bba44210885c4180.json",
+ "recommendation": {
+  "action": "partial_close",
+  "level": null,
+  "level_atr": null,
+  "ev_delta_r": null,
+  "worst_case_delta_r": null,
+  "basis": "judgement",
+  "confidence": "anecdote",
+  "evidence_source": "judgement",
+  "judgement_confidence": 0.55,
+  "reason": "close broke since-entry high by >0.1 ATR against the short, giveback 1.19R from 0.79R peak, now -0.40R with news reduce and 10 other open shorts; hold cell n=13 < floor 20; halving size cuts crowded exposure while both brackets stay and trend ADX 33 keeps the TP live. Expected: modest gain vs hold (~+0.05R), mainly lower variance; hold is close behind.",
+  "size_fraction": 0.5,
+  "size_multiplier": null
+ },
+ "judge_prior": null,
+ "applied": false,
+ "apply_policy": {
+  "bound_r": 0.25,
+  "within_bound": null,
+  "tighten_r": null
+ },
+ "shadow_policy": {
+  "bound_r": 0.5,
+  "within_bound": null,
+  "would_apply": null,
+  "tighten_r": null
+ },
+ "context_flags": [
+  "judgement: hold cell n=13 < floor 20, no measured mean (thin, not measured)",
+  "judgement: tighten cells all invalid_level",
+  "mechanics: could_not_look, bybit_open_orders diag timeout (known, filed); no mismatch evidence",
+  "news: reduce (adjustment -0.186)",
+  "correlated exposure: 10 other open short packages",
+  "regime: ADX 33.1 trending, ATR ratio 1.2 (within 0.67-1.5, no overlay)",
+  "missing_inputs: funding, regime cell entry/now"
+ ],
+ "account_reads": [
+  {
+   "account_id": "bybit_1",
+   "account_class": "paper",
+   "read": "unknown",
+   "evidence": "bybit_orders read failed: diag bybit_open_orders: exit 3 ('bybit_open_orders' \u2014 https://ict-bot.duckdns.org -> unreachable. Use the issue relay only if every candidate is 'unreachable'; an 'answered_*' means the web-api is UP "
+  }
+ ],
+ "disposition": {
+  "route": "recommended",
+  "mandate": "MD-TRADE-DESK",
+  "action_issue": null,
+  "applied_at": null,
+  "verified_readback": null
+ },
+ "model": "sonnet-tier (repo-less reviewer)",
+ "session": "session_01AFoLuK1SR3Zt4ZRsWUAqwQ",
+ "prompt_sha": null,
+ "skill_sha": null,
+ "packet_sha": "2bdadd6376e59b32e63823764ac5e43bbde22211a4b9f3838c248bae1fa260d4"
+}
