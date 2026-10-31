@@ -15,7 +15,7 @@
   "blocked_on": [],
   "note": "[Manager Session 2026-10-31a, 07:55Z] System-first defect (the gate decides real-money prop rosters; every v2 PASS to date is not evidence of edge). MEASURED basis: docs/research/e4-prop-sim-2026-10-30/RESULT.md (E4 ledger n=1619; trailing-365d n=847, mean net R -0.017, v2 PASS all 12 cells). Done = a committed self-test where the fixed gate FAILS a zero-edge null ledger on all 3 prop accounts, prior v2 verdicts re-graded in a committed record, and any currently rostered prop leg whose PASS does not survive is put to the operator (Tier 3; do not edit rosters). Clears PI-20261030-9KC5G3FG-0007. Closing observation: PR #21851 merged AND the operator's Tier-3 call on trend_donchian_eth_prop (V3 FAIL_EDGE 12/12 cells; edge not proven at 95%, not zero) recorded on this row. Self-test tests/test_prop_gate_edge.py and re-grade docs/research/prop-gate-edge-regrade-2026-10-31/ are committed in #21851. Landing hold: manager merges. [PROP-GATE-EDGE-SENSITIVE lane, 2026-10-31 ~09:10Z] OPERATOR ANSWERS (popups in Manager Session 2026-10-31a, ~08:50Z), verbatim: eth_prop -> \"Keep, and get more evidence\"; V3 gate -> \"Merge V3 (Recommended)\". Consequence: trend_donchian_eth_prop stays rostered on breakout_2/tradeify_1/velotrade_1 BELOW the V3 bar by operator choice (FAIL_EDGE 12/12 cells). Evidence unit authored in #21851: research/queue/RQ-20261031-422a-01.yaml (decision rule RULE-RQ-20261031-422a-01-WIDENED-EDGE registered before run; dispatch_queue dry run = would_dispatch). SUPERSEDES the earlier closing observation. CLOSING OBSERVATION: #21851 merged, and the eth_prop evidence unit's verdict applied (PASS -> V3 re-grade on the prop accounts; FAIL -> manager brings a pull-from-prop proposal to the operator; INCONCLUSIVE -> state the n that settles it). Landing hold: the manager merges #21851 under the operator's approval of V3.",
   "priority_rank": 1,
-  "updated_at": "2026-10-31T09:06:54Z",
+  "updated_at": "2026-10-31T09:12:53Z",
   "updated_by": "session_01AFoLuJwBvR58WBtD4qc5Gp",
   "roadmap": [
     "L-DESK"
@@ -23,6 +23,11 @@
   "writeback": {
     "roadmap": "none: evidence-tooling rule change inside L-DESK",
     "arch": "none: research gate, no runtime path"
+  },
+  "observation": {
+    "what": "PR #21851 merged and the eth_prop evidence unit RQ-20261031-422a-01 has landed a verdict (PASS / FAIL / INCONCLUSIVE) that the manager applied",
+    "how_to_check": "git log origin/main for #21851; cat research/results/RQ-20261031-422a-01/*.jsonl verdict; then the manager re-grades or brings the pull proposal",
+    "due_by": "2026-11-03"
   },
   "_seq": 851
 }

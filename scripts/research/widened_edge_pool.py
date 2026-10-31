@@ -95,7 +95,7 @@ def main(argv=None) -> int:
             rows = run_arm(a.leg, sym, a.common_start, a.end, a.common_days, out / sym)
             res["per_symbol"][sym] = iid_ci([net(r) for r in rows])
             pooled += rows
-        except Exception as e:  # noqa: BLE001 - contain per item (no halting): record the could-not-look state
+        except Exception as e:  # noqa: BLE001 # allow-silent: contained per item (no halting), recorded in the result as could_not_run, never dropped
             res["per_symbol"][sym] = {"read_state": f"could_not_run: {type(e).__name__}"}
     res["pooled"] = cluster_ci(pooled)
     p, o = res["pooled"], res["own_long"]
