@@ -1,0 +1,112 @@
+{
+ "schema_version": 1,
+ "review_id": "LR-20261031T0502Z-pkg-a819d2ab2f254b74",
+ "reviewed_at": "2026-10-31T05:10:00Z",
+ "order_package_id": "pkg-a819d2ab2f254b74",
+ "trade_id": null,
+ "leg": "e4_oi_shock_1h",
+ "accounts": [
+  "bybit_1"
+ ],
+ "trigger": {
+  "event": "judgement_cadence",
+  "level": "2026-10-31T05:00:00+00:00",
+  "l0_snapshot_at": null
+ },
+ "info_cutoff_at": "2026-10-31T05:02:50Z",
+ "state": {
+  "atr_now_over_entry": null,
+  "bars_held": 0,
+  "giveback_r": null,
+  "open_r": -0.0156,
+  "peak_provenance": "estimated",
+  "peak_r": null,
+  "regime_cell_entry": null,
+  "regime_cell_now": null,
+  "sl": 1.2570357142857143,
+  "tp": 1.2185285714285714
+ },
+ "features_at_review": {
+  "atr_now_over_entry": null,
+  "bars_since_peak": null,
+  "giveback_r": null,
+  "open_r": -0.0156,
+  "peak_r": null,
+  "r_to_stop": 0.9844,
+  "r_to_target": 2.0156
+ },
+ "mechanics": {
+  "evidence": "package sl 1.2570357142857143 / tp 1.2185285714285714 agree with every readable account",
+  "verdict": "match"
+ },
+ "options": [],
+ "outcome_table_source": "comms/live_review/tables/LR-20261031T0502Z-pkg-a819d2ab2f254b74.json",
+ "judge_prior": null,
+ "applied": false,
+ "apply_policy": {
+  "bound_r": 0.25,
+  "within_bound": null,
+  "tighten_r": null
+ },
+ "shadow_policy": {
+  "bound_r": 0.5,
+  "within_bound": null,
+  "would_apply": null,
+  "tighten_r": null
+ },
+ "model": "sonnet-tier (repo-less reviewer)",
+ "session": "session_01AFoLuKrJWiWTzbMeVLjKw2",
+ "prompt_sha": null,
+ "skill_sha": null,
+ "packet_sha": "65a29f74a14d1737df7133df8d0fec6b7deb4b6f0c80d4ee47071db25242f4ac",
+ "recommendation": {
+  "action": "hold",
+  "level": null,
+  "level_atr": null,
+  "ev_delta_r": null,
+  "worst_case_delta_r": null,
+  "reason": "No priced table (priced_options null) and no Stage-0 record; first E4 trade is a demo mechanics soak with both brackets live (SL 1.2570 / TP 1.2185, 24-bar time stop), so HOLD already expresses the view of a range-bound 1h drifting to the 1.2334 low; nothing in the packet beats the strategy's own plan.",
+  "basis": "judgement",
+  "judgement_confidence": 0.6,
+  "confidence": "judgement",
+  "evidence_source": "judgement"
+ },
+ "forecast": {
+  "thesis": "1h is range-bound 1.2334-1.2621 with a lower high at 1.2617; the last bar closed on the entry price after rejecting 1.2511, and 4h is transitional (ADX 22), so a drift to the 1.2334 range low is slightly less than even odds before the time stop.",
+  "direction": "with_trade",
+  "target_px": 1.2334,
+  "p_target": 0.45,
+  "invalidation_px": 1.2617,
+  "horizon_bars": 12,
+  "timeframe": "1h",
+  "evidence": [
+   "chart.swings: low 1.2334 (1.26 ATR below), high 1.2617 (2.05 ATR above)",
+   "chart.htf: 4h transitional, ADX 22.09",
+   "exit_plan: SL 1.25704 / TP 1.21853, 24-bar time stop",
+   "features_at_review: open_r -0.0156"
+  ]
+ },
+ "context_flags": [
+  "thin_cell: priced_options null, table not priced (open_r/peak_r/atr_stop_mult unavailable); judgement basis",
+  "book: trend_donchian_xrp_4h XRP short open on bybit_2 (-0.14R); this adds correlated XRP short exposure, and the book holds ~10 correlated crypto/metal shorts (one beta bet)",
+  "live_vs_backtest: NO_BACKTEST, Stage 0 FAILED; demo soak only, mechanics are the only question",
+  "missing_inputs: funding null, regime vol cell, chart.since_entry, atr_now_over_entry",
+  "news neutral (adjustment 0.0); no calendar events next 24h",
+  "previous review: none"
+ ],
+ "account_reads": [
+  {
+   "account_id": "bybit_1",
+   "account_class": "paper",
+   "read": "no_action",
+   "evidence": "bybit_orders: SL 1.257 / TP 1.2185, position True; would_apply = the shared amend reaches this leg, NOT that its RiskManager approved (LTR-6 gap)"
+  }
+ ],
+ "disposition": {
+  "route": "none",
+  "mandate": null,
+  "action_issue": null,
+  "applied_at": null,
+  "verified_readback": null
+ }
+}
