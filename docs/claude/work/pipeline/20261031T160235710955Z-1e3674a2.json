@@ -1,0 +1,19 @@
+{
+  "based_on": "20261031T144849735217Z-efe92d21.json",
+  "due_when": {
+    "clears_when": "the root cause of the bybit_1 venue-vs-journal bracket mismatch on pkg-821a1280782b48a1 is named and either fixed or shown to be by design (e.g. a venue tick/min-distance adjustment) with the journal updated to the venue truth",
+    "due_date": "2026-11-03",
+    "kind": "date"
+  },
+  "id": "PI-20261031-TD4QC5GP-0004",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "Manager Session 2026-10-31a (session_01AFoLuJwBvR58WBtD4qc5Gp), ltr-wake comment 6544918688 on ops-flags #17895, packet LR-20261031T1447Z-pkg-821a1280782b48a1 (packet_sha 2d4dab24a5bb, rows commit 7bfb42fdfdd1 on live-review/rows)",
+    "rerun": "read packet.mechanics + account_bounds[bybit_1].evidence for pkg-821a1280782b48a1 on live-review/rows, and the next ict_scalp_xrp_15m package's mechanics verdict"
+  },
+  "severity": "high",
+  "state": "queued",
+  "tier": 2,
+  "what": "mechanics mismatch on a fresh fill: ict_scalp_xrp_15m short XRPUSDT on bybit_1 (opened 2026-10-31T13:55:50Z) has venue SL 1.257 / TP 1.2185 (bybit_orders read) vs package/journal SL 1.25208286 / TP 1.24212571. The venue stop is ~0.0049 (~2.4 x 15m ATR 0.00209) WIDER than the planned risk, so a stop-out loses ~2x the sized R. REPORTED by the packet generator and the short-hold lane's flag_mechanics row at 14:46Z. Unknown whether the venue order was placed with different levels, amended later, or the journal is stale; check the order-placement log for the package and whether other bybit_1 packages show the same pattern. UPDATE 2026-10-31T16:02Z (manager, INFERRED, not yet verified on the venue): the venue SL 1.257 / TP 1.2185 equal the brackets of the OTHER open XRPUSDT short on bybit_1, e4_oi_shock_1h pkg-a819d2ab2f254b74 (exit_plan SL 1.25704 / TP 1.21853; its 16:01Z packet reads the same bybit_orders SL 1.257 / TP 1.2185). Likely root cause: two legs on one symbol in one Bybit account net into ONE venue position with one bracket set, so the later leg's journal brackets never reached the venue. The scalp closed sl_cross at ~15:37Z (trader-side exit at the journal stop, so realised loss ~1R, not ~2.2R; fill UNVERIFIED). Check: (a) bybit_1 position mode and whether pkg-821's close reduced E4's quantity; (b) how often two rostered legs share a symbol on one account (same-symbol overlap in config/strategies.yaml rosters); (c) the fix class (per-leg reduce-only brackets, hedge-mode positionIdx, or an exclusive-hold refusal like claude_desk.exclusive_hold_refusal)."
+}
