@@ -92,7 +92,7 @@ def load_bars(path: Path) -> dict[str, np.ndarray]:
 
 
 def _starts_for_anchor(anchor: tuple, length_min: int, d0: date, d1: date) -> np.ndarray:
-    name, tzname, hh, mm, mode, wdays = anchor
+    _name, tzname, hh, mm, mode, wdays = anchor
     tz = ZoneInfo(tzname)
     out: list[int] = []
     d = d0
@@ -167,7 +167,7 @@ def funding_crossed(entry: np.ndarray, exit_: np.ndarray, window_h: float) -> np
 
 # ---- stats -------------------------------------------------------------------------------------------------------
 def mean_sd(x: np.ndarray) -> tuple[int, float, float]:
-    n = int(len(x))
+    n = len(x)
     if n == 0:
         return 0, float("nan"), float("nan")
     return n, float(np.mean(x)), float(np.std(x, ddof=1)) if n > 1 else float("nan")
@@ -300,7 +300,7 @@ def scan_symbol(sym: str, bars: dict[str, np.ndarray], cfg: dict[str, Any]) -> l
 
 
 def grade(cells: list[dict[str, Any]], cfg: dict[str, Any]) -> dict[str, Any]:
-    k, half = cfg["folds"], cfg["folds"] // 2
+    half = cfg["folds"] // 2
     theta, nfl, alpha = cfg["vol_ratio"], cfg["n_floor"], cfg["alpha"]
     n_eval = len(cells)
     stable = shortlisted = 0
@@ -380,12 +380,12 @@ def run(a: argparse.Namespace) -> dict[str, Any]:
             bars = load_bars(path)
             if len(bars["ts"]) < 5000:
                 raise RuntimeError(f"only {len(bars['ts'])} 5m bars")
-            status[sym] = {"state": "measured", "bars": int(len(bars["ts"])),
+            status[sym] = {"state": "measured", "bars": len(bars["ts"]),
                            "first": datetime.fromtimestamp(int(bars["ts"][0]), tz=timezone.utc).isoformat(),
                            "last": datetime.fromtimestamp(int(bars["ts"][-1]), tz=timezone.utc).isoformat()}
             inputs.append(str(path))
             cells.extend(scan_symbol(sym, bars, cfg))
-        except Exception as exc:  # noqa: BLE001 - a symbol with no data is NAMED, never fabricated or substituted
+        except Exception as exc:  # noqa: BLE001  # allow-silent: not silent, the failure is recorded per symbol in symbol_status and symbols_without_data; never fabricated or substituted
             status[sym] = {"state": "no_data", "reason": f"{type(exc).__name__}: {str(exc)[:200]}"}
     g = grade(cells, cfg)
     measured = [s for s, v in status.items() if v["state"] == "measured"]
