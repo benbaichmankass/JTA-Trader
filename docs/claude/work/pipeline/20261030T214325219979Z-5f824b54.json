@@ -1,0 +1,18 @@
+{
+  "due_when": {
+    "clears_when": "the cause is named (builder non-determinism, changed candles or schema drift) and either fixed or documented on DESK-18-GEN-REPLAY-S0, or killed with a reason",
+    "due_date": "2026-11-04",
+    "kind": "date"
+  },
+  "id": "PI-20261030-9KC5G3FG-0006",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "Manager Session 2026-10-30c, lane DESK-18F-MAKER-FILLS report (PR #21719)",
+    "rerun": "rebuild 10 judged-1 packets with scripts/ops/desk_scan_packet.py --as-of on a FULL clone and compare sha256 to judged-1/mask-key.json; any mismatch is an instance"
+  },
+  "severity": "low",
+  "state": "queued",
+  "tier": 1,
+  "what": "All 1,498 re-derived judged-1 desk packets differ in sha from the committed mask key, although ids match (reported by lane DESK-18F-MAKER-FILLS, PR #21719, 2026-10-30; cause unknown, the lane had a shallow clone). Packets re-built from the same inputs should hash identically; a mismatch means the builder is non-deterministic or its inputs moved, which weakens replay reproducibility."
+}

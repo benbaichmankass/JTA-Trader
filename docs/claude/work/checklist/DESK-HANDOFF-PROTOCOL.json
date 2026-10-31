@@ -2,23 +2,24 @@
   "id": "DESK-HANDOFF-PROTOCOL",
   "title": "Desk hand-off protocol for desk-opened positions, then lift the claude_desk max_hold_min <= 60 cap on bybit_1 demo (operator-approved, conditional)",
   "phase": null,
-  "state": "queued",
-  "owner": null,
-  "lane": null,
+  "state": "in_flight",
+  "owner": "session_01AFoLuJghnUym97LJh6wmxa",
+  "lane": "DESK-HANDOFF-PROTOCOL",
   "model": "claude-opus-5-5",
-  "ceiling_usd": 15,
+  "ceiling_usd": 12,
   "spend_usd": null,
   "tier": 3,
-  "prs": [],
-  "blocked_on": [
-    "DESK-AM-REFOCUS"
+  "prs": [
+    21750
   ],
+  "blocked_on": [],
   "priority_rank": 2,
   "roadmap": [
     "L-DESK",
     "L-ATM"
   ],
   "note": "OPERATOR, popup ~22:30Z 2026-10-30, verbatim (relayed by Manager Session 2026-10-30c): \"We can lift it completely if we have a protocol for trade desk hand-offs\". The 60-min max_hold_min cap on claude_desk entries goes ENTIRELY (bybit_1 demo; the other paper books' scope is unchanged; no real money or prop), CONDITIONAL on this protocol because each desk wake is a fresh session.\n\nThe protocol must hold:\n(a) Every desk-opened position carries its thesis, falsifiable forecast (direction, target, horizon, p), invalidation level and exit plan in the decision record. Reuse the live-review `forecast` object from DESK-AM-REFOCUS (#21731) inside desk_write.py's proposal.\n(b) Every later wake that touches the position receives that record in its packet, and must explicitly CONFIRM, REVISE (with reason) or EXIT. Its decision row links to the prior one, a chain per position (prior_decision_id).\n(c) The 4h judgement_cadence wake (#21732) covers desk-opened positions too, so no desk position goes longer than one cadence without an owner. Check that claude_desk packages are on the daily_floor account list and not excluded as short_hold 5m/15m.\n(d) An invariant check (an attention_watch-style flag, not a gate) catches an orphaned desk position: open with no desk decision inside cadence + slack.\n(e) If a hand-off read fails (could_not_look), the position keeps its existing SL/TP. Never a silent orphan, never a halt.\n\nThe cap lift lands in the SAME PR as the protocol or after it, never before. The cap is Tier 3, operator-approved under this condition; the runtime pieces are Tier 2. Hold the PR and wake the manager with the PR number and the green head sha.\n\nWhere the cap lives: DESK-BRIEF.md section 3 and desk_write.py (max_hold_min 1-60 on a live market entry); the leg closes at max_hold_min (claude_desk in config/strategies.yaml + the short-hold lane). Filed by lane DESK-AM-REFOCUS (session_01AFoLuLYH6B5e8LJSBB8q9x) at its ceiling.",
-  "updated_by": "session_01AFoLuLYH6B5e8LJSBB8q9x",
+  "updated_by": "session_01AFoLuJghnUym97LJh6wmxa",
+  "updated_at": "2026-10-31T00:30:19Z",
   "_seq": 848
 }

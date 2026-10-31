@@ -1,0 +1,18 @@
+{
+  "due_when": {
+    "clears_when": "bybit_open_orders reads within its timeout in 20 consecutive packet builds (no could_not_look from timeout), or killed with a reason",
+    "due_date": "2026-11-02",
+    "kind": "date"
+  },
+  "id": "PI-20261031-9KC5G3FG-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "Manager Session 2026-10-31 (2026-10-30c), ltr-wake ops-flags #17895 comment 6536170324",
+    "rerun": "time 10 calls of bash scripts/ops/diag_fetch.sh bybit_open_orders; any rc 28 / 'unreachable' while 'version' answers is an instance; also grep committed packets on live-review/rows for read:bybit_orders unreachable"
+  },
+  "severity": "medium",
+  "state": "queued",
+  "tier": 1,
+  "what": "Live-review packets intermittently read mechanics=could_not_look because scripts/ops/diag_fetch.sh caps each candidate at curl --max-time 10 while /api/diag/bybit_open_orders takes ~10 s (MEASURED 2026-10-31 ~00:04Z from a session: bybit_open_orders 10 s ok on retry, alpaca_open_orders 4 s, version 1 s; the 00:02Z packets LR-20261031T0002Z-pkg-011a7bf85ee54a6f and -pkg-06447eb2d3af47f0 both recorded 'unreachable' rc 28 for bybit and alpaca order reads while the web-api was up). Effect: the review cannot confirm the bracket on real-money packages (one of the two was bybit_2). Fix: a per-path timeout (e.g. 30 s for *_open_orders) or make the endpoint faster; diag_fetch's 'unreachable' wording should distinguish a timeout on an answering host from no host."
+}

@@ -1,0 +1,18 @@
+{
+  "due_when": {
+    "clears_when": "the research_ops_age_h threshold follows the active research-ops cadence and a self-test shows a 1x/day cadence is ok at 20 h and breaches at 30 h, or killed when the throttle is lifted",
+    "due_date": "2026-11-02",
+    "kind": "date"
+  },
+  "id": "PI-20261030-9KC5G3FG-0008",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "Manager Session 2026-10-30c, research-slo breach ops-flags #17895 comment 6535776922",
+    "rerun": "python3 scripts/research/research_slo.py and read research_ops_age_h vs the cadence in effect; a breach while the newest pass is < 26 h old under 1x/day pacing is an instance"
+  },
+  "severity": "low",
+  "state": "queued",
+  "tier": 1,
+  "what": "research_slo.yaml research_ops_age_h threshold is 8 h, built for the 4x/day research-ops cadence; under the operator's usage throttle (2026-10-30, row DESK-COST-THROTTLE / refill routine: 'research-ops 1x/day ... while pacing') the pass runs about once a day, so the SLO breaches every day as a false alarm (first instance 2026-10-30T23:34Z, 8.16 h vs 8, ops-flags #17895 comment 6535776922). Fix: make the threshold follow the configured cadence (e.g. read it from the routine cadence, or 26 h while pacing) so a real stall still alerts; the SLO must not be silenced."
+}
