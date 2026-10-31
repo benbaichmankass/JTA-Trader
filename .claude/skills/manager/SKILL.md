@@ -668,6 +668,7 @@ run of § "The operating loop" and the first turn after every compaction starts 
    `Manager Session YYYY-MM-DD<letter>`, and a prompt: read this skill and the handoff doc in full; `CLAUDE.md` is in the system prompt; from
    the canonical doc read only the sections named in § "Start of session" step 2; perform V1 (including its own depth) and wait for the old
    manager's diff; no routine work yet.
+   *Before archiving:* the outgoing manager runs `python3 scripts/ops/routine_prompt_check.py <list_triggers JSON>` (all pages) and repoints any enabled routine whose prompt names its own session id (advisory, not a gate; row ROUTINE-PROMPTS-ON-ROTATION).
 3. **REWIRE.** `update_trigger` cannot change a trigger's target: (a) for each trigger on the old session `create_trigger` the same
    name/cron/prompt with `persistent_session_id=<new>`, then disable the old (delete only at step 5); (b) update every prompt naming the old
    id (research-ops, assistant-manager charter, review and check-in routines, live-lane briefs; lanes by fired trigger naming the new wake
