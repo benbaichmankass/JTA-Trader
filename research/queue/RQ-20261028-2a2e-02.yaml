@@ -1,6 +1,6 @@
 id: RQ-20261028-2a2e-02
 title: 'Prop pace pullback at 4h on the six core perps: break-even floor, long-only, ADX floor'
-status: queued
+status: done
 cadence: once
 roadmap:
 - L-PROP
@@ -111,3 +111,16 @@ related:
 - scripts/research/harness_stage0.py
 - DAILY-AUTHORING-20261028
 last_dispatched_at: '2026-10-31T00:59:51+00:00'
+grading:
+  attested: RULE-RQ202610282A2E02-PULLBACK4H
+  auto: true
+  decision_rule_id: RULE-RQ202610282A2E02-PULLBACK4H
+  evidence:
+  - research/results/RQ-20261028-2a2e-02/41153113529.jsonl
+  graded_at: '2026-10-31'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail
