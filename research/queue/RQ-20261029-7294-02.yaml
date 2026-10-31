@@ -149,3 +149,16 @@ related:
 what_it_does_not_do: Registers, serves or promotes nothing; changes no config; places no order. A PASS produces an evidence record for one
   Tier-3 packet, it does not graduate any action class.
 last_dispatched_at: '2026-10-30T10:47:52+00:00'
+grading:
+  attested: RULE-RQ20261029-7294-02-QTM1-SOFFLINE
+  auto: false
+  decision_rule_id: RULE-RQ20261029-7294-02-QTM1-SOFFLINE
+  evidence:
+  - research/results/RQ-20261029-7294-02/local-v1-20261030.jsonl
+  graded_at: '2026-10-31'
+  grader: RESEARCH-OPS-20261031-1120 (session)
+  reason: 'Rule applied verbatim, verdict fail as the row states: lgbm_action_value is worse than hold on all 4 arms (pooled OOS -0.056..-0.079 R/trade, 0/6 folds positive)
+    and worse than matched random (adverse selection). Configuration closed: v1-corpus GBDT action-value head; family stays open; next test = the corpus-v2 retrain (7294-01
+    unresolvable until a corpus v2 exists).'
+  rows: 1
+  verdict: fail
