@@ -1,0 +1,23 @@
+{
+  "id": "WEEKEND-TRIGGER-ONLY",
+  "title": "Weekend trigger-only reviews: scheduled judgement_cadence book review OFF and desk scan wakes 2h -> 24h from 2026-10-31 until Mon 2026-11-02 13:30Z (US open), then restored; all event triggers, daily_floor and venue brackets stay on",
+  "phase": null,
+  "state": "in_flight",
+  "owner": "manager",
+  "lane": "session_01AFoLuKNfrHwfz6U7uYhrGh",
+  "model": "claude-sonnet-5-5",
+  "ceiling_usd": 2,
+  "spend_usd": null,
+  "tier": 2,
+  "prs": [],
+  "blocked_on": [],
+  "note": "[Manager Session 2026-10-31a, ~10:45Z] OPERATOR DECISION (chat + popup 2026-10-31): operator, verbatim excerpt: 'markets are closed right now. So we don't need to be reserving desk capacity for them ... maybe we can, turn off the regular reviews ... we should leave the trigger event so that if there's, like, a big move, we'll have a desk review'. Popup answer verbatim: 'Yes, until Mon 13:30Z (Recommended)'. MEASURED basis: 08:00Z book reviewed 11 pkgs of which 4 in closed markets (SLV, GLD, USO alpaca_paper; MGC ib_paper); judgement_cadence = 31 of 34 review rows on 2026-10-31 in comms/live_review/reviews.jsonl; book review 0.73-1.08 USD/slot x 6/day + desk scan ~0.35 USD x 12/day = ~9-11 USD/day. Change: config/live_trade_review.yaml events.judgement_cadence.hours_by_timeframe {} ; config/desk_triggers.yaml scan_wake_every_h 24. Restore at 2026-11-02 13:30Z (manager send_later). Freed capacity -> a 2nd weekend build lane (TRIGGER-FIRST-REVIEWS).",
+  "priority_rank": 1,
+  "updated_at": "2026-10-31T11:00:34Z",
+  "updated_by": "session_01AFoLuJwBvR58WBtD4qc5Gp",
+  "roadmap": [
+    "L-DESK",
+    "L-ATM"
+  ],
+  "_seq": 852
+}
