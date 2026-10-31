@@ -10,12 +10,13 @@
   "spend_usd": null,
   "tier": 2,
   "prs": [
-    21875
+    21875,
+    21876
   ],
   "blocked_on": [],
-  "note": "[Manager Session 2026-10-31a, ~10:45Z] OPERATOR DECISION (chat + popup 2026-10-31): operator, verbatim excerpt: 'markets are closed right now. So we don't need to be reserving desk capacity for them ... maybe we can, turn off the regular reviews ... we should leave the trigger event so that if there's, like, a big move, we'll have a desk review'. Popup answer verbatim: 'Yes, until Mon 13:30Z (Recommended)'. MEASURED basis: 08:00Z book reviewed 11 pkgs of which 4 in closed markets (SLV, GLD, USO alpaca_paper; MGC ib_paper); judgement_cadence = 31 of 34 review rows on 2026-10-31 in comms/live_review/reviews.jsonl; book review 0.73-1.08 USD/slot x 6/day + desk scan ~0.35 USD x 12/day = ~9-11 USD/day. Change: config/live_trade_review.yaml events.judgement_cadence.hours_by_timeframe {} ; config/desk_triggers.yaml scan_wake_every_h 24. Restore at 2026-11-02 13:30Z (manager send_later). Freed capacity -> a 2nd weekend build lane (TRIGGER-FIRST-REVIEWS). [lane session_01AFoLuKNfrHwfz6U7uYhrGh] PR A #21875 (draft, hold). CLOSING OBSERVATIONS: (1) the 12:00Z (or next) slot posts no judgement_cadence ltr-wake and the 12:00Z desk bar posts no desk-wake marker, while event-triggered ltr-wakes still post; (2) the revert PR B merged Mon 2026-11-02 13:30Z.",
+  "note": "[Manager Session 2026-10-31a, ~10:45Z] OPERATOR DECISION (chat + popup 2026-10-31): operator, verbatim excerpt: 'markets are closed right now. So we don't need to be reserving desk capacity for them ... maybe we can, turn off the regular reviews ... we should leave the trigger event so that if there's, like, a big move, we'll have a desk review'. Popup answer verbatim: 'Yes, until Mon 13:30Z (Recommended)'. MEASURED basis: 08:00Z book reviewed 11 pkgs of which 4 in closed markets (SLV, GLD, USO alpaca_paper; MGC ib_paper); judgement_cadence = 31 of 34 review rows on 2026-10-31 in comms/live_review/reviews.jsonl; book review 0.73-1.08 USD/slot x 6/day + desk scan ~0.35 USD x 12/day = ~9-11 USD/day. Change: config/live_trade_review.yaml events.judgement_cadence.hours_by_timeframe {} ; config/desk_triggers.yaml scan_wake_every_h 24. Restore at 2026-11-02 13:30Z (manager send_later). Freed capacity -> a 2nd weekend build lane (TRIGGER-FIRST-REVIEWS). [lane session_01AFoLuKNfrHwfz6U7uYhrGh] PR A #21875 (draft, hold), revert PR B #21876. CLOSING OBSERVATIONS: (1) the 12:00Z (or next) slot posts no judgement_cadence ltr-wake and the 12:00Z desk bar posts no desk-wake marker, while event-triggered ltr-wakes still post; (2) the revert merged Mon 2026-11-02 13:30Z.",
   "priority_rank": 1,
-  "updated_at": "2026-10-31T11:21:05Z",
+  "updated_at": "2026-10-31T11:31:43Z",
   "updated_by": "session_01AFoLuKNfrHwfz6U7uYhrGh",
   "roadmap": [
     "L-DESK",
