@@ -1,48 +1,130 @@
 {
-  "generated_at": "2026-10-30T18:12:41Z",
+  "generated_at": "2026-10-31T05:59:04Z",
   "overall": "could_not_read",
   "produced_by": {
-    "run_id": "41103876703",
+    "run_id": "41174611943",
     "workflow": "research-loss-detector"
   },
   "questions": {
     "A_stuck_research_prs": {
       "findings": [],
-      "population": "12 open PRs; 8 automation/*; 4 carry research; 4 automation/* carry none (not graded here)",
+      "population": "4 open PRs; 3 automation/*; 2 carry research; 1 automation/* carry none (not graded here)",
       "state": "clean",
       "threshold_hours": 6.0
     },
     "B_unlanded_result_runs": {
-      "error": "GET https://api.github.com/repos/benbaichmankass/JTA-Trader/actions/runs/38967815725/jobs?per_page=100: HTTP Error 502: Bad Gateway",
-      "findings": null,
-      "state": "could_not_read"
-    },
-    "C_expiring_unlanded_artifacts": {
       "findings": [
         {
-          "artifact": "gdelt-panel-2026-10",
-          "artifact_id": 12638576340,
-          "expires_at": "2026-11-02T09:01:09Z",
-          "run_id": "40296135089",
-          "workflow": "news-gdelt-panel.yml"
+          "conclusion": "failure",
+          "created_at": "2026-10-30T14:05:35Z",
+          "result_job": [
+            "failure"
+          ],
+          "run_id": "41068790597",
+          "run_url": "https://github.com/benbaichmankass/JTA-Trader/actions/runs/41068790597",
+          "workflow": "m20-exit-lever-sweep.yml"
         },
         {
-          "artifact": "gdelt-panel-2026-10",
-          "artifact_id": 12592331670,
-          "expires_at": "2026-11-01T09:29:21Z",
-          "run_id": "40176719906",
-          "workflow": "news-gdelt-panel.yml"
+          "conclusion": "failure",
+          "created_at": "2026-10-30T02:55:09Z",
+          "result_job": [
+            "failure"
+          ],
+          "run_id": "40994427469",
+          "run_url": "https://github.com/benbaichmankass/JTA-Trader/actions/runs/40994427469",
+          "workflow": "m20-exit-lever-sweep.yml"
         },
         {
-          "artifact": "gdelt-panel-2026-10",
-          "artifact_id": 12553039634,
-          "expires_at": "2026-10-31T08:11:42Z",
-          "run_id": "40076981889",
-          "workflow": "news-gdelt-panel.yml"
+          "conclusion": "failure",
+          "created_at": "2026-10-30T00:16:29Z",
+          "result_job": [
+            "failure"
+          ],
+          "run_id": "40978648245",
+          "run_url": "https://github.com/benbaichmankass/JTA-Trader/actions/runs/40978648245",
+          "workflow": "m20-exit-lever-sweep.yml"
+        },
+        {
+          "conclusion": "failure",
+          "created_at": "2026-10-24T12:47:07Z",
+          "result_job": [
+            "failure"
+          ],
+          "run_id": "40095366642",
+          "run_url": "https://github.com/benbaichmankass/JTA-Trader/actions/runs/40095366642",
+          "workflow": "m20-exit-lever-sweep.yml"
+        },
+        {
+          "conclusion": "failure",
+          "created_at": "2026-10-17T07:59:13Z",
+          "result_job": [
+            "failure"
+          ],
+          "run_id": "39015656806",
+          "run_url": "https://github.com/benbaichmankass/JTA-Trader/actions/runs/39015656806",
+          "workflow": "m20-exit-lever-sweep.yml"
         }
       ],
-      "population": "2513 artifact(s) listed, 2513 unexpired, 1755 expire within 72.0h across 1728 run(s); 3 of those from research workflows (news-gdelt-panel.yml); a landed copy = run id named on origin/main in research/results, a commit message, or a file under research/**, docs/research/**, runtime_logs/replay_pregate/**",
+      "lost": [
+        {
+          "conclusion": "failure",
+          "created_at": "2026-10-30T14:05:35Z",
+          "result_job": [
+            "failure"
+          ],
+          "run_id": "41068790597",
+          "run_url": "https://github.com/benbaichmankass/JTA-Trader/actions/runs/41068790597",
+          "workflow": "m20-exit-lever-sweep.yml"
+        },
+        {
+          "conclusion": "failure",
+          "created_at": "2026-10-30T02:55:09Z",
+          "result_job": [
+            "failure"
+          ],
+          "run_id": "40994427469",
+          "run_url": "https://github.com/benbaichmankass/JTA-Trader/actions/runs/40994427469",
+          "workflow": "m20-exit-lever-sweep.yml"
+        },
+        {
+          "conclusion": "failure",
+          "created_at": "2026-10-30T00:16:29Z",
+          "result_job": [
+            "failure"
+          ],
+          "run_id": "40978648245",
+          "run_url": "https://github.com/benbaichmankass/JTA-Trader/actions/runs/40978648245",
+          "workflow": "m20-exit-lever-sweep.yml"
+        },
+        {
+          "conclusion": "failure",
+          "created_at": "2026-10-24T12:47:07Z",
+          "result_job": [
+            "failure"
+          ],
+          "run_id": "40095366642",
+          "run_url": "https://github.com/benbaichmankass/JTA-Trader/actions/runs/40095366642",
+          "workflow": "m20-exit-lever-sweep.yml"
+        },
+        {
+          "conclusion": "failure",
+          "created_at": "2026-10-17T07:59:13Z",
+          "result_job": [
+            "failure"
+          ],
+          "run_id": "39015656806",
+          "run_url": "https://github.com/benbaichmankass/JTA-Trader/actions/runs/39015656806",
+          "workflow": "m20-exit-lever-sweep.yml"
+        }
+      ],
+      "pending_merge": [],
+      "population": "78 completed run(s) of 7 workflow(s) calling ./.github/actions/research-result since 2026-10-17 (dukascopy-span-probe.yml, ict-scalp-exit-sweep.yml, m20-exit-lever-sweep.yml, research-exit-head-build.yml, research-exit-head-replay-trainer.yml, research-harness-dispatch.yml, soak-book-grade-weekly.yml); 721 produced no result by design (skipped); 1770 result file(s) on origin/main",
       "state": "findings"
+    },
+    "C_expiring_unlanded_artifacts": {
+      "error": "GET https://api.github.com/repos/benbaichmankass/JTA-Trader/actions/artifacts?per_page=100&page=1: HTTP Error 500: Internal Server Error",
+      "findings": null,
+      "state": "could_not_read"
     }
   },
   "ref": "origin/main",
