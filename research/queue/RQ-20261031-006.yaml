@@ -68,3 +68,32 @@ generated:
     symbol: ETHUSDT
     timeframe: 1h
 last_dispatched_at: '2026-10-31T05:54:23+00:00'
+grading:
+  auto: true
+  confirmation: confirmed
+  decision_rule_id: RULE-EXIT-REFINEMENT-P2-GATE
+  discovery: confirmed
+  evidence:
+  - research/results/RQ-20261031-006/41174431948.jsonl
+  graded_at: '2026-10-31'
+  grader: scripts/research/queue_grade.py
+  holdout:
+    base_trades: 163
+    boundary: '2025-02-06'
+    confirmation: confirmed
+    confirmed_cells:
+    - rrfloor1
+    - stale12_lt0R
+    - stale8_lt0R
+    - trail4
+    selected_from: 25
+    share_used: 0.2511
+    state: ok
+  latest: true
+  needs_review: false
+  note: 'discovery on the span before 2025-02-06, confirmation on the held-back span in the SAME run:
+    confirmed. Only `confirmed` may feed a Tier-3 proposal.'
+  reason: 1 row(s), all measured, all pass
+  rows: 1
+  selected_from_cells: 25
+  verdict: pass
