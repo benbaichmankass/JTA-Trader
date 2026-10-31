@@ -1,0 +1,23 @@
+{
+  "id": "TRIGGER-FIRST-REVIEWS",
+  "title": "Trigger-first live reviews (permanent): scheduled review slots never fire for a package whose market is closed, and fire only when something is new since the last review (a new closed bar of the leg or a price move beyond a threshold); event triggers remain the primary path; same rule for the desk scan wake",
+  "phase": null,
+  "state": "in_flight",
+  "owner": "manager",
+  "lane": "session_01AFoLuMayLRYRMLq9QJKt9W",
+  "model": "claude-sonnet-5-5",
+  "ceiling_usd": 8,
+  "spend_usd": null,
+  "tier": 2,
+  "prs": [],
+  "blocked_on": [],
+  "note": "[Manager Session 2026-10-31a, ~10:45Z] OPERATOR DECISION 2026-10-31, verbatim excerpt: 'Maybe in general, that should be the workflow, like, have more trigger-based events and not waste capacity on regular reviews if there's nothing new really to review.' Popup answer verbatim: 'Yes, build it (Recommended)'. Target: live before Mon 2026-11-02 13:30Z when the weekend switch (WEEKEND-TRIGGER-ONLY) is restored, so the restore brings back the new rule, not the fixed 4h slot. Locus: src/runtime/live_review_due.py judgement_cadence_event (+ daily_floor) and scripts/ops/desk_wake_marker.py.",
+  "priority_rank": 1,
+  "updated_at": "2026-10-31T11:00:34Z",
+  "updated_by": "session_01AFoLuJwBvR58WBtD4qc5Gp",
+  "roadmap": [
+    "L-DESK",
+    "L-ATM"
+  ],
+  "_seq": 853
+}
