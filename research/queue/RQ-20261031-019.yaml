@@ -68,3 +68,30 @@ generated:
     symbol: USO
     timeframe: 1h
 last_dispatched_at: '2026-10-31T11:55:17+00:00'
+grading:
+  auto: true
+  confirmation: confirmed
+  decision_rule_id: RULE-EXIT-REFINEMENT-P2-GATE
+  discovery: confirmed
+  evidence:
+  - research/results/RQ-20261031-019/41198849177.jsonl
+  graded_at: '2026-10-31'
+  grader: scripts/research/queue_grade.py
+  holdout:
+    base_trades: 65
+    boundary: '2024-04-04'
+    confirmation: confirmed
+    confirmed_cells:
+    - decay_p80arm3.21R_t2
+    - trail3
+    selected_from: 25
+    share_used: 0.2528
+    state: ok
+  latest: true
+  needs_review: false
+  note: 'discovery on the span before 2024-04-04, confirmation on the held-back span in the SAME run:
+    confirmed. Only `confirmed` may feed a Tier-3 proposal.'
+  reason: 1 row(s), all measured, all pass
+  rows: 1
+  selected_from_cells: 25
+  verdict: pass
