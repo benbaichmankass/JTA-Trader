@@ -1,6 +1,6 @@
 # Manager handover: 2026-10-30c → 2026-10-31a
 
-> **Doc status:** `live` · category `handoff` · last verified `2026-10-31` · registered in [`docs/DOCUMENT-INDEX.md`](../../../DOCUMENT-INDEX.md)
+> **Doc status:** `unknown` · category `unknown` · last verified `never` · written 2026-10-31 ~05:55Z by the outgoing manager `session_01AFoLuJEaf7dNfk9kc5g3fG` · registered in [`docs/DOCUMENT-INDEX.md`](../../../DOCUMENT-INDEX.md)
 
 Old manager: **Manager Session 2026-10-30c**, `session_01AFoLuJEaf7dNfk9kc5g3fG` (lineage depth 6/8; context 711k tokens at 05:53Z, past the ~650k rotation bar).
 New manager: **Manager Session 2026-10-31a**, created by the assistant manager `session_011c3qoaBvGBioDWkPVToQSb` (shallow), Opus, tags `manager` + `predecessor:session_01AFoLuJEaf7dNfk9kc5g3fG`.
