@@ -1,0 +1,18 @@
+{
+  "due_when": {
+    "clears_when": "bars_held for an open E4 package increases with each closed 1h bar in its review packet, or the field is shown not to be used and is killed with a reason",
+    "due_date": "2026-11-01",
+    "kind": "date"
+  },
+  "id": "PI-20261031-TD4QC5GP-0002",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "Manager Session 2026-10-31a (session_01AFoLuJwBvR58WBtD4qc5Gp), LTR book review 2026-10-31T08:00Z, rows commit 63c14da1cd13 on live-review/rows (reviewer session_01AFoLuMiTY1eUre6PZYbLxC)",
+    "rerun": "read context bars_held in the next LTR packet for pkg-a819d2ab2f254b74 on live-review/rows vs hours since entry"
+  },
+  "severity": "medium",
+  "state": "queued",
+  "tier": 1,
+  "what": "E4 demo package pkg-a819d2ab2f254b74 (e4_oi_shock_1h, XRPUSDT, bybit_1) reports bars_held=0 three hours after entry (REPORTED by the 08:00Z book reviewer). If bars_held feeds any time-based exit, stale-stop or soak accounting for E4, it is wrong; find where bars_held is computed for this leg and fix it."
+}
