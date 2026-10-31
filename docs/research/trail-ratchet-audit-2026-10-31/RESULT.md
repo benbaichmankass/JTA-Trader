@@ -1,6 +1,6 @@
 # TRAIL-RATCHET-AUDIT — result (2026-10-31)
 
-> **Doc status:** `live` · category `research` · lane `TRAIL-RATCHET-AUDIT` · read `main` @ `fe356e70ca`.
+> **Doc status:** `unknown` · category `research` · lane `TRAIL-RATCHET-AUDIT` · read `main` @ `fe356e70ca`.
 > Marks: **MEASURED** = read from live data/code this session; **ESTIMATED** = reconstructed from bar-extreme telemetry; **INFERRED** = reasoned from code, not observed.
 > **Gates this adds or changes:** none in this PR. The two PRs it links add (Tier 3) a close-on-cross rule and (Tier 2) a per-leg tighten-only guard; both are `landing: hold`.
 
