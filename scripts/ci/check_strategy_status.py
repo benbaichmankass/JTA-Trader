@@ -54,7 +54,14 @@ UNHOMED: Dict[str, str] = {
 #: Production legs that ALSO stay on general paper, BY NAME. Operator 2026-10-28 (Q2, verbatim "Keep on
 #: alpaca_paper as exception (Recommended)"): the alpaca mirror excludes the affordability proxy, so it keeps a
 #: paper record beside real money until it has a mirror. Leg -> the general paper account it may stay on.
-DUAL_BOOK_EXCEPTIONS: Dict[str, str] = {"iaum_pullback_1d": "alpaca_paper"}
+DUAL_BOOK_EXCEPTIONS: Dict[str, str] = {
+    "iaum_pullback_1d": "alpaca_paper",
+    # Operator 2026-11-01 ~11:47Z (popup, relayed by Manager Session 2026-11-01a), verbatim "Paper now, v2 for live
+    # (Rec.)": the ONE ml_entry model trades real money on bybit_2 (crypto) AND paper on alpaca_paper (ETFs, a
+    # different symbol set: strategies.yaml::ml_entry.account_symbols), with no real-money ML on Alpaca until a model
+    # passes. Not a duplicate trade: the two books never share a symbol. Row ALPACA-LIVE-ACTIVITY-ML.
+    "ml_entry": "alpaca_paper",
+}
 
 
 def findings(accounts: Dict[str, Any], strategies: Dict[str, Any]) -> List[str]:
@@ -101,10 +108,10 @@ def self_test() -> int:
         ok &= bool(cond)
         print(f"  {'ok  ' if cond else 'FAIL'} {name}")
 
-    strat = {"a": {}, "p": {}, "r": {"enabled": False}, "iaum_pullback_1d": {}}
-    clean = {"bybit_1": {"strategies": ["a"]}, "bybit_2": {"strategies": ["p"]},
-             "bybit_portfolio": {"strategies": ["p"]}, "alpaca_live": {"strategies": ["iaum_pullback_1d"]},
-             "alpaca_portfolio": {"strategies": []}, "alpaca_paper": {"strategies": ["iaum_pullback_1d"]}}
+    strat = {"a": {}, "p": {}, "r": {"enabled": False}, "iaum_pullback_1d": {}, "ml_entry": {}}
+    clean = {"bybit_1": {"strategies": ["a"]}, "bybit_2": {"strategies": ["p", "ml_entry"]},
+             "bybit_portfolio": {"strategies": ["p", "ml_entry"]}, "alpaca_live": {"strategies": ["iaum_pullback_1d"]},
+             "alpaca_portfolio": {"strategies": []}, "alpaca_paper": {"strategies": ["iaum_pullback_1d", "ml_entry"]}}
     ck("a clean tree passes (positive control)", findings(clean, strat) == [])
     dual = {**clean, "bybit_1": {"strategies": ["a", "p"]}}
     ck("a production leg left on general paper is refused (R-DUAL-BOOK)",

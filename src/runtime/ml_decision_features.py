@@ -10,7 +10,7 @@ bar (the forming bar already dropped).
 """
 from __future__ import annotations
 
-from typing import Dict, Mapping, Optional
+from typing import Dict, Iterable, Mapping, Optional
 
 import numpy as np
 import pandas as pd
@@ -59,31 +59,55 @@ def atr_last(df: pd.DataFrame, n: int = ATR_N) -> float:
     return float(tr.rolling(n, min_periods=n).mean().iloc[-1])
 
 
-def decision_row(symbol: str, frames: Mapping[str, pd.DataFrame]) -> Optional[Dict[str, float]]:
-    """The 20-feature row for ``symbol`` at the last bar of ``frames[symbol]``; cross-sectional context from every
-    frame whose last bar has the SAME timestamp (the reference symbols). ``None`` if the row cannot be formed."""
+def _asof(fr: pd.DataFrame, close_ts: pd.Timestamp) -> pd.DataFrame:
+    """``fr`` truncated to the bars CLOSED at or before ``close_ts`` (a 1h bar opening at ts closes at ts + 1h)."""
+    return fr[fr["ts"] + pd.Timedelta(hours=1) <= close_ts]
+
+
+def decision_row(symbol: str, frames: Mapping[str, pd.DataFrame],
+                 reference: Optional[Iterable[str]] = None) -> Optional[Dict[str, float]]:
+    """The 20-feature row for ``symbol`` at the last bar of ``frames[symbol]``.
+
+    Cross-sectional context is read AS-OF that bar's close: each reference frame is cut to its bars closed at or
+    before it, and is used only if its last closed bar closed within the hour before it (a stale or missing
+    reference is skipped and counted). For a 24/7 perp whose bars share the decision timestamp this is exactly the
+    previous equal-timestamp rule. For a symbol OUTSIDE the reference set (an ETF on alpaca_paper, row
+    ALPACA-LIVE-ACTIVITY-ML) its 24-bar return is ranked among the references with itself inserted, and breadth /
+    median vol are the references' -- the definition scripts/research/ml_entry_alpaca_score.py scored.
+    ``reference``: the model's reference symbols (``meta["xs_reference"]``); ``None`` treats ``symbol`` as one of
+    them (the pre-2026-11-01 behaviour). ``None`` if the row cannot be formed."""
     own = frames.get(symbol)
     if own is None or len(own) < MIN_BARS:
         return None
-    t = own["ts"].iloc[-1]
+    close = own["ts"].iloc[-1] + pd.Timedelta(hours=1)
     fo = features_symbol(own).iloc[-1]
     r24, v24 = {}, {}
     for s, fr in frames.items():
-        if fr is None or len(fr) < 25 or fr["ts"].iloc[-1] != t:
+        if fr is None or s == symbol:
             continue
-        ff = features_symbol(fr.iloc[-200:].reset_index(drop=True)).iloc[-1]
+        cut = _asof(fr, close)
+        if len(cut) < 25 or cut["ts"].iloc[-1] + pd.Timedelta(hours=2) <= close:
+            continue
+        ff = features_symbol(cut.iloc[-200:].reset_index(drop=True)).iloc[-1]
         r24[s], v24[s] = ff["ret24_raw"], ff["vol24"]
-    if "BTCUSDT" not in r24 or symbol not in r24:
+    if "BTCUSDT" not in r24 and symbol != "BTCUSDT":
         return None
-    rv = pd.Series(r24, dtype=float)
-    vv = pd.Series(v24, dtype=float)
+    in_reference = reference is None or symbol in set(reference)
+    rv_ref = pd.Series(r24, dtype=float)
+    vv_ref = pd.Series(v24, dtype=float)
+    rv = pd.concat([rv_ref, pd.Series({symbol: float(fo["ret24_raw"])})])
+    vv = pd.concat([vv_ref, pd.Series({symbol: float(fo["vol24"])})])
     rank = rv.rank(pct=True)
     row = {k: float(fo[k]) for k in FEATURES if k in fo.index}
     row["xs_rank_ret24"] = float(rank[symbol])
     row["btc_ret24"] = float(rv["BTCUSDT"])
     row["btc_vol24"] = float(vv["BTCUSDT"])
-    row["breadth_up24"] = float((rv > 0).sum() / rv.notna().sum())
-    row["rel_vol"] = float(fo["vol24"] / vv.median())
+    if in_reference:   # the perp universe includes the symbol itself (the c692 training definition)
+        row["breadth_up24"] = float((rv > 0).sum() / rv.notna().sum())
+        row["rel_vol"] = float(fo["vol24"] / vv.median())
+    else:              # an outside symbol: breadth / median vol of the references only
+        row["breadth_up24"] = float((rv_ref > 0).sum() / rv_ref.notna().sum())
+        row["rel_vol"] = float(fo["vol24"] / vv_ref.median())
     if any(not np.isfinite(row.get(k, np.nan)) for k in FEATURES):
         return None
     row["_n_reference"] = float(len(rv))
