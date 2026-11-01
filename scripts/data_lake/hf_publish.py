@@ -62,7 +62,12 @@ def cmd_preflight(a) -> int:
     api = _api()
     who = api.whoami()
     role = ((who.get("auth") or {}).get("accessToken") or {}).get("role", "unknown")
-    rec = {"user": who.get("name"), "token_role": role, "repo": a.repo,
+    at = (who.get("auth") or {}).get("accessToken") or {}
+    fg = at.get("fineGrained") or {}
+    scoped = [{"entity": (sc.get("entity") or {}).get("name"), "type": (sc.get("entity") or {}).get("type"),
+               "permissions": sc.get("permissions")} for sc in (fg.get("scoped") or [])]
+    rec = {"user": who.get("name"), "token_role": role, "token_name": at.get("displayName"),
+           "fine_grained_global": fg.get("global"), "fine_grained_scoped": scoped, "repo": a.repo,
            "at": datetime.now(timezone.utc).isoformat(timespec="seconds"), "write_test": None}
     try:
         ensure_private_repo(api, a.repo)
