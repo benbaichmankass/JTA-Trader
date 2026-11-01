@@ -1,7 +1,7 @@
 {
- "bar": "2026-11-01T11:10:00Z",
- "bar_close": "2026-11-01T11:15:00Z",
- "built_at": "2026-11-01T11:16:21Z",
+ "bar": "2026-11-01T11:15:00Z",
+ "bar_close": "2026-11-01T11:20:00Z",
+ "built_at": "2026-11-01T11:21:04Z",
  "closed": false,
  "order_package_id": "pkg-f07b659a7db94e8a",
  "packet": {
@@ -38,10 +38,25 @@
    },
    "previous_review": {
     "action": "hold",
-    "forecast": null,
-    "reason": "Mark 1.2547 (-0.35R), flat on the last bar and still above the 1.2543 swing low (low 1.2546); no structure break and no progress, 50 min held. Holding stays marginal; a close under 1.2543 means close.",
-    "review_id": "LR-20261101T1110Z-pkg-f07b659a7db94e8a",
-    "reviewed_at": "2026-11-01T11:11:31Z",
+    "forecast": {
+     "direction": "with_trade",
+     "evidence": [
+      "chart.since_entry: low 1.2543 (0.0 ATR), high 1.2578 (1.34 ATR)",
+      "chart.htf: 1h chop, ADX 8.6, last close 1.2562",
+      "exit_plan: SL 1.24738 / TP 1.27543 with no trail",
+      "book: USO long -0.814R, correlated long exposure",
+      "context.previous_review: hold, close-under-1.2543 trigger not strictly met"
+     ],
+     "horizon_bars": 4,
+     "invalidation_px": 1.2519,
+     "p_target": 0.4,
+     "target_px": 1.2578,
+     "thesis": "The 15m reclaim of the 1.2596 spike failed and price is sitting on the 1.2543 swing low inside a 1h chop range; I expect a bounce back toward the 1.2578 since-entry high before a clean break, but the longer sellers hold the low the more likely it breaks.",
+     "timeframe": "15m"
+    },
+    "reason": "Previous review (1110Z) said a close UNDER 1.2543 means close; the 15m bar closed AT 1.2543 (low 1.2543), equal to the swing low, not under it, so that trigger is not strictly met and its (null) forecast has nothing to grade. Price gave back the 1.2578 high, but 1h is chop (ADX 8.6), the 1h bar holds 1.2562 above the 1.2559/1.2564 highs, stop is ~2.2 ATR away at 1.2474 and the leg shows no priced\u2026",
+    "review_id": "LR-20261101T1117Z-pkg-f07b659a7db94e8a",
+    "reviewed_at": "2026-11-01T11:21:00Z",
     "route": null
    },
    "symbol": "XRPUSDT"
@@ -70,7 +85,7 @@
      "BTCUSDT",
      "short",
      "trend_donchian_1h",
-     0.541
+     0.539
     ],
     [
      "IAUM",
@@ -94,7 +109,7 @@
      "ADAUSDT",
      "short",
      "trend_donchian_ada_4h",
-     -0.275
+     -0.256
     ],
     [
      "MGC",
@@ -106,13 +121,13 @@
      "ETHUSDT",
      "short",
      "trend_donchian_eth",
-     -0.203
+     -0.192
     ],
     [
      "SOLUSDT",
      "short",
      "trend_donchian_sol_4h",
-     0.416
+     0.43
     ]
    ],
    "book_note": "[symbol, direction, leg, open_r (null = not measured)] per OTHER open package, either side",
@@ -441,14 +456,14 @@
   },
   "features_at_review": {
    "atr_now_over_entry": 1.0027,
-   "bars_since_peak": 3,
-   "giveback_r": 0.4724,
-   "open_r": -0.3832,
+   "bars_since_peak": 4,
+   "giveback_r": 0.508,
+   "open_r": -0.4189,
    "peak_r": 0.0891,
-   "r_to_stop": 0.6168,
-   "r_to_target": 1.8832
+   "r_to_stop": 0.5811,
+   "r_to_target": 1.9189
   },
-  "info_cutoff_at": "2026-11-01T11:16:36Z",
+  "info_cutoff_at": "2026-11-01T11:21:18Z",
   "leg": "ict_scalp_xrp_15m",
   "mechanics": {
    "evidence": "package sl 1.24738 / tp 1.27543 agree with every readable account",
@@ -482,25 +497,18 @@
    "cell_now": null,
    "trend_now": "chop"
   },
-  "review_id": "LR-20261101T1116Z-pkg-f07b659a7db94e8a",
+  "review_id": "LR-20261101T1121Z-pkg-f07b659a7db94e8a",
   "short_hold": {
-   "atr": 0.0014928571428571688,
-   "bar": "2026-11-01T11:10:00Z",
-   "bar_close": "2026-11-01T11:15:00Z",
+   "atr": 0.001335714285714329,
+   "bar": "2026-11-01T11:15:00Z",
+   "bar_close": "2026-11-01T11:20:00Z",
    "entry": 1.2586,
-   "mark": 1.2543,
-   "minutes_held": 55.7,
-   "open_r_at_mark": -0.3832,
+   "mark": 1.2539,
+   "minutes_held": 60.4,
+   "open_r_at_mark": -0.4189,
    "r_unit": "risk_per_unit",
    "read_state": "read",
    "recent_bars": [
-    {
-     "close": 1.2588,
-     "high": 1.2591,
-     "low": 1.2543,
-     "open": 1.2549,
-     "t": "2026-11-01T10:15:00Z"
-    },
     {
      "close": 1.2577,
      "high": 1.2596,
@@ -577,6 +585,13 @@
      "low": 1.2543,
      "open": 1.2547,
      "t": "2026-11-01T11:10:00Z"
+    },
+    {
+     "close": 1.2539,
+     "high": 1.2551,
+     "low": 1.2539,
+     "open": 1.2543,
+     "t": "2026-11-01T11:15:00Z"
     }
    ],
    "risk_per_unit": 0.01122,
@@ -584,9 +599,9 @@
   },
   "state": {
    "atr_now_over_entry": 1.0027,
-   "bars_held": 4,
-   "giveback_r": 0.4724,
-   "open_r": -0.3832,
+   "bars_held": 5,
+   "giveback_r": 0.508,
+   "open_r": -0.4189,
    "peak_provenance": "estimated",
    "peak_r": 0.0891,
    "regime_cell_entry": null,
@@ -595,25 +610,18 @@
    "tp": 1.27543
   }
  },
- "packet_sha": "d037cc2f8f32ed5864b75b802228cbc7b31555a518655cccadc6132ae0f6ecb2",
+ "packet_sha": "2461400c44a088ba0e55f12fe1ce05c09d752c337ec6b098d634b7f9cc30acad",
  "short_hold": {
-  "atr": 0.0014928571428571688,
-  "bar": "2026-11-01T11:10:00Z",
-  "bar_close": "2026-11-01T11:15:00Z",
+  "atr": 0.001335714285714329,
+  "bar": "2026-11-01T11:15:00Z",
+  "bar_close": "2026-11-01T11:20:00Z",
   "entry": 1.2586,
-  "mark": 1.2543,
-  "minutes_held": 55.7,
-  "open_r_at_mark": -0.3832,
+  "mark": 1.2539,
+  "minutes_held": 60.4,
+  "open_r_at_mark": -0.4189,
   "r_unit": "risk_per_unit",
   "read_state": "read",
   "recent_bars": [
-   {
-    "close": 1.2588,
-    "high": 1.2591,
-    "low": 1.2543,
-    "open": 1.2549,
-    "t": "2026-11-01T10:15:00Z"
-   },
    {
     "close": 1.2577,
     "high": 1.2596,
@@ -690,6 +698,13 @@
     "low": 1.2543,
     "open": 1.2547,
     "t": "2026-11-01T11:10:00Z"
+   },
+   {
+    "close": 1.2539,
+    "high": 1.2551,
+    "low": 1.2539,
+    "open": 1.2543,
+    "t": "2026-11-01T11:15:00Z"
    }
   ],
   "risk_per_unit": 0.01122,
