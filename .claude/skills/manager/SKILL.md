@@ -160,6 +160,8 @@ each **one marker, one lane, never spawn twice for the same id**; a `could_not_*
      skill and the handoff doc in full; from the canonical doc read only: RULE ONE; Permission Tiers + Data-backed Tier-2/3 decisions; Prime
      Directive; "Lanes answer to the manager" + "Reading is never gated".
    - **A dispatched lane** reads those same four sections (not the whole doc) plus any section its dispatch names (§ "Required dispatch block").
+2a. **Overdue first** (filing contract, operator 2026-11-01): run `python3 scripts/ops/checklist_overdue.py` — non-terminal rows past `due_by`, oldest
+   first (plus the count with no date at all). Dispatch, re-date with a reason, or drop each one before taking new work.
 2b. **Subscribe to the ops-flags PR** (§ "Standing alert subscriptions").
 3. Take over every live lane: `get_session` it, then send it a trigger naming
    you as its manager (the reply channel is described under § "Every spawn
@@ -375,7 +377,7 @@ edit it with ad-hoc python.** The CLI writes one row atomically, checks it again
 declared `states` (and `priority_rank`: a positive number or null), and never touches the shared header:
 
 ```bash
-python3 scripts/ops/checklist.py add  NEW-ROW --title "one line" --state queued --owner me --tier 1 --rank 3 --by "$SESSION"
+python3 scripts/ops/checklist.py add  NEW-ROW --title "one line" --state queued --due-by 2026-11-05 --roadmap L-OPS --tier 1 --rank 3 --by "$SESSION"
 python3 scripts/ops/checklist.py set  A3 state=in_flight lane=session_01... ceiling_usd=25 --by "$SESSION"
 python3 scripts/ops/checklist.py set  A3 prs='[123,456]' blocked_on='[]'     # values parse as JSON, else string
 python3 scripts/ops/checklist.py note A3 "what is true about this row"        # --append to add to it
@@ -383,6 +385,26 @@ python3 scripts/ops/checklist.py archive-lane A3                              # 
 python3 scripts/ops/checklist.py queue --limit 10                             # the ranked runnable queue
 python3 scripts/ops/checklist.py header last_review '{"report_id": "...", "reviewed_at": "..."}'   # rare: the header is shared
 ```
+
+⚠️ **The filing contract (operator, 2026-11-01, binding; lane `CHECKLIST-OWNER-DUE`).** *"The manager is the owner of all the tasks. It's
+just a question of when we're getting to them, or they need to be related to a roadmap item ... that needs to be done immediately when it's
+filed."* So `add` **refuses** a row without a `--due-by` (ISO date) **and** a `--roadmap` ref (a milestone id from `docs/roadmap/milestones.yaml`,
+or the explicit `--roadmap unmapped --roadmap-unmapped-reason '<why no milestone fits>'`); `owner` **defaults to `manager`** and is never null;
+`set` refuses to clear `owner` / `due_by` / `roadmap` (re-date it instead); closing to `done`/`dropped` needs a stated reason
+(`closed_reason=` or a new note in the same call). `checklist-filing-guard` (`scripts/ci/check_checklist_filing.py`) refuses any PR that adds or
+substantively changes a non-terminal row lacking the three. **A date is when we will GET TO the row**, not when it ends; an unscheduled
+row is not on the plan. **Overdue is the first thing you look at**: `python3 scripts/ops/checklist_overdue.py` at start of session (and the top of
+`GET /api/bot/work/brief`); an overdue row is dispatched, re-dated with a reason in its note, or dropped with a reason that day. Gates this
+adds: the refusal and the guard above (operator-authorised 2026-11-01).
+
+### The audit-outcome contract (operator, 2026-11-01, binding)
+
+*"There needs to be this specific outcome where we have an audit and then a work plan to make sure that those items get taken care of."* An
+audit or review lane — `weekly-audit`, `health-review`, `performance-review`, `ml-review`, `programme-review`, any from-scratch audit — is **done only
+when every proposal it makes maps to** (a) a checklist row with `owner`, `due_by` and a `roadmap` ref (or a research queue unit carrying a
+`roadmap` ref and a run date), **or** (b) a recorded operator decision (a row, popup answer or `config/mandates.yaml` entry it names). A proposal
+that is "in the report" and in neither is **not filed**, whatever the report says. The lane's final section lists each proposal id → row/unit
+id → `due_by`, and the manager checks that list against `checklist.py` before accepting the lane (`close-out` check 4 repeats it).
 
 A refused edit (state outside `states`, duplicate id, unknown row, `state`/`status`
 disagreement, path-shaped id) prints `checklist: refused -- <why>` and writes

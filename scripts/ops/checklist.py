@@ -47,7 +47,7 @@ if str(REPO) not in sys.path:
 from src.runtime.checklist_store import *  # noqa: E402,F401,F403
 from src.runtime import checklist_store as _store  # noqa: E402
 from src.runtime.checklist_store import (  # noqa: E402
-    MONOLITH, SEQ, STORE, ChecklistError, _dump, check, load,
+    DEFAULT_OWNER, MONOLITH, SEQ, STORE, TERMINAL, ChecklistError, _dump, check, filing_problems, load,
     render, seed, write_row,
 )
 
@@ -109,12 +109,21 @@ def op_add(repo: Path, row_id: str, fields: dict, by: str | None) -> Path:
     header = _require_seeded(repo)
     if _store.read_row(row_id, repo) is not None:
         raise ChecklistError(f"row {row_id!r} already exists; use `set` or `note`")
-    row = {"id": row_id, "title": "", "phase": None, "state": "queued", "owner": None, "lane": None,
+    row = {"id": row_id, "title": "", "phase": None, "state": "queued", "owner": DEFAULT_OWNER, "lane": None,
            "model": None, "ceiling_usd": None, "spend_usd": None, "tier": None, "prs": [],
-           "blocked_on": [], "note": ""}
+           "blocked_on": [], "note": "", "due_by": None, "roadmap": None}
     row.update(fields)
     if not str(row["title"]).strip():
         raise ChecklistError("`add` needs --title")
+    if row["state"] in TERMINAL:
+        if not str(row.get("closed_reason") or row.get("note") or "").strip():
+            raise ChecklistError(f"a row added as {row['state']!r} needs a stated reason (--note or closed_reason=)")
+    elif (why := filing_problems(row)):
+        # THE FILING CONTRACT (operator, 2026-11-01): the manager owns every task, so a row is filed with
+        # a date and a roadmap ref or not at all -- "when we're getting to it" is a field, not a hope.
+        raise ChecklistError(f"row {row_id!r} not filed: " + "; ".join(why)
+                             + " (pass --due-by YYYY-MM-DD and --roadmap L-OPS[,M20] | --roadmap unmapped "
+                               "--roadmap-unmapped-reason '...')")
     return _commit_row(row, repo, header, by)
 
 
@@ -125,7 +134,25 @@ def op_set(repo: Path, row_id: str, fields: dict, by: str | None) -> Path:
         raise ChecklistError(f"no row {row_id!r}")
     if "id" in fields and fields["id"] != row_id:
         raise ChecklistError("a row's id cannot change")
+    old = dict(row)
     row.update(fields)
+    # `set` never clears owner / due_by / roadmap (operator, 2026-11-01): re-date it, do not blank it.
+    for k in ("owner", "due_by", "roadmap"):
+        if old.get(k) and not row.get(k):
+            raise ChecklistError(f"row {row_id!r}: `set` refuses to clear `{k}` (was {old.get(k)!r}); "
+                                 f"change it to a new value instead")
+    if row.get("state") in TERMINAL and old.get("state") not in TERMINAL:
+        reason = str(fields.get("closed_reason") or "").strip()
+        if not reason and str(fields.get("note") or "").strip() == str(old.get("note") or "").strip():
+            raise ChecklistError(f"row {row_id!r}: closing to {row['state']!r} needs a stated reason "
+                                 f"(closed_reason='...' or a new note in the same call)")
+    touched = {"owner", "due_by", "roadmap", "roadmap_unmapped_reason"} & set(fields)
+    if (why := filing_problems(row)):
+        if touched or old.get("state") in TERMINAL:  # you edited the contract fields, or reopened a closed row
+            raise ChecklistError(f"row {row_id!r} refused: " + "; ".join(why))
+        print(f"checklist: WARNING row {row_id!r} is not to the filing contract and CI refuses a changed row "
+              f"like this: " + "; ".join(why) + f"\n  fix: checklist.py set {row_id} due_by=YYYY-MM-DD "
+              "roadmap='[\"L-OPS\"]' owner=manager", file=sys.stderr)
     return _commit_row(row, repo, header, by)
 
 
@@ -166,7 +193,11 @@ def _cli_write(a, repo: Path) -> int:
         if a.cmd == "add":
             fields = {k: v for k, v in (("title", a.title), ("phase", a.phase), ("state", a.state),
                                         ("owner", a.owner), ("tier", None if a.tier is None else _parse_value(a.tier)), ("note", a.note),
-                                        ("lane", a.lane)) if v is not None}
+                                        ("lane", a.lane), ("due_by", a.due_by),
+                                        ("roadmap_unmapped_reason", a.roadmap_unmapped_reason)) if v is not None}
+            if a.roadmap is not None:
+                rm = _parse_value(a.roadmap)
+                fields["roadmap"] = rm if isinstance(rm, list) else [x.strip() for x in str(rm).split(",") if x.strip()]
             if a.rank is not None:
                 fields[_store.RANK] = _parse_value(a.rank)
             if a.prs:
@@ -245,6 +276,44 @@ def _self_test() -> int:
             ck("a row whose id disagrees with its filename is refused, not skipped", True)
         else:
             ck("a row whose id disagrees with its filename is refused, not skipped", False)
+    # ── the filing contract (operator, 2026-11-01) ──
+    with tempfile.TemporaryDirectory() as td:
+        repo = Path(td)
+        (repo / MONOLITH.parent).mkdir(parents=True)
+        seed_doc = {"schema_version": 2, "states": {"queued": "", "in_flight": "", "blocked": "",
+                                                    "landed_unproven": "", "done": "", "dropped": ""},
+                    "items": [{"id": "OLD", "title": "legacy", "state": "queued", "owner": None, "note": "n"}]}
+        (repo / MONOLITH).write_text(_dump(seed_doc), encoding="utf-8")
+        seed(repo=repo)
+
+        def refused(fn, *a) -> bool:
+            try:
+                fn(*a)
+            except ChecklistError:
+                return True
+            return False
+        good = {"title": "t", "due_by": "2026-11-05", "roadmap": ["L-OPS"]}
+        ck("add REFUSES a row with no due_by", refused(op_add, repo, "N1", {"title": "t", "roadmap": ["L-OPS"]}, None))
+        ck("add REFUSES a row with no roadmap", refused(op_add, repo, "N2", {"title": "t", "due_by": "2026-11-05"}, None))
+        ck("add REFUSES a non-date due_by", refused(op_add, repo, "N3", dict(good, due_by="soon"), None))
+        ck("add REFUSES an impossible date", refused(op_add, repo, "N3b", dict(good, due_by="2026-02-31"), None))
+        ck("add REFUSES unmapped with no reason", refused(op_add, repo, "N4", dict(good, roadmap=["unmapped"]), None))
+        ck("add REFUSES a blank owner", refused(op_add, repo, "N4b", dict(good, owner=" "), None))
+        op_add(repo, "N5", good, None)
+        ck("add defaults owner to manager", load(repo)["items"][-1]["owner"] == "manager")
+        op_add(repo, "N6", dict(good, roadmap=["unmapped"], roadmap_unmapped_reason="no milestone fits a one-off"), None)
+        ck("add accepts unmapped WITH a reason", any(r["id"] == "N6" for r in load(repo)["items"]))
+        ck("set REFUSES to clear due_by", refused(op_set, repo, "N5", {"due_by": None}, None))
+        ck("set REFUSES to clear roadmap", refused(op_set, repo, "N5", {"roadmap": []}, None))
+        ck("set REFUSES to clear owner", refused(op_set, repo, "N5", {"owner": ""}, None))
+        op_set(repo, "N5", {"due_by": "2026-11-09"}, None)
+        ck("set may RE-DATE", [r for r in load(repo)["items"] if r["id"] == "N5"][0]["due_by"] == "2026-11-09")
+        ck("closing needs a stated reason", refused(op_set, repo, "N5", {"state": "dropped"}, None))
+        op_set(repo, "N5", {"state": "dropped", "closed_reason": "superseded by N6"}, None)
+        ck("closing with a reason works", [r for r in load(repo)["items"] if r["id"] == "N5"][0]["state"] == "dropped")
+        ck("a legacy row can still be noted (warned, not blocked)", op_note(repo, "OLD", "x", True, None) is not None)
+        ck("...but touching a contract field on it must leave it valid", refused(op_set, repo, "OLD", {"due_by": "nope"}, None))
+        ck("terminal rows are exempt from the contract", filing_problems({"state": "done"}) == [])
     print("checklist store self-test:", "PASS" if ok else "FAIL")
     return 0 if ok else 1
 
@@ -260,7 +329,8 @@ def main(argv: list[str] | None = None) -> int:
     sub = ap.add_subparsers(dest="cmd")
     pa = sub.add_parser("add", help="add a new row")
     pa.add_argument("id")
-    for flag in ("title", "phase", "state", "owner", "note", "lane", "tier", "prs", "rank"):
+    for flag in ("title", "phase", "state", "owner", "note", "lane", "tier", "prs", "rank", "due-by", "roadmap",
+                 "roadmap-unmapped-reason"):
         pa.add_argument(f"--{flag}")
     ps = sub.add_parser("set", help="set fields on a row: key=value ... (JSON values parsed)")
     ps.add_argument("id")

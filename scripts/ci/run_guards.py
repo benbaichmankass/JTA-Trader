@@ -422,6 +422,16 @@ GUARDS: List[Dict[str, Any]] = [
                   ["python3", "scripts/ops/roadmap_map.py", "--check", "--base", "origin/main"]],
     },
     {
+        # CHECKLIST-OWNER-DUE (operator, 2026-11-01): the manager owns every task, and a row is filed with
+        # a date and a roadmap ref. Diff-scoped: rows this diff adds/changes (non-terminal) need owner +
+        # due_by + roadmap (or "unmapped" + reason). Gates this adds: this one (operator-authorised).
+        "name": "checklist-filing-guard",
+        "when": {"globs": ["docs/claude/work/checklist/**", "scripts/ci/check_checklist_filing.py",
+                            "src/runtime/checklist_store.py"]},
+        "steps": [["python3", "scripts/ci/check_checklist_filing.py", "--self-test"],
+                  ["python3", "scripts/ci/check_checklist_filing.py", "--check", "--base", "origin/main"]],
+    },
+    {
         # PI-20261005-4GA8WQPA-0002 (the lapse wave): a pipeline item whose
         # next-due date moves LATER with its state unchanged must carry a
         # `redate` block holding a NEW observation. Diff-scoped.
@@ -435,9 +445,10 @@ GUARDS: List[Dict[str, Any]] = [
         # PI-20261004-APBY4NTV-0003: the per-row checklist store/loader/generator
         # (step (a); the monolith-equals-render guard arrives with step (c)).
         "name": "checklist-store-guard",
-        "when": {"globs": ["scripts/ops/checklist.py", "tests/test_checklist_store.py",
-                            "docs/claude/work/checklist/**"]},
-        "steps": [["python3", "scripts/ops/checklist.py", "--self-test"]],
+        "when": {"globs": ["scripts/ops/checklist.py", "scripts/ops/checklist_overdue.py",
+                            "tests/test_checklist_store.py", "docs/claude/work/checklist/**"]},
+        "steps": [["python3", "scripts/ops/checklist.py", "--self-test"],
+                  ["python3", "scripts/ops/checklist_overdue.py", "--self-test"]],
     },
     {
         # SALVAGED FROM THREE REMOVED GOVERNANCE ENTRIES, 2026-09-21.

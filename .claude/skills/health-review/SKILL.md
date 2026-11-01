@@ -176,6 +176,11 @@ the exact change and go to the operator. Fix Tier 1 now.
 Record `backlog_coverage`: `open_at_start` = the gate set, `due_total`, `excluded`, the sources, `count_untriaged`. If
 the budget ends the walk, stop there and state the count. Never bulk-redate.
 
+## Done-condition (audit-outcome contract, operator 2026-11-01)
+
+The review is done only when **every call/proposal maps to a checklist row with `owner`, `due_by` and a `roadmap` ref, or to a recorded operator
+decision**; the `## 3. Decisions` ending column names that row and its `due_by`. Manager skill § "The audit-outcome contract".
+
 ## Output
 
 1. **`comms/reviews/health/<YYYY-MM-DD>-health-review.json`** per

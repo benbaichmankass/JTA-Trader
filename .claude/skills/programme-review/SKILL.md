@@ -132,6 +132,12 @@ reason against the diff. Guards before push:
 `family-retirement-guard`, `canonical-doc-coherence`) and `python3 scripts/ci/check_pr_landing.py --base origin/main`.
 Report to the manager in one line: calls graded (hit/miss), nodes authored, the top next test per track, PR number.
 
+## Done-condition (audit-outcome contract, operator 2026-11-01)
+
+The lane is done only when **every next-test, retirement and build proposal in the held PR maps to a research unit or checklist row with `owner`,
+`due_by` (a run date for a unit) and a `roadmap` ref, or to a recorded operator decision**; list proposal → id → date in the PR body. Manager skill
+§ "The audit-outcome contract".
+
 ## What this skill never does
 
 Never edits config, weights or a registered rule; never retires a family on one FAIL; never self-lands a tree edit;

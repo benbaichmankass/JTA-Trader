@@ -210,7 +210,8 @@ Answer each yes/no in the PR body:
 5. Layer 0 graded every prior finding;
 6. the deep pass ran;
 7. every touched row has a TRUE state (`landed_unproven` ≠ `done`, with its observation);
-8. `close-out` was run.
+8. `close-out` was run;
+9. **every proposal maps to a row with `owner`, `due_by` and a `roadmap` ref, or to a recorded operator decision** (list: proposal → row → `due_by`; manager skill § "The audit-outcome contract", operator 2026-11-01).
 
 ## Landing
 
