@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import argparse
 import datetime as dt
+import itertools
 import json
 import os
 import statistics as st
@@ -58,7 +59,7 @@ def runs(hours: int) -> list[dict]:
 
 def report(rs: list[dict], window_h: float | None) -> dict:
     ok = sorted(dt.datetime.fromisoformat(r["updated_at"].replace("Z", "+00:00")) for r in rs if r.get("conclusion") == "success")
-    gaps = [((b - a).total_seconds() / 60, a, b) for a, b in zip(ok, ok[1:])]
+    gaps = [((b - a).total_seconds() / 60, a, b) for a, b in itertools.pairwise(ok)]
     by_day: dict[str, float] = {}
     for g, a, _b in gaps:
         by_day[a.strftime("%Y-%m-%d")] = max(by_day.get(a.strftime("%Y-%m-%d"), 0.0), g)
