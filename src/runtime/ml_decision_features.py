@@ -24,7 +24,7 @@ MIN_BARS = 169 + 168  # ret_168 needs 168 bars of vol24 history plus 168 of retu
 
 def features_symbol(df: pd.DataFrame) -> pd.DataFrame:
     """Per-bar own-symbol features. ``df`` has columns ts (UTC bar OPEN time), open, high, low, close, volume."""
-    c, h, l, v = (df[k].astype(float) for k in ("close", "high", "low", "volume"))
+    c, h, lo, v = (df[k].astype(float) for k in ("close", "high", "low", "volume"))
     lr = np.log(c).diff()
     vol24 = lr.rolling(24).std()
     vol168 = lr.rolling(168).std()
@@ -34,11 +34,11 @@ def features_symbol(df: pd.DataFrame) -> pd.DataFrame:
     f["vol24"] = vol24
     f["vol_ratio"] = vol24 / vol168
     pc = c.shift(1)
-    tr = pd.concat([h - l, (h - pc).abs(), (l - pc).abs()], axis=1).max(axis=1)
+    tr = pd.concat([h - lo, (h - pc).abs(), (lo - pc).abs()], axis=1).max(axis=1)
     f["atr_pct"] = tr.rolling(ATR_N).mean() / c
     for k in (24, 168):
-        hi, lo = h.rolling(k).max(), l.rolling(k).min()
-        f[f"range_pos_{k}"] = (c - lo) / (hi - lo).replace(0, np.nan)
+        hi, lw = h.rolling(k).max(), lo.rolling(k).min()
+        f[f"range_pos_{k}"] = (c - lw) / (hi - lw).replace(0, np.nan)
     lv = np.log1p(v)
     f["vol_z"] = (lv - lv.rolling(168).mean()) / lv.rolling(168).std()
     up = lr.clip(lower=0).rolling(14).mean()
@@ -53,9 +53,9 @@ def features_symbol(df: pd.DataFrame) -> pd.DataFrame:
 
 def atr_last(df: pd.DataFrame, n: int = ATR_N) -> float:
     """ATR14 (simple mean of true range) at the last bar, as the harness labels it."""
-    h, l, c = (df[k].astype(float) for k in ("high", "low", "close"))
+    h, lo, c = (df[k].astype(float) for k in ("high", "low", "close"))
     pc = c.shift(1)
-    tr = pd.concat([h - l, (h - pc).abs(), (l - pc).abs()], axis=1).max(axis=1)
+    tr = pd.concat([h - lo, (h - pc).abs(), (lo - pc).abs()], axis=1).max(axis=1)
     return float(tr.rolling(n, min_periods=n).mean().iloc[-1])
 
 

@@ -50,7 +50,7 @@ def _get(url, params=None):
                 return None
             r.raise_for_status()
             return r
-        except Exception as e:  # noqa: BLE001 - retried; the final failure is raised to the caller
+        except Exception as e:  # noqa: BLE001  # allow-silent: retried with backoff; the final failure is raised below
             last = e
     raise RuntimeError(f"GET failed {url}: {last}")
 
@@ -90,7 +90,7 @@ def binance_1h(symbol: str, days: list[str]) -> pd.DataFrame | None:
     return df[["ts", "open", "high", "low", "close", "volume"]].reset_index(drop=True)
 
 
-def compare(traded, ref_syms, src_a: dict, src_b: dict, model, every_h: int, since: pd.Timestamp) -> dict:
+def compare(traded, src_a: dict, src_b: dict, model, every_h: int, since: pd.Timestamp) -> dict:
     out = {}
     for sym in traded:
         a_own, b_own = src_a.get(sym), src_b.get(sym)
@@ -153,7 +153,7 @@ def main(argv=None) -> int:
         (out / "verdict.json").write_text(json.dumps(vj, indent=1) + "\n")
         print(json.dumps(vj))
         return 0
-    res = compare(traded, ref, bybit, binance, model, int(meta["bracket"]["decision_every_h"]), since)
+    res = compare(traded, bybit, binance, model, int(meta["bracket"]["decision_every_h"]), since)
     n = sum(r["n"] for r in res.values())
     agree = sum((r["decision_agreement"] or 0) * r["n"] for r in res.values()) / n if n else None
     missing = {"bybit": [s for s in syms if bybit.get(s) is None], "binance": [s for s in syms if binance.get(s) is None]}

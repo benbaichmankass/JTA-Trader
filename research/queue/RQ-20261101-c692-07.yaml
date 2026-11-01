@@ -61,3 +61,10 @@ related:
 - RQ-20261101-c692-01
 - RQ-20261101-c692-06
 what_it_does_not_do: Places no order; changes no config.
+ml_consumer:
+  consumer: src/units/strategies/ml_entry.py
+  decision: whether the ml_entry adapter is fixed before its first real-money bybit_2 trade (a decision-agreement failure is a mechanical fault
+    in the served features)
+  legs:
+  - ml_entry
+  book: money
