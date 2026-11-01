@@ -3,7 +3,7 @@
   "title": "Desk full-lifecycle factorial: every trade replayed bar by bar entry->close; entry (random/strategy/Claude) x management (hold/Claude/B3 static) to find WHERE the desk's value is and how to combine it with the legs",
   "phase": null,
   "state": "in_flight",
-  "owner": null,
+  "owner": "manager",
   "lane": "session_01AFoLuJGUG7n1WDzgCysB32",
   "model": "claude-opus-5-5",
   "ceiling_usd": 45,
@@ -15,8 +15,8 @@
   "blocked_on": [],
   "note": "2026-10-28 ~20:30Z lane: FULL RUN (option C, C4E x 520 pairs) DONE, registered verdict FAIL. Claude whole-trade management dR vs HOLD: Claude entries -0.159 R [-0.261,-0.041] (n 473 trades), random entries -0.124 R [-0.197,-0.043] (n 465); vs matched random intervention -0.013 / -0.046 (sig.); vs best rule -0.075 / -0.101. Loss = frequent tightening (981 of 1,155 actions, -0.097 each); holds worth +0.142 vs closing; only positive pocket (n.s.) = closes at <= -0.5 R. Entry value indeterminate (-0.09), interaction 0. Coverage 938/1,040 trades (b088-b099 stopped at the $200 ceiling); 3,156 check-ins, 0 invalid; isolation 0 violations after voiding + re-judging b018. Spend: judges $159.48 MEASURED + pilot $6.85; session INFERRED ~$25-35. Evidence comms/research/desk_lifecycle/full-c4e/, doc s7.5; RQ-20261028-d1f5-02 graded fail. PR pending manager merge (hold). [2026-10-29 15:10Z lane ML-AM-NEXT-LIVE] Matched-random control made CAUSAL (intervention_controls B2 default mode='causal'; PI-20261029-IFMPNGJK-0003): the legacy draw picked the random action's bar uniformly over the trade's OWN remaining check-ins (P(act at offset 0) = 1/remaining life, known only at exit). Inventory (comms/research/causal-matched-random/inventory-2026-10-29.json): 5 units declare matched_random, 7 record files carry a B2 result; 0 verdicts can flip: RQ-20261029-1f39-02 every class fails R1/R2/R3 before R4 (no class verdict flips), RQ-20261028-d1f5-02 fails on dR vs hold (n=473/465). desk_lifecycle_driver.matched_random (used by the regrade) keeps a milder per-trade-rate dependence: PI-20261029-IFMPNGJK-0005. Any future R4 read (incl. the BOOK-SIM re-grade and HARNESS-BE-RANDOM-CONTROL) must draw causally.",
   "priority_rank": 1,
-  "updated_at": "2026-10-29T15:07:50Z",
-  "updated_by": "session_01AFoLuN7GVCEJnGiFMpNGJK",
+  "updated_at": "2026-11-01T11:36:35Z",
+  "updated_by": "session_01AFoLuL5qrtXsc8bv7JrN4Z",
   "roadmap": [
     "L-DESK"
   ],

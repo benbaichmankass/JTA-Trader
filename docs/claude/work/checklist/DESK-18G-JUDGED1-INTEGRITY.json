@@ -3,7 +3,7 @@
   "title": "Explain two judged-1 integrity gaps found by DESK-18F: (a) committed judged-1 net R is a constant 3.5 bps round trip cheaper than today's cost policy; (b) 1,498/1,498 re-derived packets differ in sha from the committed mask-key",
   "phase": null,
   "state": "queued",
-  "owner": null,
+  "owner": "manager",
   "lane": null,
   "model": null,
   "ceiling_usd": null,
@@ -12,8 +12,8 @@
   "prs": [],
   "blocked_on": [],
   "note": "Filed 2026-10-30 by lane DESK-18F-MAKER-FILLS (PR #21719, report docs/research/desk-18f-maker-fills-2026-10-30.md). MEASURED: (a) market-entry replay of the 732 judged-1 proposals reproduces every exit reason and days of comparison/judged-1-decomposition/records.jsonl, but net R differs by exactly -3.5 bps round trip (mean -3.5000, sd 1.8e-14) under today's dsp.cost_policy (11.0 fee + 3.0 slip bps); cause not established, git history shallow. (b) packet ids match but every packet_sha differs, with candles fetched from 2025-05-01 and from 2024-05-01. Neither changes the DESK-18F verdict (paired S3). WHAT TO DO: git fetch --unshallow, find the commit that changed the cost policy and the one that changed the packet builder between 2026-10-27 and 2026-10-30, and state whether judged-1's S3 (+0.006) and the RQ-20261026-e535-03 verdict were scored under the older cost. CLOSES WHEN: both gaps are explained with a commit ref, or a unit's cost basis is restated.",
-  "updated_at": "2026-10-30T22:14:42Z",
-  "updated_by": "session_01AFoLuJFbgeLCnsH2uRRAMS",
+  "updated_at": "2026-11-01T11:36:35Z",
+  "updated_by": "session_01AFoLuL5qrtXsc8bv7JrN4Z",
   "roadmap": [
     "L-DESK"
   ],

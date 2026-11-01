@@ -3,7 +3,7 @@
   "title": "Coalesce live-review wakes per package: when a reviewer for a package is still running, route new events for that package to it (one row per review_id) instead of spawning a new session per event",
   "phase": null,
   "state": "queued",
-  "owner": null,
+  "owner": "manager",
   "lane": null,
   "model": "claude-sonnet-5-5",
   "ceiling_usd": 4,
@@ -13,8 +13,8 @@
   "blocked_on": [],
   "note": "MEASURED 2026-10-29: ict_scalp_sol_5m pkg-e5f8bcda8cfa4ae5 (bybit_1 paper) raised 3 wakes in 3 min (13:56Z structure_break, 13:58Z adverse_r -0.5, 13:59Z adverse_r -0.75), 3 Sonnet sessions (~$0.4-0.6 each, n=3 earlier reviewer sessions measured $0.39-$0.60). On 5m legs the -0.5/-0.75 ladder fires inside one bar. Not a new gate: every event still gets a review row; only the session count changes. Design decision for the lane: coalesce in the manager dispatch (send_message to the live reviewer) vs a VM-side batching window.",
   "priority_rank": 6,
-  "updated_at": "2026-10-29T14:00:38Z",
-  "updated_by": "Manager Session 2026-10-29c",
+  "updated_at": "2026-11-01T11:36:35Z",
+  "updated_by": "session_01AFoLuL5qrtXsc8bv7JrN4Z",
   "roadmap": [
     "L-AM-STANDARD"
   ],

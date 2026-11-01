@@ -3,7 +3,7 @@
   "title": "Routines resolve the current manager by ONE step: the non-archived 'Manager Session YYYY-MM-DD<letter>' with the latest date then letter (list_sessions); no hard-coded session id, no fallback wording (operator: redundant paths waste compute). Repo slug and cadence wording correct; a check lists any routine prompt naming a specific session id or an old repo name",
   "phase": null,
   "state": "landed_unproven",
-  "owner": null,
+  "owner": "manager",
   "lane": "session_011c3qoaBvGBioDWkPVToQSb",
   "model": "sonnet",
   "ceiling_usd": 3,
@@ -15,8 +15,8 @@
   "blocked_on": [],
   "note": "12:09Z DONE (assistant, after the operator took its session out of auto mode): 6 of 6 routine prompts bound to session_011c3qoaBvGBioDWkPVToQSb rewritten with ONE STEP 0 manager lookup (latest non-archived 'Manager Session YYYY-MM-DD<letter>'), no session id named, JTA-Trader source_url, real cadence wording: trig_01UnRpzN513KbMjvJWFAf911 research-ops, trig_01Bchsugftspk4uZhHR1ncK8 LTR backstop, trig_01PHFNiKyeRUMLJj1DgYzmuy daily authoring, trig_013GU17584wu4HJYEkTF1KBk weekly health review, trig_01HxRVXSy6GGqWaWQXmGdJ97 lane check-in, trig_01LE61kLKDFKptEfTfZ7vnYS weekly review prep (still disabled, prompt only). Remaining: the handover step + a stale-reference check (follow-up build).  2026-10-31 (lane): built scripts/ops/routine_prompt_check.py (+tests) and a one-line handover step in manager skill. MEASURED live run 2026-10-31 ~16Z: list_triggers(enabled=true, recurring=true), all pages (has_more false): 12 recurring routines checked, 0 flagged (none names a session id or old repo slug). Also seen: 1 pending one-shot, trig_01VM3CGFfV5ErNSk3yhzK1Mz (run_once_at 2026-11-02T13:25Z) names lane session_01AFoLuKNfrHwfz6U7uYhrGh in its prompt: a lane id, not the manager, informational only. Could not look: the remaining pages of non-recurring one-shots (about 40 read; fired one-shots are inert). Input was a hand-transcription of the prompt lines carrying URLs/ids from the tool output (full prompts read by eye). No trigger edited.",
   "priority_rank": 3,
-  "updated_at": "2026-10-31T16:05:58Z",
-  "updated_by": "session_01AFoLuKwNMzjtn2CH2kVd86",
+  "updated_at": "2026-11-01T11:36:35Z",
+  "updated_by": "session_01AFoLuL5qrtXsc8bv7JrN4Z",
   "roadmap": [
     "L-LADDER"
   ],
