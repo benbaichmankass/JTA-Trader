@@ -92,7 +92,7 @@ def order_package(cfg: dict, candles_df: Optional[pd.DataFrame] = None,
         raise ValueError("not_a_decision_bar")
     frames = dict(reference_frames or {})
     frames[symbol] = df
-    row = F.decision_row(symbol, frames)
+    row = F.decision_row(symbol, frames, reference=meta.get("xs_reference"))
     if row is None:
         raise ValueError("feature_row_unformable")
     n_ref = int(row.pop("_n_reference"))

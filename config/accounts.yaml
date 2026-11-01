@@ -1306,6 +1306,11 @@ accounts:
       # support, so a desk entry and a strategy leg never share a symbol's position (refused, journalled). This roster
       # is NOT mirrored: alpaca_portfolio mirrors alpaca_live, which does not carry claude_desk. ROLLBACK: delete this line.
       - claude_desk
+      # 2026-11-01 ML ENTRY v1 on the Stage-1 floor (row ALPACA-LIVE-ACTIVITY-ML, Tier 3; operator popup ~11:47Z,
+      # verbatim "Paper now, v2 for live (Rec.)"): the same frozen ml_entry model as bybit_2, paper money, both sides,
+      # on strategies.yaml::ml_entry.account_symbols.alpaca_paper. NOT on alpaca_live / alpaca_portfolio (no real-money
+      # ML on Alpaca until a model passes). ROLLBACK: delete this line.
+      - ml_entry
     symbols: [SPY, QQQ, GLD, IWM, TLT, IEF, SLV, USO, GDX, TQQQ, QLD, SPYM, IAUM, SCHA]   # instrument identity (Phase-0 +
                                        # ETF-breadth daily 2026-06-20 + intraday
                                        # ETF pilot 2026-06-20 § 0e adds SLV +
