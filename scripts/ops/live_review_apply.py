@@ -705,10 +705,14 @@ def _venue_tp(client, cfg: Dict[str, Any], symbol: str, direction: str, tp_order
             return out
         out["read_state"] = "resolved"
         if tp_order_id:
+            # THIS leg's tracked TP, or None. Never fall back to the position-level / sole TP leg: on a
+            # slices account that is a SIBLING package's bracket, and reading it as this leg's would pass
+            # the both-brackets check for a leg whose own TP is gone (LTR-PACKET-FIXES, 2026-11-01; the
+            # same fail-closed rule amend_position_sl._venue_state applies to the SL).
             hit = [o for o in orders if str(o.get("orderId")) == str(tp_order_id)]
             if hit:
                 out["venue_tp"] = _f(hit[0].get("triggerPrice"))
-                return out
+            return out
         pos = next((r for r in rows if str(r.get("side")) == want and (_f(r.get("size")) or 0) > 0), None)
         if pos is not None and _f(pos.get("takeProfit")):
             out["venue_tp"] = _f(pos.get("takeProfit"))
