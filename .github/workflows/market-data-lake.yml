@@ -1,80 +1,110 @@
 name: market-data-lake
 
-# The market data lake for the general (pooled) ML models, built on runners and STORED ON HUGGING FACE (private), not
-# on our VMs. Row MARKET-DATA-LAKE; design + depth tables docs/data/market-data-lake.md; universe
-# config/data_universe.yaml; loader ml/datasets/lake.py.
+# The market data lake for the general (pooled) ML models: CAPTURED, PROCESSED and VALIDATED by this workflow on
+# GitHub runners, STORED on Hugging Face (private dataset), never on our VMs, with no Claude session in the loop.
+# Row MARKET-DATA-LAKE; design + per-class depth docs/data/market-data-lake.md; universe config/data_universe.yaml;
+# loader ml/datasets/lake.py; health records health/latest.json (HF) + comms/data_lake/health_latest.json (repo).
 #
-# WHY (operator, 2026-11-01 12:38Z): "at least the general MLs needs to be training pretty much on as much market data
-# as we can find for it, and riding on memory and infra from kaggle/HF to create and store the data sets".
+# WHY (operator, 2026-11-01): "the general MLs needs to be training pretty much on as much market data as we can find
+# for it, and riding on memory and infra from kaggle/HF to create and store the data sets"; "keeping the smallest
+# timeframe data available - we can always reconstruct higher timeframes on top of that"; "automations (not claudes)
+# that are continuosly capturing, processing and validating the data feeds".
 #
-# GATES THIS ADDS OR CHANGES: none. A data-path job only: no order path, no config/*.yaml the trader reads, no execution
-# flag. A failed shard or series is recorded in MANIFEST.json and turns the run RED (one flag); nothing halts, the next
-# run retries.
+# GATES THIS ADDS OR CHANGES: none. Data path only: no order path, no config the trader reads, no execution flag.
 #
-# JOBS
-#   preflight  HF_TOKEN present + WRITE role + dataset private (refuses a public repo)
-#   crypto     matrix over (market, tf, shard): every Binance USD-M perp (incl. delisted) at 1d/1h/15m/5m, 1m majors,
-#              spot majors -- data.binance.vision, sha256-checked per monthly zip -> HF  crypto/<market>/<tf>/
-#   other      universe snapshots (NASDAQ Trader symbol directory, Binance archive listings), FRED rates/FX/macro,
-#              Yahoo daily futures fronts, and the ETF-HISTORY-PIPELINE store pulled from the trainer -> HF
-#   manifest   merges every shard's manifest into MANIFEST.json + README depth table, tags the HF commit vYYYYMMDD-HHMM
+# MODES (input `mode`, issue body `mode:`, default refresh)
+#   refresh   DAILY (cron + schedule-keeper). Pulls MANIFEST.json from HF; each capture job rebuilds only what changed
+#             (the open month, new months, daily-built months whose monthly file has since appeared).
+#   backfill  everything from the start of each source (first run; idempotent, re-runnable).
+#   preflight token check only: whoami role + a REAL write to the private dataset. Also runs on pull_request for
+#             changes to this pipeline, so the token is MEASURED before merge.
 #
-# TRIGGERS: weekly refresh Sun 03:23Z; workflow_dispatch; or a labelled issue `market-data-lake-request` whose body may
-#   carry `scope: all|crypto|other` (default all).
+# PER CAPTURE JOB: capture (incremental) -> process (resample 1m -> 5m/15m/1h/4h/1d; per-partition manifest) ->
+#   validate (schema, dups, monotonic ts, OHLC sanity, return outliers, gaps vs calendar) -> upload (add/replace).
+# MANIFEST JOB: merge manifests, feed staleness, consecutive-failure counts -> health record. A series or feed failing
+#   3 consecutive runs raises ONE red flag (ops-flags PR comment + one Telegram message). A failure never halts a feed:
+#   every run retries every series.
 #
-#   options    CBOE IV indices (VIX family), DoltHub EOD chains + IV history (dolt clone), trainer option snapshots
-#   equities   universe snapshot + Alpaca 1d SIP bars for EVERY stock/ETF incl. inactive; DoltHub stocks
-#
-# SECRETS: HF_TOKEN (WRITE token for the bentzbk HF account); VM_SSH_KEY + TRAINER_VM_IP only to READ the ETF/option
-#   stores; ALPACA_API_KEY_ID_LIVE / ALPACA_API_SECRET_KEY_LIVE (market data only) in the equities job.
-#   Nothing prints a token, a balance or an account number. Market data only.
+# SECRETS: HF_TOKEN (write, bentzbk); ALPACA_API_KEY_ID_LIVE / ALPACA_API_SECRET_KEY_LIVE (market data only, equities
+#   job); VM_SSH_KEY + TRAINER_VM_IP (READ the ETF-HISTORY-PIPELINE stores only); TELEGRAM_* (the one red flag);
+#   BRANCH_PROTECTION_TOKEN (land the repo health copy). Nothing prints a token, a balance or an account number.
 
 on:
   workflow_dispatch:
     inputs:
-      scope:
-        description: "all | crypto | other"
-        default: "all"
+      mode:
+        description: "refresh | backfill | preflight"
+        default: "refresh"
   schedule:
-    - cron: "23 3 * * 0"
+    - cron: "41 3 * * *"
   issues:
     types: [opened]
+  pull_request:
+    paths:
+      - ".github/workflows/market-data-lake.yml"
+      - "scripts/data_lake/**"
 
 permissions:
   contents: read
   issues: write
 
 concurrency:
-  group: market-data-lake
+  group: market-data-lake-${{ github.event_name == 'pull_request' && github.head_ref || 'main' }}
   cancel-in-progress: false
 
 jobs:
+  dedupe:
+    if: github.event_name == 'schedule'
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    permissions:
+      actions: read
+      contents: read
+    outputs:
+      skip: ${{ steps.d.outputs.skip }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: scripts/ops/schedule_keeper.py
+          sparse-checkout-cone-mode: false
+      - id: d
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: >-
+          python3 scripts/ops/schedule_keeper.py dedupe
+          --run-id "${{ github.run_id }}" --schedule "${{ github.event.schedule }}"
+
   preflight:
+    needs: dedupe
     if: >-
-      github.event_name != 'issues' ||
-      ((github.event.issue.user.login == github.repository_owner ||
-        github.event.issue.user.login == 'github-actions[bot]') &&
-       contains(github.event.issue.labels.*.name, 'market-data-lake-request'))
+      !cancelled() && needs.dedupe.outputs.skip != 'true' &&
+      (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' ||
+       (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository) ||
+       (github.event_name == 'issues' &&
+        (github.event.issue.user.login == github.repository_owner || github.event.issue.user.login == 'github-actions[bot]') &&
+        contains(github.event.issue.labels.*.name, 'market-data-lake-request')))
     runs-on: ubuntu-latest
     timeout-minutes: 10
     outputs:
-      scope: ${{ steps.scope.outputs.scope }}
+      mode: ${{ steps.mode.outputs.mode }}
     steps:
-      - name: Resolve scope (validated against a fixed list)
-        id: scope
+      - name: Resolve mode (validated against a fixed list)
+        id: mode
         env:
           EVENT: ${{ github.event_name }}
-          INPUT_SCOPE: ${{ inputs.scope }}
+          INPUT_MODE: ${{ inputs.mode }}
           ISSUE_BODY: ${{ github.event.issue.body }}
         run: |
           set -euo pipefail
-          s="all"
-          if [ "$EVENT" = "workflow_dispatch" ]; then s="${INPUT_SCOPE:-all}"; fi
+          m="refresh"
+          if [ "$EVENT" = "workflow_dispatch" ]; then m="${INPUT_MODE:-refresh}"; fi
+          if [ "$EVENT" = "pull_request" ]; then m="preflight"; fi
           if [ "$EVENT" = "issues" ]; then
-            s="$(printf '%s\n' "$ISSUE_BODY" | sed -n 's/^scope:[[:space:]]*\([a-z]*\).*/\1/p' | head -1)"; s="${s:-all}"
+            m="$(printf '%s\n' "$ISSUE_BODY" | sed -n 's/^mode:[[:space:]]*\([a-z]*\).*/\1/p' | head -1)"; m="${m:-refresh}"
           fi
-          case "$s" in all|crypto|other) ;; *) echo "::error::bad scope '$s'"; exit 1;; esac
-          echo "scope=$s" >> "$GITHUB_OUTPUT"
+          case "$m" in refresh|backfill|preflight) ;; *) echo "::error::bad mode '$m'"; exit 1;; esac
+          echo "mode=$m" >> "$GITHUB_OUTPUT"
       - uses: actions/checkout@v4
         with:
           persist-credentials: false
@@ -82,48 +112,59 @@ jobs:
         with:
           python-version: "3.11"
       - run: python -m pip install --quiet huggingface_hub pyyaml
-      - name: HF preflight (token set, write role, repo private)
+      - name: HF preflight (token set, role, REAL write to the private dataset)
         env:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
         run: |
           if [ -z "${HF_TOKEN}" ]; then
-            echo "::error::Actions secret HF_TOKEN is not set. The operator creates a WRITE token at huggingface.co/settings/tokens (account bentzbk) and stores it as repo secret HF_TOKEN."
+            echo "::error::Actions secret HF_TOKEN is not set (needs a WRITE token for the bentzbk HF account)."
             exit 1
           fi
-          python3 scripts/data_lake/hf_publish.py preflight
+          python3 scripts/data_lake/hf_publish.py preflight --record preflight.json
+          cat preflight.json >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: preflight
+          path: preflight.json
+          if-no-files-found: ignore
+          retention-days: 14
 
   crypto:
-    needs: preflight
+    needs: [dedupe, preflight]
     if: >-
-      (github.event_name != 'issues' || ((github.event.issue.user.login == github.repository_owner || github.event.issue.user.login == 'github-actions[bot]') && contains(github.event.issue.labels.*.name, 'market-data-lake-request'))) &&
-      (needs.preflight.outputs.scope == 'all' || needs.preflight.outputs.scope == 'crypto')
+      !cancelled() && needs.dedupe.outputs.skip != 'true' && needs.preflight.result == 'success' &&
+      needs.preflight.outputs.mode != 'preflight' &&
+      (github.event_name != 'issues' || ((github.event.issue.user.login == github.repository_owner || github.event.issue.user.login == 'github-actions[bot]') && contains(github.event.issue.labels.*.name, 'market-data-lake-request')))
     runs-on: ubuntu-latest
-    timeout-minutes: 300
+    timeout-minutes: 330
     strategy:
       fail-fast: false
       max-parallel: 8
       matrix:
         include:
-          - {market: um_perp, tf: 1d, shard: 0/1}
-          - {market: um_perp, tf: 1h, shard: 0/2}
-          - {market: um_perp, tf: 1h, shard: 1/2}
-          - {market: um_perp, tf: 15m, shard: 0/4}
-          - {market: um_perp, tf: 15m, shard: 1/4}
-          - {market: um_perp, tf: 15m, shard: 2/4}
-          - {market: um_perp, tf: 15m, shard: 3/4}
-          - {market: um_perp, tf: 5m, shard: 0/6}
-          - {market: um_perp, tf: 5m, shard: 1/6}
-          - {market: um_perp, tf: 5m, shard: 2/6}
-          - {market: um_perp, tf: 5m, shard: 3/6}
-          - {market: um_perp, tf: 5m, shard: 4/6}
-          - {market: um_perp, tf: 5m, shard: 5/6}
-          - {market: um_perp, tf: 1m, shard: 0/4}
-          - {market: um_perp, tf: 1m, shard: 1/4}
-          - {market: um_perp, tf: 1m, shard: 2/4}
-          - {market: um_perp, tf: 1m, shard: 3/4}
-          - {market: spot, tf: 1d, shard: 0/1}
-          - {market: spot, tf: 1h, shard: 0/1}
-          - {market: spot, tf: 5m, shard: 0/1}
+          - {market: um_perp, stream: klines, shard: 0/16}
+          - {market: um_perp, stream: klines, shard: 1/16}
+          - {market: um_perp, stream: klines, shard: 2/16}
+          - {market: um_perp, stream: klines, shard: 3/16}
+          - {market: um_perp, stream: klines, shard: 4/16}
+          - {market: um_perp, stream: klines, shard: 5/16}
+          - {market: um_perp, stream: klines, shard: 6/16}
+          - {market: um_perp, stream: klines, shard: 7/16}
+          - {market: um_perp, stream: klines, shard: 8/16}
+          - {market: um_perp, stream: klines, shard: 9/16}
+          - {market: um_perp, stream: klines, shard: 10/16}
+          - {market: um_perp, stream: klines, shard: 11/16}
+          - {market: um_perp, stream: klines, shard: 12/16}
+          - {market: um_perp, stream: klines, shard: 13/16}
+          - {market: um_perp, stream: klines, shard: 14/16}
+          - {market: um_perp, stream: klines, shard: 15/16}
+          - {market: um_perp, stream: metrics, shard: 0/4}
+          - {market: um_perp, stream: metrics, shard: 1/4}
+          - {market: um_perp, stream: metrics, shard: 2/4}
+          - {market: um_perp, stream: metrics, shard: 3/4}
+          - {market: um_perp, stream: fundingRate, shard: 0/1}
+          - {market: spot, stream: klines, shard: 0/1}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -132,30 +173,47 @@ jobs:
         with:
           python-version: "3.11"
       - run: python -m pip install --quiet pandas pyarrow pyyaml huggingface_hub
-      - name: Build shard from data.binance.vision
+      - name: Previous lake manifest (refresh rebuilds only what changed)
+        if: needs.preflight.outputs.mode == 'refresh'
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+        run: python3 scripts/data_lake/hf_publish.py pull --dir prev --files MANIFEST.json
+      - name: Capture (data.binance.vision, sha256-checked)
         run: |
-          python3 -u scripts/data_lake/binance_vision_lake.py --market "${{ matrix.market }}" --tf "${{ matrix.tf }}" \
-            --shard "${{ matrix.shard }}" --out lake --parallel 8 --workers 8
-      - name: Upload shard to HF (add/replace only)
+          REF=""; [ -f prev/MANIFEST.json ] && REF="--refresh-from prev/MANIFEST.json"
+          python3 -u scripts/data_lake/binance_vision_lake.py --market "${{ matrix.market }}" --stream "${{ matrix.stream }}" \
+            --shard "${{ matrix.shard }}" --out lake --parallel 6 --workers 8 $REF
+      - name: Process (derive 5m/15m/1h/4h/1d from the 1m base)
+        if: matrix.stream == 'klines'
+        run: python3 scripts/data_lake/resample.py --out lake --base 1m --tfs 5m,15m,1h,4h,1d --tag "${{ matrix.market }}-${{ strategy.job-index }}"
+      - name: Validate (schema, dups, OHLC, outliers, gaps)
+        run: python3 scripts/data_lake/validate.py check --out lake --tag "crypto-${{ matrix.market }}-${{ matrix.stream }}-${{ strategy.job-index }}"
+      - name: Upload to HF (add/replace only)
         env:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
         run: |
-          python3 scripts/data_lake/hf_publish.py upload --dir lake --prefix "crypto/${{ matrix.market }}/${{ matrix.tf }}" \
-            --note "shard ${{ matrix.shard }} run ${{ github.run_id }}"
-      - name: Keep the shard manifest for the merge job
-        uses: actions/upload-artifact@v4
+          [ -d lake/crypto ] || { echo "nothing changed"; exit 0; }
+          du -sh lake/crypto
+          python3 scripts/data_lake/hf_publish.py upload --dir lake --prefix crypto \
+            --note "${{ matrix.market }} ${{ matrix.stream }} ${{ matrix.shard }} run ${{ github.run_id }}"
+      - uses: actions/upload-artifact@v4
+        if: always()
         with:
-          name: manifest-crypto-${{ matrix.market }}-${{ matrix.tf }}-${{ strategy.job-index }}
-          path: lake/_manifests/
-          retention-days: 7
+          name: control-crypto-${{ strategy.job-index }}
+          path: |
+            lake/_manifests/
+            lake/_health/
+          if-no-files-found: ignore
+          retention-days: 14
 
   other:
-    needs: preflight
+    needs: [dedupe, preflight]
     if: >-
-      (github.event_name != 'issues' || ((github.event.issue.user.login == github.repository_owner || github.event.issue.user.login == 'github-actions[bot]') && contains(github.event.issue.labels.*.name, 'market-data-lake-request'))) &&
-      (needs.preflight.outputs.scope == 'all' || needs.preflight.outputs.scope == 'other')
+      !cancelled() && needs.dedupe.outputs.skip != 'true' && needs.preflight.result == 'success' &&
+      needs.preflight.outputs.mode != 'preflight' &&
+      (github.event_name != 'issues' || ((github.event.issue.user.login == github.repository_owner || github.event.issue.user.login == 'github-actions[bot]') && contains(github.event.issue.labels.*.name, 'market-data-lake-request')))
     runs-on: ubuntu-latest
-    timeout-minutes: 90
+    timeout-minutes: 120
     steps:
       - uses: actions/checkout@v4
         with:
@@ -170,103 +228,58 @@ jobs:
         run: python3 -u scripts/data_lake/free_sources.py fred --out lake
       - name: CFTC Commitments of Traders (legacy 1986+, disaggregated + TFF 2006+)
         run: python3 -u scripts/data_lake/free_sources.py cot --out lake
-      - name: Daily futures fronts (Yahoo, research use, private store)
-        continue-on-error: true
-        run: python3 -u scripts/data_lake/free_sources.py futures --out lake
-      - name: Pull the ETF-HISTORY-PIPELINE store from the trainer (read only)
-        continue-on-error: true
-        env:
-          VM_SSH_KEY: ${{ secrets.VM_SSH_KEY }}
-          TRAINER_IP: ${{ secrets.TRAINER_VM_IP }}
-          TRAINER_USER: ${{ vars.TRAINER_VM_USER || 'ubuntu' }}
-        run: |
-          set -uo pipefail
-          mkdir -p store ~/.ssh && chmod 700 ~/.ssh
-          if [ -z "${VM_SSH_KEY}" ] || [ -z "${TRAINER_IP}" ]; then echo "no trainer secrets; skipping ETF store"; exit 0; fi
-          printf '%s\n' "${VM_SSH_KEY}" > ~/.ssh/trainer_key && chmod 600 ~/.ssh/trainer_key
-          rsync -a -e "ssh -i ~/.ssh/trainer_key -o BatchMode=yes -o StrictHostKeyChecking=accept-new -o ConnectTimeout=20" \
-            "${TRAINER_USER}@${TRAINER_IP}:ict-trading-bot/data/etf_history/" store/ 2>&1 | sed -E 's/[0-9]{1,3}(\.[0-9]{1,3}){3}/<ip>/g' || true
-          echo "pulled: $(find store -name '*.parquet' | wc -l) series"
-      - name: Re-shape the ETF store into the lake layout
-        run: python3 -u scripts/data_lake/free_sources.py import-etf --src store --out lake
-      - name: Upload to HF (add/replace only)
-        env:
-          HF_TOKEN: ${{ secrets.HF_TOKEN }}
-        run: |
-          for p in universe fx macro futures us_equity; do
-            [ -d "lake/$p" ] && python3 scripts/data_lake/hf_publish.py upload --dir lake --prefix "$p" --note "run ${{ github.run_id }}"
-          done
-          true
-      - uses: actions/upload-artifact@v4
-        with:
-          name: manifest-other
-          path: lake/_manifests/
-          retention-days: 7
-
-  options:
-    needs: preflight
-    if: >-
-      (github.event_name != 'issues' || ((github.event.issue.user.login == github.repository_owner || github.event.issue.user.login == 'github-actions[bot]') && contains(github.event.issue.labels.*.name, 'market-data-lake-request'))) &&
-      (needs.preflight.outputs.scope == 'all' || needs.preflight.outputs.scope == 'other')
-    runs-on: ubuntu-latest
-    timeout-minutes: 240
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          persist-credentials: false
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.11"
-      - run: python -m pip install --quiet pandas pyarrow pyyaml huggingface_hub
       - name: CBOE implied-vol indices (VIX family, 1990+)
         run: python3 -u scripts/data_lake/free_sources.py cboe --out lake
-      - name: DoltHub options (EOD chains + IV history) via dolt clone
-        continue-on-error: true
-        run: |
-          set -uo pipefail
-          sudo bash -c 'curl -sL https://github.com/dolthub/dolt/releases/latest/download/install.sh | bash'
-          df -h . | tail -1
-          dolt clone --depth 1 post-no-preference/options dolt-options || dolt clone post-no-preference/options dolt-options
-          du -sh dolt-options
-          cd dolt-options
-          dolt sql -r csv -q "select * from volatility_history" > ../vol.csv
-          und=$(python3 -c "import yaml;print(','.join(repr(s) for s in yaml.safe_load(open('../config/data_universe.yaml'))['options']['dolthub']['chain_underlyings']))")
-          dolt sql -r csv -q "select * from option_chain where act_symbol in (${und})" > ../chain.csv
-          cd ..
-          wc -l vol.csv chain.csv
-          python3 -u scripts/data_lake/free_sources.py import-csv --kind volatility --csv vol.csv --out lake
-          python3 -u scripts/data_lake/free_sources.py import-csv --kind chain --csv chain.csv --out lake
-      - name: Pull ETF-HISTORY-PIPELINE option snapshots from the trainer (read only)
-        continue-on-error: true
+      - name: Daily futures fronts (Yahoo, research use, private store)
+        run: python3 -u scripts/data_lake/free_sources.py futures --out lake
+      - name: Pull the ETF-HISTORY-PIPELINE stores from the trainer (read only; empty until that lane's backfill)
         env:
           VM_SSH_KEY: ${{ secrets.VM_SSH_KEY }}
           TRAINER_IP: ${{ secrets.TRAINER_VM_IP }}
           TRAINER_USER: ${{ vars.TRAINER_VM_USER || 'ubuntu' }}
         run: |
           set -uo pipefail
-          mkdir -p optstore ~/.ssh && chmod 700 ~/.ssh
-          if [ -z "${VM_SSH_KEY}" ] || [ -z "${TRAINER_IP}" ]; then echo "no trainer secrets; skipping"; exit 0; fi
+          mkdir -p store optstore ~/.ssh && chmod 700 ~/.ssh
+          if [ -z "${VM_SSH_KEY}" ] || [ -z "${TRAINER_IP}" ]; then echo "::warning::no trainer secrets; ETF/option stores not published this run"; exit 0; fi
           printf '%s\n' "${VM_SSH_KEY}" > ~/.ssh/trainer_key && chmod 600 ~/.ssh/trainer_key
-          rsync -a -e "ssh -i ~/.ssh/trainer_key -o BatchMode=yes -o StrictHostKeyChecking=accept-new -o ConnectTimeout=20" \
-            "${TRAINER_USER}@${TRAINER_IP}:ict-trading-bot/data/options_history/" optstore/ 2>&1 | sed -E 's/[0-9]{1,3}(\.[0-9]{1,3}){3}/<ip>/g' || true
+          for pair in "etf_history:store" "options_history:optstore"; do
+            rsync -a -e "ssh -i ~/.ssh/trainer_key -o BatchMode=yes -o StrictHostKeyChecking=accept-new -o ConnectTimeout=20" \
+              "${TRAINER_USER}@${TRAINER_IP}:ict-trading-bot/data/${pair%%:*}/" "${pair##*:}/" 2>&1 | sed -E 's/[0-9]{1,3}(\.[0-9]{1,3}){3}/<ip>/g' || true
+          done
+          echo "pulled: $(find store -name '*.parquet' | wc -l) bar files, $(find optstore -name '*.parquet' | wc -l) option files"
+      - name: Re-shape the ETF/option stores into the lake layout
+        run: |
+          python3 -u scripts/data_lake/free_sources.py import-etf --src store --out lake
           python3 -u scripts/data_lake/free_sources.py import-option-snapshots --src optstore --out lake
+      - name: Validate
+        run: python3 scripts/data_lake/validate.py check --out lake --tag other
       - name: Upload to HF (add/replace only)
         env:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
-        run: python3 scripts/data_lake/hf_publish.py upload --dir lake --prefix options --note "run ${{ github.run_id }}"
+        run: |
+          rc=0
+          for p in universe fx macro futures options us_equity; do
+            if [ -d "lake/$p" ]; then python3 scripts/data_lake/hf_publish.py upload --dir lake --prefix "$p" --note "run ${{ github.run_id }}" || rc=1; fi
+          done
+          exit "$rc"
       - uses: actions/upload-artifact@v4
+        if: always()
         with:
-          name: manifest-options
-          path: lake/_manifests/
-          retention-days: 7
+          name: control-other
+          path: |
+            lake/_manifests/
+            lake/_health/
+          if-no-files-found: ignore
+          retention-days: 14
 
   equities:
-    needs: preflight
+    needs: [dedupe, preflight]
     if: >-
-      (github.event_name != 'issues' || ((github.event.issue.user.login == github.repository_owner || github.event.issue.user.login == 'github-actions[bot]') && contains(github.event.issue.labels.*.name, 'market-data-lake-request'))) &&
-      (needs.preflight.outputs.scope == 'all' || needs.preflight.outputs.scope == 'other')
+      !cancelled() && needs.dedupe.outputs.skip != 'true' && needs.preflight.result == 'success' &&
+      needs.preflight.outputs.mode != 'preflight' &&
+      (github.event_name != 'issues' || ((github.event.issue.user.login == github.repository_owner || github.event.issue.user.login == 'github-actions[bot]') && contains(github.event.issue.labels.*.name, 'market-data-lake-request')))
     runs-on: ubuntu-latest
-    timeout-minutes: 240
+    timeout-minutes: 300
     steps:
       - uses: actions/checkout@v4
         with:
@@ -277,72 +290,134 @@ jobs:
       - run: python -m pip install --quiet pandas pyarrow pyyaml huggingface_hub requests
       - name: Universe snapshot (every US-listed security, ETF flag)
         run: python3 -u scripts/data_lake/free_sources.py universe --out lake
-      - name: Alpaca 1d SIP bars for every stock + ETF + inactive (delisted) asset, 2016+
+      - name: Alpaca 1d SIP bars, every stock + ETF + inactive (delisted) asset (refresh = current year only)
         env:
           ALPACA_API_KEY_ID_LIVE: ${{ secrets.ALPACA_API_KEY_ID_LIVE }}
           ALPACA_API_SECRET_KEY_LIVE: ${{ secrets.ALPACA_API_SECRET_KEY_LIVE }}
-        run: python3 -u scripts/data_lake/free_sources.py alpaca-daily --out lake
-      - name: DoltHub stocks (ohlcv + splits + dividends) via dolt clone
-        continue-on-error: true
+          MODE: ${{ needs.preflight.outputs.mode }}
+        run: |
+          SINCE=""; [ "$MODE" = "refresh" ] && SINCE="--since-year $(date -u +%Y)"
+          python3 -u scripts/data_lake/free_sources.py alpaca-daily --out lake $SINCE
+      - name: DoltHub stocks + options (backfill, and weekly on Sundays) via dolt clone
         run: |
           set -uo pipefail
+          if [ "${{ needs.preflight.outputs.mode }}" != "backfill" ] && [ "$(date -u +%u)" != "7" ]; then echo "weekly step; not today"; exit 0; fi
           sudo bash -c 'curl -sL https://github.com/dolthub/dolt/releases/latest/download/install.sh | bash'
-          dolt clone --depth 1 post-no-preference/stocks dolt-stocks || dolt clone post-no-preference/stocks dolt-stocks
-          du -sh dolt-stocks
-          (cd dolt-stocks && dolt sql -r csv -q "select * from ohlcv") > stocks.csv
-          wc -l stocks.csv
-          python3 -u scripts/data_lake/free_sources.py import-csv --kind stocks --csv stocks.csv --out lake
+          df -h . | tail -1
+          rc=0
+          if dolt clone post-no-preference/stocks dolt-stocks; then
+            du -sh dolt-stocks
+            (cd dolt-stocks && dolt sql -r csv -q "select * from ohlcv") > stocks.csv && \
+              python3 -u scripts/data_lake/free_sources.py import-csv --kind stocks --csv stocks.csv --out lake || rc=1
+          else rc=1; fi
+          rm -rf dolt-stocks stocks.csv
+          if dolt clone post-no-preference/options dolt-options; then
+            du -sh dolt-options
+            (cd dolt-options && dolt sql -r csv -q "select * from volatility_history") > vol.csv && \
+              python3 -u scripts/data_lake/free_sources.py import-csv --kind volatility --csv vol.csv --out lake || rc=1
+            und=$(python3 -c "import yaml;print(','.join(repr(s) for s in yaml.safe_load(open('config/data_universe.yaml'))['options_sources']['dolthub']['chain_underlyings']))")
+            (cd dolt-options && dolt sql -r csv -q "select * from option_chain where act_symbol in (${und})") > chain.csv && \
+              python3 -u scripts/data_lake/free_sources.py import-csv --kind chain --csv chain.csv --out lake || rc=1
+          else rc=1; fi
+          rm -rf dolt-options vol.csv chain.csv
+          exit "$rc"
+      - name: Validate
+        if: always()
+        run: python3 scripts/data_lake/validate.py check --out lake --tag equities
       - name: Upload to HF (add/replace only)
+        if: always()
         env:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
-        run: python3 scripts/data_lake/hf_publish.py upload --dir lake --prefix us_equity --note "run ${{ github.run_id }}"
+        run: |
+          rc=0
+          for p in us_equity options; do
+            if [ -d "lake/$p" ]; then python3 scripts/data_lake/hf_publish.py upload --dir lake --prefix "$p" --note "run ${{ github.run_id }}" || rc=1; fi
+          done
+          exit "$rc"
       - uses: actions/upload-artifact@v4
+        if: always()
         with:
-          name: manifest-equities
-          path: lake/_manifests/
-          retention-days: 7
+          name: control-equities
+          path: |
+            lake/_manifests/
+            lake/_health/
+          if-no-files-found: ignore
+          retention-days: 14
 
   manifest:
-    needs: [preflight, crypto, other, options, equities]
+    needs: [dedupe, preflight, crypto, other, equities]
     if: >-
-      always() && needs.preflight.result == 'success' &&
+      !cancelled() && needs.dedupe.outputs.skip != 'true' && needs.preflight.result == 'success' &&
+      needs.preflight.outputs.mode != 'preflight' &&
       (github.event_name != 'issues' || ((github.event.issue.user.login == github.repository_owner || github.event.issue.user.login == 'github-actions[bot]') && contains(github.event.issue.labels.*.name, 'market-data-lake-request')))
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 110   # commit-to-main verify-merged waits up to 80 min (tests/test_commit_to_main_callers.py)
+    permissions:
+      contents: write
+      pull-requests: write
+      issues: write
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      GITHUB_REPOSITORY: ${{ github.repository }}
+      TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+      TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+      TELEGRAM_SYSTEM_CHAT_ID: ${{ secrets.TELEGRAM_SYSTEM_CHAT_ID }}
     steps:
       - uses: actions/checkout@v4
         with:
-          persist-credentials: false
+          token: ${{ secrets.BRANCH_PROTECTION_TOKEN }}
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
       - run: python -m pip install --quiet pandas pyarrow pyyaml huggingface_hub
       - uses: actions/download-artifact@v4
         with:
-          pattern: manifest-*
-          path: lake/_manifests/
+          pattern: control-*
+          path: lake/
           merge-multiple: true
-      - name: Merge manifests, publish MANIFEST.json + depth table, tag the revision
+      - name: Previous manifest + health from HF
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+        run: python3 scripts/data_lake/hf_publish.py pull --dir prev --files MANIFEST.json,health/latest.json
+      - name: Merge manifests, health record (+ ONE red flag on a persistent failure), publish, tag
         env:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
         run: |
-          python3 scripts/data_lake/hf_publish.py manifest --dir lake | tee depth.md
-          cat depth.md >> "$GITHUB_STEP_SUMMARY"
+          set -euo pipefail
+          python3 scripts/data_lake/hf_publish.py manifest --dir lake --previous prev/MANIFEST.json --local > /dev/null
+          python3 scripts/data_lake/validate.py merge --dir lake --previous prev/health/latest.json \
+            --run-id "${{ github.run_id }}" --repo-copy comms/data_lake/health_latest.json --flag | tee health.txt
+          python3 scripts/data_lake/hf_publish.py manifest --dir lake --previous prev/MANIFEST.json > depth.md
+          { echo '### market-data-lake depth'; cat depth.md; echo; echo '### health'; cat health.txt; } >> "$GITHUB_STEP_SUMMARY"
+      - name: Land the repo health copy (read by /health-review and /ml-review)
+        uses: ./.github/actions/commit-to-main
+        with:
+          verify-merged: "true"
+          token: ${{ secrets.BRANCH_PROTECTION_TOKEN }}
+          paths: comms/data_lake
+          message: "chore(market-data-lake): feed health record (run ${{ github.run_id }})"
+          pr-title: "chore(market-data-lake): feed health (auto)"
+          pr-body: >-
+            Machine-readable health record of the market data lake feeds (scripts/data_lake/validate.py; full
+            record in the HF dataset health/latest.json). Data-only.
+          branch-prefix: automation/market-data-lake
       - name: Comment the depth table on the issue
         if: always() && github.event_name == 'issues'
         uses: actions/github-script@v7
         env:
           CRYPTO: ${{ needs.crypto.result }}
           OTHER: ${{ needs.other.result }}
+          EQ: ${{ needs.equities.result }}
         with:
           script: |
             const fs = require('fs');
-            let body = `market-data-lake crypto=${process.env.CRYPTO} other=${process.env.OTHER} run=${context.runId}\n\n`;
-            if (fs.existsSync('depth.md')) body += fs.readFileSync('depth.md', 'utf8').slice(0, 60000);
+            let body = `market-data-lake crypto=${process.env.CRYPTO} other=${process.env.OTHER} equities=${process.env.EQ} run=${context.runId}\n\n`;
+            if (fs.existsSync('depth.md')) body += fs.readFileSync('depth.md', 'utf8').slice(0, 50000);
+            if (fs.existsSync('health.txt')) body += '\n\nhealth: ' + fs.readFileSync('health.txt', 'utf8').slice(0, 8000);
             await github.rest.issues.createComment({ owner: context.repo.owner, repo: context.repo.repo, issue_number: context.issue.number, body });
             await github.rest.issues.update({ owner: context.repo.owner, repo: context.repo.repo, issue_number: context.issue.number, state: 'closed' });
-      - name: Red flag on a failed shard (ONE flag; the next run retries)
-        if: always() && (needs.crypto.result == 'failure' || needs.other.result == 'failure' || needs.options.result == 'failure' || needs.equities.result == 'failure')
+      - name: Red run on a failed capture job (the health record carries the per-series detail)
+        if: always() && (needs.crypto.result == 'failure' || needs.other.result == 'failure' || needs.equities.result == 'failure')
         run: |
-          echo "::error::market-data-lake: crypto=${{ needs.crypto.result }} other=${{ needs.other.result }} options=${{ needs.options.result }} equities=${{ needs.equities.result }}"
+          echo "::error::market-data-lake: crypto=${{ needs.crypto.result }} other=${{ needs.other.result }} equities=${{ needs.equities.result }}"
           exit 1

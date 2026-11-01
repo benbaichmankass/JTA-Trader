@@ -58,11 +58,13 @@ So the design mandate was never contradicted. It was quietly narrowed three time
 | piece | file | what it does |
 |---|---|---|
 | universe | [`config/data_universe.yaml`](../../config/data_universe.yaml) | selection RULES, not hand lists (shared with ETF-HISTORY-PIPELINE; data path only, not a gate) |
-| crypto | [`scripts/data_lake/binance_vision_lake.py`](../../scripts/data_lake/binance_vision_lake.py) | every Binance USD-M perp, **incl. delisted**, enumerated from the archive's own listing; 1d/1h/15m/5m all, 1m majors; spot majors; every monthly zip sha256-checked against Binance's `.CHECKSUM`; daily tail for the current month |
+| crypto | [`scripts/data_lake/binance_vision_lake.py`](../../scripts/data_lake/binance_vision_lake.py) | every Binance USD-M perp, **incl. delisted**, enumerated from the archive's own listing, at the FINEST grain the archive publishes: **1m klines**, every funding event, 5m metrics (OI, long/short, taker ratio); 27 spot majors at 1m. One parquet per symbol per month; every zip sha256-checked; incremental (`--refresh-from` rebuilds only the open month, new months, and daily-built months whose monthly file appeared) |
+| process | [`scripts/data_lake/resample.py`](../../scripts/data_lake/resample.py) | 5m/15m/1h/4h/1d DERIVED from the stored 1m by one deterministic rule (left-closed, labelled at open; `n_base` + `complete` columns mark thin/partial bars); never fetched separately |
+| validate | [`scripts/data_lake/validate.py`](../../scripts/data_lake/validate.py) | machine-readable health record per series and per feed (§7); one red flag after 3 consecutive failing runs |
 | other sources | [`scripts/data_lake/free_sources.py`](../../scripts/data_lake/free_sources.py) | dated universe snapshots (NASDAQ Trader directory: every US-listed security with its ETF flag; Binance archive listings); FRED rates / FX / credit / vol / commodities / monthly macro; Yahoo daily futures fronts; import of the ETF-HISTORY-PIPELINE store |
 | publish | [`scripts/data_lake/hf_publish.py`](../../scripts/data_lake/hf_publish.py) | creates the PRIVATE dataset (refuses a public one), add/replace uploads, merges MANIFEST.json, writes the README depth table, tags `vYYYYMMDD-HHMM` |
-| loader | [`ml/datasets/lake.py`](../../ml/datasets/lake.py) | `manifest() / symbols() / load() / iter_series() / liquid_mask() / revision_info()`; streams from HF (or `LAKE_LOCAL_DIR`: a Kaggle mount, a runner dir) |
-| compute | [`.github/workflows/market-data-lake.yml`](../../.github/workflows/market-data-lake.yml) | 20 crypto shards + `other` (universe, FRED, COT, futures, ETF store) + `options` (CBOE IV, DoltHub chains/IV, own snapshots) + `equities` (Alpaca 1d for every stock/ETF incl. inactive, DoltHub stocks) on GitHub runners, weekly Sun 03:23Z + dispatch + label `market-data-lake-request`; nothing runs on our VMs |
+| loader | [`ml/datasets/lake.py`](../../ml/datasets/lake.py) | `manifest() / symbols() / load() / iter_series() / liquid_mask() / resample() / health() / revision_info()`; reads only the partitions overlapping the requested window; streams from HF (or `LAKE_LOCAL_DIR`: a Kaggle mount, a runner dir) |
+| compute | [`.github/workflows/market-data-lake.yml`](../../.github/workflows/market-data-lake.yml) | 22 crypto capture shards + `other` (universe, FRED, COT, CBOE IV, futures, ETF/option stores) + `equities` (Alpaca 1d for every stock/ETF incl. inactive; DoltHub stocks + options weekly) + `manifest` (merge, health, flag) on GitHub runners. **Daily refresh 03:41Z** (cron + `schedule_keeper.py` re-dispatch of a dropped slot), `mode: backfill` / `preflight` by dispatch or label `market-data-lake-request`; the preflight also runs on every PR touching the pipeline. Nothing runs on our VMs and no Claude session is in the loop |
 
 **Layout** (HF dataset `bentzbk/jta-market-lake`, private): `<asset_class>/<market>/<tf>/<SYMBOL>.parquet`. Bars are
 stamped at bar OPEN (UTC) and never forward-filled. Gaps are counted in `MANIFEST.json` (`expected_rows`, `missing_bars`,
@@ -97,8 +99,8 @@ All HF paths are inside the private dataset `bentzbk/jta-market-lake`. The publi
 
 | class | HF path | symbols | first bar | last bar | rows | state |
 |---|---|---|---|---|---|---|
-| crypto perps | `crypto/um_perp/{1d,1h,15m,5m,1m}/` | **1,056** (incl. delisted); 1m: 20 majors | 2020-01 | 2026-10-31 | 5m ≤ 214,284,936 · 15m ≤ 71,428,312 · 1h ≤ 17,857,078 · 1d ≤ 744,044 · 1m ≤ 62,725,881 | MEASURED-census + sample |
-| crypto spot | `crypto/spot/{1d,1h,5m}/` | 27 majors (3,745 listed in the archive) | 2017-07 | 2026-10-31 | 5m ≤ 21,241,762 · 1h ≤ 1,770,146 · 1d ≤ 73,756 | MEASURED-census |
+| crypto perps | `crypto/um_perp/1m/<SYM>/<YYYY-MM>.parquet` (base) + `crypto/um_perp/{5m,15m,1h,4h,1d}/…` (derived) + `funding/`, `metrics_5m/` | **1,056** (incl. delisted), all at 1m | 2020-01 | 2026-10-31 | 1m ≤ 1,071,000,000 · metrics ≈ 197,000,000 | MEASURED-census + real-data run |
+| crypto spot | `crypto/spot/1m/…` + derived | 27 majors at 1m (3,745 listed in the archive) | 2017-07 | 2026-10-31 | 1m ≤ 106,200,000 | MEASURED-census |
 | US stocks | `us_equity/alpaca_sip/1d/`, `us_equity/dolthub/1d/` | 6,158 common listed today + delisted (Alpaca inactive); DoltHub symbol table 24,441 | 2011-01-03 (DoltHub) / 2016-01 (Alpaca) | 2026-10-30 | not yet counted | BUILT; DoltHub span MEASURED |
 | ETFs | `us_equity/alpaca_sip/1d/` (all), `us_equity/alpaca/{1h,5m}/` (ETF-HISTORY-PIPELINE) | **5,776** ETF-flagged | 2016-01 | — | not yet counted | BUILT |
 | options: IV indices | `options/cboe_iv/1d/` | 18 (VIX family, SKEW, OVX, GVZ, single-stock VIX) | **1990-01-02** | 2026-10-30 | 82,373 | MEASURED-full |
@@ -112,16 +114,33 @@ All HF paths are inside the private dataset `bentzbk/jta-market-lake`. The publi
 
 ### 3.1 Crypto: perps and spot
 
-Source: data.binance.vision (keyless, sha256 per monthly zip). Census run 2026-11-01 with `binance_vision_lake.py --census`:
-1,056 of 1,056 listed UM symbols have monthly data, 24,443 symbol-months in all. The monthly files run from 2020-01 to
-2026-09, and October 2026 comes from the daily files (sample BTCUSDT 1h last bar 2026-10-31T23:00Z). Samples:
-- BTCUSDT 1h: 59,880 rows, 2020-01-01→2026-10-31, 111/111 checksums ok, 24 missing bars (one absent day).
-- LUNAUSDT, delisted: ends 2022-05-13.
-- 53 perps at 1d: 28,374 rows.
+**Finest available vs stored** (operator: keep the smallest timeframe; derive the rest; never downsample silently).
 
-Spot: 27 majors from 2017-07. The archive lists 3,745 spot symbols; widening the set is a one-line change in `config/data_universe.yaml`.
+| stream (Binance Vision) | finest grain | stored? | size, all 1,056 perps | basis |
+|---|---|---|---|---|
+| klines | **1m** | **yes**, base | ≤ 45.5 GB parquet (+ ~35% for derived 5m–1d ⇒ ≤ 61 GB) | MEASURED 42.5 B/row on 1,257,605 real 1m rows (0GUSDT + LUNAUSDT, 53.5 MB); census 24,443 symbol-months ⇒ ≤ 1.071 B rows |
+| fundingRate | every funding event | **yes** | < 0.1 GB | MEASURED 5,218 rows / 144 KB for 2 symbols |
+| metrics | 5m (OI, top-trader + global long/short, taker ratio), 2021-12+ | **yes** | ≈ 10 GB | MEASURED 51 B/row (164,767 rows, 8.5 MB); 684,083 daily files (ML-FEATURE-INFRA count) × 288 rows |
+| spot klines (27 majors) | 1m | **yes** | ≈ 4.5 GB | census 2,423 symbol-months × 43,830 rows × 42.5 B |
+| aggTrades | every trade | **no — operator storage call** | order of **TB** (BTC alone 8.4 MB/day zipped) | ML-FEATURE-INFRA measurement |
+| bookDepth | depth snapshots, 2023-01+ | **no — operator storage call** | ≤ 279 GB zipped | ML-FEATURE-INFRA upper bound |
+| premiumIndex / markPrice / indexPrice klines | 1m | **no — operator storage call** | ≈ 45 GB each | same shape as klines |
 
-**Gap:** order books and trades. The archive has `trades` / `aggTrades` / `bookTicker` too, but they are huge. No consumer has asked for them, so they are not wired; the source is free.
+The stored crypto total is ≈ 75 GB. HF's private-storage allowance for this free (non-PRO) account is **not verified**. If the
+backfill exceeds it, the upload fails visibly, the health record goes red, and the flag reaches the operator. Nothing is dropped
+silently.
+
+**Measured depth:**
+- Census (2026-11-01, archive listing, no download): 1,056 of 1,056 listed UM symbols have data, 24,443 symbol-months.
+  Monthly files run 2020-01 → 2026-09. The open month comes from daily files.
+- The real-data pipeline run (capture → resample → validate → manifest) on 0GUSDT + delisted LUNAUSDT:
+  - 1,257,605 1m rows, 0 failures. Derived bars: 5m 251,521 · 15m 83,841 · 1h 20,961 · 4h 5,242 · 1d 875.
+  - Warnings are real events: LUNA's May-2022 collapse shows as return outliers, and the archive is missing one day of
+    0GUSDT 1m (1,440 bars).
+- Data-quality facts from ML-FEATURE-INFRA's handoff:
+  - Frozen post-delist months are flagged per partition (`frozen`) and kept.
+  - Kline files before ~2020-10 have no header; header-row files call the trade count `count`, and both are handled.
+  - Metrics daily files since 2026-08 are unsorted, so they are sorted on read. Treat `create_time` as the window END.
 
 ### 3.2 US stocks: the full liquid universe, point-in-time
 
@@ -129,8 +148,13 @@ Spot: 27 majors from 2017-07. The archive lists 3,745 spot symbols; widening the
 - **Delisted names:** Alpaca `/v2/assets?status=inactive`, fetched in the `equities` job. The count is not yet measured.
 - **Bars (BUILT):** Alpaca 1d SIP, split-adjusted, 2016+, for every listed and inactive symbol (`free_sources.py alpaca-daily`).
 - **Older daily history:** DoltHub `post-no-preference/stocks`. MEASURED: `ohlcv` runs 2011-01-03 → 2026-10-30, and the `symbol` table holds 24,441 rows; it includes funds, e.g. `ZZZTX`. It is cloned and exported in the `equities` job.
+- **Finest grain:** Alpaca serves **1m** bars from 2016. Stored now:
+  - **1d for every stock, ETF and delisted name** (`us_equity/alpaca_sip/1d/<SYM>/<YYYY>.parquet`).
+  - 1m/1h/5m for the ETF-HISTORY-PIPELINE list (~1,000 symbols incl. point-in-time S&P 500 members; that lane is told to store 1m as the base).
+
+  1m for the WHOLE ~12k-symbol universe is ≤ ~470 GB, INFERRED: 12k × 10 y × 252 d × 390 bars × 40 B, an upper bound because thin names print far fewer bars. That is an **operator storage call**, not done silently. 1m for the ~1,000-symbol list is ≤ ~40 GB.
 - **Point-in-time:** the liquid universe is chosen at READ time by `lake.liquid_mask` (trailing ADV ≥ $5M, price ≥ $2). It is never chosen at collection.
-- **Further corpora:** `CryptoSpartan/stocks_bars_1m` (MEASURED 604,208,214 1m bars, ≥637 tickers, current names only) and the gated `paperswithbacktest/Stocks-*` (§4).
+- **Further corpora:** `CryptoSpartan/stocks_bars_1m` (MEASURED 604,208,214 1m bars, ≥637 tickers, current names only).
 - **Gaps:**
   - Intraday (1h/5m) for every stock is an Alpaca pull bounded by request rate, not by cost (same keys). It is filed as PI-20261101-WTFTWTFP-0002.
   - Pre-2011 daily history with delisted names is not covered: CRSP via WRDS is institutional-only, and Norgate Data is a paid subscription (price not verified this session).
@@ -185,14 +209,13 @@ Spot: 27 majors from 2017-07. The archive lists 3,745 spot symbols; widening the
 
   `ts` is the Tuesday position date. Release is Friday, so a point-in-time reader lags 3 days (recorded in the manifest).
 - **IB historical path:** per-contract MES/MGC/MHG history through the IB gateway, reachable only from the live VM's subnet. Owned by PI-20261101-ETFHIST-0001; it lands as `futures/ibkr/<tf>/<CONTRACT>.parquet`.
-- **Gap: intraday continuous futures with proper rolls.** The source is CME DataMine or Databento CME Globex (usage-priced per GB); price not verified. The gated `paperswithbacktest/Commodities-Daily-Price` and `Futures-Yearly-FrontMonthCostParams` (§4) may cover the daily side.
+- **Gap: intraday continuous futures with proper rolls.** The source is CME DataMine or Databento CME Globex (usage-priced per GB); price not verified.
 
 ### 3.6 FX: spot
 
 - **Daily (MEASURED-full):** FRED H.10 noon buying rates plus the broad/AFE/EM dollar indices: 23 series, 257,747 rows, 1971-01-04 → 2026-10-23, public domain.
 - **Gaps:**
   - **Intraday:** Dukascopy's public datafeed (free, keyless tick/1m; the tunnel failed from this sandbox and runner reachability is not verified; their terms need reading before bulk use). HistData.com 1m is free, but the download sits behind a per-month web form, so it is not automatable within its terms.
-  - The gated `paperswithbacktest/Forex-Daily-Price` (§4).
 
 ### 3.7 Rates / macro
 
@@ -222,23 +245,42 @@ Spot: 27 majors from 2017-07. The archive lists 3,745 spot symbols; widening the
 
 | dataset | coverage (MEASURED where stated) | licence | PIT | verdict |
 |---|---|---|---|---|
-| `paperswithbacktest/{Stocks,ETFs,Bonds,Commodities,Forex,Indices,Cryptocurrencies}-Daily-Price`, `Stocks-1Min-Price`, `Stocks-Daily-LiquidUniverse` | card: Stocks-Daily 25.99M rows / 7,764 symbols / 1962-01-02→2026-08-05, refreshed monthly; LiquidUniverse = top-1000 liquid names **per session** (a PIT universe) | `other`; **gated (manual approval)** — terms unread | universe yes (LiquidUniverse); delisting coverage unverified | **highest-value candidate.** Needs the operator to click "request access" on HF as `bentzbk` (§5). Then read the terms and the delisting coverage before use |
+| `paperswithbacktest/{Stocks,ETFs,Bonds,Commodities,Forex,Indices,Cryptocurrencies}-Daily-Price`, `Stocks-1Min-Price`, `Stocks-Daily-LiquidUniverse` | card: Stocks-Daily 25.99M rows / 7,764 symbols / 1962-01-02→2026-08-05, refreshed monthly; LiquidUniverse = top-1000 liquid names **per session** (a PIT universe) | `other`; **gated (manual approval)** — terms unread | universe yes (LiquidUniverse); delisting coverage unverified | **not pursued** (operator 2026-11-01: stick to already-accessible sources). Equity history comes from Alpaca on our keys plus ungated corpora |
 | `CryptoSpartan/stocks_bars_1m` | MEASURED via parquet metadata: **604,208,214** 1m bars, ≥637 tickers, 2016-01-01→2026-07-07, one 10.9 GB file; has QQQ/AAPL, lacks SPY/GLD/TLT/XLE | card says MIT; the data is scraped from Alpaca, so Alpaca's terms are the binding ones | current names only (survivorship) | **usable now** as an extra 1m equity pretraining corpus (ungated); not for universe-level PIT studies. Import is follow-up (b2) |
 | `yadavsaurabh/us-stocks-and-search-trends` | card: 11,636 symbols, 1d/1h/5m/2m/1m CSV, Yahoo-derived | `other` | unknown | Yahoo-derived, so the intraday depth is capped by Yahoo (1h ≈ 730 d, 1m ≈ 30 d); daily may duplicate the paperswithbacktest data; low priority |
 | `Salesforce/GiftEvalPretrain`, `autogluon/chronos_datasets` | 4.5M series / 230B points (GIFT); Chronos corpus | Apache-2.0 / other | n/a (not market data) | for time-series **foundation-model** pretraining only, not for market features |
 | `zongowo111/v2-crypto-ohlcv-data`, `arthurneuron/crypto-futures-ohlcv-1m` | 46 files; a 2023 snapshot | MIT (re-hosted Binance) | — | **redundant**: our Binance Vision pull is the primary source, full and fresher |
 
-## 5. What is needed from the operator (credentials only)
+## 5. What is needed from the operator
 
-1. **`HF_TOKEN`** must be a **WRITE** token for the `bentzbk` account, stored as the Actions repo secret `HF_TOKEN`. The secret
-   name is already referenced by `hf-cron.yml`, but whether it is set, and with what role, is **not verified**: a session cannot
-   read secrets. The workflow's `preflight` job reports both on the first run. If it is missing or read-only, the operator
-   creates a token at huggingface.co → Settings → Access Tokens with "Write" (or fine-grained write on `bentzbk/jta-market-lake`)
-   and pastes it into GitHub → Settings → Secrets → Actions → `HF_TOKEN`.
-2. **HF gated access**: request access to the `paperswithbacktest/*` datasets while signed in as `bentzbk` (one click per
-   dataset on its HF page). Nothing else is needed. The import is filed and runs once access is granted.
+- **`HF_TOKEN`:** the operator says it has write access. It is **measured, not assumed**: the workflow's `preflight` job runs on
+  this PR (pull_request trigger) and on every run. It reads whoami's token role and does a REAL write, creating the private
+  dataset and uploading `health/preflight.json`. The measured role is recorded in the run artifact `preflight`. The token is
+  never printed.
+- **Storage calls with numbers (§3.1, §3.2):**
+  - aggTrades: order of TB.
+  - bookDepth: ≤ 279 GB.
+  - premium/mark/index 1m: ≈ 45 GB each.
+  - Equity 1m for the whole universe: ≤ ~470 GB.
 
-`KAGGLE_API_TOKEN` is already in use by 9 workflows; nothing is needed there.
+  Plus the unverified HF private-storage allowance for this free account.
+- Nothing else. Every source in §3 is free and reachable. The paid gaps in §3 are listed for completeness and are not asked for.
+
+`KAGGLE_API_TOKEN` is already used by 9 workflows.
+
+## 7. Feed automation and health (no Claude in the loop)
+
+| stage | where | what |
+|---|---|---|
+| capture | every capture job, daily 03:41Z | incremental from the previous `MANIFEST.json`; per-file retries; a failing symbol is recorded and skipped, never halts the shard |
+| process | crypto klines jobs | `resample.py` derives 5m/15m/1h/4h/1d from the rebuilt 1m months; per-partition manifest entries |
+| validate | every capture job | `validate.py check`: schema, duplicate ts, non-monotonic ts, OHLC sanity, return outliers, missing bars vs the bar calendar (crypto continuous; US equity 1d vs business days less federal holidays, an approximation of the NYSE calendar) |
+| merge | `manifest` job | `validate.py merge`: per-feed staleness (newest last bar vs a per-feed limit, e.g. crypto 54 h, FRED 6 d, COT 12 d), consecutive-failure counts carried from the previous record |
+| record | HF `health/latest.json` + `health/<ts>.json`; repo `comms/data_lake/health_latest.json` (landed by commit-to-main) | schema `market-data-lake-health/v1`: summary, per-feed states, failing series, `new_flags`, `flag_delivered` |
+| flag | `manifest` job | a series or feed failing **3 consecutive runs** raises ONE flag: a comment on the ops-flags PR plus one Telegram message on the operator SYSTEM channel, the same `GhProbe` path research-watchdog uses. It re-arms only after recovery |
+| keep-alive | `scripts/ops/schedule_keeper.py` target `market-data-lake.yml` (stale 26 h) + a `dedupe` job | a dropped GitHub cron slot is re-dispatched; a dead run is caught by `claude-run-failure-alert` |
+
+Claude reads the health record in `/health-review` and `/ml-review`. It does not run the feeds.
 
 ## 6. Follow-ups (filed in `docs/claude/work/PIPELINE.jsonl`)
 
@@ -247,4 +289,4 @@ Spot: 27 majors from 2017-07. The archive lists 3,745 spot symbols; widening the
   `universe/us_equity/<date>.csv` instead of its 31-symbol constant), plus inactive assets for delisted names.
 - (c2) ALFRED vintages for the revised FRED series (true PIT macro).
 - (d2) Kaggle mirror `metis-market-lake`, or a Kaggle-secret HF read path, so Kaggle kernels read the lake.
-- (e) after access is granted: the `paperswithbacktest/*` import, with its terms read first.
+- (e) ~~paperswithbacktest import~~ — killed: the operator said to stay on already-accessible sources (2026-11-01).

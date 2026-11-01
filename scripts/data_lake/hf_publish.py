@@ -57,15 +57,32 @@ def ensure_private_repo(api, repo: str) -> None:
 
 
 def cmd_preflight(a) -> int:
+    """Measure the token: whoami role, then a REAL write -- create the private dataset (idempotent) and upload one
+    small marker file. A read-only token fails here, before any capture job spends an hour. Never prints the token."""
     api = _api()
     who = api.whoami()
     role = ((who.get("auth") or {}).get("accessToken") or {}).get("role", "unknown")
-    print(json.dumps({"user": who.get("name"), "token_role": role, "repo": a.repo}))
-    if role not in ("write", "fineGrained", "admin"):
-        print(f"::error::HF token role is '{role}'; the lake needs a WRITE token")
+    rec = {"user": who.get("name"), "token_role": role, "repo": a.repo,
+           "at": datetime.now(timezone.utc).isoformat(timespec="seconds"), "write_test": None}
+    try:
+        ensure_private_repo(api, a.repo)
+        import tempfile
+        with tempfile.NamedTemporaryFile("w", suffix=".json", delete=False) as fh:
+            json.dump({"preflight_at": rec["at"], "role": role}, fh)
+        api.upload_file(path_or_fileobj=fh.name, path_in_repo="health/preflight.json", repo_id=a.repo,
+                        repo_type="dataset", commit_message="lake: preflight write test")
+        rec["write_test"] = "ok"
+    except SystemExit:
+        raise
+    except Exception as e:
+        rec["write_test"] = f"failed: {str(e)[:200]}"
+    print(json.dumps(rec))
+    if a.record:
+        Path(a.record).write_text(json.dumps(rec, indent=1))
+    if rec["write_test"] != "ok":
+        print(f"::error::HF token cannot write to {a.repo} (role {role}): {rec['write_test']}")
         return 2
-    ensure_private_repo(api, a.repo)
-    print(f"ok: {a.repo} exists and is private")
+    print(f"ok: token role {role}; wrote health/preflight.json to private {a.repo}")
     return 0
 
 
@@ -92,17 +109,47 @@ def cmd_upload(a) -> int:
     return 1
 
 
+def _key(e: Dict) -> str:
+    return f"{e.get('asset_class')}/{e.get('market')}/{e.get('tf')}/{e.get('symbol')}"
+
+
+def _aggregate(e: Dict) -> Dict:
+    parts = e.get("partitions") or {}
+    if not parts:
+        return e
+    ps = [p for p in parts.values() if (p.get("rows") or 0) > 0]
+    e["n_partitions"] = len(parts)
+    e["rows"] = sum(int(p.get("rows") or 0) for p in ps)
+    e["first"] = min((p["first"] for p in ps if p.get("first")), default=None)
+    e["last"] = max((p["last"] for p in ps if p.get("last")), default=None)
+    e["bytes"] = sum(int(p.get("bytes") or 0) for p in ps)
+    e["missing_bars"] = sum(int(p.get("missing_bars") or 0) for p in ps)
+    e["expected_rows"] = sum(int(p.get("expected_rows") or 0) for p in ps)
+    e["frozen_months"] = sorted(m for m, p in parts.items() if p.get("frozen"))
+    e["dir"] = "/".join(str(next(iter(parts.values())).get("path", "")).split("/")[:-1])
+    return e
+
+
 def merge_manifests(base: Path, previous: Optional[Dict] = None) -> Dict:
+    """Fold this run's shard manifests into the previous lake manifest. Partitioned series merge PER MONTH (a refresh
+    that rebuilt one month replaces only that month); single-file series are replaced whole."""
     files: Dict[str, Dict] = {}
-    if previous:
-        for e in previous.get("files", []):
-            files[e.get("path") or f"{e.get('asset_class')}/{e.get('market')}/{e.get('tf')}/{e.get('symbol')}"] = e
+    for e in (previous or {}).get("files", []):
+        files[_key(e)] = e
     for p in sorted((base / "_manifests").glob("*.json")):
         for e in json.loads(p.read_text()):
-            key = e.get("path") or f"{e.get('asset_class')}/{e.get('market')}/{e.get('tf')}/{e.get('symbol')}"
-            files[key] = e
+            k = _key(e)
+            old = files.get(k)
+            if old is not None and (e.get("partitions") is not None or old.get("partitions")):
+                merged = dict(old)
+                merged.update({kk: vv for kk, vv in e.items() if kk != "partitions"})
+                merged["partitions"] = {**(old.get("partitions") or {}), **(e.get("partitions") or {})}
+                files[k] = merged
+            else:
+                files[k] = e
+    out = [_aggregate(e) for e in files.values()]
     return {"generated_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
-            "schema": "market-data-lake/v1", "files": sorted(files.values(), key=lambda e: (
+            "schema": "market-data-lake/v2", "files": sorted(out, key=lambda e: (
                 str(e.get("asset_class")), str(e.get("market")), str(e.get("tf")), str(e.get("symbol"))))}
 
 
@@ -154,14 +201,17 @@ def cmd_manifest(a) -> int:
     base = Path(a.dir)
     previous = None
     api = None
+    if a.previous and Path(a.previous).exists():
+        previous = json.loads(Path(a.previous).read_text())
     if not a.local:
         api = _api()
-        try:
-            from huggingface_hub import hf_hub_download
-            previous = json.loads(Path(hf_hub_download(a.repo, "MANIFEST.json", repo_type="dataset",
-                                                       token=api.token)).read_text())
-        except Exception:
-            previous = None
+        if previous is None:
+            try:
+                from huggingface_hub import hf_hub_download
+                previous = json.loads(Path(hf_hub_download(a.repo, "MANIFEST.json", repo_type="dataset",
+                                                           token=api.token)).read_text())
+            except Exception:
+                previous = None  # first run: no manifest yet
     m = merge_manifests(base, previous)
     (base / "MANIFEST.json").write_text(json.dumps(m, indent=1))
     table = depth_table(m)
@@ -173,7 +223,7 @@ def cmd_manifest(a) -> int:
         for attempt in range(6):
             try:
                 ci = api.upload_folder(repo_id=a.repo, repo_type="dataset", folder_path=str(base),
-                                       allow_patterns=["MANIFEST.json", "README.md", "DEPTH.md"],
+                                       allow_patterns=["MANIFEST.json", "README.md", "DEPTH.md", "health/*.json"],
                                        commit_message="lake: MANIFEST + depth table")
                 tag = "v" + datetime.now(timezone.utc).strftime("%Y%m%d-%H%M")
                 try:
@@ -189,6 +239,24 @@ def cmd_manifest(a) -> int:
     return 0
 
 
+def cmd_pull(a) -> int:
+    """Download small control files (MANIFEST.json, health/latest.json) into --dir; a missing file is not an error
+    (first run). Refresh jobs use the manifest to rebuild only what changed."""
+    api = _api()
+    from huggingface_hub import hf_hub_download
+    Path(a.dir).mkdir(parents=True, exist_ok=True)
+    for f in [x for x in a.files.split(",") if x]:
+        try:
+            src = hf_hub_download(a.repo, f, repo_type="dataset", token=api.token)
+            dst = Path(a.dir) / f
+            dst.parent.mkdir(parents=True, exist_ok=True)
+            dst.write_bytes(Path(src).read_bytes())
+            print(f"pulled {f}")
+        except Exception as e:
+            print(f"absent {f}: {str(e)[:120]}")
+    return 0
+
+
 def cmd_depth(a) -> int:
     p = Path(a.dir) / "MANIFEST.json"
     m = json.loads(p.read_text()) if p.exists() else merge_manifests(Path(a.dir))
@@ -198,14 +266,18 @@ def cmd_depth(a) -> int:
 
 def main(argv: Optional[Sequence[str]] = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("cmd", choices=["preflight", "upload", "manifest", "depth"])
+    ap.add_argument("cmd", choices=["preflight", "upload", "manifest", "depth", "pull"])
+    ap.add_argument("--files", default="MANIFEST.json,health/latest.json")
     ap.add_argument("--repo", default=_repo_from_config())
     ap.add_argument("--dir", default="lake")
     ap.add_argument("--prefix", default="")
     ap.add_argument("--note", default="")
     ap.add_argument("--local", action="store_true", help="manifest: merge + render only, no HF read/write")
+    ap.add_argument("--previous", default="", help="manifest: a previous MANIFEST.json on disk (else fetched from HF)")
+    ap.add_argument("--record", default="", help="preflight: write the measured role/write-test JSON here")
     a = ap.parse_args(argv)
-    return {"preflight": cmd_preflight, "upload": cmd_upload, "manifest": cmd_manifest, "depth": cmd_depth}[a.cmd](a)
+    return {"preflight": cmd_preflight, "upload": cmd_upload, "manifest": cmd_manifest, "depth": cmd_depth,
+            "pull": cmd_pull}[a.cmd](a)
 
 
 if __name__ == "__main__":

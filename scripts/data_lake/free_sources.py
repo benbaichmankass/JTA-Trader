@@ -194,52 +194,61 @@ TF_MIN = {"1m": 1, "5m": 5, "15m": 15, "1h": 60, "1d": 1440}
 
 
 def cmd_import_etf(a) -> int:
-    """Re-shape the ETF-HISTORY-PIPELINE store (<SYM>/<tf>.parquet, column ``timestamp``) into the lake layout
-    us_equity/alpaca/<tf>/<SYM>.parquet (column ``ts``), carrying its MANIFEST (feed, adjustment) per series.
-    The ETF lane owns the fetch; this only publishes what it built."""
+    """Publish the ETF-HISTORY-PIPELINE store into the lake. Store layout (that lane's contract, 2026-11-01):
+    <SYM>/<tf>/<YYYY>.parquet, column ``timestamp`` (UTC bar-open), MANIFEST.json series["SYM/tf"] = {status, feed,
+    adjustment, ...}, corporate_actions.csv at the root. Lake layout: us_equity/alpaca/<tf>/<SYM>/<YYYY>.parquet
+    (column ``ts``), one partition per year exactly as stored. The ETF lane owns the fetch; this only publishes.
+    An empty or absent store (before that lane's first backfill) is recorded, not an error."""
     src, out = Path(a.src), Path(a.out)
-    if not src.exists():
-        print(f"[etf] no ETF-HISTORY-PIPELINE store at {src}; nothing to publish (state recorded)")
-        _write_manifest(out, "us_equity-alpaca", [])
-        return 0
+    entries: List[Dict] = []
     meta = {}
-    mp = src / "MANIFEST.json"
-    if mp.exists():
+    if (src / "MANIFEST.json").exists():
         try:
-            meta = json.loads(mp.read_text())
+            meta = (json.loads((src / "MANIFEST.json").read_text()).get("series") or {})
         except Exception:
             meta = {}
-    entries = []
-    for f in sorted(src.glob("*/*.parquet")):
-        sym, tf = f.parent.name, f.stem
-        try:
-            df = pd.read_parquet(f)
-            if "timestamp" in df.columns:
-                df = df.rename(columns={"timestamp": "ts"})
-            df["ts"] = pd.to_datetime(df["ts"], utc=True)
-            df = df.sort_values("ts").drop_duplicates("ts").reset_index(drop=True)
-            p = out / "us_equity" / "alpaca" / tf / f"{sym}.parquet"
-            p.parent.mkdir(parents=True, exist_ok=True)
-            df.to_parquet(p, index=False, compression="zstd")
-            m = ((meta.get("series") or meta).get(sym) or {}) if isinstance(meta, dict) else {}
-            m = m.get(tf, m) if isinstance(m, dict) else {}
-            e = _entry("us_equity", "alpaca", tf, sym, df, p, out, source="alpaca market data (ETF-HISTORY-PIPELINE)",
-                       licence="Alpaca market-data terms; private store only",
-                       feed=m.get("feed"), adjustment=m.get("adjustment", "split"))
-            e["is_etf"] = True
-        except Exception as ex:
-            e = _entry("us_equity", "alpaca", tf, sym, None, None, out, source="alpaca", licence="alpaca",
-                       state="error", errors=[str(ex)[:200]])
+    files = sorted(src.glob("*/*/*.parquet")) if src.exists() else []
+    series: Dict[tuple, List[Path]] = {}
+    for f in files:
+        series.setdefault((f.parent.parent.name, f.parent.name), []).append(f)
+    for (sym, tf), fs in sorted(series.items()):
+        m = meta.get(f"{sym}/{tf}") or {}
+        e = {"asset_class": "us_equity", "market": "alpaca", "tf": tf, "symbol": sym, "partitions": {},
+             "source": "alpaca market data (ETF-HISTORY-PIPELINE)", "licence": "Alpaca market-data terms; private store only",
+             "feed": m.get("feed"), "adjustment": m.get("adjustment", "split"), "vendor_status": m.get("status"),
+             "fetched_at": datetime.now(timezone.utc).isoformat(timespec="seconds"), "state": "ok"}
+        for f in fs:
+            try:
+                df = pd.read_parquet(f)
+                if "timestamp" in df.columns:
+                    df = df.rename(columns={"timestamp": "ts"})
+                df["ts"] = pd.to_datetime(df["ts"], utc=True)
+                df = df.sort_values("ts").drop_duplicates("ts").reset_index(drop=True)
+                if df.empty:
+                    continue
+                p = out / "us_equity" / "alpaca" / tf / sym / f.name
+                p.parent.mkdir(parents=True, exist_ok=True)
+                df.to_parquet(p, index=False, compression="zstd")
+                e["partitions"][f.stem] = {"rows": int(len(df)), "first": df["ts"].iloc[0].isoformat(),
+                                           "last": df["ts"].iloc[-1].isoformat(), "bytes": p.stat().st_size,
+                                           "path": str(p.relative_to(out)), "src": "etf_history"}
+            except Exception as ex:
+                e["state"] = "partial"
+                e.setdefault("errors", []).append(f"{f.name}: {str(ex)[:150]}")
         entries.append(e)
+    if (src / "corporate_actions.csv").exists():
+        d = out / "us_equity" / "alpaca" / "corporate_actions"
+        d.mkdir(parents=True, exist_ok=True)
+        (d / "corporate_actions.csv").write_bytes((src / "corporate_actions.csv").read_bytes())
     _write_manifest(out, "us_equity-alpaca", entries)
-    print(f"[etf] imported {sum(e['state'] == 'ok' for e in entries)} / {len(entries)} series from {src}")
+    print(f"[etf] imported {len(entries)} series ({len(files)} year files) from {src}")
     return 0
 
 
 # ---------------------------------------------------------------- options: CBOE implied-vol indices (VIX family)
 def cmd_cboe(a) -> int:
     out = Path(a.out)
-    spec = _cfg()["options"]["cboe_iv_indices"]
+    spec = _cfg()["options_sources"]["cboe_iv_indices"]
     entries = []
     for sym in spec["symbols"]:
         try:
@@ -345,7 +354,8 @@ def cmd_alpaca_daily(a) -> int:
         batch = syms[i:i + 100]
         tok = None
         while True:
-            params = {"symbols": ",".join(batch), "timeframe": "1Day", "start": "2016-01-01T00:00:00Z", "limit": 10000,
+            params = {"symbols": ",".join(batch), "timeframe": "1Day", "start": f"{a.since_year or 2016}-01-01T00:00:00Z",
+                      "limit": 10000,
                       "adjustment": "split", "feed": "sip"}
             if tok:
                 params["page_token"] = tok
@@ -376,15 +386,22 @@ def cmd_alpaca_daily(a) -> int:
                                               "n": "trades", "vw": "vwap"})
         df["ts"] = pd.to_datetime(df["ts"], utc=True)
         df = df.sort_values("ts").drop_duplicates("ts").reset_index(drop=True)
-        p = out / "us_equity" / "alpaca_sip" / "1d" / f"{sym}.parquet"
-        p.parent.mkdir(parents=True, exist_ok=True)
-        df.to_parquet(p, index=False, compression="zstd")
-        entries.append(_entry("us_equity", "alpaca_sip", "1d", sym, df, p, out, source="alpaca /v2/stocks/bars sip",
-                              licence="Alpaca market-data terms; private store only", kind=kind[sym],
-                              adjustment="split"))
+        e = {"asset_class": "us_equity", "market": "alpaca_sip", "tf": "1d", "symbol": sym, "partitions": {},
+             "source": "alpaca /v2/stocks/bars sip", "licence": "Alpaca market-data terms; private store only",
+             "kind": kind[sym], "adjustment": "split", "state": "ok",
+             "fetched_at": datetime.now(timezone.utc).isoformat(timespec="seconds")}
+        for yr, g in df.groupby(df["ts"].dt.year):
+            p = out / "us_equity" / "alpaca_sip" / "1d" / sym / f"{yr}.parquet"
+            p.parent.mkdir(parents=True, exist_ok=True)
+            g.to_parquet(p, index=False, compression="zstd")
+            e["partitions"][str(yr)] = {"rows": int(len(g)), "first": g["ts"].iloc[0].isoformat(),
+                                        "last": g["ts"].iloc[-1].isoformat(), "bytes": p.stat().st_size,
+                                        "path": str(p.relative_to(out)), "src": "alpaca"}
+        entries.append(e)
     _write_manifest(out, "us_equity-alpaca-1d", entries)
-    ok = [e for e in entries if e["state"] == "ok"]
-    print(f"[alpaca] wrote {len(ok)} / {len(entries)} series, {sum(e['rows'] for e in ok):,} rows")
+    ok = [e for e in entries if e.get("partitions")]
+    rows = sum(p["rows"] for e in ok for p in e["partitions"].values())
+    print(f"[alpaca] wrote {len(ok)} / {len(entries)} series, {rows:,} rows")
     return 0
 
 
@@ -449,6 +466,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     ap.add_argument("--kind", choices=["chain", "volatility", "stocks"], default="volatility")
     ap.add_argument("--csv", default="")
     ap.add_argument("--limit", type=int, default=0)
+    ap.add_argument("--since-year", type=int, default=0, help="alpaca-daily refresh: fetch from Jan 1 of this year only")
     ap.add_argument("--out", default="lake")
     ap.add_argument("--src", default="store", help="import-etf: the ETF-HISTORY-PIPELINE store directory")
     a = ap.parse_args(argv)

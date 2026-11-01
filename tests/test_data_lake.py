@@ -39,7 +39,7 @@ def test_parse_kline_csv_handles_header_and_microseconds(header, us):
 
 def test_gap_stats_counts_missing_bars_without_patching():
     ts = pd.Series(pd.to_datetime(["2024-01-01 00:00", "2024-01-01 01:00", "2024-01-01 04:00"], utc=True))
-    g = bvl.gap_stats(ts, "1h")
+    g = bvl.gap_stats(ts, 60)
     assert g == {"expected_rows": 5, "missing_bars": 2, "gaps": 1, "largest_gap_bars": 2}
 
 
@@ -51,9 +51,9 @@ def test_shard_partitions_exactly():
 
 
 def test_symbols_from_config_all_vs_list():
-    assert bvl.symbols_from_config("um_perp", "1h") is None  # all
-    one_m = bvl.symbols_from_config("um_perp", "1m")
-    assert "BTCUSDT" in one_m and len(one_m) >= 10
+    assert bvl.symbols_from_config("um_perp", "klines") is None  # all perps at 1m
+    spot = bvl.symbols_from_config("spot", "klines")
+    assert "BTCUSDT" in spot and len(spot) >= 10
 
 
 def test_parse_nasdaqtraded_flags_etfs_and_drops_test_issues():
@@ -137,7 +137,7 @@ def test_publish_refuses_public_repo(monkeypatch):
 
 def test_cboe_parse_and_manifest(tmp_path, monkeypatch):
     monkeypatch.setattr(fs, "_get", lambda url, **k: b"DATE,OPEN,HIGH,LOW,CLOSE\n01/02/1990,17.24,17.24,17.24,17.24\n01/03/1990,18.19,18.19,18.19,18.19\n")
-    monkeypatch.setattr(fs, "_cfg", lambda: {"options": {"cboe_iv_indices": {"symbols": ["VIX"], "licence": "x"}}})
+    monkeypatch.setattr(fs, "_cfg", lambda: {"options_sources": {"cboe_iv_indices": {"symbols": ["VIX"], "licence": "x"}}})
 
     class A:
         out = str(tmp_path)
@@ -158,3 +158,121 @@ def test_import_csv_partitions_by_symbol(tmp_path):
     es = {e["symbol"]: e for e in json.loads((tmp_path / "lake" / "_manifests" / "dolthub-volatility.json").read_text())}
     assert es["SPY"]["rows"] == 2 and es["QQQ"]["rows"] == 1
     assert es["SPY"]["path"] == "options/dolthub_iv/1d/SPY.parquet"
+
+
+# ---------------------------------------------------------------- finest-grain + automation (2026-11-01 v2)
+import resample as rs  # noqa: E402
+import validate as vd  # noqa: E402
+
+
+def test_plan_months_incremental():
+    monthly = [f"x/S-1m-2026-0{m}.zip" for m in (7, 8, 9)]
+    daily = [f"x/S-1m-2026-10-{d:02d}.zip" for d in (1, 2)]
+    # first run: everything
+    assert set(bvl.plan_months(monthly, daily, {})) == {"2026-07", "2026-08", "2026-09", "2026-10"}
+    have = {"2026-07": {"src": "monthly"}, "2026-08": {"src": "monthly"}, "2026-09": {"src": "daily"},
+            "2026-10": {"src": "daily"}}
+    plan = bvl.plan_months(monthly, daily, have)
+    # 09 was daily-built and its monthly file now exists -> rebuilt from monthly; 10 is the open month -> rebuilt
+    assert set(plan) == {"2026-09", "2026-10"} and plan["2026-09"][0] == "monthly" and plan["2026-10"][0] == "daily"
+
+
+def test_resample_is_exact_and_marks_partial_bars():
+    ts = pd.date_range("2026-01-01 00:00", periods=7, freq="1min", tz="UTC")
+    df = pd.DataFrame({"ts": ts, "open": [1, 2, 3, 4, 5, 6, 7.0], "high": [2, 3, 9, 5, 6, 7, 8.0],
+                       "low": [0.5, 1, 2, 3, 4, 5, 6.0], "close": [2, 3, 4, 5, 6, 7, 8.0], "volume": [1.0] * 7,
+                       "trades": [1] * 7})
+    d = rs.resample_frame(df, "1m", "5m")
+    assert list(d["ts"]) == [ts[0], ts[5]]
+    r0 = d.iloc[0]
+    assert (r0.open, r0.high, r0.low, r0.close, r0.volume, r0.n_base, bool(r0.complete)) == (1, 9, 0.5, 6, 5, 5, True)
+    assert d.iloc[1].n_base == 2 and not bool(d.iloc[1].complete)
+
+
+def test_check_frame_flags_ohlc_violation_and_dups():
+    ts = pd.to_datetime(["2026-01-01 00:00", "2026-01-01 00:01", "2026-01-01 00:01"], utc=True)
+    df = pd.DataFrame({"ts": ts, "open": [1, 1, 1.0], "high": [0.5, 1, 1.0], "low": [0.4, 1, 1.0],
+                       "close": [1, 1, 1.0], "volume": [1, 1, 1.0]})
+    c = vd.check_frame(df, "1m")
+    assert c["dup_ts"] == 1 and c["ohlc_violations"] == 1 and c["schema_missing"] == []
+    assert vd.check_frame(df.drop(columns=["close"]), "1m")["schema_missing"] == ["close"]
+
+
+def test_fold_counts_consecutive_failures_and_flags_once():
+    prev = {"series": [{"series": "feed:crypto/um_perp/1m", "state": "fail", "consecutive_failures": 2}]}
+    rec = vd.fold([{"series": "feed:crypto/um_perp/1m", "state": "fail", "checks": {}}], prev)
+    assert rec[0]["consecutive_failures"] == 3 and rec[0]["flagged_at"] is None   # -> flagged this run
+    prev2 = {"series": [{**rec[0], "flagged_at": "2026-11-01T00:00:00+00:00"}]}
+    rec2 = vd.fold([{"series": "feed:crypto/um_perp/1m", "state": "fail", "checks": {}}], prev2)
+    assert rec2[0]["flagged_at"]          # already flagged: no second flag for the same incident
+    rec3 = vd.fold([{"series": "feed:crypto/um_perp/1m", "state": "ok", "checks": {}}], prev2)
+    assert rec3[0]["consecutive_failures"] == 0 and rec3[0]["flagged_at"] is None  # recovered: re-armed
+
+
+def test_feed_staleness():
+    from datetime import datetime, timezone
+    now = datetime(2026, 11, 1, 12, tzinfo=timezone.utc)
+    m = {"files": [{"asset_class": "crypto", "market": "um_perp", "tf": "1m", "symbol": "A", "last": "2026-10-31T23:59:00+00:00"},
+                   {"asset_class": "crypto", "market": "um_perp", "tf": "1m", "symbol": "DEAD", "last": "2022-05-13T00:00:00+00:00"},
+                   {"asset_class": "fx", "market": "fred", "tf": "1d", "symbol": "X", "last": "2026-09-01T00:00:00+00:00"}]}
+    f = {r["series"]: r["state"] for r in vd.feed_staleness(m, now)}
+    assert f["feed:crypto/um_perp/1m"] == "ok"      # the freshest series decides; a delisted one does not stale the feed
+    assert f["feed:fx/fred/1d"] == "fail"
+
+
+def test_merge_manifests_merges_partitions(tmp_path):
+    prev = {"files": [{"asset_class": "crypto", "market": "um_perp", "tf": "1m", "symbol": "A",
+                       "partitions": {"2026-09": {"rows": 10, "first": "2026-09-01T00:00:00+00:00",
+                                                  "last": "2026-09-30T23:59:00+00:00", "path": "crypto/um_perp/1m/A/2026-09.parquet"}}}]}
+    (tmp_path / "_manifests").mkdir()
+    (tmp_path / "_manifests" / "x.json").write_text(json.dumps([{"asset_class": "crypto", "market": "um_perp", "tf": "1m",
+        "symbol": "A", "partitions": {"2026-10": {"rows": 5, "first": "2026-10-01T00:00:00+00:00",
+                                                  "last": "2026-10-31T23:59:00+00:00", "path": "crypto/um_perp/1m/A/2026-10.parquet"}}}]))
+    m = hp.merge_manifests(tmp_path, prev)
+    e = m["files"][0]
+    assert set(e["partitions"]) == {"2026-09", "2026-10"} and e["rows"] == 15
+    assert e["first"].startswith("2026-09-01") and e["last"].startswith("2026-10-31")
+
+
+def test_import_etf_per_year_layout(tmp_path):
+    store = tmp_path / "store" / "SPY" / "1h"
+    store.mkdir(parents=True)
+    for y in (2024, 2025):
+        pd.DataFrame({"timestamp": pd.date_range(f"{y}-01-02 14:30", periods=3, freq="1h", tz="UTC"),
+                      "open": 1.0, "high": 1.0, "low": 1.0, "close": 1.0, "volume": 1}).to_parquet(store / f"{y}.parquet")
+    (tmp_path / "store" / "MANIFEST.json").write_text(json.dumps({"series": {"SPY/1h": {"status": "ok", "feed": "sip"}}}))
+
+    class A:
+        src = str(tmp_path / "store")
+        out = str(tmp_path / "lake")
+    assert fs.cmd_import_etf(A) == 0
+    e = json.loads((tmp_path / "lake" / "_manifests" / "us_equity-alpaca.json").read_text())[0]
+    assert e["feed"] == "sip" and set(e["partitions"]) == {"2024", "2025"}
+    assert (tmp_path / "lake" / "us_equity/alpaca/1h/SPY/2025.parquet").exists()
+
+
+def test_loader_reads_partitions_with_window(tmp_path, monkeypatch):
+    base = tmp_path / "lake"
+    parts = {}
+    for m in ("2026-09", "2026-10"):
+        p = base / "crypto/um_perp/1m/A" / f"{m}.parquet"
+        p.parent.mkdir(parents=True, exist_ok=True)
+        ts = pd.date_range(f"{m}-01", periods=3, freq="1min", tz="UTC")
+        pd.DataFrame({"ts": ts, "open": 1.0, "high": 1.0, "low": 1.0, "close": 1.0, "volume": 1.0}).to_parquet(p)
+        parts[m] = {"rows": 3, "first": ts[0].isoformat(), "last": ts[-1].isoformat(), "path": str(p.relative_to(base))}
+    (base / "MANIFEST.json").write_text(json.dumps({"files": [{"asset_class": "crypto", "market": "um_perp", "tf": "1m",
+                                                               "symbol": "A", "rows": 6, "partitions": parts,
+                                                               "first": parts["2026-09"]["first"], "last": parts["2026-10"]["last"]}]}))
+    monkeypatch.setenv("LAKE_LOCAL_DIR", str(base))
+    from ml.datasets import lake
+    lake._MANIFEST_CACHE.clear()
+    assert len(lake.load("crypto", "um_perp", "1m", ["A"])) == 6
+    assert len(lake.load("crypto", "um_perp", "1m", ["A"], start="2026-10-01")) == 3
+    assert len(lake.resample(lake.load("crypto", "um_perp", "1m", ["A"]), "2h")) == 2
+
+
+def test_parse_kline_header_uses_count_column():
+    raw = (b"open_time,open,high,low,close,volume,close_time,quote_volume,count,taker_buy_volume,taker_buy_quote_volume,ignore\n"
+           b"1735689600000,1,2,0.5,1.5,10,1735689659999,15,7,4,6,0\n")
+    df = bvl.parse_kline_csv(raw)
+    assert int(df["trades"].iloc[0]) == 7
