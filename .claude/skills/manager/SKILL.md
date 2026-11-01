@@ -478,6 +478,16 @@ mandatory in the planning routine's prompt and come BEFORE part (B) 1:
 0. **First agenda item: the numbers.** Run `python3 scripts/ops/review_followthrough.py --window-days 7` and put its table (with its
    population line) at the top of the Artifact. Each review's Layer 0 runs the same script with `--source <review>` first, so a review starts
    by grading its own prior follow-ups.
+0b. **The backlog: reviewed weekly, budgeted in planning, drained the same morning (operator, 2026-11-01, binding).** *"The backlog is supposed
+   to be reviewed and handled during the weekly review sessions so that we can account for that in the Thursday planning sessions."* Collect
+   every review's backlog numbers (weekly-audit C6, health H15, ml C9 `backlog_coverage`, performance backlog gate) plus
+   `checklist_daily_measure.py`; put one **BACKLOG** line in the workplan (due / overdue / unrouted, oldest age, opened vs closed 7 d, last
+   week's drain result); budget the week's drain inside the capacity plan; and **dispatch that drain lane the same morning**. **Never
+   bulk-drop**: every drop is a row with its own reason. One process, two cadences: **daily** (§ "The daily review" step 4b) drains what is
+   due; **weekly** the reviews measure, planning budgets and dispatches. *What went wrong without it:* the 2026-10-28 weekly audit measured
+   C6 **fail** (510 due, 59 unrouted, oldest unrouted 94 d) and health H15 **concern** (same 510; 275 of 337 health-backlog items with no
+   owner), no drain lane was dispatched, and the 2026-10-29 bulk reset then dropped rows instead of working them (the register now holds 143
+   `dropped` rows over all time; I did NOT verify how many came from that reset).
 1. **Carry-over first.** Last week's (a) items that are not `done` are scheduled first this week, ahead of anything new, or re-dispositioned
    to (b) or (c) with a reason. A second carry-over of the same item is a decision for the operator, not a third silent carry.
 2. **Every follow-up, insight and idea this week's reviews filed gets exactly ONE disposition:** **(a) scheduled this week** — a checklist
