@@ -63,6 +63,14 @@ KEEPER_ACTOR = "github-actions[bot]"
 #: run is idempotent per slot, declared as `self_dedupes: "<why>"`.
 TARGETS: dict[str, dict] = {
     "r4-demotion-gate.yml": {"stale_hours": 26},
+    # ETF-HISTORY-PIPELINE (2026-11-01): the data feeds are automations, so a dropped slot must be re-dispatched. Both crons skip a weekend
+    # (etf: Tue-Sat 02:17Z, options: Mon-Fri 21:25Z) => the longest legitimate silence is ~3 days; 80 h pages after a MISSED slot, not a weekend.
+    # Re-dispatch uses each workflow's own default mode (refresh / capture), which is idempotent, so a late scheduled run on top is harmless.
+    "etf-history-pipeline.yml": {"stale_hours": 80, "self_dedupes":
+        "refresh is idempotent per slot: a second run in the same slot finds every series fresh/appended, writes only bars strictly after the "
+        "stored last bar, and the workflow's concurrency group serialises overlapping runs"},
+    "options-snapshot-capture.yml": {"stale_hours": 80, "self_dedupes":
+        "capture is idempotent per day: it rewrites that day's file per underlying (same path), and the concurrency group serialises overlapping runs"},
     # PATHB-MANDATE (2026-09-30): the runner for the granted MD-SOAK-EXIT-CELL-PATHB.
     "exit-cell-mandate.yml": {"stale_hours": 26},
     "replay-pregate-nightly.yml": {"stale_hours": 26},

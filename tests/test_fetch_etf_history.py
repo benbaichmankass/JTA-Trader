@@ -1,6 +1,8 @@
 """fetch_etf_history / etf_history_verify / data_universe: yearly store, paging, split re-adjust refetch, no_data, resume, verdicts. No network."""
 import json
 import sys
+
+import pandas as pd
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
@@ -30,18 +32,34 @@ def fake_getter(series, page=3):
     return get
 
 
-def test_paging_year_split_and_incremental(tmp_path):
-    s0 = datetime(2025, 12, 30, 14, tzinfo=UTC)  # crosses a year boundary
-    allb = _bars(s0, 60, step=timedelta(hours=12))
-    end = s0 + timedelta(days=40)
-    r1 = f.update_symbol(fake_getter(allb[:40]), tmp_path, "SPY", "1h", "sip", s0, end, full=False)
-    assert r1["status"] == "ok" and r1["rows"] == 40 and set(r1["years"]) == {"2025", "2026"}
-    assert (tmp_path / "SPY" / "1h" / "2025.parquet").exists() and (tmp_path / "SPY" / "1h" / "2026.parquet").exists()
-    r2 = f.update_symbol(fake_getter(allb), tmp_path, "SPY", "1h", "sip", s0, end, full=False, prior=r1)
-    assert r2["rows"] == 60 and r2["added"] == 20 and not r2["note"] and r2["first"] == r1["first"]
-    df = f.read_bars(tmp_path, "SPY", "1h")
-    assert len(df) == 60 and df["timestamp"].is_monotonic_increasing
-    assert len(f.read_bars(tmp_path, "SPY", "1h", start="2026-01-01")) == sum(1 for b in allb if b["t"] >= "2026-01-01")
+def test_paging_month_partitions_and_incremental(tmp_path):
+    s0 = datetime(2026, 1, 30, 20, tzinfo=UTC)  # 1m bars cross a month boundary
+    allb = _bars(s0, 3000, step=timedelta(minutes=1))
+    end = s0 + timedelta(days=3)
+    r1 = f.update_symbol(fake_getter(allb[:2000], page=700), tmp_path, "SPY", "1m", "sip", s0, end, full=False)
+    assert r1["status"] == "ok" and r1["rows"] == 2000 and set(r1["years"]) == {"2026"}
+    names = sorted(p.name for p in (tmp_path / "SPY" / "1m").glob("*.parquet"))
+    assert names == ["2026-01.parquet", "2026-02.parquet"]
+    r2 = f.update_symbol(fake_getter(allb, page=700), tmp_path, "SPY", "1m", "sip", s0, end, full=False, prior=r1)
+    assert r2["rows"] == 3000 and r2["added"] == 1000 and not r2["note"] and r2["first"] == r1["first"]
+    df = f.read_bars(tmp_path, "SPY", "1m")
+    assert len(df) == 3000 and df["timestamp"].is_monotonic_increasing
+    assert len(f.read_bars(tmp_path, "SPY", "1m", start="2026-02-01")) == sum(1 for b in allb if b["t"] >= "2026-02-01")
+
+
+def test_derived_timeframes_come_from_the_1m_base(tmp_path):
+    s0 = datetime(2026, 3, 2, 14, 30, tzinfo=UTC)  # a session open: the first UTC-hour bar is partial (30 of 60 minutes)
+    bars = _bars(s0, 90, step=timedelta(minutes=1))
+    for i, b in enumerate(bars):
+        b["h"], b["l"], b["v"], b["vw"] = 200.0 + i, 50.0 + i, 10, 100.0
+    f.update_symbol(fake_getter(bars, page=1000), tmp_path, "QQQ", "1m", "sip", s0, s0 + timedelta(hours=3), full=False)
+    h = f.read_bars(tmp_path, "QQQ", "1h")
+    assert not (tmp_path / "QQQ" / "1h").exists()  # derived, never stored
+    assert list(h["n_base"]) == [30, 60] and list(h["complete"]) == [False, True]
+    assert h.loc[0, "high"] == 200.0 + 29 and h.loc[0, "low"] == 50.0 and h.loc[0, "volume"] == 300 and h.loc[0, "vwap"] == 100.0
+    assert h["timestamp"].iloc[0] == pd.Timestamp("2026-03-02 14:00", tz="UTC")  # labelled at the bar OPEN, whole-UTC-hour aligned
+    m5 = f.read_bars(tmp_path, "QQQ", "5m")
+    assert m5["n_base"].eq(5).all() and m5["complete"].all() and len(m5) == 18
 
 
 def test_split_readjust_refetches(tmp_path):
@@ -71,19 +89,19 @@ def _manifest(entries):
 
 
 def test_verify_verdicts():
-    u = {"us_equity_bars": {"core": ["SPY"], "etfs": {"x": ["QQQ", "TYPO"]}, "extra": [], "timeframes": ["1h"],
+    u = {"us_equity_bars": {"core": ["SPY"], "etfs": {"x": ["QQQ", "TYPO"]}, "extra": [], "timeframes": ["1m"],
                       "sp500_membership": None}, "options": {}}
     now = datetime(2026, 11, 3, tzinfo=UTC)
     fresh = {"status": "ok", "rows": 10, "first": "2016-01-04T14:30:00Z", "last": "2026-11-02T20:00:00Z", "long_gaps": 0, "feed": "sip"}
     stale = dict(fresh, last="2026-09-01T20:00:00Z")
-    man = _manifest({"SPY/1h": fresh, "QQQ/1h": stale, "TYPO/1h": {"status": "no_data", "rows": 0}})
-    rows = {r["symbol"]: r for r in ver.classify(u, man, ["1h"], now, 5.0, progress=False)}
+    man = _manifest({"SPY/1m": fresh, "QQQ/1m": stale, "TYPO/1m": {"status": "no_data", "rows": 0}})
+    rows = {r["symbol"]: r for r in ver.classify(u, man, ["1m"], now, 5.0, progress=False)}
     assert rows["SPY"]["verdict"] == "ok" and not rows["SPY"]["red"] and rows["SPY"]["years"] > 10
     assert rows["QQQ"]["verdict"] == "STALE" and rows["QQQ"]["red"]
     assert rows["TYPO"]["verdict"] == "NO_DATA" and rows["TYPO"]["red"]  # an expected-live symbol the vendor does not serve
-    gone = ver.classify(u, _manifest({}), ["1h"], now, 5.0, progress=True)
+    gone = ver.classify(u, _manifest({}), ["1m"], now, 5.0, progress=True)
     assert all(r["verdict"] == "PENDING" and not r["red"] for r in gone)
-    assert all(r["verdict"] == "MISSING" and r["red"] for r in ver.classify(u, _manifest({}), ["1h"], now, 5.0, progress=False))
+    assert all(r["verdict"] == "MISSING" and r["red"] for r in ver.classify(u, _manifest({}), ["1m"], now, 5.0, progress=False))
 
 
 def test_universe_snapshot_union(tmp_path):
@@ -93,3 +111,14 @@ def test_universe_snapshot_union(tmp_path):
     base = du.equity_symbols(u)
     withsnap = du.equity_symbols(u, snapshot=snap)
     assert withsnap[:len(base)] == base and withsnap[len(base):] == ["NEWETF", "ZZZ"]
+
+
+def test_ended_series_is_not_repulled_daily(tmp_path):
+    s0 = datetime(2024, 1, 2, 14, 30, tzinfo=UTC)
+    bars = _bars(s0, 30, step=timedelta(minutes=1))
+    end = datetime(2026, 11, 1, tzinfo=UTC)
+    r1 = f.update_symbol(fake_getter(bars), tmp_path, "OLDCO", "1m", "sip", s0, s0 + timedelta(days=1), full=False)
+    import shutil
+    shutil.rmtree(tmp_path / "OLDCO")  # as on a runner that pulled only the current/previous month
+    r2 = f.update_symbol(fake_getter(bars), tmp_path, "OLDCO", "1m", "sip", s0, end, full=False, prior=r1)
+    assert r2["note"].startswith("ended") and r2["rows"] == r1["rows"] and r2["added"] == 0 and not (tmp_path / "OLDCO").exists()

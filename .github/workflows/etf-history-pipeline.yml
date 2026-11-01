@@ -110,16 +110,17 @@ jobs:
           used_mb="$(printf '%s\n' "$out" | sed -n 2p)"
           echo "trainer free GB=${avail} (disk line: $(printf '%s\n' "$out" | sed -n 1p)); etf_history store now ${used_mb} MB"
           echo "avail=${avail}" >> "$GITHUB_OUTPUT"
-          # PROJECTION (parquet 23-30 B/row measured on realistic synthetic bars; ~770 symbols with data): 5m ~3.9 GB, 1h ~0.5 GB, total ~4.4 GB (2.5-6).
-          # Below 8 GB free, the 5m pull is NOT started (1h only) and the run goes red with these numbers; it is never silently shrunk.
-          if [ -z "${avail}" ] || ! [ "${avail}" -ge 8 ] 2>/dev/null; then
-            echo "tfs=1h" >> "$GITHUB_OUTPUT"
-            echo "::error::trainer free disk is ${avail:-unknown} GB (< 8 GB needed for the projected ~4.4 GB store with headroom): pulling 1h only; 5m is deferred. Free space on the trainer, then re-run."
+          # MEASURED 2026-11-01 (trainer-vm-diag #22140): 97 GB disk, 53 GB used, 45 GB free. PROJECTION for the 1m base on ~770 symbols
+          # with data: ~14 GB (range 10-25; synthetic-bar bytes/row x estimated rows, NOT yet measured on the real data). Floor: do not
+          # START below 15 GB free, and stop mid-run below 10 GB; never silently shrink the universe or the timeframe.
+          if [ -z "${avail}" ] || ! [ "${avail}" -ge 15 ] 2>/dev/null; then
+            echo "go=0" >> "$GITHUB_OUTPUT"
             echo "lowdisk=1" >> "$GITHUB_OUTPUT"
+            echo "::error::trainer free disk is ${avail:-unknown} GB (< 15 GB to start the 1m base pull; projected store ~14 GB, range 10-25). NOT fetching: free space on the trainer or tell the manager the numbers, then re-run."
           else
-            echo "tfs=1h,5m" >> "$GITHUB_OUTPUT"
+            echo "go=1" >> "$GITHUB_OUTPUT"
           fi
-      - name: Pull the manifest + current/previous-year files from the trainer
+      - name: Pull the manifest + the current and previous month of 1m bars from the trainer
         if: steps.mode.outputs.mode != 'probe' && steps.mode.outputs.mode != 'verify'
         env:
           TRAINER_IP: ${{ secrets.TRAINER_VM_IP }}
@@ -127,13 +128,13 @@ jobs:
         run: |
           set -uo pipefail
           mkdir -p store
-          Y="$(date -u +%Y)"; Y1="$((Y-1))"
-          # The store is GBs: a refresh needs only the manifest and the two newest year files per series. First run: nothing exists yet
-          # (rsync exit 23), the expected empty start.
+          YM="$(date -u +%Y-%m)"; YM1="$(date -u -d "$(date -u +%Y-%m-01) -1 month" +%Y-%m)"
+          # The store is GBs: a refresh needs only the manifest and the two newest monthly partitions per series. First run: nothing
+          # exists yet (rsync exit 23), the expected empty start.
           rsync -a --prune-empty-dirs -e "ssh -i ~/.ssh/trainer_key -o BatchMode=yes -o StrictHostKeyChecking=accept-new -o ConnectTimeout=20" \
-            --include='*/' --include='MANIFEST.json' --include="*/*/${Y}.parquet" --include="*/*/${Y1}.parquet" --exclude='*' \
+            --include='*/' --include='MANIFEST.json' --include="*/1m/${YM}.parquet" --include="*/1m/${YM1}.parquet" --exclude='*' \
             "${TRAINER_USER}@${TRAINER_IP}:ict-trading-bot/data/etf_history/" store/ 2>&1 | sed -E 's/[0-9]{1,3}(\.[0-9]{1,3}){3}/<ip>/g' || true
-          echo "pulled: $(find store -name '*.parquet' | wc -l) year-files, manifest: $(test -f store/MANIFEST.json && echo yes || echo no)"
+          echo "pulled: $(find store -name '*.parquet' | wc -l) partitions, manifest: $(test -f store/MANIFEST.json && echo yes || echo no)"
       - name: Pull the manifest only (verify mode)
         if: steps.mode.outputs.mode == 'verify'
         env:
@@ -171,16 +172,59 @@ jobs:
           except Exception as e:
               print(f"stooq 1d: ERR {str(e)[:100]}")
           PY
-      - name: Fetch (backfill resumes what is missing/stale; refresh extends everything), time-budgeted
+      - name: Fetch the 1m base in chunks (push + clear between chunks; time-budgeted; per-symbol failures contained)
         id: fetch
-        if: steps.mode.outputs.mode == 'backfill' || steps.mode.outputs.mode == 'refresh'
+        if: (steps.mode.outputs.mode == 'backfill' || steps.mode.outputs.mode == 'refresh') && steps.disk.outputs.go == '1'
         continue-on-error: true
         env:
           ALPACA_API_KEY_ID_LIVE: ${{ secrets.ALPACA_API_KEY_ID_LIVE }}
           ALPACA_API_SECRET_KEY_LIVE: ${{ secrets.ALPACA_API_SECRET_KEY_LIVE }}
           MODE: ${{ steps.mode.outputs.mode }}
-          TFS: ${{ steps.disk.outputs.tfs }}
-        run: python3 -u scripts/ops/fetch_etf_history.py --mode "$MODE" --out store --tfs "${TFS:-1h,5m}" --budget-min 165
+          TRAINER_IP: ${{ secrets.TRAINER_VM_IP }}
+          TRAINER_USER: ${{ vars.TRAINER_VM_USER || 'ubuntu' }}
+        run: |
+          set -uo pipefail
+          SSH="ssh -i $HOME/.ssh/trainer_key -o BatchMode=yes -o StrictHostKeyChecking=accept-new -o ConnectTimeout=20"
+          RUN_START="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          rc=0
+          SECONDS=0
+          for chunk in $(seq 1 200); do
+            left=$(( (9900 - SECONDS) / 60 ))   # 165 min budget; the job cap is 210
+            if [ "$left" -lt 3 ]; then echo "time budget used; the next run resumes"; break; fi
+            python3 -u scripts/ops/fetch_etf_history.py --mode "$MODE" --out store --tfs 1m --max-new 25 --budget-min "$left" \
+              --skip-fetched-after "$RUN_START" || rc=1
+            # Push this chunk (add/replace only, never --delete), then clear the local bars so the runner never holds the whole store.
+            # The manifest stays on both sides, so a killed run resumes from what was pushed.
+            rsync -a --partial -e "$SSH" store/ "${TRAINER_USER}@${TRAINER_IP}:ict-trading-bot/data/etf_history/" > rsync.log 2>&1
+            rsc=$?
+            sed -E 's/[0-9]{1,3}(\.[0-9]{1,3}){3}/<ip>/g' rsync.log | tail -5
+            if [ "$rsc" -ne 0 ]; then echo "::error::chunk ${chunk} push to the trainer failed (rsync exit ${rsc})"; rc=1; break; fi
+            # Clear ONLY the series finished this run: the pulled tail partitions of symbols not yet reached must stay, or their refresh
+            # would find no local files and re-fetch the whole history.
+            RUN_START="$RUN_START" python3 - <<'PY'
+          import json, os, shutil
+          m = json.load(open("store/MANIFEST.json"))
+          t0 = os.environ["RUN_START"]
+          n = 0
+          for key, rec in (m.get("series") or {}).items():
+              if (rec.get("fetched_at") or "") >= t0:
+                  d = os.path.join("store", *key.split("/"))
+                  if os.path.isdir(d):
+                      shutil.rmtree(d)
+                      n += 1
+          print(f"cleared {n} finished series dirs from the runner")
+          PY
+            rem="$(python3 -c "import json;print(json.load(open('store/MANIFEST.json'))['run']['remaining'])" 2>/dev/null)"
+            if [ -z "${rem}" ]; then echo "::error::chunk ${chunk}: manifest has no run.remaining (fetcher died before writing it)"; rc=1; break; fi
+            avail="$($SSH "${TRAINER_USER}@${TRAINER_IP}" 'df -BG --output=avail / | tail -1' 2>/dev/null | tr -dc 0-9)"
+            echo "chunk ${chunk}: remaining=${rem} trainer_free_gb=${avail:-unknown} elapsed=${SECONDS}s"
+            if [ "${rem}" = "0" ]; then break; fi
+            if [ -n "${avail}" ] && [ "${avail}" -lt 10 ]; then
+              echo "::error::trainer free disk ${avail} GB < 10 GB floor mid-run (${rem} series still to pull): stopping the 1m pull. Projected store ~14 GB (10-25). Free space or widen the disk, then re-run."
+              echo "lowdisk=1" >> "$GITHUB_OUTPUT"; rc=1; break
+            fi
+          done
+          exit "$rc"
       - name: Verify (depth, gaps, freshness) from the manifest
         id: verify
         if: steps.mode.outputs.mode != 'probe'
@@ -195,8 +239,31 @@ jobs:
           python3 scripts/ops/etf_history_verify.py --root store --table --all $flag > verify_full.md 2>&1 || true
           cat verify.md
           exit "$rc"
-      - name: Push the store to the trainer (add/replace only, never --delete) and report measured size
-        if: steps.mode.outputs.mode == 'backfill' || steps.mode.outputs.mode == 'refresh'
+      - name: Machine-readable health record
+        if: always() && steps.mode.outputs.mode != 'probe'
+        env:
+          FETCH: ${{ steps.fetch.outcome }}
+          VERIFY: ${{ steps.verify.outcome }}
+          DISK_GO: ${{ steps.disk.outputs.go }}
+          DISK_AVAIL: ${{ steps.disk.outputs.avail }}
+          MODE: ${{ steps.mode.outputs.mode }}
+        run: |
+          python3 - <<'PY'
+          import json, os
+          m = {}
+          try:
+              m = json.load(open("store/MANIFEST.json"))
+          except Exception:
+              pass
+          h = {"feed": "etf-history-pipeline", "mode": os.environ.get("MODE"), "fetch": os.environ.get("FETCH"),
+               "verify": os.environ.get("VERIFY"), "trainer_free_gb": os.environ.get("DISK_AVAIL"),
+               "disk_go": os.environ.get("DISK_GO"), "run": m.get("run"), "failures": (m.get("failures") or [])[:50],
+               "updated_at": m.get("updated_at")}
+          json.dump(h, open("health.json", "w"), indent=1)
+          print(json.dumps(h))
+          PY
+      - name: Final push (manifest + corporate actions) and measured trainer size
+        if: (steps.mode.outputs.mode == 'backfill' || steps.mode.outputs.mode == 'refresh') && steps.disk.outputs.go == '1'
         env:
           TRAINER_IP: ${{ secrets.TRAINER_VM_IP }}
           TRAINER_USER: ${{ vars.TRAINER_VM_USER || 'ubuntu' }}
@@ -204,9 +271,8 @@ jobs:
           set -euo pipefail
           rsync -a --partial -e "ssh -i ~/.ssh/trainer_key -o BatchMode=yes -o StrictHostKeyChecking=accept-new" \
             store/ "${TRAINER_USER}@${TRAINER_IP}:ict-trading-bot/data/etf_history/"
-          echo "store pushed; runner-side delta $(du -sm store | cut -f1) MB"
           ssh -i ~/.ssh/trainer_key -o BatchMode=yes -o StrictHostKeyChecking=accept-new "${TRAINER_USER}@${TRAINER_IP}" \
-            'echo "trainer etf_history now $(du -sm ict-trading-bot/data/etf_history | cut -f1) MB, files $(find ict-trading-bot/data/etf_history -name "*.parquet" | wc -l)"; df -BG --output=avail,pcent / | tail -1' 2>&1 \
+            'echo "trainer etf_history now $(du -sm ict-trading-bot/data/etf_history | cut -f1) MB, partitions $(find ict-trading-bot/data/etf_history -name "*.parquet" | wc -l)"; df -BG --output=avail,pcent / | tail -1' 2>&1 \
             | sed -E 's/[0-9]{1,3}(\.[0-9]{1,3}){3}/<ip>/g'
       - name: Upload the full depth table
         if: always() && steps.mode.outputs.mode != 'probe'
@@ -216,6 +282,7 @@ jobs:
           path: |
             verify.md
             verify_full.md
+            health.json
           if-no-files-found: ignore
       - name: Comment result on the issue
         if: always() && github.event_name == 'issues'
@@ -234,7 +301,7 @@ jobs:
             await github.rest.issues.createComment({ owner: context.repo.owner, repo: context.repo.repo, issue_number: context.issue.number, body });
             await github.rest.issues.update({ owner: context.repo.owner, repo: context.repo.repo, issue_number: context.issue.number, state: 'closed' });
       - name: Red flag on a failed fetch, stale/missing series or low disk (ONE flag; the next run retries)
-        if: always() && (steps.fetch.outcome == 'failure' || steps.verify.outcome == 'failure' || steps.disk.outputs.lowdisk == '1')
+        if: always() && (steps.fetch.outcome == 'failure' || steps.verify.outcome == 'failure' || steps.disk.outputs.lowdisk == '1' || steps.fetch.outputs.lowdisk == '1')
         run: |
           echo "::error::etf-history: fetch=${{ steps.fetch.outcome }} verify=${{ steps.verify.outcome }} lowdisk=${{ steps.disk.outputs.lowdisk }} (see steps above)"
           exit 1

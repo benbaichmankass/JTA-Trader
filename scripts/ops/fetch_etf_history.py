@@ -1,20 +1,23 @@
 #!/usr/bin/env python3
 # wiring: .github/workflows/etf-history-pipeline.yml (runner holding the Alpaca Actions secrets; store synced to the trainer)
-"""Multi-year equity/ETF bar history (1h + 5m) from the Alpaca Market Data API -> the canonical store.
+"""Multi-year equity/ETF bar history from the Alpaca Market Data API -> the canonical store. BASE TIMEFRAME 1m.
 
-WHY (operator, 2026-11-01): "there's no way we are limited to 2 years of etf data" and "we need to be collecting data on far
-more symbols than that, even if we're not trading them yet". Lanes fell back to Yahoo 1h (~730 d cap) because the Alpaca
-keys live only in Actions secrets / on the VMs, never in a lane sandbox. This runs WHERE THE KEYS ARE (a runner) and lands
-the data where the ML/research lanes read. WHAT is collected is config/data_universe.yaml (a config edit widens it).
+WHY (operator, 2026-11-01): "there's no way we are limited to 2 years of etf data", "we need to be collecting data on far more symbols
+than that, even if we're not trading them yet", and (binding) "we should also be keeping the smallest timeframe data available - we can
+always reconstruct higher timeframes on top of that". Lanes fell back to Yahoo 1h (~730 d cap) because the Alpaca keys live only in
+Actions secrets / on the VMs, never in a lane sandbox. This runs WHERE THE KEYS ARE (a runner) and lands the data where the ML/research
+lanes read. WHAT is collected is config/data_universe.yaml (a config edit widens it).
 
 STORE (``--out``; on the trainer ``data/etf_history/``)::
 
-    <SYM>/<tf>/<YYYY>.parquet   timestamp(UTC), open, high, low, close, volume, trade_count, vwap -- one file PER YEAR, so a
-                                daily refresh rewrites only the current year (the store is GBs: whole-file rewrites do not scale)
+    <SYM>/1m/<YYYY-MM>.parquet  the BASE: 1-minute bars, one file per MONTH so a daily refresh pulls/rewrites ~a month, not the history
+    <SYM>/<tf>/<YYYY>.parquet   any other STORED timeframe (none by default), one file per year
+                                columns: timestamp(UTC bar-open), open, high, low, close, volume, trade_count, vwap
     corporate_actions.csv       dividends + splits, SEPARATE from the bars (bars are split-adjusted ONLY)
-    MANIFEST.json               per symbol/tf: status ok|no_data, feed, first, last, rows, years{}, long_gaps, fetched_at
+    MANIFEST.json               per symbol/tf: status ok|no_data, feed, first, last, rows, years{}, long_gaps, fetched_at; run{}; failures[]
 
-READER: ``read_bars(root, sym, tf, start=None, end=None)`` concatenates the year files.
+READER: ``read_bars(root, sym, tf, start=None, end=None)``. 5m / 15m / 30m / 1h / 4h are DERIVED on read from the 1m base by
+``resample_bars`` (left-closed, labelled at the bar open, ``n_base`` + ``complete`` columns, never forward-filled); they are not fetched.
 
 SEMANTICS (the contract a reader can rely on)
   * adjustment = ``split``: split-adjusted, NOT dividend-adjusted. Dividends are in corporate_actions.csv (ex_date, rate), so a
@@ -53,7 +56,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import data_universe as du  # noqa: E402
 
 DATA_URL = os.environ.get("ALPACA_DATA_URL", "https://data.alpaca.markets").rstrip("/")
-TF_API = {"5m": "5Min", "15m": "15Min", "1h": "1Hour", "1d": "1Day"}
+TF_API = {"1m": "1Min", "5m": "5Min", "15m": "15Min", "1h": "1Hour", "1d": "1Day"}
 DEFAULT_START = "2016-01-04"  # Alpaca's documented start of stock bar history
 OVERLAP_DAYS = 7              # a refresh re-reads this many days to detect re-adjustment (splits)
 MIN_INTERVAL_S = 0.4          # ~150 requests/min
@@ -166,27 +169,67 @@ def pick_feed(get: Getter, preferred: str) -> str:
         return "iex"
 
 
-# ----------------------------------------------------------------------------------------------- the per-year store
+# ------------------------------------------------------------------------------------------------ the partitioned store
+# 1m (the BASE, operator 2026-11-01: "keep the smallest timeframe available") is partitioned by MONTH (<YYYY-MM>.parquet) so a
+# daily refresh pulls/rewrites ~a month; every other stored timeframe is partitioned by YEAR (<YYYY>.parquet).
+MONTHLY_TFS = {"1m"}
+DERIVED_MINUTES = {"5m": 5, "15m": 15, "30m": 30, "1h": 60, "4h": 240}
+
+
 def _ydir(root: Path, sym: str, tf: str) -> Path:
     return root / sym / tf
 
 
-def _year_files(root: Path, sym: str, tf: str) -> List[Path]:
+def _part_files(root: Path, sym: str, tf: str) -> List[Path]:
     d = _ydir(root, sym, tf)
-    return sorted(d.glob("[0-9][0-9][0-9][0-9].parquet")) if d.exists() else []
+    return sorted(d.glob("[0-9][0-9][0-9][0-9]*.parquet")) if d.exists() else []
+
+
+def _part_key(ts: "pd.Series", tf: str) -> "pd.Series":
+    return ts.dt.strftime("%Y-%m") if tf in MONTHLY_TFS else ts.dt.strftime("%Y")
+
+
+def resample_bars(df: pd.DataFrame, tf: str) -> pd.DataFrame:
+    """Derive ``tf`` bars from 1m bars, deterministically (same rule for every symbol and run; identical in semantics to the lake's
+    scripts/data_lake/resample.py): left-closed, labelled at the bar OPEN, aligned to whole UTC multiples of ``tf`` (equity sessions open
+    on :30 so the first bar of a session is partial -- see ``complete``); open=first, high=max, low=min, close=last, volume and
+    trade_count = sum, vwap = volume-weighted; a bar exists only if >= 1 base bar is in it (no forward fill). ``n_base`` = base bars
+    inside the bar, ``complete`` = n_base == minutes in the bar, so thin/partial bars are visible instead of looking normal."""
+    if df.empty:
+        return df
+    g = df.set_index("timestamp").sort_index()
+    pv = (g["vwap"] * g["volume"]).where(g["volume"] > 0)
+    g = g.assign(_pv=pv.fillna(0.0), _v=g["volume"].where(g["volume"] > 0, 0.0))
+    r = g.resample(f"{DERIVED_MINUTES[tf]}min", label="left", closed="left")
+    out = r.agg({"open": "first", "high": "max", "low": "min", "close": "last", "volume": "sum", "trade_count": "sum",
+                 "_pv": "sum", "_v": "sum"})
+    out["n_base"] = r["close"].count()
+    out = out[out["n_base"] > 0].copy()
+    out["vwap"] = (out["_pv"] / out["_v"]).where(out["_v"] > 0)
+    out["complete"] = out["n_base"] == DERIVED_MINUTES[tf]
+    out["n_base"] = out["n_base"].astype("int32")
+    return out.drop(columns=["_pv", "_v"]).reset_index()[_BASE_COLS + ["n_base", "complete"]]
 
 
 def read_bars(root: Path | str, sym: str, tf: str, start: Optional[str] = None, end: Optional[str] = None) -> pd.DataFrame:
-    """THE reader: ``read_bars('data/etf_history', 'SPY', '1h', start='2020-01-01')`` -> OHLCV frame sorted by UTC ``timestamp``."""
+    """THE reader: ``read_bars('data/etf_history', 'SPY', '1h', start='2020-01-01')`` -> OHLCV frame sorted by UTC ``timestamp``.
+
+    A timeframe that is not stored (5m, 15m, 30m, 1h, 4h) is DERIVED from the stored 1m base by ``resample_bars`` (adds ``n_base`` and
+    ``complete`` columns); a stored one is read as is."""
     root = Path(root)
-    files = _year_files(root, sym, tf)
+    files = _part_files(root, sym, tf)
+    derive = False
+    if not files and tf in DERIVED_MINUTES:
+        files, derive = _part_files(root, sym, "1m"), True
     if start:
-        files = [f for f in files if int(f.stem) >= int(start[:4])]
+        files = [f for f in files if int(f.stem[:4]) >= int(start[:4])]
     if end:
-        files = [f for f in files if int(f.stem) <= int(end[:4])]
+        files = [f for f in files if int(f.stem[:4]) <= int(end[:4])]
     if not files:
         return pd.DataFrame(columns=_BASE_COLS)
     df = pd.concat([pd.read_parquet(f) for f in files], ignore_index=True)
+    if derive:
+        df = resample_bars(df, tf)
     if start:
         df = df[df["timestamp"] >= pd.Timestamp(start, tz="UTC")]
     if end:
@@ -194,8 +237,8 @@ def read_bars(root: Path | str, sym: str, tf: str, start: Optional[str] = None, 
     return df.reset_index(drop=True)
 
 
-def _write_year(root: Path, sym: str, tf: str, year: int, df: pd.DataFrame) -> None:
-    p = _ydir(root, sym, tf) / f"{year}.parquet"
+def _write_part(root: Path, sym: str, tf: str, key: str, df: pd.DataFrame) -> None:
+    p = _ydir(root, sym, tf) / f"{key}.parquet"
     p.parent.mkdir(parents=True, exist_ok=True)
     tmp = p.with_suffix(".parquet.tmp")
     df.to_parquet(tmp, index=False)
@@ -210,11 +253,21 @@ def _long_gaps(df: pd.DataFrame, max_days: float = 5.0) -> int:
 
 def update_symbol(get: Getter, root: Path, sym: str, tf: str, feed: str, start: datetime, end: datetime, full: bool,
                   prior: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
-    """Create / extend one series. ``prior`` is the manifest entry (carries what the unpulled year files hold)."""
+    """Create / extend one series. ``prior`` is the manifest entry: it carries what the partitions NOT pulled onto this runner hold
+    (rows per year, first bar), so a refresh never needs the whole store."""
     prior = prior or {}
-    files = [] if full else _year_files(root, sym, tf)
+    files = [] if full else _part_files(root, sym, tf)
     note = ""
-    added = 0
+    if not files and not full and prior.get("status") == "ok" and prior.get("last"):
+        # The manifest says this series exists but no partition was pulled onto this runner. For an ACTIVE series that means the pull
+        # window missed it (fall through to a full fetch). For one whose last bar is >40 days old it simply ENDED (delisted / liquidated):
+        # re-pulling its whole history every day would be pure waste, so only look for resumed trading since its last bar.
+        last_prior = datetime.fromisoformat(prior["last"].replace("Z", "+00:00"))
+        if (end - last_prior).days > 40:
+            probe_new = fetch_bars(get, sym, tf, last_prior - timedelta(days=OVERLAP_DAYS), end, feed)
+            if probe_new[probe_new["timestamp"] > pd.Timestamp(last_prior)].empty:
+                return {**prior, "added": 0, "note": "ended (no bars after last)", "fetched_at": _iso(datetime.now(timezone.utc))}
+            note = "resumed trading -> full refetch"
     if files:
         tail = pd.read_parquet(files[-1])
         if tail.empty and len(files) > 1:
@@ -226,27 +279,26 @@ def update_symbol(get: Getter, root: Path, sym: str, tf: str, feed: str, start: 
         ov = old_overlap.merge(new, on="timestamp", suffixes=("_o", "_n"))
         readj = len(ov) and ((ov["close_o"] - ov["close_n"]).abs() / ov["close_o"].abs().clip(lower=1e-9) > 1e-6).any()
         if readj:
-            note = "re-adjusted (split) -> full refetch"
-            return _full(get, root, sym, tf, feed, start, end, note)
-        delta = new[new["timestamp"] > last]
-        added = len(delta)
+            return _full(get, root, sym, tf, feed, start, end, "re-adjusted (split) -> full refetch")
+        delta = new[new["timestamp"] > last]  # strictly after the stored last bar, so the row counts below are additive
         gap_new = _long_gaps(pd.concat([tail.tail(1), delta], ignore_index=True))
         years: Dict[str, int] = dict(prior.get("years") or {})
-        for y, grp in delta.groupby(delta["timestamp"].dt.year):
-            ypath = _ydir(root, sym, tf) / f"{y}.parquet"
-            cur = pd.read_parquet(ypath) if ypath.exists() else pd.DataFrame(columns=_BASE_COLS)
+        for key, grp in delta.groupby(_part_key(delta["timestamp"], tf)):
+            ppath = _ydir(root, sym, tf) / f"{key}.parquet"
+            cur = pd.read_parquet(ppath) if ppath.exists() else pd.DataFrame(columns=_BASE_COLS)
             merged = pd.concat([cur, grp], ignore_index=True).drop_duplicates("timestamp").sort_values("timestamp").reset_index(drop=True)
             if len(merged) < len(cur):
-                raise RuntimeError(f"{sym} {tf} {y}: refusing a shrinking write")
-            _write_year(root, sym, tf, int(y), merged)
-            years[str(y)] = int(len(merged))
-        if not years:
-            years = {f.stem: int(len(pd.read_parquet(f, columns=["timestamp"]))) for f in files}
+                raise RuntimeError(f"{sym} {tf} {key}: refusing a shrinking write")
+            _write_part(root, sym, tf, key, merged)
+            years[key[:4]] = years.get(key[:4], 0) + int(len(merged) - len(cur))
+        if not years:  # no manifest entry for an existing store: recount from whatever is on disk (partial if only some pulled)
+            for f in files:
+                years[f.stem[:4]] = years.get(f.stem[:4], 0) + int(len(pd.read_parquet(f, columns=["timestamp"])))
         last_ts = max(last, delta["timestamp"].max()) if len(delta) else last
         return {"symbol": sym, "tf": tf, "status": "ok", "feed": prior.get("feed", feed), "adjustment": "split",
                 "rows": int(sum(years.values())), "first": prior.get("first") or _iso(pd.read_parquet(files[0])["timestamp"].min().to_pydatetime()),
                 "last": _iso(last_ts.to_pydatetime()), "years": years, "long_gaps": int(prior.get("long_gaps", 0)) + gap_new,
-                "added": int(added), "note": note, "fetched_at": _iso(datetime.now(timezone.utc))}
+                "added": int(len(delta)), "note": note, "fetched_at": _iso(datetime.now(timezone.utc))}
     return _full(get, root, sym, tf, feed, start, end, note)
 
 
@@ -256,12 +308,13 @@ def _full(get: Getter, root: Path, sym: str, tf: str, feed: str, start: datetime
     if df.empty:
         return {**base, "status": "no_data", "rows": 0, "first": None, "last": None, "years": {}, "long_gaps": 0, "added": 0}
     years: Dict[str, int] = {}
-    for y, grp in df.groupby(df["timestamp"].dt.year):
-        _write_year(root, sym, tf, int(y), grp.reset_index(drop=True))
-        years[str(y)] = int(len(grp))
-    keep = {f"{y}.parquet" for y in years}
-    for f in _year_files(root, sym, tf):  # a re-adjusted series must not keep a year file the new fetch no longer has
-        if f.name not in keep:
+    keys = set()
+    for key, grp in df.groupby(_part_key(df["timestamp"], tf)):
+        _write_part(root, sym, tf, key, grp.reset_index(drop=True))
+        years[key[:4]] = years.get(key[:4], 0) + int(len(grp))
+        keys.add(f"{key}.parquet")
+    for f in _part_files(root, sym, tf):  # a re-adjusted series must not keep a partition the new fetch no longer has
+        if f.name not in keys:
             f.unlink()
     return {**base, "status": "ok", "rows": int(len(df)), "first": _iso(df["timestamp"].min().to_pydatetime()),
             "last": _iso(df["timestamp"].max().to_pydatetime()), "years": years, "long_gaps": _long_gaps(df), "added": int(len(df))}
@@ -308,6 +361,12 @@ def main(argv: Optional[List[str]] = None) -> int:
     ap.add_argument("--start", default=None)
     ap.add_argument("--feed", choices=["auto", "sip", "iex"], default="auto")
     ap.add_argument("--budget-min", type=float, default=0.0, help="stop cleanly after this many minutes (0 = no limit); the next run resumes")
+    ap.add_argument("--skip-fetched-after", default=None,
+                    help="ISO time: a series whose manifest fetched_at is >= this was already done THIS run (the workflow clears the local "
+                         "store between chunks, so without this a later chunk would re-fetch it from scratch)")
+    ap.add_argument("--max-new", type=int, default=0,
+                    help="stop cleanly after fetching this many series (0 = no limit); the workflow loops chunks, syncing + clearing the local store "
+                         "between them so the runner disk never holds the whole store. manifest run.remaining says how many are left")
     a = ap.parse_args(argv)
 
     get = make_getter()
@@ -330,13 +389,16 @@ def main(argv: Optional[List[str]] = None) -> int:
     failures: List[str] = []
     done = skipped = no_data = 0
     stopped = False
-    for tf in tfs:  # timeframe-major: all of 1h (cheap, valuable) lands before the heavy 5m pull starts
+    for tf in tfs:  # timeframe-major; within a timeframe the universe order is priority order (core first)
         for sym in syms:
-            if deadline and time.monotonic() > deadline:
+            if (deadline and time.monotonic() > deadline) or (a.max_new and done >= a.max_new):
                 stopped = True
                 break
             key = f"{sym}/{tf}"
             prior = manifest["series"].get(key) or {}
+            if a.skip_fetched_after and (prior.get("fetched_at") or "") >= a.skip_fetched_after:
+                skipped += 1
+                continue
             if a.mode == "backfill" and prior.get("status") in ("ok", "no_data") and (prior.get("status") == "no_data" or _fresh(prior, now)):
                 skipped += 1
                 continue
@@ -362,8 +424,15 @@ def main(argv: Optional[List[str]] = None) -> int:
             manifest["corporate_actions"] = {"error": str(e)[:140]}
     manifest["failures"] = failures[:200]
     manifest["updated_at"] = _iso(datetime.now(timezone.utc))
+    pending = 0
+    for tf in tfs:
+        for sym in syms:
+            pr = manifest["series"].get(f"{sym}/{tf}") or {}
+            done_now = bool(a.skip_fetched_after) and (pr.get("fetched_at") or "") >= a.skip_fetched_after
+            if not (done_now or pr.get("status") == "no_data" or (pr.get("status") == "ok" and _fresh(pr, now))):
+                pending += 1
     manifest["run"] = {"mode": a.mode, "symbols": len(syms), "tfs": tfs, "fetched": done, "skipped_fresh": skipped, "no_data": no_data,
-                       "failed": len(failures), "stopped_on_budget": stopped}
+                       "failed": len(failures), "stopped_early": stopped, "remaining": pending}
     root.mkdir(parents=True, exist_ok=True)
     mpath.write_text(json.dumps(manifest, indent=1, sort_keys=True))
     print(json.dumps(manifest["run"]), flush=True)
