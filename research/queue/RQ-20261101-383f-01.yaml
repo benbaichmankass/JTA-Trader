@@ -57,6 +57,13 @@ power:
   min_detectable_effect: 0.02
   effect_units: R per trade
   basis: 'INFERRED from c692-01 held-out by_month: 702..1,197 ENTRY trades per month on 53 symbols; per-trade delta sd ~0.3 R -> SE ~0.01 R.'
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  sd: 0.3
+  feasibility:
+    source: none
+    accrual_basis: 'Replays public history (the October 2026 forward window, read once); nothing accrues. The run records the observed n and the per-trade delta sd.'
 compute: cpu_long
 value:
   bucket: ai_trader

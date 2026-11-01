@@ -58,6 +58,13 @@ power:
   min_detectable_effect: 0.02
   effect_units: R per trade
   basis: 'INFERRED from c692-01 held-out by_month: 702..1,197 ENTRY trades per month on 53 symbols; per-trade delta sd ~0.3 R -> SE ~0.01 R.'
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  sd: 0.3
+  feasibility:
+    source: none
+    accrual_basis: 'Accrues: the November 2026 forward window exists only after 2026-11-30 (Binance Vision daily klines); ~700..1,200 ml_entry trades per month on the frozen universe (c692-01 by_month); the run records the observed n and sd.'
 compute: cpu_long
 value:
   bucket: ai_trader

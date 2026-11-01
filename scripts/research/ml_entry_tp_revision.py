@@ -422,7 +422,9 @@ class Scorer:
             out.append((s * g - c, reason, []))
         return out
 
-    def policy(self, margin: float, log: list | None = None):
+    def policy(self, margin: float, log: list | None = None, extend_only: bool = False):
+        """``extend_only``: only levels farther from entry than the resting TP are candidates (the live policy,
+        operator 2026-11-01 ~22:50Z); default False = the two-way policy RQ-20261101-383f-01 registered."""
         def fac(k, t, s, entry, C):
             pr = self.probs.get(k, {})
 
@@ -431,6 +433,8 @@ class Scorer:
                     return None
                 close = C[jc - 1]
                 ok = valid_levels(s, entry, t.atr, close)
+                if extend_only:
+                    ok = ok & (np.arange(len(GRID)) > q)
                 cost = level_cost(entry, t.atr, s)
                 ev = expected_net_r(pr[jc], self.means, cost)
                 cur = ev[q]
@@ -930,20 +934,68 @@ def entry_forward(args) -> int:
     return 0
 
 
+def evidence_extend_only(args) -> int:
+    """The faithful re-measure for comms/strategy_evidence/ml_entry.json once the leg declares the extend-only TP
+    revision: the record's own population (the served ENTRY model's held-out trades 2025-10-01..2026-09-30 on the
+    bybit_2 symbols, c692-06) under the fixed 3 ATR TP, the two-way and the EXTEND-ONLY policy (margin from the dev
+    stage). The TP model is the TP walk-forward fold for that window (trained < 2025-10-01 minus purge + embargo), so its
+    predictions are out of sample; the margin was chosen on dev OOS trades that INCLUDE this window (stated)."""
+    cache, out = Path(args.cache), Path(args.out)
+    out.mkdir(parents=True, exist_ok=True)
+    t0 = time.time()
+    dev = json.loads(Path(args.dev_json).read_text())
+    art = json.loads(SERVED.read_text())
+    syms = E.universe()
+    tab = E.build_table(cache, syms)
+    bars = load_bars(cache, syms)
+    panel = feature_panel(bars)
+    a = pd.Timestamp(E.HOLDOUT_START, tz="UTC")
+    cut = a - pd.Timedelta(days=E.EMBARGO_DAYS) - pd.Timedelta(hours=H + 1)
+    tm = fit_tp_model(training_rows(tab, bars, panel, cut, SEED))
+    traded = E.traded_symbols()
+    trades = served_trades(tab, E.HOLDOUT_START, DEV_END, art)
+    trades = trades[trades.symbol.isin(traded)].reset_index(drop=True)
+    rows = trade_checkins(trades, bars, panel)
+    probs = probs_by_trade(rows, predict_probs(tm, rows))
+    sc = Scorer(trades, bars, probs, tm["class_mean_net_r"])
+    m = float(dev["margin_star"])
+    base = np.array([x[0] for x in sc.fixed(BASE_TP)])
+    res = {"population": f"served ENTRY trades {E.HOLDOUT_START}..{DEV_END} on {traded}", "n": len(base),
+           "margin_r": m, "tp_fold_train_end_exclusive": str(cut), "n_train": tm["n_train"],
+           "fixed_3atr": {"mean_net_r": float(base.mean()), "sum_net_r": float(base.sum())}}
+    for name, eo in (("two_way", False), ("extend_only", True)):
+        pol = sc.policy(m, extend_only=eo)
+        v = np.array([x[0] for x in pol])
+        mv = [x for x in pol if x[2]]
+        res[name] = {"mean_net_r": float(v.mean()), "sum_net_r": float(v.sum()), "mean_delta": float((v - base).mean()),
+                     "n_trades_moved": len(mv), "n_pull_in": sum(1 for x in pol for _, q0, q1 in x[2] if q1 < q0),
+                     "exit_reasons": {str(r): int(sum(1 for x in pol if x[1] == r)) for r in (0, 1, 2)},
+                     "per_symbol": {s: round(float(v[(trades.symbol == s).to_numpy()].mean()), 4)
+                                    for s in traded if (trades.symbol == s).any()}}
+    res["elapsed_s"] = round(time.time() - t0)
+    res["git_sha"] = E._git_sha()
+    (out / "evidence_extend_only.json").write_text(json.dumps(res, indent=1, default=str) + "\n")
+    print(json.dumps({k: res[k] for k in ("n", "fixed_3atr", "two_way", "extend_only")}, default=str)[:1500], flush=True)
+    return 0
+
+
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser()
-    ap.add_argument("cmd", nargs="?", default="run", choices=["run", "export", "entry-forward"])
+    ap.add_argument("cmd", nargs="?", default="run", choices=["run", "export", "entry-forward", "evidence-extend-only"])
     ap.add_argument("--cache", default="/tmp/ml_decision_klines")
     ap.add_argument("--out", default="/tmp/ml_entry_tp_revision_out")
     ap.add_argument("--unit", default=UNIT)
     ap.add_argument("--dev-only", action="store_true", help="stop before the one read of the forward window")
     ap.add_argument("--self-test", action="store_true")
+    ap.add_argument("--dev-json", default="comms/research/RQ-20261101-383f-01/local-20261101T1030Z/dev.json")
     ap.add_argument("--summary", default="", help="export: the run summary.json whose final fit is reproduced")
     ap.add_argument("--artifact", default=str(REPO / "ml" / "served" / "ml_entry_tp_revision_v1" / "model.json"))
     a = ap.parse_args(argv)
     if a.self_test:
         _self_test()
         return 0
+    if a.cmd == "evidence-extend-only":
+        return evidence_extend_only(a)
     if a.cmd == "entry-forward":
         return entry_forward(a)
     return export(a) if a.cmd == "export" else run(a)

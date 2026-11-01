@@ -38,6 +38,13 @@ power:
   min_detectable_effect: 0.06
   effect_units: R per decision
   basis: 'INFERRED from c692-01 held-out by_month (702..1,197 decisions per month); per-decision sd ~1 R -> SE ~0.033 R.'
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  sd: 1.0
+  feasibility:
+    source: none
+    accrual_basis: 'Replays public history (the October 2026 forward window); nothing accrues. The run records the observed n and sd.'
 compute: cpu_long
 value:
   bucket: ai_trader
