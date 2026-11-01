@@ -340,7 +340,7 @@ result's own rows → form **one hypothesis** → **register the next variant** 
 
 No result sits without one of the three. **Every `testing` strategy leg, every ML model not on real money and every live-review
 action class that has not graduated always has a live iteration.** The number of subjects without one — the orphan count, from
-`scripts/research/iteration_orphans.py` — is reported every day (the manager's daily review, step 4b) and on every research-ops
+`scripts/research/iteration_orphans.py` — is reported every day (the manager's daily review, step 4c) and on every research-ops
 pass; it should read **0**.
 
 **Superseded by this section:** authoring research to meet a runnable-queue floor, and tests that change no decision — STOP-GENERATED-AUTHORING
