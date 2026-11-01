@@ -1,0 +1,22 @@
+{
+  "id": "COMPUTE-PREFER-KAGGLE",
+  "title": "Route research compute to specific infra (Kaggle) first; keep GitHub runners free for general work",
+  "phase": "build",
+  "state": "queued",
+  "owner": "manager",
+  "lane": null,
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [],
+  "blocked_on": [],
+  "note": "OPERATOR 2026-11-01 ~22:55Z, verbatim: \"we should generally prefer specific infra like kaggle when it's relevant to leave the general use git resources free for other work\". STANDING RULE for dispatch and for every lane that routes compute. TODO (lane, after the 2026-11-04 18:00Z usage reset): (1) change scripts/research/research_compute.yaml routing so cpu_long / gpu / heavy units prefer the Kaggle backend, with github_runner as the fallback when Kaggle is unavailable or the unit needs Actions secrets or venue access (e.g. Bybit-blocked runners); (2) fix the Kaggle CPU backend flagged idle by the research watchdog on 2026-11-01 before relying on it; (3) re-route queued ML ENTRY units (b601-b608, a508, a24c-01, the timeframe-scaling set) and state per-unit backend; (4) record the rule in the research-ops skill routing section. No new gate.",
+  "updated_at": "2026-11-01T22:34:55Z",
+  "updated_by": "session_01AFoLuJ1apgy8sfngu4WyNH",
+  "due_by": "2026-11-05",
+  "roadmap": [
+    "L-OPS"
+  ],
+  "_seq": 889
+}
