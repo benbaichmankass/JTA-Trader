@@ -182,6 +182,11 @@ CADENCE_REGISTRY: dict[str, dict] = {
                "store's own freshness (etf_history_verify.py exits 1 on a stale/missing series and turns the run red) and a dead run is "
                "observed by claude-run-failure-alert",
     },
+    "sp500-membership-refresh.yml": {
+        "receipt": "config/data_universe/sp500_membership.csv",
+        "why": "lands the membership table through commit-to-main, so the last commit touching it IS the receipt (quarterly; a refresh that "
+               "changes nothing opens no PR, so a quiet quarter can read old -- the file's own newest snapshot date is the real freshness)",
+    },
     "options-snapshot-capture.yml": {
         "receipt": None,
         "why": "writes the option-snapshot store on the trainer (data/options_history/), not in git, so no repo receipt exists; every run "

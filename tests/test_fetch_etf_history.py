@@ -84,3 +84,21 @@ def test_verify_verdicts():
     gone = ver.classify(u, _manifest({}), ["1h"], now, 5.0, progress=True)
     assert all(r["verdict"] == "PENDING" and not r["red"] for r in gone)
     assert all(r["verdict"] == "MISSING" and r["red"] for r in ver.classify(u, _manifest({}), ["1h"], now, 5.0, progress=False))
+
+
+def test_publish_to_hf_lake_is_add_only(tmp_path):
+    import publish_to_hf_lake as pub
+
+    (tmp_path / "SPY" / "1h").mkdir(parents=True)
+    (tmp_path / "SPY" / "1h" / "2026.parquet").write_bytes(b"x")
+    (tmp_path / "MANIFEST.json").write_text("{}")
+    calls = []
+
+    class Api:
+        def upload_folder(self, **kw):
+            calls.append(kw)
+
+    assert pub.publish(Api(), tmp_path, "o/lake", "/equities/bars/", "m") == 0
+    kw = calls[0]
+    assert kw["repo_type"] == "dataset" and kw["path_in_repo"] == "equities/bars" and "delete_patterns" not in kw
+    assert pub.publish(Api(), tmp_path / "empty", "o/lake", "p", "m") == 0 and len(calls) == 1
