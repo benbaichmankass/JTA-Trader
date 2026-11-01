@@ -1,0 +1,106 @@
+{
+  "strategy": "trend_donchian",
+  "symbol": "ETHUSDT",
+  "timeframe": "4h",
+  "params": {
+    "donchian": 20,
+    "atr_stop_mult": 1.5,
+    "trail_mult": 6.0,
+    "min_confidence": 0.6,
+    "path_state_gate": {
+      "trail": [
+        "er",
+        6,
+        "lt",
+        0.3,
+        1.5,
+        2.0
+      ]
+    },
+    "trail_decay_arm_r": 0.0,
+    "trail_decay_stall_bars": 10,
+    "trail_decay_tight_mult": 1.8,
+    "tp_revision": "donchian_measured_move",
+    "tp_revision_width_mult": 0.5,
+    "tp_revisions_applied": 2690,
+    "tp_revisions_clamped": 932
+  },
+  "total_trades": 293,
+  "fee_bps_roundtrip": 11.0,
+  "slippage_bps_roundtrip": 3.0,
+  "funding_bps_per_window": 1.0,
+  "data_start": "2020-07-01 00:00:00+00:00",
+  "data_end": "2026-10-31 20:00:00+00:00",
+  "run_date": "2026-11-01",
+  "tp_r_effective_n": 293,
+  "tp_r_effective_median": 3.398,
+  "tp_r_effective_min": 0.823,
+  "tp_r_effective_max": 13.62,
+  "rr_floor_state": "off",
+  "rr_min_n": 277,
+  "rr_min_p10": 0.374,
+  "rr_min_median": 1.18,
+  "rr_min_p90": 3.37,
+  "rr_floor_exits": 0,
+  "win_rate_pct": 39.25,
+  "total_r": 69.981,
+  "net_total_r": 49.1496,
+  "net_total_r_long": 35.5082,
+  "net_total_r_short": 13.6414,
+  "net_expectancy_r": 0.1677,
+  "net_total_r_fee_only": 57.8301,
+  "net_expectancy_r_fee_only": 0.1974,
+  "mean_cost_r": {
+    "fee_r": 0.04147,
+    "slippage_r": 0.01131,
+    "funding_r": 0.01832,
+    "total_cost_r": 0.0711,
+    "funding_windows": 5.06143
+  },
+  "trades_long": 162,
+  "trades_short": 131,
+  "avg_win_r": 1.9752,
+  "max_mfe_r": 10.936,
+  "max_drawdown_r": 18.3337,
+  "by_outcome": {
+    "trail_stop": 122,
+    "stop": 142,
+    "take_profit": 29
+  },
+  "by_year": {
+    "2020": {
+      "trades": 23,
+      "net_r": 5.2286
+    },
+    "2021": {
+      "trades": 47,
+      "net_r": 0.9762
+    },
+    "2022": {
+      "trades": 44,
+      "net_r": 5.348
+    },
+    "2023": {
+      "trades": 42,
+      "net_r": 9.7194
+    },
+    "2024": {
+      "trades": 41,
+      "net_r": 21.2864
+    },
+    "2025": {
+      "trades": 50,
+      "net_r": 14.9567
+    },
+    "2026": {
+      "trades": 46,
+      "net_r": -8.3647
+    }
+  },
+  "bar_minutes": 240.0,
+  "position_days": 497.1667,
+  "capital_days": 497.1667,
+  "mean_bars_held": 10.181,
+  "net_r_per_position_day": 0.0989,
+  "net_r_per_capital_day": 0.0989
+}

@@ -1,0 +1,30 @@
+{
+  "id": "ML-LEVER-PLAN",
+  "title": "ENTRY lever plan: ranked levers, one pre-registered dev-only unit per lever test, one combined held-out read (record: research/levers/ml-entry.yaml declared)",
+  "phase": "research",
+  "state": "in_flight",
+  "owner": "manager",
+  "lane": "ML-RECIPE",
+  "model": null,
+  "ceiling_usd": 10,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [],
+  "blocked_on": [],
+  "note": "Operator 2026-11-01 ~17:55Z via manager: a specific plan for improving ml_entry (selectivity, active management, levers, testing plan). Record = research/levers/ml-entry.yaml declared.ranked_levers + ml-brackets.yaml declared + units b601-01..b605-01 (blocked; shared harness ML-LEVER-HARNESS) + a508-01 + d507-01. Held-out year already spent on two bracket geometries (c692-02), so the combined v2 candidate read uses W1 (2026-10-01..31, unspent) or live forward data, ONE read, rule written first. Gates this adds: none.  [2026-11-01 18:30Z] ROUND 1 DONE (dev, 3 seeds): b606 cost gate 0.06 WIN (+0.0205 vs +0.0089), b602 low-vol abstention WIN (same cost-share mechanism), b601 2/4 +0.0126 below power, b604 score is a ranking not an expectation (slope 0.17), a508 BTC/ETH HARM and coin-driven. Records: comms/research/RQ-20261101-{b601,b602,b604,b606,a508}-01/local-20261101T1830Z/. Units b601/b602/b604/a508/b606 queued as P2 priority 1 (plan picks 2-6). Still open: d507-01, b603-01, b605-01, active management; combined held-out read on W1 or live forward, rule first.  [2026-11-01 19:10Z] d507-01 INDETERMINATE (LOFO quantile threshold is a noise source). b607-01 (recipe at a matched decision share, registered first): R2 single +0.0293 vs base +0.0089 WIN (also R1, E2, E3; R0 ensemble no win) - regularisation is the lever. Combined-read candidates: recipe R2, cost gate 0.06, bracket 2/4. Interaction untested (next: stack test on dev, then the combined read on W1 or live forward).",
+  "updated_at": "2026-11-01T18:47:48Z",
+  "updated_by": "session_01AFoLuHiygG7N8NBVqBMa9C",
+  "roadmap": [
+    "L-ML-LIVE"
+  ],
+  "observation": {
+    "what": "each lever unit (b601-01 brackets, b602-01 selectivity, b603-01 horizon/cadence, b604-01 calibration, b605-01 target, a508-01 symbol set, d507-01 recipe) has a result record, and the dev winners are collected into ONE combined held-out read unit with its rule written first",
+    "how_to_check": "ls comms/research/RQ-20261101-b6*-01 comms/research/RQ-20261101-a508-01 comms/research/RQ-20261101-d507-01",
+    "due_by": "2026-11-03"
+  },
+  "writeback": {
+    "roadmap": "L-ML-LIVE: ENTRY lever outcomes written back when each unit closes (levers map reading)",
+    "arch": "none: research plan, no contract change"
+  },
+  "_seq": 886
+}
