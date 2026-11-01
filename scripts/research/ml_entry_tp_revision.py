@@ -39,7 +39,7 @@ import pandas as pd
 REPO = Path(__file__).resolve().parents[2]
 sys.path[:0] = [str(REPO), str(REPO / "scripts" / "research")]
 
-import ml_decision_entry as E
+import ml_decision_entry as E  # noqa: E402
 
 SCHEMA = "ml_entry_tp_revision/1"
 UNIT = "RQ-20261101-383f-01"
@@ -230,8 +230,8 @@ def windows(df: pd.DataFrame, i: np.ndarray):
 def checkin_rows(sym: str, df: pd.DataFrame, pan: pd.DataFrame, i: np.ndarray, atr: np.ndarray, side: np.ndarray,
                  with_label: bool) -> pd.DataFrame:
     """One row per (position, check-in) with the SL not yet hit. ``side`` +1/-1 per position."""
-    O, Hh, L, C = windows(df, i)
-    entry = O[:, 0]
+    Ob, Hh, L, C = windows(df, i)
+    entry = Ob[:, 0]
     risk = E.SL_ATR * atr
     sl = entry - side * risk
     fav = np.where(side[:, None] > 0, Hh, -L)                     # favourable extreme, sign-adjusted
@@ -271,7 +271,7 @@ def checkin_rows(sym: str, df: pd.DataFrame, pan: pd.DataFrame, i: np.ndarray, a
             stop = js <= H
             # outcome net R of the path WITHOUT a TP (stop fill or the 24-bar close)
             jj = np.minimum(js, H) - 1
-            o_sl = O[a, jj]
+            o_sl = Ob[a, jj]
             gap = np.where(s > 0, o_sl <= sl[a], o_sl >= sl[a])
             px = np.where(stop, np.where(gap, o_sl, sl[a]), C[a, H - 1])
             j_exit = np.where(stop, js, H)
@@ -343,7 +343,7 @@ def valid_levels(side: int, entry: float, atr: float, close: float) -> np.ndarra
     return beyond & cap
 
 
-def walk(O, Hh, L, C, entry, atr, side, chooser, tie=None):
+def walk(Ob, Hh, L, C, entry, atr, side, chooser, tie=None):
     """Sequential first passage with a TP that may move at each check-in (applies from the next bar). SL fixed.
     Gap rule and tie rule exactly as ml_decision_entry.bracket_outcome (tie -> ``tie`` callback, default SL).
     ``chooser(jc, tp_level_idx) -> new level idx | None``. Returns (exit_px, exit_j, reason, moves)."""
@@ -353,7 +353,7 @@ def walk(O, Hh, L, C, entry, atr, side, chooser, tie=None):
     tp = entry + side * GRID[q] * atr
     moves = []
     for j in range(1, H + 1):
-        o, h, lo = O[j - 1], Hh[j - 1], L[j - 1]
+        o, h, lo = Ob[j - 1], Hh[j - 1], L[j - 1]
         hit_sl = lo <= sl if side > 0 else h >= sl
         hit_tp = h >= tp if side > 0 else lo <= tp
         if hit_sl and hit_tp and tie is not None:
@@ -392,17 +392,17 @@ class Scorer:
         self.win = {}
         for k, t in self.trades.iterrows():
             df = bars[t.symbol]
-            O, Hh, L, C = windows(df, np.array([t.i]))
-            self.win[k] = (O[0], Hh[0], L[0], C[0])
+            Ob, Hh, L, C = windows(df, np.array([t.i]))
+            self.win[k] = (Ob[0], Hh[0], L[0], C[0])
 
     def _one(self, k, chooser_factory):
         t = self.trades.loc[k]
         s = 1 if t.side == "long" else -1
-        O, Hh, L, C = self.win[k]
-        entry = O[0]
+        Ob, Hh, L, C = self.win[k]
+        entry = Ob[0]
         ch = chooser_factory(k, t, s, entry, C) if chooser_factory else None
         tie = self.tie_maker(t, s) if self.tie_maker else None
-        px, j, reason, moves = walk(O, Hh, L, C, entry, t.atr, s, ch, tie)
+        px, j, reason, moves = walk(Ob, Hh, L, C, entry, t.atr, s, ch, tie)
         g, c = trade_net(entry, px, j, t.atr, self.t_ns[t.symbol], int(t.i))
         return s * g - c, reason, moves
 
@@ -415,10 +415,10 @@ class Scorer:
         for k in self.trades.index:
             t = self.trades.loc[k]
             s = 1 if t.side == "long" else -1
-            O, Hh, L, C = self.win[k]
-            px, j, reason, _ = walk_static(O, Hh, L, C, O[0], t.atr, s, GRID[q0],
+            Ob, Hh, L, C = self.win[k]
+            px, j, reason, _ = walk_static(Ob, Hh, L, C, Ob[0], t.atr, s, GRID[q0],
                                            self.tie_maker(t, s) if self.tie_maker else None)
-            g, c = trade_net(O[0], px, j, t.atr, self.t_ns[t.symbol], int(t.i))
+            g, c = trade_net(Ob[0], px, j, t.atr, self.t_ns[t.symbol], int(t.i))
             out.append((s * g - c, reason, []))
         return out
 
@@ -460,12 +460,12 @@ class Scorer:
         return [self._one(k, fac) for k in self.trades.index]
 
 
-def walk_static(O, Hh, L, C, entry, atr, side, level, tie):
+def walk_static(Ob, Hh, L, C, entry, atr, side, level, tie):
     risk = E.SL_ATR * atr
     sl = entry - side * risk
     tp = entry + side * level * atr
     for j in range(1, H + 1):
-        o, h, lo = O[j - 1], Hh[j - 1], L[j - 1]
+        o, h, lo = Ob[j - 1], Hh[j - 1], L[j - 1]
         hit_sl = lo <= sl if side > 0 else h >= sl
         hit_tp = h >= tp if side > 0 else lo <= tp
         if hit_sl and hit_tp and tie is not None:
@@ -781,12 +781,12 @@ def _self_test() -> None:
     for _ in range(300):
         side = int(rng.choice([1, -1]))
         steps = rng.normal(0, 1.2, H).cumsum() + 100
-        O = steps + rng.normal(0, .3, H)
+        Ob = steps + rng.normal(0, .3, H)
         C = steps
-        Hh = np.maximum(O, C) + rng.random(H) * 1.5
-        L = np.minimum(O, C) - rng.random(H) * 1.5
-        px, j, r = E.bracket_outcome(O[None], Hh[None], L[None], C[None], np.array([O[0]]), np.array([1.0]), side)
-        px2, j2, r2, _ = walk(O, Hh, L, C, O[0], 1.0, side, None)
+        Hh = np.maximum(Ob, C) + rng.random(H) * 1.5
+        L = np.minimum(Ob, C) - rng.random(H) * 1.5
+        px, j, r = E.bracket_outcome(Ob[None], Hh[None], L[None], C[None], np.array([Ob[0]]), np.array([1.0]), side)
+        px2, j2, r2, _ = walk(Ob, Hh, L, C, Ob[0], 1.0, side, None)
         assert (abs(px[0] - px2) < 1e-12) and j[0] == j2 and r[0] == r2, (px, px2, j, j2, r, r2)
     # a move at a check-in binds from the next bar: TP 3 ATR -> 1 ATR at bar 4 then bar 5 high 101.5 fills at 101
     hh2 = hh.copy()
@@ -828,19 +828,52 @@ def _self_test() -> None:
     print("self-test ok")
 
 
+def export(args) -> int:
+    """Refit the FINAL TP model exactly as ``forward_stage`` did (dev cache only: no forward bar is read), assert it
+    reproduces the run's final fit (row count, class counts, class means), and write the served artifact that
+    ``src/units/strategies/ml_entry.py`` loads. The margin is the dev-chosen one from the same summary."""
+    cache = Path(args.cache)
+    s = json.loads(Path(args.summary).read_text())
+    syms = E.universe()
+    tab = E.build_table(cache, syms)
+    bars = load_bars(cache, syms)
+    panel = feature_panel(bars)
+    cut = pd.Timestamp(DEV_END, tz="UTC") - pd.Timedelta(days=E.EMBARGO_DAYS) - pd.Timedelta(hours=H + 1)
+    tm = fit_tp_model(training_rows(tab, bars, panel, cut, SEED))
+    ff = s["heldout"]["final_fit"]
+    assert tm["n_train"] == ff["n_train"] and tm["class_counts"] == ff["class_counts"], (tm["n_train"], ff["n_train"])
+    got = [round(float(x), 4) for x in tm["class_mean_net_r"]]
+    assert got == ff["class_mean_net_r"], (got, ff["class_mean_net_r"])
+    art = {"model_id": "ml-entry-tp-revision-v1", "schema": "ml_entry_tp_revision_model/1", "unit": UNIT,
+           "evidence": [f"research/results/{UNIT}/local-20261101T1030Z.jsonl"],
+           "features": TP_FEATURES, "classes": [int(c) for c in tm["classes"]],
+           "class_mean_net_r": [float(x) for x in tm["class_mean_net_r"]], "grid_atr": GRID, "base_tp_atr": BASE_TP,
+           "checkins_bars_held": CHECKINS, "min_gap_atr": MIN_GAP_ATR, "margin_r": float(s["dev"]["margin_star"]),
+           "sl_atr": E.SL_ATR, "horizon_h": H, "fee_bps": E.FEE_BPS, "n_train": tm["n_train"],
+           "train_end_exclusive": str(cut), "lgb_params": TP_LGB, "git_sha": E._git_sha(),
+           "booster_txt": tm["model"].booster_.model_to_string()}
+    out = Path(args.artifact)
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_text(json.dumps(art) + "\n")
+    print(json.dumps({"artifact": str(out), "bytes": out.stat().st_size, "n_train": tm["n_train"]}), flush=True)
+    return 0
+
+
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser()
-    ap.add_argument("cmd", nargs="?", default="run", choices=["run"])
+    ap.add_argument("cmd", nargs="?", default="run", choices=["run", "export"])
     ap.add_argument("--cache", default="/tmp/ml_decision_klines")
     ap.add_argument("--out", default="/tmp/ml_entry_tp_revision_out")
     ap.add_argument("--unit", default=UNIT)
     ap.add_argument("--dev-only", action="store_true", help="stop before the one read of the forward window")
     ap.add_argument("--self-test", action="store_true")
+    ap.add_argument("--summary", default="", help="export: the run summary.json whose final fit is reproduced")
+    ap.add_argument("--artifact", default=str(REPO / "ml" / "served" / "ml_entry_tp_revision_v1" / "model.json"))
     a = ap.parse_args(argv)
     if a.self_test:
         _self_test()
         return 0
-    return run(a)
+    return export(a) if a.cmd == "export" else run(a)
 
 
 if __name__ == "__main__":
