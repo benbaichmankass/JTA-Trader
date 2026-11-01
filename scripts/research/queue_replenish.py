@@ -1114,7 +1114,13 @@ def _self_test() -> int:
 
 
 def _default_target() -> int:
-    """The refill aims at the SAME floor the health check grades against, not the fixed 25.
+    """STOP-GENERATED-AUTHORING (operator, 2026-11-01, row AUDIT-1101-DECISIONS, verbatim "Stop floor-driven
+    units (Rec.)"): the refill NO LONGER aims at a runnable count. A floor gap is REPORTED (health check,
+    brief, research-ops packet), never filled by generating units. Already-queued units keep running; an
+    explicit `--target N` (the workflow's manual `target` input) still expands templates, so a hypothesis-led
+    family can be run on purpose. The computed floor is still printed so the gap stays visible.
+
+    HISTORY (kept, superseded): the refill aimed at the SAME floor the health check grades against, not the fixed 25.
 
     RESEARCH-SLO-ROOTCAUSE 2026-10-28: the daily cron and the health-triggered dispatch both passed 25 while
     `computed_floor` was 57-63 (fired_24h 72-78), so every refill stopped 30+ units short of the floor and the
@@ -1122,10 +1128,11 @@ def _default_target() -> int:
     """
     try:
         from scripts.research.queue_throughput import computed_floor, throughput  # noqa: PLC0415
-        return max(DEFAULT_TARGET, computed_floor(throughput(_REPO).get("fired_24h")))
-    except Exception as e:  # allow-silent: a refill must still run when the measurement cannot; the warning below logs it and DEFAULT_TARGET holds
-        print(f"::warning::queue_replenish: fired_24h unread ({e!r}); target falls back to {DEFAULT_TARGET}")
-        return DEFAULT_TARGET
+        floor = max(DEFAULT_TARGET, computed_floor(throughput(_REPO).get("fired_24h")))
+        print(f"queue_replenish: floor-driven generation is OFF (STOP-GENERATED-AUTHORING); computed floor {floor} is reported, not filled")
+    except Exception as e:  # allow-silent: the target is 0 either way; this only loses the floor figure in the log line
+        print(f"::warning::queue_replenish: fired_24h unread ({e!r}); floor-driven generation is OFF regardless")
+    return 0
 
 
 def main(argv: Optional[List[str]] = None) -> int:

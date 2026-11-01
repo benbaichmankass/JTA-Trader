@@ -12,6 +12,9 @@ name: research-queue-replenish
 # `queue_replenish.py --verify` at the merge-base and demands the same bytes
 # (a hand-edited or non-template unit holds for a human, as before).
 #
+# STOP-GENERATED-AUTHORING (operator 2026-11-01, row AUDIT-1101-DECISIONS): the default target is now 0 (queue_replenish._default_target),
+# so the cron expands nothing and a floor gap is reported, not filled. A manual dispatch with an explicit `target` still expands templates.
+#
 # Four times a day (05:50, 11:50, 17:50, 23:50 UTC; RESEARCH-SLO-ROOTCAUSE 2026-10-28: one daily fill to a
 # fixed 25 could not hold a ~57-63 floor against ~72 fires/24h; the target is now the computed floor).
 # First slot: 05:50 UTC -- half an hour before the dispatcher's 06:20 slot, so
