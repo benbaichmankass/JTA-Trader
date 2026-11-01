@@ -1,7 +1,7 @@
 {
- "bar": "2026-11-01T11:30:00Z",
- "bar_close": "2026-11-01T11:35:00Z",
- "built_at": "2026-11-01T11:36:38Z",
+ "bar": "2026-11-01T11:35:00Z",
+ "bar_close": "2026-11-01T11:40:00Z",
+ "built_at": "2026-11-01T11:41:23Z",
  "closed": false,
  "order_package_id": "pkg-f07b659a7db94e8a",
  "packet": {
@@ -39,9 +39,9 @@
    "previous_review": {
     "action": "close",
     "forecast": null,
-    "reason": "Three close rows still applied=false; trade open at 1.2552 (-0.30R, 71 min) after a bounce off the broken 1.2543 low. Past the expected hold with no progress and TP ~10 ATR away; close stands.",
-    "review_id": "LR-20261101T1131Z-pkg-f07b659a7db94e8a",
-    "reviewed_at": "2026-11-01T11:32:26Z",
+    "reason": "Bounce failed: 11:30 bar closed 1.2533, a new low under the 1.2543 support (-0.47R, 76 min). Thesis failed with the stop not hit; four earlier close rows still applied=false.",
+    "review_id": "LR-20261101T1136Z-pkg-f07b659a7db94e8a",
+    "reviewed_at": "2026-11-01T11:37:28Z",
     "route": null
    },
    "symbol": "XRPUSDT"
@@ -442,13 +442,13 @@
   "features_at_review": {
    "atr_now_over_entry": 1.0192,
    "bars_since_peak": 5,
-   "giveback_r": 0.5971,
-   "open_r": -0.508,
+   "giveback_r": 0.6239,
+   "open_r": -0.5348,
    "peak_r": 0.0891,
-   "r_to_stop": 0.492,
-   "r_to_target": 2.008
+   "r_to_stop": 0.4652,
+   "r_to_target": 2.0348
   },
-  "info_cutoff_at": "2026-11-01T11:37:03Z",
+  "info_cutoff_at": "2026-11-01T11:41:38Z",
   "leg": "ict_scalp_xrp_15m",
   "mechanics": {
    "evidence": "package sl 1.24738 / tp 1.27543 agree with every readable account",
@@ -482,25 +482,18 @@
    "cell_now": null,
    "trend_now": "chop"
   },
-  "review_id": "LR-20261101T1136Z-pkg-f07b659a7db94e8a",
+  "review_id": "LR-20261101T1141Z-pkg-f07b659a7db94e8a",
   "short_hold": {
-   "atr": 0.0010428571428571707,
-   "bar": "2026-11-01T11:30:00Z",
-   "bar_close": "2026-11-01T11:35:00Z",
+   "atr": 0.0010500000000000429,
+   "bar": "2026-11-01T11:35:00Z",
+   "bar_close": "2026-11-01T11:40:00Z",
    "entry": 1.2586,
-   "mark": 1.2533,
-   "minutes_held": 76.0,
-   "open_r_at_mark": -0.4724,
+   "mark": 1.2528,
+   "minutes_held": 80.7,
+   "open_r_at_mark": -0.5169,
    "r_unit": "risk_per_unit",
    "read_state": "read",
    "recent_bars": [
-    {
-     "close": 1.2567,
-     "high": 1.2572,
-     "low": 1.2566,
-     "open": 1.2567,
-     "t": "2026-11-01T10:35:00Z"
-    },
     {
      "close": 1.2561,
      "high": 1.2568,
@@ -577,6 +570,13 @@
      "low": 1.2533,
      "open": 1.2552,
      "t": "2026-11-01T11:30:00Z"
+    },
+    {
+     "close": 1.2528,
+     "high": 1.2533,
+     "low": 1.2526,
+     "open": 1.2533,
+     "t": "2026-11-01T11:35:00Z"
     }
    ],
    "risk_per_unit": 0.01122,
@@ -585,8 +585,8 @@
   "state": {
    "atr_now_over_entry": 1.0192,
    "bars_held": 6,
-   "giveback_r": 0.5971,
-   "open_r": -0.508,
+   "giveback_r": 0.6239,
+   "open_r": -0.5348,
    "peak_provenance": "estimated",
    "peak_r": 0.0891,
    "regime_cell_entry": null,
@@ -595,25 +595,18 @@
    "tp": 1.27543
   }
  },
- "packet_sha": "b9acc3176902d5cf21a96245fb22e9b1834a748b999c728fd2a46e3bac6fed62",
+ "packet_sha": "26a360b1db8f635583c6afa92086408bf0bb48e14a0818cca02b7d0a6eff72ce",
  "short_hold": {
-  "atr": 0.0010428571428571707,
-  "bar": "2026-11-01T11:30:00Z",
-  "bar_close": "2026-11-01T11:35:00Z",
+  "atr": 0.0010500000000000429,
+  "bar": "2026-11-01T11:35:00Z",
+  "bar_close": "2026-11-01T11:40:00Z",
   "entry": 1.2586,
-  "mark": 1.2533,
-  "minutes_held": 76.0,
-  "open_r_at_mark": -0.4724,
+  "mark": 1.2528,
+  "minutes_held": 80.7,
+  "open_r_at_mark": -0.5169,
   "r_unit": "risk_per_unit",
   "read_state": "read",
   "recent_bars": [
-   {
-    "close": 1.2567,
-    "high": 1.2572,
-    "low": 1.2566,
-    "open": 1.2567,
-    "t": "2026-11-01T10:35:00Z"
-   },
    {
     "close": 1.2561,
     "high": 1.2568,
@@ -690,6 +683,13 @@
     "low": 1.2533,
     "open": 1.2552,
     "t": "2026-11-01T11:30:00Z"
+   },
+   {
+    "close": 1.2528,
+    "high": 1.2533,
+    "low": 1.2526,
+    "open": 1.2533,
+    "t": "2026-11-01T11:35:00Z"
    }
   ],
   "risk_per_unit": 0.01122,
