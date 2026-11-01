@@ -12,7 +12,10 @@
   "prs": [],
   "blocked_on": [],
   "note": "MEASURED 2026-11-01 by LTR-PACKET-FIXES (B): population = every leg on any accounts.yaml strategies: roster (52 legs). Missing comms/strategy_evidence/<leg>.json: 3 -- claude_desk (bybit_1, ib_paper, alpaca_paper), e4_oi_shock_1h (bybit_1; build_strategy_evidence.py --dry-run: harness=None, no_harness), trend_donchian_1h (bybit_1). trend_donchian_1h never had a record (git log --diff-filter=AD over 1500 commits: none). REGENERATED from its harness (scripts/ops/build_strategy_evidence.py --strategy trend_donchian_1h, harness trend, 365 d binance_vision BTCUSDT 1h, fee 11 + slip 3 + funding 1 bps): net_r_oos -16.09 R, n_trades_oos 159, folds_positive 1, fidelity faithful, RULE-D1-STAGE0-NET-OF-FULL-COST verdict FAIL. (For comparison the flagship trend_donchian record of 2026-10-28 reads net_r_oos -16.23, n 71, also fail.) Decisions for the manager: (1) trend_donchian_1h is a TESTING leg on the bybit_1 demo floor with a failing Stage-0 record -- per OPERATING-PLAN 2 the floor keeps it unless a retirement record removes it; that is a Tier-3 call. (2) e4_oi_shock_1h needs a harness route or an explicit evidence exemption. (3) claude_desk: state whether a discretionary desk leg is exempt from the per-leg record (and where that is recorded). The packet now reports these as priced_options_state=evidence_missing instead of a traceback.",
-  "updated_at": "2026-11-01T15:02:58Z",
+  "updated_at": "2026-11-01T15:24:44Z",
   "updated_by": "session_01AFoLuKrtjxkEjpGuVNPAMz",
+  "roadmap": [
+    "L-LADDER"
+  ],
   "_seq": 881
 }
