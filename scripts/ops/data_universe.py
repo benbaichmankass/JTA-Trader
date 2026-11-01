@@ -73,5 +73,6 @@ def options_underlyings(u: Dict[str, Any]) -> List[str]:
 if __name__ == "__main__":
     u = load()
     es = equity_symbols(u)
-    print(f"equities: {len(es)} symbols (core {len((u["us_equity_bars"].get('core') or []))}, delisted S&P names {len(delisted_symbols(u))}); "
+    core = (u.get("us_equity_bars") or {}).get("core") or []
+    print(f"equities: {len(es)} symbols (core {len(core)}, delisted S&P names {len(delisted_symbols(u))}); "
           f"options underlyings: {len(options_underlyings(u))}")
