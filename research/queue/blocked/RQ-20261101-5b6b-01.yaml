@@ -21,9 +21,10 @@ question: 'Operator 2026-11-01 ~10:40Z, verbatim: "the supra-symbol mls are for 
   -> SL, gap -> open fill; tau grid and dev-n >= 1000 rule; one position per symbol; decisions on the model clock, UTC close hour % 4 == 0) with
   exactly two changes: (1) TRAINING ROWS = the 60 frozen perps (Binance Vision 1h, 2020-07-01..2026-10-31) PLUS the union of alpaca_live and
   alpaca_portfolio symbols: and the alpaca_paper ETFs (Yahoo 1h regular-session bars, from the earliest the source serves, ~730 days); every row
-  costed by its own venue (perps: fee 11.0 + slip 3.0 bps + funding 1.0/8h; ETFs: fee 0.0 + slip 5.0 + regulatory 0.5 bps, funding 0); (2) two
-  SESSION features added to the 20, computed for every symbol from its own bars (for a 24/7 perp they are constant): bars_since_session_open and
-  last_session_gap_atr (open of the session''s first bar minus the prior session''s last close, in ATR14). Cross-sectional / BTC features keep the
+  costed by its own venue (perps: fee 11.0 + slip 3.0 bps + funding 1.0/8h; ETFs: fee 0.0 + slip 5.0 + regulatory 0.5 bps, funding 0); (2) the SESSION family F6 added to the 20,
+  exactly as owned by lane ML-FEATURE-INFRA in scripts/research/ml_entry_families.py (PR #22097): f6_bars_since_session_open,
+  f6_last_session_gap_atr, f6_gap_seen168 (leakage-tested there; constant on a 24/7 series). This unit does not define its own copy.
+  Cross-sectional / BTC features keep the
   60-perp reference. No symbol id and no asset-class id. Dev folds as c692-01 (the ETF rows enter the folds they fall in). Fit ONCE on all rows
   through 2026-10-31 (purged + embargoed), read 2026-11-02..2026-11-30 ONCE through HOLDOUT-LOCK.'
 why_this_matters: 'Operator 2026-11-01 ~10:30Z (row ALPACA-LIVE-ACTIVITY-ML): "MLs live on that account by the end of the week"; v1 does not pass on
@@ -88,9 +89,13 @@ run:
 blocked_on:
 - kind: harness
   ref: scripts/research/ml_decision_entry.py all-accounts
-  what: the subcommand (ETF 1h fetch via scripts/research/ml_entry_alpaca_score.py fetch_equity_1h, per-venue costs, the two session features,
+  what: the subcommand (ETF 1h fetch via scripts/research/ml_entry_alpaca_score.py fetch_equity_1h, per-venue costs, family F6 from scripts/research/ml_entry_families.py,
     a read of the forward window through HOLDOUT-LOCK only)
-  clears_when: lands with a self-test pinning the session features (constant on a 24/7 series) and the per-venue cost split
+  clears_when: lands with a self-test pinning F6 is read from the store (constant on a 24/7 series) and the per-venue cost split
+- kind: pr
+  ref: '#22097'
+  what: ML-FEATURE-INFRA's feature store (family F6) and HOLDOUT-LOCK (scripts/research/holdout_lock.py)
+  clears_when: '#22097 is merged on main'
 - kind: accrual
   ref: forward window 2026-11-02..2026-11-30
   what: the window must elapse and its last labels close

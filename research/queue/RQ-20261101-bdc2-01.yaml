@@ -95,6 +95,10 @@ run:
   timeout_minutes: 60
   inputs:
     research_unit: RQ-20261101-bdc2-01
+holdout_lock_note: 'ML-FEATURE-INFRA (relayed by the manager 2026-11-01 12:03Z): this read is a symbol-holdout read of ENTRY-v1-frozen on
+  2025-10-01..2026-09-30 for the 11 alpaca_live ETFs (absent from v1 training), CORRELATED evidence (same calendar window as c692-01). It was
+  read 2026-11-01 ~12:05Z, BEFORE scripts/research/holdout_lock.py existed on main; the lock claim is back-filled once PR #22097 lands
+  (PI item ALPACA lane), and the lock will stamp read_at as the back-fill time, not the true read time.'
 ml_consumer:
   consumer: ALPACA-LIVE-ACTIVITY-ML
   decision: 'whether the ONE ml_entry implementation (held PR #22079) gets a per-account block that opens LONG positions on alpaca_live (and both
