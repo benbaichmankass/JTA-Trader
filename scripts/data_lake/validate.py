@@ -25,9 +25,8 @@ from __future__ import annotations
 
 import argparse
 import json
-import math
 import sys
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Sequence
 
@@ -71,8 +70,8 @@ def check_frame(df: pd.DataFrame, tf: str) -> Dict[str, Any]:
     res["dup_ts"] = int(ts.duplicated().sum())
     res["non_monotonic"] = int((ts.diff().dropna() < pd.Timedelta(0)).sum())
     if "open" in cols:
-        o, h, l, c = (pd.to_numeric(df[k], errors="coerce") for k in ("open", "high", "low", "close"))
-        bad = (h < np.maximum(o, c) - 1e-12) | (l > np.minimum(o, c) + 1e-12) | (l > h)
+        o, h, lo, c = (pd.to_numeric(df[k], errors="coerce") for k in ("open", "high", "low", "close"))
+        bad = (h < np.maximum(o, c) - 1e-12) | (lo > np.minimum(o, c) + 1e-12) | (lo > h)
         if tf not in SIGNED:
             bad |= (c <= 0) | (o <= 0)
         if "volume" in cols:
