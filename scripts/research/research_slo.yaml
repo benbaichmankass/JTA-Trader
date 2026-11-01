@@ -11,42 +11,68 @@
 # cadence), not tuned so that today's numbers pass -- the 2026-10-16 baseline breaches several of them on purpose.
 
 slos:
+  # ── YIELD SLOs (RESEARCH-SLO-YIELD, operator 2026-11-01 ~08:50Z, popup verbatim: "Replace with yield SLOs (Rec.)") ──
+  # The only two SLOs that alert on the research programme's OUTPUT. Source: the weekly trial ledger
+  # (scripts/research/trial_ledger.py -> comms/research/*/*/trial_ledger.json). A "survivor" is a Stage-0 PASS with
+  # DSR > 0.95 AND BHY-haircut expectancy > 0 (the ledger's own definition); a "trial" is a config tried (sum of
+  # legs.*.n_configs). Measured 2026-11-01: 0 survivors in all 3 ledgers (10-16, 10-23, 10-30), trials 1462 -> 2179 -> 2832.
+  # Thresholds are placeholders for the operator to set at planning: survivors_per_month >= 1 is "at least one
+  # leg a month clears the multiple-testing haircut"; trials_per_survivor <= 500 is "a hit rate no worse than 1 in 500".
+  survivors_per_month:
+    what: "survivors (ledger: Stage-0 pass AND DSR>0.95 AND BHY haircut>0) gained per 30 d = (newest ledger - oldest ledger within the last 45 d) x 30 / span_days; needs >= 14 d of ledger history, else could_not_look"
+    op: min
+    threshold: 1
+  trials_per_survivor:
+    what: "configs tried (newest ledger, cumulative) / max(survivors, 1) -- zero survivors is divided by 1, the most generous reading, and the evidence names survivors: 0"
+    op: max
+    threshold: 500
+  # ── VOLUME SLOs, demoted to DIAGNOSTICS (2026-11-01): still measured and shown, no longer alert. The 15-minute
+  # research_watchdog keeps escalating a dead dispatcher / collector / starved queue on its own. ──
   runnable_floor:
     what: "runnable units >= the computed floor (queue_throughput.computed_floor: max(25, ceil(fired_24h x 19/24)))"
+    diagnostic: true
     op: min
     threshold: computed      # the ONE floor formula; not a number here
   fires_24h:
     what: "units fired in the last 24 h (sum of `dispatched` over comms/research/utilization/ records)"
+    diagnostic: true
     op: min
     threshold: 24            # one per hour: the dispatcher is hourly
   lands_24h:
     what: "result rows landed in the last 24 h whose read_state is a verdict (not producer_failed / no_data)"
+    diagnostic: true
     op: min
     threshold: 12
   # grading.graded_at is a DATE (measured 2026-10-16: 495 of 495 values are YYYY-MM-DD), so latency is in whole
   # DAYS: 0 = graded the day its newest result row landed.
   grade_latency_p50_d:
     what: "days from a unit's newest result row to the grading stamped on or after it, p50 over units whose newest result landed in the last 7 d (re-grades of an unchanged old result are not latency; fresh results with no grading are counted in ungraded_fresh)"
+    diagnostic: true
     op: max
     threshold: 1             # the grader runs 6-hourly: most results are graded the same or next day
   grade_latency_p90_d:
     what: "same population, p90"
+    diagnostic: true
     op: max
     threshold: 2
   undispositioned_24h:
     what: "units with a landed result older than 24 h and no verdict / no owned needs_review (result_disposition_check findings)"
+    diagnostic: true
     op: max
     threshold: 5
   authoring_supply_ratio_7d:
     what: "authored (non-generated) units created in 7 d / authored units first-or-re-fired in 7 d"
+    diagnostic: true
     op: min
     threshold: 1.0           # supply must at least replace what is consumed
   programme_coverage_pct:
     what: "plan questions with a programme-tree node or a reasoned discharge / all plan questions (programme_coverage.py)"
+    diagnostic: true
     op: min
     threshold: 75
   theme_share_min_ratio:
     what: "worst theme's (fire share over 7 d) / (weight share in research/THEMES.yaml)"
+    diagnostic: true
     op: min
     # MONEY FIRST (operator 2026-10-18, lane DISPATCH-MONEY-FIRST-1018): the dispatcher now ranks due units across
     # themes by value and uses the weight share only to break ties, so this ratio recovers MORE SLOWLY than under the
@@ -57,31 +83,38 @@ slos:
     threshold: 0.5
   blocked_over_age:
     what: "blocked units whose id date is older than blocked_age_days (no blocked_at field exists; id date is an upper bound)"
+    diagnostic: true
     op: max
     threshold: 10
     blocked_age_days: 21
   dispatcher_age_h:
     what: "hours since the newest dispatcher utilization record on main (one per dispatch cycle that ran; lands ~1 h late)"
+    diagnostic: true
     op: max
     threshold: 3
   collector_age_h:
     what: "hours since the newest commit on main touching research/results/ (a result landed)"
+    diagnostic: true
     op: max
     threshold: 6
   grader_age_h:
     what: "hours since the last SUCCESSFUL research-queue-grade.yml run (GitHub; could_not_look without a token)"
+    diagnostic: true
     op: max
     threshold: 14            # cron 50 */6 + one missed cycle + scheduler lag
   research_ops_age_h:
     what: "hours since the newest research-ops pass record (comms/research/ops/*.json finished_at); the pass runs 4x/day"
+    diagnostic: true
     op: max
     threshold: 8
   research_ops_not_run:
     what: "steps the newest research-ops pass declared not_run"
+    diagnostic: true
     op: max
     threshold: 2
   hold_pr_wait_h:
     what: "hours the oldest open non-automation PR adding research/queue/ unit files has waited (hold PRs)"
+    diagnostic: true
     op: max
     threshold: 24
 
