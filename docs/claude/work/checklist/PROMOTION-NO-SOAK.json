@@ -13,7 +13,7 @@
   "blocked_on": [],
   "note": "Merged as 77afc99fc (#22073) on the operator final yes, popup ~09:20Z, verbatim: \"Yes, merge it (Rec.)\". Closing observation (state landed_unproven): the first mechanics_proven promotion firing MD-PROMOTE-S1-S2 with no soak contract; registry config/mechanics_paths.yaml starts empty, so that promoting PR registers its leg.",
   "priority_rank": 1,
-  "updated_at": "2026-11-01T09:22:10Z",
+  "updated_at": "2026-11-01T09:36:55Z",
   "updated_by": "session_01AFoLuNLj7YESZ6zjVnnxdV",
   "roadmap": [
     "L-LADDER"
@@ -22,6 +22,10 @@
     "what": "the first mechanics_proven promotion fires MD-PROMOTE-S1-S2 with no soak contract, and its first 1-2 live trades execute cleanly",
     "how_to_check": "python3 scripts/ops/mandate_resolver.py for the promoting leg shows evidence.mechanics.proven true; the promoting PR registers the leg in config/mechanics_paths.yaml",
     "due_by": "2026-11-15"
+  },
+  "writeback": {
+    "roadmap": "none: milestone L-LADDER text is unchanged; the rule is stated once in OPERATING-PLAN \u00a7 2 (merged #22073)",
+    "arch": "none: ARCHITECTURE-CANONICAL describes the pipeline, not the soak rule; the 2026-10-15 SOAK-REDEFINE row stands as history"
   },
   "_seq": 858
 }
