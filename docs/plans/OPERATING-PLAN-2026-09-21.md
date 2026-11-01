@@ -300,113 +300,180 @@ have produced zero retirements.
 
 ### What does not pass goes back into research — THE research workflow (operator, 2026-11-01, binding)
 
-<!-- RESEARCH-LOOP-CANONICAL: the ONE statement of the research loop. Skills and docs point here; they never restate it. -->
+<!-- RESEARCH-LOOP-CANONICAL: the ONE statement of the research workflow. Skills and docs point here; they never restate it. -->
 
 **Gates this adds or changes:** none on research work. Retirement gets HARDER: the count-based minimum in
-`scripts/research/family_retirement_policy.yaml` (v2 `configs_tested: 3`) is replaced by lever exhaustion (v3). The unit fields
-below are filled by default by the authoring tools; nothing refuses a unit for lacking them.
+`scripts/research/family_retirement_policy.yaml` (v2 `configs_tested: 3`) is replaced by lever exhaustion (v3). Every field below
+is filled by default by the tools; nothing refuses a unit for lacking one.
 
-The operator, verbatim, 2026-11-01:
-- ~12:59Z: *"first, these rules apply to MLs as well, not just strategies or live reviews. second, if the data doesn't pass, it goes
-  back into research for improvments and testing. THere is no other pipeline for underperforming strategies/mls. I don' twant to
-  keep finding strategies sitting arround on paper testing with no clear plan"*
-- ~13:01Z: *"its also not jsut that each one gets a plan as a one off - this is the only kosher workflow in the research side of the
-  system, and it must be upheld going forward"*
-- ~14:00Z: *"Okay so not quite. First of all, I don't know why we decided one hypothesis sometimes like that's not necessarily a format
-  that's going to be good across all the different things. So get rid of that like we need to think of how we're actually doing an
-  iteration. Not just have like the one I hypothesis thing. That's ridiculous. Been through several operations and we really have
-  dated to support the idea that there's no levers that we can pull to affect the outcome then we can. we can retire strategies ever.
-  There's just like it cannot possibly be that a strategy that we haven't made a decision to retire a strategy and it isn't doesn't
-  have an edge and we're not doing anything with it. That's what's unacceptable here. That's why we need to have iterations if we've
-  integrated and we have actual not. We've done three random tests and those three tests didn't pass, so we're done. No, that's not
-  how it works. Once we've proven conclusively that we cannot find an edge on a certain strategy, we can retire it, and until then it
-  needs to be an iteration. We cannot have a situation where we either retire something because we tried once and it didn't work or
-  we just leave. Things that aren't working is not working because we don't have a process for iterating. That is the problem that I
-  still don't understand how we have, and that's the problem that we're fixing here. That's what needs to be in the process that
-  we're building here"*
+**The operator, verbatim, 2026-11-01:**
+1. ~12:59Z: *"first, these rules apply to MLs as well, not just strategies or live reviews. second, if the data doesn't pass, it
+   goes back into research for improvments and testing. THere is no other pipeline for underperforming strategies/mls. I don' twant
+   to keep finding strategies sitting arround on paper testing with no clear plan"*
+2. ~13:01Z: *"its also not jsut that each one gets a plan as a one off - this is the only kosher workflow in the research side of
+   the system, and it must be upheld going forward"*
+3. ~14:00Z: *"Okay so not quite. First of all, I don't know why we decided one hypothesis sometimes like that's not necessarily a
+   format that's going to be good across all the different things. So get rid of that like we need to think of how we're actually
+   doing an iteration. Not just have like the one I hypothesis thing. That's ridiculous. Been through several operations and we
+   really have dated to support the idea that there's no levers that we can pull to affect the outcome then we can. we can retire
+   strategies ever. There's just like it cannot possibly be that a strategy that we haven't made a decision to retire a strategy and
+   it isn't doesn't have an edge and we're not doing anything with it. That's what's unacceptable here. That's why we need to have
+   iterations if we've integrated and we have actual not. We've done three random tests and those three tests didn't pass, so we're
+   done. No, that's not how it works. Once we've proven conclusively that we cannot find an edge on a certain strategy, we can retire
+   it, and until then it needs to be an iteration. We cannot have a situation where we either retire something because we tried once
+   and it didn't work or we just leave. Things that aren't working is not working because we don't have a process for iterating.
+   That is the problem that I still don't understand how we have, and that's the problem that we're fixing here. That's what needs
+   to be in the process that we're building here"*
+4. ~14:04Z: *"And yes, part of the iterative process is understanding why something is failing. It can't just be, oh, it didn't
+   work, then let's try something else random. No, we have to have a process here by which we understand how to test the different
+   levers so that we can understand how each lever affects the outcome, and based on that, decide if something has potential or not
+   have potential. We can't just keep on doing this each time is a complete, guess of luck, and either it works or doesn't work.
+   That's just not how, that's definitely not how trading firms work, and I don't understand how that's still the process that we're
+   working by, considering how many times we've tried to go back and fix the process to be more like how actual trading firms work.
+   So we need to make sure that our research process helps us understand the outcomes and not just test them and then randomly test
+   something else."*
+5. ~14:04Z: *"And that isn't just applied to things that aren't working right now. This is the workflow. It's building and
+   designing in a way that allows us to test specific variables and then iterate based on those results, not just random crapshoots
+   every time."*
+6. ~14:09Z: *"And just in case it isn't explicitly clear, this is part of the mandate of the regular research operations skill and
+   routine. But why would we, what are we doing with it if not using it in order to improve and figure out what we're doing? Like,
+   this is just so, it's very frustrating, and we need to make sure that it's not, that we're not falling into these traps. We need
+   to design correctly from the beginning, and I don't understand how many times we can audit and redesign the system and still be
+   finding ourselves in fucking amateur hour. It's insane."*
 
-**The ladder (one, for every strategy leg, ML model or decision head, and live-review action class):** the edge is decided
-**offline, on evidence** (Stage 0 above) → the mechanics are verified on paper in 1–2 trades, or are already proven (§ "The soak is
-MECHANICAL") → live. Anything whose evidence does not pass goes **back into research and iterates**. There is no other pipeline.
-Paper (status `testing`) is where an unproven thing keeps generating live data *while it iterates* — never a parking place.
+**The workflow — for EVERYTHING, by design.** It covers every strategy leg, ML model or decision head, and live-review action
+class: new ones, failing ones, and ones that pass and trade live. It is the research workflow, not a remediation path. Its centre is
+**understanding how each lever moves the outcome**, never pass/fail alone.
+
+1. **DESIGN PARAMETERISED FROM THE START.** A new strategy, model or class is built with its levers declared up front, in a lever
+   manifest (`research/levers/<subject>.yaml` `declared:` — each lever, its range and its hypothesised effect). The harness can
+   vary each lever independently. The first test is a **structured design**: one-factor sweeps or ablations of the declared levers,
+   with the base as the control. It is never a single configuration. No unit type is exempt from declaring which variables it
+   measures; an `origin: new_hypothesis` unit carries its manifest too.
+2. **ATTRIBUTE EVERY RESULT FIRST**, before any next test is chosen. Net R is decomposed into:
+   - entry quality: MFE, and the share of trades that reach 1 R;
+   - exit capture: realised vs MFE, and losers that had reached 1 R;
+   - filter effect;
+   - cost share: gross vs net.
+   
+   Each component is split by year, direction, exit reason, regime / ADX bucket, symbol and session. A shared tool computes it from
+   the committed trade rows (`scripts/research/lever_map.py`, reusing the harness emits). The finding is written into the result's
+   disposition.
+3. **KEEP A LEVER RESPONSE MAP PER SUBJECT**, persistent and cumulative (`research/levers/<subject>.yaml`). For each lever family it
+   records:
+   - the values tested;
+   - the measured response: n, net R and the delta vs baseline;
+   - the shape: flat, monotone, peaked, noisy or single point;
+   - fold and regime stability.
+   
+   Every result appends to it. It answers "how does each lever affect the outcome":
+   - a **smooth, fold-stable** response on a lever is **potential**;
+   - a **spiky single-point optimum** is **overfit**, not an edge;
+   - a **flat or noisy** response on every material lever is evidence of **no edge**.
+4. **CHOOSE THE NEXT TEST FROM THE MAP, NEVER AT RANDOM.** Each unit cites the attribution finding, the map entries it builds on,
+   the lever it measures next, and why that lever, by expected information or value. The methods are a desk's:
+   - one-factor sensitivity and ablation before combinations;
+   - response surfaces where interactions are suspected;
+   - every variant registered before the run and counted against multiple-testing correction;
+   - walk-forward and regime splits;
+   - ONE holdout read for a survivor.
+5. **LIVE THINGS KEEP BEING MAPPED.** A leg or model that passed and trades live still has a map. Its levers are re-measured on new
+   data on a standing cadence, so the demotion signal is mechanistic: we see **which lever's response decayed**, not only that P&L
+   fell. Improvements to live legs come from the same map.
+
+The lever families (`scripts/research/family_retirement_policy.yaml` v3 `lever_families`):
+- **strategy leg:** entry rule / threshold, exits / brackets / TP / trailing, filters, regime gating, timeframe, symbol set,
+  direction, session, sizing vs cost;
+- **ML model:** features, labels / targets, recipe / learner, universe, horizon, decision threshold, calibration;
+- **live-review class:** trigger, timing, action bounds.
 
 **Exactly two states for anything that has not passed:** it is **ITERATING**, or it is **RETIRED by a lever-exhaustion record**.
 Two states are forbidden, by name:
 - **(a) retired after a few tries.** An attempt count, a number of failed tests or a date is never grounds for retirement.
-- **(b) failing with no active iteration.** A subject that fails and has no live iteration unit is a defect of the process.
+- **(b) failing with no active iteration.**
 
-**What an iteration is: a diagnosis-driven search over the subject's lever space**, not one hypothesis at a time.
-1. **Diagnose from the result's own rows.** Which trades lost, in which regimes and months; gross vs net (cost drag); entry vs exit
-   vs filter (where the R was lost); n vs the power the rule needed; harness fidelity; a sibling that passes on the same idea.
-2. **Map the diagnosis to the subject's levers.**
-   - *Strategy leg:* entry rule / threshold · exits, brackets, TP, trailing · filters · regime gating · timeframe · symbol set ·
-     direction · session · sizing vs cost.
-   - *ML model:* features · labels / targets · recipe / learner · universe · horizon · decision threshold · calibration.
-   - *Live-review action class:* trigger · timing · action bounds.
-3. **Test as many variants per pass as the diagnosis supports** — sweeps, ablations, grids, across one lever family or several.
-   Every variant is registered with its rule **before** the run and **counted** against the multiple-testing correction (the arm /
-   cell denominator is stated beside any PASS). The survivor is read **once** on a holdout before it is a pass.
-4. **Read, then iterate again.** The result's rows are the next diagnosis. Each pass moves the subject across its lever map.
-
-**Worked example — `trend_donchian_eth_prop`** (the one leg on three prop books that fails Stage 0):
-- *Diagnosis:* `comms/strategy_evidence/trend_donchian_eth_prop.json` shows fee-only +4.0 R but net −0.25 R over 165 trades. That is
-  a real gross edge erased by cost, about 0.026 R per trade. Folds read −4.5 / +14.0 / −6.1 / −3.6: one trending quarter carries
-  the year, so the entry also takes breakouts in non-trending tape.
-- *Lever map:* the coverage view (below) shows exit, filter, session and sizing already tested on this leg. Entry, regime gating,
-  timeframe, symbol set and direction have **never** been tested.
-- *This pass:* entry selectivity (min_confidence 0.7, 0.8) and an ADX ≥ 20 trend filter, three arms with the denominator stated
-  (`RQ-20261101-78fc-14`).
-- *Next pass, by result:*
-  - a survivor goes to ONE holdout read, then the prop gate;
-  - a near-miss narrows the grid around it;
-  - a flat result moves to the next untested families: regime gating by vol cell, direction (long-only vs short-only), and
-    timeframe (the 4h channel that passes on SOL).
-  
-  The leg retires only when every family on its map has been tested at power, net of cost, and none produces an edge.
-
-The same loop for the other two kinds:
-- **ML, ENTRY:** the feature-family ablation `RQ-20261101-fs01-01` failed because 9 noise columns cost −0.017 R per decision. The
-  diagnosis is recipe, not columns, so the next pass searches the recipe lever (regularisation and shadow selection, `fs05-01`) and
-  the target lever (market-neutral, rank, clipped and first-passage targets, `fs06-01`), with noise controls in every arm.
-- **Live-review tighten:** the class lost money in the early cell (−0.041 R). The diagnosis is timing, so the next pass searches the
-  timing and bounds levers: tighten only after +1 R, at or beyond break-even, with at least 1 ATR of room (`RQ-20261101-78fc-09`).
-
-**Retirement = lever exhaustion, recorded.** A subject retires only when its lever map is exhausted: every material lever family
-for its kind has been tested **at adequate declared power, net of the full cost stack, across regimes** (disjoint windows or ≥ 4
-folds), and none produced an edge. The record is a family review (`research/family_reviews/<family>.yaml`). It lists each lever
-family with its evidence (`lever_map`), or why that family does not apply, plus the existing six protocol items: test-design
-review, breadth, positive control, outside evidence, not-tested list and mechanism. `scripts/research/family_retirement_policy.yaml`
-v3 lists the lever families per kind, and `family-retirement-guard` checks the record. Until such a record exists, the subject
-**iterates**.
-
-**Every unit has its place in the loop**, recorded on the unit:
-- `iteration:` — the subject; `from_result` (the parent result); the diagnosis read from it; `search` (the lever families and grid
-  this pass searches, and why the diagnosis points there); optional `levers`; the attempt number; and `due_by`. Or:
-- `origin: new_hypothesis`, with `origin_reason` (a first test of a new idea: who pays, why the edge would persist). The template
-  refill stamps `origin: standing_remeasure` on recurring re-measurements. `queue_replenish.py` fills `origin` by default.
+**Potential vs retirement is read from the map.** A subject retires only when its map shows every material lever family flat or
+noisy, at adequate declared power, net of the full cost stack, across regimes (disjoint windows or ≥ 4 folds).
+- The record is a family review (`research/family_reviews/<family>.yaml`) whose `lever_map` lists each family and its evidence, or
+  why that family does not apply. It also carries the six existing protocol items.
+- `family-retirement-guard` checks the record.
+- Until that record exists, the subject **iterates**.
+- Practice basis: `docs/reference/trading-and-model-practice-principles.md` R7–R8 (and R5, reconciled: uncounted trial is the
+  anti-metric, counted lever search is not; M4–M5 for selection control).
 
 **Every result gets exactly one disposition, in the pass that reads it:**
 - **pass** → holdout once → promotion proposal (Tier 3, through the ladder above);
-- **next iteration** → authored in the same pass, from the diagnosis;
-- **retired** → only by a lever-exhaustion family-review record.
+- **next iteration** → chosen from the map and authored in the same pass;
+- **retired** → only by a lever-exhaustion record.
 
-**Visible every day.** Two numbers, from `scripts/research/iteration_orphans.py`:
-- the **orphan count**: subjects failing with no live iteration (forbidden state b). Target **0**.
-- the **lever coverage per subject** (`--levers`): which lever families have been tested, which are live and which remain. This
-  shows progress toward an edge, or toward a conclusive retirement.
+**Worked example — `trend_donchian_eth_prop`** (the one leg on three prop books that fails Stage 0):
+- **Attribution** (`research/levers/trend_donchian_eth_prop.yaml`, from its Stage-0 trades, n = 165):
+  - +14.5 R gross against 14.7 R of total cost. The cost share is 1.02 of gross, so cost erases a real gross edge.
+  - Shorts net +2.7 R; longs net −3.0 R.
+  - Stops lose 43.9 R. 11 losers had reached 1 R of MFE first.
+- **Map:** exit, filter, session and sizing have been tested. Entry, regime gating, timeframe, symbol set and **direction** have
+  never been.
+- **Next tests, from the map:**
+  - entry selectivity (min_confidence 0.7 / 0.8) and an ADX ≥ 20 filter (`RQ-20261101-78fc-14`);
+  - then direction (long vs short only), which the attribution points at;
+  - then regime gating by vol cell.
+  
+  Each is a one-factor sweep against the declared leg. A smooth, fold-stable response goes to one holdout read and the prop gate.
+- The ML and live-review loops work the same way: ENTRY's recipe and target levers (`fs05-01`, `fs06-01`) after the feature
+  ablation read inside its noise floor; the tighten class's timing and bounds levers (`78fc-09`) after the early-cell loss.
 
-Both are reported in the manager's daily review (step 4c) and in every research-ops checks packet.
+**Every unit has its place in the loop**, recorded on the unit and filled by default by the tools (`queue_replenish.py` stamps
+`origin`, `design` and `levers_declared`):
+- `iteration:` — the subject; `from_result`; the diagnosis (the attribution finding); `search` (the lever families and grid this
+  pass measures, and why); `map_entries` (the map readings it builds on); `levers`; `attempt`; and `due_by`. Or:
+- `origin: new_hypothesis` — with `origin_reason` and its lever manifest. The template refill stamps `origin: standing_remeasure`.
+
+**Visible every day, measured, not prose.** These numbers have a `could_not_look` state and are reported in the manager's daily
+review (step 4c) and in every research-ops checks packet (`iteration` block):
+- the **orphan count**: subjects failing with no live iteration. Target **0**.
+- **lever coverage** per subject: families tested, live and remaining (`iteration_orphans.py --levers`, `lever_map.py --summary`).
+- **workflow shares**, each with its population:
+  - structured designs vs single configs;
+  - units citing a parent result or map entry;
+  - units declaring their levers;
+  - results recorded in a lever map.
+
+The weekly audit samples 5 units against this section (C14).
+
+**Why the earlier redesigns did not stick (root cause, measured 2026-11-01):**
+- **The rules lived in prose.** Since 2026-10-01, 14 commits changed the research rule docs and skills (research-ops,
+  programme-review, PLANNING.md, this plan), against 5 for the generators (`research/templates/*`, `queue_replenish.py`).
+- **The tools that generate work kept generating single configurations.** 4 of the 6 templates emit one configuration per unit
+  (roster-walkforward, prop-fit, leg-corpus, macro-valuation); only m20 and e35 sweep a lever. Of the 1,580 units authored
+  2026-10-02..11-01, **42%** were structured designs (a baseline arm plus variants, or a lever sweep), and **32%** varied one lever
+  family against a baseline control.
+- **Results were cited, but nothing was learned per lever.** 72% of those units cite a prior result in their text. Yet there was no
+  per-subject record of how each lever moved the outcome. As a result, **93 of 495** lever families across the 55 rostered legs have
+  ever had a graded test, and 23 of the 49 testing legs had none in any family.
+- **Nothing measured whether a result informed the next test.** The 2026-10-28 checks packet counted FAILs with no next test named
+  (`fails_without_next`), not whether the next test came from what the result taught.
+
+This section fixes each one in the tools: the lever map and its backfill, the default design and lever stamps in the replenisher,
+the workflow shares in the daily packet, and the C14 audit sample. Converting the 4 single-config templates into structured
+designs is the remaining build (row `RESEARCH-TEMPLATES-STRUCTURED`).
 
 **Superseded by this section:**
 - authoring research to meet a runnable-queue floor, and tests that change no decision: STOP-GENERATED-AUTHORING (operator popup
   2026-11-01 *"Stop floor-driven units (Rec.)"*, #22107);
-- volume targets: RESEARCH-SLO-YIELD (*"Replace with yield SLOs (Rec.)"*). The research pipeline is measured by **iterations
-  advanced and survivors found**, never by units authored;
-- any retirement or forced decision keyed on a count of attempts.
+- volume targets: RESEARCH-SLO-YIELD (*"Replace with yield SLOs (Rec.)"*). The pipeline is measured by **understanding gained**
+  (results attributed, map entries added, next tests chosen from the map), **iterations advanced and survivors found**, never by
+  units authored;
+- any retirement or forced decision keyed on a count of attempts;
+- any "one hypothesis per variant" format.
 
-Where it is carried out (each points here): the 4x/day pass (`.claude/skills/research-ops/SKILL.md` § "THE ITERATION LOOP", the
-field mechanics), the weekly programme review, `/perf-followup` Track 1, `/ml-review`, `model-training`, `frontier-research` and
-`backtesting`.
+**Where it is carried out (each points here):**
+- research-ops — its CORE MANDATE every pass (`.claude/skills/research-ops/SKILL.md` § "THE CORE MANDATE");
+- programme-review (weekly);
+- the manager's daily review (4c) and research-ops dispatch;
+- `/perf-followup` Track 1, `/ml-review` and `model-training`;
+- `frontier-research` intake;
+- `new-strategy`, `exit-refinement`, `live-trade-review` class design and `backtesting`;
+- weekly-audit C14.
 
 ### Prop legs clear a SUPERSET of the ladder (operator, 2026-10-15, binding)
 

@@ -1,6 +1,6 @@
 ---
 name: research-ops
-description: The routine research-OPERATIONS pass, run 4x/day (02:47, 08:47, 14:47, 20:47 UTC) as a bounded lane. Its FIRST job every pass is THE ITERATION LOOP (operator 2026-11-01, binding) -- every result that FAILED or was INDETERMINATE since the last pass, and every ORPHAN (a testing strategy leg, a non-live ML model or a live-review action class with no live iteration unit, scripts/research/iteration_orphans.py), gets its next iteration unit authored from a written diagnosis, or is retired by a family-review record; success is iterations advanced and survivors found, never units authored, and nothing is authored to meet a queue count. Then two layers (2026-10-28) -- a script-computed CHECKS packet (scripts/research/research_ops_checks.py) and an ANALYSIS per track (TRADING / MODEL). Checks the research pipeline is flowing (dispatcher, collector, receipts, stamps, stranded PRs), audits every blocked / not-runnable unit and unlocks or retires it, reads every result landed since the last pass and applies its pre-registered rule, and files the follow-ups (research units and builds). Does NOT replace topic research (perf-followup, ML research, readouts on a specific question) — it only keeps the pipeline healthy and moving. Use when the manager dispatches a RESEARCH-OPS-<date>-<slot> lane, or the operator says "/research-ops", "check the research pipeline", "is research operations on track".
+description: The routine research-OPERATIONS pass, run 4x/day (02:47, 08:47, 14:47, 20:47 UTC) as a bounded lane. Its CORE MANDATE every pass (operator 2026-11-01, binding; OPERATING-PLAN § 2) -- for EVERY result it reads (failing, passing, paper, live, new): attribute it, update the subject's lever response map (research/levers/<subject>.yaml, scripts/research/lever_map.py), and choose the next test from the map, never at random; every ORPHAN (a testing leg, non-live ML model or live-review class with no live iteration, scripts/research/iteration_orphans.py) gets its next iteration; retirement only on lever exhaustion; the report leads with results attributed, map entries added, next tests chosen from the map and lever coverage; nothing is authored to meet a queue count. Then two layers (2026-10-28) -- a script-computed CHECKS packet (scripts/research/research_ops_checks.py) and an ANALYSIS per track (TRADING / MODEL). Checks the research pipeline is flowing (dispatcher, collector, receipts, stamps, stranded PRs), audits every blocked / not-runnable unit and unlocks or retires it, reads every result landed since the last pass and applies its pre-registered rule, and files the follow-ups (research units and builds). Does NOT replace topic research (perf-followup, ML research, readouts on a specific question) — it only keeps the pipeline healthy and moving. Use when the manager dispatches a RESEARCH-OPS-<date>-<slot> lane, or the operator says "/research-ops", "check the research pipeline", "is research operations on track".
 ---
 
 > **Doc status:** `live` · category `instruction` · last verified `2026-11-01` · registered in [`docs/DOCUMENT-INDEX.md`](../../../docs/DOCUMENT-INDEX.md)
@@ -9,30 +9,42 @@ description: The routine research-OPERATIONS pass, run 4x/day (02:47, 08:47, 14:
 
 > **Operator, 2026-10-10 (verbatim):** *"I think we need to create a routine research session skill with instructions for checking the research pipeline, ensuring the que has items that are running, verify blocked items so they can be unlocked, analyzing results and generating the follow up tasks (research and otherwise), that should probably be run 3-4 times a day, just to ensure that we are on track. This doesn't come instead of other research sessions on specific topics, but more to ensure that research operations are working smoothly and effectively"*
 
-## THE ITERATION LOOP — this pass's FIRST job (operator 2026-11-01, binding; lane RESEARCH-ITERATE)
+## THE CORE MANDATE — attribute every result, keep the lever map, choose the next test from it (operator 2026-11-01, binding)
 
-**The rule is stated once, with the operator's words, in [`docs/plans/OPERATING-PLAN-2026-09-21.md`](../../../docs/plans/OPERATING-PLAN-2026-09-21.md) § 2 "What does not pass goes back into research — THE research workflow": one ladder for strategy legs, ML models and live-review classes; what does not pass goes back into an iterative loop; there is no other pipeline; every result gets exactly one of pass → confirmation/promotion, next iteration (authored in the same pass), or retired by a family-review record. This section is how the 4x/day pass carries it out.**
+**The rule is stated once, with the operator's words, in [`docs/plans/OPERATING-PLAN-2026-09-21.md`](../../../docs/plans/OPERATING-PLAN-2026-09-21.md) § 2 "What does not pass goes back into research — THE research workflow". This section is how the 4x/day pass carries it out. It is this skill's core mandate, every pass, for EVERY result it reads — failing, passing, paper, live and new — not a remediation side-path.** Operator, 2026-11-01 (verbatim, in § 2): *"this is part of the mandate of the regular research operations skill and routine."*
 
-**MEASURED when this section was written** (`scripts/research/iteration_orphans.py`, 2026-11-01): of 49 testing legs, 9 non-live ML
-heads and 7 live-review classes, **none** had a live unit authored from a diagnosis of its own last result. The queue held 253
-queued units; most units naming a failing leg were template re-runs (`roster-walkforward`, `m20-exit-lever`, `e35-bracket`,
-`prop-fit-*`) or lever TRANSFER batches chosen without reading why that leg failed. Seventeen legs had no hand-authored unit at all.
+**MEASURED when this section was written** (2026-11-01): of 49 testing legs, 9 non-live ML heads and 7 live-review classes, **none**
+had a live unit authored from a diagnosis of its own last result (`iteration_orphans.py`); 23 of 49 testing legs had no graded
+test in any lever family (`--levers`); over the 1,580 units authored 2026-10-02..11-01, 42% were structured designs and 32% varied
+one lever family against a baseline control (the § 2 root-cause numbers).
 
-**Run it first, before CHECKS and before any other step:**
+**Every pass, in this order (it comes before CHECKS and every other step):**
 ```bash
-python3 scripts/research/iteration_orphans.py --legacy        # every subject: covered / overdue / ORPHAN, with its verdict
-python3 scripts/research/research_disposition.py --unread-only # results landed with no disposition
+python3 scripts/research/lever_map.py --backfill            # rebuild research/levers/<subject>.yaml from every committed result
+python3 scripts/research/iteration_orphans.py --levers      # orphans (target 0) + per-subject lever coverage
+python3 scripts/research/research_disposition.py --unread-only
 ```
-Then, in this order, by money (real-money adjacent first — prop and `alpaca_live` candidates — then ML go-live candidates, then
-paper-only legs):
+1. **ATTRIBUTE every result that landed since the previous record**, before choosing anything: the map's `attribution`
+   (entry quality = MFE, exit capture = net vs MFE, filter effect, cost share = gross vs net; by year, direction, exit reason,
+   ADX/regime bucket) and, for an arm unit, each arm's lever response (value vs baseline, n, net R, fold stability, shape).
+   `lever_map.py --backfill` computes both from the committed rows; read them, and write the finding into the result's
+   disposition. A result nobody attributed is "not read", whatever the grader wrote.
+2. **UPDATE THE MAP** (the backfill does the arithmetic; you write the reading): which lever responded, its shape (flat /
+   monotone / peaked / noisy / single point), whether it held across folds and regimes. A smooth, fold-stable response is
+   potential; a single-point spike is overfit; flat or noisy on every material family at power is evidence of no edge.
+3. **CHOOSE THE NEXT TEST FROM THE MAP, never at random.** For each subject whose result you read, and each ORPHAN: the next
+   unit cites the attribution finding, the map entries it builds on (`iteration.map_entries`), the lever it measures next and why
+   (expected information or value). Desk methods: one-factor sweeps and ablations against a baseline control first, response
+   surfaces where interactions are suspected, every arm counted, walk-forward and regime splits, ONE holdout read for a survivor.
+   A pass result → its holdout → promotion proposal (Tier 3). An OVERDUE iteration: fix its route, re-date it with the reason,
+   or replace it.
+4. **PASSING AND LIVE SUBJECTS KEEP BEING MAPPED.** A production leg's levers are re-measured on new data on a standing cadence;
+   when its P&L falls, the map says which lever's response decayed. Improvements to live legs come from the same map.
 
-1. **Every result that landed since the previous record and FAILED or was INDETERMINATE** (and every PASS that is still a
-   discovery): apply its registered rule (step D), then author the **next iteration** of its subject. A FAIL is never the end of a
-   subject; it is the input to the next diagnosis.
-2. **Every ORPHAN** the script lists: author its next iteration unit now. An orphan left for the next pass is named in `handoff`
-   with the reason, and the next pass authors it first.
-3. **Every OVERDUE iteration** (`due_by` passed, no read): find why (not dispatched, harness failed, lever not built) and fix the
-   route, re-date it with that reason, or replace it.
+**Done = and the one-line report leads with:** results attributed · map entries added · next tests chosen from the map (units
+citing `map_entries`) · lever coverage (families tested / remaining, per kind) · orphans (target 0). The checks packet's
+`iteration.workflow` block measures the shares daily (structured designs, units citing a parent or map entry, units declaring
+levers, results recorded in a map), each with its population and a `could_not_look` state.
 
 **An iteration unit** is an ordinary queue unit (step E rules, PLANNING.md § 1) that also carries the block the script reads:
 ```yaml
@@ -44,10 +56,11 @@ iteration:
   diagnosis: <WHY it failed, read from that result's rows: folds, fee-only vs full cost, n vs power, fidelity, a sibling that passes>
   search: <the lever families + grid this pass searches, and why the diagnosis points there>   # `hypothesis` = legacy alias
   levers: [entry, filter]   # optional; else read from the unit's --arm specs (iteration_orphans.py --levers)
+  map_entries: ['research/levers/<subject>.yaml#levers.filter.adx_min']   # the map readings this test builds on
   attempt: <1, 2, ...>
   due_by: 'YYYY-MM-DD'
 ```
-A unit that is the FIRST test of a new idea carries `origin: new_hypothesis` plus `origin_reason:` (who pays, why the edge persists) instead of the block.
+A unit that is the FIRST test of a new idea carries `origin: new_hypothesis` plus `origin_reason:` (who pays, why the edge persists) and its LEVER MANIFEST (`levers_declared`, or a new subject's `research/levers/<subject>.yaml` `declared:` block: each lever, its range and its hypothesised effect). No unit type is exempt from declaring which variables it measures; the replenisher stamps `design` and `levers_declared` by default.
 
 **How to run an iteration (the canonical § 2 states the rule; this is the procedure).** (1) Diagnose from the result's rows:
 which trades, regimes and months lost; gross vs net; entry vs exit vs filter; n vs power; fidelity; a passing sibling. (2) Run
@@ -115,7 +128,7 @@ records filed, traced to authored → fired → graded), `needs_review`, `stale`
 checks the packet cannot see (workflow runs, stranded stamp PRs, watchdog incidents). Copy the packet's headline numbers
 into the record's `checks` block; that is the only place they are repeated.
 
-**2. ANALYSIS — the pass's real work, in this order, per track (TRADING, MODEL).** THE ITERATION LOOP (top of this file) runs first, then "The mechanical minimum" (below); then budget at least half the remainder here. Steps 4–5 below are where the loop's diagnoses come from — an iteration unit authored in the loop IS the step-4 variant.
+**2. ANALYSIS — the pass's real work, in this order, per track (TRADING, MODEL).** THE CORE MANDATE (top of this file) runs first, then "The mechanical minimum" (below); then budget at least half the remainder here. Steps 4–5 below are where the loop's diagnoses come from — an iteration unit authored in the loop IS the step-4 variant.
 0. **Follow-through first (2026-10-28):** run `python3 scripts/ops/review_followthrough.py --source research-ops --window-days 7` and record its cohort and backlog line before grading calls; an open item older than 14 d with no owner is a call to schedule or kill, not to re-file.
 1. **Grade the previous record's `calls`** (`previous_calls` in the packet; Layer 0 of the shared pattern): hit / miss / not yet, one line each,
    and what the miss teaches. First, before anything else.
@@ -129,7 +142,7 @@ into the record's `checks` block; that is the only place they are repeated.
 4. **Diagnose the failed first tests.** For each FAIL cluster (start with `fails_without_next`): the most likely cause
    among {test design, power / n, cost drag, regime / window, harness defect, the idea is wrong} and the evidence for it;
    then the variants across the implicated lever families (a sweep / ablation / grid; step E rules; the iteration
-   procedure in § "THE ITERATION LOOP"). "Configuration closed; family stays open"
+   procedure in § "THE CORE MANDATE"). "Configuration closed; family stays open"
    is the disposition, not the diagnosis.
 5. **What to test next, value-ranked.** Each proposal names the decision it would change, what we do on PASS and on FAIL,
    and the cost. If both branches lead to the same action the test is worth ~0 — do not author it (value of information).
@@ -222,7 +235,7 @@ intake list did not include the research programme plans at all. The mechanism n
 
 > ⚠️ **Superseded in part 2026-11-01** (STOP-GENERATED-AUTHORING): `H1-THEME` / `H1-AUTHOR` shortfalls and the floor below are
 > DIAGNOSTICS now, not authoring work. What still binds from this section: programme coverage, `RESULTS-UNDISPOSITIONED`, and
-> that a ready plan question is drafted (`OPS-AUTHOR-SKIPPED`) -- after THE ITERATION LOOP, never to fill a count.
+> that a ready plan question is drafted (`OPS-AUTHOR-SKIPPED`) -- after THE CORE MANDATE, never to fill a count.
 
 MEASURED 07:15Z: runnable **2** against a computed floor of 50; theme `regime` (weight 5) held **0** queued units;
 79 of 112 queued units were generated re-runs; four of the six programme plans (03 STRATEGY, 04 MACRO, 05 PROP,
@@ -271,7 +284,7 @@ author units there that carry an honest `value:` block (money at stake, confiden
   lane: *is research operations working, and what is stuck?*
 - **The iteration loop comes before everything** (2026-11-01): when budget is short, cut step E plan-node authoring, never
   the loop's diagnoses, the self-grade or the rows opened. An orphan the pass could not reach goes in `handoff` by name.
-- **Done =** (−1) THE ITERATION LOOP ran: every FAIL / INDETERMINATE result since the last record and every orphan has its next
+- **Done =** (−1) THE CORE MANDATE ran (results attributed, maps updated, next tests chosen from the maps): every FAIL / INDETERMINATE result since the last record and every orphan has its next
   iteration unit, a retirement record, or a named `handoff` entry, and the record's `iteration` block is written; (0) the `checks` and `analysis` blocks of "How a pass runs" are written; (1) every step below ran, or the step names what blocked it; (2) every finding
   ended in exactly one of: a fix landed, a queue unit id, a `PI-…` pipeline id, a checklist
   row id, a retirement with a reason, or `"no action, because <reason>"`; (3) the run record
@@ -344,7 +357,7 @@ git log --oneline -15 -- research/queue docs/claude/work/research-queue-dispatch
 
 > Operator popup 2026-11-01 ~08:50Z, verbatim: *"Stop floor-driven units (Rec.)"* (row STOP-GENERATED-AUTHORING, #22107). It
 > reverses the 2026-10-16 rule that a floor gap is authoring work. **No unit is authored to meet a runnable count.** New units come
-> from THE ITERATION LOOP and from plan questions with a stated mechanism; already-queued units keep running. Record the count and
+> from THE CORE MANDATE and from plan questions with a stated mechanism; already-queued units keep running. Record the count and
 > the computed floor below as a diagnostic (a low count with orphans present means the loop is behind, not that units are owed).
 
 The historical floor arithmetic, kept for the diagnostic only: **Floor: computed, never below 25** — `check_research_queue_health.computed_floor(fired_24h)` =
@@ -575,7 +588,9 @@ REQUIRED: `check_research_queue_health.ops_authoring_skips` reads `authoring.nod
   "units_authored": [], "followups_filed": [],
   "authoring": {"queue_depth": 6, "nodes_drafted": 1, "nodes": ["P2-Q4-et-mlp-extend"],
                 "theme_shortfall": {"regime": 12}},
-  "iteration": {"orphans_before": {"strategy_leg": 3, "ml_model": 1, "ltr_class": 5},
+  "iteration": {"results_attributed": {"count": 6, "of": 6}, "map_entries_added": 14, "next_tests_from_map": 5,
+                "lever_coverage": {"strategy_leg": {"tested": 212, "families": 495}},
+                "orphans_before": {"strategy_leg": 3, "ml_model": 1, "ltr_class": 5},
                 "orphans_after": {"strategy_leg": 0, "ml_model": 0, "ltr_class": 5},
                 "results_iterated": [{"result": "RQ-…", "verdict": "fail", "subject": "<leg>", "next": "RQ-…", "attempt": 2}],
                 "advanced": 4, "survivors": ["<subject whose confirmation PASSED>"], "overdue": [], "retired_by_review": []},
@@ -588,9 +603,9 @@ self-landing declaration as any Tier-1 PR — `.github/pr-landing/<slug>.json`,
 `.github/pr-automerge-requests/<slug>.txt`, `claim_merge_slot.py --branch-claim`).
 Then send the **one-line report** to the manager, e.g.:
 
-`RESEARCH-OPS 2026-11-02-0247: orphans 9→5 (legs 3→0, ML 1→0, LTR 5→5 owned), iterations advanced 4, survivors 1, overdue 0, results p1/f3/i2, runnable 61 (diagnostic), incident none — PR #NNNN`
+`RESEARCH-OPS 2026-11-02-0247: attributed 6/6 results, map entries +14, next tests from the map 5 (cite map_entries), lever coverage legs 212/495 families tested, orphans 9→5, survivors 1, overdue 0, runnable 61 (diagnostic), incident none — PR #NNNN`
 
-The headline is the loop: orphans, iterations advanced, survivors. Units authored is not a success measure and is not reported first.
+The headline is the loop: results attributed, map entries added, next tests chosen from the map, lever coverage, orphans, survivors. Units authored is not a success measure and is not reported first.
 
 ## Guards to run before you push
 

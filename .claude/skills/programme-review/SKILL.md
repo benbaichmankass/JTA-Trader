@@ -17,8 +17,9 @@ pattern `docs/reference/llm-analyst-skill-design.md`.
 
 ## THE ITERATION LOOP, weekly view (operator 2026-11-01, binding; lane RESEARCH-ITERATE)
 
-The rule is stated once in [`docs/plans/OPERATING-PLAN-2026-09-21.md`](../../../docs/plans/OPERATING-PLAN-2026-09-21.md) § 2 "What does not pass goes back into research — THE research workflow". The 4x/day `research-ops` pass runs the loop (its § "THE ITERATION LOOP" holds the `iteration:` field mechanics). This weekly review checks that the loop is LEARNING, not just turning:
+The rule is stated once in [`docs/plans/OPERATING-PLAN-2026-09-21.md`](../../../docs/plans/OPERATING-PLAN-2026-09-21.md) § 2 "What does not pass goes back into research — THE research workflow". The 4x/day `research-ops` pass runs the loop (its § "THE CORE MANDATE" holds the `iteration:` field mechanics). This weekly review checks that the loop is LEARNING (how each lever moves each outcome), not just turning:
 
+0. `python3 scripts/research/lever_map.py --backfill --summary` — every subject's lever response map (live and paper legs, ML heads, live-review classes). Per programme: which subjects' maps moved this week, which lever responses look like potential (smooth, fold-stable) or overfit (single point), and which subjects have NO map reading yet — those get a structured first design (one-factor sweeps of declared levers against a baseline control).
 1. `python3 scripts/research/iteration_orphans.py --legacy --json` — orphans per kind. **Every orphan is authored by this review**
    (an iteration unit with the block) or named with the reason in `handoff`. Report the counts first in the record.
 2. **Per subject, the week's iterations and its lever map** (`iteration_orphans.py --levers`): what each diagnosis said,

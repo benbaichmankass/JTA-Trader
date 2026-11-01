@@ -284,10 +284,11 @@ Never add, and never dispatch a lane to add, a gate (approval step, hold, readin
 - **`RESEARCH-OPS-<date>-<slot>`** (operator, 2026-10-10): at 02:47, 08:47, 14:47, 20:47 UTC dispatch ONE lane on the `research-ops` skill —
   Sonnet, ceiling $6, row first. Skip a slot while the previous research-ops lane still runs; a running TOPIC lane (`RESEARCH-NIGHT-*`,
   `PERF-FOLLOWUP-*`, `REGIME-*`, ML, readouts) never causes a skip (operator 2026-10-11) — tell it which topic lanes are live. Its first job is THE
-  ITERATION LOOP (research-ops SKILL § "THE ITERATION LOOP"; the rule: [`docs/plans/OPERATING-PLAN-2026-09-21.md`](../../../docs/plans/OPERATING-PLAN-2026-09-21.md) § 2 "What does not pass goes back into research — THE research workflow"). **A research floor gap is NOT due work**
+  ITERATION LOOP (research-ops SKILL § "THE CORE MANDATE"; the rule: [`docs/plans/OPERATING-PLAN-2026-09-21.md`](../../../docs/plans/OPERATING-PLAN-2026-09-21.md) § 2 "What does not pass goes back into research — THE research workflow"). **A research floor gap is NOT due work**
   (STOP-GENERATED-AUTHORING, operator popup 2026-11-01 *"Stop floor-driven units (Rec.)"*, reversing the 2026-10-16 rule): never dispatch
-  a lane to author units to a count; orphans are the due work (daily review step 4c). Record `comms/research/ops/<stamp>.json`; one line in
-  "what moved" led by orphans before → after, iterations advanced, survivors.
+  a lane to author units to a count; orphans are the due work (daily review step 4c). Its CORE MANDATE (put it in the dispatch text): attribute every result read, update the
+  lever maps (`lever_map.py --backfill`), choose the next tests from the maps. Record `comms/research/ops/<stamp>.json`; one line in
+  "what moved" led by results attributed, map entries added, next tests chosen from the map, lever coverage, orphans, survivors.
 - **Research SLO escalation** (operator, 2026-10-16, binding): SLOs are in `scripts/research/research_slo.yaml` (measured every 2 h; one
   Telegram message per state change + one comment on the ops-flags PR, marker `research-slo`). **When any SLO is `breach` or
   `could_not_look`, dispatch the lane that moves it the same day** (a note or far-`due_when` row is not a disposition): `runnable_floor` /
