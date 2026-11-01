@@ -15,6 +15,15 @@ debt_ceiling: 34   # 35 -> 34: gld_pullback_1h paid down to a real trending-shor
 
 # Permanent, regime-gating genuinely N/A (reasoned).
 exempt:
+  ml_entry:
+    tracking_id: ML-ENTRY-LIVE-ADAPTER
+    added: '2026-11-01'
+    reason: >-
+      The ENTRY decision model was scored with NO regime filter (RQ-20261101-c692-01 pooled held-out PASS,
+      RQ-20261101-c692-06 bybit_2-symbol PASS): market regime is an INPUT the model reads (vol ratio, ATR/price,
+      range position, BTC context, universe breadth), not a gate around it. A regime_policy cell would trade a different
+      policy than the one that passed and has no walk-forward (regime-selectivity skill: no-cosmetic-cell). Exempt rather
+      than coverage_debt because the debt ceiling only ratchets down.
   e4_oi_shock_1h:
     tracking_id: E4-DEMO-LEG
     added: '2026-10-30'

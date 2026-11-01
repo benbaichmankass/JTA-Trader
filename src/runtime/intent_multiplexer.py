@@ -105,6 +105,7 @@ from src.runtime.strategy_signal_builders import (
     trend_donchian_eth_prop_signal_builder,
     trend_donchian_sol_prop_signal_builder,
     trend_donchian_eth_4h_signal_builder,
+    ml_entry_signal_builder,
     trend_donchian_sol_4h_signal_builder,
     trend_donchian_xrp_4h_signal_builder,
     trend_donchian_xrp_adx25_signal_builder,
@@ -311,6 +312,8 @@ def _default_intent_builders() -> Dict[str, IntentBuilder]:
         # account) so arbitration never fires. Builders honour the YAML
         # `enabled` flag.
         "trend_donchian_eth_4h": trend_donchian_eth_4h_signal_builder,
+        # ML ENTRY decision model (row ML-ENTRY-LIVE-ADAPTER; evidence RQ-20261101-c692-01/-06).
+        "ml_entry": ml_entry_signal_builder,
         "trend_donchian_sol_4h": trend_donchian_sol_4h_signal_builder,
         "trend_donchian_xrp_4h": trend_donchian_xrp_4h_signal_builder,
         "trend_donchian_xrp_adx25": trend_donchian_xrp_adx25_signal_builder,

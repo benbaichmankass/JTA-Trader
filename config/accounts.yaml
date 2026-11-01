@@ -465,7 +465,7 @@ accounts:
     market_type: linear                # PR 3 — Bybit V5 USDT-margined
                                        # linear perpetuals. Was
                                        # spot-margin pre-cutover.
-    strategies: [xrp_pullback_2h, trend_donchian_eth_4h, trend_donchian_xrp_4h, ada_pullback_2h, trend_donchian_sol_prop]
+    strategies: [xrp_pullback_2h, trend_donchian_eth_4h, trend_donchian_xrp_4h, ada_pullback_2h, trend_donchian_sol_prop, ml_entry]
                                        # ── PROMOTE-PROP-LEGS, 2026-10-15 (Tier-3, operator PRE-AUTHORIZED).
                                        # ONE LEG ADDED, identically and in the same order on
                                        # bybit_2 AND bybit_portfolio: trend_donchian_sol_prop.
@@ -858,7 +858,7 @@ accounts:
     mode: live                         # demo = paper money; live is correct.
     market_type: linear                # USDT-margined linear perps (mirrors
                                        # bybit_2); set-leverage fires at boot.
-    strategies: [xrp_pullback_2h, trend_donchian_eth_4h, trend_donchian_xrp_4h, ada_pullback_2h, trend_donchian_sol_prop]
+    strategies: [xrp_pullback_2h, trend_donchian_eth_4h, trend_donchian_xrp_4h, ada_pullback_2h, trend_donchian_sol_prop, ml_entry]
                                        # ── PROMOTE-PROP-LEGS, 2026-10-15 — FOLLOWS bybit_2's addition
                                        # of trend_donchian_sol_prop IDENTICALLY (ordered mirror
                                        # equality, test_bybit_portfolio_mirrors_bybit_2_exactly).
