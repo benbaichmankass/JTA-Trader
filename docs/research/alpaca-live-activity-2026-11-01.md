@@ -77,4 +77,28 @@ run; scorer `scripts/research/ml_entry_alpaca_score.py` (no fitting; imports the
 Bar: the operator's (held-out mean net R per LONG decision ≥ 0, point estimate), floor n ≥ 30 (c692-06's). Reported beside it, never
 gating: the October forward monitoring (RQ-20261101-383f-03, lane ML-ENTRY-TP-REVISION) read LONGS n=137 at −0.308 R on crypto perps.
 
-**Result:** section C (after the run).
+**Result:** section C.
+
+## C. Result of `RQ-20261101-bdc2-01` — **FAIL** (one read, 2026-11-01 ~12:05Z)
+
+Record: `research/results/RQ-20261101-bdc2-01/local-20261101T1205Z.jsonl` (summary `comms/research/RQ-20261101-bdc2-01/local-20261101T1205Z/summary.json`).
+Run in this lane's container at head `d1d4d3ad9` (the pushed registration), with the served model at sha256 `489dcee3…4630`. It was read once and is not to be re-run.
+
+| read | n | mean net R / decision | notes |
+|---|---|---|---|
+| **alpaca_live symbols, LONG only (the rule)** | **128** | **−0.308** | 11 symbols; CI95 [−0.52, −0.08]; exits: 70 SL, 37 TP, 21 time; cost 0.043 R/decision |
+| always-long, same mechanics (reported) | 1,509 | −0.178 | the model does WORSE than taking every long |
+| alpaca_live symbols, both sides (reported) | 383 | −0.330 | longs −0.310 (118), shorts −0.339 (265) |
+| alpaca_portfolio symbols, both sides (reported) | 334 | −0.319 | longs −0.289, shorts −0.332 |
+
+Per symbol (LONG): positive only on TLT (+0.54, n=3) and IEF (+0.53, n=3); GLD −0.70, IAUM −0.72, SLV −0.55, GDX −0.20, QQQ −0.31, IWM −0.26, SPY −0.04, SPYM −0.21, USO −0.10.
+
+**What it points at (MEASURED in a sanity read, same bars):** the label sign is right. A SPY long's raw 24-bar drift on the window is **+0.09 R** (GLD +0.11 R), yet the bracketed long reads **−0.158 R gross**:
+- 292 of 497 SPY longs end at the stop.
+- **59 of them gap THROUGH it.**
+
+On regular-session bars, a 2 × **1h**-ATR stop sits inside the overnight gap range. The crypto reference bracket does not transfer to a market that closes. The cross-sectional / BTC features rank an ETF among crypto perps, which is the frozen model's definition and is probably uninformative here.
+
+**Disposition (operator rules, nothing lowered):** there is no alpaca_live adapter PR, and no per-category model (operator: *"only on evidence, later"*). Filed as **B3**: `research/queue/blocked/RQ-20261101-5b6b-01.yaml`. It is ONE ENTRY model trained on all symbols of all accounts (60 perps + the Alpaca ETF universe, per-venue costs, two session features so the model sees the overnight gap, no asset-class id), read ONCE on the fresh forward window 2026-11-02..2026-11-30, with the per-account result reported inside it. It is blocked on its harness subcommand and on the window elapsing (readable 2026-12-01). If it fails, the next lever is the bracket itself (BRACKETS, c692-02, composed).
+
+**Consequence for the operator's end-of-week goal:** by Fri 2026-11-06 no ML entry decision model has evidence that clears the bar on alpaca_live's instruments. Any faster route is the manager's and operator's call. One example is putting v1 on alpaca_portfolio (paper) as a monitoring read, which needs no evidence bar because it is paper. This lane does not take that route on its own.
