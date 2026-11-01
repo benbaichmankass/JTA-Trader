@@ -187,6 +187,12 @@ Premortem each one (pattern § 3.9). Next week's Layer 0 re-runs the check as wr
 
 ---
 
+## Done-condition (audit-outcome contract, operator 2026-11-01)
+
+The review is done only when **every call, promotion recommendation and experiment maps to a checklist row with `owner`, `due_by` and a `roadmap` ref
+(or a research unit with a `roadmap` ref and run date), or to a recorded operator decision**; `## 3 Decisions` names the row and its `due_by`. Manager
+skill § "The audit-outcome contract".
+
 ## Output — fixed template
 
 **1. The brief.** Markdown in the pattern's § 4 order, headed `MODEL track — /ml-review <date> — <the one sentence that most

@@ -435,9 +435,10 @@ GUARDS: List[Dict[str, Any]] = [
         # PI-20261004-APBY4NTV-0003: the per-row checklist store/loader/generator
         # (step (a); the monolith-equals-render guard arrives with step (c)).
         "name": "checklist-store-guard",
-        "when": {"globs": ["scripts/ops/checklist.py", "tests/test_checklist_store.py",
-                            "docs/claude/work/checklist/**"]},
-        "steps": [["python3", "scripts/ops/checklist.py", "--self-test"]],
+        "when": {"globs": ["scripts/ops/checklist.py", "scripts/ops/checklist_daily_measure.py",
+                            "tests/test_checklist_store.py", "docs/claude/work/checklist/**"]},
+        "steps": [["python3", "scripts/ops/checklist.py", "--self-test"],
+                  ["python3", "scripts/ops/checklist_daily_measure.py", "--self-test"]],
     },
     {
         # SALVAGED FROM THREE REMOVED GOVERNANCE ENTRIES, 2026-09-21.

@@ -11,6 +11,7 @@ import json
 import os
 import re
 import subprocess
+from datetime import date, datetime
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[2]
@@ -22,11 +23,111 @@ _ID_OK = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]*$")
 
 
 __all__ = ["ChecklistError", "HEADER", "MONOLITH", "MONOLITH_NAME", "RANK", "REPO", "SEQ", "STORE",
-           "HISTORY_PATHS", "check", "queue", "rank_problem", "exists", "is_checklist_path", "load", "load_at", "load_path", "read_row", "render", "seeded", "seed", "write_header", "write_row"]
+           "HISTORY_PATHS", "TERMINAL", "UNMAPPED", "DEFAULT_OWNER", "filing_problems", "fill_defaults", "effective_due", "is_overdue", "check", "queue", "rank_problem", "exists", "is_checklist_path", "load", "load_at", "load_path", "read_row", "render", "seeded", "seed", "write_header", "write_row"]
 
 
 class ChecklistError(ValueError):
     pass
+
+
+#: THE FILING CONTRACT (operator, 2026-11-01, lane CHECKLIST-OWNER-DUE): the manager owns every task;
+#: a row is filed WITH a date and WITH a roadmap ref, or it is not filed. "It is just a question of
+#: when we are getting to them" -- so `owner` defaults to `manager`, `due_by` is an ISO date, and
+#: `roadmap` is a milestone list or the explicit ["unmapped"] with `roadmap_unmapped_reason`.
+#: Rows in a TERMINAL state are exempt (they are closed; closing needs a stated reason).
+TERMINAL = ("done", "dropped")
+UNMAPPED = "unmapped"
+DEFAULT_OWNER = "manager"
+_DATE_RE = re.compile(r"^(\d{4}-\d{2}-\d{2})(?:[T ].*)?$")
+
+
+def _as_date(value) -> date | None:
+    if not isinstance(value, str):
+        return None
+    m = _DATE_RE.match(value.strip())
+    if not m:
+        return None
+    try:
+        return date.fromisoformat(m.group(1))
+    except ValueError:
+        return None
+
+
+def filing_problems(row: dict) -> list[str]:
+    """Why a NON-TERMINAL row may not be filed/changed as it stands (owner, due_by, roadmap), else []."""
+    if row.get("state") in TERMINAL:
+        return []
+    out: list[str] = []
+    owner = row.get("owner")
+    if not (isinstance(owner, str) and owner.strip()):
+        out.append(f"no `owner` (default `{DEFAULT_OWNER}`: the manager owns every task)")
+    if _as_date(row.get("due_by")) is None:
+        out.append("no `due_by` -- an ISO date (YYYY-MM-DD) when we will get to it; every row is filed with one")
+    rm = row.get("roadmap")
+    rm = [rm] if isinstance(rm, str) else rm
+    refs = [x for x in rm if isinstance(x, str) and x.strip()] if isinstance(rm, list) else []
+    if not refs:
+        out.append("no `roadmap` ref -- a milestone id from docs/roadmap/milestones.yaml, or "
+                   f'["{UNMAPPED}"] with `roadmap_unmapped_reason`')
+    elif UNMAPPED in refs:
+        if refs != [UNMAPPED]:
+            out.append(f'`roadmap` mixes "{UNMAPPED}" with milestone ids; use one or the other')
+        elif len(str(row.get("roadmap_unmapped_reason") or "").strip()) < 10:
+            out.append(f'`roadmap` is "{UNMAPPED}" with no `roadmap_unmapped_reason` (say why, >= 10 chars)')
+    return out
+
+
+def fill_defaults(row: dict, today: date | None = None) -> list[str]:
+    """PROCESS, NOT GATES (operator, 2026-11-01): fill what a filer left out instead of refusing the row.
+    owner -> manager; due_by -> computed from state / priority_rank / the observation the row names;
+    roadmap -> ["unmapped"] + a reason the drain and the weekly pass will show as work. Mutates ``row``;
+    returns what it filled (so the CLI can say so). Terminal rows are left alone."""
+    from datetime import timedelta
+    today = today or datetime.now().astimezone().date()
+    if row.get("state") in TERMINAL:
+        return []
+    filled: list[str] = []
+    if not (isinstance(row.get("owner"), str) and row["owner"].strip()):
+        row["owner"] = DEFAULT_OWNER
+        filled.append("owner=manager")
+    if _as_date(row.get("due_by")) is None:
+        obs = row.get("observe") if isinstance(row.get("observe"), dict) else {}
+        d = _as_date(obs.get("when")) or (_as_date(row["observation"].get("due_by"))
+                                          if isinstance(row.get("observation"), dict) else None)
+        st, rank = row.get("state"), row.get("priority_rank")
+        if d is not None and d >= today:
+            basis = "the observation date the row names"
+        elif st == "in_flight":
+            d, basis = today + timedelta(days=2), "in_flight: +2d"
+        elif st == "blocked":
+            d, basis = today + timedelta(days=7), "blocked: re-check in +7d"
+        elif st == "landed_unproven":
+            d, basis = today + timedelta(days=3), "landed_unproven, no future observation date: +3d"
+        elif isinstance(rank, (int, float)) and not isinstance(rank, bool):
+            d, basis = today + timedelta(days=1 if rank <= 3 else 3 if rank <= 10 else 7), f"queued, priority_rank {rank}"
+        else:
+            d, basis = today + timedelta(days=7), "queued, unranked: +7d"
+        row["due_by"] = d.isoformat()
+        filled.append(f"due_by={row['due_by']} ({basis})")
+    rm = row.get("roadmap")
+    if not ([rm] if isinstance(rm, str) and rm.strip() else rm):
+        row["roadmap"] = [UNMAPPED]
+        row.setdefault("roadmap_unmapped_reason", "not set at filing -- manager to map to a milestone at the next weekly pass")
+        filled.append('roadmap=["unmapped"]')
+    return filled
+
+
+def effective_due(row: dict) -> date | None:
+    """The date a row is due: its own `due_by`, else the legacy `observation.due_by` (rows filed before the contract)."""
+    d = _as_date(row.get("due_by"))
+    if d is None and isinstance(row.get("observation"), dict):
+        d = _as_date(row["observation"].get("due_by"))
+    return d
+
+
+def is_overdue(row: dict, today: date) -> bool:
+    d = effective_due(row)
+    return bool(d and d < today and row.get("state") not in TERMINAL)
 
 
 #: THE RANKED QUEUE IS A REGISTER FIELD (MANAGER-PACING-STRUCTURAL, 2026-10-18): the manager's

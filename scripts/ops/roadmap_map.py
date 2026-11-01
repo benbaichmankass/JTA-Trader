@@ -122,6 +122,8 @@ def build(spec: dict, rows: list[dict], units: list[dict], fallback: dict | None
         refs = row_refs(r, fallback)
         st = r.get("state")
         for ref in refs:
+            if ref == "unmapped":  # the explicit, reasoned opt-out (filing contract, 2026-11-01); checked by check_checklist_filing.py
+                continue
             if ref not in ms:
                 dangling.append(("row", r["id"], ref))
             elif st in LIVE_ROW:
