@@ -52,14 +52,27 @@ def is_decision_bar(ts: pd.Timestamp, every_h: int) -> bool:
     return int((ts + pd.Timedelta(hours=1)).hour) % int(every_h) == 0
 
 
+def cost_r_estimate(meta: Mapping[str, Any], row: Mapping[str, float]) -> Optional[float]:
+    """Estimated round-trip cost per R when the artifact declares a ``cost_gate`` (None otherwise, so v1 is untouched).
+    Cost per R = (fee + slippage + funding, in bps) / 1e4 / (2 x ATR/price), so it needs only ``atr_pct`` from the feature
+    row and the constant ``k_cost_x_atr`` = total round-trip bps / 20,000 fixed from the research cost stack."""
+    g = meta.get("cost_gate")
+    if not g:
+        return None
+    a = float(row[g.get("input", "atr_pct")])
+    return float(g["k_cost_x_atr"]) / a if a > 0 else float("inf")
+
+
 def decide(row: Mapping[str, float], model: Dict[str, Any]) -> Dict[str, Any]:
     x = pd.DataFrame([[row[k] for k in model["meta"]["features"]]], columns=model["meta"]["features"])
     p_long = float(model["long"].predict(x)[0])
     p_short = float(model["short"].predict(x)[0])
     side = "long" if p_long >= p_short else "short"
     best = p_long if side == "long" else p_short
-    return {"p_long": p_long, "p_short": p_short, "side": side if best > float(model["meta"]["tau"]) else "none",
-            "pred_net_r": best}
+    est = cost_r_estimate(model["meta"], row)
+    gated = est is not None and est > float(model["meta"]["cost_gate"]["max_cost_r"])
+    return {"p_long": p_long, "p_short": p_short, "side": side if (best > float(model["meta"]["tau"]) and not gated) else "none",
+            "pred_net_r": best, "cost_r_est": est, "gated": gated}
 
 
 def order_package(cfg: dict, candles_df: Optional[pd.DataFrame] = None,
@@ -87,6 +100,8 @@ def order_package(cfg: dict, candles_df: Optional[pd.DataFrame] = None,
     if n_ref < min_ref:
         raise ValueError(f"reference_symbols:{n_ref}<{min_ref}")
     d = decide(row, model)
+    if d["gated"]:
+        raise ValueError(f"cost_gate:est_cost_r={d['cost_r_est']:.4f}>{float(meta['cost_gate']['max_cost_r']):g}")
     if d["side"] == "none":
         raise ValueError(f"below_tau:pred={d['pred_net_r']:.4f}")
     atr = F.atr_last(df)
@@ -96,15 +111,18 @@ def order_package(cfg: dict, candles_df: Optional[pd.DataFrame] = None,
     tp = entry + s * float(br["tp_atr"]) * atr
     if not (atr > 0 and sl > 0 and tp > 0):
         raise ValueError("bracket_unformable")
-    return {
+    pkg = {
         "symbol": symbol, "direction": d["side"], "entry": entry, "sl": sl, "tp": tp,
         "confidence": NEUTRAL_CONFIDENCE,
         "meta": {"model_id": meta.get("model_id"), "decision_bar": t.isoformat(), "p_long": round(d["p_long"], 5),
                  "p_short": round(d["p_short"], 5), "tau": meta["tau"], "atr14": atr, "n_reference": n_ref,
-                 "tp_intent": "predictive", "tp_basis": "3 x ATR14 first-passage target the model was scored on",
+                 "tp_intent": "predictive", "tp_basis": f"{float(br['tp_atr']):g} x ATR14 first-passage target the model was scored on",
                  "max_hold_min": int(br["horizon_h"]) * 60,
                  "features": {k: round(float(v), 6) for k, v in row.items()}},
     }
+    if d["cost_r_est"] is not None:  # only a gated artifact (v2) reports it; the v1 package meta is unchanged
+        pkg["meta"]["cost_r_est"] = round(d["cost_r_est"], 5)
+    return pkg
 
 
 def _telemetry(candles_df: Optional[pd.DataFrame], open_pkg: dict) -> None:

@@ -54,7 +54,8 @@ def test_population_is_enabled_and_live(mod):
     # 54 -> 55 on 2026-10-30: e4_oi_shock_1h joins the bybit_1 demo (E4-DEMO-LEG; a mechanics test, Stage 0 FAILED).
     # 55 -> 56 on 2026-11-01: ml_entry joins the enabled+live population (ML-ENTRY-LIVE-ADAPTER, #22079, Tier-3 held;
     # bybit_2 + bybit_portfolio). Its unit carries record_position_telemetry, so it is not structurally invisible.
-    assert len(legs) == 56, f"population drifted from the 2026-11-01 denominator: {len(legs)}"
+    # 56 -> 57 on 2026-11-01: ml_entry_v2 (bybit_1 demo TESTING leg; carries record_position_telemetry through the shared module).
+    assert len(legs) == 57, f"population drifted from the 2026-11-01 denominator: {len(legs)}"
     for name, cfg in legs.items():
         assert cfg.get("enabled") is True, name
         assert str(cfg.get("execution", "live")).lower() == "live", name

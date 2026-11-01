@@ -354,3 +354,11 @@ coverage_debt:
     added: '2026-07-17'
     reason: >-
       Directional pullback trend-follower on XRPUSDT; live since before the regime-coverage guard, no regime_policy cell (roster grew 6->44, policy did not). Owed a Phase-2 direction-aware cell.
+  ml_entry_v2:
+    tracking_id: ML-ENTRY-V2-TESTING
+    added: '2026-11-01'
+    reason: >-
+      Same as ml_entry: the ENTRY v2 candidate reads market regime as an INPUT (vol ratio, ATR/price, range position, BTC context,
+      breadth) and its cost-per-R gate is a cost filter, not a regime cell; a regime_policy cell would trade a different policy than
+      the one scored (RQ-20261101-b608-01 dev stack, b609-01 W1). A bybit_1 demo TESTING leg only. Exempt rather than coverage_debt
+      because the debt ceiling only ratchets down.
