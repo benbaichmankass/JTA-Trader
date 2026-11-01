@@ -1,0 +1,116 @@
+# Hand-authored 2026-11-01 by lane ML-ENTRY-TP-REVISION (Tier 1), dispatched by Manager Session 2026-11-01a (session_01AFoLuJ1apgy8sfngu4WyNH).
+# Filed 2026-11-01 from the RQ-20261101-383f-01 result (pull-ins lost on dev and forward). Rule registered BEFORE any run. Gates: none.
+id: RQ-20261101-383f-02
+status: blocked
+cadence: once
+theme: ml_health
+priority: 1
+roadmap:
+- L-ML-LIVE
+kind: experiment
+title: 'ml_entry MOVING TP, EXTEND-ONLY variant: the same frozen first-passage model and margin, but the TP may only move OUT (never pulled
+  in); does it raise forward (2026-11) held-out mean net R per trade vs the fixed 3 ATR TP? (two-way policy reported beside it)'
+practice_precedent: 'T1, M6 (docs/reference/trading-and-model-practice-principles.md): an in-trade intervention judged against hold-to-bracket
+  and a matched random intervention, purged walk-forward, a sealed held-out window; triple-barrier first-passage labels (Lopez de Prado 2018,
+  ch. 3); docs/research/ml-decision-models-2026-11-01/DESIGN.md sections 1b, 1c and 7.'
+question: 'EXTEND-ONLY variant of RQ-20261101-383f-01 (TP-REVISION.md section 6: first-move pull-ins -0.017 R/trade n=98 forward, the loss side). Spec docs/research/ml-decision-models-2026-11-01/TP-REVISION.md. Population: every trade the FROZEN served
+  ENTRY model (ml/served/ml_decision_entry_v1, tau 0.10) takes on the frozen 60-perp universe under the c692-01 mechanics exactly as ml_entry
+  trades them (decision at the close of every 4th 1h bar, entry at the next bar open, SL 2 x ATR14, TP 3 x ATR14, 24 h time stop, one position
+  per symbol). At each check-in (the close of every 4h decision bar while the position is open: 4, 8, 12, 16, 20 bars held) one pooled LightGBM
+  multiclass model predicts the first-passage outcome of the REST of the trade over a fixed TP grid {1.0, 1.5, 2.0, 2.5, 3.0, 4.0, 5.0, 6.0} x
+  ATR14(entry) from entry: 18 classes = highest grid level touched before the stop (0..8) x stop hit (yes / no; no = timeout at the 24 h stop).
+  Expected net R of level L = P(reach >= L) x (net R of a TP fill at L) + sum over classes below L of P(class) x the class mean net R on the
+  training rows. The TP moves to the argmax level iff its expected net R beats the resting TP by more than a margin m (chosen on dev only);
+  the SL is never touched; both brackets always set.'
+why_this_matters: 'Operator 2026-11-01 ~09:05Z on PR #22079, verbatim "1, but a moving to needs to be the be t work item": the fixed tested 1.5R
+  TP ships now; a MOVING take-profit is the next work item. TP doctrine clause 2 (docs/ARCHITECTURE-CANONICAL.md "TP doctrine"): the TP is a live
+  prediction re-estimated through the trade; the two ml_entry baseline lines in scripts/ci/check_tp_doctrine.py exit only through this row.'
+decision_rule:
+  id: RULE-RQ20261101-383f-02-ML-ENTRY-TP-EXTEND-ONLY
+  registered_at: '2026-11-01'
+  registered_before_run: true
+  statistic: 'Forward held-out mean over ml_entry trades of (net R under the moving-TP policy minus net R under the fixed 3 ATR TP), same trades,
+    same bars, same cost stack (src/runtime/execution_costs.py: fee 11.0 bps round trip, slippage 3.0 bps, funding 1.0 bps per 8h window), ties
+    resolved from 1m for BOTH arms; n trades, n symbols, n trades with >= 1 TP move.'
+  rule: 'INDETERMINATE IF held-out trades < 300 OR distinct symbols < 10 OR trades with >= 1 TP move < 30. PASS IF the held-out mean delta net R
+    per trade (policy minus fixed 3 ATR TP) >= 0, point estimate (the operator bar, popup 2026-11-01 "Point estimate >= 0"). FAIL otherwise.
+    ONE pre-registered policy, the held-out window read ONCE (ML-BAR-ONE-READ, DESIGN.md 1c); variants read on this window: 1 (extend-only); the two-way re-score is reported, not ruled on. A FAIL closes
+    this grid / cadence / learner, not the family. Thresholds are not changed after any result.'
+  heldout_window: 'FORWARD 2026-11: decisions 2026-11-01T00:00Z .. 2026-11-29T23:00Z whose 24 h ends inside November (Binance Vision daily
+    1h klines). October 2026 was read by RQ-20261101-383f-01 and is not reused as held-out. Same frozen model artifact
+    ml/served/ml_entry_tp_revision_v1 and margin 0.05; the only change is the action set (extend only). Reported beside it: the two-way
+    policy on the same November trades (that is a re-score of a frozen variant, not a new one).'
+  what_it_does_not_do: No sizing, no config change, no order. Reported comparators (matched random, best static, bootstrap, calibration) never
+    gate.
+  min_n: 300 held-out trades on >= 10 symbols, >= 30 with a TP move
+intervention_controls:
+  hold_to_bracket: true
+  matched_random:
+    draws: 200
+    how: 'same per-check-in move rate and pull-in / extend mix as the policy on the held-out, random valid target level, sequential'
+  best_static:
+    grid: [1.0, 1.5, 2.0, 2.5, 3.0, 4.0, 5.0, 6.0]
+    excludes_test_folds: true
+    how: 'the one entry-time TP level (ATR14) with the best dev mean net R on the dev ENTRY OOS trades, scored once on the held-out'
+  bootstrap_group: trade
+power:
+  expected_n: 900
+  min_detectable_effect: 0.02
+  effect_units: R per trade
+  basis: 'INFERRED from c692-01 held-out by_month: 702..1,197 ENTRY trades per month on 53 symbols; per-trade delta sd ~0.3 R -> SE ~0.01 R.'
+compute: cpu_long
+value:
+  bucket: ai_trader
+  usd_at_stake_per_month: 800
+  confidence: 0.2
+  basis: 'stand-in: the operator priority-1 goal (ML decision models on real money); not a P&L measurement.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 8.0
+  est_minutes: 90
+  why_runner: Keyless public Binance Vision klines; GBDT on CPU; no trainer data.
+  basis: 'INFERRED: ~4,500 monthly + ~1,900 daily 1h zips, 1m daily zips for tie days only, 6 multiclass LightGBM fits on <= 1.5M rows.'
+run:
+  workflow: research-script-run.yml
+  command:
+  - python3
+  - scripts/research/ml_entry_tp_revision.py
+  - run-extend-only
+  - --cache
+  - /tmp/ml_decision_klines
+  - --unit
+  - '{unit}'
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 240
+  inputs:
+    research_unit: RQ-20261101-383f-02
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- ML-ENTRY-TP-REVISION
+- ML-ENTRY-LIVE-ADAPTER
+- RQ-20261101-c692-01
+- RQ-20261101-c692-03
+- docs/research/ml-decision-models-2026-11-01/DESIGN.md
+ml_consumer:
+  consumer: src/units/strategies/ml_entry.py
+  decision: whether ml_entry.monitor() returns {tp, tp_reason} revisions from this model (TP doctrine path) and the two ml_entry TP-doctrine
+    baseline lines come out
+  legs:
+  - ml_entry
+  book: money
+blocked_on:
+- kind: data
+  ref: Binance Vision daily 1h klines 2026-11-01..2026-11-30
+  what: the November 2026 forward window must exist before it is read once
+  clears_when: 2026-12-01 (all November daily zips published); then the lane adds the run-extend-only path (an `--extend-only` chooser in
+    scripts/research/ml_entry_tp_revision.py, self-tested) and git-mvs this file to research/queue/ with status queued (rule unchanged)
+- kind: harness
+  ref: scripts/research/ml_entry_tp_revision.py
+  what: a run-extend-only subcommand (forward window parameterised; the chooser refuses pull-ins)
+  clears_when: lands with a self-test
+what_it_does_not_do: Registers, serves and promotes nothing; changes no config; places no order; sizes nothing; never moves the SL.

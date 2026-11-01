@@ -1,0 +1,21 @@
+{
+  "id": "ML-ENTRY-FINETUNE",
+  "title": "ENTRY fine-tuning after the Oct-2026 forward FAIL: why do the model's own picks lose to a random entry at its side mix (longs -0.31 R, n=137)?",
+  "phase": null,
+  "state": "queued",
+  "owner": null,
+  "lane": null,
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [],
+  "blocked_on": [],
+  "note": "Filed 2026-11-01 by lane ML-ENTRY-TP-REVISION (session_01AFoLuJHhRvbWCNzPGXgPWy) per the operator line. Operator 2026-11-01 ~10:25Z, verbatim (ENTRY): \"Go live as planned, but also run the Oct test - if it doesn't pass, leave it live but keep finetunig - the result matters but should prevent an otherwise passing ML from going live\" (manager reading stated to the operator: \"should\" = \"shouldn't\"; monitoring, not a go-live precondition). Verbatim (moving TP): \"Build it, extend-only next (Rec.)\". TRIGGER: RQ-20261101-383f-03 FAIL (monitoring only; not blind, stated): forward 2026-10 mean net R per decision -0.0193 (n=868, 49 symbols); longs n=137 -0.308, shorts n=731 +0.035; random at matched rate + side mix (p_long 0.16) +0.0425, model below all 200 draws; always-long -0.239. One month = one regime draw. FIRST QUESTIONS (each a pre-registered unit before any run, scored on a fresh window per ML-BAR-ONE-READ): (1) a side-asymmetric tau or a regime (BTC 24h/168h trend) input on the long head; (2) ENTRY v2 (RQ-20261101-c692-05, 1m-tie first-passage classifier) re-pointed at Nov-2026; (3) the training-universe arms (c692-04). Never a go-live gate (operator). Tier 1 research; a fix that changes the served model is Tier 3. Relates: ML-ENTRY-LIVE-ADAPTER, RQ-20261101-c692-01, -05. roadmap L-ML-LIVE. Gates: none.",
+  "updated_at": "2026-11-01T10:36:32Z",
+  "updated_by": "session_01AFoLuJHhRvbWCNzPGXgPWy",
+  "roadmap": [
+    "L-ML-LIVE"
+  ],
+  "_seq": 862
+}
