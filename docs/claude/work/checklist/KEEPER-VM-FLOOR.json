@@ -2,17 +2,19 @@
   "id": "KEEPER-VM-FLOOR",
   "title": "Hourly trainer-VM dispatch of schedule-keeper.yml (backstop clock independent of GitHub's scheduler)",
   "phase": "build",
-  "state": "in_flight",
+  "state": "done",
   "owner": "manager",
   "lane": "session_01AFoLuJ1apgy8sfngu4WyNH",
   "model": null,
   "ceiling_usd": null,
   "spend_usd": null,
   "tier": 2,
-  "prs": [],
+  "prs": [
+    22191
+  ],
   "blocked_on": [],
-  "note": "[manager 2026-11-01a] Measured (FORECAST-GRADE lane, 48h to 14:25Z): schedule-keeper cron fired 13 of ~56 expected; kept alive only by bot pushes; max gap between completed runs 73.3 min, under every target's stale window. Operator popup ~14:48Z, verbatim: 'Yes, BRANCH_PROTECTION_TOKEN'. Lane build refused twice by the auto-mode classifier; operator (verbatim excerpt) 'I took you off auto mode because that is the sanctioned first path for dealing with these kinds of permission issues. You can ask for permission and I will grant it.' Built by the manager. After merge: vm-git-credential-bootstrap target trainer, credential dispatch; observe HTTP 204 and a keeper run created by the dispatch.",
-  "updated_at": "2026-11-01T15:03:44Z",
+  "note": "[manager 2026-11-01a] Measured (FORECAST-GRADE lane, 48h to 14:25Z): schedule-keeper cron fired 13 of ~56 expected; kept alive only by bot pushes; max gap between completed runs 73.3 min, under every target's stale window. Operator popup ~14:48Z, verbatim: 'Yes, BRANCH_PROTECTION_TOKEN'. Lane build refused twice by the auto-mode classifier; operator (verbatim excerpt) 'I took you off auto mode because that is the sanctioned first path for dealing with these kinds of permission issues. You can ask for permission and I will grant it.' Built by the manager. After merge: vm-git-credential-bootstrap target trainer, credential dispatch; observe HTTP 204 and a keeper run created by the dispatch. 2026-11-01T17:27Z OBSERVED (issue #22216, run 41328376552): /etc/ict/gh-dispatch.env root:root 600; ict-keeper-dispatch.timer installed (:23 UTC hourly); first run logged 'keeper-dispatch: dispatched schedule-keeper.yml (HTTP 204)'; schedule-keeper workflow_dispatch runs 41330835157 (17:18:53Z, first run) and 41331268774 (17:24:02Z, timer) both appeared. Merged #22191 = deployed = observed.",
+  "updated_at": "2026-11-01T17:25:57Z",
   "updated_by": "session_01AFoLuJ1apgy8sfngu4WyNH",
   "due_by": "2026-11-02",
   "roadmap": [
