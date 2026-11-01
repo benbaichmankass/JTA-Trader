@@ -91,7 +91,9 @@ def run(a: argparse.Namespace) -> dict:
         ledger = Path(a.ledger) if a.ledger else build_ledger(a.leg, out, a)
         rows = pes.load_rows(ledger)
     except Exception as exc:  # noqa: BLE001  # allow-silent: recorded as read_state producer_failed with the reason, never a verdict
-        v = {"verdict": "indeterminate", "read_state": "producer_failed", "n": 0, "note": f"{type(exc).__name__}: {str(exc)[:300]}"}
+        v = {"verdict": "indeterminate", "read_state": "producer_failed", "n": 0,
+             "population": f"{a.leg}: ledger build failed before any measurement (window {a.start}..{a.end}, days={a.days})",
+             "note": f"{type(exc).__name__}: {str(exc)[:300]}"}
         (out / "verdict.json").write_text(json.dumps(v, indent=1) + "\n")
         return v
     wins = split_windows(rows, a.recent_from)

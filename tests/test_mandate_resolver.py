@@ -1345,6 +1345,30 @@ def test_a_unit_for_another_leg_is_not_named(repo):
     assert _s1s2(root)["data_task"]["research_unit"] is None
 
 
+# PI-20261101-RXABACKP-0003 (operator 2026-11-01 ~11:47Z "Yes, and fix the bug (Rec.)"): a MEASURED zero venue
+# fee (a commission-free venue in config/instruments.yaml) is a full cost stack; an unknown venue's zero is not.
+def test_holdout_zero_fee_on_a_measured_commission_free_venue_fires(repo, monkeypatch):
+    monkeypatch.setattr(mr, "_venue_fee_bps", lambda symbol: 0.0)
+    res = _s1s2(_h_repo(repo, hc=_hc(cost_stack={"fees": 0.0, "slippage": 5.0, "funding": 0.0})))
+    assert res["verdict"] == "FIRE", res
+    assert res["evidence"]["holdout"]["venue_fee_bps"] == 0.0
+
+
+@pytest.mark.parametrize("venue_fee", [None, 11.0])
+def test_holdout_zero_fee_on_an_unknown_or_charging_venue_is_needs_data(repo, monkeypatch, venue_fee):
+    monkeypatch.setattr(mr, "_venue_fee_bps", lambda symbol: venue_fee)
+    res = _s1s2(_h_repo(repo, hc=_hc(cost_stack={"fees": 0.0, "slippage": 5.0, "funding": 0.0})))
+    _needs_data(res, mr.HOLDOUT_CLAUSE)
+    assert "full stack" in res["detail"], res["detail"]
+
+
+def test_venue_fee_reads_the_real_instrument_config():
+    assert mr._venue_fee_bps("TQQQ") == 0.0          # Alpaca ETF: commission-free venue, measured zero
+    assert mr._venue_fee_bps("BTCUSDT") == 11.0      # bybit:linear measured fee
+    assert mr._venue_fee_bps("NOT-A-SYMBOL") is None  # unknown venue is never read as zero
+    assert mr._venue_fee_bps(None) is None
+
+
 @pytest.mark.parametrize("over,why", [
     ({"evaluations_on_holdout": 2}, "evaluations_on_holdout"),
     ({"evaluations_on_holdout": 0}, "evaluations_on_holdout"),

@@ -2,21 +2,32 @@
   "id": "FORECAST-GRADE-FIRST-PASSAGE",
   "title": "Price predictions are graded first-passage, continuously: run the live-review forecast grader on a schedule, report target-first / stop-first / timeout as three classes, resolve same-bar double touches from 1m, and feed the outcome to the claude_judgments ML family as a label",
   "phase": null,
-  "state": "queued",
+  "state": "landed_unproven",
   "owner": null,
-  "lane": null,
+  "lane": "FORECAST-GRADE-FIRST-PASSAGE",
   "model": "claude-sonnet-5-5",
   "ceiling_usd": 6,
   "spend_usd": null,
   "tier": 1,
-  "prs": [],
+  "prs": [
+    22077
+  ],
   "blocked_on": [],
-  "note": "OPERATOR 2026-11-01 ~08:15Z, verbatim: \"I think in general when MLs are making price predictions (which is great), we should try to add 1. Within what timeframe 2. before/after crossing the other bracket. Just to help with labeling and verifying the MLs.\" then \"yes, send it to the lane and check the grading\". MEASURED 2026-11-01 ~08:20Z by Manager Session 2026-11-01a on origin/main: scripts/research/desk_am_judgement_grade.py::forecast_outcome ALREADY grades first-passage within horizon_bars x timeframe (hit = target_px before invalidation_px, miss = invalidation first, expired = neither). Gaps: (1) it never runs: header says \"manual-only ... No timer\"; grep of .github/workflows, deploy/, scripts/ops for desk_am_judgement_grade / am_judgement_grade = 0 hits (same grep finds tests/test_desk_am_judgement_grade.py and docs/research/desk-am-refocus-diagnosis-2026-10-30.md, so the probe works); comms/desk/am_judgement_grade.json absent; (2) a bar touching both levels is scored \"miss\" (pessimistic) instead of being resolved from 1m data, unresolved count not reported; (3) Brier folds expired into not-hit; the three classes are not reported separately; (4) population is CLOSED packages only, so an open trade's expired forecast waits for the close; (5) ml/datasets/families/claude_judgments.py carries fc_* inputs (direction, p_target, target_r, invalidation_r, horizon_bars) but no forecast-outcome label column (grep forecast_outcome / fc_outcome = 0). Done when: a scheduled job (token-free, existing runner or VM timer pattern) writes the grade at least daily, three classes + Brier per class + unresolved-tie count with population, the claude_judgments family gains fc_outcome, and one run is observed. Reuse the 1m tie resolver from ML-DECISION-MODELS (same label rule; do not build twice). Gates this adds: none. OPERATOR 2026-11-01 ~08:25Z, verbatim: \"This is exactly the kind of infra that needs priority - we can't build models if we're not eactually grading them\". Lane session_01AFoLuK13bdf4iNCUDiUvUX dispatched 08:23Z; operator spec verbatim: \"it should be run at least hourly and grade all decisions, including on open trades\".",
+  "note": "2026-11-01 lane: PR #22077 (landing hold, claude_judgments.py Tier-2 by name; CI green at 6216b57c1) adds scripts/research/forecast_first_passage.py, forecast-grade.yml (hourly :41), fc_outcome/fc_resolved_at. Manual live run 09:0xZ over 44 forecasts (34 live_review, 10 desk_entry; 142 no_trade carry none): target_first 2, invalidation_first 8, expired 21, pending 2, tie_unresolved 0, no_data 11 (closed-market candles, re-checked); both AVAX reviews invalidation_first 08:14Z (matches raw 1m). CLOSES ON: first SCHEDULED forecast-grade run after #22077 lands and its committed comms/desk/forecast_grade.json population. 1m tie resolver = forecast_first_passage.resolve_same_bar (ML-DECISION-MODELS had none on main).",
   "priority_rank": 2,
-  "updated_at": "2026-11-01T08:48:24Z",
-  "updated_by": "session_01AFoLuJ1apgy8sfngu4WyNH",
+  "updated_at": "2026-11-01T10:13:09Z",
+  "updated_by": "session_01AFoLuK13bdf4iNCUDiUvUX",
   "roadmap": [
     "L-ML-LIVE"
   ],
+  "observation": {
+    "what": "first scheduled forecast-grade.yml run after #22077 lands: comms/desk/forecast_grade.json committed with population (live_review + desk_entry forecasts), three classes, Brier per class, pending and tie_unresolved counts",
+    "how_to_check": "gh workflow run list forecast-grade (or dispatch once), then read comms/desk/forecast_grade.json population/pooled on main",
+    "due_by": "2026-11-02T12:00:00Z"
+  },
+  "writeback": {
+    "roadmap": "none: grader and label column feed L-ML-LIVE as tooling; no milestone status changes until the first scheduled run is observed",
+    "arch": "none: no architecture contract changes; read-only grader, no gate added"
+  },
   "_seq": 859
 }
