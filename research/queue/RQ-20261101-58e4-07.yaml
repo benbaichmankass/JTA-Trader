@@ -72,6 +72,21 @@ related:
 - m31-implied-vol-grade.yml
 - RQ-20261101-58e4-06
 programme: P6
-status: queued
+status: done
 practice_precedent: 'docs/reference/trading-and-model-practice-principles.md and AUDIT section 5b (docs/audits/2026-11-01-from-scratch/AUDIT.md): <=10 pre-declared configs, discovery ends 2024-06-30, every
   trial counted, DSR(N=trials)>0.95; Bailey & Lopez de Prado 2014 (DSR); payer literature: Carr & Wu 2009 RFS (variance risk premium); Bailey & Lopez de Prado 2014'
+last_dispatched_at: '2026-11-01T12:20:00+00:00'
+grading:
+  attested: RULE-RQ20261101-58E4-07-VOL-PREMIUM
+  auto: false
+  decision_rule_id: RULE-RQ20261101-58E4-07-VOL-PREMIUM
+  evidence:
+  - research/results/RQ-20261101-58e4-07/manual-research-edge-20261101.jsonl
+  - comms/research/RQ-20261101-58e4-07/manual-research-edge-20261101/result.json
+  graded_at: '2026-11-01'
+  grader: manual (lane RESEARCH-EDGE)
+  note: Variance-swap PROXY, not a priced straddle. Closed; real option-chain history is the gap (see row OPTIONS-IV-HISTORY-GAP).
+  reason: best V2 net Sharpe 0.506 but stress -0.007, DSR(N=8)=0.674, 9 of 15 counted years positive (needs 12), long-variance side -2.76 vs short +16.15; always-short-variance mean 0.208 beats the signal
+    0.070 (the premium is the base rate, not the forecast)
+  rows: 1
+  verdict: fail
