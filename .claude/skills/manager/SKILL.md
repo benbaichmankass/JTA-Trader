@@ -405,7 +405,7 @@ audit or review lane — `weekly-audit`, `health-review`, `performance-review`, 
 when every proposal it makes maps to** (a) a checklist row with `owner`, `due_by` and a `roadmap` ref (or a research queue unit carrying a
 `roadmap` ref and a run date), **or** (b) a recorded operator decision (a row, popup answer or `config/mandates.yaml` entry it names). A proposal
 that is "in the report" and in neither is **not filed**, whatever the report says. The lane's final section lists each proposal id → row/unit
-id → `due_by`, and the manager checks that list against `checklist.py` before accepting the lane (`close-out` check 4 repeats it).
+id → `due_by`, and the manager checks that list against `checklist.py` before accepting the lane (`close-out` check 4 repeats it). This is a process step, not a guard: a dated row is what the drain acts on, so a proposal that is not one will never be observed.
 
 A refused edit (state outside `states`, duplicate id, unknown row, `state`/`status`
 disagreement, path-shaped id) prints `checklist: refused -- <why>` and writes
