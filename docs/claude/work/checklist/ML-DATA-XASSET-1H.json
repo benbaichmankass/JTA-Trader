@@ -1,0 +1,21 @@
+{
+  "id": "ML-DATA-XASSET-1H",
+  "title": "Point-in-time 1h bars 2020-2026 for non-crypto asset classes (equity index / rates / commodity futures, FX) as an ML TRAINING universe arm for the decision models",
+  "phase": null,
+  "state": "queued",
+  "owner": null,
+  "lane": null,
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [],
+  "blocked_on": [],
+  "note": "Filed 2026-11-01 by lane ML-DECISION-MODELS (session_01AFoLuKpnjMPskKhfM39cy7) from the operator directive 2026-11-01 ~07:50Z (train on data beyond what we trade; quoted verbatim in row ML-DECISION-MODELS). INVENTORY (this lane, from docs/research/ml-data-classification-2026-10-13.md and scripts/): no store holds 1h non-crypto bars over 2020-07..2026-09. yfinance 1h is capped near 730 days; trainer market_raw has MES/ETF bars (third-party licence, trainer-resident, daily depth); FX has only scripts/research/dukascopy_span_probe.py. BUILD: a keyless or licensed 1h source covering >= 5 years for >= 10 non-crypto series, point-in-time, published per the ML-DATA-OFF-TRAINER classification rules. DONE WHEN: a manifest with per-series first/last ts lands and RQ-20261101-c692-04 gains arm (d) as a new registered unit. roadmap L-ML-LIVE. Gates: none.",
+  "updated_at": "2026-11-01T08:19:05Z",
+  "updated_by": "session_01AFoLuKpnjMPskKhfM39cy7",
+  "roadmap": [
+    "L-ML-LIVE"
+  ],
+  "_seq": 859
+}

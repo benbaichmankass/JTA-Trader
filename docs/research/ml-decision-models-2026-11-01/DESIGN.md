@@ -53,6 +53,31 @@ across symbols.
    RiskManager default risk), held for the manager. A FAIL closes the configuration (this horizon, bracket, feature
    block, learner), never the family; §5 names the next lever.
 
+## 1a. TRAINING UNIVERSE is a researched factor, not an assumption (operator, 2026-11-01 ~07:50Z)
+
+Verbatim: *"The MLs don't only need to train on the data of the symbols that we're trading. Like, for training purposes, we
+need to, like, research this before we just do things, but, like, we can train them on all sorts of data, even if it's not
+things that we're planning on trading immediately, if it will improve their decision-making for the things that they are
+trading."*
+
+- **Evaluation population = what we trade.** The symbols `bybit_2` / `bybit_portfolio` pull today (MEASURED from
+  `config/accounts.yaml` 2026-11-01: BTCUSDT, ETHUSDT, XRPUSDT, ADAUSDT, SOLUSDT; re-parsed at run time, never quoted).
+  The ENTRY unit c692-01 (registered before this directive) pools its held-out over all 60 perps of the frozen universe —
+  every one a USDT perp, i.e. "can trade on bybit_2" in kind; its rule is not edited. Its harness ALSO reports the
+  held-out restricted to the five traded symbols (reported, not gating).
+- **Training set = the variable**, unit `RQ-20261101-c692-04`: the same ENTRY recipe trained on (a) the traded symbols
+  only, (b) the frozen 60-perp universe, (c) wider — every Binance Vision USDT-M perp passing the same listing-age rule
+  with no cap of 60 (310 qualified on 2026-10-30, MEASURED by ML-DATA-BROAD-PATHS). Each arm is scored on the SAME
+  held-out window restricted to the traded symbols, same mechanics, same cost stack, same rule. Cross-sectional
+  features are computed against the frozen-60 reference set in every arm, so the traded rows' inputs are identical
+  across arms and only the training rows differ. Point-in-time and purge / embargo rules apply to every added series.
+- **Data inventory (what exists now):** public Binance Vision USDT-M 1h klines for every listed perp (keyless, used by
+  arms a–c); the trainer's `market_raw` / `market_features` shards: BTC / ETH / SOL 15m + 1h (Bybit V5, a subset of the
+  60) and MES / ETF bars from yfinance / IBKR (third-party licence, trainer-resident, daily depth; yfinance 1h history
+  is capped near 730 days); FX: only a Dukascopy span probe (`scripts/research/dukascopy_span_probe.py`), no store.
+  So **other asset classes at 1h over 2020–2026 do not exist in any store today** — that arm (d) is filed as data row
+  `ML-DATA-XASSET-1H` rather than waited on.
+
 ## 2. ENTRY — `RQ-20261101-c692-01` (built: `scripts/research/ml_decision_entry.py`)
 
 - **Decision set:** {LONG, SHORT, NOTHING} at the close of every 4th 1h bar (00, 04, … 20 UTC).
