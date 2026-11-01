@@ -9,6 +9,12 @@ Pure signal generator (``.claude/skills/new-strategy/SKILL.md``): no accounts, n
 module emits a fixed neutral confidence), no order placement. Both brackets are always set at entry: SL = 2 x ATR14,
 TP = 3 x ATR14 (the reference bracket the model was scored with); a 24 h time stop rides ``meta.max_hold_min`` and is
 enforced by :func:`monitor` through the same ``max_hold_verdict`` the desk uses.
+
+MOVING TP (row ML-ENTRY-TP-REVISION; evidence ``research/results/RQ-20261101-383f-01/``): when the leg declares
+``tp_revision: {rule: ml_first_passage}`` in ``config/strategies.yaml`` the package meta carries it. At each 4h check-in (4, 8, .., 20 closed 1h bars after the decision
+bar) :func:`monitor` re-scores the first-passage model of ``src/runtime/ml_entry_tp_policy.py`` and returns
+``{"tp": x, "tp_reason": ...}`` through ``src/runtime/tp_revision.py`` (the TP-doctrine path) when a grid level beats
+the resting TP by more than the dev-chosen margin. The SL is never touched; a close verdict always wins.
 """
 from __future__ import annotations
 
@@ -87,6 +93,7 @@ def order_package(cfg: dict, candles_df: Optional[pd.DataFrame] = None,
     if n_ref < min_ref:
         raise ValueError(f"reference_symbols:{n_ref}<{min_ref}")
     d = decide(row, model)
+    from src.runtime.tp_revision import declared_rule
     if d["side"] == "none":
         raise ValueError(f"below_tau:pred={d['pred_net_r']:.4f}")
     atr = F.atr_last(df)
@@ -101,18 +108,161 @@ def order_package(cfg: dict, candles_df: Optional[pd.DataFrame] = None,
         "confidence": NEUTRAL_CONFIDENCE,
         "meta": {"model_id": meta.get("model_id"), "decision_bar": t.isoformat(), "p_long": round(d["p_long"], 5),
                  "p_short": round(d["p_short"], 5), "tau": meta["tau"], "atr14": atr, "n_reference": n_ref,
-                 "tp_intent": "predictive", "tp_basis": "3 x ATR14 first-passage target the model was scored on",
+                 "tp_intent": "predictive", "tp_basis": "3 x ATR14 first-passage target the model was scored on; "
+                 "re-predicted at each 4h check-in by the ml_first_passage TP revision (RQ-20261101-383f-01)",
+                 **({"tp_revision": cfg["tp_revision"]} if declared_rule(cfg) == TP_RULE else {}),
                  "max_hold_min": int(br["horizon_h"]) * 60,
                  "features": {k: round(float(v), 6) for k, v in row.items()}},
     }
 
 
-def monitor(cfg, candles_df, open_pkg):  # noqa: ARG001 -- canonical signature
-    """The 24 h time stop only (the model was scored hold-to-bracket with a time stop); never raises."""
+def monitor(cfg, candles_df, open_pkg):
+    """The 24 h time stop, then the moving TP at a 4h check-in (a close verdict wins); never raises."""
+    base = None
     try:
         from datetime import datetime, timezone
         from src.units.strategies.claude_desk import max_hold_verdict
-        return max_hold_verdict(open_pkg, datetime.now(timezone.utc))
+        base = max_hold_verdict(open_pkg, datetime.now(timezone.utc))
     except Exception:  # noqa: BLE001 -- a monitor must never raise
-        logger.debug("ml_entry.monitor: verdict failed", exc_info=True)
+        logger.debug("ml_entry.monitor: time-stop verdict failed", exc_info=True)
+    if isinstance(base, dict) and base.get("action") == "close":
+        return base
+    try:
+        from src.runtime.tp_revision import merge_verdict
+        return merge_verdict(base, tp_revision(cfg, candles_df, open_pkg))
+    except Exception:  # noqa: BLE001 -- a monitor must never raise
+        logger.debug("ml_entry.monitor: tp revision failed", exc_info=True)
+        return base
+
+
+# ----------------------------------------------------------------------------------------------- moving TP
+TP_RULE = "ml_first_passage"
+_TP_FRAMES: Dict[str, Any] = {}
+
+
+def _frame(df: Any) -> Optional[pd.DataFrame]:
+    """Closed 1h bars as ``ts`` (UTC bar OPEN) + OHLCV; the forming bar dropped. None when unreadable."""
+    if df is None or len(df) == 0:
         return None
+    from src.runtime.closed_bars import drop_forming_bar
+    from src.runtime.strategy_signal_builders import _ml_entry_frame
+    return _ml_entry_frame(drop_forming_bar(df, "1h"))
+
+
+def _meta(open_pkg: Any) -> Dict[str, Any]:
+    meta = (open_pkg or {}).get("meta") if isinstance(open_pkg, dict) else None
+    if isinstance(meta, str):
+        try:
+            meta = json.loads(meta)
+        except ValueError:
+            meta = None
+    return meta if isinstance(meta, dict) else {}
+
+
+def checkin_bars_held(decision_bar: Any, last_closed_bar: Any, checkins) -> Optional[int]:
+    """Bars held at a check-in: the last CLOSED bar is ``k`` hours after the decision bar with ``k`` in ``checkins``."""
+    try:
+        k = (pd.Timestamp(last_closed_bar) - pd.Timestamp(decision_bar)) / pd.Timedelta(hours=1)
+    except (TypeError, ValueError):
+        return None
+    return int(k) if float(k).is_integer() and int(k) in set(int(x) for x in checkins) else None
+
+
+def _checkin_frames(symbol: str, bar_iso: str, xs_symbols) -> tuple:
+    """(own 400-bar closed frame, reference frames) for this check-in bar; fetched once per (symbol, bar)."""
+    from src.runtime.market_data import fetch_candles
+    from src.runtime.strategy_signal_builders import _ml_entry_reference_frames
+    key = f"{symbol}|{bar_iso}"
+    if key not in _TP_FRAMES:
+        own = _frame(fetch_candles(symbol, "1h", limit=400, bypass_cache=True))
+        if own is not None and (not len(own) or own["ts"].iloc[-1].isoformat() != bar_iso):
+            own = None
+        if len(_TP_FRAMES) > 256:
+            _TP_FRAMES.clear()
+        _TP_FRAMES[key] = own
+    return _TP_FRAMES[key], _ml_entry_reference_frames(list(xs_symbols), bar_iso, None)
+
+
+def tp_revision(cfg: Any, candles_df: Any, open_pkg: Any, *, frames_fn=None, tp_model=None):
+    """The ml_first_passage revision for one open package, or None. ``frames_fn(symbol, bar_iso, xs) -> (own, refs)``
+    and ``tp_model`` are injectable for tests. Never raises."""
+    try:
+        from src.runtime.tp_revision import declared_rule, plan_tp_revision
+        meta = _meta(open_pkg)
+        if declared_rule(meta) != TP_RULE:
+            return None
+        bars = _frame(candles_df)
+        if bars is None or not len(bars):
+            return None
+        from src.runtime import ml_entry_tp_policy as P
+        model = tp_model or P.load_tp_model()
+        tm = model["meta"]
+        jc = checkin_bars_held(meta.get("decision_bar"), bars["ts"].iloc[-1], tm["checkins_bars_held"])
+        if jc is None:
+            return None                       # not a check-in bar: the resting TP is the prediction
+        symbol = str(open_pkg.get("symbol") or "")
+        bar_iso = bars["ts"].iloc[-1].isoformat()
+        xs = load_model()["meta"]["xs_reference"]
+        own, refs = (frames_fn or _checkin_frames)(symbol, bar_iso, xs)
+        if own is None:
+            return None
+        leg = {**meta, "_own": own, "_refs": refs, "_resting_tp": open_pkg.get("tp"), "_bars_held": jc,
+               "_symbol": symbol, "_tp_model": model, "min_reference_symbols": (cfg or {}).get("min_reference_symbols", 40)}
+        return plan_tp_revision(leg=leg, direction=str(open_pkg.get("direction") or meta.get("direction") or ""),
+                                entry=open_pkg.get("entry"), risk=float(tm["sl_atr"]) * float(meta.get("atr14") or 0),
+                                bars=own, entry_time=meta.get("decision_bar"), ref_price=float(own["close"].iloc[-1]))
+    except Exception:  # noqa: BLE001 -- a revision must never break the monitor
+        logger.debug("ml_entry.tp_revision failed", exc_info=True)
+        return None
+
+
+def _register_rule() -> None:
+    from src.runtime.tp_revision import register_rule
+
+    @register_rule(TP_RULE)
+    def _ml_first_passage(*, direction, entry, risk, bars, entry_time, params, leg):  # noqa: ARG001
+        """bars = the own closed frame ending at the check-in bar; leg carries the reference frames, the resting TP,
+        the bars held and the TP model (set by :func:`tp_revision`). None = keep the resting TP."""
+        from src.runtime import ml_entry_tp_policy as P
+        from src.runtime.execution_costs import resolve_cost_policy
+        model = leg["_tp_model"]
+        tm = model["meta"]
+        side = 1 if direction == "long" else -1
+        atr = float(leg["atr14"])
+        sl_atr = float(tm["sl_atr"])
+        sl = entry - side * sl_atr * atr
+        df = bars.reset_index(drop=True)
+        jc = int(leg["_bars_held"])
+        at = (df["ts"] == pd.Timestamp(entry_time)).to_numpy().nonzero()[0]
+        if not len(at) or int(at[-1]) + jc != len(df) - 1:
+            return None                       # the decision bar is not jc bars before the check-in: could not look
+        win = df.iloc[int(at[-1]) + 1:]
+        frames = dict(leg.get("_refs") or {})
+        frames[leg["_symbol"]] = df
+        row = F.decision_row(leg["_symbol"], frames)
+        if row is None or int(row.pop("_n_reference")) < int(leg.get("min_reference_symbols") or 40):
+            return None
+        close = float(df["close"].iloc[-1])
+        st = P.state_features(side=side, entry=entry, atr_entry=atr, sl=sl, highs=win["high"], lows=win["low"],
+                              close_now=close, atr_now=F.atr_last(df), ret_4=row["ret_4"], ret_24=row["ret_24"],
+                              bars_held=jc, sl_atr=sl_atr)
+        grid = tm["grid_atr"]
+        ridx = P.grid_index(leg.get("_resting_tp"), entry, atr, side, grid)
+        if ridx is None:
+            return None                       # an off-grid resting TP was set by something else: do not fight it
+        slip, fund = resolve_cost_policy(leg["_symbol"])
+        cost = P.level_cost(entry, atr, side, grid, sl_atr, float(tm["fee_bps"]), slip, fund)
+        from src.runtime.tp_venue_cap import TP_VENUE_CAP_PCT
+        c = P.choose(P.class_probs(model, {**row, **st}), tm["class_mean_net_r"], side=side, entry=entry, atr=atr,
+                     close=close, resting_idx=ridx, grid=grid, sl_atr=sl_atr, min_gap_atr=float(tm["min_gap_atr"]),
+                     cap_pct=TP_VENUE_CAP_PCT, margin=float(tm["margin_r"]), cost=cost)
+        if c["move_to"] is None:
+            return None
+        q = c["move_to"]
+        return entry + side * grid[q] * atr, {
+            "model_id": tm.get("model_id"), "bars_held": jc, "from_atr": grid[ridx], "to_atr": grid[q],
+            "kind": "extend" if q > ridx else "pull_in", "ev_resting_r": round(c["ev_resting"], 4),
+            "ev_new_r": round(c["ev_best"], 4), "margin_r": tm["margin_r"]}
+
+
+_register_rule()

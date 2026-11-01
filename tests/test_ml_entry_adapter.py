@@ -89,6 +89,16 @@ def test_order_package_brackets_and_no_sizing():
     assert short["direction"] == "short" and short["sl"] > short["entry"] > short["tp"]
 
 
+def test_order_package_threads_the_declared_tp_revision():
+    """ML-ENTRY-TP-REVISION: the leg's tp_revision declaration rides the package meta; undeclared = no revision."""
+    df = _frame(2)
+    on = M.order_package({"symbol": "ETHUSDT", "tp_revision": {"rule": M.TP_RULE}}, candles_df=df,
+                         reference_frames=_refs(), model=_model(0.3, 0.05))
+    assert on["meta"]["tp_revision"] == {"rule": M.TP_RULE}
+    off = M.order_package({"symbol": "ETHUSDT"}, candles_df=df, reference_frames=_refs(), model=_model(0.3, 0.05))
+    assert "tp_revision" not in off["meta"]
+
+
 def test_refusals():
     df = _frame(2)
     with pytest.raises(ValueError, match="below_tau"):

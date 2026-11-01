@@ -227,15 +227,6 @@ BASELINE_2026_10_06: dict[str, frozenset[str]] = {
     # fail), so it inherits the breakout_2 / bybit_1 debt line verbatim. A visible, deliberate line on a
     # REAL-MONEY routing: exit-refinement priority rises with it (money at stake).
     "bybit_2/trend_donchian_sol_prop": ER,
-    # 2026-11-01 ML-ENTRY-LIVE-ADAPTER (Tier-3, HELD PR, operator decides on merge): the ENTRY decision model
-    # carries the finite 1.5 R target it was SCORED with (TP 3 ATR / SL 2 ATR; 31% of its 11,240 held-out
-    # decisions reached it). Nothing moves it yet: the producer is the MANAGE decision model
-    # (research/queue/blocked/RQ-20261101-c692-03), and a revision rule declared before that is scored would
-    # trade an unscored policy. Operator popup on PR #22079, 2026-11-01 ~09:05Z, verbatim: "1, but a moving to
-    # needs to be the be t work item" -- fixed 1.5 R TP accepted now; EXIT for both lines = checklist row
-    # ML-ENTRY-TP-REVISION (a tested moving-TP policy plumbed through monitor()), then remove both.
-    "bybit_2/ml_entry": R,
-    "bybit_portfolio/ml_entry": R,
     # ── prop ────────────────────────────────────────────────────────────────
     # breakout_1 legs removed 2026-10-07 (account retired, roster cleared).
     # R -> ER on 2026-10-15 (TP-REACH-FLOOR, operator-approved 2026-10-14): the
