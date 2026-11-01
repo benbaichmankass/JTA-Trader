@@ -1,0 +1,92 @@
+# Hand-authored 2026-11-01 by lane RESEARCH-EDGE (Tier 1), dispatched by Manager session_01AFoLuJ1apgy8sfngu4WyNH. Decision rule registered BEFORE any run (this commit precedes the run commit). Gates: none.
+id: RQ-20261101-58e4-02
+title: 'Discovery: weekly cross-sectional crypto momentum, long-short and long-only, top-20 liquid USD-M perps, 10 configs, net of full cost stack, window ends 2024-06-30'
+cadence: once
+roadmap:
+- L-PROGRAMMES
+theme: new_strategy_prop
+priority: 1
+kind: experiment
+question: Does ranking the top-20 perps on trailing return and holding top-30% long / bottom-30% short (weekly) earn a net Sharpe that survives a 10-trial deflation
+  on 2020-06..2024-06; and do long-only top-quantile variants beat the equal-weight universe net?
+why_this_matters: 'Row RQ-XSEC-MOM-DISCOVERY. Payer: under-reaction / attention flows in a retail-dominated cross-section. scripts/backtest_xsec_momentum.py had 1
+  wiring-only run.'
+power:
+  expected_n: 1490
+  min_detectable_effect: 0.5
+  effect_units: annualised_sharpe
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: ~4.1 years of daily portfolio returns (2020-06-01..2024-06-30, n~1490). SE of an annualised Sharpe ~ 1/sqrt(years) ~ 0.49, so only Sharpe >~1.0 is separable
+    from 0 alone; the DSR bar (N=configs) is stricter by design (AUDIT section 5b). This unit is DISCOVERY; a pass is a candidate for ONE holdout read, never evidence
+    for a book.
+  feasibility:
+    source: none
+    accrual_basis: Fixed historical archive (data.binance.vision), no accrual.
+decision_rule:
+  id: RULE-RQ20261101-58E4-02-XSEC-DISCOVERY
+  registered_at: '2026-11-01'
+  registered_before_run: true
+  statistic: 'long-short net Sharpe (long-only: active vs equal-weight benchmark), stress Sharpe, halves, bootstrap p05, DSR(N=10)'
+  rule: 'Configs X1..X10 fixed in the script. PRIMARY = X1 (formation 28 d, q=0.3, long-short dollar-neutral, equal weight, weekly). PASS iff X1 net Sharpe >= 0.5
+    AND stress Sharpe > 0 AND both halves > 0 AND bootstrap p05 of annualised mean > 0 AND DSR(X1; N=10) > 0.95. Long-only variants (X6..X8) are graded on net return
+    MINUS the equal-weight top-20 benchmark and are reported, but only X1 can make the unit PASS. FAIL otherwise. indeterminate IF fewer than 200 usable days. Costs
+    (registered): fee round trip = execution_costs.resolve_fee_bps_roundtrip (11.0 bps) charged per side (RT/2 per unit |delta w|), slippage 3 bps RT, SIGNED settled
+    funding, STRESS arm = 2x fee+slippage. Returns are daily fractional portfolio returns, not R. Universe = point-in-time top-N by trailing-90d mean quote volume
+    (ex stables), recomputed each weekly rebalance; Binance USD-M archive as proxy for the Bybit perps.'
+  what_it_does_not_do: Does not read the holdout (2024-07-01 on; edge_data.MAX_MONTH makes it unloadable), touch config/strategies.yaml, rosters or sizing, or propose
+    a live leg. A PASS is only a candidate for the single HOLDOUT-LOCK read.
+compute: cpu_light
+value:
+  usd_at_stake_per_month: 100
+  confidence: 0.1
+  bucket: structural
+  basis: 'stand-in: the audit (2026-11-01) found the live book flat gross and negative net; a documented-payer family is the only candidate source of positive expectancy'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 4.0
+  est_minutes: 60
+  basis: Manual lane run (RESEARCH-EDGE) from a session with Binance Vision egress; daily bars, a few thousand rows per symbol; no secret.
+run:
+  command:
+  - python3
+  - scripts/research/edge_portfolio_discovery.py
+  - --family
+  - xsec
+  - --data-root
+  - <scratch data root>
+  - --out
+  - <result.json>
+  timeout_minutes: 120
+  inputs:
+    research_unit: RQ-20261101-58e4-02
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- docs/audits/2026-11-01-from-scratch/AUDIT.md
+- scripts/research/edge_portfolio_discovery.py
+- scripts/research/edge_data.py
+- HOLDOUT-LOCK
+- 'primary config X1; configs run: X1..X10'
+programme: P6
+status: done
+practice_precedent: 'docs/reference/trading-and-model-practice-principles.md and AUDIT section 5b (docs/audits/2026-11-01-from-scratch/AUDIT.md): <=10 pre-declared
+  configs, discovery ends 2024-06-30, every trial counted, DSR(N=trials)>0.95; Bailey & Lopez de Prado 2014 (DSR); payer literature: Liu-Tsyvinski-Wu 2022 J. Finance'
+last_dispatched_at: '2026-11-01T11:31:13+00:00'
+grading:
+  attested: RULE-RQ20261101-58E4-02-XSEC-DISCOVERY
+  auto: false
+  decision_rule_id: RULE-RQ20261101-58E4-02-XSEC-DISCOVERY
+  evidence:
+  - research/results/RQ-20261101-58e4-02/manual-research-edge-20261101.jsonl
+  - comms/research/RQ-20261101-58e4-02/manual-research-edge-20261101/result.json
+  graded_at: '2026-11-01'
+  grader: manual (lane RESEARCH-EDGE; queue_grade.py cannot grade a manual unit and must not re-queue a same-window replay)
+  note: 'discovery only, holdout not read. Closed: the same-window replay reproduces the same number; a variant is a new trial and needs a new mechanism.'
+  reason: X1 net Sharpe 1.325, stress 1.240, both halves positive (2.132 / 0.259), bootstrap p05 ok; FAILS only DSR(N=10)=0.868 (<0.95). 10 trials. 2022 -2.3%, 2023 +5.6%, 2024H1 -8.7%.
+  rows: 1
+  verdict: fail

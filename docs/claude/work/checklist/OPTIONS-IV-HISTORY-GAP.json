@@ -1,0 +1,19 @@
+{
+  "id": "OPTIONS-IV-HISTORY-GAP",
+  "title": "Data gap (filed 2026-11-01): no keyless option-chain or IV-surface history for a priced straddle test of forecast-vs-implied vol; TLT has no keyless IV series",
+  "phase": null,
+  "state": "queued",
+  "owner": "manager",
+  "lane": "RESEARCH-EDGE",
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [],
+  "blocked_on": [],
+  "note": "FOUND 2026-11-01 (lane RESEARCH-EDGE, unit RQ-20261101-58e4-07, PR #22117). Reachable keyless: CBOE vol INDICES on FRED (VIX, VXN, RVX, GVZ, OVX, VXSLV) = 30-day IV for SPY QQQ IWM GLD USO SLV. NOT reachable: TLT IV (FRED TYVIX/VXTLT 404); any option CHAIN history or surface; Alpaca options (src/units/accounts/alpaca_options_data.py) needs credentials and serves only current 15-min-delayed indicative snapshots, no history. COST OF CLOSING: (a) start collecting daily chain snapshots now via the existing alpaca-options-probe route (free tier, indicative feed) - zero spend but 12+ months to accrue; or (b) buy historical OPRA/chain data (ORATS, Polygon options, CBOE DataShop; roughly tens to hundreds of USD per month, operator decision, not verified here). The variance-swap proxy result says the forecast-minus-IV gap adds nothing over the always-short-variance premium net of cost, so a priced test is only worth buying if the operator wants the variance risk premium itself (short-vol, tail risk). Done when the operator picks (a), (b) or drops it.",
+  "updated_at": "2026-11-01T12:17:08Z",
+  "updated_by": "session_RESEARCH-EDGE",
+  "roadmap": "L-PROGRAMMES",
+  "_seq": 877
+}

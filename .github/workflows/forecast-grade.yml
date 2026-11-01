@@ -45,6 +45,9 @@ jobs:
           git fetch -q origin live-review/rows desk/decisions || echo "::warning::rows/decisions branch fetch failed; main copies only"
           python3 scripts/research/forecast_first_passage.py --live --write \
             || { echo "::warning::forecast_first_passage failed; nothing lands this hour"; exit 0; }
+          # the net-of-cost d_hold / d_mech package grade (RULE-DESK-AM-JUDGEMENT-V1), previously never run: same token, same hour
+          python3 scripts/research/desk_am_judgement_grade.py --live --write \
+            || echo "::warning::desk_am_judgement_grade failed; its committed copy is left as is"
           python3 - <<'PY' >> "$GITHUB_STEP_SUMMARY"
           import json
           d = json.load(open("comms/desk/forecast_grade.json"))
@@ -66,7 +69,22 @@ jobs:
               age_h = (datetime.now(timezone.utc) - t).total_seconds() / 3600
           except Exception:
               pass
-          print("changed=1" if (ledger or age_h > 6) else "changed=0")
+          def am_changed():
+              try:
+                  new = json.load(open("comms/desk/am_judgement_grade.json"))
+              except (OSError, ValueError):
+                  return False
+              old = subprocess.run(["git", "show", "HEAD:comms/desk/am_judgement_grade.json"], capture_output=True, text=True)
+              if old.returncode != 0:
+                  return True
+              try:
+                  prev = json.loads(old.stdout)
+              except ValueError:
+                  return True
+              for d in (new, prev):
+                  d.pop("computed_at", None)
+              return new != prev
+          print("changed=1" if (ledger or age_h > 6 or am_changed()) else "changed=0")
           PY
 
       - name: Land on main (one self-landing PR, when a forecast changed state or the committed grade is >6h old)
@@ -74,9 +92,9 @@ jobs:
         uses: ./.github/actions/commit-to-main
         with:
           token: ${{ secrets.BRANCH_PROTECTION_TOKEN }}
-          paths: comms/desk/forecast_grade.json comms/desk/forecast_ledger.jsonl
+          paths: comms/desk/forecast_grade.json comms/desk/forecast_ledger.jsonl comms/desk/am_judgement_grade.json
           # both files are derived: on a stale-branch conflict adopt main's copy; the next hour regenerates
-          refresh-command: git fetch -q origin main && git checkout FETCH_HEAD -- comms/desk/forecast_grade.json comms/desk/forecast_ledger.jsonl || true
+          refresh-command: git fetch -q origin main && git checkout FETCH_HEAD -- comms/desk/forecast_grade.json comms/desk/forecast_ledger.jsonl comms/desk/am_judgement_grade.json || true
           message: "forecast-grade: first-passage grade of every price forecast"
           pr-title: "forecast-grade: first-passage grade of every price forecast"
           pr-body: "Automated (auto-merge): comms/desk/forecast_grade.json + forecast_ledger.jsonl from scripts/research/forecast_first_passage.py."
