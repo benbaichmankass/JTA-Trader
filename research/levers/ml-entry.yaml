@@ -151,6 +151,19 @@ levers:
         response: 'decile Spearman 0.83-0.89 (rank-informative) but slope of realised on predicted 0.16-0.19 (target 0.7-1.3): predicted net R is about 5x too large, so the score is a RANKING, not an expected R; not usable for confidence-scaled sizing as is. Isotonic remap +0.0120 (delta +0.0031, a fold down to 200 decisions: indeterminate); binned remap +0.0028 (no win)'
         shape: ranking_not_expectation
       shape: ranking_not_expectation
+  stack_v2:
+    r2_gate_bracket:
+      tests:
+      - unit: RQ-20261101-b608-01
+        value: 'stack R2 recipe (matched share) + cost gate 0.06 + bracket 2/4, dev, 3 seeds'
+        response: 'dev +0.0478 vs base +0.0089 (delta +0.0388, 8 of 8 folds, 4 of 4 years, min fold n 1,572); each level accepted; slightly super-additive (marginals +0.0204/+0.0137/+0.0048 vs stand-alone +0.0204/+0.0115/+0.0037); traded-5 -0.0405 -> +0.0315'
+        shape: additive_on_dev
+      - unit: RQ-20261101-b609-01
+        value: 'the ONE W1 read (2026-10-01..31), fixed on dev, claimed in the lock'
+        response: 'FAIL: v2 -0.1161 (n=320, 45 symbols, CI95 -0.231..+0.005) vs frozen v1 reference -0.0405 (n=894); shorts -0.131 vs random shorts +0.100 and always-short +0.152 on that month; gross -0.0714; take rate 15.9% (the cost gate removed calm-market decisions)'
+        shape: dev_gain_did_not_hold
+        note: 'W1 is spent for this stack (variants on window 2). A re-test needs a FRESH window (live forward / November). Dev winners selected from 12+ arms are optimistic; the stack is not rejected as having no edge (n=320, SE about 0.06) but fails its registered bar and is worse than the live v1'
+      shape: dev_gain_did_not_hold
   next_from_map:
   - 'universe/symbol_set: attribute the traded-5 dev shortfall (coins vs 4h cadence vs cost share) from the v1 dev-fold trades, then a structured test the live go/no-go on the traded symbols can rest on (rule written before the run)'
   - 'fs07: replace the single-model score with the mean of K seeds (variance), pick tau as a per-fold score QUANTILE so every fold has a comparable n, rescale T1/T4 scores the same way, keep the fs05 noise control'
@@ -242,6 +255,7 @@ declared:
     - 'recipe R2 (win at a matched decision share; the largest single effect measured so far)'
     - 'cost gate 0.06 (win under its registered rule)'
     - 'bracket 2/4 (not a win on its own; carried because the direction repeats on the held-out year and it costs nothing to include as a one-factor addition in the combined unit)'
+    w1_outcome: 'RQ-20261101-b609-01 FAIL (v2 stack -0.1161, n=320, vs v1 reference -0.0405): no swap; W1 spent for the stack'
     combined_read_window: 'W1 (2026-10-01..31, unspent) or live forward data; the held-out year is spent on two geometries. ONE read, rule written first, new unit'
     still_to_run: ['RQ-20261101-d507-01 (recipe, running)', 'RQ-20261101-b603-01 (horizon/cadence, needs the relabel arm)', 'RQ-20261101-b605-01 (target, after d507-01)', 'RQ-20261101-c692-03 and ML-ENTRY-TP-REVISION (active management)']
   levers:
