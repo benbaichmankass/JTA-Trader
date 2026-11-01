@@ -55,5 +55,19 @@ related:
 - COST-BROKER-SOURCED
 - COST-LEVER-LIVE-LEGS
 programme: P6
-status: queued
+status: done
 practice_precedent: docs/reference/trading-and-model-practice-principles.md (cost accounting before alpha claims); AUDIT section 3 C3
+last_dispatched_at: '2026-11-01T11:46:00+00:00'
+grading:
+  attested: RULE-RQ20261101-58E4-04-COST-LEVER-BOUNDS
+  auto: false
+  decision_rule_id: RULE-RQ20261101-58E4-04-COST-LEVER-BOUNDS
+  evidence:
+  - research/results/RQ-20261101-58e4-04/manual-research-edge-20261101.jsonl
+  - comms/research/RQ-20261101-58e4-04/manual-research-edge-20261101/result.json
+  graded_at: '2026-11-01'
+  grader: manual (lane RESEARCH-EDGE)
+  note: Bounds only; a lever that WORKS needs signal-level replay (not in the journal).
+  reason: 'n=64: net -71.01, est. cost 5.17, gross -65.84; maker-entry max saving 2.70 at 100% fill; no scenario reaches pooled net >= 0 without the no-selection removal artifact'
+  rows: 1
+  verdict: fail
