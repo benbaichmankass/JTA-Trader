@@ -83,6 +83,17 @@ def candidate_verdict(rows: list[dict]) -> tuple[str, str]:
     return "PASS", f"v3 {vs}"
 
 
+def _write_verdict(path: Path, v: dict) -> dict:
+    """Never write a verdict with no population: the runner would reject it as malformed and hide the real cause
+    (PI-20261101-HOPS1447-0001). An empty population becomes read_state producer_failed (the runner accepts only measured|no_data|producer_failed|not_attempted), verdict indeterminate, note could_not_look."""
+    if not str(v.get("population") or "").strip():
+        v = {**v, "verdict": "indeterminate", "read_state": "producer_failed", "n": v.get("n") or 0,
+             "population": "gate produced no population statement: NOT MEASURED",
+             "note": "could_not_look: verdict had no population. " + str(v.get("note") or "")}
+    path.write_text(json.dumps(v, indent=1) + "\n")
+    return v
+
+
 def run(a: argparse.Namespace) -> dict:
     out = Path(a.out)
     cells = out / "cells"
@@ -94,8 +105,7 @@ def run(a: argparse.Namespace) -> dict:
         v = {"verdict": "indeterminate", "read_state": "producer_failed", "n": 0,
              "population": f"{a.leg}: ledger build failed before any measurement (window {a.start}..{a.end}, days={a.days})",
              "note": f"{type(exc).__name__}: {str(exc)[:300]}"}
-        (out / "verdict.json").write_text(json.dumps(v, indent=1) + "\n")
-        return v
+        return _write_verdict(out / "verdict.json", v)
     wins = split_windows(rows, a.recent_from)
     jobs = []
     for win, wr in wins.items():
@@ -117,8 +127,7 @@ def run(a: argparse.Namespace) -> dict:
          "population": f"{a.leg} prop-stack ledger n={len(rows)}; 365d n={len(wins['365d'])}; {a.seeds} seeds x {a.lives} lives; "
                        f"{len(table)} graded cells ({len(ACCOUNTS)} accounts x {len(ARMS)} arms x 2 windows)",
          "cells": table}
-    (out / "verdict.json").write_text(json.dumps(v, indent=1) + "\n")
-    return v
+    return _write_verdict(out / "verdict.json", v)
 
 
 def _synth_ledger(path: Path, mean_gross: float, n: int = 120) -> None:

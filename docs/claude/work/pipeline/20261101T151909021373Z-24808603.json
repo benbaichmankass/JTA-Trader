@@ -1,0 +1,18 @@
+{
+  "based_on": "20261101T150713645683Z-580e729a.json",
+  "due_when": {
+    "check_every_days": 2,
+    "due_date": "2026-11-03",
+    "kind": "date"
+  },
+  "id": "PI-20261101-HOPS1447-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "lane RESEARCH-OPS-20261101-1447",
+    "rerun": "for u in 2df8-01 e5b1-08 e5b1-09 e5b1-10; do python3 -c \"import json,glob;print('$u',json.load(open(glob.glob('comms/research/RQ-20261101-$u/*/verdict.json')[0]))['read_state'])\"; done"
+  },
+  "state": "done",
+  "terminal_reason": "Fixed on PR #22186 (2026-11-01): e5b1-08/09/10 re-armed with --days 2300 (2df8-01 already had it) so fetched history covers the pinned 2020-10-01 start, window and rule unchanged; prop_candidate_gate.py now refuses an empty-population verdict (producer_failed, note could_not_look). Landed_unproven: confirm by the four re-runs landing a measured verdict (rerun: python3 -c over comms/research/RQ-20261101-e5b1-0[89]/*/verdict.json read_state).",
+  "what": "[research harness defect: disjoint-window CONFIRMATION units never graded] RQ-20261101-2df8-01 and e5b1-08/09/10 (confirmations of a4e7-01..04 on a DISJOINT earlier window at the prop stack) all landed read_state producer_failed / verdict not_applicable. Root cause read from e5b1-08's cmd-0.log: exit_lever_ablation.py fold_edges raised 'empty window: 2023-10-18 .. 2023-10-12 20:00' -- the unit's earlier window ENDS before the fetched history STARTS (public archive gave rows only from 2023-10-18), so the arm run died, and prop_candidate_gate.py then wrote a verdict.json with NO `population` (script_run: 'verdict.json malformed: population is required'), which hid the real cause behind a malformed record. Two fixes: (1) prop_candidate_gate.py exception path must write a well-formed verdict.json (population + the exception text) so a harness failure reads as itself; (2) the four confirmation units' window must lie inside data that exists (pick the window from the fetched start, or fetch an earlier source), then re-arm them. These four units carry the replacement-candidate DISJOINT-window twin, without which no batch-A PASS can be acted on (PI-20261031-TD4QC5GP-0005). Not fixed in this lane: out of the four assigned items and it needs a window decision."
+}
