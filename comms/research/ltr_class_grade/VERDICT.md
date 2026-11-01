@@ -100,3 +100,17 @@ close: 1 of 22 unpriced (replay_mismatch). tighten_sl: 7 of 11 (trade_open).
   stamp-back. Schedule `ltr_class_grade.py` under GRADE-EVERYTHING-CONTINUOUSLY.
 - **LTR-CLASS-RULE-PACKAGE-N** (proposal to the manager): count the n of the MD-TRADE-DESK review_rule in PACKAGES (first call
   per package), not calls. Repeated calls on one package are one decision.
+
+## Addendum (13:15Z, manager ask): refused / unmirrored rows
+- **Refused row `LR-20261101T1136Z-pkg-f07b659a7db94e8a`** (a close call from the short_hold lane). Its recorded `packet_sha` is `b9acc317…`. The packet was
+  committed once (`074f6db44`, "machine, byte-exact") and never changed on the branch. Its canonical sha256 is `ca571dbc…`.
+  The recorded sha matches **no** packet on the branch. **The recorded sha is wrong; the packet is not altered.** The VM's
+  original bytes are not readable from here, so "byte-original" rests on the branch history. Filed as row
+  LTR-ROW-PACKET-SHA-DEFECT (due 2026-11-03). No evidence was rewritten.
+- **Population check over the 87 rows on live-review/rows:** 85 packet shas verify, **2 mismatch** (the row above, and
+  `LR-20261026T0410Z-pkg-b1e4fdf9b9d049a3`, a no_recommendation). **5 rows are not mirrored to main**: 1131Z, 1136Z, 1141Z and
+  1146Z on pkg-f07b659a, and `LR-20261026T2311Z-pkg-6a8e3fb325464be3`. All 5 are **in** this grade's population, because the
+  union reads the rows branch directly. They are therefore not part of the could-not-price share.
+- **How the refused call grades.** The pricing uses the row's own state and recommendation, plus the journal and candles,
+  not the packet body, so the sha defect does not change its delta. It prices at +0.599 R (close, replay matches the realised
+  exit). It is one of the 7 close calls on pkg-f07b659a, which counts as one package in the package-level figures above.
