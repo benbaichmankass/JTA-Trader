@@ -1,0 +1,13 @@
+# mechanics_proven registry (operator, 2026-11-01, lane PROMOTION-NO-SOAK; OPERATING-PLAN § 2 "The soak is MECHANICAL").
+# An EVIDENCE INPUT to MD-PROMOTE-S1-S2, not a gate: it says which already-proven execution path a leg rides, so a leg
+# that cleared Stage 0 need not soak on paper again. scripts/ops/soak_state.py::mechanics_proven() decides from SOAKS.json
+# states: a leg is proven when its own soak passed, or (delta: none) another leg on the same path+exchange has a passed soak.
+# delta: none      = config/params only on the path (no new adapter, order-path, broker or bracket/management code)
+# delta: new_code  = needs its own ONE clean small trade (paper, or minimum size on real money)
+# No calendar / sample fields (soak-contract-guard refuses them). Add an entry in the promoting PR. Starts empty on purpose:
+# nothing is claimed proven until a PR registers it and the resolver can verify it from a passed contract.
+legs: {}
+#  example_leg:
+#    path: bybit_perp_bracket_v1
+#    exchange: bybit
+#    delta: none

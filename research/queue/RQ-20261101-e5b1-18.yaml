@@ -1,0 +1,55 @@
+# Hand-authored 2026-11-01 by DAILY-RESEARCH-AUTHORING-20261101 (Tier 1), dispatched by Manager session_01AFoLuJwBvR58WBtD4qc5Gp. Decision rule registered BEFORE any run. Gates: none.
+id: RQ-20261101-e5b1-18
+title: 'Rule hygiene: does every queued authored unit with a decision_rule state an id and registered_before_run: true?'
+cadence: daily
+roadmap:
+- L-OPS
+theme: infra
+priority: 2
+kind: deterministic
+question: 'Does every queued authored unit that has a decision_rule block carry decision_rule.id and registered_before_run: true?'
+why_this_matters: 'A rule without an id cannot be attested by the grader, and one not marked registered-before-run is the post-hoc-rule failure class RULE ONE guards
+  against. Measured 2026-11-01 before authoring: 116 queued authored units, 0 violations, so the detector starts green.'
+why_not_inferential: 'A deterministic self-test of repo state on the runner: the property either holds or it does not. There is no sampling question to power.'
+decision_rule:
+  id: RULE-RQ-20261101e5b118-RULE-REGISTERED-BEFORE-RUN
+  registered_at: '2026-11-01'
+  statistic: scripts/research/infra_selftest.py --check rule_registered_before_run
+  rule: 'PASS IF every queued authored unit with a decision_rule block has a non-empty id and registered_before_run true. FAIL IF any does not: measurement.sample
+    names the units. A producer_failed or no_data record is NOT a verdict.'
+  what_it_does_not_do: Measures nothing about any strategy, model or market; edits no config, registry, account, pipeline item or queue unit.
+  registered_before_run: true
+compute: cpu_light
+value:
+  usd_at_stake_per_month: 40
+  confidence: 0.4
+  bucket: structural
+  basis: 'infrastructure detector: a stand-in figure for the research throughput a silent queue fault costs, not a measured P&L'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 1.0
+  est_minutes: 5
+  basis: Reads only the repo checkout on a GitHub-hosted runner; no network, no secret.
+run:
+  command:
+  - python3
+  - scripts/research/infra_selftest.py
+  - --check
+  - rule_registered_before_run
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 20
+  inputs:
+    research_unit: RQ-20261101-e5b1-18
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- scripts/research/infra_selftest.py
+- scripts/ops/pipeline.py
+- RESEARCH-OPS-20261027-0248
+programme: P6
+status: queued
+practice_precedent: 'none: a deterministic repo-state self-test of queue plumbing; it evaluates no strategy, model or market claim, so no trading or model-practice principle applies'

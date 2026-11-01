@@ -75,6 +75,13 @@ HEAVY_ENTRYPOINTS = [
 # `.fit(`/`lgb.train(` it belongs above, and the reason recorded here is what
 # makes that reviewable.
 DECLARED_LIGHT = {
+    "scripts/research/ml_decision_entry.py":
+        "ML-DECISION-MODELS ENTRY harness: fits LightGBM on public Binance Vision 1h klines in a lane container or a "
+        "GitHub runner. Its queue units (RQ-20261101-c692-01/-04/-06) declare compute cpu_long (backend github_runner), "
+        "never needs_vm_data, so it is never routed to the 6 GB trainer.",
+    "scripts/research/ml_decision_brackets.py":
+        "ML-DECISION-MODELS BRACKETS harness: same data and route as ml_decision_entry.py (unit RQ-20261101-c692-02, "
+        "compute cpu_long, github_runner); never routed to the trainer.",
     "scripts/research/compute_smoke.py":
         "RESEARCH-ROUTER plumbing smoke: one 4096x4096 fp16 matmul loop (GPU, on a Kaggle kernel) or one "
         "1024x1024 fp32 numpy loop (CPU, on a runner) for a few seconds. It is never routed to the trainer "

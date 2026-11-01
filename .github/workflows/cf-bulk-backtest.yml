@@ -1,0 +1,118 @@
+name: cf-bulk-backtest
+
+# CF-B1-BULK-BACKTEST (design docs/plans/counterfactual-everywhere-DESIGN-2026-10-29.md § 3). Bulk counterfactual replay of every
+# distinct backtest trade job on GitHub-hosted runners: plan -> sharded matrix -> reduce. No Claude, no API credits, no secrets;
+# it only READS the checked-out corpus + the keyless Binance Vision archive and UPLOADS artifacts (shards, manifest, summary).
+# Gates this adds or changes: none. Nothing here touches the trade path.
+# no-durable-result: artifacts-only first run (shards, manifest.json, summary.json); landing the small manifest + summary under comms/research/ through a research-result record is the follow-up once one real shard's size and the result are read (checklist row CF-B1-BULK-BACKTEST, note)
+# Resumable: shard ids hash their job keys + the engine schema; re-dispatch with the same run_id and a prior run's artifacts is
+# not needed because a shard is cheap to redo; a failed shard job is retried by re-dispatching (batches are independent).
+
+on:
+  workflow_dispatch:
+    inputs:
+      run_id:
+        description: "Run id (names the artifacts), e.g. cfb-20261101"
+        required: true
+      batches:
+        description: "Matrix width (balanced batches of shards)"
+        default: "24"
+      n_random:
+        description: "Random-control draws per job (engine default 300)"
+        default: "300"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: cf-bulk-backtest-${{ github.event.inputs.run_id }}
+  cancel-in-progress: false
+
+jobs:
+  plan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    outputs:
+      matrix: ${{ steps.m.outputs.matrix }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install numpy pandas pyyaml requests
+      - name: Plan shards
+        env:
+          RUN_ID: ${{ inputs.run_id }}
+          BATCHES: ${{ inputs.batches }}
+        run: python3 scripts/research/cf_bulk.py plan --run-id "$RUN_ID" --out out --batches "$BATCHES"
+      - id: m
+        run: echo "matrix=$(python3 -c "import json;print(json.dumps({'include':[{'batch':b['batch'],'index':' '.join(map(str,b['index']))} for b in json.load(open('out/batches.json'))]}))")" >> "$GITHUB_OUTPUT"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ inputs.run_id }}-plan
+          path: out/plan.json
+
+  shard:
+    needs: plan
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+    strategy:
+      fail-fast: false
+      max-parallel: 8
+      matrix: ${{ fromJson(needs.plan.outputs.matrix) }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install numpy pandas pyyaml requests
+      - uses: actions/download-artifact@v4
+        with:
+          name: ${{ inputs.run_id }}-plan
+          path: out
+      - name: Grade this batch's shards
+        env:
+          RUN_ID: ${{ inputs.run_id }}
+          INDEX: ${{ matrix.index }}
+          N_RANDOM: ${{ inputs.n_random }}
+        run: python3 scripts/research/cf_bulk.py shard --run-id "$RUN_ID" --out out --index $INDEX --n-random "$N_RANDOM"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ${{ inputs.run_id }}-shards-${{ matrix.batch }}
+          path: out/shards
+          if-no-files-found: ignore
+
+  reduce:
+    needs: shard
+    if: always() && needs.plan.result == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install numpy pandas pyyaml requests
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: ${{ inputs.run_id }}-shards-*
+          path: out/shards
+          merge-multiple: true
+      - uses: actions/download-artifact@v4
+        with:
+          name: ${{ inputs.run_id }}-plan
+          path: out
+      - run: python3 scripts/research/cf_bulk.py reduce --out out
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ inputs.run_id }}-result
+          path: |
+            out/manifest.json
+            out/summary.json

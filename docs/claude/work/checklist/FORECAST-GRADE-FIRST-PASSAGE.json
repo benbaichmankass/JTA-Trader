@@ -1,0 +1,33 @@
+{
+  "id": "FORECAST-GRADE-FIRST-PASSAGE",
+  "title": "Price predictions are graded first-passage, continuously: run the live-review forecast grader on a schedule, report target-first / stop-first / timeout as three classes, resolve same-bar double touches from 1m, and feed the outcome to the claude_judgments ML family as a label",
+  "phase": null,
+  "state": "landed_unproven",
+  "owner": null,
+  "lane": "FORECAST-GRADE-FIRST-PASSAGE",
+  "model": "claude-sonnet-5-5",
+  "ceiling_usd": 6,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [
+    22077
+  ],
+  "blocked_on": [],
+  "note": "2026-11-01 lane: PR #22077 (landing hold, claude_judgments.py Tier-2 by name; CI green at 6216b57c1) adds scripts/research/forecast_first_passage.py, forecast-grade.yml (hourly :41), fc_outcome/fc_resolved_at. Manual live run 09:0xZ over 44 forecasts (34 live_review, 10 desk_entry; 142 no_trade carry none): target_first 2, invalidation_first 8, expired 21, pending 2, tie_unresolved 0, no_data 11 (closed-market candles, re-checked); both AVAX reviews invalidation_first 08:14Z (matches raw 1m). CLOSES ON: first SCHEDULED forecast-grade run after #22077 lands and its committed comms/desk/forecast_grade.json population. 1m tie resolver = forecast_first_passage.resolve_same_bar (ML-DECISION-MODELS had none on main).",
+  "priority_rank": 2,
+  "updated_at": "2026-11-01T10:13:09Z",
+  "updated_by": "session_01AFoLuK13bdf4iNCUDiUvUX",
+  "roadmap": [
+    "L-ML-LIVE"
+  ],
+  "observation": {
+    "what": "first scheduled forecast-grade.yml run after #22077 lands: comms/desk/forecast_grade.json committed with population (live_review + desk_entry forecasts), three classes, Brier per class, pending and tie_unresolved counts",
+    "how_to_check": "gh workflow run list forecast-grade (or dispatch once), then read comms/desk/forecast_grade.json population/pooled on main",
+    "due_by": "2026-11-02T12:00:00Z"
+  },
+  "writeback": {
+    "roadmap": "none: grader and label column feed L-ML-LIVE as tooling; no milestone status changes until the first scheduled run is observed",
+    "arch": "none: no architecture contract changes; read-only grader, no gate added"
+  },
+  "_seq": 859
+}

@@ -1,7 +1,7 @@
 {
  "schema": "stage_aware_v1",
- "generated_at": "2026-10-31T05:20:48.106235+00:00",
- "utc_date": "2026-10-31",
+ "generated_at": "2026-11-01T05:19:54.276088+00:00",
+ "utc_date": "2026-11-01",
  "generated_by": "scripts/ops/strategy_review_stage_aware.py",
  "graded": 48,
  "verdict_reached": 4,
@@ -106,9 +106,9 @@
    "actionable": false,
    "disposition": "insufficient-data",
    "execution": "live",
-   "n_needed": "needs 10 more entry fill(s) and 10 more package-referenced exit fill(s) to clear the n=10/side floor (currently entry=0, exit=0); no fill-rate basis to date an ETA from this run alone — re-check next scheduled pass",
+   "n_needed": "needs 9 more entry fill(s) and 10 more package-referenced exit fill(s) to clear the n=10/side floor (currently entry=1, exit=0); no fill-rate basis to date an ETA from this run alone — re-check next scheduled pass",
    "eta": "re-check next scheduled pass",
-   "reason": "flowing; cost fidelity insufficient_n (entry n=0, exit n=0; need >= 10 each)"
+   "reason": "flowing; cost fidelity insufficient_n (entry n=1, exit n=0; need >= 10 each)"
   },
   {
    "stage": "S1",
@@ -164,7 +164,7 @@
    "execution": "live",
    "n_needed": "a per-tick account-election read (e.g. the conviction_arbitration/arbitration_fanout_soak log, or a live dispatch trace) showing this leg either winning at least once, or never winning across a large contested-tick sample",
    "eta": "re-check next scheduled pass",
-   "reason": "starved (22 intent(s), 0 received, no open position) but contends its symbol on this SAME account against live sibling(s) ['claude_desk', 'e4_oi_shock_1h', 'fade_breakout_4h', 'htf_pullback_trend_2h', 'ict_scalp_5m', 'squeeze_breakout_4h', 'trend_donchian', 'trend_donchian_1h', 'turtle_soup'] — src/runtime/intents.py elects only ONE strategy per (account, symbol) per tick, so losing that election every time produces this exact shape without the leg ever being mechanically dead. Cannot be graded kill without a live per-tick election trace."
+   "reason": "starved (26 intent(s), 0 received, no open position) but contends its symbol on this SAME account against live sibling(s) ['claude_desk', 'e4_oi_shock_1h', 'fade_breakout_4h', 'htf_pullback_trend_2h', 'ict_scalp_5m', 'squeeze_breakout_4h', 'trend_donchian', 'trend_donchian_1h', 'turtle_soup'] — src/runtime/intents.py elects only ONE strategy per (account, symbol) per tick, so losing that election every time produces this exact shape without the leg ever being mechanically dead. Cannot be graded kill without a live per-tick election trace."
   },
   {
    "stage": "S1",
@@ -262,7 +262,7 @@
    "execution": "live",
    "n_needed": null,
    "eta": null,
-   "reason": "flowing (intents=3, received=1); cost fidelity consistent (n=23, roundtrip_mean=-1.518bps vs modelled 3.0bps)"
+   "reason": "flowing (intents=14, received=1); cost fidelity consistent (n=23, roundtrip_mean=-1.518bps vs modelled 3.0bps)"
   },
   {
    "stage": "S1",
@@ -276,7 +276,7 @@
    "execution": "live",
    "n_needed": null,
    "eta": null,
-   "reason": "flowing (intents=45, received=2); cost fidelity consistent (n=10, roundtrip_mean=-1.045bps vs modelled 3.0bps)"
+   "reason": "flowing (intents=53, received=3); cost fidelity consistent (n=11, roundtrip_mean=-1.115bps vs modelled 3.0bps)"
   },
   {
    "stage": "S1",
@@ -290,7 +290,7 @@
    "execution": "live",
    "n_needed": "more fills on both sides than currently measured (n=22); no fixed floor for this state",
    "eta": "re-check next scheduled pass",
-   "reason": "flowing; cost fidelity inconclusive: CI95 [-0.941, 5.599] straddles the 5.0bps threshold over n=22 — more fills would resolve it"
+   "reason": "flowing; cost fidelity inconclusive: CI95 [-0.923, 5.757] straddles the 5.0bps threshold over n=22 — more fills would resolve it"
   },
   {
    "stage": "S1",
@@ -682,17 +682,17 @@
    "actionable": false,
    "r4_status": "abstain_thin",
    "chosen_source": "real_money",
-   "n_closed": 17,
-   "pnl_coverage_measured": 0.6471,
+   "n_closed": 18,
+   "pnl_coverage_measured": 0.6667,
    "coverage_floor": 0.6,
    "min_trades": 40,
-   "net_usd_measured": 9.7831,
-   "net_r_net_of_full_cost": 6.5052,
-   "r_population": 17,
+   "net_usd_measured": 7.5438,
+   "net_r_net_of_full_cost": 5.6927,
+   "r_population": 18,
    "t3_windows_r": [],
    "t3_p10": -5.29651,
    "abstain": "thin",
-   "reason": "fewer than 40 closed trades on either book: 17 closed rows < min_trades 40"
+   "reason": "fewer than 40 closed trades on either book: 18 closed rows < min_trades 40"
   },
   {
    "stage": "S2",
@@ -726,17 +726,17 @@
    "actionable": false,
    "r4_status": "abstain_thin",
    "chosen_source": "real_money",
-   "n_closed": 7,
-   "pnl_coverage_measured": 0.5714,
+   "n_closed": 8,
+   "pnl_coverage_measured": 0.625,
    "coverage_floor": 0.6,
    "min_trades": 40,
-   "net_usd_measured": -7.7079,
-   "net_r_net_of_full_cost": -0.9443,
-   "r_population": 7,
+   "net_usd_measured": -8.1141,
+   "net_r_net_of_full_cost": -1.1438,
+   "r_population": 8,
    "t3_windows_r": [],
    "t3_p10": -4.07226,
    "abstain": "thin",
-   "reason": "fewer than 40 closed trades on either book: 7 closed rows < min_trades 40"
+   "reason": "fewer than 40 closed trades on either book: 8 closed rows < min_trades 40"
   },
   {
    "stage": "S2",

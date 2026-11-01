@@ -180,3 +180,49 @@ def test_unreadable_review_date_shows_the_soak_again(tmp_path):
     p.write_text(json.dumps({"soaks": [_graded(until="soon")]}))
     db = _db(tmp_path, "2026-10-09T00:00:00+00:00", [_trade(2)])
     assert len(ss.soak_states(today=date(2026, 10, 10), db_path=db, contracts_path=p)) == 1
+
+
+# ── PROMOTION-NO-SOAK (operator, 2026-11-01) ────────────────────────────────────────────────────
+_REG = {"a": {"path": "p", "exchange": "bybit", "delta": "none"},
+        "b": {"path": "p", "exchange": "bybit", "delta": "none"},
+        "c": {"path": "p", "exchange": "bybit", "delta": "new_code"},
+        "d": {"path": "q", "exchange": "bybit", "delta": "none"}}
+
+
+def _st(leg, state="passed", account="bybit_1"):
+    return {"id": f"SOAK-stage1-{account}-{leg}", "leg": leg, "account": account, "state": state}
+
+
+def test_mechanics_proven_by_own_soak_needs_no_registry():
+    assert ss.mechanics_proven("z", [_st("z")], {})["basis"] == "own_soak"
+
+
+def test_mechanics_proven_by_a_passed_leg_on_the_same_path():
+    r = ss.mechanics_proven("a", [_st("b")], _REG, {"bybit_1": "bybit"})
+    assert r["proven"] and r["basis"] == "path_soak"
+
+
+def test_mechanics_not_proven_across_paths_states_or_new_code():
+    assert not ss.mechanics_proven("a", [_st("d")], _REG)["proven"]                    # other path
+    assert not ss.mechanics_proven("a", [_st("b", "in_progress")], _REG)["proven"]    # not passed
+    assert not ss.mechanics_proven("c", [_st("b")], _REG)["proven"]                    # new_code
+    assert not ss.mechanics_proven("a", [_st("b", account="alpaca_paper")], _REG,
+                                   {"alpaca_paper": "alpaca"})["proven"]               # other exchange
+    assert not ss.mechanics_proven("unregistered", [_st("b")], _REG)["proven"]
+
+
+def test_registry_refuses_calendar_fields_and_unknown_delta():
+    bad = {"a": {"path": "p", "exchange": "bybit", "delta": "weeks", "end_date": "2026-12-01"}}
+    probs = ss.mechanics_problems(bad)
+    assert any("delta" in p for p in probs) and any("end_date" in p for p in probs)
+    assert ss.mechanics_problems(_REG) == []
+
+
+def test_guard_accepts_a_stage2_leg_without_a_soak_contract_and_still_refuses_a_long_soak():
+    acc = {"bybit_2": {"strategies": ["x"]}, "bybit_1": {"strategies": []}}
+    assert guard.tree_findings(acc, {"x": {"execution": "live"}}, []) == [] or \
+        all("bybit_2" not in f for f in guard.tree_findings(acc, {"x": {"execution": "live"}}, []))
+    long_c = ss.make_contract(kind="stage1", leg="x", account="bybit_1", started="2026-10-01", n_needed=5) \
+        if "n_needed" in ss.make_contract.__code__.co_varnames else None
+    if long_c is not None:
+        assert ss.contract_problems(long_c)

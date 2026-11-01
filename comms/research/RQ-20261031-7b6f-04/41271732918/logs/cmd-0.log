@@ -1,0 +1,31 @@
+Fetching XRPUSDT 15 candles 2025-09-27 -> 2026-11-01 (source=binance_vision) …
+  vision monthly 2025-09: 2880 bars (384 kept)
+  vision monthly 2025-10: 2976 bars (3360 kept)
+  vision monthly 2025-11: 2880 bars (6240 kept)
+  vision monthly 2025-12: 2976 bars (9216 kept)
+  vision monthly 2026-01: 2976 bars (12192 kept)
+  vision monthly 2026-02: 2688 bars (14880 kept)
+  vision monthly 2026-03: 2976 bars (17856 kept)
+  vision monthly 2026-04: 2880 bars (20736 kept)
+  vision monthly 2026-05: 2976 bars (23712 kept)
+  vision monthly 2026-06: 2880 bars (26592 kept)
+  vision monthly 2026-07: 2976 bars (29568 kept)
+  vision monthly 2026-08: 2976 bars (32544 kept)
+  vision monthly 2026-09: 2880 bars (35424 kept)
+  vision daily 2026-10: 38208 bars kept so far
+Wrote 38208 rows (2025-09-27 -> 2026-10-30) to /tmp/exit_lever_ablation_jjv62wa8/ict_scalp_xrp_15m__data.csv
+[A] /opt/hostedtoolcache/Python/3.11.17/x64/bin/python3 /home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_ict_scalp.py --data <data> --symbol XRPUSDT --timeframe 15m --strategy-name ict_scalp_xrp_15m --fee-bps-roundtrip 11.0 --emit-trades comms/research/RQ-20261031-7b6f-04/41271732918/arms/A__trades.jsonl --json comms/research/RQ-20261031-7b6f-04/41271732918/arms/A__bt.json --htf-rule 1h --htf-ema-period 20 --sim-breakeven --start 2025-10-05 --end 2026-10-04 23:59
+[AX40] /opt/hostedtoolcache/Python/3.11.17/x64/bin/python3 /home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_ict_scalp.py --data <data> --symbol XRPUSDT --timeframe 15m --strategy-name ict_scalp_xrp_15m --fee-bps-roundtrip 11.0 --emit-trades comms/research/RQ-20261031-7b6f-04/41271732918/arms/AX40__trades.jsonl --json comms/research/RQ-20261031-7b6f-04/41271732918/arms/AX40__bt.json --htf-rule 1h --htf-ema-period 20 --sim-breakeven --adx-max 40 --start 2025-10-05 --end 2026-10-04 23:59
+ERROR: arm AX40 harness exit 2:               [--tp-retarget-pull-r TP_RETARGET_PULL_R]
+                             [--no-tp] [--emit-trades PATH] [--stamp-regime]
+                             [--vol-spec-json PATH] [--be-arm-on-touch]
+                             [--sim-breakeven] [--stale-exit-bars N]
+                             [--stale-exit-below-r R] [--giveback-min-mfe-r R]
+                             [--bank-frac F] [--bank-at-r R] [--tp-at-r R]
+                             [--atr-sl-buffer-mult M] [--giveback-r R]
+                             [--entry-mode {market,limit}]
+                             [--limit-expire-bars N]
+                             [--maker-fee-bps MAKER_FEE_BPS]
+                             [--taker-fee-bps TAKER_FEE_BPS]
+backtest_ict_scalp.py: error: unrecognized arguments: --adx-max 40
+

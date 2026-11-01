@@ -2,23 +2,32 @@
   "id": "CF-B1-BULK-BACKTEST",
   "title": "Bulk counterfactual run on non-Claude compute over the 352,063 distinct backtest replay jobs (CF-BULK-BT, CF-BULK-POSTEXIT), sharded, idempotent, manifest + summary",
   "phase": null,
-  "state": "queued",
-  "owner": null,
-  "lane": null,
+  "state": "landed_unproven",
+  "owner": "session_01AFoLuKZduX4XRZ5pFQ1HBE",
+  "lane": "CF-B1-BULK-BACKTEST",
   "model": "sonnet",
   "ceiling_usd": 8,
   "spend_usd": null,
   "tier": 1,
-  "prs": [],
-  "blocked_on": [
-    "CF-B0-ENGINE-LIFT"
+  "prs": [
+    22026
   ],
-  "note": "Phase from docs/plans/counterfactual-everywhere-DESIGN-2026-10-29.md \u00a7 5 (parent COUNTERFACTUAL-EVERYWHERE). No gates added.",
+  "blocked_on": [],
+  "note": "Built by lane session session_01AFoLuKZduX4XRZ5pFQ1HBE (Sonnet, ceiling $8). Re-counted 2026-11-01 on origin/main: 4,068 trade files, 1,584,685 rows, 425,635 distinct (strategy,symbol,entry_time,direction,sl) jobs; 337,216 carry a symbol, 88,419 have no symbol in the row (could_not_grade symbol_unresolved), 19k+ no resolvable timeframe, non-crypto has no keyless bar source wired (no_bar_source). Pilot: 3 shards, 3,425 jobs, 2,701 graded, schema cf_trade/1 verified, shard re-run is a no-op, ~25 ms/job grading. Full run NOT yet dispatched: needs a cf-bulk-backtest.yml workflow_dispatch (no dispatch tool in lane). Phase from docs/plans/counterfactual-everywhere-DESIGN-2026-10-29.md section 5. No gates added. FOLLOW-UP (filed): the workflow is artifacts-only (annotated no-durable-result); land manifest.json + summary.json under comms/research/ via a research-result record after the first full run. Merged #22026. Full run DISPATCHED 2026-11-01T04:31Z: cf-bulk-backtest.yml run_id cfb-20261101 (24 batches, n_random 300, 425,635 jobs planned). Result = artifact cfb-20261101-result (manifest.json, summary.json); not yet read. Pilot caveat: replayed_actual fidelity poor (median gap 0.32 R), use arms vs original_brackets only. Follow-up: land manifest+summary under comms/research/ via research-result record. FULL RUN COMPLETE 2026-11-01 (run 41273371826, run_id cfb-20261101, 24 shard jobs + plan + reduce all success, ~21 min wall): 204/204 shards done, 425,635/425,635 jobs, 311,180 graded (73.1%); could_not_grade: symbol_unresolved 88,419, timeframe_unresolved 19,192, no_bar_source 6,844. Artifact cfb-20261101-result (manifest.json, summary.json; not yet read, per-leg CF-BULK-BT / CF-BULK-POSTEXIT verdicts are in summary.json). Still open: land manifest+summary under comms/research/, symbol/timeframe resolver for the 107,611 unresolved, non-crypto bar source.",
   "priority_rank": 1,
-  "updated_at": "2026-10-29T21:23:47Z",
+  "updated_at": "2026-11-01T06:50:45Z",
   "updated_by": "session_01AFoLuLpoWiu1SEu6vTJpKk",
   "roadmap": [
     "L-AM-STANDARD"
   ],
+  "observation": {
+    "what": "the cf-bulk-backtest workflow ran end to end on runners: manifest.json n_shards_done == n_shards_planned and summary.json carries CF-BULK-BT and CF-BULK-POSTEXIT leg verdicts",
+    "how_to_check": "dispatch cf-bulk-backtest.yml (run_id cfb-<date>); read artifact <run_id>-result: manifest.n_graded, could_not_grade_by_reason, shards_missing == []",
+    "due_by": "2026-11-08"
+  },
+  "writeback": {
+    "roadmap": "L-AM-STANDARD: cf_bulk.py + cf-bulk-backtest.yml shard the backtest corpus over the cf_trade/1 grader on runner compute; population re-counted 425,635 distinct jobs (row claim 352,063 stale); replayed_actual fidelity vs harness net_r poor (pilot median gap 0.32 R, 39% within 0.10 R) so arms vs original_brackets are usable, replayed_actual is not",
+    "arch": "none: research tooling, no runtime component or contract changed"
+  },
   "_seq": 827
 }

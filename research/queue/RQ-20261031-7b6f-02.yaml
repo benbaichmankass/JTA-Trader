@@ -91,7 +91,7 @@ run:
   inputs:
     research_unit: RQ-20261031-7b6f-02
   timeout_minutes: 150
-status: queued
+status: done
 theme: regime
 title: 'TRANSFER of ADX ceiling AX40/AX50 (AX40/AX50) to avax_pullback_2h: does any arm beat the declared leg net of cost over the leg''s declared window?'
 value:
@@ -102,3 +102,17 @@ value:
 why_this_matters: 'Transfer of a lever that PASSED elsewhere (ADX ceiling AX40/AX50 (passed on 4 of 10 legs)). A pass on one leg is a discovery; a carry to a sibling
   leg separates a leg-specific artifact (FAIL) from a lever that carries across the family (PASS). Decision it changes: whether the lever is queued for a Tier-3 note
   on avax_pullback_2h or stays an observation. PASS = lead for a Tier-3 note, never a config edit; FAIL closes this leg x arm-grid only, lever family stays open.'
+last_dispatched_at: '2026-11-01T04:05:48+00:00'
+grading:
+  attested: RULERQ202610317B6F02
+  auto: true
+  decision_rule_id: RULERQ202610317B6F02
+  evidence:
+  - research/results/RQ-20261031-7b6f-02/41271729850.jsonl
+  graded_at: '2026-11-01'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail
