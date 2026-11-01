@@ -1,0 +1,82 @@
+# Hand-authored 2026-11-01 by lane ML-FEATURE-INFRA (Tier 1) on the manager request 2026-11-01 ~12:03Z. Decision rule registered BEFORE any run. Gates: none.
+id: RQ-20261101-fs05-01
+title: 'ENTRY recipe fix, not column fix: does stronger fixed regularisation or fold-internal shadow-feature selection make the pooled recipe immune to junk columns, and only then admit real feature families? Dev folds only, noise controls built in'
+status: blocked
+cadence: once
+theme: ml_health
+priority: 1
+roadmap:
+- L-ML-LIVE
+kind: experiment
+practice_precedent: 'T1, M6 (docs/reference/trading-and-model-practice-principles.md): purged + embargoed walk-forward; shadow-feature (Boruta-style) controls so a model that cannot reject noise columns is not trusted to admit real ones.'
+question: 'Baseline recipe (arm A) loses 0.017 leave-one-fold-out net R per decision when 9 pure-noise columns are added (A +0.0010, A+9 noise -0.0157; 2026-11-01). Arms: R0 baseline recipe; R1 colsample_bytree 0.5, min_child_samples 2000, reg_lambda 50; R2 R1 plus num_leaves 15 and learning_rate 0.02 with 450 trees; R3 baseline parameters with fold-internal shadow selection (inside each training fold, fit on the first 80 percent by time, keep a real column only if its permutation importance on the last 20 percent, after a 7-day embargo, exceeds the maximum importance of 9 injected noise columns). For each arm four feature sets: S0 the 20 baseline columns, S1 S0 plus 9 noise columns (the NOISE CONTROL), S2 S0 plus all families F1..F5 (arm G of fs01-01), S3 S0 plus the families admitted by fs01-01 (may be empty). Three seeds per arm and set (7, 11, 13) give the seed-to-seed spread. No sealed window is read.'
+why_this_matters: 'Operator 2026-11-01: 20 features is a regression equation, not algorithmic trading; manager 2026-11-01 ~12:03Z: a family ablation at +0.010 cannot admit anything when the recipe overfits with any extra column, so fix the recipe, then the columns.'
+power:
+  expected_n: 60000
+  min_detectable_effect: 0.01
+  effect_units: metric
+  sd: 1.0
+  design: paired
+  alpha: 0.05
+  power: 0.8
+  basis: 'INFERRED: dev folds hold about 6 x 10^4 scored decisions at the chosen tau (arm A, 2026-11-01: 67,860 leave-one-fold-out). The seed-to-seed spread of arm A (measured, A vs A2: 0.0017 leave-one-fold-out, 0.003 to 0.005 pooled at a fixed tau) is the noise floor the rule is set against.'
+  feasibility:
+    source: none
+    accrual_basis: Replays public history through 2025-09-30 (dev folds only); nothing accrues.
+decision_rule:
+  id: RULE-20261101-fs05-01
+  registered_at: '2026-11-01'
+  registered_before_run: true
+  statistic: 'Per arm, set, seed and fold: n and sum of net R at the leave-one-fold-out tau; pooled leave-one-fold-out mean; across-seed spread; noise-control delta; per-fold comparison; shadow-selection keep counts per fold for R3.'
+  rule: "NOISE-IMMUNE: an arm passes the noise control iff mean over seeds of (LOFO(S1) - LOFO(S0)) >= -spread, where spread = max over sets of the across-seed range of LOFO(S0). A recipe that is not noise-immune admits NOTHING. FAMILY ADMISSION (only for noise-immune arms): S2 or S3 beats S0 by >= 2 x spread on the mean over seeds AND is better in >= 6 of 8 folds on the mean over seeds. RESULT: the arm with the highest S0 mean among noise-immune arms is the 'fixed recipe'; if none is noise-immune the result is 'no recipe fix found' and the next lever is the target (RQ-20261101-fs06-01). Thresholds are not changed after any result. INDETERMINATE if spread cannot be computed (fewer than 3 seeds) or any fold has fewer than 1000 scored decisions."
+  what_it_does_not_do: 'Reads no sealed window (dev folds only), serves nothing, changes no config, places no order, sizes nothing.'
+  min_n: 1000 dev decisions per fold
+compute: cpu_long
+value:
+  bucket: ai_trader
+  usd_at_stake_per_month: 400
+  confidence: 0.2
+  basis: 'stand-in: the operator priority-1 goal (ML decision makers live); not a P&L measurement.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 8.0
+  est_minutes: 360
+  why_runner: Keyless public Binance Vision archives; GBDT on CPU.
+  basis: 'MEASURED 2026-11-01: one 8-fold arm of the baseline recipe takes about 480 s on 4 threads (arm A); this unit runs a fixed number of arms.'
+run:
+  workflow: research-script-run.yml
+  command:
+  - bash
+  - scripts/research/ml_entry_v2_run.sh
+  - recipe
+  - '{unit}'
+  - '{out_dir}'
+  timeout_minutes: 600
+  inputs:
+    research_unit: RQ-20261101-fs05-01
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- ML-FS-RECIPE
+- ML-FEATURE-INFRA
+- RQ-20261101-fs01-01
+- RQ-20261101-c692-01
+- docs/research/ml-feature-inventory-2026-11-01.md
+what_it_does_not_do: Registers, serves or promotes nothing; changes no config; places no order; sizes nothing; reads no sealed window.
+blocked_on:
+- kind: harness
+  what: 'the recipe-arm subcommand (regularisation configs R1/R2, shadow selection R3, noise sets, seeds) in scripts/research/ml_entry_v2.py'
+  clears_when: 'lands on main with a self-test that a noise column is injected and that no sealed date is read (planned 2026-11-01T17:00Z, row ML-FS-RECIPE); then git-mv to research/queue/ with status queued (rule unchanged)'
+ml_consumer:
+  consumer: ML-ENTRY-LIVE-ADAPTER
+  decision: 'which regularisation and target the ENTRY v2 recipe uses before any feature family is added; feeds the single pre-registered forward read'
+  legs:
+  - xrp_pullback_2h
+  - trend_donchian_eth_4h
+  - trend_donchian_xrp_4h
+  - ada_pullback_2h
+  - trend_donchian_sol_prop
+  book: money

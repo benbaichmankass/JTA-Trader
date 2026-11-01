@@ -35,7 +35,7 @@ import pandas as pd
 import yaml
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
-UA = {"User-Agent": "Mozilla/5.0 (jta-trader market-data-lake)"}
+UA = {"User-Agent": "jta-trader-market-data-lake/1 (research; contact via github.com/benbaichmankass)"}
 REVISED = {"CPIAUCSL", "CPILFESL", "PCEPILFE", "UNRATE", "PAYEMS", "INDPRO", "M2SL", "UMCSENT", "HOUST", "RSAFS",
            "ICSA", "NFCI", "STLFSI4"}
 
@@ -60,10 +60,57 @@ def _get(url: str, tries: int = 6, timeout: int = 60) -> bytes:
     raise RuntimeError(f"GET failed: {url}: {last}")
 
 
-def _write_manifest(out: Path, name: str, entries: List[Dict]) -> None:
+def _write_manifest(out: Path, name: str, entries: List[Dict], unique: bool = False) -> None:
+    """unique=True: a fragment name no other publisher run can collide with (several workflows upload fragments to
+    the lake's _manifests/; hf_publish.py manifest folds every fragment into MANIFEST.json idempotently)."""
     d = out / "_manifests"
     d.mkdir(parents=True, exist_ok=True)
+    if unique:
+        import uuid
+        name = f"{name}-{datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%S')}-{uuid.uuid4().hex[:8]}"
     (d / f"{name}.json").write_text(json.dumps(entries, indent=1))
+
+
+def _lake_previous_manifest(path: str = "") -> Dict:
+    """The lake's current MANIFEST: from --prev-manifest if given, else from HF when HF_TOKEN is set, else empty."""
+    import os
+    if path and Path(path).exists():
+        return json.loads(Path(path).read_text())
+    if not os.environ.get("HF_TOKEN"):
+        return {"files": []}
+    try:
+        from huggingface_hub import hf_hub_download
+        sys.path.insert(0, str(Path(__file__).resolve().parent))
+        from hf_publish import _repo_from_config
+        return json.loads(Path(hf_hub_download(_repo_from_config(), "MANIFEST.json", repo_type="dataset",
+                                               token=os.environ["HF_TOKEN"])).read_text())
+    except Exception:
+        return {"files": []}
+
+
+def _lake_download(rel: str) -> Optional[Path]:
+    import os
+    try:
+        from huggingface_hub import hf_hub_download
+        sys.path.insert(0, str(Path(__file__).resolve().parent))
+        from hf_publish import _repo_from_config
+        return Path(hf_hub_download(_repo_from_config(), rel, repo_type="dataset", token=os.environ.get("HF_TOKEN")))
+    except Exception:
+        return None
+
+
+def merge_year_partition(new: pd.DataFrame, existing: Optional[pd.DataFrame], key: str = "ts",
+                         replace_months: Optional[set] = None) -> pd.DataFrame:
+    """A yearly partition rebuilt from a PARTIAL source never shrinks: rows of the months the source supplies replace
+    those months in the existing lake file; every other month of the existing file is kept."""
+    if existing is None or existing.empty:
+        return new.sort_values(key).reset_index(drop=True)
+    ex = existing.copy()
+    ex[key] = pd.to_datetime(ex[key], utc=True)
+    if replace_months:
+        ex = ex[~ex[key].dt.strftime("%Y-%m").isin(replace_months)]
+    out = pd.concat([ex, new], ignore_index=True).drop_duplicates(key, keep="last")
+    return out.sort_values(key).reset_index(drop=True)
 
 
 def _entry(asset_class, market, tf, symbol, df, path, out, **kw) -> Dict:
@@ -194,56 +241,415 @@ TF_MIN = {"1m": 1, "5m": 5, "15m": 15, "1h": 60, "1d": 1440}
 
 
 def cmd_import_etf(a) -> int:
-    """Re-shape the ETF-HISTORY-PIPELINE store (<SYM>/<tf>.parquet, column ``timestamp``) into the lake layout
-    us_equity/alpaca/<tf>/<SYM>.parquet (column ``ts``), carrying its MANIFEST (feed, adjustment) per series.
-    The ETF lane owns the fetch; this only publishes what it built."""
+    """Publish ETF-HISTORY-PIPELINE bars into the lake (that lane's contract, 2026-11-01 13:44Z):
+    source  <src>/<SYM>/<tf>/<YYYY-MM>.parquet (1m base, monthly) -- or legacy <YYYY>.parquet -- column ``timestamp``;
+            <src>/MANIFEST.json series["SYM/tf"] = {status, feed, adjustment, ...}; <src>/corporate_actions.csv.
+    lake    us_equity/alpaca/<tf>/<SYM>/<YYYY>.parquet: ONE file per symbol-year (HF repo file budget: ~770 symbols x
+            ~11 years, not x ~130 months). A source holding only SOME months of a year (the trainer tail cache, a
+            chunk) is MERGED into the lake's existing yearly file: the supplied months replace those months, every
+            other month is kept -- a partial import never shrinks history.
+    derived 5m/15m/30m/1h/4h/1d from the 1m base by resample.py (same rule as crypto), written beside it.
+    The manifest fragment has a unique name; hf_publish.py manifest folds it in. Absent/empty source: recorded."""
     src, out = Path(a.src), Path(a.out)
-    if not src.exists():
-        print(f"[etf] no ETF-HISTORY-PIPELINE store at {src}; nothing to publish (state recorded)")
-        _write_manifest(out, "us_equity-alpaca", [])
-        return 0
+    entries: List[Dict] = []
     meta = {}
-    mp = src / "MANIFEST.json"
-    if mp.exists():
+    if (src / "MANIFEST.json").exists():
         try:
-            meta = json.loads(mp.read_text())
+            meta = (json.loads((src / "MANIFEST.json").read_text()).get("series") or {})
         except Exception:
             meta = {}
+    files = sorted(src.glob("*/*/*.parquet")) if src.exists() else []
+    series: Dict[tuple, List[Path]] = {}
+    for f in files:
+        series.setdefault((f.parent.parent.name, f.parent.name), []).append(f)
+    prev = _lake_previous_manifest(getattr(a, "prev_manifest", "")) if series else {"files": []}
+    prev_parts = {(e.get("tf"), e.get("symbol")): e.get("partitions") or {} for e in prev.get("files", [])
+                  if e.get("asset_class") == "us_equity" and e.get("market") == "alpaca"}
+    for (sym, tf), fs in sorted(series.items()):
+        m = meta.get(f"{sym}/{tf}") or {}
+        e = {"asset_class": "us_equity", "market": "alpaca", "tf": tf, "symbol": sym, "partitions": {},
+             "source": "alpaca market data (ETF-HISTORY-PIPELINE)", "licence": "Alpaca market-data terms; private store only",
+             "feed": m.get("feed"), "adjustment": m.get("adjustment", "split"), "vendor_status": m.get("status"),
+             "fetched_at": datetime.now(timezone.utc).isoformat(timespec="seconds"), "state": "ok"}
+        by_year: Dict[str, List[Path]] = {}
+        for f in fs:
+            by_year.setdefault(f.stem[:4], []).append(f)
+        for yr, yfs in sorted(by_year.items()):
+            try:
+                frames = []
+                for f in yfs:
+                    d = pd.read_parquet(f)
+                    if "timestamp" in d.columns:
+                        d = d.rename(columns={"timestamp": "ts"})
+                    d["ts"] = pd.to_datetime(d["ts"], utc=True)
+                    frames.append(d)
+                new = pd.concat(frames, ignore_index=True).drop_duplicates("ts").sort_values("ts")
+                if new.empty:
+                    continue
+                supplied = set(new["ts"].dt.strftime("%Y-%m"))
+                existing = None
+                old = prev_parts.get((tf, sym), {}).get(yr)
+                if old and old.get("path"):
+                    lp = _lake_download(old["path"])
+                    existing = pd.read_parquet(lp) if lp else None
+                    if lp is None:
+                        e["state"] = "partial"
+                        e.setdefault("errors", []).append(f"{yr}: lake year file not readable; NOT overwritten")
+                        continue  # never replace a lake year we could not read with a partial one
+                df = merge_year_partition(new, existing, replace_months=supplied)
+                p = out / "us_equity" / "alpaca" / tf / sym / f"{yr}.parquet"
+                p.parent.mkdir(parents=True, exist_ok=True)
+                df.to_parquet(p, index=False, compression="zstd", row_group_size=100_000)
+                e["partitions"][yr] = {"rows": int(len(df)), "first": df["ts"].iloc[0].isoformat(),
+                                       "last": df["ts"].iloc[-1].isoformat(), "bytes": p.stat().st_size,
+                                       "path": str(p.relative_to(out)), "src": "etf_history",
+                                       "months_supplied": len(supplied), "merged_with_lake": existing is not None}
+            except Exception as ex:
+                e["state"] = "partial"
+                e.setdefault("errors", []).append(f"{yr}: {str(ex)[:150]}")
+        entries.append(e)
+    if (src / "corporate_actions.csv").exists():
+        d = out / "us_equity" / "alpaca" / "corporate_actions"
+        d.mkdir(parents=True, exist_ok=True)
+        (d / "corporate_actions.csv").write_bytes((src / "corporate_actions.csv").read_bytes())
+    _write_manifest(out, "us_equity-alpaca", entries, unique=True)
+    if entries:
+        sys.path.insert(0, str(Path(__file__).resolve().parent))
+        import resample
+        derived = resample.run(out, "1m", ["5m", "15m", "30m", "1h", "4h", "1d"], only_asset="us_equity")
+        _write_manifest(out, "derived-us_equity", derived, unique=True)
+    print(f"[etf] imported {len(entries)} series ({len(files)} files) from {src}")
+    return 0
+
+
+# ---------------------------------------------------------------- options: CBOE implied-vol indices (VIX family)
+def cmd_cboe(a) -> int:
+    out = Path(a.out)
+    spec = _cfg()["options_sources"]["cboe_iv_indices"]
     entries = []
-    for f in sorted(src.glob("*/*.parquet")):
-        sym, tf = f.parent.name, f.stem
+    for sym in spec["symbols"]:
         try:
-            df = pd.read_parquet(f)
-            if "timestamp" in df.columns:
-                df = df.rename(columns={"timestamp": "ts"})
-            df["ts"] = pd.to_datetime(df["ts"], utc=True)
+            raw = _get(f"https://cdn.cboe.com/api/global/us_indices/daily_prices/{sym}_History.csv").decode()
+            df = pd.read_csv(io.StringIO(raw))
+            df.columns = [c.strip().lower() for c in df.columns]
+            df = df.rename(columns={"date": "ts"})
+            df["ts"] = pd.to_datetime(df["ts"], format="%m/%d/%Y", utc=True)
             df = df.sort_values("ts").drop_duplicates("ts").reset_index(drop=True)
-            p = out / "us_equity" / "alpaca" / tf / f"{sym}.parquet"
+            p = out / "options" / "cboe_iv" / "1d" / f"{sym}.parquet"
             p.parent.mkdir(parents=True, exist_ok=True)
-            df.to_parquet(p, index=False, compression="zstd")
-            m = ((meta.get("series") or meta).get(sym) or {}) if isinstance(meta, dict) else {}
-            m = m.get(tf, m) if isinstance(m, dict) else {}
-            e = _entry("us_equity", "alpaca", tf, sym, df, p, out, source="alpaca market data (ETF-HISTORY-PIPELINE)",
-                       licence="Alpaca market-data terms; private store only",
-                       feed=m.get("feed"), adjustment=m.get("adjustment", "split"))
-            e["is_etf"] = True
+            df.to_parquet(p, index=False)
+            e = _entry("options", "cboe_iv", "1d", sym, df, p, out, source="cdn.cboe.com daily_prices",
+                       licence=spec["licence"], pit=True)
         except Exception as ex:
-            e = _entry("us_equity", "alpaca", tf, sym, None, None, out, source="alpaca", licence="alpaca",
+            e = _entry("options", "cboe_iv", "1d", sym, None, None, out, source="cboe", licence=spec["licence"],
                        state="error", errors=[str(ex)[:200]])
         entries.append(e)
-    _write_manifest(out, "us_equity-alpaca", entries)
-    print(f"[etf] imported {sum(e['state'] == 'ok' for e in entries)} / {len(entries)} series from {src}")
+        print(f"[cboe] {sym}: {e['state']} rows={e['rows']} {e.get('first')}..{e.get('last')}", flush=True)
+    _write_manifest(out, "options-cboe", entries)
+    return 0
+
+
+# ---------------------------------------------------------------- CFTC Commitments of Traders (Socrata, keyless)
+COT_DATASETS = {"legacy_futures": "6dca-aqww", "disaggregated_futures": "72hh-3qpy", "tff_futures": "gpe5-46if"}
+
+
+def cmd_cot(a) -> int:
+    out = Path(a.out)
+    entries = []
+    for name, ds in COT_DATASETS.items():
+        rows: List[Dict] = []
+        off, page = 0, 50000
+        try:
+            while True:
+                url = (f"https://publicreporting.cftc.gov/resource/{ds}.json?$limit={page}&$offset={off}"
+                       f"&$order=report_date_as_yyyy_mm_dd,cftc_contract_market_code")
+                chunk = json.loads(_get(url, timeout=120))
+                rows += chunk
+                if len(chunk) < page:
+                    break
+                off += page
+            df = pd.DataFrame(rows)
+            df["ts"] = pd.to_datetime(df["report_date_as_yyyy_mm_dd"], utc=True)
+            for c in df.columns:
+                if c not in ("ts",) and df[c].dtype == object:
+                    num = pd.to_numeric(df[c], errors="coerce")
+                    if num.notna().mean() > 0.95:
+                        df[c] = num
+            df = df.sort_values(["ts", "cftc_contract_market_code"]).reset_index(drop=True)
+            p = out / "macro" / "cftc_cot" / "1w" / f"{name}.parquet"
+            p.parent.mkdir(parents=True, exist_ok=True)
+            df.to_parquet(p, index=False, compression="zstd")
+            # COT is as-of the Tuesday position date but RELEASED the following Friday: a PIT reader must lag 3 days.
+            e = _entry("macro", "cftc_cot", "1w", name, df, p, out, source=f"publicreporting.cftc.gov {ds}",
+                       licence="CFTC; US government public domain", n_markets=int(df["cftc_contract_market_code"].nunique()),
+                       pit_note="ts = position date (Tue); published Fri 15:30 ET -> lag >= 3 days for PIT use")
+        except Exception as ex:
+            e = _entry("macro", "cftc_cot", "1w", name, None, None, out, source="cftc", licence="public domain",
+                       state="error", errors=[str(ex)[:200]])
+        entries.append(e)
+        print(f"[cot] {name}: {e['state']} rows={e['rows']} markets={e.get('n_markets')} {e.get('first')}..{e.get('last')}",
+              flush=True)
+    _write_manifest(out, "macro-cot", entries)
+    return 0
+
+
+# ---------------------------------------------------------------- US stocks + ETFs: Alpaca daily for the WHOLE universe
+def cmd_alpaca_daily(a) -> int:
+    """1d split-adjusted SIP bars for every US-listed stock + ETF in today's universe snapshot PLUS Alpaca's INACTIVE
+    (delisted) assets -- the broad daily layer. Intraday for ETFs is ETF-HISTORY-PIPELINE's. Keys from env only."""
+    import os
+    import requests
+    out = Path(a.out)
+    kid = os.environ.get("ALPACA_API_KEY_ID_LIVE") or os.environ.get("ALPACA_API_KEY_ID")
+    sec = os.environ.get("ALPACA_API_SECRET_KEY_LIVE") or os.environ.get("ALPACA_API_SECRET_KEY")
+    if not (kid and sec):
+        print("[alpaca] no Alpaca data keys in env; skipping (recorded)")
+        _write_manifest(out, "us_equity-alpaca-1d", [])
+        return 0
+    s = requests.Session()
+    s.headers.update({"APCA-API-KEY-ID": kid, "APCA-API-SECRET-KEY": sec, **UA})
+    snap = sorted((out / "universe" / "us_equity").glob("*.csv"))
+    uni = pd.read_csv(snap[-1]) if snap else pd.DataFrame(columns=["symbol", "is_etf", "is_common"])
+    uni = uni[(uni["is_etf"]) | (uni["is_common"])]
+    kind = dict(zip(uni["symbol"], uni["is_etf"].map({True: "etf", False: "stock"})))
+    inactive = []
+    try:
+        r = s.get("https://paper-api.alpaca.markets/v2/assets", params={"status": "inactive", "asset_class": "us_equity"},
+                  timeout=120)
+        r.raise_for_status()
+        inactive = [x["symbol"] for x in r.json() if x.get("symbol") and "." not in x["symbol"]]
+    except Exception as ex:
+        print(f"[alpaca] inactive asset list unavailable: {str(ex)[:150]}")
+    for sym in inactive:
+        kind.setdefault(sym, "delisted")
+    syms = sorted(kind)
+    if a.limit:
+        syms = syms[: a.limit]
+    print(f"[alpaca] universe: {len(syms)} symbols ({len(inactive)} inactive listed)", flush=True)
+    bars: Dict[str, List[Dict]] = {}
+    for i in range(0, len(syms), 100):
+        batch = syms[i:i + 100]
+        tok = None
+        while True:
+            params = {"symbols": ",".join(batch), "timeframe": "1Day", "start": f"{a.since_year or 2016}-01-01T00:00:00Z",
+                      "limit": 10000,
+                      "adjustment": "split", "feed": "sip"}
+            if tok:
+                params["page_token"] = tok
+            for attempt in range(8):
+                r = s.get("https://data.alpaca.markets/v2/stocks/bars", params=params, timeout=120)
+                if r.status_code == 429 or r.status_code >= 500:
+                    time.sleep(min(60, 2 ** attempt))
+                    continue
+                break
+            if r.status_code >= 400:
+                print(f"[alpaca] batch {i}: http {r.status_code} {r.text[:120]}")
+                break
+            j = r.json()
+            for sym, bl in (j.get("bars") or {}).items():
+                bars.setdefault(sym, []).extend(bl)
+            tok = j.get("next_page_token")
+            if not tok:
+                break
+        print(f"[alpaca] {min(i + 100, len(syms))}/{len(syms)} symbols, {sum(map(len, bars.values())):,} bars", flush=True)
+    entries = []
+    for sym in syms:
+        bl = bars.get(sym)
+        if not bl:
+            entries.append(_entry("us_equity", "alpaca_sip", "1d", sym, None, None, out, source="alpaca",
+                                  licence="Alpaca market-data terms; private store only", kind=kind[sym]))
+            continue
+        df = pd.DataFrame(bl).rename(columns={"t": "ts", "o": "open", "h": "high", "l": "low", "c": "close", "v": "volume",
+                                              "n": "trades", "vw": "vwap"})
+        df["ts"] = pd.to_datetime(df["ts"], utc=True)
+        df = df.sort_values("ts").drop_duplicates("ts").reset_index(drop=True)
+        e = {"asset_class": "us_equity", "market": "alpaca_sip", "tf": "1d", "symbol": sym, "partitions": {},
+             "source": "alpaca /v2/stocks/bars sip", "licence": "Alpaca market-data terms; private store only",
+             "kind": kind[sym], "adjustment": "split", "state": "ok",
+             "fetched_at": datetime.now(timezone.utc).isoformat(timespec="seconds")}
+        for yr, g in df.groupby(df["ts"].dt.year):
+            p = out / "us_equity" / "alpaca_sip" / "1d" / sym / f"{yr}.parquet"
+            p.parent.mkdir(parents=True, exist_ok=True)
+            g.to_parquet(p, index=False, compression="zstd")
+            e["partitions"][str(yr)] = {"rows": int(len(g)), "first": g["ts"].iloc[0].isoformat(),
+                                        "last": g["ts"].iloc[-1].isoformat(), "bytes": p.stat().st_size,
+                                        "path": str(p.relative_to(out)), "src": "alpaca"}
+        entries.append(e)
+    _write_manifest(out, "us_equity-alpaca-1d", entries)
+    ok = [e for e in entries if e.get("partitions")]
+    rows = sum(p["rows"] for e in ok for p in e["partitions"].values())
+    print(f"[alpaca] wrote {len(ok)} / {len(entries)} series, {rows:,} rows")
+    return 0
+
+
+# ---------------------------------------------------------------- MEASURE: one real day of 1m bars for the whole universe
+def cmd_measure_equity_1m(a) -> int:
+    """Replace the INFERRED 1m-for-every-US-symbol size with a MEASUREMENT: pull ONE complete trading day of Alpaca 1m
+    SIP bars for every stock + ETF in the universe snapshot, count rows, write them as zstd parquet, and project
+    bytes/year (x 252 sessions) and since 2016. Output <out>/_measure/equity_1m_day.json. Keys from env only."""
+    import os
+    import tempfile
+    import requests
+    out = Path(a.out)
+    kid = os.environ.get("ALPACA_API_KEY_ID_LIVE") or os.environ.get("ALPACA_API_KEY_ID")
+    sec = os.environ.get("ALPACA_API_SECRET_KEY_LIVE") or os.environ.get("ALPACA_API_SECRET_KEY")
+    rec: Dict = {"measured_at": datetime.now(timezone.utc).isoformat(timespec="seconds")}
+    if not (kid and sec):
+        rec["error"] = "no Alpaca data keys in env"
+    else:
+        snap = sorted((out / "universe" / "us_equity").glob("*.csv"))
+        uni = pd.read_csv(snap[-1]) if snap else pd.DataFrame(columns=["symbol", "is_etf", "is_common"])
+        uni = uni[(uni["is_etf"]) | (uni["is_common"])]
+        syms = sorted(uni["symbol"].astype(str))
+        from pandas.tseries.holiday import USFederalHolidayCalendar
+        day = pd.Timestamp.now(tz="UTC").normalize() - pd.Timedelta(days=1)
+        hol = set(USFederalHolidayCalendar().holidays(day - pd.Timedelta(days=15), day).date)
+        while day.weekday() >= 5 or day.date() in hol:
+            day -= pd.Timedelta(days=1)
+        s = requests.Session()
+        s.headers.update({"APCA-API-KEY-ID": kid, "APCA-API-SECRET-KEY": sec, **UA})
+        rows: List[Dict] = []
+        for i in range(0, len(syms), 200):
+            tok = None
+            while True:
+                params = {"symbols": ",".join(syms[i:i + 200]), "timeframe": "1Min", "start": day.isoformat(),
+                          "end": (day + pd.Timedelta(days=1)).isoformat(), "limit": 10000, "feed": "sip",
+                          "adjustment": "split"}
+                if tok:
+                    params["page_token"] = tok
+                for attempt in range(8):
+                    r = s.get("https://data.alpaca.markets/v2/stocks/bars", params=params, timeout=120)
+                    if r.status_code == 429 or r.status_code >= 500:
+                        time.sleep(min(60, 2 ** attempt))
+                        continue
+                    break
+                if r.status_code >= 400:
+                    rec.setdefault("http_errors", []).append(r.status_code)
+                    break
+                j = r.json()
+                for sym, bl in (j.get("bars") or {}).items():
+                    for b in bl:
+                        b["symbol"] = sym
+                    rows += bl
+                tok = j.get("next_page_token")
+                if not tok:
+                    break
+        df = pd.DataFrame(rows)
+        with tempfile.TemporaryDirectory() as td:
+            nbytes = 0
+            if len(df):
+                df["t"] = pd.to_datetime(df["t"], utc=True)
+                for sym, g in df.groupby("symbol"):   # the lake stores per symbol, so measure per-symbol files
+                    f = Path(td) / f"{sym}.parquet"
+                    g.drop(columns="symbol").to_parquet(f, index=False, compression="zstd")
+                    nbytes += f.stat().st_size
+        n = int(len(df))
+        rec.update({"session": str(day.date()), "symbols_requested": len(syms),
+                    "symbols_with_bars": int(df["symbol"].nunique()) if n else 0, "rows": n, "parquet_bytes": nbytes,
+                    "bytes_per_row": round(nbytes / n, 1) if n else None,
+                    "projected_bytes_per_year": nbytes * 252, "projected_bytes_2016_to_now": nbytes * 252 * 10.8,
+                    "note": "one-session measurement; today's listed names only (delisted names add history, not today's rows)"})
+    (out / "_measure").mkdir(parents=True, exist_ok=True)
+    (out / "_measure" / "equity_1m_day.json").write_text(json.dumps(rec, indent=1))
+    print(json.dumps(rec))
+    return 0
+
+
+# ---------------------------------------------------------------- DoltHub (options chains, IV history, stocks) via `dolt sql -r csv`
+def cmd_import_csv(a) -> int:
+    """Partition a CSV exported by `dolt sql -r csv` into the lake. --kind chain|volatility|stocks."""
+    out = Path(a.out)
+    kinds = {"chain": ("options", "dolthub_chain", "1d"), "volatility": ("options", "dolthub_iv", "1d"),
+             "stocks": ("us_equity", "dolthub", "1d")}
+    ac, market, tf = kinds[a.kind]
+    entries = []
+    df = pd.read_csv(a.csv, low_memory=False)
+    df["ts"] = pd.to_datetime(df["date"], utc=True)
+    df = df.drop(columns=["date"])
+    for sym, g in df.groupby("act_symbol"):
+        g = g.sort_values("ts").reset_index(drop=True)
+        p = out / ac / market / tf / f"{sym}.parquet"
+        p.parent.mkdir(parents=True, exist_ok=True)
+        g.to_parquet(p, index=False, compression="zstd")
+        entries.append(_entry(ac, market, tf, str(sym), g, p, out, source="dolthub post-no-preference",
+                              licence="DoltHub repo licence (see repo README); private store only",
+                              distinct_days=int(g["ts"].nunique())))
+    _write_manifest(out, f"dolthub-{a.kind}", entries)
+    print(f"[dolt] {a.kind}: {len(entries)} symbols, {len(df):,} rows")
+    return 0
+
+
+# ---------------------------------------------------------------- options: ETF-HISTORY-PIPELINE daily chain snapshots
+def cmd_import_option_snapshots(a) -> int:
+    """Option-chain snapshots from ETF-HISTORY-PIPELINE: <src>/<source>/<UND>/<YYYY-MM-DD>.parquet (source alpaca|cboe;
+    one file per underlying per session, one row per contract). Lake: options/<source>_snapshot/1d/<UND>/<YYYY>.parquet,
+    one file per underlying-year; a source holding only some sessions REPLACES those sessions in the lake's year file
+    and keeps the rest (dates, not timestamps, are the merge key: many contracts share one snapshot time)."""
+    src, out = Path(a.src), Path(a.out)
+    entries: List[Dict] = []
+    files = sorted(src.glob("*/*/*.parquet")) if src.exists() else []
+    groups: Dict[tuple, List[Path]] = {}
+    for f in files:
+        groups.setdefault((f.parent.parent.name, f.parent.name, f.stem[:4]), []).append(f)
+    prev = _lake_previous_manifest(getattr(a, "prev_manifest", "")) if groups else {"files": []}
+    prev_parts = {(e.get("market"), e.get("symbol")): e.get("partitions") or {} for e in prev.get("files", [])
+                  if e.get("asset_class") == "options"}
+    by_series: Dict[tuple, Dict] = {}
+    for (source, und, yr), fs in sorted(groups.items()):
+        market = f"{source}_snapshot"
+        e = by_series.setdefault((market, und), {"asset_class": "options", "market": market, "tf": "1d", "symbol": und,
+                                                  "partitions": {}, "source": f"ETF-HISTORY-PIPELINE options ({source})",
+                                                  "licence": f"{source} terms; private store only", "state": "ok"})
+        try:
+            frames = []
+            for f in fs:
+                d = pd.read_parquet(f)
+                d["session"] = f.stem
+                tcol = next((c for c in ("ts", "snapshot_ts", "timestamp") if c in d.columns), None)
+                d["ts"] = pd.to_datetime(d[tcol], utc=True) if tcol else pd.to_datetime(d["session"], utc=True)
+                frames.append(d)
+            new = pd.concat(frames, ignore_index=True)
+            old = prev_parts.get((market, und), {}).get(yr)
+            if old and old.get("path"):
+                lp = _lake_download(old["path"])
+                if lp is None:
+                    e["state"] = "partial"
+                    e.setdefault("errors", []).append(f"{yr}: lake year file not readable; NOT overwritten")
+                    continue
+                ex = pd.read_parquet(lp)
+                new = pd.concat([ex[~ex["session"].isin(set(new["session"]))], new], ignore_index=True)
+            new = new.sort_values(["ts"]).reset_index(drop=True)
+            p = out / "options" / market / "1d" / und / f"{yr}.parquet"
+            p.parent.mkdir(parents=True, exist_ok=True)
+            new.to_parquet(p, index=False, compression="zstd")
+            e["partitions"][yr] = {"rows": int(len(new)), "first": new["ts"].iloc[0].isoformat(),
+                                   "last": new["ts"].iloc[-1].isoformat(), "bytes": p.stat().st_size,
+                                   "path": str(p.relative_to(out)), "sessions": int(new["session"].nunique())}
+        except Exception as ex:
+            e["state"] = "partial"
+            e.setdefault("errors", []).append(f"{yr}: {str(ex)[:150]}")
+    entries = list(by_series.values())
+    _write_manifest(out, "options-snapshots", entries, unique=True)
+    print(f"[opt-snap] {len(entries)} underlying series from {len(files)} session files under {src}")
     return 0
 
 
 def main(argv: Optional[Sequence[str]] = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("cmd", choices=["universe", "fred", "futures", "import-etf"])
+    ap.add_argument("cmd", choices=["universe", "fred", "futures", "import-etf", "cboe", "cot", "alpaca-daily",
+                                    "import-csv", "import-option-snapshots", "measure-equity-1m"])
+    ap.add_argument("--kind", choices=["chain", "volatility", "stocks"], default="volatility")
+    ap.add_argument("--csv", default="")
+    ap.add_argument("--limit", type=int, default=0)
+    ap.add_argument("--since-year", type=int, default=0, help="alpaca-daily refresh: fetch from Jan 1 of this year only")
     ap.add_argument("--out", default="lake")
     ap.add_argument("--src", default="store", help="import-etf: the ETF-HISTORY-PIPELINE store directory")
+    ap.add_argument("--prev-manifest", default="", help="import-*: the lake MANIFEST.json (else fetched from HF)")
     a = ap.parse_args(argv)
     return {"universe": cmd_universe, "fred": cmd_fred, "futures": cmd_futures,
-            "import-etf": cmd_import_etf}[a.cmd](a)
+            "import-etf": cmd_import_etf, "cboe": cmd_cboe, "cot": cmd_cot, "alpaca-daily": cmd_alpaca_daily,
+            "import-csv": cmd_import_csv, "import-option-snapshots": cmd_import_option_snapshots,
+            "measure-equity-1m": cmd_measure_equity_1m}[a.cmd](a)
 
 
 if __name__ == "__main__":

@@ -9,6 +9,11 @@ Row MARKET-DATA-LAKE; design docs/data/market-data-lake.md; dataset ``config/dat
     for sym, df in lake.iter_series("crypto", "um_perp", "1h"):  # streams one file at a time (bounded memory)
         ...
     lake.liquid_mask(df, adv_usd=5e6)                           # point-in-time liquidity floor (rolling, as-of)
+    lake.resample(df_1m, "2h")                                  # any other timeframe, same rule as the stored ones
+    lake.health()                                               # latest feed health record
+
+STORED TIMEFRAMES  the base is the finest each source publishes (crypto 1m); 5m/15m/1h/4h/1d are DERIVED from it by
+scripts/data_lake/resample.py and stored too (columns n_base / complete mark thin or partial bars).
 
 READ PATH  ``hf_hub_download`` into the HF cache (``HF_HOME``; on Kaggle ``/kaggle/working``); a file is fetched once
 per revision and re-read from the cache after. ``LAKE_LOCAL_DIR`` points the loader at a local copy instead (a Kaggle
@@ -73,7 +78,7 @@ def manifest(revision: Optional[str] = None) -> Dict:
 def entries(asset_class: str, market: str, tf: str, revision: Optional[str] = None) -> List[Dict]:
     return [e for e in manifest(revision)["files"]
             if e.get("asset_class") == asset_class and e.get("market") == market and e.get("tf") == tf
-            and (e.get("rows") or 0) > 0 and e.get("path")]
+            and (e.get("rows") or 0) > 0 and (e.get("path") or e.get("partitions"))]
 
 
 def symbols(asset_class: str, market: str, tf: str, min_days: int = 0, min_rows: int = 0,
@@ -87,15 +92,57 @@ def symbols(asset_class: str, market: str, tf: str, min_days: int = 0, min_rows:
     return sorted(out)
 
 
+def _paths(e: Dict, start=None, end=None) -> List[str]:
+    """File paths for a series: one ``path``, or its month/year ``partitions`` overlapping [start, end)."""
+    if e.get("partitions"):
+        s = pd.Timestamp(start, tz="UTC") if start is not None else None
+        t = pd.Timestamp(end, tz="UTC") if end is not None else None
+        out = []
+        for _, p in sorted(e["partitions"].items()):
+            if not p.get("path") or not (p.get("rows") or 0):
+                continue
+            if s is not None and p.get("last") and pd.Timestamp(p["last"]) < s:
+                continue
+            if t is not None and p.get("first") and pd.Timestamp(p["first"]) >= t:
+                continue
+            out.append(p["path"])
+        return out
+    return [e["path"]]
+
+
 def _read(e: Dict, start=None, end=None, columns: Optional[Sequence[str]] = None, revision=None) -> pd.DataFrame:
-    p = _fetch(e["path"], revision)
     filters = []
     if start is not None:
         filters.append(("ts", ">=", pd.Timestamp(start, tz="UTC")))
     if end is not None:
         filters.append(("ts", "<", pd.Timestamp(end, tz="UTC")))
-    df = pd.read_parquet(p, columns=list(columns) if columns else None, filters=filters or None)
-    return df
+    if e.get("tf_col"):  # derived timeframes share one file per partition; select this series' tf
+        filters.append((e["tf_col"], "==", e["tf"]))
+    frames = [pd.read_parquet(_fetch(p, revision), columns=list(columns) if columns else None, filters=filters or None)
+              for p in sorted(set(_paths(e, start, end)))]
+    frames = [f for f in frames if len(f)]
+    if not frames:
+        return pd.DataFrame(columns=list(columns) if columns else None)
+    return pd.concat(frames, ignore_index=True) if len(frames) > 1 else frames[0]
+
+
+def resample(df: pd.DataFrame, tf: str, base: str = "1m") -> pd.DataFrame:
+    """Same deterministic rule the lake uses to derive its stored higher timeframes (scripts/data_lake/resample.py),
+    for a timeframe the lake does not store (e.g. 3m, 2h)."""
+    import importlib.util
+    spec = importlib.util.spec_from_file_location("lake_resample", _REPO_ROOT / "scripts" / "data_lake" / "resample.py")
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    mod.MINUTES.setdefault(tf, int(pd.Timedelta(tf.replace("m", "min")).total_seconds() // 60))
+    if "symbol" in df.columns:
+        return pd.concat([mod.resample_frame(g.drop(columns="symbol"), base, tf).assign(symbol=s)
+                          for s, g in df.groupby("symbol")], ignore_index=True)
+    return mod.resample_frame(df, base, tf)
+
+
+def health(revision: Optional[str] = None) -> Dict:
+    """The latest machine-readable health record (scripts/data_lake/validate.py)."""
+    return json.loads(_fetch("health/latest.json", revision).read_text())
 
 
 def load(asset_class: str, market: str, tf: str, syms: Optional[Sequence[str]] = None, start=None, end=None,

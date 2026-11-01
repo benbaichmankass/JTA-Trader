@@ -56,16 +56,96 @@ def ensure_private_repo(api, repo: str) -> None:
         raise SystemExit(f"REFUSING: {repo} reports PUBLIC; the lake holds no-open-licence data and must be private")
 
 
+#: Private-storage allowance per plan, from https://huggingface.co/docs/hub/storage-limits ("Storage plans", read
+#: 2026-11-01): free user 100 GB, PRO 1 TB (+ pay-as-you-go). The PLAN is measured from whoami (isPro); the USED
+#: bytes are measured per private repo (usedStorage). The allowance itself is not exposed by the API.
+PLAN_PRIVATE_BYTES = {"free": 100 * 10 ** 9, "pro": 1000 * 10 ** 9}
+
+
+def measure_storage(api, who: Dict) -> Dict:
+    plan = "pro" if who.get("isPro") else "free"
+    user = who.get("name")
+    used, repos, errs = 0, [], 0
+    for kind, lister, info in (("model", api.list_models, api.model_info), ("dataset", api.list_datasets, api.dataset_info),
+                               ("space", api.list_spaces, api.space_info)):
+        try:
+            for r in lister(author=user, expand=["private"]):
+                if not getattr(r, "private", False):
+                    continue
+                try:
+                    u = int(getattr(info(r.id, expand=["usedStorage"]), "used_storage", 0) or 0)
+                except Exception:
+                    u, errs = 0, errs + 1
+                used += u
+                repos.append({"repo": r.id, "type": kind, "used_bytes": u})
+        except Exception:
+            errs += 1
+    quota = PLAN_PRIVATE_BYTES[plan]
+    return {"plan": plan, "private_allowance_bytes": quota, "allowance_source": "huggingface.co/docs/hub/storage-limits",
+            "private_used_bytes": used, "private_headroom_bytes": quota - used, "private_repos": repos,
+            "measure_errors": errs}
+
+
+def decide_optional(headroom: int, cfg_path: Path) -> Dict:
+    """Optional streams land WITHOUT asking when they fit: walk config crypto.um_perp.optional_streams in order and
+    enable each whose MEASURED projected bytes fit in the headroom left after the core lake's projected bytes."""
+    import yaml
+    cfg = yaml.safe_load(cfg_path.read_text())
+    core = int((cfg.get("storage") or {}).get("core_projected_bytes") or 0)
+    left = headroom - core
+    enabled, deferred = [], []
+    for st, spec in ((cfg.get("crypto") or {}).get("um_perp", {}).get("optional_streams") or {}).items():
+        b = int(spec.get("projected_bytes") or 0)
+        if b and b <= left:
+            enabled.append(st)
+            left -= b
+        else:
+            deferred.append({"stream": st, "projected_bytes": b})
+    return {"core_projected_bytes": core, "enabled": enabled, "deferred": deferred, "headroom_after_bytes": left}
+
+
 def cmd_preflight(a) -> int:
+    """Measure the token: whoami role, then a REAL write -- create the private dataset (idempotent) and upload one
+    small marker file. A read-only token fails here, before any capture job spends an hour. Never prints the token."""
     api = _api()
     who = api.whoami()
     role = ((who.get("auth") or {}).get("accessToken") or {}).get("role", "unknown")
-    print(json.dumps({"user": who.get("name"), "token_role": role, "repo": a.repo}))
-    if role not in ("write", "fineGrained", "admin"):
-        print(f"::error::HF token role is '{role}'; the lake needs a WRITE token")
+    at = (who.get("auth") or {}).get("accessToken") or {}
+    fg = at.get("fineGrained") or {}
+    scoped = [{"entity": (sc.get("entity") or {}).get("name"), "type": (sc.get("entity") or {}).get("type"),
+               "permissions": sc.get("permissions")} for sc in (fg.get("scoped") or [])]
+    rec = {"user": who.get("name"), "token_role": role, "token_name": at.get("displayName"),
+           "fine_grained_global": fg.get("global"), "fine_grained_scoped": scoped, "repo": a.repo,
+           "at": datetime.now(timezone.utc).isoformat(timespec="seconds"), "write_test": None}
+    try:
+        ensure_private_repo(api, a.repo)
+        import tempfile
+        with tempfile.NamedTemporaryFile("w", suffix=".json", delete=False) as fh:
+            json.dump({"preflight_at": rec["at"], "role": role}, fh)
+        api.upload_file(path_or_fileobj=fh.name, path_in_repo="health/preflight.json", repo_id=a.repo,
+                        repo_type="dataset", commit_message="lake: preflight write test")
+        rec["write_test"] = "ok"
+    except SystemExit:
+        raise
+    except Exception as e:
+        rec["write_test"] = f"failed: {str(e)[:200]}"
+    try:
+        rec["storage"] = measure_storage(api, who)
+        rec["optional_streams"] = decide_optional(rec["storage"]["private_headroom_bytes"],
+                                                  REPO_ROOT / "config" / "data_universe.yaml")
+    except Exception as e:
+        rec["storage"] = {"error": str(e)[:200]}
+        rec["optional_streams"] = {"enabled": [], "error": "storage not measured"}
+    print(json.dumps(rec))
+    if a.github_output:
+        with open(a.github_output, "a") as fh:
+            fh.write("optional=" + ",".join(rec["optional_streams"].get("enabled") or []) + "\n")
+    if a.record:
+        Path(a.record).write_text(json.dumps(rec, indent=1))
+    if rec["write_test"] != "ok":
+        print(f"::error::HF token cannot write to {a.repo} (role {role}): {rec['write_test']}")
         return 2
-    ensure_private_repo(api, a.repo)
-    print(f"ok: {a.repo} exists and is private")
+    print(f"ok: token role {role}; wrote health/preflight.json to private {a.repo}")
     return 0
 
 
@@ -92,17 +172,56 @@ def cmd_upload(a) -> int:
     return 1
 
 
+def _key(e: Dict) -> str:
+    return f"{e.get('asset_class')}/{e.get('market')}/{e.get('tf')}/{e.get('symbol')}"
+
+
+def _aggregate(e: Dict) -> Dict:
+    parts = e.get("partitions") or {}
+    if not parts:
+        return e
+    ps = [p for p in parts.values() if (p.get("rows") or 0) > 0]
+    e["n_partitions"] = len(parts)
+    e["rows"] = sum(int(p.get("rows") or 0) for p in ps)
+    e["first"] = min((p["first"] for p in ps if p.get("first")), default=None)
+    e["last"] = max((p["last"] for p in ps if p.get("last")), default=None)
+    e["bytes"] = sum(int(p.get("bytes") or 0) for p in ps)
+    e["missing_bars"] = sum(int(p.get("missing_bars") or 0) for p in ps)
+    e["expected_rows"] = sum(int(p.get("expected_rows") or 0) for p in ps)
+    e["frozen_months"] = sorted(m for m, p in parts.items() if p.get("frozen"))
+    e["dir"] = "/".join(str(next(iter(parts.values())).get("path", "")).split("/")[:-1])
+    return e
+
+
 def merge_manifests(base: Path, previous: Optional[Dict] = None) -> Dict:
+    """Fold this run's shard manifests into the previous lake manifest. Partitioned series merge PER MONTH (a refresh
+    that rebuilt one month replaces only that month); single-file series are replaced whole."""
     files: Dict[str, Dict] = {}
-    if previous:
-        for e in previous.get("files", []):
-            files[e.get("path") or f"{e.get('asset_class')}/{e.get('market')}/{e.get('tf')}/{e.get('symbol')}"] = e
+    superseded: set = set()
+    for e in (previous or {}).get("files", []):
+        files[_key(e)] = e
     for p in sorted((base / "_manifests").glob("*.json")):
         for e in json.loads(p.read_text()):
-            key = e.get("path") or f"{e.get('asset_class')}/{e.get('market')}/{e.get('tf')}/{e.get('symbol')}"
-            files[key] = e
-    return {"generated_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
-            "schema": "market-data-lake/v1", "files": sorted(files.values(), key=lambda e: (
+            k = _key(e)
+            old = files.get(k)
+            if old is not None and (e.get("partitions") is not None or old.get("partitions")):
+                merged = dict(old)
+                merged.update({kk: vv for kk, vv in e.items() if kk != "partitions"})
+                parts = {**(old.get("partitions") or {}), **(e.get("partitions") or {})}
+                # a yearly partition (YYYY) supersedes that year's monthly ones (YYYY-MM): compaction at year close
+                for yk in [pk for pk in (e.get("partitions") or {}) if len(pk) == 4]:
+                    for mk in [pk for pk in parts if pk.startswith(yk + "-")]:
+                        sp = parts.pop(mk).get("path")
+                        if sp:
+                            superseded.add(sp)
+                merged["partitions"] = parts
+                files[k] = merged
+            else:
+                files[k] = e
+    out = [_aggregate(e) for e in files.values()]
+    live = {p.get("path") for e in out for p in (e.get("partitions") or {}).values()} | {e.get("path") for e in out}
+    return {"superseded": sorted(superseded - live), "n_files": len({x for x in live if x}), "generated_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+            "schema": "market-data-lake/v2", "files": sorted(out, key=lambda e: (
                 str(e.get("asset_class")), str(e.get("market")), str(e.get("tf")), str(e.get("symbol"))))}
 
 
@@ -154,16 +273,39 @@ def cmd_manifest(a) -> int:
     base = Path(a.dir)
     previous = None
     api = None
+    if a.previous and Path(a.previous).exists():
+        previous = json.loads(Path(a.previous).read_text())
     if not a.local:
         api = _api()
+        if previous is None:
+            try:
+                from huggingface_hub import hf_hub_download
+                previous = json.loads(Path(hf_hub_download(a.repo, "MANIFEST.json", repo_type="dataset",
+                                                           token=api.token)).read_text())
+            except Exception:
+                previous = None  # first run: no manifest yet
+    remote_frags: List[str] = []
+    if api is not None:
+        # Fold in every manifest FRAGMENT another publisher (e.g. ETF-HISTORY-PIPELINE's per-chunk import) uploaded to
+        # _manifests/ since the last merge. Fragments sort before this run's local ones ("0-hf-" prefix), so the
+        # newest data wins; they are deleted from HF only after MANIFEST.json is published -> rebuild is idempotent.
         try:
             from huggingface_hub import hf_hub_download
-            previous = json.loads(Path(hf_hub_download(a.repo, "MANIFEST.json", repo_type="dataset",
-                                                       token=api.token)).read_text())
-        except Exception:
-            previous = None
+            remote_frags = [f for f in api.list_repo_files(a.repo, repo_type="dataset")
+                            if f.startswith("_manifests/") and f.endswith(".json")]
+            (base / "_manifests").mkdir(parents=True, exist_ok=True)
+            for f in sorted(remote_frags):
+                lp = hf_hub_download(a.repo, f, repo_type="dataset", token=api.token)
+                (base / "_manifests" / ("0-hf-" + f.split("/", 1)[1])).write_bytes(Path(lp).read_bytes())
+            print(f"folded {len(remote_frags)} remote manifest fragments")
+        except Exception as e:
+            print(f"::warning::remote fragments not read (kept for next run): {str(e)[:200]}")
+            remote_frags = []
     m = merge_manifests(base, previous)
+    superseded = m.pop("superseded", []) + remote_frags
     (base / "MANIFEST.json").write_text(json.dumps(m, indent=1))
+    if m.get("n_files", 0) > 80000:
+        print(f"::warning::lake holds {m['n_files']} files; HF recommends < 100k per repo -- compaction needed")
     table = depth_table(m)
     (base / "DEPTH.md").write_text(table + "\n")
     (base / "README.md").write_text(README.format(generated_at=m["generated_at"], table=table))
@@ -173,8 +315,17 @@ def cmd_manifest(a) -> int:
         for attempt in range(6):
             try:
                 ci = api.upload_folder(repo_id=a.repo, repo_type="dataset", folder_path=str(base),
-                                       allow_patterns=["MANIFEST.json", "README.md", "DEPTH.md"],
+                                       allow_patterns=["MANIFEST.json", "README.md", "DEPTH.md", "health/*.json"],
                                        commit_message="lake: MANIFEST + depth table")
+                if superseded:
+                    from huggingface_hub import CommitOperationDelete
+                    try:
+                        api.create_commit(repo_id=a.repo, repo_type="dataset",
+                                          operations=[CommitOperationDelete(path_in_repo=x) for x in superseded],
+                                          commit_message=f"lake: prune {len(superseded)} superseded partitions / folded fragments")
+                        print(f"pruned {len(superseded)} superseded files (partitions + folded manifest fragments)")
+                    except Exception as e:
+                        print(f"::warning::prune failed (retried next run): {str(e)[:200]}")
                 tag = "v" + datetime.now(timezone.utc).strftime("%Y%m%d-%H%M")
                 try:
                     api.create_tag(a.repo, tag=tag, repo_type="dataset", revision=getattr(ci, "oid", None))
@@ -189,6 +340,24 @@ def cmd_manifest(a) -> int:
     return 0
 
 
+def cmd_pull(a) -> int:
+    """Download small control files (MANIFEST.json, health/latest.json) into --dir; a missing file is not an error
+    (first run). Refresh jobs use the manifest to rebuild only what changed."""
+    api = _api()
+    from huggingface_hub import hf_hub_download
+    Path(a.dir).mkdir(parents=True, exist_ok=True)
+    for f in [x for x in a.files.split(",") if x]:
+        try:
+            src = hf_hub_download(a.repo, f, repo_type="dataset", token=api.token)
+            dst = Path(a.dir) / f
+            dst.parent.mkdir(parents=True, exist_ok=True)
+            dst.write_bytes(Path(src).read_bytes())
+            print(f"pulled {f}")
+        except Exception as e:
+            print(f"absent {f}: {str(e)[:120]}")
+    return 0
+
+
 def cmd_depth(a) -> int:
     p = Path(a.dir) / "MANIFEST.json"
     m = json.loads(p.read_text()) if p.exists() else merge_manifests(Path(a.dir))
@@ -198,14 +367,19 @@ def cmd_depth(a) -> int:
 
 def main(argv: Optional[Sequence[str]] = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("cmd", choices=["preflight", "upload", "manifest", "depth"])
+    ap.add_argument("cmd", choices=["preflight", "upload", "manifest", "depth", "pull"])
+    ap.add_argument("--files", default="MANIFEST.json,health/latest.json")
     ap.add_argument("--repo", default=_repo_from_config())
     ap.add_argument("--dir", default="lake")
     ap.add_argument("--prefix", default="")
     ap.add_argument("--note", default="")
     ap.add_argument("--local", action="store_true", help="manifest: merge + render only, no HF read/write")
+    ap.add_argument("--previous", default="", help="manifest: a previous MANIFEST.json on disk (else fetched from HF)")
+    ap.add_argument("--record", default="", help="preflight: write the measured role/write-test JSON here")
+    ap.add_argument("--github-output", default="", help="preflight: append optional=<streams> to this file")
     a = ap.parse_args(argv)
-    return {"preflight": cmd_preflight, "upload": cmd_upload, "manifest": cmd_manifest, "depth": cmd_depth}[a.cmd](a)
+    return {"preflight": cmd_preflight, "upload": cmd_upload, "manifest": cmd_manifest, "depth": cmd_depth,
+            "pull": cmd_pull}[a.cmd](a)
 
 
 if __name__ == "__main__":
