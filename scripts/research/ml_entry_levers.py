@@ -579,6 +579,7 @@ def w1_unit(dev_streams, fwd_streams, oct_dir, out, n_jobs, stack_result: Path, 
     test = full[(full.ts >= w0) & (full.ts < w1e)].reset_index(drop=True)
     params = {**R.BASE, **R.RECIPES["R2"], "random_state": E.SEED, "n_jobs": n_jobs}
     models = {side: lgb.LGBMRegressor(**params).fit(train[E.FEATURES], train[f"net_{side}"]) for side in ("long", "short")}   # T0 raw net R, both sides
+    # provenance: LGBMRegressor — regression head: predicts net R per decision, not a class probability
     pl, ps = (models[side].predict(test[E.FEATURES]) for side in ("long", "short"))
     if use_gate:
         est = k_cost / test["atr_pct"].to_numpy()
@@ -591,6 +592,7 @@ def w1_unit(dev_streams, fwd_streams, oct_dir, out, n_jobs, stack_result: Path, 
     # frozen v1 reference: second claim, the committed booster that is live
     claim1 = holdout_lock.claim_read("ENTRY-v1-frozen-ref-b609", W1[0], W1[1], "RQ-20261101-b609-01-v1ref", reader, ledger)
     art = Path(__file__).resolve().parents[2] / "comms/research/RQ-20261101-c692-06/41324826751/model"
+    # provenance: Booster — regression booster file: predicts net R per decision, not a class probability
     v1p = {side: lgb.Booster(model_file=str(art / f"entry_{side}.txt")).predict(test[E.FEATURES]) for side in ("long", "short")}
     taken1 = E.policy(test, v1p["long"], v1p["short"], TAU)
     m1 = E.summarize(taken1)
@@ -636,6 +638,7 @@ def fwd_unit(artifact: Path, dev_streams: Path, fwd_streams: Path, daily_dirs: l
     full["ts"] = pd.to_datetime(full["ts"], utc=True)
     w0, w1e = pd.Timestamp(start, tz="UTC"), pd.Timestamp(end, tz="UTC") + pd.Timedelta(days=1)
     test = full[(full.ts >= w0) & (full.ts < w1e)].reset_index(drop=True)
+    # provenance: LGBMRegressor — regression head: predicts net R per decision, not a class probability
     pl, ps = (models[side].predict(test[meta["features"]]) for side in ("long", "short"))
     gate = meta.get("cost_gate")
     est = (float(gate["k_cost_x_atr"]) / test["atr_pct"].to_numpy()) if gate else np.zeros(len(test))
@@ -658,6 +661,7 @@ def fwd_unit(artifact: Path, dev_streams: Path, fwd_streams: Path, daily_dirs: l
     m = E.summarize(taken)
     v1 = Path(__file__).resolve().parents[2] / "comms/research/RQ-20261101-c692-06/41324826751/model"
     claim1 = holdout_lock.claim_read("ENTRY-v1-frozen-ref-fwd", start, end, "RQ-20261101-b610-01-v1ref", reader, ledger)
+    # provenance: Booster — regression booster file: predicts net R per decision, not a class probability
     v1p = {side: lgb.Booster(model_file=str(v1 / f"entry_{side}.txt")).predict(test[E.FEATURES]) for side in ("long", "short")}
     taken1 = E.policy(test, v1p["long"], v1p["short"], TAU)
     m1 = E.summarize(taken1)
