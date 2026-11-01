@@ -1,6 +1,6 @@
 # ML decision models — DESIGN and PRE-REGISTRATION (ENTRY · BRACKETS · MANAGE)
 
-> **Doc status:** `live` · category `spec` · last verified `2026-11-01` · lane `ML-DECISION-MODELS` · roadmap `L-ML-LIVE`
+> **Doc status:** `unknown` · category `evidence` · last verified `never` · registered in [`docs/DOCUMENT-INDEX.md`](../../DOCUMENT-INDEX.md) · lane `ML-DECISION-MODELS` (row `docs/claude/work/checklist/ML-DECISION-MODELS.json`, roadmap `L-ML-LIVE`)
 
 Gates this adds or changes: none. (The live bar below is the operator's own, popup 2026-11-01 "Point estimate >= 0";
 the n floor is the evidence floor the dispatch asked this lane to justify, §1.4; neither adds a runtime switch, a flag,
@@ -52,6 +52,17 @@ across symbols.
    decisions as order packages through the existing order path and RiskManager on `bybit_2` + `bybit_portfolio`,
    RiskManager default risk), held for the manager. A FAIL closes the configuration (this horizon, bracket, feature
    block, learner), never the family; §5 names the next lever.
+
+## 1c. One model, one read (operator, 2026-11-01 ~08:48Z, audit ML-BAR-ONE-READ)
+
+Verbatim popup answer: *"Yes, one model, one read (Rec.)"*. The point-estimate ≥ 0 bar is unchanged; it applies to ONE
+pre-registered model per question, the held-out window (2025-10-01..2026-09-30) is read ONCE, and the number of variants
+tried is reported beside every result. **ENTRY variants read on that window so far: 1** (c692-01; c692-06 re-scores the
+SAME frozen model on a subset of the same decisions, not a new variant). A second ENTRY variant — c692-04's arms, c692-05
+(ENTRY v2) — needs a FRESH held-out window (forward data after 2026-09-30); their units must be re-pointed at it before
+they run. Reported, not gating (audit §4/§5c): ENTRY is benched beside simple factor portfolios on the same universe,
+window and costs (12-1 and vol-targeted time-series momentum, weekly cross-sectional momentum; funding carry if its harness
+runs), next to the random and always-long baselines.
 
 ## 1b. The FIRST-PASSAGE label contract — every price prediction (operator, 2026-11-01 ~08:15Z, binding)
 

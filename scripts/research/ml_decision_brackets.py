@@ -21,6 +21,7 @@ ENTRY model recipe and its dev-chosen tau (read from the ENTRY run's summary.jso
 from __future__ import annotations
 
 import argparse
+import itertools
 import json
 import sys
 import time
@@ -44,17 +45,17 @@ RANDOM_DRAWS = 200
 
 def cell_labels(df: pd.DataFrame, lab: pd.DataFrame) -> dict:
     """net R and bars for every (side, cell) on the decision rows ``lab`` of one symbol."""
-    o, h, l, c = (df[k].to_numpy(float) for k in ("open", "high", "low", "close"))
+    o, h, lo, c = (df[k].to_numpy(float) for k in ("open", "high", "low", "close"))
     t_ns = df["ts"].to_numpy().astype("datetime64[ns]").astype("int64")
     cand = lab["i"].to_numpy()
     win = cand[:, None] + np.arange(1, E.HORIZON_H + 1)[None, :]
-    O, Hh, L, C = o[win], h[win], l[win], c[win]
-    entry, a = O[:, 0], lab["atr"].to_numpy()
+    Ob, Hh, Lb, Cb = o[win], h[win], lo[win], c[win]
+    entry, a = Ob[:, 0], lab["atr"].to_numpy()
     t_entry_s = t_ns[cand + 1] / 1e9
     out = {}
     for side, sname in ((1, "long"), (-1, "short")):
         for k, (sl, tp) in enumerate(CELLS):
-            px, j, _ = E.bracket_outcome(O, Hh, L, C, entry, a, side, sl_atr=sl, tp_atr=tp)
+            px, j, _ = E.bracket_outcome(Ob, Hh, Lb, Cb, entry, a, side, sl_atr=sl, tp_atr=tp)
             risk = sl * a
             gross = side * (px - entry) / risk
             fee, slip, fund = E._cost_r(entry, px, risk, t_entry_s, t_ns[cand + j] / 1e9 + 3600.0)
@@ -126,7 +127,7 @@ def composed(test: pd.DataFrame, p_long, p_short, tau: float, chooser) -> pd.Dat
 def _s(tk: pd.DataFrame) -> dict:
     if tk.empty:
         return {"n": 0, "mean_net_r": None, "n_symbols": 0}
-    return {"n": int(len(tk)), "mean_net_r": float(tk.net_r.mean()), "sum_net_r": float(tk.net_r.sum()),
+    return {"n": len(tk), "mean_net_r": float(tk.net_r.mean()), "sum_net_r": float(tk.net_r.sum()),
             "n_symbols": int(tk.symbol.nunique())}
 
 
@@ -148,7 +149,7 @@ def run(a) -> int:
     # dev walk-forward: ENTRY decisions per fold under each STATIC cell -> best static cell (dev only)
     bounds = [pd.Timestamp(x, tz="UTC") for x in E.DEV_FOLDS] + [hs]
     static_dev = {k: [] for k in range(len(CELLS))}
-    for lo, hi in zip(bounds[:-1], bounds[1:]):
+    for lo, hi in itertools.pairwise(bounds):
         test = dev[(dev.ts >= lo) & (dev.ts < hi - pd.Timedelta(hours=E.HORIZON_H + 1))]
         pl, ps = E.fit_predict(E.purge_train(dev, lo), test)
         for k in range(len(CELLS)):

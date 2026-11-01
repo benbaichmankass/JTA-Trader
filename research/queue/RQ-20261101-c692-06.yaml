@@ -83,3 +83,14 @@ related:
 - ML-ENTRY-LIVE-ADAPTER
 - RQ-20261101-c692-01
 what_it_does_not_do: Registers, serves or promotes nothing; changes no config; places no order; sizes nothing.
+ml_consumer:
+  consumer: ML-ENTRY-LIVE-ADAPTER
+  decision: 'whether the new ml_entry leg (held PR #22079) opens LONG / SHORT positions on bybit_2 + bybit_portfolio on BTC/ETH/XRP/ADA/SOL beside
+    the rostered legs below, which share those symbols and the account risk book (ml_entry is not on the main roster until that PR merges)'
+  legs:
+  - xrp_pullback_2h
+  - trend_donchian_eth_4h
+  - trend_donchian_xrp_4h
+  - ada_pullback_2h
+  - trend_donchian_sol_prop
+  book: money

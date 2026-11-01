@@ -38,12 +38,12 @@ import argparse
 import concurrent.futures as cf
 import hashlib
 import io
+import itertools
 import json
 import subprocess
 import sys
 import time
 import zipfile
-from datetime import datetime, timezone
 from pathlib import Path
 
 import numpy as np
@@ -70,8 +70,9 @@ N_FLOOR = 300                         # held-out decisions needed for a verdict
 SYMBOL_FLOOR = 10                     # distinct symbols traded in the held-out
 RANDOM_DRAWS = 200
 SEED = 20261101
-LGB_PARAMS = dict(n_estimators=300, learning_rate=0.03, num_leaves=31, min_child_samples=500, subsample=0.8,
-                  subsample_freq=1, colsample_bytree=0.8, reg_lambda=5.0, random_state=SEED, verbose=-1, n_jobs=4)
+LGB_PARAMS = {"n_estimators": 300, "learning_rate": 0.03, "num_leaves": 31, "min_child_samples": 500, "subsample": 0.8,
+              "subsample_freq": 1, "colsample_bytree": 0.8, "reg_lambda": 5.0, "random_state": SEED, "verbose": -1,
+              "n_jobs": 4}
 _BASE = "https://data.binance.vision/data/futures/um/monthly/klines"
 
 
@@ -102,7 +103,7 @@ def _fetch_month(sym: str, month: str) -> pd.DataFrame | None:
             df = df.iloc[:, :6]
             df.columns = ["open_time", "open", "high", "low", "close", "volume"]
             return df
-        except Exception:  # noqa: BLE001 - retried with backoff; a month that never arrives is recorded, not fatal
+        except Exception:  # noqa: BLE001, S112  # allow-silent: retried with backoff; the final failure raises below
             continue
     raise RuntimeError(f"fetch failed {url}")
 
@@ -141,7 +142,7 @@ def fetch(cache: Path, symbols: list[str]) -> dict:
 
 
 # ----------------------------------------------------------------------------------------------- labels
-def bracket_outcome(o, h, l, c, entry, atr, side, sl_atr=SL_ATR, tp_atr=TP_ATR):
+def bracket_outcome(o, h, lo, c, entry, atr, side, sl_atr=SL_ATR, tp_atr=TP_ATR):
     """Vectorised first passage. o/h/l/c are (N, H) arrays of the H bars AFTER the decision bar (bar t+1..t+H);
     entry (N,) is bar t+1's open; side is +1 long / -1 short. Returns (exit_px, exit_j [1..H], reason) where reason
     0 = time, 1 = SL, 2 = TP. Tie (SL and TP touched in one bar) -> SL. Gap through the stop -> fill at the open."""
@@ -150,12 +151,12 @@ def bracket_outcome(o, h, l, c, entry, atr, side, sl_atr=SL_ATR, tp_atr=TP_ATR):
     sl = entry - side * risk
     tp = entry + side * tp_atr * atr
     if side > 0:
-        hit_sl = l <= sl[:, None]
+        hit_sl = lo <= sl[:, None]
         hit_tp = h >= tp[:, None]
         gap_sl = o <= sl[:, None]
     else:
         hit_sl = h >= sl[:, None]
-        hit_tp = l <= tp[:, None]
+        hit_tp = lo <= tp[:, None]
         gap_sl = o >= sl[:, None]
     big = H + 1
     j_sl = np.where(hit_sl.any(1), hit_sl.argmax(1), big)
@@ -189,9 +190,9 @@ def _cost_r(entry, exit_px, risk, t_entry_s, t_exit_s):
 
 def label_symbol(df: pd.DataFrame) -> pd.DataFrame:
     """Decision rows for one symbol: every DECISION_EVERY_H-th bar whose close is the decision time."""
-    o, h, l, c = (df[k].to_numpy(float) for k in ("open", "high", "low", "close"))
+    o, h, lo, c = (df[k].to_numpy(float) for k in ("open", "high", "low", "close"))
     pc = np.r_[np.nan, c[:-1]]
-    tr = np.nanmax(np.vstack([h - l, np.abs(h - pc), np.abs(l - pc)]), axis=0)
+    tr = np.nanmax(np.vstack([h - lo, np.abs(h - pc), np.abs(lo - pc)]), axis=0)
     atr = pd.Series(tr).rolling(ATR_N, min_periods=ATR_N).mean().to_numpy()
     ts = df["ts"]
     close_hour = (ts + pd.Timedelta(hours=1)).dt.hour.to_numpy()
@@ -204,14 +205,14 @@ def label_symbol(df: pd.DataFrame) -> pd.DataFrame:
     contiguous = (t_ns[cand + H] - t_ns[cand]) == H * 3_600_000_000_000
     cand = cand[contiguous]
     win = cand[:, None] + np.arange(1, H + 1)[None, :]
-    O, Hh, L, C = o[win], h[win], l[win], c[win]
-    entry = O[:, 0]
+    Ob, Hh, Lb, Cb = o[win], h[win], lo[win], c[win]
+    entry = Ob[:, 0]
     a = atr[cand]
     risk = SL_ATR * a
     out = {"i": cand, "ts": ts.to_numpy()[cand], "atr": a, "entry": entry}
     t_entry_s = (t_ns[cand + 1] / 1e9)
     for name, side in (("long", 1), ("short", -1)):
-        px, j, reason = bracket_outcome(O, Hh, L, C, entry, a, side)
+        px, j, reason = bracket_outcome(Ob, Hh, Lb, Cb, entry, a, side)
         gross = side * (px - entry) / risk
         # exit time: SL/TP fill inside bar j (use that bar's open time + 1h as a conservative upper bound);
         # a time stop exits at bar H's close
@@ -227,7 +228,7 @@ def label_symbol(df: pd.DataFrame) -> pd.DataFrame:
 
 # ----------------------------------------------------------------------------------------------- features
 def features_symbol(df: pd.DataFrame) -> pd.DataFrame:
-    c, h, l, v = (df[k].astype(float) for k in ("close", "high", "low", "volume"))
+    c, h, lo, v = (df[k].astype(float) for k in ("close", "high", "low", "volume"))
     lr = np.log(c).diff()
     vol24 = lr.rolling(24).std()
     vol168 = lr.rolling(168).std()
@@ -237,11 +238,11 @@ def features_symbol(df: pd.DataFrame) -> pd.DataFrame:
     f["vol24"] = vol24
     f["vol_ratio"] = vol24 / vol168
     pc = c.shift(1)
-    tr = pd.concat([h - l, (h - pc).abs(), (l - pc).abs()], axis=1).max(axis=1)
+    tr = pd.concat([h - lo, (h - pc).abs(), (lo - pc).abs()], axis=1).max(axis=1)
     f["atr_pct"] = tr.rolling(ATR_N).mean() / c
     for k in (24, 168):
-        hi, lo = h.rolling(k).max(), l.rolling(k).min()
-        f[f"range_pos_{k}"] = (c - lo) / (hi - lo).replace(0, np.nan)
+        hi, lw = h.rolling(k).max(), lo.rolling(k).min()
+        f[f"range_pos_{k}"] = (c - lw) / (hi - lw).replace(0, np.nan)
     lv = np.log1p(v)
     f["vol_z"] = (lv - lv.rolling(168).mean()) / lv.rolling(168).std()
     up = lr.clip(lower=0).rolling(14).mean()
@@ -315,6 +316,7 @@ def fit_predict(train: pd.DataFrame, test: pd.DataFrame) -> tuple[np.ndarray, np
     for side in ("long", "short"):
         m = lgb.LGBMRegressor(**LGB_PARAMS)
         m.fit(train[FEATURES], train[f"net_{side}"])
+        # provenance: predict — LGBMRegressor.predict is the regressed net R of that side, not a probability
         preds.append(m.predict(test[FEATURES]))
     return preds[0], preds[1]
 
@@ -359,18 +361,18 @@ def sequential_baseline(test: pd.DataFrame, choose, rng=None) -> pd.DataFrame:
 def summarize(taken: pd.DataFrame) -> dict:
     if taken.empty:
         return {"n": 0, "mean_net_r": None}
-    s = {"n": int(len(taken)), "mean_net_r": float(taken.net_r.mean()), "sum_net_r": float(taken.net_r.sum()),
+    s = {"n": len(taken), "mean_net_r": float(taken.net_r.mean()), "sum_net_r": float(taken.net_r.sum()),
          "mean_gross_r": float(taken.gross_r.mean()) if "gross_r" in taken else None,
          "mean_cost_r": float(taken.cost_r.mean()) if "cost_r" in taken else None,
          "n_symbols": int(taken.symbol.nunique())}
     if "side" in taken:
-        s["by_side"] = {k: {"n": int(len(g)), "mean_net_r": float(g.net_r.mean())} for k, g in taken.groupby("side")}
+        s["by_side"] = {k: {"n": len(g), "mean_net_r": float(g.net_r.mean())} for k, g in taken.groupby("side")}
         s["exit_reason_counts"] = {str({0: "time", 1: "sl", 2: "tp"}[k]): int(v)
                                    for k, v in taken.reason.value_counts().items()}
         by_sym = taken.groupby("symbol").net_r.sum()
         top = by_sym.abs().idxmax()
         ex = taken[taken.symbol != top]
-        s["ex_max_symbol"] = {"symbol": top, "n": int(len(ex)), "mean_net_r": float(ex.net_r.mean()) if len(ex) else None}
+        s["ex_max_symbol"] = {"symbol": top, "n": len(ex), "mean_net_r": float(ex.net_r.mean()) if len(ex) else None}
         m = taken.assign(month=pd.to_datetime(taken.ts, utc=True).dt.strftime("%Y-%m")).groupby("month").net_r
         s["by_month"] = {k: {"n": int(v.count()), "mean_net_r": round(float(v.mean()), 4)} for k, v in m}
         rng = np.random.default_rng(SEED)
@@ -389,23 +391,23 @@ def walk_forward(tab: pd.DataFrame) -> dict:
     dev = tab[tab.ts < pd.Timestamp(HOLDOUT_START, tz="UTC")]
     bounds = [pd.Timestamp(x, tz="UTC") for x in DEV_FOLDS] + [pd.Timestamp(HOLDOUT_START, tz="UTC")]
     folds, per_tau = [], {tau: [] for tau in TAU_GRID}
-    for a, b in zip(bounds[:-1], bounds[1:]):
+    for a, b in itertools.pairwise(bounds):
         test = dev[(dev.ts >= a) & (dev.ts < b)]
         # the fold's test rows must also stop H bars before b so no label reads past the fold
         test = test[test.ts < b - pd.Timedelta(hours=HORIZON_H + 1)]
         train = purge_train(dev, a)
         pl, ps = fit_predict(train, test)
-        rec = {"test_start": str(a.date()), "test_end": str(b.date()), "n_train": int(len(train)), "n_test_rows": int(len(test))}
+        rec = {"test_start": str(a.date()), "test_end": str(b.date()), "n_train": len(train), "n_test_rows": len(test)}
         for tau in TAU_GRID:
             tk = policy(test, pl, ps, tau)
             per_tau[tau].append(tk)
-            rec[f"tau_{tau}"] = {"n": int(len(tk)), "mean_net_r": float(tk.net_r.mean()) if len(tk) else None}
+            rec[f"tau_{tau}"] = {"n": len(tk), "mean_net_r": float(tk.net_r.mean()) if len(tk) else None}
         folds.append(rec)
         print(json.dumps(rec), flush=True)
     pooled = {}
     for tau in TAU_GRID:
         allk = pd.concat(per_tau[tau]) if per_tau[tau] else pd.DataFrame(columns=["net_r"])
-        pooled[str(tau)] = {"n": int(len(allk)), "mean_net_r": float(allk.net_r.mean()) if len(allk) else None,
+        pooled[str(tau)] = {"n": len(allk), "mean_net_r": float(allk.net_r.mean()) if len(allk) else None,
                             "folds_positive": int(sum(1 for f in folds if (f[f"tau_{tau}"]["mean_net_r"] or -1) > 0))}
     eligible = [t for t in TAU_GRID if pooled[str(t)]["n"] >= TAU_MIN_DEV_N and pooled[str(t)]["mean_net_r"] is not None]
     tau_star = max(eligible, key=lambda t: (pooled[str(t)]["mean_net_r"], t)) if eligible else None
@@ -419,14 +421,14 @@ def holdout(tab: pd.DataFrame, tau: float) -> dict:
     test = tab[tab.ts >= hs]
     pl, ps = fit_predict(train, test)
     taken = policy(test, pl, ps, tau)
-    res = {"n_train": int(len(train)), "n_test_rows": int(len(test)), "test_symbols": int(test.symbol.nunique()),
+    res = {"n_train": len(train), "n_test_rows": len(test), "test_symbols": int(test.symbol.nunique()),
            "window": [str(test.ts.min()), str(test.ts.max())], "model": summarize(taken)}
     # baselines under identical mechanics
     res["baseline_no_trade"] = {"n": 0, "mean_net_r": 0.0}
     al = sequential_baseline(test, lambda r: "long")
-    res["baseline_always_long"] = {"n": int(len(al)), "mean_net_r": float(al.net_r.mean())}
+    res["baseline_always_long"] = {"n": len(al), "mean_net_r": float(al.net_r.mean())}
     ash = sequential_baseline(test, lambda r: "short")
-    res["baseline_always_short_reported"] = {"n": int(len(ash)), "mean_net_r": float(ash.net_r.mean())}
+    res["baseline_always_short_reported"] = {"n": len(ash), "mean_net_r": float(ash.net_r.mean())}
     n_free = len(sequential_baseline(test, lambda r: "long"))  # free decision slots under always-take mechanics
     p_take = min(1.0, len(taken) / max(1, n_free))
     p_long = float((taken.side == "long").mean()) if len(taken) else 0.5
@@ -455,7 +457,7 @@ def verdict(h: dict) -> tuple[str, str]:
 def _git_sha() -> str:
     try:
         return subprocess.check_output(["git", "-C", str(REPO), "rev-parse", "HEAD"], text=True).strip()
-    except Exception:  # noqa: BLE001
+    except Exception:  # noqa: BLE001  # allow-silent: provenance only; an empty sha is recorded, not hidden
         return ""
 
 
@@ -469,7 +471,7 @@ def run(args) -> int:
     data_fp = hashlib.sha256(pd.util.hash_pandas_object(tab[["ts", "symbol", "net_long", "net_short"]], index=False)
                              .to_numpy().tobytes()).hexdigest()[:16]
     print(f"table rows={len(tab)} symbols={tab.symbol.nunique()} fp={data_fp} t={time.time()-t0:.0f}s", flush=True)
-    label_stats = {"rows": int(len(tab)), "dev_rows": int((tab.ts < pd.Timestamp(HOLDOUT_START, tz='UTC')).sum()),
+    label_stats = {"rows": len(tab), "dev_rows": int((tab.ts < pd.Timestamp(HOLDOUT_START, tz='UTC')).sum()),
                    "mean_net_long": float(tab.net_long.mean()), "mean_net_short": float(tab.net_short.mean()),
                    "mean_cost_r": float(tab.cost_long.mean()), "tie_rule": "SL", "entry": "next bar open"}
     wf = walk_forward(tab)
@@ -511,10 +513,8 @@ def run(args) -> int:
 # ----------------------------------------------------------------------------------------------- c692-04 universe arms
 def traded_symbols() -> list[str]:
     """The bybit_2 data-pull list, re-parsed at run time (CLAUDE.md: never quote roster counts)."""
-    import yaml
-    acc = yaml.safe_load((REPO / "config/accounts.yaml").read_text())
-    acc = acc.get("accounts", acc)
-    return [str(x) for x in (acc["bybit_2"].get("symbols") or [])]
+    from src.config.accounts_loader import load_accounts_dict
+    return [str(x) for x in (load_accounts_dict()["bybit_2"].get("symbols") or [])]
 
 
 def wide_universe() -> list[str]:
@@ -536,7 +536,7 @@ def arm_eval(tab: pd.DataFrame, train_syms: set, eval_syms: set) -> dict:
     dev = tab[tab.ts < hs]
     bounds = [pd.Timestamp(x, tz="UTC") for x in DEV_FOLDS] + [hs]
     per_tau = {t: [] for t in TAU_GRID}
-    for a, b in zip(bounds[:-1], bounds[1:]):
+    for a, b in itertools.pairwise(bounds):
         test = dev[(dev.ts >= a) & (dev.ts < b - pd.Timedelta(hours=HORIZON_H + 1)) & dev.symbol.isin(eval_syms)]
         train = purge_train(dev[dev.symbol.isin(train_syms)], a)
         pl, ps = fit_predict(train, test)
@@ -636,16 +636,17 @@ def traded_subset(args) -> int:
     train = purge_train(tab[tab.ts < hs], hs)
     models = fit_models(train)
     test = tab[tab.ts >= hs]
+    # provenance: predict — LGBMRegressor.predict is the regressed net R of that side, not a probability
     pl, ps = models["long"].predict(test[FEATURES]), models["short"].predict(test[FEATURES])
     taken_all = policy(test, pl, ps, tau)
     taken = taken_all[taken_all.symbol.isin(traded)]
     m = summarize(taken)
-    per_sym = {k: {"n": int(len(g)), "mean_net_r": float(g.net_r.mean())} for k, g in taken.groupby("symbol")}
+    per_sym = {k: {"n": len(g), "mean_net_r": float(g.net_r.mean())} for k, g in taken.groupby("symbol")}
     art = out / "model"
     art.mkdir(exist_ok=True)
     for side, mdl in models.items():
         mdl.booster_.save_model(str(art / f"entry_{side}.txt"))
-    meta = {"schema": "ml_decision_entry_model/1", "features": FEATURES, "tau": tau, "train_rows": int(len(train)),
+    meta = {"schema": "ml_decision_entry_model/1", "features": FEATURES, "tau": tau, "train_rows": len(train),
             "train_end_exclusive": str(train.ts.max()), "lgb_params": LGB_PARAMS, "bracket": {"sl_atr": SL_ATR, "tp_atr": TP_ATR,
             "atr_n": ATR_N, "horizon_h": HORIZON_H, "decision_every_h": DECISION_EVERY_H}, "xs_reference": syms,
             "git_sha": _git_sha(), "pooled_heldout_mean_net_r": summarize(taken_all)["mean_net_r"]}
@@ -658,7 +659,7 @@ def traded_subset(args) -> int:
         v, why = "fail", f"traded-symbol held-out mean net R per decision {m['mean_net_r']:+.4f} < 0 at n={m['n']}"
     meas = {"traded_symbols": traded, "tau": tau, "traded": {k: m.get(k) for k in ("n", "mean_net_r", "sum_net_r", "mean_gross_r",
             "mean_cost_r", "by_side", "exit_reason_counts", "bootstrap_ci95_mean_net_r_reported_not_gating")},
-            "per_symbol": per_sym, "pooled_reproduction": {"n": int(len(taken_all)), "mean_net_r": meta["pooled_heldout_mean_net_r"]},
+            "per_symbol": per_sym, "pooled_reproduction": {"n": len(taken_all), "mean_net_r": meta["pooled_heldout_mean_net_r"]},
             "git_sha": meta["git_sha"], "elapsed_s": round(time.time() - t0)}
     (out / "summary.json").write_text(json.dumps(meas, indent=1, default=str) + "\n")
     vj = {"verdict": v, "read_state": "measured", "n": m["n"], "measurement": meas, "note": why,
@@ -671,20 +672,32 @@ def traded_subset(args) -> int:
 # ----------------------------------------------------------------------------------------------- self-test
 def _self_test() -> None:
     H = 4
-    o = np.array([[100, 100, 100, 100.]]); h = o + 1; l = o - 1; c = o.copy()
+    o = np.array([[100, 100, 100, 100.]])
+    h = o + 1
+    lw = o - 1
+    c = o.copy()
     # long, atr=1 -> sl 98, tp 103: never hit -> time stop at close of bar H
-    px, j, r = bracket_outcome(o, h, l, c, np.array([100.]), np.array([1.]), +1)
+    px, j, r = bracket_outcome(o, h, lw, c, np.array([100.]), np.array([1.]), +1)
     assert r[0] == 0 and j[0] == H and px[0] == 100.0
     # bar 2 touches both sl and tp -> SL (tie conservative)
-    h2 = h.copy(); l2 = l.copy(); h2[0, 1] = 104; l2[0, 1] = 97
+    h2 = h.copy()
+    l2 = lw.copy()
+    h2[0, 1] = 104
+    l2[0, 1] = 97
     px, j, r = bracket_outcome(o, h2, l2, c, np.array([100.]), np.array([1.]), +1)
     assert r[0] == 1 and j[0] == 2 and px[0] == 98.0, (px, j, r)
     # gap through the stop at bar 3 open -> fill at that open (95), worse than 98
-    o3 = o.copy(); o3[0, 2] = 95; l3 = l.copy(); l3[0, 2] = 94; h3 = h.copy(); h3[0, 2] = 96
+    o3 = o.copy()
+    o3[0, 2] = 95
+    l3 = lw.copy()
+    l3[0, 2] = 94
+    h3 = h.copy()
+    h3[0, 2] = 96
     px, j, r = bracket_outcome(o3, h3, l3, c, np.array([100.]), np.array([1.]), +1)
     assert r[0] == 1 and j[0] == 3 and px[0] == 95.0, (px, j, r)
     # short: tp at 97 hit at bar 2 low
-    l4 = l.copy(); l4[0, 1] = 96.5
+    l4 = lw.copy()
+    l4[0, 1] = 96.5
     px, j, r = bracket_outcome(o, h, l4, c, np.array([100.]), np.array([1.]), -1)
     assert r[0] == 2 and j[0] == 2 and px[0] == 97.0, (px, j, r)
     # cost arithmetic equals the canonical roundtrip_cost_r

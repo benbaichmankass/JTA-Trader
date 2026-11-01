@@ -1,6 +1,6 @@
 # ML decision models — DIAGNOSIS: what the ML line has been doing, measured
 
-> **Doc status:** `live` · category `evidence` · last verified `2026-11-01` · lane `ML-DECISION-MODELS` (row `docs/claude/work/checklist/ML-DECISION-MODELS.json`, roadmap `L-ML-LIVE`)
+> **Doc status:** `unknown` · category `evidence` · last verified `never` · registered in [`docs/DOCUMENT-INDEX.md`](../../DOCUMENT-INDEX.md) · lane `ML-DECISION-MODELS` (row `docs/claude/work/checklist/ML-DECISION-MODELS.json`, roadmap `L-ML-LIVE`)
 
 Gates this adds or changes: none.
 

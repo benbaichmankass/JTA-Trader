@@ -3,7 +3,7 @@
 id: RQ-20261101-c692-04
 title: 'TRAINING UNIVERSE for the ENTRY decision model: trained on (a) the traded bybit_2 symbols only, (b) the frozen 60-perp universe, (c) every
   qualifying Binance USDT-M perp, does each arm reach held-out mean net R per decision >= 0 on the TRADED symbols, and which arm is best?'
-status: queued
+status: blocked
 cadence: once
 theme: ml_health
 priority: 1
@@ -83,3 +83,21 @@ related:
 - ML-DATA-XASSET-1H
 - docs/research/ml-decision-models-2026-11-01/DESIGN.md
 what_it_does_not_do: Registers, serves or promotes nothing; changes no config; places no order; sizes nothing.
+ml_consumer:
+  consumer: ML-ENTRY-LIVE-ADAPTER
+  decision: 'whether the new ml_entry leg (held PR #22079) opens LONG / SHORT positions on bybit_2 + bybit_portfolio on BTC/ETH/XRP/ADA/SOL beside
+    the rostered legs below, which share those symbols and the account risk book (ml_entry is not on the main roster until that PR merges)'
+  legs:
+  - xrp_pullback_2h
+  - trend_donchian_eth_4h
+  - trend_donchian_xrp_4h
+  - ada_pullback_2h
+  - trend_donchian_sol_prop
+  book: money
+blocked_on:
+- kind: rule
+  ref: DESIGN.md section 1c (operator 2026-11-01 ~08:48Z "Yes, one model, one read (Rec.)")
+  what: the arms are new ENTRY variants; the 2025-10..2026-09 held-out window was already read once by c692-01, so the arms must be scored on
+    a FRESH forward window (bars after 2026-09-30) with its own registered length before they run
+  clears_when: forward data after 2026-09-30 covers >= 300 traded-symbol decisions; the rule is re-registered on that window in a new commit before
+    any run, then this file moves to research/queue/

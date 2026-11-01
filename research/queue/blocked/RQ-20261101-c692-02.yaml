@@ -86,3 +86,14 @@ power:
   feasibility:
     source: none
     accrual_basis: Replays public history; nothing accrues. The run records the observed n and sd.
+ml_consumer:
+  consumer: ML-ENTRY-LIVE-ADAPTER
+  decision: 'whether the new ml_entry leg (held PR #22079) sets the SL / TP of each ml_entry position on bybit_2 + bybit_portfolio on BTC/ETH/XRP/ADA/SOL
+    beside the rostered legs below, which share those symbols and the account risk book (ml_entry is not on the main roster until that PR merges)'
+  legs:
+  - xrp_pullback_2h
+  - trend_donchian_eth_4h
+  - trend_donchian_xrp_4h
+  - ada_pullback_2h
+  - trend_donchian_sol_prop
+  book: money
