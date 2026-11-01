@@ -1,0 +1,20 @@
+{
+  "id": "ML-TIMEFRAME",
+  "title": "ENTRY timeframe lever: the pooled ENTRY pipeline at 5m / 15m / 1h / 4h bars, bar-count and clock-time scaling, with and without v2's cost gate; which features and which edge scale (units b620..b626, harness scripts/research/ml_entry_timeframe.py)",
+  "phase": "research",
+  "state": "in_flight",
+  "owner": "manager",
+  "lane": "ML-RECIPE",
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [],
+  "blocked_on": [],
+  "note": "Operator ~22:35Z (relayed): 'queue a training session for 5 minutes bars as well so we can compare results and see what scales tfs and what doesn't'. Seven dev-only units, rule registered first, P2 priority 1: b620-01 (1h harness reproduction of the round-1 base +0.0089), b621/b622 (15m bar/clock), b623/b624 (5m bar/clock), b625/b626 (4h bar/clock). Each re-runs the 1h baseline inside itself, reports gross R / cost R / net R, ungated and with v2's cost gate, gain-share + SHAP-sign stability vs 1h, and signal overlap with the 1h model. Rows (INFERRED): 5m bar-count ~8M, 15m bar ~2.7M, others ~668k (1h measured). ETA: 1h ~25 min, 4h ~40 min, 15m 1-2.5 h, 5m clock ~1.5 h, 5m bar-count ~5 h (runner, 330 min cap). Forward read on the decision-logging lane's 15m/5m shadow scores is owed once those rows exist. Gates this adds: none. Held PR.",
+  "updated_at": "2026-11-01T22:40:50Z",
+  "updated_by": "lane ML-RECIPE",
+  "due_by": "2026-11-04",
+  "roadmap": "L-ML-LIVE",
+  "_seq": 889
+}
