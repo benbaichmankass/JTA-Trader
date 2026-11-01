@@ -93,7 +93,9 @@ def self_test() -> int:
         (root / "old.json").write_text(json.dumps({"at": "2026-10-01T00:00:00Z"}))
         (root / "bad.json").write_text("not json")
         (root / "s.jsonl").write_text('{"at":"2026-10-01T00:00:00Z"}\n{"at":"2026-11-01T10:00:00Z"}\n')
-        mk = lambda p, k="json_field": {"status": "scheduled", "store": {"path": p, "kind": k, "field": "at", "max_age_hours": 6}}
+        def mk(p, k="json_field"):
+            return {"status": "scheduled", "store": {"path": p, "kind": k, "field": "at", "max_age_hours": 6}}
+
         cases = [(mk("fresh.json"), FRESH), (mk("old.json"), STALE), (mk("bad.json"), COULD_NOT_LOOK),
                  (mk("missing.json"), COULD_NOT_LOOK), (mk("s.jsonl", "jsonl_max"), FRESH),
                  ({"status": "not_scheduled", "store": None}, NO_GRADER)]
