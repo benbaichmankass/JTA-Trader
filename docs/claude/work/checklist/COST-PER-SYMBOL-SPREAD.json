@@ -1,0 +1,18 @@
+{
+  "id": "COST-PER-SYMBOL-SPREAD",
+  "title": "Cost-model fidelity per SYMBOL: execution_costs charges one flat 3 bps round-trip perp slippage (D3, pooled bybit_2 fills) while one-tick spreads differ ~100x across symbols (ADA 5.2 bps vs BTC 0.01); measure realized slippage per symbol and set per-symbol slippage where it differs",
+  "phase": "research",
+  "state": "queued",
+  "owner": null,
+  "lane": "ML-ENTRY-GOLIVE-UNBLOCK",
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [],
+  "blocked_on": [],
+  "note": "Filed 2026-11-01 ~20:15Z by lane ML-ENTRY-GOLIVE-UNBLOCK at the manager's request (Manager Session 2026-11-01a, 19:58Z). WHAT IS MEASURED: src/runtime/execution_costs.slippage_bps_roundtrip_for returns PERP_SLIPPAGE_BPS_ROUNDTRIP = 3.0 for every crypto perp (resolve_cost_policy('ADAUSDT') = (3.0, 1.0), read 2026-11-01). Its evidence, comms/research/d3_realized_slippage/2026-09-24.json, is POOLED over bybit_2 fills (round-trip mean +0.868 bps, CI95 [-0.911, +2.946], n entry 87 / package-referenced exit 42, 2026-05-11..2026-09-24) with NO per-symbol split. Bybit tickers snapshot 2026-11-01 ~18:30Z (trainer-vm-diag #22237, committed comms/research/ML-ENTRY-UNIVERSE/local-20261101T1830Z/bybit_specs_20261101.json): ADAUSDT tick 0.0001 at 0.1924 = a 5.2 bps one-tick spread; BTC 0.01, ETH 0.04, SOL 1.06, XRP 0.80 bps. So ADA's structural floor (one tick crossed ~once per round trip) exceeds the flat 3 bps, and every leg that trades ADA (bybit_2/bybit_portfolio ada_pullback_2h and ml_entry; bybit_1 ADA legs) is priced below that floor. WHAT IS NOT KNOWN: realized ADA slippage. The pooled D3 figure includes ADA fills and reads under 3 bps, so this is a fidelity GAP, not a measured under-cost. TASK (Tier 1, measurement): (1) extend scripts/research/realized_slippage.py analyze with a per-symbol split (bybit_2 + bybit_1, same reference_price rules, min_n_per_side 20, else report n and 'insufficient'); (2) for each symbol report realized round trip vs one-tick spread vs 3.0; (3) if a symbol's realized CI95 lower bound exceeds 3.0, propose a per-symbol slippage map in execution_costs (Tier 2/3 per the cost-stack precedent, operator call) and re-run the D3 flip count for that symbol's legs. Re-entry test: the per-symbol table exists with stated n. Related: RQ-20261101-a24c-01 (the ENTRY universe test uses a per-symbol spread + impact model for the same reason), COST-STACK-RECOST-SWEEP, D3.",
+  "updated_at": "2026-11-01T20:02:49Z",
+  "updated_by": "session_01AFoLuKfE1ZQzYVUj5a432n",
+  "_seq": 887
+}
