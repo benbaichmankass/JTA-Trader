@@ -103,3 +103,13 @@ related:
 - docs/plans/counterfactual-everywhere-DESIGN-2026-10-29.md
 what_it_does_not_do: Trains nothing that is registered or served, changes no config, places no order. It grades prediction error, not money;
   the money test is 7294-02. Harness paths are not live paths.
+blocked_review:
+  by: RESEARCH-OPS-20261101-0940
+  disposition: kept
+  due_by: '2026-11-15'
+  note: 'blocker row(s) read done/landed_unproven (ML-DATA-BROAD-PATHS=done, TM-BENCH=landed_unproven)
+    but the unit is NOT dispatchable as authored or its own clears_when is unverified (dispatcher dry
+    run 2026-11-01: missing run.workflow/lands.store, or missing run.inputs.research_unit, or unsupported
+    design ''paired'', or the stated lever not confirmed built). Needs a run-spec/inputs repair by an
+    owner before it can unlock; not unlocked blind.'
+  reviewed: '2026-11-01'
