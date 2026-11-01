@@ -104,3 +104,13 @@ blocked_on:
     2026-10-15 contain none of slv_trend_1h, slv_pullback_1d); the driver would land unavailable on every run.'
   clears_when: each leg is registered in backtest_system.ROSTER with its module/tf AND scripts/ops/backtest_data_source.py resolves a 5m candle
     file for SLV. Then git mv this file to research/queue/. Tracked on checklist row SAME-SYMBOL-ALLOCATION.
+blocked_review:
+  by: RESEARCH-OPS-20261101-0940
+  disposition: kept
+  due_by: '2026-11-15'
+  note: 'blocker row(s) read done/landed_unproven (SAME-SYMBOL-ALLOCATION=landed_unproven) but the unit
+    is NOT dispatchable as authored or its own clears_when is unverified (dispatcher dry run 2026-11-01:
+    missing run.workflow/lands.store, or missing run.inputs.research_unit, or unsupported design ''paired'',
+    or the stated lever not confirmed built). Needs a run-spec/inputs repair by an owner before it can
+    unlock; not unlocked blind.'
+  reviewed: '2026-11-01'

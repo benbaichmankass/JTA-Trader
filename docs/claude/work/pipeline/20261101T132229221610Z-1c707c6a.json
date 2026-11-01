@@ -1,0 +1,17 @@
+{
+  "due_when": {
+    "due_date": "2026-11-05",
+    "kind": "date"
+  },
+  "id": "PI-20261101-WTFTWTFP-0006",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "lane MARKET-DATA-LAKE, manager follow-up 2026-11-01 (every asset class)",
+    "rerun": "Read docs/data/market-data-lake.md section 3 GAP lines; for each vendor fetch its public pricing page and record price per unit; test curl -sI https://datafeed.dukascopy.com/datafeed/EURUSD/2024/00/02/12h_ticks.bi5 from a GitHub runner"
+  },
+  "severity": "medium",
+  "state": "queued",
+  "tier": 1,
+  "what": "(f) Market-data-lake PAID/blocked gaps, one decision list for the operator (docs/data/market-data-lake.md section 3): intraday continuous futures (CME DataMine / Databento CME Globex), historical intraday option chains / OPRA (CBOE DataShop / Polygon-Massive options), pre-2011 delisted-inclusive daily equities (Norgate; CRSP is institutional), FX intraday (Dukascopy datafeed free but runner reachability + terms unverified). Prices were NOT verified this session; each needs a quote before a spend decision."
+}

@@ -1,0 +1,19 @@
+{
+  "id": "PAPER-SPY-UNJOURNALED-1101",
+  "title": "alpaca_paper venue holds SPY long 11 sh with no open journal row",
+  "phase": "W6",
+  "state": "queued",
+  "owner": "manager",
+  "lane": null,
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [],
+  "blocked_on": [],
+  "note": "Found by BACKLOG-DRAIN-2 2026-11-01T14:38Z. /api/diag/exchange_positions?account_id=alpaca_paper lists GLD long 39, IAUM short 137, SLV short 1683, SPY long 11, USO long 301. Journal (trades limit=1000) has open rows only for USO (6806), SLV (6778), IAUM (6655); SPY has only rejected size-0 rows. GLD is the accepted zombie (operator 2026-10-25, do not raise). SPY 11 sh is unjournaled: find which order produced it (ALPACA-CLOSE-WEDGE left an 8-share exit; 11 is not 8) and either adopt it into a journal row or flatten it. Paper only. Closes when: exchange_positions SPY matches a journal row or is flat.",
+  "updated_at": "2026-11-01T15:08:49Z",
+  "updated_by": "BACKLOG-DRAIN-20261101b",
+  "roadmap": "L-OPS",
+  "_seq": 879
+}

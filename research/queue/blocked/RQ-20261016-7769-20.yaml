@@ -1,7 +1,7 @@
 id: RQ-20261016-7769-20
 title: 'P4-Q2 refinement of the 4a4c-06 FAIL: does a MAGNITUDE-weighted, exposure-matched long TILT on ES=F (overweight after cool PPI prints, underweight
   after hot, weight from the surprise''s rank among PRIOR releases) beat the all-long floor net of the MES cost stack? (blocked: rank-tilt arm)'
-status: blocked
+status: retired
 cadence: once
 theme: macro
 priority: 1
@@ -116,3 +116,15 @@ blocked_on:
     2026-10-16); the command above would exit on an unknown argument.'
   ref: checklist MACRO-EVENT-RANKTILT-ARM (Tier-1 research tooling)
   clears_when: the arm lands with a test asserting z uses PRIOR releases only, then git mv this file back to research/queue/ with status queued
+grading:
+  auto: false
+  graded_at: '2026-11-01'
+  grader: session RESEARCH-OPS-20261101-0940 (blocked/ audit)
+  note: 'owner/lever gone: the work item it waited on (MACRO-EVENT-RANKTILT-ARM=dropped) was dropped or
+    killed (bulk reset 2026-10-29 / owner closure) and the lever was never built. Moot as carried; re-file
+    only as a hypothesis-led unit with a stated mechanism (STOP-GENERATED-AUTHORING).'
+  verdict: null
+retired_reason: '2026-11-01 RESEARCH-OPS-20261101-0940 blocked/ audit: owner/lever gone: the work item
+  it waited on (MACRO-EVENT-RANKTILT-ARM=dropped) was dropped or killed (bulk reset 2026-10-29 / owner
+  closure) and the lever was never built. Moot as carried; re-file only as a hypothesis-led unit with
+  a stated mechanism (STOP-GENERATED-AUTHORING).'
