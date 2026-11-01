@@ -14,7 +14,7 @@
   ],
   "blocked_on": [],
   "note": "[2026-11-01T13:35Z lane] MERGED #22131 as 71d37913 (13:25Z). DEPLOYED: /api/diag/version 13:34:01Z ict-web-api + ict-trader-live both on 61b8d1f2 (71d37913 is an ancestor); the 13:30:40Z account_status already carried the new field, so deploy <= 13:30:40Z. OBSERVED: status.raw.closed_orders_state = not_reported on breakout_2 (the legacy-app fallback: APK 1b.311 sends no closed_state and no rows); /api/bot/prop/fills?account_id=breakout_2 trade_open_count 0, rows 106/107/124 trade_state closed (closed_by 109/108/125). NOT YET OBSERVED: the emptyShape dump -- phone-exec-js-sign run 41311144876 for 71d37913 still QUEUED at 13:35Z (Actions backlog), phone still on exec.js 2026-10-18.6 bundled; owned by PI-20261101-YHTYFLA8-0001 (clock starts at the first shape-dump miss; backstop due_by 2026-11-02 holds for a 13:30Z deploy). New APK (MainActivity capture + closed_state) needs install on the phone.",
-  "updated_at": "2026-11-01T13:34:35Z",
+  "updated_at": "2026-11-01T13:50:57Z",
   "updated_by": "session_01AFoLuLMwVEeQ18YhTyfLa8",
   "priority": "high",
   "roadmap": [
@@ -24,6 +24,10 @@
     "what": "after the held PR deploys: the next breakout_2 account_status raw carries closed_orders_state, and the next Closed-orders miss (positions_miss closed_*) carries the emptyShape cells (hdr k=/L0 sib=/txt=/row k=) on /api/bot/prop/status phone_positions_diag",
     "how_to_check": "curl /api/bot/prop/status?account_id=breakout_2 -> status.raw.closed_orders_state and phone_positions_diag.cells",
     "due_by": "2026-11-01"
+  },
+  "writeback": {
+    "roadmap": "none: M39 prop tracking is unchanged in scope; this row adds a diagnostic (closed_orders_state, shape dump) and a /fills trade_state label, and the milestone line already covers prop journal reconciliation",
+    "arch": "none: no contract change; /api/bot/prop/fills only gains additive fields and closed_orders_state lives inside account_status raw"
   },
   "_seq": 876
 }
