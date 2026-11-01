@@ -97,12 +97,17 @@ def jobs(stream: str, syms: list[str], start: str, end: str):
         return [(s, m, f"{BASE}/monthly/fundingRate/{s}/{s}-fundingRate-{m}.zip") for s in syms for m in months(start, end)]
     if stream == "premium":
         return [(s, m, f"{BASE}/monthly/premiumIndexKlines/{s}/1h/{s}-1h-{m}.zip") for s in syms for m in months(start, end)]
+    if stream == "klines12d":  # daily files for the current, not-yet-monthly-published month
+        return [(s, d, f"{BASE}/daily/klines/{s}/1h/{s}-1h-{d}.zip") for s in syms for d in days(start, end)]
+    if stream == "premiumd":
+        return [(s, d, f"{BASE}/daily/premiumIndexKlines/{s}/1h/{s}-1h-{d}.zip") for s in syms for d in days(start, end)]
     if stream == "metrics":
         return [(s, d, f"{BASE}/daily/metrics/{s}/{s}-metrics-{d}.zip") for s in syms for d in days(start, end)]
     raise SystemExit(f"unknown stream {stream}")
 
 
-PARSE = {"klines12": parse_klines, "funding": parse_funding, "premium": parse_klines, "metrics": parse_metrics}
+PARSE = {"klines12": parse_klines, "funding": parse_funding, "premium": parse_klines, "metrics": parse_metrics,
+         "klines12d": parse_klines, "premiumd": parse_klines}
 
 
 def run(out: Path, streams: list[str], start: str, end: str, workers: int, syms: list[str]) -> dict:
@@ -126,7 +131,7 @@ def run(out: Path, streams: list[str], start: str, end: str, workers: int, syms:
                 if df is None:
                     missing[s] += 1
                     continue
-                if st == "klines12" and delist_flag(df):
+                if st in ("klines12", "klines12d") and delist_flag(df):
                     frozen[s].append(key)
                 frames[s].append(df)
         (out / st).mkdir(parents=True, exist_ok=True)
@@ -136,7 +141,8 @@ def run(out: Path, streams: list[str], start: str, end: str, workers: int, syms:
                 man[s] = {"rows": 0, "missing_files": missing[s]}
                 continue
             d = pd.concat(frames[s], ignore_index=True)
-            tcol = {"klines12": "open_time", "premium": "open_time", "funding": "calc_time", "metrics": "create_time"}[st]
+            tcol = {"klines12": "open_time", "premium": "open_time", "funding": "calc_time", "metrics": "create_time",
+                    "klines12d": "open_time", "premiumd": "open_time"}[st]
             d = d.sort_values(tcol).drop_duplicates(tcol).reset_index(drop=True)
             d.to_pickle(out / st / f"{s}.pkl")  # pickle: same as ml_decision_entry cache; no pyarrow on the runner image
             man[s] = {"rows": len(d), "first": str(d[tcol].iloc[0]), "last": str(d[tcol].iloc[-1]),
