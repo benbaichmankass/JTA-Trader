@@ -1,5 +1,5 @@
 {
-  "as_of": "2026-11-01T05:32:33.425546+00:00",
+  "as_of": "2026-11-01T09:21:47.833931+00:00",
   "by_disposition": {
     "healthy": 3,
     "insufficient-data": 38,
@@ -130,11 +130,12 @@
         "account_class": "paper",
         "account_id": "bybit_1",
         "basis": "simulator",
-        "entry_mean": 6.43,
+        "entry_mean": 11.053,
+        "exit_mean": -3.565,
         "modelled_bps": null,
-        "n": 0,
-        "n_entry": 1,
-        "n_exit": 0,
+        "n": 1,
+        "n_entry": 2,
+        "n_exit": 1,
         "stage": "S1",
         "threshold_bps": null,
         "touched_split": {
@@ -142,7 +143,7 @@
         },
         "venue": "bybit_perps",
         "verdict": "insufficient_n",
-        "why": "entry n=1, exit n=0; need >= 10 each"
+        "why": "entry n=2, exit n=1; need >= 10 each"
       },
       "disposition": "insufficient-data",
       "eta": "re-check next scheduled pass",
@@ -152,9 +153,9 @@
         "account_id": "bybit_1",
         "has_open_position": false,
         "held_back": 0,
-        "intent_episodes": 1,
-        "intents": 1,
-        "received": 1,
+        "intent_episodes": 2,
+        "intents": 2,
+        "received": 2,
         "same_symbol_live_contenders": [
           "avax_pullback_2h",
           "claude_desk",
@@ -188,8 +189,8 @@
         "unmapped": null,
         "unmapped_statuses": []
       },
-      "n_needed": "needs 9 more entry fill(s) and 10 more package-referenced exit fill(s) to clear the n=10/side floor (currently entry=1, exit=0); no fill-rate basis to date an ETA from this run alone \u2014 re-check next scheduled pass",
-      "reason": "flowing; cost fidelity insufficient_n (entry n=1, exit n=0; need >= 10 each)",
+      "n_needed": "needs 8 more entry fill(s) and 9 more package-referenced exit fill(s) to clear the n=10/side floor (currently entry=2, exit=1); no fill-rate basis to date an ETA from this run alone \u2014 re-check next scheduled pass",
+      "reason": "flowing; cost fidelity insufficient_n (entry n=2, exit n=1; need >= 10 each)",
       "strategy": "e4_oi_shock_1h"
     },
     {
@@ -221,8 +222,8 @@
         "account_id": "bybit_1",
         "has_open_position": false,
         "held_back": 0,
-        "intent_episodes": 21,
-        "intents": 269,
+        "intent_episodes": 20,
+        "intents": 169,
         "received": 1,
         "same_symbol_live_contenders": [
           "claude_desk",
@@ -270,8 +271,8 @@
         "account_id": "bybit_1",
         "has_open_position": false,
         "held_back": 0,
-        "intent_episodes": 21,
-        "intents": 269,
+        "intent_episodes": 20,
+        "intents": 169,
         "received": 1,
         "same_symbol_live_contenders": [
           "claude_desk",
@@ -417,8 +418,8 @@
         "account_id": "bybit_1",
         "has_open_position": false,
         "held_back": 0,
-        "intent_episodes": 51,
-        "intents": 624,
+        "intent_episodes": 50,
+        "intents": 582,
         "received": 1,
         "same_symbol_live_contenders": [
           "claude_desk",
@@ -526,8 +527,8 @@
         "account_id": "bybit_1",
         "has_open_position": false,
         "held_back": 1,
-        "intent_episodes": 12,
-        "intents": 17,
+        "intent_episodes": 11,
+        "intents": 16,
         "received": 1,
         "same_symbol_live_contenders": [
           "avax_pullback_2h",
@@ -541,7 +542,7 @@
         "unmapped_statuses": []
       },
       "n_needed": null,
-      "reason": "flowing (intents=17, received=1); cost fidelity consistent (n=54, roundtrip_mean=-0.217bps vs modelled 3.0bps)",
+      "reason": "flowing (intents=16, received=1); cost fidelity consistent (n=54, roundtrip_mean=-0.217bps vs modelled 3.0bps)",
       "strategy": "ict_scalp_avax_5m"
     },
     {
@@ -627,8 +628,8 @@
         "account_id": "bybit_1",
         "has_open_position": false,
         "held_back": 1,
-        "intent_episodes": 3,
-        "intents": 7,
+        "intent_episodes": 2,
+        "intents": 3,
         "received": 0,
         "same_symbol_live_contenders": [
           "claude_desk",
@@ -644,7 +645,7 @@
         "unmapped_statuses": []
       },
       "n_needed": "a per-tick account-election read (e.g. the conviction_arbitration/arbitration_fanout_soak log, or a live dispatch trace) showing this leg either winning at least once, or never winning across a large contested-tick sample",
-      "reason": "starved (7 intent(s), 0 received, no open position) but contends its symbol on this SAME account against live sibling(s) ['claude_desk', 'e4_oi_shock_1h', 'ict_scalp_sol_5m', 'sol_pullback_2h', 'trend_donchian_sol', 'trend_donchian_sol_4h'] \u2014 src/runtime/intents.py elects only ONE strategy per (account, symbol) per tick, so losing that election every time produces this exact shape without the leg ever being mechanically dead. Cannot be graded kill without a live per-tick election trace.",
+      "reason": "starved (3 intent(s), 0 received, no open position) but contends its symbol on this SAME account against live sibling(s) ['claude_desk', 'e4_oi_shock_1h', 'ict_scalp_sol_5m', 'sol_pullback_2h', 'trend_donchian_sol', 'trend_donchian_sol_4h'] \u2014 src/runtime/intents.py elects only ONE strategy per (account, symbol) per tick, so losing that election every time produces this exact shape without the leg ever being mechanically dead. Cannot be graded kill without a live per-tick election trace.",
       "strategy": "ict_scalp_sol_15m"
     },
     {
@@ -735,8 +736,8 @@
         "account_id": "bybit_1",
         "has_open_position": false,
         "held_back": 2,
-        "intent_episodes": 14,
-        "intents": 53,
+        "intent_episodes": 12,
+        "intents": 46,
         "received": 3,
         "same_symbol_live_contenders": [
           "claude_desk",
@@ -750,7 +751,7 @@
         "unmapped_statuses": []
       },
       "n_needed": null,
-      "reason": "flowing (intents=53, received=3); cost fidelity consistent (n=11, roundtrip_mean=-1.115bps vs modelled 3.0bps)",
+      "reason": "flowing (intents=46, received=3); cost fidelity consistent (n=11, roundtrip_mean=-1.115bps vs modelled 3.0bps)",
       "strategy": "ict_scalp_xrp_15m"
     },
     {
@@ -833,8 +834,8 @@
         "account_id": "bybit_1",
         "has_open_position": false,
         "held_back": 0,
-        "intent_episodes": 26,
-        "intents": 328,
+        "intent_episodes": 24,
+        "intents": 234,
         "received": 1,
         "same_symbol_live_contenders": [
           "claude_desk",
@@ -934,8 +935,8 @@
         "account_id": "bybit_1",
         "has_open_position": false,
         "held_back": 0,
-        "intent_episodes": 2,
-        "intents": 15,
+        "intent_episodes": 3,
+        "intents": 22,
         "received": 1,
         "same_symbol_live_contenders": [
           "claude_desk",
@@ -986,8 +987,8 @@
         "account_id": "bybit_1",
         "has_open_position": true,
         "held_back": 1,
-        "intent_episodes": 6,
-        "intents": 52,
+        "intent_episodes": 8,
+        "intents": 85,
         "received": 2,
         "same_symbol_live_contenders": [
           "claude_desk",
@@ -1106,11 +1107,11 @@
         "account_class": "paper",
         "account_id": "bybit_1",
         "basis": "simulator",
-        "entry_mean": 1.177,
+        "entry_mean": 0.933,
         "exit_mean": -0.824,
         "modelled_bps": 3.0,
         "n": 4,
-        "n_entry": 19,
+        "n_entry": 18,
         "n_exit": 4,
         "stage": "S1",
         "threshold_bps": 5.0,
@@ -1119,7 +1120,7 @@
         },
         "venue": "bybit_perps",
         "verdict": "insufficient_n",
-        "why": "entry n=19, exit n=4; need >= 10 each"
+        "why": "entry n=18, exit n=4; need >= 10 each"
       },
       "disposition": "insufficient-data",
       "eta": "re-check next scheduled pass",
@@ -1145,8 +1146,8 @@
         "unmapped": null,
         "unmapped_statuses": []
       },
-      "n_needed": "needs 0 more entry fill(s) and 6 more package-referenced exit fill(s) to clear the n=10/side floor (currently entry=19, exit=4); no fill-rate basis to date an ETA from this run alone \u2014 re-check next scheduled pass",
-      "reason": "flowing; cost fidelity insufficient_n (entry n=19, exit n=4; need >= 10 each)",
+      "n_needed": "needs 0 more entry fill(s) and 6 more package-referenced exit fill(s) to clear the n=10/side floor (currently entry=18, exit=4); no fill-rate basis to date an ETA from this run alone \u2014 re-check next scheduled pass",
+      "reason": "flowing; cost fidelity insufficient_n (entry n=18, exit n=4; need >= 10 each)",
       "strategy": "trend_donchian_eth"
     },
     {
