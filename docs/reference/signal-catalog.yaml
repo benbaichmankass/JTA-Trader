@@ -69,8 +69,14 @@ strategy_modules:
     # the 60 reference symbols (cross-sectional context) through src.runtime.ml_decision_features; scores
     # ml/served/ml_decision_entry_v1/model.json (LightGBM). Health: unmeasured until the first live decision.
     # monitor() records M31 peak-R telemetry (exit_levers.since_entry + position_telemetry), observe-only.
+    # ML-ENTRY-TP-REVISION (2026-11-01): at each 4h check-in monitor() re-scores the first-passage TP model
+    # (src.runtime.ml_entry_tp_policy, ml/served/ml_entry_tp_revision_v1) on a fresh 400-bar 1h frame + the reference
+    # frames (market_data.fetch_candles, closed_bars, strategy_signal_builders' reference fetch) and returns the TP move
+    # through src.runtime.tp_revision (venue cap tp_venue_cap; cost stack execution_costs).
     candle_columns: [open, high, low, close, volume]
-    runtime_imports: [src.runtime.exit_levers, src.runtime.ml_decision_features, src.runtime.position_telemetry]
+    runtime_imports: [src.runtime.closed_bars, src.runtime.execution_costs, src.runtime.exit_levers, src.runtime.market_data,
+      src.runtime.ml_decision_features, src.runtime.ml_entry_tp_policy, src.runtime.position_telemetry,
+      src.runtime.strategy_signal_builders, src.runtime.tp_revision, src.runtime.tp_venue_cap]
   ml_entry_v2:
     file: src/units/strategies/ml_entry_v2.py
     # ML-ENTRY-LIVE-ADAPTER (2026-11-01): the ENTRY v2 candidate (TESTING leg, bybit_1 demo only), same pooled-model machinery. Reads 1h OHLCV of the traded symbol and of

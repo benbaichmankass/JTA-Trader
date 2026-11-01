@@ -234,7 +234,7 @@ def tp_revision(cfg: Any, candles_df: Any, open_pkg: Any, *, frames_fn=None, tp_
         bars = _frame(candles_df)
         if bars is None or not len(bars):
             return None
-        from src.runtime import ml_entry_tp_policy as P
+        import src.runtime.ml_entry_tp_policy as P
         model = tp_model or P.load_tp_model()
         tm = model["meta"]
         jc = checkin_bars_held(meta.get("decision_bar"), bars["ts"].iloc[-1], tm["checkins_bars_held"])
@@ -263,7 +263,7 @@ def _register_rule() -> None:
     def _ml_first_passage(*, direction, entry, risk, bars, entry_time, params, leg):  # noqa: ARG001
         """bars = the own closed frame ending at the check-in bar; leg carries the reference frames, the resting TP,
         the bars held and the TP model (set by :func:`tp_revision`). None = keep the resting TP."""
-        from src.runtime import ml_entry_tp_policy as P
+        import src.runtime.ml_entry_tp_policy as P
         from src.runtime.execution_costs import resolve_cost_policy
         model = leg["_tp_model"]
         tm = model["meta"]
