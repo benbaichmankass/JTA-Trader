@@ -465,6 +465,14 @@ accounts:
     market_type: linear                # PR 3 — Bybit V5 USDT-margined
                                        # linear perpetuals. Was
                                        # spot-margin pre-cutover.
+    position_model: slices             # NETTED-SLICES rollout to real money (Tier-3; OPERATOR 2026-11-01
+                                       # ~09:40Z, popup, verbatim "Slices on bybit_2 (Rec.)"): each leg holds
+                                       # its OWN slice of a symbol with its own qty-scoped Partial SL/TP; the
+                                       # per-symbol risk budget (config/slice_allocation.yaml
+                                       # symbol_budget_trades 1.0) is unchanged, so slices never raise a
+                                       # symbol's risk. Follows bybit_1 (live since 2026-10-18). MUST match
+                                       # bybit_portfolio (test_mirror_carries_the_same_position_model_as_live).
+                                       # ROLLBACK: delete this line here AND on bybit_portfolio.
     strategies: [xrp_pullback_2h, trend_donchian_eth_4h, trend_donchian_xrp_4h, ada_pullback_2h, trend_donchian_sol_prop]
                                        # ── PROMOTE-PROP-LEGS, 2026-10-15 (Tier-3, operator PRE-AUTHORIZED).
                                        # ONE LEG ADDED, identically and in the same order on
@@ -858,6 +866,8 @@ accounts:
     mode: live                         # demo = paper money; live is correct.
     market_type: linear                # USDT-margined linear perps (mirrors
                                        # bybit_2); set-leverage fires at boot.
+    position_model: slices             # mirrors bybit_2 (operator 2026-11-01 "Slices on bybit_2 (Rec.)");
+                                       # mirror equality. ROLLBACK: with bybit_2's line.
     strategies: [xrp_pullback_2h, trend_donchian_eth_4h, trend_donchian_xrp_4h, ada_pullback_2h, trend_donchian_sol_prop]
                                        # ── PROMOTE-PROP-LEGS, 2026-10-15 — FOLLOWS bybit_2's addition
                                        # of trend_donchian_sol_prop IDENTICALLY (ordered mirror
