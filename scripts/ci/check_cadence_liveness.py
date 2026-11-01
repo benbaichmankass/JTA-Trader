@@ -206,6 +206,11 @@ CADENCE_REGISTRY: dict[str, dict] = {
                "receipt by design; a crashing run is observed by claude-run-failure-alert and a closed package without a record in "
                "comms/research/counterfactual_grades/ is the staleness signal",
     },
+    "forecast-grade.yml": {
+        "receipt": None,
+        "why": "writes main only when a forecast changed state (the ledger is final-row-frozen), so a quiet hour leaves no receipt by "
+               "design; a crashing run is observed by claude-run-failure-alert and each run uploads its grade as a run summary",
+    },
     "live-review-rows-mirror.yml": {
         "receipt": None,
         "why": "writes main only when live-review/rows carries a review_id main lacks, so a quiet mirror leaves no receipt by design; "

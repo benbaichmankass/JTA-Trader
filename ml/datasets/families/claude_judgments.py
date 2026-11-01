@@ -145,6 +145,10 @@ JUDGMENT_COLUMNS: tuple[str, ...] = (
     "fc_target_r",
     "fc_invalidation_r",
     "fc_horizon_bars",
+    # FORECAST-GRADE-FIRST-PASSAGE label: which level price reached first (target_first | invalidation_first | expired),
+    # joined from comms/desk/forecast_ledger.jsonl by review_id; None until graded (pending / no_data / no forecast)
+    "fc_outcome",
+    "fc_resolved_at",
 )
 OUTCOME_COLUMNS: tuple[str, ...] = (
     "label_net_r",
@@ -210,6 +214,14 @@ def _forecast_cols(fc: Any, state: Mapping[str, Any], feats: Mapping[str, Any], 
         px = _num(fc.get(key))
         out[col] = None if px is None else round(side * (px - mark) / unit, 4)
     return out
+
+
+def _fc_outcome_cols(entry: Mapping[str, Any] | None) -> dict:
+    """fc_outcome / fc_resolved_at from a forecast-ledger entry; only a FINAL first-passage class is a label
+    (pending / tie_unresolved / no_data -> None, never a guess)."""
+    if entry and entry.get("class") in ("target_first", "invalidation_first", "expired"):
+        return {"fc_outcome": entry["class"], "fc_resolved_at": entry.get("resolved_at")}
+    return {"fc_outcome": None, "fc_resolved_at": None}
 
 
 def _read_jsonl(path: Path) -> list[dict]:
@@ -354,6 +366,8 @@ class ClaudeJudgmentsBuilder(DatasetBuilder):
         "fc_target_r": float,
         "fc_invalidation_r": float,
         "fc_horizon_bars": int,
+        "fc_outcome": str,
+        "fc_resolved_at": str,
         # which wake asked (cadence vs a mechanical trigger); lineage, in none of the three groups
         "trigger_event": str,
         # outcome / labels
@@ -379,6 +393,7 @@ class ClaudeJudgmentsBuilder(DatasetBuilder):
         reviews = _read_jsonl(comms_root / "live_review" / "reviews.jsonl")
         ltr_out = {r.get("review_id"): r for r in _read_jsonl(comms_root / "live_review" / "outcomes.jsonl")}
         self.last_report["sources"]["ltr_review"] = len(reviews)
+        fc_ledger = {x.get("fid"): x for x in _read_jsonl(comms_root / "desk" / "forecast_ledger.jsonl")}
         for r in reviews:
             rid = r.get("review_id")
             judged = _parse_ts(r.get("reviewed_at"))
@@ -448,6 +463,7 @@ class ClaudeJudgmentsBuilder(DatasetBuilder):
             feats = r.get("features_at_review") or {}
             state = r.get("state") or {}
             fc = _forecast_cols(r.get("forecast"), state, feats, jr["direction"] if jr else None)
+            fc.update(_fc_outcome_cols(fc_ledger.get(rid)))
             yield {
                 "judgment_id": rid,
                 "kind": "ltr_review",

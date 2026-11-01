@@ -1,0 +1,68 @@
+name: forecast-grade
+
+# FORECAST-GRADE-FIRST-PASSAGE (operator 2026-11-01: "run at least hourly and grade all decisions, including on open
+# trades"). Every price forecast (live-review rows with a `forecast`, desk entry proposals) is graded by first passage -
+# target_first / invalidation_first / expired - plus pending (time remaining) and tie_unresolved (same-bar double touch the
+# 1m candles could not order): scripts/research/forecast_first_passage.py. Token-free (no Claude/API spend). Output:
+# comms/desk/forecast_grade.json (+ per-forecast comms/desk/forecast_ledger.jsonl; final rows frozen). The grader grades;
+# it never gates, applies or edits a trade. A failure is a warning, never a stop (Prime Directive rule 7).
+# Gates this adds or changes: none.
+
+on:
+  schedule:
+    - cron: "41 * * * *"
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: forecast-grade
+  cancel-in-progress: false
+
+jobs:
+  grade:
+    runs-on: ubuntu-latest
+    timeout-minutes: 110  # commit-to-main verify-merged waits up to 80 min (tests/test_commit_to_main_callers.py)
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+          token: ${{ secrets.BRANCH_PROTECTION_TOKEN }}
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Grade every forecast
+        id: grade
+        continue-on-error: true
+        env:
+          DIAG_READ_TOKEN: ${{ secrets.DIAG_READ_TOKEN }}
+        run: |
+          git fetch -q origin live-review/rows desk/decisions || echo "::warning::rows/decisions branch fetch failed; main copies only"
+          python3 scripts/research/forecast_first_passage.py --live --write \
+            || { echo "::warning::forecast_first_passage failed; nothing lands this hour"; exit 0; }
+          python3 - <<'PY' >> "$GITHUB_STEP_SUMMARY"
+          import json
+          d = json.load(open("comms/desk/forecast_grade.json"))
+          print("### forecast-grade", d["computed_at"], "\n", d["population"], "\n```json")
+          print(json.dumps({"pooled": d["pooled"]["classes"], "brier": d["pooled"]["brier_overall"],
+                            "pending": len(d["pending"])}, indent=1), "\n```")
+          PY
+          if [ -n "$(git status --porcelain comms/desk/forecast_ledger.jsonl)" ]; then echo "changed=1" >> "$GITHUB_OUTPUT"; else echo "changed=0" >> "$GITHUB_OUTPUT"; fi
+
+      - name: Land on main (one self-landing PR, only when a forecast changed state)
+        if: steps.grade.outputs.changed == '1'
+        uses: ./.github/actions/commit-to-main
+        with:
+          token: ${{ secrets.BRANCH_PROTECTION_TOKEN }}
+          paths: comms/desk/forecast_grade.json comms/desk/forecast_ledger.jsonl
+          # both files are derived: on a stale-branch conflict adopt main's copy; the next hour regenerates
+          refresh-command: git fetch -q origin main && git checkout FETCH_HEAD -- comms/desk/forecast_grade.json comms/desk/forecast_ledger.jsonl || true
+          message: "forecast-grade: first-passage grade of every price forecast"
+          pr-title: "forecast-grade: first-passage grade of every price forecast"
+          pr-body: "Automated (auto-merge): comms/desk/forecast_grade.json + forecast_ledger.jsonl from scripts/research/forecast_first_passage.py."
+          verify-merged: "true"
