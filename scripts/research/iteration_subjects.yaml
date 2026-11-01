@@ -215,3 +215,6 @@ candidate:
   - id: vol-premium-proxy
     verdict: fail
     basis: 'RQ-20261101-58e4-07: long-variance side loses; profit is the base short-variance premium. Top untested lever: a PRICED straddle test on real chains (DoltHub post-no-preference/options, EOD from 2019-02; row OPTIONS-IV-HISTORY-GAP caveats).'
+  - id: funding-carry
+    verdict: pass
+    basis: 'RQ-20261101-58e4-03: the one discovery PASS of the candidate set (C1 net ann 11.2%, Sharpe 7.77, stress 9.7%/yr, worst month -0.18%, DSR(N=8)=1.0). Return is decaying: 2020 +10.3%, 2021 +33.0%, 2022 -0.1%, 2023 +1.8%, 2024H1 +5.9%. Next test: the ONE holdout read (HOLDOUT-LOCK), then the cost/regime levers.'

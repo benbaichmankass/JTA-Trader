@@ -1,0 +1,110 @@
+# Hand-authored 2026-11-01 by lane RESEARCH-OPS-20261101-1447 (Tier 1), dispatched by Manager Session 2026-11-01a. ITERATION unit: chosen from the subject's lever map (research/levers/funding-carry.yaml), one-factor/ablation against the base control, every arm counted, rule registered BEFORE the graded run. Gates: none.
+id: RQ-20261101-d1f3-07
+title: 'ONE holdout read (2024-07 onward) of the discovery-PASS delta-neutral funding carry C1, under HOLDOUT-LOCK: does it still clear the registered carry rule
+  on data it has never seen?'
+status: blocked
+cadence: once
+theme: new_strategy_prop
+priority: 2
+roadmap:
+- L-PROGRAMMES
+programme: P6
+kind: experiment
+question: 'ONE holdout read (2024-07 onward) of the discovery-PASS delta-neutral funding carry C1, under HOLDOUT-LOCK: does it still clear the registered carry rule
+  on data it has never seen?'
+why_this_matters: 'Operator 2026-11-01: nothing that passes is booked on discovery alone either - a discovery PASS earns exactly ONE holdout read. funding-carry is
+  the only PASS in the candidate set, and its return is decaying (2022 -0.1%, 2023 +1.8%), so the holdout is the whole question.'
+iteration:
+  subject: funding-carry
+  subject_kind: strategy_leg
+  from_result: research/levers/funding-carry.yaml
+  verdict_read: fail/indeterminate (see lever map)
+  diagnosis: 'research/levers/funding-carry.yaml: C1 PASSED discovery (net ann 11.2%, stress 9.7%, worst month -0.18%, DSR(N=8)=1.0) but 2020 +10.3% and 2021 +33.0%
+    carry the window and 2022-24H1 are +0.0 / +1.8 / +5.9%. DIAGNOSIS: the premium is funding collected in a leveraged bull and it compresses outside one; the funding-sign
+    filter is the load-bearing lever (always-carry halves Sharpe). The next test from the map is not another lever on the same window: it is the single held-out read,
+    then (if it holds) the untested cost / regime / tail levers.'
+  hypothesis: 'the single holdout read; levers after it: cost (maker fills, spot financing), regime (funding-trend gate), sizing_vs_cost (tail / liquidation)'
+  search: 'the single holdout read; levers after it: cost (maker fills, spot financing), regime (funding-trend gate), sizing_vs_cost (tail / liquidation)'
+  levers: []
+  attempt: 1
+  due_by: '2026-11-15'
+power:
+  expected_n: 0
+  min_detectable_effect: 0.0
+  effect_units: annualised_return
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: held-out length is whatever has accrued since 2024-07 (about 28 months by 2026-11), read once; one read, so no multiplicity beyond the discovery N=8 already
+    paid.
+  feasibility:
+    source: none
+    accrual_basis: Fixed historical archive; nothing accrues.
+decision_rule:
+  id: RULE-RQ-20261101-d1f3-07
+  registered_at: '2026-11-01'
+  registered_before_run: true
+  statistic: 'ARM (one, counted): C1 exactly as registered (top-10 point-in-time perps with spot, 7d funding window, threshold 1e-4, daily rebalance, perp fee 11
+    bps + 3 slippage, stress 2x), evaluated on 2024-07-01 onward with NO parameter changed. The read goes through the HOLDOUT-LOCK read-once script, which logs reader
+    and time and refuses a second read.'
+  rule: 'PASS iff, on the held-out window, net annualised return > 0 AND net Sharpe >= 1.0 AND stress (2x cost) annualised return > 0 AND worst calendar month > -5%
+    AND both halves of the held-out window net return > 0 (DSR is not re-applied: N=1 read). FAIL otherwise - the lever responses stay in the map and the cost/regime/tail
+    levers are the next iteration; a FAIL does not retire the family. INDETERMINATE if the held-out window is shorter than 120 days. DISCLOSURE: the author smoke-ran
+    the committed harness once on the dev box (none (this unit has not been run in any form; the --holdout-read mode does not exist yet)) before this unit existed;
+    that run is NOT the graded record (the runner''s record is) and neither the arm grid nor the rule changed after it. Any arm added because of what it showed is
+    a NEW trial and a new unit.'
+  what_it_does_not_do: 'Edits no config and no roster, places no order, proposes no live leg. A PASS earns ONE holdout read (HOLDOUT-LOCK), never a book. A FAIL records
+    the lever response in the map and closes NO family: retirement is only by a lever-exhaustion record.'
+intervention_controls:
+  not_applicable: an offline research ablation, not an in-trade action
+practice_precedent: 'M4, M5 (docs/reference/trading-and-model-practice-principles.md): pre-registered arm grid with a control arm, every arm counted, DSR at the cumulative
+  trial count.'
+compute: cpu_light
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 6.0
+  est_minutes: 90
+  why_runner: Public keyless archive / committed closes; CPU only.
+  basis: Estimate; the first run replaces it.
+value:
+  usd_at_stake_per_month: 200
+  confidence: 0.1
+  bucket: structural
+  basis: 'stand-in: candidate sources of positive expectancy for a book the audit found flat gross; an estimate, not a measurement'
+run:
+  command:
+  - python3
+  - scripts/research/edge_portfolio_discovery.py
+  - --family
+  - carry
+  - --holdout-read
+  - --build-data
+  - --data-root
+  - comms/research/_scratch_edge_data
+  - --out
+  - '{out_dir}'
+  inputs:
+    research_unit: RQ-20261101-d1f3-07
+  timeout_minutes: 150
+  workflow: research-script-run.yml
+lands:
+  assert_field: read_state
+  min_rows: 1
+  store: research/results/
+related:
+- research/levers/funding-carry.yaml
+- RESEARCH-OPS-20261101-1447
+- HOLDOUT-LOCK
+- scripts/research/edge_portfolio_discovery.py
+- RQ-20261101-58e4-03
+blocked_on:
+- kind: row
+  ref: HOLDOUT-LOCK
+  what: the read-once script that logs every read of the held-out window; a holdout read must go through it
+  clears_when: HOLDOUT-LOCK self-test refuses a second read and logs who read when (row state done)
+- kind: harness
+  ref: scripts/research/edge_portfolio_discovery.py --holdout-read
+  what: the --holdout-read mode (carry only; loads 2024-07+ only through HOLDOUT-LOCK; edge_data.MAX_MONTH currently makes it unloadable on purpose)
+  clears_when: the mode lands with a self-test that it refuses to run without the HOLDOUT-LOCK token and refuses a second read; this file is then git-mv'd to research/queue/
+    with status queued

@@ -1814,3 +1814,26 @@ levers:
       best_delta_r_per_trade: 0.0748
       fold_stability: 0.625
       reading: 'smooth, fold-stable gain: potential -- confirm on a holdout'
+units:
+- RQ-20261101-e5b1-14
+levers_tested:
+- family: prop-stack fit (account sizing vs firm DD limits and the prop cost stack)
+  varied: prop cost stack, 3 prop accounts x 2 arms x 2 windows, 5 seeds x 1000 lives
+  response:
+    n_3y: 206
+    mean_r_3y: 0.1205
+    ci_r_3y:
+    - -0.073
+    - 0.314
+    mean_r_365d: -0.024
+    by_year_net_r:
+      '2023': -3.342
+      '2024': 14.54
+      '2025': 14.05
+      '2026': -0.738
+    exit_capture_median_winners: 0.575
+  shape: 'FAIL_EDGE on all 3 accounts: 3y edge mean_r +0.120 R (CI -0.07..+0.31, n=206) but 365d -0.024 R (n=66). Ledger: long +15.5 R, short
+    +9.0 R; 2024 +14.5, 2025 +14.1, 2023 -3.3, 2026 -0.7 R; exit capture is the weak spot: 129 of 206 exits are trail_stop (-5.3 R) and median
+    net/MFE of winners is 0.575 (vs ~1.1 on the donchian legs) - the exit family is the lever the attribution points at.'
+  tested_at_power: false
+  unit: RQ-20261101-e5b1-14
