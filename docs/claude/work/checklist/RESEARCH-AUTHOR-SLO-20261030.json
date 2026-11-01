@@ -2,7 +2,7 @@
   "id": "RESEARCH-AUTHOR-SLO-20261030",
   "title": "Research SLO breach 2026-10-30T07:24Z (runnable_floor 56 < 58, authoring_supply_ratio_7d 0.93 < 1): author pre-registered research/queue units from the programme backlogs to restore the runnable floor and supply",
   "phase": null,
-  "state": "landed_unproven",
+  "state": "done",
   "owner": "manager",
   "lane": null,
   "model": "sonnet",
@@ -13,10 +13,10 @@
     21554
   ],
   "blocked_on": [],
-  "note": "Same-day dispatch per manager SKILL \u00a7 Research SLO escalation (runnable_floor / authoring_supply_ratio_7d -> an AUTHORING lane; supply is the lever, never the threshold). Source: research-slo comment 6517324883 on ops-flags #17895 at 07:24:38Z: runnable_floor 56 vs >= 58 [breach, since 07:24Z]; authoring_supply_ratio_7d 0.93 vs >= 1 [breach since 00:24Z]; research_ops_age_h 15.74 vs <= 8 [breach since 00:24Z]. The third is owned by today's 14:47Z research-ops slot (assistant routine trig_01UnRpzN513KbMjvJWFAf911; operator 2026-10-29 pacing rule: research-ops 1x/day while pacing), not this lane. Why no authoring lane ran today: the assistant's 05:53Z daily authoring routine deduped on RESEARCH-AUTHOR-FLOOR-20261029 (created 21:28Z, inside its 12h window). Gates: none. Dispatched 07:27Z: fresh Sonnet lane session_01AFoLuKuWFkKjiKsvHQoNqp, ceiling $6 (fresh: supply is on-disk context). | Lane: observation added for soak-contract-guard #21554 merged 4e387fd (manager hold-merge via auto-merge after resolving a row conflict). research-slo 09:17Z on #17895: runnable_floor and authoring_supply_ratio_7d RECOVERED (lane read runnable 92 vs floor 59, ratio 1.02). Lane archived, final spend $3.44 of $6.",
+  "note": "Same-day dispatch per manager SKILL \u00a7 Research SLO escalation (runnable_floor / authoring_supply_ratio_7d -> an AUTHORING lane; supply is the lever, never the threshold). Source: research-slo comment 6517324883 on ops-flags #17895 at 07:24:38Z: runnable_floor 56 vs >= 58 [breach, since 07:24Z]; authoring_supply_ratio_7d 0.93 vs >= 1 [breach since 00:24Z]; research_ops_age_h 15.74 vs <= 8 [breach since 00:24Z]. The third is owned by today's 14:47Z research-ops slot (assistant routine trig_01UnRpzN513KbMjvJWFAf911; operator 2026-10-29 pacing rule: research-ops 1x/day while pacing), not this lane. Why no authoring lane ran today: the assistant's 05:53Z daily authoring routine deduped on RESEARCH-AUTHOR-FLOOR-20261029 (created 21:28Z, inside its 12h window). Gates: none. Dispatched 07:27Z: fresh Sonnet lane session_01AFoLuKuWFkKjiKsvHQoNqp, ceiling $6 (fresh: supply is on-disk context). | Lane: observation added for soak-contract-guard #21554 merged 4e387fd (manager hold-merge via auto-merge after resolving a row conflict). research-slo 09:17Z on #17895: runnable_floor and authoring_supply_ratio_7d RECOVERED (lane read runnable 92 vs floor 59, ratio 1.02). Lane archived, final spend $3.44 of $6. [BACKLOG-DRAIN-2 2026-11-01] DONE research_slo 2026-11-01T14:33Z: runnable_floor 141 >= 58 ok, authoring_supply_ratio_7d 1.28 >= 1 ok.",
   "priority_rank": 1,
-  "updated_at": "2026-10-30T09:19:20Z",
-  "updated_by": "session_01AFoLuKe1M26JqmpKg3rYdo",
+  "updated_at": "2026-11-01T14:37:31Z",
+  "updated_by": "BACKLOG-DRAIN-20261101b",
   "roadmap": [
     "L-PROGRAMMES"
   ],

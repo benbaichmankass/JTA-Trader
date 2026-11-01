@@ -2,7 +2,7 @@
   "id": "RULE-SHADOW-NOT-DROP",
   "title": "Rule + registry + guard: off the trade path is not off the data path (shadowed features stay collected, owned, re-entry-tested)",
   "phase": null,
-  "state": "landed_unproven",
+  "state": "done",
   "owner": "manager",
   "lane": null,
   "model": null,
@@ -13,9 +13,9 @@
     20312
   ],
   "blocked_on": [],
-  "note": "[2026-10-26 lane session_01Hdec7vwkm7pNRXhARoPgdE] Operator directive 2026-10-26 ~11:30Z (see CLAUDE-RULES-CANONICAL.md). Built: rule section, docs/reference/shadowed-features.yaml (5 entries seeded by measurement), shadowed-features-guard (scripts/ci/check_shadowed_features.py, own --self-test), weekly-audit CORE C10. UMBRELLA owner for shadow_legs (16 of 56 strategies execution: shadow on 2026-10-26) and regime_ml_vol_verdict until per-leg owner rows are verified. Closing observation: PR merged and the guard green on main; then first Monday weekly-audit reports C10 with a per-leg owner gap list.  [2026-10-26] Scope addition from manager (operator-approved): weekly-audit CORE C11 consumed-input freshness added; extends scripts/macro/check_producer_liveness.py (DATA-FEEDS lane session_01YGQEZjAnnVwXXkU66iJbs2), no parallel mechanism.",
-  "updated_at": "2026-10-26T11:55:29Z",
-  "updated_by": "session_01Hdec7vwkm7pNRXhARoPgdE",
+  "note": "[2026-10-26 lane session_01Hdec7vwkm7pNRXhARoPgdE] Operator directive 2026-10-26 ~11:30Z (see CLAUDE-RULES-CANONICAL.md). Built: rule section, docs/reference/shadowed-features.yaml (5 entries seeded by measurement), shadowed-features-guard (scripts/ci/check_shadowed_features.py, own --self-test), weekly-audit CORE C10. UMBRELLA owner for shadow_legs (16 of 56 strategies execution: shadow on 2026-10-26) and regime_ml_vol_verdict until per-leg owner rows are verified. Closing observation: PR merged and the guard green on main; then first Monday weekly-audit reports C10 with a per-leg owner gap list.  [2026-10-26] Scope addition from manager (operator-approved): weekly-audit CORE C11 consumed-input freshness added; extends scripts/macro/check_producer_liveness.py (DATA-FEEDS lane session_01YGQEZjAnnVwXXkU66iJbs2), no parallel mechanism. [BACKLOG-DRAIN-2 2026-11-01] DONE python3 scripts/ci/check_shadowed_features.py exits 0 on main (2026-11-01). docs/reviews/2026-10-28-weekly-audit.md row C10: pass, 18 registry entries, 2 execution:shadow legs, self-test 7/7 planted breaks.",
+  "updated_at": "2026-11-01T14:37:27Z",
+  "updated_by": "BACKLOG-DRAIN-20261101b",
   "observation": {
     "what": "PR merged to main, shadowed-features-guard green on main, and the next Monday weekly-audit reports C10 with the per-shadow-leg owner gap count",
     "how_to_check": "python3 scripts/ci/check_shadowed_features.py; ls docs/reviews/*-weekly-audit.md | tail -1 | xargs grep -n C10",

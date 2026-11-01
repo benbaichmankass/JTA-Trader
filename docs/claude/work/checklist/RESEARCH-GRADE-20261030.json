@@ -13,10 +13,10 @@
     21579
   ],
   "blocked_on": [],
-  "note": "Same-day GRADING lane per manager SKILL \u00a7 Research SLO escalation (undispositioned_24h -> a GRADING lane over result_disposition_check.py --list). Source: research-slo comment 6519300639 on #17895 at 09:17:24Z. Population: result_disposition_check.py --list on main 09:18Z: 1359 units with landed results; graded 1186, needs_review owned 26 / UNOWNED 6, UNGRADED 1. research_ops_age_h (17.6h) is owned by today's 14:47Z research-ops slot. Recovered at 09:17Z: runnable_floor, authoring_supply_ratio_7d (after #21554 4e387fd). Gates: none. Dispatched 09:19Z: fresh Sonnet lane session_01AFoLuNPeyYKZCZ1hFwGqve, ceiling $4.",
+  "note": "Same-day GRADING lane per manager SKILL \u00a7 Research SLO escalation (undispositioned_24h -> a GRADING lane over result_disposition_check.py --list). Source: research-slo comment 6519300639 on #17895 at 09:17:24Z. Population: result_disposition_check.py --list on main 09:18Z: 1359 units with landed results; graded 1186, needs_review owned 26 / UNOWNED 6, UNGRADED 1. research_ops_age_h (17.6h) is owned by today's 14:47Z research-ops slot. Recovered at 09:17Z: runnable_floor, authoring_supply_ratio_7d (after #21554 4e387fd). Gates: none. Dispatched 09:19Z: fresh Sonnet lane session_01AFoLuNPeyYKZCZ1hFwGqve, ceiling $4. [BACKLOG-DRAIN-2 2026-11-01] PENDING: NOT MET. research_slo undispositioned_24h = 3 <= 5 (ok), but result_disposition_check --list at 2026-11-01 shows UNOWNED 3 (needs_review_unowned RQ-20261031-7b6f-03, -04, -05); the row requires UNOWNED 0. UNGRADED is 0.",
   "priority_rank": 1,
-  "updated_at": "2026-10-30T10:06:13Z",
-  "updated_by": "session_01AFoLuKe1M26JqmpKg3rYdo",
+  "updated_at": "2026-11-01T14:37:32Z",
+  "updated_by": "BACKLOG-DRAIN-20261101b",
   "roadmap": [
     "L-PROGRAMMES"
   ],
@@ -27,7 +27,13 @@
   "observation": {
     "what": "undispositioned_24h back <= 5 and result_disposition_check shows UNGRADED 0 / UNOWNED 0 on main after PR 21579 merges",
     "how_to_check": "python3 scripts/research/result_disposition_check.py --list; research-slo comment on ops-flags 17895",
-    "due_by": "2026-10-31"
+    "due_by": "2026-11-02",
+    "redated": {
+      "on": "2026-11-01",
+      "from": "2026-10-31",
+      "by": "BACKLOG-DRAIN-20261101b",
+      "reason": "research_slo undispositioned_24h = 3 <= 5 (ok), but result_disposition_check --list at 2026-11-01 shows UNOWNED 3 (needs_review_unowned RQ-20261031-7b6f-03, -04, -05); the row requires UNOWNED 0. UNGRADED is 0."
+    }
   },
   "_seq": 839
 }
