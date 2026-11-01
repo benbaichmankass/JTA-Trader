@@ -4,7 +4,8 @@ At each 4h check-in of an open ml_entry position (4, 8, 12, 16, 20 closed 1h bar
 LightGBM multiclass model predicts the FIRST-PASSAGE outcome of the rest of the trade over a fixed TP grid (x ATR14 at
 entry, from entry): 18 classes = (highest grid level touched before the stop, 0..8) x (stop hit). The expected net R
 of each level follows from the class probabilities and the training rows' class means; the TP moves to the best valid
-level iff it beats the resting TP by more than the dev-chosen margin. The SL is never touched.
+level iff it beats the resting TP by more than the dev-chosen margin. LIVE IS EXTEND-ONLY (operator 2026-11-01 ~22:50Z):
+the TP only ever moves farther from entry, never closer. The SL is never touched.
 
 Evidence + spec: ``research/results/RQ-20261101-383f-01/``, ``docs/research/ml-decision-models-2026-11-01/TP-REVISION.md``.
 The research harness is ``scripts/research/ml_entry_tp_revision.py``; every function here is pinned to its harness twin
@@ -70,9 +71,15 @@ def level_cost(entry: float, atr: float, side: int, grid: Sequence[float], sl_at
 
 def choose(probs: Sequence[float], means: Sequence[float], *, side: int, entry: float, atr: float, close: float,
            resting_idx: int, grid: Sequence[float], sl_atr: float, min_gap_atr: float, cap_pct: float, margin: float,
-           cost: Sequence[float]) -> Dict[str, Any]:
-    """The policy at one check-in. ``{"move_to": idx | None, "ev": [...], "ev_resting": x, "ev_best": y}``."""
+           cost: Sequence[float], extend_only: bool = True) -> Dict[str, Any]:
+    """The policy at one check-in. ``{"move_to": idx | None, "ev": [...], "ev_resting": x, "ev_best": y}``.
+
+    ``extend_only`` (the live default; operator 2026-11-01 ~22:50Z "Extend-only, now"): only levels FARTHER from entry
+    than the resting TP are candidates, so a pull-in is never emitted. ``False`` is the two-way policy scored by
+    RQ-20261101-383f-01, kept for the research parity tests."""
     ok = valid_levels(side, entry, atr, close, grid, min_gap_atr, cap_pct)
+    if extend_only:
+        ok = ok & (np.arange(len(grid)) > resting_idx)
     ev = expected_net_r(probs, means, cost, grid, sl_atr)
     cand = np.where(ok, ev, -np.inf)
     best = int(np.argmax(cand))

@@ -14,7 +14,8 @@ MOVING TP (row ML-ENTRY-TP-REVISION; evidence ``research/results/RQ-20261101-383
 ``tp_revision: {rule: ml_first_passage}`` in ``config/strategies.yaml`` the package meta carries it. At each 4h check-in (4, 8, .., 20 closed 1h bars after the decision
 bar) :func:`monitor` re-scores the first-passage model of ``src/runtime/ml_entry_tp_policy.py`` and returns
 ``{"tp": x, "tp_reason": ...}`` through ``src/runtime/tp_revision.py`` (the TP-doctrine path) when a grid level beats
-the resting TP by more than the dev-chosen margin. The SL is never touched; a close verdict always wins.
+the resting TP by more than the dev-chosen margin. EXTEND-ONLY (operator 2026-11-01 ~22:50Z "Extend-only, now"): the TP
+only moves farther from entry, never closer. The SL is never touched; a close verdict always wins.
 """
 from __future__ import annotations
 
@@ -260,7 +261,7 @@ def _register_rule() -> None:
     from src.runtime.tp_revision import register_rule
 
     @register_rule(TP_RULE)
-    def _ml_first_passage(*, direction, entry, risk, bars, entry_time, params, leg):  # noqa: ARG001
+    def _ml_first_passage(*, direction, entry, risk, bars, entry_time, params, leg):
         """bars = the own closed frame ending at the check-in bar; leg carries the reference frames, the resting TP,
         the bars held and the TP model (set by :func:`tp_revision`). None = keep the resting TP."""
         import src.runtime.ml_entry_tp_policy as P
@@ -295,7 +296,8 @@ def _register_rule() -> None:
         from src.runtime.tp_venue_cap import TP_VENUE_CAP_PCT
         c = P.choose(P.class_probs(model, {**row, **st}), tm["class_mean_net_r"], side=side, entry=entry, atr=atr,
                      close=close, resting_idx=ridx, grid=grid, sl_atr=sl_atr, min_gap_atr=float(tm["min_gap_atr"]),
-                     cap_pct=TP_VENUE_CAP_PCT, margin=float(tm["margin_r"]), cost=cost)
+                     cap_pct=TP_VENUE_CAP_PCT, margin=float(tm["margin_r"]), cost=cost,
+                     extend_only=bool(params.get("extend_only", True)))
         if c["move_to"] is None:
             return None
         q = c["move_to"]

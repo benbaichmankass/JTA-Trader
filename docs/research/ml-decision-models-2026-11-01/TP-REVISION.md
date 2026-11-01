@@ -79,3 +79,10 @@ Record: `research/results/RQ-20261101-383f-01/local-20261101T1030Z.jsonl` (summa
 - The October baseline itself is negative (−0.019 R/trade) — ENTRY's forward month, reported; this unit does not grade ENTRY.
 - **Next lever** (filed as a unit, not a gate): the pull-in half loses on both dev and forward. An EXTEND-ONLY variant is a NEW variant
   and needs a fresh window (November 2026 forward) under ML-BAR-ONE-READ.
+
+## 7. What went live: EXTEND-ONLY (operator 2026-11-01 ~22:50Z, verbatim: "Extend-only, now")
+The live policy is the registered model and margin, with pull-ins disabled: the TP only ever moves farther from entry.
+**This is not the policy the October read registered.** The two-way policy passed; the extend-only figure (+0.029 R, n = 296
+trades whose FIRST move was an extend) is a post-hoc subset of the same read, and it conditions on the first move only. Its own
+registered check is `RQ-20261101-383f-02` (November 2026 forward window, runnable from 2026-12-01). `config/strategies.yaml`
+declares `tp_revision: {rule: ml_first_passage, extend_only: true}`; removing the line returns the leg to the fixed 3 ATR TP.

@@ -1443,9 +1443,11 @@ strategies:
     tp_r: 1.5
     # MOVING TP (row ML-ENTRY-TP-REVISION, Tier 3): at each 4h check-in the first-passage model
     # (ml/served/ml_entry_tp_revision_v1) re-predicts the TP over the 1..6 ATR grid; evidence
-    # research/results/RQ-20261101-383f-01/ (forward 2026-10 PASS +0.0081 R/trade, n=868). Remove
-    # this line to rest at the fixed 3 ATR TP again.
-    tp_revision: {rule: ml_first_passage}
+    # research/results/RQ-20261101-383f-01/ (forward 2026-10 PASS +0.0081 R/trade, n=868). EXTEND-ONLY
+    # (operator 2026-11-01 ~22:50Z "Extend-only, now"): the TP only moves farther from entry. The
+    # extend-only split (+0.029 R, n=296) is a post-hoc subset of that read; its own check is
+    # RQ-20261101-383f-02 (Nov-2026 window). Remove this line to rest at the fixed 3 ATR TP again.
+    tp_revision: {rule: ml_first_passage, extend_only: true}
     min_reference_symbols: 40
     shadow_model_ids: []
   # ML ENTRY v2 CANDIDATE as a TESTING leg (Tier 3, operator popup 2026-11-01 ~20:20Z: "Live at 1.5% as approved + v2 on bybit_1").

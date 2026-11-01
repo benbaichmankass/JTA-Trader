@@ -89,8 +89,41 @@ def test_choose_matches_harness_policy_step(seed):
     best = int(np.argmax(cand))
     want = best if (np.isfinite(cand[best]) and best != q and cand[best] - ev[q] > 0.05) else None
     got = P.choose(p, means, side=side, entry=entry, atr=atr, close=close, resting_idx=q, grid=H.GRID, sl_atr=2.0,
-                   min_gap_atr=H.MIN_GAP_ATR, cap_pct=TP_VENUE_CAP_PCT, margin=0.05, cost=cost)["move_to"]
+                   min_gap_atr=H.MIN_GAP_ATR, cap_pct=TP_VENUE_CAP_PCT, margin=0.05, cost=cost,
+                   extend_only=False)["move_to"]                    # the two-way policy the harness scored
     assert got == want
+
+
+@pytest.mark.parametrize("seed", range(200))
+def test_extend_only_never_emits_a_pull_in(seed):
+    """Operator 2026-11-01 ~22:50Z "Extend-only, now": live choose() may only move the TP FARTHER from entry."""
+    rng = np.random.default_rng(1000 + seed)
+    p = rng.dirichlet(np.ones(H.N_CLASS) * 0.3)
+    means = rng.normal(0, 1.0, H.N_CLASS)
+    side = int(rng.choice([1, -1]))
+    close = 100.0 + side * float(rng.uniform(-1.5, 5.0))
+    q = int(rng.integers(0, len(H.GRID)))
+    c = P.choose(p, means, side=side, entry=100.0, atr=1.0, close=close, resting_idx=q, grid=H.GRID, sl_atr=2.0,
+                 min_gap_atr=H.MIN_GAP_ATR, cap_pct=TP_VENUE_CAP_PCT, margin=0.0, cost=H.level_cost(100.0, 1.0, side))
+    assert c["move_to"] is None or c["move_to"] > q
+
+
+def test_extend_only_refuses_the_pull_in_the_two_way_policy_takes():
+    p = np.zeros(H.N_CLASS)
+    p[2] = 1.0                                                      # reaches 1.0 and 1.5 ATR, never more, no stop
+    kw = dict(side=1, entry=100.0, atr=1.0, close=100.5, resting_idx=H.GRID.index(3.0), grid=H.GRID, sl_atr=2.0,
+              min_gap_atr=H.MIN_GAP_ATR, cap_pct=TP_VENUE_CAP_PCT, margin=0.05, cost=np.zeros(len(H.GRID)))
+    assert P.choose(p, np.zeros(H.N_CLASS), extend_only=False, **kw)["move_to"] == H.GRID.index(1.5)
+    assert P.choose(p, np.zeros(H.N_CLASS), **kw)["move_to"] is None          # the live default
+
+
+def test_monitor_never_emits_a_pull_in(monkeypatch):
+    frames, own, i, model = _setup(8, p_class=1)                    # mass on "reach 1.0 ATR only": two-way pulls in
+    pkg, entry, atr = _pkg(own, i, 1)
+    monkeypatch.setattr(M, "_frame", lambda df: df[df["ts"] <= own["ts"].iloc[-1]].reset_index(drop=True))
+    rev = M.tp_revision({"min_reference_symbols": 2}, own, pkg, frames_fn=lambda s, b, xs: (own, frames),
+                        tp_model=model)
+    assert rev is None or rev.tp > pkg["tp"]
 
 
 @pytest.mark.parametrize("jc,side", [(4, 1), (8, -1), (12, 1), (20, -1)])
@@ -212,6 +245,7 @@ def test_leg_declares_the_rule_and_the_package_threads_it():
     cfg = yaml.safe_load((REPO / "config/strategies.yaml").read_text())["strategies"]["ml_entry"]
     from src.runtime.tp_revision import RULES, declared_rule
     assert declared_rule(cfg) == M.TP_RULE and M.TP_RULE in RULES
+    assert cfg["tp_revision"].get("extend_only") is True            # operator 2026-11-01 ~22:50Z "Extend-only, now"
     import src.units.strategies.ml_entry as mod
     src = Path(mod.__file__).read_text()
     assert '{"tp_revision": cfg["tp_revision"]} if declared_rule(cfg) == TP_RULE' in src
