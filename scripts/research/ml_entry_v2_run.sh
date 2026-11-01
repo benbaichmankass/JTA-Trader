@@ -14,7 +14,7 @@ python3 scripts/research/vision_streams.py --out "$O" --streams klines12d,premiu
 python3 scripts/research/vision_streams.py --out "$O" --streams funding --start 2026-10 --end 2026-10 --workers 16
 python3 scripts/research/ml_entry_v2.py build-table --streams "$S" --oct-dir "$O" --out "$W"
 if [ "$MODE" = "ablation" ]; then
-  for A in A B C D E F G; do python3 scripts/research/ml_entry_v2.py arm --arm "$A" --out "$W" --n-jobs 2 & done
+  for A in A A2 B C D E F G; do python3 scripts/research/ml_entry_v2.py arm --arm "$A" --out "$W" --n-jobs 2 & done
   wait
   python3 scripts/research/ml_entry_v2.py combine --out "$W"
   cp "$W"/ablation.json "$W"/arm_*.json "$OUT"/

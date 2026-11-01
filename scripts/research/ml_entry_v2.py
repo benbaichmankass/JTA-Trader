@@ -31,12 +31,13 @@ import holdout_lock  # noqa: E402
 import ml_decision_entry as E  # noqa: E402
 import ml_entry_families as F  # noqa: E402
 
-ARMS = {"A": [], "B": ["F1"], "C": ["F2"], "D": ["F3"], "E": ["F4"], "F": ["F5"], "G": ["F1", "F2", "F3", "F4", "F5"]}
+ARMS = {"A": [], "A2": [], "B": ["F1"], "C": ["F2"], "D": ["F3"], "E": ["F4"], "F": ["F5"], "G": ["F1", "F2", "F3", "F4", "F5"]}
 FAM_COLS = {k: [c for c in v if c != "f3_present"] if k == "F3" else v for k, v in F.FAMILIES.items()}
 ALL_FAM_COLS = [c for v in F.FAMILIES.values() for c in v]
 EXTRA_DEV_FOLDS = ["2025-10-01", "2026-01-01", "2026-04-01", "2026-07-01"]   # used ONLY by the forward unit (dev through W1 start)
 W1 = ("2026-10-01", "2026-10-31")
 ADMIT_DELTA, ADMIT_FOLDS, ADMIT_COVERAGE = 0.010, 6, 0.40
+SEEDS = {"A2": 7}   # A2 = arm A with another LightGBM seed: the harness noise floor, measured, not assumed
 
 
 # ----------------------------------------------------------------------------------------------- tables
@@ -121,7 +122,14 @@ def lofo(folds: list[dict]) -> dict:
 def run_arm(tab: pd.DataFrame, arm: str, out: Path, n_jobs: int) -> dict:
     t0 = time.time()
     feats = features_for(arm)
-    wf = E.walk_forward(tab, feats, n_jobs=n_jobs)
+    base_params = dict(E.LGB_PARAMS)
+    if arm in SEEDS:
+        E.LGB_PARAMS["random_state"] = SEEDS[arm]
+    try:
+        wf = E.walk_forward(tab, feats, n_jobs=n_jobs)
+    finally:
+        E.LGB_PARAMS.clear()
+        E.LGB_PARAMS.update(base_params)
     res = {"arm": arm, "families": ARMS[arm], "n_features": len(feats), "features": feats, "walk_forward": wf,
            "lofo": lofo(wf["folds"]), "elapsed_s": round(time.time() - t0)}
     (out / f"arm_{arm}.json").write_text(json.dumps(res, indent=1, default=str))
@@ -134,11 +142,17 @@ def combine(tab: pd.DataFrame, out: Path) -> dict:
         raise SystemExit("arm A (baseline) is required")
     a = arms["A"]["lofo"]
     res = {"read_state": "read", "rule": "ADMIT iff pooled LOFO delta >= +0.010 R per decision AND delta > 0 in >= 6 of 8 folds "
-           "AND present on >= 40 percent of dev decision rows", "baseline_A": {"n": a["n"], "mean_net_r": a["mean_net_r"]},
+           "AND delta >= the measured seed noise |A - A2| AND present on >= 40 percent of dev decision rows", "baseline_A": {"n": a["n"], "mean_net_r": a["mean_net_r"]},
            "arms": {}, "admitted_families": [], "variants_read_on_sealed_window": 0,
            "not_run": ["H (bookDepth): not fetched; rule of fs01-01 arm H stays unevaluated"]}
+    noise = None
+    if "A2" in arms and arms["A2"]["lofo"]["mean_net_r"] is not None and a["mean_net_r"] is not None:
+        noise = abs(arms["A2"]["lofo"]["mean_net_r"] - a["mean_net_r"])
+    res["noise_floor_abs_A_minus_A2"] = noise
+    if noise is None:
+        raise SystemExit("arm A2 (seed noise floor) is required by the registered rule")
     for arm, r in arms.items():
-        if arm in ("A", "G"):
+        if arm in ("A", "A2", "G"):
             continue
         fam = ARMS[arm][0]
         l = r["lofo"]
@@ -149,7 +163,7 @@ def combine(tab: pd.DataFrame, out: Path) -> dict:
         if cov < ADMIT_COVERAGE:
             verdict = "indeterminate"
         else:
-            verdict = "admit" if (d is not None and d >= ADMIT_DELTA and pos >= ADMIT_FOLDS) else "reject"
+            verdict = "admit" if (d is not None and d >= max(ADMIT_DELTA, noise) and pos >= ADMIT_FOLDS) else "reject"
         res["arms"][arm] = {"family": fam, "n": l["n"], "mean_net_r": l["mean_net_r"], "delta_vs_A": d, "folds_better_than_A": pos,
                             "dev_coverage": cov, "verdict": verdict}
         if verdict == "admit":
