@@ -1,0 +1,25 @@
+{
+  "id": "ML-FEATURE-INFRA",
+  "title": "Feature inventory + ranked plan for a pooled feature store that ENTRY v2, BRACKETS and HOLD/ADJUST/CLOSE all read (operator: 20 features is far too few)",
+  "phase": "research",
+  "state": "in_progress",
+  "owner": "lane",
+  "lane": "ML-FEATURE-INFRA",
+  "model": "claude-sonnet-5-5",
+  "ceiling_usd": 30,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [],
+  "blocked_on": [],
+  "note": "Dispatched by Manager Session 2026-11-01a. OPERATOR 2026-11-01, verbatim: \"20 features seems like far far far far too little for the caliber of MLs we are aiming to build - if that's the best we can do, than labelling/features infra needs to get more attention. If it's not the best we can, then why so few?\" Scope: market structure and trading data only, no sizing, no risk features; training may use any useful data incl. symbols not traded; one pooled model per question. DELIVERABLES: (1) this row; (2) docs/research/ml-feature-inventory-2026-11-01.md (per source: measures, symbols, history actually read, point-in-time safety, live today?, backfill cost); (3) ranked feature-family plan + infra gaps each as a row/unit; (4) direct answer: data limit, infra limit or choice. No training, no held-out read (ML-BAR-ONE-READ). ENTRY v1 go-live path unchanged. Gates this adds: none.",
+  "priority_rank": 2,
+  "roadmap": [
+    "L-ML-LIVE"
+  ],
+  "observation": {
+    "what": "the inventory doc is on main and registered in docs/DOCUMENT-INDEX.md, and every infra gap it names is a checklist row or research/queue unit",
+    "how_to_check": "ls docs/research/ml-feature-inventory-2026-11-01.md; grep -c ml-feature-inventory docs/DOCUMENT-INDEX.md; python3 scripts/ops/checklist.py queue | grep FEATURE",
+    "due_by": "2026-11-04"
+  },
+  "_seq": 850
+}
