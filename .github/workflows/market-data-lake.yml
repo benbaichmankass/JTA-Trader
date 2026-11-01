@@ -10,6 +10,8 @@ name: market-data-lake
 # timeframe data available - we can always reconstruct higher timeframes on top of that"; "automations (not claudes)
 # that are continuosly capturing, processing and validating the data feeds".
 #
+# no-durable-result: data pipeline, computes no research verdict; its durable outputs are the private HF dataset (bars, MANIFEST.json, health/latest.json) and the repo health copy comms/data_lake/health_latest.json landed in-job by commit-to-main
+#
 # GATES THIS ADDS OR CHANGES: none. Data path only: no order path, no config the trader reads, no execution flag.
 #
 # MODES (input `mode`, issue body `mode:`, default refresh)
