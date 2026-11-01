@@ -48,7 +48,7 @@ def _as_date(value) -> date | None:
     if not m:
         return None
     try:
-        return datetime.strptime(m.group(1), "%Y-%m-%d").date()
+        return date.fromisoformat(m.group(1))
     except ValueError:
         return None
 
@@ -82,7 +82,7 @@ def fill_defaults(row: dict, today: date | None = None) -> list[str]:
     owner -> manager; due_by -> computed from state / priority_rank / the observation the row names;
     roadmap -> ["unmapped"] + a reason the drain and the weekly pass will show as work. Mutates ``row``;
     returns what it filled (so the CLI can say so). Terminal rows are left alone."""
-    from datetime import timedelta  # noqa: PLC0415
+    from datetime import timedelta
     today = today or datetime.now().astimezone().date()
     if row.get("state") in TERMINAL:
         return []

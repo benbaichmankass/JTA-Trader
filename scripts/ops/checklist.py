@@ -44,17 +44,28 @@ REPO = Path(__file__).resolve().parents[2]
 if str(REPO) not in sys.path:
     sys.path.insert(0, str(REPO))
 
-from src.runtime.checklist_store import *  # noqa: E402,F401,F403
-from src.runtime import checklist_store as _store  # noqa: E402
-from src.runtime.checklist_store import (  # noqa: E402
-    DEFAULT_OWNER, MONOLITH, SEQ, STORE, TERMINAL, ChecklistError, _dump, check, fill_defaults, filing_problems, load,
-    render, seed, write_row,
+from src.runtime import checklist_store as _store
+from src.runtime.checklist_store import *
+from src.runtime.checklist_store import (
+    DEFAULT_OWNER,
+    MONOLITH,
+    SEQ,
+    STORE,
+    ChecklistError,
+    _dump,
+    check,
+    filing_problems,
+    fill_defaults,
+    load,
+    render,
+    seed,
+    write_row,
 )
 
 
 # ── the write CLI: every register edit goes through here, never ad-hoc python ──
 def _now_utc() -> str:
-    from datetime import datetime, timezone  # noqa: PLC0415
+    from datetime import datetime, timezone
     return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
@@ -70,7 +81,10 @@ def _vocab_problems(row: dict, header: dict) -> list[str]:
     """Grade ONE row against the file's own declared vocabulary, with the same
     functions the vocabulary guard uses (`manager_status` owns them), so a bad row
     is refused at the keyboard instead of at CI."""
-    from src.runtime.manager_status import _declared_vocabulary, effective_state  # noqa: PLC0415
+    from src.runtime.manager_status import (
+        _declared_vocabulary,
+        effective_state,
+    )
     vocab = _declared_vocabulary({"states": header.get("states"), "items": [row]})
     eff = effective_state(row, vocabulary=vocab)
     out: list[str] = []
@@ -272,7 +286,7 @@ def _self_test() -> int:
         seed(repo=repo)
 
         def get(rid):
-            return [r for r in load(repo)["items"] if r["id"] == rid][0]
+            return next(r for r in load(repo)["items"] if r["id"] == rid)
 
         def refused(fn, *a) -> bool:
             try:
@@ -280,7 +294,8 @@ def _self_test() -> int:
             except ChecklistError:
                 return True
             return False
-        import contextlib, io  # noqa: E401,PLC0415
+        import contextlib
+        import io
         with contextlib.redirect_stderr(io.StringIO()):
             op_add(repo, "N1", {"title": "bare row"}, None)
             op_add(repo, "N2", {"title": "ranked", "priority_rank": 2}, None)

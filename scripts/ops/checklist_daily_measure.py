@@ -84,7 +84,7 @@ def measure(rows: list[dict], today: date, now: datetime | None = None) -> dict:
             u = yaml.safe_load(f.read_text(encoding="utf-8")) or {}
             c[u.get("status")] += 1
         m["research"] = {"not_run_queued": c.get("queued", 0), "units_total": sum(c.values())}
-    except Exception as exc:  # noqa: BLE001
+    except Exception:  # noqa: BLE001
         m["research"] = None
     return m
 
