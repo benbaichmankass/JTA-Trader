@@ -19,11 +19,7 @@ manifest:
   cost_gate: tested
   horizon: untested
   threshold: tested
-<<<<<<< HEAD
   calibration: tested
-=======
-  calibration: untested
->>>>>>> origin/main
 levers:
   features:
     feature_families_F1_F5:
@@ -54,7 +50,6 @@ levers:
         value: R0 baseline, 3 seeds
         response: 'S0 -0.0018 (n 39.5k-71.9k), S1 -0.0077, S2 (F1..F5) -0.0337; spread 0.0237; only noise-immune arm, no family admitted'
         shape: flat
-<<<<<<< HEAD
       - unit: RQ-20261101-d507-01
         value: 'K=3 seed ensembles x R0/R1/R2 params with a per-fold LOFO quantile threshold (3 draws)'
         response: 'INDETERMINATE: E0 -0.0030 (range 0.0091), E1 +0.0077 (noise-immune, no win), E2 +0.0210 (5/8 folds, a fold at 986), E3 +0.0095; the LOFO threshold choice is itself a noise source'
@@ -64,8 +59,6 @@ levers:
         response: 'base +0.0089; R1 single +0.0204 (delta +0.0114), R2 single +0.0293 (delta +0.0204, seeds +0.0261/+0.0296/+0.0324), E2 R1 ens +0.0245, E3 R2 ens +0.0303 (delta +0.0214); all noise-immune, 6 of 8 folds, 3 of 4 years, min fold n about 3.5k. R0 ensemble +0.0135 no win'
         shape: regularisation_wins
         note: 'regularisation is the lever, ensembling adds little; resolves the fs05-01 INDETERMINATE (R1/R2 were ungradeable only because the LOFO tau left thin folds). Dev only, 5 arms, interaction with the cost gate and bracket untested'
-=======
->>>>>>> origin/main
       shape: noisy
     seed_variance:
       tests:
@@ -94,7 +87,6 @@ levers:
         response: 'S0 +0.0082, delta +0.0099 vs 2x spread 0.0474, 5 of 8 folds; INDETERMINATE (min fold n 1070 on S0, 817 on S1 seed 7)'
         shape: noisy
       shape: noisy
-<<<<<<< HEAD
   universe:
     symbol_set_traded_vs_pooled:
       tests:
@@ -108,8 +100,6 @@ levers:
         response: 'traded-5 -0.0411 (seed range 0.0058, n about 5,486 per seed) vs other 55 +0.0123; cost-neutral re-price of the traded 5: -0.0262 (not cost-driven); BTC+ETH -0.0974 vs ADA+SOL+XRP -0.0103 (gap -0.0871 >= 2 x 0.0058: COIN-driven). Flags: BTC HARM (-0.1291, t -3.6, negative in 4 of 4 years), ETH HARM (-0.0722, t -2.2, negative in 4 of 4 years), XRP/ADA/SOL UNDETERMINED (|t| < 1). Cadence untested (needs b603-01)'
         shape: coin_effect_majors
       shape: slice_negative_on_dev
-=======
->>>>>>> origin/main
   threshold:
     tau_scaling_and_min_n:
       tests:
@@ -118,7 +108,6 @@ levers:
         response: 'the floor trips for R1/R2/R3/T1/T4 because regularised or rescaled scores concentrate near zero; the arms look better on S0 yet cannot be graded'
         shape: design_defect
       shape: design_defect
-<<<<<<< HEAD
   bracket_geometry:
     sl_tp_grid:
       tests:
@@ -269,8 +258,3 @@ declared:
   - {lever: training_target, range: 'raw, market-neutral, first-passage', hypothesis: 'a regime-free target stabilises folds'}
   - {lever: calibration, range: 'raw, isotonic, binned reliability remap', hypothesis: 'non-monotone remap repairs the top band'}
   - {lever: management, range: 'hold, close, SL-to-breakeven, trail, TP move', hypothesis: 'active management adds a captured-move component'}
-=======
-  next_from_map:
-  - 'fs07: replace the single-model score with the mean of K seeds (variance), pick tau as a per-fold score QUANTILE so every fold has a comparable n, rescale T1/T4 scores the same way, keep the fs05 noise control'
-  - 'last dev fold 2025-07..09 is negative for every arm (-0.11 to -0.21): attribute by symbol and direction before any further recipe lever'
->>>>>>> origin/main
