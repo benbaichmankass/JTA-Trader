@@ -131,3 +131,113 @@ def test_monitor_records_peak_r_telemetry_and_never_raises(monkeypatch):
     assert seen.get("strategy") == "ml_entry" and seen.get("current_price") == 1.05 and seen.get("atr") == 0.05
     monkeypatch.setattr(pt, "record_position_telemetry", lambda **kw: (_ for _ in ()).throw(RuntimeError("x")))
     me.monitor({}, df, pkg)  # a telemetry failure never reaches the exit path
+
+
+# ── alpaca_paper (row ALPACA-LIVE-ACTIVITY-ML; operator 2026-11-01 "Paper now, v2 for live (Rec.)") ────────────
+
+
+def _rth_frame(seed: int, sessions: int = 70, end_day: str = "2026-01-30") -> pd.DataFrame:
+    """Alpaca-shaped 1h ETF bars: ts = bar OPEN on the clock hour, 14:00..20:00 UTC (no overnight bars)."""
+    days = pd.bdate_range(end=end_day, periods=sessions, tz="UTC")
+    ts = pd.DatetimeIndex([d + pd.Timedelta(hours=h) for d in days for h in range(14, 21)])
+    rng = np.random.default_rng(seed)
+    n = len(ts)
+    c = 100 * np.exp(np.cumsum(rng.normal(0, 0.004, n)))
+    o = np.r_[c[0], c[:-1]]
+    return pd.DataFrame({"ts": ts, "open": o, "high": np.maximum(o, c) * 1.002, "low": np.minimum(o, c) * 0.998,
+                         "close": c, "volume": rng.uniform(1e5, 1e6, n)})
+
+
+def test_an_outside_symbol_is_aligned_as_of_its_close_and_ranked_with_itself_inserted():
+    """An ETF bar opening 15:00 closes 16:00: the perps are read at their bar that closed 16:00 (opened 15:00), even
+    though the perp frames run on (24/7) past it. Rank = the ETF inserted among the references; breadth / median vol
+    are the references' (the definition RQ-20261101-bdc2-01 scored)."""
+    etf = _rth_frame(9)
+    etf = etf[etf["ts"] <= pd.Timestamp("2026-01-30 15:00", tz="UTC")].reset_index(drop=True)
+    perps = {s: _frame(i, n=800, end="2026-01-31 03:00") for i, s in enumerate(["BTCUSDT", "ETHUSDT", "XRPUSDT"], 1)}
+    row = F.decision_row("SPY", {**perps, "SPY": etf}, reference=list(perps))
+    assert row is not None and row["_n_reference"] == 4
+    close = etf["ts"].iloc[-1] + pd.Timedelta(hours=1)
+    cut = {s: f[f["ts"] + pd.Timedelta(hours=1) <= close] for s, f in perps.items()}
+    assert all(c["ts"].iloc[-1] == pd.Timestamp("2026-01-30 15:00", tz="UTC") for c in cut.values())
+    ff = {s: F.features_symbol(c.iloc[-200:].reset_index(drop=True)).iloc[-1] for s, c in cut.items()}
+    own = F.features_symbol(etf).iloc[-1]
+    rv = pd.Series({**{s: f["ret24_raw"] for s, f in ff.items()}, "SPY": own["ret24_raw"]})
+    assert row["xs_rank_ret24"] == pytest.approx(rv.rank(pct=True)["SPY"])
+    assert row["btc_ret24"] == pytest.approx(ff["BTCUSDT"]["ret24_raw"])
+    refs = pd.Series({s: f["ret24_raw"] for s, f in ff.items()})
+    assert row["breadth_up24"] == pytest.approx(float((refs > 0).mean()))
+    assert row["rel_vol"] == pytest.approx(own["vol24"] / pd.Series({s: f["vol24"] for s, f in ff.items()}).median())
+
+
+def test_a_stale_reference_is_skipped_not_read():
+    etf = _rth_frame(9)
+    etf = etf[etf["ts"] <= pd.Timestamp("2026-01-30 15:00", tz="UTC")].reset_index(drop=True)
+    fresh = {s: _frame(i, n=800, end="2026-01-31 03:00") for i, s in enumerate(["BTCUSDT", "ETHUSDT"], 1)}
+    stale = _frame(3, n=800, end="2026-01-29 03:00")       # last bar a day before the decision
+    row = F.decision_row("SPY", {**fresh, "XRPUSDT": stale, "SPY": etf}, reference=[*fresh, "XRPUSDT"])
+    assert row is not None and row["_n_reference"] == 3     # BTC, ETH + SPY itself; XRP skipped
+
+
+def test_a_perp_row_is_unchanged_by_the_as_of_rule():
+    """Equal-timestamp perps (the bybit_2 case): the as-of rule reads exactly the bars the old equality rule read."""
+    frames = {"BTCUSDT": _frame(1), "ETHUSDT": _frame(2), "XRPUSDT": _frame(3)}
+    assert F.decision_row("ETHUSDT", frames) == F.decision_row("ETHUSDT", frames, reference=list(frames))
+
+
+def test_reference_perps_come_from_bybit_public_data_on_an_alpaca_account(monkeypatch):
+    import src.runtime.market_data as md
+    from src.runtime import strategy_signal_builders as B
+    calls = []
+
+    def fake_fetch(symbol, timeframe, *, settings=None, limit, exchange_client=None, since=None, bypass_cache=False):
+        calls.append((symbol, exchange_client, (settings or {}).get("EXCHANGE")))
+        f = _frame(len(calls), n=300).rename(columns={"ts": "timestamp"})
+        return f
+    monkeypatch.setattr(md, "fetch_candles", fake_fetch)
+    monkeypatch.setattr("src.runtime.closed_bars.drop_forming_bar", lambda df, tf: df)
+    B._ML_ENTRY_REF_CACHE.clear()
+    alpaca_client = object()
+    frames = B._ml_entry_reference_frames(["BTCUSDT", "ETHUSDT"], "2026-01-30T15:00:00+00:00", alpaca_client,
+                                          venue="alpaca")
+    assert set(frames) == {"BTCUSDT", "ETHUSDT"}
+    assert all(client is None and ex == "bybit" for _, client, ex in calls), calls   # never the Alpaca client
+    n = len(calls)
+    B._ml_entry_reference_frames(["BTCUSDT", "ETHUSDT"], "2026-01-30T15:00:00+00:00", alpaca_client, venue="alpaca")
+    assert len(calls) == n                                                          # cached per (venue, bar)
+    bybit_client = object()
+    B._ml_entry_reference_frames(["BTCUSDT"], "2026-01-30T15:00:00+00:00", bybit_client, venue="bybit")
+    assert calls[-1][1] is bybit_client                                             # a Bybit account reuses its client
+    B._ML_ENTRY_REF_CACHE.clear()
+
+
+def test_alpaca_bars_carry_bar_open_timestamps(monkeypatch):
+    """GOLIVE lane's condition: the live decision clock assumes ts = bar OPEN. Alpaca's `t` is the bar START; the
+    connector keeps it and the ml_entry frame keeps it, so a bar opening 15:00 UTC closes 16:00 = a decision bar."""
+    from src.exchange import alpaca_connector as A
+    from src.runtime import strategy_signal_builders as B
+
+    class _Resp:
+        def raise_for_status(self):
+            return None
+
+        def json(self):
+            return {"bars": [{"t": "2026-01-30T15:00:00Z", "o": 1, "h": 2, "l": 0.5, "c": 1.5, "v": 10},
+                             {"t": "2026-01-30T14:00:00Z", "o": 1, "h": 2, "l": 0.5, "c": 1.0, "v": 10}]}
+    monkeypatch.setattr(A.requests, "get", lambda *a, **k: _Resp())
+    df = A.AlpacaMarketData(api_key="k", api_secret="s").get_ohlcv("SPY", "1h", limit=2)
+    fr = B._ml_entry_frame(df)
+    assert list(fr["ts"]) == [pd.Timestamp("2026-01-30 14:00", tz="UTC"), pd.Timestamp("2026-01-30 15:00", tz="UTC")]
+    assert M.is_decision_bar(fr["ts"].iloc[-1], 4) and not M.is_decision_bar(fr["ts"].iloc[0], 4)
+
+
+def test_ml_entry_scope_on_alpaca_paper_is_etfs_only():
+    import yaml
+    from src.config.symbol_sets import leg_symbols
+    cfg = yaml.safe_load((REPO / "config/strategies.yaml").read_text())["strategies"]["ml_entry"]
+    paper = leg_symbols(cfg, "alpaca_paper")
+    assert paper and not any(s.endswith("USDT") for s in paper) and "GLD" not in paper
+    assert leg_symbols(cfg, "bybit_2") == ["BTCUSDT", "ETHUSDT", "XRPUSDT", "ADAUSDT", "SOLUSDT"]
+    accts = yaml.safe_load((REPO / "config/accounts.yaml").read_text())["accounts"]
+    assert "ml_entry" in accts["alpaca_paper"]["strategies"]
+    assert "ml_entry" not in (accts["alpaca_live"].get("strategies") or [])        # no real-money ML on Alpaca
