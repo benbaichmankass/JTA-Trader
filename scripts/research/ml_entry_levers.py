@@ -507,13 +507,14 @@ def stack_unit(tab, out, n_jobs, cache: Path) -> dict:
 W1 = ("2026-10-01", "2026-10-31")
 
 
-def build_full_cache(dev_streams: Path, fwd_streams: Path, oct_dir: Path, out: Path):
+def build_full_cache(dev_streams: Path, fwd_streams: Path, oct_dir, out: Path):
     import ml_entry_families as F
     cache = out / "klines_full"
     cache.mkdir(parents=True, exist_ok=True)
     syms = []
     for sym in E.universe():
-        frames = [pd.read_pickle(d / st / f"{sym}.pkl") for d, st in ((dev_streams, "klines12"), (fwd_streams, "klines12"), (oct_dir, "klines12d"))
+        dailies = [Path(x) for x in (oct_dir if isinstance(oct_dir, (list, tuple)) else [oct_dir])]
+        frames = [pd.read_pickle(d / st / f"{sym}.pkl") for d, st in [(dev_streams, "klines12"), (fwd_streams, "klines12")] + [(x, "klines12d") for x in dailies]
                   if (d / st / f"{sym}.pkl").exists()]
         if not frames:
             continue
@@ -615,6 +616,61 @@ def w1_unit(dev_streams, fwd_streams, oct_dir, out, n_jobs, stack_result: Path, 
     taken.to_pickle(out / "w1_trades_v2.pkl")
     taken1.to_pickle(out / "w1_trades_v1ref.pkl")
     return res
+
+
+# ----------------------------------------------------------------------------------------------- b610: forward read of the frozen v2 artifact
+FWD_ID = "ENTRY-v2-frozen-fwd"
+
+
+def fwd_unit(artifact: Path, dev_streams: Path, fwd_streams: Path, daily_dirs: list, start: str, end: str, out: Path, count_only: bool,
+             reader: str, ledger: Path) -> dict:
+    """Score the FROZEN artifact (no retrain, no change) on [start, end]. ``count_only`` is label-free: it counts candidate decisions
+    (score > tau and the cost gate passes) from scores only and claims nothing. The real read claims the lock first."""
+    import holdout_lock
+    import lightgbm as lgb
+    art = json.loads(artifact.read_text())
+    meta = {k: v for k, v in art.items() if k != "booster_txt"}
+    models = {side: lgb.Booster(model_str=art["booster_txt"][side]) for side in ("long", "short")}
+    cache, syms = build_full_cache(dev_streams, fwd_streams, daily_dirs, out)
+    full = E.build_table(cache, syms)
+    full["ts"] = pd.to_datetime(full["ts"], utc=True)
+    w0, w1e = pd.Timestamp(start, tz="UTC"), pd.Timestamp(end, tz="UTC") + pd.Timedelta(days=1)
+    test = full[(full.ts >= w0) & (full.ts < w1e)].reset_index(drop=True)
+    pl, ps = (models[side].predict(test[meta["features"]]) for side in ("long", "short"))
+    gate = meta.get("cost_gate")
+    est = (float(gate["k_cost_x_atr"]) / test["atr_pct"].to_numpy()) if gate else np.zeros(len(test))
+    passes = (est <= float(gate["max_cost_r"])) if gate else np.ones(len(test), bool)
+    cand = (np.maximum(pl, ps) > float(meta["tau"])) & passes
+    days = max((test.ts.max() - test.ts.min()).total_seconds() / 86400.0, 1e-9) if len(test) else 1.0
+    base = {"unit": "RQ-20261101-b610-01", "window": [start, end], "rows": len(test), "symbols": int(test.symbol.nunique()),
+            "candidates": int(cand.sum()), "candidates_per_day": round(float(cand.sum()) / days, 2), "trigger_candidates": 1100,
+            "trigger_reached": bool(cand.sum() >= 1100), "artifact": str(artifact.name), "model_id": meta.get("model_id")}
+    if count_only:
+        return {**base, "count_only": True, "result": f"label-free count: {base['candidates']} candidates ({base['candidates_per_day']}/day) vs trigger 1100"}
+    mid = FWD_ID
+    claim = holdout_lock.claim_read(mid, start, end, "RQ-20261101-b610-01", reader, ledger)        # BEFORE any outcome is used
+    br = meta["bracket"]
+    score = relabel_table(test, cache, float(br["sl_atr"]), float(br["tp_atr"])) if float(br["tp_atr"]) != 3.0 else test
+    pl2, ps2 = pl.copy(), ps.copy()
+    pl2[~passes] = ABSTAIN
+    ps2[~passes] = ABSTAIN
+    taken = E.policy(score, pl2, ps2, float(meta["tau"]))
+    m = E.summarize(taken)
+    v1 = Path(__file__).resolve().parents[2] / "comms/research/RQ-20261101-c692-06/41324826751/model"
+    claim1 = holdout_lock.claim_read("ENTRY-v1-frozen-ref-fwd", start, end, "RQ-20261101-b610-01-v1ref", reader, ledger)
+    v1p = {side: lgb.Booster(model_file=str(v1 / f"entry_{side}.txt")).predict(test[E.FEATURES]) for side in ("long", "short")}
+    taken1 = E.policy(test, v1p["long"], v1p["short"], TAU)
+    m1 = E.summarize(taken1)
+    a_ok = m["n"] >= E.N_FLOOR and m["n_symbols"] >= E.SYMBOL_FLOOR
+    b_ok = m["mean_net_r"] is not None and m["mean_net_r"] >= 0
+    c_ok = m["mean_net_r"] is not None and m1["mean_net_r"] is not None and m["mean_net_r"] >= m1["mean_net_r"]
+    verdict = "indeterminate" if not a_ok else ("pass" if (b_ok and c_ok) else "fail")
+    taken.to_pickle(out / "fwd_trades_v2.pkl")
+    return {**base, "read_state": "read", "verdict": verdict, "conditions": {"a_n_and_symbols": a_ok, "b_mean_ge_0": b_ok, "c_ge_v1_reference": c_ok},
+            "v2": m, "v2_traded5": E.summarize(taken[taken.symbol.isin(TRADED)]), "v1_reference": m1,
+            "v1_reference_traded5": E.summarize(taken1[taken1.symbol.isin(TRADED)]), "baselines_v2_mechanics": _baselines(score, taken),
+            "holdout_lock": claim, "holdout_lock_v1ref": claim1, "variants_on_window": claim1["variants_on_window"],
+            "result": f"{verdict}: v2 {m['mean_net_r']:+.4f} (n={m['n']}) vs v1 reference {m1['mean_net_r']:+.4f} (n={m1['n']})"}
 
 
 # ----------------------------------------------------------------------------------------------- a508: the traded slice
@@ -725,7 +781,7 @@ def build_base_table(streams: Path, out: Path) -> Path:
 
 def main() -> int:
     ap = argparse.ArgumentParser()
-    ap.add_argument("cmd", nargs="?", choices=["run", "build-table", "w1-read"])
+    ap.add_argument("cmd", nargs="?", choices=["run", "build-table", "w1-read", "fwd-read"])
     ap.add_argument("--streams", default="")
     ap.add_argument("--unit", default="")
     ap.add_argument("--dev-streams", default="")
@@ -734,6 +790,11 @@ def main() -> int:
     ap.add_argument("--stack-result", default="")
     ap.add_argument("--reader", default="lane ML-RECIPE")
     ap.add_argument("--dry", action="store_true")
+    ap.add_argument("--artifact", default="ml/served/ml_decision_entry_v2/model.json")
+    ap.add_argument("--daily-dirs", default="")
+    ap.add_argument("--start", default="2026-11-01")
+    ap.add_argument("--end", default="")
+    ap.add_argument("--count-only", action="store_true")
     ap.add_argument("--table", default="")
     ap.add_argument("--out", default="/tmp/ml_entry_levers")
     ap.add_argument("--n-jobs", type=int, default=4)
@@ -746,6 +807,13 @@ def main() -> int:
     out.mkdir(parents=True, exist_ok=True)
     if a.cmd == "build-table":
         print(build_base_table(Path(a.streams), out))
+        return 0
+    if a.cmd == "fwd-read":
+        import holdout_lock
+        r = fwd_unit(Path(a.artifact), Path(a.dev_streams), Path(a.fwd_streams), [x for x in a.daily_dirs.split(",") if x], a.start, a.end, out,
+                     a.count_only, a.reader, holdout_lock.LEDGER)
+        (out / ("fwd_count.json" if a.count_only else "b610_result.json")).write_text(json.dumps(r, indent=1, default=str))
+        print(r["result"])
         return 0
     if a.cmd == "w1-read":
         import holdout_lock
