@@ -985,6 +985,7 @@ real top-level `docs/*.md` and fails if the population builder cannot see it.
 | `docs/research/ml-data-rate-path-2026-10-29.md` | evidence | unknown | — | 2026-10-29 | `dir:research-is-measurement / not-assessed` | Ranked data sources the system can generate now for ML training (harness universe, cf arms, bar labels, desk, live) + units RQ-20261029-7294-01..03. |
 | `docs/research/ml-decision-models-2026-11-01/DESIGN.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
 | `docs/research/ml-decision-models-2026-11-01/DIAGNOSIS.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
+| `docs/research/ml-decision-models-2026-11-01/TP-REVISION.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
 | `docs/research/ml-p1-costnet-rebuild-2026-10-29.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
 | `docs/research/ml-review-frontier-diagnosis-2026-10-28.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | Scored last 4 ml-review + frontier outputs; researched MRM/monitoring practice; basis for the two-layer redesign of both skills. |
 | `docs/research/ml-data-classification-2026-10-13.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
