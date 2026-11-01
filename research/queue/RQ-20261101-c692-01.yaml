@@ -1,0 +1,93 @@
+# Hand-authored 2026-11-01 by lane ML-DECISION-MODELS (Tier 1), dispatched by Manager Session 2026-11-01a (session_01AFoLuJ1apgy8sfngu4WyNH).
+# Decision rule registered BEFORE any run (spec docs/research/ml-decision-models-2026-11-01/DESIGN.md section 2). Gates: none.
+id: RQ-20261101-c692-01
+title: 'ENTRY decision model: does ONE LightGBM model pooled over the frozen 60-perp universe, deciding LONG / SHORT / NOTHING every 4h from
+  market context alone (24h horizon, reference bracket 2 ATR / 3 ATR), reach held-out mean net R per decision >= 0 net of the full cost stack?'
+status: queued
+cadence: once
+theme: ml_health
+priority: 1
+roadmap:
+- L-ML-LIVE
+kind: experiment
+practice_precedent: 'T1, M6 (docs/reference/trading-and-model-practice-principles.md): purged + embargoed walk-forward with a sealed held-out
+  window; triple-barrier first-passage labels (Lopez de Prado 2018, ch. 3); docs/research/ml-decision-models-2026-11-01/DESIGN.md.'
+question: 'On the 60 symbols of manifest bp2-f4271084b120 (Binance Vision USDT-M 1h, 2020-07-01..2026-09-30), at the close of every 4th
+  bar, label LONG and SHORT by first passage over SL 2.0 x ATR14 / TP 3.0 x ATR14 / 24h time stop with entry at the next bar open (tie ->
+  SL, gap -> open fill), net of fee 11.0 + slippage 3.0 bps round trip + funding 1.0 bps per 8h window. Train two LightGBM regressors
+  (net R long / short) on 20 point-in-time symbol-agnostic features, pooled; take the better side iff its prediction > tau (tau chosen
+  on 8 purged + embargoed dev folds 2022-01..2025-09 only), one position per symbol. Score the sealed held-out window 2025-10-01..2026-09-30
+  once. Prior search (PLANNING section 1, look before you re-test): docs/research/ml-decision-models-2026-11-01/DIAGNOSIS.md lists 175
+  graded ML units; none is a bar-level market-label decision model scored in net R pooled across symbols (direction heads
+  RQ-20261014-9d20-*, RQ-20261016-* were per-symbol log-loss tests).'
+why_this_matters: 'Operator directive 2026-11-01 (row ML-DECISION-MODELS): ML decision makers live on real money as soon as possible; live
+  bar "Point estimate >= 0", path "Straight to real money" (bybit_2 + mirror). This is the critical path: BRACKETS (c692-02) and MANAGE
+  (c692-03) compose on top of it.'
+power:
+  expected_n: 3000
+  min_detectable_effect: 0.06
+  effect_units: metric
+  sd: 1.0
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: 'INFERRED capacity: 60 symbols x 365 held-out days, decisions every 4h, one position per symbol with holds <= 24h gives ~20,000 free
+    slots; a take rate of 15 percent gives ~3,000 decisions. sd ~1 R because net R is bounded near [-1.1, +1.4] under the 2/3 ATR bracket.
+    The operator bar is a point estimate (>= 0), not a test against 0; the n floor 300 (DESIGN section 1.7) keeps the SE near 0.06 R.'
+  feasibility:
+    source: none
+    accrual_basis: Replays public history; nothing accrues. The run records the observed n and sd.
+decision_rule:
+  id: RULE-RQ20261101-c692-01-ENTRY
+  registered_at: '2026-11-01'
+  registered_before_run: true
+  statistic: 'scripts/research/ml_decision_entry.py verdict(): held-out mean net R per TAKEN decision (net of fee 11.0 + slip 3.0 bps + funding
+    1.0 bps/8h), n taken, distinct symbols traded; tau from TAU_GRID by the dev-only rule; baselines no-trade / always-long / always-short /
+    random matched (200 draws) reported under identical mechanics.'
+  rule: 'INDETERMINATE IF no tau reaches dev n >= 1000, OR held-out n < 300, OR held-out distinct symbols < 10. PASS IF held-out mean net R
+    per decision >= 0 (point estimate, the operator bar). FAIL otherwise. A PASS releases the deliverable-D Tier-3 promotion PR (new adapter,
+    bybit_2 + bybit_portfolio, RiskManager default risk) held for the manager. A FAIL closes THIS configuration (24h horizon, 2/3 ATR bracket,
+    this feature block, regression target), not the family; DESIGN section 5 orders the next levers. Thresholds are not changed after any
+    result.'
+  what_it_does_not_do: No sizing, no config change, no order. The bootstrap CI and ex-max-symbol mean are reported, not gating.
+  min_n: 300 held-out decisions on >= 10 symbols
+compute: cpu_long
+value:
+  bucket: ai_trader
+  usd_at_stake_per_month: 800
+  confidence: 0.2
+  basis: 'stand-in: the operator priority-1 goal (first ML decision model on real money); not a P&L measurement.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 6.0
+  est_minutes: 60
+  why_runner: Keyless public Binance Vision klines; GBDT on CPU; no trainer data.
+  basis: 'INFERRED: ~4,500 monthly zips (~40 KB each), ~0.8M decision rows x 20 features, 9 LightGBM pairs of fits, a 200-draw random
+    baseline in pure Python.'
+run:
+  workflow: research-script-run.yml
+  command:
+  - python3
+  - scripts/research/ml_decision_entry.py
+  - run
+  - --cache
+  - /tmp/ml_decision_klines
+  - --unit
+  - '{unit}'
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 240
+  inputs:
+    research_unit: RQ-20261101-c692-01
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- ML-DECISION-MODELS
+- RQ-20261101-c692-02
+- RQ-20261101-c692-03
+- ML-DATA-BROAD-PATHS
+- docs/research/ml-decision-models-2026-11-01/DESIGN.md
+what_it_does_not_do: Registers, serves or promotes nothing; changes no config; places no order; sizes nothing.
