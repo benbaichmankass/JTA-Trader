@@ -1,0 +1,7 @@
+{
+  "tier": 3,
+  "landing": "hold",
+  "hold_reason": "tier_2_3_needs_approval",
+  "hold_text": "Tier-3 exit-logic change on a real-money leg (ml_entry on bybit_2 + bybit_portfolio): the TP now moves at each 4h check-in. Stacked on PR #22079 (ml_entry exists only there). Evidence RQ-20261101-383f-01 passes its pre-registered rule (+0.0081 R/trade, n=868) but the matched-random comparison is weak (93rd pct, CI spans 0); the manager weighs it and the operator merges.",
+  "why": "ml_entry.monitor() returns {tp, tp_reason} via src/runtime/tp_revision (rule ml_first_passage declared in config/strategies.yaml); served artifact ml/served/ml_entry_tp_revision_v1; the two ml_entry TP-doctrine baseline lines removed."
+}
