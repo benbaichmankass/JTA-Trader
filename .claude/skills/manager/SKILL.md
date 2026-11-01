@@ -284,8 +284,9 @@ Never add, and never dispatch a lane to add, a gate (approval step, hold, readin
 - **`RESEARCH-OPS-<date>-<slot>`** (operator, 2026-10-10): at 02:47, 08:47, 14:47, 20:47 UTC dispatch ONE lane on the `research-ops` skill —
   Sonnet, ceiling $6, row first. Skip a slot while the previous research-ops lane still runs; a running TOPIC lane (`RESEARCH-NIGHT-*`,
   `PERF-FOLLOWUP-*`, `REGIME-*`, ML, readouts) never causes a skip (operator 2026-10-11) — tell it which topic lanes are live. **A research
-  floor gap is due work, not a note**: while the brief's §0 shows `### 🚨 RESEARCH FLOOR GAP`, dispatch a same-day authoring lane sized to
-  the gap (`queue_replenish.py --authoring-queue`; aim at the `H1-THEME` shortfalls). Record `comms/research/ops/<stamp>.json`; one line in
+  floor gap is REPORTED, NOT FILLED** (operator 2026-11-01, STOP-GENERATED-AUTHORING, superseding the 2026-10-16 "due work" rule): when the
+  brief's §0 shows `### 🚨 RESEARCH FLOOR GAP`, do NOT dispatch an authoring lane to close it; new units need a stated mechanism from a result
+  someone read. Record `comms/research/ops/<stamp>.json`; one line in
   "what moved".
 - **Research SLO escalation** (operator, 2026-10-16, binding): SLOs are in `scripts/research/research_slo.yaml` (measured every 2 h; one
   Telegram message per state change + one comment on the ops-flags PR, marker `research-slo`). **When any SLO is `breach` or

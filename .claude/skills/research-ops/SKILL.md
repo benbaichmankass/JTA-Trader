@@ -282,7 +282,12 @@ the health check warns `H1-THIN` (nothing left to refill or author) or `H1-AUTHO
 ready questions -- that is your step E work).
 
 - `runnable >= floor` → nothing to do. Record it.
-- `runnable < floor` → first let the template + programme refill do its job
+- ⚠️ **STOP-GENERATED-AUTHORING (operator 2026-11-01, row AUDIT-1101-DECISIONS, verbatim "Stop floor-driven units (Rec.)"):
+  `runnable < floor` is REPORTED, never filled.** Do not author units, run the step-E top-up, or dispatch the refill to meet the
+  floor or a theme shortfall; `queue_replenish.py`'s default target is now 0. Author a unit ONLY when a result you read this pass calls
+  for a specific follow-up with a stated mechanism (who pays, why it persists) -- at most a handful, no lever-transfer units. The
+  bullet below is SUPERSEDED and kept as history:
+- ~~`runnable < floor` → first let the template + programme refill do its job~~
   (`research-queue-replenish.yml` fills from `research/templates/*.yaml`; the health check
   exits 3 when templates can fill the gap). If templates cannot fill it, or `runnable`
   stays below the floor after the unlock work in step C, top up from the sources in step E
@@ -426,6 +431,9 @@ unit id, a `PI-…`/checklist id, or `no action, because …`. A finding in chat
 not filed (CLAUDE.md § "Two categories").
 
 ## E. Intake sources for the top-up
+
+> ⚠️ **SUPERSEDED for floor/theme gaps (operator 2026-11-01, STOP-GENERATED-AUTHORING):** this list is NOT drawn on to meet a count.
+> Use it only when a result you read calls for a specific follow-up with a stated mechanism.
 
 Draw new units from, in this order, until the floor is met or sources are exhausted:
 
