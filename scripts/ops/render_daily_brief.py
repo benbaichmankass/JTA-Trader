@@ -587,6 +587,13 @@ def build(*, today: date | None = None, root: Path | None = None) -> dict[str, A
 
     checklist_doc, checklist_state = read_json(_CHECKLIST, root)
     ck = checklist_view(checklist_doc) if checklist_state == "read" else checklist_view({})
+    # CHECKLIST-OWNER-DUE (operator, 2026-11-01): overdue rows render at the TOP of the brief. Unread
+    # checklist => a declared hole ("we did not look"), never an empty list.
+    if checklist_state == "read":
+        from scripts.ops import checklist_overdue as _od  # noqa: PLC0415
+        overdue_lines = _od.brief_lines((checklist_doc or {}).get("items") or [], today)
+    else:
+        overdue_lines = [f"### OVERDUE -- COULD NOT BE COMPUTED (checklist `{checklist_state}`; we did not look, this is not zero)", ""]
     # §0b: derived due-ness, only when the checklist was actually read -- an
     # unread checklist is "we did not look", never "nothing derived-due".
     if checklist_state == "read":
@@ -616,6 +623,7 @@ def build(*, today: date | None = None, root: Path | None = None) -> dict[str, A
         "researchSlo": _research_slo(root),
         "liveParity": _live_parity_line(root),
         "activeTradeManagement": atm_view(root),
+        "overdueLines": overdue_lines,
         "pipeline": {"stats": pipe_stats, "section0Lines": section0,
                      "healthy": pipe_res.healthy, "askOperator": ask_operator},
         "activity": git_activity(root, today),
@@ -638,7 +646,7 @@ def build(*, today: date | None = None, root: Path | None = None) -> dict[str, A
 def _section0(b: dict) -> list[str]:
     # `section0_lines` emits its own "## §0 —" header. Due-ness comes from
     # pipeline.py (`due`, `due_bucket`), never re-derived here.
-    L = list(b["pipeline"]["section0Lines"]) + [""]
+    L = list(b.get("overdueLines") or []) + list(b["pipeline"]["section0Lines"]) + [""]
     # RESEARCH-ENGINE-1016 (2026-10-16): a research floor gap is DUE work computed on every render -- it
     # reached the manager only as prose in research-ops handoffs before, and nobody acted on it.
     if "researchFloorLines" in b:
