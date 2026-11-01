@@ -217,6 +217,7 @@ ER: frozenset[str] = frozenset({DIM_ENTRY, DIM_REVISION})
 E: frozenset[str] = frozenset({DIM_ENTRY})  # entry_tp only: a tp_revision rule is declared and plumbed
 BASELINE_2026_10_06: dict[str, frozenset[str]] = {
     # ── real_money ──────────────────────────────────────────────────────────
+    "alpaca_portfolio/gld_pullback_1d": R,  # 2026-11-01 mirror superset (operator): the underlying of alpaca_live/iaum_pullback_1d, same params, same debt, not new: tp_r 3.5 declared, tp_revision still undeclared
     "alpaca_live/iaum_pullback_1d": R,  # 2026-10-22 tp_r 3.5 declared (OPERATOR-DECISIONS-1022); tp_revision still undeclared
     "bybit_2/ada_pullback_2h": R,
     "bybit_2/trend_donchian_eth_4h": E,  # 2026-10-18 tp_revision declared (TIER3-PACKETS-1018); entry_tp still the 50 R sentinel

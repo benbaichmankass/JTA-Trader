@@ -1,0 +1,7 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "hold_reason": "tier_2_3_needs_approval",
+  "hold_text": "Tier-2: touches the live prop phone path (src/prop/phone_executor.py, src/prop/phone_reconcile.py) and exec.js, which the phone fetches OTA once signed on main. Dispatch BREAKOUT-UNRECORDED (Manager Session 2026-11-01a): 'Tier-2: held PR for the manager'. The manager merges.",
+  "why": "Every breakout_2 phone_reconcile close since 2026-10-16 (9/9) was journaled closed_unpriced because the phone's Closed orders read returns empty_unconfirmed; this records that read's state on every unpriced close, makes the next miss carry a layout dump (OTA) and a DOM capture (next APK), and labels /api/bot/prop/fills rows with the trade's state so an opening event row is never read as an open trade (the false finding that dispatched this lane). No order is placed, cancelled or amended; no reconcile decision changes."
+}

@@ -1,0 +1,96 @@
+# Hand-authored 2026-11-01 by lane ML-FEATURE-INFRA (Tier 1) on the manager request 2026-11-01 ~12:03Z. Decision rule registered BEFORE any run. Gates: none.
+id: RQ-20261101-fs06-01
+title: 'ENTRY label/target fix: does a market-neutral or rank-transformed target (instead of raw net R per side) stabilise the dev folds and raise the leave-one-fold-out mean at the same features? Dev folds only, noise controls built in'
+status: blocked
+cadence: once
+theme: ml_health
+priority: 1
+roadmap:
+- L-ML-LIVE
+kind: experiment
+practice_precedent: 'T1, M6 (docs/reference/trading-and-model-practice-principles.md): purged + embargoed walk-forward; shadow-feature (Boruta-style) controls so a model that cannot reject noise columns is not trusted to admit real ones.'
+question: 'Dev folds swing from -0.10 to +0.06 net R per decision across half-year periods for the same model, so the target carries a market-regime component the 20 features cannot explain. Arms (features fixed at the 20 baseline, recipe fixed at the baseline LightGBM parameters, same labels and cost stack; only the TRAINING TARGET changes, scoring is always raw net R): T0 raw net R per side; T1 net R minus the cross-sectional mean of net R over the 60 symbols at the same decision timestamp (market-neutral alpha); T2 per-timestamp cross-sectional rank of net R scaled to [-1, 1]; T3 net R clipped to [-3, +3] ATR-risk units; T4 first-passage 3-class classifier per side (target-first / stop-first / timeout) with score = sum of P(class) x class mean net R (the contract of DESIGN.md section 1b, ties SL-first until DATA-LABEL-TIES lands). Each arm also runs S1 = 20 columns plus 9 noise columns as the noise control and three seeds (7, 11, 13). No sealed window is read.'
+why_this_matters: 'Manager 2026-11-01 ~12:03Z: labels/targets are the other lever after the recipe; operator 2026-11-01: improving the labelling is super important.'
+power:
+  expected_n: 60000
+  min_detectable_effect: 0.01
+  effect_units: metric
+  sd: 1.0
+  design: paired
+  alpha: 0.05
+  power: 0.8
+  basis: 'INFERRED: dev folds hold about 6 x 10^4 scored decisions at the chosen tau (arm A, 2026-11-01: 67,860 leave-one-fold-out). The seed-to-seed spread of arm A (measured, A vs A2: 0.0017 leave-one-fold-out, 0.003 to 0.005 pooled at a fixed tau) is the noise floor the rule is set against.'
+  feasibility:
+    source: none
+    accrual_basis: Replays public history through 2025-09-30 (dev folds only); nothing accrues.
+decision_rule:
+  id: RULE-20261101-fs06-01
+  registered_at: '2026-11-01'
+  registered_before_run: true
+  statistic: 'Per arm, seed and fold: n and sum of raw net R at the leave-one-fold-out tau; pooled mean; across-seed spread; noise-control delta; per-fold comparison with T0; fold-to-fold standard deviation of the mean (stability).'
+  rule: "A target arm is ADMITTED iff its mean-over-seeds leave-one-fold-out mean (S0) beats T0 by >= 2 x spread (spread = the across-seed range of T0, measured) AND it is better than T0 in >= 6 of 8 folds AND its noise-control delta (S1 - S0) is >= -spread. If none is admitted the result is 'target change does not help the dev folds' and the lane reports that the pooled bar-level recipe has no measured edge above the seed noise. Thresholds are not changed after any result. INDETERMINATE if spread cannot be computed or any fold has fewer than 1000 scored decisions."
+  what_it_does_not_do: 'Reads no sealed window (dev folds only), serves nothing, changes no config, places no order, sizes nothing.'
+  min_n: 1000 dev decisions per fold
+compute: cpu_long
+value:
+  bucket: ai_trader
+  usd_at_stake_per_month: 400
+  confidence: 0.2
+  basis: 'stand-in: the operator priority-1 goal (ML decision makers live); not a P&L measurement.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 8.0
+  est_minutes: 240
+  why_runner: Keyless public Binance Vision archives; GBDT on CPU.
+  basis: 'MEASURED 2026-11-01: one 8-fold arm of the baseline recipe takes about 480 s on 4 threads (arm A); this unit runs a fixed number of arms.'
+run:
+  workflow: research-script-run.yml
+  command:
+  - bash
+  - scripts/research/ml_entry_v2_run.sh
+  - labels
+  - '{unit}'
+  - '{out_dir}'
+  timeout_minutes: 600
+  inputs:
+    research_unit: RQ-20261101-fs06-01
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- ML-FS-LABELS
+- ML-FEATURE-INFRA
+- RQ-20261101-fs05-01
+- RQ-20261101-c692-05
+- DATA-LABEL-TIES
+- docs/research/ml-feature-inventory-2026-11-01.md
+what_it_does_not_do: Registers, serves or promotes nothing; changes no config; places no order; sizes nothing; reads no sealed window.
+blocked_on:
+- kind: harness
+  what: 'the target-arm subcommand (T1..T4 training targets, raw-net-R scoring, noise sets, seeds) in scripts/research/ml_entry_v2.py'
+  clears_when: 'lands on main with a self-test that the cross-sectional demeaning uses only same-timestamp values (truncation invariance) and no sealed date is read (planned 2026-11-01T20:00Z, row ML-FS-LABELS); then git-mv to research/queue/ with status queued (rule unchanged)'
+ml_consumer:
+  consumer: ML-ENTRY-LIVE-ADAPTER
+  decision: 'which regularisation and target the ENTRY v2 recipe uses before any feature family is added; feeds the single pre-registered forward read'
+  legs:
+  - xrp_pullback_2h
+  - trend_donchian_eth_4h
+  - trend_donchian_xrp_4h
+  - ada_pullback_2h
+  - trend_donchian_sol_prop
+  book: money
+# iteration block added 2026-11-01 by lane RESEARCH-ITERATE (the unit's registered rule is unchanged)
+iteration:
+  subject: ml-entry
+  subject_kind: ml_model
+  from_result: RQ-20261101-fs01-01 (ENTRY v2 feature-family ablation, FAIL 2026-11-01)
+  verdict_read: fail
+  diagnosis: 'Dev folds swing from -0.10 to +0.06 net R per decision across half-year periods for the same model and features: the raw net-R target
+    carries a market-regime component the 20 features cannot explain, which the fs01-01 ablation inherits. Cause (second lever after the recipe):
+    the TARGET.'
+  hypothesis: a market-neutral, rank-transformed, clipped or first-passage target stabilises the dev folds and raises the leave-one-fold-out mean
+    at the same features
+  attempt: 1
+  due_by: '2026-11-03'

@@ -74,7 +74,7 @@ def _old_ref(base: str) -> str:
     return sha if mb.returncode == 0 and sha else base
 
 
-def tree_findings(acc: dict, strat: dict, contracts: List[dict]) -> List[str]:
+def tree_findings(acc: dict, strat: dict, contracts: List[dict], mech: Optional[dict] = None) -> List[str]:
     by_id = {c.get("id"): c for c in contracts}
     shadow = {n for n, v in strat.items() if isinstance(v, dict) and v.get("execution") == "shadow"}
     out = []
@@ -97,7 +97,8 @@ def tree_findings(acc: dict, strat: dict, contracts: List[dict]) -> List[str]:
     # PROMOTION-NO-SOAK (operator, 2026-11-01): a Stage-2 leg with mechanics_proven and no soak contract is VALID, so no
     # contract is demanded of it. The registry is checked for shape only (no calendar field, a known delta) -- it is an
     # evidence input to MD-PROMOTE-S1-S2, never a gate on what trades. A long soak is still refused above.
-    mech = ss.load_mechanics_paths()
+    # `mech` None = the real registry; the self-test passes its own (a synthetic tree must not read the real file).
+    mech = ss.load_mechanics_paths() if mech is None else mech
     out += [f"config/mechanics_paths.yaml: {p}" for p in ss.mechanics_problems(mech)]
     out += [f"config/mechanics_paths.yaml: {leg} is not a leg in config/strategies.yaml"
             for leg in sorted(mech) if leg not in strat]
@@ -202,7 +203,7 @@ def _self_test() -> int:
     good = [ss.make_contract(kind="stage1", leg="a", account="bybit_1", started="2026-09-01"),
             ss.make_contract(kind="shadow", leg="s", account="bybit_1", started="2026-09-01",
                              enabled=False)]
-    ck("a contracted roster passes (positive control)", tree_findings(acc, strat, good) == [])
+    ck("a contracted roster passes (positive control)", tree_findings(acc, strat, good, {}) == [])
     ck("a NEW roster leg with no contract is refused",
        any("bybit_1/b" in f for f in tree_findings({"bybit_1": {"strategies": ["a", "s", "b"]}},
                                                    strat, good)))
@@ -216,7 +217,7 @@ def _self_test() -> int:
     ck("the retired too_long design is refused",
        any("design" in f for f in tree_findings(acc, strat, [dict(good[0], design="too_long"), good[1]])))
     ck("a removed leg needs nothing (removal is free)",
-       tree_findings({"bybit_1": {"strategies": ["s"]}}, strat, good) == [])
+       tree_findings({"bybit_1": {"strategies": ["s"]}}, strat, good, {}) == [])
     ck("a one-shot observation with due_by is admissible",
        observation_problems({"what": "05:30Z report produced", "how_to_check": "ls comms/x",
                              "due_by": "2026-10-05T06:00Z"}) == [])

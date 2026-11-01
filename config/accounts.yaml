@@ -1352,25 +1352,18 @@ accounts:
   # primaries; the proxies stay alpaca_live-only. ROLLBACK: re-add both cells +
   # SPYM/IAUM to `symbols`.
   #
-  # ⚠️ ROSTER-SYNC IS NOW STRICT EQUALITY, AND THE LIST BELOW DOES NOT YET
-  # SATISFY IT. DECIDED 2026-09-21 (operator, checklist row B2): this account
-  # must carry EXACTLY alpaca_live's roster minus the two declared proxies,
-  # the same mechanism bybit_portfolio/bybit_2 already use, because
-  # docs/plans/OPERATING-PLAN-2026-09-21.md makes this book's net-of-cost
-  # window Gate 2's DEMOTION signal and a 14-leg mirror of a 3-leg live book
-  # cannot carry that meaning. Enforced by
-  # tests/test_paper_portfolio_accounts.py::
-  #   test_alpaca_portfolio_mirrors_alpaca_live_exactly_minus_proxies
-  # which is RED against the list below ON PURPOSE — the invariant landed, the
-  # roster edit that satisfies it did not, because removing 12 legs from a
-  # trading account's roster needs an operator OK this lane does not have.
-  # MEASURED 2026-09-21 by parsing THIS FILE: alpaca_live 3 legs, minus the
-  # iaum proxy = 2; this account 14; 12 surplus. To satisfy the invariant,
-  # `strategies:` below becomes exactly:
-  #     - ief_pullback_1d
-  #     - slv_pullback_1d
-  # ROLLBACK of the invariant (not of the roster): the SUBSET form is in git
-  # (#10393, #10633) and restoring it is an operator decision, not a test edit.
+  # ⚠️ ROSTER-SYNC IS A SUPERSET (operator, 2026-11-01, chat, relayed by Manager Session 2026-11-01a,
+  # VERBATIM): "The paper portfolio decision is wrong - it should mirror the live account, as per the
+  # definition of paper mirror." and "The only difference with alpaca mirror is that it also has shorting
+  # and includes the symbols we can't yet trade on alpaca live, but there's no excuse for that account
+  # having nothing/less than alpaca live trading, that's a serious process flaw that is unacceptable".
+  # SUPERSEDES B2 (2026-09-21, strict equality minus the proxies, "empty live => empty mirror"), under
+  # which this account sat EMPTY while alpaca_live traded iaum_pullback_1d.
+  # Rule: every alpaca_live leg is here, each affordability PROXY replaced by the full-size leg it proxies
+  # (iaum_pullback_1d -> gld_pullback_1d, splg_trend_long_1d -> spy_trend_long_1d), never just dropped;
+  # every alpaca_live symbol is in `symbols` (SPYM -> SPY, IAUM -> GLD); this book trades BOTH sides.
+  # Enforced by tests/test_paper_portfolio_accounts.py (superset tests; an empty mirror fails).
+  # Superseded B2-era text: git history of this block.
   alpaca_portfolio:
     exchange: alpaca
     account_class: paper               # PAPER money (Alpaca paper host).
@@ -1379,26 +1372,14 @@ accounts:
     api_key_env: ALPACA_API_KEY_PAPER_PORTFOLIO         # dedicated paper login,
     api_secret_env: ALPACA_API_SECRET_KEY_PAPER_PORTFOLIO  # separate from alpaca_paper.
     mode: live                         # paper host = paper money; executes.
-    side_filter: long                  # = alpaca_live's. B2 (operator, 2026-09-21): the mirror
-                                       # takes IDENTICAL trades, and a direction live suppresses
-                                       # is not a trade live takes. Until 2026-09-30 this key was
-                                       # absent, so the mirror traded shorts on ief/slv_pullback_1d
-                                       # that alpaca_live demotes to dry — and Gate 2's demotion
-                                       # read included short-side P&L the live book never had
-                                       # (PI-20260928-E8Y3BGBS-0002 / -SVBNZOVH-0002). This
-                                       # SUPERSEDES, for this account only, the 2026-08-23 scoping
-                                       # "alpaca_paper / alpaca_portfolio / ib_paper keep trading
-                                       # both sides": that scope existed so the soak keeps accruing
-                                       # short-side data, and alpaca_paper (the soak) still does.
-                                       # CONFIRMED 2026-09-30 05:41Z by the manager
-                                       # (session_01HYq6XtfesZ57VyaQrK6CL1), relaying the operator's
-                                       # authority: "B2 ... is the later decision and wins for
-                                       # alpaca_portfolio. The 2026-08-23 scoping still holds for
-                                       # alpaca_paper and ib_paper, which stay two-sided."
-                                       # Asserted by tests/test_paper_portfolio_accounts.py::
-                                       # test_alpaca_portfolio_trade_shaping_fields_equal_alpaca_live.
-                                       # ROLLBACK: delete this key (and that test's side_filter row).
-    strategies: []                     # alpaca_live's roster MINUS the affordability
+    # side_filter: ABSENT ON PURPOSE -- this mirror trades BOTH sides (operator 2026-11-01, quoted above:
+    # "it also has shorting"). alpaca_live stays `side_filter: long` (cash book). Declared divergence:
+    # tests/test_paper_portfolio_accounts.py::_SANCTIONED_DIVERGENCE. The venue login is margin with shorting
+    # enabled (MEASURED 2026-11-01 broker_account_status: ACTIVE, shorting_enabled true, multiplier 4, flat).
+    # ROLLBACK: add `side_filter: long` back (Tier 3).
+    strategies: [gld_pullback_1d]      # = alpaca_live [iaum_pullback_1d] with the proxy replaced by its
+                                       # underlying (operator 2026-11-01). Identical params to iaum_pullback_1d
+                                       # except symbol (MEASURED: config/strategies.yaml diff). Both sides.
       # ⚠️ EXPLICIT `[]`, NOT A BARE `strategies:` — a key with only comments under it parses as
       # null. The account loader (src/units/accounts/__init__.py) maps a present-but-null key to
       # `[]` (block all), but src/runtime/strategy_monocle._accounts_declaring reads null as the
@@ -1412,7 +1393,8 @@ accounts:
       # Stage-0 FAIL at power on RQ-20261016-c56e-17, RQ-20261023-9ffb-01, -02, -03 (tune-before-demote done).
       # It keeps trading on alpaca_paper so the record continues. REVERT = add `- slv_pullback_1d` back (Tier 3).
       # With iaum_pullback_1d the only alpaca_live leg (a declared proxy), this mirror is now EMPTY —
-      # the operator's 2026-09-21 "equality wins, no exception" decision (see the mirror test).
+      # the operator's 2026-09-21 "equality wins, no exception" decision. ⚠️ SUPERSEDED 2026-11-01 (operator,
+      # quoted on the ROSTER-SYNC block above): the mirror is a superset; the proxy is carried as its underlying.
       # ⚠️ CUT FROM 14 TO 2 ON 2026-09-21, BY EXPLICIT OPERATOR APPROVAL, asked
       # and answered directly. The 12 removed were:
       #   spy_trend_long_1d, qqq_trend_long_1d, gld_pullback_1d,

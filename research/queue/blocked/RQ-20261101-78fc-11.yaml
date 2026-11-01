@@ -1,0 +1,80 @@
+# Hand-authored 2026-11-01 by lane RESEARCH-ITERATE (Tier 1), dispatched by Manager Session 2026-11-01a. ITERATION unit: authored from a written diagnosis of the subject's last result. Decision rule registered BEFORE any run. Gates: none.
+id: RQ-20261101-78fc-11
+title: 'ITERATION 1 of e4_oi_shock_1h (fail): does a stricter shock threshold (oi_z 4.0 / 5.0) turn the thin positive mean into a cluster-CI-positive
+  edge?'
+status: blocked
+cadence: once
+theme: live_strategy
+priority: 1
+roadmap:
+- L-PROGRAMMES
+programme: P3
+kind: experiment
+question: On the E4 ledger's held-out window, re-replayed with oi_z 4.0 and 5.0 (all else frozen), does either arm reach n >= 30, mean net R >
+  0 and a 95% ISO-week cluster CI lower bound > 0?
+why_this_matters: 'Operator 2026-11-01 ~12:59Z: "if the data doesn''t pass, it goes back into research for improvments and testing. THere is no
+  other pipeline for underperforming strategies/mls." e4_oi_shock_1h is not on real money and had no live research iteration (scripts/research/iteration_orphans.py,
+  2026-11-01).'
+iteration:
+  subject: e4_oi_shock_1h
+  subject_kind: strategy_leg
+  from_result: comms/strategy_evidence/e4_oi_shock.json
+  verdict_read: fail
+  diagnosis: 'comms/strategy_evidence/e4_oi_shock.json (rule RULE-RQ20261030-E18G-03-E4-STAGE0-ABSOLUTE, verdict fail): n=856, net +18.8 R (+0.022
+    R/trade), folds +4.4 / +17.2 / -0.5 / +6.8 / -9.1. The mean is positive but the week-clustered CI includes zero: a thin per-trade edge spread
+    over many weak shocks, with the last fold negative. Most likely cause: the oi_z 3.0 threshold admits shocks too small to carry a move net
+    of cost (design), with noise as the competing hypothesis.'
+  hypothesis: fewer, larger OI shocks carry a per-trade edge large enough to clear the clustered CI
+  attempt: 1
+  due_by: '2026-11-08'
+power:
+  expected_n: 500
+  min_detectable_effect: 0.02
+  effect_units: metric
+  sd: 1.0
+  design: paired
+  alpha: 0.05
+  power: 0.8
+  basis: INFERRED from the source result's population; the rule's own INDETERMINATE floor governs.
+  feasibility:
+    source: none
+    accrual_basis: Replays existing corpora; nothing accrues.
+decision_rule:
+  id: RULE-RQ-20261101-78fc-11
+  registered_at: '2026-11-01'
+  registered_before_run: true
+  statistic: On the E4 ledger's held-out window, re-replayed with oi_z 4.0 and 5.0 (all else frozen), does either arm reach n >= 30, mean net
+    R > 0 and a 95% ISO-week cluster CI lower bound > 0?
+  rule: 'PASS iff an arm has n >= 30 AND mean net R > 0 AND 95% ISO-week cluster CI LB > 0 on the held-out rows (the E18G-03 rule, unchanged,
+    per arm; denominator 2 arms). FAIL: back to diagnosis (horizon / side). INDETERMINATE if every arm has n < 30. Fixed now.'
+  what_it_does_not_do: Serves, promotes or applies nothing; changes no config; places no order.
+practice_precedent: 'M4, M5 (docs/reference/trading-and-model-practice-principles.md): pre-registered arm grid, every arm counted.'
+compute: cpu_light
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 8.0
+  est_minutes: 120
+  basis: Estimate; the first run replaces it.
+  why_runner: Replays committed or public corpora on CPU.
+value:
+  usd_at_stake_per_month: 60
+  confidence: 0.15
+  bucket: structural
+  basis: planning weight by money rank; an estimate, not a measurement
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- RESEARCH-ITERATE
+- E4-DEMO-LEG
+what_it_does_not_do: Serves, promotes or applies nothing; changes no config; places no order.
+blocked_on:
+- kind: work_item
+  ref: E4-DEMO-LEG
+  what: an --oi-z argument on scripts/research/desk_event_entry_replay.py / e4_prop_ledger.py so the frozen E4 arm can be re-replayed at another
+    threshold
+  clears_when: the argument lands with a self-test that oi_z 3.0 reproduces the committed ledger; then git-mv to research/queue/ (rule unchanged)
+intervention_controls:
+  not_applicable: an offline model evaluation; the consumer's own gate applies any action
