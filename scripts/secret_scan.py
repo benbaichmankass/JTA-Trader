@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import re
 import subprocess
+import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -44,9 +45,39 @@ def is_allowed(line: str) -> bool:
     low = line.lower()
     return any(word in low for word in ALLOW_WORDS)
 
-def main() -> int:
+def files_in_diff(diff_path: str) -> set[str]:
+    """Paths named by `diff --git a/X b/Y` headers (both sides of a rename).
+
+    Empty set => unreadable/empty diff, which the caller reads as "scan everything".
+    """
+    try:
+        text = Path(diff_path).read_text(errors="replace")
+    except OSError:
+        return set()
+    out: set[str] = set()
+    for ln in text.splitlines():
+        if ln.startswith("diff --git a/") and " b/" in ln:
+            a, b = ln[len("diff --git a/"):].rsplit(" b/", 1)
+            out.update((a, b))
+    return out
+
+
+def main(argv: list[str] | None = None) -> int:
+    # CI-THROUGHPUT-20261029: `--pr-diff FILE` (passed by run_guards only on a
+    # pull_request event) scans just the files that diff touches. Push to main,
+    # merge_group, dispatch, schedule and --all get no such flag and scan the FULL tree,
+    # so every committed byte is still scanned at least once on main. An unreadable
+    # or empty diff scans EVERYTHING, never fewer files.
+    argv = list(sys.argv[1:] if argv is None else argv)
+    touched: set[str] = set()
+    if "--pr-diff" in argv:
+        touched = files_in_diff(argv[argv.index("--pr-diff") + 1])
     findings = []
+    scanned = 0
     for path in tracked_files():
+        if touched and str(path.relative_to(ROOT)) not in touched:
+            continue
+        scanned += 1
         if not path.exists():
             # File may be tracked but deleted in the working tree before git add -A.
             # That is expected during cleanup; skip it.
@@ -70,7 +101,8 @@ def main() -> int:
             print(f"  {rel}:{line} — {kind}")
         return 1
 
-    print("No obvious tracked-file secrets found.")
+    print(f"No obvious tracked-file secrets found (scanned {scanned} tracked file(s)"
+          f"{'; PR-diff scoped' if touched else '; full tree'}).")
     return 0
 
 if __name__ == "__main__":
