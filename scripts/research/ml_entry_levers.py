@@ -177,7 +177,7 @@ def bracket_unit(tab, out, n_jobs, cache: Path) -> dict:
 
 # ----------------------------------------------------------------------------------------------- b602: selectivity
 def _cap(q, m):
-    def tw(k, test, pl, ps):
+    def tw(k, _test, pl, ps):
         other = np.concatenate([np.maximum(m[f"pl{j}"], m[f"ps{j}"]) for j in range(8) if j != k])     # OTHER folds' out-of-sample scores, no labels
         c = np.quantile(other, q)
         sc = np.maximum(pl, ps)
@@ -188,7 +188,7 @@ def _cap(q, m):
 
 
 def _regime(col, j, cuts):
-    def tw(k, test, pl, ps):
+    def tw(_k, test, pl, ps):
         lo, hi = cuts[col]
         v = test[col].to_numpy()
         inside = (v <= lo) if j == 0 else ((v > lo) & (v <= hi)) if j == 1 else (v > hi)
@@ -199,7 +199,7 @@ def _regime(col, j, cuts):
 
 
 def _side(drop):
-    def tw(k, test, pl, ps):
+    def tw(_k, _test, pl, ps):
         (pl if drop == "long" else ps)[:] = ABSTAIN
         return pl, ps, TAU
     return tw
@@ -307,7 +307,7 @@ def calibration_unit(tab, out, n_jobs) -> dict:
         share = [float((np.maximum(mem[sd][f"pl{k}"], mem[sd][f"ps{k}"]) > TAU).mean()) for k in range(8)]
         per["base"].append(stats(run_arm(frames[sd], mem[sd])))
         for name, fit in (("R1_isotonic", remap_isotonic), ("R2_binned", remap_binned)):
-            def tw(k, test, pl, ps, fit=fit, sd=sd, s=s, n=n, f=f, share=share):
+            def tw(k, _test, pl, ps, fit=fit, s=s, n=n, f=f, share=share):
                 fn = fit(s[f != k], n[f != k])                      # fitted on the OTHER folds' out-of-sample scores and outcomes
                 long_ = pl >= ps
                 sc = np.where(long_, pl, ps)
@@ -373,7 +373,7 @@ def _mean_member(members: list) -> dict:
 
 def _matched(share):
     """Threshold = the quantile of the arm's own score that takes the same share of rows as the base; labels are never used."""
-    def tw(k, test, pl, ps):
+    def tw(k, _test, pl, ps):
         sc = np.maximum(pl, ps)
         thr = float(np.quantile(sc, 1 - share[k])) if share[k] > 0 else 1e9
         return pl, ps, thr
