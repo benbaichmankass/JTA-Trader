@@ -967,24 +967,91 @@ def test_afford_on_the_real_committed_gld_record(tmp_path):
     assert aff["ref_price"] > 193.56
 
 
-def test_snapshot_writer_round_trips_the_diag_shape(tmp_path):
+_DIAG_ALPACA = {"captured_at": "2026-09-30T05:36:08.978715+00:00",
+                "requested_account_id": "alpaca_live",
+                "accounts": [{"account_id": "alpaca_live", "exchange": "alpaca", "error": None,
+                              "status_flags": {"shorting_enabled": False, "capacity": {
+                                  "multiplier": "1", "buying_power": "193.56",
+                                  "cash": "193.56", "equity": "193.56"}}}]}
+
+
+def test_snapshot_writer_commits_no_balance(repo):
+    """Manager 2026-11-01: a committed balance is a rule violation in this public repo. The writer commits the
+    per-leg answer of the resolver's own sizer; no equity / buying power / cash key and no dollar figure."""
     import snapshot_account_for_mandate as snapw
-    diag = {"captured_at": "2026-09-30T05:36:08.978715+00:00",
-            "requested_account_id": "alpaca_live",
-            "accounts": [{"account_id": "alpaca_live", "exchange": "alpaca", "error": None,
-                          "status_flags": {"shorting_enabled": False, "capacity": {
-                              "multiplier": "1", "buying_power": "193.56",
-                              "cash": "193.56", "equity": "193.56"}}}]}
-    snap = snapw.build(diag, "alpaca_live")
-    assert snap["equity_usd"] == 193.56 and snap["buying_power_usd"] == 193.56
-    assert snap["captured_at"] == diag["captured_at"]
-    _w(tmp_path, f"{mr.ACCOUNT_SNAPSHOT_DIR_REL}/alpaca_live.json", snap)
-    assert mr._json(tmp_path / mr.ACCOUNT_SNAPSHOT_DIR_REL / "alpaca_live.json") == snap
-    bad = copy.deepcopy(diag)
+    root = repo(setups=GLD_LIKE, r3=_r3(EQ_R3))
+    snap = snapw.build(_DIAG_ALPACA, "alpaca_live", root, legs=[EQ_LEG])
+    text = json.dumps(snap)
+    assert not any(k in snap for k in ("equity_usd", "buying_power_usd", "cash_usd"))
+    assert "193.56" not in text and snap["balance_committed"] is False
+    assert snap["schema"] == mr.AFFORD_SNAPSHOT_SCHEMA and snap["captured_at"] == _DIAG_ALPACA["captured_at"]
+    ans = snap["legs"][EQ_LEG]
+    assert ans["setups_sized"] == 0 and ans["affordable"] is False and ans["refuse"]
+    bad = copy.deepcopy(_DIAG_ALPACA)
     bad["accounts"][0]["status_flags"]["capacity"] = {}
     bad["accounts"][0]["available_margin"] = {"could_not_look": True}
     with pytest.raises(SystemExit):
-        snapw.build(bad, "alpaca_live")   # never writes a number it did not read
+        snapw.build(bad, "alpaca_live", root, legs=[EQ_LEG])   # never writes an answer it did not compute
+
+
+def _v2(account, legs_answers, age_days=0.0):
+    from datetime import datetime, timedelta, timezone
+    ts = datetime.now(timezone.utc) - timedelta(days=age_days)
+    return {"account_id": account, "captured_at": ts.isoformat(), "schema": mr.AFFORD_SNAPSHOT_SCHEMA,
+            "balance_committed": False, "legs": legs_answers}
+
+
+def _answer_for(root, leg, equity):
+    return mr.affordability_answer(leg, "alpaca_live", equity, equity, root=root)
+
+
+def test_afford_v2_answer_matches_the_balance_path(repo):
+    """The committed per-leg answer reaches the same verdict the balance path does, both ways."""
+    for equity, want in ((1e6, "FIRE"), (193.56, mr.REFUSE)):
+        root = repo(setups=GLD_LIKE, r3=_r3(EQ_R3))
+        legacy = _s1s2(root, leg=EQ_LEG, account="alpaca_live")  # default fixture: 100k equity
+        ans = _answer_for(root, EQ_LEG, equity)
+        _w(root, f"{mr.ACCOUNT_SNAPSHOT_DIR_REL}/alpaca_live.json", _v2("alpaca_live", {EQ_LEG: ans}))
+        res = _s1s2(root, leg=EQ_LEG, account="alpaca_live")
+        assert res["verdict"] == want, res
+        assert legacy["verdict"] == "FIRE"
+        if want == mr.REFUSE:
+            assert "193.56" not in res["detail"]
+
+
+@pytest.mark.parametrize("mutate,why", [
+    (lambda a: {}, "no affordability answer"),
+    (lambda a: {EQ_LEG: dict(a, config_fingerprint="sha256:other")}, "another record"),
+    (lambda a: {EQ_LEG: dict(a, source_run="comms/other.jsonl")}, "another record"),
+    (lambda a: {EQ_LEG: dict(a, setups_sized="many")}, "malformed"),
+])
+def test_afford_v2_answer_missing_or_for_another_record_is_needs_data(repo, mutate, why):
+    root = repo(setups=GLD_LIKE, r3=_r3(EQ_R3))
+    ans = _answer_for(root, EQ_LEG, 1e6)
+    _w(root, f"{mr.ACCOUNT_SNAPSHOT_DIR_REL}/alpaca_live.json", _v2("alpaca_live", mutate(ans)))
+    res = _s1s2(root, leg=EQ_LEG, account="alpaca_live")
+    _needs_data(res, "R-AFFORD")
+    assert why in res["detail"], res["detail"]
+
+
+def test_afford_v2_stale_snapshot_is_needs_data(repo):
+    root = repo(setups=GLD_LIKE, r3=_r3(EQ_R3))
+    ans = _answer_for(root, EQ_LEG, 1e6)
+    _w(root, f"{mr.ACCOUNT_SNAPSHOT_DIR_REL}/alpaca_live.json", _v2("alpaca_live", {EQ_LEG: ans}, age_days=9))
+    _needs_data(_s1s2(root, leg=EQ_LEG, account="alpaca_live"), "R-AFFORD")
+
+
+def test_no_balance_redacts_money_figures():
+    t = mr._no_balance("0 of 5 size on alpaca_live (equity $193.56, buying power $193.56, whole-unit venue) at 393.01")
+    assert "193.56" not in t and "393.01" in t
+
+
+def test_committed_snapshots_carry_no_balance():
+    """Every committed account snapshot in THIS tree is schema 2 with no balance key."""
+    for p in sorted((REPO / mr.ACCOUNT_SNAPSHOT_DIR_REL).glob("*.json")):
+        d = json.loads(p.read_text())
+        assert d.get("balance_committed") is False, p
+        assert not any(k in d for k in ("equity_usd", "buying_power_usd", "cash_usd")), p
 
 
 def test_afford_rejects_a_future_dated_snapshot(repo):
