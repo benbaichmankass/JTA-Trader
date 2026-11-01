@@ -27,21 +27,21 @@ def test_planted_starved_queue_alerts_and_healthy_control_does_not():
     cfg = rs.load_config()
     healthy = rs.evaluate(rs._fixture(), cfg)
     assert rs.transition(healthy, {}, NOW, cfg, [])["alert"] is None
-    starved = rs.evaluate(rs._fixture(runnable_floor=rs._fact(2, threshold=50)), cfg)
+    starved = rs.evaluate(rs._fixture(survivors_per_month=rs._fact(0.0)), cfg)
     tr = rs.transition(starved, {}, NOW, cfg, [])
-    assert tr["alert"]["kind"] == "change" and tr["alert"]["new"] == ["runnable_floor"]
-    assert "runnable_floor (NEW): 2 vs >= 50" in tr["alert"]["text"]
+    assert tr["alert"]["kind"] == "change" and tr["alert"]["new"] == ["survivors_per_month"]
+    assert "survivors_per_month (NEW): 0 vs >= 1" in tr["alert"]["text"]
 
 
 def test_measure_only_run_does_not_consume_the_alert(tmp_path, monkeypatch):
     """A --write run without --live must not record the breach as announced."""
     cfg = rs.load_config()
-    table = rs.evaluate(rs._fixture(runnable_floor=rs._fact(2, threshold=50)), cfg)
-    monkeypatch.setattr(rs, "gather_facts", lambda *a, **k: rs._fixture(runnable_floor=rs._fact(2, threshold=50)))
+    table = rs.evaluate(rs._fixture(survivors_per_month=rs._fact(0.0)), cfg)
+    monkeypatch.setattr(rs, "gather_facts", lambda *a, **k: rs._fixture(survivors_per_month=rs._fact(0.0)))
     res = rs.run(tmp_path, NOW, live=False, write=True, use_gh=False)
     doc = json.loads(Path(res["status_file"]).read_text())
     assert doc["alert_state"] == {} and doc["runs"][-1]["alert"] is None
-    assert [r["slo"] for r in doc["latest"] if r["state"] != "ok"] == ["runnable_floor"]
+    assert [r["slo"] for r in doc["latest"] if r["state"] != "ok"] == ["survivors_per_month"]
     # the next live run still sees the breach as NEW
     prev = rs.prior_state(tmp_path, None, cfg["alerting"]["comment_marker"])
     assert rs.transition(table, prev, NOW + timedelta(hours=2), cfg, [])["alert"]["kind"] == "change"

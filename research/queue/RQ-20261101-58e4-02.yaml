@@ -73,6 +73,20 @@ related:
 - HOLDOUT-LOCK
 - 'primary config X1; configs run: X1..X10'
 programme: P6
-status: queued
+status: done
 practice_precedent: 'docs/reference/trading-and-model-practice-principles.md and AUDIT section 5b (docs/audits/2026-11-01-from-scratch/AUDIT.md): <=10 pre-declared
   configs, discovery ends 2024-06-30, every trial counted, DSR(N=trials)>0.95; Bailey & Lopez de Prado 2014 (DSR); payer literature: Liu-Tsyvinski-Wu 2022 J. Finance'
+last_dispatched_at: '2026-11-01T11:31:13+00:00'
+grading:
+  attested: RULE-RQ20261101-58E4-02-XSEC-DISCOVERY
+  auto: false
+  decision_rule_id: RULE-RQ20261101-58E4-02-XSEC-DISCOVERY
+  evidence:
+  - research/results/RQ-20261101-58e4-02/manual-research-edge-20261101.jsonl
+  - comms/research/RQ-20261101-58e4-02/manual-research-edge-20261101/result.json
+  graded_at: '2026-11-01'
+  grader: manual (lane RESEARCH-EDGE; queue_grade.py cannot grade a manual unit and must not re-queue a same-window replay)
+  note: 'discovery only, holdout not read. Closed: the same-window replay reproduces the same number; a variant is a new trial and needs a new mechanism.'
+  reason: X1 net Sharpe 1.325, stress 1.240, both halves positive (2.132 / 0.259), bootstrap p05 ok; FAILS only DSR(N=10)=0.868 (<0.95). 10 trials. 2022 -2.3%, 2023 +5.6%, 2024H1 -8.7%.
+  rows: 1
+  verdict: fail

@@ -328,6 +328,7 @@ def main() -> int:
     ap.add_argument("--family", choices=["tsmom", "xsec", "carry"], required=True)
     ap.add_argument("--data-root", required=True)
     ap.add_argument("--out", required=True)
+    ap.add_argument("--series-dir", default=None, help="diagnostic only: write each config's primary daily net series as csv (does not affect any verdict)")
     ap.add_argument("--etf-csv", default=None, help="optional daily close panel csv for T10 (date index, ticker columns)")
     a = ap.parse_args()
     root = Path(a.data_root)
@@ -371,6 +372,9 @@ def main() -> int:
                 net = (net + spot_pnl) / CARRY_CAP_FACTOR
                 res[tag] = metrics(net, to, len(CARRY_CONFIGS))
                 res[tag + "_parts"] = parts
+                if a.series_dir and tag == "primary":
+                    Path(a.series_dir).mkdir(parents=True, exist_ok=True)
+                    net.to_csv(Path(a.series_dir) / f"{a.family}_{cid}.csv", header=["net"])
             runs[cid] = res
             out["configs"][cid] = {"params": cfg, **res}
         out["verdict"] = verdict("carry", out["configs"][REGISTERED["carry"]["primary"]]["primary"],
@@ -408,6 +412,9 @@ def main() -> int:
                     net = net - ew_net[mult]
                 res[tag] = metrics(net, to, n_run)
                 res[tag + "_parts"] = parts
+                if a.series_dir and tag == "primary":
+                    Path(a.series_dir).mkdir(parents=True, exist_ok=True)
+                    net.to_csv(Path(a.series_dir) / f"{a.family}_{cid}.csv", header=["net"])
                 if tag == "primary" and cid == REGISTERED[a.family]["primary"] and a.family == "tsmom":
                     b = ret["BTCUSDT"].reindex(net.index)
                     res["corr_to_btc"] = round(float(net.corr(b)), 3)

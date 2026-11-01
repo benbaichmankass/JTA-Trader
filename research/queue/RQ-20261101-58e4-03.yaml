@@ -73,7 +73,22 @@ related:
 - HOLDOUT-LOCK
 - 'primary config C1; configs run: C1..C8'
 programme: P6
-status: queued
+status: done
 practice_precedent: 'docs/reference/trading-and-model-practice-principles.md and AUDIT section 5b (docs/audits/2026-11-01-from-scratch/AUDIT.md): <=10 pre-declared
   configs, discovery ends 2024-06-30, every trial counted, DSR(N=trials)>0.95; Bailey & Lopez de Prado 2014 (DSR); payer literature: Schmeling-Schrimpf-Todorov BIS
   WP 1087 2023; He-Manela-Ross-von Wachter 2022'
+last_dispatched_at: '2026-11-01T11:31:13+00:00'
+grading:
+  attested: RULE-RQ20261101-58E4-03-CARRY-DISCOVERY
+  auto: false
+  decision_rule_id: RULE-RQ20261101-58E4-03-CARRY-DISCOVERY
+  evidence:
+  - research/results/RQ-20261101-58e4-03/manual-research-edge-20261101.jsonl
+  - comms/research/RQ-20261101-58e4-03/manual-research-edge-20261101/result.json
+  graded_at: '2026-11-01'
+  grader: manual (lane RESEARCH-EDGE; queue_grade.py cannot grade a manual unit and must not re-queue a same-window replay)
+  note: discovery only, holdout not read. A discovery PASS earns ONE holdout read under HOLDOUT-LOCK (row not yet built) - not a Stage-1 placement.
+  reason: 'C1 net ann return 11.2%, Sharpe 7.77, worst month -0.18%, stress 9.7%/yr, halves 18.8% / 3.7%/yr, DSR(N=8)=1.0. All registered checks pass. 2022 -0.1%, 2023 +1.8%, 2024H1 +5.9%: concentrated
+    in 2020-21.'
+  rows: 1
+  verdict: pass
