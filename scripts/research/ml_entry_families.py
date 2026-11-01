@@ -108,7 +108,8 @@ def f3(k: pd.DataFrame, met: pd.DataFrame | None) -> pd.DataFrame:
     out["f3_oi_chg4"] = oi - oi.shift(4)
     out["f3_oi_chg24"] = oi - oi.shift(24)
     out["f3_oi_chg4_z168"] = _z(out["f3_oi_chg4"], 168)
-    pos = lambda c: np.log(h[c].astype(float).replace(0, np.nan)).reset_index(drop=True)
+    def pos(c):
+        return np.log(h[c].astype(float).replace(0, np.nan)).reset_index(drop=True)
     out["f3_top_ls"] = pos("count_toptrader_long_short_ratio")
     out["f3_top_pos_ls"] = pos("sum_toptrader_long_short_ratio")
     out["f3_acct_ls"] = pos("count_long_short_ratio")
@@ -181,7 +182,8 @@ def cross_section(frames: dict[str, pd.DataFrame]) -> pd.DataFrame:
     lc = np.log(close)
     r = {k: lc - lc.shift(k) for k in (4, 24, 72, 168)}
     vol24 = lr.rolling(24).std()
-    rank = lambda df: df.rank(axis=1, pct=True)
+    def rank(df):
+        return df.rank(axis=1, pct=True)
     out = {
         "f4_rank_ret4": rank(r[4]), "f4_rank_ret72": rank(r[72]), "f4_rank_ret168": rank(r[168]), "f4_rank_vol24": rank(vol24),
     }

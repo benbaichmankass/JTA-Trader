@@ -11,6 +11,7 @@ Steps: install the PINNED lightgbm (the live pin; a no-op once the runner image 
 fetch the Binance Vision streams (vision_streams.py), build the family table, run the arms in parallel (dev folds only), combine.
 `forward` claims ONE read of W1 through holdout_lock.py inside ml_entry_v2.py.
 """
+# wiring: manual-only - run by hand until the four ENTRY units (fs01/fs02/fs05/fs06) point at it; those command repoints are the held PR #22158 (pre-registered unit files cannot self-land)
 from __future__ import annotations
 
 import os

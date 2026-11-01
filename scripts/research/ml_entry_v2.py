@@ -155,16 +155,16 @@ def combine(tab: pd.DataFrame, out: Path) -> dict:
         if arm in ("A", "A2", "G"):
             continue
         fam = ARMS[arm][0]
-        l = r["lofo"]
-        d = (l["mean_net_r"] - a["mean_net_r"]) if (l["mean_net_r"] is not None and a["mean_net_r"] is not None) else None
-        pos = sum(1 for x, y in zip(l["per_fold"], a["per_fold"]) if x["mean_net_r"] is not None and y["mean_net_r"] is not None
+        lf = r["lofo"]
+        d = (lf["mean_net_r"] - a["mean_net_r"]) if (lf["mean_net_r"] is not None and a["mean_net_r"] is not None) else None
+        pos = sum(1 for x, y in zip(lf["per_fold"], a["per_fold"]) if x["mean_net_r"] is not None and y["mean_net_r"] is not None
                   and x["mean_net_r"] > y["mean_net_r"])
         cov = coverage(tab, fam)
         if cov < ADMIT_COVERAGE:
             verdict = "indeterminate"
         else:
             verdict = "admit" if (d is not None and d >= max(ADMIT_DELTA, noise) and pos >= ADMIT_FOLDS) else "reject"
-        res["arms"][arm] = {"family": fam, "n": l["n"], "mean_net_r": l["mean_net_r"], "delta_vs_A": d, "folds_better_than_A": pos,
+        res["arms"][arm] = {"family": fam, "n": lf["n"], "mean_net_r": lf["mean_net_r"], "delta_vs_A": d, "folds_better_than_A": pos,
                             "dev_coverage": cov, "verdict": verdict}
         if verdict == "admit":
             res["admitted_families"].append(fam)
@@ -197,9 +197,15 @@ def signal_baseline(test: pd.DataFrame, sidefn) -> dict:
 
 def benchmarks(test: pd.DataFrame) -> dict:
     """Reported beside v2, never gating (manager 2026-11-01, audit ML-M1-POOLED-ENTRY). Same one-position mechanics and cost stack."""
-    ts = lambda r: None if pd.isna(r.b_mom720) else ("long" if r.b_mom720 > 0 else "short")
-    xs = lambda r: None if pd.isna(r.f4_rank_ret168) else ("long" if r.f4_rank_ret168 >= 2 / 3 else "short" if r.f4_rank_ret168 <= 1 / 3 else None)
-    cy = lambda r: None if (pd.isna(r.f2_fund) or abs(r.f2_fund) < 1e-4) else ("short" if r.f2_fund > 0 else "long")
+    def ts(r):
+        return None if pd.isna(r.b_mom720) else ("long" if r.b_mom720 > 0 else "short")
+
+    def xs(r):
+        return None if pd.isna(r.f4_rank_ret168) else ("long" if r.f4_rank_ret168 >= 2 / 3 else "short" if r.f4_rank_ret168 <= 1 / 3 else None)
+
+    def cy(r):
+        return None if (pd.isna(r.f2_fund) or abs(r.f2_fund) < 1e-4) else ("short" if r.f2_fund > 0 else "long")
+
     return {"tsmom_sign_of_720h_return": signal_baseline(test, ts),
             "xsmom_top_third_long_bottom_third_short_by_168h_rank": signal_baseline(test, xs),
             "funding_carry_opposite_to_funding_when_abs_ge_1bp": signal_baseline(test, cy)}
@@ -243,10 +249,12 @@ def forward(tab: pd.DataFrame, out: Path, ablation: Path, unit: str, reader: str
 def _self_test() -> None:
     F.self_test()
     # lofo: tau chosen without the held fold; a fold whose tau pool has n < 1000 elsewhere gets no tau
-    mk = lambda ts, n, sm: {"test_start": ts, **{f"tau_{t}": {"n": n, "sum_net_r": sm} for t in E.TAU_GRID}}
+    def mk(ts, n, sm):
+        return {"test_start": ts, **{f"tau_{t}": {"n": n, "sum_net_r": sm} for t in E.TAU_GRID}}
+
     folds = [mk(f"2022-0{i}-01", 600, 6.0) for i in range(1, 5)]
-    l = lofo(folds)
-    assert l["n"] == 2400 and abs(l["mean_net_r"] - 0.01) < 1e-12, l
+    lf = lofo(folds)
+    assert lf["n"] == 2400 and abs(lf["mean_net_r"] - 0.01) < 1e-12, lf
     # forward refuses a second read of the same model on an overlapping window
     import tempfile
     with tempfile.TemporaryDirectory() as d:
