@@ -140,9 +140,11 @@ def iteration_errors(it: Any) -> list[str]:
         errs.append("no `subject`")
     if it.get("subject_kind") not in KINDS:
         errs.append(f"`subject_kind` not one of {KINDS}")
-    for k in ("from_result", "hypothesis", "due_by"):
+    for k in ("from_result", "due_by"):
         if not it.get(k):
             errs.append(f"no `{k}`")
+    if not (it.get("search") or it.get("hypothesis")):   # `hypothesis` is the 2026-11-01 alias of `search`
+        errs.append("no `search` (the lever space this iteration searches, and why the diagnosis points there)")
     if len(str(it.get("diagnosis") or "")) < MIN_DIAGNOSIS:
         errs.append(f"`diagnosis` shorter than {MIN_DIAGNOSIS} chars (a diagnosis says WHY, from the result's rows)")
     return errs

@@ -1,6 +1,6 @@
 ---
 name: programme-review
-description: The WEEKLY research programme review (routine "Weekly research programme review", Wed 19:29Z, one Opus lane). Reads the research map, every programme plan (research/programmes/*.yaml + docs/research/programmes/*.md) and every result graded in the week; runs in two layers -- a script-computed CHECKS packet (scripts/research/research_ops_checks.py --kind programme_review --since 7d) and an ANALYSIS per programme and per track (TRADING / MODEL) -- audits THE ITERATION LOOP first (every testing leg, non-live ML model and live-review class has a live iteration unit authored from a diagnosis; orphans are authored here; a subject failing iteration after iteration gets a family-review decision, never silent parking), then updates each plan (learned; questions answered / unlocked / retired; the next 3-4 weeks of pre-registered units, value-ranked; cross-programme and cross-track feeds), turns needs_authoring nodes into unit specs, grades last week's calls, and lands one HELD PR for the manager's merge. Feeds Thursday planning. Use when the routine fires, the manager dispatches a PROGRAMME-REVIEW-<date> lane, or the operator says "review the research programmes". NOT the 4x/day pipeline pass (research-ops), NOT the external scan (frontier-research), NOT closed-trade grading (performance-review).
+description: The WEEKLY research programme review (routine "Weekly research programme review", Wed 19:29Z, one Opus lane). Reads the research map, every programme plan (research/programmes/*.yaml + docs/research/programmes/*.md) and every result graded in the week; runs in two layers -- a script-computed CHECKS packet (scripts/research/research_ops_checks.py --kind programme_review --since 7d) and an ANALYSIS per programme and per track (TRADING / MODEL) -- audits THE ITERATION LOOP first (every testing leg, non-live ML model and live-review class has a live iteration unit authored from a diagnosis; orphans are authored here; retirement only on lever exhaustion, never on an attempt count), then updates each plan (learned; questions answered / unlocked / retired; the next 3-4 weeks of pre-registered units, value-ranked; cross-programme and cross-track feeds), turns needs_authoring nodes into unit specs, grades last week's calls, and lands one HELD PR for the manager's merge. Feeds Thursday planning. Use when the routine fires, the manager dispatches a PROGRAMME-REVIEW-<date> lane, or the operator says "review the research programmes". NOT the 4x/day pipeline pass (research-ops), NOT the external scan (frontier-research), NOT closed-trade grading (performance-review).
 ---
 
 > **Doc status:** `live` · category `instruction` · last verified `2026-11-01` · registered in [`docs/DOCUMENT-INDEX.md`](../../../docs/DOCUMENT-INDEX.md)
@@ -30,15 +30,13 @@ the `iteration:` block). This weekly review checks that the loop is LEARNING, no
    (an iteration unit with the block) or named with the reason in `handoff`. Report the counts first in the record.
 2. **Per subject, the week's iterations**: attempt number, what each diagnosis said, what the result taught. A subject whose
    attempts repeat the same diagnosis is a design failure of the loop: the next attempt must test a DIFFERENT cause.
-3. **A subject at attempt >= 3 with every attempt failing** gets a family-review decision this week (`research/family_reviews/`,
-   `scripts/research/family_retirement_policy.yaml`): A (tested wrong: the outside-evidence re-test is the next iteration),
-   B (needs a build: the row), or C (retire, with all six protocol items and the `config/strategies.yaml` retirement record
-   proposed to the manager as Tier 3). Nothing sits on paper with no loop and no decision.
+3. **Retirement only on lever exhaustion** (every lever family for the subject's kind tested at declared power, net of the
+   full cost stack, across regimes, none producing an edge; family-review record). **Never on a count of attempts.**
 4. **Survivors**: subjects whose confirmation passed this week, each with its promotion proposal (Tier 3, the manager's) named.
    Success is iterations advanced and survivors found, never units authored (RESEARCH-SLO-YIELD).
 
-The record gains `"iteration": {"orphans_before": {}, "orphans_after": {}, "advanced": 0, "survivors": [], "at_attempt_3_plus":
-[{"subject": "...", "decision": "A|B|C", "record": "research/family_reviews/<f>.yaml"}]}`.
+The record gains `"iteration": {"orphans_before": {}, "orphans_after": {}, "advanced": 0, "survivors": [], "retirement_proposals":
+[{"subject": "...", "record": "research/family_reviews/<f>.yaml"}]}`.
 
 **Scope.** One lane per week, Opus, ceiling set by the manager on the checklist row. Tier 1. The deliverable is the plans
 moving, not a report: edits to `research/programmes/<NN>-*.yaml` and the "Programme review <date>" section of each

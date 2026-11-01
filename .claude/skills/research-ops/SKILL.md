@@ -54,12 +54,12 @@ iteration:
   from_result: <the unit / record whose result this iterates on>
   verdict_read: fail | indeterminate | pass_unconfirmed | pending
   diagnosis: <WHY it failed, read from that result's rows: folds, fee-only vs full cost, n vs power, fidelity, a sibling that passes>
-  hypothesis: <the one cause this variant tests>
+  search: <the lever families + grid this pass searches, and why the diagnosis points there>   # `hypothesis` = legacy alias
   attempt: <1, 2, ...>
   due_by: 'YYYY-MM-DD'
 ```
 The diagnosis names the likeliest cause among {test design, power / n, cost drag, regime / window, harness defect, the idea is
-wrong} **with the evidence** (noise is always one competing hypothesis), and the arms test THAT cause. A lever TRANSFER or a
+wrong} **with the evidence** (noise is always one competing hypothesis), and the arms search the lever families that diagnosis implicates -- as many variants as it supports, each registered and counted (operator 2026-11-01: no 'one hypothesis' format). A lever TRANSFER or a
 template re-run is not an iteration unless a diagnosis of this subject chose it. A PASS that is still a discovery iterates to ONE
 confirmation (`exit_lever_ablation.py --grade holdout`, the shape `mandate_resolver` R-HOLDOUT reads), and a confirmed PASS
 iterates to its promotion proposal (Tier 3, the manager's). Where no driver exists yet, the unit goes in `blocked/` with the lever
