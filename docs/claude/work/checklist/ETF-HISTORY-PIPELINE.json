@@ -2,17 +2,19 @@
   "id": "ETF-HISTORY-PIPELINE",
   "title": "Build: multi-year ETF/equity 1h+5m history pipeline (Alpaca/IB/open sources) into the trainer canonical store, with freshness check + daily refresh",
   "phase": null,
-  "state": "in_flight",
+  "state": "landed_unproven",
   "owner": "manager",
   "lane": "ETF-HISTORY-PIPELINE",
   "model": null,
   "ceiling_usd": null,
   "spend_usd": null,
   "tier": 1,
-  "prs": [],
+  "prs": [
+    "#22136"
+  ],
   "blocked_on": [],
-  "note": "Operator 2026-11-01: 'no way we are limited to 2 years of etf data'. Yahoo 1h caps ~730d; pipeline gap, not a data limit. Lane ETF-HISTORY-PIPELINE (Manager Session 2026-11-01a), ceiling 30 USD, due_by 2026-11-01. Supersedes the data-gap half of TF-EQUITY-INTRADAY-BARS. Scope: measured source inventory, runner/trainer pipeline, freshness check + daily incremental, depth read-back, notify ML-FEATURE-INFRA / ALPACA-LIVE-ACTIVITY-ML / RESEARCH-EDGE.",
-  "updated_at": "2026-11-01T12:15:48Z",
+  "note": "Operator 2026-11-01: 'no way we are limited to 2 years of etf data'. Yahoo 1h caps ~730d; pipeline gap, not a data limit. Lane ETF-HISTORY-PIPELINE (Manager Session 2026-11-01a), ceiling 30 USD, due_by 2026-11-01. Supersedes the data-gap half of TF-EQUITY-INTRADAY-BARS. Scope: measured source inventory, runner/trainer pipeline, freshness check + daily incremental, depth read-back, notify ML-FEATURE-INFRA / ALPACA-LIVE-ACTIVITY-ML / RESEARCH-EDGE. [2026-11-01 lane] BUILT, NOT RUN: PR #22136 (held, Tier-2 workflow). No keys in a lane sandbox so NO depth table exists yet. CLOSES WHEN: after merge, label etf-history-request body 'mode: probe' (measures Alpaca SIP/IEX depth per timeframe + Yahoo/Stooq keyless), then 'mode: backfill', then 'mode: verify' shows >=8y 1h and per-symbol 5m first/last/rows/gaps for the ~31-symbol universe; the 3 ML/research lanes are then told the read path (trainer data/etf_history/<SYM>/<tf>.parquet via fetch_etf_history.read_bars). NOT DONE: IB historical path (documented, unmeasured; needs gateway via live VM) -- cross-check source only, MES/MGC/MHG futures are not Alpaca-covered.",
+  "updated_at": "2026-11-01T12:16:35Z",
   "updated_by": "lane-ETF-HISTORY-PIPELINE",
   "due_by": "2026-11-01",
   "roadmap": [
