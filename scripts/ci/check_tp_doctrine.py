@@ -237,6 +237,10 @@ BASELINE_2026_10_06: dict[str, frozenset[str]] = {
     # ML-ENTRY-TP-REVISION (a tested moving-TP policy plumbed through monitor()), then remove both.
     "bybit_2/ml_entry": R,
     "bybit_portfolio/ml_entry": R,
+    # 2026-11-01 ENTRY v2 TESTING leg (Tier-3 held PR, operator popup ~20:20Z "v2 on bybit_1"): bybit_1 demo only. It carries the finite
+    # 2 R target it was SCORED with (TP 4 ATR / SL 2 ATR) and, like ml_entry, no revision producer yet (EXIT = checklist row
+    # ML-ENTRY-TP-REVISION, then remove this line with the two above).
+    "bybit_1/ml_entry_v2": R,
     # ── prop ────────────────────────────────────────────────────────────────
     # breakout_1 legs removed 2026-10-07 (account retired, roster cleared).
     # R -> ER on 2026-10-15 (TP-REACH-FLOOR, operator-approved 2026-10-14): the

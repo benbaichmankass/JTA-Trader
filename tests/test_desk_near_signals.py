@@ -35,7 +35,7 @@ def test_every_current_rostered_leg_resolves_to_a_unit():
     # 2026-11-01 (ML-ENTRY-LIVE-ADAPTER, #22079): ml_entry's trigger is a pooled model prediction over 60 reference
     # symbols, which no single-symbol candle probe can see, so the desk reads it `unlooked` (loud). Known gap, noted on
     # row ML-ENTRY-LIVE-ADAPTER.
-    assert unresolved == ["e4_oi_shock_1h", "fade_breakout_4h", "fvg_range_15m", "ml_entry", "squeeze_breakout_4h",
+    assert unresolved == ["e4_oi_shock_1h", "fade_breakout_4h", "fvg_range_15m", "ml_entry", "ml_entry_v2", "squeeze_breakout_4h",
                           "turtle_soup"]
 
 

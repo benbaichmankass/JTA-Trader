@@ -117,7 +117,8 @@ LEVERS = ["trail_mult", "tp_r", "trail_decay_tight_mult", "trail_decay_stall_bar
 TELEMETRY_HOOKED_UNITS = {"trend_donchian", "htf_pullback_trend_2h",
                           "ict_scalp", "squeeze_breakout_4h", "turtle_soup",
                           "e4_oi_shock_1h",  # E4-DEMO-LEG 2026-10-30
-                          "ml_entry"}  # ML-ENTRY-LIVE-ADAPTER 2026-11-01 (#22079)
+                          "ml_entry",  # ML-ENTRY-LIVE-ADAPTER 2026-11-01 (#22079)
+                          "ml_entry_v2"}  # ENTRY v2 bybit_1 testing leg 2026-11-01
 
 
 def _f(v) -> Optional[float]:

@@ -106,6 +106,7 @@ from src.runtime.strategy_signal_builders import (
     trend_donchian_sol_prop_signal_builder,
     trend_donchian_eth_4h_signal_builder,
     ml_entry_signal_builder,
+    ml_entry_v2_signal_builder,
     trend_donchian_sol_4h_signal_builder,
     trend_donchian_xrp_4h_signal_builder,
     trend_donchian_xrp_adx25_signal_builder,
@@ -314,6 +315,8 @@ def _default_intent_builders() -> Dict[str, IntentBuilder]:
         "trend_donchian_eth_4h": trend_donchian_eth_4h_signal_builder,
         # ML ENTRY decision model (row ML-ENTRY-LIVE-ADAPTER; evidence RQ-20261101-c692-01/-06).
         "ml_entry": ml_entry_signal_builder,
+        # ML ENTRY v2 candidate: bybit_1 demo testing leg (evidence RQ-20261101-b608-01 dev stack; W1 read FAIL b609-01).
+        "ml_entry_v2": ml_entry_v2_signal_builder,
         "trend_donchian_sol_4h": trend_donchian_sol_4h_signal_builder,
         "trend_donchian_xrp_4h": trend_donchian_xrp_4h_signal_builder,
         "trend_donchian_xrp_adx25": trend_donchian_xrp_adx25_signal_builder,

@@ -1,0 +1,73 @@
+# Authored 2026-11-01 by lane ML-RECIPE (Tier 1): the ml_entry_v2 serve-parity preflight. Rule registered BEFORE any run (copied from c692-07). Gates: none.
+cadence: once
+theme: ml_health
+priority: 1
+roadmap:
+- L-ML-LIVE
+practice_precedent: 'T1, M6 (docs/reference/trading-and-model-practice-principles.md): purged + embargoed walk-forward with a sealed held-out window; triple-barrier first-passage labels (Lopez de Prado
+  2018, ch. 3); docs/research/ml-decision-models-2026-11-01/DESIGN.md.'
+value:
+  bucket: ai_trader
+  usd_at_stake_per_month: 800
+  confidence: 0.2
+  basis: 'stand-in: the operator priority-1 goal (first ML decision model on real money); not a P&L measurement.'
+compute: cpu_long
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+id: RQ-20261101-b611-01
+status: queued
+kind: deterministic
+title: 'ml_entry_v2 serve-parity preflight: do live Bybit V5 1h bars give the same features and LONG/SHORT/NONE decisions (including the cost-gate refusals) as the Binance Vision bars the v2 artifact was
+  trained on, over the last 30 days on the bybit_1 symbols?'
+question: 'Operator popup 2026-11-01 ~20:20Z: v2 as a TESTING leg on bybit_1. Same check as RQ-20261101-c692-07 against ml/served/ml_decision_entry_v2 (R2 recipe, cost gate 0.06, TP 4): scripts/research/ml_entry_serve_parity.py
+  --model v2 builds each decision-bar feature row twice through the served code, from Bybit V5 public klines and from Binance Vision daily klines, and scores both with the v2 artifact through the shared
+  decide() (the cost gate is a function of atr_pct, so it is part of the compared decision).'
+why_this_matters: The model was trained on Binance bars and will be served on Bybit bars; a venue difference in OHLCV, listing set or bar alignment changes the features silently. A mechanical fault found
+  here is fixed in the adapter, never a reason to stop (manager 2026-11-01).
+why_not_inferential: 'A parity check on a fixed window: every decision bar of the window is compared; there is no sample to power.'
+decision_rule:
+  id: RULE-RQ20261101-B611-01-SERVE-PARITY-V2
+  registered_at: '2026-11-01'
+  registered_before_run: true
+  statistic: Decision agreement (long/short/none equal on both venues) over all compared decision bars; per-feature max and median |diff|; |pred diff| median and max; reference symbols missing per venue.
+  rule: 'PASS IF agreement >= 0.95 over n >= 50 compared bars. FAIL IF n >= 50 and agreement < 0.95 (a mechanical fault: the adapter is fixed and this unit re-run). INDETERMINATE IF n < 50. producer_failed
+    when either venue cannot be read (re-run from a host that reaches api.bybit.com, e.g. the trainer-vm-diag relay). Reported, not gating, at the first real-money trade unless FAIL.'
+  what_it_does_not_do: No order, no config change; does not measure edge.
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 2.0
+  est_minutes: 15
+  why_runner: Keyless public endpoints.
+  basis: 'INFERRED: 61 symbols x 50 daily zips + ~61 Bybit kline pages, 12 threads.'
+run:
+  workflow: research-script-run.yml
+  command:
+  - python3
+  - scripts/research/ml_entry_serve_parity.py
+  - --model
+  - v2
+  - --days
+  - '30'
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 60
+  inputs:
+    research_unit: RQ-20261101-b611-01
+related:
+- ML-ENTRY-V2-TESTING
+- RQ-20261101-c692-07
+- RQ-20261101-b609-01
+what_it_does_not_do: Places no order; changes no config.
+ml_consumer:
+  consumer: src/units/strategies/ml_entry_v2.py
+  decision: whether the ml_entry_v2 adapter is fixed before its first bybit_1 demo trade (a decision-agreement failure is a mechanical fault in the served features or the gate input)
+  legs:
+  - ml_entry_v2
+  book: demo_floor
+programme_node:
+  programme: P2
+  node: P2-ENTRY-LEVERS
+  goal: G4

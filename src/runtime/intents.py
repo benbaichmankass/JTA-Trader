@@ -408,6 +408,8 @@ DEFAULT_PRIORITIES: Dict[str, int] = {
     # ML ENTRY decision model (ML-ENTRY-LIVE-ADAPTER, 2026-11-01): lowest priority, same as the money legs it
     # shares symbols with; ordering stays the pending Tier-3 decision noted above.
     "ml_entry": 0,
+    # ML ENTRY v2 candidate: TESTING leg on bybit_1 only (demo floor); same lowest priority.
+    "ml_entry_v2": 0,
     "trend_donchian_sol_4h": 0,
     "trend_donchian_xrp_4h": 0,
     "trend_donchian_xrp_adx25": 0,

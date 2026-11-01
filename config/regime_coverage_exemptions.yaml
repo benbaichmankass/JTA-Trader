@@ -24,6 +24,14 @@ exempt:
       range position, BTC context, universe breadth), not a gate around it. A regime_policy cell would trade a different
       policy than the one that passed and has no walk-forward (regime-selectivity skill: no-cosmetic-cell). Exempt rather
       than coverage_debt because the debt ceiling only ratchets down.
+  ml_entry_v2:
+    tracking_id: ML-ENTRY-V2-TESTING
+    added: '2026-11-01'
+    reason: >-
+      Same as ml_entry: the ENTRY v2 candidate reads market regime as an INPUT (vol ratio, ATR/price, range position, BTC context,
+      breadth) and its cost-per-R gate is a cost filter, not a regime cell; a regime_policy cell would trade a different policy than
+      the one scored (RQ-20261101-b608-01 dev stack, b609-01 W1). A bybit_1 demo TESTING leg only. Exempt rather than coverage_debt
+      because the debt ceiling only ratchets down.
   e4_oi_shock_1h:
     tracking_id: E4-DEMO-LEG
     added: '2026-10-30'

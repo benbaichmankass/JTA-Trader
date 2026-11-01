@@ -1443,6 +1443,25 @@ strategies:
     tp_r: 1.5
     min_reference_symbols: 40
     shadow_model_ids: []
+  # ML ENTRY v2 CANDIDATE as a TESTING leg (Tier 3, operator popup 2026-11-01 ~20:20Z: "Live at 1.5% as approved + v2 on bybit_1").
+  # bybit_1 (Bybit DEMO, Stage-1 floor) ONLY: not on bybit_2, bybit_portfolio or any real-money roster. Artifact
+  # ml/served/ml_decision_entry_v2/ = R2 regularised recipe + cost-per-R gate 0.06 + SL 2 / TP 4 ATR. Its dev stack (+0.0478) did NOT hold
+  # on the one W1 read (RQ-20261101-b609-01 FAIL -0.1161, n=320, vs frozen v1 -0.0405): this leg proves MECHANICS only; the edge is
+  # decided OFFLINE by RQ-20261101-b610-01 (replay of this frozen artifact on a fresh window). NO sizing (neutral confidence).
+  ml_entry_v2:
+    model: ml-decision-entry-v2
+    signal_prefixes: [ml_entry_v2]
+    enabled: true
+    execution: live
+    timeframe: "1h"
+    decision_bar: closed
+    symbols: [BTCUSDT, ETHUSDT, XRPUSDT, ADAUSDT, SOLUSDT]
+    atr_period: 14
+    atr_stop_mult: 2.0
+    tp_r: 2.0
+    min_reference_symbols: 40
+    shadow_model_ids: []
+
   trend_donchian_eth_4h:
     model: null
     signal_prefixes: [trend_donchian_eth_4h, donchian_eth_4h]
