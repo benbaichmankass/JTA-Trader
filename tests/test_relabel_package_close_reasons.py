@@ -7,7 +7,7 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts" / "ops"))
-import relabel_package_close_reasons as rp  # noqa: E402
+import relabel_package_close_reasons as rp
 
 A, B, C, D = rp.TARGET_IDS[:4]
 
@@ -20,7 +20,8 @@ def _db(tmp_path, pkgs, trades):
     c.execute("CREATE TABLE trades (id INT, order_package_id TEXT, status TEXT, exit_reason TEXT)")
     c.executemany("INSERT INTO order_packages VALUES (?,?,?,?,?)", pkgs)
     c.executemany("INSERT INTO trades VALUES (?,?,?,?)", trades)
-    c.commit(); c.close()
+    c.commit()
+    c.close()
     return str(p)
 
 
@@ -28,7 +29,8 @@ def _read(db, pid):
     c = sqlite3.connect(db)
     r = c.execute("SELECT close_reason, meta FROM order_packages WHERE order_package_id=?",
                   (pid,)).fetchone()
-    c.close(); return r
+    c.close()
+    return r
 
 
 def test_relabels_keeps_prior_and_is_idempotent(tmp_path, capsys):

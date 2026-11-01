@@ -13,7 +13,7 @@ source "${SCRIPT_DIR}/_lib.sh"
 
 ACTION_SLUG="relabel-package-close-reasons"
 DB_PATH="$(runtime_db_path)"
-PY_SCRIPT="${REPO_DIR}/scripts/ops/${SCRIPT_NAME}.py"
+PY_SCRIPT="${REPO_DIR}/scripts/ops/relabel_package_close_reasons.py"
 
 if [ ! -f "${PY_SCRIPT}" ]; then
     log "ERROR: helper not present at ${PY_SCRIPT}. Did the VM pull the latest main?"
