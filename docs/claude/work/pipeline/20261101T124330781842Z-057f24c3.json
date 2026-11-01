@@ -1,0 +1,18 @@
+{
+  "based_on": "20261101T121748053018Z-07c66949.json",
+  "due_when": {
+    "due_date": "2026-11-03",
+    "kind": "date"
+  },
+  "id": "PI-20261101-ETFHIST-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "lane ETF-HISTORY-PIPELINE (PR #22136), manager follow-up 2026-11-01",
+    "rerun": "On the LIVE VM (only host on the gateway subnet), clientId 450: bash scripts/ops/pull_mes_ibkr_history.sh (ibkr_offvm adapter; paced 20s; see docs/runbooks/ib-integration.md Historical backfill). Then read data/ibkr_datasets/market_raw/<SYM>/<tf>/*/data.jsonl for MES, MGC, MHG and report first/last/rows/gaps."
+  },
+  "severity": "medium",
+  "state": "queued",
+  "tier": 1,
+  "what": "IB historical depth for MES/MGC/MHG (futures are NOT covered by the Alpaca ETF store): measure per-contract first bar / rows / gaps at 1h and 5m through the IB gateway and compare to the continuous-futures proxies (ES=F/GC=F/HG=F) the ML lanes use today. || WIDENED 2026-11-01 on operator direction (collect far more symbols even if not traded): measure the same for the liquid CME/COMEX/NYMEX futures, not just MES/MGC/MHG: micros+minis MES MNQ M2K MYM ES NQ RTY YM; COMEX MGC GC SIL SI MHG HG; NYMEX MCL CL QG NG; rates/FX/ags ZN ZB ZF ZT 6E 6J 6B ZC ZS ZW (list lives in config/data_universe.yaml futures:)."
+}
