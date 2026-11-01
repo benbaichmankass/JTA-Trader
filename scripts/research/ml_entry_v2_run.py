@@ -4,6 +4,8 @@
 
     python3 scripts/research/ml_entry_v2_run.py ablation <unit> <out_dir>
     python3 scripts/research/ml_entry_v2_run.py forward  <unit> <out_dir>   # needs ABLATION_JSON=<fs01-01 ablation.json>
+    python3 scripts/research/ml_entry_v2_run.py recipe   <unit> <out_dir>   # fs05-01: arms R0..R3 x sets S0..S2 x 3 seeds, DEV FOLDS ONLY
+    python3 scripts/research/ml_entry_v2_run.py labels   <unit> <out_dir>   # fs06-01: targets T0..T4 x sets S0,S1 x 3 seeds, DEV FOLDS ONLY
 
 Steps: install the PINNED lightgbm (the live pin; a no-op once the runner image carries it, row RESEARCH-RUNNER-ML-DEPS / #22143),
 fetch the Binance Vision streams (vision_streams.py), build the family table, run the arms in parallel (dev folds only), combine.
@@ -27,7 +29,7 @@ def run(*args: str) -> None:
 
 
 def main(argv: list[str]) -> int:
-    if len(argv) != 3 or argv[0] not in ("ablation", "forward"):
+    if len(argv) != 3 or argv[0] not in ("ablation", "forward", "recipe", "labels"):
         print(__doc__)
         return 2
     mode, unit, out = argv[0], argv[1], Path(argv[2])
@@ -37,6 +39,18 @@ def main(argv: list[str]) -> int:
         d.mkdir(parents=True, exist_ok=True)
     vs = str(HERE / "vision_streams.py")
     v2 = str(HERE / "ml_entry_v2.py")
+    if mode in ("recipe", "labels"):
+        # dev-only fetch: no date after 2025-09-30 is downloaded, so no sealed window can be read
+        run(vs, "--out", str(streams), "--streams", "klines12,funding,premium", "--start", "2020-07-01", "--end", "2025-09-30", "--workers", "24")
+        run(vs, "--out", str(streams), "--streams", "metrics", "--start", "2021-12-01", "--end", "2025-09-30", "--workers", "32")
+        run(v2, "build-table", "--streams", str(streams), "--out", str(work))
+        rc = str(HERE / "ml_entry_recipe.py")
+        run(rc, "run", "--unit", mode, "--table", str(work / "table.pkl"), "--out", str(work), "--n-jobs", "4")
+        run(rc, "combine", "--unit", mode, "--out", str(work))
+        for f in (work / "result.json", work / "RESULT.md"):
+            shutil.copy(f, out / f.name)
+        shutil.copytree(work / "runs", out / "runs", dirs_exist_ok=True)
+        return 0
     run(vs, "--out", str(streams), "--streams", "klines12,funding,premium", "--workers", "24")
     run(vs, "--out", str(streams), "--streams", "metrics", "--start", "2021-12-01", "--end", "2026-10-31", "--workers", "32")
     run(vs, "--out", str(octd), "--streams", "klines12d,premiumd", "--start", "2026-10-01", "--end", "2026-10-31", "--workers", "16")
