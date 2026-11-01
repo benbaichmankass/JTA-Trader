@@ -13,10 +13,13 @@ manifest:
   features: tested
   labels: tested
   recipe: tested
-  universe: untested
+  universe: tested
+  bracket_geometry: tested
+  selectivity: tested
+  cost_gate: tested
   horizon: untested
   threshold: tested
-  calibration: untested
+  calibration: tested
 levers:
   features:
     feature_families_F1_F5:
@@ -47,6 +50,15 @@ levers:
         value: R0 baseline, 3 seeds
         response: 'S0 -0.0018 (n 39.5k-71.9k), S1 -0.0077, S2 (F1..F5) -0.0337; spread 0.0237; only noise-immune arm, no family admitted'
         shape: flat
+      - unit: RQ-20261101-d507-01
+        value: 'K=3 seed ensembles x R0/R1/R2 params with a per-fold LOFO quantile threshold (3 draws)'
+        response: 'INDETERMINATE: E0 -0.0030 (range 0.0091), E1 +0.0077 (noise-immune, no win), E2 +0.0210 (5/8 folds, a fold at 986), E3 +0.0095; the LOFO threshold choice is itself a noise source'
+        shape: noisy
+      - unit: RQ-20261101-b607-01
+        value: 'recipe at a MATCHED decision share (same share of rows per fold as the v1 base at tau 0.10), 3 seeds/draws, dev'
+        response: 'base +0.0089; R1 single +0.0204 (delta +0.0114), R2 single +0.0293 (delta +0.0204, seeds +0.0261/+0.0296/+0.0324), E2 R1 ens +0.0245, E3 R2 ens +0.0303 (delta +0.0214); all noise-immune, 6 of 8 folds, 3 of 4 years, min fold n about 3.5k. R0 ensemble +0.0135 no win'
+        shape: regularisation_wins
+        note: 'regularisation is the lever, ensembling adds little; resolves the fs05-01 INDETERMINATE (R1/R2 were ungradeable only because the LOFO tau left thin folds). Dev only, 5 arms, interaction with the cost gate and bracket untested'
       shape: noisy
     seed_variance:
       tests:
@@ -75,6 +87,19 @@ levers:
         response: 'S0 +0.0082, delta +0.0099 vs 2x spread 0.0474, 5 of 8 folds; INDETERMINATE (min fold n 1070 on S0, 817 on S1 seed 7)'
         shape: noisy
       shape: noisy
+  universe:
+    symbol_set_traded_vs_pooled:
+      tests:
+      - unit: RQ-20261101-c692-06
+        value: v1 frozen recipe (20 features, baseline params, tau 0.10) scored on the five bybit_2 symbols vs all 60
+        response: 'DEV folds, 4 seeds (20261101, 7, 11, 13): traded-5 -0.0427/-0.0405/-0.0434/-0.0376 net R/decision (n about 5,500 each, seed range 0.0058); pooled 60 symbols +0.0063 to +0.0097 (n about 72k). Held-out (c692-06): traded-5 +0.0263 (n=907, bootstrap CI95 -0.042..+0.099), pooled +0.0073 (n=11,240)'
+        shape: slice_negative_on_dev
+        note: 'traded-5 is the weak slice of v1 on dev (6 of 8 folds negative, seed 7); the held-out +0.0263 is not corroborated by 5.5k dev decisions on the same symbols. Operator decided 2026-11-01 17:05Z: v1 goes live on bybit_2 as approved (the registered rule passed). Cause not yet attributed: the coins, the 4h cadence or the cost share.'
+      - unit: RQ-20261101-a508-01
+        value: 'symbol set, round 1 (dev, seeds 20261101/7/11/13, v1 frozen)'
+        response: 'traded-5 -0.0411 (seed range 0.0058, n about 5,486 per seed) vs other 55 +0.0123; cost-neutral re-price of the traded 5: -0.0262 (not cost-driven); BTC+ETH -0.0974 vs ADA+SOL+XRP -0.0103 (gap -0.0871 >= 2 x 0.0058: COIN-driven). Flags: BTC HARM (-0.1291, t -3.6, negative in 4 of 4 years), ETH HARM (-0.0722, t -2.2, negative in 4 of 4 years), XRP/ADA/SOL UNDETERMINED (|t| < 1). Cadence untested (needs b603-01)'
+        shape: coin_effect_majors
+      shape: slice_negative_on_dev
   threshold:
     tau_scaling_and_min_n:
       tests:
@@ -83,6 +108,153 @@ levers:
         response: 'the floor trips for R1/R2/R3/T1/T4 because regularised or rescaled scores concentrate near zero; the arms look better on S0 yet cannot be graded'
         shape: design_defect
       shape: design_defect
+  bracket_geometry:
+    sl_tp_grid:
+      tests:
+      - unit: RQ-20261101-b601-01
+        value: 'TP sweep at SL 2 (3, 4, 6) and SL sweep at TP 4 (1.5, 2, 3), frozen entries, pooled 60, 3 seeds, dev'
+        response: 'base 2/3 +0.0089; 2/4 +0.0126 (delta +0.0037, 6 of 8 folds, 3 of 4 years, threshold 0.0068: no win); 2/6 +0.0093; 1.5/4 +0.0040; 3/4 +0.0090. All cells smooth, none clears'
+        shape: weak_positive_below_power
+        note: 'same direction as c692-02 held-out (2/4 +0.0144 vs 2/3 +0.0073) but a TP of 4 is worth about +0.004 on dev, under the registered power; tested_at_power false for a 0.004 effect. The held-out year is already spent on both geometries'
+      shape: weak_positive_below_power
+  selectivity:
+    gates:
+      tests:
+      - unit: RQ-20261101-b602-01
+        value: 'score-band cap q0.80/q0.90; tau 0.05/0.15; side drop; BTC-return and vol24 tercile abstention (13 arms, 3 seeds, dev)'
+        response: 'base +0.0089. cap q0.90 +0.0104 (no win), cap q0.80 +0.0071, tau 0.05 +0.0008, tau 0.15 +0.0079, drop long +0.0239 (delta +0.015 but long is negative in only 2 of 4 years: rejected by the registered stability condition), drop short -0.0181. Abstaining in the lowest vol24 tercile +0.0220 (delta +0.0131, 6 of 8 folds, 4 of 4 years, min fold n 2,128): the only win. tau curve over seeds: 0.0 -0.0085, 0.05 +0.0008, 0.10 +0.0089, 0.15 +0.0079, 0.20 +0.0043, 0.30 -0.0080'
+        shape: one_cell_wins
+        note: '12 arms were tested, so one win at this bar is not surprising (selection risk); the mechanism below is what makes it credible'
+      - unit: RQ-20261101-b602-01
+        value: attribution of the low-vol win
+        response: 'gross edge is the same in the lowest vol24 tercile (+0.0748) and the rest (+0.0724); cost per R is 0.0922 vs 0.0466, so net is -0.0174 vs +0.0259 (seed 7, 27.7k vs 44.3k decisions). The loss is COST SHARE (fixed bps over a risk of 2 ATR), not edge'
+        shape: cost_share_effect
+      shape: one_cell_wins
+  cost_gate:
+    est_cost_per_r:
+      tests:
+      - unit: RQ-20261101-b606-01
+        value: 'EXPLORATORY first look (run before the rule was written): abstain when estimated cost per R > 0.10 / 0.08 / 0.06'
+        response: '+0.0112 / +0.0126 / +0.0205 vs base +0.0089 (3 seeds, dev); 0.06 clears the common rule (delta +0.0115, 6 of 8 folds, 3 of 4 years, 2022 -0.004, n about 39.5k per seed, min fold n 1,697). Monotone dose-response'
+        shape: monotone_dose_response
+        note: 'exploratory, so not counted as a candidate; b606-01 registers the grid 0.03..0.10 with the rule first (0.03-0.05 unseen)'
+      - unit: RQ-20261101-b606-01
+        value: 'registered grid 0.03 / 0.04 / 0.05 / 0.06 / 0.08 / 0.10 (0.03-0.05 unseen when the rule was written), 3 seeds, dev'
+        response: '-0.0004 (a fold of 98 decisions) / +0.0088 (380) / +0.0207 (965, 35 under the floor: indeterminate) / +0.0205 WIN (delta +0.0115, 6 of 8 folds, 3 of 4 years, min fold n 1,697) / +0.0126 / +0.0112 vs base +0.0089. Plateau at 0.05-0.06, collapse below as decisions run out (about 28.5k at 0.05 vs 72k base)'
+        shape: plateau_then_collapse
+      shape: monotone_dose_response
+  calibration:
+    score_vs_outcome:
+      tests:
+      - unit: RQ-20261101-b604-01
+        value: 'decile reliability of the base score; isotonic and binned remaps (dev, 3 seeds)'
+        response: 'decile Spearman 0.83-0.89 (rank-informative) but slope of realised on predicted 0.16-0.19 (target 0.7-1.3): predicted net R is about 5x too large, so the score is a RANKING, not an expected R; not usable for confidence-scaled sizing as is. Isotonic remap +0.0120 (delta +0.0031, a fold down to 200 decisions: indeterminate); binned remap +0.0028 (no win)'
+        shape: ranking_not_expectation
+      shape: ranking_not_expectation
   next_from_map:
+  - 'universe/symbol_set: attribute the traded-5 dev shortfall (coins vs 4h cadence vs cost share) from the v1 dev-fold trades, then a structured test the live go/no-go on the traded symbols can rest on (rule written before the run)'
   - 'fs07: replace the single-model score with the mean of K seeds (variance), pick tau as a per-fold score QUANTILE so every fold has a comparable n, rescale T1/T4 scores the same way, keep the fs05 noise control'
   - 'last dev fold 2025-07..09 is negative for every arm (-0.11 to -0.21): attribute by symbol and direction before any further recipe lever'
+
+declared:
+  # AUTHOR-OWNED (preserved by lever_map.py --backfill). ENTRY lever plan, lane ML-RECIPE, 2026-11-01 ~18:15Z, for the operator's
+  # "what are the levers and how do we test them". Rule for every test: one factor against the frozen v1 base, selected on DEV only,
+  # net of the full cost stack, pooled frozen-60 population (traded five reported beside it); winners go together into ONE combined
+  # held-out read (ML-BAR-ONE-READ) as a new unit with its rule written first. The held-out year is already spent on two bracket
+  # geometries (c692-02), so the combined read uses a FRESH window (W1, 2026-10-01..31, unspent) or live forward data.
+  threshold_for_a_win: '>= 2 x 0.0034 (v1 dev seed range, pooled 60) over the base, >= 6 of 8 folds, same sign in >= 3 of 4 years'
+  ranked_levers:
+  - rank: 1
+    lever: symbol_set (live book is BTC, ETH, XRP, ADA, SOL)
+    reading: 'MEASURED dev, v1 seed 7: traded-5 -0.041; BTC -0.132 (t -3.7), ETH -0.082 (t -2.5), XRP/ADA/SOL about 0. Pooled 60: +0.007'
+    next_unit: RQ-20261101-a508-01
+    expected_effect: '+0.036 net R/decision on the traded slice if BTC and ETH were excluded (MEASURED dev, one seed, post-hoc). A symbol-list change is a Tier-3 proposal to the operator, never applied by the lane'
+    cost: 'about 2 h (shared harness)'
+    eta: 'harness 2026-11-02'
+  - rank: 2
+    lever: bracket_geometry (SL/TP)
+    reading: 'MEASURED: dev static 2/4 +0.0209 vs 2/3 +0.0154; held-out 2/4 +0.0144 (n 10,641) vs 2/3 +0.0073 (n 11,240), same decisions; held-out already read on both'
+    next_unit: RQ-20261101-b601-01
+    expected_effect: '+0.005 to +0.007 net R/decision (MEASURED on two windows, one pair of cells; about the size of the registered threshold)'
+    cost: 'about 1.5 h'
+    eta: 'harness 2026-11-02'
+  - rank: 3
+    lever: selectivity (score band cap, tau rule, regime abstention, side)
+    reading: 'MEASURED dev: tau curve peaks at 0.10 and is negative at 0.20/0.30; top score quintile -0.0075 vs +0.023 for the fourth; side edge flips sign between dev (short +0.0195, long -0.0089) and held-out (long +0.032, short -0.004) and by year, so a side filter is expected to FAIL'
+    next_unit: RQ-20261101-b602-01
+    expected_effect: 'about +0.004 from capping the top band (ESTIMATED, in-sample); side filter none expected'
+    cost: 'about 1.5 h'
+    eta: 'harness 2026-11-02'
+  - rank: 4
+    lever: recipe (regularisation, K-seed ensemble, quantile threshold)
+    reading: 'fs05-01: seed spread 0.012-0.040 (14x assumed); R1/R2 S0 +0.029/+0.025 but ungradeable (a fold under 1000 decisions); R0 -0.0018'
+    next_unit: RQ-20261101-d507-01 (running locally, 34 of 54 member walks done at 18:15Z)
+    expected_effect: 'unknown; the ensemble first tells whether any recipe effect is real (variance cut about sqrt 3)'
+    cost: 'running, about 1 h left'
+    eta: 'result 2026-11-01 evening'
+  - rank: 5
+    lever: calibration (precondition for confidence-scaled sizing)
+    reading: 'MEASURED dev: score is not monotone with outcome at the top quintile'
+    next_unit: RQ-20261101-b604-01
+    expected_effect: 'no direct R gain expected from a monotone remap; enables sizing; non-monotone remap overlaps rank 3'
+    cost: 'about 1 h'
+    eta: 'harness 2026-11-02'
+  - rank: 6
+    lever: active_management (moving TP, MANAGE head, time stop)
+    reading: 'no reading: c692-03 (MANAGE head) blocked on its harness; ML-ENTRY-TP-REVISION / #22093 (first-passage TP revision) built, held'
+    next_unit: RQ-20261101-c692-03 and ML-ENTRY-TP-REVISION (existing)
+    expected_effect: 'unknown; highest ceiling (changes what a trade earns after entry) and highest cost'
+    cost: 'days to build the heads'
+    eta: 'after the dev levers above'
+  - rank: 7
+    lever: target_labels (market-neutral, first-passage) under a gradeable threshold
+    reading: 'fs06-01: T1 +0.026 and T4 +0.008 ungradeable; T2 reject; T3 == T0'
+    next_unit: RQ-20261101-b605-01 (after d507-01)
+    expected_effect: 'unknown'
+    cost: 'about 2.5 h'
+    eta: '2026-11-02'
+  - rank: 8
+    lever: horizon_and_cadence
+    reading: 'untested'
+    next_unit: RQ-20261101-b603-01
+    expected_effect: 'unknown'
+    cost: 'about 3 h'
+    eta: '2026-11-02'
+  - rank: 9
+    lever: live_monitoring (the demotion signal, not an edge lever)
+    reading: 'expected live band from dev: traded-5 -0.041 net R/decision, pooled +0.007; October 2026 -0.019R (manager)'
+    next_unit: row ML-ENTRY-LIVE-MONITOR (a build, not a research unit)
+    expected_effect: 'detects a failing live ENTRY early; cannot add edge'
+    cost: 'small'
+    eta: '2026-11-02'
+  round1:
+    # ROUND 1 (lane ML-RECIPE, 2026-11-01 ~18:30Z), dev folds only, 3 seeds, pooled frozen-60, base +0.0089, all against the common rule.
+    # Order of the ranked list above is superseded by what the dev data showed; the table below is the current reading.
+    results:
+    - {lever: cost_gate (new, from b602 attribution), unit: RQ-20261101-b606-01, outcome: 'WIN at 0.06: +0.0205, delta +0.0115, 6/8 folds, 3/4 years; plateau 0.05-0.06', status: candidate}
+    - {lever: selectivity low-vol abstention, unit: RQ-20261101-b602-01, outcome: 'WIN +0.0220 (delta +0.0131); same cost-share mechanism as the gate, so the gate is carried, not both', status: superseded_by_cost_gate}
+    - {lever: recipe regularisation, unit: RQ-20261101-b607-01, outcome: 'WIN: R2 single +0.0293 vs base +0.0089 (delta +0.0204, noise-immune, 6/8 folds, 3/4 years); R1 +0.0204; R0 K=3 ensemble does not win', status: candidate}
+    - {lever: bracket_geometry, unit: RQ-20261101-b601-01, outcome: '2/4 +0.0126 (delta +0.0037) below the 0.0068 power; direction matches the held-out', status: indeterminate_by_power}
+    - {lever: symbol_set, unit: RQ-20261101-a508-01, outcome: 'BTC HARM, ETH HARM, XRP/ADA/SOL undetermined; coin-driven not cost-driven', status: tier3_proposal_to_operator}
+    - {lever: calibration, unit: RQ-20261101-b604-01, outcome: 'score is a ranking (Spearman 0.83-0.89), not an expectation (slope 0.16-0.19); no remap helps', status: no_sizing_on_this_score}
+    - {lever: side_filter, unit: RQ-20261101-b602-01, outcome: 'rejected by the registered stability condition, as predicted', status: rejected}
+    combined_read_candidates:
+    - 'recipe R2 (win at a matched decision share; the largest single effect measured so far)'
+    - 'cost gate 0.06 (win under its registered rule)'
+    - 'bracket 2/4 (not a win on its own; carried because the direction repeats on the held-out year and it costs nothing to include as a one-factor addition in the combined unit)'
+    combined_read_window: 'W1 (2026-10-01..31, unspent) or live forward data; the held-out year is spent on two geometries. ONE read, rule written first, new unit'
+    still_to_run: ['RQ-20261101-d507-01 (recipe, running)', 'RQ-20261101-b603-01 (horizon/cadence, needs the relabel arm)', 'RQ-20261101-b605-01 (target, after d507-01)', 'RQ-20261101-c692-03 and ML-ENTRY-TP-REVISION (active management)']
+  levers:
+  - {lever: symbol_set, range: 'subsets of the frozen 60; live = bybit_2 symbols', hypothesis: 'BTC and ETH have near-zero gross edge and the highest cost per R'}
+  - {lever: sl_atr, range: '1.5, 2, 3', hypothesis: 'live 2 is near the optimum'}
+  - {lever: tp_atr, range: '3, 4, 6', hypothesis: 'a wider TP raises mean net R (dev +0.0055, held-out +0.0071 at 4)'}
+  - {lever: entry_tau, range: '0.05, 0.10, 0.15', hypothesis: 'plateau around 0.10; drops above 0.20'}
+  - {lever: score_band_cap, range: 'drop the top 10% or 20% of scores', hypothesis: 'the top band is over-confident and loses'}
+  - {lever: regime_abstention, range: 'terciles of BTC 24h return and vol24', hypothesis: 'one regime cell loses consistently'}
+  - {lever: side_filter, range: 'drop long, drop short', hypothesis: 'expected to fail: sign flips by year'}
+  - {lever: horizon_h, range: '12, 24, 48', hypothesis: 'unknown'}
+  - {lever: cadence_h, range: '2, 4, 8', hypothesis: 'unknown; separates the coin effect from cadence on the traded five'}
+  - {lever: recipe, range: 'baseline, R1, R2 params; K=1 or 3 seed ensemble', hypothesis: 'regularisation helps once gradeable'}
+  - {lever: training_target, range: 'raw, market-neutral, first-passage', hypothesis: 'a regime-free target stabilises folds'}
+  - {lever: calibration, range: 'raw, isotonic, binned reliability remap', hypothesis: 'non-monotone remap repairs the top band'}
+  - {lever: management, range: 'hold, close, SL-to-breakeven, trail, TP move', hypothesis: 'active management adds a captured-move component'}
