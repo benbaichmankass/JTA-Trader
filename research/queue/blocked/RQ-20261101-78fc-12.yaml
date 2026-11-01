@@ -1,0 +1,78 @@
+# Hand-authored 2026-11-01 by lane RESEARCH-ITERATE (Tier 1), dispatched by Manager Session 2026-11-01a. ITERATION unit: authored from a written diagnosis of the subject's last result. Decision rule registered BEFORE any run. Gates: none.
+id: RQ-20261101-78fc-12
+title: 'ITERATION 1 of turtle_soup (indeterminate): once a harness routes it, does the declared leg clear Stage 0 on 2024-10..2026-10?'
+status: blocked
+cadence: once
+theme: live_strategy
+priority: 1
+roadmap:
+- L-PROGRAMMES
+programme: P3
+kind: experiment
+question: Measured config-exact on 2024-10-05..2026-10-04, net of the full cost stack, does turtle_soup clear Stage 0 (n >= 30, net R > 0, >=
+  4 of 6 folds positive)?
+why_this_matters: 'Operator 2026-11-01 ~12:59Z: "if the data doesn''t pass, it goes back into research for improvments and testing. THere is no
+  other pipeline for underperforming strategies/mls." turtle_soup is not on real money and had no live research iteration (scripts/research/iteration_orphans.py,
+  2026-11-01).'
+iteration:
+  subject: turtle_soup
+  subject_kind: strategy_leg
+  from_result: comms/strategy_evidence/turtle_soup.json
+  verdict_read: indeterminate
+  diagnosis: 'comms/strategy_evidence/turtle_soup.json is coverage no_harness: regime_debt_matrix.classify() routes nothing for this config (its
+    1m entry_tf, partials and BE are outside every branch). It trades on bybit_1 with NO Stage-0 measurement at all -- the diagnosis is a missing
+    instrument, not a failed idea.'
+  hypothesis: the declared leg has a measurable non-negative edge once a harness models it
+  attempt: 1
+  due_by: '2026-11-12'
+power:
+  expected_n: 500
+  min_detectable_effect: 0.02
+  effect_units: metric
+  sd: 1.0
+  design: paired
+  alpha: 0.05
+  power: 0.8
+  basis: INFERRED from the source result's population; the rule's own INDETERMINATE floor governs.
+  feasibility:
+    source: none
+    accrual_basis: Replays existing corpora; nothing accrues.
+decision_rule:
+  id: RULE-RQ-20261101-78fc-12
+  registered_at: '2026-11-01'
+  registered_before_run: true
+  statistic: Measured config-exact on 2024-10-05..2026-10-04, net of the full cost stack, does turtle_soup clear Stage 0 (n >= 30, net R > 0,
+    >= 4 of 6 folds positive)?
+  rule: 'PASS iff n >= 30 AND net R > 0 AND >= 4 of 6 calendar folds positive. FAIL: back to diagnosis with a real result. INDETERMINATE if n
+    < 30. Fixed now.'
+  what_it_does_not_do: Serves, promotes or applies nothing; changes no config; places no order.
+practice_precedent: 'M4 (docs/reference/trading-and-model-practice-principles.md): config-exact harness, baseline = the declared leg.'
+compute: cpu_light
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 8.0
+  est_minutes: 120
+  basis: Estimate; the first run replaces it.
+  why_runner: Replays committed or public corpora on CPU.
+value:
+  usd_at_stake_per_month: 30
+  confidence: 0.15
+  bucket: structural
+  basis: planning weight by money rank; an estimate, not a measurement
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- RESEARCH-ITERATE
+- E25
+what_it_does_not_do: Serves, promotes or applies nothing; changes no config; places no order.
+blocked_on:
+- kind: work_item
+  ref: E25
+  what: a turtle_soup classifier branch + lever map in regime_debt_matrix (the fvg_range branch, E25, is the worked example)
+  clears_when: the branch lands and build_strategy_evidence.py writes a measured record; then git-mv to research/queue/ with run.command (rule
+    unchanged)
+intervention_controls:
+  not_applicable: an offline model evaluation; the consumer's own gate applies any action

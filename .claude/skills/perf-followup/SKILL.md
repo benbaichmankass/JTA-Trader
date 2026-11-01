@@ -93,6 +93,11 @@ the expensive one (see § Cost).
 
 ### Track 1 — TUNE: underperformers get diagnosed, then re-tested
 
+**Every Track-1 unit is an ITERATION unit** (operator 2026-11-01, binding: *"if the data doesn't pass, it goes back into research for
+improvments and testing. THere is no other pipeline for underperforming strategies/mls."*): it carries the `iteration:` block defined
+once in `.claude/skills/research-ops/SKILL.md` § "THE ITERATION LOOP", so `scripts/research/iteration_orphans.py` counts the leg as
+covered and the 4x/day pass continues its loop. A leg already covered there gets its NEXT attempt here only from a new diagnosis.
+
 *Operator point 1.* For each leg the review marks underperforming (negative net window,
 `grade_drift`, a `proposed_tweaks` demote/kill candidate, or a low-grade cluster):
 

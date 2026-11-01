@@ -1,0 +1,89 @@
+# Hand-authored 2026-11-01 by lane RESEARCH-ITERATE (Tier 1), dispatched by Manager Session 2026-11-01a. ITERATION unit: authored from a written diagnosis of the subject's last result. Decision rule registered BEFORE any run. Gates: none.
+id: RQ-20261101-78fc-05
+title: 'ITERATION 1 of ml-holdbias-exit (pending): on held-out corpus-B folds, does exit-holdbias-v1 acting only when the best action beats hold
+  by >= 0.15 R keep as-if-applied >= hold-to-bracket?'
+status: blocked
+cadence: once
+theme: ml_health
+priority: 1
+roadmap:
+- L-ML-LIVE
+programme: P2
+kind: experiment
+question: On the real-money legs' Stage-0 path corpus (corpus B, held-out folds), does exit-holdbias-v1 meet as-if-applied >= hold-to-bracket
+  (trade-clustered LB > -0.01 R/trade), advice rate <= 15%, no leg < -0.05 R/trade?
+why_this_matters: 'Operator 2026-11-01 ~12:59Z: "if the data doesn''t pass, it goes back into research for improvments and testing. THere is no
+  other pipeline for underperforming strategies/mls." ml-holdbias-exit is not on real money and had no live research iteration (scripts/research/iteration_orphans.py,
+  2026-11-01).'
+iteration:
+  subject: ml-holdbias-exit
+  subject_kind: ml_model
+  from_result: Row ML-HOLDBIAS-EXIT-MODEL
+  verdict_read: pending
+  diagnosis: Never tested (row ML-HOLDBIAS-EXIT-MODEL). The operator asked for 'a conservative production ML that will mostly recommend holding'.
+    The TM action-value FAIL (over-acting on 66-73% of trades, argmax over noisy heads) is the failure this design avoids by a hard hold default
+    and a 0.15 R margin.
+  hypothesis: a model that acts on <= 15% of check-ins, only on large predicted advantage, does not lose to hold
+  attempt: 1
+  due_by: '2026-11-08'
+power:
+  expected_n: 500
+  min_detectable_effect: 0.02
+  effect_units: metric
+  sd: 1.0
+  design: paired
+  alpha: 0.05
+  power: 0.8
+  basis: INFERRED from the source result's population; the rule's own INDETERMINATE floor governs.
+  feasibility:
+    source: none
+    accrual_basis: Replays existing corpora; nothing accrues.
+decision_rule:
+  id: RULE-RQ-20261101-78fc-05
+  registered_at: '2026-11-01'
+  registered_before_run: true
+  statistic: On the real-money legs' Stage-0 path corpus (corpus B, held-out folds), does exit-holdbias-v1 meet as-if-applied >= hold-to-bracket
+    (trade-clustered LB > -0.01 R/trade), advice rate <= 15%, no leg < -0.05 R/trade?
+  rule: 'The section 2a sanity rule of docs/plans/ml-live-promotion-plan-2026-10-29.md, UNCHANGED (registered 2026-10-28): PASS iff LB > -0.01
+    R/trade AND advice rate <= 15% AND no leg < -0.05 R/trade. FAIL: back to diagnosis (margin vs features). INDETERMINATE if < 500 held-out trades.'
+  what_it_does_not_do: Serves, promotes or applies nothing; changes no config; places no order.
+practice_precedent: 'T1, M6 (docs/reference/trading-and-model-practice-principles.md): purged walk-forward, matched-random control, one pre-registered
+  read.'
+compute: cpu_long
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 8.0
+  est_minutes: 120
+  basis: Estimate; the first run replaces it.
+  why_runner: Replays committed or public corpora on CPU.
+value:
+  usd_at_stake_per_month: 250
+  confidence: 0.15
+  bucket: ai_trader
+  basis: planning weight by money rank; an estimate, not a measurement
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- RESEARCH-ITERATE
+- ML-EXIT-ACTIONGRID-LABELS
+what_it_does_not_do: Serves, promotes or applies nothing; changes no config; places no order.
+blocked_on:
+- kind: work_item
+  ref: ML-EXIT-ACTIONGRID-LABELS
+  what: the action-grid labels (desk_lifecycle_driver.py --action-grid) the model trains on
+  clears_when: the labels land; then git-mv to research/queue/ (rule unchanged)
+intervention_controls:
+  not_applicable: an offline model evaluation; the consumer's own gate applies any action
+ml_consumer:
+  consumer: scripts/ops/live_review_apply.py
+  decision: hold vs act advice on the real-money legs' open packages
+  legs:
+  - xrp_pullback_2h
+  - trend_donchian_eth_4h
+  - trend_donchian_xrp_4h
+  - ada_pullback_2h
+  - trend_donchian_sol_prop
+  book: money
