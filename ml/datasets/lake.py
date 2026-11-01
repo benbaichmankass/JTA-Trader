@@ -116,8 +116,10 @@ def _read(e: Dict, start=None, end=None, columns: Optional[Sequence[str]] = None
         filters.append(("ts", ">=", pd.Timestamp(start, tz="UTC")))
     if end is not None:
         filters.append(("ts", "<", pd.Timestamp(end, tz="UTC")))
+    if e.get("tf_col"):  # derived timeframes share one file per partition; select this series' tf
+        filters.append((e["tf_col"], "==", e["tf"]))
     frames = [pd.read_parquet(_fetch(p, revision), columns=list(columns) if columns else None, filters=filters or None)
-              for p in _paths(e, start, end)]
+              for p in sorted(set(_paths(e, start, end)))]
     frames = [f for f in frames if len(f)]
     if not frames:
         return pd.DataFrame(columns=list(columns) if columns else None)

@@ -304,12 +304,3 @@ The first run of each new year compacts the previous year automatically and prun
 | keep-alive | `scripts/ops/schedule_keeper.py` target `market-data-lake.yml` (stale 26 h) + a `dedupe` job | a dropped GitHub cron slot is re-dispatched; a dead run is caught by `claude-run-failure-alert` |
 
 Claude reads the health record in `/health-review` and `/ml-review`. It does not run the feeds.
-
-## 6. Follow-ups (filed in `docs/claude/work/PIPELINE.jsonl`)
-
-- (b2) import `CryptoSpartan/stocks_bars_1m` into `us_equity/alpaca_1m_ext/1m/` (ungated; Alpaca terms).
-- (b3) broad Alpaca daily + 1h pull for every ETF in the universe snapshot (ETF-HISTORY-PIPELINE's fetcher reading
-  `universe/us_equity/<date>.csv` instead of its 31-symbol constant), plus inactive assets for delisted names.
-- (c2) ALFRED vintages for the revised FRED series (true PIT macro).
-- (d2) Kaggle mirror `metis-market-lake`, or a Kaggle-secret HF read path, so Kaggle kernels read the lake.
-- (e) ~~paperswithbacktest import~~ — killed: the operator said to stay on already-accessible sources (2026-11-01).
