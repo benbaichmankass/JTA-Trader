@@ -2,7 +2,7 @@
   "id": "RESEARCH-ITERATE",
   "title": "One ladder, one research loop: every testing leg, non-live ML model and failing live-review class has a LIVE iteration unit (diagnosis -> pre-registered variant -> test -> read -> repeat); research-ops/programme-review/manager 4b enforce it; orphans cleared",
   "phase": null,
-  "state": "landed_unproven",
+  "state": "in_flight",
   "owner": "manager",
   "lane": "RESEARCH-ITERATE",
   "model": null,
@@ -17,7 +17,7 @@
   "blocked_on": [],
   "note": "OPERATOR 2026-11-01 ~12:59Z verbatim: \"if the data doesn't pass, it goes back into research for improvments and testing. THere is no other pipeline for underperforming strategies/mls.\" Dispatched by Manager Session 2026-11-01a. Ceiling $35. Skill edits Tier-1 self-land; orphan iteration units are a HELD PR for operator merge. Gates this adds: none. [2026-11-01 lane] ORPHANS (scripts/research/iteration_orphans.py, strict = a live unit carrying an iteration: block): BEFORE strategy_leg 49/49, ml_model 9/9, ltr_class 7/7 (legacy-lenient: 16 legs had no hand-authored unit at all; ML 8/9; LTR 7/7). AFTER (with #22161 merged): legs 0/49, ML 0/9, LTR 5/7 (partial, widen, structure, tp_extend, tp_pull_in -- owned by in-flight lane LTR-CLASS-GRADE; research-ops authors them from its verdicts). Caveat: 13 of the 61 covering units are BLOCKED on named levers (9 ML/LTR, 3 harness-less legs, + fs05/fs06), so those subjects are covered by a registered question, not yet a runnable test. PRs: #22159 skills + detector (Tier 1, self-land), #22161 57 units + 4 iteration blocks (HELD for operator merge). Filed PI-20261101-HIPIPRHQ-0001 (7b6f-03/04/05 --adx-max cannot fire on the scalp harness), -0002 (e1a7-01/02 blocked on a DONE row). Closes when #22159 and #22161 merge and the next research-ops record carries an iteration block.",
   "priority_rank": 1,
-  "updated_at": "2026-11-01T13:45:25Z",
+  "updated_at": "2026-11-01T13:45:38Z",
   "updated_by": "session_01AFoLuLiJ6TVirjHipiPRhQ",
   "due_by": "2026-11-02",
   "roadmap": [
