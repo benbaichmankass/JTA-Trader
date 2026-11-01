@@ -52,8 +52,8 @@ def load_rows(paths: List[str]) -> List[dict]:
 
 
 def roster_legs() -> set:
-    acc = yaml.safe_load((REPO / "config/accounts.yaml").read_text())
-    acc = acc.get("accounts", acc)
+    from src.config.accounts_loader import load_accounts_dict
+    acc = load_accounts_dict()
     legs = set()
     for v in acc.values():
         if isinstance(v, dict):
