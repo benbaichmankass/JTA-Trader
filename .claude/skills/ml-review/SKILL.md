@@ -187,6 +187,15 @@ Premortem each one (pattern § 3.9). Next week's Layer 0 re-runs the check as wr
 
 ---
 
+## Weekly progress lines (operator, 2026-11-01, binding; row ML-WEEKLY-REVIEW-LINES)
+
+Operator, 2026-11-01: *"a plan for feeding and retraining on more and better data (now ...), with regular reviews from claude to see that it's progerssing correctly."* Under `1 CHECKS`, every Sunday print four graded lines, each a number with its population, never prose; a missing number is `could_not_look`, not 0:
+1. **Data coverage** -- per feature family of `docs/research/ml-feature-inventory-2026-11-01.md`, the present share of the last 7 days' decision rows, per symbol (min, median).
+2. **Feature count in use** -- columns the live ENTRY artifact reads versus columns the feature registry holds; flag if the live count is below the registry's admitted count.
+3. **Retrain freshness** -- age in days of the live artifact's data-through date against the weekly cadence (row ML-ENTRY-RETRAIN-CADENCE); stale beyond 8 days is a red line.
+4. **Live decision-grade vs held-out** -- mean net R per decision live over the week (n, symbols) beside the registered held-out figure of the unit that produced the artifact.
+Gates this adds: none (a reporting line; it blocks nothing).
+
 ## Output — fixed template
 
 **1. The brief.** Markdown in the pattern's § 4 order, headed `MODEL track — /ml-review <date> — <the one sentence that most

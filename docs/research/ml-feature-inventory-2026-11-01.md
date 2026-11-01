@@ -23,6 +23,66 @@ What I measured (population stated on each line; method in § 6):
 
 ---
 
+## 1a. Manager addenda, 2026-11-01 ~10:48Z (operator, verbatim)
+
+> *"we should already have a data feed/features catalog, so I don't know why we need to be so lean just to get an ML off the ground - and if that's just to have the prototype live, then we need to make sure there's a plan for feeding and retraining on more and better data (now, not an unspecified date in the future), with regular reviews from claude to see that it's progerssing correctly. 20 features is a regression equation, not algorithmic trading"*
+>
+> *"if we're going live then iterating the entry ML, then we're talking about a timeline in hours, not days/weeks"*
+
+**A catalog exists, and it explains the 20.** `docs/reference/signal-catalog.yaml` has 335 inputs; `docs/research/signals-catalog.yaml` has 67 families. Both catalog what the system **reads**, not what is **stored or available**. Three measured consequences:
+
+1. **ENTRY's 20 features are in neither catalog** (grep of `xs_rank_ret24 | ret_168 | btc_vol24 | breadth_up24 | rel_vol` in the 335-input file: **0 matches**). `scripts/research/ml_decision_entry.py` is a standalone harness; `signal-catalog-guard` keys on manifests, strategy modules and config ids, so the harness is invisible to it. That is why ENTRY v1 could be lean without anyone seeing the catalog's other rows.
+2. **The catalog's crypto market-structure features are `market_features` columns for BTC/ETH/SOL**, not pooled ones (105 `ml_feature` entries, mapped below). Nothing in the catalog says what the 60-perp universe could be fed.
+3. **The per-STORE catalog the operator expects is row `DATA-CATALOG`, dropped in the 2026-10-29 bulk reset as "value unknown".** The operator has now stated its value (quote above). It is **re-opened** by this lane (state `queued`, Tier 1) and its scope is widened to include the Binance Vision streams of § 2a, which are the only stores that can feed ENTRY v2 in hours.
+
+### Catalog → candidacy map (335 inputs; counts from the file, `ml_feature` split read id by id, all 105 assigned)
+
+Readiness classes: **NOW** = history for the 60 perps and a live computation from the 1h klines the ENTRY adapter already reads; **BACKFILL** = history fetchable from the free archive (hours, measured § 7), live path exists or is a small build; **COLLECT** = needs a new live collector or has no history; **NO** = outside operator scope (sizing/risk) or not a market-structure input.
+
+| Catalog group (n) | ENTRY | BRACKETS | HOLD/ADJUST/CLOSE | Readiness |
+|---|---|---|---|---|
+| ml: OHLCV returns, vol estimators, hour, dow (11) | yes (v1 uses a subset) | yes | context | **NOW** |
+| strategy/candle (7) and strategy/derived_indicator (35: ATR, ADX, Donchian, Bollinger, Keltner, squeeze, VWAP, sweeps, FVG, body/wick) | yes, as shape features | yes (ATR/ADX set brackets) | partly (`since_entry_window`, `open_r_mfe`) | **NOW** (pure functions of candles). ~25 of the 35 are price-structure; the rest are strategy-state (`pairs_*`, `bars_elapsed`) |
+| ml: cross-asset peer (13) | yes, redefined as pooled cross-sectional ranks | yes | context | **NOW** (the peer pairing is per target symbol; the pooled version is family 4 of § 4) |
+| ml: funding and OI (5) | yes | yes | yes | **BACKFILL**: funding 99.6% and OI 71.3% of dev symbol-months (§ 1); live OI exists (`src/runtime/oi_feed.py`, Bybit 5m, point-in-time `known_at`, but **not yet observed on the VM**); no live funding producer |
+| strategy/feed `oi_bybit_5m` (1 of 11) | yes | yes | yes | **BACKFILL** live half: the feed exists for the E4 leg's symbol only; 60-symbol scope is a Tier-2 extension |
+| ml: order flow (6) | maybe | maybe | maybe | **COLLECT**: BTC only, forward from 2026-06-04; Binance bookDepth (2023+) is the historical proxy |
+| ml: macro (7), regime_macro/macro_series (54), valuation (10), event_calendar (20) | weak at 1h–24h | no | no | **BACKFILL**: daily PIT stores in `comms/macro` (COT 10,093 rows 1988→2026-07-17, lag verified); FRED has no caller |
+| regime_macro/news (31) | weak | no | event risk only | **COLLECT**: GDELT corpus not persisted (`NEWS-ALPHA-CORPUS` dropped) |
+| ml: in-trade path (31: `unrealized_r`, `mfe_r_so_far`, `mae_r_so_far`, `bars_since_peak`, `giveback_r`, `dist_to_stop_atr`, …) | no | no | **yes, the HOLD/ADJUST/CLOSE state** | **BACKFILL/COLLECT**: pure functions exist (`intrabar_features.py`), per-bar path store does not (`DATA-INTRADE-LABEL-STORE` blocked, `PATH-FLOW-JOIN` landed_unproven) |
+| ml: forecast fc (6), embeddings (2 patterns = 48 columns) | later | later | later | **COLLECT**: BTC/ETH/SOL shards only; opaque to the leakage test |
+| regime_input (32), ml_output (3), crowding (1), cross_asset (6) | as derived context | as derived context | as derived context | **NOW** where computed from candles; the 15 `cell.*` entries are policy cells, not features |
+| ml: account/risk context (5), conviction (4), strategy context (8), present flags (3) | **NO** | **NO** | **NO** | Operator scope: no sizing, no risk features, pooled across strategies. Present flags are reused by the new store |
+
+**Why v1 used 20 of them, in one line:** it needed a pooled 60-symbol answer to one question, the `market_features` columns are per-symbol and trainer-resident, and the harness was not governed by the catalog, so it computed the OHLCV subset inline from the Binance klines it was already fetching and dropped the rest of each kline row.
+
+## 1b. Dated plan: ENTRY v2 in hours, then the rest (all times UTC, 2026-11-01 unless stated)
+
+**Rule for the whole plan.** Anything not needing a backfill or a new live collector is in v2. What needs either is a later *increment*, never a blocker. Every increment is its own pre-registered model with a stated variant count (ML-BAR-ONE-READ): **dev folds may be read repeatedly; a forward window is read once per model.**
+
+**Measured physical limits** (§ 7): archive throughput ~20 to 27 files/s at 16 workers; 1h klines + funding + premium for 60 symbols = 3 × 4,500 monthly files, **~3 to 4 min each stream**; 5m metrics = **106,800 daily files, ~70 min**; 1m klines = ~138,000 daily files, ~95 min and ~8 GB; bookDepth = ~84,000 daily files and ~38 GB (bandwidth **not measured**, so not scheduled). Forward evidence accrues at ~31 scored decisions per day (c692-01: 11,240 over 365 days), so a window needs ~10 days to clear the n = 300 floor. The forward window after c692-01's read is 2026-10-01..2026-10-31 (**W1**, expected n ~ 950).
+
+| When (UTC) | Step | Owner row / unit | Physical reason it takes this long |
+|---|---|---|---|
+| 11:30 | This PR lands: plan, rows, units, registered rules | `ML-FEATURE-INFRA` | — |
+| 11:30 → 11:50 | Backfill A starts in parallel: 12-column 1h klines, funding, premium index for 60 symbols | `ML-FS-ARCHIVE` | 3 streams × 4,500 files at ~20 files/s |
+| 11:30 → 12:45 | Backfill B: 5m metrics (OI, long/short, taker ratio) for 60 symbols, sorted on read | `ML-FS-ARCHIVE` | 106,800 files at ~25 files/s |
+| 11:30 → 13:00 | Harness: feature builders for families 1, 2, 4, 5 (+3 when B lands), leakage self-test (a forward-shifted column is refused), `run-family-ablation` and `run-v2` subcommands | `ML-FS-ENTRY-V2` | Code and tests, not data |
+| 13:00 → 14:15 | **Dev-fold ablation**: arms A baseline, B..F one family each, G all of B..F, run as parallel jobs | `RQ-20261101-fs01-01` | 8 arms × 8 folds × 2 sides of LightGBM at c692-01 size; ~60 min wall if arms fan out (INFERRED from c692-05's 60 min per recipe; first run measures it) |
+| 14:15 | Registered selection: v2 feature set = baseline + every family ADMITTED by the fs01-01 rule (delta ≥ +0.010 R and positive in ≥ 6 of 8 folds) | rule in fs01-01 | — |
+| 14:30 → 15:15 | v2 fit on all data through 2026-09-30 (7-day embargo), tau chosen on dev, then **one read on W1** | `RQ-20261101-fs02-01` | One fit plus a 200-draw random baseline (~60 min INFERRED) |
+| 15:30 | Verdict written, manager woken. Variants read on W1: **1** (v2). Dev-fold arms are not forward reads | `RQ-20261101-fs02-01` | — |
+| 18:00 | Serve-parity verdict per family (Binance-trained vs Bybit-served) from an environment that reaches both venues | `ML-FS-SERVE-PARITY` | Bybit REST is HTTP 403 and Binance fapi HTTP 451 from this sandbox, so it needs the trainer or a runner |
+| 2026-11-02 12:00 | BRACKETS re-scored on the v2 feature set | `ML-FS-BRACKETS-HOLD` | Needs v2 features and the c692-01 summary |
+| 2026-11-02 18:00 | Held PR for the manager (Tier 2): weekly retrain timer for the live ENTRY model, first scheduled run 2026-11-08 04:00 | `ML-ENTRY-RETRAIN-CADENCE` | Runtime and timer change |
+| 2026-11-03 12:00 | HOLD/ADJUST/CLOSE state features (in-trade path families) read from the same store | `ML-FS-BRACKETS-HOLD` | Per-bar path store (`DATA-INTRADE-LABEL-STORE`) |
+| 2026-11-04 | Increment v3: add positioning (family 3) if not already admitted; own pre-registered unit, **W2 = 2026-11-01..2026-11-10, earliest read 2026-11-11**, variants stated | `ML-FS-ENTRY-V2` | Forward-window accrual: ~10 days to n = 300 |
+| 2026-11-08 (Sun) | First weekly ML review with the four graded lines below | `ML-WEEKLY-REVIEW-LINES` | Existing Sunday `/ml-review` cadence |
+
+**Standing retrain cadence.** Weekly, Sunday 04:00Z, refit the live ENTRY model on all data through the previous day minus embargo, publish the artifact with feature list, sha and data-through date, and write a freshness line the review grades. It is a workflow or timer (Tier 2, held PR), not a promise; the row's `due_by` is 2026-11-02T18:00Z.
+
+**Weekly Claude review.** The existing Sunday `/ml-review` gains four graded lines, each a number with its population, never prose: **(1) data coverage**: per feature family, present share of the last 7 days' decision rows per symbol; **(2) feature count in use**: columns the live model reads versus columns the registry holds; **(3) retrain freshness**: age of the live artifact's data-through date; **(4) live decision-grade versus held-out**: mean net R per decision live over the week next to the registered held-out figure, with n. Landed in this PR as an edit to `.claude/skills/ml-review/SKILL.md`.
+
 ## 2. Inventory: every source
 
 **Reading key.** *Depth* is first and last timestamp read from file contents unless marked *listed* (first and last file name in the archive listing; contiguity between them is **not** gap-checked). *Live today* means a collector exists that a served model could read at decision time. *PIT* is point-in-time safety. Backfill cost uses today's HEAD sizes for BTCUSDT (an upper bound for smaller alts); population = 60 frozen perps.
@@ -101,6 +161,11 @@ One store, one feature registry (name, source, window, lag, venue), one as-of jo
 | G5 | 1m klines for tie-resolved first-passage labels at 60-symbol scale | row `DATA-KLINE-ARCHIVE` (reopened from dropped, scope widened) + `DATA-LABEL-TIES` (queued, consumer) | 1 |
 | G6 | In-trade path store for HOLD/ADJUST/CLOSE | existing `DATA-INTRADE-LABEL-STORE` (blocked), `PATH-FLOW-JOIN` (landed_unproven) | 1 |
 | G7 | Non-crypto 1h bars | existing `ML-DATA-XASSET-1H` (queued) | 1 |
+| G9 | ENTRY v2 in hours; increments with stated variant counts | row `ML-FS-ENTRY-V2`, units `RQ-20261101-fs01-01` (dev ablation) and `RQ-20261101-fs02-01` (one forward read) | 1 |
+| G10 | BRACKETS and HOLD/ADJUST/CLOSE on the same store | row `ML-FS-BRACKETS-HOLD` | 1 |
+| G11 | Standing retrain cadence | row `ML-ENTRY-RETRAIN-CADENCE` (held PR) | 2 |
+| G12 | Weekly Claude review of ML progress | row `ML-WEEKLY-REVIEW-LINES` (landed here) | 1 |
+| G13 | Per-store available-feeds catalog | row `DATA-CATALOG` (reopened) | 1 |
 | G8 | Forward order-flow capture beyond BTC | decided by the fs01-01 arm `flow_depth`; no row until it shows value | — |
 
 `DATA-DERIV-ARCHIVE` (6 roster symbols) stays; `ML-FS-ARCHIVE` covers the 60-perp universe and the two are not duplicates.
@@ -111,3 +176,13 @@ One store, one feature registry (name, source, window, lag, venue), one as-of jo
 - **Coverage fractions** (§ 1.1) are first-listed to last-listed month per symbol intersected with the klines months of that symbol inside 2020-07..2025-09. **Contiguity inside the range is assumed, not gap-checked.**
 - **Not verified:** any trainer-VM state (no egress; the BTC-only and 37,722-row figures are the 2026-10-14 diag measurement, cited); Bybit REST (HTTP 403 from here) and Binance fapi (HTTP 451 from here), so every "live" claim for a venue feed is UNVERIFIED; why 7 symbols are absent from the held-out; any signal in any feature.
 - **Held-out:** nothing in 2025-10-01..2026-09-30 was read as an outcome. File timestamps and spacing were read for sources whose depth is part of the inventory; no price, label or return was computed.
+
+## 7. Measured throughput (2026-11-01, this sandbox, 16 workers)
+
+| Probe | Files | Result |
+|---|---|---|
+| 1h klines, 2025-06, first 16 universe symbols | 16 | 19.6 files/s, 0.7 MB/s |
+| 5m metrics daily, 4 symbols × 8 days | 32 | 24.8 files/s, 0.3 MB/s |
+| premium index 1h, 2025-06 | 16 | 26.6 files/s, 0.4 MB/s |
+
+Small files, latency-bound: more workers should raise files/s, bandwidth for the large streams (bookDepth, aggTrades) was **not measured**. Totals in § 1b are file counts divided by these rates and are ESTIMATES until the backfill prints its own.

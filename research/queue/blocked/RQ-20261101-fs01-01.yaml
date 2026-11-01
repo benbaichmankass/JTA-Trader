@@ -41,8 +41,8 @@ routing:
   needs_trainer_resident_data: false
   needs_gpu: false
   peak_memory_gb: 8.0
-  est_minutes: 240
-  why_runner: Keyless public Binance Vision archives (rows ML-FS-ARCHIVE, ML-FS-STORE); GBDT on CPU.
+  est_minutes: 75
+  why_runner: Keyless public Binance Vision archives fetched at run time (rows ML-FS-ARCHIVE, ML-FS-STORE are follow-on persistence, not a blocker); GBDT on CPU; arms fan out as parallel jobs.
   basis: 'INFERRED: 8 arms x 8 folds x 2 sides of LightGBM at the c692-01 size, about 8x the c692-01 dev cost.'
 run:
   workflow: research-script-run.yml
@@ -74,8 +74,8 @@ what_it_does_not_do: Registers, serves or promotes nothing; changes no config; p
 blocked_on:
 - kind: harness
   ref: scripts/research/ml_decision_entry.py run-family-ablation
-  what: the ablation subcommand, reading features from the ML-FS-STORE registry
-  clears_when: ML-FS-ARCHIVE and ML-FS-STORE are done and the subcommand lands with a self-test that refuses a held-out date; the lane git-mvs this file to research/queue/ with status queued (rule unchanged)
+  what: the ablation subcommand with family builders 1-5 (fetches the 12-column klines, funding, premium index and 5m metrics from Binance Vision itself; no persisted store needed) and a self-test that refuses a held-out date and a forward-shifted column
+  clears_when: lands on main with the self-tests (planned 2026-11-01T13:00Z, row ML-FS-ENTRY-V2); the lane git-mvs this file to research/queue/ with status queued (rule unchanged)
 ml_consumer:
   consumer: ML-ENTRY-LIVE-ADAPTER
   decision: 'which feature families enter the candidate list for the separately pre-registered ENTRY v2 unit (and the BRACKETS / HOLD-ADJUST-CLOSE state), serving none of them yet'
