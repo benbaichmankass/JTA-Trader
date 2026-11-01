@@ -50,6 +50,7 @@ def venue_check(doc) -> tuple:
     if not isinstance(doc, dict) or not isinstance(doc.get("accounts"), list):
         return False, "venue payload unusable"
     acct = next((a for a in doc["accounts"] if a.get("account_id") == ACCOUNT), None)
+    # collapsed-state: orders_read — every other read state (could_not_look, not_alpaca, ...) is a REFUSAL here
     if not acct or acct.get("read_state") != "orders_read":
         return False, f"{ACCOUNT} venue read_state={acct and acct.get('read_state')} (could not look)"
     res = acct.get("result") or {}
