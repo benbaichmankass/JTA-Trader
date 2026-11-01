@@ -13,7 +13,7 @@ manifest:
   features: tested
   labels: tested
   recipe: tested
-  universe: untested
+  universe: tested
   horizon: untested
   threshold: tested
   calibration: untested
@@ -75,6 +75,15 @@ levers:
         response: 'S0 +0.0082, delta +0.0099 vs 2x spread 0.0474, 5 of 8 folds; INDETERMINATE (min fold n 1070 on S0, 817 on S1 seed 7)'
         shape: noisy
       shape: noisy
+  universe:
+    symbol_set_traded_vs_pooled:
+      tests:
+      - unit: RQ-20261101-c692-06
+        value: v1 frozen recipe (20 features, baseline params, tau 0.10) scored on the five bybit_2 symbols vs all 60
+        response: 'DEV folds, 4 seeds (20261101, 7, 11, 13): traded-5 -0.0427/-0.0405/-0.0434/-0.0376 net R/decision (n about 5,500 each, seed range 0.0058); pooled 60 symbols +0.0063 to +0.0097 (n about 72k). Held-out (c692-06): traded-5 +0.0263 (n=907, bootstrap CI95 -0.042..+0.099), pooled +0.0073 (n=11,240)'
+        shape: slice_negative_on_dev
+        note: 'traded-5 is the weak slice of v1 on dev (6 of 8 folds negative, seed 7); the held-out +0.0263 is not corroborated by 5.5k dev decisions on the same symbols. Operator decided 2026-11-01 17:05Z: v1 goes live on bybit_2 as approved (the registered rule passed). Cause not yet attributed: the coins, the 4h cadence or the cost share.'
+      shape: slice_negative_on_dev
   threshold:
     tau_scaling_and_min_n:
       tests:
@@ -84,5 +93,6 @@ levers:
         shape: design_defect
       shape: design_defect
   next_from_map:
+  - 'universe/symbol_set: attribute the traded-5 dev shortfall (coins vs 4h cadence vs cost share) from the v1 dev-fold trades, then a structured test the live go/no-go on the traded symbols can rest on (rule written before the run)'
   - 'fs07: replace the single-model score with the mean of K seeds (variance), pick tau as a per-fold score QUANTILE so every fold has a comparable n, rescale T1/T4 scores the same way, keep the fs05 noise control'
   - 'last dev fold 2025-07..09 is negative for every arm (-0.11 to -0.21): attribute by symbol and direction before any further recipe lever'
