@@ -12,9 +12,13 @@
   "prs": [],
   "blocked_on": [],
   "note": "STATE 2026-11-01 15:40Z (usage hold). MERGED: PR #22128 as 2d79e51c. DEPLOY WORKFLOW RAN: pull-and-deploy issue #22171, run 41316031771, exit 0 at 15:12Z, BUT its log says 'only non-runtime paths changed ... restart skipped' (running 1d3b781 -> HEAD f82ab55), so whether ict-web-api runs the new diag code is UNKNOWN. NOT OBSERVED: batched verify issue #22196 (version + journalctl since 09:25Z grep=order_monitor lines=50 + log_file audit x2) had no reply at 15:37Z (runner queue saturated). CLOSES WHEN: #22196 reply shows journalctl mode=window, lines_scanned >> 2000, a truncated field, log_file truncated+lines_scanned, and version shows running sha >= 2d79e51c with restart_pending false. IF fields absent: web-api is on old code; restart ict-web-api alone (Tier-2, covered by the manager's approval for this deploy), re-verify once. Then tell BACKLOG-DRAIN (call syntax: docs/claude/diag-relay.md 'Reading deep history without a silent cap'). All self check-ins deleted.",
-  "updated_at": "2026-11-01T15:38:12Z",
+  "updated_at": "2026-11-01T15:39:01Z",
   "updated_by": "session_01AFoLuLApF6ZANeNvTGeQ9o",
   "due_by": "2026-11-05",
   "roadmap": "L-OPS",
+  "writeback": {
+    "roadmap": "none: diag read-path tooling under L-OPS; no milestone status changes until the deploy is observed",
+    "arch": "none: no architecture section changes; operator-facing contract is documented in docs/claude/diag-relay.md"
+  },
   "_seq": 876
 }
