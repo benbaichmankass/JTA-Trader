@@ -2,7 +2,7 @@
   "id": "DIAG-LOG-DEPTH",
   "title": "Diag log readers: grep/since/until before the cap + truncated marker (journalctl 2000, log_file 1000)",
   "phase": "A",
-  "state": "in_flight",
+  "state": "landed_unproven",
   "owner": "manager",
   "lane": "session_01AFoLuLApF6ZANeNvTGeQ9o",
   "model": null,
@@ -11,10 +11,10 @@
   "tier": 2,
   "prs": [],
   "blocked_on": [],
-  "note": "Held PR for manager; Tier-2 (ict-web-api diag router, needs web-api restart). Caps measured from code: journalctl _MAX_JOURNAL_LINES=2000 (-n), log_file _MAX_LIMIT=1000 applied after readlines(); neither marked truncation. Fix: grep= (substring, pre-cap) on both, window streaming on journalctl, truncated + lines_scanned/matched/returned/dropped + read_state on both. VERIFY AFTER DEPLOY (merged != deployed != observed): relay journalctl?unit=ict-trader-live&since=<6h ago>&grep=order_monitor&lines=50 -> lines_scanned > 2000 and a truncated field; log_file?name=audit&lines=5 -> truncated + lines_scanned. Then BACKLOG-DRAIN re-runs its landed_unproven history greps.",
-  "updated_at": "2026-11-01T12:37:03Z",
+  "note": "STATE 2026-11-01 15:40Z (usage hold). MERGED: PR #22128 as 2d79e51c. DEPLOY WORKFLOW RAN: pull-and-deploy issue #22171, run 41316031771, exit 0 at 15:12Z, BUT its log says 'only non-runtime paths changed ... restart skipped' (running 1d3b781 -> HEAD f82ab55), so whether ict-web-api runs the new diag code is UNKNOWN. NOT OBSERVED: batched verify issue #22196 (version + journalctl since 09:25Z grep=order_monitor lines=50 + log_file audit x2) had no reply at 15:37Z (runner queue saturated). CLOSES WHEN: #22196 reply shows journalctl mode=window, lines_scanned >> 2000, a truncated field, log_file truncated+lines_scanned, and version shows running sha >= 2d79e51c with restart_pending false. IF fields absent: web-api is on old code; restart ict-web-api alone (Tier-2, covered by the manager's approval for this deploy), re-verify once. Then tell BACKLOG-DRAIN (call syntax: docs/claude/diag-relay.md 'Reading deep history without a silent cap'). All self check-ins deleted.",
+  "updated_at": "2026-11-01T15:38:12Z",
   "updated_by": "session_01AFoLuLApF6ZANeNvTGeQ9o",
-  "due_by": "2026-11-02",
+  "due_by": "2026-11-05",
   "roadmap": "L-OPS",
   "_seq": 876
 }
