@@ -68,7 +68,7 @@ def test_every_roster_walkforward_point_renders_and_chooses_from_the_map(templat
 
 
 def test_prop_fit_prices_all_sizing_arms_in_one_unit(templates, facts):
-    u, pt, _ = _unit(templates, facts, "prop-fit-breakout")
+    u, _pt, _ = _unit(templates, facts, "prop-fit-breakout")
     arms = _arms(u)
     assert arms[0].startswith("A=--sizing balance --risk-pct 0.010") and len(arms) == 5
     assert "arms_pass_bar" in u["run"]["command"] and u["design"] == "structured" and u["levers_declared"] == ["sizing_vs_cost"]
@@ -77,7 +77,7 @@ def test_prop_fit_prices_all_sizing_arms_in_one_unit(templates, facts):
 
 
 def test_leg_corpus_carries_the_registered_arms_per_leg(templates, facts):
-    u, pt, _ = _unit(templates, facts, "leg-corpus-s1")
+    u, _pt, _ = _unit(templates, facts, "leg-corpus-s1")
     cmd = [str(x) for x in u["run"]["command"]]
     arms_by_leg = json.loads(cmd[cmd.index("--arms-json") + 1])
     assert arms_by_leg and all(v[0] == ["A", ""] for v in arms_by_leg.values())

@@ -255,7 +255,7 @@ def _self_test() -> int:
     import tempfile
     calls = []
 
-    def stub(leg, cfg_, *, days, start, end, wd, data_csv, non_crypto_source):
+    def stub(leg, cfg_, *, wd, data_csv, **_kw):
         calls.append((cfg_.get("donchian"), data_csv))
         if cfg_.get("donchian") == 99:
             raise RuntimeError("boom")

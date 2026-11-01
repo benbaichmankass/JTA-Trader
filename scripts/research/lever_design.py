@@ -130,7 +130,7 @@ def _step(v: Any, f: float) -> Any:
     return max(1, int(round(nv))) if isinstance(v, int) else round(nv, 6)
 
 
-def arms_for(cfg: dict[str, Any], family: str, keys: list[str], declared: list[dict[str, Any]] | None = None
+def arms_for(cfg: dict[str, Any], keys: list[str], declared: list[dict[str, Any]] | None = None
              ) -> list[tuple[str, str]]:
     """[(label, spec)] with the control `A=` first. One factor at a time; duplicate settings are dropped."""
     arms: list[tuple[str, str]] = [("A", "")]
@@ -160,7 +160,7 @@ def design_block(subject: str, kind: str, cfg: dict[str, Any], map_doc: dict[str
     pick = ({"lever": fam_override, "basis": "template_fixed", "why": f"{fam_override} is this template's lever", "map_entries": []}
             if fam_override else next_lever(map_doc, families, available))
     fam = pick["lever"]
-    arms = arms_for(cfg, fam, cl.get(fam, []), dl.get(fam)) if fam else [("A", "")]
+    arms = arms_for(cfg, cl.get(fam, []), dl.get(fam)) if fam else [("A", "")]
     out = {"subject": subject, "subject_kind": kind, "lever": fam, "lever_basis": pick["basis"], "why_this_lever": pick["why"],
            "map_entries": pick["map_entries"], "arms": [[a, s] for a, s in arms], "k_variants": len(arms) - 1}
     base, attr = map_doc.get("baseline") or {}, map_doc.get("attribution") or {}
@@ -202,9 +202,9 @@ def _self_test() -> int:
           "attribution": {"read_state": "measured", "n": 20}}
     assert next_lever(m2, fams, avail)["basis"] == "unresolved_shape"
     assert next_lever(m0, fams, [])["lever"] is None
-    arms = arms_for(cfg, "entry", ["donchian"])
+    arms = arms_for(cfg, ["donchian"])
     assert arms == [("A", ""), ("donchian_lo", "donchian=15"), ("donchian_hi", "donchian=25")], arms
-    d = arms_for(cfg, "filter", ["adx_min"], [{"key": "adx_min", "values": [15, 25]}])
+    d = arms_for(cfg, ["adx_min"], [{"key": "adx_min", "values": [15, 25]}])
     assert [s for _, s in d] == ["", "adx_min=15", "adx_min=25"], d
     blk = design_block("s", "strategy_leg", cfg, m0, fams)
     assert blk["lever"] == "entry" and blk["k_variants"] == 2 and "design_gap" not in blk
