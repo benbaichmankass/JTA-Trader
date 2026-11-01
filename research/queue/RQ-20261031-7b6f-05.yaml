@@ -91,7 +91,7 @@ run:
   inputs:
     research_unit: RQ-20261031-7b6f-05
   timeout_minutes: 150
-status: queued
+status: retired
 theme: regime
 title: 'TRANSFER of ADX ceiling AX40/AX50 (AX40/AX50) to ict_scalp_xrp_5m: does any arm beat the declared leg net of cost over the leg''s declared window?'
 value:
@@ -104,14 +104,14 @@ why_this_matters: 'Transfer of a lever that PASSED elsewhere (ADX ceiling AX40/A
   on ict_scalp_xrp_5m or stays an observation. PASS = lead for a Tier-3 note, never a config edit; FAIL closes this leg x arm-grid only, lever family stays open.'
 last_dispatched_at: '2026-11-01T04:53:49+00:00'
 grading:
-  attested: RULERQ202610317B6F05
-  auto: true
-  decision_rule_id: RULERQ202610317B6F05
-  evidence:
-  - research/results/RQ-20261031-7b6f-05/41274828948.jsonl
+  auto: false
   graded_at: '2026-11-01'
-  grader: scripts/research/queue_grade.py
-  needs_review: true
-  reason: 'read_state not unanimously measured: [''producer_failed'']'
-  rows: 1
+  grader: session RESEARCH-OPS-20261101-0940 (triage)
+  note: 'Mis-specified lever-transfer unit: it passes --adx-max 40 to scripts/backtest_ict_scalp.py, which
+    has no such flag (argparse exit 1). A lever-transfer unit is also barred by STOP-GENERATED-AUTHORING
+    (operator 2026-11-01, row AUDIT-1101-DECISIONS). Not a verdict. Retired; the result row stays.'
   verdict: null
+retired_reason: '2026-11-01 RESEARCH-OPS-20261101-0940 needs_review triage: Mis-specified lever-transfer
+  unit: it passes --adx-max 40 to scripts/backtest_ict_scalp.py, which has no such flag (argparse exit
+  1). A lever-transfer unit is also barred by STOP-GENERATED-AUTHORING (operator 2026-11-01, row AUDIT-1101-DECISIONS).
+  Not a verdict. Retired; the result row stays.'

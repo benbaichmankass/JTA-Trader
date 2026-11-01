@@ -14,18 +14,18 @@
     17282
   ],
   "blocked_on": [],
-  "note": "MEASURED 08:15Z /api/bot/config accounts[].daily_dd_switch: armed + read_state ok + non-null day_start_equity on bybit_1, bybit_2 (192.09), bybit_portfolio, alpaca_paper, alpaca_portfolio, alpaca_live (193.94), alpaca_options_paper, ib_paper, breakout_2, tradeify_1, velotrade_1; ib_live + oanda_practice dry_run_not_read (dry accounts). First half of the closing observation MET (real equity read); still open: a trip+reset pair or 14 days of ok readings. Audit's upgrade candidate 'never observed reading equity' is refuted -> not upgraded.",
-  "updated_at": "2026-10-29T08:14:11Z",
-  "updated_by": "session_01AFoLuKwNMzjtn2CH2kVd86",
+  "note": "MEASURED 08:15Z /api/bot/config accounts[].daily_dd_switch: armed + read_state ok + non-null day_start_equity on bybit_1, bybit_2 (192.09), bybit_portfolio, alpaca_paper, alpaca_portfolio, alpaca_live (193.94), alpaca_options_paper, ib_paper, breakout_2, tradeify_1, velotrade_1; ib_live + oanda_practice dry_run_not_read (dry accounts). First half of the closing observation MET (real equity read); still open: a trip+reset pair or 14 days of ok readings. Audit's upgrade candidate 'never observed reading equity' is refuted -> not upgraded. [BACKLOG-DRAIN-2 2026-11-01] PENDING: NOT MET. Population: log_file daily_dd_switch_state 2026-11-01 + /api/bot/config. 8 armed accounts; 7 carry read_state ok with non-null day_start_equity (bybit_2, bybit_portfolio, alpaca_portfolio, alpaca_live, breakout_2, velotrade_1 on 11-01; tradeify_1 on 10-31, one day stale). ib_live is armed but read_state=dry_run_not_read (account is dry, no equity read). No trip+reset pair observed (all tripped=false) and 14 days of ok readings not yet established.",
+  "updated_at": "2026-11-01T14:37:32Z",
+  "updated_by": "BACKLOG-DRAIN-20261101b",
   "observation": {
     "what": "a real equity read folded into runtime_logs/daily_dd_switch_state.json for every armed account (read_state ok, non-null day_start_equity), then a trip+reset pair or 14 days of ok readings",
     "how_to_check": "curl https://ict-bot.duckdns.org/api/bot/config -> accounts[].daily_dd_switch; journal rejections with reason DAILY_DD_SWITCH; tracked by pipeline PI-20261009-BKKVRSVQ-0001",
-    "due_by": "2026-10-31",
+    "due_by": "2026-11-15",
     "redated": {
-      "on": "2026-10-24",
-      "from": "2026-10-23",
-      "by": "REGISTER-SWEEP-W43",
-      "reason": "not observed yet: the closing observation needs a live VM/diag read, a deploy, a human, or a future event that this register lane cannot take (repo-only, no VM egress); re-checked for repo-visible evidence this session (research/results, PR state) and none closes it; date moved one week for the daily-review pull"
+      "on": "2026-11-01",
+      "from": "2026-10-31",
+      "by": "BACKLOG-DRAIN-20261101b",
+      "reason": "Population: log_file daily_dd_switch_state 2026-11-01 + /api/bot/config. 8 armed accounts; 7 carry read_state ok with non-null day_start_equity (bybit_2, bybit_portfolio, alpaca_portfolio, alpaca_live, breakout_2, velotrade_1 on 11-01; trad"
     }
   },
   "_seq": 370

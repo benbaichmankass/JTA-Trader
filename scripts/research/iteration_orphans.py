@@ -119,10 +119,11 @@ def leg_verdict(rec: dict[str, Any]) -> str:
 def listed_subjects(root: Path) -> list[dict[str, Any]]:
     doc = _load_yaml(root / SUBJECTS_REL) or {}
     out = []
-    for kind in ("ml_model", "ltr_class"):
+    for kind in ("ml_model", "ltr_class", "candidate"):
         for s in doc.get(kind) or []:
             if isinstance(s, dict) and s.get("id"):
-                out.append({"id": s["id"], "kind": kind, "verdict": s.get("verdict", "pending"),
+                out.append({"id": s["id"], "kind": "strategy_leg" if kind == "candidate" else kind,
+                            "verdict": s.get("verdict", "pending"),
                             "basis": s.get("basis", ""), "money": s.get("money")})
     return out
 
@@ -166,8 +167,97 @@ def live_units(root: Path) -> list[dict[str, Any]]:
         else:
             live = False
         out.append({"id": d.get("id"), "path": str(Path(f).relative_to(root)), "status": st, "live": live,
+                    "run": d.get("run") or {}, "grading": d.get("grading") or {},
                     "iteration": d.get("iteration"), "text": Path(f).read_text(encoding="utf-8"),
                     "generated": (d.get("generated") or {}).get("family") if isinstance(d.get("generated"), dict) else None})
+    return out
+
+
+# ── lever coverage (operator 2026-11-01): which lever families each subject has had tested, and which remain ──────────
+#: config key / harness flag prefix -> strategy lever family (policy.lever_families.strategy_leg). Normalised: no dashes, '_'.
+_LEVER_PREFIX = [
+    ("off_cells", "regime_gating"), ("vol_spec", "regime_gating"), ("regime", "regime_gating"),
+    ("adx_", "filter"), ("vol_skip", "filter"), ("htf_", "filter"), ("cooldown", "filter"),
+    ("session", "session"), ("skip_hours", "session"),
+    ("side_filter", "direction"), ("long_only", "direction"),
+    ("timeframe", "timeframe"), ("symbol", "symbol_set"),
+    ("entry_mode", "sizing_vs_cost"), ("fee_", "sizing_vs_cost"), ("slippage", "sizing_vs_cost"), ("maker_", "sizing_vs_cost"),
+    ("taker_", "sizing_vs_cost"), ("risk_", "sizing_vs_cost"), ("sizing", "sizing_vs_cost"), ("funding", "sizing_vs_cost"),
+    ("tp_", "exit"), ("trail_", "exit"), ("stale_exit", "exit"), ("giveback", "exit"), ("timeout", "exit"), ("bank_", "exit"),
+    ("atr_stop", "exit"), ("atr_sl_buffer", "exit"), ("be_", "exit"), ("exit_", "exit"), ("partial", "exit"),
+    ("trend_lookback", "entry"), ("pullback", "entry"), ("donchian", "entry"), ("min_confidence", "entry"),
+    ("confirm_bars", "entry"), ("displacement", "entry"), ("min_displacement", "entry"), ("sweep", "entry"),
+    ("swing_lookback", "entry"), ("min_fvg", "entry"), ("mitigation", "entry"), ("pierce", "entry"), ("range_lookback", "entry"),
+    ("min_touches", "entry"), ("third_frac", "entry"), ("fvg_search", "entry"), ("min_width", "entry"), ("max_width", "entry"),
+    ("touch_tol", "entry"), ("bb_", "entry"), ("kc_", "entry"), ("oi_", "entry"),
+]
+#: generated template families -> lever family (they carry no per-arm keys we can read)
+_GEN_LEVER = [("m20-exit-lever", "exit"), ("e35-bracket", "exit"), ("prop-fit", "sizing_vs_cost")]
+
+
+def _lever_of(token: str) -> str | None:
+    key = token.lstrip("-").split("=", 1)[0].replace("-", "_").lower()
+    for pre, fam in _LEVER_PREFIX:
+        if key.startswith(pre):
+            return fam
+    return None
+
+
+def unit_levers(u: dict[str, Any]) -> set:
+    """Lever families a unit varies: explicit `iteration.levers`, else read from its `--arm` specs / --symbol / template family."""
+    it = u.get("iteration") if isinstance(u.get("iteration"), dict) else {}
+    if it.get("levers"):
+        return {str(x) for x in it["levers"]}
+    fams: set = set()
+    cmd = [str(x) for x in ((u.get("run") or {}).get("command") or [])]
+    for i, tok in enumerate(cmd):
+        if tok == "--arm" and i + 1 < len(cmd):
+            body = cmd[i + 1].partition("=")[2]
+            for t in (x.strip() for x in body.split(";")):
+                if t and (f := _lever_of(t)):
+                    fams.add(f)
+        elif tok == "--symbol":
+            fams.add("symbol_set")
+    for pre, fam in _GEN_LEVER:
+        if u.get("generated") and str(u["generated"]).startswith(pre):
+            fams.add(fam)
+    return fams
+
+
+def _names_subject(u: dict[str, Any], sid: str) -> bool:
+    it = u.get("iteration") if isinstance(u.get("iteration"), dict) else {}
+    if sid in _subjects_of(it):
+        return True
+    cmd = [str(x) for x in ((u.get("run") or {}).get("command") or [])]
+    return any(cmd[i] == "--leg" and i + 1 < len(cmd) and cmd[i + 1] == sid for i in range(len(cmd)))
+
+
+def lever_coverage(subjects: list[dict[str, Any]], units: list[dict[str, Any]], policy: dict[str, Any]) -> dict[str, Any]:
+    """Per subject: each lever family of its kind -> tested (a graded pass/fail), indeterminate_only, live, or untested.
+
+    'tested' here means a graded verdict exists; whether it was at ADEQUATE power and full cost is the family-review
+    record's job (scripts/research/family_retirement_guard.py). This view shows progress, it decides nothing."""
+    fams_by_kind = policy.get("lever_families") or {}
+    out = {}
+    for s in subjects:
+        fams = list(fams_by_kind.get(s["kind"]) or [])
+        cell: dict[str, dict[str, list]] = {f: {"graded": [], "indeterminate": [], "live": []} for f in fams}
+        for u in units:
+            if not _names_subject(u, s["id"]):
+                continue
+            v = str((u.get("grading") or {}).get("verdict") or "").lower()
+            for f in unit_levers(u):
+                c = cell.setdefault(f, {"graded": [], "indeterminate": [], "live": []})
+                if u["live"]:
+                    c["live"].append(u["id"])
+                elif v in ("pass", "fail"):
+                    c["graded"].append(f"{u['id']}:{v}")
+                elif u.get("status") == "done":
+                    c["indeterminate"].append(u["id"])
+        state = {f: ("tested" if c["graded"] else "live" if c["live"] else
+                     "indeterminate_only" if c["indeterminate"] else "untested") for f, c in cell.items()}
+        out[s["id"]] = {"kind": s["kind"], "state": state, "detail": cell,
+                        "remaining": [f for f in fams if state.get(f) != "tested"]}
     return out
 
 
@@ -214,9 +304,11 @@ def summarize(rows: list[dict[str, Any]]) -> dict[str, dict[str, int]]:
 def run(root: Path, today: dt.date | None = None, legacy: bool = False) -> dict[str, Any]:
     today = today or dt.datetime.now(dt.timezone.utc).date()
     subjects = leg_subjects(root) + listed_subjects(root)
-    rows = classify(subjects, live_units(root), today, legacy=legacy)
+    units = live_units(root)
+    rows = classify(subjects, units, today, legacy=legacy)
+    policy = _load_yaml(root / "scripts/research/family_retirement_policy.yaml") or {}
     return {"as_of": str(today), "population": "testing legs (strategy_status.py) + " + SUBJECTS_REL,
-            "counts": summarize(rows), "rows": rows}
+            "counts": summarize(rows), "rows": rows, "lever_coverage": lever_coverage(subjects, units, policy)}
 
 
 def _self_test() -> int:
@@ -249,6 +341,13 @@ def _self_test() -> int:
     check("verdict: pass but n < 30 -> indeterminate",
           leg_verdict({"coverage_state": "measured", "decision_rule": {"verdict": "pass"}, "n_trades_oos": 8, "fidelity": "faithful"}) == "indeterminate")
     check("verdict: no record -> indeterminate (never pass)", leg_verdict({}) == "indeterminate")
+    u_arm = {"id": "U9", "live": False, "status": "done", "grading": {"verdict": "fail"}, "iteration": None, "generated": None,
+             "run": {"command": ["python3", "x.py", "--leg", "leg_a", "--arm", "A=", "--arm", "AD=adx_min=25;tp_r=3",
+                                 "--arm", "H4=--htf-rule=4h"]}}
+    check("arms map to lever families (adx/htf -> filter, tp_r -> exit)", unit_levers(u_arm) == {"filter", "exit"})
+    cov = lever_coverage(subj[:1], [u_arm], {"lever_families": {"strategy_leg": ["entry", "exit", "filter"]}})["leg_a"]
+    check("coverage: graded families read tested, others remain", cov["state"] == {"entry": "untested", "exit": "tested",
+                                                                                   "filter": "tested"} and cov["remaining"] == ["entry"])
     return 0 if ok else 1
 
 
@@ -256,6 +355,7 @@ def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     ap.add_argument("--json", action="store_true")
     ap.add_argument("--legacy", action="store_true")
+    ap.add_argument("--levers", action="store_true", help="per subject: lever families tested / live / remaining")
     ap.add_argument("--root", default=str(REPO))
     ap.add_argument("--self-test", action="store_true")
     a = ap.parse_args(argv)
@@ -274,6 +374,12 @@ def main(argv: list[str] | None = None) -> int:
         extra = f"  legacy-naming: {len(r.get('legacy_naming') or [])}" if "legacy_naming" in r else ""
         mal = f"  MALFORMED: {','.join(m['unit'] for m in r['malformed'])}" if r["malformed"] else ""
         print(f"{r['state']:<8} {r['kind']:<13} {r['id']:<28} verdict={r['verdict']:<17} {its}{extra}{mal}")
+    if a.levers:
+        print("\nLEVER COVERAGE (T tested=graded pass/fail, L live, i indeterminate only, . untested; power/cost adequacy is the review record's call)")
+        sym = {"tested": "T", "live": "L", "indeterminate_only": "i", "untested": "."}
+        for sid, c in res["lever_coverage"].items():
+            cells = " ".join(f"{f}={sym.get(st, '?')}" for f, st in c["state"].items())
+            print(f"  {sid:<28} {cells}")
     print(f"population: {res['population']} as of {res['as_of']}")
     for k, c in res["counts"].items():
         print(f"  {k}: {c['subjects']} subjects -- covered {c['covered']}, overdue {c['overdue']}, ORPHAN {c['orphan']}")

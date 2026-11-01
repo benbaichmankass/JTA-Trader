@@ -185,10 +185,14 @@ grading:
   graded_at: '2026-11-01'
   grader: scripts/research/queue_grade.py
   needs_review: true
-  owner: NEWS-ALPHA-CORPUS
-  owner_reason: '36 cells, MEASURED 2026-10-16: 30 fail + 6 indeterminate, 0 pass; the rule needs >=1
-    PASS cell, so the unit reads FAIL on its attention-shock question. Not mechanical because 6 cells
-    are indeterminate. Does NOT retire the news layer (separate corpus question).'
+  owner: NEWS-VETO-EVAL
+  owner_reason: 'Triage 2026-11-01 (RESEARCH-OPS-20261101-0940): prior owner NEWS-ALPHA-CORPUS was dropped;
+    re-pointed to NEWS-VETO-EVAL, which owns the same gap on 5bd1-03/-04: the result rows do not label
+    primary vs secondary cells, and the rule reads INDETERMINATE if any primary cell is below its n floor.
+    Measured: 30 cells fail, 6 indeterminate, 0 pass. FAILs close only their exact configurations; news
+    is not retired. Original note: 36 cells, MEASURED 2026-10-16: 30 fail + 6 indeterminate, 0 pass; the
+    rule needs >=1 PASS cell, so the unit reads FAIL on its attention-shock question. Not mechanical because
+    6 cells are indeterminate. Does NOT retire the news layer (separate corpus question).'
   reason: 'verdicts not unanimous-mechanical: [''fail'', ''indeterminate'']'
   rows: 36
   verdict: null

@@ -1,0 +1,27 @@
+{
+  "id": "MARKET-DATA-LAKE",
+  "title": "MARKET-DATA-LAKE: pooled-ML market data lake on HF/Kaggle (all Binance UM perps + major spot, all US ETFs + liquid stocks PIT, futures/FX/macro free sources), versioned private HF dataset + manifest + streaming loader",
+  "phase": "build",
+  "state": "in_flight",
+  "owner": "manager",
+  "lane": "MARKET-DATA-LAKE",
+  "model": null,
+  "ceiling_usd": 60,
+  "spend_usd": null,
+  "tier": 2,
+  "prs": [
+    22142,
+    22148,
+    22197
+  ],
+  "blocked_on": [],
+  "note": "[2026-11-01 15:38Z PAUSED for usage hold (manager/operator)] STOPPED AT: #22148 merged (62f93718): lake pipeline live; HF_TOKEN measured fineGrained repo.write, write test ok; private storage 0/100 GB. First backfill run 41320352867 (issue #22192) queued as an automation, row counts NOT yet read. Daily refresh 03:41Z registered in schedule_keeper (health record not yet observed). Fallbacks PR #22197 (traded bookDepth/mark/index, 1m order-flow from every trade, raw aggTrades tail on Kaggle) OPEN, held, not merged; do not start it until the hold lifts. RESUME: read MANIFEST.json/DEPTH.md/health/latest.json from hf://datasets/bentzbk/jta-market-lake + issue #22192 comment, report measured rows per path, then land #22197.",
+  "updated_at": "2026-11-01T15:37:58Z",
+  "updated_by": "session_01AFoLuMGGx1v99tWtfTWTfP",
+  "due_by": "2026-11-05",
+  "roadmap": [
+    "L-DATA",
+    "M14"
+  ],
+  "_seq": 877
+}

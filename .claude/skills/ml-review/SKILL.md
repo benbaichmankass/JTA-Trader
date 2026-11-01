@@ -5,6 +5,8 @@ description: Weekly review of the ICT bot's ML LIFECYCLE, built on the shared fo
 
 > **Doc status:** `live` · category `instruction` · last verified `2026-10-28` · registered in [`docs/DOCUMENT-INDEX.md`](../../../docs/DOCUMENT-INDEX.md)
 
+> **The research loop (binding, 2026-11-01):** [`docs/plans/OPERATING-PLAN-2026-09-21.md`](../../../docs/plans/OPERATING-PLAN-2026-09-21.md) § 2 "What does not pass goes back into research — THE research workflow" -- every non-live model has a live iteration; the review reports `iteration_orphans.py` ml_model orphans (target 0) and authors any it finds.
+
 # /ml-review — model/training lifecycle review
 
 > **Practice principles (pointer):** the design and evaluation choices this skill makes follow [`docs/reference/trading-and-model-practice-principles.md`](../../../docs/reference/trading-and-model-practice-principles.md) (TRADING T1–T10 · MODEL M1–M10 · RESEARCH-OPS R1–R6), refreshed weekly by `frontier-research`. A principle never overrides a binding rule.
@@ -186,6 +188,15 @@ Premortem each one (pattern § 3.9). Next week's Layer 0 re-runs the check as wr
 - plus the pattern's list (§ 5): week-only windows, restating numbers, predetermined outcomes, amnesia, dead-end endings.
 
 ---
+
+## Weekly progress lines (operator, 2026-11-01, binding; row ML-WEEKLY-REVIEW-LINES)
+
+Operator, 2026-11-01: *"a plan for feeding and retraining on more and better data (now ...), with regular reviews from claude to see that it's progerssing correctly."* Under `1 CHECKS`, every Sunday print four graded lines, each a number with its population, never prose; a missing number is `could_not_look`, not 0:
+1. **Data coverage** -- per feature family of `docs/research/ml-feature-inventory-2026-11-01.md`, the present share of the last 7 days' decision rows, per symbol (min, median).
+2. **Feature count in use** -- columns the live ENTRY artifact reads versus columns the feature registry holds; flag if the live count is below the registry's admitted count.
+3. **Retrain freshness** -- age in days of the live artifact's data-through date against the weekly cadence (row ML-ENTRY-RETRAIN-CADENCE); stale beyond 8 days is a red line.
+4. **Live decision-grade vs held-out** -- mean net R per decision live over the week (n, symbols) beside the registered held-out figure of the unit that produced the artifact.
+Gates this adds: none (a reporting line; it blocks nothing).
 
 ## Output — fixed template
 

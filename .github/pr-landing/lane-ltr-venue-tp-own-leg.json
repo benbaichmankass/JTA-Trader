@@ -1,0 +1,7 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "hold_reason": "tier_2_3_needs_approval",
+  "hold_text": "Held for the manager: changes the live-review apply path's venue TP read (scripts/ops/live_review_apply.py::_venue_tp), which gates tighten / move_tp / reduce on Bybit legs.",
+  "why": "Fail-closed hardening: a Bybit leg whose tracked tp_order_id is no longer resting now reads venue_tp None instead of the position-level or sole TP leg (a sibling package's on a slices account). Mirrors amend_position_sl._venue_state's SL rule. No live leg is affected today (4/4 open bybit legs have both ids resting, measured 2026-11-01). Revert: git revert of this one commit."
+}
