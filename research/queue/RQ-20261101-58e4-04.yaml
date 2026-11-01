@@ -1,0 +1,73 @@
+# Hand-authored 2026-11-01 by lane RESEARCH-EDGE (Tier 1) for row COST-LEVER-LIVE-LEGS. Rule registered BEFORE the run. Gates: none.
+id: RQ-20261101-58e4-04
+title: 'Cost levers on the legs currently on real money: upper bounds for maker/limit entries and lower trade frequency, from the trades journal, net of the estimated cost stack'
+cadence: once
+roadmap:
+- L-PROGRAMMES
+theme: live_strategy
+priority: 1
+kind: deterministic
+question: Can maker entries (lever A) or fewer trades (lever B) turn the pooled net P&L of the legs now on real money non-negative, even under the most generous reading (no adverse selection, no signal
+  selection)?
+why_this_matters: Row COST-LEVER-LIVE-LEGS (manager, operator 'yes, let's do that'). The audit puts real-money net near -131 USD against about -41 before an estimated ~90 USD of costs. If the generous upper
+  bound cannot reach zero, neither lever is a rescue and the real-money question is about edge, not cost.
+why_not_inferential: 'Deterministic accounting identity on the journal rows: bounds, not a sampled estimate. It cannot show a lever WORKS; it can only show it cannot SUFFICE. Showing a lever works needs
+  signal-level replay (file as a follow-up).'
+decision_rule:
+  id: RULE-RQ20261101-58E4-04-COST-LEVER-BOUNDS
+  registered_at: '2026-11-01'
+  registered_before_run: true
+  statistic: 'pooled net_after per lever from scripts/research/cost_lever_bounds.py (population: closed real-money journal rows of the legs rostered on live real-money accounts, re-read from config/accounts.yaml)'
+  rule: 'For each lever scenario (A: fill probability 1.0/0.75/0.5 with entry saving 3.934 bps of notional and no adverse selection; B: remove 25%/50% of trades uniformly), SUFFICIENT iff pooled net_after
+    >= 0 under that scenario; otherwise INSUFFICIENT. The unit PASSes (verdict pass = ''a lever bound clears zero, worth a signal-level replay'') iff any lever scenario is SUFFICIENT with p>=0.75 or f<=0.5;
+    else FAIL (no cost lever rescues the pooled book). Cost fields are ESTIMATES (cost_source); rows with null cost fields are counted, not read as 0.'
+  what_it_does_not_do: Does not measure adverse selection, signal selection, or any live behaviour; does not change config, order type or any leg (Tier-3).
+compute: cpu_light
+value:
+  usd_at_stake_per_month: 50
+  confidence: 0.2
+  bucket: structural
+  basis: 'stand-in: audit 2026-11-01 estimated costs ~90 USD of ~131 USD loss'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 1.0
+  est_minutes: 5
+  basis: Manual lane run over the paged journal (DIAG_READ_TOKEN); no secret committed.
+run:
+  command:
+  - python3
+  - scripts/research/cost_lever_bounds.py
+  - --journal-dir
+  - <paged journal dir>
+  - --out
+  - <result.json>
+  timeout_minutes: 20
+  inputs:
+    research_unit: RQ-20261101-58e4-04
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- docs/audits/2026-11-01-from-scratch/AUDIT.md
+- scripts/research/desk_maker_entry_replay.py
+- COST-BROKER-SOURCED
+- COST-LEVER-LIVE-LEGS
+programme: P6
+status: done
+practice_precedent: docs/reference/trading-and-model-practice-principles.md (cost accounting before alpha claims); AUDIT section 3 C3
+last_dispatched_at: '2026-11-01T11:46:00+00:00'
+grading:
+  attested: RULE-RQ20261101-58E4-04-COST-LEVER-BOUNDS
+  auto: false
+  decision_rule_id: RULE-RQ20261101-58E4-04-COST-LEVER-BOUNDS
+  evidence:
+  - research/results/RQ-20261101-58e4-04/manual-research-edge-20261101.jsonl
+  - comms/research/RQ-20261101-58e4-04/manual-research-edge-20261101/result.json
+  graded_at: '2026-11-01'
+  grader: manual (lane RESEARCH-EDGE)
+  note: Bounds only; a lever that WORKS needs signal-level replay (not in the journal).
+  reason: 'n=64: net -71.01, est. cost 5.17, gross -65.84; maker-entry max saving 2.70 at 100% fill; no scenario reaches pooled net >= 0 without the no-selection removal artifact'
+  rows: 1
+  verdict: fail

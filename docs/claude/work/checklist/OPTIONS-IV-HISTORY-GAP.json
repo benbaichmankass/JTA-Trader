@@ -1,6 +1,6 @@
 {
   "id": "OPTIONS-IV-HISTORY-GAP",
-  "title": "Build/research: historical option + IV data for SPY QQQ IWM GLD TLT SLV USO (no keyless contract-level history exists; accrue our own, buy nothing)",
+  "title": "Data gap (filed 2026-11-01): no keyless option-chain or IV-surface history for a priced straddle test of forecast-vs-implied vol; TLT has no keyless IV series",
   "phase": null,
   "state": "landed_unproven",
   "owner": "manager",
@@ -13,13 +13,10 @@
     "#22136"
   ],
   "blocked_on": [],
-  "note": "Operator 2026-11-01: 'no way we can't find sources for historical data on publicly traded securities'. Source inventory: docs/research/options-iv-history-sources-2026-11-01.md (MEASURED reach table + priced list). KEY FINDINGS: (1) keyless CBOE delayed-quotes chain with IV/greeks/OI/volume reached for all 7 underlyings (capture ran live, 7/7); (2) free index-level IV history reached (GVZ OVX VXN RVX VXSLV VXGDX VXTLT 2004-2011 onward); (3) contract-level backward history is a purchase (CBOE DataShop 2012+ with Calcs add-on, price not on page, FREE SAMPLE available; ORATS 199 USD/mo EOD 2007+, no trial); DoltHub post-no-preference/options covers SPY/XLE only of 10 tested. BUILT: scripts/ops/capture_options_snapshot.py + options-snapshot-capture.yml (daily 21:25Z Mon-Fri, Alpaca + CBOE sources, trainer data/options_history/<source>/<UND>/<date>.parquet), PR #22136. CLOSES WHEN: after merge, label options-snapshot-request 'mode: probe' (Alpaca opra vs indicative + historical option-bars depth) and 'mode: capture' produce verify tables for both sources, then 5 consecutive trading-day files per underlying. NEXT: download the CBOE DataShop sample (operator purchase decision after that); PI-20261101-ETFHIST-0002 measures IB option-IV.",
-  "updated_at": "2026-11-01T14:26:31Z",
-  "updated_by": "lane-ETF-HISTORY-PIPELINE",
-  "due_by": "2026-11-08",
-  "roadmap": [
-    "L-DATA"
-  ],
+  "note": "FOUND 2026-11-01 (lane RESEARCH-EDGE, unit RQ-20261101-58e4-07, PR #22117). Reachable keyless: CBOE vol INDICES on FRED (VIX, VXN, RVX, GVZ, OVX, VXSLV) = 30-day IV for SPY QQQ IWM GLD USO SLV. NOT reachable: TLT IV (FRED TYVIX/VXTLT 404); any option CHAIN history or surface; Alpaca options (src/units/accounts/alpaca_options_data.py) needs credentials and serves only current 15-min-delayed indicative snapshots, no history. COST OF CLOSING: (a) start collecting daily chain snapshots now via the existing alpaca-options-probe route (free tier, indicative feed) - zero spend but 12+ months to accrue; or (b) buy historical OPRA/chain data (ORATS, Polygon options, CBOE DataShop; roughly tens to hundreds of USD per month, operator decision, not verified here). The variance-swap proxy result says the forecast-minus-IV gap adds nothing over the always-short-variance premium net of cost, so a priced test is only worth buying if the operator wants the variance risk premium itself (short-vol, tail risk). Done when the operator picks (a), (b) or drops it. [2026-11-01 lane ETF-HISTORY-PIPELINE] Operator 2026-11-01: 'no way we can't find sources for historical data on publicly traded securities'. Source inventory: docs/research/options-iv-history-sources-2026-11-01.md (MEASURED reach table + priced list). KEY FINDINGS: (1) keyless CBOE delayed-quotes chain with IV/greeks/OI/volume reached for all 7 underlyings (capture ran live, 7/7); (2) free index-level IV history reached (GVZ OVX VXN RVX VXSLV VXGDX VXTLT 2004-2011 onward); (3) contract-level backward history is a purchase (CBOE DataShop 2012+ with Calcs add-on, price not on page, FREE SAMPLE available; ORATS 199 USD/mo EOD 2007+, no trial); DoltHub post-no-preference/options covers SPY/XLE only of 10 tested. BUILT: scripts/ops/capture_options_snapshot.py + options-snapshot-capture.yml (daily 21:25Z Mon-Fri, Alpaca + CBOE sources, trainer data/options_history/<source>/<UND>/<date>.parquet), PR #22136. CLOSES WHEN: after merge, label options-snapshot-request 'mode: probe' (Alpaca opra vs indicative + historical option-bars depth) and 'mode: capture' produce verify tables for both sources, then 5 consecutive trading-day files per underlying. NEXT: download the CBOE DataShop sample (operator purchase decision after that); PI-20261101-ETFHIST-0002 measures IB option-IV.",
+  "updated_at": "2026-11-01T15:18:44Z",
+  "updated_by": "session_RESEARCH-EDGE",
+  "roadmap": "L-PROGRAMMES",
   "observation": {
     "what": "Daily option-chain snapshots (Alpaca + CBOE) have never run on the scheduled workflow; Alpaca opra-vs-indicative and historical option-bar depth are unmeasured",
     "how_to_check": "after #22136 merges: options-snapshot-request mode: probe, then mode: capture; mode: verify shows 7+ trading-day files per underlying after a week; PI-20261101-ETFHIST-0002 measures IB option-IV",
@@ -29,5 +26,6 @@
     "roadmap": "none: L-DATA milestone text unchanged until the capture is observed",
     "arch": "none: no architecture section covers option snapshots yet"
   },
+  "due_by": "2026-11-08",
   "_seq": 877
 }

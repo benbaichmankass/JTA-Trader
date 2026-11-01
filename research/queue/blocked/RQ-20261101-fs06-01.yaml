@@ -81,3 +81,16 @@ ml_consumer:
   - ada_pullback_2h
   - trend_donchian_sol_prop
   book: money
+# iteration block added 2026-11-01 by lane RESEARCH-ITERATE (the unit's registered rule is unchanged)
+iteration:
+  subject: ml-entry
+  subject_kind: ml_model
+  from_result: RQ-20261101-fs01-01 (ENTRY v2 feature-family ablation, FAIL 2026-11-01)
+  verdict_read: fail
+  diagnosis: 'Dev folds swing from -0.10 to +0.06 net R per decision across half-year periods for the same model and features: the raw net-R target
+    carries a market-regime component the 20 features cannot explain, which the fs01-01 ablation inherits. Cause (second lever after the recipe):
+    the TARGET.'
+  hypothesis: a market-neutral, rank-transformed, clipped or first-passage target stabilises the dev folds and raises the leave-one-fold-out mean
+    at the same features
+  attempt: 1
+  due_by: '2026-11-03'

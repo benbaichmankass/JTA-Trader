@@ -1280,6 +1280,77 @@ _MAX_JOURNAL_LINES = 2000
 _JOURNALCTL_TIMEOUT_S = 30
 _SYSTEMCTL_TIMEOUT_S = 5
 
+# DIAG-LOG-DEPTH (2026-11-01). Both log readers used to cut the tail silently
+# (journalctl -n <=2000, log_file <=1000) so a caller could not tell "pattern
+# not found" from "pattern not READ". They now filter (grep) BEFORE the cap and
+# always report what was scanned / matched / returned / dropped.
+_LOG_SCAN_BUDGET_S = 25.0          # < _JOURNALCTL_TIMEOUT_S: we stop first, and say so
+_LOG_SCAN_MAX_LINES = 3_000_000    # journalctl window-scan ceiling (read_state=scan_cap_hit)
+_GREP_MAX_LEN = 200
+_GREP_MAX_ALTS = 10
+_GREP_RE = re.compile(r"^[A-Za-z0-9 _.:@/=|\-\[\]()#,%+*]{1," + str(_GREP_MAX_LEN) + r"}$")
+
+
+def _parse_grep(grep: str | None) -> list[str] | None:
+    """``a|b|c`` -> case-insensitive SUBSTRING alternatives (never a regex:
+    no ReDoS surface on a request-thread). None = no filter. 400 if malformed."""
+    if grep is None:
+        return None
+    alts = [a.strip().lower() for a in grep.split("|") if a.strip()]
+    if not _GREP_RE.match(grep) or not alts or len(alts) > _GREP_MAX_ALTS:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={"error": "invalid_grep", "got": grep[:_GREP_MAX_LEN],
+                    "expected": f"1-{_GREP_MAX_ALTS} case-insensitive substrings "
+                                f"joined by '|', <= {_GREP_MAX_LEN} chars"},
+        )
+    return alts
+
+
+def _grep_hit(line: str, alts: list[str] | None) -> bool:
+    if alts is None:
+        return True
+    low = line.lower()
+    return any(a in low for a in alts)
+
+
+def _stream_tail(it, n: int, alts: list[str] | None, budget_s: float,
+                 max_lines: int | None = None) -> dict[str, Any]:
+    """Consume line iterator ``it`` once. Keep the last ``n`` lines that match
+    ``alts`` (grep applied BEFORE the cap). Returns the lines plus the counts
+    that make the cap visible: ``lines_scanned`` (denominator), ``lines_matched``,
+    ``lines_returned``, ``lines_dropped`` (= matched - returned), ``truncated``
+    and ``read_state`` (complete | time_budget_hit | scan_cap_hit; the latter two
+    mean the scan stopped early and ALL counts are lower bounds)."""
+    from collections import deque
+    t0 = time.monotonic()
+    keep: deque[str] = deque(maxlen=n)
+    scanned = matched = 0
+    state = "complete"
+    for raw in it:
+        scanned += 1
+        if scanned % 2000 == 0 and time.monotonic() - t0 > budget_s:
+            state = "time_budget_hit"
+            break
+        if max_lines is not None and scanned >= max_lines:
+            state = "scan_cap_hit"
+            break
+        line = raw.rstrip("\n")
+        if _grep_hit(line, alts):
+            matched += 1
+            keep.append(line)
+    returned = len(keep)
+    dropped = matched - returned
+    return {
+        "lines": list(keep),
+        "lines_scanned": scanned,
+        "lines_matched": matched,
+        "lines_returned": returned,
+        "lines_dropped": dropped,
+        "truncated": dropped > 0 or state != "complete",
+        "read_state": state,
+    }
+
 # Strict ISO-8601 form accepted by /api/diag/journalctl?since=… / ?until=…
 # before forwarding to journalctl --since/--until. Matches:
 #   2026-05-10T21:13:00            (naive UTC, journalctl assumes local)
@@ -1869,26 +1940,43 @@ def _journalctl_tail(
     lines: int,
     since: str | None = None,
     until: str | None = None,
+    grep: list[str] | None = None,
 ) -> dict[str, Any]:
+    """Journal lines for an allowlisted unit.
+
+    Two modes, both reporting what the cap cost (DIAG-LOG-DEPTH 2026-11-01):
+
+    * TAIL (no since/until/grep): ``journalctl -n lines+1`` -- one extra line so
+      "more existed" is detectable. Fast backwards scan, as before.
+    * WINDOW (any of since/until/grep): the window is STREAMED forward, ``grep``
+      is applied BEFORE the ``lines`` cap, and the last ``lines`` matches are
+      kept. ``lines_scanned`` is the denominator, so "0 matches" is distinguishable
+      from "did not read" (``read_state`` != ``complete`` => counts are lower bounds).
+
+    Every result carries ``truncated`` (True when any cap dropped matching lines
+    or the scan stopped early) plus ``lines_returned`` / ``lines_dropped``.
+    """
     canonical = _normalize_unit(unit)
-    cmd = [
-        "journalctl",
-        "-u",
-        canonical,
-        "-n",
-        str(lines),
-        "--no-pager",
-        "--output=short-iso",
-    ]
-    # ?since / ?until support — passes through to journalctl's native
-    # --since/--until flags. The endpoint route validates the format
-    # with _ISO_TIMESTAMP_RE before reaching this helper. Normalize
-    # to journalctl's universal "YYYY-MM-DD HH:MM:SS [UTC]" form so
-    # older journalctl versions (Ubuntu 20.04 ships 245) also accept it.
+    cmd = ["journalctl", "-u", canonical, "--no-pager", "--output=short-iso"]
+    window_mode = bool(since or until or grep)
     if since:
         cmd.extend(["--since", _normalize_journalctl_timestamp(since)])
     if until:
         cmd.extend(["--until", _normalize_journalctl_timestamp(until)])
+    base: dict[str, Any] = {"unit": canonical, "lines_requested": lines,
+                            "mode": "window" if window_mode else "tail"}
+    if since:
+        base["since"] = since
+    if until:
+        base["until"] = until
+    if grep:
+        base["grep"] = grep
+        base["grep_mode"] = "substring_any_ci"
+
+    if window_mode:
+        return _journalctl_window(cmd, canonical, lines, grep, base)
+
+    cmd.extend(["-n", str(lines + 1)])
     try:
         proc = subprocess.run(
             cmd,
@@ -1898,30 +1986,83 @@ def _journalctl_tail(
             check=False,
         )
     except FileNotFoundError:
-        return {"unit": canonical, "available": False, "reason": "journalctl_not_found", "lines": []}
+        return {**base, "available": False, "reason": "journalctl_not_found", "lines": []}
     except subprocess.TimeoutExpired:
-        return {"unit": canonical, "available": False, "reason": "timeout", "lines": []}
+        return {**base, "available": False, "reason": "timeout", "lines": []}
     output = proc.stdout or ""
     stderr = (proc.stderr or "").strip()
-    out_lines = output.splitlines()[-lines:] if output else []
+    all_lines = output.splitlines() if output else []
+    out_lines = all_lines[-lines:]
     # journalctl rc=1 has overloaded semantics:
-    #   * rc=0, stdout=N lines      → matches found
-    #   * rc=1, stdout="", stderr="" → query valid, just no matching entries
-    #   * rc=1, stdout="", stderr=X → real failure (bad args, perm, etc.)
-    #   * rc=0, stdout=""           → unit has no entries at all
+    #   * rc=0, stdout=N lines      -> matches found
+    #   * rc=1, stdout="", stderr="" -> query valid, just no matching entries
+    #   * rc=1, stdout="", stderr=X -> real failure (bad args, perm, etc.)
+    #   * rc=0, stdout=""           -> unit has no entries at all
     # Treat empty-stderr rc=1 as "available, just empty" so a legitimate
     # zero-match window doesn't get misreported as a unit-unavailable
     # failure (issue #930).
     available = proc.returncode == 0 or (proc.returncode == 1 and not stderr)
     result: dict[str, Any] = {
-        "unit": canonical,
+        **base,
         "available": available,
         "returncode": proc.returncode,
         "lines": out_lines,
+        "lines_returned": len(out_lines),
+        # We asked for lines+1: an extra line back means older entries exist
+        # beyond this tail. Count of how many is unknown in tail mode (None, not 0).
+        "truncated": len(all_lines) > lines,
+        "lines_dropped": None if len(all_lines) > lines else 0,
+        "hint": ("tail capped; pass since=/until=/grep= to read a window"
+                 if len(all_lines) > lines else None),
     }
     if not available and stderr:
         result["stderr"] = stderr[:500]  # truncate; defensive
     return result
+
+
+def _journalctl_window(cmd: list[str], canonical: str, lines: int,
+                       grep: list[str] | None, base: dict[str, Any]) -> dict[str, Any]:
+    import tempfile
+    import threading
+    try:
+        with tempfile.TemporaryFile(mode="w+", encoding="utf-8", errors="replace") as errf:
+            proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=errf, text=True,
+                                    encoding="utf-8", errors="replace")
+            timer = threading.Timer(_JOURNALCTL_TIMEOUT_S, proc.kill)
+            timer.start()
+            try:
+                res = _stream_tail(proc.stdout, lines, grep, _LOG_SCAN_BUDGET_S,
+                                   _LOG_SCAN_MAX_LINES)
+            finally:
+                timer.cancel()
+                if proc.poll() is None:
+                    proc.kill()
+                proc.wait()
+                if proc.stdout:
+                    proc.stdout.close()
+            errf.seek(0)
+            stderr = errf.read(2000).strip()
+    except FileNotFoundError:
+        return {**base, "available": False, "reason": "journalctl_not_found", "lines": []}
+    rc = proc.returncode
+    stopped_early = res["read_state"] != "complete"
+    # rc is -9 when WE killed it after hitting a cap; that is not a failure.
+    available = stopped_early or rc == 0 or (rc == 1 and not stderr)
+    out: dict[str, Any] = {**base, "available": available, "returncode": rc, **res}
+    if res["truncated"]:
+        if res["lines_dropped"]:
+            out["hint"] = (
+                "matching lines were dropped by the lines= cap (oldest dropped); "
+                f"narrow since/until/grep or raise lines (max {_MAX_JOURNAL_LINES})"
+            )
+        else:
+            out["hint"] = (
+                f"scan stopped early ({res['read_state']}); counts are LOWER BOUNDS "
+                "- narrow the window"
+            )
+    if not available and stderr:
+        out["stderr"] = stderr[:500]
+    return out
 
 
 # ---------------------------------------------------------------------------
@@ -2357,8 +2498,14 @@ def get_journalctl(
     lines: int = _DEFAULT_JOURNAL_LINES,
     since: str | None = None,
     until: str | None = None,
+    grep: str | None = None,
 ) -> dict[str, Any]:
     """Tail systemd-journal lines for an allowlisted unit.
+
+    ``grep`` (DIAG-LOG-DEPTH): ``a|b`` case-insensitive substrings, applied
+    BEFORE the ``lines`` cap on the VM side. Response always carries
+    ``truncated`` + ``lines_scanned/matched/returned/dropped`` + ``read_state``;
+    ``truncated: true`` means matching lines existed that you were not given.
 
     ``since`` / ``until`` accept ISO-8601 timestamps (``2026-05-10T21:13:00Z``
     or ``2026-05-10 21:13:00``) and forward to journalctl's native
@@ -2386,6 +2533,7 @@ def get_journalctl(
         _clamp(lines, _DEFAULT_JOURNAL_LINES, _MAX_JOURNAL_LINES),
         since=since,
         until=until,
+        grep=_parse_grep(grep),
     )
 
 
@@ -2566,20 +2714,38 @@ def get_log_file(
     request: Request,
     name: str,
     lines: int = _DEFAULT_LIMIT,
+    grep: str | None = None,
 ) -> dict[str, Any]:
+    """Tail of an allowlisted log file.
+
+    ``grep`` (DIAG-LOG-DEPTH): ``a|b`` case-insensitive substrings applied BEFORE
+    the ``lines`` cap (a timestamp prefix such as ``2026-11-01T11`` selects a
+    window in the timestamped logs). The file is STREAMED, not slurped, and the
+    response always says what the cap cost: ``truncated`` (True => matching lines
+    existed that are not in ``lines``), ``lines_scanned`` (whole-file
+    denominator), ``lines_matched``, ``lines_returned``, ``lines_dropped``,
+    ``limit_state`` and ``read_state`` (!= ``complete`` => counts are lower bounds).
+    """
     _require_diag_token(request)
     if name not in _LOG_FILES:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail={"error": "unknown_log_file", "allowed": sorted(_LOG_FILES.keys())},
         )
+    alts = _parse_grep(grep)
     n = _clamp(lines, _DEFAULT_LIMIT, _MAX_LIMIT)
+    if n == lines:
+        limit_state = "as_requested"
+    elif lines is not None and lines >= 1:
+        limit_state = "clamped_to_max"
+    else:
+        limit_state = "defaulted_invalid"
     path = _LOG_FILES[name]
     if not path.exists():
         return {"name": name, "path": str(path), "present": False, "lines": []}
     try:
         with path.open(encoding="utf-8", errors="replace") as fh:
-            content = fh.readlines()
+            res = _stream_tail(fh, n, alts, _LOG_SCAN_BUDGET_S)
     except OSError as exc:
         return {
             "name": name,
@@ -2588,13 +2754,25 @@ def get_log_file(
             "error": str(exc),
             "lines": [],
         }
-    return {
+    out: dict[str, Any] = {
         "name": name,
         "path": str(path),
         "present": True,
         "size_bytes": path.stat().st_size,
-        "lines": [ln.rstrip("\n") for ln in content[-n:]],
+        "lines_requested": lines,
+        "limit_state": limit_state,
+        "limit_max": _MAX_LIMIT,
+        **res,
     }
+    if alts:
+        out["grep"] = alts
+        out["grep_mode"] = "substring_any_ci"
+    if res["truncated"]:
+        out["hint"] = ("older matching lines were dropped by the lines= cap; add grep= "
+                       "(e.g. a timestamp prefix) to narrow, or /log_aggregate for counts"
+                       if res["lines_dropped"] else
+                       "scan stopped early; counts are LOWER BOUNDS")
+    return out
 
 
 # ---------------------------------------------------------------------------

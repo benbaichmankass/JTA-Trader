@@ -1,0 +1,19 @@
+{
+  "id": "COST-LEVER-LIVE-LEGS",
+  "title": "Pre-registered test, net of the full cost stack, of two cost levers on the legs currently on real money: (a) maker/limit vs market entries with fill-probability and adverse-selection penalty, (b) lower trade frequency / longer holds",
+  "phase": null,
+  "state": "in_flight",
+  "owner": "manager",
+  "lane": "RESEARCH-EDGE",
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [],
+  "blocked_on": [],
+  "note": "Manager-added 2026-11-01 ~11:27Z (operator: 'yes, let's do that'). WHY: audit puts real-money net near -131 USD vs about -41 before an estimated ~90 USD of costs. Proposals only: any live change is Tier-3 -> operator. due_by 2026-11-03. Cost inputs are estimates (485 of 488 real rows cost_source=estimate); COST-BROKER-SOURCED is the measured-fee follow-up. desk_maker_entry_replay.py audited: built for desk proposals via desk_gen_replay_driver, not for leg signals. RESULT (unit RQ-20261101-58e4-04, PR #22117): FAIL, bounds only. Population: 64 closed real-money journal rows of the current real-money legs, 2026-07-02..2026-10-30. Net -71.01, ESTIMATED cost 5.17 (62 of 64 rows cost_source=estimate), gross before cost -65.84. Costs are ~7% of the loss on these legs, NOT most of it (the audit's ~90 USD of costs is the whole book incl. the retired vwap scalps). Lever A (maker entry): max saving 2.70 USD at 100% fill and zero adverse selection; maker fills ever = 3. Lever B (fewer trades, uniform removal): delta = -f x net, so it only 'helps' by deleting a negative total; a real gain needs signal-level selection data the journal does not have. desk_maker_entry_replay.py audited: desk-proposal replay, not usable on leg signals. Follow-up if wanted: signal-level replay of the six legs' evidence series on bars (new unit). No live change proposed.",
+  "updated_at": "2026-11-01T11:39:05Z",
+  "updated_by": "session_RESEARCH-EDGE",
+  "roadmap": "L-PROGRAMMES",
+  "_seq": 876
+}

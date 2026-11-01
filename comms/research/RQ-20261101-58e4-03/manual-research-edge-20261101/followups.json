@@ -1,0 +1,161 @@
+{
+ "label": "post-hoc dev-window sensitivities; no new configs; DSR counts unchanged",
+ "carry": {
+  "events": {
+   "liquidations_symbol_runs": 68,
+   "topup_increments": 485,
+   "assumptions": {
+    "liq_threshold": 0.245,
+    "liq_fee": 0.01,
+    "topup_step": 0.125,
+    "transfer_bps": 5.0
+   }
+  },
+  "variants": {
+   "C1_base": {
+    "full": {
+     "state": "computed",
+     "n_days": 1491,
+     "ann_return_net": 0.112,
+     "sharpe_net": 7.765,
+     "max_drawdown": -0.0045,
+     "worst_month": -0.0018,
+     "sharpe_h1": 10.088,
+     "sharpe_h2": 5.799,
+     "dsr": 1.0
+    },
+    "post2021_ann_net": 0.03,
+    "post2021_tbill_ann": 0.0396,
+    "post2021_excess_ann": -0.0095,
+    "post2021_excess_sharpe": -1.617,
+    "by_year_net": {
+     "2020": 0.1033,
+     "2021": 0.3297,
+     "2022": -0.0008,
+     "2023": 0.0176,
+     "2024": 0.0589
+    }
+   },
+   "C1_liquidation_no_topup": {
+    "full": {
+     "state": "computed",
+     "n_days": 1491,
+     "ann_return_net": 0.094,
+     "sharpe_net": 6.913,
+     "max_drawdown": -0.0071,
+     "worst_month": -0.0022,
+     "sharpe_h1": 9.085,
+     "sharpe_h2": 4.497,
+     "dsr": 1.0
+    },
+    "post2021_ann_net": 0.0243,
+    "post2021_tbill_ann": 0.0396,
+    "post2021_excess_ann": -0.0153,
+    "post2021_excess_sharpe": -2.479,
+    "by_year_net": {
+     "2020": 0.0926,
+     "2021": 0.2653,
+     "2022": -0.0008,
+     "2023": 0.0089,
+     "2024": 0.0532
+    }
+   },
+   "C1_topup_with_friction": {
+    "full": {
+     "state": "computed",
+     "n_days": 1491,
+     "ann_return_net": 0.1114,
+     "sharpe_net": 7.752,
+     "max_drawdown": -0.0045,
+     "worst_month": -0.0018,
+     "sharpe_h1": 10.077,
+     "sharpe_h2": 5.771,
+     "dsr": 1.0
+    },
+    "post2021_ann_net": 0.0298,
+    "post2021_tbill_ann": 0.0396,
+    "post2021_excess_ann": -0.0098,
+    "post2021_excess_sharpe": -1.667,
+    "by_year_net": {
+     "2020": 0.1028,
+     "2021": 0.3279,
+     "2022": -0.0008,
+     "2023": 0.0173,
+     "2024": 0.0587
+    }
+   }
+  },
+  "ftx_nov2022": {
+   "C1_month_return_measured": 0.0,
+   "worst_day": 0.0,
+   "venue_default_scenario": {
+    "loss_if_100pct_of_capital_on_defaulting_venue_recovery_0": -1.0,
+    "recovery_50pct": -0.5,
+    "note": "scenario, not measured: the archive has no venue-failure data. One such event erases roughly the cumulative post-2021 carry many times over; sizing/venue split is the only mitigation."
+   }
+  }
+ },
+ "xsec": {
+  "X1_full": {
+   "state": "computed",
+   "n_days": 1491,
+   "ann_return_net": 0.3947,
+   "sharpe_net": 1.325,
+   "max_drawdown": -0.2381,
+   "worst_month": -0.1156,
+   "sharpe_h1": 2.132,
+   "sharpe_h2": 0.259,
+   "dsr": 0.867691
+  },
+  "top3_contributors": {
+   "AXSUSDT": 0.2704,
+   "SOLUSDT": 0.2244,
+   "LINKUSDT": 0.2174
+  },
+  "sum_contrib_all": 1.6125,
+  "ex_2021": {
+   "state": "computed",
+   "n_days": 1126,
+   "ann_return_net": 0.1689,
+   "sharpe_net": 0.651,
+   "max_drawdown": -0.2381,
+   "worst_month": -0.1156,
+   "sharpe_h1": 1.156,
+   "sharpe_h2": 0.129,
+   "dsr": 0.332384
+  },
+  "ex_top3_zeroed": {
+   "state": "computed",
+   "n_days": 1491,
+   "ann_return_net": 0.2204,
+   "sharpe_net": 0.738,
+   "max_drawdown": -0.3226,
+   "worst_month": -0.1327,
+   "sharpe_h1": 1.327,
+   "sharpe_h2": -0.021,
+   "dsr": 0.46663
+  },
+  "ex_top3_reformed": {
+   "state": "computed",
+   "n_days": 1491,
+   "ann_return_net": 0.3272,
+   "sharpe_net": 1.056,
+   "max_drawdown": -0.3044,
+   "worst_month": -0.1273,
+   "sharpe_h1": 2.019,
+   "sharpe_h2": -0.181,
+   "dsr": 0.714109
+  },
+  "ex_2021_and_top3_reformed": {
+   "state": "computed",
+   "n_days": 1126,
+   "ann_return_net": 0.1424,
+   "sharpe_net": 0.531,
+   "max_drawdown": -0.3044,
+   "worst_month": -0.1273,
+   "sharpe_h1": 1.251,
+   "sharpe_h2": -0.133,
+   "dsr": 0.260057
+  }
+ }
+}
