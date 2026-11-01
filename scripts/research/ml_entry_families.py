@@ -29,6 +29,7 @@ FAMILIES = {
            "f3_taker_ls", "f3_taker_ls_ma4", "f3_present"],
     "F4": ["f4_rank_ret4", "f4_rank_ret72", "f4_rank_ret168", "f4_rank_vol24", "f4_disp24", "f4_breadth4", "f4_breadth168",
            "f4_rel_btc24", "f4_corr_btc168"],
+    "F6": ["f6_bars_since_session_open", "f6_last_session_gap_atr", "f6_gap_seen168"],
     "F5": ["f5_skew24", "f5_kurt24", "f5_semivar_ratio24", "f5_park24", "f5_er24", "f5_since_hi168", "f5_since_lo168",
            "f5_dist_hi168_atr", "f5_dist_lo168_atr", "f5_how", "f5_hrs_to_funding"],
 }
@@ -141,13 +142,30 @@ def f5(k: pd.DataFrame) -> pd.DataFrame:
     return out
 
 
+def f6(k: pd.DataFrame) -> pd.DataFrame:
+    """Session and overnight-gap family (owner: this store; consumer: the Alpaca ETF candidate, row ML-FS-ENTRY-V2 / unit RQ-20261101-5b6b-01).
+    A session opens at a bar whose gap to the previous bar exceeds one hour. For a 24/7 series there is no gap: bars_since is capped at 168
+    (never a growing index), the gap is 0 and ``f6_gap_seen168`` is 0, so the model can tell 'no sessions' from 'a zero gap'."""
+    out = pd.DataFrame({"ts": k["ts"]})
+    gap = k["ts"].diff() > pd.Timedelta(hours=1)
+    sid = gap.cumsum()
+    out["f6_bars_since_session_open"] = np.minimum(k.groupby(sid).cumcount(), 168).to_numpy()
+    c, o, h, lo = k["close"].astype(float), k["open"].astype(float), k["high"].astype(float), k["low"].astype(float)
+    pc = c.shift(1)
+    atr = pd.concat([h - lo, (h - pc).abs(), (lo - pc).abs()], axis=1).max(axis=1).rolling(14).mean().replace(0, np.nan)
+    g = ((o - pc) / atr).where(gap, np.nan)
+    out["f6_last_session_gap_atr"] = g.ffill().fillna(0.0).to_numpy()   # 0.0 = no gap seen, flagged by f6_gap_seen168
+    out["f6_gap_seen168"] = gap.astype(float).rolling(168, min_periods=1).max().to_numpy()
+    return out
+
+
 def symbol_frame(k12: pd.DataFrame, prem: pd.DataFrame | None, fund: pd.DataFrame | None, met: pd.DataFrame | None) -> pd.DataFrame:
     k = k12.copy()
     k["ts"] = _ts(k["open_time"])
     k = k.sort_values("ts").drop_duplicates("ts").reset_index(drop=True)
     for c in ("open", "high", "low", "close", "volume", "quote_volume", "count", "taker_buy_volume"):
         k[c] = k[c].astype(float)
-    parts = [f1(k), f2(k, prem, fund), f3(k, met), f5(k)]
+    parts = [f1(k), f2(k, prem, fund), f3(k, met), f5(k), f6(k)]
     out = parts[0]
     for p in parts[1:]:
         out = out.merge(p, on="ts", how="left")
@@ -210,7 +228,7 @@ def _synthetic(n=900, seed=1):
 def self_test() -> None:
     k, prem, fund, met = _synthetic()
     full = symbol_frame(k, prem, fund, met)
-    cols = [c for fam in ("F1", "F2", "F3", "F5") for c in FAMILIES[fam]]
+    cols = [c for fam in ("F1", "F2", "F3", "F5", "F6") for c in FAMILIES[fam]]
     assert all(c in full.columns for c in cols), [c for c in cols if c not in full.columns]
     # truncation invariance: removing every input after bar t's close must not change the features at t
     for t in (400, 600, 850):
@@ -223,6 +241,11 @@ def self_test() -> None:
         a, b = full.iloc[t][cols].astype(float), part.iloc[t][cols].astype(float)
         bad = [c for c in cols if not (np.isclose(a[c], b[c], equal_nan=True))]
         assert not bad, f"LOOKAHEAD at t={t}: {bad}"
+    # F6: a series with overnight gaps (drop 16 of every 24 hours) opens sessions; a 24/7 series never does
+    kg = k[(((k["open_time"] // 3_600_000) % 24) < 8)].reset_index(drop=True)
+    fg = symbol_frame(kg, None, None, None)
+    assert fg["f6_gap_seen168"].iloc[-1] == 1.0 and fg["f6_bars_since_session_open"].max() <= 7
+    assert full["f6_gap_seen168"].eq(0).all() and full["f6_bars_since_session_open"].max() <= 168 and full["f6_last_session_gap_atr"].eq(0).all()
     # a planted lead IS caught by the same test
     lead = full.copy()
     lead["f1_tb"] = lead["f1_tb"].shift(-1)
