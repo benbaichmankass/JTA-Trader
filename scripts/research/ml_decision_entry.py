@@ -259,7 +259,10 @@ FEATURES = ["ret_1", "ret_4", "ret_12", "ret_24", "ret_72", "ret_168", "vol24", 
             "xs_rank_ret24", "btc_ret24", "btc_vol24", "breadth_up24", "rel_vol"]
 
 
-def build_table(cache: Path, symbols: list[str]) -> pd.DataFrame:
+def build_table(cache: Path, symbols: list[str], xs_symbols: list[str] | None = None) -> pd.DataFrame:
+    """``xs_symbols`` None: cross-sectional context over ``symbols`` (the c692-01 recipe, unchanged). Given: context is
+    computed against that fixed REFERENCE set for every row, so a row's inputs do not depend on which other symbols are
+    in the table (the c692-04 training-universe arms)."""
     rows, feats = [], {}
     for sym in symbols:
         df = pd.read_pickle(cache / f"{sym}.pkl").reset_index(drop=True)
@@ -277,7 +280,22 @@ def build_table(cache: Path, symbols: list[str]) -> pd.DataFrame:
     breadth = (r24 > 0).sum(axis=1) / r24.notna().sum(axis=1)
     med_vol = v24.median(axis=1)
     key = pd.MultiIndex.from_arrays([tab["ts"], tab["symbol"]])
-    tab["xs_rank_ret24"] = rank.stack().reindex(key).to_numpy()
+    if xs_symbols is None:
+        tab["xs_rank_ret24"] = rank.stack().reindex(key).to_numpy()
+    else:
+        missing = [x for x in xs_symbols if x not in r24.columns]
+        if missing:
+            raise RuntimeError(f"cross-sectional reference symbols not in the table: {missing[:5]} (+{max(0, len(missing)-5)})")
+        ref = r24[list(xs_symbols)]
+        v24 = v24[ref.columns]
+        breadth = (ref > 0).sum(axis=1) / ref.notna().sum(axis=1)
+        med_vol = v24.median(axis=1)
+        own = r24.stack().reindex(key).to_numpy()
+        refv = ref.reindex(tab["ts"]).to_numpy()
+        valid = (~np.isnan(refv)).sum(axis=1)
+        less = (refv < own[:, None]).sum(axis=1)
+        eq = (refv == own[:, None]).sum(axis=1)
+        tab["xs_rank_ret24"] = np.where(valid > 0, (less + 0.5 * eq) / np.maximum(valid, 1), np.nan)
     tab["btc_ret24"] = r24["BTCUSDT"].reindex(tab["ts"]).to_numpy()
     tab["btc_vol24"] = v24["BTCUSDT"].reindex(tab["ts"]).to_numpy()
     tab["breadth_up24"] = breadth.reindex(tab["ts"]).to_numpy()
@@ -285,7 +303,7 @@ def build_table(cache: Path, symbols: list[str]) -> pd.DataFrame:
     tab = tab.replace([np.inf, -np.inf], np.nan)
     tab = tab.dropna(subset=["net_long", "net_short", "ret_168", "vol_ratio"]).reset_index(drop=True)
     tab["ts"] = pd.to_datetime(tab["ts"], utc=True)
-    if tab.empty or tab.symbol.nunique() < len(symbols) // 2:
+    if tab.empty or tab.symbol.nunique() < max(1, len(symbols) // 2):
         raise RuntimeError(f"label table degenerate: rows={len(tab)} symbols={tab.symbol.nunique()} of {len(symbols)}")
     return tab
 
@@ -490,6 +508,109 @@ def run(args) -> int:
     return 0
 
 
+# ----------------------------------------------------------------------------------------------- c692-04 universe arms
+def traded_symbols() -> list[str]:
+    """The bybit_2 data-pull list, re-parsed at run time (CLAUDE.md: never quote roster counts)."""
+    import yaml
+    acc = yaml.safe_load((REPO / "config/accounts.yaml").read_text())
+    acc = acc.get("accounts", acc)
+    return [str(x) for x in (acc["bybit_2"].get("symbols") or [])]
+
+
+def wide_universe() -> list[str]:
+    """Every Binance Vision USDT-M perp passing the frozen-universe listing rule, with no cap (arm c)."""
+    import broad_paths_corpus as bpc
+    prefixes = bpc._s3_list(bpc._PREFIX)
+    syms = [p.rstrip("/").split("/")[-1] for p in prefixes]
+    syms = [x for x in syms if bpc._PERP.match(x)]
+    spans = {}
+    with cf.ThreadPoolExecutor(16) as ex:
+        for sym, sp in zip(syms, ex.map(bpc._span, syms)):
+            if sp:
+                spans[sym] = sp
+    return [r["symbol"] for r in bpc.select_universe(spans, n=10 ** 6)]
+
+
+def arm_eval(tab: pd.DataFrame, train_syms: set, eval_syms: set) -> dict:
+    hs = pd.Timestamp(HOLDOUT_START, tz="UTC")
+    dev = tab[tab.ts < hs]
+    bounds = [pd.Timestamp(x, tz="UTC") for x in DEV_FOLDS] + [hs]
+    per_tau = {t: [] for t in TAU_GRID}
+    for a, b in zip(bounds[:-1], bounds[1:]):
+        test = dev[(dev.ts >= a) & (dev.ts < b - pd.Timedelta(hours=HORIZON_H + 1)) & dev.symbol.isin(eval_syms)]
+        train = purge_train(dev[dev.symbol.isin(train_syms)], a)
+        pl, ps = fit_predict(train, test)
+        for t in TAU_GRID:
+            per_tau[t].append(policy(test, pl, ps, t))
+    pooled = {str(t): {"n": int(sum(len(x) for x in v)),
+                       "mean_net_r": float(pd.concat(v).net_r.mean()) if sum(len(x) for x in v) else None}
+              for t, v in per_tau.items()}
+    elig = [t for t in TAU_GRID if pooled[str(t)]["n"] >= TAU_MIN_DEV_N]
+    tau = max(elig, key=lambda t: (pooled[str(t)]["mean_net_r"], t)) if elig else None
+    res = {"n_train_symbols": len(train_syms), "dev_pooled_by_tau": pooled, "tau_star": tau}
+    if tau is None:
+        res.update(verdict="indeterminate", why=f"no tau reaches dev n >= {TAU_MIN_DEV_N}")
+        return res
+    train = purge_train(dev[dev.symbol.isin(train_syms)], hs)
+    test = tab[(tab.ts >= hs) & tab.symbol.isin(eval_syms)]
+    pl, ps = fit_predict(train, test)
+    tk = policy(test, pl, ps, tau)
+    m = summarize(tk)
+    res["heldout"] = m
+    res["_taken"] = tk
+    if m["n"] < N_FLOOR:
+        res.update(verdict="indeterminate", why=f"held-out n={m['n']} < {N_FLOOR}")
+    elif m["mean_net_r"] >= 0:
+        res.update(verdict="pass", why=f"held-out mean net R {m['mean_net_r']:+.4f} >= 0 at n={m['n']}")
+    else:
+        res.update(verdict="fail", why=f"held-out mean net R {m['mean_net_r']:+.4f} < 0 at n={m['n']}")
+    return res
+
+
+def universe_arms(args) -> int:
+    cache, out = Path(args.cache), Path(args.out)
+    out.mkdir(parents=True, exist_ok=True)
+    t0 = time.time()
+    traded, frozen = traded_symbols(), universe()
+    wide = sorted(set(wide_universe()) | set(frozen) | set(traded))
+    fetch(cache, wide)
+    tab = build_table(cache, wide, xs_symbols=frozen)
+    print(f"rows={len(tab)} symbols={tab.symbol.nunique()} t={time.time()-t0:.0f}s", flush=True)
+    ev = set(traded)
+    arms = {"a_traded": set(traded), "b_frozen60": set(frozen), "c_wide": set(tab.symbol.unique())}
+    results = {}
+    for name, ts in arms.items():
+        results[name] = arm_eval(tab, ts, ev)
+        print(name, results[name]["verdict"], results[name]["why"], f"t={time.time()-t0:.0f}s", flush=True)
+    paired = {}
+    for x in ("b_frozen60", "c_wide"):
+        if "heldout" in results[x] and "heldout" in results["a_traded"]:
+            paired[f"{x}_minus_a_mean_net_r"] = results[x]["heldout"]["mean_net_r"] - results["a_traded"]["heldout"]["mean_net_r"]
+    for r in results.values():
+        r.pop("_taken", None)
+    passing = [k for k, r in results.items() if r["verdict"] == "pass"]
+    if passing:
+        adopt = max(passing, key=lambda k: results[k]["heldout"]["mean_net_r"])
+        v = "pass"
+    else:
+        cand = {k: r["dev_pooled_by_tau"][str(r["tau_star"])]["mean_net_r"] for k, r in results.items() if r["tau_star"] is not None}
+        adopt = max(cand, key=cand.get) if cand else None
+        v = "fail" if any(r["verdict"] == "fail" for r in results.values()) else "indeterminate"
+    meas = {"traded_symbols": traded, "n_wide_symbols": len(arms["c_wide"]), "arms": results, "paired_vs_a": paired,
+            "adopted_arm": adopt, "git_sha": _git_sha(), "elapsed_s": round(time.time() - t0)}
+    (out / "summary.json").write_text(json.dumps(meas, indent=1, default=str) + "\n")
+    records = [{"verdict": r["verdict"], "read_state": "measured", "n": (r.get("heldout") or {}).get("n"),
+                "population": f"arm {k}: trained on {r['n_train_symbols']} symbols, scored on traded {traded} held-out {HOLDOUT_START}..{END}",
+                "measurement": {kk: r[kk] for kk in r if kk not in ("dev_pooled_by_tau",)}, "note": r["why"]}
+               for k, r in results.items()]
+    vj = {"verdict": v, "read_state": "measured", "n": sum((r.get("heldout") or {}).get("n") or 0 for r in results.values()),
+          "population": f"ENTRY training-universe arms a/b/c scored on the traded symbols {traded}, held-out {HOLDOUT_START}..{END}",
+          "measurement": meas, "note": f"adopted arm: {adopt}", "records": records}
+    (out / "verdict.json").write_text(json.dumps(vj, indent=1, default=str) + "\n")
+    print(json.dumps({"verdict": v, "adopted": adopt}), flush=True)
+    return 0
+
+
 # ----------------------------------------------------------------------------------------------- self-test
 def _self_test() -> None:
     H = 4
@@ -522,12 +643,14 @@ def _self_test() -> None:
                          "reason_long": [2, 2, 1], "reason_short": [0] * 3, "bars_long": [24, 24, 24], "bars_short": [24] * 3})
     tk = policy(test, np.array([1., 1., 1.]), np.array([0., 0., 0.]), 0.0)
     assert list(tk.net_r) == [1.0, -1.0], tk  # the i=4 bar is blocked by the open position from i=0
+    t = traded_symbols()
+    assert t and all(x.endswith("USDT") for x in t), t
     print("self-test ok")
 
 
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser()
-    ap.add_argument("cmd", nargs="?", default="run", choices=["run"])
+    ap.add_argument("cmd", nargs="?", default="run", choices=["run", "universe-arms"])
     ap.add_argument("--cache", default="/tmp/ml_decision_klines")
     ap.add_argument("--out", default="/tmp/ml_decision_entry_out")
     ap.add_argument("--unit", default="")
@@ -536,7 +659,7 @@ def main(argv=None) -> int:
     if a.self_test:
         _self_test()
         return 0
-    return run(a)
+    return universe_arms(a) if a.cmd == "universe-arms" else run(a)
 
 
 if __name__ == "__main__":

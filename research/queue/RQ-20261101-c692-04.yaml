@@ -3,7 +3,7 @@
 id: RQ-20261101-c692-04
 title: 'TRAINING UNIVERSE for the ENTRY decision model: trained on (a) the traded bybit_2 symbols only, (b) the frozen 60-perp universe, (c) every
   qualifying Binance USDT-M perp, does each arm reach held-out mean net R per decision >= 0 on the TRADED symbols, and which arm is best?'
-status: blocked
+status: queued
 cadence: once
 theme: ml_health
 priority: 1
@@ -83,8 +83,3 @@ related:
 - ML-DATA-XASSET-1H
 - docs/research/ml-decision-models-2026-11-01/DESIGN.md
 what_it_does_not_do: Registers, serves or promotes nothing; changes no config; places no order; sizes nothing.
-blocked_on:
-- kind: harness
-  ref: scripts/research/ml_decision_entry.py
-  what: the universe-arms subcommand (train-set filter, traded-symbol scoring, frozen-60 cross-sectional reference)
-  clears_when: the subcommand lands on main with a self-test; the lane git-mvs this file to research/queue/ with status queued (rule unchanged)
