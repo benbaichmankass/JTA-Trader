@@ -139,7 +139,7 @@ result into one change — it smuggles the weak half in on the strong half's evi
 
 **Every new registration** (a `decision_rule` in `research/queue/` or any pre-registered backtest rule) carries this clause **in the rule text, set before the run**, in addition to its own statistic and threshold. It is an evaluation standard on new registrations, **not a CI guard** (no new gate; the operator's no-new-gates rule stands):
 
-1. **Years.** Net P&L positive in at least 3 of the 4 calendar years of the discovery window. A longer window scales this to at least 75% of its calendar years (minimum 3). A year counts only with at least 200 calendar days of data; a partial year is reported but not counted.
+1. **Years.** Net P&L positive in at least 3 of the 4 calendar years of the discovery window (the operator's rule). **The scaling to longer windows (at least 75% of calendar years, minimum 3) is the RESEARCH-EDGE lane's extension, not the operator's words**; the operator may replace it. A year counts only with at least 200 calendar days of data; a partial year is reported but not counted.
 2. **Concentration.** No single calendar year contributes more than 50% of total net P&L. If total net P&L is not positive, the clause fails.
 3. **Sides.** Long-side and short-side net reported separately. A two-sided strategy needs both sides >= 0.
 4. **Table.** The per-year net table (and the long/short split) is reported in every result, pass or fail.

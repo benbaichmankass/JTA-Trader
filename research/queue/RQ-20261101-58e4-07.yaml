@@ -1,0 +1,77 @@
+# Hand-authored 2026-11-01 by lane RESEARCH-EDGE (Tier 1). Rule incl. the regime-robustness clause registered BEFORE the run; this commit precedes the run commit. Gates: none.
+id: RQ-20261101-58e4-07
+title: 'Discovery: does EWMA realised-vol forecast minus CBOE implied vol predict variance-swap P&L on SPY QQQ IWM GLD USO SLV (2008-07..2024-06), 8 configs, net of a bid-ask haircut, with the regime-robustness
+  clause'
+cadence: once
+roadmap:
+- L-PROGRAMMES
+theme: new_strategy_prop
+priority: 1
+kind: experiment
+question: Does the sign of (EWMA-return-variance forecast - CBOE 30d implied vol) predict the sign of a long-variance payoff (RV^2 - IV^2)/IV^2 over the next 21 or 63 trading days, and does trading it (long
+  variance when forecast > IV, short when below) earn a net Sharpe that survives deflation AND the regime-robustness clause?
+why_this_matters: 'Manager 2026-11-01 ~12:01Z: options are the natural instrument for a size forecast (realised vol vs the implied vol the market charges). IMPORTANT SCOPE: this is a VARIANCE-SWAP PROXY
+  from keyless CBOE vol indices (FRED) and ETF closes, NOT a priced straddle: no option chain or IV surface history is reachable keyless (Alpaca options need credentials and serve only current 15-min-delayed
+  snapshots). TLT has no keyless IV series and is not tested. A pass here would justify buying real option-chain history, not trading.'
+power:
+  expected_n: 380
+  min_detectable_effect: 0.5
+  effect_units: annualised_sharpe
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: '~16 years of 21-day samples (n~190 periods) or 63-day (n~65): very low power per config; SE of an annualised Sharpe ~ 1/sqrt(16) ~ 0.25. Discovery only.'
+  feasibility:
+    source: none
+    accrual_basis: Fixed historical archive (data.binance.vision), no accrual.
+decision_rule:
+  id: RULE-RQ20261101-58E4-07-VOL-PREMIUM
+  registered_at: '2026-11-01'
+  registered_before_run: true
+  statistic: net period Sharpe, stress Sharpe, halves, bootstrap p05, DSR(N=8), regime-robustness clause of the best-of-8 config, from scripts/research/edge_vol_premium.py
+  rule: 'Configs V1..V8 fixed in the script (EWMA lambda 0.94/0.97 x entry threshold 0/2 vol points x horizon 21/63 trading days, non-overlapping samples, equal weight over the six underlyings, long variance
+    if forecast - IV > thr, short if < -thr). The config with the HIGHEST net Sharpe among the 8 is the only one graded. PASS iff it has net Sharpe >= 0.5 AND stress (2x cost) net Sharpe > 0 AND net Sharpe
+    > 0 in BOTH halves AND bootstrap p05 of mean > 0 AND DSR(N=8) > 0.95 AND the REGIME-ROBUSTNESS CLAUSE: net positive in at least 3 of 4 calendar years (operator) scaled to >= 75% of years on this 16-year
+    window (RESEARCH-EDGE extension), no single year above 50% of total net, long-variance and short-variance side net reported separately and BOTH >= 0, the two non-overlapping sub-periods each net-positive,
+    per-year table reported. FAIL otherwise, naming the failing item. Cost haircut per trade: 1 vol point round trip on IV (variance units (2*IV*0.01+0.0001)/IV^2), stress 2x. Reported, not graded: hit
+    rate of sign(F-IV) vs sign(RV-IV), and the always-short-variance mean for context. Holdout (2024-07+) not read.'
+  what_it_does_not_do: Does not read the holdout (2024-07-01 on; edge_data.MAX_MONTH makes it unloadable), touch config/strategies.yaml, rosters or sizing, or propose a live leg. A PASS is only a candidate
+    for the single HOLDOUT-LOCK read.
+compute: cpu_light
+value:
+  usd_at_stake_per_month: 100
+  confidence: 0.1
+  bucket: structural
+  basis: 'stand-in: the audit (2026-11-01) found the live book flat gross and negative net; a documented-payer family is the only candidate source of positive expectancy'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 4.0
+  est_minutes: 60
+  basis: Manual lane run (RESEARCH-EDGE) from a session with Binance Vision egress; daily bars, a few thousand rows per symbol; no secret.
+run:
+  command:
+  - python3
+  - scripts/research/edge_vol_premium.py
+  - --data-dir
+  - comms/research
+  - --fred-dir
+  - <fred csv dir>
+  - --out
+  - <result.json>
+  timeout_minutes: 120
+  inputs:
+    research_unit: RQ-20261101-58e4-07
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- scripts/research/edge_vol_premium.py
+- scripts/research/regime_robustness.py
+- m31-implied-vol-grade.yml
+- RQ-20261101-58e4-06
+programme: P6
+status: queued
+practice_precedent: 'docs/reference/trading-and-model-practice-principles.md and AUDIT section 5b (docs/audits/2026-11-01-from-scratch/AUDIT.md): <=10 pre-declared configs, discovery ends 2024-06-30, every
+  trial counted, DSR(N=trials)>0.95; Bailey & Lopez de Prado 2014 (DSR); payer literature: Carr & Wu 2009 RFS (variance risk premium); Bailey & Lopez de Prado 2014'
