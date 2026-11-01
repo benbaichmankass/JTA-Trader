@@ -1,0 +1,99 @@
+# Hand-authored 2026-11-01 by DAILY-RESEARCH-AUTHORING-20261101 (Tier 1), dispatched by Manager session_01AFoLuJwBvR58WBtD4qc5Gp. Decision rule registered BEFORE any run. Gates: none.
+id: RQ-20261101-e5b1-02
+title: 'Calendar event study (avg_hourly_earnings_yoy): does the avg_hourly_earnings_yoy surprise vs the PIT survey consensus predict TLT forward returns at 1-5 trading
+  days?'
+cadence: once
+theme: macro
+priority: 3
+kind: experiment
+programme: P4
+roadmap:
+- M28
+question: 'Using survey-consensus point-in-time rows (live feed plus survey backfill: 111 DISTINCT avg_hourly_earnings_yoy releases with a defined surprise, MEASURED
+  2026-11-01 by scripts/macro/econ_event_study.load_resolved_events_multi over comms/macro/econ_calendar_snapshots.jsonl + comms/macro/econ_calendar_snapshots_survey_backfill.jsonl),
+  is Spearman(surprise = actual - consensus, forward TLT return) significant at 1, 3 or 5 trading days after the release at |t_eff| >= 3.5 (Bonferroni over 3 horizons
+  x about 73 calendar-class studies registered to date)?'
+why_this_matters: '`avg_hourly_earnings_yoy` has NO macro event study in the queue (scan of research/queue incl. blocked/, 2026-11-01: 0 avg_hourly_earnings_yoy units),
+  while sibling classes already have repeated reads; the calendar-event-types work (CALENDAR-EVENT-TYPES, operator 2026-10-26) needs every collected class measured
+  before any non-zero news-layer weight. The year-on-year wage print (sibling average_hourly_earnings_mom is studied on ES=F/ZN=F); long bonds price wage-inflation
+  surprises, sign not pre-registered. The t-bar is 3.5 as in the d5dd/3ef3 batches, so a single-class PASS is a discovery lead, not a result.'
+power:
+  expected_n: 111
+  min_detectable_effect: 0.42
+  effect_units: sd
+  design: one_sample
+  alpha: 0.01
+  power: 0.8
+  basis: 'Unit = one distinct release with a defined survey surprise (111, MEASURED 2026-11-01). Fisher-z: detecting rho at the registered |t| bar 3.5 with power
+    0.8 needs atanh(rho) >= (3.5+0.8416)/sqrt(n-3), i.e. rho >= 0.42 at n=111. A FAIL therefore means "no effect >= ~0.42 sd at daily-close resolution", not "no effect".
+    The queue power gate only tabulates alpha 0.01, so power.alpha is declared 0.01 (looser than the registered bar); min_detectable_effect is computed at the STRICTER
+    t bar.'
+  feasibility:
+    source: none
+    accrual_basis: n is a fixed historical backfill, not an accrual; the run prints releases, releases_with_value and price_bars so the bound is MEASURED and a short
+      join lands INDETERMINATE, never padded.
+decision_rule:
+  id: RULERQ20261101e5b102
+  registered_at: '2026-11-01'
+  registered_before_run: true
+  statistic: Overlap-corrected Spearman t (ic_t_eff) of surprise vs forward TLT return at horizons 1, 3, 5 trading days (scripts/macro/econ_event_study.py event_study,
+    merged live+survey snapshots), graded by scripts/research/macro_event_study_run.py grade() with the CLI flags below.
+  rule: 'PASS IF at some horizon in {1,3,5} with n >= 100, |ic_t_eff| >= 3.5 (sign not pre-specified: either direction is reported with its sign). FAIL IF every horizon
+    has n >= 100 and none reaches the bar. INDETERMINATE IF any horizon has n < 100. no_data/producer_failed IF the price panel is empty or no release has a defined
+    surprise: a route fault, not a verdict. Thresholds are not changed after any result.'
+  min_n: 100 joined releases per horizon.
+  what_it_does_not_do: A PASS is evidence for a weight-setting proposal (Tier 3, operator-gated; costs, a placebo, a sub-period split and the naive-floor check still
+    owed), not a weight. Sets no weight, touches no config or order path. Daily closes cannot see the intraday reaction.
+compute: cpu_light
+value:
+  bucket: information
+  usd_at_stake_per_month: 50
+  confidence: 0.2
+  basis: 'stand-in: a measured event-class effect decides whether the `avg_hourly_earnings_yoy` calendar class earns a non-zero news-layer weight; information value,
+    not a P&L claim'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 1.0
+  est_minutes: 10
+  basis: 'Estimate, NOT measured: one daily-close fetch and a rank correlation per horizon, comparable to RQ-20261031-3ef3-01.'
+run:
+  command:
+  - python3
+  - scripts/research/macro_event_study_run.py
+  - --kind
+  - avg_hourly_earnings_yoy
+  - --snapshots
+  - comms/macro/econ_calendar_snapshots.jsonl,comms/macro/econ_calendar_snapshots_survey_backfill.jsonl
+  - --symbol
+  - TLT
+  - --horizons
+  - 1,3,5
+  - --primary-horizons
+  - 1,3,5
+  - --min-n
+  - '100'
+  - --t-bar
+  - '3.5'
+  - --expected-sign
+  - either
+  - --population
+  - avg_hourly_earnings_yoy releases (live feed + survey-consensus backfill) joined to TLT daily closes
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 30
+  inputs:
+    research_unit: RQ-20261101-e5b1-02
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- scripts/macro/econ_event_study.py
+- .claude/skills/macro-research/SKILL.md
+- docs/claude/work/checklist/CALENDAR-EVENT-TYPES.json
+- RQ-20261031-3ef3-01
+- RQ-20261031-d5dd-14
+practice_precedent: 'T1 (docs/reference/trading-and-model-practice-principles.md): net-of-cost economic read follows only a PASS here; the multiple-testing denominator
+  (studies registered to date) is stated in the rule'
+status: queued
