@@ -4,6 +4,7 @@ name: cf-bulk-backtest
 # distinct backtest trade job on GitHub-hosted runners: plan -> sharded matrix -> reduce. No Claude, no API credits, no secrets;
 # it only READS the checked-out corpus + the keyless Binance Vision archive and UPLOADS artifacts (shards, manifest, summary).
 # Gates this adds or changes: none. Nothing here touches the trade path.
+# no-durable-result: artifacts-only first run (shards, manifest.json, summary.json); landing the small manifest + summary under comms/research/ through a research-result record is the follow-up once one real shard's size and the result are read (checklist row CF-B1-BULK-BACKTEST, note)
 # Resumable: shard ids hash their job keys + the engine schema; re-dispatch with the same run_id and a prior run's artifacts is
 # not needed because a shard is cheap to redo; a failed shard job is retried by re-dispatching (batches are independent).
 

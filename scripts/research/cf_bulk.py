@@ -202,7 +202,7 @@ def run_shard(shard: dict, chunks: Dict[str, List[str]], jobs: Dict[str, dict], 
                 hi = max(lrc._ts(jobs[k]["exit_time"]) for k in chosen) + cf_core.resolve_horizon({"timeframe": tf}, {"timeframe": tf})["seconds"]
                 bars = cf_bars.historical_bars(shard["symbol"], tf, lo, hi, fetcher)
                 store = BarStore(bars) if bars else None
-            except Exception as e:                           # a failed fetch is a recorded state + retry, never a halt
+            except Exception as e:                           # allow-silent: a failed fetch is a recorded state (state=fetch_failed, error kept in meta, no 'done' meta so a re-run retries), never a halt
                 state, err = "fetch_failed", f"{type(e).__name__}: {e}"[:300]
     reasons, n_graded = Counter(), 0
     tmp = data_p.with_suffix(".tmp")
@@ -398,7 +398,7 @@ def main(argv: Optional[List[str]] = None) -> int:
         shard = plan["shards"][i]
         try:
             meta = run_shard(shard, chunks, jobs, out, n_random=a.n_random, force=a.force)
-        except Exception as e:                                # recorded, retried by re-running; never a halt
+        except Exception as e:                                # allow-silent: recorded as state=failed with the error and a non-zero exit; a re-run retries it, never a halt
             meta = {"shard_id": shard["shard_id"], "state": "failed", "error": f"{type(e).__name__}: {e}"[:300]}
             rc = 1
         print(json.dumps({k: meta.get(k) for k in ("shard_id", "state", "n_jobs", "n_graded", "could_not_grade", "seconds", "skipped", "error")}))
