@@ -86,6 +86,16 @@ def sim_day(o, h, lo, c, rh, cfg):
     return None
 
 
+def build_klines_1h(root, symbols=None, ms=None):
+    """<root>/klines_1h.pkl = (series, manifest) for the 10-symbol UNIVERSE from the public archive (HOLDOUT-LOCK: edge_data caps at 2024-06)."""
+    import edge_data as E
+
+    root.mkdir(parents=True, exist_ok=True)
+    ser, man = E.assemble(E.fetch(symbols or UNIVERSE, root, kinds=("k",), ms=ms, interval="1h"), "k")
+    pickle.dump((ser, man), open(root / "klines_1h.pkl", "wb"))
+    return root / "klines_1h.pkl"
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--data-root", required=True)
@@ -95,7 +105,11 @@ def main():
                          "no adverse selection, 2 bps/side -- an upper bound on what a limit-entry cost lever can recover.")
     ap.add_argument("--dsr-trials", type=int, default=len(CFG),
                     help="N for the deflated Sharpe (default = this grid). The cost-ceiling iteration passes the CUMULATIVE count.")
+    ap.add_argument("--build-data", action="store_true",
+                    help="if <data-root>/klines_1h.pkl is absent, build it from the public Binance Vision 1h archive first")
     a = ap.parse_args()
+    if a.build_data and not (Path(a.data_root) / "klines_1h.pkl").is_file():
+        build_klines_1h(Path(a.data_root))
     ser, _ = pickle.load(open(Path(a.data_root) / "klines_1h.pkl", "rb"))
     out = {"universe": UNIVERSE, "configs": {}, "n_trials": a.dsr_trials}
     recs = {}
