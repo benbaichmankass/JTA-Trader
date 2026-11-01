@@ -411,6 +411,75 @@ def recipe_unit(tab, out, n_jobs) -> dict:
     return res
 
 
+# ----------------------------------------------------------------------------------------------- b608: the v2 stack on dev
+GATE_V2 = 0.06
+STACK_TRADES = {}
+
+
+def _stack_tweak(share, cost_x_atr, fold_of, gate):
+    """R2 scores thresholded at the quantile that takes the base's share of rows (set BEFORE the gate), then the cost gate abstains."""
+    def tw(k, test, pl, ps):
+        sc = np.maximum(pl, ps)
+        thr = float(np.quantile(sc, 1 - share[k])) if share[k] > 0 else 1e9
+        if gate is not None:
+            kk = float(np.nanmedian(cost_x_atr[fold_of != k]))
+            est = kk / test["atr_pct"].to_numpy()
+            pl[est > gate] = ABSTAIN
+            ps[est > gate] = ABSTAIN
+        return pl, ps, thr
+    return tw
+
+
+def stack_unit(tab, out, n_jobs, cache: Path) -> dict:
+    base_m = {sd: R.ens_member(tab, "R0", "S0", sd, out, n_jobs) for sd in SEEDS}
+    r2_m = {sd: R.ens_member(tab, "R2", "S0", sd, out, n_jobs) for sd in SEEDS}
+    share = {sd: [float((np.maximum(base_m[sd][f"pl{k}"], base_m[sd][f"ps{k}"]) > TAU).mean()) for k in range(8)] for sd in SEEDS}
+    fr = {sd: fold_frames(tab, base_m[sd]) for sd in SEEDS}
+    pos = np.concatenate([base_m[SEEDS[0]][f"pos{k}"] for k in range(8)])
+    fold_of = np.concatenate([np.full(len(base_m[SEEDS[0]][f"pos{k}"]), k) for k in range(8)])
+    cxa = ((tab.loc[pos, "cost_long"] + tab.loc[pos, "cost_short"]) / 2 * tab.loc[pos, "atr_pct"]).to_numpy()
+    t24 = relabel_table(tab, cache, 2.0, 4.0)
+    fr24 = {sd: fold_frames(t24, base_m[sd]) for sd in SEEDS}
+    levels = {"base": None, "S1_R2": (fr, None), "S2_R2_gate": (fr, GATE_V2), "S3_R2_gate_24": (fr24, GATE_V2)}
+    per, trades = {}, {}
+    for name, spec in levels.items():
+        per[name], trades[name] = [], []
+        for sd in SEEDS:
+            if spec is None:
+                tr = run_arm(fr[sd], base_m[sd])
+            else:
+                frames, gate = spec
+                tr = run_arm(frames[sd], r2_m[sd], tweak=_stack_tweak(share[sd], cxa, fold_of, gate))
+            per[name].append(stats(tr))
+            trades[name].append(tr)
+        print("level", name, round(float(np.mean([x["mean"] for x in per[name]])), 4), flush=True)
+    res = {"unit": "RQ-20261101-b608-01", "sealed_windows_read": 0, "levels": {}}
+    res["levels"]["base"] = {"arm_mean": float(np.mean([x["mean"] for x in per["base"]])), "n": [x["n"] for x in per["base"]]}
+    prev_name, prev_mean, winner = "base", res["levels"]["base"]["arm_mean"], "base"
+    stopped = False
+    for name in ("S1_R2", "S2_R2_gate", "S3_R2_gate_24"):
+        j = judge(per["base"], per[name])
+        j["marginal_vs_previous_level"] = float(j["arm_mean"] - prev_mean)
+        j["adds_on_top"] = bool(j["marginal_vs_previous_level"] >= SPREAD_FLOOR)
+        j["accepted"] = bool(j["verdict"] == "win" and j["adds_on_top"] and not stopped)
+        res["levels"][name] = j
+        if j["accepted"]:
+            winner, prev_mean = name, j["arm_mean"]
+        else:
+            stopped = True
+    res["winning_stack"] = winner
+    # interaction: stand-alone deltas (b607, b606, b601, measured on the same base) vs the marginal deltas on the stack
+    alone = {"R2": 0.0204, "cost_gate_0.06": 0.0115, "bracket_2_4": 0.0037}
+    res["interaction"] = {"stand_alone_delta": alone,
+                          "marginal_on_stack": {"R2": res["levels"]["S1_R2"]["delta"], "gate": res["levels"]["S2_R2_gate"]["marginal_vs_previous_level"],
+                                                "bracket_2_4": res["levels"]["S3_R2_gate_24"]["marginal_vs_previous_level"]}}
+    tr5 = {n: float(pd.concat(trades[n])[lambda x: x.symbol.isin(TRADED)].net_r.mean()) for n in trades}
+    res["traded5_mean_by_level"] = tr5
+    res["result"] = f"winning stack: {winner}"
+    pd.to_pickle({n: trades[n][0] for n in trades}, out / "stack_trades_seed7.pkl")
+    return res
+
+
 # ----------------------------------------------------------------------------------------------- a508: the traded slice
 def traded_unit(tab, out, n_jobs) -> dict:
     seeds = (E.SEED, *SEEDS)
@@ -544,7 +613,7 @@ def main() -> int:
     assert tab.ts.max() < pd.Timestamp(E.HOLDOUT_START, tz="UTC")
     u = a.unit.split("-")[-2] if a.unit.startswith("RQ-") else a.unit.split("-")[0]
     fn = {"b601": lambda: bracket_unit(tab, out, a.n_jobs, tpath.parent / "klines"), "b602": lambda: selectivity_unit(tab, out, a.n_jobs),
-          "b604": lambda: calibration_unit(tab, out, a.n_jobs), "b606": lambda: cost_gate_unit(tab, out, a.n_jobs), "b607": lambda: recipe_unit(tab, out, a.n_jobs), "a508": lambda: traded_unit(tab, out, a.n_jobs)}[u]
+          "b604": lambda: calibration_unit(tab, out, a.n_jobs), "b606": lambda: cost_gate_unit(tab, out, a.n_jobs), "b607": lambda: recipe_unit(tab, out, a.n_jobs), "b608": lambda: stack_unit(tab, out, a.n_jobs, tpath.parent / "klines"), "a508": lambda: traded_unit(tab, out, a.n_jobs)}[u]
     res = fn()
     (out / f"{u}_result.json").write_text(json.dumps(res, indent=1, default=str))
     print(res["result"])
