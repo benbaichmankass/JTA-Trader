@@ -16,6 +16,14 @@ One file per subject, research/levers/<subject>.yaml:
 The map is REBUILT from the committed results every run (idempotent: no hand edits to the generated part); a subject's
 `manifest_notes` and `declared` blocks (ranges and hypothesised effects written by an author) are preserved across rebuilds.
 
+ONE SCHEMA (PI-20261101-HIPIPRHQ-0004, 2026-11-01): the generated keys above plus an author-owned HAND block, all preserved on rebuild
+(HAND_KEYS): `units`, `status`, `doctrine`, `verdict_so_far`, `failure_attribution` (where_lost / by_direction / by_year / worst+best
+months+symbols / cost_split / stage), `levers_tested` [{family, varied, response, shape, tested_at_power, lever_family?}],
+`lever_families_untested`, `power_note`, `evidence`, `handed_to`. A subject with no results-derived arms (a research CANDIDATE) gets its
+`attribution` (read_state "attributed") and its `manifest` (tested / underpowered / untested) DERIVED from that block, so
+iteration_orphans --levers and research_ops_checks read one shape. `levers_tested[].family` is free text mapped to a policy family by
+iteration_orphans.policy_family (or set `lever_family:` explicitly). New tests are appended with --append (below), never by hand-editing.
+
 Reading it (canonical § 2): a flat or noisy response on every material lever family at adequate power is evidence of no edge;
 a smooth, fold-stable response on some lever is potential; a spiky single-point optimum is overfit, not an edge.
 
@@ -29,6 +37,7 @@ Usage:
   python3 scripts/research/lever_map.py --backfill          # rebuild every subject's map (testing + production legs, ML, LTR)
   python3 scripts/research/lever_map.py --subject <id>      # print one subject's map
   python3 scripts/research/lever_map.py --summary           # coverage counts (non-empty maps, families with responses)
+  python3 scripts/research/lever_map.py --append <subject> --family F --varied "..." --shape "..." --unit RQ-... [--at-power] [--response-json '{}']
   python3 scripts/research/lever_map.py --self-test
 """
 from __future__ import annotations
@@ -52,6 +61,9 @@ sys.path.insert(0, str(REPO / "scripts" / "ops"))
 import iteration_orphans as io
 
 FLAT_R_PER_TRADE = 0.02      # |delta| below 0.02 R/trade x n is "no response" (the units' own materiality bar)
+#: author-owned keys, preserved verbatim across --backfill (the hand-seeded schema of RESEARCH-EDGE, 2026-11-01, plus the 2 older ones)
+HAND_KEYS = ("title", "declared", "manifest_notes", "units", "status", "doctrine", "verdict_so_far", "failure_attribution", "levers_tested",
+             "lever_families_untested", "power_note", "evidence", "handed_to")
 _SKIP_FLAGS = {"--data", "--emit-trades", "--json", "--start", "--end", "--symbol", "--resample", "--strategy-name"}
 
 
@@ -273,11 +285,26 @@ def build(root: Path) -> dict[str, dict[str, Any]]:
                              "attribution": {"read_state": "no_arm_records_yet"},
                              "manifest": {f: ("tested" if f in lv else "untested") for f in fams.get(kind, [])},
                              "levers": lv}
+    for c in io.listed_subjects(root):          # research CANDIDATES (no roster leg, no arm records): derive from the hand block
+        if c["kind"] != "strategy_leg" or c["id"] in maps:
+            continue
+        old = io.read_map(root, c["id"]) or {}
+        mf = io.map_families(old)
+        fa = old.get("failure_attribution")
+        maps[c["id"]] = {"subject": c["id"], "kind": "strategy_leg", "status": "candidate",
+                         **({"title": old["subject"]} if old.get("subject") not in (None, c["id"]) and "title" not in old else {}),
+                         "baseline": {"verdict": c.get("verdict"), "basis": c.get("basis")},
+                         "attribution": ({"read_state": "attributed", "source": "failure_attribution (hand block)",
+                                          "where_lost": fa.get("where_lost"), "stage": fa.get("stage")} if isinstance(fa, dict)
+                                         else {"read_state": "no_record"}),
+                         "manifest": {f: ("tested" if mf.get(f, {}).get("at_power") else "underpowered" if f in mf else "untested")
+                                      for f in fams.get("strategy_leg", [])},
+                         "levers": {}}
     return maps
 
 
 def non_empty(m: dict[str, Any]) -> bool:
-    return bool(m.get("levers")) or (m.get("attribution") or {}).get("read_state") == "measured"
+    return bool(m.get("levers")) or (m.get("attribution") or {}).get("read_state") in ("measured", "attributed")
 
 
 def write(root: Path, maps: dict[str, dict[str, Any]]) -> int:
@@ -288,12 +315,29 @@ def write(root: Path, maps: dict[str, dict[str, Any]]) -> int:
         keep = {}
         if p.is_file():
             old = yaml.safe_load(p.read_text(encoding="utf-8")) or {}
-            keep = {k: old[k] for k in ("declared", "manifest_notes") if k in old}
+            keep = {k: old[k] for k in HAND_KEYS if k in old}
         body = {**m, **keep}
         p.write_text("# GENERATED by scripts/research/lever_map.py --backfill from committed results; `declared` and\n"
                      "# `manifest_notes` are author-owned and preserved. Canonical: OPERATING-PLAN § 2 (research loop).\n"
                      + yaml.safe_dump(body, sort_keys=False, width=140, allow_unicode=True), encoding="utf-8")
     return len(maps)
+
+
+def append_test(root: Path, subject: str, entry: dict[str, Any]) -> Path:
+    """Append one tested lever to a subject's `levers_tested` (cumulative; a repeat of the same unit+family replaces its entry)."""
+    p = root / LEVERS_DIR / f"{subject}.yaml"
+    if not p.is_file():
+        raise FileNotFoundError(f"no lever map for {subject}: run --backfill first")
+    head = "".join(ln for ln in p.read_text(encoding="utf-8").splitlines(True) if ln.startswith("#"))
+    d = yaml.safe_load(p.read_text(encoding="utf-8")) or {}
+    lt = [e for e in (d.get("levers_tested") or []) if not (e.get("unit") == entry.get("unit") and e.get("family") == entry["family"])]
+    lt.append(entry)
+    d["levers_tested"] = lt
+    units = list(d.get("units") or [])
+    if entry.get("unit") and entry["unit"] not in units:
+        d["units"] = units + [entry["unit"]]
+    p.write_text(head + yaml.safe_dump(d, sort_keys=False, width=140, allow_unicode=True), encoding="utf-8")
+    return p
 
 
 def summary(maps: dict[str, dict[str, Any]]) -> dict[str, Any]:
@@ -303,7 +347,7 @@ def summary(maps: dict[str, dict[str, Any]]) -> dict[str, Any]:
         c["subjects"] += 1
         c["non_empty"] += int(non_empty(m))
         c["with_lever_responses"] += int(bool(m.get("levers")))
-        c["with_attribution"] += int((m.get("attribution") or {}).get("read_state") == "measured")
+        c["with_attribution"] += int((m.get("attribution") or {}).get("read_state") in ("measured", "attributed"))
     return {k: dict(v) for k, v in by_kind.items()}
 
 
@@ -339,6 +383,22 @@ def _self_test() -> int:
     check("shape: interior maximum reads peaked", pk["shape"] == "peaked")
     one = shape([{"delta_net_r": 9, "baseline_n": 100, "value": "x", "folds_ge_baseline": "1/4"}])
     check("shape: one big point is overfit until a holdout", one["shape"] == "single_point" and "overfit" in one["reading"])
+    import tempfile
+    with tempfile.TemporaryDirectory() as td:
+        r = Path(td)
+        (r / LEVERS_DIR).mkdir(parents=True)
+        (r / LEVERS_DIR / "x.yaml").write_text("subject: x\nstatus: open\nfailure_attribution: {where_lost: side}\nlevers_tested: []\n")
+        append_test(r, "x", {"family": "side (short suppression)", "varied": "v", "response": {}, "shape": "s", "tested_at_power": False,
+                             "unit": "RQ-1"})
+        append_test(r, "x", {"family": "side (short suppression)", "varied": "v2", "response": {}, "shape": "s", "tested_at_power": True,
+                             "unit": "RQ-1"})
+        d = yaml.safe_load((r / LEVERS_DIR / "x.yaml").read_text())
+        check("append: idempotent per unit+family, keeps the hand block", len(d["levers_tested"]) == 1 and d["levers_tested"][0]["varied"] == "v2"
+              and d["failure_attribution"]["where_lost"] == "side" and d["units"] == ["RQ-1"])
+        mf = io.map_families(d)
+        check("schema: free-text family maps to a policy family, power carried", mf == {"direction": {"at_power": True, "tests": ["side (short suppression)"]}})
+    check("schema: alias order (regime before gate, signal horizon -> entry)", io.policy_family("regime filter") == "regime_gating"
+          and io.policy_family("signal horizon") == "entry" and io.policy_family("predicted-range gate") == "filter")
     return 0 if ok else 1
 
 
@@ -349,10 +409,26 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--summary", action="store_true")
     ap.add_argument("--root", default=str(REPO))
     ap.add_argument("--self-test", action="store_true")
+    ap.add_argument("--append", metavar="SUBJECT", help="append one tested lever to the subject's levers_tested")
+    ap.add_argument("--family"); ap.add_argument("--varied"); ap.add_argument("--shape"); ap.add_argument("--unit")
+    ap.add_argument("--lever-family", help="explicit policy family (else mapped from --family text)")
+    ap.add_argument("--at-power", action="store_true"); ap.add_argument("--response-json", default="{}")
     a = ap.parse_args(argv)
     if a.self_test:
         return _self_test()
     root = Path(a.root)
+    if a.append:
+        if not (a.family and a.varied and a.shape):
+            print("lever_map: --append needs --family, --varied and --shape", file=sys.stderr)
+            return 2
+        e = {"family": a.family, "varied": a.varied, "response": json.loads(a.response_json), "shape": a.shape,
+             "tested_at_power": bool(a.at_power)}
+        if a.unit:
+            e["unit"] = a.unit
+        if a.lever_family:
+            e["lever_family"] = a.lever_family
+        print(f"lever_map: appended to {append_test(root, a.append, e)}")
+        return 0
     try:
         maps = build(root)
     except (OSError, ValueError, KeyError, ImportError, yaml.YAMLError) as exc:   # could not look: say so

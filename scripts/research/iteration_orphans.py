@@ -232,7 +232,51 @@ def _names_subject(u: dict[str, Any], sid: str) -> bool:
     return any(cmd[i] == "--leg" and i + 1 < len(cmd) and cmd[i + 1] == sid for i in range(len(cmd)))
 
 
-def lever_coverage(subjects: list[dict[str, Any]], units: list[dict[str, Any]], policy: dict[str, Any]) -> dict[str, Any]:
+#: lever-map `levers_tested[].family` is free text (RESEARCH-EDGE hand-seeded it); the policy has nine strategy families. An entry may
+#: carry an explicit `lever_family:` (wins); otherwise the first keyword that matches picks the policy family. Order matters.
+_FAMILY_ALIASES = [
+    ("regime", "regime_gating"), ("time-of-day", "session"), ("session", "session"),
+    ("side", "direction"), ("short", "direction"), ("direction", "direction"), ("long-only", "direction"),
+    ("universe", "symbol_set"), ("symbol", "symbol_set"), ("breadth", "symbol_set"), ("instrument", "symbol_set"),
+    ("rebalance", "timeframe"), ("timeframe", "timeframe"),
+    ("cost", "sizing_vs_cost"), ("risk scale", "sizing_vs_cost"), ("weighting", "sizing_vs_cost"), ("order type", "sizing_vs_cost"),
+    ("trade frequency", "sizing_vs_cost"), ("sizing", "sizing_vs_cost"),
+    ("target", "exit"), ("stop", "exit"), ("exit", "exit"), ("hold", "exit"),
+    ("gate", "filter"), ("threshold", "filter"), ("filter", "filter"),
+]
+
+
+def policy_family(text: str, explicit: str | None = None) -> str:
+    if explicit:
+        return str(explicit)
+    t = str(text).lower()
+    for kw, fam in _FAMILY_ALIASES:
+        if kw in t:
+            return fam
+    return "entry"          # signal / formation / forecast horizon, bracket mode, entry distance: how the entry is chosen
+
+
+def map_families(doc: dict[str, Any] | None) -> dict[str, dict[str, Any]]:
+    """policy family -> {"at_power": bool, "tests": [labels]} from a lever map's hand-schema `levers_tested`."""
+    out: dict[str, dict[str, Any]] = {}
+    for lt in (doc or {}).get("levers_tested") or []:
+        if not isinstance(lt, dict) or not lt.get("family"):
+            continue
+        fam = policy_family(lt["family"], lt.get("lever_family"))
+        c = out.setdefault(fam, {"at_power": False, "tests": []})
+        c["at_power"] = c["at_power"] or bool(lt.get("tested_at_power"))
+        c["tests"].append(str(lt["family"]))
+    return out
+
+
+def read_map(root: Path, sid: str) -> dict[str, Any] | None:
+    p = root / "research" / "levers" / f"{sid}.yaml"
+    d = _load_yaml(p) if p.is_file() else None
+    return d if isinstance(d, dict) else None
+
+
+def lever_coverage(subjects: list[dict[str, Any]], units: list[dict[str, Any]], policy: dict[str, Any],
+                   root: Path | None = None) -> dict[str, Any]:
     """Per subject: each lever family of its kind -> tested (a graded pass/fail), indeterminate_only, live, or untested.
 
     'tested' here means a graded verdict exists; whether it was at ADEQUATE power and full cost is the family-review
@@ -254,7 +298,14 @@ def lever_coverage(subjects: list[dict[str, Any]], units: list[dict[str, Any]], 
                     c["graded"].append(f"{u['id']}:{v}")
                 elif u.get("status") == "done":
                     c["indeterminate"].append(u["id"])
-        state = {f: ("tested" if c["graded"] else "live" if c["live"] else
+        # the subject's lever map (research/levers/<id>.yaml `levers_tested`) is the other source: a family the map records as tested
+        # counts; at_power False reads "underpowered" (tried, not closed -- it stays in `remaining`).
+        mapped = map_families(read_map(root, s["id"])) if root is not None else {}
+        for f, m in mapped.items():
+            cell.setdefault(f, {"graded": [], "indeterminate": [], "live": []})
+            cell[f]["map"] = m
+        state = {f: ("tested" if c["graded"] or (c.get("map") or {}).get("at_power") else "live" if c["live"] else
+                     "underpowered" if c.get("map") else
                      "indeterminate_only" if c["indeterminate"] else "untested") for f, c in cell.items()}
         out[s["id"]] = {"kind": s["kind"], "state": state, "detail": cell,
                         "remaining": [f for f in fams if state.get(f) != "tested"]}
@@ -308,7 +359,7 @@ def run(root: Path, today: dt.date | None = None, legacy: bool = False) -> dict[
     rows = classify(subjects, units, today, legacy=legacy)
     policy = _load_yaml(root / "scripts/research/family_retirement_policy.yaml") or {}
     return {"as_of": str(today), "population": "testing legs (strategy_status.py) + " + SUBJECTS_REL,
-            "counts": summarize(rows), "rows": rows, "lever_coverage": lever_coverage(subjects, units, policy)}
+            "counts": summarize(rows), "rows": rows, "lever_coverage": lever_coverage(subjects, units, policy, root)}
 
 
 def _self_test() -> int:
@@ -375,8 +426,8 @@ def main(argv: list[str] | None = None) -> int:
         mal = f"  MALFORMED: {','.join(m['unit'] for m in r['malformed'])}" if r["malformed"] else ""
         print(f"{r['state']:<8} {r['kind']:<13} {r['id']:<28} verdict={r['verdict']:<17} {its}{extra}{mal}")
     if a.levers:
-        print("\nLEVER COVERAGE (T tested=graded pass/fail, L live, i indeterminate only, . untested; power/cost adequacy is the review record's call)")
-        sym = {"tested": "T", "live": "L", "indeterminate_only": "i", "untested": "."}
+        print("\nLEVER COVERAGE (T tested=graded pass/fail or map-recorded at power, L live, u tried-underpowered (map), i indeterminate only, . untested; power/cost adequacy is the review record's call)")
+        sym = {"tested": "T", "live": "L", "underpowered": "u", "indeterminate_only": "i", "untested": "."}
         for sid, c in res["lever_coverage"].items():
             cells = " ".join(f"{f}={sym.get(st, '?')}" for f, st in c["state"].items())
             print(f"  {sid:<28} {cells}")
