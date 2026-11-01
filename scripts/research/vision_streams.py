@@ -110,50 +110,55 @@ PARSE = {"klines12": parse_klines, "funding": parse_funding, "premium": parse_kl
          "klines12d": parse_klines, "premiumd": parse_klines}
 
 
-def run(out: Path, streams: list[str], start: str, end: str, workers: int, syms: list[str]) -> dict:
+def run(out: Path, streams: list[str], start: str, end: str, workers: int, syms: list[str], chunk: int = 4) -> dict:
+    """Symbols are processed in chunks so memory stays bounded (the first metrics run held 100k parsed frames and died)."""
     report = {}
+    tcols = {"klines12": "open_time", "premium": "open_time", "funding": "calc_time", "metrics": "create_time",
+             "klines12d": "open_time", "premiumd": "open_time"}
     for st in streams:
         t0 = time.time()
-        js = jobs(st, syms, start, end)
-        frames: dict[str, list[pd.DataFrame]] = {s: [] for s in syms}
-        missing: dict[str, int] = {s: 0 for s in syms}
-        frozen: dict[str, list[str]] = {s: [] for s in syms}
-
         parse = PARSE[st]
+        tcol = tcols[st]
+        (out / st).mkdir(parents=True, exist_ok=True)
+        man: dict = {}
+        nfiles = 0
 
         def one(j, parse=parse):
             s, key, url = j
             raw = _get(url)
-            if raw is None:
-                return s, key, None
-            return s, key, parse(raw)
+            return s, key, (None if raw is None else parse(raw))
 
-        with cf.ThreadPoolExecutor(workers) as ex:
-            for s, key, df in ex.map(one, js):
-                if df is None:
-                    missing[s] += 1
+        for c0 in range(0, len(syms), chunk):
+            part = syms[c0:c0 + chunk]
+            js = jobs(st, part, start, end)
+            nfiles += len(js)
+            frames: dict[str, list[pd.DataFrame]] = {s: [] for s in part}
+            missing = {s: 0 for s in part}
+            frozen: dict[str, list[str]] = {s: [] for s in part}
+            with cf.ThreadPoolExecutor(workers) as ex:
+                for s, key, df in ex.map(one, js):
+                    if df is None:
+                        missing[s] += 1
+                        continue
+                    if st in ("klines12", "klines12d") and delist_flag(df):
+                        frozen[s].append(key)
+                    frames[s].append(df)
+            for s in part:
+                if not frames[s]:
+                    man[s] = {"rows": 0, "missing_files": missing[s]}
                     continue
-                if st in ("klines12", "klines12d") and delist_flag(df):
-                    frozen[s].append(key)
-                frames[s].append(df)
-        (out / st).mkdir(parents=True, exist_ok=True)
-        man = {}
-        for s in syms:
-            if not frames[s]:
-                man[s] = {"rows": 0, "missing_files": missing[s]}
-                continue
-            d = pd.concat(frames[s], ignore_index=True)
-            tcol = {"klines12": "open_time", "premium": "open_time", "funding": "calc_time", "metrics": "create_time",
-                    "klines12d": "open_time", "premiumd": "open_time"}[st]
-            d = d.sort_values(tcol).drop_duplicates(tcol).reset_index(drop=True)
-            d.to_pickle(out / st / f"{s}.pkl")  # pickle: same as ml_decision_entry cache; no pyarrow on the runner image
-            man[s] = {"rows": len(d), "first": str(d[tcol].iloc[0]), "last": str(d[tcol].iloc[-1]),
-                      "missing_files": missing[s], "frozen_post_delist_months": frozen[s]}
+                d = pd.concat(frames[s], ignore_index=True)
+                d = d.sort_values(tcol).drop_duplicates(tcol).reset_index(drop=True)
+                d.to_pickle(out / st / f"{s}.pkl")  # pickle: same as ml_decision_entry cache; no pyarrow on the runner image
+                man[s] = {"rows": len(d), "first": str(d[tcol].iloc[0]), "last": str(d[tcol].iloc[-1]),
+                          "missing_files": missing[s], "frozen_post_delist_months": frozen[s]}
+            print(f"{st}: {c0 + len(part)}/{len(syms)} symbols, {nfiles} files, {time.time() - t0:.0f}s", flush=True)
+        secs = time.time() - t0
         (out / st / "MANIFEST.json").write_text(json.dumps(
-            {"stream": st, "start": start, "end": end, "files": len(js), "seconds": round(time.time() - t0, 1),
-             "files_per_s": round(len(js) / max(time.time() - t0, 1e-9), 1), "symbols": man}, indent=1))
-        report[st] = {"files": len(js), "seconds": round(time.time() - t0, 1)}
-        print(f"{st}: {len(js)} files in {report[st]['seconds']}s", flush=True)
+            {"stream": st, "start": start, "end": end, "files": nfiles, "seconds": round(secs, 1),
+             "files_per_s": round(nfiles / max(secs, 1e-9), 1), "symbols": man}, indent=1))
+        report[st] = {"files": nfiles, "seconds": round(secs, 1)}
+        print(f"{st}: {nfiles} files in {report[st]['seconds']}s", flush=True)
     return report
 
 
