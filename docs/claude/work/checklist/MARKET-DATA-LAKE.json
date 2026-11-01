@@ -1,0 +1,23 @@
+{
+  "id": "MARKET-DATA-LAKE",
+  "title": "MARKET-DATA-LAKE: pooled-ML market data lake on HF/Kaggle (all Binance UM perps + major spot, all US ETFs + liquid stocks PIT, futures/FX/macro free sources), versioned private HF dataset + manifest + streaming loader",
+  "phase": "build",
+  "state": "in_flight",
+  "owner": "manager",
+  "lane": "MARKET-DATA-LAKE",
+  "model": null,
+  "ceiling_usd": 60,
+  "spend_usd": null,
+  "tier": 2,
+  "prs": [],
+  "blocked_on": [],
+  "note": "[2026-11-01 lane MARKET-DATA-LAKE, dispatched by Manager Session 2026-11-01a on the operator's 12:38Z directive: the general ML trains on as much market data as can be found, created and stored on HF/Kaggle, not the VMs] Build order (a) crypto-all Binance Vision->HF (b) ETF/equity bars from ETF-HISTORY-PIPELINE ->HF (c) futures/FX/macro free sources (d) HF-streaming loader for ML lanes. Universe in config/data_universe.yaml (shared with ETF-HISTORY-PIPELINE). Data scripts Tier-1; the workflow is Tier-2 (held PR). Ceiling $60. Re-opens the intent of DATA-KLINE-ARCHIVE (dropped by the 2026-10-29 bulk reset).",
+  "updated_at": "2026-11-01T12:43:40Z",
+  "updated_by": "session_01AFoLuMGGx1v99tWtfTWTfP",
+  "due_by": "2026-11-02",
+  "roadmap": [
+    "L-DATA",
+    "M14"
+  ],
+  "_seq": 877
+}
