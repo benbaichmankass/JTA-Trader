@@ -611,6 +611,63 @@ def universe_arms(args) -> int:
     return 0
 
 
+# ----------------------------------------------------------------------------------------------- c692-06 traded subset
+def fit_models(train: pd.DataFrame) -> dict:
+    import lightgbm as lgb
+    models = {}
+    for side in ("long", "short"):
+        m = lgb.LGBMRegressor(**LGB_PARAMS)
+        m.fit(train[FEATURES], train[f"net_{side}"])
+        models[side] = m
+    return models
+
+
+def traded_subset(args) -> int:
+    """Precondition (b): the c692-01 final fit, unchanged, scored on the bybit_2 symbols. Also writes the frozen model
+    artifact (LightGBM text dumps + feature list + tau + data fingerprint) that ML-ENTRY-LIVE-ADAPTER serves."""
+    cache, out = Path(args.cache), Path(args.out)
+    out.mkdir(parents=True, exist_ok=True)
+    t0 = time.time()
+    tau = json.loads(Path(args.entry_summary).read_text())["walk_forward"]["tau_star"]
+    syms, traded = universe(), traded_symbols()
+    fetch(cache, syms)
+    tab = build_table(cache, syms)
+    hs = pd.Timestamp(HOLDOUT_START, tz="UTC")
+    train = purge_train(tab[tab.ts < hs], hs)
+    models = fit_models(train)
+    test = tab[tab.ts >= hs]
+    pl, ps = models["long"].predict(test[FEATURES]), models["short"].predict(test[FEATURES])
+    taken_all = policy(test, pl, ps, tau)
+    taken = taken_all[taken_all.symbol.isin(traded)]
+    m = summarize(taken)
+    per_sym = {k: {"n": int(len(g)), "mean_net_r": float(g.net_r.mean())} for k, g in taken.groupby("symbol")}
+    art = out / "model"
+    art.mkdir(exist_ok=True)
+    for side, mdl in models.items():
+        mdl.booster_.save_model(str(art / f"entry_{side}.txt"))
+    meta = {"schema": "ml_decision_entry_model/1", "features": FEATURES, "tau": tau, "train_rows": int(len(train)),
+            "train_end_exclusive": str(train.ts.max()), "lgb_params": LGB_PARAMS, "bracket": {"sl_atr": SL_ATR, "tp_atr": TP_ATR,
+            "atr_n": ATR_N, "horizon_h": HORIZON_H, "decision_every_h": DECISION_EVERY_H}, "xs_reference": syms,
+            "git_sha": _git_sha(), "pooled_heldout_mean_net_r": summarize(taken_all)["mean_net_r"]}
+    (art / "meta.json").write_text(json.dumps(meta, indent=1, default=str) + "\n")
+    if m["n"] < 30:
+        v, why = "indeterminate", f"traded-symbol held-out n={m['n']} < 30"
+    elif m["mean_net_r"] >= 0:
+        v, why = "pass", f"traded-symbol held-out mean net R per decision {m['mean_net_r']:+.4f} >= 0 at n={m['n']}"
+    else:
+        v, why = "fail", f"traded-symbol held-out mean net R per decision {m['mean_net_r']:+.4f} < 0 at n={m['n']}"
+    meas = {"traded_symbols": traded, "tau": tau, "traded": {k: m.get(k) for k in ("n", "mean_net_r", "sum_net_r", "mean_gross_r",
+            "mean_cost_r", "by_side", "exit_reason_counts", "bootstrap_ci95_mean_net_r_reported_not_gating")},
+            "per_symbol": per_sym, "pooled_reproduction": {"n": int(len(taken_all)), "mean_net_r": meta["pooled_heldout_mean_net_r"]},
+            "git_sha": meta["git_sha"], "elapsed_s": round(time.time() - t0)}
+    (out / "summary.json").write_text(json.dumps(meas, indent=1, default=str) + "\n")
+    vj = {"verdict": v, "read_state": "measured", "n": m["n"], "measurement": meas, "note": why,
+          "population": f"c692-01 frozen model (tau {tau}) held-out {HOLDOUT_START}..{END} decisions on the bybit_2 symbols {traded}"}
+    (out / "verdict.json").write_text(json.dumps(vj, indent=1, default=str) + "\n")
+    print(json.dumps({"verdict": v, "why": why, "pooled_reproduction": meas["pooled_reproduction"]}), flush=True)
+    return 0
+
+
 # ----------------------------------------------------------------------------------------------- self-test
 def _self_test() -> None:
     H = 4
@@ -650,15 +707,18 @@ def _self_test() -> None:
 
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser()
-    ap.add_argument("cmd", nargs="?", default="run", choices=["run", "universe-arms"])
+    ap.add_argument("cmd", nargs="?", default="run", choices=["run", "universe-arms", "traded-subset"])
     ap.add_argument("--cache", default="/tmp/ml_decision_klines")
     ap.add_argument("--out", default="/tmp/ml_decision_entry_out")
     ap.add_argument("--unit", default="")
+    ap.add_argument("--entry-summary", default="")
     ap.add_argument("--self-test", action="store_true")
     a = ap.parse_args(argv)
     if a.self_test:
         _self_test()
         return 0
+    if a.cmd == "traded-subset":
+        return traded_subset(a)
     return universe_arms(a) if a.cmd == "universe-arms" else run(a)
 
 
