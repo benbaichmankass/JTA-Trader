@@ -71,7 +71,7 @@ def _manifest(entries):
 
 
 def test_verify_verdicts():
-    u = {"equities": {"core": ["SPY"], "etfs": {"x": ["QQQ", "TYPO"]}, "extra": [], "timeframes": ["1h"],
+    u = {"us_equity_bars": {"core": ["SPY"], "etfs": {"x": ["QQQ", "TYPO"]}, "extra": [], "timeframes": ["1h"],
                       "sp500_membership": None}, "options": {}}
     now = datetime(2026, 11, 3, tzinfo=UTC)
     fresh = {"status": "ok", "rows": 10, "first": "2016-01-04T14:30:00Z", "last": "2026-11-02T20:00:00Z", "long_gaps": 0, "feed": "sip"}
@@ -102,3 +102,12 @@ def test_publish_to_hf_lake_is_add_only(tmp_path):
     kw = calls[0]
     assert kw["repo_type"] == "dataset" and kw["path_in_repo"] == "equities/bars" and "delete_patterns" not in kw
     assert pub.publish(Api(), tmp_path / "empty", "o/lake", "p", "m") == 0 and len(calls) == 1
+
+
+def test_universe_snapshot_union(tmp_path):
+    snap = tmp_path / "us_equity_2026-11-01.csv"
+    snap.write_text("symbol,name\nSPY,x\nNEWETF,y\n\nZZZ,z\n")
+    u = du.load()
+    base = du.equity_symbols(u)
+    withsnap = du.equity_symbols(u, snapshot=snap)
+    assert withsnap[:len(base)] == base and withsnap[len(base):] == ["NEWETF", "ZZZ"]

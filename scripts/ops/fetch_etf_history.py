@@ -302,6 +302,8 @@ def main(argv: Optional[List[str]] = None) -> int:
     ap.add_argument("--out", default="data/etf_history")
     ap.add_argument("--universe", default=None, help="path to data_universe.yaml (default config/data_universe.yaml)")
     ap.add_argument("--symbols", default=None, help="comma list overriding the universe")
+    ap.add_argument("--universe-snapshot", default=None,
+                    help="dated lake universe snapshot CSV (universe/us_equity/<date>.csv): its symbols are APPENDED to the configured list")
     ap.add_argument("--tfs", default=None, help="comma list overriding the universe timeframes")
     ap.add_argument("--start", default=None)
     ap.add_argument("--feed", choices=["auto", "sip", "iex"], default="auto")
@@ -314,8 +316,8 @@ def main(argv: Optional[List[str]] = None) -> int:
         return 0
 
     u = du.load(a.universe)
-    eq = u.get("equities") or {}
-    syms = [s.strip().upper() for s in a.symbols.split(",") if s.strip()] if a.symbols else du.equity_symbols(u)
+    eq = u.get("us_equity_bars") or {}
+    syms = [s.strip().upper() for s in a.symbols.split(",") if s.strip()] if a.symbols else du.equity_symbols(u, snapshot=a.universe_snapshot)
     tfs = [t.strip() for t in a.tfs.split(",") if t.strip()] if a.tfs else list(eq.get("timeframes") or ["1h", "5m"])
     start = datetime.fromisoformat(a.start or eq.get("start") or DEFAULT_START).replace(tzinfo=timezone.utc)
     root = Path(a.out)

@@ -377,6 +377,11 @@ jobs:
                 description: 'Triggers etf-history-pipeline — probe / backfill / refresh / verify of the multi-year ETF bar store (runner holds the Alpaca secrets, store lands on the trainer).',
               },
               {
+                name: 'market-data-lake-request',
+                color: '5319e7',
+                description: 'Triggers market-data-lake — builds/refreshes the private HF market data lake (Binance Vision crypto, FRED, futures, ETF store); body may carry scope: all|crypto|other.',
+              },
+              {
                 name: 'trainer-capture-watch-now',
                 color: '5319e7',
                 description: 'Triggers trainer-capture-watch — grades the trainer order-flow capture on its DATA freshness (never ActiveState) and re-proves the alarm fires against planted staleness.',

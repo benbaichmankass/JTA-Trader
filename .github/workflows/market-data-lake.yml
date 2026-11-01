@@ -1,0 +1,243 @@
+name: market-data-lake
+
+# The market data lake for the general (pooled) ML models, built on runners and STORED ON HUGGING FACE (private), not
+# on our VMs. Row MARKET-DATA-LAKE; design + depth tables docs/data/market-data-lake.md; universe
+# config/data_universe.yaml; loader ml/datasets/lake.py.
+#
+# WHY (operator, 2026-11-01 12:38Z): "at least the general MLs needs to be training pretty much on as much market data
+# as we can find for it, and riding on memory and infra from kaggle/HF to create and store the data sets".
+#
+# GATES THIS ADDS OR CHANGES: none. A data-path job only: no order path, no config/*.yaml the trader reads, no execution
+# flag. A failed shard or series is recorded in MANIFEST.json and turns the run RED (one flag); nothing halts, the next
+# run retries.
+#
+# JOBS
+#   preflight  HF_TOKEN present + WRITE role + dataset private (refuses a public repo)
+#   crypto     matrix over (market, tf, shard): every Binance USD-M perp (incl. delisted) at 1d/1h/15m/5m, 1m majors,
+#              spot majors -- data.binance.vision, sha256-checked per monthly zip -> HF  crypto/<market>/<tf>/
+#   other      universe snapshots (NASDAQ Trader symbol directory, Binance archive listings), FRED rates/FX/macro,
+#              Yahoo daily futures fronts, and the ETF-HISTORY-PIPELINE store pulled from the trainer -> HF
+#   manifest   merges every shard's manifest into MANIFEST.json + README depth table, tags the HF commit vYYYYMMDD-HHMM
+#
+# TRIGGERS: weekly refresh Sun 03:23Z; workflow_dispatch; or a labelled issue `market-data-lake-request` whose body may
+#   carry `scope: all|crypto|other` (default all).
+#
+# SECRETS: HF_TOKEN (WRITE token for the bentzbk HF account); VM_SSH_KEY + TRAINER_VM_IP only to READ the ETF store.
+#   Nothing prints a token, a balance or an account number. Market data only.
+
+on:
+  workflow_dispatch:
+    inputs:
+      scope:
+        description: "all | crypto | other"
+        default: "all"
+  schedule:
+    - cron: "23 3 * * 0"
+  issues:
+    types: [opened]
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: market-data-lake
+  cancel-in-progress: false
+
+jobs:
+  preflight:
+    if: >-
+      github.event_name != 'issues' ||
+      ((github.event.issue.user.login == github.repository_owner ||
+        github.event.issue.user.login == 'github-actions[bot]') &&
+       contains(github.event.issue.labels.*.name, 'market-data-lake-request'))
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    outputs:
+      scope: ${{ steps.scope.outputs.scope }}
+    steps:
+      - name: Resolve scope (validated against a fixed list)
+        id: scope
+        env:
+          EVENT: ${{ github.event_name }}
+          INPUT_SCOPE: ${{ inputs.scope }}
+          ISSUE_BODY: ${{ github.event.issue.body }}
+        run: |
+          set -euo pipefail
+          s="all"
+          if [ "$EVENT" = "workflow_dispatch" ]; then s="${INPUT_SCOPE:-all}"; fi
+          if [ "$EVENT" = "issues" ]; then
+            s="$(printf '%s\n' "$ISSUE_BODY" | sed -n 's/^scope:[[:space:]]*\([a-z]*\).*/\1/p' | head -1)"; s="${s:-all}"
+          fi
+          case "$s" in all|crypto|other) ;; *) echo "::error::bad scope '$s'"; exit 1;; esac
+          echo "scope=$s" >> "$GITHUB_OUTPUT"
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: python -m pip install --quiet huggingface_hub pyyaml
+      - name: HF preflight (token set, write role, repo private)
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+        run: |
+          if [ -z "${HF_TOKEN}" ]; then
+            echo "::error::Actions secret HF_TOKEN is not set. The operator creates a WRITE token at huggingface.co/settings/tokens (account bentzbk) and stores it as repo secret HF_TOKEN."
+            exit 1
+          fi
+          python3 scripts/data_lake/hf_publish.py preflight
+
+  crypto:
+    needs: preflight
+    if: >-
+      (github.event_name != 'issues' || ((github.event.issue.user.login == github.repository_owner || github.event.issue.user.login == 'github-actions[bot]') && contains(github.event.issue.labels.*.name, 'market-data-lake-request'))) &&
+      (needs.preflight.outputs.scope == 'all' || needs.preflight.outputs.scope == 'crypto')
+    runs-on: ubuntu-latest
+    timeout-minutes: 300
+    strategy:
+      fail-fast: false
+      max-parallel: 8
+      matrix:
+        include:
+          - {market: um_perp, tf: 1d, shard: 0/1}
+          - {market: um_perp, tf: 1h, shard: 0/2}
+          - {market: um_perp, tf: 1h, shard: 1/2}
+          - {market: um_perp, tf: 15m, shard: 0/4}
+          - {market: um_perp, tf: 15m, shard: 1/4}
+          - {market: um_perp, tf: 15m, shard: 2/4}
+          - {market: um_perp, tf: 15m, shard: 3/4}
+          - {market: um_perp, tf: 5m, shard: 0/6}
+          - {market: um_perp, tf: 5m, shard: 1/6}
+          - {market: um_perp, tf: 5m, shard: 2/6}
+          - {market: um_perp, tf: 5m, shard: 3/6}
+          - {market: um_perp, tf: 5m, shard: 4/6}
+          - {market: um_perp, tf: 5m, shard: 5/6}
+          - {market: um_perp, tf: 1m, shard: 0/4}
+          - {market: um_perp, tf: 1m, shard: 1/4}
+          - {market: um_perp, tf: 1m, shard: 2/4}
+          - {market: um_perp, tf: 1m, shard: 3/4}
+          - {market: spot, tf: 1d, shard: 0/1}
+          - {market: spot, tf: 1h, shard: 0/1}
+          - {market: spot, tf: 5m, shard: 0/1}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: python -m pip install --quiet pandas pyarrow pyyaml huggingface_hub
+      - name: Build shard from data.binance.vision
+        run: |
+          python3 -u scripts/data_lake/binance_vision_lake.py --market "${{ matrix.market }}" --tf "${{ matrix.tf }}" \
+            --shard "${{ matrix.shard }}" --out lake --parallel 8 --workers 8
+      - name: Upload shard to HF (add/replace only)
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+        run: |
+          python3 scripts/data_lake/hf_publish.py upload --dir lake --prefix "crypto/${{ matrix.market }}/${{ matrix.tf }}" \
+            --note "shard ${{ matrix.shard }} run ${{ github.run_id }}"
+      - name: Keep the shard manifest for the merge job
+        uses: actions/upload-artifact@v4
+        with:
+          name: manifest-crypto-${{ matrix.market }}-${{ matrix.tf }}-${{ strategy.job-index }}
+          path: lake/_manifests/
+          retention-days: 7
+
+  other:
+    needs: preflight
+    if: >-
+      (github.event_name != 'issues' || ((github.event.issue.user.login == github.repository_owner || github.event.issue.user.login == 'github-actions[bot]') && contains(github.event.issue.labels.*.name, 'market-data-lake-request'))) &&
+      (needs.preflight.outputs.scope == 'all' || needs.preflight.outputs.scope == 'other')
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: python -m pip install --quiet pandas pyarrow pyyaml huggingface_hub
+      - name: Universe snapshots (US-listed securities with ETF flag; Binance archive listings)
+        run: python3 -u scripts/data_lake/free_sources.py universe --out lake
+      - name: FRED rates / FX / macro
+        run: python3 -u scripts/data_lake/free_sources.py fred --out lake
+      - name: Daily futures fronts (Yahoo, research use, private store)
+        continue-on-error: true
+        run: python3 -u scripts/data_lake/free_sources.py futures --out lake
+      - name: Pull the ETF-HISTORY-PIPELINE store from the trainer (read only)
+        continue-on-error: true
+        env:
+          VM_SSH_KEY: ${{ secrets.VM_SSH_KEY }}
+          TRAINER_IP: ${{ secrets.TRAINER_VM_IP }}
+          TRAINER_USER: ${{ vars.TRAINER_VM_USER || 'ubuntu' }}
+        run: |
+          set -uo pipefail
+          mkdir -p store ~/.ssh && chmod 700 ~/.ssh
+          if [ -z "${VM_SSH_KEY}" ] || [ -z "${TRAINER_IP}" ]; then echo "no trainer secrets; skipping ETF store"; exit 0; fi
+          printf '%s\n' "${VM_SSH_KEY}" > ~/.ssh/trainer_key && chmod 600 ~/.ssh/trainer_key
+          rsync -a -e "ssh -i ~/.ssh/trainer_key -o BatchMode=yes -o StrictHostKeyChecking=accept-new -o ConnectTimeout=20" \
+            "${TRAINER_USER}@${TRAINER_IP}:ict-trading-bot/data/etf_history/" store/ 2>&1 | sed -E 's/[0-9]{1,3}(\.[0-9]{1,3}){3}/<ip>/g' || true
+          echo "pulled: $(find store -name '*.parquet' | wc -l) series"
+      - name: Re-shape the ETF store into the lake layout
+        run: python3 -u scripts/data_lake/free_sources.py import-etf --src store --out lake
+      - name: Upload to HF (add/replace only)
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+        run: |
+          for p in universe fx macro futures us_equity; do
+            [ -d "lake/$p" ] && python3 scripts/data_lake/hf_publish.py upload --dir lake --prefix "$p" --note "run ${{ github.run_id }}"
+          done
+          true
+      - uses: actions/upload-artifact@v4
+        with:
+          name: manifest-other
+          path: lake/_manifests/
+          retention-days: 7
+
+  manifest:
+    needs: [preflight, crypto, other]
+    if: >-
+      always() && needs.preflight.result == 'success' &&
+      (github.event_name != 'issues' || ((github.event.issue.user.login == github.repository_owner || github.event.issue.user.login == 'github-actions[bot]') && contains(github.event.issue.labels.*.name, 'market-data-lake-request')))
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: python -m pip install --quiet pandas pyarrow pyyaml huggingface_hub
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: manifest-*
+          path: lake/_manifests/
+          merge-multiple: true
+      - name: Merge manifests, publish MANIFEST.json + depth table, tag the revision
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+        run: |
+          python3 scripts/data_lake/hf_publish.py manifest --dir lake | tee depth.md
+          cat depth.md >> "$GITHUB_STEP_SUMMARY"
+      - name: Comment the depth table on the issue
+        if: always() && github.event_name == 'issues'
+        uses: actions/github-script@v7
+        env:
+          CRYPTO: ${{ needs.crypto.result }}
+          OTHER: ${{ needs.other.result }}
+        with:
+          script: |
+            const fs = require('fs');
+            let body = `market-data-lake crypto=${process.env.CRYPTO} other=${process.env.OTHER} run=${context.runId}\n\n`;
+            if (fs.existsSync('depth.md')) body += fs.readFileSync('depth.md', 'utf8').slice(0, 60000);
+            await github.rest.issues.createComment({ owner: context.repo.owner, repo: context.repo.repo, issue_number: context.issue.number, body });
+            await github.rest.issues.update({ owner: context.repo.owner, repo: context.repo.repo, issue_number: context.issue.number, state: 'closed' });
+      - name: Red flag on a failed shard (ONE flag; the next run retries)
+        if: always() && (needs.crypto.result == 'failure' || needs.other.result == 'failure')
+        run: |
+          echo "::error::market-data-lake: crypto=${{ needs.crypto.result }} other=${{ needs.other.result }}"
+          exit 1

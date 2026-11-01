@@ -1,18 +1,122 @@
-# THE DATA UNIVERSE: what we COLLECT history for, whether or not we trade it (operator, 2026-11-01:
-# "we need to be collecting data on far more symbols than that, even if we're not trading them yet").
+# config/data_universe.yaml — WHAT MARKET DATA WE COLLECT (data path only; NOT a trading roster, NOT a gate).
 #
-# This file is read by scripts/ops/fetch_etf_history.py (equity/ETF bars) and scripts/ops/capture_options_snapshot.py
-# (option chains) via scripts/ops/data_universe.py. WIDENING LATER IS A CONFIG EDIT, NOT CODE.
+# Gates this adds or changes: none. Nothing on the order path reads this file. The `strategies:` rosters decide what
+# trades; this file decides what history the research / general (pooled) ML models can see. A symbol here is data.
 #
-# Gates this adds or changes: NONE. This is a data-pull list, not a trading roster: `accounts.yaml::symbols` and the
-# `strategies:` roster still decide what trades, and nothing here reaches an order path (same status as the
-# accounts.yaml `symbols:` pull list, which is "an additive data-pull list, never a gate").
+# Operator, 2026-11-01 12:38Z: "at least the general MLs needs to be training pretty much on as much market data as we can
+# find for it, and riding on memory and infra from kaggle/HF to create and store the data sets". Row MARKET-DATA-LAKE;
+# design + depth tables: docs/data/market-data-lake.md. Shared with lane ETF-HISTORY-PIPELINE (extend, don't fork).
 #
-# A symbol the data vendor does not serve is recorded as `no_data` in the store MANIFEST (measured, not assumed) and never
-# halts the pipeline; a symbol that stops updating turns the freshness check red ONCE so this file can be edited.
+# SELECTION RULES, not hand-picked lists, wherever a free source can enumerate the universe:
+#   * `all`            -> every symbol the source enumerates (incl. delisted, where the source keeps them)
+#   * a list           -> exactly those symbols (used only where "all" is too large for the timeframe)
+#   * liquidity floors are applied POINT-IN-TIME at READ time by ml/datasets/lake.py (rolling ADV as of each date),
+#     never at collection time -- collecting only today's liquid names is survivorship bias.
+#
+# Resolved lists are written by scripts/data_lake/universe.py into the lake as universe/<asset>/<YYYY-MM-DD>.csv
+# (a dated snapshot each run), so "what was listed when" is itself data.
+
 version: 1
 
-equities:
+storage:
+  hf_dataset: bentzbk/jta-market-lake   # PRIVATE; created by scripts/data_lake/hf_publish.py
+  kaggle_dataset: metis-market-lake     # PRIVATE mirror for Kaggle kernels (training compute); optional
+  layout: "<asset_class>/<market>/<tf>/<SYMBOL>.parquet"
+  manifest: MANIFEST.json               # per file: source, licence, first/last bar, rows, expected rows, gaps
+
+crypto:
+  # Binance Vision (keyless, full history). Symbols enumerated from the archive listing => delisted perps included.
+  um_perp:
+    source: data.binance.vision
+    licence: "Binance Terms of Use; no open-data licence -> private stores only"
+    timeframes:
+      1d: all
+      1h: all
+      15m: all
+      5m: all
+      # 1m for every perp is ~10x the 5m volume; majors first, widen once HF storage is measured.
+      1m: [BTCUSDT, ETHUSDT, SOLUSDT, XRPUSDT, BNBUSDT, DOGEUSDT, ADAUSDT, AVAXUSDT, LINKUSDT, LTCUSDT,
+           DOTUSDT, TRXUSDT, BCHUSDT, NEARUSDT, SUIUSDT, APTUSDT, ARBUSDT, OPUSDT, FILUSDT, ATOMUSDT]
+    extras: [fundingRate]   # monthly funding files, same archive
+  spot:
+    source: data.binance.vision
+    licence: "Binance Terms of Use; no open-data licence -> private stores only"
+    timeframes:
+      1d: &spot_majors [BTCUSDT, ETHUSDT, SOLUSDT, XRPUSDT, BNBUSDT, DOGEUSDT, ADAUSDT, AVAXUSDT, LINKUSDT, LTCUSDT,
+                        DOTUSDT, TRXUSDT, BCHUSDT, NEARUSDT, ATOMUSDT, FILUSDT, ETCUSDT, XLMUSDT, UNIUSDT, AAVEUSDT,
+                        ETHBTC, BNBBTC, SOLBTC, XRPBTC, BTCFDUSD, BTCUSDC, ETHUSDC]
+      1h: *spot_majors
+      5m: *spot_majors
+
+us_equity:
+  # Enumeration: NASDAQ Trader symbol directory (nasdaqtraded.txt: every US-listed security on every exchange, with an
+  # ETF flag). Delisted names: Alpaca /v2/assets?status=inactive (runner with the Alpaca data keys). Bars: the
+  # ETF-HISTORY-PIPELINE fetcher (Alpaca SIP, 2016+, split-adjusted, corporate actions separate).
+  etf:
+    enumerate: nasdaqtrader_etf_flag      # ALL US-listed ETFs (ETF == 'Y'), plus inactive ETFs from Alpaca
+    include_delisted: true
+    timeframes:
+      1d: all
+      1h: all
+      5m: liquid      # ADV floor below, resolved as of the run date for COLLECTION only at 5m (volume-bounded)
+  stock:
+    enumerate: nasdaqtrader_common        # common stock, excl. test issues / warrants / rights / units / preferreds
+    include_delisted: true
+    timeframes:
+      1d: all
+      1h: liquid
+  liquidity_floor:
+    adv_usd_20d: 5000000                  # applied point-in-time at read; also bounds which names get 1h/5m pulls
+    min_price: 2.0
+
+futures:
+  # No free intraday futures archive with an open licence exists that we have verified. Daily continuous fronts from
+  # Yahoo (=F) are collected as RESEARCH data, private store only (Yahoo ToS). CME DataMine is paid. Verified gaps are
+  # named in docs/data/market-data-lake.md rather than papered over.
+  daily_continuous:
+    source: yahoo_chart
+    licence: "Yahoo ToS; research use, private store only"
+    symbols: [ES=F, NQ=F, YM=F, RTY=F, CL=F, BZ=F, NG=F, RB=F, HO=F, GC=F, SI=F, HG=F, PL=F, PA=F,
+              ZB=F, ZN=F, ZF=F, ZT=F, ZC=F, ZS=F, ZW=F, KC=F, CC=F, SB=F, CT=F, LE=F, HE=F, 6E=F, 6J=F, 6B=F,
+              6A=F, 6C=F, 6S=F, DX=F, VX=F, BTC=F, ETH=F]
+
+  # Owned by pipeline row PI-20261101-ETFHIST-0001 (IB gateway, live VM only; measure depth, due 2026-11-03). Distinct from daily_continuous (Yahoo).
+  ib_gateway:
+    # Owned by pipeline row PI-20261101-ETFHIST-0001 (IB gateway, live VM only); listed here so the universe lives in one place.
+    cme_micros_minis: [MES, MNQ, M2K, MYM, ES, NQ, RTY, YM]
+    comex: [MGC, GC, SIL, SI, MHG, HG]
+    nymex: [MCL, CL, QG, NG]
+    rates_fx_ags: [ZN, ZB, ZF, ZT, 6E, 6J, 6B, ZC, ZS, ZW]
+
+fx:
+  daily:
+    source: fred           # Federal Reserve H.10 noon buying rates; public domain (US government data)
+    licence: "FRED / Federal Reserve; public domain"
+    series: [DEXUSEU, DEXJPUS, DEXUSUK, DEXCAUS, DEXSZUS, DEXUSAL, DEXUSNZ, DEXCHUS, DEXMXUS, DEXINUS, DEXKOUS,
+             DEXBZUS, DEXSDUS, DEXNOUS, DEXSIUS, DEXHKUS, DEXTHUS, DEXSFUS, DEXDNUS, DEXTAUS, DTWEXBGS, DTWEXAFEGS, DTWEXEMEGS]
+
+macro:
+  daily:
+    source: fred
+    licence: "FRED; per-series source licences vary -- private store only until each is checked"
+    series:
+      rates: [DGS1MO, DGS3MO, DGS6MO, DGS1, DGS2, DGS3, DGS5, DGS7, DGS10, DGS20, DGS30, DFF, SOFR, T10Y2Y, T10Y3M,
+              DFII5, DFII10, T5YIE, T10YIE, T5YIFR]
+      credit: [BAMLH0A0HYM2, BAMLC0A0CM, BAMLH0A3HYC, BAMLC0A4CBBB, BAMLHE00EHYIOAS]
+      vol_risk: [VIXCLS, VXNCLS, OVXCLS, GVZCLS, STLFSI4, NFCI]
+      commodities: [DCOILWTICO, DCOILBRENTEU, DHHNGSP]   # GOLDAMGBD228NLBM removed: FRED discontinued it (LBMA, 2022); gold via GC=F futures
+  monthly:
+    source: fred
+    series: [CPIAUCSL, CPILFESL, PCEPILFE, UNRATE, PAYEMS, INDPRO, M2SL, UMCSENT, HOUST, RSAFS, ICSA]
+
+# ---------------------------------------------------------------------------------------------------------------------
+# ETF-HISTORY-PIPELINE sections (lane ETF-HISTORY-PIPELINE; PR #22136). The Alpaca bar-pull SPEC for scripts/ops/fetch_etf_history.py
+# (WHAT it collects and how) and the option-snapshot underlyings for scripts/ops/capture_options_snapshot.py.
+# Read by scripts/ops/data_universe.py. `us_equity` above is the lake's ENUMERATION rule; this section is the concrete pull list the
+# runner executes: curated ETFs + point-in-time S&P 500 (removed names kept). `scripts/ops/fetch_etf_history.py --universe-snapshot
+# <csv>` additionally unions every symbol in a dated lake snapshot (universe/us_equity/<date>.csv) so 1h covers EVERY listed ETF.
+# ---------------------------------------------------------------------------------------------------------------------
+us_equity_bars:
   start: "2016-01-04"        # Alpaca stock-bar history starts here
   timeframes: ["1h", "5m"]
   # Series refreshed first and graded in the human-readable depth table: everything the alpaca_*/ib_* legs trade + the liquid set.
@@ -49,13 +153,3 @@ options:
   expiries: 3
   moneyness: 0.06
 
-futures:
-  # Owned by pipeline row PI-20261101-ETFHIST-0001 (IB gateway, live VM only); listed here so the universe lives in one place.
-  cme_micros_minis: [MES, MNQ, M2K, MYM, ES, NQ, RTY, YM]
-  comex: [MGC, GC, SIL, SI, MHG, HG]
-  nymex: [MCL, CL, QG, NG]
-  rates_fx_ags: [ZN, ZB, ZF, ZT, 6E, 6J, 6B, ZC, ZS, ZW]
-
-crypto:
-  # Owned by lane ML-FEATURE-INFRA (the perp archive store). Operator 2026-11-01: widen from 60 to ALL Binance USD-M perps with history.
-  owner: ML-FEATURE-INFRA

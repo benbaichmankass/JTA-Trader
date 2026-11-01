@@ -122,7 +122,7 @@ def main(argv: List[str] | None = None) -> int:
     a = ap.parse_args(argv)
     root = Path(a.root)
     u = du.load(a.universe)
-    tfs = [t for t in a.tfs.split(",") if t] if a.tfs else list((u.get("equities") or {}).get("timeframes") or ["1h", "5m"])
+    tfs = [t for t in a.tfs.split(",") if t] if a.tfs else list((u.get("us_equity_bars") or {}).get("timeframes") or ["1h", "5m"])
     mp = root / "MANIFEST.json"
     manifest = json.loads(mp.read_text()) if mp.exists() else {"series": {}}
     now = datetime.now(timezone.utc)
@@ -130,7 +130,7 @@ def main(argv: List[str] | None = None) -> int:
     extra = deep(root, rows) if a.deep else []
     for line in summarize(rows, tfs):
         print(line)
-    core = set((u.get("equities") or {}).get("core") or [])
+    core = set((u.get("us_equity_bars") or {}).get("core") or [])
     shown = rows if a.all else [r for r in rows if r["symbol"] in core]
     if a.table:
         print("\n".join(table(shown)))

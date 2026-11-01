@@ -16,8 +16,9 @@ around). WHOLE TREE, not diff-scoped: the books are the population.
 REFUSES (exit 1):
   R-DUAL-BOOK      a production leg (on bybit_2 / alpaca_live / ib_live) that is also on a general paper
                    roster (bybit_1 / alpaca_paper / ib_paper) — the duplicate trade this model removes.
-  R-NO-MIRROR      a production leg its real-money account's mirror does not carry (minus the declared
-                   affordability carve-out), or a real-money account with legs and no mirror (ib_live).
+  R-NO-MIRROR      a production leg its real-money account's mirror does not carry (an affordability proxy
+                   is carried as its full-size underlying, strategy_status.MIRROR_PROXY_UNDERLYING; operator
+                   2026-11-01), or a real-money account with legs and no mirror (ib_live).
   R-INACTIVE-ROSTERED  a leg retired by record (``enabled: false``) still on ANY roster.
   R-UNHOMED        a non-retired leg on neither book (it trades nowhere and is not retired) — unless it
                    is named in UNHOMED below with its reason and owning row. A demotion that drops a leg
@@ -69,8 +70,9 @@ def findings(accounts: Dict[str, Any], strategies: Dict[str, Any]) -> List[str]:
             if dual:
                 out.append(f"R-DUAL-BOOK {leg} is production ({real}) and also on general paper {dual}: "
                            f"remove it from {dual} (promotion MOVES a leg; OPERATING-PLAN § 2)")
-            if mirror and leg not in ros.get(mirror, []) and leg not in st.MIRROR_CARVE_OUT.get(mirror, ()):
-                out.append(f"R-NO-MIRROR {leg} is on {real} but not on its mirror {mirror}")
+            want = st.MIRROR_PROXY_UNDERLYING.get(mirror or "", {}).get(leg, leg)
+            if mirror and want not in ros.get(mirror, []):
+                out.append(f"R-NO-MIRROR {leg} is on {real} but its mirror {mirror} does not carry {want}")
     for leg, acct in sorted(DUAL_BOOK_EXCEPTIONS.items()):
         if not (leg in ros.get(acct, []) and any(leg in ros.get(r, []) for r in st.REAL_MONEY_MIRROR)):
             out.append(f"R-STALE-EXCEPTION {leg} is named in DUAL_BOOK_EXCEPTIONS but is not on both {acct} and "
@@ -104,7 +106,7 @@ def self_test() -> int:
     strat = {"a": {}, "p": {}, "r": {"enabled": False}, "iaum_pullback_1d": {}}
     clean = {"bybit_1": {"strategies": ["a"]}, "bybit_2": {"strategies": ["p"]},
              "bybit_portfolio": {"strategies": ["p"]}, "alpaca_live": {"strategies": ["iaum_pullback_1d"]},
-             "alpaca_portfolio": {"strategies": []}, "alpaca_paper": {"strategies": ["iaum_pullback_1d"]}}
+             "alpaca_portfolio": {"strategies": ["gld_pullback_1d"]}, "alpaca_paper": {"strategies": ["iaum_pullback_1d"]}}
     ck("a clean tree passes (positive control)", findings(clean, strat) == [])
     dual = {**clean, "bybit_1": {"strategies": ["a", "p"]}}
     ck("a production leg left on general paper is refused (R-DUAL-BOOK)",
@@ -112,8 +114,10 @@ def self_test() -> int:
     nomir = {**clean, "bybit_portfolio": {"strategies": []}}
     ck("a production leg its mirror lacks is refused (R-NO-MIRROR)",
        any(f.startswith("R-NO-MIRROR p") for f in findings(nomir, strat)))
-    ck("the declared affordability carve-out is not a missing mirror",
+    ck("a proxy mirrored by its underlying is not a missing mirror",
        not any("iaum" in f for f in findings(clean, strat)))
+    ck("a proxy whose underlying the mirror lacks is refused (operator 2026-11-01: superset, never dropped)",
+       any(f.startswith("R-NO-MIRROR iaum") for f in findings({**clean, "alpaca_portfolio": {"strategies": []}}, strat)))
     ib = {**clean, "ib_live": {"strategies": ["a"]}}
     ck("a real-money account with no mirror account is refused", any("ib_live" in f for f in findings(ib, strat)))
     ret = {**clean, "bybit_1": {"strategies": ["a", "r"]}}
