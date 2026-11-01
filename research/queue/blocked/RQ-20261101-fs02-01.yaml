@@ -1,0 +1,90 @@
+# Hand-authored 2026-11-01 by lane ML-FEATURE-INFRA (Tier 1). Decision rule registered BEFORE any run. Gates: none.
+id: RQ-20261101-fs02-01
+title: 'ENTRY v2 on the expanded feature set: the pooled 60-perp recipe of c692-01 with the feature families ADMITTED by RQ-20261101-fs01-01, fit on all data through 2026-09-30, read ONCE on the forward window 2026-10-01..2026-10-31 -- does held-out mean net R per decision stay >= 0?'
+status: blocked
+cadence: once
+theme: ml_health
+priority: 1
+roadmap:
+- L-ML-LIVE
+kind: experiment
+practice_precedent: 'T1, M6 (docs/reference/trading-and-model-practice-principles.md): purged + embargoed walk-forward with a sealed forward window; one model, one read (ML-BAR-ONE-READ, DESIGN.md section 1c).'
+question: 'As RQ-20261101-c692-01 (universe, decision grid, 2/3 ATR 24h reference bracket, full cost stack, LightGBM parameters, per-side regressors, tau grid and rule) with exactly two changes: (1) the feature set is the 20 baseline columns plus every family the rule of RQ-20261101-fs01-01 ADMITS (taken from that record; if none is admitted the unit is NOT RUN and the manager is told that 20 was sufficient); (2) training uses all rows through 2026-09-30 minus a 7-day embargo (the c692-01 held-out year is now development), tau chosen on dev folds, and the single read is W1 = 2026-10-01..2026-10-31. The frozen c692-01 model is scored on W1 beside it as a reported reference.'
+why_this_matters: 'Operator 2026-11-01: 20 features is a regression equation, not algorithmic trading; ENTRY iteration is a timeline in hours. This is the first forward read of a richer model.'
+power:
+  expected_n: 950
+  min_detectable_effect: 0.06
+  effect_units: metric
+  sd: 1.0
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: 'INFERRED: c692-01 produced 11,240 scored held-out decisions over 365 days (about 31 per day), so a 31-day window gives about 950. sd about 1 R. The operator bar is a point estimate (>= 0), not a test against 0; n >= 300 keeps the SE near 0.06 R.'
+  feasibility:
+    source: none
+    accrual_basis: Replays public history through 2026-10-31; nothing accrues for this window. Later windows accrue at about 31 decisions per day.
+decision_rule:
+  id: RULE-RQ20261101-FS02-01-ENTRY-V2
+  registered_at: '2026-11-01'
+  registered_before_run: true
+  statistic: 'Held-out mean net R per taken decision on W1, n, distinct symbols; reported: bootstrap CI95, ex-max-symbol mean, matched random 200 draws, always-long, the frozen c692-01 model on the same window, feature families used and their present share, variants read on W1 (this unit: 1).'
+  rule: 'INDETERMINATE IF no tau reaches dev n >= 1000, OR W1 n < 300, OR W1 distinct symbols < 10, OR fs01-01 has no record. PASS IF W1 mean net R per decision >= 0 (operator bar: point estimate). FAIL otherwise. A PASS makes this the candidate that replaces v1 in ML-ENTRY-LIVE-ADAPTER after RQ-20261101-c692-06-style symbol check and serve-parity (ML-FS-SERVE-PARITY); a FAIL with v1 PASS is reported with both records. Thresholds are not changed after any result.'
+  what_it_does_not_do: No sizing, no config change, no order, no promotion.
+  min_n: 300 forward decisions on >= 10 symbols
+compute: cpu_long
+value:
+  bucket: ai_trader
+  usd_at_stake_per_month: 800
+  confidence: 0.2
+  basis: 'stand-in: the operator priority-1 goal (ML decision makers on real money); not a P&L measurement.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 8.0
+  est_minutes: 75
+  why_runner: Keyless public Binance Vision archives; GBDT on CPU.
+  basis: 'INFERRED from c692-05 (60 min per recipe) plus a larger feature matrix.'
+run:
+  workflow: research-script-run.yml
+  command:
+  - python3
+  - scripts/research/ml_decision_entry.py
+  - run-v2-forward
+  - --cache
+  - /tmp/ml_decision_klines
+  - --unit
+  - '{unit}'
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 300
+  inputs:
+    research_unit: RQ-20261101-fs02-01
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- ML-FS-ENTRY-V2
+- RQ-20261101-fs01-01
+- RQ-20261101-c692-01
+- docs/research/ml-feature-inventory-2026-11-01.md
+what_it_does_not_do: Registers, serves or promotes nothing; changes no config; places no order; sizes nothing; reads no window other than W1.
+blocked_on:
+- kind: unit
+  ref: RQ-20261101-fs01-01
+  what: the dev-fold ablation record that fixes the feature set (planned 2026-11-01T14:15Z)
+  clears_when: its result record lands on main; this file is then git-mv'd to research/queue/ with status queued (rule unchanged)
+- kind: harness
+  ref: scripts/research/ml_decision_entry.py run-v2-forward
+  what: the single-read forward subcommand, refusing any window except W1
+  clears_when: lands with a self-test that refuses a second read of W1 (HOLDOUT-LOCK semantics)
+ml_consumer:
+  consumer: ML-ENTRY-LIVE-ADAPTER
+  decision: 'whether ENTRY v2 replaces v1 in the held ml_entry adapter PR (#22079) after the symbol check and serve parity'
+  legs:
+  - xrp_pullback_2h
+  - trend_donchian_eth_4h
+  - trend_donchian_xrp_4h
+  - ada_pullback_2h
+  - trend_donchian_sol_prop
+  book: money
