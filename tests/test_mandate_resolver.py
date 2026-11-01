@@ -1416,3 +1416,54 @@ def test_a_leg_retired_by_record_may_leave_the_floor_demo_floor(repo, monkeypatc
 
 def test_unreadable_strategies_is_not_a_retirement_demo_floor(tmp_path):
     assert mr._retired_by_record(tmp_path, LEG) is False
+
+
+# ── PROMOTION-NO-SOAK (operator, 2026-11-01): mechanics_proven replaces a paper soak ────────────
+MECH_AMENDED = {"mandates": [
+    dict(x, bar=dict(x["bar"], mechanics_proven=True)) if x.get("id") == "MD-PROMOTE-S1-S2" else x
+    for x in AMENDED["mandates"]], "proposed": []}
+
+
+def _mech_repo(repo, *, other_passed=True, delta="none", on_soak_roster=False):
+    root = repo(mandates=MECH_AMENDED, r3=_r3({LEG: "insufficient_n"}))
+    accts = yaml.safe_load((root / mr.ACCOUNTS_REL).read_text())
+    legs = accts["accounts"]["bybit_1"]["strategies"]
+    if not on_soak_roster and LEG in legs:
+        legs.remove(LEG)
+    (root / mr.ACCOUNTS_REL).write_text(yaml.safe_dump(accts))
+    other = {"id": "SOAK-stage1-bybit_1-other_leg", "leg": "other_leg", "account": "bybit_1", "kind": "stage1"}
+    if other_passed:
+        other["disposition"] = {"verdict": "PASS", "decided_at": "2026-10-20", "trades": [1], "evidence": [], "reason": "r"}
+    _w(root, mr.SOAKS_REL, {"soaks": [other]})
+    reg = {"legs": {LEG: {"path": "p1", "exchange": "bybit", "delta": delta},
+                    "other_leg": {"path": "p1", "exchange": "bybit", "delta": "none"}}}
+    _w(root, "config/mechanics_paths.yaml", reg, as_yaml=True)
+    (root / R3_DATED.replace(".json", "__rows.jsonl")).write_text(_rows())
+    return root
+
+
+def test_no_soak_promotion_fires_when_the_path_is_proven(repo):
+    res = _s1s2(_mech_repo(repo))
+    assert res["verdict"] == "FIRE", res
+    assert res["evidence"]["mechanics"]["basis"] == "path_soak"
+    assert "soak" not in res["evidence"]  # no per-leg soak was consulted
+
+
+def test_no_soak_promotion_needs_data_when_the_path_is_unproven(repo):
+    _needs_data(_s1s2(_mech_repo(repo, other_passed=False)), "R-NOT-SOAKED")
+
+
+def test_new_code_leg_is_not_proven_by_a_path(repo):
+    _needs_data(_s1s2(_mech_repo(repo, delta="new_code")), "R-NOT-SOAKED")
+
+
+def test_mechanics_does_not_waive_the_stage0_record(repo):
+    root = _mech_repo(repo)
+    (root / mr.EVIDENCE_DIR_REL / f"{LEG}.json").unlink()
+    _needs_data(_s1s2(root), "R-RECORD-MISSING")
+
+
+def test_without_the_bar_flag_a_proven_path_does_not_skip_the_soak(repo):
+    root = _mech_repo(repo)
+    _w(root, mr.MANDATES_REL, AMENDED, as_yaml=True)  # AMENDED has no mechanics_proven
+    _needs_data(_s1s2(root), "R-NOT-SOAKED")

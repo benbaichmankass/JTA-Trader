@@ -92,6 +92,8 @@ in-trade form is `RULE-AM-RISK-ADJUSTED-V1`. Point at it; never restate it.
                               ▼  GATE 1  ▼
   STAGE 1   Soak                         bybit_1 · alpaca_paper
             Do the MECHANICS work? (edge was already proven at Stage 0)
+            SKIPPED when the leg's mechanics are already proven (§ "The soak is
+            MECHANICAL", 2026-11-01): Stage 0 -> Gate 2 directly.
             Passes when — the first 1–2 CLEAN trades: the signal fires, the
             order is placed with the right size and side, a real SL and TP
             rest at the venue, management (trail/amend) works, the exit is
@@ -131,7 +133,7 @@ help by cleaning up duplicate trades in the books and creating a more integrated
 - **The status is DERIVED, never declared** (`scripts/ops/strategy_status.py`): inactive = retired by record; production = on a real-money
   roster; testing = otherwise. A `status:` field would be a third gate (CLAUDE.md § "The two execution gates") and a second copy of the
   roster, free to drift from it.
-- **Promotion MOVES a leg.** Gate 2 (`MD-PROMOTE-S1-S2`, human-merge PR) adds it to real money **and** the mirror and removes it from its
+- **Promotion MOVES a leg** (and, when its mechanics are already proven, it MOVES straight from Stage 0 to real money without ever being on general paper — § "The soak is MECHANICAL", 2026-11-01). Gate 2 (`MD-PROMOTE-S1-S2`, human-merge PR) adds it to real money **and** the mirror and removes it from its
   general paper account in the same PR (`mandate_resolver._delta` proposes all three edits). Production legs keep logging every trade on
   real money and the mirror, so general paper loses no record a production leg would have made — except where real money cannot size a
   trade the paper book would (measured below).
@@ -196,13 +198,45 @@ mechanical bugs while we're still improving the actual function."*
 - **Real money is promotion only.** Gate 2 (`MD-PROMOTE-S1-S2`, human-merge PR) and the prop superset gate are unchanged.
 - **Exceptions are named, never silent.** A leg no demo venue can serve (e.g. `xauusd_trend_1h`: OANDA practice is `dry_run` and OANDA US cannot trade XAU_USD) or one blocked by a guard (same-symbol allocation without slices on alpaca_paper) is listed with the reason on its checklist row until the blocker is fixed.
 
-### The soak is MECHANICAL — 1–2 clean trades, no calendar (operator, 2026-10-15, binding)
+### The soak is MECHANICAL — and a leg with proven mechanics skips it (operator, 2026-10-15 and 2026-11-01, binding)
 
 <!-- SOAK-RULE-CANONICAL: the ONE statement of the soak rule. Every other doc points here
      (soak-doctrine-guard CHECK E refuses a live doc or skill that restates a long soak). -->
 
-Verbatim: *"A soak is a mechanical verification that was already proven in backtesting, and nothing
+**Gates this adds or changes:** it REMOVES one — Gate 2 no longer requires a paper soak for a leg whose mechanics are already proven.
+It adds none (`config/mechanics_paths.yaml` is an evidence input to `MD-PROMOTE-S1-S2`, not a switch on what trades).
+
+Verbatim (2026-10-15): *"A soak is a mechanical verification that was already proven in backtesting, and nothing
 needs to soak for more than one or two trades."*
+
+**2026-11-01 — mechanics proven means no paper soak.** Operator directive, verbatim (chat to Manager Session 2026-11-01a, ~07:55Z):
+*"I also want us to, in general, we need to sort of update the process for promotion. Like, not everything really needs to be soaked,
+because if the whole idea is that we're basing the decisions off of the quality of the testing, and we're not using the soaking for
+performance, which we're not, and we shouldn't be, then, like, we don't need to prove everything on, a mechanical soak. If it's not
+using a new training mechanism, then there's no reason, like, if it needs to, it can also be tested on, one very small trade, just to
+make sure that everything works end-to-end, and then, it doesn't need to keep on soaking in paper. If it proved itself on the back test
+and the mechanics are proven, for that, paper and real money are the same, so we can do, fake trade on paper money just to test the
+mechanics and then move it to real money. There's no reason why we need to, watch it trade on paper first if we're confident enough in
+the results, and that is the pipeline here, right? Good testing results, and then we're not, testing things in a real simulation for
+weeks on end, because we just don't have that amount of time for the kind of data that we're generating."*
+
+⚠️ **The manager's reading (the operator can correct it):** "new training mechanism" is read as **new execution mechanism**.
+
+**The rule, in order:**
+1. **Mechanics already proven → straight to real money.** A leg that clears Stage 0 (committed, pre-registered evidence record, net of
+   the full cost stack, holdout) goes to Stage 2 (live + mirror) with NO paper soak when `soak_state.mechanics_proven(leg)` is true.
+   Its first 1–2 live trades are a **named closing observation** on the PR and checklist row (what executes, what it is compared to).
+2. **New mechanics → ONE small end-to-end trade, then real money.** A leg with new code on the order path (new adapter, broker,
+   bracket/management code) proves it with one clean small trade — on paper, or at minimum size on real money — then moves. No extended
+   paper watching. That trade is a soak with `n_needed: 1`.
+3. **Edge is never decided here.** Stage 0 decides edge. Realized cost and live-vs-backtest are monitoring (the mirror's net-of-cost
+   window is the demotion signal). The prop superset below is unchanged. TESTING legs that have not cleared Stage 0 stay on the demo floor.
+
+**`mechanics_proven` is decided by a script from records, not prose** (`scripts/ops/soak_state.py::mechanics_proven`, read by
+`mandate_resolver` when `MD-PROMOTE-S1-S2`'s `bar.mechanics_proven` is set). True when EITHER (own) the leg's own soak contract reads
+`passed`, OR (path) the leg is registered `delta: none` in `config/mechanics_paths.yaml` and a *different* leg registered on the same
+`path` and `exchange` has a `passed` soak (≥ 1 clean closed trade, graded by `grade_trade`). `delta: new_code` is never proven by a
+path. The registry starts empty; the promoting PR adds the entry, and the resolver verifies it against SOAKS.json.
 
 - **What a soak asks:** do the mechanics work for this leg? Edge was settled offline at Stage 0.
 - **PASS** = the first `n_needed` (1 or 2) CLEAN trades. Clean = the signal fires · the order is placed
@@ -219,16 +253,15 @@ needs to soak for more than one or two trades."*
   account); a passed shadow soak is not a Stage-1 soak. **Live prop trades count** as soak trades.
 - **Where it lives:** contracts `docs/claude/work/SOAKS.json` (a mechanical `checklist`, `n_needed` ≤ 2);
   state `scripts/ops/soak_state.py::soak_states()` (`passed` · `mechanical_fail` · `in_progress` ·
-  `awaiting_first_trade` · `unknown`); guards `soak-contract-guard` (the contracts) and
-  `soak-doctrine-guard` (the docs, skills and generators).
-- **Open:** the granted `MD-PROMOTE-S1-S2` still reads a per-leg R3 `consistent` verdict (a cost sample).
-  Its amendment is PROPOSED in `config/mandates.yaml` (`MD-PROMOTE-S1-S2-SOAK-AMEND`); granting it is the
-  operator's.
+  `awaiting_first_trade` · `unknown`) and `mechanics_proven()`; registry `config/mechanics_paths.yaml`; guards
+  `soak-contract-guard` (the contracts and the registry's shape) and `soak-doctrine-guard` (the docs, skills and generators).
+- **Open:** the 2026-11-01 amendment of `MD-PROMOTE-S1-S2` (`bar.mechanics_proven`) is Tier 3 and lands only on the operator's yes.
+
 - **Exception — a config-only improvement to an existing, already-live strategy (operator, 2026-10-18,
   binding).** Verbatim: *"in general, yes, things need to pass a mechanical test on paper, but if it's an
   improvement like this to an existing strategy, and it's just configuration that's already based on, like,
   the theory that's proven itself, then we should move forward with that and just monitor the first trades
-  to make sure that they execute correctly."* So a change that is **configuration only** on a leg that is
+  to make sure that they execute correctly."* This is the `delta: none` case of the rule above, generalised from config-only to any proven path. So a change that is **configuration only** on a leg that is
   **already live**, backed by a **committed, pre-registered evidence record** (net of the full cost stack,
   clearing a rule registered before the run), goes live directly — no soak alias, no separate soak stage —
   and its **first 1–2 live trades are monitored** for correct execution. The monitoring is a named closing
@@ -236,6 +269,7 @@ needs to soak for more than one or two trades."*
   there is a mechanical fault like any other (fix it, or revert the config). **New strategies and new code
   paths still soak** as above; so does anything that needs code to run. This relaxes the *placement* of the
   mechanical check (live, watched), not the evidence bar, and it does not touch the prop superset below.
+
 - **The Claude desk (`claude_desk`): one passed paper/demo soak covers later packet, brief and symbol changes
   (operator, chat 2026-10-27 ~16:00Z, binding).** Verbatim: *"once the demo soak is placed now, that on the paper
   accounts, that's good enough. That's the same as passing a soak once there's an edge, because the mechanics are

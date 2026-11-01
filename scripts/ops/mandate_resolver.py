@@ -980,7 +980,14 @@ def _add_risk(leg: str, frm: str, to: str, account: str, exchange: str,
     if not isinstance(bar, dict) or not isinstance(cap, dict):
         raise _Refuse("R-MANDATE-NOT-GRANTED", f"{m['id']} does not state its `bar:` and `cap:`")
 
-    if (frm, to) == ("S1", "S2"):
+    # PROMOTION-NO-SOAK (operator, 2026-11-01; OPERATING-PLAN § 2 "The soak is MECHANICAL"): a leg whose
+    # execution mechanics are already proven (soak_state.mechanics_proven, from records) skips the paper soak.
+    # Only an entry whose `bar:` states `mechanics_proven: true` reads this; the Stage-0 bar below is untouched.
+    mech = None
+    if (frm, to) == ("S1", "S2") and bar.get("mechanics_proven"):
+        mech = _mechanics_proven(leg, root, m, acfg)
+        ctx["evidence"]["mechanics"] = mech
+    if (frm, to) == ("S1", "S2") and not (mech and mech.get("proven")):
         soak = SOAK_ACCOUNT.get(exchange)
         if not soak or leg not in rosters.get(soak, {}).get("legs", []):
             raise _NeedsData("R-NOT-SOAKED", f"{leg} is not on the Stage-1 soak roster {soak!r}; "
@@ -1299,6 +1306,25 @@ COST_BASIS_VENUE_SYMBOL = "venue_symbol"
 #: R3 row account_class -> the basis R3 names its cells by. Real money first:
 #: a real fill is the venue's cost; a demo fill is a simulator's.
 VENUE_BASIS_ORDER = (("real_money", "market"), ("paper", "simulator"))
+
+
+def _mechanics_proven(leg: str, root: Path, m: Dict[str, Any], acfg: Dict[str, Any]) -> Dict[str, Any]:
+    """soak_state.mechanics_proven over the records the resolver may read: SOAKS.json PASS dispositions
+    plus the newest fresh committed soak snapshot (the resolver never opens the live journal)."""
+    import soak_state as ss  # noqa: PLC0415
+    states: List[Dict[str, Any]] = []
+    doc = _json(root / SOAKS_REL)
+    for c in (doc or {}).get("soaks") or []:
+        d = (c or {}).get("disposition") or {}
+        if isinstance(c, dict) and d.get("verdict") == "PASS" and d.get("trades"):
+            states.append({"id": c.get("id"), "leg": c.get("leg"), "account": c.get("account"), "state": "passed"})
+    rel, snap = latest_soak_snapshot(root)
+    if snap is not None:
+        states += [r for r in snap.get("soaks") or [] if isinstance(r, dict)]
+    xo = {a: str((cfg or {}).get("exchange") or "") for a, cfg in acfg.items() if isinstance(cfg, dict)}
+    out = ss.mechanics_proven(leg, states, ss.load_mechanics_paths(root / "config/mechanics_paths.yaml"), xo)
+    out["snapshot"] = rel
+    return out
 
 
 def _soak_passed(leg: str, soak: str, m: Dict[str, Any], root: Path,
