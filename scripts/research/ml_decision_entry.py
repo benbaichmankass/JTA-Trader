@@ -200,7 +200,7 @@ def label_symbol(df: pd.DataFrame) -> pd.DataFrame:
     cand = np.where((close_hour % DECISION_EVERY_H == 0) & ~np.isnan(atr))[0]
     cand = cand[cand + H < N]
     # require the H forward bars to be contiguous hourly bars (no data hole)
-    t_ns = ts.astype("int64").to_numpy()
+    t_ns = ts.to_numpy().astype("datetime64[ns]").astype("int64")   # explicit ns: pandas 3 parses to ms units
     contiguous = (t_ns[cand + H] - t_ns[cand]) == H * 3_600_000_000_000
     cand = cand[contiguous]
     win = cand[:, None] + np.arange(1, H + 1)[None, :]
@@ -285,6 +285,8 @@ def build_table(cache: Path, symbols: list[str]) -> pd.DataFrame:
     tab = tab.replace([np.inf, -np.inf], np.nan)
     tab = tab.dropna(subset=["net_long", "net_short", "ret_168", "vol_ratio"]).reset_index(drop=True)
     tab["ts"] = pd.to_datetime(tab["ts"], utc=True)
+    if tab.empty or tab.symbol.nunique() < len(symbols) // 2:
+        raise RuntimeError(f"label table degenerate: rows={len(tab)} symbols={tab.symbol.nunique()} of {len(symbols)}")
     return tab
 
 
