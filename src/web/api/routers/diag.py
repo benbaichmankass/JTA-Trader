@@ -2050,11 +2050,16 @@ def _journalctl_window(cmd: list[str], canonical: str, lines: int,
     available = stopped_early or rc == 0 or (rc == 1 and not stderr)
     out: dict[str, Any] = {**base, "available": available, "returncode": rc, **res}
     if res["truncated"]:
-        out["hint"] = ("matching lines were dropped by the lines= cap (oldest dropped); "
-                       "narrow since/until/grep or raise lines (max %d)" % _MAX_JOURNAL_LINES
-                       if res["lines_dropped"] else
-                       "scan stopped early (%s); counts are LOWER BOUNDS - narrow the window"
-                       % res["read_state"])
+        if res["lines_dropped"]:
+            out["hint"] = (
+                "matching lines were dropped by the lines= cap (oldest dropped); "
+                f"narrow since/until/grep or raise lines (max {_MAX_JOURNAL_LINES})"
+            )
+        else:
+            out["hint"] = (
+                f"scan stopped early ({res['read_state']}); counts are LOWER BOUNDS "
+                "- narrow the window"
+            )
     if not available and stderr:
         out["stderr"] = stderr[:500]
     return out

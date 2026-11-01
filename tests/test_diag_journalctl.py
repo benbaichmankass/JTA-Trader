@@ -13,6 +13,7 @@ Two bugs fixed:
 """
 from __future__ import annotations
 
+from typing import ClassVar
 from unittest.mock import MagicMock, patch
 
 from src.web.api.routers.diag import (
@@ -94,7 +95,7 @@ class _Out:
 
 class _FakePopen:
     """Stands in for subprocess.Popen in WINDOW mode (stdout is streamed)."""
-    last_cmd: list[str] = []
+    last_cmd: ClassVar[list[str]] = []
 
     def __init__(self, cmd, stdout=None, stderr=None, **kw):
         type(self).last_cmd = cmd
@@ -103,7 +104,7 @@ class _FakePopen:
         if type(self).err and stderr is not None:
             stderr.write(type(self).err)
 
-    out_lines: list[str] = []
+    out_lines: ClassVar[list[str]] = []
     rc = 0
     err = ""
 
@@ -232,9 +233,10 @@ def test_window_scan_cap_marks_truncated_lower_bound():
 def test_parse_grep_validation():
     import pytest
     from fastapi import HTTPException
+
     from src.web.api.routers.diag import _parse_grep
     assert _parse_grep(None) is None
     assert _parse_grep("Order_Monitor|FILL") == ["order_monitor", "fill"]
-    for bad in ("", "|", "a;b", "$(x)", "a" * 201, "|".join("x%d" % i for i in range(11))):
+    for bad in ("", "|", "a;b", "$(x)", "a" * 201, "|".join(f"x{i}" for i in range(11))):
         with pytest.raises(HTTPException):
             _parse_grep(bad)

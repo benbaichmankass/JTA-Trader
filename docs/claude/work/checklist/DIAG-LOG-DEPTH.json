@@ -12,8 +12,9 @@
   "prs": [],
   "blocked_on": [],
   "note": "Held PR for manager; Tier-2 (ict-web-api diag router, needs web-api restart). Caps measured from code: journalctl _MAX_JOURNAL_LINES=2000 (-n), log_file _MAX_LIMIT=1000 applied after readlines(); neither marked truncation. Fix: grep= (substring, pre-cap) on both, window streaming on journalctl, truncated + lines_scanned/matched/returned/dropped + read_state on both. VERIFY AFTER DEPLOY (merged != deployed != observed): relay journalctl?unit=ict-trader-live&since=<6h ago>&grep=order_monitor&lines=50 -> lines_scanned > 2000 and a truncated field; log_file?name=audit&lines=5 -> truncated + lines_scanned. Then BACKLOG-DRAIN re-runs its landed_unproven history greps.",
-  "updated_at": "2026-11-01T11:49:04Z",
+  "updated_at": "2026-11-01T12:37:03Z",
   "updated_by": "session_01AFoLuLApF6ZANeNvTGeQ9o",
   "due_by": "2026-11-02",
+  "roadmap": "L-OPS",
   "_seq": 876
 }
