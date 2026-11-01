@@ -39,7 +39,7 @@ page through a fetch tool today; not verified by a purchase or a sample. Alpaca/
 
 | Vendor / product | Depth | Fields | Price read today | Reached? |
 |---|---|---|---|---|
-| **CBOE DataShop — Option EOD Summary** | **Jan 2012 → present**, all OPRA-listed US stocks/ETFs/indices | two snapshots/day (15:45 ET and EOD): bid/ask+size; EOD adds OHLC, volume, VWAP, open interest. **IV and greeks need the optional "Calcs" add-on (15:45 snapshot).** | **no price shown on the page** (cart $0.00 until options chosen; monthly/annual); **has a "Download sample" button** | Page read (200); **sample not downloaded** — the first free step is to pull it and check ETF coverage |
+| **CBOE DataShop — Option EOD Summary** | **Jan 2012 → present**, all OPRA-listed US stocks/ETFs/indices | two snapshots/day (15:45 ET and EOD): bid/ask+size; EOD adds OHLC, volume, VWAP, open interest. **IV and greeks need the optional "Calcs" add-on (15:45 snapshot).** | **no price shown on the page** (cart $0.00 until options chosen; monthly/annual); **has a "Download sample" button** | **Page read AND free sample downloaded 2026-11-01** (anonymous `GET /download/sample/217`, no signup, no payment details; 2.95 MB zip): see sample measurement below |
 | **ORATS** (Delayed Data API) | EOD **2007 →**, >5,000 symbols; 1-minute intraday from Aug 2020 (Intraday plans) | bid/ask, **greeks, ORATS smoothed IV/surfaces**, 500+ indicators; no US equity prices | **$199/mo** Delayed (20k requests); $299 Live; $599 Intraday; $899 All-In; **no free trial**, historical samples at ORATS University | Page read (200); API 403 without key |
 | **Theta Data** | Value 6 y, Standard 10 y, Pro 14 y | Value: 1-minute intervals; Standard/Pro: tick-level NBBO. **Page does not state IV/greeks included** | **$40 / $80 / $160 per month**; no free tier stated | Page read (200) |
 | **Polygon.io (now massive.com)** | not stated | — | **Pricing page read did not show options plans** (footer link `/options` only); not priced | Page redirects (301 to massive.com); options page not read |
@@ -60,3 +60,19 @@ page through a fetch tool today; not verified by a purchase or a sample. Alpaca/
    carries, then decide. ORATS has no trial, so a purchase there is a leap on page claims.
 4. **Not established:** DoltHub `option_chain` per-symbol depth; Alpaca historical option-bars depth; IB option-IV depth; the
    Kaggle/HF archives' ETF coverage. Each has a stated measurement above.
+
+## E. Measurement: CBOE DataShop free sample (downloaded 2026-11-01, anonymous)
+
+`UnderlyingOptionsEODCalcs_2023-08-25.zip` (two CSVs, ~7.3 MB each, differing only in how `^SPX` underlying values are reported, plus a readme).
+**One trading day (2023-08-25). Four underlyings: `^SPX` (19,366 rows), `SPY` (7,630), `TSLA` (4,238), `^VIX` (1,438).** Of our seven
+underlyings **only SPY is present**; QQQ, IWM, GLD, TLT, SLV, USO are absent from the sample (a demo, so this says nothing about the full
+product's coverage — the product page says all OPRA-listed US stocks/ETFs/indices).
+
+Columns (33): underlying_symbol, quote_date, root, expiration, strike, option_type, open/high/low/close, trade_volume; at 15:45 ET:
+bid/ask + sizes, underlying bid/ask, `implied_underlying_price`, `active_underlying_price`, **`implied_volatility_1545`, delta, gamma,
+theta, vega, rho**; at EOD: bid/ask + sizes, underlying bid/ask; `vwap`, `open_interest`, `delivery_code`.
+SPY on that day: **29 expiries (2023-08-25 → 2025-12-19), full strike ladder**, IV non-zero on **85% (cgi file) / 91% (no_cgi file)** of
+rows (zero = no IV computed), trade_volume > 0 on 3,501 of 7,630 rows, open interest populated. **So the Calcs add-on does carry IV and
+greeks at contract level for SPY, on the whole chain, plus open interest — richer than anything free above.** Not measured: the price of
+the full history, whether our other ETFs are in it, and any licence restriction on redistribution/ML use (readme points to the product
+specification; not read).
