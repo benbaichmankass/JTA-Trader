@@ -51,7 +51,10 @@ def test_yaml_declares_the_desk_slice_and_the_leg_scope_is_all_six():
     # the declared slice is bybit_1's only: the other two desk books (DESK-PAPER-ACCOUNTS) have no slice support
     assert sorted(a for a, c in acc.items() if "claude_desk" in (c.get("strategies") or [])) == [
         "alpaca_paper", "bybit_1", "ib_paper"]
-    assert [a for a, c in acc.items() if c.get("position_model") == "slices"] == ["bybit_1"]
+    # bybit_2 + bybit_portfolio gained slice support 2026-11-01 (operator "Slices on bybit_2 (Rec.)") but roster no
+    # desk leg: of the desk books, only bybit_1 has slice support, so the declared slice stays bybit_1's alone.
+    desk_books = {a for a, c in acc.items() if "claude_desk" in (c.get("strategies") or [])}
+    assert sorted(a for a in desk_books if acc[a].get("position_model") == "slices") == ["bybit_1"]
 
 
 def test_loader_reads_the_real_file():
