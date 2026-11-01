@@ -2,7 +2,7 @@
 # wiring: scripts/ci/run_guards.py (--self-test) + .github/workflows/grading-freshness-alert.yml (daily, prints the table)
 """Is every grader's grade FRESH, and does it drive an action? (row GRADE-EVERYTHING-CONTINUOUSLY, 2026-11-01)
 
-Reads docs/reference/grader-registry.yaml. ALERT-ONLY, like check_grading_freshness.py: the default prints a table and
+Reads scripts/ci/grader_registry.yaml. ALERT-ONLY, like check_grading_freshness.py: the default prints a table and
 GitHub ``::warning::`` annotations and ALWAYS exits 0; ``--strict`` exits 1 (stale / no grader) or 2 (could not look).
 It grades nothing, gates nothing, blocks no PR and no trade. Gates this adds or changes: none.
 
@@ -22,7 +22,7 @@ from typing import Optional
 import yaml
 
 REPO = Path(__file__).resolve().parents[2]
-REGISTRY = REPO / "docs" / "reference" / "grader-registry.yaml"
+REGISTRY = REPO / "scripts" / "ci" / "grader_registry.yaml"
 FRESH, STALE, COULD_NOT_LOOK, NO_GRADER = "FRESH", "STALE", "COULD_NOT_LOOK", "NO_GRADER"
 
 

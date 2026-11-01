@@ -15,7 +15,7 @@ spec.loader.exec_module(gf)
 
 
 def _reg():
-    return yaml.safe_load((REPO / "docs/reference/grader-registry.yaml").read_text())["graders"]
+    return yaml.safe_load((REPO / "scripts/ci/grader_registry.yaml").read_text())["graders"]
 
 
 def test_self_test_passes():

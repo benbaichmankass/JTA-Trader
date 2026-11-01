@@ -1925,7 +1925,7 @@ GUARDS: List[Dict[str, Any]] = [
     },
     {
         # GRADE-EVERYTHING-CONTINUOUSLY (2026-11-01): every grader's store is fresh and names the action it drives
-        # (docs/reference/grader-registry.yaml). ALERT-ONLY like grading-freshness: prints ::warning::, exits 0.
+        # (scripts/ci/grader_registry.yaml). ALERT-ONLY like grading-freshness: prints ::warning::, exits 0.
         "name": "grader-freshness",
         "when": None,
         "steps": [
