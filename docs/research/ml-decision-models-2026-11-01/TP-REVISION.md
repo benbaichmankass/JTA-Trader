@@ -57,3 +57,25 @@ class at the resting TP, Δ split by pull-in / extend, by side, policy and basel
 PASS → `ml_entry.monitor()` returns `{tp, tp_reason}` from this model through `src/runtime/tp_revision.py` (parity-tested
 against the harness), the two `ml_entry` lines leave `scripts/ci/check_tp_doctrine.py`; a HELD Tier-3 PR. FAIL → the result
 names the next lever, filed as a unit or row that the debt lines then point at.
+
+## 6. RESULT (2026-11-01, the one read) — PASS under the registered rule, a thin one
+Record: `research/results/RQ-20261101-383f-01/local-20261101T1030Z.jsonl` (summary + dev under
+`comms/research/RQ-20261101-383f-01/local-20261101T1030Z/`). MEASURED, forward 2026-10 (868 ml_entry trades, 49 symbols):
+
+| | mean net R / trade |
+|---|---|
+| fixed 3 ATR TP (baseline, as ml_entry trades) | −0.0193 |
+| moving TP, margin 0.05 (dev-chosen) | −0.0112 |
+| **Δ per trade (the rule)** | **+0.0081** (394 trades moved, 560 moves: 300 extend / 260 pull-in) |
+| matched random TP moves, 200 draws | −0.0071 mean, p95 +0.0096 → policy at the 93rd percentile |
+| best static TP chosen on dev | 3.0 ATR = the baseline (Δ 0) |
+
+- **Reported, not gating, and they matter:** the trade-bootstrap CI of Δ is [−0.022, +0.039] (spans 0), and the policy does not clear
+  the matched-random p95. The point estimate clears the operator's bar; the evidence that it beats random TP moves is weak.
+- **Where the Δ comes from:** trades whose first move was an EXTEND: n = 296, +0.029; first move PULL-IN: n = 98, −0.017. Longs
+  (n = 137) −0.024, shorts (n = 731) +0.014. Dev (72,906 trades with a check-in, 2022-01..2026-09) at m = 0.05: +0.0038.
+- **Calibration at 3 ATR** (2,886 forward check-ins) beats climatology on every first-passage class (Brier: target_first 0.138 vs
+  0.246, stop_first 0.126 vs 0.174, timeout 0.150 vs 0.224). Ties: 198 resolved from 1m, 6 `still_ambiguous` (SL).
+- The October baseline itself is negative (−0.019 R/trade) — ENTRY's forward month, reported; this unit does not grade ENTRY.
+- **Next lever** (filed as a unit, not a gate): the pull-in half loses on both dev and forward. An EXTEND-ONLY variant is a NEW variant
+  and needs a fresh window (November 2026 forward) under ML-BAR-ONE-READ.
