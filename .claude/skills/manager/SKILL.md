@@ -632,7 +632,7 @@ gated"). **Put in the prompt any other canonical section the lane's task needs**
 
 Stated once: [`OPERATING-PLAN` § 2 "The soak is MECHANICAL"](../../../docs/plans/OPERATING-PLAN-2026-09-21.md) — never restate it in a
 dispatch, row note or contract. A Stage-1 placement needs a contract in `docs/claude/work/SOAKS.json` (`soak_state.py --backfill`). Per live
-state: `passed` → promotion candidate, run `MD-PROMOTE-S1-S2` · `mechanical_fail` → dispatch the fix, the next clean trades re-soak it ·
+state: `passed` → promotion candidate, run `MD-PROMOTE-S1-S2` (a `mechanics_proven` leg is a candidate with no contract at all, 2026-11-01) · `mechanical_fail` → dispatch the fix, the next clean trades re-soak it ·
 `awaiting_first_trade` / `in_progress` → nothing, no deadline · `unknown` → we could not look; find out why. A grade's `kill` calls are
 applied under `MD-DEMOTE-S1-OFF` / `MD-KILL-QUESTION` or filed with a reason, never just read.
 
@@ -703,7 +703,7 @@ control · V4 round-trips (trigger id, assistant evidence, lane id) · V5 operat
 ## The ladder the manager is moving things along
 
 Stage 0 backtest (edge net of the FULL cost stack) → Gate 1 → Stage 1 soak (`bybit_1` · `alpaca_paper`; MECHANICS on 1–2 clean trades,
-2026-10-15) → Gate 2 → Stage 2 live + mirror (identical rosters and trades; the mirror's net-of-cost window is the DEMOTION signal).
+2026-10-15; SKIPPED when `mechanics_proven`, 2026-11-01 — OPERATING-PLAN § 2 "The soak is MECHANICAL") → Gate 2 → Stage 2 live + mirror (identical rosters and trades; the mirror's net-of-cost window is the DEMOTION signal).
 **Edge is decided offline; a book only checks mechanics and cost** — a lane proposing Stage 2 on live-book evidence is a category error.
 Canonical: CLAUDE.md § "The promotion ladder".
 

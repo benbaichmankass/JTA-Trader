@@ -1,0 +1,22 @@
+{
+  "id": "ML-DECISION-MODELS",
+  "title": "Three market-context ML decision models live on real money ASAP: (1) ENTRY (take a long/short now or not, over a designated horizon), (2) BRACKETS (SL/TP at entry), (3) MANAGE (hold / adjust bracket / close at each check-in). One model per question pooled across symbols, not one per symbol; not tied to a strategy and not grading a strategy's decisions; NO position sizing (RiskManager owns it)",
+  "phase": null,
+  "state": "in_flight",
+  "owner": null,
+  "lane": "session_01AFoLuKpnjMPskKhfM39cy7",
+  "model": "claude-opus-5-5",
+  "ceiling_usd": 25,
+  "spend_usd": null,
+  "tier": 3,
+  "prs": [],
+  "blocked_on": [],
+  "note": "OPERATOR 2026-11-01 ~07:40Z (chat to Manager Session 2026-11-01a), verbatim excerpts: \"I want to make sure that we are focused on getting MLs that are decision makers live ... models that don't choose like entries and then make decisions for like brackets and then either a hold, adjust, or close decision ... Let's break it down to those first stages. No position sizing. We keep on defaulting to that. We already have a risk manager.\" / \"preferably not having like one model for each specific symbol, but rather like one model for like each question that also like shouldn't be based on like just one strategy and like grading the strategy's decisions. It should like be freely making decisions based on a market context over like designated time periods.\" / \"I want that live on real money as soon as possible. It doesn't need to prove an edge, it needs to prove that it won't lose money\" / \"we need to have the plan to get those models live, and then we need to understand what we're not doing correctly and why this is so difficult\". POPUP ANSWERS same turn, verbatim: live bar \"Point estimate >= 0\" (= held-out mean net R per decision >= 0 net of the FULL cost stack, no CI bound, rule registered before the run); path \"Straight to real money\" (skip the bybit_1 demo trades; bybit_2 + its mirror at the RiskManager default risk; the mirror net-of-cost window remains the demotion signal); lanes \"Add it as a 2nd lane (Rec.)\" (over the spend_meter 1-lane target, reported); research \"Decision models first (Rec.)\" (runner keeps running lever units; every new Claude research lane and new unit this week goes to the three decision models; no new lever transfers authored). This operator answer is the Tier-3 approval in principle for a real-money promotion of a model that clears the registered point-estimate bar; the promotion PR itself still names its evidence record. Supersedes the sizing/veto framing of ml-live-promotion-plan-2026-10-29 P1/P4 for this goal. Gates this adds: none. [manager] Diagnosis to test (manager reading, not yet measured as a finding): every ML line so far labels a STRATEGY's trades (TM-BENCH 2,627 trades of 6 legs; desk 507; meta-label/exit heads per leg), so n is small and the model inherits the strategy's selection; the ML units in the queue are regime-head log-loss bake-offs, none is a decision model. The fix this row tests: bar-level labels from market data on the frozen 60-perp universe (ML-DATA-BROAD-PATHS bp2-f4271084b120), fixed horizons, pooled across symbols. OPERATOR 2026-11-01 ~08:00Z, verbatim, on scope: \"this doesn't supersede the need to continue, like, the strategy research pipeline and improvements, and new strategies. Like, we, in general, just need more. But I do want this focus on the ML to take priority for at least the rest of this week.\" Manager reading: the strategy research pipeline and NEW-strategy research continue; only the one-off lever-transfer tweaks stay low priority; ML takes first claim on new work through the 2026-11-04 reset. Also relayed to the lane 08:16Z: the first-passage label rule (row FORECAST-GRADE-FIRST-PASSAGE).",
+  "priority_rank": 1,
+  "updated_at": "2026-11-01T08:17:49Z",
+  "updated_by": "session_01AFoLuJ1apgy8sfngu4WyNH",
+  "roadmap": [
+    "L-ML-LIVE"
+  ],
+  "_seq": 858
+}
