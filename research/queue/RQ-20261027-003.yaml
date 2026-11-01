@@ -121,3 +121,15 @@ generated:
   params:
     node: P3-Q3-ief-fail
 last_dispatched_at: null
+# iteration block added 2026-11-01 by lane RESEARCH-ITERATE (the unit's registered rule is unchanged)
+iteration:
+  subject: ief_pullback_1d
+  subject_kind: strategy_leg
+  from_result: comms/strategy_evidence/ief_pullback_1d.json
+  verdict_read: indeterminate
+  diagnosis: 'The record reads n=6 OOS trades on a 365 d window (net +1.03 R, approximate: trail-decay levers omitted), so mandate_resolver REFUSES
+    on fidelity and R-N can never be met on one year of a 1d leg. Cause: POWER and fidelity; this unit re-validates the leg as now declared at
+    power over 2006-2025.'
+  hypothesis: measured at power, faithful, the declared leg clears Stage 0
+  attempt: 1
+  due_by: '2026-11-08'

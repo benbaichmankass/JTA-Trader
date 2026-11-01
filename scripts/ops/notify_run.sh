@@ -505,6 +505,15 @@ case "${action}" in
             *) result="FAILED/refused (exit ${exit_code}) — trade still on legacy add-a-leg path"; priority="normal" ;;
         esac
         ;;
+    relabel-package-close-reasons)
+        # 2026-11-01 CLOSE-REASON-XRP-1220: relabel 13 closed packages to their
+        # linked trades' sl/tp. Journal-only; dry-run unless apply:true.
+        tier=2
+        case "${exit_code}" in
+            0) result="ok (dry-run preview or relabelled)"; priority="normal" ;;
+            *) result="FAILED/refused (exit ${exit_code}) -- no package relabelled"; priority="normal" ;;
+        esac
+        ;;
     reattach-stranded-package-legs)
         # 2026-09-10, audit F-39 / MI-241: re-attach the three order_packages
         # rows that were closed while their legs were still OPEN, so

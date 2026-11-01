@@ -2415,7 +2415,10 @@ GUARDS: List[Dict[str, Any]] = [
     {
         "name": "secret-scan",
         "when": None,
-        "steps": [["python3", "scripts/secret_scan.py"]],
+        # CI-THROUGHPUT-20261029: 379 s whole-tree (MEASURED). On a PR scan the files the diff
+        # touches; push / merge_group / dispatch / schedule / --all keep the FULL tree scan.
+        "steps": [{"argv": ["python3", "scripts/secret_scan.py"],
+                   "pr_argv": ["python3", "scripts/secret_scan.py", "--pr-diff", "{pr_diff}"]}],
     },
     {
         "name": "lane-reconcile-guard",

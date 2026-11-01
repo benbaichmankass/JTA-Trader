@@ -1,0 +1,88 @@
+# Hand-authored 2026-11-01 by lane RESEARCH-ITERATE (Tier 1), dispatched by Manager Session 2026-11-01a. ITERATION unit: authored from a written diagnosis of the subject's last result. Decision rule registered BEFORE any run. Gates: none.
+id: RQ-20261101-78fc-08
+title: 'ITERATION 1 of ml-btc-router-cells (fail): do the 6 authored BTC OFF-cells still earn their keep under the current fc-pcv-v2 head, by
+  money in a walk-forward?'
+status: blocked
+cadence: once
+theme: regime
+priority: 1
+roadmap:
+- L-ML-LIVE
+programme: P2
+kind: experiment
+question: In a 6-fold walk-forward, does each authored BTC trend_vol OFF-cell (trend_donchian, ict_scalp_5m, squeeze_breakout_4h) raise its leg's
+  net R vs no cell and beat a matched random cell?
+why_this_matters: 'Operator 2026-11-01 ~12:59Z: "if the data doesn''t pass, it goes back into research for improvments and testing. THere is no
+  other pipeline for underperforming strategies/mls." ml-btc-router-cells is not on real money and had no live research iteration (scripts/research/iteration_orphans.py,
+  2026-11-01).'
+iteration:
+  subject: ml-btc-router-cells
+  subject_kind: ml_model
+  from_result: RQ-20261012-75b2-16
+  verdict_read: fail
+  diagnosis: 'RQ-20261012-75b2-16: BTC 15m holdout macro-F1 lift -0.0001 (no classification skill), yet its cells veto live entries on three bybit_1
+    legs, all three of which FAIL Stage 0 anyway. The cells were authored on an older head; nobody has re-verified them by money under the current
+    one (plan P3 ''re-verify'').'
+  hypothesis: the cells are cosmetic under the current head (no money effect), so they should come off; or one cell still pays
+  attempt: 1
+  due_by: '2026-11-08'
+power:
+  expected_n: 500
+  min_detectable_effect: 0.02
+  effect_units: metric
+  sd: 1.0
+  design: paired
+  alpha: 0.05
+  power: 0.8
+  basis: INFERRED from the source result's population; the rule's own INDETERMINATE floor governs.
+  feasibility:
+    source: none
+    accrual_basis: Replays existing corpora; nothing accrues.
+decision_rule:
+  id: RULE-RQ-20261101-78fc-08
+  registered_at: '2026-11-01'
+  registered_before_run: true
+  statistic: In a 6-fold walk-forward, does each authored BTC trend_vol OFF-cell (trend_donchian, ict_scalp_5m, squeeze_breakout_4h) raise its
+    leg's net R vs no cell and beat a matched random cell?
+  rule: PASS per cell iff net R up in >= 4 of 6 folds AND beats the matched random cell. A failing cell is a data-backed Tier-3 removal proposal
+    (regime-selectivity no-cosmetic-cell rule). Fixed now.
+  what_it_does_not_do: Serves, promotes or applies nothing; changes no config; places no order.
+practice_precedent: 'T1, M6 (docs/reference/trading-and-model-practice-principles.md): purged walk-forward, matched-random control, one pre-registered
+  read.'
+compute: cpu_long
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 8.0
+  est_minutes: 120
+  basis: Estimate; the first run replaces it.
+  why_runner: Replays committed or public corpora on CPU.
+value:
+  usd_at_stake_per_month: 50
+  confidence: 0.15
+  bucket: ai_trader
+  basis: planning weight by money rank; an estimate, not a measurement
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- RESEARCH-ITERATE
+- ML-REGIME-15M-DRIFT
+what_it_does_not_do: Serves, promotes or applies nothing; changes no config; places no order.
+blocked_on:
+- kind: work_item
+  ref: ML-REGIME-15M-DRIFT
+  what: scripts/research/regime_cell_walkforward.py over the current head's shadow scores (row ML-VOL-LABEL-LIVE-VERIFY verifies the replayed
+    vol labels first)
+  clears_when: the replayed labels verify; then git-mv to research/queue/ (rule unchanged)
+intervention_controls:
+  not_applicable: an offline model evaluation; the consumer's own gate applies any action
+ml_consumer:
+  consumer: config/regime_policy.yaml
+  decision: keep or remove each BTC OFF-cell
+  legs:
+  - trend_donchian
+  - ict_scalp_5m
+  - squeeze_breakout_4h
+  book: demo_floor

@@ -149,6 +149,60 @@ def test_positions_miss_unparsed_keeps_detail_and_masked_cells(env):
     assert pe.last_positions_diag("breakout_2")["cells"] == []
 
 
+def test_closed_miss_shape_dump_keeps_its_counts_and_masks_page_text(env):
+    # BREAKOUT-UNRECORDED-1101: an empty_unconfirmed Closed orders read sends exec.js emptyShape lines; the counts the
+    # app computed are the evidence (kept), any page text after them is digit-masked server-side as before.
+    pe.record_event(_dev(), {"event": "positions_miss", "reason": "closed_empty_unconfirmed",
+                             "headers": ["Market", "Side"],
+                             "cells": ["hdr k=7", "L0 sib=1 k=0", "txt=No orders in 30 days", "row k=5 d=6 SOL 17.26 111.39"]})
+    d = pe.last_positions_diag("breakout_2")
+    assert d["cells"] == ["hdr k=7", "L0 sib=1 k=0", "txt=No orders in dd days", "row k=5 d=6 SOL dd.dd ddd.dd"]
+
+
+def test_closed_orders_state_is_recorded_and_named_on_an_unpriced_close(monkeypatch, env):
+    # BREAKOUT-UNRECORDED-1101: every live reconcile close since 2026-10-16 was unpriced with closed_orders [] and no
+    # record of whether the Closed orders view was read at all. The state is now kept and named on the close.
+    jid = _open("prop-manual-cs1")
+    t0 = datetime.now(timezone.utc)
+    for i in range(2):
+        monkeypatch.setattr(rc, "_now", lambda i=i: t0 + timedelta(seconds=90 * i))
+        r = _status([], closed_state="empty_unconfirmed")
+    assert r["reconcile"]["closed_unpriced"] == [str(jid)] and r["reconcile"]["closed_read_state"] == "empty_unconfirmed"
+    close = [f for f in prop_journal.list_fills(account_id="breakout_2") if f["status"] == "closed"][0]
+    assert json.loads(close["raw"])["reconcile"]["closed_read_state"] == "empty_unconfirmed"
+    assert "Closed orders read: empty_unconfirmed" in env[-1]
+    assert json.loads(prop_journal.latest_account_status("breakout_2")["raw"])["closed_orders_state"] == "empty_unconfirmed"
+
+
+@pytest.mark.parametrize("closed,want", [([], "read"), (None, "not_reported")])
+def test_an_app_without_closed_state_reads_read_only_when_it_sent_rows(monkeypatch, closed, want):
+    _open("prop-manual-cs2")
+    r = _status([ETH], closed=closed)
+    assert r["reconcile"]["closed_read_state"] == want
+
+
+def test_annotate_trade_state_labels_opening_rows_of_closed_trades():
+    # the 2026-11-01 misread: an opening row keeps status "open" after its trade closes on a SEPARATE row
+    a = _open("prop-manual-ts1")
+    from src.prop.prop_report import ingest_report
+    c = ingest_report({"kind": "fill", "status": "closed", "account_id": "breakout_2", "ticket_id": "prop-manual-ts1",
+                       "symbol": "ETHUSDT", "direction": "long", "qty": 1.1758, "entry_price": 2527.8,
+                       "exit_price": None, "closed_at": datetime.now(timezone.utc).isoformat(), "reason": "closed_unpriced"})["id"]
+    b = _open("prop-manual-ts2", symbol="SOLUSDT", qty=17.26, entry=111.16, sl=109.7, tp=119.8)
+    fills = prop_journal.list_fills(account_id="breakout_2", limit=500)
+    assert po.annotate_trade_state(fills) == 1
+    by = {f["id"]: f for f in fills}
+    assert (by[a]["status"], by[a]["trade_state"], by[a]["closed_by_fill_id"]) == ("open", "closed", c)
+    assert by[c]["trade_state"] == "closed" and by[b]["trade_state"] == "open" and "closed_by_fill_id" not in by[b]
+
+
+def test_fills_route_carries_trade_state_and_the_open_trade_count():
+    from src.web.api.routers import prop as prop_router
+    _open("prop-manual-ts3")
+    out = prop_router.get_fills(account_id="breakout_2", limit=50)
+    assert out["trade_open_count"] == 1 and out["fills"][0]["trade_state"] == "open"
+
+
 # ---- reconcile ----
 
 def test_matching_positions_change_nothing():

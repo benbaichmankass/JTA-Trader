@@ -284,6 +284,14 @@ path. The registry starts empty; the promoting PR adds the entry, and the resolv
 same strategies and take the same trades at all times (operator, 2026-09-21).
 The mirror is the honest-size read of the live book, not a separate rung.
 
+⚠️ **Alpaca mirror = SUPERSET (operator, 2026-11-01, chat, verbatim):** *"The paper portfolio decision is wrong - it should mirror
+the live account, as per the definition of paper mirror."* and *"The only difference with alpaca mirror is that it also has shorting
+and includes the symbols we can't yet trade on alpaca live, but there's no excuse for that account having nothing/less than alpaca
+live trading, that's a serious process flaw that is unacceptable"*. **Supersedes B2** (strict equality minus the affordability
+proxies, "empty live ⇒ empty mirror"). `alpaca_portfolio` carries every `alpaca_live` leg (each proxy as its full-size underlying),
+trades both sides, and may carry the symbols live cannot yet trade; `tests/test_paper_portfolio_accounts.py` fails on an empty or
+smaller mirror. The Bybit pair stays strict equality.
+
 **Consequence: R4 becomes a DEMOTION gate, not a promotion gate.** A mirror
 that carries identical strategies only ever holds data for legs already live,
 so it cannot gate entry. It gates exit. This is the falsifier the system has
@@ -331,6 +339,7 @@ source; contracts carry both (`sources` in `SOAKS.json`). This PR promotes nothi
   `tests/test_paper_portfolio_accounts.py::test_bybit_portfolio_mirrors_bybit_2_exactly`
   pins the rosters together. `bybit_2`: 6 strategies, `bybit_portfolio`: 6.
 - **The Alpaca mirror is a SUBSET invariant, not an equality one.**
+  ⚠️ **SUPERSEDED 2026-11-01** (operator: the Alpaca mirror is a SUPERSET, § "Stage 2 is one stage"). History:
   ⚠️ **RESOLVED BY B2, 2026-09-21** — the operator chose strict equality and the
   invariant now reads
   `test_alpaca_portfolio_mirrors_alpaca_live_exactly_minus_proxies`. The
@@ -829,7 +838,7 @@ deletion and rewiring; nothing new gets built until C.
 | id | item | who |
 |---|---|---|
 | **B1** | **Invert the execution-gate guard.** Demotion becomes free. A new guard blocks any leg reaching a Stage-2 roster without a fresh evidence record that clears its declared bar. **This is the load-bearing change.** | operator + build lane |
-| **B2** | **Decide what the Alpaca mirror is FOR, then make its invariant say that.** ⚠️ Re-scoped 2026-09-21: the first draft said *"extend the Bybit roster-sync test"* on the false premise that no invariant existed. One does — a deliberate SUBSET assertion (`test_alpaca_portfolio_mirrors_alpaca_live_minus_proxies`) that protects real money and does not make the mirror representative. Live 5 legs vs mirror 14, so Gate 2's demotion signal cannot be read off the mirror's aggregate. The test argues against blind equality during a staged go-live and that argument must be answered, not overwritten. | operator + build lane |
+| **B2** | ⚠️ **SUPERSEDED 2026-11-01 (operator: Alpaca mirror is a superset of alpaca_live, two-sided).** **Decide what the Alpaca mirror is FOR, then make its invariant say that.** ⚠️ Re-scoped 2026-09-21: the first draft said *"extend the Bybit roster-sync test"* on the false premise that no invariant existed. One does — a deliberate SUBSET assertion (`test_alpaca_portfolio_mirrors_alpaca_live_minus_proxies`) that protects real money and does not make the mirror representative. Live 5 legs vs mirror 14, so Gate 2's demotion signal cannot be read off the mirror's aggregate. The test argues against blind equality during a staged go-live and that argument must be answered, not overwritten. | operator + build lane |
 | **B3** | **R4 as the demotion gate.** Flip to enforcing, pointed at demotion rather than promotion. Recommended 2026-07-30, built, shipped observe-only, never armed. | operator + build lane |
 | **B4** | **Re-scope the review packet.** Grade Stage 2 on money and Stage 1 on mechanics (§ 2 "The soak is MECHANICAL"; cost fidelity is monitoring). Without this it keeps grading 52 legs against a 20-trade floor and emitting nothing, forever. | build lane |
 | **B5** | **The mandate mechanism** (`config/mandates.yaml` + a resolver + a guard). A standing authorization the operator grants ONCE that lets the system act inside stated bounds without asking again. `direction: derisk_only` mandates carry no rate ceiling because their worst case is trading less than we could; `add_risk` mandates carry a hard cap on total risk added, a per-leg size bound and a count. Every action records which mandate authorized it. **Pairs with B1** — the guard that requires evidence before a Stage-2 roster is the same guard that reads what is already authorized. | operator + build lane |

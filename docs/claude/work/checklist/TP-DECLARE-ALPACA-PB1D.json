@@ -2,7 +2,7 @@
   "id": "TP-DECLARE-ALPACA-PB1D",
   "title": "Declare tp_r 3.5 as the predictive TP of the 1d pullback family (slv/ief/iaum alpaca_live+portfolio; gdx/tlt/gld paper), replacing the 50 R sentinel",
   "phase": "now",
-  "state": "landed_unproven",
+  "state": "queued",
   "owner": "manager",
   "lane": null,
   "model": null,
@@ -13,17 +13,17 @@
     19479
   ],
   "blocked_on": [],
-  "note": "Population: n=326 trades of the 1d pullback family, n=133 out-of-sample, window 2018-02-01 to 2026-10-15 (RQ-20261016-014). [2026-10-22 ~06:40Z OPERATOR DECISION, Thursday walk-through popup, relayed by manager session_01CSwhZWiw15rVCkjsJ8Cpuh] \"Declare 3.5R (Recommended)\". Executed by lane OPERATOR-DECISIONS-1022 (ief now paper-only after #19403).",
+  "note": "Population: n=326 trades of the 1d pullback family, n=133 out-of-sample, window 2018-02-01 to 2026-10-15 (RQ-20261016-014). [2026-10-22 ~06:40Z OPERATOR DECISION, Thursday walk-through popup, relayed by manager session_01CSwhZWiw15rVCkjsJ8Cpuh] \"Declare 3.5R (Recommended)\". Executed by lane OPERATOR-DECISIONS-1022 (ief now paper-only after #19403). | [BACKLOG-DRAIN 2026-11-01] REOPEN: FAILED on n=1. order_packages latest 400: the only *_pullback_1d package created after 2026-10-22T09:55Z is gdx_pullback_1d 2026-10-28T19:35 (short, status rejected, paper): meta tp_r=3.5 but tp=74.855 vs entry 83.08 sl 88.707 = 1.46R (3.5R would be 63.4); exit_plan targets reach_r=1.4617. The declared 3.5R is not what the order carries. One sample, on a paper short; check whether a reach cap or short-side path rewrites the TP, and re-run on a long.",
   "priority_rank": 4,
-  "updated_at": "2026-10-22T09:56:21Z",
-  "updated_by": "session_01EritaPoZF59TgJ3KVur3Hi",
+  "updated_at": "2026-11-01T11:39:49Z",
+  "updated_by": "BACKLOG-DRAIN-20261101",
   "roadmap": [
     "L-OPS"
   ],
   "observation": {
     "what": "DECLARED + DEPLOYED: tp_r 3.5 (tp_intent r_multiple, basis RQ-20261016-014_pooled_kstar_3.5R) on slv/iaum/gdx/tlt/gld/ief_pullback_1d via #19479 (f8a9b6fd7, running 2026-10-22 09:55Z; /api/bot/config shows tp_r 3.5 on all six). OBSERVE: the next 1d pullback entry on any alpaca account carries a resting TP at entry + 3.5 R (journal order_packages tp vs entry/sl). TP doctrine: entry_tp FAIL 28 -> 16 routings (check_tp_doctrine.py); tp_revision still undeclared on these legs.",
     "how_to_check": "scripts/ops/diag_fetch.sh 'journal?table=order_packages&limit=200' -> rows with strategy_name *_pullback_1d created after 2026-10-22T09:55Z: (tp - entry)/(entry - sl) == 3.5",
-    "due_by": "2026-11-22"
+    "due_by": "2026-11-03"
   },
   "writeback": {
     "roadmap": "L-OPS: on close, the first 3.5 R TP observed on an alpaca 1d pullback entry",

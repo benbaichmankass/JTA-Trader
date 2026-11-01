@@ -1,0 +1,85 @@
+# Hand-authored 2026-11-01 by lane RESEARCH-ITERATE (Tier 1), dispatched by Manager Session 2026-11-01a. ITERATION unit: authored from a written diagnosis of the subject's last result. Decision rule registered BEFORE any run. Gates: none.
+id: RQ-20261101-78fc-06
+title: 'ITERATION 1 of ml-conviction-meta (indeterminate): retrained on cost-stamped rows, does conviction-meta-v1 clear the P4 cost gate and
+  calibration (ECE) bar?'
+status: blocked
+cadence: once
+theme: ml_health
+priority: 1
+roadmap:
+- L-ML-LIVE
+programme: P2
+kind: experiment
+question: Retrained on conviction_meta rows carrying label_cost_basis, does conviction-meta-v1 pass the P4 rule (cost gate + ECE) on its eval
+  split?
+why_this_matters: 'Operator 2026-11-01 ~12:59Z: "if the data doesn''t pass, it goes back into research for improvments and testing. THere is no
+  other pipeline for underperforming strategies/mls." ml-conviction-meta is not on real money and had no live research iteration (scripts/research/iteration_orphans.py,
+  2026-11-01).'
+iteration:
+  subject: ml-conviction-meta
+  subject_kind: ml_model
+  from_result: Row ML-P4-CONVICTION-REGATE
+  verdict_read: indeterminate
+  diagnosis: 'macro-F1 0.430 / accuracy 0.537 on n_eval 309 with NO cost metrics: its rows were never cost-stamped (PI-20261028-V8KBRR5H-0002),
+    so it has never been graded on money. The stamp code landed with #21199; the rebuild was not run (pacing).'
+  hypothesis: on cost-stamped rows the multiplier's top-conviction bucket out-earns the bottom one net of cost and is calibrated
+  attempt: 1
+  due_by: '2026-11-06'
+power:
+  expected_n: 500
+  min_detectable_effect: 0.02
+  effect_units: metric
+  sd: 1.0
+  design: paired
+  alpha: 0.05
+  power: 0.8
+  basis: INFERRED from the source result's population; the rule's own INDETERMINATE floor governs.
+  feasibility:
+    source: none
+    accrual_basis: Replays existing corpora; nothing accrues.
+decision_rule:
+  id: RULE-RQ-20261101-78fc-06
+  registered_at: '2026-11-01'
+  registered_before_run: true
+  statistic: Retrained on conviction_meta rows carrying label_cost_basis, does conviction-meta-v1 pass the P4 rule (cost gate + ECE) on its eval
+    split?
+  rule: Graded by docs/plans/ml-live-promotion-plan-2026-10-29.md section 3 P4 UNCHANGED. INDETERMINATE if n_eval < 200.
+  what_it_does_not_do: Serves, promotes or applies nothing; changes no config; places no order.
+practice_precedent: 'T1, M6 (docs/reference/trading-and-model-practice-principles.md): purged walk-forward, matched-random control, one pre-registered
+  read.'
+compute: cpu_long
+routing:
+  needs_trainer_resident_data: true
+  needs_gpu: false
+  peak_memory_gb: 8.0
+  est_minutes: 120
+  basis: Estimate; the first run replaces it.
+  why_runner: Replays committed or public corpora on CPU.
+value:
+  usd_at_stake_per_month: 60
+  confidence: 0.15
+  bucket: ai_trader
+  basis: planning weight by money rank; an estimate, not a measurement
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- RESEARCH-ITERATE
+- ML-P4-CONVICTION-REGATE
+what_it_does_not_do: Serves, promotes or applies nothing; changes no config; places no order.
+blocked_on:
+- kind: work_item
+  ref: ML-P4-CONVICTION-REGATE
+  what: the conviction_meta rebuild + retrain on the trainer (scripts/ml/p1_extras.sh STEP 2)
+  clears_when: the trainer run lands its experiment dir; then git-mv to research/queue/ (rule unchanged)
+intervention_controls:
+  not_applicable: an offline model evaluation; the consumer's own gate applies any action
+ml_consumer:
+  consumer: src/runtime/conviction_sizing.py
+  decision: size down low-conviction entries on bybit_1
+  legs:
+  - trend_donchian
+  - trend_donchian_eth
+  - trend_donchian_sol
+  book: demo_floor

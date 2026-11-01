@@ -40,14 +40,13 @@ def test_everything_else_stays_the_same():
         for aid in accounts
         if account_side_filter(aid) in ("long", "short")
     }
-    # alpaca_portfolio is gated too, since 2026-09-30: it is alpaca_live's
-    # Stage-2 mirror, which B2 (operator, 2026-09-21) requires to take the
-    # IDENTICAL trades (tests/test_paper_portfolio_accounts.py). The soak book
-    # the 2026-08-23 scoping protected, alpaca_paper, is still two-sided.
-    assert gated == {"alpaca_live": "long", "alpaca_portfolio": "long"}, (
-        f"only alpaca_live and its mirror may be directionally gated; got {gated}"
+    # alpaca_portfolio was gated 2026-09-30..2026-11-01 under B2. The operator reversed that on 2026-11-01
+    # ("The only difference with alpaca mirror is that it also has shorting ..."): the mirror is two-sided again.
+    assert gated == {"alpaca_live": "long"}, (
+        f"only alpaca_live may be directionally gated; got {gated}"
     )
     assert account_side_filter("alpaca_paper") == "both"
+    assert account_side_filter("alpaca_portfolio") == "both"
 
 
 @pytest.mark.parametrize(
