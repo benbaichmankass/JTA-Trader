@@ -119,10 +119,11 @@ def leg_verdict(rec: dict[str, Any]) -> str:
 def listed_subjects(root: Path) -> list[dict[str, Any]]:
     doc = _load_yaml(root / SUBJECTS_REL) or {}
     out = []
-    for kind in ("ml_model", "ltr_class"):
+    for kind in ("ml_model", "ltr_class", "candidate"):
         for s in doc.get(kind) or []:
             if isinstance(s, dict) and s.get("id"):
-                out.append({"id": s["id"], "kind": kind, "verdict": s.get("verdict", "pending"),
+                out.append({"id": s["id"], "kind": "strategy_leg" if kind == "candidate" else kind,
+                            "verdict": s.get("verdict", "pending"),
                             "basis": s.get("basis", ""), "money": s.get("money")})
     return out
 

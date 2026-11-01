@@ -194,3 +194,24 @@ ltr_class:
   verdict: pending
   basis: awaiting lane LTR-CLASS-GRADE
   money: real_money
+candidate:
+  # Research CANDIDATES not on any roster (lane RESEARCH-EDGE handoff 2026-11-01 14:27Z). Their lever maps are research/levers/<id>.yaml
+  # in PR #22174 (lane/research-edge-close-20261101); attribution comms/research/edge-failure-attribution-20261101/attribution.json.
+  - id: tsmom-crypto
+    verdict: fail
+    basis: 'RQ-20261101-58e4-01: loss is the SHORT side (-0.13 vs long +0.74) and reversal months; funding ~5x fees. Untested: regime gate, short-side funding awareness, rebalance frequency, universe size, signal family, stops.'
+  - id: xsec-crypto
+    verdict: fail
+    basis: 'RQ-20261101-58e4-02: shorts -0.21 vs longs +1.86; 2021 is 68% of net. Untested: regime gate, universe/liquidity, short-leg treatment, residual momentum.'
+  - id: cost-levers-live-legs
+    verdict: fail
+    basis: 'RQ-20261101-58e4-04: costs ~7% of the loss; legs gross-negative (xrp_pullback_2h -35.9, ada_pullback_2h -15.9). Untested: signal-strength threshold, hold length, symbol pruning, measured costs. Needs signal-level data.'
+  - id: tsmom-etf
+    verdict: indeterminate
+    basis: 'RQ-20261101-58e4-05: stable but small (Sharpe 0.42), shorts hurt, whipsaw years. Untested: dividend-adjusted series, asset-class gating, regime gate, breadth.'
+  - id: movement-capture
+    verdict: fail
+    basis: 'RQ-20261101-58e4-06: vol predictable (Spearman ~0.5 every year) but the fade has zero gross edge; breakout entry adverse (gross -0.40%/trade). Untested: maker fills, longer horizon, better forecaster (HAR, ML vol head), time-exit-only.'
+  - id: vol-premium-proxy
+    verdict: fail
+    basis: 'RQ-20261101-58e4-07: long-variance side loses; profit is the base short-variance premium. Top untested lever: a PRICED straddle test on real chains (DoltHub post-no-preference/options, EOD from 2019-02; row OPTIONS-IV-HISTORY-GAP caveats).'
