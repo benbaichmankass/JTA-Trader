@@ -1,0 +1,184 @@
+name: etf-history-pipeline
+
+# Multi-year ETF/equity bar history (1h + 5m) into the trainer's canonical store, built WHERE THE KEYS ARE.
+#
+# WHY (operator, 2026-11-01): "there's no way we are limited to 2 years of etf data". Lanes fell back to Yahoo 1h
+# (~730 d cap) because the Alpaca Market Data keys exist only in Actions secrets / on the VMs, never in a lane
+# sandbox. This runner holds them. Row ETF-HISTORY-PIPELINE; contract scripts/ops/fetch_etf_history.py.
+#
+# GATES THIS ADDS OR CHANGES: none. A data-path job only: no order path, no config/*.yaml, no execution flag. A stale or
+# missing series turns the run RED (one flag); nothing halts, and the next run retries.
+#
+# WHAT IT DOES
+#   1. pulls the current store from the trainer (so a refresh is incremental),
+#   2. runs scripts/ops/fetch_etf_history.py (probe | backfill | refresh) with the Alpaca secrets in THAT step only,
+#   3. runs scripts/ops/etf_history_verify.py (first/last/rows/gaps/freshness per symbol x timeframe),
+#   4. pushes the store back to <trainer>:data/etf_history/ (add/replace only -- never --delete),
+#   5. on an issue-triggered run, comments the depth table on the issue and closes it.
+#
+# TRIGGERS: daily 02:17Z Tue-Sat (the prior US session is complete) = refresh; workflow_dispatch; or a labelled issue
+# `etf-history-request` whose body carries `mode: probe|backfill|refresh|verify` (default refresh).
+#
+# SECRETS: ALPACA_API_KEY_ID_LIVE / ALPACA_API_SECRET_KEY_LIVE (market data only), VM_SSH_KEY, TRAINER_VM_IP.
+# Nothing prints a key, a balance or an account number.
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "probe | backfill | refresh | verify"
+        default: "refresh"
+  schedule:
+    - cron: "17 2 * * 2-6"
+  issues:
+    types: [opened]
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: etf-history-pipeline
+  cancel-in-progress: false
+
+jobs:
+  etf-history:
+    if: >-
+      github.event_name != 'issues' ||
+      ((github.event.issue.user.login == github.repository_owner ||
+        github.event.issue.user.login == 'github-actions[bot]') &&
+       contains(github.event.issue.labels.*.name, 'etf-history-request'))
+    runs-on: ubuntu-latest
+    timeout-minutes: 150
+    steps:
+      - name: Resolve mode (validated against a fixed list)
+        id: mode
+        env:
+          EVENT: ${{ github.event_name }}
+          INPUT_MODE: ${{ inputs.mode }}
+          ISSUE_BODY: ${{ github.event.issue.body }}
+        run: |
+          set -euo pipefail
+          m="refresh"
+          if [ "$EVENT" = "workflow_dispatch" ]; then m="${INPUT_MODE:-refresh}"; fi
+          if [ "$EVENT" = "issues" ]; then
+            m="$(printf '%s\n' "$ISSUE_BODY" | sed -n 's/^mode:[[:space:]]*\([a-z]*\).*/\1/p' | head -1)"
+            m="${m:-refresh}"
+          fi
+          case "$m" in probe|backfill|refresh|verify) ;; *) echo "::error::bad mode '$m'"; exit 1;; esac
+          echo "mode=$m" >> "$GITHUB_OUTPUT"
+      - name: Require secrets (fail closed)
+        env:
+          K1: ${{ secrets.ALPACA_API_KEY_ID_LIVE }}
+          K2: ${{ secrets.ALPACA_API_SECRET_KEY_LIVE }}
+          VMK: ${{ secrets.VM_SSH_KEY }}
+          TIP: ${{ secrets.TRAINER_VM_IP }}
+        run: |
+          fail=0
+          for v in K1 K2 VMK TIP; do
+            [ -n "${!v}" ] || { echo "::error::a required secret is unset ($v)"; fail=1; }
+          done
+          exit "$fail"
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install deps
+        run: python -m pip install --quiet pandas pyarrow requests
+      - name: Install SSH key
+        env:
+          VM_SSH_KEY: ${{ secrets.VM_SSH_KEY }}
+        run: |
+          set -euo pipefail
+          mkdir -p ~/.ssh && chmod 700 ~/.ssh
+          printf '%s\n' "${VM_SSH_KEY}" > ~/.ssh/trainer_key
+          chmod 600 ~/.ssh/trainer_key
+      - name: Pull the current store from the trainer
+        if: steps.mode.outputs.mode != 'probe'
+        env:
+          TRAINER_IP: ${{ secrets.TRAINER_VM_IP }}
+          TRAINER_USER: ${{ vars.TRAINER_VM_USER || 'ubuntu' }}
+        run: |
+          set -uo pipefail
+          mkdir -p store
+          # First run: the remote dir does not exist yet -> rsync exit 23; that is the expected empty start.
+          rsync -a -e "ssh -i ~/.ssh/trainer_key -o BatchMode=yes -o StrictHostKeyChecking=accept-new -o ConnectTimeout=20" \
+            "${TRAINER_USER}@${TRAINER_IP}:ict-trading-bot/data/etf_history/" store/ 2>&1 | sed -E 's/[0-9]{1,3}(\.[0-9]{1,3}){3}/<ip>/g' || true
+          echo "pulled: $(find store -name '*.parquet' | wc -l) series"
+      - name: Probe (what the plan serves) + keyless sources
+        if: steps.mode.outputs.mode == 'probe'
+        env:
+          ALPACA_API_KEY_ID_LIVE: ${{ secrets.ALPACA_API_KEY_ID_LIVE }}
+          ALPACA_API_SECRET_KEY_LIVE: ${{ secrets.ALPACA_API_SECRET_KEY_LIVE }}
+        run: |
+          set -uo pipefail
+          echo "## Alpaca Market Data (SPY): earliest/latest bar per feed x timeframe"
+          python3 scripts/ops/fetch_etf_history.py --mode probe | tee probe.json
+          echo "## Keyless: Yahoo 1h range=max / 5m range=max / Stooq daily (SPY)"
+          python3 - <<'PY'
+          import requests, io
+          h = {"User-Agent": "Mozilla/5.0"}
+          for iv in ("1h", "5m"):
+              try:
+                  r = requests.get("https://query1.finance.yahoo.com/v8/finance/chart/SPY", params={"interval": iv, "range": "max"}, headers=h, timeout=30)
+                  ts = (r.json()["chart"]["result"][0]["timestamp"]) if r.status_code == 200 else []
+                  print(f"yahoo {iv}: http={r.status_code} bars={len(ts)} first={ts[0] if ts else None} last={ts[-1] if ts else None}")
+              except Exception as e:
+                  print(f"yahoo {iv}: ERR {str(e)[:100]}")
+          try:
+              r = requests.get("https://stooq.com/q/d/l/?s=spy.us&i=d", timeout=30)
+              n = len(r.text.strip().splitlines()) - 1
+              print(f"stooq 1d: http={r.status_code} rows={n} first={r.text.splitlines()[1][:10] if n > 0 else None}")
+          except Exception as e:
+              print(f"stooq 1d: ERR {str(e)[:100]}")
+          PY
+      - name: Fetch (backfill = full history; refresh = incremental)
+        id: fetch
+        if: steps.mode.outputs.mode == 'backfill' || steps.mode.outputs.mode == 'refresh'
+        continue-on-error: true
+        env:
+          ALPACA_API_KEY_ID_LIVE: ${{ secrets.ALPACA_API_KEY_ID_LIVE }}
+          ALPACA_API_SECRET_KEY_LIVE: ${{ secrets.ALPACA_API_SECRET_KEY_LIVE }}
+          MODE: ${{ steps.mode.outputs.mode }}
+        run: python3 -u scripts/ops/fetch_etf_history.py --mode "$MODE" --out store
+      - name: Verify (depth, gaps, freshness)
+        id: verify
+        if: steps.mode.outputs.mode != 'probe'
+        continue-on-error: true
+        run: |
+          python3 scripts/ops/etf_history_verify.py --root store --table | tee verify.md
+      - name: Push the store to the trainer (add/replace only)
+        if: steps.mode.outputs.mode == 'backfill' || steps.mode.outputs.mode == 'refresh'
+        env:
+          TRAINER_IP: ${{ secrets.TRAINER_VM_IP }}
+          TRAINER_USER: ${{ vars.TRAINER_VM_USER || 'ubuntu' }}
+        run: |
+          set -euo pipefail
+          ssh -i ~/.ssh/trainer_key -o BatchMode=yes -o StrictHostKeyChecking=accept-new -o ConnectTimeout=20 \
+            "${TRAINER_USER}@${TRAINER_IP}" 'mkdir -p ict-trading-bot/data/etf_history'
+          rsync -a --partial -e "ssh -i ~/.ssh/trainer_key -o BatchMode=yes -o StrictHostKeyChecking=accept-new" \
+            store/ "${TRAINER_USER}@${TRAINER_IP}:ict-trading-bot/data/etf_history/"
+          echo "store pushed"
+      - name: Comment result on the issue
+        if: always() && github.event_name == 'issues'
+        uses: actions/github-script@v7
+        env:
+          MODE: ${{ steps.mode.outputs.mode }}
+          FETCH: ${{ steps.fetch.outcome }}
+          VERIFY: ${{ steps.verify.outcome }}
+        with:
+          script: |
+            const fs = require('fs');
+            let body = `etf-history-pipeline mode=${process.env.MODE} fetch=${process.env.FETCH} verify=${process.env.VERIFY}\n\n`;
+            for (const f of ['verify.md', 'probe.json']) {
+              if (fs.existsSync(f)) body += '```\n' + fs.readFileSync(f, 'utf8').slice(0, 60000) + '\n```\n';
+            }
+            await github.rest.issues.createComment({ owner: context.repo.owner, repo: context.repo.repo, issue_number: context.issue.number, body });
+            await github.rest.issues.update({ owner: context.repo.owner, repo: context.repo.repo, issue_number: context.issue.number, state: 'closed' });
+      - name: Red flag on a failed fetch or stale/missing series (ONE flag; the next run retries)
+        if: always() && (steps.fetch.outcome == 'failure' || steps.verify.outcome == 'failure')
+        run: |
+          echo "::error::etf-history: fetch=${{ steps.fetch.outcome }} verify=${{ steps.verify.outcome }} (see steps above)"
+          exit 1

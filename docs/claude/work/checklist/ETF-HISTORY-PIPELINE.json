@@ -1,0 +1,22 @@
+{
+  "id": "ETF-HISTORY-PIPELINE",
+  "title": "Build: multi-year ETF/equity 1h+5m history pipeline (Alpaca/IB/open sources) into the trainer canonical store, with freshness check + daily refresh",
+  "phase": null,
+  "state": "in_flight",
+  "owner": "manager",
+  "lane": "ETF-HISTORY-PIPELINE",
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [],
+  "blocked_on": [],
+  "note": "Operator 2026-11-01: 'no way we are limited to 2 years of etf data'. Yahoo 1h caps ~730d; pipeline gap, not a data limit. Lane ETF-HISTORY-PIPELINE (Manager Session 2026-11-01a), ceiling 30 USD, due_by 2026-11-01. Supersedes the data-gap half of TF-EQUITY-INTRADAY-BARS. Scope: measured source inventory, runner/trainer pipeline, freshness check + daily incremental, depth read-back, notify ML-FEATURE-INFRA / ALPACA-LIVE-ACTIVITY-ML / RESEARCH-EDGE.",
+  "updated_at": "2026-11-01T12:15:48Z",
+  "updated_by": "lane-ETF-HISTORY-PIPELINE",
+  "due_by": "2026-11-01",
+  "roadmap": [
+    "L-DATA"
+  ],
+  "_seq": 876
+}
