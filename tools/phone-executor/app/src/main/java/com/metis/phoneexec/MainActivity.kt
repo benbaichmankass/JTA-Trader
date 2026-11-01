@@ -724,6 +724,11 @@ class MainActivity : Activity() {
             lastPosMissMs = System.currentTimeMillis()
             api.positionsMiss("closed_$cs", closed.optJSONArray("headers") ?: JSONArray(), closed.optJSONArray("controls") ?: JSONArray(),
                 closed.optJSONArray("cells") ?: JSONArray())
+            // BREAKOUT-UNRECORDED-1101: a Closed orders miss is captured like a Positions miss, so its layout is fixed from
+            // the page, not guessed. Positions was re-shown above: show Closed orders again for the capture, then go back.
+            p.js("__ex.clickTab(${q("^(closed orders|trades)\\b")})"); delay(1200)
+            cap(CaptureRun("closed", cs ?: "none"), p, "closed_miss", false, "closed_$cs")
+            p.js("__ex.clickText(${q("^positions\\b")})"); delay(600)
         }
         if (ps != "read" && System.currentTimeMillis() - lastPosMissMs >= POS_MISS_MS) {
             lastPosMissMs = System.currentTimeMillis()

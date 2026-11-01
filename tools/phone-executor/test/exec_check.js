@@ -722,6 +722,16 @@ document.getElementById('f').onsubmit=function(e){e.preventDefault();window.__su
   let cgr = await cg.evaluate("__ex.closedRead()");
   eq([cgr.state, cgr.layout, cgr.rows.length], ["read", "div_grid", 2], "closed div grid: two orders read");
   eq([cgr.rows[0].side, cgr.rows[0].qty, cgr.rows[0].price, cgr.rows[0].status, cgr.rows[0].netpnl, cgr.rows[0].time], ["short", 17.26, 111.39, "Filled", 3.97, "2026-10-12 16:30:05"], "closed div grid: the exit row mapped by header");
+  // BREAKOUT-UNRECORDED-1101: header, no rows, an empty-state phrase emptyRe does not know -> still empty_unconfirmed
+  // (never a guessed empty), now with a digit-masked shape dump: header cell count, wrapper levels, the panel's text.
+  const cgEmpty = await onHost(closedGrid("Closed orders", "<p>Nothing to show for 30 days</p>"));
+  const cge = await cgEmpty.evaluate("__ex.closedRead()");
+  eq([cge.state, cge.cells[0], cge.cells.some((c) => c === "txt=Nothing to show for dd days")], ["empty_unconfirmed", "hdr k=8", true], "closed div grid: an empty read carries its shape + the panel text, digits masked");
+  eq([cge.cells.every((c) => c.length <= 40), cge.cells.filter((c) => c.startsWith("txt=")).every((c) => !/\d/.test(c))], [true, true], "closed div grid: shape lines fit the 40-char scrub, page text digit-masked");
+  // rows nested where gridRowsOf does not look are NAMED by the dump (cell count + depth), not silently dropped
+  const cgDeep = await onHost(closedGrid("Closed orders", "<div><div><div><div><div class=r2><div>SOLUSD</div><div>Sell</div><div>Stop</div><div>17.26</div><div>111.39</div></div></div></div></div></div>"));
+  const cgd = await cgDeep.evaluate("__ex.closedRead()");
+  eq([cgd.state, cgd.cells.some((c) => /^row k=5 d=\d+ SOLUSD Sell Stop dd.dd/.test(c))], ["empty_unconfirmed", true], "closed div grid: misplaced rows appear in the shape dump");
   const cgBad = await onHost(closedGrid("Closed orders", cRow("SOLUSD", "Sell", "Stop", "17.26", "111.39", "Filled", "2026-10-12 16:30:05", "+3.97 USD") + "<div class=r><div>SOLUSD 12</div><div>Buy</div></div>"));
   eq((await cgBad.evaluate("__ex.closedRead()")).state, "unparsed", "closed div grid: a misaligned row is unparsed");
   const closedT = `<!doctype html><html><body><div role=tablist><button role=tab>Positions</button><button role=tab>Closed orders</button></div>
