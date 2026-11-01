@@ -14,7 +14,7 @@ ONE exception, per package (MD-LTR-ADA-AUTO, operator 2026-10-29): a granted ``k
 config/mandates.yaml lifts advice-only for the ONE order package it names (src/runtime/ltr_auto_mandate.py;
 behaviour in tests/test_ltr_auto_mandate.py). The last tests below pin that this is the ONLY way out: every such
 exception is a granted, single-package, operator-sourced mandate entry, and the global set is unchanged.
-An ACCOUNT-scoped exception (MD-LTR-BYBIT1-AUTO, operator 2026-11-01) lifts it for packages carried by a PAPER
+An ACCOUNT-scoped exception (MD-LTR-PAPER-AUTO, operator 2026-11-01) lifts it for packages carried by a PAPER
 account it names, on that account's leg only; the tests pin it to paper accounts.
 """
 from __future__ import annotations
@@ -150,8 +150,8 @@ def _mandates():
 
 def test_every_exception_is_a_granted_single_package_or_paper_account_operator_mandate():
     """A package-scoped exception names ONE package and expires with it (MD-LTR-ADA-AUTO). An account-scoped
-    one (MD-LTR-BYBIT1-AUTO, operator 2026-11-01 "Auto-apply on bybit_1 (Rec.)") names only PAPER accounts
-    in config/accounts.yaml: real money, mirrors and prop are never in an exception's scope."""
+    one (MD-LTR-PAPER-AUTO, operator 2026-11-01) names only PAPER, non-mirror accounts in config/accounts.yaml:
+    real money, the mirrors (paper_role portfolio) and prop are never in an exception's scope."""
     import yaml
 
     from src.runtime import ltr_auto_mandate as am
@@ -170,7 +170,10 @@ def test_every_exception_is_a_granted_single_package_or_paper_account_operator_m
             sc = m["account_scope"]
             assert sc["accounts"], m["id"]
             for aid in sc["accounts"]:
-                assert str((accts.get(aid) or {}).get("account_class")).lower() == "paper", (m["id"], aid)
+                cfg = accts.get(aid) or {}
+                assert str(cfg.get("account_class")).lower() == "paper", (m["id"], aid)
+                # a Stage-2 mirror is account_class paper too: it is never in an exception's scope
+                assert str(cfg.get("paper_role") or "").lower() != "portfolio", (m["id"], aid)
         assert set(sc["actions"]) <= set(rows_lib.ADVICE_ONLY_ACTIONS) | set(w.DISPATCHABLE_ACTIONS)
     # a proposal never lifts anything: only the granted list is read
     assert am.active({"mandates": [], "proposed": [m for m in am.active(doc)]}) == []

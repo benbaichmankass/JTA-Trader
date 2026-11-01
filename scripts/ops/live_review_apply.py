@@ -954,7 +954,7 @@ def run(intent: lri.LiveReviewIntent, *, apply: bool = False, db=None,
     granted only while ``ltr_auto_mandate.scoping`` finds it active in ``config/mandates.yaml``
     (``mandates_doc`` in tests) for THIS package and action, and its bounds (:func:`auto_bound_refusal`,
     the executors' bracket read-backs) bind; every applied action then pings ONCE, not per account.
-    An ACCOUNT-scoped auto mandate (``account_scope``, MD-LTR-BYBIT1-AUTO) acts only on the legs its accounts
+    An ACCOUNT-scoped auto mandate (``account_scope``, MD-LTR-PAPER-AUTO) acts only on the legs its accounts
     hold; the other legs are listed in ``scope_excluded`` and never touched, and the shared package stop
     is never moved by it."""
     db = db or _open_db()
@@ -1042,7 +1042,7 @@ def run(intent: lri.LiveReviewIntent, *, apply: bool = False, db=None,
                                                  f"/{intent.target_trade_id or '*'}")
             return out
     if auto_accounts is not None:
-        # An ACCOUNT-scoped auto mandate (MD-LTR-BYBIT1-AUTO): act ONLY on the scoped accounts' legs. Every
+        # An ACCOUNT-scoped auto mandate (MD-LTR-PAPER-AUTO): act ONLY on the scoped accounts' legs. Every
         # other account carrying the package (real money, mirror, prop) is not touched, computed or pinged
         # here: it stays advice-only, exactly as without the mandate.
         out["scope_excluded"] = sorted({str(lg.get("account_id")) for lg in legs

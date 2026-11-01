@@ -1,5 +1,5 @@
 """Per-package and per-account AUTO-APPLY mandates for the live trade review (MD-LTR-ADA-AUTO, operator
-2026-10-29; MD-LTR-BYBIT1-AUTO, operator 2026-11-01).
+2026-10-29; MD-LTR-PAPER-AUTO, operator 2026-11-01).
 
 Every in-trade class is ADVICE ONLY (``live_review_rows.ADVICE_ONLY_ACTIONS``, operator 2026-10-28,
 "Advice-only until tested"). The operator may lift that for ONE order package by granting a
@@ -22,8 +22,8 @@ An entry scopes a row when ALL of these hold (:func:`scoping`):
   ``expires_on_event: order_package_closed`` needs no read here: a closed package is refused by the apply
   (``package ... not open``), gets no due cadence (only open packages are evaluated) and never reopens.
 
-ACCOUNT-SCOPED entries (MD-LTR-BYBIT1-AUTO, operator 2026-11-01, popup "Auto-apply on bybit_1 (Rec.)")
-carry ``account_scope: {accounts: [...], actions: [...]}`` instead of ``package_scope``. They scope a row when
+ACCOUNT-SCOPED entries (MD-LTR-PAPER-AUTO, operator 2026-11-01: "Auto-apply on bybit_1 (Rec.)", widened the
+same day to every Stage-1 demo-floor paper account) carry ``account_scope: {accounts: [...], actions: [...]}`` instead of ``package_scope``. They scope a row when
 the row's action is in ``account_scope.actions`` and the row's ``accounts`` list names a scoped account (a row
 with no readable ``accounts`` is never scoped: fail closed). The apply then acts ONLY on the legs held by a
 scoped account; every other account carrying the package (real money, mirrors, prop) stays advice-only and

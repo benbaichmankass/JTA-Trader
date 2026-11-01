@@ -1,6 +1,6 @@
 {
   "id": "MD-LTR-BYBIT1-AUTO",
-  "title": "Operator-granted mandate MD-LTR-BYBIT1-AUTO: every in-trade live-review call on a bybit_1 (paper soak) package is applied automatically by the VM on the bybit_1 leg only; real money, mirrors and prop stay advice-only. Build: mandates.yaml account-scoped entry + ltr_auto_mandate account_scope + apply leg filter",
+  "title": "Operator-granted mandate MD-LTR-PAPER-AUTO (lane MD-LTR-BYBIT1-AUTO, widened 2026-11-01 ~11:40Z): every in-trade live-review call on a Stage-1 demo-floor paper package (bybit_1, alpaca_paper, ib_paper) is applied by the VM on those legs only; real money, mirrors and prop stay advice-only; per-class promotion path to real money + mirror (Tier-3 proposal)",
   "phase": null,
   "state": "in_flight",
   "owner": "manager",
@@ -13,8 +13,8 @@
     22130
   ],
   "blocked_on": [],
-  "note": "2026-11-01 lane built the entry + reader + apply leg filter with tests proving bybit_2/mirror/prop unchanged; held PR for the manager's merge. Revert: delete the entry. Open: merged, deployed and observed (first applied bybit_1 call end to end: row -> dispatch -> venue amend/close -> journal close reason).",
-  "updated_at": "2026-11-01T11:56:09Z",
+  "note": "2026-11-01 lane built the account-scoped entry + reader + apply leg filter + skill promotion path; tests prove bybit_2/alpaca_live/mirrors/prop unchanged; held PR #22130 for the manager merge. Revert: delete the MD-LTR-PAPER-AUTO entry. Open: merged, deployed and observed (first applied paper call end to end: row -> dispatch -> venue amend/close -> journal close reason).",
+  "updated_at": "2026-11-01T11:59:26Z",
   "updated_by": "MD-LTR-BYBIT1-AUTO",
   "due_by": "2026-11-01",
   "roadmap": [
