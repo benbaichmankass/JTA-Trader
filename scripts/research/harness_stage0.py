@@ -64,6 +64,7 @@ from typing import Any
 
 REPO = Path(__file__).resolve().parents[2]
 sys.path[:0] = [str(REPO / "scripts" / "research"), str(REPO / "scripts"), str(REPO)]
+from cf_harness import cf_summary  # noqa: E402  (CF-C1: pure aggregation of the per-trade `cf` blocks)
 
 FAMILIES: dict[str, dict[str, Any]] = {
     # The structural keys `regime_debt_matrix.classify` routes on come first; the rest are the harness
@@ -219,11 +220,14 @@ def grade_arm(cells: dict[str, dict[str, Any]], pooled: dict[str, Any] | None, *
 
 # ---- run -----------------------------------------------------------------------------------
 def run_cell(name: str, cfg: dict[str, Any], csv: Path, timeframe: str, extra: list[str], start: str | None,
-             end: str | None, work: Path, *, folds: int, timeout_s: int) -> dict[str, Any]:
+             end: str | None, work: Path, *, folds: int, timeout_s: int, cf: bool = False) -> dict[str, Any]:
     import exit_lever_ablation as ela
     ela.N_FOLDS = folds
     emit, jout = work / f"{name}__trades.jsonl", work / f"{name}__bt.json"
     argv = build_argv(name, cfg, str(csv), timeframe, str(emit), str(jout), extra, start, end)
+    cf_on = cf and Path(argv[1]).name == "backtest_trend.py" and "--cf" not in argv   # CF-C2 extends the other harnesses
+    if cf_on:
+        argv.append("--cf")
     log = work / f"{name}.log"
     with open(log, "w", encoding="utf-8") as fh:
         rc = subprocess.run(argv, stdout=fh, stderr=subprocess.STDOUT, cwd=str(REPO), timeout=timeout_s,
@@ -235,7 +239,11 @@ def run_cell(name: str, cfg: dict[str, Any], csv: Path, timeframe: str, extra: l
     edges = ela.fold_edges(str(csv), start, end)
     s = ela.summarize_arm(str(jout), str(emit), edges)
     trades = ela._load_trades(str(emit))
-    return {"state": "measured", "argv": argv[1:], "summary": s, "trades": trades, "edges": edges}
+    out = {"state": "measured", "argv": argv[1:], "summary": s, "trades": trades, "edges": edges}
+    cfs = cf_summary(trades)            # None unless the harness graded the rows ("—", never 0)
+    if cfs is not None:
+        out["cf_summary"] = cfs
+    return out
 
 
 def run(a: argparse.Namespace) -> dict[str, Any]:
@@ -291,7 +299,7 @@ def run(a: argparse.Namespace) -> dict[str, Any]:
                 continue
             try:
                 r = run_cell(name, cfg, csvs[sym], a.timeframe, list(extra), a.start, a.end, work,  # type: ignore[arg-type]
-                             folds=a.folds, timeout_s=a.cell_timeout_s)
+                             folds=a.folds, timeout_s=a.cell_timeout_s, cf=not a.no_cf)
             except Exception as exc:  # allow-silent: a crashed cell lands as state harness_failed with the exception text; the denominator stays whole  # noqa: BLE001
                 r = {"state": "harness_failed", "why": f"{type(exc).__name__}: {exc}"}
             if r["state"] != "measured":
@@ -312,6 +320,7 @@ def run(a: argparse.Namespace) -> dict[str, Any]:
                 "params": s.get("params"), "data_start": s.get("data_start"), "data_end": s.get("data_end"),
                 "grade": grade_cell(s["n"], s["net_r"], folds_pos, n_floor=a.n_floor, fold_majority=a.fold_majority),
                 "argv": r["argv"],
+                **({"cf_summary": r["cf_summary"]} if "cf_summary" in r else {}),
             }
             pooled_trades.extend(r["trades"])
             spans += [r["edges"][0], r["edges"][-1]]
@@ -328,7 +337,8 @@ def run(a: argparse.Namespace) -> dict[str, Any]:
                       "folds_pos": sum(1 for f in folds if f["net_r"] > 0),
                       "max_drawdown_r_sequential": sequential_max_drawdown(pooled_trades),
                       "net_r_per_trade": round(net / len(pooled_trades), 4), "t_one_sided_p": mt.get("p"),
-                      "window": [str(lo), str(hi)]}
+                      "window": [str(lo), str(hi)],
+                      **({"cf_summary": _pooled_cf} if (_pooled_cf := cf_summary(pooled_trades)) is not None else {})}
         arms_out[label] = {"sets": sets, "unsets": unsets, "extra_flags": extra, "cells": cells, "pooled": pooled}
     base_pooled = arms_out[a.baseline]["pooled"] if a.baseline else None
     if a.baseline and a.baseline not in arms_out:
@@ -520,6 +530,9 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--data-dir", default=None)
     ap.add_argument("--no-fetch", action="store_true")
     ap.add_argument("--cell-timeout-s", type=int, default=3600)
+    ap.add_argument("--no-cf", action="store_true",
+                    help="skip the counterfactual-arms grading (default ON, CF-C1; adds a `cf` block per trade row and a "
+                         "`cf_summary` per cell/pooled; grade_arm's verdict logic is untouched)")
     ap.add_argument("--rule-id", default=None)
     ap.add_argument("--out", default=None)
     ap.add_argument("--self-test", action="store_true")

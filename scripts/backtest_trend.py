@@ -362,7 +362,8 @@ def run_backtest(df: pd.DataFrame, *, donchian: int, atr_period: int,
                  decision_cfg: Optional[Dict[str, Any]] = None,
                  decision_workers: int = 4,
                  emit_paths_path: Optional[str] = None,
-                 emit_features: bool = False) -> Dict[str, Any]:
+                 emit_features: bool = False,
+                 cf: bool = False) -> Dict[str, Any]:
     # FORMING-BAR DECISION MODE (PI-20260929-VOLSKIP-SIGNAL-0002; default
     # "closed" = byte-identical). Live evaluates the WHOLE entry signal on the
     # still-forming bar every ~2 min; "forming" replays that decision with the
@@ -1153,6 +1154,12 @@ def run_backtest(df: pd.DataFrame, *, donchian: int, atr_period: int,
         trades_out.extend(trades)
     if emit_path:
         Path(emit_path).parent.mkdir(parents=True, exist_ok=True)
+        _cf_bars = _cf_horizon = None
+        if cf:        # CF-C1-HARNESS-HOOK (opt-in here; harness_stage0 passes it by default): adds one `cf` key per row
+            import cf_harness as _cf_h
+            _cf_horizon = {"timeframe": timeframe, "max_hold_bars": timeout_bars}
+            _cf_bars = (_cf_h.FrameBars(df, timeframe=timeframe, bar_label=bar_label)
+                        if timeframe in _cf_h.TF_SECONDS else None)
         with open(emit_path, "w", encoding="utf-8") as fh:
             for t in trades:
                 cb = _cost_breakdown(t)
@@ -1220,7 +1227,10 @@ def run_backtest(df: pd.DataFrame, *, donchian: int, atr_period: int,
                     **(t.mom or {}),
                     **(t.level or {}),
                     **(_tpg_row(t) if tp_geom.armed else {}),
-                    **(t.extra or {})}, default=str) + "\n")
+                    **(t.extra or {}),
+                    **({} if not cf else {"cf": _cf_fields_for(t, cb, strategy_name, symbol, _cf_bars, _cf_horizon,
+                                                              atr_stop_mult, trail_mult, tp_r)})},
+                    default=str) + "\n")
     params: Dict[str, Any] = {"donchian": donchian, "atr_stop_mult": atr_stop_mult,
                               "trail_mult": trail_mult, "min_confidence": min_confidence}
     if adx_min is not None:
@@ -1362,6 +1372,26 @@ def _cost_breakdown(t: Trade) -> Dict[str, float]:
     return {"fee_r": fee_r, "slippage_r": cb["slippage_r"], "funding_r": cb["funding_r"],
             "total_cost_r": fee_r + cb["slippage_r"] + cb["funding_r"],
             "funding_windows": cb["funding_windows"]}
+
+
+def _cf_fields_for(t: Trade, cb: Dict[str, float], strategy_name: str, symbol: str, frame_bars: Any,
+                   horizon_cfg: Dict[str, Any], atr_stop_mult: float, trail_mult: float, tp_r: float) -> Dict[str, Any]:
+    """The `cf` block (schema cf_trade/1) for one emitted row; see scripts/research/cf_harness.py. Pure of the run."""
+    import cf_core
+    import cf_harness
+    row = {"strategy": strategy_name, "symbol": symbol, "entry_time": str(t.entry_time), "exit_time": str(t.exit_time),
+           "entry": t.entry, "sl": t.sl, "direction": t.direction, "exit_price": t.exit_price, "exit_reason": t.outcome,
+           "net_r": round(t.r_multiple - cb["total_cost_r"], 4), "cost_fee_r": cb["fee_r"], "cost_funding_r": cb["funding_r"]}
+    if frame_bars is None:
+        return cf_harness.cf_fields(row, [], horizon_cfg=horizon_cfg)
+    import live_review_counterfactual as lrc
+    t_in, t_out = lrc._ts(row["entry_time"]), lrc._ts(row["exit_time"])
+    h = cf_core.resolve_horizon({"timeframe": horizon_cfg["timeframe"]}, horizon_cfg)
+    bars = frame_bars.slice(t_in, t_out + h["seconds"]) if t_in is not None and t_out is not None else []
+    sign = 1.0 if t.direction == "long" else -1.0
+    meta = {"atr": t.risk / atr_stop_mult if atr_stop_mult else None, "trail_mult": trail_mult,
+            "tp": (t.entry + sign * tp_r * t.risk) if (tp_r and tp_r < 50.0) else None}
+    return cf_harness.cf_fields(row, bars, horizon_cfg=horizon_cfg, leg_meta=meta)
 
 
 def _fee_r(t: Trade) -> float:
@@ -1842,6 +1872,9 @@ def main(argv: List[str]) -> int:
                         "f_* context columns (ADX-14 + label, ATR pct/percentile/bucket, "
                         "regime cell proxy, rolling log-return vol, 20-bar return, UTC "
                         "hour/dow) to every --emit-trades row. Existing keys unchanged.")
+    p.add_argument("--cf", action="store_true",
+                   help="CF-C1-HARNESS-HOOK (opt-in): add a `cf` counterfactual-arms block (schema cf_trade/1) to every "
+                        "--emit-trades row. Existing keys unchanged; off = byte-identical.")
     args = p.parse_args(argv[1:])
     # The ATR percentile these flags compare against is rolling rank(pct=True), a 0-1 scale.
     # A value > 1 (e.g. "50" meant as the 50th percentile) skips every bar once the window
@@ -2018,7 +2051,7 @@ def main(argv: List[str]) -> int:
     else:
         out = run_backtest(df, emit_path=args.emit_trades, strategy_name=args.strategy_name,
                            emit_paths_path=args.emit_paths,
-                           emit_features=args.emit_features,
+                           emit_features=args.emit_features, cf=args.cf,
                            **decision_kw,
                            min_confidence=args.min_confidence, **bt_kwargs)
         print(_fmt(out))

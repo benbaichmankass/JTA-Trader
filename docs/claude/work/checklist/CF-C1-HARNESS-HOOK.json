@@ -2,23 +2,30 @@
   "id": "CF-C1-HARNESS-HOOK",
   "title": "Call the grader from backtest_trend.py (cf_fields) and harness_stage0.py (--cf default-on, cf_summary); per-trade record schema cf_trade/1",
   "phase": null,
-  "state": "queued",
-  "owner": null,
-  "lane": null,
+  "state": "landed_unproven",
+  "owner": "session_01AFoLuKwVZaRfdWkVBsQDEa",
+  "lane": "CF-C1-HARNESS-HOOK",
   "model": "sonnet",
   "ceiling_usd": 8,
   "spend_usd": null,
   "tier": 1,
   "prs": [],
-  "blocked_on": [
-    "CF-B0-ENGINE-LIFT"
-  ],
+  "blocked_on": [],
   "note": "Phase from docs/plans/counterfactual-everywhere-DESIGN-2026-10-29.md \u00a7 5 (parent COUNTERFACTUAL-EVERYWHERE). No gates added.",
   "priority_rank": 1,
-  "updated_at": "2026-10-29T21:23:48Z",
+  "updated_at": "2026-11-01T00:33:39Z",
   "updated_by": "session_01AFoLuLpoWiu1SEu6vTJpKk",
   "roadmap": [
     "L-AM-STANDARD"
   ],
+  "observation": {
+    "what": "the next harness_stage0 unit result on main carries cf_summary on its trend/pullback cells",
+    "how_to_check": "open the newest comms/research results harness_stage0 json: arms.*.cells.*.cf_summary.n_graded == n and fidelity_abs_gap_r.max < 0.05",
+    "due_by": "2026-11-08"
+  },
+  "writeback": {
+    "roadmap": "L-AM-STANDARD: backtest_trend.py --cf and harness_stage0 (default on, --no-cf) grade every trade on the cf_core arms, schema cf_trade/1; non-trend harnesses follow in CF-C2",
+    "arch": "none: research tooling, no runtime component or contract changed"
+  },
   "_seq": 829
 }
