@@ -17,10 +17,15 @@ Lever B (lower frequency): keep a fraction (1-f) of trades, f in {0.25, 0.5}, re
         delta = -f x net. Any gain beyond that needs a SELECTION effect, which needs signal-level data (not in the journal).
 Rule  : registered in research/queue/RQ-20261101-58e4-04.yaml.
 """
+
 from __future__ import annotations
-import argparse, glob, json, sys
+import argparse
+import glob
+import json
+import sys
 from pathlib import Path
-import pandas as pd, yaml
+import pandas as pd
+import yaml
 
 TAKER_ENTRY_BPS = 5.5 + 0.434
 MAKER_ENTRY_BPS = 2.0
@@ -31,14 +36,21 @@ def real_legs(accounts_yaml: Path):
     accs = a.get("accounts", a)
     legs, names = set(), []
     for k, v in accs.items():
-        if isinstance(v, dict) and v.get("mode") == "live" and v.get("account_class", "real_money") != "paper" and v.get("strategies"):
-            legs |= set(v["strategies"]); names.append(k)
+        if (
+            isinstance(v, dict)
+            and v.get("mode") == "live"
+            and v.get("account_class", "real_money") != "paper"
+            and v.get("strategies")
+        ):
+            legs |= set(v["strategies"])
+            names.append(k)
     return sorted(legs), names
 
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--journal-dir", required=True); ap.add_argument("--out", required=True)
+    ap.add_argument("--journal-dir", required=True)
+    ap.add_argument("--out", required=True)
     ap.add_argument("--accounts", default="config/accounts.yaml")
     a = ap.parse_args()
     legs, accts = real_legs(Path(a.accounts))
@@ -46,28 +58,61 @@ def main():
     for f in sorted(glob.glob(a.journal_dir + "/p*.json")):
         rows += json.load(open(f))["rows"]
     df = pd.DataFrame(rows)
-    d = df[(df.status == "closed") & df.pnl.notna() & (df.account_class == "real_money") & df.setup_type.isin(legs)].copy()
-    d["cost"] = d.fee_taker_usd.fillna(0) + d.fee_maker_usd.fillna(0) + d.funding_paid_usd.fillna(0)
+    d = df[
+        (df.status == "closed")
+        & df.pnl.notna()
+        & (df.account_class == "real_money")
+        & df.setup_type.isin(legs)
+    ].copy()
+    d["cost"] = (
+        d.fee_taker_usd.fillna(0)
+        + d.fee_maker_usd.fillna(0)
+        + d.funding_paid_usd.fillna(0)
+    )
     d["cost_known"] = d.fee_taker_usd.notna()
     d["notional"] = d.entry_price * d.position_size
-    out = {"legs": legs, "accounts": accts, "n": int(len(d)), "n_cost_fields_null": int((~d.cost_known).sum()),
-           "cost_source_counts": d.cost_source.fillna("null").value_counts().to_dict(),
-           "net_pnl": round(float(d.pnl.sum()), 2), "cost_total_est": round(float(d.cost.sum()), 2),
-           "gross_before_cost": round(float((d.pnl + d.cost).sum()), 2), "notional_total": round(float(d.notional.sum()), 0),
-           "first": str(d.timestamp.min()), "last": str(d.timestamp.max()), "per_leg": {}, "lever_A": {}, "lever_B": {}}
+    out = {
+        "legs": legs,
+        "accounts": accts,
+        "n": int(len(d)),
+        "n_cost_fields_null": int((~d.cost_known).sum()),
+        "cost_source_counts": d.cost_source.fillna("null").value_counts().to_dict(),
+        "net_pnl": round(float(d.pnl.sum()), 2),
+        "cost_total_est": round(float(d.cost.sum()), 2),
+        "gross_before_cost": round(float((d.pnl + d.cost).sum()), 2),
+        "notional_total": round(float(d.notional.sum()), 0),
+        "first": str(d.timestamp.min()),
+        "last": str(d.timestamp.max()),
+        "per_leg": {},
+        "lever_A": {},
+        "lever_B": {},
+    }
     for leg, g in d.groupby("setup_type"):
-        out["per_leg"][leg] = {"n": int(len(g)), "net": round(float(g.pnl.sum()), 2), "cost_est": round(float(g.cost.sum()), 2),
-                               "gross": round(float((g.pnl + g.cost).sum()), 2), "notional": round(float(g.notional.sum()), 0)}
+        out["per_leg"][leg] = {
+            "n": int(len(g)),
+            "net": round(float(g.pnl.sum()), 2),
+            "cost_est": round(float(g.cost.sum()), 2),
+            "gross": round(float((g.pnl + g.cost).sum()), 2),
+            "notional": round(float(g.notional.sum()), 0),
+        }
     net = float(d.pnl.sum())
     sav = float((d.notional * (TAKER_ENTRY_BPS - MAKER_ENTRY_BPS) / 1e4).sum())
     for p in (1.0, 0.75, 0.5):
         delta = p * sav - (1 - p) * net
-        out["lever_A"][f"p={p}"] = {"net_delta_upper": round(delta, 2), "net_after": round(net + delta, 2), "turns_pooled_net_ge_0": net + delta >= 0}
+        out["lever_A"][f"p={p}"] = {
+            "net_delta_upper": round(delta, 2),
+            "net_after": round(net + delta, 2),
+            "turns_pooled_net_ge_0": net + delta >= 0,
+        }
     out["lever_A"]["max_saving_at_p1"] = round(sav, 2)
     for f in (0.25, 0.5):
         delta = -f * net
-        out["lever_B"][f"f={f}"] = {"net_delta_no_selection": round(delta, 2), "net_after": round(net + delta, 2), "turns_pooled_net_ge_0": net + delta >= 0,
-                                    "needs_selection_effect_to_clear": True}
+        out["lever_B"][f"f={f}"] = {
+            "net_delta_no_selection": round(delta, 2),
+            "net_after": round(net + delta, 2),
+            "turns_pooled_net_ge_0": net + delta >= 0,
+            "needs_selection_effect_to_clear": True,
+        }
     Path(a.out).write_text(json.dumps(out, indent=1))
     print(json.dumps(out, indent=1))
 
