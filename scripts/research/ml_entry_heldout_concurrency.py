@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# wiring: manual-only — a one-shot measurement a session runs to size a universe change for ml_entry (concurrency, stop-risk, spread re-cost); no scheduled consumer.
 """ml_entry held-out CONCURRENCY + per-symbol population (lane ML-ENTRY universe widening, 2026-11-01).
 
 Re-runs the c692-01 final fit exactly as ``ml_decision_entry.traded_subset`` does (same universe, same purge, same
