@@ -42,13 +42,22 @@ iteration:
   from_result: <the unit / record whose result this iterates on>
   verdict_read: fail | indeterminate | pass_unconfirmed | pending
   diagnosis: <WHY it failed, read from that result's rows: folds, fee-only vs full cost, n vs power, fidelity, a sibling that passes>
-  hypothesis: <the one cause this variant tests>
+  search: <the lever families + grid this pass searches, and why the diagnosis points there>   # `hypothesis` = legacy alias
+  levers: [entry, filter]   # optional; else read from the unit's --arm specs (iteration_orphans.py --levers)
   attempt: <1, 2, ...>
   due_by: 'YYYY-MM-DD'
 ```
-A unit that is the FIRST test of a new idea carries `origin: new_hypothesis` plus `origin_reason:` (who pays, why the edge persists) instead of the block. The diagnosis names the likeliest cause among {test design, power / n, cost drag, regime / window, harness defect, the idea is
-wrong} **with the evidence** (noise is always one competing hypothesis), and the arms test THAT cause. A lever TRANSFER or a
-template re-run is not an iteration unless a diagnosis of this subject chose it. A PASS that is still a discovery iterates to ONE
+A unit that is the FIRST test of a new idea carries `origin: new_hypothesis` plus `origin_reason:` (who pays, why the edge persists) instead of the block.
+
+**How to run an iteration (the canonical § 2 states the rule; this is the procedure).** (1) Diagnose from the result's rows:
+which trades, regimes and months lost; gross vs net; entry vs exit vs filter; n vs power; fidelity; a passing sibling. (2) Run
+`python3 scripts/research/iteration_orphans.py --levers` and map the diagnosis onto the subject's lever map — the families the
+diagnosis implicates first, then the families never tested (`.`). (3) Author as many arms as the diagnosis supports — a sweep,
+an ablation or a grid, across one family or several — each registered before the run, the arm denominator stated, the
+survivor read once on a holdout. One unit per lever family is a fine shape; one variant per pass is not a rule. (4) A flat
+result moves the next pass to untested families; a near-miss narrows the grid. Retirement only when the map is exhausted
+(lever-exhaustion family review; never an attempt count). A lever TRANSFER or a template re-run is not an iteration unless a
+diagnosis of this subject chose it. A PASS that is still a discovery iterates to ONE
 confirmation (`exit_lever_ablation.py --grade holdout`, the shape `mandate_resolver` R-HOLDOUT reads), and a confirmed PASS
 iterates to its promotion proposal (Tier 3, the manager's). Where no driver exists yet, the unit goes in `blocked/` with the lever
 named and owned (`blocked_on[].clears_when`), and the lever is filed once.
@@ -119,7 +128,8 @@ into the record's `checks` block; that is the only place they are repeated.
    ed1c") and is a discovery until its confirmation unit passes.
 4. **Diagnose the failed first tests.** For each FAIL cluster (start with `fails_without_next`): the most likely cause
    among {test design, power / n, cost drag, regime / window, harness defect, the idea is wrong} and the evidence for it;
-   then the ONE variant that tests the diagnosis (a node or unit, step E rules). "Configuration closed; family stays open"
+   then the variants across the implicated lever families (a sweep / ablation / grid; step E rules; the iteration
+   procedure in § "THE ITERATION LOOP"). "Configuration closed; family stays open"
    is the disposition, not the diagnosis.
 5. **What to test next, value-ranked.** Each proposal names the decision it would change, what we do on PASS and on FAIL,
    and the cost. If both branches lead to the same action the test is worth ~0 — do not author it (value of information).
