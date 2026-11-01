@@ -2,7 +2,7 @@
   "id": "DIAG-LOG-DEPTH",
   "title": "Diag log readers: grep/since/until before the cap + truncated marker (journalctl 2000, log_file 1000)",
   "phase": "A",
-  "state": "in_flight",
+  "state": "done",
   "owner": "manager",
   "lane": "session_01AFoLuLApF6ZANeNvTGeQ9o",
   "model": null,
@@ -11,10 +11,14 @@
   "tier": 2,
   "prs": [],
   "blocked_on": [],
-  "note": "Held PR for manager; Tier-2 (ict-web-api diag router, needs web-api restart). Caps measured from code: journalctl _MAX_JOURNAL_LINES=2000 (-n), log_file _MAX_LIMIT=1000 applied after readlines(); neither marked truncation. Fix: grep= (substring, pre-cap) on both, window streaming on journalctl, truncated + lines_scanned/matched/returned/dropped + read_state on both. VERIFY AFTER DEPLOY (merged != deployed != observed): relay journalctl?unit=ict-trader-live&since=<6h ago>&grep=order_monitor&lines=50 -> lines_scanned > 2000 and a truncated field; log_file?name=audit&lines=5 -> truncated + lines_scanned. Then BACKLOG-DRAIN re-runs its landed_unproven history greps.",
-  "updated_at": "2026-11-01T12:37:03Z",
+  "note": "DONE 2026-11-01 16:10Z. MERGED: PR #22128 as 2d79e51c. DEPLOYED: pull-and-deploy #22171 (exit 0); ict-web-api deployed_sha ff76ab1e97 and running git_sha 433b208020 both contain 2d79e51c (git merge-base --is-ancestor, checked), restart_pending false for both units. OBSERVED (verify issue #22196, run 41320958685, captured 15:56Z): journalctl?unit=ict-trader-live&since=2026-11-01T09:25:00Z&grep=order_monitor&lines=50 -> mode=window, lines_scanned=85706, lines_matched=20462, lines_returned=50, lines_dropped=20412, truncated=true, read_state=complete; log_file?name=audit&lines=5 -> lines_scanned=4706654 (whole 1.57 GB file inside the 25 s budget), truncated=true, lines_dropped=4706649; same with grep=2026-11-01T15 -> lines_matched=1300. The 2000-line wall is gone and every cap is now visible. Caveat: #22171's own log said 'restart skipped', so the restart that put the new code live was an earlier auto-deploy; not established which. BACKLOG-DRAIN lane had stopped; call syntax is in docs/claude/diag-relay.md \u00a7 Reading deep history without a silent cap and was sent as trig_0121EYA1yB1XdCu4qrPrUFHH. Next drain batch is dispatched by the 17:52Z manager review.",
+  "updated_at": "2026-11-01T16:10:07Z",
   "updated_by": "session_01AFoLuLApF6ZANeNvTGeQ9o",
-  "due_by": "2026-11-02",
+  "due_by": "2026-11-05",
   "roadmap": "L-OPS",
+  "writeback": {
+    "roadmap": "none: diag read-path tooling under L-OPS; no milestone status changes until the deploy is observed",
+    "arch": "none: no architecture section changes; operator-facing contract is documented in docs/claude/diag-relay.md"
+  },
   "_seq": 876
 }
