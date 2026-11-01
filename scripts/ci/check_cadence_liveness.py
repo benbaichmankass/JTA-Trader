@@ -254,6 +254,7 @@ CADENCE_REGISTRY: dict[str, dict] = {
     #    just has not been declared yet. Measured 2026-09-22: 9 of the 18
     #    scheduled workflows contain a commit-to-main / git push step. Naming
     #    the output path for each is the obvious next shrink of this file.
+    "market-data-lake.yml": {"receipt": None, "why": "its output is the PRIVATE HF dataset bentzbk/jta-market-lake (MARKET-DATA-LAKE 2026-11-01), nothing committed to git; a dead run is caught by claude-run-failure-alert, and stale data by MANIFEST.json generated_at + per-series last bar, which ml/datasets/lake.py readers see"},
     "ml-data-export-kaggle.yml": {"receipt": None, "why": "its output is a PRIVATE Kaggle dataset version plus 14-day run artifacts, nothing committed to git (ML-DATA-OFF-TRAINER 2026-10-13); a dead run is caught by claude-run-failure-alert, and a stale dataset by the MANIFEST generated_at that every consumer re-reads"},
     "grading-freshness-alert.yml": {"receipt": None, "why": "quiet by design when grading is fresh: it commits nothing and its only output is a Telegram ping on stale/unreadable; a dead run is caught by claude-run-failure-alert (GRADE-ALERT 2026-09-29)"},
     "schedule-keeper.yml": {"receipt": None, "why": "no in-repo trace by design: it reads the Actions API and dispatches; it also fires on every push to main, so its own cron is only the night-time floor (W6-OPS-R 2026-09-27)"},

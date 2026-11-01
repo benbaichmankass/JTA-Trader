@@ -527,6 +527,7 @@ real top-level `docs/*.md` and fails if the population builder cannot see it.
 | `docs/claude/work/triage-2026-09-28.md` | unknown | unknown | — | never | `not-assessed / not-assessed` | — |
 | `docs/claude/workplan.md` | plan | historical | — | 2026-09-07 | `name:workplan-is-a-forward-commitment / mi159:plan-status-header:historical` | — |
 | `docs/cross-asset-regime-conviction-DESIGN.md` | architecture | unknown | — | never | `name:design-declares-a-contract / not-assessed` | — |
+| `docs/data/market-data-lake.md` | architecture | live | — | 2026-11-01 | `not-assessed / not-assessed` | — |
 | `docs/data/dataset-schema.md` | architecture | unknown | — | never | `dir:schema-and-taxonomy-are-contracts / not-assessed` | — |
 | `docs/data/dataset-taxonomy.md` | architecture | unknown | — | never | `dir:schema-and-taxonomy-are-contracts / not-assessed` | — |
 | `docs/data/versioning-policy.md` | architecture | unknown | — | never | `dir:schema-and-taxonomy-are-contracts / not-assessed` | — |
