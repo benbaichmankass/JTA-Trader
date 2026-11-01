@@ -72,7 +72,8 @@
   "n": 86,
   "dispositions": {
    "retired_with_reason": 26,
-   "kept_and_redated_due_by_2026-11-15": 59,
+   "kept_and_redated_due_by_2026-11-15": 58,
+   "unlocked": 1,
    "already_retired_misfiled": 1
   },
   "retired": [
@@ -158,7 +159,6 @@
    "RQ-20261030-e18g-01",
    "RQ-20261030-e18g-02",
    "RQ-20261030-e18g-03",
-   "RQ-20261030-f18f-01",
    "RQ-20261101-c692-02",
    "RQ-20261101-c692-03",
    "RQ-20261101-c692-04",
@@ -168,13 +168,16 @@
    "RQ-20261007-033"
   ],
   "method": "blocker refs resolved against checklist rows, pipeline items and queue units (states done/landed_unproven/live/dropped/killed); the 21 'cleared' units were run through the dispatcher dry run on a temp copy; targeted greps for three levers (FIRST_MONTH, extra_args, ROSTER). Prerequisite-unit verdicts read from research/results.",
-  "unlocked": [],
-  "unlock_note": "NONE unlocked: the dispatcher dry run showed the 'cleared' units are not dispatchable as authored (no run.workflow/lands.store, or no run.inputs.research_unit, or design 'paired' unsupported), or their own clears_when is not confirmed built (e.g. 1631-03/04 need ROSTER entries; fe57-02 needs a prior build dir). They are kept with a blocked_review block and due_by; unlocking blind would have fired runs that land unavailable.",
-  "needs_a_decision": "RQ-20261030-e18g-01/-02/-03 and f18f-01 wait only on the manager's E57 release (or retirement): left untouched; the manager owns that call."
+  "unlocked": [
+   "RQ-20261030-f18f-01"
+  ],
+  "unlock_note": "1 unlocked after the manager's 11:45Z correction (E57 is state done on main): RQ-20261030-f18f-01 (dry run would_dispatch). The 21 'cleared' units from the row-state pass were NOT unlocked: not dispatchable as authored (no run.workflow/lands.store, no run.inputs.research_unit, design 'paired' unsupported) or their own clears_when is unconfirmed. RQ-20261030-e18g-01/-02/-03: E57 is no longer their blocker, but the dispatcher rejects the id (band 'e18g' is not hex), so they are re-dated with that real blocker and a stated fix (rename to a hex band, owner DESK-18G)."
  },
  "needs_review_triaged": 34,
  "needs_review_left": 25,
- "unlocked": [],
+ "unlocked": [
+  "RQ-20261030-f18f-01"
+ ],
  "retired": [
   "RQ-20260927-003",
   "RQ-20260929-009",

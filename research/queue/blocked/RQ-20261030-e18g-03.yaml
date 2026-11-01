@@ -72,19 +72,23 @@ lands:
   store: research/results/
   assert_field: read_state
   min_rows: 1
-blocked_on:
-- kind: manager_release
-  ref: E57
-  what: new queue units hold for the manager (E57); the lane runs the harness locally on the registered rule and the manager releases or retires this file.
-  clears_when: the manager moves this file to research/queue/ (or retires it) after the PR lands.
 related:
 - RQ-20261030-e18g-02
 - RQ-20261030-e18g-01
 last_dispatched_at: null
+blocked_on:
+- clears_when: the owner lane DESK-18G (or the manager) renames the unit to a hex-band id (RQ-20261030-e18a-NN
+    or similar), then a dispatcher dry run reads would_dispatch; or retires the unit.
+  due_by: '2026-11-15'
+  kind: defect
+  ref: queue-id-format
+  what: 'The E57 manager release is no longer a blocker (E57 is state done on main; BACKLOG-DRAIN-20261015).
+    The unit cannot be dispatched as authored: the dispatcher rejects its id ("id must match RQ-YYYYMMDD-NNN")
+    because the id band ''e18g'' is not hex, so dispatch_queue.py marks it invalid (dry run 2026-11-01).
+    Nothing outside the unit files references the id (grep of main), so renaming is mechanical, but the
+    lane DESK-18G may hold local result files under the old id.'
 blocked_review:
   by: RESEARCH-OPS-20261101-0940
-  disposition: kept
+  disposition: kept, re-dated with the real blocker
   due_by: '2026-11-15'
-  note: 'kept: filed today or released only by the manager (E57) or an observation threshold; owner named
-    in blocked_on'
   reviewed: '2026-11-01'
