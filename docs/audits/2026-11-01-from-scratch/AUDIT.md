@@ -19,7 +19,7 @@
 5. **ML has changed nothing.** 98 models are registered: 63 regime classifiers and 0 trade-decision models in production. The only order-changing model, an exit head, closed 11 trades (5 real-money, net −$1.13).
 6. **Process eats the effort.** October on `main`: **3,052 commits to `docs/claude/work/` vs 284 to `src/`, a ratio of 10.7 : 1.** The 2026-09-21 reset was written to fix a ratio of 7.1 : 1, so it has got worse. The repo carries 120 CI guards, 192 workflows, 643 KB of skills, 1,169 checklist rows (334 `landed_unproven`), and 15 research SLOs that all measure volume (none measures discoveries).
 7. **The prompts measure activity, not money.** The 66 KB manager skill never mentions net P&L. The brief has no P&L line. Weekly audits grade their "calls" (8 hit / 0 miss on 10-28) while the book loses. The 09-21 plan opened on −0.3231R/trade. Six weeks later it is −0.333R/trade, and no document says the plan failed.
-8. **Earlier audits graded the plumbing.** 09-29, 10-04 and 10-29 ranked reconciler labels, phone executors and TP-guard compliance. The 10-29 audit *had* the 0-of-31 DSR finding and filed it at #4 as "re-rank a queued row".
+8. **Graded, but the grade never acts.** The real-money legs and Stage-0 promotions are graded and nothing changes. ML has no continuous decision-value grader. 9 graders exist that never run, against 9 scheduled (§ 1f). **Earlier audits graded the plumbing.** 09-29, 10-04 and 10-29 ranked reconciler labels, phone executors and TP-guard compliance. The 10-29 audit *had* the 0-of-31 DSR finding and filed it at #4 as "re-rank a queued row".
 9. **From scratch, I would trade fewer, better-founded things**: delta-neutral funding carry, vol-targeted trend across a diversified set, cross-sectional crypto momentum/carry. One research protocol: a locked holdout, every trial counted, a DSR gate. One pooled market-label entry model before any bracket or management model. Process cut to about a tenth.
 10. **Keep** the execution plumbing, journal, provenance, cost module, trial ledger and data pulls. **Stop** the generated lever units, the volume SLOs, real money on legs that fail the haircut (Tier-3: the operator's call), new guards and judgement-desk work on legs with no edge. The first checkpoint is day 14 (§ 7).
 
@@ -94,6 +94,28 @@ Population: `/api/bot/ml/registry` (mirror age 22 s, 98 rows) and close reasons 
 - **Commits on `main`, 2026-10-01 → 11-01** (5,719 total): `docs/claude/work/` 3,052 · `comms/` 1,448 · `research/queue/` 913 · `scripts/ci/` 119 · `.claude/skills/` 121 · **`src/` 284** · `src/units/strategies/` 23 · `config/strategies.yaml` 26.
 - **Rule and process surface:** canonical rules 154 KB, architecture 286 KB, operating plan 64 KB, skills 643 KB (manager 66 KB, performance-review 68 KB), 1,348 docs (20.7 MB of markdown) against 216,552 lines of Python in `src/`.
 - **Output:** no leg survives the haircut, the real book has PF 0.64, and no model has changed P&L.
+
+### 1f. The grading test (added at the manager's request, 2026-11-01 ~08:25Z)
+
+The question, relayed from the operator (*"we can't build models if we're not actually grading them"*): for every model, strategy decision and forecast, is it graded **continuously on its own decision value** (forecasts on first passage within their horizon), and **does the grade feed back into what is built next?**
+
+**Population and method.** 28 tracked `.py` files under `scripts/` and `src/` with grade, grader or scor(e/ing) in the name, excluding tests. For each I grepped `.github/workflows/*.yml` (and checked for `schedule:`), `deploy/*` units and every tracked `*.sh` for a caller. I also took the last commit date of each grader's output store on `origin/main`. **The limit:** a VM cron that calls a script by a path not in the repo would not show up here. Inside the repo the probe can find a positive: `queue_grade` turns up in `research-queue-grade.yml` and in `deploy_pull_restart.sh`.
+
+| what is decided | grader | runs? (schedule · output) | graded on decision value? | feeds what gets built? | money at stake |
+|---|---|---|---|---|---|
+| **Real-money strategy legs** (6 production) | `performance-review` → `comms/claude_strategy_scores.jsonl` (4,388 lines, last commit 11-01); `r4-demotion-gate.yml` (cron) | **yes** | per-trade grades, yes. Demotion needs n ≥ 40 live trades, so it returns `abstain_thin` on 6/6 (10-29 audit) | **no**: all 6 legs still on real money at PF 0.20–1.26 | **highest**: the real book |
+| **Stage-0 promotions** | `trial_ledger.py` (last commit 10-31) | **yes** | yes (DSR + BHY) | **no**: `report_only` by decision, 0/28 survive and nothing changed | every leg on any roster |
+| **Research units** | `queue_grade.py` (`research-queue-grade.yml`, cron) | **yes** | on a point-estimate bar (C2), not on significance | yes, but it feeds more lever units (C5) | indirect |
+| **Live trade reviews** (in-trade advice) | `live_review_grade.py` (`live-review-rows-mirror.yml`, cron) → `comms/live_review/outcomes.jsonl` (158 rows, 10-31) | **yes** | **18 of 158 priced** (140 `no_path_change`). The 18 priced read **+15.15R, 17 of 18 positive**, as counterfactual replays | **no**: the earlier audit found the reviews unapplied, and nothing promotes a class that prices positive | small today. **This is the only positive number this audit found. It is worth a pre-registered test on a disjoint window before anyone reads it as edge (n = 18; counterfactual, not realised).** |
+| **Desk decisions** | `claude_role_grade.py` (`desk-decisions-mirror.yml`, cron) → `comms/desk/role_grade.json` | **yes** | n = 6 priced. Brier **0.297 vs 0.25 coin-flip reference** (skill −0.19). Verdict INDETERMINATE | no | small |
+| **Closed-trade order packages** | `score_order_packages.py` (`grade-closed-trades.yml`, cron); `counterfactual_grader.py` (cron) | **yes** | yes for the counterfactual | not traced | small |
+| **Closed-trade Claude scores** | `comms/claude_trade_scores.jsonl` | **dead store**: 1 line, last commit 10-01 | — | — | — |
+| **ML models** (98 registered; 3 advisory, 20 shadow) | no scheduled grader of *served* predictions on decision value was found. Registry metrics are offline log-loss/F1 | **no continuous decision-value grade** | no | no | the whole ML track (§ 1d) |
+| **Forecasts** (desk AM judgement, regime heads) | `desk_am_judgement_grade.py` | **never run**: no workflow, no unit, no caller (the operator's example, row `FORECAST-GRADE-FIRST-PASSAGE`) | first-passage logic exists | no | every forecast-driven decision |
+
+**Graders that exist and never run** (no workflow, no `deploy/` unit, no `*.sh` caller, no importer): `desk_am_judgement_grade.py`, `exit_head_final_fold_grade.py`, `grade_closed_trades_from_diag.py`, `blind_grade.py`, `check_claude_grade_loop.py`, `regrade_vs_control.py`, `am_class_regrade.py`, `qtm1_grade.py`, `regrade_wiring_only_results.py`. `p1_costnet_grade.py` runs only from a manual `.sh`; `net_r_regrade.py` only as an on-demand system-action. **9 never run plus 2 manual-only, against 9 scheduled.**
+
+**Ranked by money.** (1) The real-money legs and Stage-0 promotions *are* graded, and the grade does not act. That is a feedback gap, not a grading gap, and it is the most expensive one (C2, C4). (2) ML has no continuous decision-value grade at all, so no model can earn its way in or out. (3) Forecast graders are written and never scheduled. (4) The LTR grade prices only 11% of its rows. Its priced slice is the one positive signal found, and nothing acts on it either.
 
 **The outcomes are the verdict.** Six months and thousands of commits have not produced one strategy with evidence of edge, and the live record agrees.
 
@@ -296,6 +318,8 @@ A small book cannot win on speed or microstructure. It *can* harvest premia that
 | `ML-M1-POOLED-ENTRY` | row (coordinate with ML-DECISION-MODELS) | 1 | pooled market-label entry model, benched vs the 3 factor portfolios, every trial in the ledger | beats the best baseline on discovery, or is closed |
 | `PROP-SPEND-PAUSE` | row | 3 | no new challenge purchases until a strategy clears § 5b | operator decision recorded |
 | `ML-BAR-ONE-READ` | row | 3 (operator preference) | keep the 2026-11-01 "point estimate ≥ 0" bar, but on ONE pre-registered model per question, holdout read once, trial count reported beside it; optional CI bound is the operator's call | operator decision recorded on `ML-DECISION-MODELS` |
+| `GRADE-EVERYTHING-CONTINUOUSLY` | row | 1 (schedules) / 3 (grade → action) | schedule the 9 never-run graders that still matter (first `desk_am_judgement_grade`, `exit_head_final_fold_grade`); add a served-prediction decision-value grader for every shadow/advisory model; make each grade name the action it drives (demote, promote, retire) | every model, decision class and forecast has a scheduled grader with output newer than 7 days, checked by the scoreboard |
+| `LTR-CLOSE-CLASS-TEST` | unit | 1 | pre-registered disjoint-window test of the LTR `close` recommendation class (18 priced, +15.15R counterfactual) | graded on a window it was not found on |
 | `PROMPTS-PNL-FIRST` | row | 1 | manager, review and audit skills open with the scoreboard and the question "would a sceptical quant believe this leg has edge?"; remove call-hit self-grading as a headline | skills edited; next review opens with P&L |
 
 ---
