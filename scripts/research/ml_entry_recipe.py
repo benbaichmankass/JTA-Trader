@@ -187,6 +187,14 @@ def run_cell(tab: pd.DataFrame, recipe: str, target: str, fset: str, seed: int, 
     path = out / "runs" / f"{key}.json"
     if path.exists():
         return json.loads(path.read_text())
+    if target == "T3":
+        # T3 clips net R to [-3, +3], but net R spans only [-2.05, +1.50] (MEASURED, dev table), so the clip changes 0 rows:
+        # T3 == T0 by construction and gets T0's result with no compute (manager 2026-11-01 15:39Z).
+        res = dict(run_cell(tab, recipe, "T0", fset, seed, out, n_jobs), key=key, target="T3", reused_from="T0",
+                   note="clip at +-3 changes no row; identical to T0 by construction")
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(json.dumps(res, indent=1, default=str))
+        return res
     t0, log = time.time(), []
     feats = FSETS[fset]
     work = with_noise(tab, seed) if fset == "S1" else tab
