@@ -1,0 +1,77 @@
+# Hand-authored 2026-11-01 by lane RESEARCH-EDGE (Tier 1). Decision rule (incl. the regime-robustness clause) registered BEFORE the run; this commit precedes the run commit. Gates: none.
+id: RQ-20261101-58e4-06
+title: 'Discovery: direction-agnostic MOVEMENT capture - two-sided stop brackets (breakout and fade) around an EWMA-predicted daily range, 10 liquid perps on 1h bars, 8 configs, net of cost, window 2020-06..2024-06'
+cadence: once
+roadmap:
+- L-PROGRAMMES
+theme: new_strategy_prop
+priority: 1
+kind: experiment
+question: Is the size of the next day's move predictable enough, and capturable both ways by a bracket around the predicted range, to earn a net Sharpe that survives an 8-trial deflation AND the regime-robustness
+  clause (3 of 4 years, no year above 50%, both sides non-negative, two sub-periods)?
+why_this_matters: 'Operator 2026-11-01 ~11:46Z: ''we''re looking for volatility that we can [be] predictable enough for us to capture, not a strong move in one specific direction, we want to be capturing
+  all types of movement''. Volatility clustering is the best-documented predictable quantity in markets; direction is not. The forecast here (EWMA of the daily range) is the baseline any ML vol head must
+  beat (coordinate with ML-FEATURE-INFRA / the vol-head lanes: their scores live on the trainer and were not reachable here, so this unit does not duplicate them). The stage-A time-of-day volatility scan
+  (VOL-WINDOW-RESEARCH) tested WHEN, this tests HOW MUCH, each day.'
+power:
+  expected_n: 1490
+  min_detectable_effect: 0.5
+  effect_units: annualised_sharpe
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: ~4.1 years of daily portfolio returns (2020-06-01..2024-06-30, n~1490). SE of an annualised Sharpe ~ 1/sqrt(years) ~ 0.49, so only Sharpe >~1.0 is separable from 0 alone; the DSR bar (N=configs)
+    is stricter by design (AUDIT section 5b). This unit is DISCOVERY; a pass is a candidate for ONE holdout read, never evidence for a book.
+  feasibility:
+    source: none
+    accrual_basis: Fixed historical archive (data.binance.vision), no accrual.
+decision_rule:
+  id: RULE-RQ20261101-58E4-06-MOVEMENT-CAPTURE
+  registered_at: '2026-11-01'
+  registered_before_run: true
+  statistic: net Sharpe, stress Sharpe, halves, bootstrap p05, DSR(N=8), plus the regime-robustness clause, of the highest-net-Sharpe config among 8, from scripts/research/edge_movement_capture.py
+  rule: 'Configs BO1 BO2 BO3 FD1 FD2 FD3 BO1g FD1g fixed in scripts/research/edge_movement_capture.py (breakout and fade brackets at +/- a*R_hat around the day''s open, TP b*R_hat, SL c*R_hat, R_hat = EWMA(0.94)
+    of the daily range through the prior day; ''g'' = trade only when R_hat >= its trailing 60-day median). The config with the HIGHEST net Sharpe among the 8 is the only one graded. PASS iff it has net
+    Sharpe >= 0.5 AND stress (2x cost) net Sharpe > 0 AND net Sharpe > 0 in BOTH halves AND bootstrap p05 of annualised mean > 0 AND DSR(N=8) > 0.95 AND the REGIME-ROBUSTNESS CLAUSE (operator 2026-11-01):
+    net positive in at least 3 of the 4 calendar years, no single calendar year above 50% of total net P&L, long-side and short-side net reported separately and BOTH >= 0, the two non-overlapping sub-periods
+    each net-positive, per-year table reported. FAIL otherwise, naming the failing item. Reported, not graded: Spearman of R_hat vs realised range per calendar year. Costs: 14 bps round trip all taker (stress
+    28), fixed notional 1/10 per symbol (no sizing), pessimistic intrabar order (stop first; both levels in one bar = stop loss). Window 2020-06-01..2024-06-30; holdout not read.'
+  what_it_does_not_do: Does not read the holdout (2024-07-01 on; edge_data.MAX_MONTH makes it unloadable), touch config/strategies.yaml, rosters or sizing, or propose a live leg. A PASS is only a candidate
+    for the single HOLDOUT-LOCK read.
+compute: cpu_light
+value:
+  usd_at_stake_per_month: 100
+  confidence: 0.1
+  bucket: structural
+  basis: 'stand-in: the audit (2026-11-01) found the live book flat gross and negative net; a documented-payer family is the only candidate source of positive expectancy'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 4.0
+  est_minutes: 60
+  basis: Manual lane run (RESEARCH-EDGE) from a session with Binance Vision egress; daily bars, a few thousand rows per symbol; no secret.
+run:
+  command:
+  - python3
+  - scripts/research/edge_movement_capture.py
+  - --data-root
+  - <scratch data root>
+  - --out
+  - <result.json>
+  timeout_minutes: 120
+  inputs:
+    research_unit: RQ-20261101-58e4-06
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- scripts/research/edge_movement_capture.py
+- scripts/research/regime_robustness.py
+- VOL-WINDOW-RESEARCH
+- ML-FEATURE-INFRA
+- .claude/skills/backtesting/SKILL.md
+programme: P6
+status: queued
+practice_precedent: 'docs/reference/trading-and-model-practice-principles.md and AUDIT section 5b (docs/audits/2026-11-01-from-scratch/AUDIT.md): <=10 pre-declared configs, discovery ends 2024-06-30, every
+  trial counted, DSR(N=trials)>0.95; Bailey & Lopez de Prado 2014 (DSR); payer literature: Bailey & Lopez de Prado 2014; volatility clustering (Engle 1982; RiskMetrics EWMA 0.94)'

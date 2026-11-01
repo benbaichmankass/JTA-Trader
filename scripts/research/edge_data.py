@@ -48,12 +48,12 @@ def _get(url, tries=4):
 
 
 def _month(args):
-    kind, sym, m, root, market = args
-    f = root / "raw" / (kind if market == "um" else kind + "_" + market) / f"{sym}-{m}.pkl"
+    kind, sym, m, root, market, iv = args
+    f = root / "raw" / ((kind if market == "um" else kind + "_" + market) + ("" if iv == "1d" else "_" + iv)) / f"{sym}-{m}.pkl"
     if f.exists():
         return pickle.load(open(f, "rb"))
     host = HOST if market == "um" else "https://data.binance.vision/data/spot/monthly"
-    url = (f"{host}/klines/{sym}/1d/{sym}-1d-{m}.zip" if kind == "k" else f"{HOST}/fundingRate/{sym}/{sym}-fundingRate-{m}.zip")
+    url = (f"{host}/klines/{sym}/{iv}/{sym}-{iv}-{m}.zip" if kind == "k" else f"{HOST}/fundingRate/{sym}/{sym}-fundingRate-{m}.zip")
     b = _get(url)
     df = None
     if b is not None:
@@ -64,7 +64,9 @@ def _month(args):
                 df = df.iloc[1:]
             df.columns = COLS
             df = df[["open_time", "open", "high", "low", "close", "volume", "quote_volume"]].astype(float)
-            df.index = pd.to_datetime(df.pop("open_time").astype("int64"), unit="ms", utc=True).dt.normalize()
+            df.index = pd.to_datetime(df.pop("open_time").astype("int64"), unit="ms", utc=True)
+            if iv == "1d":
+                df.index = df.index.normalize()
         else:
             df = df.rename(columns=lambda c: c.strip())
             df.index = pd.to_datetime(df["calc_time"].astype("int64"), unit="ms", utc=True)
@@ -74,14 +76,14 @@ def _month(args):
     return df
 
 
-def fetch(symbols, root, kinds=("k", "f"), workers=48, ms=None, market="um"):
+def fetch(symbols, root, kinds=("k", "f"), workers=48, ms=None, market="um", interval="1d"):
     root = Path(root)
     ms = ms or months()
-    jobs = [(k, s, m, root, market) for s in symbols for k in kinds for m in ms]
+    jobs = [(k, s, m, root, market, interval) for s in symbols for k in kinds for m in ms]
     with ThreadPoolExecutor(workers) as ex:
         res = list(ex.map(_month, jobs))
     out = {}
-    for (k, s, m, _, _mk), df in zip(jobs, res):
+    for (k, s, m, _, _mk, _iv), df in zip(jobs, res):
         out.setdefault((k, s), []).append((m, df))
     return out
 
