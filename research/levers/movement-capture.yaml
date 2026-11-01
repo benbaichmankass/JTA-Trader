@@ -1,0 +1,204 @@
+# Lever map (operator doctrine 2026-11-01). Seeded by lane RESEARCH-EDGE from result rows; RESEARCH-ITERATE owns it from here.
+subject: 'Direction-agnostic movement capture: two-sided stop brackets around an EWMA-predicted daily range, 10 liquid perps, 1h bars'
+units:
+- RQ-20261101-58e4-06
+status: open
+doctrine: 'operator 2026-11-01 14:00-14:09Z: nothing that failed is closed; attribute first; next tests are one-factor/ablation chosen from this map; retire only when every lever family
+  has been tested at power, net of cost, with no effect'
+verdict_so_far: 'fail: all 8 configs lose net; best (gated fade) net Sharpe -0.72, stress -1.41; 1 of 4 years positive. Volatility IS predictable (Spearman 0.48-0.58 each year).'
+failure_attribution:
+  where_lost: 'ENTRY geometry and EXIT asymmetry, then cost. BO1: mean gross -0.40% per trade, net -0.54% (cost 0.14%): the breakout entry is adverse (gross negative). FD1g: mean gross
+    -0.005% (zero), net -0.145%: for the fade the ENTIRE loss is the 0.14% cost. Outcome mix BO1: SL 42.7% (avg -3.1%) vs TP 17.5% (avg +4.3%) vs time 39.5% (avg +0.11%).'
+  by_direction:
+    BO1:
+      '-1': -0.666
+      '0': -3.542
+      '1': -0.389
+    FD1g:
+      '-1': -0.385
+      '0': -3.725
+      '1': 0.09
+  by_year:
+    BO1:
+      '2020': -0.436
+      '2021': -0.588
+      '2022': -0.622
+      '2023': -0.476
+      '2024': -0.517
+    FD1g:
+      '2020': -0.339
+      '2021': -0.315
+      '2022': -0.148
+      '2023': 0.089
+      '2024': -0.046
+  by_symbol:
+    BO1:
+      ADAUSDT: -0.446
+      BCHUSDT: -0.619
+      BNBUSDT: -0.347
+      BTCUSDT: -0.397
+      DOGEUSDT: -0.729
+      ETHUSDT: -0.449
+      LINKUSDT: -0.407
+      LTCUSDT: -0.632
+      SOLUSDT: -0.605
+      XRPUSDT: -0.807
+    FD1g:
+      ADAUSDT: -0.296
+      BCHUSDT: 0.222
+      BNBUSDT: -0.247
+      BTCUSDT: -0.183
+      DOGEUSDT: -0.404
+      ETHUSDT: -0.266
+      LINKUSDT: -0.384
+      LTCUSDT: 0.183
+      SOLUSDT: -0.047
+      XRPUSDT: -0.031
+  by_predicted_range_tercile:
+    BO1:
+      low: -0.356
+      mid: -0.54
+      high: -0.723
+    FD1g:
+      low: -0.129
+      mid: -0.124
+      high: -0.183
+  outcome_mix:
+    BO1:
+      sl: 4969
+      time: 4604
+      tp: 2041
+      amb: 33
+    FD1g:
+      time: 1761
+      sl: 1282
+      tp: 1189
+      amb: 8
+  stage: 'entry (touch of +/-a*R_hat is a bad entry for breakouts; roughly neutral for fades), exit (stop distance c*R_hat pays more when hit than the target earns), cost (decisive for
+    the fade); filter (gating by predicted-range level did not help: BO1 loses MORE in the high-range tercile)'
+levers_tested:
+- family: bracket mode
+  varied: breakout vs fade
+  response:
+    BO1:
+      sharpe_net: -5.014
+      ann_return_net: -1.5387
+      dsr: 0.0
+      stress_sharpe: -6.312
+    BO2:
+      sharpe_net: -3.606
+      ann_return_net: -1.0072
+      dsr: 0.0
+      stress_sharpe: -4.561
+    BO3:
+      sharpe_net: -1.965
+      ann_return_net: -0.7834
+      dsr: 0.0
+      stress_sharpe: -2.968
+    FD1:
+      sharpe_net: -1.279
+      ann_return_net: -0.3702
+      dsr: 1.8e-05
+      stress_sharpe: -2.409
+    FD2:
+      sharpe_net: -1.558
+      ann_return_net: -0.3645
+      dsr: 1.0e-06
+      stress_sharpe: -2.453
+    FD3:
+      sharpe_net: -1.866
+      ann_return_net: -0.4693
+      dsr: 0.0
+      stress_sharpe: -3.576
+  shape: fade (-1.3 to -1.9) beats breakout (-5.0 to -2.0); neither positive
+  tested_at_power: true
+- family: entry distance a
+  varied: 0.35 | 0.4 | 0.5 | 0.6 | 0.7 x R_hat
+  response:
+    BO1:
+      sharpe_net: -5.014
+      ann_return_net: -1.5387
+      dsr: 0.0
+      stress_sharpe: -6.312
+    BO2:
+      sharpe_net: -3.606
+      ann_return_net: -1.0072
+      dsr: 0.0
+      stress_sharpe: -4.561
+    FD1:
+      sharpe_net: -1.279
+      ann_return_net: -0.3702
+      dsr: 1.8e-05
+      stress_sharpe: -2.409
+    FD2:
+      sharpe_net: -1.558
+      ann_return_net: -0.3645
+      dsr: 1.0e-06
+      stress_sharpe: -2.453
+    FD3:
+      sharpe_net: -1.866
+      ann_return_net: -0.4693
+      dsr: 0.0
+      stress_sharpe: -3.576
+  shape: no monotone benefit
+  tested_at_power: false
+- family: target / stop ratio
+  varied: b 0.35-1.0, c 0.35-0.5 x R_hat
+  response:
+    BO1:
+      sharpe_net: -5.014
+      ann_return_net: -1.5387
+      dsr: 0.0
+      stress_sharpe: -6.312
+    BO3:
+      sharpe_net: -1.965
+      ann_return_net: -0.7834
+      dsr: 0.0
+      stress_sharpe: -2.968
+    FD3:
+      sharpe_net: -1.866
+      ann_return_net: -0.4693
+      dsr: 0.0
+      stress_sharpe: -3.576
+  shape: wider target (BO3) loses less than BO1 (-1.97 vs -5.01)
+  tested_at_power: false
+- family: predicted-range gate
+  varied: trade only when R_hat >= trailing 60d median
+  response:
+    BO1:
+      sharpe_net: -5.014
+      ann_return_net: -1.5387
+      dsr: 0.0
+      stress_sharpe: -6.312
+    FD1:
+      sharpe_net: -1.279
+      ann_return_net: -0.3702
+      dsr: 1.8e-05
+      stress_sharpe: -2.409
+    BO1g:
+      sharpe_net: -3.611
+      ann_return_net: -0.8238
+      dsr: 0.0
+      stress_sharpe: -4.34
+    FD1g:
+      sharpe_net: -0.72
+      ann_return_net: -0.151
+      dsr: 0.001462
+      stress_sharpe: -1.407
+  shape: gate helps both (-5.0 -> -3.6; -1.28 -> -0.72) but does not cross zero
+  tested_at_power: false
+lever_families_untested:
+- cost (maker/limit fills; the fade has zero gross edge so cost is the whole loss)
+- time-of-day windows (the earlier stage-A scan failed on hours, but not combined with the range forecast)
+- longer horizon (multi-day range, weekly) where cost per unit of move is lower
+- better forecaster (HAR / ML vol head; EWMA is the baseline to beat)
+- asymmetric brackets (one-sided after a first touch; scale-out)
+- instrument with convex payoff (options; see vol-premium-proxy)
+- 'time-exit-only variants (the time outcome averages +0.11%: hold-to-close after touch with no TP/SL)'
+- symbol subset (BCH, LTC positive for the fade) - risks data-snooping, needs holdout
+- funding-aware sides
+power_note: n=4240-11647 trades per config, 10 correlated symbols, one 4-year window; the sign of every config is stable across 5 calendar years, so "all lose" is better powered than
+  the ranking among configs.
+evidence: 'Result rows: research/results/<unit>/manual-research-edge-20261101.jsonl; per-config detail: comms/research/<unit>/manual-research-edge-20261101/result.json; attribution computed
+  by scripts/research/edge_failure_attribution.py (comms/research/edge-failure-attribution-20261101/attribution.json).'
+handed_to: RESEARCH-ITERATE (session_01AFoLuLiJ6TVirjHipiPRhQ)
