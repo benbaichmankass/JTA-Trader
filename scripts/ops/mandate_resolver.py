@@ -985,7 +985,7 @@ def _add_risk(leg: str, frm: str, to: str, account: str, exchange: str,
     # Only an entry whose `bar:` states `mechanics_proven: true` reads this; the Stage-0 bar below is untouched.
     mech = None
     if (frm, to) == ("S1", "S2") and bar.get("mechanics_proven"):
-        mech = _mechanics_proven(leg, root, m, acfg)
+        mech = _mechanics_proven(leg, root, acfg)
         ctx["evidence"]["mechanics"] = mech
     if (frm, to) == ("S1", "S2") and not (mech and mech.get("proven")):
         soak = SOAK_ACCOUNT.get(exchange)
@@ -1308,7 +1308,7 @@ COST_BASIS_VENUE_SYMBOL = "venue_symbol"
 VENUE_BASIS_ORDER = (("real_money", "market"), ("paper", "simulator"))
 
 
-def _mechanics_proven(leg: str, root: Path, m: Dict[str, Any], acfg: Dict[str, Any]) -> Dict[str, Any]:
+def _mechanics_proven(leg: str, root: Path, acfg: Dict[str, Any]) -> Dict[str, Any]:
     """soak_state.mechanics_proven over the records the resolver may read: SOAKS.json PASS dispositions
     plus the newest fresh committed soak snapshot (the resolver never opens the live journal)."""
     import soak_state as ss  # noqa: PLC0415
