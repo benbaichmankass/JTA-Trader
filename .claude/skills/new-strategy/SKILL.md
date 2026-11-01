@@ -129,6 +129,11 @@ why a shadow strategy's safe home is **bybit_1 (demo)**.
 § "Promotion evidence — **offline edge, live mechanics**" (binding; a
 soak-doctrine CI guard enforces this). Read that rule before wiring anything.
 
+⚠️ **Updated 2026-11-01 (operator, PROMOTION-NO-SOAK): not every leg soaks.** A leg whose execution mechanics are already proven
+(`soak_state.mechanics_proven`, registry `config/mechanics_paths.yaml`) goes from Stage 0 to real money with no paper soak; only a leg
+with NEW order-path code proves it with one small trade. The rule is stated once in
+[`OPERATING-PLAN` § 2 "The soak is MECHANICAL"](../../../docs/plans/OPERATING-PLAN-2026-09-21.md); steps 1–2 below are the new-mechanics case.
+
 The **edge is decided OFFLINE, before the soak** — a live-faithful backtest
 (config-exact, live-exit-faithful) plus the backfill / live-simulator over deep
 history must already show the leg meets our standard. That offline gate carries
