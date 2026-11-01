@@ -47,14 +47,10 @@ routing:
 run:
   workflow: research-script-run.yml
   command:
-  - python3
-  - scripts/research/ml_decision_entry.py
-  - run-family-ablation
-  - --cache
-  - /tmp/ml_decision_klines
-  - --unit
+  - bash
+  - scripts/research/ml_entry_v2_run.sh
+  - ablation
   - '{unit}'
-  - --out
   - '{out_dir}'
   timeout_minutes: 600
   inputs:
@@ -73,7 +69,7 @@ related:
 what_it_does_not_do: Registers, serves or promotes nothing; changes no config; places no order; sizes nothing; reads no held-out window.
 blocked_on:
 - kind: harness
-  ref: scripts/research/ml_decision_entry.py run-family-ablation
+  ref: scripts/research/ml_entry_v2.py (build-table, arm, combine)
   what: the ablation subcommand with family builders 1-5 (fetches the 12-column klines, funding, premium index and 5m metrics from Binance Vision itself; no persisted store needed) and a self-test that refuses a held-out date and a forward-shifted column
   clears_when: lands on main with the self-tests (planned 2026-11-01T13:00Z, row ML-FS-ENTRY-V2); the lane git-mvs this file to research/queue/ with status queued (rule unchanged)
 ml_consumer:

@@ -27,7 +27,7 @@ decision_rule:
   id: RULE-RQ20261101-FS02-01-ENTRY-V2
   registered_at: '2026-11-01'
   registered_before_run: true
-  statistic: 'Held-out mean net R per taken decision on W1, n, distinct symbols; reported: bootstrap CI95, ex-max-symbol mean, matched random 200 draws, always-long, the frozen c692-01 model on the same window, and the audit benchmarks on the same window and cost stack (manager 2026-11-01, audit row ML-M1-POOLED-ENTRY): time-series momentum, cross-sectional momentum and funding carry (reported beside v2, not gating), feature families used and their present share, variants read on W1 (this unit: 1).'
+  statistic: 'Held-out mean net R per taken decision on W1, n, distinct symbols; reported: bootstrap CI95, ex-max-symbol mean, matched random 200 draws, always-long, the frozen c692-01 model on the same window, and the audit benchmarks on the same window and cost stack (manager 2026-11-01, audit row ML-M1-POOLED-ENTRY): time-series momentum, cross-sectional momentum and funding carry (reported beside v2, not gating), feature families used and their present share, variants read on W1 as counted by HOLDOUT-LOCK (this unit: v2 plus the frozen v1 reference = 2; the reference is reported, not a candidate).'
   rule: 'INDETERMINATE IF no tau reaches dev n >= 1000, OR W1 n < 300, OR W1 distinct symbols < 10, OR fs01-01 has no record. PASS IF W1 mean net R per decision >= 0 (operator bar: point estimate). FAIL otherwise. A PASS makes this the candidate that replaces v1 in ML-ENTRY-LIVE-ADAPTER after RQ-20261101-c692-06-style symbol check and serve-parity (ML-FS-SERVE-PARITY); a FAIL with v1 PASS is reported with both records. Thresholds are not changed after any result.'
   what_it_does_not_do: No sizing, no config change, no order, no promotion.
   min_n: 300 forward decisions on >= 10 symbols
@@ -47,14 +47,10 @@ routing:
 run:
   workflow: research-script-run.yml
   command:
-  - python3
-  - scripts/research/ml_decision_entry.py
-  - run-v2-forward
-  - --cache
-  - /tmp/ml_decision_klines
-  - --unit
+  - bash
+  - scripts/research/ml_entry_v2_run.sh
+  - forward
   - '{unit}'
-  - --out
   - '{out_dir}'
   timeout_minutes: 300
   inputs:
@@ -75,7 +71,7 @@ blocked_on:
   what: the dev-fold ablation record that fixes the feature set (planned 2026-11-01T14:15Z)
   clears_when: its result record lands on main; this file is then git-mv'd to research/queue/ with status queued (rule unchanged)
 - kind: harness
-  ref: scripts/research/ml_decision_entry.py run-v2-forward
+  ref: scripts/research/ml_entry_v2.py forward
   what: the single-read forward subcommand, refusing any window except W1
   clears_when: lands with a self-test that refuses a second read of W1 (HOLDOUT-LOCK semantics)
 - kind: row
