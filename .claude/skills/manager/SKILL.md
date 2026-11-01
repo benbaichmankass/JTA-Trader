@@ -386,16 +386,17 @@ python3 scripts/ops/checklist.py queue --limit 10                             # 
 python3 scripts/ops/checklist.py header last_review '{"report_id": "...", "reviewed_at": "..."}'   # rare: the header is shared
 ```
 
-⚠️ **The filing contract (operator, 2026-11-01, binding; lane `CHECKLIST-OWNER-DUE`).** *"The manager is the owner of all the tasks. It's
-just a question of when we're getting to them, or they need to be related to a roadmap item ... that needs to be done immediately when it's
-filed."* So `add` **refuses** a row without a `--due-by` (ISO date) **and** a `--roadmap` ref (a milestone id from `docs/roadmap/milestones.yaml`,
-or the explicit `--roadmap unmapped --roadmap-unmapped-reason '<why no milestone fits>'`); `owner` **defaults to `manager`** and is never null;
-`set` refuses to clear `owner` / `due_by` / `roadmap` (re-date it instead); closing to `done`/`dropped` needs a stated reason
-(`closed_reason=` or a new note in the same call). `checklist-filing-guard` (`scripts/ci/check_checklist_filing.py`) refuses any PR that adds or
-substantively changes a non-terminal row lacking the three. **A date is when we will GET TO the row**, not when it ends; an unscheduled
-row is not on the plan. **Overdue is the first thing you look at**: `python3 scripts/ops/checklist_overdue.py` at start of session (and the top of
-`GET /api/bot/work/brief`); an overdue row is dispatched, re-dated with a reason in its note, or dropped with a reason that day. Gates this
-adds: the refusal and the guard above (operator-authorised 2026-11-01).
+⚠️ **Process, not gates (operator, 2026-11-01, binding; lane `CHECKLIST-OWNER-DUE`).** *"We don't need gates, we need processes ... structurally
+making sure that work items don't get dropped and anything that needs to wait and be observed later actually gets observed later."* The manager
+owns every task; a row always has an owner, a date and a roadmap ref **because the tool fills them**, not because a filer remembered:
+`add`/`set` fill `owner=manager`, a computed `due_by` (the observation date the row names; else in_flight +2d, blocked +7d, landed_unproven +3d, queued by
+`priority_rank` +1/+3/+7d) and `roadmap=["unmapped"]` + a reason (the weekly pass maps it). Nothing is refused; only a *deliberate clearing* of
+owner/due_by/roadmap errors. A `landed_unproven` row carries `observe: {when, how}` where `how` is one allowlisted command
+(`python3 scripts/...` or a GET on the live API). **The drain acts on the date:** `scripts/ops/checklist_drain.py --run` (a scheduled routine,
+Tier-2, hourly) runs each due row's `observe.how`, writes the result onto the row, counts `slips`, and lists the row as DUE NOW; it also surfaces
+any new pipeline id collision as a due item. **Overdue/due-now is the first thing you look at**: `python3 scripts/ops/checklist_overdue.py` and
+`python3 scripts/ops/checklist_drain.py` at start of session (and top of `GET /api/bot/work/brief`); a due row is dispatched, re-dated with a
+reason in its note, or dropped with a reason that day. Gates this adds or changes: **none -- defaults plus a scheduled drain.**
 
 ### The audit-outcome contract (operator, 2026-11-01, binding)
 

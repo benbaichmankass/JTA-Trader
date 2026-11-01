@@ -77,7 +77,7 @@ container costs the work.
 A finding is filed when it is in `docs/claude/work/PIPELINE.jsonl` with an
 `origin.rerun` and a `due_when`, or when it is a checklist row.
 
-⚠️ **A filed row carries `owner`, `due_by` and a `roadmap` ref** (`checklist.py add` refuses without them; operator, 2026-11-01). **An audit or
+⚠️ **A filed row carries `owner`, `due_by` and a `roadmap` ref** (`checklist.py add` fills them; the scheduled drain acts on the date; operator, 2026-11-01). **An audit or
 review lane** (weekly-audit, health, performance, ml, programme review, any from-scratch audit) **is done only when every proposal it made maps to such a
 row — or to a recorded operator decision** — and the PR body lists proposal → row id → `due_by` (manager skill § "The audit-outcome contract").
 

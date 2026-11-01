@@ -23,7 +23,7 @@ _ID_OK = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]*$")
 
 
 __all__ = ["ChecklistError", "HEADER", "MONOLITH", "MONOLITH_NAME", "RANK", "REPO", "SEQ", "STORE",
-           "HISTORY_PATHS", "TERMINAL", "UNMAPPED", "DEFAULT_OWNER", "filing_problems", "effective_due", "is_overdue", "check", "queue", "rank_problem", "exists", "is_checklist_path", "load", "load_at", "load_path", "read_row", "render", "seeded", "seed", "write_header", "write_row"]
+           "HISTORY_PATHS", "TERMINAL", "UNMAPPED", "DEFAULT_OWNER", "filing_problems", "fill_defaults", "effective_due", "is_overdue", "check", "queue", "rank_problem", "exists", "is_checklist_path", "load", "load_at", "load_path", "read_row", "render", "seeded", "seed", "write_header", "write_row"]
 
 
 class ChecklistError(ValueError):
@@ -75,6 +75,46 @@ def filing_problems(row: dict) -> list[str]:
         elif len(str(row.get("roadmap_unmapped_reason") or "").strip()) < 10:
             out.append(f'`roadmap` is "{UNMAPPED}" with no `roadmap_unmapped_reason` (say why, >= 10 chars)')
     return out
+
+
+def fill_defaults(row: dict, today: date | None = None) -> list[str]:
+    """PROCESS, NOT GATES (operator, 2026-11-01): fill what a filer left out instead of refusing the row.
+    owner -> manager; due_by -> computed from state / priority_rank / the observation the row names;
+    roadmap -> ["unmapped"] + a reason the drain and the weekly pass will show as work. Mutates ``row``;
+    returns what it filled (so the CLI can say so). Terminal rows are left alone."""
+    from datetime import timedelta  # noqa: PLC0415
+    today = today or datetime.now().astimezone().date()
+    if row.get("state") in TERMINAL:
+        return []
+    filled: list[str] = []
+    if not (isinstance(row.get("owner"), str) and row["owner"].strip()):
+        row["owner"] = DEFAULT_OWNER
+        filled.append("owner=manager")
+    if _as_date(row.get("due_by")) is None:
+        obs = row.get("observe") if isinstance(row.get("observe"), dict) else {}
+        d = _as_date(obs.get("when")) or (_as_date(row["observation"].get("due_by"))
+                                          if isinstance(row.get("observation"), dict) else None)
+        st, rank = row.get("state"), row.get("priority_rank")
+        if d is not None and d >= today:
+            basis = "the observation date the row names"
+        elif st == "in_flight":
+            d, basis = today + timedelta(days=2), "in_flight: +2d"
+        elif st == "blocked":
+            d, basis = today + timedelta(days=7), "blocked: re-check in +7d"
+        elif st == "landed_unproven":
+            d, basis = today + timedelta(days=3), "landed_unproven, no future observation date: +3d"
+        elif isinstance(rank, (int, float)) and not isinstance(rank, bool):
+            d, basis = today + timedelta(days=1 if rank <= 3 else 3 if rank <= 10 else 7), f"queued, priority_rank {rank}"
+        else:
+            d, basis = today + timedelta(days=7), "queued, unranked: +7d"
+        row["due_by"] = d.isoformat()
+        filled.append(f"due_by={row['due_by']} ({basis})")
+    rm = row.get("roadmap")
+    if not ([rm] if isinstance(rm, str) and rm.strip() else rm):
+        row["roadmap"] = [UNMAPPED]
+        row.setdefault("roadmap_unmapped_reason", "not set at filing -- manager to map to a milestone at the next weekly pass")
+        filled.append('roadmap=["unmapped"]')
+    return filled
 
 
 def effective_due(row: dict) -> date | None:

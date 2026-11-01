@@ -47,7 +47,7 @@ if str(REPO) not in sys.path:
 from src.runtime.checklist_store import *  # noqa: E402,F401,F403
 from src.runtime import checklist_store as _store  # noqa: E402
 from src.runtime.checklist_store import (  # noqa: E402
-    DEFAULT_OWNER, MONOLITH, SEQ, STORE, TERMINAL, ChecklistError, _dump, check, filing_problems, load,
+    DEFAULT_OWNER, MONOLITH, SEQ, STORE, TERMINAL, ChecklistError, _dump, check, fill_defaults, filing_problems, load,
     render, seed, write_row,
 )
 
@@ -115,15 +115,10 @@ def op_add(repo: Path, row_id: str, fields: dict, by: str | None) -> Path:
     row.update(fields)
     if not str(row["title"]).strip():
         raise ChecklistError("`add` needs --title")
-    if row["state"] in TERMINAL:
-        if not str(row.get("closed_reason") or row.get("note") or "").strip():
-            raise ChecklistError(f"a row added as {row['state']!r} needs a stated reason (--note or closed_reason=)")
-    elif (why := filing_problems(row)):
-        # THE FILING CONTRACT (operator, 2026-11-01): the manager owns every task, so a row is filed with
-        # a date and a roadmap ref or not at all -- "when we're getting to it" is a field, not a hope.
-        raise ChecklistError(f"row {row_id!r} not filed: " + "; ".join(why)
-                             + " (pass --due-by YYYY-MM-DD and --roadmap L-OPS[,M20] | --roadmap unmapped "
-                               "--roadmap-unmapped-reason '...')")
+    # PROCESS, NOT GATES (operator, 2026-11-01): fill owner / due_by / roadmap instead of refusing the row;
+    # the scheduled drain (checklist_drain.py) is what makes the date act.
+    for f in fill_defaults(row):
+        print(f"checklist: filled {f}", file=sys.stderr)
     return _commit_row(row, repo, header, by)
 
 
@@ -136,23 +131,13 @@ def op_set(repo: Path, row_id: str, fields: dict, by: str | None) -> Path:
         raise ChecklistError("a row's id cannot change")
     old = dict(row)
     row.update(fields)
-    # `set` never clears owner / due_by / roadmap (operator, 2026-11-01): re-date it, do not blank it.
+    # Only a DELIBERATE clearing errors (operator, 2026-11-01): re-date it, do not blank it.
     for k in ("owner", "due_by", "roadmap"):
         if old.get(k) and not row.get(k):
             raise ChecklistError(f"row {row_id!r}: `set` refuses to clear `{k}` (was {old.get(k)!r}); "
                                  f"change it to a new value instead")
-    if row.get("state") in TERMINAL and old.get("state") not in TERMINAL:
-        reason = str(fields.get("closed_reason") or "").strip()
-        if not reason and str(fields.get("note") or "").strip() == str(old.get("note") or "").strip():
-            raise ChecklistError(f"row {row_id!r}: closing to {row['state']!r} needs a stated reason "
-                                 f"(closed_reason='...' or a new note in the same call)")
-    touched = {"owner", "due_by", "roadmap", "roadmap_unmapped_reason"} & set(fields)
-    if (why := filing_problems(row)):
-        if touched or old.get("state") in TERMINAL:  # you edited the contract fields, or reopened a closed row
-            raise ChecklistError(f"row {row_id!r} refused: " + "; ".join(why))
-        print(f"checklist: WARNING row {row_id!r} is not to the filing contract and CI refuses a changed row "
-              f"like this: " + "; ".join(why) + f"\n  fix: checklist.py set {row_id} due_by=YYYY-MM-DD "
-              "roadmap='[\"L-OPS\"]' owner=manager", file=sys.stderr)
+    for f in fill_defaults(row):  # a legacy row is brought up to the contract when touched, never blocked
+        print(f"checklist: filled {f}", file=sys.stderr)
     return _commit_row(row, repo, header, by)
 
 
@@ -276,7 +261,7 @@ def _self_test() -> int:
             ck("a row whose id disagrees with its filename is refused, not skipped", True)
         else:
             ck("a row whose id disagrees with its filename is refused, not skipped", False)
-    # ── the filing contract (operator, 2026-11-01) ──
+    # ── process, not gates (operator, 2026-11-01): defaults fill; only deliberate clearing errors ──
     with tempfile.TemporaryDirectory() as td:
         repo = Path(td)
         (repo / MONOLITH.parent).mkdir(parents=True)
@@ -286,34 +271,36 @@ def _self_test() -> int:
         (repo / MONOLITH).write_text(_dump(seed_doc), encoding="utf-8")
         seed(repo=repo)
 
+        def get(rid):
+            return [r for r in load(repo)["items"] if r["id"] == rid][0]
+
         def refused(fn, *a) -> bool:
             try:
                 fn(*a)
             except ChecklistError:
                 return True
             return False
-        good = {"title": "t", "due_by": "2026-11-05", "roadmap": ["L-OPS"]}
-        ck("add REFUSES a row with no due_by", refused(op_add, repo, "N1", {"title": "t", "roadmap": ["L-OPS"]}, None))
-        ck("add REFUSES a row with no roadmap", refused(op_add, repo, "N2", {"title": "t", "due_by": "2026-11-05"}, None))
-        ck("add REFUSES a non-date due_by", refused(op_add, repo, "N3", dict(good, due_by="soon"), None))
-        ck("add REFUSES an impossible date", refused(op_add, repo, "N3b", dict(good, due_by="2026-02-31"), None))
-        ck("add REFUSES unmapped with no reason", refused(op_add, repo, "N4", dict(good, roadmap=["unmapped"]), None))
-        ck("add REFUSES a blank owner", refused(op_add, repo, "N4b", dict(good, owner=" "), None))
-        op_add(repo, "N5", good, None)
-        ck("add defaults owner to manager", load(repo)["items"][-1]["owner"] == "manager")
-        op_add(repo, "N6", dict(good, roadmap=["unmapped"], roadmap_unmapped_reason="no milestone fits a one-off"), None)
-        ck("add accepts unmapped WITH a reason", any(r["id"] == "N6" for r in load(repo)["items"]))
-        ck("set REFUSES to clear due_by", refused(op_set, repo, "N5", {"due_by": None}, None))
-        ck("set REFUSES to clear roadmap", refused(op_set, repo, "N5", {"roadmap": []}, None))
-        ck("set REFUSES to clear owner", refused(op_set, repo, "N5", {"owner": ""}, None))
-        op_set(repo, "N5", {"due_by": "2026-11-09"}, None)
-        ck("set may RE-DATE", [r for r in load(repo)["items"] if r["id"] == "N5"][0]["due_by"] == "2026-11-09")
-        ck("closing needs a stated reason", refused(op_set, repo, "N5", {"state": "dropped"}, None))
-        op_set(repo, "N5", {"state": "dropped", "closed_reason": "superseded by N6"}, None)
-        ck("closing with a reason works", [r for r in load(repo)["items"] if r["id"] == "N5"][0]["state"] == "dropped")
-        ck("a legacy row can still be noted (warned, not blocked)", op_note(repo, "OLD", "x", True, None) is not None)
-        ck("...but touching a contract field on it must leave it valid", refused(op_set, repo, "OLD", {"due_by": "nope"}, None))
-        ck("terminal rows are exempt from the contract", filing_problems({"state": "done"}) == [])
+        import contextlib, io  # noqa: E401,PLC0415
+        with contextlib.redirect_stderr(io.StringIO()):
+            op_add(repo, "N1", {"title": "bare row"}, None)
+            op_add(repo, "N2", {"title": "ranked", "priority_rank": 2}, None)
+            op_add(repo, "N3", {"title": "obs", "state": "landed_unproven", "observation": {"due_by": "2999-01-01T00:00Z"}}, None)
+            op_note(repo, "OLD", "touched", True, None)
+        ck("add of a bare row is NOT refused: owner defaults to manager", get("N1")["owner"] == "manager")
+        ck("add fills a due_by (an ISO date)", bool(__import__("re").match(r"^20\d\d-\d\d-\d\d$", get("N1")["due_by"])))
+        ck("add fills roadmap as unmapped + reason, for the weekly pass to map",
+           get("N1")["roadmap"] == ["unmapped"] and get("N1")["roadmap_unmapped_reason"])
+        ck("a ranked queued row is due sooner than an unranked one", get("N2")["due_by"] < get("N1")["due_by"])
+        ck("landed_unproven keeps the observation date the row names", get("N3")["due_by"] == "2999-01-01")
+        ck("touching a legacy row brings it to the contract", filing_problems(get("OLD")) == [])
+        ck("an explicit due_by is never overwritten", (op_add(repo, "N4", {"title": "t", "due_by": "2026-11-09", "roadmap": ["L-OPS"]}, None), get("N4")["due_by"])[1] == "2026-11-09")
+        ck("only a DELIBERATE clearing errors: due_by", refused(op_set, repo, "N4", {"due_by": None}, None))
+        ck("...owner", refused(op_set, repo, "N4", {"owner": ""}, None))
+        ck("...roadmap", refused(op_set, repo, "N4", {"roadmap": []}, None))
+        op_set(repo, "N4", {"due_by": "2026-11-12"}, None)
+        ck("re-dating is fine", get("N4")["due_by"] == "2026-11-12")
+        op_set(repo, "N4", {"state": "dropped", "note": "x"}, None)
+        ck("closing is never blocked", get("N4")["state"] == "dropped")
     print("checklist store self-test:", "PASS" if ok else "FAIL")
     return 0 if ok else 1
 
