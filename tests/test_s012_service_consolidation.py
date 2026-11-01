@@ -53,6 +53,10 @@ EXPECTED_SERVICES = {
     "ict-claude-decision-bot.service",
     # Shadow log rotation for the shadow-predictions audit log.
     "ict-shadow-log-rotate.service",
+    # 2026-11-01 (ML-ENTRY-GOLIVE-UNBLOCK): observe-only ML ENTRY decision shadow -- every Bybit-listed symbol under
+    # ml_entry v1 + v2 at every 15m close (operator ~22:30Z "logging decisions more frequently and on smaller
+    # timeframes"). Oneshot, timer-driven; in DEFAULT_SKIP. Recorded in docs/claude/deployment-ops.md.
+    "ict-ml-decision-shadow.service",
     # One-shot smoke check run on deploy.
     "ict-smoke-once.service",
     # Claude VM runner template unit.
