@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# wiring: manual research tooling (lane ML-DECISION-MODELS, deliverable A); output docs/research/ml-decision-models-2026-11-01/diagnosis_table.json
+# wiring: manual-only - a one-shot census for lane ML-DECISION-MODELS deliverable A; its committed output is docs/research/ml-decision-models-2026-11-01/diagnosis_table.json, re-run by hand to refresh it
 """Tabulate every GRADED ML / AI-trader result in research/results/ by how it was set up (Tier-1, read-only).
 
 The operator asked (2026-11-01) "what we're not doing correctly and why this is so difficult". This script
@@ -43,30 +43,30 @@ REPO = Path(__file__).resolve().parents[2]
 ML_TITLE = re.compile(
     r"(exit[- ]head|regime[- ]head|direction[- ]head|meta[- ]?label|lightgbm|lgbm|gbdt|xgboost|catboost|classifier|"
     r"\bmodel\b|tabpfn|tabicl|chronos|timesfm|kronos|\blearner|\bml\b|\bml-|overlay|ai trader|logit|\bmlp\b|gru|"
-    r"extratrees|foundation)", re.I)
-NOT_ML = re.compile(r"head-to-head", re.I)
+    r"extratrees|foundation)", re.IGNORECASE)
+NOT_ML = re.compile(r"head-to-head", re.IGNORECASE)
 
 TASK_RULES = [
-    ("infra_parity_drift", re.compile(r"(parity|smoke|plumbing|drift|health monitor|feasibility|wiring|census|selfcheck|re-entry test)", re.I)),
+    ("infra_parity_drift", re.compile(r"(parity|smoke|plumbing|drift|health monitor|feasibility|wiring|census|selfcheck|re-entry test)", re.IGNORECASE)),
     ("in_trade_exit", re.compile(r"(exit[- ]head|in-trade|exit line|exit/tighten|partial close|giveback|sl-before-tp|"
-                                  r"action-value|hold-to-bracket|exit-now)", re.I)),
+                                  r"action-value|hold-to-bracket|exit-now)", re.IGNORECASE)),
     ("entry_filter_meta", re.compile(r"(meta[- ]?label|overlay|take/skip|entry gate|veto|label wall|conviction|"
-                                      r"setup[- ]quality|winrate|trade[- ]outcome|impact scoping|gates? each leg)", re.I)),
-    ("direction_head", re.compile(r"direction", re.I)),
-    ("regime_vol_head", re.compile(r"(regime|vol(atility)?[- ]?(head|label|regime)|range-vol|har-rv)", re.I)),
+                                      r"setup[- ]quality|winrate|trade[- ]outcome|impact scoping|gates? each leg)", re.IGNORECASE)),
+    ("direction_head", re.compile(r"direction", re.IGNORECASE)),
+    ("regime_vol_head", re.compile(r"(regime|vol(atility)?[- ]?(head|label|regime)|range-vol|har-rv)", re.IGNORECASE)),
 ]
 STRATEGY_LABEL = re.compile(r"(\btrades?\b|\blegs?\b|ledger|exit|meta[- ]?label|overlay|in-trade|take/skip|giveback|"
-                            r"strategy x symbol|trade corpus|entry gate|veto)", re.I)
+                            r"strategy x symbol|trade corpus|entry gate|veto)", re.IGNORECASE)
 BAR_LABEL = re.compile(r"(regime_label|direction_label|regime head|direction|vol label|forward return|bars?\b|shards?)",
-                       re.I)
+                       re.IGNORECASE)
 NET_R = re.compile(r"(net[- ]?r\b|r per trade|r/trade|recovered_r|\bdr\b|net of (the )?(full )?cost|mean_net_r|"
-                   r"net-of-cost|delta[_ ]r|per capital-day)", re.I)
-STAT = re.compile(r"(log[-_ ]?loss|macro[-_ ]?f1|f1_|\bauc\b|brier|accuracy|nats|calibrat|\bece\b)", re.I)
+                   r"net-of-cost|delta[_ ]r|per capital-day)", re.IGNORECASE)
+STAT = re.compile(r"(log[-_ ]?loss|macro[-_ ]?f1|f1_|\bauc\b|brier|accuracy|nats|calibrat|\bece\b)", re.IGNORECASE)
 POOLED = re.compile(r"(pooled across symbols|cross-symbol|pooled over (the )?symbols|universe|60[- ]perp|"
-                    r"one model .* all|generalist)", re.I)
+                    r"one model .* all|generalist)", re.IGNORECASE)
 SYMBOL = re.compile(r"\b(BTC|ETH|SOL|XRP|ADA|DOGE|MES|BNB)(USDT)?\b")
-CLOCK = re.compile(r"\b(5m|15m|30m|1h|2h|4h|1d|daily)\b", re.I)
-COST = re.compile(r"(net of (the )?(full )?cost|net-of-cost|cost stack|fee|slippage|funding|net r|netr)", re.I)
+CLOCK = re.compile(r"\b(5m|15m|30m|1h|2h|4h|1d|daily)\b", re.IGNORECASE)
+COST = re.compile(r"(net of (the )?(full )?cost|net-of-cost|cost stack|fee|slippage|funding|net r|netr)", re.IGNORECASE)
 N_KEY = re.compile(r"^(n|n_oos\w*|n_test\w*|n_trades\w*|n_rows\w*|n_holdout\w*|n_eval\w*|n_total\w*|rows_n|block_n)$")
 
 
@@ -130,8 +130,9 @@ def load_units() -> dict:
     units = {}
     for f in glob.glob(str(REPO / "research/queue/*.yaml")) + glob.glob(str(REPO / "research/queue/*/*.yaml")):
         try:
-            d = yaml.safe_load(open(f))
-        except Exception:  # noqa: BLE001 - an unparsable unit is counted below, not fatal
+            with open(f) as fh:
+                d = yaml.safe_load(fh)
+        except Exception:  # noqa: BLE001, S112  # allow-silent: an unparsable unit is not a graded ML unit; the queue validator owns parse errors
             continue
         if isinstance(d, dict) and d.get("id"):
             units[d["id"]] = d
@@ -158,7 +159,9 @@ def build() -> dict:
             continue
         recs = []
         for f in sorted(glob.glob(str(res_root / rid / "*.jsonl"))):
-            for line in open(f):
+            with open(f) as fh:
+                lines = fh.read().splitlines()
+            for line in lines:
                 try:
                     recs.append(json.loads(line))
                 except ValueError:

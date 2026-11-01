@@ -92,3 +92,18 @@ blocked_on:
   what: the decision-model label store (1m tie resolution + manifest) and the run-v2 path
   clears_when: both land on main with self-tests (planted tie resolved TP-first on 1m); the lane git-mvs this file to research/queue/ with status
     queued (rule unchanged)
+- kind: rule
+  ref: DESIGN.md section 1c
+  what: 'ENTRY v2 is a second ENTRY variant: it must be scored on a fresh forward held-out window (after 2026-09-30), not the window c692-01 read'
+  clears_when: its rule is re-registered on the forward window before any run
+ml_consumer:
+  consumer: ML-ENTRY-LIVE-ADAPTER
+  decision: 'whether the new ml_entry leg (held PR #22079) opens LONG / SHORT positions on bybit_2 + bybit_portfolio on BTC/ETH/XRP/ADA/SOL beside
+    the rostered legs below, which share those symbols and the account risk book (ml_entry is not on the main roster until that PR merges)'
+  legs:
+  - xrp_pullback_2h
+  - trend_donchian_eth_4h
+  - trend_donchian_xrp_4h
+  - ada_pullback_2h
+  - trend_donchian_sol_prop
+  book: money
