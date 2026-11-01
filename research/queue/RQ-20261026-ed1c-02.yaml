@@ -1,6 +1,6 @@
 id: RQ-20261026-ed1c-02
 title: 'Trend-direction confirmation on trend_donchian_ada_4h: does direction filter beat the declared exit net of the full cost stack?'
-status: queued
+status: done
 cadence: once
 roadmap:
 - L-ATM
@@ -101,3 +101,16 @@ related:
 - research/queue/RQ-20261026-90d3-15.yaml
 - RESEARCH-FLOOR-20261026
 last_dispatched_at: '2026-11-01T00:01:00+00:00'
+grading:
+  attested: RULE-RQ20261026ed1c02
+  auto: true
+  decision_rule_id: RULE-RQ20261026ed1c02
+  evidence:
+  - research/results/RQ-20261026-ed1c-02/41254888502.jsonl
+  graded_at: '2026-11-01'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail
