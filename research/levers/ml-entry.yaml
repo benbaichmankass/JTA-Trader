@@ -15,7 +15,7 @@ manifest:
   recipe: tested
   universe: untested
   horizon: untested
-  threshold: untested
+  threshold: tested
   calibration: untested
 levers:
   features:
@@ -31,13 +31,58 @@ levers:
     regularisation_selection:
       tests:
       - unit: RQ-20261101-fs05-01
-        value: R1/R2/R3 queued
-        shape: no_reading
-      shape: no_reading
+        value: R1 (colsample 0.5, min_child 2000, lambda 50)
+        response: 'S0 +0.0286 vs R0 -0.0018 LOFO net R/decision (3 seeds, dev folds, n 34k-41k per seed); noise delta S1-S0 -0.0039; INDETERMINATE by the registered n>=1000-per-fold clause (min fold n 941)'
+        shape: noisy
+        note: 'across-seed range of S0 is 0.040, so +0.030 is inside one seed spread; tested_at_power false'
+      - unit: RQ-20261101-fs05-01
+        value: R2 (R1 + leaves 15, lr 0.02, 450 trees)
+        response: 'S0 +0.0253; noise delta +0.0004; INDETERMINATE (min fold n 250 on S2)'
+        shape: noisy
+      - unit: RQ-20261101-fs05-01
+        value: R3 (fold-internal shadow selection, baseline params)
+        response: 'S0 +0.0039; noise delta -0.0017; kept 10-17 of 20 columns per fold, let 0-3 of 9 injected noise columns through on S1; INDETERMINATE (min fold n 424)'
+        shape: flat
+      - unit: RQ-20261101-fs05-01
+        value: R0 baseline, 3 seeds
+        response: 'S0 -0.0018 (n 39.5k-71.9k), S1 -0.0077, S2 (F1..F5) -0.0337; spread 0.0237; only noise-immune arm, no family admitted'
+        shape: flat
+      shape: noisy
+    seed_variance:
+      tests:
+      - unit: RQ-20261101-fs05-01
+        value: 3 seeds (7, 11, 13), pooled LOFO mean
+        response: 'across-seed range 0.012-0.040 per cell, about 14x the 0.0017 A-vs-A2 figure the unit assumed; the evaluation noise swamps every 0.01 effect'
+        shape: dominant_noise
+      shape: dominant_noise
   labels:
     training_target:
       tests:
       - unit: RQ-20261101-fs06-01
-        value: T1..T4 queued
+        value: T1 market-neutral (minus same-timestamp mean)
+        response: 'S0 +0.0263 vs T0 -0.0018, but only 41-1275 scored decisions per fold: INDETERMINATE; fixed tau grid is in raw-net-R units and T1 scores are on another scale'
         shape: no_reading
-      shape: no_reading
+      - unit: RQ-20261101-fs06-01
+        value: T2 same-timestamp rank in [-1, 1]
+        response: 'S0 -0.0085, delta -0.0067, 3 of 8 folds better, noise delta -0.0044: reject'
+        shape: flat
+      - unit: RQ-20261101-fs06-01
+        value: T3 clip to [-3, +3]
+        response: 'no-op: net R spans [-2.05, +1.50], 0 of 664,786 rows change; T3 == T0 by construction'
+        shape: not_a_test
+      - unit: RQ-20261101-fs06-01
+        value: T4 first-passage 3-class, score = sum P x class mean
+        response: 'S0 +0.0082, delta +0.0099 vs 2x spread 0.0474, 5 of 8 folds; INDETERMINATE (min fold n 1070 on S0, 817 on S1 seed 7)'
+        shape: noisy
+      shape: noisy
+  threshold:
+    tau_scaling_and_min_n:
+      tests:
+      - unit: RQ-20261101-fs05-01
+        value: LOFO tau on the fixed grid 0..0.3 with a 1000-decision floor per fold
+        response: 'the floor trips for R1/R2/R3/T1/T4 because regularised or rescaled scores concentrate near zero; the arms look better on S0 yet cannot be graded'
+        shape: design_defect
+      shape: design_defect
+  next_from_map:
+  - 'fs07: replace the single-model score with the mean of K seeds (variance), pick tau as a per-fold score QUANTILE so every fold has a comparable n, rescale T1/T4 scores the same way, keep the fs05 noise control'
+  - 'last dev fold 2025-07..09 is negative for every arm (-0.11 to -0.21): attribute by symbol and direction before any further recipe lever'
