@@ -1,0 +1,101 @@
+# Authored 2026-11-01 by lane ML-RECIPE (Tier 1) on the operator request ~22:35Z (timeframe lever). Decision rule registered BEFORE any run. Gates: none.
+id: RQ-20261101-b620-01
+title: 'ENTRY timeframe lever, precondition: does the new timeframe harness, run at 1h, REPRODUCE the round-1 v1 base (R0, seeds 7/11/13, tau 0.10, dev folds, pooled frozen 60: seed-mean +0.0089, n about
+  72k)? It is the baseline every other timeframe unit is judged against. Dev folds only'
+status: queued
+cadence: once
+theme: ml_health
+priority: 1
+roadmap:
+- L-ML-LIVE
+kind: experiment
+practice_precedent: 'T1, M6 (docs/reference/trading-and-model-practice-principles.md): purged + embargoed walk-forward; shadow-feature (Boruta-style) controls so a model that cannot reject noise columns
+  is not trusted to admit real ones.'
+question: 'Operator 2026-11-01 ~22:35Z: queue ENTRY training on other bar sizes (5m) to see what scales across timeframes and what does not. Before comparing, prove the harness: scripts/research/ml_entry_timeframe.py
+  at 1h must give the round-1 v1 base (b607-01 arms.base: mean +0.0089486, n 71,950 / 71,886 / 72,063). Also reports the 1h gate-on/gate-off rows and the 1h feature importance (gain share, SHAP sign) every
+  other arm is compared with.'
+why_this_matters: 'Operator 2026-11-01 ~22:35Z (relayed by the manager): compare the ENTRY model across bar sizes to learn which timeframes the edge scales to and which it does not. Fee plus slippage is
+  a much larger share of R at short bars, so gross R, cost per R and net R are reported side by side.'
+power:
+  expected_n: 72000
+  min_detectable_effect: 0.0148
+  effect_units: metric
+  sd: 1.0
+  design: two_sample
+  alpha: 0.05
+  power: 0.8
+  basis: 'MEASURED 2026-11-01 (round 1): the v1 recipe at a fixed tau on the pooled 60 symbols over the dev folds has a pooled seed range 0.0034 at n about 72k; the win threshold is 2 x max(0.0034, the
+    1h seed range). The naive two-sample MDE at n 72,000 per arm and sd 1 is 0.0148 R; the registered win threshold (2 x 0.0034 = 0.0068) is below it, so the fold, year and seed-range conditions, not a
+    t-test, carry the evidence (as in b607). Shorter bars have more decisions (about 12x at 5m bar-count), so their MDE is smaller. Row counts for other bar sizes are INFERRED (decision cadence x the measured
+    668,280 1h dev rows).'
+  feasibility:
+    source: none
+    accrual_basis: Replays public Binance Vision history through 2025-09-30 (dev folds only); nothing accrues.
+decision_rule:
+  id: RULE-20261101-b620-01
+  registered_at: '2026-11-01'
+  registered_before_run: true
+  statistic: 'Per seed (7, 11, 13) at tau 0.10, one-position-per-symbol: n, mean gross, cost and net R per decision, per-fold and per-year net; ungated and with the v2 cost gate; LightGBM gain share and
+    Spearman SHAP-sign per feature (last dev fold, seed 7, long and short heads).'
+  rule: 'REPRODUCES iff, at the frozen tau 0.10 on the dev folds and pooled frozen-60 population, the mean over seeds 7/11/13 is within 0.0005 of the round-1 v1 base +0.0089486 AND each seed''s decision
+    count is within 1% of round 1''s 71,950 / 71,886 / 72,063. DOES_NOT_REPRODUCE otherwise: a mechanical fault in the harness, fixed before any other timeframe unit is read. Nothing else is judged here.'
+  what_it_does_not_do: Reads no sealed or held-out window (dev folds only, no month after 2025-09 is downloaded), serves nothing, changes no config or live symbol list, places no order, sizes nothing.
+  min_n: 1000 dev decisions per fold
+compute: cpu_long
+value:
+  bucket: ai_trader
+  usd_at_stake_per_month: 400
+  confidence: 0.2
+  basis: 'stand-in: the operator priority-1 goal (ML decision makers live, ENTRY about to go live 2026-11-01); not a P&L measurement.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 4.0
+  est_minutes: 25
+  why_runner: Keyless public Binance Vision archives; GBDT on CPU. A GitHub runner (4 vCPU, 16 GB, 6 h) fits it; the 6 GB trainer does not.
+  basis: 'INFERRED 2026-11-01: 668,280 measured 1h dev decision rows x the cadence ratio; LightGBM 300 trees fits 1M float rows in about 6 s on 4 threads (random-data probe); 3 seeds x 8 folds x 2 heads;
+    plus the 1h baseline re-run. See scripts/research/ml_entry_timeframe.py count.'
+run:
+  workflow: research-script-run.yml
+  command:
+  - python3
+  - scripts/research/ml_entry_v2_run.py
+  - timeframe
+  - '{unit}'
+  - '{out_dir}'
+  timeout_minutes: 120
+  inputs:
+    research_unit: RQ-20261101-b620-01
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- ML-TIMEFRAME
+- research/levers/ml-entry.yaml
+- RQ-20261101-b607-01
+- RQ-20261101-b620-01
+what_it_does_not_do: Registers, serves or promotes nothing; changes no config; places no order; sizes nothing; reads no sealed window.
+ml_consumer:
+  consumer: ML-ENTRY-LIVE-ADAPTER
+  decision: whether ENTRY is built at another bar size and which features generalise across timeframes; feeds the timeframe lever on the ENTRY lever map
+  legs:
+  - xrp_pullback_2h
+  - trend_donchian_eth_4h
+  - trend_donchian_xrp_4h
+  - ada_pullback_2h
+  - trend_donchian_sol_prop
+  book: money
+iteration:
+  subject: ml-entry
+  subject_kind: ml_model
+  from_result: 'operator request 2026-11-01 ~22:35Z (new lever: timeframe)'
+  verdict_read: n/a
+  diagnosis: ENTRY was only ever built at 1h bars; whether its edge, its features and its cost burden scale to other bar sizes is unmeasured.
+  hypothesis: the harness reproduces the round-1 base at 1h
+  attempt: 1
+  due_by: '2026-11-04'
+programme_node:
+  programme: P2
+  node: P2-ENTRY-LEVERS
+  goal: G4

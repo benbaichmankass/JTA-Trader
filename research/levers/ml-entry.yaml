@@ -20,6 +20,7 @@ manifest:
   horizon: untested
   threshold: tested
   calibration: tested
+  timeframe: untested
 levers:
   features:
     feature_families_F1_F5:
@@ -240,6 +241,14 @@ declared:
     expected_effect: 'detects a failing live ENTRY early; cannot add edge'
     cost: 'small'
     eta: '2026-11-02'
+  - rank: 10
+    lever: timeframe (bar size 5m / 15m / 1h / 4h, bar-count and clock-time scaling) -- operator-prioritised 2026-11-01 ~22:35Z
+    reading: 'untested: ENTRY has only ever been built at 1h. Fee plus slippage is a much larger share of R at short bars (cost per R is about (fee+slip+funding bps) / (2 x atr_pct)), so the cost burden is expected to rise as bars shorten'
+    next_unit: RQ-20261101-b620-01 (1h harness reproduction) then b621..b626 (15m/5m/4h x bar/clock scaling), each also with and without v2's cost gate
+    expected_effect: 'unknown; measured, not assumed. The two scalings separate "the same number of bars" from "the same clock time". Dev only; any beats_1h arm is a candidate for ONE fresh-window read'
+    cost: 'runner hours: about 25 min (1h), 40 min (4h), 1-2.5 h (15m, clock arms), about 5 h (5m bar-count, about 8M decision rows)'
+    eta: 'units queued 2026-11-01; results as the runners finish'
+    forward_data: 'the decision-logging lane is adding 15m/5m live shadow scores; a later forward-read unit (rule first, new unit) can read those rows once they exist. Owed, not yet authored: it needs rows that do not exist yet.'
   round1:
     # ROUND 1 (lane ML-RECIPE, 2026-11-01 ~18:30Z), dev folds only, 3 seeds, pooled frozen-60, base +0.0089, all against the common rule.
     # Order of the ranked list above is superseded by what the dev data showed; the table below is the current reading.
@@ -272,3 +281,4 @@ declared:
   - {lever: training_target, range: 'raw, market-neutral, first-passage', hypothesis: 'a regime-free target stabilises folds'}
   - {lever: calibration, range: 'raw, isotonic, binned reliability remap', hypothesis: 'non-monotone remap repairs the top band'}
   - {lever: management, range: 'hold, close, SL-to-breakeven, trail, TP move', hypothesis: 'active management adds a captured-move component'}
+  - {lever: timeframe, range: 'bar 5m, 15m, 1h, 4h x scaling bar-count or clock-time', hypothesis: 'unknown: the cost share of R rises at short bars, so a short-bar edge needs a gross edge large enough to pay it; the features that keep their role across bar sizes are the transferable ones'}
