@@ -1,10 +1,10 @@
 # Authored 2026-11-01 by lane ML-RECIPE (Tier 1) for the ENTRY lever plan (manager/operator 17:55Z). Decision rule registered BEFORE any run. Gates: none.
 id: RQ-20261101-b604-01
 title: 'ENTRY lever 6, calibration: does a reliability remap of the score restore a monotone score-to-outcome relation (the precondition for confidence-scaled sizing)?'
-status: blocked
+status: queued
 cadence: once
 theme: ml_health
-priority: 2
+priority: 1
 roadmap:
 - L-ML-LIVE
 kind: experiment
@@ -21,7 +21,7 @@ power:
   min_detectable_effect: 0.01
   effect_units: metric
   sd: 1.0
-  design: paired
+  design: two_sample
   alpha: 0.05
   power: 0.8
   basis: 'MEASURED: calibration is poor at the top quintile (one seed). No gain on mean net R is expected from R1; R2 can raise the mean only through the top-band repair that b602-01 arm A also tests.'
@@ -53,7 +53,7 @@ routing:
   needs_trainer_resident_data: false
   needs_gpu: false
   peak_memory_gb: 8.0
-  est_minutes: 60
+  est_minutes: 30
   why_runner: Keyless public Binance Vision archives; GBDT on CPU.
   basis: 'MEASURED 2026-11-01: one 8-fold arm of the baseline recipe takes about 480 s on 4 threads (arm A); this unit runs a fixed number of arms.'
 run:
@@ -77,11 +77,6 @@ related:
 - RQ-20261101-a508-01
 - RQ-20261101-d507-01
 what_it_does_not_do: Registers, serves or promotes nothing; changes no config; places no order; sizes nothing; reads no sealed window.
-blocked_on:
-- kind: harness
-  what: the reliability-remap arms and the calibration statistics (shared one-factor lever harness, row ML-LEVER-HARNESS, scripts/research/ml_entry_levers.py)
-  clears_when: lands on main with a self-test that the base arm reproduces the frozen v1 dev reading and that no held-out or sealed date is read; then git-mv to research/queue/ with status queued (rule
-    unchanged)
 ml_consumer:
   consumer: ML-ENTRY-LIVE-ADAPTER
   decision: whether the ENTRY score can drive confidence-scaled sizing at all (it cannot until it is calibrated)
@@ -101,3 +96,7 @@ iteration:
   hypothesis: a reliability remap makes realised net R monotone in the score
   attempt: 1
   due_by: '2026-11-03'
+programme_node:
+  programme: P2
+  node: P2-ENTRY-LEVERS
+  goal: G4

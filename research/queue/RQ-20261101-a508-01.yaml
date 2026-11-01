@@ -2,7 +2,7 @@
 id: RQ-20261101-a508-01
 title: 'ENTRY v1 traded-slice test: is the five-symbol dev shortfall (-0.041 net R/decision vs +0.007 pooled) a coin effect, a cost-share effect or a cadence effect, and which traded symbols does the live
   go/no-go rest on? Dev folds only'
-status: blocked
+status: queued
 cadence: once
 theme: ml_health
 priority: 1
@@ -13,8 +13,8 @@ practice_precedent: 'T1, M6 (docs/reference/trading-and-model-practice-principle
   is not trusted to admit real ones.'
 question: 'v1 frozen recipe (20 features, baseline params, tau 0.10) on the DEV folds: traded-5 (BTC, ETH, XRP, ADA, SOL) -0.041 (n about 5,500 per seed, seed range 0.0058) vs pooled 60 symbols +0.007;
   seed-7 attribution: gross +0.038 vs +0.076 for the other 55, cost 0.078 vs 0.063R; BTC -0.132 (t -3.7), ETH -0.082 (t -2.5), XRP/ADA/SOL about 0. Arms, all on the dev folds with seeds 20261101, 7, 11,
-  13 and tau 0.10 frozen: A0 reference as measured, per symbol and per calendar year; A1 cost-neutral: the traded trades re-priced at the other 55 symbols'' mean cost per R (the cost-share lever); A2 cadence:
-  decisions every 2h and every 8h instead of 4h (labels, features and model rebuilt, tau 0.10 unchanged, a cadence lever; the 4h arm is A0); A3 split: BTC+ETH versus ADA+SOL+XRP with SE from the per-decision
+  13 and tau 0.10 frozen: A0 reference as measured, per symbol and per calendar year; A1 cost-neutral: the traded trades re-priced at the other 55 symbols'' mean cost per R (the cost-share lever); A2 cadence
+  is NOT run here: it needs the cadence relabel of RQ-20261101-b603-01, so CADENCE-DRIVEN is reported ''untested'' until that unit reads; A3 split: BTC+ETH versus ADA+SOL+XRP with SE from the per-decision
   spread of seed-pooled trades. No sealed or held-out window is read.'
 why_this_matters: 'Operator 2026-11-01: 20 features is a regression equation, not algorithmic trading; manager 2026-11-01 ~12:03Z: a family ablation at +0.010 cannot admit anything when the recipe overfits
   with any extra column, so fix the recipe, then the columns.'
@@ -23,7 +23,7 @@ power:
   min_detectable_effect: 0.01
   effect_units: metric
   sd: 1.0
-  design: paired
+  design: two_sample
   alpha: 0.05
   power: 0.8
   basis: 'MEASURED 2026-11-01: v1 dev traded-5 seed range 0.0058 (SD 0.0026) at n about 5,500; BTC SE 0.036 at n=867. A0 per-symbol SE 0.03-0.04 means a symbol-level effect below about 0.07 is not detectable
@@ -53,7 +53,7 @@ routing:
   needs_trainer_resident_data: false
   needs_gpu: false
   peak_memory_gb: 8.0
-  est_minutes: 150
+  est_minutes: 45
   why_runner: Keyless public Binance Vision archives; GBDT on CPU.
   basis: 'MEASURED 2026-11-01: one 8-fold arm of the baseline recipe takes about 480 s on 4 threads (arm A); this unit runs a fixed number of arms.'
 run:
@@ -61,7 +61,7 @@ run:
   command:
   - python3
   - scripts/research/ml_entry_v2_run.py
-  - traded
+  - levers
   - '{unit}'
   - '{out_dir}'
   timeout_minutes: 300
@@ -77,12 +77,6 @@ related:
 - RQ-20261101-d507-01
 - research/levers/ml-entry.yaml
 what_it_does_not_do: Registers, serves or promotes nothing; changes no config; places no order; sizes nothing; reads no sealed window.
-blocked_on:
-- kind: harness
-  what: 'a ''traded'' mode: per-symbol and per-year report of the frozen v1 recipe on the dev folds, the cost re-price (A1), the BTC+ETH versus ADA+SOL+XRP split (A3), and the 2h/8h cadence relabel (A2)
-    in scripts/research/ml_entry_recipe.py'
-  clears_when: lands on main with a self-test that the cost re-price changes only cost, that cadence only changes DECISION_EVERY_H, and that no sealed date is read; then git-mv to research/queue/ with status
-    queued (rule unchanged)
 ml_consumer:
   consumer: ML-ENTRY-LIVE-ADAPTER
   decision: whether the live ENTRY v1 go/no-go on the bybit_2 traded symbols (BTC, ETH, XRP, ADA, SOL) has dev-fold support per symbol, and which lever (coin, cost share, cadence) the next ENTRY iteration
@@ -103,3 +97,7 @@ iteration:
   hypothesis: the shortfall is a coin effect concentrated in BTC and ETH
   attempt: 1
   due_by: '2026-11-03'
+programme_node:
+  programme: P2
+  node: P2-ENTRY-LEVERS
+  goal: G4

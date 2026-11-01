@@ -1,7 +1,7 @@
 # Authored 2026-11-01 by lane ML-RECIPE (Tier 1) for the ENTRY lever plan (manager/operator 17:55Z). Decision rule registered BEFORE any run. Gates: none.
 id: RQ-20261101-b602-01
 title: 'ENTRY lever 2, selectivity: do a score-band cap, a tau choice rule, regime abstention or a side filter lift the dev mean when selected on dev only?'
-status: blocked
+status: queued
 cadence: once
 theme: ml_health
 priority: 1
@@ -13,8 +13,9 @@ practice_precedent: 'T1, M6 (docs/reference/trading-and-model-practice-principle
 question: 'Dev reading (v1 frozen recipe, seed 7, all 60 symbols, tau 0.10): pooled tau curve over the dev folds is peaked and then NEGATIVE (tau 0.0 -0.0026, 0.05 +0.0026, 0.10 +0.0154, 0.15 +0.0100, 0.20
   -0.0012, 0.30 -0.0216); by predicted-score quintile net R is +0.008, +0.008, +0.015, +0.023, -0.0075, so the TOP quintile (mean score 0.38) loses. By side: dev short +0.0195 (n 45.9k) vs long -0.0089
   (n 26.1k), but held-out was long +0.032 vs short -0.004 and the sign flips by calendar year (2022 long -0.069 / short +0.038; 2023 long +0.077 / short -0.025). Arms, one factor each against the base (tau
-  0.10, no filter): A band cap: abstain when the score is above the training-fold q-quantile, q in {0.80, 0.90}; B tau choice: tau in {0.05, 0.10, 0.15} chosen by a plateau rule (the largest tau whose neighbours
-  are within 0.01); C regime abstention: abstain in each tercile of BTC 24h return and of vol24 in turn; D side abstention: drop long, drop short. Three seeds.'
+  0.10, no filter): A band cap: abstain when the score is above the q-quantile, q in {0.80, 0.90}, of the OTHER dev folds'' out-of-sample scores (leave-one-fold-out, labels never used); B tau choice: tau
+  in {0.05, 0.10, 0.15} chosen by a plateau rule (the largest tau whose neighbours are within 0.01); C regime abstention: abstain in each tercile of BTC 24h return and of vol24 in turn; D side abstention:
+  drop long, drop short. Three seeds.'
 why_this_matters: 'Operator 2026-11-01: 20 features is a regression equation, not algorithmic trading; manager 2026-11-01 ~12:03Z: a family ablation at +0.010 cannot admit anything when the recipe overfits
   with any extra column, so fix the recipe, then the columns.'
 power:
@@ -22,7 +23,7 @@ power:
   min_detectable_effect: 0.01
   effect_units: metric
   sd: 1.0
-  design: paired
+  design: two_sample
   alpha: 0.05
   power: 0.8
   basis: 'MEASURED 2026-11-01: top score quintile -0.0075 vs +0.023 for the fourth (n 14,390 each, one seed). Removing the top quintile in-sample would lift the mean by about +0.004 (ESTIMATED, selection
@@ -35,12 +36,13 @@ decision_rule:
   registered_at: '2026-11-01'
   registered_before_run: true
   statistic: 'Per arm and seed: n, mean gross, cost and net R per decision at the frozen entry tau; seed mean and range; per-fold and per-calendar-year net; traded-5 slice beside the pooled frozen-60 population.'
-  rule: 'Extra for D: a side may be dropped only if that side is negative in >= 3 of 4 calendar years (the dev sign flips predict the held-out failure of a side filter). Extra for A and C: the cutoff is
-    fit on the training folds of each fold, never on the scored fold. A lever arm WINS iff, net of the full cost stack on the dev folds, on the pooled frozen-60 population (the traded five are reported
-    beside it, never instead): (1) every fold keeps >= 1000 scored decisions (else INDETERMINATE); (2) the mean over seeds 7/11/13 beats the base arm by >= 2 x the base seed range (base range 0.0034 (MEASURED
-    2026-11-01, v1 frozen recipe at a fixed tau on the pooled 60 symbols over the dev folds: per-seed means +0.0063..+0.0097, n about 72k; traded-5 range 0.0058), recomputed from this run''s base arm if
-    larger); (3) it is better than the base in >= 6 of 8 dev folds; (4) its sign is the same in >= 3 of 4 calendar years. A winner is only a CANDIDATE: it is selected on dev alone and goes, with the other
-    winners, into ONE combined held-out read (a later unit, ML-BAR-ONE-READ); no arm of this unit reads a held-out or sealed window. Thresholds are not changed after any result.'
+  rule: 'Extra for D: a side may be dropped only if that side is negative in >= 3 of 4 calendar years (the dev sign flips predict the held-out failure of a side filter). Extra for A and C: the cap is the
+    quantile of the other folds'' out-of-sample scores and the regime cutoffs are terciles of the label-free features over the dev rows; no label of the scored fold is used. A lever arm WINS iff, net of
+    the full cost stack on the dev folds, on the pooled frozen-60 population (the traded five are reported beside it, never instead): (1) every fold keeps >= 1000 scored decisions (else INDETERMINATE);
+    (2) the mean over seeds 7/11/13 beats the base arm by >= 2 x the base seed range (base range 0.0034 (MEASURED 2026-11-01, v1 frozen recipe at a fixed tau on the pooled 60 symbols over the dev folds:
+    per-seed means +0.0063..+0.0097, n about 72k; traded-5 range 0.0058), recomputed from this run''s base arm if larger); (3) it is better than the base in >= 6 of 8 dev folds; (4) its sign is the same
+    in >= 3 of 4 calendar years. A winner is only a CANDIDATE: it is selected on dev alone and goes, with the other winners, into ONE combined held-out read (a later unit, ML-BAR-ONE-READ); no arm of this
+    unit reads a held-out or sealed window. Thresholds are not changed after any result.'
   what_it_does_not_do: Reads no sealed or held-out window (dev folds only), serves nothing, changes no config or live symbol list, places no order, sizes nothing.
   min_n: 1000 dev decisions per fold
 compute: cpu_long
@@ -53,7 +55,7 @@ routing:
   needs_trainer_resident_data: false
   needs_gpu: false
   peak_memory_gb: 8.0
-  est_minutes: 90
+  est_minutes: 45
   why_runner: Keyless public Binance Vision archives; GBDT on CPU.
   basis: 'MEASURED 2026-11-01: one 8-fold arm of the baseline recipe takes about 480 s on 4 threads (arm A); this unit runs a fixed number of arms.'
 run:
@@ -77,11 +79,6 @@ related:
 - RQ-20261101-a508-01
 - RQ-20261101-d507-01
 what_it_does_not_do: Registers, serves or promotes nothing; changes no config; places no order; sizes nothing; reads no sealed window.
-blocked_on:
-- kind: harness
-  what: the selectivity arms (band cap, tau choice, regime and side abstention) (shared one-factor lever harness, row ML-LEVER-HARNESS, scripts/research/ml_entry_levers.py)
-  clears_when: lands on main with a self-test that the base arm reproduces the frozen v1 dev reading and that no held-out or sealed date is read; then git-mv to research/queue/ with status queued (rule
-    unchanged)
 ml_consumer:
   consumer: ML-ENTRY-LIVE-ADAPTER
   decision: how selective the live ENTRY policy should be (score cap, tau, regime or side filters); feeds the combined v2 candidate
@@ -102,3 +99,7 @@ iteration:
   hypothesis: capping the top score band and abstaining in the worst regime cells lifts the dev mean
   attempt: 1
   due_by: '2026-11-03'
+programme_node:
+  programme: P2
+  node: P2-ENTRY-LEVERS
+  goal: G4

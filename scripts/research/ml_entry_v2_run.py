@@ -6,6 +6,7 @@
     python3 scripts/research/ml_entry_v2_run.py forward  <unit> <out_dir>   # needs ABLATION_JSON=<fs01-01 ablation.json>
     python3 scripts/research/ml_entry_v2_run.py recipe   <unit> <out_dir>   # fs05-01: arms R0..R3 x sets S0..S2 x 3 seeds, DEV FOLDS ONLY
     python3 scripts/research/ml_entry_v2_run.py labels   <unit> <out_dir>   # fs06-01: targets T0..T4 x sets S0,S1 x 3 seeds, DEV FOLDS ONLY
+    python3 scripts/research/ml_entry_v2_run.py levers   <unit> <out_dir>   # b601/b602/b604/a508: one-factor ENTRY lever tests, DEV FOLDS ONLY
     python3 scripts/research/ml_entry_v2_run.py ensemble <unit> <out_dir>   # d507-01: K=3 seed ensembles + per-fold quantile threshold, DEV FOLDS ONLY
 
 Steps: install the PINNED lightgbm (the live pin; a no-op once the runner image carries it, row RESEARCH-RUNNER-ML-DEPS / #22143),
@@ -31,7 +32,7 @@ def run(*args: str) -> None:
 
 
 def main(argv: list[str]) -> int:
-    if len(argv) != 3 or argv[0] not in ("ablation", "forward", "recipe", "labels", "ensemble"):
+    if len(argv) != 3 or argv[0] not in ("ablation", "forward", "recipe", "labels", "ensemble", "levers"):
         print(__doc__)
         return 2
     mode, unit, out = argv[0], argv[1], Path(argv[2])
@@ -41,6 +42,14 @@ def main(argv: list[str]) -> int:
         d.mkdir(parents=True, exist_ok=True)
     vs = str(HERE / "vision_streams.py")
     v2 = str(HERE / "ml_entry_v2.py")
+    if mode == "levers":
+        # ENTRY lever round 1 (b601/b602/b604/a508): baseline-feature table from the 12-column klines only, dev window only
+        run(vs, "--out", str(streams), "--streams", "klines12", "--start", "2020-07-01", "--end", "2025-09-30", "--workers", "24")
+        run(str(HERE / "ml_entry_levers.py"), "build-table", "--streams", str(streams), "--out", str(work))
+        run(str(HERE / "ml_entry_levers.py"), "run", "--unit", unit, "--table", str(work / "table.pkl"), "--out", str(work), "--n-jobs", "4")
+        for f in work.glob("*_result.json"):
+            shutil.copy(f, out / f.name)
+        return 0
     if mode in ("recipe", "labels", "ensemble"):
         # dev-only fetch: no date after 2025-09-30 is downloaded, so no sealed window can be read
         run(vs, "--out", str(streams), "--streams", "klines12,funding,premium", "--start", "2020-07-01", "--end", "2025-09-30", "--workers", "24")
