@@ -54,6 +54,10 @@ class TestTelegramTokenPattern:
         assert is_allowed(f'FAKE_TOKEN = "{_FAKE}"')
 
 
+# Built at runtime so this file itself carries no literal that matches a secret pattern.
+_PLANT = "api" + "_key = '{}'\n"
+
+
 def _load_scan():
     import importlib.util
     from pathlib import Path
@@ -67,8 +71,8 @@ def _load_scan():
 def test_pr_mode_catches_planted_secret_in_changed_file_only(tmp_path, monkeypatch):
     m = _load_scan()
     bad, other = tmp_path / "bad.py", tmp_path / "other.py"
-    bad.write_text("api_key = 'AAAAAAAAAAAAAAAAAAAAAAAA'\n")
-    other.write_text("api_key = 'BBBBBBBBBBBBBBBBBBBBBBBB'\n")
+    bad.write_text(_PLANT.format("A" * 24))
+    other.write_text(_PLANT.format("B" * 24))
     monkeypatch.setattr(m, "ROOT", tmp_path)
     monkeypatch.setattr(m, "tracked_files", lambda: [bad, other])
     d = tmp_path / "p.diff"
@@ -81,7 +85,7 @@ def test_pr_mode_catches_planted_secret_in_changed_file_only(tmp_path, monkeypat
 def test_full_mode_scans_everything_without_flag_or_with_empty_diff(tmp_path, monkeypatch):
     m = _load_scan()
     other = tmp_path / "other.py"
-    other.write_text("api_key = 'BBBBBBBBBBBBBBBBBBBBBBBB'\n")
+    other.write_text(_PLANT.format("B" * 24))
     monkeypatch.setattr(m, "ROOT", tmp_path)
     monkeypatch.setattr(m, "tracked_files", lambda: [other])
     assert m.main([]) == 1                                # push / --all: full tree
