@@ -1,0 +1,18 @@
+{
+  "based_on": "20261101T143034902308Z-823cef7c.json",
+  "due_when": {
+    "check_every_days": 1,
+    "due_date": "2026-11-02",
+    "kind": "date"
+  },
+  "id": "PI-20261101-HIPIPRHQ-0003",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "checklist RESEARCH-ITERATE (handoff from lane RESEARCH-EDGE 2026-11-01 14:27Z)",
+    "rerun": "python3 scripts/research/iteration_orphans.py | grep -E 'tsmom-crypto|xsec-crypto|cost-levers-live-legs|tsmom-etf|movement-capture|vol-premium-proxy'"
+  },
+  "state": "done",
+  "terminal_reason": "Authored 2026-11-01 (lane RESEARCH-OPS-20261101-1447): one live iteration unit per candidate, RQ-20261101-d1f3-01..06 (+ d1f3-07 funding-carry holdout), each from its lever map. Verified: iteration_orphans.py strategy_leg ORPHAN 6 -> 0 on the lane branch. Landed_unproven until the PR merges and the runner records land.",
+  "what": "[research loop: 6 candidate orphans] Author the next iteration (structured one-factor / ablation designs chosen from each lever map, OPERATING-PLAN § 2) for tsmom-crypto (58e4-01: short side + reversal months; regime gate, short-side funding, rebalance freq, universe, signal family, stops), xsec-crypto (-02: shorts; 2021 = 68% of net; regime gate, universe/liquidity, short-leg, residual momentum), cost-levers-live-legs (-04: legs gross-negative; signal threshold, hold length, symbol pruning, measured costs; needs signal-level data), tsmom-etf (-05: dividend-adjusted series, asset-class gating, regime gate, breadth), movement-capture (-06: maker fills, longer horizon, HAR/ML vol forecaster, time-exit-only), vol-premium-proxy (-07: PRICED straddle on real chains, DoltHub options from 2019-02, row OPTIONS-IV-HISTORY-GAP). Maps and attribution in PR #22174 (lane/research-edge-close-20261101). Owner: the next research-ops slot (core mandate). Done when iteration_orphans.py lists none of the six as ORPHAN."
+}
