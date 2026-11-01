@@ -14,6 +14,8 @@ ONE exception, per package (MD-LTR-ADA-AUTO, operator 2026-10-29): a granted ``k
 config/mandates.yaml lifts advice-only for the ONE order package it names (src/runtime/ltr_auto_mandate.py;
 behaviour in tests/test_ltr_auto_mandate.py). The last tests below pin that this is the ONLY way out: every such
 exception is a granted, single-package, operator-sourced mandate entry, and the global set is unchanged.
+An ACCOUNT-scoped exception (MD-LTR-BYBIT1-AUTO, operator 2026-11-01) lifts it for packages carried by a PAPER
+account it names, on that account's leg only; the tests pin it to paper accounts.
 """
 from __future__ import annotations
 
@@ -146,15 +148,29 @@ def _mandates():
     return yaml.safe_load((Path(__file__).resolve().parents[1] / "config" / "mandates.yaml").read_text())
 
 
-def test_every_exception_is_a_granted_single_package_operator_mandate():
+def test_every_exception_is_a_granted_single_package_or_paper_account_operator_mandate():
+    """A package-scoped exception names ONE package and expires with it (MD-LTR-ADA-AUTO). An account-scoped
+    one (MD-LTR-BYBIT1-AUTO, operator 2026-11-01 "Auto-apply on bybit_1 (Rec.)") names only PAPER accounts
+    in config/accounts.yaml: real money, mirrors and prop are never in an exception's scope."""
+    import yaml
+
     from src.runtime import ltr_auto_mandate as am
 
     doc = _mandates()
+    accts = yaml.safe_load((Path(__file__).resolve().parents[1] / "config" / "accounts.yaml").read_text())
+    accts = accts.get("accounts", accts)
     for m in am.active(doc):
-        sc = m["package_scope"]
-        assert str(sc["order_package_id"]).startswith("pkg-") and "*" not in str(sc["order_package_id"])
         assert m.get("granted_by") and "operator" in str(m["granted_by"]) and str(m.get("source") or "").strip()
-        assert m.get("parent") == "MD-TRADE-DESK" and m.get("expires_on_event")
+        assert m.get("parent") == "MD-TRADE-DESK"
+        if m.get("package_scope") is not None:
+            sc = m["package_scope"]
+            assert str(sc["order_package_id"]).startswith("pkg-") and "*" not in str(sc["order_package_id"])
+            assert m.get("expires_on_event")
+        else:
+            sc = m["account_scope"]
+            assert sc["accounts"], m["id"]
+            for aid in sc["accounts"]:
+                assert str((accts.get(aid) or {}).get("account_class")).lower() == "paper", (m["id"], aid)
         assert set(sc["actions"]) <= set(rows_lib.ADVICE_ONLY_ACTIONS) | set(w.DISPATCHABLE_ACTIONS)
     # a proposal never lifts anything: only the granted list is read
     assert am.active({"mandates": [], "proposed": [m for m in am.active(doc)]}) == []
