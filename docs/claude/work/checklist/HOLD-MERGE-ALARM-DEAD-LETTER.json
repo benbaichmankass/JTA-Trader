@@ -1,0 +1,22 @@
+{
+  "id": "HOLD-MERGE-ALARM-DEAD-LETTER",
+  "title": "JC-CA-04 hold-merge alarm pings never send (bot-created system-action issues fire no workflow) and the alarm fires on sanctioned manager merges",
+  "phase": "build",
+  "state": "queued",
+  "owner": "manager",
+  "lane": null,
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [],
+  "blocked_on": [],
+  "note": "FOUND 2026-11-01T17:58Z (manager review). (1) DEAD LETTER: pr-landing-hold-merge-alarm opens send-ping issues as github-actions[bot] (e.g. #22225, #22231). Issues created with GITHUB_TOKEN fire no issues-event workflow, so system-actions never runs them; none appears in system-actions runs (run list 2026-11-01 14:24-17:39Z), and they pile up open (488 open system-action issues at 17:58Z, most of them these alarms). (2) PREMISE: the alarm treats any landing:hold Tier-2/3 merge with no GitHub APPROVED review as unapproved, but held Tier-2 PRs are merged by the manager on an operator chat/popup OK or a data-backed act-then-notify (CLAUDE.md Permission tiers), recorded in the PR body or checklist, not as a review; so it fires on every sanctioned merge (#22191, #22200, #22208, #22148, #22128...). Fix: deliver the ping directly (send it inside the alarm job, or dispatch with a PAT), read the recorded decision from the PR body or checklist row, and close the stale open alarm issues. No new gate. Paused under the usage hold; pick up 2026-11-05.",
+  "updated_at": "2026-11-01T17:56:39Z",
+  "updated_by": "session_01AFoLuJ1apgy8sfngu4WyNH",
+  "due_by": "2026-11-05",
+  "roadmap": [
+    "L-OPS"
+  ],
+  "_seq": 886
+}
