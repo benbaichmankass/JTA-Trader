@@ -353,10 +353,11 @@ class: new ones, failing ones, and ones that pass and trade live. It is the rese
 2. **ATTRIBUTE EVERY RESULT FIRST**, before any next test is chosen. Net R is decomposed into:
    - entry quality: MFE, and the share of trades that reach 1 R;
    - exit capture: realised vs MFE, and losers that had reached 1 R;
-   - filter effect;
+   - filter effect (read from the filter lever's arms in the map);
    - cost share: gross vs net.
    
-   Each component is split by year, direction, exit reason, regime / ADX bucket, symbol and session. A shared tool computes it from
+   Each component is split by year, direction, exit reason and regime / ADX bucket (by symbol and session too where a subject
+   spans several; the tool does not compute those two splits yet). A shared tool computes it from
    the committed trade rows (`scripts/research/lever_map.py`, reusing the harness emits). The finding is written into the result's
    disposition.
 3. **KEEP A LEVER RESPONSE MAP PER SUBJECT**, persistent and cumulative (`research/levers/<subject>.yaml`). For each lever family it
