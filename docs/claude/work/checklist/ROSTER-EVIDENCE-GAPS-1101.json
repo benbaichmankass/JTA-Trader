@@ -2,7 +2,7 @@
   "id": "ROSTER-EVIDENCE-GAPS-1101",
   "title": "Rostered legs trading with no committed Stage-0 evidence record: e4_oi_shock_1h (no harness) and claude_desk; trend_donchian_1h now has one and it FAILS Stage 0",
   "phase": "build",
-  "state": "queued",
+  "state": "done",
   "owner": "manager",
   "lane": null,
   "model": null,
@@ -11,8 +11,8 @@
   "tier": 3,
   "prs": [],
   "blocked_on": [],
-  "note": "MEASURED 2026-11-01 by LTR-PACKET-FIXES (B): population = every leg on any accounts.yaml strategies: roster (52 legs). Missing comms/strategy_evidence/<leg>.json: 3 -- claude_desk (bybit_1, ib_paper, alpaca_paper), e4_oi_shock_1h (bybit_1; build_strategy_evidence.py --dry-run: harness=None, no_harness), trend_donchian_1h (bybit_1). trend_donchian_1h never had a record (git log --diff-filter=AD over 1500 commits: none). REGENERATED from its harness (scripts/ops/build_strategy_evidence.py --strategy trend_donchian_1h, harness trend, 365 d binance_vision BTCUSDT 1h, fee 11 + slip 3 + funding 1 bps): net_r_oos -16.09 R, n_trades_oos 159, folds_positive 1, fidelity faithful, RULE-D1-STAGE0-NET-OF-FULL-COST verdict FAIL. (For comparison the flagship trend_donchian record of 2026-10-28 reads net_r_oos -16.23, n 71, also fail.) Decisions for the manager: (1) trend_donchian_1h is a TESTING leg on the bybit_1 demo floor with a failing Stage-0 record -- per OPERATING-PLAN 2 the floor keeps it unless a retirement record removes it; that is a Tier-3 call. (2) e4_oi_shock_1h needs a harness route or an explicit evidence exemption. (3) claude_desk: state whether a discretionary desk leg is exempt from the per-leg record (and where that is recorded). The packet now reports these as priced_options_state=evidence_missing instead of a traceback.",
-  "updated_at": "2026-11-01T15:24:44Z",
+  "note": "MEASURED 2026-11-01 by LTR-PACKET-FIXES (B): population = every leg on any accounts.yaml strategies: roster (52 legs). Missing comms/strategy_evidence/<leg>.json: 3 -- claude_desk (bybit_1, ib_paper, alpaca_paper), e4_oi_shock_1h (bybit_1; build_strategy_evidence.py --dry-run: harness=None, no_harness), trend_donchian_1h (bybit_1). trend_donchian_1h never had a record (git log --diff-filter=AD over 1500 commits: none). REGENERATED from its harness (scripts/ops/build_strategy_evidence.py --strategy trend_donchian_1h, harness trend, 365 d binance_vision BTCUSDT 1h, fee 11 + slip 3 + funding 1 bps): net_r_oos -16.09 R, n_trades_oos 159, folds_positive 1, fidelity faithful, RULE-D1-STAGE0-NET-OF-FULL-COST verdict FAIL. (For comparison the flagship trend_donchian record of 2026-10-28 reads net_r_oos -16.23, n 71, also fail.) Decisions for the manager: (1) trend_donchian_1h is a TESTING leg on the bybit_1 demo floor with a failing Stage-0 record -- per OPERATING-PLAN 2 the floor keeps it unless a retirement record removes it; that is a Tier-3 call. (2) e4_oi_shock_1h needs a harness route or an explicit evidence exemption. (3) claude_desk: state whether a discretionary desk leg is exempt from the per-leg record (and where that is recorded). The packet now reports these as priced_options_state=evidence_missing instead of a traceback. DISPOSITION 2026-11-01 (manager, binding doctrine: Stage 1 is the DEMO FLOOR; a failing Stage-0 leg iterates in research, never parked, never retired by count). trend_donchian_1h STAYS on bybit_1 as an iteration subject; iteration_orphans.py reads it covered by RQ-20261101-78fc-43 (verdict=fail; strategy legs are derived from strategy_status.py, so iteration_subjects.yaml needs no entry). e4_oi_shock_1h and claude_desk: gap recorded as 'no harness route', moved to row STAGE0-ROUTE-E4-DESK (owner manager, due 2026-11-05). No Tier-3 decision is open.",
+  "updated_at": "2026-11-01T15:56:38Z",
   "updated_by": "session_01AFoLuKrtjxkEjpGuVNPAMz",
   "roadmap": [
     "L-LADDER"
