@@ -141,4 +141,21 @@ jobs:
         run: |
           echo "::error::the unit's command did not complete (run step: ${{ steps.run.outcome }}) — its manifest/logs and a producer_failed record are in the artifact and land with the next cycle."
           exit 1
+      # A command can exit 0 and still grade its own run producer_failed (e.g. a venue 403 caught and written to
+      # verdict.json: RQ-20261101-c692-07 run 41307919288 read GREEN with read_state=producer_failed, n=null).
+      # Such a record is not a result (dispatch_queue.NON_VERDICT_READ_STATES), so the run must not read green:
+      # anything gating on the Actions conclusion would take "success" for a measurement. Not a new gate -- the
+      # dispatcher already treats the row as a non-result; this only makes the conclusion say the same.
+      - name: Fail if the run produced no result (producer_failed record)
+        if: always() && steps.run.outcome == 'success'
+        env:
+          UNIT: ${{ inputs.research_unit }}
+        run: |
+          REC="comms/research/${UNIT}/${GITHUB_RUN_ID}/record-inputs.json"
+          RS=$(python3 -c "import json,sys; print(json.load(open(sys.argv[1])).get('read_state') or '')" "$REC" 2>/dev/null || echo unreadable)
+          echo "record read_state: ${RS}"
+          if [ "${RS}" = "producer_failed" ] || [ "${RS}" = "unreadable" ]; then
+            echo "::error::the unit's command exited 0 but its record is read_state=${RS} -- NOT a result; see verdict.json / record-inputs.json in the artifact."
+            exit 1
+          fi
 
