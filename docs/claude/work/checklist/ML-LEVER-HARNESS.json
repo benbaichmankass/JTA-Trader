@@ -1,0 +1,30 @@
+{
+  "id": "ML-LEVER-HARNESS",
+  "title": "Shared one-factor ENTRY lever harness (scripts/research/ml_entry_levers.py) for b601/b602/b603/b604 and a508-01: base reproduces frozen v1 dev reading, no held-out read",
+  "phase": "build",
+  "state": "queued",
+  "owner": "manager",
+  "lane": "ML-RECIPE",
+  "model": null,
+  "ceiling_usd": 15,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [],
+  "blocked_on": [],
+  "note": "",
+  "updated_at": "2026-11-01T17:58:17Z",
+  "updated_by": "session_01AFoLuHiygG7N8NBVqBMa9C",
+  "roadmap": [
+    "L-ML-LIVE"
+  ],
+  "observation": {
+    "what": "ml_entry_levers.py lands on main with a self-test (base arm reproduces v1 dev -0.0405 traded / +0.006..+0.010 pooled, cost re-price changes only cost, no sealed date read) and the runner modes levers/traded in ml_entry_v2_run.py; then the five units are git-mv-ed to research/queue/",
+    "how_to_check": "python3 scripts/research/ml_entry_levers.py --self-test",
+    "due_by": "2026-11-02"
+  },
+  "writeback": {
+    "roadmap": "L-ML-LIVE: tooling for the ENTRY lever plan",
+    "arch": "none: offline research tooling"
+  },
+  "_seq": 887
+}

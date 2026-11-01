@@ -96,10 +96,10 @@ ml_consumer:
 iteration:
   subject: ml-entry
   subject_kind: ml_model
-  from_result: RQ-20261101-fs01-01 (ENTRY v2 feature-family ablation, FAIL 2026-11-01)
-  verdict_read: fail
-  diagnosis: 'fs01-01 FAILED: adding 9 pure-noise columns moves the baseline recipe from +0.0010 to -0.0157 leave-one-fold-out net R per decision (-0.017), larger than any family gain (+0.010), so the pooled
-    LightGBM recipe overfits ANY extra column and cannot admit a real feature family. Cause: the RECIPE (regularisation / selection), not the columns.'
-  hypothesis: stronger fixed regularisation or fold-internal shadow-feature selection makes the recipe noise-immune, after which real families can be admitted
+  from_result: RQ-20261101-fs05-01 and fs06-01 (2026-11-01, dev folds, 60 cells)
+  verdict_read: indeterminate
+  diagnosis: The seed spread of the pooled mean (0.012-0.040) is about 14x the assumed 0.0017 and the fixed tau grid leaves folds under 1000 decisions for the regularised and rescaled-target arms, so they
+    cannot be graded.
+  hypothesis: a K-seed ensemble score with a per-fold score-quantile threshold makes the recipe gradeable and cuts the variance
   attempt: 1
   due_by: '2026-11-03'

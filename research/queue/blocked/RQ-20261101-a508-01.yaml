@@ -97,10 +97,9 @@ ml_consumer:
 iteration:
   subject: ml-entry
   subject_kind: ml_model
-  from_result: RQ-20261101-fs01-01 (ENTRY v2 feature-family ablation, FAIL 2026-11-01)
+  from_result: RQ-20261101-c692-06 and the v1 dev-fold seed spread (2026-11-01)
   verdict_read: fail
-  diagnosis: 'fs01-01 FAILED: adding 9 pure-noise columns moves the baseline recipe from +0.0010 to -0.0157 leave-one-fold-out net R per decision (-0.017), larger than any family gain (+0.010), so the pooled
-    LightGBM recipe overfits ANY extra column and cannot admit a real feature family. Cause: the RECIPE (regularisation / selection), not the columns.'
-  hypothesis: stronger fixed regularisation or fold-internal shadow-feature selection makes the recipe noise-immune, after which real families can be admitted
+  diagnosis: v1 on the traded five scores -0.041 on the dev folds (pooled 60 symbols +0.007); the shortfall is a coin effect in BTC and ETH (gross edge near zero, highest cost per R), not mainly cost.
+  hypothesis: the shortfall is a coin effect concentrated in BTC and ETH
   attempt: 1
   due_by: '2026-11-03'

@@ -96,3 +96,89 @@ levers:
   - 'universe/symbol_set: attribute the traded-5 dev shortfall (coins vs 4h cadence vs cost share) from the v1 dev-fold trades, then a structured test the live go/no-go on the traded symbols can rest on (rule written before the run)'
   - 'fs07: replace the single-model score with the mean of K seeds (variance), pick tau as a per-fold score QUANTILE so every fold has a comparable n, rescale T1/T4 scores the same way, keep the fs05 noise control'
   - 'last dev fold 2025-07..09 is negative for every arm (-0.11 to -0.21): attribute by symbol and direction before any further recipe lever'
+
+declared:
+  # AUTHOR-OWNED (preserved by lever_map.py --backfill). ENTRY lever plan, lane ML-RECIPE, 2026-11-01 ~18:15Z, for the operator's
+  # "what are the levers and how do we test them". Rule for every test: one factor against the frozen v1 base, selected on DEV only,
+  # net of the full cost stack, pooled frozen-60 population (traded five reported beside it); winners go together into ONE combined
+  # held-out read (ML-BAR-ONE-READ) as a new unit with its rule written first. The held-out year is already spent on two bracket
+  # geometries (c692-02), so the combined read uses a FRESH window (W1, 2026-10-01..31, unspent) or live forward data.
+  threshold_for_a_win: '>= 2 x 0.0034 (v1 dev seed range, pooled 60) over the base, >= 6 of 8 folds, same sign in >= 3 of 4 years'
+  ranked_levers:
+  - rank: 1
+    lever: symbol_set (live book is BTC, ETH, XRP, ADA, SOL)
+    reading: 'MEASURED dev, v1 seed 7: traded-5 -0.041; BTC -0.132 (t -3.7), ETH -0.082 (t -2.5), XRP/ADA/SOL about 0. Pooled 60: +0.007'
+    next_unit: RQ-20261101-a508-01
+    expected_effect: '+0.036 net R/decision on the traded slice if BTC and ETH were excluded (MEASURED dev, one seed, post-hoc). A symbol-list change is a Tier-3 proposal to the operator, never applied by the lane'
+    cost: 'about 2 h (shared harness)'
+    eta: 'harness 2026-11-02'
+  - rank: 2
+    lever: bracket_geometry (SL/TP)
+    reading: 'MEASURED: dev static 2/4 +0.0209 vs 2/3 +0.0154; held-out 2/4 +0.0144 (n 10,641) vs 2/3 +0.0073 (n 11,240), same decisions; held-out already read on both'
+    next_unit: RQ-20261101-b601-01
+    expected_effect: '+0.005 to +0.007 net R/decision (MEASURED on two windows, one pair of cells; about the size of the registered threshold)'
+    cost: 'about 1.5 h'
+    eta: 'harness 2026-11-02'
+  - rank: 3
+    lever: selectivity (score band cap, tau rule, regime abstention, side)
+    reading: 'MEASURED dev: tau curve peaks at 0.10 and is negative at 0.20/0.30; top score quintile -0.0075 vs +0.023 for the fourth; side edge flips sign between dev (short +0.0195, long -0.0089) and held-out (long +0.032, short -0.004) and by year, so a side filter is expected to FAIL'
+    next_unit: RQ-20261101-b602-01
+    expected_effect: 'about +0.004 from capping the top band (ESTIMATED, in-sample); side filter none expected'
+    cost: 'about 1.5 h'
+    eta: 'harness 2026-11-02'
+  - rank: 4
+    lever: recipe (regularisation, K-seed ensemble, quantile threshold)
+    reading: 'fs05-01: seed spread 0.012-0.040 (14x assumed); R1/R2 S0 +0.029/+0.025 but ungradeable (a fold under 1000 decisions); R0 -0.0018'
+    next_unit: RQ-20261101-d507-01 (running locally, 34 of 54 member walks done at 18:15Z)
+    expected_effect: 'unknown; the ensemble first tells whether any recipe effect is real (variance cut about sqrt 3)'
+    cost: 'running, about 1 h left'
+    eta: 'result 2026-11-01 evening'
+  - rank: 5
+    lever: calibration (precondition for confidence-scaled sizing)
+    reading: 'MEASURED dev: score is not monotone with outcome at the top quintile'
+    next_unit: RQ-20261101-b604-01
+    expected_effect: 'no direct R gain expected from a monotone remap; enables sizing; non-monotone remap overlaps rank 3'
+    cost: 'about 1 h'
+    eta: 'harness 2026-11-02'
+  - rank: 6
+    lever: active_management (moving TP, MANAGE head, time stop)
+    reading: 'no reading: c692-03 (MANAGE head) blocked on its harness; ML-ENTRY-TP-REVISION / #22093 (first-passage TP revision) built, held'
+    next_unit: RQ-20261101-c692-03 and ML-ENTRY-TP-REVISION (existing)
+    expected_effect: 'unknown; highest ceiling (changes what a trade earns after entry) and highest cost'
+    cost: 'days to build the heads'
+    eta: 'after the dev levers above'
+  - rank: 7
+    lever: target_labels (market-neutral, first-passage) under a gradeable threshold
+    reading: 'fs06-01: T1 +0.026 and T4 +0.008 ungradeable; T2 reject; T3 == T0'
+    next_unit: RQ-20261101-b605-01 (after d507-01)
+    expected_effect: 'unknown'
+    cost: 'about 2.5 h'
+    eta: '2026-11-02'
+  - rank: 8
+    lever: horizon_and_cadence
+    reading: 'untested'
+    next_unit: RQ-20261101-b603-01
+    expected_effect: 'unknown'
+    cost: 'about 3 h'
+    eta: '2026-11-02'
+  - rank: 9
+    lever: live_monitoring (the demotion signal, not an edge lever)
+    reading: 'expected live band from dev: traded-5 -0.041 net R/decision, pooled +0.007; October 2026 -0.019R (manager)'
+    next_unit: row ML-ENTRY-LIVE-MONITOR (a build, not a research unit)
+    expected_effect: 'detects a failing live ENTRY early; cannot add edge'
+    cost: 'small'
+    eta: '2026-11-02'
+  levers:
+  - {lever: symbol_set, range: 'subsets of the frozen 60; live = bybit_2 symbols', hypothesis: 'BTC and ETH have near-zero gross edge and the highest cost per R'}
+  - {lever: sl_atr, range: '1.5, 2, 3', hypothesis: 'live 2 is near the optimum'}
+  - {lever: tp_atr, range: '3, 4, 6', hypothesis: 'a wider TP raises mean net R (dev +0.0055, held-out +0.0071 at 4)'}
+  - {lever: entry_tau, range: '0.05, 0.10, 0.15', hypothesis: 'plateau around 0.10; drops above 0.20'}
+  - {lever: score_band_cap, range: 'drop the top 10% or 20% of scores', hypothesis: 'the top band is over-confident and loses'}
+  - {lever: regime_abstention, range: 'terciles of BTC 24h return and vol24', hypothesis: 'one regime cell loses consistently'}
+  - {lever: side_filter, range: 'drop long, drop short', hypothesis: 'expected to fail: sign flips by year'}
+  - {lever: horizon_h, range: '12, 24, 48', hypothesis: 'unknown'}
+  - {lever: cadence_h, range: '2, 4, 8', hypothesis: 'unknown; separates the coin effect from cadence on the traded five'}
+  - {lever: recipe, range: 'baseline, R1, R2 params; K=1 or 3 seed ensemble', hypothesis: 'regularisation helps once gradeable'}
+  - {lever: training_target, range: 'raw, market-neutral, first-passage', hypothesis: 'a regime-free target stabilises folds'}
+  - {lever: calibration, range: 'raw, isotonic, binned reliability remap', hypothesis: 'non-monotone remap repairs the top band'}
+  - {lever: management, range: 'hold, close, SL-to-breakeven, trail, TP move', hypothesis: 'active management adds a captured-move component'}
