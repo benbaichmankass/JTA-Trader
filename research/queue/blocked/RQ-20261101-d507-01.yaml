@@ -1,0 +1,103 @@
+# Authored 2026-11-01 by lane ML-RECIPE (Tier 1) from the fs05-01/fs06-01 diagnosis. Decision rule registered BEFORE any run. Gates: none.
+id: RQ-20261101-d507-01
+title: 'ENTRY variance and threshold fix: does a K-seed score ensemble with a per-fold score-quantile threshold make the recipe gradeable (every fold >= 1000 decisions) and lift the dev mean above the seed
+  noise, with noise controls? Dev folds only'
+status: blocked
+cadence: once
+theme: ml_health
+priority: 1
+roadmap:
+- L-ML-LIVE
+kind: experiment
+practice_precedent: 'T1, M6 (docs/reference/trading-and-model-practice-principles.md): purged + embargoed walk-forward; shadow-feature (Boruta-style) controls so a model that cannot reject noise columns
+  is not trusted to admit real ones.'
+question: 'fs05-01/fs06-01 (2026-11-01) found: across-seed range of the pooled LOFO mean is 0.012-0.040 (14x the assumed 0.0017); regularised arms (R1 +0.029, R2 +0.025 on S0) and T1/T4 cannot be graded
+  because the raw-net-R tau grid leaves folds under 1000 decisions. Arms (features S0 = 20 baseline columns, noise set S1 = S0 + 9 noise columns, S2 = S0 + F1..F5; targets T0 raw and T1 market-neutral,
+  T4 first-passage score): E0 single baseline model (reference, tau grid as in fs05-01); E1 mean score of K=3 baseline models (seed sets {7,11,13}, {17,19,23}, {29,31,37} = three independent draws; E0 is
+  each draw''s first member); E2 E1 with R1 parameters; E3 E1 with R2 parameters. Threshold: instead of the fixed grid, tau for a fold is chosen from the quantile grid q in {0.80,0.85,0.90,0.95,0.98} of
+  the ensemble score on the training folds only (leave-one-fold-out as before), which fixes the decision count per fold by construction. The three draws give the spread. About 54 model walks of about 2.5
+  minutes. No sealed window is read.'
+why_this_matters: 'Operator 2026-11-01: 20 features is a regression equation, not algorithmic trading; manager 2026-11-01 ~12:03Z: a family ablation at +0.010 cannot admit anything when the recipe overfits
+  with any extra column, so fix the recipe, then the columns.'
+power:
+  expected_n: 60000
+  min_detectable_effect: 0.01
+  effect_units: metric
+  sd: 1.0
+  design: paired
+  alpha: 0.05
+  power: 0.8
+  basis: 'MEASURED 2026-11-01 (fs05-01): across-seed range of the pooled LOFO mean 0.012-0.040 per cell; ensembling K=3 should cut it roughly with sqrt(3); this unit measures it.'
+  feasibility:
+    source: none
+    accrual_basis: Replays public history through 2025-09-30 (dev folds only); nothing accrues.
+decision_rule:
+  id: RULE-20261101-d507-01
+  registered_at: '2026-11-01'
+  registered_before_run: true
+  statistic: 'Per arm, set and draw: n and sum of net R at the leave-one-fold-out quantile threshold; pooled mean; across-draw range (spread); noise-control delta S1-S0; per-fold comparison with E0; min
+    decisions per fold.'
+  rule: 'GRADEABLE: every fold has >= 1000 scored decisions in every cell, else the arm is INDETERMINATE. NOISE-IMMUNE: mean over draws of (S1 - S0) >= -spread, spread = across-draw range of that arm''s
+    S0 pooled mean. WIN: a gradeable noise-immune arm whose mean-over-draws S0 beats E0''s S0 by >= 2 x E0''s across-draw range AND is better in >= 6 of 8 folds. RESULT: the winning arm with the highest
+    S0, or ''no ensemble/threshold fix: the pooled bar-level recipe has no gradeable edge on the dev folds'' (then the lever left is the label/horizon family and the universe). Thresholds are not changed
+    after any result.'
+  what_it_does_not_do: Reads no sealed window (dev folds only), serves nothing, changes no config, places no order, sizes nothing.
+  min_n: 1000 dev decisions per fold
+compute: cpu_long
+value:
+  bucket: ai_trader
+  usd_at_stake_per_month: 400
+  confidence: 0.2
+  basis: 'stand-in: the operator priority-1 goal (ML decision makers live); not a P&L measurement.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 8.0
+  est_minutes: 180
+  why_runner: Keyless public Binance Vision archives; GBDT on CPU.
+  basis: 'MEASURED 2026-11-01: one 8-fold arm of the baseline recipe takes about 480 s on 4 threads (arm A); this unit runs a fixed number of arms.'
+run:
+  workflow: research-script-run.yml
+  command:
+  - python3
+  - scripts/research/ml_entry_v2_run.py
+  - ensemble
+  - '{unit}'
+  - '{out_dir}'
+  timeout_minutes: 300
+  inputs:
+    research_unit: RQ-20261101-d507-01
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- ML-RECIPE
+- RQ-20261101-fs05-01
+- RQ-20261101-fs06-01
+- research/levers/ml-entry.yaml
+what_it_does_not_do: Registers, serves or promotes nothing; changes no config; places no order; sizes nothing; reads no sealed window.
+blocked_on:
+- kind: harness
+  what: the ensemble subcommand (K-seed mean score, per-fold score-quantile threshold) in scripts/research/ml_entry_recipe.py and a runner mode 'ensemble' in ml_entry_v2_run.py
+  clears_when: lands on main with a self-test that the quantile uses training-fold scores only and no sealed date is read; then git-mv to research/queue/ with status queued (rule unchanged)
+ml_consumer:
+  consumer: ML-ENTRY-LIVE-ADAPTER
+  decision: which regularisation and target the ENTRY v2 recipe uses before any feature family is added; feeds the single pre-registered forward read
+  legs:
+  - xrp_pullback_2h
+  - trend_donchian_eth_4h
+  - trend_donchian_xrp_4h
+  - ada_pullback_2h
+  - trend_donchian_sol_prop
+  book: money
+iteration:
+  subject: ml-entry
+  subject_kind: ml_model
+  from_result: RQ-20261101-fs01-01 (ENTRY v2 feature-family ablation, FAIL 2026-11-01)
+  verdict_read: fail
+  diagnosis: 'fs01-01 FAILED: adding 9 pure-noise columns moves the baseline recipe from +0.0010 to -0.0157 leave-one-fold-out net R per decision (-0.017), larger than any family gain (+0.010), so the pooled
+    LightGBM recipe overfits ANY extra column and cannot admit a real feature family. Cause: the RECIPE (regularisation / selection), not the columns.'
+  hypothesis: stronger fixed regularisation or fold-internal shadow-feature selection makes the recipe noise-immune, after which real families can be admitted
+  attempt: 1
+  due_by: '2026-11-03'

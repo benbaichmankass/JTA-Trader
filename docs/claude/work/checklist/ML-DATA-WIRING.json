@@ -1,0 +1,23 @@
+{
+  "id": "ML-DATA-WIRING",
+  "title": "Every ML trains on the market data lake: a dataset-selection design plus a per-model data-coverage audit",
+  "phase": "build",
+  "state": "queued",
+  "owner": "manager",
+  "lane": null,
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [],
+  "blocked_on": [],
+  "note": "OPERATOR 2026-11-01 ~18:05Z, verbatim: \"now that we have a much better data pipeline, I want to make sure that that's actually going to go into training model, like in general in the design of how we do it, and specifically with everything that already exists that could that needs more data. Like, we need to know how to select the right data sets and make sure that it's getting all of them.\" MEASURED 18:05Z on main: ml/datasets/lake.py (loader, #22148) has NO consumer. grep finds no import of ml.datasets.lake in ml/, scripts/research/ or src/ outside tests and the lake's own scripts. The first full backfill (issue #22192, run 41320352867) has not been read, so lake contents are UNMEASURED. DELIVERABLES: (1) read the lake MANIFEST and report rows/symbols/span per path (MARKET-DATA-LAKE resume step); (2) a dataset-selection design in the ML training contract: every training manifest and decision harness declares its data as a lake query (asset class, venue, tf, as-of universe including delisted symbols so there is no survivorship, point-in-time liquidity floor via lake.liquid_mask, min history), a pinned lake revision recorded in the result, and a stated reason for any narrower set; (3) a per-model data-coverage audit of every model in the registry and every ML decision harness (ml_entry, brackets, manage, the per-symbol heads): data read today, data the lake holds that it could use, expected gain, and one queue unit per data-starved model with a pre-registered rule (more data is a lever on the map, tested one factor at a time); (4) wire ml_entry's harness to the lake first (feeds ML-ENTRY universe and recipe tests). No new gate: report-style coverage, not a CI refusal.",
+  "updated_at": "2026-11-01T18:00:33Z",
+  "updated_by": "session_01AFoLuJ1apgy8sfngu4WyNH",
+  "due_by": "2026-11-05",
+  "roadmap": [
+    "L-DATA",
+    "L-ML-LIVE"
+  ],
+  "_seq": 886
+}

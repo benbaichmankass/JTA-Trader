@@ -2,22 +2,24 @@
   "id": "GRADE-EVERYTHING-CONTINUOUSLY",
   "title": "Every model, decision class and forecast has a scheduled grader with output newer than 7 days: schedule the never-run graders that matter (desk_am_judgement_grade via FORECAST-GRADE-FIRST-PASSAGE, exit_head_final_fold_grade), a decision-value grader for every shadow/advisory model, and each grade names the action it drives",
   "phase": null,
-  "state": "in_flight",
+  "state": "queued",
   "owner": "manager",
-  "lane": "FORECAST-GRADE-FIRST-PASSAGE",
+  "lane": null,
   "model": "claude-sonnet-5-5",
   "ceiling_usd": 10,
   "spend_usd": null,
   "tier": 1,
   "prs": [],
-  "blocked_on": [],
-  "note": "Audit 1f: 9 graders exist that never run vs 9 scheduled. Operator 2026-11-01 ~08:25Z, verbatim: \"This is exactly the kind of infra that needs priority - we can't build models if we're not eactually grading them\". First piece is row FORECAST-GRADE-FIRST-PASSAGE (in flight). Done when the scoreboard checks every grader's freshness. Source: docs/audits/2026-11-01-from-scratch/AUDIT.md section 8 (lane SYSTEM-AUDIT-FROM-SCRATCH, PR #22072); walk-through https://claude.ai/artifact/T9ztV5nc1fUAGbdjsbZHSf. Operator 2026-11-01 ~08:45Z popup, verbatim: \"Walk through it today (Rec.)\" (Tier-1 proposals filed straight away). Gates this adds: none. [2026-11-01 manager] Operator 2026-11-01 ~11:05Z popup, verbatim: \"Fold into running lanes (Rec.)\". Owner: lane FORECAST-GRADE-FIRST-PASSAGE. Target: after the forecast grader's first scheduled run: schedule the never-run graders, 2026-11-02. [2026-11-01 LTR-CLASS-GRADE] New grader scripts/research/ltr_class_grade.py (per live-review class, package-cluster CI, regime) - scheduling it is part of row LTR-GRADER-COVERAGE.",
+  "blocked_on": [
+    "paused: operator usage hold until 2026-11-05"
+  ],
+  "note": "PAUSED 2026-11-01 15:37Z by operator usage hold (resume 2026-11-05). DONE: #22135 merged (desk_am_judgement_grade runs hourly inside forecast-grade.yml); re-count of the audit's 9 never-run graders (9 confirmed; only desk_am_judgement_grade is a continuous grader, the other 8 are one-shot research/repair graders wired to queue units, manual runs or a superseded fallback). OPEN: #22113 (scripts/ci/grader_registry.yaml + alert-only scripts/ci/check_grader_freshness.py: FRESH/STALE/COULD_NOT_LOOK/NO_GRADER and the action each grade drives). NOT DONE: a served-model decision-value grader for ML models (registry NO_GRADER, owner ML-DECISION-MODELS; only ml/promotion/attribution.py exists: discrimination + calibration on the VM, not net-of-cost decision value); making each existing grade drive an action (registry lists 5 of 7 as 'none' with a gap owner). Corrections found: the R4 demotion gate reads /api/bot/performance/recent, not the strategy-scores file; the soak-book grade is monitoring, not a soak exit.",
   "priority_rank": 2,
-  "updated_at": "2026-11-01T13:05:57Z",
-  "updated_by": "session_01AFoLuJYbPJ8e5Lv2fZHWWw",
+  "updated_at": "2026-11-01T17:10:22Z",
+  "updated_by": "session_01AFoLuK13bdf4iNCUDiUvUX",
   "roadmap": [
     "L-ML-LIVE"
   ],
-  "due_by": "2026-11-02",
+  "due_by": "2026-11-05",
   "_seq": 865
 }
