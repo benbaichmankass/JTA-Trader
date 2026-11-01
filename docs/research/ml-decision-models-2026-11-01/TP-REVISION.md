@@ -23,13 +23,16 @@ verbatim: *"1, but a moving to needs to be the be t work item"*.
 - **Model (first-passage, DESIGN.md §1b):** one pooled LightGBM multiclass over 18 classes = (highest grid level touched before
   the stop, 0..8) × (stop hit: yes / no — no = timeout at the 24-bar stop). Three outcomes per level follow:
   `target_first` = reach ≥ L, `stop_first` = stop and reach < L, `timeout` = no stop and reach < L. Features: the 20 ENTRY
-  features at the check-in bar, plus side, bars held, open R, MFE / MAE so far (R), the resting TP (ATR), distances to TP / SL
-  (ATR), ATR(now) / ATR(entry), side-signed 4h / 24h returns. 200 trees, lr 0.05, 31 leaves, min leaf 500, subsample 0.8,
+  features at the check-in bar, plus side, bars held, open R, MFE / MAE so far (R), distance to the SL (ATR), ATR(now) /
+  ATR(entry), side-signed 4h / 24h returns. *(Amended 2026-11-01 before any run: the resting TP and the distance to it are NOT
+  features — the 18-class label is a property of the remaining price path and the fixed SL alone, so it is the same whatever TP
+  rests; the TP enters only through the expected-net-R arithmetic below.)* Training check-ins are those where the SL has not been
+  hit (TP-agnostic), so states beyond the 3 ATR level are covered. 200 trees, lr 0.05, 31 leaves, min leaf 500, subsample 0.8,
   colsample 0.8, λ 5, seed 20261101.
 - **Expected net R of level L** = P(reach ≥ L) × (L/2 − cost of a TP fill at L) + Σ over classes with reach < L of P(class) ×
   that class's mean net R on the training rows. Move to argmax_L iff E(L*) − E(resting TP) > m.
 - **Training rows:** check-ins of every candidate position (every decision bar, both sides) in the label table, deterministic
-  1-in-k subsample to ≤ 1.5M rows; dev ties SL-first (counted), label ends purged + 7-day embargo before each fold.
+  random subsample (seed 20261101) to ≤ 1.5M rows; dev ties SL-first (counted), label ends purged + 7-day embargo before each fold.
 - **m ∈ {0, 0.02, 0.05, 0.10}**, chosen on dev only: max pooled dev OOS mean Δ per trade (tie → larger m) over the ENTRY OOS
   trades 2022-01-01..2026-09-30 (the c692-01 walk-forward fold trades, re-run with its recipe, plus the served model's trades
   2025-10-01..2026-09-30), TP model walk-forward in yearly folds (2022, 2023, 2024, 2025-01..09, 2025-10..2026-09).
