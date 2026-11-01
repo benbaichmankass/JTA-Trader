@@ -70,7 +70,7 @@ def main() -> None:
         # Create repo if first time we see it
         if (repo_id, repo_type) not in seen_repos:
             try:
-                create_repo(repo_id=repo_id, repo_type=repo_type, exist_ok=True, private=False)
+                create_repo(repo_id=repo_id, repo_type=repo_type, exist_ok=True, private=True)  # Binance data: no open licence
             except Exception as exc:
                 print(f"WARN  Could not ensure repo {repo_id} exists: {exc}")
             seen_repos.add((repo_id, repo_type))

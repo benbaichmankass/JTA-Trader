@@ -310,14 +310,17 @@ def build_table(cache: Path, symbols: list[str], xs_symbols: list[str] | None = 
 
 
 # ----------------------------------------------------------------------------------------------- model + policy
-def fit_predict(train: pd.DataFrame, test: pd.DataFrame) -> tuple[np.ndarray, np.ndarray]:
+def fit_predict(train: pd.DataFrame, test: pd.DataFrame, features: list[str] | None = None,
+                n_jobs: int | None = None) -> tuple[np.ndarray, np.ndarray]:
     import lightgbm as lgb
+    feats = FEATURES if features is None else features
+    params = LGB_PARAMS if n_jobs is None else {**LGB_PARAMS, "n_jobs": n_jobs}
     preds = []
     for side in ("long", "short"):
-        m = lgb.LGBMRegressor(**LGB_PARAMS)
-        m.fit(train[FEATURES], train[f"net_{side}"])
+        m = lgb.LGBMRegressor(**params)
+        m.fit(train[feats], train[f"net_{side}"])
         # provenance: predict — LGBMRegressor.predict is the regressed net R of that side, not a probability
-        preds.append(m.predict(test[FEATURES]))
+        preds.append(m.predict(test[feats]))
     return preds[0], preds[1]
 
 
@@ -387,21 +390,25 @@ def purge_train(tab: pd.DataFrame, test_start: pd.Timestamp) -> pd.DataFrame:
     return tab[tab.ts < cut]
 
 
-def walk_forward(tab: pd.DataFrame) -> dict:
-    dev = tab[tab.ts < pd.Timestamp(HOLDOUT_START, tz="UTC")]
-    bounds = [pd.Timestamp(x, tz="UTC") for x in DEV_FOLDS] + [pd.Timestamp(HOLDOUT_START, tz="UTC")]
+def walk_forward(tab: pd.DataFrame, features: list[str] | None = None, dev_folds: list[str] | None = None,
+                 dev_end: str | None = None, n_jobs: int | None = None) -> dict:
+    """Defaults reproduce c692-01 exactly (FEATURES, DEV_FOLDS, HOLDOUT_START); the optional arguments serve the v2 units."""
+    end = dev_end or HOLDOUT_START
+    dev = tab[tab.ts < pd.Timestamp(end, tz="UTC")]
+    bounds = [pd.Timestamp(x, tz="UTC") for x in (dev_folds or DEV_FOLDS)] + [pd.Timestamp(end, tz="UTC")]
     folds, per_tau = [], {tau: [] for tau in TAU_GRID}
     for a, b in itertools.pairwise(bounds):
         test = dev[(dev.ts >= a) & (dev.ts < b)]
         # the fold's test rows must also stop H bars before b so no label reads past the fold
         test = test[test.ts < b - pd.Timedelta(hours=HORIZON_H + 1)]
         train = purge_train(dev, a)
-        pl, ps = fit_predict(train, test)
+        pl, ps = fit_predict(train, test, features, n_jobs)
         rec = {"test_start": str(a.date()), "test_end": str(b.date()), "n_train": len(train), "n_test_rows": len(test)}
         for tau in TAU_GRID:
             tk = policy(test, pl, ps, tau)
             per_tau[tau].append(tk)
-            rec[f"tau_{tau}"] = {"n": len(tk), "mean_net_r": float(tk.net_r.mean()) if len(tk) else None}
+            rec[f"tau_{tau}"] = {"n": len(tk), "mean_net_r": float(tk.net_r.mean()) if len(tk) else None,
+                                 "sum_net_r": float(tk.net_r.sum()) if len(tk) else 0.0}
         folds.append(rec)
         print(json.dumps(rec), flush=True)
     pooled = {}
@@ -415,11 +422,16 @@ def walk_forward(tab: pd.DataFrame) -> dict:
             "tau_rule": f"argmax pooled dev mean net R per decision over TAU_GRID with dev n >= {TAU_MIN_DEV_N}; tie -> larger tau"}
 
 
-def holdout(tab: pd.DataFrame, tau: float) -> dict:
-    hs = pd.Timestamp(HOLDOUT_START, tz="UTC")
+def holdout(tab: pd.DataFrame, tau: float, features: list[str] | None = None, start: str | None = None,
+            end: str | None = None, n_jobs: int | None = None) -> dict:
+    """Defaults reproduce c692-01 (window = HOLDOUT_START..). v2 units pass their own sealed window; the CALLER must have
+    claimed the read from scripts/research/holdout_lock.py first."""
+    hs = pd.Timestamp(start or HOLDOUT_START, tz="UTC")
     train = purge_train(tab[tab.ts < hs], hs)
     test = tab[tab.ts >= hs]
-    pl, ps = fit_predict(train, test)
+    if end:
+        test = test[test.ts < pd.Timestamp(end, tz="UTC") + pd.Timedelta(days=1)]
+    pl, ps = fit_predict(train, test, features, n_jobs)
     taken = policy(test, pl, ps, tau)
     res = {"n_train": len(train), "n_test_rows": len(test), "test_symbols": int(test.symbol.nunique()),
            "window": [str(test.ts.min()), str(test.ts.max())], "model": summarize(taken)}

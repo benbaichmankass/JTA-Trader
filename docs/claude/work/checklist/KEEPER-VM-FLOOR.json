@@ -1,29 +1,27 @@
 {
   "id": "KEEPER-VM-FLOOR",
-  "title": "Hard floor for schedule-keeper: an hourly trainer-VM timer that dispatches it (PARKED: blocked by the session permission classifier)",
-  "phase": null,
-  "state": "queued",
+  "title": "Hourly trainer-VM dispatch of schedule-keeper.yml (backstop clock independent of GitHub's scheduler)",
+  "phase": "build",
+  "state": "in_flight",
   "owner": "manager",
-  "lane": null,
+  "lane": "session_01AFoLuJ1apgy8sfngu4WyNH",
   "model": null,
   "ceiling_usd": null,
   "spend_usd": null,
   "tier": 2,
   "prs": [],
-  "blocked_on": [
-    "session permission classifier refused the credential-provisioning step and the script commit; the operator decides how the credential reaches the trainer"
-  ],
-  "note": "UPDATE 2026-11-01 15:37Z: the VM floor is now the manager's (PR #22191, built by the manager with operator permission). My local keeper scripts/worktree were DROPPED (worktree and branch claude/keeper-vm-floor deleted; nothing of it was pushed), so the paths named above no longer exist. This row keeps the measured-risk observation (scripts/ops/keeper_gap_report.py --strict) only. Paused with the lane until 2026-11-05.",
-  "updated_at": "2026-11-01T15:38:58Z",
-  "updated_by": "session_01AFoLuK13bdf4iNCUDiUvUX",
-  "observation": {
-    "what": "daily max gap between completed schedule-keeper.yml runs vs the smallest stale window of any keeper target (120 min at filing)",
-    "how_to_check": "python3 scripts/ops/keeper_gap_report.py --hours 48 --strict  (exit 0 under the window; 1 = FLAG; 2 = could not judge)",
-    "due_by": "2026-11-05T12:00:00Z"
-  },
+  "blocked_on": [],
+  "note": "[manager 2026-11-01a] Measured (FORECAST-GRADE lane, 48h to 14:25Z): schedule-keeper cron fired 13 of ~56 expected; kept alive only by bot pushes; max gap between completed runs 73.3 min, under every target's stale window. Operator popup ~14:48Z, verbatim: 'Yes, BRANCH_PROTECTION_TOKEN'. Lane build refused twice by the auto-mode classifier; operator (verbatim excerpt) 'I took you off auto mode because that is the sanctioned first path for dealing with these kinds of permission issues. You can ask for permission and I will grant it.' Built by the manager. After merge: vm-git-credential-bootstrap target trainer, credential dispatch; observe HTTP 204 and a keeper run created by the dispatch.",
+  "updated_at": "2026-11-01T15:03:44Z",
+  "updated_by": "session_01AFoLuJ1apgy8sfngu4WyNH",
+  "due_by": "2026-11-02",
   "roadmap": [
-    "L-ML-LIVE"
+    "L-OPS"
   ],
-  "due_by": "2026-11-05",
+  "observation": {
+    "what": "one ict-keeper-dispatch run on the trainer logs HTTP 204 and a schedule-keeper.yml run with event workflow_dispatch appears within a minute",
+    "how_to_check": "trainer journalctl -u ict-keeper-dispatch.service | grep keeper-dispatch: ; Actions runs of schedule-keeper.yml event=workflow_dispatch",
+    "due_by": "2026-11-02"
+  },
   "_seq": 879
 }

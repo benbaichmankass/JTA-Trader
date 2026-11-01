@@ -5,6 +5,8 @@ description: Run and interpret strategy backtests for the ICT bot — the standa
 
 > **Doc status:** `live` · category `instruction` · last verified `2026-09-07` · registered in [`docs/DOCUMENT-INDEX.md`](../../../docs/DOCUMENT-INDEX.md)
 
+> **The research loop (binding, 2026-11-01):** [`docs/plans/OPERATING-PLAN-2026-09-21.md`](../../../docs/plans/OPERATING-PLAN-2026-09-21.md) § 2 "What does not pass goes back into research — THE research workflow" -- a backtest that fails its registered rule is the input to the subject's next iteration (diagnosis -> variant), never a stopping point.
+
 # /backtesting — run and read ICT strategy backtests
 
 Backtesting is the evidence step before any Tier-3 strategy change. This

@@ -22,13 +22,24 @@
 #   A  viable, tested wrong  -- outside evidence names a condition we did not test -> a pre-registered re-test
 #   B  viable, not testable  -- needs data / a harness we lack -> a checklist row with its first step
 #   C  no supporting evidence -- retire, with the sources checked as the denominator
-# Only C retires a family, and only with ALL six items below; a record missing any leaves the family open.
+# Only C retires a family, and only with ALL six items below PLUS a complete lever_map; a record missing any leaves it open.
 # Numbers are configurable here; change one with the evidence for it in the PR body.
-policy_version: 2
+policy_version: 3
 provisional: true
 retiring_verdicts: [C]
+# v3 (2026-11-01, lane RESEARCH-ITERATE; operator verbatim: "Once we've proven conclusively that we cannot find an edge on a certain
+# strategy, we can retire it, and until then it needs to be an iteration." and "We've done three random tests and those three tests
+# didn't pass, so we're done. No, that's not how it works."). Retirement is LEVER EXHAUSTION, never a count of attempts or a date:
+# the v2 `configs_tested: 3` minimum is REMOVED. The record's `lever_map` must cover every lever family for the subject's kind below,
+# each with at least one COUNTED test (n + power stated, verdict not indeterminate, `cost_basis: full`) -- or `irrelevant_because`.
+# Canonical: docs/plans/OPERATING-PLAN-2026-09-21.md § 2 "What does not pass goes back into research".
+lever_families:
+  strategy_leg: [entry, exit, filter, regime_gating, timeframe, symbol_set, direction, session, sizing_vs_cost]
+  ml_model: [features, labels, recipe, universe, horizon, threshold, calibration]
+  ltr_class: [trigger, timing, action_bounds]
+  lever_family: [setting, legs, timeframe, regime, interaction]   # an exit/entry LEVER kind (giveback stop, TP extension, ...)
+lever_kinds_default: lever_family   # a record that names no subject_kind is read as a lever kind (the v2 population)
 minimums:
-  configs_tested: 3          # (2) on the family's PRIMARY axis; each with n + power; indeterminate counts zero
   windows_disjoint: 2        # (2) disjoint windows ...
   folds_alternative: 4       #     ... or at least this many folds
   instruments_tested: 2      # (2) unless breadth.instrument_specific_why says the idea is instrument-specific
