@@ -116,7 +116,7 @@ def op_add(repo: Path, row_id: str, fields: dict, by: str | None) -> Path:
     if not str(row["title"]).strip():
         raise ChecklistError("`add` needs --title")
     # PROCESS, NOT GATES (operator, 2026-11-01): fill owner / due_by / roadmap instead of refusing the row;
-    # the scheduled drain (checklist_drain.py) is what makes the date act.
+    # the manager's daily review (step 4b, checklist_daily_measure.py) is what makes the date act.
     for f in fill_defaults(row):
         print(f"checklist: filled {f}", file=sys.stderr)
     return _commit_row(row, repo, header, by)
