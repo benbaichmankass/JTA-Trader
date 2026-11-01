@@ -1,5 +1,7 @@
 {
   "tier": 1,
-  "landing": "self",
+  "landing": "hold",
+  "hold_reason": "changes_landing_machinery",
+  "hold_text": "Holding for the manager: scripts/research/queue_replenish.py is re-run by check_pr_landing.py --verify, so editing its default target is a landing-machinery change that a human reads once.",
   "why": "Tier-1 process reduction (operator 2026-11-01, STOP-GENERATED-AUTHORING): the refill default target becomes 0 and the brief reports a floor gap instead of ordering authoring. No runtime, config, strategy or order-path change; adds no gate."
 }
