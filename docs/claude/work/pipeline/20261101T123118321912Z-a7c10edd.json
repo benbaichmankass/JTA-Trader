@@ -1,0 +1,17 @@
+{
+  "due_when": {
+    "due_date": "2026-11-03",
+    "kind": "date"
+  },
+  "id": "PI-20261101-ETFHIST-0002",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "lane ETF-HISTORY-PIPELINE, docs/research/options-iv-history-sources-2026-11-01.md section B",
+    "rerun": "On the LIVE VM (gateway subnet only), clientId 450, paced: adapt scripts/ops/pull_mes_ibkr_history.sh / ml/datasets/adapters/ibkr_offvm.py to whatToShow=OPTION_IMPLIED_VOLATILITY for the 7 underlyings; read first/last/rows per symbol."
+  },
+  "severity": "medium",
+  "state": "queued",
+  "tier": 1,
+  "what": "Measure IB-gateway option-IV history for the options underlyings (SPY QQQ IWM GLD TLT SLV USO): reqHistoricalData whatToShow=OPTION_IMPLIED_VOLATILITY and HISTORICAL_VOLATILITY, first bar / rows per symbol; and whether any expired option contract bars are retrievable (IB documents none)."
+}

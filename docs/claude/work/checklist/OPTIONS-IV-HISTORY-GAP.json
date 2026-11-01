@@ -1,0 +1,24 @@
+{
+  "id": "OPTIONS-IV-HISTORY-GAP",
+  "title": "Build/research: historical option + IV data for SPY QQQ IWM GLD TLT SLV USO (no keyless contract-level history exists; accrue our own, buy nothing)",
+  "phase": null,
+  "state": "landed_unproven",
+  "owner": "manager",
+  "lane": "ETF-HISTORY-PIPELINE",
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [
+    "#22136"
+  ],
+  "blocked_on": [],
+  "note": "Operator 2026-11-01: 'no way we can't find sources for historical data on publicly traded securities'. Source inventory: docs/research/options-iv-history-sources-2026-11-01.md (MEASURED reach table + priced list). KEY FINDINGS: (1) keyless CBOE delayed-quotes chain with IV/greeks/OI/volume reached for all 7 underlyings (capture ran live, 7/7); (2) free index-level IV history reached (GVZ OVX VXN RVX VXSLV VXGDX VXTLT 2004-2011 onward); (3) contract-level backward history is a purchase (CBOE DataShop 2012+ with Calcs add-on, price not on page, FREE SAMPLE available; ORATS 199 USD/mo EOD 2007+, no trial); DoltHub post-no-preference/options covers SPY/XLE only of 10 tested. BUILT: scripts/ops/capture_options_snapshot.py + options-snapshot-capture.yml (daily 21:25Z Mon-Fri, Alpaca + CBOE sources, trainer data/options_history/<source>/<UND>/<date>.parquet), PR #22136. CLOSES WHEN: after merge, label options-snapshot-request 'mode: probe' (Alpaca opra vs indicative + historical option-bars depth) and 'mode: capture' produce verify tables for both sources, then 5 consecutive trading-day files per underlying. NEXT: download the CBOE DataShop sample (operator purchase decision after that); PI-20261101-ETFHIST-0002 measures IB option-IV.",
+  "updated_at": "2026-11-01T12:31:18Z",
+  "updated_by": "lane-ETF-HISTORY-PIPELINE",
+  "due_by": "2026-11-08",
+  "roadmap": [
+    "L-DATA"
+  ],
+  "_seq": 877
+}
