@@ -1,0 +1,88 @@
+# Hand-authored 2026-11-01 by lane RESEARCH-ITERATE (Tier 1), dispatched by Manager Session 2026-11-01a. ITERATION unit: authored from a written diagnosis of the subject's last result. Decision rule registered BEFORE any run. Gates: none.
+id: RQ-20261101-78fc-10
+title: 'ITERATION 1 of ltr-close (indeterminate): does the live-review FULL CLOSE class, found positive on one window, pass RULE-AM-RISK-ADJUSTED-V1
+  on a disjoint window it was not found on?'
+status: blocked
+cadence: once
+theme: live_strategy
+priority: 1
+roadmap:
+- L-PROGRAMMES
+programme: P1
+kind: experiment
+question: On a calendar window disjoint from the audit's discovery window, does the close class pass RULE-AM-RISK-ADJUSTED-V1 vs hold and vs a
+  matched random close?
+why_this_matters: 'Operator 2026-11-01 ~12:59Z: "if the data doesn''t pass, it goes back into research for improvments and testing. THere is no
+  other pipeline for underperforming strategies/mls." ltr-close is not on real money and had no live research iteration (scripts/research/iteration_orphans.py,
+  2026-11-01).'
+iteration:
+  subject: ltr-close
+  subject_kind: ltr_class
+  from_result: docs/audits/2026-11-01-from-scratch/AUDIT.md
+  verdict_read: indeterminate
+  diagnosis: 'docs/audits/2026-11-01-from-scratch/AUDIT.md section 8: the only positive active-management signal, found on ONE window; a PASS
+    on one window is a discovery, not a confirmation (research-ops step D). Row LTR-CLOSE-CLASS-TEST was filed but has no unit.'
+  hypothesis: the close signal replicates on unseen trades
+  attempt: 1
+  due_by: '2026-11-08'
+power:
+  expected_n: 500
+  min_detectable_effect: 0.02
+  effect_units: metric
+  sd: 1.0
+  design: paired
+  alpha: 0.05
+  power: 0.8
+  basis: INFERRED from the source result's population; the rule's own INDETERMINATE floor governs.
+  feasibility:
+    source: none
+    accrual_basis: Replays existing corpora; nothing accrues.
+decision_rule:
+  id: RULE-RQ-20261101-78fc-10
+  registered_at: '2026-11-01'
+  registered_before_run: true
+  statistic: On a calendar window disjoint from the audit's discovery window, does the close class pass RULE-AM-RISK-ADJUSTED-V1 vs hold and vs
+    a matched random close?
+  rule: 'RULE-AM-RISK-ADJUSTED-V1 V1 parameters on the disjoint window, R4 vs a matched random close. A screen until BOOK-SIM-REAL-SIZER. FAIL:
+    back to diagnosis (which close trigger). INDETERMINATE if < 60 closes in the window.'
+  what_it_does_not_do: Serves, promotes or applies nothing; changes no config; places no order.
+practice_precedent: 'T1 (docs/reference/trading-and-model-practice-principles.md): matched random-intervention control; RULE-AM-RISK-ADJUSTED-V1
+  per class.'
+compute: cpu_light
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 8.0
+  est_minutes: 120
+  basis: Estimate; the first run replaces it.
+  why_runner: Replays committed or public corpora on CPU.
+value:
+  usd_at_stake_per_month: 200
+  confidence: 0.15
+  bucket: own_losses
+  basis: planning weight by money rank; an estimate, not a measurement
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- RESEARCH-ITERATE
+- LTR-CLOSE-CLASS-TEST
+what_it_does_not_do: Serves, promotes or applies nothing; changes no config; places no order.
+blocked_on:
+- kind: work_item
+  ref: LTR-CLOSE-CLASS-TEST
+  what: the disjoint-window close replay (live_review_outcomes.py over the post-discovery packets)
+  clears_when: the replay command is wired as a research-script-run unit; then git-mv to research/queue/ (rule unchanged)
+intervention_controls:
+  hold_to_bracket: true
+  matched_random:
+    draws: 200
+    same_cell: true
+  best_static:
+    grid:
+    - hold
+    - tighten_1atr_at_1R
+    - close_at_1R
+    excludes_test_folds: true
+  bootstrap_group: trade

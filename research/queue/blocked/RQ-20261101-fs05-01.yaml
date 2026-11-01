@@ -80,3 +80,16 @@ ml_consumer:
   - ada_pullback_2h
   - trend_donchian_sol_prop
   book: money
+# iteration block added 2026-11-01 by lane RESEARCH-ITERATE (the unit's registered rule is unchanged)
+iteration:
+  subject: ml-entry
+  subject_kind: ml_model
+  from_result: RQ-20261101-fs01-01 (ENTRY v2 feature-family ablation, FAIL 2026-11-01)
+  verdict_read: fail
+  diagnosis: 'fs01-01 FAILED: adding 9 pure-noise columns moves the baseline recipe from +0.0010 to -0.0157 leave-one-fold-out net R per decision
+    (-0.017), larger than any family gain (+0.010), so the pooled LightGBM recipe overfits ANY extra column and cannot admit a real feature family.
+    Cause: the RECIPE (regularisation / selection), not the columns.'
+  hypothesis: stronger fixed regularisation or fold-internal shadow-feature selection makes the recipe noise-immune, after which real families
+    can be admitted
+  attempt: 1
+  due_by: '2026-11-03'

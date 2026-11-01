@@ -1,0 +1,91 @@
+# Hand-authored 2026-11-01 by lane RESEARCH-ITERATE (Tier 1), dispatched by Manager Session 2026-11-01a. ITERATION unit: authored from a written diagnosis of the subject's last result. Decision rule registered BEFORE any run. Gates: none.
+id: RQ-20261101-78fc-04
+title: 'ITERATION 1 of ml-tm-action-value (fail): with path-state features the R1 state lacks, is the per-action advantage predictable out of
+  fold at all?'
+status: blocked
+cadence: once
+theme: ml_health
+priority: 1
+roadmap:
+- L-ML-LIVE
+programme: P2
+kind: experiment
+question: With the TM-BENCH corpus v1 and an added path-state feature block (MFE/MAE so far, bars since MFE, ATR ratio vs entry, distance to the
+  nearest swing), does Stage-A out-of-fold rank calibration of the per-action advantage beat a shuffled control?
+why_this_matters: 'Operator 2026-11-01 ~12:59Z: "if the data doesn''t pass, it goes back into research for improvments and testing. THere is no
+  other pipeline for underperforming strategies/mls." ml-tm-action-value is not on real money and had no live research iteration (scripts/research/iteration_orphans.py,
+  2026-11-01).'
+iteration:
+  subject: ml-tm-action-value
+  subject_kind: ml_model
+  from_result: RQ-20261030-c7a1-01
+  verdict_read: fail
+  diagnosis: 'Q-TM1 RQ-20261029-7294-02 FAILED (-0.056..-0.079 R/trade vs hold, 0/6 folds, worse than matched random) and Q-TM1b RQ-20261030-c7a1-01
+    FAILED: the advantage is NOT predictable out of fold from the R1 state. The hindsight action-value ceiling is 0.86 R/trade (ML-AM-NEXT-LIVE),
+    so value exists; the common factor of four negatives (d6e7-06, RQ-20260927-002, a7e1-01, 7294-02) is the R1 state. Diagnosis: FEATURES, as
+    Q-TM1b''s own FAIL branch names.'
+  hypothesis: the advantage is predictable once the model sees the path state, which the R1 state omits
+  attempt: 1
+  due_by: '2026-11-07'
+power:
+  expected_n: 500
+  min_detectable_effect: 0.02
+  effect_units: metric
+  sd: 1.0
+  design: paired
+  alpha: 0.05
+  power: 0.8
+  basis: INFERRED from the source result's population; the rule's own INDETERMINATE floor governs.
+  feasibility:
+    source: none
+    accrual_basis: Replays existing corpora; nothing accrues.
+decision_rule:
+  id: RULE-RQ-20261101-78fc-04
+  registered_at: '2026-11-01'
+  registered_before_run: true
+  statistic: With the TM-BENCH corpus v1 and an added path-state feature block (MFE/MAE so far, bars since MFE, ATR ratio vs entry, distance to
+    the nearest swing), does Stage-A out-of-fold rank calibration of the per-action advantage beat a shuffled control?
+  rule: 'PASS iff the Stage-A OOS Spearman between predicted and realised per-action advantage beats the 95th percentile of 200 shuffled-label
+    controls on >= 4 of 6 purged folds for at least one non-hold action. FAIL: the feature block does not carry it; iteration 2 changes the label
+    (per-action first-passage) per ML-EXIT-ACTIONGRID-LABELS. INDETERMINATE if any fold has < 200 check-ins. Fixed now.'
+  what_it_does_not_do: Serves, promotes or applies nothing; changes no config; places no order.
+practice_precedent: 'T1, M6 (docs/reference/trading-and-model-practice-principles.md): purged walk-forward, matched-random control, one pre-registered
+  read.'
+compute: cpu_long
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 8.0
+  est_minutes: 120
+  basis: Estimate; the first run replaces it.
+  why_runner: Replays committed or public corpora on CPU.
+value:
+  usd_at_stake_per_month: 250
+  confidence: 0.15
+  bucket: ai_trader
+  basis: planning weight by money rank; an estimate, not a measurement
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- RESEARCH-ITERATE
+- TMBENCH-QTM1B-BUILD
+what_it_does_not_do: Serves, promotes or applies nothing; changes no config; places no order.
+blocked_on:
+- kind: work_item
+  ref: TMBENCH-QTM1B-BUILD
+  what: a path-state feature block in tm_bench (the four features named in the question), causal at each check-in
+  clears_when: lands on main with a truncation-invariance self-test; then git-mv to research/queue/ (rule unchanged)
+intervention_controls:
+  not_applicable: an offline model evaluation; the consumer's own gate applies any action
+ml_consumer:
+  consumer: scripts/ops/live_review_apply.py
+  decision: which in-trade action the conservative management model advises on the real-money legs
+  legs:
+  - xrp_pullback_2h
+  - trend_donchian_eth_4h
+  - trend_donchian_xrp_4h
+  - ada_pullback_2h
+  - trend_donchian_sol_prop
+  book: money

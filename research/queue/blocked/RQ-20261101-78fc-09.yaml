@@ -1,0 +1,91 @@
+# Hand-authored 2026-11-01 by lane RESEARCH-ITERATE (Tier 1), dispatched by Manager Session 2026-11-01a. ITERATION unit: authored from a written diagnosis of the subject's last result. Decision rule registered BEFORE any run. Gates: none.
+id: RQ-20261101-78fc-09
+title: 'ITERATION 1 of ltr-tighten-sl (fail): is the tighten loss confined to the EARLY cell, i.e. does a tighten allowed only at open >= +1 R
+  with stop >= break-even and >= 1 ATR of room clear RULE-AM-RISK-ADJUSTED-V1?'
+status: blocked
+cadence: once
+theme: live_strategy
+priority: 1
+roadmap:
+- L-PROGRAMMES
+programme: P1
+kind: experiment
+question: On the real-money legs' Stage-0 path corpus (6 calendar folds), does a tighten restricted to the LATE cell (open >= +1 R, new stop >=
+  BE, >= 1 ATR from price) pass RULE-AM-RISK-ADJUSTED-V1 vs hold and vs a matched random tighten of the same cell?
+why_this_matters: 'Operator 2026-11-01 ~12:59Z: "if the data doesn''t pass, it goes back into research for improvments and testing. THere is no
+  other pipeline for underperforming strategies/mls." ltr-tighten-sl is not on real money and had no live research iteration (scripts/research/iteration_orphans.py,
+  2026-11-01).'
+iteration:
+  subject: ltr-tighten-sl
+  subject_kind: ltr_class
+  from_result: comms/research/ltr_tighten_optimize/verdict.json
+  verdict_read: fail
+  diagnosis: 'comms/research/ltr_tighten_optimize/verdict.json (#21003): tightening in the early cell loses -0.041 R (CI -0.087..-0.005); all
+    5 priced tighten options in 125 live review rows sat in that losing early cell. The class was made advice-only (#21024). The diagnosis is
+    WHERE, not whether: the fallback the lane proposed (auto only at open >= +1R, stop >= BE, >= 1 ATR) has never been graded. RQ-20261028-e1a7-01
+    asked a similar question but is blocked on a DONE row with no owner (stale).'
+  hypothesis: a tighten that waits for +1 R and leaves >= 1 ATR of room cuts drawdown without paying the early-cell cost
+  attempt: 1
+  due_by: '2026-11-08'
+power:
+  expected_n: 500
+  min_detectable_effect: 0.02
+  effect_units: metric
+  sd: 1.0
+  design: paired
+  alpha: 0.05
+  power: 0.8
+  basis: INFERRED from the source result's population; the rule's own INDETERMINATE floor governs.
+  feasibility:
+    source: none
+    accrual_basis: Replays existing corpora; nothing accrues.
+decision_rule:
+  id: RULE-RQ-20261101-78fc-09
+  registered_at: '2026-11-01'
+  registered_before_run: true
+  statistic: On the real-money legs' Stage-0 path corpus (6 calendar folds), does a tighten restricted to the LATE cell (open >= +1 R, new stop
+    >= BE, >= 1 ATR from price) pass RULE-AM-RISK-ADJUSTED-V1 vs hold and vs a matched random tighten of the same cell?
+  rule: 'RULE-AM-RISK-ADJUSTED-V1 (am_risk_adjusted.py) with V1 parameters, R4 vs a matched random tighten in the same cell. Until BOOK-SIM-REAL-SIZER
+    lands the grade is a SCREEN (ranks, never graduates). FAIL: back to diagnosis (trigger choice). Fixed now.'
+  what_it_does_not_do: Serves, promotes or applies nothing; changes no config; places no order.
+practice_precedent: 'T1 (docs/reference/trading-and-model-practice-principles.md): matched random-intervention control; RULE-AM-RISK-ADJUSTED-V1
+  per class.'
+compute: cpu_light
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 8.0
+  est_minutes: 120
+  basis: Estimate; the first run replaces it.
+  why_runner: Replays committed or public corpora on CPU.
+value:
+  usd_at_stake_per_month: 200
+  confidence: 0.15
+  bucket: own_losses
+  basis: planning weight by money rank; an estimate, not a measurement
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- RESEARCH-ITERATE
+- BOOK-SIM-REAL-SIZER
+what_it_does_not_do: Serves, promotes or applies nothing; changes no config; places no order.
+blocked_on:
+- kind: work_item
+  ref: BOOK-SIM-REAL-SIZER
+  what: a cell-restricted tighten arm in exit_lever_ablation --grade risk_adjusted (raw flags for the +1R / BE / 1 ATR gate) -- or, sooner, the
+    e1a7-01 corpus wrapper
+  clears_when: the arm flags land with a self-test; then git-mv to research/queue/ (rule unchanged)
+intervention_controls:
+  hold_to_bracket: true
+  matched_random:
+    draws: 200
+    same_cell: true
+  best_static:
+    grid:
+    - hold
+    - tighten_1atr_at_1R
+    - close_at_1R
+    excludes_test_folds: true
+  bootstrap_group: trade
