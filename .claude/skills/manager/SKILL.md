@@ -267,6 +267,11 @@ A Tier-1 lane self-lands: `.github/pr-landing/<slug>.json` (`tier: 1`, `landing:
 Review"), the lane re-declares `landing: hold` with `hold_reason: operator_asked_to_hold`, reports the exact refused command in one line,
 and the manager lands it. Tier-2/3 lane PRs always carry `landing: hold` (manager for Tier 2, the operator's recorded approval for Tier 3).
 
+**Push less, push checked** (CI-THROUGHPUT-20261029; a habit, not a gate). Before every push run `python3 scripts/ci/prepush.py`
+(guards on the diff + affected tests, locally). **Never push to a PR while its CI runs unless you are fixing a red check** — a re-push
+cancels the run in flight and restarts the ~15 min guards job. **Batch register commits** (checklist rows, pipeline appends, landing
+files) into one push instead of one push per edit; this applies to the manager's own register branch too.
+
 ### No new gates (operator, 2026-10-29, binding)
 
 Never add, and never dispatch a lane to add, a gate (approval step, hold, readiness condition, cap, flag, review step) without the operator's explicit permission; read ambiguous friction as less; green Tier-1/2 deploys are automatic; every design doc or approval packet opens with "Gates this adds or changes" (or `Gates: none`) and the popup names them. Canonical § "No new gates without the operator's permission".
@@ -614,6 +619,8 @@ what is blocked and on what>) then fire_trigger(<id>). Never set run_once_at (it
 If your PR waits on the manager (landing: hold), wake it AGAIN once CI on your head is green, with the PR
 number and head sha; you stay subscribed to your own PR and fix red CI yourself. If that prompts, comment on your PR instead.
 Then continue, or run close-out. Never stop to wait for direction.
+Before EVERY push run `python3 scripts/ci/prepush.py` (guards on your diff + affected tests, locally); never push to a PR while its
+CI runs unless fixing red; batch your commits into one push.
 ```
 
 **Reading scope for the lane (operator 2026-10-27, `CONTEXT-DIET`).** A lane reads only what CLAUDE.md § "Every session" step 1 names from
