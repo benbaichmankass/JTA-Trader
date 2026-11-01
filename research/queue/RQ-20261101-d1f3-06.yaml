@@ -1,0 +1,101 @@
+# Hand-authored 2026-11-01 by lane RESEARCH-OPS-20261101-1447 (Tier 1), dispatched by Manager Session 2026-11-01a. ITERATION unit: chosen from the subject's lever map (research/levers/vol-premium-proxy.yaml), one-factor/ablation against the base control, every arm counted, rule registered BEFORE the graded run. Gates: none.
+id: RQ-20261101-d1f3-06
+title: Does replacing the forecast-minus-IV signal with always-short variance, with and without a trailing-IV tail gate, clear the registered rule on the variance-swap
+  proxy?
+status: queued
+cadence: once
+theme: new_strategy_prop
+priority: 2
+roadmap:
+- L-PROGRAMMES
+programme: P6
+kind: experiment
+question: Does replacing the forecast-minus-IV signal with always-short variance, with and without a trailing-IV tail gate, clear the registered rule on the variance-swap
+  proxy?
+why_this_matters: 'Operator 2026-11-01 14:00Z: nothing that failed is closed. The proxy''s profit is the short-variance base rate (always-short 0.208 beats the signal
+  0.070), so the signal is the wrong lever and the tail gate is the lever that acts on the diagnosis.'
+iteration:
+  subject: vol-premium-proxy
+  subject_kind: strategy_leg
+  from_result: research/levers/vol-premium-proxy.yaml
+  verdict_read: fail/indeterminate (see lever map)
+  diagnosis: 'research/levers/vol-premium-proxy.yaml failure_attribution: the signal LOSES when it goes LONG variance (net -17.2 over 97 long positions; 749 short,
+    240 flat) and the profit is the short-variance premium (+87.9) that an always-short baseline earns without it; forecast > IV by 6.4 vol points on average, realised
+    variance still came in 10.5% BELOW implied. DIAGNOSIS: the premium is the base rate; the signal removes the good side. The levers that act on it: entry (replace
+    the signal with always-short), filter (a tail gate on IV level, because short variance''s risk is the spike).'
+  hypothesis: entry (always-short replaces the signal), filter (trailing-252d IV quantile tail gate 0.8 / 0.9)
+  search: entry (always-short replaces the signal), filter (trailing-252d IV quantile tail gate 0.8 / 0.9)
+  levers:
+  - entry
+  - filter
+  attempt: 2
+  due_by: '2026-11-15'
+power:
+  expected_n: 190
+  min_detectable_effect: 0.5
+  effect_units: annualised_sharpe
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: 'about 190 non-overlapping 21-day periods over 6 correlated underlyings, one 16-year window: LOW power; the proxy is not a tradable price.'
+  feasibility:
+    source: none
+    accrual_basis: Fixed historical archive; nothing accrues.
+decision_rule:
+  id: RULE-RQ-20261101-d1f3-06
+  registered_at: '2026-11-01'
+  registered_before_run: true
+  statistic: 'ARMS (4 incl. control, all counted): A0 control = V2 (lam 0.94, thr 0.02, h 21d signal); S0 always short variance; S1 = S0 flat when IV > its trailing-252d
+    0.8 quantile; S2 = S0 flat when IV > trailing 0.9 quantile (history strictly before t, >=100 obs). 6 underlyings with a FRED vol index. Grid fixed in scripts/research/edge_vol_premium.py
+    ITER_CFG.'
+  rule: 'PASS iff the best arm (harness selection: best primary Sharpe) is NOT the control AND clears the UNCHANGED registered rule: Sharpe >= 0.5, stress > 0, both
+    halves > 0, boot p05 > 0, DSR > 0.95 at N_cum = 12 (8 + 4), plus RR.clause years >= 12 counted, concentration, sides, subperiods. FAIL otherwise. A PASS is a
+    PROXY pass (variance-swap proxy, NOT a tradable price): its only consequence is that the PRICED straddle test on real chains (row OPTIONS-IV-HISTORY-GAP) moves
+    up, never a book. Costs as discovery (spread 1 vol-point-equivalent + 1e-4). DISCLOSURE: the author smoke-ran the committed harness once on the dev box (4-arm
+    grid: control reproduced 0.506; S0 0.664, S1 0.918, S2 0.981 (DSR 0.928 at N=12); no arm passed) before this unit existed; that run is NOT the graded record (the
+    runner''s record is) and neither the arm grid nor the rule changed after it. Any arm added because of what it showed is a NEW trial and a new unit.'
+  what_it_does_not_do: 'Edits no config and no roster, places no order, proposes no live leg. A PASS earns ONE holdout read (HOLDOUT-LOCK), never a book. A FAIL records
+    the lever response in the map and closes NO family: retirement is only by a lever-exhaustion record.'
+intervention_controls:
+  not_applicable: an offline research ablation, not an in-trade action
+practice_precedent: 'M4, M5 (docs/reference/trading-and-model-practice-principles.md): pre-registered arm grid with a control arm, every arm counted, DSR at the cumulative
+  trial count.'
+compute: cpu_light
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 6.0
+  est_minutes: 15
+  why_runner: Public keyless archive / committed closes; CPU only.
+  basis: Estimate; the first run replaces it.
+value:
+  usd_at_stake_per_month: 60
+  confidence: 0.1
+  bucket: structural
+  basis: 'stand-in: candidate sources of positive expectancy for a book the audit found flat gross; an estimate, not a measurement'
+run:
+  command:
+  - python3
+  - scripts/research/edge_vol_premium.py
+  - --data-dir
+  - comms/research
+  - --fred-dir
+  - comms/research/_scratch_fred
+  - --iteration
+  - --out
+  - '{out_dir}'
+  inputs:
+    research_unit: RQ-20261101-d1f3-06
+  timeout_minutes: 60
+  workflow: research-script-run.yml
+lands:
+  assert_field: read_state
+  min_rows: 1
+  store: research/results/
+related:
+- research/levers/vol-premium-proxy.yaml
+- RESEARCH-OPS-20261101-1447
+- HOLDOUT-LOCK
+- scripts/research/edge_vol_premium.py
+- OPTIONS-IV-HISTORY-GAP
+- RQ-20261101-58e4-07

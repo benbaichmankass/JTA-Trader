@@ -1,0 +1,103 @@
+# Hand-authored 2026-11-01 by lane RESEARCH-OPS-20261101-1447 (Tier 1), dispatched by Manager Session 2026-11-01a. ITERATION unit: chosen from the subject's lever map (research/levers/tsmom-crypto.yaml), one-factor/ablation against the base control, every arm counted, rule registered BEFORE the graded run. Gates: none.
+id: RQ-20261101-d1f3-01
+title: Does a regime gate, rebalance frequency or universe size lift the vol-targeted crypto time-series momentum portfolio over the T4 control, net of the full cost
+  stack?
+status: queued
+cadence: once
+theme: new_strategy_prop
+priority: 2
+roadmap:
+- L-PROGRAMMES
+programme: P6
+kind: experiment
+question: Does a regime gate, rebalance frequency or universe size lift the vol-targeted crypto time-series momentum portfolio over the T4 control, net of the full
+  cost stack?
+why_this_matters: 'Operator 2026-11-01 14:00Z: nothing that failed is closed; attribute first, choose the next test from the map. tsmom-crypto failed RQ-20261101-58e4-01
+  on the SHORT side and reversal months, not cost.'
+iteration:
+  subject: tsmom-crypto
+  subject_kind: strategy_leg
+  from_result: research/levers/tsmom-crypto.yaml
+  verdict_read: fail/indeterminate (see lever map)
+  diagnosis: 'research/levers/tsmom-crypto.yaml failure_attribution: net 0.61 = gross 0.79 - funding 0.15 - fees 0.03; long +0.74, short -0.13; return is 2020-21
+    (+0.18, +0.33), 2022 +0.09, 2023 -0.03, 2024H1 +0.03; worst months 2023-01, 2022-07, 2020-09 (reversals). DIAGNOSIS: the loss is side and regime, not cost (cost
+    is ~23% of gross) and not signal horizon (flat across 6 horizon sets, differences far below the 0.49 Sharpe SE). The untested families that act on that diagnosis
+    are regime_gating (a BTC-trend gate on shorts or the whole book), timeframe (rebalance frequency, only 7d tried) and symbol_set (universe size, only top-20 tried).'
+  hypothesis: regime_gating (BTC 200d gate on shorts / on the book), timeframe (rebalance 3d/14d), symbol_set (top-10/top-40)
+  search: regime_gating (BTC 200d gate on shorts / on the book), timeframe (rebalance 3d/14d), symbol_set (top-10/top-40)
+  levers:
+  - regime_gating
+  - timeframe
+  - symbol_set
+  attempt: 2
+  due_by: '2026-11-15'
+power:
+  expected_n: 1490
+  min_detectable_effect: 0.5
+  effect_units: annualised_sharpe
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: 'n~1490 daily returns (2020-06..2024-06): Sharpe SE ~0.49, so an arm is separable from 0 only above ~1.0; the cumulative-N DSR bar is stricter by design.
+    Config differences below ~0.7 Sharpe are NOT separable from the control, which is why the pass bar is the absolute registered rule, not a delta.'
+  feasibility:
+    source: none
+    accrual_basis: Fixed historical archive; nothing accrues.
+decision_rule:
+  id: RULE-RQ-20261101-d1f3-01
+  registered_at: '2026-11-01'
+  registered_before_run: true
+  statistic: 'ARMS (7 incl. control, all counted): A0 control = discovery primary T4 (lookbacks 28/56/112, sleeve vol 0.40); R1 shorts only while BTC < its 200d mean;
+    R2 whole book flat while BTC < 200d mean; F1 rebalance 3d; F2 rebalance 14d (control 7d); U1 universe top-10; U2 universe top-40 (control top-20). Grid fixed
+    in scripts/research/edge_portfolio_discovery.py ITER_ARMS.'
+  rule: 'PASS iff at least one NON-control arm clears the UNCHANGED discovery rule: net Sharpe >= 0.5 AND stress (2x cost) Sharpe > 0 AND Sharpe > 0 in BOTH halves
+    AND bootstrap p05 of annualised mean > 0 AND DSR > 0.95 at N_cum = 16 (9 discovery configs + 7 arms), 2020-06-01..2024-06-30. FAIL if the control computed and
+    no arm clears it. INDETERMINATE if the control series is insufficient. The side split and by-year sums are REPORTED, not graded. Holdout not read. DISCLOSURE:
+    the author smoke-ran the committed harness once on the dev box (synthetic panel only; no real-data arm number seen) before this unit existed; that run is NOT
+    the graded record (the runner''s record is) and neither the arm grid nor the rule changed after it. Any arm added because of what it showed is a NEW trial and
+    a new unit.'
+  what_it_does_not_do: 'Edits no config and no roster, places no order, proposes no live leg. A PASS earns ONE holdout read (HOLDOUT-LOCK), never a book. A FAIL records
+    the lever response in the map and closes NO family: retirement is only by a lever-exhaustion record.'
+intervention_controls:
+  not_applicable: an offline research ablation, not an in-trade action
+practice_precedent: 'M4, M5 (docs/reference/trading-and-model-practice-principles.md): pre-registered arm grid with a control arm, every arm counted, DSR at the cumulative
+  trial count.'
+compute: cpu_light
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 6.0
+  est_minutes: 90
+  why_runner: Public keyless archive / committed closes; CPU only.
+  basis: Estimate; the first run replaces it.
+value:
+  usd_at_stake_per_month: 100
+  confidence: 0.1
+  bucket: structural
+  basis: 'stand-in: candidate sources of positive expectancy for a book the audit found flat gross; an estimate, not a measurement'
+run:
+  command:
+  - python3
+  - scripts/research/edge_portfolio_discovery.py
+  - --family
+  - tsmom
+  - --iteration
+  - --build-data
+  - --data-root
+  - comms/research/_scratch_edge_data
+  - --out
+  - '{out_dir}'
+  inputs:
+    research_unit: RQ-20261101-d1f3-01
+  timeout_minutes: 150
+  workflow: research-script-run.yml
+lands:
+  assert_field: read_state
+  min_rows: 1
+  store: research/results/
+related:
+- research/levers/tsmom-crypto.yaml
+- RESEARCH-OPS-20261101-1447
+- HOLDOUT-LOCK
+- scripts/research/edge_portfolio_discovery.py
+- RQ-20261101-58e4-01

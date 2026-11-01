@@ -1,0 +1,101 @@
+# Hand-authored 2026-11-01 by lane RESEARCH-OPS-20261101-1447 (Tier 1), dispatched by Manager Session 2026-11-01a. ITERATION unit: chosen from the subject's lever map (research/levers/xsec-crypto.yaml), one-factor/ablation against the base control, every arm counted, rule registered BEFORE the graded run. Gates: none.
+id: RQ-20261101-d1f3-02
+title: Does a regime gate, rebalance frequency or universe size lift weekly cross-sectional crypto momentum (X1) over the control, net of the full cost stack?
+status: queued
+cadence: once
+theme: new_strategy_prop
+priority: 2
+roadmap:
+- L-PROGRAMMES
+programme: P6
+kind: experiment
+question: Does a regime gate, rebalance frequency or universe size lift weekly cross-sectional crypto momentum (X1) over the control, net of the full cost stack?
+why_this_matters: 'Operator 2026-11-01 14:00Z: nothing that failed is closed. xsec-crypto failed ONLY on DSR(N=10)=0.868 with both halves positive and Sharpe 1.325
+  - the closest of the six to a pass - so it is the highest-value iteration here.'
+iteration:
+  subject: xsec-crypto
+  subject_kind: strategy_leg
+  from_result: research/levers/xsec-crypto.yaml
+  verdict_read: fail/indeterminate (see lever map)
+  diagnosis: 'research/levers/xsec-crypto.yaml failure_attribution: net 1.61 = gross 1.57 + funding received 0.15 - cost 0.10; long +1.86, short -0.21; 2021 alone
+    +1.09 of 1.61 (68%); 2022 +0.01, 2023 +0.08, 2024H1 -0.07. DIAGNOSIS: the edge is long-side and concentrated in the 2021 bull; shorts lose; the formation-horizon,
+    weighting and breadth levers are flat at this n. The decay after 2021 is the thing to explain, which points at regime_gating (does a BTC-trend gate remove the
+    post-2021 reversal drag), timeframe (weekly only) and symbol_set (top-20 only; liquidity floor untested).'
+  hypothesis: regime_gating, timeframe, symbol_set
+  search: regime_gating, timeframe, symbol_set
+  levers:
+  - regime_gating
+  - timeframe
+  - symbol_set
+  attempt: 2
+  due_by: '2026-11-15'
+power:
+  expected_n: 1490
+  min_detectable_effect: 0.5
+  effect_units: annualised_sharpe
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: Same window and standard error as the tsmom unit (Sharpe SE ~0.49). X1's control Sharpe 1.325 is already above the 1.0 separability line; what fails it is
+    the DSR bar, so the DSR denominator (N_cum=17) is the binding constraint, not n.
+  feasibility:
+    source: none
+    accrual_basis: Fixed historical archive; nothing accrues.
+decision_rule:
+  id: RULE-RQ-20261101-d1f3-02
+  registered_at: '2026-11-01'
+  registered_before_run: true
+  statistic: 'ARMS (7 incl. control, all counted): A0 control = discovery primary X1 (L=28, skip 0, q=0.3, long-short, equal weight); R1 shorts only while BTC < its
+    200d mean; R2 whole book flat while BTC < 200d mean; F1 rebalance 3d; F2 rebalance 14d (control 7d); U1 universe top-10; U2 universe top-40 (control top-20).
+    Grid fixed in scripts/research/edge_portfolio_discovery.py ITER_ARMS.'
+  rule: 'PASS iff at least one NON-control arm clears the UNCHANGED discovery rule: net Sharpe >= 0.5 AND stress (2x cost) Sharpe > 0 AND Sharpe > 0 in BOTH halves
+    AND bootstrap p05 of annualised mean > 0 AND DSR > 0.95 at N_cum = 17 (10 discovery configs + 7 arms), 2020-06-01..2024-06-30. FAIL if the control computed and
+    no arm clears it. INDETERMINATE if the control series is insufficient. The side split and by-year sums are REPORTED, not graded. Holdout not read. DISCLOSURE:
+    the author smoke-ran the committed harness once on the dev box (synthetic panel only; no real-data arm number seen) before this unit existed; that run is NOT
+    the graded record (the runner''s record is) and neither the arm grid nor the rule changed after it. Any arm added because of what it showed is a NEW trial and
+    a new unit.'
+  what_it_does_not_do: 'Edits no config and no roster, places no order, proposes no live leg. A PASS earns ONE holdout read (HOLDOUT-LOCK), never a book. A FAIL records
+    the lever response in the map and closes NO family: retirement is only by a lever-exhaustion record.'
+intervention_controls:
+  not_applicable: an offline research ablation, not an in-trade action
+practice_precedent: 'M4, M5 (docs/reference/trading-and-model-practice-principles.md): pre-registered arm grid with a control arm, every arm counted, DSR at the cumulative
+  trial count.'
+compute: cpu_light
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 6.0
+  est_minutes: 90
+  why_runner: Public keyless archive / committed closes; CPU only.
+  basis: Estimate; the first run replaces it.
+value:
+  usd_at_stake_per_month: 150
+  confidence: 0.1
+  bucket: structural
+  basis: 'stand-in: candidate sources of positive expectancy for a book the audit found flat gross; an estimate, not a measurement'
+run:
+  command:
+  - python3
+  - scripts/research/edge_portfolio_discovery.py
+  - --family
+  - xsec
+  - --iteration
+  - --build-data
+  - --data-root
+  - comms/research/_scratch_edge_data
+  - --out
+  - '{out_dir}'
+  inputs:
+    research_unit: RQ-20261101-d1f3-02
+  timeout_minutes: 150
+  workflow: research-script-run.yml
+lands:
+  assert_field: read_state
+  min_rows: 1
+  store: research/results/
+related:
+- research/levers/xsec-crypto.yaml
+- RESEARCH-OPS-20261101-1447
+- HOLDOUT-LOCK
+- scripts/research/edge_portfolio_discovery.py
+- RQ-20261101-58e4-02

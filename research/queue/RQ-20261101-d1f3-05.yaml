@@ -1,0 +1,121 @@
+# Hand-authored 2026-11-01 by lane RESEARCH-OPS-20261101-1447 (Tier 1), dispatched by Manager Session 2026-11-01a. ITERATION unit: chosen from the subject's lever map (research/levers/movement-capture.yaml), one-factor/ablation against the base control, every arm counted, rule registered BEFORE the graded run. Gates: none.
+id: RQ-20261101-d1f3-05
+title: Does a maker-fill cost ceiling (4 bps round trip vs 14) rescue the two-sided stop-bracket movement capture over the same 8-config grid?
+status: queued
+cadence: once
+theme: new_strategy_prop
+priority: 2
+roadmap:
+- L-PROGRAMMES
+programme: P6
+kind: experiment
+question: Does a maker-fill cost ceiling (4 bps round trip vs 14) rescue the two-sided stop-bracket movement capture over the same 8-config grid?
+why_this_matters: 'Operator 2026-11-01 14:00Z: nothing that failed is closed. movement-capture lost ENTIRELY to cost on the fade side (gross ~0), so the cost lever
+  is the one that can be bounded cheaply.'
+iteration:
+  subject: movement-capture
+  subject_kind: strategy_leg
+  from_result: research/levers/movement-capture.yaml
+  verdict_read: fail/indeterminate (see lever map)
+  diagnosis: 'research/levers/movement-capture.yaml failure_attribution: BO1 mean gross -0.40%/trade, net -0.54% (cost 0.14%) - the breakout entry is adverse; FD1g
+    mean gross -0.005% (zero), net -0.145% - for the fade the ENTIRE loss is the 0.14% taker cost; SL 42.7% (avg -3.1%) vs TP 17.5% (+4.3%) vs time 39.5% (+0.11%).
+    All 8 configs negative, 1 of 4 years positive. DIAGNOSIS: the fade has no gross edge to protect, so the cost lever is a CEILING test: at 4 bps round trip (100%
+    fill, no adverse selection, 2 bps/side maker) does any config clear the registered rule? If not, no limit-entry scheme can rescue THIS geometry and the remaining
+    families (longer horizon, better forecaster, one-sided brackets) are the next iteration.'
+  hypothesis: 'sizing_vs_cost (maker-fill ceiling: round-trip 14 -> 4 bps)'
+  search: 'sizing_vs_cost (maker-fill ceiling: round-trip 14 -> 4 bps)'
+  levers:
+  - sizing_vs_cost
+  attempt: 2
+  due_by: '2026-11-15'
+power:
+  expected_n: 1460
+  min_detectable_effect: 0.5
+  effect_units: annualised_sharpe
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: n=4240-11647 trades per config over ~4 years, 10 correlated symbols; the sign of every config is stable across 5 calendar years, so 'all lose' is better
+    powered than the ranking among configs.
+  feasibility:
+    source: none
+    accrual_basis: Fixed historical archive; nothing accrues.
+decision_rule:
+  id: RULE-RQ-20261101-d1f3-05
+  registered_at: '2026-11-01'
+  registered_before_run: true
+  statistic: 'ARMS (2, both counted; the same 8-config grid in each): control = registered 14 bps round trip (11 taker fee + 3 slippage); ARM = 4 bps round trip (maker
+    ceiling: 100% fill, zero slippage, no adverse selection - an UPPER BOUND, not a fill model). Selection is the harness''s own (best primary Sharpe among the 8).
+    DSR N = 16 (8 + 8) in BOTH runs.'
+  rule: 'PASS iff the ARM''s selected config clears the UNCHANGED registered rule (sharpe>=0.5, stress>0, both halves>0, boot p05>0, DSR(N=16)>0.95, and the four
+    RR.clause checks: years, concentration, sides, subperiods). FAIL iff the arm computed and does not: a maker-fill ceiling does not rescue this geometry. INDETERMINATE
+    iff a side did not compute. Combined by scripts/research/edge_iteration_verdict.py. DISCLOSURE: the author smoke-ran the committed harness once on the dev box
+    (not run; the harness change is --rt-bps/--dsr-trials only (defaults byte-identical)) before this unit existed; that run is NOT the graded record (the runner''s
+    record is) and neither the arm grid nor the rule changed after it. Any arm added because of what it showed is a NEW trial and a new unit.'
+  what_it_does_not_do: 'Edits no config and no roster, places no order, proposes no live leg. A PASS earns ONE holdout read (HOLDOUT-LOCK), never a book. A FAIL records
+    the lever response in the map and closes NO family: retirement is only by a lever-exhaustion record.'
+intervention_controls:
+  not_applicable: an offline research ablation, not an in-trade action
+practice_precedent: 'M4, M5 (docs/reference/trading-and-model-practice-principles.md): pre-registered arm grid with a control arm, every arm counted, DSR at the cumulative
+  trial count.'
+compute: cpu_light
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 6.0
+  est_minutes: 90
+  why_runner: Public keyless archive / committed closes; CPU only.
+  basis: Estimate; the first run replaces it.
+value:
+  usd_at_stake_per_month: 60
+  confidence: 0.1
+  bucket: structural
+  basis: 'stand-in: candidate sources of positive expectancy for a book the audit found flat gross; an estimate, not a measurement'
+run:
+  commands:
+  - - python3
+    - scripts/research/edge_movement_capture.py
+    - --build-data
+    - --data-root
+    - comms/research/_scratch_edge_data
+    - --rt-bps
+    - '14'
+    - --dsr-trials
+    - '16'
+    - --out
+    - '{out_dir}/ctl.json'
+  - - python3
+    - scripts/research/edge_movement_capture.py
+    - --data-root
+    - comms/research/_scratch_edge_data
+    - --rt-bps
+    - '4'
+    - --dsr-trials
+    - '16'
+    - --out
+    - '{out_dir}/arm_rt4.json'
+  - - python3
+    - scripts/research/edge_iteration_verdict.py
+    - --control
+    - '{out_dir}/ctl.json'
+    - --arm
+    - '{out_dir}/arm_rt4.json'
+    - --factor
+    - maker-fill cost ceiling (round trip 14 -> 4 bps)
+    - --out
+    - '{out_dir}'
+  inputs:
+    research_unit: RQ-20261101-d1f3-05
+  timeout_minutes: 150
+  workflow: research-script-run.yml
+lands:
+  assert_field: read_state
+  min_rows: 1
+  store: research/results/
+related:
+- research/levers/movement-capture.yaml
+- RESEARCH-OPS-20261101-1447
+- HOLDOUT-LOCK
+- scripts/research/edge_movement_capture.py
+- scripts/research/edge_iteration_verdict.py
+- RQ-20261101-58e4-06
