@@ -1,0 +1,23 @@
+{
+  "id": "ML-ENTRY-ALL-ACCOUNTS",
+  "title": "ml_entry runs on every account by config (one implementation, never a fork): parametrise the bybit/crypto-only assumptions found in #22079 so alpaca_live (and any account) can roster the SAME leg",
+  "phase": null,
+  "state": "queued",
+  "owner": "session_01AFoLuMP2ywy8v4RXABackp",
+  "lane": "ALPACA-LIVE-ACTIVITY-ML",
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 3,
+  "prs": [
+    22079
+  ],
+  "blocked_on": [],
+  "note": "Filed 2026-11-01 ~10:45Z by lane ML-ENTRY-GOLIVE-UNBLOCK (session_01AFoLuKfE1ZQzYVUj5a432n) on the manager's instruction (Manager Session 2026-11-01a). OPERATOR ~10:40Z, VERBATIM: \"really, the same entry model should be applied to alpaca as to bybit 2 - we're trying to consolidate so we have overall-context models, in addtion to the per-symbol models, and I'm not sure when we decided that there was a distinction between bybit and the other accounts on this, but that's wrong - the supra-symbol mls are for all symbols on all accounts. If we find evidence for per-category MLs later on, than we'll build those later on, but that was never the design spec for the models I asked for this morning\". #22079 keeps its scope (bybit_2 + bybit_portfolio). AUDIT of #22079 head 09df3fd (code read, not run on alpaca): on a non-Bybit account ml_entry would REFUSE every decision (safe: no wrong trade, but it never trades). Hard-coded items: (1) src/runtime/ml_decision_features.py:76,83-84 the BTCUSDT anchor literal (btc_ret24 / btc_vol24 features, and the row is unformable without it). (2) src/runtime/strategy_signal_builders.py _ml_entry_reference_frames: the 60 crypto reference symbols come from the artifact (meta.xs_reference) and are fetched with the TRADED symbol's exchange client, keeping only frames whose last bar ts equals the decision bar. An Alpaca client cannot list the perps, and equity bars never share the crypto bar ts, so n_reference=0 < min_reference_symbols 40 -> refuse. The module cache _ML_ENTRY_REF_CACHE is keyed on bar time only, not venue (two venues would share frames). Needed: a per-account reference source (venue + universe) independent of the trading venue. (3) src/units/strategies/ml_entry.py:50 is_decision_bar is UTC hour % 4 on 24/7 bars; market hours are not modelled (equity 1h bars, session open/close). The generic market_closes_before_max_hold refusal (strategy_signal_builders ~6294) already exists for the 24h time stop. (4) No allowed-sides parameter: ml_entry does not call the existing _resolve_side_filter (side_filter / long_only), and nothing is per account. (5) Cost basis: tau and pred net R were fit net of the CRYPTO cost stack (fee 11 + slip 3 bps rt + funding 1 bps/8h); there is no per-account cost basis. (6) Features assume 24 bars/day (ret_168, vol168, hour/dow). Equity 1h series differ in distribution: an EVIDENCE question, not code. A roster add on alpaca_live needs its own Stage-0 record (roster-promotion-evidence-guard C1-C5) on the equity population. DONE WHEN: one ml_entry implementation takes per-account (or per-leg-per-account) reference source, anchor, sides, session/cadence and cost basis from config, with tests; plus an evidence record for the first non-crypto account. Gates: none.",
+  "updated_at": "2026-11-01T10:39:49Z",
+  "updated_by": "session_01AFoLuKfE1ZQzYVUj5a432n",
+  "roadmap": [
+    "L-ML-LIVE"
+  ],
+  "_seq": 875
+}
