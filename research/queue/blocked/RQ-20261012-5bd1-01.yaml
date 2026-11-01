@@ -1,7 +1,7 @@
 id: RQ-20261012-5bd1-01
 title: 'NEWS-ALPHA U01: does the LIVE news score carry standalone information about the next 15m-1d move of its symbol, over
   ALL evaluations (not only taken trades)?'
-status: blocked
+status: retired
 roadmap: M28
 program: NEWS-ALPHA-PROGRAM
 cadence: once
@@ -123,3 +123,15 @@ resolved_blockers:
   clears_when: 'NEWS-ALPHA-HARNESS is done: writes a script_run verdict.json and appends to research/news_alpha/TEST-LEDGER.jsonl'
   resolved_by: 'NEWS-ALPHA-HARNESS (scripts/research/news_alpha_ic.py, PR #18558, merged 2026-10-16)'
   resolved_at: '2026-10-16'
+grading:
+  auto: false
+  graded_at: '2026-11-01'
+  grader: session RESEARCH-OPS-20261101-0940 (blocked/ audit)
+  note: 'owner/lever gone: the work item it waited on (NEWS-ALPHA-FEATURES=dropped) was dropped or killed
+    (bulk reset 2026-10-29 / owner closure) and the lever was never built. Moot as carried; re-file only
+    as a hypothesis-led unit with a stated mechanism (STOP-GENERATED-AUTHORING).'
+  verdict: null
+retired_reason: '2026-11-01 RESEARCH-OPS-20261101-0940 blocked/ audit: owner/lever gone: the work item
+  it waited on (NEWS-ALPHA-FEATURES=dropped) was dropped or killed (bulk reset 2026-10-29 / owner closure)
+  and the lever was never built. Moot as carried; re-file only as a hypothesis-led unit with a stated
+  mechanism (STOP-GENERATED-AUTHORING).'

@@ -407,6 +407,7 @@ EXPECTED_ACTIONS = {
     # ABORTS on a failed capture; a leg flat at the venue, an unreadable account,
     # and a payload naming no accounts are each a REFUSAL, never a write.
     "reattach-stranded-package-legs": "reattach_stranded_package_legs_action.sh",
+    "relabel-package-close-reasons": "relabel_package_close_reasons_action.sh",
 }
 
 TIER_2_ACTIONS = {
@@ -497,6 +498,7 @@ TIER_2_ACTIONS = {
     "cancel-stale-tpsl-legs",
     "backfill-tpsl-leg-ids",
     "reattach-stranded-package-legs",
+    "relabel-package-close-reasons",
     "amend-position-sl",
     "live-review-dry-run",
     "live-review-apply",

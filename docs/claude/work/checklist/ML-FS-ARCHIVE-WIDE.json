@@ -1,0 +1,25 @@
+{
+  "id": "ML-FS-ARCHIVE-WIDE",
+  "title": "Widen the crypto archive from 60 symbols to every Binance USD-M perpetual with history (delisted kept), config-driven from one committed universe file, measured before it runs",
+  "phase": "research",
+  "state": "queued",
+  "owner": null,
+  "lane": null,
+  "model": "claude-sonnet-5-5",
+  "ceiling_usd": 10,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [],
+  "blocked_on": [],
+  "roadmap": [
+    "L-DATA"
+  ],
+  "priority_rank": 2,
+  "note": "OPERATOR 2026-11-01 ~12:34Z, verbatim (relayed by lane ETF-HISTORY-PIPELINE via the manager): \"we need to be collecting data on far more symbols than that, even if we're not trading them yet\". Extends ML-FS-ARCHIVE (60 perps) to the whole Binance Vision USD-M universe. MEASURED 2026-11-01 from the public bucket index (1,056 symbol directories listed; 1h monthly klines read for 1,049, 7 listing errors not retried): 900 USDT perps, 40 USDC, 52 dated delivery contracts (names ending _YYMMDD, not perpetuals), 64 other (BUSD, *SETTLED: delisted perps, kept). 914 of the 1,049 still list in 2026-09 or later, 135 ended. First listing 2020-01 .. 2026-09. FILE COUNTS (to 2026-10-31): 24,310 monthly files per stream (klines 12-col, funding, premium index); daily files: 5m metrics 684,083 (from 2021-12), 1m klines 740,163, bookDepth 614,838 (from 2023-01). SIZE (zipped, BTC-file-size upper bound; alts are smaller): klines12 0.9 GB, funding 0.02 GB, premium 0.4 GB, metrics 7.5 GB, 1m klines 44 GB, bookDepth 279 GB. FETCH TIME at the rates I measured (monthly 55 files/s, daily 78 files/s with 32 workers, no throttling seen on the 60-symbol run): monthly streams about 22 min, metrics about 2.4 h, 1m klines about 2.6 h, bookDepth about 2.2 h by file count but 279 GB so not scheduled. NOT MEASURED: trainer disk free (no trainer egress from this lane; read it with trainer-vm-diag before any write), the bucket's rate limit (none observed up to 78 files/s; a 429/403 would show as missing files and is counted), and Binance spot. PLAN: universe in ONE committed file config/data_universe.yaml section crypto: (owner ML-FEATURE-INFRA; stub already on PR #22136 branch claude/etf-history-pipeline), read by scripts/research/vision_streams.py; default include = perpetuals (USDT, USDC, BUSD, SETTLED), dated delivery contracts excluded unless listed; widening later is a config edit; a failing symbol is logged and skipped, never halts; storage as pickle here and parquet on the trainer (this sandbox has no pyarrow; 1,049 symbols of 5m metrics is roughly 190M rows, about 12 GB unpacked). Order: klines12+funding+premium for all (22 min), then 5m metrics (2.4 h), then 1m klines. Tier-1 runner job; the trainer write is Tier-2 only if it needs a new timer. DONE WHEN: MANIFEST per stream lists every symbol with first/last ts, rows, missing-file count and frozen-bar months; disk free vs projected size is printed before the write. Gates: none.",
+  "observation": {
+    "what": "MANIFEST per stream lists all perpetual symbols with first/last ts and missing counts, and the trainer disk-free vs projected size line is printed",
+    "how_to_check": "ls archive/binance_perp_all/MANIFEST.json",
+    "due_by": "2026-11-02"
+  },
+  "_seq": 877
+}

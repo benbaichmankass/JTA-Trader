@@ -8065,6 +8065,59 @@ def _cascade_close_netted_siblings(
     return closed
 
 
+def _own_bracket_fill_from_venue(
+    cfg: Optional[Dict[str, Any]], row: Dict[str, Any], *, is_reduce_leg: bool = False,
+) -> Optional[Dict[str, Any]]:
+    """The venue fill of THIS trade's own SL/TP leg, read at close time.
+
+    CLOSE-REASON-XRP-1220 (2026-11-01). ``bybit_1`` trade 6817 (XRPUSDT long, pkg
+    pkg-f07b659a7db94e8a) was stopped out by the venue at 12:16:49Z (its own
+    ``sl_order_id`` Filled at 1.2476). The reconciler finalised it at 12:20:15Z as
+    ``reconciler_filled`` with ``exit_price`` NULL because on a DEMO account the
+    closed-pnl lookup resolves only from the local fills store, which an hourly
+    timer fills, so a fresh close finds nothing. The label was only repaired later
+    by ``_sweep_exit_label_from_bracket_order``, and until then every reader saw a
+    non-TP/SL close with no price.
+
+    The venue already says which leg filled and at what price on
+    ``/v5/order/history``, keyed by the order id the journal holds. This is the
+    same per-order read the reconciler already makes for the ENTRY order
+    (``account_order_status``), made once per finalisation, never per tick.
+
+    Returns ``{"leg": "sl"|"tp", "avg_price", "exec_time", "order_id"}`` only when
+    a tracked leg is ``Filled``, with a positive price and a filled qty within 5 %
+    of the row's size. Otherwise ``None`` and the caller keeps its generic
+    fallback (we could not establish it; never a guess). Intent-reduce legs are
+    excluded: their bracket may be inverted. Never raises.
+    """
+    if cfg is None or is_reduce_leg:
+        return None
+    qty = _safe_float(row.get("position_size")) or 0.0
+    if qty <= 0:
+        return None
+    try:
+        from src.units.accounts.clients import account_order_status
+    except Exception:  # noqa: BLE001
+        return None
+    for leg, key in (("sl", "sl_order_id"), ("tp", "tp_order_id")):
+        oid = str(row.get(key) or "").strip()
+        if not oid or not _is_real_order_id(oid):
+            continue
+        try:
+            st = account_order_status(cfg, oid)
+        except Exception:  # noqa: BLE001
+            continue
+        if not isinstance(st, dict) or str(st.get("status") or "") != "Filled":
+            continue
+        px = _safe_float(st.get("avg_price")) or 0.0
+        fq = _safe_float(st.get("filled_qty")) or 0.0
+        if px <= 0 or fq <= 0 or abs(fq - qty) / qty > 0.05:
+            continue
+        return {"leg": leg, "avg_price": px,
+                "exec_time": st.get("exec_time"), "order_id": oid}
+    return None
+
+
 def _close_trade_from_order_status(
     db,
     row: Dict[str, Any],
@@ -8269,6 +8322,39 @@ def _close_trade_from_order_status(
                     )
             except (TypeError, ValueError):
                 pass
+    elif (_own_leg := _own_bracket_fill_from_venue(
+            cfg, row, is_reduce_leg=is_reduce_leg)) is not None:
+        # CLOSE-REASON-XRP-1220: the closed-pnl path found nothing (demo reads a
+        # local store filled hourly) but the venue says THIS trade's own SL/TP
+        # order filled. Book that fill: real exit price, real close time, the
+        # leg's true reason, attributed by order identity (MEASURED). `pnl` is
+        # left NULL for the local-compute sweep, exactly as the late-price path
+        # does, so no PnL is invented here.
+        final_exit_reason = _own_leg["leg"]
+        closed_at = (
+            normalize_closed_at_value(_own_leg.get("exec_time"))
+            or datetime.now(timezone.utc).isoformat()
+        )
+        notes.update({
+            "closed_at": closed_at,
+            "closed_by": "monitor_reconciler",
+            "closed_reason":
+                "reconciler — Bybit reports order filled and position flat",
+            "exit_price_source": "exchange_fill",
+            "exit_reason_source": BRACKET_ORDER_LABEL_SOURCE,
+            "finalised_by": "reconciler",
+        })
+        updates = {
+            "status": "closed",
+            "exit_reason": final_exit_reason,
+            "exit_price": _own_leg["avg_price"],
+            "closed_at": closed_at,
+            "notes": dump_capped(notes, 500),
+        }
+        _entry_avg_price = _safe_float(order_status.get("avg_price"))
+        _entry_current = _safe_float(row.get("entry_price"))
+        if _entry_avg_price > 0 and _entry_avg_price != _entry_current:
+            updates["entry_price"] = _entry_avg_price
     else:
         # Fallback: gate clears but exit_price stays NULL with the
         # unreliable-source flag (pre-2026-05-16 contract preserved

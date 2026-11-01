@@ -1,0 +1,16 @@
+{
+  "due_when": {
+    "check_every_days": 7,
+    "due_date": "2026-11-05",
+    "kind": "date"
+  },
+  "id": "PI-20261101-HIPIPRHQ-0002",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "checklist RESEARCH-ITERATE",
+    "rerun": "python3 -c \"import yaml;print(yaml.safe_load(open('research/queue/blocked/RQ-20261028-e1a7-01.yaml'))['blocked_on'])\"; python3 -c \"import json;print(json.load(open('docs/claude/work/checklist/LTR-TIGHTEN-OPTIMIZE.json'))['state'])\""
+  },
+  "state": "queued",
+  "what": "[stale block, no owner] research/queue/blocked/RQ-20261028-e1a7-01 and -02 (tighten cells on the strategy legs; Claude-judged confirmation) are blocked_on work_item LTR-TIGHTEN-OPTIMIZE, a row that is DONE, so nobody owns the wrapper e1a7-01 needs and no blocked_on entry carries clears_when. The live-review tighten class now has its iteration in RQ-20261101-78fc-09 (blocked on BOOK-SIM-REAL-SIZER / a cell-restricted risk_adjusted arm). Disposition needed: re-own e1a7-01's wrapper to a live row (or fold into 78fc-09) and give e1a7-02 a manager GO/kill (operator said 'Not now' 2026-10-28, revisit was 2026-10-29)."
+}

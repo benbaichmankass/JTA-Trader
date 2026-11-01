@@ -1,0 +1,23 @@
+{
+  "id": "LTR-HOLD-BIAS-BRIEF",
+  "title": "Reviewer packet carries the priced close-now vs hold comparison + this record's hold prior; stop re-issuing the identical call on one package every cycle",
+  "phase": null,
+  "state": "queued",
+  "owner": "manager",
+  "lane": null,
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [],
+  "blocked_on": [],
+  "note": "Hold class FAILS the pre-registered rule (n=65 priced calls, mean -0.595 R vs close, CI95 [-0.707,-0.479]). The reviewer re-issued close 12x / 7x on two packages. Source: comms/research/ltr_class_grade/VERDICT.md (lane LTR-CLASS-GRADE). Gates this adds: none. [2026-11-01 LTR-TRIGGER-CLOSE-S0] Amend: over 552 packages / 6 months, closing at the first adverse_r -0.5 crossing is -0.03R vs hold and -0.41R vs a random-time close (Bonf CI [-0.535,-0.298]). The brief must NOT push close-on-adverse; the live week's hold loss did not generalise.",
+  "priority_rank": 2,
+  "updated_at": "2026-11-01T13:18:39Z",
+  "updated_by": "session_01AFoLuJYbPJ8e5Lv2fZHWWw",
+  "due_by": "2026-11-03",
+  "roadmap": [
+    "L-ATM"
+  ],
+  "_seq": 879
+}
