@@ -173,6 +173,13 @@ value:
   # above every other theme and programme, earlier entries before later ones -- then the money-first value order below,
   # then theme share for ties / spare capacity. Only a STARVED unit (starve_hours) goes ahead of it: nothing waits forever.
   # Edit this list to change the operator's priority; the dispatcher prints `pick=programme:<id>` on each such decision line.
+  # 2026-11-01 ~18:00Z, OPERATOR (relayed by the manager): "I do want to prioritize getting tests for this model to the top of the research
+  # queue so that we can get in like the first round of iterating as soon as possible ... I want to make sure that we're pushing on the
+  # iteration here, even if we have to slow down a few of the other things this week."  The ENTRY lever units (RQ-20261101-b601-01,
+  # -b602-01, -b604-01, -a508-01) carry programme_node.programme P2 and priority 1. MEASURED the same hour (dispatch_queue.py dry run on
+  # research/queue): they plan as picks 2-5 (`pick=programme:P2`) behind one starved unit, and NO P1 programme-tagged unit is in the
+  # dispatch plan, so [P1, P2] does not delay them and the order is left as is. If P1 programme-tagged units come due and push the ENTRY
+  # tests down, change this list to [P2, P1]. Revisit at Thursday planning, 2026-11-05.
   programme_priority: [P1, P2]
   default_confidence: 0.3
   priority_usd: {1: 300, 2: 100, 3: 30}     # stand-ins when a unit carries no value block; derived from priority only
