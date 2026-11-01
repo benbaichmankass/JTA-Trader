@@ -14,9 +14,10 @@ practice_precedent: 'T1, M6 (docs/reference/trading-and-model-practice-principle
 question: 'fs05-01/fs06-01 (2026-11-01) found: across-seed range of the pooled LOFO mean is 0.012-0.040 (14x the assumed 0.0017); regularised arms (R1 +0.029, R2 +0.025 on S0) and T1/T4 cannot be graded
   because the raw-net-R tau grid leaves folds under 1000 decisions. Arms (features S0 = 20 baseline columns, noise set S1 = S0 + 9 noise columns, S2 = S0 + F1..F5; targets T0 raw and T1 market-neutral,
   T4 first-passage score): E0 single baseline model (reference, tau grid as in fs05-01); E1 mean score of K=3 baseline models (seed sets {7,11,13}, {17,19,23}, {29,31,37} = three independent draws; E0 is
-  each draw''s first member); E2 E1 with R1 parameters; E3 E1 with R2 parameters. Threshold: instead of the fixed grid, tau for a fold is chosen from the quantile grid q in {0.80,0.85,0.90,0.95,0.98} of
-  the ensemble score on the training folds only (leave-one-fold-out as before), which fixes the decision count per fold by construction. The three draws give the spread. About 54 model walks of about 2.5
-  minutes. No sealed window is read.'
+  each draw''s first member); E2 E1 with R1 parameters; E3 E1 with R2 parameters. Threshold: instead of the fixed grid, the decision score of a row is max(long, short) of the ensemble mean, and the threshold
+  of a fold is the q-quantile of that fold''s OWN test-row scores (labels are never used to set the value), with q chosen leave-one-fold-out from {0.80,0.85,0.90,0.95,0.98} by the pooled mean over the OTHER
+  folds (n >= 1000 there), as tau was before. This fixes the decision share per fold by construction and is deployable with a trailing score window. The three draws give the spread. About 54 model walks
+  of about 2.5 minutes. No sealed window is read.'
 why_this_matters: 'Operator 2026-11-01: 20 features is a regression equation, not algorithmic trading; manager 2026-11-01 ~12:03Z: a family ablation at +0.010 cannot admit anything when the recipe overfits
   with any extra column, so fix the recipe, then the columns.'
 power:
@@ -80,7 +81,8 @@ what_it_does_not_do: Registers, serves or promotes nothing; changes no config; p
 blocked_on:
 - kind: harness
   what: the ensemble subcommand (K-seed mean score, per-fold score-quantile threshold) in scripts/research/ml_entry_recipe.py and a runner mode 'ensemble' in ml_entry_v2_run.py
-  clears_when: lands on main with a self-test that the quantile uses training-fold scores only and no sealed date is read; then git-mv to research/queue/ with status queued (rule unchanged)
+  clears_when: lands on main with a self-test that the threshold value is computed from scores only (changing every label leaves it unchanged) and no sealed date is read; then git-mv to research/queue/
+    with status queued (rule unchanged)
 ml_consumer:
   consumer: ML-ENTRY-LIVE-ADAPTER
   decision: which regularisation and target the ENTRY v2 recipe uses before any feature family is added; feeds the single pre-registered forward read
