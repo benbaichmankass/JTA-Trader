@@ -69,7 +69,10 @@ def bybit_1h(symbol: str, start_ms: int, end_ms: int) -> pd.DataFrame | None:
     df = pd.DataFrame(rows, columns=["t", "open", "high", "low", "close", "volume", "turnover"]).drop(columns="turnover")
     df = df.astype(float).drop_duplicates("t").sort_values("t")
     df["ts"] = pd.to_datetime(df.pop("t").astype("int64"), unit="ms", utc=True)
-    return df[(df.ts.astype("int64") // 10**6 >= start_ms)][["ts", "open", "high", "low", "close", "volume"]].reset_index(drop=True)
+    # Compare as timestamps, never via int64: pandas 3 keeps unit="ms" datetimes at ms resolution, so the old
+    # `ts.astype("int64") // 10**6 >= start_ms` (which assumed ns) dropped EVERY row -> n=0 (trainer run, issue #22152).
+    keep = df.ts >= pd.Timestamp(int(start_ms), unit="ms", tz="UTC")
+    return df[keep][["ts", "open", "high", "low", "close", "volume"]].reset_index(drop=True)
 
 
 def binance_1h(symbol: str, days: list[str]) -> pd.DataFrame | None:
