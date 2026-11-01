@@ -14,11 +14,20 @@
   ],
   "blocked_on": [],
   "note": "2026-11-01 MERGED #22130 (36d5d1e, 12:50Z). DEPLOYED: trader running 36d5d1e at 12:52:05Z (/api/diag/version trader_git_sha, restart_pending false). NOT YET OBSERVED: no in-trade call on a paper package since the deploy. The XRP package pkg-f07b659a7db94e8a closed by SL at 12:16:49Z before the deploy (its close calls 11:21-12:16Z were advice-only). Closing observation: the first rows_watch.jsonl entry after 12:52Z with auto_mandate MD-LTR-PAPER-AUTO on a bybit_1 or alpaca_paper package -> applied.jsonl accounts_applied naming only that account -> venue read-back -> the trade row exit_reason (close) or the moved bracket. Open paper legs at 12:55Z: bybit_1 BTC/ETH/SOL/ADA, alpaca_paper USO/SLV, ib_paper MGC (no executor). Revert: delete the MD-LTR-PAPER-AUTO entry. | 2026-11-01 manager decision: oanda_practice and alpaca_options_paper (account_class paper, no paper_role, not on the demo floor) stay OUT of MD-LTR-PAPER-AUTO for now. ib_paper's missing in-trade executor is filed as row IB-PAPER-INTRADE-EXECUTOR (due 2026-11-05).",
-  "updated_at": "2026-11-01T12:54:24Z",
+  "updated_at": "2026-11-01T13:24:11Z",
   "updated_by": "MD-LTR-BYBIT1-AUTO",
   "due_by": "2026-11-01",
   "roadmap": [
     "L-AM-STANDARD"
   ],
+  "observation": {
+    "what": "the first in-trade live-review call on a bybit_1 or alpaca_paper package after the 2026-11-01T12:52Z deploy is applied by the VM under MD-LTR-PAPER-AUTO on the paper leg only",
+    "how_to_check": "diag log_file?name=live_review_rows_watch: an entry with auto_mandate MD-LTR-PAPER-AUTO and verdict dispatched; runtime_logs/live_review/applied.jsonl accounts_applied names only the paper account; venue read-back in the executor record; journal trades row shows the close exit_reason or the moved bracket with both brackets present",
+    "due_by": "2026-11-03"
+  },
+  "writeback": {
+    "roadmap": "none: a mandate entry under MD-TRADE-DESK, no milestone line changes",
+    "arch": "none: extends the existing per-package ltr_auto_apply exception (ARCHITECTURE-CANONICAL Active management) to an account scope; contract unchanged"
+  },
   "_seq": 876
 }
