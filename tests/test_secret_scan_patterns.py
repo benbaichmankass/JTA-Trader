@@ -52,17 +52,3 @@ class TestTelegramTokenPattern:
         # The scanner skips lines carrying an allow word — the contract this
         # test file (and test_log_redaction.py's FAKE_TOKEN) depends on.
         assert is_allowed(f'FAKE_TOKEN = "{_FAKE}"')
-
-
-def test_pr_diff_scopes_to_touched_files_and_empty_diff_scans_all(tmp_path):
-    import importlib.util
-    from pathlib import Path
-    root = Path(__file__).resolve().parents[1]
-    spec = importlib.util.spec_from_file_location("ss_pr", root / "scripts/secret_scan.py")
-    m = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(m)
-    d = tmp_path / "p.diff"
-    d.write_text("diff --git a/a/x.py b/a/x.py\ndiff --git a/o.md b/n.md\n")
-    assert m.files_in_diff(str(d)) == {"a/x.py", "n.md"}
-    assert m.files_in_diff(str(tmp_path / "nope")) == set()
-    assert m.main(["--pr-diff", str(d)]) == 0

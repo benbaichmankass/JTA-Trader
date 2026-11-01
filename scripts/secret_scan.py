@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import re
 import subprocess
-import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -45,30 +44,9 @@ def is_allowed(line: str) -> bool:
     low = line.lower()
     return any(word in low for word in ALLOW_WORDS)
 
-def files_in_diff(diff_path: str) -> set[str]:
-    """Paths named by `diff --git a/X b/Y` headers; empty set => unreadable/empty (scan all)."""
-    try:
-        text = Path(diff_path).read_text(errors="replace")
-    except OSError:
-        return set()
-    return {ln.rsplit(" b/", 1)[1] for ln in text.splitlines()
-            if ln.startswith("diff --git a/") and " b/" in ln}
-
-
-def main(argv: list[str] | None = None) -> int:
-    # CI-THROUGHPUT-20261029: on a PR the verdict for a file the diff does not touch
-    # cannot change, and push-to-main still scans the whole tree. `--pr-diff` scopes
-    # to the touched files; an unreadable or empty diff scans EVERYTHING (never fewer).
-    argv = list(sys.argv[1:] if argv is None else argv)
-    touched: set[str] = set()
-    if "--pr-diff" in argv:
-        touched = files_in_diff(argv[argv.index("--pr-diff") + 1])
+def main() -> int:
     findings = []
-    scanned = 0
     for path in tracked_files():
-        if touched and str(path.relative_to(ROOT)) not in touched:
-            continue
-        scanned += 1
         if not path.exists():
             # File may be tracked but deleted in the working tree before git add -A.
             # That is expected during cleanup; skip it.
@@ -92,8 +70,7 @@ def main(argv: list[str] | None = None) -> int:
             print(f"  {rel}:{line} — {kind}")
         return 1
 
-    print(f"No obvious tracked-file secrets found (scanned {scanned} tracked file(s)"
-          f"{'; PR-diff scoped' if touched else ''}).")
+    print("No obvious tracked-file secrets found.")
     return 0
 
 if __name__ == "__main__":
