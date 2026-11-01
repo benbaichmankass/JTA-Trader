@@ -9,10 +9,12 @@
   "ceiling_usd": null,
   "spend_usd": null,
   "tier": 2,
-  "prs": [],
+  "prs": [
+    22131
+  ],
   "blocked_on": [],
-  "note": "[2026-11-01 lane BREAKOUT-UNRECORDED-1101] MEASURED (live /api/bot/prop/fills, all 208 prop_fills rows, 4 prop accounts): the finding is a READER error -- fills 106/107/124 are OPENING event rows whose trades were closed by rows 109/108/125 (2026-10-12/12/15); split_fills shows breakout_2 0 open trades, matching the venue read (positions_state=read, []). REAL BUG found instead: all 9/9 phone_reconcile closes on breakout_2 since 2026-10-16 (rows 135,154,167,174,175,184,192,200,208) are closed_unpriced (11 of 14 breakout_2 closes unpriced incl. hand-closed 108/109): the phone's Closed orders read returns empty_unconfirmed (header found, 0 rows) on every read, so phone_reconcile._pick_exit never has an exit. Fix PR (held, Tier-2): closed_state posted+recorded+named on every unpriced close; exec.js empty-read shape dump (OTA); APK captures the Closed orders DOM on a miss; /api/bot/prop/fills carries trade_state + trade_open_count.",
-  "updated_at": "2026-11-01T11:56:22Z",
+  "note": "WRITEBACK PROPOSAL: none needed for 106/107/124 (already closed by 109/108/125; exits stay UNVERIFIED, the venue never gave one). Population checked for journal-open/venue-flat: prop breakout_2/tradeify_1/velotrade_1 = 0 open trades each (split_fills over all 208 prop_fills rows); breakout_1 (retired, dry_run) = 2 known residues: id 15 (dup of 16->17, operator 'skip it' 2026-07-09) and id 10 (SOL closed by row 11 under another ticket id) -- optional Tier-2 close row for ticket prop-manual-SOLUSD-498665711 copying row 11 (exit 72.29, 2026-06-30T15:47Z, source=row 11), manager's call. Real money: bybit_2 + alpaca_live positions=agree (account-broker-reconcile 2026-11-01T05:50Z, issue #14113); ib_live dry_run with 0 strategies, not checked. PR #22131 held (Tier-2).",
+  "updated_at": "2026-11-01T12:00:40Z",
   "updated_by": "session_01AFoLuLMwVEeQ18YhTyfLa8",
   "priority": "high",
   "roadmap": [
