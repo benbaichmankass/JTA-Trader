@@ -11,7 +11,7 @@ Gates this adds or changes: none.
 `Reached` = this lane's **sandbox** fetched the URL/API and read the stated fields on 2026-11-01 (a `curl`/`requests` call, stated
 HTTP status). `Not reached` = the host answered but needs a key/purchase, or the sandbox could not connect. **"Not reached" is NOT
 "does not exist"**: the sandbox sits behind a proxy; a runner may differ. `Vendor page` = figures read off the vendor's own pricing
-page through a fetch tool today; not verified by a purchase or a sample. Alpaca/IB depth cannot be measured from a lane sandbox
+page through a fetch tool today; not verified by a purchase or a sample. Alpaca/IB depth cannot be measured from a lane sandbox (checked: `scripts/ops/fetch_etf_history.py` and `scripts/ops/capture_options_snapshot.py` read keys only from the environment, and `.github/workflows/test-alpaca-creds.yml` shows the only holders are Actions secrets and the VMs)
 (keys live in Actions secrets / on the VMs) so it is measured by the probe modes of the workflows below, not asserted here.
 
 ## A. Free / open — what we can actually have today

@@ -49,7 +49,7 @@ def make_cboe_getter() -> Getter:
 
     def get(path: str, params: Dict[str, Any]) -> Any:
         for attempt in range(6):
-            r = requests.get("https://cdn.cboe.com" + path, headers={"User-Agent": "Mozilla/5.0"}, timeout=90)
+            r = requests.get("https://cdn.cboe.com" + path, params=params or None, headers={"User-Agent": "Mozilla/5.0"}, timeout=90)
             if r.status_code == 429 or r.status_code >= 500:
                 time.sleep(min(60, 2 ** attempt))
                 continue
@@ -130,7 +130,10 @@ def cboe_frame(und: str, j: Dict[str, Any], today: date, n_expiries: int, moneyn
         recs.append((p, o))
     expiries = sorted({p["expiry"] for p, _ in recs})[:n_expiries]
     rows = []
-    nz = lambda v: v if v else None  # CBOE reports 0.0 for "no quote / no IV": that is absent, never a real zero
+
+    def nz(v):  # CBOE reports 0.0 for "no quote / no IV": that is absent, never a real zero
+        return v if v else None
+
     for p, o in recs:
         if p["expiry"] not in expiries:
             continue
