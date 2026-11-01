@@ -241,7 +241,8 @@ def test_real_yaml_loads():
     # execution: shadow on bybit_1; emits only accepted desk proposals.
     # 57 → 58 by e4_oi_shock_1h (2026-10-30, E4-DEMO-LEG, Tier-3, operator-approved bybit_1 demo):
     # the frozen E4 open-interest-shock continuation rule (PR #21720 held-out PASS).
-    assert len(strategies) == 58
+    # 58 -> 59 on 2026-11-01 ML-ENTRY-LIVE-ADAPTER (#22079, Tier-3 held): ml_entry, the ML ENTRY decision model leg (bybit_2 + bybit_portfolio).
+    assert len(strategies) == 59
 
 
 def test_real_yaml_has_required_strategies():
@@ -290,6 +291,8 @@ def test_real_yaml_has_required_strategies():
         "ict_scalp_mgc_15m",
         # DESK-17 (2026-10-26, Tier-3): the desk leg, execution: shadow, bybit_1.
         "claude_desk",
+        # ML-ENTRY-LIVE-ADAPTER (2026-11-01, Tier-3 held PR #22079): the ML ENTRY decision model leg.
+        "ml_entry",
         # E4-DEMO-LEG (2026-10-30, Tier-3): the E4 OI-shock leg, execution: live, bybit_1 demo only.
         "e4_oi_shock_1h",
     }

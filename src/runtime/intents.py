@@ -405,6 +405,9 @@ DEFAULT_PRIORITIES: Dict[str, int] = {
     # They arbitrate on every tick where two of them fire the same side.
     # Value 0 held pending the Tier-3 ordering decision.
     "trend_donchian_eth_4h": 0,
+    # ML ENTRY decision model (ML-ENTRY-LIVE-ADAPTER, 2026-11-01): lowest priority, same as the money legs it
+    # shares symbols with; ordering stays the pending Tier-3 decision noted above.
+    "ml_entry": 0,
     "trend_donchian_sol_4h": 0,
     "trend_donchian_xrp_4h": 0,
     "trend_donchian_xrp_adx25": 0,

@@ -1,0 +1,132 @@
+{
+ "schema_version": 2,
+ "strategy": "ml_entry",
+ "symbol": "BTCUSDT,ETHUSDT,XRPUSDT,ADAUSDT,SOLUSDT",
+ "timeframe": "1h (decision at every 4th closed bar)",
+ "config_fingerprint": "sha256:228bd9588617b70764d526e1e8561386",
+ "basis": "heldout_window",
+ "coverage_state": "measured",
+ "fidelity": "faithful",
+ "omitted_levers": [],
+ "fidelity_basis": "Every lever the ml_entry config declares is modelled by the harness: timeframe 1h, decision_bar closed (decision at the close of every 4th bar, entry next bar open), symbols (the 5 bybit_2 symbols = c692-06 population), atr_period 14, atr_stop_mult 2.0 (SL 2 x ATR14), tp_r 1.5 (TP 3 x ATR14), plus the artifact's 24h time stop (meta.max_hold_min) and tau 0.10, one position per symbol. min_reference_symbols 40 is a live data-availability refusal; MEASURED 2026-11-01 by this lane (GET of data.binance.vision 1h monthly zips, 60 reference symbols x 12 held-out months 2025-10..2026-09): all 720 files present with 672..744 rows each, so the floor never binds on the scored data.",
+ "known_gaps_not_levers": [
+  "Venue: scored on Binance Vision USDT-M 1h klines; live serves from Bybit 1h. Serve parity RQ-20261101-c692-07 PASS (research/results/RQ-20261101-c692-07/trainer-41314355162.jsonl): decision agreement 0.9529 over n=870 decision bars 2026-10-02..2026-11-01 on the 5 traded symbols, rule >= 0.95 over n >= 50 registered before the run. THIN margin (41 disagreements); ADAUSDT alone 0.937.",
+  "Reference universe on Bybit is 52 of 60: Bybit lists no BALUSDT, BLZUSDT, DEFIUSDT, FLMUSDT, FTMUSDT, ICXUSDT, MKRUSDT, OMGUSDT (measured by the c692-07 trainer run, 2026-11-01). Live cross-sectional features (xs_rank_ret24, breadth_up24, rel_vol) are computed over 52 symbols; the model was fit and scored over 60. Above the min_reference_symbols 40 floor, and the c692-07 PASS already includes this difference.",
+  "Artifact: RUNNER-BUILT since 2026-11-01 (research runner run 41324826751, lightgbm 4.6.0, scikit-learn 1.7.2), replacing the PROVISIONAL sandbox fit (lightgbm 4.7.0). Runner reproduction matched the session-local records exactly: c692-01 +0.007301 R/decision n=11,240 (run 41324824079), c692-06 +0.026283 n=907 (run 41324826751). Old vs new boosters: identical tree structure; max |prediction diff| 2.2e-16 and decision agreement 1.000 over 200,000 rows sampled uniformly inside the training feature ranges, so the c692-07 serve-parity PASS carries over.",
+  "Live fills, latency and netting with other bybit_2 legs are not modelled (per-strategy slices: operator 2026-11-01 'Slices on bybit_2 (Rec.)').",
+  "DEV-FOLD, TRADED 5 SYMBOLS (ML-RECIPE; record comms/research/RQ-20261101-c692-06/dev-seed-spread-20261101T1700Z/v1_seed_spread.json, branch claude/ml-recipe-ensemble @481e3fd, not yet on main): the frozen v1 recipe re-fit on the 8 dev folds (2022-01-01, 2022-07-01, 2023-01-01, 2023-07-01, 2024-01-01, 2024-07-01, 2025-01-01, 2025-07-01; tau 0.1; sealed windows read 0) and scored on BTC/ETH/XRP/ADA/SOL only reads -0.041 R/decision (mean over 4 seeds 20261101/7/11/13: -0.0427/-0.0405/-0.0434/-0.0376; range 0.0058, sd 0.0026; n_traded 5,463-5,527 per seed); 6 of 8 folds negative on seeds 7 and 13, 7 of 8 on seeds 11 and 20261101 (only 2025-01-01 positive on every seed). The pooled all-symbol dev mean is +0.006 to +0.010 per seed. So the held-out +0.0263 (c692-06, n=907) is NOT corroborated on the dev folds for the traded universe. Operator decision on this evidence, popup ~17:04Z 2026-11-01, verbatim: \"Go live as approved\". Monitoring, not an exit: the October test and fine-tuning continue per the ~10:25Z decision (\"Go live as planned, but also run the Oct test - if it doesn't pass, leave it live but keep finetunig\")."
+ ],
+ "net_r_oos": 23.8388,
+ "expectancy_r_oos": 0.0263,
+ "n_trades_oos": 907,
+ "expectancy_ci95": [
+  -0.0419,
+  0.0989
+ ],
+ "expectancy_ci95_note": "bootstrap, reported not gating (c692-06 record)",
+ "per_symbol": {
+  "ADAUSDT": {
+   "n": 236,
+   "expectancy_r": 0.0767
+  },
+  "BTCUSDT": {
+   "n": 104,
+   "expectancy_r": -0.0297
+  },
+  "ETHUSDT": {
+   "n": 176,
+   "expectancy_r": 0.0071
+  },
+  "SOLUSDT": {
+   "n": 205,
+   "expectancy_r": 0.0309
+  },
+  "XRPUSDT": {
+   "n": 186,
+   "expectancy_r": 0.0067
+  }
+ },
+ "by_side": {
+  "long": {
+   "n": 311,
+   "expectancy_r": 0.0295
+  },
+  "short": {
+   "n": 596,
+   "expectancy_r": 0.0246
+  }
+ },
+ "exit_reason_counts": {
+  "sl": 403,
+  "time": 200,
+  "tp": 304
+ },
+ "mean_gross_r": 0.1049,
+ "mean_cost_r": 0.0786,
+ "folds": 1,
+ "fold_detail": [
+  {
+   "fold": 1,
+   "label": "sealed held-out",
+   "trades": 907,
+   "net_r": 23.8388,
+   "expectancy_r": 0.0263,
+   "start": "2025-10-01 03:00:00+00:00",
+   "end": "2026-09-29 23:00:00+00:00"
+  }
+ ],
+ "folds_positive": 1,
+ "window": [
+  "2025-10-01 03:00:00+00:00",
+  "2026-09-29 23:00:00+00:00"
+ ],
+ "window_days": 364,
+ "population": "c692-01 frozen model (tau 0.1) held-out 2025-10-01..2026-09-30 decisions on the bybit_2 symbols ['BTCUSDT', 'ETHUSDT', 'XRPUSDT', 'ADAUSDT', 'SOLUSDT']",
+ "fee_bps_roundtrip": 11.0,
+ "cost_stack": {
+  "fees": 11.0,
+  "slippage": 3.0,
+  "funding": 1.0,
+  "unit": "bps_roundtrip (funding: bps per 8h funding window)",
+  "source": "research/queue/RQ-20261101-c692-01.yaml question + decision_rule.statistic (net of fee 11.0 + slippage 3.0 bps round trip + funding 1.0 bps per 8h); c692-06 scores the same frozen model by the same mechanics"
+ },
+ "decision_rule": {
+  "id": "RULE-RQ20261101-c692-06-TRADED-SUBSET",
+  "rule": "PASS IF held-out mean net R per decision on the traded symbols >= 0 (point estimate, the operator bar). FAIL IF < 0. (research/queue/RQ-20261101-c692-06.yaml decision_rule.rule; parent RULE-RQ20261101-c692-01-ENTRY on the pooled 60-symbol population also PASS.)",
+  "registered_at": "2026-11-01T08:34:59Z",
+  "registered_at_source": "commit b8eff4424 (author+commit time) registering research/queue/RQ-20261101-c692-06.yaml before the run; the unit records the date only ('2026-11-01')",
+  "verdict": "pass"
+ },
+ "research_grading": {
+  "research_unit": "RQ-20261101-c692-06",
+  "rule_id": "RULE-RQ20261101-c692-06-TRADED-SUBSET",
+  "powered_verdict": "pass",
+  "power_state": "powered",
+  "result": "research/results/RQ-20261101-c692-06/local-20261101T0840Z.jsonl"
+ },
+ "parent_evidence": {
+  "research_unit": "RQ-20261101-c692-01",
+  "result": "research/results/RQ-20261101-c692-01/local-20261101T0835Z.jsonl",
+  "rule_id": "RULE-RQ20261101-c692-01-ENTRY",
+  "rule_registered_at": "2026-11-01T08:08:37Z (author time of commit 55b4da5f2; committed 08:15:38Z)",
+  "generated_at": "2026-11-01T08:30:16Z",
+  "verdict": "pass",
+  "power_state": "powered",
+  "n": 11240,
+  "n_symbols": 53,
+  "expectancy_r": 0.0073,
+  "ci95_reported_not_gating": [
+   -0.0108,
+   0.028
+  ],
+  "population": "ENTRY decision model held-out decisions 2025-10-01..2026-09-30 on the 60-perp universe bp2-f4271084b120 (Binance Vision 1h), one position per symbol, reference bracket SL 2.0 ATR / TP 3.0 ATR / 24h time stop, net of fee 11.0 + slip 3.0 bps + funding 1 bps/8h"
+ },
+ "param_selection_provenance": "tau 0.10 chosen on 8 purged + embargoed dev folds 2022-01..2025-09 only (c692-01); model frozen; held-out 2025-10-01..2026-09-30 scored once; c692-06 re-scores the same frozen model on the traded symbols",
+ "generated_at": "2026-11-01T08:37:24Z",
+ "generated_by": "hand-assembled 2026-11-01 by lane ML-ENTRY-GOLIVE-UNBLOCK from the two committed result records (fields copied, not re-derived); producer scripts/research/ml_decision_entry.py",
+ "source_run": "research/results/RQ-20261101-c692-06/local-20261101T0840Z.jsonl",
+ "error": null,
+ "harness": "ml_decision_entry",
+ "venue_bracket_arm": null,
+ "operator_bar": "Point estimate >= 0 (operator 2026-11-01, row ML-DECISION-MODELS); path 'Straight to real money'"
+}

@@ -6431,3 +6431,115 @@ def e4_oi_shock_1h_signal_builder(settings: dict) -> Dict[str, Any]:
     }
     _stamp_regime_on_meta(sig.setdefault("meta", {}), candles_df, symbol=symbol, timeframe=timeframe)
     return _with_signal_package(name, sig)
+
+
+# ── ml_entry — the pooled ML ENTRY decision model (row ML-ENTRY-LIVE-ADAPTER, Tier 3) ──────────────────────
+_ML_ENTRY_REF_CACHE: Dict[str, Any] = {}
+
+
+def _ml_entry_frame(df: Any) -> Any:
+    """Normalise a fetched candle frame to ``ts`` (UTC bar OPEN time) + OHLCV, the shape the features read."""
+    import pandas as pd
+    out = df.copy()
+    col = out["timestamp"] if "timestamp" in out.columns else out.index.to_series()
+    if pd.api.types.is_numeric_dtype(col):
+        ts = pd.to_datetime(col.astype("int64"), unit="ms" if float(col.iloc[-1]) > 1e11 else "s", utc=True)
+    else:
+        ts = pd.to_datetime(col, utc=True)
+    out["ts"] = ts.to_numpy()
+    out["ts"] = pd.to_datetime(out["ts"], utc=True)
+    return out[["ts", "open", "high", "low", "close", "volume"]].reset_index(drop=True)
+
+
+def _ml_entry_reference_frames(symbols: list, bar_open_iso: str, exchange: Any, limit: int = 200) -> Dict[str, Any]:
+    """Closed 1h frames of the cross-sectional reference symbols, fetched ONCE per decision bar (all traded symbols
+    of that bar share them). A symbol the venue does not list or that fails to fetch is skipped and counted by the
+    caller (``n_reference``); the strategy refuses below its ``min_reference_symbols``."""
+    from src.runtime.closed_bars import drop_forming_bar
+    from src.runtime.market_data import fetch_candles
+    hit = _ML_ENTRY_REF_CACHE.get("bar")
+    if hit == bar_open_iso:
+        return _ML_ENTRY_REF_CACHE["frames"]
+    frames: Dict[str, Any] = {}
+    for s in symbols:
+        try:
+            df = fetch_candles(s, "1h", exchange_client=exchange, limit=limit, bypass_cache=True)
+            if df is None or len(df) == 0:
+                continue
+            fr = _ml_entry_frame(drop_forming_bar(df, "1h"))
+            if len(fr) and fr["ts"].iloc[-1].isoformat() == bar_open_iso:
+                frames[s] = fr
+        except Exception:  # noqa: BLE001 -- one missing reference symbol never blocks the decision
+            logger.debug("ml_entry: reference fetch failed for %s", s, exc_info=True)
+    _ML_ENTRY_REF_CACHE.update(bar=bar_open_iso, frames=frames)
+    return frames
+
+
+def ml_entry_signal_builder(settings: dict) -> Dict[str, Any]:
+    """ml_entry: one pooled model decides LONG / SHORT / NOTHING per traded symbol at every 4th closed 1h bar.
+
+    Closed-bar decisions through the shared ``decision_bar: closed`` ledger, keyed per symbol
+    (``ml_entry|<SYMBOL>``) so one symbol's decision never marks another's bar decided."""
+    from src.units.strategies import load_strategy_config
+    from src.units.strategies.ml_entry import NAME, load_model, order_package
+    from src.runtime.market_data import fetch_candles
+
+    try:
+        strategies_cfg = load_strategy_config()
+    except Exception:  # noqa: BLE001
+        strategies_cfg = {}
+    vcfg = dict(strategies_cfg.get(NAME, {}) or {})
+    vcfg.setdefault("decision_bar", "closed")
+    symbol = str(settings.get("SYMBOL", settings.get("symbol", "")) or "")
+    syms = [str(s) for s in (vcfg.get("symbols") or [])]
+    if not bool(vcfg.get("enabled", False)) or (syms and symbol not in syms):
+        return _with_signal_package(NAME, {"symbol": symbol, "side": "none",
+                                           "meta": {"strategy_name": NAME, "reason": "disabled_or_out_of_scope"}})
+    key = f"{NAME}|{symbol}"
+    timeframe = "1h"
+    import time as _time
+    _now = _time.time()
+    _skip = _closed_window_skip(timeframe, vcfg, name=key, now=_now)
+    if _skip is not None:
+        return _with_signal_package(NAME, {"symbol": symbol, "side": "none",
+                                           "meta": {"strategy_name": NAME, "reason": _skip}})
+    exchange = _build_killzone_exchange(settings)
+    raw = fetch_candles(symbol, timeframe, exchange_client=exchange, limit=400, bypass_cache=True)
+    if raw is None:
+        raise RuntimeError(f"{NAME}: no candle data for symbol={symbol}")
+    _publish_liquidity_state(symbol, raw)
+    frame, _skip = _decision_frame(raw, timeframe, vcfg, name=key, now=_now, record=False)
+    if _skip is not None:
+        return _with_signal_package(NAME, {"symbol": symbol, "side": "none",
+                                           "meta": {"strategy_name": NAME, "reason": _skip}})
+    df = _ml_entry_frame(frame)
+    cfg: Dict[str, Any] = {"symbol": symbol, "timeframe": timeframe, **vcfg}
+    try:
+        model = load_model()
+        from src.units.strategies.ml_entry import is_decision_bar
+        if not is_decision_bar(df["ts"].iloc[-1], int(model["meta"]["bracket"]["decision_every_h"])):
+            raise ValueError("not_a_decision_bar")  # before the reference fetch: 60 venue calls only every 4th bar
+        refs = _ml_entry_reference_frames(list(model["meta"]["xs_reference"]), df["ts"].iloc[-1].isoformat(), exchange)
+        pkg = order_package(cfg, candles_df=df, reference_frames=refs, model=model)
+    except ValueError as exc:
+        _record_closed_decision(key, frame, timeframe, vcfg, _now)
+        try:
+            log_signal({"event": f"{NAME}_eval", "strategy": NAME, "symbol": symbol, "timeframe": timeframe,
+                        "side": "none", "reason": str(exc)})
+        except Exception:  # noqa: BLE001
+            logger.exception("%s: audit emit failed", NAME)
+        return _with_signal_package(NAME, {"symbol": symbol, "side": "none",
+                                           "meta": {"strategy_name": NAME, "reason": str(exc)}})
+    _record_closed_decision(key, frame, timeframe, vcfg, _now)
+    side = "buy" if pkg["direction"] == "long" else "sell"
+    try:
+        log_signal({"event": f"{NAME}_eval", "strategy": NAME, "symbol": symbol, "timeframe": timeframe,
+                    "side": side, "entry": pkg["entry"], "stop_loss": pkg["sl"], "take_profit": pkg["tp"],
+                    "p_long": pkg["meta"]["p_long"], "p_short": pkg["meta"]["p_short"]})
+    except Exception:  # noqa: BLE001
+        logger.exception("%s: audit emit failed", NAME)
+    sig = {"symbol": symbol, "side": side, "price": pkg["entry"], "entry_price": pkg["entry"],
+           "stop_loss": pkg["sl"], "take_profit": pkg["tp"], "pattern": NAME,
+           "meta": {**pkg["meta"], "strategy_name": NAME, "confidence": pkg["confidence"],
+                    "direction": pkg["direction"], "timeframe": timeframe}}
+    return _with_signal_package(NAME, sig)

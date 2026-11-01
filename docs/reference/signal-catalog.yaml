@@ -63,6 +63,14 @@ population:
   strategy_modules: 17
   ml_models: 76
 strategy_modules:
+  ml_entry:
+    file: src/units/strategies/ml_entry.py
+    # ML-ENTRY-LIVE-ADAPTER (2026-11-01): the pooled ENTRY decision model. Reads 1h OHLCV of the traded symbol and of
+    # the 60 reference symbols (cross-sectional context) through src.runtime.ml_decision_features; scores
+    # ml/served/ml_decision_entry_v1/model.json (LightGBM). Health: unmeasured until the first live decision.
+    # monitor() records M31 peak-R telemetry (exit_levers.since_entry + position_telemetry), observe-only.
+    candle_columns: [open, high, low, close, volume]
+    runtime_imports: [src.runtime.exit_levers, src.runtime.ml_decision_features, src.runtime.position_telemetry]
   claude_desk:
     file: src/units/strategies/claude_desk.py
     # DESK-17 (2026-10-26): reads NO candles. Its only input is the accepted-proposal queue

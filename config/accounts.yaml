@@ -473,7 +473,7 @@ accounts:
                                        # symbol's risk. Follows bybit_1 (live since 2026-10-18). MUST match
                                        # bybit_portfolio (test_mirror_carries_the_same_position_model_as_live).
                                        # ROLLBACK: delete this line here AND on bybit_portfolio.
-    strategies: [xrp_pullback_2h, trend_donchian_eth_4h, trend_donchian_xrp_4h, ada_pullback_2h, trend_donchian_sol_prop]
+    strategies: [xrp_pullback_2h, trend_donchian_eth_4h, trend_donchian_xrp_4h, ada_pullback_2h, trend_donchian_sol_prop, ml_entry]
                                        # ── PROMOTE-PROP-LEGS, 2026-10-15 (Tier-3, operator PRE-AUTHORIZED).
                                        # ONE LEG ADDED, identically and in the same order on
                                        # bybit_2 AND bybit_portfolio: trend_donchian_sol_prop.
@@ -868,7 +868,7 @@ accounts:
                                        # bybit_2); set-leverage fires at boot.
     position_model: slices             # mirrors bybit_2 (operator 2026-11-01 "Slices on bybit_2 (Rec.)");
                                        # mirror equality. ROLLBACK: with bybit_2's line.
-    strategies: [xrp_pullback_2h, trend_donchian_eth_4h, trend_donchian_xrp_4h, ada_pullback_2h, trend_donchian_sol_prop]
+    strategies: [xrp_pullback_2h, trend_donchian_eth_4h, trend_donchian_xrp_4h, ada_pullback_2h, trend_donchian_sol_prop, ml_entry]
                                        # ── PROMOTE-PROP-LEGS, 2026-10-15 — FOLLOWS bybit_2's addition
                                        # of trend_donchian_sol_prop IDENTICALLY (ordered mirror
                                        # equality, test_bybit_portfolio_mirrors_bybit_2_exactly).
