@@ -791,6 +791,7 @@ real top-level `docs/*.md` and fails if the population builder cannot see it.
 | `docs/research/alpaca-200-affordability-sweep-2026-08-25.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
 | `docs/research/alpaca-close-blast-radius-mechanism-2026-09-08.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
 | `docs/research/alpaca-inverse-etf-route-2026-09-10.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
+| `docs/research/alpaca-live-activity-2026-11-01.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
 | `docs/research/alpaca-promotion-inventory-2026-11-01.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
 | `docs/research/alpaca-live-refusal-verdict-2026-09-07.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
 | `docs/research/alpaca-live-roster-candidates-2026-09-10.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
