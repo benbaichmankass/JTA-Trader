@@ -1,0 +1,121 @@
+{
+ "schema_version": 1,
+ "review_id": "LR-20261101T1432Z-pkg-f76bb92289d143e5",
+ "reviewed_at": "2026-11-01T14:38:02Z",
+ "order_package_id": "pkg-f76bb92289d143e5",
+ "trade_id": null,
+ "leg": "trend_donchian_sol_4h",
+ "accounts": [
+  "bybit_1"
+ ],
+ "trigger": {
+  "event": "daily_floor",
+  "level": "2026-11-01",
+  "l0_snapshot_at": "2026-11-01T14:31:19Z"
+ },
+ "info_cutoff_at": "2026-11-01T14:32:17Z",
+ "state": {
+  "atr_now_over_entry": 0.6074,
+  "bars_held": 16,
+  "giveback_r": 0.9282,
+  "open_r": 0.5363,
+  "peak_provenance": "estimated",
+  "peak_r": 1.4645,
+  "regime_cell_entry": null,
+  "regime_cell_now": null,
+  "sl": 99.48892857,
+  "tp": 87.01858
+ },
+ "features_at_review": {
+  "atr_now_over_entry": 0.6074,
+  "bars_since_peak": 14,
+  "giveback_r": 0.9282,
+  "open_r": 0.5363,
+  "peak_r": 1.4645,
+  "r_to_stop": 1.5363,
+  "r_to_target": 2.7506
+ },
+ "mechanics": {
+  "evidence": "package sl 99.48892857 / tp 87.01858 agree with every readable account",
+  "verdict": "match"
+ },
+ "options": [
+  {
+   "action": "hold",
+   "level": null,
+   "n": 19,
+   "mean_r": null,
+   "sd_r": null,
+   "worst_r": null,
+   "net": null
+  }
+ ],
+ "outcome_table_source": "comms/live_review/tables/LR-20261101T1432Z-pkg-f76bb92289d143e5.json",
+ "recommendation": {
+  "action": "hold",
+  "level": null,
+  "level_atr": null,
+  "ev_delta_r": null,
+  "worst_case_delta_r": null,
+  "basis": "judgement",
+  "confidence": "anecdote",
+  "evidence_source": "judgement",
+  "judgement_confidence": 0.56,
+  "reason": "Prior forecast (target 92.32 / invalidation 98.54, 5x4h from 10-31 08Z) expired untouched (lows >=94.32, highs <=96.39). Hold cell n=19, one under the floor, so judgement. SOL is relatively weak: 95.1 is 3 points under the 98.09 = 50% retrace of the 10-28 high to 10-30 low while ETH/BTC retrace higher, +0.51R with peak 1.46R, stop 1.51R away. Close-or-tighten on a giveback with the trend intact is priced ~= hold or worse (LTR-TRIGGER-CLOSE-S0; tighten advice-only, 61 rules failed). Hold, both brackets intact."
+ },
+ "judge_prior": null,
+ "applied": false,
+ "apply_policy": {
+  "bound_r": 0.25,
+  "within_bound": null,
+  "tighten_r": null
+ },
+ "shadow_policy": {
+  "bound_r": 0.5,
+  "within_bound": null,
+  "would_apply": null,
+  "tighten_r": null
+ },
+ "context_flags": [
+  "correlated_exposure: BTC, ETH, SOL, ADA shorts all on bybit_1 = one crypto-beta bet",
+  "judgement: hold n=19 thin (<20), not measured; tighten atr:1.5 n=19 insufficient, atr:1.0 invalid_level",
+  "atr_ratio: 0.61 of entry (contracting)",
+  "context.funding unavailable (geo-blocked public API)",
+  "missing_inputs: regime.vol_now, regime.cell_entry, context.live_vs_backtest, chart context_v3"
+ ],
+ "account_reads": [
+  {
+   "account_id": "bybit_1",
+   "account_class": "paper",
+   "read": "no_action",
+   "evidence": "hold: no action; packet.account_bounds: bybit_orders: SL 99.49 / TP 87.02, position True; would_apply = the shared amend reaches this leg, NOT that its RiskManager approved (LTR-6 gap)"
+  }
+ ],
+ "disposition": {
+  "route": "none",
+  "mandate": null,
+  "action_issue": null,
+  "applied_at": null,
+  "verified_readback": null
+ },
+ "model": "sonnet-tier (repo lane)",
+ "session": "session_01AFoLuMvV6eLadEzZTzQa3X",
+ "prompt_sha": null,
+ "skill_sha": "1216286d9a4d8cf31706f33d74cad822329513e8",
+ "packet_sha": "832acf77c49189a184e70d9ff29075c731a8bf680683fa27ad370ff0c79044a1",
+ "forecast": {
+  "thesis": "SOL is making flat-to-lower 4h highs under the 96.39 shelf with 1d ADX 28 trending down and relative weakness to ETH/BTC; a retest of the 92.32 low is slightly less than even odds in the horizon.",
+  "direction": "with_trade",
+  "target_px": 92.32,
+  "p_target": 0.38,
+  "invalidation_px": 96.39,
+  "horizon_bars": 6,
+  "timeframe": "4h",
+  "evidence": [
+   "context.previous_review.forecast: 92.32 / 98.54 untouched, horizon expired",
+   "chart.bars_ohlc 4h: lows >=94.32 highs <=96.39",
+   "chart.htf 1d: ADX 28.1 trending, 10-30 high 98.54",
+   "exit_plan: SL 99.49 / TP 87.02"
+  ]
+ }
+}

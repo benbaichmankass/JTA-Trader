@@ -1,0 +1,120 @@
+{
+ "schema_version": 1,
+ "review_id": "LR-20261101T1432Z-pkg-011a7bf85ee54a6f",
+ "reviewed_at": "2026-11-01T14:38:02Z",
+ "order_package_id": "pkg-011a7bf85ee54a6f",
+ "trade_id": null,
+ "leg": "mgc_pullback_1d",
+ "accounts": [
+  "ib_paper"
+ ],
+ "trigger": {
+  "event": "r_milestone",
+  "level": 2.0,
+  "l0_snapshot_at": "2026-11-01T14:31:19Z"
+ },
+ "info_cutoff_at": "2026-11-01T14:32:17Z",
+ "state": {
+  "atr_now_over_entry": 1.0697,
+  "bars_held": 10,
+  "giveback_r": 0.186,
+  "open_r": 2.6759,
+  "peak_provenance": "estimated",
+  "peak_r": 2.8619,
+  "regime_cell_entry": null,
+  "regime_cell_now": null,
+  "sl": 4160.32857143,
+  "tp": 3766.9909
+ },
+ "features_at_review": {
+  "atr_now_over_entry": 1.0697,
+  "bars_since_peak": 0,
+  "giveback_r": 0.186,
+  "open_r": 2.6759,
+  "peak_r": 2.8619,
+  "r_to_stop": 2.4807,
+  "r_to_target": 1.2517
+ },
+ "mechanics": {
+  "verdict": "match",
+  "evidence": "ib_open_orders 14:35Z: oca-protect-t6673 (this package, qty 14) STP 4160.3 and LMT 3767.0 equal package SL 4160.32857 / TP 3766.9909; packet's mismatch used the orders of a different MGC package (oca-protect-t6803)"
+ },
+ "options": [
+  {
+   "action": "hold",
+   "level": null,
+   "n": 0,
+   "mean_r": null,
+   "sd_r": null,
+   "worst_r": null,
+   "net": null
+  }
+ ],
+ "outcome_table_source": "comms/live_review/tables/LR-20261101T1432Z-pkg-011a7bf85ee54a6f.json",
+ "recommendation": {
+  "action": "hold",
+  "level": null,
+  "level_atr": null,
+  "ev_delta_r": null,
+  "worst_case_delta_r": null,
+  "basis": "judgement",
+  "confidence": "anecdote",
+  "evidence_source": "judgement",
+  "judgement_confidence": 0.55,
+  "reason": "Hold cell n=0, judgement. Open +2.68R, peak 2.86R, giveback 0.19R, real TP 3767 is 1.25R away and the stop 4160 is 2.5R away. Prior forecast: none (the 10-31 row was a could_not_look flag). Friday's daily bar fell 4031 -> 3899 (-3.3%, low 3879.3) and CME is shut until 22:00Z; I expect the low to be taken before Friday's high 4038 is reclaimed. Banking size has no executor on ib_paper and no evidence net of cost, so hold with both brackets."
+ },
+ "judge_prior": null,
+ "applied": false,
+ "apply_policy": {
+  "bound_r": 0.25,
+  "within_bound": null,
+  "tighten_r": null
+ },
+ "shadow_policy": {
+  "bound_r": 0.5,
+  "within_bound": null,
+  "would_apply": null,
+  "tighten_r": null
+ },
+ "context_flags": [
+  "mechanics_override: packet.mechanics said mismatch (venue SL 3938.1 / TP 3596.2) but those are the orders of a DIFFERENT MGC package in the same account (oca-protect-t6803, qty 1, pkg-d76f1b15923e4282); this package's own orders (oca-protect-t6673, qty 14) are STP 4160.3 and LMT 3767.0, equal to the package SL 4160.33 / TP 3766.99 to the tick (ib_open_orders read 14:35Z). Generator matches venue orders by symbol, not by oca group",
+  "correlated_exposure: second MGC short (pkg-d76f1b15923e4282) plus GLD, SLV, IAUM, MHG shorts",
+  "weekend: CME closed until 22:00Z",
+  "judgement: hold n=0, tighten cells could_not_look (no_candles); not measured",
+  "missing_inputs: regime.vol_now, regime.cell_entry, context.calendar (stale), context.live_vs_backtest, chart context_v3"
+ ],
+ "account_reads": [
+  {
+   "account_id": "ib_paper",
+   "account_class": "paper",
+   "read": "no_action",
+   "evidence": "hold: no action; packet.account_bounds: ib_orders: SL 3938.1 / TP 3596.2, position True; no apply path for this exchange yet (LTR-9 / none)"
+  }
+ ],
+ "disposition": {
+  "route": "none",
+  "mandate": null,
+  "action_issue": null,
+  "applied_at": null,
+  "verified_readback": null
+ },
+ "model": "sonnet-tier (repo lane)",
+ "session": "session_01AFoLuMvV6eLadEzZTzQa3X",
+ "prompt_sha": null,
+ "skill_sha": "1216286d9a4d8cf31706f33d74cad822329513e8",
+ "packet_sha": "4969f08abbb35f821ff02c013f7184fd2cf763783a2d33276d4881cfff9499b0",
+ "forecast": {
+  "thesis": "Gold broke down through the 4030-4000 shelf in a -3.3% daily flush to 3898.9; with the market shut, I expect a push to the Friday low 3879.3 before a reclaim of the Friday high 4038.2.",
+  "direction": "with_trade",
+  "target_px": 3879.3,
+  "p_target": 0.55,
+  "invalidation_px": 4038.2,
+  "horizon_bars": 3,
+  "timeframe": "1d",
+  "evidence": [
+   "chart.bars_ohlc: 10-30 1d open 4033.7 high 4038.2 low 3879.3 close 3898.9",
+   "exit_plan: venue STP 4160.3 / LMT 3767.0 on oca-protect-t6673, equal to package SL/TP",
+   "book: IAUM/GLD/SLV/MGC/MHG metal shorts"
+  ]
+ }
+}

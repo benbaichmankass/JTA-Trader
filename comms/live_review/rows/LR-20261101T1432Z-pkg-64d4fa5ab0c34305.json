@@ -1,0 +1,122 @@
+{
+ "schema_version": 1,
+ "review_id": "LR-20261101T1432Z-pkg-64d4fa5ab0c34305",
+ "reviewed_at": "2026-11-01T14:38:02Z",
+ "order_package_id": "pkg-64d4fa5ab0c34305",
+ "trade_id": null,
+ "leg": "iaum_pullback_1d",
+ "accounts": [
+  "alpaca_paper"
+ ],
+ "trigger": {
+  "event": "swing",
+  "level": "2026-10-30T04:00:00+00:00",
+  "l0_snapshot_at": "2026-11-01T14:31:19Z"
+ },
+ "info_cutoff_at": "2026-11-01T14:32:17Z",
+ "state": {
+  "atr_now_over_entry": 1.2044,
+  "bars_held": 11,
+  "giveback_r": 0.0894,
+  "open_r": 2.7573,
+  "peak_provenance": "estimated",
+  "peak_r": 2.8467,
+  "regime_cell_entry": null,
+  "regime_cell_now": null,
+  "sl": 40.60285714,
+  "tp": 37.350955
+ },
+ "features_at_review": {
+  "atr_now_over_entry": 1.2044,
+  "bars_since_peak": 0,
+  "giveback_r": 0.0894,
+  "open_r": 2.7573,
+  "peak_r": 2.8467,
+  "r_to_stop": 1.9106,
+  "r_to_target": 1.3206
+ },
+ "mechanics": {
+  "evidence": "package sl 40.60285714 / tp 37.350955 agree with every readable account",
+  "verdict": "match"
+ },
+ "options": [
+  {
+   "action": "hold",
+   "level": null,
+   "n": 0,
+   "mean_r": null,
+   "sd_r": null,
+   "worst_r": null,
+   "net": null
+  }
+ ],
+ "outcome_table_source": "comms/live_review/tables/LR-20261101T1432Z-pkg-64d4fa5ab0c34305.json",
+ "recommendation": {
+  "action": "hold",
+  "level": null,
+  "level_atr": null,
+  "ev_delta_r": null,
+  "worst_case_delta_r": null,
+  "basis": "judgement",
+  "confidence": "anecdote",
+  "evidence_source": "judgement",
+  "judgement_confidence": 0.55,
+  "reason": "Hold cell n=0 (no comparable corpus trades), so judgement. Prior 10-31 call was partial_close 50% with an against_trade retest forecast (39.50 / 37.90); nothing has traded since (Friday 38.68 close, market shut until Monday), so it is unresolved and I do not carry it: alpaca has no partial-close executor, the retest is a coin flip (p 0.5) and giving back to 39.50 still leaves +2.0R, while the stop is 3.8 ATR away and a real TP sits 1.32R below. The 10-30 daily flush (open 39.30, low 38.59) broke the 39.5 weekly floor; I expect continuation to the Friday low before a reclaim of the Friday high. Hold, both brackets intact."
+ },
+ "judge_prior": null,
+ "applied": false,
+ "apply_policy": {
+  "bound_r": 0.25,
+  "within_bound": null,
+  "tighten_r": null
+ },
+ "shadow_policy": {
+  "bound_r": 0.5,
+  "within_bound": null,
+  "would_apply": null,
+  "tighten_r": null
+ },
+ "context_flags": [
+  "weekend: US equity market closed, last print 38.68; the Monday open can gap either side of the 40.60 stop",
+  "correlated_exposure: open short metals GLD, SLV, IAUM, MGC x2, MHG (one gold/metals beta bet)",
+  "judgement: hold n=0 (no comparable corpus trades), not measured",
+  "prior_forecast: 10-31 partial_close (against_trade 39.50/37.90) unresolved; not carried, see reason",
+  "account_read: alpaca_paper has no partial/close executor per packet (LTR-9); any action would be no_action_path",
+  "missing_inputs: regime.vol_now, regime.cell_entry, context.news, context.live_vs_backtest, chart context_v3 (packet v2); chart read from api/bot/candles"
+ ],
+ "account_reads": [
+  {
+   "account_id": "alpaca_paper",
+   "account_class": "paper",
+   "read": "no_action",
+   "evidence": "hold: no action; packet.account_bounds: alpaca_orders: SL 40.6 / TP 37.35, position True; no apply path for this exchange yet (LTR-9 / none)"
+  }
+ ],
+ "disposition": {
+  "route": "none",
+  "mandate": null,
+  "action_issue": null,
+  "applied_at": null,
+  "verified_readback": null
+ },
+ "model": "sonnet-tier (repo lane)",
+ "session": "session_01AFoLuMvV6eLadEzZTzQa3X",
+ "prompt_sha": null,
+ "skill_sha": "1216286d9a4d8cf31706f33d74cad822329513e8",
+ "packet_sha": "bdf117a8771a8a045776661fb2934fcd75013647dd9e72c53e99eafb34379205",
+ "forecast": {
+  "thesis": "Gold ETF broke 39.5 weekly support in a -3% daily flush and sits +2.76R in; with no bar traded since, I expect the break to extend to the Friday low 38.59 before the Friday open 39.30 is reclaimed.",
+  "direction": "with_trade",
+  "target_px": 38.59,
+  "p_target": 0.55,
+  "invalidation_px": 39.3,
+  "horizon_bars": 3,
+  "timeframe": "1d",
+  "evidence": [
+   "chart.bars_ohlc: 10-30 1d open 39.30 high 39.30 low 38.59 close 38.68",
+   "context.previous_review.forecast: 39.50 and 37.90 untouched, no bar traded since",
+   "exit_plan: SL 40.60 (3.8 ATR) / TP 37.35 (1.32R)",
+   "book: IAUM/GLD/SLV/MGC/MHG metal shorts, one correlated bet"
+  ]
+ }
+}

@@ -1,0 +1,120 @@
+{
+ "schema_version": 1,
+ "review_id": "LR-20261101T1432Z-pkg-bba44210885c4180",
+ "reviewed_at": "2026-11-01T14:38:02Z",
+ "order_package_id": "pkg-bba44210885c4180",
+ "trade_id": null,
+ "leg": "trend_donchian_ada_4h",
+ "accounts": [
+  "bybit_1"
+ ],
+ "trigger": {
+  "event": "daily_floor",
+  "level": "2026-11-01",
+  "l0_snapshot_at": "2026-11-01T14:31:19Z"
+ },
+ "info_cutoff_at": "2026-11-01T14:32:17Z",
+ "state": {
+  "atr_now_over_entry": 0.4758,
+  "bars_held": 16,
+  "giveback_r": 1.0248,
+  "open_r": -0.2379,
+  "peak_provenance": "estimated",
+  "peak_r": 0.7869,
+  "regime_cell_entry": null,
+  "regime_cell_now": null,
+  "sl": 0.20172857,
+  "tp": 0.1719108
+ },
+ "features_at_review": {
+  "atr_now_over_entry": 0.4758,
+  "bars_since_peak": 14,
+  "giveback_r": 1.0248,
+  "open_r": -0.2379,
+  "peak_r": 0.7869,
+  "r_to_stop": 0.7621,
+  "r_to_target": 1.9663
+ },
+ "mechanics": {
+  "evidence": "package sl 0.20172857 / tp 0.1719108 agree with every readable account",
+  "verdict": "match"
+ },
+ "options": [
+  {
+   "action": "hold",
+   "level": null,
+   "n": 13,
+   "mean_r": null,
+   "sd_r": null,
+   "worst_r": null,
+   "net": null
+  }
+ ],
+ "outcome_table_source": "comms/live_review/tables/LR-20261101T1432Z-pkg-bba44210885c4180.json",
+ "recommendation": {
+  "action": "hold",
+  "level": null,
+  "level_atr": null,
+  "ev_delta_r": null,
+  "worst_case_delta_r": null,
+  "basis": "judgement",
+  "confidence": "anecdote",
+  "evidence_source": "judgement",
+  "judgement_confidence": 0.55,
+  "reason": "Prior forecast (target 0.1899 / invalidation 0.1956, 5x4h from 10-31 08Z) expired untouched: 4h lows >=0.1917, highs <=0.1945, so it is a flat, no signal. Hold cell n=13 <20, judgement. ADA is still the weakest of the four crypto shorts (0.1933, far under the 0.1962 = 50% retrace of the 10-28 high to 10-30 low), 1d ADX 31 trending down, ATR 0.48 of entry so the range is compressing. -0.23R with the stop 0.77R away; closing an adverse-but-unbroken short is priced ~= hold (LTR-TRIGGER-CLOSE-S0). Hold, both brackets intact; re-state the same levels with a fresh horizon."
+ },
+ "judge_prior": null,
+ "applied": false,
+ "apply_policy": {
+  "bound_r": 0.25,
+  "within_bound": null,
+  "tighten_r": null
+ },
+ "shadow_policy": {
+  "bound_r": 0.5,
+  "within_bound": null,
+  "would_apply": null,
+  "tighten_r": null
+ },
+ "context_flags": [
+  "correlated_exposure: BTC, ETH, SOL, ADA shorts all on bybit_1 = one crypto-beta bet; a squeeze through the ETH 2278 / BTC 78227 highs would test several stops together",
+  "judgement: hold n=13 thin (<20), not measured; tighten cells invalid_level",
+  "context.funding unavailable (geo-blocked public API)",
+  "missing_inputs: regime.vol_now, regime.cell_entry, context.news, context.live_vs_backtest, chart context_v3"
+ ],
+ "account_reads": [
+  {
+   "account_id": "bybit_1",
+   "account_class": "paper",
+   "read": "no_action",
+   "evidence": "hold: no action; packet.account_bounds: bybit_orders: SL 0.2017 / TP 0.1719, position True; would_apply = the shared amend reaches this leg, NOT that its RiskManager approved (LTR-6 gap)"
+  }
+ ],
+ "disposition": {
+  "route": "none",
+  "mandate": null,
+  "action_issue": null,
+  "applied_at": null,
+  "verified_readback": null
+ },
+ "model": "sonnet-tier (repo lane)",
+ "session": "session_01AFoLuMvV6eLadEzZTzQa3X",
+ "prompt_sha": null,
+ "skill_sha": "1216286d9a4d8cf31706f33d74cad822329513e8",
+ "packet_sha": "4df291ea51f364d275b03be27ef0d82619058433656396f8b1e39896d44a0e33",
+ "forecast": {
+  "thesis": "ADA is coiling at 0.192-0.1945 under the 0.1956 swing high with the 1d trend down and ADX 31; a break of the 0.1917 range low and a test of the 0.1899 low is a bit less than even odds within the horizon.",
+  "direction": "with_trade",
+  "target_px": 0.1899,
+  "p_target": 0.35,
+  "invalidation_px": 0.1956,
+  "horizon_bars": 6,
+  "timeframe": "4h",
+  "evidence": [
+   "context.previous_review.forecast: 0.1899 / 0.1956 untouched, horizon expired",
+   "chart.bars_ohlc 4h: lows >=0.1917 highs <=0.1945 since 10-31 08Z",
+   "chart.htf 1d: ADX 31 trending, 10-30 high 0.1956",
+   "exit_plan: SL 0.20173 / TP 0.17191"
+  ]
+ }
+}

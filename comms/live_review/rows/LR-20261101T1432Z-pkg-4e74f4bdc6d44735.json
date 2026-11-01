@@ -1,0 +1,111 @@
+{
+ "schema_version": 1,
+ "review_id": "LR-20261101T1432Z-pkg-4e74f4bdc6d44735",
+ "reviewed_at": "2026-11-01T14:38:02Z",
+ "order_package_id": "pkg-4e74f4bdc6d44735",
+ "trade_id": null,
+ "leg": "trend_donchian_1h",
+ "accounts": [
+  "bybit_1"
+ ],
+ "trigger": {
+  "event": "daily_floor",
+  "level": "2026-11-01",
+  "l0_snapshot_at": "2026-11-01T14:31:19Z"
+ },
+ "info_cutoff_at": "2026-11-01T14:32:17Z",
+ "state": {
+  "atr_now_over_entry": 0.3251,
+  "bars_held": 66,
+  "giveback_r": 1.1984,
+  "open_r": 0.5194,
+  "peak_provenance": "estimated",
+  "peak_r": 1.7178,
+  "regime_cell_entry": "transitional/volatile",
+  "regime_cell_now": null,
+  "sl": 79165.38571429,
+  "tp": 70960.5976
+ },
+ "features_at_review": {
+  "atr_now_over_entry": 0.3251,
+  "bars_since_peak": 43,
+  "giveback_r": 1.1984,
+  "open_r": 0.5194,
+  "peak_r": 1.7178,
+  "r_to_stop": 0.8016,
+  "r_to_target": 4.8759
+ },
+ "mechanics": {
+  "evidence": "package sl 79165.38571429 / tp 70960.5976 agree with every readable account",
+  "verdict": "match"
+ },
+ "options": [],
+ "outcome_table_source": null,
+ "recommendation": {
+  "action": "hold",
+  "level": null,
+  "level_atr": null,
+  "ev_delta_r": null,
+  "worst_case_delta_r": null,
+  "basis": "judgement",
+  "confidence": "anecdote",
+  "evidence_source": "judgement",
+  "judgement_confidence": 0.5,
+  "reason": "Prior forecast (target 76275.1 / invalidation 77607.1, 8x1h) FAILED: the invalidation was breached (4h highs 77637, 77753, 77854, 78011, 78227), so the thesis is restated, not carried. No priced table (comms/strategy_evidence/trend_donchian_1h.json missing), so judgement. BTC is +0.52R (peak 1.72R, 43 bars ago), retraced to 78227 = 44% of the 10-28 high (81977) to 10-30 low (76275); the stop 79165 sits above the 50% level (79126), so it is the structure stop and 0.80R away. ADX 4h still trending down, ATR 0.33 of entry. Closing/tightening a profitable trend short on a bounce is priced ~= hold or worse (LTR-TRIGGER-CLOSE-S0), so hold; confidence 0.50."
+ },
+ "judge_prior": null,
+ "applied": false,
+ "apply_policy": {
+  "bound_r": 0.25,
+  "within_bound": null,
+  "tighten_r": null
+ },
+ "shadow_policy": {
+  "bound_r": 0.5,
+  "within_bound": null,
+  "would_apply": null,
+  "tighten_r": null
+ },
+ "context_flags": [
+  "prior_forecast_failed: 77607.1 invalidation breached; thesis restated, not carried",
+  "correlated_exposure: BTC, ETH, SOL, ADA shorts all on bybit_1 = one crypto-beta bet",
+  "priced_options null: live_review_outcomes FileNotFoundError comms/strategy_evidence/trend_donchian_1h.json (evidence file missing for this leg)",
+  "context.funding unavailable (geo-blocked public API)",
+  "missing_inputs: regime.vol_now, priced_options, context.calendar (stale), context.live_vs_backtest, chart context_v3"
+ ],
+ "account_reads": [
+  {
+   "account_id": "bybit_1",
+   "account_class": "paper",
+   "read": "no_action",
+   "evidence": "hold: no action; packet.account_bounds: bybit_orders: SL 79165.4 / TP 70960.6, position True; would_apply = the shared amend reaches this leg, NOT that its RiskManager approved (LTR-6 gap)"
+  }
+ ],
+ "disposition": {
+  "route": "none",
+  "mandate": null,
+  "action_issue": null,
+  "applied_at": null,
+  "verified_readback": null
+ },
+ "model": "sonnet-tier (repo lane)",
+ "session": "session_01AFoLuMvV6eLadEzZTzQa3X",
+ "prompt_sha": null,
+ "skill_sha": "1216286d9a4d8cf31706f33d74cad822329513e8",
+ "packet_sha": "300b97517f59dda1da9766a35266521308cc3911e808e206ea9c53238bbebded",
+ "forecast": {
+  "thesis": "BTC is bouncing under the 50% retrace 79126 with ATR contracting and the 4h trend still down; a rejection at 78227 and a move back to the 77060 range low is less than even odds before 78227 breaks.",
+  "direction": "with_trade",
+  "target_px": 77060.1,
+  "p_target": 0.38,
+  "invalidation_px": 78227.1,
+  "horizon_bars": 6,
+  "timeframe": "4h",
+  "evidence": [
+   "context.previous_review.forecast: invalidation 77607.1 breached by 4h highs",
+   "chart.bars_ohlc 4h: higher highs since 10-31 20Z, last 78006",
+   "chart.swings: 10-28 high 81977, 10-30 low 76275.1, 50% = 79126",
+   "exit_plan: SL 79165 / TP 70960.6"
+  ]
+ }
+}
