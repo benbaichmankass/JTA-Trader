@@ -85,6 +85,20 @@ REGISTERED = {
 
 
 # ----------------------------------------------------------------------------- data
+def build_klines(root: Path, symbols: Optional[List[str]] = None, ms: Optional[List[str]] = None) -> Path:
+    """Build ``<root>/klines_all.pkl`` = (series, manifest) from the public Binance Vision archive (no key). Same artefact the
+    discovery sessions built by hand; ``edge_data`` caps the months at MAX_MONTH (HOLDOUT-LOCK), so nothing past 2024-06 loads."""
+    import edge_data as E
+
+    root = Path(root)
+    root.mkdir(parents=True, exist_ok=True)
+    syms = symbols or [x for x in E.list_symbols() if x.endswith("USDT")]
+    ser, man = E.assemble(E.fetch(syms, root, kinds=("k",), ms=ms), "k")
+    out = root / "klines_all.pkl"
+    pickle.dump((ser, man), open(out, "wb"))
+    return out
+
+
 def load_panels(klines_pkl: Path) -> Dict[str, pd.DataFrame]:
     ser, manifest = pickle.load(open(klines_pkl, "rb"))
     close = pd.DataFrame({s: d["close"] for s, d in ser.items()})
@@ -472,12 +486,42 @@ ITER_ARMS = {
 }
 
 
-def apply_gate(W: pd.DataFrame, close: pd.DataFrame, mode: Optional[str], ma: int = 200) -> pd.DataFrame:
+def iteration_verdict(it: Dict[str, Any], what: str) -> Dict[str, Any]:
+    """The unit's registered reading of an arm grid: PASS iff >=1 non-control arm clears the UNCHANGED registered rule at the cumulative
+    trial count (then ONE holdout read is the next step, never a book); FAIL iff the control computed and no arm cleared it (the lever
+    families tried are recorded in the map, no family is closed by this); INDETERMINATE iff the control series was insufficient."""
+    ctl = it["arms"]["A0"]["primary"]
+    if ctl.get("state") != "computed":
+        v, note = "indeterminate", "control series insufficient"
+    elif it["passing_arms"]:
+        v, note = "pass", f"arm(s) {it['passing_arms']} clear the registered rule at N_cum={it['n_trials_cumulative']}"
+    else:
+        v, note = "fail", f"no arm clears the registered rule at N_cum={it['n_trials_cumulative']}; delta Sharpe vs control {it['delta_sharpe_vs_control']}"
+    return {"verdict": v, "read_state": "measured", "n": ctl.get("n_days"), "note": note,
+            "population": f"{what}: {it['n_arms']} arms incl. control A0, daily net returns, {ctl.get('first')}..{ctl.get('last')} "
+                          f"(n_days={ctl.get('n_days')}), DSR N_cum={it['n_trials_cumulative']}"}
+
+
+def write_run_outputs(out_arg: str, result: Dict[str, Any], verdict_doc: Optional[Dict[str, Any]] = None) -> Path:
+    """`--out X.json` keeps the old behaviour (one file). `--out <dir>` (the research-script-run `{out_dir}`) writes result.json and,
+    when a verdict is given, verdict.json {verdict, read_state, population, n, note, measurement} so the runner can grade it."""
+    o = Path(out_arg)
+    if o.suffix == ".json":
+        o.write_text(json.dumps(result, indent=1, default=str))
+        return o
+    o.mkdir(parents=True, exist_ok=True)
+    (o / "result.json").write_text(json.dumps(result, indent=1, default=str))
+    if verdict_doc is not None:
+        (o / "verdict.json").write_text(json.dumps(verdict_doc, indent=1, default=str))
+    return o
+
+
+def apply_gate(W: pd.DataFrame, close: pd.DataFrame, mode: Optional[str], ma: int = 200, ref: str = "BTCUSDT") -> pd.DataFrame:
     """BTC trend gate on a weight panel. Decision-time: the BTC state at day t uses closes through t-1 (shift(1)); the first
     ``ma`` days have no state and read as 'BTC up' (so a gate never opens a position it could not see)."""
     if not mode:
         return W
-    btc = close["BTCUSDT"]
+    btc = close[ref]
     sma = btc.rolling(ma).mean()
     up = (btc > sma).where(sma.notna()).shift(1)      # NaN (not False) until the mean exists: a NaN comparison is False
     up = up.where(up.notna(), True).astype(bool).to_numpy()
@@ -570,11 +614,16 @@ def main() -> int:
         default=None,
         help="optional daily close panel csv for T10 (date index, ticker columns)",
     )
+    ap.add_argument("--build-data", action="store_true",
+                    help="if <data-root>/klines_all.pkl is absent, build it from the public Binance Vision archive first")
     ap.add_argument("--iteration", action="store_true",
                     help="run the pre-registered one-factor ITER_ARMS grid (tsmom/xsec) against the primary as control")
     ap.add_argument("--self-test", action="store_true")
     a = ap.parse_args()
     root = Path(a.data_root)
+    if a.build_data and not (root / "klines_all.pkl").is_file():
+        print(f"building {root / 'klines_all.pkl'} from the public archive", file=sys.stderr)
+        build_klines(root)
     P = load_panels(root / "klines_all.pkl")
     close, qv = P["close"], P["qv"]
     ret = close.pct_change()
@@ -603,8 +652,14 @@ def main() -> int:
             print(f"--iteration has no arm grid for family {a.family!r}", file=sys.stderr)
             return 2
         out["iteration"] = run_iteration(a.family, close, qv, ret, F, fee_rt)
-        Path(a.out).write_text(json.dumps(out, indent=1, default=str))
         it = out["iteration"]
+        it["measurement"] = {"control": "A0", "delta_sharpe_vs_control": it["delta_sharpe_vs_control"], "passing_arms": it["passing_arms"],
+                             "arms": {k: {"spec": r["spec"], "sharpe": r["primary"].get("sharpe_net"), "h1": r["primary"].get("sharpe_h1"),
+                                          "h2": r["primary"].get("sharpe_h2"), "dsr": r["primary"].get("dsr"),
+                                          "stress_sharpe": r["stress"].get("sharpe_net"), "side_net_sum": r.get("side_net_sum"),
+                                          "by_year_net_sum": r.get("by_year_net_sum"), "verdict": r["verdict"]["verdict"]}
+                                      for k, r in it["arms"].items()}}
+        write_run_outputs(a.out, out, {**iteration_verdict(it, f"{a.family} iteration"), "measurement": it["measurement"]})
         print(json.dumps({"family": a.family, "passing_arms": it["passing_arms"], "n_arms": it["n_arms"],
                           "delta_sharpe_vs_control": it["delta_sharpe_vs_control"]}, indent=1))
         for aid, r in it["arms"].items():
