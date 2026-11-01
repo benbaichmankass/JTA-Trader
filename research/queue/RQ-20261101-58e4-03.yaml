@@ -1,0 +1,79 @@
+# Hand-authored 2026-11-01 by lane RESEARCH-EDGE (Tier 1), dispatched by Manager session_01AFoLuJ1apgy8sfngu4WyNH. Decision rule registered BEFORE any run (this commit precedes the run commit). Gates: none.
+id: RQ-20261101-58e4-03
+title: 'Discovery: delta-neutral spot-long/perp-short funding carry, point-in-time top-10 liquid perps with spot, 8 configs, net of full cost stack, window ends 2024-06-30'
+cadence: once
+roadmap:
+- L-PROGRAMMES
+theme: new_strategy_prop
+priority: 1
+kind: experiment
+question: Does holding spot long / perp short on the liquid names whose trailing funding exceeds a threshold earn a net return and Sharpe that survive an 8-trial
+  deflation, with the basis (spot minus perp) P&L, both legs' fees and signed settled funding all charged?
+why_this_matters: 'Row FUNDING-CARRY-HARNESS-FIX / funding-carry DISCOVERY. Payer: leveraged longs pay for leverage; arbitrage capital is balance-sheet constrained.
+  PR #22104 fixed the per-symbol directional dispatch arm; this is the delta-neutral multi-symbol form it did not cover. Liquidity rank is by Binance 1d quote volume
+  (the monthly archive has no open interest); the ranking is verified in the result (top names at three dates).'
+power:
+  expected_n: 1490
+  min_detectable_effect: 0.5
+  effect_units: annualised_sharpe
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: ~4.1 years of daily portfolio returns (2020-06-01..2024-06-30, n~1490). SE of an annualised Sharpe ~ 1/sqrt(years) ~ 0.49, so only Sharpe >~1.0 is separable
+    from 0 alone; the DSR bar (N=configs) is stricter by design (AUDIT section 5b). This unit is DISCOVERY; a pass is a candidate for ONE holdout read, never evidence
+    for a book.
+  feasibility:
+    source: none
+    accrual_basis: Fixed historical archive (data.binance.vision), no accrual.
+decision_rule:
+  id: RULE-RQ20261101-58E4-03-CARRY-DISCOVERY
+  registered_at: '2026-11-01'
+  registered_before_run: true
+  statistic: net annualised return, net Sharpe, worst calendar month, halves, stress, DSR(N=8) from scripts/research/edge_portfolio_discovery.py
+  rule: 'Configs C1..C8 fixed in the script (C8 = always-on benchmark with no funding filter). PRIMARY = C1 (top-10 with spot, trailing 7-day mean funding >= 1 bp
+    per 8h settlement through t-1, daily rebalance, equal 1/10 weights). PASS iff C1 net annualised return > 0 AND net Sharpe >= 1.0 AND stress(2x cost) annualised
+    return > 0 AND worst calendar month > -5% AND both halves positive AND DSR(C1; N=8) > 0.95. FAIL otherwise. Costs: spot taker 10 bps + perp taker 5.5 bps + 2
+    bps slippage per side per unit of pair notional (stress 2x), capital = 1.25 x notional (spot funded + 25% perp margin), signed settled funding, basis P&L from
+    spot and perp closes. Venue risk (exchange failure, short-leg liquidation in squeezes) is NOT modelled and is stated as a limitation.'
+  what_it_does_not_do: Does not read the holdout (2024-07-01 on; edge_data.MAX_MONTH makes it unloadable), touch config/strategies.yaml, rosters or sizing, or propose
+    a live leg. A PASS is only a candidate for the single HOLDOUT-LOCK read.
+compute: cpu_light
+value:
+  usd_at_stake_per_month: 100
+  confidence: 0.1
+  bucket: structural
+  basis: 'stand-in: the audit (2026-11-01) found the live book flat gross and negative net; a documented-payer family is the only candidate source of positive expectancy'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 4.0
+  est_minutes: 60
+  basis: Manual lane run (RESEARCH-EDGE) from a session with Binance Vision egress; daily bars, a few thousand rows per symbol; no secret.
+run:
+  command:
+  - python3
+  - scripts/research/edge_portfolio_discovery.py
+  - --family
+  - carry
+  - --data-root
+  - <scratch data root>
+  - --out
+  - <result.json>
+  timeout_minutes: 120
+  inputs:
+    research_unit: RQ-20261101-58e4-03
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- docs/audits/2026-11-01-from-scratch/AUDIT.md
+- scripts/research/edge_portfolio_discovery.py
+- scripts/research/edge_data.py
+- HOLDOUT-LOCK
+- 'primary config C1; configs run: C1..C8'
+programme: P6
+status: queued
+practice_precedent: 'docs/reference/trading-and-model-practice-principles.md and AUDIT section 5b (docs/audits/2026-11-01-from-scratch/AUDIT.md): <=10 pre-declared
+  configs, discovery ends 2024-06-30, every trial counted, DSR(N=trials)>0.95; Bailey & Lopez de Prado 2014 (DSR); payer literature: Schmeling-Schrimpf-Todorov BIS
+  WP 1087 2023; He-Manela-Ross-von Wachter 2022'
