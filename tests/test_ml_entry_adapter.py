@@ -115,3 +115,19 @@ def test_served_artifact_loads_and_predicts():
     assert model["meta"]["features"] == F.FEATURES and model["meta"]["tau"] == 0.1
     x = pd.DataFrame([[0.1] * len(F.FEATURES)], columns=F.FEATURES)
     assert np.isfinite(model["long"].predict(x)[0]) and np.isfinite(model["short"].predict(x)[0])
+
+
+def test_monitor_records_peak_r_telemetry_and_never_raises(monkeypatch):
+    """ml_entry is on a real-money roster, so its monitor carries the M31 peak-R hook (observe-only)."""
+    import src.runtime.position_telemetry as pt
+    import src.units.strategies.ml_entry as me
+    seen = {}
+    monkeypatch.setattr(pt, "record_position_telemetry", lambda **kw: seen.update(kw))
+    df = pd.DataFrame({"ts": pd.date_range("2026-11-01", periods=3, freq="h", tz="UTC"),
+                       "open": [1.0, 1.0, 1.0], "high": [1.1, 1.1, 1.1], "low": [0.9, 0.9, 0.9],
+                       "close": [1.0, 1.0, 1.05], "volume": [1.0, 1.0, 1.0]})
+    pkg = {"direction": "long", "sl": 0.9, "tp": 1.2, "meta": {"atr14": 0.05}}
+    me.monitor({}, df, pkg)
+    assert seen.get("strategy") == "ml_entry" and seen.get("current_price") == 1.05 and seen.get("atr") == 0.05
+    monkeypatch.setattr(pt, "record_position_telemetry", lambda **kw: (_ for _ in ()).throw(RuntimeError("x")))
+    me.monitor({}, df, pkg)  # a telemetry failure never reaches the exit path

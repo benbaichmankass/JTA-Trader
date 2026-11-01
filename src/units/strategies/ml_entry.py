@@ -107,8 +107,29 @@ def order_package(cfg: dict, candles_df: Optional[pd.DataFrame] = None,
     }
 
 
+def _telemetry(candles_df: Optional[pd.DataFrame], open_pkg: dict) -> None:
+    """M31 peak-R position telemetry, the same hook as e4_oi_shock_1h / squeeze_breakout_4h. Observe-only: it reads
+    nothing back and cannot alter the exit. Swallows everything."""
+    try:
+        if candles_df is None or len(candles_df) == 0:
+            return
+        from src.runtime.exit_levers import since_entry
+        from src.runtime.position_telemetry import record_position_telemetry
+
+        meta = open_pkg.get("meta") or {}
+        record_position_telemetry(
+            candles_df=candles_df, atr=meta.get("atr14"), open_pkg=open_pkg, meta=meta,
+            window=since_entry(candles_df, open_pkg), direction=str(open_pkg.get("direction") or ""),
+            current_price=float(candles_df["close"].iloc[-1]), stop=open_pkg.get("sl"),
+            target=open_pkg.get("tp"), strategy=NAME)
+    except Exception:  # noqa: BLE001 -- telemetry must never break the time stop
+        logger.debug("ml_entry: telemetry failed", exc_info=True)
+
+
 def monitor(cfg, candles_df, open_pkg):  # noqa: ARG001 -- canonical signature
-    """The 24 h time stop only (the model was scored hold-to-bracket with a time stop); never raises."""
+    """The 24 h time stop only (the model was scored hold-to-bracket with a time stop); never raises.
+    Also records peak-R position telemetry (observe-only)."""
+    _telemetry(candles_df, open_pkg)
     try:
         from datetime import datetime, timezone
         from src.units.strategies.claude_desk import max_hold_verdict

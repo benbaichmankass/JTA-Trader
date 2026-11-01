@@ -152,6 +152,7 @@ def test_run_checks_strategies_match_roster():
     assert names == {
         "claude_desk",
         "e4_oi_shock_1h",  # 2026-10-30 E4-DEMO-LEG (Tier-3): the E4 OI-shock leg, bybit_1 demo
+        "ml_entry",  # 2026-11-01 ML-ENTRY-LIVE-ADAPTER (Tier-3 held PR #22079): the ML ENTRY decision model leg
         "turtle_soup", "vwap", "ict_scalp_5m", "trend_donchian", "fade_breakout_4h",
         "squeeze_breakout_4h", "fvg_range_15m", "htf_pullback_trend_2h", "trend_donchian_1h",
         "mes_trend_long_1d", "mgc_pullback_1d", "mhg_pullback_1d",

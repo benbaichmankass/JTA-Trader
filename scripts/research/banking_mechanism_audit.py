@@ -116,7 +116,8 @@ LEVERS = ["trail_mult", "tp_r", "trail_decay_tight_mult", "trail_decay_stall_bar
 # turtle_soup added 2026-10-27: it joined the enabled+live population (DEMO-FLOOR RULE) and its unit carries the hook (derived from source).
 TELEMETRY_HOOKED_UNITS = {"trend_donchian", "htf_pullback_trend_2h",
                           "ict_scalp", "squeeze_breakout_4h", "turtle_soup",
-                          "e4_oi_shock_1h"}  # E4-DEMO-LEG 2026-10-30
+                          "e4_oi_shock_1h",  # E4-DEMO-LEG 2026-10-30
+                          "ml_entry"}  # ML-ENTRY-LIVE-ADAPTER 2026-11-01 (#22079)
 
 
 def _f(v) -> Optional[float]:
