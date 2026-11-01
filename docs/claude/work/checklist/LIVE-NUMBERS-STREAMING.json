@@ -3,7 +3,7 @@
   "title": "Live trade count and live P&L must be live on the dashboard (no refresh, no 10 s+ waits): measure where the delay is (SPA polling interval vs REST latency vs uPnL write cadence in the DB vs /ws/market positions frames), then push positions + uPnL + counts over the existing WebSocket and render them as they arrive; publish a measured latency (venue mark -> screen)",
   "phase": null,
   "state": "queued",
-  "owner": null,
+  "owner": "manager",
   "lane": "session_01AFoLuM288vnTL4FB79j7gR",
   "model": "sonnet",
   "ceiling_usd": 8,
@@ -13,8 +13,8 @@
   "blocked_on": [],
   "note": "2026-10-29 ~22:35Z operator check on the first open trade: the open trade was a PROP ticket (eth_prop short, 3 prop accounts) and it does NOT appear on Overview at all; filed OVERVIEW-PROP-OPEN-TRADES. No real-money broker position was open (positions route: 13 rows, all paper), so this row's own observation (real-money uPnL updates by itself) is still owed on the next real-money open position. OPERATOR 2026-10-30T10:08Z (popup to Manager Session 2026-10-30b, verbatim): \"It's better but not yet where it needs to be - backlog it and we'll get back to it at another point\". Observation NOT met (uPnL updates improved but not at the 1-2 s live bar). Moved landed_unproven -> queued, unranked (backlog); bring it to the Thursday 2026-11-05 planning for a date. The hourly uPnL reminder trigger trig_01UuY58V64dQoetPPVieCSLV was disabled during the 10-29/30 rotations and never fired; this popup replaced it.",
   "priority_rank": null,
-  "updated_at": "2026-10-30T10:09:56Z",
-  "updated_by": "session_01AFoLuKe1M26JqmpKg3rYdo",
+  "updated_at": "2026-11-01T11:36:35Z",
+  "updated_by": "session_01AFoLuL5qrtXsc8bv7JrN4Z",
   "roadmap": [
     "L-OPS"
   ],

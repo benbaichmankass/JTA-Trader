@@ -3,7 +3,7 @@
   "title": "Fast track for operator/manager-directed trade updates (tighten/move SL, move TP, close, partial close): execute within ~1 min, no PR, no GitHub Actions queue. Reuse the VM rows watcher (src/runtime/live_review_rows_watch.py, POLL_S 45) + scripts/ops/live_review_apply.py executors and each account's own RiskManager; a directed-action record (who, operator quote, package/account/leg, action, level) committed to a branch the watcher reads; per-account targeting (a leg, not only the whole package); venue read-back + one ping. This is the single trade-action interface the desk, LTR and ML exit heads also call (STATUS-MOVE-OPEN-POSITIONS gap 2)",
   "phase": null,
   "state": "landed_unproven",
-  "owner": null,
+  "owner": "manager",
   "lane": null,
   "model": "claude-opus-5-5",
   "ceiling_usd": 15,
@@ -15,8 +15,8 @@
   "blocked_on": [],
   "note": "2026-10-29T13:48:45Z first --live directed action: operator popup 'Tighten to 84.6 now (Recommended)' on GDX short pkg-23929c3f526440c3 (alpaca_paper trade 6660): approve, executed, venue SL 84.6 / TP 78.25 read back; push->done 4.9s. Observation met on a paper account (n=1 live action); real-money directed action not yet observed.",
   "priority_rank": 1,
-  "updated_at": "2026-10-29T13:49:16Z",
-  "updated_by": "Manager Session 2026-10-29c",
+  "updated_at": "2026-11-01T11:36:35Z",
+  "updated_by": "session_01AFoLuL5qrtXsc8bv7JrN4Z",
   "roadmap": [
     "L-LADDER"
   ],
