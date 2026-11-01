@@ -1,0 +1,121 @@
+# Hand-authored 2026-11-01 by lane RESEARCH-ITERATE (Tier 1), dispatched by Manager Session 2026-11-01a. ITERATION unit: authored from a written diagnosis of the subject's last result. Decision rule registered BEFORE any run. Gates: none.
+id: RQ-20261101-78fc-19
+title: 'ITERATION 1 of uso_trend_1h (pass_unconfirmed): Does uso_trend_1h as declared, selected on 2018-06-01..(holdout boundary), stay net-positive
+  once on the held-back latest span?'
+status: queued
+cadence: once
+theme: live_strategy
+priority: 1
+roadmap:
+- L-PROGRAMMES
+programme: P3
+kind: experiment
+question: Does uso_trend_1h as declared, selected on 2018-06-01..(holdout boundary), stay net-positive once on the held-back latest span?
+why_this_matters: 'Operator 2026-11-01 ~12:59Z: "if the data doesn''t pass, it goes back into research for improvments and testing. THere is no
+  other pipeline for underperforming strategies/mls." uso_trend_1h is a TESTING leg (pass_unconfirmed) with no live research iteration (scripts/research/iteration_orphans.py,
+  2026-11-01); paper keeps it generating live data while this loop runs, never as a parking place.'
+iteration:
+  subject: uso_trend_1h
+  subject_kind: strategy_leg
+  from_result: comms/strategy_evidence/uso_trend_1h.json
+  verdict_read: pass_unconfirmed
+  diagnosis: 'Stage-0 record comms/strategy_evidence/uso_trend_1h.json (generated 2026-09-24, harness trend, 365 d window, fidelity faithful):
+    n=56 OOS trades, net 25.8924 R net of the full cost stack (fee-only 27.5422 R), expectancy 0.4624 R/trade, folds [-2.3, -0.6, 14.5, 14.3],
+    rule RULE-D1-STAGE0-NET-OF-FULL-COST pass. DIAGNOSIS: The Stage-0 edge passes (see record) but the leg cannot leave testing: mandate_resolver
+    S1->S2 reads NEEDS-DATA [R-HOLDOUT] -- no configuration has been confirmed on held-back data (docs/research/alpaca-promotion-inventory-2026-11-01.md).
+    uso_trend_1h is REFUSED on folds (2 of 4 positive): the confirmation decides whether the edge is one regime. Without this read it sits on
+    paper with no plan -- the failure the operator named.'
+  hypothesis: the declared configuration, selected on the earlier span, stays net-positive once on the held-back latest span
+  attempt: 1
+  due_by: '2026-11-08'
+power:
+  expected_n: 60
+  min_detectable_effect: 0.45
+  effect_units: sd
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: d=0.45 at alpha 0.05 / power 0.8 needs 39 trades (the repo E35 floor). expected_n=60 is an ESTIMATE scaled from the leg's record over
+    the longer window, NOT a measurement; below the floor the unit grades INDETERMINATE, never FAIL.
+  feasibility:
+    source: none
+    accrual_basis: Re-measurement on freshly fetched public candles over a pinned window; nothing accrues.
+decision_rule:
+  id: RULE-RQ-20261101-78fc-19
+  registered_at: '2026-11-01'
+  registered_before_run: true
+  statistic: scripts/research/exit_lever_ablation.py --grade holdout (PROMOTION-BAR-HOLDOUT-1016), one continuous harness pass, net of the full
+    cost stack.
+  rule: 'Select-then-confirm, one arm (the declared leg). The boundary is fixed before any outcome: the latest 25% of the window, grown in 1%
+    steps until it holds 25 of A''s entries, capped at 40%. A is eligible iff its discovery n >= 20, discovery net R > 0 and >= 3 of 4 discovery
+    folds net-positive. PASS (confirmed) iff n_holdout >= 25 and holdout net R > 0: the verdict carries holdout_confirmation in the shape mandate_resolver
+    R-HOLDOUT reads, and the next step is the leg''s S1->S2 resolver run (a promotion PROPOSAL, never a config edit here). FAIL (not_replicated
+    / no_discovery): the configuration does not replicate; the leg goes back to diagnosis for iteration 2. INDETERMINATE (underpowered / insufficient_discovery)
+    is a power shortfall, never evidence against the leg. Not changed after any result.'
+  what_it_does_not_do: Edits no config and no roster, places no order, is not a promotion case by itself. The arm grid is the whole search; the
+    baseline is the declared leg.
+intervention_controls:
+  not_applicable: a config-exact harness re-measurement / parameter ablation, not an in-trade action
+practice_precedent: 'M4, M5 (docs/reference/trading-and-model-practice-principles.md): pre-registered arm grid, every arm counted, baseline =
+  the declared leg; holdout read once (PROMOTION-BAR-HOLDOUT-1016).'
+compute: cpu_light
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 4.0
+  est_minutes: 30
+  why_runner: Fetches keyless public candles for a pinned window; reads no trainer data; CPU only.
+  basis: Estimate from comparable exit_lever_ablation runs (3ef3-*, 7b6f-*); the first run replaces it.
+value:
+  usd_at_stake_per_month: 300
+  confidence: 0.15
+  bucket: structural
+  basis: planning weight by money rank (1 prop / alpaca_live candidate, 2 bybit_1 with a real-money sibling, 3 paper only); an estimate, not a
+    measurement
+run:
+  command:
+  - python3
+  - scripts/research/exit_lever_ablation.py
+  - --leg
+  - uso_trend_1h
+  - --arm
+  - A=
+  - --days
+  - '3060'
+  - --start
+  - '2018-06-01'
+  - --end
+  - 2026-10-15 23:59
+  - --non-crypto-source
+  - dukascopy
+  - --grade
+  - holdout
+  - --baseline
+  - A
+  - --delta-r
+  - '0'
+  - --folds
+  - '4'
+  - --fold-majority
+  - '3'
+  - --n-floor
+  - '20'
+  - --holdout-frac
+  - '0.25'
+  - --holdout-min-trades
+  - '25'
+  - --holdout-max-frac
+  - '0.40'
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 90
+  inputs:
+    research_unit: RQ-20261101-78fc-19
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- RESEARCH-ITERATE
+- comms/strategy_evidence/uso_trend_1h.json
+what_it_does_not_do: Edits no config, roster or rule; places no order; a PASS is an input to the next iteration, not a promotion.

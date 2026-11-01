@@ -2,21 +2,28 @@
   "id": "FUNDING-CARRY-HARNESS-FIX",
   "title": "Fix scripts/backtest_funding_carry.py (producer_failed x2, queued 33 days) and run delta-neutral funding carry on the top 10 perps by OI on settled funding and measured fees",
   "phase": null,
-  "state": "queued",
-  "owner": null,
-  "lane": null,
+  "state": "done",
+  "owner": "manager",
+  "lane": "RESEARCH-EDGE",
   "model": "claude-sonnet-5-5",
-  "ceiling_usd": 8,
+  "ceiling_usd": 30,
   "spend_usd": null,
   "tier": 1,
-  "prs": [],
+  "prs": [
+    22104
+  ],
   "blocked_on": [],
-  "note": "The best-founded idea the audit found (a documented payer: leveraged longs pay funding). Done when a measured discovery result lands: net annualised return, Sharpe, worst month, turnover. Pre-register the unit (<= 10 configs, stated mechanism) before it runs. Source: docs/audits/2026-11-01-from-scratch/AUDIT.md section 8 (lane SYSTEM-AUDIT-FROM-SCRATCH, PR #22072); walk-through https://claude.ai/artifact/T9ztV5nc1fUAGbdjsbZHSf. Operator 2026-11-01 ~08:45Z popup, verbatim: \"Walk through it today (Rec.)\" (Tier-1 proposals filed straight away). Gates this adds: none.",
+  "note": "The best-founded idea the audit found (a documented payer: leveraged longs pay funding). Done when a measured discovery result lands: net annualised return, Sharpe, worst month, turnover. Pre-register the unit (<= 10 configs, stated mechanism) before it runs. Source: docs/audits/2026-11-01-from-scratch/AUDIT.md section 8 (lane SYSTEM-AUDIT-FROM-SCRATCH, PR #22072); walk-through https://claude.ai/artifact/T9ztV5nc1fUAGbdjsbZHSf. Operator 2026-11-01 ~08:45Z popup, verbatim: \"Walk through it today (Rec.)\" (Tier-1 proposals filed straight away). Gates this adds: none. [2026-11-01 manager] Operator 2026-11-01 ~11:05Z popup, verbatim: \"Fold into running lanes (Rec.)\". Owner: lane RESEARCH-OPS. Target: harness fixed and unit re-dispatched by 2026-11-02. 2026-11-01 RESEARCH-OPS-20261101-0940: ROOT CAUSE (measured): research-harness-dispatch.yml's funding_carry arm fetched funding from api.bybit.com (HTTP 403 from runners); both prior rows (RQ-20260929-104, runs 37188714461 / 37205968950, 2026-10-04) are producer_failed. Fix in PR #22104 (hold): scripts/ops/fetch_binance_vision_funding.py (data.binance.vision; BTCUSDT 358 settlements to 2026-10-31) wired into the workflow; harness verified end to end locally on real funding+candles (BTCUSDT 1h Jul-Oct 2026: 2 trades, n<39 = indeterminate by that unit's rule; the --days 1200 run is what decides). RQ-20260929-104 (BNBUSDT, rule registered 2026-09-29) re-armed. NOT DONE: the audit's 'top 10 perps by OI, delta-neutral, settled funding + measured fees' discovery unit: the dispatch workflow runs one symbol and the directional variant only, and no OI ranking was verified; needs a multi-symbol runner and its own pre-registered rule (lane RESEARCH-EDGE per the manager 11:13Z). Deadline 2026-11-02. Delta-neutral carry discovery (unit RQ-20261101-58e4-03, PR #22117): PASS on discovery, n=1491 d, 8 trials. C1 net 11.2%/yr, Sharpe 7.8, worst month -0.18%, stress 9.7%/yr, DSR 1.0. BUT 2020 +10%, 2021 +33%, 2022 -0.1%, 2023 +1.8%, 2024H1 +5.9%: post-2021 at or below cash; venue/liquidation risk unmodelled. Earns ONE holdout read once HOLDOUT-LOCK exists; holdout NOT read. FOLLOW-UP sensitivities (manager 2026-11-01, dev window only, post-hoc, no new configs; scripts/research/edge_followups.py, comms/research/RQ-20261101-58e4-03/.../followups.json): C1 is FLAT from May to Dec 2022 (funding filter out of the market, incl. the FTX month), so the Nov-2022 month reads 0.0 by construction, NOT evidence of safety. Post-2021 (2022-01..2024-06) net 3.00%/yr vs 3-month T-bill 3.96%/yr (FRED DTB3) on the same capital: excess -0.95%/yr, excess Sharpe -1.6. With short-perp liquidation at 25% margin, no top-up (68 symbol-run liquidation events): post-2021 2.43%/yr, excess -1.53%/yr. Top-up with 5 bps transfer friction (485 top-up increments): 2.98%/yr, excess -0.98%/yr. Venue default is a scenario, not a measurement: 100% of capital on the failed venue = -100% (-50% at 50% recovery). Verdict: carry's discovery pass does not survive as an investment: post-2021 it earns less than cash; the pass is a 2020-21 funding-regime result. Holdout read still waits for HOLDOUT-LOCK; I would not spend it expecting a different answer unless funding has re-widened (check 2024-07+ funding level first, which is a rate, not a return read). CLOSED 2026-11-01 after merge of #22117 (be10d84b): graded units and results are on main (observed: queue units, research/results records, comms evidence present on origin/main). The subject is NOT retired: its failure attribution and lever map are in research/levers/ and handed to RESEARCH-ITERATE (operator doctrine 2026-11-01).",
   "priority_rank": 2,
-  "updated_at": "2026-11-01T08:48:20Z",
-  "updated_by": "session_01AFoLuJ1apgy8sfngu4WyNH",
+  "updated_at": "2026-11-01T15:07:28Z",
+  "updated_by": "session_RESEARCH-EDGE",
   "roadmap": [
     "L-PROGRAMMES"
   ],
+  "due_by": "2026-11-02",
+  "writeback": {
+    "roadmap": "none: research outcome recorded in research/levers/*.yaml and research/results; no milestone status changed",
+    "arch": "none: no component changed"
+  },
   "_seq": 862
 }

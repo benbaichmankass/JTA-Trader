@@ -500,6 +500,7 @@ real top-level `docs/*.md` and fails if the population builder cannot see it.
 | `docs/claude/work/README.md` | unknown | unknown | — | never | `not-assessed / not-assessed` | — |
 | `docs/claude/work/SOAK-REPORT-observations.md` | unknown | unknown | — | never | `not-assessed / not-assessed` | — |
 | `docs/claude/work/SOAK-REPORT.md` | unknown | unknown | — | never | `not-assessed / not-assessed` | — |
+| `docs/claude/work/SOAK-TOUCH-SPLIT.md` | unknown | unknown | — | never | `not-assessed / not-assessed` | — |
 | `docs/claude/work/designs/world-event-prediction-engine-v0.1.md` | unknown | unknown | — | never | `not-assessed / not-assessed` | — |
 | `docs/claude/work/findings/E18-starved-triage-post-E35-20260926.md` | unknown | unknown | — | never | `not-assessed / not-assessed` | — |
 | `docs/claude/work/handoffs/2026-10-21-01VduHYz-to-new.md` | unknown | unknown | — | never | `not-assessed / not-assessed` | — |
@@ -526,6 +527,7 @@ real top-level `docs/*.md` and fails if the population builder cannot see it.
 | `docs/claude/work/triage-2026-09-28.md` | unknown | unknown | — | never | `not-assessed / not-assessed` | — |
 | `docs/claude/workplan.md` | plan | historical | — | 2026-09-07 | `name:workplan-is-a-forward-commitment / mi159:plan-status-header:historical` | — |
 | `docs/cross-asset-regime-conviction-DESIGN.md` | architecture | unknown | — | never | `name:design-declares-a-contract / not-assessed` | — |
+| `docs/data/market-data-lake.md` | architecture | live | — | 2026-11-01 | `dir:schema-and-taxonomy-are-contracts / read:MARKET-DATA-LAKE-lane-authored-it-2026-11-01-measured` | pooled-ML market data lake on HF: audit, layout, per-class depth, feed automation |
 | `docs/data/dataset-schema.md` | architecture | unknown | — | never | `dir:schema-and-taxonomy-are-contracts / not-assessed` | — |
 | `docs/data/dataset-taxonomy.md` | architecture | unknown | — | never | `dir:schema-and-taxonomy-are-contracts / not-assessed` | — |
 | `docs/data/versioning-policy.md` | architecture | unknown | — | never | `dir:schema-and-taxonomy-are-contracts / not-assessed` | — |
@@ -790,6 +792,8 @@ real top-level `docs/*.md` and fails if the population builder cannot see it.
 | `docs/research/alpaca-200-affordability-sweep-2026-08-25.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
 | `docs/research/alpaca-close-blast-radius-mechanism-2026-09-08.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
 | `docs/research/alpaca-inverse-etf-route-2026-09-10.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
+| `docs/research/alpaca-live-activity-2026-11-01.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
+| `docs/research/alpaca-promotion-inventory-2026-11-01.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
 | `docs/research/alpaca-live-refusal-verdict-2026-09-07.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
 | `docs/research/alpaca-live-roster-candidates-2026-09-10.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
 | `docs/research/alpaca-live-splg-iaum-promotion-sizing-2026-07-07.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
@@ -986,6 +990,7 @@ real top-level `docs/*.md` and fails if the population builder cannot see it.
 | `docs/research/ml-decision-models-2026-11-01/DESIGN.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
 | `docs/research/ml-decision-models-2026-11-01/DIAGNOSIS.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
 | `docs/research/ml-p1-costnet-rebuild-2026-10-29.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
+| `docs/research/ml-feature-inventory-2026-11-01.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | Every feature source (symbols, depth read from files, PIT, live?, backfill cost), ranked pooled feature-store plan and gap rows; answers why ENTRY has 20 features. |
 | `docs/research/ml-review-frontier-diagnosis-2026-10-28.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | Scored last 4 ml-review + frontier outputs; researched MRM/monitoring practice; basis for the two-layer redesign of both skills. |
 | `docs/research/ml-data-classification-2026-10-13.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
 | `docs/research/ml-strategies-deep-review-2026-06-25.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |

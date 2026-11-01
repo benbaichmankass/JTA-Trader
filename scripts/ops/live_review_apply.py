@@ -705,10 +705,14 @@ def _venue_tp(client, cfg: Dict[str, Any], symbol: str, direction: str, tp_order
             return out
         out["read_state"] = "resolved"
         if tp_order_id:
+            # THIS leg's tracked TP, or None. Never fall back to the position-level / sole TP leg: on a
+            # slices account that is a SIBLING package's bracket, and reading it as this leg's would pass
+            # the both-brackets check for a leg whose own TP is gone (LTR-PACKET-FIXES, 2026-11-01; the
+            # same fail-closed rule amend_position_sl._venue_state applies to the SL).
             hit = [o for o in orders if str(o.get("orderId")) == str(tp_order_id)]
             if hit:
                 out["venue_tp"] = _f(hit[0].get("triggerPrice"))
-                return out
+            return out
         pos = next((r for r in rows if str(r.get("side")) == want and (_f(r.get("size")) or 0) > 0), None)
         if pos is not None and _f(pos.get("takeProfit")):
             out["venue_tp"] = _f(pos.get("takeProfit"))
@@ -953,7 +957,10 @@ def run(intent: lri.LiveReviewIntent, *, apply: bool = False, db=None,
     ``--mandate`` may name a per-package AUTO mandate (``kind: ltr_auto_apply``, MD-LTR-ADA-AUTO): it is
     granted only while ``ltr_auto_mandate.scoping`` finds it active in ``config/mandates.yaml``
     (``mandates_doc`` in tests) for THIS package and action, and its bounds (:func:`auto_bound_refusal`,
-    the executors' bracket read-backs) bind; every applied action then pings ONCE, not per account."""
+    the executors' bracket read-backs) bind; every applied action then pings ONCE, not per account.
+    An ACCOUNT-scoped auto mandate (``account_scope``, MD-LTR-PAPER-AUTO) acts only on the legs its accounts
+    hold; the other legs are listed in ``scope_excluded`` and never touched, and the shared package stop
+    is never moved by it."""
     db = db or _open_db()
     accounts = accounts if accounts is not None else _accounts()
     strategies = strategies if strategies is not None else _strategies()
@@ -977,26 +984,31 @@ def run(intent: lri.LiveReviewIntent, *, apply: bool = False, db=None,
     auto_doc = mandates_doc if mandates_doc is not None else ltr_auto_mandate.load()
     auto = None
     if intent.mandate and ltr_auto_mandate.is_auto_mandate(intent.mandate, auto_doc):
-        scoped = ltr_auto_mandate.scoping(intent.order_package_id, intent.action, auto_doc)
-        auto = scoped if scoped is not None and str(scoped["id"]) == str(intent.mandate) else None
+        auto = ltr_auto_mandate.named_scoping(intent.mandate, intent.order_package_id, intent.action, auto_doc)
         mandate_ok = auto is not None
         out["auto_mandate"] = intent.mandate if auto else None
         if auto is None:
             out.update(exit=EXIT_REFUSED, detail=f"mandate {intent.mandate} does not scope "
                                                  f"{intent.order_package_id} / {intent.action}")
             return out
+        auto_accounts = ltr_auto_mandate.account_scope(auto)
+        if auto_accounts is not None:
+            out["auto_account_scope"] = sorted(auto_accounts)
         bound = auto_bound_refusal(intent, pkg, st)
         if bound:
             out.update(exit=bound[0], detail=bound[1])
             key = f"{intent.order_package_id}|auto_bound|{intent.review_id}"
             if apply and bound[0] == EXIT_REFUSED and not (st.setdefault("alerted", {})).get(key):
                 st["alerted"][key] = datetime.now(timezone.utc).isoformat()
-                _alert(pkg, ",".join(sorted({str(lg.get("account_id")) for lg in gather_legs(db, pkg)})) or "?",
+                _alert(pkg, ",".join(sorted({str(lg.get("account_id")) for lg in gather_legs(db, pkg)
+                                             if auto_accounts is None or lg.get("account_id") in auto_accounts}))
+                       or "?",
                        f"{intent.action} not applied under {intent.mandate}: {bound[1]}")
                 if persist:
                     _save_state(st)
             return out
     auto_applied: List[tuple] = []
+    auto_accounts = ltr_auto_mandate.account_scope(auto) if auto is not None else None
     # The mandate's package-level clauses (mechanics match; table EV bounds OR a
     # judgement confidence + reason -- LTR-JUDGEMENT-APPLY; for a trade action
     # also a reason and its target -- LTR-ALL-ACTIONS). None = they hold.
@@ -1032,6 +1044,17 @@ def run(intent: lri.LiveReviewIntent, *, apply: bool = False, db=None,
         if not legs:
             out.update(exit=EXIT_REFUSED, detail=f"{directed_actions.R_SCOPE_EMPTY}:{intent.target_account_id}"
                                                  f"/{intent.target_trade_id or '*'}")
+            return out
+    if auto_accounts is not None:
+        # An ACCOUNT-scoped auto mandate (MD-LTR-PAPER-AUTO): act ONLY on the scoped accounts' legs. Every
+        # other account carrying the package (real money, mirror, prop) is not touched, computed or pinged
+        # here: it stays advice-only, exactly as without the mandate.
+        out["scope_excluded"] = sorted({str(lg.get("account_id")) for lg in legs
+                                        if lg.get("account_id") not in auto_accounts})
+        legs = [lg for lg in legs if lg.get("account_id") in auto_accounts]
+        if not legs:
+            out.update(exit=EXIT_REFUSED, detail=f"mandate {intent.mandate} scopes no open leg of "
+                                                 f"{intent.order_package_id} (accounts {sorted(auto_accounts)})")
             return out
     for leg in legs:
         aid = leg["account_id"]
@@ -1133,7 +1156,9 @@ def run(intent: lri.LiveReviewIntent, *, apply: bool = False, db=None,
     # each applied leg is held at ITS OWN applied level (notes.sl_floor) and the
     # trail keeps working for the untouched legs -- account-scoped execution.
     levels = set(trade_applied.values())
-    if n_trade_legs and len(trade_applied) == n_trade_legs and len(levels) == 1 and not intent.target_account_id:
+    # An account-scoped apply never moves the SHARED package stop: the legs outside its scope keep theirs.
+    if (n_trade_legs and len(trade_applied) == n_trade_legs and len(levels) == 1 and not intent.target_account_id
+            and auto_accounts is None):
         lvl = levels.pop()
         if lri.is_tighter(intent.direction, lvl, _f(pkg.get("sl")) or lvl):
             db.update_order_package(pkg["order_package_id"], {"sl": lvl})

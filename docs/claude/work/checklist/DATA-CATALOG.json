@@ -2,7 +2,7 @@
   "id": "DATA-CATALOG",
   "title": "Data catalog of every STORE (source, symbols, grain, depth, cadence, location, market/OURS class, licence, expected rows) + an integrity check over a trainer listing",
   "phase": "build",
-  "state": "dropped",
+  "state": "queued",
   "owner": "build lane (Sonnet) dispatched by the manager",
   "lane": null,
   "model": null,
@@ -11,11 +11,16 @@
   "tier": 1,
   "prs": [],
   "blocked_on": [],
-  "note": "[2026-10-14 lane DATA-INFRA-PROGRAMME, plan docs/research/programmes/06-DATA-INFRA.md, milestone L-DATA] Programme 06 Q6. WHY: before this audit nobody could say that a 572 MB BTC 1m v001 sits unrefreshed on the trainer, that four v002 market_raw shards end at round counts (BTC 5m 157,000 with a 2023 last price, SOL 5m 135,000, SOL 15m 64,000, ADA 15m 158,000) or that SPLG 1d v002 is EMPTY (all MEASURED, trainer diag #18108). docs/reference/signal-catalog.yaml covers what is READ, not what is STORED. BUILD: docs/reference/data-catalog.yaml (one entry per store in 06 \u00a7 2.1/2.2, incl. licence and owner row) + scripts/ops/data_catalog_check.py that reads a trainer-vm-diag listing (path, rows, first/last ts) and flags: rows != expected (calendar minus gap ledger), 0 rows, last ts older than the store's cadence, version sprawl (market_features has v001..v901 one-offs, 7.9 of 9.6 GB). Tier-1 (docs + read-only tooling). DONE WHEN: catalog committed, the check run once against a fresh diag listing and its output committed under comms/ or docs/research/, every flag routed to a row (ML-SHARD-TRUNCATED owns the repair). [2026-10-29 BACKLOG-RESET-20261029] dropped: bulk reset 2026-10-29: value unknown (operator). Re-open by setting state=queued if the value is later known.",
-  "updated_at": "2026-10-29T11:31:31Z",
+  "note": "[2026-10-14 lane DATA-INFRA-PROGRAMME, plan docs/research/programmes/06-DATA-INFRA.md, milestone L-DATA] Programme 06 Q6. WHY: before this audit nobody could say that a 572 MB BTC 1m v001 sits unrefreshed on the trainer, that four v002 market_raw shards end at round counts (BTC 5m 157,000 with a 2023 last price, SOL 5m 135,000, SOL 15m 64,000, ADA 15m 158,000) or that SPLG 1d v002 is EMPTY (all MEASURED, trainer diag #18108). docs/reference/signal-catalog.yaml covers what is READ, not what is STORED. BUILD: docs/reference/data-catalog.yaml (one entry per store in 06 \u00a7 2.1/2.2, incl. licence and owner row) + scripts/ops/data_catalog_check.py that reads a trainer-vm-diag listing (path, rows, first/last ts) and flags: rows != expected (calendar minus gap ledger), 0 rows, last ts older than the store's cadence, version sprawl (market_features has v001..v901 one-offs, 7.9 of 9.6 GB). Tier-1 (docs + read-only tooling). DONE WHEN: catalog committed, the check run once against a fresh diag listing and its output committed under comms/ or docs/research/, every flag routed to a row (ML-SHARD-TRUNCATED owns the repair). [2026-10-29 BACKLOG-RESET-20261029] dropped: bulk reset 2026-10-29: value unknown (operator). Re-open by setting state=queued if the value is later known. [2026-11-01 lane ML-FEATURE-INFRA] REOPENED (was dropped 2026-10-29 'value unknown'): the operator has now stated the value. Operator 2026-11-01 verbatim: \"we should already have a data feed/features catalog, so I don't know why we need to be so lean just to get an ML off the ground\". Scope: the per-STORE/available-feeds catalog the signal catalog is not (it covers what is READ; ENTRY's 20 features are in neither catalog, 0 matches). First entries: the Binance Vision streams of docs/research/ml-feature-inventory-2026-11-01.md section 2a. Due 2026-11-03. Gates: none.",
+  "updated_at": "2026-11-01T11:02:49Z",
   "updated_by": "session_01AFoLuKwNMzjtn2CH2kVd86",
   "roadmap": [
     "L-DATA"
   ],
+  "observation": {
+    "what": "docs/reference/data-catalog.yaml lists every store incl. the Binance Vision streams with first/last ts",
+    "how_to_check": "ls docs/reference/data-catalog.yaml",
+    "due_by": "2026-11-03"
+  },
   "_seq": 497
 }

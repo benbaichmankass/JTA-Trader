@@ -1,0 +1,74 @@
+{
+ "read_state": "read",
+ "rule": "ADMIT iff pooled LOFO delta >= +0.010 R per decision AND delta > 0 in >= 6 of 8 folds AND delta >= the measured seed noise |A - A2| AND present on >= 40 percent of dev decision rows",
+ "baseline_A": {
+  "n": 67860,
+  "mean_net_r": 0.0009898514781754306
+ },
+ "arms": {
+  "B": {
+   "family": "F1",
+   "n": 35381,
+   "mean_net_r": -0.0024157940466144195,
+   "delta_vs_A": -0.00340564552478985,
+   "folds_better_than_A": 5,
+   "dev_coverage": 1.0,
+   "verdict": "reject"
+  },
+  "C": {
+   "family": "F2",
+   "n": 64719,
+   "mean_net_r": 0.0017516573360587242,
+   "delta_vs_A": 0.0007618058578832936,
+   "folds_better_than_A": 3,
+   "dev_coverage": 0.9964005629194833,
+   "verdict": "reject"
+  },
+  "D": {
+   "family": "F3",
+   "n": 68156,
+   "mean_net_r": -0.028137350476362476,
+   "delta_vs_A": -0.029127201954537905,
+   "folds_better_than_A": 2,
+   "dev_coverage": 0.7416674685462724,
+   "verdict": "reject"
+  },
+  "E": {
+   "family": "F4",
+   "n": 51379,
+   "mean_net_r": -0.05596640044731888,
+   "delta_vs_A": -0.05695625192549431,
+   "folds_better_than_A": 0,
+   "dev_coverage": 0.9999278308354783,
+   "verdict": "reject"
+  },
+  "F": {
+   "family": "F5",
+   "n": 44577,
+   "mean_net_r": 0.004500959611195552,
+   "delta_vs_A": 0.0035111081330201216,
+   "folds_better_than_A": 4,
+   "dev_coverage": 1.0,
+   "verdict": "reject"
+  },
+  "G": {
+   "families": [
+    "F1",
+    "F2",
+    "F3",
+    "F4",
+    "F5"
+   ],
+   "n": 92589,
+   "mean_net_r": -0.020629781372417114,
+   "delta_vs_A": -0.021619632850592544,
+   "note": "reported beside B..F; never substitutes for them"
+  }
+ },
+ "admitted_families": [],
+ "variants_read_on_sealed_window": 0,
+ "not_run": [
+  "H (bookDepth): not fetched; rule of fs01-01 arm H stays unevaluated"
+ ],
+ "noise_floor_abs_A_minus_A2": 0.0016680637686382008
+}

@@ -1,0 +1,86 @@
+# Hand-authored 2026-11-01 by lane RESEARCH-EDGE (Tier 1). Decision rule registered BEFORE the run (this commit precedes the run commit). Gates: none.
+id: RQ-20261101-58e4-05
+title: 'Discovery: vol-targeted time-series momentum across liquid ETFs and a copper futures proxy (SPY QQQ IWM TLT IEF GLD SLV GDX USO XLE MHG), 9 configs, net of cost, window 2008-01..2024-06'
+cadence: once
+roadmap:
+- L-PROGRAMMES
+theme: new_strategy_prop
+priority: 1
+kind: experiment
+question: Does a vol-targeted multi-asset trend portfolio (sign of 63/126/252-trading-day returns, sleeve vol target 10%, weekly rebalance, long-short) earn a net Sharpe that survives a 9-trial deflation
+  on 2008-01-01..2024-06-30, where the 2022 crypto regime break does not apply?
+why_this_matters: Manager request 2026-11-01 (non-crypto trend), row RQ-TSMOM-PORTFOLIO-DISCOVERY. Trend is the best-documented family in multi-asset futures and ETFs. The crypto TSMOM unit (-01) failed
+  on half-period stability and DSR. This is a NEW unit with its own trial count (9), not a re-run of -01.
+power:
+  expected_n: 4100
+  min_detectable_effect: 0.5
+  effect_units: annualised_sharpe
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: ~16.5 years of daily returns (n~4100); SE of an annualised Sharpe ~ 1/sqrt(16.5) ~ 0.25. Discovery only; a pass is a candidate for ONE holdout read.
+  feasibility:
+    source: none
+    accrual_basis: Fixed historical archive (data.binance.vision), no accrual.
+decision_rule:
+  id: RULE-RQ20261101-58E4-05-ETF-TSMOM-DISCOVERY
+  registered_at: '2026-11-01'
+  registered_before_run: true
+  statistic: portfolio net Sharpe, stress Sharpe, half-period Sharpes, bootstrap p05 of annualised mean, DSR(N=9) from scripts/research/edge_etf_tsmom.py
+  rule: 'Configs E1..E9 fixed in scripts/research/edge_etf_tsmom.py. PRIMARY = E5 (lookbacks 63/126/252 trading days, sleeve target vol 10%, max leverage 3, 63-day vol window, weekly rebalance, long-short,
+    equal 1/11 sleeve share). PASS iff E5 net Sharpe >= 0.5 AND stress (2x cost) net Sharpe > 0 AND net Sharpe > 0 in BOTH halves AND bootstrap 5th-percentile of annualised mean > 0 AND DSR(E5; N=9) > 0.95,
+    evaluated 2008-01-01..2024-06-30 (252-day annualisation). FAIL otherwise. Also REPORTED, not graded: the 2020-06..2024-06 sub-window and calendar-year returns. Costs: 2 bps per side per unit |delta
+    weight| (commission-free ETFs), stress 4 bps; NO financing or borrow on shorts and PRICE-ONLY returns (committed closes are unadjusted: dividends excluded, understating long carry on bonds and equities,
+    flattering shorts) - both stated limitations. Holdout (2024-07+) not read.'
+  what_it_does_not_do: Does not read the holdout (2024-07-01 on; edge_data.MAX_MONTH makes it unloadable), touch config/strategies.yaml, rosters or sizing, or propose a live leg. A PASS is only a candidate
+    for the single HOLDOUT-LOCK read.
+compute: cpu_light
+value:
+  usd_at_stake_per_month: 100
+  confidence: 0.1
+  bucket: structural
+  basis: 'stand-in: the audit (2026-11-01) found the live book flat gross and negative net; a documented-payer family is the only candidate source of positive expectancy'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 4.0
+  est_minutes: 60
+  basis: Manual lane run (RESEARCH-EDGE) from a session with Binance Vision egress; daily bars, a few thousand rows per symbol; no secret.
+run:
+  command:
+  - python3
+  - scripts/research/edge_etf_tsmom.py
+  - --data-dir
+  - comms/research
+  - --out
+  - <result.json>
+  timeout_minutes: 120
+  inputs:
+    research_unit: RQ-20261101-58e4-05
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- scripts/research/edge_etf_tsmom.py
+- comms/research
+- RQ-20261101-58e4-01
+- configs E1..E9; primary E5
+programme: P6
+status: done
+practice_precedent: 'docs/reference/trading-and-model-practice-principles.md and AUDIT section 5b (docs/audits/2026-11-01-from-scratch/AUDIT.md): <=10 pre-declared configs, discovery ends 2024-06-30, every
+  trial counted, DSR(N=trials)>0.95; Bailey & Lopez de Prado 2014 (DSR); payer literature: Moskowitz-Ooi-Pedersen 2012 JFE; Hurst-Ooi-Pedersen 2017 JPM'
+last_dispatched_at: '2026-11-01T11:50:00+00:00'
+grading:
+  attested: RULE-RQ20261101-58E4-05-ETF-TSMOM-DISCOVERY
+  auto: false
+  decision_rule_id: RULE-RQ20261101-58E4-05-ETF-TSMOM-DISCOVERY
+  evidence:
+  - research/results/RQ-20261101-58e4-05/manual-research-edge-20261101.jsonl
+  - comms/research/RQ-20261101-58e4-05/manual-research-edge-20261101/result.json
+  graded_at: '2026-11-01'
+  grader: manual (lane RESEARCH-EDGE)
+  note: 'Closed: a same-window replay reproduces the same number; a variant is a new trial.'
+  reason: E5 net Sharpe 0.418 (<0.5), halves 0.495 / 0.342, stress 0.392, bootstrap p05 ok, DSR(N=9)=0.570 (<0.95); n=4151 d
+  rows: 1
+  verdict: fail

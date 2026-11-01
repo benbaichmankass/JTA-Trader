@@ -1,9 +1,9 @@
 ---
 name: programme-review
-description: The WEEKLY research programme review (routine "Weekly research programme review", Wed 19:29Z, one Opus lane). Reads the research map, every programme plan (research/programmes/*.yaml + docs/research/programmes/*.md) and every result graded in the week; runs in two layers -- a script-computed CHECKS packet (scripts/research/research_ops_checks.py --kind programme_review --since 7d) and an ANALYSIS per programme and per track (TRADING / MODEL) -- then updates each plan (learned; questions answered / unlocked / retired; the next 3-4 weeks of pre-registered units, value-ranked; cross-programme and cross-track feeds), turns needs_authoring nodes into unit specs, grades last week's calls, and lands one HELD PR for the manager's merge. Feeds Thursday planning. Use when the routine fires, the manager dispatches a PROGRAMME-REVIEW-<date> lane, or the operator says "review the research programmes". NOT the 4x/day pipeline pass (research-ops), NOT the external scan (frontier-research), NOT closed-trade grading (performance-review).
+description: The WEEKLY research programme review (routine "Weekly research programme review", Wed 19:29Z, one Opus lane). Reads the research map, every programme plan (research/programmes/*.yaml + docs/research/programmes/*.md) and every result graded in the week; runs in two layers -- a script-computed CHECKS packet (scripts/research/research_ops_checks.py --kind programme_review --since 7d) and an ANALYSIS per programme and per track (TRADING / MODEL) -- audits THE ITERATION LOOP first (every testing leg, non-live ML model and live-review class has a live iteration unit authored from a diagnosis; orphans are authored here; retirement only on lever exhaustion, never on an attempt count; every subject's lever coverage reviewed), then updates each plan (learned; questions answered / unlocked / retired; the next 3-4 weeks of pre-registered units, value-ranked; cross-programme and cross-track feeds), turns needs_authoring nodes into unit specs, grades last week's calls, and lands one HELD PR for the manager's merge. Feeds Thursday planning. Use when the routine fires, the manager dispatches a PROGRAMME-REVIEW-<date> lane, or the operator says "review the research programmes". NOT the 4x/day pipeline pass (research-ops), NOT the external scan (frontier-research), NOT closed-trade grading (performance-review).
 ---
 
-> **Doc status:** `live` · category `instruction` · last verified `2026-10-28` · registered in [`docs/DOCUMENT-INDEX.md`](../../../docs/DOCUMENT-INDEX.md)
+> **Doc status:** `live` · category `instruction` · last verified `2026-11-01` · registered in [`docs/DOCUMENT-INDEX.md`](../../../docs/DOCUMENT-INDEX.md)
 
 # /programme-review — what this week's research means, and what we ask next
 
@@ -14,6 +14,27 @@ fed); reason over wide context inside a fixed format that guarantees the checks;
 to trade better) and **MODEL** (how to build a better AI trader model). Diagnosis of the previous runs and sources:
 [`docs/research/research-ops-redesign-2026-10-28.md`](../../../docs/research/research-ops-redesign-2026-10-28.md); shared
 pattern `docs/reference/llm-analyst-skill-design.md`.
+
+## THE ITERATION LOOP, weekly view (operator 2026-11-01, binding; lane RESEARCH-ITERATE)
+
+The rule is stated once in [`docs/plans/OPERATING-PLAN-2026-09-21.md`](../../../docs/plans/OPERATING-PLAN-2026-09-21.md) § 2 "What does not pass goes back into research — THE research workflow". The 4x/day `research-ops` pass runs the loop (its § "THE CORE MANDATE" holds the `iteration:` field mechanics). This weekly review checks that the loop is LEARNING (how each lever moves each outcome), not just turning:
+
+0. `python3 scripts/research/lever_map.py --backfill --summary` — every subject's lever response map (live and paper legs, ML heads, live-review classes). Per programme: which subjects' maps moved this week, which lever responses look like potential (smooth, fold-stable) or overfit (single point), and which subjects have NO map reading yet — those get a structured first design (one-factor sweeps of declared levers against a baseline control).
+1. `python3 scripts/research/iteration_orphans.py --legacy --json` — orphans per kind. **Every orphan is authored by this review**
+   (an iteration unit with the block) or named with the reason in `handoff`. Report the counts first in the record.
+2. **Per subject, the week's iterations and its lever map** (`iteration_orphans.py --levers`): what each diagnosis said,
+   which lever families were searched, what the result taught, and which families remain untested. A subject whose passes keep
+   searching the same family after flat results is a design failure of the loop: the next pass moves to an untested family.
+3. **Retirement only on lever exhaustion.** A subject is proposed for retirement only when its lever map is exhausted — every
+   family for its kind tested at declared power, net of the full cost stack, across regimes, none producing an edge — in a
+   family-review record (`research/family_reviews/`, policy v3 `lever_map`), then the `config/strategies.yaml` retirement record
+   proposed to the manager as Tier 3. **Never on a count of attempts or failed tests.** Everything else keeps iterating.
+4. **Survivors**: subjects whose confirmation passed this week, each with its promotion proposal (Tier 3, the manager's) named.
+   Success is iterations advanced and survivors found, never units authored (RESEARCH-SLO-YIELD).
+
+The record gains `"iteration": {"orphans_before": {}, "orphans_after": {}, "advanced": 0, "survivors": [], "lever_coverage":
+{"<subject>": {"tested": ["exit"], "remaining": ["entry", "regime_gating"]}}, "retirement_proposals": [{"subject": "...",
+"record": "research/family_reviews/<f>.yaml"}]}`.
 
 **Scope.** One lane per week, Opus, ceiling set by the manager on the checklist row. Tier 1. The deliverable is the plans
 moving, not a report: edits to `research/programmes/<NN>-*.yaml` and the "Programme review <date>" section of each
@@ -48,7 +69,8 @@ unprogrammed cluster to a programme** in its analysis, by what it asks, not by t
 
 Fixed questions, open answers. Do them in this order.
 
-0. **Follow-through first (2026-10-28):** run `python3 scripts/ops/review_followthrough.py --source programme-review --window-days 7` and record its cohort and backlog line before grading calls; an open item older than 14 d with no owner is a call to schedule or kill, not to re-file.
+00. **The iteration loop audit (above) first (2026-11-01).**
+0. **Follow-through (2026-10-28):** run `python3 scripts/ops/review_followthrough.py --source programme-review --window-days 7` and record its cohort and backlog line before grading calls; an open item older than 14 d with no owner is a call to schedule or kill, not to re-file.
 1. **Grade last week's calls** (`previous_calls`): each prediction → hit / miss / not yet, with why. Then one line: what
    did last week's ranking get wrong (a top-ranked test that turned out uninformative, a low-ranked one that mattered)?
 2. **Per programme, then per track — what was learned.** Read result rows for every PASS and for the largest FAIL
@@ -135,4 +157,5 @@ Report to the manager in one line: calls graded (hit/miss), nodes authored, the 
 ## What this skill never does
 
 Never edits config, weights or a registered rule; never retires a family on one FAIL; never self-lands a tree edit;
-never proposes a test without the decision it changes; never ends without grading last week's calls.
+never proposes a test without the decision it changes; never ends without grading last week's calls; never leaves an orphan
+unauthored without naming it; never authors a unit to fill a queue count (STOP-GENERATED-AUTHORING).

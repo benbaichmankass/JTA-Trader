@@ -101,8 +101,9 @@ work? 1–2 clean trades; an instrument, not a decision surface) → *Gate 2* �
 - ⚠️ **STAGE 1 IS THE DEMO FLOOR: every TESTING leg TRADES there** (operator, 2026-10-27, binding, popup *"Yes, that's the rule"*): `bybit_1` for crypto, `alpaca_paper` / `ib_paper` for equities and futures; shadow is not a holding stage; demotion stops at the floor (popup *"Demote stops at the floor (Recommended)"*); only a retirement record removes a leg from the books. Stated once in [`docs/plans/OPERATING-PLAN-2026-09-21.md`](docs/plans/OPERATING-PLAN-2026-09-21.md) § 2 "Stage 1 is the DEMO FLOOR"; point at it.
 - **A live or paper book never establishes edge.** It checks mechanics and cost. Advancing a leg on live-book P&L is a category error.
 - **Stage 2 is one stage** (operator, 2026-09-21): mirror and live take the same strategies and trades, enforced by strict equality in
-  `tests/test_paper_portfolio_accounts.py`; sanctioned divergence: the two Alpaca affordability proxies only. **Empty `alpaca_live` ⇒ empty
-  mirror: equality wins** (do not reintroduce a non-empty guard without reopening). **Re-parse `config/accounts.yaml` for roster counts;
+  `tests/test_paper_portfolio_accounts.py`. **Alpaca is a SUPERSET** (operator, 2026-11-01, reversing B2's "empty live ⇒ empty
+  mirror"): `alpaca_portfolio` ⊇ `alpaca_live`, each affordability proxy carried as its full-size underlying, plus shorting and symbols live
+  cannot yet trade; an empty mirror while live trades fails CI. **Re-parse `config/accounts.yaml` for roster counts;
   never quote them** (pre-diet § "Stage 2 is one stage").
 
 ### The TP doctrine — no fictional take-profits (operator, 2026-10-06, binding)

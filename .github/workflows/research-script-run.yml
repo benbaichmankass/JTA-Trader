@@ -103,6 +103,12 @@ jobs:
           # ModuleNotFoundError (RQ-20261016-c56e-16/-17/-18, 2026-10-17). 1.7.0 is the version
           # requirements-backtest.txt pins as the first that returns SPY/GDX rows.
           pip install yfinance==1.7.0
+          # lightgbm: the ML DECISION model units (scripts/research/ml_decision_entry.py, ml_decision_brackets.py,
+          # ml_entry_serve_parity.py -> src/units/strategies/ml_entry.load_model) fit and score LightGBM. Absent, every
+          # such unit died exit=1 with ModuleNotFoundError (RQ-20261101-c692-07 run 41306541056, 2026-11-01), which also
+          # blocks the runner reproduction of c692-01 / -06 that #22079 waits on. ~2 MB wheel, no torch. PINNED to the
+          # version requirements.txt pins for the live trader and the trainer (serve parity: one lightgbm everywhere).
+          pip install lightgbm==4.6.0
       - name: Install the ml_bakeoff learners (catboost / tabicl / tabpfn / torch) and probe them
         # ML-NONGBDT-RUNNERS (2026-10-22). Only for a unit that runs ml_bakeoff.py (or tm_bench.py, TM-BENCH 2026-10-30); every other unit skips the ~1 GB torch wheel.
         # Absent, lightgbm/catboost/tabicl/tabpfn/torch_gru all landed `unavailable` on this backend. A failed install is reported
@@ -177,4 +183,21 @@ jobs:
         run: |
           echo "::error::the unit's command did not complete (run step: ${{ steps.run.outcome }}) — its manifest/logs and a producer_failed record are in the artifact and land with the next cycle."
           exit 1
+      # A command can exit 0 and still grade its own run producer_failed (e.g. a venue 403 caught and written to
+      # verdict.json: RQ-20261101-c692-07 run 41307919288 read GREEN with read_state=producer_failed, n=null).
+      # Such a record is not a result (dispatch_queue.NON_VERDICT_READ_STATES), so the run must not read green:
+      # anything gating on the Actions conclusion would take "success" for a measurement. Not a new gate -- the
+      # dispatcher already treats the row as a non-result; this only makes the conclusion say the same.
+      - name: Fail if the run produced no result (producer_failed record)
+        if: always() && steps.run.outcome == 'success'
+        env:
+          UNIT: ${{ inputs.research_unit }}
+        run: |
+          REC="comms/research/${UNIT}/${GITHUB_RUN_ID}/record-inputs.json"
+          RS=$(python3 -c "import json,sys; print(json.load(open(sys.argv[1])).get('read_state') or '')" "$REC" 2>/dev/null || echo unreadable)
+          echo "record read_state: ${RS}"
+          if [ "${RS}" = "producer_failed" ] || [ "${RS}" = "unreadable" ]; then
+            echo "::error::the unit's command exited 0 but its record is read_state=${RS} -- NOT a result; see verdict.json / record-inputs.json in the artifact."
+            exit 1
+          fi
 

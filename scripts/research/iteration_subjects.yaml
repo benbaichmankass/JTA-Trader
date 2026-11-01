@@ -1,0 +1,217 @@
+# scripts/research/iteration_subjects.yaml -- the NON-STRATEGY subjects of the one research loop (lane RESEARCH-ITERATE, 2026-11-01).
+#
+# OPERATOR, 2026-11-01 ~12:59Z (verbatim): "first, these rules apply to MLs as well, not just strategies or live reviews. second,
+# if the data doesn't pass, it goes back into research for improvments and testing. THere is no other pipeline for underperforming
+# strategies/mls."
+#
+# Gates this adds or changes: none. This file is an INPUT LIST for scripts/research/iteration_orphans.py (report-only). It decides
+# nothing about what trades; a subject listed here is a thing that must have a live research iteration while it is not on real money.
+#
+# Strategy legs are NOT listed: they are DERIVED from config (scripts/ops/strategy_status.py, status `testing`), so the list cannot
+# drift from the rosters. ML decision heads and live-review action classes have no machine-readable roster of their own, so they are
+# named here, each with the record its current verdict comes from. Add a subject when a new head or class appears; remove one only
+# when it is on real money by record (then its demotion signal, not this loop, watches it) or retired by a family-review record
+# (research/family_reviews/, scripts/research/family_retirement_policy.yaml).
+#
+# verdict vocabulary: pass | fail | indeterminate | pending (no graded test yet). `basis` is where the verdict was read.
+schema: 1
+updated: '2026-11-01'
+ml_model:
+- id: ml-entry
+  title: ENTRY decision model (take long / short / none per bar; ml_entry leg)
+  verdict: fail
+  basis: 'RQ-20261101-c692-01 PASS (+0.0073 R/decision, n=11,240); then the v2 feature-family ablation RQ-20261101-fs01-01 FAILED 2026-11-01 (adding
+    9 pure-noise columns costs -0.017 LOFO net R: the recipe overfits any extra column). Row ML-DECISION-MODELS / ML-FEATURE-INFRA.'
+  money: real_money_candidate
+  lever_evidence:
+  - family: features
+    lever: feature_families_F1_F5
+    unit: RQ-20261101-fs01-01
+    value: +families
+    response: +0.010 LOFO net R/decision for the best family set
+    shape: noisy
+    note: '9 pure-noise columns move the same recipe by -0.017: the family gain is inside the noise floor'
+  - family: recipe
+    lever: regularisation_selection
+    unit: RQ-20261101-fs05-01
+    value: R1/R2/R3 queued
+    shape: no_reading
+  - family: labels
+    lever: training_target
+    unit: RQ-20261101-fs06-01
+    value: T1..T4 queued
+    shape: no_reading
+- id: ml-brackets
+  title: BRACKETS decision model (learned SL/TP cell per decision)
+  verdict: indeterminate
+  basis: 'RQ-20261101-c692-02 PASS under its rule (+0.0143 R/decision n=11,118) but the best STATIC cell chosen on dev gives +0.0144: the learned
+    choice adds ~nothing over a fixed bracket. Row ML-DECISION-MODELS.'
+  money: real_money_candidate
+  lever_evidence:
+  - family: features
+    lever: learned_vs_static_cell
+    unit: RQ-20261101-c692-02
+    value: learned
+    response: +0.0143 vs static 2/4 cell +0.0144 R/decision, n=11,118
+    shape: flat
+    note: the per-decision features add ~0 over a fixed bracket
+- id: ml-setup-metalabel-p2pool
+  title: setup-candidates-metalabel-p2pool-v2 (entry take/skip meta-label, P1)
+  verdict: indeterminate
+  basis: 'comms/ml-plan/p1_costnet_verdict.json: cost gate +0.212 R/opp vs take-all -0.048, but n_eval 144 < 200 and 72.4% of the live book has
+    no declared initial risk. Row ML-P1-COSTNET-REBUILD.'
+  money: demo_floor
+  lever_evidence:
+  - family: universe
+    lever: eval_population
+    unit: comms/ml-plan/p1_costnet_verdict.json
+    value: 144 live trades with declared risk
+    response: +0.212 R/opp vs take-all -0.048 (bootstrap LB +0.128)
+    shape: single_point
+    note: n_eval 144 < 200; 72.4% of the book excluded
+- id: ml-exit-head-donchian-1h
+  title: exit-head-donchian-1h-v1 (live close advice; ETH still acting)
+  verdict: fail
+  basis: 'Row ML-EXITHEAD-VALUE: BTC FAIL (pooled -0.0141 R/trade, n_oos 1041, 1/3 folds) and SOL FAIL (in-sample -0.0246 R/trade, n 286) -> annotate;
+    ETH in-sample only +0.0215 R/trade (INDETERMINATE, still closes trades on bybit_1).'
+  money: demo_floor
+  lever_evidence:
+  - family: universe
+    lever: symbol
+    unit: ML-EXITHEAD-VALUE
+    value: BTC / SOL / ETH
+    response: BTC -0.0141 OOS (n 1041); SOL -0.0246 IS (n 286); ETH +0.0215 IS only (n 583)
+    shape: noisy
+    note: sign flips across symbols; ETH never read out of sample
+- id: ml-tm-action-value
+  title: trade-management action-value policy (Q-TM1 / TM-BENCH)
+  verdict: fail
+  basis: RQ-20261029-7294-02 FAIL (-0.056..-0.079 R/trade vs hold, 0/6 folds); Q-TM1b RQ-20261030-c7a1-01 done. Row ML-AM-NEXT-LIVE.
+  money: real_money_candidate
+  lever_evidence:
+  - family: features
+    lever: R1_state
+    unit: RQ-20261029-7294-02
+    value: R1 state, 7-action argmax
+    response: -0.056..-0.079 R/trade vs hold, 0/6 folds
+    shape: flat
+    note: advantage not predictable out of fold (c7a1-01 FAIL)
+  - family: threshold
+    lever: action_margin
+    unit: RQ-20261029-7294-02
+    value: margin chosen in-sample
+    response: acts on 66-73% of trades
+    shape: no_reading
+    note: over-acting; an inner-fold margin was never tested
+- id: ml-holdbias-exit
+  title: exit-holdbias-v1 conservative hold-biased management model (P6)
+  verdict: pending
+  basis: 'Row ML-HOLDBIAS-EXIT-MODEL: not built; depends on ML-EXIT-ACTIONGRID-LABELS.'
+  money: real_money_candidate
+- id: ml-conviction-meta
+  title: conviction-meta-v1 size multiplier (P4)
+  verdict: indeterminate
+  basis: macro-F1 0.430 on unstamped rows; no cost-net eval. Row ML-P4-CONVICTION-REGATE.
+  money: demo_floor
+- id: ml-eth-vol-head
+  title: ETH 15m vol-regime head for router OFF-cells (P2)
+  verdict: fail
+  basis: 'RQ-20261012-75b2-17: ETH 15m LightGBM holdout macro-F1 lift +0.022 vs the +0.10 bar. Rows ML-REGIME-15M-DRIFT, ML-LIVE-PROMOTION-PLAN
+    P2.'
+  money: demo_floor
+  lever_evidence:
+  - family: labels
+    lever: classification_lift
+    unit: RQ-20261012-75b2-17
+    value: macro-F1 vs prior
+    response: holdout +0.022 vs +0.10 bar
+    shape: flat
+    note: never judged by money (walk-forward cell)
+- id: ml-btc-router-cells
+  title: btc-regime-15m-lgbm-fc-pcv-v2 router OFF-cells (advisory, acts on bybit_1 BTC legs; P3)
+  verdict: fail
+  basis: 'RQ-20261012-75b2-16: BTC 15m holdout macro-F1 lift -0.0001 vs the +0.10 bar; the cells still veto entries on 3 bybit_1 legs. Row ML-REGIME-15M-DRIFT.'
+  money: demo_floor
+  lever_evidence:
+  - family: labels
+    lever: classification_lift
+    unit: RQ-20261012-75b2-16
+    value: macro-F1 vs prior
+    response: holdout -0.0001
+    shape: flat
+    note: cells still veto entries; never re-verified by money
+ltr_class:
+- id: ltr-tighten-sl
+  title: live-review stop tighten
+  verdict: fail
+  basis: 'comms/research/ltr_tighten_optimize/verdict.json (#21003): early-cell tighten loses (-0.041 R, CI [-0.087,-0.005]); operator chose advice-only
+    (#21024).'
+  money: real_money
+  lever_evidence:
+  - family: timing
+    lever: open_r_at_tighten
+    unit: comms/research/ltr_tighten_optimize/verdict.json
+    value: early cell
+    response: -0.041 R (CI -0.087..-0.005)
+    shape: single_point
+    note: late cell (open >= +1R, >= BE, >= 1 ATR room) never graded
+- id: ltr-close
+  title: live-review full close
+  verdict: indeterminate
+  basis: 'docs/audits/2026-11-01-from-scratch/AUDIT.md section 8: the only positive signal, found on one window; row LTR-CLOSE-CLASS-TEST (needs
+    a disjoint-window grade).'
+  money: real_money
+  lever_evidence:
+  - family: trigger
+    lever: close_trigger
+    unit: docs/audits/2026-11-01-from-scratch/AUDIT.md
+    value: as reviewed
+    response: positive on one window
+    shape: single_point
+    note: needs a disjoint-window read
+- id: ltr-partial-close
+  title: live-review partial close
+  verdict: pending
+  basis: awaiting lane LTR-CLASS-GRADE
+  money: real_money
+- id: ltr-widen-sl
+  title: live-review stop widen
+  verdict: pending
+  basis: 'awaiting lane LTR-CLASS-GRADE (desk labels: 0 widen rows, ML-LIVE-PROMOTION-PLAN section 0 item 11)'
+  money: real_money
+- id: ltr-sl-to-structure
+  title: live-review stop moved to structure
+  verdict: pending
+  basis: 'awaiting lane LTR-CLASS-GRADE (desk labels: 0 structure rows)'
+  money: real_money
+- id: ltr-tp-extend
+  title: live-review take-profit extend
+  verdict: pending
+  basis: awaiting lane LTR-CLASS-GRADE
+  money: real_money
+- id: ltr-tp-pull-in
+  title: live-review take-profit pull in
+  verdict: pending
+  basis: awaiting lane LTR-CLASS-GRADE
+  money: real_money
+candidate:
+  # Research CANDIDATES not on any roster (lane RESEARCH-EDGE handoff 2026-11-01 14:27Z). Their lever maps are research/levers/<id>.yaml
+  # in PR #22174 (lane/research-edge-close-20261101); attribution comms/research/edge-failure-attribution-20261101/attribution.json.
+  - id: tsmom-crypto
+    verdict: fail
+    basis: 'RQ-20261101-58e4-01: loss is the SHORT side (-0.13 vs long +0.74) and reversal months; funding ~5x fees. Untested: regime gate, short-side funding awareness, rebalance frequency, universe size, signal family, stops.'
+  - id: xsec-crypto
+    verdict: fail
+    basis: 'RQ-20261101-58e4-02: shorts -0.21 vs longs +1.86; 2021 is 68% of net. Untested: regime gate, universe/liquidity, short-leg treatment, residual momentum.'
+  - id: cost-levers-live-legs
+    verdict: fail
+    basis: 'RQ-20261101-58e4-04: costs ~7% of the loss; legs gross-negative (xrp_pullback_2h -35.9, ada_pullback_2h -15.9). Untested: signal-strength threshold, hold length, symbol pruning, measured costs. Needs signal-level data.'
+  - id: tsmom-etf
+    verdict: indeterminate
+    basis: 'RQ-20261101-58e4-05: stable but small (Sharpe 0.42), shorts hurt, whipsaw years. Untested: dividend-adjusted series, asset-class gating, regime gate, breadth.'
+  - id: movement-capture
+    verdict: fail
+    basis: 'RQ-20261101-58e4-06: vol predictable (Spearman ~0.5 every year) but the fade has zero gross edge; breakout entry adverse (gross -0.40%/trade). Untested: maker fills, longer horizon, better forecaster (HAR, ML vol head), time-exit-only.'
+  - id: vol-premium-proxy
+    verdict: fail
+    basis: 'RQ-20261101-58e4-07: long-variance side loses; profit is the base short-variance premium. Top untested lever: a PRICED straddle test on real chains (DoltHub post-no-preference/options, EOD from 2019-02; row OPTIONS-IV-HISTORY-GAP caveats).'
