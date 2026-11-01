@@ -1,0 +1,128 @@
+# Lever map (operator doctrine 2026-11-01). Seeded by lane RESEARCH-EDGE from result rows; RESEARCH-ITERATE owns it from here.
+subject: Vol-targeted time-series momentum portfolio, top-20 liquid USD-M perps, daily, weekly rebalance
+units:
+- RQ-20261101-58e4-01
+status: open
+doctrine: 'operator 2026-11-01 14:00-14:09Z: nothing that failed is closed; attribute first; next tests are one-factor/ablation chosen from this map; retire only when every lever family
+  has been tested at power, net of cost, with no effect'
+verdict_so_far: 'fail: primary T4 net Sharpe 0.76, halves 1.37 / -0.04, DSR(N=9) 0.51; clause fail'
+failure_attribution:
+  where_lost: SIDE and REGIME, not cost. Net sum 0.61 = gross 0.79 - funding 0.15 - fees/slippage 0.03. Long side +0.74, short side -0.13 (shorts lose). Return is 2020-21 (+0.18, +0.33);
+    2022 +0.09, 2023 -0.03, 2024H1 +0.03.
+  by_direction:
+    long: 0.736
+    short: -0.1259
+  by_year:
+    '2020': 0.1806
+    '2021': 0.3314
+    '2022': 0.0889
+    '2023': -0.026
+    '2024': 0.0332
+  worst_months:
+    2023-01: -0.0677
+    2022-07: -0.0596
+    2020-09: -0.0575
+    2023-04: -0.0548
+  best_months:
+    2021-04: 0.1123
+    2020-07: 0.0938
+    2020-11: 0.0874
+    2023-12: 0.0823
+  worst_symbols:
+    1000SHIBUSDT: -0.023
+    BCHUSDT: -0.0219
+    LINAUSDT: -0.0185
+    ETCUSDT: -0.0127
+  best_symbols:
+    SOLUSDT: 0.0565
+    ADAUSDT: 0.0713
+    ETHUSDT: 0.0726
+    BNBUSDT: 0.1088
+  cost_split: 'funding (0.15) is 5x the fee+slippage drag (0.03): the largest cost item is funding paid by longs, charged to every held long day'
+  stage: entry (short-side signals) and regime (reversal months 2022-07, 2023-01, 2020-09); exit/cost are not the problem
+levers_tested:
+- family: signal horizon
+  varied: lookbacks 28 | 56 | 112 | 14/28/56 | 28/56/112 | 28/56/112/224 (days)
+  response:
+    T1:
+      sharpe_net: 0.639
+      ann_return_net: 0.1542
+      dsr: 0.409281
+      stress_sharpe: 0.596
+    T2:
+      sharpe_net: 0.739
+      ann_return_net: 0.1745
+      dsr: 0.489026
+      stress_sharpe: 0.703
+    T3:
+      sharpe_net: 0.618
+      ann_return_net: 0.1477
+      dsr: 0.393139
+      stress_sharpe: 0.591
+    T4:
+      sharpe_net: 0.761
+      ann_return_net: 0.1489
+      dsr: 0.506311
+      stress_sharpe: 0.727
+    T5:
+      sharpe_net: 0.823
+      ann_return_net: 0.1697
+      dsr: 0.556275
+      stress_sharpe: 0.781
+    T6:
+      sharpe_net: 0.711
+      ann_return_net: 0.12
+      dsr: 0.466521
+      stress_sharpe: 0.683
+  shape: 'flat: all net Sharpe 0.62-0.82, differences far below the ~0.49 Sharpe standard error'
+  tested_at_power: false
+- family: side (short suppression)
+  varied: long-short vs long-only (56d, and 28/56/112)
+  response:
+    T4:
+      sharpe_net: 0.761
+      ann_return_net: 0.1489
+      dsr: 0.506311
+      stress_sharpe: 0.727
+    T7:
+      sharpe_net: 0.921
+      ann_return_net: 0.2095
+      dsr: 0.631531
+      stress_sharpe: 0.902
+    T8:
+      sharpe_net: 1.067
+      ann_return_net: 0.18
+      dsr: 0.733873
+      stress_sharpe: 1.047
+  shape: long-only raises net Sharpe (0.76 -> 1.07 at 28/56/112) and fixes the short-side loss; but long-only Sharpe 1.07 ~ BTC buy-and-hold 1.06 over the window, so this is beta
+  tested_at_power: false
+- family: risk scale
+  varied: sleeve target vol 0.40 vs 0.20
+  response:
+    T4:
+      sharpe_net: 0.761
+      ann_return_net: 0.1489
+      dsr: 0.506311
+      stress_sharpe: 0.727
+    T9:
+      sharpe_net: 0.761
+      ann_return_net: 0.0745
+      dsr: 0.506856
+      stress_sharpe: 0.728
+  shape: 'Sharpe unchanged (0.76 / 0.76): scale-invariant, as expected; no information'
+  tested_at_power: true
+lever_families_untested:
+- regime filter (BTC trend / vol-state gate on shorts or on the whole book)
+- short-side funding awareness (skip shorts when funding makes them costly, or pay-receive asymmetry)
+- rebalance frequency (only 7d tried)
+- universe size and rank (top-10 vs top-40; alt vs major)
+- exit/stop on position (none tested; signal flip only)
+- signal family (breakout, MA cross, return-sign vs return-magnitude)
+- vol window (30d only)
+- cross-asset blending with ETF trend (diversification across regimes)
+- turnover/cost-aware signal smoothing
+power_note: n=1491 days, one 4-year window containing one bull market; Sharpe SE ~0.49. Config differences below ~0.7 Sharpe are not separable. Every "flat" response above is flat at
+  THAT resolution only.
+evidence: 'Result rows: research/results/<unit>/manual-research-edge-20261101.jsonl; per-config detail: comms/research/<unit>/manual-research-edge-20261101/result.json; attribution computed
+  by scripts/research/edge_failure_attribution.py (comms/research/edge-failure-attribution-20261101/attribution.json).'
+handed_to: RESEARCH-ITERATE (session_01AFoLuLiJ6TVirjHipiPRhQ)
