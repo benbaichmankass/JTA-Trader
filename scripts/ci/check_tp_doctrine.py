@@ -231,7 +231,9 @@ BASELINE_2026_10_06: dict[str, frozenset[str]] = {
     # carries the finite 1.5 R target it was SCORED with (TP 3 ATR / SL 2 ATR; 31% of its 11,240 held-out
     # decisions reached it). Nothing moves it yet: the producer is the MANAGE decision model
     # (research/queue/blocked/RQ-20261101-c692-03), and a revision rule declared before that is scored would
-    # trade an unscored policy. Remove both lines when c692-03 passes and its verdict is plumbed.
+    # trade an unscored policy. Operator popup on PR #22079, 2026-11-01 ~09:05Z, verbatim: "1, but a moving to
+    # needs to be the be t work item" -- fixed 1.5 R TP accepted now; EXIT for both lines = checklist row
+    # ML-ENTRY-TP-REVISION (a tested moving-TP policy plumbed through monitor()), then remove both.
     "bybit_2/ml_entry": R,
     "bybit_portfolio/ml_entry": R,
     # ── prop ────────────────────────────────────────────────────────────────
