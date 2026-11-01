@@ -30,6 +30,7 @@ def main():
     cols = {}
     for s in UNIVERSE:
         cands = sorted(Path(a.data_dir).glob(f"**/data/{s}_D.csv"), key=lambda q: -q.stat().st_size)   # longest committed history wins
+        print(f"{s}: using {cands[0]}")   # the chosen input is printed, never silent
         d = pd.read_csv(cands[0], parse_dates=["timestamp"], index_col="timestamp")
         d.index = d.index.tz_convert("UTC") if d.index.tz is not None else d.index.tz_localize("UTC")
         cols[s] = d["close"][~d.index.duplicated()]

@@ -10,6 +10,7 @@ UNIVERSE = ["SPY", "QQQ", "IWM", "TLT", "IEF", "GLD", "SLV", "GDX", "USO", "XLE"
 cols = {}
 for s in UNIVERSE:
     c = sorted(Path("comms/research").glob(f"**/data/{s}_D.csv"), key=lambda q: -q.stat().st_size)[0]
+    print(f"{s}: using {c}")   # the chosen input is printed, never silent
     d = pd.read_csv(c, parse_dates=["timestamp"], index_col="timestamp"); d.index = d.index.tz_convert("UTC") if d.index.tz is not None else d.index.tz_localize("UTC")
     cols[s] = d["close"][~d.index.duplicated()]
 close = pd.DataFrame(cols).sort_index(); close = close[(close.index <= D.END_DISCOVERY) & close["SPY"].notna()]
