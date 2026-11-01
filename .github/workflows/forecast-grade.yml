@@ -66,13 +66,3 @@ jobs:
           pr-title: "forecast-grade: first-passage grade of every price forecast"
           pr-body: "Automated (auto-merge): comms/desk/forecast_grade.json + forecast_ledger.jsonl from scripts/research/forecast_first_passage.py."
           verify-merged: "true"
-
-      - name: Keep the grade as a run artifact
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: forecast-grade
-          path: |
-            comms/desk/forecast_grade.json
-            comms/desk/forecast_ledger.jsonl
-          if-no-files-found: ignore
