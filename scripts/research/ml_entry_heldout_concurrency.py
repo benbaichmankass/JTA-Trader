@@ -133,6 +133,51 @@ def margin_sim(taken: pd.DataFrame, risk_pct: float, leverage: float, buffer: fl
             "notional_x_equity_per_trade_p50": float((risk_pct / taken.stop_pct).median())}
 
 
+def pnl_path(taken: pd.DataFrame, risk_pct: float, leverage: float, buffer: float,
+             dd_switch: float | None = None) -> dict:
+    """Held-out P&L path in % of a STATIC equity E under RiskManager-shaped sizing (risk_pct at the stop, margin
+    pre-flight clamp as in ``margin_sim``), optionally with the account daily-DD switch: once the UTC day's REALIZED
+    loss reaches ``dd_switch`` of E, new entries are refused until the next UTC day; open positions run on (operator
+    "Keep open, block new"). Realized-only trips LATER than the live equity-based switch, so this understates the
+    switch's protection. ml_entry alone on the account; other legs share margin and the switch in live trading."""
+    tk = taken.reset_index(drop=True)
+    ev = []
+    for i, r in enumerate(tk.itertuples(index=False)):
+        ev.append((r.open_ts.value, 1, i))
+        ev.append((r.close_ts.value, 0, i))
+    ev.sort(key=lambda x: (x[0], x[1]))
+    open_: dict[int, float] = {}
+    w: dict[int, float] = {}
+    day, day_pnl, blocked = None, 0.0, 0
+    for ts, kind, i in ev:
+        d = pd.Timestamp(ts, tz="UTC").floor("D")
+        if d != day:
+            day, day_pnl = d, 0.0
+        if kind == 0:
+            if i in open_:
+                day_pnl += float(tk.net_r.iat[i]) * w[i]
+                open_.pop(i)
+            continue
+        if dd_switch is not None and day_pnl <= -dd_switch:
+            blocked += 1
+            continue
+        sp = float(tk.stop_pct.iat[i])
+        got = min(risk_pct / sp, max(0.0, (leverage - sum(open_.values())) * buffer))
+        if got <= 0:
+            continue
+        open_[i] = got
+        w[i] = got * sp
+    kept = tk.loc[list(w)].assign(risk_frac=pd.Series(w))
+    kept = kept.assign(pnl=kept.net_r * kept.risk_frac).sort_values("close_ts")
+    eq = kept.pnl.cumsum()
+    dayp = kept.groupby(kept.close_ts.dt.floor("D")).pnl.sum()
+    return {"dd_switch": dd_switch, "n_taken": len(kept), "blocked_by_switch": blocked,
+            "mean_net_r_taken": float(kept.net_r.mean()), "total_pct_equity": 100 * float(kept.pnl.sum()),
+            "max_drawdown_pct_equity": 100 * float((eq - eq.cummax()).min()),
+            "worst_day_pct_equity": 100 * float(dayp.min()), "days_below_minus_3pct": int((dayp < -0.03).sum()),
+            "mean_risk_per_trade_pct_equity": 100 * float(kept.risk_frac.mean())}
+
+
 def per_symbol(taken: pd.DataFrame) -> dict:
     return {k: {"n": len(g), "mean_net_r": round(float(g.net_r.mean()), 4)}
             for k, g in sorted(taken.groupby("symbol"), key=lambda kv: kv[0])}
@@ -147,6 +192,7 @@ def main(argv=None) -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--cache", default="/tmp/ml_decision_klines")
     ap.add_argument("--out", required=True)
+    ap.add_argument("--from-decisions", default="", help="re-analyse a pickled decision frame instead of re-fitting")
     ap.add_argument("--save-decisions", default="", help="also pickle the decision frame here (re-analysis)")
     ap.add_argument("--risk-pct", type=float, default=0.015)
     ap.add_argument("--leverage", type=float, default=3.0)
@@ -157,7 +203,10 @@ def main(argv=None) -> int:
     out = Path(args.out)
     out.mkdir(parents=True, exist_ok=True)
     t0 = time.time()
-    taken, meta = heldout_decisions(Path(args.cache))
+    if args.from_decisions:
+        taken, meta = pd.read_pickle(args.from_decisions), {"from_decisions": args.from_decisions}
+    else:
+        taken, meta = heldout_decisions(Path(args.cache))
     start = pd.Timestamp(mde.HOLDOUT_START, tz="UTC")
     end = taken.close_ts.max()
     res = {"schema": "ml_entry_heldout_concurrency/1", "source": "c692-01 final fit, re-run (ml_decision_entry.fit_models)",
@@ -166,7 +215,9 @@ def main(argv=None) -> int:
                                   "c692_01_n": json.loads(C692_01_SUMMARY.read_text())["holdout"]["model"]["n"],
                                   "c692_01_mean_net_r": json.loads(C692_01_SUMMARY.read_text())["holdout"]["model"]["mean_net_r"]},
            "per_symbol": per_symbol(taken), "concurrency_all": concurrency(taken, start, end),
-           "margin_all": margin_sim(taken, args.risk_pct, args.leverage, args.margin_buffer), "subsets": {},
+           "margin_all": margin_sim(taken, args.risk_pct, args.leverage, args.margin_buffer),
+           "pnl_all": [pnl_path(taken, args.risk_pct, args.leverage, args.margin_buffer, sw) for sw in (None, 0.03)],
+           "subsets": {},
            "interval_rule": "open [ts+1h, ts+(bars+1)h): exit counted to the END of the exit bar (upper bound)",
            "git_sha": mde._git_sha()}
     for spec in args.subset:
@@ -175,7 +226,9 @@ def main(argv=None) -> int:
         sub = taken[taken.symbol.isin(keep)]
         res["subsets"][name] = {"symbols": sorted(keep), "missing_from_population": sorted(keep - set(taken.symbol)),
                                 "pooled": pooled(sub), "concurrency": concurrency(sub, start, end),
-                                "margin": margin_sim(sub, args.risk_pct, args.leverage, args.margin_buffer) if len(sub) else None}
+                                "margin": margin_sim(sub, args.risk_pct, args.leverage, args.margin_buffer) if len(sub) else None,
+                                "pnl": [pnl_path(sub, args.risk_pct, args.leverage, args.margin_buffer, sw)
+                                        for sw in (None, 0.03)] if len(sub) else None}
     res["elapsed_s"] = round(time.time() - t0)
     (out / "summary.json").write_text(json.dumps(res, indent=1, default=str) + "\n")
     taken.to_csv(out / "decisions.csv.gz", index=False)
