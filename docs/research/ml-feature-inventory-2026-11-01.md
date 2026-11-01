@@ -84,6 +84,34 @@ Readiness classes: **NOW** = history for the 60 perps and a live computation fro
 
 **Weekly Claude review.** The existing Sunday `/ml-review` gains four graded lines, each a number with its population, never prose: **(1) data coverage**: per feature family, present share of the last 7 days' decision rows per symbol; **(2) feature count in use**: columns the live model reads versus columns the registry holds; **(3) retrain freshness**: age of the live artifact's data-through date; **(4) live decision-grade versus held-out**: mean net R per decision live over the week next to the registered held-out figure, with n. Landed in this PR as an edit to `.claude/skills/ml-review/SKILL.md`.
 
+## 1c. Dev-fold findings of 2026-11-01 and the recipe/target plan (manager request ~12:03Z)
+
+All figures are leave-one-fold-out (LOFO) mean net R per decision on the 8 development folds of c692-01, **no sealed window read**. Arm A = the 20 baseline features; A2 = arm A with LightGBM seed 7.
+
+| Arm | Features | LOFO n | LOFO mean | Delta vs A | Folds better than A |
+|---|---|---|---|---|---|
+| A | 20 | 67,860 | +0.0010 | 0 | — |
+| A2 (seed noise) | 20 | 58,651 | +0.0027 | +0.0017 | 4 |
+| B taker flow | 28 | 35,381 | -0.0024 | -0.0034 | 5 |
+| C basis, funding | 28 | 64,719 | +0.0018 | +0.0008 | 3 |
+| E cross-section | 29 | 51,379 | -0.0560 | -0.0570 | 0 |
+| F shape, calendar | 31 | 44,577 | +0.0045 | +0.0035 | 4 |
+| N9 control: 20 + 9 pure-noise columns | 29 | 52,688 | -0.0157 | -0.0167 | — |
+| D positioning, G all | | | pending at the time of writing | | |
+
+**Readings (each measured, causes not isolated).** (1) No family reaches the registered +0.010 with the noise clause; (2) **the recipe degrades with any added column**: nine columns of pure noise cost 0.017, so a family-add ablation at this threshold is under-powered against its own noise; (3) arm E was checked for construction bugs and is clean (3,000 random rows recomputed from raw closes: 0 mismatches; truncation-invariant at three timestamps for all 60 symbols), so its -0.057 is a property of the recipe, not a coding error; (4) **c692-01 reproduces exactly under its own pipeline** (777,861 rows, 665,527 dev rows, pooled tau 0.10: +0.0154 at n = 71,865, lightgbm 4.7.0); my pipeline (explicit frozen-bar mask, 665,104 dev rows) gives +0.0063 and another seed +0.0092, so seed and a 423-row data change move the dev pooled mean by 0.003 to 0.009, the size of the effect itself.
+
+**Plan (dated, UTC; rules registered before any run, thresholds fixed against the measured seed spread):**
+
+| When | Step | Row / unit |
+|---|---|---|
+| 2026-11-01 (registered) | Recipe-fix unit: R0 baseline, R1 stronger fixed regularisation, R2 R1 plus smaller leaves and slower learning, R3 fold-internal shadow-feature selection; each with a pure-noise control and 3 seeds; admission needs noise-immunity first, then 2 x seed spread | `ML-FS-RECIPE`, `RQ-20261101-fs05-01` |
+| 2026-11-01 (registered) | Label/target unit: T1 market-neutral, T2 cross-sectional rank, T3 clipped, T4 first-passage 3-class, at fixed features; same noise controls | `ML-FS-LABELS`, `RQ-20261101-fs06-01` |
+| 2026-11-01T17:00 | Recipe harness lands (self-test: a noise column is injected, no sealed date read) | `ML-FS-RECIPE` |
+| 2026-11-01T20:00 | Target harness lands (self-test: demeaning uses same-timestamp values only) | `ML-FS-LABELS` |
+| 2026-11-01T23:00 / 2026-11-02T04:00 | Dev runs finish | both |
+| 2026-11-02T08:00 | Verdicts written; the manager decides which (recipe, target, families) tuple gets ONE forward read: W1 if `RQ-20261101-fs02-01` did not run, else W2 (earliest 2026-11-11) | both |
+
 ## 2. Inventory: every source
 
 **Reading key.** *Depth* is first and last timestamp read from file contents unless marked *listed* (first and last file name in the archive listing; contiguity between them is **not** gap-checked). *Live today* means a collector exists that a served model could read at decision time. *PIT* is point-in-time safety. Backfill cost uses today's HEAD sizes for BTCUSDT (an upper bound for smaller alts); population = 60 frozen perps.
