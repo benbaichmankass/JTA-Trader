@@ -27,9 +27,9 @@ import pandas as pd
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
-import holdout_lock  # noqa: E402
-import ml_decision_entry as E  # noqa: E402
-import ml_entry_families as F  # noqa: E402
+import holdout_lock
+import ml_decision_entry as E
+import ml_entry_families as F
 
 ARMS = {"A": [], "A2": [], "B": ["F1"], "C": ["F2"], "D": ["F3"], "E": ["F4"], "F": ["F5"], "G": ["F1", "F2", "F3", "F4", "F5"]}
 FAM_COLS = {k: [c for c in v if c != "f3_present"] if k == "F3" else v for k, v in F.FAMILIES.items()}
@@ -197,9 +197,9 @@ def signal_baseline(test: pd.DataFrame, sidefn) -> dict:
 
 def benchmarks(test: pd.DataFrame) -> dict:
     """Reported beside v2, never gating (manager 2026-11-01, audit ML-M1-POOLED-ENTRY). Same one-position mechanics and cost stack."""
-    ts = lambda r: None if pd.isna(r.b_mom720) else ("long" if r.b_mom720 > 0 else "short")  # noqa: E731
-    xs = lambda r: None if pd.isna(r.f4_rank_ret168) else ("long" if r.f4_rank_ret168 >= 2 / 3 else "short" if r.f4_rank_ret168 <= 1 / 3 else None)  # noqa: E731
-    cy = lambda r: None if (pd.isna(r.f2_fund) or abs(r.f2_fund) < 1e-4) else ("short" if r.f2_fund > 0 else "long")  # noqa: E731
+    ts = lambda r: None if pd.isna(r.b_mom720) else ("long" if r.b_mom720 > 0 else "short")
+    xs = lambda r: None if pd.isna(r.f4_rank_ret168) else ("long" if r.f4_rank_ret168 >= 2 / 3 else "short" if r.f4_rank_ret168 <= 1 / 3 else None)
+    cy = lambda r: None if (pd.isna(r.f2_fund) or abs(r.f2_fund) < 1e-4) else ("short" if r.f2_fund > 0 else "long")
     return {"tsmom_sign_of_720h_return": signal_baseline(test, ts),
             "xsmom_top_third_long_bottom_third_short_by_168h_rank": signal_baseline(test, xs),
             "funding_carry_opposite_to_funding_when_abs_ge_1bp": signal_baseline(test, cy)}
@@ -243,7 +243,7 @@ def forward(tab: pd.DataFrame, out: Path, ablation: Path, unit: str, reader: str
 def _self_test() -> None:
     F.self_test()
     # lofo: tau chosen without the held fold; a fold whose tau pool has n < 1000 elsewhere gets no tau
-    mk = lambda ts, n, sm: {"test_start": ts, **{f"tau_{t}": {"n": n, "sum_net_r": sm} for t in E.TAU_GRID}}  # noqa: E731
+    mk = lambda ts, n, sm: {"test_start": ts, **{f"tau_{t}": {"n": n, "sum_net_r": sm} for t in E.TAU_GRID}}
     folds = [mk(f"2022-0{i}-01", 600, 6.0) for i in range(1, 5)]
     l = lofo(folds)
     assert l["n"] == 2400 and abs(l["mean_net_r"] - 0.01) < 1e-12, l

@@ -47,7 +47,7 @@ def _get(url: str) -> bytes | None:
         except urllib.error.HTTPError as e:  # type: ignore[attr-defined]
             if e.code == 404:
                 return None
-        except Exception:  # noqa: BLE001  # allow-silent: retried with backoff; final failure returns None and is counted
+        except Exception:  # noqa: BLE001, S112  # allow-silent: retried with backoff; final failure returns None and is counted
             continue
     return None
 
@@ -119,12 +119,14 @@ def run(out: Path, streams: list[str], start: str, end: str, workers: int, syms:
         missing: dict[str, int] = {s: 0 for s in syms}
         frozen: dict[str, list[str]] = {s: [] for s in syms}
 
-        def one(j):
+        parse = PARSE[st]
+
+        def one(j, parse=parse):
             s, key, url = j
             raw = _get(url)
             if raw is None:
                 return s, key, None
-            return s, key, PARSE[st](raw)
+            return s, key, parse(raw)
 
         with cf.ThreadPoolExecutor(workers) as ex:
             for s, key, df in ex.map(one, js):

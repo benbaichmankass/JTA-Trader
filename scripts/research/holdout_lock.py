@@ -24,7 +24,7 @@ import tempfile
 from datetime import datetime, timezone
 from pathlib import Path
 
-LEDGER = Path(__file__).resolve().parents[2] / "research" / "holdout_reads.jsonl"
+LEDGER = Path(__file__).resolve().parents[2] / "comms" / "research" / "holdout_reads.jsonl"
 
 
 class HoldoutAlreadyRead(RuntimeError):
