@@ -1,0 +1,84 @@
+# Hand-authored 2026-11-01 by lane ML-ENTRY-TP-REVISION (Tier 1), dispatched by Manager Session 2026-11-01a (session_01AFoLuJ1apgy8sfngu4WyNH).
+# Rule registered BEFORE this unit's run. NOT BLIND: see decision_rule.not_blind. Gates: none (the outcome is monitoring only, operator 2026-11-01 ~10:25Z).
+id: RQ-20261101-383f-03
+status: queued
+cadence: once
+theme: ml_health
+priority: 1
+roadmap:
+- L-ML-LIVE
+kind: experiment
+title: 'ENTRY forward test on October 2026: does the frozen served ENTRY model (tau 0.10), traded exactly as ml_entry trades it (SL 2 / TP 3 ATR14,
+  24 h stop, one position per symbol), keep forward mean net R per decision >= 0 over 2026-10-01..2026-10-31?'
+practice_precedent: 'T1, M6 (docs/reference/trading-and-model-practice-principles.md): a frozen model scored once on data after its sealed window;
+  docs/research/ml-decision-models-2026-11-01/DESIGN.md sections 1.7 and 1c.'
+question: 'The c692-01 model as served (ml/served/ml_decision_entry_v1, unchanged) and its policy (scripts/research/ml_decision_entry.py policy,
+  tau 0.10) on Binance Vision DAILY 1h klines for 2026-10 (the monthly zip is not yet published), decisions 2026-10-01T00:00Z.. whose 24 h label
+  ends inside October, labels exactly as c692-01 (ties SL-first, gap fills at the open, full cost stack). Reported beside it: the same with
+  same-bar ties resolved from 1m, by side, by symbol, the always-long / random baselines.'
+why_this_matters: 'Operator 2026-11-01 ~10:25Z, verbatim: "Go live as planned, but also run the Oct test - if it doesn''t pass, leave it live but
+  keep finetunig - the result matters but should prevent an otherwise passing ML from going live" (manager reading, stated to the operator:
+  "should" = "shouldn''t": monitoring, not a go-live precondition).'
+decision_rule:
+  id: RULE-RQ20261101-383f-03-ENTRY-FORWARD-OCT
+  registered_at: '2026-11-01'
+  registered_before_run: true
+  statistic: Forward mean net R per decision (taken decisions only), n, n symbols, net of fee 11.0 + slippage 3.0 bps + funding 1 bps/8h.
+  rule: 'INDETERMINATE IF n < 300 OR distinct symbols < 10. PASS IF forward mean net R per decision >= 0 (point estimate, the operator bar).
+    FAIL otherwise. MONITORING ONLY (operator 2026-11-01 ~10:25Z): PASS or FAIL, ENTRY stays on its go-live path; a FAIL files a fine-tuning
+    row (Tier 1 research, roadmap L-ML-LIVE). ENTRY variants read on this window: 1 (this frozen model).'
+  not_blind: 'Before this registration the lane saw a closely related number on the same window: RQ-20261101-383f-01 (the moving-TP unit) reported
+    its fixed-TP baseline = these ENTRY trades restricted to positions whose 24 h ends inside October, ties resolved from 1m: -0.0193 R per trade,
+    n = 868. That unit read October for a DIFFERENT question (the TP); it is not this test. This rule was written knowing that number, so this
+    unit is a confirmation of a known sign, not a blind forward read; it is recorded as such.'
+  what_it_does_not_do: No config change, no order, no gate on ENTRY's go-live.
+  min_n: 300 forward decisions on >= 10 symbols
+power:
+  expected_n: 900
+  min_detectable_effect: 0.06
+  effect_units: R per decision
+  basis: 'INFERRED from c692-01 held-out by_month (702..1,197 decisions per month); per-decision sd ~1 R -> SE ~0.033 R.'
+compute: cpu_long
+value:
+  bucket: ai_trader
+  usd_at_stake_per_month: 800
+  confidence: 0.2
+  basis: 'stand-in: the operator priority-1 goal (first ML decision model on real money); not a P&L measurement.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 4.0
+  est_minutes: 20
+  why_runner: Keyless public Binance Vision klines.
+  basis: 'INFERRED: the dev monthly cache + ~1,900 daily zips; one served-model scoring pass.'
+run:
+  workflow: research-script-run.yml
+  command:
+  - python3
+  - scripts/research/ml_entry_tp_revision.py
+  - entry-forward
+  - --cache
+  - /tmp/ml_decision_klines
+  - --unit
+  - '{unit}'
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 120
+  inputs:
+    research_unit: RQ-20261101-383f-03
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- ML-ENTRY-LIVE-ADAPTER
+- ML-ENTRY-TP-REVISION
+- RQ-20261101-c692-01
+- RQ-20261101-383f-01
+ml_consumer:
+  consumer: src/units/strategies/ml_entry.py
+  decision: monitoring only -- a FAIL opens ENTRY fine-tuning work; it never blocks or reverses ENTRY's go-live (operator 2026-11-01 ~10:25Z)
+  legs:
+  - ml_entry
+  book: money
+what_it_does_not_do: Registers, serves and promotes nothing; changes no config; places no order.
