@@ -500,6 +500,7 @@ real top-level `docs/*.md` and fails if the population builder cannot see it.
 | `docs/claude/work/README.md` | unknown | unknown | — | never | `not-assessed / not-assessed` | — |
 | `docs/claude/work/SOAK-REPORT-observations.md` | unknown | unknown | — | never | `not-assessed / not-assessed` | — |
 | `docs/claude/work/SOAK-REPORT.md` | unknown | unknown | — | never | `not-assessed / not-assessed` | — |
+| `docs/claude/work/SOAK-TOUCH-SPLIT.md` | unknown | unknown | — | never | `not-assessed / not-assessed` | — |
 | `docs/claude/work/designs/world-event-prediction-engine-v0.1.md` | unknown | unknown | — | never | `not-assessed / not-assessed` | — |
 | `docs/claude/work/findings/E18-starved-triage-post-E35-20260926.md` | unknown | unknown | — | never | `not-assessed / not-assessed` | — |
 | `docs/claude/work/handoffs/2026-10-21-01VduHYz-to-new.md` | unknown | unknown | — | never | `not-assessed / not-assessed` | — |
