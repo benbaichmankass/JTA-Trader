@@ -372,13 +372,18 @@ def _once(st: Dict[str, Any], key: str, now: datetime) -> bool:
 
 
 def reconcile(account_id: str, positions: List[Dict[str, Any]], closed: List[Dict[str, Any]], *,
-              now: Optional[datetime] = None, send=None, mode: Optional[str] = None) -> Dict[str, Any]:
+              now: Optional[datetime] = None, send=None, mode: Optional[str] = None,
+              closed_state: Optional[str] = None) -> Dict[str, Any]:
     """Reconcile the account's journal against ONE clean venue Positions read. Returns a summary (also kept in the
     snapshot's raw by the caller). Never raises past a logged warning: the account_status itself is already stored.
 
     ``report_only`` (the default until the follow-up flips it): every decision is computed exactly as in ``write``
     mode and returned, and ONE alert per decision says what WOULD be written ("would close row N ..."); nothing
-    is written to the journal."""
+    is written to the journal.
+
+    ``closed_state`` is the phone's own state for the Closed orders read (BREAKOUT-UNRECORDED-1101): ``read`` means
+    ``closed`` is the venue's list; anything else means the exit was never looked up, and an unpriced close says so
+    (in the row's ``reconcile.closed_read_state`` and in its alert) instead of reading as "no matching order"."""
     from src.prop import prop_journal
     from src.prop.prop_overview import split_fills
     from src.prop.prop_report import ingest_report
@@ -386,8 +391,9 @@ def reconcile(account_id: str, positions: List[Dict[str, Any]], closed: List[Dic
     now = now or _now()
     mode = mode or reconcile_mode(account_id)
     write = mode == "write"
+    cstate = str(closed_state or "not_reported")[:24]
     out: Dict[str, Any] = {"mode": mode, "closed": [], "closed_unpriced": [], "pending_close": [], "opened": [],
-                           "unconfirmed": [], "unmapped": [], "matched": 0}
+                           "unconfirmed": [], "unmapped": [], "matched": 0, "closed_read_state": cstate}
     with _LOCK:
         fills = prop_journal.list_fills(account_id=account_id, limit=500)
         open_rows, closed_rows = split_fills(fills)
@@ -477,15 +483,17 @@ def reconcile(account_id: str, positions: List[Dict[str, Any]], closed: List[Dic
                     "closed_at": now.isoformat(), "reason": reason,
                     "source": "phone_reconcile", "provenance": MEASURED if c else UNVERIFIED,
                     "reconcile": {"absent_reads": m["n"], "first_absent": m["first"], "exit_candidates": n,
-                                  "closing_order": c},
+                                  "closing_order": c, "closed_read_state": cstate},
                 }
                 if reason == "manual":
                     report["reconcile"]["reason_basis"] = MANUAL_BASIS
                 what = (f"close|close journal row {rid} ({f.get('symbol')} {f.get('direction')}) at "
-                        + (f"{c['price']:g} ({reason})" if c else f"NO exit price ({n} matching closing orders read)"))
+                        + (f"{c['price']:g} ({reason})" if c else
+                           f"NO exit price ({n} matching closing orders read; Closed orders read: {cstate})"))
                 alert = "" if c else (f"📱 phone {account_id}: {f.get('symbol')} {f.get('direction')} (journal row {rid}) "
                                       f"is no longer on the terminal's Positions list; journaled CLOSED without an exit "
-                                      f"price ({n} matching closing orders read). Report the exit if you can see it.")
+                                      f"price ({n} matching closing orders read; Closed orders read: {cstate}). "
+                                      f"Report the exit if you can see it.")
                 if not act(report, what, alert):
                     new_missing[rid] = m
                     continue

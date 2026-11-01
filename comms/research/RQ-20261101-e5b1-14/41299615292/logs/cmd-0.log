@@ -1,0 +1,51 @@
+Fetching ETHUSDT 120 candles 2023-10-18 -> 2026-11-01 (source=binance_vision) …
+  vision monthly 2023-10: 372 bars (168 kept)
+  vision monthly 2023-11: 360 bars (528 kept)
+  vision monthly 2023-12: 372 bars (900 kept)
+  vision monthly 2024-01: 372 bars (1272 kept)
+  vision monthly 2024-02: 348 bars (1620 kept)
+  vision monthly 2024-03: 372 bars (1992 kept)
+  vision monthly 2024-04: 360 bars (2352 kept)
+  vision monthly 2024-05: 372 bars (2724 kept)
+  vision monthly 2024-06: 360 bars (3084 kept)
+  vision monthly 2024-07: 372 bars (3456 kept)
+  vision monthly 2024-08: 372 bars (3828 kept)
+  vision monthly 2024-09: 360 bars (4188 kept)
+  vision monthly 2024-10: 372 bars (4560 kept)
+  vision monthly 2024-11: 360 bars (4920 kept)
+  vision monthly 2024-12: 372 bars (5292 kept)
+  vision monthly 2025-01: 372 bars (5664 kept)
+  vision monthly 2025-02: 336 bars (6000 kept)
+  vision monthly 2025-03: 372 bars (6372 kept)
+  vision monthly 2025-04: 360 bars (6732 kept)
+  vision monthly 2025-05: 372 bars (7104 kept)
+  vision monthly 2025-06: 360 bars (7464 kept)
+  vision monthly 2025-07: 372 bars (7836 kept)
+  vision monthly 2025-08: 372 bars (8208 kept)
+  vision monthly 2025-09: 360 bars (8568 kept)
+  vision monthly 2025-10: 372 bars (8940 kept)
+  vision monthly 2025-11: 360 bars (9300 kept)
+  vision monthly 2025-12: 372 bars (9672 kept)
+  vision monthly 2026-01: 372 bars (10044 kept)
+  vision monthly 2026-02: 336 bars (10380 kept)
+  vision monthly 2026-03: 372 bars (10752 kept)
+  vision monthly 2026-04: 360 bars (11112 kept)
+  vision monthly 2026-05: 372 bars (11484 kept)
+  vision monthly 2026-06: 360 bars (11844 kept)
+  vision monthly 2026-07: 372 bars (12216 kept)
+  vision monthly 2026-08: 372 bars (12588 kept)
+  vision monthly 2026-09: 360 bars (12948 kept)
+  vision daily 2026-10: 13308 bars kept so far
+Wrote 13308 rows (2023-10-18 -> 2026-10-31) to /tmp/exit_lever_ablation_iuh92r3_/eth_pullback_2h__data.csv
+[P] /opt/hostedtoolcache/Python/3.11.17/x64/bin/python3 /home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_pullback.py --trend-lookback 40 --pullback-lookback 10 --pullback-frac 0.5 --data <data> --symbol ETHUSDT --resample 2h --atr-period 14 --atr-stop-mult 2.5 --trail-mult 5.0 --min-confidence 0.0 --fee-bps-roundtrip 8 --emit-trades comms/research/RQ-20261101-e5b1-14/41299615292/ablate/arms/P__trades.jsonl --json comms/research/RQ-20261101-e5b1-14/41299615292/ablate/arms/P__bt.json --adx-min 25 --trail-decay-stall-bars 10 --trail-decay-tight-mult 2.5 --tp-cap-pct 0.099 --tp-r 50.0 --slippage-bps-roundtrip 3 --funding-bps-per-window 5 --funding-window-hours 24 --start 2023-10-13 --end 2026-10-11 20:00
+{
+ "verdict": "pass",
+ "label": "stage0_edge",
+ "why": "net_r=24.5087 > 0 with 3/4 positive folds at this arm's cost stack"
+}
+{
+  "verdict": "fail",
+  "read_state": "measured",
+  "n": 206,
+  "note": "FAIL: v3 ['FAIL_EDGE', 'FAIL_EDGE', 'FAIL_EDGE']"
+}

@@ -127,6 +127,10 @@ TARGETS: dict[str, dict] = {
     # MARKET-DATA-LAKE (operator 2026-11-01: "automations (not claudes) that are continuosly capturing, processing
     # and validating the data feeds"): the daily lake refresh (`41 3 * * *`); a dropped slot = a feed a day stale.
     "market-data-lake.yml": {"stale_hours": 26},
+    # FORECAST-GRADE-FIRST-PASSAGE (2026-11-01): the native :41 cron did not fire after the workflow landed (the scheduler
+    # drops hourly slots, see above), so the keeper dispatches a missed hour. A second run of one slot is harmless.
+    "forecast-grade.yml": {"stale_hours": 3,
+                           "self_dedupes": "concurrency-serialised and idempotent per slot: final rows are frozen in the ledger and files are committed only when content changed"},
     "research-slo.yml": {"stale_hours": 3,
                          "self_dedupes": "alerts are change-keyed (research_slo.py): a second run of one slot re-measures and re-sends nothing"},
 }

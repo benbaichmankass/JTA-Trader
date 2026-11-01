@@ -1,0 +1,18 @@
+{
+  "due_when": {
+    "clears_when": "each of the 11 rows has either a pnl with provenance MEASURED (balance delta, basis named) or a stated reason it stays UNVERIFIED",
+    "due_date": "2026-11-03",
+    "kind": "date"
+  },
+  "id": "PI-20261101-YHTYFLA8-0002",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "lane BREAKOUT-UNRECORDED-1101: 8/8 phone_reconcile closes on breakout_2 since 2026-10-16 have exit_price/pnl null; balance moved 4947.72 (2026-10-12) -> 4880.45 (2026-11-01) with no per-trade attribution",
+    "rerun": "curl https://ict-bot.duckdns.org/api/bot/prop/fills?account_id=breakout_2&limit=500 and count status=closed rows with exit_price null"
+  },
+  "severity": "medium",
+  "state": "queued",
+  "tier": 2,
+  "what": "Price the 11 unpriced breakout_2 closes (fills 108,109 from 2026-10-12 and phone_reconcile rows 135,154,167,174,175,184,192,200,208) from a VENUE-MEASURED figure, never an invented one: the account_status balance series (prop_account_status, MEASURED by the phone) gives realized P&L per close where exactly one trade closed between two snapshots. Rows where two closes share a balance step, or the series has a gap, stay UNVERIFIED. Read-only analysis first (prop_account_status is not on a diag route: a system-action or diag route is needed), then a Tier-2 writeback proposal via prop_report close-correction (VELO-CLOSE-RECON in-place branch)."
+}
