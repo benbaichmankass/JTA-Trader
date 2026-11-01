@@ -1,0 +1,126 @@
+id: RQ-20261101-5e01-02
+title: 'Structure-based SL+TP (swing / FVG / liquidity, ratcheting) vs the declared exit on ada_pullback_2h (bybit_2 + bybit_portfolio): does
+  it beat the current exit net of the full cost stack, held-out?'
+status: blocked
+cadence: once
+theme: live_strategy
+priority: 1
+roadmap:
+- L-AM-STANDARD
+kind: experiment
+practice_precedent: 'T1, T2, T3, T4, T8 (docs/reference/trading-and-model-practice-principles.md): intervention judged against hold AND a matched
+  random intervention, per leg, entries fixed, net of cost.'
+intervention_controls:
+  hold_to_bracket: true
+  matched_random:
+    draws: 100
+  best_static:
+    grid:
+    - pivot_3
+    - pivot_5
+    - pivot_8
+    excludes_test_folds: true
+  bootstrap_group: week
+question: 'Replace ada_pullback_2h''s declared SL/TP mechanism (backtest_pullback 2h; ATR stop 1.5 + trail 5.0, TP 4R) with a dynamic structure-based
+  SL and TP and compare it with the declared exit on the same entries.  Operator 2026-11-01: dynamic structure-based exits are the default until
+  a leg''s own net-of-cost evidence proves another exit better; this unit is that evidence for this leg.'
+why_this_matters: "Operator 2026-11-01 ~23:00Z (verbatim in ARCHITECTURE-CANONICAL \xA7 Active management, 'The default exit'): structure-based\
+  \ SL and TP are the default for all strategies and ML. Row STRUCTURE-EXITS-DEFAULT. Real-money first; a PASS is a discovery, never a config\
+  \ change."
+power:
+  expected_n: 400
+  min_detectable_effect: 0.1
+  effect_units: R
+  design: paired
+  alpha: 0.05
+  power: 0.8
+  basis: 'ESTIMATE: leg-level Stage-0 trade counts of 2020-07..2026-10 runs are 400-700 for 2h/4h crypto legs and thinner for 1d legs; n >= 39
+    floor below which the leg grades INDETERMINATE, never FAIL. The first run replaces it.'
+  feasibility:
+    source: none
+    accrual_basis: Replays history on freshly fetched public candles for a pinned window; nothing accrues. The detector and harness arms are the
+      blockers, not the data.
+decision_rule:
+  id: RULE-STRUCTURE-EXITS-V1
+  unit_rule_id: RULE-RQ20261101-5E01-02-STRUCT-EXIT
+  registered_at: '2026-11-01'
+  registered_before_run: true
+  statistic: 'Per leg, exit_lever_ablation.py (the leg''s own Stage-0 harness, same argv build_strategy_evidence.py uses) over the pinned window
+    2020-07-01..2026-10-15, 6 equal calendar folds by entry time, net of the full cost stack the harness resolves per venue (fee + slippage +
+    funding, recorded per arm as cost_stack). Arms: A = the leg as declared (hold-to-bracket); S = structure SL+TP; R = 100 seeded matched-rate
+    random-exit controls. Entries are fixed: the declared leg''s own signals in every arm. Per arm: n, net R, max drawdown R, weekly CVaR5, R
+    giveback (peak MFE R - realised net R) mean and p95, net P&L %.'
+  rule: 'Structure arm S (ONE factor: the source of the SL and TP levels; sizing, entries, venue, cost stack unchanged). SL = beyond the most
+    recent CONFIRMED swing (N-bar pivot, N left = N right) on the adverse side minus 0.25 ATR, clamped to [0.5, 3.0] x the declared atr_stop distance;
+    it ratchets only toward price to each newly confirmed favourable swing and never loosens. TP = the nearest opposing liquidity level (swing
+    extreme or unfilled FVG edge) at >= 1.0 R, re-estimated on each newly confirmed level and extend-only (src/runtime/tp_revision.py tp_extend
+    semantics). The pivot N in {3, 5, 8} is the ONLY dev-selected parameter: chosen on 5 folds, scored on the held fold (leave-one-fold-out);
+    the clamp and buffer constants are fixed here and never tuned. VERDICT per leg on the 6 held-out fold scores. PASS_BETTER: mean net R per
+    trade of S exceeds A and the paired week-bootstrap 95% lower bound of (S - A) is > 0, in >= 4 of 6 folds, and S beats the 95th pct of the
+    100 random-exit controls (R4); n >= 39 else INDETERMINATE. PASS_NONINFERIOR: lower bound of (S - A) > -0.05 R/trade, R4 holds, and RULE-AM-RISK-ADJUSTED-V1
+    R2 (book max drawdown or worst-5% weekly outcome cut >= 15%) holds. FAIL otherwise. INDETERMINATE if n < 39, S never differs from A, or the
+    controls or detector are missing. A PASS is a DISCOVERY: ONE confirmation run on post-window data, then a per-leg Tier-3 apply PR; the per-trade-R
+    run is a screen until BOOK-SIM-REAL-SIZER exists (canonical Active management clause 4). Thresholds, grid, seeds and window are not changed
+    after any result.'
+  what_it_does_not_do: Edits no config, roster, mandate or live-review policy and places no order. A PASS is not a promotion. Harness fills a
+    stop at the stop price (no gap), equally in S, A and the R controls.
+blocked_on:
+- kind: work_item
+  ref: STRUCTURE-LEVEL-DETECTOR
+  what: No shared causal structure-level detector (confirmed swings, unfilled FVG edges, liquidity levels) exists that both the live monitor and
+    the research harnesses import. src/ict_detection/swing_points.py is a centered-window detector with lookahead unless truncated; src/runtime/liquidity_state.py
+    is live-only.
+  clears_when: One pure, index-based, no-lookahead module returns the confirmed levels as of bar t, with a lookahead-negative test; live monitor
+    and harness both import it.
+- kind: work_item
+  ref: HARNESS-STRUCTURE-EXIT
+  what: scripts/backtest_trend.py, scripts/backtest_pullback.py and the ML entry harness have no structure-exit arm (--structure-exit pivot=N),
+    and no random-exit control for it.
+  clears_when: 'Each harness accepts --structure-exit (default off, byte-identical), exit_lever_ablation writes the A / S / 100 R arms, with tests.
+    Then git mv this file to research/queue/, fill run.command, remove blocked_on and set status: queued.'
+compute: cpu_long
+value:
+  usd_at_stake_per_month: 400
+  confidence: 0.25
+  bucket: own_losses
+  basis: 'stand-in estimate: governs the default exit of a leg that trades real money; not a measurement.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 4.0
+  est_minutes: 240
+  why_runner: 'Operator rule (row COMPUTE-PREFER-KAGGLE, not present in this clone, cited from the dispatch): compute on Kaggle first. Keyless
+    public candles, CPU only; route to research-script-run-kaggle.yml if the router allows a CPU class there, else the runner. The harness must
+    run on both.'
+  basis: 'Estimate: (3 pivot arms + 1 hold + 100 random controls) x one leg; one 2h-leg arm over the window took about 20 s on a runner (ed1c-17
+    / 9a7e-01 logs). The first run replaces it.'
+run:
+  command:
+  - python3
+  - scripts/research/exit_lever_ablation.py
+  - --leg
+  - ada_pullback_2h
+  - --arm
+  - A=
+  - --arm
+  - S3=--structure-exit=pivot=3
+  - --arm
+  - S5=--structure-exit=pivot=5
+  - --arm
+  - S8=--structure-exit=pivot=8
+  - --common=--days=2330;--start=2020-07-01;--end=2026-10-15 23:59
+  - --out
+  - '{out_dir}'
+  inputs:
+    research_unit: RQ-20261101-5e01-02
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+programme: P1
+related:
+- research/levers/ltr-sl-to-structure.yaml
+- src/runtime/tp_revision.py
+- scripts/research/exit_lever_ablation.py
+- STRUCTURE-EXITS-DEFAULT
+- docs/research/structure-exits-default-scope-2026-11-01.md

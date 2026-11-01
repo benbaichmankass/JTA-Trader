@@ -282,6 +282,19 @@ question at wiring time — where the move is expected to run out, what revises
 that prediction, and what thesis condition extends it — or its coverage row is
 `pending`, whatever its lever columns read.
 
+## The default exit is structure-based (operator 2026-11-01)
+
+Canonical text: `docs/ARCHITECTURE-CANONICAL.md` § "Active management", "The default exit". **Gates this adds or changes: none.**
+A dynamic SL and TP anchored on structure (confirmed swings, FVG edges, liquidity levels) that moves with structure is the default exit
+for every strategy and ML until a leg's own net-of-cost evidence proves another exit better. In this skill it means:
+
+- **A leg's first lever is the structure exit.** Before sweeping trail or ATR geometry on a leg, its structure-exit unit
+  (`RQ-20261101-5e01-*`, row `STRUCTURE-EXITS-DEFAULT`) is registered or run; the declared exit is the BASELINE it must beat or be
+  non-inferior to, net of cost, held-out, against a matched random-exit control.
+- **An untested leg's exit is a debt, not a decision.** Record it in the coverage matrix as `pending` with the unit id, never as a finished row.
+- **It is not a live change.** Applying it is leg by leg through a test and a Tier-3 merge; in-trade moves still clear clause 4.
+- Use the ONE shared detector (row `STRUCTURE-EXITS-DEFAULT`, step 1) in live and research. Do not write a second one.
+
 ## Reading a FAIL — it is not a dead lever
 
 A lever that misses its registered bar settles only the ship/config question that rule asked. Before

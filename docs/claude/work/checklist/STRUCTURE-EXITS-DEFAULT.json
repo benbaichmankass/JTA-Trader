@@ -1,0 +1,20 @@
+{
+  "id": "STRUCTURE-EXITS-DEFAULT",
+  "title": "Structure-based SL+TP as the default exit: detector, harness arm, units run, per-leg Tier-3 apply",
+  "phase": "L-AM-STANDARD",
+  "state": "queued",
+  "owner": "manager",
+  "lane": null,
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 3,
+  "prs": [],
+  "blocked_on": [],
+  "note": "Operator 2026-11-01. Due 2026-11-05 (steps 1-3 started, first P1 results read; live apply is Tier-3 per leg). Plan: (1) shared causal structure-level detector ~1d $8; (2) harness --structure-exit + random-exit control + coverage column ~1-2d $12; (3) run units RQ-20261101-5e01-01..15 Kaggle-first; (4) read + confirmation ~$6; (5) per-leg Tier-3 apply PRs ~$3 each. Scope: docs/research/structure-exits-default-scope-2026-11-01.md. roadmap: L-AM-STANDARD (L-ATM). Gaps: no shared detector; ML-ENTRY-DYNAMIC-SL row and #22093 not found on main in this clone.  | SCOPE ADDS 2026-11-01 (operator ~23:05Z, ~23:10Z): BUILD SCOPE (memo section 5): no live monitor detects structure today (15 monitor() paths, order_monitor, tp_revision have zero swing/FVG/sweep code; live_review_packet has its own swings(); 4 swing implementations, none consumed by a monitor); contract = existing verdict path, ratchet-only, close wins, idempotent per bar, journalled; plan detector -> monitor wiring -> venue amend -> replay parity -> per-leg Tier-3 (~$35 total, after the 11-04 reset). RUNNABLE NOW: RQ-20261101-5e02-01..08 (existing --trail-level swing/fvg harness arms, static entry-anchored form) on the 8 trend/pullback real-money/prop/mirror legs; 15 blocked 5e01 units (full dynamic). ML legs blocked on the SL-move walker (RQ-20261101-383f-* not on main; ML-ENTRY-DYNAMIC-SL authors after reset).",
+  "updated_at": "2026-11-01T22:59:30Z",
+  "updated_by": "lane STRUCTURE-EXITS-SCOPE",
+  "roadmap": "L-AM-STANDARD",
+  "due": "2026-11-05",
+  "_seq": 850
+}
