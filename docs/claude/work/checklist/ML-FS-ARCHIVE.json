@@ -1,0 +1,24 @@
+{
+  "phase": "research",
+  "state": "queued",
+  "owner": null,
+  "lane": null,
+  "model": "claude-sonnet-5-5",
+  "tier": 1,
+  "prs": [],
+  "blocked_on": [],
+  "roadmap": [
+    "L-ML-LIVE"
+  ],
+  "priority_rank": 3,
+  "id": "ML-FS-ARCHIVE",
+  "title": "Binance Vision archive for the 60-perp universe beyond OHLCV: all 12 kline columns, fundingRate, premium-index 1h, 5m metrics (OI, long/short, taker ratio), explicit delisting mask, manifest per symbol",
+  "ceiling_usd": 8,
+  "note": "Filed 2026-11-01 by lane ML-FEATURE-INFRA from docs/research/ml-feature-inventory-2026-11-01.md (gap G1). WHY: ENTRY _fetch_month keeps iloc[:, :6] of 12 kline columns and discards taker_buy_volume / count / quote_volume (non-zero on every bar read); funding, premium index and 5m metrics are listed for 60/60, 59/60, 58/60 symbols (dev-window symbol-month coverage 99.6 / 98.0 / 71.3 percent); delisted contracts (OMG, BLZ, FTM read) keep publishing zero-volume constant-close bars and are removed only incidentally by a NaN in vol_ratio. BUILD: a runner script, no credentials, writing parquet per symbol-month plus MANIFEST (sha256, rows, expected rows, first/last ts, gap ledger, delist flag); the metrics reader SORTS and tolerates irregular stamps (BTC daily files since 2026-08 are unsorted/irregular, 7 of 7 sampled days); missing stays NaN, never 0. Cost: ~170 MB klines, ~72 MB premium, ~4 MB funding, ~1.2 GB metrics (BTC-size upper bounds). Licence: Binance ToU, private stores only. Widens DATA-DERIV-ARCHIVE (6 roster symbols) to the 60-perp frozen universe; they are not duplicates. DONE WHEN: manifests whole for 60 symbols and a self-test plants a frozen post-delist month and sees it masked. Gates: none.",
+  "observation": {
+    "what": "manifests for all 60 symbols land with first/last ts per stream and the delist mask counts",
+    "how_to_check": "ls archive/binance_perp_60/MANIFEST.json && python3 -c \"import json;m=json.load(open('archive/binance_perp_60/MANIFEST.json'));print(len(m['symbols']))\"",
+    "due_by": "2026-11-08"
+  },
+  "_seq": 875
+}

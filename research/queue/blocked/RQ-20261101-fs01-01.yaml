@@ -1,0 +1,88 @@
+# Hand-authored 2026-11-01 by lane ML-FEATURE-INFRA (Tier 1). Decision rule registered BEFORE any run. Gates: none.
+id: RQ-20261101-fs01-01
+title: 'Which feature families add DEV-FOLD value to the pooled 60-perp ENTRY recipe? Family-by-family ablation on the c692-01 development folds only (taker flow, basis/funding, positioning, cross-sectional context, OHLCV shape, order-book depth), each added to the 20-feature baseline'
+status: blocked
+cadence: once
+theme: ml_health
+priority: 2
+roadmap:
+- L-ML-LIVE
+kind: experiment
+practice_precedent: 'T1, M6 (docs/reference/trading-and-model-practice-principles.md): purged + embargoed walk-forward; feature admission by out-of-fold ablation, never by in-sample importance; docs/research/ml-feature-inventory-2026-11-01.md section 4.'
+question: 'Same universe (the frozen 60 perps), decision grid, labels, cost stack, purge/embargo, LightGBM parameters, tau grid and dev folds as RQ-20261101-c692-01, with ONE change per arm: the baseline 20 features plus one family from the inventory. Arms: A baseline 20; B +taker flow (kline columns); C +basis and funding; D +positioning (OI, long/short; NaN plus present flag before 2021-12); E +cross-sectional context; F +OHLCV shape and calendar; G all of B..F; H +order-book depth (bookDepth, 2023-01 onward, NaN before). The held-out window 2025-10-01..2026-09-30 is NEVER read by this unit.'
+why_this_matters: 'Operator 2026-11-01: 20 features is far too few for the models we are aiming to build (row ML-FEATURE-INFRA). This unit turns the ranked plan into evidence: it says which families earn a place in ENTRY v2, BRACKETS and HOLD/ADJUST/CLOSE and which do not, before anyone spends serving effort on them.'
+power:
+  expected_n: 90000
+  min_detectable_effect: 0.01
+  effect_units: metric
+  sd: 1.0
+  design: paired
+  alpha: 0.05
+  power: 0.8
+  basis: 'INFERRED: the c692-01 dev folds hold of the order of 10^5 taken-or-scored decision rows pooled over 8 folds; sd of per-decision net R about 1 R (bounded near [-1.1, +1.4] under the 2/3 ATR bracket); a paired out-of-fold comparison uses the same rows in both arms. The effect of interest is +0.01 R per decision. The run records observed n and sd.'
+  feasibility:
+    source: none
+    accrual_basis: Replays public history; nothing accrues. The run records the observed n and sd.
+decision_rule:
+  id: RULE-RQ20261101-FS01-01-FAMILY-ADMISSION
+  registered_at: '2026-11-01'
+  registered_before_run: true
+  statistic: 'Per arm X and per dev fold k (the 8 folds of c692-01): out-of-fold mean net R per decision at the tau chosen on the other folds, minus the same for arm A on the same decision rows. Reported: pooled delta, the number of folds with delta > 0, per-symbol-block bootstrap CI95 of the pooled delta, coverage (share of dev rows with the family present), distinct symbols.'
+  rule: 'INDETERMINATE for an arm IF its family is present on fewer than 40 percent of dev decision rows, OR dev scored n < 1000 in any fold used. ADMIT the family IF pooled delta >= +0.010 R per decision AND delta > 0 in at least 6 of 8 folds. REJECT otherwise. Arm G is reported beside B..F and never substitutes for them. Thresholds are not changed after any result.'
+  what_it_does_not_do: 'Admits a family to the CANDIDATE list for a separately pre-registered ENTRY v2 unit on a fresh forward window; it does not select features for any served model, reads no held-out window, changes no config and places no order.'
+  min_n: 1000 dev decisions per fold
+compute: cpu_long
+value:
+  bucket: ai_trader
+  usd_at_stake_per_month: 400
+  confidence: 0.2
+  basis: 'stand-in: the operator priority-1 goal (ML decision makers on real money) depends on whether richer state helps; not a P&L measurement.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 8.0
+  est_minutes: 240
+  why_runner: Keyless public Binance Vision archives (rows ML-FS-ARCHIVE, ML-FS-STORE); GBDT on CPU.
+  basis: 'INFERRED: 8 arms x 8 folds x 2 sides of LightGBM at the c692-01 size, about 8x the c692-01 dev cost.'
+run:
+  workflow: research-script-run.yml
+  command:
+  - python3
+  - scripts/research/ml_decision_entry.py
+  - run-family-ablation
+  - --cache
+  - /tmp/ml_decision_klines
+  - --unit
+  - '{unit}'
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 600
+  inputs:
+    research_unit: RQ-20261101-fs01-01
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- ML-FEATURE-INFRA
+- ML-FS-ARCHIVE
+- ML-FS-STORE
+- ML-FS-SERVE-PARITY
+- RQ-20261101-c692-01
+- docs/research/ml-feature-inventory-2026-11-01.md
+what_it_does_not_do: Registers, serves or promotes nothing; changes no config; places no order; sizes nothing; reads no held-out window.
+blocked_on:
+- kind: harness
+  ref: scripts/research/ml_decision_entry.py run-family-ablation
+  what: the ablation subcommand, reading features from the ML-FS-STORE registry
+  clears_when: ML-FS-ARCHIVE and ML-FS-STORE are done and the subcommand lands with a self-test that refuses a held-out date; the lane git-mvs this file to research/queue/ with status queued (rule unchanged)
+ml_consumer:
+  consumer: ML-ENTRY-LIVE-ADAPTER
+  decision: 'which feature families enter the candidate list for the separately pre-registered ENTRY v2 unit (and the BRACKETS / HOLD-ADJUST-CLOSE state), serving none of them yet'
+  legs:
+  - xrp_pullback_2h
+  - trend_donchian_eth_4h
+  - trend_donchian_xrp_4h
+  - ada_pullback_2h
+  - trend_donchian_sol_prop
+  book: money
