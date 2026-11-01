@@ -149,17 +149,44 @@ class OneMinute:
             self.counts["no_1m_data"] += 1
             return "sl"
         m = d.loc[bar_ts: bar_ts + pd.Timedelta(minutes=59)]
-        for lo, hi in zip(m["low"].to_numpy(), m["high"].to_numpy()):
-            s_hit = lo <= sl if side > 0 else hi >= sl
-            t_hit = hi >= tp if side > 0 else lo <= tp
-            if s_hit and t_hit:
-                self.counts["still_ambiguous"] += 1
-                return "sl"
-            if s_hit or t_hit:
-                self.counts["1m"] += 1
-                return "sl" if s_hit else "tp"
-        self.counts["still_ambiguous"] += 1
-        return "sl"
+        t0 = int(bar_ts.timestamp())
+        mins = [{"time": int(ts.timestamp()), "high": float(hi), "low": float(lo)}
+                for ts, hi, lo in zip(m.index, m["high"].to_numpy(), m["low"].to_numpy())]
+        res = resolve_same_bar({"time": t0}, 3600, mins, side > 0, tp, sl)
+        if res is None:
+            self.counts["still_ambiguous"] += 1      # one 1m bar touched both, or the 1m data does not cover the bar
+            return "sl"
+        self.counts["1m"] += 1
+        return "sl" if res == "invalidation_first" else "tp"
+
+
+def _local_resolve_same_bar(bar, bar_s, bars_1m, up, tgt, inv):
+    """Identical semantics to scripts/research/forecast_first_passage.py::resolve_same_bar (PR #22077, lane
+    FORECAST-GRADE-FIRST-PASSAGE), used only while that module is not importable here."""
+    if not bars_1m:
+        return None
+    lo, hi = bar["time"], bar["time"] + bar_s
+    sub = [m for m in bars_1m if lo <= m["time"] < hi]
+    if not sub or sub[0]["time"] > lo or len(sub) < bar_s // 60:
+        return None
+    for m in sub:
+        i = (m["low"] <= inv) if up else (m["high"] >= inv)
+        t = (m["high"] >= tgt) if up else (m["low"] <= tgt)
+        if i and t:
+            return None
+        if i:
+            return "invalidation_first"
+        if t:
+            return "target_first"
+    return None
+
+
+try:  # the shared same-bar resolver (manager 2026-11-01): reuse it, never fork it
+    from forecast_first_passage import resolve_same_bar
+    TIE_RESOLVER = "scripts/research/forecast_first_passage.py::resolve_same_bar"
+except ImportError:  # not on this branch's base yet (#22077); identical semantics, asserted in the self-test once it lands
+    resolve_same_bar = _local_resolve_same_bar
+    TIE_RESOLVER = "local copy of forecast_first_passage.resolve_same_bar (PR #22077 not on base)"
 
 
 # ------------------------------------------------------------------------------------------------ panel
@@ -699,7 +726,7 @@ def forward_stage(cache: Path, out: Path, dev: dict) -> dict:
     h["best_static_dev_chosen"] = {"level_atr": dev["best_static_level"], "mean_net_r": float(bs.mean()),
                                    "mean_delta_vs_base": float((bs - b).mean())}
     h["calibration_reported"] = calibration(rows, P)
-    h["ties"] = om.counts
+    h["ties"] = {**om.counts, "resolver": TIE_RESOLVER}
     h["window"] = [str(trades.ts.min()), str(trades.ts.max())]
     h["forward_fetch"] = {"symbols_with_october": len(have), "symbols_without": [s for s in syms if s not in have]}
     h["final_fit"] = {"n_train": tm["n_train"], "class_counts": tm["class_counts"],
@@ -789,6 +816,15 @@ def _self_test() -> None:
     ok = valid_levels(-1, 100.0, 1.0, 99.0)
     assert ok[GRID.index(1.5)] and not ok[GRID.index(1.0)]
     assert G == 9 and N_CLASS == 18
+    # shared 1m tie resolver contract: first minute decides; a minute touching both, or partial coverage, is None
+    mins = [{"time": 60 * k, "high": 100.5, "low": 99.5} for k in range(60)]
+    mins[7] = {"time": 420, "high": 103.5, "low": 99.0}
+    assert resolve_same_bar({"time": 0}, 3600, mins, True, 103.0, 98.0) == "target_first"
+    mins[3] = {"time": 180, "high": 100.0, "low": 97.0}
+    assert resolve_same_bar({"time": 0}, 3600, mins, True, 103.0, 98.0) == "invalidation_first"
+    assert resolve_same_bar({"time": 0}, 3600, mins[:30], True, 103.0, 98.0) is None
+    mins[3] = {"time": 180, "high": 104.0, "low": 97.0}
+    assert resolve_same_bar({"time": 0}, 3600, mins, True, 103.0, 98.0) is None
     print("self-test ok")
 
 
