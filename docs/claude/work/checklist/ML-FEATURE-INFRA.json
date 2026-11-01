@@ -2,7 +2,7 @@
   "id": "ML-FEATURE-INFRA",
   "title": "Feature inventory + ranked plan for a pooled feature store that ENTRY v2, BRACKETS and HOLD/ADJUST/CLOSE all read (operator: 20 features is far too few)",
   "phase": "research",
-  "state": "in_flight",
+  "state": "landed_unproven",
   "owner": "lane",
   "lane": "ML-FEATURE-INFRA",
   "model": "claude-sonnet-5-5",
@@ -11,7 +11,7 @@
   "tier": 1,
   "prs": [],
   "blocked_on": [],
-  "note": "Dispatched by Manager Session 2026-11-01a. OPERATOR 2026-11-01, verbatim: \"20 features seems like far far far far too little for the caliber of MLs we are aiming to build - if that's the best we can do, than labelling/features infra needs to get more attention. If it's not the best we can, then why so few?\" Scope: market structure and trading data only, no sizing, no risk features; training may use any useful data incl. symbols not traded; one pooled model per question. DELIVERABLES: (1) this row; (2) docs/research/ml-feature-inventory-2026-11-01.md (per source: measures, symbols, history actually read, point-in-time safety, live today?, backfill cost); (3) ranked feature-family plan + infra gaps each as a row/unit; (4) direct answer: data limit, infra limit or choice. No training, no held-out read (ML-BAR-ONE-READ). ENTRY v1 go-live path unchanged. Gates this adds: none. [2026-11-01 lane] DONE in this PR: inventory docs/research/ml-feature-inventory-2026-11-01.md; gap rows ML-FS-ARCHIVE, ML-FS-STORE, ML-FS-SERVE-PARITY; reopened DATA-KLINE-ARCHIVE; unit RQ-20261101-fs01-01 (blocked). Answer: an infra limit that looks like a choice (inventory section 1).",
+  "note": "Dispatched by Manager Session 2026-11-01a. OPERATOR 2026-11-01, verbatim: \"20 features seems like far far far far too little for the caliber of MLs we are aiming to build - if that's the best we can do, than labelling/features infra needs to get more attention. If it's not the best we can, then why so few?\" Scope: market structure and trading data only, no sizing, no risk features; training may use any useful data incl. symbols not traded; one pooled model per question. DELIVERABLES: (1) this row; (2) docs/research/ml-feature-inventory-2026-11-01.md (per source: measures, symbols, history actually read, point-in-time safety, live today?, backfill cost); (3) ranked feature-family plan + infra gaps each as a row/unit; (4) direct answer: data limit, infra limit or choice. No training, no held-out read (ML-BAR-ONE-READ). ENTRY v1 go-live path unchanged. Gates this adds: none. [2026-11-01 lane] DONE in this PR: inventory docs/research/ml-feature-inventory-2026-11-01.md; gap rows ML-FS-ARCHIVE, ML-FS-STORE, ML-FS-SERVE-PARITY; reopened DATA-KLINE-ARCHIVE; unit RQ-20261101-fs01-01 (blocked). Answer: an infra limit that looks like a choice (inventory section 1). [2026-11-01 ~12:55Z lane close-out, HANDOFF] DONE: inventory + ranked plan + dated hours-plan (docs/research/ml-feature-inventory-2026-11-01.md); gap rows; HOLDOUT-LOCK (scripts/research/holdout_lock.py, symbol-aware, c692-01/-02 reads backfilled with the 60-perp set); vision_streams.py (12-col klines, funding, premium, sorted 5m metrics, frozen-bar flag; 60/60 symbols fetched, metrics 107,760 files in 1,381 s); ml_entry_families.py F1..F6 with truncation-invariance leakage test; ml_entry_v2.py (build-table / arm / combine / forward), ml_entry_v2_run.py (python runner entry); fs01-01 local dev-fold ablation committed at comms/research/RQ-20261101-fs01-01/local-20261101T1250Z/ (RESULT.md has the per-fold table and the noise control): NO family admitted; lightgbm 4.6.0 vs 4.7.0 dev walk of c692-01 identical to the digit; c692-01 reproduces exactly under its own pipeline. NOT BUILT (for the fresh ML-RECIPE lane): (1) fs05-01 recipe harness: arms R1/R2/R3 (stronger fixed regularisation, smaller leaves/slower learning, fold-internal shadow-feature selection), noise sets S1, 3 seeds -- ml_entry_v2.py has the seed hook (SEEDS/run_arm) and the lofo()/combine() machinery; the noise control used so far is a scratch script (9 N(0,1) columns, LOFO -0.0157) not in the repo; planned 2026-11-01T17:00Z. (2) fs06-01 target harness T1..T4 (market-neutral, rank, clipped, first-passage), planned 2026-11-01T20:00Z; needs a training-target switch in E.fit_predict (currently trains on net_long/net_short only) and same-timestamp demeaning with a truncation test. (3) fs02-01 forward unit is NOT RUN by its own rule (no admitted family); W1 2026-10-01..31 UNSPENT. (4) Unit commands: runner allows only python3 scripts/research/*.py; fs01-01/fs02-01 on main and fs05-01/fs06-01 in PR #22133 still declare 'bash scripts/research/ml_entry_v2_run.sh' -> change to python3 scripts/research/ml_entry_v2_run.py <mode> {unit} {out_dir} once PR #22097 (which carries the script) merges. (5) ML-FS-ARCHIVE-WIDE handed to lane MARKET-DATA-LAKE (HF data lake). (6) ML-ENTRY-RETRAIN-CADENCE Tier-2 held PR NOT written (due 2026-11-02T18:00Z). (7) serve-parity c692-07 rerun is run 41307919288 on branch claude/c692-07-run (queued; verdict goes to the manager). SPEND not metered from this lane.",
   "priority_rank": 2,
   "roadmap": [
     "L-ML-LIVE"
@@ -21,6 +21,10 @@
     "how_to_check": "ls docs/research/ml-feature-inventory-2026-11-01.md; grep -c ml-feature-inventory docs/DOCUMENT-INDEX.md; python3 scripts/ops/checklist.py queue | grep FEATURE",
     "due_by": "2026-11-04"
   },
-  "updated_at": "2026-11-01T10:55:47Z",
+  "updated_at": "2026-11-01T12:49:20Z",
+  "writeback": {
+    "roadmap": "none: the ENTRY v2 family question answered (no family admitted on dev folds); L-ML-LIVE milestone text unchanged, recipe/target units carry the next step",
+    "arch": "none: no component changed"
+  },
   "_seq": 850
 }
