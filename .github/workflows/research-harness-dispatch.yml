@@ -153,13 +153,13 @@ jobs:
               ;;
             funding_carry)
               fetch "$SYM" "$TF"
-              # Bybit funding, like Bybit candles, is geoblocked from a
-              # GH-hosted runner's IP — NO swallowing here (`set -euo
-              # pipefail` above already means a failed fetch fails this
-              # step): the run correctly lands `read_state: producer_failed`,
-              # an honest network-reach limitation rather than a fabricated
-              # pass with an empty/missing funding series quietly used.
-              python3 scripts/ops/fetch_bybit_funding.py --symbol "$SYM" --days 180 \
+              # Funding comes from the Binance Vision archive (data.binance.vision, 200 from a
+              # GH-hosted runner), NOT api.bybit.com (HTTP 403 from runner IPs: every Bybit-funding
+              # dispatch landed producer_failed, FUNDING-CARRY-HARNESS-FIX / PI-20261007-X9UFEF4U-0001).
+              # No swallowing: `set -euo pipefail` makes a failed or empty fetch fail this step, so the run
+              # lands `read_state: producer_failed` with a reason, never a pass on an empty series.
+              # --days 1200 covers the candle corpus window; complete months only (stated on stderr).
+              python3 scripts/ops/fetch_binance_vision_funding.py --symbol "$SYM" --days 1200 \
                 --output "data/${SYM}_funding.csv"
               python3 scripts/backtest_funding_carry.py \
                 --symbol "$SYM" --timeframe "$TF" \
