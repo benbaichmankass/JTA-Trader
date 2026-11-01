@@ -24,7 +24,7 @@ def test_account_sets_agree_with_the_resolver_and_the_mirror_tests():
     assert set(st.GENERAL_PAPER) == set(mr.SOAK_ACCOUNT.values())
     assert {a for a, s in mr.STAGE_OF_ACCOUNT.items() if s == "S2"} == set(st.REAL_MONEY_MIRROR)
     assert {k: v for k, v in st.REAL_MONEY_MIRROR.items() if v} == mr.MIRROR_OF
-    assert st.MIRROR_CARVE_OUT["alpaca_portfolio"] == mirror_tests._ALPACA_PROXY_STRATEGIES
+    assert st.MIRROR_PROXY_UNDERLYING["alpaca_portfolio"] == mirror_tests._ALPACA_PROXY_UNDERLYING
 
 
 def test_the_real_tree_holds_the_invariant():
