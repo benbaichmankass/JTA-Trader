@@ -18,11 +18,13 @@ WHAT IT REFUSES
         research/programmes/*.yaml      a node with retires_family: <f>
       (whole-tree: a structured retirement is never grandfathered, it is a claim the record must back)
   R2  a review record missing any of the SIX protocol items (IDEA-REVIEW-1016, PR #18560): (1) a test-design
-      review answering every check in policy.test_design_checks; (2) breadth >= the minimums on configs /
+      review answering every check in policy.test_design_checks; (2) breadth >= the minimums on
       disjoint windows or folds / instruments, each entry with n + power, indeterminate counting zero; (3) a
       passing positive control (or none_exists_because); (4) >= outside_sources sources or the searches run,
       and NO source naming an untested condition (that is verdict A, never C); (5) every not-tested dimension
-      covered_by a unit/row or irrelevant_because a reason; (6) a one-sentence mechanism-level reason. Only
+      covered_by a unit/row or irrelevant_because a reason; (6) a one-sentence mechanism-level reason; and (v3,
+      2026-11-01) a lever_map covering every lever family of the subject_kind (policy.lever_families) with a
+      counted full-cost test or irrelevant_because -- never an attempt count. Only
       verdict C retires; A (tested wrong) and B (not yet testable) never do.
   R3  (with --base) an ADDED line on a research text surface that uses family-closure language
       (policy.closure_language) without citing `family_review: <f>` / research/family_reviews/<f>.yaml
@@ -111,9 +113,6 @@ def record_problems(r: Dict[str, Any], family: str, policy: Dict[str, Any]) -> L
     if isinstance(br, dict):
         if not str(br.get("primary_axis") or "").strip():
             out.append("breadth.primary_axis: name the family's main axis")
-        nc = len(_counted(br.get("configs")))
-        if nc < int(mins.get("configs_tested") or 0):
-            out.append(f"breadth.configs: {nc} counted (n + power, not indeterminate) < {mins.get('configs_tested')}")
         nw, nf = len(_counted(br.get("windows"))), len(_counted(br.get("folds")))
         if nw < int(mins.get("windows_disjoint") or 0) and nf < int(mins.get("folds_alternative") or 0):
             out.append(f"breadth: {nw} disjoint window(s) < {mins.get('windows_disjoint')} and {nf} fold(s) < "
@@ -121,6 +120,22 @@ def record_problems(r: Dict[str, Any], family: str, policy: Dict[str, Any]) -> L
         ni = len(_counted(br.get("instruments")))
         if ni < int(mins.get("instruments_tested") or 0) and not str(br.get("instrument_specific_why") or "").strip():
             out.append(f"breadth.instruments: {ni} counted < {mins.get('instruments_tested')} and no instrument_specific_why")
+    # (2b) LEVER EXHAUSTION (policy v3, operator 2026-11-01): every lever family of the subject's kind is tested at declared power,
+    # net of the full cost stack, or named irrelevant -- never a count of attempts.
+    kind = str(r.get("subject_kind") or policy.get("lever_kinds_default") or "lever_family")
+    fams = (policy.get("lever_families") or {}).get(kind)
+    if fams is None:
+        out.append(f"subject_kind {kind!r} is not a key of policy.lever_families")
+        fams = []
+    lm = r.get("lever_map") if isinstance(r.get("lever_map"), dict) else {}
+    for fam in fams:
+        e = lm.get(fam) if isinstance(lm.get(fam), dict) else {}
+        if str(e.get("irrelevant_because") or "").strip():
+            continue
+        full = [t for t in _counted(e.get("tested")) if str(t.get("cost_basis") or "") == "full"]
+        if not full:
+            out.append(f"lever_map.{fam}: no counted test (n + power, not indeterminate, cost_basis: full) and no "
+                       "irrelevant_because -- the lever map is not exhausted, so the subject keeps iterating")
     # (3) positive control
     pc = r.get("positive_control") or {}
     if isinstance(pc, dict) and not (pc.get("passed") is True and str(pc.get("test") or "").strip()) \
@@ -250,6 +265,9 @@ def _good_record(family: str = "deep_sequence") -> Dict[str, Any]:
             "checks": {"window_vs_mechanism": "two years, both regimes", "metric_vs_baseline": "logloss vs prior",
                        "label_vs_payoff": "R-weighted", "gate_vs_size": "fixed size, no gate",
                        "harness_validity": "no known defect at run time", "reference_distribution": "block bootstrap"}},
+        "subject_kind": "ml_model",
+        "lever_map": {f: {"tested": [{**ent(f"{f}-1"), "cost_basis": "full"}]} for f in
+                      ("features", "labels", "recipe", "universe", "horizon", "threshold", "calibration")},
         "breadth": {"primary_axis": "architecture", "configs": [ent("c1"), ent("c2"), ent("c3")],
                     "windows": [ent("w1"), ent("w2")], "instruments": [ent("BTC"), ent("ETH")]},
         "positive_control": {"test": "RQ-POS", "passed": True},
@@ -292,8 +310,13 @@ def _self_test() -> int:
         assert any("does not retire" in b for b in bad(lambda x: x.update(verdict="A")))
         assert any("flawed" in b for b in bad(lambda x: x["test_design_review"].update(verdict="flawed")))
         assert any("checks.gate_vs_size" in b for b in bad(lambda x: x["test_design_review"]["checks"].pop("gate_vs_size")))
-        assert any("breadth.configs" in b for b in bad(lambda x: x["breadth"]["configs"][2].update(verdict="indeterminate")))
-        assert any("breadth.configs" in b for b in bad(lambda x: x["breadth"]["configs"][1].pop("power")))
+        # v3: no attempt count retires anything; an unexhausted lever map does not
+        assert not any("configs" in b for b in bad(lambda x: x["breadth"].update(configs=[])))
+        assert any("lever_map.labels" in b for b in bad(lambda x: x["lever_map"].pop("labels")))
+        assert any("lever_map.recipe" in b for b in bad(lambda x: x["lever_map"]["recipe"]["tested"][0].update(cost_basis="fee_only")))
+        assert any("lever_map.horizon" in b for b in bad(lambda x: x["lever_map"]["horizon"]["tested"][0].update(verdict="indeterminate")))
+        assert not bad(lambda x: x["lever_map"].update(universe={"irrelevant_because": "single-instrument head by design"}))
+        assert any("lever_map.entry" in b for b in bad(lambda x: x.update(subject_kind="strategy_leg")))
         assert not any(b.startswith("breadth:") for b in bad(lambda x: x["breadth"].update(
             windows=[], folds=[{"id": f"f{i}", "n": 50, "power": 0.6, "verdict": "fail"} for i in range(4)])))
         assert any(b.startswith("breadth:") for b in bad(lambda x: x["breadth"].update(windows=good["breadth"]["windows"][:1])))

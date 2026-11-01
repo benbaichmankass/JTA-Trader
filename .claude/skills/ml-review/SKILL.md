@@ -5,6 +5,8 @@ description: Weekly review of the ICT bot's ML LIFECYCLE, built on the shared fo
 
 > **Doc status:** `live` · category `instruction` · last verified `2026-10-28` · registered in [`docs/DOCUMENT-INDEX.md`](../../../docs/DOCUMENT-INDEX.md)
 
+> **The research loop (binding, 2026-11-01):** [`docs/plans/OPERATING-PLAN-2026-09-21.md`](../../../docs/plans/OPERATING-PLAN-2026-09-21.md) § 2 "What does not pass goes back into research — THE research workflow" -- every non-live model has a live iteration; the review reports `iteration_orphans.py` ml_model orphans (target 0) and authors any it finds.
+
 # /ml-review — model/training lifecycle review
 
 > **Practice principles (pointer):** the design and evaluation choices this skill makes follow [`docs/reference/trading-and-model-practice-principles.md`](../../../docs/reference/trading-and-model-practice-principles.md) (TRADING T1–T10 · MODEL M1–M10 · RESEARCH-OPS R1–R6), refreshed weekly by `frontier-research`. A principle never overrides a binding rule.
