@@ -131,12 +131,18 @@ def main(argv=None) -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--days", type=int, default=30)
     ap.add_argument("--out", required=True)
+    ap.add_argument("--model", choices=["v1", "v2"], default="v1",
+                    help="v2: the ml_entry_v2 artifact (R2 recipe, cost gate, TP 4); decisions go through the same shared decide()")
     a = ap.parse_args(argv)
     out = Path(a.out)
     out.mkdir(parents=True, exist_ok=True)
     import ml_decision_entry as E
     traded = E.traded_symbols()
-    model = M.load_model()
+    if a.model == "v2":
+        from src.units.strategies import ml_entry_v2 as M2  # noqa: E402
+        model = M2.load_model()
+    else:
+        model = M.load_model()
     meta = model["meta"]
     ref = list(meta["xs_reference"])
     end = pd.Timestamp.now(tz="UTC").floor("D")
