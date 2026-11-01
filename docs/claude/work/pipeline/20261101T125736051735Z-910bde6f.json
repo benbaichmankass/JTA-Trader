@@ -1,0 +1,17 @@
+{
+  "due_when": {
+    "due_date": "2026-11-03",
+    "kind": "date"
+  },
+  "id": "PI-20261101-WTFTWTFP-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "lane MARKET-DATA-LAKE (row MARKET-DATA-LAKE), 2026-11-01",
+    "rerun": "python3 -c \"from huggingface_hub import HfFileSystem; import pyarrow.parquet as pq; print(pq.ParquetFile(HfFileSystem().open('datasets/CryptoSpartan/stocks_bars_1m/stocks_bars_1m.parquet','rb')).metadata)\" ; then extend scripts/data_lake/free_sources.py with an import command and run market-data-lake.yml scope other"
+  },
+  "severity": "high",
+  "state": "queued",
+  "tier": 1,
+  "what": "(b2) Import CryptoSpartan/stocks_bars_1m (ungated HF; MEASURED 604,208,214 1m bars, >=637 tickers, 2016-01-01..2026-07-07) into the lake as us_equity/alpaca_1m_ext/1m/<SYM>.parquet with manifest entries; Alpaca terms bind (data scraped from Alpaca)."
+}
