@@ -1,0 +1,21 @@
+{
+  "id": "GLD-ORPHAN-5209",
+  "title": "alpaca_paper GLD 39 sh (trade 5209) is unreviewable: falsely-closed trade 5126 re-adopted onto the WRONG package of a RETIRED leg; orphan attribution is account-blind",
+  "phase": "build",
+  "state": "queued",
+  "owner": "manager",
+  "lane": null,
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 2,
+  "prs": [],
+  "blocked_on": [],
+  "note": "MEASURED 2026-11-01 ~15:50Z (LTR-PACKET-FIXES G; diag journal trades ids 2818-6817 + order_packages + alpaca_open_orders). (1) Venue: alpaca_paper holds GLD long 39 sh with OCO legs SL 416.09 / TP 461.27 submitted 2026-08-27T14:11Z. Those are trade 5126's brackets exactly (pkg-8106d5eef6fc425c, 39 sh, entry 419.72, SL 416.0886, TP 461.2723). (2) 5126 was closed 2026-08-28T07:34Z by position_snapshot_reconciler as exchange_flat_reconciled, yet the shares are still held: a FALSE CLOSE (the cause on 08-28 is INFERRED, not re-measured: two absent snapshots + alpaca 404 while the position existed). (3) 2026-08-29T07:32Z the reverse reconciler re-adopted the 39 sh as trade 5209 (setup_type adopted_orphan) onto pkg-6a8e3fb325464be3, the NEWEST gld_pullback_1h package within the entry-price tolerance (419.77 vs 419.51). alpaca_paper's own row in that package (5166) was REJECTED INTRADAY_DRAWDOWN, and the journal SL/TP 414.54/461.33 disagree with the venue's 416.09/461.27. Code: order_monitor._recover_orphan_attribution walks db.get_recent_order_packages_for_symbol newest-first on direction + entry price; it never checks that this ACCOUNT had a filled row in the candidate package, nor that the venue bracket matches the package. (4) gld_pullback_1h was RETIRED 2026-10-28 (enabled: false), so no strategy loop manages the position or writes position_telemetry. live_review_due reads telemetry_absent with 0 history bars, so every event is could_not_look and the package can never be reviewed. Of 12 open trades (= live_review_due open_count 12), 5209 is the ONLY one on a disabled strategy. DECISIONS: (a) Tier-2 journal writeback: re-link 5209 to pkg-8106 (or reopen 5126) with the venue brackets, and close pkg-6a8e; (b) Tier-3/operator: whether a retired leg's 39-sh paper position is closed now or left to its venue OCO; (c) Tier-2 code fix: _recover_orphan_attribution prefers a package where THIS account has a filled (not rejected) row and whose bracket matches the venue legs, else refuses (same 'never guess' rule as the size/stale refusals); (d) retired legs with an open position keep telemetry (off the trade path is not off the data path). Re-entry test: live_review_due shows pkg-8106/5209 telemetry present and its events looked, or the position flat with a first-class close reason.",
+  "updated_at": "2026-11-01T15:47:10Z",
+  "updated_by": "session_01AFoLuKrtjxkEjpGuVNPAMz",
+  "roadmap": [
+    "L-ATM"
+  ],
+  "_seq": 882
+}
