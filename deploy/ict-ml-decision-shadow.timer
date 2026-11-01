@@ -1,0 +1,23 @@
+# ============================================
+# ICT ML DECISION SHADOW TIMER (operator 2026-11-01 ~22:30Z: "We should have it logging decisions more frequently and
+# on smaller timeframes as well")
+# Fires the OBSERVE-ONLY ML ENTRY scoring pass every 15 minutes, 50 s after each 15m boundary so the venue has closed
+# the bar. Each pass scores every Bybit-listed reference symbol under ml_entry (v1) and ml_entry_v2 and appends to
+# runtime_logs/ml_decision_shadow.jsonl. It places no order (src/runtime/ml_decision_shadow.py).
+#
+# Auto-installed + enabled on the trader box by scripts/install_systemd_units.sh (deploy/*.timer glob).
+# Save to: /etc/systemd/system/ict-ml-decision-shadow.timer
+# ============================================
+
+[Unit]
+Description=Trigger ict-ml-decision-shadow every 15 minutes (observe-only ML ENTRY scoring, all symbols)
+
+[Timer]
+OnCalendar=*-*-* *:00,15,30,45:50
+AccuracySec=5s
+# No catch-up: a missed boundary is logged as missing, never back-filled with a later bar's data.
+Persistent=false
+Unit=ict-ml-decision-shadow.service
+
+[Install]
+WantedBy=timers.target
