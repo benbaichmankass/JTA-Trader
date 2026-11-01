@@ -178,6 +178,23 @@ def pnl_path(taken: pd.DataFrame, risk_pct: float, leverage: float, buffer: floa
             "mean_risk_per_trade_pct_equity": 100 * float(kept.risk_frac.mean())}
 
 
+def recost(taken: pd.DataFrame, spec: dict, slip_bps_assumed: float = 3.0) -> dict:
+    """Re-cost every decision with the symbol's MEASURED Bybit bid/ask spread (``spec[sym]['spread_bps']``, one
+    tickers snapshot). A market entry plus a market exit pays about one full spread; the evidence charged
+    ``slip_bps_assumed`` round trip, so the extra cost in R is max(0, spread - assumed) / stop distance."""
+    sp = {k: (v or {}).get("spread_bps") for k, v in spec.items()}
+    t = taken.assign(spread=taken.symbol.map(sp)).dropna(subset=["spread"])
+    t = t.assign(extra_r=np.maximum(0.0, t.spread - slip_bps_assumed) / 1e4 / t.stop_pct)
+    t = t.assign(net_adj=t.net_r - t.extra_r)
+    by = {k: {"n": len(g), "spread_bps": float(g.spread.iat[0]), "extra_r_per_trade": round(float(g.extra_r.mean()), 4),
+              "mean_net_r": round(float(g.net_r.mean()), 4), "mean_net_r_recosted": round(float(g.net_adj.mean()), 4)}
+          for k, g in t.groupby("symbol")}
+    return {"slip_bps_assumed": slip_bps_assumed, "n": len(t), "n_symbols": int(t.symbol.nunique()),
+            "mean_net_r": float(t.net_r.mean()), "mean_net_r_recosted": float(t.net_adj.mean()),
+            "symbols_spread_above_assumed": int(sum(1 for v in by.values() if v["spread_bps"] > slip_bps_assumed)),
+            "per_symbol": by}
+
+
 def per_symbol(taken: pd.DataFrame) -> dict:
     return {k: {"n": len(g), "mean_net_r": round(float(g.net_r.mean()), 4)}
             for k, g in sorted(taken.groupby("symbol"), key=lambda kv: kv[0])}
@@ -194,6 +211,8 @@ def main(argv=None) -> int:
     ap.add_argument("--out", required=True)
     ap.add_argument("--from-decisions", default="", help="re-analyse a pickled decision frame instead of re-fitting")
     ap.add_argument("--save-decisions", default="", help="also pickle the decision frame here (re-analysis)")
+    ap.add_argument("--bybit-specs", default="", help="JSON {symbol: {status, contractType, quoteCoin, spread_bps, ...}}"
+                    " from Bybit instruments-info + tickers; restricts a 'bybit_listed' subset and re-costs it")
     ap.add_argument("--risk-pct", type=float, default=0.015)
     ap.add_argument("--leverage", type=float, default=3.0)
     ap.add_argument("--margin-buffer", type=float, default=0.9)
@@ -220,6 +239,12 @@ def main(argv=None) -> int:
            "subsets": {},
            "interval_rule": "open [ts+1h, ts+(bars+1)h): exit counted to the END of the exit bar (upper bound)",
            "git_sha": mde._git_sha()}
+    if args.bybit_specs:
+        bspec = json.loads(Path(args.bybit_specs).read_text())
+        listed = sorted(k for k, v in bspec.items() if v and v.get("status") == "Trading"
+                        and v.get("contractType") == "LinearPerpetual" and v.get("quoteCoin") == "USDT")
+        args.subset.append("bybit_listed=" + ",".join(listed))
+        res["bybit_listed_recost"] = recost(taken[taken.symbol.isin(listed)], bspec)
     for spec in args.subset:
         name, _, lst = spec.partition("=")
         keep = {s.strip() for s in lst.split(",") if s.strip()}
