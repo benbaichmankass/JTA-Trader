@@ -1,9 +1,9 @@
 ---
 name: programme-review
-description: The WEEKLY research programme review (routine "Weekly research programme review", Wed 19:29Z, one Opus lane). Reads the research map, every programme plan (research/programmes/*.yaml + docs/research/programmes/*.md) and every result graded in the week; runs in two layers -- a script-computed CHECKS packet (scripts/research/research_ops_checks.py --kind programme_review --since 7d) and an ANALYSIS per programme and per track (TRADING / MODEL) -- then updates each plan (learned; questions answered / unlocked / retired; the next 3-4 weeks of pre-registered units, value-ranked; cross-programme and cross-track feeds), turns needs_authoring nodes into unit specs, grades last week's calls, and lands one HELD PR for the manager's merge. Feeds Thursday planning. Use when the routine fires, the manager dispatches a PROGRAMME-REVIEW-<date> lane, or the operator says "review the research programmes". NOT the 4x/day pipeline pass (research-ops), NOT the external scan (frontier-research), NOT closed-trade grading (performance-review).
+description: The WEEKLY research programme review (routine "Weekly research programme review", Wed 19:29Z, one Opus lane). Reads the research map, every programme plan (research/programmes/*.yaml + docs/research/programmes/*.md) and every result graded in the week; runs in two layers -- a script-computed CHECKS packet (scripts/research/research_ops_checks.py --kind programme_review --since 7d) and an ANALYSIS per programme and per track (TRADING / MODEL) -- audits THE ITERATION LOOP first (every testing leg, non-live ML model and live-review class has a live iteration unit authored from a diagnosis; orphans are authored here; a subject failing iteration after iteration gets a family-review decision, never silent parking), then updates each plan (learned; questions answered / unlocked / retired; the next 3-4 weeks of pre-registered units, value-ranked; cross-programme and cross-track feeds), turns needs_authoring nodes into unit specs, grades last week's calls, and lands one HELD PR for the manager's merge. Feeds Thursday planning. Use when the routine fires, the manager dispatches a PROGRAMME-REVIEW-<date> lane, or the operator says "review the research programmes". NOT the 4x/day pipeline pass (research-ops), NOT the external scan (frontier-research), NOT closed-trade grading (performance-review).
 ---
 
-> **Doc status:** `live` · category `instruction` · last verified `2026-10-28` · registered in [`docs/DOCUMENT-INDEX.md`](../../../docs/DOCUMENT-INDEX.md)
+> **Doc status:** `live` · category `instruction` · last verified `2026-11-01` · registered in [`docs/DOCUMENT-INDEX.md`](../../../docs/DOCUMENT-INDEX.md)
 
 # /programme-review — what this week's research means, and what we ask next
 
@@ -14,6 +14,31 @@ fed); reason over wide context inside a fixed format that guarantees the checks;
 to trade better) and **MODEL** (how to build a better AI trader model). Diagnosis of the previous runs and sources:
 [`docs/research/research-ops-redesign-2026-10-28.md`](../../../docs/research/research-ops-redesign-2026-10-28.md); shared
 pattern `docs/reference/llm-analyst-skill-design.md`.
+
+## THE ITERATION LOOP, weekly view (operator 2026-11-01, binding; lane RESEARCH-ITERATE)
+
+> **Operator, 2026-11-01 ~12:59Z (verbatim):** *"first, these rules apply to MLs as well, not just strategies or live reviews.
+> second, if the data doesn't pass, it goes back into research for improvments and testing. THere is no other pipeline for
+> underperforming strategies/mls. I don' twant to keep finding strategies sitting arround on paper testing with no clear plan"*
+
+One ladder for strategy legs, ML models and live-review action classes: edge offline → mechanics in 1–2 trades or proven → live.
+What does not pass goes back into an iterative loop (diagnose → hypothesis → pre-registered variant → test → read → repeat). The
+4x/day `research-ops` pass runs the loop (`.claude/skills/research-ops/SKILL.md` § "THE ITERATION LOOP", the one statement of
+the `iteration:` block). This weekly review checks that the loop is LEARNING, not just turning:
+
+1. `python3 scripts/research/iteration_orphans.py --legacy --json` — orphans per kind. **Every orphan is authored by this review**
+   (an iteration unit with the block) or named with the reason in `handoff`. Report the counts first in the record.
+2. **Per subject, the week's iterations**: attempt number, what each diagnosis said, what the result taught. A subject whose
+   attempts repeat the same diagnosis is a design failure of the loop: the next attempt must test a DIFFERENT cause.
+3. **A subject at attempt >= 3 with every attempt failing** gets a family-review decision this week (`research/family_reviews/`,
+   `scripts/research/family_retirement_policy.yaml`): A (tested wrong: the outside-evidence re-test is the next iteration),
+   B (needs a build: the row), or C (retire, with all six protocol items and the `config/strategies.yaml` retirement record
+   proposed to the manager as Tier 3). Nothing sits on paper with no loop and no decision.
+4. **Survivors**: subjects whose confirmation passed this week, each with its promotion proposal (Tier 3, the manager's) named.
+   Success is iterations advanced and survivors found, never units authored (RESEARCH-SLO-YIELD).
+
+The record gains `"iteration": {"orphans_before": {}, "orphans_after": {}, "advanced": 0, "survivors": [], "at_attempt_3_plus":
+[{"subject": "...", "decision": "A|B|C", "record": "research/family_reviews/<f>.yaml"}]}`.
 
 **Scope.** One lane per week, Opus, ceiling set by the manager on the checklist row. Tier 1. The deliverable is the plans
 moving, not a report: edits to `research/programmes/<NN>-*.yaml` and the "Programme review <date>" section of each
@@ -48,7 +73,8 @@ unprogrammed cluster to a programme** in its analysis, by what it asks, not by t
 
 Fixed questions, open answers. Do them in this order.
 
-0. **Follow-through first (2026-10-28):** run `python3 scripts/ops/review_followthrough.py --source programme-review --window-days 7` and record its cohort and backlog line before grading calls; an open item older than 14 d with no owner is a call to schedule or kill, not to re-file.
+00. **The iteration loop audit (above) first (2026-11-01).**
+0. **Follow-through (2026-10-28):** run `python3 scripts/ops/review_followthrough.py --source programme-review --window-days 7` and record its cohort and backlog line before grading calls; an open item older than 14 d with no owner is a call to schedule or kill, not to re-file.
 1. **Grade last week's calls** (`previous_calls`): each prediction → hit / miss / not yet, with why. Then one line: what
    did last week's ranking get wrong (a top-ranked test that turned out uninformative, a low-ranked one that mattered)?
 2. **Per programme, then per track — what was learned.** Read result rows for every PASS and for the largest FAIL
@@ -135,4 +161,5 @@ Report to the manager in one line: calls graded (hit/miss), nodes authored, the 
 ## What this skill never does
 
 Never edits config, weights or a registered rule; never retires a family on one FAIL; never self-lands a tree edit;
-never proposes a test without the decision it changes; never ends without grading last week's calls.
+never proposes a test without the decision it changes; never ends without grading last week's calls; never leaves an orphan
+unauthored without naming it; never authors a unit to fill a queue count (STOP-GENERATED-AUTHORING).
