@@ -1195,6 +1195,20 @@ def _holdout_data_task(leg: str, frm: str, to: str, why: str, root: Path) -> Dic
     }
 
 
+def _venue_fee_bps(symbol: Any) -> Optional[float]:
+    """The instrument's MEASURED venue round-trip fee (profile_loader.roundtrip_fee_bps_for): 0.0 for a declared
+    commission-free venue, a number for a measured venue, None when the venue is unknown (never read as zero)."""
+    if not symbol:
+        return None
+    try:
+        sys.path.insert(0, str(REPO))
+        from src.core.profile_loader import roundtrip_fee_bps_for
+        v = roundtrip_fee_bps_for(str(symbol))
+    except Exception:  # noqa: BLE001 -- an unreadable venue is "unknown", which keeps the fees > 0 requirement
+        return None
+    return float(v) if v is not None else None
+
+
 def _holdout(leg: str, frm: str, to: str, record: Dict[str, Any], bar: Dict[str, Any],
              m: Dict[str, Any], root: Path, ctx: Dict[str, Any]) -> None:
     hc = record.get(HOLDOUT_FIELD)
@@ -1231,9 +1245,17 @@ def _holdout(leg: str, frm: str, to: str, record: Dict[str, Any], bar: Dict[str,
     if not in_repo(root, hc.get("source_run")):
         need(f"source_run {hc.get('source_run')!r} is not a committed file")
     cs = hc.get("cost_stack") or {}
-    if not (isinstance(cs, dict) and _num(cs.get("fees")) and cs["fees"] > 0
-            and _num(cs.get("slippage")) and "funding" in cs):
-        need(f"cost_stack={cs!r} is not the full stack (fees > 0, slippage, funding stated)")
+    venue_fee = _venue_fee_bps(record.get("symbol"))
+    ev["venue_fee_bps"] = venue_fee
+    # fees must be > 0, EXCEPT a MEASURED zero: the record's instrument resolves to a commission-free venue in
+    # config/instruments.yaml (profile_loader.roundtrip_fee_bps_for == 0.0, e.g. US ETFs on Alpaca). An unknown
+    # venue resolves to None (the estimator's default would apply), so a zero there is still a fail (operator
+    # 2026-11-01 ~11:47Z "Yes, and fix the bug (Rec.)"; PI-20261101-RXABACKP-0003).
+    fees_ok = _num(cs.get("fees")) and (cs["fees"] > 0 or (cs["fees"] == 0 and venue_fee == 0.0)) \
+        if isinstance(cs, dict) else False
+    if not (isinstance(cs, dict) and fees_ok and _num(cs.get("slippage")) and "funding" in cs):
+        need(f"cost_stack={cs!r} is not the full stack (fees > 0, or 0 on a measured commission-free venue "
+             f"[this instrument's venue fee: {venue_fee!r}]; slippage, funding stated)")
     disc, hold = hc.get("discovery") or {}, hc.get("holdout") or {}
     d_end, h_start = _parse_ts(disc.get("end")), _parse_ts(hold.get("start"))
     if d_end is None or h_start is None or not d_end < h_start:
