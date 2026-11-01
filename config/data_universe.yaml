@@ -23,6 +23,11 @@ storage:
   kaggle_dataset: metis-market-lake     # PRIVATE mirror for Kaggle kernels (training compute); optional
   layout: "<asset_class>/<market>/<tf>/<SYMBOL>/<YYYY-MM|YYYY>.parquet (partitioned) or <asset_class>/<market>/<tf>/<SYMBOL>.parquet"
   manifest: MANIFEST.json               # per file: source, licence, first/last bar, rows, expected rows, gaps
+  # Projected lake bytes for the CORE streams (always stored), from MEASURED archive sizes (S3 listing, 2026-11-01)
+  # x MEASURED parquet/zip ratios: perp 1m klines 32.17 GB zip x 1.166 x 1.336 (derived) = 50.1 GB; metrics 6.91 GB x 1.45
+  # = 10.0 GB; spot 1m 3.92 GB x 1.166 x 1.336 = 6.1 GB; funding 0.03 GB; equities 1d + DoltHub + FRED/COT/CBOE ~7 GB
+  # (INFERRED). The preflight subtracts this from the MEASURED private headroom before enabling optional streams.
+  core_projected_bytes: 73000000000
 
 crypto:
   # Binance Vision (keyless, full history). Symbols enumerated from the archive listing => delisted perps included.
@@ -37,11 +42,16 @@ crypto:
       fundingRate: all     # every funding event
       metrics: all         # 5m OI + long/short + taker ratios, 2021-12+ (upper bound ~7.5 GB zipped)
     derived: [5m, 15m, 1h, 4h, 1d]
-    not_stored_yet:        # finest-available streams held for an operator storage call (numbers in the doc)
-      aggTrades: "every trade; BTC alone 8.4 MB/day zipped -> order of TB for the universe"
-      bookDepth: "order-book depth snapshots, 2023-01+; upper bound ~279 GB zipped"
-      premiumIndexKlines: "1m premium index; ~same size as klines"
-      markPriceKlines: "1m mark price; ~same size as klines"
+    # OPTIONAL streams, in priority order: the preflight enables each one whose projected bytes fit the MEASURED
+    # headroom (allowance - used - core). Projected = MEASURED zipped bytes (listing) x 1.166 (klines ratio).
+    optional_streams:
+      premiumIndexKlines: {projected_bytes: 17500000000, zipped_bytes: 15016108214}
+      markPriceKlines: {projected_bytes: 21350000000, zipped_bytes: 18308178903}
+      indexPriceKlines: {projected_bytes: 22590000000, zipped_bytes: 19375847131}
+      bookDepth: {projected_bytes: 246015173471, zipped_bytes: 246015173471}   # zipped size as a lower bound
+    not_stored:            # MEASURED zipped, all perps (S3 listing 2026-11-01): far above any free allowance
+      aggTrades: {zipped_bytes: 1154088435275}
+      trades: {zipped_bytes: 2149312748438}
   spot:
     source: data.binance.vision
     licence: "Binance Terms of Use; no open-data licence -> private stores only"

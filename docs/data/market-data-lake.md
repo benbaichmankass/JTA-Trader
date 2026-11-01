@@ -114,21 +114,34 @@ All HF paths are inside the private dataset `bentzbk/jta-market-lake`. The publi
 
 ### 3.1 Crypto: perps and spot
 
-**Finest available vs stored** (operator: keep the smallest timeframe; derive the rest; never downsample silently).
+**Finest available vs stored.** The operator rule is to keep the smallest timeframe, derive the rest, and never downsample
+silently. Every size below is **MEASURED**, in one of two ways:
+- zipped bytes summed from the archive's own S3 listing (`binance_vision_lake.py --size-census`, all 1,056 perps, 2026-11-01);
+- parquet/zip ratios taken from this lane's real-data runs: klines 1.166 (48.9 MB parquet / 41.9 MB zip), derived
+  timeframes +33.6% of 1m, metrics 1.45.
 
-| stream (Binance Vision) | finest grain | stored? | size, all 1,056 perps | basis |
+| stream (Binance Vision) | finest grain | zipped (all perps) | in the lake | stored? |
 |---|---|---|---|---|
-| klines | **1m** | **yes**, base | ≤ 45.5 GB parquet (+ ~35% for derived 5m–1d ⇒ ≤ 61 GB) | MEASURED 42.5 B/row on 1,257,605 real 1m rows (0GUSDT + LUNAUSDT, 53.5 MB); census 24,443 symbol-months ⇒ ≤ 1.071 B rows |
-| fundingRate | every funding event | **yes** | < 0.1 GB | MEASURED 5,218 rows / 144 KB for 2 symbols |
-| metrics | 5m (OI, top-trader + global long/short, taker ratio), 2021-12+ | **yes** | ≈ 10 GB | MEASURED 51 B/row (164,767 rows, 8.5 MB); 684,083 daily files (ML-FEATURE-INFRA count) × 288 rows |
-| spot klines (27 majors) | 1m | **yes** | ≈ 4.5 GB | census 2,423 symbol-months × 43,830 rows × 42.5 B |
-| aggTrades | every trade | **no — operator storage call** | order of **TB** (BTC alone 8.4 MB/day zipped) | ML-FEATURE-INFRA measurement |
-| bookDepth | depth snapshots, 2023-01+ | **no — operator storage call** | ≤ 279 GB zipped | ML-FEATURE-INFRA upper bound |
-| premiumIndex / markPrice / indexPrice klines | 1m | **no — operator storage call** | ≈ 45 GB each | same shape as klines |
+| klines (+ derived 5m–1d) | **1m** | 32.17 GB, 24,443 files | ≈ 50.1 GB | **yes**, core |
+| metrics | 5m OI, long/short, taker ratio | 6.91 GB, 655,935 daily files | ≈ 10.0 GB | **yes**, core |
+| fundingRate | every funding event | 0.02 GB | < 0.1 GB | **yes**, core |
+| spot klines, 27 majors (+ derived) | 1m | 3.92 GB | ≈ 6.1 GB | **yes**, core |
+| premiumIndexKlines | 1m | 15.02 GB | ≈ 17.5 GB | **yes, if it fits** the measured headroom; the preflight decides |
+| markPriceKlines | 1m | 18.31 GB | ≈ 21.4 GB | only if it fits after premium |
+| indexPriceKlines | 1m | 19.38 GB | ≈ 22.6 GB | only if it fits after mark |
+| bookDepth | depth snapshots, 2023-01+ | **246.0 GB**, 564,793 files | ≥ 246 GB | **does not fit** |
+| aggTrades | every trade (aggregated) | **1,154 GB** | — | **does not fit** |
+| trades | every trade | **2,149 GB** | — | **does not fit** |
 
-The stored crypto total is ≈ 75 GB. HF's private-storage allowance for this free (non-PRO) account is **not verified**. If the
-backfill exceeds it, the upload fails visibly, the health record goes red, and the flag reaches the operator. Nothing is dropped
-silently.
+**The storage allowance.** HF documents 100 GB of private storage for a free account and 1 TB for PRO
+([storage-limits](https://huggingface.co/docs/hub/storage-limits), read 2026-11-01). This account is **not PRO**, MEASURED
+via whoami. The preflight measures the bytes the account's private repos already use (`usedStorage` per repo). It subtracts
+those and the core lake's projected 73 GB (`config/data_universe.yaml` `storage.core_projected_bytes`), then enables each
+optional stream that still fits, in priority order. At ~0 bytes used, premium (17.5 GB) fits and mark/index do not.
+
+The repo also follows HF's < 100k-files recommendation. A closed year is one file per symbol, the current year is one file
+per month, and all derived timeframes share one file per partition. That is ≈ 15k files in January and ≤ 60k in December.
+The first run of each new year compacts the previous year automatically and prunes the superseded files.
 
 **Measured depth:**
 - Census (2026-11-01, archive listing, no download): 1,056 of 1,056 listed UM symbols have data, 24,443 symbol-months.
@@ -253,20 +266,30 @@ silently.
 
 ## 5. What is needed from the operator
 
-- **`HF_TOKEN`:** the operator says it has write access. It is **measured, not assumed**: the workflow's `preflight` job runs on
-  this PR (pull_request trigger) and on every run. It reads whoami's token role and does a REAL write, creating the private
-  dataset and uploading `health/preflight.json`. The measured role is recorded in the run artifact `preflight`. The token is
-  never printed.
-- **Storage calls with numbers (§3.1, §3.2):**
-  - aggTrades: order of TB.
-  - bookDepth: ≤ 279 GB.
-  - premium/mark/index 1m: ≈ 45 GB each.
-  - Equity 1m for the whole universe: ≤ ~470 GB.
+- **`HF_TOKEN`:** MEASURED by the workflow's `preflight` job on this PR and on every run. It records the role and the
+  fine-grained scopes, does a REAL write, and measures private storage in use. The token is never printed. The result is in
+  the run artifact `preflight`.
+- **What doesn't fit free storage** (the one line, after the first run measures headroom and the equity 1m day):
+  - bookDepth: 246 GB.
+  - aggTrades / trades: 1.15 TB / 2.15 TB zipped.
+  - Mark/index 1m, if premium takes the headroom.
+  - Equity 1m for every US symbol: measured from one real session (`free_sources.py measure-equity-1m`, `_measure/equity_1m_day.json`).
 
-  Plus the unverified HF private-storage allowance for this free account.
-- Nothing else. Every source in §3 is free and reachable. The paid gaps in §3 are listed for completeness and are not asked for.
+  Each against the 100 GB free allowance, with the cheapest free fallback:
+  - aggTrades: the traded universe only (≈ 8 symbols).
+  - bookDepth: the traded universe only.
+  - Older months: private Kaggle datasets (a separate free quota).
+- Nothing is bought. The paid gaps in §3 stay in PI-20261101-WTFTWTFP-0006.
 
 `KAGGLE_API_TOKEN` is already used by 9 workflows.
+
+## 6. Follow-ups (filed in `docs/claude/work/PIPELINE.jsonl`)
+
+- (b2) import `CryptoSpartan/stocks_bars_1m` (ungated; Alpaca terms).
+- (b3) ETF-HISTORY-PIPELINE reads the universe snapshot (done in its code; wiring pending its PR).
+- (c2) ALFRED vintages for the revised FRED series (true PIT macro).
+- (d2) a Kaggle read path for the lake.
+- (f) paid-gap quotes (PI-20261101-WTFTWTFP-0006).
 
 ## 7. Feed automation and health (no Claude in the loop)
 

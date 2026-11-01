@@ -36,7 +36,9 @@ import pandas as pd
 
 FLAG_AFTER = 3
 BAR_COLS = ["ts", "open", "high", "low", "close"]
-SCHEMA = {"funding": ["ts", "funding_rate"], "metrics_5m": ["ts", "sum_open_interest"]}
+SCHEMA = {"funding": ["ts", "funding_rate"], "metrics_5m": ["ts", "sum_open_interest"],
+          "bookdepth": ["ts", "percentage", "depth"]}
+SIGNED = {"premium_1m"}  # premium index klines are signed basis values: no price > 0 check
 # hours before a FEED (its freshest series) counts as stale. Binance daily files land the next day; FRED/CBOE
 # publish on business days; COT weekly (Friday); monthly macro monthly.
 STALE_H = {("crypto", "*"): 54, ("macro", "fred_monthly"): 24 * 75, ("macro", "cftc_cot"): 24 * 12,
@@ -51,6 +53,8 @@ def stale_hours(asset: str, market: str) -> float:
 def _required(tf: str, cols: List[str]) -> List[str]:
     if tf in SCHEMA:
         return SCHEMA[tf]
+    if "depth" in cols:
+        return SCHEMA["bookdepth"]
     if "value" in cols and "open" not in cols:
         return ["ts", "value"]
     return BAR_COLS
@@ -68,14 +72,16 @@ def check_frame(df: pd.DataFrame, tf: str) -> Dict[str, Any]:
     res["non_monotonic"] = int((ts.diff().dropna() < pd.Timedelta(0)).sum())
     if "open" in cols:
         o, h, l, c = (pd.to_numeric(df[k], errors="coerce") for k in ("open", "high", "low", "close"))
-        bad = (h < np.maximum(o, c) - 1e-12) | (l > np.minimum(o, c) + 1e-12) | (l > h) | (c <= 0) | (o <= 0)
+        bad = (h < np.maximum(o, c) - 1e-12) | (l > np.minimum(o, c) + 1e-12) | (l > h)
+        if tf not in SIGNED:
+            bad |= (c <= 0) | (o <= 0)
         if "volume" in cols:
             bad |= pd.to_numeric(df["volume"], errors="coerce") < 0
         res["ohlc_violations"] = int(bad.sum())
         px = c
     else:
         px = pd.to_numeric(df[req[1]], errors="coerce")
-    lr = np.log(px.where(px > 0)).diff().abs().dropna()
+    lr = (px.diff().abs() if tf in SIGNED else np.log(px.where(px > 0)).diff().abs()).dropna()
     if len(lr) > 20:
         med = float(lr.median())
         thr = max(0.2, 25 * med) if med > 0 else 0.2
@@ -121,6 +127,8 @@ def cmd_check(a) -> int:
                 except Exception as ex:
                     agg["schema_missing"] = [f"unreadable: {str(ex)[:80]}"]
                     continue
+                if e.get("tf_col") and e["tf_col"] in df.columns:
+                    df = df[df[e["tf_col"]] == e.get("tf")]
                 c = check_frame(df, str(e.get("tf")))
                 for k in ("rows", "dup_ts", "non_monotonic", "ohlc_violations", "outliers"):
                     agg[k] += int(c.get(k) or 0)

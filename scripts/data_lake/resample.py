@@ -6,7 +6,7 @@ Operator 2026-11-01: "we should also be keeping the smallest timeframe data avai
 higher timeframes on top of that". Row MARKET-DATA-LAKE.
 
 For every base partition <out>/<asset>/<market>/<base>/<SYM>/<YYYY-MM>.parquet present in --out (i.e. built or rebuilt
-this run), writes <out>/<asset>/<market>/<tf>/<SYM>/<YYYY-MM>.parquet for each target tf. A calendar month is a whole
+this run), writes ONE <out>/<asset>/<market>/derived/<SYM>/<partition>.parquet holding every target tf (column `tf`). A calendar month is a whole
 number of every target bar (5m..1d all divide 00:00 UTC), so a month partition resamples on its own, exactly.
 
 RULES (identical for every symbol, every run)
@@ -51,27 +51,38 @@ def resample_frame(df: pd.DataFrame, base: str, tf: str) -> pd.DataFrame:
 
 
 def run(out: Path, base: str, tfs: List[str]) -> List[Dict]:
+    """One DERIVED file per base partition, holding every target tf (column ``tf``), so derived data adds one file per
+    partition, not one per timeframe (HF repo file budget). Manifest entries stay per tf, pointing at the shared file
+    with ``tf_col``; ml/datasets/lake.py filters on it."""
     entries: Dict[tuple, Dict] = {}
     bases = sorted(out.glob(f"*/*/{base}/*/*.parquet"))
     for p in bases:
-        rel = p.relative_to(out).parts  # asset, market, base, SYM, month.parquet
-        asset, market, _, sym, fname = rel
+        asset, market, _, sym, fname = p.relative_to(out).parts
         df = pd.read_parquet(p)
+        frames = []
         for tf in tfs:
             d = resample_frame(df, base, tf)
-            if d.empty:
-                continue
-            q = out / asset / market / tf / sym / fname
-            q.parent.mkdir(parents=True, exist_ok=True)
-            d.to_parquet(q, index=False, compression="zstd")
+            if not d.empty:
+                d.insert(1, "tf", tf)
+                frames.append(d)
+        if not frames:
+            continue
+        allv = pd.concat(frames, ignore_index=True)
+        q = out / asset / market / "derived" / sym / fname
+        q.parent.mkdir(parents=True, exist_ok=True)
+        allv.to_parquet(q, index=False, compression="zstd", row_group_size=200_000)
+        pkey = fname[:-8]
+        for tf, d in allv.groupby("tf", sort=False):
             key = (asset, market, tf, sym)
             e = entries.setdefault(key, {"asset_class": asset, "market": market, "tf": tf, "symbol": sym,
-                                         "derived_from": base, "source": "resample.py", "partitions": {},
-                                         "state": "ok"})
-            e["partitions"][fname[:-8]] = {"rows": int(len(d)), "first": d["ts"].iloc[0].isoformat(),
-                                           "last": d["ts"].iloc[-1].isoformat(), "bytes": q.stat().st_size,
-                                           "incomplete_bars": int((~d["complete"]).sum()),
-                                           "path": str(q.relative_to(out)), "src": "derived"}
+                                         "derived_from": base, "source": "resample.py", "tf_col": "tf",
+                                         "partitions": {}, "state": "ok"})
+            e["partitions"][pkey] = {"rows": int(len(d)), "first": d["ts"].iloc[0].isoformat(),
+                                     "last": d["ts"].iloc[-1].isoformat(),
+                                     # the file is shared by every tf: apportion its bytes by row share (no double count)
+                                     "bytes": int(q.stat().st_size * len(d) / len(allv)),
+                                     "incomplete_bars": int((~d["complete"]).sum()),
+                                     "path": str(q.relative_to(out)), "src": "derived"}
     return list(entries.values())
 
 

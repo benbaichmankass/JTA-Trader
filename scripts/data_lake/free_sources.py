@@ -405,6 +405,79 @@ def cmd_alpaca_daily(a) -> int:
     return 0
 
 
+# ---------------------------------------------------------------- MEASURE: one real day of 1m bars for the whole universe
+def cmd_measure_equity_1m(a) -> int:
+    """Replace the INFERRED 1m-for-every-US-symbol size with a MEASUREMENT: pull ONE complete trading day of Alpaca 1m
+    SIP bars for every stock + ETF in the universe snapshot, count rows, write them as zstd parquet, and project
+    bytes/year (x 252 sessions) and since 2016. Output <out>/_measure/equity_1m_day.json. Keys from env only."""
+    import os
+    import tempfile
+    import requests
+    out = Path(a.out)
+    kid = os.environ.get("ALPACA_API_KEY_ID_LIVE") or os.environ.get("ALPACA_API_KEY_ID")
+    sec = os.environ.get("ALPACA_API_SECRET_KEY_LIVE") or os.environ.get("ALPACA_API_SECRET_KEY")
+    rec: Dict = {"measured_at": datetime.now(timezone.utc).isoformat(timespec="seconds")}
+    if not (kid and sec):
+        rec["error"] = "no Alpaca data keys in env"
+    else:
+        snap = sorted((out / "universe" / "us_equity").glob("*.csv"))
+        uni = pd.read_csv(snap[-1]) if snap else pd.DataFrame(columns=["symbol", "is_etf", "is_common"])
+        uni = uni[(uni["is_etf"]) | (uni["is_common"])]
+        syms = sorted(uni["symbol"].astype(str))
+        from pandas.tseries.holiday import USFederalHolidayCalendar
+        day = pd.Timestamp.now(tz="UTC").normalize() - pd.Timedelta(days=1)
+        hol = set(USFederalHolidayCalendar().holidays(day - pd.Timedelta(days=15), day).date)
+        while day.weekday() >= 5 or day.date() in hol:
+            day -= pd.Timedelta(days=1)
+        s = requests.Session()
+        s.headers.update({"APCA-API-KEY-ID": kid, "APCA-API-SECRET-KEY": sec, **UA})
+        rows: List[Dict] = []
+        for i in range(0, len(syms), 200):
+            tok = None
+            while True:
+                params = {"symbols": ",".join(syms[i:i + 200]), "timeframe": "1Min", "start": day.isoformat(),
+                          "end": (day + pd.Timedelta(days=1)).isoformat(), "limit": 10000, "feed": "sip",
+                          "adjustment": "split"}
+                if tok:
+                    params["page_token"] = tok
+                for attempt in range(8):
+                    r = s.get("https://data.alpaca.markets/v2/stocks/bars", params=params, timeout=120)
+                    if r.status_code == 429 or r.status_code >= 500:
+                        time.sleep(min(60, 2 ** attempt))
+                        continue
+                    break
+                if r.status_code >= 400:
+                    rec.setdefault("http_errors", []).append(r.status_code)
+                    break
+                j = r.json()
+                for sym, bl in (j.get("bars") or {}).items():
+                    for b in bl:
+                        b["symbol"] = sym
+                    rows += bl
+                tok = j.get("next_page_token")
+                if not tok:
+                    break
+        df = pd.DataFrame(rows)
+        with tempfile.TemporaryDirectory() as td:
+            nbytes = 0
+            if len(df):
+                df["t"] = pd.to_datetime(df["t"], utc=True)
+                for sym, g in df.groupby("symbol"):   # the lake stores per symbol, so measure per-symbol files
+                    f = Path(td) / f"{sym}.parquet"
+                    g.drop(columns="symbol").to_parquet(f, index=False, compression="zstd")
+                    nbytes += f.stat().st_size
+        n = int(len(df))
+        rec.update({"session": str(day.date()), "symbols_requested": len(syms),
+                    "symbols_with_bars": int(df["symbol"].nunique()) if n else 0, "rows": n, "parquet_bytes": nbytes,
+                    "bytes_per_row": round(nbytes / n, 1) if n else None,
+                    "projected_bytes_per_year": nbytes * 252, "projected_bytes_2016_to_now": nbytes * 252 * 10.8,
+                    "note": "one-session measurement; today's listed names only (delisted names add history, not today's rows)"})
+    (out / "_measure").mkdir(parents=True, exist_ok=True)
+    (out / "_measure" / "equity_1m_day.json").write_text(json.dumps(rec, indent=1))
+    print(json.dumps(rec))
+    return 0
+
+
 # ---------------------------------------------------------------- DoltHub (options chains, IV history, stocks) via `dolt sql -r csv`
 def cmd_import_csv(a) -> int:
     """Partition a CSV exported by `dolt sql -r csv` into the lake. --kind chain|volatility|stocks."""
@@ -462,7 +535,7 @@ def cmd_import_option_snapshots(a) -> int:
 def main(argv: Optional[Sequence[str]] = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("cmd", choices=["universe", "fred", "futures", "import-etf", "cboe", "cot", "alpaca-daily",
-                                    "import-csv", "import-option-snapshots"])
+                                    "import-csv", "import-option-snapshots", "measure-equity-1m"])
     ap.add_argument("--kind", choices=["chain", "volatility", "stocks"], default="volatility")
     ap.add_argument("--csv", default="")
     ap.add_argument("--limit", type=int, default=0)
@@ -472,7 +545,8 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     a = ap.parse_args(argv)
     return {"universe": cmd_universe, "fred": cmd_fred, "futures": cmd_futures,
             "import-etf": cmd_import_etf, "cboe": cmd_cboe, "cot": cmd_cot, "alpaca-daily": cmd_alpaca_daily,
-            "import-csv": cmd_import_csv, "import-option-snapshots": cmd_import_option_snapshots}[a.cmd](a)
+            "import-csv": cmd_import_csv, "import-option-snapshots": cmd_import_option_snapshots,
+            "measure-equity-1m": cmd_measure_equity_1m}[a.cmd](a)
 
 
 if __name__ == "__main__":

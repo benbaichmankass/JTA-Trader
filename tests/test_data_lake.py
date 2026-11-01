@@ -166,15 +166,29 @@ import validate as vd  # noqa: E402
 
 
 def test_plan_months_incremental():
-    monthly = [f"x/S-1m-2026-0{m}.zip" for m in (7, 8, 9)]
+    from datetime import datetime, timezone
+    now = datetime(2026, 11, 1, 4, tzinfo=timezone.utc)
+    monthly = [f"x/S-1m-2025-{m:02d}.zip" for m in (11, 12)] + [f"x/S-1m-2026-{m:02d}.zip" for m in (7, 8, 9)]
     daily = [f"x/S-1m-2026-10-{d:02d}.zip" for d in (1, 2)]
-    # first run: everything
-    assert set(bvl.plan_months(monthly, daily, {})) == {"2026-07", "2026-08", "2026-09", "2026-10"}
-    have = {"2026-07": {"src": "monthly"}, "2026-08": {"src": "monthly"}, "2026-09": {"src": "daily"},
-            "2026-10": {"src": "daily"}}
-    plan = bvl.plan_months(monthly, daily, have)
+    # first run: the closed year is ONE partition, the current year one per month
+    assert set(bvl.plan_months(monthly, daily, {}, now=now)) == {"2025", "2026-07", "2026-08", "2026-09", "2026-10"}
+    have = {"2025": {"src": "monthly"}, "2026-07": {"src": "monthly"}, "2026-08": {"src": "monthly"},
+            "2026-09": {"src": "daily"}, "2026-10": {"src": "daily"}}
+    plan = bvl.plan_months(monthly, daily, have, now=now)
     # 09 was daily-built and its monthly file now exists -> rebuilt from monthly; 10 is the open month -> rebuilt
     assert set(plan) == {"2026-09", "2026-10"} and plan["2026-09"][0] == "monthly" and plan["2026-10"][0] == "daily"
+
+
+def test_plan_months_delisted_and_year_rollover():
+    from datetime import datetime, timezone
+    # a symbol delisted in 2022: its last year is not re-downloaded every day
+    dead = [f"x/L-1m-2022-{m:02d}.zip" for m in (1, 2, 3)]
+    assert bvl.plan_months(dead, [], {"2022": {"src": "monthly"}}, now=datetime(2026, 11, 1, tzinfo=timezone.utc)) == {}
+    # first run of 2027: 2026's monthly partitions are compacted into one yearly file
+    mon = [f"x/S-1m-2026-{m:02d}.zip" for m in range(1, 13)]
+    have = {f"2026-{m:02d}": {"src": "monthly"} for m in range(1, 13)}
+    plan = bvl.plan_months(mon, [], have, now=datetime(2027, 1, 2, tzinfo=timezone.utc))
+    assert set(plan) == {"2026"} and len(plan["2026"][1]) == 12
 
 
 def test_resample_is_exact_and_marks_partial_bars():
@@ -276,3 +290,33 @@ def test_parse_kline_header_uses_count_column():
            b"1735689600000,1,2,0.5,1.5,10,1735689659999,15,7,4,6,0\n")
     df = bvl.parse_kline_csv(raw)
     assert int(df["trades"].iloc[0]) == 7
+
+
+def test_derived_shared_file_and_loader_tf_filter(tmp_path, monkeypatch):
+    base = tmp_path / "lake"
+    p = base / "crypto/um_perp/1m/A/2025.parquet"
+    p.parent.mkdir(parents=True)
+    ts = pd.date_range("2025-01-01", periods=120, freq="1min", tz="UTC")
+    pd.DataFrame({"ts": ts, "open": 1.0, "high": 2.0, "low": 0.5, "close": 1.5, "volume": 1.0}).to_parquet(p)
+    ents = rs.run(base, "1m", ["5m", "1h"])
+    assert {e["tf"] for e in ents} == {"5m", "1h"}
+    assert len({pp["path"] for e in ents for pp in e["partitions"].values()}) == 1   # ONE derived file
+    (base / "MANIFEST.json").write_text(json.dumps({"files": [hp._aggregate(e) for e in ents]}))
+    monkeypatch.setenv("LAKE_LOCAL_DIR", str(base))
+    from ml.datasets import lake
+    lake._MANIFEST_CACHE.clear()
+    assert len(lake.load("crypto", "um_perp", "1h", ["A"])) == 2
+    assert len(lake.load("crypto", "um_perp", "5m", ["A"])) == 24
+
+
+def test_year_partition_supersedes_months(tmp_path):
+    prev = {"files": [{"asset_class": "crypto", "market": "um_perp", "tf": "1m", "symbol": "A", "partitions": {
+        f"2026-{m:02d}": {"rows": 1, "first": f"2026-{m:02d}-01T00:00:00+00:00", "last": f"2026-{m:02d}-01T00:00:00+00:00",
+                          "path": f"crypto/um_perp/1m/A/2026-{m:02d}.parquet"} for m in (11, 12)}}]}
+    (tmp_path / "_manifests").mkdir()
+    (tmp_path / "_manifests" / "x.json").write_text(json.dumps([{"asset_class": "crypto", "market": "um_perp", "tf": "1m",
+        "symbol": "A", "partitions": {"2026": {"rows": 2, "first": "2026-11-01T00:00:00+00:00",
+                                               "last": "2026-12-01T00:00:00+00:00", "path": "crypto/um_perp/1m/A/2026.parquet"}}}]))
+    m = hp.merge_manifests(tmp_path, prev)
+    assert set(m["files"][0]["partitions"]) == {"2026"}
+    assert m["superseded"] == ["crypto/um_perp/1m/A/2026-11.parquet", "crypto/um_perp/1m/A/2026-12.parquet"]

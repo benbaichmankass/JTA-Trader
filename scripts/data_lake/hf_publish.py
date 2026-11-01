@@ -56,6 +56,54 @@ def ensure_private_repo(api, repo: str) -> None:
         raise SystemExit(f"REFUSING: {repo} reports PUBLIC; the lake holds no-open-licence data and must be private")
 
 
+#: Private-storage allowance per plan, from https://huggingface.co/docs/hub/storage-limits ("Storage plans", read
+#: 2026-11-01): free user 100 GB, PRO 1 TB (+ pay-as-you-go). The PLAN is measured from whoami (isPro); the USED
+#: bytes are measured per private repo (usedStorage). The allowance itself is not exposed by the API.
+PLAN_PRIVATE_BYTES = {"free": 100 * 10 ** 9, "pro": 1000 * 10 ** 9}
+
+
+def measure_storage(api, who: Dict) -> Dict:
+    plan = "pro" if who.get("isPro") else "free"
+    user = who.get("name")
+    used, repos, errs = 0, [], 0
+    for kind, lister, info in (("model", api.list_models, api.model_info), ("dataset", api.list_datasets, api.dataset_info),
+                               ("space", api.list_spaces, api.space_info)):
+        try:
+            for r in lister(author=user, expand=["private"]):
+                if not getattr(r, "private", False):
+                    continue
+                try:
+                    u = int(getattr(info(r.id, expand=["usedStorage"]), "used_storage", 0) or 0)
+                except Exception:
+                    u, errs = 0, errs + 1
+                used += u
+                repos.append({"repo": r.id, "type": kind, "used_bytes": u})
+        except Exception:
+            errs += 1
+    quota = PLAN_PRIVATE_BYTES[plan]
+    return {"plan": plan, "private_allowance_bytes": quota, "allowance_source": "huggingface.co/docs/hub/storage-limits",
+            "private_used_bytes": used, "private_headroom_bytes": quota - used, "private_repos": repos,
+            "measure_errors": errs}
+
+
+def decide_optional(headroom: int, cfg_path: Path) -> Dict:
+    """Optional streams land WITHOUT asking when they fit: walk config crypto.um_perp.optional_streams in order and
+    enable each whose MEASURED projected bytes fit in the headroom left after the core lake's projected bytes."""
+    import yaml
+    cfg = yaml.safe_load(cfg_path.read_text())
+    core = int((cfg.get("storage") or {}).get("core_projected_bytes") or 0)
+    left = headroom - core
+    enabled, deferred = [], []
+    for st, spec in ((cfg.get("crypto") or {}).get("um_perp", {}).get("optional_streams") or {}).items():
+        b = int(spec.get("projected_bytes") or 0)
+        if b and b <= left:
+            enabled.append(st)
+            left -= b
+        else:
+            deferred.append({"stream": st, "projected_bytes": b})
+    return {"core_projected_bytes": core, "enabled": enabled, "deferred": deferred, "headroom_after_bytes": left}
+
+
 def cmd_preflight(a) -> int:
     """Measure the token: whoami role, then a REAL write -- create the private dataset (idempotent) and upload one
     small marker file. A read-only token fails here, before any capture job spends an hour. Never prints the token."""
@@ -81,7 +129,17 @@ def cmd_preflight(a) -> int:
         raise
     except Exception as e:
         rec["write_test"] = f"failed: {str(e)[:200]}"
+    try:
+        rec["storage"] = measure_storage(api, who)
+        rec["optional_streams"] = decide_optional(rec["storage"]["private_headroom_bytes"],
+                                                  REPO_ROOT / "config" / "data_universe.yaml")
+    except Exception as e:
+        rec["storage"] = {"error": str(e)[:200]}
+        rec["optional_streams"] = {"enabled": [], "error": "storage not measured"}
     print(json.dumps(rec))
+    if a.github_output:
+        with open(a.github_output, "a") as fh:
+            fh.write("optional=" + ",".join(rec["optional_streams"].get("enabled") or []) + "\n")
     if a.record:
         Path(a.record).write_text(json.dumps(rec, indent=1))
     if rec["write_test"] != "ok":
@@ -139,6 +197,7 @@ def merge_manifests(base: Path, previous: Optional[Dict] = None) -> Dict:
     """Fold this run's shard manifests into the previous lake manifest. Partitioned series merge PER MONTH (a refresh
     that rebuilt one month replaces only that month); single-file series are replaced whole."""
     files: Dict[str, Dict] = {}
+    superseded: set = set()
     for e in (previous or {}).get("files", []):
         files[_key(e)] = e
     for p in sorted((base / "_manifests").glob("*.json")):
@@ -148,12 +207,20 @@ def merge_manifests(base: Path, previous: Optional[Dict] = None) -> Dict:
             if old is not None and (e.get("partitions") is not None or old.get("partitions")):
                 merged = dict(old)
                 merged.update({kk: vv for kk, vv in e.items() if kk != "partitions"})
-                merged["partitions"] = {**(old.get("partitions") or {}), **(e.get("partitions") or {})}
+                parts = {**(old.get("partitions") or {}), **(e.get("partitions") or {})}
+                # a yearly partition (YYYY) supersedes that year's monthly ones (YYYY-MM): compaction at year close
+                for yk in [pk for pk in (e.get("partitions") or {}) if len(pk) == 4]:
+                    for mk in [pk for pk in parts if pk.startswith(yk + "-")]:
+                        sp = parts.pop(mk).get("path")
+                        if sp:
+                            superseded.add(sp)
+                merged["partitions"] = parts
                 files[k] = merged
             else:
                 files[k] = e
     out = [_aggregate(e) for e in files.values()]
-    return {"generated_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+    live = {p.get("path") for e in out for p in (e.get("partitions") or {}).values()} | {e.get("path") for e in out}
+    return {"superseded": sorted(superseded - live), "n_files": len({x for x in live if x}), "generated_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
             "schema": "market-data-lake/v2", "files": sorted(out, key=lambda e: (
                 str(e.get("asset_class")), str(e.get("market")), str(e.get("tf")), str(e.get("symbol"))))}
 
@@ -218,7 +285,10 @@ def cmd_manifest(a) -> int:
             except Exception:
                 previous = None  # first run: no manifest yet
     m = merge_manifests(base, previous)
+    superseded = m.pop("superseded", [])
     (base / "MANIFEST.json").write_text(json.dumps(m, indent=1))
+    if m.get("n_files", 0) > 80000:
+        print(f"::warning::lake holds {m['n_files']} files; HF recommends < 100k per repo -- compaction needed")
     table = depth_table(m)
     (base / "DEPTH.md").write_text(table + "\n")
     (base / "README.md").write_text(README.format(generated_at=m["generated_at"], table=table))
@@ -230,6 +300,15 @@ def cmd_manifest(a) -> int:
                 ci = api.upload_folder(repo_id=a.repo, repo_type="dataset", folder_path=str(base),
                                        allow_patterns=["MANIFEST.json", "README.md", "DEPTH.md", "health/*.json"],
                                        commit_message="lake: MANIFEST + depth table")
+                if superseded:
+                    from huggingface_hub import CommitOperationDelete
+                    try:
+                        api.create_commit(repo_id=a.repo, repo_type="dataset",
+                                          operations=[CommitOperationDelete(path_in_repo=x) for x in superseded],
+                                          commit_message=f"lake: prune {len(superseded)} superseded partitions")
+                        print(f"pruned {len(superseded)} superseded partition files")
+                    except Exception as e:
+                        print(f"::warning::prune failed (retried next run): {str(e)[:200]}")
                 tag = "v" + datetime.now(timezone.utc).strftime("%Y%m%d-%H%M")
                 try:
                     api.create_tag(a.repo, tag=tag, repo_type="dataset", revision=getattr(ci, "oid", None))
@@ -280,6 +359,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     ap.add_argument("--local", action="store_true", help="manifest: merge + render only, no HF read/write")
     ap.add_argument("--previous", default="", help="manifest: a previous MANIFEST.json on disk (else fetched from HF)")
     ap.add_argument("--record", default="", help="preflight: write the measured role/write-test JSON here")
+    ap.add_argument("--github-output", default="", help="preflight: append optional=<streams> to this file")
     a = ap.parse_args(argv)
     return {"preflight": cmd_preflight, "upload": cmd_upload, "manifest": cmd_manifest, "depth": cmd_depth,
             "pull": cmd_pull}[a.cmd](a)

@@ -98,6 +98,56 @@ def s3_list(prefix: str, delimiter: str = "/") -> Tuple[List[str], List[str]]:
         marker = root.findtext("s3:NextMarker", default="", namespaces=_NS) or (page_k or page_p)[-1]
 
 
+def s3_sizes(prefix: str) -> Dict[str, int]:
+    """key -> bytes for every object under ``prefix`` (the listing carries <Size>; nothing is downloaded)."""
+    out: Dict[str, int] = {}
+    marker = ""
+    while True:
+        q = f"{LISTING}?prefix={urllib.request.quote(prefix)}"
+        if marker:
+            q += f"&marker={urllib.request.quote(marker)}"
+        root = ET.fromstring(_get(q))
+        cs = root.findall("s3:Contents", _NS)
+        for c in cs:
+            out[c.findtext("s3:Key", namespaces=_NS)] = int(c.findtext("s3:Size", default="0", namespaces=_NS))
+        if root.findtext("s3:IsTruncated", default="false", namespaces=_NS) != "true" or not cs:
+            return out
+        marker = cs[-1].findtext("s3:Key", namespaces=_NS)
+
+
+#: archive streams whose SIZE we measure from the listing (stream path, period) -- stored or candidates
+SIZE_STREAMS = {
+    "klines_1m": ("klines/{s}/1m/", "monthly"), "aggTrades": ("aggTrades/{s}/", "monthly"),
+    "trades": ("trades/{s}/", "monthly"), "premiumIndexKlines_1m": ("premiumIndexKlines/{s}/1m/", "monthly"),
+    "markPriceKlines_1m": ("markPriceKlines/{s}/1m/", "monthly"), "indexPriceKlines_1m": ("indexPriceKlines/{s}/1m/", "monthly"),
+    "fundingRate": ("fundingRate/{s}/", "monthly"), "metrics": ("metrics/{s}/", "daily"), "bookDepth": ("bookDepth/{s}/", "daily"),
+}
+
+
+def size_census(market: str, symbols: List[str], streams: List[str], workers: int = 32) -> Dict[str, Dict]:
+    """MEASURED zipped bytes per stream over ``symbols`` from the archive listing (monthly files, or daily where the
+    stream is daily-only). Daily files of the open month are not counted (a few % of the total)."""
+    res: Dict[str, Dict] = {}
+    for st in streams:
+        tmpl, period = SIZE_STREAMS[st]
+
+        def one(sym, tmpl=tmpl, period=period):
+            try:
+                d = s3_sizes(f"{MARKETS[market]}/{period}/{tmpl.format(s=sym)}")
+                z = {k: v for k, v in d.items() if k.endswith(".zip")}
+                return sym, len(z), sum(z.values()), None
+            except Exception as e:
+                return sym, 0, 0, str(e)[:80]
+        with ThreadPoolExecutor(max_workers=workers) as ex:
+            rows = list(ex.map(one, symbols))
+        res[st] = {"period": period, "symbols_with_files": sum(1 for r in rows if r[1]), "files": sum(r[1] for r in rows),
+                   "zipped_bytes": sum(r[2] for r in rows), "errors": sum(1 for r in rows if r[3]),
+                   "top5": sorted(((r[0], r[2]) for r in rows), key=lambda x: -x[1])[:5]}
+        print(json.dumps({"stream": st, **{k: v for k, v in res[st].items() if k != "top5"},
+                          "zipped_gb": round(res[st]["zipped_bytes"] / 1e9, 2)}), flush=True)
+    return res
+
+
 def list_symbols(market: str) -> List[str]:
     prefixes, _ = s3_list(f"{MARKETS[market]}/monthly/klines/")
     return sorted(p.rstrip("/").rsplit("/", 1)[-1] for p in prefixes)
@@ -152,6 +202,14 @@ def parse_metrics_csv(raw: bytes) -> pd.DataFrame:
     return out.dropna(subset=["ts"]).sort_values("ts")
 
 
+def parse_bookdepth_csv(raw: bytes) -> pd.DataFrame:
+    df = _read_csv(raw, ["timestamp", "percentage", "depth", "notional"], "timestamp")
+    return pd.DataFrame({"ts": pd.to_datetime(df["timestamp"], utc=True, errors="coerce"),
+                         "percentage": pd.to_numeric(df["percentage"], errors="coerce"),
+                         "depth": pd.to_numeric(df["depth"], errors="coerce"),
+                         "notional": pd.to_numeric(df["notional"], errors="coerce")}).dropna(subset=["ts"]).sort_values(["ts", "percentage"])
+
+
 # stream -> (label, monthly path tmpl, daily path tmpl, parser, markets, bar minutes for gap stats or None)
 STREAMS: Dict[str, dict] = {
     "klines": {"label": "1m", "monthly": "{b}/monthly/klines/{s}/1m/", "daily": "{b}/daily/klines/{s}/1m/",
@@ -160,6 +218,18 @@ STREAMS: Dict[str, dict] = {
                     "parse": parse_funding_csv, "markets": ("um_perp",), "step_min": None},
     "metrics": {"label": "metrics_5m", "monthly": None, "daily": "{b}/daily/metrics/{s}/",
                 "parse": parse_metrics_csv, "markets": ("um_perp",), "step_min": 5},
+    # OPTIONAL streams: enabled by the preflight only when the MEASURED HF private-storage headroom covers them
+    "premiumIndexKlines": {"label": "premium_1m", "monthly": "{b}/monthly/premiumIndexKlines/{s}/1m/",
+                           "daily": "{b}/daily/premiumIndexKlines/{s}/1m/", "parse": parse_kline_csv,
+                           "markets": ("um_perp",), "step_min": 1},
+    "markPriceKlines": {"label": "mark_1m", "monthly": "{b}/monthly/markPriceKlines/{s}/1m/",
+                        "daily": "{b}/daily/markPriceKlines/{s}/1m/", "parse": parse_kline_csv,
+                        "markets": ("um_perp",), "step_min": 1},
+    "indexPriceKlines": {"label": "index_1m", "monthly": "{b}/monthly/indexPriceKlines/{s}/1m/",
+                         "daily": "{b}/daily/indexPriceKlines/{s}/1m/", "parse": parse_kline_csv,
+                         "markets": ("um_perp",), "step_min": 1},
+    "bookDepth": {"label": "bookdepth", "monthly": None, "daily": "{b}/daily/bookDepth/{s}/",
+                  "parse": parse_bookdepth_csv, "markets": ("um_perp",), "step_min": None},
 }
 
 
@@ -202,10 +272,22 @@ def gap_stats(ts: pd.Series, step_min: Optional[int]) -> Dict[str, int]:
             "largest_gap_bars": int(round(big.max() / step) - 1) if len(big) else 0}
 
 
-def plan_months(monthly: List[str], daily: List[str], have: Dict[str, dict]) -> Dict[str, Tuple[str, List[str]]]:
-    """month -> (src, keys) for every month that must be (re)built. A month is built from its monthly zip when one
-    exists, else from its daily zips. Skip a month already in the lake unless it was daily-built and a monthly file
-    now exists, or it is the newest month (still filling)."""
+def partition_key(month: str, current_year: str) -> str:
+    """Closed years are ONE file per symbol-year; the current year is one file per month (keeps the HF repo far under
+    its 100k-files recommendation: ~15k files in January, <=60k in December). On the first run of a new year the
+    previous year's months are rebuilt as one yearly file (automatic compaction)."""
+    return month[:4] if month[:4] < current_year else month
+
+
+def plan_months(monthly: List[str], daily: List[str], have: Dict[str, dict],
+                current_year: Optional[str] = None, now: Optional[datetime] = None) -> Dict[str, Tuple[str, List[str]]]:
+    """partition key -> (src, zip keys) for every partition that must be (re)built. A month is built from its monthly
+    zip when one exists, else from its daily zips. A partition already in the lake is skipped unless (a) it holds the
+    symbol's newest month AND that month is the current or previous calendar month (still filling / just closed), or
+    (b) it was built from daily files and is now fully covered by monthly files. A delisted symbol's last year is
+    therefore not re-downloaded every day."""
+    now = now or datetime.now(timezone.utc)
+    current_year = current_year or f"{now.year:04d}"
     by_month: Dict[str, Tuple[str, List[str]]] = {}
     for k in monthly:
         by_month[_month_of(k)] = ("monthly", [k])
@@ -216,11 +298,22 @@ def plan_months(monthly: List[str], daily: List[str], have: Dict[str, dict]) -> 
     if not by_month:
         return {}
     newest = max(by_month)
-    out = {}
+    prev_month = f"{now.year - (now.month == 1):04d}-{(now.month - 2) % 12 + 1:02d}"
+    open_months = {f"{now.year:04d}-{now.month:02d}", prev_month}
+    groups: Dict[str, dict] = {}
     for m, (src, keys) in by_month.items():
-        prev = have.get(m)
-        if prev is None or m == newest or (prev.get("src") == "daily" and src == "monthly"):
-            out[m] = (src, sorted(keys))
+        g = groups.setdefault(partition_key(m, current_year), {"srcs": set(), "keys": [], "months": []})
+        g["srcs"].add(src)
+        g["keys"] += keys
+        g["months"].append(m)
+    out = {}
+    for k, g in groups.items():
+        src = "monthly" if g["srcs"] == {"monthly"} else ("daily" if g["srcs"] == {"daily"} else "mixed")
+        prev = have.get(k)
+        filling = newest in g["months"] and newest in open_months
+        upgraded = prev is not None and prev.get("src") in ("daily", "mixed") and src == "monthly"
+        if prev is None or filling or upgraded:
+            out[k] = (src, sorted(g["keys"]))
     return out
 
 
@@ -238,7 +331,7 @@ def build_symbol(market: str, stream: str, symbol: str, out: Path, have: Optiona
         # klines: daily files only matter after the last monthly file (the open month)
         last_m = _month_of(monthly[-1])
         daily = [k for k in daily if _month_of(k) > last_m]
-    plan = plan_months(monthly, daily, have or {})
+    plan = plan_months(monthly, daily, have or {}) if spec["monthly"] or spec["daily"] else {}
     errors: List[str] = []
 
     def one(k: str):
@@ -247,7 +340,7 @@ def build_symbol(market: str, stream: str, symbol: str, out: Path, have: Optiona
         except Exception as e:  # contained per file; counted, retried next run
             return e
 
-    for month, (src, keys) in sorted(plan.items()):
+    for month, (src, keys) in sorted(plan.items()):  # `month` is a partition key: YYYY (closed year) or YYYY-MM
         frames, checks = [], {}
         with ThreadPoolExecutor(max_workers=workers) as ex:
             for k, res in zip(keys, ex.map(one, keys)):
@@ -266,7 +359,7 @@ def build_symbol(market: str, stream: str, symbol: str, out: Path, have: Optiona
                 "src": src, "files": len(keys), "checksum": checks, "bytes": path.stat().st_size,
                 "path": str(path.relative_to(out))}
         part.update(gap_stats(df["ts"], spec["step_min"]))
-        if "quote_volume" in df.columns:
+        if "quote_volume" in df.columns and label == "1m":
             part["quote_volume_usd"] = float(df["quote_volume"].sum())
             # a frozen post-delist month: no volume and a constant close (ML-FEATURE-INFRA finding) -> flag, keep
             part["frozen"] = bool(df["volume"].fillna(0).sum() == 0 and df["close"].nunique() <= 1)
@@ -312,6 +405,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     ap.add_argument("--limit", type=int, default=0)
     ap.add_argument("--refresh-from", default="", help="previous lake MANIFEST.json: rebuild only what changed")
     ap.add_argument("--census", action="store_true", help="list the archive only: per-symbol months, no downloads")
+    ap.add_argument("--size-census", default="", help="comma list of SIZE_STREAMS: MEASURED zipped bytes from the listing")
     ap.add_argument("--workers", type=int, default=8, help="parallel file downloads per symbol")
     ap.add_argument("--parallel", type=int, default=4, help="symbols built concurrently")
     a = ap.parse_args(argv)
@@ -328,6 +422,11 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         chosen = chosen[: a.limit]
     label = spec["label"]
     print(f"[lake] {a.market} {a.stream}: archive lists {len(listed)}; shard {a.shard} builds {len(chosen)}", flush=True)
+    if a.size_census:
+        res = size_census(a.market, chosen, [x for x in a.size_census.split(",") if x])
+        (out / "_census").mkdir(parents=True, exist_ok=True)
+        (out / "_census" / f"sizes-{a.market}.json").write_text(json.dumps(res, indent=1))
+        return 0
     if a.census:
         def cen(sym):
             try:
