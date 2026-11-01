@@ -75,6 +75,9 @@ HEAVY_ENTRYPOINTS = [
 # `.fit(`/`lgb.train(` it belongs above, and the reason recorded here is what
 # makes that reviewable.
 DECLARED_LIGHT = {
+    "scripts/research/ml_entry_recipe.py":
+        "ML-RECIPE ENTRY recipe/target harness (units RQ-20261101-fs05-01, -fs06-01): fits LightGBM on the public Binance Vision table "
+        "of ml_entry_v2.py in a lane container or a GitHub runner (compute cpu_long, github_runner), never needs_vm_data, never routed to the trainer.",
     "scripts/research/ml_decision_entry.py":
         "ML-DECISION-MODELS ENTRY harness: fits LightGBM on public Binance Vision 1h klines in a lane container or a "
         "GitHub runner. Its queue units (RQ-20261101-c692-01/-04/-06) declare compute cpu_long (backend github_runner), "
