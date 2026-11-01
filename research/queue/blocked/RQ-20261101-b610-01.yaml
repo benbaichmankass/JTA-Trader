@@ -1,0 +1,114 @@
+# Authored 2026-11-01 by lane ML-RECIPE (Tier 1). Decision rule registered BEFORE any window outcome exists (the window starts 2026-11-01, today). Gates: none.
+id: RQ-20261101-b610-01
+title: 'ENTRY v2 forward read on a FRESH window (from 2026-11-01): one read of the frozen v2 artifact, window closed by a label-free decision count. Offline replay; the bybit_1 leg proves mechanics only'
+status: blocked
+cadence: once
+theme: ml_health
+priority: 1
+roadmap:
+- L-ML-LIVE
+kind: experiment
+practice_precedent: 'T1, M6 (docs/reference/trading-and-model-practice-principles.md): purged + embargoed walk-forward; shadow-feature (Boruta-style) controls so a model that cannot reject noise columns
+  is not trusted to admit real ones.'
+question: 'The v2 candidate (artifact ml/served/ml_decision_entry_v2/model.json, R2 recipe + cost-per-R gate 0.06 + SL 2 / TP 4 ATR, tau 0.07800176, trained through 2026-09-22) FAILED its one W1 read (RQ-20261101-b609-01:
+  -0.1161, n=320, vs frozen v1 -0.0405) and is now a TESTING leg on bybit_1 only. This unit is the ONE read of that SAME frozen artifact (no retrain, no threshold or gate change) on a window it has never
+  seen: 2026-11-01 00:00Z onward. Edge is decided OFFLINE (OPERATING-PLAN: a live or paper book checks mechanics, never edge): the read is a replay of the frozen artifact on Binance Vision klines of the
+  window, with outcomes under the SL 2 / TP 4 bracket and the full cost stack, on the pooled frozen-60 population (traded five beside it). WINDOW CLOSE (label-free, so the date is computed, not declared
+  and not chosen after seeing outcomes): the first day D on which the number of candidate decisions since 2026-11-01 (rows whose frozen-artifact score exceeds tau AND pass the cost gate; computed from scores
+  only, `ml_entry_levers.py fwd-read --count-only`) reaches 1,100, or 2026-12-31, whichever is first. MEASURED ratio on W1: 594 candidates became 320 policy decisions (0.539), so 1,100 candidates is about
+  600 decisions. ACCRUAL (measured): W1 594 candidates in 31 days = 19.2 a day -> D = 2026-12-28; the dev average is 27 policy decisions a day (about 50 candidates a day) -> D = 2026-11-23. The counter
+  is run weekly; D is whatever it says. The frozen v1 booster (comms/research/RQ-20261101-c692-06/41324826751/model, tau 0.10, 2/3 bracket) scores the same rows as a second claim, reported and used only
+  in condition (c).'
+why_this_matters: 'Operator 2026-11-01: 20 features is a regression equation, not algorithmic trading; manager 2026-11-01 ~12:03Z: a family ablation at +0.010 cannot admit anything when the recipe overfits
+  with any extra column, so fix the recipe, then the columns.'
+power:
+  expected_n: 60000
+  min_detectable_effect: 0.01
+  effect_units: metric
+  sd: 1.0
+  design: two_sample
+  alpha: 0.05
+  power: 0.8
+  basis: 'MEASURED 2026-11-01 (b609-01 W1): candidates 19.2/day -> policy 10.3/day; dev 27 policy/day; per-decision SD about 1.07 R; n=600 gives SE 0.044.'
+  feasibility:
+    source: none
+    accrual_basis: Replays public history through 2025-09-30 (dev folds only); nothing accrues.
+decision_rule:
+  id: RULE-20261101-b610-01
+  registered_at: '2026-11-01'
+  registered_before_run: true
+  statistic: 'W1 decisions of the stack: n, symbols, mean gross/cost/net R per decision, bootstrap CI95 (reported), per side, traded-5 slice, baselines (no-trade, always-long, random matched at the stack
+    take rate); the same for the frozen v1 reference; variants on the window from the lock.'
+  rule: 'PASS iff, net of the full cost stack on the window: (a) n >= 300 policy decisions and >= 10 distinct symbols; (b) the mean net R per decision >= 0; (c) the mean >= the frozen v1 reference''s mean
+    on the same rows. FAIL iff (a) holds and (b) or (c) fails. INDETERMINATE iff (a) fails at the window close. ONE read: the lock (model id ENTRY-v2-frozen-fwd) refuses a second read; no variant of the
+    artifact is scored on this window; the variant count is stated beside the result. Traded-5, bootstrap CI, per-side and baselines (no-trade, always-long/short, random matched) are reported and do not
+    gate. STATED POWER (so a PASS is not over-read): the per-decision SD is about 1.07 R (W1 CI width 0.235 at n=320), so at n=600 the standard error is about 0.044 R. A PASS is a point estimate >= 0 (the
+    live bar, ML-BAR-ONE-READ), not proof of an edge: a true +0.03 edge has only about 14% power to show a CI above zero at n=600 (about 8,700 decisions, years of accrual, would be needed). A FAIL with
+    the CI upper bound below 0 is strong evidence against. Thresholds are not changed after the result.'
+  what_it_does_not_do: Registers, serves or promotes nothing; changes no config; places no order; sizes nothing. The bybit_1 demo leg is a separate mechanics soak (1-2 clean trades) and never an edge input.
+  min_n: 300 policy decisions
+compute: cpu_long
+value:
+  bucket: ai_trader
+  usd_at_stake_per_month: 400
+  confidence: 0.2
+  basis: 'stand-in: the operator priority-1 goal (ML decision makers live, ENTRY about to go live 2026-11-01); not a P&L measurement.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 8.0
+  est_minutes: 60
+  why_runner: Keyless public Binance Vision archives; GBDT on CPU.
+  basis: 'MEASURED 2026-11-01: one 8-fold arm of the baseline recipe takes about 480 s on 4 threads (arm A); this unit runs a fixed number of arms.'
+run:
+  workflow: research-script-run.yml
+  command:
+  - python3
+  - scripts/research/ml_entry_v2_run.py
+  - levers
+  - '{unit}'
+  - '{out_dir}'
+  timeout_minutes: 300
+  inputs:
+    research_unit: RQ-20261101-b610-01
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- ML-LEVER-PLAN
+- RQ-20261101-b609-01
+- RQ-20261101-b608-01
+- ML-BAR-ONE-READ
+- HOLDOUT-LOCK
+- ML-ENTRY-V2-TESTING
+what_it_does_not_do: Registers, serves or promotes nothing; changes no config; places no order; sizes nothing. A PASS is evidence for a Tier-3 swap PR the operator merges.
+ml_consumer:
+  consumer: ML-ENTRY-LIVE-ADAPTER
+  decision: whether the live ENTRY bracket should move from SL 2 / TP 3 to a wider TP; feeds the combined v2 candidate
+  legs:
+  - xrp_pullback_2h
+  - trend_donchian_eth_4h
+  - trend_donchian_xrp_4h
+  - ada_pullback_2h
+  - trend_donchian_sol_prop
+  book: money
+iteration:
+  subject: ml-entry
+  subject_kind: ml_model
+  from_result: RQ-20261101-b609-01 (W1 FAIL)
+  verdict_read: fail
+  diagnosis: The dev stack (+0.0478) did not hold on the first unseen month (v2 -0.1161 vs v1 -0.0405, shorts worse than random in a short-favouring month). W1 cannot separate a bad stack from a bad month
+    (n=320, SE about 0.06).
+  hypothesis: on a fresh window the frozen v2 artifact keeps a non-negative mean and is no worse than the frozen v1
+  attempt: 2
+  due_by: '2026-12-31'
+programme_node:
+  programme: P2
+  node: P2-ENTRY-LEVERS
+  goal: G4
+blocked_on:
+- kind: date
+  what: the label-free candidate counter reaches 1,100 since 2026-11-01 (or 2026-12-31) and the fwd-read harness lands
+  clears_when: '`python3 scripts/research/ml_entry_levers.py fwd-read --count-only` prints candidates >= 1100, or the date is 2026-12-31; the lane then runs the read once locally and commits the lock lines
+    with the result'
