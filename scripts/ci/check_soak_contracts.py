@@ -94,6 +94,13 @@ def tree_findings(acc: dict, strat: dict, contracts: List[dict]) -> List[str]:
     for c in contracts:
         for p in ss.contract_problems(c):
             out.append(f"contract {c.get('id')}: {p}")
+    # PROMOTION-NO-SOAK (operator, 2026-11-01): a Stage-2 leg with mechanics_proven and no soak contract is VALID, so no
+    # contract is demanded of it. The registry is checked for shape only (no calendar field, a known delta) -- it is an
+    # evidence input to MD-PROMOTE-S1-S2, never a gate on what trades. A long soak is still refused above.
+    mech = ss.load_mechanics_paths()
+    out += [f"config/mechanics_paths.yaml: {p}" for p in ss.mechanics_problems(mech)]
+    out += [f"config/mechanics_paths.yaml: {leg} is not a leg in config/strategies.yaml"
+            for leg in sorted(mech) if leg not in strat]
     return out
 
 

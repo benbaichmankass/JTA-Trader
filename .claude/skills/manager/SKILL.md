@@ -267,6 +267,11 @@ A Tier-1 lane self-lands: `.github/pr-landing/<slug>.json` (`tier: 1`, `landing:
 Review"), the lane re-declares `landing: hold` with `hold_reason: operator_asked_to_hold`, reports the exact refused command in one line,
 and the manager lands it. Tier-2/3 lane PRs always carry `landing: hold` (manager for Tier 2, the operator's recorded approval for Tier 3).
 
+**Push less, push checked** (CI-THROUGHPUT-20261029; a habit, not a gate). Before every push run `python3 scripts/ci/prepush.py`
+(guards on the diff + affected tests, locally). **Never push to a PR while its CI runs unless you are fixing a red check** — a re-push
+cancels the run in flight and restarts the ~15 min guards job. **Batch register commits** (checklist rows, pipeline appends, landing
+files) into one push instead of one push per edit; this applies to the manager's own register branch too.
+
 ### No new gates (operator, 2026-10-29, binding)
 
 Never add, and never dispatch a lane to add, a gate (approval step, hold, readiness condition, cap, flag, review step) without the operator's explicit permission; read ambiguous friction as less; green Tier-1/2 deploys are automatic; every design doc or approval packet opens with "Gates this adds or changes" (or `Gates: none`) and the popup names them. Canonical § "No new gates without the operator's permission".
@@ -614,6 +619,8 @@ what is blocked and on what>) then fire_trigger(<id>). Never set run_once_at (it
 If your PR waits on the manager (landing: hold), wake it AGAIN once CI on your head is green, with the PR
 number and head sha; you stay subscribed to your own PR and fix red CI yourself. If that prompts, comment on your PR instead.
 Then continue, or run close-out. Never stop to wait for direction.
+Before EVERY push run `python3 scripts/ci/prepush.py` (guards on your diff + affected tests, locally); never push to a PR while its
+CI runs unless fixing red; batch your commits into one push.
 ```
 
 **Reading scope for the lane (operator 2026-10-27, `CONTEXT-DIET`).** A lane reads only what CLAUDE.md § "Every session" step 1 names from
@@ -625,7 +632,7 @@ gated"). **Put in the prompt any other canonical section the lane's task needs**
 
 Stated once: [`OPERATING-PLAN` § 2 "The soak is MECHANICAL"](../../../docs/plans/OPERATING-PLAN-2026-09-21.md) — never restate it in a
 dispatch, row note or contract. A Stage-1 placement needs a contract in `docs/claude/work/SOAKS.json` (`soak_state.py --backfill`). Per live
-state: `passed` → promotion candidate, run `MD-PROMOTE-S1-S2` · `mechanical_fail` → dispatch the fix, the next clean trades re-soak it ·
+state: `passed` → promotion candidate, run `MD-PROMOTE-S1-S2` (a `mechanics_proven` leg is a candidate with no contract at all, 2026-11-01) · `mechanical_fail` → dispatch the fix, the next clean trades re-soak it ·
 `awaiting_first_trade` / `in_progress` → nothing, no deadline · `unknown` → we could not look; find out why. A grade's `kill` calls are
 applied under `MD-DEMOTE-S1-OFF` / `MD-KILL-QUESTION` or filed with a reason, never just read.
 
@@ -696,7 +703,7 @@ control · V4 round-trips (trigger id, assistant evidence, lane id) · V5 operat
 ## The ladder the manager is moving things along
 
 Stage 0 backtest (edge net of the FULL cost stack) → Gate 1 → Stage 1 soak (`bybit_1` · `alpaca_paper`; MECHANICS on 1–2 clean trades,
-2026-10-15) → Gate 2 → Stage 2 live + mirror (identical rosters and trades; the mirror's net-of-cost window is the DEMOTION signal).
+2026-10-15; SKIPPED when `mechanics_proven`, 2026-11-01 — OPERATING-PLAN § 2 "The soak is MECHANICAL") → Gate 2 → Stage 2 live + mirror (identical rosters and trades; the mirror's net-of-cost window is the DEMOTION signal).
 **Edge is decided offline; a book only checks mechanics and cost** — a lane proposing Stage 2 on live-book evidence is a category error.
 Canonical: CLAUDE.md § "The promotion ladder".
 

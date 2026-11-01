@@ -286,3 +286,18 @@ class TestPrSkipUnless:
         g = next(x for x in rg.GUARDS if x["name"] == "candle-fixture-variance-guard")
         steps = [s if isinstance(s, dict) else {"argv": s} for s in g["steps"]]
         assert [("pr_skip_unless" in s) for s in steps] == [False, True]
+
+
+class TestPrArgv:
+    """`pr_argv` (CI-THROUGHPUT-20261029): diff-scoped argv on a PR, unchanged elsewhere."""
+
+    def test_pr_uses_pr_argv_other_events_use_argv(self):
+        guard = _guard([{"argv": FAIL, "pr_argv": ["python3", "-c", "pass"]}])
+        assert rg.run_guard(guard, CTX, ["x.py"]) is None
+        ctx = dict(CTX, event_name="push")
+        assert rg.run_guard(guard, ctx, [], no_diff_scope=True) is not None
+
+    def test_candle_guard_scopes_to_diff_on_pr(self):
+        g = next(x for x in rg.GUARDS if x["name"] == "candle-fixture-variance-guard")
+        step = [s for s in g["steps"] if isinstance(s, dict)][0]
+        assert "--pr-diff" in step["pr_argv"] and "--pr-diff" not in step["argv"]
