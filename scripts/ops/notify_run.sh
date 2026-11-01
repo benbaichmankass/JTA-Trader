@@ -505,6 +505,15 @@ case "${action}" in
             *) result="FAILED/refused (exit ${exit_code}) — trade still on legacy add-a-leg path"; priority="normal" ;;
         esac
         ;;
+    relink-orphan-trade-5209)
+        # 2026-11-01 GLD-ORPHAN-5209: re-link trade 5209 to pkg-8106, reopen it,
+        # close pkg-6a8e. Journal-only; dry-run unless apply:true.
+        tier=2
+        case "${exit_code}" in
+            0) result="ok (dry-run preview, no-op or re-linked)"; priority="normal" ;;
+            *) result="FAILED/refused (exit ${exit_code}) -- nothing written"; priority="normal" ;;
+        esac
+        ;;
     relabel-package-close-reasons)
         # 2026-11-01 CLOSE-REASON-XRP-1220: relabel 13 closed packages to their
         # linked trades' sl/tp. Journal-only; dry-run unless apply:true.
