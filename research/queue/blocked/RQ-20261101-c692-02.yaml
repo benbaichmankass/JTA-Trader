@@ -46,10 +46,10 @@ run:
   workflow: research-script-run.yml
   command:
   - python3
-  - scripts/research/ml_decision_entry.py
+  - scripts/research/ml_decision_brackets.py
   - run
-  - --model
-  - '02'
+  - --entry-summary
+  - comms/research/RQ-20261101-c692-01/local-20261101T0835Z/summary.json
   - --cache
   - /tmp/ml_decision_klines
   - --unit
@@ -71,7 +71,8 @@ what_it_does_not_do: Registers, serves or promotes nothing; changes no config; p
 blocked_on:
 - kind: harness
   ref: scripts/research/ml_decision_entry.py
-  what: 'a `--model 02` (BRACKETS) path in ml_decision_entry.py: per-cell labels and the composed scoring'
+  what: 'harness built (scripts/research/ml_decision_brackets.py, self-tested); remaining: one smoke run on a 3-symbol subset to confirm runtime
+    fits the 240-min cap before release'
   clears_when: the subcommand lands on main with a self-test; the lane git-mvs this file to research/queue/ with status queued (rule unchanged)
 power:
   expected_n: 3000
