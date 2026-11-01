@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """ENTRY lever harness, round 1 (rows ML-LEVER-HARNESS / ML-LEVER-PLAN; units RQ-20261101-b601-01 brackets, -b602-01 selectivity,
--b604-01 calibration, -b606-01 cost gate, -a508-01 traded slice). DEV FOLDS ONLY: the table is clipped to ts < HOLDOUT_START on load.
+-b604-01 calibration, -b606-01 cost gate, -b607-01 recipe at a matched share, -a508-01 traded slice). DEV FOLDS ONLY: the table is clipped to ts < HOLDOUT_START on load.
 
 Every arm is ONE factor against the frozen v1 base (20 baseline features, baseline LightGBM params, entry tau 0.10, the c692-01
 walk-forward folds, purge and embargo) and is scored with the same one-position-per-symbol policy and cost stack. The arm rule is
@@ -361,6 +361,56 @@ def cost_gate_unit(tab, out, n_jobs) -> dict:
     return res
 
 
+# ----------------------------------------------------------------------------------------------- b607: recipe at a matched decision share
+def _mean_member(members: list) -> dict:
+    out = {}
+    for k in range(8):
+        out[f"pos{k}"] = members[0][f"pos{k}"]
+        out[f"pl{k}"] = np.mean([m[f"pl{k}"] for m in members], axis=0)
+        out[f"ps{k}"] = np.mean([m[f"ps{k}"] for m in members], axis=0)
+    return out
+
+
+def _matched(share):
+    """Threshold = the quantile of the arm's own score that takes the same share of rows as the base; labels are never used."""
+    def tw(k, test, pl, ps):
+        sc = np.maximum(pl, ps)
+        thr = float(np.quantile(sc, 1 - share[k])) if share[k] > 0 else 1e9
+        return pl, ps, thr
+    return tw
+
+
+def recipe_unit(tab, out, n_jobs) -> dict:
+    singles, draws = SEEDS, R.ENS_DRAWS
+    base_m = {sd: R.ens_member(tab, "R0", "S0", sd, out, n_jobs) for sd in singles}
+    share = {sd: [float((np.maximum(base_m[sd][f"pl{k}"], base_m[sd][f"ps{k}"]) > TAU).mean()) for k in range(8)] for sd in singles}
+    fr = {sd: fold_frames(tab, base_m[sd]) for sd in singles}
+    res = {"unit": "RQ-20261101-b607-01", "sealed_windows_read": 0, "arms": {}}
+
+    def arm_stats(recipe, fset, ens):
+        out_l = []
+        for i, sd in enumerate(singles):
+            seeds_ = draws[i] if ens else (sd,)
+            m = _mean_member([R.ens_member(tab, recipe, fset, x, out, n_jobs) for x in seeds_])
+            out_l.append(stats(run_arm(fr[sd], m, tweak=_matched(share[sd]))))
+        return out_l
+    base = [stats(run_arm(fr[sd], base_m[sd])) for sd in singles]
+    res["base"] = {"mean": float(np.mean([x["mean"] for x in base])), "range": float(max(x["mean"] for x in base) - min(x["mean"] for x in base)), "n": [x["n"] for x in base]}
+    for name, recipe, ens in (("R1_single", "R1", False), ("R2_single", "R2", False), ("E1_R0_ens3", "R0", True), ("E2_R1_ens3", "R1", True), ("E3_R2_ens3", "R2", True)):
+        s0, s1 = arm_stats(recipe, "S0", ens), arm_stats(recipe, "S1", ens)
+        j = judge(base, s0)
+        rng = float(max(x["mean"] for x in s0) - min(x["mean"] for x in s0))
+        nd = float(np.mean([x["mean"] for x in s1]) - np.mean([x["mean"] for x in s0]))
+        j.update({"S1_mean": float(np.mean([x["mean"] for x in s1])), "noise_delta": nd, "arm_range": rng, "noise_immune": bool(nd >= -rng)})
+        if j["verdict"] == "win" and not j["noise_immune"]:
+            j["verdict"] = "not_noise_immune"
+        res["arms"][name] = j
+        print(name, round(j["arm_mean"], 4), j["verdict"], flush=True)
+    wins = [k for k, v in res["arms"].items() if v["verdict"] == "win"]
+    res["result"] = f"candidates: {wins}" if wins else "no recipe arm clears the rule at a matched decision share on the dev folds"
+    return res
+
+
 # ----------------------------------------------------------------------------------------------- a508: the traded slice
 def traded_unit(tab, out, n_jobs) -> dict:
     seeds = (E.SEED, *SEEDS)
@@ -494,7 +544,7 @@ def main() -> int:
     assert tab.ts.max() < pd.Timestamp(E.HOLDOUT_START, tz="UTC")
     u = a.unit.split("-")[-2] if a.unit.startswith("RQ-") else a.unit.split("-")[0]
     fn = {"b601": lambda: bracket_unit(tab, out, a.n_jobs, tpath.parent / "klines"), "b602": lambda: selectivity_unit(tab, out, a.n_jobs),
-          "b604": lambda: calibration_unit(tab, out, a.n_jobs), "b606": lambda: cost_gate_unit(tab, out, a.n_jobs), "a508": lambda: traded_unit(tab, out, a.n_jobs)}[u]
+          "b604": lambda: calibration_unit(tab, out, a.n_jobs), "b606": lambda: cost_gate_unit(tab, out, a.n_jobs), "b607": lambda: recipe_unit(tab, out, a.n_jobs), "a508": lambda: traded_unit(tab, out, a.n_jobs)}[u]
     res = fn()
     (out / f"{u}_result.json").write_text(json.dumps(res, indent=1, default=str))
     print(res["result"])

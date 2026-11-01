@@ -1,0 +1,103 @@
+# Authored 2026-11-01 by lane ML-RECIPE (Tier 1) from the d507-01 diagnosis. Decision rule registered BEFORE any run. Gates: none.
+id: RQ-20261101-b607-01
+title: 'ENTRY lever 4b, recipe at a matched decision share: do stronger regularisation (R1, R2) and a K=3 seed ensemble lift the dev mean over the frozen v1 recipe when the threshold-selection noise is
+  removed? Dev folds only'
+status: queued
+cadence: once
+theme: ml_health
+priority: 1
+roadmap:
+- L-ML-LIVE
+kind: experiment
+practice_precedent: 'T1, M6 (docs/reference/trading-and-model-practice-principles.md): purged + embargoed walk-forward; shadow-feature (Boruta-style) controls so a model that cannot reject noise columns
+  is not trusted to admit real ones.'
+question: 'd507-01 (2026-11-01, LOFO quantile threshold): E0 single -0.0030 (range 0.0091), E1 K=3 ensemble +0.0077 (noise-immune, 6/8 folds), E2 (R1 params) +0.0210 but 5/8 folds and a fold at 986 decisions,
+  E3 (R2) +0.0095: INDETERMINATE, the per-arm leave-one-fold-out threshold choice is itself a noise source (draw ranges 0.014-0.029). This unit removes it: every arm takes, in every fold, the SAME share
+  of rows as the frozen v1 base at tau 0.10 (threshold = that quantile of the arm''s own max(long, short) score; labels never used). Arms against the base (R0 single model, seeds 7, 11, 13, tau 0.10): R1
+  single, R2 single (seeds 7, 11, 13); E1 R0 K=3 ensemble, E2 R1 K=3 ensemble, E3 R2 K=3 ensemble (draws {7,11,13}, {17,19,23}, {29,31,37}); each also with the 9-noise-column control (S1). Dev folds only.'
+why_this_matters: 'Operator 2026-11-01: 20 features is a regression equation, not algorithmic trading; manager 2026-11-01 ~12:03Z: a family ablation at +0.010 cannot admit anything when the recipe overfits
+  with any extra column, so fix the recipe, then the columns.'
+power:
+  expected_n: 60000
+  min_detectable_effect: 0.01
+  effect_units: metric
+  sd: 1.0
+  design: two_sample
+  alpha: 0.05
+  power: 0.8
+  basis: 'MEASURED 2026-11-01 (d507-01): the matched-share protocol has the v1 fixed-tau spread (pooled range 0.0034 at n about 72k); the ensemble and regularised arms are expected to move the mean by 0.01-0.02
+    (E1 +0.0107, E2 +0.0240 over E0 under the LOFO quantile).'
+  feasibility:
+    source: none
+    accrual_basis: Replays public history through 2025-09-30 (dev folds only); nothing accrues.
+decision_rule:
+  id: RULE-20261101-b607-01
+  registered_at: '2026-11-01'
+  registered_before_run: true
+  statistic: 'Per arm and seed: n, mean gross, cost and net R per decision at the frozen entry tau; seed mean and range; per-fold and per-calendar-year net; traded-5 slice beside the pooled frozen-60 population.'
+  rule: 'NOISE-IMMUNE: for an arm, mean (S1 - S0) >= -(its across-seed/draw range); only noise-immune arms can win. A lever arm WINS iff, net of the full cost stack on the dev folds, on the pooled frozen-60
+    population (the traded five are reported beside it, never instead): (1) every fold keeps >= 1000 scored decisions (else INDETERMINATE); (2) the mean over seeds 7/11/13 beats the base arm by >= 2 x the
+    base seed range (base range 0.0034 (MEASURED 2026-11-01, v1 frozen recipe at a fixed tau on the pooled 60 symbols over the dev folds: per-seed means +0.0063..+0.0097, n about 72k; traded-5 range 0.0058),
+    recomputed from this run''s base arm if larger); (3) it is better than the base in >= 6 of 8 dev folds; (4) its sign is the same in >= 3 of 4 calendar years. A winner is only a CANDIDATE: it is selected
+    on dev alone and goes, with the other winners, into ONE combined held-out read (a later unit, ML-BAR-ONE-READ); no arm of this unit reads a held-out or sealed window. Thresholds are not changed after
+    any result.'
+  what_it_does_not_do: Reads no sealed or held-out window (dev folds only), serves nothing, changes no config or live symbol list, places no order, sizes nothing.
+  min_n: 1000 dev decisions per fold
+compute: cpu_long
+value:
+  bucket: ai_trader
+  usd_at_stake_per_month: 400
+  confidence: 0.2
+  basis: 'stand-in: the operator priority-1 goal (ML decision makers live, ENTRY about to go live 2026-11-01); not a P&L measurement.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 8.0
+  est_minutes: 20
+  why_runner: Keyless public Binance Vision archives; GBDT on CPU.
+  basis: 'MEASURED 2026-11-01: one 8-fold arm of the baseline recipe takes about 480 s on 4 threads (arm A); this unit runs a fixed number of arms.'
+run:
+  workflow: research-script-run.yml
+  command:
+  - python3
+  - scripts/research/ml_entry_v2_run.py
+  - levers
+  - '{unit}'
+  - '{out_dir}'
+  timeout_minutes: 300
+  inputs:
+    research_unit: RQ-20261101-b607-01
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- ML-LEVER-PLAN
+- research/levers/ml-entry.yaml
+- RQ-20261101-d507-01
+- RQ-20261101-fs05-01
+what_it_does_not_do: Registers, serves or promotes nothing; changes no config; places no order; sizes nothing; reads no sealed window.
+ml_consumer:
+  consumer: ML-ENTRY-LIVE-ADAPTER
+  decision: whether the live ENTRY bracket should move from SL 2 / TP 3 to a wider TP; feeds the combined v2 candidate
+  legs:
+  - xrp_pullback_2h
+  - trend_donchian_eth_4h
+  - trend_donchian_xrp_4h
+  - ada_pullback_2h
+  - trend_donchian_sol_prop
+  book: money
+iteration:
+  subject: ml-entry
+  subject_kind: ml_model
+  from_result: RQ-20261101-d507-01 (INDETERMINATE)
+  verdict_read: indeterminate
+  diagnosis: The ensemble and the R1 recipe raise the mean (E1 +0.0107, E2 +0.0240 over the single model) but the per-arm leave-one-fold-out threshold choice adds noise that leaves folds under 1000 decisions
+    and the fold-count condition unmet.
+  hypothesis: at a matched decision share the regularised and ensembled recipes beat the frozen v1 recipe
+  attempt: 2
+  due_by: '2026-11-02'
+programme_node:
+  programme: P2
+  node: P2-ENTRY-LEVERS
+  goal: G4

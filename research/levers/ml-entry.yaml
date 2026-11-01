@@ -50,6 +50,15 @@ levers:
         value: R0 baseline, 3 seeds
         response: 'S0 -0.0018 (n 39.5k-71.9k), S1 -0.0077, S2 (F1..F5) -0.0337; spread 0.0237; only noise-immune arm, no family admitted'
         shape: flat
+      - unit: RQ-20261101-d507-01
+        value: 'K=3 seed ensembles x R0/R1/R2 params with a per-fold LOFO quantile threshold (3 draws)'
+        response: 'INDETERMINATE: E0 -0.0030 (range 0.0091), E1 +0.0077 (noise-immune, no win), E2 +0.0210 (5/8 folds, a fold at 986), E3 +0.0095; the LOFO threshold choice is itself a noise source'
+        shape: noisy
+      - unit: RQ-20261101-b607-01
+        value: 'recipe at a MATCHED decision share (same share of rows per fold as the v1 base at tau 0.10), 3 seeds/draws, dev'
+        response: 'base +0.0089; R1 single +0.0204 (delta +0.0114), R2 single +0.0293 (delta +0.0204, seeds +0.0261/+0.0296/+0.0324), E2 R1 ens +0.0245, E3 R2 ens +0.0303 (delta +0.0214); all noise-immune, 6 of 8 folds, 3 of 4 years, min fold n about 3.5k. R0 ensemble +0.0135 no win'
+        shape: regularisation_wins
+        note: 'regularisation is the lever, ensembling adds little; resolves the fs05-01 INDETERMINATE (R1/R2 were ungradeable only because the LOFO tau left thin folds). Dev only, 5 arms, interaction with the cost gate and bracket untested'
       shape: noisy
     seed_variance:
       tests:
@@ -224,11 +233,13 @@ declared:
     results:
     - {lever: cost_gate (new, from b602 attribution), unit: RQ-20261101-b606-01, outcome: 'WIN at 0.06: +0.0205, delta +0.0115, 6/8 folds, 3/4 years; plateau 0.05-0.06', status: candidate}
     - {lever: selectivity low-vol abstention, unit: RQ-20261101-b602-01, outcome: 'WIN +0.0220 (delta +0.0131); same cost-share mechanism as the gate, so the gate is carried, not both', status: superseded_by_cost_gate}
+    - {lever: recipe regularisation, unit: RQ-20261101-b607-01, outcome: 'WIN: R2 single +0.0293 vs base +0.0089 (delta +0.0204, noise-immune, 6/8 folds, 3/4 years); R1 +0.0204; R0 K=3 ensemble does not win', status: candidate}
     - {lever: bracket_geometry, unit: RQ-20261101-b601-01, outcome: '2/4 +0.0126 (delta +0.0037) below the 0.0068 power; direction matches the held-out', status: indeterminate_by_power}
     - {lever: symbol_set, unit: RQ-20261101-a508-01, outcome: 'BTC HARM, ETH HARM, XRP/ADA/SOL undetermined; coin-driven not cost-driven', status: tier3_proposal_to_operator}
     - {lever: calibration, unit: RQ-20261101-b604-01, outcome: 'score is a ranking (Spearman 0.83-0.89), not an expectation (slope 0.16-0.19); no remap helps', status: no_sizing_on_this_score}
     - {lever: side_filter, unit: RQ-20261101-b602-01, outcome: 'rejected by the registered stability condition, as predicted', status: rejected}
     combined_read_candidates:
+    - 'recipe R2 (win at a matched decision share; the largest single effect measured so far)'
     - 'cost gate 0.06 (win under its registered rule)'
     - 'bracket 2/4 (not a win on its own; carried because the direction repeats on the held-out year and it costs nothing to include as a one-factor addition in the combined unit)'
     combined_read_window: 'W1 (2026-10-01..31, unspent) or live forward data; the held-out year is spent on two geometries. ONE read, rule written first, new unit'
