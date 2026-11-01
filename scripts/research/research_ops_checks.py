@@ -291,9 +291,25 @@ def build(root: Path, since: datetime, now: datetime, k: int, stale_days: int, k
                        "results_read": {x: (r.get("results_read") or {}).get(x) for x in ("pass", "fail", "indeterminate")},
                        "not_run": len(r.get("not_run") or [])} for r in recs],
         "stale": {"days": stale_days, "count": len(stale), "by_track": dict(Counter(s["track"] for s in stale)), "oldest": stale[:10]},
+        "iteration": _iteration_block(root),
         "previous_calls": {"file": prev[0]["_file"] if prev else None,
                            "calls": ((prev[0].get("calls") or (prev[0].get("analysis") or {}).get("calls")) if prev else None)},
     }
+
+
+def _iteration_block(root: Path) -> Dict[str, Any]:
+    """The research loop's daily number (OPERATING-PLAN § 2, 2026-11-01): subjects with no live iteration, per kind.
+
+    Target 0. `could_not_look` is its own state -- never read as zero orphans."""
+    try:
+        sys.path.insert(0, str(Path(__file__).resolve().parent))
+        import iteration_orphans as io  # same directory
+        res = io.run(root)
+    except (OSError, ValueError, KeyError, ImportError) as exc:
+        return {"read_state": "could_not_look", "why": f"{type(exc).__name__}: {exc}"}
+    return {"read_state": "measured", "as_of": res["as_of"], "counts": res["counts"],
+            "orphans": [r["id"] for r in res["rows"] if r["state"] == "orphan"],
+            "overdue": [r["id"] for r in res["rows"] if r["state"] == "overdue"]}
 
 
 def main(argv: Optional[List[str]] = None) -> int:

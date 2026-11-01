@@ -5,6 +5,8 @@ description: The WEEKLY frontier scan — look OUTSIDE the repo for better model
 
 > **Doc status:** `live` · category `instruction` · last verified `2026-10-28` · registered in [`docs/DOCUMENT-INDEX.md`](../../../docs/DOCUMENT-INDEX.md)
 
+> **The research loop (binding, 2026-11-01):** [`docs/plans/OPERATING-PLAN-2026-09-21.md`](../../../docs/plans/OPERATING-PLAN-2026-09-21.md) § 2 "What does not pass goes back into research — THE research workflow" -- a kept outside idea becomes a unit with `origin: new_hypothesis`; an outside method that answers a failed test becomes that subject's NEXT ITERATION (`iteration:` block).
+
 # /frontier-research — stay on top of what is out there, test it, apply it
 
 > **Operator, 2026-10-11 (voice, paraphrased closely):** the ML research mandate must not be limited to

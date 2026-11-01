@@ -11,19 +11,7 @@ description: The routine research-OPERATIONS pass, run 4x/day (02:47, 08:47, 14:
 
 ## THE ITERATION LOOP — this pass's FIRST job (operator 2026-11-01, binding; lane RESEARCH-ITERATE)
 
-> **Operator, 2026-11-01 ~12:59Z (verbatim):** *"first, these rules apply to MLs as well, not just strategies or live reviews.
-> second, if the data doesn't pass, it goes back into research for improvments and testing. THere is no other pipeline for
-> underperforming strategies/mls. I don' twant to keep finding strategies sitting arround on paper testing with no clear plan - why
-> do we have a fuckking reserach pipeline with regualrly scheduled sessions if they aren't doing the work they are supposed to be
-> doing? All you're having them do is stuff the reserach pipeline with no-impact tests, intead of implementing the iterative
-> reaserch flwo that i have explained and begged for tilll my eyes are dry becuase there are no tears left - what the fuck else do
-> di need to do for this system to work as desgined?"*
-
-**One ladder for everything** — strategy legs, ML models and decision heads, live-review action classes: the edge is decided
-OFFLINE on evidence; mechanics are verified on paper in 1–2 trades or are already proven (OPERATING-PLAN § 2); then it goes live.
-**Anything whose evidence does not pass goes BACK INTO RESEARCH**, into a loop: diagnose why it failed → form a hypothesis →
-register the next variant with its rule pre-registered → test → read → repeat. There is no other pipeline. Paper (status
-`testing`) is where an unproven thing keeps generating live data **while its loop runs** — never a parking place.
+**The rule is stated once, with the operator's words, in [`docs/plans/OPERATING-PLAN-2026-09-21.md`](../../../docs/plans/OPERATING-PLAN-2026-09-21.md) § 2 "What does not pass goes back into research — THE research workflow": one ladder for strategy legs, ML models and live-review classes; what does not pass goes back into an iterative loop; there is no other pipeline; every result gets exactly one of pass → confirmation/promotion, next iteration (authored in the same pass), or retired by a family-review record. This section is how the 4x/day pass carries it out.**
 
 **MEASURED when this section was written** (`scripts/research/iteration_orphans.py`, 2026-11-01): of 49 testing legs, 9 non-live ML
 heads and 7 live-review classes, **none** had a live unit authored from a diagnosis of its own last result. The queue held 253
@@ -58,7 +46,7 @@ iteration:
   attempt: <1, 2, ...>
   due_by: 'YYYY-MM-DD'
 ```
-The diagnosis names the likeliest cause among {test design, power / n, cost drag, regime / window, harness defect, the idea is
+A unit that is the FIRST test of a new idea carries `origin: new_hypothesis` plus `origin_reason:` (who pays, why the edge persists) instead of the block. The diagnosis names the likeliest cause among {test design, power / n, cost drag, regime / window, harness defect, the idea is
 wrong} **with the evidence** (noise is always one competing hypothesis), and the arms test THAT cause. A lever TRANSFER or a
 template re-run is not an iteration unless a diagnosis of this subject chose it. A PASS that is still a discovery iterates to ONE
 confirmation (`exit_lever_ablation.py --grade holdout`, the shape `mandate_resolver` R-HOLDOUT reads), and a confirmed PASS

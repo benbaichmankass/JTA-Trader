@@ -317,6 +317,11 @@ def render(tpl: Dict[str, Any], tpl_path: str, tpl_sha: str, params: Dict[str, A
     run["inputs"] = inputs
     unit["run"] = run
     unit["lands"] = _fill(tpl["lands"], p)
+    # The research loop (OPERATING-PLAN § 2 "What does not pass goes back into research", 2026-11-01): every unit records
+    # its place in the loop. A template unit is a standing re-measurement, filled by DEFAULT here -- never a refusal.
+    if "iteration" not in unit and "origin" not in unit:
+        unit["origin"] = "standing_remeasure"
+        unit["origin_reason"] = f"template {tpl['family']}: a standing re-measurement of a declared configuration"
     unit["generated"] = {"family": str(tpl["family"]), "template": tpl_path, "template_sha": tpl_sha,
                          "key": point_key(str(tpl["family"]), params),
                          "params": {k: str(v) for k, v in sorted(params.items())}}
@@ -627,6 +632,11 @@ def render_node(node: Dict[str, Any], prog_path: str, prog_sha: str, programme: 
         run["inputs"] = {**dict(run.get("inputs") or {}), "research_unit": unit_id}
     if run:
         unit["run"] = run
+    # The research loop (OPERATING-PLAN § 2, 2026-11-01): a node that does not say it iterates on a result is a first test of
+    # a plan question -- filled by DEFAULT, never a refusal. A node body may carry its own `iteration:` or `origin:`.
+    if "iteration" not in unit and "origin" not in unit:
+        unit["origin"] = "new_hypothesis"
+        unit["origin_reason"] = f"programme {programme} node {node['id']}" + (f" (goal {node.get('goal')})" if node.get("goal") else "")
     unit["programme_node"] = {"programme": programme, "node": node["id"], "goal": node.get("goal"),
                               "after": node.get("after") or []}
     unit["generated"] = {"family": f"{PROGRAMME_FAMILY}:{programme}", "template": prog_path,

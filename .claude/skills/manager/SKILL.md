@@ -284,8 +284,7 @@ Never add, and never dispatch a lane to add, a gate (approval step, hold, readin
 - **`RESEARCH-OPS-<date>-<slot>`** (operator, 2026-10-10): at 02:47, 08:47, 14:47, 20:47 UTC dispatch ONE lane on the `research-ops` skill —
   Sonnet, ceiling $6, row first. Skip a slot while the previous research-ops lane still runs; a running TOPIC lane (`RESEARCH-NIGHT-*`,
   `PERF-FOLLOWUP-*`, `REGIME-*`, ML, readouts) never causes a skip (operator 2026-10-11) — tell it which topic lanes are live. Its first job is THE
-  ITERATION LOOP (research-ops SKILL § "THE ITERATION LOOP"; operator 2026-11-01: *"if the data doesn't pass, it goes back into research
-  for improvments and testing. THere is no other pipeline for underperforming strategies/mls."*). **A research floor gap is NOT due work**
+  ITERATION LOOP (research-ops SKILL § "THE ITERATION LOOP"; the rule: [`docs/plans/OPERATING-PLAN-2026-09-21.md`](../../../docs/plans/OPERATING-PLAN-2026-09-21.md) § 2 "What does not pass goes back into research — THE research workflow"). **A research floor gap is NOT due work**
   (STOP-GENERATED-AUTHORING, operator popup 2026-11-01 *"Stop floor-driven units (Rec.)"*, reversing the 2026-10-16 rule): never dispatch
   a lane to author units to a count; orphans are the due work (daily review step 4b). Record `comms/research/ops/<stamp>.json`; one line in
   "what moved" led by orphans before → after, iterations advanced, survivors.
@@ -585,7 +584,7 @@ The review routine IS the periodic check; its prompt names `GET /api/bot/work/re
    `terminal_reason`) or **decide** (§ "Before any operator popup"). A `routed` item still due means its lane has not delivered.
 4. **Every silence alarm gets a fix lane the same day**; anything due at a known time gets a `send_later` wake.
 4b. **Orphan drain — the research loop, daily (operator 2026-11-01, binding).** Run `python3 scripts/research/iteration_orphans.py`.
-   Operator, verbatim: *"I don' twant to keep finding strategies sitting arround on paper testing with no clear plan"*. Every
+   The rule: [`docs/plans/OPERATING-PLAN-2026-09-21.md`](../../../docs/plans/OPERATING-PLAN-2026-09-21.md) § 2 "What does not pass goes back into research — THE research workflow". Report the orphan count per kind as a NUMBER every review (target 0). Every
    `ORPHAN` (a testing leg, a non-live ML model or a live-review class with no live iteration unit) and every `overdue` iteration gets
    ONE disposition this run: the next research-ops slot is told to author it first (name the subjects in its prompt), a topic lane is
    dispatched for it, or the family-review path is opened (`research/family_reviews/`). Put the counts per kind in the brief's

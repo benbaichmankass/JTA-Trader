@@ -298,6 +298,59 @@ so it cannot gate entry. It gates exit. This is the falsifier the system has
 never had — nothing currently demotes anything, and 21 retirement candidates
 have produced zero retirements.
 
+### What does not pass goes back into research — THE research workflow (operator, 2026-11-01, binding)
+
+<!-- RESEARCH-LOOP-CANONICAL: the ONE statement of the research loop. Skills and docs point here; they never restate it. -->
+
+**Gates this adds or changes:** none. It removes one practice (authoring research to meet a queue count). The fields below are
+filled by default by the authoring tools; nothing refuses a unit for lacking them.
+
+The operator, verbatim, 2026-11-01 ~12:59Z: *"first, these rules apply to MLs as well, not just strategies or live reviews. second,
+if the data doesn't pass, it goes back into research for improvments and testing. THere is no other pipeline for underperforming
+strategies/mls. I don' twant to keep finding strategies sitting arround on paper testing with no clear plan"* — and ~13:01Z: *"its
+also not jsut that each one gets a plan as a one off - this is the only kosher workflow in the research side of the system, and it
+must be upheld going forward"*.
+
+**The rule.** One ladder, for every strategy leg, every ML model or decision head, and every live-review action class:
+
+1. the edge is decided **offline, on evidence** (Stage 0 above);
+2. the mechanics are verified on paper in 1–2 trades, or are already proven (§ "The soak is MECHANICAL");
+3. then it goes live.
+
+Anything whose evidence does not pass goes **back into research, into an iterative loop**: **diagnose** why it failed, from the
+result's own rows → form **one hypothesis** → **register the next variant** with its rule written before the run → **test** →
+**read** → repeat. **There is no other pipeline.** Paper (status `testing`) is where an unproven thing keeps generating live data
+*while its loop runs* — never a parking place. This loop is the only research workflow, permanently, not a one-off cleanup.
+
+**Every research unit has a place in the loop**, recorded on the unit:
+- `iteration:` — the subject, the parent result it iterates on (`from_result`), the diagnosis read from that result, the hypothesis
+  this variant tests, the attempt number and a `due_by`; or
+- `origin: new_hypothesis` — a first test of a new idea, with the reason it is worth asking (who pays, why the edge would persist).
+- (`origin: standing_remeasure` is what the template refill stamps on a recurring re-measurement of a declared configuration.)
+
+`scripts/research/queue_replenish.py` fills `origin` by default on every unit it emits; a hand-authored unit writes its own block.
+
+**Every result gets exactly one disposition, in the pass that reads it:**
+- **pass** → the confirmation (a PASS on one window is a discovery; it iterates to ONE holdout read), then the promotion proposal
+  (Tier 3 through the ladder above);
+- **next iteration** → the next unit is authored in the same pass, from a written diagnosis;
+- **retired** → only by a family-retirement review record (`research/family_reviews/`, `scripts/research/family_retirement_policy.yaml`).
+  A configuration that fails closes that configuration; it never closes the idea by itself (§ 3, *"never to just kill ideas
+  because of one bad pass"*).
+
+No result sits without one of the three. **Every `testing` strategy leg, every ML model not on real money and every live-review
+action class that has not graduated always has a live iteration.** The number of subjects without one — the orphan count, from
+`scripts/research/iteration_orphans.py` — is reported every day (the manager's daily review, step 4b) and on every research-ops
+pass; it should read **0**.
+
+**Superseded by this section:** authoring research to meet a runnable-queue floor, and tests that change no decision — STOP-GENERATED-AUTHORING
+(operator popup 2026-11-01 *"Stop floor-driven units (Rec.)"*, #22107) and RESEARCH-SLO-YIELD (*"Replace with yield SLOs (Rec.)"*):
+the research pipeline is measured by **iterations advanced and survivors found**, never by units authored.
+
+Where it is carried out: the 4x/day pass (`.claude/skills/research-ops/SKILL.md` § "THE ITERATION LOOP", which also holds the field
+mechanics), the weekly programme review, `/perf-followup` Track 1, `/ml-review`, `model-training`, `frontier-research` and
+`backtesting`. Each points here.
+
 ### Prop legs clear a SUPERSET of the ladder (operator, 2026-10-15, binding)
 
 A leg that reaches a **prop** roster (`account_class: prop`: breakout_2 · tradeify_1 · velotrade_1)
@@ -401,6 +454,8 @@ cadences. The machine is running against an empty input.
   already agreed, and the number that met it.
 - **Kill** → closes the question and lands in the ledger. A null is an asset,
   not a memo.
+
+**Since 2026-11-01 the loop itself is stated once, in § 2 "What does not pass goes back into research — THE research workflow"; this section's queue schema and result routing serve it.**
 
 ⚠️ **The default is refinement, not a one-strike kill** (operator, 2026-09-27):
 *"our default is never to just kill ideas because of one bad pass, we should
