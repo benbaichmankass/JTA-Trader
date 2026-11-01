@@ -15,7 +15,8 @@ whose state is not done/dropped must satisfy `checklist_store.filing_problems`:
   owner   non-empty (the CLI default is `manager`)
   due_by  an ISO date (YYYY-MM-DD)
   roadmap a milestone list, or ["unmapped"] with a `roadmap_unmapped_reason` (>= 10 chars)
-Terminal rows are exempt. Whether a `roadmap` id names a real milestone is roadmap-map-guard's job.
+Terminal rows are exempt. Ratchet: an existing row the diff strictly improves (fewer problems than at base)
+passes, so the backfill that fixes rows a field at a time is not itself blocked. Whether a `roadmap` id names a real milestone is roadmap-map-guard's job.
 
 Gates this adds or changes: ONE gate -- a PR (or push) that adds/changes a non-terminal checklist row
 without those three fields is refused. Operator permission: the 2026-11-01 dispatch ("I also don't
@@ -46,7 +47,13 @@ def grade(head_rows: dict, base_rows: dict) -> list[str]:
         if old is not None and {k: v for k, v in old.items() if k not in BOOKKEEPING} == \
                 {k: v for k, v in row.items() if k not in BOOKKEEPING}:
             continue
-        for why in filing_problems(row):
+        problems = filing_problems(row)
+        # A ratchet, not a loophole: an EXISTING row that this diff strictly improves (fewer problems than at
+        # base, e.g. the backfill setting owner) is not blocked for the problems it still has. A new row, or a
+        # change that does not improve a legacy row, must be fully compliant.
+        if old is not None and len(problems) < len(filing_problems(old)):
+            continue
+        for why in problems:
             bad.append(f"row {rid}: {why}")
     return bad
 
@@ -90,6 +97,10 @@ def self_test() -> int:
     ck("a substantively changed legacy row FAILS", len(grade({"L": dict(legacy, note="b")}, {"L": legacy})) == 3)
     ck("a bookkeeping-only change is not graded", grade({"L": dict(legacy, updated_at="t")}, {"L": legacy}) == [])
     ck("closing a legacy row is exempt", grade({"L": dict(legacy, state="done")}, {"L": legacy}) == [])
+    ck("a change that strictly IMPROVES a legacy row is allowed (ratchet)",
+       grade({"L": dict(legacy, owner="manager")}, {"L": legacy}) == [])
+    ck("...but a change that only keeps it non-compliant is not",
+       len(grade({"L": dict(legacy, note="b", owner="manager")}, {"L": dict(legacy, owner="manager")})) == 2)
     ck("an untouched legacy row is never in the diff", grade({}, {"L": legacy}) == [])
     print("checklist-filing-guard self-test:", "PASS" if ok else "FAIL")
     return 0 if ok else 1
