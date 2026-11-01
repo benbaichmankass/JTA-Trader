@@ -241,3 +241,19 @@ def test_ml_entry_scope_on_alpaca_paper_is_etfs_only():
     accts = yaml.safe_load((REPO / "config/accounts.yaml").read_text())["accounts"]
     assert "ml_entry" in accts["alpaca_paper"]["strategies"]
     assert "ml_entry" not in (accts["alpaca_live"].get("strategies") or [])        # no real-money ML on Alpaca
+
+
+def test_ml_entry_is_an_exclusive_hold_leg_on_a_non_slice_book():
+    """alpaca_paper has no slice support: ml_entry enters only a flat symbol and other legs wait while it holds
+    (claude_desk's rule, now a named set). The desk's own reasons are unchanged."""
+    from src.units.strategies import claude_desk as cd
+    assert "ml_entry" in cd.EXCLUSIVE_HOLD_LEGS and cd.NAME in cd.EXCLUSIVE_HOLD_LEGS
+    r = cd.exclusive_hold_refusal
+    assert r("ml_entry", 0.0, None, exclusive="ml_entry") is None
+    assert r("ml_entry", 2.0, None, exclusive="ml_entry") == "ml_entry_symbol_held:net_qty=2.0"
+    assert r("spy_trend_long_1d", 0.0, True, exclusive="ml_entry") == "symbol_held_by_ml_entry_leg"
+    assert r("spy_trend_long_1d", 0.0, None, exclusive="ml_entry") == "symbol_held_by_ml_entry_leg:unreadable"
+    assert r("spy_trend_long_1d", 5.0, False, exclusive="ml_entry") is None
+    assert r("claude_desk", 3.0, None).startswith(cd.R_DESK_HELD)        # desk default unchanged
+    src = (REPO / "src/core/coordinator.py").read_text()
+    assert "for _ex in _cd.EXCLUSIVE_HOLD_LEGS:" in src and "exclusive=_ex" in src

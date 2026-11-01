@@ -235,6 +235,7 @@ BASELINE_2026_10_06: dict[str, frozenset[str]] = {
     # needs to be the be t work item" -- fixed 1.5 R TP accepted now; EXIT for both lines = checklist row
     # ML-ENTRY-TP-REVISION (a tested moving-TP policy plumbed through monitor()), then remove both.
     "bybit_2/ml_entry": R,
+    "alpaca_paper/ml_entry": R,  # 2026-11-01 Stage-1 floor for the same model (ALPACA-LIVE-ACTIVITY-ML): same debt as bybit_2/ml_entry, not new
     "bybit_portfolio/ml_entry": R,
     # ── prop ────────────────────────────────────────────────────────────────
     # breakout_1 legs removed 2026-10-07 (account retired, roster cleared).
