@@ -167,8 +167,8 @@ def cross_section(frames: dict[str, pd.DataFrame]) -> pd.DataFrame:
     out = {
         "f4_rank_ret4": rank(r[4]), "f4_rank_ret72": rank(r[72]), "f4_rank_ret168": rank(r[168]), "f4_rank_vol24": rank(vol24),
     }
-    breadth4 = (r[4] > 0).where(r[4].notna()).mean(axis=1)
-    breadth168 = (r[168] > 0).where(r[168].notna()).mean(axis=1)
+    breadth4 = (r[4] > 0).astype(float).where(r[4].notna()).mean(axis=1)
+    breadth168 = (r[168] > 0).astype(float).where(r[168].notna()).mean(axis=1)
     disp24 = r[24].std(axis=1)
     btc24 = r[24]["BTCUSDT"] if "BTCUSDT" in r[24] else pd.Series(np.nan, index=close.index)
     rel = r[24].sub(btc24, axis=0)

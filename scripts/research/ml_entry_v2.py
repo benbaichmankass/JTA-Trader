@@ -286,6 +286,7 @@ def main() -> int:
         print(f"table rows={len(tab)} symbols={tab.symbol.nunique()}", flush=True)
         return 0
     tab = pd.read_pickle(out / "table.pkl")
+    tab[ALL_FAM_COLS] = tab[ALL_FAM_COLS].astype(float)   # object dtypes from older table builds break LightGBM
     if a.cmd == "arm":
         r = run_arm(tab, a.arm, out, a.n_jobs)
         print(a.arm, json.dumps(r["lofo"])[:300], flush=True)
