@@ -859,9 +859,80 @@ def export(args) -> int:
     return 0
 
 
+def entry_forward(args) -> int:
+    """RQ-20261101-383f-03: the frozen served ENTRY model on the October 2026 forward window, labels exactly as
+    c692-01 (ties SL-first); 1m-tie variant, baselines and splits reported. Monitoring only (operator 2026-11-01)."""
+    cache, out = Path(args.cache), Path(args.out)
+    out.mkdir(parents=True, exist_ok=True)
+    t0 = time.time()
+    art = json.loads(SERVED.read_text())
+    syms = E.universe()
+    fwd = out / "fwd_klines"
+    if not fwd.exists() or len(list(fwd.glob("*.pkl"))) < len(syms):
+        rep = forward_cache(cache, fwd, syms)
+        for sym in syms:
+            if not rep[sym].get("oct_days"):
+                (fwd / f"{sym}.pkl").write_bytes((cache / f"{sym}.pkl").read_bytes())
+    tab = E.build_table(fwd, syms)
+    lo = pd.Timestamp(FWD_START, tz="UTC")
+    hi = pd.Timestamp(FWD_END, tz="UTC") + pd.Timedelta(days=1)
+    test = tab[(tab.ts >= lo) & (tab.ts < hi)]
+    trades = served_trades(tab, FWD_START, str(hi.date()), art)
+    trades = trades[trades.ts >= lo].reset_index(drop=True)
+    m = E.summarize(trades)
+    n, mean, ns = m["n"], m["mean_net_r"], m.get("n_symbols", 0)
+    if n < N_FLOOR or ns < SYMBOL_FLOOR:
+        v, why = "indeterminate", f"forward n={n} (floor {N_FLOOR}) / symbols={ns} (floor {SYMBOL_FLOOR})"
+    elif mean >= 0:
+        v, why = "pass", f"forward mean net R per decision {mean:+.4f} >= 0 at n={n}, {ns} symbols"
+    else:
+        v, why = "fail", f"forward mean net R per decision {mean:+.4f} < 0 at n={n}, {ns} symbols"
+    bars = load_bars(fwd, syms)
+    om = OneMinute(out / "klines_1m")
+
+    def tie_maker(t, s):
+        df = bars[t.symbol]
+
+        def tie(j, sl, tp):
+            return om.resolve(t.symbol, pd.Timestamp(df["ts"].iloc[int(t.i) + j]), s, sl, tp)
+        return tie
+    m1 = np.array([x[0] for x in Scorer(trades, bars, {}, np.zeros(N_CLASS), tie_maker).fixed(BASE_TP)])
+    al = E.sequential_baseline(test, lambda r: "long")
+    n_free = len(al)
+    p_take = min(1.0, n / max(1, n_free))
+    p_long = float((trades.side == "long").mean()) if n else 0.5
+    rng = np.random.default_rng(SEED)
+    draws = []
+    for _ in range(RANDOM_DRAWS):
+        rd = E.sequential_baseline(test, lambda r: (("long" if r.random() < p_long else "short")
+                                                    if r.random() < p_take else None), rng)
+        draws.append(float(rd.net_r.mean()) if len(rd) else 0.0)
+    meas = {"forward_mean_net_r_per_decision": mean, "n": n, "n_symbols": ns, "tau": art["tau"],
+            "model_detail": {k: m.get(k) for k in ("mean_gross_r", "mean_cost_r", "by_side", "exit_reason_counts",
+                                                   "ex_max_symbol", "by_month",
+                                                   "bootstrap_ci95_mean_net_r_reported_not_gating")},
+            "ties_from_1m_reported": {"mean_net_r": float(m1.mean()), "n": len(m1), **om.counts,
+                                      "resolver": TIE_RESOLVER},
+            "baseline_always_long": {"n": len(al), "mean_net_r": float(al.net_r.mean()) if len(al) else None},
+            "baseline_random_matched": {"draws": RANDOM_DRAWS, "p_take": p_take, "p_long": p_long,
+                                        "mean_of_means": float(np.mean(draws)), "p95": float(np.percentile(draws, 95)),
+                                        "model_percentile": float(np.mean([d < mean for d in draws]))},
+            "per_symbol": {k: {"n": len(g), "mean_net_r": round(float(g.net_r.mean()), 4)}
+                           for k, g in trades.groupby("symbol")},
+            "window": [str(trades.ts.min()), str(trades.ts.max())], "git_sha": E._git_sha(),
+            "elapsed_s": round(time.time() - t0)}
+    vj = {"verdict": v, "read_state": "measured", "n": n, "measurement": meas, "note": why,
+          "population": (f"served ENTRY model ml_decision_entry_v1 (tau {art['tau']}) decisions {FWD_START}..{FWD_END} on the "
+                         f"60-perp universe (Binance Vision daily 1h), SL 2 / TP 3 ATR14 / 24h, one position per symbol, ties "
+                         f"SL-first, net of fee {E.FEE_BPS} + slip 3.0 bps + funding 1 bps/8h")}
+    (out / "verdict.json").write_text(json.dumps(vj, indent=1, default=str) + "\n")
+    print(json.dumps({"verdict": v, "why": why, "ties_1m_mean": meas["ties_from_1m_reported"]["mean_net_r"]}), flush=True)
+    return 0
+
+
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser()
-    ap.add_argument("cmd", nargs="?", default="run", choices=["run", "export"])
+    ap.add_argument("cmd", nargs="?", default="run", choices=["run", "export", "entry-forward"])
     ap.add_argument("--cache", default="/tmp/ml_decision_klines")
     ap.add_argument("--out", default="/tmp/ml_entry_tp_revision_out")
     ap.add_argument("--unit", default=UNIT)
@@ -873,6 +944,8 @@ def main(argv=None) -> int:
     if a.self_test:
         _self_test()
         return 0
+    if a.cmd == "entry-forward":
+        return entry_forward(a)
     return export(a) if a.cmd == "export" else run(a)
 
 
