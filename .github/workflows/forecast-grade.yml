@@ -52,9 +52,24 @@ jobs:
           print(json.dumps({"pooled": d["pooled"]["classes"], "brier": d["pooled"]["brier_overall"],
                             "pending": len(d["pending"])}, indent=1), "\n```")
           PY
-          if [ -n "$(git status --porcelain comms/desk/forecast_ledger.jsonl)" ]; then echo "changed=1" >> "$GITHUB_OUTPUT"; else echo "changed=0" >> "$GITHUB_OUTPUT"; fi
+          # land when a forecast changed state, or when the committed grade is >6h old (so main's computed_at stays an honest
+          # "last graded" even through quiet hours; at most ~4 extra commits/day)
+          python3 - <<'PY' >> "$GITHUB_OUTPUT"
+          import json, subprocess
+          from datetime import datetime, timezone
+          ledger = subprocess.run(["git", "status", "--porcelain", "comms/desk/forecast_ledger.jsonl"],
+                                  capture_output=True, text=True).stdout.strip()
+          age_h = 99.0
+          try:
+              old = subprocess.run(["git", "show", "HEAD:comms/desk/forecast_grade.json"], capture_output=True, text=True, check=True).stdout
+              t = datetime.fromisoformat(json.loads(old)["computed_at"].replace("Z", "+00:00"))
+              age_h = (datetime.now(timezone.utc) - t).total_seconds() / 3600
+          except Exception:
+              pass
+          print("changed=1" if (ledger or age_h > 6) else "changed=0")
+          PY
 
-      - name: Land on main (one self-landing PR, only when a forecast changed state)
+      - name: Land on main (one self-landing PR, when a forecast changed state or the committed grade is >6h old)
         if: steps.grade.outputs.changed == '1'
         uses: ./.github/actions/commit-to-main
         with:
