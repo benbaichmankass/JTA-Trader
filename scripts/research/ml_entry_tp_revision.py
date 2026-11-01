@@ -446,7 +446,7 @@ class Scorer:
         return [self._one(k, fac) for k in self.trades.index]
 
     def random(self, rate: float, p_in: float, rng):
-        def fac(k, t, s, entry, C):
+        def fac(k, t, s, entry, C):  # inert: k — the chooser factory signature is shared with policy(), which keys probs by k
             def ch(jc, q):
                 ok = valid_levels(s, entry, t.atr, C[jc - 1])
                 ok[q] = False
@@ -593,7 +593,7 @@ def verdict(h: dict) -> tuple[str, str]:
 
 
 # ------------------------------------------------------------------------------------------------ run
-def dev_stage(cache: Path, out: Path) -> dict:
+def dev_stage(cache: Path) -> dict:
     t0 = time.time()
     art = json.loads(SERVED.read_text())
     syms = E.universe()
@@ -743,7 +743,7 @@ def run(args) -> int:
     if dev_p.exists():
         dev = json.loads(dev_p.read_text())
     else:
-        dev = dev_stage(cache, out)
+        dev = dev_stage(cache)
         dev_p.write_text(json.dumps(dev, indent=1, default=str) + "\n")
     print(json.dumps({k: dev[k] for k in ("dev_by_margin", "margin_star", "best_static_level")}), flush=True)
     if args.dev_only:
