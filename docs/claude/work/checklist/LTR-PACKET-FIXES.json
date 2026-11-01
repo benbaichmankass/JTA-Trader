@@ -9,10 +9,13 @@
   "ceiling_usd": null,
   "spend_usd": null,
   "tier": 1,
-  "prs": [],
+  "prs": [
+    22198,
+    22200
+  ],
   "blocked_on": [],
-  "note": "Dispatched by Manager Session 2026-11-01a. A/B/C/D fixed in the packet generator (Tier 1, read path); one apply-path finding (bybit _venue_tp falls back to a sibling's TP) goes to a held Tier-2 PR.",
-  "updated_at": "2026-11-01T15:24:44Z",
+  "note": "Dispatched by Manager Session 2026-11-01a. A/B/C/D fixed in the packet generator (Tier 1, read path); one apply-path finding (bybit _venue_tp falls back to a sibling's TP) goes to a held Tier-2 PR. 2026-11-01 lane: PR #22198 (Tier 1, self-land: A/B/C/D packet fixes, trend_donchian_1h record, skill) and PR #22200 (Tier 2, HELD: live_review_apply._venue_tp own-leg). Verified on live diag reads ~15:00Z: both MGC packets match by oca_group; BTC priced; alpaca_paper apply_paths close/move_tp/tighten. CLOSES WHEN: #22198 merged AND the next VM-built or main-built packet on a shared-symbol account (ib_paper MGC) reads generator.state=current, packet_version 3, mechanics match; #22200 is the manager's merge call.",
+  "updated_at": "2026-11-01T15:38:02Z",
   "updated_by": "session_01AFoLuKrtjxkEjpGuVNPAMz",
   "roadmap": [
     "L-ATM"
