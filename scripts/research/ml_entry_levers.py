@@ -17,6 +17,7 @@ the common rule of the units (registered before any run):
 from __future__ import annotations
 
 import argparse
+import itertools
 import json
 import sys
 from pathlib import Path
@@ -411,6 +412,27 @@ def recipe_unit(tab, out, n_jobs) -> dict:
     return res
 
 
+# ----------------------------------------------------------------------------------------------- sizing on a trade series
+def sizing_table(trades: pd.DataFrame, fracs=(0.015, 0.005)) -> dict:
+    """Modelled return and max drawdown if each trade risks ``f`` of equity (net R is in units of the 2 ATR stop, so a 1 R loss costs f).
+    Trades are applied in entry order. COMPOUNDING: equity *= 1 + f * net_r. ADDITIVE: equity = 1 + f * cumulative net_r (fixed risk in
+    initial-equity terms). Concurrent positions are NOT modelled (each trade is sized on the equity at its own entry), so both overstate
+    smoothness when many trades overlap: read the additive series as the conservative one for return and the compounding one for DD shape."""
+    t = trades.sort_values("ts")
+    r = t.net_r.to_numpy()
+    years = max((pd.to_datetime(t.ts, utc=True).max() - pd.to_datetime(t.ts, utc=True).min()).days / 365.25, 1e-9) if len(t) else 1.0
+    out = {"n": len(t), "years": round(years, 3), "trades_per_year": round(len(t) / years, 1), "mean_net_r": float(r.mean()) if len(r) else None,
+           "worst_loss_streak": int(max((len(list(g)) for k, g in itertools.groupby(r < 0) if k), default=0))}
+    for f in fracs:
+        eq = np.cumprod(1 + f * r)
+        peak = np.maximum.accumulate(np.r_[1.0, eq])[1:]
+        add = 1 + f * np.cumsum(r)
+        peak_a = np.maximum.accumulate(np.r_[1.0, add])[1:]
+        out[f"risk_{f}"] = {"compound_total_return": float(eq[-1] - 1), "compound_annualised": float(eq[-1] ** (1 / years) - 1), "compound_max_dd": float(((eq - peak) / peak).min()),
+                            "additive_total_return": float(add[-1] - 1), "additive_annualised": float((add[-1] - 1) / years), "additive_max_dd": float(((add - peak_a) / peak_a).min())}
+    return out
+
+
 # ----------------------------------------------------------------------------------------------- b608: the v2 stack on dev
 GATE_V2 = 0.06
 STACK_TRADES = {}
@@ -477,6 +499,7 @@ def stack_unit(tab, out, n_jobs, cache: Path) -> dict:
     res["traded5_mean_by_level"] = tr5
     res["result"] = f"winning stack: {winner}"
     pd.to_pickle({n: trades[n][0] for n in trades}, out / "stack_trades_seed7.pkl")
+    pd.to_pickle({n: trades[n] for n in trades}, out / "stack_trades_all_seeds.pkl")
     return res
 
 
@@ -553,7 +576,9 @@ def w1_unit(dev_streams, fwd_streams, oct_dir, out, n_jobs, stack_result: Path, 
     claim = holdout_lock.claim_read(mid, W1[0], W1[1], "RQ-20261101-b609-01", reader, ledger)
     train = E.purge_train(full[full.ts < w0], w0)
     test = full[(full.ts >= w0) & (full.ts < w1e)].reset_index(drop=True)
-    pl, ps = R.make_fit("R2", "T0", E.SEED, [])(train, test, E.FEATURES, n_jobs)
+    params = {**R.BASE, **R.RECIPES["R2"], "random_state": E.SEED, "n_jobs": n_jobs}
+    models = {side: lgb.LGBMRegressor(**params).fit(train[E.FEATURES], train[f"net_{side}"]) for side in ("long", "short")}   # T0 raw net R, both sides
+    pl, ps = (models[side].predict(test[E.FEATURES]) for side in ("long", "short"))
     if use_gate:
         est = k_cost / test["atr_pct"].to_numpy()
         pl[est > GATE_V2] = ABSTAIN
@@ -577,6 +602,16 @@ def w1_unit(dev_streams, fwd_streams, oct_dir, out, n_jobs, stack_result: Path, 
            "v2": m, "v2_traded5": E.summarize(slice5), "v1_reference": m1, "v1_reference_traded5": E.summarize(taken1[taken1.symbol.isin(TRADED)]),
            "baselines_v2_mechanics": _baselines(score_frame, taken), "holdout_lock": claim, "holdout_lock_v1ref": claim1,
            "variants_on_window": claim1["variants_on_window"], "result": f"{verdict}: v2 {m['mean_net_r']:+.4f} (n={m['n']}) vs v1 reference {m1['mean_net_r']:+.4f} (n={m1['n']})"}
+    v1meta = json.loads((art / "meta.json").read_text())
+    art_dir = out / "v2_artifact"
+    art_dir.mkdir(exist_ok=True)
+    meta = {"model_id": "ml-decision-entry-v2", "schema": "ml_decision_entry_model/1", "features": list(E.FEATURES), "tau": tau_v2,
+            "train_rows": len(train), "train_end_exclusive": str(train.ts.max()), "lgb_params": {k: v for k, v in params.items()},
+            "bracket": {"sl_atr": 2.0, "tp_atr": 4.0 if use_bracket else 3.0, "atr_n": E.ATR_N, "horizon_h": E.HORIZON_H, "decision_every_h": E.DECISION_EVERY_H},
+            "cost_gate": ({"max_cost_r": GATE_V2, "k_cost_x_atr": k_cost, "input": "atr_pct", "rule": "abstain when k_cost_x_atr / atr_pct > max_cost_r"} if use_gate else None),
+            "xs_reference": v1meta["xs_reference"], "stack": stack, "w1_verdict": verdict, "w1_mean_net_r": m["mean_net_r"], "w1_n": m["n"],
+            "evidence": ["research/queue/RQ-20261101-b607-01 (R2 recipe)", "RQ-20261101-b606-01 (cost gate)", "RQ-20261101-b601-01 (2/4 bracket)", "RQ-20261101-b608-01 (dev stack)", "RQ-20261101-b609-01 (the one W1 read)"]}
+    (art_dir / "model.json").write_text(json.dumps({**meta, "booster_txt": {side: models[side].booster_.model_to_string() for side in ("long", "short")}}))
     taken.to_pickle(out / "w1_trades_v2.pkl")
     taken1.to_pickle(out / "w1_trades_v1ref.pkl")
     return res
