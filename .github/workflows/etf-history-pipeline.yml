@@ -3,7 +3,7 @@ name: etf-history-pipeline
 # no-durable-result: data-collection feed, computes no research verdict or measurement; its durable outputs are the bar store (lake + trainer cache) and
 # the uploaded depth table / health.json, which are operational artifacts of the feed, not a result to grade
 
-# Multi-year ETF/equity bar history (1h + 5m) into the trainer's canonical store, built WHERE THE KEYS ARE. WHAT is collected is
+# Multi-year ETF/equity bar history (1m BASE; 5m/1h are derived on read) into the trainer's canonical store, built WHERE THE KEYS ARE. WHAT is collected is
 # config/data_universe.yaml (~1,000 symbols: liquid ETFs + point-in-time S&P 500 incl. removed names); a config edit widens it.
 #
 # WHY (operator, 2026-11-01): "there's no way we are limited to 2 years of etf data". Lanes fell back to Yahoo 1h
