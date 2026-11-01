@@ -1,0 +1,18 @@
+{
+  "due_when": {
+    "clears_when": "a breakout_2 account_status shows closed_orders_state=read with >=1 closed_orders row, or the next reconcile close is priced (exit_price non-null, source phone_reconcile)",
+    "event": "phone_positions_diag.state starts closed_ and its cells start 'hdr k=' (the shape dump arrived)",
+    "kind": "event"
+  },
+  "id": "PI-20261101-YHTYFLA8-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "lane BREAKOUT-UNRECORDED-1101 (Manager Session 2026-11-01a dispatch): live /api/bot/prop/fills + /status read 2026-11-01 ~11:50Z",
+    "rerun": "curl https://ict-bot.duckdns.org/api/bot/prop/status?account_id=breakout_2 -> phone_positions_diag (state, cells) and status.raw.closed_orders_state; GET /api/diag/phone_captures?account_id=breakout_2 for a flow=closed run"
+  },
+  "severity": "high",
+  "state": "queued",
+  "tier": 2,
+  "what": "breakout_2 phone Closed-orders reader (tools/phone-executor exec.js closedRead -> readGrid/gridRowsOf) returns empty_unconfirmed on every read (header Market|Side|Type|Price|Quantity|Status|Date & time found, 0 rows), so every phone_reconcile close is closed_unpriced (9/9 since 2026-10-16: rows 135,154,167,174,175,184,192,200,208). Once the BREAKOUT-UNRECORDED-1101 PR deploys, the next miss carries an emptyShape dump (OTA exec.js) and, after the next APK install, a DOM capture of the Closed orders view (flow 'closed'). Fix closedRead from that evidence and prove one clean read (closed_orders_state=read with rows)."
+}

@@ -440,6 +440,16 @@ def record_report(device: PhoneDevice, body: Dict[str, Any]) -> Dict[str, Any]:
                 body["positions_side_source"] = "journal"
                 body["positions_provenance"] = "ESTIMATED"
         body["positions_state"] = pstate
+        # BREAKOUT-UNRECORDED-1101: the Closed orders read's OWN state, kept beside the rows. Every phone_reconcile close
+        # since 2026-10-16 came out `closed_unpriced` with `closed_orders: []`, and nothing on the server could say
+        # whether that [] was the venue's empty list or a read that never got its rows (the app posted rows only on a
+        # clean read and dropped the state). An app that predates `closed_state` reads `read` when it sent rows (it
+        # only ever sent them on a clean read) and `not_reported` otherwise -- never a guessed clean.
+        cs_in = body_in.get("closed_state")
+        if cs_in is not None:
+            body["closed_orders_state"] = re.sub(r"[^a-z_]", "", str(cs_in))[:24] or "not_read"
+        else:
+            body["closed_orders_state"] = "read" if isinstance(body_in.get("closed_orders"), list) else "not_reported"
         if pstate == "read":
             positions = phone_reconcile.clean_positions(device.account_id, body_in.get("positions"))
             if any(p.get("side_source") == "sheet" for p in positions):
@@ -470,7 +480,8 @@ def record_report(device: PhoneDevice, body: Dict[str, Any]) -> Dict[str, Any]:
     res = ingest_report(body)
     if body.get("kind") == "account_status" and body.get("positions_state") == "read":
         try:
-            res["reconcile"] = phone_reconcile.reconcile(device.account_id, body["positions"], body["closed_orders"])
+            res["reconcile"] = phone_reconcile.reconcile(device.account_id, body["positions"], body["closed_orders"],
+                                                         closed_state=body.get("closed_orders_state"))
         except Exception:  # noqa: BLE001  # allow-silent: logged; the snapshot is stored and the next read retries
             logger.warning("phone_executor: positions reconcile failed for %s", device.account_id, exc_info=True)
             res["reconcile"] = None
@@ -716,13 +727,24 @@ def _sheet_diag_path(account_id: str) -> Path:
     return _diag_path(account_id).with_name(f"prop_phone_sheetdiag_{re.sub(r'[^a-z0-9_]', '', account_id)}.json")
 
 
+# BREAKOUT-UNRECORDED-1101: an empty_unconfirmed read's shape dump (exec.js emptyShape) carries COUNTS the app computed
+# itself -- "hdr k=8", "L0 sib=1 k=0/8", "row k=5 d=6 <page text>" -- which are the evidence; page text is masked.
+_SHAPE_CELL = re.compile(r"^(hdr k=\d+|L\d sib=\d+ k=[\d/]*|row k=\d+ d=\d+)(.*)$", re.S)
+
+
+def _mask_cell(c: str) -> str:
+    """Digit-mask a diag cell, keeping only the structural counts of a shape-dump line (never a page number)."""
+    m = _SHAPE_CELL.match(c)
+    return m.group(1) + re.sub(r"\d", "d", m.group(2)) if m else re.sub(r"\d", "d", c)
+
+
 def _write_positions_diag(account_id: str, state: str, headers: Any, controls: Any, cells: Any = None) -> None:
     def lst(v: Any) -> list:
         return [x for x in (_scrub(c, 40).strip() for c in (v if isinstance(v, list) else [])[:_DIAG_MAX]) if x]
     try:
         (_sheet_diag_path if _is_sheet_diag(state) else _positions_diag_path)(account_id).write_text(json.dumps(
             {"at": _now().isoformat(), "state": _scrub(state, 60), "headers": lst(headers), "controls": lst(controls),
-             "cells": [re.sub(r"\d", "d", c) for c in lst(cells)]}))
+             "cells": [_mask_cell(c) for c in lst(cells)]}))
     except OSError:  # allow-silent: diagnostics only; the event is still acknowledged
         logger.warning("phone_executor: positions diag write failed", exc_info=True)
 
