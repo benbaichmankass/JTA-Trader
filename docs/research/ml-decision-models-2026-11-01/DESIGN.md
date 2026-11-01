@@ -53,6 +53,35 @@ across symbols.
    RiskManager default risk), held for the manager. A FAIL closes the configuration (this horizon, bracket, feature
    block, learner), never the family; §5 names the next lever.
 
+## 1b. The FIRST-PASSAGE label contract — every price prediction (operator, 2026-11-01 ~08:15Z, binding)
+
+Verbatim: *"I think in general when MLs are making price predictions (which is great), we should try to add 1. Within what
+timeframe 2. before/after crossing the other bracket. Just to help with labeling and verifying the MLs."* — and, on the
+manager's proposal, *"yes, send it to the lane"*. Also (~08:00Z): *"improving our labeling is super important"*.
+
+1. Every price prediction any of the three models makes is a first-passage prediction: P(target touched BEFORE the
+   opposite bracket, WITHIN H bars), over **three labelled outcomes**: `target_first`, `stop_first`, `timeout` (neither by
+   H — its own class, never dropped).
+2. **H and the bar timeframe are declared per model and stored on every label and prediction row.** ENTRY: timeframe 1h,
+   H = 24, check cadence 4h. BRACKETS: 1h, H = 24 (per cell). MANAGE: 1h, H = the remaining bars of the entry's H, check-in 4h.
+3. **Same-bar double touches are resolved from 1m data** (Binance Vision daily 1m klines for exactly the tie bars); a tie
+   the 1m bar cannot split (both inside one minute) is `still_ambiguous`, kept SL-first by convention and COUNTED in the
+   label manifest (`tie_resolution` ∈ {`no_tie`, `1m`, `still_ambiguous`}). MEASURED on the c692-01 table: 3.5% of side-
+   labels (56,548 of 1,615,860) end on a double-touch bar, 5,111 symbol-days.
+4. **Every label carries its realized net R** net of the full cost stack (§1.3) — a target-first path can still lose after cost.
+5. **Evaluation reports calibration per outcome class** (Brier score and a 10-bin reliability table per class) on the
+   held-out window beside the net-R rule. Calibration is reported, never a gate (§ "No new gates").
+6. BRACKETS' SL / TP and MANAGE's hold / adjust / close are scored on the same first-passage labels.
+7. Owner: `scripts/research/decision_labels.py` (the decision-model label store: label build + 1m tie resolution +
+   manifest); checklist row `DATA-LABEL-TIES` (re-opened 2026-11-01).
+
+**What c692-01 did and did not do.** It was registered and run before this contract: its labels are the same first-passage
+walk with ties SL-first (the conservative side: resolving a tie TP-first can only raise R), its model regressed net R, and it
+reported no calibration. Its PASS stands under its own rule. `RQ-20261101-c692-05` (ENTRY v2) re-runs ENTRY under this
+contract: 1m-resolved labels, a 3-class first-passage classifier per side whose expected net R
+(Σ P(class) × the class's mean net R on the training rows) drives the same τ policy, per-class calibration reported, and the
+same registered bar.
+
 ## 1a. TRAINING UNIVERSE is a researched factor, not an assumption (operator, 2026-11-01 ~07:50Z)
 
 Verbatim: *"The MLs don't only need to train on the data of the symbols that we're trading. Like, for training purposes, we
