@@ -4,14 +4,33 @@ kind: experiment
 cadence: once
 theme: new_strategy_prop
 priority: 2
-title: "Breakout prop fit: {leg} at sizing {sizing_arm} under RULE-B6 V2 (generated)"
+# STRUCTURED LEVER DESIGN (RESEARCH-TEMPLATES-STRUCTURED, 2026-11-01; OPERATING-PLAN § 2 "THE research workflow"): ONE unit per leg
+# prices ALL the sizing arms together -- control A (flat 1.0% of balance) plus the one-factor variants (risk_pct 0.5% / 1.5%, and
+# the cushion-fit room fractions) -- instead of one unit per arm. The lever is `sizing_vs_cost`; the arms are counted for
+# multiple testing; prop_ev_grid.py `--grade arms_pass_bar` reports every arm against the SAME absolute bar. The old per-arm
+# units (family key `...sizing_arm_key=`) are untouched; this mints a new key per leg. Gates this adds or changes: none.
+structured:
+  mode: fixed_arms
+  lever: sizing_vs_cost
+  correction: "none needed for ranking: the arms re-price one fixed trade set; a PASS names the arm(s), the count is stated"
+  hypothesis: >-
+    the leg's prop EV and survival respond smoothly to risk_pct and to the cushion-fit room fraction; a response that only clears
+    the bar at one arm is a lead for that sizing, a response that clears none is evidence the leg does not fit the firm's limits
+  arms:
+    - {key: A, args: "--sizing balance --risk-pct 0.010"}
+    - {key: C-bal005, args: "--sizing balance --risk-pct 0.005"}
+    - {key: C-bal015, args: "--sizing balance --risk-pct 0.015"}
+    - {key: C-room033, args: "--sizing room --risk-pct 0.015 --room-frac 0.33"}
+    - {key: C-room050, args: "--sizing room --risk-pct 0.015 --room-frac 0.50"}
+title: "Breakout prop fit: {leg} across the sizing arms under RULE-B6 V2 (generated)"
 practice_precedent: "none: a prop firm's drawdown-limit survival fit is a house-specific constraint check; no external practice source was reviewed for it"
 question: >-
   Does {leg} ({symbol} {timeframe}, Breakout market {breakout_market}) clear the
   operator's prop bar -- E[net $ banked before the account dies] > 0 with
   P(net>0) >= 0.70 on every seed -- under Breakout's own cost stack
   (config/prop_rulesets/breakout_turbo_1step.yaml -- breakout_2's ruleset, --costs breakout, swap model
-  {swap_model}) when sized {sizing_arm}? Re-prices the leg's committed
+  {swap_model}) at its best sizing among 5 pre-registered arms (control A = flat 1.0% of balance;
+  variants one-factor in risk_pct and room fraction)? Re-prices the leg's committed
   trade evidence; no new backtest.
 why_this_matters: >-
   Breakout prop is the operator's priority-1 fit target (weight 30 of 100).
@@ -39,38 +58,37 @@ power:
     accrual_basis: >-
       Re-grading of committed trade evidence; nothing accrues.
 decision_rule:
-  id: "RULE-TPL-PROP-FIT-B6V2-{leg}-{sizing_arm_key}"
+  id: "RULE-TPL-PROP-FIT-B6V2-ARMS-{leg}"
   statistic: >-
     Per seed: prop_ev_sim path-mode ev_net_usd_per_life and p_net_positive
-    over the leg's committed trades ({trades_file}), sizing {sizing_arm}.
+    over the leg's committed trades ({trades_file}), for each of the 5 sizing arms.
   rule: >-
-    PASS IF ev_net_usd_per_life > 0 on ALL 5 seeds AND P(net>0) >= 0.70 on
-    ALL 5 seeds. UNDERPOWERED (indeterminate) IF n < 88. FAIL IF ev <= 0 on
-    any seed. NULL (indeterminate) otherwise. A PASS is a Tier-3 roster
+    PASS IF ANY arm has ev_net_usd_per_life > 0 on ALL 5 seeds AND P(net>0) >= 0.70 on
+    ALL 5 seeds (the passing arm(s) and the control A's own reading are named; 5 arms counted). UNDERPOWERED (indeterminate) IF n < 88. FAIL IF every arm has ev <= 0 on
+    some seed. NULL (indeterminate) otherwise. A PASS is a Tier-3 roster
     proposal for breakout_2, not applied by this unit; a FAIL is one pass and
     re-queues for a confirmatory run before it is read as a kill.
 routing:
   needs_trainer_resident_data: false
   needs_gpu: false
   peak_memory_gb: 1.0
-  est_minutes: 20
-  basis: 1 leg x 1 arm x 5 seeds of prop_ev_sim, ~2.5 min per cell serial.
+  est_minutes: 60
+  basis: 1 leg x 5 arms x 5 seeds of prop_ev_sim, ~2.5 min per cell serial (~60 min on the runner at --jobs 4).
 run:
   workflow: research-script-run.yml
-  timeout_minutes: 90
+  timeout_minutes: 150
   command:
     - python3
     - scripts/research/prop_ev_grid.py
     - --leg
     - "{leg}"
-    - --arm
-    - "A={sizing_arm_args}"
+    - "@ARMS@"
     - --common
     - "--ruleset config/prop_rulesets/breakout_turbo_1step.yaml --costs breakout --funded-start fresh --swap-model {swap_model}"
     - --seeds
     - "1,2,3,4,5"
     - --grade
-    - pass_all_seeds
+    - arms_pass_bar
     - --p-floor
     - "0.70"
     - --n-floor
@@ -95,15 +113,6 @@ grid:
   # exists AND whose symbol maps to a Breakout market (see `markets`), and
   # whose committed n_trades >= min_n_trades.
   legs: evidence_legs_with_breakout_market
-  sizing_arm:
-    - {key: bal010, label: "flat 1.0% of balance", args: "--sizing balance --risk-pct 0.010"}
-    - {key: bal015, label: "flat 1.5% of balance", args: "--sizing balance --risk-pct 0.015"}
-    - {key: room033, label: "cushion-fit room 0.33 at 1.5%", args: "--sizing room --risk-pct 0.015 --room-frac 0.33"}
-    # PROPOSED 2026-10-14 (RESEARCH-OPS 02:47Z, manager review): two new pre-registered sizing arms. Adding arms to this
-    # {key,label} axis mints NEW point keys (sizing_arm_key) and leaves every existing key untouched, so nothing is re-minted.
-    # Same flags the committed arms use (prop_ev_sim --sizing balance|room, --risk-pct, --room-frac).
-    - {key: bal005, label: "flat 0.5% of balance", args: "--sizing balance --risk-pct 0.005"}
-    - {key: room050, label: "cushion-fit room 0.50 at 1.5%", args: "--sizing room --risk-pct 0.015 --room-frac 0.50"}
 markets:
   # our symbol -> Breakout market and the swap model its venue uses
   # (docs/integrations/breakout-instruments-2026-09-27.md).

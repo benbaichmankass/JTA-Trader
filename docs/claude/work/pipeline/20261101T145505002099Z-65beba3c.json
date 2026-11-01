@@ -1,0 +1,16 @@
+{
+  "due_when": {
+    "check_every_days": 7,
+    "due_date": "2026-11-08",
+    "kind": "date"
+  },
+  "id": "PI-20261101-MJFESSM5-0003",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "checklist RESEARCH-TEMPLATES-STRUCTURED",
+    "rerun": "python3 - <<'X'\nimport sys; sys.path.insert(0,'.')\nfrom pathlib import Path\nfrom scripts.research import queue_replenish as q\nf=q.repo_facts(Path('.')); from scripts.research.regime_debt_matrix import classify\nprint([l for l in f['legs'] if not classify(f['configs'].get(l) or {})])\nX"
+  },
+  "state": "queued",
+  "what": "[research templates] live roster legs with NO structured walk-forward design: claude_desk, e4_oi_shock_1h, turtle_soup (regime_debt_matrix.classify returns None, so exit_lever_ablation cannot route them; the old E7 harness dispatch did not cover them either). Each needs a harness class in classify (or its own sweep wrapper) before roster-walkforward can emit a control+variant design for it."
+}

@@ -8,6 +8,18 @@ why_not_inferential: >-
 cadence: monthly
 theme: macro
 priority: 2
+# STRUCTURED, with a stated limit (RESEARCH-TEMPLATES-STRUCTURED, 2026-11-01): the one variable this producer has is the snapshot
+# CADENCE (the value thesis's re-scoring interval, lever family `timeframe`). The arms are SIBLING units, one per `cadence_days`
+# value, the 7-day cadence being the control. The workflow takes one cadence per dispatch and lands its snapshots UNATTRIBUTED
+# (no research_unit input), so the arms cannot be separated by the lever map yet: `attributable: false` says so in each unit and
+# the exact gap is filed (pipeline item PI-20261101-MJFESSM5-0002). Gates this adds or changes: none.
+structured:
+  mode: siblings
+  axis: cadence_days
+  control: "7"
+  lever: timeframe
+  attributable: false
+  gap: "macro-valuation-backfill.yml has no research_unit input; snapshot rows land unattributed, so per-cadence arms are graded only by run window"
 title: "M28 valuation snapshot backfill, cadence {cadence_days}d (generated, monthly)"
 practice_precedent: "none: a point-in-time valuation snapshot backfill is data plumbing; no external practice source was reviewed for it"
 question: >-
@@ -60,4 +72,4 @@ lands:
   min_rows: 1
 grid:
   start_date: ["2005-01-01"]
-  cadence_days: ["7"]
+  cadence_days: ["7", "30", "91"]
