@@ -618,6 +618,7 @@ def run_backtest(
     maker_fee_bps: float = LIMIT_MAKER_FEE_BPS,
     taker_fee_bps: float = LIMIT_TAKER_FEE_BPS,
     tp_geometry: Optional[_tpg.TPGeometrySpec] = None,
+    adx_max: Optional[float] = None,
 ) -> Dict[str, Any]:
     tp_geom = tp_geometry or _tpg.TPGeometrySpec()
     _refused = _tpg.refusal(tp_geom, has_target=not no_tp)
@@ -690,6 +691,15 @@ def run_backtest(
         confidence = float(pkg.get("confidence") or 0.0)
         if confidence < min_confidence:
             continue
+        # ADX CEILING (PI-20261101-HIPIPRHQ-0001): skip a signal whose decision-time ADX-14 is >= adx_max. Same
+        # detector + same trailing 200-bar window the live builder stamps (_stamp_decision_time_regime), read at
+        # signal bars only. Default None = no gate = byte-identical to before. An unreadable ADX is SKIPPED (the
+        # conservative reading, as backtest_fade.py), never silently let through.
+        if adx_max is not None:
+            from src.runtime.regime import detect_regime
+            _adx_v = detect_regime(df.iloc[max(0, i + 1 - 200): i + 1]).get("adx")
+            if _adx_v is None or float(_adx_v) >= float(adx_max):
+                continue
         entry = float(pkg["entry"])
         sl = float(pkg["sl"])
         unit_tp = float(pkg["tp"])
@@ -1366,6 +1376,9 @@ def build_parser() -> argparse.ArgumentParser:
                    help="Ignore config/strategies.yaml; use unit defaults only.")
     p.add_argument("--min-confidence", type=float, default=0.0,
                    help="Skip entries whose live order_package() confidence is below this.")
+    p.add_argument("--adx-max", type=float, default=None, metavar="X",
+                   help="Skip signals whose decision-time ADX-14 (live detect_regime, trailing 200 bars) is >= X. "
+                        "Default off (no gate).")
     p.add_argument("--confidence-sweep", default=None, metavar="GRID",
                    help="Sweep min_confidence over GRID ('0:0.6:0.05' or '0,0.1,0.2') and tabulate.")
     p.add_argument("--strategy-name", default="ict_scalp_5m", metavar="NAME",
@@ -1596,6 +1609,7 @@ def main(argv: List[str]) -> int:
         htf_rule=str(args.htf_rule),
         htf_ema_period=int(args.htf_ema_period),
         vol_spec=vol_spec,
+        adx_max=(float(args.adx_max) if args.adx_max is not None else None),
         stamp_regime=bool(args.stamp_regime),
         sim_breakeven=bool(args.sim_breakeven),
         be_arm_on_touch=bool(args.be_arm_on_touch),
