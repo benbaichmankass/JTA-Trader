@@ -2,7 +2,7 @@
   "id": "MD-LTR-BYBIT1-AUTO",
   "title": "Operator-granted mandate MD-LTR-PAPER-AUTO (lane MD-LTR-BYBIT1-AUTO, widened 2026-11-01 ~11:40Z): every in-trade live-review call on a Stage-1 demo-floor paper package (bybit_1, alpaca_paper, ib_paper) is applied by the VM on those legs only; real money, mirrors and prop stay advice-only; per-class promotion path to real money + mirror (Tier-3 proposal)",
   "phase": null,
-  "state": "in_flight",
+  "state": "landed_unproven",
   "owner": "manager",
   "lane": "session_01AFoLuJXXPBMjAsbBHB5bvr",
   "model": null,
@@ -13,8 +13,8 @@
     22130
   ],
   "blocked_on": [],
-  "note": "2026-11-01 lane built the account-scoped entry + reader + apply leg filter + skill promotion path; tests prove bybit_2/alpaca_live/mirrors/prop unchanged; held PR #22130 for the manager merge. Revert: delete the MD-LTR-PAPER-AUTO entry. Open: merged, deployed and observed (first applied paper call end to end: row -> dispatch -> venue amend/close -> journal close reason).",
-  "updated_at": "2026-11-01T11:59:26Z",
+  "note": "2026-11-01 MERGED #22130 (36d5d1e, 12:50Z). DEPLOYED: trader running 36d5d1e at 12:52:05Z (/api/diag/version trader_git_sha, restart_pending false). NOT YET OBSERVED: no in-trade call on a paper package since the deploy. The XRP package pkg-f07b659a7db94e8a closed by SL at 12:16:49Z before the deploy (its close calls 11:21-12:16Z were advice-only). Closing observation: the first rows_watch.jsonl entry after 12:52Z with auto_mandate MD-LTR-PAPER-AUTO on a bybit_1 or alpaca_paper package -> applied.jsonl accounts_applied naming only that account -> venue read-back -> the trade row exit_reason (close) or the moved bracket. Open paper legs at 12:55Z: bybit_1 BTC/ETH/SOL/ADA, alpaca_paper USO/SLV, ib_paper MGC (no executor). Revert: delete the MD-LTR-PAPER-AUTO entry.",
+  "updated_at": "2026-11-01T12:53:00Z",
   "updated_by": "MD-LTR-BYBIT1-AUTO",
   "due_by": "2026-11-01",
   "roadmap": [
