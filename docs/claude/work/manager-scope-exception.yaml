@@ -6,6 +6,30 @@
 # this guard must remain "route the work to a session", because that is the
 # behaviour wanted.
 exceptions:
+  - id: MGR-20261101-KEEPER-VM-FLOOR
+    status: active
+    expires: "2026-11-03"
+    paths:
+      - "scripts/ops/keeper_dispatch.sh"
+      - "scripts/ops/install_trainer_keeper_dispatch.sh"
+      - "deploy/trainer/ict-keeper-dispatch.service"
+      - "deploy/trainer/ict-keeper-dispatch.timer"
+      - "tests/test_keeper_dispatch.py"
+      - ".github/workflows/vm-git-credential-bootstrap.yml"
+      - "docs/claude/work/manager-scope-exception.yaml"
+    reason: >-
+      OPERATOR DIRECTION, 2026-11-01, manager session
+      session_01AFoLuJ1apgy8sfngu4WyNH. The lane that built KEEPER-VM-FLOOR
+      (session_01AFoLuK13bdf4iNCUDiUvUX) was refused twice by the auto-mode
+      classifier on the step that installs BRANCH_PROTECTION_TOKEN on the
+      trainer, which the operator approved by popup ~14:48Z, verbatim "Yes,
+      BRANCH_PROTECTION_TOKEN". The operator then said, verbatim: "I took you
+      off auto mode because that is the sanctioned first path for dealing with
+      these kinds of permission issues. You can ask for permission and I will
+      grant it." Popup ~15:35Z on this exception, verbatim: "I'll take you off
+      auto mode". The manager authors this one change (the trainer
+      keeper-dispatch timer, its installer and test, and the trainer-only
+      credential: dispatch mode). It covers nothing else.
   - id: MGR-20261027-BYBIT1-LEVERAGE
     status: active
     expires: "2026-10-29"
