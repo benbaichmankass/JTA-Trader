@@ -133,3 +133,28 @@ def test_publish_refuses_public_repo(monkeypatch):
     monkeypatch.setattr(huggingface_hub, "create_repo", lambda *a, **k: None)
     with pytest.raises(SystemExit, match="PUBLIC"):
         hp.ensure_private_repo(Api(), "someone/repo")
+
+
+def test_cboe_parse_and_manifest(tmp_path, monkeypatch):
+    monkeypatch.setattr(fs, "_get", lambda url, **k: b"DATE,OPEN,HIGH,LOW,CLOSE\n01/02/1990,17.24,17.24,17.24,17.24\n01/03/1990,18.19,18.19,18.19,18.19\n")
+    monkeypatch.setattr(fs, "_cfg", lambda: {"options": {"cboe_iv_indices": {"symbols": ["VIX"], "licence": "x"}}})
+
+    class A:
+        out = str(tmp_path)
+    assert fs.cmd_cboe(A) == 0
+    e = json.loads((tmp_path / "_manifests" / "options-cboe.json").read_text())[0]
+    assert e["rows"] == 2 and e["first"].startswith("1990-01-02") and e["path"] == "options/cboe_iv/1d/VIX.parquet"
+
+
+def test_import_csv_partitions_by_symbol(tmp_path):
+    csv = tmp_path / "vol.csv"
+    csv.write_text("date,act_symbol,iv_current\n2019-02-11,SPY,0.15\n2019-02-12,SPY,0.16\n2019-02-11,QQQ,0.2\n")
+
+    class A:
+        out = str(tmp_path / "lake")
+        kind = "volatility"
+    A.csv = str(csv)
+    assert fs.cmd_import_csv(A) == 0
+    es = {e["symbol"]: e for e in json.loads((tmp_path / "lake" / "_manifests" / "dolthub-volatility.json").read_text())}
+    assert es["SPY"]["rows"] == 2 and es["QQQ"]["rows"] == 1
+    assert es["SPY"]["path"] == "options/dolthub_iv/1d/SPY.parquet"

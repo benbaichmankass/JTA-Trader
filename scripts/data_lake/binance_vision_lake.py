@@ -227,6 +227,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     ap.add_argument("--quote", default="", help="keep only symbols ending in this quote (e.g. USDT)")
     ap.add_argument("--limit", type=int, default=0)
     ap.add_argument("--list-only", action="store_true")
+    ap.add_argument("--census", action="store_true", help="list the archive only: per-symbol months, no downloads")
     ap.add_argument("--workers", type=int, default=8, help="parallel file downloads per symbol")
     ap.add_argument("--parallel", type=int, default=4, help="symbols built concurrently")
     a = ap.parse_args(argv)
@@ -242,6 +243,28 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         chosen = chosen[: a.limit]
     print(f"[lake] {a.market} {a.tf}: archive lists {len(listed)} symbols; this shard {a.shard} builds {len(chosen)}"
           f"; requested-but-not-in-archive {len(missing_from_archive)}", flush=True)
+    if a.census:
+        # Archive census without downloading: monthly files per symbol -> first/last month, months, bar-count bound.
+        def cen(sym):
+            try:
+                ks = list_files(a.market, sym, a.tf, "monthly")
+            except Exception as ex:
+                return {"symbol": sym, "error": str(ex)[:120]}
+            ms = [re.search(r"(\d{4}-\d{2})\.zip$", k).group(1) for k in ks]
+            return {"symbol": sym, "months": len(ms), "first_month": ms[0] if ms else None, "last_month": ms[-1] if ms else None}
+        with ThreadPoolExecutor(max_workers=32) as ex:
+            rows = list(ex.map(cen, chosen))
+        mdir = out / "_census"
+        mdir.mkdir(parents=True, exist_ok=True)
+        (mdir / f"crypto-{a.market}-{a.tf}.json").write_text(json.dumps(rows, indent=1))
+        have = [r for r in rows if r.get("months")]
+        months = sum(r["months"] for r in have)
+        per = 30.44 * 1440 / TF_MINUTES[a.tf]
+        print(json.dumps({"market": a.market, "tf": a.tf, "symbols_with_data": len(have), "symbols_listed": len(rows),
+                          "first_month": min((r["first_month"] for r in have), default=None),
+                          "last_month": max((r["last_month"] for r in have), default=None),
+                          "symbol_months": months, "rows_upper_bound": int(months * per)}))
+        return 0
     if a.list_only:
         print(json.dumps({"listed": len(listed), "chosen": chosen, "not_in_archive": missing_from_archive}))
         return 0

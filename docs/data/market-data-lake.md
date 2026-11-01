@@ -62,7 +62,7 @@ So the design mandate was never contradicted. It was quietly narrowed three time
 | other sources | [`scripts/data_lake/free_sources.py`](../../scripts/data_lake/free_sources.py) | dated universe snapshots (NASDAQ Trader directory: every US-listed security with its ETF flag; Binance archive listings); FRED rates / FX / credit / vol / commodities / monthly macro; Yahoo daily futures fronts; import of the ETF-HISTORY-PIPELINE store |
 | publish | [`scripts/data_lake/hf_publish.py`](../../scripts/data_lake/hf_publish.py) | creates the PRIVATE dataset (refuses a public one), add/replace uploads, merges MANIFEST.json, writes the README depth table, tags `vYYYYMMDD-HHMM` |
 | loader | [`ml/datasets/lake.py`](../../ml/datasets/lake.py) | `manifest() / symbols() / load() / iter_series() / liquid_mask() / revision_info()`; streams from HF (or `LAKE_LOCAL_DIR`: a Kaggle mount, a runner dir) |
-| compute | [`.github/workflows/market-data-lake.yml`](../../.github/workflows/market-data-lake.yml) | 20 crypto shards + one "other" job on GitHub runners, weekly Sun 03:23Z + dispatch + label `market-data-lake-request`; nothing runs on our VMs |
+| compute | [`.github/workflows/market-data-lake.yml`](../../.github/workflows/market-data-lake.yml) | 20 crypto shards + `other` (universe, FRED, COT, futures, ETF store) + `options` (CBOE IV, DoltHub chains/IV, own snapshots) + `equities` (Alpaca 1d for every stock/ETF incl. inactive, DoltHub stocks) on GitHub runners, weekly Sun 03:23Z + dispatch + label `market-data-lake-request`; nothing runs on our VMs |
 
 **Layout** (HF dataset `bentzbk/jta-market-lake`, private): `<asset_class>/<market>/<tf>/<SYMBOL>.parquet`. Bars are
 stamped at bar OPEN (UTC) and never forward-filled. Gaps are counted in `MANIFEST.json` (`expected_rows`, `missing_bars`,
@@ -82,44 +82,141 @@ the fetch time.
 kernel with internet on and a read token stored as a Kaggle secret) or from a private Kaggle mirror `metis-market-lake`
 mounted at `LAKE_LOCAL_DIR`. Both routes use the same loader and layout. The mirror job is follow-up (d2) below.
 
-## 3. Depth tables (MEASURED)
+## 3. Depth, per asset class
 
-### 3a. Measured in this lane's sandbox, 2026-11-01
+State key:
+- **MEASURED-full**: the whole series was counted from the source, this session.
+- **MEASURED-census**: the archive listing was counted with no download. Rows are an upper bound: listed months × bars per month.
+- **MEASURED-sample**: a part of the series was downloaded and counted.
+- **BUILT**: the code is in the PR but has not run yet (it needs the merged workflow and `HF_TOKEN`).
+- **GAP**: no free source is wired. The exact source and what it costs are named.
 
-`binance_vision_lake.py` and `free_sources.py` ran against the live sources. This is a sample, not the full lake.
+All HF paths are inside the private dataset `bentzbk/jta-market-lake`. The published table is regenerated into its `README.md` / `DEPTH.md` on every run.
 
-| asset class | market | tf | series ok / total | rows | earliest first bar | latest last bar | median span (days) | missing bars | bytes |
-|---|---|---|---|---|---|---|---|---|---|
-| crypto | um_perp | 1h | 3 / 3 (BTCUSDT, LUNAUSDT delisted, 0GUSDT new) | 80,841 | 2020-01-01 | 2026-10-31 | 469 | 168 | 5,432,936 |
-| crypto | um_perp | 1d | 53 / 53 (shard 0 of 20, ≈5% of the 1,056 listed) | 28,374 | — | 2026-10-31 | — | — | — |
-| fx | fred | 1d | 23 / 23 | 257,747 | 1971-01-04 | 2026-10-23 | 16,730 | 0 | 3,382,672 |
-| macro | fred_rates | 1d | 20 / 20 | 229,689 | 1954-07-01 | 2026-10-30 | 18,153 | 0 | 2,415,781 |
-| macro | fred_credit | 1d | 5 / 5 | 3,929 | **2023-10-31** | 2026-10-29 | 1,094 | 0 | 49,026 |
-| macro | fred_vol_risk | 1d | 6 / 6 | 29,941 | 1971-01-08 | 2026-10-29 | 11,984 | 0 | 378,474 |
-| macro | fred_commodities | 1d | 3 / 4 | 24,366 | 1986-01-02 | 2026-10-27 | 14,405 | 0 | 307,169 |
-| macro | fred_monthly | 1mo | 11 / 11 | 11,736 | 1919-01-01 | 2026-10-24 | 25,445 | 0 | 179,270 |
+### 3.0 Summary (one row per class)
 
-Notes. BTCUSDT 1h has 59,880 rows. All 111 monthly checksums were ok, with 24 bars missing (one day absent from the archive,
-the same day as in 0GUSDT). The FRED credit spreads (ICE BofA) now serve only the last 3 years on FRED, a licence change at the
-source. Longer history needs another source. `GOLDAMGBD228NLBM` was removed because FRED discontinued it; gold comes from `GC=F`.
+| class | HF path | symbols | first bar | last bar | rows | state |
+|---|---|---|---|---|---|---|
+| crypto perps | `crypto/um_perp/{1d,1h,15m,5m,1m}/` | **1,056** (incl. delisted); 1m: 20 majors | 2020-01 | 2026-10-31 | 5m ≤ 214,284,936 · 15m ≤ 71,428,312 · 1h ≤ 17,857,078 · 1d ≤ 744,044 · 1m ≤ 62,725,881 | MEASURED-census + sample |
+| crypto spot | `crypto/spot/{1d,1h,5m}/` | 27 majors (3,745 listed in the archive) | 2017-07 | 2026-10-31 | 5m ≤ 21,241,762 · 1h ≤ 1,770,146 · 1d ≤ 73,756 | MEASURED-census |
+| US stocks | `us_equity/alpaca_sip/1d/`, `us_equity/dolthub/1d/` | 6,158 common listed today + delisted (Alpaca inactive); DoltHub symbol table 24,441 | 2011-01-03 (DoltHub) / 2016-01 (Alpaca) | 2026-10-30 | not yet counted | BUILT; DoltHub span MEASURED |
+| ETFs | `us_equity/alpaca_sip/1d/` (all), `us_equity/alpaca/{1h,5m}/` (ETF-HISTORY-PIPELINE) | **5,776** ETF-flagged | 2016-01 | — | not yet counted | BUILT |
+| options: IV indices | `options/cboe_iv/1d/` | 18 (VIX family, SKEW, OVX, GVZ, single-stock VIX) | **1990-01-02** | 2026-10-30 | 82,373 | MEASURED-full |
+| options: IV/HV history | `options/dolthub_iv/1d/` | 2,342 | 2019-02-09 | 2026-10-30 | 1,984,324 | MEASURED-full (count), BUILT (export) |
+| options: EOD chains | `options/dolthub_chain/1d/` | 19 underlyings exported (the source covers A…ZWS) | 2019-02-09 | 2026-10-30 | not counted (API timeout) | span MEASURED; BUILT |
+| options: own snapshots | `options/alpaca_snapshot/1d/` | 7 (SPY QQQ IWM GLD TLT SLV USO) | accrual starts when ETF-HISTORY-PIPELINE merges | — | 0 | BUILT (accrual) |
+| futures: daily fronts | `futures/yahoo_cont/1d/` | 37 roots | — | — | not counted (Yahoo 429 from this sandbox) | BUILT |
+| futures: positioning (COT) | `macro/cftc_cot/1w/` | legacy 964 · disaggregated 662 · TFF 149 markets | **1986-01-15** | 2026-10-27 | 525,501 | MEASURED-full |
+| FX spot (daily) | `fx/fred/1d/` | 23 (H.10 + broad dollar indices) | 1971-01-04 | 2026-10-23 | 257,747 | MEASURED-full |
+| rates / macro | `macro/fred_*/` | 45 | 1919-01-01 (monthly) / 1954-07-01 (daily rates) | 2026-10-30 | 299,661 | MEASURED-full |
 
-**Universe counts (MEASURED 2026-11-01).** NASDAQ Trader `nasdaqtraded.txt` lists 13,249 US-listed non-test securities:
-**5,776 ETF-flagged** and 6,158 common stocks by the filter in `parse_nasdaqtraded`. The Binance archive lists **1,056** UM
-symbols and **3,745** spot symbols. The old basket was 31 ETFs, so the ETF universe is ~186× larger.
+### 3.1 Crypto: perps and spot
 
-**Throughput (MEASURED).** 53 perps at 1d took 68 s at `--parallel 8`. BTCUSDT 1h (111 monthly zips) took 21 s. The full
-1,056 symbols are ≈23 min per timeframe per runner, which is why 1h/15m/5m are sharded 2/4/6 ways.
+Source: data.binance.vision (keyless, sha256 per monthly zip). Census run 2026-11-01 with `binance_vision_lake.py --census`:
+1,056 of 1,056 listed UM symbols have monthly data, 24,443 symbol-months in all. The monthly files run from 2020-01 to
+2026-09, and October 2026 comes from the daily files (sample BTCUSDT 1h last bar 2026-10-31T23:00Z). Samples:
+- BTCUSDT 1h: 59,880 rows, 2020-01-01→2026-10-31, 111/111 checksums ok, 24 missing bars (one absent day).
+- LUNAUSDT, delisted: ends 2022-05-13.
+- 53 perps at 1d: 28,374 rows.
 
-**Size (INFERRED from the measured files).** BTCUSDT 1h for 6.8 years is 4.26 MB in zstd parquet. The 1,056 perps are mostly
-short-lived, so the full lake is ≈1 GB at 1h, ≈3–4 GB at 15m, ≈10 GB at 5m and ≈4–5 GB for 1m on the 20 majors, about
-**20 GB** in total. HF private-storage limits for this (free, non-PRO) account are **not verified**. The first full run's
-`MANIFEST.json` byte totals are the measurement.
+Spot: 27 majors from 2017-07. The archive lists 3,745 spot symbols; widening the set is a one-line change in `config/data_universe.yaml`.
 
-### 3b. The published lake
+**Gap:** order books and trades. The archive has `trades` / `aggTrades` / `bookTicker` too, but they are huge. No consumer has asked for them, so they are not wired; the source is free.
 
-The table is generated into the HF dataset's `README.md` / `DEPTH.md` by every `market-data-lake` run, and posted on the
-triggering issue. It is copied here when the first run lands. *Not yet run: needs the workflow merged and `HF_TOKEN`
-(write) — §5.*
+### 3.2 US stocks: the full liquid universe, point-in-time
+
+- **Enumeration (MEASURED):** NASDAQ Trader `nasdaqtraded.txt` lists 13,249 non-test US securities, of which 6,158 are common stock by `parse_nasdaqtraded`. A dated snapshot is written every run, so the history of "what was listed when" builds up.
+- **Delisted names:** Alpaca `/v2/assets?status=inactive`, fetched in the `equities` job. The count is not yet measured.
+- **Bars (BUILT):** Alpaca 1d SIP, split-adjusted, 2016+, for every listed and inactive symbol (`free_sources.py alpaca-daily`).
+- **Older daily history:** DoltHub `post-no-preference/stocks`. MEASURED: `ohlcv` runs 2011-01-03 → 2026-10-30, and the `symbol` table holds 24,441 rows; it includes funds, e.g. `ZZZTX`. It is cloned and exported in the `equities` job.
+- **Point-in-time:** the liquid universe is chosen at READ time by `lake.liquid_mask` (trailing ADV ≥ $5M, price ≥ $2). It is never chosen at collection.
+- **Further corpora:** `CryptoSpartan/stocks_bars_1m` (MEASURED 604,208,214 1m bars, ≥637 tickers, current names only) and the gated `paperswithbacktest/Stocks-*` (§4).
+- **Gaps:**
+  - Intraday (1h/5m) for every stock is an Alpaca pull bounded by request rate, not by cost (same keys). It is filed as PI-20261101-WTFTWTFP-0002.
+  - Pre-2011 daily history with delisted names is not covered: CRSP via WRDS is institutional-only, and Norgate Data is a paid subscription (price not verified this session).
+
+### 3.3 ETFs: all US-listed
+
+- **Enumeration (MEASURED):** 5,776 ETF-flagged securities, against the 31 the basket had.
+- **Bars:**
+  - 1d for all of them in the `equities` job (Alpaca SIP, 2016+).
+  - 1h/5m from the ETF-HISTORY-PIPELINE store. Its fetcher still carries a 31-symbol constant; PI-20261101-WTFTWTFP-0002 widens it to the universe snapshot.
+- **Gap:** pre-2016 intraday. The free Alpaca SIP history starts in 2016; earlier intraday needs a paid vendor (Polygon/Massive, or Databento equities; prices not verified).
+
+### 3.4 Options
+
+- **CBOE IV indices (MEASURED-full):** 18 of 18 series, 82,373 rows.
+
+  | series | first bar |
+  |---|---|
+  | VIX, SKEW | 1990-01-02 |
+  | VVIX | 2006-03-06 |
+  | VIX1Y | 2007-01-03 |
+  | VIX6M | 2008-01-02 |
+  | VIX3M, OVX, GVZ, VXD | 2009-09-18 |
+  | VXN | 2009-09-14 |
+  | RVX | 2009-09-16 |
+  | VIX9D | 2011-01-04 |
+  | VXEEM, VXSLV, VXGDX | 2011-03-16 |
+  | VXAZN, VXAPL | 2011-01-07 |
+  | VIX1D | 2022-05-13 |
+
+  All end 2026-10-30. `VXXLE` returns an error from CBOE and is dropped.
+- **DoltHub `post-no-preference/options`:**
+  - `volatility_history` (MEASURED by SQL): 1,984,324 rows, 2,342 symbols, 2019-02-09 → 2026-10-30.
+  - `option_chain`: EOD chains with bid/ask/IV/greeks, MEASURED first row 2019-02-09, last row 2026-10-30. The total row count is unmeasured because the SQL API times out on whole-table scans.
+  - The runner `dolt clone`s the repo. It exports `volatility_history` in full and `option_chain` for the 19 underlyings in `config/data_universe.yaml`; wider once the clone size is measured.
+  - "SPY/XLE" in the brief are covered here.
+- **Own accrual:** ETF-HISTORY-PIPELINE's daily chain snapshot (7 underlyings) is imported from the trainer as it accrues. It is 0 days today, because that PR is unmerged.
+- **Gaps:**
+  - **CBOE sample files:** CBOE DataShop's free samples are single-day downloads behind a web form, not an archive. They are useful for schema checks only, so they are not wired.
+  - **Full historical intraday chains / OPRA:** CBOE DataShop Option EOD/Intervals (paid per product and month) or Polygon/Massive Options (paid plan). Prices not verified this session; a quote needs an operator account.
+
+### 3.5 Futures
+
+- **Daily continuous fronts (BUILT):** Yahoo `=F` for 37 roots: equity indices, energy, metals, rates, grains, softs, livestock, the FX majors, VX, and BTC/ETH. These are raw front-month series with roll jumps, for research use in the private store only. Not counted yet: Yahoo returned 429 to this sandbox, and the runner is the measurement.
+- **Positioning (COT, MEASURED-full):** 525,501 rows.
+
+  | report | rows | markets | span |
+  |---|---|---|---|
+  | legacy | 291,531 | 964 | 1986-01-15→2026-10-27 |
+  | disaggregated | 186,744 | 662 | 2006-06-13→ |
+  | TFF | 47,226 | 149 | 2006-06-13→ |
+
+  `ts` is the Tuesday position date. Release is Friday, so a point-in-time reader lags 3 days (recorded in the manifest).
+- **IB historical path:** per-contract MES/MGC/MHG history through the IB gateway, reachable only from the live VM's subnet. Owned by PI-20261101-ETFHIST-0001; it lands as `futures/ibkr/<tf>/<CONTRACT>.parquet`.
+- **Gap: intraday continuous futures with proper rolls.** The source is CME DataMine or Databento CME Globex (usage-priced per GB); price not verified. The gated `paperswithbacktest/Commodities-Daily-Price` and `Futures-Yearly-FrontMonthCostParams` (§4) may cover the daily side.
+
+### 3.6 FX: spot
+
+- **Daily (MEASURED-full):** FRED H.10 noon buying rates plus the broad/AFE/EM dollar indices: 23 series, 257,747 rows, 1971-01-04 → 2026-10-23, public domain.
+- **Gaps:**
+  - **Intraday:** Dukascopy's public datafeed (free, keyless tick/1m; the tunnel failed from this sandbox and runner reachability is not verified; their terms need reading before bulk use). HistData.com 1m is free, but the download sits behind a per-month web form, so it is not automatable within its terms.
+  - The gated `paperswithbacktest/Forex-Daily-Price` (§4).
+
+### 3.7 Rates / macro
+
+**FRED (MEASURED-full):** 45 of 46 series, 299,661 rows.
+
+| group | series | rows | from |
+|---|---|---|---|
+| rates | 20 | 229,689 | 1954-07-01 |
+| credit | 5 | 3,929 | **2023-10-31** only: FRED now serves 3 years of ICE BofA |
+| vol / financial stress | 6 | 29,941 | 1971 |
+| commodities | 3 | 24,366 | 1986 |
+| monthly macro | 11 | 11,736 | 1919 |
+
+**Gaps:**
+- Long-history credit spreads: ICE data is licensed; Moody's daily `DBAA` / `DAAA` on FRED are now in the config as the free long proxy.
+- First-release vintages for the revised series: ALFRED, free and keyless; filed as PI-20261101-WTFTWTFP-0003.
+
+### 3.8 How this was measured
+
+- The FRED, CBOE and COT figures are full downloads from this lane's sandbox, 2026-11-01.
+- The crypto figures are the archive listing plus downloaded samples.
+- The DoltHub figures are SQL queries against DoltHub's API.
+- The NASDAQ Trader counts are a full file parse.
+- Sizes: BTCUSDT 1h for 6.8 years is 4.26 MB; COT legacy is 45.8 MB. The full lake is INFERRED at ~20–30 GB, before the DoltHub chain export, whose size is unknown until the clone runs.
 
 ## 4. Public datasets on the hubs (evaluated, 2026-11-01)
 

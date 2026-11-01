@@ -69,10 +69,27 @@ us_equity:
     adv_usd_20d: 5000000                  # applied point-in-time at read; also bounds which names get 1h/5m pulls
     min_price: 2.0
 
+options:
+  cboe_iv_indices:
+    source: cdn.cboe.com/api/global/us_indices/daily_prices/<SYM>_History.csv
+    licence: "Cboe index data; research use, private store only"
+    symbols: [VIX, VIX9D, VIX3M, VIX6M, VIX1Y, VIX1D, VVIX, SKEW, OVX, GVZ, VXN, RVX, VXD, VXEEM, VXSLV, VXGDX, VXAZN, VXAPL]
+  dolthub:
+    # post-no-preference/options: option_chain (EOD chains with greeks) + volatility_history (per-symbol IV/HV, 2,342
+    # symbols, 2019-02-09..). The SQL API times out on whole-table queries, so the runner `dolt clone`s the repo.
+    repo: post-no-preference/options
+    chain_underlyings: [SPY, QQQ, IWM, DIA, XLE, XLF, XLK, GLD, SLV, TLT, USO, EEM, HYG, AAPL, MSFT, NVDA, AMZN, TSLA, META]
+  snapshots:
+    source: ETF-HISTORY-PIPELINE options-snapshot-capture (trainer data/options_history/<UND>/<date>.parquet)
+
 futures:
   # No free intraday futures archive with an open licence exists that we have verified. Daily continuous fronts from
   # Yahoo (=F) are collected as RESEARCH data, private store only (Yahoo ToS). CME DataMine is paid. Verified gaps are
   # named in docs/data/market-data-lake.md rather than papered over.
+  ib_historical:
+    # Per-contract MES/MGC/MHG history through the IB gateway: only reachable from the LIVE VM's subnet (pipeline item
+    # PI-20261101-ETFHIST-0001 owns it); published into the lake as futures/ibkr/<tf>/<CONTRACT>.parquet once pulled.
+    source: ib_gateway (live VM only)
   daily_continuous:
     source: yahoo_chart
     licence: "Yahoo ToS; research use, private store only"
@@ -94,9 +111,12 @@ macro:
     series:
       rates: [DGS1MO, DGS3MO, DGS6MO, DGS1, DGS2, DGS3, DGS5, DGS7, DGS10, DGS20, DGS30, DFF, SOFR, T10Y2Y, T10Y3M,
               DFII5, DFII10, T5YIE, T10YIE, T5YIFR]
-      credit: [BAMLH0A0HYM2, BAMLC0A0CM, BAMLH0A3HYC, BAMLC0A4CBBB, BAMLHE00EHYIOAS]
+      credit: [BAMLH0A0HYM2, BAMLC0A0CM, BAMLH0A3HYC, BAMLC0A4CBBB, BAMLHE00EHYIOAS, DBAA, DAAA]  # ICE series: FRED serves 3y only; Moody's DBAA/DAAA are the long free proxy
       vol_risk: [VIXCLS, VXNCLS, OVXCLS, GVZCLS, STLFSI4, NFCI]
       commodities: [DCOILWTICO, DCOILBRENTEU, DHHNGSP]   # GOLDAMGBD228NLBM removed: FRED discontinued it (LBMA, 2022); gold via GC=F futures
+  cot:
+    source: publicreporting.cftc.gov (Socrata; legacy 6dca-aqww 1986+, disaggregated 72hh-3qpy 2006+, TFF gpe5-46if 2006+)
+    licence: "CFTC; US government public domain"
   monthly:
     source: fred
     series: [CPIAUCSL, CPILFESL, PCEPILFE, UNRATE, PAYEMS, INDPRO, M2SL, UMCSENT, HOUST, RSAFS, ICSA]
