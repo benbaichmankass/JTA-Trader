@@ -2,9 +2,9 @@
   "id": "GRADE-EVERYTHING-CONTINUOUSLY",
   "title": "Every model, decision class and forecast has a scheduled grader with output newer than 7 days: schedule the never-run graders that matter (desk_am_judgement_grade via FORECAST-GRADE-FIRST-PASSAGE, exit_head_final_fold_grade), a decision-value grader for every shadow/advisory model, and each grade names the action it drives",
   "phase": null,
-  "state": "queued",
+  "state": "in_flight",
   "owner": null,
-  "lane": null,
+  "lane": "FORECAST-GRADE-FIRST-PASSAGE",
   "model": "claude-sonnet-5-5",
   "ceiling_usd": 10,
   "spend_usd": null,
@@ -13,8 +13,8 @@
   "blocked_on": [],
   "note": "Audit 1f: 9 graders exist that never run vs 9 scheduled. Operator 2026-11-01 ~08:25Z, verbatim: \"This is exactly the kind of infra that needs priority - we can't build models if we're not eactually grading them\". First piece is row FORECAST-GRADE-FIRST-PASSAGE (in flight). Done when the scoreboard checks every grader's freshness. Source: docs/audits/2026-11-01-from-scratch/AUDIT.md section 8 (lane SYSTEM-AUDIT-FROM-SCRATCH, PR #22072); walk-through https://claude.ai/artifact/T9ztV5nc1fUAGbdjsbZHSf. Operator 2026-11-01 ~08:45Z popup, verbatim: \"Walk through it today (Rec.)\" (Tier-1 proposals filed straight away). Gates this adds: none.",
   "priority_rank": 2,
-  "updated_at": "2026-11-01T08:48:21Z",
-  "updated_by": "session_01AFoLuJ1apgy8sfngu4WyNH",
+  "updated_at": "2026-11-01T11:08:12Z",
+  "updated_by": "session_01AFoLuK13bdf4iNCUDiUvUX",
   "roadmap": [
     "L-ML-LIVE"
   ],
