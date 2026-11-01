@@ -119,7 +119,7 @@ class _FakePopen:
 
 
 def _popen(lines=(), rc=0, err=""):
-    cls = type("P", (_FakePopen,), {"out_lines": [l + "\n" for l in lines], "rc": rc, "err": err})
+    cls = type("P", (_FakePopen,), {"out_lines": [row + "\n" for row in lines], "rc": rc, "err": err})
     return patch("src.web.api.routers.diag.subprocess.Popen", cls), cls
 
 
