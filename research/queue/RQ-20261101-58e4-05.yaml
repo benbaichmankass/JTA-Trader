@@ -67,6 +67,20 @@ related:
 - RQ-20261101-58e4-01
 - configs E1..E9; primary E5
 programme: P6
-status: queued
+status: done
 practice_precedent: 'docs/reference/trading-and-model-practice-principles.md and AUDIT section 5b (docs/audits/2026-11-01-from-scratch/AUDIT.md): <=10 pre-declared configs, discovery ends 2024-06-30, every
   trial counted, DSR(N=trials)>0.95; Bailey & Lopez de Prado 2014 (DSR); payer literature: Moskowitz-Ooi-Pedersen 2012 JFE; Hurst-Ooi-Pedersen 2017 JPM'
+last_dispatched_at: '2026-11-01T11:50:00+00:00'
+grading:
+  attested: RULE-RQ20261101-58E4-05-ETF-TSMOM-DISCOVERY
+  auto: false
+  decision_rule_id: RULE-RQ20261101-58E4-05-ETF-TSMOM-DISCOVERY
+  evidence:
+  - research/results/RQ-20261101-58e4-05/manual-research-edge-20261101.jsonl
+  - comms/research/RQ-20261101-58e4-05/manual-research-edge-20261101/result.json
+  graded_at: '2026-11-01'
+  grader: manual (lane RESEARCH-EDGE)
+  note: 'Closed: a same-window replay reproduces the same number; a variant is a new trial.'
+  reason: E5 net Sharpe 0.418 (<0.5), halves 0.495 / 0.342, stress 0.392, bootstrap p05 ok, DSR(N=9)=0.570 (<0.95); n=4151 d
+  rows: 1
+  verdict: fail
