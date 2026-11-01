@@ -4,7 +4,7 @@
   "phase": null,
   "state": "queued",
   "owner": "manager",
-  "lane": "FORECAST-GRADE-FIRST-PASSAGE",
+  "lane": null,
   "model": null,
   "ceiling_usd": null,
   "spend_usd": null,
@@ -13,16 +13,17 @@
   "blocked_on": [
     "session permission classifier refused the credential-provisioning step and the script commit; the operator decides how the credential reaches the trainer"
   ],
-  "note": "PARKED 2026-11-01 ~14:55Z by manager decision (lane FORECAST-GRADE-FIRST-PASSAGE). WHY IT WAS PROPOSED: GitHub drops most of this repo's cron slots, so schedule-keeper.yml's reliable clock is the stream of bot pushes. MEASURED risk today (Actions API, schedule-keeper.yml, 48h to 14:25Z, 468 runs): its own crons fired 13 of ~56 expected; 388 completed-success runs; gap between successful runs median 4.8 min, p90 14.7, MAX 73.3 min; smallest stale window of any target is 120 min, so nothing was dropped and no concurrency change is supported (cancel-in-progress is already false; the 78 cancelled runs have zero jobs). STATE: an inert hourly trainer-VM dispatch timer (scripts/ops/keeper_dispatch.sh, scripts/ops/install_keeper_dispatch_units.sh, tests/test_keeper_dispatch.py, 7 tests passing) is BUILT in the git worktree /tmp/claude-0/-home-user-JTA-Trader/319ca446-e5de-52ad-b715-ffd83b44f139/scratchpad/wt on branch claude/keeper-vm-floor (first version committed locally as f12c0310b, later edits uncommitted); nothing is pushed. BLOCKED: the session's auto-mode permission classifier refused (a) the workflow step that would provision the dispatch credential on the trainer and (b) a later commit, reason '[Code That Leaks When Run]', and refused a read-only trainer credential probe, reason '[Credential Exploration]'; it also refused this row's first, longer note as '[Instruction Poisoning]', so the credential-provisioning spec and the operator's confirmation are NOT recorded here: they are in the manager's 14:48Z message and the lane's 14:54Z report. None of it was retried or worked around. NEEDED TO UNBLOCK: a decision by the operator on how the credential reaches the trainer, then a held Tier-2 PR. WHEN IT IS NEEDED: only if the daily max gap between completed keeper runs exceeds the smallest stale window; scripts/ops/keeper_gap_report.py --strict exits 1 then.",
-  "updated_at": "2026-11-01T15:09:57Z",
+  "note": "UPDATE 2026-11-01 15:37Z: the VM floor is now the manager's (PR #22191, built by the manager with operator permission). My local keeper scripts/worktree were DROPPED (worktree and branch claude/keeper-vm-floor deleted; nothing of it was pushed), so the paths named above no longer exist. This row keeps the measured-risk observation (scripts/ops/keeper_gap_report.py --strict) only. Paused with the lane until 2026-11-05.",
+  "updated_at": "2026-11-01T15:38:58Z",
   "updated_by": "session_01AFoLuK13bdf4iNCUDiUvUX",
   "observation": {
-    "what": "daily max gap between completed schedule-keeper.yml runs vs the smallest stale window of any keeper target (120 min today)",
+    "what": "daily max gap between completed schedule-keeper.yml runs vs the smallest stale window of any keeper target (120 min at filing)",
     "how_to_check": "python3 scripts/ops/keeper_gap_report.py --hours 48 --strict  (exit 0 under the window; 1 = FLAG; 2 = could not judge)",
-    "due_by": "2026-11-08T12:00:00Z"
+    "due_by": "2026-11-05T12:00:00Z"
   },
   "roadmap": [
     "L-ML-LIVE"
   ],
+  "due_by": "2026-11-05",
   "_seq": 879
 }

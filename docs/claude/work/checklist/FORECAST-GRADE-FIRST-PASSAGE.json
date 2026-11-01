@@ -13,21 +13,22 @@
     22077
   ],
   "blocked_on": [],
-  "note": "2026-11-01 lane: PR #22077 (landing hold, claude_judgments.py Tier-2 by name; CI green at 6216b57c1) adds scripts/research/forecast_first_passage.py, forecast-grade.yml (hourly :41), fc_outcome/fc_resolved_at. Manual live run 09:0xZ over 44 forecasts (34 live_review, 10 desk_entry; 142 no_trade carry none): target_first 2, invalidation_first 8, expired 21, pending 2, tie_unresolved 0, no_data 11 (closed-market candles, re-checked); both AVAX reviews invalidation_first 08:14Z (matches raw 1m). CLOSES ON: first SCHEDULED forecast-grade run after #22077 lands and its committed comms/desk/forecast_grade.json population. 1m tie resolver = forecast_first_passage.resolve_same_bar (ML-DECISION-MODELS had none on main).",
+  "note": "PAUSED 2026-11-01 15:37Z by operator usage hold (resume 2026-11-05). WHERE I STOPPED: merged #22077 (grader, hourly forecast-grade.yml, fc_outcome label), #22100 (6h refresh), #22135 (schedule-keeper target + hourly desk_am_judgement_grade). Open: #22170 (landing of my 13:53Z dispatch run's grade), #22113 (GRADE-EVERYTHING part 1). NOT OBSERVED: any schedule-event or keeper-dispatched forecast-grade run (only dispatch runs 41298543995 and 41313446415). Root cause of the missing schedule run: GitHub drops this repo's cron slots; the keeper evaluated forecast-grade at 14:03Z and correctly did not dispatch because my manual run counted. TO CLOSE: read the Actions run list for forecast-grade.yml, take the first run with event schedule or a keeper-dispatched workflow_dispatch by github-actions[bot], record its population from comms/desk/forecast_grade.json, then set done.",
   "priority_rank": 2,
-  "updated_at": "2026-11-01T10:13:09Z",
+  "updated_at": "2026-11-01T15:38:48Z",
   "updated_by": "session_01AFoLuK13bdf4iNCUDiUvUX",
   "roadmap": [
     "L-ML-LIVE"
   ],
   "observation": {
-    "what": "first scheduled forecast-grade.yml run after #22077 lands: comms/desk/forecast_grade.json committed with population (live_review + desk_entry forecasts), three classes, Brier per class, pending and tie_unresolved counts",
-    "how_to_check": "gh workflow run list forecast-grade (or dispatch once), then read comms/desk/forecast_grade.json population/pooled on main",
-    "due_by": "2026-11-02T12:00:00Z"
+    "what": "first schedule-event or keeper-dispatched forecast-grade.yml run after #22135: its population per class in comms/desk/forecast_grade.json",
+    "how_to_check": "gh api repos/benbaichmankass/JTA-Trader/actions/workflows/forecast-grade.yml/runs --jq .workflow_runs[].event ; then read comms/desk/forecast_grade.json on main",
+    "due_by": "2026-11-05T12:00:00Z"
   },
   "writeback": {
     "roadmap": "none: grader and label column feed L-ML-LIVE as tooling; no milestone status changes until the first scheduled run is observed",
     "arch": "none: no architecture contract changes; read-only grader, no gate added"
   },
+  "due_by": "2026-11-05",
   "_seq": 859
 }

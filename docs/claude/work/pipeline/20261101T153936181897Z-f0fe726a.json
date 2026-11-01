@@ -1,0 +1,21 @@
+{
+  "based_on": "20261101T151018307030Z-8a0b37a2.json",
+  "due_when": {
+    "check_every_days": 1,
+    "due_date": "2026-11-05",
+    "kind": "date"
+  },
+  "id": "PI-20261101-CUDIUVUX-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "checklist KEEPER-VM-FLOOR; runner census 2026-11-01 (48h keeper measurement)",
+    "rerun": "python3 scripts/ops/keeper_gap_report.py --hours 48 --strict"
+  },
+  "redate": {
+    "observation": "paused: operator usage hold 2026-11-01 15:37Z; resume 2026-11-05",
+    "observed_at": "2026-11-01"
+  },
+  "state": "queued",
+  "what": "Daily re-measure of the schedule-keeper gap (KEEPER-VM-FLOOR). Run scripts/ops/keeper_gap_report.py --hours 48 --strict. Exit 0 = the longest gap between completed keeper runs is under the smallest stale window (120 min at filing; first reading 73.3 min). Exit 1 = FLAG: the hard floor is needed, wake the manager. Exit 2 = could not judge (schedule_keeper.TARGETS unreadable or no runs): fix the probe, do not read it as fine. Append the daily max to the row KEEPER-VM-FLOOR note."
+}
