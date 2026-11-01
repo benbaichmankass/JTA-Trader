@@ -2,14 +2,14 @@
 
 > **Doc status:** `unknown` · category `unknown` · last verified `never` · registered in [`docs/DOCUMENT-INDEX.md`](../../DOCUMENT-INDEX.md) · *generated weekly by `scripts/ops/touch_split.py` — the population line below is its freshness*
 
-Population: 1608 closed non-backtest trades on ['bybit_1'] (of 6815 rows read), 37 legs; **0 touched / 1608 untouched**. 1560 of them match one of 5618 packages read (R needs the package's declared risk; others fall back to the stored stop). R3 cost cells: 42 (record supplied).
+Population: 1609 closed non-backtest trades on ['bybit_1'] (of 6816 rows read), 37 legs; **0 touched / 1609 untouched**. 1561 of them match one of 5619 packages read (R needs the package's declared risk; others fall back to the stored stop). R3 cost cells: 42 (record supplied).
 
 | account | leg | untouched n | touched n | untouched LvB | touched LvB | cost untouched | cost touched |
 |---|---|--:|--:|---|---|---|---|
 | bybit_1 | ada_pullback_2h | 46 | 0 | CONSISTENT | NO_LIVE_TRADES | — | — |
 | bybit_1 | avax_pullback_2h | 19 | 0 | CONSISTENT | NO_LIVE_TRADES | insufficient_n | — |
 | bybit_1 | claude_desk | 1 | 0 | NO_BACKTEST | NO_BACKTEST | insufficient_n | — |
-| bybit_1 | e4_oi_shock_1h | 1 | 0 | NO_BACKTEST | NO_BACKTEST | insufficient_n | — |
+| bybit_1 | e4_oi_shock_1h | 2 | 0 | NO_BACKTEST | NO_BACKTEST | insufficient_n | — |
 | bybit_1 | eth_pullback_2h | 39 | 0 | CONSISTENT | NO_LIVE_TRADES | insufficient_n | — |
 | bybit_1 | eth_pullback_prop_2h | 2 | 0 | INSUFFICIENT_N | NO_LIVE_TRADES | insufficient_n | — |
 | bybit_1 | fade_breakout_4h | 8 | 0 | CONSISTENT | NO_LIVE_TRADES | insufficient_n | — |
