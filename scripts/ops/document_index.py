@@ -317,6 +317,15 @@ STATUS_EXPLICIT: Dict[str, Tuple[str, str, str]] = {
     # from the operator's rename decision: the operator steps, the do-not-rename list and the
     # dashboard follow-up. Step 1 was done by the operator the same day. Goes `history` once the
     # dashboard repo and VM remotes are settled.
+    # Written 2026-11-01 by lane MARKET-DATA-LAKE (session_01AFoLuMGGx1v99tWtfTWTfP), which wrote it: the design,
+    # audit and measured per-class depth of the HF market data lake; its numbers are measurements from that lane's
+    # runs (archive size census, real-data pipeline run) and tests/test_data_lake.py pins the code it describes.
+    # Goes `history` if the lake moves off Hugging Face.
+    "docs/data/market-data-lake.md": (
+        "live",
+        "read:MARKET-DATA-LAKE-lane-authored-it-2026-11-01-measured",
+        "pooled-ML market data lake on HF: audit, layout, per-class depth, feed automation",
+    ),
     "docs/runbooks/jta-trader-rename.md": (
         "live",
         "read:RENAME-lane-authored-it-2026-10-28-from-operator-decision",

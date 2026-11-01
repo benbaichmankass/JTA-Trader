@@ -1,0 +1,96 @@
+# Lever map (operator doctrine 2026-11-01). Seeded by lane RESEARCH-EDGE from result rows; RESEARCH-ITERATE owns it from here.
+subject: Cost levers (maker entries, lower frequency) on the legs currently on real money
+units:
+- RQ-20261101-58e4-04
+status: open
+doctrine: 'operator 2026-11-01 14:00-14:09Z: nothing that failed is closed; attribute first; next tests are one-factor/ablation chosen from this map; retire only when every lever family
+  has been tested at power, net of cost, with no effect'
+verdict_so_far: 'fail (bounds only): maker-entry saving <= 2.70 USD at 100% fill vs net -71.01 over 64 trades'
+failure_attribution:
+  where_lost: EDGE (gross), not cost. Net -71.01 = gross -65.84 - estimated cost 5.17 (62 of 64 rows are estimates). Cost is ~7% of the loss on these legs.
+  per_leg:
+    ada_pullback_2h:
+      n: 18
+      net: -17.5
+      cost_est: 1.58
+      gross: -15.91
+      notional: 2084.0
+    iaum_pullback_1d:
+      n: 1
+      net: -4.41
+      cost_est: 0.0
+      gross: -4.41
+      notional: 87.0
+    trend_donchian_eth_4h:
+      n: 18
+      net: 7.54
+      cost_est: 1.27
+      gross: 8.82
+      notional: 1613.0
+    trend_donchian_sol_prop:
+      n: 3
+      net: -8.76
+      cost_est: 0.49
+      gross: -8.27
+      notional: 551.0
+    trend_donchian_xrp_4h:
+      n: 7
+      net: -10.72
+      cost_est: 0.54
+      gross: -10.19
+      notional: 689.0
+    xrp_pullback_2h:
+      n: 17
+      net: -37.16
+      cost_est: 1.29
+      gross: -35.87
+      notional: 1839.0
+  stage: entry/exit edge of the legs themselves (xrp_pullback_2h gross -35.9 of -65.8; ada_pullback_2h -15.9; trend_donchian_xrp_4h -10.2); only trend_donchian_eth_4h is gross positive
+    (+8.8)
+  regime_month_symbol_direction: NOT attributable from the journal alone (no per-signal features); a signal-level replay of the legs would provide it
+levers_tested:
+- family: entry order type
+  varied: maker vs taker entry, fill probability 1.0 / 0.75 / 0.5, no adverse selection
+  response:
+    p=1.0:
+      net_delta_upper: 2.7
+      net_after: -68.31
+      turns_pooled_net_ge_0: false
+    p=0.75:
+      net_delta_upper: 19.78
+      net_after: -51.23
+      turns_pooled_net_ge_0: false
+    p=0.5:
+      net_delta_upper: 36.85
+      net_after: -34.15
+      turns_pooled_net_ge_0: false
+    max_saving_at_p1: 2.7
+  shape: at 100% fill the saving is 2.70 USD; the p<1 rows are only no-selection trade removal, not evidence
+  tested_at_power: true
+- family: trade frequency
+  varied: remove 25% / 50% of trades uniformly
+  response:
+    f=0.25:
+      net_delta_no_selection: 17.75
+      net_after: -53.26
+      turns_pooled_net_ge_0: false
+      needs_selection_effect_to_clear: true
+    f=0.5:
+      net_delta_no_selection: 35.5
+      net_after: -35.5
+      turns_pooled_net_ge_0: false
+      needs_selection_effect_to_clear: true
+  shape: 'delta = -f x net: arithmetic identity, only a selection effect could beat it'
+  tested_at_power: false
+lever_families_untested:
+- signal-strength threshold (trade only the strongest signals) - needs signal features
+- minimum hold / longer hold - needs bar paths per trade
+- regime or vol-state filter per leg
+- time-of-day / session filter
+- symbol-level pruning (drop legs with negative gross)
+- exit geometry (TP/SL multiples) per leg - already a separate programme, link rather than duplicate
+- measured costs (COST-BROKER-SOURCED) to replace the estimates
+power_note: 'n=64 closed real-money trades over 4 months across 6 legs: far too few to separate any lever; the bound argument is exact but only upper-bounds the saving.'
+evidence: 'Result rows: research/results/<unit>/manual-research-edge-20261101.jsonl; per-config detail: comms/research/<unit>/manual-research-edge-20261101/result.json; attribution computed
+  by scripts/research/edge_failure_attribution.py (comms/research/edge-failure-attribution-20261101/attribution.json).'
+handed_to: RESEARCH-ITERATE (session_01AFoLuLiJ6TVirjHipiPRhQ)

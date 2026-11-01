@@ -1,0 +1,26 @@
+{
+  "id": "ML-RECIPE",
+  "title": "ENTRY recipe fix then target fix, dev folds only: fs05-01 (R0..R3, noise sets, 3 seeds) and fs06-01 (T0..T4); applies each registered rule; next iteration if nothing passes",
+  "phase": "research",
+  "state": "in_flight",
+  "owner": "manager",
+  "lane": "ML-RECIPE",
+  "model": null,
+  "ceiling_usd": 35,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [],
+  "blocked_on": [],
+  "note": "Dispatched by Manager Session 2026-11-01a. Builds scripts/research/ml_entry_recipe.py (fs05-01 recipe arms R0..R3 x sets S0..S2 x seeds 7/11/13; fs06-01 targets T0..T4 x S0,S1 x seeds), repoints fs01/fs02/fs05/fs06 commands to python3 scripts/research/ml_entry_v2_run.py (carried from #22097 which is not merged). DEV FOLDS ONLY, W1 and sealed windows never fetched or read. Gates this adds: none. FINDING: fs* unit ids fail script_run/_ID_RE ([0-9a-f]{4}), so the runner would refuse them; results are produced locally like fs01. Spread interpretation fixed before run: across-seed range of the arm's S0 LOFO mean (max over sets reported as sensitivity).  [2026-11-01 14:30Z] FINDING (MEASURED, dev table 664,786 rows): net R spans [-2.05, +1.50], so fs06-01 arm T3 (clip to [-3,+3]) alters 0 rows and is identical to T0 by construction; it cannot be admitted. Registered arm left as is; a tighter clip (e.g. +-1) is a candidate for the next target iteration. Interim seed-7 results are not a verdict.",
+  "updated_at": "2026-11-01T14:26:56Z",
+  "updated_by": "session_01AFoLuHiygG7N8NBVqBMa9C",
+  "roadmap": [
+    "L-ML-LIVE"
+  ],
+  "observation": {
+    "what": "result records of RQ-20261101-fs05-01 and RQ-20261101-fs06-01 (RESULT.md with n, per-fold tables, noise controls) and the applied rule",
+    "how_to_check": "ls comms/research/RQ-20261101-fs05-01 comms/research/RQ-20261101-fs06-01",
+    "due_by": "2026-11-02"
+  },
+  "_seq": 884
+}

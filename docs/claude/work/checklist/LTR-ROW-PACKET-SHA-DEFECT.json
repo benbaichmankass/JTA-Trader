@@ -1,0 +1,23 @@
+{
+  "id": "LTR-ROW-PACKET-SHA-DEFECT",
+  "title": "Live-review row writers record a packet_sha that matches no committed packet (2 of 87 rows on live-review/rows); fix the short-hold writer to hash the committed bytes, and unblock the 5 unmirrored rows",
+  "phase": null,
+  "state": "queued",
+  "owner": "manager",
+  "lane": null,
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [],
+  "blocked_on": [],
+  "note": "LR-20261101T1136Z-pkg-f07b659a7db94e8a (short_hold lane, close): recorded b9acc317...; packet committed once at 074f6db44 ('machine, byte-exact'), never altered on the branch; its canonical sha256 is ca571dbc..., and the recorded sha matches NO packet on the branch => the recorded sha is wrong, not the packet (packet byte-original as far as the branch history shows; the VM original is not readable from here). Same defect on LR-20261026T0410Z-pkg-b1e4fdf9b9d049a3 (new_peak, no_recommendation). Unmirrored to main: 1131Z/1136Z/1141Z/1146Z on pkg-f07b659a + LR-20261026T2311Z-pkg-6a8e3fb325464be3. Evidence is NOT rewritten. Found by lane LTR-CLASS-GRADE on the manager's ask. Gates this adds: none.",
+  "priority_rank": 2,
+  "updated_at": "2026-11-01T13:09:57Z",
+  "updated_by": "session_01AFoLuJYbPJ8e5Lv2fZHWWw",
+  "due_by": "2026-11-03",
+  "roadmap": [
+    "L-ATM"
+  ],
+  "_seq": 882
+}

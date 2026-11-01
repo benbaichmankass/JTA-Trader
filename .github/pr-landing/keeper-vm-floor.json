@@ -1,0 +1,7 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "why": "KEEPER-VM-FLOOR: an hourly trainer-VM timer that workflow_dispatches schedule-keeper.yml, so the backstop for GitHub's dropped schedules (13 of ~56 keeper cron events fired in 48h, measured 2026-11-01) has a clock that does not depend on GitHub's scheduler or on bot pushes. Adds credential: dispatch (trainer only) to vm-git-credential-bootstrap.yml to install BRANCH_PROTECTION_TOKEN as /etc/ict/gh-dispatch.env (root:600), per the operator's popup answer 2026-11-01 ~14:48Z, verbatim 'Yes, BRANCH_PROTECTION_TOKEN'. No order path, no live-VM change.",
+  "hold_reason": "tier_2_3_needs_approval",
+  "hold_text": "Tier-2 (VM credential install + new timer). Green Tier-2 lands automatically per the operator's 2026-10-29 rule; the manager merges, then runs vm-git-credential-bootstrap (target: trainer, credential: dispatch) and verifies one HTTP 204 dispatch."
+}

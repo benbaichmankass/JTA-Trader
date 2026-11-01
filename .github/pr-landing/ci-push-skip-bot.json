@@ -1,0 +1,5 @@
+{
+  "tier": 1,
+  "landing": "self",
+  "why": "Runner census 2026-11-01 (row GRADE-EVERYTHING-CONTINUOUSLY, manager decision A+D): push.paths-ignore on pytest-run, guards, repo-inventory, pytest-collect, branch-sync and work-digest, so a push to main that changes ONLY bot-data / landing-metadata files skips the push run (its landing PR already ran CI on the identical tree). pull_request triggers are untouched, so no guard is skipped on any PR; the list is pinned disjoint from every committed path the test suite reads. Workflow trigger filters + one test only; no order path, config, guard or data feed removed."
+}

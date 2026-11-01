@@ -1,0 +1,26 @@
+{
+  "id": "RESEARCH-UNIT-ID-REGEX",
+  "title": "Research unit ids with non-hex letters (fs05-01 style) are refused by script_run and six other scripts: widen the id pattern or rename the units",
+  "phase": "research",
+  "state": "queued",
+  "owner": "manager",
+  "lane": null,
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [],
+  "blocked_on": [],
+  "note": "MEASURED 2026-11-01 (lane ML-RECIPE): script_run._ID_RE = RQ-\\d{8}-(?:\\d{3}|[0-9a-f]{4}-\\d{2}); 'fs05' contains 's', not hex, so script_run --check refuses all four fs units ('is not RQ-YYYYMMDD-NNN'). The same pattern is enforced in dispatch_queue.py, research_result.py, research_queue.py, collect_runner_results.py, next_rq_id.py and kernel_main.py. Options: (a) widen the hex class to [0-9a-z] in all seven (loosens, adds no gate); (b) rename the four units to hex ids and fix references. Local runs by lane ML-RECIPE are unaffected meanwhile. Needs a decision on (a) vs (b).",
+  "updated_at": "2026-11-01T15:40:42Z",
+  "updated_by": "session_01AFoLuHiygG7N8NBVqBMa9C",
+  "roadmap": [
+    "L-ML-LIVE"
+  ],
+  "observation": {
+    "what": "RQ-20261101-fs01-01/-fs02-01/-fs05-01/-fs06-01 pass script_run --check (or are renamed to hex ids) so the runner can dispatch them",
+    "how_to_check": "python3 scripts/research/script_run.py --check --unit RQ-20261101-fs05-01 --queue-dir research/queue/blocked",
+    "due_by": "2026-11-05"
+  },
+  "_seq": 885
+}
