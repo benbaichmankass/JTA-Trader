@@ -1,0 +1,16 @@
+{
+  "due_when": {
+    "check_every_days": 7,
+    "due_date": "2026-11-08",
+    "kind": "date"
+  },
+  "id": "PI-20261101-MJFESSM5-0002",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "checklist RESEARCH-TEMPLATES-STRUCTURED",
+    "rerun": "grep -n 'research_unit' .github/workflows/macro-valuation-backfill.yml; grep -n 'attributable' research/templates/macro-valuation.yaml"
+  },
+  "state": "queued",
+  "what": "[research templates] macro-valuation cadence arms (7 control / 30 / 91) are sibling units whose snapshots land UNATTRIBUTED: .github/workflows/macro-valuation-backfill.yml has no research_unit input, so the lever map cannot separate the arms (design_arms.attributable=false in each unit). Fix: add research_unit input + a result record naming cadence_days, then set structured.attributable: true in research/templates/macro-valuation.yaml."
+}

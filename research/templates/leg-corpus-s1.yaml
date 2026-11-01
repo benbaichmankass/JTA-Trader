@@ -7,6 +7,15 @@ priority: 2
 compute: cpu_light
 roadmap:
 - L-ML-LIVE
+# STRUCTURED LEVER DESIGN (RESEARCH-TEMPLATES-STRUCTURED, 2026-11-01): beside each leg's config-exact CONTROL corpus the unit runs the
+# one-factor low/high steps of that leg's NEXT lever family (lever map -> scripts/research/lever_design.py), on the control's own
+# candles, and records n / net R / delta vs the control per variant in verdict.json (`measurement.lever_arms`) and meta.json. The
+# variants are measured, NOT graded: the coverage rule below still reads the control corpus alone, so the ML line's S1 input is
+# unchanged. The lever is frozen at generation (this unit is weekly/standing): see pipeline item PI-20261101-MJFESSM5-0001 for rotation.
+# Gates this adds or changes: none.
+structured:
+  mode: per_leg
+  hypothesis: the next lever family moves each money leg's net R monotonically; the variant corpora are the response-surface rows the ML line labels
 title: "S1 standing Stage-0 corpus: money-leg family {family} (generated, weekly)"
 practice_precedent: "M1, T2 (docs/reference/trading-and-model-practice-principles.md): one config-exact, cost-net corpus per leg, evaluated per leg and pooled by family"
 question: >-
@@ -45,9 +54,9 @@ routing:
   needs_trainer_resident_data: false
   needs_gpu: false
   peak_memory_gb: 3.0
-  est_minutes: 30
+  est_minutes: 90
   why_runner: Keyless public candles (binance_vision / yfinance) and config-exact harness runs; reads no trainer data.
-  basis: one harness pass with --emit-paths per leg of the family (~1-2 min each MEASURED 2026-10-16 for the same arms).
+  basis: one harness pass with --emit-paths per leg of the family (~1-2 min each MEASURED 2026-10-16 for the same arms; each variant re-runs the harness on the control's candles (no refetch), <= 4 per leg).
 run:
   workflow: research-script-run.yml
   command:
@@ -57,7 +66,9 @@ run:
   - "{family}"
   - --out
   - "{out_dir}"
-  timeout_minutes: 60
+  - --arms-json
+  - "{arms_json}"
+  timeout_minutes: 150
 lands:
   store: research/results/
   assert_field: read_state
