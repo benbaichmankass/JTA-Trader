@@ -130,6 +130,10 @@ silently. Every size below is **MEASURED**, in one of two ways:
 | markPriceKlines | 1m | 18.31 GB | ≈ 21.4 GB | only if it fits after premium |
 | indexPriceKlines | 1m | 19.38 GB | ≈ 22.6 GB | only if it fits after mark |
 | bookDepth | depth snapshots, 2023-01+ | **246.0 GB**, 564,793 files | ≥ 246 GB | **does not fit** |
+| bookDepth, **6 traded perps** | same | 3.79 GB | ≈ 4.4 GB (parquet ratio 1.165) | **yes** (fallback) |
+| mark / index price 1m, **6 traded perps** | 1m | 0.43 / 0.49 GB | ≈ 0.5 / 0.6 GB | **yes** (fallback) |
+| aggTrades → **1m order-flow bars**, 6 traded perps, full history | every trade aggregated per minute (taker buy/sell qty and quote, counts, VWAP, largest trade) | raw 129.8 GB | ≈ 1.2 GB (MEASURED 48–57 B/row) | **yes** (fallback; derived from every raw trade, exact: daily totals equal the raw CSV) |
+| aggTrades **raw**, 6 traded perps, trailing 3 months | every trade | 2.82 GB (12 months: 17.4 GB) | verbatim zips | **yes**, private Kaggle dataset `metis-aggtrades-tail` (fallback; weekly + on backfill) |
 | aggTrades | every trade (aggregated) | **1,154 GB** | — | **does not fit** |
 | trades | every trade | **2,149 GB** | — | **does not fit** |
 
@@ -137,7 +141,7 @@ silently. Every size below is **MEASURED**, in one of two ways:
 ([storage-limits](https://huggingface.co/docs/hub/storage-limits), read 2026-11-01). This account is **not PRO**, MEASURED
 via whoami. The preflight measures the bytes the account's private repos already use (`usedStorage` per repo). It subtracts
 those and the core lake's projected 73 GB (`config/data_universe.yaml` `storage.core_projected_bytes`), then enables each
-optional stream that still fits, in priority order. At ~0 bytes used, premium (17.5 GB) fits and mark/index do not.
+optional stream that still fits, in priority order. MEASURED at the first preflight (run 41314336409): 0 bytes in use. Premium (17.5 GB) and the traded-universe fallbacks (≈ 6.7 GB) fit, leaving ≈ 2.8 GB; mark/index for every perp (≈ 44 GB) and bookDepth for every perp (246 GB) do not.
 
 The repo also follows HF's < 100k-files recommendation. A closed year is one file per symbol, the current year is one file
 per month, and all derived timeframes share one file per partition. That is ≈ 15k files in January and ≤ 60k in December.

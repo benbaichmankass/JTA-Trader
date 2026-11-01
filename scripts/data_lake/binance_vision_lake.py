@@ -230,6 +230,11 @@ STREAMS: Dict[str, dict] = {
                          "markets": ("um_perp",), "step_min": 1},
     "bookDepth": {"label": "bookdepth", "monthly": None, "daily": "{b}/daily/bookDepth/{s}/",
                   "parse": parse_bookdepth_csv, "markets": ("um_perp",), "step_min": None},
+    # aggTrades -> 1m ORDER-FLOW bars (every trade aggregated; raw ticks are 1,154 GB zipped for all perps / 129.8 GB
+    # for the 6 traded perps, MEASURED 2026-11-01 -- far over the 100 GB free allowance, so the raw is not stored here)
+    "aggTrades": {"label": "orderflow_1m", "monthly": "{b}/monthly/aggTrades/{s}/", "daily": "{b}/daily/aggTrades/{s}/",
+                  "parse": lambda fh: orderflow_from_aggtrades(fh), "markets": ("um_perp",), "step_min": 1,
+                  "streaming": True},
 }
 
 
@@ -244,20 +249,105 @@ def _month_of(key: str) -> str:
     return re.search(r"(\d{4}-\d{2})(?:-\d{2})?\.zip$", key).group(1)
 
 
-def fetch_zip(key: str, parse: Callable[[bytes], pd.DataFrame], verify: bool = True) -> Tuple[pd.DataFrame, str]:
-    blob = _get(f"{FILES}/{key}")
-    sha = hashlib.sha256(blob).hexdigest()
-    state = "unchecked"
-    if verify:
+def _download_to_file(url: str, dst: Path, tries: int = 6) -> str:
+    """Stream ``url`` to ``dst`` (constant memory, for multi-GB aggTrades months); return its sha256."""
+    last: Optional[Exception] = None
+    for i in range(tries):
         try:
-            want = _get(f"{FILES}/{key}.CHECKSUM").decode().split()[0].strip().lower()
-            state = "ok" if want == sha else "MISMATCH"
-        except Exception:
-            state = "no_checksum"
-    if state == "MISMATCH":
-        raise ValueError(f"sha256 mismatch for {key}")
-    with zipfile.ZipFile(io.BytesIO(blob)) as zf:
-        return parse(zf.read(zf.namelist()[0])), state
+            h = hashlib.sha256()
+            with urllib.request.urlopen(urllib.request.Request(url, headers=UA), timeout=120) as r, open(dst, "wb") as fh:
+                while True:
+                    chunk = r.read(8 << 20)
+                    if not chunk:
+                        break
+                    h.update(chunk)
+                    fh.write(chunk)
+            return h.hexdigest()
+        except urllib.error.HTTPError as e:
+            if e.code == 404:
+                raise
+            last = e
+        except Exception as e:
+            last = e
+        time.sleep(min(30, 2 ** i))
+    raise RuntimeError(f"download failed after {tries} tries: {url}: {last}")
+
+
+def fetch_zip(key: str, parse: Callable, verify: bool = True, streaming: bool = False) -> Tuple[pd.DataFrame, str]:
+    """Download one archive zip, check it against Binance's .CHECKSUM, parse it. ``streaming``: the zip goes to a temp
+    file and the parser receives the open CSV member (a file object) instead of its bytes, so a 3 GB month never sits
+    in memory twice."""
+    import tempfile
+    with tempfile.TemporaryDirectory() as td:
+        if streaming:
+            zp = Path(td) / "f.zip"
+            sha = _download_to_file(f"{FILES}/{key}", zp)
+            src = zp
+        else:
+            blob = _get(f"{FILES}/{key}")
+            sha = hashlib.sha256(blob).hexdigest()
+            src = io.BytesIO(blob)
+        state = "unchecked"
+        if verify:
+            try:
+                want = _get(f"{FILES}/{key}.CHECKSUM").decode().split()[0].strip().lower()
+                state = "ok" if want == sha else "MISMATCH"
+            except Exception:
+                state = "no_checksum"
+        if state == "MISMATCH":
+            raise ValueError(f"sha256 mismatch for {key}")
+        with zipfile.ZipFile(src) as zf:
+            name = zf.namelist()[0]
+            if streaming:
+                with zf.open(name) as fh:
+                    return parse(fh), state
+            return parse(zf.read(name)), state
+
+
+AGG_COLS = ["agg_trade_id", "price", "quantity", "first_trade_id", "last_trade_id", "transact_time", "is_buyer_maker"]
+
+
+def orderflow_from_aggtrades(fh, chunksize: int = 2_000_000) -> pd.DataFrame:
+    """1m ORDER-FLOW bars from every aggregated trade (Binance aggTrades), streamed in chunks (constant memory).
+    Taker side: is_buyer_maker true => the taker SOLD. Columns: ts (minute open, UTC), n_agg (aggregated trades),
+    n_trades (raw fills = last_trade_id - first_trade_id + 1), buy_qty / sell_qty (taker base volume), buy_quote /
+    sell_quote, vwap, max_qty (largest single aggregated trade), signed_qty = buy_qty - sell_qty. Derived from the raw
+    stream (the finest grain the archive publishes); the raw ticks are not stored when they do not fit (stated)."""
+    import io as _io
+    if not hasattr(fh, "peek"):
+        fh = _io.BufferedReader(fh)
+    head = fh.peek(64)
+    has_header = bytes(head[:12]).lower().startswith(b"agg_trade_id")
+    reader = pd.read_csv(_io.TextIOWrapper(fh, encoding="utf-8"), header=0 if has_header else None,
+                         names=None if has_header else AGG_COLS, chunksize=chunksize,
+                         dtype={"price": "float64", "quantity": "float64"})
+    parts = []
+    for ch in reader:
+        ch.columns = AGG_COLS[: len(ch.columns)]
+        t = pd.to_numeric(ch["transact_time"], errors="coerce")
+        unit = "us" if t.max() > 10 ** 14 else "ms"
+        ts = pd.to_datetime(t, unit=unit, utc=True).dt.floor("1min")
+        sell = ch["is_buyer_maker"].astype(str).str.lower().isin(("true", "1"))
+        q = ch["quantity"]
+        quote = ch["price"] * q
+        nt = (pd.to_numeric(ch["last_trade_id"], errors="coerce") - pd.to_numeric(ch["first_trade_id"], errors="coerce") + 1)
+        d = pd.DataFrame({"ts": ts, "n_agg": 1, "n_trades": nt, "buy_qty": q.where(~sell, 0.0),
+                          "sell_qty": q.where(sell, 0.0), "buy_quote": quote.where(~sell, 0.0),
+                          "sell_quote": quote.where(sell, 0.0), "max_qty": q})
+        g = d.groupby("ts")
+        agg = g[["n_agg", "n_trades", "buy_qty", "sell_qty", "buy_quote", "sell_quote"]].sum()
+        agg["max_qty"] = g["max_qty"].max()
+        parts.append(agg)
+    if not parts:
+        return pd.DataFrame(columns=["ts"])
+    allp = pd.concat(parts)
+    out = allp.groupby(level=0).agg({"n_agg": "sum", "n_trades": "sum", "buy_qty": "sum", "sell_qty": "sum",
+                                     "buy_quote": "sum", "sell_quote": "sum", "max_qty": "max"})
+    qty = out["buy_qty"] + out["sell_qty"]
+    out["vwap"] = (out["buy_quote"] + out["sell_quote"]) / qty.where(qty > 0)
+    out["signed_qty"] = out["buy_qty"] - out["sell_qty"]
+    out["n_agg"] = out["n_agg"].astype("int64")
+    return out.reset_index().sort_values("ts")
 
 
 def gap_stats(ts: pd.Series, step_min: Optional[int]) -> Dict[str, int]:
@@ -336,7 +426,7 @@ def build_symbol(market: str, stream: str, symbol: str, out: Path, have: Optiona
 
     def one(k: str):
         try:
-            return fetch_zip(k, spec["parse"])
+            return fetch_zip(k, spec["parse"], streaming=bool(spec.get("streaming")))
         except Exception as e:  # contained per file; counted, retried next run
             return e
 
@@ -376,6 +466,23 @@ def shard(items: Sequence[str], spec: str) -> List[str]:
     return [s for j, s in enumerate(items) if j % n == i]
 
 
+def traded_symbols() -> List[str]:
+    """The crypto symbols our accounts actually trade, re-parsed from config/accounts.yaml every run (never quoted):
+    every bybit account's `symbols:` plus each rostered strategy's `symbol`."""
+    import yaml
+    cfg = yaml.safe_load((Path(__file__).resolve().parents[2] / "config" / "accounts.yaml").read_text()) or {}
+    accs = cfg.get("accounts", cfg)
+    out = set()
+    for name, acc in (accs.items() if isinstance(accs, dict) else []):
+        if not isinstance(acc, dict) or "bybit" not in (str(acc.get("exchange", "")) + str(name)).lower():
+            continue
+        out.update(str(x) for x in (acc.get("symbols") or []))
+        for st in acc.get("strategies") or []:
+            if isinstance(st, dict) and st.get("symbol"):
+                out.add(str(st["symbol"]))
+    return sorted(x for x in out if x.endswith("USDT"))
+
+
 def symbols_from_config(market: str, stream: str) -> Optional[List[str]]:
     """Explicit symbol list from config/data_universe.yaml crypto.<market>.streams.<stream>, or None meaning ALL."""
     import yaml
@@ -402,6 +509,8 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     ap.add_argument("--out", default="lake")
     ap.add_argument("--shard", default="0/1")
     ap.add_argument("--symbols", default="", help="comma list; default = config/data_universe.yaml selection")
+    ap.add_argument("--scope", choices=["config", "traded"], default="config",
+                    help="traded = only the symbols config/accounts.yaml trades (storage fallback for big streams)")
     ap.add_argument("--limit", type=int, default=0)
     ap.add_argument("--refresh-from", default="", help="previous lake MANIFEST.json: rebuild only what changed")
     ap.add_argument("--census", action="store_true", help="list the archive only: per-symbol months, no downloads")
@@ -415,7 +524,9 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         return 0
     out = Path(a.out)
     listed = list_symbols(a.market)
-    chosen = [s.strip() for s in a.symbols.split(",") if s.strip()] or symbols_from_config(a.market, a.stream) or listed
+    chosen = ([s.strip() for s in a.symbols.split(",") if s.strip()]
+              or (traded_symbols() if a.scope == "traded" else None)
+              or symbols_from_config(a.market, a.stream) or listed)
     chosen = sorted(s for s in chosen if s in set(listed))
     chosen = shard(chosen, a.shard)
     if a.limit:

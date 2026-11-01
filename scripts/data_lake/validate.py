@@ -36,8 +36,9 @@ import pandas as pd
 FLAG_AFTER = 3
 BAR_COLS = ["ts", "open", "high", "low", "close"]
 SCHEMA = {"funding": ["ts", "funding_rate"], "metrics_5m": ["ts", "sum_open_interest"],
-          "bookdepth": ["ts", "percentage", "depth"]}
-SIGNED = {"premium_1m"}  # premium index klines are signed basis values: no price > 0 check
+          "bookdepth": ["ts", "percentage", "depth"], "orderflow_1m": ["ts", "buy_qty", "sell_qty", "n_agg"]}
+SIGNED = {"premium_1m"}
+NO_RETURNS = {"orderflow_1m", "bookdepth", "metrics_5m", "funding"}  # not price series: no return-outlier check  # premium index klines are signed basis values: no price > 0 check
 # hours before a FEED (its freshest series) counts as stale. Binance daily files land the next day; FRED/CBOE
 # publish on business days; COT weekly (Friday); monthly macro monthly.
 STALE_H = {("crypto", "*"): 54, ("macro", "fred_monthly"): 24 * 75, ("macro", "cftc_cot"): 24 * 12,
@@ -80,6 +81,8 @@ def check_frame(df: pd.DataFrame, tf: str) -> Dict[str, Any]:
         px = c
     else:
         px = pd.to_numeric(df[req[1]], errors="coerce")
+    if tf in NO_RETURNS:
+        return res
     lr = (px.diff().abs() if tf in SIGNED else np.log(px.where(px > 0)).diff().abs()).dropna()
     if len(lr) > 20:
         med = float(lr.median())
