@@ -29,7 +29,7 @@ from typing import Dict, List, Optional, Sequence
 import pandas as pd
 
 MINUTES = {"1m": 1, "5m": 5, "15m": 15, "30m": 30, "1h": 60, "4h": 240, "1d": 1440}
-SUM_COLS = ["volume", "quote_volume", "trades", "taker_buy_volume", "taker_buy_quote_volume"]
+SUM_COLS = ["volume", "quote_volume", "trades", "trade_count", "taker_buy_volume", "taker_buy_quote_volume"]
 
 
 def resample_frame(df: pd.DataFrame, base: str, tf: str) -> pd.DataFrame:
@@ -41,8 +41,14 @@ def resample_frame(df: pd.DataFrame, base: str, tf: str) -> pd.DataFrame:
     for c in SUM_COLS:
         if c in g.columns:
             agg[c] = "sum"
+    if "vwap" in g.columns and "volume" in g.columns:
+        g = g.assign(_pv=g["vwap"] * g["volume"])
+        agg["_pv"] = "sum"
     r = g.resample(rule, label="left", closed="left")
     out = r.agg(agg)
+    if "_pv" in out.columns:  # volume-weighted vwap; NaN where the bar has no volume (never 0)
+        out["vwap"] = out["_pv"] / out["volume"].where(out["volume"] > 0)
+        out = out.drop(columns="_pv")
     out["n_base"] = r["close"].count()
     out = out[out["n_base"] > 0].copy()
     out["complete"] = out["n_base"] == (MINUTES[tf] // MINUTES[base])
@@ -50,12 +56,12 @@ def resample_frame(df: pd.DataFrame, base: str, tf: str) -> pd.DataFrame:
     return out.reset_index()
 
 
-def run(out: Path, base: str, tfs: List[str]) -> List[Dict]:
+def run(out: Path, base: str, tfs: List[str], only_asset: Optional[str] = None) -> List[Dict]:
     """One DERIVED file per base partition, holding every target tf (column ``tf``), so derived data adds one file per
     partition, not one per timeframe (HF repo file budget). Manifest entries stay per tf, pointing at the shared file
     with ``tf_col``; ml/datasets/lake.py filters on it."""
     entries: Dict[tuple, Dict] = {}
-    bases = sorted(out.glob(f"*/*/{base}/*/*.parquet"))
+    bases = sorted(out.glob(f"{only_asset or '*'}/*/{base}/*/*.parquet"))
     for p in bases:
         asset, market, _, sym, fname = p.relative_to(out).parts
         df = pd.read_parquet(p)

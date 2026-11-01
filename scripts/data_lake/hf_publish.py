@@ -284,8 +284,25 @@ def cmd_manifest(a) -> int:
                                                            token=api.token)).read_text())
             except Exception:
                 previous = None  # first run: no manifest yet
+    remote_frags: List[str] = []
+    if api is not None:
+        # Fold in every manifest FRAGMENT another publisher (e.g. ETF-HISTORY-PIPELINE's per-chunk import) uploaded to
+        # _manifests/ since the last merge. Fragments sort before this run's local ones ("0-hf-" prefix), so the
+        # newest data wins; they are deleted from HF only after MANIFEST.json is published -> rebuild is idempotent.
+        try:
+            from huggingface_hub import hf_hub_download
+            remote_frags = [f for f in api.list_repo_files(a.repo, repo_type="dataset")
+                            if f.startswith("_manifests/") and f.endswith(".json")]
+            (base / "_manifests").mkdir(parents=True, exist_ok=True)
+            for f in sorted(remote_frags):
+                lp = hf_hub_download(a.repo, f, repo_type="dataset", token=api.token)
+                (base / "_manifests" / ("0-hf-" + f.split("/", 1)[1])).write_bytes(Path(lp).read_bytes())
+            print(f"folded {len(remote_frags)} remote manifest fragments")
+        except Exception as e:
+            print(f"::warning::remote fragments not read (kept for next run): {str(e)[:200]}")
+            remote_frags = []
     m = merge_manifests(base, previous)
-    superseded = m.pop("superseded", [])
+    superseded = m.pop("superseded", []) + remote_frags
     (base / "MANIFEST.json").write_text(json.dumps(m, indent=1))
     if m.get("n_files", 0) > 80000:
         print(f"::warning::lake holds {m['n_files']} files; HF recommends < 100k per repo -- compaction needed")
@@ -305,8 +322,8 @@ def cmd_manifest(a) -> int:
                     try:
                         api.create_commit(repo_id=a.repo, repo_type="dataset",
                                           operations=[CommitOperationDelete(path_in_repo=x) for x in superseded],
-                                          commit_message=f"lake: prune {len(superseded)} superseded partitions")
-                        print(f"pruned {len(superseded)} superseded partition files")
+                                          commit_message=f"lake: prune {len(superseded)} superseded partitions / folded fragments")
+                        print(f"pruned {len(superseded)} superseded files (partitions + folded manifest fragments)")
                     except Exception as e:
                         print(f"::warning::prune failed (retried next run): {str(e)[:200]}")
                 tag = "v" + datetime.now(timezone.utc).strftime("%Y%m%d-%H%M")

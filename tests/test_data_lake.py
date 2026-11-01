@@ -248,21 +248,82 @@ def test_merge_manifests_merges_partitions(tmp_path):
     assert e["first"].startswith("2026-09-01") and e["last"].startswith("2026-10-31")
 
 
-def test_import_etf_per_year_layout(tmp_path):
-    store = tmp_path / "store" / "SPY" / "1h"
-    store.mkdir(parents=True)
-    for y in (2024, 2025):
-        pd.DataFrame({"timestamp": pd.date_range(f"{y}-01-02 14:30", periods=3, freq="1h", tz="UTC"),
-                      "open": 1.0, "high": 1.0, "low": 1.0, "close": 1.0, "volume": 1}).to_parquet(store / f"{y}.parquet")
-    (tmp_path / "store" / "MANIFEST.json").write_text(json.dumps({"series": {"SPY/1h": {"status": "ok", "feed": "sip"}}}))
+def _etf_month(root, sym, month, n=3):
+    d = root / sym / "1m"
+    d.mkdir(parents=True, exist_ok=True)
+    pd.DataFrame({"timestamp": pd.date_range(f"{month}-02 14:30", periods=n, freq="1min", tz="UTC"),
+                  "open": 1.0, "high": 1.0, "low": 1.0, "close": 1.0, "volume": 10, "trade_count": 1,
+                  "vwap": 1.0}).to_parquet(d / f"{month}.parquet")
+
+
+def _frag(lake, prefix):
+    fs = sorted((lake / "_manifests").glob(f"{prefix}-*.json"))
+    return [e for f in fs for e in json.loads(f.read_text())]
+
+
+def test_import_etf_monthly_store_to_yearly_lake_with_derived(tmp_path):
+    store = tmp_path / "store"
+    for m in ("2025-11", "2025-12", "2026-01"):
+        _etf_month(store, "SPY", m)
+    (store / "MANIFEST.json").write_text(json.dumps({"series": {"SPY/1m": {"status": "ok", "feed": "sip"}}}))
 
     class A:
-        src = str(tmp_path / "store")
+        src = str(store)
         out = str(tmp_path / "lake")
+        prev_manifest = str(tmp_path / "none.json")
     assert fs.cmd_import_etf(A) == 0
-    e = json.loads((tmp_path / "lake" / "_manifests" / "us_equity-alpaca.json").read_text())[0]
-    assert e["feed"] == "sip" and set(e["partitions"]) == {"2024", "2025"}
-    assert (tmp_path / "lake" / "us_equity/alpaca/1h/SPY/2025.parquet").exists()
+    e = _frag(tmp_path / "lake", "us_equity-alpaca")[0]
+    assert e["feed"] == "sip" and set(e["partitions"]) == {"2025", "2026"} and e["partitions"]["2025"]["rows"] == 6
+    assert (tmp_path / "lake" / "us_equity/alpaca/1m/SPY/2025.parquet").exists()
+    assert {d["tf"] for d in _frag(tmp_path / "lake", "derived-us_equity")} >= {"5m", "1h", "1d"}
+
+
+def test_import_etf_partial_tail_merges_never_shrinks(tmp_path, monkeypatch):
+    # the lake already holds 2026 with Jan+Feb; the trainer tail supplies only Feb (revised) + Mar
+    lake_old = tmp_path / "old"
+    _etf_month(tmp_path / "seed", "SPY", "2026-01")
+    _etf_month(tmp_path / "seed", "SPY", "2026-02")
+    old = pd.concat([pd.read_parquet(f) for f in sorted((tmp_path / "seed/SPY/1m").glob("*.parquet"))]).rename(columns={"timestamp": "ts"})
+    (lake_old / "us_equity/alpaca/1m/SPY").mkdir(parents=True)
+    old.to_parquet(lake_old / "us_equity/alpaca/1m/SPY/2026.parquet")
+    prev = {"files": [{"asset_class": "us_equity", "market": "alpaca", "tf": "1m", "symbol": "SPY",
+                       "partitions": {"2026": {"path": "us_equity/alpaca/1m/SPY/2026.parquet", "rows": 6}}}]}
+    (tmp_path / "prev.json").write_text(json.dumps(prev))
+    monkeypatch.setattr(fs, "_lake_download", lambda rel: lake_old / rel)
+    store = tmp_path / "store"
+    _etf_month(store, "SPY", "2026-02", n=5)
+    _etf_month(store, "SPY", "2026-03", n=2)
+
+    class A:
+        src = str(store)
+        out = str(tmp_path / "lake")
+        prev_manifest = str(tmp_path / "prev.json")
+    assert fs.cmd_import_etf(A) == 0
+    df = pd.read_parquet(tmp_path / "lake/us_equity/alpaca/1m/SPY/2026.parquet")
+    by_m = df["ts"].dt.strftime("%Y-%m").value_counts().to_dict()
+    assert by_m == {"2026-01": 3, "2026-02": 5, "2026-03": 2}   # Jan kept, Feb replaced, Mar added
+
+
+def test_option_snapshots_merge_by_session(tmp_path, monkeypatch):
+    lake_old = tmp_path / "old"
+    p = lake_old / "options/alpaca_snapshot/1d/SPY/2026.parquet"
+    p.parent.mkdir(parents=True)
+    pd.DataFrame({"ts": pd.to_datetime(["2026-10-01 20:00"] * 2, utc=True), "session": ["2026-10-01"] * 2,
+                  "contract": ["C1", "C2"]}).to_parquet(p)
+    (tmp_path / "prev.json").write_text(json.dumps({"files": [{"asset_class": "options", "market": "alpaca_snapshot",
+        "tf": "1d", "symbol": "SPY", "partitions": {"2026": {"path": "options/alpaca_snapshot/1d/SPY/2026.parquet"}}}]}))
+    monkeypatch.setattr(fs, "_lake_download", lambda rel: lake_old / rel)
+    d = tmp_path / "src/alpaca/SPY"
+    d.mkdir(parents=True)
+    pd.DataFrame({"ts": pd.to_datetime(["2026-10-02 20:00"] * 3, utc=True), "contract": ["C1", "C2", "C3"]}).to_parquet(d / "2026-10-02.parquet")
+
+    class A:
+        src = str(tmp_path / "src")
+        out = str(tmp_path / "lake")
+        prev_manifest = str(tmp_path / "prev.json")
+    assert fs.cmd_import_option_snapshots(A) == 0
+    df = pd.read_parquet(tmp_path / "lake/options/alpaca_snapshot/1d/SPY/2026.parquet")
+    assert len(df) == 5 and df["session"].nunique() == 2   # 2 contracts kept from 10-01, 3 added for 10-02
 
 
 def test_loader_reads_partitions_with_window(tmp_path, monkeypatch):

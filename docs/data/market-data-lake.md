@@ -163,7 +163,14 @@ The first run of each new year compacts the previous year automatically and prun
 - **Older daily history:** DoltHub `post-no-preference/stocks`. MEASURED: `ohlcv` runs 2011-01-03 → 2026-10-30, and the `symbol` table holds 24,441 rows; it includes funds, e.g. `ZZZTX`. It is cloned and exported in the `equities` job.
 - **Finest grain:** Alpaca serves **1m** bars from 2016. Stored now:
   - **1d for every stock, ETF and delisted name** (`us_equity/alpaca_sip/1d/<SYM>/<YYYY>.parquet`).
-  - 1m/1h/5m for the ETF-HISTORY-PIPELINE list (~1,000 symbols incl. point-in-time S&P 500 members; that lane is told to store 1m as the base).
+  - **1m base** for the ETF-HISTORY-PIPELINE list (~770 symbols with data, including point-in-time S&P 500 members).
+    - That lane fetches it and hands each finished chunk to `free_sources.py import-etf`. Each chunk is written as one
+      lake file per symbol per year (`us_equity/alpaca/1m/<SYM>/<YYYY>.parquet`) and merged with the lake's existing
+      year, so a partial or tail import replaces only the months it supplies and never shrinks history.
+    - 5m/15m/30m/1h/4h/1d are derived in the lake (`us_equity/alpaca/derived/`, volume-weighted vwap).
+    - The lake is the store of record; the trainer keeps a tail cache.
+    - Manifest fragments are uniquely named and folded into MANIFEST.json idempotently by `hf_publish.py manifest`,
+      which then deletes them, so two publishers cannot overwrite each other.
 
   1m for the WHOLE ~12k-symbol universe is ≤ ~470 GB, INFERRED: 12k × 10 y × 252 d × 390 bars × 40 B, an upper bound because thin names print far fewer bars. That is an **operator storage call**, not done silently. 1m for the ~1,000-symbol list is ≤ ~40 GB.
 - **Point-in-time:** the liquid universe is chosen at READ time by `lake.liquid_mask` (trailing ADV ≥ $5M, price ≥ $2). It is never chosen at collection.

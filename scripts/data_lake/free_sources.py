@@ -60,10 +60,57 @@ def _get(url: str, tries: int = 6, timeout: int = 60) -> bytes:
     raise RuntimeError(f"GET failed: {url}: {last}")
 
 
-def _write_manifest(out: Path, name: str, entries: List[Dict]) -> None:
+def _write_manifest(out: Path, name: str, entries: List[Dict], unique: bool = False) -> None:
+    """unique=True: a fragment name no other publisher run can collide with (several workflows upload fragments to
+    the lake's _manifests/; hf_publish.py manifest folds every fragment into MANIFEST.json idempotently)."""
     d = out / "_manifests"
     d.mkdir(parents=True, exist_ok=True)
+    if unique:
+        import uuid
+        name = f"{name}-{datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%S')}-{uuid.uuid4().hex[:8]}"
     (d / f"{name}.json").write_text(json.dumps(entries, indent=1))
+
+
+def _lake_previous_manifest(path: str = "") -> Dict:
+    """The lake's current MANIFEST: from --prev-manifest if given, else from HF when HF_TOKEN is set, else empty."""
+    import os
+    if path and Path(path).exists():
+        return json.loads(Path(path).read_text())
+    if not os.environ.get("HF_TOKEN"):
+        return {"files": []}
+    try:
+        from huggingface_hub import hf_hub_download
+        sys.path.insert(0, str(Path(__file__).resolve().parent))
+        from hf_publish import _repo_from_config
+        return json.loads(Path(hf_hub_download(_repo_from_config(), "MANIFEST.json", repo_type="dataset",
+                                               token=os.environ["HF_TOKEN"])).read_text())
+    except Exception:
+        return {"files": []}
+
+
+def _lake_download(rel: str) -> Optional[Path]:
+    import os
+    try:
+        from huggingface_hub import hf_hub_download
+        sys.path.insert(0, str(Path(__file__).resolve().parent))
+        from hf_publish import _repo_from_config
+        return Path(hf_hub_download(_repo_from_config(), rel, repo_type="dataset", token=os.environ.get("HF_TOKEN")))
+    except Exception:
+        return None
+
+
+def merge_year_partition(new: pd.DataFrame, existing: Optional[pd.DataFrame], key: str = "ts",
+                         replace_months: Optional[set] = None) -> pd.DataFrame:
+    """A yearly partition rebuilt from a PARTIAL source never shrinks: rows of the months the source supplies replace
+    those months in the existing lake file; every other month of the existing file is kept."""
+    if existing is None or existing.empty:
+        return new.sort_values(key).reset_index(drop=True)
+    ex = existing.copy()
+    ex[key] = pd.to_datetime(ex[key], utc=True)
+    if replace_months:
+        ex = ex[~ex[key].dt.strftime("%Y-%m").isin(replace_months)]
+    out = pd.concat([ex, new], ignore_index=True).drop_duplicates(key, keep="last")
+    return out.sort_values(key).reset_index(drop=True)
 
 
 def _entry(asset_class, market, tf, symbol, df, path, out, **kw) -> Dict:
@@ -194,11 +241,15 @@ TF_MIN = {"1m": 1, "5m": 5, "15m": 15, "1h": 60, "1d": 1440}
 
 
 def cmd_import_etf(a) -> int:
-    """Publish the ETF-HISTORY-PIPELINE store into the lake. Store layout (that lane's contract, 2026-11-01):
-    <SYM>/<tf>/<YYYY>.parquet, column ``timestamp`` (UTC bar-open), MANIFEST.json series["SYM/tf"] = {status, feed,
-    adjustment, ...}, corporate_actions.csv at the root. Lake layout: us_equity/alpaca/<tf>/<SYM>/<YYYY>.parquet
-    (column ``ts``), one partition per year exactly as stored. The ETF lane owns the fetch; this only publishes.
-    An empty or absent store (before that lane's first backfill) is recorded, not an error."""
+    """Publish ETF-HISTORY-PIPELINE bars into the lake (that lane's contract, 2026-11-01 13:44Z):
+    source  <src>/<SYM>/<tf>/<YYYY-MM>.parquet (1m base, monthly) -- or legacy <YYYY>.parquet -- column ``timestamp``;
+            <src>/MANIFEST.json series["SYM/tf"] = {status, feed, adjustment, ...}; <src>/corporate_actions.csv.
+    lake    us_equity/alpaca/<tf>/<SYM>/<YYYY>.parquet: ONE file per symbol-year (HF repo file budget: ~770 symbols x
+            ~11 years, not x ~130 months). A source holding only SOME months of a year (the trainer tail cache, a
+            chunk) is MERGED into the lake's existing yearly file: the supplied months replace those months, every
+            other month is kept -- a partial import never shrinks history.
+    derived 5m/15m/30m/1h/4h/1d from the 1m base by resample.py (same rule as crypto), written beside it.
+    The manifest fragment has a unique name; hf_publish.py manifest folds it in. Absent/empty source: recorded."""
     src, out = Path(a.src), Path(a.out)
     entries: List[Dict] = []
     meta = {}
@@ -211,37 +262,63 @@ def cmd_import_etf(a) -> int:
     series: Dict[tuple, List[Path]] = {}
     for f in files:
         series.setdefault((f.parent.parent.name, f.parent.name), []).append(f)
+    prev = _lake_previous_manifest(getattr(a, "prev_manifest", "")) if series else {"files": []}
+    prev_parts = {(e.get("tf"), e.get("symbol")): e.get("partitions") or {} for e in prev.get("files", [])
+                  if e.get("asset_class") == "us_equity" and e.get("market") == "alpaca"}
     for (sym, tf), fs in sorted(series.items()):
         m = meta.get(f"{sym}/{tf}") or {}
         e = {"asset_class": "us_equity", "market": "alpaca", "tf": tf, "symbol": sym, "partitions": {},
              "source": "alpaca market data (ETF-HISTORY-PIPELINE)", "licence": "Alpaca market-data terms; private store only",
              "feed": m.get("feed"), "adjustment": m.get("adjustment", "split"), "vendor_status": m.get("status"),
              "fetched_at": datetime.now(timezone.utc).isoformat(timespec="seconds"), "state": "ok"}
+        by_year: Dict[str, List[Path]] = {}
         for f in fs:
+            by_year.setdefault(f.stem[:4], []).append(f)
+        for yr, yfs in sorted(by_year.items()):
             try:
-                df = pd.read_parquet(f)
-                if "timestamp" in df.columns:
-                    df = df.rename(columns={"timestamp": "ts"})
-                df["ts"] = pd.to_datetime(df["ts"], utc=True)
-                df = df.sort_values("ts").drop_duplicates("ts").reset_index(drop=True)
-                if df.empty:
+                frames = []
+                for f in yfs:
+                    d = pd.read_parquet(f)
+                    if "timestamp" in d.columns:
+                        d = d.rename(columns={"timestamp": "ts"})
+                    d["ts"] = pd.to_datetime(d["ts"], utc=True)
+                    frames.append(d)
+                new = pd.concat(frames, ignore_index=True).drop_duplicates("ts").sort_values("ts")
+                if new.empty:
                     continue
-                p = out / "us_equity" / "alpaca" / tf / sym / f.name
+                supplied = set(new["ts"].dt.strftime("%Y-%m"))
+                existing = None
+                old = prev_parts.get((tf, sym), {}).get(yr)
+                if old and old.get("path"):
+                    lp = _lake_download(old["path"])
+                    existing = pd.read_parquet(lp) if lp else None
+                    if lp is None:
+                        e["state"] = "partial"
+                        e.setdefault("errors", []).append(f"{yr}: lake year file not readable; NOT overwritten")
+                        continue  # never replace a lake year we could not read with a partial one
+                df = merge_year_partition(new, existing, replace_months=supplied)
+                p = out / "us_equity" / "alpaca" / tf / sym / f"{yr}.parquet"
                 p.parent.mkdir(parents=True, exist_ok=True)
-                df.to_parquet(p, index=False, compression="zstd")
-                e["partitions"][f.stem] = {"rows": int(len(df)), "first": df["ts"].iloc[0].isoformat(),
-                                           "last": df["ts"].iloc[-1].isoformat(), "bytes": p.stat().st_size,
-                                           "path": str(p.relative_to(out)), "src": "etf_history"}
+                df.to_parquet(p, index=False, compression="zstd", row_group_size=100_000)
+                e["partitions"][yr] = {"rows": int(len(df)), "first": df["ts"].iloc[0].isoformat(),
+                                       "last": df["ts"].iloc[-1].isoformat(), "bytes": p.stat().st_size,
+                                       "path": str(p.relative_to(out)), "src": "etf_history",
+                                       "months_supplied": len(supplied), "merged_with_lake": existing is not None}
             except Exception as ex:
                 e["state"] = "partial"
-                e.setdefault("errors", []).append(f"{f.name}: {str(ex)[:150]}")
+                e.setdefault("errors", []).append(f"{yr}: {str(ex)[:150]}")
         entries.append(e)
     if (src / "corporate_actions.csv").exists():
         d = out / "us_equity" / "alpaca" / "corporate_actions"
         d.mkdir(parents=True, exist_ok=True)
         (d / "corporate_actions.csv").write_bytes((src / "corporate_actions.csv").read_bytes())
-    _write_manifest(out, "us_equity-alpaca", entries)
-    print(f"[etf] imported {len(entries)} series ({len(files)} year files) from {src}")
+    _write_manifest(out, "us_equity-alpaca", entries, unique=True)
+    if entries:
+        sys.path.insert(0, str(Path(__file__).resolve().parent))
+        import resample
+        derived = resample.run(out, "1m", ["5m", "15m", "30m", "1h", "4h", "1d"], only_asset="us_equity")
+        _write_manifest(out, "derived-us_equity", derived, unique=True)
+    print(f"[etf] imported {len(entries)} series ({len(files)} files) from {src}")
     return 0
 
 
@@ -504,31 +581,56 @@ def cmd_import_csv(a) -> int:
 
 # ---------------------------------------------------------------- options: ETF-HISTORY-PIPELINE daily chain snapshots
 def cmd_import_option_snapshots(a) -> int:
+    """Option-chain snapshots from ETF-HISTORY-PIPELINE: <src>/<source>/<UND>/<YYYY-MM-DD>.parquet (source alpaca|cboe;
+    one file per underlying per session, one row per contract). Lake: options/<source>_snapshot/1d/<UND>/<YYYY>.parquet,
+    one file per underlying-year; a source holding only some sessions REPLACES those sessions in the lake's year file
+    and keeps the rest (dates, not timestamps, are the merge key: many contracts share one snapshot time)."""
     src, out = Path(a.src), Path(a.out)
-    entries = []
-    for und in sorted(d for d in src.glob("*") if d.is_dir()) if src.exists() else []:
-        frames = []
-        for f in sorted(und.glob("*.parquet")):
-            try:
-                frames.append(pd.read_parquet(f))
-            except Exception:
-                pass
-        if not frames:
-            continue
-        df = pd.concat(frames, ignore_index=True)
-        tcol = next((c for c in ("ts", "snapshot_ts", "timestamp", "date") if c in df.columns), None)
-        if tcol is None:
-            continue
-        df["ts"] = pd.to_datetime(df[tcol], utc=True)
-        df = df.sort_values("ts").reset_index(drop=True)
-        p = out / "options" / "alpaca_snapshot" / "1d" / f"{und.name}.parquet"
-        p.parent.mkdir(parents=True, exist_ok=True)
-        df.to_parquet(p, index=False, compression="zstd")
-        entries.append(_entry("options", "alpaca_snapshot", "1d", und.name, df, p, out,
-                              source="ETF-HISTORY-PIPELINE options-snapshot-capture", licence="Alpaca terms; private",
-                              distinct_days=int(df["ts"].dt.date.nunique())))
-    _write_manifest(out, "options-snapshots", entries)
-    print(f"[opt-snap] {len(entries)} underlyings from {src}")
+    entries: List[Dict] = []
+    files = sorted(src.glob("*/*/*.parquet")) if src.exists() else []
+    groups: Dict[tuple, List[Path]] = {}
+    for f in files:
+        groups.setdefault((f.parent.parent.name, f.parent.name, f.stem[:4]), []).append(f)
+    prev = _lake_previous_manifest(getattr(a, "prev_manifest", "")) if groups else {"files": []}
+    prev_parts = {(e.get("market"), e.get("symbol")): e.get("partitions") or {} for e in prev.get("files", [])
+                  if e.get("asset_class") == "options"}
+    by_series: Dict[tuple, Dict] = {}
+    for (source, und, yr), fs in sorted(groups.items()):
+        market = f"{source}_snapshot"
+        e = by_series.setdefault((market, und), {"asset_class": "options", "market": market, "tf": "1d", "symbol": und,
+                                                  "partitions": {}, "source": f"ETF-HISTORY-PIPELINE options ({source})",
+                                                  "licence": f"{source} terms; private store only", "state": "ok"})
+        try:
+            frames = []
+            for f in fs:
+                d = pd.read_parquet(f)
+                d["session"] = f.stem
+                tcol = next((c for c in ("ts", "snapshot_ts", "timestamp") if c in d.columns), None)
+                d["ts"] = pd.to_datetime(d[tcol], utc=True) if tcol else pd.to_datetime(d["session"], utc=True)
+                frames.append(d)
+            new = pd.concat(frames, ignore_index=True)
+            old = prev_parts.get((market, und), {}).get(yr)
+            if old and old.get("path"):
+                lp = _lake_download(old["path"])
+                if lp is None:
+                    e["state"] = "partial"
+                    e.setdefault("errors", []).append(f"{yr}: lake year file not readable; NOT overwritten")
+                    continue
+                ex = pd.read_parquet(lp)
+                new = pd.concat([ex[~ex["session"].isin(set(new["session"]))], new], ignore_index=True)
+            new = new.sort_values(["ts"]).reset_index(drop=True)
+            p = out / "options" / market / "1d" / und / f"{yr}.parquet"
+            p.parent.mkdir(parents=True, exist_ok=True)
+            new.to_parquet(p, index=False, compression="zstd")
+            e["partitions"][yr] = {"rows": int(len(new)), "first": new["ts"].iloc[0].isoformat(),
+                                   "last": new["ts"].iloc[-1].isoformat(), "bytes": p.stat().st_size,
+                                   "path": str(p.relative_to(out)), "sessions": int(new["session"].nunique())}
+        except Exception as ex:
+            e["state"] = "partial"
+            e.setdefault("errors", []).append(f"{yr}: {str(ex)[:150]}")
+    entries = list(by_series.values())
+    _write_manifest(out, "options-snapshots", entries, unique=True)
+    print(f"[opt-snap] {len(entries)} underlying series from {len(files)} session files under {src}")
     return 0
 
 
@@ -542,6 +644,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     ap.add_argument("--since-year", type=int, default=0, help="alpaca-daily refresh: fetch from Jan 1 of this year only")
     ap.add_argument("--out", default="lake")
     ap.add_argument("--src", default="store", help="import-etf: the ETF-HISTORY-PIPELINE store directory")
+    ap.add_argument("--prev-manifest", default="", help="import-*: the lake MANIFEST.json (else fetched from HF)")
     a = ap.parse_args(argv)
     return {"universe": cmd_universe, "fred": cmd_fred, "futures": cmd_futures,
             "import-etf": cmd_import_etf, "cboe": cmd_cboe, "cot": cmd_cot, "alpaca-daily": cmd_alpaca_daily,

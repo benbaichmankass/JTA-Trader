@@ -264,24 +264,21 @@ jobs:
         run: python3 -u scripts/data_lake/free_sources.py cboe --out lake
       - name: Daily futures fronts (Yahoo, research use, private store)
         run: python3 -u scripts/data_lake/free_sources.py futures --out lake
-      - name: Pull the ETF-HISTORY-PIPELINE stores from the trainer (read only; empty until that lane's backfill)
+      - name: Pull the option-snapshot store from the trainer (read only; ETF bars are published by ETF-HISTORY-PIPELINE itself)
         env:
           VM_SSH_KEY: ${{ secrets.VM_SSH_KEY }}
           TRAINER_IP: ${{ secrets.TRAINER_VM_IP }}
           TRAINER_USER: ${{ vars.TRAINER_VM_USER || 'ubuntu' }}
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
         run: |
           set -uo pipefail
-          mkdir -p store optstore ~/.ssh && chmod 700 ~/.ssh
-          if [ -z "${VM_SSH_KEY}" ] || [ -z "${TRAINER_IP}" ]; then echo "::warning::no trainer secrets; ETF/option stores not published this run"; exit 0; fi
+          mkdir -p optstore ~/.ssh && chmod 700 ~/.ssh
+          if [ -z "${VM_SSH_KEY}" ] || [ -z "${TRAINER_IP}" ]; then echo "::warning::no trainer secrets; option snapshots not published this run"; exit 0; fi
           printf '%s\n' "${VM_SSH_KEY}" > ~/.ssh/trainer_key && chmod 600 ~/.ssh/trainer_key
-          for pair in "etf_history:store" "options_history:optstore"; do
-            rsync -a -e "ssh -i ~/.ssh/trainer_key -o BatchMode=yes -o StrictHostKeyChecking=accept-new -o ConnectTimeout=20" \
-              "${TRAINER_USER}@${TRAINER_IP}:ict-trading-bot/data/${pair%%:*}/" "${pair##*:}/" 2>&1 | sed -E 's/[0-9]{1,3}(\.[0-9]{1,3}){3}/<ip>/g' || true
-          done
-          echo "pulled: $(find store -name '*.parquet' | wc -l) bar files, $(find optstore -name '*.parquet' | wc -l) option files"
-      - name: Re-shape the ETF/option stores into the lake layout
-        run: |
-          python3 -u scripts/data_lake/free_sources.py import-etf --src store --out lake
+          rsync -a -e "ssh -i ~/.ssh/trainer_key -o BatchMode=yes -o StrictHostKeyChecking=accept-new -o ConnectTimeout=20" \
+            "${TRAINER_USER}@${TRAINER_IP}:ict-trading-bot/data/options_history/" optstore/ 2>&1 | sed -E 's/[0-9]{1,3}(\.[0-9]{1,3}){3}/<ip>/g' || true
+          echo "pulled: $(find optstore -name '*.parquet' | wc -l) option session files"
+          # <source>/<UND>/<YYYY-MM-DD>.parquet -> options/<source>_snapshot/1d/<UND>/<YYYY>.parquet, merged with the lake year
           python3 -u scripts/data_lake/free_sources.py import-option-snapshots --src optstore --out lake
       - name: Validate
         run: python3 scripts/data_lake/validate.py check --out lake --tag other
