@@ -309,7 +309,10 @@ def _iteration_block(root: Path) -> Dict[str, Any]:
         return {"read_state": "could_not_look", "why": f"{type(exc).__name__}: {exc}"}
     return {"read_state": "measured", "as_of": res["as_of"], "counts": res["counts"],
             "orphans": [r["id"] for r in res["rows"] if r["state"] == "orphan"],
-            "overdue": [r["id"] for r in res["rows"] if r["state"] == "overdue"]}
+            "overdue": [r["id"] for r in res["rows"] if r["state"] == "overdue"],
+            "lever_coverage": {sid: {"remaining": c["remaining"],
+                                     "tested": [f for f, st in c["state"].items() if st == "tested"]}
+                               for sid, c in (res.get("lever_coverage") or {}).items()}}
 
 
 def main(argv: Optional[List[str]] = None) -> int:
