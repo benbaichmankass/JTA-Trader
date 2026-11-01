@@ -72,6 +72,21 @@ related:
 - ML-FEATURE-INFRA
 - .claude/skills/backtesting/SKILL.md
 programme: P6
-status: queued
+status: done
 practice_precedent: 'docs/reference/trading-and-model-practice-principles.md and AUDIT section 5b (docs/audits/2026-11-01-from-scratch/AUDIT.md): <=10 pre-declared configs, discovery ends 2024-06-30, every
   trial counted, DSR(N=trials)>0.95; Bailey & Lopez de Prado 2014 (DSR); payer literature: Bailey & Lopez de Prado 2014; volatility clustering (Engle 1982; RiskMetrics EWMA 0.94)'
+last_dispatched_at: '2026-11-01T12:10:00+00:00'
+grading:
+  attested: RULE-RQ20261101-58E4-06-MOVEMENT-CAPTURE
+  auto: false
+  decision_rule_id: RULE-RQ20261101-58E4-06-MOVEMENT-CAPTURE
+  evidence:
+  - research/results/RQ-20261101-58e4-06/manual-research-edge-20261101.jsonl
+  - comms/research/RQ-20261101-58e4-06/manual-research-edge-20261101/result.json
+  graded_at: '2026-11-01'
+  grader: manual (lane RESEARCH-EDGE)
+  note: Closed. Volatility is predictable (EWMA range, Spearman 0.48-0.58 every calendar year) but not capturable net of cost by these linear two-sided brackets. A new geometry or a different instrument
+    is a new trial.
+  reason: selected FD1g net Sharpe -0.72, ann -15%, stress -1.41; all 8 configs negative (BO1 -5.0 ... FD1 -1.28); 1 of 4 years positive; short side -0.80 vs long +0.18
+  rows: 1
+  verdict: fail
