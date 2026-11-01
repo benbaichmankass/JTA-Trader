@@ -220,7 +220,7 @@ mechanics and then move it to real money. There's no reason why we need to, watc
 the results, and that is the pipeline here, right? Good testing results, and then we're not, testing things in a real simulation for
 weeks on end, because we just don't have that amount of time for the kind of data that we're generating."*
 
-⚠️ **The manager's reading (the operator can correct it):** "new training mechanism" is read as **new execution mechanism**.
+⚠️ **Confirmed reading:** "new training mechanism" means **new execution mechanism**. Operator confirmation, 2026-11-01 ~08:00Z (relayed by Manager Session 2026-11-01a), verbatim: "Yes, that is the correct interpretation."
 
 **The rule, in order:**
 1. **Mechanics already proven → straight to real money.** A leg that clears Stage 0 (committed, pre-registered evidence record, net of
