@@ -2,7 +2,7 @@
 
 > **Doc status:** `unknown` · category `unknown` · last verified `never` · registered in [`docs/DOCUMENT-INDEX.md`](../../DOCUMENT-INDEX.md) · *generated weekly by `scripts/ops/touch_split.py` — the population line below is its freshness*
 
-Population: 1608 closed non-backtest trades on ['bybit_1'] (of 6816 rows read), 37 legs; **0 touched / 1608 untouched**. 1560 of them match one of 5619 packages read (R needs the package's declared risk; others fall back to the stored stop). R3 cost cells: 42 (record supplied).
+Population: 1608 closed non-backtest trades on ['bybit_1'] (of 6815 rows read), 37 legs; **0 touched / 1608 untouched**. 1560 of them match one of 5618 packages read (R needs the package's declared risk; others fall back to the stored stop). R3 cost cells: 42 (record supplied).
 
 | account | leg | untouched n | touched n | untouched LvB | touched LvB | cost untouched | cost touched |
 |---|---|--:|--:|---|---|---|---|

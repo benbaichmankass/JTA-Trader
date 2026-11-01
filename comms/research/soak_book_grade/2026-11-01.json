@@ -1,5 +1,5 @@
 {
-  "as_of": "2026-11-01T07:25:02.755036+00:00",
+  "as_of": "2026-11-01T05:32:33.425546+00:00",
   "by_disposition": {
     "healthy": 3,
     "insufficient-data": 38,
@@ -130,10 +130,10 @@
         "account_class": "paper",
         "account_id": "bybit_1",
         "basis": "simulator",
-        "entry_mean": 11.053,
+        "entry_mean": 6.43,
         "modelled_bps": null,
         "n": 0,
-        "n_entry": 2,
+        "n_entry": 1,
         "n_exit": 0,
         "stage": "S1",
         "threshold_bps": null,
@@ -142,7 +142,7 @@
         },
         "venue": "bybit_perps",
         "verdict": "insufficient_n",
-        "why": "entry n=2, exit n=0; need >= 10 each"
+        "why": "entry n=1, exit n=0; need >= 10 each"
       },
       "disposition": "insufficient-data",
       "eta": "re-check next scheduled pass",
@@ -150,11 +150,11 @@
       "mechanics": {
         "account_class": "paper",
         "account_id": "bybit_1",
-        "has_open_position": true,
+        "has_open_position": false,
         "held_back": 0,
-        "intent_episodes": 2,
-        "intents": 2,
-        "received": 2,
+        "intent_episodes": 1,
+        "intents": 1,
+        "received": 1,
         "same_symbol_live_contenders": [
           "avax_pullback_2h",
           "claude_desk",
@@ -188,8 +188,8 @@
         "unmapped": null,
         "unmapped_statuses": []
       },
-      "n_needed": "needs 8 more entry fill(s) and 10 more package-referenced exit fill(s) to clear the n=10/side floor (currently entry=2, exit=0); no fill-rate basis to date an ETA from this run alone \u2014 re-check next scheduled pass",
-      "reason": "flowing; cost fidelity insufficient_n (entry n=2, exit n=0; need >= 10 each)",
+      "n_needed": "needs 9 more entry fill(s) and 10 more package-referenced exit fill(s) to clear the n=10/side floor (currently entry=1, exit=0); no fill-rate basis to date an ETA from this run alone \u2014 re-check next scheduled pass",
+      "reason": "flowing; cost fidelity insufficient_n (entry n=1, exit n=0; need >= 10 each)",
       "strategy": "e4_oi_shock_1h"
     },
     {
@@ -222,7 +222,7 @@
         "has_open_position": false,
         "held_back": 0,
         "intent_episodes": 21,
-        "intents": 221,
+        "intents": 269,
         "received": 1,
         "same_symbol_live_contenders": [
           "claude_desk",
@@ -271,7 +271,7 @@
         "has_open_position": false,
         "held_back": 0,
         "intent_episodes": 21,
-        "intents": 221,
+        "intents": 269,
         "received": 1,
         "same_symbol_live_contenders": [
           "claude_desk",
@@ -417,8 +417,8 @@
         "account_id": "bybit_1",
         "has_open_position": false,
         "held_back": 0,
-        "intent_episodes": 50,
-        "intents": 602,
+        "intent_episodes": 51,
+        "intents": 624,
         "received": 1,
         "same_symbol_live_contenders": [
           "claude_desk",
@@ -627,8 +627,8 @@
         "account_id": "bybit_1",
         "has_open_position": false,
         "held_back": 1,
-        "intent_episodes": 2,
-        "intents": 3,
+        "intent_episodes": 3,
+        "intents": 7,
         "received": 0,
         "same_symbol_live_contenders": [
           "claude_desk",
@@ -644,7 +644,7 @@
         "unmapped_statuses": []
       },
       "n_needed": "a per-tick account-election read (e.g. the conviction_arbitration/arbitration_fanout_soak log, or a live dispatch trace) showing this leg either winning at least once, or never winning across a large contested-tick sample",
-      "reason": "starved (3 intent(s), 0 received, no open position) but contends its symbol on this SAME account against live sibling(s) ['claude_desk', 'e4_oi_shock_1h', 'ict_scalp_sol_5m', 'sol_pullback_2h', 'trend_donchian_sol', 'trend_donchian_sol_4h'] \u2014 src/runtime/intents.py elects only ONE strategy per (account, symbol) per tick, so losing that election every time produces this exact shape without the leg ever being mechanically dead. Cannot be graded kill without a live per-tick election trace.",
+      "reason": "starved (7 intent(s), 0 received, no open position) but contends its symbol on this SAME account against live sibling(s) ['claude_desk', 'e4_oi_shock_1h', 'ict_scalp_sol_5m', 'sol_pullback_2h', 'trend_donchian_sol', 'trend_donchian_sol_4h'] \u2014 src/runtime/intents.py elects only ONE strategy per (account, symbol) per tick, so losing that election every time produces this exact shape without the leg ever being mechanically dead. Cannot be graded kill without a live per-tick election trace.",
       "strategy": "ict_scalp_sol_15m"
     },
     {
@@ -833,8 +833,8 @@
         "account_id": "bybit_1",
         "has_open_position": false,
         "held_back": 0,
-        "intent_episodes": 25,
-        "intents": 282,
+        "intent_episodes": 26,
+        "intents": 328,
         "received": 1,
         "same_symbol_live_contenders": [
           "claude_desk",
@@ -986,8 +986,8 @@
         "account_id": "bybit_1",
         "has_open_position": true,
         "held_back": 1,
-        "intent_episodes": 7,
-        "intents": 74,
+        "intent_episodes": 6,
+        "intents": 52,
         "received": 2,
         "same_symbol_live_contenders": [
           "claude_desk",
