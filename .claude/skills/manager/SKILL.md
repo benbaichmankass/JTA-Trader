@@ -287,7 +287,7 @@ Never add, and never dispatch a lane to add, a gate (approval step, hold, readin
   ITERATION LOOP (research-ops SKILL § "THE ITERATION LOOP"; operator 2026-11-01: *"if the data doesn't pass, it goes back into research
   for improvments and testing. THere is no other pipeline for underperforming strategies/mls."*). **A research floor gap is NOT due work**
   (STOP-GENERATED-AUTHORING, operator popup 2026-11-01 *"Stop floor-driven units (Rec.)"*, reversing the 2026-10-16 rule): never dispatch
-  a lane to author units to a count; orphans are the due work (daily review step 4b). Record `comms/research/ops/<stamp>.json`; one line in
+  a lane to author units to a count; orphans are the due work (daily review step 4c). Record `comms/research/ops/<stamp>.json`; one line in
   "what moved" led by orphans before → after, iterations advanced, survivors.
 - **Research SLO escalation** (operator, 2026-10-16, binding): SLOs are in `scripts/research/research_slo.yaml` (measured every 2 h; one
   Telegram message per state change + one comment on the ops-flags PR, marker `research-slo`). **When any SLO is `breach` or
@@ -584,7 +584,7 @@ The review routine IS the periodic check; its prompt names `GET /api/bot/work/re
 3. **Work every item: dispatch** (`state: routed`, `routed_to: <session>`, a checklist row for a build), **close** (`done`/`killed` with a
    `terminal_reason`) or **decide** (§ "Before any operator popup"). A `routed` item still due means its lane has not delivered.
 4. **Every silence alarm gets a fix lane the same day**; anything due at a known time gets a `send_later` wake.
-4b. **Orphan drain — the research loop, daily (operator 2026-11-01, binding).** Run `python3 scripts/research/iteration_orphans.py`.
+4c. **Orphan drain — the research loop, daily (operator 2026-11-01, binding).** Run `python3 scripts/research/iteration_orphans.py`.
    Operator, verbatim: *"I don' twant to keep finding strategies sitting arround on paper testing with no clear plan"*. Every
    `ORPHAN` (a testing leg, a non-live ML model or a live-review class with no live iteration unit) and every `overdue` iteration gets
    ONE disposition this run: the next research-ops slot is told to author it first (name the subjects in its prompt), a topic lane is
