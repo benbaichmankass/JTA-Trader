@@ -1,6 +1,6 @@
 {
  "_comment": "SOAK CONTRACTS \u2014 mechanical definitions of done (1-2 clean trades, no calendar), NOT state. State is computed live by scripts/ops/soak_state.py::soak_states(). Guarded by scripts/ci/check_soak_contracts.py.",
- "as_of": "2026-10-28",
+ "as_of": "2026-11-01",
  "soaks": [
   {
    "account": "alpaca_paper",
@@ -390,39 +390,6 @@
     "fill_and_fees"
    ],
    "design": "mechanical",
-   "disposition": {
-    "decided_at": "2026-10-15",
-    "evidence": [
-     "comms/research/soak_mechanics/2026-10-15.json"
-    ],
-    "reason": "mechanical soak passed: clean: 4496 (after fault 4332)",
-    "trades": [
-     4496
-    ],
-    "verdict": "PASS"
-   },
-   "fail_rule": "the most recent graded trade is a mechanical fault (a checklist item fails, or a reconciler / watchdog / orphan close) -> fix, then re-soak",
-   "id": "SOAK-stage1-bybit_1-ada_pullback_2h",
-   "kind": "stage1",
-   "leg": "ada_pullback_2h",
-   "metric": "clean closed trades on bybit_1/ada_pullback_2h (each = one entry + one journaled exit)",
-   "monitoring": "ONGOING, not soak exit criteria: realized cost vs the Stage-0 model (R3, scripts/ops/r3_cost_fidelity.py) and live-vs-backtest (scripts/research/live_vs_backtest.py) feed the Gate-2 demotion signal and the underperformer first step",
-   "n_needed": 1,
-   "pass_rule": "1 clean trade(s) since the last mechanical fault, each clearing every checklist item",
-   "started": "2026-06-18",
-   "verifies": "live MECHANICS: the signal fires, the order is placed with the right size and side, a real SL and TP rest at the venue, management works, the exit is journaled with a reason, and the fill and fees are recorded"
-  },
-  {
-   "account": "bybit_1",
-   "checklist": [
-    "signal_fired",
-    "order_size_side",
-    "bracket_real_at_venue",
-    "management_no_fault",
-    "exit_journaled",
-    "fill_and_fees"
-   ],
-   "design": "mechanical",
    "fail_rule": "the most recent graded trade is a mechanical fault (a checklist item fails, or a reconciler / watchdog / orphan close) -> fix, then re-soak",
    "id": "SOAK-stage1-bybit_1-avax_pullback_2h",
    "kind": "stage1",
@@ -455,6 +422,28 @@
    "pass_rule": "1 clean trade(s) since the last mechanical fault, each clearing every checklist item",
    "started": "2026-10-27",
    "verifies": "live MECHANICS: the signal fires, the order is placed with the right size and side, a real SL and TP rest at the venue, management works, the exit is journaled with a reason, and the fill and fees are recorded"
+  },
+  {
+   "account": "bybit_1",
+   "checklist": [
+    "signal_fired",
+    "order_size_side",
+    "bracket_real_at_venue",
+    "management_no_fault",
+    "exit_journaled",
+    "fill_and_fees"
+   ],
+   "design": "mechanical",
+   "fail_rule": "the most recent graded trade is a mechanical fault (a checklist item fails, or a reconciler / watchdog / orphan close) -> fix, then re-soak",
+   "id": "SOAK-stage1-bybit_1-e4_oi_shock_1h",
+   "kind": "stage1",
+   "leg": "e4_oi_shock_1h",
+   "metric": "clean closed trades on bybit_1/e4_oi_shock_1h (each = one entry + one journaled exit: tp, sl or the e4_time_stop_24h strategy close)",
+   "monitoring": "ONGOING, not soak exit criteria: realized cost vs the Stage-0 model (R3, scripts/ops/r3_cost_fidelity.py), live-vs-backtest (scripts/research/live_vs_backtest.py), and the OI feed's freshness (scripts/ops/oi_feed_freshness.py) feed the Gate-2 demotion signal",
+   "n_needed": 1,
+   "pass_rule": "1 clean trade(s) since the last mechanical fault, each clearing every checklist item",
+   "started": "2026-10-30",
+   "verifies": "live MECHANICS: an E4 OI event at a 1h cutoff fires the signal, the market order is placed with the right size and side, the frozen 1.5 / 3.0 ATR14 SL and TP rest at the venue, the 24-bar time stop closes it if neither is hit, the exit is journaled with a reason, and the fill and fees are recorded"
   },
   {
    "account": "bybit_1",
@@ -802,6 +791,28 @@
    ],
    "design": "mechanical",
    "fail_rule": "the most recent graded trade is a mechanical fault (a checklist item fails, or a reconciler / watchdog / orphan close) -> fix, then re-soak",
+   "id": "SOAK-stage1-bybit_1-ml_entry_v2",
+   "kind": "stage1",
+   "leg": "ml_entry_v2",
+   "metric": "clean closed trades on bybit_1/ml_entry_v2 (each = one entry + one journaled exit)",
+   "monitoring": "ONGOING, not soak exit criteria: realized cost vs the Stage-0 model (R3, scripts/ops/r3_cost_fidelity.py) and live-vs-backtest (scripts/research/live_vs_backtest.py) feed the Gate-2 demotion signal and the underperformer first step",
+   "n_needed": 1,
+   "pass_rule": "1 clean trade(s) since the last mechanical fault, each clearing every checklist item",
+   "started": "2026-11-01",
+   "verifies": "live MECHANICS: the signal fires, the order is placed with the right size and side, a real SL and TP rest at the venue, management works, the exit is journaled with a reason, and the fill and fees are recorded"
+  },
+  {
+   "account": "bybit_1",
+   "checklist": [
+    "signal_fired",
+    "order_size_side",
+    "bracket_real_at_venue",
+    "management_no_fault",
+    "exit_journaled",
+    "fill_and_fees"
+   ],
+   "design": "mechanical",
+   "fail_rule": "the most recent graded trade is a mechanical fault (a checklist item fails, or a reconciler / watchdog / orphan close) -> fix, then re-soak",
    "id": "SOAK-stage1-bybit_1-sol_pullback_2h",
    "kind": "stage1",
    "leg": "sol_pullback_2h",
@@ -1016,39 +1027,6 @@
     "evidence": [
      "comms/research/soak_mechanics/2026-10-15.json"
     ],
-    "reason": "mechanical soak passed: clean: 6238 (after fault 5925)",
-    "trades": [
-     6238
-    ],
-    "verdict": "PASS"
-   },
-   "fail_rule": "the most recent graded trade is a mechanical fault (a checklist item fails, or a reconciler / watchdog / orphan close) -> fix, then re-soak",
-   "id": "SOAK-stage1-bybit_1-trend_donchian_eth_4h",
-   "kind": "stage1",
-   "leg": "trend_donchian_eth_4h",
-   "metric": "clean closed trades on bybit_1/trend_donchian_eth_4h (each = one entry + one journaled exit)",
-   "monitoring": "ONGOING, not soak exit criteria: realized cost vs the Stage-0 model (R3, scripts/ops/r3_cost_fidelity.py) and live-vs-backtest (scripts/research/live_vs_backtest.py) feed the Gate-2 demotion signal and the underperformer first step",
-   "n_needed": 1,
-   "pass_rule": "1 clean trade(s) since the last mechanical fault, each clearing every checklist item",
-   "started": "2026-06-18",
-   "verifies": "live MECHANICS: the signal fires, the order is placed with the right size and side, a real SL and TP rest at the venue, management works, the exit is journaled with a reason, and the fill and fees are recorded"
-  },
-  {
-   "account": "bybit_1",
-   "checklist": [
-    "signal_fired",
-    "order_size_side",
-    "bracket_real_at_venue",
-    "management_no_fault",
-    "exit_journaled",
-    "fill_and_fees"
-   ],
-   "design": "mechanical",
-   "disposition": {
-    "decided_at": "2026-10-15",
-    "evidence": [
-     "comms/research/soak_mechanics/2026-10-15.json"
-    ],
     "reason": "mechanical soak passed: clean: prop:pkg-f17ceb55e3d04304",
     "trades": [
      "prop:pkg-f17ceb55e3d04304"
@@ -1159,6 +1137,136 @@
     "fill_and_fees"
    ],
    "design": "mechanical",
+   "fail_rule": "the most recent graded trade is a mechanical fault (a checklist item fails, or a reconciler / watchdog / orphan close) -> fix, then re-soak",
+   "id": "SOAK-stage1-bybit_1-trend_donchian_xrp_adx25",
+   "kind": "stage1",
+   "leg": "trend_donchian_xrp_adx25",
+   "metric": "clean closed trades on bybit_1/trend_donchian_xrp_adx25 (each = one entry + one journaled exit)",
+   "monitoring": "ONGOING, not soak exit criteria: realized cost vs the Stage-0 model (R3, scripts/ops/r3_cost_fidelity.py) and live-vs-backtest (scripts/research/live_vs_backtest.py) feed the Gate-2 demotion signal and the underperformer first step",
+   "n_needed": 2,
+   "pass_rule": "2 clean trade(s) since the last mechanical fault, each clearing every checklist item; plus the MOMENTUM-LEVERS-LIVE observation: a closed 4h bar with ADX(14) < 25 tightens the trail to 2.5 ATR (exit_lever_soak momentum_trail row, applied=true) and the resulting stop amend reaches the venue",
+   "started": "2026-10-22",
+   "verifies": "live MECHANICS: the signal fires, the order is placed with the right size and side, a real SL and TP rest at the venue, management works, the exit is journaled with a reason, and the fill and fees are recorded"
+  },
+  {
+   "account": "bybit_1",
+   "checklist": [
+    "signal_fired",
+    "order_size_side",
+    "bracket_real_at_venue",
+    "management_no_fault",
+    "exit_journaled",
+    "fill_and_fees"
+   ],
+   "design": "mechanical",
+   "fail_rule": "the most recent graded trade is a mechanical fault (a checklist item fails, or a reconciler / watchdog / orphan close) -> fix, then re-soak",
+   "id": "SOAK-stage1-bybit_1-turtle_soup",
+   "kind": "stage1",
+   "leg": "turtle_soup",
+   "metric": "clean closed trades on bybit_1/turtle_soup (each = one entry + one journaled exit)",
+   "monitoring": "ONGOING, not soak exit criteria: realized cost vs the Stage-0 model (R3, scripts/ops/r3_cost_fidelity.py) and live-vs-backtest (scripts/research/live_vs_backtest.py) feed the Gate-2 demotion signal and the underperformer first step",
+   "n_needed": 1,
+   "pass_rule": "1 clean trade(s) since the last mechanical fault, each clearing every checklist item",
+   "started": "2026-10-27",
+   "verifies": "live MECHANICS: the signal fires, the order is placed with the right size and side, a real SL and TP rest at the venue, management works, the exit is journaled with a reason, and the fill and fees are recorded"
+  },
+  {
+   "account": "-",
+   "checklist": [
+    "signal_fired",
+    "package_complete",
+    "sized_and_routed_dry"
+   ],
+   "design": "not_soaking",
+   "fail_rule": "the most recent package is incomplete or not recorded dry -> fix, then re-soak",
+   "id": "SOAK-shadow-vwap",
+   "kind": "shadow",
+   "leg": "vwap",
+   "metric": "shadow order packages for vwap (any rostered account)",
+   "monitoring": "ONGOING, not soak exit criteria: realized cost vs the Stage-0 model (R3, scripts/ops/r3_cost_fidelity.py) and live-vs-backtest (scripts/research/live_vs_backtest.py) feed the Gate-2 demotion signal and the underperformer first step",
+   "n_needed": 1,
+   "pass_rule": "1 complete shadow package(s), each clearing every checklist item",
+   "recommended_fix": "enabled: false \u2014 nothing runs it; retire the strategy block or re-roster it with a fresh contract",
+   "started": "2026-05-24",
+   "verifies": "shadow MECHANICS: the signal fires, the package is complete (side, entry, real SL and TP), and every rostered account sizes it and records it DRY"
+  },
+  {
+   "account": "bybit_1",
+   "checklist": [
+    "signal_fired",
+    "order_size_side",
+    "bracket_real_at_venue",
+    "management_no_fault",
+    "exit_journaled",
+    "fill_and_fees"
+   ],
+   "design": "mechanical",
+   "disposition": {
+    "decided_at": "2026-10-15",
+    "evidence": [
+     "comms/research/soak_mechanics/2026-10-15.json"
+    ],
+    "reason": "mechanical soak passed: clean: 4496 (after fault 4332)",
+    "trades": [
+     4496
+    ],
+    "verdict": "PASS"
+   },
+   "fail_rule": "the most recent graded trade is a mechanical fault (a checklist item fails, or a reconciler / watchdog / orphan close) -> fix, then re-soak",
+   "id": "SOAK-stage1-bybit_1-ada_pullback_2h",
+   "kind": "stage1",
+   "leg": "ada_pullback_2h",
+   "metric": "clean closed trades on bybit_1/ada_pullback_2h (each = one entry + one journaled exit)",
+   "monitoring": "ONGOING, not soak exit criteria: realized cost vs the Stage-0 model (R3, scripts/ops/r3_cost_fidelity.py) and live-vs-backtest (scripts/research/live_vs_backtest.py) feed the Gate-2 demotion signal and the underperformer first step",
+   "n_needed": 1,
+   "pass_rule": "1 clean trade(s) since the last mechanical fault, each clearing every checklist item",
+   "started": "2026-06-18",
+   "verifies": "live MECHANICS: the signal fires, the order is placed with the right size and side, a real SL and TP rest at the venue, management works, the exit is journaled with a reason, and the fill and fees are recorded"
+  },
+  {
+   "account": "bybit_1",
+   "checklist": [
+    "signal_fired",
+    "order_size_side",
+    "bracket_real_at_venue",
+    "management_no_fault",
+    "exit_journaled",
+    "fill_and_fees"
+   ],
+   "design": "mechanical",
+   "disposition": {
+    "decided_at": "2026-10-15",
+    "evidence": [
+     "comms/research/soak_mechanics/2026-10-15.json"
+    ],
+    "reason": "mechanical soak passed: clean: 6238 (after fault 5925)",
+    "trades": [
+     6238
+    ],
+    "verdict": "PASS"
+   },
+   "fail_rule": "the most recent graded trade is a mechanical fault (a checklist item fails, or a reconciler / watchdog / orphan close) -> fix, then re-soak",
+   "id": "SOAK-stage1-bybit_1-trend_donchian_eth_4h",
+   "kind": "stage1",
+   "leg": "trend_donchian_eth_4h",
+   "metric": "clean closed trades on bybit_1/trend_donchian_eth_4h (each = one entry + one journaled exit)",
+   "monitoring": "ONGOING, not soak exit criteria: realized cost vs the Stage-0 model (R3, scripts/ops/r3_cost_fidelity.py) and live-vs-backtest (scripts/research/live_vs_backtest.py) feed the Gate-2 demotion signal and the underperformer first step",
+   "n_needed": 1,
+   "pass_rule": "1 clean trade(s) since the last mechanical fault, each clearing every checklist item",
+   "started": "2026-06-18",
+   "verifies": "live MECHANICS: the signal fires, the order is placed with the right size and side, a real SL and TP rest at the venue, management works, the exit is journaled with a reason, and the fill and fees are recorded"
+  },
+  {
+   "account": "bybit_1",
+   "checklist": [
+    "signal_fired",
+    "order_size_side",
+    "bracket_real_at_venue",
+    "management_no_fault",
+    "exit_journaled",
+    "fill_and_fees"
+   ],
+   "design": "mechanical",
    "disposition": {
     "decided_at": "2026-10-15",
     "evidence": [
@@ -1249,50 +1357,6 @@
     "fill_and_fees"
    ],
    "design": "mechanical",
-   "fail_rule": "the most recent graded trade is a mechanical fault (a checklist item fails, or a reconciler / watchdog / orphan close) -> fix, then re-soak",
-   "id": "SOAK-stage1-bybit_1-trend_donchian_xrp_adx25",
-   "kind": "stage1",
-   "leg": "trend_donchian_xrp_adx25",
-   "metric": "clean closed trades on bybit_1/trend_donchian_xrp_adx25 (each = one entry + one journaled exit)",
-   "monitoring": "ONGOING, not soak exit criteria: realized cost vs the Stage-0 model (R3, scripts/ops/r3_cost_fidelity.py) and live-vs-backtest (scripts/research/live_vs_backtest.py) feed the Gate-2 demotion signal and the underperformer first step",
-   "n_needed": 2,
-   "pass_rule": "2 clean trade(s) since the last mechanical fault, each clearing every checklist item; plus the MOMENTUM-LEVERS-LIVE observation: a closed 4h bar with ADX(14) < 25 tightens the trail to 2.5 ATR (exit_lever_soak momentum_trail row, applied=true) and the resulting stop amend reaches the venue",
-   "started": "2026-10-22",
-   "verifies": "live MECHANICS: the signal fires, the order is placed with the right size and side, a real SL and TP rest at the venue, management works, the exit is journaled with a reason, and the fill and fees are recorded"
-  },
-  {
-   "account": "bybit_1",
-   "checklist": [
-    "signal_fired",
-    "order_size_side",
-    "bracket_real_at_venue",
-    "management_no_fault",
-    "exit_journaled",
-    "fill_and_fees"
-   ],
-   "design": "mechanical",
-   "fail_rule": "the most recent graded trade is a mechanical fault (a checklist item fails, or a reconciler / watchdog / orphan close) -> fix, then re-soak",
-   "id": "SOAK-stage1-bybit_1-turtle_soup",
-   "kind": "stage1",
-   "leg": "turtle_soup",
-   "metric": "clean closed trades on bybit_1/turtle_soup (each = one entry + one journaled exit)",
-   "monitoring": "ONGOING, not soak exit criteria: realized cost vs the Stage-0 model (R3, scripts/ops/r3_cost_fidelity.py) and live-vs-backtest (scripts/research/live_vs_backtest.py) feed the Gate-2 demotion signal and the underperformer first step",
-   "n_needed": 1,
-   "pass_rule": "1 clean trade(s) since the last mechanical fault, each clearing every checklist item",
-   "started": "2026-10-27",
-   "verifies": "live MECHANICS: the signal fires, the order is placed with the right size and side, a real SL and TP rest at the venue, management works, the exit is journaled with a reason, and the fill and fees are recorded"
-  },
-  {
-   "account": "bybit_1",
-   "checklist": [
-    "signal_fired",
-    "order_size_side",
-    "bracket_real_at_venue",
-    "management_no_fault",
-    "exit_journaled",
-    "fill_and_fees"
-   ],
-   "design": "mechanical",
    "disposition": {
     "decided_at": "2026-10-23",
     "evidence": [
@@ -1314,26 +1378,6 @@
    "pass_rule": "1 clean trade(s) since the last mechanical fault, each clearing every checklist item",
    "started": "2026-06-18",
    "verifies": "live MECHANICS: the signal fires, the order is placed with the right size and side, a real SL and TP rest at the venue, management works, the exit is journaled with a reason, and the fill and fees are recorded"
-  },
-  {
-   "account": "-",
-   "checklist": [
-    "signal_fired",
-    "package_complete",
-    "sized_and_routed_dry"
-   ],
-   "design": "not_soaking",
-   "fail_rule": "the most recent package is incomplete or not recorded dry -> fix, then re-soak",
-   "id": "SOAK-shadow-vwap",
-   "kind": "shadow",
-   "leg": "vwap",
-   "metric": "shadow order packages for vwap (any rostered account)",
-   "monitoring": "ONGOING, not soak exit criteria: realized cost vs the Stage-0 model (R3, scripts/ops/r3_cost_fidelity.py) and live-vs-backtest (scripts/research/live_vs_backtest.py) feed the Gate-2 demotion signal and the underperformer first step",
-   "n_needed": 1,
-   "pass_rule": "1 complete shadow package(s), each clearing every checklist item",
-   "recommended_fix": "enabled: false \u2014 nothing runs it; retire the strategy block or re-roster it with a fresh contract",
-   "started": "2026-05-24",
-   "verifies": "shadow MECHANICS: the signal fires, the package is complete (side, entry, real SL and TP), and every rostered account sizes it and records it DRY"
   },
   {
    "account": "bybit_1",
@@ -1905,28 +1949,6 @@
    "recommended_fix": "on no account roster \u2014 nothing runs it; retire the strategy block or re-roster it with a fresh contract",
    "started": "2026-07-07",
    "verifies": "shadow MECHANICS: the signal fires, the package is complete (side, entry, real SL and TP), and every rostered account sizes it and records it DRY"
-  },
-  {
-   "account": "bybit_1",
-   "checklist": [
-    "signal_fired",
-    "order_size_side",
-    "bracket_real_at_venue",
-    "management_no_fault",
-    "exit_journaled",
-    "fill_and_fees"
-   ],
-   "design": "mechanical",
-   "fail_rule": "the most recent graded trade is a mechanical fault (a checklist item fails, or a reconciler / watchdog / orphan close) -> fix, then re-soak",
-   "id": "SOAK-stage1-bybit_1-e4_oi_shock_1h",
-   "kind": "stage1",
-   "leg": "e4_oi_shock_1h",
-   "metric": "clean closed trades on bybit_1/e4_oi_shock_1h (each = one entry + one journaled exit: tp, sl or the e4_time_stop_24h strategy close)",
-   "monitoring": "ONGOING, not soak exit criteria: realized cost vs the Stage-0 model (R3, scripts/ops/r3_cost_fidelity.py), live-vs-backtest (scripts/research/live_vs_backtest.py), and the OI feed's freshness (scripts/ops/oi_feed_freshness.py) feed the Gate-2 demotion signal",
-   "n_needed": 1,
-   "pass_rule": "1 clean trade(s) since the last mechanical fault, each clearing every checklist item",
-   "started": "2026-10-30",
-   "verifies": "live MECHANICS: an E4 OI event at a 1h cutoff fires the signal, the market order is placed with the right size and side, the frozen 1.5 / 3.0 ATR14 SL and TP rest at the venue, the 24-bar time stop closes it if neither is hit, the exit is journaled with a reason, and the fill and fees are recorded"
   }
  ]
 }

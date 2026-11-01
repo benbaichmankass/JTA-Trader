@@ -170,8 +170,12 @@ def test_every_enabled_leg_now_routes_except_turtle_soup():
     # 54 -> 55 on 2026-10-30: e4_oi_shock_1h (E4-DEMO-LEG). Correctly UNROUTED, like claude_desk: an
     # open-interest EVENT rule with no harness-family params; its Stage 0 is the event replay
     # (scripts/research/desk_event_entry_replay.py, PR #21720), not this matrix.
-    assert len(legs) == 55
-    assert unrouted == ["claude_desk", "e4_oi_shock_1h", "turtle_soup"]
+    # 55 -> 56 on 2026-11-01: ml_entry (ML-ENTRY-LIVE-ADAPTER, #22079). Correctly UNROUTED, like e4_oi_shock_1h:
+    # a pooled ML decision model with no harness-family params; its Stage 0 is the ML replay
+    # (scripts/research/ml_decision_entry.py, RQ-20261101-c692-01 / -06), not this matrix.
+    # 56 -> 57 on 2026-11-01: ml_entry_v2 (bybit_1 testing leg), unrouted for the same reason as ml_entry.
+    assert len(legs) == 57
+    assert unrouted == ["claude_desk", "e4_oi_shock_1h", "ml_entry", "ml_entry_v2", "turtle_soup"]
 
 
 # --------------------------------------------------------------------------

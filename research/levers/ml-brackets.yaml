@@ -27,3 +27,11 @@ levers:
         shape: flat
         note: the per-decision features add ~0 over a fixed bracket
       shape: flat
+declared:
+  # AUTHOR-OWNED. BRACKETS lever manifest, lane ML-RECIPE, 2026-11-01. The ENTRY plan (research/levers/ml-entry.yaml declared.ranked_levers)
+  # carries the ranking; the bracket levers are tested by RQ-20261101-b601-01 on the frozen entries.
+  levers:
+  - {lever: sl_atr, range: '1.5, 2, 3', hypothesis: 'the live SL 2 is near the optimum', unit: RQ-20261101-b601-01}
+  - {lever: tp_atr, range: '3, 4, 6', hypothesis: 'TP 4 beats the live TP 3 (dev +0.0055, held-out +0.0071; held-out n 10,641 vs 11,240)', unit: RQ-20261101-b601-01}
+  - {lever: learned_cell_choice, range: 'learned vs fixed', hypothesis: 'a per-decision cell choice adds nothing over the best fixed cell (c692-02: +0.0143 vs +0.0144)', unit: RQ-20261101-c692-02}
+  - {lever: time_stop_horizon_h, range: '12, 24, 48', hypothesis: 'unknown', unit: RQ-20261101-b603-01}
