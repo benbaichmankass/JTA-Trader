@@ -158,6 +158,37 @@ def scheduled_slot_skip(name: str, symbol: Any, order_package_id: Any, prior: Di
     return None
 
 
+#: Events a closed market never silences: a venue / journal mismatch is real whatever the session.
+CLOSED_MARKET_EXEMPT = frozenset({"mechanics", "daily_floor", JUDGEMENT_EVENT, CADENCE_EVENT})
+
+
+def closed_market_event_skip(name: str, symbol: Any, order_package_id: Any, prior: Dict[str, Any],
+                             ctx: Optional[Dict[str, Any]], now: datetime, tf: int) -> Optional[Dict[str, Any]]:
+    """The skip record for an EVENT trigger on a closed market with no new closed bar, else None.
+
+    LTR-PACKET-FIXES F (2026-11-01): on Sunday, pkg-92d1 (USO) was re-raised hourly on Friday's bars. The
+    per-bar cooldown keys on the WALL-CLOCK bar (``bar_start(now)``), which advances every hour while the
+    market is shut, and a review answers only its one primary trigger, so momentum_flip was reviewed at
+    14:38Z and structure_break on the same 2026-10-30T19:00Z bar fell due at 15:00Z. The rule is the
+    TRIGGER-FIRST one the scheduled slots already follow: no new closed bar, no new event. Skipped only when
+    the market is closed AND the package was reviewed after its newest closed data bar ended (path history;
+    with no history, any review at all, since the price cannot have moved). Never reviewed: fires once.
+    ``mechanics`` and the scheduled slots (handled by ``scheduled_slot_skip``) never come through here."""
+    if name in CLOSED_MARKET_EXEMPT or prior.get("last") is None:
+        return None
+    is_open, cls, why = package_market_state(symbol, now)
+    if is_open:
+        return None
+    pts = _history_points(ctx)
+    newest_end = (pts[-1][0] + timedelta(seconds=tf)) if pts else None
+    if newest_end is not None and prior["last"] < newest_end:
+        return None  # a bar closed after the last review (e.g. the session's final bar): it is new
+    seen = (f"no closed bar since the last review ({prior['last'].isoformat()}; newest bar "
+            f"{pts[-1][0].isoformat() if pts else 'unread'})")
+    return {"order_package_id": order_package_id, "event": name, "symbol": symbol, "asset_class": cls,
+            "state": SKIPPED_CLOSED, "reason": f"{why}; {seen}"}
+
+
 def judgement_cadence_event(prior: Dict[str, Any], cfg: Dict[str, Any], now: datetime,
                             tf: int, row: Optional[Dict[str, Any]] = None,
                             ctx: Optional[Dict[str, Any]] = None,
@@ -990,6 +1021,10 @@ def compute_due(rows: List[Dict[str, Any]], reviews: List[Dict[str, Any]],
                 if _mechanics_fired(prior, VENUE_LEVEL, venue_sig):
                     continue
             elif (name, _lvl(level)) in prior["fired"]:
+                continue
+            cskip = closed_market_event_skip(name, row.get("symbol"), pkg, prior, (market or {}).get(pkg), now, tf)
+            if cskip is not None:
+                skipped_slots.append(dict(cskip, slot=str(level)))
                 continue
             if in_cooldown and name not in exempt and name != "daily_floor":
                 continue
