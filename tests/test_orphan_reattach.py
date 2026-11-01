@@ -58,6 +58,15 @@ def _trade_row(db: Database, trade_id: int) -> dict:
         conn.close()
 
 
+def _origin_fill(db: Database, opid: str, account_id: str, symbol: str, direction: str, entry: float,
+                 size: float, strategy: str) -> None:
+    """The orphan account's ORIGINAL fill in the package (since closed, e.g. falsely flat-reconciled).
+    GLD-ORPHAN-5209: the matcher now requires the orphan's account to have FILLED in the candidate."""
+    _insert_trade(db.db_path, timestamp="2026-06-13T00:00:00Z", symbol=symbol, direction=direction,
+                  entry_price=entry, position_size=size, status="closed", is_backtest=0, is_demo=0,
+                  strategy_name=strategy, setup_type=strategy, account_id=account_id, order_package_id=opid)
+
+
 def _pkg_row(db: Database, opid: str) -> dict:
     conn = sqlite3.connect(db.db_path)
     conn.row_factory = sqlite3.Row
@@ -79,6 +88,7 @@ def test_reattaches_orphan_to_originating_strategy(tmp_path: Path):
         status="closed", close_reason="reconciler",
         created_at=_FRESH,
     )
+    _origin_fill(db, 'op-mhg', 'ib_paper', 'MHG', 'long', 6.4, 3.0, 'mhg_pullback_1d')
 
     tid = _adopt_orphan_position(
         db=db, account_id="ib_paper", symbol="MHG", direction="long",
@@ -105,6 +115,7 @@ def test_direction_normalised_buy_matches_long(tmp_path: Path):
         symbol="BTCUSDT", direction="buy", entry=80000.0, sl=79000.0, tp=82000.0,
         status="closed", created_at=_FRESH,
     )
+    _origin_fill(db, 'op-buy', 'bybit_2', 'BTCUSDT', 'long', 80000.0, 0.01, 'trend_donchian')
     tid = _adopt_orphan_position(
         db=db, account_id="bybit_2", symbol="BTCUSDT", direction="long",
         size=0.01, entry_price=80050.0,  # within 2% of 80000
@@ -143,6 +154,7 @@ def test_self_heal_reattaches_existing_orphan_adopt_row(tmp_path: Path):
         symbol="MHG", direction="long", entry=6.40, sl=6.05, tp=7.03,
         status="closed", created_at=_FRESH,
     )
+    _origin_fill(db, 'op-mhg', 'ib_paper', 'MHG', 'long', 6.4, 3.0, 'mhg_pullback_1d')
     summary: dict = {}
     _reattach_adopted_orphans(db, summary)
 
@@ -208,6 +220,7 @@ def test_recovered_branch_paper_account_stamps_paper_and_links_package(tmp_path:
         symbol="MHG", direction="long", entry=6.40, sl=6.05, tp=7.03,
         status="closed", created_at=_FRESH,
     )
+    _origin_fill(db, 'op-mhg', 'ib_paper', 'MHG', 'long', 6.4, 3.0, 'mhg_pullback_1d')
     tid = _adopt_orphan_position(
         db=db, account_id="ib_paper", symbol="MHG", direction="long",
         size=3.0, entry_price=6.40,
@@ -231,6 +244,7 @@ def test_recovered_branch_real_money_account_stamps_real_and_links_package(tmp_p
         symbol="BTCUSDT", direction="long", entry=80000.0, sl=79000.0, tp=82000.0,
         status="closed", created_at=_FRESH,
     )
+    _origin_fill(db, 'op-btc', 'bybit_2', 'BTCUSDT', 'long', 80000.0, 0.01, 'trend_donchian')
     tid = _adopt_orphan_position(
         db=db, account_id="bybit_2", symbol="BTCUSDT", direction="long",
         size=0.01, entry_price=80050.0,
@@ -284,3 +298,49 @@ def test_wrong_direction_does_not_match(tmp_path: Path):
         size=3.0, entry_price=6.40,
     )
     assert _trade_row(db, tid)["strategy_name"] == "orphan_adopt"
+
+
+def test_a_package_where_this_account_did_not_fill_is_never_the_owner(tmp_path: Path):
+    """GLD-ORPHAN-5209: the newest price-matching package is SKIPPED when the orphan's account has no fill in it
+    (its row was rejected); the older package this account actually filled in is the owner."""
+    db = _db(tmp_path)
+    old_ts = (datetime.now(timezone.utc) - timedelta(days=2)).isoformat()
+    _insert_package(db.db_path, order_package_id="pkg-true", strategy_name="gld_pullback_1h", symbol="GLD",
+                    direction="long", entry=419.72, sl=416.09, tp=461.27, status="closed", created_at=old_ts)
+    _origin_fill(db, "pkg-true", "alpaca_paper", "GLD", "long", 419.72, 39.0, "gld_pullback_1h")
+    _insert_package(db.db_path, order_package_id="pkg-false", strategy_name="gld_pullback_1h", symbol="GLD",
+                    direction="long", entry=419.77, sl=414.54, tp=461.33, status="open", created_at=_FRESH)
+    _insert_trade(db.db_path, timestamp="2026-06-14T00:00:00Z", symbol="GLD", direction="long", entry_price=419.77,
+                  position_size=159.0, status="rejected", is_backtest=0, is_demo=1, strategy_name="gld_pullback_1h",
+                  setup_type="gld_pullback_1h", account_id="alpaca_paper", order_package_id="pkg-false")
+    tid = _adopt_orphan_position(db=db, account_id="alpaca_paper", symbol="GLD", direction="long",
+                                 size=39.0, entry_price=419.51)
+    t = _trade_row(db, tid)
+    assert t["order_package_id"] == "pkg-true" and t["stop_loss"] == 416.09
+
+
+def test_no_filled_candidate_for_this_account_is_a_named_refusal_not_no_candidate(tmp_path: Path):
+    from src.runtime.order_monitor import _recover_orphan_attribution
+    db = _db(tmp_path)
+    _insert_package(db.db_path, order_package_id="op-x", strategy_name="mhg_pullback_1d", symbol="MHG",
+                    direction="long", entry=6.40, sl=6.05, tp=7.03, status="closed", created_at=_FRESH)
+    _origin_fill(db, "op-x", "ib_live", "MHG", "long", 6.40, 3.0, "mhg_pullback_1d")   # ANOTHER account filled
+    a = _recover_orphan_attribution(db=db, symbol="MHG", direction="long", entry_price=6.40, account_id="ib_paper")
+    assert a.package is None and a.refused and a.detail.startswith("no_account_fill")
+    tid = _adopt_orphan_position(db=db, account_id="ib_paper", symbol="MHG", direction="long",
+                                 size=3.0, entry_price=6.40)
+    assert _trade_row(db, tid)["strategy_name"] == "orphan_adopt"                       # bare, never flattened
+
+
+def test_a_venue_bracket_that_disagrees_refuses_and_one_that_agrees_attributes(tmp_path: Path):
+    from src.runtime.order_monitor import _recover_orphan_attribution
+    db = _db(tmp_path)
+    _insert_package(db.db_path, order_package_id="op-mhg", strategy_name="mhg_pullback_1d", symbol="MHG",
+                    direction="long", entry=6.40, sl=6.05, tp=7.03, status="closed", created_at=_FRESH)
+    _origin_fill(db, "op-mhg", "ib_paper", "MHG", "long", 6.40, 3.0, "mhg_pullback_1d")
+    kw = dict(db=db, symbol="MHG", direction="long", entry_price=6.40, account_id="ib_paper")
+    bad = _recover_orphan_attribution(**kw, venue_sl=5.90, venue_tp=7.03)
+    assert bad.refused and bad.detail.startswith("bracket_mismatch")
+    ok = _recover_orphan_attribution(**kw, venue_sl=6.05, venue_tp=7.03)
+    assert ok.package is not None and ok.package["order_package_id"] == "op-mhg"
+    assert _recover_orphan_attribution(**kw).package is not None                          # bracket unread: account check only

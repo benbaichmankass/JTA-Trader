@@ -361,8 +361,13 @@ def test_adopt_still_attributes_a_supported_position(tmp_path):
     """The control — without it, a gate that refused EVERYTHING would pass the
     test above and look correct."""
     db = _db(tmp_path)
-    _seed_candidate(db, "trend_donchian_eth", "ETHUSDT")
+    opid = _seed_candidate(db, "trend_donchian_eth", "ETHUSDT")
     _seed_history(db, "trend_donchian_eth", "ETHUSDT", [17.08, 25.0, 37.76])
+    _insert_trade(  # bybit_1's own fill in the candidate (GLD-ORPHAN-5209: the matcher requires it)
+        db.db_path, timestamp="2026-09-09T00:00:00Z", symbol="ETHUSDT", direction="long", entry_price=2500.0,
+        position_size=25.0, status="closed", is_backtest=0, is_demo=1, strategy_name="trend_donchian_eth",
+        setup_type="trend_donchian_eth", account_id="bybit_1", order_package_id=opid,
+    )
 
     tid = _adopt_orphan_position(
         db=db, account_id="bybit_1", symbol="ETHUSDT", direction="long",
