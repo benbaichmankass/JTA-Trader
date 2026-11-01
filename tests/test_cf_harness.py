@@ -34,8 +34,8 @@ def test_default_run_is_byte_identical_to_pre_change_output(tmp_path):
 
 
 def test_cf_only_adds_the_cf_key_and_every_row_matches_the_schema(tmp_path):
-    rows = [json.loads(l) for l in _run(tmp_path, "--cf").read_text().splitlines()]
-    gold = [json.loads(l) for l in GOLDEN.read_text().splitlines()]
+    rows = [json.loads(ln) for ln in _run(tmp_path, "--cf").read_text().splitlines()]
+    gold = [json.loads(ln) for ln in GOLDEN.read_text().splitlines()]
     assert len(rows) == len(gold) == 41
     for r, g in zip(rows, gold):
         assert {k: v for k, v in r.items() if k != "cf"} == g
@@ -61,7 +61,7 @@ def test_ungradable_rows_are_recorded_not_dropped():
 
 def test_cf_summary_none_without_cf_and_counts_ungraded(tmp_path):
     assert ch.cf_summary([{"net_r": 1.0}]) is None
-    rows = [json.loads(l) for l in _run(tmp_path, "--cf").read_text().splitlines()]
+    rows = [json.loads(ln) for ln in _run(tmp_path, "--cf").read_text().splitlines()]
     rows.append({"net_r": 0.0, "cf": {"status": "could_not_grade", "reason": "no_bars"}})
     s = ch.cf_summary(rows)
     assert (s["n_rows"], s["n_graded"], s["n_could_not_grade"]) == (42, 41, 1)
