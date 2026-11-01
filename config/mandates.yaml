@@ -329,7 +329,24 @@ mandates:
     direction: add_risk
     granted_by: operator (Ben)
     granted_at: '2026-09-24'
-    amended_at: '2026-10-15'
+    amended_at: '2026-11-01'
+    # AMENDED 2026-11-01 (lane PROMOTION-NO-SOAK, dispatched by Manager Session 2026-11-01a; Tier 3, landing HELD for the
+    # operator's final yes). The operator's directive is the grant, VERBATIM (chat, ~07:55Z): "I also want us to, in general,
+    # we need to sort of update the process for promotion. Like, not everything really needs to be soaked, because if the
+    # whole idea is that we're basing the decisions off of the quality of the testing, and we're not using the soaking for
+    # performance, which we're not, and we shouldn't be, then, like, we don't need to prove everything on, a mechanical
+    # soak. If it's not using a new training mechanism, then there's no reason, like, if it needs to, it can also be tested
+    # on, one very small trade, just to make sure that everything works end-to-end, and then, it doesn't need to keep on
+    # soaking in paper. If it proved itself on the back test and the mechanics are proven, for that, paper and real money
+    # are the same, so we can do, fake trade on paper money just to test the mechanics and then move it to real money.
+    # There's no reason why we need to, watch it trade on paper first if we're confident enough in the results, and that is
+    # the pipeline here, right? Good testing results, and then we're not, testing things in a real simulation for weeks on
+    # end, because we just don't have that amount of time for the kind of data that we're generating."
+    # Change: bar.mechanics_proven (below). A leg with soak_state.mechanics_proven() true (own passed soak, or another leg on
+    # its registered path+exchange passed; config/mechanics_paths.yaml) is promoted on the Stage-0 record alone, no soak
+    # Operator confirmation of the reading, 2026-11-01 ~08:00Z (relayed by Manager Session 2026-11-01a), verbatim: "Yes, that is the correct interpretation." (so "training mechanism" = execution mechanism).
+    # contract. Any other leg still needs bar.soak_passed. Unchanged: Stage-0 bar, holdout, cost-stack, 25% cap, prop superset,
+    # mirror equality, human merge, derisk mandates. The grant is the operator's; whether it is in force is the operator's yes.
     amendment_source: >-
       MD-PROMOTE-S1-S2-SOAK-AMEND, proposed by lane SOAK-REDEFINE and granted by
       the operator via popup in manager session_01VduHYzdaXe27wTDBLSu8ao,
@@ -474,8 +491,9 @@ mandates:
       Stage-2 account AND to its mirror -- Stage 2 is one stage, and the mirror
       carries the identical roster.
     never: >-
-      Never a leg whose Stage-1 soak contract SOAK-stage1-<account>-<leg> in
-      docs/claude/work/SOAKS.json is not `passed` (n_needed <= 2 clean trades,
+      Never a leg whose mechanics are not proven (bar.mechanics_proven: its own Stage-1 soak contract SOAK-stage1-<account>-<leg> in
+      docs/claude/work/SOAKS.json reads `passed`, or soak_state.mechanics_proven() is true for it -- OPERATING-PLAN § 2)
+      -- formerly: a Stage-1 soak contract that is not `passed` (n_needed <= 2 clean trades,
       each clearing the mechanical checklist; a `prop_live` source counts).
       Never while `blocked_until`
       stands. Never onto an account whose account_class is not `real_money`.
@@ -514,6 +532,8 @@ mandates:
       # mechanical SOAKS.json result, and clause 3 reads the venue's measured
       # cost for the leg's symbol. Neither changes the Stage-0 bar above.
       soak_passed: true
+      # 2026-11-01 (PROMOTION-NO-SOAK): soak_passed is satisfied by mechanics_proven (see amended_at above).
+      mechanics_proven: true
       cost_basis: venue_symbol
       # OPERATOR DECISION 2026-10-16 (popup "Require holdout", relayed by Manager
       # Session 2026-10-16 session_01VduHYzdaXe27wTDBLSu8ao; verbatim on checklist
