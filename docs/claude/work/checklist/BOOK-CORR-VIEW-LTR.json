@@ -1,0 +1,21 @@
+{
+  "id": "BOOK-CORR-VIEW-LTR",
+  "title": "Live-review packet has no cross-package correlation view: four open bybit_1 shorts (BTC, ETH, SOL, ADA) read as four independent decisions, one crypto-beta bet",
+  "phase": "build",
+  "state": "queued",
+  "owner": "manager",
+  "lane": null,
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [],
+  "blocked_on": [],
+  "note": "Filed 2026-11-01 by LTR-PACKET-FIXES (E). MEASURED 2026-11-01 ~14:32Z: bybit_1 held four open shorts in BTCUSDT/ETHUSDT/SOLUSDT/ADAUSDT (packets pkg-4e74f4bdc6d44735, pkg-dc7c0c141d2c42c9, pkg-f76bb92289d143e5, pkg-bba44210885c4180 on live-review/rows a72036811). What exists (searched src/ scripts/ for 'correlat'): src/runtime/portfolio_conflicts.py grades correlated OPPOSITION only (opposite sides), not same-direction concentration; src/runtime/allocator_corr.py computes correlation-aware exposure (pure, observe-only) but only at allocator decision time and nothing in the packet calls it; the packet's context.correlated_open_packages is a same-direction id list and context_v3.book a symbol/direction/open_r list, neither carries a measured correlation or a combined exposure. Build: a packet block (or book-level view) that feeds the held book through allocator_corr (measured return correlation, combined same-direction risk in R and in $ per account), unmeasured pairs named, never assumed. Re-entry test: a packet for any of the four shorts names the other three with a measured correlation and the combined open risk.",
+  "updated_at": "2026-11-01T15:24:44Z",
+  "updated_by": "session_01AFoLuKrtjxkEjpGuVNPAMz",
+  "roadmap": [
+    "L-ATM"
+  ],
+  "_seq": 879
+}

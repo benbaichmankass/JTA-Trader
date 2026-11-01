@@ -104,6 +104,7 @@ def collect(wanted: Optional[List[str]] = None, *, max_pages: int = 3, diag: Cal
     (telemetry + positions + prop tickets); paging is only to fetch an open package's sl/tp/meta/trade rows.
     """
     s = Snapshot()
+    s.reads["generator"] = generator_state()
 
     def read(name: str, fn: Callable[[str], Any], path: str) -> None:
         try:
@@ -148,6 +149,27 @@ def collect(wanted: Optional[List[str]] = None, *, max_pages: int = 3, diag: Cal
         if open_ids <= have or len(rows) < 1000:
             break
     return s
+
+
+def generator_state() -> dict:
+    """Is THIS generator the one on ``origin/main``? (LTR-PACKET-FIXES C, 2026-11-01.)
+
+    The 14:32Z lane built v2 packets (no context_v3, symbol-matched IB orders) because it ran the generator from a
+    checkout of the ``live-review/rows`` data branch, whose ``scripts/`` froze at 2026-10-25. A packet now says
+    which generator built it: ``current`` / ``stale_vs_origin_main`` / ``could_not_look`` (never a gate)."""
+    here = Path(__file__).resolve()
+    try:
+        rel = here.relative_to(REPO).as_posix()
+        main_txt = subprocess.run(["git", "-C", str(REPO), "show", f"origin/main:{rel}"], capture_output=True,
+                                  text=True, timeout=30)
+        head = subprocess.run(["git", "-C", str(REPO), "rev-parse", "--short=10", "HEAD"], capture_output=True,
+                              text=True, timeout=30).stdout.strip() or None
+    except (OSError, ValueError, subprocess.SubprocessError) as exc:
+        return {"state": "could_not_look", "reason": type(exc).__name__}
+    if main_txt.returncode != 0:
+        return {"state": "could_not_look", "head": head, "reason": "origin/main not readable in this checkout"}
+    same = main_txt.stdout == here.read_text()
+    return {"state": "current" if same else "stale_vs_origin_main", "head": head}
 
 
 def open_package_ids(s: Snapshot) -> List[str]:
@@ -203,15 +225,39 @@ def _close(a: Optional[float], b: Optional[float]) -> bool:
 
 # ----------------------------------------------------------------------------- venue reads
 
-def _venue_exit_prices(s: Snapshot, account: str, exchange: str, symbol: str, direction: str,
-                       sl_order_id: Optional[str] = None, tp_order_id: Optional[str] = None) -> dict:
-    """Resting SL/TP and position presence for one account on one symbol, or could-not-look.
+def _own_or_ambiguous(own: List[dict], cands: List[dict], siblings: int) -> Tuple[List[dict], bool]:
+    """This package's own venue orders, or (``[]``, True) when they cannot be told apart from a sibling's.
 
-    Bybit ``position_model: slices`` accounts hold SEVERAL qty-scoped Partial legs per symbol (one per package),
-    so "the" symbol SL does not exist. Legs are matched by the trade's own ``sl_order_id`` / ``tp_order_id``
-    (PI-20261031-TD4QC5GP-0004: last-leg-wins read a SIBLING package's bracket as this package's and filed a
-    false mismatch). With several legs and no id match the level is ``None`` and ``ambiguous`` is set; a mismatch
-    is never asserted from a leg that is not this package's."""
+    ``own`` = the orders provably this package's (its order ids / OCA group). With none, the symbol's orders
+    stand in ONLY when no other open package holds the symbol on this account (the pre-id venues, e.g. legacy
+    IB group names). LTR-PACKET-FIXES A (2026-11-01): ib_paper held two MGC packages and symbol-level,
+    last-order-wins matching read pkg-d76f's STP/LMT as pkg-011a's and filed a false mismatch."""
+    if own:
+        return own, False
+    if siblings <= 0:
+        return cands, False
+    return [], bool(cands)
+
+
+def _venue_exit_prices(s: Snapshot, account: str, exchange: str, symbol: str, direction: str,
+                       sl_order_id: Optional[str] = None, tp_order_id: Optional[str] = None, *,
+                       trade_id: Any = None, broker_order_id: Optional[str] = None, qty: Optional[float] = None,
+                       siblings: int = 0) -> dict:
+    """Resting SL/TP and position presence for ONE PACKAGE's leg on one account, or could-not-look.
+
+    Orders are matched to the package by its own identifiers, never by symbol alone, because one account can
+    hold several packages on one symbol:
+
+    * bybit -- the trade's ``sl_order_id`` / ``tp_order_id`` (``position_model: slices`` accounts hold one
+      qty-scoped Partial leg per package; PI-20261031-TD4QC5GP-0004);
+    * interactive_brokers -- the keyed OCA group ``oca-protect-t<trade id>`` (``IBClient.place_protective``;
+      the journal carries no IB sl/tp order ids);
+    * alpaca -- the order or its ``parent_id`` equal to the trade's ``broker_order_id`` / sl / tp ids (a bracket
+      stop leg's parent is the entry), else the one exit-side leg whose qty equals the trade's
+      (``alpaca_amend.read_trade_legs`` scopes the same way).
+
+    ``siblings`` = other open packages on this account + symbol. With siblings and no id match the level is
+    ``None`` and ``ambiguous`` is set: a mismatch is never asserted from a leg that is not this package's."""
     exit_side = "buy" if direction == "short" else "sell"
     src = {"bybit": "bybit_orders", "alpaca": "alpaca_orders", "interactive_brokers": "ib_orders"}.get(exchange)
     if src is None:
@@ -224,6 +270,8 @@ def _venue_exit_prices(s: Snapshot, account: str, exchange: str, symbol: str, di
         return {"state": "could_not_look", "why": f"{account} {src} read_state={acct and acct.get('read_state')}"}
     sl = tp = None
     pos = None
+    amb_sl = amb_tp = False
+    match = "symbol"
     if exchange == "bybit":
         res = acct.get("result") or {}
         pos = next((p for p in res.get("positions", []) if p.get("symbol") == symbol and (p.get("size") or 0) > 0), None)
@@ -241,7 +289,7 @@ def _venue_exit_prices(s: Snapshot, account: str, exchange: str, symbol: str, di
             hit = [o for o in legs if oid and o.get("order_id") == oid]
             if hit:
                 return _f(hit[0].get("trigger_price")), False
-            if len(legs) == 1 and not oid:
+            if len(legs) == 1 and not oid and siblings <= 0:
                 return _f(legs[0].get("trigger_price")), False
             if not legs:
                 return None, False
@@ -249,34 +297,59 @@ def _venue_exit_prices(s: Snapshot, account: str, exchange: str, symbol: str, di
             return None, True
         sl, amb_sl = _pick(sl_legs, sl_order_id)
         tp, amb_tp = _pick(tp_legs, tp_order_id)
-        ambiguous = amb_sl or amb_tp
-        if not sl_legs and sl is None and pos:
+        match = "order_id" if (sl_order_id or tp_order_id) else "symbol"
+        if not sl_legs and sl is None and pos and siblings <= 0:
             sl = _f(pos.get("stop_loss"))
-        if not tp_legs and tp is None and pos:
+        if not tp_legs and tp is None and pos and siblings <= 0:
             tp = _f(pos.get("take_profit"))
         pos_present = pos is not None
     elif exchange == "alpaca":
         res = acct.get("result") or {}
         pos = next((p for p in res.get("positions", []) if p.get("symbol") == symbol), None)
-        for o in res.get("orders", []):
-            if o.get("symbol") != symbol or str(o.get("side")) != exit_side and o.get("order_class") != "bracket":
-                continue
-            if _f(o.get("stop_price")) is not None and o.get("order_type") in ("stop", "stop_limit"):
-                sl = _f(o["stop_price"])
-            elif o.get("order_type") == "limit" and _f(o.get("limit_price")) is not None:
-                tp = _f(o["limit_price"])
+        cands = [o for o in res.get("orders", []) if o.get("symbol") == symbol
+                 and (str(o.get("side")) == exit_side or o.get("order_class") == "bracket")]
+        ids = {str(i) for i in (broker_order_id, sl_order_id, tp_order_id) if i}
+        own = [o for o in cands if ids and (str(o.get("order_id")) in ids or str(o.get("parent_id")) in ids)]
+        # an OCO / bracket pair: the sibling leg of an own leg (one shares the other's id as parent) is own too
+        own_ids = {str(o.get("order_id")) for o in own} | {str(o.get("parent_id")) for o in own if o.get("parent_id")}
+        own += [o for o in cands if o not in own and (str(o.get("parent_id")) in own_ids or str(o.get("order_id")) in own_ids)]
+        stops = [o for o in cands if _f(o.get("stop_price")) is not None and o.get("order_type") in ("stop", "stop_limit")]
+        lims = [o for o in cands if o.get("order_type") == "limit" and _f(o.get("limit_price")) is not None]
+
+        def _leg(legs):
+            mine = [o for o in legs if o in own]
+            if mine:
+                return mine[-1], False, "order_id"
+            if qty:
+                q = [o for o in legs if _f(o.get("qty")) is not None and abs(_f(o.get("qty")) - float(qty)) < 1e-9]
+                if len(q) == 1:
+                    return q[0], False, "qty"
+            got, amb = _own_or_ambiguous([], legs, siblings)
+            return (got[-1] if got else None), amb, "symbol"
+        so, amb_sl, m1 = _leg(stops)
+        to, amb_tp, m2 = _leg(lims)
+        sl = _f(so["stop_price"]) if so else None
+        tp = _f(to["limit_price"]) if to else None
+        match = m1 if m1 == m2 else f"sl:{m1},tp:{m2}"
         pos_present = pos is not None or sl is not None or tp is not None
     else:  # interactive_brokers
-        for o in acct.get("orders") or []:
-            if o.get("symbol") != symbol or str(o.get("action", "")).lower() != exit_side:
-                continue
-            if o.get("order_type") == "STP":
-                sl = _f(o.get("aux_price"))
-            elif o.get("order_type") == "LMT":
-                tp = _f(o.get("lmt_price"))
-        pos_present = sl is not None or tp is not None
+        cands = [o for o in acct.get("orders") or []
+                 if o.get("symbol") == symbol and str(o.get("action", "")).lower() == exit_side]
+        group = f"oca-protect-t{trade_id}" if trade_id not in (None, "") else None
+        own = [o for o in cands if group and o.get("oca_group") == group]
+        legs, amb = _own_or_ambiguous(own, cands, siblings)
+        if not own and legs and len({o.get("oca_group") for o in legs if o.get("oca_group")}) > 1:
+            legs, amb = [], True  # several protective groups and none is this trade's keyed group: do not guess
+        match = "oca_group" if own else "symbol"
+        stp = [o for o in legs if o.get("order_type") == "STP"]
+        lmt = [o for o in legs if o.get("order_type") == "LMT"]
+        sl = _f(stp[0].get("aux_price")) if len(stp) == 1 else None
+        tp = _f(lmt[0].get("lmt_price")) if len(lmt) == 1 else None
+        amb_sl = amb or len(stp) > 1
+        amb_tp = amb or len(lmt) > 1
+        pos_present = sl is not None or tp is not None or bool(cands)
     return {"state": "read", "position": pos_present, "sl": sl, "tp": tp, "src": src,
-            "ambiguous": bool(exchange == "bybit" and ambiguous)}
+            "ambiguous": bool(amb_sl or amb_tp), "matched_by": match}
 
 
 # ----------------------------------------------------------------------------- candles: ATR and regime
@@ -538,6 +611,42 @@ def _phone_refusal(s: Snapshot, account: str, ticket: dict) -> dict:
             "refusal_reason_state": "read" if reason else "not_in_phone_events"}
 
 
+def _siblings(s: Snapshot, pkg: Optional[str], account: str, symbol: str) -> List[str]:
+    """OTHER open packages on this account + symbol (journal trade rows and filled prop tickets)."""
+    out = {t.get("order_package_id") for t in s.trades
+           if t.get("status") == "open" and t.get("account_id") == account and t.get("symbol") == symbol}
+    out |= {t.get("order_package_id") for t in (s.get("prop_tickets") or {}).get("tickets", [])
+            if t.get("status") == "filled" and t.get("account_id") == account and t.get("symbol") == symbol}
+    return sorted(o for o in out if o and o != pkg)
+
+
+#: The live-review executor matrix (scripts/ops/live_review_apply.py): ACTION_PATHS holds the trade actions;
+#: the SL tighten dispatches separately (``run()``: bybit / alpaca / prop_vm / phone; ``other`` -- IB -- has none).
+TIGHTEN_CLASSES = ("bybit", "alpaca", "prop_vm", "phone")
+
+
+def apply_paths(exchange: Optional[str]) -> Optional[List[str]]:
+    """The actions live_review_apply.py can execute on a NON-prop account of this exchange (None = could not look)."""
+    try:
+        sys.path.insert(0, str(REPO))
+        from scripts.ops.live_review_apply import ACTION_PATHS
+    except Exception:  # allow-silent: the caller records could_not_look
+        return None
+    cls = {"bybit": "bybit", "alpaca": "alpaca"}.get(str(exchange or "").lower(), "other")
+    return sorted(set(ACTION_PATHS.get(cls, ())) | ({"tighten"} if cls in TIGHTEN_CLASSES else set()))
+
+
+def prop_apply_paths(account_id: str) -> Optional[List[str]]:
+    """The actions live_review_apply.py can execute on a prop account (phone / prop_vm), None = could not look."""
+    try:
+        sys.path.insert(0, str(REPO))
+        from scripts.ops import live_review_apply as lra
+        cls = lra.account_class(account_id, _accounts_cfg().get(account_id) or {})
+    except Exception:  # allow-silent: the caller records could_not_look
+        return None
+    return sorted(set(lra.ACTION_PATHS.get(cls, ())) | ({"tighten"} if cls in TIGHTEN_CLASSES else set()))
+
+
 def _mechanics(s: Snapshot, view: dict, accts: List[dict], sl: Optional[float], tp: Optional[float],
                direction: str, symbol: str) -> Tuple[dict, List[dict]]:
     """Venue vs journal vs package for every account; one verdict plus the evidence, and the per-account reads."""
@@ -546,6 +655,8 @@ def _mechanics(s: Snapshot, view: dict, accts: List[dict], sl: Optional[float], 
     bounds: List[dict] = []
     p = view["package"]
     pkg_status = p.get("status") if p else None
+    pkg_id = (p or {}).get("order_package_id") or next(
+        (x.get("order_package_id") for x in view["trades"] + view["telemetry"] + view["tickets"] if x.get("order_package_id")), None)
     for a in accts:
         aid, cls, ex = a["account_id"], a["account_class"], a.get("exchange")
         item = {"account_id": aid, "account_class": cls, "read": None,
@@ -566,6 +677,9 @@ def _mechanics(s: Snapshot, view: dict, accts: List[dict], sl: Optional[float], 
                 if pos is None:
                     looked_fail += 1
                     ev.append(f"{aid}: ticket filled, positions field absent in status")
+                elif pos and pkg_status == "closed" and _siblings(s, pkg_id, aid, symbol):
+                    ev.append(f"{aid}: package {pkg_status}; the open {symbol} position belongs to sibling package(s) "
+                              f"{', '.join(_siblings(s, pkg_id, aid, symbol))}, not read as an orphan")
                 elif pos and pkg_status == "closed":
                     bad += 1
                     ev.append(f"{aid}: ticket {tk['status']}/{tk.get('close_reason')} and package {pkg_status}, but status still reports {len(pos)} open {symbol} {direction}")
@@ -576,14 +690,21 @@ def _mechanics(s: Snapshot, view: dict, accts: List[dict], sl: Optional[float], 
                 item["evidence"] = (f"amend {ref['amend_id']} refused, fails {ref.get('fails')}; reason: "
                                     f"{ref.get('refusal_reason') or 'not readable from a session (phone events do not carry it)'}")
             else:
-                item["evidence"] = ("no apply path for this action until LTR-8; positions "
+                paths = prop_apply_paths(aid)
+                item["apply_paths"] = paths
+                item["evidence"] = ((f"apply paths {', '.join(paths)}" if paths else
+                                     "apply paths could_not_look" if paths is None else "no apply path")
+                                    + " (live_review_apply.py); positions "
                                     + ("unreadable (status carries no positions field)" if pos is None else f"read: {len(pos)} open"))
             if ref:
                 item["phone_amend"] = ref
         else:
+            tr = a.get("trade") or {}
+            sibs = _siblings(s, pkg_id, aid, symbol)
+            v = _venue_exit_prices(s, aid, ex or "", symbol, direction, tr.get("sl_order_id"), tr.get("tp_order_id"),
+                                   trade_id=tr.get("id"), broker_order_id=tr.get("broker_order_id"),
+                                   qty=_f(tr.get("position_size")), siblings=len(sibs))
             tr = a.get("trade")
-            v = _venue_exit_prices(s, aid, ex or "", symbol, direction,
-                                   (tr or {}).get("sl_order_id"), (tr or {}).get("tp_order_id"))
             trade_open = (tr or {}).get("status") == "open" or (a.get("telemetry") or {}).get("lifecycle") == "open"
             if v["state"] != "read":
                 looked_fail += 1
@@ -603,15 +724,24 @@ def _mechanics(s: Snapshot, view: dict, accts: List[dict], sl: Optional[float], 
                         ev.append(f"{aid}: several {symbol} bracket legs rest at the venue and none matches this package's order ids; levels not compared")
                     elif tp is not None and v["tp"] is None:
                         ev.append(f"{aid}: no resting TP found at the venue read")
+                elif v["position"] and sibs:
+                    ev.append(f"{aid}: venue holds {symbol} for sibling package(s) {', '.join(sibs)}; this package's trade row is not open")
                 elif v["position"]:
                     bad += 1
                     ev.append(f"{aid}: venue still holds {symbol} but its trade row is not open (orphan or missed close)")
-                item["evidence"] = f"{v['src']}: SL {v['sl']} / TP {v['tp']}, position {v['position']}"
-                item["read_if_amend"] = "would_apply" if ex == "bybit" and v["position"] else "unknown"
-                if item["read_if_amend"] == "would_apply":
-                    item["evidence"] += "; would_apply = the shared amend reaches this leg, NOT that its RiskManager approved (LTR-6 gap)"
+                item["evidence"] = (f"{v['src']}: SL {v['sl']} / TP {v['tp']}, position {v['position']}, "
+                                    f"matched by {v.get('matched_by')}"
+                                    + (f", {len(sibs)} sibling package(s) on {symbol}" if sibs else ""))
+                paths = apply_paths(ex)
+                item["apply_paths"] = paths
+                item["read_if_amend"] = ("would_apply" if paths and v["position"] and not v.get("ambiguous") else "unknown")
+                if paths is None:
+                    item["evidence"] += "; apply paths could_not_look (live_review_apply.py did not import)"
+                elif not paths:
+                    item["evidence"] += f"; no apply path for {ex} (live_review_apply.py ACTION_PATHS / tighten dispatch: none)"
                 else:
-                    item["evidence"] += "; no apply path for this exchange yet (LTR-9 / none)"
+                    item["evidence"] += (f"; apply paths {', '.join(paths)}; would_apply = an executor reaches this leg, "
+                                         "NOT that its RiskManager approved (LTR-6 gap)")
         bounds.append(item)
     verdict = "mismatch" if bad else ("could_not_look" if looked_fail and not accts else "match")
     if not bad and looked_fail:
@@ -644,6 +774,11 @@ def _calendar(symbol: str, cutoff: datetime) -> dict:
 
 def _price(leg: str, side: str, tel: dict, atr_mult: Optional[float], review_id: str, write: bool,
            tables_out: Optional[Dict[str, dict]] = None) -> Tuple[Optional[dict], Optional[str]]:
+    if not (REPO / "comms" / "strategy_evidence" / f"{leg}.json").exists():
+        # LTR-PACKET-FIXES B (2026-11-01): trend_donchian_1h traded on bybit_1 with no record and the packet carried
+        # a bare FileNotFoundError traceback. A missing record is a named state, and a ladder finding.
+        return None, (f"{EVIDENCE_MISSING}: no committed Stage-0 evidence record comms/strategy_evidence/{leg}.json "
+                      "(build: scripts/ops/build_strategy_evidence.py --strategy <leg>)")
     if tel.get("open_r") is None or tel.get("peak_r") is None or atr_mult is None:
         return None, "open_r/peak_r/atr_stop_mult not available for this package"
     cmd = [sys.executable, str(REPO / "scripts/research/live_review_outcomes.py"), "--leg", leg, "--side", side,
@@ -669,6 +804,18 @@ def _price(leg: str, side: str, tel: dict, atr_mult: Optional[float], review_id:
             "corpus_trades": (table.get("population") or {}).get("corpus_trades"),
             "candles": table.get("candles"), "n_floor": table["n_floor"], "options": table["options"],
             "population": table["population"], "read_state": table["read_state"], "source": rel}, None
+
+
+EVIDENCE_MISSING = "evidence_missing"
+
+
+def priced_state(priced: Optional[dict], why: Optional[str], asked: bool) -> str:
+    """The read state beside the nullable ``priced_options``: priced / evidence_missing / could_not_price / not_priced."""
+    if priced is not None:
+        return "priced"
+    if not asked:
+        return "not_priced"
+    return EVIDENCE_MISSING if (why or "").startswith(EVIDENCE_MISSING) else "could_not_price"
 
 
 DESK_LEG = "claude_desk"
@@ -750,6 +897,8 @@ def build_packet(pkg: str, s: Snapshot, now: datetime, *, write_tables: bool = F
     accts = _accounts_for(view, cfg)
     for e in s.errors:
         miss(f"read:{e}", s.errors[e])
+    if (s.get("generator") or {}).get("state") == "stale_vs_origin_main":
+        miss("generator", "this generator differs from origin/main's; rebuild the packet from a main checkout")
 
     # --- state / features (telemetry first; the public positions r-block for a real-money row it lacks)
     pos_r = {}
@@ -794,7 +943,7 @@ def build_packet(pkg: str, s: Snapshot, now: datetime, *, write_tables: bool = F
         mech["evidence"] = f"order_packages status={p.get('status')} close_reason={p.get('close_reason')}; " + mech["evidence"]
 
     review_id = f"LR-{now.strftime('%Y%m%dT%H%MZ')}-{pkg}"
-    priced = None
+    priced = why = None
     if price and direction:
         priced, why = _price(leg, direction, {"open_r": open_r, "peak_r": peak_r, "bars_held": bars_held},
                              _f(meta.get("atr_stop_mult")), review_id, write_tables, tables_out)
@@ -853,6 +1002,7 @@ def build_packet(pkg: str, s: Snapshot, now: datetime, *, write_tables: bool = F
         "features_at_review": {"atr_now_over_entry": atr_ratio, "bars_since_peak": tel.get("bars_since_peak") if tel else pos_r.get("barsSincePeak"),
                                "giveback_r": giveback, "open_r": open_r, "peak_r": peak_r,
                                "r_to_stop": tv("r_to_stop", "rToStop"), "r_to_target": tv("r_to_target", "rToTarget")},
+        "generator": s.get("generator") or {"state": "not_checked"},
         "info_cutoff_at": cutoff,
         "leg": leg,
         "mechanics": mech,
@@ -860,6 +1010,7 @@ def build_packet(pkg: str, s: Snapshot, now: datetime, *, write_tables: bool = F
         "order_package_id": pkg,
         "packet_version": PACKET_VERSION,
         "priced_options": priced,
+        "priced_options_state": priced_state(priced, why, bool(price and direction)),
         "regime": {"adx_now": adx, "atr_now_over_entry": atr_ratio, "cell_entry": cell_entry, "cell_now": None, "trend_now": trend},
         "review_id": review_id,
         "state": {"atr_now_over_entry": atr_ratio, "bars_held": bars_held, "giveback_r": giveback, "open_r": open_r,

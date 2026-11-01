@@ -390,3 +390,149 @@ def test_sibling_slice_legs_are_not_read_as_this_packages_bracket():
     assert (v["sl"], v["tp"], v["ambiguous"]) == (1.2521, 1.2421, False)
     v = L._venue_exit_prices(s, "bybit_1", "bybit", "XRPUSDT", "short", None, None)
     assert (v["sl"], v["tp"], v["ambiguous"]) == (None, None, True)
+
+
+# --------------------------------------------------------------------------- LTR-PACKET-FIXES (2026-11-01)
+# Two packages on ONE symbol in ONE account: each packet must read its OWN orders, never the sibling's.
+# Measured case: ib_paper held MGC pkg-011a (qty 14, oca-protect-t6673, STP 4160.3 / LMT 3767.0) and pkg-d76f
+# (qty 1, oca-protect-t6803, STP 3938.1 / LMT 3596.2); symbol matching read pkg-d76f's levels as pkg-011a's.
+
+A_PKG, B_PKG = "pkg-aaaa000000000001", "pkg-bbbb000000000002"
+
+
+def _two_pkg_snap(**reads):
+    s = _snap(**reads)
+    for pid, sl, tp, tid, q in ((A_PKG, "4160.32857143", "3766.9909", 6673, 14.0),
+                                (B_PKG, "3938.07142857", "3596.1613", 6803, 1.0)):
+        s.packages[pid] = {"order_package_id": pid, "strategy_name": "mgc_pullback_1d", "symbol": "MGC",
+                           "direction": "short", "entry": "4000", "sl": sl, "tp": tp, "status": "open", "meta": "{}"}
+        s.trades.append({"id": tid, "order_package_id": pid, "account_id": "ib_paper", "status": "open",
+                         "symbol": "MGC", "position_size": q, "account_class": "paper"})
+    return s
+
+
+def _ib_two():
+    return {"accounts": [{"account_id": "ib_paper", "read_state": "orders_read", "orders": [
+        {"symbol": "MGC", "action": "BUY", "order_type": "STP", "aux_price": 4160.3, "oca_group": "oca-protect-t6673"},
+        {"symbol": "MGC", "action": "BUY", "order_type": "LMT", "lmt_price": 3767.0, "oca_group": "oca-protect-t6673"},
+        {"symbol": "MGC", "action": "BUY", "order_type": "STP", "aux_price": 3938.1, "oca_group": "oca-protect-t6803"},
+        {"symbol": "MGC", "action": "BUY", "order_type": "LMT", "lmt_price": 3596.2, "oca_group": "oca-protect-t6803"}]}]}
+
+
+@pytest.mark.parametrize("pkg", [A_PKG, B_PKG])
+def test_ib_two_packages_on_one_symbol_each_read_their_own_oca_group(pkg):
+    p = _build(pkg, _two_pkg_snap(ib_orders=_ib_two()), cfg={"ib_paper": {"exchange": "interactive_brokers",
+                                                                           "account_class": "paper"}})
+    assert p["mechanics"]["verdict"] == "match", p["mechanics"]
+    assert "matched by oca_group" in p["account_bounds"][0]["evidence"]
+
+
+def test_ib_own_group_off_the_package_is_still_a_mismatch():
+    ib = _ib_two()
+    ib["accounts"][0]["orders"][0]["aux_price"] = 4300.0  # pkg A's OWN stop moved: a real mismatch must not hide
+    p = _build(A_PKG, _two_pkg_snap(ib_orders=ib), cfg={"ib_paper": {"exchange": "interactive_brokers"}})
+    assert p["mechanics"]["verdict"] == "mismatch" and "venue SL 4300.0" in p["mechanics"]["evidence"]
+
+
+def test_ib_siblings_without_keyed_groups_are_ambiguous_never_a_mismatch():
+    ib = _ib_two()
+    for o in ib["accounts"][0]["orders"]:
+        o["oca_group"] = "oca-protect-" + o["oca_group"][-4:]  # legacy reqId groups: no trade key
+    s = _two_pkg_snap(ib_orders=ib)
+    v = L._venue_exit_prices(s, "ib_paper", "interactive_brokers", "MGC", "short", trade_id=6673, siblings=1)
+    assert (v["sl"], v["tp"], v["ambiguous"], v["position"]) == (None, None, True, True)
+    p = _build(A_PKG, s, cfg={"ib_paper": {"exchange": "interactive_brokers"}})
+    assert p["mechanics"]["verdict"] == "match" and "venue SL" not in p["mechanics"]["evidence"]
+
+
+def test_ib_single_package_legacy_group_still_reads_by_symbol():
+    ib = {"accounts": [{"account_id": "ib_paper", "read_state": "orders_read", "orders": [
+        {"symbol": "MGC", "action": "BUY", "order_type": "STP", "aux_price": 4160.3, "oca_group": "oca-protect-5"},
+        {"symbol": "MGC", "action": "BUY", "order_type": "LMT", "lmt_price": 3767.0, "oca_group": "oca-protect-5"}]}]}
+    v = L._venue_exit_prices(_snap(ib_orders=ib), "ib_paper", "interactive_brokers", "MGC", "short", trade_id=6673)
+    assert (v["sl"], v["tp"], v["ambiguous"]) == (4160.3, 3767.0, False)
+
+
+def _alpaca_two():
+    return {"accounts": [{"account_id": "alpaca_paper", "read_state": "orders_read", "result": {
+        "positions": [{"symbol": "USO", "side": "buy", "qty": 400.0}], "orders": [
+            {"symbol": "USO", "order_id": "tp-a", "order_type": "limit", "order_class": "bracket", "side": "sell",
+             "qty": 301.0, "limit_price": 180.28, "parent_id": None},
+            {"symbol": "USO", "order_id": "sl-a", "order_type": "stop", "order_class": "bracket", "side": "sell",
+             "qty": 301.0, "stop_price": 167.93, "parent_id": "entry-a"},
+            {"symbol": "USO", "order_id": "tp-b", "order_type": "limit", "order_class": "bracket", "side": "sell",
+             "qty": 99.0, "limit_price": 190.0, "parent_id": None},
+            {"symbol": "USO", "order_id": "sl-b", "order_type": "stop", "order_class": "bracket", "side": "sell",
+             "qty": 99.0, "stop_price": 160.0, "parent_id": "entry-b"}]}}]}
+
+
+def test_alpaca_two_packages_on_one_symbol_read_by_parent_id_and_qty():
+    s = _snap(alpaca_orders=_alpaca_two())
+    a = L._venue_exit_prices(s, "alpaca_paper", "alpaca", "USO", "long", broker_order_id="entry-a", qty=301.0, siblings=1)
+    b = L._venue_exit_prices(s, "alpaca_paper", "alpaca", "USO", "long", broker_order_id="entry-b", qty=99.0, siblings=1)
+    assert (a["sl"], a["tp"], a["ambiguous"]) == (167.93, 180.28, False)
+    assert (b["sl"], b["tp"], b["ambiguous"]) == (160.0, 190.0, False)
+
+
+def test_alpaca_siblings_with_no_id_or_qty_link_are_ambiguous():
+    s = _snap(alpaca_orders=_alpaca_two())
+    v = L._venue_exit_prices(s, "alpaca_paper", "alpaca", "USO", "long", siblings=1)
+    assert (v["sl"], v["tp"], v["ambiguous"]) == (None, None, True)
+
+
+def test_bybit_sole_leg_is_not_taken_as_ours_when_a_sibling_holds_the_symbol():
+    acct = {"accounts": [{"account_id": "bybit_1", "read_state": "orders_read", "result": {
+        "positions": [{"symbol": "XRPUSDT", "side": "Sell", "size": 3.0, "stop_loss": 1.3}],
+        "orders": [{"symbol": "XRPUSDT", "order_id": "sib-sl", "stop_order_type": "PartialStopLoss", "trigger_price": 1.257}]}}]}
+    v = L._venue_exit_prices(_snap(bybit_orders=acct), "bybit_1", "bybit", "XRPUSDT", "short", siblings=1)
+    assert (v["sl"], v["tp"], v["ambiguous"]) == (None, None, True)
+    v = L._venue_exit_prices(_snap(bybit_orders=acct), "bybit_1", "bybit", "XRPUSDT", "short")
+    assert (v["sl"], v["ambiguous"]) == (1.257, False)
+
+
+def test_a_closed_package_is_not_an_orphan_when_a_sibling_package_holds_the_symbol():
+    s = _two_pkg_snap(ib_orders=_ib_two())
+    s.packages[A_PKG]["status"] = "closed"
+    s.trades[0]["status"] = "closed"
+    p = _build(A_PKG, s, cfg={"ib_paper": {"exchange": "interactive_brokers"}})
+    assert p["mechanics"]["verdict"] == "match", p["mechanics"]
+    assert "sibling package(s) " + B_PKG in p["mechanics"]["evidence"]
+
+
+def test_account_bounds_name_the_real_apply_paths():
+    assert L.apply_paths("alpaca") == ["close", "move_tp", "tighten"]
+    assert L.apply_paths("bybit") == ["close", "move_tp", "reduce", "tighten", "widen_sl"]
+    assert L.apply_paths("interactive_brokers") == []
+    s = _snap(alpaca_orders=_alpaca_two())
+    s.packages[A_PKG] = {"order_package_id": A_PKG, "strategy_name": "uso_trend_1h", "symbol": "USO", "direction": "long",
+                         "entry": "170", "sl": "167.93", "tp": "180.28", "status": "open", "meta": "{}"}
+    s.trades = [{"id": 1, "order_package_id": A_PKG, "account_id": "alpaca_paper", "status": "open", "symbol": "USO",
+                 "broker_order_id": "entry-a", "position_size": 301.0, "account_class": "paper"}]
+    b = _build(A_PKG, s, cfg={"alpaca_paper": {"exchange": "alpaca", "account_class": "paper"}})["account_bounds"][0]
+    assert b["apply_paths"] == ["close", "move_tp", "tighten"] and b["read_if_amend"] == "would_apply"
+    assert "no apply path" not in b["evidence"]
+
+
+def test_tighten_classes_match_the_apply_dispatch():
+    """TIGHTEN_CLASSES mirrors live_review_apply.run()'s tighten dispatch; a new branch there must be added here."""
+    src = (REPO / "scripts/ops/live_review_apply.py").read_text()
+    dispatched = set(re.findall(r'elif cls == "(\w+)":\n\s+res = _exec_\w+\((?:db|leg)', src))
+    dispatched |= {"phone"} if re.search(r'else:  # phone\n\s+res = _exec_phone\(', src) else set()
+    assert dispatched == set(L.TIGHTEN_CLASSES)
+    assert 'if v.ok and (cls == "other"' in src  # IB / other: the tighten is refused, so it is not a path
+
+
+def test_missing_evidence_record_is_a_named_state_not_a_traceback():
+    priced, why = L._price("no_such_leg_xyz", "short", {"open_r": 0.1, "peak_r": 0.2}, 2.0, "LR-x", False)
+    assert priced is None and why.startswith("evidence_missing")
+    assert L.priced_state(None, why, True) == "evidence_missing"
+    assert L.priced_state(None, "live_review_outcomes failed: boom", True) == "could_not_price"
+    assert L.priced_state(None, None, False) == "not_priced"
+
+
+def test_packet_carries_the_generator_state():
+    p = _build(A_PKG, _two_pkg_snap(ib_orders=_ib_two(), generator={"state": "stale_vs_origin_main", "head": "x"}),
+               cfg={"ib_paper": {"exchange": "interactive_brokers"}})
+    assert p["generator"]["state"] == "stale_vs_origin_main"
+    assert any(m["field"] == "generator" for m in p["missing_inputs"])
+    assert L.generator_state()["state"] in ("current", "stale_vs_origin_main", "could_not_look")

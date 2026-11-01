@@ -1,0 +1,21 @@
+{
+  "id": "STAGE0-ROUTE-E4-DESK",
+  "title": "Give e4_oi_shock_1h and claude_desk a Stage-0 evidence route (gap: no harness route), due 2026-11-05",
+  "phase": "build",
+  "state": "queued",
+  "owner": "manager",
+  "lane": null,
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [],
+  "blocked_on": [],
+  "note": "Filed 2026-11-01 by LTR-PACKET-FIXES on the manager's disposition of ROSTER-EVIDENCE-GAPS-1101. DUE 2026-11-05. Gap: no harness route. scripts/ops/build_strategy_evidence.py --strategy e4_oi_shock_1h --dry-run reads harness=None / no_harness; claude_desk is a discretionary desk leg with no per-leg record and no harness family. Both are rostered testing legs (e4 on bybit_1; claude_desk on bybit_1, ib_paper, alpaca_paper) trading with no committed comms/strategy_evidence/<leg>.json. The live-review packet reports them as priced_options_state=evidence_missing. Done when each has a committed record from a named harness, net of the full cost stack, against a rule registered before the run (a fail is fine: a failing record makes the leg an iteration subject, never a retirement by count).",
+  "updated_at": "2026-11-01T15:56:38Z",
+  "updated_by": "session_01AFoLuKrtjxkEjpGuVNPAMz",
+  "roadmap": [
+    "L-LADDER"
+  ],
+  "_seq": 884
+}
