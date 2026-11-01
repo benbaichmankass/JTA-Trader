@@ -455,7 +455,7 @@ def stack_unit(tab, out, n_jobs, cache: Path) -> dict:
         print("level", name, round(float(np.mean([x["mean"] for x in per[name]])), 4), flush=True)
     res = {"unit": "RQ-20261101-b608-01", "sealed_windows_read": 0, "levels": {}}
     res["levels"]["base"] = {"arm_mean": float(np.mean([x["mean"] for x in per["base"]])), "n": [x["n"] for x in per["base"]]}
-    prev_name, prev_mean, winner = "base", res["levels"]["base"]["arm_mean"], "base"
+    prev_mean, winner = res["levels"]["base"]["arm_mean"], "base"
     stopped = False
     for name in ("S1_R2", "S2_R2_gate", "S3_R2_gate_24"):
         j = judge(per["base"], per[name])
@@ -477,6 +477,108 @@ def stack_unit(tab, out, n_jobs, cache: Path) -> dict:
     res["traded5_mean_by_level"] = tr5
     res["result"] = f"winning stack: {winner}"
     pd.to_pickle({n: trades[n][0] for n in trades}, out / "stack_trades_seed7.pkl")
+    return res
+
+
+# ----------------------------------------------------------------------------------------------- b609: the ONE W1 read of the winning v2 stack
+W1 = ("2026-10-01", "2026-10-31")
+
+
+def build_full_cache(dev_streams: Path, fwd_streams: Path, oct_dir: Path, out: Path):
+    import ml_entry_families as F
+    cache = out / "klines_full"
+    cache.mkdir(parents=True, exist_ok=True)
+    syms = []
+    for sym in E.universe():
+        frames = [pd.read_pickle(d / st / f"{sym}.pkl") for d, st in ((dev_streams, "klines12"), (fwd_streams, "klines12"), (oct_dir, "klines12d"))
+                  if (d / st / f"{sym}.pkl").exists()]
+        if not frames:
+            continue
+        k = pd.concat(frames, ignore_index=True)
+        k["ts"] = F._ts(k["open_time"])
+        k = k.sort_values("ts").drop_duplicates("ts")
+        for c in ("open", "high", "low", "close", "volume"):
+            k[c] = k[c].astype(float)
+        k = k[~((k["volume"] == 0) & (k["high"] == k["low"])) & (k.ts >= pd.Timestamp(E.START, tz="UTC"))]
+        k[["ts", "open", "high", "low", "close", "volume"]].reset_index(drop=True).to_pickle(cache / f"{sym}.pkl")
+        syms.append(sym)
+    return cache, syms
+
+
+def _baselines(test, taken):
+    al = E.sequential_baseline(test, lambda r: "long")
+    ash = E.sequential_baseline(test, lambda r: "short")
+    p_take = min(1.0, len(taken) / max(1, len(al)))
+    p_long = float((taken.side == "long").mean()) if len(taken) else 0.5
+    rng = np.random.default_rng(E.SEED)
+    draws = []
+    for _ in range(E.RANDOM_DRAWS):
+        rd = E.sequential_baseline(test, lambda r: (("long" if r.random() < p_long else "short") if r.random() < p_take else None), rng)
+        draws.append(float(rd.net_r.mean()) if len(rd) else 0.0)
+    return {"no_trade": 0.0, "always_long": {"n": len(al), "mean": float(al.net_r.mean())}, "always_short": {"n": len(ash), "mean": float(ash.net_r.mean())},
+            "random_matched": {"p_take": p_take, "mean_of_means": float(np.mean(draws)), "p95": float(np.percentile(draws, 95))}}
+
+
+def w1_unit(dev_streams, fwd_streams, oct_dir, out, n_jobs, stack_result: Path, reader: str, dry: bool, ledger: Path) -> dict:
+    import holdout_lock
+    import lightgbm as lgb
+    sres = json.loads(stack_result.read_text())
+    stack = sres["winning_stack"]
+    if stack == "base":
+        return {"unit": "RQ-20261101-b609-01", "result": "not run: b608-01 found no winning stack", "sealed_windows_read": 0}
+    use_gate, use_bracket = stack in ("S2_R2_gate", "S3_R2_gate_24"), stack == "S3_R2_gate_24"
+    cache, syms = build_full_cache(dev_streams, fwd_streams, oct_dir, out)
+    full = E.build_table(cache, syms)
+    full["ts"] = pd.to_datetime(full["ts"], utc=True)
+    hs, w0, w1e = pd.Timestamp(E.HOLDOUT_START, tz="UTC"), pd.Timestamp(W1[0], tz="UTC"), pd.Timestamp(W1[1], tz="UTC") + pd.Timedelta(days=1)
+    dev = full[full.ts < hs].reset_index(drop=True)
+    # ---- every number below is fixed on DEV rows only
+    r2 = R.ens_member(dev, "R2", "S0", E.SEED, out, n_jobs)
+    oos = np.concatenate([np.maximum(r2[f"pl{k}"], r2[f"ps{k}"]) for k in range(8)])
+    shares = []
+    for sd in SEEDS:
+        b = R.ens_member(dev, "R0", "S0", sd, out, n_jobs)
+        shares.append(float(np.concatenate([np.maximum(b[f"pl{k}"], b[f"ps{k}"]) > TAU for k in range(8)]).mean()))
+    share = float(np.mean(shares))
+    tau_v2 = float(np.quantile(oos, 1 - share))
+    k_cost = float(np.nanmedian(((dev.cost_long + dev.cost_short) / 2 * dev.atr_pct).to_numpy()))
+    fixed = {"stack": stack, "tau_v2": tau_v2, "v1_dev_share": share, "gate": GATE_V2 if use_gate else None, "k_cost_x_atr": k_cost,
+             "bracket": [2.0, 4.0 if use_bracket else 3.0], "r2_params": {k: v for k, v in {**R.BASE, **R.RECIPES["R2"]}.items() if k != "n_jobs"},
+             "seed": E.SEED, "train_end_exclusive_target": str(w0 - pd.Timedelta(days=E.EMBARGO_DAYS) - pd.Timedelta(hours=E.HORIZON_H + 1))}
+    if dry:
+        return {"unit": "RQ-20261101-b609-01", "dry_run": True, "fixed_on_dev": fixed, "full_rows": len(full), "w1_rows_in_memory_unread": int((full.ts >= w0).sum()),
+                "result": "dry run: nothing claimed, no W1 outcome used"}
+    # ---- the claim comes BEFORE any W1 outcome is touched
+    mid = f"ENTRY-v2-{stack}"
+    claim = holdout_lock.claim_read(mid, W1[0], W1[1], "RQ-20261101-b609-01", reader, ledger)
+    train = E.purge_train(full[full.ts < w0], w0)
+    test = full[(full.ts >= w0) & (full.ts < w1e)].reset_index(drop=True)
+    pl, ps = R.make_fit("R2", "T0", E.SEED, [])(train, test, E.FEATURES, n_jobs)
+    if use_gate:
+        est = k_cost / test["atr_pct"].to_numpy()
+        pl[est > GATE_V2] = ABSTAIN
+        ps[est > GATE_V2] = ABSTAIN
+    score_frame = relabel_table(test, cache, 2.0, 4.0) if use_bracket else test
+    taken = E.policy(score_frame, pl, ps, tau_v2)
+    m = E.summarize(taken)
+    slice5 = taken[taken.symbol.isin(TRADED)]
+    # frozen v1 reference: second claim, the committed booster that is live
+    claim1 = holdout_lock.claim_read("ENTRY-v1-frozen-ref-b609", W1[0], W1[1], "RQ-20261101-b609-01-v1ref", reader, ledger)
+    art = Path(__file__).resolve().parents[2] / "comms/research/RQ-20261101-c692-06/41324826751/model"
+    v1p = {side: lgb.Booster(model_file=str(art / f"entry_{side}.txt")).predict(test[E.FEATURES]) for side in ("long", "short")}
+    taken1 = E.policy(test, v1p["long"], v1p["short"], TAU)
+    m1 = E.summarize(taken1)
+    a_ok = m["n"] >= E.N_FLOOR and m["n_symbols"] >= E.SYMBOL_FLOOR
+    b_ok = m["mean_net_r"] is not None and m["mean_net_r"] >= 0
+    c_ok = m["mean_net_r"] is not None and m1["mean_net_r"] is not None and m["mean_net_r"] >= m1["mean_net_r"]
+    verdict = "indeterminate" if not a_ok else ("pass" if (b_ok and c_ok) else "fail")
+    res = {"unit": "RQ-20261101-b609-01", "read_state": "read", "verdict": verdict, "conditions": {"a_n_and_symbols": a_ok, "b_mean_ge_0": b_ok, "c_ge_v1_reference": c_ok},
+           "stack": stack, "fixed_on_dev": fixed, "window": list(W1), "n_train": len(train), "n_test_rows": len(test), "test_symbols": int(test.symbol.nunique()),
+           "v2": m, "v2_traded5": E.summarize(slice5), "v1_reference": m1, "v1_reference_traded5": E.summarize(taken1[taken1.symbol.isin(TRADED)]),
+           "baselines_v2_mechanics": _baselines(score_frame, taken), "holdout_lock": claim, "holdout_lock_v1ref": claim1,
+           "variants_on_window": claim1["variants_on_window"], "result": f"{verdict}: v2 {m['mean_net_r']:+.4f} (n={m['n']}) vs v1 reference {m1['mean_net_r']:+.4f} (n={m1['n']})"}
+    taken.to_pickle(out / "w1_trades_v2.pkl")
+    taken1.to_pickle(out / "w1_trades_v1ref.pkl")
     return res
 
 
@@ -588,9 +690,15 @@ def build_base_table(streams: Path, out: Path) -> Path:
 
 def main() -> int:
     ap = argparse.ArgumentParser()
-    ap.add_argument("cmd", nargs="?", choices=["run", "build-table"])
+    ap.add_argument("cmd", nargs="?", choices=["run", "build-table", "w1-read"])
     ap.add_argument("--streams", default="")
     ap.add_argument("--unit", default="")
+    ap.add_argument("--dev-streams", default="")
+    ap.add_argument("--fwd-streams", default="")
+    ap.add_argument("--oct-dir", default="")
+    ap.add_argument("--stack-result", default="")
+    ap.add_argument("--reader", default="lane ML-RECIPE")
+    ap.add_argument("--dry", action="store_true")
     ap.add_argument("--table", default="")
     ap.add_argument("--out", default="/tmp/ml_entry_levers")
     ap.add_argument("--n-jobs", type=int, default=4)
@@ -603,6 +711,12 @@ def main() -> int:
     out.mkdir(parents=True, exist_ok=True)
     if a.cmd == "build-table":
         print(build_base_table(Path(a.streams), out))
+        return 0
+    if a.cmd == "w1-read":
+        import holdout_lock
+        r = w1_unit(Path(a.dev_streams), Path(a.fwd_streams), Path(a.oct_dir), out, a.n_jobs, Path(a.stack_result), a.reader, a.dry, holdout_lock.LEDGER)
+        (out / ("w1_dry.json" if a.dry else "b609_result.json")).write_text(json.dumps(r, indent=1, default=str))
+        print(r["result"])
         return 0
     if a.cmd != "run":
         ap.print_help()
