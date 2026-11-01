@@ -373,3 +373,222 @@ def test_the_records_validator_requires_the_cadence_level():
     assert clr.trigger_problems(row)
     row["trigger"]["level"] = "2026-10-29T10:00:00+00:00"
     assert clr.trigger_problems(row) == []
+
+
+# ================================================================== MD-LTR-BYBIT1-AUTO (account scope)
+#
+# Operator 2026-11-01 ~11:38Z, popup answered verbatim "Auto-apply on bybit_1 (Rec.)": every in-trade call on
+# a bybit_1 package is applied by the VM; real money, mirrors and prop stay advice-only. These tests PROVE the
+# real-money and mirror legs are unchanged (MD-DEMO-FLOOR-BUILD shared_code_rule).
+
+B1 = "MD-LTR-BYBIT1-AUTO"
+
+
+def acct_doc(accounts=("bybit_1",), actions=IN_TRADE_CLASSES, **kw):
+    entry = {"id": "MD-A-AUTO", "kind": am.KIND, "granted_by": "operator",
+             "account_scope": {"accounts": list(accounts), "actions": list(actions)}}
+    entry.update(kw)
+    return {"mandates": [entry], "proposed": []}
+
+
+def test_the_committed_bybit1_grant_is_the_operators_words_bybit1_only_every_action():
+    (m,) = [x for x in REAL["mandates"] if x["id"] == B1]
+    assert m["kind"] == am.KIND and m["granted_by"] and m["granted_at"] == "2026-11-01"
+    assert m["parent"] == "MD-TRADE-DESK"
+    assert '"Auto-apply on bybit_1 (Rec.)"' in m["source"]
+    assert '"Should live-review calls be applied automatically on the paper soak account (bybit_1) only?"' \
+        in " ".join(m["source"].split())
+    assert "package_scope" not in m and m["account_scope"]["accounts"] == ["bybit_1"]
+    assert tuple(m["account_scope"]["actions"]) == IN_TRADE_CLASSES
+    assert [b.split(" ")[0] for b in m["bounds"]] == list(am.BOUNDS)
+    # no calendar expiry (the operator's words name none), no cadence, landing stays a human merge
+    assert not m.get("expires_on") and not m.get("expired_at") and not m.get("review_cadence_minutes")
+    assert not m.get("autoland")
+    assert am.is_auto_mandate(B1, REAL) and am.account_scope(m) == frozenset({"bybit_1"})
+
+
+def test_bybit1_paper_is_scoped_and_no_real_money_mirror_or_prop_account_is():
+    """bybit_1 is the paper demo floor in config/accounts.yaml; every account it could share a package with
+    stays out of scope."""
+    accts = yaml.safe_load((Path(__file__).resolve().parents[1] / "config" / "accounts.yaml").read_text())
+    accts = accts.get("accounts", accts)
+    assert str(accts["bybit_1"].get("account_class")).lower() == "paper"
+    (m,) = [x for x in REAL["mandates"] if x["id"] == B1]
+    for aid, cfg in accts.items():
+        if aid in m["account_scope"]["accounts"]:
+            assert str((cfg or {}).get("account_class")).lower() == "paper", aid
+
+
+@pytest.mark.parametrize("accounts,want", [
+    (["bybit_1"], B1),
+    (["bybit_2", "bybit_portfolio", "bybit_1"], B1),     # shared package: dispatched; the apply acts on bybit_1 only
+    (["bybit_2", "bybit_portfolio"], None),              # real money + mirror: advice-only, unchanged
+    (["breakout_1"], None),                              # prop: advice-only, unchanged
+    (["alpaca_paper"], None),                            # another paper account: not in this grant
+    ([], None),
+    (None, None),                                        # unread accounts: fail closed
+    ("bybit_1", None),                                   # not a list: fail closed
+])
+def test_the_committed_grant_scopes_a_row_by_its_accounts(accounts, want):
+    for action in IN_TRADE_CLASSES:
+        row = {"order_package_id": "pkg-f07b659a7db94e8a", "accounts": accounts, "recommendation": {"action": action}}
+        assert am.exception_for(row, REAL) == want
+    assert am.exception_for({"order_package_id": "pkg-f07b659a7db94e8a", "accounts": ["bybit_1"],
+                             "recommendation": {"action": "hold"}}, REAL) is None
+
+
+def test_malformed_account_scopes_grant_nothing():
+    row = {"order_package_id": "pkg-1", "accounts": ["bybit_1"], "recommendation": {"action": "close"}}
+    assert am.exception_for(row, acct_doc()) == "MD-A-AUTO"
+    assert am.exception_for(row, acct_doc(accounts=("bybit_*",))) is None        # never a pattern
+    assert am.exception_for(row, acct_doc(accounts=())) is None
+    assert am.exception_for(row, acct_doc(actions=())) is None
+    both = acct_doc(package_scope={"order_package_id": "pkg-1", "actions": ["close"]})
+    assert am.exception_for(row, both) is None                                  # both scopes: malformed
+    assert am.exception_for(row, {"mandates": [], "proposed": acct_doc()["mandates"]}) is None
+    assert am.exception_for(row, acct_doc(expired_at="2026-11-01T12:00:00Z")) is None
+    assert am.cadence(acct_doc()) == {}                                         # no package to wake
+
+
+def test_named_scoping_keeps_the_grant_it_was_handed():
+    d2 = {"mandates": doc("pkg-1")["mandates"] + acct_doc()["mandates"], "proposed": []}
+    assert am.named_scoping("MD-A-AUTO", "pkg-1", "close", d2)["id"] == "MD-A-AUTO"
+    assert am.named_scoping("MD-T-AUTO", "pkg-1", "close", d2)["id"] == "MD-T-AUTO"
+    assert am.named_scoping("MD-T-AUTO", "pkg-2", "close", d2) is None
+    assert am.named_scoping("MD-A-AUTO", "pkg-2", "close", d2)["id"] == "MD-A-AUTO"
+    assert am.named_scoping("MD-A-AUTO", "pkg-2", "hold", d2) is None
+
+
+# ------------------------------------------------------------------ watcher + dispatcher
+
+def _arow(rid, accounts, action="close"):
+    return dict(trw.row(rid, action=action), accounts=accounts)
+
+
+@pytest.mark.parametrize("accounts,dispatched", [(["bybit_1"], True), (["bybit_2", "bybit_portfolio"], False)])
+def test_watcher_dispatches_bybit1_rows_and_keeps_real_money_advice_only(tmp_path, monkeypatch, accounts, dispatched):
+    monkeypatch.setattr(am, "load", lambda path=None: REAL)
+    disp = trw.FakeDispatch()
+    w.run_pass(git=trw.FakeGit([]), dispatch=disp, now_fn=lambda: trw.T0, logs=tmp_path)
+    w.run_pass(git=trw.FakeGit([_arow("LR-b", accounts)]), dispatch=disp, now_fn=lambda: trw.T0, logs=tmp_path)
+    (rec,) = trw.log(tmp_path)
+    if dispatched:
+        assert disp.calls == [("LR-b", trw.TIP)] and rec["auto_mandate"] == B1
+    else:
+        assert disp.calls == [] and rec["verdict"] == "advice_only" and "auto_mandate" not in rec
+
+
+def test_dispatcher_real_money_row_stays_advice_only_under_the_bybit1_grant(world, monkeypatch):  # noqa: F811
+    monkeypatch.setattr(am, "load", lambda path=None: REAL)
+    res = d.dispatch(RID, apply=True)             # TABLE_ROW.accounts == [bybit_2, bybit_portfolio]
+    assert res["verdict"] == "advice_only" and world["calls"] == [] and world["pings"] == []
+
+
+def test_dispatcher_hands_a_bybit1_close_over_under_the_bybit1_grant(world, monkeypatch):  # noqa: F811
+    monkeypatch.setattr(am, "load", lambda path=None: REAL)
+    row = copy.deepcopy(TABLE_ROW)
+    row["accounts"] = ["bybit_1"]
+    row["recommendation"] = {"action": "close", "reason": "thesis failed", "evidence_source": "judgement",
+                             "basis": "judgement", "judgement_confidence": 0.7}
+    _set_row(world, row)
+    res = d.dispatch(RID, apply=True)
+    pairs = dict(zip(world["calls"][0][::2], world["calls"][0][1::2]))
+    assert res["verdict"] == "dispatched" and pairs["--action"] == "close" and pairs["--mandate"] == B1
+
+
+# ------------------------------------------------------------------ apply: only the bybit_1 leg moves
+
+ACCTS_B1 = dict(ACCOUNTS, bybit_1={"exchange": "bybit", "mode": "live", "account_class": "paper", "risk": {}})
+
+
+def _b1_run(wired, monkeypatch, legs, *, mdoc=None, state=None, **ikw):  # noqa: F811
+    monkeypatch.setattr(lra, "_get_package", lambda db, pid: dict(db.pkg) if pid == db.pkg["order_package_id"] else None)
+    db = _ApplyDB([dict(_leg(i + 1, a), entry_price=0.2062, take_profit_1=0.1900) for i, a in enumerate(legs)], PKG_A)
+    kw = dict(order_package_id="pkg-P", mandate=B1)
+    kw.update(ikw)
+    st = state if state is not None else {}
+    res = lra.run(_intent(**kw), apply=True, db=db, accounts=ACCTS_B1, strategies=STRATS,
+                  review_cfg={"apply_mode": "apply"}, granted=set(), write_log=False, state=st,
+                  mandates_doc=mdoc if mdoc is not None else REAL)
+    return res, st, db
+
+
+def test_a_tighten_on_a_shared_package_moves_only_the_bybit1_leg(wired, monkeypatch):  # noqa: F811
+    res, st, db = _b1_run(wired, monkeypatch, ["bybit_2", "bybit_portfolio", "bybit_1"])
+    assert res["exit"] == lra.EXIT_OK and res["auto_mandate"] == B1 and res["auto_account_scope"] == ["bybit_1"]
+    assert wired["exec"] == [("bybit", "bybit_1", 0.21)]                     # nothing sent for bybit_2 / mirror
+    assert [a["account_id"] for a in res["accounts"]] == ["bybit_1"]
+    assert res["scope_excluded"] == ["bybit_2", "bybit_portfolio"]
+    assert [t for t, _ in db.trade_writes] == [3]                            # only the bybit_1 trade row
+    assert res["package_sl_moved"] is False and db.package_writes == []      # the shared stop never moves
+    assert wired["pings"] == [("bybit_1", 0.21)] and wired["alerts"] == []
+    assert [a["account_id"] for a in res["writeback"]["accounts_applied"]] == ["bybit_1"]
+
+
+def test_a_bybit1_only_tighten_still_leaves_the_shared_package_stop(wired, monkeypatch):  # noqa: F811
+    res, _, db = _b1_run(wired, monkeypatch, ["bybit_1"])
+    assert wired["exec"] == [("bybit", "bybit_1", 0.21)] and res["scope_excluded"] == []
+    assert res["package_sl_moved"] is False and db.package_writes == []
+
+
+@pytest.mark.parametrize("action,extra", [
+    ("close", {}),
+    ("move_tp", {"new_tp": 0.1950}),
+    ("partial_close", {"size_fraction": 0.5}),
+])
+def test_every_trade_action_reaches_only_the_bybit1_leg(wired, monkeypatch, action, extra):  # noqa: F811
+    sent = []
+    monkeypatch.setattr(lra, "_exec_trade_action",
+                        lambda db, leg, pkg, cls, v, intent: sent.append(leg["account_id"]) or {"result": lra.X_APPLIED})
+    res, _, _ = _b1_run(wired, monkeypatch, ["bybit_2", "bybit_portfolio", "bybit_1"], action=action,
+                        reason="thesis failed", basis=lri.BASIS_JUDGEMENT, confidence=0.7, mandate=B1, **extra)
+    assert sent == ["bybit_1"], [(a["account_id"], a.get("verdict"), a.get("reason")) for a in res["accounts"]]
+    assert res["scope_excluded"] == ["bybit_2", "bybit_portfolio"] and wired["alerts"] == []
+
+
+def test_a_real_money_only_package_is_untouched_by_the_bybit1_grant(wired, monkeypatch):  # noqa: F811
+    res, st, db = _b1_run(wired, monkeypatch, ["bybit_2", "bybit_portfolio"])
+    assert res["exit"] == lra.EXIT_REFUSED and "scopes no open leg" in res["detail"]
+    assert wired["exec"] == [] and wired["pings"] == [] and wired["alerts"] == []
+    assert db.trade_writes == [] and db.package_writes == [] and res.get("accounts") == []
+    assert "auto_review_ids" not in st
+
+
+def test_real_money_and_mirror_behaviour_is_identical_with_and_without_the_bybit1_grant(wired, monkeypatch):  # noqa: F811
+    """The same desk-mandate tighten on a bybit_2 + mirror package, with the committed file (which carries
+    MD-LTR-BYBIT1-AUTO) and with an empty one: identical execution, pings and account reads."""
+    outs = []
+    for mdoc in (REAL, {"mandates": [], "proposed": []}):
+        wired["exec"].clear(), wired["pings"].clear(), wired["alerts"].clear()
+        monkeypatch.setattr(lra, "_get_package", lambda db, pid: dict(db.pkg))
+        db = _ApplyDB([_leg(1, "bybit_2"), _leg(2, "bybit_portfolio")], PKG_A)
+        res = lra.run(_intent(order_package_id="pkg-P"), apply=True, db=db, accounts=ACCTS_B1, strategies=STRATS,
+                      review_cfg={"apply_mode": "apply"}, granted={lri.MANDATE_ID}, write_log=False, state={},
+                      mandates_doc=mdoc)
+        outs.append((list(wired["exec"]), list(wired["pings"]), list(wired["alerts"]),
+                     res["writeback"]["account_reads"], res["package_sl_moved"], db.package_writes))
+    assert outs[0] == outs[1]
+    assert outs[0][0] == [("bybit", "bybit_2", 0.21), ("bybit", "bybit_portfolio", 0.21)]
+
+
+def test_the_bybit1_grant_cannot_be_named_for_a_prop_or_real_money_leg(wired, monkeypatch):  # noqa: F811
+    """Even named explicitly on the command line, the grant reaches no leg outside bybit_1."""
+    wired["tickets"] = [{"account_id": "tradeify_1", "ticket_id": "t1", "sl": 0.22, "meta": None}]
+    res, _, _ = _b1_run(wired, monkeypatch, ["bybit_2"])
+    assert res["exit"] == lra.EXIT_REFUSED and wired["exec"] == [] and wired["alerts"] == []
+
+
+def test_the_bybit1_bounds_still_bind(wired, monkeypatch):  # noqa: F811
+    _, st, _ = _b1_run(wired, monkeypatch, ["bybit_1"])
+    res, _, _ = _b1_run(wired, monkeypatch, ["bybit_1"], state=st)             # same review_id
+    assert res["exit"] == lra.EXIT_REFUSED and "idempotent_per_review_id" in res["detail"]
+    res, _, _ = _b1_run(wired, monkeypatch, ["bybit_1"], action="widen_sl", new_sl=0.2150, review_id="LR-w",
+                        reason="vol", basis=lri.BASIS_JUDGEMENT, confidence=0.6)
+    assert "widen_within_1r" in res["detail"]
+    pkg_no_tp = dict(PKG_A, tp=None)
+    monkeypatch.setattr(lra, "_get_package", lambda db, pid: dict(pkg_no_tp))
+    res = lra.run(_intent(order_package_id="pkg-P", mandate=B1, review_id="LR-t"), apply=True,
+                  db=_ApplyDB([_leg(1, "bybit_1")], pkg_no_tp), accounts=ACCTS_B1, strategies=STRATS,
+                  review_cfg={"apply_mode": "apply"}, granted=set(), write_log=False, state={}, mandates_doc=REAL)
+    assert "both_brackets" in res["detail"]
+    assert len(wired["exec"]) == 1                                             # only the first tighten was sent

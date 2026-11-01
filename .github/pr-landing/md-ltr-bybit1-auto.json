@@ -1,0 +1,7 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "hold_reason": "tier_2_3_needs_approval",
+  "hold_text": "Tier-2 order-path change (the VM rows watcher, live_review_dispatch.py and live_review_apply.py execute live-review calls on the bybit_1 leg under the operator-granted MD-LTR-BYBIT1-AUTO). The manager (Manager Session 2026-11-01a) merges; the lane does not merge.",
+  "why": "Transcribes the operator's MD-LTR-BYBIT1-AUTO grant (popup 2026-11-01 ~11:38Z, verbatim \"Auto-apply on bybit_1 (Rec.)\") into config/mandates.yaml and teaches src/runtime/ltr_auto_mandate.py an account-scoped entry: the apply acts only on the bybit_1 leg; bybit_2, bybit_portfolio, prop and every other account stay advice-only (tests prove it). Revert: delete the entry."
+}

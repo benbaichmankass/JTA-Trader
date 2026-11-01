@@ -1,0 +1,22 @@
+{
+  "id": "MD-LTR-BYBIT1-AUTO",
+  "title": "Operator-granted mandate MD-LTR-BYBIT1-AUTO: every in-trade live-review call on a bybit_1 (paper soak) package is applied automatically by the VM on the bybit_1 leg only; real money, mirrors and prop stay advice-only. Build: mandates.yaml account-scoped entry + ltr_auto_mandate account_scope + apply leg filter",
+  "phase": null,
+  "state": "in_flight",
+  "owner": "manager",
+  "lane": "session_01AFoLuJXXPBMjAsbBHB5bvr",
+  "model": null,
+  "ceiling_usd": 30,
+  "spend_usd": null,
+  "tier": 2,
+  "prs": [],
+  "blocked_on": [],
+  "note": "2026-11-01 lane built the entry + reader + apply leg filter with tests proving bybit_2/mirror/prop unchanged; held PR for the manager's merge. Revert: delete the entry. Open: merged, deployed and observed (first applied bybit_1 call end to end: row -> dispatch -> venue amend/close -> journal close reason).",
+  "updated_at": "2026-11-01T11:49:57Z",
+  "updated_by": "MD-LTR-BYBIT1-AUTO",
+  "due_by": "2026-11-01",
+  "roadmap": [
+    "L-AM-STANDARD"
+  ],
+  "_seq": 876
+}
