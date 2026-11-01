@@ -2,27 +2,21 @@
   "id": "CI-THROUGHPUT-20261029",
   "title": "Cut PR wait time: 32 of the last 50 PR pytest-run runs were CANCELLED (superseded by a new push before finishing) and 3 of 15 guards runs failed on guard rules a local run would have caught. Make lanes (and the manager) run scripts/ci/run_guards.py + the affected tests locally before every push, never push to a PR while its CI runs unless fixing red, batch register commits, and profile the guards job (13 min median exec, the real floor)",
   "phase": null,
-  "state": "landed_unproven",
+  "state": "in_flight",
   "owner": null,
   "lane": "session_01AFoLuMsMKbFUYRD53uEQ9j",
   "model": "sonnet",
   "ceiling_usd": 6,
   "spend_usd": null,
   "tier": 1,
-  "prs": [
-    22067
-  ],
+  "prs": [],
   "blocked_on": [],
-  "note": "Operator 2026-10-29 ~09:55Z verbatim: \"We also seem to be spending an inordinate amount of time waiting for CI checks and for merges ... I thought we had a plan to try and cut that down by like making sure we're only checking what's like what's actually changed and not doing the whole suite for every PR. So I want to check if that was actually implemented.\" MEASURED 09:55Z (GitHub Actions API, last PR runs): CI-DIET + GH-CAPACITY-PR-CI-FANOUT ARE implemented (scripts/ci/pytest_run_scope.py: data mode + affected-tests mode on PRs; landing/merge-slot files excluded). pytest-run PR job: queue median 2.4 / p90 7.1 min, exec median 9.6 / p90 22.8 min (n 25 jobs). guards: queue 2.6 / 6.7, exec 12.8 / 16.2 (n 15). pytest-collect exec 2.5; repo-inventory 0.8. Conclusions over the last 50 PR pytest-run runs: 32 cancelled, 16 success, 2 failure. The loss is churn (re-pushes cancel and restart) and late guard failures, not suite scope. Manager's own register branch (#21147) is a large contributor: ~25 pushes today, each restarting its CI and conflicting with lane row edits. Also an Actions-wide queue (90 runs at 08:17Z) delays system-actions (GH-CAPACITY-INFRA-RUNNER, rank 2). LANDED_UNPROVEN 2026-11-01 (PR 22067). Re-measure 02:13Z-07:28Z, 50 PR runs: pytest-run 45 success/3 cancelled (was 32 cancelled); guards 38 success/8 failure, exec med 14.8/p90 17.3 min. Profile (--all): secret-scan 379s, candle-fixture-variance 265s, attention-watch 58s, collapsed-state 52s, daily-brief 38s. Shipped prepush.py + timing + candle PR-scope. OPEN: secret_scan.py PR-scope is outside TIER1_SURFACE -> needs a hold PR. CLOSING OBSERVATION: >=3 days after merge re-measure the same 50-run stats; predict guards exec median <=10 min (from 14.8) and guard failures <=4 of 50 on lane PRs.",
+  "note": "Operator 2026-10-29 ~09:55Z verbatim: \"We also seem to be spending an inordinate amount of time waiting for CI checks and for merges ... I thought we had a plan to try and cut that down by like making sure we're only checking what's like what's actually changed and not doing the whole suite for every PR. So I want to check if that was actually implemented.\" MEASURED 09:55Z (GitHub Actions API, last PR runs): CI-DIET + GH-CAPACITY-PR-CI-FANOUT ARE implemented (scripts/ci/pytest_run_scope.py: data mode + affected-tests mode on PRs; landing/merge-slot files excluded). pytest-run PR job: queue median 2.4 / p90 7.1 min, exec median 9.6 / p90 22.8 min (n 25 jobs). guards: queue 2.6 / 6.7, exec 12.8 / 16.2 (n 15). pytest-collect exec 2.5; repo-inventory 0.8. Conclusions over the last 50 PR pytest-run runs: 32 cancelled, 16 success, 2 failure. The loss is churn (re-pushes cancel and restart) and late guard failures, not suite scope. Manager's own register branch (#21147) is a large contributor: ~25 pushes today, each restarting its CI and conflicting with lane row edits. Also an Actions-wide queue (90 runs at 08:17Z) delays system-actions (GH-CAPACITY-INFRA-RUNNER, rank 2).",
   "priority_rank": 2,
-  "updated_at": "2026-11-01T08:08:33Z",
-  "updated_by": "session_01AFoLuMsMKbFUYRD53uEQ9j",
+  "updated_at": "2026-11-01T07:45:40Z",
+  "updated_by": "session_01AFoLuJ1apgy8sfngu4WyNH",
   "roadmap": [
     "L-LADDER"
   ],
-  "writeback": {
-    "roadmap": "none: CI tooling, no milestone change",
-    "arch": "none: no architecture change"
-  },
   "_seq": 803
 }
