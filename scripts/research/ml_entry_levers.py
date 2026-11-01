@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """ENTRY lever harness, round 1 (rows ML-LEVER-HARNESS / ML-LEVER-PLAN; units RQ-20261101-b601-01 brackets, -b602-01 selectivity,
--b604-01 calibration, -a508-01 traded slice). DEV FOLDS ONLY: the table is clipped to ts < HOLDOUT_START on load.
+-b604-01 calibration, -b606-01 cost gate, -a508-01 traded slice). DEV FOLDS ONLY: the table is clipped to ts < HOLDOUT_START on load.
 
 Every arm is ONE factor against the frozen v1 base (20 baseline features, baseline LightGBM params, entry tau 0.10, the c692-01
 walk-forward folds, purge and embargo) and is scored with the same one-position-per-symbol policy and cost stack. The arm rule is
@@ -327,6 +327,40 @@ def calibration_unit(tab, out, n_jobs) -> dict:
     return res
 
 
+# ----------------------------------------------------------------------------------------------- b606: cost-aware gate
+COST_GATES = (0.03, 0.04, 0.05, 0.06, 0.08, 0.10)       # abstain when the estimated round-trip cost per R exceeds this (0.06/0.08/0.10 were seen exploratorily first)
+
+
+def cost_gate_unit(tab, out, n_jobs) -> dict:
+    """Cost per R is fixed bps over a risk of 2 ATR, so it is high where ATR/price is small. The decision-time estimate is k / atr_pct with k
+    the median of (realised cost per R x atr_pct) over the OTHER dev folds (no label of the scored fold)."""
+    mem = base_members(tab, out, n_jobs)
+    frames = {sd: fold_frames(tab, mem[sd]) for sd in SEEDS}
+    fold_of = np.concatenate([np.full(len(frames[SEEDS[0]][k]), k) for k in range(8)])
+    pos = np.concatenate([mem[SEEDS[0]][f"pos{k}"] for k in range(8)])
+    cost_x_atr = ((tab.loc[pos, "cost_long"] + tab.loc[pos, "cost_short"]) / 2 * tab.loc[pos, "atr_pct"]).to_numpy()
+
+    def gate(c):
+        def tw(k, test, pl, ps):
+            kk = float(np.nanmedian(cost_x_atr[fold_of != k]))
+            est = kk / test["atr_pct"].to_numpy()
+            pl[est > c] = ABSTAIN
+            ps[est > c] = ABSTAIN
+            return pl, ps, TAU
+        return tw
+    per = {"base": [stats(run_arm(frames[sd], mem[sd])) for sd in SEEDS]}
+    for c in COST_GATES:
+        per[f"gate_{c}"] = [stats(run_arm(frames[sd], mem[sd], tweak=gate(c))) for sd in SEEDS]
+        print("gate", c, np.mean([x["mean"] for x in per[f"gate_{c}"]]), flush=True)
+    res = {"unit": "RQ-20261101-b606-01", "sealed_windows_read": 0, "arms": {}}
+    res["arms"]["base"] = {"arm_mean": float(np.mean([x["mean"] for x in per["base"]])), "n": [x["n"] for x in per["base"]], "verdict": "base"}
+    for c in COST_GATES:
+        res["arms"][f"gate_{c}"] = judge(per["base"], per[f"gate_{c}"])
+    wins = [k for k, v in res["arms"].items() if v["verdict"] == "win"]
+    res["result"] = f"candidates: {wins}" if wins else "no cost gate clears the rule on the dev folds"
+    return res
+
+
 # ----------------------------------------------------------------------------------------------- a508: the traded slice
 def traded_unit(tab, out, n_jobs) -> dict:
     seeds = (E.SEED, *SEEDS)
@@ -460,7 +494,7 @@ def main() -> int:
     assert tab.ts.max() < pd.Timestamp(E.HOLDOUT_START, tz="UTC")
     u = a.unit.split("-")[-2] if a.unit.startswith("RQ-") else a.unit.split("-")[0]
     fn = {"b601": lambda: bracket_unit(tab, out, a.n_jobs, tpath.parent / "klines"), "b602": lambda: selectivity_unit(tab, out, a.n_jobs),
-          "b604": lambda: calibration_unit(tab, out, a.n_jobs), "a508": lambda: traded_unit(tab, out, a.n_jobs)}[u]
+          "b604": lambda: calibration_unit(tab, out, a.n_jobs), "b606": lambda: cost_gate_unit(tab, out, a.n_jobs), "a508": lambda: traded_unit(tab, out, a.n_jobs)}[u]
     res = fn()
     (out / f"{u}_result.json").write_text(json.dumps(res, indent=1, default=str))
     print(res["result"])
