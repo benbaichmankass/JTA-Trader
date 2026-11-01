@@ -1,0 +1,17 @@
+{
+  "due_when": {
+    "due_date": "2026-11-03",
+    "kind": "date"
+  },
+  "id": "PI-20261101-ETFHIST-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "lane ETF-HISTORY-PIPELINE (PR #22136), manager follow-up 2026-11-01",
+    "rerun": "On the LIVE VM (only host on the gateway subnet), clientId 450: bash scripts/ops/pull_mes_ibkr_history.sh (ibkr_offvm adapter; paced 20s; see docs/runbooks/ib-integration.md Historical backfill). Then read data/ibkr_datasets/market_raw/<SYM>/<tf>/*/data.jsonl for MES, MGC, MHG and report first/last/rows/gaps."
+  },
+  "severity": "medium",
+  "state": "queued",
+  "tier": 1,
+  "what": "IB historical depth for MES/MGC/MHG (futures are NOT covered by the Alpaca ETF store): measure per-contract first bar / rows / gaps at 1h and 5m through the IB gateway and compare to the continuous-futures proxies (ES=F/GC=F/HG=F) the ML lanes use today."
+}

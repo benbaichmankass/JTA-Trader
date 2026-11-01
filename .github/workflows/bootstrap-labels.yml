@@ -362,6 +362,21 @@ jobs:
                 description: 'Triggers trainer-vm-diag workflow — full-visibility SSH command runner on the trainer VM (autonomous Claude). QUICK read-only pulls (parallel-safe).',
               },
               {
+                name: 'options-snapshot-request',
+                color: '5319e7',
+                description: 'Triggers options-snapshot-capture — capture / verify / probe of the daily option-chain IV snapshot store (runner holds the Alpaca secrets, store lands on the trainer).',
+              },
+              {
+                name: 'sp500-membership-now',
+                color: '5319e7',
+                description: 'Triggers sp500-membership-refresh — rebuilds config/data_universe/sp500_membership.csv and lands it via an auto-merge PR.',
+              },
+              {
+                name: 'etf-history-request',
+                color: '5319e7',
+                description: 'Triggers etf-history-pipeline — probe / backfill / refresh / verify of the multi-year ETF bar store (runner holds the Alpaca secrets, store lands on the trainer).',
+              },
+              {
                 name: 'market-data-lake-request',
                 color: '5319e7',
                 description: 'Triggers market-data-lake — builds/refreshes the private HF market data lake (Binance Vision crypto, FRED, futures, ETF store); body may carry scope: all|crypto|other.',
