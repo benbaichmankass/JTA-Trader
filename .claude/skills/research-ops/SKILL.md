@@ -458,6 +458,11 @@ Draw new units from, in this order, until the floor is met or sources are exhaus
 - `decision_rule` with `registered_before_run: true`, committed in the same PR as the unit;
   `what_it_does_not_do` stated (an upper-bound or scoping unit says it is not a promotion
   case). Too vague to register a rule → a SCOPING unit, not a dropped idea.
+- **Regime-robustness clause (operator, 2026-11-01 ~11:46Z; default decision-rule template).** Every new `decision_rule` text
+  includes, set before the run: net positive in at least 3 of 4 calendar years (>= 75% of years on a longer window, minimum 3);
+  no single year above 50% of total net P&L; long-side and short-side net reported separately and both >= 0 for a two-sided
+  strategy; the per-year table in every result; at least 2 non-overlapping sub-periods each net-positive. Operator quote and
+  full text: `.claude/skills/backtesting/SKILL.md` § "Default decision-rule template". An evaluation standard, not a CI guard.
 - A unit that needs a prior result uses `requires_result`, not prose.
 - New units also carry `practice_precedent` (and an intervention test its `intervention_controls`): `research/queue/PLANNING.md` § 1a.
 - **An ML unit is admitted only if it names its consumer and the live or demo decision it would change**

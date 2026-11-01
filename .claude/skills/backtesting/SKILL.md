@@ -133,6 +133,20 @@ evidence it makes money." On 2026-07-30 only the restrictive half of a two-sided
 proposed, because only that half was affirmatively supported. Don't flatten a two-sided
 result into one change — it smuggles the weak half in on the strong half's evidence.
 
+### Default decision-rule template: the regime-robustness clause (operator, 2026-11-01)
+
+**Operator, 2026-11-01 ~11:46Z, verbatim (the message was cut off at the end):** *"we seem to have this issue a lot where we keep on going back to one specific time period in 2021 for crypto ... to the extent that we're sampling things, they need to be on more than one time frame so that we know that it's actually relevant. And also, we're looking for volatility that we can this predictable enough for us to capture, not a strong move in one specific direction, we want to be capturing all types of movement, even"*
+
+**Every new registration** (a `decision_rule` in `research/queue/` or any pre-registered backtest rule) carries this clause **in the rule text, set before the run**, in addition to its own statistic and threshold. It is an evaluation standard on new registrations, **not a CI guard** (no new gate; the operator's no-new-gates rule stands):
+
+1. **Years.** Net P&L positive in at least 3 of the 4 calendar years of the discovery window. A longer window scales this to at least 75% of its calendar years (minimum 3). A year counts only with at least 200 calendar days of data; a partial year is reported but not counted.
+2. **Concentration.** No single calendar year contributes more than 50% of total net P&L. If total net P&L is not positive, the clause fails.
+3. **Sides.** Long-side and short-side net reported separately. A two-sided strategy needs both sides >= 0.
+4. **Table.** The per-year net table (and the long/short split) is reported in every result, pass or fail.
+5. **Time frames.** Sampling is not drawn from one episode: the window is cut into at least 2 non-overlapping sub-periods, each net-positive, and a sample is never one market episode (for example the 2021 crypto bull) re-used under new names.
+
+A rule that passes its own statistic but fails this clause is `fail`, with the failing item named. Reference implementation of the per-year / side split: `scripts/research/regime_robustness.py`.
+
 ## Where backtest code lives (on `main`)
 
 | Entry point | Strategy | Invocation |
