@@ -418,6 +418,7 @@ CADENCE_REGISTRY: dict[str, dict] = {
     "ict-mes-ibkr-pull.timer": {"receipt": None, "why": "VM-side; diag relay is the surface"},
     "ict-research-results-gate.timer": {"receipt": None, "why": "VM-side; diag relay is the surface"},
     "ict-shadow-log-rotate.timer": {"receipt": None, "why": "VM-side; diag relay is the surface"},
+    "ict-ml-decision-shadow.timer": {"receipt": None, "why": "VM-side (2026-11-01, observe-only ML ENTRY decision shadow); it writes runtime_logs/ml_decision_shadow.jsonl on the live VM, not in the repo; graded on the VM by health check ml_decision_shadow (newest row's logged_at, four states) and readable via /api/diag/log_file?name=ml_decision_shadow"},
     "ict-trainer-git-sync.timer": {"receipt": None, "why": "VM-side; diag relay is the surface"},
     "ict-web-api-watchdog.timer": {"receipt": None, "why": "VM-side; diag relay is the surface"},
     "ict-work-digest.timer": {"receipt": None, "why": "VM-side; diag relay is the surface"},
