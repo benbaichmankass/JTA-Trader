@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 # wiring: .github/workflows/options-snapshot-capture.yml (runner holding the Alpaca secrets; store synced to the trainer)
-"""Daily end-of-day option-chain snapshot (quotes + IV + greeks) from Alpaca -> the canonical store.
+"""Daily end-of-day option-chain snapshot (quotes + IV + greeks) -> the canonical store. WHAT is captured (underlyings, expiries,
+moneyness) is config/data_universe.yaml `options:`.
 
 WHY (operator, 2026-11-01): there is no keyless historical option/IV data, so we ACCRUE our own. Every trading day
 this records the near-the-money slice of the first expiries for the liquid underlyings; in a year that is a
@@ -32,8 +33,10 @@ from typing import Any, Callable, Dict, List, Optional
 
 import pandas as pd
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import data_universe as du  # noqa: E402
+
 DATA_URL = os.environ.get("ALPACA_DATA_URL", "https://data.alpaca.markets").rstrip("/")
-UNDERLYINGS = ["SPY", "QQQ", "IWM", "GLD", "TLT", "SLV", "USO"]
 _OCC = re.compile(r"^([A-Z0-9]{1,8}?)(\d{6})([CP])(\d{8})$")  # CBOE prefixes some roots ("B1SPY...")
 COLS = ["asof_date", "captured_at", "underlying", "spot", "symbol", "expiry", "cp", "strike", "bid", "ask", "bid_size",
         "ask_size", "quote_ts", "last", "last_ts", "iv", "delta", "gamma", "theta", "vega", "rho", "open_interest", "volume", "feed"]
@@ -208,15 +211,21 @@ def main(argv: Optional[List[str]] = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--mode", choices=["capture", "verify", "probe"], required=True)
     ap.add_argument("--out", default="data/options_history")
-    ap.add_argument("--underlyings", default=",".join(UNDERLYINGS))
-    ap.add_argument("--expiries", type=int, default=3)
-    ap.add_argument("--moneyness", type=float, default=0.06)
+    ap.add_argument("--universe", default=None, help="path to data_universe.yaml (default config/data_universe.yaml)")
+    ap.add_argument("--underlyings", default=None, help="comma list overriding the universe")
+    ap.add_argument("--expiries", type=int, default=None)
+    ap.add_argument("--moneyness", type=float, default=None)
     ap.add_argument("--source", choices=["alpaca", "cboe"], default="alpaca",
                     help="alpaca = keyed (indicative/opra feed); cboe = keyless delayed-quotes CDN (adds open_interest, volume)")
     ap.add_argument("--feed", choices=["indicative", "opra"], default="indicative")
     ap.add_argument("--stale-days", type=float, default=4.0)
     a = ap.parse_args(argv)
-    root, unds = Path(a.out) / a.source, [u.strip().upper() for u in a.underlyings.split(",") if u.strip()]
+    uni = du.load(a.universe)
+    opt = uni.get("options") or {}
+    unds = [u.strip().upper() for u in a.underlyings.split(",") if u.strip()] if a.underlyings else du.options_underlyings(uni)
+    a.expiries = a.expiries if a.expiries is not None else int(opt.get("expiries", 3))
+    a.moneyness = a.moneyness if a.moneyness is not None else float(opt.get("moneyness", 0.06))
+    root = Path(a.out) / a.source
     now = datetime.now(timezone.utc)
     if a.mode == "verify":
         return verify(root, unds, a.stale_days, now)
