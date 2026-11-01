@@ -172,19 +172,31 @@ jobs:
           except Exception as e:
               print(f"stooq 1d: ERR {str(e)[:100]}")
           PY
-      - name: Fetch the 1m base in chunks (push + clear between chunks; time-budgeted; per-symbol failures contained)
+      - name: Fetch the 1m base in chunks (lake is the store of record; trainer keeps a tail cache; per-symbol failures contained)
         id: fetch
         if: (steps.mode.outputs.mode == 'backfill' || steps.mode.outputs.mode == 'refresh') && steps.disk.outputs.go == '1'
         continue-on-error: true
         env:
           ALPACA_API_KEY_ID_LIVE: ${{ secrets.ALPACA_API_KEY_ID_LIVE }}
           ALPACA_API_SECRET_KEY_LIVE: ${{ secrets.ALPACA_API_SECRET_KEY_LIVE }}
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
           MODE: ${{ steps.mode.outputs.mode }}
           TRAINER_IP: ${{ secrets.TRAINER_VM_IP }}
           TRAINER_USER: ${{ vars.TRAINER_VM_USER || 'ubuntu' }}
         run: |
           set -uo pipefail
           SSH="ssh -i $HOME/.ssh/trainer_key -o BatchMode=yes -o StrictHostKeyChecking=accept-new -o ConnectTimeout=20"
+          DEST="${TRAINER_USER}@${TRAINER_IP}:ict-trading-bot/data/etf_history/"
+          YM="$(date -u +%Y-%m)"; YM1="$(date -u -d "$(date -u +%Y-%m-01) -1 month" +%Y-%m)"
+          # DECISION (manager, operator's design mandate 2026-11-01): the HF market-data lake (bentzbk/jta-market-lake) is the STORE OF RECORD;
+          # the trainer keeps only a TAIL CACHE (current + previous month). ONE publisher: lane MARKET-DATA-LAKE's scripts/data_lake/*. If that
+          # code (PR #22148) or HF_TOKEN is absent, or a chunk's publish fails, that chunk is pushed to the trainer IN FULL instead, so no
+          # history is ever dropped; the run goes red once.
+          LAKE=0
+          if [ -f scripts/data_lake/free_sources.py ] && [ -f scripts/data_lake/hf_publish.py ] && [ -n "${HF_TOKEN:-}" ]; then
+            python -m pip install --quiet huggingface_hub && LAKE=1
+          fi
+          echo "lake publisher available: ${LAKE}"
           RUN_START="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
           rc=0
           SECONDS=0
@@ -193,34 +205,37 @@ jobs:
             if [ "$left" -lt 3 ]; then echo "time budget used; the next run resumes"; break; fi
             python3 -u scripts/ops/fetch_etf_history.py --mode "$MODE" --out store --tfs 1m --max-new 25 --budget-min "$left" \
               --skip-fetched-after "$RUN_START" || rc=1
-            # Push this chunk (add/replace only, never --delete), then clear the local bars so the runner never holds the whole store.
-            # The manifest stays on both sides, so a killed run resumes from what was pushed.
-            rsync -a --partial -e "$SSH" store/ "${TRAINER_USER}@${TRAINER_IP}:ict-trading-bot/data/etf_history/" > rsync.log 2>&1
+            rm -rf chunk lake
+            moved="$(python3 scripts/ops/etf_chunk_split.py --store store --chunk chunk --since "$RUN_START" 2>/dev/null)"
+            if [ -z "${moved}" ]; then echo "::error::chunk ${chunk}: fetcher left no manifest"; rc=1; break; fi
+            lake_ok=0
+            if [ "$LAKE" = "1" ] && [ "${moved}" != "0" ]; then
+              if python3 scripts/data_lake/free_sources.py import-etf --src chunk --out lake \
+                 && python3 scripts/data_lake/hf_publish.py upload --dir lake --prefix us_equity/alpaca --note "etf-history ${GITHUB_RUN_ID} chunk ${chunk}" \
+                 && { [ ! -d lake/_manifests ] || python3 scripts/data_lake/hf_publish.py upload --dir lake --prefix _manifests --note "etf-history ${GITHUB_RUN_ID} manifests"; }; then
+                lake_ok=1
+              else
+                echo "::error::chunk ${chunk}: lake publish FAILED; pushing this chunk to the trainer in full instead (nothing is dropped)"; rc=1
+              fi
+            fi
+            if [ "$lake_ok" = "1" ]; then
+              # tail cache only: the current + previous month of every finished series, plus the manifest and corporate actions
+              rsync -a --prune-empty-dirs -e "$SSH" --include='*/' --include='MANIFEST.json' --include='corporate_actions.csv' \
+                --include="*/1m/${YM}.parquet" --include="*/1m/${YM1}.parquet" --exclude='*' chunk/ "$DEST" > rsync.log 2>&1
+            else
+              rsync -a --partial -e "$SSH" chunk/ "$DEST" > rsync.log 2>&1
+            fi
             rsc=$?
             sed -E 's/[0-9]{1,3}(\.[0-9]{1,3}){3}/<ip>/g' rsync.log | tail -5
             if [ "$rsc" -ne 0 ]; then echo "::error::chunk ${chunk} push to the trainer failed (rsync exit ${rsc})"; rc=1; break; fi
-            # Clear ONLY the series finished this run: the pulled tail partitions of symbols not yet reached must stay, or their refresh
-            # would find no local files and re-fetch the whole history.
-            RUN_START="$RUN_START" python3 - <<'PY'
-          import json, os, shutil
-          m = json.load(open("store/MANIFEST.json"))
-          t0 = os.environ["RUN_START"]
-          n = 0
-          for key, rec in (m.get("series") or {}).items():
-              if (rec.get("fetched_at") or "") >= t0:
-                  d = os.path.join("store", *key.split("/"))
-                  if os.path.isdir(d):
-                      shutil.rmtree(d)
-                      n += 1
-          print(f"cleared {n} finished series dirs from the runner")
-          PY
+            rm -rf chunk lake
             rem="$(python3 -c "import json;print(json.load(open('store/MANIFEST.json'))['run']['remaining'])" 2>/dev/null)"
             if [ -z "${rem}" ]; then echo "::error::chunk ${chunk}: manifest has no run.remaining (fetcher died before writing it)"; rc=1; break; fi
             avail="$($SSH "${TRAINER_USER}@${TRAINER_IP}" 'df -BG --output=avail / | tail -1' 2>/dev/null | tr -dc 0-9)"
-            echo "chunk ${chunk}: remaining=${rem} trainer_free_gb=${avail:-unknown} elapsed=${SECONDS}s"
+            echo "chunk ${chunk}: series=${moved} lake=${lake_ok} remaining=${rem} trainer_free_gb=${avail:-unknown} elapsed=${SECONDS}s"
             if [ "${rem}" = "0" ]; then break; fi
             if [ -n "${avail}" ] && [ "${avail}" -lt 10 ]; then
-              echo "::error::trainer free disk ${avail} GB < 10 GB floor mid-run (${rem} series still to pull): stopping the 1m pull. Projected store ~14 GB (10-25). Free space or widen the disk, then re-run."
+              echo "::error::trainer free disk ${avail} GB < 10 GB floor mid-run (${rem} series still to pull): stopping. Free space on the trainer, then re-run."
               echo "lowdisk=1" >> "$GITHUB_OUTPUT"; rc=1; break
             fi
           done

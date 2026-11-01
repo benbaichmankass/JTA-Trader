@@ -122,3 +122,19 @@ def test_ended_series_is_not_repulled_daily(tmp_path):
     shutil.rmtree(tmp_path / "OLDCO")  # as on a runner that pulled only the current/previous month
     r2 = f.update_symbol(fake_getter(bars), tmp_path, "OLDCO", "1m", "sip", s0, end, full=False, prior=r1)
     assert r2["note"].startswith("ended") and r2["rows"] == r1["rows"] and r2["added"] == 0 and not (tmp_path / "OLDCO").exists()
+
+
+def test_chunk_split_moves_only_finished_series(tmp_path):
+    import etf_chunk_split as cs
+
+    store, chunk = tmp_path / "store", tmp_path / "chunk"
+    for sym in ("DONE", "TODO"):
+        (store / sym / "1m").mkdir(parents=True)
+        (store / sym / "1m" / "2026-11.parquet").write_bytes(b"x")
+    (store / "corporate_actions.csv").write_text("kind\n")
+    (store / "MANIFEST.json").write_text(json.dumps({"series": {
+        "DONE/1m": {"fetched_at": "2026-11-01T13:00:00Z"}, "TODO/1m": {"fetched_at": "2026-10-31T02:00:00Z"}}}))
+    assert cs.split(store, chunk, "2026-11-01T12:00:00Z") == 1
+    assert (chunk / "DONE" / "1m" / "2026-11.parquet").exists() and not (store / "DONE" / "1m").exists()
+    assert (store / "TODO" / "1m" / "2026-11.parquet").exists() and not (chunk / "TODO").exists()  # untouched, still local
+    assert (chunk / "MANIFEST.json").exists() and (chunk / "corporate_actions.csv").exists()
