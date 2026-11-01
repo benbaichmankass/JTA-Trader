@@ -1,0 +1,22 @@
+{
+  "id": "ALPACA-LIVE-ACTIVITY-ML",
+  "title": "Why is alpaca_live (real money) near-idle, get trading activity on it to learn from, and put an ML decision model live on alpaca_live by Fri 2026-11-06",
+  "phase": null,
+  "state": "in_flight",
+  "owner": "lane",
+  "lane": "session_01AFoLuMP2ywy8v4RXABackp",
+  "model": "claude-opus-5-5",
+  "ceiling_usd": 35,
+  "spend_usd": null,
+  "tier": 3,
+  "prs": [],
+  "blocked_on": [],
+  "note": "OPERATOR DIRECTIVE 2026-11-01 ~10:30Z (relayed by Manager Session 2026-11-01a, session_01AFoLuJ1apgy8sfngu4WyNH), VERBATIM: \"Also, we need to add a work item for this week to undetstand why there is no activity on Alapaca live - we need ot have some trading activity going on there for us to learn from, I also want to make sure we have MLs live on that account by the end of the week\". Deliverables: A. activity read (docs/research/alpaca-live-activity-2026-11-01.md) + disposition of PI-20261025-ALQWWPXT-0002/-0003 and RQ-20261025-bda2-01; B. one pre-registered Alpaca ML decision model (ML-DECISION-MODELS design, bar = held-out mean net R per decision >= 0), adapter as a HELD Tier-3 PR on PASS. || [2026-11-01 ~11:00Z lane] Scope additions relayed by Manager Session 2026-11-01a. OPERATOR ~10:35Z VERBATIM: \"The paper portfolio decision is wrong - it should mirror the live account, as per the definition of paper mirror. And we also need to try and get more of the shadowing startegies on alpaca turned on to live money\". OPERATOR ~10:40Z VERBATIM: \"really, the same entry model should be applied to alpaca as to bybit 2 - we're trying to consolidate so we have overall-context models, in addtion to the per-symbol models, and I'm not sure when we decided that there was a distinction between bybit and the other accounts on this, but that's wrong - the supra-symbol mls are for all symbols on all accounts. If we find evidence for per-category MLs later on, than we'll build those later on, but that was never the design spec for the models I asked for this morning\". OPERATOR (relayed ~10:40Z) VERBATIM: \"The only difference with alpaca mirror is that it also has shorting and includes the symbols we can't yet trade on alpaca live, but there's no excuse for that account having nothing/less than alpaca live trading, that's a serious process flaw that is unacceptable\". Ceiling raised to $35. Deliverables now: A activity (doc), B1 frozen ENTRY on alpaca_live (RQ-20261101-bdc2-01), mirror superset PR (held T3), promotions inventory PR (held T3). An Alpaca-specific model drafted earlier was withdrawn unpushed and never run.",
+  "priority_rank": 1,
+  "updated_at": "2026-11-01T10:59:05Z",
+  "updated_by": "session_01AFoLuMP2ywy8v4RXABackp",
+  "roadmap": [
+    "L-ML-LIVE"
+  ],
+  "_seq": 875
+}

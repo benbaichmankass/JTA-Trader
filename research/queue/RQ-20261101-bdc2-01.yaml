@@ -1,0 +1,113 @@
+# Hand-authored 2026-11-01 by lane ALPACA-LIVE-ACTIVITY-ML (Tier 1), dispatched by Manager Session 2026-11-01a (session_01AFoLuJ1apgy8sfngu4WyNH).
+# Decision rule registered BEFORE any run and pushed before the run. ONE read of the frozen model on alpaca_live's symbols (like c692-06
+# did for bybit_2). Not a new model (operator 2026-11-01 ~10:40Z, quoted below). Gates: none.
+id: RQ-20261101-bdc2-01
+title: 'ENTRY on alpaca_live: does THE frozen ENTRY model (ml-decision-entry-v1, the c692-01 final fit, tau 0.10), applied to alpaca_live''s
+  symbols with the account''s constraints as execution rules (SHORT -> nothing, regular session, Alpaca costs), reach held-out mean net R per
+  decision >= 0 on 2025-10-01..2026-09-30?'
+status: queued
+cadence: once
+theme: ml_health
+priority: 1
+roadmap:
+- L-ML-LIVE
+kind: experiment
+practice_precedent: 'T1, M6 (docs/reference/trading-and-model-practice-principles.md): one frozen model, one read of a sealed window; RQ-20261101-c692-06
+  (the same frozen model scored on the bybit_2 symbols) is the precedent this mirrors.'
+question: 'Operator 2026-11-01 ~10:40Z, verbatim: "really, the same entry model should be applied to alpaca as to bybit 2 - we''re trying to consolidate
+  so we have overall-context models, in addtion to the per-symbol models, and I''m not sure when we decided that there was a distinction between
+  bybit and the other accounts on this, but that''s wrong - the supra-symbol mls are for all symbols on all accounts. If we find evidence for per-category
+  MLs later on, than we''ll build those later on, but that was never the design spec for the models I asked for this morning". Load the served
+  artifact ml/served/ml_decision_entry_v1/model.json (branch claude/ml-entry-live-adapter commit 09df3fdf6f2c, sha256 489dcee3d4f6df55f9a8c33e87ba5a98e0ece62d7d9932fab1347781f5db4630;
+  no re-fit, tau 0.10 as served). For every symbol of config/accounts.yaml alpaca_live symbols: (re-parsed at run time), build Yahoo 1h REGULAR-session
+  bars 2025-05-01..2026-10-30; compute the model''s 20 features with scripts/research/ml_decision_entry.features_symbol on the equity''s own bar
+  sequence, hour/dow from the bar''s real close, and the cross-sectional / BTC features against the model''s own 60-perp xs_reference (Binance Vision
+  1h) at the latest perp bar closed by the equity bar''s close (the equity''s 24-bar return ranked among the 60 perps; no feature is missing: the model
+  has no funding input). Decide at every RTH bar close whose UTC hour % 4 == 0 (the model clock); entry next RTH bar open; first passage over SL 2
+  ATR14 / TP 3 ATR14 / 24-bar time stop (tie -> SL, gap through the stop -> open fill); the served decide() picks the side; SHORT -> nothing on the
+  cash book; one position per symbol. Net of fee 0.0 (resolve_fee_bps_roundtrip SPY, commission-free) + slippage 5.0 bps (resolve_cost_policy, PROVISIONAL)
+  + regulatory 0.5 bps round trip (SEC section 31 + FINRA TAF, rounded up), funding 0. Score 2025-10-01..2026-09-30 (the c692 sealed window) ONCE.'
+why_this_matters: 'Operator 2026-11-01 ~10:30Z (row ALPACA-LIVE-ACTIVITY-ML): "I also want to make sure we have MLs live on that account by the
+  end of the week". A PASS makes the alpaca_live adapter a CONFIG change on the one ml_entry implementation (PR #22079, lane ML-ENTRY-GOLIVE-UNBLOCK).
+  Context reported beside the result, not gating (manager 2026-11-01): ENTRY''s October forward monitoring RQ-20261101-383f-03 read LONGS n=137
+  -0.308 R on crypto perps; a long-only account takes only that side.'
+power:
+  expected_n: 120
+  min_detectable_effect: 0.26
+  effect_units: metric
+  sd: 1.0
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: 'INFERRED: 11 symbols x ~250 sessions x 2 decision bars a session (UTC close hours 16 and 20) = ~5,500 decision rows; holds up to 24 bars
+    (~3.4 sessions) and a long-only take at tau 0.10 give an expected ~60-250 taken decisions. sd ~1 R. The operator bar is a point estimate;
+    the floor 30 (the c692-06 traded-subset floor) only keeps a sign readable. An honest read at this n has a wide CI (reported).'
+  feasibility:
+    source: none
+    accrual_basis: Replays public history; nothing accrues. Yahoo 1h history reaches ~730 days back, which covers the window plus feature warm-up.
+decision_rule:
+  id: RULE-RQ20261101-bdc2-01-ENTRY-ON-ALPACA
+  registered_at: '2026-11-01'
+  registered_before_run: true
+  statistic: 'scripts/research/ml_entry_alpaca_score.py verdict(): held-out mean net R per TAKEN LONG decision on the alpaca_live symbols, n, per
+    symbol. Reported, never gating: bootstrap CI95; the same frozen model with BOTH sides on the alpaca_live symbols and on the alpaca_portfolio
+    symbols (the mirror takes shorts); always-long under identical mechanics; by month; the c692-06 bybit_2 read; the October long-side monitoring
+    figure above.'
+  rule: 'INDETERMINATE IF held-out n < 30 (the c692-06 floor). PASS IF held-out mean net R per decision >= 0 (point estimate, the operator bar).
+    FAIL otherwise. PASS -> ONE held Tier-3 PR: ml_entry on alpaca_live AND alpaca_portfolio as a per-account config block on the ONE ml_entry
+    implementation (coordinated with lane ML-ENTRY-GOLIVE-UNBLOCK, never forked), new order-path code proving itself on ONE small trade. FAIL or
+    INDETERMINATE -> no per-category model (operator); the consolidation unit (ONE ENTRY v2 on all symbols of all accounts, c692-04 arm (c) /
+    ML-DATA-XASSET-1H) is filed on a fresh forward window under ML-BAR-ONE-READ, reporting the per-account result inside that one model.
+    Thresholds are not changed after any result.'
+  what_it_does_not_do: No re-fit, no new model, no tau choice, no sizing, no config change, no order. Yahoo bars are a proxy for Alpaca fills;
+    5.0 bps slippage is a placeholder. The crypto-referenced cross-sectional features are the frozen model's definition applied as-is, which is
+    exactly the serve-parity question this read answers.
+  min_n: 30 held-out LONG decisions on the alpaca_live symbols
+compute: cpu_light
+value:
+  bucket: ai_trader
+  usd_at_stake_per_month: 60
+  confidence: 0.2
+  basis: 'stand-in: the operator goal (an ML decision maker live on the real-money Alpaca book); not a P&L measurement.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 2.0
+  est_minutes: 15
+  why_runner: Keyless public Yahoo 1h + Binance Vision 1h; inference only.
+  basis: 'MEASURED fetch probe: IAUM 1h RTH 2025-05-01..2026-10-30 = 2,627 bars; 60 perps x 18 monthly zips.'
+run:
+  workflow: research-script-run.yml
+  command:
+  - python3
+  - scripts/research/ml_entry_alpaca_score.py
+  - run
+  - --model
+  - ml/served/ml_decision_entry_v1/model.json
+  - --cache
+  - /tmp/ml_entry_alpaca
+  - --unit
+  - '{unit}'
+  - --out
+  - '{out_dir}'
+  - --where
+  - research-script-run
+  timeout_minutes: 60
+  inputs:
+    research_unit: RQ-20261101-bdc2-01
+ml_consumer:
+  consumer: ALPACA-LIVE-ACTIVITY-ML
+  decision: 'whether the ONE ml_entry implementation (held PR #22079) gets a per-account block that opens LONG positions on alpaca_live (and both
+    sides on its mirror alpaca_portfolio) on the ETFs alpaca_live pulls, beside the rostered leg below that shares that real-money cash book'
+  legs:
+  - iaum_pullback_1d
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- ALPACA-LIVE-ACTIVITY-ML
+- ML-ENTRY-LIVE-ADAPTER
+- RQ-20261101-c692-01
+- RQ-20261101-c692-06
+- RQ-20261101-383f-03
