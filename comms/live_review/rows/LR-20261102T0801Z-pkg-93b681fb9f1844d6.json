@@ -1,0 +1,113 @@
+{
+ "schema_version": 1,
+ "review_id": "LR-20261102T0801Z-pkg-93b681fb9f1844d6",
+ "reviewed_at": "2026-11-02T08:05:00Z",
+ "order_package_id": "pkg-93b681fb9f1844d6",
+ "trade_id": null,
+ "leg": "trend_donchian_eth",
+ "accounts": [
+  "bybit_1"
+ ],
+ "trigger": {
+  "event": "momentum_flip",
+  "level": null,
+  "l0_snapshot_at": null
+ },
+ "info_cutoff_at": "2026-11-02T08:01:16Z",
+ "state": {
+  "open_r": -0.4331,
+  "peak_r": 0.7125,
+  "peak_provenance": "estimated",
+  "giveback_r": 1.1456,
+  "bars_held": 7,
+  "sl": 2269.46071429,
+  "tp": 2525.1723,
+  "atr_now_over_entry": 1.2089,
+  "regime_cell_now": null,
+  "regime_cell_entry": "transitional/calm"
+ },
+ "features_at_review": {
+  "atr_now_over_entry": 1.2089,
+  "bars_since_peak": 4,
+  "giveback_r": 1.1456,
+  "open_r": -0.4331,
+  "peak_r": 0.7125,
+  "r_to_stop": 0.5669,
+  "r_to_target": 8.4883
+ },
+ "mechanics": {
+  "verdict": "match",
+  "evidence": "package sl 2269.46071429 / tp 2525.1723 agree with every readable account"
+ },
+ "options": [],
+ "outcome_table_source": "comms/live_review/tables/LR-20261102T0801Z-pkg-93b681fb9f1844d6.json",
+ "recommendation": {
+  "action": "hold",
+  "level": null,
+  "level_atr": null,
+  "ev_delta_r": null,
+  "worst_case_delta_r": null,
+  "basis": "judgement",
+  "confidence": "anecdote",
+  "evidence_source": "judgement",
+  "judgement_confidence": 0.55,
+  "reason": "ETH long -0.43R, stop 2269.46 is 0.57R away (1.1 ATR) and still protects; momentum_flip and structure_break fired but closing on adverse is not default (LTR-TRIGGER-CLOSE-S0); hold cell measured n=35 mean +0.61R worst -1.11R, all tighten levels invalid_level, 4h ADX 25 still trending, so exiting at -0.43R gives up that EV. TP 2525 is the 50R sentinel: noted, not acted (STRUCTURE-EXITS-DEFAULT).",
+  "size_fraction": null
+ },
+ "judge_prior": null,
+ "applied": false,
+ "apply_policy": {
+  "bound_r": 0.25,
+  "within_bound": null,
+  "tighten_r": null
+ },
+ "shadow_policy": {
+  "bound_r": 0.5,
+  "within_bound": null,
+  "would_apply": null,
+  "tighten_r": null
+ },
+ "context_flags": [
+  "momentum_flip: 3 closed 1h bars against, net>=1 ATR",
+  "structure_break: close broke since-entry low",
+  "tp_r 50.0 sentinel: noted, not acted",
+  "tighten atr:1.0/1.5/2.0 invalid_level in table",
+  "correlated: other open longs XRP, GLD, USO",
+  "hold cell is the reference n=35 from 108-trade corpus; unconditional on the two events"
+ ],
+ "account_reads": [
+  {
+   "account_id": "bybit_1",
+   "account_class": "paper",
+   "read": "no_action",
+   "evidence": "hold changes nothing"
+  }
+ ],
+ "disposition": {
+  "route": "none",
+  "mandate": null,
+  "action_issue": null,
+  "applied_at": null,
+  "verified_readback": null
+ },
+ "model": "sonnet-tier",
+ "session": "session_01AFoLuJ1apgy8sfngu4WyNH_review",
+ "prompt_sha": null,
+ "skill_sha": "ce31519c30f9287eb2f2970ac8460bb763a5e744",
+ "packet_sha": "b8f943262dc4494fd58b22fc28b3127d355a1e2c20d98e7ec8fd37f7e96b712f",
+ "forecast": {
+  "thesis": "ETH 1h pullback holds above 2269 and the 4h trend lifts price back to the 2298 entry; failure is a 1h close under the stop.",
+  "direction": "with_trade",
+  "target_px": 2298.0,
+  "p_target": 0.4,
+  "invalidation_px": 2269.46,
+  "horizon_bars": 12,
+  "timeframe": "1h",
+  "evidence": [
+   "open_r -0.43 peak 0.71",
+   "4h adx 25.45 trending",
+   "hold cell n=35 mean +0.611",
+   "momentum_flip and structure_break at 08:00Z"
+  ]
+ }
+}
