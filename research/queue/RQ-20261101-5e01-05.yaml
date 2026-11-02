@@ -22,11 +22,14 @@ power:
   expected_n: 400
   min_detectable_effect: 0.1
   effect_units: R
-  design: paired
+  sd: 1.2
+  design: one_sample
   alpha: 0.05
   power: 0.8
-  basis: 'ESTIMATE: leg-level Stage-0 trade counts of 2020-07..2026-10 runs are 400-700 for 2h/4h crypto legs and thinner for 1d legs; n >= 39 floor below
-    which the leg grades INDETERMINATE, never FAIL. The first run replaces it.'
+  basis: 'ESTIMATE (sd 1.2 R is the assumed per-trade sd also used by the 5e02 sibling units; the test is one-sample on the per-trade difference between
+    arms (same entries), whose sd is expected to be smaller than the per-trade sd, so 1.2 is conservative; sd of the per-trade difference; the first run
+    replaces it): ESTIMATE: leg-level Stage-0 trade counts of 2020-07..2026-10 runs are 400-700 for 2h/4h crypto legs and thinner for 1d legs; n >= 39 floor
+    below which the leg grades INDETERMINATE, never FAIL. The first run replaces it.'
   feasibility:
     source: none
     accrual_basis: Replays history on freshly fetched public candles for a pinned window; nothing accrues. The detector and harness arms are the blockers,
