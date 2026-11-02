@@ -1,0 +1,23 @@
+{
+  "due_when": {
+    "clears_when": "ict-bot-arm .git is under ~3 GB, or a measured du shows the cache blobs were never packed and nothing is needed",
+    "event": "the VM-SPARSE-SYNC PR is deployed on ict-bot-arm (second pull-and-deploy after merge)",
+    "kind": "event"
+  },
+  "id": "PI-20261102-ARSESYNC-0002",
+  "next_action": "check_observation",
+  "observation": {
+    "due_by": "2026-11-04",
+    "how_to_check": "vm-diag: du -sh /home/ubuntu/ict-trading-bot/.git and df -h /",
+    "what": "size of .git on ict-bot-arm after the sparse deploy"
+  },
+  "origin": {
+    "kind": "session",
+    "ref": "lane VM-SPARSE-SYNC (manager session_01AFoLuJ1apgy8sfngu4WyNH dispatch, 2026-11-02; incident #22365 filled ict-bot-arm's 45G disk)",
+    "rerun": "vm-diag read: du -sh /home/ubuntu/ict-trading-bot/.git ; df -h / ; git -C /home/ubuntu/ict-trading-bot count-objects -vH"
+  },
+  "severity": "medium",
+  "state": "queued",
+  "tier": 2,
+  "what": "The live VM's .git object store still holds the #22365 cache blobs (they stay reachable through main's history even after #22374 deletes them from the tree), so VM-SPARSE-SYNC frees the working-tree copy only. Measure `du -sh /home/ubuntu/ict-trading-bot/.git` after the sparse deploy; if it is still multi-GB, add an allowlisted system-action that drops already-fetched large blobs from the now-partial clone (git >= 2.43 `git repack -a -d --filter=blob:limit=5m` with the promisor remote set, or a fresh `--filter=blob:limit=5m` re-clone swapped in under the running trader with no restart), never touching /data/bot-data."
+}
