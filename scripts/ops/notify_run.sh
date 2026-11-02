@@ -523,6 +523,14 @@ case "${action}" in
             *) result="FAILED/refused (exit ${exit_code}) -- no package relabelled"; priority="normal" ;;
         esac
         ;;
+    backfill-package-risk-meta)
+        # 2026-11-02 ML-ENTRY-RISK-META: add meta.risk_per_unit/entry_time to open ml_entry/claude_desk packages.
+        tier=2
+        case "${exit_code}" in
+            0) result="ok (dry-run preview or backfilled)"; priority="normal" ;;
+            *) result="FAILED (exit ${exit_code}) -- meta not fully written"; priority="normal" ;;
+        esac
+        ;;
     reattach-stranded-package-legs)
         # 2026-09-10, audit F-39 / MI-241: re-attach the three order_packages
         # rows that were closed while their legs were still OPEN, so
