@@ -114,9 +114,9 @@ def floor_gap_lines(t: Optional[Dict[str, Any]], root: Path) -> list:
     streak = (f"; below floor at the end of the last {g['below_floor_passes']} research-ops pass(es) (since {g['since']})"
               if g["below_floor_passes"] else "")
     return [f"### 🚨 RESEARCH FLOOR GAP — runnable {g['runnable']} < floor {g['floor']} (gap {g['gap']}){streak}", "",
-            "- This is DUE today: dispatch a same-day authoring lane (manager SKILL § \"The roadmap loop\" / research-ops "
-            "step E), sized to the gap and aimed at the themes `check_research_queue_health.py` lists as `H1-THEME`. "
-            "A handoff note is not a disposition.", ""]
+            "- REPORTED, NOT FILLED (operator 2026-11-01, STOP-GENERATED-AUTHORING): do not dispatch an authoring lane or "
+            "generate units to close this gap. New units need a stated mechanism (who pays, why it persists) from a result "
+            "someone read; already-queued units keep running.", ""]
 
 
 def summary_line(t: Dict[str, Any]) -> str:
