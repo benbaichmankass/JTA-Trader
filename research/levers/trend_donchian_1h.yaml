@@ -6,63 +6,67 @@ status: testing
 books:
 - bybit_1
 baseline:
-  record: comms/strategy_evidence/trend_donchian.json
-  net_r: -16.226
-  n: 71
-  fidelity: approximate
+  record: comms/strategy_evidence/trend_donchian_1h.json
+  net_r: -16.0939
+  n: 159
+  fidelity: faithful
   rule_verdict: fail
 attribution:
   read_state: measured
-  n: 71
-  net_r: -16.226
-  gross_r: -2.587
-  cost_r: 13.639
-  cost_share_of_gross: 5.272
-  verdict_hint: 'no gross edge: the loss is entry/exit, not cost'
+  n: 159
+  net_r: -16.094
+  gross_r: 5.688
+  cost_r: 21.782
+  cost_share_of_gross: 3.829
+  verdict_hint: cost erases a gross edge
   entry_quality:
-    mean_mfe_r: 1.817
-    share_mfe_ge_1r: 0.521
-    n_with_mfe: 71
+    mean_mfe_r: 1.636
+    share_mfe_ge_1r: 0.503
+    n_with_mfe: 159
   exit_capture:
-    median_net_over_mfe_winners: 0.347
-    n_winners: 18
-    losers_that_reached_1r_mfe: 19
+    median_net_over_mfe_winners: 0.425
+    n_winners: 47
+    losers_that_reached_1r_mfe: 33
   by_year:
     '2025':
-      n: 13
-      net_r: -4.734
-      gross_r: -2.731
+      n: 28
+      net_r: -4.843
+      gross_r: -1.8
     '2026':
-      n: 58
-      net_r: -11.492
-      gross_r: 0.144
+      n: 131
+      net_r: -11.251
+      gross_r: 7.489
   by_direction:
     long:
-      n: 71
-      net_r: -16.226
-      gross_r: -2.587
+      n: 72
+      net_r: -4.035
+      gross_r: 6.66
+    short:
+      n: 87
+      net_r: -12.059
+      gross_r: -0.972
   by_exit_reason:
     stop:
-      n: 39
-      net_r: -46.077
-      gross_r: -39.0
+      n: 79
+      net_r: -88.455
+      gross_r: -79.0
     take_profit:
-      n: 1
-      net_r: 4.908
-      gross_r: 4.998
+      n: 6
+      net_r: 23.053
+      gross_r: 23.623
     timeout:
-      n: 1
-      net_r: 2.305
-      gross_r: 2.498
+      n: 2
+      net_r: 2.585
+      gross_r: 2.84
     trail_stop:
-      n: 30
-      net_r: 22.637
-      gross_r: 28.917
+      n: 72
+      net_r: 46.724
+      gross_r: 58.226
   by_adx_at_entry:
     unknown:
-      n: 71
-      net_r: -16.226
-      gross_r: -2.587
+      n: 159
+      net_r: -16.094
+      gross_r: 5.688
 manifest:
   entry: untested
   exit: tested

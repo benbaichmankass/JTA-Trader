@@ -1273,3 +1273,1685 @@ nodes:
     show NO baseline edge at 1h on these six perps; the lever variants cannot lift a baseline that is not positive. Diagnosis: entry edge absent at the
     1h bar, not a management problem. Author ONE unit that asks the entry question only: the fade harness range-only gate (ADX <= 20) on the 4h bar,
     where the squeeze and pullback harnesses were the only ones to show a positive 4h baseline (326f-11 PASS, net 89R). Close the 1h management variants of both without further units.'
+
+# ---- ML-PROP-ITERATE (2026-11-02, operator verbatim in checklist row ML-PROP-ITERATE): gate every passing ML variant, diagnostics, prop-specific ML candidate ----
+- id: P5-MLDIAG-DECOMP
+  goal: G2
+  theme: new_strategy_prop
+  roadmap:
+  - L-PROP
+  value:
+    usd_at_stake_per_month: 100
+    confidence: 0.2
+  unit:
+    theme: new_strategy_prop
+    priority: 1
+    kind: experiment
+    title: 'ML-PROP-ITERATE diagnostic 1: where is ml_entry''s ETH+SOL edge, and where is it lost? By regime (trend, vol), side, tau threshold, UTC hour block, symbol, month and prop cost component'
+    question: On the n=381 ETH+SOL ml_entry gate ledger rebuilt with pred_net_r / ret_168 / vol_ratio, what is mean net R (95% CI) in each trend tercile, vol tercile, side, tau-quantile subset (pred_net_r >= p0/p25/p50/p75),
+      hour block, exit reason and month under each firm cost stack, and how much of the gross edge do commission, slippage and swap each take?
+    why_this_matters: 'Operator 2026-11-02 ~11:35Z verbatim: "...also keep data to see if we need to pull different levers or create a prop specific ml". This unit is the DATA for that choice: it measures
+      why ml_entry v1 (n=381 on ETH+SOL, edge CI lower bound about -0.10 R, EV below even the zero-edge null) fails the prop gate. It registers no pass bar and no roster action; its output feeds the programme
+      review''s lever-vs-prop-ML call (node P5-MLPROP-ENTRY-ETHSOL).'
+    power:
+      expected_n: 381
+      min_detectable_effect: 0.3
+      effect_units: sd
+      design: one_sample
+      alpha: 0.05
+      power: 0.8
+      basis: 'Descriptive decomposition of the n=381 gate ledger: subgroup cells are small (a 95% CI per cell is reported, not a test); the unit asserts measurement, not significance.'
+      feasibility:
+        source: none
+        accrual_basis: Re-pricing of a committed variant ledger under the firm rules; nothing accrues.
+    decision_rule:
+      id: RULE-P5-MLDIAG-DECOMP
+      registered_at: '2026-11-02'
+      registered_before_run: true
+      statistic: 'Fields in result.json: by_symbol, by_side, by_symbol_side, by_hour_block_utc, by_exit_reason, by_month, by_trend_strength, by_trend_alignment, by_vol_ratio, by_tau_threshold (n, mean net
+        R, 95% CI each), cost_components (gross mean R, cost mean R, mean R per component and net R with each component removed), per firm.'
+      rule: 'Descriptive: no pass bar. read_state ok means the enriched ledger was built (pred_net_r / ret_168 / vol_ratio present); needs_enriched_ledger:<fields> means the rebuild failed and only the symbol
+        / side / hour / exit / month / cost parts were measured.'
+      proposal_mapping: 'none: descriptive; the programme review reads the fields and decides the lever.'
+      min_n: '88'
+    compute: cpu_long
+    routing:
+      needs_trainer_resident_data: false
+      needs_gpu: false
+      peak_memory_gb: 1.0
+      est_minutes: 20
+      basis: INFERRED from the gate lane's measured 65 s per prop_ev_sim cell.
+      why_runner: Committed ledger + repo sim code, no GPU; not a Kaggle-dataset job.
+    value:
+      bucket: own_losses
+      usd_at_stake_per_month: 100
+      confidence: 0.2
+      basis: 'stand-in: data to choose between levers and a prop-specific model.'
+    run:
+      timeout_minutes: 180
+      command:
+      - python3
+      - scripts/research/ml_ethsol_diagnostics.py
+      - --sections
+      - decomp
+      - --out-dir
+      - '{out_dir}'
+      - --enrich-build
+    lands:
+      store: research/results/
+      assert_field: read_state
+      min_rows: 1
+    ml_consumer:
+      consumer: ML-PROP-ITERATE
+      decision: choose between pulling a different lever on ml_entry (sizing / selection / hours) and training a prop-specific ENTRY model for ETH+SOL
+      legs:
+      - ml_entry
+      book: money
+    related:
+    - docs/research/ml-entry-prop-gate-2026-11-02/RESULT.md
+    - scripts/research/ml_ethsol_diagnostics.py
+    - research/queue/RQ-20261102-5e1a-01.yaml
+    what_it_does_not_do: Registers no pass bar; changes no roster, risk, sizing or config; reads no live book; the ledger is the already-spent 2025-10..2026-09 held-out year, so nothing here is a confirmation
+      read.
+- id: P5-MLDIAG-RISKCURVE
+  goal: G2
+  theme: new_strategy_prop
+  roadmap:
+  - L-PROP
+  value:
+    usd_at_stake_per_month: 100
+    confidence: 0.2
+  unit:
+    theme: new_strategy_prop
+    priority: 1
+    kind: experiment
+    title: 'ML-PROP-ITERATE diagnostic 2: p_breach against per-trade risk_pct for ml_entry on ETH+SOL: where do evaluation-breach odds and EV trade off on each firm?'
+    question: 'Re-simulating the same ledger at risk_pct 0.10% .. 1.0% (7 points, seeds 1-3, firm cost arm, dd switch 0.8): how do the evaluation breach probability B, lifetime breach, p_pass_eval and EV
+      per life move on breakout_2, tradeify_1 and velotrade_1, and is there any risk at which B is below the firm ceiling c and EV > 0 (the best_ev_risk_with_B_below_ceiling field, null if none)?'
+    why_this_matters: 'Operator 2026-11-02 ~11:35Z verbatim: "...also keep data to see if we need to pull different levers or create a prop specific ml". This unit is the DATA for that choice: it measures
+      why ml_entry v1 (n=381 on ETH+SOL, edge CI lower bound about -0.10 R, EV below even the zero-edge null) fails the prop gate. It registers no pass bar and no roster action; its output feeds the programme
+      review''s lever-vs-prop-ML call (node P5-MLPROP-ENTRY-ETHSOL).'
+    power:
+      expected_n: 381
+      min_detectable_effect: 0.3
+      effect_units: sd
+      design: one_sample
+      alpha: 0.05
+      power: 0.8
+      basis: 'Descriptive decomposition of the n=381 gate ledger: subgroup cells are small (a 95% CI per cell is reported, not a test); the unit asserts measurement, not significance.'
+      feasibility:
+        source: none
+        accrual_basis: Re-pricing of a committed variant ledger under the firm rules; nothing accrues.
+    decision_rule:
+      id: RULE-P5-MLDIAG-RISKCURVE
+      registered_at: '2026-11-02'
+      registered_before_run: true
+      statistic: 'Fields in result.json: risk.firms.<acct>.points[] = {risk_pct, ev_median_usd, ev_worst_usd, ev_median_pct, B_median, B_worst, ceiling, life_p_breach_median, p_pass_eval_median, v2_bar_holds};
+        best_ev_risk_with_B_below_ceiling.'
+      rule: 'Descriptive: no pass bar. A null best_ev_risk means no risk on the grid gives positive EV at every seed with B under the ceiling, i.e. sizing alone cannot rescue this ledger on that firm.'
+      proposal_mapping: 'none: descriptive; the programme review reads the fields and decides the lever.'
+      min_n: '88'
+    compute: cpu_long
+    routing:
+      needs_trainer_resident_data: false
+      needs_gpu: false
+      peak_memory_gb: 1.0
+      est_minutes: 40
+      basis: INFERRED from the gate lane's measured 65 s per prop_ev_sim cell.
+      why_runner: Committed ledger + repo sim code, no GPU; not a Kaggle-dataset job.
+    value:
+      bucket: own_losses
+      usd_at_stake_per_month: 100
+      confidence: 0.2
+      basis: 'stand-in: data to choose between levers and a prop-specific model.'
+    run:
+      timeout_minutes: 180
+      command:
+      - python3
+      - scripts/research/ml_ethsol_diagnostics.py
+      - --sections
+      - risk
+      - --out-dir
+      - '{out_dir}'
+      - --seeds
+      - 1,2,3
+    lands:
+      store: research/results/
+      assert_field: read_state
+      min_rows: 1
+    ml_consumer:
+      consumer: ML-PROP-ITERATE
+      decision: choose between pulling a different lever on ml_entry (sizing / selection / hours) and training a prop-specific ENTRY model for ETH+SOL
+      legs:
+      - ml_entry
+      book: money
+    related:
+    - docs/research/ml-entry-prop-gate-2026-11-02/RESULT.md
+    - scripts/research/ml_ethsol_diagnostics.py
+    - research/queue/RQ-20261102-5e1a-01.yaml
+    what_it_does_not_do: Registers no pass bar; changes no roster, risk, sizing or config; reads no live book; the ledger is the already-spent 2025-10..2026-09 held-out year, so nothing here is a confirmation
+      read.
+- id: P5-MLDIAG-MINEDGE
+  goal: G2
+  theme: new_strategy_prop
+  roadmap:
+  - L-PROP
+  value:
+    usd_at_stake_per_month: 100
+    confidence: 0.2
+  unit:
+    theme: new_strategy_prop
+    priority: 1
+    kind: experiment
+    title: 'ML-PROP-ITERATE diagnostic 3: what would have to be true? The minimum net edge per trade (R) at which ml_entry''s ETH+SOL book clears the registered V2 bar on each firm, and the edge needed
+      for the CI clause'
+    question: 'Shifting the ledger''s gross R so mean net R = e for e in {0, .02, .04, .06, .08, .10, .15, .20} (timing, stops and costs untouched, configured sizing, seeds 1-3): at what e do median and
+      worst-seed B fall below the firm ceiling c with EV > 0 on each firm (min_edge_r_on_grid_clearing_v2)? And what true mean net R gives a CI lower bound of 0 at n=381 and how large must n be at edges
+      0.03 / 0.05 / 0.08 / 0.10?'
+    why_this_matters: 'Operator 2026-11-02 ~11:35Z verbatim: "...also keep data to see if we need to pull different levers or create a prop specific ml". This unit is the DATA for that choice: it measures
+      why ml_entry v1 (n=381 on ETH+SOL, edge CI lower bound about -0.10 R, EV below even the zero-edge null) fails the prop gate. It registers no pass bar and no roster action; its output feeds the programme
+      review''s lever-vs-prop-ML call (node P5-MLPROP-ENTRY-ETHSOL).'
+    power:
+      expected_n: 381
+      min_detectable_effect: 0.3
+      effect_units: sd
+      design: one_sample
+      alpha: 0.05
+      power: 0.8
+      basis: 'Descriptive decomposition of the n=381 gate ledger: subgroup cells are small (a 95% CI per cell is reported, not a test); the unit asserts measurement, not significance.'
+      feasibility:
+        source: none
+        accrual_basis: Re-pricing of a committed variant ledger under the firm rules; nothing accrues.
+    decision_rule:
+      id: RULE-P5-MLDIAG-MINEDGE
+      registered_at: '2026-11-02'
+      registered_before_run: true
+      statistic: 'Fields in result.json: minedge.firms.<acct>.points[] = {net_edge_r, ev_median_usd, ev_worst_usd, B_median, B_worst, ceiling, v2_bar_holds}; min_edge_r_on_grid_clearing_v2; ci_clause =
+        {n, sd_net_r, true_mean_net_r_for_ci_lower_bound_zero_at_this_n, n_needed_for_ci_lower_zero_at_edge}.'
+      rule: 'Descriptive: no pass bar. Compare min_edge_r_on_grid_clearing_v2 with the measured +0.017 R (95% CI -0.106 .. +0.140) and with the 5-symbol pooled +0.027 R to size the gap a better model or
+        lever must close.'
+      proposal_mapping: 'none: descriptive; the programme review reads the fields and decides the lever.'
+      min_n: '88'
+    compute: cpu_long
+    routing:
+      needs_trainer_resident_data: false
+      needs_gpu: false
+      peak_memory_gb: 1.0
+      est_minutes: 45
+      basis: INFERRED from the gate lane's measured 65 s per prop_ev_sim cell.
+      why_runner: Committed ledger + repo sim code, no GPU; not a Kaggle-dataset job.
+    value:
+      bucket: own_losses
+      usd_at_stake_per_month: 100
+      confidence: 0.2
+      basis: 'stand-in: data to choose between levers and a prop-specific model.'
+    run:
+      timeout_minutes: 180
+      command:
+      - python3
+      - scripts/research/ml_ethsol_diagnostics.py
+      - --sections
+      - minedge
+      - --out-dir
+      - '{out_dir}'
+      - --seeds
+      - 1,2,3
+    lands:
+      store: research/results/
+      assert_field: read_state
+      min_rows: 1
+    ml_consumer:
+      consumer: ML-PROP-ITERATE
+      decision: choose between pulling a different lever on ml_entry (sizing / selection / hours) and training a prop-specific ENTRY model for ETH+SOL
+      legs:
+      - ml_entry
+      book: money
+    related:
+    - docs/research/ml-entry-prop-gate-2026-11-02/RESULT.md
+    - scripts/research/ml_ethsol_diagnostics.py
+    - research/queue/RQ-20261102-5e1a-01.yaml
+    what_it_does_not_do: Registers no pass bar; changes no roster, risk, sizing or config; reads no live book; the ledger is the already-spent 2025-10..2026-09 held-out year, so nothing here is a confirmation
+      read.
+- id: P5-MLV-GATE-TF15M-BAR
+  goal: G2
+  theme: new_strategy_prop
+  roadmap:
+  - L-PROP
+  value:
+    usd_at_stake_per_month: 150
+    confidence: 0.1
+  after:
+  - unit: RQ-20261101-b621-01
+    verdict: pass
+  unit:
+    theme: new_strategy_prop
+    priority: 1
+    kind: experiment
+    title: 'ML-PROP-ITERATE gate: does the 15m bar-count timeframe variant of the ENTRY model, on ETHUSDT+SOLUSDT, clear RULE-P5-GATE-BRK-PER-LEG-V3 on breakout_2 / tradeify_1 / velotrade_1?'
+    question: 'The variant''s own Stage-0 unit RQ-20261101-b621-01 PASSED its registered rule. Re-run RQ-20261102-5e1a-01''s prop gate harness on that variant''s ETH+SOL ledger (prop costs, configured sizing,
+      dd switch 0.8): does it clear V3 on any firm? Needs the b621 harness to emit ledger_ethsol.jsonl (see missing_piece if absent).'
+    why_this_matters: 'Operator 2026-11-02 ~11:35Z verbatim: "for the prop accounts - we should continue backtesting on each variation of the ml until one passes, and also keep data to see if we need to
+      pull different levers or create a prop specific ml". Earlier popup "Run gate now, auto-add if pass (Rec.)": a PASS yields a held Tier-3 roster-add PR. ml_entry v1 FAILED on all three firms (PR #22360,
+      edge CI lower bound about -0.10 R).'
+    power:
+      expected_n: 300
+      min_detectable_effect: 0.3
+      effect_units: sd
+      design: one_sample
+      alpha: 0.05
+      power: 0.8
+      basis: n floor 88 (V2); ml_entry v1 ETH+SOL n=381. The variant's own n is read from its ledger; below the floor the verdict is INDETERMINATE.
+      feasibility:
+        source: none
+        accrual_basis: Re-pricing of a committed variant ledger under the firm rules; nothing accrues.
+    decision_rule:
+      id: RULE-P5-MLV-GATE-TF15M-BAR
+      registered_at: '2026-11-02'
+      registered_before_run: true
+      statistic: 'Per firm x cost arm, 5 seeds (1-5), prop_ev_sim path mode, 1000 lives/seed, one-leg book at the account''s configured risk_pct, dd switch 0.8: median and worst-seed B, EV, edge mean net
+        R with 95% CI, zero-edge null EV.'
+      rule: 'RULE-P5-GATE-BRK-PER-LEG-V3 exactly as registered in research/queue/RQ-20261102-5e1a-01.yaml (the ml_entry prop gate) and implemented in scripts/research/prop_gate.py, applied unchanged to
+        this variant''s ETHUSDT+SOLUSDT ledger: V2 (n>=88, median and max-over-seeds B < firm ceiling c, EV>0 at median and worst seed; 5 seeds, 1000 lives, path mode, configured risk_pct, dd switch 0.8,
+        firm cost arm) AND two-sided 95% CI lower bound of mean net R > 0. Verdict per firm (breakout_2, tradeify_1, velotrade_1); zero-edge null EV and the current-stack arm reported beside it. ONE run
+        on the ledger as emitted; thresholds, ledger, cost arm and seeds not changed after seeing any result. read_state no_variant_ledger / n_below_floor = INDETERMINATE (a missing instrument, never a
+        PASS or FAIL).'
+      proposal_mapping: PASS on a firm -> Tier-3 roster-add PR for that account (held for operator merge; the operator's conditional approval 2026-11-02 quoted). FAIL / FAIL_EDGE / INDETERMINATE -> no roster
+        change, record landed, the line continues on the next variant.
+      min_n: '88'
+    compute: cpu_long
+    routing:
+      needs_trainer_resident_data: false
+      needs_gpu: false
+      peak_memory_gb: 1.0
+      est_minutes: 45
+      basis: 'Measured by the ML-ENTRY-PROP-GATE lane: one prop_ev_sim cell about 65 s; 30 cells + 6 null cells over 4 cores.'
+      why_runner: Repo data only (the variant's committed ledger + ruleset YAML), no GPU; the sim is repo code (not a Kaggle-dataset job), so the Kaggle-first rule resolves to a GitHub runner.
+    value:
+      bucket: own_losses
+      usd_at_stake_per_month: 150
+      confidence: 0.1
+      basis: 'stand-in: the operator priority (ML on the props); not a P&L measurement.'
+    run:
+      timeout_minutes: 120
+      command:
+      - python3
+      - scripts/research/ml_variant_prop_gate.py
+      - --variant
+      - mlv-tf15m-bar
+      - --from-unit
+      - RQ-20261101-b621-01
+      - --out-dir
+      - '{out_dir}'
+      - --jobs
+      - '4'
+      - --write-record
+    lands:
+      store: research/results/
+      assert_field: read_state
+      min_rows: 1
+    ml_consumer:
+      consumer: ML-PROP-ITERATE
+      decision: add the 15m bar-count timeframe ENTRY variant to a prop roster (held Tier-3 PR) iff it passes V3 on that firm
+      legs:
+      - ml_entry
+      book: money
+    related:
+    - research/queue/RQ-20261102-5e1a-01.yaml
+    - comms/prop_survival/ml_entry.json
+    - scripts/research/prop_gate.py
+    - RQ-20261101-b621-01
+    what_it_does_not_do: Changes no roster, risk, sizing or config; a PASS only yields a held Tier-3 PR. Reads no live book. Does not re-tune the variant or the rule.
+- id: P5-MLV-GATE-TF15M-CLK
+  goal: G2
+  theme: new_strategy_prop
+  roadmap:
+  - L-PROP
+  value:
+    usd_at_stake_per_month: 150
+    confidence: 0.1
+  after:
+  - unit: RQ-20261101-b622-01
+    verdict: pass
+  unit:
+    theme: new_strategy_prop
+    priority: 1
+    kind: experiment
+    title: 'ML-PROP-ITERATE gate: does the 15m clock-count timeframe variant of the ENTRY model, on ETHUSDT+SOLUSDT, clear RULE-P5-GATE-BRK-PER-LEG-V3 on breakout_2 / tradeify_1 / velotrade_1?'
+    question: 'The variant''s own Stage-0 unit RQ-20261101-b622-01 PASSED its registered rule. Re-run RQ-20261102-5e1a-01''s prop gate harness on that variant''s ETH+SOL ledger (prop costs, configured sizing,
+      dd switch 0.8): does it clear V3 on any firm? Needs the b622 harness to emit ledger_ethsol.jsonl.'
+    why_this_matters: 'Operator 2026-11-02 ~11:35Z verbatim: "for the prop accounts - we should continue backtesting on each variation of the ml until one passes, and also keep data to see if we need to
+      pull different levers or create a prop specific ml". Earlier popup "Run gate now, auto-add if pass (Rec.)": a PASS yields a held Tier-3 roster-add PR. ml_entry v1 FAILED on all three firms (PR #22360,
+      edge CI lower bound about -0.10 R).'
+    power:
+      expected_n: 300
+      min_detectable_effect: 0.3
+      effect_units: sd
+      design: one_sample
+      alpha: 0.05
+      power: 0.8
+      basis: n floor 88 (V2); ml_entry v1 ETH+SOL n=381. The variant's own n is read from its ledger; below the floor the verdict is INDETERMINATE.
+      feasibility:
+        source: none
+        accrual_basis: Re-pricing of a committed variant ledger under the firm rules; nothing accrues.
+    decision_rule:
+      id: RULE-P5-MLV-GATE-TF15M-CLK
+      registered_at: '2026-11-02'
+      registered_before_run: true
+      statistic: 'Per firm x cost arm, 5 seeds (1-5), prop_ev_sim path mode, 1000 lives/seed, one-leg book at the account''s configured risk_pct, dd switch 0.8: median and worst-seed B, EV, edge mean net
+        R with 95% CI, zero-edge null EV.'
+      rule: 'RULE-P5-GATE-BRK-PER-LEG-V3 exactly as registered in research/queue/RQ-20261102-5e1a-01.yaml (the ml_entry prop gate) and implemented in scripts/research/prop_gate.py, applied unchanged to
+        this variant''s ETHUSDT+SOLUSDT ledger: V2 (n>=88, median and max-over-seeds B < firm ceiling c, EV>0 at median and worst seed; 5 seeds, 1000 lives, path mode, configured risk_pct, dd switch 0.8,
+        firm cost arm) AND two-sided 95% CI lower bound of mean net R > 0. Verdict per firm (breakout_2, tradeify_1, velotrade_1); zero-edge null EV and the current-stack arm reported beside it. ONE run
+        on the ledger as emitted; thresholds, ledger, cost arm and seeds not changed after seeing any result. read_state no_variant_ledger / n_below_floor = INDETERMINATE (a missing instrument, never a
+        PASS or FAIL).'
+      proposal_mapping: PASS on a firm -> Tier-3 roster-add PR for that account (held for operator merge; the operator's conditional approval 2026-11-02 quoted). FAIL / FAIL_EDGE / INDETERMINATE -> no roster
+        change, record landed, the line continues on the next variant.
+      min_n: '88'
+    compute: cpu_long
+    routing:
+      needs_trainer_resident_data: false
+      needs_gpu: false
+      peak_memory_gb: 1.0
+      est_minutes: 45
+      basis: 'Measured by the ML-ENTRY-PROP-GATE lane: one prop_ev_sim cell about 65 s; 30 cells + 6 null cells over 4 cores.'
+      why_runner: Repo data only (the variant's committed ledger + ruleset YAML), no GPU; the sim is repo code (not a Kaggle-dataset job), so the Kaggle-first rule resolves to a GitHub runner.
+    value:
+      bucket: own_losses
+      usd_at_stake_per_month: 150
+      confidence: 0.1
+      basis: 'stand-in: the operator priority (ML on the props); not a P&L measurement.'
+    run:
+      timeout_minutes: 120
+      command:
+      - python3
+      - scripts/research/ml_variant_prop_gate.py
+      - --variant
+      - mlv-tf15m-clk
+      - --from-unit
+      - RQ-20261101-b622-01
+      - --out-dir
+      - '{out_dir}'
+      - --jobs
+      - '4'
+      - --write-record
+    lands:
+      store: research/results/
+      assert_field: read_state
+      min_rows: 1
+    ml_consumer:
+      consumer: ML-PROP-ITERATE
+      decision: add the 15m clock-count timeframe ENTRY variant to a prop roster (held Tier-3 PR) iff it passes V3 on that firm
+      legs:
+      - ml_entry
+      book: money
+    related:
+    - research/queue/RQ-20261102-5e1a-01.yaml
+    - comms/prop_survival/ml_entry.json
+    - scripts/research/prop_gate.py
+    - RQ-20261101-b622-01
+    what_it_does_not_do: Changes no roster, risk, sizing or config; a PASS only yields a held Tier-3 PR. Reads no live book. Does not re-tune the variant or the rule.
+- id: P5-MLV-GATE-TF5M-BAR
+  goal: G2
+  theme: new_strategy_prop
+  roadmap:
+  - L-PROP
+  value:
+    usd_at_stake_per_month: 150
+    confidence: 0.1
+  after:
+  - unit: RQ-20261101-b623-01
+    verdict: pass
+  unit:
+    theme: new_strategy_prop
+    priority: 1
+    kind: experiment
+    title: 'ML-PROP-ITERATE gate: does the 5m bar-count timeframe variant of the ENTRY model, on ETHUSDT+SOLUSDT, clear RULE-P5-GATE-BRK-PER-LEG-V3 on breakout_2 / tradeify_1 / velotrade_1?'
+    question: 'The variant''s own Stage-0 unit RQ-20261101-b623-01 PASSED its registered rule. Re-run RQ-20261102-5e1a-01''s prop gate harness on that variant''s ETH+SOL ledger (prop costs, configured sizing,
+      dd switch 0.8): does it clear V3 on any firm? Needs the b623 harness to emit ledger_ethsol.jsonl.'
+    why_this_matters: 'Operator 2026-11-02 ~11:35Z verbatim: "for the prop accounts - we should continue backtesting on each variation of the ml until one passes, and also keep data to see if we need to
+      pull different levers or create a prop specific ml". Earlier popup "Run gate now, auto-add if pass (Rec.)": a PASS yields a held Tier-3 roster-add PR. ml_entry v1 FAILED on all three firms (PR #22360,
+      edge CI lower bound about -0.10 R).'
+    power:
+      expected_n: 300
+      min_detectable_effect: 0.3
+      effect_units: sd
+      design: one_sample
+      alpha: 0.05
+      power: 0.8
+      basis: n floor 88 (V2); ml_entry v1 ETH+SOL n=381. The variant's own n is read from its ledger; below the floor the verdict is INDETERMINATE.
+      feasibility:
+        source: none
+        accrual_basis: Re-pricing of a committed variant ledger under the firm rules; nothing accrues.
+    decision_rule:
+      id: RULE-P5-MLV-GATE-TF5M-BAR
+      registered_at: '2026-11-02'
+      registered_before_run: true
+      statistic: 'Per firm x cost arm, 5 seeds (1-5), prop_ev_sim path mode, 1000 lives/seed, one-leg book at the account''s configured risk_pct, dd switch 0.8: median and worst-seed B, EV, edge mean net
+        R with 95% CI, zero-edge null EV.'
+      rule: 'RULE-P5-GATE-BRK-PER-LEG-V3 exactly as registered in research/queue/RQ-20261102-5e1a-01.yaml (the ml_entry prop gate) and implemented in scripts/research/prop_gate.py, applied unchanged to
+        this variant''s ETHUSDT+SOLUSDT ledger: V2 (n>=88, median and max-over-seeds B < firm ceiling c, EV>0 at median and worst seed; 5 seeds, 1000 lives, path mode, configured risk_pct, dd switch 0.8,
+        firm cost arm) AND two-sided 95% CI lower bound of mean net R > 0. Verdict per firm (breakout_2, tradeify_1, velotrade_1); zero-edge null EV and the current-stack arm reported beside it. ONE run
+        on the ledger as emitted; thresholds, ledger, cost arm and seeds not changed after seeing any result. read_state no_variant_ledger / n_below_floor = INDETERMINATE (a missing instrument, never a
+        PASS or FAIL).'
+      proposal_mapping: PASS on a firm -> Tier-3 roster-add PR for that account (held for operator merge; the operator's conditional approval 2026-11-02 quoted). FAIL / FAIL_EDGE / INDETERMINATE -> no roster
+        change, record landed, the line continues on the next variant.
+      min_n: '88'
+    compute: cpu_long
+    routing:
+      needs_trainer_resident_data: false
+      needs_gpu: false
+      peak_memory_gb: 1.0
+      est_minutes: 45
+      basis: 'Measured by the ML-ENTRY-PROP-GATE lane: one prop_ev_sim cell about 65 s; 30 cells + 6 null cells over 4 cores.'
+      why_runner: Repo data only (the variant's committed ledger + ruleset YAML), no GPU; the sim is repo code (not a Kaggle-dataset job), so the Kaggle-first rule resolves to a GitHub runner.
+    value:
+      bucket: own_losses
+      usd_at_stake_per_month: 150
+      confidence: 0.1
+      basis: 'stand-in: the operator priority (ML on the props); not a P&L measurement.'
+    run:
+      timeout_minutes: 120
+      command:
+      - python3
+      - scripts/research/ml_variant_prop_gate.py
+      - --variant
+      - mlv-tf5m-bar
+      - --from-unit
+      - RQ-20261101-b623-01
+      - --out-dir
+      - '{out_dir}'
+      - --jobs
+      - '4'
+      - --write-record
+    lands:
+      store: research/results/
+      assert_field: read_state
+      min_rows: 1
+    ml_consumer:
+      consumer: ML-PROP-ITERATE
+      decision: add the 5m bar-count timeframe ENTRY variant to a prop roster (held Tier-3 PR) iff it passes V3 on that firm
+      legs:
+      - ml_entry
+      book: money
+    related:
+    - research/queue/RQ-20261102-5e1a-01.yaml
+    - comms/prop_survival/ml_entry.json
+    - scripts/research/prop_gate.py
+    - RQ-20261101-b623-01
+    what_it_does_not_do: Changes no roster, risk, sizing or config; a PASS only yields a held Tier-3 PR. Reads no live book. Does not re-tune the variant or the rule.
+- id: P5-MLV-GATE-TF5M-CLK
+  goal: G2
+  theme: new_strategy_prop
+  roadmap:
+  - L-PROP
+  value:
+    usd_at_stake_per_month: 150
+    confidence: 0.1
+  after:
+  - unit: RQ-20261101-b624-01
+    verdict: pass
+  unit:
+    theme: new_strategy_prop
+    priority: 1
+    kind: experiment
+    title: 'ML-PROP-ITERATE gate: does the 5m clock-count timeframe variant of the ENTRY model, on ETHUSDT+SOLUSDT, clear RULE-P5-GATE-BRK-PER-LEG-V3 on breakout_2 / tradeify_1 / velotrade_1?'
+    question: 'The variant''s own Stage-0 unit RQ-20261101-b624-01 PASSED its registered rule. Re-run RQ-20261102-5e1a-01''s prop gate harness on that variant''s ETH+SOL ledger (prop costs, configured sizing,
+      dd switch 0.8): does it clear V3 on any firm? Needs the b624 harness to emit ledger_ethsol.jsonl.'
+    why_this_matters: 'Operator 2026-11-02 ~11:35Z verbatim: "for the prop accounts - we should continue backtesting on each variation of the ml until one passes, and also keep data to see if we need to
+      pull different levers or create a prop specific ml". Earlier popup "Run gate now, auto-add if pass (Rec.)": a PASS yields a held Tier-3 roster-add PR. ml_entry v1 FAILED on all three firms (PR #22360,
+      edge CI lower bound about -0.10 R).'
+    power:
+      expected_n: 300
+      min_detectable_effect: 0.3
+      effect_units: sd
+      design: one_sample
+      alpha: 0.05
+      power: 0.8
+      basis: n floor 88 (V2); ml_entry v1 ETH+SOL n=381. The variant's own n is read from its ledger; below the floor the verdict is INDETERMINATE.
+      feasibility:
+        source: none
+        accrual_basis: Re-pricing of a committed variant ledger under the firm rules; nothing accrues.
+    decision_rule:
+      id: RULE-P5-MLV-GATE-TF5M-CLK
+      registered_at: '2026-11-02'
+      registered_before_run: true
+      statistic: 'Per firm x cost arm, 5 seeds (1-5), prop_ev_sim path mode, 1000 lives/seed, one-leg book at the account''s configured risk_pct, dd switch 0.8: median and worst-seed B, EV, edge mean net
+        R with 95% CI, zero-edge null EV.'
+      rule: 'RULE-P5-GATE-BRK-PER-LEG-V3 exactly as registered in research/queue/RQ-20261102-5e1a-01.yaml (the ml_entry prop gate) and implemented in scripts/research/prop_gate.py, applied unchanged to
+        this variant''s ETHUSDT+SOLUSDT ledger: V2 (n>=88, median and max-over-seeds B < firm ceiling c, EV>0 at median and worst seed; 5 seeds, 1000 lives, path mode, configured risk_pct, dd switch 0.8,
+        firm cost arm) AND two-sided 95% CI lower bound of mean net R > 0. Verdict per firm (breakout_2, tradeify_1, velotrade_1); zero-edge null EV and the current-stack arm reported beside it. ONE run
+        on the ledger as emitted; thresholds, ledger, cost arm and seeds not changed after seeing any result. read_state no_variant_ledger / n_below_floor = INDETERMINATE (a missing instrument, never a
+        PASS or FAIL).'
+      proposal_mapping: PASS on a firm -> Tier-3 roster-add PR for that account (held for operator merge; the operator's conditional approval 2026-11-02 quoted). FAIL / FAIL_EDGE / INDETERMINATE -> no roster
+        change, record landed, the line continues on the next variant.
+      min_n: '88'
+    compute: cpu_long
+    routing:
+      needs_trainer_resident_data: false
+      needs_gpu: false
+      peak_memory_gb: 1.0
+      est_minutes: 45
+      basis: 'Measured by the ML-ENTRY-PROP-GATE lane: one prop_ev_sim cell about 65 s; 30 cells + 6 null cells over 4 cores.'
+      why_runner: Repo data only (the variant's committed ledger + ruleset YAML), no GPU; the sim is repo code (not a Kaggle-dataset job), so the Kaggle-first rule resolves to a GitHub runner.
+    value:
+      bucket: own_losses
+      usd_at_stake_per_month: 150
+      confidence: 0.1
+      basis: 'stand-in: the operator priority (ML on the props); not a P&L measurement.'
+    run:
+      timeout_minutes: 120
+      command:
+      - python3
+      - scripts/research/ml_variant_prop_gate.py
+      - --variant
+      - mlv-tf5m-clk
+      - --from-unit
+      - RQ-20261101-b624-01
+      - --out-dir
+      - '{out_dir}'
+      - --jobs
+      - '4'
+      - --write-record
+    lands:
+      store: research/results/
+      assert_field: read_state
+      min_rows: 1
+    ml_consumer:
+      consumer: ML-PROP-ITERATE
+      decision: add the 5m clock-count timeframe ENTRY variant to a prop roster (held Tier-3 PR) iff it passes V3 on that firm
+      legs:
+      - ml_entry
+      book: money
+    related:
+    - research/queue/RQ-20261102-5e1a-01.yaml
+    - comms/prop_survival/ml_entry.json
+    - scripts/research/prop_gate.py
+    - RQ-20261101-b624-01
+    what_it_does_not_do: Changes no roster, risk, sizing or config; a PASS only yields a held Tier-3 PR. Reads no live book. Does not re-tune the variant or the rule.
+- id: P5-MLV-GATE-TF4H-BAR
+  goal: G2
+  theme: new_strategy_prop
+  roadmap:
+  - L-PROP
+  value:
+    usd_at_stake_per_month: 150
+    confidence: 0.1
+  after:
+  - unit: RQ-20261101-b625-01
+    verdict: pass
+  unit:
+    theme: new_strategy_prop
+    priority: 1
+    kind: experiment
+    title: 'ML-PROP-ITERATE gate: does the 4h bar-count timeframe variant of the ENTRY model, on ETHUSDT+SOLUSDT, clear RULE-P5-GATE-BRK-PER-LEG-V3 on breakout_2 / tradeify_1 / velotrade_1?'
+    question: 'The variant''s own Stage-0 unit RQ-20261101-b625-01 PASSED its registered rule. Re-run RQ-20261102-5e1a-01''s prop gate harness on that variant''s ETH+SOL ledger (prop costs, configured sizing,
+      dd switch 0.8): does it clear V3 on any firm? Needs the b625 harness to emit ledger_ethsol.jsonl.'
+    why_this_matters: 'Operator 2026-11-02 ~11:35Z verbatim: "for the prop accounts - we should continue backtesting on each variation of the ml until one passes, and also keep data to see if we need to
+      pull different levers or create a prop specific ml". Earlier popup "Run gate now, auto-add if pass (Rec.)": a PASS yields a held Tier-3 roster-add PR. ml_entry v1 FAILED on all three firms (PR #22360,
+      edge CI lower bound about -0.10 R).'
+    power:
+      expected_n: 300
+      min_detectable_effect: 0.3
+      effect_units: sd
+      design: one_sample
+      alpha: 0.05
+      power: 0.8
+      basis: n floor 88 (V2); ml_entry v1 ETH+SOL n=381. The variant's own n is read from its ledger; below the floor the verdict is INDETERMINATE.
+      feasibility:
+        source: none
+        accrual_basis: Re-pricing of a committed variant ledger under the firm rules; nothing accrues.
+    decision_rule:
+      id: RULE-P5-MLV-GATE-TF4H-BAR
+      registered_at: '2026-11-02'
+      registered_before_run: true
+      statistic: 'Per firm x cost arm, 5 seeds (1-5), prop_ev_sim path mode, 1000 lives/seed, one-leg book at the account''s configured risk_pct, dd switch 0.8: median and worst-seed B, EV, edge mean net
+        R with 95% CI, zero-edge null EV.'
+      rule: 'RULE-P5-GATE-BRK-PER-LEG-V3 exactly as registered in research/queue/RQ-20261102-5e1a-01.yaml (the ml_entry prop gate) and implemented in scripts/research/prop_gate.py, applied unchanged to
+        this variant''s ETHUSDT+SOLUSDT ledger: V2 (n>=88, median and max-over-seeds B < firm ceiling c, EV>0 at median and worst seed; 5 seeds, 1000 lives, path mode, configured risk_pct, dd switch 0.8,
+        firm cost arm) AND two-sided 95% CI lower bound of mean net R > 0. Verdict per firm (breakout_2, tradeify_1, velotrade_1); zero-edge null EV and the current-stack arm reported beside it. ONE run
+        on the ledger as emitted; thresholds, ledger, cost arm and seeds not changed after seeing any result. read_state no_variant_ledger / n_below_floor = INDETERMINATE (a missing instrument, never a
+        PASS or FAIL).'
+      proposal_mapping: PASS on a firm -> Tier-3 roster-add PR for that account (held for operator merge; the operator's conditional approval 2026-11-02 quoted). FAIL / FAIL_EDGE / INDETERMINATE -> no roster
+        change, record landed, the line continues on the next variant.
+      min_n: '88'
+    compute: cpu_long
+    routing:
+      needs_trainer_resident_data: false
+      needs_gpu: false
+      peak_memory_gb: 1.0
+      est_minutes: 45
+      basis: 'Measured by the ML-ENTRY-PROP-GATE lane: one prop_ev_sim cell about 65 s; 30 cells + 6 null cells over 4 cores.'
+      why_runner: Repo data only (the variant's committed ledger + ruleset YAML), no GPU; the sim is repo code (not a Kaggle-dataset job), so the Kaggle-first rule resolves to a GitHub runner.
+    value:
+      bucket: own_losses
+      usd_at_stake_per_month: 150
+      confidence: 0.1
+      basis: 'stand-in: the operator priority (ML on the props); not a P&L measurement.'
+    run:
+      timeout_minutes: 120
+      command:
+      - python3
+      - scripts/research/ml_variant_prop_gate.py
+      - --variant
+      - mlv-tf4h-bar
+      - --from-unit
+      - RQ-20261101-b625-01
+      - --out-dir
+      - '{out_dir}'
+      - --jobs
+      - '4'
+      - --write-record
+    lands:
+      store: research/results/
+      assert_field: read_state
+      min_rows: 1
+    ml_consumer:
+      consumer: ML-PROP-ITERATE
+      decision: add the 4h bar-count timeframe ENTRY variant to a prop roster (held Tier-3 PR) iff it passes V3 on that firm
+      legs:
+      - ml_entry
+      book: money
+    related:
+    - research/queue/RQ-20261102-5e1a-01.yaml
+    - comms/prop_survival/ml_entry.json
+    - scripts/research/prop_gate.py
+    - RQ-20261101-b625-01
+    what_it_does_not_do: Changes no roster, risk, sizing or config; a PASS only yields a held Tier-3 PR. Reads no live book. Does not re-tune the variant or the rule.
+- id: P5-MLV-GATE-TF4H-CLK
+  goal: G2
+  theme: new_strategy_prop
+  roadmap:
+  - L-PROP
+  value:
+    usd_at_stake_per_month: 150
+    confidence: 0.1
+  after:
+  - unit: RQ-20261101-b626-01
+    verdict: pass
+  unit:
+    theme: new_strategy_prop
+    priority: 1
+    kind: experiment
+    title: 'ML-PROP-ITERATE gate: does the 4h clock-count timeframe variant of the ENTRY model, on ETHUSDT+SOLUSDT, clear RULE-P5-GATE-BRK-PER-LEG-V3 on breakout_2 / tradeify_1 / velotrade_1?'
+    question: 'The variant''s own Stage-0 unit RQ-20261101-b626-01 PASSED its registered rule. Re-run RQ-20261102-5e1a-01''s prop gate harness on that variant''s ETH+SOL ledger (prop costs, configured sizing,
+      dd switch 0.8): does it clear V3 on any firm? Needs the b626 harness to emit ledger_ethsol.jsonl.'
+    why_this_matters: 'Operator 2026-11-02 ~11:35Z verbatim: "for the prop accounts - we should continue backtesting on each variation of the ml until one passes, and also keep data to see if we need to
+      pull different levers or create a prop specific ml". Earlier popup "Run gate now, auto-add if pass (Rec.)": a PASS yields a held Tier-3 roster-add PR. ml_entry v1 FAILED on all three firms (PR #22360,
+      edge CI lower bound about -0.10 R).'
+    power:
+      expected_n: 300
+      min_detectable_effect: 0.3
+      effect_units: sd
+      design: one_sample
+      alpha: 0.05
+      power: 0.8
+      basis: n floor 88 (V2); ml_entry v1 ETH+SOL n=381. The variant's own n is read from its ledger; below the floor the verdict is INDETERMINATE.
+      feasibility:
+        source: none
+        accrual_basis: Re-pricing of a committed variant ledger under the firm rules; nothing accrues.
+    decision_rule:
+      id: RULE-P5-MLV-GATE-TF4H-CLK
+      registered_at: '2026-11-02'
+      registered_before_run: true
+      statistic: 'Per firm x cost arm, 5 seeds (1-5), prop_ev_sim path mode, 1000 lives/seed, one-leg book at the account''s configured risk_pct, dd switch 0.8: median and worst-seed B, EV, edge mean net
+        R with 95% CI, zero-edge null EV.'
+      rule: 'RULE-P5-GATE-BRK-PER-LEG-V3 exactly as registered in research/queue/RQ-20261102-5e1a-01.yaml (the ml_entry prop gate) and implemented in scripts/research/prop_gate.py, applied unchanged to
+        this variant''s ETHUSDT+SOLUSDT ledger: V2 (n>=88, median and max-over-seeds B < firm ceiling c, EV>0 at median and worst seed; 5 seeds, 1000 lives, path mode, configured risk_pct, dd switch 0.8,
+        firm cost arm) AND two-sided 95% CI lower bound of mean net R > 0. Verdict per firm (breakout_2, tradeify_1, velotrade_1); zero-edge null EV and the current-stack arm reported beside it. ONE run
+        on the ledger as emitted; thresholds, ledger, cost arm and seeds not changed after seeing any result. read_state no_variant_ledger / n_below_floor = INDETERMINATE (a missing instrument, never a
+        PASS or FAIL).'
+      proposal_mapping: PASS on a firm -> Tier-3 roster-add PR for that account (held for operator merge; the operator's conditional approval 2026-11-02 quoted). FAIL / FAIL_EDGE / INDETERMINATE -> no roster
+        change, record landed, the line continues on the next variant.
+      min_n: '88'
+    compute: cpu_long
+    routing:
+      needs_trainer_resident_data: false
+      needs_gpu: false
+      peak_memory_gb: 1.0
+      est_minutes: 45
+      basis: 'Measured by the ML-ENTRY-PROP-GATE lane: one prop_ev_sim cell about 65 s; 30 cells + 6 null cells over 4 cores.'
+      why_runner: Repo data only (the variant's committed ledger + ruleset YAML), no GPU; the sim is repo code (not a Kaggle-dataset job), so the Kaggle-first rule resolves to a GitHub runner.
+    value:
+      bucket: own_losses
+      usd_at_stake_per_month: 150
+      confidence: 0.1
+      basis: 'stand-in: the operator priority (ML on the props); not a P&L measurement.'
+    run:
+      timeout_minutes: 120
+      command:
+      - python3
+      - scripts/research/ml_variant_prop_gate.py
+      - --variant
+      - mlv-tf4h-clk
+      - --from-unit
+      - RQ-20261101-b626-01
+      - --out-dir
+      - '{out_dir}'
+      - --jobs
+      - '4'
+      - --write-record
+    lands:
+      store: research/results/
+      assert_field: read_state
+      min_rows: 1
+    ml_consumer:
+      consumer: ML-PROP-ITERATE
+      decision: add the 4h clock-count timeframe ENTRY variant to a prop roster (held Tier-3 PR) iff it passes V3 on that firm
+      legs:
+      - ml_entry
+      book: money
+    related:
+    - research/queue/RQ-20261102-5e1a-01.yaml
+    - comms/prop_survival/ml_entry.json
+    - scripts/research/prop_gate.py
+    - RQ-20261101-b626-01
+    what_it_does_not_do: Changes no roster, risk, sizing or config; a PASS only yields a held Tier-3 PR. Reads no live book. Does not re-tune the variant or the rule.
+- id: P5-MLV-GATE-MOVINGTP
+  goal: G2
+  theme: new_strategy_prop
+  roadmap:
+  - L-PROP
+  value:
+    usd_at_stake_per_month: 150
+    confidence: 0.1
+  after:
+  - unit: RQ-20261101-383f-01
+    verdict: pass
+  unit:
+    theme: new_strategy_prop
+    priority: 1
+    kind: experiment
+    title: 'ML-PROP-ITERATE gate: does the moving-TP (first-passage re-scored TP revision) variant of the ENTRY model, on ETHUSDT+SOLUSDT, clear RULE-P5-GATE-BRK-PER-LEG-V3 on breakout_2 / tradeify_1 /
+      velotrade_1?'
+    question: 'The variant''s own Stage-0 unit RQ-20261101-383f-01 PASSED its registered rule. Re-run RQ-20261102-5e1a-01''s prop gate harness on that variant''s ETH+SOL ledger (prop costs, configured sizing,
+      dd switch 0.8): does it clear V3 on any firm? The ledger is the moving-TP policy''s per-trade gross R on the same population.'
+    why_this_matters: 'Operator 2026-11-02 ~11:35Z verbatim: "for the prop accounts - we should continue backtesting on each variation of the ml until one passes, and also keep data to see if we need to
+      pull different levers or create a prop specific ml". Earlier popup "Run gate now, auto-add if pass (Rec.)": a PASS yields a held Tier-3 roster-add PR. ml_entry v1 FAILED on all three firms (PR #22360,
+      edge CI lower bound about -0.10 R).'
+    power:
+      expected_n: 300
+      min_detectable_effect: 0.3
+      effect_units: sd
+      design: one_sample
+      alpha: 0.05
+      power: 0.8
+      basis: n floor 88 (V2); ml_entry v1 ETH+SOL n=381. The variant's own n is read from its ledger; below the floor the verdict is INDETERMINATE.
+      feasibility:
+        source: none
+        accrual_basis: Re-pricing of a committed variant ledger under the firm rules; nothing accrues.
+    decision_rule:
+      id: RULE-P5-MLV-GATE-MOVINGTP
+      registered_at: '2026-11-02'
+      registered_before_run: true
+      statistic: 'Per firm x cost arm, 5 seeds (1-5), prop_ev_sim path mode, 1000 lives/seed, one-leg book at the account''s configured risk_pct, dd switch 0.8: median and worst-seed B, EV, edge mean net
+        R with 95% CI, zero-edge null EV.'
+      rule: 'RULE-P5-GATE-BRK-PER-LEG-V3 exactly as registered in research/queue/RQ-20261102-5e1a-01.yaml (the ml_entry prop gate) and implemented in scripts/research/prop_gate.py, applied unchanged to
+        this variant''s ETHUSDT+SOLUSDT ledger: V2 (n>=88, median and max-over-seeds B < firm ceiling c, EV>0 at median and worst seed; 5 seeds, 1000 lives, path mode, configured risk_pct, dd switch 0.8,
+        firm cost arm) AND two-sided 95% CI lower bound of mean net R > 0. Verdict per firm (breakout_2, tradeify_1, velotrade_1); zero-edge null EV and the current-stack arm reported beside it. ONE run
+        on the ledger as emitted; thresholds, ledger, cost arm and seeds not changed after seeing any result. read_state no_variant_ledger / n_below_floor = INDETERMINATE (a missing instrument, never a
+        PASS or FAIL).'
+      proposal_mapping: PASS on a firm -> Tier-3 roster-add PR for that account (held for operator merge; the operator's conditional approval 2026-11-02 quoted). FAIL / FAIL_EDGE / INDETERMINATE -> no roster
+        change, record landed, the line continues on the next variant.
+      min_n: '88'
+    compute: cpu_long
+    routing:
+      needs_trainer_resident_data: false
+      needs_gpu: false
+      peak_memory_gb: 1.0
+      est_minutes: 45
+      basis: 'Measured by the ML-ENTRY-PROP-GATE lane: one prop_ev_sim cell about 65 s; 30 cells + 6 null cells over 4 cores.'
+      why_runner: Repo data only (the variant's committed ledger + ruleset YAML), no GPU; the sim is repo code (not a Kaggle-dataset job), so the Kaggle-first rule resolves to a GitHub runner.
+    value:
+      bucket: own_losses
+      usd_at_stake_per_month: 150
+      confidence: 0.1
+      basis: 'stand-in: the operator priority (ML on the props); not a P&L measurement.'
+    run:
+      timeout_minutes: 120
+      command:
+      - python3
+      - scripts/research/ml_variant_prop_gate.py
+      - --variant
+      - mlv-movingtp
+      - --from-unit
+      - RQ-20261101-383f-01
+      - --out-dir
+      - '{out_dir}'
+      - --jobs
+      - '4'
+      - --write-record
+    lands:
+      store: research/results/
+      assert_field: read_state
+      min_rows: 1
+    ml_consumer:
+      consumer: ML-PROP-ITERATE
+      decision: add the moving-TP (first-passage re-scored TP revision) ENTRY variant to a prop roster (held Tier-3 PR) iff it passes V3 on that firm
+      legs:
+      - ml_entry
+      book: money
+    related:
+    - research/queue/RQ-20261102-5e1a-01.yaml
+    - comms/prop_survival/ml_entry.json
+    - scripts/research/prop_gate.py
+    - RQ-20261101-383f-01
+    what_it_does_not_do: Changes no roster, risk, sizing or config; a PASS only yields a held Tier-3 PR. Reads no live book. Does not re-tune the variant or the rule.
+- id: P5-MLV-GATE-V2-W1
+  goal: G2
+  theme: new_strategy_prop
+  roadmap:
+  - L-PROP
+  value:
+    usd_at_stake_per_month: 150
+    confidence: 0.1
+  after:
+  - unit: RQ-20261101-b609-01
+    verdict: pass
+  unit:
+    theme: new_strategy_prop
+    priority: 1
+    kind: experiment
+    title: 'ML-PROP-ITERATE gate: does the ml_entry_v2 (winning dev stack of b608-01) variant of the ENTRY model, on ETHUSDT+SOLUSDT, clear RULE-P5-GATE-BRK-PER-LEG-V3 on breakout_2 / tradeify_1 / velotrade_1?'
+    question: 'The variant''s own Stage-0 unit RQ-20261101-b609-01 PASSED its registered rule. Re-run RQ-20261102-5e1a-01''s prop gate harness on that variant''s ETH+SOL ledger (prop costs, configured sizing,
+      dd switch 0.8): does it clear V3 on any firm? The v2 W1 read is one month (2026-10): the ledger will fall below the n floor unless the v2 harness also emits its dev-fold OOS trades; then INDETERMINATE
+      names the missing piece.'
+    why_this_matters: 'Operator 2026-11-02 ~11:35Z verbatim: "for the prop accounts - we should continue backtesting on each variation of the ml until one passes, and also keep data to see if we need to
+      pull different levers or create a prop specific ml". Earlier popup "Run gate now, auto-add if pass (Rec.)": a PASS yields a held Tier-3 roster-add PR. ml_entry v1 FAILED on all three firms (PR #22360,
+      edge CI lower bound about -0.10 R).'
+    power:
+      expected_n: 300
+      min_detectable_effect: 0.3
+      effect_units: sd
+      design: one_sample
+      alpha: 0.05
+      power: 0.8
+      basis: n floor 88 (V2); ml_entry v1 ETH+SOL n=381. The variant's own n is read from its ledger; below the floor the verdict is INDETERMINATE.
+      feasibility:
+        source: none
+        accrual_basis: Re-pricing of a committed variant ledger under the firm rules; nothing accrues.
+    decision_rule:
+      id: RULE-P5-MLV-GATE-V2-W1
+      registered_at: '2026-11-02'
+      registered_before_run: true
+      statistic: 'Per firm x cost arm, 5 seeds (1-5), prop_ev_sim path mode, 1000 lives/seed, one-leg book at the account''s configured risk_pct, dd switch 0.8: median and worst-seed B, EV, edge mean net
+        R with 95% CI, zero-edge null EV.'
+      rule: 'RULE-P5-GATE-BRK-PER-LEG-V3 exactly as registered in research/queue/RQ-20261102-5e1a-01.yaml (the ml_entry prop gate) and implemented in scripts/research/prop_gate.py, applied unchanged to
+        this variant''s ETHUSDT+SOLUSDT ledger: V2 (n>=88, median and max-over-seeds B < firm ceiling c, EV>0 at median and worst seed; 5 seeds, 1000 lives, path mode, configured risk_pct, dd switch 0.8,
+        firm cost arm) AND two-sided 95% CI lower bound of mean net R > 0. Verdict per firm (breakout_2, tradeify_1, velotrade_1); zero-edge null EV and the current-stack arm reported beside it. ONE run
+        on the ledger as emitted; thresholds, ledger, cost arm and seeds not changed after seeing any result. read_state no_variant_ledger / n_below_floor = INDETERMINATE (a missing instrument, never a
+        PASS or FAIL).'
+      proposal_mapping: PASS on a firm -> Tier-3 roster-add PR for that account (held for operator merge; the operator's conditional approval 2026-11-02 quoted). FAIL / FAIL_EDGE / INDETERMINATE -> no roster
+        change, record landed, the line continues on the next variant.
+      min_n: '88'
+    compute: cpu_long
+    routing:
+      needs_trainer_resident_data: false
+      needs_gpu: false
+      peak_memory_gb: 1.0
+      est_minutes: 45
+      basis: 'Measured by the ML-ENTRY-PROP-GATE lane: one prop_ev_sim cell about 65 s; 30 cells + 6 null cells over 4 cores.'
+      why_runner: Repo data only (the variant's committed ledger + ruleset YAML), no GPU; the sim is repo code (not a Kaggle-dataset job), so the Kaggle-first rule resolves to a GitHub runner.
+    value:
+      bucket: own_losses
+      usd_at_stake_per_month: 150
+      confidence: 0.1
+      basis: 'stand-in: the operator priority (ML on the props); not a P&L measurement.'
+    run:
+      timeout_minutes: 120
+      command:
+      - python3
+      - scripts/research/ml_variant_prop_gate.py
+      - --variant
+      - mlv-v2-w1
+      - --from-unit
+      - RQ-20261101-b609-01
+      - --out-dir
+      - '{out_dir}'
+      - --jobs
+      - '4'
+      - --write-record
+    lands:
+      store: research/results/
+      assert_field: read_state
+      min_rows: 1
+    ml_consumer:
+      consumer: ML-PROP-ITERATE
+      decision: add the ml_entry_v2 (winning dev stack of b608-01) ENTRY variant to a prop roster (held Tier-3 PR) iff it passes V3 on that firm
+      legs:
+      - ml_entry
+      book: money
+    related:
+    - research/queue/RQ-20261102-5e1a-01.yaml
+    - comms/prop_survival/ml_entry.json
+    - scripts/research/prop_gate.py
+    - RQ-20261101-b609-01
+    what_it_does_not_do: Changes no roster, risk, sizing or config; a PASS only yields a held Tier-3 PR. Reads no live book. Does not re-tune the variant or the rule.
+- id: P5-MLV-GATE-DYNSL
+  goal: G2
+  theme: new_strategy_prop
+  roadmap:
+  - L-PROP
+  value:
+    usd_at_stake_per_month: 100
+    confidence: 0.1
+  needs_authoring: 'STANDING ITERATION (ML-PROP-ITERATE): for EACH ML-ENTRY-DYNAMIC-SL arm unit (break-even, trailing, time-decay tightening, ML SL revision, structure SL; checklist row ML-ENTRY-DYNAMIC-SL,
+    authored after the 2026-11-04 18:00Z reset) whose Stage-0 result PASSES, add one node of the same shape as P5-MLV-GATE-MOVINGTP: `after: [{unit: <arm unit>, verdict: pass}]`, command `ml_variant_prop_gate.py
+    --variant mlv-dynsl-<arm> --from-unit <arm unit>`, rule RULE-P5-MLV-GATE-DYNSL-<arm> = RULE-P5-GATE-BRK-PER-LEG-V3 unchanged. MISSING PIECE the arm units must supply: emit ledger_ethsol.jsonl (gross_r
+    per trade, the shape of ml_entry_ethsol.jsonl). Author the nodes in the SAME PR that authors the arm units.'
+- id: P5-MLV-GATE-STRUCT
+  goal: G2
+  theme: new_strategy_prop
+  roadmap:
+  - L-PROP
+  value:
+    usd_at_stake_per_month: 100
+    confidence: 0.1
+  needs_authoring: 'STANDING ITERATION (ML-PROP-ITERATE): structure-exit arms on ml_entry (swing-based SL, structure-aware exits; lever maps research/levers/ltr-sl-to-structure.yaml and ml-entry.yaml) -
+    each arm unit that PASSES Stage 0 gets a gate node of the P5-MLV-GATE-MOVINGTP shape, authored in the same PR as the arm unit. MISSING PIECE: a structure-exit arm unit on ml_entry does not exist yet
+    (author it from the lever map first), and it must emit ledger_ethsol.jsonl.'
+- id: P5-MLV-GATE-NEXT
+  goal: G2
+  theme: new_strategy_prop
+  roadmap:
+  - L-PROP
+  value:
+    usd_at_stake_per_month: 100
+    confidence: 0.1
+  needs_authoring: 'STANDING ITERATION (ML-PROP-ITERATE): every future ML-ENTRY variant (recipe fixes such as the b601 bracket-geometry, b602 selectivity, b604 calibration and b606 cost-gate levers, a retrained
+    ml_entry_v2, any new ENTRY recipe) whose own Stage-0 unit PASSES gets a gate node of the P5-MLV-GATE-MOVINGTP shape in the SAME PR that authors the variant, per the programme-review iteration audit;
+    nothing is tuned to pass and the rule is RULE-P5-GATE-BRK-PER-LEG-V3 unchanged. The line closes only when a variant passes on a firm (-> held Tier-3 roster PR) or the programme review retires it with
+    a recorded reason, never on an attempt count (checklist row ML-PROP-ITERATE).'
+- id: P5-MLPROP-ENTRY-ETHSOL
+  goal: G2
+  theme: new_strategy_prop
+  roadmap:
+  - L-PROP
+  value:
+    usd_at_stake_per_month: 100
+    confidence: 0.1
+  needs_authoring: 'PRE-REGISTERED DESIGN, runnable once the three diagnostics land (P5-MLDIAG-DECOMP / -RISKCURVE / -MINEDGE; full text docs/research/ml-prop-iterate-2026-11-02/PROP-ML-DESIGN.md): a PROP-SPECIFIC
+    ENTRY candidate - the pooled ENTRY model re-thresholded / re-trained on ETHUSDT+SOLUSDT only with the firm cost stack inside the label and a firm-DD-aware selection objective, graded by RULE-P5-GATE-BRK-PER-LEG-V3
+    through ml_variant_prop_gate.py on dev-OOS folds then ONE forward read on November+ data. MISSING PIECES (harness change, so needs_authoring): (1) a trainer entry point in scripts/research/ml_decision_entry.py
+    that accepts --symbols ETHUSDT,SOLUSDT and a label built with the venue cost arm (prop_gate.SIM[acct].ven) instead of the flat cost; (2) a dev-fold tau/objective selector that calls prop_ev_sim on dev-OOS
+    ledgers (never the spent held-out year); (3) the dev-OOS ledger exporter (ledger_ethsol.jsonl). Author the unit(s) after the diagnostics are read.'
+
+- id: P5-SX-GATE-ETH-P
+  goal: G2
+  theme: new_strategy_prop
+  roadmap:
+  - L-PROP
+  value:
+    usd_at_stake_per_month: 100
+    confidence: 0.1
+  after:
+  - unit: RQ-20261102-8ef8-01
+    verdict: any
+  unit:
+    theme: new_strategy_prop
+    priority: 1
+    kind: experiment
+    title: 'PROP STRUCTURE EXITS gate: does trend_donchian_eth_prop arm P clear RULE-P5-GATE-BRK-PER-LEG-V3 on breakout_2 / tradeify_1 / velotrade_1?'
+    question: 'Re-price the P trade book of RQ-20261102-8ef8-01 (single-symbol ETHUSDT, prop venue stack) with the unchanged V3 prop gate (arm P is the control: the same leg re-graded under V3, since its
+      2026-10-17 record used V1).'
+    why_this_matters: 'Operator 2026-11-02 15:58Z verbatim: "I also want to check applying strucure dynamice based exits for props this week if we can". A PASS on a firm is a data-backed Tier-3 roster decision
+      the operator takes.'
+    power:
+      expected_n: 300
+      min_detectable_effect: 0.3
+      effect_units: sd
+      design: one_sample
+      alpha: 0.05
+      power: 0.8
+      basis: n floor 88 (V2); the arm book n is read from the ledger, below the floor = INDETERMINATE.
+      feasibility:
+        source: none
+        accrual_basis: Re-pricing of a committed arm book under firm rules; nothing accrues.
+    decision_rule:
+      id: RULE-P5-SX-GATE-ETH-P
+      registered_at: '2026-11-02'
+      registered_before_run: true
+      statistic: 'Per firm x cost arm, 5 seeds (1-5), prop_ev_sim path mode, 1000 lives/seed, one-leg book at the account configured risk_pct, dd switch 0.8: median and worst-seed B, EV, edge mean net R
+        with 95% CI, zero-edge null EV.'
+      rule: 'RULE-P5-GATE-BRK-PER-LEG-V3 exactly as registered in research/queue/RQ-20261102-5e1a-01.yaml and implemented in scripts/research/prop_gate.py, applied unchanged to this arm book: V2 (n>=88,
+        median and max-over-seeds B < firm ceiling c, EV>0 at median and worst seed) AND the two-sided 95% CI lower bound of mean net R > 0, verdict on the firm venue arm. ONE run; thresholds, ledger, cost
+        arm and seeds not changed after seeing any result. no_variant_ledger / n_below_floor = INDETERMINATE.'
+      proposal_mapping: PASS on a firm -> report to the operator at once with the record; a roster add is the operator data-backed Tier-3 call. FAIL / FAIL_EDGE / INDETERMINATE -> no roster change, record
+        landed.
+      min_n: '88'
+    compute: cpu_long
+    routing:
+      needs_trainer_resident_data: false
+      needs_gpu: false
+      peak_memory_gb: 1.0
+      est_minutes: 45
+      basis: 'Measured by the ML-ENTRY-PROP-GATE lane: one prop_ev_sim cell about 65 s; 30 cells + 6 null cells over 4 cores.'
+      why_runner: Repo data only (committed arm book + ruleset YAML), no GPU; the sim is repo code, so the Kaggle-first rule resolves to a GitHub runner.
+    value:
+      bucket: own_losses
+      usd_at_stake_per_month: 100
+      confidence: 0.1
+      basis: 'stand-in: operator priority (structure exits on props); not a P&L measurement.'
+    run:
+      timeout_minutes: 120
+      command:
+      - python3
+      - scripts/research/ml_variant_prop_gate.py
+      - --variant
+      - sx-eth-prop-p
+      - --from-unit
+      - RQ-20261102-8ef8-01
+      - --arm-label
+      - P
+      - --symbols
+      - ETHUSDT
+      - --leg-key
+      - trend_donchian_eth_prop
+      - --out-dir
+      - '{out_dir}'
+      - --jobs
+      - '4'
+      - --write-record
+    lands:
+      store: research/results/
+      assert_field: read_state
+      min_rows: 1
+    related:
+    - research/queue/RQ-20261102-8ef8-01.yaml
+    - research/queue/RQ-20261102-5e1a-01.yaml
+    - scripts/research/prop_gate.py
+    what_it_does_not_do: Changes no roster, risk, sizing or config; a PASS only reports. Does not re-tune the arm or the rule.
+- id: P5-SX-GATE-ETH-SW15
+  goal: G2
+  theme: new_strategy_prop
+  roadmap:
+  - L-PROP
+  value:
+    usd_at_stake_per_month: 100
+    confidence: 0.1
+  after:
+  - unit: RQ-20261102-8ef8-01
+    verdict: any
+  unit:
+    theme: new_strategy_prop
+    priority: 1
+    kind: experiment
+    title: 'PROP STRUCTURE EXITS gate: does trend_donchian_eth_prop arm SW15 clear RULE-P5-GATE-BRK-PER-LEG-V3 on breakout_2 / tradeify_1 / velotrade_1?'
+    question: 'Re-price the SW15 trade book of RQ-20261102-8ef8-01 (single-symbol ETHUSDT, prop venue stack) with the unchanged V3 prop gate (arm P is the control: the same leg re-graded under V3, since
+      its 2026-10-17 record used V1).'
+    why_this_matters: 'Operator 2026-11-02 15:58Z verbatim: "I also want to check applying strucure dynamice based exits for props this week if we can". A PASS on a firm is a data-backed Tier-3 roster decision
+      the operator takes.'
+    power:
+      expected_n: 300
+      min_detectable_effect: 0.3
+      effect_units: sd
+      design: one_sample
+      alpha: 0.05
+      power: 0.8
+      basis: n floor 88 (V2); the arm book n is read from the ledger, below the floor = INDETERMINATE.
+      feasibility:
+        source: none
+        accrual_basis: Re-pricing of a committed arm book under firm rules; nothing accrues.
+    decision_rule:
+      id: RULE-P5-SX-GATE-ETH-SW15
+      registered_at: '2026-11-02'
+      registered_before_run: true
+      statistic: 'Per firm x cost arm, 5 seeds (1-5), prop_ev_sim path mode, 1000 lives/seed, one-leg book at the account configured risk_pct, dd switch 0.8: median and worst-seed B, EV, edge mean net R
+        with 95% CI, zero-edge null EV.'
+      rule: 'RULE-P5-GATE-BRK-PER-LEG-V3 exactly as registered in research/queue/RQ-20261102-5e1a-01.yaml and implemented in scripts/research/prop_gate.py, applied unchanged to this arm book: V2 (n>=88,
+        median and max-over-seeds B < firm ceiling c, EV>0 at median and worst seed) AND the two-sided 95% CI lower bound of mean net R > 0, verdict on the firm venue arm. ONE run; thresholds, ledger, cost
+        arm and seeds not changed after seeing any result. no_variant_ledger / n_below_floor = INDETERMINATE.'
+      proposal_mapping: PASS on a firm -> report to the operator at once with the record; a roster add is the operator data-backed Tier-3 call. FAIL / FAIL_EDGE / INDETERMINATE -> no roster change, record
+        landed.
+      min_n: '88'
+    compute: cpu_long
+    routing:
+      needs_trainer_resident_data: false
+      needs_gpu: false
+      peak_memory_gb: 1.0
+      est_minutes: 45
+      basis: 'Measured by the ML-ENTRY-PROP-GATE lane: one prop_ev_sim cell about 65 s; 30 cells + 6 null cells over 4 cores.'
+      why_runner: Repo data only (committed arm book + ruleset YAML), no GPU; the sim is repo code, so the Kaggle-first rule resolves to a GitHub runner.
+    value:
+      bucket: own_losses
+      usd_at_stake_per_month: 100
+      confidence: 0.1
+      basis: 'stand-in: operator priority (structure exits on props); not a P&L measurement.'
+    run:
+      timeout_minutes: 120
+      command:
+      - python3
+      - scripts/research/ml_variant_prop_gate.py
+      - --variant
+      - sx-eth-prop-sw15
+      - --from-unit
+      - RQ-20261102-8ef8-01
+      - --arm-label
+      - SW15
+      - --symbols
+      - ETHUSDT
+      - --leg-key
+      - trend_donchian_eth_prop
+      - --out-dir
+      - '{out_dir}'
+      - --jobs
+      - '4'
+      - --write-record
+    lands:
+      store: research/results/
+      assert_field: read_state
+      min_rows: 1
+    related:
+    - research/queue/RQ-20261102-8ef8-01.yaml
+    - research/queue/RQ-20261102-5e1a-01.yaml
+    - scripts/research/prop_gate.py
+    what_it_does_not_do: Changes no roster, risk, sizing or config; a PASS only reports. Does not re-tune the arm or the rule.
+- id: P5-SX-GATE-ETH-SW10
+  goal: G2
+  theme: new_strategy_prop
+  roadmap:
+  - L-PROP
+  value:
+    usd_at_stake_per_month: 100
+    confidence: 0.1
+  after:
+  - unit: RQ-20261102-8ef8-01
+    verdict: any
+  unit:
+    theme: new_strategy_prop
+    priority: 1
+    kind: experiment
+    title: 'PROP STRUCTURE EXITS gate: does trend_donchian_eth_prop arm SW10 clear RULE-P5-GATE-BRK-PER-LEG-V3 on breakout_2 / tradeify_1 / velotrade_1?'
+    question: 'Re-price the SW10 trade book of RQ-20261102-8ef8-01 (single-symbol ETHUSDT, prop venue stack) with the unchanged V3 prop gate (arm P is the control: the same leg re-graded under V3, since
+      its 2026-10-17 record used V1).'
+    why_this_matters: 'Operator 2026-11-02 15:58Z verbatim: "I also want to check applying strucure dynamice based exits for props this week if we can". A PASS on a firm is a data-backed Tier-3 roster decision
+      the operator takes.'
+    power:
+      expected_n: 300
+      min_detectable_effect: 0.3
+      effect_units: sd
+      design: one_sample
+      alpha: 0.05
+      power: 0.8
+      basis: n floor 88 (V2); the arm book n is read from the ledger, below the floor = INDETERMINATE.
+      feasibility:
+        source: none
+        accrual_basis: Re-pricing of a committed arm book under firm rules; nothing accrues.
+    decision_rule:
+      id: RULE-P5-SX-GATE-ETH-SW10
+      registered_at: '2026-11-02'
+      registered_before_run: true
+      statistic: 'Per firm x cost arm, 5 seeds (1-5), prop_ev_sim path mode, 1000 lives/seed, one-leg book at the account configured risk_pct, dd switch 0.8: median and worst-seed B, EV, edge mean net R
+        with 95% CI, zero-edge null EV.'
+      rule: 'RULE-P5-GATE-BRK-PER-LEG-V3 exactly as registered in research/queue/RQ-20261102-5e1a-01.yaml and implemented in scripts/research/prop_gate.py, applied unchanged to this arm book: V2 (n>=88,
+        median and max-over-seeds B < firm ceiling c, EV>0 at median and worst seed) AND the two-sided 95% CI lower bound of mean net R > 0, verdict on the firm venue arm. ONE run; thresholds, ledger, cost
+        arm and seeds not changed after seeing any result. no_variant_ledger / n_below_floor = INDETERMINATE.'
+      proposal_mapping: PASS on a firm -> report to the operator at once with the record; a roster add is the operator data-backed Tier-3 call. FAIL / FAIL_EDGE / INDETERMINATE -> no roster change, record
+        landed.
+      min_n: '88'
+    compute: cpu_long
+    routing:
+      needs_trainer_resident_data: false
+      needs_gpu: false
+      peak_memory_gb: 1.0
+      est_minutes: 45
+      basis: 'Measured by the ML-ENTRY-PROP-GATE lane: one prop_ev_sim cell about 65 s; 30 cells + 6 null cells over 4 cores.'
+      why_runner: Repo data only (committed arm book + ruleset YAML), no GPU; the sim is repo code, so the Kaggle-first rule resolves to a GitHub runner.
+    value:
+      bucket: own_losses
+      usd_at_stake_per_month: 100
+      confidence: 0.1
+      basis: 'stand-in: operator priority (structure exits on props); not a P&L measurement.'
+    run:
+      timeout_minutes: 120
+      command:
+      - python3
+      - scripts/research/ml_variant_prop_gate.py
+      - --variant
+      - sx-eth-prop-sw10
+      - --from-unit
+      - RQ-20261102-8ef8-01
+      - --arm-label
+      - SW10
+      - --symbols
+      - ETHUSDT
+      - --leg-key
+      - trend_donchian_eth_prop
+      - --out-dir
+      - '{out_dir}'
+      - --jobs
+      - '4'
+      - --write-record
+    lands:
+      store: research/results/
+      assert_field: read_state
+      min_rows: 1
+    related:
+    - research/queue/RQ-20261102-8ef8-01.yaml
+    - research/queue/RQ-20261102-5e1a-01.yaml
+    - scripts/research/prop_gate.py
+    what_it_does_not_do: Changes no roster, risk, sizing or config; a PASS only reports. Does not re-tune the arm or the rule.
+- id: P5-SX-GATE-ETH-SW15R1
+  goal: G2
+  theme: new_strategy_prop
+  roadmap:
+  - L-PROP
+  value:
+    usd_at_stake_per_month: 100
+    confidence: 0.1
+  after:
+  - unit: RQ-20261102-8ef8-01
+    verdict: any
+  unit:
+    theme: new_strategy_prop
+    priority: 1
+    kind: experiment
+    title: 'PROP STRUCTURE EXITS gate: does trend_donchian_eth_prop arm SW15R1 clear RULE-P5-GATE-BRK-PER-LEG-V3 on breakout_2 / tradeify_1 / velotrade_1?'
+    question: 'Re-price the SW15R1 trade book of RQ-20261102-8ef8-01 (single-symbol ETHUSDT, prop venue stack) with the unchanged V3 prop gate (arm P is the control: the same leg re-graded under V3, since
+      its 2026-10-17 record used V1).'
+    why_this_matters: 'Operator 2026-11-02 15:58Z verbatim: "I also want to check applying strucure dynamice based exits for props this week if we can". A PASS on a firm is a data-backed Tier-3 roster decision
+      the operator takes.'
+    power:
+      expected_n: 300
+      min_detectable_effect: 0.3
+      effect_units: sd
+      design: one_sample
+      alpha: 0.05
+      power: 0.8
+      basis: n floor 88 (V2); the arm book n is read from the ledger, below the floor = INDETERMINATE.
+      feasibility:
+        source: none
+        accrual_basis: Re-pricing of a committed arm book under firm rules; nothing accrues.
+    decision_rule:
+      id: RULE-P5-SX-GATE-ETH-SW15R1
+      registered_at: '2026-11-02'
+      registered_before_run: true
+      statistic: 'Per firm x cost arm, 5 seeds (1-5), prop_ev_sim path mode, 1000 lives/seed, one-leg book at the account configured risk_pct, dd switch 0.8: median and worst-seed B, EV, edge mean net R
+        with 95% CI, zero-edge null EV.'
+      rule: 'RULE-P5-GATE-BRK-PER-LEG-V3 exactly as registered in research/queue/RQ-20261102-5e1a-01.yaml and implemented in scripts/research/prop_gate.py, applied unchanged to this arm book: V2 (n>=88,
+        median and max-over-seeds B < firm ceiling c, EV>0 at median and worst seed) AND the two-sided 95% CI lower bound of mean net R > 0, verdict on the firm venue arm. ONE run; thresholds, ledger, cost
+        arm and seeds not changed after seeing any result. no_variant_ledger / n_below_floor = INDETERMINATE.'
+      proposal_mapping: PASS on a firm -> report to the operator at once with the record; a roster add is the operator data-backed Tier-3 call. FAIL / FAIL_EDGE / INDETERMINATE -> no roster change, record
+        landed.
+      min_n: '88'
+    compute: cpu_long
+    routing:
+      needs_trainer_resident_data: false
+      needs_gpu: false
+      peak_memory_gb: 1.0
+      est_minutes: 45
+      basis: 'Measured by the ML-ENTRY-PROP-GATE lane: one prop_ev_sim cell about 65 s; 30 cells + 6 null cells over 4 cores.'
+      why_runner: Repo data only (committed arm book + ruleset YAML), no GPU; the sim is repo code, so the Kaggle-first rule resolves to a GitHub runner.
+    value:
+      bucket: own_losses
+      usd_at_stake_per_month: 100
+      confidence: 0.1
+      basis: 'stand-in: operator priority (structure exits on props); not a P&L measurement.'
+    run:
+      timeout_minutes: 120
+      command:
+      - python3
+      - scripts/research/ml_variant_prop_gate.py
+      - --variant
+      - sx-eth-prop-sw15r1
+      - --from-unit
+      - RQ-20261102-8ef8-01
+      - --arm-label
+      - SW15R1
+      - --symbols
+      - ETHUSDT
+      - --leg-key
+      - trend_donchian_eth_prop
+      - --out-dir
+      - '{out_dir}'
+      - --jobs
+      - '4'
+      - --write-record
+    lands:
+      store: research/results/
+      assert_field: read_state
+      min_rows: 1
+    related:
+    - research/queue/RQ-20261102-8ef8-01.yaml
+    - research/queue/RQ-20261102-5e1a-01.yaml
+    - scripts/research/prop_gate.py
+    what_it_does_not_do: Changes no roster, risk, sizing or config; a PASS only reports. Does not re-tune the arm or the rule.
+- id: P5-SX-GATE-SOL-P
+  goal: G2
+  theme: new_strategy_prop
+  roadmap:
+  - L-PROP
+  value:
+    usd_at_stake_per_month: 100
+    confidence: 0.1
+  after:
+  - unit: RQ-20261102-8ef8-02
+    verdict: any
+  unit:
+    theme: new_strategy_prop
+    priority: 1
+    kind: experiment
+    title: 'PROP STRUCTURE EXITS gate: does trend_donchian_sol_prop arm P clear RULE-P5-GATE-BRK-PER-LEG-V3 on breakout_2 / tradeify_1 / velotrade_1?'
+    question: 'Re-price the P trade book of RQ-20261102-8ef8-02 (single-symbol SOLUSDT, prop venue stack) with the unchanged V3 prop gate (arm P is the control: the same leg re-graded under V3, since its
+      2026-10-17 record used V1).'
+    why_this_matters: 'Operator 2026-11-02 15:58Z verbatim: "I also want to check applying strucure dynamice based exits for props this week if we can". A PASS on a firm is a data-backed Tier-3 roster decision
+      the operator takes.'
+    power:
+      expected_n: 300
+      min_detectable_effect: 0.3
+      effect_units: sd
+      design: one_sample
+      alpha: 0.05
+      power: 0.8
+      basis: n floor 88 (V2); the arm book n is read from the ledger, below the floor = INDETERMINATE.
+      feasibility:
+        source: none
+        accrual_basis: Re-pricing of a committed arm book under firm rules; nothing accrues.
+    decision_rule:
+      id: RULE-P5-SX-GATE-SOL-P
+      registered_at: '2026-11-02'
+      registered_before_run: true
+      statistic: 'Per firm x cost arm, 5 seeds (1-5), prop_ev_sim path mode, 1000 lives/seed, one-leg book at the account configured risk_pct, dd switch 0.8: median and worst-seed B, EV, edge mean net R
+        with 95% CI, zero-edge null EV.'
+      rule: 'RULE-P5-GATE-BRK-PER-LEG-V3 exactly as registered in research/queue/RQ-20261102-5e1a-01.yaml and implemented in scripts/research/prop_gate.py, applied unchanged to this arm book: V2 (n>=88,
+        median and max-over-seeds B < firm ceiling c, EV>0 at median and worst seed) AND the two-sided 95% CI lower bound of mean net R > 0, verdict on the firm venue arm. ONE run; thresholds, ledger, cost
+        arm and seeds not changed after seeing any result. no_variant_ledger / n_below_floor = INDETERMINATE.'
+      proposal_mapping: PASS on a firm -> report to the operator at once with the record; a roster add is the operator data-backed Tier-3 call. FAIL / FAIL_EDGE / INDETERMINATE -> no roster change, record
+        landed.
+      min_n: '88'
+    compute: cpu_long
+    routing:
+      needs_trainer_resident_data: false
+      needs_gpu: false
+      peak_memory_gb: 1.0
+      est_minutes: 45
+      basis: 'Measured by the ML-ENTRY-PROP-GATE lane: one prop_ev_sim cell about 65 s; 30 cells + 6 null cells over 4 cores.'
+      why_runner: Repo data only (committed arm book + ruleset YAML), no GPU; the sim is repo code, so the Kaggle-first rule resolves to a GitHub runner.
+    value:
+      bucket: own_losses
+      usd_at_stake_per_month: 100
+      confidence: 0.1
+      basis: 'stand-in: operator priority (structure exits on props); not a P&L measurement.'
+    run:
+      timeout_minutes: 120
+      command:
+      - python3
+      - scripts/research/ml_variant_prop_gate.py
+      - --variant
+      - sx-sol-prop-p
+      - --from-unit
+      - RQ-20261102-8ef8-02
+      - --arm-label
+      - P
+      - --symbols
+      - SOLUSDT
+      - --leg-key
+      - trend_donchian_sol_prop
+      - --out-dir
+      - '{out_dir}'
+      - --jobs
+      - '4'
+      - --write-record
+    lands:
+      store: research/results/
+      assert_field: read_state
+      min_rows: 1
+    related:
+    - research/queue/RQ-20261102-8ef8-02.yaml
+    - research/queue/RQ-20261102-5e1a-01.yaml
+    - scripts/research/prop_gate.py
+    what_it_does_not_do: Changes no roster, risk, sizing or config; a PASS only reports. Does not re-tune the arm or the rule.
+- id: P5-SX-GATE-SOL-SW15
+  goal: G2
+  theme: new_strategy_prop
+  roadmap:
+  - L-PROP
+  value:
+    usd_at_stake_per_month: 100
+    confidence: 0.1
+  after:
+  - unit: RQ-20261102-8ef8-02
+    verdict: any
+  unit:
+    theme: new_strategy_prop
+    priority: 1
+    kind: experiment
+    title: 'PROP STRUCTURE EXITS gate: does trend_donchian_sol_prop arm SW15 clear RULE-P5-GATE-BRK-PER-LEG-V3 on breakout_2 / tradeify_1 / velotrade_1?'
+    question: 'Re-price the SW15 trade book of RQ-20261102-8ef8-02 (single-symbol SOLUSDT, prop venue stack) with the unchanged V3 prop gate (arm P is the control: the same leg re-graded under V3, since
+      its 2026-10-17 record used V1).'
+    why_this_matters: 'Operator 2026-11-02 15:58Z verbatim: "I also want to check applying strucure dynamice based exits for props this week if we can". A PASS on a firm is a data-backed Tier-3 roster decision
+      the operator takes.'
+    power:
+      expected_n: 300
+      min_detectable_effect: 0.3
+      effect_units: sd
+      design: one_sample
+      alpha: 0.05
+      power: 0.8
+      basis: n floor 88 (V2); the arm book n is read from the ledger, below the floor = INDETERMINATE.
+      feasibility:
+        source: none
+        accrual_basis: Re-pricing of a committed arm book under firm rules; nothing accrues.
+    decision_rule:
+      id: RULE-P5-SX-GATE-SOL-SW15
+      registered_at: '2026-11-02'
+      registered_before_run: true
+      statistic: 'Per firm x cost arm, 5 seeds (1-5), prop_ev_sim path mode, 1000 lives/seed, one-leg book at the account configured risk_pct, dd switch 0.8: median and worst-seed B, EV, edge mean net R
+        with 95% CI, zero-edge null EV.'
+      rule: 'RULE-P5-GATE-BRK-PER-LEG-V3 exactly as registered in research/queue/RQ-20261102-5e1a-01.yaml and implemented in scripts/research/prop_gate.py, applied unchanged to this arm book: V2 (n>=88,
+        median and max-over-seeds B < firm ceiling c, EV>0 at median and worst seed) AND the two-sided 95% CI lower bound of mean net R > 0, verdict on the firm venue arm. ONE run; thresholds, ledger, cost
+        arm and seeds not changed after seeing any result. no_variant_ledger / n_below_floor = INDETERMINATE.'
+      proposal_mapping: PASS on a firm -> report to the operator at once with the record; a roster add is the operator data-backed Tier-3 call. FAIL / FAIL_EDGE / INDETERMINATE -> no roster change, record
+        landed.
+      min_n: '88'
+    compute: cpu_long
+    routing:
+      needs_trainer_resident_data: false
+      needs_gpu: false
+      peak_memory_gb: 1.0
+      est_minutes: 45
+      basis: 'Measured by the ML-ENTRY-PROP-GATE lane: one prop_ev_sim cell about 65 s; 30 cells + 6 null cells over 4 cores.'
+      why_runner: Repo data only (committed arm book + ruleset YAML), no GPU; the sim is repo code, so the Kaggle-first rule resolves to a GitHub runner.
+    value:
+      bucket: own_losses
+      usd_at_stake_per_month: 100
+      confidence: 0.1
+      basis: 'stand-in: operator priority (structure exits on props); not a P&L measurement.'
+    run:
+      timeout_minutes: 120
+      command:
+      - python3
+      - scripts/research/ml_variant_prop_gate.py
+      - --variant
+      - sx-sol-prop-sw15
+      - --from-unit
+      - RQ-20261102-8ef8-02
+      - --arm-label
+      - SW15
+      - --symbols
+      - SOLUSDT
+      - --leg-key
+      - trend_donchian_sol_prop
+      - --out-dir
+      - '{out_dir}'
+      - --jobs
+      - '4'
+      - --write-record
+    lands:
+      store: research/results/
+      assert_field: read_state
+      min_rows: 1
+    related:
+    - research/queue/RQ-20261102-8ef8-02.yaml
+    - research/queue/RQ-20261102-5e1a-01.yaml
+    - scripts/research/prop_gate.py
+    what_it_does_not_do: Changes no roster, risk, sizing or config; a PASS only reports. Does not re-tune the arm or the rule.
+- id: P5-SX-GATE-SOL-SW10
+  goal: G2
+  theme: new_strategy_prop
+  roadmap:
+  - L-PROP
+  value:
+    usd_at_stake_per_month: 100
+    confidence: 0.1
+  after:
+  - unit: RQ-20261102-8ef8-02
+    verdict: any
+  unit:
+    theme: new_strategy_prop
+    priority: 1
+    kind: experiment
+    title: 'PROP STRUCTURE EXITS gate: does trend_donchian_sol_prop arm SW10 clear RULE-P5-GATE-BRK-PER-LEG-V3 on breakout_2 / tradeify_1 / velotrade_1?'
+    question: 'Re-price the SW10 trade book of RQ-20261102-8ef8-02 (single-symbol SOLUSDT, prop venue stack) with the unchanged V3 prop gate (arm P is the control: the same leg re-graded under V3, since
+      its 2026-10-17 record used V1).'
+    why_this_matters: 'Operator 2026-11-02 15:58Z verbatim: "I also want to check applying strucure dynamice based exits for props this week if we can". A PASS on a firm is a data-backed Tier-3 roster decision
+      the operator takes.'
+    power:
+      expected_n: 300
+      min_detectable_effect: 0.3
+      effect_units: sd
+      design: one_sample
+      alpha: 0.05
+      power: 0.8
+      basis: n floor 88 (V2); the arm book n is read from the ledger, below the floor = INDETERMINATE.
+      feasibility:
+        source: none
+        accrual_basis: Re-pricing of a committed arm book under firm rules; nothing accrues.
+    decision_rule:
+      id: RULE-P5-SX-GATE-SOL-SW10
+      registered_at: '2026-11-02'
+      registered_before_run: true
+      statistic: 'Per firm x cost arm, 5 seeds (1-5), prop_ev_sim path mode, 1000 lives/seed, one-leg book at the account configured risk_pct, dd switch 0.8: median and worst-seed B, EV, edge mean net R
+        with 95% CI, zero-edge null EV.'
+      rule: 'RULE-P5-GATE-BRK-PER-LEG-V3 exactly as registered in research/queue/RQ-20261102-5e1a-01.yaml and implemented in scripts/research/prop_gate.py, applied unchanged to this arm book: V2 (n>=88,
+        median and max-over-seeds B < firm ceiling c, EV>0 at median and worst seed) AND the two-sided 95% CI lower bound of mean net R > 0, verdict on the firm venue arm. ONE run; thresholds, ledger, cost
+        arm and seeds not changed after seeing any result. no_variant_ledger / n_below_floor = INDETERMINATE.'
+      proposal_mapping: PASS on a firm -> report to the operator at once with the record; a roster add is the operator data-backed Tier-3 call. FAIL / FAIL_EDGE / INDETERMINATE -> no roster change, record
+        landed.
+      min_n: '88'
+    compute: cpu_long
+    routing:
+      needs_trainer_resident_data: false
+      needs_gpu: false
+      peak_memory_gb: 1.0
+      est_minutes: 45
+      basis: 'Measured by the ML-ENTRY-PROP-GATE lane: one prop_ev_sim cell about 65 s; 30 cells + 6 null cells over 4 cores.'
+      why_runner: Repo data only (committed arm book + ruleset YAML), no GPU; the sim is repo code, so the Kaggle-first rule resolves to a GitHub runner.
+    value:
+      bucket: own_losses
+      usd_at_stake_per_month: 100
+      confidence: 0.1
+      basis: 'stand-in: operator priority (structure exits on props); not a P&L measurement.'
+    run:
+      timeout_minutes: 120
+      command:
+      - python3
+      - scripts/research/ml_variant_prop_gate.py
+      - --variant
+      - sx-sol-prop-sw10
+      - --from-unit
+      - RQ-20261102-8ef8-02
+      - --arm-label
+      - SW10
+      - --symbols
+      - SOLUSDT
+      - --leg-key
+      - trend_donchian_sol_prop
+      - --out-dir
+      - '{out_dir}'
+      - --jobs
+      - '4'
+      - --write-record
+    lands:
+      store: research/results/
+      assert_field: read_state
+      min_rows: 1
+    related:
+    - research/queue/RQ-20261102-8ef8-02.yaml
+    - research/queue/RQ-20261102-5e1a-01.yaml
+    - scripts/research/prop_gate.py
+    what_it_does_not_do: Changes no roster, risk, sizing or config; a PASS only reports. Does not re-tune the arm or the rule.
+- id: P5-SX-GATE-SOL-SW15R1
+  goal: G2
+  theme: new_strategy_prop
+  roadmap:
+  - L-PROP
+  value:
+    usd_at_stake_per_month: 100
+    confidence: 0.1
+  after:
+  - unit: RQ-20261102-8ef8-02
+    verdict: any
+  unit:
+    theme: new_strategy_prop
+    priority: 1
+    kind: experiment
+    title: 'PROP STRUCTURE EXITS gate: does trend_donchian_sol_prop arm SW15R1 clear RULE-P5-GATE-BRK-PER-LEG-V3 on breakout_2 / tradeify_1 / velotrade_1?'
+    question: 'Re-price the SW15R1 trade book of RQ-20261102-8ef8-02 (single-symbol SOLUSDT, prop venue stack) with the unchanged V3 prop gate (arm P is the control: the same leg re-graded under V3, since
+      its 2026-10-17 record used V1).'
+    why_this_matters: 'Operator 2026-11-02 15:58Z verbatim: "I also want to check applying strucure dynamice based exits for props this week if we can". A PASS on a firm is a data-backed Tier-3 roster decision
+      the operator takes.'
+    power:
+      expected_n: 300
+      min_detectable_effect: 0.3
+      effect_units: sd
+      design: one_sample
+      alpha: 0.05
+      power: 0.8
+      basis: n floor 88 (V2); the arm book n is read from the ledger, below the floor = INDETERMINATE.
+      feasibility:
+        source: none
+        accrual_basis: Re-pricing of a committed arm book under firm rules; nothing accrues.
+    decision_rule:
+      id: RULE-P5-SX-GATE-SOL-SW15R1
+      registered_at: '2026-11-02'
+      registered_before_run: true
+      statistic: 'Per firm x cost arm, 5 seeds (1-5), prop_ev_sim path mode, 1000 lives/seed, one-leg book at the account configured risk_pct, dd switch 0.8: median and worst-seed B, EV, edge mean net R
+        with 95% CI, zero-edge null EV.'
+      rule: 'RULE-P5-GATE-BRK-PER-LEG-V3 exactly as registered in research/queue/RQ-20261102-5e1a-01.yaml and implemented in scripts/research/prop_gate.py, applied unchanged to this arm book: V2 (n>=88,
+        median and max-over-seeds B < firm ceiling c, EV>0 at median and worst seed) AND the two-sided 95% CI lower bound of mean net R > 0, verdict on the firm venue arm. ONE run; thresholds, ledger, cost
+        arm and seeds not changed after seeing any result. no_variant_ledger / n_below_floor = INDETERMINATE.'
+      proposal_mapping: PASS on a firm -> report to the operator at once with the record; a roster add is the operator data-backed Tier-3 call. FAIL / FAIL_EDGE / INDETERMINATE -> no roster change, record
+        landed.
+      min_n: '88'
+    compute: cpu_long
+    routing:
+      needs_trainer_resident_data: false
+      needs_gpu: false
+      peak_memory_gb: 1.0
+      est_minutes: 45
+      basis: 'Measured by the ML-ENTRY-PROP-GATE lane: one prop_ev_sim cell about 65 s; 30 cells + 6 null cells over 4 cores.'
+      why_runner: Repo data only (committed arm book + ruleset YAML), no GPU; the sim is repo code, so the Kaggle-first rule resolves to a GitHub runner.
+    value:
+      bucket: own_losses
+      usd_at_stake_per_month: 100
+      confidence: 0.1
+      basis: 'stand-in: operator priority (structure exits on props); not a P&L measurement.'
+    run:
+      timeout_minutes: 120
+      command:
+      - python3
+      - scripts/research/ml_variant_prop_gate.py
+      - --variant
+      - sx-sol-prop-sw15r1
+      - --from-unit
+      - RQ-20261102-8ef8-02
+      - --arm-label
+      - SW15R1
+      - --symbols
+      - SOLUSDT
+      - --leg-key
+      - trend_donchian_sol_prop
+      - --out-dir
+      - '{out_dir}'
+      - --jobs
+      - '4'
+      - --write-record
+    lands:
+      store: research/results/
+      assert_field: read_state
+      min_rows: 1
+    related:
+    - research/queue/RQ-20261102-8ef8-02.yaml
+    - research/queue/RQ-20261102-5e1a-01.yaml
+    - scripts/research/prop_gate.py
+    what_it_does_not_do: Changes no roster, risk, sizing or config; a PASS only reports. Does not re-tune the arm or the rule.
