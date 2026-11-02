@@ -59,7 +59,7 @@ for k, t in trades.iterrows():
                 "entry_time": str(et), "exit_time": str(xt), "entry": entry, "sl": entry - s * risk,
                 "exit_reason": {0: "time", 1: "sl", 2: "take_profit"}[reason],
                 "gross_r": round(gross, 6), "mfe_r": round(max(fav / risk, gross), 6), "net_r_evidence": round(pol[k][0], 6),
-                "score": round(float(t.p_long if t.side == "long" else t.p_short), 6),
+                "pred_net_r": round(float(t.p_long if t.side == "long" else t.p_short), 6),
                 **{c: round(float(_feat.loc[(t.symbol, t.ts), c]), 6) for c in ("ret_168", "vol_ratio", "atr_pct")}})
 df = pd.DataFrame(led)
 out.mkdir(parents=True, exist_ok=True)

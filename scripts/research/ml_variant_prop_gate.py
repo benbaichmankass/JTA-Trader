@@ -23,7 +23,7 @@ from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-import prop_gate as G  # noqa: E402
+import prop_gate as G
 
 SYMS = ("ETHUSDT", "SOLUSDT")
 MISSING_PIECE = ("the variant's harness must emit its ETH+SOL trade ledger (gross_r per trade, shape of "
@@ -33,7 +33,7 @@ MISSING_PIECE = ("the variant's harness must emit its ETH+SOL trade ledger (gros
 def find_ledger(unit: str) -> Path | None:
     pats = [f"research/results/{unit}/**/ledger_ethsol.jsonl", f"comms/research/{unit}/**/ledger_ethsol.jsonl",
             f"research/results/{unit}/**/ledger.jsonl", f"comms/research/{unit}/**/ledger.jsonl"]
-    for p in pats:
+    for p in pats:  # provenance: pats — fixed list of the variant's own result dirs by unit id, in priority order (named ledger first)
         hits = sorted(glob.glob(str(REPO / p), recursive=True))
         if hits:
             return Path(hits[-1])

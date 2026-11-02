@@ -1288,7 +1288,7 @@ nodes:
     priority: 1
     kind: experiment
     title: 'ML-PROP-ITERATE diagnostic 1: where is ml_entry''s ETH+SOL edge, and where is it lost? By regime (trend, vol), side, tau threshold, UTC hour block, symbol, month and prop cost component'
-    question: On the n=381 ETH+SOL ml_entry gate ledger rebuilt with score / ret_168 / vol_ratio, what is mean net R (95% CI) in each trend tercile, vol tercile, side, tau-quantile subset (score >= p0/p25/p50/p75),
+    question: On the n=381 ETH+SOL ml_entry gate ledger rebuilt with pred_net_r / ret_168 / vol_ratio, what is mean net R (95% CI) in each trend tercile, vol tercile, side, tau-quantile subset (pred_net_r >= p0/p25/p50/p75),
       hour block, exit reason and month under each firm cost stack, and how much of the gross edge do commission, slippage and swap each take?
     why_this_matters: 'Operator 2026-11-02 ~11:35Z verbatim: "...also keep data to see if we need to pull different levers or create a prop specific ml". This unit is the DATA for that choice: it measures
       why ml_entry v1 (n=381 on ETH+SOL, edge CI lower bound about -0.10 R, EV below even the zero-edge null) fails the prop gate. It registers no pass bar and no roster action; its output feeds the programme
@@ -1310,7 +1310,7 @@ nodes:
       registered_before_run: true
       statistic: 'Fields in result.json: by_symbol, by_side, by_symbol_side, by_hour_block_utc, by_exit_reason, by_month, by_trend_strength, by_trend_alignment, by_vol_ratio, by_tau_threshold (n, mean net
         R, 95% CI each), cost_components (gross mean R, cost mean R, mean R per component and net R with each component removed), per firm.'
-      rule: 'Descriptive: no pass bar. read_state ok means the enriched ledger was built (score / ret_168 / vol_ratio present); needs_enriched_ledger:<fields> means the rebuild failed and only the symbol
+      rule: 'Descriptive: no pass bar. read_state ok means the enriched ledger was built (pred_net_r / ret_168 / vol_ratio present); needs_enriched_ledger:<fields> means the rebuild failed and only the symbol
         / side / hour / exit / month / cost parts were measured.'
       proposal_mapping: 'none: descriptive; the programme review reads the fields and decides the lever.'
       min_n: '88'

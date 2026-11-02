@@ -60,6 +60,8 @@ was read as an *instruction*.
 
 | category | rows | meaning |
 |---|---|---|
+| `docs/research/ml-entry-prop-gate-2026-11-02/RESULT.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
+| `docs/research/ml-prop-iterate-2026-11-02/PROP-ML-DESIGN.md` | architecture | unknown | — | never | `name:design-declares-a-contract / not-assessed` | — |
 | `instruction` | 44 | A session must OBEY it. Binding. |
 | `architecture` | 91 | A declared contract about how the system is built; read as truth about the system. |
 | `plan` | 64 | A forward commitment -- what we intend to do next. NEVER obeyed as instruction. |
