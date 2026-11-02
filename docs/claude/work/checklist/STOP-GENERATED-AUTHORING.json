@@ -9,12 +9,14 @@
   "ceiling_usd": 6,
   "spend_usd": null,
   "tier": 1,
-  "prs": [],
+  "prs": [
+    22107
+  ],
   "blocked_on": [],
-  "note": "OPERATOR 2026-11-01 ~08:50Z popup, verbatim: \"Stop floor-driven units (Rec.)\". Reverses the 2026-10-16 rule that a research floor gap is due work (manager SKILL Recurring dispatches; research_slo.yaml; queue_replenish). Edit the manager skill, research-ops skill, the refill routine text and the dispatcher only where they drive authoring to a count. Done when no lane is dispatched to meet a floor and the dispatcher runs only hypothesis-led units for new authoring. Source: docs/audits/2026-11-01-from-scratch/AUDIT.md section 8 (lane SYSTEM-AUDIT-FROM-SCRATCH, PR #22072); walk-through https://claude.ai/artifact/T9ztV5nc1fUAGbdjsbZHSf. Operator 2026-11-01 ~08:45Z popup, verbatim: \"Walk through it today (Rec.)\" (Tier-1 proposals filed straight away). Gates this adds: none. [2026-11-01 manager] Operator 2026-11-01 ~11:05Z popup, verbatim: \"Fold into running lanes (Rec.)\". Owner: lane RESEARCH-OPS. Target: floor-driven authoring stopped from the next research-ops pass, 2026-11-01.",
+  "note": "OPERATOR 2026-11-01 ~08:50Z popup, verbatim: \"Stop floor-driven units (Rec.)\". Reverses the 2026-10-16 rule that a research floor gap is due work (manager SKILL Recurring dispatches; research_slo.yaml; queue_replenish). Edit the manager skill, research-ops skill, the refill routine text and the dispatcher only where they drive authoring to a count. Done when no lane is dispatched to meet a floor and the dispatcher runs only hypothesis-led units for new authoring. Source: docs/audits/2026-11-01-from-scratch/AUDIT.md section 8 (lane SYSTEM-AUDIT-FROM-SCRATCH, PR #22072); walk-through https://claude.ai/artifact/T9ztV5nc1fUAGbdjsbZHSf. Operator 2026-11-01 ~08:45Z popup, verbatim: \"Walk through it today (Rec.)\" (Tier-1 proposals filed straight away). Gates this adds: none. [2026-11-01 manager] Operator 2026-11-01 ~11:05Z popup, verbatim: \"Fold into running lanes (Rec.)\". Owner: lane RESEARCH-OPS. Target: floor-driven authoring stopped from the next research-ops pass, 2026-11-01. 2026-11-01 15:25Z RESEARCH-OPS-20261101-0940 CLOSE: PR #22107 (refill default target 0, brief says REPORTED NOT FILLED, skills marked superseded) was GREEN on aa47733cc and auto-merge was enabled by the manager at 15:19Z; at 15:21Z it was NOT yet on main (queue_replenish.py on origin/main lacks the 'OFF' line). NEXT STATE: landed_unproven when #22107 shows on main. Closing observation: a research-ops pass with runnable < floor generates and authors nothing (record units_authored 0; queue_replenish dry run prints 'floor-driven generation is OFF'). RESIDUALS unchanged: research_slo.yaml runnable_floor and research_watchdog.yaml still grade a count (RESEARCH-SLO-YIELD, lane RESEARCH-EDGE); research-queue-dispatch.yml health step still dispatches the (now no-op) replenish.",
   "priority_rank": 2,
-  "updated_at": "2026-11-01T11:08:34Z",
-  "updated_by": "session_01AFoLuJ1apgy8sfngu4WyNH",
+  "updated_at": "2026-11-01T15:23:05Z",
+  "updated_by": "session_01AFoLuJRBdk2erte7Z3Fbdv",
   "roadmap": [
     "L-PROGRAMMES"
   ],
