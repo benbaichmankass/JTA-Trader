@@ -1,0 +1,16 @@
+{
+  "due_when": {
+    "check_every_days": 2,
+    "clears_when": "no committed or collected comms/research/*/*/work file exceeds 50 MB and the collector logs no 'pruned oversize' line for a full dispatcher day, or killed with a stated reason",
+    "kind": "observation"
+  },
+  "id": "PI-20261102-UUBTKHN7-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "audit",
+    "ref": "COLLECTOR-STUCK 2026-11-02 / PR #22356",
+    "rerun": "gh run view 41409245551 --log | grep -E 'exceeds GitHub|pruned oversize'  (and: find the uploaded artifact of a new run of RQ-20261101-a508-01 for work/table.pkl size)"
+  },
+  "state": "queued",
+  "what": "Producers of RQ-20261101-a508-01 (run 41357669686) and RQ-20261101-b601-01 (run 41397568396) write a 164.84 MB work/table.pkl into the uploaded run artifact; it exceeded GitHub's 100 MB push limit and rejected every results batch since 2026-11-01 evening (COLLECTOR-STUCK). #22356 prunes >50 MB files at collection; the producers should stop uploading the table (write it outside the artifact dir, or downsample)."
+}
