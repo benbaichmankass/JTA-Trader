@@ -770,6 +770,12 @@ def _yahoo_empty_reason(ticker: str, yf, interval: str = "1d") -> str:
 
 def _fetch_csv(feed: dict, days: int, out: str) -> None:
     """Populate `out` with a timestamp,open,high,low,close,volume CSV."""
+    # KAGGLE-CANDLES (2026-11-02): a Kaggle CPU kernel has no internet. When the published candle dataset is mounted
+    # (CANDLE_DATA_ROOT, set by kernel_main.py) and holds this feed for >= `days`, read it; any miss falls through to the network.
+    if os.environ.get("CANDLE_DATA_ROOT"):
+        from scripts.research import candle_dataset as _cd  # noqa: PLC0415
+        if _cd.serve((feed["source"], feed["ticker"], feed["interval"]), days, out):
+            return
     if feed["source"] == "binance":
         # Force Binance-vision: fetch_backtest_candles defaults to source=auto,
         # which tries Bybit first — Bybit geoblocks US GH-runners (403), wasting

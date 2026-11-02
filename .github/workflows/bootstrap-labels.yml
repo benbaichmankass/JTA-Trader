@@ -185,6 +185,11 @@ jobs:
                 description: 'Triggers oci-retire-orphan-volume — back up then delete the pinned orphan ict-bot-data-vol (plan is read-only; execute needs volume_id + confirm: yes).',
               },
               {
+                name: 'oci-grow-boot-volume',
+                color: 'b60205',
+                description: 'Triggers oci-grow-boot-volume — grow the LIVE VM boot volume 47->53 GB (backup first; plan is read-only; execute needs confirm: yes; never past 53 GB).',
+              },
+              {
                 name: 'trainer-boot-volume',
                 color: '5319e7',
                 description: 'Triggers trainer-boot-volume — measure tenancy block storage; grow the TRAINER boot volume online (resize needs confirm: yes; refused past Always Free 200 GB).',

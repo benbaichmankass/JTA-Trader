@@ -1,0 +1,131 @@
+name: research-candles-kaggle
+
+# KAGGLE-CANDLES (2026-11-02, lane dispatched by Manager Session 2026-11-01a): publish the PUBLIC price data the exit-lever research
+# units download at run time as a private, versioned Kaggle DATASET (`metis-research-candles`), so those units can run on the Kaggle
+# CPU kernel (internet off) instead of queueing on the shared GitHub runner pool. COMPUTE-PREFER-KAGGLE (#22337) moved 1 of 153 queued
+# units because 81 of them fetch candles at run time.
+#
+# WHAT. scripts/research/candle_dataset.py derives the feed list from the QUEUED exit_lever_ablation units themselves (leg -> symbol,
+# timeframe -> the harness's own resolve_feed) and builds one csv.gz per feed. Binance crypto comes from the market data lake on
+# Hugging Face when it holds the series (the SAME data.binance.vision futures archive the units fetch -- nothing the lake has is
+# re-downloaded), falling back to the unit's own network fetch; Yahoo equities/ETFs/futures are fetched here once, with the very
+# function the units call. A feed that fails is recorded (status=failed + reason) and the rest publish; nothing halts.
+#
+# SECRETS. KAGGLE_API_TOKEN (the existing secret every kaggle workflow uses; the Kaggle username is resolved from it, masked and
+# scrubbed). HF_TOKEN (the existing lake token; read use only here). Nothing prints a credential.
+#
+# NO DATA IN GIT. The dataset lives on Kaggle. The only repo artifact is the small coverage record
+# comms/research/candle_dataset/coverage.json (feed ids, row counts, last bars: a few KB, under the 1 MB cap), which the router reads to
+# decide which units may leave the runner. It is uploaded as an artifact here and committed by the PR/lane that refreshes it.
+#
+# no-durable-result: data-publishing job (a private Kaggle dataset + a coverage artifact), computes no research verdict or measurement
+#
+# GATES THIS ADDS OR CHANGES: none. Tier 1: reads public data, writes one private Kaggle dataset. Cadence: on demand (no cron: a refresh is needed only when the queued units' feeds change) + on a PR
+# that touches this pipeline (so the publish is MEASURED before merge, as market-data-lake does for its preflight).
+
+on:
+  workflow_dispatch:
+    inputs:
+      force_rebuild:
+        description: "Rebuild and re-publish even when the published dataset is fresh and complete"
+        default: "false"
+      days_floor:
+        description: "Minimum history (days) to build for every feed; the largest queued unit --days wins if larger"
+        default: "0"
+  pull_request:
+    paths:
+      - ".github/workflows/research-candles-kaggle.yml"
+      - "scripts/research/candle_dataset.py"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: research-candles-kaggle
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    env:
+      KAGGLE_API_TOKEN: ${{ secrets.KAGGLE_API_TOKEN }}
+      HF_TOKEN: ${{ secrets.HF_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: python -m pip install --quiet "kaggle>=2.0" six pandas pyarrow pyyaml requests huggingface_hub yfinance
+      - name: Reuse the published dataset when it is fresh and complete
+        id: chk
+        run: |
+          set -uo pipefail
+          echo "reuse=false" >> "$GITHUB_OUTPUT"
+          [ "${{ inputs.force_rebuild }}" = "true" ] && { echo "force_rebuild: rebuilding"; exit 0; }
+          [ -n "${KAGGLE_API_TOKEN}" ] || exit 0
+          echo "::add-mask::${KAGGLE_API_TOKEN}"
+          python3 scripts/research/candle_dataset.py reuse-check --dest /tmp/pub --coverage-out out/coverage.json \
+            && echo "reuse=true" >> "$GITHUB_OUTPUT" || echo "no reusable published dataset: building"
+      - name: Build the candle files (lake first, network fallback)
+        if: steps.chk.outputs.reuse != 'true'
+        run: |
+          set -uo pipefail
+          [ -n "${KAGGLE_API_TOKEN}" ] || { echo "::error::KAGGLE_API_TOKEN is empty"; exit 1; }
+          echo "::add-mask::${KAGGLE_API_TOKEN}"
+          [ -n "${HF_TOKEN}" ] || echo "::warning::HF_TOKEN empty: every Binance feed falls back to the network fetch"
+          python3 scripts/research/candle_dataset.py feeds | head -60
+          python3 scripts/research/candle_dataset.py build --out /tmp/stage --days-floor "${{ inputs.days_floor || 0 }}" \
+            --coverage-out out/coverage.json
+          du -sh /tmp/stage; ls /tmp/stage | wc -l
+      - name: Publish the private Kaggle dataset
+        if: steps.chk.outputs.reuse != 'true'
+        run: |
+          set -uo pipefail
+          USERNAME=$(python - <<'PY'
+          from kaggle.api.kaggle_api_extended import KaggleApi
+          a = KaggleApi(); a.authenticate()
+          print(a.config_values.get("username", ""))
+          PY
+          )
+          [ -n "$USERNAME" ] || { echo "::error::token did not resolve to a Kaggle user"; exit 1; }
+          echo "::add-mask::$USERNAME"
+          scrub() { sed "s|$USERNAME|<user>|g"; }
+          python3 - "$USERNAME" <<'PY'
+          import json, sys
+          u = sys.argv[1]
+          json.dump({"title": "metis-research-candles", "id": f"{u}/metis-research-candles",
+                     "licenses": [{"name": "CC0-1.0"}]}, open("/tmp/stage/dataset-metadata.json", "w"), indent=1)
+          PY
+          if kaggle datasets status "$USERNAME/metis-research-candles" >/dev/null 2>&1; then
+            # exit code is NOT the verdict (the CLI can exit 1 while the version is being created); the `ready` poll below is.
+            kaggle datasets version -p /tmp/stage -m "candles $(date -u +%Y-%m-%dT%H:%MZ) run ${GITHUB_RUN_ID}" 2>&1 | scrub | grep -v "it/s\|B/s" | tail -5 || true
+          else
+            kaggle datasets create -p /tmp/stage 2>&1 | scrub | grep -v "it/s\|B/s" | tail -5 || true
+          fi
+          READY=0
+          for i in $(seq 1 80); do
+            st=$(kaggle datasets status "$USERNAME/metis-research-candles" 2>&1 | scrub) || true
+            echo "dataset: $st"
+            case "$st" in *[Rr]eady*|*READY*) READY=1; break;; esac
+            sleep 15
+          done
+          [ "$READY" = "1" ] || { echo "::error::dataset never became ready"; exit 1; }
+          mkdir -p out && cp /tmp/stage/CANDLES_MANIFEST.json out/
+          sed -i "s|$USERNAME|<user>|g" out/CANDLES_MANIFEST.json out/coverage.json
+      - name: Print the coverage record (the committed router input)
+        if: always()
+        run: |
+          python3 - <<'PY'
+          import json, os
+          p = "out/coverage.json"
+          print(open(p).read() if os.path.exists(p) else "no coverage.json")
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: research-candles-${{ github.run_id }}
+          path: out
+          retention-days: 30

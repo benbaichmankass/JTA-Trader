@@ -1,0 +1,23 @@
+{
+  "due_when": {
+    "clears_when": "plan output shows a numeric Limits API headroom and 'sudo ok', or the substring match / sudoers line is fixed",
+    "event": "PR #22389 merged and a plan-mode issue run (label oci-grow-boot-volume) completed",
+    "kind": "event"
+  },
+  "id": "PI-20261102-JHZ3VJMB-0001",
+  "next_action": "check_observation",
+  "observation": {
+    "due_by": "2026-11-04",
+    "how_to_check": "open an issue labelled oci-grow-boot-volume with body 'mode: plan' and read the comment",
+    "what": "first plan run output"
+  },
+  "origin": {
+    "kind": "session",
+    "ref": "lane OCI-GROW-BOOT-VOLUME (manager session_01AFoLuJ1apgy8sfngu4WyNH dispatch, 2026-11-02)",
+    "rerun": "issue labelled oci-grow-boot-volume, body 'mode: plan'"
+  },
+  "severity": "low",
+  "state": "queued",
+  "tier": 2,
+  "what": "oci-grow-boot-volume (PR #22389): first real run is untested against OCI/VM. Check the first `plan` output: (1) Limits API free-storage headroom prints a number, not COULD NOT LOOK (the limit name is matched by substring 'free' + 'gb'/'storage'); (2) VM preflight sudo ok for growpart, resize2fs/xfs_growfs, dd, tee on ict-bot-arm, else exit 5 prints the sudoers line for the operator."
+}

@@ -86,6 +86,11 @@ _pub = sorted(m for m in glob.glob("/kaggle/input/**/MANIFEST.json", recursive=T
 if _pub:
     env["ML_DATA_ROOT"] = os.path.dirname(_pub[0])
     print("== ML_DATA_ROOT:", env["ML_DATA_ROOT"])
+# KAGGLE-CANDLES: the published candle dataset (metis-research-candles) mounted -> units read candles from it, not the network.
+_cd = sorted(glob.glob("/kaggle/input/**/CANDLES_MANIFEST.json", recursive=True))
+if _cd:
+    env["CANDLE_DATA_ROOT"] = os.path.dirname(_cd[0])
+    print("== CANDLE_DATA_ROOT:", env["CANDLE_DATA_ROOT"])
 # ML-NONGBDT-RUNNERS: learner wheels shipped in the bundle (internet is off). Installed --no-deps/--no-index so nothing the
 # Kaggle image already pins can move; a wheel that cannot install is reported by the probe line, never a halt.
 _wh = sorted(glob.glob(os.path.join(bundle_dir, "*.whl")))
