@@ -47,6 +47,9 @@ if str(_REPO_ROOT) in sys.path:
 sys.path.insert(0, str(_REPO_ROOT))
 
 from src.runtime import execution_costs  # noqa: E402  (the ONE shared cost model)
+from src.runtime.structure_levels import (  # noqa: E402  (STRUCTURE-EXITS-DEFAULT: the ONE causal detector)
+    StructureExit as _StructureExit, StructureLevels as _StructureLevels,
+    parse_structure_exit as _parse_structure_exit)
 # The ONE definition of (r_to_stop, r_to_target, rr_from_here) — imported from
 # the LIVE telemetry module that computes it on the trader, so the `rr_floor`
 # lever below measures the same quantity production records rather than a
@@ -272,6 +275,10 @@ def run_backtest(df: pd.DataFrame, *, trend_lookback: int, pullback_lookback: in
                  trail_level_pivot_k: int = 3,
                  trail_level_round_step: float = 0.0,
                  trail_level_min_r: float = 0.0,
+                 structure_exit: str = "",
+                 structure_buffer_atr: float = 0.25,
+                 structure_min_r: float = 1.0,
+                 structure_fvg: bool = True,
                  giveback_frac: float = 0.0,
                  trigger_action: str = "",
                  trigger_file: str = "",
@@ -431,6 +438,12 @@ def run_backtest(df: pd.DataFrame, *, trend_lookback: int, pullback_lookback: in
     # P1-Q10 level-triggered trail (default off = byte-identical); the rule and its
     # rationale live in src/research/trail_levers.trade_level / backtest_trend.py.
     level_on = level_trail_armed(trail_level, trail_level_tight_mult)
+    # STRUCTURE-EXITS-DEFAULT ('' = off, byte-identical); same rule as scripts/backtest_trend.py.
+    # The ATR chandelier (and the break-even floor) are replaced while armed.
+    _sx_n = _parse_structure_exit(structure_exit)
+    _sx_levels = (_StructureLevels(df["high"].to_numpy(float), df["low"].to_numpy(float), _sx_n)
+                  if _sx_n else None)
+    _sx_fallback = 0
     # HARNESS-METRIC-TRIGGER (default off = byte-identical): act only on trades an out-of-fold
     # metric flagged (or on every trade open at bar K, the control); src/research/metric_trigger.py.
     _trig = TriggerPlan(trigger_action, trigger_file, trigger_all)
@@ -661,6 +674,15 @@ def run_backtest(df: pd.DataFrame, *, trend_lookback: int, pullback_lookback: in
         entry = c
         sl = entry - atr_stop_mult * atr if direction == "long" else entry + atr_stop_mult * atr
         risk = abs(entry - sl)
+        _sx = None
+        if _sx_levels is not None:
+            _sx = _StructureExit.start(_sx_levels, i, entry, direction == "long", atr, risk,
+                                       buffer_atr=structure_buffer_atr, min_r=structure_min_r,
+                                       fvg=structure_fvg)
+            if _sx is None:
+                _sx_fallback += 1          # no confirmed adverse swing: declared ATR stop, no TP
+            else:
+                sl, risk = _sx.sl, _sx.risk
         if risk <= 0:
             i += 1
             continue
@@ -692,6 +714,8 @@ def run_backtest(df: pd.DataFrame, *, trend_lookback: int, pullback_lookback: in
             _tpt = _tpg.TPTracker(
                 tp_geom, anchor=entry, sl=sl, risk=risk, is_long=(direction == "long"),
                 tp_cap_pct=tp_cap_pct, target=tp_price, atr0=atr)
+        if _sx is not None:
+            tp_price = _sx.tp              # None -> no resting TP until a level is confirmed
         ext = entry
         ext_j = i
         trail = sl
@@ -794,6 +818,8 @@ def run_backtest(df: pd.DataFrame, *, trend_lookback: int, pullback_lookback: in
                 # MI-165 break-even FLOOR — short side; `min()` tightens here.
                 if be_floor_r > 0.0 and mfe >= be_floor_r:
                     trail = min(trail, entry - be_floor_lock_r * risk)
+            if _sx is not None:
+                trail = _trail_prev        # structure replaces the chandelier (stop moves on bar close only)
             # momentum_trail attribution: was the stop last moved on a bar the
             # ADX condition fired on?
             if mom_trail_on and trail != _trail_prev:
@@ -944,6 +970,9 @@ def run_backtest(df: pd.DataFrame, *, trend_lookback: int, pullback_lookback: in
                     exit_price, exit_idx = _bc, j
                     exit_reason = "chop_stop"
                     break
+            if _sx is not None:
+                # bar j has CLOSED: new confirmed levels bind from bar j+1 (ratchet / extend-only)
+                trail, tp_price = _sx.on_bar_close(j, float(df["close"].iloc[j]), trail, tp_price, entry)
             # GEOM-B1 target revision (off unless --tp-extend-r / --tp-retarget-mode):
             # once per LEG bar, on its close, after the bar's own stop/target and
             # lever tests; the revised level binds from the next bar. Native
@@ -1105,6 +1134,10 @@ def run_backtest(df: pd.DataFrame, *, trend_lookback: int, pullback_lookback: in
         params["giveback_frac"] = giveback_frac
     if level_on and trail_level_min_r > 0.0:
         params["trail_level_min_r"] = trail_level_min_r
+    if _sx_n:
+        params.update(structure_exit=structure_exit, structure_buffer_atr=structure_buffer_atr,
+                      structure_min_r=structure_min_r, structure_fvg=structure_fvg,
+                      structure_no_swing_fallbacks=_sx_fallback)
     if _trig.on:
         params["trigger_action"] = trigger_action
         params["trigger_all"] = trigger_all
@@ -1509,6 +1542,14 @@ def main(argv: List[str]) -> int:
                    help="Swing pivot half-width in bars (confirmed before the entry bar).")
     p.add_argument("--trail-level-round-step", type=float, default=0.0,
                    help="Round-number step in price (0 = auto from the entry price).")
+    p.add_argument("--structure-exit", default="",
+                   help="STRUCTURE-EXITS-DEFAULT ('' = off, byte-identical): pivot=N. See backtest_trend.py.")
+    p.add_argument("--structure-buffer-atr", type=float, default=0.25,
+                   help="ATR buffer beyond the swing for the structure stop.")
+    p.add_argument("--structure-min-r", type=float, default=1.0,
+                   help="Minimum distance of the structure TP from entry, in R.")
+    p.add_argument("--structure-no-fvg", action="store_true",
+                   help="Structure TP uses swing highs/lows only.")
     p.add_argument("--trail-level-min-r", type=float, default=0.0,
                    help="LEVEL-TRAIL-R-GATE (0 = off, byte-identical): a level touch latches the tight "
                         "trail only once the trade's peak open profit has reached this many R (AND, not "
@@ -1643,7 +1684,14 @@ def main(argv: List[str]) -> int:
         for _e in _mom_errs:
             print(f"ERROR: {_e}", file=sys.stderr)
         return 2
-    _lvl_errs = level_flag_errors(args.trail_level, args.trail_level_tight_mult, args.trail_mult,
+    _lvl_errs = []
+    try:
+        _parse_structure_exit(args.structure_exit)
+    except ValueError as _e:
+        _lvl_errs.append(str(_e))
+    if args.structure_exit and args.trail_level:
+        _lvl_errs.append("--structure-exit replaces the trail; do not combine with --trail-level")
+    _lvl_errs += level_flag_errors(args.trail_level, args.trail_level_tight_mult, args.trail_mult,
                                   args.trail_level_lookback, args.trail_level_pivot_k,
                                   args.trail_level_round_step, args.trail_level_min_r)
     _lvl_errs += giveback_flag_errors(args.giveback_min_mfe_r, args.giveback_frac)
@@ -1776,6 +1824,10 @@ def main(argv: List[str]) -> int:
                        trail_level_pivot_k=args.trail_level_pivot_k,
                        trail_level_round_step=args.trail_level_round_step,
                        trail_level_min_r=args.trail_level_min_r,
+                       structure_exit=args.structure_exit,
+                       structure_buffer_atr=args.structure_buffer_atr,
+                       structure_min_r=args.structure_min_r,
+                       structure_fvg=not args.structure_no_fvg,
                        giveback_frac=args.giveback_frac,
                        trigger_action=args.trigger_action,
                        trigger_file=args.trigger_file,

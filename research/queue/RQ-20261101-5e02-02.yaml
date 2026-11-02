@@ -1,0 +1,121 @@
+id: RQ-20261101-5e02-02
+title: 'Entry-anchored structure trail level (confirmed swing pivot 3 / 5, or nearest unfilled FVG; tightens to 1.0 ATR on first touch) vs the
+  declared exit on ada_pullback_2h: does the existing-harness structure lever beat or match the declared exit, net of the full cost stack, dev
+  window?'
+status: queued
+cadence: once
+theme: live_strategy
+priority: 1
+roadmap:
+- L-AM-STANDARD
+kind: experiment
+practice_precedent: 'T1, T2, T3, T4, T8 (docs/reference/trading-and-model-practice-principles.md): intervention judged against hold AND a matched
+  random intervention, per leg, entries fixed, net of cost.'
+intervention_controls:
+  not_applicable: Static exit geometry chosen at entry by an existing harness flag (--trail-level), not a triggered in-trade action; there is
+    no trigger time to randomise. Hold is arm A (the leg as declared). The triggered, ratcheting form is the blocked sibling RQ-20261101-5e01-02.
+question: 'On ada_pullback_2h, replay the leg''s own Stage-0 harness (entries fixed) with arm A (declared exit) and three structure-level arms:
+  SW3 / SW5 (the prior confirmed swing extreme beyond entry, pivot half-width 3 / 5) and FVG (the nearest unfilled opposing FVG), each tightening
+  the trail to 1.0 ATR on first touch of that level (existing --trail-level; latched; one level fixed at entry). This is the part of the operator''s
+  2026-11-01 structure-exits default that an EXISTING harness can already test; it is NOT the full ratcheting SL + structure TP, which stays in
+  RQ-20261101-5e01-02 (blocked on the shared detector and harness arm). {d[''question''].split(''Replace'')[0]}'
+why_this_matters: "Operator 2026-11-01 ~23:00Z (verbatim in ARCHITECTURE-CANONICAL \xA7 Active management, 'The default exit'): structure-based\
+  \ SL and TP are the default for all strategies and ML. Row STRUCTURE-EXITS-DEFAULT. Real-money first; a PASS is a discovery, never a config\
+  \ change."
+power:
+  expected_n: 400
+  min_detectable_effect: 0.1
+  effect_units: R
+  sd: 1.2
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: 'ESTIMATE (sd 1.2 R per trade is an assumed typical Stage-0 per-trade sd, the first run replaces it): leg-level Stage-0 trade counts of 2020-07..2026-10 runs are 400-700 for 2h/4h crypto legs and thinner for 1d legs; n >= 39
+    floor below which the leg grades INDETERMINATE, never FAIL. The first run replaces it.'
+  feasibility:
+    source: none
+    accrual_basis: Replays history on freshly fetched public candles for a pinned window; nothing accrues. The detector and harness arms are the
+      blockers, not the data.
+decision_rule:
+  id: RULE-STRUCTURE-EXITS-V1
+  unit_rule_id: RULE-RQ20261101-5E02-02-STRUCT-LEVEL-TRAIL
+  registered_at: '2026-11-01'
+  registered_before_run: true
+  statistic: 'exit_lever_ablation.py --grade replace over 2020-07-01 (2021-07-01 for the dukascopy ETF legs)..2026-10-15, 6 equal calendar folds
+    by entry time, net of the full cost stack the harness resolves per venue (cost_stack recorded per arm), baseline A, parameters unchanged from
+    RQ-20261026-ed1c-17: delta-r 0, delta-r-per-trade 0.02, fold-majority 4 of 6, dd-tol-frac 0.35, n-floor 39.'
+  rule: 'Registered before any run. Candidates SW3, SW5, FVG (multiplicity 3). One factor: the trail''s tightening trigger becomes a structure
+    level instead of the declared geometry; entries, sizing, cost stack unchanged. A candidate PASSES when the harness''s replace verdict passes
+    with the parameters above; the best passing candidate is named. FAIL if none passes with every floor met (this static, entry-anchored form
+    is closed on this leg for this window; the ratcheting form stays open). INDETERMINATE if n < 39 or no arm fires the level. A PASS is a DISCOVERY
+    needing one confirmation run on post-window data and then a per-leg Tier-3 apply PR; a FAIL does not close the dynamic structure SL/TP. Thresholds,
+    arms, grid, window not changed after any result.'
+  what_it_does_not_do: Edits no config or roster, places no order. Does not test a ratcheting SL or any structure TP.
+compute: cpu_long
+value:
+  usd_at_stake_per_month: 400
+  confidence: 0.25
+  bucket: own_losses
+  basis: 'stand-in estimate: governs the default exit of a leg that trades real money; not a measurement.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 4.0
+  est_minutes: 90
+  why_runner: 'Operator rule (row COMPUTE-PREFER-KAGGLE, not present in this clone, cited from the dispatch): compute on Kaggle first. Keyless
+    public candles, CPU only; route to research-script-run-kaggle.yml if the router allows a CPU class there, else the runner. The harness must
+    run on both.'
+  basis: 'Estimate: 4 arms x one leg over the pinned window; one 2h-leg arm took about 20 s on the runner (ed1c-17 / 9a7e-01 logs). The first
+    run replaces it.'
+run:
+  command:
+  - python3
+  - scripts/research/exit_lever_ablation.py
+  - --leg
+  - ada_pullback_2h
+  - --arm
+  - A=
+  - --arm
+  - SW3=--trail-level=swing;--trail-level-pivot-k=3;--trail-level-tight-mult=1.0
+  - --arm
+  - SW5=--trail-level=swing;--trail-level-pivot-k=5;--trail-level-tight-mult=1.0
+  - --arm
+  - FVG=--trail-level=fvg;--trail-level-tight-mult=1.0
+  - --days
+  - '2330'
+  - --start
+  - '2020-07-01'
+  - --end
+  - 2026-10-15 23:59
+  - --grade
+  - replace
+  - --baseline
+  - A
+  - --delta-r
+  - '0'
+  - --delta-r-per-trade
+  - '0.02'
+  - --folds
+  - '6'
+  - --fold-majority
+  - '4'
+  - --dd-tol-frac
+  - '0.35'
+  - --n-floor
+  - '39'
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 150
+  inputs:
+    research_unit: RQ-20261101-5e02-02
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+programme: P1
+related:
+- research/levers/ltr-sl-to-structure.yaml
+- src/runtime/tp_revision.py
+- scripts/research/exit_lever_ablation.py
+- docs/research/structure-exits-default-scope-2026-11-01.md
+- RQ-20261101-5e01-02 (blocked full dynamic form)
