@@ -179,6 +179,9 @@ def order_package(cfg: dict, row: Dict[str, Any]) -> Dict[str, Any]:
             "venue_class": p.get("venue_class"),
             "max_hold_min": p.get("max_hold_min"),
             "mechanics_probe": probe,
+            # peak-R / open-R telemetry reads these (position_telemetry.build_record); without them peak_state=no_risk
+            "risk_per_unit": abs(float(p["entry"]["level"]) - float(p["stop"]["level"])),
+            "entry_time": datetime.now(timezone.utc).isoformat(),
         },
     }
 

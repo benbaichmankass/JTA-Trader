@@ -124,6 +124,7 @@ def order_package(cfg: dict, candles_df: Optional[pd.DataFrame] = None,
         "confidence": NEUTRAL_CONFIDENCE,
         "meta": {"model_id": meta.get("model_id"), "decision_bar": t.isoformat(), "p_long": round(d["p_long"], 5),
                  "p_short": round(d["p_short"], 5), "tau": meta["tau"], "atr14": atr, "n_reference": n_ref,
+                 "risk_per_unit": abs(entry - sl), "entry_time": t.isoformat(),
                  "tp_intent": "predictive", "tp_basis": f"{float(br['tp_atr']):g} x ATR14 first-passage target the model was scored on"
                  + ("; re-predicted at each 4h check-in by the ml_first_passage TP revision (RQ-20261101-383f-01)"
                     if declared_rule(cfg) == TP_RULE else ""),
