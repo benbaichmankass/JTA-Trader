@@ -1,0 +1,119 @@
+{
+ "schema_version": 1,
+ "review_id": "LR-20261102T2106Z-pkg-c569fc01db464fb2",
+ "reviewed_at": "2026-11-02T21:10:00Z",
+ "order_package_id": "pkg-c569fc01db464fb2",
+ "trade_id": 6830,
+ "leg": "ml_entry",
+ "accounts": [
+  "bybit_2",
+  "bybit_portfolio"
+ ],
+ "trigger": {
+  "event": "giveback",
+  "level": null,
+  "l0_snapshot_at": null
+ },
+ "info_cutoff_at": "2026-11-02T21:06:39Z",
+ "state": {
+  "atr_now_over_entry": null,
+  "bars_held": 14,
+  "giveback_r": 0.6796,
+  "open_r": 0.7816,
+  "peak_provenance": "estimated",
+  "peak_r": 1.4612,
+  "regime_cell_entry": null,
+  "regime_cell_now": null,
+  "sl": 0.19364285714285714,
+  "tp": 0.18187143
+ },
+ "features_at_review": {
+  "atr_now_over_entry": null,
+  "bars_since_peak": 2,
+  "giveback_r": 0.6796,
+  "open_r": 0.7816,
+  "peak_r": 1.4612,
+  "r_to_stop": 1.7816,
+  "r_to_target": 2.2184
+ },
+ "mechanics": {
+  "evidence": "package sl 0.19364285714285714 / tp 0.18187143 agree with every readable account",
+  "verdict": "match"
+ },
+ "options": [],
+ "outcome_table_source": null,
+ "recommendation": {
+  "action": "hold",
+  "level": null,
+  "level_atr": null,
+  "ev_delta_r": null,
+  "worst_case_delta_r": null,
+  "basis": "judgement",
+  "confidence": "anecdote",
+  "evidence_source": "judgement",
+  "judgement_confidence": 0.5,
+  "reason": "Prior 18:30Z forecast (target 0.1862, invalid 0.1921, 8 bars) graded: 3 of 8 bars elapsed, neither touched (low 0.1864, 2 ticks short; high 0.1892), direction with_trade correct but small. Now ~+0.78R after 1.46R peak, giveback 0.68R: 1h made a higher low 0.1873 vs 0.1864 and bounced to 0.1892, but 4h ADX 32.9 trending down and the broken 4h low 0.1906 caps the bounce. Hold expresses the view (TP 3R, SL 0.1936); a tighten is advice-only and -0.097R net on 981 priors, closing locks 0.78R but gives up the trend with no evidence of reversal. Carry the target, tighten the invalidation to a reclaim of 0.1908.",
+  "size_fraction": null,
+  "size_multiplier": null
+ },
+ "judge_prior": null,
+ "applied": false,
+ "apply_policy": {
+  "bound_r": 0.25,
+  "within_bound": null,
+  "tighten_r": null
+ },
+ "shadow_policy": {
+  "bound_r": 0.5,
+  "within_bound": null,
+  "would_apply": null,
+  "tighten_r": null
+ },
+ "context_flags": [
+  "could_not_price: live_review_outcomes.py crashes on ml_entry (KeyError 'direction' at :351, reproduced this session); no table EV quoted, judgement basis",
+  "giveback 0.68R of 1.46R peak (peak ESTIMATED from bar extremes, lower bound); first event since risk_per_unit backfill",
+  "correlated_exposure: crypto shorts (BTC, SOL, XRP, ADA x2) are one beta bet plus MGC/IAUM shorts",
+  "tighten evidence: 981 Claude tightens averaged -0.097R net (advice-only); would be flattered by stop-at-price fills",
+  "missing: regime cell/vol bucket, ATR ratio, funding (packet missing_inputs); 24h time stop is the strategy's own exit"
+ ],
+ "account_reads": [
+  {
+   "account_id": "bybit_2",
+   "account_class": "real_money",
+   "read": "no_action",
+   "evidence": "hold changes nothing; venue SL/TP match the package"
+  },
+  {
+   "account_id": "bybit_portfolio",
+   "account_class": "paper",
+   "read": "no_action",
+   "evidence": "hold changes nothing; venue SL/TP match the package"
+  }
+ ],
+ "disposition": {
+  "route": "none",
+  "mandate": null,
+  "action_issue": null,
+  "applied_at": null,
+  "verified_readback": null
+ },
+ "model": "sonnet-tier (live-review lane)",
+ "session": "session_01AFoLuMQtMgpFfzjGLfipuN",
+ "prompt_sha": null,
+ "skill_sha": "ce31519c30f9287eb2f2970ac8460bb763a5e744",
+ "packet_sha": "e721d643de7fcde0e613486c0bacab389149295b13858c96dd5aac181269606b",
+ "forecast": {
+  "thesis": "Bounce fails under the broken 4h low 0.1906 and 1h retests the 0.1864 low then extends; a 1h close back above 0.1908 means the giveback is a reversal.",
+  "direction": "with_trade",
+  "target_px": 0.1862,
+  "p_target": 0.45,
+  "invalidation_px": 0.1908,
+  "horizon_bars": 8,
+  "timeframe": "1h",
+  "evidence": [
+   "context_v3.chart: higher 1h low 0.1873 after 0.1864, bounce high 0.1892",
+   "context_v3.htf: 4h adx 32.85 trending, 4h swing low 0.1906 broken",
+   "context.correlated_open_packages: 6 other open shorts incl SOL/BTC/XRP"
+  ]
+ }
+}
