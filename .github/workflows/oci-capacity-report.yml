@@ -1,0 +1,62 @@
+name: oci-capacity-report
+
+# READ-ONLY OCI storage + compute capacity report (Tier 1). list_*/get_* only:
+# boot/block volumes, backups, Limits API, object storage. No mutation of any
+# kind. Gates this adds or changes: none. Lane OCI-FREE-CAPACITY (2026-11-02).
+# Trigger: issues.opened with label `oci-capacity-report`, or workflow_dispatch.
+
+on:
+  workflow_dispatch:
+  issues:
+    types: [opened]
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: oci-capacity-report
+  cancel-in-progress: false
+
+jobs:
+  report:
+    if: |
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'issues' &&
+       (github.event.issue.user.login == github.repository_owner ||
+        github.event.issue.user.login == 'github-actions[bot]') &&
+       contains(github.event.issue.labels.*.name, 'oci-capacity-report'))
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install --quiet oci
+      - name: Run report
+        env:
+          OCI_CLI_USER: ${{ secrets.OCI_CLI_USER }}
+          OCI_CLI_KEY_CONTENT: ${{ secrets.OCI_CLI_KEY_CONTENT }}
+          OCI_CLI_FINGERPRINT: ${{ secrets.OCI_CLI_FINGERPRINT }}
+          OCI_CLI_TENANCY: ${{ secrets.OCI_CLI_TENANCY }}
+          OCI_CLI_REGION: ${{ secrets.OCI_CLI_REGION }}
+          OCI_COMPARTMENT_OCID: ${{ secrets.OCI_COMPARTMENT_OCID }}
+        run: |
+          set +e
+          mkdir -p /tmp/oci
+          python3 scripts/ops/oci_capacity_report.py > /tmp/oci/out.json 2> /tmp/oci/err.txt
+          echo "rc=$?" >> /tmp/oci/rc.txt
+      - name: Post report
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ISSUE: ${{ github.event.issue.number }}
+        run: |
+          {
+            printf '## oci-capacity-report\n\n%s\n\n' "$(cat /tmp/oci/rc.txt 2>/dev/null || echo 'rc=unknown')"
+            if [ -s /tmp/oci/out.json ]; then printf '```json\n'; head -c 60000 /tmp/oci/out.json; printf '\n```\n'
+            else printf 'NO OUTPUT (could_not_look)\n```\n'; head -c 3000 /tmp/oci/err.txt 2>/dev/null; printf '\n```\n'; fi
+          } > /tmp/oci/comment.md
+          if [ -n "${ISSUE:-}" ]; then gh issue comment "$ISSUE" --repo "$GITHUB_REPOSITORY" --body-file /tmp/oci/comment.md; \
+          else cat /tmp/oci/comment.md >> "$GITHUB_STEP_SUMMARY"; fi
