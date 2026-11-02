@@ -1,0 +1,95 @@
+{
+ "schema_version": 1,
+ "review_id": "LR-20261102T0619Z-pkg-4fd943d31ef34fdb",
+ "reviewed_at": "2026-11-02T06:25:00Z",
+ "order_package_id": "pkg-4fd943d31ef34fdb",
+ "trade_id": null,
+ "leg": "ict_scalp_xrp_5m",
+ "accounts": [
+  "bybit_1"
+ ],
+ "trigger": {
+  "event": "adverse_r",
+  "level": -0.75,
+  "l0_snapshot_at": "2026-11-02T03:17:00Z"
+ },
+ "info_cutoff_at": "2026-11-02T06:22:31Z",
+ "state": {
+  "atr_now_over_entry": 1.0083,
+  "bars_held": 3,
+  "giveback_r": 0.8179,
+  "open_r": -0.7897,
+  "peak_provenance": "estimated",
+  "peak_r": 0.0282,
+  "regime_cell_entry": null,
+  "regime_cell_now": null,
+  "sl": 1.25155429,
+  "tp": 1.26041857
+ },
+ "features_at_review": {
+  "atr_now_over_entry": 1.0083,
+  "bars_since_peak": 2,
+  "giveback_r": 0.8179,
+  "open_r": -0.7897,
+  "peak_r": 0.0282,
+  "r_to_stop": 0.2103,
+  "r_to_target": 2.2897
+ },
+ "mechanics": {
+  "verdict": "match",
+  "evidence": "CASE (a) SL HIT, not naked, not a reader gap. journal trade 6827 (bybit_1, pkg-4fd943d31ef34fdb) closed 2026-11-02T06:20:38Z exit 1.2516 vs package SL 1.25155429; order_packages status=closed. The bybit XRPUSDT position still showing (37953.6 @1.25387, SL/TP None at position level) is the netted position of a DIFFERENT package pkg-7bb5b2578aef490a (e4_oi_shock_1h, trade 6823, size 37953.6) whose Partial SL 1.2458 / TP 1.2757 rest as venue orders (bybit_open_orders). Position-level stop_loss/take_profit read None because the brackets are tpsl_mode=Partial conditional orders; the packet reader's 'position True' is symbol-level and cannot attribute to a package (reader attribution gap: packet mechanics evidence says 'none matches this package's order ids')."
+ },
+ "options": [],
+ "outcome_table_source": null,
+ "recommendation": {
+  "action": "no_recommendation",
+  "level": null,
+  "level_atr": null,
+  "ev_delta_r": null,
+  "worst_case_delta_r": null,
+  "basis": "record_only",
+  "confidence": "anecdote",
+  "evidence_source": "none",
+  "judgement_confidence": null,
+  "reason": "Package already stopped out at 06:20:38Z (exit 1.2516, about -1R); nothing open to manage. The 06:11Z hold was not changed by anything we could act on.",
+  "size_fraction": null
+ },
+ "judge_prior": null,
+ "applied": false,
+ "apply_policy": {
+  "bound_r": 0.25,
+  "within_bound": null,
+  "tighten_r": null
+ },
+ "shadow_policy": {
+  "bound_r": 0.5,
+  "within_bound": null,
+  "would_apply": null,
+  "tighten_r": null
+ },
+ "context_flags": [
+  "package closed at SL 06:20:38Z before this review was written; review is post-hoc mechanics record",
+  "open_r at trigger -0.79 (06:19Z) preceded the stop hit by about 1 minute",
+  "symbol XRPUSDT still carries pkg-7bb5b2578aef490a on bybit_1 with venue Partial SL 1.2458 / TP 1.2757 intact"
+ ],
+ "account_reads": [
+  {
+   "account_id": "bybit_1",
+   "account_class": "paper",
+   "read": "no_action",
+   "evidence": "package closed at its SL; nothing to apply"
+  }
+ ],
+ "disposition": {
+  "route": "none",
+  "mandate": null,
+  "action_issue": null,
+  "applied_at": null,
+  "verified_readback": null
+ },
+ "model": "sonnet-tier",
+ "session": "live-review-lane",
+ "prompt_sha": null,
+ "skill_sha": "59ad4814d9e7edf5f398b0105fd3ce9a2bd311e0",
+ "packet_sha": "ca4d0848d5cdeb782a3d63d9cac739a910a8731843dd4789c9361e010da1a40a"
+}
