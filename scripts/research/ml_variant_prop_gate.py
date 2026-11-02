@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 # wiring: manual-only - run by units minted from programme-05 nodes (research/programmes/05-prop.yaml P5-MLV-GATE-*), a source this guard does not scan
+# ruff: noqa: E402
 """Prop gate for ONE ML variant's ledger: RULE-P5-GATE-BRK-PER-LEG-V3, as registered in RQ-20261102-5e1a-01.
 
 Re-runs exactly the harness of docs/research/ml-entry-prop-gate-2026-11-02/run_grade.py (prop_ev_sim path mode, 5 seeds x 1000
