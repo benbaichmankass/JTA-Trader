@@ -54,6 +54,15 @@ inputs:
       this action's. A caller still owns the question this cannot answer — "are
       MY rows in the file?" — via assert_rows_landed.py --pushed-ref.
     default: "false"
+  close-on-fail:
+    description: >
+      When "true", a `verify-merged` wait that ends with the PR NOT merged (timeout, never-read) CLOSES the
+      PR with a reason comment before failing the step. For callers whose open PR blocks the next cycle
+      (research-queue-dispatch: an open `automation/research-queue-stamp-*` PR makes its units read as
+      already dispatched, so a stranded stamp PR stalled dispatch for 27.6 h, PI-20261102-RODISPATCHLAND-0001).
+      The step still fails LOUDLY (one red flag); the next cycle keeps going. Default "false" (no change).
+    required: false
+    default: "false"
   verify-timeout-minutes:
     description: >
       How long `verify-merged` waits. Default 30.
@@ -192,6 +201,7 @@ runs:
         BRANCH_PREFIX: ${{ inputs.branch-prefix }}
         VERIFY_MERGED: ${{ inputs.verify-merged }}
         VERIFY_TIMEOUT_MINUTES: ${{ inputs.verify-timeout-minutes }}
+        CLOSE_ON_FAIL: ${{ inputs.close-on-fail }}
         REFRESH_STALE_BRANCH: ${{ inputs.refresh-stale-branch }}
         REFRESH_COMMAND: ${{ inputs.refresh-command }}
       run: |
@@ -969,10 +979,19 @@ runs:
 
         # THREE OUTCOMES, NEVER COLLAPSED — and only the first two are claims
         # about the merge. `never_read` is a claim about US.
+        close_pr_on_fail() {
+          if [ "${CLOSE_ON_FAIL:-false}" = "true" ]; then
+            gh pr close "${PR_URL}" --comment "Closed by commit-to-main: not merged within ${MINS}m (refresh: ${REFRESH_STATE}). Left open it would hold its paths as 'already dispatched' and block the next cycle; the next run re-derives and re-lands. Check this PR's failing checks (e.g. pr-landing R5) for the cause." >/dev/null 2>&1 \
+              && echo "::warning::commit-to-main: closed ${PR_URL} (close-on-fail)" \
+              || echo "::warning::commit-to-main: close-on-fail could not close ${PR_URL}"
+          fi
+        }
         if [ "${STATE_EVER_READ}" -eq 0 ]; then
+          close_pr_on_fail
           echo "::error::commit-to-main: ${PR_URL} — WE NEVER ONCE READ THE PR STATE in ${MINS}m (every poll returned UNKNOWN: \`gh pr view\` failed, typically auth or rate limit), and git says this commit is NOT on main (fetch: ${LANDED}). This is 'we could not look' PLUS an independent negative — NOT a verdict about the PR's checks. Fix the \`gh\` read first; do not re-run checks on a hunch."
           exit 1
         fi
 
+        close_pr_on_fail
         echo "::error::commit-to-main: ${PR_URL} did not merge within ${MINS}m (stale-branch refresh: ${REFRESH_STATE}; git confirms the commit is not on main). The rows are written on ${BR} and are NOT on main. CHECK THE PR'S OWN CHECK RUNS BEFORE ASSUMING A CAUSE — the two look identical from here: (a) the branch's checks FAILED on its own content, which a re-run will not fix; or (b) they were never re-run after a transient red base (BL-20260830-A-TRANSIENT-RED-BASE-PERMANENTLY-STRANDS-AN-AUTOMERGE-BRANCH), which a re-run or rebase does fix."
         exit 1
