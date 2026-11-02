@@ -62,6 +62,7 @@ def test_covers_checks_feed_status_and_days():
 def test_router_releases_covered_unit_to_kaggle_cpu(monkeypatch):
     cfg = cr.load_config()
     u = _unit()
+    monkeypatch.setattr(cd, "load_coverage", lambda p=None: {})        # hermetic: never the committed coverage.json
     assert cr.runner_only_reason(u)
     assert cr.class_backends("cpu_light", u, cfg) == ["github_runner"]
     monkeypatch.setattr(cd, "load_coverage", lambda p=None: _cov())
