@@ -41,6 +41,9 @@ assert len(rec) == len(pol) == len(trades)
 mean5 = float(np.mean([x[0] for x in pol]))
 print("5-symbol extend-only mean", mean5, "n", len(pol))
 assert abs(mean5 - 0.02712995887700275) < 1e-6 and len(pol) == 907, "does not reproduce the evidence record"
+# ML-PROP-ITERATE enrichment (2026-11-02): extra per-trade columns for the ETH/SOL diagnostics. Appended fields only; the
+# 5-symbol reproduction assert above and every existing field are untouched (prop_ev_sim ignores unknown keys).
+_feat = tab.set_index(["symbol", "ts"])[["ret_168", "vol_ratio", "atr_pct"]]
 led = []
 for k, t in trades.iterrows():
     px, j, reason = rec[k]
@@ -55,7 +58,9 @@ for k, t in trades.iterrows():
     led.append({"leg": "ml_entry", "strategy": "ml_entry", "symbol": t.symbol, "direction": t.side,
                 "entry_time": str(et), "exit_time": str(xt), "entry": entry, "sl": entry - s * risk,
                 "exit_reason": {0: "time", 1: "sl", 2: "take_profit"}[reason],
-                "gross_r": round(gross, 6), "mfe_r": round(max(fav / risk, gross), 6), "net_r_evidence": round(pol[k][0], 6)})
+                "gross_r": round(gross, 6), "mfe_r": round(max(fav / risk, gross), 6), "net_r_evidence": round(pol[k][0], 6),
+                "score": round(float(t.p_long if t.side == "long" else t.p_short), 6),
+                **{c: round(float(_feat.loc[(t.symbol, t.ts), c]), 6) for c in ("ret_168", "vol_ratio", "atr_pct")}})
 df = pd.DataFrame(led)
 out.mkdir(parents=True, exist_ok=True)
 for name, sub in (("ml_entry_5sym", df), ("ml_entry_ethsol", df[df.symbol.isin(["ETHUSDT", "SOLUSDT"])])):
