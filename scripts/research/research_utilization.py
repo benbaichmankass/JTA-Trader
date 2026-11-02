@@ -206,7 +206,7 @@ def _self_test() -> int:
     rec = measure(cfg=cfg, by_name_to_backend={"research-script-run": "github_runner"}, pressure=pressure, quota=q,
                   decisions=dec, now=now, run_id="1", fired=True)
     gh = rec["backends"]["github_runner"]
-    assert gh["read_state"] == "measured" and gh["inflight_at_start"] == 1 and gh["fired_this_cycle"] == 1 and gh["free_slots_after"] == 1, gh
+    assert gh["read_state"] == "measured" and gh["inflight_at_start"] == 1 and gh["fired_this_cycle"] == 1 and gh["free_slots_after"] == gh["capacity"] - 2, gh
     assert rec["kaggle_gpu"]["expiring_h"] == 20.0 and any(f.startswith("kaggle_quota_expiring") for f in rec["flags"]), rec["flags"]
     assert any(f.startswith("floor_thin") for f in rec["flags"]), rec["flags"]
     blind = measure(cfg=cfg, by_name_to_backend={}, pressure={"inflight_research": None}, quota={"remaining": None, "note": "x"},
@@ -217,7 +217,7 @@ def _self_test() -> int:
         write(rec, Path(td) / OUT_DIR)
         w = week(Path(td), now)
         assert w["cycles"] == 1 and w["backends"]["github_runner"]["value_dispatched"] == 12.5, w
-        assert w["backends"]["github_runner"]["utilization"] == round(2 / 3, 3), w
+        assert w["backends"]["github_runner"]["utilization"] == round(2 / cfg["backends"]["github_runner"]["max_concurrent"], 3), w
     print("research_utilization self-test OK")
     return 0
 
