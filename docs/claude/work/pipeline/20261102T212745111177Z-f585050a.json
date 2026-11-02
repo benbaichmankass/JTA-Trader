@@ -1,0 +1,15 @@
+{
+  "due_when": {
+    "clears_when": "concurrency moved to job level in both workflows, or the manager decides to leave it",
+    "kind": "event"
+  },
+  "id": "PI-20261102-PTDVAI3R-0002",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "etf-history-pipeline runs 41500761586 (cancelled) / 41512376285",
+    "rerun": "list etf-history-pipeline.yml runs with conclusion cancelled while a backfill is in progress"
+  },
+  "state": "queued",
+  "what": "Workflow-level `concurrency` in etf-history-pipeline.yml and options-snapshot-capture.yml: job-skipped issue events queue in the group and a newer pending run cancels an older pending one (verified: run 16 cancelled by run 17). A real request filed during a long backfill can be cancelled. Candidate fix: job-level concurrency. Not shown to be the cause of #22406."
+}

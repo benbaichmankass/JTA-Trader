@@ -1,0 +1,16 @@
+{
+  "due_when": {
+    "check_every_days": 1,
+    "clears_when": "manifest run.remaining == 0 for tfs [1m] and no STALE series, or the operator kills the 1m-universe goal",
+    "kind": "observation"
+  },
+  "id": "PI-20261102-PTDVAI3R-0001",
+  "next_action": "ask_operator",
+  "origin": {
+    "kind": "session",
+    "ref": "issue #22441 / run 41500756635",
+    "rerun": "file an etf-history-request issue with 'mode: backfill'; read manifest run.remaining in the result comment"
+  },
+  "state": "queued",
+  "what": "ETF 1m backfill throughput: 24 symbols fetched in 2h48m, 920 of 1019 still PENDING (stopped_early); ~38 more runs at this rate. Cause undiagnosed (per-symbol pull time vs API rate limit vs chunk loop). Also SPLG/1m STALE (last bar 2025-10-30)."
+}
