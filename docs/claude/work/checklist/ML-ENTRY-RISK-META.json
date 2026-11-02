@@ -1,0 +1,22 @@
+{
+  "id": "ML-ENTRY-RISK-META",
+  "title": "ml_entry (and claude_desk) packages carry no risk_per_unit / entry_time in meta, so open_r, r_to_stop, adverse_r / giveback wakes and every exit lever are blind on the REAL-MONEY ml_entry legs",
+  "phase": null,
+  "state": "queued",
+  "owner": "manager",
+  "lane": null,
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 2,
+  "prs": [],
+  "blocked_on": [],
+  "note": "Found 2026-11-02 18:26Z by LIVE-REVIEW lane session_01AFoLuMQtMgpFfzjGLfipuN. Producer gap: src/units/strategies/ml_entry.py:125 package meta has no risk_per_unit/entry_time (trend_donchian.py:456-457 does). Consumer: src/runtime/position_telemetry.py:164 risk=None, so trail_decay.py:108-113 sets peak_state no_risk. Population: 150 order_packages rows (diag); all 6 ml_entry rows and 3 claude_desk rows lack both keys; e4_oi_shock_1h has risk_per_unit but no entry_time (unanchored). Fix (Tier 2): set meta risk_per_unit=|entry-sl| and entry_time at package build, plus a backfill of the open ml_entry packages. Also: live_review_outcomes.py:351 KeyError 'direction' on ml_entry (no Stage-0 trades table), so ml_entry reviews are could_not_price; and exit_plan_state keeps the pre-revision 1.5R TP after the extend-only TP revision (venue+package at 3.0R agree).",
+  "due_by": "2026-11-04",
+  "roadmap": [
+    "L-ML-LIVE"
+  ],
+  "updated_at": "2026-11-02T18:39:41Z",
+  "updated_by": "session_01AFoLuJ1apgy8sfngu4WyNH",
+  "_seq": 895
+}
