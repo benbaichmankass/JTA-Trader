@@ -378,7 +378,7 @@ edit it with ad-hoc python.** The CLI writes one row atomically, checks it again
 declared `states` (and `priority_rank`: a positive number or null), and never touches the shared header:
 
 ```bash
-python3 scripts/ops/checklist.py add  NEW-ROW --title "one line" --state queued --owner me --tier 1 --rank 3 --by "$SESSION"
+python3 scripts/ops/checklist.py add  NEW-ROW --title "one line" --state queued --due-by 2026-11-05 --roadmap L-OPS --tier 1 --rank 3 --by "$SESSION"
 python3 scripts/ops/checklist.py set  A3 state=in_flight lane=session_01... ceiling_usd=25 --by "$SESSION"
 python3 scripts/ops/checklist.py set  A3 prs='[123,456]' blocked_on='[]'     # values parse as JSON, else string
 python3 scripts/ops/checklist.py note A3 "what is true about this row"        # --append to add to it
@@ -386,6 +386,21 @@ python3 scripts/ops/checklist.py archive-lane A3                              # 
 python3 scripts/ops/checklist.py queue --limit 10                             # the ranked runnable queue
 python3 scripts/ops/checklist.py header last_review '{"report_id": "...", "reviewed_at": "..."}'   # rare: the header is shared
 ```
+
+⚠️ **Process, not gates (operator, 2026-11-01, binding; lane `CHECKLIST-OWNER-DUE`).** The manager owns every row and does not assign owners
+to sessions; `add`/`set` therefore FILL `owner=manager`, a computed `due_by` (the observation date the row names; else in_flight +2d, blocked
++7d, landed_unproven +3d, queued by `priority_rank` +1/+3/+7d) and `roadmap=["unmapped"]` + a reason (the weekly pass maps it). Nothing is
+refused; only a *deliberate clearing* of owner/due_by/roadmap errors. The date is what step 4b of § "The daily review" measures. Gates this adds
+or changes: **none.**
+
+### The audit-outcome contract (operator, 2026-11-01, binding)
+
+*"There needs to be this specific outcome where we have an audit and then a work plan to make sure that those items get taken care of."* An
+audit or review lane — `weekly-audit`, `health-review`, `performance-review`, `ml-review`, `programme-review`, any from-scratch audit — is **done only
+when every proposal it makes maps to** (a) a checklist row with `owner`, `due_by` and a `roadmap` ref (or a research queue unit carrying a
+`roadmap` ref and a run date), **or** (b) a recorded operator decision (a row, popup answer or `config/mandates.yaml` entry it names). A proposal
+that is "in the report" and in neither is **not filed**, whatever the report says. The lane's final section lists each proposal id → row/unit
+id → `due_by`, and the manager checks that list against `checklist.py` before accepting the lane (`close-out` check 4 repeats it). This is a process step, not a guard: a dated row is what the daily review (step 4b) works, so a proposal that is not one will never be observed.
 
 A refused edit (state outside `states`, duplicate id, unknown row, `state`/`status`
 disagreement, path-shaped id) prints `checklist: refused -- <why>` and writes
@@ -466,6 +481,16 @@ mandatory in the planning routine's prompt and come BEFORE part (B) 1:
 0. **First agenda item: the numbers.** Run `python3 scripts/ops/review_followthrough.py --window-days 7` and put its table (with its
    population line) at the top of the Artifact. Each review's Layer 0 runs the same script with `--source <review>` first, so a review starts
    by grading its own prior follow-ups.
+0b. **The backlog: reviewed weekly, budgeted in planning, drained the same morning (operator, 2026-11-01, binding).** *"The backlog is supposed
+   to be reviewed and handled during the weekly review sessions so that we can account for that in the Thursday planning sessions."* Collect
+   every review's backlog numbers (weekly-audit C6, health H15, ml C9 `backlog_coverage`, performance backlog gate) plus
+   `checklist_daily_measure.py`; put one **BACKLOG** line in the workplan (due / overdue / unrouted, oldest age, opened vs closed 7 d, last
+   week's drain result); budget the week's drain inside the capacity plan; and **dispatch that drain lane the same morning**. **Never
+   bulk-drop**: every drop is a row with its own reason. One process, two cadences: **daily** (§ "The daily review" step 4b) drains what is
+   due; **weekly** the reviews measure, planning budgets and dispatches. *What went wrong without it:* the 2026-10-28 weekly audit measured
+   C6 **fail** (510 due, 59 unrouted, oldest unrouted 94 d) and health H15 **concern** (same 510; 275 of 337 health-backlog items with no
+   owner), no drain lane was dispatched, and the 2026-10-29 bulk reset then dropped rows instead of working them (the register now holds 143
+   `dropped` rows over all time; I did NOT verify how many came from that reset).
 1. **Carry-over first.** Last week's (a) items that are not `done` are scheduled first this week, ahead of anything new, or re-dispositioned
    to (b) or (c) with a reason. A second carry-over of the same item is a decision for the operator, not a third silent carry.
 2. **Every follow-up, insight and idea this week's reviews filed gets exactly ONE disposition:** **(a) scheduled this week** — a checklist
@@ -584,6 +609,16 @@ The review routine IS the periodic check; its prompt names `GET /api/bot/work/re
 3. **Work every item: dispatch** (`state: routed`, `routed_to: <session>`, a checklist row for a build), **close** (`done`/`killed` with a
    `terminal_reason`) or **decide** (§ "Before any operator popup"). A `routed` item still due means its lane has not delivered.
 4. **Every silence alarm gets a fix lane the same day**; anything due at a known time gets a `send_later` wake.
+4b. **The backlog drain — MANDATORY, once a day (the 05:52Z run) (operator, 2026-11-01, binding).** *"The manager owns everything, including the
+   backlog ... check it once a day and open a lane that fixes the things that need to get fixed ... It's not like an open-ended optional."*
+   The manager owns ALL checklist rows and pipeline items and **does not assign owners to sessions** (a row's `owner` is `manager`; `lane` is
+   only who is working it now). Run `python3 scripts/ops/checklist_daily_measure.py`: rows by state, overdue, `landed_unproven` observations due,
+   pipeline due, research units queued-not-run, and rows opened vs closed over 24 h and 7 d. Rank what is due (oldest and most money-relevant
+   first) and **dispatch ONE `BACKLOG-DRAIN-<date>` lane** on the ranked set (one question per lane, row first, ceiling stated; it observes the
+   soaks, closes or re-dates with a reason, and kills what is stale with a reason). A review that skips the drain lane has failed close-out. If
+   inflow exceeds outflow three days running, put it in "decisions for you". No cap on starting work (operator: "No cap, metric only"). A lane
+   that lands a change as `landed_unproven` writes the runnable `observe: {when, how}` on its row; lanes archive as normal and are not kept open.
+
 4c. **Orphan drain — the research loop, daily (operator 2026-11-01, binding).** Run `python3 scripts/research/iteration_orphans.py`.
    The rule: [`docs/plans/OPERATING-PLAN-2026-09-21.md`](../../../docs/plans/OPERATING-PLAN-2026-09-21.md) § 2 "What does not pass goes back into research — THE research workflow". Report the orphan count per kind as a NUMBER every review (target 0), and from `--levers` the subjects whose lever map has untested families with no live unit. Every
    `ORPHAN` (a testing leg, a non-live ML model or a live-review class with no live iteration unit) and every `overdue` iteration gets
