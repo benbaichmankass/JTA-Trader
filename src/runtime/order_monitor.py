@@ -5824,7 +5824,11 @@ def _reconcile_open_trades(db) -> Dict[str, int]:
             conn.row_factory = __import__("sqlite3").Row
             rows = conn.execute(
                 "SELECT id, account_id, symbol, direction, notes, created_at, "
-                "       entry_price, position_size, setup_type "
+                "       entry_price, position_size, setup_type, "
+                # CLOSE-REASON-XRP-1220 recurrence (trade 6836): the close path's
+                # _own_bracket_fill_from_venue reads these two off this row; they
+                # were never selected, so the #22138 fix was a silent no-op.
+                "       sl_order_id, tp_order_id "
                 "  FROM trades WHERE status='open' AND COALESCE(is_backtest,0)=0"
             ).fetchall()
         finally:

@@ -114,3 +114,34 @@ def test_reduce_leg_is_never_classified_from_its_legs():
 
 def test_no_cfg_means_no_venue_read():
     assert om._own_bracket_fill_from_venue(None, _row()) is None
+
+
+def test_reconciler_open_trades_select_carries_the_bracket_order_ids():
+    """Trade 6836 recurrence: the reconciler's SELECT omitted sl/tp_order_id, so
+    `_own_bracket_fill_from_venue` saw empty ids on every real row and never fired.
+    Run the real SELECT against a real journal and feed its row to the helper."""
+    import inspect
+    import sqlite3
+
+    src = inspect.getsource(om._reconcile_open_trades)
+    sel = src[src.index("SELECT id"):src.index("FROM trades WHERE status='open'")]
+    for col in ("sl_order_id", "tp_order_id", "position_size"):
+        assert col in sel, f"_reconcile_open_trades must select {col}"
+
+    conn = sqlite3.connect(":memory:")
+    conn.row_factory = sqlite3.Row
+    conn.execute("CREATE TABLE trades (id INTEGER, account_id TEXT, symbol TEXT, direction TEXT,"
+                 " notes TEXT, created_at TEXT, entry_price REAL, position_size REAL,"
+                 " setup_type TEXT, sl_order_id TEXT, tp_order_id TEXT, status TEXT, is_backtest INT)")
+    r = _row()
+    conn.execute("INSERT INTO trades VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)",
+                 (r["id"], "bybit_1", r["symbol"], r["direction"], r["notes"], r["created_at"],
+                  r["entry_price"], r["position_size"], r["setup_type"], r["sl_order_id"],
+                  r["tp_order_id"], "open", 0))
+    import ast  # evaluate the adjacent-literal SELECT exactly as Python concatenates it
+    lit = ast.literal_eval("(" + src[src.index('"SELECT id'):src.index(").fetchall()")] + ")")
+    row = dict(conn.execute(lit).fetchone())
+    with patch("src.units.accounts.clients.account_order_status",
+               side_effect=_by_id({SL_FILLED["order_id"]: SL_FILLED})):
+        got = om._own_bracket_fill_from_venue({"account_id": "bybit_1", "exchange": "bybit"}, row)
+    assert got and got["leg"] == "sl" and got["avg_price"] == 1.2476

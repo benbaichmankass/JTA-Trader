@@ -1,0 +1,185 @@
+{
+  "leg": "slv_trend_1h",
+  "grade": {
+    "verdict": "pass",
+    "label": "confirmed",
+    "selected": "A",
+    "selected_from": 1,
+    "discovery": {
+      "A": {
+        "n": 316,
+        "net_r": 41.6643,
+        "expectancy_r": 0.1318,
+        "folds": [
+          {
+            "fold": 1,
+            "start": "2018-06-18 13:00:00+00:00",
+            "end": "2020-01-09 19:33:33.750000+00:00",
+            "trades": 87,
+            "net_r": -17.3796
+          },
+          {
+            "fold": 2,
+            "start": "2020-01-09 19:33:33.750000+00:00",
+            "end": "2021-08-02 02:07:07.500000+00:00",
+            "trades": 85,
+            "net_r": 11.5874
+          },
+          {
+            "fold": 3,
+            "start": "2021-08-02 02:07:07.500000+00:00",
+            "end": "2023-02-23 08:40:41.250000+00:00",
+            "trades": 79,
+            "net_r": 22.5352
+          },
+          {
+            "fold": 4,
+            "start": "2023-02-23 08:40:41.250000+00:00",
+            "end": "2024-09-15 15:14:15+00:00",
+            "trades": 65,
+            "net_r": 24.9213
+          }
+        ],
+        "folds_positive": 3,
+        "eligible": true
+      }
+    },
+    "plan": {
+      "boundary": "2024-09-15 15:14:15+00:00",
+      "share": 0.25,
+      "baseline_n_holdout": 104,
+      "grown": false,
+      "short_at_cap": false,
+      "discovery_fold_edges": [
+        "2018-06-18 13:00:00+00:00",
+        "2020-01-09 19:33:33.750000+00:00",
+        "2021-08-02 02:07:07.500000+00:00",
+        "2023-02-23 08:40:41.250000+00:00",
+        "2024-09-15 15:14:15+00:00"
+      ],
+      "straddling_excluded": {
+        "A": 1
+      }
+    },
+    "holdout": {
+      "n": 104,
+      "net_r": 35.9867,
+      "expectancy_r": 0.346
+    },
+    "holdout_min_trades": 25,
+    "discovery_n_floor": 20,
+    "evaluations_on_holdout": 1,
+    "why": "A (selected from 1 on discovery) reads net_r=35.9867 over n=104 held-back trades, read once"
+  },
+  "arms": {
+    "A": {
+      "reach_ge_6r": 0.1045,
+      "n": 421,
+      "net_r": 81.0536,
+      "net_r_fee_only": 104.5861,
+      "max_drawdown_r": 44.8621,
+      "by_outcome": {
+        "stop": 258,
+        "trail_stop": 141,
+        "take_profit": 22
+      },
+      "mean_bars_held": 16.637,
+      "net_r_per_capital_day": 0.2777,
+      "cost_stack": {
+        "fee_bps_roundtrip": 0.0,
+        "slippage_bps_roundtrip": 5.0,
+        "funding_bps_per_window": 0.0
+      },
+      "params": {
+        "donchian": 24,
+        "atr_stop_mult": 1.5,
+        "trail_mult": 4.0,
+        "min_confidence": 0.3
+      },
+      "data_start": "2018-06-18 13:00:00+00:00",
+      "data_end": "2026-10-15 19:00:00+00:00",
+      "folds": [
+        {
+          "fold": 1,
+          "start": "2018-06-18 13:00:00+00:00",
+          "end": "2020-07-17 21:44:45+00:00",
+          "trades": 113,
+          "net_r": 19.1776
+        },
+        {
+          "fold": 2,
+          "start": "2020-07-17 21:44:45+00:00",
+          "end": "2022-08-17 06:29:30+00:00",
+          "trades": 114,
+          "net_r": -11.1302
+        },
+        {
+          "fold": 3,
+          "start": "2022-08-17 06:29:30+00:00",
+          "end": "2024-09-15 15:14:15+00:00",
+          "trades": 90,
+          "net_r": 37.0194
+        },
+        {
+          "fold": 4,
+          "start": "2024-09-15 15:14:15+00:00",
+          "end": "2026-10-15 23:59:00+00:00",
+          "trades": 104,
+          "net_r": 35.9867
+        }
+      ],
+      "argv": [
+        "/opt/hostedtoolcache/Python/3.11.17/x64/bin/python3",
+        "/home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_trend.py",
+        "--donchian",
+        "24",
+        "--data",
+        "<data>",
+        "--symbol",
+        "SLV",
+        "--resample",
+        "1h",
+        "--atr-period",
+        "14",
+        "--atr-stop-mult",
+        "1.5",
+        "--trail-mult",
+        "4.0",
+        "--min-confidence",
+        "0.3",
+        "--fee-bps-roundtrip",
+        "0.0",
+        "--emit-trades",
+        "comms/research/RQ-20261101-78fc-18/41486192593/arms/A__trades.jsonl",
+        "--json",
+        "comms/research/RQ-20261101-78fc-18/41486192593/arms/A__bt.json",
+        "--tp-cap-pct",
+        "0.099",
+        "--tp-r",
+        "50.0",
+        "--start",
+        "2018-06-01",
+        "--end",
+        "2026-10-15 23:59"
+      ]
+    }
+  },
+  "window": {
+    "start": "2018-06-01",
+    "end": "2026-10-15 23:59",
+    "fetch_days": 3060,
+    "feed": {
+      "source": "dukascopy",
+      "ticker": "SLV",
+      "interval": "60m",
+      "resample": "1h"
+    },
+    "fold_edges": [
+      "2018-06-18 13:00:00+00:00",
+      "2020-07-17 21:44:45+00:00",
+      "2022-08-17 06:29:30+00:00",
+      "2024-09-15 15:14:15+00:00",
+      "2026-10-15 23:59:00+00:00"
+    ]
+  }
+}
