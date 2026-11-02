@@ -1,0 +1,39 @@
+# VM sparse-checkout patterns (non-cone, gitignore syntax) — VM-SPARSE-SYNC, 2026-11-02.
+#
+# Applied by scripts/deploy_pull_restart.sh on EVERY sync (ict-git-sync timer +
+# the pull-and-deploy system-action), read from origin/main AFTER the fetch, so
+# a change here reaches the VM on the next tick without any manual step.
+#
+# Why: #22365 put 21.6 GB of research caches (comms/research/<unit>/<run>/
+# streams/*.pkl, work/) on main; the VM's `git reset --hard origin/main`
+# checked them out and filled the 45G root disk -> the web API went blind.
+#
+# Rule: exclude ONLY bulk research artefacts that nothing on the VM reads.
+# Verified 2026-11-02 by grep over src/, scripts/ops/, scripts/*.py|sh and
+# config/ (every ExecStart in deploy/*.service): the runtime reads JSON / JSONL /
+# MD under comms/research (verdict.json pointers in config/*.yaml,
+# profile_loader's bybit-fee-measured json, mandate_resolver, soak_book_grade,
+# attention_watch, research catalog) — those all STAY. Nothing on the VM opens a
+# .pkl/.npz/.csv/.parquet under comms/research or a streams/ work/ candles/ dir.
+# Adding a VM reader of an excluded shape means removing its line here first
+# (tests/test_vm_sparse_checkout.py pins the runtime paths that must stay).
+#
+# The last matching line wins; `/*` = everything, `!` lines exclude.
+/*
+!/comms/research/**/streams/
+!/comms/research/**/work/
+!/comms/research/**/candles/
+!/comms/research/**/*.pkl
+!/comms/research/**/*.pickle
+!/comms/research/**/*.npz
+!/comms/research/**/*.npy
+!/comms/research/**/*.parquet
+!/comms/research/**/*.feather
+!/comms/research/**/*.arrow
+!/comms/research/**/*.h5
+!/comms/research/**/*.hdf5
+!/comms/research/**/*.joblib
+!/comms/research/**/*.pt
+!/comms/research/**/*.csv
+!/comms/research/**/*.gz
+!/comms/research/**/*.zip

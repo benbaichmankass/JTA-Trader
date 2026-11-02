@@ -1,0 +1,23 @@
+{
+  "due_when": {
+    "clears_when": "trainer_git_sync.sh applies the sparse patterns + blob filter and a trainer-vm-diag read shows no comms/research/**/streams/ on the trainer's disk",
+    "event": "the VM-SPARSE-SYNC PR (deploy_pull_restart.sh sparse checkout) is merged and observed on ict-bot-arm (deploy log shows 'Sparse checkout patterns applied')",
+    "kind": "event"
+  },
+  "id": "PI-20261102-ARSESYNC-0001",
+  "next_action": "dispatch_lane",
+  "observation": {
+    "due_by": "2026-11-09",
+    "how_to_check": "trainer-vm-diag relay: df -h /, git -C <repo> config core.sparseCheckout, du -sh comms/research",
+    "what": "trainer sync is sparse + filtered; trainer disk free of research caches"
+  },
+  "origin": {
+    "kind": "session",
+    "ref": "lane VM-SPARSE-SYNC (manager session_01AFoLuJ1apgy8sfngu4WyNH dispatch, 2026-11-02; incident #22365 filled ict-bot-arm's 45G disk)",
+    "rerun": "grep -nE 'git (fetch|reset|checkout)|sparse' scripts/ops/trainer_git_sync.sh ; trainer-vm-diag: df -h / and du -sh <trainer repo>/comms/research"
+  },
+  "severity": "high",
+  "state": "queued",
+  "tier": 2,
+  "what": "ict-trainer-git-sync (scripts/ops/trainer_git_sync.sh on ict-trainer-vm) does a full `git fetch origin main` + checkout like the live VM's sync did before VM-SPARSE-SYNC, so any research batch that puts bulk caches on main (#22365: 21.6 GB of comms/research/**/streams/*.pkl) also lands on the trainer's disk. Give it the same treatment: fetch with --filter=blob:limit=5m and apply deploy/vm-sparse-checkout (or a trainer variant if the trainer READS some comms/research caches — grep scripts/training + scripts/ml first) before the reset, idempotent every run, with a simulated-repo test like tests/test_vm_sparse_checkout.py."
+}

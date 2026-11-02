@@ -1,0 +1,7 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "hold_reason": "tier_2_3_needs_approval",
+  "hold_text": "Deploy-path change to scripts/deploy_pull_restart.sh (the live VM's ict-git-sync + pull-and-deploy script). Operator OK 2026-11-02 ~13:00Z, verbatim: \"let's try both fixes - better organizing the data\". Held for the manager's merge (session_01AFoLuJ1apgy8sfngu4WyNH) per the VM-SPARSE-SYNC dispatch.",
+  "why": "Incident #22365: 21.6 GB of research caches on main filled ict-bot-arm's 45G disk via the sync's full fetch + reset --hard, blinding the web API. Adds a blob size filter to the fetch and a sparse checkout (patterns in deploy/vm-sparse-checkout, read from origin/main after the fetch, re-applied each run) so bulk comms/research artefacts never reach the VM working tree. No trader stop, no /data/bot-data or DB touch."
+}
