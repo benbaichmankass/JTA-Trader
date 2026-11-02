@@ -109,6 +109,11 @@ jobs:
           # blocks the runner reproduction of c692-01 / -06 that #22079 waits on. ~2 MB wheel, no torch. PINNED to the
           # version requirements.txt pins for the live trader and the trainer (serve parity: one lightgbm everywhere).
           pip install lightgbm==4.6.0
+          # scikit-learn: lightgbm.LGBMRegressor (the sklearn API the ML decision scripts fit with) refuses to construct
+          # without it. #22143 installed lightgbm alone, and c692-01 / -06 then died with "scikit-learn is required for
+          # lightgbm.sklearn" (runs 41320077486 / 41320079963, 2026-11-01). Verified in a clean venv with exactly these
+          # pins: LGBMRegressor(**ml_decision_entry.LGB_PARAMS).fit() succeeds.
+          pip install scikit-learn==1.7.2
       - name: Install the ml_bakeoff learners (catboost / tabicl / tabpfn / torch) and probe them
         # ML-NONGBDT-RUNNERS (2026-10-22). Only for a unit that runs ml_bakeoff.py (or tm_bench.py, TM-BENCH 2026-10-30); every other unit skips the ~1 GB torch wheel.
         # Absent, lightgbm/catboost/tabicl/tabpfn/torch_gru all landed `unavailable` on this backend. A failed install is reported
