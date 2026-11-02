@@ -6,7 +6,7 @@
   },
   "hold": {
    "mean_d_hold": 0.0,
-   "n_rows": 27
+   "n_rows": 30
   },
   "partial_close": {
    "mean_d_hold": null,
@@ -17,7 +17,7 @@
    "n_rows": 3
   }
  },
- "computed_at": "2026-11-02T20:23:48Z",
+ "computed_at": "2026-11-02T21:16:22Z",
  "forecast": {
   "brier": 0.173,
   "brier_ref_constant_0_5": 0.25,
@@ -89,12 +89,12 @@
   },
   {
    "action": "hold",
-   "d_hold": null,
-   "d_mech": null,
+   "d_hold": 0.0,
+   "d_mech": 0.0,
    "forecast_outcome": "expired",
    "order_package_id": "pkg-d76f1b15923e4282",
    "p_target": 0.4,
-   "price_reason": "no_path_change_trade_open_or_unjoined",
+   "price_reason": "no_path_change",
    "price_state": "not_a_call",
    "review_id": "LR-20261031T0016Z-pkg-d76f1b15923e4282",
    "trigger": "judgement_cadence"
@@ -202,7 +202,7 @@
    "forecast_outcome": "expired",
    "order_package_id": "pkg-d76f1b15923e4282",
    "p_target": 0.45,
-   "price_reason": "realised_net_r_uncomputable",
+   "price_reason": "replay_mismatch",
    "price_state": "could_not_price",
    "review_id": "LR-20261031T0411Z-pkg-d76f1b15923e4282",
    "trigger": "judgement_cadence"
@@ -322,7 +322,7 @@
    "forecast_outcome": "expired",
    "order_package_id": "pkg-d76f1b15923e4282",
    "p_target": 0.45,
-   "price_reason": "realised_net_r_uncomputable",
+   "price_reason": "replay_mismatch",
    "price_state": "could_not_price",
    "review_id": "LR-20261031T0804Z-pkg-d76f1b15923e4282",
    "trigger": "judgement_cadence"
@@ -545,12 +545,12 @@
   },
   {
    "action": "hold",
-   "d_hold": null,
-   "d_mech": null,
+   "d_hold": 0.0,
+   "d_mech": 0.0,
    "forecast_outcome": "miss",
    "order_package_id": "pkg-d76f1b15923e4282",
    "p_target": 0.35,
-   "price_reason": "no_path_change_trade_open_or_unjoined",
+   "price_reason": "no_path_change",
    "price_state": "not_a_call",
    "review_id": "LR-20261102T0022Z-pkg-d76f1b15923e4282",
    "trigger": "daily_floor"
@@ -605,12 +605,12 @@
   },
   {
    "action": "hold",
-   "d_hold": null,
-   "d_mech": null,
+   "d_hold": 0.0,
+   "d_mech": 0.0,
    "forecast_outcome": "miss",
    "order_package_id": "pkg-d76f1b15923e4282",
    "p_target": 0.45,
-   "price_reason": "no_path_change_trade_open_or_unjoined",
+   "price_reason": "no_path_change",
    "price_state": "not_a_call",
    "review_id": "LR-20261102T0627Z-pkg-d76f1b15923e4282",
    "trigger": "giveback"
@@ -692,13 +692,13 @@
  "verdict": {
   "ci95_d_hold": [
    0.0,
-   0.222
+   0.2094
   ],
-  "mean_d_hold": 0.0773,
-  "mean_d_mech": 0.0474,
+  "mean_d_hold": 0.0713,
+  "mean_d_mech": 0.0438,
   "min_packages": 30,
-  "n_packages": 12,
-  "n_packages_mech": 12,
+  "n_packages": 13,
+  "n_packages_mech": 13,
   "rule": "RULE-DESK-AM-JUDGEMENT-V1",
   "verdict": "accruing"
  }
