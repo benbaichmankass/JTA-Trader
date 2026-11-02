@@ -111,7 +111,7 @@ def write_verdict(unit: str, out: Path) -> bool:
     for f in sorted(out.glob("*_result.json")):
         try:
             d = json.loads(f.read_text())
-        except Exception:
+        except (OSError, ValueError):
             return False
         cells = d.get("cells") if isinstance(d.get("cells"), dict) else None
         for c in (cells.values() if cells else [d]):
