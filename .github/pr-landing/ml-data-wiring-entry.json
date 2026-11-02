@@ -1,5 +1,7 @@
 {
   "tier": 1,
-  "landing": "self",
-  "why": "Offline ML tooling only: a lake->klines-cache adapter (ml/datasets/lake_klines.py), a per-model selection config, a --source lake option on a research harness build-table, and a synthetic-lake parity test. No runtime, trade-path, deploy, live-model or retrain change; default source stays streams."
+  "landing": "hold",
+  "why": "Offline ML tooling only (lake->klines adapter, per-model selection config, --source lake option on a research harness, synthetic-lake parity test); default source unchanged, no runtime/deploy/live-model/retrain change. The guard names ml/ paths Tier-2 (R5) so this is held for the manager's merge rather than self-landed.",
+  "hold_reason": "unvouchable_paths",
+  "hold_text": "ml/configs/lake_selection.yaml and ml/datasets/lake_klines.py are Tier-2 by name to the guard; offline tooling only, manager to read and merge."
 }
