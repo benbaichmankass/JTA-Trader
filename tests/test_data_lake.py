@@ -381,3 +381,26 @@ def test_year_partition_supersedes_months(tmp_path):
     m = hp.merge_manifests(tmp_path, prev)
     assert set(m["files"][0]["partitions"]) == {"2026"}
     assert m["superseded"] == ["crypto/um_perp/1m/A/2026-11.parquet", "crypto/um_perp/1m/A/2026-12.parquet"]
+
+
+def test_orderflow_from_aggtrades_exact_and_header_tolerant():
+    import io
+    rows = ["1,10.0,2.0,100,101,1735689600000,false", "2,11.0,1.0,102,102,1735689630000,true",
+            "3,12.0,3.0,103,105,1735689660000,false"]
+    for header in (False, True):
+        txt = ("agg_trade_id,price,quantity,first_trade_id,last_trade_id,transact_time,is_buyer_maker\n" if header else "") + "\n".join(rows) + "\n"
+        d = bvl.orderflow_from_aggtrades(io.BytesIO(txt.encode()), chunksize=2)
+        assert list(d["n_agg"]) == [2, 1] and list(d["n_trades"]) == [3, 3]
+        r0 = d.iloc[0]
+        assert (r0.buy_qty, r0.sell_qty, r0.signed_qty, r0.max_qty) == (2.0, 1.0, 1.0, 2.0)
+        assert abs(r0.vwap - (10 * 2 + 11 * 1) / 3) < 1e-12
+
+
+def test_traded_symbols_and_scoped_optional_streams():
+    from pathlib import Path
+    syms = bvl.traded_symbols()
+    assert syms and all(s.endswith("USDT") for s in syms)
+    d = hp.decide_optional(100 * 10**9, Path(ROOT / "config" / "data_universe.yaml"))
+    # the traded-universe fallbacks fit the measured free allowance; the all-perp big streams do not
+    assert {"bookDepth_traded", "aggTrades_traded"} <= set(d["enabled"])
+    assert "bookDepth" in {x["stream"] for x in d["deferred"]}
