@@ -1,0 +1,48 @@
+{
+  "unit": "RQ-20261102-8ef8-02",
+  "run_id": "41514291135",
+  "commit_sha": "43d31fd9158febbb832a65a70eba8f1685885f32",
+  "run_url": "https://github.com/benbaichmankass/JTA-Trader/actions/runs/41514291135",
+  "timeout_minutes": 90,
+  "commands": [
+    {
+      "index": 0,
+      "argv": [
+        "python3",
+        "scripts/research/exit_lever_ablation.py",
+        "--leg",
+        "trend_donchian_sol_prop",
+        "--arm",
+        "P=--fee-bps-roundtrip=8;--slippage-bps-roundtrip=3;--funding-bps-per-window=5;--funding-window-hours=24",
+        "--arm",
+        "SW15=--fee-bps-roundtrip=8;--slippage-bps-roundtrip=3;--funding-bps-per-window=5;--funding-window-hours=24;--trail-level=swing;--trail-level-tight-mult=1.5;--trail-level-lookback=60;--trail-level-pivot-k=3",
+        "--arm",
+        "SW10=--fee-bps-roundtrip=8;--slippage-bps-roundtrip=3;--funding-bps-per-window=5;--funding-window-hours=24;--trail-level=swing;--trail-level-tight-mult=1.0;--trail-level-lookback=60;--trail-level-pivot-k=3",
+        "--arm",
+        "SW15R1=--fee-bps-roundtrip=8;--slippage-bps-roundtrip=3;--funding-bps-per-window=5;--funding-window-hours=24;--trail-level=swing;--trail-level-tight-mult=1.5;--trail-level-lookback=60;--trail-level-pivot-k=3;--trail-level-min-r=1.0",
+        "--days",
+        "1110",
+        "--start",
+        "2023-10-13",
+        "--end",
+        "2026-10-11 20:00",
+        "--grade",
+        "sweep",
+        "--baseline",
+        "P",
+        "--delta-r",
+        "0",
+        "--fold-majority",
+        "3",
+        "--n-floor",
+        "39",
+        "--out",
+        "comms/research/RQ-20261102-8ef8-02/41514291135"
+      ],
+      "log": "comms/research/RQ-20261102-8ef8-02/41514291135/logs/cmd-0.log",
+      "exit_code": 0,
+      "seconds": 32.0
+    }
+  ],
+  "all_ok": true
+}

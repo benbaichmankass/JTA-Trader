@@ -103,6 +103,8 @@ def main(argv: list[str]) -> int:
 # results sitting ungraded on main (71 of 90 landed records since 2026-11-01). The verdict word below is the script's OWN
 # pre-registered per-cell verdict, mapped mechanically; an unrecognised shape writes NOTHING (stays producer_failed).
 _WIN, _LOSS = {"win"}, {"no_win", "does_not_reproduce"}
+_TF = {"beats_1h": "pass", "reproduces": "pass", "viable_not_better": "no_action_warranted", "not_viable": "fail",
+       "does_not_reproduce": "fail", "indeterminate": "indeterminate", "smoke_not_judged": "indeterminate"}
 
 
 def write_verdict(unit: str, out: Path) -> bool:
@@ -113,6 +115,23 @@ def write_verdict(unit: str, out: Path) -> bool:
             d = json.loads(f.read_text())
         except (OSError, ValueError):
             return False
+        if isinstance(d, dict) and str(d.get("schema", "")).startswith("ml_entry_timeframe/"):
+            # b620..b626: the unit's OWN registered word (ungated headline) -- beats_1h | viable_not_better | not_viable | indeterminate;
+            # the 1h reproduction unit (b620) says reproduces | does_not_reproduce | smoke_not_judged. Mapped, never invented.
+            w = d.get("verdict")
+            v = _TF.get(str(w))
+            if v is None:
+                return False
+            rows = d.get("rows")
+            (out / "verdict.json").write_text(json.dumps({
+                "verdict": v, "read_state": "measured",
+                "population": f"{unit}: timeframe {d.get('timeframe')} ENTRY pipeline, DEV FOLDS ONLY; registered word {w!r} "
+                              f"(gated variant {d.get('gated_verdict')!r}); features read-out is in the result file",
+                "n": rows if isinstance(rows, int) else None,
+                "note": "mechanical map of the unit's own registered verdict word: beats_1h/reproduces->pass, viable_not_better->"
+                        "no_action_warranted, not_viable/does_not_reproduce->fail, indeterminate/smoke_not_judged->indeterminate",
+            }, indent=2) + "\n")
+            return True
         cells = d.get("cells") if isinstance(d.get("cells"), dict) else None
         for c in (cells.values() if cells else [d]):
             w = c.get("verdict") if isinstance(c, dict) else None
