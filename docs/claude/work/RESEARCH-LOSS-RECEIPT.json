@@ -1,40 +1,15 @@
 {
-  "generated_at": "2026-11-02T06:29:30Z",
-  "overall": "findings",
+  "generated_at": "2026-11-02T21:50:25Z",
+  "overall": "could_not_read",
   "produced_by": {
-    "run_id": "41400057865",
+    "run_id": "41531642049",
     "workflow": "research-loss-detector"
   },
   "questions": {
     "A_stuck_research_prs": {
-      "findings": [
-        {
-          "age_hours": 12.7,
-          "branch": "automation/research-queue-stamp-41321850725-1",
-          "pr": 22230,
-          "title": "chore(research-queue): dispatch stamps (auto)"
-        },
-        {
-          "age_hours": 11.1,
-          "branch": "automation/research-queue-stamp-41339993019-1",
-          "pr": 22246,
-          "title": "chore(research-queue): dispatch stamps (auto)"
-        },
-        {
-          "age_hours": 10.3,
-          "branch": "automation/research-queue-stamp-41343175959-1",
-          "pr": 22257,
-          "title": "chore(research-queue): dispatch stamps (auto)"
-        },
-        {
-          "age_hours": 8.9,
-          "branch": "automation/research-queue-stamp-41350729730-1",
-          "pr": 22268,
-          "title": "chore(research-queue): dispatch stamps (auto)"
-        }
-      ],
-      "population": "21 open PRs; 6 automation/*; 4 carry research; 2 automation/* carry none (not graded here)",
-      "state": "findings",
+      "findings": [],
+      "population": "14 open PRs; 5 automation/*; 2 carry research; 3 automation/* carry none (not graded here)",
+      "state": "clean",
       "threshold_hours": 6.0
     },
     "B_unlanded_result_runs": {
@@ -163,35 +138,13 @@
         }
       ],
       "pending_merge": [],
-      "population": "81 completed run(s) of 7 workflow(s) calling ./.github/actions/research-result since 2026-10-19 (dukascopy-span-probe.yml, ict-scalp-exit-sweep.yml, m20-exit-lever-sweep.yml, research-exit-head-build.yml, research-exit-head-replay-trainer.yml, research-harness-dispatch.yml, soak-book-grade-weekly.yml); 706 produced no result by design (skipped); 1904 result file(s) on origin/main",
+      "population": "82 completed run(s) of 7 workflow(s) calling ./.github/actions/research-result since 2026-10-19 (dukascopy-span-probe.yml, ict-scalp-exit-sweep.yml, m20-exit-lever-sweep.yml, research-exit-head-build.yml, research-exit-head-replay-trainer.yml, research-harness-dispatch.yml, soak-book-grade-weekly.yml); 775 produced no result by design (skipped); 1990 result file(s) on origin/main",
       "state": "findings"
     },
     "C_expiring_unlanded_artifacts": {
-      "findings": [
-        {
-          "artifact": "gdelt-panel-2026-10",
-          "artifact_id": 12805374909,
-          "expires_at": "2026-11-04T09:46:59Z",
-          "run_id": "40666370965",
-          "workflow": "news-gdelt-panel.yml"
-        },
-        {
-          "artifact": "gdelt-panel-2026-10",
-          "artifact_id": 12721831663,
-          "expires_at": "2026-11-03T09:10:16Z",
-          "run_id": "40477886367",
-          "workflow": "news-gdelt-panel.yml"
-        },
-        {
-          "artifact": "gdelt-panel-2026-10",
-          "artifact_id": 12638576340,
-          "expires_at": "2026-11-02T09:01:09Z",
-          "run_id": "40296135089",
-          "workflow": "news-gdelt-panel.yml"
-        }
-      ],
-      "population": "2385 artifact(s) listed, 2385 unexpired, 1495 expire within 72.0h across 1458 run(s); 3 of those from research workflows (news-gdelt-panel.yml); a landed copy = run id named on origin/main in research/results, a commit message, or a file under research/**, docs/research/**, runtime_logs/replay_pregate/**",
-      "state": "findings"
+      "error": "GET https://api.github.com/repos/benbaichmankass/JTA-Trader/actions/artifacts?per_page=100&page=1: HTTP Error 500: Internal Server Error",
+      "findings": null,
+      "state": "could_not_read"
     }
   },
   "ref": "origin/main",
