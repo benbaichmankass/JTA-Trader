@@ -26,6 +26,9 @@ name: research-candles-kaggle
 on:
   workflow_dispatch:
     inputs:
+      force_rebuild:
+        description: "Rebuild and re-publish even when the published dataset is fresh and complete"
+        default: "false"
       days_floor:
         description: "Minimum history (days) to build for every feed; the largest queued unit --days wins if larger"
         default: "0"
@@ -56,7 +59,18 @@ jobs:
         with:
           python-version: "3.11"
       - run: python -m pip install --quiet "kaggle>=2.0" six pandas pyarrow pyyaml requests huggingface_hub yfinance
+      - name: Reuse the published dataset when it is fresh and complete
+        id: chk
+        run: |
+          set -uo pipefail
+          echo "reuse=false" >> "$GITHUB_OUTPUT"
+          [ "${{ inputs.force_rebuild }}" = "true" ] && { echo "force_rebuild: rebuilding"; exit 0; }
+          [ -n "${KAGGLE_API_TOKEN}" ] || exit 0
+          echo "::add-mask::${KAGGLE_API_TOKEN}"
+          python3 scripts/research/candle_dataset.py reuse-check --dest /tmp/pub --coverage-out out/coverage.json \
+            && echo "reuse=true" >> "$GITHUB_OUTPUT" || echo "no reusable published dataset: building"
       - name: Build the candle files (lake first, network fallback)
+        if: steps.chk.outputs.reuse != 'true'
         run: |
           set -uo pipefail
           [ -n "${KAGGLE_API_TOKEN}" ] || { echo "::error::KAGGLE_API_TOKEN is empty"; exit 1; }
@@ -67,6 +81,7 @@ jobs:
             --coverage-out out/coverage.json
           du -sh /tmp/stage; ls /tmp/stage | wc -l
       - name: Publish the private Kaggle dataset
+        if: steps.chk.outputs.reuse != 'true'
         run: |
           set -uo pipefail
           USERNAME=$(python - <<'PY'
@@ -92,7 +107,7 @@ jobs:
           fi
           READY=0
           for i in $(seq 1 80); do
-            st=$(kaggle datasets status "$USERNAME/metis-research-candles" 2>&1 | scrub)
+            st=$(kaggle datasets status "$USERNAME/metis-research-candles" 2>&1 | scrub) || true
             echo "dataset: $st"
             case "$st" in *[Rr]eady*|*READY*) READY=1; break;; esac
             sleep 15
@@ -100,6 +115,14 @@ jobs:
           [ "$READY" = "1" ] || { echo "::error::dataset never became ready"; exit 1; }
           mkdir -p out && cp /tmp/stage/CANDLES_MANIFEST.json out/
           sed -i "s|$USERNAME|<user>|g" out/CANDLES_MANIFEST.json out/coverage.json
+      - name: Print the coverage record (the committed router input)
+        if: always()
+        run: |
+          python3 - <<'PY'
+          import json, os
+          p = "out/coverage.json"
+          print(open(p).read() if os.path.exists(p) else "no coverage.json")
+          PY
       - uses: actions/upload-artifact@v4
         if: always()
         with:

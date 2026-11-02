@@ -253,6 +253,47 @@ def serve(key: FeedKey, days: int, out: str, root: Optional[str] = None) -> bool
         return False
 
 
+def reuse_check(dest: Path, coverage_out: Optional[str], max_age_days: float = 3.0) -> int:
+    """0 when the PUBLISHED dataset's manifest is readable, has every needed feed `ok` with enough days, and is < max_age_days old
+    (the caller then skips the rebuild and the coverage record comes from the published manifest). Non-zero = rebuild."""
+    from kaggle.api.kaggle_api_extended import KaggleApi  # noqa: PLC0415
+    api = KaggleApi()
+    api.authenticate()
+    user = api.config_values.get("username", "")
+    if not user:
+        print("reuse-check: token did not resolve to a Kaggle user")
+        return 2
+    dest.mkdir(parents=True, exist_ok=True)
+    got = None
+    try:
+        api.dataset_download_file(f"{user}/{DATASET_SLUG}", MANIFEST_NAME, path=str(dest), force=True, quiet=True)
+    except Exception as exc:  # allow-silent: any failure means "cannot reuse"; the caller rebuilds
+        print(f"reuse-check: manifest download failed ({type(exc).__name__}: {str(exc)[:120].replace(user, '<user>')})")
+        return 3
+    for q in (dest / MANIFEST_NAME, dest / (MANIFEST_NAME + ".zip")):
+        if q.is_file() and q.suffix == ".zip":
+            import zipfile  # noqa: PLC0415
+            with zipfile.ZipFile(q) as z:
+                z.extract(MANIFEST_NAME, dest)
+        if (dest / MANIFEST_NAME).is_file():
+            got = json.loads((dest / MANIFEST_NAME).read_text(encoding="utf-8"))
+            break
+    if not got:
+        print("reuse-check: no manifest after download")
+        return 4
+    age = (datetime.now(timezone.utc) - datetime.fromisoformat(got["generated_at"])).total_seconds() / 86400
+    need = needed_feeds()
+    missing = [feed_id(k) for k, d in need.items()
+               if (got["feeds"].get(feed_id(k)) or {}).get("status") != "ok" or int(got["feeds"][feed_id(k)].get("days_built", 0)) < d]
+    print(f"reuse-check: published manifest {age:.2f} d old, {got['counts']}, needed feeds {len(need)}, missing/short {len(missing)} {missing[:5]}")
+    if age > max_age_days or missing:
+        return 5
+    if coverage_out:
+        Path(coverage_out).parent.mkdir(parents=True, exist_ok=True)
+        Path(coverage_out).write_text(json.dumps(coverage_record(got), indent=1, sort_keys=True) + "\n", encoding="utf-8")
+    return 0
+
+
 def main(argv: Optional[List[str]] = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     sub = ap.add_subparsers(dest="cmd", required=True)
@@ -262,7 +303,12 @@ def main(argv: Optional[List[str]] = None) -> int:
     b.add_argument("--no-lake", action="store_true")
     b.add_argument("--coverage-out", default=None, help="also write the small coverage record here")
     sub.add_parser("feeds", help="print the feeds the queued units need")
+    r = sub.add_parser("reuse-check", help="exit 0 when the published dataset is fresh and complete (skip the rebuild)")
+    r.add_argument("--dest", required=True)
+    r.add_argument("--coverage-out", default=None)
     a = ap.parse_args(argv)
+    if a.cmd == "reuse-check":
+        return reuse_check(Path(a.dest), a.coverage_out)
     feeds = needed_feeds()
     if a.cmd == "feeds":
         print(json.dumps({feed_id(k): v for k, v in sorted(feeds.items())}, indent=1))
