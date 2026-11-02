@@ -350,6 +350,19 @@ def stamp_lost(entry: Dict[str, Any]) -> Optional[datetime]:
     return result_at
 
 
+def rearm_marked(path: Path) -> bool:
+    """True when the unit file's top-level `last_dispatched_at:` is null AND carries a trailing `# comment`
+    (how research-ops records a re-arm). The marker is on the line itself, so it needs no result rows."""
+    try:
+        for ln in path.read_text().splitlines():
+            if ln.startswith("last_dispatched_at:"):
+                val = ln.split(":", 1)[1]
+                return bool(re.match(r"\s*(null|~)?\s+#", val)) or bool(re.match(r"\s*#", val))
+    except OSError:
+        return False
+    return False
+
+
 def cleared_on_purpose(entry: Dict[str, Any]) -> bool:
     """Is this unit's missing stamp a DELIBERATE re-arm, not a dropped stamp?
 
@@ -730,7 +743,9 @@ def _stamp(path: Path, when: datetime) -> Optional[str]:
         for i, existing in enumerate(lines):
             # Top-level key only: a nested one would be indented.
             if existing.startswith("last_dispatched_at:"):
-                lines[i] = line
+                # Keep a trailing `# comment` (re-arm provenance) -- only the value is rewritten.
+                tail = re.search(r"\s+#.*$", existing.split(":", 1)[1])
+                lines[i] = line + (tail.group(0) if tail else "")
                 break
         else:
             lines.append(line)
@@ -1434,6 +1449,16 @@ def main(argv: Optional[List[str]] = None) -> int:
                     cur = _parse_ts(job.raw.get("last_dispatched_at"))
                     if cur is not None and cur >= when:
                         pending.pop(uid, None)   # main already carries this stamp or newer
+                        continue
+                    if cur is None and rearm_marked(job.path):
+                        # A `last_dispatched_at: null   # re-armed ...` line is a re-arm by record. Adoption
+                        # never writes onto it, whatever the landed rows say: RQ-20260929-104 / RQ-20261101-2df8-01 (run 41471395020, PRs
+                        # #22408/#22392) were re-armed by research-ops, had no verdict rows so
+                        # `cleared_on_purpose` was False, and got the OLD stamp + a dropped comment, which
+                        # pr-landing R5 refused -- stalling dispatch 27.6 h (PI-20261102-RODISPATCHLAND-0001).
+                        pending.pop(uid, None)
+                        print(f"::notice::{uid}: not adopting the stranded stamp from {src} -- main's stamp "
+                              "is null (re-armed); the unit is due on its own terms", file=sys.stderr)
                         continue
                     if cleared_on_purpose(job.raw):
                         # A null on main here is a re-arm, not a dropped stamp: adopting the old stamp

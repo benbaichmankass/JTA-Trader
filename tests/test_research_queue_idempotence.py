@@ -476,3 +476,39 @@ def test_main_refires_a_cleared_producer_failed_unit(tmp_path, monkeypatch):
     _results(tmp_path, UID, [_state_row("producer_failed", (now - timedelta(hours=2)).isoformat())])
     fired, _dec, stamps = _cycle(tmp_path, monkeypatch, [(UID, {})], pending={})
     assert fired == [f"research_unit={UID}"] and stamps[UID]
+
+
+def test_a_commented_rearm_is_never_stamped_over_and_a_stamp_keeps_its_comment(tmp_path, monkeypatch):
+    """PI-20261102-RODISPATCHLAND-0001: the stranded-stamp adoption wrote an OLD stamp onto a unit whose
+    `last_dispatched_at: null   # re-armed ...` was research-ops' re-arm (no verdict rows, so
+    `cleared_on_purpose` was False), and dropped the comment -- pr-landing R5 then refused the stamp PR."""
+    old = datetime(2030, 1, 10, 1, 2, 3, tzinfo=timezone.utc)
+    src = "PR #7 (automation/research-queue-stamp-1-1)"
+    monkeypatch.setattr(dq, "stranded_stamp_adoptions", lambda now, hours=3.0, api=None: {UID: (old, src)})
+    p = tmp_path / "u.yaml"
+    p.write_text("id: x\nlast_dispatched_at: null   # re-armed 2030-01-09 (reason)\n")
+    assert dq.rearm_marked(p) is True
+    q = tmp_path / "v.yaml"
+    q.write_text("id: x\nlast_dispatched_at: null\n")
+    assert dq.rearm_marked(q) is False
+    # _stamp (this run's own dispatch) rewrites the value only and keeps the comment.
+    assert dq._stamp(p, old) is None
+    assert p.read_text().splitlines()[1] == "last_dispatched_at: '2030-01-10T01:02:03+00:00'   # re-armed 2030-01-09 (reason)"
+    assert yaml.safe_load(p.read_text())["last_dispatched_at"]
+
+
+def test_adoption_skips_a_commented_rearm_in_a_cycle(tmp_path, monkeypatch):
+    old = datetime(2030, 1, 10, 1, 2, 3, tzinfo=timezone.utc)
+    src = "PR #7 (automation/research-queue-stamp-1-1)"
+    monkeypatch.setattr(dq, "stranded_stamp_adoptions", lambda now, hours=3.0, api=None: {UID: (old, src)})
+    monkeypatch.setattr(dq, "rearm_marked", lambda path: True)
+    fired, _dec, stamps = _cycle(tmp_path, monkeypatch, [(UID, {})], pending={UID: src})
+    assert fired == [f"research_unit={UID}"]
+    assert stamps[UID] != old.isoformat()           # only THIS run's stamp, never the old one
+
+
+def test_the_stamp_land_step_closes_a_stuck_pr_instead_of_blocking():
+    wf = (REPO / ".github/workflows/research-queue-dispatch.yml").read_text()
+    act = (REPO / ".github/actions/commit-to-main/action.yml").read_text()
+    assert 'close-on-fail: "true"' in wf
+    assert act.count("close_pr_on_fail") >= 3 and "gh pr close" in act

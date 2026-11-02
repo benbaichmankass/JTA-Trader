@@ -625,6 +625,7 @@ jobs:
         uses: ./.github/actions/commit-to-main
         with:
           verify-merged: "true"
+          close-on-fail: "true"   # an open stamp PR blocks the next cycle (PI-20261102-RODISPATCHLAND-0001)
           # A PAT, not GITHUB_TOKEN: a PR authored by GITHUB_TOKEN does not
           # trigger checks, so its auto-merge would sit forever waiting on
           # required checks that never start. Same reason gpu-burst-train.yml
