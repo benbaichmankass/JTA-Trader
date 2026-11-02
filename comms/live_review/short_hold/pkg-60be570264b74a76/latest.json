@@ -1,7 +1,7 @@
 {
- "bar": "2026-11-02T15:20:00Z",
- "bar_close": "2026-11-02T15:25:00Z",
- "built_at": "2026-11-02T15:25:23Z",
+ "bar": "2026-11-02T15:25:00Z",
+ "bar_close": "2026-11-02T15:30:00Z",
+ "built_at": "2026-11-02T15:30:47Z",
  "closed": false,
  "order_package_id": "pkg-60be570264b74a76",
  "packet": {
@@ -58,19 +58,19 @@
      "MGC",
      "short",
      "mgc_pullback_1d",
-     2.0
+     2.02
     ],
     [
      "SPY",
      "long",
      "spy_trend_long_1d",
-     0.35
+     0.365
     ],
     [
      "BTCUSDT",
      "short",
      "trend_donchian_1h",
-     0.562
+     0.523
     ],
     [
      "IAUM",
@@ -94,19 +94,19 @@
      "ETHUSDT",
      "long",
      "trend_donchian_eth",
-     -0.295
+     -0.165
     ],
     [
      "MHG",
      "short",
      "mhg_pullback_1d",
-     0.169
+     0.187
     ],
     [
      "ADAUSDT",
      "short",
      "trend_donchian_ada_4h",
-     0.0
+     -0.0366
     ],
     [
      "ADAUSDT",
@@ -118,21 +118,14 @@
      "SOLUSDT",
      "short",
      "trend_donchian_sol_4h",
-     0.753
+     0.729
     ]
    ],
    "book_note": "[symbol, direction, leg, open_r (null = not measured)] per OTHER open package, either side",
    "chart": {
-    "atr": 0.00578571,
+    "atr": 0.00593571,
     "bars_note": "[epoch_s, open, high, low, close], closed bars only, oldest first",
     "bars_ohlc": [
-     [
-      1793618100,
-      1.2495,
-      1.2513,
-      1.2476,
-      1.2495
-     ],
      [
       1793619000,
       1.2495,
@@ -237,43 +230,56 @@
       1.2587,
       1.2506,
       1.256
+     ],
+     [
+      1793632500,
+      1.256,
+      1.256,
+      1.2512,
+      1.2534
      ]
     ],
-    "last_close": 1.256,
-    "since_entry": null,
+    "last_close": 1.2534,
+    "since_entry": {
+     "bars": 1,
+     "high": 1.256,
+     "high_dist_atr": 0.44,
+     "low": 1.2512,
+     "low_dist_atr": -0.37
+    },
     "swings": {
      "highs": [
       {
-       "bars_ago": 2,
-       "dist_atr": 0.52,
+       "bars_ago": 3,
+       "dist_atr": 0.94,
        "px": 1.259
       },
       {
-       "bars_ago": 6,
-       "dist_atr": 1.33,
+       "bars_ago": 7,
+       "dist_atr": 1.74,
        "px": 1.2637
       },
       {
-       "bars_ago": 11,
-       "dist_atr": -0.02,
+       "bars_ago": 12,
+       "dist_atr": 0.42,
        "px": 1.2559
       }
      ],
      "lows": [
       {
-       "bars_ago": 7,
-       "dist_atr": -1.94,
+       "bars_ago": 2,
+       "dist_atr": -0.56,
+       "px": 1.2501
+      },
+      {
+       "bars_ago": 8,
+       "dist_atr": -1.45,
        "px": 1.2448
       },
       {
-       "bars_ago": 15,
-       "dist_atr": -1.45,
+       "bars_ago": 16,
+       "dist_atr": -0.98,
        "px": 1.2476
-      },
-      {
-       "bars_ago": 20,
-       "dist_atr": -1.54,
-       "px": 1.2471
       }
      ]
     },
@@ -440,19 +446,19 @@
    "basis": null
   },
   "features_at_review": {
-   "atr_now_over_entry": 1.0,
+   "atr_now_over_entry": 1.0259,
    "bars_since_peak": 1,
-   "giveback_r": 0.4833,
-   "open_r": -0.3808,
+   "giveback_r": 0.3075,
+   "open_r": -0.205,
    "peak_r": 0.1025,
-   "r_to_stop": 0.6192,
-   "r_to_target": 1.8808
+   "r_to_stop": 0.795,
+   "r_to_target": 1.705
   },
   "generator": {
    "head": "24fbc0e632",
    "state": "current"
   },
-  "info_cutoff_at": "2026-11-02T15:25:40Z",
+  "info_cutoff_at": "2026-11-02T15:31:06Z",
   "leg": "ict_scalp_xrp_15m",
   "mechanics": {
    "evidence": "package sl 1.24364286 / tp 1.27778571 agree with every readable account",
@@ -474,10 +480,6 @@
    {
     "field": "context.funding",
     "reason": "Bybit public funding API is geo-blocked from session networks and no read-only diag route carries funding_now; needs a diag route"
-   },
-   {
-    "field": "context_v3.chart.since_entry",
-    "reason": "package open time not in the journal reads"
    }
   ],
   "order_package_id": "pkg-60be570264b74a76",
@@ -485,31 +487,24 @@
   "priced_options": null,
   "priced_options_state": "could_not_price",
   "regime": {
-   "adx_now": 15.5089,
-   "atr_now_over_entry": 1.0,
+   "adx_now": 16.6396,
+   "atr_now_over_entry": 1.0259,
    "cell_entry": null,
    "cell_now": null,
    "trend_now": "chop"
   },
-  "review_id": "LR-20261102T1525Z-pkg-60be570264b74a76",
+  "review_id": "LR-20261102T1530Z-pkg-60be570264b74a76",
   "short_hold": {
-   "atr": 0.0038571428571428446,
-   "bar": "2026-11-02T15:20:00Z",
-   "bar_close": "2026-11-02T15:25:00Z",
+   "atr": 0.0037499999999999994,
+   "bar": "2026-11-02T15:25:00Z",
+   "bar_close": "2026-11-02T15:30:00Z",
    "entry": 1.2573,
    "mark": 1.2534,
-   "minutes_held": 12.3,
+   "minutes_held": 17.7,
    "open_r_at_mark": -0.2856,
    "r_unit": "risk_per_unit",
    "read_state": "read",
    "recent_bars": [
-    {
-     "close": 1.2514,
-     "high": 1.2521,
-     "low": 1.2506,
-     "open": 1.2521,
-     "t": "2026-11-02T14:25:00Z"
-    },
     {
      "close": 1.2587,
      "high": 1.2589,
@@ -586,16 +581,23 @@
      "low": 1.2512,
      "open": 1.2522,
      "t": "2026-11-02T15:20:00Z"
+    },
+    {
+     "close": 1.2534,
+     "high": 1.2548,
+     "low": 1.253,
+     "open": 1.2534,
+     "t": "2026-11-02T15:25:00Z"
     }
    ],
    "risk_per_unit": 0.01365714,
    "timeframe": "5m"
   },
   "state": {
-   "atr_now_over_entry": 1.0,
+   "atr_now_over_entry": 1.0259,
    "bars_held": 2,
-   "giveback_r": 0.4833,
-   "open_r": -0.3808,
+   "giveback_r": 0.3075,
+   "open_r": -0.205,
    "peak_provenance": "estimated",
    "peak_r": 0.1025,
    "regime_cell_entry": null,
@@ -604,25 +606,18 @@
    "tp": 1.27778571
   }
  },
- "packet_sha": "1872aceb213d7b285405030e443f2753019378aaccd6da46894e9629d6fcfe2b",
+ "packet_sha": "d86f767755e77e5b880f83372927fc16c55a10c5b9b4a186e72031a23804ba33",
  "short_hold": {
-  "atr": 0.0038571428571428446,
-  "bar": "2026-11-02T15:20:00Z",
-  "bar_close": "2026-11-02T15:25:00Z",
+  "atr": 0.0037499999999999994,
+  "bar": "2026-11-02T15:25:00Z",
+  "bar_close": "2026-11-02T15:30:00Z",
   "entry": 1.2573,
   "mark": 1.2534,
-  "minutes_held": 12.3,
+  "minutes_held": 17.7,
   "open_r_at_mark": -0.2856,
   "r_unit": "risk_per_unit",
   "read_state": "read",
   "recent_bars": [
-   {
-    "close": 1.2514,
-    "high": 1.2521,
-    "low": 1.2506,
-    "open": 1.2521,
-    "t": "2026-11-02T14:25:00Z"
-   },
    {
     "close": 1.2587,
     "high": 1.2589,
@@ -699,6 +694,13 @@
     "low": 1.2512,
     "open": 1.2522,
     "t": "2026-11-02T15:20:00Z"
+   },
+   {
+    "close": 1.2534,
+    "high": 1.2548,
+    "low": 1.253,
+    "open": 1.2534,
+    "t": "2026-11-02T15:25:00Z"
    }
   ],
   "risk_per_unit": 0.01365714,
