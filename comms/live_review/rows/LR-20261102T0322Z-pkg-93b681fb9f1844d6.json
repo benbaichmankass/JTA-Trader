@@ -1,0 +1,134 @@
+{
+ "schema_version": 1,
+ "review_id": "LR-20261102T0322Z-pkg-93b681fb9f1844d6",
+ "reviewed_at": "2026-11-02T03:32:00Z",
+ "order_package_id": "pkg-93b681fb9f1844d6",
+ "trade_id": null,
+ "leg": "trend_donchian_eth",
+ "accounts": [
+  "bybit_1"
+ ],
+ "trigger": {
+  "event": "daily_floor",
+  "level": "2026-11-02",
+  "l0_snapshot_at": "2026-11-02T03:17:00Z"
+ },
+ "info_cutoff_at": "2026-11-02T03:22:16Z",
+ "state": {
+  "atr_now_over_entry": 0.9679,
+  "bars_held": 2,
+  "giveback_r": 0.1115,
+  "open_r": -0.0644,
+  "peak_provenance": "estimated",
+  "peak_r": 0.0471,
+  "regime_cell_entry": "transitional/calm",
+  "regime_cell_now": null,
+  "sl": 2269.46071429,
+  "tp": 2525.1723
+ },
+ "features_at_review": {
+  "atr_now_over_entry": 0.9679,
+  "bars_since_peak": 1,
+  "giveback_r": 0.1115,
+  "open_r": -0.0644,
+  "peak_r": 0.0471,
+  "r_to_stop": 0.9356,
+  "r_to_target": 8.1196
+ },
+ "mechanics": {
+  "evidence": "package sl 2269.46071429 / tp 2525.1723 agree with every readable account",
+  "verdict": "match"
+ },
+ "options": [
+  {
+   "action": "hold",
+   "level": null,
+   "n": 51,
+   "mean_r": 0.079,
+   "sd_r": 2.0313,
+   "worst_r": -1.1936,
+   "net": true
+  },
+  {
+   "action": "tighten_sl",
+   "level": null,
+   "n": 51,
+   "mean_r": 0.058,
+   "sd_r": 0.5779,
+   "worst_r": -0.7514,
+   "net": true
+  }
+ ],
+ "outcome_table_source": "comms/live_review/tables/LR-20261102T0322Z-pkg-93b681fb9f1844d6.json",
+ "recommendation": {
+  "action": "hold",
+  "level": null,
+  "level_atr": null,
+  "ev_delta_r": null,
+  "worst_case_delta_r": null,
+  "basis": "judgement",
+  "confidence": "anecdote",
+  "evidence_source": "judgement",
+  "judgement_confidence": 0.6,
+  "reason": "No previous review. ETH long, 2 bars in, -0.06R, price 2295.6 after a 1h breakout bar (high 2299) off the 2247 low; 4h is trending (ADX 29.5) and holds above 2275. The stop 2269.5 sits 2.4 ATR below price, outside noise, and no structure has failed. Table is measured (hold n=51, mean +0.079R) but the leg's tighten cells are statistically indistinguishable from hold (ev_cost se 0.2-0.3R) and tightening is advice-only on weak evidence, so the bracket already expresses my view: hold. Mild overlay: news adjustment -0.13 (reduce) is not enough to act on.",
+  "size_fraction": null
+ },
+ "judge_prior": null,
+ "applied": false,
+ "apply_policy": {
+  "bound_r": 0.25,
+  "within_bound": null,
+  "tighten_r": null
+ },
+ "shadow_policy": {
+  "bound_r": 0.5,
+  "within_bound": null,
+  "would_apply": null,
+  "tighten_r": null
+ },
+ "context_flags": [
+  "table: hold n=51 mean +0.079 sd 2.03 worst -1.19; tighten atr:1.0 mean +0.058 (n=51); the atr:2.0 tighten (+0.114) is within noise of hold (ev_cost se 0.21R); a tighten is flattered by stop-at-price fills",
+  "overlay: news decision 'reduce' (adjustment -0.129) vs a long; below any action threshold, no calendar events in 24h",
+  "regime: entry cell transitional/calm; 4h trending ADX 29.5 now; atr_now_over_entry 0.97 (no vol overlay)",
+  "book: ETH long + XRP long on bybit_1 are one crypto-beta bet; BTC/ADA/SOL short offset partly",
+  "plumbing: exit_plan_state final target 2438.9 (5R) differs from the package/venue TP 2525.17 (declared tp_r 50.0): TP doctrine non-compliance for this leg, filed for the manager; venue = package, so mechanics match",
+  "tighten_bias: tighten advice-only since 2026-10-28 (0 of 79 cells CI>0)",
+  "missing_inputs: regime.vol_now, context.funding"
+ ],
+ "account_reads": [
+  {
+   "account_id": "bybit_1",
+   "account_class": "paper",
+   "read": "no_action",
+   "evidence": "bybit_orders: SL 2269.46 / TP 2525.17, position True; hold changes nothing"
+  }
+ ],
+ "disposition": {
+  "route": "none",
+  "mandate": null,
+  "action_issue": null,
+  "applied_at": null,
+  "verified_readback": null
+ },
+ "model": "sonnet-tier (repo lane)",
+ "session": "session_01AFoLuMorytNviGhAD8VuDV",
+ "prompt_sha": null,
+ "skill_sha": "59ad4814d9e7edf5f398b0105fd3ce9a2bd311e0",
+ "packet_sha": "6b70306a0e13c12ca6a9b48ef555be909d590150e46f544a17d6456b7db8c592",
+ "forecast": {
+  "thesis": "The 1h breakout above 2283 with a trending 4h should carry ETH toward 2320 before it loses 2269, since the last swing lows are 4+ ATR below and no 1h resistance sits overhead.",
+  "direction": "with_trade",
+  "target_px": 2320.0,
+  "p_target": 0.4,
+  "invalidation_px": 2269.46,
+  "horizon_bars": 12,
+  "timeframe": "1h",
+  "evidence": [
+   "chart.since_entry: high 2298.74, low 2288.88, 1 bar",
+   "chart.htf: 4h trending ADX 29.5, last close 2275",
+   "exit_plan: sl 2269.46 / tp 2525.17",
+   "priced_options: hold n=51 mean +0.079",
+   "book: XRP long same beta"
+  ]
+ }
+}

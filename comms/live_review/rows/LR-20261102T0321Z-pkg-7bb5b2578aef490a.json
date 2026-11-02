@@ -1,0 +1,122 @@
+{
+ "schema_version": 1,
+ "review_id": "LR-20261102T0321Z-pkg-7bb5b2578aef490a",
+ "reviewed_at": "2026-11-02T03:30:00Z",
+ "order_package_id": "pkg-7bb5b2578aef490a",
+ "trade_id": null,
+ "leg": "e4_oi_shock_1h",
+ "accounts": [
+  "bybit_1"
+ ],
+ "trigger": {
+  "event": "daily_floor",
+  "level": "2026-11-02",
+  "l0_snapshot_at": "2026-11-02T03:17:00Z"
+ },
+ "info_cutoff_at": "2026-11-02T03:21:51Z",
+ "state": {
+  "atr_now_over_entry": null,
+  "bars_held": 0,
+  "giveback_r": null,
+  "open_r": -0.1708,
+  "peak_provenance": "estimated",
+  "peak_r": null,
+  "regime_cell_entry": null,
+  "regime_cell_now": null,
+  "sl": 1.2458464285714286,
+  "tp": 1.275707142857143
+ },
+ "features_at_review": {
+  "atr_now_over_entry": null,
+  "bars_since_peak": null,
+  "giveback_r": null,
+  "open_r": -0.1708,
+  "peak_r": null,
+  "r_to_stop": 0.8292,
+  "r_to_target": 2.1708
+ },
+ "mechanics": {
+  "evidence": "package sl 1.2458464285714286 / tp 1.275707142857143 agree with every readable account",
+  "verdict": "match"
+ },
+ "options": [
+  {
+   "action": "hold",
+   "level": null,
+   "n": 0,
+   "mean_r": null,
+   "sd_r": null,
+   "worst_r": null,
+   "net": null
+  }
+ ],
+ "outcome_table_source": null,
+ "recommendation": {
+  "action": "hold",
+  "level": null,
+  "level_atr": null,
+  "ev_delta_r": null,
+  "worst_case_delta_r": null,
+  "basis": "judgement",
+  "confidence": "anecdote",
+  "evidence_source": "judgement",
+  "judgement_confidence": 0.5,
+  "reason": "No previous review (nothing to grade). Long XRP just opened (0 bars held, -0.17R): the 1h range 1.242-1.260 is intact, price 1.2529 is mid-range after a fade from the 1.2614 spike bar, and the 4h is transitional (ADX 24). The 2R bracket (SL 1.2458 below the 1.2421 swing low buffer, TP 1.2757 above the 1.2614 spike high) already expresses a range-break thesis; no bar since entry gives evidence for moving either side, and a tighten would sit inside 1 ATR. No priced table and no Stage-0 record for this leg, so this is a pure judgement hold.",
+  "size_fraction": null
+ },
+ "judge_prior": null,
+ "applied": false,
+ "apply_policy": {
+  "bound_r": 0.25,
+  "within_bound": null,
+  "tighten_r": null
+ },
+ "shadow_policy": {
+  "bound_r": 0.5,
+  "within_bound": null,
+  "would_apply": null,
+  "tighten_r": null
+ },
+ "context_flags": [
+  "judgement: no priced table (open_r/peak_r/atr_stop_mult unavailable) and live_vs_backtest NO_BACKTEST (no committed Stage-0 record for e4_oi_shock_1h): hold is judgement, not measured",
+  "book: XRP long + ETH long (trend_donchian_eth) on bybit_1 are one crypto-beta long; BTC/ADA/SOL are short, partly offsetting",
+  "regime: 4h transitional, adx 24 (1h chop adx 14); atr_now_over_entry null, entry cell unknown",
+  "tighten_bias: tighten advice-only since 2026-10-28 (0 of 79 cells CI>0)",
+  "missing_inputs: regime.atr_now_over_entry, regime.vol_now, regime.cell_entry, priced_options, context.funding, chart.since_entry"
+ ],
+ "account_reads": [
+  {
+   "account_id": "bybit_1",
+   "account_class": "paper",
+   "read": "no_action",
+   "evidence": "bybit_orders: SL 1.2458 / TP 1.2757, position True; hold changes nothing"
+  }
+ ],
+ "disposition": {
+  "route": "none",
+  "mandate": null,
+  "action_issue": null,
+  "applied_at": null,
+  "verified_readback": null
+ },
+ "model": "sonnet-tier (repo lane)",
+ "session": "session_01AFoLuMorytNviGhAD8VuDV",
+ "prompt_sha": null,
+ "skill_sha": "59ad4814d9e7edf5f398b0105fd3ce9a2bd311e0",
+ "packet_sha": "c20400d352b0d1f78106839108d829a08dfff915bdb4635a40d72905718ab17a",
+ "forecast": {
+  "thesis": "XRP is range-bound 1.242-1.260 on the 1h with a transitional 4h; I expect a probe of the 1.2596 swing high before any break of the 1.2421 low, but the first-touch odds of the 2R target are below even.",
+  "direction": "with_trade",
+  "target_px": 1.2596,
+  "p_target": 0.4,
+  "invalidation_px": 1.2458,
+  "horizon_bars": 12,
+  "timeframe": "1h",
+  "evidence": [
+   "chart.swings: highs 1.2596/1.2559/1.2566, lows 1.2421/1.2430",
+   "chart.htf: 4h transitional, ADX 24.2",
+   "exit_plan: sl 1.24585 / tp 1.27571 (2R)",
+   "book: ETH long same crypto beta"
+  ]
+ }
+}
