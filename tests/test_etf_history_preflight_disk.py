@@ -90,3 +90,14 @@ def test_issue_triggered_workflows_use_labeled_with_label_name_check():
         on = wf.get("on", wf.get(True))
         assert on["issues"]["types"] == ["labeled"], name
         assert f"github.event.label.name == '{label}'" in text, name
+
+
+def test_options_snapshot_installs_pyyaml_and_probe_fails_loudly():
+    """#22442: capture_options_snapshot imports data_universe -> yaml; the install step lacked pyyaml and `| tee` (no pipefail)
+    hid the crash, so the probe 'succeeded' with an empty probe.json."""
+    wf = yaml.safe_load((WF / "options-snapshot-capture.yml").read_text())
+    steps = wf["jobs"]["options-snapshot"]["steps"]
+    install = next(s for s in steps if s.get("name") == "Install deps")
+    assert "pyyaml" in install["run"]
+    probe = next(s for s in steps if str(s.get("name", "")).startswith("Probe"))
+    assert "pipefail" in probe["run"]

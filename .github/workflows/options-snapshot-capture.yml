@@ -76,7 +76,7 @@ jobs:
         with:
           python-version: "3.11"
       - name: Install deps
-        run: python -m pip install --quiet pandas pyarrow requests
+        run: python -m pip install --quiet pandas pyarrow requests pyyaml
       - name: Install SSH key
         env:
           VM_SSH_KEY: ${{ secrets.VM_SSH_KEY }}
@@ -102,7 +102,11 @@ jobs:
         env:
           ALPACA_API_KEY_ID_LIVE: ${{ secrets.ALPACA_API_KEY_ID_LIVE }}
           ALPACA_API_SECRET_KEY_LIVE: ${{ secrets.ALPACA_API_SECRET_KEY_LIVE }}
-        run: python3 scripts/ops/capture_options_snapshot.py --mode probe | tee probe.json
+        # pipefail: without it `| tee` returned 0 when python crashed (ModuleNotFoundError: yaml), so a failed probe
+        # reported success with an empty probe.json (#22348, #22442).
+        run: |
+          set -o pipefail
+          python3 scripts/ops/capture_options_snapshot.py --mode probe | tee probe.json
       - name: Capture today's chain slice (Alpaca, keyed)
         id: fetch
         if: steps.mode.outputs.mode == 'capture'
