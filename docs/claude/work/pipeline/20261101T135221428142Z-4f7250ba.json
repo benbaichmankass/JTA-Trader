@@ -1,0 +1,17 @@
+{
+  "due_when": {
+    "due_date": "2026-11-05",
+    "kind": "date"
+  },
+  "id": "PI-20261101-ETFHIST-0004",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "lane ETF-HISTORY-PIPELINE + lane MARKET-DATA-LAKE hand-off contract (their message 2026-11-01 13:51Z, point d); manager decision: lake is the store of record, trainer a tail cache",
+    "rerun": "After the first completed backfill (MANIFEST run.remaining == 0): compare lake.manifest() partitions for each us_equity/alpaca/1m/<SYM> with the trainer's data/etf_history/<SYM>/1m/*.parquet years (ssh find), list the safe-to-prune set, then prune via a labelled trainer-vm-diag issue; df -h before and after."
+  },
+  "severity": "medium",
+  "state": "queued",
+  "tier": 2,
+  "what": "Prune the trainer's old 1m partitions (keep only current + previous month: the tail cache) for each equity series, but ONLY after the lake copy is confirmed: hf://datasets/bentzbk/jta-market-lake/MANIFEST.json lists that series with every year partition the trainer holds AND the series is not failing in health/latest.json (read with ml/datasets/lake.py lake.manifest() / lake.health()). Until then the trainer may hold full history from fallback chunks; never delete before the check. Also report trainer data/etf_history size and free GB after pruning."
+}

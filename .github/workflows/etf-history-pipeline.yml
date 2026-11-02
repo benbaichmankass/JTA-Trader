@@ -1,0 +1,325 @@
+name: etf-history-pipeline
+
+# no-durable-result: data-collection feed, computes no research verdict or measurement; its durable outputs are the bar store (lake + trainer cache) and
+# the uploaded depth table / health.json, which are operational artifacts of the feed, not a result to grade
+
+# Multi-year ETF/equity bar history (1m BASE; 5m/1h are derived on read) into the trainer's canonical store, built WHERE THE KEYS ARE. WHAT is collected is
+# config/data_universe.yaml (~1,000 symbols: liquid ETFs + point-in-time S&P 500 incl. removed names); a config edit widens it.
+#
+# WHY (operator, 2026-11-01): "there's no way we are limited to 2 years of etf data". Lanes fell back to Yahoo 1h
+# (~730 d cap) because the Alpaca Market Data keys exist only in Actions secrets / on the VMs, never in a lane
+# sandbox. This runner holds them. Row ETF-HISTORY-PIPELINE; contract scripts/ops/fetch_etf_history.py.
+#
+# GATES THIS ADDS OR CHANGES: none. A data-path job only: no order path, no config/*.yaml, no execution flag. A stale or
+# missing series turns the run RED (one flag); nothing halts, and the next run retries.
+#
+# WHAT IT DOES
+#   1. pulls the current store from the trainer (so a refresh is incremental),
+#   2. runs scripts/ops/fetch_etf_history.py (probe | backfill | refresh) with the Alpaca secrets in THAT step only,
+#   3. runs scripts/ops/etf_history_verify.py (first/last/rows/gaps/freshness per symbol x timeframe),
+#   4. pushes the store back to <trainer>:data/etf_history/ (add/replace only -- never --delete),
+#   5. on an issue-triggered run, comments the depth table on the issue and closes it.
+#
+# TRIGGERS: daily 02:17Z Tue-Sat (the prior US session is complete) = refresh; workflow_dispatch; or a labelled issue
+# `etf-history-request` whose body carries `mode: probe|backfill|refresh|verify` (default refresh).
+#
+# SECRETS: ALPACA_API_KEY_ID_LIVE / ALPACA_API_SECRET_KEY_LIVE (market data only), VM_SSH_KEY, TRAINER_VM_IP.
+# Nothing prints a key, a balance or an account number.
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "probe | backfill | refresh | verify"
+        default: "refresh"
+  schedule:
+    - cron: "17 2 * * 2-6"
+  issues:
+    types: [opened]
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: etf-history-pipeline
+  cancel-in-progress: false
+
+jobs:
+  etf-history:
+    if: >-
+      github.event_name != 'issues' ||
+      ((github.event.issue.user.login == github.repository_owner ||
+        github.event.issue.user.login == 'github-actions[bot]') &&
+       contains(github.event.issue.labels.*.name, 'etf-history-request'))
+    runs-on: ubuntu-latest
+    timeout-minutes: 210
+    steps:
+      - name: Resolve mode (validated against a fixed list)
+        id: mode
+        env:
+          EVENT: ${{ github.event_name }}
+          INPUT_MODE: ${{ inputs.mode }}
+          ISSUE_BODY: ${{ github.event.issue.body }}
+        run: |
+          set -euo pipefail
+          m="refresh"
+          if [ "$EVENT" = "workflow_dispatch" ]; then m="${INPUT_MODE:-refresh}"; fi
+          if [ "$EVENT" = "issues" ]; then
+            m="$(printf '%s\n' "$ISSUE_BODY" | sed -n 's/^mode:[[:space:]]*\([a-z]*\).*/\1/p' | head -1)"
+            m="${m:-refresh}"
+          fi
+          case "$m" in probe|backfill|refresh|verify) ;; *) echo "::error::bad mode '$m'"; exit 1;; esac
+          echo "mode=$m" >> "$GITHUB_OUTPUT"
+      - name: Require secrets (fail closed)
+        env:
+          K1: ${{ secrets.ALPACA_API_KEY_ID_LIVE }}
+          K2: ${{ secrets.ALPACA_API_SECRET_KEY_LIVE }}
+          VMK: ${{ secrets.VM_SSH_KEY }}
+          TIP: ${{ secrets.TRAINER_VM_IP }}
+        run: |
+          fail=0
+          for v in K1 K2 VMK TIP; do
+            [ -n "${!v}" ] || { echo "::error::a required secret is unset ($v)"; fail=1; }
+          done
+          exit "$fail"
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install deps
+        run: python -m pip install --quiet pandas pyarrow requests pyyaml
+      - name: Install SSH key
+        env:
+          VM_SSH_KEY: ${{ secrets.VM_SSH_KEY }}
+        run: |
+          set -euo pipefail
+          mkdir -p ~/.ssh && chmod 700 ~/.ssh
+          printf '%s\n' "${VM_SSH_KEY}" > ~/.ssh/trainer_key
+          chmod 600 ~/.ssh/trainer_key
+      - name: Preflight - trainer disk (measured, reported with numbers)
+        id: disk
+        if: steps.mode.outputs.mode == 'backfill' || steps.mode.outputs.mode == 'refresh'
+        env:
+          TRAINER_IP: ${{ secrets.TRAINER_VM_IP }}
+          TRAINER_USER: ${{ vars.TRAINER_VM_USER || 'ubuntu' }}
+        run: |
+          set -uo pipefail
+          out="$(ssh -i ~/.ssh/trainer_key -o BatchMode=yes -o StrictHostKeyChecking=accept-new -o ConnectTimeout=20 \
+            "${TRAINER_USER}@${TRAINER_IP}" 'mkdir -p ict-trading-bot/data/etf_history; df -BG --output=avail,size,pcent / | tail -1; du -sm ict-trading-bot/data/etf_history | cut -f1' 2>&1)"
+          avail="$(printf '%s\n' "$out" | sed -n 1p | awk '{gsub("G","",$1); print $1}')"
+          used_mb="$(printf '%s\n' "$out" | sed -n 2p)"
+          echo "trainer free GB=${avail} (disk line: $(printf '%s\n' "$out" | sed -n 1p)); etf_history store now ${used_mb} MB"
+          echo "avail=${avail}" >> "$GITHUB_OUTPUT"
+          # MEASURED 2026-11-01 (trainer-vm-diag #22140): 97 GB disk, 53 GB used, 45 GB free. PROJECTION for the 1m base on ~770 symbols
+          # with data: ~14 GB (range 10-25; synthetic-bar bytes/row x estimated rows, NOT yet measured on the real data). Floor: do not
+          # START below 15 GB free, and stop mid-run below 10 GB; never silently shrink the universe or the timeframe.
+          if [ -z "${avail}" ] || ! [ "${avail}" -ge 15 ] 2>/dev/null; then
+            echo "go=0" >> "$GITHUB_OUTPUT"
+            echo "lowdisk=1" >> "$GITHUB_OUTPUT"
+            echo "::error::trainer free disk is ${avail:-unknown} GB (< 15 GB to start the 1m base pull; projected store ~14 GB, range 10-25). NOT fetching: free space on the trainer or tell the manager the numbers, then re-run."
+          else
+            echo "go=1" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Pull the manifest + the current and previous month of 1m bars from the trainer
+        if: steps.mode.outputs.mode != 'probe' && steps.mode.outputs.mode != 'verify'
+        env:
+          TRAINER_IP: ${{ secrets.TRAINER_VM_IP }}
+          TRAINER_USER: ${{ vars.TRAINER_VM_USER || 'ubuntu' }}
+        run: |
+          set -uo pipefail
+          mkdir -p store
+          YM="$(date -u +%Y-%m)"; YM1="$(date -u -d "$(date -u +%Y-%m-01) -1 month" +%Y-%m)"
+          # The store is GBs: a refresh needs only the manifest and the two newest monthly partitions per series. First run: nothing
+          # exists yet (rsync exit 23), the expected empty start.
+          rsync -a --prune-empty-dirs -e "ssh -i ~/.ssh/trainer_key -o BatchMode=yes -o StrictHostKeyChecking=accept-new -o ConnectTimeout=20" \
+            --include='*/' --include='MANIFEST.json' --include="*/1m/${YM}.parquet" --include="*/1m/${YM1}.parquet" --exclude='*' \
+            "${TRAINER_USER}@${TRAINER_IP}:ict-trading-bot/data/etf_history/" store/ 2>&1 | sed -E 's/[0-9]{1,3}(\.[0-9]{1,3}){3}/<ip>/g' || true
+          echo "pulled: $(find store -name '*.parquet' | wc -l) partitions, manifest: $(test -f store/MANIFEST.json && echo yes || echo no)"
+      - name: Pull the manifest only (verify mode)
+        if: steps.mode.outputs.mode == 'verify'
+        env:
+          TRAINER_IP: ${{ secrets.TRAINER_VM_IP }}
+          TRAINER_USER: ${{ vars.TRAINER_VM_USER || 'ubuntu' }}
+        run: |
+          set -uo pipefail
+          mkdir -p store
+          rsync -a -e "ssh -i ~/.ssh/trainer_key -o BatchMode=yes -o StrictHostKeyChecking=accept-new -o ConnectTimeout=20" \
+            "${TRAINER_USER}@${TRAINER_IP}:ict-trading-bot/data/etf_history/MANIFEST.json" store/ 2>&1 | sed -E 's/[0-9]{1,3}(\.[0-9]{1,3}){3}/<ip>/g' || true
+      - name: Probe (what the plan serves) + keyless sources
+        if: steps.mode.outputs.mode == 'probe'
+        env:
+          ALPACA_API_KEY_ID_LIVE: ${{ secrets.ALPACA_API_KEY_ID_LIVE }}
+          ALPACA_API_SECRET_KEY_LIVE: ${{ secrets.ALPACA_API_SECRET_KEY_LIVE }}
+        run: |
+          set -uo pipefail
+          echo "## Alpaca Market Data (SPY): earliest/latest bar per feed x timeframe"
+          python3 scripts/ops/fetch_etf_history.py --mode probe | tee probe.json
+          echo "## Keyless: Yahoo 1h range=max / 5m range=max / Stooq daily (SPY)"
+          python3 - <<'PY'
+          import requests
+          h = {"User-Agent": "Mozilla/5.0"}
+          for iv in ("1h", "5m"):
+              try:
+                  r = requests.get("https://query1.finance.yahoo.com/v8/finance/chart/SPY", params={"interval": iv, "range": "max"}, headers=h, timeout=30)
+                  ts = (r.json()["chart"]["result"][0]["timestamp"]) if r.status_code == 200 else []
+                  print(f"yahoo {iv}: http={r.status_code} bars={len(ts)} first={ts[0] if ts else None} last={ts[-1] if ts else None}")
+              except Exception as e:
+                  print(f"yahoo {iv}: ERR {str(e)[:100]}")
+          try:
+              r = requests.get("https://stooq.com/q/d/l/?s=spy.us&i=d", timeout=30)
+              n = len(r.text.strip().splitlines()) - 1
+              print(f"stooq 1d: http={r.status_code} rows={n} first={r.text.splitlines()[1][:10] if n > 0 else None}")
+          except Exception as e:
+              print(f"stooq 1d: ERR {str(e)[:100]}")
+          PY
+      - name: Fetch the 1m base in chunks (lake is the store of record; trainer keeps a tail cache; per-symbol failures contained)
+        id: fetch
+        if: (steps.mode.outputs.mode == 'backfill' || steps.mode.outputs.mode == 'refresh') && steps.disk.outputs.go == '1'
+        continue-on-error: true
+        env:
+          ALPACA_API_KEY_ID_LIVE: ${{ secrets.ALPACA_API_KEY_ID_LIVE }}
+          ALPACA_API_SECRET_KEY_LIVE: ${{ secrets.ALPACA_API_SECRET_KEY_LIVE }}
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+          MODE: ${{ steps.mode.outputs.mode }}
+          TRAINER_IP: ${{ secrets.TRAINER_VM_IP }}
+          TRAINER_USER: ${{ vars.TRAINER_VM_USER || 'ubuntu' }}
+        run: |
+          set -uo pipefail
+          SSH="ssh -i $HOME/.ssh/trainer_key -o BatchMode=yes -o StrictHostKeyChecking=accept-new -o ConnectTimeout=20"
+          DEST="${TRAINER_USER}@${TRAINER_IP}:ict-trading-bot/data/etf_history/"
+          YM="$(date -u +%Y-%m)"; YM1="$(date -u -d "$(date -u +%Y-%m-01) -1 month" +%Y-%m)"
+          # DECISION (manager, operator's design mandate 2026-11-01): the HF market-data lake (bentzbk/jta-market-lake) is the STORE OF RECORD;
+          # the trainer keeps only a TAIL CACHE (current + previous month). ONE publisher: lane MARKET-DATA-LAKE's scripts/data_lake/*. If that
+          # code (PR #22148) or HF_TOKEN is absent, or a chunk's publish fails, that chunk is pushed to the trainer IN FULL instead, so no
+          # history is ever dropped; the run goes red once.
+          LAKE=0
+          if [ -f scripts/data_lake/free_sources.py ] && [ -f scripts/data_lake/hf_publish.py ] && [ -n "${HF_TOKEN:-}" ]; then
+            python -m pip install --quiet huggingface_hub && LAKE=1
+          fi
+          echo "lake publisher available: ${LAKE}"
+          RUN_START="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          rc=0
+          SECONDS=0
+          for chunk in $(seq 1 200); do
+            left=$(( (9900 - SECONDS) / 60 ))   # 165 min budget; the job cap is 210
+            if [ "$left" -lt 3 ]; then echo "time budget used; the next run resumes"; break; fi
+            python3 -u scripts/ops/fetch_etf_history.py --mode "$MODE" --out store --tfs 1m --max-new 25 --budget-min "$left" \
+              --skip-fetched-after "$RUN_START" || rc=1
+            rm -rf chunk lake
+            moved="$(python3 scripts/ops/etf_chunk_split.py --store store --chunk chunk --since "$RUN_START" 2>/dev/null)"
+            if [ -z "${moved}" ]; then echo "::error::chunk ${chunk}: fetcher left no manifest"; rc=1; break; fi
+            lake_ok=0
+            if [ "$LAKE" = "1" ] && [ "${moved}" != "0" ]; then
+              if python3 scripts/data_lake/free_sources.py import-etf --src chunk --out lake \
+                 && python3 scripts/data_lake/hf_publish.py upload --dir lake --prefix us_equity/alpaca --note "etf-history ${GITHUB_RUN_ID} chunk ${chunk}" \
+                 && { [ ! -d lake/_manifests ] || python3 scripts/data_lake/hf_publish.py upload --dir lake --prefix _manifests --note "etf-history ${GITHUB_RUN_ID} manifests"; }; then
+                lake_ok=1
+              else
+                echo "::error::chunk ${chunk}: lake publish FAILED; pushing this chunk to the trainer in full instead (nothing is dropped)"; rc=1
+              fi
+            fi
+            if [ "$lake_ok" = "1" ]; then
+              # tail cache only: the current + previous month of every finished series, plus the manifest and corporate actions
+              rsync -a --prune-empty-dirs -e "$SSH" --include='*/' --include='MANIFEST.json' --include='corporate_actions.csv' \
+                --include="*/1m/${YM}.parquet" --include="*/1m/${YM1}.parquet" --exclude='*' chunk/ "$DEST" > rsync.log 2>&1
+            else
+              rsync -a --partial -e "$SSH" chunk/ "$DEST" > rsync.log 2>&1
+            fi
+            rsc=$?
+            sed -E 's/[0-9]{1,3}(\.[0-9]{1,3}){3}/<ip>/g' rsync.log | tail -5
+            if [ "$rsc" -ne 0 ]; then echo "::error::chunk ${chunk} push to the trainer failed (rsync exit ${rsc})"; rc=1; break; fi
+            rm -rf chunk lake
+            rem="$(python3 -c "import json;print(json.load(open('store/MANIFEST.json'))['run']['remaining'])" 2>/dev/null)"
+            if [ -z "${rem}" ]; then echo "::error::chunk ${chunk}: manifest has no run.remaining (fetcher died before writing it)"; rc=1; break; fi
+            avail="$($SSH "${TRAINER_USER}@${TRAINER_IP}" 'df -BG --output=avail / | tail -1' 2>/dev/null | tr -dc 0-9)"
+            echo "chunk ${chunk}: series=${moved} lake=${lake_ok} remaining=${rem} trainer_free_gb=${avail:-unknown} elapsed=${SECONDS}s"
+            if [ "${rem}" = "0" ]; then break; fi
+            if [ -n "${avail}" ] && [ "${avail}" -lt 10 ]; then
+              echo "::error::trainer free disk ${avail} GB < 10 GB floor mid-run (${rem} series still to pull): stopping. Free space on the trainer, then re-run."
+              echo "lowdisk=1" >> "$GITHUB_OUTPUT"; rc=1; break
+            fi
+          done
+          exit "$rc"
+      - name: Verify (depth, gaps, freshness) from the manifest
+        id: verify
+        if: steps.mode.outputs.mode != 'probe'
+        continue-on-error: true
+        env:
+          MODE: ${{ steps.mode.outputs.mode }}
+        run: |
+          rc=0
+          flag=""
+          if [ "$MODE" = "backfill" ]; then flag="--progress"; fi
+          python3 scripts/ops/etf_history_verify.py --root store --table $flag > verify.md 2>&1 || rc=1
+          python3 scripts/ops/etf_history_verify.py --root store --table --all $flag > verify_full.md 2>&1 || true
+          cat verify.md
+          exit "$rc"
+      - name: Machine-readable health record
+        if: always() && steps.mode.outputs.mode != 'probe'
+        env:
+          FETCH: ${{ steps.fetch.outcome }}
+          VERIFY: ${{ steps.verify.outcome }}
+          DISK_GO: ${{ steps.disk.outputs.go }}
+          DISK_AVAIL: ${{ steps.disk.outputs.avail }}
+          MODE: ${{ steps.mode.outputs.mode }}
+        run: |
+          python3 - <<'PY'
+          import json, os
+          m = {}
+          try:
+              m = json.load(open("store/MANIFEST.json"))
+          except Exception:
+              pass
+          h = {"feed": "etf-history-pipeline", "mode": os.environ.get("MODE"), "fetch": os.environ.get("FETCH"),
+               "verify": os.environ.get("VERIFY"), "trainer_free_gb": os.environ.get("DISK_AVAIL"),
+               "disk_go": os.environ.get("DISK_GO"), "run": m.get("run"), "failures": (m.get("failures") or [])[:50],
+               "updated_at": m.get("updated_at")}
+          json.dump(h, open("health.json", "w"), indent=1)
+          print(json.dumps(h))
+          PY
+      - name: Final push (manifest + corporate actions) and measured trainer size
+        if: (steps.mode.outputs.mode == 'backfill' || steps.mode.outputs.mode == 'refresh') && steps.disk.outputs.go == '1'
+        env:
+          TRAINER_IP: ${{ secrets.TRAINER_VM_IP }}
+          TRAINER_USER: ${{ vars.TRAINER_VM_USER || 'ubuntu' }}
+        run: |
+          set -euo pipefail
+          rsync -a --partial -e "ssh -i ~/.ssh/trainer_key -o BatchMode=yes -o StrictHostKeyChecking=accept-new" \
+            store/ "${TRAINER_USER}@${TRAINER_IP}:ict-trading-bot/data/etf_history/"
+          ssh -i ~/.ssh/trainer_key -o BatchMode=yes -o StrictHostKeyChecking=accept-new "${TRAINER_USER}@${TRAINER_IP}" \
+            'echo "trainer etf_history now $(du -sm ict-trading-bot/data/etf_history | cut -f1) MB, partitions $(find ict-trading-bot/data/etf_history -name "*.parquet" | wc -l)"; df -BG --output=avail,pcent / | tail -1' 2>&1 \
+            | sed -E 's/[0-9]{1,3}(\.[0-9]{1,3}){3}/<ip>/g'
+      - name: Upload the full depth table
+        if: always() && steps.mode.outputs.mode != 'probe'
+        uses: actions/upload-artifact@v4
+        with:
+          name: etf-history-depth-table
+          path: |
+            verify.md
+            verify_full.md
+            health.json
+          if-no-files-found: ignore
+      - name: Comment result on the issue
+        if: always() && github.event_name == 'issues'
+        uses: actions/github-script@v7
+        env:
+          MODE: ${{ steps.mode.outputs.mode }}
+          FETCH: ${{ steps.fetch.outcome }}
+          VERIFY: ${{ steps.verify.outcome }}
+        with:
+          script: |
+            const fs = require('fs');
+            let body = `etf-history-pipeline mode=${process.env.MODE} fetch=${process.env.FETCH} verify=${process.env.VERIFY} (full table: run artifact etf-history-depth-table)\n\n`;
+            for (const f of ['verify.md', 'probe.json']) {
+              if (fs.existsSync(f)) body += '```\n' + fs.readFileSync(f, 'utf8').slice(0, 55000) + '\n```\n';
+            }
+            await github.rest.issues.createComment({ owner: context.repo.owner, repo: context.repo.repo, issue_number: context.issue.number, body });
+            await github.rest.issues.update({ owner: context.repo.owner, repo: context.repo.repo, issue_number: context.issue.number, state: 'closed' });
+      - name: Red flag on a failed fetch, stale/missing series or low disk (ONE flag; the next run retries)
+        if: always() && (steps.fetch.outcome == 'failure' || steps.verify.outcome == 'failure' || steps.disk.outputs.lowdisk == '1' || steps.fetch.outputs.lowdisk == '1')
+        run: |
+          echo "::error::etf-history: fetch=${{ steps.fetch.outcome }} verify=${{ steps.verify.outcome }} lowdisk=${{ steps.disk.outputs.lowdisk }} (see steps above)"
+          exit 1

@@ -1,0 +1,64 @@
+name: sp500-membership-refresh
+
+# Quarterly refresh of the point-in-time S&P 500 membership table the equity-bar pipeline reads
+# (config/data_universe/sp500_membership.csv, built by scripts/ops/build_sp500_membership.py from the fja05680/sp500 "Updated"
+# file). ETF-HISTORY-PIPELINE (operator 2026-11-01: collect far more symbols). The source was 2.5 months stale on 2026-11-01, so
+# a quarterly cadence is a ceiling on that staleness, not a promise of freshness: the row carries its own newest-snapshot date.
+#
+# GATES THIS ADDS OR CHANGES: none. A data-pull list refresh; no order path, no config/*.yaml gate, no execution flag.
+#
+# Lands via commit-to-main (a PAT-authored auto-merge PR, so the required checks run) with verify-merged. A refresh that changes
+# nothing opens no PR. Runs 03:41Z on the 2nd of Jan/Apr/Jul/Oct, or on dispatch / a labelled issue `sp500-membership-now`.
+
+on:
+  schedule:
+    - cron: "41 3 2 1,4,7,10 *"
+  workflow_dispatch:
+  issues:
+    types: [opened]
+
+permissions:
+  contents: write
+  issues: write
+  pull-requests: write
+
+concurrency:
+  group: sp500-membership-refresh
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    if: |
+      github.event_name == 'schedule' ||
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'issues' &&
+       github.event.issue.user.login == github.repository_owner &&
+       contains(github.event.issue.labels.*.name, 'sp500-membership-now'))
+    runs-on: ubuntu-latest
+    timeout-minutes: 90  # work ~2 min + the shared commit-to-main wait (80) -- tests/test_commit_to_main_callers.py pins the margin
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+          token: ${{ secrets.BRANCH_PROTECTION_TOKEN }}
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install deps
+        run: python -m pip install --quiet requests
+      - name: Rebuild the membership table
+        run: python3 scripts/ops/build_sp500_membership.py
+      - name: Land it on main (auto-merge PR; no PR when unchanged)
+        uses: ./.github/actions/commit-to-main
+        with:
+          token: ${{ secrets.BRANCH_PROTECTION_TOKEN }}
+          paths: config/data_universe/sp500_membership.csv
+          message: "chore(data): refresh the S&P 500 membership table"
+          pr-title: "chore(data): refresh the S&P 500 membership table (auto)"
+          pr-body: "Quarterly refresh of config/data_universe/sp500_membership.csv (ETF-HISTORY-PIPELINE). Generated file only; auto-merge."
+          branch-prefix: automation/sp500-membership
+          verify-merged: "true"
+          # The file is rendered wholesale by one command, so on a conflict re-rendering over the merged main IS the merge.
+          refresh-command: python3 scripts/ops/build_sp500_membership.py

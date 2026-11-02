@@ -1,0 +1,163 @@
+name: options-snapshot-capture
+
+# Daily end-of-day option-chain snapshot (quotes + IV + greeks) for SPY QQQ IWM GLD TLT SLV USO -> the trainer's
+# data/options_history/. There is no keyless historical option/IV data, so we ACCRUE our own (operator, 2026-11-01).
+# Row OPTIONS-IV-HISTORY-GAP; contract scripts/ops/capture_options_snapshot.py. Runner holds the Alpaca secrets; the
+# store is pulled from / pushed to the trainer (add/replace only, never --delete).
+#
+# GATES THIS ADDS OR CHANGES: none. Data path only: no order path, no config/*.yaml, no execution flag. A stale or
+# missing underlying turns the run RED (one flag); nothing halts, the next run retries.
+#
+# TRIGGERS: cron 21:25Z Mon-Fri (US close is 21:00Z once DST ends 2026-11-01; quotes are the closing state);
+# workflow_dispatch; or a labelled issue `options-snapshot-request` with body `mode: capture|verify|probe`.
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "capture | verify | probe"
+        default: "capture"
+  schedule:
+    - cron: "25 21 * * 1-5"
+  issues:
+    types: [opened]
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: options-snapshot-capture
+  cancel-in-progress: false
+
+jobs:
+  options-snapshot:
+    if: >-
+      github.event_name != 'issues' ||
+      ((github.event.issue.user.login == github.repository_owner ||
+        github.event.issue.user.login == 'github-actions[bot]') &&
+       contains(github.event.issue.labels.*.name, 'options-snapshot-request'))
+    runs-on: ubuntu-latest
+    timeout-minutes: 150
+    steps:
+      - name: Resolve mode (validated against a fixed list)
+        id: mode
+        env:
+          EVENT: ${{ github.event_name }}
+          INPUT_MODE: ${{ inputs.mode }}
+          ISSUE_BODY: ${{ github.event.issue.body }}
+        run: |
+          set -euo pipefail
+          m="capture"
+          if [ "$EVENT" = "workflow_dispatch" ]; then m="${INPUT_MODE:-capture}"; fi
+          if [ "$EVENT" = "issues" ]; then
+            m="$(printf '%s\n' "$ISSUE_BODY" | sed -n 's/^mode:[[:space:]]*\([a-z]*\).*/\1/p' | head -1)"
+            m="${m:-capture}"
+          fi
+          case "$m" in capture|verify|probe) ;; *) echo "::error::bad mode '$m'"; exit 1;; esac
+          echo "mode=$m" >> "$GITHUB_OUTPUT"
+      - name: Require secrets (fail closed)
+        env:
+          K1: ${{ secrets.ALPACA_API_KEY_ID_LIVE }}
+          K2: ${{ secrets.ALPACA_API_SECRET_KEY_LIVE }}
+          VMK: ${{ secrets.VM_SSH_KEY }}
+          TIP: ${{ secrets.TRAINER_VM_IP }}
+        run: |
+          fail=0
+          for v in K1 K2 VMK TIP; do
+            [ -n "${!v}" ] || { echo "::error::a required secret is unset ($v)"; fail=1; }
+          done
+          exit "$fail"
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install deps
+        run: python -m pip install --quiet pandas pyarrow requests
+      - name: Install SSH key
+        env:
+          VM_SSH_KEY: ${{ secrets.VM_SSH_KEY }}
+        run: |
+          set -euo pipefail
+          mkdir -p ~/.ssh && chmod 700 ~/.ssh
+          printf '%s\n' "${VM_SSH_KEY}" > ~/.ssh/trainer_key
+          chmod 600 ~/.ssh/trainer_key
+      - name: Pull the current store from the trainer
+        if: steps.mode.outputs.mode != 'probe'
+        env:
+          TRAINER_IP: ${{ secrets.TRAINER_VM_IP }}
+          TRAINER_USER: ${{ vars.TRAINER_VM_USER || 'ubuntu' }}
+        run: |
+          set -uo pipefail
+          mkdir -p store
+          # First run: the remote dir does not exist yet -> rsync exit 23; that is the expected empty start.
+          rsync -a -e "ssh -i ~/.ssh/trainer_key -o BatchMode=yes -o StrictHostKeyChecking=accept-new -o ConnectTimeout=20" \
+            "${TRAINER_USER}@${TRAINER_IP}:ict-trading-bot/data/options_history/" store/ 2>&1 | sed -E 's/[0-9]{1,3}(\.[0-9]{1,3}){3}/<ip>/g' || true
+          echo "pulled: $(find store -name '*.parquet' | wc -l) series"
+      - name: Probe (what the plan serves, opra vs indicative)
+        if: steps.mode.outputs.mode == 'probe'
+        env:
+          ALPACA_API_KEY_ID_LIVE: ${{ secrets.ALPACA_API_KEY_ID_LIVE }}
+          ALPACA_API_SECRET_KEY_LIVE: ${{ secrets.ALPACA_API_SECRET_KEY_LIVE }}
+        run: python3 scripts/ops/capture_options_snapshot.py --mode probe | tee probe.json
+      - name: Capture today's chain slice (Alpaca, keyed)
+        id: fetch
+        if: steps.mode.outputs.mode == 'capture'
+        continue-on-error: true
+        env:
+          ALPACA_API_KEY_ID_LIVE: ${{ secrets.ALPACA_API_KEY_ID_LIVE }}
+          ALPACA_API_SECRET_KEY_LIVE: ${{ secrets.ALPACA_API_SECRET_KEY_LIVE }}
+        run: python3 -u scripts/ops/capture_options_snapshot.py --mode capture --source alpaca --out store
+      - name: Capture today's chain slice (CBOE delayed quotes, keyless; adds open interest + volume)
+        id: fetch_cboe
+        if: steps.mode.outputs.mode == 'capture'
+        continue-on-error: true
+        run: python3 -u scripts/ops/capture_options_snapshot.py --mode capture --source cboe --out store
+      - name: Verify (days, last capture, IV coverage, freshness; both sources)
+        id: verify
+        if: steps.mode.outputs.mode != 'probe'
+        continue-on-error: true
+        run: |
+          rc=0
+          : > verify.md
+          for src in alpaca cboe; do
+            echo "### source=$src" >> verify.md
+            python3 scripts/ops/capture_options_snapshot.py --mode verify --source "$src" --out store >> verify.md 2>&1 || rc=1
+          done
+          cat verify.md
+          exit "$rc"
+      - name: Push the store to the trainer (add/replace only)
+        if: steps.mode.outputs.mode == 'capture'
+        env:
+          TRAINER_IP: ${{ secrets.TRAINER_VM_IP }}
+          TRAINER_USER: ${{ vars.TRAINER_VM_USER || 'ubuntu' }}
+        run: |
+          set -euo pipefail
+          ssh -i ~/.ssh/trainer_key -o BatchMode=yes -o StrictHostKeyChecking=accept-new -o ConnectTimeout=20 \
+            "${TRAINER_USER}@${TRAINER_IP}" 'mkdir -p ict-trading-bot/data/options_history'
+          rsync -a --partial -e "ssh -i ~/.ssh/trainer_key -o BatchMode=yes -o StrictHostKeyChecking=accept-new" \
+            store/ "${TRAINER_USER}@${TRAINER_IP}:ict-trading-bot/data/options_history/"
+          echo "store pushed"
+      - name: Comment result on the issue
+        if: always() && github.event_name == 'issues'
+        uses: actions/github-script@v7
+        env:
+          MODE: ${{ steps.mode.outputs.mode }}
+          FETCH: ${{ steps.fetch.outcome }}
+          VERIFY: ${{ steps.verify.outcome }}
+        with:
+          script: |
+            const fs = require('fs');
+            let body = `options-snapshot-capture mode=${process.env.MODE} fetch=${process.env.FETCH} verify=${process.env.VERIFY}\n\n`;
+            for (const f of ['verify.md', 'probe.json']) {
+              if (fs.existsSync(f)) body += '```\n' + fs.readFileSync(f, 'utf8').slice(0, 60000) + '\n```\n';
+            }
+            await github.rest.issues.createComment({ owner: context.repo.owner, repo: context.repo.repo, issue_number: context.issue.number, body });
+            await github.rest.issues.update({ owner: context.repo.owner, repo: context.repo.repo, issue_number: context.issue.number, state: 'closed' });
+      - name: Red flag on a failed fetch or stale/missing series (ONE flag; the next run retries)
+        if: always() && (steps.fetch.outcome == 'failure' || steps.fetch_cboe.outcome == 'failure' || steps.verify.outcome == 'failure')
+        run: |
+          echo "::error::options-snapshot: fetch=${{ steps.fetch.outcome }} cboe=${{ steps.fetch_cboe.outcome }} verify=${{ steps.verify.outcome }} (see steps above)"
+          exit 1

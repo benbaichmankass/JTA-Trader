@@ -39,6 +39,10 @@ on:
     workflows:
       # ML-DATA-OFF-TRAINER (2026-10-13): the daily market-data export; its death would leave ML units on a stale dataset.
       - ml-data-export-kaggle
+      # ETF-HISTORY-PIPELINE (2026-11-01): daily ETF bars + option-chain snapshots; a dead run leaves the research stores stale.
+      - etf-history-pipeline
+      - options-snapshot-capture
+      - sp500-membership-refresh
       # MARKET-DATA-LAKE (2026-11-01): the pooled-ML market data lake on HF; a dead run leaves the general models on stale data.
       - market-data-lake
       # LEDGER-REFRESH (2026-10-10): the broker-truth freshness grader; its death
