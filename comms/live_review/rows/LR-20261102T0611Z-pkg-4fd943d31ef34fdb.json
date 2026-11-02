@@ -1,0 +1,113 @@
+{
+ "schema_version": 1,
+ "review_id": "LR-20261102T0611Z-pkg-4fd943d31ef34fdb",
+ "reviewed_at": "2026-11-02T06:14:00Z",
+ "order_package_id": "pkg-4fd943d31ef34fdb",
+ "trade_id": null,
+ "leg": "ict_scalp_xrp_5m",
+ "accounts": [
+  "bybit_1"
+ ],
+ "trigger": {
+  "event": "adverse_r",
+  "level": -0.5,
+  "l0_snapshot_at": "2026-11-02T03:17:00Z"
+ },
+ "info_cutoff_at": "2026-11-02T06:11:30Z",
+ "state": {
+  "atr_now_over_entry": 1.0124,
+  "bars_held": 2,
+  "giveback_r": 0.6769,
+  "open_r": -0.6487,
+  "peak_provenance": "estimated",
+  "peak_r": 0.0282,
+  "regime_cell_entry": null,
+  "regime_cell_now": null,
+  "sl": 1.25155429,
+  "tp": 1.26041857
+ },
+ "features_at_review": {
+  "atr_now_over_entry": 1.0124,
+  "bars_since_peak": 1,
+  "giveback_r": 0.6769,
+  "open_r": -0.6487,
+  "peak_r": 0.0282,
+  "r_to_stop": 0.3513,
+  "r_to_target": 2.1487
+ },
+ "mechanics": {
+  "evidence": "package sl 1.25155429 / tp 1.26041857 agree with every readable account",
+  "verdict": "match"
+ },
+ "options": [],
+ "outcome_table_source": null,
+ "recommendation": {
+  "action": "hold",
+  "level": null,
+  "level_atr": null,
+  "ev_delta_r": null,
+  "worst_case_delta_r": null,
+  "basis": "judgement",
+  "confidence": "anecdote",
+  "evidence_source": "judgement",
+  "judgement_confidence": 0.55,
+  "reason": "Long -0.65R at 2 bars, stop 0.35R away and just under the 1.2515 swing low; 5m is range-bound 1.2515-1.2565 with no close below it, 1h is chop (ADX 13.7). Leg's long history from this state is flat (hold n=75 mean -0.061R vs tighten atr:1.0 -0.040R, same within noise), so closing locks -0.65R for no edge and the bracket already expresses the view: hold.",
+  "size_fraction": null
+ },
+ "judge_prior": null,
+ "applied": false,
+ "apply_policy": {
+  "bound_r": 0.25,
+  "within_bound": null,
+  "tighten_r": null
+ },
+ "shadow_policy": {
+  "bound_r": 0.5,
+  "within_bound": null,
+  "would_apply": null,
+  "tighten_r": null
+ },
+ "context_flags": [
+  "priced_options null in packet; tool run this session (live_review_outcomes.py, atr_stop_mult=1.0 assumed): hold n=75 mean -0.0613 sd 0.9133 worst -1.367; tighten atr:1.0 n=75 mean -0.0397 worst -1.3153 (tighten flattered, stops fill at stop)",
+  "open_r_unverified: telemetry open_r -0.649 implies mark ~1.2528 but last closed 5m close 1.2540 (~-0.31R); mark may be intrabar",
+  "leg_backtest_expectancy_r -0.2017 n=163, no live closed trades on this book",
+  "correlated: 5 other open longs (2 ETH, XRP e4_oi_shock_1h, GLD, USO)",
+  "regime entry cell unknown; htf 1h chop"
+ ],
+ "account_reads": [
+  {
+   "account_id": "bybit_1",
+   "account_class": "paper",
+   "read": "no_action",
+   "evidence": "hold changes nothing"
+  }
+ ],
+ "disposition": {
+  "route": "none",
+  "mandate": null,
+  "action_issue": null,
+  "applied_at": null,
+  "verified_readback": null
+ },
+ "model": "sonnet-tier",
+ "session": "session_01AFoLuLwExwKJqVXTKxr9hY",
+ "prompt_sha": null,
+ "skill_sha": "59ad4814d9e7edf5f398b0105fd3ce9a2bd311e0",
+ "packet_sha": "bc5adf755b14d1578a9f29a510e4b8c89c83416f1317410a870634ba0912d7ad",
+ "forecast": {
+  "thesis": "The 1h breakout above 2283 with a trending 4h should carry ETH toward 2320 before it loses 2269, since the last swing lows are 4+ ATR below and no 1h resistance sits overhead.",
+  "direction": "with_trade",
+  "target_px": 2320.0,
+  "p_target": 0.4,
+  "invalidation_px": 2269.46,
+  "horizon_bars": 12,
+  "timeframe": "1h",
+  "evidence": [
+   "chart.since_entry: high 2298.74, low 2288.88, 1 bar",
+   "chart.htf: 4h trending ADX 29.5, last close 2275",
+   "exit_plan: sl 2269.46 / tp 2525.17",
+   "priced_options: hold n=51 mean +0.079",
+   "book: XRP long same beta"
+  ]
+ }
+}
