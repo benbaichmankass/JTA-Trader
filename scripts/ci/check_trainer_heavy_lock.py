@@ -75,6 +75,13 @@ HEAVY_ENTRYPOINTS = [
 # `.fit(`/`lgb.train(` it belongs above, and the reason recorded here is what
 # makes that reviewable.
 DECLARED_LIGHT = {
+    "scripts/research/ml_entry_levers.py":
+        "ML-LEVER-HARNESS ENTRY one-factor lever tests (units RQ-20261101-b601-01, -b602-01, -b604-01, -a508-01): fits LightGBM on the public Binance Vision "
+        "klines table in a lane container or a GitHub runner (compute cpu_long, github_runner), never needs_vm_data, never routed to the trainer.",
+    "scripts/research/ml_entry_timeframe.py":
+        "ML-TIMEFRAME ENTRY timeframe-scaling harness (units RQ-20261101-b620-01 .. -b626-01): fits LightGBM on public Binance Vision klines at 5m/15m/1h/4h "
+        "on a GitHub runner (compute cpu_long, backend github_runner: 4 vCPU, 16 GB, 6 h), never needs_vm_data, never routed to the trainer; the 5m bar-count arm "
+        "(~8M rows) would not fit the 6 GB trainer, which is why the units say github_runner.",
     "scripts/research/ml_entry_recipe.py":
         "ML-RECIPE ENTRY recipe/target harness (units RQ-20261101-fs05-01, -fs06-01): fits LightGBM on the public Binance Vision table "
         "of ml_entry_v2.py in a lane container or a GitHub runner (compute cpu_long, github_runner), never needs_vm_data, never routed to the trainer.",
@@ -89,6 +96,9 @@ DECLARED_LIGHT = {
     "scripts/research/ml_decision_brackets.py":
         "ML-DECISION-MODELS BRACKETS harness: same data and route as ml_decision_entry.py (unit RQ-20261101-c692-02, "
         "compute cpu_long, github_runner); never routed to the trainer.",
+    "scripts/research/ml_entry_tp_revision.py":
+        "ML-ENTRY-TP-REVISION moving-TP harness: same data and route as ml_decision_entry.py (units RQ-20261101-383f-01/"
+        "-03, compute cpu_long, github_runner); fits LightGBM in a lane container or a runner, never routed to the trainer.",
     "scripts/research/compute_smoke.py":
         "RESEARCH-ROUTER plumbing smoke: one 4096x4096 fp16 matmul loop (GPU, on a Kaggle kernel) or one "
         "1024x1024 fp32 numpy loop (CPU, on a runner) for a few seconds. It is never routed to the trainer "

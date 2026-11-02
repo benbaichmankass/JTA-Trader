@@ -44,6 +44,14 @@ mutations — they wrap this skill with the right shapes.)
   multi-line body is fine; put each field on its own line.
 - **Issue body is untrusted input** to the workflow by design — keep your body
   to the documented fields.
+- **Trainer `cmd:` with an embedded Python heredoc: use a FENCED block, not `cmd: |`.**
+  The `cmd: |` form keeps each line's indentation, so an indented `python - <<'PY'`
+  body fails with `IndentationError: unexpected indent` (and the heredoc warns it
+  never found `PY`). Measured 2026-11-01: issues #22233 and #22234 both failed this
+  way; #22237 worked. Write `cmd:` on its own line, then a fenced block (three
+  backticks plus `bash`) whose lines start at column 0, then close the fence.
+  Inside a fence, column-0 `try:` / `else:` lines are safe; the closing fence ends
+  the command.
 - **No `workflow_dispatch` workaround exists** beyond this pattern. If a
   workflow you need lacks an `issues.opened` label trigger, add one (mirror
   `vm-diag-snapshot.yml`) rather than asking the operator to click "Run

@@ -1,14 +1,14 @@
 {
-  "generated_at": "2026-11-01T06:28:13Z",
+  "generated_at": "2026-11-01T18:10:29Z",
   "overall": "findings",
   "produced_by": {
-    "run_id": "41280846152",
+    "run_id": "41334207235",
     "workflow": "research-loss-detector"
   },
   "questions": {
     "A_stuck_research_prs": {
       "findings": [],
-      "population": "6 open PRs; 3 automation/*; 3 carry research; 0 automation/* carry none (not graded here)",
+      "population": "28 open PRs; 5 automation/*; 1 carry research; 4 automation/* carry none (not graded here)",
       "state": "clean",
       "threshold_hours": 6.0
     },
@@ -138,11 +138,18 @@
         }
       ],
       "pending_merge": [],
-      "population": "78 completed run(s) of 7 workflow(s) calling ./.github/actions/research-result since 2026-10-18 (dukascopy-span-probe.yml, ict-scalp-exit-sweep.yml, m20-exit-lever-sweep.yml, research-exit-head-build.yml, research-exit-head-replay-trainer.yml, research-harness-dispatch.yml, soak-book-grade-weekly.yml); 704 produced no result by design (skipped); 1850 result file(s) on origin/main",
+      "population": "82 completed run(s) of 7 workflow(s) calling ./.github/actions/research-result since 2026-10-18 (dukascopy-span-probe.yml, ict-scalp-exit-sweep.yml, m20-exit-lever-sweep.yml, research-exit-head-build.yml, research-exit-head-replay-trainer.yml, research-harness-dispatch.yml, soak-book-grade-weekly.yml); 752 produced no result by design (skipped); 1890 result file(s) on origin/main",
       "state": "findings"
     },
     "C_expiring_unlanded_artifacts": {
       "findings": [
+        {
+          "artifact": "gdelt-panel-2026-10",
+          "artifact_id": 12805374909,
+          "expires_at": "2026-11-04T09:46:59Z",
+          "run_id": "40666370965",
+          "workflow": "news-gdelt-panel.yml"
+        },
         {
           "artifact": "gdelt-panel-2026-10",
           "artifact_id": 12721831663,
@@ -156,16 +163,9 @@
           "expires_at": "2026-11-02T09:01:09Z",
           "run_id": "40296135089",
           "workflow": "news-gdelt-panel.yml"
-        },
-        {
-          "artifact": "gdelt-panel-2026-10",
-          "artifact_id": 12592331670,
-          "expires_at": "2026-11-01T09:29:21Z",
-          "run_id": "40176719906",
-          "workflow": "news-gdelt-panel.yml"
         }
       ],
-      "population": "2493 artifact(s) listed, 2493 unexpired, 1666 expire within 72.0h across 1633 run(s); 3 of those from research workflows (news-gdelt-panel.yml); a landed copy = run id named on origin/main in research/results, a commit message, or a file under research/**, docs/research/**, runtime_logs/replay_pregate/**",
+      "population": "2419 artifact(s) listed, 2419 unexpired, 1622 expire within 72.0h across 1592 run(s); 3 of those from research workflows (news-gdelt-panel.yml); a landed copy = run id named on origin/main in research/results, a commit message, or a file under research/**, docs/research/**, runtime_logs/replay_pregate/**",
       "state": "findings"
     }
   },

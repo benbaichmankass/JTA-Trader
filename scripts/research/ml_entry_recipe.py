@@ -26,6 +26,7 @@ beside it as a sensitivity and never gates.
 from __future__ import annotations
 
 import argparse
+import itertools
 import json
 import sys
 import time
@@ -212,6 +213,184 @@ def run_cell(tab: pd.DataFrame, recipe: str, target: str, fset: str, seed: int, 
     return res
 
 
+def v1_seed_spread(tab: pd.DataFrame, out: Path, n_jobs: int) -> dict:
+    """Seed spread of the FROZEN v1 recipe (baseline params, 20 features, tau 0.10) on the bybit_2 traded subset over the DEV folds
+    only (manager 2026-11-01 16:57Z). Same walk-forward folds, purge and embargo as c692-01; each fold's model is refit per seed
+    and scored at the frozen tau (not LOFO-chosen). Reads no held-out or sealed window."""
+    from src.config.accounts_loader import load_accounts_dict
+    traded = [str(x) for x in (load_accounts_dict()["bybit_2"].get("symbols") or [])]
+    tau = 0.10
+    res = {"traded_symbols": traded, "tau": tau, "seeds": {}, "sealed_windows_read": 0}
+    end = pd.Timestamp(E.HOLDOUT_START, tz="UTC")
+    dev = tab[tab.ts < end]
+    bounds = [pd.Timestamp(x, tz="UTC") for x in E.DEV_FOLDS] + [end]
+    for seed in (E.SEED, *SEEDS):
+        fit = make_fit("R0", "T0", seed, [])
+        rows = []
+        for a, b in itertools.pairwise(bounds):
+            test = dev[(dev.ts >= a) & (dev.ts < b - pd.Timedelta(hours=E.HORIZON_H + 1))]
+            pl, ps = fit(E.purge_train(dev, a), test, E.FEATURES, n_jobs)
+            tk = E.policy(test, pl, ps, tau)
+            tr = tk[tk.symbol.isin(traded)]
+            rows.append({"fold": str(a.date()), "n_traded": len(tr), "sum_traded": float(tr.net_r.sum()), "n_all": len(tk),
+                         "sum_all": float(tk.net_r.sum())})
+        n, sm = sum(r["n_traded"] for r in rows), sum(r["sum_traded"] for r in rows)
+        na, sa = sum(r["n_all"] for r in rows), sum(r["sum_all"] for r in rows)
+        res["seeds"][str(seed)] = {"n_traded": n, "mean_traded": sm / n if n else None, "n_all": na, "mean_all": sa / na if na else None,
+                                   "folds": rows}
+        print(seed, res["seeds"][str(seed)]["n_traded"], res["seeds"][str(seed)]["mean_traded"], flush=True)
+    m = [v["mean_traded"] for v in res["seeds"].values() if v["mean_traded"] is not None]
+    res["traded_mean_over_seeds"], res["traded_range"] = float(np.mean(m)), float(max(m) - min(m))
+    res["traded_sd"] = float(np.std(m, ddof=1)) if len(m) > 1 else None
+    (out / "v1_seed_spread.json").write_text(json.dumps(res, indent=1, default=str))
+    return res
+
+
+# ----------------------------------------------------------------------------------------------- d507-01: K-seed ensemble + quantile threshold
+ENS_ARMS = {"E1": "R0", "E2": "R1", "E3": "R2"}          # E0 = first member of each draw, R0 parameters
+ENS_SETS = ("S0", "S1")
+ENS_DRAWS = ((7, 11, 13), (17, 19, 23), (29, 31, 37))      # K=3 models per draw; three independent draws
+ENS_Q = (0.80, 0.85, 0.90, 0.95, 0.98)
+
+
+def quantile_threshold(pl: np.ndarray, ps: np.ndarray, q: float) -> float:
+    """q-quantile of the decision score max(long, short). Uses scores only: no label can move it."""
+    return float(np.quantile(np.maximum(pl, ps), q))
+
+
+def fold_bounds() -> list[pd.Timestamp]:
+    return [pd.Timestamp(x, tz="UTC") for x in E.DEV_FOLDS] + [pd.Timestamp(E.HOLDOUT_START, tz="UTC")]
+
+
+def ens_member(tab: pd.DataFrame, recipe: str, fset: str, seed: int, out: Path, n_jobs: int) -> dict:
+    """One model's per-fold test predictions (dev folds only), cached: fold -> (row positions, p_long, p_short)."""
+    path = out / "ens_preds" / f"{recipe}_{fset}_s{seed}.npz"
+    if path.exists():
+        z = np.load(path)
+        return {k: z[k] for k in z.files}
+    work = (with_noise(tab, seed) if fset == "S1" else tab)
+    dev = work[work.ts < pd.Timestamp(E.HOLDOUT_START, tz="UTC")]
+    fit = make_fit(recipe, "T0", seed, [])
+    pred = {}
+    for k, (a, b) in enumerate(itertools.pairwise(fold_bounds())):
+        test = dev[(dev.ts >= a) & (dev.ts < b - pd.Timedelta(hours=E.HORIZON_H + 1))]
+        pl, ps = fit(E.purge_train(dev, a), test, FSETS[fset], n_jobs)
+        pred[f"pos{k}"], pred[f"pl{k}"], pred[f"ps{k}"] = test.index.to_numpy(), pl, ps
+    path.parent.mkdir(parents=True, exist_ok=True)
+    np.savez(path, **pred)
+    print("member", recipe, fset, seed, flush=True)
+    return pred
+
+
+def ens_fold_records(tab: pd.DataFrame, members: list[dict]) -> list[dict]:
+    """Mean score over the members, then per fold the policy at every q-quantile threshold of that fold's own scores."""
+    folds = []
+    for k, (a, b) in enumerate(itertools.pairwise(fold_bounds())):
+        pos = members[0][f"pos{k}"]
+        assert all(np.array_equal(m[f"pos{k}"], pos) for m in members)
+        pl = np.mean([m[f"pl{k}"] for m in members], axis=0)
+        ps = np.mean([m[f"ps{k}"] for m in members], axis=0)
+        test = tab.loc[pos]
+        rec = {"test_start": str(a.date())}
+        for q in ENS_Q:
+            tk = E.policy(test, pl, ps, quantile_threshold(pl, ps, q))
+            rec[f"q_{q}"] = {"n": len(tk), "sum_net_r": float(tk.net_r.sum()) if len(tk) else 0.0}
+        folds.append(rec)
+    return folds
+
+
+def lofo_q(folds: list[dict]) -> dict:
+    """Leave-one-fold-out q: q for fold k = argmax pooled mean over the OTHER folds (n >= TAU_MIN_DEV_N), tie -> larger q."""
+    per_fold, tn, ts_ = [], 0, 0.0
+    for k, f in enumerate(folds):
+        best = None
+        for q in ENS_Q:
+            n = sum(g[f"q_{q}"]["n"] for j, g in enumerate(folds) if j != k)
+            sm = sum(g[f"q_{q}"]["sum_net_r"] for j, g in enumerate(folds) if j != k)
+            if n >= E.TAU_MIN_DEV_N and (best is None or (sm / n, q) > best[:2]):
+                best = (sm / n, q)
+        t = f[f"q_{best[1]}"] if best else {"n": 0, "sum_net_r": 0.0}
+        per_fold.append({"fold": f["test_start"], "q": best[1] if best else None, "n": t["n"], "mean_net_r": t["sum_net_r"] / t["n"] if t["n"] else None})
+        tn, ts_ = tn + t["n"], ts_ + t["sum_net_r"]
+    return {"per_fold": per_fold, "n": tn, "mean_net_r": ts_ / tn if tn else None}
+
+
+def ens_run(tab: pd.DataFrame, out: Path, n_jobs: int, only_draw: int = -1) -> None:
+    for d, seeds in enumerate(ENS_DRAWS):
+        if only_draw >= 0 and d != only_draw:
+            continue
+        for arm, recipe in ENS_ARMS.items():
+            for fset in ENS_SETS:
+                key = out / "ens_cells" / f"{arm}_{fset}_d{d}.json"
+                if key.exists():
+                    continue
+                mem = [ens_member(tab, recipe, fset, sd, out, n_jobs) for sd in seeds]
+                res = {"arm": arm, "set": fset, "draw": d, "seeds": list(seeds), "lofo": lofo_q(ens_fold_records(tab, mem))}
+                if arm == "E1":      # E0: the draw's first member alone, same quantile rule
+                    res["E0"] = lofo_q(ens_fold_records(tab, mem[:1]))
+                key.parent.mkdir(parents=True, exist_ok=True)
+                key.write_text(json.dumps(res, indent=1, default=str))
+                print(arm, fset, d, res["lofo"]["n"], res["lofo"]["mean_net_r"], flush=True)
+
+
+def combine_ens(out: Path) -> dict:
+    cells = {}
+    for f in (out / "ens_cells").glob("*.json"):
+        r = json.loads(f.read_text())
+        cells[(r["arm"], r["set"], r["draw"])] = r
+    nd = len(ENS_DRAWS)
+
+    def agg(get):
+        ms = [get(d) for d in range(nd)]
+        if any(m is None for m in ms):
+            return None
+        means = [m["mean_net_r"] for m in ms]
+        pf = [[f["mean_net_r"] if f["mean_net_r"] is not None else float("nan") for f in m["per_fold"]] for m in ms]
+        return {"draw_means": means, "mean": float(np.mean(means)), "range": float(max(means) - min(means)),
+                "per_fold": [float(np.nanmean([p[i] for p in pf])) for i in range(len(pf[0]))],
+                "min_fold_n": min(f["n"] for m in ms for f in m["per_fold"]), "n": [m["n"] for m in ms]}
+    res = {"unit": "RQ-20261101-d507-01", "read_state": "read", "sealed_windows_read": 0, "arms": {}}
+    e0 = agg(lambda d: cells.get(("E1", "S0", d), {}).get("E0"))
+    if e0 is None:
+        res["result"] = "INDETERMINATE"
+        res["why"] = "E0 lacks all draws"
+        return res
+    res["E0"] = e0
+    win = []
+    for arm in ENS_ARMS:
+        a0 = agg(lambda d, arm=arm: cells.get((arm, "S0", d), {}).get("lofo"))
+        a1 = agg(lambda d, arm=arm: cells.get((arm, "S1", d), {}).get("lofo"))
+        if a0 is None or a1 is None:
+            res["arms"][arm] = {"verdict": "indeterminate", "why": "missing draws"}
+            continue
+        gradeable = min(a0["min_fold_n"], a1["min_fold_n"]) >= MIN_FOLD_N
+        nd_ = a1["mean"] - a0["mean"]
+        immune = nd_ >= -a0["range"]
+        delta = a0["mean"] - e0["mean"]
+        better = sum(1 for x, y in zip(a0["per_fold"], e0["per_fold"]) if x > y)
+        ok = gradeable and immune and delta >= 2 * e0["range"] and better >= 6
+        res["arms"][arm] = {"S0": a0["mean"], "S1": a1["mean"], "draw_means_S0": a0["draw_means"], "spread": a0["range"], "n_S0": a0["n"],
+                            "noise_delta": nd_, "noise_immune": immune, "gradeable": gradeable, "min_fold_n": min(a0["min_fold_n"], a1["min_fold_n"]),
+                            "delta_vs_E0": delta, "two_x_E0_range": 2 * e0["range"], "folds_better_than_E0": better, "per_fold_S0": a0["per_fold"],
+                            "verdict": "win" if ok else ("indeterminate" if not gradeable else "no_win")}
+        if ok:
+            win.append(arm)
+    res["winners"] = win
+    res["result"] = (f"winner: {max(win, key=lambda a: res['arms'][a]['S0'])}" if win else
+                     ("INDETERMINATE" if any(v["verdict"] == "indeterminate" for v in res["arms"].values())
+                      else "no ensemble/threshold fix: the pooled bar-level recipe has no gradeable edge on the dev folds"))
+    (out / "ens_result.json").write_text(json.dumps(res, indent=1, default=str))
+    L = [f"# {res['unit']} dev-fold result", "", "sealed windows read: 0", "", f"**Result:** {res['result']}", "",
+         f"E0 (single model, same quantile rule): S0 {e0['mean']:+.4f}, draws {e0['draw_means']}, range {e0['range']:.4f}, n {e0['n']}", "",
+         "| arm | S0 | draws | spread | S1-S0 | n (S0) | min fold n | delta vs E0 (2x E0 range) | folds better | verdict |", "|---|---|---|---|---|---|---|---|---|---|"]
+    for k, a in res["arms"].items():
+        if "S0" in a:
+            L.append(f"| {k} | {a['S0']:+.4f} | {', '.join(f'{x:+.4f}' for x in a['draw_means_S0'])} | {a['spread']:.4f} | {a['noise_delta']:+.4f} | "
+                     f"{'/'.join(map(str, a['n_S0']))} | {a['min_fold_n']} | {a['delta_vs_E0']:+.4f} ({a['two_x_E0_range']:.4f}) | {a['folds_better_than_E0']} | {a['verdict']} |")
+    (out / "ENS_RESULT.md").write_text("\n".join(L) + "\n")
+    return res
+
+
 def grid(unit: str) -> list[tuple]:
     u = UNITS[unit]
     return [(r, t, s, seed) for seed in SEEDS for r in u["recipes"] for t in u["targets"] for s in u["sets"]]
@@ -394,6 +573,15 @@ def _self_test() -> None:
     assert "sig" in sel["kept"] and "junk" not in sel["kept"], sel
     # 6. recipes differ from the baseline only in the registered keys
     assert set(RECIPES["R1"]) == {"colsample_bytree", "min_child_samples", "reg_lambda"} and RECIPES["R2"]["n_estimators"] == 450
+    # 6b. ensemble threshold uses scores only, and lofo_q chooses q without the held fold
+    pl_, ps_ = rng.standard_normal(500), rng.standard_normal(500)
+    assert quantile_threshold(pl_, ps_, 0.9) == quantile_threshold(pl_.copy(), ps_.copy(), 0.9)
+    assert abs((np.maximum(pl_, ps_) > quantile_threshold(pl_, ps_, 0.9)).mean() - 0.1) < 0.01
+    def mkq(ts, n, sm):
+        return {"test_start": ts, **{f"q_{q}": {"n": n, "sum_net_r": sm} for q in ENS_Q}}
+
+    lq = lofo_q([mkq(f"2022-0{i}-01", 600, 6.0) for i in range(1, 5)])
+    assert lq["n"] == 2400 and abs(lq["mean_net_r"] - 0.01) < 1e-12 and ENS_DRAWS[0] == SEEDS
     # 7. grid sizes
     assert len(grid("recipe")) == 36 and len(grid("labels")) == 30
     print("ml_entry_recipe self-test OK")
@@ -401,7 +589,7 @@ def _self_test() -> None:
 
 def main() -> int:
     ap = argparse.ArgumentParser()
-    ap.add_argument("cmd", nargs="?", choices=["run", "combine"])
+    ap.add_argument("cmd", nargs="?", choices=["run", "combine", "v1spread", "ens-run", "ens-combine"])
     ap.add_argument("--unit", choices=list(UNITS))
     ap.add_argument("--table", default="")
     ap.add_argument("--out", default="/tmp/ml_entry_recipe")
@@ -420,6 +608,12 @@ def main() -> int:
             if a.only_seed and seed != a.only_seed:
                 continue
             run_cell(tab, r, t, s, seed, out, a.n_jobs)
+    elif a.cmd == "ens-run":
+        ens_run(load_table(Path(a.table)), out, a.n_jobs, a.only_seed - 1 if a.only_seed else -1)
+    elif a.cmd == "ens-combine":
+        print(combine_ens(out)["result"])
+    elif a.cmd == "v1spread":
+        print(json.dumps(v1_seed_spread(load_table(Path(a.table)), out, a.n_jobs), indent=1, default=str)[:1500])
     elif a.cmd == "combine":
         res = combine_recipe(out) if a.unit == "recipe" else combine_labels(out)
         write_result(a.unit, res, out)
