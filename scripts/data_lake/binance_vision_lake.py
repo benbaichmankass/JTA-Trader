@@ -469,9 +469,10 @@ def shard(items: Sequence[str], spec: str) -> List[str]:
 def traded_symbols() -> List[str]:
     """The crypto symbols our accounts actually trade, re-parsed from config/accounts.yaml every run (never quoted):
     every bybit account's `symbols:` plus each rostered strategy's `symbol`."""
-    import yaml
-    cfg = yaml.safe_load((Path(__file__).resolve().parents[2] / "config" / "accounts.yaml").read_text()) or {}
-    accs = cfg.get("accounts", cfg)
+    import sys
+    sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+    from src.config.accounts_loader import load_accounts_dict
+    accs = load_accounts_dict()
     out = set()
     for name, acc in (accs.items() if isinstance(accs, dict) else []):
         if not isinstance(acc, dict) or "bybit" not in (str(acc.get("exchange", "")) + str(name)).lower():
