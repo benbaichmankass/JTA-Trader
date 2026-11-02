@@ -138,3 +138,36 @@ def test_chunk_split_moves_only_finished_series(tmp_path):
     assert (chunk / "DONE" / "1m" / "2026-11.parquet").exists() and not (store / "DONE" / "1m").exists()
     assert (store / "TODO" / "1m" / "2026-11.parquet").exists() and not (chunk / "TODO").exists()  # untouched, still local
     assert (chunk / "MANIFEST.json").exists() and (chunk / "corporate_actions.csv").exists()
+
+
+def test_rate_gate_is_shared_adaptive_and_thread_safe():
+    gate = f.RateGate(rps=1000.0, cap_rps=2000.0)
+    gate.declare(600)  # plan declares 600/min -> 0.8 * 10 req/s, never lowered below the configured rate
+    assert gate.rps == 1000.0 and gate.declared_per_min == 600
+    slow = f.RateGate(rps=2.5)
+    slow.declare(10000)  # a paid plan: raised to 0.8 * 10000/60 = 133 req/s, capped at cap_rps (60)
+    assert slow.rps == 60.0
+    gate.penalize("http_429")
+    assert gate.rps == 500.0 and gate.stats["http_429"] == 1
+    gate.recover()
+    assert 500.0 < gate.rps <= 1000.0
+    import threading
+
+    ts = [threading.Thread(target=lambda: [gate.wait() for _ in range(50)]) for _ in range(4)]
+    [t.start() for t in ts]
+    [t.join() for t in ts]
+    assert gate.stats["requests"] == 200
+
+
+def test_parallel_main_fetches_every_pending_symbol_once(tmp_path, monkeypatch):
+    s0 = datetime(2026, 10, 1, 14, tzinfo=UTC)
+    bars = _bars(s0, 5, 100.0)
+    monkeypatch.setattr(f, "make_getter", lambda *a, **k: fake_getter(bars))
+    monkeypatch.setattr(f, "pick_feed", lambda get, pref: "iex")
+    monkeypatch.setattr(f, "fetch_corporate_actions", lambda *a, **k: pd.DataFrame(columns=["kind"]))
+    (tmp_path / "u.yaml").write_text("us_equity_bars: {}\n")
+    rc = f.main(["--mode", "backfill", "--out", str(tmp_path / "o"), "--universe", str(tmp_path / "u.yaml"), "--symbols", "AAA,BBB,CCC,DDD", "--tfs", "1h",
+                 "--start", "2026-10-01", "--workers", "4", "--max-new", "3"])
+    m = json.loads((tmp_path / "o" / "MANIFEST.json").read_text())
+    assert rc == 0 and m["run"]["fetched"] == 3 and m["run"]["remaining"] >= 1 and m["run"]["stopped_early"] is True
+    assert sorted(k for k in m["series"]) == ["AAA/1h", "BBB/1h", "CCC/1h"]

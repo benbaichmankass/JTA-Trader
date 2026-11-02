@@ -1,0 +1,15 @@
+{
+  "due_when": {
+    "clears_when": "SPLG/1m shows a recent last bar, or SPLG is recorded as retired/renamed with the reason",
+    "kind": "event"
+  },
+  "id": "PI-20261102-PTDVAI3R-0004",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "issue #22441 / run 41500756635 (SPLG/1m STALE)",
+    "rerun": "file an etf-history-request issue 'mode: backfill'; read the SPLG row in the depth table"
+  },
+  "state": "queued",
+  "what": "SPLG/1m is STALE in the ETF store: fetched in full (736,031 rows, 2017-10-16 -> 2025-10-30T23:58) but nothing after 2025-10-30 although the API call asked for bars up to now. Cause NOT diagnosed (needs Alpaca API access, which only Actions has). Hypotheses, unverified: a 2-for-1 split around 2025-10-30/31 (from memory, not checked) leaving post-split bars outside the 'split' adjustment window, or a symbol/asset change on the Alpaca side. Next step: a probe of SPLG bars from 2025-10-25 with adjustment=raw vs split, via fetch_etf_history.py --symbols SPLG --start 2025-10-25."
+}
