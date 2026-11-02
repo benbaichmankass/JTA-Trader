@@ -121,6 +121,25 @@ def run_artifacts(repo_slug: str, run_id: int) -> Optional[List[Dict[str, Any]]]
     return rows if isinstance(rows, list) else None
 
 
+#: GitHub refuses any pushed blob over 100 MB, and one such file rejects the WHOLE results batch
+#: (COLLECTOR-STUCK 2026-11-02: a 164.84 MB work/table.pkl in two runs blocked every batch since 2026-11-01 evening).
+MAX_COLLECTED_FILE_BYTES = 50 * 1024 * 1024
+
+
+def prune_oversize(d: Path, limit: int = MAX_COLLECTED_FILE_BYTES) -> List[str]:
+    """Replace every file over `limit` with a `<name>.oversize.txt` stub (size + note); return the pruned relative paths.
+    The run's record and manifest still land; the bulky intermediate stays only in the expiring Actions artifact."""
+    pruned: List[str] = []
+    for f in sorted(d.rglob("*")):
+        if f.is_file() and not f.is_symlink() and f.stat().st_size > limit:
+            size = f.stat().st_size
+            f.unlink()
+            f.with_name(f.name + ".oversize.txt").write_text(
+                f"pruned by collect_runner_results.prune_oversize: {size} bytes exceeds {limit}; not committed.\n", encoding="utf-8")
+            pruned.append(str(f.relative_to(d)))
+    return pruned
+
+
 def download(run_id: int, name: str, dest: Path) -> bool:
     """Download into a scratch dir and merge, because `gh run download -D <dir>` refuses
     to extract over an existing file -- a half-landed directory must not read as a failure."""
@@ -129,6 +148,9 @@ def download(run_id: int, name: str, dest: Path) -> bool:
     with tempfile.TemporaryDirectory() as td:
         if _gh(["run", "download", str(run_id), "-n", name, "-D", td], timeout=600) is None:
             return False
+        dropped = prune_oversize(Path(td))
+        if dropped:
+            print(f"collect: run {run_id}: pruned oversize file(s) {dropped}", file=sys.stderr)
         dest.mkdir(parents=True, exist_ok=True)
         shutil.copytree(td, dest, dirs_exist_ok=True)
     return True
@@ -333,6 +355,13 @@ def collect(root: Path, *, repo_slug: str, runs: Optional[List[Dict[str, Any]]] 
 # ── self-test ───────────────────────────────────────────────────────────────
 def _self_test() -> int:
     import tempfile
+    with tempfile.TemporaryDirectory() as td0:
+        big = Path(td0) / "w"
+        big.mkdir()
+        (big / "table.pkl").write_bytes(b"x" * 20)
+        (big / "ok.json").write_text("{}")
+        assert prune_oversize(Path(td0), limit=10) == ["w/table.pkl"] and (big / "table.pkl.oversize.txt").exists() \
+            and not (big / "table.pkl").exists() and not prune_oversize(Path(td0), limit=1000)
     with tempfile.TemporaryDirectory() as td:
         root = Path(td)
         (root / "scripts/research").mkdir(parents=True)
