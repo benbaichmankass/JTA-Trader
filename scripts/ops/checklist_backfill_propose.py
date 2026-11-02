@@ -17,7 +17,8 @@ THE RULES (declared before the run; every proposed row carries `due_basis` namin
   roadmap             the row's own `roadmap`; else `docs/roadmap/backfill-2026-10-11.json` (row_fallback);
                       else the id-prefix map below (flagged); else `unmapped` + reason (flagged `roadmap_needs_review`).
   DROP (proposed only, each with its evidence; a dropped row needs a stated reason):
-  D1 never touched since the reset: no `updated_at`, state queued, no lane.
+  D1 reset-era row (id `E<n>`) never touched since the reset: no `updated_at`, state queued, no lane. (A missing
+     `updated_at` alone is NOT staleness: rows written directly by lanes also lack it.)
   D2 note says `superseded by <ID>` and <ID> exists in the register.
   D3 queued in a `dormant`/`closed` milestone (milestones.yaml), no lane, no priority_rank, no open PR, untouched >= 14 days.
   Everything else is kept and dated -- a row we cannot show is stale is not proposed for drop.
@@ -85,8 +86,8 @@ def propose(rows: list[dict], today: date, ms_status: dict, fallback: dict) -> l
     for r in live:
         o, age = out[r["id"]], _age(r, today)
         why = None
-        if r["state"] == "queued" and not r.get("lane") and age is None:
-            why = "D1 never touched since the reset (no updated_at), queued, no lane"
+        if r["state"] == "queued" and not r.get("lane") and age is None and re.match(r"^E\d+$", r["id"]):
+            why = "D1 reset-era row (id E<n>) never touched since the reset (no updated_at), queued, no lane"
         elif (m := SUPERSEDED.search(r.get("note") or "")) and m.group(1).rstrip(".,;)") in ids \
                 and m.group(1).rstrip(".,;)") != r["id"]:
             why = f"D2 note says 'superseded by {m.group(1).rstrip('.,;)')}' ({ids[m.group(1).rstrip('.,;)')]['state']}); that row exists"
@@ -216,7 +217,8 @@ def _self_test() -> int:
             {"id": "U2", "state": "landed_unproven", "updated_at": "2026-10-31T00:00:00Z", "roadmap": ["L-OPS"], "observation": {"due_by": "2026-10-01"}},
             {"id": "Q1", "state": "queued", "updated_at": "2026-10-31T00:00:00Z", "priority_rank": 1, "roadmap": ["L-OPS"]},
             {"id": "Q2", "state": "queued", "updated_at": "2026-10-31T00:00:00Z", "roadmap": ["M29"]},
-            {"id": "OLD", "state": "queued", "roadmap": ["L-OPS"]},
+            {"id": "E9", "state": "queued", "roadmap": ["L-OPS"]},
+            {"id": "NEWLANE", "state": "queued", "roadmap": ["L-OPS"]},
             {"id": "SUP", "state": "queued", "updated_at": "2026-10-31T00:00:00Z", "note": "superseded by Q1", "roadmap": ["L-OPS"]},
             {"id": "STALE", "state": "queued", "updated_at": "2026-10-01T00:00:00Z", "roadmap": ["M29"]},
             {"id": "NOMAP", "state": "queued", "updated_at": "2026-10-31T00:00:00Z"},
@@ -227,7 +229,8 @@ def _self_test() -> int:
     c("R2 future observation date is kept", ps["U1"]["due_by_proposed"] == "2026-11-09")
     c("R2 overdue observation is re-slotted from tomorrow", ps["U2"]["due_by_proposed"] == "2026-11-02")
     c("R3 ranked queued before unranked", ps["Q1"]["due_by_proposed"] <= ps["Q2"]["due_by_proposed"])
-    c("D1 never-touched queued row -> drop", ps["OLD"]["action"] == "drop" and ps["OLD"]["drop_reason"].startswith("D1"))
+    c("D1 reset-era never-touched queued row -> drop", ps["E9"]["action"] == "drop" and ps["E9"]["drop_reason"].startswith("D1"))
+    c("a lane-written row with no updated_at is NOT dropped", ps["NEWLANE"]["action"] == "date")
     c("D2 superseded-by an existing row -> drop", ps["SUP"]["action"] == "drop" and ps["SUP"]["drop_reason"].startswith("D2"))
     c("D3 stale in a dormant milestone -> drop", ps["STALE"]["action"] == "drop" and ps["STALE"]["drop_reason"].startswith("D3"))
     c("a fresh row in a dormant milestone is KEPT", ps["Q2"]["action"] == "date")
