@@ -601,6 +601,29 @@ def check_strategy_roster(*, path: Optional[str] = None) -> HealthCheck:
 
 
 # ---------------------------------------------------------------------------
+# ML ENTRY decision shadow freshness (observe-only data; off the trade path is not off the data path)
+# ---------------------------------------------------------------------------
+
+
+def check_ml_decision_shadow(*, path: Optional[Path] = None) -> HealthCheck:
+    """Grades the NEWEST row of runtime_logs/ml_decision_shadow.jsonl by its own ``logged_at`` (the data, not the
+    timer's ActiveState). Four states, never collapsed: fresh -> ok; stale / absent / unreadable -> warn, each under its
+    own name. Never critical: the log is observe-only and trading does not depend on it."""
+    from src.runtime.ml_decision_shadow import LOG_NAME, freshness
+    name = "ml_decision_shadow"
+    f = freshness(path or (runtime_logs_dir() / LOG_NAME))
+    st = f.get("state")
+    if st == "fresh":
+        return _ok(name, f"newest row {f['age_s']:.0f}s old (bar_close {f.get('last_bar_close')})", **f)
+    if st == "stale":
+        return _warn(name, f"STALE: newest row {f['age_s']:.0f}s old (> {f['threshold_s']}s); "
+                     "check ict-ml-decision-shadow.timer", **f)
+    if st == "absent":
+        return _warn(name, "ABSENT: no ml_decision_shadow.jsonl (never ran since deploy?)", **f)
+    return _warn(name, f"UNREADABLE: could not read the newest row ({f.get('error')})", **f)
+
+
+# ---------------------------------------------------------------------------
 # Top-level runner
 # ---------------------------------------------------------------------------
 
@@ -614,6 +637,7 @@ _DEFAULT_CHECKS: List[Callable[[], HealthCheck]] = [
     check_db,
     check_disk,
     check_strategy_roster,
+    check_ml_decision_shadow,
 ]
 
 

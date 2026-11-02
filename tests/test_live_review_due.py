@@ -521,3 +521,57 @@ def test_trigger_first_compute_due_records_skips_and_daily_floor_skips_only_clos
     res = lrd.compute_due([dict(row, updated_at=tue.isoformat())], [], cfg, now=tue)
     names = {e["event"] for d in res["due"] for e in d["events"]}
     assert {"daily_floor", "judgement_cadence"} <= names and not res["skipped_slots"]
+
+
+# ----------------------------------------------------------------------------- LTR-PACKET-FIXES F (2026-11-01)
+# Closed market: no new closed bar, no new EVENT. Measured case: pkg-92d1 (USO, alpaca_paper) was reviewed HOLD
+# at 14:38Z Sunday on the Friday 19:00Z bar (trigger momentum_flip), then fell due again at 15:00Z with
+# structure_break on that SAME bar: the per-bar cooldown keys on the wall-clock bar, which advances hourly.
+
+FRI_LAST_BAR = datetime(2026, 10, 30, 19, 0, tzinfo=timezone.utc)
+SUN = datetime(2026, 11, 1, 15, 10, tzinfo=timezone.utc)
+
+
+def _fri_hist(n=4):
+    return {"history": [{"bar_ts": (FRI_LAST_BAR - timedelta(hours=n - 1 - i)).isoformat(),
+                         "last_price": 100.0 + i, "atr": 1.0} for i in range(n)]}
+
+
+def test_closed_market_event_reviewed_after_the_last_bar_is_skipped():
+    sk = lrd.closed_market_event_skip("structure_break", "USO", "pkg-uso",
+                                      _prior(datetime(2026, 11, 1, 14, 38, tzinfo=timezone.utc)), _fri_hist(), SUN, 3600)
+    assert sk is not None and sk["state"] == "skipped_closed_market" and "no closed bar since" in sk["reason"]
+
+
+def test_closed_market_event_fires_when_never_reviewed_or_a_bar_closed_since():
+    assert lrd.closed_market_event_skip("structure_break", "USO", "p", _prior(), _fri_hist(), SUN, 3600) is None
+    before_final = datetime(2026, 10, 30, 19, 30, tzinfo=timezone.utc)        # reviewed inside the session's last bar
+    assert lrd.closed_market_event_skip("structure_break", "USO", "p", _prior(before_final), _fri_hist(), SUN, 3600) is None
+
+
+def test_open_market_crypto_and_mechanics_are_never_skipped():
+    last = datetime(2026, 11, 1, 14, 38, tzinfo=timezone.utc)
+    assert lrd.closed_market_event_skip("structure_break", "BTCUSDT", "p", _prior(last), _fri_hist(), SUN, 3600) is None
+    assert lrd.closed_market_event_skip("mechanics", "USO", "p", _prior(last), _fri_hist(), SUN, 3600) is None
+    tue = datetime(2026, 11, 3, 15, 10, tzinfo=timezone.utc)
+    assert lrd.closed_market_event_skip("structure_break", "USO", "p", _prior(last), _fri_hist(), tue, 3600) is None
+
+
+def test_closed_market_without_history_skips_only_a_reviewed_package():
+    last = datetime(2026, 11, 1, 14, 38, tzinfo=timezone.utc)
+    assert lrd.closed_market_event_skip("giveback", "SPY", "p", _prior(last), None, SUN, 3600)["state"] == "skipped_closed_market"
+    assert lrd.closed_market_event_skip("giveback", "SPY", "p", _prior(), None, SUN, 3600) is None
+
+
+def test_compute_due_records_the_closed_market_event_skip():
+    r = {"order_package_id": "pkg-uso", "strategy": "uso_trend_1h", "symbol": "USO", "account_id": "oanda_practice",
+         "lifecycle": "open", "open_r": 2.4, "peak_r": 2.5, "giveback_r": 0.1, "r_to_target": 3.0,
+         "updated_at": SUN.isoformat()}
+    reviewed = [review(pkg="pkg-uso", event="momentum_flip", level=FRI_LAST_BAR.isoformat(),
+                       at=datetime(2026, 11, 1, 14, 38, tzinfo=timezone.utc), peak=1.0)]
+    res = lrd.compute_due([r], reviewed, CFG, SUN, market={"pkg-uso": _fri_hist()})
+    assert res["due_count"] == 0, res["due"]
+    assert any(s["event"] == "r_milestone" and s["state"] == "skipped_closed_market" for s in res["skipped_slots"])
+    tue = datetime(2026, 11, 3, 15, 10, tzinfo=timezone.utc)                   # same state, market open: due
+    res = lrd.compute_due([dict(r, updated_at=tue.isoformat())], reviewed, CFG, tue, market={"pkg-uso": _fri_hist()})
+    assert "r_milestone" in [e["event"] for d in res["due"] for e in d["events"]]

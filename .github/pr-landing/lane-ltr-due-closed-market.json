@@ -1,0 +1,7 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "hold_reason": "tier_2_3_needs_approval",
+  "hold_text": "Held for the manager: changes src/runtime/live_review_due.py, which the live trader's wake poster runs (same tier as TRIGGER-FIRST-REVIEWS #0a2ceb042 and LTR-DUE-MIRROR-LAG).",
+  "why": "Extends TRIGGER-FIRST from scheduled slots to event triggers: on a closed market an event is not raised for a package already reviewed after its newest closed data bar (no new closed bar, no new event). mechanics and the scheduled slots are untouched; never-reviewed packages and a session's final bar still fire once. Every skip is recorded in skipped_slots (skipped_closed_market) with its reason, never silent. No order path. Revert: git revert."
+}

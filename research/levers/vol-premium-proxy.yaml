@@ -1,0 +1,127 @@
+# Lever map (operator doctrine 2026-11-01). Seeded by lane RESEARCH-EDGE from result rows; RESEARCH-ITERATE owns it from here.
+subject: 'Implied-vs-forecast volatility: variance-swap proxy from CBOE vol indices on SPY QQQ IWM GLD USO SLV, 2008-07..2024-06'
+units:
+- RQ-20261101-58e4-07
+status: open
+doctrine: 'operator 2026-11-01 14:00-14:09Z: nothing that failed is closed; attribute first; next tests are one-factor/ablation chosen from this map; retire only when every lever family
+  has been tested at power, net of cost, with no effect'
+verdict_so_far: 'fail: best V2 net Sharpe 0.506 but stress -0.007, DSR(N=8) 0.67, 9 of 15 years positive, long-variance side negative'
+failure_attribution:
+  where_lost: 'SIDE: the forecast-minus-IV signal loses money when it goes LONG variance (net sum -17.2 across 97 long-variance positions (749 short-variance, 240 flat)) and the profit is the short-variance premium (+87.9) that an
+    always-short baseline earns without the signal (mean gross 0.208 vs the signal 0.070 net). When forecast > IV by 6.4 vol points on average, realised variance still came in 10.5%
+    BELOW the strike on average: the market overcharges even when EWMA says vol is higher.'
+  by_direction:
+    '-1': 87.924
+    '0': 0.0
+    '1': -17.189
+  by_year:
+    '2008': 3.508
+    '2009': 14.205
+    '2010': 14.197
+    '2011': -6.422
+    '2012': 16.071
+    '2013': -0.277
+    '2014': 6.989
+    '2015': -3.782
+    '2016': -4.257
+    '2017': 17.486
+    '2018': -2.533
+    '2019': 1.845
+    '2020': -18.854
+    '2021': 19.675
+    '2022': 5.947
+    '2023': 3.77
+    '2024': 3.168
+  by_underlying:
+    GLD: 10.072
+    IWM: 16.156
+    QQQ: 4.616
+    SLV: 12.89
+    SPY: 13.74
+    USO: 13.261
+  stage: 'entry signal (forecast gap carries no information on the long side); regime: 2020 (-18.9, Covid crash short-variance loss), 2011, 2015, 2016, 2018; cost is a registered 1 vol
+    point haircut, not the driver'
+levers_tested:
+- family: forecast horizon / decay
+  varied: EWMA lambda 0.94|0.97, horizon 21|63 trading days
+  response:
+    V1:
+      sharpe_net: 0.305
+      ann_return_net: null
+      dsr: 0.414607
+      stress_sharpe: -0.255
+    V2:
+      sharpe_net: 0.506
+      ann_return_net: null
+      dsr: 0.674039
+      stress_sharpe: -0.007
+    V3:
+      sharpe_net: 0.054
+      ann_return_net: null
+      dsr: 0.112315
+      stress_sharpe: -0.505
+    V4:
+      sharpe_net: 0.242
+      ann_return_net: null
+      dsr: 0.333019
+      stress_sharpe: -0.212
+    V5:
+      sharpe_net: -0.227
+      ann_return_net: null
+      dsr: 0.000203
+      stress_sharpe: -0.379
+    V6:
+      sharpe_net: -0.19
+      ann_return_net: null
+      dsr: 0.00091
+      stress_sharpe: -0.307
+    V7:
+      sharpe_net: -0.295
+      ann_return_net: null
+      dsr: 4.0e-06
+      stress_sharpe: -0.446
+    V8:
+      sharpe_net: -0.261
+      ann_return_net: null
+      dsr: 2.3e-05
+      stress_sharpe: -0.366
+  shape: 21-day beats 63-day (63-day negative Sharpe); lambda and threshold matter little
+  tested_at_power: false
+- family: entry threshold
+  varied: gap threshold 0 vs 2 vol points
+  response:
+    V1:
+      sharpe_net: 0.305
+      ann_return_net: null
+      dsr: 0.414607
+      stress_sharpe: -0.255
+    V2:
+      sharpe_net: 0.506
+      ann_return_net: null
+      dsr: 0.674039
+      stress_sharpe: -0.007
+    V3:
+      sharpe_net: 0.054
+      ann_return_net: null
+      dsr: 0.112315
+      stress_sharpe: -0.505
+    V4:
+      sharpe_net: 0.242
+      ann_return_net: null
+      dsr: 0.333019
+      stress_sharpe: -0.212
+  shape: threshold 2pt raises Sharpe (0.31 -> 0.51), fewer trades
+  tested_at_power: false
+lever_families_untested:
+- 'PRICED test on real option chains: source verified reachable keyless on 2026-11-01 - DoltHub post-no-preference/options (option_chain with bid, ask, vol, delta..., EOD, 2019-02 to
+  now; volatility_history). The proxy cannot show whether ATM straddle bid/ask, skew and gamma/theta path change the answer'
+- short-variance premium harvest with a tail filter (regime or drawdown gate) - the base premium is real in this sample
+- forecast quality (HAR-RV, intraday realised vol, ML vol head) instead of EWMA
+- skew / term-structure signals (VIX term slope) as the gate
+- delta-hedged versus unhedged straddle P&L
+- TLT and other ETFs once an IV source exists (DoltHub volatility_history may carry them)
+- horizon matching the option expiry actually tradable
+power_note: 'about 190 non-overlapping 21-day periods (65 for 63-day) over 6 correlated underlyings, one 16-year window: low power; the proxy is not a tradable price.'
+evidence: 'Result rows: research/results/<unit>/manual-research-edge-20261101.jsonl; per-config detail: comms/research/<unit>/manual-research-edge-20261101/result.json; attribution computed
+  by scripts/research/edge_failure_attribution.py (comms/research/edge-failure-attribution-20261101/attribution.json).'
+handed_to: RESEARCH-ITERATE (session_01AFoLuLiJ6TVirjHipiPRhQ)

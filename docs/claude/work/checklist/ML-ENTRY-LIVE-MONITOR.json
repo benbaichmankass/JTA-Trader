@@ -1,0 +1,30 @@
+{
+  "id": "ML-ENTRY-LIVE-MONITOR",
+  "title": "ENTRY live monitoring as the demotion signal (not an edge lever): live ENTRY closes vs the dev/held-out band, rule written before use",
+  "phase": "build",
+  "state": "queued",
+  "owner": "manager",
+  "lane": "ML-RECIPE",
+  "model": null,
+  "ceiling_usd": 5,
+  "spend_usd": null,
+  "tier": 2,
+  "prs": [],
+  "blocked_on": [],
+  "note": "RULE (written before the first live read, operator 2026-11-01: ENTRY goes live on bybit_2 as approved). Expected band from dev/held-out: traded-5 -0.041 net R per decision (dev, 4 seeds, n about 5.5k each); pooled frozen-60 +0.007 (dev and held-out); October 2026 -0.019R (manager). Evaluate realised net R per closed ENTRY decision (full cost stack: fees, slippage, funding) per account over ALL its closed ENTRY trades, every 50 closes once n >= 100. FLAG ENTRY_LIVE_NEGATIVE when mean + 2*SE < 0 (SE = SD/sqrt(n)): the live loss is statistically real. FLAG ENTRY_LIVE_BELOW_DEV when mean < -0.041 - 2*SE: worse than even the weak traded-5 dev reading. A flag is a realtime ping to the operator with the numbers; it demotes nothing by itself (no halting; a demotion is the mirror-window rule's, and the operator's). Reads only closed trades; sizes nothing. Tier 2 because it adds a standing read on the live ENTRY legs. Gates this adds: none (a flag, not a switch).",
+  "updated_at": "2026-11-01T17:58:17Z",
+  "updated_by": "session_01AFoLuHiygG7N8NBVqBMa9C",
+  "roadmap": [
+    "L-ML-LIVE"
+  ],
+  "observation": {
+    "what": "the live ENTRY (bybit_2 + bybit_portfolio) realised net R per closed decision, after fees and funding, is read on a standing cadence against the band below and a flag is raised by the rule",
+    "how_to_check": "the demotion read for the ENTRY legs on /api/bot (mirror net-of-cost window)",
+    "due_by": "2026-11-03"
+  },
+  "writeback": {
+    "roadmap": "L-ML-LIVE: ENTRY live demotion signal",
+    "arch": "none until the monitor reads a new field"
+  },
+  "_seq": 888
+}

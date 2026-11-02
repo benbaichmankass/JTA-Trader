@@ -408,6 +408,7 @@ EXPECTED_ACTIONS = {
     # and a payload naming no accounts are each a REFUSAL, never a write.
     "reattach-stranded-package-legs": "reattach_stranded_package_legs_action.sh",
     "relabel-package-close-reasons": "relabel_package_close_reasons_action.sh",
+    "relink-orphan-trade-5209": "relink_orphan_trade_5209_action.sh",
 }
 
 TIER_2_ACTIONS = {
@@ -499,6 +500,7 @@ TIER_2_ACTIONS = {
     "backfill-tpsl-leg-ids",
     "reattach-stranded-package-legs",
     "relabel-package-close-reasons",
+    "relink-orphan-trade-5209",
     "amend-position-sl",
     "live-review-dry-run",
     "live-review-apply",
