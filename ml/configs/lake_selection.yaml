@@ -1,0 +1,33 @@
+# Per-model market-data-lake selection: the ONE place each model's lake query is declared (row ML-DATA-WIRING).
+# Read by ml/datasets/lake_klines.py (dataset_selection / freshness). Not a gate: a model without an entry is reported "undeclared".
+# status: wired = the training/decision harness can build its data from the lake (parity-tested); planned = declared intent, no
+# lake path yet (reason says what is missing). Lake contents for non-crypto streams are UNVERIFIED here (read the MANIFEST first).
+models:
+  ml_entry:                      # pooled ENTRY v1 (ml/served/ml_decision_entry*, harness scripts/research/ml_decision_entry.py)
+    status: wired
+    artifact: ml/served/ml_decision_entry_v2/model.json
+    harness: scripts/research/ml_entry_levers.py build-table --source lake
+    asset_class: crypto
+    market: um_perp
+    tf: 1h
+    symbols: universe       # E.universe() = comms/research/broad_paths/bp2-f4271084b120/manifest.json (60 perps); lake also holds delisted
+    start: "2020-07-01"
+    reason_narrower: "60-perp bp2 universe is the registered corpus; widening to the lake's full as-of universe is lever ML-ENTRY-UNIVERSE, one factor at a time"
+  ml_entry_v2:
+    status: wired
+    same_as: ml_entry
+  regime_btc_eth:                # btc-/eth-regime-{5m,15m,1h}-* manifests
+    status: planned
+    asset_class: crypto
+    market: um_perp
+    tf: [5m, 15m, 1h]
+    symbols: [BTCUSDT, ETHUSDT]
+    reason: "families read market_features via ml/datasets/adapters (bybit_offvm); needs a lake adapter"
+  regime_mes:                    # mes-regime-* manifests
+    status: planned
+    asset_class: futures_or_equity   # UNVERIFIED: confirm lake asset_class for MES/ES in MANIFEST
+    tf: [5m, 15m, 1d]
+    reason: "needs a lake adapter after the MANIFEST read confirms futures coverage"
+  conviction_meta_setup_candidates:
+    status: planned
+    reason: "trained on OUR journal/backtest rows (trade_outcomes, setup_candidates); market features could join from the lake, labels never leave the trainer"
