@@ -1,0 +1,33 @@
+# ============================================
+# ICT ML DECISION SHADOW (observe-only; lane ML-ENTRY-GOLIVE-UNBLOCK, 2026-11-01)
+# One scoring pass: public Bybit 15m klines (cached in runtime_state/ml_decision_shadow_cache, only the tail fetched),
+# trailing 1h bars ending at the boundary, ml_entry v1 + v2 decisions for every Bybit-listed reference symbol, appended to
+# runtime_logs/ml_decision_shadow.jsonl (read: /api/diag/log_file?name=ml_decision_shadow, /api/diag/log_aggregate).
+#
+# Its OWN process, never the trader loop (MB-20260609-001: in-tick per-bar scoring once wedged the 2-core box), at low
+# priority. MEASURED 2026-11-01 (52 symbols x 2 models, synthetic bars, x86 sandbox): ~2.2 s CPU per warm pass,
+# ~3.1 s on a cold start; network wait on top. Places no order, touches no account, reads no key.
+# Save to: /etc/systemd/system/ict-ml-decision-shadow.service
+# ============================================
+
+[Unit]
+Description=ICT ML decision shadow — observe-only ML ENTRY scoring of every symbol at every 15m close
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=ubuntu
+WorkingDirectory=/home/ubuntu/ict-trading-bot
+EnvironmentFile=-/home/ubuntu/ict-trading-bot/.env
+Environment=DATA_DIR=/data/bot-data
+Nice=10
+CPUQuota=50%
+IOSchedulingClass=idle
+TimeoutStartSec=600
+ExecStart=/home/ubuntu/ict-trading-bot/.venv/bin/python -u scripts/ops/ml_decision_shadow.py
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
