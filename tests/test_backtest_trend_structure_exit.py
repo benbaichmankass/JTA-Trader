@@ -1,6 +1,4 @@
 """--structure-exit on the canonical trend engine (row STRUCTURE-EXITS-DEFAULT)."""
-import importlib.util
-import json
 import subprocess
 import sys
 from pathlib import Path
@@ -18,7 +16,7 @@ def _run(*extra):
 
 
 def _net_line(txt):
-    return [l for l in txt.splitlines() if "net_r=" in l][0]
+    return [ln for ln in txt.splitlines() if "net_r=" in ln][0]
 
 
 @pytest.mark.skipif(not CSV.exists(), reason="sample candles absent")

@@ -4,7 +4,7 @@ import pytest
 
 from src.runtime.structure_levels import (
     StructureLevels, levels_asof, structure_sl, structure_tp,
-    SWING_HIGH, SWING_LOW,
+    SWING_HIGH,
 )
 
 
@@ -17,7 +17,7 @@ def _walk(seed, m=400):
 
 
 def _key(levels):
-    return [(l.kind, round(l.price, 9), l.formed_idx, l.confirmed_idx) for l in levels]
+    return [(lv_.kind, round(lv_.price, 9), lv_.formed_idx, lv_.confirmed_idx) for lv_ in levels]
 
 
 @pytest.mark.parametrize("n", [2, 3, 5, 8])
@@ -43,8 +43,8 @@ def test_swing_confirmed_only_after_n_bars():
     h = [1, 2, 3, 9, 3, 2, 1, 2, 3, 2, 1.0]
     lo = [x - 0.5 for x in h]
     s = StructureLevels(h, lo, 3)
-    assert [l.price for l in s.levels_asof(5) if l.kind == SWING_HIGH] == []   # bar 3 pivot, known at 6
-    assert [l.price for l in s.levels_asof(6) if l.kind == SWING_HIGH] == [9]
+    assert [lv_.price for lv_ in s.levels_asof(5) if lv_.kind == SWING_HIGH] == []   # bar 3 pivot, known at 6
+    assert [lv_.price for lv_ in s.levels_asof(6) if lv_.kind == SWING_HIGH] == [9]
     assert s.last_swing_high(5) is None and s.last_swing_high(6).formed_idx == 3
 
 
@@ -53,11 +53,11 @@ def test_fvg_unfilled_vs_filled_is_causal():
     h = [5, 8, 14, 13, 13, 12, 11, 12]
     lo = [4, 6, 10, 11, 11, 10.5, 9.5, 10.5]
     s = StructureLevels(h, lo, 2)
-    up_to_5 = [l for l in s.levels_asof(5) if l.kind == "fvg_bull_edge"]
+    up_to_5 = [lv_ for lv_ in s.levels_asof(5) if lv_.kind == "fvg_bull_edge"]
     assert len(up_to_5) == 1 and up_to_5[0].price == 10
-    assert not [l for l in s.levels_asof(6) if l.kind == "fvg_bull_edge"]   # filled at bar 6
+    assert not [lv_ for lv_ in s.levels_asof(6) if lv_.kind == "fvg_bull_edge"]   # filled at bar 6
     # and a query at t=5 on the full frame still shows it unfilled (fill is in the future)
-    assert [l for l in s.levels_asof(5) if l.kind == "fvg_bull_edge"]
+    assert [lv_ for lv_ in s.levels_asof(5) if lv_.kind == "fvg_bull_edge"]
 
 
 def test_structure_sl_tp_long_and_short():
