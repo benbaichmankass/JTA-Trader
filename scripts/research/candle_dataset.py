@@ -156,13 +156,15 @@ def _from_lake(key: FeedKey, days: int):
     if source != "binance" or interval not in _LAKE_TF:
         raise LookupError(f"lake has no {source}/{interval}")
     tf, derive = _LAKE_TF[interval]
-    start = pd.Timestamp.now(tz="UTC").normalize() - pd.Timedelta(days=days + 2)
+    start = (pd.Timestamp.now(tz="UTC").normalize() - pd.Timedelta(days=days + 2)).tz_localize(None)   # lake._read re-localizes: pass naive UTC
     df = lake.load("crypto", "um_perp", tf, [ticker], start=start, columns=["ts", "open", "high", "low", "close", "volume"])
     if df.empty:
         raise LookupError(f"lake: no {ticker} {tf} rows since {start.date()}")
     df = df.drop(columns="symbol").sort_values("ts")
     if derive:
         df = lake.resample(df, derive, base=tf)
+        if "complete" in df.columns and len(df) and not bool(df["complete"].iloc[-1]):
+            df = df.iloc[:-1]            # the still-open last bar: the archive fetch never contains it either
     df = df.rename(columns={"ts": "timestamp"})
     return df
 
@@ -190,6 +192,7 @@ def build(out_dir: Path, feeds: Dict[FeedKey, int], days_floor: int = 0, use_lak
                 df, origin = _from_lake(key, days_feed), "lake"
             except Exception as exc:  # allow-silent: recorded in the manifest as lake_error; the network fetch is the fallback
                 err = f"lake: {type(exc).__name__}: {str(exc)[:160]}"
+                print(f"lake miss {fid}: {err}")
         if df is None:
             try:
                 with tempfile.TemporaryDirectory() as td:

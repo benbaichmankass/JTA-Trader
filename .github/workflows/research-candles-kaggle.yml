@@ -55,7 +55,7 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
-      - run: python -m pip install --quiet "kaggle>=2.0" pandas pyarrow pyyaml requests huggingface_hub yfinance
+      - run: python -m pip install --quiet "kaggle>=2.0" six pandas pyarrow pyyaml requests huggingface_hub yfinance
       - name: Build the candle files (lake first, network fallback)
         run: |
           set -uo pipefail
