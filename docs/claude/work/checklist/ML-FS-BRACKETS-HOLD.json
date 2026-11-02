@@ -1,0 +1,26 @@
+{
+  "phase": "research",
+  "state": "queued",
+  "owner": null,
+  "lane": null,
+  "model": "claude-sonnet-5-5",
+  "tier": 1,
+  "prs": [],
+  "blocked_on": [
+    "ML-FS-ENTRY-V2"
+  ],
+  "roadmap": [
+    "L-ML-LIVE"
+  ],
+  "priority_rank": 2,
+  "id": "ML-FS-BRACKETS-HOLD",
+  "title": "BRACKETS and HOLD/ADJUST/CLOSE read the same feature store: BRACKETS re-scored on v2 features 2026-11-02T12:00Z; in-trade path features from the store 2026-11-03T12:00Z",
+  "ceiling_usd": 8,
+  "note": "Operator scope: one pooled model per question, all symbols, no sizing/risk features. BRACKETS: unit RQ-20261101-c692-02 harness exists; re-point at the v2 feature set once fs02-01 has a verdict (its own pre-registered rule, forward window, variants stated). HOLD/ADJUST/CLOSE: the 31 catalogued in-trade path features (docs/reference/signal-catalog.yaml, ml_feature in_trade_path group) via src/research/intrabar_features.py joined to the store at the position bar; depends on DATA-INTRADE-LABEL-STORE and PATH-FLOW-JOIN. Moving TP stays with ML-ENTRY-TP-REVISION. Plan: docs/research/ml-feature-inventory-2026-11-01.md section 1b (dated, UTC). Gates: none.",
+  "observation": {
+    "what": "BRACKETS record on the v2 feature set and a HOLD state-feature coverage table exist",
+    "how_to_check": "ls research/results/ | grep -i c692-02",
+    "due_by": "2026-11-03"
+  },
+  "_seq": 879
+}

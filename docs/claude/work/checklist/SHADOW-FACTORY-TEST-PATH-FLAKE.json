@@ -1,0 +1,22 @@
+{
+  "id": "SHADOW-FACTORY-TEST-PATH-FLAKE",
+  "title": "tests/ml/test_shadow_factory.py MirrorFallback hard-codes /home/ubuntu/...: Path.exists raises PermissionError on some runner images (py3.11), so it fails intermittently on any PR",
+  "phase": "build",
+  "state": "queued",
+  "owner": "manager",
+  "lane": null,
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [],
+  "blocked_on": [],
+  "note": "Reported 2026-11-02 by lane ALPACA-ML (PR #22282 CI; a re-run passed). Fix: use tmp_path / monkeypatch the mirror root, and catch PermissionError as absent. Usage pacing: pick up after the 2026-11-04 reset.",
+  "updated_at": "2026-11-02T05:18:17Z",
+  "updated_by": "session_01AFoLuJ1apgy8sfngu4WyNH",
+  "due_by": "2026-11-05",
+  "roadmap": [
+    "L-OPS"
+  ],
+  "_seq": 890
+}

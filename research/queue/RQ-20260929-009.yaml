@@ -3,7 +3,7 @@
 # only while `queue_replenish.py --verify` reproduces it byte-for-byte from the template.
 id: RQ-20260929-009
 title: 'M20 exit-lever sweep: ict_scalp_mgc_15m (generated, monthly)'
-status: queued
+status: retired
 cadence: monthly
 kind: experiment
 theme: live_strategy
@@ -65,19 +65,14 @@ generated:
     timeframe: 15m
 last_dispatched_at: '2026-10-30T18:58:34+00:00'
 grading:
-  auto: true
-  decision_rule_id: RULE-EXIT-REFINEMENT-P2-GATE
-  evidence:
-  - research/results/RQ-20260929-009/41111409846.jsonl
+  auto: false
   graded_at: '2026-11-01'
-  grader: scripts/research/queue_grade.py
-  latest: true
-  needs_review: true
-  owner: ICT-SCALP-EVIDENCE
-  owner_reason: 'No gradeable cell: the sweep swept 0 cells (corpus_rows 1, base_trades_OOS null) because
-    ict_scalp_mgc_15m has no futures candle feed (Yahoo 15m serves ~60 d). Lever: the MGC futures feed
-    named in PI-20261001-JWZSVYVS-0005 on row ICT-SCALP-EVIDENCE; re-asked monthly and resolves once the
-    feed exists. Triaged by RESEARCH-OPS-20261022-0847.'
-  reason: 1 row(s), all measured, all indeterminate
-  rows: 1
-  verdict: indeterminate
+  grader: session RESEARCH-OPS-20261101-0940 (triage)
+  note: 'ICT-scalp MGC 15m evidence: the sweep covered 0 cells (corpus_rows 1, base_trades_OOS null) because
+    ict_scalp_mgc_15m has no futures candle feed; owner ICT-SCALP-EVIDENCE was dropped by the bulk reset.
+    Moot until a futures feed exists. The single row stays in research/results.'
+  verdict: null
+retired_reason: '2026-11-01 RESEARCH-OPS-20261101-0940 needs_review triage: ICT-scalp MGC 15m evidence:
+  the sweep covered 0 cells (corpus_rows 1, base_trades_OOS null) because ict_scalp_mgc_15m has no futures
+  candle feed; owner ICT-SCALP-EVIDENCE was dropped by the bulk reset. Moot until a futures feed exists.
+  The single row stays in research/results.'

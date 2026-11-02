@@ -525,6 +525,29 @@ historical window the systemd journal still retains is reachable. The
 should pair `since=` with a tight `until=` to keep the response
 under the cap. Added in PR #821 (FU-20260511-001).
 
+**Reading deep history without a silent cap (DIAG-LOG-DEPTH, 2026-11-01).**
+Measured caps, `src/web/api/routers/diag.py`: `/journalctl` returns at most
+`_MAX_JOURNAL_LINES` = 2000 lines (`-n`); `/log_file` returns at most `_MAX_LIMIT` =
+1000 lines and used to `readlines()` the whole file first. Both cut the OLDEST
+lines with no marker, so "pattern not found" read the same as "pattern not read".
+Now, on both routes:
+
+- `grep=a|b` — case-insensitive SUBSTRINGS (not regex), OR-ed, applied on the VM
+  BEFORE the line cap. URL-encode `|` as `%7C` and a space as `%20` through the relay.
+  `/log_file` has no `since`/`until` (rows are not uniformly timestamped): use a
+  timestamp prefix as the grep, e.g. `grep=2026-11-01T11`.
+- `journalctl` with any of `since` / `until` / `grep` runs in `mode: window`: the
+  window is streamed forward (25 s budget, 3M-line scan ceiling) and the last `lines`
+  matches are kept. With none of them it is `mode: tail`.
+- Every response carries `truncated` (true = matching lines existed that are not in
+  `lines`), `lines_scanned` (the denominator), `lines_matched`, `lines_returned`,
+  `lines_dropped` (null in tail mode: unknown, not 0) and `read_state`
+  (`complete` | `time_budget_hit` | `scan_cap_hit` — anything but `complete` makes
+  every count a LOWER BOUND). `lines_scanned: N, lines_matched: 0, read_state:
+  complete` is a real negative; `truncated: true` is NOT one.
+
+Example: `journalctl?unit=ict-trader-live&since=2026-11-01T06:00:00Z&until=2026-11-01T12:00:00Z&grep=order_monitor%7Cclosed_flat&lines=500`
+
 ## TL;DR — fetching from outside a session (operator)
 
 ```

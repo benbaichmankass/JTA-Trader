@@ -1,0 +1,99 @@
+# Authored 2026-11-01 by lane ML-RECIPE (Tier 1). Decision rule registered BEFORE the run. Gates: none.
+id: RQ-20261101-b608-01
+title: 'ENTRY v2 stack on dev: do the regularised recipe (R2), the cost gate (0.06) and the 2/4 bracket add up, and which stack goes to the one W1 read? Dev folds only'
+status: queued
+cadence: once
+theme: ml_health
+priority: 1
+roadmap:
+- L-ML-LIVE
+kind: experiment
+practice_precedent: 'T1, M6 (docs/reference/trading-and-model-practice-principles.md): purged + embargoed walk-forward; shadow-feature (Boruta-style) controls so a model that cannot reject noise columns
+  is not trusted to admit real ones.'
+question: 'Operator 2026-11-01 ~19:50Z: ''Live now, swap to v2 fast (Rec.)''. Single-factor dev results (3 seeds, base v1 +0.0089): R2 recipe at a matched share +0.0293 (b607-01), cost gate 0.06 +0.0205
+  (b606-01), bracket 2/4 +0.0126 (b601-01, below power). Their INTERACTION is untested. Stack, cumulative in this order, on the pooled frozen-60 population: S1 = R2 recipe (single model per seed, threshold
+  = the quantile taking the SAME share of rows per fold as the v1 base at tau 0.10, set BEFORE any gate); S2 = S1 plus the cost gate (abstain when estimated cost per R = k / atr_pct exceeds 0.06, k = median
+  over the OTHER dev folds of realised cost per R x atr_pct); S3 = S2 plus the 2/4 bracket outcomes. Seeds 7, 11, 13; dev folds only. Reported: each factor''s stand-alone delta, its marginal delta on the
+  stack, and their ratio (the interaction).'
+why_this_matters: 'Operator 2026-11-01: 20 features is a regression equation, not algorithmic trading; manager 2026-11-01 ~12:03Z: a family ablation at +0.010 cannot admit anything when the recipe overfits
+  with any extra column, so fix the recipe, then the columns.'
+power:
+  expected_n: 60000
+  min_detectable_effect: 0.01
+  effect_units: metric
+  sd: 1.0
+  design: two_sample
+  alpha: 0.05
+  power: 0.8
+  basis: 'MEASURED 2026-11-01: base seed range 0.0019, R2 seeds +0.0261/+0.0296/+0.0324; the gate and bracket deltas (+0.0115, +0.0037) are the interaction candidates.'
+  feasibility:
+    source: none
+    accrual_basis: Replays public history through 2025-09-30 (dev folds only); nothing accrues.
+decision_rule:
+  id: RULE-20261101-b608-01
+  registered_at: '2026-11-01'
+  registered_before_run: true
+  statistic: 'Per stack level and seed: n, mean gross, cost and net R per decision, per-fold and per-year net; stand-alone vs marginal delta per factor; the traded-5 slice beside the pooled population.'
+  rule: A stack level is ACCEPTED iff (a) it clears the common rule against the v1 base (delta >= 2 x max(0.0034, base seed range), >= 6 of 8 folds, positive delta in >= 3 of 4 calendar years, every fold
+    >= 1000 decisions) AND (b) its mean exceeds the previous ACCEPTED level's mean by >= 0.0034 (the added factor adds on top; a negative interaction fails here). The WINNING STACK is the highest level
+    accepted in the order S1, S2, S3, stopping at the first level not accepted. If S1 is not accepted there is no winning stack and no W1 read is run. The winning stack, with its numbers fixed on the dev
+    folds, is the model of the ONE W1 read (RQ-20261101-b609-01). No W1, held-out or sealed window is read here. Thresholds are not changed after any result.
+  what_it_does_not_do: Reads no sealed or held-out window (dev folds only), serves nothing, changes no config or live symbol list, places no order, sizes nothing.
+  min_n: 1000 dev decisions per fold
+compute: cpu_long
+value:
+  bucket: ai_trader
+  usd_at_stake_per_month: 400
+  confidence: 0.2
+  basis: 'stand-in: the operator priority-1 goal (ML decision makers live, ENTRY about to go live 2026-11-01); not a P&L measurement.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 8.0
+  est_minutes: 20
+  why_runner: Keyless public Binance Vision archives; GBDT on CPU.
+  basis: 'MEASURED 2026-11-01: one 8-fold arm of the baseline recipe takes about 480 s on 4 threads (arm A); this unit runs a fixed number of arms.'
+run:
+  workflow: research-script-run.yml
+  command:
+  - python3
+  - scripts/research/ml_entry_v2_run.py
+  - levers
+  - '{unit}'
+  - '{out_dir}'
+  timeout_minutes: 300
+  inputs:
+    research_unit: RQ-20261101-b608-01
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- ML-LEVER-PLAN
+- RQ-20261101-b607-01
+- RQ-20261101-b606-01
+- RQ-20261101-b601-01
+what_it_does_not_do: Registers, serves or promotes nothing; changes no config; places no order; sizes nothing; reads no sealed window.
+ml_consumer:
+  consumer: ML-ENTRY-LIVE-ADAPTER
+  decision: whether the live ENTRY bracket should move from SL 2 / TP 3 to a wider TP; feeds the combined v2 candidate
+  legs:
+  - xrp_pullback_2h
+  - trend_donchian_eth_4h
+  - trend_donchian_xrp_4h
+  - ada_pullback_2h
+  - trend_donchian_sol_prop
+  book: money
+iteration:
+  subject: ml-entry
+  subject_kind: ml_model
+  from_result: RQ-20261101-b607-01 (R2 wins), b606-01 (cost gate wins), b601-01 (2/4 below power)
+  verdict_read: pass
+  diagnosis: Three independent dev winners; whether they add up is unknown, and the live swap needs one stack, not three single factors.
+  hypothesis: R2, the cost gate and the 2/4 bracket are largely additive because they act on different parts of the decision (model scores, cost share, exit geometry)
+  attempt: 1
+  due_by: '2026-11-02'
+programme_node:
+  programme: P2
+  node: P2-ENTRY-LEVERS
+  goal: G4

@@ -2,21 +2,22 @@
   "id": "HOLDOUT-LOCK",
   "title": "Locked research holdout: discovery to 2024-06-30, holdout from 2024-07-01, read once per hypothesis by a script that refuses and logs a second read",
   "phase": null,
-  "state": "queued",
-  "owner": null,
-  "lane": null,
+  "state": "in_flight",
+  "owner": "manager",
+  "lane": "ML-FEATURE-INFRA",
   "model": "claude-sonnet-5-5",
   "ceiling_usd": 8,
   "spend_usd": null,
   "tier": 1,
   "prs": [],
   "blocked_on": [],
-  "note": "Also serves ML-BAR-ONE-READ. Done when the self-test refuses a second read and logs who read when. Source: docs/audits/2026-11-01-from-scratch/AUDIT.md section 8 (lane SYSTEM-AUDIT-FROM-SCRATCH, PR #22072); walk-through https://claude.ai/artifact/T9ztV5nc1fUAGbdjsbZHSf. Operator 2026-11-01 ~08:45Z popup, verbatim: \"Walk through it today (Rec.)\" (Tier-1 proposals filed straight away). Gates this adds: none.",
+  "note": "Also serves ML-BAR-ONE-READ. Done when the self-test refuses a second read and logs who read when. Source: docs/audits/2026-11-01-from-scratch/AUDIT.md section 8 (lane SYSTEM-AUDIT-FROM-SCRATCH, PR #22072); walk-through https://claude.ai/artifact/T9ztV5nc1fUAGbdjsbZHSf. Operator 2026-11-01 ~08:45Z popup, verbatim: \"Walk through it today (Rec.)\" (Tier-1 proposals filed straight away). Gates this adds: none. [2026-11-01 manager] Operator 2026-11-01 ~11:05Z popup, verbatim: \"Fold into running lanes (Rec.)\". Owner: lane ML-FEATURE-INFRA. Target: lock in place before ENTRY v2's single held-out read (hours, 2026-11-01).",
   "priority_rank": 2,
-  "updated_at": "2026-11-01T08:48:20Z",
+  "updated_at": "2026-11-01T11:08:34Z",
   "updated_by": "session_01AFoLuJ1apgy8sfngu4WyNH",
   "roadmap": [
     "L-LADDER"
   ],
+  "due_by": "2026-11-01",
   "_seq": 861
 }

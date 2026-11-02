@@ -1,0 +1,30 @@
+{
+  "id": "BACKLOG-DRAIN-2-PAUSED",
+  "title": "BACKLOG-DRAIN-2: paused for usage hold; continue the landed_unproven drain",
+  "phase": "W6",
+  "state": "queued",
+  "owner": "manager",
+  "lane": null,
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [],
+  "blocked_on": [],
+  "note": "[2026-11-01 15:40Z] paused for usage hold to the 11-04 reset. DONE: PR #22176 (48 rows: 34 done, 14 pending) and PR #22179 (13 rows: 6 done, 1 dropped, 2 failed observations reopened ROUTE-AND-ASK-TRIAGE and SIGNAL-CATALOG, 4 pending; new defect row PAPER-SPY-UNJOURNALED-1101), both auto-merge armed, CI queued when I stopped (check they merged). NEXT: ~187 untouched landed_unproven rows (list = state landed_unproven and note lacking BACKLOG-DRAIN); trainer relay issue #22177 (labelled trainer-vm-diag-request) holds the reads for TRAINER-CATCHUP-0800, TRAINER-RUNAWAY-PROC, DRIFT-SCAN-RETIRE, read its comment and disposition those 3; then prop/phone, LTR/desk, ML, remaining research-ops rows. Method notes: direct diag_fetch works for /api/diag; journalctl lines<=2000 with since/grep, read_state must be complete to call a negative; a closed row owning a registry entry breaks shadowed-features-guard; new rows need a roadmap ref.",
+  "updated_at": "2026-11-01T15:36:10Z",
+  "updated_by": "BACKLOG-DRAIN-20261101b",
+  "roadmap": "L-OPS",
+  "observation": {
+    "what": "the drain lane resumes and the untouched landed_unproven rows are dispositioned",
+    "how_to_check": "count checklist rows with state landed_unproven and note lacking BACKLOG-DRAIN via src/runtime/checklist_store.py",
+    "due_by": "2026-11-05",
+    "redated": {
+      "on": "2026-11-01",
+      "from": null,
+      "by": "BACKLOG-DRAIN-20261101b",
+      "reason": "paused for usage hold to the 11-04 reset"
+    }
+  },
+  "_seq": 884
+}

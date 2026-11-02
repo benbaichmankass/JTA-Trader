@@ -119,3 +119,12 @@ related:
 - docs/research/exit-refinement-coverage.json
 last_dispatched_at: null
 retired_reason: "2026-10-30 RESEARCH-OPS-20261030-1450 (blocked_over_age UNBLOCK-OR-RETIRE): retired at CONFIG level. Unblocking needs a flip cell in the 3.9k-line m20_fleet_exit_sweep.cells_for plus a workflow lever input and a coverage-matrix column, and no row owns that build. Prior is low: the sibling frozen-label regime-flip exit returned FAIL on 0 of 42 legs at live parity (net_R -20.9 to -56.4 on the pullback legs, docs/research/exit-refinement-coverage.json). The trend-midline variant is NOT tested and the exit-lever family stays open; re-author if cells_for gains a flip cell. This is a unit-level decision only."
+blocked_review:
+  by: RESEARCH-OPS-20261101-0940
+  disposition: kept
+  due_by: '2026-11-15'
+  note: 'blocker row(s) read done/landed_unproven (CROSS-SIGNAL-RESEARCH=done) but the unit is NOT dispatchable
+    as authored or its own clears_when is unverified (dispatcher dry run 2026-11-01: missing run.workflow/lands.store,
+    or missing run.inputs.research_unit, or unsupported design ''paired'', or the stated lever not confirmed
+    built). Needs a run-spec/inputs repair by an owner before it can unlock; not unlocked blind.'
+  reviewed: '2026-11-01'

@@ -1,0 +1,112 @@
+{
+ "legs": [
+  "ada_pullback_2h",
+  "iaum_pullback_1d",
+  "trend_donchian_eth_4h",
+  "trend_donchian_eth_prop",
+  "trend_donchian_sol_prop",
+  "trend_donchian_xrp_4h",
+  "xrp_pullback_2h"
+ ],
+ "accounts": [
+  "bybit_2",
+  "alpaca_live",
+  "breakout_2",
+  "tradeify_1",
+  "velotrade_1"
+ ],
+ "n": 64,
+ "n_cost_fields_null": 0,
+ "cost_source_counts": {
+  "estimate": 62,
+  "broker": 2
+ },
+ "net_pnl": -71.01,
+ "cost_total_est": 5.17,
+ "gross_before_cost": -65.84,
+ "notional_total": 6862.0,
+ "first": "2026-07-02T13:20:45.151483+00:00",
+ "last": "2026-10-30T01:34:31.071196+00:00",
+ "per_leg": {
+  "ada_pullback_2h": {
+   "n": 18,
+   "net": -17.5,
+   "cost_est": 1.58,
+   "gross": -15.91,
+   "notional": 2084.0
+  },
+  "iaum_pullback_1d": {
+   "n": 1,
+   "net": -4.41,
+   "cost_est": 0.0,
+   "gross": -4.41,
+   "notional": 87.0
+  },
+  "trend_donchian_eth_4h": {
+   "n": 18,
+   "net": 7.54,
+   "cost_est": 1.27,
+   "gross": 8.82,
+   "notional": 1613.0
+  },
+  "trend_donchian_sol_prop": {
+   "n": 3,
+   "net": -8.76,
+   "cost_est": 0.49,
+   "gross": -8.27,
+   "notional": 551.0
+  },
+  "trend_donchian_xrp_4h": {
+   "n": 7,
+   "net": -10.72,
+   "cost_est": 0.54,
+   "gross": -10.19,
+   "notional": 689.0
+  },
+  "xrp_pullback_2h": {
+   "n": 17,
+   "net": -37.16,
+   "cost_est": 1.29,
+   "gross": -35.87,
+   "notional": 1839.0
+  }
+ },
+ "lever_A": {
+  "p=1.0": {
+   "net_delta_upper": 2.7,
+   "net_after": -68.31,
+   "turns_pooled_net_ge_0": false
+  },
+  "p=0.75": {
+   "net_delta_upper": 19.78,
+   "net_after": -51.23,
+   "turns_pooled_net_ge_0": false
+  },
+  "p=0.5": {
+   "net_delta_upper": 36.85,
+   "net_after": -34.15,
+   "turns_pooled_net_ge_0": false
+  },
+  "max_saving_at_p1": 2.7
+ },
+ "lever_B": {
+  "f=0.25": {
+   "net_delta_no_selection": 17.75,
+   "net_after": -53.26,
+   "turns_pooled_net_ge_0": false,
+   "needs_selection_effect_to_clear": true
+  },
+  "f=0.5": {
+   "net_delta_no_selection": 35.5,
+   "net_after": -35.5,
+   "turns_pooled_net_ge_0": false,
+   "needs_selection_effect_to_clear": true
+  }
+ },
+ "verdict": "fail",
+ "notes": [
+  "Roster re-read included prop accounts' legs (trend_donchian_eth_prop has 0 real-money rows); the row filter is account_class real_money, so the population is unaffected.",
+  "Lever A p<1 and lever B rows are the SAME no-selection removal arithmetic (delta = -fraction x net): they look better only because removing trades removes a negative total. They are not evidence a lever works.",
+  "Cost on these legs is an ESTIMATE (62 of 64 rows cost_source=estimate, 2 broker)."
+ ]
+}

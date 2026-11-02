@@ -77,6 +77,26 @@ _PLACEHOLDER = re.compile(r"\{([a-z_]+)\}")
 RUNNER_PLACEHOLDERS = frozenset({"out_dir", "unit", "run_id"})
 
 
+def _stamp_design(unit: Dict[str, Any]) -> None:
+    """DEFAULT, never a refusal (OPERATING-PLAN § 2 research loop, 2026-11-01): record what the unit varies.
+
+    `design: structured` = a baseline arm (empty spec) plus >= 1 variant; else `single_config`. `levers_declared` = the lever
+    families its arms change (scripts/research/iteration_orphans.py `_lever_of`). A unit that already states them keeps its own."""
+    cmd = [str(x) for x in ((unit.get("run") or {}).get("command") or [])]
+    arms = [cmd[i + 1] for i in range(len(cmd) - 1) if cmd[i] == "--arm"]
+    unit.setdefault("design", "structured" if len(arms) >= 2 and any(a.partition("=")[2] == "" for a in arms)
+                    else "single_config")
+    if "levers_declared" not in unit:
+        try:
+            sys.path.insert(0, str(Path(__file__).resolve().parent))
+            from iteration_orphans import _lever_of
+        except ImportError:
+            return
+        fams = sorted({f for a in arms for t in a.partition("=")[2].split(";") if t.strip() and (f := _lever_of(t.strip()))})
+        if fams:
+            unit["levers_declared"] = fams
+
+
 def unresolved_placeholders(text: str) -> List[str]:
     """Placeholders still literal in a rendered unit, minus the runner's own."""
     return sorted(set(_PLACEHOLDER.findall(text)) - RUNNER_PLACEHOLDERS)
@@ -317,6 +337,12 @@ def render(tpl: Dict[str, Any], tpl_path: str, tpl_sha: str, params: Dict[str, A
     run["inputs"] = inputs
     unit["run"] = run
     unit["lands"] = _fill(tpl["lands"], p)
+    # The research loop (OPERATING-PLAN § 2 "What does not pass goes back into research", 2026-11-01): every unit records
+    # its place in the loop. A template unit is a standing re-measurement, filled by DEFAULT here -- never a refusal.
+    _stamp_design(unit)
+    if "iteration" not in unit and "origin" not in unit:
+        unit["origin"] = "standing_remeasure"
+        unit["origin_reason"] = f"template {tpl['family']}: a standing re-measurement of a declared configuration"
     unit["generated"] = {"family": str(tpl["family"]), "template": tpl_path, "template_sha": tpl_sha,
                          "key": point_key(str(tpl["family"]), params),
                          "params": {k: str(v) for k, v in sorted(params.items())}}
@@ -627,6 +653,12 @@ def render_node(node: Dict[str, Any], prog_path: str, prog_sha: str, programme: 
         run["inputs"] = {**dict(run.get("inputs") or {}), "research_unit": unit_id}
     if run:
         unit["run"] = run
+    # The research loop (OPERATING-PLAN § 2, 2026-11-01): a node that does not say it iterates on a result is a first test of
+    # a plan question -- filled by DEFAULT, never a refusal. A node body may carry its own `iteration:` or `origin:`.
+    _stamp_design(unit)
+    if "iteration" not in unit and "origin" not in unit:
+        unit["origin"] = "new_hypothesis"
+        unit["origin_reason"] = f"programme {programme} node {node['id']}" + (f" (goal {node.get('goal')})" if node.get("goal") else "")
     unit["programme_node"] = {"programme": programme, "node": node["id"], "goal": node.get("goal"),
                               "after": node.get("after") or []}
     unit["generated"] = {"family": f"{PROGRAMME_FAMILY}:{programme}", "template": prog_path,

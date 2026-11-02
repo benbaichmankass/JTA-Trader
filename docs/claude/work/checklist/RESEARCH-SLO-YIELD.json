@@ -2,21 +2,31 @@
   "id": "RESEARCH-SLO-YIELD",
   "title": "Replace the 15 volume-based research SLOs with 2 yield SLOs: surviving strategies per month and trials per survivor; volume numbers stay as diagnostics, not targets",
   "phase": null,
-  "state": "queued",
-  "owner": null,
-  "lane": null,
+  "state": "landed_unproven",
+  "owner": "manager",
+  "lane": "RESEARCH-EDGE",
   "model": "claude-sonnet-5-5",
-  "ceiling_usd": 6,
+  "ceiling_usd": 30,
   "spend_usd": null,
   "tier": 1,
   "prs": [],
   "blocked_on": [],
-  "note": "OPERATOR 2026-11-01 ~08:50Z popup, verbatim: \"Replace with yield SLOs (Rec.)\". Done when scripts/research/research_slo.yaml carries the 2 SLOs and the watchdog measures them. Source: docs/audits/2026-11-01-from-scratch/AUDIT.md section 8 (lane SYSTEM-AUDIT-FROM-SCRATCH, PR #22072); walk-through https://claude.ai/artifact/T9ztV5nc1fUAGbdjsbZHSf. Operator 2026-11-01 ~08:45Z popup, verbatim: \"Walk through it today (Rec.)\" (Tier-1 proposals filed straight away). Gates this adds: none.",
+  "note": "OPERATOR 2026-11-01 ~08:50Z popup, verbatim: \"Replace with yield SLOs (Rec.)\". Done when scripts/research/research_slo.yaml carries the 2 SLOs and the watchdog measures them. Source: docs/audits/2026-11-01-from-scratch/AUDIT.md section 8 (lane SYSTEM-AUDIT-FROM-SCRATCH, PR #22072); walk-through https://claude.ai/artifact/T9ztV5nc1fUAGbdjsbZHSf. Operator 2026-11-01 ~08:45Z popup, verbatim: \"Walk through it today (Rec.)\" (Tier-1 proposals filed straight away). Gates this adds: none. [2026-11-01 manager] Operator 2026-11-01 ~11:05Z popup, verbatim: \"Fold into running lanes (Rec.)\". Owner: lane RESEARCH-OPS. Target: yield SLOs replace volume SLOs by 2026-11-03. Yield SLOs in research_slo.yaml + watchdog (PR #22117): survivors_per_month >= 1, trials_per_survivor <= 500 (placeholders for operator). Live read: 0 survivors in 3 ledgers, 2832 trials -> both breach. 16 volume SLOs now diagnostic: true (measured, never alert); research_watchdog still escalates dead dispatcher/collector/queue. LANDED (#22117, be10d84b): scripts/research/research_slo.yaml on main carries survivors_per_month and trials_per_survivor; 16 volume SLOs are diagnostic. Not yet observed in production: the 2-hourly research-slo workflow has to run from main and write comms/research/health/<date>.json with the two SLOs. Closes when that file shows both with a read_state. PAUSED for usage hold (manager, operator 2026-11-01 ~15:35Z). Stopped at: code and config landed in #22117 (be10d84b); this row closed to landed_unproven in #22174 (auto-merge on, CI running at head 8b8e937). Nothing in flight. Remaining: observe the two yield SLOs in comms/research/health/*.json from a main run. Re-dated to 2026-11-05.",
   "priority_rank": 2,
-  "updated_at": "2026-11-01T08:48:23Z",
-  "updated_by": "session_01AFoLuJ1apgy8sfngu4WyNH",
+  "updated_at": "2026-11-01T15:38:33Z",
+  "updated_by": "session_RESEARCH-EDGE",
   "roadmap": [
     "L-PROGRAMMES"
   ],
+  "due_by": "2026-11-05",
+  "writeback": {
+    "roadmap": "none: research outcome recorded in research/levers/*.yaml and research/results; no milestone status changed",
+    "arch": "none: no component changed"
+  },
+  "observation": {
+    "what": "comms/research/health/<date>.json written by the 2-hourly research-slo workflow from main lists survivors_per_month and trials_per_survivor, each with a read_state",
+    "how_to_check": "python3 scripts/research/research_slo.py (reads the committed trial ledgers) and the newest comms/research/health/*.json: both SLOs present, state breach or ok, not missing",
+    "due_by": "2026-11-05T00:00Z"
+  },
   "_seq": 871
 }

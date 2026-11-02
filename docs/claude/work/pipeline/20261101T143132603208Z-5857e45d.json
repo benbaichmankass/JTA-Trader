@@ -1,0 +1,16 @@
+{
+  "due_when": {
+    "check_every_days": 2,
+    "due_date": "2026-11-03",
+    "kind": "date"
+  },
+  "id": "PI-20261101-HIPIPRHQ-0004",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "checklist RESEARCH-ITERATE (PR #22164 vs PR #22174)",
+    "rerun": "grep -l 'failure_attribution:' research/levers/*.yaml | wc -l; grep -l '^attribution:' research/levers/*.yaml | wc -l"
+  },
+  "state": "queued",
+  "what": "[one store, two schemas] research/levers/ will hold two lever-map shapes once #22164 and #22174 both land: lever_map.py-generated maps (71 subjects; keys attribution, manifest, levers.<family>.<lever>.tests + shape) and RESEARCH-EDGE's hand-seeded maps (6 candidates; keys failure_attribution, levers_tested, lever_families_untested, power_note) plus #22174's research/levers/README.md describing only the second. Unify: teach lever_map.py to read the hand-seeded keys (levers_tested families -> manifest 'tested'; failure_attribution kept) and preserve them on rebuild, document ONE schema in the README, and make iteration_orphans --levers / research_ops_checks read both. Both PRs also edit docs/research/RESEARCH-CAPABILITY-INDEX.md (adjacent rows; whichever lands second resolves)."
+}
