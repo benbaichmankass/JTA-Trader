@@ -6451,27 +6451,38 @@ def _ml_entry_frame(df: Any) -> Any:
     return out[["ts", "open", "high", "low", "close", "volume"]].reset_index(drop=True)
 
 
-def _ml_entry_reference_frames(symbols: list, bar_open_iso: str, exchange: Any, limit: int = 200) -> Dict[str, Any]:
-    """Closed 1h frames of the cross-sectional reference symbols, fetched ONCE per decision bar (all traded symbols
-    of that bar share them). A symbol the venue does not list or that fails to fetch is skipped and counted by the
-    caller (``n_reference``); the strategy refuses below its ``min_reference_symbols``."""
+def _ml_entry_reference_frames(symbols: list, bar_open_iso: str, exchange: Any, limit: int = 200,
+                               venue: str = "bybit") -> Dict[str, Any]:
+    """Closed 1h frames of the cross-sectional reference perps, fetched ONCE per (venue, decision bar).
+
+    The model's cross-sectional / BTC features are defined against its 60 Bybit-listed USDT perps, so the frames
+    come from BYBIT PUBLIC market data whatever the trading account's venue (row ALPACA-LIVE-ACTIVITY-ML, operator
+    2026-11-01 "Paper now, v2 for live (Rec.)": ml_entry on alpaca_paper; an Alpaca client lists no perps and
+    every decision read n_reference=0). On a Bybit account the account's own client is reused. Frames are NOT
+    filtered on timestamp equality here: ``ml_decision_features.decision_row`` aligns them AS-OF the decision bar's
+    close. A symbol that fails to fetch is skipped and counted by the caller (``n_reference``); the strategy
+    refuses below its ``min_reference_symbols``."""
     from src.runtime.closed_bars import drop_forming_bar
     from src.runtime.market_data import fetch_candles
-    hit = _ML_ENTRY_REF_CACHE.get("bar")
-    if hit == bar_open_iso:
+    key = (str(venue or "bybit").lower(), bar_open_iso)
+    if _ML_ENTRY_REF_CACHE.get("key") == key:
         return _ML_ENTRY_REF_CACHE["frames"]
+    on_bybit = key[0] == "bybit"
     frames: Dict[str, Any] = {}
     for s in symbols:
         try:
-            df = fetch_candles(s, "1h", exchange_client=exchange, limit=limit, bypass_cache=True)
+            if on_bybit:
+                df = fetch_candles(s, "1h", exchange_client=exchange, limit=limit, bypass_cache=True)
+            else:
+                df = fetch_candles(s, "1h", settings={"EXCHANGE": "bybit"}, limit=limit, bypass_cache=True)
             if df is None or len(df) == 0:
                 continue
             fr = _ml_entry_frame(drop_forming_bar(df, "1h"))
-            if len(fr) and fr["ts"].iloc[-1].isoformat() == bar_open_iso:
+            if len(fr):
                 frames[s] = fr
         except Exception:  # noqa: BLE001 -- one missing reference symbol never blocks the decision
             logger.debug("ml_entry: reference fetch failed for %s", s, exc_info=True)
-    _ML_ENTRY_REF_CACHE.update(bar=bar_open_iso, frames=frames)
+    _ML_ENTRY_REF_CACHE.update(key=key, frames=frames)
     return frames
 
 
@@ -6519,7 +6530,9 @@ def ml_entry_signal_builder(settings: dict) -> Dict[str, Any]:
         from src.units.strategies.ml_entry import is_decision_bar
         if not is_decision_bar(df["ts"].iloc[-1], int(model["meta"]["bracket"]["decision_every_h"])):
             raise ValueError("not_a_decision_bar")  # before the reference fetch: 60 venue calls only every 4th bar
-        refs = _ml_entry_reference_frames(list(model["meta"]["xs_reference"]), df["ts"].iloc[-1].isoformat(), exchange)
+        venue = str(settings.get("EXCHANGE") or settings.get("exchange") or "bybit").lower()
+        refs = _ml_entry_reference_frames(list(model["meta"]["xs_reference"]), df["ts"].iloc[-1].isoformat(), exchange,
+                                          venue=venue)
         pkg = order_package(cfg, candles_df=df, reference_frames=refs, model=model)
     except ValueError as exc:
         _record_closed_decision(key, frame, timeframe, vcfg, _now)

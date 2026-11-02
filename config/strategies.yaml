@@ -1437,7 +1437,18 @@ strategies:
     execution: live
     timeframe: "1h"
     decision_bar: closed
-    symbols: [BTCUSDT, ETHUSDT, XRPUSDT, ADAUSDT, SOLUSDT]
+    symbols: [BTCUSDT, ETHUSDT, XRPUSDT, ADAUSDT, SOLUSDT, SPY, QQQ, IWM, TLT, IEF, SLV, USO, GDX, TQQQ, QLD, SPYM, IAUM, SCHA]
+    # 2026-11-01 ALPACA PAPER (row ALPACA-LIVE-ACTIVITY-ML, Tier 3; operator popup ~11:47Z verbatim "Paper now, v2 for
+    # live (Rec.)"): the SAME frozen model on alpaca_paper (Stage-1 floor, paper money, both sides), NOT on alpaca_live
+    # or its mirror. symbols: is the union; account_symbols says which each rostering account trades
+    # (src/config/symbol_sets.py::leg_symbols). alpaca_paper = every ETF it pulls EXCEPT GLD (the operator-kept zombie
+    # OCO there, PI-20261025-ALQWWPXT-0001). Evidence context, not a gate: frozen v1 on alpaca_live's ETFs FAILED its
+    # one read (RQ-20261101-bdc2-01, -0.308 R/decision long-only, n=128). ROLLBACK: drop alpaca_paper here, the ETFs
+    # from symbols:, and ml_entry from alpaca_paper's roster.
+    account_symbols:
+      bybit_2: [BTCUSDT, ETHUSDT, XRPUSDT, ADAUSDT, SOLUSDT]
+      bybit_portfolio: [BTCUSDT, ETHUSDT, XRPUSDT, ADAUSDT, SOLUSDT]
+      alpaca_paper: [SPY, QQQ, IWM, TLT, IEF, SLV, USO, GDX, TQQQ, QLD, SPYM, IAUM, SCHA]
     atr_period: 14
     atr_stop_mult: 2.0
     tp_r: 1.5
