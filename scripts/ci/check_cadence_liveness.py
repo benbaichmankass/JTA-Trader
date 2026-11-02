@@ -254,6 +254,7 @@ CADENCE_REGISTRY: dict[str, dict] = {
     #    just has not been declared yet. Measured 2026-09-22: 9 of the 18
     #    scheduled workflows contain a commit-to-main / git push step. Naming
     #    the output path for each is the obvious next shrink of this file.
+    "market-data-lake.yml": {"receipt": None, "why": "its output is the PRIVATE HF dataset bentzbk/jta-market-lake (MARKET-DATA-LAKE 2026-11-01); the daily run also lands comms/data_lake/health_latest.json, but that file does not exist until the first run, so it is not yet declared as the receipt (follow-up: switch receipt once it lands). A dropped slot is re-dispatched by schedule_keeper (stale_hours 26), a dead run is caught by claude-run-failure-alert, and stale data by the health record's per-feed staleness check"},
     "ml-data-export-kaggle.yml": {"receipt": None, "why": "its output is a PRIVATE Kaggle dataset version plus 14-day run artifacts, nothing committed to git (ML-DATA-OFF-TRAINER 2026-10-13); a dead run is caught by claude-run-failure-alert, and a stale dataset by the MANIFEST generated_at that every consumer re-reads"},
     "grading-freshness-alert.yml": {"receipt": None, "why": "quiet by design when grading is fresh: it commits nothing and its only output is a Telegram ping on stale/unreadable; a dead run is caught by claude-run-failure-alert (GRADE-ALERT 2026-09-29)"},
     "schedule-keeper.yml": {"receipt": None, "why": "no in-repo trace by design: it reads the Actions API and dispatches; it also fires on every push to main, so its own cron is only the night-time floor (W6-OPS-R 2026-09-27)"},
@@ -417,6 +418,7 @@ CADENCE_REGISTRY: dict[str, dict] = {
     "ict-mes-ibkr-pull.timer": {"receipt": None, "why": "VM-side; diag relay is the surface"},
     "ict-research-results-gate.timer": {"receipt": None, "why": "VM-side; diag relay is the surface"},
     "ict-shadow-log-rotate.timer": {"receipt": None, "why": "VM-side; diag relay is the surface"},
+    "ict-ml-decision-shadow.timer": {"receipt": None, "why": "VM-side (2026-11-01, observe-only ML ENTRY decision shadow); it writes runtime_logs/ml_decision_shadow.jsonl on the live VM, not in the repo; graded on the VM by health check ml_decision_shadow (newest row's logged_at, four states) and readable via /api/diag/log_file?name=ml_decision_shadow"},
     "ict-trainer-git-sync.timer": {"receipt": None, "why": "VM-side; diag relay is the surface"},
     "ict-web-api-watchdog.timer": {"receipt": None, "why": "VM-side; diag relay is the surface"},
     "ict-work-digest.timer": {"receipt": None, "why": "VM-side; diag relay is the surface"},

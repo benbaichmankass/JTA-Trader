@@ -64,6 +64,12 @@ truncates comments ~55 kB), `audit?limit=600` (signal_audit tail),
 `journalctl?unit=ict-trader-live&lines=200`,
 `log_file?name=heartbeat&lines=5`.
 
+**Deep log history:** `journalctl` and `log_file` take `grep=a%7Cb` (substrings, filtered
+on the VM before the cap) and `journalctl` takes `since`/`until`. Read `truncated`,
+`lines_scanned`, `lines_matched` and `read_state` in the reply: 0 matches over a
+`complete` scan is a negative; `truncated: true` or `read_state != complete` is NOT
+(`docs/claude/diag-relay.md` § "Reading deep history").
+
 ## Batch your reads — default to ONE issue per session, not one per path
 
 **This is the default recommended pattern, not an edge case.** Every relay

@@ -1,0 +1,22 @@
+{
+  "id": "ADMISSION-JOURNAL-LAG-RACE",
+  "title": "Slice admission refuses on a same-tick journal-lag race (venue flatter than ledger): re-read once, or run leg-gone attribution, before refusing",
+  "phase": null,
+  "state": "queued",
+  "owner": "session_01AFoLuJ1apgy8sfngu4WyNH",
+  "lane": null,
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 2,
+  "prs": [],
+  "blocked_on": [],
+  "note": "Filed 2026-11-01 ~11:40Z by lane ML-ENTRY-GOLIVE-UNBLOCK (session_01AFoLuKfE1ZQzYVUj5a432n) on the manager's instruction (Manager Session 2026-11-01a, owner). EVIDENCE (live journal via /api/diag/journal, newest 3,000 trades rows, read 2026-11-01): trades row 6760 (pkg-139ba137fb674759), bybit_1 SOLUSDT trend_donchian_sol LONG, 2026-10-28 08:30:12Z, refused slice_ledger_divergent. Package meta.slice_admission: ledger_net -42.4 (1 open slice = row 6755 sol_pullback_2h SHORT 42.4), venue_net 0.0, hedge_book true, tpsl partial. Row 6755 was stopped out at the venue (exit sl) with its journal close stamped 08:30:11Z: the same SOL move that stopped the short triggered the long breakout, and admit_slice (src/runtime/positions.py, reconcile step 5) read the journal before the close landed. trend_donchian_sol_prop's long 5 s later (row 6761) was admitted. COST: the trend_donchian_sol LONG entry for that bar was LOST (a closed-bar decision is recorded, so it is not re-asked). The refusal is correct by contract (refuse, never resize; nothing halts). CANDIDATE FIX (Tier 2, order path): in admit_slice, when the reconcile is DIVERGENT and the venue is FLATTER than the ledger (|venue_net| < |ledger_net|, same sign or flat), re-read the journal once after a short wait, or run the netting reconciler's leg-gone attribution, then re-reconcile before refusing; still refuse if it stays divergent. Test: a planted ledger with a slice whose close lands between the first and second read is admitted; a persistent divergence is still refused. Applies to every slice account (bybit_1 today; bybit_2 + bybit_portfolio once #22088 lands). Population of the measurement: 1 divergent refusal among 20 bybit_1 rejections since the 2026-10-18 15:10Z slices deploy. due_by 2026-11-02. Gates: none (the fix removes a false refusal).",
+  "updated_at": "2026-11-01T11:35:48Z",
+  "updated_by": "session_01AFoLuKfE1ZQzYVUj5a432n",
+  "roadmap": [
+    "M18"
+  ],
+  "due_by": "2026-11-02",
+  "_seq": 876
+}

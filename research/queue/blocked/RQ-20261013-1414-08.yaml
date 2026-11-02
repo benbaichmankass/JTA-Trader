@@ -1,7 +1,7 @@
 id: RQ-20261013-1414-08
 title: 'Frontier / TSFM LoRA: does a LoRA fine-tune of the winning forecaster beat its own frozen zero-shot features on the 15m volatility-regime
   head? (conditional on RQ-20261011-9da8-01 PASS)'
-status: blocked
+status: retired
 cadence: once
 theme: ml_health
 priority: 3
@@ -76,3 +76,14 @@ lands:
   store: research/results/
   assert_field: read_state
   min_rows: 1
+grading:
+  auto: false
+  graded_at: '2026-11-01'
+  grader: session RESEARCH-OPS-20261101-0940 (blocked/ audit)
+  note: 'requires_result unmet and now unmeetable: it needs RQ-20261011-9da8-01 to read PASS, which landed
+    measured FAIL (twice) and producer_failed. Prerequisite landed with the other verdict, so the unit
+    is moot (research-ops step C rule).'
+  verdict: null
+retired_reason: '2026-11-01 RESEARCH-OPS-20261101-0940 blocked/ audit: requires_result unmet and now unmeetable:
+  it needs RQ-20261011-9da8-01 to read PASS, which landed measured FAIL (twice) and producer_failed. Prerequisite
+  landed with the other verdict, so the unit is moot (research-ops step C rule).'

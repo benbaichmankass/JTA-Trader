@@ -217,6 +217,7 @@ ER: frozenset[str] = frozenset({DIM_ENTRY, DIM_REVISION})
 E: frozenset[str] = frozenset({DIM_ENTRY})  # entry_tp only: a tp_revision rule is declared and plumbed
 BASELINE_2026_10_06: dict[str, frozenset[str]] = {
     # ── real_money ──────────────────────────────────────────────────────────
+    "alpaca_portfolio/gld_pullback_1d": R,  # 2026-11-01 mirror superset (operator): the underlying of alpaca_live/iaum_pullback_1d, same params, same debt, not new: tp_r 3.5 declared, tp_revision still undeclared
     "alpaca_live/iaum_pullback_1d": R,  # 2026-10-22 tp_r 3.5 declared (OPERATOR-DECISIONS-1022); tp_revision still undeclared
     "bybit_2/ada_pullback_2h": R,
     "bybit_2/trend_donchian_eth_4h": E,  # 2026-10-18 tp_revision declared (TIER3-PACKETS-1018); entry_tp still the 50 R sentinel
@@ -227,6 +228,11 @@ BASELINE_2026_10_06: dict[str, frozenset[str]] = {
     # fail), so it inherits the breakout_2 / bybit_1 debt line verbatim. A visible, deliberate line on a
     # REAL-MONEY routing: exit-refinement priority rises with it (money at stake).
     "bybit_2/trend_donchian_sol_prop": ER,
+    # 2026-11-01 ENTRY v2 TESTING leg (Tier-3 held PR, operator popup ~20:20Z "v2 on bybit_1"): bybit_1 demo only. It carries the finite
+    # 2 R target it was SCORED with (TP 4 ATR / SL 2 ATR) and no revision producer yet. The v1 ml_entry lines left with
+    # ML-ENTRY-TP-REVISION (operator ~22:45Z "Merge as-is now"); v2's exit = a moving-TP unit scored on v2's own trades
+    # (the ml_first_passage model was scored on v1's 3 ATR trades), then remove this line.
+    "bybit_1/ml_entry_v2": R,
     # ── prop ────────────────────────────────────────────────────────────────
     # breakout_1 legs removed 2026-10-07 (account retired, roster cleared).
     # R -> ER on 2026-10-15 (TP-REACH-FLOOR, operator-approved 2026-10-14): the

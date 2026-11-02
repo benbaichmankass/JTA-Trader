@@ -1412,6 +1412,25 @@
     "haircut_bonferroni_gt_0": false
    }
   },
+  "ml_entry": {
+   "N_basis": "n_configs_upper_bound (no per-trade series on any config)",
+   "N_used": 1,
+   "coverage_state": "measured",
+   "expectancy_r_oos": 0.0263,
+   "family": "ml_decision_entry",
+   "fidelity": "faithful",
+   "leg": "ml_entry",
+   "n_configs": 1,
+   "n_trades_oos": 907,
+   "net_r_oos": 23.8388,
+   "param_selection_provenance": "tau 0.10 chosen on 8 purged + embargoed dev folds 2022-01..2025-09 only (c692-01); model frozen; held-out 2025-10-01..2026-09-30 scored once; c692-06 re-scores the same frozen model on the traded symbols",
+   "real_money": true,
+   "source_run": "research/results/RQ-20261101-c692-06/local-20261101T0840Z.jsonl",
+   "stage0_rule": "RULE-RQ20261101-c692-06-TRADED-SUBSET",
+   "stage0_verdict": "pass",
+   "state": "no_series",
+   "why": "coverage_state='measured'; source_run not readable -- no per-trade series, no deflated statistic (we could not look; NOT a fail)"
+  },
   "qld_trend_long_1d": {
    "N_basis": "partial: 2 return-correlation clusters over 2 configs with a series + 32 without a series counted at face value (upper bound)",
    "N_used": 34,
@@ -2948,6 +2967,11 @@
    "effective_n": 38,
    "legs": 8,
    "n_configs": 58
+  },
+  "ml_decision_entry": {
+   "effective_n": 1,
+   "legs": 1,
+   "n_configs": 1
   },
   "pairs": {
    "effective_n": 0,
@@ -5900,6 +5924,27 @@
       "verdict": "indeterminate"
      }
     ]
+   }
+  },
+  "ml_entry::ml_decision_entry": {
+   "effective_n": 1,
+   "effective_n_basis": "n_configs_upper_bound (no per-trade series on any config)",
+   "family": "ml_decision_entry",
+   "leg": "ml_entry",
+   "n_clusters": 0,
+   "n_configs": 1,
+   "n_configs_by_source": {
+    "evidence": 1
+   },
+   "n_configs_with_series": 0,
+   "real_money": true,
+   "tried": {
+    "e5_configs_by_unit": {},
+    "evidence_records": [
+     "ml_entry"
+    ],
+    "m20_levers": {},
+    "queue_units": []
    }
   },
   "p2_ict15_aaveusdt::unclassified": {
@@ -11161,7 +11206,7 @@
  "report_only_basis": "operator decision 2026-10-16, PROMOTION-BAR-MULTIPLICITY: \"Measure first (Recommended)\" -- no bar, mandate, roster or config changes on this ledger",
  "schema_version": 1,
  "summary": {
-  "evidence_records": 55,
+  "evidence_records": 56,
   "real_money_legs": [
    "xrp_pullback_2h",
    "trend_donchian_eth_4h",
@@ -11169,9 +11214,10 @@
    "ada_pullback_2h",
    "trend_donchian_sol_prop",
    "slv_pullback_1d",
-   "iaum_pullback_1d"
+   "iaum_pullback_1d",
+   "ml_entry"
   ],
-  "stage0_pass": 31,
+  "stage0_pass": 32,
   "stage0_pass_bonferroni_haircut_gt_0": 4,
   "stage0_pass_clearing_0_95_at_n1": 7,
   "stage0_pass_surviving_dsr_and_bhy_haircut": 0,
@@ -11516,6 +11562,17 @@
     "real_money": false,
     "record": "uso_trend_1h",
     "survives": false
+   },
+   {
+    "N_used": 1,
+    "dsr": null,
+    "haircut_bhy_expectancy_r": null,
+    "n_configs": 1,
+    "net_r_oos": 23.8388,
+    "psr_n1": null,
+    "real_money": true,
+    "record": "ml_entry",
+    "survives": null
    }
   ],
   "with_deflated_statistic": 50

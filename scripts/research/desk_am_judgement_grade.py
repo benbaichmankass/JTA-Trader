@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# wiring: manual-only - the DESK-AM-REFOCUS forward grade (RULE-DESK-AM-JUDGEMENT-V1); run by the weekly /performance-review "Live review" section or by hand. No timer.
+# wiring: .github/workflows/forecast-grade.yml (hourly :41, --live --write; GRADE-EVERYTHING-CONTINUOUSLY 2026-11-01); also by hand or the weekly /performance-review "Live review" section.
 """Grade the judgement desk's in-trade calls, pre-registered as RULE-DESK-AM-JUDGEMENT-V1.
 
     python3 scripts/research/desk_am_judgement_grade.py --live           # journal + candles from the live API

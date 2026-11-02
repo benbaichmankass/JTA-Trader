@@ -1454,6 +1454,113 @@ mandates:
       change cannot be undone; a moved bracket can be moved back by the
       operator's amend-position-sl system-action.
 
+  # ── PER-ACCOUNT AUTO-APPLY (kind: ltr_auto_apply, account_scope; operator 2026-11-01) ──
+  #
+  # The same exception as MD-LTR-ADA-AUTO, scoped to ACCOUNTS instead of one package:
+  # every in-trade call on a package carried by a Stage-1 demo-floor (paper soak)
+  # account is applied by the VM on THAT account's leg ONLY. Every other account
+  # carrying the same package -- real money (bybit_2, alpaca_live, ib_live), the
+  # Stage-2 mirrors (bybit_portfolio, alpaca_portfolio, account_class paper but
+  # paper_role portfolio), prop -- stays advice-only and is not touched
+  # (src/runtime/ltr_auto_mandate.py::account_scope; scripts/ops/live_review_apply.py
+  # run() filters the legs; tests/test_ltr_auto_mandate.py proves the real-money and
+  # mirror legs unchanged -- the MD-DEMO-FLOOR-BUILD shared_code_rule). This entry IS
+  # the switch: no default-off flag, no third gate. The list is explicit (an account
+  # never joins by attribute); tests pin every entry to account_class paper with no
+  # portfolio paper_role.
+  - id: MD-LTR-PAPER-AUTO
+    kind: ltr_auto_apply
+    grants: every in-trade live-review call (close, tighten, move TP and every other in-trade class) on a package carried by a Stage-1 demo-floor paper account (bybit_1, alpaca_paper, ib_paper) is applied automatically by the VM, on that account's leg only; real money, the mirrors and prop stay advice-only
+    direction: mixed
+    direction_note: >-
+      Same as MD-TRADE-DESK and MD-LTR-ADA-AUTO: a tighten / close / reduce
+      de-risks, a widen / add adds risk, a move_tp changes the exit. Paper money
+      only. Not a ladder mandate; the resolver refuses `mixed`.
+    proposed_by: manager session_01AFoLuJ1apgy8sfngu4WyNH (Manager Session 2026-11-01a), on the operator's popup
+    proposed_at: '2026-11-01'
+    granted_by: operator (Ben)
+    granted_at: '2026-11-01'
+    source: >-
+      (1) Operator popup to Manager Session 2026-11-01a
+      (session_01AFoLuJ1apgy8sfngu4WyNH), 2026-11-01 ~11:38Z, relayed in the
+      dispatch of lane MD-LTR-BYBIT1-AUTO. Question, verbatim: "Should
+      live-review calls be applied automatically on the paper soak account
+      (bybit_1) only?" Option, verbatim: "Paper only. Every in-trade call
+      (close, tighten, move TP) on bybit_1 packages is applied by the VM, the
+      same mechanism as the ADA mandate. Real money, mirrors and prop stay
+      advice-only. A Tier-2 PR with the mandate entry, for your merge." Answer,
+      verbatim: "Auto-apply on bybit_1 (Rec.)". (2) The operator WIDENED it,
+      2026-11-01 ~11:40Z, verbatim, relayed by the same manager (trigger
+      trig_01UwMnThvHr4WUwuuMQzkicN): "In general, we should let those
+      decisions, I think, be auto-applied on paper so that we can actually see
+      how they perform. Like the rest of the promotions, shadowing means live
+      paper testing, and if it proves itself, then it goes live also on real
+      money and paper portfolio." The manager scoped that to every Stage-1
+      demo-floor (paper soak) account, excluding the mirrors bybit_portfolio
+      and alpaca_portfolio. Why (manager): since 11:16Z the live review said
+      close four times on bybit_1 paper package pkg-f07b659a7db94e8a and every
+      call was applied=false (advice-only); the close class is the audit's only
+      positive signal (row LTR-CLOSE-CLASS-TEST). Transcribed by lane
+      MD-LTR-BYBIT1-AUTO in a `landing: hold` PR the manager merges; the lane
+      holds no authorization of its own. No calendar expiry: the operator's
+      words name none.
+    parent: MD-TRADE-DESK
+    account_scope:
+      # The apply acts ONLY on legs held by these accounts (= MD-TRADE-DESK
+      # entry_generation.demo_accounts, the Stage-1 demo floor). A package also carried
+      # by another account is applied on these legs alone; the others stay advice-only.
+      accounts: [bybit_1, alpaca_paper, ib_paper]
+      actions: [tighten_sl, widen_sl, move_tp, partial_close, close, change_size, add_entry]
+    executor_note: >-
+      Each account still needs an existing executor per action
+      (live_review_apply.ACTION_PATHS); without one the apply refuses it as
+      no_action_path:<action>, named in the writeback (paper: no ping). At grant
+      time bybit_1 has close / reduce / move_tp / widen_sl / tighten;
+      alpaca_paper has close / move_tp / tighten; ib_paper has none.
+    mechanism: >-
+      Same as MD-LTR-ADA-AUTO: the VM rows watcher (~45 s poll) sees a committed
+      `recommended` row on live-review/rows whose `accounts` names a scoped
+      account and dispatches it through live_review_dispatch.py --ref to
+      live_review_apply.py --mandate MD-LTR-PAPER-AUTO, which acts on the scoped
+      legs only. No extra review cadence: rows arrive on the existing triggers.
+    promotion_path: >-
+      Operator 2026-11-01 (quote (2) above): paper is the live test; a class that
+      proves itself goes to real money AND the paper portfolio. Each in-trade
+      action class is graded on its APPLIED paper calls under this mandate, net
+      of the full cost stack, by MD-TRADE-DESK's existing per-class grading
+      (scripts/ops/live_review_grade.py use_rules; hold-vs-action
+      counterfactual scripts/research/live_review_counterfactual.py; the
+      risk-adjusted rule RULE-AM-RISK-ADJUSTED-V1), at n >= 20 priced calls
+      with a 95% CI. A class that PASSES: the manager PROPOSES applying it on
+      real money AND its mirror together (Stage-2 equality) as a Tier-3 item
+      for the operator -- graduation removes that class from
+      MD-TRADE-DESK.functions.in_trade.advice_only and
+      rows_lib.ADVICE_ONLY_ACTIONS in one PR citing the passed record; never
+      this lane's or a session's own act. A class that FAILS stays paper-only
+      and is diagnosed (a research/queue unit). No calendar soak and no sample
+      size beyond the grading's own n (OPERATING-PLAN § 2).
+    fires_when:
+      - a committed live-review row on live-review/rows, read at a pinned commit, whose `accounts` names a scoped account, whose action is in account_scope.actions and whose route is recommended or auto_applied
+      - MD-TRADE-DESK's package-level clauses hold (mechanics match, a reason, a judgement confidence in [0, 1] or a table EV, the action's own target)
+      - config/live_trade_review.yaml apply_mode == apply for the account, and that account's own approve_amend / approve_action returns approve or clip
+      - every bound below holds
+    bounds:
+      - both_brackets -- both brackets exist at the venue after every action (TP doctrine clause 3); a tighten, widen, move_tp or reduce that leaves either unread is apply_failed
+      - widen_within_1r -- a widen_sl never puts the stop beyond the original entry risk (-1R = entry -/+ order_packages.meta.risk_per_unit); unread risk refuses the widen
+      - tp_live_target -- the TP stays a live predictive target (beyond the mark, beyond entry, never the 50R sentinel)
+      - idempotent_per_review_id -- a row applies at most once (the same review_id is refused); there is NO per-bar or time-window action cap [removed 2026-10-29, operator, row REMOVE-PER-BAR-CAP]
+      - venue_readback -- every leg is read back from the venue; a mismatch is apply_failed
+      - one_ping_per_action -- ONE Telegram trade-update per action naming account(s), symbol, action, level and review_id
+    never: [act on a leg held by any account outside account_scope.accounts (real money, a mirror, prop or any other paper account), move the shared package stop, act on a read that could not look, act on a mechanics mismatch, remove or null a stop-loss or a take-profit, widen a stop beyond -1R, bypass an account's own risk manager / sizing cap / exposure cap / daily-DD switch, route one account's action through another's executor, write mode or execution, promote a class to real money or a mirror (that is the operator's Tier-3 act), commit a packet from a reviewer]
+    notify: ONE trade-update ping per applied action (account(s), symbol, action, level, review_id); brief section 1 line with the row
+    revert: >-
+      Delete this entry (or set expired_at): the paper accounts return to
+      advice-only on the next watcher pass (the reader re-parses the file when
+      git-sync changes it). Narrow it by removing an account from
+      account_scope.accounts. An applied close, partial close or filled size
+      change cannot be undone; a moved bracket can be moved back by the
+      operator's amend-position-sl system-action.
+
 proposed:
 
   # ── PROPOSED, NOT GRANTED ──────────────────────────────────────────────────

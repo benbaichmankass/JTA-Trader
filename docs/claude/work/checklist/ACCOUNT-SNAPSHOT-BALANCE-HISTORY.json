@@ -1,0 +1,22 @@
+{
+  "id": "ACCOUNT-SNAPSHOT-BALANCE-HISTORY",
+  "title": "Git history of this PUBLIC repo still holds the account balances the v1 account snapshots committed (comms/mandate_evidence/account_snapshot/{alpaca_live,bybit_2}.json, 2026-09-30..2026-10-23); decide whether to purge",
+  "phase": null,
+  "state": "queued",
+  "owner": "operator",
+  "lane": null,
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 3,
+  "prs": [],
+  "blocked_on": [],
+  "note": "Filed 2026-11-01 by lane ALPACA-LIVE-ACTIVITY-ML (session_01AFoLuMP2ywy8v4RXABackp) on the manager instruction (Manager Session 2026-11-01a): \"the public balance in comms/mandate_evidence/account_snapshot/alpaca_live.json ... is a rule violation ... file a row noting that git history still holds the old values\". FIXED going forward (PR claude/account-snapshot-no-balance): the writer commits only per-leg affordability answers (schema 2, balance_committed false); tests/test_mandate_resolver.py::test_committed_snapshots_carry_no_balance pins it. NOT fixed: every earlier commit of those two files carries equity/buying power (e.g. git log -p -- comms/mandate_evidence/account_snapshot/). Purging needs a history rewrite of main (force-push, every clone invalidated): irreversible and outward-facing, so it is the operator's call, not a lane's. Options: (a) accept (small balances, already public), (b) git filter-repo + force-push with the operator coordinating clones.",
+  "priority_rank": 30,
+  "updated_at": "2026-11-01T11:54:53Z",
+  "updated_by": "session_01AFoLuMP2ywy8v4RXABackp",
+  "roadmap": [
+    "L-LADDER"
+  ],
+  "_seq": 876
+}

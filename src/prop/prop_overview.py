@@ -121,6 +121,39 @@ def split_fills(fills: List[Dict[str, Any]]):
     return open_rows, closed
 
 
+def annotate_trade_state(fills: List[Dict[str, Any]]) -> int:
+    """BREAKOUT-UNRECORDED-1101: label each fill EVENT row with the state of the TRADE it belongs to, in place.
+
+    ``prop_fills`` is an append-only event log: a trade's opening row keeps ``status: open`` / ``exit_price: null``
+    forever and its close is a SEPARATE ``closed`` row (same ticket / order id). Read row by row, every closed trade
+    looks open -- a 2026-11-01 lane reported breakout_2 fills 106/107/124 as "open in the journal, flat at the venue"
+    when rows 109/108/125 had closed them on 2026-10-12/12/15. ``trade_state`` is ``open`` / ``closed`` for an
+    opening row (by :func:`split_fills`, the one rule every prop reader uses) and ``closed`` for a closing row; other
+    statuses (``placed``, ``skipped``...) carry ``None`` -- they are not trades. ``closed_by_fill_id`` names the
+    closing row when one is in ``fills``. Returns the number of open trades. A closing row outside the page leaves
+    its opening row reading ``open``: callers page newest-first, so a close (always newer) is in any page its open
+    row is in."""
+    open_rows, closed_rows = split_fills(fills)
+    open_ids = {id(f) for f in open_rows}
+    closer: Dict[tuple, Any] = {}
+    for c in sorted(closed_rows, key=lambda f: f.get("id") or 0):
+        for k in (_key(c), (c.get("account_id"), "tkt", str(c["ticket_id"])) if c.get("ticket_id") else None):
+            if k and k not in closer:
+                closer[k] = c.get("id")
+    for f in fills:
+        st = str(f.get("status", "")).lower()
+        if st in _CLOSED:
+            f["trade_state"] = "closed"
+        elif st in _OPEN:
+            f["trade_state"] = "open" if id(f) in open_ids else "closed"
+            if f["trade_state"] == "closed":
+                tk = (f.get("account_id"), "tkt", str(f["ticket_id"])) if f.get("ticket_id") else None
+                f["closed_by_fill_id"] = closer.get(_key(f)) or closer.get(tk)
+        else:
+            f["trade_state"] = None
+    return len(open_rows)
+
+
 def _is_phone_account(account_id: str) -> bool:
     """True for a phone-executed account. An unreadable config answers True: when we cannot tell, the journal
     must not vouch for flat (None is the honest outcome)."""

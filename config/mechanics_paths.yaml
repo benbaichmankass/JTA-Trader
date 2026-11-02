@@ -6,7 +6,72 @@
 # delta: new_code  = needs its own ONE clean small trade (paper, or minimum size on real money)
 # No calendar / sample fields (soak-contract-guard refuses them). Add an entry in the promoting PR. Starts empty on purpose:
 # nothing is claimed proven until a PR registers it and the resolver can verify it from a passed contract.
-legs: {}
+legs:
+  # alpaca_equity_bracket_v1 (lane ALPACA-LIVE-ACTIVITY-ML, 2026-11-01): the Alpaca equity/ETF bracket order path
+  # (entry + venue SL/TP OCO legs, src/units/accounts/alpaca_client.py), the same code on alpaca_live / alpaca_paper /
+  # alpaca_portfolio. Proven by passed soaks on alpaca_paper (tlt_pullback_1d, tqqq_trend_long_1d, ief_pullback_1d,
+  # slv_trend_1h: docs/claude/work/SOAKS.json) and by 3 filled real-money brackets on alpaca_live (09-17, 09-18, 09-23,
+  # all closed by the venue stop leg; broker order history read 2026-11-01). Config/params only per leg: delta none.
+  iaum_pullback_1d:
+    path: alpaca_equity_bracket_v1
+    exchange: alpaca
+    delta: none
+  tlt_pullback_1d:
+    path: alpaca_equity_bracket_v1
+    exchange: alpaca
+    delta: none
+  tqqq_trend_long_1d:
+    path: alpaca_equity_bracket_v1
+    exchange: alpaca
+    delta: none
+  ief_pullback_1d:
+    path: alpaca_equity_bracket_v1
+    exchange: alpaca
+    delta: none
+  slv_trend_1h:
+    path: alpaca_equity_bracket_v1
+    exchange: alpaca
+    delta: none
+  spy_trend_long_1d:
+    path: alpaca_equity_bracket_v1
+    exchange: alpaca
+    delta: none
+  qqq_trend_long_1d:
+    path: alpaca_equity_bracket_v1
+    exchange: alpaca
+    delta: none
+  iwm_trend_long_1d:
+    path: alpaca_equity_bracket_v1
+    exchange: alpaca
+    delta: none
+  qld_trend_long_1d:
+    path: alpaca_equity_bracket_v1
+    exchange: alpaca
+    delta: none
+  scha_trend_long_1d:
+    path: alpaca_equity_bracket_v1
+    exchange: alpaca
+    delta: none
+  gdx_pullback_1d:
+    path: alpaca_equity_bracket_v1
+    exchange: alpaca
+    delta: none
+  uso_trend_1h:
+    path: alpaca_equity_bracket_v1
+    exchange: alpaca
+    delta: none
+  slv_pullback_1d:
+    path: alpaca_equity_bracket_v1
+    exchange: alpaca
+    delta: none
+  gld_pullback_1d:
+    path: alpaca_equity_bracket_v1
+    exchange: alpaca
+    delta: none
+  splg_trend_long_1d:
+    path: alpaca_equity_bracket_v1
+    exchange: alpaca
+    delta: none
 #  example_leg:
 #    path: bybit_perp_bracket_v1
 #    exchange: bybit

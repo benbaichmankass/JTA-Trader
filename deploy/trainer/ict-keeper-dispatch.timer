@@ -1,0 +1,12 @@
+# Hourly at :23 UTC (off the :00 rush; the keeper's own cron is 7 * * * *).
+# Install: sudo bash scripts/ops/install_trainer_keeper_dispatch.sh
+[Unit]
+Description=Hourly trainer dispatch of schedule-keeper.yml (KEEPER-VM-FLOOR)
+
+[Timer]
+OnCalendar=*-*-* *:23:00 UTC
+RandomizedDelaySec=1min
+Persistent=true
+
+[Install]
+WantedBy=timers.target

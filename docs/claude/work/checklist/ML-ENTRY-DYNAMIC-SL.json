@@ -1,0 +1,22 @@
+{
+  "id": "ML-ENTRY-DYNAMIC-SL",
+  "title": "Test dynamic SL for ml_entry (v1 live, v2 bybit_1): break-even, trailing, ML SL revision, one factor each",
+  "phase": "build",
+  "state": "queued",
+  "owner": "manager",
+  "lane": null,
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 3,
+  "prs": [],
+  "blocked_on": [],
+  "note": "OPERATOR 2026-11-01 ~23:00Z, verbatim: \"And we also need to test dynamic sl features for the ml\". Lever: active management, SL side (pairs with ML-ENTRY-TP-REVISION / #22093 extend-only TP). Governed by .claude/skills/exit-refinement/SKILL.md, lever maps research/levers/ml-entry.yaml (add family sl_management) + ml-tm-action-value.yaml + ltr-tighten-sl.yaml. ARMS, each one-factor vs the fixed 2-ATR SL, dev folds only, net of the full cost stack, pooled 60-perp population with the traded 5 beside it: (a) break-even move after +k R (k on a dev grid); (b) ATR trailing stop after +k R (trail on a dev grid); (c) time-decay tightening at the 4h check-ins; (d) ML SL revision: the c692-03 MANAGE / first-passage head predicting the stop-first probability at each check-in, tighten only when expected net R improves by more than m; (e) structure-based SL (swing low/high). Report giveback, win rate, mean net R and tail loss per arm; the interaction with extend-only TP is tested after single-arm winners. Rules registered before any run; the held-out year and W1 are spent, so any confirm read uses November+ forward data (lock via holdout_lock). COMPUTE: Kaggle first (operator rule COMPUTE-PREFER-KAGGLE). Usage pacing: author after the 2026-11-04 18:00Z reset. A live change is Tier 3 for the operator. No new gate.",
+  "updated_at": "2026-11-01T22:35:53Z",
+  "updated_by": "session_01AFoLuJ1apgy8sfngu4WyNH",
+  "due_by": "2026-11-05",
+  "roadmap": [
+    "L-ML-LIVE"
+  ],
+  "_seq": 889
+}

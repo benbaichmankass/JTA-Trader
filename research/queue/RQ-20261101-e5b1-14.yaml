@@ -77,7 +77,7 @@ run:
     research_unit: RQ-20261101-e5b1-14
   timeout_minutes: 150
   workflow: research-script-run.yml
-status: queued
+status: done
 theme: new_strategy_prop
 title: 'Prop replacement candidate (batch B) eth_pullback_2h: Stage 0 at the prop cost stack (fee 8 / slip 3 / funding 5 bps) then RULE-P5-GATE-BRK-PER-LEG-V3 on
   breakout_2, tradeify_1 and velotrade_1, 1110 d and trailing 365 d'
@@ -90,3 +90,17 @@ why_this_matters: 'Operator 2026-10-31 (PI-20261031-TD4QC5GP-0005): the prop ros
   is four candidates; batch B widens the candidate set with four more legs from config/strategies.yaml so the replacement is not chosen from four draws. DENOMINATOR:
   8 candidates across batches A and B, same bar, same rule, stated before either batch is read; none is selected among by P&L, and any PASS still needs the disjoint-window
   twin and stays a Tier-3 proposal. No config change.'
+last_dispatched_at: '2026-11-01T10:55:52+00:00'
+grading:
+  attested: RULE-RQ-20261101e5b114-PROP-GATE
+  auto: true
+  decision_rule_id: RULE-RQ-20261101e5b114-PROP-GATE
+  evidence:
+  - research/results/RQ-20261101-e5b1-14/41299615292.jsonl
+  graded_at: '2026-11-01'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail
