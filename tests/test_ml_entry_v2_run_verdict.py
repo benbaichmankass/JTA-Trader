@@ -26,3 +26,21 @@ def test_unknown_shape_writes_nothing(tmp_path):
     _w(tmp_path, {"b": {"verdict": "weird"}})
     assert not m.write_verdict("U", tmp_path)
     assert not (tmp_path / "verdict.json").exists()
+
+
+def test_timeframe_result_maps_its_registered_word(tmp_path):
+    cases = {"beats_1h": "pass", "viable_not_better": "no_action_warranted", "not_viable": "fail",
+             "indeterminate": "indeterminate", "does_not_reproduce": "fail"}
+    for word, want in cases.items():
+        d = tmp_path / word
+        d.mkdir()
+        (d / "U_result.json").write_text(json.dumps(
+            {"schema": "ml_entry_timeframe/1", "verdict": word, "gated_verdict": "indeterminate", "timeframe": "4h", "rows": 1234}))
+        assert m.write_verdict("U", d)
+        v = json.loads((d / "verdict.json").read_text())
+        assert (v["verdict"], v["read_state"], v["n"]) == (want, "measured", 1234)
+
+
+def test_timeframe_unknown_word_writes_nothing(tmp_path):
+    (tmp_path / "U_result.json").write_text(json.dumps({"schema": "ml_entry_timeframe/1", "verdict": "weird"}))
+    assert not m.write_verdict("U", tmp_path)
