@@ -89,6 +89,7 @@ def test_registry_roster_is_exactly_turtle_soup_and_vwap():
         "mgc_trend_1h",
         "mhg_pullback_1d",
         "ml_entry",  # 2026-11-01 ML-ENTRY-LIVE-ADAPTER (#22079, Tier-3 held)
+        "ml_entry_v2",  # 2026-11-01 ENTRY v2 testing leg (bybit_1 demo only)
         "qld_trend_long_1d",
         "qqq_pullback_1h",
         "qqq_trend_long_1d",

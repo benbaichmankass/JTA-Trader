@@ -235,5 +235,10 @@
   "short": "ML ENTRY decision model: one LightGBM model pooled over 60 perps decides LONG / SHORT / nothing every 4h from market context alone.",
   "how_it_works": "At the close of every 4th 1h bar, for each traded symbol, two LightGBM regressors predict the net R (after fee, slippage and funding) of a long and of a short under the scored bracket: stop 2x ATR(14), target 3x ATR(14), 24-hour time stop. The better side is taken only if its prediction exceeds tau = 0.10 (chosen on development folds only). Features are point-in-time and symbol-agnostic: volatility-normalised returns over 1h to 1 week, realised volatility and its ratio, ATR/price, position in the 24h and 1-week range, volume z-score, hour/weekday, and the symbol's cross-sectional context (24h-return rank across the reference universe, BTC return and volatility, universe breadth). It does not size: confidence is the fixed full basis, so the RiskManager's default risk applies. One open position per symbol at a time.",
   "evidence": "research/results/RQ-20261101-c692-01/ (held-out 2025-10..2026-09, +0.0073 R/decision at n=11,240 on 53 symbols) and research/results/RQ-20261101-c692-06/ (same frozen model on the bybit_2 symbols, +0.0263 at n=907). Spec docs/research/ml-decision-models-2026-11-01/DESIGN.md."
+ },
+ "ml_entry_v2": {
+  "short": "ML ENTRY v2 candidate (testing leg, bybit_1 demo only): regularised pooled LightGBM, cost-per-R gate, 4 ATR target.",
+  "how_it_works": "Same pooled decision model machinery as ml_entry (LONG / SHORT / nothing at every 4th closed 1h bar from market context alone) with the R2 regularised recipe (colsample 0.5, min_child 2000, lambda 50, 15 leaves, lr 0.02, 450 trees), a cost gate that abstains when the estimated round-trip cost per R (k / ATR-pct, k=0.000774) exceeds 0.06, and the SL 2 / TP 4 ATR bracket. No sizing: neutral confidence.",
+  "evidence": "DEV: research/results/RQ-20261101-b608-01 stack +0.0478 vs +0.0089 (8 of 8 folds). W1 (one read, 2026-10): FAIL, -0.1161 at n=320 vs frozen v1 -0.0405 (RQ-20261101-b609-01), so this is a Stage-1 MECHANICS leg only; the edge is decided offline by RQ-20261101-b610-01 on a fresh window."
  }
 }

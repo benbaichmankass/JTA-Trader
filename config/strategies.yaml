@@ -1437,12 +1437,49 @@ strategies:
     execution: live
     timeframe: "1h"
     decision_bar: closed
-    symbols: [BTCUSDT, ETHUSDT, XRPUSDT, ADAUSDT, SOLUSDT]
+    symbols: [BTCUSDT, ETHUSDT, XRPUSDT, ADAUSDT, SOLUSDT, SPY, QQQ, IWM, TLT, IEF, SLV, USO, GDX, TQQQ, QLD, SPYM, IAUM, SCHA]
+    # 2026-11-01 ALPACA PAPER (row ALPACA-LIVE-ACTIVITY-ML, Tier 3; operator popup ~11:47Z verbatim "Paper now, v2 for
+    # live (Rec.)"): the SAME frozen model on alpaca_paper (Stage-1 floor, paper money, both sides), NOT on alpaca_live
+    # or its mirror. symbols: is the union; account_symbols says which each rostering account trades
+    # (src/config/symbol_sets.py::leg_symbols). alpaca_paper = every ETF it pulls EXCEPT GLD (the operator-kept zombie
+    # OCO there, PI-20261025-ALQWWPXT-0001). Evidence context, not a gate: frozen v1 on alpaca_live's ETFs FAILED its
+    # one read (RQ-20261101-bdc2-01, -0.308 R/decision long-only, n=128). ROLLBACK: drop alpaca_paper here, the ETFs
+    # from symbols:, and ml_entry from alpaca_paper's roster.
+    account_symbols:
+      bybit_2: [BTCUSDT, ETHUSDT, XRPUSDT, ADAUSDT, SOLUSDT]
+      bybit_portfolio: [BTCUSDT, ETHUSDT, XRPUSDT, ADAUSDT, SOLUSDT]
+      alpaca_paper: [SPY, QQQ, IWM, TLT, IEF, SLV, USO, GDX, TQQQ, QLD, SPYM, IAUM, SCHA]
     atr_period: 14
     atr_stop_mult: 2.0
     tp_r: 1.5
+    # MOVING TP (row ML-ENTRY-TP-REVISION, Tier 3): at each 4h check-in the first-passage model
+    # (ml/served/ml_entry_tp_revision_v1) re-predicts the TP over the 1..6 ATR grid; evidence
+    # research/results/RQ-20261101-383f-01/ (forward 2026-10 PASS +0.0081 R/trade, n=868). EXTEND-ONLY
+    # (operator 2026-11-01 ~22:50Z "Extend-only, now"): the TP only moves farther from entry. The
+    # extend-only split (+0.029 R, n=296) is a post-hoc subset of that read; its own check is
+    # RQ-20261101-383f-02 (Nov-2026 window). Remove this line to rest at the fixed 3 ATR TP again.
+    tp_revision: {rule: ml_first_passage, extend_only: true}
     min_reference_symbols: 40
     shadow_model_ids: []
+  # ML ENTRY v2 CANDIDATE as a TESTING leg (Tier 3, operator popup 2026-11-01 ~20:20Z: "Live at 1.5% as approved + v2 on bybit_1").
+  # bybit_1 (Bybit DEMO, Stage-1 floor) ONLY: not on bybit_2, bybit_portfolio or any real-money roster. Artifact
+  # ml/served/ml_decision_entry_v2/ = R2 regularised recipe + cost-per-R gate 0.06 + SL 2 / TP 4 ATR. Its dev stack (+0.0478) did NOT hold
+  # on the one W1 read (RQ-20261101-b609-01 FAIL -0.1161, n=320, vs frozen v1 -0.0405): this leg proves MECHANICS only; the edge is
+  # decided OFFLINE by RQ-20261101-b610-01 (replay of this frozen artifact on a fresh window). NO sizing (neutral confidence).
+  ml_entry_v2:
+    model: ml-decision-entry-v2
+    signal_prefixes: [ml_entry_v2]
+    enabled: true
+    execution: live
+    timeframe: "1h"
+    decision_bar: closed
+    symbols: [BTCUSDT, ETHUSDT, XRPUSDT, ADAUSDT, SOLUSDT]
+    atr_period: 14
+    atr_stop_mult: 2.0
+    tp_r: 2.0
+    min_reference_symbols: 40
+    shadow_model_ids: []
+
   trend_donchian_eth_4h:
     model: null
     signal_prefixes: [trend_donchian_eth_4h, donchian_eth_4h]
