@@ -20,7 +20,8 @@ on:
   schedule:
     - cron: "25 21 * * 1-5"
   issues:
-    types: [opened]
+    # `labeled` (not `opened`): see etf-history-pipeline.yml; a re-added label (#22406) never fired under `opened`.
+    types: [labeled]
 
 permissions:
   contents: read
@@ -36,7 +37,7 @@ jobs:
       github.event_name != 'issues' ||
       ((github.event.issue.user.login == github.repository_owner ||
         github.event.issue.user.login == 'github-actions[bot]') &&
-       contains(github.event.issue.labels.*.name, 'options-snapshot-request'))
+       github.event.label.name == 'options-snapshot-request')
     runs-on: ubuntu-latest
     timeout-minutes: 150
     steps:
@@ -135,7 +136,7 @@ jobs:
           TRAINER_USER: ${{ vars.TRAINER_VM_USER || 'ubuntu' }}
         run: |
           set -euo pipefail
-          ssh -i ~/.ssh/trainer_key -o BatchMode=yes -o StrictHostKeyChecking=accept-new -o ConnectTimeout=20 \
+          ssh -i ~/.ssh/trainer_key -o BatchMode=yes -o StrictHostKeyChecking=accept-new -o LogLevel=ERROR -o ConnectTimeout=20 \
             "${TRAINER_USER}@${TRAINER_IP}" 'mkdir -p ict-trading-bot/data/options_history'
           rsync -a --partial -e "ssh -i ~/.ssh/trainer_key -o BatchMode=yes -o StrictHostKeyChecking=accept-new" \
             store/ "${TRAINER_USER}@${TRAINER_IP}:ict-trading-bot/data/options_history/"
