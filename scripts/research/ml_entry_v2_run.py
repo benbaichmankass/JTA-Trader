@@ -98,5 +98,43 @@ def main(argv: list[str]) -> int:
     return 0
 
 
+# RESEARCH-FLOW 2026-11-02: these modes copied their *_result.json into out_dir but never wrote the verdict.json
+# script_run.py grades from, so every completed run (b60x/b62x/a508 ...) landed as read_state=producer_failed with real
+# results sitting ungraded on main (71 of 90 landed records since 2026-11-01). The verdict word below is the script's OWN
+# pre-registered per-cell verdict, mapped mechanically; an unrecognised shape writes NOTHING (stays producer_failed).
+_WIN, _LOSS = {"win"}, {"no_win", "does_not_reproduce"}
+
+
+def write_verdict(unit: str, out: Path) -> bool:
+    import json
+    words, ns = [], []
+    for f in sorted(out.glob("*_result.json")):
+        try:
+            d = json.loads(f.read_text())
+        except Exception:
+            return False
+        cells = d.get("cells") if isinstance(d.get("cells"), dict) else None
+        for c in (cells.values() if cells else [d]):
+            w = c.get("verdict") if isinstance(c, dict) else None
+            if w in (None, "base"):
+                continue
+            words.append(str(w))
+            if isinstance(c.get("n"), list) and c["n"]:
+                ns.append(int(c["n"][0]))
+    if not words or not set(words) <= (_WIN | _LOSS | {"indeterminate"}):
+        return False
+    v = "pass" if any(w in _WIN for w in words) else ("indeterminate" if "indeterminate" in words else "fail")
+    (out / "verdict.json").write_text(json.dumps({
+        "verdict": v, "read_state": "measured",
+        "population": f"{unit}: {len(words)} non-base cell(s), DEV FOLDS ONLY; cell verdicts {sorted(set(words))}",
+        "n": max(ns) if ns else None,
+        "note": "mechanical map of the script's own per-cell verdicts (win->pass, all no_win->fail, any indeterminate->indeterminate); see *_result.json for cells",
+    }, indent=2) + "\n")
+    return True
+
+
 if __name__ == "__main__":
-    sys.exit(main(sys.argv[1:]))
+    rc = main(sys.argv[1:])
+    if rc == 0 and len(sys.argv) == 4:
+        write_verdict(sys.argv[2], Path(sys.argv[3]))
+    sys.exit(rc)
