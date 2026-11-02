@@ -1,0 +1,64 @@
+id: RQ-20261102-5e1a-01
+title: 'ml_entry prop gate (lane ML-ENTRY-PROP-GATE): served ENTRY trades on ETHUSDT+SOLUSDT x breakout_2 / tradeify_1 / velotrade_1 under RULE-P5-GATE-BRK-PER-LEG-V3'
+status: queued
+cadence: once
+kind: experiment
+theme: new_strategy_prop
+priority: 1
+roadmap:
+- L-PROP
+question: Per live prop account (breakout_2 breakout_turbo_1step 0.35% risk; tradeify_1 tradeify_247_1step 0.5%; velotrade_1 velotrade_classic_1step 0.5%; configured sizing, daily_dd_switch 0.8), does ml_entry
+  restricted to the prop symbols (ETHUSDT, SOLUSDT; served ENTRY model, extend-only TP, held-out 2025-10-01..2026-09-30, the ml_entry evidence record population) clear RULE-P5-GATE-BRK-PER-LEG-V3 priced
+  under the firm cost arm?
+why_this_matters: 'Operator 2026-11-02 ~10:35Z verbatim: "Is ml libe on props? I want it there too"; popup answer "Run gate now, auto-add if pass (Rec.)" = approval of the Tier-3 roster add CONDITIONAL
+  on a PASS. One run, as registered, nothing tuned to pass.'
+power:
+  expected_n: 381
+  min_detectable_effect: 0.3
+  effect_units: sd
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: n floor 88; ledger = ml_entry evidence population restricted to ETHUSDT+SOLUSDT (176+205 = 381 trades in the 5-symbol record).
+  feasibility:
+    source: none
+    accrual_basis: Re-pricing of a held-out served-model ledger under each firm rules; nothing accrues.
+decision_rule:
+  id: RULE-P5-GATE-BRK-PER-LEG-V3
+  registered_at: '2026-11-02T11:00:00Z'
+  registered_before_run: true
+  statistic: 'Per leg x account x window x cost arm, 5 seeds (1-5), prop_ev_sim path mode, 1000 lives/seed, one-leg book at the account''s configured risk_pct (--sizing start), --dd-switch-frac 0.8, ruleset
+    leverage caps. B = per-attempt evaluation breach probability = min(1, p_breach_max_dd_in_eval + p_breach_daily_loss_in_eval) (the share of first evaluation attempts that breach). EV = ev_net_usd_per_life
+    (730d horizon, rebuys charged), also reported as % of the account size. p_breach_max_dd (lifetime, the old record''s field) is reported beside it, NOT graded: over a 730d horizon on a static drawdown
+    it tends to 1 for any leg.'
+  rule: 'RULE-P5-GATE-BRK-PER-LEG-V3 exactly as registered in research/queue/RQ-20261029-9a2c-01.yaml amendments and implemented in scripts/research/prop_gate.py: V2 (n>=88, median and max-over-seeds B
+    < firm ceiling c, EV>0 at median and worst seed; 5 seeds, 1000 lives, path mode, configured risk_pct, dd switch 0.8) AND two-sided 95% CI lower bound of mean net R > 0 (cell cost arm). Verdict per firm;
+    zero-edge null EV reported. Primary arm = firm venue stack (SIM[acct].ven), the current-stack arm (11.0/3.0/0.0003) reported beside it; verdict taken on the firm arm. ONE run; thresholds and ledger
+    not changed after seeing any result.'
+  proposal_mapping: PASS on a firm -> Tier-3 roster add PR for that account (held for operator merge; operator approval conditional on PASS quoted). FAIL/FAIL_EDGE/INDETERMINATE -> no roster change; record
+    landed.
+  min_n: '88'
+compute: cpu_long
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 1.0
+  est_minutes: 45
+  basis: Measured this lane - one prop_ev_sim cell (1000 lives + 4x100 outer) takes ~65 s; 120 cells over 4 cores.
+run:
+  workflow: session-local
+  note: Run SESSION-LOCAL by lane ML-ENTRY-PROP-GATE. Driver docs/research/ml-entry-prop-gate-2026-11-02/.
+  inputs:
+    research_unit: RQ-20261102-5e1a-01
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+practice_precedent: 'none: re-pricing of committed ledgers under firm rules; follows RULE-P5-GATE-BRK-PER-LEG (RQ-20261016-026) with a real breach ceiling added; docs/reference/trading-and-model-practice-principles.md
+  (judge an edge ex a single window)'
+related:
+- research/queue/RQ-20261029-9a2c-01.yaml
+- comms/strategy_evidence/ml_entry.json
+- comms/prop_survival/README.md
+- scripts/research/prop_gate.py
+what_it_does_not_do: Changes no roster, risk, sizing or config by itself; a PASS only yields a held Tier-3 PR.
