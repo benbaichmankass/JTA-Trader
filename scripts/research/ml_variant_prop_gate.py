@@ -34,12 +34,15 @@ MISSING_PIECE = ("the variant's harness must emit its ETH+SOL trade ledger (gros
 def find_ledger(unit: str, arm: str | None = None) -> Path | None:
     if arm:   # exit_lever_ablation arm book: comms/research/<unit>/<run>/arms/<label>__trades.jsonl (the gate input of a Donchian structure-exit arm)
         hits = sorted(glob.glob(str(REPO / f"comms/research/{unit}/**/arms/{arm}__trades.jsonl"), recursive=True))
+        if hits:
+            print(f"[find_ledger] arm {arm}: {len(hits)} candidate(s), using {hits[-1]}", file=sys.stderr)   # provenance: print — the chosen path is shown, never silent
         return Path(hits[-1]) if hits else None
     pats = [f"research/results/{unit}/**/ledger_ethsol.jsonl", f"comms/research/{unit}/**/ledger_ethsol.jsonl",
             f"research/results/{unit}/**/ledger.jsonl", f"comms/research/{unit}/**/ledger.jsonl"]
     for p in pats:  # provenance: pats — fixed list of the variant's own result dirs by unit id, in priority order (named ledger first)
         hits = sorted(glob.glob(str(REPO / p), recursive=True))
         if hits:
+            print(f"[find_ledger] {len(hits)} candidate(s) for {p}, using {hits[-1]}", file=sys.stderr)   # provenance: print — the chosen path is shown, never silent
             return Path(hits[-1])
     return None
 
