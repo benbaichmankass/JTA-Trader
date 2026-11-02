@@ -1,0 +1,110 @@
+{
+ "schema_version": 1,
+ "review_id": "LR-20261102T0627Z-pkg-d76f1b15923e4282",
+ "reviewed_at": "2026-11-02T06:31:00Z",
+ "order_package_id": "pkg-d76f1b15923e4282",
+ "trade_id": null,
+ "leg": "mgc_trend_1h",
+ "accounts": [
+  "ib_paper"
+ ],
+ "trigger": {
+  "event": "giveback",
+  "level": 3.0,
+  "l0_snapshot_at": "2026-11-02T03:17:00Z"
+ },
+ "info_cutoff_at": "2026-11-02T06:27:17Z",
+ "state": {
+  "atr_now_over_entry": 1.2193,
+  "bars_held": 21,
+  "giveback_r": 1.1652,
+  "open_r": 1.8839,
+  "peak_provenance": "estimated",
+  "peak_r": 3.0491,
+  "regime_cell_entry": null,
+  "regime_cell_now": null,
+  "sl": 3938.07142857,
+  "tp": 3596.1613
+ },
+ "features_at_review": {
+  "atr_now_over_entry": 1.2193,
+  "bars_since_peak": 8,
+  "giveback_r": 1.1652,
+  "open_r": 1.8839,
+  "peak_r": 3.0491,
+  "r_to_stop": 0.4348,
+  "r_to_target": 8.8734
+ },
+ "mechanics": {
+  "evidence": "package sl 3938.07142857 / tp 3596.1613 agree with every readable account",
+  "verdict": "match"
+ },
+ "options": [],
+ "outcome_table_source": "comms/live_review/tables/LR-20261102T0627Z-pkg-d76f1b15923e4282.json",
+ "recommendation": {
+  "action": "hold",
+  "level": null,
+  "level_atr": null,
+  "ev_delta_r": null,
+  "worst_case_delta_r": null,
+  "basis": "judgement",
+  "confidence": "anecdote",
+  "evidence_source": "judgement",
+  "judgement_confidence": 0.55,
+  "reason": "Short +1.88R after a 3.05R peak, stop already trailed to 3938 (inside entry, locks ~+1.3R), 1h ADX 44.7 trending down, TP 3596 far away. Hold cell n=7 is thin and tighten levels were invalid_level, so this is judgement: giving back 1.2R is within the leg's trail geometry and a trend this strong is not a reversal signal; the trailed stop already protects profit.",
+  "size_fraction": null
+ },
+ "judge_prior": null,
+ "applied": false,
+ "apply_policy": {
+  "bound_r": 0.25,
+  "within_bound": null,
+  "tighten_r": null
+ },
+ "shadow_policy": {
+  "bound_r": 0.5,
+  "within_bound": null,
+  "would_apply": null,
+  "tighten_r": null
+ },
+ "context_flags": [
+  "thin cell: hold n=7 (< floor 20), tighten atr:1.0/1.5 invalid_level; no table EV, judgement",
+  "tp_r 50.0 sentinel on mgc TP belongs to STRUCTURE-EXITS-DEFAULT, noted not acted",
+  "correlated: other open book legs not netted here"
+ ],
+ "account_reads": [
+  {
+   "account_id": "ib_paper",
+   "account_class": "paper",
+   "read": "no_action",
+   "evidence": "hold changes nothing"
+  }
+ ],
+ "disposition": {
+  "route": "none",
+  "mandate": null,
+  "action_issue": null,
+  "applied_at": null,
+  "verified_readback": null
+ },
+ "model": "sonnet-tier",
+ "session": "session_01AFoLuLwExwKJqVXTKxr9hY",
+ "prompt_sha": null,
+ "skill_sha": "59ad4814d9e7edf5f398b0105fd3ce9a2bd311e0",
+ "packet_sha": "65142600522aaa1150976148f8d9b78a00b255570d9a58aa54e65ad64d3541ad",
+ "forecast": {
+  "thesis": "Downtrend in MGC (1h ADX 44.7) should extend toward 3860 before the trailed stop 3938 is touched.",
+  "direction": "with_trade",
+  "target_px": 3860.0,
+  "p_target": 0.45,
+  "invalidation_px": 3938.07,
+  "horizon_bars": 12,
+  "timeframe": "1h",
+  "evidence": [
+   "state: open_r +1.88, peak 3.05",
+   "htf adx 44.71 trending",
+   "exit_plan: sl 3938.07 tp 3596.16",
+   "priced_options: hold n=7 thin"
+  ]
+ }
+}

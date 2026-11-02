@@ -1,0 +1,110 @@
+{
+ "schema_version": 1,
+ "review_id": "LR-20261102T0628Z-pkg-93b681fb9f1844d6",
+ "reviewed_at": "2026-11-02T06:31:00Z",
+ "order_package_id": "pkg-93b681fb9f1844d6",
+ "trade_id": null,
+ "leg": "trend_donchian_eth",
+ "accounts": [
+  "bybit_1"
+ ],
+ "trigger": {
+  "event": "new_peak",
+  "level": 0.5,
+  "l0_snapshot_at": "2026-11-02T03:17:00Z"
+ },
+ "info_cutoff_at": "2026-11-02T06:28:05Z",
+ "state": {
+  "atr_now_over_entry": 1.1616,
+  "bars_held": 5,
+  "giveback_r": 1.0818,
+  "open_r": -0.3693,
+  "peak_provenance": "estimated",
+  "peak_r": 0.7125,
+  "regime_cell_entry": "transitional/calm",
+  "regime_cell_now": null,
+  "sl": 2269.46071429,
+  "tp": 2525.1723
+ },
+ "features_at_review": {
+  "atr_now_over_entry": 1.1616,
+  "bars_since_peak": 2,
+  "giveback_r": 1.0818,
+  "open_r": -0.3693,
+  "peak_r": 0.7125,
+  "r_to_stop": 0.6307,
+  "r_to_target": 8.4245
+ },
+ "mechanics": {
+  "evidence": "package sl 2269.46071429 / tp 2525.1723 agree with every readable account",
+  "verdict": "match"
+ },
+ "options": [],
+ "outcome_table_source": "comms/live_review/tables/LR-20261102T0628Z-pkg-93b681fb9f1844d6.json",
+ "recommendation": {
+  "action": "hold",
+  "level": null,
+  "level_atr": null,
+  "ev_delta_r": null,
+  "worst_case_delta_r": null,
+  "basis": "judgement",
+  "confidence": "anecdote",
+  "evidence_source": "judgement",
+  "judgement_confidence": 0.6,
+  "reason": "ETH long -0.37R after a 0.71R peak, 5 bars held, stop 2269.46 holds; leg's own hold cell is measured n=35 mean +0.61R (worst -1.11R) and tighten levels invalid, so hold has the best measured EV. 1h ADX 27 still trending. Do not act on TP 2525 (50R-style sentinel, STRUCTURE-EXITS-DEFAULT).",
+  "size_fraction": null
+ },
+ "judge_prior": null,
+ "applied": false,
+ "apply_policy": {
+  "bound_r": 0.25,
+  "within_bound": null,
+  "tighten_r": null
+ },
+ "shadow_policy": {
+  "bound_r": 0.5,
+  "within_bound": null,
+  "would_apply": null,
+  "tighten_r": null
+ },
+ "context_flags": [
+  "tp_r 50.0 sentinel: noted, belongs to STRUCTURE-EXITS-DEFAULT, not acted",
+  "tighten atr:1.0 invalid_level in table",
+  "correlated: ETH long with other open longs"
+ ],
+ "account_reads": [
+  {
+   "account_id": "bybit_1",
+   "account_class": "paper",
+   "read": "no_action",
+   "evidence": "hold changes nothing"
+  }
+ ],
+ "disposition": {
+  "route": "none",
+  "mandate": null,
+  "action_issue": null,
+  "applied_at": null,
+  "verified_readback": null
+ },
+ "model": "sonnet-tier",
+ "session": "session_01AFoLuLwExwKJqVXTKxr9hY",
+ "prompt_sha": null,
+ "skill_sha": "59ad4814d9e7edf5f398b0105fd3ce9a2bd311e0",
+ "packet_sha": "c5218719494f0aa701e79d1f8de80e08b1928461a172445ae1e120090fc49c90",
+ "forecast": {
+  "thesis": "ETH 1h trend (ADX 27) resumes and retests the 2298 entry before 2269 breaks.",
+  "direction": "with_trade",
+  "target_px": 2298.0,
+  "p_target": 0.5,
+  "invalidation_px": 2269.46,
+  "horizon_bars": 12,
+  "timeframe": "1h",
+  "evidence": [
+   "state open_r -0.37 peak 0.71",
+   "htf adx 27.37",
+   "priced_options: hold n=35 mean +0.611",
+   "exit_plan sl 2269.46"
+  ]
+ }
+}

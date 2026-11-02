@@ -1,0 +1,117 @@
+{
+ "schema_version": 1,
+ "review_id": "LR-20261102T0627Z-pkg-7275ef97b4944095",
+ "reviewed_at": "2026-11-02T06:31:00Z",
+ "order_package_id": "pkg-7275ef97b4944095",
+ "trade_id": null,
+ "leg": "ml_entry",
+ "accounts": [
+  "bybit_2",
+  "bybit_portfolio"
+ ],
+ "trigger": {
+  "event": "daily_floor",
+  "level": "2026-11-02",
+  "l0_snapshot_at": "2026-11-02T03:17:00Z"
+ },
+ "info_cutoff_at": "2026-11-02T06:27:42Z",
+ "state": {
+  "atr_now_over_entry": null,
+  "bars_held": 0,
+  "giveback_r": null,
+  "open_r": null,
+  "peak_provenance": "estimated",
+  "peak_r": null,
+  "regime_cell_entry": null,
+  "regime_cell_now": null,
+  "sl": 0.1965142857142857,
+  "tp": 0.19022857142857147
+ },
+ "features_at_review": {
+  "atr_now_over_entry": null,
+  "bars_since_peak": null,
+  "giveback_r": null,
+  "open_r": null,
+  "peak_r": null,
+  "r_to_stop": null,
+  "r_to_target": null
+ },
+ "mechanics": {
+  "evidence": "package sl 0.1965142857142857 / tp 0.19022857142857147 agree with every readable account",
+  "verdict": "match"
+ },
+ "options": [],
+ "outcome_table_source": null,
+ "recommendation": {
+  "action": "hold",
+  "level": null,
+  "level_atr": null,
+  "ev_delta_r": null,
+  "worst_case_delta_r": null,
+  "basis": "judgement",
+  "confidence": "anecdote",
+  "evidence_source": "judgement",
+  "judgement_confidence": 0.5,
+  "reason": "ml_entry ADA short, 0 bars held, never reviewed; open_r unknown, both brackets match the venue (SL 0.1965 / TP 0.1902, reach 1.5R). 4h ADX 31 supports the short. No priced table for ml_entry, so hold is a judgement with nothing in the packet that beats the fresh bracket.",
+  "size_fraction": null
+ },
+ "judge_prior": null,
+ "applied": false,
+ "apply_policy": {
+  "bound_r": 0.25,
+  "within_bound": null,
+  "tighten_r": null
+ },
+ "shadow_policy": {
+  "bound_r": 0.5,
+  "within_bound": null,
+  "would_apply": null,
+  "tighten_r": null
+ },
+ "context_flags": [
+  "priced_options null for ml_entry leg: judgement, no table",
+  "open_r/peak_r null at 0 bars; adverse_r, stall, structure_break could_not_look (need history bars)",
+  "funding: no settlement read for bybit_2 in 24h (puller not writing?)"
+ ],
+ "account_reads": [
+  {
+   "account_id": "bybit_2",
+   "account_class": "real_money",
+   "read": "no_action",
+   "evidence": "hold changes nothing"
+  },
+  {
+   "account_id": "bybit_portfolio",
+   "account_class": "paper",
+   "read": "no_action",
+   "evidence": "hold changes nothing"
+  }
+ ],
+ "disposition": {
+  "route": "none",
+  "mandate": null,
+  "action_issue": null,
+  "applied_at": null,
+  "verified_readback": null
+ },
+ "model": "sonnet-tier",
+ "session": "session_01AFoLuLwExwKJqVXTKxr9hY",
+ "prompt_sha": null,
+ "skill_sha": "59ad4814d9e7edf5f398b0105fd3ce9a2bd311e0",
+ "packet_sha": "6fc5da936bfbffd881184885ed5c1d9d803bacfa275aae9e5b9d4e88371ebfe6",
+ "forecast": {
+  "thesis": "ADA keeps drifting down in a trending 4h (ADX 31) and reaches 0.1902 before 0.1965.",
+  "direction": "with_trade",
+  "target_px": 0.1902,
+  "p_target": 0.45,
+  "invalidation_px": 0.1965,
+  "horizon_bars": 12,
+  "timeframe": "1h",
+  "evidence": [
+   "state: bars_held 0",
+   "htf adx 31.04",
+   "exit_plan sl 0.1965 tp 0.1902",
+   "priced_options null"
+  ]
+ }
+}
