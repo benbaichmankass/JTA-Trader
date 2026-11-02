@@ -36,6 +36,7 @@ Read-only. Writes only --out (default stdout).
 from __future__ import annotations
 
 import argparse
+import glob
 import json
 import re
 import sys
@@ -291,9 +292,80 @@ def build(root: Path, since: datetime, now: datetime, k: int, stale_days: int, k
                        "results_read": {x: (r.get("results_read") or {}).get(x) for x in ("pass", "fail", "indeterminate")},
                        "not_run": len(r.get("not_run") or [])} for r in recs],
         "stale": {"days": stale_days, "count": len(stale), "by_track": dict(Counter(s["track"] for s in stale)), "oldest": stale[:10]},
+        "iteration": _iteration_block(root),
         "previous_calls": {"file": prev[0]["_file"] if prev else None,
                            "calls": ((prev[0].get("calls") or (prev[0].get("analysis") or {}).get("calls")) if prev else None)},
     }
+
+
+def _workflow_shares(root: Path, days: int = 7) -> Dict[str, Any]:
+    """The research loop MEASURED, not prose (OPERATING-PLAN § 2, 2026-11-01). Over units with an id date in the last `days`:
+    structured designs (a baseline arm + >= 1 variant, or a lever sweep) vs single configs; units citing a lever-map entry
+    or a parent result; results whose subject's lever map records that unit (attributed). Each share names its population."""
+    try:
+        import re as _re
+
+        import iteration_orphans as io
+        import yaml as _yaml
+        cut = (datetime.now(timezone.utc) - timedelta(days=days)).strftime("%Y%m%d")
+        units = []
+        for f in glob.glob(str(root / "research/queue/*.yaml")) + glob.glob(str(root / "research/queue/blocked/*.yaml")):
+            m = _re.search(r"RQ-(\d{8})", f)
+            if not m or m.group(1) < cut:
+                continue
+            d = _yaml.safe_load(Path(f).read_text(encoding="utf-8"))
+            if isinstance(d, dict):
+                units.append(d)
+        def arms(d):
+            cmd = [str(x) for x in ((d.get("run") or {}).get("command") or [])]
+            return [cmd[i + 1] for i in range(len(cmd) - 1) if cmd[i] == "--arm"]
+        def structured(d):
+            a = arms(d)
+            return (len(a) >= 2 and any(x.partition("=")[2] == "" for x in a)) or d.get("design") == "structured"
+        def cites(d):
+            it = d.get("iteration") if isinstance(d.get("iteration"), dict) else {}
+            return bool(it.get("map_entries") or it.get("from_result") or d.get("requires_result"))
+        def levers(d):
+            return bool(io.unit_levers({"iteration": d.get("iteration"), "run": d.get("run") or {}, "generated":
+                                        (d.get("generated") or {}).get("family") if isinstance(d.get("generated"), dict) else None})
+                        or d.get("levers_declared"))
+        n = len(units)
+        mapped = set()
+        for f in glob.glob(str(root / "research/levers/*.yaml")):
+            mapped.update(_re.findall(r"unit: (RQ-[\w-]+)", Path(f).read_text(encoding="utf-8")))
+        res_units = {Path(p).parent.name for p in glob.glob(str(root / "research/results/*/*.jsonl"))
+                     if (mm := _re.search(r"RQ-(\d{8})", Path(p).parent.name)) and mm.group(1) >= cut}
+        def share(k: int, tot: int) -> Dict[str, Any]:
+            return {"count": k, "of": tot, "share": (round(k / tot, 3) if tot else None)}
+        return {"read_state": "measured", "window_days": days,
+                "population": f"research/queue units with id date >= {cut} ({n}); result dirs of units with id date >= {cut} ({len(res_units)})",
+                "structured_designs": share(sum(1 for d in units if structured(d)), n),
+                "units_citing_parent_or_map": share(sum(1 for d in units if cites(d)), n),
+                "units_declaring_levers": share(sum(1 for d in units if levers(d)), n),
+                "results_in_a_lever_map": share(len(res_units & mapped), len(res_units)),
+                "note": "results_in_a_lever_map counts a result only once lever_map.py --backfill has recorded its arms; "
+                        "stage0/holdout reads of a baseline carry no lever and are not expected there"}
+    except (OSError, ValueError, KeyError, ImportError) as exc:
+        return {"read_state": "could_not_look", "why": f"{type(exc).__name__}: {exc}"}
+
+
+def _iteration_block(root: Path) -> Dict[str, Any]:
+    """The research loop's daily number (OPERATING-PLAN § 2, 2026-11-01): subjects with no live iteration, per kind.
+
+    Target 0. `could_not_look` is its own state -- never read as zero orphans."""
+    try:
+        sys.path.insert(0, str(Path(__file__).resolve().parent))
+        import iteration_orphans as io  # same directory
+        res = io.run(root)
+    except (OSError, ValueError, KeyError, ImportError) as exc:
+        return {"read_state": "could_not_look", "why": f"{type(exc).__name__}: {exc}"}
+    return {"read_state": "measured", "as_of": res["as_of"], "counts": res["counts"],
+            "workflow": _workflow_shares(root),
+            "orphans": [r["id"] for r in res["rows"] if r["state"] == "orphan"],
+            "overdue": [r["id"] for r in res["rows"] if r["state"] == "overdue"],
+            "lever_coverage": {sid: {"remaining": c["remaining"],
+                                     "tested": [f for f, st in c["state"].items() if st == "tested"]}
+                               for sid, c in (res.get("lever_coverage") or {}).items()}}
 
 
 def main(argv: Optional[List[str]] = None) -> int:

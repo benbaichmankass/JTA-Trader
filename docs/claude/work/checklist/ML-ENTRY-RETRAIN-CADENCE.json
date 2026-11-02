@@ -1,0 +1,24 @@
+{
+  "phase": "research",
+  "state": "queued",
+  "owner": null,
+  "lane": null,
+  "model": "claude-sonnet-5-5",
+  "tier": 2,
+  "prs": [],
+  "blocked_on": [],
+  "roadmap": [
+    "L-ML-LIVE"
+  ],
+  "priority_rank": 2,
+  "id": "ML-ENTRY-RETRAIN-CADENCE",
+  "title": "Standing retrain cadence for the live ENTRY model: weekly Sunday 04:00Z workflow/timer, artifact with data-through date and sha, freshness line graded by the review (Tier 2, held PR for the manager)",
+  "ceiling_usd": 5,
+  "note": "Operator 2026-11-01: a plan for feeding and retraining on more and better data now, not at an unspecified date. This is a schedule, not a promise: a workflow or trainer timer, first scheduled run 2026-11-08T04:00Z, held PR for the manager by 2026-11-02T18:00Z. Retrain refits on all data through the previous day minus embargo with the registered recipe; publishes feature list, sha, data-through date. No halting: a failed retrain keeps the previous artifact and raises ONE red flag. Plan: docs/research/ml-feature-inventory-2026-11-01.md section 1b (dated, UTC). Gates: none.",
+  "observation": {
+    "what": "the schedule exists on main and the first scheduled run produced an artifact with a data-through date",
+    "how_to_check": "gh/MCP: workflow ml-entry-retrain run list; artifact metadata data_through",
+    "due_by": "2026-11-09"
+  },
+  "_seq": 880
+}

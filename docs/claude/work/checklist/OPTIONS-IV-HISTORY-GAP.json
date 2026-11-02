@@ -2,7 +2,7 @@
   "id": "OPTIONS-IV-HISTORY-GAP",
   "title": "Data gap (filed 2026-11-01): no keyless option-chain or IV-surface history for a priced straddle test of forecast-vs-implied vol; TLT has no keyless IV series",
   "phase": null,
-  "state": "queued",
+  "state": "done",
   "owner": "manager",
   "lane": "RESEARCH-EDGE",
   "model": null,
@@ -11,9 +11,13 @@
   "tier": 1,
   "prs": [],
   "blocked_on": [],
-  "note": "FOUND 2026-11-01 (lane RESEARCH-EDGE, unit RQ-20261101-58e4-07, PR #22117). Reachable keyless: CBOE vol INDICES on FRED (VIX, VXN, RVX, GVZ, OVX, VXSLV) = 30-day IV for SPY QQQ IWM GLD USO SLV. NOT reachable: TLT IV (FRED TYVIX/VXTLT 404); any option CHAIN history or surface; Alpaca options (src/units/accounts/alpaca_options_data.py) needs credentials and serves only current 15-min-delayed indicative snapshots, no history. COST OF CLOSING: (a) start collecting daily chain snapshots now via the existing alpaca-options-probe route (free tier, indicative feed) - zero spend but 12+ months to accrue; or (b) buy historical OPRA/chain data (ORATS, Polygon options, CBOE DataShop; roughly tens to hundreds of USD per month, operator decision, not verified here). The variance-swap proxy result says the forecast-minus-IV gap adds nothing over the always-short-variance premium net of cost, so a priced test is only worth buying if the operator wants the variance risk premium itself (short-vol, tail risk). Done when the operator picks (a), (b) or drops it.",
-  "updated_at": "2026-11-01T12:17:08Z",
+  "note": "FOUND 2026-11-01 (lane RESEARCH-EDGE, unit RQ-20261101-58e4-07, PR #22117). Reachable keyless: CBOE vol INDICES on FRED (VIX, VXN, RVX, GVZ, OVX, VXSLV) = 30-day IV for SPY QQQ IWM GLD USO SLV. NOT reachable: TLT IV (FRED TYVIX/VXTLT 404); any option CHAIN history or surface; Alpaca options (src/units/accounts/alpaca_options_data.py) needs credentials and serves only current 15-min-delayed indicative snapshots, no history. COST OF CLOSING: (a) start collecting daily chain snapshots now via the existing alpaca-options-probe route (free tier, indicative feed) - zero spend but 12+ months to accrue; or (b) buy historical OPRA/chain data (ORATS, Polygon options, CBOE DataShop; roughly tens to hundreds of USD per month, operator decision, not verified here). The variance-swap proxy result says the forecast-minus-IV gap adds nothing over the always-short-variance premium net of cost, so a priced test is only worth buying if the operator wants the variance risk premium itself (short-vol, tail risk). Done when the operator picks (a), (b) or drops it. UPDATE 2026-11-01 ~14:30Z (manager redirect, lane MARKET-DATA-LAKE): GAP CLOSED. Verified by querying it: DoltHub database post-no-preference/options is reachable KEYLESS through https://www.dolthub.com/api/v1alpha1/post-no-preference/options/master (SQL via ?q=). Tables option_chain (date, act_symbol, expiration, strike, call_put, bid, ask, vol, delta, gamma, theta, vega, rho; EOD) and volatility_history (SPY 2019-02-09..2026-10-30, 1302 rows). Example read: SPY 2020-03-16 call strike 249 expiry 2020-03-30 bid 11.75 ask 12.50 vol 0.8318 delta 0.4482. So a PRICED ATM-straddle test with real bid/ask is feasible. Caveats found: heavy group-by queries time out (use per-symbol, per-date reads or the lake copy), a SPY day can hold only ~140 rows (strike/expiry coverage is a subset - check ATM coverage per date before relying on it), EOD only (no intraday fills), 15+ years not available (2019-02 on, so no 2008 or 2011 stress years). TLT and the other ETFs: not yet checked per symbol. Re-pointed: the vol-premium-proxy lever map names the priced test as the top untested family; authoring is RESEARCH-ITERATE's, not this lane's. The earlier cost estimate (buy data / 12 months accrual) is withdrawn. CLOSED as a gap (source verified by query, above). The priced straddle test itself is a new unit for RESEARCH-ITERATE, listed first under lever_families_untested in research/levers/vol-premium-proxy.yaml.",
+  "updated_at": "2026-11-01T15:07:28Z",
   "updated_by": "session_RESEARCH-EDGE",
   "roadmap": "L-PROGRAMMES",
+  "writeback": {
+    "roadmap": "none: research outcome recorded in research/levers/*.yaml and research/results; no milestone status changed",
+    "arch": "none: no component changed"
+  },
   "_seq": 877
 }
