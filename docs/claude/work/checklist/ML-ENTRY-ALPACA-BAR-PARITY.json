@@ -1,0 +1,27 @@
+{
+  "id": "ML-ENTRY-ALPACA-BAR-PARITY",
+  "title": "Serve parity: Alpaca IEX clock-hour 1h bars (incl. extended hours) vs the regular-session :30 bars RQ-20261101-bdc2-01 scored ml_entry on; measure the feature and decision-clock difference on alpaca_paper",
+  "phase": null,
+  "state": "queued",
+  "owner": "manager",
+  "lane": null,
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [],
+  "blocked_on": [],
+  "note": "Filed 2026-11-01 by lane ALPACA-LIVE-ACTIVITY-ML on the manager instruction (12:37Z): \"file a dated serve-parity row: owner manager, due_by 2026-11-03, measuring the difference between Alpaca IEX clock-hour bars and regular-session bars. Paper can proceed.\" MEASURED in code: src/exchange/alpaca_connector.py::get_ohlcv requests /v2/stocks/{sym}/bars with the IEX feed and no session filter; bar t = bar START on the clock hour, so live 1h bars include pre/post-market trades and differ from the Yahoo regular-session :30 bars the one-read scored. Consequences to measure: (1) is_decision_bar fires at UTC close hours %4==0 incl. extended-hours bars (00/08/12 UTC) where a bracket cannot be placed; (2) ret_k / vol24 / ATR14 / range_pos counted over extended-hours bars. Method: pull 30 sessions of Alpaca IEX 1h bars and Yahoo RTH bars for the 13 alpaca_paper ETFs, compute the 20 features at each decision bar both ways, report the per-feature gap and the decision agreement (taken / side) of the frozen model.",
+  "priority_rank": 20,
+  "updated_at": "2026-11-01T13:00:10Z",
+  "updated_by": "session_01AFoLuMP2ywy8v4RXABackp",
+  "observation": {
+    "what": "per-feature gap and decision agreement, Alpaca IEX clock-hour bars vs regular-session bars, ml_entry on the 13 alpaca_paper ETFs",
+    "how_to_check": "a committed comparison under comms/research/ml_entry_alpaca_bar_parity/ with the 20 features both ways at every decision bar of 30 sessions",
+    "due_by": "2026-11-03"
+  },
+  "roadmap": [
+    "L-ML-LIVE"
+  ],
+  "_seq": 875
+}

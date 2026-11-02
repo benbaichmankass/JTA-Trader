@@ -702,6 +702,7 @@ def test_alive_orphan_with_recoverable_package_reattached_not_flattened(tmp_db, 
         "sl": 79000.0, "tp": 83000.0, "status": "closed",
         "created_at": (datetime.now(timezone.utc) - timedelta(days=1)).isoformat(),
     })
+    _origin_fill(tmp_db, "op-btc", "bybit_2", "BTCUSDT", 80700.0, 0.003)
 
     with patch(
         "src.units.accounts.clients.account_open_positions",
@@ -1071,6 +1072,17 @@ def _pkg_link(db, opid):
         conn.close()
 
 
+def _origin_fill(db, opid, account_id, symbol, entry, size):
+    """The orphan account's ORIGINAL (since-closed) fill in the package. GLD-ORPHAN-5209: the orphan matcher
+    attributes only to a package this account actually FILLED in."""
+    db.insert_trade({
+        "timestamp": (datetime.now(timezone.utc) - timedelta(days=1)).isoformat(), "symbol": symbol,
+        "direction": "long", "entry_price": entry, "position_size": size, "setup_type": "trend",
+        "status": "closed", "is_backtest": 0, "strategy_name": "x", "account_id": account_id,
+        "order_package_id": opid, "notes": "{}",
+    })
+
+
 def _seed_real_leg_and_package(db, *, real_status="open"):
     # Relative to now, not a fixed date: #17491 refuses orphan-attribution
     # packages older than ORPHAN_PACKAGE_MAX_AGE_DAYS (14), so a hard-coded
@@ -1097,6 +1109,7 @@ def test_adopted_paper_orphan_does_not_steal_real_money_link(tmp_db, monkeypatch
     monkeypatch.setattr(_om, "_rearm_broker_protection_after_recovery",
                         lambda *a, **k: None)
     real_id = _seed_real_leg_and_package(tmp_db)
+    _origin_fill(tmp_db, "pkg-1", "bybit_portfolio", "ETHUSDT", 2500.0, 1.0)
 
     orphan_id = _adopt_orphan_position(
         db=tmp_db, account_id="bybit_portfolio", symbol="ETHUSDT",
@@ -1130,6 +1143,7 @@ def test_reattached_orphan_does_not_steal_real_money_link(tmp_db, monkeypatch):
     monkeypatch.setattr(_om, "_rearm_broker_protection_after_recovery",
                         lambda *a, **k: None)
     real_id = _seed_real_leg_and_package(tmp_db)
+    _origin_fill(tmp_db, "pkg-1", "bybit_portfolio", "ETHUSDT", 2500.0, 1.0)
     _insert_orphan_adopt(tmp_db, symbol="ETHUSDT", direction="long",
                          account_id="bybit_portfolio", size=1.0, entry=2501.0)
 
