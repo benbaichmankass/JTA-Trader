@@ -684,6 +684,15 @@ jobs:
                      | grep -i -m1 '^[[:space:]]*keep[[:space:]]*:' \
                      | sed -E 's/^[[:space:]]*[Kk]eep[[:space:]]*:[[:space:]]*//' \
                      | tr -d '[:space:]' || true)
+            # prune-db-backups one-off: exact backup basename + explicit confirm.
+            file=$(printf '%s\n' "${ISSUE_BODY}" \
+                     | grep -i -m1 '^[[:space:]]*file[[:space:]]*:' \
+                     | sed -E 's/^[[:space:]]*[Ff]ile[[:space:]]*:[[:space:]]*//' \
+                     | tr -d '[:space:]' || true)
+            confirm=$(printf '%s\n' "${ISSUE_BODY}" \
+                     | grep -i -m1 '^[[:space:]]*confirm[[:space:]]*:' \
+                     | sed -E 's/^[[:space:]]*[Cc]onfirm[[:space:]]*:[[:space:]]*//' \
+                     | tr -d '[:space:]' || true)
             # supersede-*-artifacts: optional comma-separated trade-id allowlist.
             ids=$(printf '%s\n' "${ISSUE_BODY}" \
                      | grep -i -m1 '^[[:space:]]*ids[[:space:]]*:' \
@@ -852,6 +861,8 @@ jobs:
           echo "ACTION_ALLOW_MIRROR=${allow_mirror:-}" >>"$GITHUB_ENV"
           echo "ACTION_IDS=${ids:-}" >>"$GITHUB_ENV"
           echo "ACTION_KEEP=${keep:-}" >>"$GITHUB_ENV"
+          echo "ACTION_FILE=${file:-}" >>"$GITHUB_ENV"
+          echo "ACTION_CONFIRM=${confirm:-}" >>"$GITHUB_ENV"
           echo "ACTION_EQUAL_ONLY=${equal_only:-}" >>"$GITHUB_ENV"
           echo "ACTION_EXIT_PRICE=${exit_price:-}" >>"$GITHUB_ENV"
           echo "ACTION_CLOSED_AT=${closed_at:-}" >>"$GITHUB_ENV"
@@ -1538,6 +1549,10 @@ jobs:
           fi
           # prune-db-backups: days >= 0, keep 1-99 (the newest backup is never pruned); apply true/false.
           if [ "${ACTION}" = "prune-db-backups" ]; then
+            if [ -n "${ACTION_FILE// }" ] && ! printf '%s' "${ACTION_FILE}" | grep -Eq '^[A-Za-z0-9._-]+$'; then
+              echo "::error::prune-db-backups file must be a bare backup basename (got '${ACTION_FILE}')."
+              exit 1
+            fi
             if [ -n "${ACTION_KEEP// }" ] && ! printf '%s' "${ACTION_KEEP}" | grep -Eq '^[1-9][0-9]?$'; then
               echo "::error::prune-db-backups keep must be a whole number 1-99 (got '${ACTION_KEEP}')."
               exit 1
