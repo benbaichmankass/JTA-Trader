@@ -1,0 +1,22 @@
+{
+  "id": "RESET-PROTOCOL",
+  "title": "Weekly reset protocol: config, receipt, backup trigger, manager skill section",
+  "phase": "ops",
+  "state": "in_flight",
+  "owner": "RESET-PROTOCOL lane",
+  "lane": "RESET-PROTOCOL",
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [],
+  "blocked_on": [],
+  "note": "Operator 2026-11-02 ('Build now as specced'). Built: config/reset_protocol.yaml (one source), scripts/ops/reset_protocol.py (--plan/--receipt/--sweep/--self-test), .github/workflows/reset-protocol-backup.yml (Wed 18:15Z wake comment on ops-flags PR #17895 if no receipt; 19:00Z RED-FLAG + send-ping), manager SKILL \u00a7 Weekly reset protocol. Gates this adds or changes: none. HELD for operator merge. Remaining after merge (manager): create the 18:05Z primary routine and re-time the per-job routines from the config; push the started receipt first at each reset. Close when one real Wednesday reset writes a started+complete receipt (first: 2026-11-04). Monthly caps (deep audit $30, roadmap re-baseline $10, cost/infra $8) are PROPOSED.",
+  "due_by": "2026-11-04",
+  "roadmap": [
+    "L-OPS"
+  ],
+  "updated_at": "2026-11-02T10:16:38Z",
+  "updated_by": "session_01AFoLuFRESETPROTO",
+  "_seq": 892
+}

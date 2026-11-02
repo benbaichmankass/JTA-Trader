@@ -442,6 +442,15 @@ GUARDS: List[Dict[str, Any]] = [
                   ["python3", "scripts/ops/checklist_backfill_propose.py", "--self-test"]],
     },
     {
+        # RESET-PROTOCOL (2026-11-02): config/reset_protocol.yaml is the ONE source for the post-reset
+        # cascade; --self-test asserts the seeded cascade, the cadence rules and the receipt dedupe.
+        "name": "reset-protocol-guard",
+        "when": None,
+        "steps": [
+            ["python3", "scripts/ops/reset_protocol.py", "--self-test"],
+        ],
+    },
+    {
         # SALVAGED FROM THREE REMOVED GOVERNANCE ENTRIES, 2026-09-21.
         #
         # `artifact-validity-guard`, `recurrence-ledger-guard` and

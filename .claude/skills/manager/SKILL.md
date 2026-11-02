@@ -695,6 +695,68 @@ your session id by its own trigger. 4. `curl -sS 'https://ict-bot.duckdns.org/ap
 `/api/diag/services` for the two timers — fixing that comes first. 5. Run the review; clear `ask_operator` items first by classification,
 not forwarding; record `last_review`, push, then answer.
 
+## Weekly reset protocol (operator, 2026-11-02, binding)
+
+> **Gates this adds or changes: none.** It fixes WHAT the manager does after the weekly usage reset and WHEN; it decides no execution, mode,
+> promotion or merge.
+
+Operator, verbatim excerpt: *"I just keep on going over this every week ... after the reset at 6 o'clock on UTC ... all the reviews that we
+need to do in order to start the planning session ... if there are like monthly reviews ... spaced so that it doesn't happen every week ...
+any work that was left undone, if we ran out of usage automatically, like we know how to close it up ... a reset protocol. Preferably with at
+least a backup trigger from the VM ... even if I'm not necessarily available right after a reset ... kick things off after the reset as soon
+as possible."* The strategy review stays WEEKLY with a 30-day lookback every week (`perf-review-prep`, `lookback_days: 30`).
+
+**One source:** [`config/reset_protocol.yaml`](../../../config/reset_protocol.yaml) (`jobs` with cadence / order / offset / model / ceiling /
+skill / dedupe tag, and one-shot `after_reset` items). **Machinery:** `scripts/ops/reset_protocol.py` (`--plan <reset-ts>`, `--receipt`,
+`--sweep`, `--self-test`). **Receipt store:** `comms/ops/reset_receipts.jsonl`, append-only, committed by the manager to `main` (no DB, no
+second source of truth). **Triggers:** primary = a Claude routine Wed **18:05Z** (resolves the current manager by title; it forwards, never
+dispatches on its own authority); backup = `.github/workflows/reset-protocol-backup.yml` (18:15Z wake comment on the ops-flags PR #17895 if no
+receipt; 19:00Z RED-FLAG comment + `send-ping` if still none). The routines that fire each job at its offset are created from the config by
+the manager; Thursday planning stays its own routine.
+
+**The steps, in order. Step 0 is the claim; everything else is skipped by whoever finds the claim already made.**
+
+0. **Claim.** `python3 scripts/ops/reset_protocol.py --receipt <reset-ts> --write started --by <your session id> --json '{"jobs_due":[...]}'`,
+   then push that line to `main` at once. Exit 4 = another trigger owns this reset: stop in one line. The 18:15Z backup reads `main`, so the
+   claim must be pushed before then.
+1. **Restore the pacing cadence.** The pre-reset pacing (6 h check-ins, event wakes only) ends at the reset: put the check-in back to its
+   normal cadence (`17 */3 * * *`, manager SKILL § Manager handover V2) with `update_trigger` and say so in the Telegram line.
+2. **Stuck-work sweep.** `python3 scripts/ops/reset_protocol.py --sweep` lists checklist rows `in_flight`/`blocked`, open PRs older than 12 h
+   and PIPELINE items with `due_when.event == weekly_reset` (the paused-work item, below). The script **cannot see sessions**: add
+   `list_sessions(mine=true)` and find every lane that is blocked, failed or paused, plus every row with no working lane and every green-waiting
+   or red PR. **Each gets exactly one disposition with a reason:** resumed (`SendMessage`/`fire_trigger`), re-dispatched (fresh lane, the
+   resume note on its row as the brief), or closed (row `dropped`/`done`, reason written). A row `blocked` on a typed edge that is still
+   open is a valid blocked row: say so and leave it. An empty sweep is read-state `ok`, never silence.
+3. **Dispatch the due jobs.** `--plan <reset-ts>` prints them (monthly jobs appear on the first Wednesday reset of the month and
+   `supersedes` the weekly job they replace). For each at its offset: check the `dedupe_tag` in `list_sessions` (created inside
+   `dedupe_hours` = skip), then `create_session` with the config's `model` and `ceiling_usd`, tags `lane:<NAME>`, `manager:<id>`, `metis-lane`.
+   The routines already firing these at their offsets are the primary path; this step is the catch for any that did not fire.
+4. **Start the `after_reset` items** the plan lists (key + reason); each starts once and is removed from the config in the PR that confirms
+   it started.
+5. **Receipt and ONE Telegram line.** `--receipt <reset-ts> --write complete --by <id> --json '{"dispatched":[...],"skipped":[...],
+   "after_reset_started":[...],"stuck":{"resumed":n,"redispatched":n,"closed":n}}'`, push, then ONE `send-ping` line (sections separated by
+   " || ", the workflow sends only the first line): what was dispatched, what was stuck and its disposition, what is waiting on the operator.
+
+### Close-up on low usage (the other half)
+
+At about **90% of the weekly bar**, or on any limit hit (a lane or the manager reads "usage limit"): **every running lane writes a resume
+note on its checklist row** (what is done, the exact next command, branch/PR, what it owes) **and stops**; it opens no new work and starts no
+new lane. The manager then files **ONE PIPELINE item** listing all paused work, due at the next reset, so the sweep above finds it:
+
+```
+python3 - <<'PY'
+import sys; sys.path.insert(0, "scripts/ops"); import pipeline
+pipeline.append({"id": pipeline.mint_id("<session id>"),
+  "what": "PAUSED AT LOW USAGE <date>: <lane> (row <ID>, PR #n, resume note on the row); ...",
+  "origin": {"kind": "session", "ref": "<session id>", "rerun": "python3 scripts/ops/reset_protocol.py --sweep"},
+  "due_when": {"kind": "event", "event": "weekly_reset", "clears_when": "every listed lane is resumed, re-dispatched or closed with a reason"},
+  "next_action": "dispatch_lane", "state": "queued"}, intent="new")
+PY
+```
+
+`due_when.event: weekly_reset` is the marker `--sweep` reads. Close the item (`terminal_reason`) only when every listed lane has a disposition.
+Hibernating before a usage-limit outage (§ above) is the same act at the manager level.
+
 ## Manager handover (rotation)
 
 > **Operator, 2026-10-13 (verbatim):** "we need to add a section to the manager skill to streamline handover - basically, I want the manager to handoff at their own discretion, we just need to make sure it's clear how to validate a complete handoff to the new manager before the current one turns off".
