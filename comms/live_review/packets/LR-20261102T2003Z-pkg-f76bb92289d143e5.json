@@ -1,0 +1,674 @@
+{
+ "account_bounds": [
+  {
+   "account_class": "paper",
+   "account_id": "bybit_1",
+   "apply_paths": [
+    "close",
+    "move_tp",
+    "reduce",
+    "tighten",
+    "widen_sl"
+   ],
+   "evidence": "bybit_orders: SL 99.49 / TP 87.02, position True, matched by order_id; apply paths close, move_tp, reduce, tighten, widen_sl; would_apply = an executor reaches this leg, NOT that its RiskManager approved (LTR-6 gap)",
+   "own_position": true,
+   "read": null,
+   "read_basis": "depends on the recommendation: no_action for hold/no_recommendation, else see read_if_amend",
+   "read_if_amend": "would_apply"
+  }
+ ],
+ "assembled_by": "generator scripts/ops/live_review_packet.py",
+ "context": {
+  "calendar": {
+   "events_next_24h": [],
+   "state": "no_event_classes_for_symbol"
+  },
+  "correlated_open_packages": [
+   {
+    "direction": "short",
+    "order_package_id": "pkg-011a7bf85ee54a6f",
+    "symbol": "MGC"
+   },
+   {
+    "direction": "short",
+    "order_package_id": "pkg-4e74f4bdc6d44735",
+    "symbol": "BTCUSDT"
+   },
+   {
+    "direction": "short",
+    "order_package_id": "pkg-64d4fa5ab0c34305",
+    "symbol": "IAUM"
+   },
+   {
+    "direction": "short",
+    "order_package_id": "pkg-91fd7ef827dd4997",
+    "symbol": "XRPUSDT"
+   },
+   {
+    "direction": "short",
+    "order_package_id": "pkg-bba44210885c4180",
+    "symbol": "ADAUSDT"
+   },
+   {
+    "direction": "short",
+    "order_package_id": "pkg-c569fc01db464fb2",
+    "symbol": "ADAUSDT"
+   },
+   {
+    "direction": "short",
+    "order_package_id": "pkg-efea77506cc54757",
+    "symbol": "QLD"
+   }
+  ],
+  "direction": "short",
+  "funding": null,
+  "news": {
+   "adjustment": -0.015415,
+   "decision": "neutral",
+   "ts": "2026-11-02T19:55:28.056553+00:00",
+   "veto": false
+  },
+  "previous_review": {
+   "action": "hold",
+   "forecast": {
+    "direction": "with_trade",
+    "evidence": [
+     "context.previous_review.forecast: 92.32 / 98.54 untouched, horizon expired",
+     "chart.bars_ohlc 4h: lows >=94.32 highs <=96.39",
+     "chart.htf 1d: ADX 28.1 trending, 10-30 high 98.54",
+     "exit_plan: SL 99.49 / TP 87.02"
+    ],
+    "horizon_bars": 6,
+    "invalidation_px": 96.39,
+    "p_target": 0.38,
+    "target_px": 92.32,
+    "thesis": "SOL is making flat-to-lower 4h highs under the 96.39 shelf with 1d ADX 28 trending down and relative weakness to ETH/BTC; a retest of the 92.32 low is slightly less than even odds in the horizon.",
+    "timeframe": "4h"
+   },
+   "reason": "Prior forecast (target 92.32 / invalidation 98.54, 5x4h from 10-31 08Z) expired untouched (lows >=94.32, highs <=96.39). Hold cell n=19, one under the floor, so judgement. SOL is relatively weak: 95.1 is 3 points under the 98.09 = 50% retrace of the 10-28 high to 10-30 low while ETH/BTC retrace higher, +0.51R with peak 1.46R, stop 1.51R away. Close-or-tighten on a giveback with the trend intact i\u2026",
+   "review_id": "LR-20261101T1432Z-pkg-f76bb92289d143e5",
+   "reviewed_at": "2026-11-01T14:38:02Z",
+   "route": null
+  },
+  "symbol": "SOLUSDT"
+ },
+ "context_v3": {
+  "book": [
+   [
+    "MGC",
+    "short",
+    "mgc_pullback_1d",
+    2.19
+   ],
+   [
+    "SPY",
+    "long",
+    "spy_trend_long_1d",
+    -0.0276
+   ],
+   [
+    "BTCUSDT",
+    "short",
+    "trend_donchian_1h",
+    1.22
+   ],
+   [
+    "IAUM",
+    "short",
+    "iaum_pullback_1d",
+    2.18
+   ],
+   [
+    "GLD",
+    "long",
+    "gld_pullback_1h",
+    null
+   ],
+   [
+    "XRPUSDT",
+    "short",
+    "ml_entry",
+    null
+   ],
+   [
+    "MHG",
+    "short",
+    "mhg_pullback_1d",
+    0.267
+   ],
+   [
+    "ADAUSDT",
+    "short",
+    "trend_donchian_ada_4h",
+    0.22
+   ],
+   [
+    "ADAUSDT",
+    "short",
+    "ml_entry",
+    null
+   ],
+   [
+    "QLD",
+    "short",
+    "ml_entry",
+    null
+   ]
+  ],
+  "book_note": "[symbol, direction, leg, open_r (null = not measured)] per OTHER open package, either side",
+  "chart": {
+   "atr": 1.30214,
+   "bars_note": "[epoch_s, open, high, low, close], closed bars only, oldest first",
+   "bars_ohlc": [
+    [
+     1793419200,
+     96.15,
+     96.33,
+     95.46,
+     95.56
+    ],
+    [
+     1793433600,
+     95.56,
+     95.97,
+     95.15,
+     95.83
+    ],
+    [
+     1793448000,
+     95.83,
+     96.39,
+     95.56,
+     95.91
+    ],
+    [
+     1793462400,
+     95.91,
+     96.2,
+     95.69,
+     95.78
+    ],
+    [
+     1793476800,
+     95.78,
+     96.2,
+     95.17,
+     95.44
+    ],
+    [
+     1793491200,
+     95.44,
+     95.95,
+     95.3,
+     95.56
+    ],
+    [
+     1793505600,
+     95.56,
+     95.89,
+     95.27,
+     95.51
+    ],
+    [
+     1793520000,
+     95.51,
+     95.9,
+     95.2,
+     95.27
+    ],
+    [
+     1793534400,
+     95.27,
+     95.35,
+     94.32,
+     94.79
+    ],
+    [
+     1793548800,
+     94.79,
+     94.93,
+     93.66,
+     93.98
+    ],
+    [
+     1793563200,
+     93.98,
+     94.63,
+     93.15,
+     94.53
+    ],
+    [
+     1793577600,
+     94.53,
+     95.91,
+     93.84,
+     95.58
+    ],
+    [
+     1793592000,
+     95.58,
+     95.67,
+     94.13,
+     94.29
+    ],
+    [
+     1793606400,
+     94.29,
+     94.98,
+     93.79,
+     94.08
+    ],
+    [
+     1793620800,
+     94.08,
+     94.95,
+     92.68,
+     93.53
+    ],
+    [
+     1793635200,
+     93.53,
+     93.9,
+     90.86,
+     91.75
+    ]
+   ],
+   "last_close": 91.75,
+   "since_entry": {
+    "bars": 23,
+    "high": 98.54,
+    "high_dist_atr": 5.21,
+    "low": 90.86,
+    "low_dist_atr": -0.68
+   },
+   "swings": {
+    "highs": [
+     {
+      "bars_ago": 4,
+      "dist_atr": 3.19,
+      "px": 95.91
+     },
+     {
+      "bars_ago": 13,
+      "dist_atr": 3.56,
+      "px": 96.39
+     },
+     {
+      "bars_ago": 16,
+      "dist_atr": 4.02,
+      "px": 96.98
+     }
+    ],
+    "lows": [
+     {
+      "bars_ago": 5,
+      "dist_atr": 1.08,
+      "px": 93.15
+     },
+     {
+      "bars_ago": 11,
+      "dist_atr": 2.63,
+      "px": 95.17
+     },
+     {
+      "bars_ago": 14,
+      "dist_atr": 2.61,
+      "px": 95.15
+     }
+    ]
+   },
+   "timeframe": "4h"
+  },
+  "exit_plan": {
+   "declared": {
+    "atr": 1.9392857142857147,
+    "atr_period": 14,
+    "atr_stop_mult": 1.5,
+    "timeframe": "4h",
+    "tp_r": 50.0,
+    "trail_mult": 5.0
+   },
+   "entry": 96.58,
+   "exit_plan_state": {
+    "final_trailing": null,
+    "residual_qty": 0.0,
+    "stop": {
+     "price": 99.48892857,
+     "qty": 1.0
+    },
+    "targets": [
+     {
+      "kind": "final",
+      "price": 87.01858,
+      "qty": 1.0,
+      "qty_pct": 1.0,
+      "reach_r": 3.2869
+     }
+    ],
+    "time_decay_minutes": null,
+    "trailing_stop": null
+   },
+   "sl_initial": null,
+   "sl_now": 99.4889,
+   "tp_now": 87.0186
+  },
+  "htf": {
+   "adx_now": 31.53,
+   "atr": 3.84143,
+   "bars_note": "[epoch_s, open, high, low, close], closed bars only, oldest first",
+   "bars_ohlc": [
+    [
+     1792886400,
+     102.37,
+     102.77,
+     100.36,
+     101.38
+    ],
+    [
+     1792972800,
+     101.38,
+     102.72,
+     99.89,
+     100.95
+    ],
+    [
+     1793059200,
+     100.95,
+     101.9,
+     99.16,
+     101.36
+    ],
+    [
+     1793145600,
+     101.36,
+     103.86,
+     100.46,
+     102.43
+    ],
+    [
+     1793232000,
+     102.43,
+     103.19,
+     94.95,
+     95.65
+    ],
+    [
+     1793318400,
+     95.65,
+     98.54,
+     92.32,
+     96.3
+    ],
+    [
+     1793404800,
+     96.3,
+     96.98,
+     95.15,
+     95.44
+    ],
+    [
+     1793491200,
+     95.44,
+     95.95,
+     93.15,
+     94.53
+    ]
+   ],
+   "last_close": 94.53,
+   "swings": {
+    "highs": [
+     {
+      "bars_ago": 4,
+      "dist_atr": 2.43,
+      "px": 103.86
+     },
+     {
+      "bars_ago": 11,
+      "dist_atr": 3.82,
+      "px": 109.2
+     },
+     {
+      "bars_ago": 20,
+      "dist_atr": 4.92,
+      "px": 113.42
+     }
+    ],
+    "lows": [
+     {
+      "bars_ago": 2,
+      "dist_atr": -0.58,
+      "px": 92.32
+     },
+     {
+      "bars_ago": 8,
+      "dist_atr": 1.06,
+      "px": 98.62
+     },
+     {
+      "bars_ago": 14,
+      "dist_atr": 1.53,
+      "px": 100.41
+     }
+    ]
+   },
+   "timeframe": "1d",
+   "trend_now": "trending"
+  },
+  "live_vs_backtest": {
+   "read_state": "read",
+   "rows": [
+    {
+     "backtest_expectancy_r": 0.3177344827586206,
+     "backtest_n": 116,
+     "book": "realMoney",
+     "closed": 0,
+     "live_r": null,
+     "r_trades": 0,
+     "verdict": "NO_LIVE_TRADES",
+     "why": "no closed trade with an R basis on this book"
+    },
+    {
+     "backtest_expectancy_r": 0.3177344827586206,
+     "backtest_n": 116,
+     "book": "mirror",
+     "closed": 0,
+     "live_r": null,
+     "r_trades": 0,
+     "verdict": "NO_LIVE_TRADES",
+     "why": "no closed trade with an R basis on this book"
+    }
+   ]
+  }
+ },
+ "cost": {
+  "basis": "evidence-record net_r per trade (fee + slippage + funding, execution_costs.resolve_cost_policy)"
+ },
+ "features_at_review": {
+  "atr_now_over_entry": 0.6715,
+  "bars_since_peak": 0,
+  "giveback_r": 0.3231,
+  "open_r": 1.6432,
+  "peak_r": 1.9664,
+  "r_to_stop": 2.6432,
+  "r_to_target": 1.6437
+ },
+ "generator": {
+  "head": "ca63aefb9c",
+  "state": "current"
+ },
+ "info_cutoff_at": "2026-11-02T20:03:05Z",
+ "leg": "trend_donchian_sol_4h",
+ "mechanics": {
+  "evidence": "package sl 99.48892857 / tp 87.01858 agree with every readable account",
+  "verdict": "match"
+ },
+ "missing_inputs": [
+  {
+   "field": "regime.vol_now",
+   "reason": "calm/volatile buckets use frozen edges held only in the VM model registry; not reachable read-only from a session"
+  },
+  {
+   "field": "regime.cell_entry",
+   "reason": "entry meta regime='chop' vol_regime='unknown': not both known"
+  },
+  {
+   "field": "context.funding",
+   "reason": "Bybit public funding API is geo-blocked from session networks and no read-only diag route carries funding_now; needs a diag route"
+  }
+ ],
+ "order_package_id": "pkg-f76bb92289d143e5",
+ "packet_version": 3,
+ "priced_options": {
+  "biases": [
+   "stop fills at the stop price (a gap fills at the open): flatters every tighten, so the real cost of tightening is, if anything, larger",
+   "the original trail path is not recorded: on the recorded exit bar a touched tightened stop is taken as hit (SL-first)",
+   "live peak_r is a lower bound on true MFE",
+   "one leg, one window, i.i.d. trades; parameter selection on the window is not undone"
+  ],
+  "candles": null,
+  "corpus": "comms/strategy_evidence/runs/2026-10-28/trend_donchian_sol_4h__trades.jsonl",
+  "corpus_source": "evidence_source_run",
+  "corpus_trades": 116,
+  "n_floor": 20,
+  "options": [
+   {
+    "action": "hold",
+    "mean_r": null,
+    "n": 14,
+    "n_floor": 20,
+    "p05_r": null,
+    "p_giveback_gt_half": null,
+    "sd_r": null,
+    "state": "insufficient_n",
+    "worst_r": null
+   },
+   {
+    "action": "tighten",
+    "ev_cost_r": null,
+    "ev_cost_se_r": null,
+    "mean_r": null,
+    "n": 0,
+    "n_floor": 20,
+    "p05_r": null,
+    "p_giveback_gt_half": null,
+    "reason": "no_candles",
+    "sd_r": null,
+    "spec": "atr:1.0",
+    "state": "could_not_look",
+    "stop_at_r_now": 1.2997,
+    "within_auto_bound": null,
+    "within_shadow_bound": null,
+    "worst_case_gain_r": null,
+    "worst_r": null
+   },
+   {
+    "action": "tighten",
+    "ev_cost_r": null,
+    "ev_cost_se_r": null,
+    "mean_r": null,
+    "n": 0,
+    "n_floor": 20,
+    "p05_r": null,
+    "p_giveback_gt_half": null,
+    "reason": "no_candles",
+    "sd_r": null,
+    "spec": "atr:1.5",
+    "state": "could_not_look",
+    "stop_at_r_now": 0.9664,
+    "within_auto_bound": null,
+    "within_shadow_bound": null,
+    "worst_case_gain_r": null,
+    "worst_r": null
+   },
+   {
+    "action": "tighten",
+    "ev_cost_r": null,
+    "ev_cost_se_r": null,
+    "mean_r": null,
+    "n": 0,
+    "n_floor": 20,
+    "p05_r": null,
+    "p_giveback_gt_half": null,
+    "reason": "no_candles",
+    "sd_r": null,
+    "spec": "atr:2.0",
+    "state": "could_not_look",
+    "stop_at_r_now": 0.6331,
+    "within_auto_bound": null,
+    "within_shadow_bound": null,
+    "worst_case_gain_r": null,
+    "worst_r": null
+   },
+   {
+    "action": "tighten",
+    "ev_cost_r": null,
+    "ev_cost_se_r": null,
+    "mean_r": null,
+    "n": 0,
+    "n_floor": 20,
+    "p05_r": null,
+    "p_giveback_gt_half": null,
+    "reason": "no_candles",
+    "sd_r": null,
+    "spec": "r:1.0",
+    "state": "could_not_look",
+    "stop_at_r_now": 1.0,
+    "within_auto_bound": null,
+    "within_shadow_bound": null,
+    "worst_case_gain_r": null,
+    "worst_r": null
+   },
+   {
+    "action": "tighten",
+    "ev_cost_r": null,
+    "ev_cost_se_r": null,
+    "mean_r": null,
+    "n": 14,
+    "p05_r": null,
+    "p_giveback_gt_half": null,
+    "sd_r": null,
+    "spec": "r:2.0",
+    "state": "invalid_level",
+    "stop_at_r_now": 2.0,
+    "within_auto_bound": null,
+    "within_shadow_bound": null,
+    "worst_case_gain_r": null,
+    "worst_r": null
+   }
+  ],
+  "population": {
+   "beyond_bars_slack": 0,
+   "comparable": 14,
+   "corpus_trades": 116,
+   "mfe_replay_mismatch": 0,
+   "never_reached_peak": 31,
+   "no_candles": 0,
+   "no_pullback_after_peak": 0,
+   "side_excluded": 71,
+   "side_filter": "short"
+  },
+  "read_state": "insufficient_n",
+  "source": "comms/live_review/tables/LR-20261102T2003Z-pkg-f76bb92289d143e5.json"
+ },
+ "priced_options_state": "priced",
+ "regime": {
+  "adx_now": 32.3569,
+  "atr_now_over_entry": 0.6715,
+  "cell_entry": null,
+  "cell_now": null,
+  "trend_now": "trending"
+ },
+ "review_id": "LR-20261102T2003Z-pkg-f76bb92289d143e5",
+ "state": {
+  "atr_now_over_entry": 0.6715,
+  "bars_held": 24,
+  "giveback_r": 0.3231,
+  "open_r": 1.6432,
+  "peak_provenance": "estimated",
+  "peak_r": 1.9664,
+  "regime_cell_entry": null,
+  "regime_cell_now": null,
+  "sl": 99.48892857,
+  "tp": 87.01858
+ }
+}
