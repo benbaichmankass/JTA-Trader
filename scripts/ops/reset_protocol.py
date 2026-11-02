@@ -284,6 +284,8 @@ def self_test() -> int:
               "health-review": (71, "claude-opus-5-5", 12), "programme-review": (89, "claude-opus-5-5", 12),
               "cj7-weekly": (133, "claude-sonnet-5-5", 3)}
     check(all(offs.get(k) == v for k, v in expect.items()), "seeded Wednesday cascade differs from the routines")
+    check(all(j.get("brief_trigger", "").startswith("trig_") for j in cfg["jobs"] if j["cadence"] == "weekly"),
+          "every weekly job names its brief_trigger")
     for bad in ("garbage", "2026-13-40"):
         try:
             parse_reset(bad, cfg)
