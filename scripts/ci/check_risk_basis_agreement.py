@@ -84,6 +84,8 @@ _RISK_FLAGS = ("--risk-pct", "--base-risk-pct")
 FILE_UNITS: Dict[str, str] = {
     # percent: value is divided by 100 before use (the backtest fleet)
     "scripts/backtest_system.py": UNIT_PERCENT,
+    # fraction: --risk-pct 0.015 is used directly as the live sizer's risk_pct (RiskManager-shaped margin sim)
+    "scripts/research/ml_entry_heldout_concurrency.py": UNIT_FRACTION,
     "scripts/research/build_backtest_panel.py": UNIT_PERCENT,
     "scripts/research/allocator_multisymbol_backtest.py": UNIT_PERCENT,
     # VERIFIED against the code, not inferred from the flag name: `_risk_qty`

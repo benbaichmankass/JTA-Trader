@@ -4430,6 +4430,7 @@ def _reconcile_orphan_exchange_positions(db) -> Dict[str, int]:
                         # journal mis-attribution into a live reduce-only
                         # flatten, which is strictly worse than the bug.
                         position_size=r["position_size"],
+                        account_id=r["account_id"],
                     )
                     if _attr.read_failed:
                         # We could not look (package read raised). Unknown is
@@ -5135,6 +5136,8 @@ def _recover_orphan_attribution(
     *, db, symbol: str, direction: str, entry_price: float,
     max_rel_diff: float = 0.02, limit: int = 30,
     position_size: Optional[float] = None,
+    account_id: Optional[str] = None,
+    venue_sl: Optional[float] = None, venue_tp: Optional[float] = None,
 ) -> _OrphanAttribution:
     """Find the order package that opened an exchange orphan, and say whether
     its ``strategy_name`` can be SUPPORTED.
@@ -5169,6 +5172,21 @@ def _recover_orphan_attribution(
     ⚠️ **A REFUSAL NEVER PROPOSES A SECOND CANDIDATE.** It stops at the first
     price-match rather than walking on to the next-best guess: picking again is
     exactly the behaviour that produced the incident.
+
+    ⚠️ **``account_id`` IS AN IDENTITY FILTER, NOT A GUESS** (GLD-ORPHAN-5209,
+    2026-11-01). A package is shared by every account a signal fans out to, so a
+    symbol + price match says nothing about WHICH account's fill it was. Trade
+    5209 (alpaca_paper GLD 39) was re-adopted onto the newest price-matching
+    package, ``pkg-6a8e3fb325464be3``, where alpaca_paper's own row had been
+    REJECTED; the shares were ``pkg-8106d5eef6fc425c``'s. With ``account_id``
+    given, a candidate where this account has no FILLED row (status open or
+    closed) cannot own its position and is passed over, exactly like a wrong
+    direction. If price-matching candidates exist and NONE has this account's
+    fill, the result is a named REFUSAL (``no_account_fill``), never "no
+    candidate", so the caller never flattens on it. With ``venue_sl`` /
+    ``venue_tp`` given (the legs resting at the venue), a candidate whose
+    stored bracket disagrees is REFUSED (``bracket_mismatch``); without them
+    the bracket is unread and the detail says so.
     """
     want = _canon_dir(direction)
     if not want or not entry_price:
@@ -5186,6 +5204,7 @@ def _recover_orphan_attribution(
         return _OrphanAttribution(
             read_failed=True, detail="order-package read failed",
         )
+    no_fill: list = []
     for c in candidates:
         if _canon_dir(c.get("direction")) != want:
             continue
@@ -5197,6 +5216,24 @@ def _recover_orphan_attribution(
                 continue
         except (TypeError, ValueError, ZeroDivisionError):
             continue
+        if account_id:
+            fill = _account_filled_in_package(db, c.get("order_package_id"), account_id)
+            if fill is None:
+                return _OrphanAttribution(
+                    read_failed=True,
+                    detail=f"trades read failed for {c.get('order_package_id')} / {account_id}",
+                )
+            if not fill:
+                no_fill.append(str(c.get("order_package_id")))
+                continue
+            bad = _bracket_mismatch(c, venue_sl, venue_tp)
+            if bad:
+                claimed = str(c.get("strategy_name") or "")
+                logger.warning(
+                    "_recover_orphan_attribution: %s REFUSED attribution to %r - %s",
+                    symbol, claimed, bad,
+                )
+                return _OrphanAttribution(refused=True, refused_strategy=claimed, detail=bad)
 
         stale = _orphan_package_stale(c)
         if stale:
@@ -5241,7 +5278,42 @@ def _recover_orphan_attribution(
         return _OrphanAttribution(
             refused=True, refused_strategy=claimed, detail=verdict.detail,
         )
+    if no_fill:
+        detail = (f"no_account_fill: {len(no_fill)} price-matching package(s) "
+                  f"({', '.join(no_fill[:5])}) carry no filled row for {account_id}")
+        logger.warning("_recover_orphan_attribution: %s REFUSED - %s", symbol, detail)
+        return _OrphanAttribution(refused=True, refused_strategy="", detail=detail)
     return _OrphanAttribution(detail="no price-matching candidate")
+
+
+#: Relative tolerance for a stored package bracket vs the legs resting at the venue (a tick / cent rounding).
+_BRACKET_REL_TOL = 1e-3
+
+
+def _account_filled_in_package(db, order_package_id: Any, account_id: str) -> Optional[bool]:
+    """Did ``account_id`` FILL in this package (a trade row open or closed, not rejected)? None = could not look."""
+    try:
+        rows = db.get_trades(filters={"order_package_id": order_package_id, "account_id": account_id})
+    except Exception as exc:  # noqa: BLE001 - reported as could-not-look, never as "no fill"
+        logger.warning("_account_filled_in_package: trades read failed for %s / %s: %s",
+                       order_package_id, account_id, exc)
+        return None
+    return any(str(r.get("status") or "") in ("open", "closed") and not r.get("is_backtest") for r in rows or [])
+
+
+def _bracket_mismatch(pkg: dict, venue_sl: Optional[float], venue_tp: Optional[float]) -> Optional[str]:
+    """A named reason when the package's stored sl/tp disagree with the legs resting at the venue, else None."""
+    for name, venue, stored in (("sl", venue_sl, pkg.get("sl")), ("tp", venue_tp, pkg.get("tp"))):
+        if venue is None or stored is None:
+            continue
+        try:
+            v, st = float(venue), float(stored)
+        except (TypeError, ValueError):
+            continue
+        if abs(v - st) > _BRACKET_REL_TOL * max(abs(v), 1e-12):
+            return (f"bracket_mismatch: package {pkg.get('order_package_id')} {name} {st:g} "
+                    f"!= venue {name} {v:g}")
+    return None
 
 
 def _recover_orphan_order_package(
@@ -5346,6 +5418,7 @@ def _reattach_adopted_orphans(db, summary: Dict[str, int]) -> None:
         attribution = _recover_orphan_attribution(
             db=db, symbol=r["symbol"], direction=r["direction"],
             entry_price=entry_price, position_size=r["position_size"],
+            account_id=r["account_id"],
         )
         recovered = attribution.package
         if attribution.refused:
@@ -5601,7 +5674,7 @@ def _adopt_orphan_position(
     # established. It never picks a different candidate.
     recovered = _recover_orphan_attribution(
         db=db, symbol=symbol, direction=direction, entry_price=entry_price,
-        position_size=size,
+        position_size=size, account_id=account_id,
     ).package
     if recovered is not None:
         opid = recovered.get("order_package_id")

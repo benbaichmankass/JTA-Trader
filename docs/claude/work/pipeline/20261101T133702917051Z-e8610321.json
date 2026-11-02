@@ -1,0 +1,19 @@
+{
+  "based_on": "20261101T125738648055Z-d88cb094.json",
+  "due_when": {
+    "due_date": "2026-11-05",
+    "kind": "date"
+  },
+  "id": "PI-20261101-WTFTWTFP-0005",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "lane MARKET-DATA-LAKE (row MARKET-DATA-LAKE), 2026-11-01",
+    "rerun": "hf_fs stat hf://datasets/paperswithbacktest/Stocks-Daily-Price/README.md returns content instead of HF_FS_ACCESS_DENIED"
+  },
+  "severity": "high",
+  "state": "killed",
+  "terminal_reason": "operator 2026-11-01 ~13:03Z via manager: stick to already-accessible data sources; gated paperswithbacktest/* dropped (not requested).",
+  "tier": 1,
+  "what": "(e) paperswithbacktest/* HF datasets (Stocks/ETFs/Bonds/Commodities/Forex/Indices Daily, Stocks-1Min, Stocks-Daily-LiquidUniverse = PIT top-1000 per session): gated manual approval; operator requests access as bentzbk, then a lane reads the terms + delisting coverage and imports."
+}

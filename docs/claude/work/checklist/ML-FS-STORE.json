@@ -1,0 +1,27 @@
+{
+  "phase": "research",
+  "state": "queued",
+  "owner": null,
+  "lane": null,
+  "model": "claude-sonnet-5-5",
+  "tier": 1,
+  "prs": [],
+  "blocked_on": [
+    "ML-FS-ARCHIVE"
+  ],
+  "roadmap": [
+    "L-ML-LIVE"
+  ],
+  "priority_rank": 3,
+  "id": "ML-FS-STORE",
+  "title": "Pooled feature store: one feature registry (name, source, window, lag, venue), one as-of join library, a leakage test that refuses a forward-shifted column, read by ENTRY v2, BRACKETS and HOLD/ADJUST/CLOSE",
+  "ceiling_usd": 10,
+  "note": "Filed 2026-11-01 by lane ML-FEATURE-INFRA from docs/research/ml-feature-inventory-2026-11-01.md (gap G2, ranked plan section 4). WHY: ENTRY re-implements 20 OHLCV features inline in scripts/research/ml_decision_entry.py because the pooled 60-symbol path has no shared store; ml/datasets/families/market_features.py has a 108-column per-symbol schema but is per-timeframe, trainer-resident, BTC-only for funding/OI and order flow, and writes 0.0 for an absent side-stream (collapsed state). BUILD: a registry-driven builder that emits families 1-5 of the plan (taker flow, basis/funding, positioning, cross-sectional context, OHLCV shape) from the ML-FS-ARCHIVE store; missing = NaN plus a <family>_present flag; each feature is one function imported by builder and serve path; tests: forward-shifted column refused, byte-identical rebuild, per-family coverage report per symbol. No sizing and no risk features. Does NOT change ENTRY v1. DONE WHEN: a build over the 60-symbol dev window prints per-family present percentage and the leakage test fails on a planted lead. Gates: none.",
+  "observation": {
+    "what": "the store builds for the 60-symbol dev window with a per-family coverage table and the planted-lead test fails as designed",
+    "how_to_check": "python3 scripts/ml/feature_store.py --self-test",
+    "due_by": "2026-11-04"
+  },
+  "updated_at": "2026-11-01T11:02:49Z",
+  "_seq": 876
+}

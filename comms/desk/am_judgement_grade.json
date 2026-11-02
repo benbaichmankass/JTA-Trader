@@ -1,8 +1,12 @@
 {
  "by_action": {
+  "close": {
+   "mean_d_hold": 0.1176,
+   "n_rows": 1
+  },
   "hold": {
    "mean_d_hold": 0.0,
-   "n_rows": 11
+   "n_rows": 15
   },
   "partial_close": {
    "mean_d_hold": null,
@@ -13,15 +17,15 @@
    "n_rows": 0
   }
  },
- "computed_at": "2026-11-01T11:46:28Z",
+ "computed_at": "2026-11-02T06:17:59Z",
  "forecast": {
-  "brier": 0.1378,
+  "brier": 0.1542,
   "brier_ref_constant_0_5": 0.25,
-  "hits": 0,
-  "n_scored": 21,
-  "unresolved": 12
+  "hits": 2,
+  "n_scored": 30,
+  "unresolved": 16
  },
- "population": "live-review rows with a forecast reviewed from 2026-10-31T00:00:00Z: 33 rows, 14 packages",
+ "population": "live-review rows with a forecast reviewed from 2026-10-31T00:00:00Z: 46 rows, 18 packages",
  "rows": [
   {
    "action": "hold",
@@ -87,7 +91,7 @@
    "action": "hold",
    "d_hold": null,
    "d_mech": null,
-   "forecast_outcome": null,
+   "forecast_outcome": "expired",
    "order_package_id": "pkg-d76f1b15923e4282",
    "p_target": 0.4,
    "price_reason": "no_path_change_trade_open_or_unjoined",
@@ -195,7 +199,7 @@
    "action": "tighten_sl",
    "d_hold": null,
    "d_mech": null,
-   "forecast_outcome": null,
+   "forecast_outcome": "expired",
    "order_package_id": "pkg-d76f1b15923e4282",
    "p_target": 0.45,
    "price_reason": "trade_open",
@@ -205,12 +209,12 @@
   },
   {
    "action": "hold",
-   "d_hold": null,
-   "d_mech": null,
+   "d_hold": 0.0,
+   "d_mech": -0.53664839,
    "forecast_outcome": "expired",
    "order_package_id": "pkg-dc7c0c141d2c42c9",
    "p_target": 0.42,
-   "price_reason": "no_path_change_trade_open_or_unjoined",
+   "price_reason": "no_path_change",
    "price_state": "not_a_call",
    "review_id": "LR-20261031T0412Z-pkg-dc7c0c141d2c42c9",
    "trigger": "judgement_cadence"
@@ -315,7 +319,7 @@
    "action": "tighten_sl",
    "d_hold": null,
    "d_mech": null,
-   "forecast_outcome": null,
+   "forecast_outcome": "expired",
    "order_package_id": "pkg-d76f1b15923e4282",
    "p_target": 0.45,
    "price_reason": "trade_open",
@@ -325,12 +329,12 @@
   },
   {
    "action": "hold",
-   "d_hold": null,
-   "d_mech": null,
+   "d_hold": 0.0,
+   "d_mech": -0.53664839,
    "forecast_outcome": "expired",
    "order_package_id": "pkg-dc7c0c141d2c42c9",
    "p_target": 0.38,
-   "price_reason": "no_path_change_trade_open_or_unjoined",
+   "price_reason": "no_path_change",
    "price_state": "not_a_call",
    "review_id": "LR-20261031T0804Z-pkg-dc7c0c141d2c42c9",
    "trigger": "judgement_cadence"
@@ -418,19 +422,175 @@
    "price_state": "not_a_call",
    "review_id": "LR-20261101T0808Z-pkg-9e3efad9b82f442d",
    "trigger": "adverse_r"
+  },
+  {
+   "action": "hold",
+   "d_hold": 0.0,
+   "d_mech": 0.0,
+   "forecast_outcome": "miss",
+   "order_package_id": "pkg-f07b659a7db94e8a",
+   "p_target": 0.4,
+   "price_reason": "no_path_change",
+   "price_state": "not_a_call",
+   "review_id": "LR-20261101T1117Z-pkg-f07b659a7db94e8a",
+   "trigger": "structure_break"
+  },
+  {
+   "action": "close",
+   "d_hold": 0.11764706,
+   "d_mech": 0.11764706,
+   "forecast_outcome": "hit",
+   "order_package_id": "pkg-f07b659a7db94e8a",
+   "p_target": 0.55,
+   "price_reason": null,
+   "price_state": "priced",
+   "review_id": "LR-20261101T1216Z-pkg-f07b659a7db94e8a",
+   "trigger": "adverse_r"
+  },
+  {
+   "action": "hold",
+   "d_hold": null,
+   "d_mech": null,
+   "forecast_outcome": null,
+   "order_package_id": "pkg-011a7bf85ee54a6f",
+   "p_target": 0.55,
+   "price_reason": "no_path_change_trade_open_or_unjoined",
+   "price_state": "not_a_call",
+   "review_id": "LR-20261101T1432Z-pkg-011a7bf85ee54a6f",
+   "trigger": "r_milestone"
+  },
+  {
+   "action": "hold",
+   "d_hold": null,
+   "d_mech": null,
+   "forecast_outcome": "miss",
+   "order_package_id": "pkg-4e74f4bdc6d44735",
+   "p_target": 0.38,
+   "price_reason": "no_path_change_trade_open_or_unjoined",
+   "price_state": "not_a_call",
+   "review_id": "LR-20261101T1432Z-pkg-4e74f4bdc6d44735",
+   "trigger": "daily_floor"
+  },
+  {
+   "action": "hold",
+   "d_hold": null,
+   "d_mech": null,
+   "forecast_outcome": null,
+   "order_package_id": "pkg-64d4fa5ab0c34305",
+   "p_target": 0.55,
+   "price_reason": "no_path_change_trade_open_or_unjoined",
+   "price_state": "not_a_call",
+   "review_id": "LR-20261101T1432Z-pkg-64d4fa5ab0c34305",
+   "trigger": "swing"
+  },
+  {
+   "action": "hold",
+   "d_hold": null,
+   "d_mech": null,
+   "forecast_outcome": null,
+   "order_package_id": "pkg-92d1cafe559b4309",
+   "p_target": 0.3,
+   "price_reason": "no_path_change_trade_open_or_unjoined",
+   "price_state": "not_a_call",
+   "review_id": "LR-20261101T1432Z-pkg-92d1cafe559b4309",
+   "trigger": "momentum_flip"
+  },
+  {
+   "action": "hold",
+   "d_hold": null,
+   "d_mech": null,
+   "forecast_outcome": null,
+   "order_package_id": "pkg-bba44210885c4180",
+   "p_target": 0.35,
+   "price_reason": "no_path_change_trade_open_or_unjoined",
+   "price_state": "not_a_call",
+   "review_id": "LR-20261101T1432Z-pkg-bba44210885c4180",
+   "trigger": "daily_floor"
+  },
+  {
+   "action": "hold",
+   "d_hold": 0.0,
+   "d_mech": 0.0,
+   "forecast_outcome": "miss",
+   "order_package_id": "pkg-dc7c0c141d2c42c9",
+   "p_target": 0.42,
+   "price_reason": "no_path_change",
+   "price_state": "not_a_call",
+   "review_id": "LR-20261101T1432Z-pkg-dc7c0c141d2c42c9",
+   "trigger": "daily_floor"
+  },
+  {
+   "action": "hold",
+   "d_hold": null,
+   "d_mech": null,
+   "forecast_outcome": null,
+   "order_package_id": "pkg-f76bb92289d143e5",
+   "p_target": 0.38,
+   "price_reason": "no_path_change_trade_open_or_unjoined",
+   "price_state": "not_a_call",
+   "review_id": "LR-20261101T1432Z-pkg-f76bb92289d143e5",
+   "trigger": "daily_floor"
+  },
+  {
+   "action": "hold",
+   "d_hold": null,
+   "d_mech": null,
+   "forecast_outcome": null,
+   "order_package_id": "pkg-976b459f5c954df0",
+   "p_target": 0.45,
+   "price_reason": "no_path_change_trade_open_or_unjoined",
+   "price_state": "not_a_call",
+   "review_id": "LR-20261102T0022Z-pkg-976b459f5c954df0",
+   "trigger": "daily_floor"
+  },
+  {
+   "action": "hold",
+   "d_hold": null,
+   "d_mech": null,
+   "forecast_outcome": "miss",
+   "order_package_id": "pkg-d76f1b15923e4282",
+   "p_target": 0.35,
+   "price_reason": "no_path_change_trade_open_or_unjoined",
+   "price_state": "not_a_call",
+   "review_id": "LR-20261102T0022Z-pkg-d76f1b15923e4282",
+   "trigger": "daily_floor"
+  },
+  {
+   "action": "hold",
+   "d_hold": null,
+   "d_mech": null,
+   "forecast_outcome": "hit",
+   "order_package_id": "pkg-7bb5b2578aef490a",
+   "p_target": 0.4,
+   "price_reason": "no_path_change_trade_open_or_unjoined",
+   "price_state": "not_a_call",
+   "review_id": "LR-20261102T0321Z-pkg-7bb5b2578aef490a",
+   "trigger": "daily_floor"
+  },
+  {
+   "action": "hold",
+   "d_hold": null,
+   "d_mech": null,
+   "forecast_outcome": null,
+   "order_package_id": "pkg-93b681fb9f1844d6",
+   "p_target": 0.4,
+   "price_reason": "no_path_change_trade_open_or_unjoined",
+   "price_state": "not_a_call",
+   "review_id": "LR-20261102T0322Z-pkg-93b681fb9f1844d6",
+   "trigger": "daily_floor"
   }
  ],
  "rule": "RULE-DESK-AM-JUDGEMENT-V1",
  "verdict": {
   "ci95_d_hold": [
    0.0,
-   0.0
+   0.0294
   ],
-  "mean_d_hold": 0.0,
-  "mean_d_mech": 0.0,
+  "mean_d_hold": 0.0098,
+  "mean_d_mech": -0.0498,
   "min_packages": 30,
-  "n_packages": 4,
-  "n_packages_mech": 4,
+  "n_packages": 6,
+  "n_packages_mech": 6,
   "rule": "RULE-DESK-AM-JUDGEMENT-V1",
   "verdict": "accruing"
  }
