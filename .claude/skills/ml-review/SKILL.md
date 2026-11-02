@@ -189,6 +189,12 @@ Premortem each one (pattern § 3.9). Next week's Layer 0 re-runs the check as wr
 
 ---
 
+## Done-condition (audit-outcome contract, operator 2026-11-01)
+
+The review is done only when **every call, promotion recommendation and experiment maps to a checklist row with `owner`, `due_by` and a `roadmap` ref
+(or a research unit with a `roadmap` ref and run date), or to a recorded operator decision**; `## 3 Decisions` names the row and its `due_by`. Manager
+skill § "The audit-outcome contract".
+
 ## Weekly progress lines (operator, 2026-11-01, binding; row ML-WEEKLY-REVIEW-LINES)
 
 Operator, 2026-11-01: *"a plan for feeding and retraining on more and better data (now ...), with regular reviews from claude to see that it's progerssing correctly."* Under `1 CHECKS`, every Sunday print four graded lines, each a number with its population, never prose; a missing number is `could_not_look`, not 0:

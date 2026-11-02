@@ -47,7 +47,7 @@ if str(REPO) not in sys.path:
 from src.runtime.checklist_store import *  # noqa: E402,F401,F403
 from src.runtime import checklist_store as _store  # noqa: E402
 from src.runtime.checklist_store import (  # noqa: E402
-    MONOLITH, SEQ, STORE, ChecklistError, _dump, check, load,
+    DEFAULT_OWNER, MONOLITH, SEQ, STORE, ChecklistError, _dump, check, fill_defaults, filing_problems, load,
     render, seed, write_row,
 )
 
@@ -109,12 +109,16 @@ def op_add(repo: Path, row_id: str, fields: dict, by: str | None) -> Path:
     header = _require_seeded(repo)
     if _store.read_row(row_id, repo) is not None:
         raise ChecklistError(f"row {row_id!r} already exists; use `set` or `note`")
-    row = {"id": row_id, "title": "", "phase": None, "state": "queued", "owner": None, "lane": None,
+    row = {"id": row_id, "title": "", "phase": None, "state": "queued", "owner": DEFAULT_OWNER, "lane": None,
            "model": None, "ceiling_usd": None, "spend_usd": None, "tier": None, "prs": [],
-           "blocked_on": [], "note": ""}
+           "blocked_on": [], "note": "", "due_by": None, "roadmap": None}
     row.update(fields)
     if not str(row["title"]).strip():
         raise ChecklistError("`add` needs --title")
+    # PROCESS, NOT GATES (operator, 2026-11-01): fill owner / due_by / roadmap instead of refusing the row;
+    # the manager's daily review (step 4b, checklist_daily_measure.py) is what makes the date act.
+    for f in fill_defaults(row):
+        print(f"checklist: filled {f}", file=sys.stderr)
     return _commit_row(row, repo, header, by)
 
 
@@ -125,7 +129,15 @@ def op_set(repo: Path, row_id: str, fields: dict, by: str | None) -> Path:
         raise ChecklistError(f"no row {row_id!r}")
     if "id" in fields and fields["id"] != row_id:
         raise ChecklistError("a row's id cannot change")
+    old = dict(row)
     row.update(fields)
+    # Only a DELIBERATE clearing errors (operator, 2026-11-01): re-date it, do not blank it.
+    for k in ("owner", "due_by", "roadmap"):
+        if old.get(k) and not row.get(k):
+            raise ChecklistError(f"row {row_id!r}: `set` refuses to clear `{k}` (was {old.get(k)!r}); "
+                                 f"change it to a new value instead")
+    for f in fill_defaults(row):  # a legacy row is brought up to the contract when touched, never blocked
+        print(f"checklist: filled {f}", file=sys.stderr)
     return _commit_row(row, repo, header, by)
 
 
@@ -166,7 +178,11 @@ def _cli_write(a, repo: Path) -> int:
         if a.cmd == "add":
             fields = {k: v for k, v in (("title", a.title), ("phase", a.phase), ("state", a.state),
                                         ("owner", a.owner), ("tier", None if a.tier is None else _parse_value(a.tier)), ("note", a.note),
-                                        ("lane", a.lane)) if v is not None}
+                                        ("lane", a.lane), ("due_by", a.due_by),
+                                        ("roadmap_unmapped_reason", a.roadmap_unmapped_reason)) if v is not None}
+            if a.roadmap is not None:
+                rm = _parse_value(a.roadmap)
+                fields["roadmap"] = rm if isinstance(rm, list) else [x.strip() for x in str(rm).split(",") if x.strip()]
             if a.rank is not None:
                 fields[_store.RANK] = _parse_value(a.rank)
             if a.prs:
@@ -245,6 +261,47 @@ def _self_test() -> int:
             ck("a row whose id disagrees with its filename is refused, not skipped", True)
         else:
             ck("a row whose id disagrees with its filename is refused, not skipped", False)
+    # ── process, not gates (operator, 2026-11-01): defaults fill; only deliberate clearing errors ──
+    with tempfile.TemporaryDirectory() as td:
+        repo = Path(td)
+        (repo / MONOLITH.parent).mkdir(parents=True)
+        seed_doc = {"schema_version": 2, "states": {"queued": "", "in_flight": "", "blocked": "",
+                                                    "landed_unproven": "", "done": "", "dropped": ""},
+                    "items": [{"id": "OLD", "title": "legacy", "state": "queued", "owner": None, "note": "n"}]}
+        (repo / MONOLITH).write_text(_dump(seed_doc), encoding="utf-8")
+        seed(repo=repo)
+
+        def get(rid):
+            return next(r for r in load(repo)["items"] if r["id"] == rid)
+
+        def refused(fn, *a) -> bool:
+            try:
+                fn(*a)
+            except ChecklistError:
+                return True
+            return False
+        import contextlib
+        import io
+        with contextlib.redirect_stderr(io.StringIO()):
+            op_add(repo, "N1", {"title": "bare row"}, None)
+            op_add(repo, "N2", {"title": "ranked", "priority_rank": 2}, None)
+            op_add(repo, "N3", {"title": "obs", "state": "landed_unproven", "observation": {"due_by": "2999-01-01T00:00Z"}}, None)
+            op_note(repo, "OLD", "touched", True, None)
+        ck("add of a bare row is NOT refused: owner defaults to manager", get("N1")["owner"] == "manager")
+        ck("add fills a due_by (an ISO date)", bool(__import__("re").match(r"^20\d\d-\d\d-\d\d$", get("N1")["due_by"])))
+        ck("add fills roadmap as unmapped + reason, for the weekly pass to map",
+           get("N1")["roadmap"] == ["unmapped"] and get("N1")["roadmap_unmapped_reason"])
+        ck("a ranked queued row is due sooner than an unranked one", get("N2")["due_by"] < get("N1")["due_by"])
+        ck("landed_unproven keeps the observation date the row names", get("N3")["due_by"] == "2999-01-01")
+        ck("touching a legacy row brings it to the contract", filing_problems(get("OLD")) == [])
+        ck("an explicit due_by is never overwritten", (op_add(repo, "N4", {"title": "t", "due_by": "2026-11-09", "roadmap": ["L-OPS"]}, None), get("N4")["due_by"])[1] == "2026-11-09")
+        ck("only a DELIBERATE clearing errors: due_by", refused(op_set, repo, "N4", {"due_by": None}, None))
+        ck("...owner", refused(op_set, repo, "N4", {"owner": ""}, None))
+        ck("...roadmap", refused(op_set, repo, "N4", {"roadmap": []}, None))
+        op_set(repo, "N4", {"due_by": "2026-11-12"}, None)
+        ck("re-dating is fine", get("N4")["due_by"] == "2026-11-12")
+        op_set(repo, "N4", {"state": "dropped", "note": "x"}, None)
+        ck("closing is never blocked", get("N4")["state"] == "dropped")
     print("checklist store self-test:", "PASS" if ok else "FAIL")
     return 0 if ok else 1
 
@@ -260,7 +317,8 @@ def main(argv: list[str] | None = None) -> int:
     sub = ap.add_subparsers(dest="cmd")
     pa = sub.add_parser("add", help="add a new row")
     pa.add_argument("id")
-    for flag in ("title", "phase", "state", "owner", "note", "lane", "tier", "prs", "rank"):
+    for flag in ("title", "phase", "state", "owner", "note", "lane", "tier", "prs", "rank", "due-by", "roadmap",
+                 "roadmap-unmapped-reason"):
         pa.add_argument(f"--{flag}")
     ps = sub.add_parser("set", help="set fields on a row: key=value ... (JSON values parsed)")
     ps.add_argument("id")
