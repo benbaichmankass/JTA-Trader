@@ -169,30 +169,43 @@ jobs:
           - {market: um_perp, stream: metrics, shard: 3/4}
           - {market: um_perp, stream: fundingRate, shard: 0/1}
           - {market: spot, stream: klines, shard: 0/1}
-          # OPTIONAL streams: each shard runs only if the preflight's MEASURED headroom enabled the stream
-          - {market: um_perp, stream: premiumIndexKlines, shard: 0/4}
-          - {market: um_perp, stream: premiumIndexKlines, shard: 1/4}
-          - {market: um_perp, stream: premiumIndexKlines, shard: 2/4}
-          - {market: um_perp, stream: premiumIndexKlines, shard: 3/4}
-          - {market: um_perp, stream: markPriceKlines, shard: 0/4}
-          - {market: um_perp, stream: markPriceKlines, shard: 1/4}
-          - {market: um_perp, stream: markPriceKlines, shard: 2/4}
-          - {market: um_perp, stream: markPriceKlines, shard: 3/4}
-          - {market: um_perp, stream: indexPriceKlines, shard: 0/4}
-          - {market: um_perp, stream: indexPriceKlines, shard: 1/4}
-          - {market: um_perp, stream: indexPriceKlines, shard: 2/4}
-          - {market: um_perp, stream: indexPriceKlines, shard: 3/4}
+          # OPTIONAL streams (key = config crypto.um_perp.optional_streams): each runs only if the preflight's MEASURED
+          # headroom enabled it. `traded` scope = the symbols config/accounts.yaml trades (the storage fallback).
+          - {market: um_perp, stream: premiumIndexKlines, key: premiumIndexKlines, shard: 0/4}
+          - {market: um_perp, stream: premiumIndexKlines, key: premiumIndexKlines, shard: 1/4}
+          - {market: um_perp, stream: premiumIndexKlines, key: premiumIndexKlines, shard: 2/4}
+          - {market: um_perp, stream: premiumIndexKlines, key: premiumIndexKlines, shard: 3/4}
+          - {market: um_perp, stream: bookDepth, key: bookDepth_traded, scope: traded, shard: 0/2}
+          - {market: um_perp, stream: bookDepth, key: bookDepth_traded, scope: traded, shard: 1/2}
+          - {market: um_perp, stream: markPriceKlines, key: markPriceKlines_traded, scope: traded, shard: 0/1}
+          - {market: um_perp, stream: indexPriceKlines, key: indexPriceKlines_traded, scope: traded, shard: 0/1}
+          - {market: um_perp, stream: aggTrades, key: aggTrades_traded, scope: traded, shard: 0/6, workers: 2}
+          - {market: um_perp, stream: aggTrades, key: aggTrades_traded, scope: traded, shard: 1/6, workers: 2}
+          - {market: um_perp, stream: aggTrades, key: aggTrades_traded, scope: traded, shard: 2/6, workers: 2}
+          - {market: um_perp, stream: aggTrades, key: aggTrades_traded, scope: traded, shard: 3/6, workers: 2}
+          - {market: um_perp, stream: aggTrades, key: aggTrades_traded, scope: traded, shard: 4/6, workers: 2}
+          - {market: um_perp, stream: aggTrades, key: aggTrades_traded, scope: traded, shard: 5/6, workers: 2}
+          - {market: um_perp, stream: markPriceKlines, key: markPriceKlines, shard: 0/4}
+          - {market: um_perp, stream: markPriceKlines, key: markPriceKlines, shard: 1/4}
+          - {market: um_perp, stream: markPriceKlines, key: markPriceKlines, shard: 2/4}
+          - {market: um_perp, stream: markPriceKlines, key: markPriceKlines, shard: 3/4}
+          - {market: um_perp, stream: indexPriceKlines, key: indexPriceKlines, shard: 0/4}
+          - {market: um_perp, stream: indexPriceKlines, key: indexPriceKlines, shard: 1/4}
+          - {market: um_perp, stream: indexPriceKlines, key: indexPriceKlines, shard: 2/4}
+          - {market: um_perp, stream: indexPriceKlines, key: indexPriceKlines, shard: 3/4}
     steps:
       - name: Is this stream enabled? (core always; optional only if it fits the measured storage)
         id: on
         env:
           STREAM: ${{ matrix.stream }}
+          KEY: ${{ matrix.key || matrix.stream }}
           OPTIONAL: ${{ needs.preflight.outputs.optional }}
         run: |
+          if [ -z "${{ matrix.key }}" ]; then STREAM="$STREAM"; else STREAM="optional:$KEY"; fi
           case "$STREAM" in
             klines|metrics|fundingRate) echo "run=true" >> "$GITHUB_OUTPUT" ;;
-            *) if [[ ",${OPTIONAL}," == *",${STREAM},"* ]]; then echo "run=true" >> "$GITHUB_OUTPUT";
-               else echo "run=false" >> "$GITHUB_OUTPUT"; echo "optional stream $STREAM not enabled (does not fit the measured HF headroom)"; fi ;;
+            *) if [[ ",${OPTIONAL}," == *",${KEY},"* ]]; then echo "run=true" >> "$GITHUB_OUTPUT";
+               else echo "run=false" >> "$GITHUB_OUTPUT"; echo "optional stream $KEY not enabled (does not fit the measured HF headroom)"; fi ;;
           esac
       - uses: actions/checkout@v4
         if: steps.on.outputs.run == 'true'
@@ -214,7 +227,8 @@ jobs:
         run: |
           REF=""; [ -f prev/MANIFEST.json ] && REF="--refresh-from prev/MANIFEST.json"
           python3 -u scripts/data_lake/binance_vision_lake.py --market "${{ matrix.market }}" --stream "${{ matrix.stream }}" \
-            --shard "${{ matrix.shard }}" --out lake --parallel 6 --workers 8 $REF
+            --shard "${{ matrix.shard }}" --scope "${{ matrix.scope || 'config' }}" --out lake \
+            --parallel "${{ matrix.workers && 1 || 6 }}" --workers "${{ matrix.workers || 8 }}" $REF
       - name: Process (derive 5m/15m/1h/4h/1d from the 1m base)
         if: steps.on.outputs.run == 'true' && matrix.stream == 'klines'
         run: python3 scripts/data_lake/resample.py --out lake --base 1m --tfs 5m,15m,1h,4h,1d --tag "${{ matrix.market }}-${{ strategy.job-index }}"
@@ -380,6 +394,57 @@ jobs:
             lake/_measure/
           if-no-files-found: ignore
           retention-days: 14
+
+  kaggle-raw-tail:
+    needs: [dedupe, preflight]
+    if: >-
+      !cancelled() && needs.dedupe.outputs.skip != 'true' && needs.preflight.result == 'success' &&
+      needs.preflight.outputs.mode != 'preflight' &&
+      (github.event_name != 'issues' || ((github.event.issue.user.login == github.repository_owner || github.event.issue.user.login == 'github-actions[bot]') && contains(github.event.issue.labels.*.name, 'market-data-lake-request')))
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: python -m pip install --quiet pandas pyarrow pyyaml "kaggle>=1.6"
+      - name: RAW aggTrades, traded universe, trailing months -> private Kaggle dataset (backfill + Sundays)
+        env:
+          KAGGLE_API_TOKEN: ${{ secrets.KAGGLE_API_TOKEN }}
+          MODE: ${{ needs.preflight.outputs.mode }}
+        run: |
+          set -uo pipefail
+          if [ "$MODE" != "backfill" ] && [ "$(date -u +%u)" != "7" ]; then echo "weekly step; not today"; exit 0; fi
+          [ -n "${KAGGLE_API_TOKEN}" ] || { echo "::error::KAGGLE_API_TOKEN not set"; exit 1; }
+          echo "::add-mask::${KAGGLE_API_TOKEN}"
+          USERNAME=$(python - <<'PY'
+          from kaggle.api.kaggle_api_extended import KaggleApi
+          a = KaggleApi(); a.authenticate()
+          print(a.config_values.get("username", ""))
+          PY
+          )
+          [ -n "$USERNAME" ] || { echo "::error::token did not resolve to a Kaggle user"; exit 1; }
+          echo "::add-mask::$USERNAME"
+          scrub() { sed "s|$USERNAME|<user>|g"; }
+          python3 -u scripts/data_lake/kaggle_raw_tail.py --out /tmp/stage --username "$USERNAME" | scrub | tee tail.json
+          DS="$USERNAME/$(python3 -c "import json;print(json.load(open('/tmp/stage/dataset-metadata.json'))['id'].split('/')[1])")"
+          du -sh /tmp/stage
+          if kaggle datasets status "$DS" >/dev/null 2>&1; then
+            kaggle datasets version -p /tmp/stage -r skip -m "tail $(date -u +%Y-%m-%dT%H:%MZ) run ${GITHUB_RUN_ID}" 2>&1 | scrub | grep -v "it/s\|B/s" | tail -5 || true
+          else
+            kaggle datasets create -p /tmp/stage -r skip 2>&1 | scrub | grep -v "it/s\|B/s" | tail -5 || true
+          fi
+          READY=0
+          for i in $(seq 1 120); do
+            st=$(kaggle datasets status "$DS" 2>&1 | scrub); echo "dataset: $st"
+            case "$st" in *[Rr]eady*|*READY*) READY=1; break;; esac
+            sleep 15
+          done
+          [ "$READY" = "1" ] || { echo "::error::Kaggle dataset never became ready"; exit 1; }
+          { echo '### kaggle raw aggTrades tail'; cat tail.json; } >> "$GITHUB_STEP_SUMMARY"
 
   manifest:
     needs: [dedupe, preflight, crypto, other, equities]
