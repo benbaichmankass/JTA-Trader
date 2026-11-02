@@ -343,3 +343,40 @@ def test_a_recurring_unit_waits_from_when_it_came_due_not_from_its_last_stamp():
     # due long enough, it still gets served first: nothing starves
     monthly.raw["last_dispatched_at"] = (NOW - timedelta(days=41)).isoformat()
     assert dq.fair_order([monthly, hand], NOW, TH, CFG)[0] is monthly
+
+
+# ── COMPUTE-PREFER-KAGGLE (operator 2026-11-01): Kaggle CPU first for long CPU units; the runner is the fallback ──
+def _r(**kw):
+    return {"needs_trainer_resident_data": False, "needs_gpu": False, **kw}
+
+
+def test_kaggle_first_cpu_long_and_long_cpu_light():
+    assert cr.plan(unit(compute="cpu_long", routing=_r(est_minutes=90)), CFG).backend == "kaggle_cpu"
+    assert cr.plan(unit(compute="auto", routing=_r(est_minutes=90)), CFG).backend == "kaggle_cpu"
+    assert cr.plan(unit(compute="cpu_light", routing=_r(est_minutes=45)), CFG).backend == "kaggle_cpu"   # over the 30 min threshold
+    assert cr.plan(unit(compute="cpu_light", routing=_r(est_minutes=20)), CFG).backend == "github_runner"
+    assert cr.plan(unit(compute="cpu_light", routing=_r()), CFG).backend == "github_runner"             # no estimate: not promoted
+
+
+def test_kaggle_first_runner_only_stays_on_runner():
+    for k, v in [("why_runner", "fetches keyless public candles"), ("runner_only", True),
+                 ("needs_secrets", True), ("needs_internet", True)]:
+        for cls in ("cpu_long", "cpu_light"):
+            assert cr.plan(unit(compute=cls, routing=_r(est_minutes=90, **{k: v})), CFG).backend == "github_runner", (k, cls)
+
+
+def test_kaggle_first_falls_back_when_kaggle_full_and_explicit_wins():
+    u = unit(compute="cpu_long", routing=_r(est_minutes=90))
+    st = cr.BackendState(total_inflight=0, now=NOW)
+    assert cr.resolve(u, CFG, st).backend == "kaggle_cpu"
+    st.inflight["kaggle_cpu"] = 1
+    r = cr.resolve(u, CFG, st)
+    assert (r.ok, r.wait, r.backend) == (True, False, "github_runner") and "fallback" in r.reason
+    ex = cr.plan(unit(compute="cpu_long", workflow="research-script-run.yml", routing=_r(est_minutes=90)), CFG)
+    assert (ex.backend, ex.source) == ("github_runner", "explicit")
+
+
+def test_kaggle_first_gpu_classes_unchanged_and_published_not_duplicated():
+    assert cr.class_backends("gpu", unit(), CFG)[0] == "kaggle"
+    assert cr.class_backends("gpu_preferred", unit(), CFG) == ["kaggle", "github_runner"]
+    assert len(set(cr.class_backends("cpu_long", unit(), CFG))) == len(cr.class_backends("cpu_long", unit(), CFG))

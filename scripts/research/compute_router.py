@@ -217,6 +217,45 @@ def cpu_only_bakeoff(entry: Dict[str, Any]) -> bool:
     return not (kinds & GPU_LEARNER_KINDS)
 
 
+#: Units that cannot take the Kaggle CPU kernel (internet off, no secrets): they stay on the GitHub runner. COMPUTE-PREFER-KAGGLE.
+RUNNER_ONLY_KEYS = ("runner_only", "needs_secrets", "needs_internet", "why_runner")
+
+
+def runner_only_reason(entry: Dict[str, Any]) -> Optional[str]:
+    """Why this unit must stay on github_runner, or None. `routing.why_runner` (RESEARCH-LOOP-AUDIT RC5: the author's one-line
+    reason, e.g. 'fetches keyless public candles') and the explicit booleans all mean the same thing: the Kaggle kernel
+    has no internet and no secret, so the unit cannot run there."""
+    r = entry.get("routing")
+    if not isinstance(r, dict):
+        return None
+    for k in RUNNER_ONLY_KEYS:
+        if r.get(k):
+            return f"routing.{k}" + (f": {str(r[k])[:60]}" if isinstance(r[k], str) else "")
+    return None
+
+
+def class_backends(cls: str, entry: Dict[str, Any], cfg: Dict[str, Any]) -> List[str]:
+    """The ordered backend list for this unit. The class's own list, except KAGGLE-FIRST (operator 2026-11-01: prefer specific
+    infra like Kaggle so the shared GitHub runner pool stays free): a runner-only unit drops the Kaggle CPU kernel, and a
+    cpu_light unit estimated over `kaggle_first.min_est_minutes` gets it in front. It is a DEFAULT, not a gate: the next
+    backend takes the unit the moment Kaggle is full, and an explicit run.workflow never reaches here."""
+    bl = list(cfg["classes"][cls]["backends"])
+    kf = cfg.get("kaggle_first") or {}
+    be = kf.get("backend")
+    if be and be in cfg["backends"]:
+        if runner_only_reason(entry):
+            bl = [b for b in bl if b != be] or bl
+        elif cls in (kf.get("classes") or []) and be not in bl:
+            m = _num((entry.get("routing") or {}).get("est_minutes"))
+            if m is not None and m > float(kf.get("min_est_minutes", 30)):
+                bl = [be] + bl
+    out: List[str] = []
+    for b in bl:
+        if b not in out:
+            out.append(b)
+    return out
+
+
 def class_routing_conflict(cls: str, entry: Dict[str, Any], cfg: Dict[str, Any]) -> Optional[str]:
     """A class that contradicts the unit's own `routing:` block. None when consistent or when there is no block."""
     r = entry.get("routing")
@@ -419,7 +458,7 @@ def plan(entry: Dict[str, Any], cfg: Dict[str, Any]) -> Resolution:
     conflict = class_routing_conflict(cls, entry, cfg)
     if conflict:
         return Resolution(False, cls=cls, error=conflict + " -- the class and the routing block must agree")
-    be = effective_backend(cfg["classes"][cls]["backends"][0], entry, cfg)
+    be = effective_backend(class_backends(cls, entry, cfg)[0], entry, cfg)
     return Resolution(True, be, cfg["backends"][be]["workflow"], cls,
                       "auto" if str(raw).strip() == "auto" else "class",
                       reason=f"compute: {raw} -> class {cls} -> prefers {be}")
@@ -439,7 +478,7 @@ def resolve(entry: Dict[str, Any], cfg: Dict[str, Any], st: Optional[BackendStat
                 base.wait, base.reason = True, why
         return base
     why_not: List[str] = []
-    for be in (effective_backend(b, entry, cfg) for b in cfg["classes"][base.cls]["backends"]):
+    for be in (effective_backend(b, entry, cfg) for b in class_backends(base.cls, entry, cfg)):
         why = _available(be, entry, cfg, st)
         if why is None:
             return Resolution(True, be, cfg["backends"][be]["workflow"], base.cls, base.source,

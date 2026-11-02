@@ -513,6 +513,10 @@ checklist rows / pipeline items for builds, bugs and tooling gaps. Every result 
 unit id, a `PI-…`/checklist id, or `no action, because …`. A finding in chat or a memo is
 not filed (CLAUDE.md § "Two categories").
 
+## Routing default: Kaggle first (COMPUTE-PREFER-KAGGLE, operator 2026-11-01)
+
+*"we should generally prefer specific infra like kaggle when it's relevant to leave the general use git resources free for other work."* A DEFAULT, not a gate. `cpu_long`, and a `cpu_light` unit with `routing.est_minutes` > 30 (`research_compute.yaml::kaggle_first`), go to `kaggle_cpu` first; `gpu` / `gpu_preferred` already do. Fallback to `github_runner` when `kaggle_cpu` is at capacity, or the unit is runner-only (`routing.why_runner` | `runner_only` | `needs_secrets` | `needs_internet`: the kernel has no internet and no secret). An explicit `run.workflow` still wins. A unit that fetches public data MUST say `why_runner`; a unit that does not has no reason to hold a runner.
+
 ## E. Intake sources — iteration first, never a count
 
 Draw new units from, in this order, as far as the budget reaches (never "until the floor is met" -- STOP-GENERATED-AUTHORING):
