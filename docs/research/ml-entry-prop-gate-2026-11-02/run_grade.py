@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# ruff: noqa: E402, E701, E702, E741
 # wiring: research/queue/RQ-20261102-5e1a-01.yaml (lane ML-ENTRY-PROP-GATE)
 """ONE run of RULE-P5-GATE-BRK-PER-LEG-V3 for ml_entry (ETH+SOL ledger) on breakout_2 / tradeify_1 / velotrade_1.
 Cells = prop_gate.SIM params (same as every other gate cell), seeds 1-5, arms firm+cur; verdict taken on the firm arm."""

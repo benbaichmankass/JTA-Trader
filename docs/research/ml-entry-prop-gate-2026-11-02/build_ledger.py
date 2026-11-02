@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# ruff: noqa: E402, E701, E702, E741
 # wiring: research/queue/RQ-20261102-5e1a-01.yaml (lane ML-ENTRY-PROP-GATE)
 """Build the ml_entry v1 graded ledger (served ENTRY, extend-only TP) for the prop gate.
 
