@@ -150,6 +150,7 @@ def _write_csv_gz(df, path: Path) -> Dict[str, Any]:
 def _from_lake(key: FeedKey, days: int):
     """Binance candles from the HF lake, shaped like fetch_backtest_candles' CSV. Raises when the lake lacks the series."""
     import pandas as pd  # noqa: PLC0415
+
     from ml.datasets import lake  # noqa: PLC0415
     source, ticker, interval = key
     if source != "binance" or interval not in _LAKE_TF:

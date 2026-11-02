@@ -1,9 +1,7 @@
 """KAGGLE-CANDLES: the published candle dataset -- build/serve round trip, coverage, and the router's use of it."""
 import json
-from pathlib import Path
 
 import pandas as pd
-import pytest
 
 from scripts.research import candle_dataset as cd
 from scripts.research import compute_router as cr
@@ -39,7 +37,8 @@ def test_serve_round_trip_and_slice(tmp_path, monkeypatch):
 def test_serve_survives_kaggle_extracting_the_gz(tmp_path):
     info = cd._write_csv_gz(_frame(), tmp_path / cd.file_name(KEY))
     (tmp_path / cd.file_name(KEY)).rename(tmp_path / "x.gz")
-    import gzip, shutil
+    import gzip
+    import shutil
     with gzip.open(tmp_path / "x.gz", "rb") as a, open(tmp_path / cd.file_name(KEY)[:-3], "wb") as b:
         shutil.copyfileobj(a, b)
     (tmp_path / cd.MANIFEST_NAME).write_text(json.dumps({"feeds": {cd.feed_id(KEY): {"status": "ok", "file": cd.file_name(KEY), "days_built": 100, **info}}}))

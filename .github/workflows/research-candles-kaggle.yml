@@ -20,12 +20,10 @@ name: research-candles-kaggle
 #
 # no-durable-result: data-publishing job (a private Kaggle dataset + a coverage artifact), computes no research verdict or measurement
 #
-# GATES THIS ADDS OR CHANGES: none. Tier 1: reads public data, writes one private Kaggle dataset. Cadence: weekly + on demand + on a PR
+# GATES THIS ADDS OR CHANGES: none. Tier 1: reads public data, writes one private Kaggle dataset. Cadence: on demand (no cron: a refresh is needed only when the queued units' feeds change) + on a PR
 # that touches this pipeline (so the publish is MEASURED before merge, as market-data-lake does for its preflight).
 
 on:
-  schedule:
-    - cron: "17 5 * * 1"
   workflow_dispatch:
     inputs:
       days_floor:
