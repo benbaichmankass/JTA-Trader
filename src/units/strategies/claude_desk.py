@@ -299,22 +299,33 @@ R_DESK_HELD = "desk_symbol_held"
 R_HELD_BY_DESK = "symbol_held_by_desk_leg"
 
 
-def exclusive_hold_refusal(strategy: Any, current_signed_qty: Any, desk_holds_open: Any) -> Optional[str]:
-    """The refusal reason for a package on a non-slice account rostering this leg, else None. Pure.
+#: Legs that never SHARE a symbol's net position on an account without slice support (enforced per package by
+#: ``Coordinator.multi_account_execute``). ``ml_entry`` joined 2026-11-01 (row ALPACA-LIVE-ACTIVITY-ML, operator
+#: "Paper now, v2 for live (Rec.)"): on alpaca_paper it enters only a flat symbol and other legs wait while it holds,
+#: so a pooled-model entry never nets into a strategy leg's position (or its time-stop close flattens one).
+#: Mirrored by scripts/ci/check_same_symbol_allocation.py::EXCLUSIVE_HOLD_LEGS (asserted equal there).
+EXCLUSIVE_HOLD_LEGS = (NAME, "ml_entry")
 
-    * a ``claude_desk`` package while the account holds ANY position on the symbol (another leg's, a manual one, or
-      the desk's own) -> ``desk_symbol_held``: the desk enters only a flat symbol, so it never nets into a strategy's
-      position and its max-hold close can never flatten one;
-    * another leg's package while the desk holds an open trade on the symbol -> ``symbol_held_by_desk_leg``
-      (the desk holds for its thesis; the strategy's next signal is evaluated fresh once the desk trade closes);
-    * ``desk_holds_open is None`` (the journal could not be read) -> ``symbol_held_by_desk_leg:unreadable`` (fail
-      closed: "could not look" is never read as flat)."""
-    if str(strategy or "") == NAME:
+
+def exclusive_hold_refusal(strategy: Any, current_signed_qty: Any, desk_holds_open: Any,
+                           exclusive: str = NAME) -> Optional[str]:
+    """The refusal reason for a package on a non-slice account rostering the exclusive leg ``exclusive``, else None.
+
+    * an ``exclusive`` package while the account holds ANY position on the symbol (another leg's, a manual one, or
+      its own) -> ``desk_symbol_held`` (``<leg>_symbol_held`` for a leg other than the desk): it enters only a flat
+      symbol, so it never nets into a strategy's position and its max-hold close can never flatten one;
+    * another leg's package while ``exclusive`` holds an open trade on the symbol -> ``symbol_held_by_desk_leg``
+      (``symbol_held_by_<leg>_leg``): the strategy's next signal is evaluated fresh once that trade closes;
+    * ``desk_holds_open is None`` (the journal could not be read) -> ``...:unreadable`` (fail closed: "could not
+      look" is never read as flat). Pure."""
+    held = R_DESK_HELD if exclusive == NAME else f"{exclusive}_symbol_held"
+    held_by = R_HELD_BY_DESK if exclusive == NAME else f"symbol_held_by_{exclusive}_leg"
+    if str(strategy or "") == exclusive:
         q = _num(current_signed_qty)
-        return f"{R_DESK_HELD}:net_qty={q}" if q is None or q != 0 else None
+        return f"{held}:net_qty={q}" if q is None or q != 0 else None
     if desk_holds_open is None:
-        return f"{R_HELD_BY_DESK}:unreadable"
-    return R_HELD_BY_DESK if desk_holds_open else None
+        return f"{held_by}:unreadable"
+    return held_by if desk_holds_open else None
 
 
 def max_hold_verdict(open_pkg: Any, now: datetime) -> Optional[Dict[str, Any]]:

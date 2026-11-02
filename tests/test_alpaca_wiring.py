@@ -779,6 +779,9 @@ def test_accounts_yaml_alpaca_paper_ships_inert():
         "uso_trend_1h",
         # 2026-10-27 DESK-PAPER-ACCOUNTS (Tier-3, paper): the Claude desk leg, scoped to SPY/QQQ/IWM/GLD/TLT.
         "claude_desk",
+        # 2026-11-01 ALPACA-LIVE-ACTIVITY-ML (Tier-3, paper; operator "Paper now, v2 for live (Rec.)"):
+        # the ONE ml_entry model on 13 ETFs (strategies.yaml::ml_entry.account_symbols.alpaca_paper).
+        "ml_entry",
     ]
     # 2026-06-15: the old `demo: true` category stamp was superseded by
     # account_class (non-Bybit, so demo was only the category marker).
