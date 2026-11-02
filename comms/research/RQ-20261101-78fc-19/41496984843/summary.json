@@ -1,0 +1,194 @@
+{
+  "leg": "uso_trend_1h",
+  "grade": {
+    "verdict": "pass",
+    "label": "confirmed",
+    "selected": "A",
+    "selected_from": 1,
+    "discovery": {
+      "A": {
+        "n": 197,
+        "net_r": 20.9399,
+        "expectancy_r": 0.1063,
+        "folds": [
+          {
+            "fold": 1,
+            "start": "2018-06-18 13:00:00+00:00",
+            "end": "2020-01-09 19:33:33.750000+00:00",
+            "trades": 49,
+            "net_r": -0.4437
+          },
+          {
+            "fold": 2,
+            "start": "2020-01-09 19:33:33.750000+00:00",
+            "end": "2021-08-02 02:07:07.500000+00:00",
+            "trades": 49,
+            "net_r": 10.6382
+          },
+          {
+            "fold": 3,
+            "start": "2021-08-02 02:07:07.500000+00:00",
+            "end": "2023-02-23 08:40:41.250000+00:00",
+            "trades": 47,
+            "net_r": 9.3273
+          },
+          {
+            "fold": 4,
+            "start": "2023-02-23 08:40:41.250000+00:00",
+            "end": "2024-09-15 15:14:15+00:00",
+            "trades": 52,
+            "net_r": 1.4181
+          }
+        ],
+        "folds_positive": 3,
+        "eligible": true
+      }
+    },
+    "plan": {
+      "boundary": "2024-09-15 15:14:15+00:00",
+      "share": 0.25,
+      "baseline_n_holdout": 75,
+      "grown": false,
+      "short_at_cap": false,
+      "discovery_fold_edges": [
+        "2018-06-18 13:00:00+00:00",
+        "2020-01-09 19:33:33.750000+00:00",
+        "2021-08-02 02:07:07.500000+00:00",
+        "2023-02-23 08:40:41.250000+00:00",
+        "2024-09-15 15:14:15+00:00"
+      ],
+      "straddling_excluded": {
+        "A": 1
+      }
+    },
+    "holdout": {
+      "n": 75,
+      "net_r": 29.0009,
+      "expectancy_r": 0.3867
+    },
+    "holdout_min_trades": 25,
+    "discovery_n_floor": 20,
+    "evaluations_on_holdout": 1,
+    "why": "A (selected from 1 on discovery) reads net_r=29.0009 over n=75 held-back trades, read once"
+  },
+  "arms": {
+    "A": {
+      "reach_ge_6r": 0.0,
+      "n": 273,
+      "net_r": 50.5341,
+      "net_r_fee_only": 58.774,
+      "max_drawdown_r": 18.5826,
+      "by_outcome": {
+        "take_profit": 31,
+        "stop": 126,
+        "giveback_stop": 99,
+        "trail_stop": 16,
+        "timeout": 1
+      },
+      "mean_bars_held": 16.824,
+      "net_r_per_capital_day": 0.2641,
+      "cost_stack": {
+        "fee_bps_roundtrip": 0.0,
+        "slippage_bps_roundtrip": 5.0,
+        "funding_bps_per_window": 0.0
+      },
+      "params": {
+        "donchian": 24,
+        "atr_stop_mult": 2.0,
+        "trail_mult": 4.0,
+        "min_confidence": 0.0,
+        "giveback_min_mfe_r": 1.0,
+        "giveback_r": 1.0
+      },
+      "data_start": "2018-06-18 13:00:00+00:00",
+      "data_end": "2026-10-15 19:00:00+00:00",
+      "folds": [
+        {
+          "fold": 1,
+          "start": "2018-06-18 13:00:00+00:00",
+          "end": "2020-07-17 21:44:45+00:00",
+          "trades": 61,
+          "net_r": 8.3885
+        },
+        {
+          "fold": 2,
+          "start": "2020-07-17 21:44:45+00:00",
+          "end": "2022-08-17 06:29:30+00:00",
+          "trades": 68,
+          "net_r": 14.6834
+        },
+        {
+          "fold": 3,
+          "start": "2022-08-17 06:29:30+00:00",
+          "end": "2024-09-15 15:14:15+00:00",
+          "trades": 69,
+          "net_r": -1.5385
+        },
+        {
+          "fold": 4,
+          "start": "2024-09-15 15:14:15+00:00",
+          "end": "2026-10-15 23:59:00+00:00",
+          "trades": 75,
+          "net_r": 29.0009
+        }
+      ],
+      "argv": [
+        "/opt/hostedtoolcache/Python/3.11.17/x64/bin/python3",
+        "/home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_trend.py",
+        "--donchian",
+        "24",
+        "--data",
+        "<data>",
+        "--symbol",
+        "USO",
+        "--resample",
+        "1h",
+        "--atr-period",
+        "14",
+        "--atr-stop-mult",
+        "2.0",
+        "--trail-mult",
+        "4.0",
+        "--min-confidence",
+        "0.0",
+        "--fee-bps-roundtrip",
+        "0.0",
+        "--emit-trades",
+        "comms/research/RQ-20261101-78fc-19/41496984843/arms/A__trades.jsonl",
+        "--json",
+        "comms/research/RQ-20261101-78fc-19/41496984843/arms/A__bt.json",
+        "--long-only",
+        "--giveback-min-mfe-r",
+        "1.0",
+        "--giveback-r",
+        "1.0",
+        "--tp-cap-pct",
+        "0.099",
+        "--tp-r",
+        "4.0",
+        "--start",
+        "2018-06-01",
+        "--end",
+        "2026-10-15 23:59"
+      ]
+    }
+  },
+  "window": {
+    "start": "2018-06-01",
+    "end": "2026-10-15 23:59",
+    "fetch_days": 3060,
+    "feed": {
+      "source": "dukascopy",
+      "ticker": "USO",
+      "interval": "60m",
+      "resample": "1h"
+    },
+    "fold_edges": [
+      "2018-06-18 13:00:00+00:00",
+      "2020-07-17 21:44:45+00:00",
+      "2022-08-17 06:29:30+00:00",
+      "2024-09-15 15:14:15+00:00",
+      "2026-10-15 23:59:00+00:00"
+    ]
+  }
+}
