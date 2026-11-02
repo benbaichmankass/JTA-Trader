@@ -2602,6 +2602,8 @@ class Coordinator:
                     # desk max-hold close flattens the whole symbol). Refused
                     # per package, journalled -- never a silent drop.
                     from src.units.strategies import claude_desk as _cd
+                    _excl = None
+                    _roster = getattr(account, "strategies", None) or []
                     if not _slice_mode and _cd.NAME in (getattr(account, "strategies", None) or []):
                         _excl = _cd.exclusive_hold_refusal(
                             pkg.strategy, current_signed_qty,
@@ -2609,28 +2611,40 @@ class Coordinator:
                                 account.name, pkg.symbol, _cd.NAME,
                             ),
                         )
-                        if _excl:
-                            logger.info(
-                                "[coordinator] desk exclusivity refused %s/%s/%s: %s",
-                                account.name, pkg.symbol, pkg.strategy, _excl,
-                            )
-                            from src.units.accounts.execute import log_rejection_to_journal
-                            log_rejection_to_journal(
-                                pkg, account_cfg,
-                                reason=_excl,
-                                status="rejected",
-                                sized_qty=0.0,
-                                margin_basis=margin_basis or None,
-                            )
-                            results.append({
-                                "name": account.name,
-                                "exchange": account.exchange,
-                                "account_type": account.account_type,
-                                "trade_id": None,
-                                "sized_qty": 0.0,
-                                "error": _excl,
-                            })
+                    # The other exclusive-hold legs (ml_entry on alpaca_paper, ALPACA-LIVE-ACTIVITY-ML 2026-11-01):
+                    # same rule, same journalled refusal below.
+                    for _ex in _cd.EXCLUSIVE_HOLD_LEGS:
+                        if _excl or _slice_mode or _ex == _cd.NAME or _ex not in _roster:
                             continue
+                        _excl = _cd.exclusive_hold_refusal(
+                            pkg.strategy, current_signed_qty,
+                            None if pkg.strategy == _ex else has_open_trade_for_strategy(
+                                account.name, pkg.symbol, _ex,
+                            ),
+                            exclusive=_ex,
+                        )
+                    if _excl:
+                        logger.info(
+                            "[coordinator] desk exclusivity refused %s/%s/%s: %s",
+                            account.name, pkg.symbol, pkg.strategy, _excl,
+                        )
+                        from src.units.accounts.execute import log_rejection_to_journal
+                        log_rejection_to_journal(
+                            pkg, account_cfg,
+                            reason=_excl,
+                            status="rejected",
+                            sized_qty=0.0,
+                            margin_basis=margin_basis or None,
+                        )
+                        results.append({
+                            "name": account.name,
+                            "exchange": account.exchange,
+                            "account_type": account.account_type,
+                            "trade_id": None,
+                            "sized_qty": 0.0,
+                            "error": _excl,
+                        })
+                        continue
                     _existing_pos_info = (
                         get_existing_position_info(account.name, pkg.symbol)
                         if current_signed_qty != 0 else None

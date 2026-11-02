@@ -86,7 +86,7 @@ GRANDFATHERED: Dict[str, Dict[str, Any]] = {
 #: arrival per package, journalled (``src/units/strategies/claude_desk.py::exclusive_hold_refusal``, called from
 #: ``Coordinator.multi_account_execute``; DESK-PAPER-ACCOUNTS 2026-10-27). Such a leg is not part of a shared slot, so it
 #: is left out of the group. ``self_test`` pins the coordinator call: delete the refusal and this guard goes red.
-EXCLUSIVE_HOLD_LEGS: frozenset = frozenset({"claude_desk"})
+EXCLUSIVE_HOLD_LEGS: frozenset = frozenset({"claude_desk", "ml_entry"})  # == claude_desk.EXCLUSIVE_HOLD_LEGS (self-test)
 COORDINATOR_REL = "src/core/coordinator.py"
 
 
@@ -259,6 +259,9 @@ def self_test() -> int:
           groups(acct({"other": ["a", "claude_desk"]}), sx), {})
     coord = (REPO / COORDINATOR_REL).read_text(encoding="utf-8")
     check("the coordinator calls the exclusive-hold refusal", "exclusive_hold_refusal(" in coord, True)
+    check("the coordinator walks every exclusive-hold leg", "_cd.EXCLUSIVE_HOLD_LEGS" in coord, True)
+    from src.units.strategies.claude_desk import EXCLUSIVE_HOLD_LEGS as _runtime_excl
+    check("guard and runtime name the same exclusive-hold legs", set(_runtime_excl), set(EXCLUSIVE_HOLD_LEGS))
     print("self-test:", "OK" if ok else "FAILED")
     return 0 if ok else 1
 

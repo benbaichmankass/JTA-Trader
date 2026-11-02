@@ -17,6 +17,7 @@ the common rule of the units (registered before any run):
 from __future__ import annotations
 
 import argparse
+import itertools
 import json
 import sys
 from pathlib import Path
@@ -411,6 +412,271 @@ def recipe_unit(tab, out, n_jobs) -> dict:
     return res
 
 
+# ----------------------------------------------------------------------------------------------- sizing on a trade series
+def sizing_table(trades: pd.DataFrame, fracs=(0.015, 0.005)) -> dict:
+    """Modelled return and max drawdown if each trade risks ``f`` of equity (net R is in units of the 2 ATR stop, so a 1 R loss costs f).
+    Trades are applied in entry order. COMPOUNDING: equity *= 1 + f * net_r. ADDITIVE: equity = 1 + f * cumulative net_r (fixed risk in
+    initial-equity terms). Concurrent positions are NOT modelled (each trade is sized on the equity at its own entry), so both overstate
+    smoothness when many trades overlap: read the additive series as the conservative one for return and the compounding one for DD shape."""
+    t = trades.sort_values("ts")
+    r = t.net_r.to_numpy()
+    years = max((pd.to_datetime(t.ts, utc=True).max() - pd.to_datetime(t.ts, utc=True).min()).days / 365.25, 1e-9) if len(t) else 1.0
+    out = {"n": len(t), "years": round(years, 3), "trades_per_year": round(len(t) / years, 1), "mean_net_r": float(r.mean()) if len(r) else None,
+           "worst_loss_streak": int(max((len(list(g)) for k, g in itertools.groupby(r < 0) if k), default=0))}
+    for f in fracs:
+        eq = np.cumprod(1 + f * r)
+        peak = np.maximum.accumulate(np.r_[1.0, eq])[1:]
+        add = 1 + f * np.cumsum(r)
+        peak_a = np.maximum.accumulate(np.r_[1.0, add])[1:]
+        out[f"risk_{f}"] = {"compound_total_return": float(eq[-1] - 1), "compound_annualised": float(eq[-1] ** (1 / years) - 1), "compound_max_dd": float(((eq - peak) / peak).min()),
+                            "additive_total_return": float(add[-1] - 1), "additive_annualised": float((add[-1] - 1) / years), "additive_max_dd": float(((add - peak_a) / peak_a).min())}
+    return out
+
+
+# ----------------------------------------------------------------------------------------------- b608: the v2 stack on dev
+GATE_V2 = 0.06
+STACK_TRADES = {}
+
+
+def _stack_tweak(share, cost_x_atr, fold_of, gate):
+    """R2 scores thresholded at the quantile that takes the base's share of rows (set BEFORE the gate), then the cost gate abstains."""
+    def tw(k, test, pl, ps):
+        sc = np.maximum(pl, ps)
+        thr = float(np.quantile(sc, 1 - share[k])) if share[k] > 0 else 1e9
+        if gate is not None:
+            kk = float(np.nanmedian(cost_x_atr[fold_of != k]))
+            est = kk / test["atr_pct"].to_numpy()
+            pl[est > gate] = ABSTAIN
+            ps[est > gate] = ABSTAIN
+        return pl, ps, thr
+    return tw
+
+
+def stack_unit(tab, out, n_jobs, cache: Path) -> dict:
+    base_m = {sd: R.ens_member(tab, "R0", "S0", sd, out, n_jobs) for sd in SEEDS}
+    r2_m = {sd: R.ens_member(tab, "R2", "S0", sd, out, n_jobs) for sd in SEEDS}
+    share = {sd: [float((np.maximum(base_m[sd][f"pl{k}"], base_m[sd][f"ps{k}"]) > TAU).mean()) for k in range(8)] for sd in SEEDS}
+    fr = {sd: fold_frames(tab, base_m[sd]) for sd in SEEDS}
+    pos = np.concatenate([base_m[SEEDS[0]][f"pos{k}"] for k in range(8)])
+    fold_of = np.concatenate([np.full(len(base_m[SEEDS[0]][f"pos{k}"]), k) for k in range(8)])
+    cxa = ((tab.loc[pos, "cost_long"] + tab.loc[pos, "cost_short"]) / 2 * tab.loc[pos, "atr_pct"]).to_numpy()
+    t24 = relabel_table(tab, cache, 2.0, 4.0)
+    fr24 = {sd: fold_frames(t24, base_m[sd]) for sd in SEEDS}
+    levels = {"base": None, "S1_R2": (fr, None), "S2_R2_gate": (fr, GATE_V2), "S3_R2_gate_24": (fr24, GATE_V2)}
+    per, trades = {}, {}
+    for name, spec in levels.items():
+        per[name], trades[name] = [], []
+        for sd in SEEDS:
+            if spec is None:
+                tr = run_arm(fr[sd], base_m[sd])
+            else:
+                frames, gate = spec
+                tr = run_arm(frames[sd], r2_m[sd], tweak=_stack_tweak(share[sd], cxa, fold_of, gate))
+            per[name].append(stats(tr))
+            trades[name].append(tr)
+        print("level", name, round(float(np.mean([x["mean"] for x in per[name]])), 4), flush=True)
+    res = {"unit": "RQ-20261101-b608-01", "sealed_windows_read": 0, "levels": {}}
+    res["levels"]["base"] = {"arm_mean": float(np.mean([x["mean"] for x in per["base"]])), "n": [x["n"] for x in per["base"]]}
+    prev_mean, winner = res["levels"]["base"]["arm_mean"], "base"
+    stopped = False
+    for name in ("S1_R2", "S2_R2_gate", "S3_R2_gate_24"):
+        j = judge(per["base"], per[name])
+        j["marginal_vs_previous_level"] = float(j["arm_mean"] - prev_mean)
+        j["adds_on_top"] = bool(j["marginal_vs_previous_level"] >= SPREAD_FLOOR)
+        j["accepted"] = bool(j["verdict"] == "win" and j["adds_on_top"] and not stopped)
+        res["levels"][name] = j
+        if j["accepted"]:
+            winner, prev_mean = name, j["arm_mean"]
+        else:
+            stopped = True
+    res["winning_stack"] = winner
+    # interaction: stand-alone deltas (b607, b606, b601, measured on the same base) vs the marginal deltas on the stack
+    alone = {"R2": 0.0204, "cost_gate_0.06": 0.0115, "bracket_2_4": 0.0037}
+    res["interaction"] = {"stand_alone_delta": alone,
+                          "marginal_on_stack": {"R2": res["levels"]["S1_R2"]["delta"], "gate": res["levels"]["S2_R2_gate"]["marginal_vs_previous_level"],
+                                                "bracket_2_4": res["levels"]["S3_R2_gate_24"]["marginal_vs_previous_level"]}}
+    tr5 = {n: float(pd.concat(trades[n])[lambda x: x.symbol.isin(TRADED)].net_r.mean()) for n in trades}
+    res["traded5_mean_by_level"] = tr5
+    res["result"] = f"winning stack: {winner}"
+    pd.to_pickle({n: trades[n][0] for n in trades}, out / "stack_trades_seed7.pkl")
+    pd.to_pickle({n: trades[n] for n in trades}, out / "stack_trades_all_seeds.pkl")
+    return res
+
+
+# ----------------------------------------------------------------------------------------------- b609: the ONE W1 read of the winning v2 stack
+W1 = ("2026-10-01", "2026-10-31")
+
+
+def build_full_cache(dev_streams: Path, fwd_streams: Path, oct_dir, out: Path):
+    import ml_entry_families as F
+    cache = out / "klines_full"
+    cache.mkdir(parents=True, exist_ok=True)
+    syms = []
+    for sym in E.universe():
+        dailies = [Path(x) for x in (oct_dir if isinstance(oct_dir, (list, tuple)) else [oct_dir])]
+        frames = [pd.read_pickle(d / st / f"{sym}.pkl") for d, st in [(dev_streams, "klines12"), (fwd_streams, "klines12")] + [(x, "klines12d") for x in dailies]
+                  if (d / st / f"{sym}.pkl").exists()]
+        if not frames:
+            continue
+        k = pd.concat(frames, ignore_index=True)
+        k["ts"] = F._ts(k["open_time"])
+        k = k.sort_values("ts").drop_duplicates("ts")
+        for c in ("open", "high", "low", "close", "volume"):
+            k[c] = k[c].astype(float)
+        k = k[~((k["volume"] == 0) & (k["high"] == k["low"])) & (k.ts >= pd.Timestamp(E.START, tz="UTC"))]
+        k[["ts", "open", "high", "low", "close", "volume"]].reset_index(drop=True).to_pickle(cache / f"{sym}.pkl")
+        syms.append(sym)
+    return cache, syms
+
+
+def _baselines(test, taken):
+    al = E.sequential_baseline(test, lambda r: "long")
+    ash = E.sequential_baseline(test, lambda r: "short")
+    p_take = min(1.0, len(taken) / max(1, len(al)))
+    p_long = float((taken.side == "long").mean()) if len(taken) else 0.5
+    rng = np.random.default_rng(E.SEED)
+    draws = []
+    for _ in range(E.RANDOM_DRAWS):
+        rd = E.sequential_baseline(test, lambda r: (("long" if r.random() < p_long else "short") if r.random() < p_take else None), rng)
+        draws.append(float(rd.net_r.mean()) if len(rd) else 0.0)
+    return {"no_trade": 0.0, "always_long": {"n": len(al), "mean": float(al.net_r.mean())}, "always_short": {"n": len(ash), "mean": float(ash.net_r.mean())},
+            "random_matched": {"p_take": p_take, "mean_of_means": float(np.mean(draws)), "p95": float(np.percentile(draws, 95))}}
+
+
+def w1_unit(dev_streams, fwd_streams, oct_dir, out, n_jobs, stack_result: Path, reader: str, dry: bool, ledger: Path) -> dict:
+    import holdout_lock
+    import lightgbm as lgb
+    sres = json.loads(stack_result.read_text())
+    stack = sres["winning_stack"]
+    if stack == "base":
+        return {"unit": "RQ-20261101-b609-01", "result": "not run: b608-01 found no winning stack", "sealed_windows_read": 0}
+    use_gate, use_bracket = stack in ("S2_R2_gate", "S3_R2_gate_24"), stack == "S3_R2_gate_24"
+    cache, syms = build_full_cache(dev_streams, fwd_streams, oct_dir, out)
+    full = E.build_table(cache, syms)
+    full["ts"] = pd.to_datetime(full["ts"], utc=True)
+    hs, w0, w1e = pd.Timestamp(E.HOLDOUT_START, tz="UTC"), pd.Timestamp(W1[0], tz="UTC"), pd.Timestamp(W1[1], tz="UTC") + pd.Timedelta(days=1)
+    dev = full[full.ts < hs].reset_index(drop=True)
+    # ---- every number below is fixed on DEV rows only
+    r2 = R.ens_member(dev, "R2", "S0", E.SEED, out, n_jobs)
+    oos = np.concatenate([np.maximum(r2[f"pl{k}"], r2[f"ps{k}"]) for k in range(8)])
+    shares = []
+    for sd in SEEDS:
+        b = R.ens_member(dev, "R0", "S0", sd, out, n_jobs)
+        shares.append(float(np.concatenate([np.maximum(b[f"pl{k}"], b[f"ps{k}"]) > TAU for k in range(8)]).mean()))
+    share = float(np.mean(shares))
+    tau_v2 = float(np.quantile(oos, 1 - share))
+    k_cost = float(np.nanmedian(((dev.cost_long + dev.cost_short) / 2 * dev.atr_pct).to_numpy()))
+    fixed = {"stack": stack, "tau_v2": tau_v2, "v1_dev_share": share, "gate": GATE_V2 if use_gate else None, "k_cost_x_atr": k_cost,
+             "bracket": [2.0, 4.0 if use_bracket else 3.0], "r2_params": {k: v for k, v in {**R.BASE, **R.RECIPES["R2"]}.items() if k != "n_jobs"},
+             "seed": E.SEED, "train_end_exclusive_target": str(w0 - pd.Timedelta(days=E.EMBARGO_DAYS) - pd.Timedelta(hours=E.HORIZON_H + 1))}
+    if dry:
+        return {"unit": "RQ-20261101-b609-01", "dry_run": True, "fixed_on_dev": fixed, "full_rows": len(full), "w1_rows_in_memory_unread": int((full.ts >= w0).sum()),
+                "result": "dry run: nothing claimed, no W1 outcome used"}
+    # ---- the claim comes BEFORE any W1 outcome is touched
+    mid = f"ENTRY-v2-{stack}"
+    claim = holdout_lock.claim_read(mid, W1[0], W1[1], "RQ-20261101-b609-01", reader, ledger)
+    train = E.purge_train(full[full.ts < w0], w0)
+    test = full[(full.ts >= w0) & (full.ts < w1e)].reset_index(drop=True)
+    params = {**R.BASE, **R.RECIPES["R2"], "random_state": E.SEED, "n_jobs": n_jobs}
+    models = {side: lgb.LGBMRegressor(**params).fit(train[E.FEATURES], train[f"net_{side}"]) for side in ("long", "short")}   # T0 raw net R, both sides
+    # provenance: LGBMRegressor — regression head: predicts net R per decision, not a class probability
+    pl, ps = (models[side].predict(test[E.FEATURES]) for side in ("long", "short"))
+    if use_gate:
+        est = k_cost / test["atr_pct"].to_numpy()
+        pl[est > GATE_V2] = ABSTAIN
+        ps[est > GATE_V2] = ABSTAIN
+    score_frame = relabel_table(test, cache, 2.0, 4.0) if use_bracket else test
+    taken = E.policy(score_frame, pl, ps, tau_v2)
+    m = E.summarize(taken)
+    slice5 = taken[taken.symbol.isin(TRADED)]
+    # frozen v1 reference: second claim, the committed booster that is live
+    claim1 = holdout_lock.claim_read("ENTRY-v1-frozen-ref-b609", W1[0], W1[1], "RQ-20261101-b609-01-v1ref", reader, ledger)
+    art = Path(__file__).resolve().parents[2] / "comms/research/RQ-20261101-c692-06/41324826751/model"
+    # provenance: Booster — regression booster file: predicts net R per decision, not a class probability
+    v1p = {side: lgb.Booster(model_file=str(art / f"entry_{side}.txt")).predict(test[E.FEATURES]) for side in ("long", "short")}
+    taken1 = E.policy(test, v1p["long"], v1p["short"], TAU)
+    m1 = E.summarize(taken1)
+    a_ok = m["n"] >= E.N_FLOOR and m["n_symbols"] >= E.SYMBOL_FLOOR
+    b_ok = m["mean_net_r"] is not None and m["mean_net_r"] >= 0
+    c_ok = m["mean_net_r"] is not None and m1["mean_net_r"] is not None and m["mean_net_r"] >= m1["mean_net_r"]
+    verdict = "indeterminate" if not a_ok else ("pass" if (b_ok and c_ok) else "fail")
+    res = {"unit": "RQ-20261101-b609-01", "read_state": "read", "verdict": verdict, "conditions": {"a_n_and_symbols": a_ok, "b_mean_ge_0": b_ok, "c_ge_v1_reference": c_ok},
+           "stack": stack, "fixed_on_dev": fixed, "window": list(W1), "n_train": len(train), "n_test_rows": len(test), "test_symbols": int(test.symbol.nunique()),
+           "v2": m, "v2_traded5": E.summarize(slice5), "v1_reference": m1, "v1_reference_traded5": E.summarize(taken1[taken1.symbol.isin(TRADED)]),
+           "baselines_v2_mechanics": _baselines(score_frame, taken), "holdout_lock": claim, "holdout_lock_v1ref": claim1,
+           "variants_on_window": claim1["variants_on_window"], "result": f"{verdict}: v2 {m['mean_net_r']:+.4f} (n={m['n']}) vs v1 reference {m1['mean_net_r']:+.4f} (n={m1['n']})"}
+    v1meta = json.loads((art / "meta.json").read_text())
+    art_dir = out / "v2_artifact"
+    art_dir.mkdir(exist_ok=True)
+    meta = {"model_id": "ml-decision-entry-v2", "schema": "ml_decision_entry_model/1", "features": list(E.FEATURES), "tau": tau_v2,
+            "train_rows": len(train), "train_end_exclusive": str(train.ts.max()), "lgb_params": {k: v for k, v in params.items()},
+            "bracket": {"sl_atr": 2.0, "tp_atr": 4.0 if use_bracket else 3.0, "atr_n": E.ATR_N, "horizon_h": E.HORIZON_H, "decision_every_h": E.DECISION_EVERY_H},
+            "cost_gate": ({"max_cost_r": GATE_V2, "k_cost_x_atr": k_cost, "input": "atr_pct", "rule": "abstain when k_cost_x_atr / atr_pct > max_cost_r"} if use_gate else None),
+            "xs_reference": v1meta["xs_reference"], "stack": stack, "w1_verdict": verdict, "w1_mean_net_r": m["mean_net_r"], "w1_n": m["n"],
+            "evidence": ["research/queue/RQ-20261101-b607-01 (R2 recipe)", "RQ-20261101-b606-01 (cost gate)", "RQ-20261101-b601-01 (2/4 bracket)", "RQ-20261101-b608-01 (dev stack)", "RQ-20261101-b609-01 (the one W1 read)"]}
+    (art_dir / "model.json").write_text(json.dumps({**meta, "booster_txt": {side: models[side].booster_.model_to_string() for side in ("long", "short")}}))
+    taken.to_pickle(out / "w1_trades_v2.pkl")
+    taken1.to_pickle(out / "w1_trades_v1ref.pkl")
+    return res
+
+
+# ----------------------------------------------------------------------------------------------- b610: forward read of the frozen v2 artifact
+FWD_ID = "ENTRY-v2-frozen-fwd"
+
+
+def fwd_unit(artifact: Path, dev_streams: Path, fwd_streams: Path, daily_dirs: list, start: str, end: str, out: Path, count_only: bool,
+             reader: str, ledger: Path) -> dict:
+    """Score the FROZEN artifact (no retrain, no change) on [start, end]. ``count_only`` is label-free: it counts candidate decisions
+    (score > tau and the cost gate passes) from scores only and claims nothing. The real read claims the lock first."""
+    import holdout_lock
+    import lightgbm as lgb
+    art = json.loads(artifact.read_text())
+    meta = {k: v for k, v in art.items() if k != "booster_txt"}
+    models = {side: lgb.Booster(model_str=art["booster_txt"][side]) for side in ("long", "short")}
+    cache, syms = build_full_cache(dev_streams, fwd_streams, daily_dirs, out)
+    full = E.build_table(cache, syms)
+    full["ts"] = pd.to_datetime(full["ts"], utc=True)
+    w0, w1e = pd.Timestamp(start, tz="UTC"), pd.Timestamp(end, tz="UTC") + pd.Timedelta(days=1)
+    test = full[(full.ts >= w0) & (full.ts < w1e)].reset_index(drop=True)
+    # provenance: LGBMRegressor — regression head: predicts net R per decision, not a class probability
+    pl, ps = (models[side].predict(test[meta["features"]]) for side in ("long", "short"))
+    gate = meta.get("cost_gate")
+    est = (float(gate["k_cost_x_atr"]) / test["atr_pct"].to_numpy()) if gate else np.zeros(len(test))
+    passes = (est <= float(gate["max_cost_r"])) if gate else np.ones(len(test), bool)
+    cand = (np.maximum(pl, ps) > float(meta["tau"])) & passes
+    days = max((test.ts.max() - test.ts.min()).total_seconds() / 86400.0, 1e-9) if len(test) else 1.0
+    base = {"unit": "RQ-20261101-b610-01", "window": [start, end], "rows": len(test), "symbols": int(test.symbol.nunique()),
+            "candidates": int(cand.sum()), "candidates_per_day": round(float(cand.sum()) / days, 2), "trigger_candidates": 1100,
+            "trigger_reached": bool(cand.sum() >= 1100), "artifact": str(artifact.name), "model_id": meta.get("model_id")}
+    if count_only:
+        return {**base, "count_only": True, "result": f"label-free count: {base['candidates']} candidates ({base['candidates_per_day']}/day) vs trigger 1100"}
+    mid = FWD_ID
+    claim = holdout_lock.claim_read(mid, start, end, "RQ-20261101-b610-01", reader, ledger)        # BEFORE any outcome is used
+    br = meta["bracket"]
+    score = relabel_table(test, cache, float(br["sl_atr"]), float(br["tp_atr"])) if float(br["tp_atr"]) != 3.0 else test
+    pl2, ps2 = pl.copy(), ps.copy()
+    pl2[~passes] = ABSTAIN
+    ps2[~passes] = ABSTAIN
+    taken = E.policy(score, pl2, ps2, float(meta["tau"]))
+    m = E.summarize(taken)
+    v1 = Path(__file__).resolve().parents[2] / "comms/research/RQ-20261101-c692-06/41324826751/model"
+    claim1 = holdout_lock.claim_read("ENTRY-v1-frozen-ref-fwd", start, end, "RQ-20261101-b610-01-v1ref", reader, ledger)
+    # provenance: Booster — regression booster file: predicts net R per decision, not a class probability
+    v1p = {side: lgb.Booster(model_file=str(v1 / f"entry_{side}.txt")).predict(test[E.FEATURES]) for side in ("long", "short")}
+    taken1 = E.policy(test, v1p["long"], v1p["short"], TAU)
+    m1 = E.summarize(taken1)
+    a_ok = m["n"] >= E.N_FLOOR and m["n_symbols"] >= E.SYMBOL_FLOOR
+    b_ok = m["mean_net_r"] is not None and m["mean_net_r"] >= 0
+    c_ok = m["mean_net_r"] is not None and m1["mean_net_r"] is not None and m["mean_net_r"] >= m1["mean_net_r"]
+    verdict = "indeterminate" if not a_ok else ("pass" if (b_ok and c_ok) else "fail")
+    taken.to_pickle(out / "fwd_trades_v2.pkl")
+    return {**base, "read_state": "read", "verdict": verdict, "conditions": {"a_n_and_symbols": a_ok, "b_mean_ge_0": b_ok, "c_ge_v1_reference": c_ok},
+            "v2": m, "v2_traded5": E.summarize(taken[taken.symbol.isin(TRADED)]), "v1_reference": m1,
+            "v1_reference_traded5": E.summarize(taken1[taken1.symbol.isin(TRADED)]), "baselines_v2_mechanics": _baselines(score, taken),
+            "holdout_lock": claim, "holdout_lock_v1ref": claim1, "variants_on_window": claim1["variants_on_window"],
+            "result": f"{verdict}: v2 {m['mean_net_r']:+.4f} (n={m['n']}) vs v1 reference {m1['mean_net_r']:+.4f} (n={m1['n']})"}
+
+
 # ----------------------------------------------------------------------------------------------- a508: the traded slice
 def traded_unit(tab, out, n_jobs) -> dict:
     seeds = (E.SEED, *SEEDS)
@@ -519,9 +785,20 @@ def build_base_table(streams: Path, out: Path) -> Path:
 
 def main() -> int:
     ap = argparse.ArgumentParser()
-    ap.add_argument("cmd", nargs="?", choices=["run", "build-table"])
+    ap.add_argument("cmd", nargs="?", choices=["run", "build-table", "w1-read", "fwd-read"])
     ap.add_argument("--streams", default="")
     ap.add_argument("--unit", default="")
+    ap.add_argument("--dev-streams", default="")
+    ap.add_argument("--fwd-streams", default="")
+    ap.add_argument("--oct-dir", default="")
+    ap.add_argument("--stack-result", default="")
+    ap.add_argument("--reader", default="lane ML-RECIPE")
+    ap.add_argument("--dry", action="store_true")
+    ap.add_argument("--artifact", default="ml/served/ml_decision_entry_v2/model.json")
+    ap.add_argument("--daily-dirs", default="")
+    ap.add_argument("--start", default="2026-11-01")
+    ap.add_argument("--end", default="")
+    ap.add_argument("--count-only", action="store_true")
     ap.add_argument("--table", default="")
     ap.add_argument("--out", default="/tmp/ml_entry_levers")
     ap.add_argument("--n-jobs", type=int, default=4)
@@ -535,6 +812,19 @@ def main() -> int:
     if a.cmd == "build-table":
         print(build_base_table(Path(a.streams), out))
         return 0
+    if a.cmd == "fwd-read":
+        import holdout_lock
+        r = fwd_unit(Path(a.artifact), Path(a.dev_streams), Path(a.fwd_streams), [x for x in a.daily_dirs.split(",") if x], a.start, a.end, out,
+                     a.count_only, a.reader, holdout_lock.LEDGER)
+        (out / ("fwd_count.json" if a.count_only else "b610_result.json")).write_text(json.dumps(r, indent=1, default=str))
+        print(r["result"])
+        return 0
+    if a.cmd == "w1-read":
+        import holdout_lock
+        r = w1_unit(Path(a.dev_streams), Path(a.fwd_streams), Path(a.oct_dir), out, a.n_jobs, Path(a.stack_result), a.reader, a.dry, holdout_lock.LEDGER)
+        (out / ("w1_dry.json" if a.dry else "b609_result.json")).write_text(json.dumps(r, indent=1, default=str))
+        print(r["result"])
+        return 0
     if a.cmd != "run":
         ap.print_help()
         return 0
@@ -544,7 +834,7 @@ def main() -> int:
     assert tab.ts.max() < pd.Timestamp(E.HOLDOUT_START, tz="UTC")
     u = a.unit.split("-")[-2] if a.unit.startswith("RQ-") else a.unit.split("-")[0]
     fn = {"b601": lambda: bracket_unit(tab, out, a.n_jobs, tpath.parent / "klines"), "b602": lambda: selectivity_unit(tab, out, a.n_jobs),
-          "b604": lambda: calibration_unit(tab, out, a.n_jobs), "b606": lambda: cost_gate_unit(tab, out, a.n_jobs), "b607": lambda: recipe_unit(tab, out, a.n_jobs), "a508": lambda: traded_unit(tab, out, a.n_jobs)}[u]
+          "b604": lambda: calibration_unit(tab, out, a.n_jobs), "b606": lambda: cost_gate_unit(tab, out, a.n_jobs), "b607": lambda: recipe_unit(tab, out, a.n_jobs), "b608": lambda: stack_unit(tab, out, a.n_jobs, tpath.parent / "klines"), "a508": lambda: traded_unit(tab, out, a.n_jobs)}[u]
     res = fn()
     (out / f"{u}_result.json").write_text(json.dumps(res, indent=1, default=str))
     print(res["result"])
