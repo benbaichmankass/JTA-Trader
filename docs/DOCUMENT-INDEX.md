@@ -60,6 +60,7 @@ was read as an *instruction*.
 
 | category | rows | meaning |
 |---|---|---|
+| `docs/reviews/2026-11-02-checklist-backfill/summary.md` | unknown | unknown | — | never | `not-assessed / not-assessed` | — |
 | `instruction` | 44 | A session must OBEY it. Binding. |
 | `architecture` | 91 | A declared contract about how the system is built; read as truth about the system. |
 | `plan` | 64 | A forward commitment -- what we intend to do next. NEVER obeyed as instruction. |
