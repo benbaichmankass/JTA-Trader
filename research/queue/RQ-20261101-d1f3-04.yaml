@@ -29,15 +29,19 @@ iteration:
   due_by: '2026-11-15'
 power:
   expected_n: 4151
-  min_detectable_effect: 0.5
+  min_detectable_effect: 0.8
   effect_units: annualised_sharpe
   design: one_sample
   alpha: 0.05
   power: 0.8
-  basis: 'n=4151 days (16.5 y): Sharpe SE ~0.25, the best-powered subject in the candidate set; a 0.2 Sharpe difference still needs ~2x the window.'
+  basis: 'n=4151 days (16.5 y): Sharpe SE ~0.25, the best-powered subject in the candidate set; a 0.2 Sharpe difference still needs ~2x the window. POWER ARITHMETIC
+    (research_queue.required_n, one-sample, alpha 0.05, power 0.8): sd=15.87 converts an annualised Sharpe to a per-observation d; the smallest annualised-Sharpe
+    effect separable from zero at expected_n=4151 is 0.8. That is ABOVE the 0.5 pass bar of the registered rule, which is why the rule is an absolute bar with a cumulative-N
+    DSR, not a delta against the control.'
   feasibility:
     source: none
     accrual_basis: Fixed historical archive; nothing accrues.
+  sd: 15.874507866387544
 decision_rule:
   id: RULE-RQ-20261101-d1f3-04
   registered_at: '2026-11-01'

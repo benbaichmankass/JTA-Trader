@@ -33,16 +33,20 @@ iteration:
   due_by: '2026-11-15'
 power:
   expected_n: 1490
-  min_detectable_effect: 0.5
+  min_detectable_effect: 1.2
   effect_units: annualised_sharpe
   design: one_sample
   alpha: 0.05
   power: 0.8
   basis: 'n~1490 daily returns (2020-06..2024-06): Sharpe SE ~0.49, so an arm is separable from 0 only above ~1.0; the cumulative-N DSR bar is stricter by design.
-    Config differences below ~0.7 Sharpe are NOT separable from the control, which is why the pass bar is the absolute registered rule, not a delta.'
+    Config differences below ~0.7 Sharpe are NOT separable from the control, which is why the pass bar is the absolute registered rule, not a delta. POWER ARITHMETIC
+    (research_queue.required_n, one-sample, alpha 0.05, power 0.8): sd=15.87 converts an annualised Sharpe to a per-observation d; the smallest annualised-Sharpe
+    effect separable from zero at expected_n=1490 is 1.2. That is ABOVE the 0.5 pass bar of the registered rule, which is why the rule is an absolute bar with a cumulative-N
+    DSR, not a delta against the control.'
   feasibility:
     source: none
     accrual_basis: Fixed historical archive; nothing accrues.
+  sd: 15.874507866387544
 decision_rule:
   id: RULE-RQ-20261101-d1f3-01
   registered_at: '2026-11-01'

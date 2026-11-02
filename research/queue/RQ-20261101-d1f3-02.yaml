@@ -31,16 +31,19 @@ iteration:
   due_by: '2026-11-15'
 power:
   expected_n: 1490
-  min_detectable_effect: 0.5
+  min_detectable_effect: 1.2
   effect_units: annualised_sharpe
   design: one_sample
   alpha: 0.05
   power: 0.8
-  basis: Same window and standard error as the tsmom unit (Sharpe SE ~0.49). X1's control Sharpe 1.325 is already above the 1.0 separability line; what fails it is
-    the DSR bar, so the DSR denominator (N_cum=17) is the binding constraint, not n.
+  basis: 'Same window and standard error as the tsmom unit (Sharpe SE ~0.49). X1''s control Sharpe 1.325 is already above the 1.0 separability line; what fails it
+    is the DSR bar, so the DSR denominator (N_cum=17) is the binding constraint, not n. POWER ARITHMETIC (research_queue.required_n, one-sample, alpha 0.05, power
+    0.8): sd=15.87 converts an annualised Sharpe to a per-observation d; the smallest annualised-Sharpe effect separable from zero at expected_n=1490 is 1.2. That
+    is ABOVE the 0.5 pass bar of the registered rule, which is why the rule is an absolute bar with a cumulative-N DSR, not a delta against the control.'
   feasibility:
     source: none
     accrual_basis: Fixed historical archive; nothing accrues.
+  sd: 15.874507866387544
 decision_rule:
   id: RULE-RQ-20261101-d1f3-02
   registered_at: '2026-11-01'
