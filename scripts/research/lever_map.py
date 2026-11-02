@@ -58,7 +58,7 @@ REPO = Path(__file__).resolve().parents[2]
 LEVERS_DIR = "research/levers"
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 sys.path.insert(0, str(REPO / "scripts" / "ops"))
-import iteration_orphans as io
+import iteration_orphans as io  # noqa: E402
 
 FLAT_R_PER_TRADE = 0.02      # |delta| below 0.02 R/trade x n is "no response" (the units' own materiality bar)
 #: author-owned keys, preserved verbatim across --backfill (the hand-seeded schema of RESEARCH-EDGE, 2026-11-01, plus the 2 older ones)
@@ -126,7 +126,7 @@ def _flag_values(argv: list[str]) -> dict[str, str]:
             out[t] = str(v)
             i += 2 if v != "on" else 1
             continue
-        i += 1 if not (t in _SKIP_FLAGS) else 2
+        i += 1 if t not in _SKIP_FLAGS else 2
     return out
 
 
@@ -410,9 +410,13 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--root", default=str(REPO))
     ap.add_argument("--self-test", action="store_true")
     ap.add_argument("--append", metavar="SUBJECT", help="append one tested lever to the subject's levers_tested")
-    ap.add_argument("--family"); ap.add_argument("--varied"); ap.add_argument("--shape"); ap.add_argument("--unit")
+    ap.add_argument("--family")
+    ap.add_argument("--varied")
+    ap.add_argument("--shape")
+    ap.add_argument("--unit")
     ap.add_argument("--lever-family", help="explicit policy family (else mapped from --family text)")
-    ap.add_argument("--at-power", action="store_true"); ap.add_argument("--response-json", default="{}")
+    ap.add_argument("--at-power", action="store_true")
+    ap.add_argument("--response-json", default="{}")
     a = ap.parse_args(argv)
     if a.self_test:
         return _self_test()

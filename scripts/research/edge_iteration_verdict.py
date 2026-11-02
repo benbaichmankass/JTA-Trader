@@ -44,8 +44,9 @@ def combine(ctl: dict, arm: dict, factor: str) -> dict:
 
 
 def _self_test() -> int:
-    mk = lambda sh, vd: {"selected": "X", "configs": {"X": {"primary": {"sharpe_net": sh, "ann_return_net": 0.1, "dsr": 0.9, "n_days": 9}, "stress": {"sharpe_net": 0.1}}},
-                         "verdict": {"verdict": vd, "checks": {"a": vd == "pass"}}, "n_trials": 16, "universe": ["A"]}
+    def mk(sh, vd):
+        return {"selected": "X", "configs": {"X": {"primary": {"sharpe_net": sh, "ann_return_net": 0.1, "dsr": 0.9, "n_days": 9}, "stress": {"sharpe_net": 0.1}}},
+                "verdict": {"verdict": vd, "checks": {"a": vd == "pass"}}, "n_trials": 16, "universe": ["A"]}
     r1 = combine(mk(-0.7, "fail"), mk(0.2, "fail"), "f")
     r2 = combine(mk(-0.7, "fail"), mk(1.2, "pass"), "f")
     r3 = combine(mk(-0.7, "fail"), {"selected": None, "configs": {}}, "f")
