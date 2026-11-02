@@ -1,0 +1,22 @@
+{
+  "id": "LTR-WAKE-PAPER-NOISE",
+  "title": "ltr-wake labels paper packages 'real-money/prop' and fires repeatedly on ib_paper packages that have no apply path",
+  "phase": "build",
+  "state": "queued",
+  "owner": "manager",
+  "lane": null,
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [],
+  "blocked_on": [],
+  "note": "FOUND 2026-11-02 00:20-02:15Z (manager): ltr-wake comments on #17895 headline 'newly due on real-money/prop packages' for bybit_1 / ib_paper (paper) packages. ib_paper MGC pkg-d76f1b15 woke 3x in 2h (giveback, momentum_flip) with account_bounds 'no apply path for this exchange yet (LTR-9)', so every review there is no_action. Fix: label the account class correctly in the wake headline, and coalesce wakes for a package reviewed inside its cooldown when its apply path is none. No new gate: wakes still fire, the headline and cooldown change. Pick up after the 2026-11-04 reset.",
+  "updated_at": "2026-11-02T05:18:18Z",
+  "updated_by": "session_01AFoLuJ1apgy8sfngu4WyNH",
+  "due_by": "2026-11-05",
+  "roadmap": [
+    "L-OPS"
+  ],
+  "_seq": 891
+}

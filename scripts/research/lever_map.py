@@ -49,7 +49,7 @@ REPO = Path(__file__).resolve().parents[2]
 LEVERS_DIR = "research/levers"
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 sys.path.insert(0, str(REPO / "scripts" / "ops"))
-import iteration_orphans as io
+import iteration_orphans as io  # noqa: E402
 
 FLAT_R_PER_TRADE = 0.02      # |delta| below 0.02 R/trade x n is "no response" (the units' own materiality bar)
 _SKIP_FLAGS = {"--data", "--emit-trades", "--json", "--start", "--end", "--symbol", "--resample", "--strategy-name"}
@@ -114,7 +114,7 @@ def _flag_values(argv: list[str]) -> dict[str, str]:
             out[t] = str(v)
             i += 2 if v != "on" else 1
             continue
-        i += 1 if not (t in _SKIP_FLAGS) else 2
+        i += 1 if t not in _SKIP_FLAGS else 2
     return out
 
 

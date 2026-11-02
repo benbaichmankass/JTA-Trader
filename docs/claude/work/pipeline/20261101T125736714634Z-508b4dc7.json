@@ -1,0 +1,17 @@
+{
+  "due_when": {
+    "due_date": "2026-11-04",
+    "kind": "date"
+  },
+  "id": "PI-20261101-WTFTWTFP-0002",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "lane MARKET-DATA-LAKE (row MARKET-DATA-LAKE), 2026-11-01",
+    "rerun": "Read scripts/ops/fetch_etf_history.py UNIVERSE on main; count symbols in hf://datasets/bentzbk/jta-market-lake/MANIFEST.json where asset_class=us_equity; target >= 5,000 ETFs at 1d"
+  },
+  "severity": "high",
+  "state": "queued",
+  "tier": 1,
+  "what": "(b3) Broad ETF/equity pull: every ETF in the lake's universe/us_equity/<date>.csv (MEASURED 5,776 ETF-flagged 2026-11-01) at 1d+1h from Alpaca, plus inactive assets (/v2/assets?status=inactive) for delisted names -- ETF-HISTORY-PIPELINE's fetcher reads the universe snapshot instead of its 31-symbol ROSTER+LIQUID constant."
+}

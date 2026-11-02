@@ -1,0 +1,645 @@
+{
+ "schema": "ltr_class_grade/v1",
+ "computed_at": "2026-11-01T13:03:55Z",
+ "preregistration": "comms/research/ltr_class_grade/PREREGISTRATION.md",
+ "harness": "scripts/research/live_review_counterfactual.py::price_all (paired_replay_v1 / replay_v1), net of cost_legs",
+ "population": {
+  "refs": {
+   "origin/main": 313,
+   "origin/live-review/rows": 87
+  },
+  "n_reviews_union": 318,
+  "first": "2026-10-25T16:30:00Z",
+  "last": "2026-11-01T11:46:42Z",
+  "by_action": {
+   "no_recommendation": 56,
+   "hold": 170,
+   "flag_mechanics": 58,
+   "close": 22,
+   "tighten_sl": 11,
+   "partial_close": 1
+  },
+  "n_packages_journal": 1000,
+  "n_trades_journal": 6817
+ },
+ "classes": {
+  "close": {
+   "n_calls": 22,
+   "n_priced": 21,
+   "n_packages_priced": 4,
+   "share_unpriced": 0.045,
+   "unpriced_reasons": {
+    "replay_mismatch": 1
+   },
+   "n": 21,
+   "mean_dr": 0.8231,
+   "sum_dr": 17.2859,
+   "hit_rate": 1.0,
+   "ci95_call_bootstrap": [
+    0.7021,
+    0.9436
+   ],
+   "ci95_package_cluster_bootstrap": [
+    0.5785,
+    0.9499
+   ],
+   "calibration_verdict": "UNDERCONFIDENT",
+   "applied": {
+    "n": 2,
+    "mean_dr": 0.6975,
+    "sum_dr": 1.395,
+    "hit_rate": 1.0
+   },
+   "recommended_only": {
+    "n": 19,
+    "mean_dr": 0.8364,
+    "sum_dr": 15.8909,
+    "hit_rate": 1.0
+   },
+   "replay_fidelity": {
+    "unvalidated": 2,
+    "replay_matches_realised": 19
+   },
+   "by_account": {
+    "bybit_1": {
+     "n": 21,
+     "mean_dr": 0.8231,
+     "sum_dr": 17.2859,
+     "hit_rate": 1.0
+    }
+   },
+   "by_leg": {
+    "ict_scalp_eth_15m": {
+     "n": 1,
+     "mean_dr": 0.4237,
+     "sum_dr": 0.4237,
+     "hit_rate": 1.0
+    },
+    "ict_scalp_xrp_15m": {
+     "n": 20,
+     "mean_dr": 0.8431,
+     "sum_dr": 16.8622,
+     "hit_rate": 1.0
+    }
+   },
+   "regime": {
+    "by_week": {
+     "2026-W44": {
+      "n": 21,
+      "mean_dr": 0.8231,
+      "sum_dr": 17.2859,
+      "hit_rate": 1.0
+     }
+    },
+    "by_month": {
+     "2026-10": {
+      "n": 14,
+      "mean_dr": 0.9123,
+      "sum_dr": 12.7725,
+      "hit_rate": 1.0
+     },
+     "2026-11": {
+      "n": 7,
+      "mean_dr": 0.6448,
+      "sum_dr": 4.5134,
+      "hit_rate": 1.0
+     }
+    },
+    "best_week": "2026-W44",
+    "mean_without_best_week": null,
+    "weeks_with_ge3": 1,
+    "weeks_positive": 1,
+    "p5_pass": false,
+    "p5_why": "mean w/o best week 2026-W44 = None; 1/1 weeks (n>=3) positive"
+   },
+   "verdict": "INDETERMINATE",
+   "why": "P5 regime: mean w/o best week 2026-W44 = None; 1/1 weeks (n>=3) positive"
+  },
+  "hold": {
+   "n_calls": 170,
+   "n_priced": 65,
+   "n_packages_priced": 19,
+   "share_unpriced": 0.618,
+   "unpriced_reasons": {
+    "replay_mismatch": 41,
+    "candles_start_after_review": 2,
+    "no_candles": 11,
+    "trade_open": 46,
+    "hold_replay_unresolved_before_close": 5
+   },
+   "n": 65,
+   "mean_dr": -0.5946,
+   "sum_dr": -38.6497,
+   "hit_rate": 0.062,
+   "ci95_call_bootstrap": [
+    -0.7065,
+    -0.4792
+   ],
+   "ci95_package_cluster_bootstrap": [
+    -0.7408,
+    -0.3789
+   ],
+   "calibration_verdict": "n/a (hold priced vs close here)",
+   "applied": {
+    "n": 0,
+    "mean_dr": null,
+    "sum_dr": null
+   },
+   "recommended_only": {
+    "n": 65,
+    "mean_dr": -0.5946,
+    "sum_dr": -38.6497,
+    "hit_rate": 0.062
+   },
+   "replay_fidelity": {
+    "null": 65
+   },
+   "by_account": {
+    "alpaca_paper": {
+     "n": 3,
+     "mean_dr": 0.7238,
+     "sum_dr": 2.1715,
+     "hit_rate": 1.0
+    },
+    "breakout_2": {
+     "n": 3,
+     "mean_dr": -0.5821,
+     "sum_dr": -1.7462,
+     "hit_rate": 0.333
+    },
+    "bybit_1": {
+     "n": 59,
+     "mean_dr": -0.6836,
+     "sum_dr": -40.3323,
+     "hit_rate": 0.017
+    },
+    "bybit_2": {
+     "n": 12,
+     "mean_dr": -0.7137,
+     "sum_dr": -8.5648,
+     "hit_rate": 0.0
+    },
+    "bybit_portfolio": {
+     "n": 11,
+     "mean_dr": -0.7496,
+     "sum_dr": -8.2459,
+     "hit_rate": 0.0
+    },
+    "tradeify_1": {
+     "n": 3,
+     "mean_dr": -0.5821,
+     "sum_dr": -1.7462,
+     "hit_rate": 0.333
+    },
+    "velotrade_1": {
+     "n": 3,
+     "mean_dr": -0.5821,
+     "sum_dr": -1.7462,
+     "hit_rate": 0.333
+    }
+   },
+   "by_leg": {
+    "ada_pullback_2h": {
+     "n": 3,
+     "mean_dr": -0.163,
+     "sum_dr": -0.489,
+     "hit_rate": 0.0
+    },
+    "avax_pullback_2h": {
+     "n": 4,
+     "mean_dr": -0.7206,
+     "sum_dr": -2.8826,
+     "hit_rate": 0.0
+    },
+    "e4_oi_shock_1h": {
+     "n": 2,
+     "mean_dr": -0.3415,
+     "sum_dr": -0.6831,
+     "hit_rate": 0.0
+    },
+    "eth_pullback_2h": {
+     "n": 1,
+     "mean_dr": -0.5398,
+     "sum_dr": -0.5398,
+     "hit_rate": 0.0
+    },
+    "eth_pullback_prop_2h": {
+     "n": 1,
+     "mean_dr": -0.5398,
+     "sum_dr": -0.5398,
+     "hit_rate": 0.0
+    },
+    "gdx_pullback_1d": {
+     "n": 3,
+     "mean_dr": 0.7238,
+     "sum_dr": 2.1715,
+     "hit_rate": 1.0
+    },
+    "htf_pullback_trend_2h": {
+     "n": 6,
+     "mean_dr": -0.5464,
+     "sum_dr": -3.2783,
+     "hit_rate": 0.0
+    },
+    "ict_scalp_eth_15m": {
+     "n": 2,
+     "mean_dr": -0.4213,
+     "sum_dr": -0.8426,
+     "hit_rate": 0.0
+    },
+    "ict_scalp_sol_5m": {
+     "n": 2,
+     "mean_dr": -0.4057,
+     "sum_dr": -0.8113,
+     "hit_rate": 0.0
+    },
+    "ict_scalp_xrp_15m": {
+     "n": 18,
+     "mean_dr": -0.8307,
+     "sum_dr": -14.953,
+     "hit_rate": 0.0
+    },
+    "sol_pullback_2h": {
+     "n": 1,
+     "mean_dr": -0.7808,
+     "sum_dr": -0.7808,
+     "hit_rate": 0.0
+    },
+    "trend_donchian": {
+     "n": 1,
+     "mean_dr": -1.0576,
+     "sum_dr": -1.0576,
+     "hit_rate": 0.0
+    },
+    "trend_donchian_1h": {
+     "n": 2,
+     "mean_dr": -0.5535,
+     "sum_dr": -1.107,
+     "hit_rate": 0.0
+    },
+    "trend_donchian_eth": {
+     "n": 7,
+     "mean_dr": -0.4426,
+     "sum_dr": -3.098,
+     "hit_rate": 0.0
+    },
+    "trend_donchian_eth_prop": {
+     "n": 3,
+     "mean_dr": -0.5608,
+     "sum_dr": -1.6824,
+     "hit_rate": 0.333
+    },
+    "trend_donchian_sol_prop": {
+     "n": 1,
+     "mean_dr": -0.8453,
+     "sum_dr": -0.8453,
+     "hit_rate": 0.0
+    },
+    "xrp_pullback_2h": {
+     "n": 8,
+     "mean_dr": -0.9038,
+     "sum_dr": -7.2305,
+     "hit_rate": 0.0
+    }
+   },
+   "regime": {
+    "by_week": {
+     "2026-W43": {
+      "n": 1,
+      "mean_dr": -0.8234,
+      "sum_dr": -0.8234,
+      "hit_rate": 0.0
+     },
+     "2026-W44": {
+      "n": 64,
+      "mean_dr": -0.591,
+      "sum_dr": -37.8263,
+      "hit_rate": 0.062
+     }
+    },
+    "by_month": {
+     "2026-10": {
+      "n": 51,
+      "mean_dr": -0.5675,
+      "sum_dr": -28.9434,
+      "hit_rate": 0.078
+     },
+     "2026-11": {
+      "n": 14,
+      "mean_dr": -0.6933,
+      "sum_dr": -9.7063,
+      "hit_rate": 0.0
+     }
+    },
+    "best_week": "2026-W43",
+    "mean_without_best_week": -0.591,
+    "weeks_with_ge3": 1,
+    "weeks_positive": 0,
+    "p5_pass": false,
+    "p5_why": "mean w/o best week 2026-W43 = -0.591; 0/1 weeks (n>=3) positive"
+   },
+   "verdict": "FAIL",
+   "why": "mean -0.5946 / CI95 [-0.7065, -0.4792] / cluster CI95 [-0.7408, -0.3789]"
+  },
+  "move_tp": {
+   "n_calls": 0,
+   "n_priced": 0,
+   "n_packages_priced": 0,
+   "share_unpriced": null,
+   "unpriced_reasons": {},
+   "n": 0,
+   "mean_dr": null,
+   "sum_dr": null,
+   "ci95_call_bootstrap": null,
+   "ci95_package_cluster_bootstrap": null,
+   "calibration_verdict": "n/a",
+   "applied": {
+    "n": 0,
+    "mean_dr": null,
+    "sum_dr": null
+   },
+   "recommended_only": {
+    "n": 0,
+    "mean_dr": null,
+    "sum_dr": null
+   },
+   "replay_fidelity": {},
+   "by_account": {},
+   "by_leg": {},
+   "regime": {
+    "by_week": {},
+    "by_month": {},
+    "p5_pass": false,
+    "p5_why": "no priced calls"
+   },
+   "verdict": "INDETERMINATE",
+   "why": "P1 fails: n=0 priced < 20"
+  },
+  "partial_close": {
+   "n_calls": 1,
+   "n_priced": 0,
+   "n_packages_priced": 0,
+   "share_unpriced": 1.0,
+   "unpriced_reasons": {
+    "trade_open": 1
+   },
+   "n": 0,
+   "mean_dr": null,
+   "sum_dr": null,
+   "ci95_call_bootstrap": null,
+   "ci95_package_cluster_bootstrap": null,
+   "calibration_verdict": "n/a",
+   "applied": {
+    "n": 0,
+    "mean_dr": null,
+    "sum_dr": null
+   },
+   "recommended_only": {
+    "n": 0,
+    "mean_dr": null,
+    "sum_dr": null
+   },
+   "replay_fidelity": {},
+   "by_account": {},
+   "by_leg": {},
+   "regime": {
+    "by_week": {},
+    "by_month": {},
+    "p5_pass": false,
+    "p5_why": "no priced calls"
+   },
+   "verdict": "INDETERMINATE",
+   "why": "P1 fails: n=0 priced < 20"
+  },
+  "tighten_sl": {
+   "n_calls": 11,
+   "n_priced": 4,
+   "n_packages_priced": 2,
+   "share_unpriced": 0.636,
+   "unpriced_reasons": {
+    "trade_open": 7
+   },
+   "n": 4,
+   "mean_dr": 0.5938,
+   "sum_dr": 2.3751,
+   "hit_rate": 0.75,
+   "ci95_call_bootstrap": [
+    0.0957,
+    0.8709
+   ],
+   "ci95_package_cluster_bootstrap": [
+    -0.1439,
+    0.8397
+   ],
+   "calibration_verdict": "INDETERMINATE (n=4 < 10)",
+   "applied": {
+    "n": 0,
+    "mean_dr": null,
+    "sum_dr": null
+   },
+   "recommended_only": {
+    "n": 4,
+    "mean_dr": 0.5938,
+    "sum_dr": 2.3751,
+    "hit_rate": 0.75
+   },
+   "replay_fidelity": {
+    "replay_matches_realised": 4
+   },
+   "by_account": {
+    "alpaca_paper": {
+     "n": 1,
+     "mean_dr": -0.1439,
+     "sum_dr": -0.1439,
+     "hit_rate": 0.0
+    },
+    "bybit_1": {
+     "n": 3,
+     "mean_dr": 0.8397,
+     "sum_dr": 2.519,
+     "hit_rate": 1.0
+    }
+   },
+   "by_leg": {
+    "gdx_pullback_1d": {
+     "n": 1,
+     "mean_dr": -0.1439,
+     "sum_dr": -0.1439,
+     "hit_rate": 0.0
+    },
+    "ict_scalp_xrp_15m": {
+     "n": 3,
+     "mean_dr": 0.8397,
+     "sum_dr": 2.519,
+     "hit_rate": 1.0
+    }
+   },
+   "regime": {
+    "by_week": {
+     "2026-W44": {
+      "n": 4,
+      "mean_dr": 0.5938,
+      "sum_dr": 2.3751,
+      "hit_rate": 0.75
+     }
+    },
+    "by_month": {
+     "2026-10": {
+      "n": 4,
+      "mean_dr": 0.5938,
+      "sum_dr": 2.3751,
+      "hit_rate": 0.75
+     }
+    },
+    "best_week": "2026-W44",
+    "mean_without_best_week": null,
+    "weeks_with_ge3": 1,
+    "weeks_positive": 1,
+    "p5_pass": false,
+    "p5_why": "mean w/o best week 2026-W44 = None; 1/1 weeks (n>=3) positive"
+   },
+   "verdict": "INDETERMINATE",
+   "why": "P1 fails: n=4 priced < 20"
+  },
+  "widen_sl": {
+   "n_calls": 0,
+   "n_priced": 0,
+   "n_packages_priced": 0,
+   "share_unpriced": null,
+   "unpriced_reasons": {},
+   "n": 0,
+   "mean_dr": null,
+   "sum_dr": null,
+   "ci95_call_bootstrap": null,
+   "ci95_package_cluster_bootstrap": null,
+   "calibration_verdict": "n/a",
+   "applied": {
+    "n": 0,
+    "mean_dr": null,
+    "sum_dr": null
+   },
+   "recommended_only": {
+    "n": 0,
+    "mean_dr": null,
+    "sum_dr": null
+   },
+   "replay_fidelity": {},
+   "by_account": {},
+   "by_leg": {},
+   "regime": {
+    "by_week": {},
+    "by_month": {},
+    "p5_pass": false,
+    "p5_why": "no priced calls"
+   },
+   "verdict": "INDETERMINATE",
+   "why": "P1 fails: n=0 priced < 20"
+  },
+  "flag_mechanics": {
+   "n_calls": 58,
+   "n_priced": 0,
+   "n_packages_priced": 0,
+   "share_unpriced": 1.0,
+   "unpriced_reasons": {
+    "no_path_change": 24,
+    "no_path_change_trade_open_or_unjoined": 34
+   },
+   "n": 0,
+   "mean_dr": null,
+   "sum_dr": null,
+   "ci95_call_bootstrap": null,
+   "ci95_package_cluster_bootstrap": null,
+   "calibration_verdict": "n/a",
+   "applied": {
+    "n": 0,
+    "mean_dr": null,
+    "sum_dr": null
+   },
+   "recommended_only": {
+    "n": 0,
+    "mean_dr": null,
+    "sum_dr": null
+   },
+   "replay_fidelity": {},
+   "by_account": {},
+   "by_leg": {},
+   "regime": {
+    "by_week": {},
+    "by_month": {},
+    "p5_pass": false,
+    "p5_why": "no priced calls"
+   },
+   "verdict": "INDETERMINATE",
+   "why": "P1 fails: n=0 priced < 20"
+  },
+  "no_recommendation": {
+   "n_calls": 56,
+   "n_priced": 0,
+   "n_packages_priced": 0,
+   "share_unpriced": 1.0,
+   "unpriced_reasons": {
+    "no_path_change": 22,
+    "no_path_change_trade_open_or_unjoined": 34
+   },
+   "n": 0,
+   "mean_dr": null,
+   "sum_dr": null,
+   "ci95_call_bootstrap": null,
+   "ci95_package_cluster_bootstrap": null,
+   "calibration_verdict": "n/a",
+   "applied": {
+    "n": 0,
+    "mean_dr": null,
+    "sum_dr": null
+   },
+   "recommended_only": {
+    "n": 0,
+    "mean_dr": null,
+    "sum_dr": null
+   },
+   "replay_fidelity": {},
+   "by_account": {},
+   "by_leg": {},
+   "regime": {
+    "by_week": {},
+    "by_month": {},
+    "p5_pass": false,
+    "p5_why": "no priced calls"
+   },
+   "verdict": "INDETERMINATE",
+   "why": "P1 fails: n=0 priced < 20"
+  }
+ },
+ "sensitivity_realised_anchored_not_applied": {
+  "hold": {
+   "n": 104,
+   "mean_dr": -0.3261,
+   "sum_dr": -33.9102,
+   "hit_rate": 0.26,
+   "n_packages": 23,
+   "ci95_call_bootstrap": [
+    -0.4484,
+    -0.2046
+   ],
+   "ci95_package_cluster_bootstrap": [
+    -0.5573,
+    -0.0937
+   ]
+  },
+  "close": {
+   "n": 20,
+   "mean_dr": 0.7326,
+   "sum_dr": 14.6518,
+   "hit_rate": 0.95,
+   "n_packages": 3,
+   "ci95_call_bootstrap": [
+    0.5315,
+    0.9119
+   ],
+   "ci95_package_cluster_bootstrap": [
+    -0.7158,
+    0.936
+   ]
+  }
+ }
+}

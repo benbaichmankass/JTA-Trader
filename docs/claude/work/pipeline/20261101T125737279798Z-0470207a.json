@@ -1,0 +1,17 @@
+{
+  "due_when": {
+    "due_date": "2026-11-08",
+    "kind": "date"
+  },
+  "id": "PI-20261101-WTFTWTFP-0003",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "lane MARKET-DATA-LAKE (row MARKET-DATA-LAKE), 2026-11-01",
+    "rerun": "grep pit false in the lake MANIFEST.json (macro entries); fetch https://alfred.stlouisfed.org/graph/alfredgraph.csv?id=CPIAUCSL&vintage_date=... for one series and compare first-release vs current"
+  },
+  "severity": "high",
+  "state": "queued",
+  "tier": 1,
+  "what": "(c2) Point-in-time macro: ALFRED vintages for the revised FRED series the lake marks pit:false (CPIAUCSL, PAYEMS, INDPRO, UNRATE, ...), so macro features carry first-release values as of each date."
+}

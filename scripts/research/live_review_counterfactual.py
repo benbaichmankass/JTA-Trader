@@ -219,6 +219,12 @@ def price_review(review: dict, pkg: Optional[dict], trade: Optional[dict], bars:
     t0 = _ts(review.get("reviewed_at"))
     if stop_now is None or t0 is None:
         return _result(review, state="could_not_price", reason="review_state_missing")
+    # LTR-CLASS-GRADE 2026-11-01: the live candle source returns only the LAST 1000 bars, so for an older review
+    # the first bar can open long after ``reviewed_at``. ``replay`` would then start at that later bar and price a
+    # path the review never faced. Refuse instead (one bar of slack: the bar in progress at the review is skipped).
+    tf_s = _TF_SECONDS.get(str(meta.get("timeframe") or "1h"), 3600)
+    if bars[0]["time"] > t0 + tf_s:
+        return _result(review, state="could_not_price", reason="candles_start_after_review")
     hold = replay(bars, side=side, entry=entry, r_dist=r_dist, start_ts=t0, stop=stop_now, tp=tp,
                   extreme_r0=peak_r, trail_dist=trail_dist)
     if action in PAIRED:

@@ -340,3 +340,13 @@ def test_a_close_the_journal_shows_executed_is_priced_as_applied_not_as_a_hold_m
     out = cf.price_all([rv], {"pkg-t": pkg()}, {1: tr}, lambda s, i: bars((100, 100, 100, 100)) + bars(
         (100, 100, 100, 100), (100, 100, 100, 100), (100, 100, 100, 100), (100, 100, 96, 96)))
     assert out[0]["reason"] != "replay_mismatch", out[0]
+
+
+def test_candles_that_start_after_the_review_are_refused_not_shifted():
+    # LTR-CLASS-GRADE 2026-11-01: the live source serves only the last 1000 bars; a replay must never start at a
+    # bar opening long after the review (it would price a path the review never faced).
+    late = [dict(b, time=b["time"] + 3 * H) for b in bars((99.0, 99.7, 98.5, 99.0), (98.5, 98.6, 96.0, 96.0))]
+    r = cf.price_review(review(), pkg(), trade(realised(4.0)), late)
+    assert r["state"] == "could_not_price" and r["reason"] == "candles_start_after_review"
+    ok = [dict(b, time=b["time"] + H) for b in bars((99.0, 99.7, 98.5, 99.0), (98.5, 98.6, 96.0, 96.0))]
+    assert cf.price_review(review(), pkg(), trade(realised(4.0)), ok)["reason"] != "candles_start_after_review"

@@ -1,0 +1,27 @@
+# ============================================
+# KEEPER-VM-FLOOR (2026-11-01): hourly workflow_dispatch of schedule-keeper.yml from the
+# trainer VM, a clock that does not depend on GitHub's (dropping) scheduler.
+#
+# **TRAINER VM ONLY** - lives in deploy/trainer/ so the live-VM unit installer never picks
+# it up. No order path, no DB. Token: /etc/ict/gh-dispatch.env (root:600), installed by
+# vm-git-credential-bootstrap.yml (target: trainer, credential: dispatch). The leading "-"
+# makes a missing file non-fatal: the script then logs "inert" and exits 0.
+# Install: sudo bash scripts/ops/install_trainer_keeper_dispatch.sh
+# ============================================
+
+[Unit]
+Description=ICT trainer: dispatch schedule-keeper.yml (hourly floor)
+After=network-online.target
+Wants=network-online.target
+OnFailure=ict-notify-failure@%n.service
+
+[Service]
+Type=oneshot
+User=ubuntu
+WorkingDirectory=/home/ubuntu/ict-trading-bot
+EnvironmentFile=-/etc/ict/gh-dispatch.env
+Environment=KEEPER_DISPATCH_LATCH=/home/ubuntu/.local/state/ict/keeper-dispatch.denied
+TimeoutStartSec=120
+ExecStart=/bin/bash scripts/ops/keeper_dispatch.sh
+StandardOutput=journal
+StandardError=journal
