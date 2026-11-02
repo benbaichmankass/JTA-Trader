@@ -1,0 +1,22 @@
+{
+  "id": "VM-DISK-GROWTH-20261102",
+  "title": "Live VM root filesystem /dev/sda1 (df, window 2026-11-02 14:33Z to 2026-11-02 20:48Z): 35 of 45 GB (77%) grew to 41 of 45 GB (87%); resized to 52G at 20:57Z, journald capped at 21:15Z: 37 of 52 GB (71%)",
+  "phase": null,
+  "state": "queued",
+  "owner": "manager",
+  "lane": null,
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 2,
+  "prs": [],
+  "blocked_on": [],
+  "note": "disk-usage-report #22476 (20:59Z): new .git pack 1.35 GB written 18:57Z by ict-git-sync despite the sparse/filter fix (PI-20261102-ARSESYNC-0002; git 2.34 has no repack --filter, so re-clone as partial); signal_audit.jsonl 1.5 GB live with no writer cap; position_read_state_soak.jsonl 343 MB; trade_journal.db 2.4 GB; old backup .bak-own-fill-exits-20261017 2.0 GB (prune keep>=1 keeps it, so deleting needs an operator OK); journald 4.0 GB + syslog.1 724 MB (cap-vm-logs journald needs a one-time operator sudoers line).",
+  "due_by": "2026-11-04",
+  "roadmap": [
+    "L-OPS"
+  ],
+  "updated_at": "2026-11-02T21:23:52Z",
+  "updated_by": "session_01AFoLuJ1apgy8sfngu4WyNH",
+  "_seq": 896
+}
