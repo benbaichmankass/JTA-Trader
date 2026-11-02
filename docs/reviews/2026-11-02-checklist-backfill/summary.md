@@ -1,5 +1,7 @@
 # Checklist backfill proposal (2026-11-02) -- PROPOSAL ONLY, nothing dated or dropped
 
+> **Doc status:** `unknown` · category `evidence` · last verified `2026-11-02` · lane `CHECKLIST-BACKFILL` (proposal only; nothing dated or dropped)
+
 Population: 588 non-terminal rows (state not done/dropped) in docs/claude/work/checklist/ on 2026-11-02. Rules R1-R4 / D1-D3: `scripts/ops/checklist_backfill_propose.py` docstring. File: `proposal.jsonl`.
 
 - propose DATE: 582  |  propose DROP: 6
