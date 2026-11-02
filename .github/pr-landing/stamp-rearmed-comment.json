@@ -1,0 +1,7 @@
+{
+  "tier": 1,
+  "landing": "hold",
+  "hold_reason": "operator_asked_to_hold",
+  "hold_text": "Edits scripts/ci/check_pr_landing.py, a guard. A guard change is read by the manager before it merges, even when it only fixes a false refusal.",
+  "why": "CI tooling only (scripts/ci). Fixes R5 refusing every stamp PR whose removed last_dispatched_at line carries a trailing '# re-armed ...' comment; the added line stays strict. Self-test gains a positive control and a payload-comment plant. No src/, config/ or order path."
+}
