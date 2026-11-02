@@ -1,5 +1,7 @@
 # Prop-specific ENTRY candidate: pre-registered design (lane ML-PROP-ITERATE, 2026-11-02)
 
+> **Doc status:** `unknown` · category `architecture` · last verified `never` · registered in [`docs/DOCUMENT-INDEX.md`](../../DOCUMENT-INDEX.md)
+
 > Gates this adds or changes: none. It reuses RULE-P5-GATE-BRK-PER-LEG-V3 unchanged. Status: `needs_authoring` (programme node `P5-MLPROP-ENTRY-ETHSOL`); runnable once the three diagnostics (`P5-MLDIAG-*`) are read.
 
 ## Why

@@ -1,5 +1,7 @@
 # ml_entry on props — RULE-P5-GATE-BRK-PER-LEG-V3 (lane ML-ENTRY-PROP-GATE, 2026-11-02)
 
+> **Doc status:** `unknown` · category `evidence` · last verified `never` · registered in [`docs/DOCUMENT-INDEX.md`](../../DOCUMENT-INDEX.md)
+
 Rule registered before the run: `research/queue/RQ-20261102-5e1a-01.yaml` (commit 7b3591a, registered_at 2026-11-02T10:47:24Z). One run, nothing tuned.
 Population: served ENTRY v1 + extend-only TP, held-out 2025-10-01..2026-09-30, ETHUSDT+SOLUSDT, n=381 (5-symbol replay reproduced the evidence record's +0.02713 R, n=907, to 1e-6).
 
