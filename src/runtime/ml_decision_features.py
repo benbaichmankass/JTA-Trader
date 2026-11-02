@@ -64,18 +64,51 @@ def _asof(fr: pd.DataFrame, close_ts: pd.Timestamp) -> pd.DataFrame:
     return fr[fr["ts"] + pd.Timedelta(hours=1) <= close_ts]
 
 
+def _same_ts_row(symbol: str, frames: Mapping[str, pd.DataFrame]) -> Optional[Dict[str, float]]:
+    """The pre-2026-11-01 rule, unchanged: cross-sectional context from every frame whose last bar has the SAME
+    timestamp as ``symbol``'s (``symbol`` itself among them). ``ml_decision_shadow.decision_rows`` is pinned
+    bit-identical to this."""
+    own = frames.get(symbol)
+    if own is None or len(own) < MIN_BARS:
+        return None
+    t = own["ts"].iloc[-1]
+    fo = features_symbol(own).iloc[-1]
+    r24, v24 = {}, {}
+    for s, fr in frames.items():
+        if fr is None or len(fr) < 25 or fr["ts"].iloc[-1] != t:
+            continue
+        ff = features_symbol(fr.iloc[-200:].reset_index(drop=True)).iloc[-1]
+        r24[s], v24[s] = ff["ret24_raw"], ff["vol24"]
+    if "BTCUSDT" not in r24 or symbol not in r24:
+        return None
+    rv = pd.Series(r24, dtype=float)
+    vv = pd.Series(v24, dtype=float)
+    rank = rv.rank(pct=True)
+    row = {k: float(fo[k]) for k in FEATURES if k in fo.index}
+    row["xs_rank_ret24"] = float(rank[symbol])
+    row["btc_ret24"] = float(rv["BTCUSDT"])
+    row["btc_vol24"] = float(vv["BTCUSDT"])
+    row["breadth_up24"] = float((rv > 0).sum() / rv.notna().sum())
+    row["rel_vol"] = float(fo["vol24"] / vv.median())
+    if any(not np.isfinite(row.get(k, np.nan)) for k in FEATURES):
+        return None
+    row["_n_reference"] = float(len(rv))
+    return row
+
+
 def decision_row(symbol: str, frames: Mapping[str, pd.DataFrame],
                  reference: Optional[Iterable[str]] = None) -> Optional[Dict[str, float]]:
-    """The 20-feature row for ``symbol`` at the last bar of ``frames[symbol]``.
+    """The 20-feature row for ``symbol`` at the last bar of ``frames[symbol]``. ``None`` if it cannot be formed.
 
-    Cross-sectional context is read AS-OF that bar's close: each reference frame is cut to its bars closed at or
-    before it, and is used only if its last closed bar closed within the hour before it (a stale or missing
-    reference is skipped and counted). For a 24/7 perp whose bars share the decision timestamp this is exactly the
-    previous equal-timestamp rule. For a symbol OUTSIDE the reference set (an ETF on alpaca_paper, row
-    ALPACA-LIVE-ACTIVITY-ML) its 24-bar return is ranked among the references with itself inserted, and breadth /
-    median vol are the references' -- the definition scripts/research/ml_entry_alpaca_score.py scored.
-    ``reference``: the model's reference symbols (``meta["xs_reference"]``); ``None`` treats ``symbol`` as one of
-    them (the pre-2026-11-01 behaviour). ``None`` if the row cannot be formed."""
+    ``reference``: the model's reference symbols (``meta["xs_reference"]``). A symbol IN the reference set (every
+    bybit perp), or ``reference=None``, takes the unchanged same-timestamp rule (``_same_ts_row``), so the real-money
+    bybit_2 path and the shadow decision log are byte-for-byte what they were. Only a symbol OUTSIDE it (an ETF on
+    alpaca_paper, row ALPACA-LIVE-ACTIVITY-ML) reads the references AS-OF its bar's close: each reference frame is cut
+    to its bars closed at or before it and used only if its last closed bar closed within the hour before it; the
+    symbol's 24-bar return is ranked among the references with itself inserted, and breadth / median vol are the
+    references' -- the definition scripts/research/ml_entry_alpaca_score.py scored."""
+    if reference is None or symbol in set(reference):
+        return _same_ts_row(symbol, frames)
     own = frames.get(symbol)
     if own is None or len(own) < MIN_BARS:
         return None
@@ -90,24 +123,19 @@ def decision_row(symbol: str, frames: Mapping[str, pd.DataFrame],
             continue
         ff = features_symbol(cut.iloc[-200:].reset_index(drop=True)).iloc[-1]
         r24[s], v24[s] = ff["ret24_raw"], ff["vol24"]
-    if "BTCUSDT" not in r24 and symbol != "BTCUSDT":
+    if "BTCUSDT" not in r24:
         return None
-    in_reference = reference is None or symbol in set(reference)
     rv_ref = pd.Series(r24, dtype=float)
     vv_ref = pd.Series(v24, dtype=float)
-    rv = pd.concat([rv_ref, pd.Series({symbol: float(fo["ret24_raw"])})])
-    vv = pd.concat([vv_ref, pd.Series({symbol: float(fo["vol24"])})])
+    fx = features_symbol(own.iloc[-200:].reset_index(drop=True)).iloc[-1]
+    rv = pd.concat([rv_ref, pd.Series({symbol: float(fx["ret24_raw"])})])
     rank = rv.rank(pct=True)
     row = {k: float(fo[k]) for k in FEATURES if k in fo.index}
     row["xs_rank_ret24"] = float(rank[symbol])
-    row["btc_ret24"] = float(rv["BTCUSDT"])
-    row["btc_vol24"] = float(vv["BTCUSDT"])
-    if in_reference:   # the perp universe includes the symbol itself (the c692 training definition)
-        row["breadth_up24"] = float((rv > 0).sum() / rv.notna().sum())
-        row["rel_vol"] = float(fo["vol24"] / vv.median())
-    else:              # an outside symbol: breadth / median vol of the references only
-        row["breadth_up24"] = float((rv_ref > 0).sum() / rv_ref.notna().sum())
-        row["rel_vol"] = float(fo["vol24"] / vv_ref.median())
+    row["btc_ret24"] = float(rv_ref["BTCUSDT"])
+    row["btc_vol24"] = float(vv_ref["BTCUSDT"])
+    row["breadth_up24"] = float((rv_ref > 0).sum() / rv_ref.notna().sum())
+    row["rel_vol"] = float(fo["vol24"] / vv_ref.median())
     if any(not np.isfinite(row.get(k, np.nan)) for k in FEATURES):
         return None
     row["_n_reference"] = float(len(rv))
