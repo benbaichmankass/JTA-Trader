@@ -38,6 +38,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 import ml_decision_entry as E
 import ml_entry_levers as L
+import ml_variant_ledger as MVL
 
 REPO = Path(__file__).resolve().parents[2]
 SEEDS = (7, 11, 13)
@@ -416,6 +417,8 @@ def run_unit(unit: str, out: Path, cache: Path, n_jobs: int, smoke: bool) -> dic
         print(unit, t, sc, rows[f"{t}/{sc}"], flush=True)
         wfs[(t, sc)] = walk_forward(tab, sp, n_jobs=n_jobs)
         pop[(t, sc)] = sp
+        if (t, sc) == (tf, scaling):                       # ML-PROP-ITERATE: keep only what the ETH+SOL ledger needs (2 symbols), not the table
+            arm_tab_ethsol = tab[tab.symbol.isin(MVL.SYMS)][["symbol", "ts", "atr_pct", "bars_long", "bars_short"]].copy()
         del tab
     base_wf, arm_wf = wfs[("1h", "bar")], wfs[(tf, scaling)]
     res = {"unit": unit, "schema": "ml_entry_timeframe/1", "read_state": "read", "timeframe": tf, "scaling": scaling, "smoke": smoke,
@@ -439,6 +442,12 @@ def run_unit(unit: str, out: Path, cache: Path, n_jobs: int, smoke: bool) -> dic
     if tf != "1h" and arm_wf["preds"] and base_wf["preds"]:
         res["overlap_vs_1h"] = overlap(pd.concat(arm_wf["preds"]), pd.concat(base_wf["preds"]))
     res["seconds_total"] = round(time.time() - started, 1)
+    out.mkdir(parents=True, exist_ok=True)
+    # ledger_ethsol.jsonl: the dev-OOS ETH+SOL ledger the prop gate reads (ml_variant_prop_gate.py). Pre-declared choice, made before any run:
+    # first seed, UNGATED variant, fixed TAU (the variant the unit's own headline verdict is computed on). Adds a file; changes no result.
+    led = MVL.ledger_from_policy(trades_frame(arm_wf, SEEDS[0], "ungated", TAU), arm_tab_ethsol, TF_MIN[tf] / 60.0, E.SL_ATR)
+    MVL.write_ledger(led, out)
+    res["ledger_ethsol"] = {"rows": len(led), "seed": SEEDS[0], "variant": "ungated", "tau": TAU, "window": "dev walk-forward OOS folds"}
     out.mkdir(parents=True, exist_ok=True)
     (out / f"{unit}_result.json").write_text(json.dumps(res, indent=1, default=str))
     return res
