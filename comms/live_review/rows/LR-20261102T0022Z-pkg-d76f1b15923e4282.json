@@ -1,0 +1,124 @@
+{
+ "schema_version": 1,
+ "review_id": "LR-20261102T0022Z-pkg-d76f1b15923e4282",
+ "reviewed_at": "2026-11-02T00:35:00Z",
+ "order_package_id": "pkg-d76f1b15923e4282",
+ "trade_id": null,
+ "leg": "mgc_trend_1h",
+ "accounts": [
+  "ib_paper"
+ ],
+ "trigger": {
+  "event": "daily_floor",
+  "level": "2026-11-02",
+  "l0_snapshot_at": "2026-11-02T00:21:51Z"
+ },
+ "info_cutoff_at": "2026-11-02T00:22:19Z",
+ "state": {
+  "atr_now_over_entry": 1.3913,
+  "bars_held": 15,
+  "giveback_r": 0.7977,
+  "open_r": 2.2514,
+  "peak_provenance": "estimated",
+  "peak_r": 3.0491,
+  "regime_cell_entry": null,
+  "regime_cell_now": null,
+  "sl": 3938.07142857,
+  "tp": 3596.1613
+ },
+ "features_at_review": {
+  "atr_now_over_entry": 1.3913,
+  "bars_since_peak": 2,
+  "giveback_r": 0.7977,
+  "open_r": 2.2514,
+  "peak_r": 3.0491,
+  "r_to_stop": 0.8023,
+  "r_to_target": 8.5059
+ },
+ "mechanics": {
+  "evidence": "package sl 3938.07142857 / tp 3596.1613 agree with every readable account",
+  "verdict": "match"
+ },
+ "options": [
+  {
+   "action": "hold",
+   "level": null,
+   "n": 7,
+   "mean_r": null,
+   "sd_r": null,
+   "worst_r": null,
+   "net": null
+  }
+ ],
+ "outcome_table_source": "comms/live_review/tables/LR-20261102T0022Z-pkg-d76f1b15923e4282.json",
+ "recommendation": {
+  "action": "hold",
+  "level": null,
+  "level_atr": null,
+  "ev_delta_r": null,
+  "worst_case_delta_r": null,
+  "basis": "judgement",
+  "confidence": "anecdote",
+  "evidence_source": "judgement",
+  "judgement_confidence": 0.55,
+  "reason": "Short +2.25R (peak ~3.05R), SL 3938 is 1.5 ATR above the 3907 close and above the 3933 swing high, TP far at 3596: the strategy's bracket already expresses my view. Prior forecast (target 3850 / invalidation 3925, 24x1h) unresolved and inside horizon: since then the weekend reopen bounced 3884->3911 (high 3911.2 < 3925; low 3879.3 > 3850). Giveback grew (0.80R) but 4h ADX 43 downtrend is intact and the bounce has not broken a 1h swing high; a tighten to <=3925 would sit under 1 ATR from price and priced -EV historically, so hold; carry the forecast forward with a lower p_target after the gap against.",
+  "size_fraction": null
+ },
+ "judge_prior": null,
+ "applied": false,
+ "apply_policy": {
+  "bound_r": 0.25,
+  "within_bound": null,
+  "tighten_r": null
+ },
+ "shadow_policy": {
+  "bound_r": 0.5,
+  "within_bound": null,
+  "would_apply": null,
+  "tighten_r": null
+ },
+ "context_flags": [
+  "judgement: hold cell n=7 < floor 20 insufficient_n (not measured); tighten cells invalid_level/no_candles",
+  "regime: atr_now_over_entry 1.39 (<1.5, no vol overlay); 4h ADX 43 trending; entry cell not known",
+  "book: MGC pullback_1d +2.58R, SLV +3.76R, IAUM +2.76R, MHG +0.32R all short: one metals-beta bet; MGC trend is the second MGC short",
+  "tighten_bias: stop-at-price fills flatter any tighten; tighten advice-only since 2026-10-28 (0 of 79 cells CI>0)",
+  "gap: Sunday-evening futures reopen moved price against the trade (open_r 2.91 -> 2.25 since the 08:12Z review)",
+  "missing_inputs: regime.vol_now, regime.cell_entry"
+ ],
+ "account_reads": [
+  {
+   "account_id": "ib_paper",
+   "account_class": "paper",
+   "read": "no_action",
+   "evidence": "ib_orders: SL 3938.1 / TP 3596.2, position True; no apply path for this exchange yet (LTR-9 / none)"
+  }
+ ],
+ "disposition": {
+  "route": "none",
+  "mandate": null,
+  "action_issue": null,
+  "applied_at": null,
+  "verified_readback": null
+ },
+ "model": "sonnet-tier (repo lane)",
+ "session": "session_01AFoLuK741TVJ1UAkXKNLQS",
+ "prompt_sha": null,
+ "skill_sha": "59ad4814d9e7edf5f398b0105fd3ce9a2bd311e0",
+ "packet_sha": "e87c0905f5818cf88c08fbb738d17c8bf1c07dc24dad1fe417bf0947b1ed4c03",
+ "forecast": {
+  "thesis": "4h ADX 43 downtrend intact; the weekend-reopen bounce to 3911 is a retest below the 3933 lower high, so I expect a roll over toward 3850 before price reclaims 3925; the gap up is the main risk.",
+  "direction": "with_trade",
+  "target_px": 3850.0,
+  "p_target": 0.35,
+  "invalidation_px": 3925.0,
+  "horizon_bars": 20,
+  "timeframe": "1h",
+  "evidence": [
+   "chart.swings: highs 4009.4/3933.3 lower, low 3879.3",
+   "chart.htf: 4h trending ADX 43.08, last close 3884.4",
+   "exit_plan: sl 3938.07 / tp 3596.16",
+   "book: MGC pullback, SLV, IAUM, MHG also short (metals cluster)",
+   "context.previous_review.forecast: 3850 and 3925 untouched"
+  ]
+ }
+}
