@@ -1,7 +1,7 @@
 {
   "tier": 1,
   "landing": "hold",
-  "hold_reason": "operator_asked_to_hold",
-  "hold_text": "Dispatched lane: queue units hold for the manager's merge, and this PR stacks on #22164 and #22174 which merge first (manager message 2026-11-01 15:17Z: merge order #22164 -> #22174 -> #22186).",
-  "why": "Research tooling (scripts/research, scripts/backtest_ict_scalp.py default-off flag), research/queue units, research/levers maps, checklist rows and pipeline records. No src/, config/, deploy/ or order-path file is touched; Tier-1 by path, held per the dispatch."
+  "hold_reason": "unvouchable_paths",
+  "hold_text": "Holding for the manager: the diff edits research/queue/*.yaml and research/levers/*.yaml, outside the Tier-1 self-land surface (E57).",
+  "why": "Tier-1 research-ops pass 14:47Z: lever-map one-schema unification, iteration harness modes, iteration units for the RESEARCH-EDGE candidates, prop-gate empty-population refusal. No runtime, config, strategy or order-path change; adds no gate."
 }
