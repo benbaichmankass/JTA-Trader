@@ -116,9 +116,14 @@ def get_fills(account_id: str | None = None, limit: int = 100) -> dict[str, Any]
 
     limit = max(1, min(int(limit), 500))
     try:
+        from src.prop.prop_overview import annotate_trade_state
+
         rows = prop_journal.list_fills(account_id=account_id, limit=limit)
+        # rows are fill EVENTS: an opening row keeps status "open" after its trade closes (BREAKOUT-UNRECORDED-1101);
+        # trade_state / trade_open_count say what the TRADE is, so a reader never counts a closed trade as open
+        n_open = annotate_trade_state(rows)
         return {"present": bool(prop_journal.tables_present()), "count": len(rows),
-                "fills": rows}
+                "trade_open_count": n_open, "fills": rows}
     except Exception:  # noqa: BLE001  # allow-silent: degrade to present:false, not a 500
         logger.warning("prop: /fills read failed; degrading to present:false", exc_info=True)
         return {"present": False, "count": 0, "fills": []}

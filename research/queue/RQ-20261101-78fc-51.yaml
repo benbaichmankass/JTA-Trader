@@ -1,0 +1,125 @@
+# Hand-authored 2026-11-01 by lane RESEARCH-ITERATE (Tier 1), dispatched by Manager Session 2026-11-01a. ITERATION unit: authored from a written diagnosis of the subject's last result. Decision rule registered BEFORE any run. Gates: none.
+id: RQ-20261101-78fc-51
+title: 'ITERATION 1 of avax_pullback_2h (fail): On avax_pullback_2h over 2020-07-01..2026-10-15 23:59, does any of AD30 (adx_min=30), AD35 (adx_min=35),
+  SL25 (atr_stop_mult=2.5) beat the declared leg (A) net of the full cost stack, by >= 0.02 R x n(A), in >= 4 of 6 calendar folds, with maxDD
+  <= 1.35 x A?'
+status: queued
+cadence: once
+theme: live_strategy
+priority: 2
+roadmap:
+- L-PROGRAMMES
+programme: P3
+kind: experiment
+question: On avax_pullback_2h over 2020-07-01..2026-10-15 23:59, does any of AD30 (adx_min=30), AD35 (adx_min=35), SL25 (atr_stop_mult=2.5) beat
+  the declared leg (A) net of the full cost stack, by >= 0.02 R x n(A), in >= 4 of 6 calendar folds, with maxDD <= 1.35 x A?
+why_this_matters: 'Operator 2026-11-01 ~12:59Z: "if the data doesn''t pass, it goes back into research for improvments and testing. THere is no
+  other pipeline for underperforming strategies/mls." avax_pullback_2h is a TESTING leg (fail) with no live research iteration (scripts/research/iteration_orphans.py,
+  2026-11-01); paper keeps it generating live data while this loop runs, never as a parking place.'
+iteration:
+  subject: avax_pullback_2h
+  subject_kind: strategy_leg
+  from_result: comms/strategy_evidence/avax_pullback_2h.json
+  verdict_read: fail
+  diagnosis: 'Stage-0 record comms/strategy_evidence/avax_pullback_2h.json (generated 2026-10-28, harness pullback, 365 d window, fidelity approximate):
+    n=52 OOS trades, net -8.2515 R net of the full cost stack (fee-only -6.5667 R), expectancy -0.1587 R/trade, folds [2.2, 1.4, -5.5, -6.3],
+    rule RULE-D1-STAGE0-NET-OF-FULL-COST fail. DIAGNOSIS: Folds +2.2 / +1.4 / -5.5 / -6.3 R (n=52, fee-only -6.6 R): positive in the first half
+    of the year, negative in the second -- decay or a regime change, not a never-worked idea. Graded approximate (trail-decay levers omitted).
+    Vol-skip transfers are queued (7b6f-13/-28); trend strength and stop width are not.'
+  hypothesis: 'the later losses are weak-trend entries stopped by noise: a stronger ADX floor (30 / 35) or a wider stop (2.5 ATR) holds up across
+    both halves'
+  attempt: 1
+  due_by: '2026-11-08'
+power:
+  expected_n: 120
+  min_detectable_effect: 0.45
+  effect_units: sd
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: d=0.45 at alpha 0.05 / power 0.8 needs 39 trades (the repo E35 floor). expected_n=120 is an ESTIMATE scaled from the leg's record over
+    the longer window, NOT a measurement; below the floor the unit grades INDETERMINATE, never FAIL.
+  feasibility:
+    source: none
+    accrual_basis: Re-measurement on freshly fetched public candles over a pinned window; nothing accrues.
+decision_rule:
+  id: RULE-RQ-20261101-78fc-51
+  registered_at: '2026-11-01'
+  registered_before_run: true
+  statistic: 'scripts/research/exit_lever_ablation.py --grade replace over 2020-07-01..2026-10-15 23:59, 6 equal calendar folds by entry time,
+    net of the full cost stack the harness resolves per venue. Per arm: n, net_total_r, max_drawdown_r, net R per fold.'
+  rule: 'INDETERMINATE IF n(A) < 39 or every candidate arm is byte-identical to A (the lever never fired). A candidate C PASSES iff net_r(C) >
+    net_r(A) AND net_r(C) - net_r(A) >= 0.02 R x n(A) AND net R(C) >= net R(A) in >= 4 of 6 calendar folds AND maxDD(C) <= 1.35 x maxDD(A). PASS
+    IF one or more pass: the best by net R is named, the denominator is the 3 candidate arms, and the next iteration is ONE holdout confirmation
+    of that arm (--grade holdout) before any Tier-3 proposal. FAIL IF none passes with n(A) >= the floor: this arm grid is closed on this leg
+    and window; the leg goes back to diagnosis for iteration 2 (the record names the arm that moved closest) and the family stays open (scripts/research/family_retirement_policy.yaml).
+    Thresholds and arms are not changed after any result.'
+  what_it_does_not_do: Edits no config and no roster, places no order, is not a promotion case by itself. The arm grid is the whole search; the
+    baseline is the declared leg.
+intervention_controls:
+  not_applicable: a config-exact harness re-measurement / parameter ablation, not an in-trade action
+practice_precedent: 'M4, M5 (docs/reference/trading-and-model-practice-principles.md): pre-registered arm grid, every arm counted, baseline =
+  the declared leg; holdout read once (PROMOTION-BAR-HOLDOUT-1016).'
+compute: cpu_light
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 4.0
+  est_minutes: 60
+  why_runner: Fetches keyless public candles for a pinned window; reads no trainer data; CPU only.
+  basis: Estimate from comparable exit_lever_ablation runs (3ef3-*, 7b6f-*); the first run replaces it.
+value:
+  usd_at_stake_per_month: 60
+  confidence: 0.15
+  bucket: structural
+  basis: planning weight by money rank (1 prop / alpaca_live candidate, 2 bybit_1 with a real-money sibling, 3 paper only); an estimate, not a
+    measurement
+run:
+  command:
+  - python3
+  - scripts/research/exit_lever_ablation.py
+  - --leg
+  - avax_pullback_2h
+  - --arm
+  - A=
+  - --arm
+  - AD30=adx_min=30
+  - --arm
+  - AD35=adx_min=35
+  - --arm
+  - SL25=atr_stop_mult=2.5
+  - --days
+  - '2330'
+  - --start
+  - '2020-07-01'
+  - --end
+  - 2026-10-15 23:59
+  - --grade
+  - replace
+  - --baseline
+  - A
+  - --delta-r
+  - '0'
+  - --delta-r-per-trade
+  - '0.02'
+  - --folds
+  - '6'
+  - --fold-majority
+  - '4'
+  - --dd-tol-frac
+  - '0.35'
+  - --n-floor
+  - '39'
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 180
+  inputs:
+    research_unit: RQ-20261101-78fc-51
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- RESEARCH-ITERATE
+- comms/strategy_evidence/avax_pullback_2h.json
+what_it_does_not_do: Edits no config, roster or rule; places no order; a PASS is an input to the next iteration, not a promotion.

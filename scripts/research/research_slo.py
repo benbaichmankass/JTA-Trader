@@ -142,6 +142,45 @@ def gather_facts(root: Path, now: datetime, cfg: Dict[str, Any], gh: Optional["G
                      basis="queue_replenish.runnable(); floor = queue_throughput.computed_floor(fired_24h)")
     f["runnable_floor"] = _safe(runnable_floor, "runnable_floor")
 
+    def _ledgers():
+        out = []
+        for lp in sorted((root / "comms" / "research").glob("*/*/trial_ledger.json")):
+            try:
+                d = json.loads(lp.read_text(encoding="utf-8"))
+                at = _ts(d.get("generated_at"))
+                surv = d["summary"]["stage0_pass_surviving_dsr_and_bhy_haircut"]
+                trials = sum(int(v.get("n_configs") or 0) for v in (d.get("legs") or {}).values())
+                if at is not None and isinstance(surv, int):
+                    out.append((at, surv, trials, lp.parent.name))
+            except (OSError, ValueError, KeyError, TypeError):
+                continue
+        return sorted(out)
+
+    def survivors_per_month():
+        led = _ledgers()
+        if len(led) < 2:
+            return _cnl(f"{len(led)} readable trial_ledger.json under comms/research/ (need >= 2 to take a difference)")
+        newest = led[-1]
+        base = next((x for x in led if (newest[0] - x[0]).days <= 45), led[0])
+        span = (newest[0] - base[0]).total_seconds() / 86400.0
+        if span < 14:
+            return _cnl(f"ledger history spans {span:.1f} d (< 14 d needed)")
+        gained = max(0, newest[1] - base[1])
+        return _fact(round(gained * 30.0 / span, 3), survivors_now=newest[1], survivors_base=base[1],
+                     span_days=round(span, 1), newest=newest[3], base=base[3],
+                     basis="trial_ledger.json summary.stage0_pass_surviving_dsr_and_bhy_haircut, difference over the span")
+    f["survivors_per_month"] = _safe(survivors_per_month, "survivors_per_month")
+
+    def trials_per_survivor():
+        led = _ledgers()
+        if not led:
+            return _cnl("no readable trial_ledger.json under comms/research/")
+        at, surv, trials, name = led[-1]
+        return _fact(round(trials / max(surv, 1), 1), trials=trials, survivors=surv, zero_survivor_floor=(surv == 0),
+                     ledger=name, ledger_generated_at=at.strftime("%Y-%m-%dT%H:%M:%SZ"),
+                     basis="sum(legs.*.n_configs) / max(survivors, 1) from the newest trial_ledger.json")
+    f["trials_per_survivor"] = _safe(trials_per_survivor, "trials_per_survivor")
+
     util = _util_records(root)
     since24 = now - timedelta(hours=24)
     since7 = now - timedelta(days=7)
@@ -359,7 +398,7 @@ def evaluate(facts: Dict[str, Dict[str, Any]], cfg: Dict[str, Any]) -> List[Dict
         else:
             state = OK if float(val) <= float(thr) else BREACH
         row = {"slo": name, "state": state, "value": val, "op": ">=" if spec["op"] == "min" else "<=", "threshold": thr,
-               "what": spec.get("what", "")}
+               "what": spec.get("what", ""), "diagnostic": bool(spec.get("diagnostic"))}
         row["evidence"] = {k: v for k, v in fact.items() if k not in ("value", "threshold")}
         out.append(row)
     return out
@@ -371,7 +410,8 @@ def transition(table: List[Dict[str, Any]], prev: Dict[str, Any], now: datetime,
     """prev = {"open": {slo: {"since", "state"}}, "last_alert": iso|None}. Returns {state, alert: None|{kind, ...}}."""
     overlap = cfg["alerting"].get("watchdog_overlap") or {}
     wd = set(watchdog_open or [])
-    flagged = {r["slo"]: r for r in table if r["state"] != OK and overlap.get(r["slo"]) not in wd}
+    # diagnostic (volume) SLOs are measured and shown but never alert: yield SLOs are the targets (2026-11-01)
+    flagged = {r["slo"]: r for r in table if r["state"] != OK and not r.get("diagnostic") and overlap.get(r["slo"]) not in wd}
     suppressed = sorted(r["slo"] for r in table if r["state"] != OK and overlap.get(r["slo"]) in wd)
     p_open = dict(prev.get("open") or {})
     new = sorted(k for k in flagged if k not in p_open or p_open[k].get("state") != flagged[k]["state"])
@@ -523,7 +563,7 @@ def deliver(alert: Dict[str, Any], state: Dict[str, Any], now: datetime, cfg: Di
 
 # ── self-test: a planted starved queue must fire, a healthy pipeline must not ───────────────────────────────
 def _fixture(**over: Any) -> Dict[str, Dict[str, Any]]:
-    healthy = {"runnable_floor": _fact(60, threshold=50), "fires_24h": _fact(60), "lands_24h": _fact(40),
+    healthy = {"survivors_per_month": _fact(2.0), "trials_per_survivor": _fact(120.0), "runnable_floor": _fact(60, threshold=50), "fires_24h": _fact(60), "lands_24h": _fact(40),
                "grade_latency_p50_d": _fact(0.0), "grade_latency_p90_d": _fact(1.0), "undispositioned_24h": _fact(0),
                "authoring_supply_ratio_7d": _fact(1.3), "programme_coverage_pct": _fact(90.0),
                "theme_share_min_ratio": _fact(0.8), "blocked_over_age": _fact(2), "dispatcher_age_h": _fact(1.0),
@@ -556,19 +596,19 @@ def _self_test() -> int:
     assert all(r["state"] == OK for r in t), [r for r in t if r["state"] != OK]
     tr = transition(t, {}, now, cfg, [])
     assert tr["alert"] is None and tr["state"]["open"] == {}, tr
-    # planted defect: starved queue (runnable 2 vs computed floor 50) -> breach -> ONE alert, delivered
-    t2 = evaluate(_fixture(runnable_floor=_fact(2, threshold=50)), cfg)
-    assert [r["slo"] for r in t2 if r["state"] != OK] == ["runnable_floor"], t2
+    # planted defect: zero survivors this month -> breach -> ONE alert, delivered
+    t2 = evaluate(_fixture(survivors_per_month=_fact(0.0)), cfg)
+    assert [r["slo"] for r in t2 if r["state"] != OK] == ["survivors_per_month"], t2
     tr2 = transition(t2, tr["state"], now, cfg, [])
-    assert tr2["alert"] and tr2["alert"]["kind"] == "change" and tr2["alert"]["new"] == ["runnable_floor"], tr2
+    assert tr2["alert"] and tr2["alert"]["kind"] == "change" and tr2["alert"]["new"] == ["survivors_per_month"], tr2
     rec = _Recorder()
     d = deliver(tr2["alert"], tr2["state"], now, cfg, rec, 17895)
     assert d["telegram"] and d["ops_flags_comment"] and len(rec.effects) == 2, rec.effects
-    assert "runnable_floor" in rec.effects[1][1] and "RESEARCH SLO BREACH" in rec.effects[1][1]
+    assert "survivors_per_month" in rec.effects[1][1] and "RESEARCH SLO BREACH" in rec.effects[1][1]
     # the marker round-trips: the next run reads its state back from the comment
     from scripts.research.research_watchdog import parse_events
     ev = parse_events([{"body": rec.effects[0][2]}], cfg["alerting"]["comment_marker"])
-    assert ev and ev[0]["state"]["open"].get("runnable_floor"), ev
+    assert ev and ev[0]["state"]["open"].get("survivors_per_month"), ev
     # same breach 1 h later: silent (dedupe)
     tr3 = transition(t2, tr2["state"], now + timedelta(hours=1), cfg, [])
     assert tr3["alert"] is None, tr3
@@ -577,11 +617,19 @@ def _self_test() -> int:
     assert tr4["alert"] and tr4["alert"]["kind"] == "reminder", tr4
     # recovery: a message, then nothing open
     tr5 = transition(t, tr2["state"], now + timedelta(hours=2), cfg, [])
-    assert tr5["alert"] and tr5["alert"]["recovered"] == ["runnable_floor"] and "RECOVERED" in tr5["alert"]["text"], tr5
+    assert tr5["alert"] and tr5["alert"]["recovered"] == ["survivors_per_month"] and "RECOVERED" in tr5["alert"]["text"], tr5
     assert tr5["state"]["open"] == {}
-    # the watchdog already has the `queue` incident open: no second flag for the same condition
-    tr6 = transition(t2, {}, now, cfg, ["queue"])
-    assert tr6["alert"] is None and tr6["state"]["suppressed_by_watchdog"] == ["runnable_floor"], tr6
+    # a starved queue is a DIAGNOSTIC now: shown as a breach, never flagged by this monitor (the 15-minute watchdog owns it)
+    tr6 = transition(evaluate(_fixture(runnable_floor=_fact(2, threshold=50)), cfg), {}, now, cfg, [])
+    assert tr6["alert"] is None, tr6
+    # yield SLOs: zero survivors breaches and alerts; a breached VOLUME (diagnostic) SLO is shown but silent
+    t8 = evaluate(_fixture(survivors_per_month=_fact(0.0), trials_per_survivor=_fact(2832.0)), cfg)
+    assert [r["slo"] for r in t8 if r["state"] != OK] == ["survivors_per_month", "trials_per_survivor"], t8
+    assert transition(t8, {}, now, cfg, [])["alert"]["new"] == ["survivors_per_month", "trials_per_survivor"]
+    t9 = evaluate(_fixture(fires_24h=_fact(0), lands_24h=_fact(0)), cfg)
+    assert {r["slo"] for r in t9 if r["state"] == BREACH} == {"fires_24h", "lands_24h"}
+    assert transition(t9, {}, now, cfg, [])["alert"] is None, "diagnostic volume breach must not alert"
+    assert all(r["diagnostic"] for r in t9 if r["slo"] in ("fires_24h", "lands_24h", "runnable_floor"))
     # could_not_look is never ok, and a null value is never rendered as 0
     t7 = evaluate(_fixture(grader_age_h=_cnl("no token")), cfg)
     r7 = next(r for r in t7 if r["slo"] == "grader_age_h")

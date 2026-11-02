@@ -5,6 +5,8 @@ description: The binding procedure for reviewing OPEN order packages against the
 
 > **Doc status:** `live` · category `instruction` · last verified `2026-10-26` · registered in [`docs/DOCUMENT-INDEX.md`](../../../docs/DOCUMENT-INDEX.md)
 
+> **The research loop (binding, 2026-11-01):** [`docs/plans/OPERATING-PLAN-2026-09-21.md`](../../../docs/plans/OPERATING-PLAN-2026-09-21.md) § 2 "What does not pass goes back into research — THE research workflow" -- a live-review action CLASS is designed parameterised: declare its levers (trigger, timing, action bounds) in `research/levers/<class>.yaml` and grade it by one-factor variation of those levers against hold and a matched random control.
+
 # /live-trade-review — review open packages against the market
 
 > **Practice principles (pointer):** the design and evaluation choices this skill makes follow [`docs/reference/trading-and-model-practice-principles.md`](../../../docs/reference/trading-and-model-practice-principles.md) (TRADING T1–T10 · MODEL M1–M10 · RESEARCH-OPS R1–R6), refreshed weekly by `frontier-research`; a principle never overrides a binding rule.

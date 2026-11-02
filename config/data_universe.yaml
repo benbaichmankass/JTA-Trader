@@ -1,0 +1,136 @@
+# config/data_universe.yaml — WHAT MARKET DATA WE COLLECT (data path only; NOT a trading roster, NOT a gate).
+#
+# Gates this adds or changes: none. Nothing on the order path reads this file. The `strategies:` rosters decide what
+# trades; this file decides what history the research / general (pooled) ML models can see. A symbol here is data.
+#
+# Operator, 2026-11-01 12:38Z: "at least the general MLs needs to be training pretty much on as much market data as we can
+# find for it, and riding on memory and infra from kaggle/HF to create and store the data sets". Row MARKET-DATA-LAKE;
+# design + depth tables: docs/data/market-data-lake.md. Shared with lane ETF-HISTORY-PIPELINE (extend, don't fork).
+#
+# SELECTION RULES, not hand-picked lists, wherever a free source can enumerate the universe:
+#   * `all`            -> every symbol the source enumerates (incl. delisted, where the source keeps them)
+#   * a list           -> exactly those symbols (used only where "all" is too large for the timeframe)
+#   * liquidity floors are applied POINT-IN-TIME at READ time by ml/datasets/lake.py (rolling ADV as of each date),
+#     never at collection time -- collecting only today's liquid names is survivorship bias.
+#
+# Resolved lists are written by scripts/data_lake/free_sources.py universe into the lake as universe/<asset>/<YYYY-MM-DD>.csv
+# (a dated snapshot each run), so "what was listed when" is itself data.
+
+version: 1
+
+storage:
+  hf_dataset: bentzbk/jta-market-lake   # PRIVATE; created by scripts/data_lake/hf_publish.py
+  kaggle_dataset: metis-market-lake     # PRIVATE mirror for Kaggle kernels (training compute); optional
+  layout: "<asset_class>/<market>/<tf>/<SYMBOL>/<YYYY-MM|YYYY>.parquet (partitioned) or <asset_class>/<market>/<tf>/<SYMBOL>.parquet"
+  manifest: MANIFEST.json               # per file: source, licence, first/last bar, rows, expected rows, gaps
+  # Projected lake bytes for the CORE streams (always stored), from MEASURED archive sizes (S3 listing, 2026-11-01)
+  # x MEASURED parquet/zip ratios: perp 1m klines 32.17 GB zip x 1.166 x 1.336 (derived) = 50.1 GB; metrics 6.91 GB x 1.45
+  # = 10.0 GB; spot 1m 3.92 GB x 1.166 x 1.336 = 6.1 GB; funding 0.03 GB; equities 1d + DoltHub + FRED/COT/CBOE ~7 GB
+  # (INFERRED). The preflight subtracts this from the MEASURED private headroom before enabling optional streams.
+  core_projected_bytes: 73000000000
+
+crypto:
+  # Binance Vision (keyless, full history). Symbols enumerated from the archive listing => delisted perps included.
+  # FINEST GRAIN RULE (operator 2026-11-01): store the smallest timeframe each source publishes; 5m/15m/1h/4h/1d are
+  # DERIVED by scripts/data_lake/resample.py from the stored 1m base, never fetched separately.
+  # Stored now vs finest available, with sizes, in docs/data/market-data-lake.md section 3.1.
+  um_perp:
+    source: data.binance.vision
+    licence: "Binance Terms of Use; no open-data licence -> private stores only"
+    streams:               # stream -> `all` or a symbol list
+      klines: all          # 1m, every perp incl. delisted (upper bound ~44 GB zipped, ML-FEATURE-INFRA 2026-11-01)
+      fundingRate: all     # every funding event
+      metrics: all         # 5m OI + long/short + taker ratios, 2021-12+ (upper bound ~7.5 GB zipped)
+    derived: [5m, 15m, 1h, 4h, 1d]
+    # OPTIONAL streams, in priority order: the preflight enables each one whose projected bytes fit the MEASURED
+    # headroom (allowance - used - core). Projected = MEASURED zipped bytes (listing) x 1.166 (klines ratio).
+    optional_streams:
+      premiumIndexKlines: {projected_bytes: 17500000000, zipped_bytes: 15016108214}
+      markPriceKlines: {projected_bytes: 21350000000, zipped_bytes: 18308178903}
+      indexPriceKlines: {projected_bytes: 22590000000, zipped_bytes: 19375847131}
+      bookDepth: {projected_bytes: 246015173471, zipped_bytes: 246015173471}   # zipped size as a lower bound
+    not_stored:            # MEASURED zipped, all perps (S3 listing 2026-11-01): far above any free allowance
+      aggTrades: {zipped_bytes: 1154088435275}
+      trades: {zipped_bytes: 2149312748438}
+  spot:
+    source: data.binance.vision
+    licence: "Binance Terms of Use; no open-data licence -> private stores only"
+    streams:
+      klines: [BTCUSDT, ETHUSDT, SOLUSDT, XRPUSDT, BNBUSDT, DOGEUSDT, ADAUSDT, AVAXUSDT, LINKUSDT, LTCUSDT,
+               DOTUSDT, TRXUSDT, BCHUSDT, NEARUSDT, ATOMUSDT, FILUSDT, ETCUSDT, XLMUSDT, UNIUSDT, AAVEUSDT,
+               ETHBTC, BNBBTC, SOLBTC, XRPBTC, BTCFDUSD, BTCUSDC, ETHUSDC]   # 1m; 3,745 spot symbols listed
+    derived: [5m, 15m, 1h, 4h, 1d]
+
+us_equity:
+  # Enumeration: NASDAQ Trader symbol directory (nasdaqtraded.txt: every US-listed security on every exchange, with an
+  # ETF flag). Delisted names: Alpaca /v2/assets?status=inactive (runner with the Alpaca data keys). Bars: the
+  # ETF-HISTORY-PIPELINE fetcher (Alpaca SIP, 2016+, split-adjusted, corporate actions separate).
+  # FINEST GRAIN: Alpaca serves 1m (2016+). The lake's broad layer is 1d for EVERY stock/ETF incl. delisted
+  # (free_sources.py alpaca-daily); 1m for the whole universe is a storage call put to the operator with numbers
+  # (docs/data/market-data-lake.md section 3.2) -- never silently downsampled.
+  etf:
+    enumerate: nasdaqtrader_etf_flag      # ALL US-listed ETFs (ETF == 'Y'), plus inactive ETFs from Alpaca
+    include_delisted: true
+    timeframes:
+      1d: all
+      1h: all
+      5m: liquid      # ADV floor below, resolved as of the run date for COLLECTION only at 5m (volume-bounded)
+  stock:
+    enumerate: nasdaqtrader_common        # common stock, excl. test issues / warrants / rights / units / preferreds
+    include_delisted: true
+    timeframes:
+      1d: all
+      1h: liquid
+  liquidity_floor:
+    adv_usd_20d: 5000000                  # applied point-in-time at read; also bounds which names get 1h/5m pulls
+    min_price: 2.0
+
+# `options:` (the 55 option-snapshot underlyings) and `us_equity_bars:` are owned by ETF-HISTORY-PIPELINE; the lake's
+# own option SOURCES live here so the two never collide.
+options_sources:
+  cboe_iv_indices:
+    source: cdn.cboe.com/api/global/us_indices/daily_prices/<SYM>_History.csv
+    licence: "Cboe index data; research use, private store only"
+    symbols: [VIX, VIX9D, VIX3M, VIX6M, VIX1Y, VIX1D, VVIX, SKEW, OVX, GVZ, VXN, RVX, VXD, VXEEM, VXSLV, VXGDX, VXAZN, VXAPL]
+  dolthub:
+    # post-no-preference/options: option_chain (EOD chains with greeks) + volatility_history (per-symbol IV/HV, 2,342
+    # symbols, 2019-02-09..). The SQL API times out on whole-table queries, so the runner `dolt clone`s the repo.
+    repo: post-no-preference/options
+    chain_underlyings: [SPY, QQQ, IWM, DIA, XLE, XLF, XLK, GLD, SLV, TLT, USO, EEM, HYG, AAPL, MSFT, NVDA, AMZN, TSLA, META]
+  snapshots:
+    source: ETF-HISTORY-PIPELINE options-snapshot-capture (trainer data/options_history/<UND>/<date>.parquet)
+
+futures:
+  # No free intraday futures archive with an open licence exists that we have verified. Daily continuous fronts from
+  # Yahoo (=F) are collected as RESEARCH data, private store only (Yahoo ToS). CME DataMine is paid. Verified gaps are
+  # named in docs/data/market-data-lake.md rather than papered over.
+  daily_continuous:
+    source: yahoo_chart
+    licence: "Yahoo ToS; research use, private store only"
+    symbols: [ES=F, NQ=F, YM=F, RTY=F, CL=F, BZ=F, NG=F, RB=F, HO=F, GC=F, SI=F, HG=F, PL=F, PA=F,
+              ZB=F, ZN=F, ZF=F, ZT=F, ZC=F, ZS=F, ZW=F, KC=F, CC=F, SB=F, CT=F, LE=F, HE=F, 6E=F, 6J=F, 6B=F,
+              6A=F, 6C=F, 6S=F, DX=F, VX=F, BTC=F, ETH=F]
+
+fx:
+  daily:
+    source: fred           # Federal Reserve H.10 noon buying rates; public domain (US government data)
+    licence: "FRED / Federal Reserve; public domain"
+    series: [DEXUSEU, DEXJPUS, DEXUSUK, DEXCAUS, DEXSZUS, DEXUSAL, DEXUSNZ, DEXCHUS, DEXMXUS, DEXINUS, DEXKOUS,
+             DEXBZUS, DEXSDUS, DEXNOUS, DEXSIUS, DEXHKUS, DEXTHUS, DEXSFUS, DEXDNUS, DEXTAUS, DTWEXBGS, DTWEXAFEGS, DTWEXEMEGS]
+
+macro:
+  daily:
+    source: fred
+    licence: "FRED; per-series source licences vary -- private store only until each is checked"
+    series:
+      rates: [DGS1MO, DGS3MO, DGS6MO, DGS1, DGS2, DGS3, DGS5, DGS7, DGS10, DGS20, DGS30, DFF, SOFR, T10Y2Y, T10Y3M,
+              DFII5, DFII10, T5YIE, T10YIE, T5YIFR]
+      credit: [BAMLH0A0HYM2, BAMLC0A0CM, BAMLH0A3HYC, BAMLC0A4CBBB, BAMLHE00EHYIOAS, DBAA, DAAA]  # ICE series: FRED serves 3y only; Moody's DBAA/DAAA are the long free proxy
+      vol_risk: [VIXCLS, VXNCLS, OVXCLS, GVZCLS, STLFSI4, NFCI]
+      commodities: [DCOILWTICO, DCOILBRENTEU, DHHNGSP]   # GOLDAMGBD228NLBM removed: FRED discontinued it (LBMA, 2022); gold via GC=F futures
+  cot:
+    source: publicreporting.cftc.gov (Socrata; legacy 6dca-aqww 1986+, disaggregated 72hh-3qpy 2006+, TFF gpe5-46if 2006+)
+    licence: "CFTC; US government public domain"
+  monthly:
+    source: fred
+    series: [CPIAUCSL, CPILFESL, PCEPILFE, UNRATE, PAYEMS, INDPRO, M2SL, UMCSENT, HOUST, RSAFS, ICSA]

@@ -5,6 +5,8 @@ description: Wiring checklist + scaffold for adding a new live trading strategy 
 
 > **Doc status:** `live` · category `instruction` · last verified `2026-09-07` · registered in [`docs/DOCUMENT-INDEX.md`](../../../docs/DOCUMENT-INDEX.md)
 
+> **The research loop (binding, 2026-11-01):** [`docs/plans/OPERATING-PLAN-2026-09-21.md`](../../../docs/plans/OPERATING-PLAN-2026-09-21.md) § 2 "What does not pass goes back into research — THE research workflow" -- a new strategy is BUILT parameterised: declare its levers up front (`research/levers/<leg>.yaml` `declared:` -- each lever, its range, its hypothesised effect), make each lever independently variable in the harness, and make the first Stage-0 test a STRUCTURED design (one-factor sweeps or ablations of the declared levers, the base as control), never one configuration.
+
 # /new-strategy — wire a new trading strategy through the execution layer
 
 The execution layer (intent multiplexer + delta-aware dispatcher,

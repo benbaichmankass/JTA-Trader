@@ -118,3 +118,14 @@ related:
 - scripts/ci/check_desk_records.py
 - docs/plans/claude-trading-desk-DESIGN.md
 last_dispatched_at: '2026-10-27T23:40:48+00:00'
+# iteration block added 2026-11-01 by lane RESEARCH-ITERATE (the unit's registered rule is unchanged)
+iteration:
+  subject: claude_desk
+  subject_kind: strategy_leg
+  from_result: 'none: claude_desk has no Stage-0 record (first measurement)'
+  verdict_read: pending
+  diagnosis: claude_desk trades on all three general paper books (bybit_1, alpaca_paper, ib_paper) with no Stage-0 record at all; its edge has
+    never been measured offline. The first iteration is the masked point-in-time D-S0 entry-generation test this unit already registers.
+  hypothesis: Claude's proposed entries on masked scan packets earn positive net R per capital-day and beat the registered random control
+  attempt: 1
+  due_by: '2026-11-08'

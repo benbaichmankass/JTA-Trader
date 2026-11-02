@@ -1,0 +1,24 @@
+{
+  "phase": "research",
+  "state": "queued",
+  "owner": null,
+  "lane": null,
+  "model": "claude-sonnet-5-5",
+  "tier": 1,
+  "prs": [],
+  "blocked_on": [],
+  "roadmap": [
+    "L-ML-LIVE"
+  ],
+  "priority_rank": 2,
+  "id": "ML-FS-ENTRY-V2",
+  "title": "ENTRY v2 on the expanded feature set, in hours: harness + dev-fold ablation (fs01-01) + one pre-registered read on the 2026-10 forward window (fs02-01), then dated increments",
+  "ceiling_usd": 20,
+  "note": "Operator 2026-11-01 verbatim: \"if we're going live then iterating the entry ML, then we're talking about a timeline in hours, not days/weeks\" and \"20 features is a regression equation, not algorithmic trading\". Steps and UTC times: 11:30 backfills start; 13:00 harness + leakage self-test; 13:00-14:15 dev ablation RQ-20261101-fs01-01; 14:15 registered selection; 14:30-15:15 fit through 2026-09-30 and ONE read on W1 2026-10-01..2026-10-31 (RQ-20261101-fs02-01, variants 1); 15:30 verdict. Increments after: v3 adds positioning, W2 2026-11-01..2026-11-10, earliest read 2026-11-11 (forward accrual ~31 decisions/day, n=300 floor). Anything needing a backfill or live collector is an increment, never a blocker. ENTRY v1 go-live path unchanged. Plan: docs/research/ml-feature-inventory-2026-11-01.md section 1b (dated, UTC). Gates: none.",
+  "observation": {
+    "what": "fs02-01 result record for v2 lands under research/results/RQ-20261101-fs02-01/ with n, symbols, variants=1",
+    "how_to_check": "ls research/results/RQ-20261101-fs02-01/",
+    "due_by": "2026-11-01"
+  },
+  "_seq": 878
+}

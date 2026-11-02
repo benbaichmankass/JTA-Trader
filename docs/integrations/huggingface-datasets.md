@@ -86,7 +86,10 @@ A template card is filed as a follow-up.
   `generation_commit_sha=unknown`.
 - Publishing any dataset whose `leakage_test_status` is `failed`
   (failed datasets are diagnostic only).
-- Auto-publishing on push. Every publication is operator-driven.
+- Auto-publishing on push of OUR data (journal, fills, labels joined to our trades). Every such publication is operator-driven.
+  **Exception (operator, 2026-11-01, row MARKET-DATA-LAKE):** MARKET-ONLY data built from public sources is published on a
+  schedule to the PRIVATE dataset `bentzbk/jta-market-lake` by `market-data-lake.yml` — see
+  [`docs/data/market-data-lake.md`](../data/market-data-lake.md). A public repo is still forbidden (the publisher refuses one).
 - Running heavy dataset builds (full historical pull, multi-symbol,
   multi-timeframe) on the Oracle live VM. WS9.
 

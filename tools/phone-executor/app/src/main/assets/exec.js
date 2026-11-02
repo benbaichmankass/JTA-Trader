@@ -6,7 +6,7 @@
   // PHONE-EXEC-OBSERVABLE-1018: this file is also served SIGNED by our own API and swapped in at runtime
   // (RemoteJs.kt): a newer version replaces the installed helpers on the next ensure(); the same version is
   // never injected twice. Bump on every change (CI signs the file; the app pins by version).
-  var EXEC_VERSION = "2026-10-18.6";
+  var EXEC_VERSION = "2026-11-01.1";
   if (window.__ex && window.__ex.version === EXEC_VERSION) return;
   function hostOk() { return /(^|\.)breakoutprop\.com$/.test(location.hostname || ""); }
   function vis(el) { if (!el) return false; var r = el.getBoundingClientRect(); return r.width > 0 && r.height > 0; }
@@ -521,7 +521,33 @@
     var panel = gridPanel(h), emptyOk = !!(panel && emptyRe.test(t(panel)));
     var r = finishRead(out, bad, hs, count, need, strict, emptyOk, raw, keys, els);
     r.layout = "div_grid";
+    if (r.state === "empty_unconfirmed") r.cells = emptyShape(h, panel);
     return r;
+  }
+  // BREAKOUT-UNRECORDED-1101 (2026-11-01): every Closed orders read since 2026-10-16 came back empty_unconfirmed -- the
+  // header found, ZERO rows, no empty-state text -- so all 9 reconciler closes were journaled with no exit. That miss
+  // posted only the headers, which cannot say whether the list is really empty (an empty-state phrase emptyRe does not
+  // know) or its rows sit where gridRowsOf does not look. This says which, digits masked like every dump: the header's
+  // cell count, each wrapper level's sibling cell counts (gridRowsOf's search), the first row-like elements in the
+  // panel (cell count, depth, masked text) and the panel's own text without the header ("txt", an empty-state phrase).
+  function emptyShape(h, panel) {
+    var n = kids(h).length, out = ["hdr k=" + n], node = h, P = panel || h.parentElement;
+    // PAGE TEXT is digit-masked; the structural counts this function computes itself are kept as numbers
+    var m = function (s) { return s.replace(/\d/g, "d").replace(/[^A-Za-z0-9 _.:\/()=+&%-]/g, "="); };
+    for (var lvl = 0; lvl < 4 && node.parentElement && node !== P; lvl++, node = node.parentElement) {
+      var sib = kids(node.parentElement).filter(function (x) { return x !== node; });
+      out.push(("L" + lvl + " sib=" + sib.length + " k=" + sib.slice(0, 8).map(function (x) { return kids(x).length; }).join("/")).slice(0, 40));
+    }
+    var ht = t(h), pt = t(P).replace(ht, " ").replace(/\s+/g, " ").trim();
+    out.push(("txt=" + m(pt)).slice(0, 40));
+    var rowish = Array.prototype.slice.call(P.querySelectorAll("*")).filter(function (x) {
+      return vis(x) && x !== h && !h.contains(x) && !x.contains(h) && kids(x).length >= 3 && /\d/.test(t(x));
+    });
+    rowish.filter(function (x) { return !rowish.some(function (o) { return o !== x && x.contains(o); }); }).slice(0, 6).forEach(function (x) {
+      var d = 0; for (var a = x; a && a !== P; a = a.parentElement) d++;
+      out.push(("row k=" + kids(x).length + " d=" + d + " " + m(t(x))).slice(0, 40));
+    });
+    return out;
   }
   function readTable(cols, need, emptyRe, tabRe, strict) {   // need: the keys every row must carry; a table is ours when it has a symbol column and a qty/price/entry column
     var hits = [];

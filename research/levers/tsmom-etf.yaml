@@ -1,0 +1,137 @@
+# Lever map (operator doctrine 2026-11-01). Seeded by lane RESEARCH-EDGE from result rows; RESEARCH-ITERATE owns it from here.
+subject: Vol-targeted multi-asset ETF / futures-proxy time-series momentum, 2008-2024
+units:
+- RQ-20261101-58e4-05
+status: open
+doctrine: 'operator 2026-11-01 14:00-14:09Z: nothing that failed is closed; attribute first; next tests are one-factor/ablation chosen from this map; retire only when every lever family
+  has been tested at power, net of cost, with no effect'
+verdict_so_far: 'fail: primary E5 net Sharpe 0.418 (< 0.5), halves 0.495 / 0.342, DSR(N=9) 0.57; clause fail (11 of 16 years positive, short side negative)'
+failure_attribution:
+  where_lost: SIDE and REGIME; the strategy is stable but small. Net sum 0.30 = gross 0.31 - cost 0.02. Long +0.32, short -0.02. Negative years 2011, 2012, 2016, 2018, 2023 (trend reversals
+    / whipsaw); worst months 2010-05, 2018-02, 2022-11.
+  by_direction:
+    long: 0.3188
+    short: -0.023
+  by_year:
+    '2008': 0.0646
+    '2009': 0.0002
+    '2010': 0.0276
+    '2011': -0.0117
+    '2012': -0.0268
+    '2013': 0.1011
+    '2014': 0.0261
+    '2015': 0.0093
+    '2016': -0.0053
+    '2017': 0.0157
+    '2018': -0.0037
+    '2019': 0.0099
+    '2020': 0.0564
+    '2021': 0.0202
+    '2022': 0.0158
+    '2023': -0.0235
+    '2024': 0.0198
+  worst_months:
+    2010-05: -0.0365
+    2018-02: -0.0269
+    2014-01: -0.0238
+    2022-11: -0.0235
+  best_months:
+    2019-08: 0.0334
+    2008-10: 0.0304
+    2020-03: 0.0286
+    2013-04: 0.028
+  worst_symbols:
+    GDX: -0.0331
+    SLV: -0.007
+    IWM: -0.0012
+    XLE: 0.0091
+  best_symbols:
+    MHG: 0.0379
+    USO: 0.0383
+    QQQ: 0.0724
+    SPY: 0.0772
+  stage: entry (short-side signals add nothing) and filter (whipsaw regimes); cost is 6% of gross; unadjusted closes (no dividends) understate long carry
+levers_tested:
+- family: signal horizon
+  varied: 21|63|126|252 and combinations (trading days)
+  response:
+    E1:
+      sharpe_net: -0.08
+      ann_return_net: -0.004
+      dsr: 0.032564
+      stress_sharpe: -0.139
+    E2:
+      sharpe_net: 0.342
+      ann_return_net: 0.0173
+      dsr: 0.447759
+      stress_sharpe: 0.31
+    E3:
+      sharpe_net: 0.421
+      ann_return_net: 0.0213
+      dsr: 0.573877
+      stress_sharpe: 0.396
+    E4:
+      sharpe_net: 0.319
+      ann_return_net: 0.0156
+      dsr: 0.411091
+      stress_sharpe: 0.302
+    E5:
+      sharpe_net: 0.418
+      ann_return_net: 0.018
+      dsr: 0.569795
+      stress_sharpe: 0.392
+    E6:
+      sharpe_net: 0.272
+      ann_return_net: 0.0115
+      dsr: 0.338919
+      stress_sharpe: 0.23
+    E8:
+      sharpe_net: 0.406
+      ann_return_net: 0.0183
+      dsr: 0.550748
+      stress_sharpe: 0.385
+  shape: 21d is the worst (-0.08); 63-252d cluster 0.27-0.42; slow horizons are better
+  tested_at_power: false
+- family: side
+  varied: long-short vs long-only
+  response:
+    E5:
+      sharpe_net: 0.418
+      ann_return_net: 0.018
+      dsr: 0.569795
+      stress_sharpe: 0.392
+    E7:
+      sharpe_net: 0.586
+      ann_return_net: 0.0193
+      dsr: 0.800097
+      stress_sharpe: 0.567
+  shape: 'long-only 0.586 vs 0.418: shorts hurt again'
+  tested_at_power: false
+- family: rebalance
+  varied: weekly vs 21-day
+  response:
+    E5:
+      sharpe_net: 0.418
+      ann_return_net: 0.018
+      dsr: 0.569795
+      stress_sharpe: 0.392
+    E9:
+      sharpe_net: 0.397
+      ann_return_net: 0.0175
+      dsr: 0.536631
+      stress_sharpe: 0.385
+  shape: flat (0.418 vs 0.397)
+  tested_at_power: false
+lever_families_untested:
+- dividend-adjusted total-return series (data fix, may move bond/equity legs)
+- 'asset-class gating (trend only where it historically works: commodities, rates) vs equities'
+- regime gate on whipsaw (vol-of-trend, ADX-like)
+- sleeve weighting (risk parity vs equal) and portfolio vol target
+- universe breadth (add FX, more futures proxies)
+- shorting only the assets with negative carry
+- stop-loss / trailing exit
+- cost sensitivity at realistic ETF spreads
+power_note: 'n=4151 days (16.5 years), Sharpe SE ~0.25: the best-powered subject here; still a 0.2 Sharpe effect needs ~2x the window.'
+evidence: 'Result rows: research/results/<unit>/manual-research-edge-20261101.jsonl; per-config detail: comms/research/<unit>/manual-research-edge-20261101/result.json; attribution computed
+  by scripts/research/edge_failure_attribution.py (comms/research/edge-failure-attribution-20261101/attribution.json).'
+handed_to: RESEARCH-ITERATE (session_01AFoLuLiJ6TVirjHipiPRhQ)

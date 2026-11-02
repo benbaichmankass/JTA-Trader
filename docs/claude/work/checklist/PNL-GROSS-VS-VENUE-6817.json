@@ -1,0 +1,22 @@
+{
+  "id": "PNL-GROSS-VS-VENUE-6817",
+  "title": "Journal pnl is gross local compute (-786.10) vs venue closed_pnl (-888.30) on trade 6817: which is stored as pnl, should every close take venue closed_pnl",
+  "phase": "research",
+  "state": "queued",
+  "owner": "manager",
+  "lane": "CLOSE-REASON-XRP-1220",
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 3,
+  "prs": [],
+  "blocked_on": [],
+  "note": "Links to COST-BROKER-SOURCED. Trade 6817 (bybit_1 XRPUSDT long, 74160 qty): journal pnl -786.096 (pnl_source local_compute = (1.2476-1.2582)*74160, no fees) vs Bybit closed_pnl -888.3026 (venue figure, includes fees; journal fee_taker_usd estimate 102.64 + 786.10 = 888.74 vs 888.30). Questions: (1) is journal pnl meant to be gross with fees held separately in fee_*_usd, or net; (2) should every close take venue closed_pnl where the venue serves a trustworthy one (demo closed-pnl is deliberately untrusted, BL-20260608-DEMOPNL, so for bybit_1 the gap is by design); (3) which figure do graders and promotion records read. Measure over closed bybit rows: sum(pnl) vs sum(venue closed_pnl) per account before deciding.",
+  "updated_at": "2026-11-01T12:46:04Z",
+  "updated_by": "session_01AFoLuKWSvsaNCfXBikWHbF",
+  "due_by": "2026-11-03",
+  "roadmap": [
+    "L-OPS"
+  ],
+  "_seq": 878
+}

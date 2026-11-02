@@ -34,6 +34,15 @@ ADDED = ("gdx_pullback_1d", "iaum_pullback_1d", "scha_trend_long_1d",
          "slv_pullback_1d", "splg_trend_long_1d")
 OLD_FALLBACK = 10
 
+#: Legs that joined these symbols AFTER the 2026-09-28 change. The proof is about
+#: that change only: such a leg had no "before" in it, so comparing it against the
+#: synthetic old fallback would report a flip the change never caused. Each is named
+#: here so a new leg is excluded explicitly, never silently.
+#: ``ml_entry``: put on alpaca_paper's ETFs 2026-11-01 (operator "Paper now, v2 for
+#: live (Rec.)", row ALPACA-LIVE-ACTIVITY-ML); priority 0, so it ties the ETF legs and
+#: still loses SLV to ``slv_pullback_1d`` (1).
+LATER_LEGS = ("ml_entry",)
+
 
 def _old_priority(name: str) -> int:
     if name in ADDED:
@@ -50,7 +59,7 @@ def _enabled_by_symbol() -> Dict[str, list]:
     strats = cfg.get("strategies", cfg)
     by: Dict[str, list] = collections.defaultdict(list)
     for name, c in strats.items():
-        if not isinstance(c, dict) or not c.get("enabled"):
+        if not isinstance(c, dict) or not c.get("enabled") or name in LATER_LEGS:
             continue
         sym = c.get("symbol") or c.get("symbols")
         for s in (sym if isinstance(sym, list) else [sym]):
@@ -61,6 +70,14 @@ def _enabled_by_symbol() -> Dict[str, list]:
 
 def _sign(x: int) -> int:
     return (x > 0) - (x < 0)
+
+
+def test_later_legs_are_on_the_roster():
+    """A LATER_LEGS name that left the roster is stale -- remove it."""
+    cfg = yaml.safe_load((REPO / "config" / "strategies.yaml").read_text())
+    strats = cfg.get("strategies", cfg)
+    for name in LATER_LEGS:
+        assert (strats.get(name) or {}).get("enabled"), name
 
 
 def test_every_added_leg_is_now_mapped():
