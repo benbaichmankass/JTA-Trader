@@ -1,0 +1,7 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "hold_reason": "tier_2_3_needs_approval",
+  "hold_text": "New Tier-2 system-action (vm-sparse-bootstrap) + its allowlist wiring in system-actions.yml. Operator OK 2026-11-02 ~13:00Z, verbatim: \"let's try both fixes - better organizing the data\". Manager (session_01AFoLuJ1apgy8sfngu4WyNH) merges and dispatches.",
+  "why": "Live VM is at 100% disk; pull-and-deploy #22382 died inside the old script's unfiltered fetch, so #22379's sparse sync can never run. This action is piped from the runner over ssh stdin (no VM-side script, no prior fetch): deletes the deploy/vm-sparse-checkout cache shapes from the working tree, makes the clone partial + sparse, fetches filtered, resets to origin/main. Dry-run by default; never stops the trader or touches /data/bot-data."
+}
