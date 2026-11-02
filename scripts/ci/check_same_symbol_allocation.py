@@ -86,7 +86,7 @@ GRANDFATHERED: Dict[str, Dict[str, Any]] = {
 #: arrival per package, journalled (``src/units/strategies/claude_desk.py::exclusive_hold_refusal``, called from
 #: ``Coordinator.multi_account_execute``; DESK-PAPER-ACCOUNTS 2026-10-27). Such a leg is not part of a shared slot, so it
 #: is left out of the group. ``self_test`` pins the coordinator call: delete the refusal and this guard goes red.
-EXCLUSIVE_HOLD_LEGS: frozenset = frozenset({"claude_desk"})
+EXCLUSIVE_HOLD_LEGS: frozenset = frozenset({"claude_desk", "ml_entry"})  # == claude_desk.EXCLUSIVE_HOLD_LEGS (self-test)
 COORDINATOR_REL = "src/core/coordinator.py"
 
 
@@ -124,8 +124,9 @@ def load_records(rec_dir: Path) -> List[Dict[str, Any]]:
 #: bybit_1 declares `position_model: slices` in config/accounts.yaml (NETTED-SLICES soak, operator 2026-10-15) and the runtime implements it
 #: (src/runtime/positions.py POSITION_MODEL_KEY / admit_slice; weights from config/slice_allocation.yaml). Listed here because the
 #: roster-add of ict_scalp_eth_15m / ict_scalp_xrp_15m (DESK-8-SHORT-HOLD-S0) otherwise fails this guard on the XRP and ETH leg sets.
-#: bybit_2 / bybit_portfolio do NOT declare it and stay graded. ROLLBACK: empty this set (and restore the self-test assertion below).
-SLICE_SUPPORT_ACCOUNTS: frozenset = frozenset({"bybit_1"})
+#: 2026-11-01: bybit_2 + bybit_portfolio declare it too (operator popup, verbatim "Slices on bybit_2 (Rec.)"; mirror equality).
+#: ROLLBACK: drop the account here AND its `position_model` line (the self-test pins this set to the YAML).
+SLICE_SUPPORT_ACCOUNTS: frozenset = frozenset({"bybit_1", "bybit_2", "bybit_portfolio"})
 
 _ALLOCATOR_FACTORS = ("allocator_ev", "allocator_corr", "allocator_soak", "conviction")
 
@@ -227,7 +228,10 @@ def self_test() -> int:
     check("slice-supported account passes", grade(g, [], today), [])
     check("slice support is per account", len(grade({("other", "X"): ["a", "b"]}, [], today)), 1)
     SLICE_SUPPORT_ACCOUNTS = saved
-    check("slice support lists only accounts declaring position_model: slices", SLICE_SUPPORT_ACCOUNTS, frozenset({"bybit_1"}))
+    _declared = frozenset(n for n, a in ((yaml.safe_load((REPO / ACCOUNTS_REL).read_text(encoding="utf-8")) or {})
+                                          .get("accounts") or {}).items()
+                          if str((a or {}).get("position_model") or "").strip().lower() == "slices")
+    check("slice support lists exactly the accounts declaring position_model: slices", SLICE_SUPPORT_ACCOUNTS, _declared)
     # grandfather (real table, real keys): graded as if the account had no slice support, since the table predates it
     SLICE_SUPPORT_ACCOUNTS = frozenset()
     gk = ("bybit_1", "XRPUSDT")
@@ -255,6 +259,9 @@ def self_test() -> int:
           groups(acct({"other": ["a", "claude_desk"]}), sx), {})
     coord = (REPO / COORDINATOR_REL).read_text(encoding="utf-8")
     check("the coordinator calls the exclusive-hold refusal", "exclusive_hold_refusal(" in coord, True)
+    check("the coordinator walks every exclusive-hold leg", "_cd.EXCLUSIVE_HOLD_LEGS" in coord, True)
+    from src.units.strategies.claude_desk import EXCLUSIVE_HOLD_LEGS as _runtime_excl
+    check("guard and runtime name the same exclusive-hold legs", set(_runtime_excl), set(EXCLUSIVE_HOLD_LEGS))
     print("self-test:", "OK" if ok else "FAILED")
     return 0 if ok else 1
 

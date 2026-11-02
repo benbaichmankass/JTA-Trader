@@ -1,0 +1,65 @@
+# Every grader, the decision it grades, where its grade lands, how fresh that must be, and the ACTION the grade drives.
+# Read by scripts/ci/check_grader_freshness.py (alert-only: it never fails a PR and never blocks a trade).
+# Row GRADE-EVERYTHING-CONTINUOUSLY (operator 2026-11-01: "we can't build models if we're not actually grading them").
+# Gates this adds or changes: none.
+#
+# freshness.kind: jsonl_max (max of `field` over a .jsonl) | json_field (`field` of one .json) | commit (last git commit
+# touching `path`, a file or directory; only for stores that are rewritten every run).
+# drives_action: what a grade is FOR. `none` is stated, not hidden: it is the feedback gap, owned by `gap_owner`.
+# status: scheduled | not_scheduled (a decision class with no continuous grader: reported as NO_GRADER, never as fresh).
+graders:
+  - id: closed-trade-scores
+    decision: closed order packages (per-trade A-F grade)
+    grader: scripts/ops/score_order_packages.py
+    workflow: grade-closed-trades.yml
+    status: scheduled
+    store: {path: comms/claude_strategy_scores.jsonl, kind: jsonl_max, field: reviewed_at, max_age_hours: 72}
+    drives_action: none that moves a position (read by the claude_judgments ML family, the order-packages API and the dashboard; the R4 demotion gate reads /api/bot/performance/recent, not this file, and abstains below n=40 live trades per leg)
+    gap_owner: PROD-LEGS-DSR-DECISION (proposed in AUDIT.md section 8)
+  - id: live-review-outcomes
+    decision: in-trade advice (live-review rows)
+    grader: scripts/ops/live_review_grade.py
+    workflow: live-review-rows-mirror.yml
+    status: scheduled
+    store: {path: comms/live_review/outcomes.jsonl, kind: jsonl_max, field: computed_at, max_age_hours: 6}
+    drives_action: none (counterfactual replay prices the advice; nothing promotes a class)
+    gap_owner: LTR-CLOSE-CLASS-TEST (proposed in AUDIT.md section 8)
+  - id: desk-role-grade
+    decision: desk decisions (entry proposals, no_trade)
+    grader: scripts/ops/claude_role_grade.py
+    workflow: desk-decisions-mirror.yml
+    status: scheduled
+    store: {path: comms/desk/role_grade.json, kind: json_field, field: generated_at, max_age_hours: 6}
+    drives_action: none (calibration read by the desk skill)
+    gap_owner: GRADE-EVERYTHING-CONTINUOUSLY
+  - id: counterfactual-grades
+    decision: closed trades vs alternative brackets and management
+    grader: scripts/research/counterfactual_grader.py
+    workflow: counterfactual-grade-closed.yml
+    status: scheduled
+    store: {path: comms/research/counterfactual_grades, kind: commit, max_age_hours: 72}
+    drives_action: none (research input to exit levers)
+    gap_owner: GRADE-EVERYTHING-CONTINUOUSLY
+  - id: forecast-first-passage
+    decision: every price forecast (live-review rows, desk entry proposals), by first passage
+    grader: scripts/research/forecast_first_passage.py
+    workflow: forecast-grade.yml
+    status: scheduled
+    store: {path: comms/desk/forecast_grade.json, kind: json_field, field: computed_at, max_age_hours: 9}
+    drives_action: fc_outcome label of the claude_judgments ML family (what the ML models train and calibrate against)
+  - id: soak-book-grade
+    decision: soak-stage legs (weekly)
+    grader: scripts/ops/soak_book_grade.py
+    workflow: soak-book-grade-weekly.yml
+    status: scheduled
+    store: {path: comms/research/soak_book_grade, kind: commit, max_age_hours: 200}
+    drives_action: none (ongoing mechanics + cost-fidelity monitoring of Stage-1 legs; by decision NOT the soak's exit)
+    gap_owner: GRADE-EVERYTHING-CONTINUOUSLY
+  - id: served-model-decision-value
+    decision: ML models (served shadow/advisory predictions, graded on decision value net of cost)
+    grader: null
+    workflow: null
+    status: not_scheduled
+    store: null
+    drives_action: none (a model cannot be promoted or demoted on its decision value)
+    gap_owner: ML-DECISION-MODELS; today only ml/promotion/attribution.py (discrimination + calibration vs realised outcome, on the VM, not decision value net of cost)

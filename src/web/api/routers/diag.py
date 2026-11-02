@@ -326,6 +326,11 @@ _CANONICAL_UNITS: tuple[str, ...] = (
     # the pull is firing on cadence and tail its journal.
     "ict-alpaca-fills-pull.service",
     "ict-alpaca-fills-pull.timer",
+    # 2026-11-01 (ML-ENTRY-GOLIVE-UNBLOCK) — the observe-only ML ENTRY decision shadow (every symbol, every 15m
+    # close). Queryable so a session can verify it fires on cadence and tail its journal (each pass prints a summary
+    # line with rows, read_state split and measured CPU).
+    "ict-ml-decision-shadow.service",
+    "ict-ml-decision-shadow.timer",
     # 2026-09-28 (W6-PROP-FEED) — the 5-min read-only breakout_1
     # account_status feed; queryable so its tick journal (redacted output,
     # trip/backoff lines) can be tailed without SSH.
@@ -396,6 +401,7 @@ _EXIT_LADDER_SOAK_LOG = runtime_logs_dir() / "exit_ladder_soak.jsonl"
 _FC_GEOMETRY_SOAK_LOG = runtime_logs_dir() / "fc_geometry_soak.jsonl"
 _EXIT_LEVER_SOAK_LOG = runtime_logs_dir() / "exit_lever_soak.jsonl"
 _VOL_TRAIL_SHADOW_LOG = runtime_logs_dir() / "vol_trail_shadow.jsonl"
+_ML_DECISION_SHADOW_LOG = runtime_logs_dir() / "ml_decision_shadow.jsonl"
 # ML-REAL-MONEY-OVERLAY shadow scoring (src/runtime/overlay_shadow.py): one row per account per scored
 # package, annotate-only. Allowlisted in the SAME PR as its writer (the read-surface defect class above).
 _OVERLAY_SHADOW_LOG = runtime_logs_dir() / "overlay_shadow.jsonl"
@@ -755,6 +761,11 @@ _LOG_FILES: dict[str, Path] = {
     # first would-fire trade.
     "exit_lever_soak": _EXIT_LEVER_SOAK_LOG,
     "vol_trail_shadow": _VOL_TRAIL_SHADOW_LOG,
+    # ML ENTRY decision shadow (operator 2026-11-01 ~22:30Z): every Bybit-listed reference symbol scored under
+    # ml_entry v1 + ml_entry_v2 at EVERY 15m close (tf_offset 0m = the 1h close; 15m/30m/45m = trailing 1h bars
+    # ending there), with the decision it WOULD take, trading_bar, read_state. Observe-only, its own oneshot process
+    # (ict-ml-decision-shadow.timer); ~10k rows/day. Grep a bar_close prefix for a window; /log_aggregate for counts.
+    "ml_decision_shadow": _ML_DECISION_SHADOW_LOG,
     "overlay_shadow": _OVERLAY_SHADOW_LOG,
     "target_extension_soak": _TARGET_EXTENSION_SOAK_LOG,
     "protection_reassert_soak": _PROTECTION_REASSERT_SOAK_LOG,

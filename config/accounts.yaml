@@ -227,7 +227,7 @@ accounts:
                                        # pick-one. bybit_1 first; bybit_2 + bybit_portfolio
                                        # together after 1-2 clean multi-slice trades here
                                        # (mirror equality test). ROLLBACK: delete this line.
-    strategies: [trend_donchian_1h, trend_donchian_xrp_adx25, trend_donchian_eth_prop, claude_desk, ict_scalp_eth_15m, ict_scalp_xrp_15m, avax_pullback_2h, eth_pullback_2h, eth_pullback_prop_2h, sol_pullback_2h, fade_breakout_4h, fvg_range_15m, htf_pullback_trend_2h, ict_scalp_5m, ict_scalp_avax_5m, ict_scalp_sol_5m, ict_scalp_sol_15m, ict_scalp_xrp_5m, squeeze_breakout_4h, trend_donchian, trend_donchian_ada_4h, trend_donchian_avax_4h, trend_donchian_eth, trend_donchian_sol, trend_donchian_sol_4h, turtle_soup, e4_oi_shock_1h]
+    strategies: [trend_donchian_1h, trend_donchian_xrp_adx25, trend_donchian_eth_prop, claude_desk, ict_scalp_eth_15m, ict_scalp_xrp_15m, avax_pullback_2h, eth_pullback_2h, eth_pullback_prop_2h, sol_pullback_2h, fade_breakout_4h, fvg_range_15m, htf_pullback_trend_2h, ict_scalp_5m, ict_scalp_avax_5m, ict_scalp_sol_5m, ict_scalp_sol_15m, ict_scalp_xrp_5m, squeeze_breakout_4h, trend_donchian, trend_donchian_ada_4h, trend_donchian_avax_4h, trend_donchian_eth, trend_donchian_sol, trend_donchian_sol_4h, turtle_soup, e4_oi_shock_1h, ml_entry_v2]
                                         # 2026-10-30 E4-DEMO-LEG (Tier-3, OPERATOR-APPROVED for bybit_1 DEMO only: popup
                                         # verbatim "Prop sim + bybit_1 demo (Recommended)", Manager Session 2026-10-30c):
                                         # e4_oi_shock_1h -- the frozen E4 OI-shock continuation rule. Its Stage 0 (absolute)
@@ -465,7 +465,15 @@ accounts:
     market_type: linear                # PR 3 — Bybit V5 USDT-margined
                                        # linear perpetuals. Was
                                        # spot-margin pre-cutover.
-    strategies: [xrp_pullback_2h, trend_donchian_eth_4h, trend_donchian_xrp_4h, ada_pullback_2h, trend_donchian_sol_prop]
+    position_model: slices             # NETTED-SLICES rollout to real money (Tier-3; OPERATOR 2026-11-01
+                                       # ~09:40Z, popup, verbatim "Slices on bybit_2 (Rec.)"): each leg holds
+                                       # its OWN slice of a symbol with its own qty-scoped Partial SL/TP; the
+                                       # per-symbol risk budget (config/slice_allocation.yaml
+                                       # symbol_budget_trades 1.0) is unchanged, so slices never raise a
+                                       # symbol's risk. Follows bybit_1 (live since 2026-10-18). MUST match
+                                       # bybit_portfolio (test_mirror_carries_the_same_position_model_as_live).
+                                       # ROLLBACK: delete this line here AND on bybit_portfolio.
+    strategies: [xrp_pullback_2h, trend_donchian_eth_4h, trend_donchian_xrp_4h, ada_pullback_2h, trend_donchian_sol_prop, ml_entry]
                                        # ── PROMOTE-PROP-LEGS, 2026-10-15 (Tier-3, operator PRE-AUTHORIZED).
                                        # ONE LEG ADDED, identically and in the same order on
                                        # bybit_2 AND bybit_portfolio: trend_donchian_sol_prop.
@@ -858,7 +866,9 @@ accounts:
     mode: live                         # demo = paper money; live is correct.
     market_type: linear                # USDT-margined linear perps (mirrors
                                        # bybit_2); set-leverage fires at boot.
-    strategies: [xrp_pullback_2h, trend_donchian_eth_4h, trend_donchian_xrp_4h, ada_pullback_2h, trend_donchian_sol_prop]
+    position_model: slices             # mirrors bybit_2 (operator 2026-11-01 "Slices on bybit_2 (Rec.)");
+                                       # mirror equality. ROLLBACK: with bybit_2's line.
+    strategies: [xrp_pullback_2h, trend_donchian_eth_4h, trend_donchian_xrp_4h, ada_pullback_2h, trend_donchian_sol_prop, ml_entry]
                                        # ── PROMOTE-PROP-LEGS, 2026-10-15 — FOLLOWS bybit_2's addition
                                        # of trend_donchian_sol_prop IDENTICALLY (ordered mirror
                                        # equality, test_bybit_portfolio_mirrors_bybit_2_exactly).
@@ -1296,6 +1306,11 @@ accounts:
       # support, so a desk entry and a strategy leg never share a symbol's position (refused, journalled). This roster
       # is NOT mirrored: alpaca_portfolio mirrors alpaca_live, which does not carry claude_desk. ROLLBACK: delete this line.
       - claude_desk
+      # 2026-11-01 ML ENTRY v1 on the Stage-1 floor (row ALPACA-LIVE-ACTIVITY-ML, Tier 3; operator popup ~11:47Z,
+      # verbatim "Paper now, v2 for live (Rec.)"): the same frozen ml_entry model as bybit_2, paper money, both sides,
+      # on strategies.yaml::ml_entry.account_symbols.alpaca_paper. NOT on alpaca_live / alpaca_portfolio (no real-money
+      # ML on Alpaca until a model passes). ROLLBACK: delete this line.
+      - ml_entry
     symbols: [SPY, QQQ, GLD, IWM, TLT, IEF, SLV, USO, GDX, TQQQ, QLD, SPYM, IAUM, SCHA]   # instrument identity (Phase-0 +
                                        # ETF-breadth daily 2026-06-20 + intraday
                                        # ETF pilot 2026-06-20 § 0e adds SLV +
