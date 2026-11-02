@@ -81,7 +81,7 @@
    "worst": -3.3
   }
  },
- "generated_at": "2026-11-02T18:00:57Z",
+ "generated_at": "2026-11-02T18:26:57Z",
  "live_review_calibration": {
   "close/all": {
    "brier": 0.1809,
@@ -317,27 +317,26 @@
  "no_trade": {
   "abstain_value_all_overlapping": {
    "ci95": [
-    -0.4179,
-    2.0901
+    -1.5025,
+    -0.3702
    ],
-   "hit_rate": 0.667,
-   "mean": 0.8361,
-   "n": 12,
-   "worst": -3.7841
+   "hit_rate": 0.352,
+   "mean": -0.9364,
+   "n": 88,
+   "worst": -12.6677
   },
   "abstain_value_independent": {
    "ci95": [
-    -4.0374,
-    6.1792
+    -1.3694,
+    1.2092
    ],
-   "hit_rate": 0.667,
-   "mean": 1.0709,
-   "n": 3,
-   "worst": -0.9314
+   "hit_rate": 0.455,
+   "mean": -0.0801,
+   "n": 11,
+   "worst": -3.5934
   },
-  "abstain_vs_random_mean": 1.1009,
+  "abstain_vs_random_mean": 0.319,
   "awaiting_ready_at": [
-   "2026-11-02T18:06:00+00:00",
    "2026-11-02T22:02:00+00:00",
    "2026-11-03T00:02:00+00:00",
    "2026-11-03T02:02:00+00:00",
@@ -349,37 +348,37 @@
   ],
   "could_not_look_reasons": {
    "0 of 1 symbols had 12 forward bars": 48,
-   "10 of 23 symbols had 12 forward bars": 44,
-   "11 of 23 symbols had 12 forward bars": 16,
-   "8 of 23 symbols had 12 forward bars": 1,
-   "9 of 23 symbols had 12 forward bars": 16
+   "9 of 23 symbols had 12 forward bars": 2
   },
-  "hindsight_best_cell_mean": 0.4783,
+  "hindsight_best_cell_mean": 6.6767,
   "horizon_bars": 12,
   "limits": "overlapping hourly windows (verdict uses the independent subset); cell-average baseline, not the best trade; hindsight_best_cell is an upper bound, never graded; abstain vs random is ~ the round-trip cost by symmetry (context only)",
-  "n_awaiting": 9,
-  "n_could_not_look": 125,
-  "n_independent": 3,
+  "n_awaiting": 8,
+  "n_could_not_look": 50,
+  "n_independent": 11,
   "n_independent_recorded": 12,
-  "n_priced": 12,
+  "n_priced": 88,
   "n_priced_without_listed_alternative": 0,
   "n_recorded": 146,
-  "n_without_near_signals": 12,
+  "n_without_near_signals": 73,
   "near_signal_mean_r_independent": {
-   "ci95": null,
-   "hit_rate": null,
-   "mean": null,
-   "n": 0,
-   "worst": null
+   "ci95": [
+    -0.7537,
+    0.6987
+   ],
+   "hit_rate": 0.667,
+   "mean": -0.0275,
+   "n": 15,
+   "worst": -3.2121
   },
   "state": "insufficient_n",
-  "verdict": "INSUFFICIENT_N (3 independent < 20)"
+  "verdict": "INSUFFICIENT_N (11 independent < 20)"
  },
  "rows": [
   {
    "class": "propose_entry vs random entry",
    "eta_earliest": "2026-11-15",
-   "eta_note": "20 more call(s) at 1.658/day + 1.0d to price; earliest, assumes each prices",
+   "eta_note": "20 more call(s) at 1.653/day + 1.0d to price; earliest, assumes each prices",
    "n_graded": 6,
    "n_needed": 30,
    "n_not_yet_graded": 4,
@@ -389,34 +388,31 @@
     "expired_unfilled": 0,
     "pre_cutoff_or_gate_ineligible": 3
    },
-   "recorded_per_day_7d": 1.658,
+   "recorded_per_day_7d": 1.653,
    "role": "entry_generation",
    "state": "insufficient_n",
    "verdict": "INDETERMINATE (n=6 < 30)"
   },
   {
-   "abstain_value_mean_r": 1.0709,
+   "abstain_value_mean_r": -0.0801,
    "class": "no_trade vs entering (counterfactual)",
    "eta_earliest": "2026-11-09",
    "eta_note": "8 more call(s) at 2.0/day + 3d to price; earliest, assumes each prices",
-   "n_graded": 3,
+   "n_graded": 11,
    "n_needed": 20,
-   "n_not_yet_graded": 143,
-   "n_priced_overlapping": 12,
+   "n_not_yet_graded": 135,
+   "n_priced_overlapping": 88,
    "n_recorded": 146,
    "not_yet_graded_breakdown": {
     "0 of 1 symbols had 12 forward bars": 48,
-    "10 of 23 symbols had 12 forward bars": 44,
-    "11 of 23 symbols had 12 forward bars": 16,
-    "8 of 23 symbols had 12 forward bars": 1,
-    "9 of 23 symbols had 12 forward bars": 16,
-    "awaiting_horizon": 9,
-    "priced_but_overlapping_not_independent": 9
+    "9 of 23 symbols had 12 forward bars": 2,
+    "awaiting_horizon": 8,
+    "priced_but_overlapping_not_independent": 77
    },
    "recorded_per_day_7d": 2.0,
    "role": "entry_generation",
    "state": "insufficient_n",
-   "verdict": "INSUFFICIENT_N (3 independent < 20)"
+   "verdict": "INSUFFICIENT_N (11 independent < 20)"
   },
   {
    "ci95_delta_r": [
@@ -425,7 +421,7 @@
    ],
    "class": "tighten_sl",
    "eta_earliest": "2026-11-07",
-   "eta_note": "9 more call(s) at 2.629/day + 1.0d to price; earliest, assumes each prices",
+   "eta_note": "9 more call(s) at 2.617/day + 1.0d to price; earliest, assumes each prices",
    "mean_delta_r": 0.6787,
    "n_applied": 0,
    "n_graded": 9,
@@ -437,7 +433,7 @@
     "replay_mismatch": 1,
     "trade_open": 1
    },
-   "recorded_per_day_7d": 2.629,
+   "recorded_per_day_7d": 2.617,
    "role": "in_trade (live review)",
    "state": "insufficient_n",
    "verdict": "HOLD_SCOPE (INDETERMINATE: n=9 < 20)"
@@ -463,7 +459,7 @@
    "ci95_delta_r": null,
    "class": "partial_close",
    "eta_earliest": "2026-12-25",
-   "eta_note": "19 more call(s) at 0.366/day + 1.0d to price; earliest, assumes each prices",
+   "eta_note": "19 more call(s) at 0.364/day + 1.0d to price; earliest, assumes each prices",
    "mean_delta_r": null,
    "n_applied": 0,
    "n_graded": 0,
@@ -475,7 +471,7 @@
     "replay_mismatch": 1,
     "trade_open": 1
    },
-   "recorded_per_day_7d": 0.366,
+   "recorded_per_day_7d": 0.364,
    "role": "in_trade (live review)",
    "state": "insufficient_n",
    "verdict": "HOLD_SCOPE (INDETERMINATE: n=0 < 20)"
@@ -499,7 +495,7 @@
     "replay_mismatch": 1,
     "trade_open": 1
    },
-   "recorded_per_day_7d": 3.492,
+   "recorded_per_day_7d": 3.482,
    "role": "in_trade (live review)",
    "state": "graded",
    "verdict": "PROPOSE_WIDEN"
@@ -585,7 +581,7 @@
    "not_yet_graded_breakdown": {
     "trade_still_open_or_not_joined": 63
    },
-   "recorded_per_day_7d": 25.601,
+   "recorded_per_day_7d": 26.195,
    "role": "in_trade (live review)",
    "state": "graded",
    "verdict": null
