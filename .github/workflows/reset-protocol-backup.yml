@@ -1,0 +1,120 @@
+name: reset-protocol-backup
+
+# RESET-PROTOCOL (operator, 2026-11-02): the BACKUP trigger for the weekly reset protocol, so the
+# post-reset work starts even if the primary Claude routine (Wed 18:05Z) never fires or the operator
+# is not around. Contract: .claude/skills/manager/SKILL.md § "Weekly reset protocol"; jobs and
+# receipts: config/reset_protocol.yaml, scripts/ops/reset_protocol.py.
+#
+#   Wed 18:15Z  WAKE   if the reset has no receipt on main, post ONE comment on the standing ops-flags
+#                      PR (#17895) -- `RESET: weekly usage reset at <ts>; run reset protocol` -- which
+#                      wakes the subscribed manager (the same path live-review-wake.yml uses). If the
+#                      primary trigger already wrote its `started` receipt, post nothing and stop.
+#   Wed 19:00Z  CHECK  if there is still no receipt: post a RED-FLAG comment on the same PR and send a
+#                      send-ping system-action to the operator's Telegram.
+#
+# Gates this adds or changes: none. Comments and one ping only; it starts no lane, edits no config,
+# halts nothing. Token-free: NO Claude / Anthropic API spend (it is `gh` + python only).
+# Idempotent: each comment carries a hidden marker per reset date and is posted at most once.
+
+on:
+  schedule:
+    - cron: "15 18 * * 3"
+    - cron: "0 19 * * 3"
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "wake (post the RESET comment) or check (red-flag if no receipt)"
+        type: choice
+        options: [wake, check]
+        default: wake
+      reset_date:
+        description: "Reset date YYYY-MM-DD (blank = today, UTC)"
+        type: string
+        default: ""
+      live:
+        description: "Post the comment / ping (false = print only)"
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+  pull-requests: write
+  issues: write
+  actions: write   # gh workflow run system-actions.yml (send-ping)
+
+concurrency:
+  group: reset-protocol-backup
+  cancel-in-progress: false
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      GITHUB_REPOSITORY: ${{ github.repository }}
+      OPS_FLAGS_PR: "17895"
+      EVENT_NAME: ${{ github.event_name }}
+      SCHEDULE: ${{ github.event.schedule }}
+      IN_MODE: ${{ inputs.mode }}
+      IN_DATE: ${{ inputs.reset_date }}
+      IN_LIVE: ${{ inputs.live }}
+      RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - run: pip install --quiet pyyaml
+      - name: Wake or check
+        run: |
+          set -euo pipefail
+          if [ "$EVENT_NAME" = "schedule" ]; then
+            LIVE=true
+            case "$SCHEDULE" in
+              "15 18 * * 3") MODE=wake ;;
+              "0 19 * * 3")  MODE=check ;;
+              *) echo "unknown schedule $SCHEDULE" >&2; exit 1 ;;
+            esac
+            RESET_DATE="$(date -u +%Y-%m-%d)"
+          else
+            MODE="$IN_MODE"; LIVE="$IN_LIVE"
+            RESET_DATE="${IN_DATE:-$(date -u +%Y-%m-%d)}"
+          fi
+          case "$RESET_DATE" in [0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]) ;; *) echo "bad reset_date" >&2; exit 1 ;; esac
+          TS="${RESET_DATE}T18:00Z"
+          echo "mode=$MODE reset=$TS live=$LIVE" | tee -a "$GITHUB_STEP_SUMMARY"
+
+          # Receipt on main? exit 0 found, 3 none; anything else is a failed look, never "none".
+          set +e
+          python3 scripts/ops/reset_protocol.py --receipt "$TS" --check | tee -a "$GITHUB_STEP_SUMMARY"
+          RC=${PIPESTATUS[0]}
+          set -e
+          if [ "$RC" -eq 0 ]; then echo "receipt exists: nothing to do" | tee -a "$GITHUB_STEP_SUMMARY"; exit 0; fi
+          if [ "$RC" -ne 3 ]; then echo "could not read the receipt store (rc=$RC); posting nothing" >&2; exit 1; fi
+
+          # Idempotence: one comment per marker.
+          post_once() {  # $1 marker  $2 body
+            if gh api "repos/${GITHUB_REPOSITORY}/issues/${OPS_FLAGS_PR}/comments" --paginate --jq '.[].body' \
+                 | grep -qF "$1"; then
+              echo "already posted ($1)" | tee -a "$GITHUB_STEP_SUMMARY"; return 1
+            fi
+            if [ "$LIVE" = "true" ]; then
+              gh pr comment "$OPS_FLAGS_PR" --repo "$GITHUB_REPOSITORY" --body "$(printf '%s\n\n<!-- %s -->' "$2" "$1")"
+              echo "posted ($1)" | tee -a "$GITHUB_STEP_SUMMARY"
+            else
+              echo "DRY RUN would post ($1): $2" | tee -a "$GITHUB_STEP_SUMMARY"
+            fi
+            return 0
+          }
+
+          if [ "$MODE" = "wake" ]; then
+            post_once "reset-protocol:wake:${RESET_DATE}" "RESET: weekly usage reset at ${TS}; run reset protocol" || true
+          else
+            if post_once "reset-protocol:red:${RESET_DATE}" "RED-FLAG: no reset-protocol receipt for the ${TS} reset an hour after it. The primary trigger and the 18:15Z wake did not start the protocol. Manager: run it now (manager SKILL § Weekly reset protocol). Run: ${RUN_URL}"; then
+              if [ "$LIVE" = "true" ]; then
+                gh workflow run system-actions.yml -f action=send-ping \
+                  -f "message=RED FLAG: the weekly reset protocol has not started (no receipt for the ${TS} reset, 19:00Z check). The manager has been woken on the ops-flags PR; if nothing moves, open the manager session." \
+                  -f priority=high -f target=claude
+              fi
+            fi
+          fi

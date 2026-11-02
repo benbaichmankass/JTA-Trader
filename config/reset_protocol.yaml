@@ -1,0 +1,170 @@
+# THE WEEKLY RESET PROTOCOL — the ONE source (operator, 2026-11-02, "Build now as specced").
+#
+# Gates this adds or changes: none. (Declares WHAT the manager dispatches after the weekly usage
+# reset and WHEN; it decides no execution, mode, promotion or merge. Not a third execution gate.)
+#
+# Read by: scripts/ops/reset_protocol.py (--plan / --receipt / --sweep), the manager skill
+# § "Weekly reset protocol", .github/workflows/reset-protocol-backup.yml. The Claude routines are
+# created from THIS file by the manager; the file does not schedule anything itself.
+#
+# reset: the weekly usage bar resets Wed 18:00Z (manager SKILL § "Reviews first after the reset").
+#   offset_minutes counts from that instant. Today's cascade was READ from the enabled routines on
+#   2026-11-02 (list_triggers): audit 18:31, review prep 18:53, health 19:11, programme 19:29, CJ-7 20:13.
+#   Thursday planning stays its OWN routine (Thu 06:17Z, trig_01VKbpUoD72EAAs8oPUVU5Lm) and is not a job here.
+#
+# cadence:
+#   weekly    every reset
+#   monthly   the FIRST reset of the calendar month (the Wednesday reset whose UTC day-of-month <= 7)
+#   quarterly the first reset of Jan / Apr / Jul / Oct
+# supersedes: when this job is due, the named job is NOT dispatched that reset (one deep audit replaces
+#   the single rotating pass, it does not stack on top of it).
+# dedupe_tag: the lane tag the manager checks (list_sessions, created in the last dedupe_hours) before
+#   dispatching, so a second trigger or a re-run never double-dispatches.
+# ceiling_usd: API-equivalent dollars, the per-lane comparison unit (NOT the plan-allowance meter).
+
+reset:
+  weekday: wed
+  hour_utc: 18
+  minute_utc: 0
+
+jobs:
+  - name: weekly-audit
+    cadence: weekly
+    order: 1
+    offset_minutes: 31
+    model: claude-opus-5-5
+    ceiling_usd: 15
+    skill: .claude/skills/weekly-audit/SKILL.md
+    dedupe_tag: lane:WEEKLY-AUDIT
+    dedupe_hours: 24
+    note: CORE every week plus the rotating deep pass (ISO week mod 4). Routine trig_014evBo5FLDzboVCeTv2PVW2.
+
+  - name: perf-review-prep
+    cadence: weekly
+    order: 2
+    offset_minutes: 53
+    model: claude-opus-5-5
+    ceiling_usd: 20
+    skill: .claude/skills/performance-review/SKILL.md
+    dedupe_tag: lane:PERF-REVIEW-PREP
+    dedupe_hours: 24
+    lookback_days: 30   # operator 2026-11-02: "weekly with a look at the last month as well, every week"
+    note: >-
+      WEEKLY, never monthly. Full two-layer /performance-review including the 30-day lookback window
+      (the skill's lifetime / 90d / 30d / 7d windows) on every run. Routine trig_01N7sV8R7TxBN8xdvh3dnaLt.
+
+  - name: ml-frontier-prep
+    cadence: weekly
+    order: 3
+    offset_minutes: 53
+    model: claude-opus-5-5
+    ceiling_usd: 16
+    skill: .claude/skills/ml-review/SKILL.md   # plus .claude/skills/frontier-research/SKILL.md, run in full
+    dedupe_tag: lane:ML-FRONTIER-PREP
+    dedupe_hours: 24
+    note: Same routine as perf-review-prep (three parallel lanes). Queues no units; proposes them.
+
+  - name: practice-refresh
+    cadence: weekly
+    order: 4
+    offset_minutes: 53
+    model: claude-opus-5-5
+    ceiling_usd: 16
+    skill: .claude/skills/frontier-research/SKILL.md   # its Practice & methodology refresh track
+    dedupe_tag: lane:PRACTICE-REFRESH
+    dedupe_hours: 24
+    note: Same routine as perf-review-prep. Lane prompt is embedded in trig_01N7sV8R7TxBN8xdvh3dnaLt.
+
+  - name: health-review
+    cadence: weekly
+    order: 5
+    offset_minutes: 71
+    model: claude-opus-5-5
+    ceiling_usd: 12
+    skill: .claude/skills/health-review/SKILL.md
+    dedupe_tag: lane:HEALTH-REVIEW
+    dedupe_hours: 24
+    note: Routine trig_013GU17584wu4HJYEkTF1KBk (bound to the assistant manager session).
+
+  - name: programme-review
+    cadence: weekly
+    order: 6
+    offset_minutes: 89
+    model: claude-opus-5-5
+    ceiling_usd: 12
+    skill: .claude/skills/programme-review/SKILL.md
+    dedupe_tag: lane:PROGRAMME-REVIEW
+    dedupe_hours: 24
+    note: One HELD PR (research/programmes/** is landing machinery). Routine trig_015PQVokJGCy9asw9Ku62GNW.
+
+  - name: cj7-weekly
+    cadence: weekly
+    order: 7
+    offset_minutes: 133
+    model: claude-sonnet-5-5
+    ceiling_usd: 3
+    skill: comms/claude_judgments/backfill/tier-a/REPORT.md   # § 5; not a SKILL.md
+    dedupe_tag: lane:CJ-7-WEEKLY
+    dedupe_hours: 24
+    note: Blind-then-reveal grading, $3 cap. Routine trig_01EmjDpGzpc1GnRJQfToXCW2.
+
+  # ---- monthly: first reset of the calendar month. Caps are PROPOSALS (operator did not name them). ----
+  - name: deep-audit
+    cadence: monthly
+    order: 1
+    offset_minutes: 31
+    model: claude-opus-5-5
+    ceiling_usd: 30     # PROPOSED: the weekly audit's $15 covers CORE + ONE deep pass; all four passes ~ 2x
+    skill: .claude/skills/weekly-audit/SKILL.md
+    supersedes: weekly-audit
+    dedupe_tag: lane:DEEP-AUDIT
+    dedupe_hours: 24
+    note: >-
+      The weekly-audit skill with ALL FOUR rotation passes (0 OUTCOME+INDEPENDENCE, 1 CONSISTENCY+LIVENESS,
+      2 MODULARITY, 3 DESIGN CRITICISM) instead of the single ISO-week-mod-4 pass. May be split into two
+      lanes (CORE + passes 0-1, passes 2-3) if one context cannot carry it; both under the same cap.
+
+  - name: roadmap-rebaseline
+    cadence: monthly
+    order: 2
+    offset_minutes: 107
+    model: claude-opus-5-5
+    ceiling_usd: 10     # PROPOSED
+    skill: null         # no skill exists; the brief below IS the spec (a skill is a follow-up if it recurs)
+    dedupe_tag: lane:ROADMAP-REBASELINE
+    dedupe_hours: 24
+    note: >-
+      Re-baseline ROADMAP.md's generated block against reality: python3 scripts/ops/roadmap_map.py --report,
+      every milestone's status/where text vs its checklist rows and landed evidence, stale or orphan
+      milestones, goals with no live row. Proposes edits to docs/roadmap/milestones.yaml; the yaml is
+      edited only once agreed in Thursday planning (manager SKILL § roadmap loop). One PR, no memo.
+
+  - name: cost-infra-review
+    cadence: monthly
+    order: 3
+    offset_minutes: 125
+    model: claude-sonnet-5-5
+    ceiling_usd: 8      # PROPOSED
+    skill: null         # no skill exists; the brief below IS the spec
+    dedupe_tag: lane:COST-INFRA-REVIEW
+    dedupe_hours: 24
+    note: >-
+      Month of lane spend vs ceilings and vs value (scripts/ops/spend_meter.py, PACE rows); recurring
+      routines and workflows that cost minutes or dollars without being read; VM / OCI / CI-minute
+      footprint; Nothing-spends-API-credits check. Every finding becomes a row, a pipeline item or a
+      kill with a reason. Report only; no infra mutation (Tier 2 stays operator-gated).
+
+# One-shot items to start right after a reset. Each runs ONCE: the key is recorded in the receipt
+# and never re-listed. Remove an item from this list in the PR that confirms it started.
+after_reset:
+  - key: PROJECT-PITCH-DECK
+    reason: >-
+      Operator queued it behind the 2026-11-04 reset so it does not compete with the pre-reset usage
+      budget. (No checklist row or doc by this name was found on main at authoring, 2026-11-02; the manager
+      supplies the brief from the operator's own words.)
+  - key: STRUCTURE-EXITS-DEFAULT
+    reason: >-
+      Kick off the structure-based default exit (replaces the tp_r 50.0 sentinel TPs, e.g. MGC; TP doctrine,
+      ARCHITECTURE-CANONICAL § "TP doctrine"). Named in live-review rows as the owner of that sentinel.
+      (No row of this name on main at authoring; the manager supplies the brief.) Tier 3 pieces go to the
+      operator with the exact change.

@@ -212,6 +212,12 @@ CADENCE_REGISTRY: dict[str, dict] = {
         "why": "writes the incident ledger only when an incident occurs, so a quiet watchdog leaves no receipt by design; "
                "a stopped watchdog is observed by claude-run-failure-alert (crashed runs) and by research-ops reading the Actions run list",
     },
+    "reset-protocol-backup.yml": {
+        "receipt": None,
+        "why": "weekly (Wed 18:15Z / 19:00Z); posts an ops-flags comment only when the reset has no receipt in "
+               "comms/ops/reset_receipts.jsonl, so a reset the primary trigger already handled leaves no artifact by design; "
+               "a crashing run is observed by claude-run-failure-alert, and the receipt's absence IS the signal it reports",
+    },
     "live-review-wake.yml": {
         "receipt": None,
         "why": "posts an ops-flags comment only when a live-review event is newly due (or a could-not-look flag "
