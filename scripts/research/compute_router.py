@@ -221,6 +221,17 @@ def cpu_only_bakeoff(entry: Dict[str, Any]) -> bool:
 RUNNER_ONLY_KEYS = ("runner_only", "needs_secrets", "needs_internet", "why_runner")
 
 
+def candle_dataset_covers(entry: Dict[str, Any]) -> bool:
+    """KAGGLE-CANDLES (2026-11-02): True when the published candle dataset holds every candle this unit fetches at run time, so
+    its free-text `why_runner` ('fetches keyless public candles') no longer pins it to the GitHub runner. Checked against the
+    committed coverage record (comms/research/candle_dataset/coverage.json), which the publish workflow's manifest produces."""
+    try:
+        from scripts.research import candle_dataset as cd  # noqa: PLC0415
+        return cd.covers(entry)[0]
+    except Exception:  # allow-silent: coverage unreadable -> the unit stays runner-only (the safe, pre-existing behaviour)
+        return False
+
+
 def runner_only_reason(entry: Dict[str, Any]) -> Optional[str]:
     """Why this unit must stay on github_runner, or None. `routing.why_runner` (RESEARCH-LOOP-AUDIT RC5: the author's one-line
     reason, e.g. 'fetches keyless public candles') and the explicit booleans all mean the same thing: the Kaggle kernel
@@ -230,6 +241,8 @@ def runner_only_reason(entry: Dict[str, Any]) -> Optional[str]:
         return None
     for k in RUNNER_ONLY_KEYS:
         if r.get(k):
+            if k == "why_runner" and candle_dataset_covers(entry):
+                continue        # the reason was "fetches public candles" and the Kaggle candle dataset now holds them
             return f"routing.{k}" + (f": {str(r[k])[:60]}" if isinstance(r[k], str) else "")
     return None
 
