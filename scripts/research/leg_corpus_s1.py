@@ -154,8 +154,42 @@ def station_metrics(legs: List[str], metas: Dict[str, Dict[str, Any]], now: date
             "cost_completeness": {"complete": cc, "of": tr, "share": round(cc / tr, 4) if tr else None}}
 
 
+def run_arms(leg: str, cfg: Dict[str, Any], arms: List[List[str]], d: Path, control: List[Dict[str, Any]], *, days: int,
+             start: Optional[str], end: Optional[str], non_crypto_source: str, runner: Any = None) -> Dict[str, Any]:
+    """STRUCTURED LEVER DESIGN (RESEARCH-TEMPLATES-STRUCTURED): the lever variants of one leg, on the control's own candles.
+
+    ``arms`` is the unit's registered ``[[label, spec], ...]`` (control ``A`` first, empty spec). Each variant is the SAME
+    harness run with ONE config key stepped (exit_lever_ablation.parse_arm / arm_cfg), written to ``<d>/arms/<label>/``
+    (trades.jsonl, bt.json); ``paths.jsonl`` is not kept for a variant. Contained per arm: a failed arm is recorded with its
+    reason and never stops the corpus. The control is the corpus graded by the station metrics; variants are MEASURED, not graded."""
+    import exit_lever_ablation as ela
+    import path_metric_giveback as pmg
+    run = runner or pmg.run_leg_paths
+    csv = str(d / f"{leg}__data.csv")
+    net = lambda rows: round(sum(float(t.get("net_r") or 0.0) for t in rows), 4)  # noqa: E731
+    out: Dict[str, Any] = {"A": {"spec": "", "n": len(control), "net_r": net(control)}}
+    for label, spec in arms:
+        if not spec:
+            continue
+        ad = d / "arms" / label
+        ad.mkdir(parents=True, exist_ok=True)
+        try:
+            _lab, sets, unsets, _extra = ela.parse_arm(f"{label}={spec}")
+            rows, info = run(leg, ela.arm_cfg(cfg, sets, unsets), days=days, start=start, end=end, wd=ad, data_csv=csv,
+                             non_crypto_source=non_crypto_source)
+            (ad / "trades.jsonl").write_bytes((ad / f"{leg}__trades.jsonl").read_bytes())
+            (ad / "bt.json").write_bytes((ad / f"{leg}__bt.json").read_bytes())
+            for junk in (f"{leg}__trades.jsonl", f"{leg}__bt.json", f"{leg}__paths.jsonl"):
+                (ad / junk).unlink(missing_ok=True)
+            tr = read_jsonl(ad / "trades.jsonl")
+            out[label] = {"spec": spec, "n": len(tr), "net_r": net(tr), "delta_r_vs_A": round(net(tr) - out["A"]["net_r"], 4)}
+        except Exception as exc:  # noqa: BLE001  # allow-silent: contained per arm and recorded with its reason (no-halting rule)
+            out[label] = {"spec": spec, "state": "producer_failed", "reason": repr(exc)[:300]}
+    return out
+
+
 def run_family(family: str, out: Path, *, days: int, start: Optional[str], end: Optional[str], paths: bool,
-               non_crypto_source: str, root: Path = REPO) -> int:
+               non_crypto_source: str, root: Path = REPO, arms_by_leg: Optional[Dict[str, List[List[str]]]] = None) -> int:
     import path_metric_giveback as pmg
     fams = money_families(root)
     legs = fams.get(family, [])
@@ -173,12 +207,16 @@ def run_family(family: str, out: Path, *, days: int, start: Optional[str], end: 
                              (f"{leg}__paths.jsonl", "paths.jsonl")):
                 (d / dst).write_bytes((d / src).read_bytes())
                 (d / src).unlink()
+            trades = read_jsonl(d / "trades.jsonl")
+            lever_arms = run_arms(leg, cfgs[leg], (arms_by_leg or {}).get(leg) or [], d, trades, days=days, start=start,
+                                  end=end, non_crypto_source=non_crypto_source) if (arms_by_leg or {}).get(leg) else None
             (d / f"{leg}__data.csv").unlink(missing_ok=True)
             if not paths:
                 (d / "paths.jsonl").unlink(missing_ok=True)
-            trades = read_jsonl(d / "trades.jsonl")
             metas[leg] = leg_meta(leg, cfgs[leg], family, trades, info["bt"], now,
                                   {k: v for k, v in info["feed"].items() if k in ("source", "interval", "resample")})
+            if lever_arms:
+                metas[leg]["lever_arms"] = lever_arms
         except Exception as exc:  # noqa: BLE001  # allow-silent: contained per leg and recorded as state=producer_failed with the reason in meta.json + verdict (no-halting rule)
             metas[leg] = {"leg": leg, "family": family, "state": "producer_failed", "reason": repr(exc)[:400]}
         (d / "meta.json").write_text(json.dumps(metas[leg], indent=2, sort_keys=True))
@@ -192,7 +230,7 @@ def run_family(family: str, out: Path, *, days: int, start: Optional[str], end: 
                "read_state": ("measured" if ok else ("not_attempted" if not legs else "producer_failed")),
                "n": n if ok else None, "population": f"family {family}: {len(legs)} money legs, {days} d window",
                "note": ("every money leg covered" if full else f"not covered: {sm['coverage']['not_covered']}"),
-               "measurement": sm}
+               "measurement": dict(sm, lever_arms={lg: m["lever_arms"] for lg, m in metas.items() if m.get("lever_arms")} or None)}
     (out / "verdict.json").write_text(json.dumps(verdict, indent=2, sort_keys=True))
     (out / "manifest.json").write_text(json.dumps({"family": family, "legs": legs, "metas": metas,
                                                     "station_metrics": sm}, indent=2, sort_keys=True))
@@ -214,6 +252,22 @@ def _self_test() -> int:
     assert sm["fidelity"] == {"hash_equal": 3, "of": 4, "share": 0.75}, sm["fidelity"]  # a, b, e equal; c mismatched
     assert sm["cost_completeness"]["share"] == 0.5
     assert cost_completeness([])["share"] is None
+    import tempfile
+    calls = []
+
+    def stub(leg, cfg_, *, wd, data_csv, **_kw):
+        calls.append((cfg_.get("donchian"), data_csv))
+        if cfg_.get("donchian") == 99:
+            raise RuntimeError("boom")
+        (wd / f"{leg}__trades.jsonl").write_text(json.dumps({"net_r": 1.5}) + "\n" + json.dumps({"net_r": -0.5}) + "\n")
+        (wd / f"{leg}__bt.json").write_text("{}")
+        return [], {}
+    with tempfile.TemporaryDirectory() as td:
+        res = run_arms("a", cfg, [["A", ""], ["donchian_lo", "donchian=15"], ["bad", "donchian=99"]], Path(td),
+                       [{"net_r": 0.25}], days=10, start=None, end=None, non_crypto_source="auto", runner=stub)
+        assert res["A"] == {"spec": "", "n": 1, "net_r": 0.25} and res["donchian_lo"]["delta_r_vs_A"] == 0.75, res
+        assert res["bad"]["state"] == "producer_failed" and [c[0] for c in calls] == [15, 99], (res, calls)
+        assert all(c[1].endswith("a__data.csv") for c in calls) and (Path(td) / "arms/donchian_lo/trades.jsonl").is_file()
     print("self-test ok")
     return 0
 
@@ -228,6 +282,9 @@ def main(argv: Optional[List[str]] = None) -> int:
     ap.add_argument("--no-paths", action="store_true")
     ap.add_argument("--non-crypto-source", choices=("auto", "dukascopy"), default="auto")
     ap.add_argument("--list-families", action="store_true")
+    ap.add_argument("--arms-json", default=None,
+                    help='{"<leg>": [["A", ""], ["<label>", "key=value"], ...]}: the unit\'s registered lever design '
+                         "(scripts/research/lever_design.py). Variants are measured beside the control corpus, never graded.")
     ap.add_argument("--self-test", action="store_true")
     a = ap.parse_args(argv)
     if a.self_test:
@@ -238,7 +295,7 @@ def main(argv: Optional[List[str]] = None) -> int:
     if not a.family or not a.out:
         ap.error("--family and --out are required")
     return run_family(a.family, Path(a.out), days=a.days, start=a.start, end=a.end, paths=not a.no_paths,
-                      non_crypto_source=a.non_crypto_source)
+                      non_crypto_source=a.non_crypto_source, arms_by_leg=json.loads(a.arms_json) if a.arms_json else None)
 
 
 if __name__ == "__main__":

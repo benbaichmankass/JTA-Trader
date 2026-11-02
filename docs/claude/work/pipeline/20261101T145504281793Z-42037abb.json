@@ -1,0 +1,16 @@
+{
+  "due_when": {
+    "check_every_days": 7,
+    "due_date": "2026-11-08",
+    "kind": "date"
+  },
+  "id": "PI-20261101-MJFESSM5-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "checklist RESEARCH-TEMPLATES-STRUCTURED",
+    "rerun": "grep -n 'rotate' research/templates/roster-walkforward.yaml research/templates/leg-corpus-s1.yaml; ls research/queue | grep -c .; python3 scripts/research/queue_replenish.py --json | head -c 600"
+  },
+  "state": "queued",
+  "what": "[research templates] roster-walkforward / leg-corpus-s1 units freeze their lever at generation. roster-walkforward rotates (lever_key joins the identity, so a new lever after the map moves is a NEW weekly unit, old weekly units keep re-running -> unbounded growth of weekly units per leg); leg-corpus-s1 does NOT rotate (arms frozen at mint). Decide: retire a roster-walkforward unit once its lever has a map entry, and let leg-corpus-s1 rotate its lever on a cadence. Not a gate."
+}

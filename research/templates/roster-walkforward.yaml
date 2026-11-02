@@ -7,15 +7,29 @@ priority: 3
 # A compute class for the router and the queue views. Plan placement is still the explicit run.workflow below
 # (compute_router.plan honours an explicit workflow first), so this classifies the unit; it does not move it.
 compute: cpu_light
-title: "Walk-forward re-run of {leg}'s harness on fresh data (generated, weekly)"
-practice_precedent: "M2, M4 (docs/reference/trading-and-model-practice-principles.md): walk-forward on fresh data against a rule registered before the run"
+# STRUCTURED LEVER DESIGN (RESEARCH-TEMPLATES-STRUCTURED, 2026-11-01; OPERATING-PLAN § 2 "THE research workflow"): the unit is
+# NOT one harness configuration. The control arm A is the leg exactly as configured; the variants are one-factor low/high
+# steps of the NEXT lever family chosen from research/levers/<leg>.yaml (untested family first, then the family attribution
+# points at -- scripts/research/lever_design.py). `@ARMS@` is expanded by queue_replenish.render into `--arm LABEL=spec` pairs.
+# Before this change the unit ran the E7 harness at its DEFAULT params (not even the leg's config) and could only say
+# pass/fail on one configuration. Legs the ablation cannot route (claude_desk, e4_oi_shock_1h, turtle_soup) are filed: PI-20261101-MJFESSM5-0003.
+# Gates this adds or changes: none (defaults, not refusals).
+structured:
+  mode: leg
+  rotate: true            # a new lever (the map moved on) is a NEW unit; an old unit is never edited
+  correction: Holm
+  hypothesis: >-
+    the chosen lever family moves the leg's net-of-cost OOS R monotonically and fold-stably; a flat or spiky response is
+    recorded in the lever map as evidence of no edge / overfit, not discarded
+title: "Walk-forward lever sweep of {leg}: next lever {lever} (generated, weekly)"
+practice_precedent: "M2, M4 (docs/reference/trading-and-model-practice-principles.md): walk-forward on fresh data against a rule registered before the run; one-factor sensitivity before combinations"
 question: >-
-  Does {leg} ({symbol} {timeframe}, {harness} harness) still show net-of-cost
-  OOS edge when its harness is re-run on freshly fetched candles this week?
+  Does {leg} ({symbol} {timeframe}, {harness} harness) still show net-of-cost OOS edge on freshly fetched candles at its
+  configured settings (control arm A) -- and how does the next lever family on the lever map, {lever}, move that edge when
+  stepped one factor at a time (arms: see run.command / iteration.design)?
 why_this_matters: >-
-  A live leg's evidence record is a photograph; the roster trades the film.
-  A weekly harness re-run per leg is the cheapest standing check that the
-  offline edge the record claims is still there on data the record never saw.
+  A live leg's evidence record is a photograph; the roster trades the film. A weekly re-run keeps the control honest AND measures
+  one more lever of the leg per unit, so the lever map -- not a pass/fail on one configuration -- is what the research learns.
 power:
   expected_n: 50
   min_detectable_effect: 0.45
@@ -24,49 +38,60 @@ power:
   alpha: 0.05
   power: 0.8
   basis: >-
-    d=0.45 -> 39 trades at alpha 0.05 / power 0.8 (the E35 floor). n is the
-    harness's own OOS trade count; below 39 the unit grades indeterminate.
+    d=0.45 -> 39 trades at alpha 0.05 / power 0.8 (the E35 floor) for the CONTROL reading. Each variant is graded against the
+    control on the same trades (paired), with a 3-of-4 calendar-fold consistency bar and a materiality bar of 4.0 R over the
+    window; the number of variants is counted in iteration.multiple_testing and a best-of-k pass is a LEAD, never a finding.
   feasibility:
     source: none
     accrual_basis: >-
-      Free-lane candle fetch through scripts/ops/fetch_backtest_corpus.py;
-      Bybit-hosted symbols may land producer_failed on a GitHub runner (known
-      geoblock), which is recorded honestly rather than retried.
+      Free-lane candle fetch (binance_vision / yfinance); Bybit-hosted symbols may land producer_failed on a GitHub runner
+      (known geoblock), which is recorded honestly rather than retried.
 decision_rule:
-  id: "RULE-TPL-ROSTER-WALKFORWARD-NET-OF-COST"
+  id: "RULE-TPL-ROSTER-WALKFORWARD-LEVER-SWEEP"
   statistic: >-
-    The harness's summary net-of-cost OOS R (fee + slippage + funding via
-    execution_costs.resolve_cost_policy) and OOS trade count, as mapped by
-    scripts/research/harness_dispatch_result.py.
+    exit_lever_ablation.py --grade sweep: per variant, delta net R vs the control A, delta maxDD, and the number of 4 calendar
+    folds in which it beats A, all net of the full cost stack (execution_costs.resolve_cost_policy); the control's own n, net R
+    and fold signs are reported in verdict.json (the standing walk-forward reading).
   rule: >-
-    PASS IF net-of-cost OOS R > 0 with n >= 39. FAIL IF net-of-cost OOS R <= 0
-    with n >= 39 -- one pass; a FAIL re-queues for a confirmatory run and
-    two consecutive FAILs are a Gate-2 demotion INPUT (never a demotion by
-    this unit). indeterminate IF n < 39 or the producer failed.
+    PASS (a LEAD for a Tier-3 setting proposal after a holdout read, never applied here) IF some variant beats A by >= 4.0 R,
+    with maxDD no worse and >= 3 of 4 folds, at A's n >= 39. FAIL IF none does at n >= 39 (these settings are not better than the
+    configured ones; the lever FAMILY stays open until its map is flat/noisy at adequate power). indeterminate IF A's n < 39 or the
+    producer failed. The control A net R <= 0 at n >= 39 on two consecutive units is a Gate-2 demotion INPUT (never a demotion by
+    this unit). The result is appended to the leg's lever map either way.
 routing:
   needs_trainer_resident_data: false
   needs_gpu: false
   peak_memory_gb: 2.0
-  est_minutes: 20
-  basis: one harness invocation per unit on a GitHub runner.
+  est_minutes: 60
+  basis: one leg, <= 5 arms (control + 2 keys x low/high) through the committed-record argv builder on a GitHub runner.
 run:
-  workflow: research-harness-dispatch.yml
-  inputs:
-    harness: "{harness}"
-    symbol: "{symbol}"
-    timeframe: "{timeframe}"
-    research_unit: "{unit_id}"
+  workflow: research-script-run.yml
+  timeout_minutes: 120
+  command:
+    - python3
+    - scripts/research/exit_lever_ablation.py
+    - --leg
+    - "{leg}"
+    - "@ARMS@"
+    - --days
+    - "1830"
+    - --grade
+    - sweep
+    - --baseline
+    - A
+    - --delta-r
+    - "4.0"
+    - --folds
+    - "4"
+    - --fold-majority
+    - "3"
+    - --n-floor
+    - "39"
+    - --out
+    - "{out_dir}"
 lands:
   store: research/results/
   assert_field: read_state
   min_rows: 1
 grid:
-  legs: live_roster_legs_with_e7_harness
-harness_by_leg_pattern:
-  # leg-name pattern -> E7 harness name (research-harness-dispatch.yml choices)
-  "_pullback_": pullback
-  "squeeze_": squeeze
-  "fade_": fade
-  "fvg_range": fvg_range
-  "chop_scalp": chop_scalp
-  "orb_": orb
+  legs: live_roster_legs_ablatable
