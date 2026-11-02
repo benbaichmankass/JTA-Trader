@@ -35,7 +35,9 @@ on:
   schedule:
     - cron: "17 2 * * 2-6"
   issues:
-    types: [opened]
+    # `labeled` (not `opened`): a label added after creation, or re-added, must also trigger; creating an issue WITH the label
+    # fires `labeled` too. Under `opened` alone a late/re-added label (#22406) could never start a run.
+    types: [labeled]
 
 permissions:
   contents: read
@@ -51,7 +53,7 @@ jobs:
       github.event_name != 'issues' ||
       ((github.event.issue.user.login == github.repository_owner ||
         github.event.issue.user.login == 'github-actions[bot]') &&
-       contains(github.event.issue.labels.*.name, 'etf-history-request'))
+       github.event.label.name == 'etf-history-request')
     runs-on: ubuntu-latest
     timeout-minutes: 210
     steps:
@@ -107,11 +109,24 @@ jobs:
           TRAINER_USER: ${{ vars.TRAINER_VM_USER || 'ubuntu' }}
         run: |
           set -uo pipefail
-          out="$(ssh -i ~/.ssh/trainer_key -o BatchMode=yes -o StrictHostKeyChecking=accept-new -o ConnectTimeout=20 \
-            "${TRAINER_USER}@${TRAINER_IP}" 'mkdir -p ict-trading-bot/data/etf_history; df -BG --output=avail,size,pcent / | tail -1; du -sm ict-trading-bot/data/etf_history | cut -f1' 2>&1)"
-          avail="$(printf '%s\n' "$out" | sed -n 1p | awk '{gsub("G","",$1); print $1}')"
-          used_mb="$(printf '%s\n' "$out" | sed -n 2p)"
-          echo "trainer free GB=${avail} (disk line: $(printf '%s\n' "$out" | sed -n 1p)); etf_history store now ${used_mb} MB"
+          # ssh stderr ("Warning: Permanently added ... known hosts") must NOT be merged into the parsed output: it became line 1,
+          # `avail` parsed as "Warning:" and every backfill skipped its fetch as lowdisk with 43 GB actually free (#22421, #22353).
+          errf="$(mktemp)"
+          out="$(ssh -i ~/.ssh/trainer_key -o BatchMode=yes -o StrictHostKeyChecking=accept-new -o LogLevel=ERROR -o ConnectTimeout=20 \
+            "${TRAINER_USER}@${TRAINER_IP}" 'mkdir -p ict-trading-bot/data/etf_history; df -BG --output=avail,size,pcent / | tail -1; du -sm ict-trading-bot/data/etf_history | cut -f1' 2>"$errf")" || rc=$?
+          [ -s "$errf" ] && { echo "ssh stderr:"; sed -E 's/[0-9]{1,3}(\.[0-9]{1,3}){3}/<ip>/g' "$errf"; }
+          # Defensive parse: the df data line is the one shaped "<n>G <n>G <n>%"; du's line is a bare integer.
+          dfline="$(printf '%s\n' "$out" | grep -E '^[[:space:]]*[0-9]+G[[:space:]]+[0-9]+G[[:space:]]+[0-9]+%' | head -1)"
+          avail="$(printf '%s\n' "$dfline" | awk '{gsub("G","",$1); print $1}')"
+          used_mb="$(printf '%s\n' "$out" | grep -E '^[0-9]+$' | head -1)"
+          # An unreadable disk is a LOUD read failure, never reported as "low disk".
+          if ! [[ "${avail}" =~ ^[0-9]+$ ]]; then
+            echo "go=0" >> "$GITHUB_OUTPUT"
+            echo "readfail=1" >> "$GITHUB_OUTPUT"
+            echo "::error::could not read trainer disk (ssh rc=${rc:-0}); not a low-disk condition. Raw output: $(printf '%s' "$out" | tr '\n' '|')"
+            exit 1
+          fi
+          echo "trainer free GB=${avail} (disk line: ${dfline}); etf_history store now ${used_mb:-unknown} MB"
           echo "avail=${avail}" >> "$GITHUB_OUTPUT"
           # MEASURED 2026-11-01 (trainer-vm-diag #22140): 97 GB disk, 53 GB used, 45 GB free. PROJECTION for the 1m base on ~770 symbols
           # with data: ~14 GB (range 10-25; synthetic-bar bytes/row x estimated rows, NOT yet measured on the real data). Floor: do not
@@ -134,7 +149,7 @@ jobs:
           YM="$(date -u +%Y-%m)"; YM1="$(date -u -d "$(date -u +%Y-%m-01) -1 month" +%Y-%m)"
           # The store is GBs: a refresh needs only the manifest and the two newest monthly partitions per series. First run: nothing
           # exists yet (rsync exit 23), the expected empty start.
-          rsync -a --prune-empty-dirs -e "ssh -i ~/.ssh/trainer_key -o BatchMode=yes -o StrictHostKeyChecking=accept-new -o ConnectTimeout=20" \
+          rsync -a --prune-empty-dirs -e "ssh -i ~/.ssh/trainer_key -o BatchMode=yes -o StrictHostKeyChecking=accept-new -o LogLevel=ERROR -o ConnectTimeout=20" \
             --include='*/' --include='MANIFEST.json' --include="*/1m/${YM}.parquet" --include="*/1m/${YM1}.parquet" --exclude='*' \
             "${TRAINER_USER}@${TRAINER_IP}:ict-trading-bot/data/etf_history/" store/ 2>&1 | sed -E 's/[0-9]{1,3}(\.[0-9]{1,3}){3}/<ip>/g' || true
           echo "pulled: $(find store -name '*.parquet' | wc -l) partitions, manifest: $(test -f store/MANIFEST.json && echo yes || echo no)"
@@ -146,7 +161,7 @@ jobs:
         run: |
           set -uo pipefail
           mkdir -p store
-          rsync -a -e "ssh -i ~/.ssh/trainer_key -o BatchMode=yes -o StrictHostKeyChecking=accept-new -o ConnectTimeout=20" \
+          rsync -a -e "ssh -i ~/.ssh/trainer_key -o BatchMode=yes -o StrictHostKeyChecking=accept-new -o LogLevel=ERROR -o ConnectTimeout=20" \
             "${TRAINER_USER}@${TRAINER_IP}:ict-trading-bot/data/etf_history/MANIFEST.json" store/ 2>&1 | sed -E 's/[0-9]{1,3}(\.[0-9]{1,3}){3}/<ip>/g' || true
       - name: Probe (what the plan serves) + keyless sources
         if: steps.mode.outputs.mode == 'probe'
@@ -188,7 +203,7 @@ jobs:
           TRAINER_USER: ${{ vars.TRAINER_VM_USER || 'ubuntu' }}
         run: |
           set -uo pipefail
-          SSH="ssh -i $HOME/.ssh/trainer_key -o BatchMode=yes -o StrictHostKeyChecking=accept-new -o ConnectTimeout=20"
+          SSH="ssh -i $HOME/.ssh/trainer_key -o LogLevel=ERROR -o BatchMode=yes -o StrictHostKeyChecking=accept-new -o ConnectTimeout=20"
           DEST="${TRAINER_USER}@${TRAINER_IP}:ict-trading-bot/data/etf_history/"
           YM="$(date -u +%Y-%m)"; YM1="$(date -u -d "$(date -u +%Y-%m-01) -1 month" +%Y-%m)"
           # DECISION (manager, operator's design mandate 2026-11-01): the HF market-data lake (bentzbk/jta-market-lake) is the STORE OF RECORD;
@@ -319,7 +334,7 @@ jobs:
             await github.rest.issues.createComment({ owner: context.repo.owner, repo: context.repo.repo, issue_number: context.issue.number, body });
             await github.rest.issues.update({ owner: context.repo.owner, repo: context.repo.repo, issue_number: context.issue.number, state: 'closed' });
       - name: Red flag on a failed fetch, stale/missing series or low disk (ONE flag; the next run retries)
-        if: always() && (steps.fetch.outcome == 'failure' || steps.verify.outcome == 'failure' || steps.disk.outputs.lowdisk == '1' || steps.fetch.outputs.lowdisk == '1')
+        if: always() && (steps.fetch.outcome == 'failure' || steps.verify.outcome == 'failure' || steps.disk.outputs.lowdisk == '1' || steps.disk.outputs.readfail == '1' || steps.fetch.outputs.lowdisk == '1')
         run: |
           echo "::error::etf-history: fetch=${{ steps.fetch.outcome }} verify=${{ steps.verify.outcome }} lowdisk=${{ steps.disk.outputs.lowdisk }} (see steps above)"
           exit 1
