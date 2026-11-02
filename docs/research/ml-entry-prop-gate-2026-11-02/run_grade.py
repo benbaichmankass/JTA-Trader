@@ -2,12 +2,16 @@
 # wiring: research/queue/RQ-20261102-5e1a-01.yaml (lane ML-ENTRY-PROP-GATE)
 """ONE run of RULE-P5-GATE-BRK-PER-LEG-V3 for ml_entry (ETH+SOL ledger) on breakout_2 / tradeify_1 / velotrade_1.
 Cells = prop_gate.SIM params (same as every other gate cell), seeds 1-5, arms firm+cur; verdict taken on the firm arm."""
-import json, subprocess, sys, statistics as st
+import json
+import subprocess
+import sys
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
+
 REPO = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(REPO / "scripts/research"))
 import prop_gate as G
+
 D = Path(__file__).parent
 LED = D / "ledgers/ml_entry_ethsol.jsonl"
 rows = [json.loads(l) for l in LED.read_text().splitlines()]
@@ -38,7 +42,7 @@ for acct in G.SIM:
         null = G.null_cell(rows, "ml_entry", acct, arm, D / f"cells/null_{acct}_{arm}.json", D / "null_work")
         v3 = G.grade_v3(r["verdict"], edge)
         res["firms"].setdefault(acct, {})[arm] = {"v2": r, "edge": edge, "null": null, "v3_verdict": v3}
-json.dump(res, open(D / "result.json", "w"), indent=1)
+(D / "result.json").write_text(json.dumps(res, indent=1))
 for acct, arms in res["firms"].items():
     for arm, x in arms.items():
         print(acct, arm, x["v3_verdict"], "n", x["v2"]["n"], "ev_med", x["v2"]["ev_median_usd"], "ev_worst", x["v2"]["ev_worst_usd"],

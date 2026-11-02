@@ -6,9 +6,13 @@ Same population as comms/strategy_evidence/ml_entry.json (served ENTRY trades 20
 the 5-symbol replay must reproduce the record's extend_only mean (0.0271299...) before the ETH+SOL restriction is applied.
 Rows carry gross_r so prop_ev_sim --costs breakout re-prices them under each firm stack.
 """
-import json, sys, time
+import json
+import sys
 from pathlib import Path
-import numpy as np, pandas as pd
+
+import numpy as np
+import pandas as pd
+
 REPO = Path(__file__).resolve().parents[3]
 sys.path[:0] = [str(REPO), str(REPO / "scripts" / "research")]
 import ml_decision_entry as E

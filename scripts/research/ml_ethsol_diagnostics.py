@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# wiring: research/programmes/05-prop.yaml (nodes P5-MLDIAG-DECOMP / -RISKCURVE / -MINEDGE; ML-PROP-ITERATE)
+# wiring: manual-only - run by units minted from programme-05 nodes (research/programmes/05-prop.yaml P5-MLDIAG-*), a source this guard does not scan
 """Why does ml_entry fail the prop gate on ETH+SOL, and what lever (sizing / selection / a prop-specific model) could change that?
 
 Three read-only sections on the ml_entry v1 ETH+SOL gate ledger (n=381, held-out 2025-10-01..2026-09-30; shape in
