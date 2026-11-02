@@ -1,0 +1,71 @@
+{
+ "leg": "ml_entry",
+ "harness": "build_ledger.py -> prop_ev_sim (path mode) via scripts/research/prop_gate.py (account_compat_matrix equivalent: one-leg book, configured risk_pct, dd switch 0.8)",
+ "ruleset": "breakout_turbo_1step",
+ "account_scope": "breakout_2 (headline); per-firm results in per_firm",
+ "ev_net_usd": -13.55,
+ "p_breach": 0.875,
+ "n_trades": 381,
+ "decision_rule": {
+  "id": "RULE-P5-GATE-BRK-PER-LEG-V3",
+  "registered_at": "2026-11-02T10:47:24Z",
+  "verdict": "fail"
+ },
+ "unit": "research/queue/RQ-20261102-5e1a-01.yaml",
+ "per_firm": {
+  "breakout_2": {
+   "ruleset": "breakout_turbo_1step",
+   "verdict_firm_arm": "FAIL",
+   "verdict_current_stack_arm": "FAIL",
+   "ev_net_usd_median": -13.55,
+   "ev_net_usd_worst_seed": -14.4,
+   "ev_net_usd_current_stack_median": -16.52,
+   "p_breach_eval_median": 0.775,
+   "p_breach_eval_worst": 0.784,
+   "ceiling": 0.889,
+   "p_breach_lifetime_worst": 0.875,
+   "edge_mean_net_r": 0.01704,
+   "edge_ci95_lower": -0.1057,
+   "edge_ci95_upper": 0.13978,
+   "zero_edge_null_ev_usd": -16.65,
+   "n_trades": 381
+  },
+  "tradeify_1": {
+   "ruleset": "tradeify_247_1step",
+   "verdict_firm_arm": "FAIL",
+   "verdict_current_stack_arm": "FAIL",
+   "ev_net_usd_median": -83.7,
+   "ev_net_usd_worst_seed": -86.88,
+   "ev_net_usd_current_stack_median": -97.91,
+   "p_breach_eval_median": 0.682,
+   "p_breach_eval_worst": 0.712,
+   "ceiling": 0.75,
+   "p_breach_lifetime_worst": 0.8,
+   "edge_mean_net_r": 0.01704,
+   "edge_ci95_lower": -0.1057,
+   "edge_ci95_upper": 0.13978,
+   "zero_edge_null_ev_usd": -101.39,
+   "n_trades": 381
+  },
+  "velotrade_1": {
+   "ruleset": "velotrade_classic_1step",
+   "verdict_firm_arm": "FAIL",
+   "verdict_current_stack_arm": "FAIL",
+   "ev_net_usd_median": -26.75,
+   "ev_net_usd_worst_seed": -29.18,
+   "ev_net_usd_current_stack_median": -40.43,
+   "p_breach_eval_median": 0.578,
+   "p_breach_eval_worst": 0.597,
+   "ceiling": 0.73,
+   "p_breach_lifetime_worst": 0.721,
+   "edge_mean_net_r": 0.02233,
+   "edge_ci95_lower": -0.10039,
+   "edge_ci95_upper": 0.14505,
+   "zero_edge_null_ev_usd": -39.66,
+   "n_trades": 381
+  }
+ },
+ "population": "ml_entry served ENTRY v1 (extend-only TP), held-out 2025-10-01..2026-09-30, ETHUSDT+SOLUSDT only (176+205 trades of the 907-trade evidence record; 5-symbol replay reproduces its +0.027130 R exactly)",
+ "source": "docs/research/ml-entry-prop-gate-2026-11-02/ (ledgers/, cells/, result.json)",
+ "note": "FAIL on all three firms: V2 fails on EV (< 0 at every seed on the firm arm) and V3 edge CI lower bound is about -0.10 R. No roster change. Fail-closed record: verdict 'fail' is refused by prop-roster-gate-guard."
+}
