@@ -162,8 +162,6 @@ markers that were cheaper to lie to than to satisfy — `new-table-wiring-guard`
 |---|---|---|
 | `docs/claude/DUE.md` | `scripts/ops/render_due_list.py` | verified: generator exists and names the file |
 | `docs/claude/READOUT.md` | `scripts/ops/constraint_readout.py` | verified: generator exists and names the file |
-| `docs/research/ml-entry-prop-gate-2026-11-02/RESULT.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
-| `docs/research/ml-prop-iterate-2026-11-02/PROP-ML-DESIGN.md` | architecture | unknown | — | never | `name:design-declares-a-contract / not-assessed` | — |
 | `docs/research/ml-volgate-wf-2026-10-29/README.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
 | `docs/strategy-coverage-matrix.md` | `scripts/check_strategy_coverage.py` | verified: generator exists and names the file |
 | `docs/training-population-matrix.md` | `scripts/check_training_population.py` | verified: generator exists and names the file |
@@ -993,8 +991,10 @@ real top-level `docs/*.md` and fails if the population builder cannot see it.
 | `docs/research/ml-decision-models-2026-11-01/DESIGN.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
 | `docs/research/ml-decision-models-2026-11-01/DIAGNOSIS.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
 | `docs/research/ml-decision-models-2026-11-01/TP-REVISION.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
+| `docs/research/ml-entry-prop-gate-2026-11-02/RESULT.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
 | `docs/research/ml-p1-costnet-rebuild-2026-10-29.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
 | `docs/research/ml-feature-inventory-2026-11-01.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | Every feature source (symbols, depth read from files, PIT, live?, backfill cost), ranked pooled feature-store plan and gap rows; answers why ENTRY has 20 features. |
+| `docs/research/ml-prop-iterate-2026-11-02/PROP-ML-DESIGN.md` | architecture | unknown | — | never | `name:design-declares-a-contract / not-assessed` | — |
 | `docs/research/ml-review-frontier-diagnosis-2026-10-28.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | Scored last 4 ml-review + frontier outputs; researched MRM/monitoring practice; basis for the two-layer redesign of both skills. |
 | `docs/research/ml-data-classification-2026-10-13.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
 | `docs/research/ml-strategies-deep-review-2026-06-25.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
