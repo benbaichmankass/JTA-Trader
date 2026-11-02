@@ -6,7 +6,7 @@ close, volume`` pickles (``E.build_table(cache, syms)``). ``build_klines_cache``
 so nothing downstream changes. Lake ``ts`` is the bar OPEN in UTC, same as the streams' ``open_time``.
 
 ``parity`` compares a lake cache with a stream cache on their overlapping window and reports every difference (never raises on a diff).
-``dataset_selection`` is the ONE declared place a model's lake query lives: ``ml/configs/lake_selection.yaml``.
+``dataset_selection`` is the ONE declared place a model's lake query lives: ``ml/datasets/lake_selection.yaml``.
 """
 from __future__ import annotations
 
@@ -18,7 +18,7 @@ import pandas as pd
 from ml.datasets import lake
 
 COLS = ["ts", "open", "high", "low", "close", "volume"]
-SELECTION_FILE = Path(__file__).resolve().parents[2] / "ml" / "configs" / "lake_selection.yaml"
+SELECTION_FILE = Path(__file__).resolve().parents[2] / "ml" / "datasets" / "lake_selection.yaml"
 
 
 def clean(df: pd.DataFrame, start: str, end: Optional[str] = None) -> pd.DataFrame:
@@ -73,7 +73,7 @@ def parity(stream_cache: Path, lake_cache: Path, syms: Sequence[str], tol: float
 
 
 def dataset_selection(model: str) -> Dict[str, object]:
-    """The declared lake query for ``model`` (ml/configs/lake_selection.yaml). KeyError if undeclared."""
+    """The declared lake query for ``model`` (ml/datasets/lake_selection.yaml). KeyError if undeclared."""
     import yaml
     return yaml.safe_load(SELECTION_FILE.read_text())["models"][model]
 
