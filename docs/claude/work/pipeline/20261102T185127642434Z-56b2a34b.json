@@ -1,0 +1,22 @@
+{
+  "due_when": {
+    "due_date": "2026-11-09",
+    "kind": "date"
+  },
+  "id": "PI-20261102-ECANDLES-0002",
+  "next_action": "check_observation",
+  "observation": {
+    "due_by": "2026-11-09",
+    "how_to_check": "count queued exit_lever_ablation units where candle_dataset.covers() is False",
+    "what": "uncovered candle units after new queue authoring"
+  },
+  "origin": {
+    "kind": "session",
+    "ref": "lane KAGGLE-CANDLES (manager session_01AFoLuJ1apgy8sfngu4WyNH dispatch 2026-11-02; PR #22410)",
+    "rerun": "python3 scripts/research/candle_dataset.py feeds  # compare to coverage.json feeds; then dispatch research-candles-kaggle"
+  },
+  "severity": "medium",
+  "state": "queued",
+  "tier": 1,
+  "what": "Coverage record comms/research/candle_dataset/coverage.json is a snapshot (30 feeds, published 2026-11-02T18:18Z). 17 of the 81 candle units have feeds not in the dataset, and new queued exit_lever_ablation units on other legs/timeframes stay runner-only until research-candles-kaggle is re-run (force_rebuild, or the fresh-reuse check) and the printed record is copied into the repo. 12 more covered units stay on the runner only because cpu_light est_minutes <= 30 (kaggle_first.min_est_minutes), a policy this lane did not change."
+}

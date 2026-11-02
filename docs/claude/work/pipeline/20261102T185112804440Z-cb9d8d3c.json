@@ -1,0 +1,23 @@
+{
+  "due_when": {
+    "clears_when": "a kaggle_cpu run log shows 'candle dataset: served <feed>' and the unit lands a result",
+    "event": "PR #22410 merged and the dispatcher has sent a covered unit to kaggle_cpu",
+    "kind": "event"
+  },
+  "id": "PI-20261102-ECANDLES-0001",
+  "next_action": "check_observation",
+  "observation": {
+    "due_by": "2026-11-05",
+    "how_to_check": "list research-script-run-kaggle-cpu runs after merge; read the kernel log for the 'candle dataset: served' line",
+    "what": "first covered unit end-to-end on kaggle_cpu"
+  },
+  "origin": {
+    "kind": "session",
+    "ref": "lane KAGGLE-CANDLES (manager session_01AFoLuJ1apgy8sfngu4WyNH dispatch 2026-11-02; PR #22410)",
+    "rerun": "grep 'candle dataset: served' in the research-script-run-kaggle-cpu run log for a unit with routing.why_runner 'Fetches keyless public candles'"
+  },
+  "severity": "medium",
+  "state": "queued",
+  "tier": 1,
+  "what": "landed_unproven: no covered candle unit has yet RUN on the Kaggle CPU kernel reading the mounted metis-research-candles dataset. Publish (30/30 feeds) and routing (dry-run runner 137->84, kaggle_cpu 2->55) are measured; the kernel-side read (kernel_main sets CANDLE_DATA_ROOT, regime_debt_matrix._fetch_csv serves from it) is tested only against fixtures. Closes when one covered exit_lever_ablation unit completes on kaggle_cpu with the log line 'candle dataset: served ... from' and no network fetch."
+}
