@@ -1,0 +1,7 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "hold_reason": "tier_2_3_needs_approval",
+  "hold_text": "Tier 2: adds a route that backs up then GROWS the live VM's boot volume 47 -> 53 GB and grows its partition/filesystem. Operator decision (popup, 2026-11-02 ~14:00Z, verbatim): \"Free +6 GB only\". Never past 53 GB (billed). The manager merges.",
+  "why": "Tenancy block+boot storage measured 194/200 GB (oci-capacity-report, issue #22387, PR #22378); +6 GB stays inside Always Free. Live disk is at 100%; the VM-SPARSE-SYNC lane (PR #22386) frees ~16 GB of caches, so this is headroom, not the incident fix."
+}

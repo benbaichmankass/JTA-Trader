@@ -1151,6 +1151,7 @@ its guards in a tested script:
 |---|---|---|---|
 | `trainer-boot-volume.yml` (`trainer-boot-volume`) | 1 measure / 2 resize | `scripts/ops/oci_trainer_boot_volume.py` | resize: grows the TRAINER boot volume only (pinned OCID; refused past Always Free 200 GB) |
 | `oci-retire-orphan-volume.yml` (`oci-retire-orphan-volume`) | 1 plan / 2 execute | `scripts/ops/oci_retire_orphan_volume.py` | execute: FULL backup of `ict-bot-data-vol` (must reach AVAILABLE), then **deletes that volume** |
+| `oci-grow-boot-volume.yml` (`oci-grow-boot-volume`) | 1 plan / 2 execute | `scripts/ops/oci_grow_boot_volume.py` + `scripts/ops/vm_grow_root_fs.sh` | execute: FULL backup of the LIVE VM boot volume, grows it to 53 GB max, then growpart + resize2fs/xfs_growfs on the VM (no reboot, no restart) |
 
 `oci-retire-orphan-volume` exists for ONE operator decision (2026-09-29, "Back up,
 then delete (Recommended)", PI-20260929-CMXYTHSP-0002). How it finds and checks
@@ -1163,4 +1164,22 @@ the target:
 - It refuses, and does not delete, if the backup does not reach AVAILABLE.
 - It re-checks attachments right before the delete.
 - Tests: `tests/ops/test_oci_retire_orphan_volume.py`.
+
+`oci-grow-boot-volume` exists for ONE operator decision (popup, 2026-11-02 ~14:00Z,
+verbatim "Free +6 GB only"): live `ict-bot-arm` boot volume 47 -> 53 GB, inside
+the Always-Free 200 GB cap. Tier 2, approved.
+- `plan` (default) is read-only: current size, target, headroom (enumerated
+  volumes and the Limits API), backup count, plus a VM preflight (root layout,
+  `df -T`, passwordless-sudo check). It refuses a target past 53 GB, a headroom
+  below the delta, or a backup that would exceed the free backup count.
+- `execute` needs `confirm: yes` and runs: FULL boot-volume backup (wait for
+  AVAILABLE) -> resize (wait for AVAILABLE) -> on the VM rescan, `growpart`,
+  `resize2fs`/`xfs_growfs` (from `df -T`) -> verify (`df`, `lsblk`, trader and
+  web-api active). No reboot, no service restart. A re-run at/above the target
+  is a no-op for OCI and idempotent on the VM.
+- The boot-volume OCID is read at runtime from the host's IMDS; none is committed.
+- Exit 5 (VM step) = passwordless sudo missing for growpart / resize2fs / dd /
+  tee; the log prints the exact sudoers line for the operator. The preflight
+  runs before the backup, so this strands nothing. It is not worked around.
+- Tests: `tests/ops/test_oci_grow_boot_volume.py`.
 
