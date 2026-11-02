@@ -44,11 +44,21 @@ crypto:
     derived: [5m, 15m, 1h, 4h, 1d]
     # OPTIONAL streams, in priority order: the preflight enables each one whose projected bytes fit the MEASURED
     # headroom (allowance - used - core). Projected = MEASURED zipped bytes (listing) x 1.166 (klines ratio).
-    optional_streams:
-      premiumIndexKlines: {projected_bytes: 17500000000, zipped_bytes: 15016108214}
-      markPriceKlines: {projected_bytes: 21350000000, zipped_bytes: 18308178903}
-      indexPriceKlines: {projected_bytes: 22590000000, zipped_bytes: 19375847131}
-      bookDepth: {projected_bytes: 246015173471, zipped_bytes: 246015173471}   # zipped size as a lower bound
+    optional_streams:      # priority order; key -> {stream, scope, projected_bytes}. `traded` = config/accounts.yaml
+      premiumIndexKlines: {stream: premiumIndexKlines, scope: all, projected_bytes: 17500000000, zipped_bytes: 15016108214}
+      # storage FALLBACKS (manager 2026-11-01): the big streams for the traded universe only. MEASURED zipped bytes for
+      # the 6 traded perps (S3 listing 2026-11-01) x MEASURED parquet ratios (bookDepth 1.165, klines 1.166).
+      bookDepth_traded: {stream: bookDepth, scope: traded, projected_bytes: 4414000000, zipped_bytes: 3788894506}
+      markPriceKlines_traded: {stream: markPriceKlines, scope: traded, projected_bytes: 506000000, zipped_bytes: 434225788}
+      indexPriceKlines_traded: {stream: indexPriceKlines, scope: traded, projected_bytes: 568000000, zipped_bytes: 487494253}
+      # every trade -> 1m order-flow bars (raw 129.8 GB zipped for the 6 traded perps does not fit): 56.7 B/row MEASURED
+      aggTrades_traded: {stream: aggTrades, scope: traded, projected_bytes: 1190000000, zipped_bytes: 129768723833}
+      markPriceKlines: {stream: markPriceKlines, scope: all, projected_bytes: 21350000000, zipped_bytes: 18308178903}
+      indexPriceKlines: {stream: indexPriceKlines, scope: all, projected_bytes: 22590000000, zipped_bytes: 19375847131}
+      bookDepth: {stream: bookDepth, scope: all, projected_bytes: 246015173471, zipped_bytes: 246015173471}
+    kaggle_raw_tail:       # RAW aggTrades (verbatim archive zips), traded universe, trailing months -> private Kaggle dataset
+      dataset: metis-aggtrades-tail
+      months: 3            # MEASURED 2.82 GB zipped for the last 3 months of the 6 traded perps (17.4 GB for 12)
     not_stored:            # MEASURED zipped, all perps (S3 listing 2026-11-01): far above any free allowance
       aggTrades: {zipped_bytes: 1154088435275}
       trades: {zipped_bytes: 2149312748438}

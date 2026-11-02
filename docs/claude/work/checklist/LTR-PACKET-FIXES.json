@@ -1,0 +1,25 @@
+{
+  "id": "LTR-PACKET-FIXES",
+  "title": "Live-review packet defects from the 2026-11-01 14:32Z lane: symbol-level venue order matching (A), missing trend_donchian_1h evidence (B), v2 packets (C), wrong apply-path read (D)",
+  "phase": "build",
+  "state": "in_flight",
+  "owner": "manager",
+  "lane": "session_01AFoLuKrtjxkEjpGuVNPAMz",
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [
+    22198,
+    22200,
+    22208
+  ],
+  "blocked_on": [],
+  "note": "Dispatched by Manager Session 2026-11-01a. A/B/C/D fixed in the packet generator (Tier 1, read path); one apply-path finding (bybit _venue_tp falls back to a sibling's TP) goes to a held Tier-2 PR. 2026-11-01 lane: PR #22198 (Tier 1, self-land: A/B/C/D packet fixes, trend_donchian_1h record, skill) and PR #22200 (Tier 2, HELD: live_review_apply._venue_tp own-leg). Verified on live diag reads ~15:00Z: both MGC packets match by oca_group; BTC priced; alpaca_paper apply_paths close/move_tp/tighten. CLOSES WHEN: #22198 merged AND the next VM-built or main-built packet on a shared-symbol account (ib_paper MGC) reads generator.state=current, packet_version 3, mechanics match; #22200 is the manager's merge call. F (closed-market events): PR #22208 Tier 2 HELD; 10/126 event-trigger raises (7.9%) in 105 ltr-wake markers 2026-10-26T22:29Z..11-01T12:17Z fell on a closed market. G (GLD telemetry_absent): root-caused, filed as GLD-ORPHAN-5209 (false close of 5126 + account-blind orphan attribution + retired leg). #22200 marked ready + auto-merge by the repo owner account 15:39Z. #22200 (_venue_tp own-leg) MERGED 1a269a2a7; DEPLOYED: VM git_sha_on_disk = 1a269a2a73 at 16:45Z (/api/diag/status). live_review_apply runs as a subprocess from the on-disk tree (live_review_rows_watch.py), so no restart is needed. OBSERVED: not yet; it closes on the first Bybit tighten / move_tp / reduce apply after 16:45Z reading its own tp_order_id. F #22208 MERGED 38f6a8a9b; DEPLOYED (VM git_sha_running = on_disk = 0917b8a818 at 17:29Z); OBSERVED 17:29:32Z /api/diag/live_review_due: due_count 0, pkg-92d1cafe559b4309 USO structure_break -> skipped_closed_market ('no closed bar since the last review 14:38:02Z; newest bar 2026-10-30T20:00Z'). Before the fix this exact event fell due at 15:00Z.",
+  "updated_at": "2026-11-01T17:29:43Z",
+  "updated_by": "session_01AFoLuKrtjxkEjpGuVNPAMz",
+  "roadmap": [
+    "L-ATM"
+  ],
+  "_seq": 880
+}

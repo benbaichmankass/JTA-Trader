@@ -1,0 +1,16 @@
+{
+  "due_when": {
+    "check_every_days": 1,
+    "due_date": "2026-11-02",
+    "kind": "date"
+  },
+  "id": "PI-20261101-E7Z3FBDV-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "RESEARCH-OPS-20261101-0940 (session_01AFoLuJRBdk2erte7Z3Fbdv)",
+    "rerun": "python3 scripts/research/dispatch_queue.py 2>&1 | grep c692-0[16]; git ls-tree -r origin/main --name-only | grep 'research/results/RQ-20261101-c692-0[16]/'"
+  },
+  "state": "queued",
+  "what": "[c692 runner reproduction is NOT dispatchable] research/queue/RQ-20261101-c692-01 and -06 are status: done with last_dispatched_at set by the SESSION-LOCAL runs (08:30Z / 08:37Z), so dispatch_queue.py reads them not_due status=done and the research runner will never reproduce them. The ml_entry go-live precondition (a) (runner reproduction of c692-01 and c692-06) in PR #22079 therefore cannot be met as filed; only the local rows (+0.0073 n=11,240; +0.0263 n=907) are on main (checked 2026-11-01 15:20Z). Fix (owner: the ML lane / manager, these are its units): re-queue both (status: queued, last_dispatched_at: null) with a confirmatory/reproduction label, or file new reproduction units, and have the runner row compared with the local row."
+}
