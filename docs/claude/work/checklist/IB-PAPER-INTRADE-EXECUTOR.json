@@ -1,0 +1,22 @@
+{
+  "id": "IB-PAPER-INTRADE-EXECUTOR",
+  "title": "ib_paper has NO in-trade executor (scripts/ops/live_review_apply.py::ACTION_PATHS: interactive_brokers -> 'other' -> frozenset()), so every MD-LTR-PAPER-AUTO call on an ib_paper leg refuses no_action_path:<action> and IB paper builds no applied evidence. Build an IB executor (close / reduce / move_tp / widen_sl / tighten) with venue read-back of both brackets; paper first under MD-LTR-PAPER-AUTO",
+  "phase": null,
+  "state": "queued",
+  "owner": "manager",
+  "lane": null,
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 2,
+  "prs": [],
+  "blocked_on": [],
+  "note": "Filed 2026-11-01 by lane MD-LTR-BYBIT1-AUTO at the manager's direction (trigger trig_01SPuNwfaKGNgiqtCm8QZ9Yu). Open ib_paper leg at filing: MGC pkg-d76f1b15923e4282. Done when an applied ib_paper close or bracket move is read back at the venue with both brackets present, and the journal records the close reason.",
+  "updated_at": "2026-11-01T12:54:12Z",
+  "updated_by": "MD-LTR-BYBIT1-AUTO",
+  "due_by": "2026-11-05",
+  "roadmap": [
+    "L-AM-STANDARD"
+  ],
+  "_seq": 877
+}

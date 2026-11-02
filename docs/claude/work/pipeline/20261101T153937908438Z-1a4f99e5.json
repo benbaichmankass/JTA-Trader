@@ -1,0 +1,21 @@
+{
+  "based_on": "20261101T151019118182Z-fb59adae.json",
+  "due_when": {
+    "check_every_days": 1,
+    "due_date": "2026-11-05",
+    "kind": "date"
+  },
+  "id": "PI-20261101-CUDIUVUX-0002",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "runner census 2026-11-01 (manager decisions A+D, PR 22187)",
+    "rerun": "cd /tmp && gh api 'repos/benbaichmankass/JTA-Trader/actions/workflows/pytest-run.yml/runs?event=push&per_page=100&created=%3E'$(date -u -d '24 hours ago' +%FT%TZ) --jq '.total_count'  (then the per-workflow census in the 2026-11-01 report: exact run counts per workflow file over created>since, mean job-minutes over a 40-run sample)"
+  },
+  "redate": {
+    "observation": "paused: operator usage hold 2026-11-01 15:37Z; resume 2026-11-05",
+    "observed_at": "2026-11-01"
+  },
+  "state": "queued",
+  "what": "Re-measure runner minutes 24h after the push-skip change (PR 22187, ci-push-skip-bot) lands. Baseline (runner census 2026-11-01, 24h to 14:25Z): 6,571 runs, ~25,640 est runner-min; push-to-main ~8,500 est min; 104 of 212 main commits (49%) were bot-data-only. Compare: pytest-run, guards, repo-inventory, pytest-collect, branch-sync, work-digest push-event runs per 24h and their minutes, same sampling method (up to 40 runs per workflow, mean job-minutes x exact run count). Report minutes saved and the share of main pushes that skipped, and confirm no PR check was skipped."
+}

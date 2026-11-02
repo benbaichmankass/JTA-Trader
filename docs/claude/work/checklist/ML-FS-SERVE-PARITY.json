@@ -1,0 +1,24 @@
+{
+  "phase": "research",
+  "state": "queued",
+  "owner": null,
+  "lane": null,
+  "model": "claude-sonnet-5-5",
+  "tier": 1,
+  "prs": [],
+  "blocked_on": [],
+  "roadmap": [
+    "L-ML-LIVE"
+  ],
+  "priority_rank": 3,
+  "id": "ML-FS-SERVE-PARITY",
+  "title": "Serve parity for non-OHLCV features: measure Binance-trained vs Bybit-served volume, taker split, funding and OI on overlapping bars, and propose the live collector each admitted family needs",
+  "ceiling_usd": 6,
+  "note": "Filed 2026-11-01 by lane ML-FEATURE-INFRA (gap G3). WHY: ENTRY trains on Binance USD-M klines and its live adapter (ML-ENTRY-LIVE-ADAPTER) computes features from Bybit 1h klines; volume-derived features (vol_z, rel_vol) already cross venues, and the taker split, OI and funding families have no live producer (ML-PARITY-HARNESS read funding 0 percent present live on the BTC svble head, diag #18883). Bybit REST returned HTTP 403 and Binance fapi HTTP 451 from the cloud sandbox on 2026-11-01, so reachability from the live VM is UNVERIFIED. DO: from an environment that can reach both venues (trainer or runner), compare the same hour on both venues for >= 10 symbols x 30 days: volume ratio and correlation of log-volume z-scores, funding-rate difference, OI change correlation, and whether Bybit offers a taker-buy split per bar (kline, recent-trade or ticker); write the verdict per family as {servable_as_is, servable_with_collector, not_servable}. Any live collector it proposes is a separate Tier-2 row. DONE WHEN: a committed record gives the verdict per family with n and the venue-reach evidence. Gates: none.",
+  "observation": {
+    "what": "a committed per-family servability record with symbols, days and venue-reach evidence",
+    "how_to_check": "ls research/results/ | grep -i serve-parity",
+    "due_by": "2026-11-10"
+  },
+  "_seq": 877
+}

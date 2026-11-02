@@ -1,0 +1,142 @@
+# Lever map (operator doctrine 2026-11-01). Seeded by lane RESEARCH-EDGE from result rows; RESEARCH-ITERATE owns it from here.
+subject: Weekly cross-sectional crypto momentum, top-20 liquid perps
+units:
+- RQ-20261101-58e4-02
+status: open
+doctrine: 'operator 2026-11-01 14:00-14:09Z: nothing that failed is closed; attribute first; next tests are one-factor/ablation chosen from this map; retire only when every lever family
+  has been tested at power, net of cost, with no effect'
+verdict_so_far: 'fail: primary X1 net Sharpe 1.33, halves 2.13 / 0.26, DSR(N=10) 0.87 (< 0.95); ex-2021 Sharpe 0.65, DSR 0.33; clause fail'
+failure_attribution:
+  where_lost: SIDE, REGIME and SYMBOL concentration. Net sum 1.61 = gross 1.57 + funding received 0.15 - cost 0.10. Long side +1.86, short side -0.21. 2021 alone +1.09 of 1.61 (68%);
+    2022 +0.01, 2023 +0.08, 2024H1 -0.07.
+  by_direction:
+    long: 1.8646
+    short: -0.2061
+  by_year:
+    '2020': 0.5022
+    '2021': 1.0914
+    '2022': 0.0058
+    '2023': 0.0816
+    '2024': -0.0686
+  worst_months:
+    2023-07: -0.1209
+    2021-06: -0.0917
+    2024-02: -0.0801
+    2022-02: -0.0755
+  best_months:
+    2021-01: 0.2322
+    2021-10: 0.179
+    2021-11: 0.1622
+    2020-12: 0.1446
+  worst_symbols:
+    EOSUSDT: -0.1816
+    1000SHIBUSDT: -0.1212
+    DYDXUSDT: -0.0989
+    MTLUSDT: -0.081
+  best_symbols:
+    TRBUSDT: 0.182
+    LINKUSDT: 0.2174
+    SOLUSDT: 0.2244
+    AXSUSDT: 0.2704
+  robustness_cuts: ex-2021 Sharpe 0.65; ex top-3 symbols (AXS, SOL, LINK) zeroed 0.74, re-formed 1.06; ex-2021 and ex-top-3 0.53 (comms/research/RQ-20261101-58e4-02/.../followups.json)
+  stage: entry selection works only in the long leg in the 2020-21 episode; the short leg never earned; cost is 7% of gross (not the problem); worst months are reversal months (2023-07,
+    2021-06, 2024-02)
+levers_tested:
+- family: formation horizon
+  varied: 14|28|56|84-day returns, plus 28-day with a skip-week
+  response:
+    X1:
+      sharpe_net: 1.325
+      ann_return_net: 0.3947
+      dsr: 0.867691
+      stress_sharpe: 1.24
+    X2:
+      sharpe_net: 1.055
+      ann_return_net: 0.3161
+      dsr: 0.714353
+      stress_sharpe: 0.933
+    X3:
+      sharpe_net: 0.654
+      ann_return_net: 0.1953
+      dsr: 0.399351
+      stress_sharpe: 0.587
+    X4:
+      sharpe_net: 1.248
+      ann_return_net: 0.3719
+      dsr: 0.831103
+      stress_sharpe: 1.192
+    X5:
+      sharpe_net: 0.945
+      ann_return_net: 0.2694
+      dsr: 0.630923
+      stress_sharpe: 0.856
+  shape: 'non-monotone (14d 1.06, 28d 1.33, 56d 0.65, 84d 1.25): noise at this n, no clean horizon'
+  tested_at_power: false
+- family: side
+  varied: long-short vs long-only (active vs equal-weight)
+  response:
+    X1:
+      sharpe_net: 1.325
+      ann_return_net: 0.3947
+      dsr: 0.867691
+      stress_sharpe: 1.24
+    X6:
+      sharpe_net: 1.014
+      ann_return_net: 0.3677
+      dsr: 0.685503
+      stress_sharpe: 0.958
+    X7:
+      sharpe_net: 1.082
+      ann_return_net: 0.3877
+      dsr: 0.734942
+      stress_sharpe: 0.995
+    X8:
+      sharpe_net: 0.466
+      ann_return_net: 0.1758
+      dsr: 0.261687
+      stress_sharpe: 0.425
+  shape: long-only is graded vs equal-weight benchmark; see per-config values; no clear gain
+  tested_at_power: false
+- family: weighting
+  varied: equal vs inverse-vol within side
+  response:
+    X1:
+      sharpe_net: 1.325
+      ann_return_net: 0.3947
+      dsr: 0.867691
+      stress_sharpe: 1.24
+    X9:
+      sharpe_net: 1.372
+      ann_return_net: 0.3842
+      dsr: 0.883863
+      stress_sharpe: 1.271
+  shape: tiny (1.33 vs 1.37)
+  tested_at_power: false
+- family: breadth
+  varied: quantile 0.3 vs 0.2
+  response:
+    X1:
+      sharpe_net: 1.325
+      ann_return_net: 0.3947
+      dsr: 0.867691
+      stress_sharpe: 1.24
+    X10:
+      sharpe_net: 1.174
+      ann_return_net: 0.4444
+      dsr: 0.791347
+      stress_sharpe: 1.091
+  shape: small (1.33 vs 1.17)
+  tested_at_power: false
+lever_families_untested:
+- regime gate (disable in reversal / high-dispersion-collapse regimes)
+- universe size (top-10 / top-40) and liquidity floor
+- rebalance frequency (weekly only)
+- short-leg treatment (drop shorts, or short only liquid names; borrow-like funding)
+- turnover control (hysteresis / band)
+- residual momentum (beta-adjusted vs BTC)
+- holding exit (stop on losers within the week)
+- sector/cluster neutralisation
+power_note: n=1491 days; Sharpe SE ~0.49; 2021 is 68% of net. The ablations above do not resolve a 0.2-0.3 Sharpe effect.
+evidence: 'Result rows: research/results/<unit>/manual-research-edge-20261101.jsonl; per-config detail: comms/research/<unit>/manual-research-edge-20261101/result.json; attribution computed
+  by scripts/research/edge_failure_attribution.py (comms/research/edge-failure-attribution-20261101/attribution.json).'
+handed_to: RESEARCH-ITERATE (session_01AFoLuLiJ6TVirjHipiPRhQ)

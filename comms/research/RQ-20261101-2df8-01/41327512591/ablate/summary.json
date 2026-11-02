@@ -1,0 +1,142 @@
+{
+  "leg": "trend_donchian_sol_4h",
+  "grade": {
+    "verdict": "pass",
+    "label": "stage0_edge",
+    "baseline": "P",
+    "net_r": 20.7486,
+    "n": 149,
+    "max_drawdown_r": 8.3227,
+    "folds_positive": 3,
+    "n_folds": 4,
+    "fold_majority": 3,
+    "n_floor": 88,
+    "control": null,
+    "why": "net_r=20.7486 > 0 with 3/4 positive folds at this arm's cost stack"
+  },
+  "arms": {
+    "P": {
+      "reach_ge_6r": 0.0,
+      "n": 149,
+      "net_r": 20.7486,
+      "net_r_fee_only": 24.3649,
+      "max_drawdown_r": 8.3227,
+      "by_outcome": {
+        "stop": 84,
+        "take_profit": 60,
+        "trail_stop": 4,
+        "timeout": 1
+      },
+      "mean_bars_held": 9.161,
+      "net_r_per_capital_day": 0.0912,
+      "cost_stack": {
+        "fee_bps_roundtrip": 8.0,
+        "slippage_bps_roundtrip": 3.0,
+        "funding_bps_per_window": 5.0
+      },
+      "params": {
+        "donchian": 20,
+        "atr_stop_mult": 1.5,
+        "trail_mult": 5.0,
+        "min_confidence": 0.6,
+        "trail_decay_arm_r": 5.57,
+        "trail_decay_stall_bars": 0,
+        "trail_decay_tight_mult": 2.5
+      },
+      "data_start": "2020-10-01 00:00:00+00:00",
+      "data_end": "2023-10-12 20:00:00+00:00",
+      "folds": [
+        {
+          "fold": 1,
+          "start": "2020-10-01 00:00:00+00:00",
+          "end": "2021-07-04 17:00:00+00:00",
+          "trades": 43,
+          "net_r": -0.9369
+        },
+        {
+          "fold": 2,
+          "start": "2021-07-04 17:00:00+00:00",
+          "end": "2022-04-07 10:00:00+00:00",
+          "trades": 41,
+          "net_r": 2.873
+        },
+        {
+          "fold": 3,
+          "start": "2022-04-07 10:00:00+00:00",
+          "end": "2023-01-09 03:00:00+00:00",
+          "trades": 34,
+          "net_r": 7.5696
+        },
+        {
+          "fold": 4,
+          "start": "2023-01-09 03:00:00+00:00",
+          "end": "2023-10-12 20:00:00+00:00",
+          "trades": 31,
+          "net_r": 11.2432
+        }
+      ],
+      "argv": [
+        "/opt/hostedtoolcache/Python/3.11.17/x64/bin/python3",
+        "/home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_trend.py",
+        "--donchian",
+        "20",
+        "--data",
+        "<data>",
+        "--symbol",
+        "SOLUSDT",
+        "--resample",
+        "4h",
+        "--atr-period",
+        "14",
+        "--atr-stop-mult",
+        "1.5",
+        "--trail-mult",
+        "5.0",
+        "--min-confidence",
+        "0.6",
+        "--fee-bps-roundtrip",
+        "8",
+        "--emit-trades",
+        "comms/research/RQ-20261101-2df8-01/41327512591/ablate/arms/P__trades.jsonl",
+        "--json",
+        "comms/research/RQ-20261101-2df8-01/41327512591/ablate/arms/P__bt.json",
+        "--trail-decay-arm-r",
+        "5.57",
+        "--trail-decay-tight-mult",
+        "2.5",
+        "--tp-cap-pct",
+        "0.099",
+        "--tp-r",
+        "50.0",
+        "--slippage-bps-roundtrip",
+        "3",
+        "--funding-bps-per-window",
+        "5",
+        "--funding-window-hours",
+        "24",
+        "--start",
+        "2020-10-01",
+        "--end",
+        "2023-10-12 20:00"
+      ]
+    }
+  },
+  "window": {
+    "start": "2020-10-01",
+    "end": "2023-10-12 20:00",
+    "fetch_days": 2300,
+    "feed": {
+      "source": "binance",
+      "ticker": "SOLUSDT",
+      "interval": "240",
+      "resample": "4h"
+    },
+    "fold_edges": [
+      "2020-10-01 00:00:00+00:00",
+      "2021-07-04 17:00:00+00:00",
+      "2022-04-07 10:00:00+00:00",
+      "2023-01-09 03:00:00+00:00",
+      "2023-10-12 20:00:00+00:00"
+    ]
+  }
+}

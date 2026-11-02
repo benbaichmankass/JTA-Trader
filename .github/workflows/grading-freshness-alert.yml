@@ -61,3 +61,8 @@ jobs:
           ref: main
       - name: Ping once if grading is stale or unreadable
         run: python3 scripts/ci/check_grading_freshness.py --alert
+      - name: Grader registry freshness (alert-only table; GRADE-EVERYTHING-CONTINUOUSLY)
+        continue-on-error: true
+        run: |
+          pip install --quiet pyyaml
+          python3 scripts/ci/check_grader_freshness.py | tee -a "$GITHUB_STEP_SUMMARY"
