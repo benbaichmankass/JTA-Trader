@@ -81,7 +81,7 @@ def test_runpod_is_never_auto_routed():
 
 def test_capacity_makes_a_unit_wait_and_a_fallback_class_moves_on():
     st = cr.BackendState(quota_hours=29.98)
-    st.inflight["github_runner"] = 3
+    st.inflight["github_runner"] = CFG["backends"]["github_runner"]["max_concurrent"]
     w = cr.resolve(unit(compute="cpu_light"), CFG, st)
     assert w.ok and w.wait and "at capacity" in w.reason
     st.inflight["kaggle"] = 1
@@ -314,8 +314,8 @@ def test_idle_fill_pulls_an_opted_in_recurring_unit_forward_only_into_free_capac
                       runs={"in_progress": [{"workflowName": "x", "createdAt": datetime.now(timezone.utc).isoformat()}]})
     assert dec["RQ-20300110-002"]["outcome"] == dq.DISPATCHED and dec["RQ-20300110-002"]["idle_fill"] is True
     assert dec["RQ-20300110-003"]["outcome"] == dq.NOT_DUE
-    # no free capacity -> no fill: three runner runs already in flight
-    busy = [{"workflowName": "research-script-run", "createdAt": datetime.now(timezone.utc).isoformat()}] * 3
+    # no free capacity -> no fill: the runner backend is at its max_concurrent (read from the config, not hard-coded)
+    busy = [{"workflowName": "research-script-run", "createdAt": datetime.now(timezone.utc).isoformat()}] * CFG["backends"]["github_runner"]["max_concurrent"]
     dec2, _ = _dry(tmp_path / "b", monkeypatch, units, fire=True, runs={"in_progress": busy}) \
         if (tmp_path / "b").mkdir() is None else (None, None)
     assert dec2["RQ-20300110-002"]["outcome"] != dq.DISPATCHED

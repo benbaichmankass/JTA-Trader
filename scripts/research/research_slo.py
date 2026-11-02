@@ -195,7 +195,7 @@ def gather_facts(root: Path, now: datetime, cfg: Dict[str, Any], gh: Optional["G
 
     def lands_24h():
         from scripts.research.dispatch_queue import NON_VERDICT_READ_STATES
-        verdict_rows, non_verdict, unreadable = 0, 0, 0
+        verdict_rows, non_verdict, unreadable, pf_rows = 0, 0, 0, 0
         for p in (root / "research" / "results").glob("*/*.jsonl"):
             try:
                 lines = p.read_text(encoding="utf-8").splitlines()
@@ -211,13 +211,27 @@ def gather_facts(root: Path, now: datetime, cfg: Dict[str, Any], gh: Optional["G
                     continue
                 t = _ts(r.get("generated_at"))
                 if t and t >= since24:
+                    if str(r.get("read_state") or "") == "producer_failed":
+                        pf_rows += 1
                     if str(r.get("read_state") or "") in NON_VERDICT_READ_STATES:
                         non_verdict += 1
                     else:
                         verdict_rows += 1
-        return _fact(verdict_rows, non_verdict_rows_24h=non_verdict, result_files_unreadable=unreadable,
+        return _fact(verdict_rows, non_verdict_rows_24h=non_verdict, producer_failed_rows_24h=pf_rows, result_files_unreadable=unreadable,
                      basis="research/results/*/*.jsonl rows by generated_at")
     f["lands_24h"] = _safe(lands_24h, "lands_24h")
+
+    def producer_failed_rate_24h():
+        # RESEARCH-FLOW 2026-11-02: survivors-only SLOs could not see a pipeline whose runs complete and land UNGRADED
+        # (79% of 90 landed records since 2026-11-01 were producer_failed). Rate over rows landed in 24 h; CNL when none.
+        ev = f["lands_24h"]
+        if ev.get("read_state") == CNL or ev.get("value") is None:
+            return _cnl("lands_24h unreadable")
+        pf, total = int(ev.get("producer_failed_rows_24h") or 0), int(ev["value"]) + int(ev.get("non_verdict_rows_24h") or 0)
+        if total < 4:
+            return _cnl(f"only {total} row(s) landed in 24 h -- too few for a rate")
+        return _fact(round(pf / total, 3), producer_failed_rows=pf, rows_24h=total, basis="producer_failed rows / all rows landed in 24 h")
+    f["producer_failed_rate_24h"] = _safe(producer_failed_rate_24h, "producer_failed_rate_24h")
 
     def grade_latency():
         # POPULATION (PIPELINE-HEALTH-1021): units whose NEWEST result row landed in the last 7 d, measured from
@@ -563,7 +577,7 @@ def deliver(alert: Dict[str, Any], state: Dict[str, Any], now: datetime, cfg: Di
 
 # ── self-test: a planted starved queue must fire, a healthy pipeline must not ───────────────────────────────
 def _fixture(**over: Any) -> Dict[str, Dict[str, Any]]:
-    healthy = {"survivors_per_month": _fact(2.0), "trials_per_survivor": _fact(120.0), "runnable_floor": _fact(60, threshold=50), "fires_24h": _fact(60), "lands_24h": _fact(40),
+    healthy = {"survivors_per_month": _fact(2.0), "trials_per_survivor": _fact(120.0), "runnable_floor": _fact(60, threshold=50), "fires_24h": _fact(60), "lands_24h": _fact(40), "producer_failed_rate_24h": _fact(0.05),
                "grade_latency_p50_d": _fact(0.0), "grade_latency_p90_d": _fact(1.0), "undispositioned_24h": _fact(0),
                "authoring_supply_ratio_7d": _fact(1.3), "programme_coverage_pct": _fact(90.0),
                "theme_share_min_ratio": _fact(0.8), "blocked_over_age": _fact(2), "dispatcher_age_h": _fact(1.0),
@@ -626,6 +640,9 @@ def _self_test() -> int:
     t8 = evaluate(_fixture(survivors_per_month=_fact(0.0), trials_per_survivor=_fact(2832.0)), cfg)
     assert [r["slo"] for r in t8 if r["state"] != OK] == ["survivors_per_month", "trials_per_survivor"], t8
     assert transition(t8, {}, now, cfg, [])["alert"]["new"] == ["survivors_per_month", "trials_per_survivor"]
+    # planted: a pipeline that lands mostly ungraded runs must breach the new rate SLO (and the healthy control must not)
+    tpf = evaluate(_fixture(producer_failed_rate_24h=_fact(0.79)), cfg)
+    assert {r["slo"] for r in tpf if r["state"] == BREACH} == {"producer_failed_rate_24h"}
     t9 = evaluate(_fixture(fires_24h=_fact(0), lands_24h=_fact(0)), cfg)
     assert {r["slo"] for r in t9 if r["state"] == BREACH} == {"fires_24h", "lands_24h"}
     assert transition(t9, {}, now, cfg, [])["alert"] is None, "diagnostic volume breach must not alert"

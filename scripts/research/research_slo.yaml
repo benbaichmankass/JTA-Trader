@@ -43,6 +43,10 @@ slos:
     diagnostic: true
     op: min
     threshold: 12
+  producer_failed_rate_24h:
+    what: "share of result rows landed in the last 24 h that are read_state=producer_failed (a run that completed but graded nothing, or whose command failed). Alerts through the same ops-flags path as every SLO; no gate, no halt."
+    op: max
+    threshold: 0.25
   # grading.graded_at is a DATE (measured 2026-10-16: 495 of 495 values are YYYY-MM-DD), so latency is in whole
   # DAYS: 0 = graded the day its newest result row landed.
   grade_latency_p50_d:
