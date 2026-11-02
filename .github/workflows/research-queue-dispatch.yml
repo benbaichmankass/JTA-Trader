@@ -296,6 +296,12 @@ jobs:
           git ls-files -o -i --exclude-standard -- 'comms/research/*/*/logs/*.log' \
             'comms/research/*/*/arms/*.log' >> /tmp/payload/changed.txt || true
           cat /tmp/payload/changed.txt
+          # Fail-safe on the write path (INCIDENT 2026-11-02, 21.65 GB of caches landed): a batch over 50 MB is never bundled.
+          if ! python3 scripts/research/collect_runner_results.py --check-staged /tmp/payload/changed.txt; then
+            rm -rf /tmp/payload
+            echo "::error::research batch over the 50 MB cap -- refusing to bundle/push it"
+            exit 1
+          fi
           if [ -f /tmp/collected.json ]; then cp /tmp/collected.json /tmp/payload/collected.json; fi
           tar czf /tmp/payload/landing.tgz --ignore-failed-read -T /tmp/payload/changed.txt
           echo "payload=true" >> "$GITHUB_OUTPUT"
