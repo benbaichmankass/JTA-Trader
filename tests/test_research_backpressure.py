@@ -245,6 +245,15 @@ def test_a_queued_infra_run_defers_every_research_fire():
     assert r["infra_queued"] == 1
 
 
+def test_infra_yield_threshold_lets_research_fire_at_one_queued_and_defers_at_two():
+    one = dq.backpressure(RESEARCH, max_inflight=3, max_queued=10, infra_names=INFRA, infra_yield_at=2,
+                          runs_by_status={"queued": _runs(["system-actions"]), "in_progress": []})
+    assert one["block"] is None and one["infra_queued"] == 1
+    two = dq.backpressure(RESEARCH, max_inflight=3, max_queued=10, infra_names=INFRA, infra_yield_at=2,
+                          runs_by_status={"queued": _runs(["system-actions", "system-actions"]), "in_progress": []})
+    assert two["block"] and "infra" in two["block"]
+
+
 def test_infra_already_running_does_not_block():
     """Only a WAITING infra run is starved by a new research job; one already on a runner is not."""
     r = dq.backpressure(RESEARCH, max_inflight=3, max_queued=10, infra_names=INFRA,

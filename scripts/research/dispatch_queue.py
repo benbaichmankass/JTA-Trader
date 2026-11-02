@@ -995,7 +995,7 @@ def _run_age_hours(row: Dict[str, Any], now: datetime) -> Optional[float]:
 def backpressure(research_names: Dict[str, str], *, max_inflight: int, max_queued: int,
                  runs_by_status: Optional[Dict[str, Optional[List[Dict[str, Any]]]]] = None,
                  now: Optional[datetime] = None, stale_after_hours: float = STALE_PRESSURE_HOURS,
-                 infra_names: Optional[List[str]] = None) -> Dict[str, Any]:
+                 infra_names: Optional[List[str]] = None, infra_yield_at: int = 1) -> Dict[str, Any]:
     """What the runner pool looks like before this cycle fires anything.
 
     Returns {inflight_research, repo_queued, stale_ignored, block, detail}.
@@ -1051,7 +1051,9 @@ def backpressure(research_names: Dict[str, str], *, max_inflight: int, max_queue
            "detail": f"research compute in flight {inflight} (cap {max_inflight}); repo runs queued "
                      f"{len(competing)} (cap {max_queued}; {listeners} workflow_run listener run(s) not counted); "
                      f"{stale} stuck run(s) older than {stale_after_hours:g} h ignored"}
-    if infra_queued:
+    # RESEARCH-FLOW 2026-11-02 (manager, relaying the operator's "get research flowing"): defer only when infra_yield_at or more
+    # infra runs are queued (config limits.infra_yield_at; default 1 = the original rule). --max-repo-queued is untouched.
+    if infra_queued >= max(1, int(infra_yield_at)):
         out["block_kind"] = "infra"
         out["block"] = (f"{infra_queued} infra run(s) queued ({', '.join(infra_waiting)}): research yields "
                         "the shared GitHub runner pool to infra -- deferring every fire this cycle")
@@ -1394,7 +1396,8 @@ def main(argv: Optional[List[str]] = None) -> int:
         pressure = backpressure(wf_names, max_inflight=max_inflight,
                                 max_queued=args.max_repo_queued,
                                 stale_after_hours=args.pressure_stale_hours,
-                                infra_names=list((cfg or {}).get("limits", {}).get("infra_workflows") or []))
+                                infra_names=list((cfg or {}).get("limits", {}).get("infra_workflows") or []),
+                                infra_yield_at=int((cfg or {}).get("limits", {}).get("infra_yield_at", 1)))
         print(f"backpressure: {pressure.get('detail') or pressure.get('block')}", file=sys.stderr)
         _starve_h = args.starvation_hours if args.starvation_hours is not None else \
             float((cfg or {}).get("limits", {}).get("starvation_hours", STARVATION_HOURS))
