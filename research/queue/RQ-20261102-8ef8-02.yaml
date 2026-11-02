@@ -1,0 +1,100 @@
+id: RQ-20261102-8ef8-02
+title: 'PROP STRUCTURE EXITS (programme 05): does a swing-structure trail (--trail-level swing) on trend_donchian_sol_prop beat the config-exact exit at the prop venue stack, 1110 d? Arms P / SW15 / SW10
+  / SW15R1; feeds the prop gate per arm'
+status: queued
+cadence: once
+kind: experiment
+theme: new_strategy_prop
+priority: 1
+roadmap:
+- L-PROP
+question: On trend_donchian_sol_prop (config-exact, prop stack fee 8 / slip 3 / funding 5 per 24h, 2023-10-13..2026-10-11 20:00), does tightening the trail to a multiple of ATR once price touches the prior
+  confirmed swing extreme (the harness's structure-based dynamic exit, --trail-level swing) raise net R over the window? The arms' trade books are the inputs of the per-arm prop gate nodes P5-SX-GATE-*
+  (RULE-P5-GATE-BRK-PER-LEG-V3).
+why_this_matters: 'Operator 2026-11-02 15:58Z verbatim: "I also want to check applying strucure dynamice based exits for props this week if we can". --structure-exit (STRUCTURE-EXITS-DEFAULT, PR #22281)
+  has not landed (scope + queue only), so the existing swing-level trail lever is the structure exit measured here. Prop legs clear a SUPERSET (OPERATING-PLAN § 2): this Stage-0 read is necessary, the V3
+  prop gate decides.'
+power:
+  expected_n: 200
+  min_detectable_effect: 0.3
+  effect_units: sd
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: RQ-20261015-1bf3-06 measured the same leg and window; n floor 39 is the Stage-0 grade floor, the gate needs n>=88.
+  feasibility:
+    source: none
+    accrual_basis: Re-measure of committed price history; nothing accrues.
+decision_rule:
+  id: RULE-RQ-20261102-8ef8-02-STRUCT-SWEEP
+  registered_at: '2026-11-02'
+  registered_before_run: true
+  statistic: net_total_r over the window, n, and net_r per each of 4 equal calendar folds, for arm P (config-exact at the prop stack) and each structure arm SW15, SW10, SW15R1 (exit_lever_ablation.py --grade
+    sweep, baseline P, delta-r 0).
+  rule: PASS IF at least one structure arm has n >= 39, net_total_r above arm P, and net R above P in at least 3 of 4 folds -> a structure exit beats the config-exact exit at Stage 0 (an input to the prop
+    gate, NOT a promotion). FAIL IF no arm does with every arm n >= 39. INDETERMINATE IF an arm has n < 39. Three structure arms were registered together, so a PASS is read as one of three tries (no multiplicity
+    correction is claimed). Every arm, pass or fail, is graded by the V3 prop gate through P5-SX-GATE-* regardless of this verdict.
+  what_it_does_not_do: Changes no roster, params, exits or risk. Is not the prop gate and does not clear it.
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 2.0
+  est_minutes: 45
+  basis: one or two harness runs over a ~1100 d public candle fetch (Binance Vision), as RQ-20261014-470a-* ran
+compute: cpu_light
+value:
+  bucket: information
+  usd_at_stake_per_month: 150
+  confidence: 0.4
+  basis: gates the prop-add decision on tradeify_1 / velotrade_1; stand-in figure, no balances stated
+run:
+  workflow: research-script-run.yml
+  timeout_minutes: 90
+  command:
+  - python3
+  - scripts/research/exit_lever_ablation.py
+  - --leg
+  - trend_donchian_sol_prop
+  - --arm
+  - P=--fee-bps-roundtrip=8;--slippage-bps-roundtrip=3;--funding-bps-per-window=5;--funding-window-hours=24
+  - --arm
+  - SW15=--fee-bps-roundtrip=8;--slippage-bps-roundtrip=3;--funding-bps-per-window=5;--funding-window-hours=24;--trail-level=swing;--trail-level-tight-mult=1.5;--trail-level-lookback=60;--trail-level-pivot-k=3
+  - --arm
+  - SW10=--fee-bps-roundtrip=8;--slippage-bps-roundtrip=3;--funding-bps-per-window=5;--funding-window-hours=24;--trail-level=swing;--trail-level-tight-mult=1.0;--trail-level-lookback=60;--trail-level-pivot-k=3
+  - --arm
+  - SW15R1=--fee-bps-roundtrip=8;--slippage-bps-roundtrip=3;--funding-bps-per-window=5;--funding-window-hours=24;--trail-level=swing;--trail-level-tight-mult=1.5;--trail-level-lookback=60;--trail-level-pivot-k=3;--trail-level-min-r=1.0
+  - --days
+  - '1110'
+  - --start
+  - '2023-10-13'
+  - --end
+  - 2026-10-11 20:00
+  - --grade
+  - sweep
+  - --baseline
+  - P
+  - --delta-r
+  - '0'
+  - --fold-majority
+  - '3'
+  - --n-floor
+  - '39'
+  - --out
+  - '{out_dir}'
+  inputs:
+    research_unit: RQ-20261102-8ef8-02
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- research/queue/RQ-20261015-1bf3-06.yaml
+- research/queue/RQ-20261102-5e1a-01.yaml
+- scripts/research/ml_variant_prop_gate.py
+- scripts/backtest_trend.py
+what_it_does_not_do: Changes no roster, params, exits or risk; research only. The harness applies the swing trail from candles only (no live parity claim).
+practice_precedent: 'none: a prop firm drawdown-limit survival fit is house-specific; the swing-level trail is the harness own P1-Q10 lever (scripts/backtest_trend.py --trail-level), no external source
+  reviewed'
+intervention_controls:
+  not_applicable: Arm P is the config-exact hold control and the three swing arms are one pre-registered lever family graded against it over 4 calendar folds. No matched-random or best-static draw is run
+    here; the V3 prop gate downstream supplies the edge CI and the zero-edge null.

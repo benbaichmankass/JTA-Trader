@@ -40,6 +40,7 @@ REPO = Path(__file__).resolve().parents[2]
 sys.path[:0] = [str(REPO), str(REPO / "scripts" / "research")]
 
 import ml_decision_entry as E  # noqa: E402
+import ml_variant_ledger as MVL  # noqa: E402
 
 SCHEMA = "ml_entry_tp_revision/1"
 UNIT = "RQ-20261101-383f-01"
@@ -711,9 +712,29 @@ def forward_stage(cache: Path, out: Path, dev: dict) -> dict:
     sc = Scorer(trades, bars, probs, tm["class_mean_net_r"], tie_maker)
     base = sc.fixed(BASE_TP)
     log: list = []
-    pol = sc.policy(dev["margin_star"], log)
+    # ML-PROP-ITERATE: record each trade's walk so the policy's ETH+SOL ledger can be emitted (ledger_ethsol.jsonl, read by the prop gate).
+    # Observation only: the spy forwards every call unchanged, so pol / base / the verdict are byte-identical to an un-spied run.
+    global walk
+    _walk0, _rec = walk, []
+
+    def _spy(*a, **k):
+        r = _walk0(*a, **k)
+        _rec.append(r[:3])
+        return r
+    walk = _spy
+    try:
+        pol = sc.policy(dev["margin_star"], log)
+    finally:
+        walk = _walk0
+    try:
+        led = MVL.ledger_from_walks(trades, _rec, sc.win, bars, E.SL_ATR)
+        read_state = "emitted"
+    except ValueError as exc:  # noqa: BLE001  # allow-silent: reported as ledger_state below, the variant's own result is unaffected
+        led, read_state = [], f"not_emitted: {exc}"
+    MVL.write_ledger(led, out)
     rng = np.random.default_rng(SEED)
     h = summarize_delta(trades, base, pol, rng)
+    h["ledger_ethsol"] = {"rows": len(led), "read_state": read_state, "window": "forward served-trade window (policy arm)"}
     elig = [x for x in log if x["eligible"]]
     rate = h["n_moves"] / max(1, len(elig))
     p_in = h["n_pull_in"] / max(1, h["n_moves"])

@@ -31,17 +31,23 @@ MISSING_PIECE = ("the variant's harness must emit its ETH+SOL trade ledger (gros
                  "docs/research/ml-entry-prop-gate-2026-11-02/ledgers/ml_entry_ethsol.jsonl) as ledger_ethsol.jsonl beside its result")
 
 
-def find_ledger(unit: str) -> Path | None:
+def find_ledger(unit: str, arm: str | None = None) -> Path | None:
+    if arm:   # exit_lever_ablation arm book: comms/research/<unit>/<run>/arms/<label>__trades.jsonl (the gate input of a Donchian structure-exit arm)
+        hits = sorted(glob.glob(str(REPO / f"comms/research/{unit}/**/arms/{arm}__trades.jsonl"), recursive=True))
+        if hits:
+            print(f"[find_ledger] arm {arm}: {len(hits)} candidate(s), using {hits[-1]}", file=sys.stderr)   # provenance: print — the chosen path is shown, never silent
+        return Path(hits[-1]) if hits else None
     pats = [f"research/results/{unit}/**/ledger_ethsol.jsonl", f"comms/research/{unit}/**/ledger_ethsol.jsonl",
             f"research/results/{unit}/**/ledger.jsonl", f"comms/research/{unit}/**/ledger.jsonl"]
     for p in pats:  # provenance: pats — fixed list of the variant's own result dirs by unit id, in priority order (named ledger first)
         hits = sorted(glob.glob(str(REPO / p), recursive=True))
         if hits:
+            print(f"[find_ledger] {len(hits)} candidate(s) for {p}, using {hits[-1]}", file=sys.stderr)   # provenance: print — the chosen path is shown, never silent
             return Path(hits[-1])
     return None
 
 
-def run_cells(leg: str, led: Path, out: Path, jobs: int) -> None:
+def run_cells(leg: str, led: Path, out: Path, jobs: int, leg_key: str = "ml_entry") -> None:
     def cell(acct: str, arm: str, seed: int) -> None:
         o = out / "cells" / f"{leg}__3y__{acct}__{arm}__s{seed}.json"
         if o.exists():
@@ -51,7 +57,7 @@ def run_cells(leg: str, led: Path, out: Path, jobs: int) -> None:
         subprocess.run([sys.executable, str(REPO / "scripts/research/prop_ev_sim.py"), "--trades", f"{leg}={led}",
                         "--ruleset", str(REPO / f"config/prop_rulesets/{sim['rs']}.yaml"), "--costs", "breakout",
                         "--commission-bps-rt", str(c), "--slippage-bps-rt", str(s), "--swap-daily", str(sw),
-                        "--swap-model", "prorated", "--funded-start", "fresh", "--lev-cap", f"{leg}={G.lev_cap(acct, 'ml_entry')}",
+                        "--swap-model", "prorated", "--funded-start", "fresh", "--lev-cap", f"{leg}={G.lev_cap(acct, leg_key)}",
                         "--sizing", "start", "--risk-pct", str(sim["risk"]), "--dd-switch-frac", "0.8", "--seed", str(seed),
                         "--lives", "1000", "--outer", "2", "--lives-per-outer", "100", "--modes", "path", "--out", str(o)],
                        check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, cwd=str(REPO))
@@ -65,14 +71,17 @@ def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--variant", required=True, help="slug, [a-z0-9-] only (no double underscore): names cells and the record")
     ap.add_argument("--ledger"), ap.add_argument("--from-unit")
+    ap.add_argument("--arm-label", default=None, help="with --from-unit: read arms/<label>__trades.jsonl of an exit_lever_ablation unit")
     ap.add_argument("--out-dir", required=True)
     ap.add_argument("--jobs", type=int, default=4)
+    ap.add_argument("--symbols", default=",".join(SYMS), help="comma list of ledger symbols graded (default ETHUSDT,SOLUSDT)")
+    ap.add_argument("--leg-key", default="ml_entry", help="leg name prop_ev_sim keys lev-cap / cost on (default ml_entry; a Donchian arm passes its strategy key)")
     ap.add_argument("--write-record", action="store_true", help="write comms/prop_survival/<variant>.json (verdict as graded)")
     a = ap.parse_args()
     out = Path(a.out_dir)
     out.mkdir(parents=True, exist_ok=True)
     leg = a.variant.replace("_", "-")
-    led = Path(a.ledger) if a.ledger else (find_ledger(a.from_unit) if a.from_unit else None)
+    led = Path(a.ledger) if a.ledger else (find_ledger(a.from_unit, a.arm_label) if a.from_unit else None)
     if led is None or not led.exists():
         res = {"rule": G.RULE_V3, "variant": a.variant, "from_unit": a.from_unit, "read_state": "no_variant_ledger",
                "verdict": "INDETERMINATE", "missing_piece": MISSING_PIECE}
@@ -80,7 +89,8 @@ def main() -> int:
         print(json.dumps(res))
         return 0
     rows = [json.loads(x) for x in led.read_text().splitlines() if x.strip()]
-    rows = [r for r in rows if r.get("symbol") in SYMS]
+    syms = tuple(x for x in a.symbols.split(",") if x)
+    rows = [r for r in rows if r.get("symbol") in syms]
     if len(rows) < G.N_FLOOR:
         res = {"rule": G.RULE_V3, "variant": a.variant, "ledger": str(led), "read_state": "n_below_floor", "n": len(rows),
                "floor": G.N_FLOOR, "verdict": "INDETERMINATE"}
@@ -88,10 +98,10 @@ def main() -> int:
         print(json.dumps(res))
         return 0
     for r in rows:
-        r["leg"] = r["strategy"] = "ml_entry"      # prop_ev_sim lev-cap / cost keys on the leg name
+        r["leg"] = r["strategy"] = a.leg_key      # prop_ev_sim lev-cap / cost keys on the leg name
     stage = out / "ledger_ethsol.jsonl"
     stage.write_text("\n".join(json.dumps(r) for r in rows) + "\n")
-    run_cells(leg, stage, out, a.jobs)
+    run_cells(leg, stage, out, a.jobs, a.leg_key)
     agg = G.aggregate_v2(str(out) + "/")
     res = {"rule": G.RULE_V3, "variant": a.variant, "from_unit": a.from_unit, "ledger": str(led), "n": len(rows),
            "read_state": "graded", "prior_ml_records_on_this_window": len(glob.glob(str(REPO / "comms/prop_survival/ml_*.json"))),
