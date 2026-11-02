@@ -536,3 +536,28 @@ def test_packet_carries_the_generator_state():
     assert p["generator"]["state"] == "stale_vs_origin_main"
     assert any(m["field"] == "generator" for m in p["missing_inputs"])
     assert L.generator_state()["state"] in ("current", "stale_vs_origin_main", "could_not_look")
+
+
+def test_a_closed_package_is_not_read_as_an_open_position_held_by_its_sibling():
+    """2026-11-02: pkg-4fd943 (ict_scalp_xrp_5m, bybit_1) closed at its SL while sibling pkg-7bb5b257 (e4_oi_shock_1h)
+    still held XRPUSDT; the packet read the closed package as 'position True, SL/TP None'. It must read it as closed."""
+    closed, sib = "pkg-closed000000001", "pkg-sibling00000002"
+    acct = {"accounts": [{"account_id": "bybit_1", "read_state": "orders_read", "result": {
+        "positions": [{"symbol": "XRPUSDT", "side": "Sell", "size": 50.0}],
+        "orders": [
+            {"symbol": "XRPUSDT", "order_id": "sib-sl", "stop_order_type": "PartialStopLoss", "trigger_price": 2.61},
+            {"symbol": "XRPUSDT", "order_id": "sib-tp", "stop_order_type": "PartialTakeProfit", "trigger_price": 2.31}]}}]}
+    s = _snap(bybit_orders=acct)
+    s.packages[closed] = {"order_package_id": closed, "strategy_name": "ict_scalp_xrp_5m", "symbol": "XRPUSDT",
+                          "direction": "short", "entry": "2.5", "sl": "2.55", "tp": "2.40", "status": "closed",
+                          "close_reason": "sl", "meta": "{}"}
+    s.trades = [
+        {"id": 1, "order_package_id": closed, "account_id": "bybit_1", "status": "closed", "symbol": "XRPUSDT",
+         "sl_order_id": "own-sl", "tp_order_id": "own-tp", "account_class": "paper"},
+        {"id": 2, "order_package_id": sib, "account_id": "bybit_1", "status": "open", "symbol": "XRPUSDT",
+         "sl_order_id": "sib-sl", "tp_order_id": "sib-tp", "account_class": "paper"}]
+    p = _build(closed, s, cfg={"bybit_1": {"exchange": "bybit", "account_class": "paper"}})
+    b = p["account_bounds"][0]
+    assert b["own_position"] is False and "position False" in b["evidence"]
+    assert "belongs to " + sib in b["evidence"] and b["read_if_amend"] == "unknown"
+    assert p["mechanics"]["verdict"] == "match" and "sibling package(s) " + sib in p["mechanics"]["evidence"]

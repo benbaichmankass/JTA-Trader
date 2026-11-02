@@ -729,12 +729,19 @@ def _mechanics(s: Snapshot, view: dict, accts: List[dict], sl: Optional[float], 
                 elif v["position"]:
                     bad += 1
                     ev.append(f"{aid}: venue still holds {symbol} but its trade row is not open (orphan or missed close)")
-                item["evidence"] = (f"{v['src']}: SL {v['sl']} / TP {v['tp']}, position {v['position']}, "
+                # THIS package's own position: the venue read is per symbol, so with this package's trade row
+                # closed and a sibling holding the symbol, the position the venue shows is the SIBLING's
+                # (2026-11-02: closed pkg-4fd943 read "position True, SL/TP None" while pkg-7bb5b257 held XRPUSDT).
+                own_pos = bool(v["position"]) if (trade_open or not sibs) else False
+                item["own_position"] = own_pos
+                item["evidence"] = (f"{v['src']}: SL {v['sl']} / TP {v['tp']}, position {own_pos}, "
                                     f"matched by {v.get('matched_by')}"
-                                    + (f", {len(sibs)} sibling package(s) on {symbol}" if sibs else ""))
+                                    + (f", {len(sibs)} sibling package(s) on {symbol}" if sibs else "")
+                                    + (f"; this package is closed, the venue {symbol} position belongs to "
+                                       f"{', '.join(sibs)}" if v["position"] and not own_pos else ""))
                 paths = apply_paths(ex)
                 item["apply_paths"] = paths
-                item["read_if_amend"] = ("would_apply" if paths and v["position"] and not v.get("ambiguous") else "unknown")
+                item["read_if_amend"] = ("would_apply" if paths and own_pos and not v.get("ambiguous") else "unknown")
                 if paths is None:
                     item["evidence"] += "; apply paths could_not_look (live_review_apply.py did not import)"
                 elif not paths:
