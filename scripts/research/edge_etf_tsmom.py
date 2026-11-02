@@ -31,6 +31,16 @@ CONFIGS = {
     "E8": dict(lb=[126, 252], tv=0.10, lo=False, reb=5),
     "E9": dict(lb=[63, 126, 252], tv=0.10, lo=False, reb=21),
 }
+EQUITY, NON_EQUITY = ["SPY", "QQQ", "IWM"], ["TLT", "IEF", "GLD", "SLV", "GDX", "USO", "XLE", "MHG"]
+#: ITERATION arms (lane RESEARCH-OPS 2026-11-01): one factor from the primary E5, every arm counted; DSR N = 9 discovery configs + arms.
+ITER_ARMS = {
+    "A0": dict(base="E5"),                                   # control == discovery primary
+    "C1": dict(base="E5", universe=EQUITY),                  # asset-class gating: equity ETFs only
+    "C2": dict(base="E5", universe=NON_EQUITY),              # asset-class gating: rates / metals / energy / copper only
+    "R1": dict(base="E5", gate="shorts_spy_dn"),             # regime: shorts only while SPY < its 200d mean
+    "R2": dict(base="E5", gate="flat_spy_dn"),               # regime: whole book flat while SPY < its 200d mean
+}
+ITER_PRIOR_TRIALS = 9
 PRIMARY, SIDE_BPS, EVAL_A, EVAL_B = (
     "E5",
     2.0,
@@ -39,11 +49,51 @@ PRIMARY, SIDE_BPS, EVAL_A, EVAL_B = (
 )
 
 
+def run_iteration(a, close, ret, zero):
+    n_cum = ITER_PRIOR_TRIALS + len(ITER_ARMS)
+    D.EVAL_START = EVAL_A
+    it = {"control": "A0", "n_arms": len(ITER_ARMS), "n_trials_cumulative": n_cum, "arms": {}}
+    for aid, spec in ITER_ARMS.items():
+        c = CONFIGS[spec["base"]]
+        uni = spec.get("universe") or UNIVERSE
+        W = D.tsmom_weights(close, zero.notna().astype(float), c, n_univ=len(uni), rebalance=c["reb"], max_lev=3.0,
+                            vol_window=63, universe_fixed=uni)
+        W = D.apply_gate(W, close, {"shorts_spy_dn": "shorts_btc_dn", "flat_spy_dn": "flat_btc_dn"}.get(spec.get("gate")), ref="SPY")
+        res = {"spec": {k: v for k, v in spec.items()}}
+        for tag, m in (("primary", 1.0), ("stress", 2.0)):
+            net, to, _ = D.net_from_weights(W, ret, zero, m, 0.0, per_side_bps=SIDE_BPS)
+            res[tag] = D.metrics(net, to, n_cum)
+            if tag == "primary":
+                lo_n = D.net_from_weights(W.clip(lower=0.0), ret, zero, 1.0, 0.0, per_side_bps=SIDE_BPS)[0]
+                sh_n = D.net_from_weights(W.clip(upper=0.0), ret, zero, 1.0, 0.0, per_side_bps=SIDE_BPS)[0]
+                res["side_net_sum"] = {"long": round(float(lo_n[lo_n.index >= EVAL_A].sum()), 4),
+                                       "short": round(float(sh_n[sh_n.index >= EVAL_A].sum()), 4)}
+                yr = net[net.index >= EVAL_A]
+                res["by_year_net_sum"] = {str(k): round(float(v), 4) for k, v in yr.groupby(yr.index.year).sum().items()}
+        res["verdict"] = D.verdict("tsmom", res["primary"], res["stress"])
+        it["arms"][aid] = res
+    ctl = it["arms"]["A0"]["primary"]
+    it["delta_sharpe_vs_control"] = {k: (round(r["primary"]["sharpe_net"] - ctl["sharpe_net"], 3)
+                                         if r["primary"].get("state") == "computed" and ctl.get("state") == "computed" else None)
+                                     for k, r in it["arms"].items() if k != "A0"}
+    it["passing_arms"] = [k for k, r in it["arms"].items() if k != "A0" and r["verdict"]["verdict"] == "pass"]
+    it["measurement"] = {"control": "A0", "delta_sharpe_vs_control": it["delta_sharpe_vs_control"], "passing_arms": it["passing_arms"],
+                         "arms": {k: {"spec": r["spec"], "sharpe": r["primary"].get("sharpe_net"), "h1": r["primary"].get("sharpe_h1"),
+                                      "h2": r["primary"].get("sharpe_h2"), "dsr": r["primary"].get("dsr"),
+                                      "stress_sharpe": r["stress"].get("sharpe_net"), "side_net_sum": r["side_net_sum"],
+                                      "by_year_net_sum": r["by_year_net_sum"], "verdict": r["verdict"]["verdict"]}
+                                  for k, r in it["arms"].items()}}
+    D.write_run_outputs(a.out, {"iteration": it}, {**D.iteration_verdict(it, "etf tsmom iteration"), "measurement": it["measurement"]})
+    print(json.dumps({"passing_arms": it["passing_arms"], "delta_sharpe_vs_control": it["delta_sharpe_vs_control"]}, indent=1))
+    return 0
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--data-dir", required=True)
     ap.add_argument("--out", required=True)
     ap.add_argument("--series-dir", default=None)
+    ap.add_argument("--iteration", action="store_true", help="run the pre-registered ITER_ARMS grid against E5 as control")
     a = ap.parse_args()
     cols = {}
     for s in UNIVERSE:
@@ -74,6 +124,8 @@ def main():
         "primary": PRIMARY,
     }
     spy = ret["SPY"]
+    if a.iteration:
+        return run_iteration(a, close, ret, zero)
     for cid, c in CONFIGS.items():
         W = D.tsmom_weights(
             close,
@@ -140,4 +192,5 @@ def main():
         )
 
 
-main()
+if __name__ == "__main__":
+    sys.exit(main() or 0)

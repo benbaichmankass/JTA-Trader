@@ -1617,3 +1617,23 @@ levers:
       best_delta_r_per_trade: 0.0944
       fold_stability: 0.75
       reading: 'smooth, fold-stable gain: potential -- confirm on a holdout'
+units:
+- RQ-20261101-e5b1-13
+levers_tested:
+- family: prop-stack fit (account sizing vs firm DD limits and the prop cost stack)
+  varied: prop cost stack, 3 prop accounts x 2 arms x 2 windows, 5 seeds x 1000 lives
+  response:
+    n_3y: 63
+    mean_r_3y: -0.035
+    ci_r_3y:
+    - -0.37
+    - 0.301
+    by_direction_net_r:
+      short: -2.496
+    gross_r: 0.5
+    cost_r: 2.997
+  shape: 'INDETERMINATE: n=63 over 3y (18 in 365d), edge mean_r -0.035 R (CI -0.37..+0.30). Ledger is SHORT-only (63 of 63): net -2.5 R, gross
+    +0.5 R, cost 3.0 R = cost erases a thin gross edge; 2024-25 negative, 2026 +6.0 R. Underpowered: a powered re-measure (78fc-40) is the next
+    read.'
+  tested_at_power: false
+  unit: RQ-20261101-e5b1-13

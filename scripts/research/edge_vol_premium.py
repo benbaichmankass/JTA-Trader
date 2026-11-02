@@ -47,6 +47,16 @@ CFG = {
         ]
     )
 }
+#: ITERATION arms (lane RESEARCH-OPS 2026-11-01), chosen from research/levers/vol-premium-proxy.yaml: the signal LOSES on its long-variance
+#: side and an always-short-variance baseline earns more than the signal, so the premium is the base rate. One factor from the control
+#: (V2 = the discovery best): replace the signal with always-short (S0), then add a TAIL GATE (flat when the underlying's IV is above its
+#: own trailing-252d q-quantile; decision-time, history strictly before t). Every arm counted; DSR N = 8 discovery configs + these.
+ITER_CFG = {
+    "A0": dict(lam=0.94, thr=0.02, h=21),
+    "S0": dict(lam=0.94, thr=0.02, h=21, mode="short_always"),
+    "S1": dict(lam=0.94, thr=0.02, h=21, mode="short_always", tail_q=0.8),
+    "S2": dict(lam=0.94, thr=0.02, h=21, mode="short_always", tail_q=0.9),
+}
 START, END = pd.Timestamp("2008-07-01", tz="UTC"), pd.Timestamp("2024-06-30", tz="UTC")
 
 
@@ -64,7 +74,12 @@ def load(data_dir, fred_dir):
             else d.index.tz_localize("UTC")
         )
         px[s] = d["close"][~d.index.duplicated()]
-        v = pd.read_csv(Path(fred_dir) / f"{f}.csv")
+        fp = Path(fred_dir) / f"{f}.csv"
+        if not fp.is_file():                       # public FRED series, no key: fetch when the dir was not pre-filled
+            import urllib.request
+            fp.parent.mkdir(parents=True, exist_ok=True)
+            fp.write_bytes(urllib.request.urlopen(f"https://fred.stlouisfed.org/graph/fredgraph.csv?id={f}", timeout=60).read())
+        v = pd.read_csv(fp)
         v = v.set_index(pd.to_datetime(v.iloc[:, 0], utc=True)).iloc[:, 1]
         iv[s] = pd.to_numeric(v, errors="coerce") / 100.0
     return px, iv
@@ -99,6 +114,12 @@ def run_cfg(px, iv, cfg, mult):
             y = (RV**2 - K**2) / K**2
             gap = F - K
             pos = 1 if gap > cfg["thr"] else (-1 if gap < -cfg["thr"] else 0)
+            if cfg.get("mode") == "short_always":
+                pos = -1
+            if cfg.get("tail_q") is not None and pos != 0:
+                hist = iv[s][iv[s].index < t].dropna().tail(252)
+                if len(hist) >= 100 and K > float(hist.quantile(cfg["tail_q"])):
+                    pos = 0
             cost = (2 * K * 0.01 + 1e-4) / K**2 * mult if pos != 0 else 0.0
             rows.append((t, s, pos, y, pos * y - abs(pos) * cost, gap))
     df = pd.DataFrame(rows, columns=["t", "s", "pos", "y", "net", "gap"])
@@ -110,16 +131,19 @@ def main():
     ap.add_argument("--data-dir", required=True)
     ap.add_argument("--fred-dir", required=True)
     ap.add_argument("--out", required=True)
+    ap.add_argument("--iteration", action="store_true", help="run ITER_CFG (control + always-short + tail-gated) instead of CFG")
     a = ap.parse_args()
+    CFGS = ITER_CFG if a.iteration else CFG
+    NT = (len(CFG) + len(ITER_CFG)) if a.iteration else len(CFG)      # cumulative trials: discovery configs + these arms
     px, iv = load(a.data_dir, a.fred_dir)
     out = {
         "underlyings": list(MAP),
         "tlt": "no keyless IV history (FRED TYVIX/VXTLT 404) - not tested",
         "configs": {},
-        "n_trials": len(CFG),
+        "n_trials": NT,
     }
     D.EVAL_START = START
-    for cid, cfg in CFG.items():
+    for cid, cfg in CFGS.items():
         res = {}
         for tag, mult in (("primary", 1.0), ("stress", 2.0)):
             df = run_cfg(px, iv, cfg, mult)
@@ -140,7 +164,7 @@ def main():
             bs = np.array([rng.choice(full.to_numpy(), n).mean() for _ in range(2000)])
             import trial_ledger
 
-            d = trial_ledger.dsr([float(x) for x in full.to_numpy()], len(CFG))
+            d = trial_ledger.dsr([float(x) for x in full.to_numpy()], NT)
             res[tag] = {
                 "n_periods": n,
                 "sharpe_net": round(float(sr), 3),
@@ -198,7 +222,20 @@ def main():
     for c in out["configs"].values():
         c.pop("_series", None)
         c.pop("_df", None)
-    Path(a.out).write_text(json.dumps(out, indent=1, default=str))
+    if a.iteration:
+        ctl_sh = out["configs"]["A0"]["primary"]["sharpe_net"]
+        non_ctl_pass = out["verdict"]["verdict"] == "pass" and best != "A0"
+        meas = {"control": "A0", "selected": best, "arms": {k: {"spec": CFGS[k], "sharpe": c["primary"]["sharpe_net"],
+                "delta_sharpe_vs_control": round(c["primary"]["sharpe_net"] - ctl_sh, 3), "h1": c["primary"]["sharpe_h1"],
+                "h2": c["primary"]["sharpe_h2"], "stress_sharpe": c["stress"]["sharpe_net"], "dsr": c["primary"]["dsr"],
+                "frac_short_var": c["primary"]["frac_short_var"], "frac_long_var": c["primary"]["frac_long_var"]}
+                for k, c in out["configs"].items()}, "checks_of_selected": out["verdict"]["checks"]}
+        vdoc = {"verdict": "pass" if non_ctl_pass else "fail", "read_state": "measured", "n": out["configs"][best]["primary"]["n_periods"],
+                "population": f"vol-premium iteration: {len(CFGS)} arms incl. control A0, {len(MAP)} underlyings, 21d periods, {START.date()}..{END.date()}, DSR N_cum={NT}",
+                "note": f"selected {best}; passes the unchanged registered rule: {non_ctl_pass}", "measurement": meas}
+        D.write_run_outputs(a.out, out, vdoc)
+    else:
+        Path(a.out).write_text(json.dumps(out, indent=1, default=str))
     print(json.dumps(out["verdict"]), "selected", best)
     for cid, c in out["configs"].items():
         q = c["primary"]
@@ -230,4 +267,5 @@ def main():
     print(cl["per_year"])
 
 
-main()
+if __name__ == "__main__":
+    main()

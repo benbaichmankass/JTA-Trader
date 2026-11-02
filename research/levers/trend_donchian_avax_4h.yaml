@@ -1456,3 +1456,26 @@ levers:
       best_delta_r_per_trade: -0.0111
       fold_stability: 0.667
       reading: every tested value is worse than the baseline
+units:
+- RQ-20261101-e5b1-12
+levers_tested:
+- family: prop-stack fit (account sizing vs firm DD limits and the prop cost stack)
+  varied: prop cost stack, 3 prop accounts x 2 arms x 2 windows, 5 seeds x 1000 lives
+  response:
+    n_3y: 138
+    mean_r_3y: 0.0987
+    ci_r_3y:
+    - -0.153
+    - 0.35
+    by_direction_net_r:
+      long: 7.777
+      short: 5.738
+    by_year_net_r:
+      '2023': -0.367
+      '2024': 7.118
+      '2025': 17.394
+      '2026': -10.628
+  shape: 'FAIL on all 3 accounts: 3y edge mean_r +0.099 R (CI -0.15..+0.35, n=138). Ledger: long +7.8 R, short +5.7 R (both sides positive); 2024
+    +7.1, 2025 +17.4, 2026 -10.6 R; stops -76 R vs TP +88 R. Edge positive but CI spans zero and 2026 is losing: not separable from zero at n=138.'
+  tested_at_power: false
+  unit: RQ-20261101-e5b1-12

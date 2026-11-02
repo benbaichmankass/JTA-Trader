@@ -1,0 +1,103 @@
+# Hand-authored 2026-11-01 by lane RESEARCH-OPS-20261101-1447 (Tier 1), dispatched by Manager Session 2026-11-01a. ITERATION unit: chosen from the subject's lever map (research/levers/cost-levers-live-legs.yaml), one-factor/ablation against the base control, every arm counted, rule registered BEFORE the graded run. Gates: none.
+id: RQ-20261101-d1f3-03
+title: 'Re-measure the cost-lever bounds on the real-money journal once >=150 closed trades carry broker-sourced costs: does any lever reach pooled net >= 0 without
+  the no-selection artifact?'
+status: blocked
+cadence: once
+theme: live_strategy
+priority: 2
+roadmap:
+- L-PROGRAMMES
+programme: P6
+kind: experiment
+question: 'Re-measure the cost-lever bounds on the real-money journal once >=150 closed trades carry broker-sourced costs: does any lever reach pooled net >= 0 without
+  the no-selection artifact?'
+why_this_matters: 'Operator 2026-11-01 14:00Z: nothing that failed is closed. cost-levers-live-legs failed because the live legs are GROSS-negative (edge, not cost:
+  cost ~7% of the loss) and 62 of 64 cost rows are estimates; the remaining families are either per-leg (their own subjects) or need measured costs and more trades.'
+iteration:
+  subject: cost-levers-live-legs
+  subject_kind: strategy_leg
+  from_result: research/levers/cost-levers-live-legs.yaml
+  verdict_read: fail/indeterminate (see lever map)
+  diagnosis: 'research/levers/cost-levers-live-legs.yaml failure_attribution: n=64 closed real-money trades over 4 months across 6 legs; net -71.01 = gross -65.84
+    - estimated cost 5.17; maker-entry max saving 2.70 USD at 100% fill. DIAGNOSIS: cost is not the loss; the loss is gross edge on the individual legs, which is
+    OWNED by those legs'' own iteration units (signal threshold, session, regime and symbol pruning are per-leg families: link, not duplicate). What this subject
+    can still test, and cannot yet: measured (broker) costs replacing estimates, and a pooled bound at an n that can separate a lever. Both wait on COST-BROKER-SOURCED
+    and accrual, so this unit is BLOCKED with a clearing condition, not dropped.'
+  hypothesis: sizing_vs_cost (measured broker costs; pooled bound at adequate n)
+  search: sizing_vs_cost (measured broker costs; pooled bound at adequate n)
+  levers:
+  - sizing_vs_cost
+  attempt: 2
+  due_by: '2026-11-15'
+power:
+  expected_n: 150
+  min_detectable_effect: 0.3
+  effect_units: R_per_trade
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: 'n=64 trades over 4 months was far too few to separate any lever; 150 is the floor at which a 0.3 R/trade pooled difference is separable. Accrual: ~16 closed
+    real-money trades/month => ~5 more months unless more legs go live.'
+  feasibility:
+    source: none
+    accrual_basis: Fixed historical archive; nothing accrues.
+decision_rule:
+  id: RULE-RQ-20261101-d1f3-03
+  registered_at: '2026-11-01'
+  registered_before_run: true
+  statistic: 'ARMS: the harness''s own scenario set (maker-entry upper bound at 100% fill, trade-frequency selection) re-run on the journal AFTER the clearing condition
+    holds; unchanged scenarios, larger n, measured costs.'
+  rule: 'PASS iff some scenario''s pooled net >= 0 on >= 150 closed real-money trades with >= 95% broker-sourced cost rows WITHOUT being the no-selection removal
+    artifact (a scenario that only drops trades is excluded by construction). FAIL iff none does at that n. INDETERMINATE below the clearing condition (this unit
+    does not run before it). DISCLOSURE: the author smoke-ran the committed harness once on the dev box (not run) before this unit existed; that run is NOT the graded
+    record (the runner''s record is) and neither the arm grid nor the rule changed after it. Any arm added because of what it showed is a NEW trial and a new unit.'
+  what_it_does_not_do: 'Edits no config and no roster, places no order, proposes no live leg. A PASS earns ONE holdout read (HOLDOUT-LOCK), never a book. A FAIL records
+    the lever response in the map and closes NO family: retirement is only by a lever-exhaustion record.'
+intervention_controls:
+  not_applicable: an offline research ablation, not an in-trade action
+practice_precedent: 'M4, M5 (docs/reference/trading-and-model-practice-principles.md): pre-registered arm grid with a control arm, every arm counted, DSR at the cumulative
+  trial count.'
+compute: cpu_light
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 6.0
+  est_minutes: 20
+  why_runner: Public keyless archive / committed closes; CPU only.
+  basis: Estimate; the first run replaces it.
+value:
+  usd_at_stake_per_month: 40
+  confidence: 0.1
+  bucket: structural
+  basis: 'stand-in: candidate sources of positive expectancy for a book the audit found flat gross; an estimate, not a measurement'
+run:
+  command:
+  - python3
+  - scripts/research/cost_lever_bounds.py
+  - --journal-dir
+  - <paged journal dir>
+  - --out
+  - '{out_dir}'
+  inputs:
+    research_unit: RQ-20261101-d1f3-03
+  timeout_minutes: 60
+  workflow: research-script-run.yml
+lands:
+  assert_field: read_state
+  min_rows: 1
+  store: research/results/
+related:
+- research/levers/cost-levers-live-legs.yaml
+- RESEARCH-OPS-20261101-1447
+- HOLDOUT-LOCK
+- scripts/research/cost_lever_bounds.py
+- COST-BROKER-SOURCED
+- RQ-20261101-58e4-04
+blocked_on:
+- kind: work_item
+  ref: COST-BROKER-SOURCED
+  what: Broker-reported fee and funding on every real-money trade (485 of 488 real rows were cost_source estimate, audit 2026-11-01); plus >=150 closed real-money
+    trades.
+  clears_when: '>= 95% of new real rows carry cost_source broker AND >= 150 closed real-money trades are in the paged journal. Then git mv this file to research/queue/,
+    remove blocked_on, set status: queued; the --journal-dir token must be replaced with the paged-journal fetch step first.'

@@ -86,13 +86,32 @@ def sim_day(o, h, lo, c, rh, cfg):
     return None
 
 
+def build_klines_1h(root, symbols=None, ms=None):
+    """<root>/klines_1h.pkl = (series, manifest) for the 10-symbol UNIVERSE from the public archive (HOLDOUT-LOCK: edge_data caps at 2024-06)."""
+    import edge_data as E
+
+    root.mkdir(parents=True, exist_ok=True)
+    ser, man = E.assemble(E.fetch(symbols or UNIVERSE, root, kinds=("k",), ms=ms, interval="1h"), "k")
+    pickle.dump((ser, man), open(root / "klines_1h.pkl", "wb"))
+    return root / "klines_1h.pkl"
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--data-root", required=True)
     ap.add_argument("--out", required=True)
+    ap.add_argument("--rt-bps", type=float, default=RT_BPS,
+                    help="round-trip cost in bps (default 14 = 11 taker fee + 3 slippage). 4 = the MAKER-FILL CEILING arm: 100%% fill, "
+                         "no adverse selection, 2 bps/side -- an upper bound on what a limit-entry cost lever can recover.")
+    ap.add_argument("--dsr-trials", type=int, default=len(CFG),
+                    help="N for the deflated Sharpe (default = this grid). The cost-ceiling iteration passes the CUMULATIVE count.")
+    ap.add_argument("--build-data", action="store_true",
+                    help="if <data-root>/klines_1h.pkl is absent, build it from the public Binance Vision 1h archive first")
     a = ap.parse_args()
+    if a.build_data and not (Path(a.data_root) / "klines_1h.pkl").is_file():
+        build_klines_1h(Path(a.data_root))
     ser, _ = pickle.load(open(Path(a.data_root) / "klines_1h.pkl", "rb"))
-    out = {"universe": UNIVERSE, "configs": {}, "n_trials": len(CFG)}
+    out = {"universe": UNIVERSE, "configs": {}, "n_trials": a.dsr_trials}
     recs = {}
     pred_rows = []
     for s in UNIVERSE:
@@ -165,7 +184,7 @@ def main():
                     if sim is None:
                         continue
                     ret, d, why = sim
-                    ret = (ret - RT_BPS * mult / 1e4) / len(UNIVERSE)
+                    ret = (ret - a.rt_bps * mult / 1e4) / len(UNIVERSE)
                     net[t] += ret
                     cnt[t] += 1 / len(UNIVERSE)
                     outc[why] += 1
@@ -176,7 +195,7 @@ def main():
                     else:
                         ln[t] += ret / 2
                         sn[t] += ret / 2
-            m = D.metrics(net, cnt, len(CFG))
+            m = D.metrics(net, cnt, a.dsr_trials)
             res[tag] = m
             if tag == "primary":
                 res["outcomes"] = outc
