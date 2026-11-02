@@ -712,7 +712,7 @@ skill / dedupe tag, and one-shot `after_reset` items). **Machinery:** `scripts/o
 second source of truth). **Triggers:** primary = a Claude routine Wed **18:05Z** (resolves the current manager by title; it forwards, never
 dispatches on its own authority); backup = `.github/workflows/reset-protocol-backup.yml` (18:15Z wake comment on the ops-flags PR #17895 if no
 receipt; 19:00Z RED-FLAG comment + `send-ping` if still none). The protocol dispatches each job at its offset itself (the legacy per-job routines are disabled; their prompts are the briefs, see
-step 3). Primary routine ( `trig_018F2BmrzKwWTYoSYCCbroqy`); Thursday planning stays its own routine.
+step 3). Primary routine `trig_018F2BmrzKwWTYoSYCCbroqy`; Thursday planning stays its own routine.
 
 **The steps, in order. Step 0 is the claim; everything else is skipped by whoever finds the claim already made.**
 
