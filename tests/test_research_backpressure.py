@@ -448,3 +448,25 @@ def test_a_starved_saturated_cycle_fires_exactly_one_unit(tmp_path, monkeypatch)
         (q / f"{uid}.yaml").write_text(_unit_text(uid, wf))
     assert dq.main(["--queue-dir", str(q), "--fire", "--ref", "main", "--json", "--starvation-hours", "0"]) == 0
     assert fired == []
+
+
+def test_rearmed_at_lifts_the_retry_cap_for_rows_older_than_the_fix(tmp_path, monkeypatch):
+    """RESEARCH-FLOW: b62x landed producer_failed x4 (cap) from a since-fixed defect; `rearmed_at` after those rows makes it due once."""
+    from datetime import datetime, timezone
+    now = datetime(2026, 11, 2, 23, tzinfo=timezone.utc)
+    old = datetime(2026, 11, 2, 10, tzinfo=timezone.utc)
+    monkeypatch.setattr(dq, "precondition_met", lambda e: (True, ""))
+    monkeypatch.setattr(dq, "config_problem", lambda e: None)
+    monkeypatch.setattr(dq, "_e35_scope_problem", lambda *a, **k: None)
+    monkeypatch.setattr(dq, "latest_result_at", lambda uid, root=None: (old, 4))
+    monkeypatch.setattr(dq, "nonverdict_attempts", lambda uid, root=None: 4)
+    base = {"id": "RQ-X", "cadence": "once"}
+    due, why = dq._is_due({**base}, now)
+    assert not due and dq.RETRY_CAP_MARK in why
+    due, why = dq._is_due({**base, "rearmed_at": "2026-11-02T22:30:00+00:00"}, now)
+    assert due and "re-armed at" in why
+    new = datetime(2026, 11, 2, 22, 45, tzinfo=timezone.utc)      # a row AFTER the re-arm still counts: no loop
+    monkeypatch.setattr(dq, "latest_result_at", lambda uid, root=None: (new, 5))
+    monkeypatch.setattr(dq, "nonverdict_attempts", lambda uid, root=None: 5)
+    due, why = dq._is_due({**base, "rearmed_at": "2026-11-02T22:30:00+00:00"}, now)
+    assert not due and dq.RETRY_CAP_MARK in why

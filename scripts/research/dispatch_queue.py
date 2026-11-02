@@ -424,6 +424,13 @@ def _is_due(entry: Dict[str, Any], now: datetime) -> tuple:
     result_at, result_rows = latest_result_at(uid) if uid else (None, 0)
     if not last and not result_rows:
         return True, "never dispatched"
+    # RESEARCH-FLOW 2026-11-02: an explicit, dated re-arm. `rearmed_at` on the unit says every row landed BEFORE it was produced by a
+    # defect that has since been fixed (b62x: ran to completion, wrote no verdict.json -> producer_failed x3 -> retry cap). Those
+    # earlier rows no longer count against the cap, so the unit is due once. After it fires, its stamp and any new row apply as normal
+    # (a new producer_failed row still counts toward the cap, so this can never loop).
+    _ra = _parse_ts(entry.get("rearmed_at")) if entry.get("rearmed_at") else None
+    if not last and _ra is not None and (result_at is None or result_at < _ra):
+        return True, f"re-armed at {_ra.isoformat()}: {result_rows} earlier row(s) predate the fix and do not count against the cap"
     if not last and result_rows and confirmatory_requeue(entry, result_at):
         # The GRADER cleared the stamp on purpose (queue_grade.decide: first FAIL
         # -> `last_dispatched_at: null`, grading.confirmatory_run 1) after
