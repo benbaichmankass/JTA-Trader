@@ -1,0 +1,15 @@
+{
+  "due_when": {
+    "clears_when": "operator decides on signing the OPRA agreement and past capture runs are checked",
+    "kind": "event"
+  },
+  "id": "PI-20261102-PTDVAI3R-0003",
+  "next_action": "ask_operator",
+  "origin": {
+    "kind": "session",
+    "ref": "issue #22458 / PR #22449",
+    "rerun": "file an options-snapshot-request issue with 'mode: probe'; list options-snapshot-capture.yml schedule runs before 2026-11-02 and read their Install deps / capture logs"
+  },
+  "state": "queued",
+  "what": "Options: Alpaca OPRA agreement not signed (opra feed + all historical option bars 403); and not checked whether past nightly options captures failed for the same missing pyyaml fixed in #22449 (#22348 empty probe assumed same cause)."
+}
