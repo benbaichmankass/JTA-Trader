@@ -1,0 +1,112 @@
+{
+ "schema_version": 1,
+ "review_id": "LR-20261102T1101Z-pkg-7bb5b2578aef490a",
+ "reviewed_at": "2026-11-02T11:06:00Z",
+ "order_package_id": "pkg-7bb5b2578aef490a",
+ "trade_id": null,
+ "leg": "e4_oi_shock_1h",
+ "accounts": [
+  "bybit_1"
+ ],
+ "trigger": {
+  "event": "structure_break",
+  "level": "close_broke_since_entry_low",
+  "l0_snapshot_at": null
+ },
+ "info_cutoff_at": "2026-11-02T11:01:56Z",
+ "state": {
+  "atr_now_over_entry": null,
+  "bars_held": 0,
+  "giveback_r": null,
+  "open_r": -0.7033,
+  "peak_provenance": "estimated",
+  "peak_r": null,
+  "regime_cell_entry": null,
+  "regime_cell_now": null,
+  "sl": 1.2458464285714286,
+  "tp": 1.275707142857143
+ },
+ "features_at_review": {
+  "atr_now_over_entry": null,
+  "bars_since_peak": null,
+  "giveback_r": null,
+  "open_r": -0.7033,
+  "peak_r": null,
+  "r_to_stop": 0.2967,
+  "r_to_target": 2.7033
+ },
+ "mechanics": {
+  "evidence": "package sl 1.2458464285714286 / tp 1.275707142857143 agree with every readable account",
+  "verdict": "match"
+ },
+ "options": [],
+ "outcome_table_source": null,
+ "recommendation": {
+  "action": "hold",
+  "level": null,
+  "level_atr": null,
+  "ev_delta_r": null,
+  "worst_case_delta_r": null,
+  "basis": "judgement",
+  "confidence": "anecdote",
+  "evidence_source": "judgement",
+  "judgement_confidence": 0.5,
+  "reason": "Previous forecast (target 1.2614 / invalidation 1.2458, 12 bars) has not resolved: neither touched. Close 1.2487 broke the since-entry low close (low 1.2471), -0.70R mark, stop 1.2458 is 0.30R / ~0.4 ATR away and a real venue order below the 1.2421-1.2474 swing lows. No Stage-0 record; closing on adverse is not a default (LTR-TRIGGER-CLOSE-S0) and the bracket already expresses the view. Carry forward, p_target cut as target is ~1.6 ATR away vs stop 0.4 ATR.",
+  "size_fraction": null
+ },
+ "judge_prior": null,
+ "applied": false,
+ "apply_policy": {
+  "bound_r": 0.25,
+  "within_bound": null,
+  "tighten_r": null
+ },
+ "shadow_policy": {
+  "bound_r": 0.5,
+  "within_bound": null,
+  "would_apply": null,
+  "tighten_r": null
+ },
+ "context_flags": [
+  "no Stage-0 evidence record for e4_oi_shock_1h: pure judgement, no priced table",
+  "structure_break: 1h close 1.2487 below since-entry low close; 4h trend transitional adx 22",
+  "4h swing low 1.247 is within 0.2 ATR of price; a 4h break likely takes the stop",
+  "bars_held 0, peak_r null; atr_now_over_entry null"
+ ],
+ "account_reads": [
+  {
+   "account_id": "bybit_1",
+   "account_class": "paper",
+   "read": "no_action",
+   "evidence": "hold changes nothing"
+  }
+ ],
+ "disposition": {
+  "route": "none",
+  "mandate": null,
+  "action_issue": null,
+  "applied_at": null,
+  "verified_readback": null
+ },
+ "model": "sonnet-tier",
+ "session": "session_01AFoLuJ1apgy8sfngu4WyNH_lane",
+ "prompt_sha": null,
+ "skill_sha": "ce31519c30f9287eb2f2970ac8460bb763a5e744",
+ "packet_sha": "3b412d01c2eaed37879bb165e8dc866e655d15d5be30274472225435a40680a1",
+ "forecast": {
+  "thesis": "XRP is sagging toward the 1.2458 stop; I expect the stop more likely than a reclaim of the 1.2614 spike high, but the venue SL already caps loss at 1R so hold costs nothing extra.",
+  "direction": "with_trade",
+  "target_px": 1.2614,
+  "p_target": 0.2,
+  "invalidation_px": 1.2458,
+  "horizon_bars": 12,
+  "timeframe": "1h",
+  "evidence": [
+   "chart last_close 1.2487 vs entry 1.2558",
+   "since_entry low 1.2471 low_dist_atr -0.21",
+   "htf 4h swing low 1.247",
+   "exit_plan sl 1.2458 / tp 1.2757",
+   "priced_options null"
+  ]
+ }
+}
