@@ -757,8 +757,19 @@ def _self_test() -> None:
     print("ml_entry_levers self-test OK")
 
 
-def build_base_table(streams: Path, out: Path) -> Path:
-    """Baseline-feature table from the 12-column klines streams only (no families), same cache conversion as ml_entry_v2.build_table."""
+def build_base_table(streams: Path, out: Path, source: str = "streams", lake_revision: str | None = None) -> Path:
+    """Baseline-feature table from the 12-column klines streams only (no families), same cache conversion as ml_entry_v2.build_table.
+    ``source="lake"`` reads the same bars from the market data lake (ml/datasets/lake_klines.py; row ML-DATA-WIRING) and records the
+    lake revision beside the table; the downstream table build is unchanged."""
+    if source == "lake":
+        sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+        from ml.datasets import lake_klines as LK
+        cache, syms, info = LK.build_klines_cache(out, E.universe(), E.START, str((pd.Timestamp(E.END) + pd.Timedelta(days=1)).date()), revision=lake_revision)
+        tab = E.build_table(cache, syms)
+        tab["ts"] = tab["ts"].astype("datetime64[ns, UTC]")
+        tab.to_pickle(out / "table.pkl")
+        (out / "lake_revision.json").write_text(json.dumps(info, indent=1, default=str))
+        return out / "table.pkl"
     import ml_entry_families as F
     import ml_entry_v2 as V
     cache = out / "klines"
@@ -803,6 +814,8 @@ def main() -> int:
     ap.add_argument("--out", default="/tmp/ml_entry_levers")
     ap.add_argument("--n-jobs", type=int, default=4)
     ap.add_argument("--self-test", action="store_true")
+    ap.add_argument("--source", choices=["streams", "lake"], default="streams")
+    ap.add_argument("--lake-revision", default=None)
     a = ap.parse_args()
     if a.self_test:
         _self_test()
@@ -810,7 +823,7 @@ def main() -> int:
     out = Path(a.out)
     out.mkdir(parents=True, exist_ok=True)
     if a.cmd == "build-table":
-        print(build_base_table(Path(a.streams), out))
+        print(build_base_table(Path(a.streams), out, a.source, a.lake_revision))
         return 0
     if a.cmd == "fwd-read":
         import holdout_lock
