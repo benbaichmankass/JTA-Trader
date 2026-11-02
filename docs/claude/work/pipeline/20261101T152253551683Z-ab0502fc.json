@@ -1,0 +1,16 @@
+{
+  "due_when": {
+    "check_every_days": 7,
+    "due_date": "2026-11-08",
+    "kind": "date"
+  },
+  "id": "PI-20261101-E7Z3FBDV-0002",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "RESEARCH-OPS-20261101-0940 (session_01AFoLuJRBdk2erte7Z3Fbdv)",
+    "rerun": "python3 scripts/ops/pipeline.py --stats"
+  },
+  "state": "queued",
+  "what": "[soak-report pipeline sync re-emits duplicates] soak_report.py / soak-book-grade-weekly.yml dedupes its PI-SOAK-* pipeline items only against main, so every run whose result PR has not landed re-emits the same 45 items under new filenames (ids identical). MEASURED 2026-11-01: four stuck result PRs (#22029, #22040, #22061, #22086) each added the same 45; the duplicates were dropped from three by hand before landing. Fix: make the sync skip an id that already exists in the store or in any open automation branch, or make the writer idempotent on id. Not fixed by #22090 (that fixed the document-index failure only)."
+}
