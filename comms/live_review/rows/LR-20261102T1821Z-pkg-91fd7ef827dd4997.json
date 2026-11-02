@@ -1,0 +1,121 @@
+{
+ "schema_version": 1,
+ "review_id": "LR-20261102T1821Z-pkg-91fd7ef827dd4997",
+ "reviewed_at": "2026-11-02T18:30:00Z",
+ "order_package_id": "pkg-91fd7ef827dd4997",
+ "trade_id": 6828,
+ "leg": "ml_entry",
+ "accounts": [
+  "bybit_2",
+  "bybit_portfolio"
+ ],
+ "trigger": {
+  "event": "daily_floor",
+  "level": "2026-11-02",
+  "l0_snapshot_at": null
+ },
+ "info_cutoff_at": "2026-11-02T18:21:56Z",
+ "state": {
+  "atr_now_over_entry": null,
+  "bars_held": 0,
+  "giveback_r": null,
+  "open_r": 0.55,
+  "peak_provenance": "estimated",
+  "peak_r": null,
+  "regime_cell_entry": null,
+  "regime_cell_now": null,
+  "sl": 1.2656857142857143,
+  "tp": 1.20454286
+ },
+ "features_at_review": {
+  "atr_now_over_entry": null,
+  "bars_since_peak": null,
+  "giveback_r": null,
+  "open_r": null,
+  "peak_r": null,
+  "r_to_stop": null,
+  "r_to_target": null
+ },
+ "mechanics": {
+  "evidence": "package sl 1.2656857142857143 / tp 1.20454286 agree with every readable account",
+  "verdict": "match"
+ },
+ "options": [],
+ "outcome_table_source": null,
+ "recommendation": {
+  "action": "hold",
+  "level": null,
+  "level_atr": null,
+  "ev_delta_r": null,
+  "worst_case_delta_r": null,
+  "basis": "judgement",
+  "confidence": "anecdote",
+  "evidence_source": "judgement",
+  "judgement_confidence": 0.5,
+  "reason": "Short from 1.2504, last close 1.2420 (+0.55R est., ATR 0.00856); latest 1h bar swept to 1.2352 and closed below the 1.2448 swing low, but 4h ADX is only 20 and the entry bar was a failed 1.2637 spike, so conviction is lower than ADA. Hold expresses the view: SL 1.2657 beyond the spike high, TP 3R below, 24h time stop. No bracket move beats holding; risk is the correlated crypto-short book.",
+  "size_fraction": null,
+  "size_multiplier": null
+ },
+ "judge_prior": null,
+ "applied": false,
+ "apply_policy": {
+  "bound_r": 0.25,
+  "within_bound": null,
+  "tighten_r": null
+ },
+ "shadow_policy": {
+  "bound_r": 0.5,
+  "within_bound": null,
+  "would_apply": null,
+  "tighten_r": null
+ },
+ "context_flags": [
+  "ml_entry has no Stage-0 outcome table in live_review_outcomes.py (priced_options could_not_price: open_r/peak_r/atr_stop_mult unavailable, no position_telemetry R) so no table EV is quoted",
+  "open_r computed by hand from packet chart last_close vs entry and SL distance, ESTIMATED, not telemetry (telemetry R is null: meta.risk_per_unit missing)",
+  "exit_plan_state target (1.5R) is stale vs the venue/package TP (6 ATR = 3.0R after the extend-only ml_first_passage TP revision): venue and package agree, mechanics match",
+  "correlated_exposure: 8 open shorts (BTC, SOL x2, ADA x2, XRP, MGC, IAUM, QLD): crypto shorts are one beta bet",
+  "tighten evidence: 981 Claude tightens averaged -0.097R net (advice-only), so no tighten here; a tighten would also be flattered by stop-at-price fills",
+  "missing: regime cell/vol bucket, ATR ratio, funding (packet missing_inputs); 24h time stop at max_hold_min 1440 is the strategy's own exit"
+ ],
+ "account_reads": [
+  {
+   "account_id": "bybit_2",
+   "account_class": "real_money",
+   "read": "no_action",
+   "evidence": "hold changes nothing; venue SL/TP match the package"
+  },
+  {
+   "account_id": "bybit_portfolio",
+   "account_class": "paper",
+   "read": "no_action",
+   "evidence": "hold changes nothing; venue SL/TP match the package"
+  }
+ ],
+ "disposition": {
+  "route": "none",
+  "mandate": null,
+  "action_issue": null,
+  "applied_at": null,
+  "verified_readback": null
+ },
+ "model": "sonnet-tier (live-review lane)",
+ "session": "session_01AFoLuMQtMgpFfzjGLfipuN",
+ "prompt_sha": null,
+ "skill_sha": "ce31519c30f9287eb2f2970ac8460bb763a5e744",
+ "packet_sha": "15fd34a887c3e90fe9a799d094f243a891c1d1325791217a1132f831d13b2430",
+ "forecast": {
+  "thesis": "The 1.2448 swing low has broken and the sweep to 1.2352 closed back above it, so a continued drift to the 1.5R level is likelier than a reclaim of 1.259, but 4h ADX 20 means chop can stall it",
+  "direction": "with_trade",
+  "target_px": 1.2275,
+  "p_target": 0.4,
+  "invalidation_px": 1.259,
+  "horizon_bars": 8,
+  "timeframe": "1h",
+  "evidence": [
+   "context_v3.chart.swings: low 1.2448 broken",
+   "context_v3.chart.since_entry: low 1.2352 high 1.2637",
+   "context_v3.htf: 4h adx 20.0",
+   "context_v3.book: 8 open shorts"
+  ]
+ }
+}
