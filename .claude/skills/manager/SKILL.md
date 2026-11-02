@@ -711,8 +711,8 @@ skill / dedupe tag, and one-shot `after_reset` items). **Machinery:** `scripts/o
 `--sweep`, `--self-test`). **Receipt store:** `comms/ops/reset_receipts.jsonl`, append-only, committed by the manager to `main` (no DB, no
 second source of truth). **Triggers:** primary = a Claude routine Wed **18:05Z** (resolves the current manager by title; it forwards, never
 dispatches on its own authority); backup = `.github/workflows/reset-protocol-backup.yml` (18:15Z wake comment on the ops-flags PR #17895 if no
-receipt; 19:00Z RED-FLAG comment + `send-ping` if still none). The routines that fire each job at its offset are created from the config by
-the manager; Thursday planning stays its own routine.
+receipt; 19:00Z RED-FLAG comment + `send-ping` if still none). The protocol dispatches each job at its offset itself (the legacy per-job routines are disabled; their prompts are the briefs, see
+step 3). Primary routine `trig_018F2BmrzKwWTYoSYCCbroqy`; Thursday planning stays its own routine.
 
 **The steps, in order. Step 0 is the claim; everything else is skipped by whoever finds the claim already made.**
 
@@ -730,7 +730,12 @@ the manager; Thursday planning stays its own routine.
 3. **Dispatch the due jobs.** `--plan <reset-ts>` prints them (monthly jobs appear on the first Wednesday reset of the month and
    `supersedes` the weekly job they replace). For each at its offset: check the `dedupe_tag` in `list_sessions` (created inside
    `dedupe_hours` = skip), then `create_session` with the config's `model` and `ceiling_usd`, tags `lane:<NAME>`, `manager:<id>`, `metis-lane`.
-   The routines already firing these at their offsets are the primary path; this step is the catch for any that did not fire.
+   **The lane brief:** read each weekly job's brief with `get_trigger(<brief_trigger>)` (a DISABLED legacy routine whose stored prompt is
+   the brief; review prep's one brief covers its three lanes) and use it verbatim with the current manager id substituted. Monthly jobs use
+   their config `note` as the brief. On a monthly week the deep audit replaces the weekly audit. The legacy per-job routines are disabled:
+   this protocol is now the only dispatcher of these jobs.
+   **Thursday planning** is its own routine, now `trig_01QhYHMBFSnMB5CYYAyy7MH6` (assistant session, forwards to the manager); the old
+   `trig_01VKbpUoD72EAAs8oPUVU5Lm` is disabled.
 4. **Start the `after_reset` items** the plan lists (key + reason); each starts once and is removed from the config in the PR that confirms
    it started.
 5. **Receipt and ONE Telegram line.** `--receipt <reset-ts> --write complete --by <id> --json '{"dispatched":[...],"skipped":[...],
