@@ -27,12 +27,13 @@ permissions:
   contents: read
   issues: write
 
-concurrency:
-  group: options-snapshot-capture
-  cancel-in-progress: false
-
 jobs:
   options-snapshot:
+    # JOB-level (not workflow-level): a workflow-level group lets every skipped issue event queue behind a long run, and a newer
+    # pending run then CANCELS an older pending real request (observed on etf-history-pipeline runs 16/17, 2026-11-02).
+    concurrency:
+      group: options-snapshot-capture
+      cancel-in-progress: false
     if: >-
       github.event_name != 'issues' ||
       ((github.event.issue.user.login == github.repository_owner ||
