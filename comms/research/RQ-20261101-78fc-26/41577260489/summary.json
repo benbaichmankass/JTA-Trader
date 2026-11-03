@@ -1,0 +1,185 @@
+{
+  "leg": "mgc_trend_1h",
+  "grade": {
+    "verdict": "fail",
+    "label": "no_discovery",
+    "selected": null,
+    "selected_from": 1,
+    "discovery": {
+      "A": {
+        "n": 158,
+        "net_r": 12.6817,
+        "expectancy_r": 0.0803,
+        "folds": [
+          {
+            "fold": 1,
+            "start": "2024-06-24 04:00:00+00:00",
+            "end": "2024-11-29 09:14:48.750000+00:00",
+            "trades": 40,
+            "net_r": -3.0431
+          },
+          {
+            "fold": 2,
+            "start": "2024-11-29 09:14:48.750000+00:00",
+            "end": "2025-05-06 14:29:37.500000+00:00",
+            "trades": 42,
+            "net_r": -7.7869
+          },
+          {
+            "fold": 3,
+            "start": "2025-05-06 14:29:37.500000+00:00",
+            "end": "2025-10-11 19:44:26.250000+00:00",
+            "trades": 39,
+            "net_r": 11.9169
+          },
+          {
+            "fold": 4,
+            "start": "2025-10-11 19:44:26.250000+00:00",
+            "end": "2026-03-19 00:59:15+00:00",
+            "trades": 37,
+            "net_r": 11.5948
+          }
+        ],
+        "folds_positive": 2,
+        "eligible": false
+      }
+    },
+    "plan": {
+      "boundary": "2026-03-19 00:59:15+00:00",
+      "share": 0.25,
+      "baseline_n_holdout": 69,
+      "grown": false,
+      "short_at_cap": false,
+      "discovery_fold_edges": [
+        "2024-06-24 04:00:00+00:00",
+        "2024-11-29 09:14:48.750000+00:00",
+        "2025-05-06 14:29:37.500000+00:00",
+        "2025-10-11 19:44:26.250000+00:00",
+        "2026-03-19 00:59:15+00:00"
+      ],
+      "straddling_excluded": {
+        "A": 1
+      }
+    },
+    "holdout": null,
+    "holdout_min_trades": 25,
+    "discovery_n_floor": 20,
+    "evaluations_on_holdout": 0,
+    "why": "no arm is eligible on the discovery span (n floor, net R > 0, fold majority): nothing to confirm"
+  },
+  "arms": {
+    "A": {
+      "reach_ge_6r": 0.0263,
+      "n": 228,
+      "net_r": 5.3859,
+      "net_r_fee_only": 18.5649,
+      "max_drawdown_r": 20.0898,
+      "by_outcome": {
+        "stop": 76,
+        "trail_stop": 144,
+        "timeout": 4,
+        "take_profit": 4
+      },
+      "mean_bars_held": 35.64,
+      "net_r_per_capital_day": 0.0159,
+      "cost_stack": {
+        "fee_bps_roundtrip": 7.5,
+        "slippage_bps_roundtrip": 5.0,
+        "funding_bps_per_window": 0.0
+      },
+      "params": {
+        "donchian": 20,
+        "atr_stop_mult": 2.5,
+        "trail_mult": 4.0,
+        "min_confidence": 0.0,
+        "confirm_bars": 1
+      },
+      "data_start": "2024-06-24 04:00:00+00:00",
+      "data_end": "2026-10-15 23:00:00+00:00",
+      "folds": [
+        {
+          "fold": 1,
+          "start": "2024-06-24 04:00:00+00:00",
+          "end": "2025-01-21 02:59:45+00:00",
+          "trades": 52,
+          "net_r": -9.5803
+        },
+        {
+          "fold": 2,
+          "start": "2025-01-21 02:59:45+00:00",
+          "end": "2025-08-20 01:59:30+00:00",
+          "trades": 55,
+          "net_r": 4.2357
+        },
+        {
+          "fold": 3,
+          "start": "2025-08-20 01:59:30+00:00",
+          "end": "2026-03-19 00:59:15+00:00",
+          "trades": 52,
+          "net_r": 26.563
+        },
+        {
+          "fold": 4,
+          "start": "2026-03-19 00:59:15+00:00",
+          "end": "2026-10-15 23:59:00+00:00",
+          "trades": 69,
+          "net_r": -15.8322
+        }
+      ],
+      "argv": [
+        "/opt/hostedtoolcache/Python/3.11.17/x64/bin/python3",
+        "/home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_trend.py",
+        "--donchian",
+        "20",
+        "--data",
+        "<data>",
+        "--symbol",
+        "MGC",
+        "--resample",
+        "1h",
+        "--atr-period",
+        "14",
+        "--atr-stop-mult",
+        "2.5",
+        "--trail-mult",
+        "4.0",
+        "--min-confidence",
+        "0.0",
+        "--fee-bps-roundtrip",
+        "7.5",
+        "--emit-trades",
+        "comms/research/RQ-20261101-78fc-26/41577260489/arms/A__trades.jsonl",
+        "--json",
+        "comms/research/RQ-20261101-78fc-26/41577260489/arms/A__bt.json",
+        "--confirm-bars",
+        "1",
+        "--tp-cap-pct",
+        "0.099",
+        "--tp-r",
+        "50.0",
+        "--start",
+        "2018-06-01",
+        "--end",
+        "2026-10-15 23:59"
+      ]
+    }
+  },
+  "window": {
+    "start": "2018-06-01",
+    "end": "2026-10-15 23:59",
+    "fetch_days": 3060,
+    "feed": {
+      "source": "yahoo",
+      "ticker": "GC=F",
+      "interval": "60m",
+      "resample": "1h"
+    },
+    "fold_edges": [
+      "2024-06-24 04:00:00+00:00",
+      "2025-01-21 02:59:45+00:00",
+      "2025-08-20 01:59:30+00:00",
+      "2026-03-19 00:59:15+00:00",
+      "2026-10-15 23:59:00+00:00"
+    ]
+  }
+}
