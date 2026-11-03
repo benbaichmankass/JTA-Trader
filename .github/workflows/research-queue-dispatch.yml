@@ -98,20 +98,40 @@ jobs:
   # run proceeds, never what it computes. Fails open: an error here means
   # "run" — see `dedupe` in replay-pregate-nightly.yml for the same pattern.
   dedupe:
-    if: github.event_name == 'schedule' || github.event_name == 'workflow_run'
+    if: github.event_name == 'schedule'
     runs-on: ubuntu-latest
     timeout-minutes: 3
     permissions:
       actions: read
       contents: read
     outputs:
-      skip: ${{ steps.gap.outputs.skip == 'true' || steps.d.outputs.skip == 'true' }}
+      skip: ${{ steps.d.outputs.skip }}
     steps:
-      # REFILL 2026-11-03: a research-run completion asks for a cycle, but never faster than one per 10 min. Skip when any
-      # other dispatch run of this workflow was created in the last 10 min (a running one, a queued one, or a finished one).
-      # Fails open to "run": the group + one-pending-run rule still serialise, and a wrong "run" costs one idempotent cycle.
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: scripts/ops/schedule_keeper.py
+          sparse-checkout-cone-mode: false
+      - id: d
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: >-
+          python3 scripts/ops/schedule_keeper.py dedupe
+          --run-id "${{ github.run_id }}" --schedule "${{ github.event.schedule }}"
+
+  # REFILL 2026-11-03: a research-run completion asks for a cycle, but never faster than one per 10 min. Skip when any other dispatch
+  # run of this workflow was created in the last 10 min (running, queued or finished). Fails open to "run": the concurrency group and
+  # its one-pending-run rule still serialise, and a wrong "run" costs one idempotent cycle. Separate from `dedupe` (schedule-only).
+  gap:
+    if: github.event_name == 'workflow_run'
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    permissions:
+      actions: read
+    outputs:
+      skip: ${{ steps.gap.outputs.skip }}
+    steps:
       - id: gap
-        if: github.event_name == 'workflow_run'
         continue-on-error: true
         env:
           GH_TOKEN: ${{ github.token }}
@@ -123,19 +143,6 @@ jobs:
             --jq '[.workflow_runs[] | select((.id|tostring) != env.THIS_RUN) | select((.created_at|fromdateiso8601) > (now - 600))] | length')
           echo "other dispatch runs created in the last 10 min: ${recent}"
           if [ "${recent}" != "0" ]; then echo "skip=true" >> "$GITHUB_OUTPUT"; fi
-      - uses: actions/checkout@v4
-        if: github.event_name == 'schedule'
-        with:
-          sparse-checkout: scripts/ops/schedule_keeper.py
-          sparse-checkout-cone-mode: false
-      - id: d
-        if: github.event_name == 'schedule'
-        continue-on-error: true
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: >-
-          python3 scripts/ops/schedule_keeper.py dedupe
-          --run-id "${{ github.run_id }}" --schedule "${{ github.event.schedule }}"
 
   # ⚠️ SPLIT 2026-10-07 (lane RQ-CADENCE, PI-20261007-APBY4NTV-0004): THIS JOB NO
   # LONGER LANDS ANYTHING. It used to hold the `research-queue-dispatch`
@@ -155,9 +162,9 @@ jobs:
   # only holder of the group, and the open-stamp-PR / landed-results checks in
   # dispatch_queue.py cover the minutes between "fired" and "stamp PR open".
   dispatch:
-    needs: dedupe
+    needs: [dedupe, gap]
     if: |
-      !cancelled() && needs.dedupe.outputs.skip != 'true' && (
+      !cancelled() && needs.dedupe.outputs.skip != 'true' && needs.gap.outputs.skip != 'true' && (
       github.event_name == 'schedule' ||
       github.event_name == 'workflow_run' ||
       github.event_name == 'workflow_dispatch'

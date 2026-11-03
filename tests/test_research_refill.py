@@ -87,10 +87,10 @@ def test_the_fire_decision_still_lives_in_one_env_and_admits_workflow_run():
     assert d["concurrency"]["group"] == "research-queue-dispatch"
 
 
-def test_a_workflow_run_cycle_is_rate_limited_by_a_gap_step():
-    j = _wf("research-queue-dispatch")["jobs"]["dedupe"]
-    assert "workflow_run" in j["if"]
-    gap = [s for s in j["steps"] if s.get("id") == "gap"]
-    assert len(gap) == 1 and gap[0]["if"] == "github.event_name == 'workflow_run'"
-    assert "600" in gap[0]["run"], "10-minute floor between cycles"
-    assert "steps.gap.outputs.skip" in j["outputs"]["skip"]
+def test_a_workflow_run_cycle_is_rate_limited_by_a_gap_job():
+    jobs = _wf("research-queue-dispatch")["jobs"]
+    assert jobs["dedupe"]["if"] == "github.event_name == 'schedule'", "the keeper's dedupe job is pinned schedule-only"
+    gap = jobs["gap"]
+    assert gap["if"] == "github.event_name == 'workflow_run'"
+    assert "600" in gap["steps"][0]["run"], "10-minute floor between cycles"
+    assert "gap" in jobs["dispatch"]["needs"] and "needs.gap.outputs.skip" in jobs["dispatch"]["if"]
