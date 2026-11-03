@@ -77,6 +77,10 @@ container costs the work.
 A finding is filed when it is in `docs/claude/work/PIPELINE.jsonl` with an
 `origin.rerun` and a `due_when`, or when it is a checklist row.
 
+⚠️ **A filed row carries `owner`, `due_by` and a `roadmap` ref** (`checklist.py add` fills them; the manager's daily review step 4b works the due set; operator, 2026-11-01). **A lane that lands a change as `landed_unproven` writes the runnable `observe: {when, how}` on its row at landing; that is all it owes (it archives as normal, it is not kept open for the soak).** **An audit or
+review lane** (weekly-audit, health, performance, ml, programme review, any from-scratch audit) **is done only when every proposal it made maps to such a
+row — or to a recorded operator decision** — and the PR body lists proposal → row id → `due_by` (manager skill § "The audit-outcome contract").
+
 ⚠️ **These are NOT filed**, however carefully written:
 
 | not filed | why |

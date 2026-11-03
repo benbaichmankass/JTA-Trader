@@ -26,7 +26,8 @@ Dedupe is on the packet id and on the bar.
 
 States: ``posted`` (``producer`` ``vm`` when this pass built it, ``latency_s`` from the packet's
 ``built_at``) · ``skipped_by_cadence`` (the packet landed, the bar is not a wake bar: ``scan_wake_every_h``,
-operator 2026-10-30) · ``already_recorded`` · ``awaiting_wake`` · ``wake_missing`` · ``could_not_build``
+operator 2026-10-30) · ``skipped_nothing_new`` (a wake bar, but the packet does not differ materially from the last
+woken one: ``scan_wake_min_move_atr``, operator 2026-10-31; ``reason`` says what was compared) · ``already_recorded`` · ``awaiting_wake`` · ``wake_missing`` · ``could_not_build``
 (``reason``, ``attempts``) · ``could_not_commit`` (``http_code``) · ``could_not_post`` (``http_code``) ·
 ``could_not_look`` (``reason``, incl. ``stale_packet``). NO HALTING: every failure is a receipt state, the
 next pass retries (bounded per bar), and the workflow fallback covers a VM that cannot commit.
@@ -238,6 +239,8 @@ def run_once(fetch: Fetch = _get,
         prior = json.loads((receipt or receipt_path()).read_text())
         if prior.get("last_posted"):
             rec["last_posted"] = prior["last_posted"]
+        if prior.get("last_skipped"):
+            rec["last_skipped"] = prior["last_skipped"]
     except Exception:  # noqa: BLE001
         pass
 
@@ -293,6 +296,11 @@ def run_once(fetch: Fetch = _get,
                         every_h=mm.scan_wake_every_h())
         if mm.plan_post(entry, markers) != "post":
             return done("already_posted", packet_id=entry["packet_id"], commit=sha)
+        wake, why = mm.material_change(entry["context"]["fingerprint"], mm.last_woken_fingerprint(markers),
+                                       mm.scan_wake_min_move_atr())
+        if not wake:
+            rec["last_skipped"] = {"packet_id": entry["packet_id"], "bar": entry["bar"], "reason": why}
+            return done("skipped_nothing_new", packet_id=entry["packet_id"], commit=sha, bar=entry["bar"], reason=why)
         pcode, pdata = http("POST", f"{API}/repos/{REPO}/issues/{pr}/comments",
                             json.dumps({"body": mm.render_wake(entry, now)}).encode(), auth)
         if pcode != 201:
@@ -320,6 +328,9 @@ def run_once(fetch: Fetch = _get,
     if pid in recorded_packet_ids(text):
         return done("already_recorded")
     pbar = mm.bar_of(ptr["info_cutoff_at"])
+    skipped = rec.get("last_skipped") or {}
+    if skipped.get("packet_id") == pid:  # this pass's predecessor judged it: nothing new, no wake by design
+        return done("skipped_nothing_new", packet_id=pid, bar=skipped.get("bar") or pbar, reason=skipped.get("reason"))
     if not mm.wake_due(pbar):
         return done("skipped_by_cadence", bar=pbar, every_h=mm.scan_wake_every_h(),
                     reason="the packet landed; no wake by design on this bar (config/desk_triggers.yaml scan_wake_every_h)")

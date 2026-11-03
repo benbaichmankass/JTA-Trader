@@ -1,0 +1,477 @@
+{
+  "leg": "qqq_trend_long_1d",
+  "label": "reachable_lever_beats_removed",
+  "grade": {
+    "verdict": "pass",
+    "label": "reachable_lever_beats_removed",
+    "best": "AX40",
+    "baseline": "B",
+    "candidates": {
+      "AX30": {
+        "delta_net_r": -5.4801,
+        "delta_max_drawdown_r": 0.0,
+        "fold_wins": 1,
+        "passes": false
+      },
+      "AX40": {
+        "delta_net_r": 1.1174,
+        "delta_max_drawdown_r": 0.0,
+        "fold_wins": 3,
+        "passes": true
+      }
+    },
+    "delta_r_bar": 1.0,
+    "fold_majority": 3,
+    "n_floor": 39,
+    "control": null,
+    "why": "AX40 beats the removed-lever baseline by 1.1174 R with no worse drawdown and >= 3/4 fold wins: a Tier-3 proposal to declare it (not done here)"
+  },
+  "arms": {
+    "B": {
+      "reach_ge_6r": 0.0,
+      "n": 124,
+      "net_r": 60.7057,
+      "net_r_fee_only": 62.8195,
+      "max_drawdown_r": 5.5615,
+      "by_outcome": {
+        "trail_stop": 31,
+        "stop": 47,
+        "take_profit": 46
+      },
+      "mean_bars_held": 25.468,
+      "net_r_per_capital_day": 0.0192,
+      "cost_stack": {
+        "fee_bps_roundtrip": 0.0,
+        "slippage_bps_roundtrip": 5.0,
+        "funding_bps_per_window": 0.0
+      },
+      "params": {
+        "donchian": 30,
+        "atr_stop_mult": 2.0,
+        "trail_mult": 4.0,
+        "min_confidence": 0.0,
+        "trail_decay_arm_r": 0.0,
+        "trail_decay_stall_bars": 0,
+        "trail_decay_tight_mult": 2.0
+      },
+      "data_start": "1999-03-10 00:00:00+00:00",
+      "data_end": "2026-10-27 00:00:00+00:00",
+      "folds": [
+        {
+          "fold": 1,
+          "start": "1999-03-10 00:00:00+00:00",
+          "end": "2006-02-04 06:00:00+00:00",
+          "trades": 26,
+          "net_r": 1.8944
+        },
+        {
+          "fold": 2,
+          "start": "2006-02-04 06:00:00+00:00",
+          "end": "2013-01-01 12:00:00+00:00",
+          "trades": 33,
+          "net_r": 8.9879
+        },
+        {
+          "fold": 3,
+          "start": "2013-01-01 12:00:00+00:00",
+          "end": "2019-11-29 18:00:00+00:00",
+          "trades": 28,
+          "net_r": 28.0118
+        },
+        {
+          "fold": 4,
+          "start": "2019-11-29 18:00:00+00:00",
+          "end": "2026-10-27 00:00:00+00:00",
+          "trades": 37,
+          "net_r": 21.8121
+        }
+      ],
+      "argv": [
+        "/opt/hostedtoolcache/Python/3.11.17/x64/bin/python3",
+        "/home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_trend.py",
+        "--donchian",
+        "30",
+        "--data",
+        "<data>",
+        "--symbol",
+        "QQQ",
+        "--resample",
+        "1d",
+        "--atr-period",
+        "14",
+        "--atr-stop-mult",
+        "2.0",
+        "--trail-mult",
+        "4.0",
+        "--min-confidence",
+        "0.0",
+        "--fee-bps-roundtrip",
+        "0.0",
+        "--emit-trades",
+        "comms/research/RQ-20261031-d5dd-02/41226533954/arms/B__trades.jsonl",
+        "--json",
+        "comms/research/RQ-20261031-d5dd-02/41226533954/arms/B__bt.json",
+        "--long-only",
+        "--trail-decay-tight-mult",
+        "2.0",
+        "--tp-cap-pct",
+        "0.099",
+        "--tp-r",
+        "3.0",
+        "--end",
+        "2026-10-27"
+      ]
+    },
+    "AX30": {
+      "reach_ge_6r": 0.0,
+      "n": 111,
+      "net_r": 55.2256,
+      "net_r_fee_only": 57.0698,
+      "max_drawdown_r": 5.5615,
+      "by_outcome": {
+        "trail_stop": 24,
+        "stop": 45,
+        "take_profit": 42
+      },
+      "mean_bars_held": 25.568,
+      "net_r_per_capital_day": 0.0195,
+      "cost_stack": {
+        "fee_bps_roundtrip": 0.0,
+        "slippage_bps_roundtrip": 5.0,
+        "funding_bps_per_window": 0.0
+      },
+      "params": {
+        "donchian": 30,
+        "atr_stop_mult": 2.0,
+        "trail_mult": 4.0,
+        "min_confidence": 0.0,
+        "adx_max": 30.0,
+        "adx_period": 14,
+        "trail_decay_arm_r": 0.0,
+        "trail_decay_stall_bars": 0,
+        "trail_decay_tight_mult": 2.0
+      },
+      "data_start": "1999-03-10 00:00:00+00:00",
+      "data_end": "2026-10-27 00:00:00+00:00",
+      "folds": [
+        {
+          "fold": 1,
+          "start": "1999-03-10 00:00:00+00:00",
+          "end": "2006-02-04 06:00:00+00:00",
+          "trades": 23,
+          "net_r": 0.7735
+        },
+        {
+          "fold": 2,
+          "start": "2006-02-04 06:00:00+00:00",
+          "end": "2013-01-01 12:00:00+00:00",
+          "trades": 30,
+          "net_r": 6.7838
+        },
+        {
+          "fold": 3,
+          "start": "2013-01-01 12:00:00+00:00",
+          "end": "2019-11-29 18:00:00+00:00",
+          "trades": 26,
+          "net_r": 25.438
+        },
+        {
+          "fold": 4,
+          "start": "2019-11-29 18:00:00+00:00",
+          "end": "2026-10-27 00:00:00+00:00",
+          "trades": 32,
+          "net_r": 22.2308
+        }
+      ],
+      "argv": [
+        "/opt/hostedtoolcache/Python/3.11.17/x64/bin/python3",
+        "/home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_trend.py",
+        "--donchian",
+        "30",
+        "--data",
+        "<data>",
+        "--symbol",
+        "QQQ",
+        "--resample",
+        "1d",
+        "--atr-period",
+        "14",
+        "--atr-stop-mult",
+        "2.0",
+        "--trail-mult",
+        "4.0",
+        "--min-confidence",
+        "0.0",
+        "--fee-bps-roundtrip",
+        "0.0",
+        "--emit-trades",
+        "comms/research/RQ-20261031-d5dd-02/41226533954/arms/AX30__trades.jsonl",
+        "--json",
+        "comms/research/RQ-20261031-d5dd-02/41226533954/arms/AX30__bt.json",
+        "--long-only",
+        "--trail-decay-tight-mult",
+        "2.0",
+        "--tp-cap-pct",
+        "0.099",
+        "--tp-r",
+        "3.0",
+        "--adx-max",
+        "30",
+        "--end",
+        "2026-10-27"
+      ]
+    },
+    "AX40": {
+      "reach_ge_6r": 0.0,
+      "n": 119,
+      "net_r": 61.8231,
+      "net_r_fee_only": 63.827,
+      "max_drawdown_r": 5.5615,
+      "by_outcome": {
+        "trail_stop": 30,
+        "stop": 44,
+        "take_profit": 45
+      },
+      "mean_bars_held": 26.118,
+      "net_r_per_capital_day": 0.0199,
+      "cost_stack": {
+        "fee_bps_roundtrip": 0.0,
+        "slippage_bps_roundtrip": 5.0,
+        "funding_bps_per_window": 0.0
+      },
+      "params": {
+        "donchian": 30,
+        "atr_stop_mult": 2.0,
+        "trail_mult": 4.0,
+        "min_confidence": 0.0,
+        "adx_max": 40.0,
+        "adx_period": 14,
+        "trail_decay_arm_r": 0.0,
+        "trail_decay_stall_bars": 0,
+        "trail_decay_tight_mult": 2.0
+      },
+      "data_start": "1999-03-10 00:00:00+00:00",
+      "data_end": "2026-10-27 00:00:00+00:00",
+      "folds": [
+        {
+          "fold": 1,
+          "start": "1999-03-10 00:00:00+00:00",
+          "end": "2006-02-04 06:00:00+00:00",
+          "trades": 25,
+          "net_r": 2.4905
+        },
+        {
+          "fold": 2,
+          "start": "2006-02-04 06:00:00+00:00",
+          "end": "2013-01-01 12:00:00+00:00",
+          "trades": 31,
+          "net_r": 7.0385
+        },
+        {
+          "fold": 3,
+          "start": "2013-01-01 12:00:00+00:00",
+          "end": "2019-11-29 18:00:00+00:00",
+          "trades": 27,
+          "net_r": 29.0366
+        },
+        {
+          "fold": 4,
+          "start": "2019-11-29 18:00:00+00:00",
+          "end": "2026-10-27 00:00:00+00:00",
+          "trades": 36,
+          "net_r": 23.258
+        }
+      ],
+      "argv": [
+        "/opt/hostedtoolcache/Python/3.11.17/x64/bin/python3",
+        "/home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_trend.py",
+        "--donchian",
+        "30",
+        "--data",
+        "<data>",
+        "--symbol",
+        "QQQ",
+        "--resample",
+        "1d",
+        "--atr-period",
+        "14",
+        "--atr-stop-mult",
+        "2.0",
+        "--trail-mult",
+        "4.0",
+        "--min-confidence",
+        "0.0",
+        "--fee-bps-roundtrip",
+        "0.0",
+        "--emit-trades",
+        "comms/research/RQ-20261031-d5dd-02/41226533954/arms/AX40__trades.jsonl",
+        "--json",
+        "comms/research/RQ-20261031-d5dd-02/41226533954/arms/AX40__bt.json",
+        "--long-only",
+        "--trail-decay-tight-mult",
+        "2.0",
+        "--tp-cap-pct",
+        "0.099",
+        "--tp-r",
+        "3.0",
+        "--adx-max",
+        "40",
+        "--end",
+        "2026-10-27"
+      ]
+    }
+  },
+  "window": {
+    "start": null,
+    "end": "2026-10-27",
+    "fetch_days": 7300,
+    "feed": {
+      "source": "yahoo",
+      "ticker": "QQQ",
+      "interval": "1d",
+      "resample": "1d"
+    },
+    "fold_edges": [
+      "1999-03-10 00:00:00+00:00",
+      "2006-02-04 06:00:00+00:00",
+      "2013-01-01 12:00:00+00:00",
+      "2019-11-29 18:00:00+00:00",
+      "2026-10-27 00:00:00+00:00"
+    ]
+  },
+  "argv": {
+    "B": {
+      "argv": [
+        "/opt/hostedtoolcache/Python/3.11.17/x64/bin/python3",
+        "/home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_trend.py",
+        "--donchian",
+        "30",
+        "--data",
+        "<data>",
+        "--symbol",
+        "QQQ",
+        "--resample",
+        "1d",
+        "--atr-period",
+        "14",
+        "--atr-stop-mult",
+        "2.0",
+        "--trail-mult",
+        "4.0",
+        "--min-confidence",
+        "0.0",
+        "--fee-bps-roundtrip",
+        "0.0",
+        "--emit-trades",
+        "comms/research/RQ-20261031-d5dd-02/41226533954/arms/B__trades.jsonl",
+        "--json",
+        "comms/research/RQ-20261031-d5dd-02/41226533954/arms/B__bt.json",
+        "--long-only",
+        "--trail-decay-tight-mult",
+        "2.0",
+        "--tp-cap-pct",
+        "0.099",
+        "--tp-r",
+        "3.0",
+        "--end",
+        "2026-10-27"
+      ],
+      "cfg_set": {},
+      "cfg_unset": [],
+      "extra_flags": [],
+      "omitted_levers_per_builder": []
+    },
+    "AX30": {
+      "argv": [
+        "/opt/hostedtoolcache/Python/3.11.17/x64/bin/python3",
+        "/home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_trend.py",
+        "--donchian",
+        "30",
+        "--data",
+        "<data>",
+        "--symbol",
+        "QQQ",
+        "--resample",
+        "1d",
+        "--atr-period",
+        "14",
+        "--atr-stop-mult",
+        "2.0",
+        "--trail-mult",
+        "4.0",
+        "--min-confidence",
+        "0.0",
+        "--fee-bps-roundtrip",
+        "0.0",
+        "--emit-trades",
+        "comms/research/RQ-20261031-d5dd-02/41226533954/arms/AX30__trades.jsonl",
+        "--json",
+        "comms/research/RQ-20261031-d5dd-02/41226533954/arms/AX30__bt.json",
+        "--long-only",
+        "--trail-decay-tight-mult",
+        "2.0",
+        "--tp-cap-pct",
+        "0.099",
+        "--tp-r",
+        "3.0",
+        "--adx-max",
+        "30",
+        "--end",
+        "2026-10-27"
+      ],
+      "cfg_set": {},
+      "cfg_unset": [],
+      "extra_flags": [
+        "--adx-max",
+        "30"
+      ],
+      "omitted_levers_per_builder": []
+    },
+    "AX40": {
+      "argv": [
+        "/opt/hostedtoolcache/Python/3.11.17/x64/bin/python3",
+        "/home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_trend.py",
+        "--donchian",
+        "30",
+        "--data",
+        "<data>",
+        "--symbol",
+        "QQQ",
+        "--resample",
+        "1d",
+        "--atr-period",
+        "14",
+        "--atr-stop-mult",
+        "2.0",
+        "--trail-mult",
+        "4.0",
+        "--min-confidence",
+        "0.0",
+        "--fee-bps-roundtrip",
+        "0.0",
+        "--emit-trades",
+        "comms/research/RQ-20261031-d5dd-02/41226533954/arms/AX40__trades.jsonl",
+        "--json",
+        "comms/research/RQ-20261031-d5dd-02/41226533954/arms/AX40__bt.json",
+        "--long-only",
+        "--trail-decay-tight-mult",
+        "2.0",
+        "--tp-cap-pct",
+        "0.099",
+        "--tp-r",
+        "3.0",
+        "--adx-max",
+        "40",
+        "--end",
+        "2026-10-27"
+      ],
+      "cfg_set": {},
+      "cfg_unset": [],
+      "extra_flags": [
+        "--adx-max",
+        "40"
+      ],
+      "omitted_levers_per_builder": []
+    }
+  }
+}

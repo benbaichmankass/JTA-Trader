@@ -1,0 +1,20 @@
+{
+  "based_on": "20261030T223342330006Z-29a82c9d.json",
+  "due_when": {
+    "clears_when": "v2 (or v3) fails a zero-edge null ledger on all 3 accounts in a committed self-test, and prior v2 PASS verdicts are re-graded, or killed with a reason",
+    "due_date": "2026-11-03",
+    "kind": "date"
+  },
+  "id": "PI-20261030-9KC5G3FG-0007",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "Manager Session 2026-10-30c, lane DESK-18G E4 prop-sim report (PR #21720)",
+    "rerun": "run the v2 harness (docs/research/prop-replacement-2026-10-30/run_cells.sh) on a synthetic zero-edge ledger (net R ~ mean 0, the leg's sd) for breakout_2/tradeify_1/velotrade_1; any PASS is an instance"
+  },
+  "severity": "high",
+  "state": "done",
+  "terminal_reason": "Fixed 2026-10-31 (lane PROP-GATE-EDGE-SENSITIVE): V3 = V2 AND net-of-cost edge 95% CI lower bound > 0, one implementation scripts/research/prop_gate.py; self-test tests/test_prop_gate_edge.py (zero-edge ledger FAILs on breakout_2/tradeify_1/velotrade_1, positive-edge ledger can PASS); every recorded V2 PASS re-graded in docs/research/prop-gate-edge-regrade-2026-10-31/RESULT.md (only sol4h 3y survives; rostered trend_donchian_eth_prop is FAIL_EDGE on all 3 accounts, put to operator as Tier 3).",
+  "tier": 1,
+  "what": "The prop EV/survival gate RULE-P5-GATE-BRK-PER-LEG-V2 is INSENSITIVE TO EDGE: it PASSES a leg with no edge. MEASURED 2026-10-30 (lane DESK-18G, PR #21720, docs/research/e4-prop-sim-2026-10-30/RESULT.md): E4 ledger n=1619 trades (DEV 763 + held-out 856), trailing-365d n=847 trades with mean net R -0.017 R on the simulator's own cost model, yet v2 PASSED all 12 cells (EV +$23..+$116 per life on the 365d cells) because the cheap evaluation fee vs 80% of a 9-12% profit target plus near-break-even breach ceilings make a ~zero-edge random walk +EV per attempt. Consequence: every v2 PASS to date (e.g. trend_donchian_eth_prop 2026-10-29 on the old ledger, eth_4h/sol_4h primary cells in PROP-REPLACEMENT) is not evidence of edge; the prop superset rule only stays honest because Stage-0 is checked separately. Fix: v2 must require a positive net-of-cost edge (or EV computed with a per-trade edge CI lower bound) and report the zero-edge null EV per account; re-grade recorded v2 verdicts; state whether the prop-roster-gate-guard can be satisfied by a zero-edge leg."
+}

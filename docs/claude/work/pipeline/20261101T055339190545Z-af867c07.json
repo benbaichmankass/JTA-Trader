@@ -1,0 +1,18 @@
+{
+  "due_when": {
+    "clears_when": "the live_review_due_stale 'rows ahead of main' count excludes review_ids listed in comms/live_review/killed_rows.json, so a killed row no longer reads as a stuck mirror",
+    "due_date": "2026-11-05",
+    "kind": "date"
+  },
+  "id": "PI-20261101-TD4QC5GP-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "Manager Session 2026-10-31a daily review WR-20261101-0538Z: live_review_due_stale reads 'rows: 1 review row(s) on live-review/rows not on main; oldest LR-20261031T1529Z-pkg-821a1280782b48a1 ... the rows mirror is stuck', but that row was killed by #21933 (killed_rows.json) and the mirror reports it as killed by design",
+    "rerun": "GET /api/bot/work/report and read the live_review_due_stale line; it must not name LR-20261031T1529Z-pkg-821a1280782b48a1"
+  },
+  "severity": "low",
+  "state": "queued",
+  "tier": 1,
+  "what": "False alarm in the expected-signals check live_review_due_stale: its rows-ahead-of-main probe counts a review_id that is dispositioned KILLED in comms/live_review/killed_rows.json (LR-20261031T1529Z-pkg-821a1280782b48a1, malformed packet_sha, killed 2026-10-31 via #21933) and so reports 'the rows mirror is stuck' when the mirror is working (it reports the row as killed). Fix: exclude killed review_ids the same way the 7 schema-refused rows are excluded. Same check also counts 4 due events unreviewed > 120m whose oldest is uso_trend_1h/alpaca_paper on a CLOSED weekend market (1238m); separate question whether closed-market events should count, note only."
+}

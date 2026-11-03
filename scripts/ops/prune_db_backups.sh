@@ -16,6 +16,12 @@
 #   ACTION_APPLY  - "true" to delete; else dry-run
 #   ACTION_DAYS   - retention in days (default 7; 0 = age is no protection, keep still applies)
 #   ACTION_KEEP   - always keep this many newest backups (default 2, minimum 1)
+#   ACTION_FILE   - ONE-OFF path (operator-approved 2026-11-02, VM-DISK-GROWTH-20261102): the exact BASENAME of one
+#                   backup next to the live DB. Bypasses keep/days for that one file ONLY, and deletes only with
+#                   ACTION_CONFIRM=yes AND ACTION_APPLY=true; otherwise it prints the plan. Refused for the live DB,
+#                   -wal/-shm, a path (any "/"), or anything that is not <db>.bak-* / <db>.*-bak-*. The general
+#                   keep >= 1 rule below is unchanged.
+#   ACTION_CONFIRM - must be exactly "yes" for the file: path to delete.
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -23,6 +29,25 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "${SCRIPT_DIR}/_lib.sh"
 
 DB_PATH="$(runtime_db_path)"
+
+if [ -n "${ACTION_FILE:-}" ]; then
+    f_base="${ACTION_FILE}"
+    case "${f_base}" in */*|.|..) echo "REFUSED: file must be a bare basename, not a path (got '${f_base}')"; exit 3 ;; esac
+    f_full="$(dirname "${DB_PATH}")/${f_base}"
+    case "${f_full}" in "${DB_PATH}"|"${DB_PATH}-wal"|"${DB_PATH}-shm") echo "REFUSED: ${f_full} is the live DB or its -wal/-shm"; exit 3 ;; esac
+    case "${f_full}" in "${DB_PATH}".bak-*|"${DB_PATH}".*-bak-*) ;; *) echo "REFUSED: ${f_base} is not a <db>.bak-* / <db>.*-bak-* backup"; exit 3 ;; esac
+    if [ -L "${f_full}" ] || [ ! -f "${f_full}" ]; then echo "REFUSED: ${f_full} is not a regular file"; exit 3; fi
+    echo ">>> ONE-OFF delete of exactly: ${f_full}"; du -h "${f_full}" || true
+    df -h "$(dirname "${DB_PATH}")" || true
+    if [ "${ACTION_CONFIRM:-}" != "yes" ] || [ "${ACTION_APPLY:-}" != "true" ]; then
+        echo ">>> NOT DELETED: needs confirm: yes AND apply: true."; exit 0
+    fi
+    rm -f -- "${f_full}" && echo "  deleted ${f_full}"
+    record_audit "prune-db-backups" "ok" "{\"deleted_file\": \"${f_base}\"}" >/dev/null || true
+    df -h "$(dirname "${DB_PATH}")" || true
+    exit 0
+fi
+
 RETAIN_DAYS="${ACTION_DAYS:-7}"
 KEEP="${ACTION_KEEP:-2}"
 case "${KEEP}" in ''|*[!0-9]*) echo "ERROR: keep must be a whole number (got '${KEEP}')"; exit 2 ;; esac

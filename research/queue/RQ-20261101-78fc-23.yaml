@@ -1,0 +1,113 @@
+# Hand-authored 2026-11-01 by lane RESEARCH-ITERATE (Tier 1), dispatched by Manager Session 2026-11-01a. ITERATION unit: authored from a written diagnosis of the subject's last result. Decision rule registered BEFORE any run. Gates: none.
+id: RQ-20261101-78fc-23
+title: 'ITERATION 1 of qqq_trend_long_1d (indeterminate): Measured at power on 2018-06-01..2026-10-15 23:59, does qqq_trend_long_1d as declared
+  clear Stage 0 net of the full cost stack?'
+status: queued
+cadence: once
+theme: live_strategy
+priority: 1
+roadmap:
+- L-PROGRAMMES
+programme: P3
+kind: experiment
+question: Measured at power on 2018-06-01..2026-10-15 23:59, does qqq_trend_long_1d as declared clear Stage 0 net of the full cost stack?
+why_this_matters: 'Operator 2026-11-01 ~12:59Z: "if the data doesn''t pass, it goes back into research for improvments and testing. THere is no
+  other pipeline for underperforming strategies/mls." qqq_trend_long_1d is a TESTING leg (indeterminate) with no live research iteration (scripts/research/iteration_orphans.py,
+  2026-11-01); paper keeps it generating live data while this loop runs, never as a parking place.'
+iteration:
+  subject: qqq_trend_long_1d
+  subject_kind: strategy_leg
+  from_result: comms/strategy_evidence/qqq_trend_long_1d.json
+  verdict_read: indeterminate
+  diagnosis: 'Stage-0 record comms/strategy_evidence/qqq_trend_long_1d.json (generated 2026-09-24, harness trend, 365 d window, fidelity faithful):
+    n=8 OOS trades, net 5.2971 R net of the full cost stack (fee-only 5.4396 R), expectancy 0.6621 R/trade, folds [6.0, -2.0, 2.4, -1.0], rule
+    RULE-D1-STAGE0-NET-OF-FULL-COST pass. DIAGNOSIS: The record cannot decide (n=8): R-N (n < 30) or fidelity keeps it INDETERMINATE, so it sits
+    on paper with no verdict. Every one of these records used a 365 d window; the 1d legs trade ~8-15 times a year, so a year can never reach
+    n >= 30. The trail-decay levers that made some records approximate are now forwarded by regime_debt_matrix (_PB_LEVER_FLAG), so a re-measure
+    is faithful. The diagnosis is POWER, and the iteration is the powered measurement.'
+  hypothesis: measured on a multi-year window at n >= 30 the declared leg clears Stage 0 (net R > 0 in a majority of folds)
+  attempt: 1
+  due_by: '2026-11-08'
+power:
+  expected_n: 60
+  min_detectable_effect: 0.45
+  effect_units: sd
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: d=0.45 at alpha 0.05 / power 0.8 needs 39 trades (the repo E35 floor). expected_n=60 is an ESTIMATE scaled from the leg's record over
+    the longer window, NOT a measurement; below the floor the unit grades INDETERMINATE, never FAIL.
+  feasibility:
+    source: none
+    accrual_basis: Re-measurement on freshly fetched public candles over a pinned window; nothing accrues.
+decision_rule:
+  id: RULE-RQ-20261101-78fc-23
+  registered_at: '2026-11-01'
+  registered_before_run: true
+  statistic: scripts/research/exit_lever_ablation.py --grade stage0 over 2018-06-01..2026-10-15 23:59, 6 calendar folds, one arm (the declared
+    leg).
+  rule: 'PASS iff net R(A) > 0 AND n(A) >= 30 AND >= 4 of 6 calendar folds net-positive, net of the full cost stack: the next iteration is the
+    holdout confirmation (--grade holdout). FAIL at n >= the floor: the leg goes back to diagnosis with a powered result to diagnose (iteration
+    2 is a variant unit). INDETERMINATE if n(A) < 30 (still underpowered: the next iteration pools the leg''s family or extends the window). Not
+    changed after any result.'
+  what_it_does_not_do: Edits no config and no roster, places no order, is not a promotion case by itself. The arm grid is the whole search; the
+    baseline is the declared leg.
+intervention_controls:
+  not_applicable: a config-exact harness re-measurement / parameter ablation, not an in-trade action
+practice_precedent: 'M4, M5 (docs/reference/trading-and-model-practice-principles.md): pre-registered arm grid, every arm counted, baseline =
+  the declared leg; holdout read once (PROMOTION-BAR-HOLDOUT-1016).'
+compute: cpu_light
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 4.0
+  est_minutes: 25
+  why_runner: Fetches keyless public candles for a pinned window; reads no trainer data; CPU only.
+  basis: Estimate from comparable exit_lever_ablation runs (3ef3-*, 7b6f-*); the first run replaces it.
+value:
+  usd_at_stake_per_month: 80
+  confidence: 0.15
+  bucket: structural
+  basis: planning weight by money rank (1 prop / alpaca_live candidate, 2 bybit_1 with a real-money sibling, 3 paper only); an estimate, not a
+    measurement
+run:
+  command:
+  - python3
+  - scripts/research/exit_lever_ablation.py
+  - --leg
+  - qqq_trend_long_1d
+  - --arm
+  - A=
+  - --days
+  - '3060'
+  - --start
+  - '2018-06-01'
+  - --end
+  - 2026-10-15 23:59
+  - --non-crypto-source
+  - dukascopy
+  - --grade
+  - stage0
+  - --baseline
+  - A
+  - --delta-r
+  - '0'
+  - --folds
+  - '6'
+  - --fold-majority
+  - '4'
+  - --n-floor
+  - '30'
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 90
+  inputs:
+    research_unit: RQ-20261101-78fc-23
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- RESEARCH-ITERATE
+- comms/strategy_evidence/qqq_trend_long_1d.json
+what_it_does_not_do: Edits no config, roster or rule; places no order; a PASS is an input to the next iteration, not a promotion.

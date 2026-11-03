@@ -1,0 +1,18 @@
+{
+  "due_when": {
+    "clears_when": "RQ-20261009-900 is in research/queue/ with a run.command and a verdict.json grader, or is retired with a reason before it passes 30 d in blocked/",
+    "due_date": "2026-11-07",
+    "kind": "date"
+  },
+  "id": "PI-20261031-10311121-0002",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "RESEARCH-OPS-20261031-1120",
+    "rerun": "python3 -c \"import sys;sys.path.insert(0,'.');from scripts.research import infra_selftest as t;print(t.blocked_over_age()['measurement'])\""
+  },
+  "severity": "low",
+  "state": "queued",
+  "tier": 1,
+  "what": "RQ-20261009-900 (blocked, owner ML-LEG-CORPUS) clause 1 is CLEAR: RQ-20261014-736c-01 landed read_state measured / verdict pass (research/results/RQ-20261014-736c-01/38738465656.jsonl). Still missing: its run.command and the small grader that writes verdict.json per the rule (ml2_bracket_train_eval.py --corpus <path> --outcome mfe_r --per-leg --per-stratum), and the S1-below-88 floor decision named in its blocked_on (window lengthening, rule not edited). Build the grader, git mv the unit out of blocked/, then RQ-20261009-901 waits on its PASS. Blocked age: 22 d at 2026-10-31."
+}

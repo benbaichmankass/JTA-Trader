@@ -1,0 +1,510 @@
+{
+ "account_bounds": [
+  {
+   "account_class": "paper",
+   "account_id": "bybit_1",
+   "evidence": "bybit_orders: SL 8.817 / TP 9.156, position True; would_apply = the shared amend reaches this leg, NOT that its RiskManager approved (LTR-6 gap)",
+   "read": null,
+   "read_basis": "depends on the recommendation: no_action for hold/no_recommendation, else see read_if_amend",
+   "read_if_amend": "would_apply"
+  }
+ ],
+ "assembled_by": "generator scripts/ops/live_review_packet.py",
+ "context": {
+  "calendar": {
+   "events_next_24h": [],
+   "state": "no_event_classes_for_symbol"
+  },
+  "correlated_open_packages": [
+   {
+    "direction": "long",
+    "order_package_id": "pkg-92d1cafe559b4309",
+    "symbol": "USO"
+   }
+  ],
+  "direction": "long",
+  "funding": null,
+  "news": {
+   "adjustment": 0.0,
+   "decision": "neutral",
+   "ts": "2026-11-01T06:00:40.158882+00:00",
+   "veto": false
+  },
+  "previous_review": {
+   "action": "hold",
+   "forecast": {
+    "direction": "with_trade",
+    "evidence": [
+     "chart.bars_ohlc: impulse 8.519->9.034, last close 8.897 with upper wick",
+     "chart.htf: 4h swing high 8.64 now below price, trend transitional",
+     "exit_plan: SL 8.817 / TP 9.156 (2R)",
+     "context.correlated_open_packages: USO long only"
+    ],
+    "horizon_bars": 8,
+    "invalidation_px": 8.817,
+    "p_target": 0.3,
+    "target_px": 9.156,
+    "thesis": "The OI-shock impulse from 8.52 to 9.03 is being retraced; the 4h swing high 8.64 has flipped to support and the 1h rejection wick at 9.034 is a pause, so price should retest and push back toward the 9.156 target, but the reclaim is not yet confirmed so odds are below even.",
+    "timeframe": "1h"
+   },
+   "reason": "No priced table (priced_options null, no Stage-0 record). First review (previous_review null). Entry 8.93 came after a 3-bar OI-shock impulse 8.52->8.94; the last bar printed 9.034 high but closed 8.897 (rejection wick), and open_r -0.54 is a normal retrace of that impulse. Stop 8.817 sits just below the impulse-bar low 8.771 zone and 0.46R away; bracket already expresses my view, and tightening \u2026",
+   "review_id": "LR-20261101T0752Z-pkg-9e3efad9b82f442d",
+   "reviewed_at": "2026-11-01T07:54:00Z",
+   "route": null
+  },
+  "symbol": "AVAXUSDT"
+ },
+ "context_v3": {
+  "book": [
+   [
+    "MGC",
+    "short",
+    "mgc_pullback_1d",
+    2.68
+   ],
+   [
+    "SPY",
+    "long",
+    "spy_trend_long_1d",
+    0.0046
+   ],
+   [
+    "SLV",
+    "short",
+    "slv_trend_1h",
+    3.76
+   ],
+   [
+    "BTCUSDT",
+    "short",
+    "trend_donchian_1h",
+    0.572
+   ],
+   [
+    "IAUM",
+    "short",
+    "iaum_pullback_1d",
+    2.76
+   ],
+   [
+    "USO",
+    "long",
+    "uso_trend_1h",
+    -0.814
+   ],
+   [
+    "MHG",
+    "short",
+    "mhg_pullback_1d",
+    0.414
+   ],
+   [
+    "ADAUSDT",
+    "short",
+    "trend_donchian_ada_4h",
+    -0.256
+   ],
+   [
+    "MGC",
+    "short",
+    "mgc_trend_1h",
+    2.91
+   ],
+   [
+    "ETHUSDT",
+    "short",
+    "trend_donchian_eth",
+    -0.179
+   ],
+   [
+    "SOLUSDT",
+    "short",
+    "trend_donchian_sol_4h",
+    0.364
+   ]
+  ],
+  "book_note": "[symbol, direction, leg, open_r (null = not measured)] per OTHER open package, either side",
+  "chart": {
+   "atr": 0.0844286,
+   "bars_note": "[epoch_s, open, high, low, close], closed bars only, oldest first",
+   "bars_ohlc": [
+    [
+     1793462400,
+     8.533,
+     8.556,
+     8.511,
+     8.541
+    ],
+    [
+     1793466000,
+     8.541,
+     8.581,
+     8.512,
+     8.567
+    ],
+    [
+     1793469600,
+     8.567,
+     8.589,
+     8.538,
+     8.586
+    ],
+    [
+     1793473200,
+     8.586,
+     8.614,
+     8.563,
+     8.577
+    ],
+    [
+     1793476800,
+     8.577,
+     8.593,
+     8.551,
+     8.561
+    ],
+    [
+     1793480400,
+     8.561,
+     8.582,
+     8.543,
+     8.572
+    ],
+    [
+     1793484000,
+     8.572,
+     8.605,
+     8.548,
+     8.557
+    ],
+    [
+     1793487600,
+     8.557,
+     8.571,
+     8.551,
+     8.56
+    ],
+    [
+     1793491200,
+     8.56,
+     8.578,
+     8.536,
+     8.548
+    ],
+    [
+     1793494800,
+     8.548,
+     8.566,
+     8.521,
+     8.538
+    ],
+    [
+     1793498400,
+     8.538,
+     8.578,
+     8.513,
+     8.519
+    ],
+    [
+     1793502000,
+     8.519,
+     8.697,
+     8.519,
+     8.643
+    ],
+    [
+     1793505600,
+     8.643,
+     8.787,
+     8.602,
+     8.785
+    ],
+    [
+     1793509200,
+     8.785,
+     8.938,
+     8.771,
+     8.93
+    ],
+    [
+     1793512800,
+     8.93,
+     9.034,
+     8.895,
+     8.897
+    ],
+    [
+     1793516400,
+     8.897,
+     8.96,
+     8.859,
+     8.875
+    ]
+   ],
+   "last_close": 8.875,
+   "since_entry": {
+    "bars": 1,
+    "high": 8.96,
+    "high_dist_atr": 1.01,
+    "low": 8.859,
+    "low_dist_atr": -0.19
+   },
+   "swings": {
+    "highs": [
+     {
+      "bars_ago": 9,
+      "dist_atr": -3.2,
+      "px": 8.605
+     },
+     {
+      "bars_ago": 12,
+      "dist_atr": -3.09,
+      "px": 8.614
+     },
+     {
+      "bars_ago": 30,
+      "dist_atr": -2.78,
+      "px": 8.64
+     }
+    ],
+    "lows": [
+     {
+      "bars_ago": 5,
+      "dist_atr": -4.29,
+      "px": 8.513
+     },
+     {
+      "bars_ago": 10,
+      "dist_atr": -3.93,
+      "px": 8.543
+     },
+     {
+      "bars_ago": 22,
+      "dist_atr": -5.71,
+      "px": 8.393
+     }
+    ]
+   },
+   "timeframe": "1h"
+  },
+  "exit_plan": {
+   "declared": {
+    "timeframe": "1h",
+    "tp_r": 2.0
+   },
+   "entry": 8.93,
+   "exit_plan_state": {
+    "final_trailing": null,
+    "residual_qty": 0.0,
+    "stop": {
+     "price": 8.816857142857142,
+     "qty": 1.0
+    },
+    "targets": [
+     {
+      "kind": "final",
+      "price": 9.156285714285714,
+      "qty": 1.0,
+      "qty_pct": 1.0,
+      "reach_r": 2.0
+     }
+    ],
+    "time_decay_minutes": null,
+    "trailing_stop": null
+   },
+   "sl_initial": null,
+   "sl_now": 8.81686,
+   "tp_now": 9.15629
+  },
+  "htf": {
+   "adx_now": 23.51,
+   "atr": 0.203214,
+   "bars_note": "[epoch_s, open, high, low, close], closed bars only, oldest first",
+   "bars_ohlc": [
+    [
+     1793404800,
+     8.538,
+     8.64,
+     8.536,
+     8.582
+    ],
+    [
+     1793419200,
+     8.582,
+     8.588,
+     8.427,
+     8.44
+    ],
+    [
+     1793433600,
+     8.44,
+     8.46,
+     8.393,
+     8.448
+    ],
+    [
+     1793448000,
+     8.448,
+     8.549,
+     8.438,
+     8.533
+    ],
+    [
+     1793462400,
+     8.533,
+     8.614,
+     8.511,
+     8.577
+    ],
+    [
+     1793476800,
+     8.577,
+     8.605,
+     8.543,
+     8.56
+    ],
+    [
+     1793491200,
+     8.56,
+     8.697,
+     8.513,
+     8.643
+    ],
+    [
+     1793505600,
+     8.643,
+     9.034,
+     8.602,
+     8.875
+    ]
+   ],
+   "last_close": 8.875,
+   "swings": {
+    "highs": [
+     {
+      "bars_ago": 7,
+      "dist_atr": -1.16,
+      "px": 8.64
+     },
+     {
+      "bars_ago": 15,
+      "dist_atr": 1.02,
+      "px": 9.082
+     },
+     {
+      "bars_ago": 20,
+      "dist_atr": 1.42,
+      "px": 9.164
+     }
+    ],
+    "lows": [
+     {
+      "bars_ago": 5,
+      "dist_atr": -2.37,
+      "px": 8.393
+     },
+     {
+      "bars_ago": 10,
+      "dist_atr": -3.77,
+      "px": 8.108
+     },
+     {
+      "bars_ago": 13,
+      "dist_atr": -4.31,
+      "px": 7.999
+     }
+    ]
+   },
+   "timeframe": "4h",
+   "trend_now": "transitional"
+  },
+  "live_vs_backtest": {
+   "read_state": "read",
+   "rows": [
+    {
+     "backtest_expectancy_r": null,
+     "backtest_n": 0,
+     "book": "realMoney",
+     "closed": 0,
+     "live_r": null,
+     "r_trades": 0,
+     "verdict": "NO_BACKTEST",
+     "why": "no committed Stage-0 evidence record at comms/strategy_evidence/e4_oi_shock_1h.json"
+    },
+    {
+     "backtest_expectancy_r": null,
+     "backtest_n": 0,
+     "book": "mirror",
+     "closed": 0,
+     "live_r": null,
+     "r_trades": 0,
+     "verdict": "NO_BACKTEST",
+     "why": "no committed Stage-0 evidence record at comms/strategy_evidence/e4_oi_shock_1h.json"
+    }
+   ]
+  }
+ },
+ "cost": {
+  "basis": null
+ },
+ "features_at_review": {
+  "atr_now_over_entry": null,
+  "bars_since_peak": null,
+  "giveback_r": null,
+  "open_r": -0.8131,
+  "peak_r": null,
+  "r_to_stop": 0.1869,
+  "r_to_target": 2.8131
+ },
+ "info_cutoff_at": "2026-11-01T08:08:42Z",
+ "leg": "e4_oi_shock_1h",
+ "mechanics": {
+  "evidence": "package sl 8.816857142857142 / tp 9.156285714285714 agree with every readable account",
+  "verdict": "match"
+ },
+ "missing_inputs": [
+  {
+   "field": "regime.atr_now_over_entry",
+   "reason": "candles unavailable or meta.atr (ATR at entry) not recorded"
+  },
+  {
+   "field": "regime.vol_now",
+   "reason": "calm/volatile buckets use frozen edges held only in the VM model registry; not reachable read-only from a session"
+  },
+  {
+   "field": "regime.cell_entry",
+   "reason": "entry meta regime='transitional' vol_regime='unknown': not both known"
+  },
+  {
+   "field": "priced_options",
+   "reason": "open_r/peak_r/atr_stop_mult not available for this package"
+  },
+  {
+   "field": "context.funding",
+   "reason": "Bybit public funding API is geo-blocked from session networks and no read-only diag route carries funding_now; needs a diag route"
+  }
+ ],
+ "order_package_id": "pkg-9e3efad9b82f442d",
+ "packet_version": 3,
+ "priced_options": null,
+ "regime": {
+  "adx_now": 26.3054,
+  "atr_now_over_entry": null,
+  "cell_entry": null,
+  "cell_now": null,
+  "trend_now": "trending"
+ },
+ "review_id": "LR-20261101T0808Z-pkg-9e3efad9b82f442d",
+ "state": {
+  "atr_now_over_entry": null,
+  "bars_held": 0,
+  "giveback_r": null,
+  "open_r": -0.8131,
+  "peak_provenance": "estimated",
+  "peak_r": null,
+  "regime_cell_entry": null,
+  "regime_cell_now": null,
+  "sl": 8.816857142857142,
+  "tp": 9.156285714285714
+ }
+}

@@ -1,4 +1,5 @@
 name: research-script-run-data
+run-name: research-script-run-data ${{ inputs.research_unit }}   # REFILL 2026-11-03: the unit id is visible on an in-flight run, so dispatch_queue.fired_run_units can dedupe before any stamp PR exists
 
 # THE PUBLISHED-DATA TWIN of research-script-run.yml (ML-DATA-OFF-TRAINER, 2026-10-13).
 #
@@ -85,7 +86,7 @@ jobs:
           KAGGLE_API_TOKEN: ${{ secrets.KAGGLE_API_TOKEN }}
         run: |
           set -euo pipefail
-          pip install "kaggle>=2.0" lightgbm scikit-learn pyarrow
+          pip install "kaggle>=2.0" six lightgbm scikit-learn pyarrow
           python3 scripts/research/published_data.py self-test
           python3 scripts/research/published_data.py fetch --unit "${UNIT}" --dest "${RUNNER_TEMP}/mldata" --run-id "${GITHUB_RUN_ID}"
       - name: Run the unit's command(s)
@@ -141,4 +142,21 @@ jobs:
         run: |
           echo "::error::the unit's command did not complete (run step: ${{ steps.run.outcome }}) — its manifest/logs and a producer_failed record are in the artifact and land with the next cycle."
           exit 1
+      # A command can exit 0 and still grade its own run producer_failed (e.g. a venue 403 caught and written to
+      # verdict.json: RQ-20261101-c692-07 run 41307919288 read GREEN with read_state=producer_failed, n=null).
+      # Such a record is not a result (dispatch_queue.NON_VERDICT_READ_STATES), so the run must not read green:
+      # anything gating on the Actions conclusion would take "success" for a measurement. Not a new gate -- the
+      # dispatcher already treats the row as a non-result; this only makes the conclusion say the same.
+      - name: Fail if the run produced no result (producer_failed record)
+        if: always() && steps.run.outcome == 'success'
+        env:
+          UNIT: ${{ inputs.research_unit }}
+        run: |
+          REC="comms/research/${UNIT}/${GITHUB_RUN_ID}/record-inputs.json"
+          RS=$(python3 -c "import json,sys; print(json.load(open(sys.argv[1])).get('read_state') or '')" "$REC" 2>/dev/null || echo unreadable)
+          echo "record read_state: ${RS}"
+          if [ "${RS}" = "producer_failed" ] || [ "${RS}" = "unreadable" ]; then
+            echo "::error::the unit's command exited 0 but its record is read_state=${RS} -- NOT a result; see verdict.json / record-inputs.json in the artifact."
+            exit 1
+          fi
 

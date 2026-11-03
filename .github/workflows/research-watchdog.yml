@@ -72,7 +72,7 @@ jobs:
           KAGGLE_API_TOKEN: ${{ secrets.KAGGLE_API_TOKEN }}
         run: |
           if [ -n "${KAGGLE_API_TOKEN:-}" ]; then
-            pip install --quiet "kaggle>=2.0" && kaggle quota > /tmp/kaggle-quota.txt 2>/dev/null || true
+            pip install --quiet "kaggle>=2.0" six && kaggle quota > /tmp/kaggle-quota.txt 2>/dev/null || true
           fi
           if [ -s /tmp/kaggle-quota.txt ]; then echo "KAGGLE_QUOTA_FILE=/tmp/kaggle-quota.txt" >> "$GITHUB_ENV"; fi
 

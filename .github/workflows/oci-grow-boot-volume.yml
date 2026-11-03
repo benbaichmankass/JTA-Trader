@@ -1,0 +1,166 @@
+name: oci-grow-boot-volume
+
+# Grow the LIVE VM's (ict-bot-arm) boot volume 47 GB -> 53 GB, inside the
+# Always-Free 200 GB cap. Operator decision (popup, 2026-11-02 ~14:00Z), verbatim:
+# "Free +6 GB only". Tier 2, approved; ceiling 53 GB (anything more is billed).
+#
+# Order: VM preflight (sudo + layout, read-only) -> OCI plan/execute
+# (scripts/ops/oci_grow_boot_volume.py: FULL backup, then resize) -> VM grow
+# (scripts/ops/vm_grow_root_fs.sh: rescan, growpart, resize2fs/xfs_growfs) ->
+# VM verify. No reboot, no service restart. The boot-volume OCID is resolved at
+# runtime from the host's IMDS; nothing sensitive is committed.
+# Exit 5 from the VM steps = passwordless sudo missing; the log prints the exact
+# sudoers line for the operator. It is not worked around.
+#
+# Trigger: issues.opened with label `oci-grow-boot-volume`. Body fields:
+#   mode: plan            # default, read-only
+#   mode: execute         # needs `confirm: yes`
+#   target_gb: 53         # default 53; > 53 is refused
+#   confirm: yes
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode: { description: "plan | execute", required: true, default: "plan" }
+      target_gb: { description: "target size in GB (max 53)", required: false, default: "53" }
+      confirm: { description: "'yes' required for execute", required: false, default: "" }
+  issues:
+    types: [opened]
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: oci-grow-boot-volume
+  cancel-in-progress: false
+
+jobs:
+  grow:
+    if: |
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'issues' &&
+       (github.event.issue.user.login == github.repository_owner ||
+        github.event.issue.user.login == 'github-actions[bot]') &&
+       contains(github.event.issue.labels.*.name, 'oci-grow-boot-volume'))
+    runs-on: ubuntu-latest
+    timeout-minutes: 150
+    env:
+      VM_HOST: ${{ secrets.VM_SSH_HOST }}
+      VM_USER: ${{ vars.VM_SSH_USER || 'ubuntu' }}
+    steps:
+      - name: Require VM host secrets (fail closed)
+        env:
+          NEED_HOST: ${{ secrets.VM_SSH_HOST }}
+          NEED_KEY: ${{ secrets.VM_SSH_KEY }}
+        run: |
+          fail=0
+          [ -n "${NEED_HOST}" ] || { echo "::error::secret VM_SSH_HOST not set"; fail=1; }
+          [ -n "${NEED_KEY}" ] || { echo "::error::secret VM_SSH_KEY not set"; fail=1; }
+          exit "$fail"
+      - uses: actions/checkout@v4
+
+      - name: Parse request
+        id: parse
+        env:
+          ISSUE_BODY: ${{ github.event.issue.body || '' }}
+          IN_MODE: ${{ inputs.mode || '' }}
+          IN_TARGET: ${{ inputs.target_gb || '' }}
+          IN_CONFIRM: ${{ inputs.confirm || '' }}
+        run: |
+          set -euo pipefail
+          fld() { printf '%s' "${ISSUE_BODY}" | awk -F: -v k="$1" '$1 ~ "^[[:space:]]*"k"[[:space:]]*$"{gsub(/^[[:space:]]+|[[:space:]]+$/,"",$2);print $2;exit}'; }
+          mode="${IN_MODE:-$(fld mode)}"; mode="$(printf '%s' "${mode:-plan}" | tr '[:upper:]' '[:lower:]')"
+          target="${IN_TARGET:-$(fld target_gb)}"; target="${target:-53}"
+          confirm="${IN_CONFIRM:-$(fld confirm)}"
+          case "$mode" in plan|execute) ;; *) echo "::error::mode must be plan|execute"; exit 1 ;; esac
+          [[ "$target" =~ ^[0-9]+$ ]] || { echo "::error::target_gb must be an integer"; exit 1; }
+          if [ "$target" -gt 53 ]; then echo "::error::target_gb ${target} is past the 53 GB operator ceiling (billed)"; exit 1; fi
+          if [ "$mode" = "execute" ] && [ "$confirm" != "yes" ]; then
+            echo "::error::mode: execute requires 'confirm: yes'"; exit 1
+          fi
+          { echo "mode=$mode"; echo "target=$target"; } >> "$GITHUB_OUTPUT"
+
+      - name: Set up SSH
+        env:
+          VM_SSH_KEY: ${{ secrets.VM_SSH_KEY }}
+        run: |
+          set -euo pipefail
+          mkdir -p ~/.ssh && chmod 700 ~/.ssh
+          printf '%s\n' "${VM_SSH_KEY}" > ~/.ssh/vm_key && chmod 600 ~/.ssh/vm_key
+          ssh-keyscan -t ed25519,ecdsa,rsa "${VM_HOST}" >> ~/.ssh/known_hosts 2>/dev/null || true
+
+      - name: VM preflight (read-only; sudo + layout) and IMDS
+        id: pre
+        env:
+          TARGET: ${{ steps.parse.outputs.target }}
+        run: |
+          set -uo pipefail
+          SSH="ssh -i $HOME/.ssh/vm_key -o StrictHostKeyChecking=accept-new -o ConnectTimeout=20 ${VM_USER}@${VM_HOST}"
+          $SSH 'curl -sS -H "Authorization: Bearer Oracle" --max-time 5 http://169.254.169.254/opc/v2/instance/' > imds.json
+          set +e
+          $SSH "EXPECTED_NAME=ict-bot-arm bash -s -- preflight" < scripts/ops/vm_grow_root_fs.sh 2>&1 | tee -a report.txt
+          rc=${PIPESTATUS[0]}
+          echo "rc=$rc" >> "$GITHUB_OUTPUT"
+          exit "$rc"
+
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.11" }
+
+      - name: Install oci sdk
+        run: python3 -m pip install --quiet 'oci>=2.119,<3'
+
+      - name: OCI plan / execute (backup, then resize)
+        id: oci
+        env:
+          OCI_CLI_USER: ${{ secrets.OCI_CLI_USER }}
+          OCI_CLI_FINGERPRINT: ${{ secrets.OCI_CLI_FINGERPRINT }}
+          OCI_CLI_TENANCY: ${{ secrets.OCI_CLI_TENANCY }}
+          OCI_CLI_REGION: ${{ secrets.OCI_CLI_REGION }}
+          OCI_CLI_KEY_CONTENT: ${{ secrets.OCI_CLI_KEY_CONTENT }}
+          MODE: ${{ steps.parse.outputs.mode }}
+          TARGET: ${{ steps.parse.outputs.target }}
+        run: |
+          set -uo pipefail
+          set +e
+          python3 scripts/ops/oci_grow_boot_volume.py --mode "$MODE" --target-gb "$TARGET" --imds imds.json 2>&1 | tee -a report.txt
+          rc=${PIPESTATUS[0]}
+          set -e
+          echo "rc=$rc" >> "$GITHUB_OUTPUT"
+          exit "$rc"
+
+      - name: Grow partition + filesystem on the VM
+        if: steps.parse.outputs.mode == 'execute' && steps.oci.outputs.rc == '0'
+        env:
+          TARGET: ${{ steps.parse.outputs.target }}
+        run: |
+          set -uo pipefail
+          ssh -i ~/.ssh/vm_key -o StrictHostKeyChecking=accept-new -o ConnectTimeout=20 \
+              "${VM_USER}@${VM_HOST}" "TARGET_GB=${TARGET} EXPECTED_NAME=ict-bot-arm bash -s -- grow" \
+              < scripts/ops/vm_grow_root_fs.sh 2>&1 | tee -a report.txt
+          exit "${PIPESTATUS[0]}"
+
+      - name: Verify (df, lsblk, trader + web-api active)
+        if: steps.parse.outputs.mode == 'execute' && steps.oci.outputs.rc == '0'
+        run: |
+          set -uo pipefail
+          ssh -i ~/.ssh/vm_key -o StrictHostKeyChecking=accept-new -o ConnectTimeout=20 \
+              "${VM_USER}@${VM_HOST}" "EXPECTED_NAME=ict-bot-arm bash -s -- verify" \
+              < scripts/ops/vm_grow_root_fs.sh 2>&1 | tee -a report.txt
+          exit "${PIPESTATUS[0]}"
+
+      - name: Comment result on the issue
+        if: always() && github.event_name == 'issues'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const out = fs.existsSync('report.txt') ? fs.readFileSync('report.txt', 'utf8') : '(no report produced)';
+            const runUrl = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
+            await github.rest.issues.createComment({
+              owner: context.repo.owner, repo: context.repo.repo, issue_number: context.issue.number,
+              body: `**oci-grow-boot-volume** — job status: \`${{ job.status }}\` · preflight rc: \`${{ steps.pre.outputs.rc || 'n/a' }}\` · oci rc: \`${{ steps.oci.outputs.rc || 'n/a' }}\`\nRun: ${runUrl}\n\n\`\`\`\n${out.slice(-60000)}\n\`\`\``,
+            });
+            await github.rest.issues.update({
+              owner: context.repo.owner, repo: context.repo.repo, issue_number: context.issue.number, state: 'closed',
+            });

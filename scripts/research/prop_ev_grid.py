@@ -79,7 +79,7 @@ from typing import Any, Dict, List, Optional, Tuple
 
 _REPO = Path(__file__).resolve().parents[2]
 SIM = "scripts/research/prop_ev_sim.py"
-GRADES = ("pass_all_seeds", "cushion_vs_flat", "any_c_dominates", "reproduce", "none")
+GRADES = ("pass_all_seeds", "cushion_vs_flat", "any_c_dominates", "arms_pass_bar", "reproduce", "none")
 
 
 def _resolve_leg(spec: str, *, repo: Path) -> Tuple[str, Path, str]:
@@ -167,6 +167,27 @@ def grade_cushion_vs_flat(cells: Dict[str, Dict[int, Dict[str, float]]]) -> Tupl
     if undominated:
         return "fail", f"FLAT_HOLDS: A or B undominated by {best} on seed(s) {sorted(set(undominated))}"
     return "indeterminate", "NULL: mixed across seeds"
+
+
+def grade_arms_pass_bar(cells: Dict[str, Dict[int, Dict[str, float]]], *, n: int, n_floor: int,
+                        p_floor: float) -> Tuple[str, str]:
+    """STRUCTURED prop-fit (RESEARCH-TEMPLATES-STRUCTURED): several sizing arms of ONE lever, each against the ABSOLUTE bar of
+    ``pass_all_seeds`` (ev > 0 and P(net>0) >= p_floor on every seed). Control arm ``A`` is reported by name, never graded
+    differently. pass iff ANY arm clears the bar (a LEAD for a sizing proposal -- arms are counted by the unit, and a sizing
+    pick among k re-pricings of the same trades is not an edge claim); fail iff every arm has ev <= 0 on some seed;
+    otherwise indeterminate. Below the n floor: indeterminate (UNDERPOWERED), like the single-arm grade."""
+    if n < n_floor:
+        return "indeterminate", f"UNDERPOWERED: n={n} < floor {n_floor}"
+    if not cells:
+        return "indeterminate", "NULL: no arms"
+    per = {a: grade_pass_all_seeds({a: seeds}, n=n, n_floor=n_floor, p_floor=p_floor)[0] for a, seeds in sorted(cells.items())}
+    passing = [a for a, v in per.items() if v == "pass"]
+    ctrl = per.get("A", "no control arm")
+    if passing:
+        return "pass", f"PASS: arm(s) {passing} clear ev > 0 and P(net>0) >= {p_floor} on every seed (control A: {ctrl}; {len(per)} arms counted)"
+    if all(v == "fail" for v in per.values()):
+        return "fail", f"FAIL: ev <= 0 on at least one seed in every one of the {len(per)} arms (control A: {ctrl})"
+    return "indeterminate", f"NULL: no arm passes, not all fail ({per})"
 
 
 def grade_any_c_dominates(cells: Dict[str, Dict[int, Dict[str, float]]]) -> Tuple[str, str]:
@@ -324,6 +345,8 @@ def main(argv: Optional[List[str]] = None) -> int:
             v, why = grade_cushion_vs_flat(by_arm)
         elif args.grade == "any_c_dominates":
             v, why = grade_any_c_dominates(by_arm)
+        elif args.grade == "arms_pass_bar":
+            v, why = grade_arms_pass_bar(by_arm, n=info["n_trades"], n_floor=args.n_floor, p_floor=args.p_floor)
         else:
             if leg not in targets:
                 v, why = "indeterminate", "NULL: no --target for this leg"
@@ -369,6 +392,13 @@ def _self_test() -> int:
     assert grade_pass_all_seeds(c, n=200, n_floor=88, p_floor=0.78)[0] == "indeterminate"
     c["A"][2]["ev"] = -1
     assert grade_pass_all_seeds(c, n=200, n_floor=88, p_floor=0.7)[0] == "fail"
+    # arms_pass_bar: control A fails on a seed, variant C-x clears the bar -> pass naming C-x; all fail -> fail; n floor -> indeterminate
+    good = {1: {"ev": 5, "p_net_positive": 0.8, "p_alive_at_horizon": 0.1}, 2: {"ev": 4, "p_net_positive": 0.75, "p_alive_at_horizon": 0.1}}
+    bad = {1: {"ev": -5, "p_net_positive": 0.4, "p_alive_at_horizon": 0.1}, 2: {"ev": 4, "p_net_positive": 0.75, "p_alive_at_horizon": 0.1}}
+    v, why = grade_arms_pass_bar({"A": bad, "C-x": good}, n=200, n_floor=88, p_floor=0.7)
+    assert v == "pass" and "C-x" in why and "control A: fail" in why, (v, why)
+    assert grade_arms_pass_bar({"A": bad, "C-x": bad}, n=200, n_floor=88, p_floor=0.7)[0] == "fail"
+    assert grade_arms_pass_bar({"A": good}, n=50, n_floor=88, p_floor=0.7)[0] == "indeterminate"
 
     a = {1: {"ev": 100, "p_net_positive": .8, "p_alive_at_horizon": .10}, 2: {"ev": 100, "p_net_positive": .8, "p_alive_at_horizon": .10}}
     b = {1: {"ev": 90, "p_net_positive": .8, "p_alive_at_horizon": .10}, 2: {"ev": 90, "p_net_positive": .8, "p_alive_at_horizon": .10}}

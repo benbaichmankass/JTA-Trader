@@ -80,6 +80,9 @@ HARNESS_PATHS = (
 #               pr_skip_unless — a `when` dict; the step is skipped ONLY on a
 #                             pull_request event whose diff matches none of it.
 #                             Every other event (push, dispatch, --all) runs it.
+#               pr_argv     — on a pull_request event WITH a diff, run this argv instead
+#                             of `argv` (a diff-scoped form of the same check). Every other
+#                             event (push, dispatch, --all) runs `argv` unchanged.
 #               git_clean   — after running argv, assert this path is unmodified
 #               hint        — extra operator guidance printed on failure
 #             `{changed_files}` in an argv element is replaced with the
@@ -432,9 +435,20 @@ GUARDS: List[Dict[str, Any]] = [
         # PI-20261004-APBY4NTV-0003: the per-row checklist store/loader/generator
         # (step (a); the monolith-equals-render guard arrives with step (c)).
         "name": "checklist-store-guard",
-        "when": {"globs": ["scripts/ops/checklist.py", "tests/test_checklist_store.py",
-                            "docs/claude/work/checklist/**"]},
-        "steps": [["python3", "scripts/ops/checklist.py", "--self-test"]],
+        "when": {"globs": ["scripts/ops/checklist.py", "scripts/ops/checklist_daily_measure.py",
+                            "tests/test_checklist_store.py", "docs/claude/work/checklist/**"]},
+        "steps": [["python3", "scripts/ops/checklist.py", "--self-test"],
+                  ["python3", "scripts/ops/checklist_daily_measure.py", "--self-test"],
+                  ["python3", "scripts/ops/checklist_backfill_propose.py", "--self-test"]],
+    },
+    {
+        # RESET-PROTOCOL (2026-11-02): config/reset_protocol.yaml is the ONE source for the post-reset
+        # cascade; --self-test asserts the seeded cascade, the cadence rules and the receipt dedupe.
+        "name": "reset-protocol-guard",
+        "when": None,
+        "steps": [
+            ["python3", "scripts/ops/reset_protocol.py", "--self-test"],
+        ],
     },
     {
         # SALVAGED FROM THREE REMOVED GOVERNANCE ENTRIES, 2026-09-21.
@@ -1364,7 +1378,11 @@ GUARDS: List[Dict[str, Any]] = [
             # data-only automation PR). It grades only files of those suffixes, so a PR
             # diff touching none of them cannot change its verdict. `pr_skip_unless`
             # skips ONLY on a pull_request event; push / dispatch / --all still run it.
+            # CI-THROUGHPUT-20261029: on a PR scan only the files the diff touches
+            # (the verdict is per file). MEASURED: this guard was 265 s of the 15 min job.
             {"argv": ["python3", "scripts/ci/check_candle_fixture_variance.py"],
+             "pr_argv": ["python3", "scripts/ci/check_candle_fixture_variance.py",
+                         "--pr-diff", "{pr_diff}"],
              "pr_skip_unless": {"globs": [
                  "**/*.csv", "**/*.jsonl", "**/*.parquet",
                  "scripts/ci/check_candle_fixture_variance.py", "scripts/candle_variance.py",
@@ -1917,6 +1935,16 @@ GUARDS: List[Dict[str, Any]] = [
         ],
     },
     {
+        # GRADE-EVERYTHING-CONTINUOUSLY (2026-11-01): every grader's store is fresh and names the action it drives
+        # (scripts/ci/grader_registry.yaml). ALERT-ONLY like grading-freshness: prints ::warning::, exits 0.
+        "name": "grader-freshness",
+        "when": None,
+        "steps": [
+            ["python3", "scripts/ci/check_grader_freshness.py", "--self-test"],
+            ["python3", "scripts/ci/check_grader_freshness.py"],
+        ],
+    },
+    {
         "name": "guard-liveness",
         "when": None,
         "steps": [
@@ -2408,7 +2436,10 @@ GUARDS: List[Dict[str, Any]] = [
     {
         "name": "secret-scan",
         "when": None,
-        "steps": [["python3", "scripts/secret_scan.py"]],
+        # CI-THROUGHPUT-20261029: 379 s whole-tree (MEASURED). On a PR scan the files the diff
+        # touches; push / merge_group / dispatch / schedule / --all keep the FULL tree scan.
+        "steps": [{"argv": ["python3", "scripts/secret_scan.py"],
+                   "pr_argv": ["python3", "scripts/secret_scan.py", "--pr-diff", "{pr_diff}"]}],
     },
     {
         "name": "lane-reconcile-guard",
@@ -2844,6 +2875,9 @@ def run_guard(
                 reason = "skipped: step not relevant to this diff"
             print(f"    ({reason}) {' '.join(step['argv'])}", flush=True)
             continue
+        if (step.get("pr_argv") is not None
+                and ctx.get("event_name") == "pull_request" and not no_diff_scope):
+            step = dict(step, argv=step["pr_argv"])
         argv = _subst(step["argv"], ctx)
         absent = missing_runner(argv)
         if absent is not None:
@@ -3098,6 +3132,20 @@ def dirty_tree_lines(tree_dirty: List[str], changed: List[str]) -> List[str]:
     return out
 
 
+def slowest_guards_block(timings: Sequence[tuple], top: int = 5) -> str:
+    """Top-N slowest guards of this run plus the total, as plain text.
+
+    Informational only: it never changes an exit code (CI-THROUGHPUT-20261029).
+    """
+    total = sum(dt for _, dt in timings)
+    lines = [f"guard wall time: {total:.1f}s over {len(timings)} guard(s) that ran; "
+             f"slowest {min(top, len(timings))}:"]
+    for name, dt in sorted(timings, key=lambda t: -t[1])[:top]:
+        share = (100.0 * dt / total) if total else 0.0
+        lines.append(f"  {dt:7.1f}s  {share:4.1f}%  {name}")
+    return "\n".join(lines)
+
+
 def counts_line(n_pass: int, n_fail: int, n_could_not_run: int,
                 n_skip: int, n_not_graded: int = 0,
                 n_dirty_paths: int = 0) -> str:
@@ -3325,6 +3373,9 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     skipped: List[str] = []
     passed: List[str] = []
     notify: List[str] = []
+    # Wall time per guard that ran (CI-THROUGHPUT-20261029): the guards job is
+    # the PR floor, and a profile with no output cannot be acted on.
+    timings: List[tuple] = []
     # Steps skipped because this event carries no PR diff to scope by. Counted
     # separately from ordinary not-relevant skips so push-time coverage is
     # legible instead of assumed (BL-20260809-GUARD-STEP-WHEN-SKIPS-ON-PUSH).
@@ -3341,6 +3392,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         t0 = time.time()
         reason = run_guard(guard, ctx, changed, no_diff_scope, unscoped)
         dt = time.time() - t0
+        timings.append((name, dt))
         if reason is None:
             passed.append(name)
             print(f"--- {name}: PASS ({dt:.1f}s)", flush=True)
@@ -3373,6 +3425,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     unchecked = sorted({g["name"] for g in selected
                         if g["name"] in skipped and is_relevant(g["when"], dirty)})
 
+    print("\n" + slowest_guards_block(timings))
     print("\n" + "=" * 72)
     print(counts_line(len(passed), len(failures), len(could_not_run),
                       len(skipped), len(unchecked),

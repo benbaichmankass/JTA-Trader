@@ -1,0 +1,142 @@
+id: RQ-20261101-5e01-06
+title: 'Structure-based SL+TP (causal swing / FVG, ratcheting) vs the declared exit on trend_donchian_sol_prop (bybit_2 + bybit_portfolio): does it beat
+  the current exit net of the full cost stack, held-out?'
+status: done
+cadence: once
+theme: live_strategy
+priority: 1
+roadmap:
+- L-AM-STANDARD
+kind: experiment
+practice_precedent: 'T1, T2, T3, T4, T8 (docs/reference/trading-and-model-practice-principles.md): intervention judged against hold AND a matched random
+  intervention, per leg, entries fixed, net of cost.'
+intervention_controls:
+  not_applicable: Static grid of structure parameters judged by the harness replace verdict; the random-exit control is deferred to the confirmation run
+    (see rule).
+question: 'Replace trend_donchian_sol_prop''s declared SL/TP mechanism (backtest_trend 1h; ATR stop 2.5 + trail 3.5, TP 6R (reach 0.019: unreachable)) with
+  a dynamic structure-based SL and TP and compare it with the declared exit on the same entries. Its declared TP is graded unreachable by TP-REACH-FLOOR.
+  Operator 2026-11-01: dynamic structure-based exits are the default until a leg''s own net-of-cost evidence proves another exit better; this unit is that
+  evidence for this leg.'
+why_this_matters: 'Operator 2026-11-01 ~23:00Z (verbatim in ARCHITECTURE-CANONICAL § Active management, ''The default exit''): structure-based SL and TP
+  are the default for all strategies and ML. Row STRUCTURE-EXITS-DEFAULT. Real-money first; a PASS is a discovery, never a config change.'
+power:
+  expected_n: 400
+  min_detectable_effect: 0.1
+  effect_units: R
+  sd: 1.2
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: 'ESTIMATE (sd 1.2 R is the assumed per-trade sd also used by the 5e02 sibling units; the test is one-sample on the per-trade difference between
+    arms (same entries), whose sd is expected to be smaller than the per-trade sd, so 1.2 is conservative; sd of the per-trade difference; the first run
+    replaces it): ESTIMATE: leg-level Stage-0 trade counts of 2020-07..2026-10 runs are 400-700 for 2h/4h crypto legs and thinner for 1d legs; n >= 39 floor
+    below which the leg grades INDETERMINATE, never FAIL. The first run replaces it.'
+  feasibility:
+    source: none
+    accrual_basis: Replays history on freshly fetched public candles for a pinned window; nothing accrues. The detector and harness arms are the blockers,
+      not the data.
+decision_rule:
+  id: RULE-STRUCTURE-EXITS-V1
+  unit_rule_id: RULE-RQ20261101-5E01-06-STRUCT-EXIT
+  registered_at: '2026-11-02'
+  registered_before_run: true
+  statistic: 'exit_lever_ablation.py --grade replace over 2020-07-01 (2021-07-01 for the dukascopy ETF legs)..2026-10-15, 6 equal calendar folds by entry
+    time, net of the full cost stack the harness resolves per venue (cost_stack recorded per arm), baseline A; arms A, S3, S5, S8, S5NB; parameters unchanged
+    from RQ-20261026-ed1c-17: delta-r 0, delta-r-per-trade 0.02, fold-majority 4 of 6, dd-tol-frac 0.35, n-floor 39.'
+  rule: 'Registered before any run (amends the blocked-form text; no result existed). One factor: the source of the SL and TP levels (src/runtime/structure_levels.py,
+    causal: a swing is usable only after its confirming bar closes). Arms: A = leg as declared; S3 / S5 / S8 = structure SL+TP at pivot half-width 3 / 5
+    / 8 (SL beyond the last confirmed swing minus 0.25 ATR, distance clamped to [0.5, 3.0] x the declared ATR stop, ratcheting toward price only; TP = nearest
+    opposing swing / unfilled FVG edge >= 1.0 R, extend-only); S5NB = S5 with NO ATR buffer (the buffer arm). Entries, sizing, cost stack unchanged. Verdict:
+    exit_lever_ablation --grade replace, over 2020-07-01 (2021-07-01 for dukascopy ETF legs)..2026-10-15, 6 equal calendar folds by entry time, net of the
+    full cost stack, parameters delta-r 0, delta-r-per-trade 0.02, fold-majority 4 of 6, dd-tol-frac 0.35, n-floor 39 (the ed1c-17 parameters). Candidates
+    S3, S5, S8, S5NB (multiplicity 4): a candidate PASSES when the replace verdict passes; the best passing one is named. FAIL if none passes with every
+    floor met. INDETERMINATE if n < 39 or no arm differs from A. NOT in this run: the 100 matched random-exit controls (R4) and leave-one-fold-out pivot
+    selection (they need the control harness); a PASS here is therefore a DISCOVERY on the static-grid screen and needs a confirmation run on post-window
+    data WITH the random-exit control before any per-leg Tier-3 apply PR. Thresholds, arms, window are not changed after any result. Per-trade-R is a screen
+    until BOOK-SIM-REAL-SIZER exists (canonical Active management clause 4).'
+  what_it_does_not_do: Edits no config, roster, mandate or live-review policy and places no order. A PASS is not a promotion. Harness fills a stop at the
+    stop price (no gap), equally in S, A and the R controls.
+compute: cpu_long
+value:
+  usd_at_stake_per_month: 400
+  confidence: 0.25
+  bucket: own_losses
+  basis: 'stand-in estimate: governs the default exit of a leg that trades real money; not a measurement.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 4.0
+  est_minutes: 90
+  why_runner: 'Compute class cpu_long, keyless public candles: route to research-script-run-kaggle.yml (KAGGLE-CANDLES merged, #22410) first, else the runner.
+    Harness arm: scripts/backtest_trend.py / backtest_pullback.py --structure-exit (this PR).'
+  basis: 'Estimate: (3 pivot arms + 1 hold + 100 random controls) x one leg; one 2h-leg arm over the window took about 20 s on a runner (ed1c-17 / 9a7e-01
+    logs). The first run replaces it.'
+run:
+  command:
+  - python3
+  - scripts/research/exit_lever_ablation.py
+  - --leg
+  - trend_donchian_sol_prop
+  - --arm
+  - A=
+  - --arm
+  - S3=--structure-exit=pivot=3
+  - --arm
+  - S5=--structure-exit=pivot=5
+  - --arm
+  - S8=--structure-exit=pivot=8
+  - --arm
+  - S5NB=--structure-exit=pivot=5;--structure-buffer-atr=0
+  - --days
+  - '2330'
+  - --start
+  - '2020-07-01'
+  - --end
+  - 2026-10-15 23:59
+  - --grade
+  - replace
+  - --baseline
+  - A
+  - --delta-r
+  - '0'
+  - --delta-r-per-trade
+  - '0.02'
+  - --folds
+  - '6'
+  - --fold-majority
+  - '4'
+  - --dd-tol-frac
+  - '0.35'
+  - --n-floor
+  - '39'
+  - --out
+  - '{out_dir}'
+  inputs:
+    research_unit: RQ-20261101-5e01-06
+  timeout_minutes: 150
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+programme: P1
+related:
+- research/levers/ltr-sl-to-structure.yaml
+- src/runtime/tp_revision.py
+- scripts/research/exit_lever_ablation.py
+- STRUCTURE-EXITS-DEFAULT
+- docs/research/structure-exits-default-scope-2026-11-01.md
+- src/runtime/structure_levels.py
+last_dispatched_at: '2026-11-03T02:39:22+00:00'
+grading:
+  attested: RULE-STRUCTURE-EXITS-V1
+  auto: true
+  decision_rule_id: RULE-STRUCTURE-EXITS-V1
+  evidence:
+  - research/results/RQ-20261101-5e01-06/41567581158.jsonl
+  graded_at: '2026-11-03'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail

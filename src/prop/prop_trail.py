@@ -131,6 +131,58 @@ def _floor_tf(t: datetime, tf_min: int) -> datetime:
     return datetime.fromtimestamp((epoch - epoch % tf_min) * 60, tz=timezone.utc)
 
 
+def _structure_declared(leg: Mapping[str, Any]) -> Optional[Dict[str, Any]]:
+    try:
+        from src.runtime.structure_exit_live import declared
+        return declared(leg)
+    except Exception:  # noqa: BLE001
+        return None
+
+
+def _structure_replay(leg: Mapping[str, Any], params: Mapping[str, Any], direction: str, entry: float,
+                      initial_sl: float, atr: float, signal_time: datetime, candles: pd.DataFrame,
+                      tf_min: int, now: datetime) -> tuple:
+    """(sl, tp) of the shared structure replay (src/runtime/structure_exit_live.replay) over every CLOSED bar,
+    from the harness entry bar i (the bar holding signal_time for a forming decision, the bar before it for a
+    closed one). Never looser than ``initial_sl``; ``tp`` None = no structure level (keep the resting TP)."""
+    from src.runtime.structure_exit_live import replay
+    allbars = _closed_bars(candles, datetime(1970, 1, 1, tzinfo=timezone.utc), tf_min, now)
+    if len(allbars) == 0:
+        return initial_sl, None
+    bar_i = _floor_tf(signal_time, tf_min)
+    if str(leg.get("decision_bar") or "forming").lower() == "closed":
+        bar_i = bar_i - timedelta(minutes=tf_min)
+    ts = pd.to_datetime(allbars["timestamp"], utc=True).reset_index(drop=True)
+    idx = int((ts <= pd.Timestamp(bar_i)).sum()) - 1
+    if idx < 0:
+        return initial_sl, None
+    out = replay(highs=allbars["high"].to_numpy(float), lows=allbars["low"].to_numpy(float),
+                 closes=allbars["close"].to_numpy(float), entry_idx=idx, entry=entry,
+                 is_long=direction == "long", entry_sl=initial_sl, atr=atr, params=params)
+    return out["sl"], out["tp"]
+
+
+def _structure_tp_revision(leg, params, direction, entry, initial_sl, signal_time, candles, tf_min, now, ref):
+    """The structure TP as a ``TpRevision`` (clamped to the venue cap, refused through price), or None."""
+    from src.runtime.tp_revision import TpRevision, clamp_to_venue_cap, tp_revision_rejection
+    stop_mult = _f(leg.get("atr_stop_mult"))
+    risk = abs(entry - initial_sl)
+    if not stop_mult or stop_mult <= 0 or risk <= 0 or direction not in ("long", "short"):
+        return None
+    _, tp = _structure_replay(leg, params, direction, entry, initial_sl, risk / stop_mult,
+                              signal_time, candles, tf_min, now)
+    if tp is None:
+        return None
+    placed, clamped = clamp_to_venue_cap(direction, tp, ref)
+    if tp_revision_rejection(direction, placed, ref) is not None:
+        return None
+    r = (placed - entry) / risk if direction == "long" else (entry - placed) / risk
+    return TpRevision(tp=round(placed, 8), rule="structure_exit",
+                      reason=f"structure_exit: level {tp:.8g} ({r:+.2f}R)"
+                             + (f", CLAMPED to the venue cap from {tp:.8g}" if clamped else ""),
+                      clamped=clamped, detail={"target_r": round(r, 4), "unclamped": tp})
+
+
 def plan_trail(*, leg: Mapping[str, Any], direction: str, entry: float, initial_sl: float,
                signal_time: datetime, resting_sl: Optional[float], candles: Optional[pd.DataFrame],
                now: datetime, price_step: Optional[float] = None,
@@ -154,6 +206,11 @@ def plan_trail(*, leg: Mapping[str, Any], direction: str, entry: float, initial_
         return TrailPlan("skip", f"leg declares {unmodelled}: not modelled by the prop trail, "
                                  "so a replayed stop would differ from the evidence")
     trail_mult, stop_mult = _f(leg.get("trail_mult")), _f(leg.get("atr_stop_mult"))
+    _sx_params = _structure_declared(leg)
+    if _sx_params is not None:
+        # STRUCTURE-EXITS-DEFAULT: the declared structure exit replaces the
+        # chandelier (as the harness arm does); it needs only the stop mult for ATR.
+        trail_mult = trail_mult or 1.0
     if not trail_mult or not stop_mult or trail_mult <= 0 or stop_mult <= 0:
         return TrailPlan("skip", "leg declares no trail_mult/atr_stop_mult")
     risk = abs(entry - initial_sl)
@@ -186,7 +243,15 @@ def plan_trail(*, leg: Mapping[str, Any], direction: str, entry: float, initial_
     decay_stall = int(_num(leg, "trail_decay_stall_bars"))
 
     ext, trail, peak_j, mfe = entry, initial_sl, -1, 0.0
-    for j in range(len(bars)):
+    tm = None
+    if _sx_params is not None:
+        trail, _sx_tp = _structure_replay(leg, _sx_params, direction, entry, initial_sl, atr,
+                                          signal_time, candles, tf_min, now)
+        for j in range(len(bars)):
+            bh, bl = float(bars["high"].iloc[j]), float(bars["low"].iloc[j])
+            ext = max(ext, bh) if long_ else min(ext, bl)
+            mfe = max(mfe, ((ext - entry) if long_ else (entry - ext)) / risk)
+    for j in (range(len(bars)) if _sx_params is None else ()):
         bh, bl = float(bars["high"].iloc[j]), float(bars["low"].iloc[j])
         if long_:
             if bh > ext:
@@ -210,6 +275,9 @@ def plan_trail(*, leg: Mapping[str, Any], direction: str, entry: float, initial_
     if floor is not None and floor > 0 and ((long_ and floor > trail) or (not long_ and floor < trail)):
         trail, floored = floor, True
     detail = {"atr": atr, "ext": ext, "mfe_r": round(mfe, 4), "trail_mult_last": None if not len(bars) else tm}
+    if _sx_params is not None:
+        detail["source"] = "structure_exit"
+        detail["structure_tp"] = _sx_tp
     if floored:
         detail["sl_floor"] = floor
     close_lever = None
@@ -585,7 +653,8 @@ def run_trail_step(*, adapter: Any, page: Any, api: Any, cfg: ExecutorConfig, mo
         retried on the next cycles (capped backoff, one red flag after
         RED_FLAG_AFTER in a row -- NO-HALT); one that disturbs the SL is
         alerted. Nothing here can loosen or remove the stop."""
-        if declared_rule(leg) is None:
+        _sx_params = _structure_declared(leg)
+        if declared_rule(leg) is None and _sx_params is None:
             return
         if not getattr(adapter, "TP_AMEND_SUPPORTED", False):
             # dxtrade (browser): the rollout guard admits SL-only tightens, so a
@@ -606,9 +675,15 @@ def run_trail_step(*, adapter: Any, page: Any, api: Any, cfg: ExecutorConfig, mo
             res.log("trail_tp_skip", ticket_id=tid, why="no venue quote: could not look, no TP amend")
             return
         bars = _closed_bars(candles, datetime(1970, 1, 1, tzinfo=timezone.utc), tf_min, now)
-        rev = plan_tp_revision(leg=leg, direction=p.side or "", entry=entry,
-                               risk=abs(entry - initial_sl), bars=bars,
-                               entry_time=signal_time, ref_price=ref)
+        if _sx_params is not None:
+            # STRUCTURE-EXITS-DEFAULT: the structure TP replaces the declared revision rule; the same venue-cap
+            # clamp and through-price refusal as plan_tp_revision apply.
+            rev = _structure_tp_revision(leg, _sx_params, p.side or "", entry, initial_sl, signal_time,
+                                         candles, tf_min, now, ref)
+        else:
+            rev = plan_tp_revision(leg=leg, direction=p.side or "", entry=entry,
+                                   risk=abs(entry - initial_sl), bars=bars,
+                                   entry_time=signal_time, ref_price=ref)
         if rev is None:
             res.log("trail_tp_hold", ticket_id=tid, why="rule produced no placeable target")
             return

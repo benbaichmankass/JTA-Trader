@@ -1,0 +1,593 @@
+{
+ "ledger": "/home/runner/work/JTA-Trader/JTA-Trader/docs/research/ml-entry-prop-gate-2026-11-02/ledgers/ml_entry_ethsol.jsonl",
+ "n": 381,
+ "population": "ml_entry v1 served ENTRY, extend-only TP, ETHUSDT+SOLUSDT, held-out 2025-10-01..2026-09-30",
+ "enriched": false,
+ "decomp": {
+  "read_state": "needs_enriched_ledger:pred_net_r,ret_168,vol_ratio (symbol/side/hour/exit/cost parts are ok)",
+  "firms": {
+   "breakout_2": {
+    "all": {
+     "n": 381,
+     "mean_r": 0.01704,
+     "ci_lo": -0.1057,
+     "ci_hi": 0.13978
+    },
+    "by_symbol": {
+     "ETHUSDT": {
+      "n": 176,
+      "mean_r": 0.01104,
+      "ci_lo": -0.17576,
+      "ci_hi": 0.19783
+     },
+     "SOLUSDT": {
+      "n": 205,
+      "mean_r": 0.0222,
+      "ci_lo": -0.14045,
+      "ci_hi": 0.18484
+     }
+    },
+    "by_side": {
+     "long": {
+      "n": 129,
+      "mean_r": 0.10178,
+      "ci_lo": -0.10238,
+      "ci_hi": 0.30594
+     },
+     "short": {
+      "n": 252,
+      "mean_r": -0.02634,
+      "ci_lo": -0.17969,
+      "ci_hi": 0.12701
+     }
+    },
+    "by_symbol_side": {
+     "ETHUSDT/long": {
+      "n": 61,
+      "mean_r": 0.04554,
+      "ci_lo": -0.24706,
+      "ci_hi": 0.33814
+     },
+     "ETHUSDT/short": {
+      "n": 115,
+      "mean_r": -0.00726,
+      "ci_lo": -0.24818,
+      "ci_hi": 0.23366
+     },
+     "SOLUSDT/long": {
+      "n": 68,
+      "mean_r": 0.15223,
+      "ci_lo": -0.13408,
+      "ci_hi": 0.43854
+     },
+     "SOLUSDT/short": {
+      "n": 137,
+      "mean_r": -0.04234,
+      "ci_lo": -0.23977,
+      "ci_hi": 0.15508
+     }
+    },
+    "by_hour_block_utc": {
+     "00h": {
+      "n": 124,
+      "mean_r": -0.03141,
+      "ci_lo": -0.24706,
+      "ci_hi": 0.18423
+     },
+     "06h": {
+      "n": 45,
+      "mean_r": 0.30263,
+      "ci_lo": -0.08796,
+      "ci_hi": 0.69321
+     },
+     "12h": {
+      "n": 154,
+      "mean_r": 0.03373,
+      "ci_lo": -0.15707,
+      "ci_hi": 0.22453
+     },
+     "18h": {
+      "n": 58,
+      "mean_r": -0.14525,
+      "ci_lo": -0.44178,
+      "ci_hi": 0.15129
+     }
+    },
+    "by_exit_reason": {
+     "sl": {
+      "n": 178,
+      "mean_r": -1.06315,
+      "ci_lo": -1.06706,
+      "ci_hi": -1.05924
+     },
+     "take_profit": {
+      "n": 87,
+      "mean_r": 1.75788,
+      "ci_lo": 1.63643,
+      "ci_hi": 1.87932
+     },
+     "time": {
+      "n": 116,
+      "mean_r": 0.36895,
+      "ci_lo": 0.24517,
+      "ci_hi": 0.49273
+     }
+    },
+    "by_month": {
+     "2025-10": {
+      "n": 43,
+      "mean_r": 0.10574,
+      "ci_lo": -0.29139,
+      "ci_hi": 0.50286
+     },
+     "2025-11": {
+      "n": 36,
+      "mean_r": -0.12152,
+      "ci_lo": -0.49647,
+      "ci_hi": 0.25344
+     },
+     "2025-12": {
+      "n": 28,
+      "mean_r": -0.2103,
+      "ci_lo": -0.6526,
+      "ci_hi": 0.232
+     },
+     "2026-01": {
+      "n": 41,
+      "mean_r": -0.01968,
+      "ci_lo": -0.42308,
+      "ci_hi": 0.38372
+     },
+     "2026-02": {
+      "n": 39,
+      "mean_r": -0.06234,
+      "ci_lo": -0.46117,
+      "ci_hi": 0.3365
+     },
+     "2026-03": {
+      "n": 38,
+      "mean_r": 0.26319,
+      "ci_lo": -0.15901,
+      "ci_hi": 0.6854
+     },
+     "2026-04": {
+      "n": 28,
+      "mean_r": -0.09149,
+      "ci_lo": -0.45412,
+      "ci_hi": 0.27114
+     },
+     "2026-05": {
+      "n": 22,
+      "mean_r": -0.27868,
+      "ci_lo": -0.72475,
+      "ci_hi": 0.16738
+     },
+     "2026-06": {
+      "n": 41,
+      "mean_r": 0.17179,
+      "ci_lo": -0.22053,
+      "ci_hi": 0.5641
+     },
+     "2026-07": {
+      "n": 24,
+      "mean_r": -0.46397,
+      "ci_lo": -0.8037,
+      "ci_hi": -0.12424
+     },
+     "2026-08": {
+      "n": 25,
+      "mean_r": 0.53323,
+      "ci_lo": 0.01005,
+      "ci_hi": 1.05642
+     },
+     "2026-09": {
+      "n": 16,
+      "mean_r": 0.30623,
+      "ci_lo": -0.20308,
+      "ci_hi": 0.81553
+     }
+    },
+    "cost_components": {
+     "gross_mean_r": 0.08391,
+     "cost_mean_r": 0.06687,
+     "net_mean_r_without_commission_bps_rt": 0.05851,
+     "commission_bps_rt_mean_r": 0.04147,
+     "net_mean_r_without_slippage_bps_rt": 0.03259,
+     "slippage_bps_rt_mean_r": 0.01555,
+     "net_mean_r_without_swap_daily": 0.0269,
+     "swap_daily_mean_r": 0.00986
+    }
+   },
+   "tradeify_1": {
+    "all": {
+     "n": 381,
+     "mean_r": 0.01704,
+     "ci_lo": -0.1057,
+     "ci_hi": 0.13978
+    },
+    "by_symbol": {
+     "ETHUSDT": {
+      "n": 176,
+      "mean_r": 0.01104,
+      "ci_lo": -0.17576,
+      "ci_hi": 0.19783
+     },
+     "SOLUSDT": {
+      "n": 205,
+      "mean_r": 0.0222,
+      "ci_lo": -0.14045,
+      "ci_hi": 0.18484
+     }
+    },
+    "by_side": {
+     "long": {
+      "n": 129,
+      "mean_r": 0.10178,
+      "ci_lo": -0.10238,
+      "ci_hi": 0.30594
+     },
+     "short": {
+      "n": 252,
+      "mean_r": -0.02634,
+      "ci_lo": -0.17969,
+      "ci_hi": 0.12701
+     }
+    },
+    "by_symbol_side": {
+     "ETHUSDT/long": {
+      "n": 61,
+      "mean_r": 0.04554,
+      "ci_lo": -0.24706,
+      "ci_hi": 0.33814
+     },
+     "ETHUSDT/short": {
+      "n": 115,
+      "mean_r": -0.00726,
+      "ci_lo": -0.24818,
+      "ci_hi": 0.23366
+     },
+     "SOLUSDT/long": {
+      "n": 68,
+      "mean_r": 0.15223,
+      "ci_lo": -0.13408,
+      "ci_hi": 0.43854
+     },
+     "SOLUSDT/short": {
+      "n": 137,
+      "mean_r": -0.04234,
+      "ci_lo": -0.23977,
+      "ci_hi": 0.15508
+     }
+    },
+    "by_hour_block_utc": {
+     "00h": {
+      "n": 124,
+      "mean_r": -0.03141,
+      "ci_lo": -0.24706,
+      "ci_hi": 0.18423
+     },
+     "06h": {
+      "n": 45,
+      "mean_r": 0.30263,
+      "ci_lo": -0.08796,
+      "ci_hi": 0.69321
+     },
+     "12h": {
+      "n": 154,
+      "mean_r": 0.03373,
+      "ci_lo": -0.15707,
+      "ci_hi": 0.22453
+     },
+     "18h": {
+      "n": 58,
+      "mean_r": -0.14525,
+      "ci_lo": -0.44178,
+      "ci_hi": 0.15129
+     }
+    },
+    "by_exit_reason": {
+     "sl": {
+      "n": 178,
+      "mean_r": -1.06315,
+      "ci_lo": -1.06706,
+      "ci_hi": -1.05924
+     },
+     "take_profit": {
+      "n": 87,
+      "mean_r": 1.75788,
+      "ci_lo": 1.63643,
+      "ci_hi": 1.87932
+     },
+     "time": {
+      "n": 116,
+      "mean_r": 0.36895,
+      "ci_lo": 0.24517,
+      "ci_hi": 0.49273
+     }
+    },
+    "by_month": {
+     "2025-10": {
+      "n": 43,
+      "mean_r": 0.10574,
+      "ci_lo": -0.29139,
+      "ci_hi": 0.50286
+     },
+     "2025-11": {
+      "n": 36,
+      "mean_r": -0.12152,
+      "ci_lo": -0.49647,
+      "ci_hi": 0.25344
+     },
+     "2025-12": {
+      "n": 28,
+      "mean_r": -0.2103,
+      "ci_lo": -0.6526,
+      "ci_hi": 0.232
+     },
+     "2026-01": {
+      "n": 41,
+      "mean_r": -0.01968,
+      "ci_lo": -0.42308,
+      "ci_hi": 0.38372
+     },
+     "2026-02": {
+      "n": 39,
+      "mean_r": -0.06234,
+      "ci_lo": -0.46117,
+      "ci_hi": 0.3365
+     },
+     "2026-03": {
+      "n": 38,
+      "mean_r": 0.26319,
+      "ci_lo": -0.15901,
+      "ci_hi": 0.6854
+     },
+     "2026-04": {
+      "n": 28,
+      "mean_r": -0.09149,
+      "ci_lo": -0.45412,
+      "ci_hi": 0.27114
+     },
+     "2026-05": {
+      "n": 22,
+      "mean_r": -0.27868,
+      "ci_lo": -0.72475,
+      "ci_hi": 0.16738
+     },
+     "2026-06": {
+      "n": 41,
+      "mean_r": 0.17179,
+      "ci_lo": -0.22053,
+      "ci_hi": 0.5641
+     },
+     "2026-07": {
+      "n": 24,
+      "mean_r": -0.46397,
+      "ci_lo": -0.8037,
+      "ci_hi": -0.12424
+     },
+     "2026-08": {
+      "n": 25,
+      "mean_r": 0.53323,
+      "ci_lo": 0.01005,
+      "ci_hi": 1.05642
+     },
+     "2026-09": {
+      "n": 16,
+      "mean_r": 0.30623,
+      "ci_lo": -0.20308,
+      "ci_hi": 0.81553
+     }
+    },
+    "cost_components": {
+     "gross_mean_r": 0.08391,
+     "cost_mean_r": 0.06687,
+     "net_mean_r_without_commission_bps_rt": 0.05851,
+     "commission_bps_rt_mean_r": 0.04147,
+     "net_mean_r_without_slippage_bps_rt": 0.03259,
+     "slippage_bps_rt_mean_r": 0.01555,
+     "net_mean_r_without_swap_daily": 0.0269,
+     "swap_daily_mean_r": 0.00986
+    }
+   },
+   "velotrade_1": {
+    "all": {
+     "n": 381,
+     "mean_r": 0.02233,
+     "ci_lo": -0.10039,
+     "ci_hi": 0.14505
+    },
+    "by_symbol": {
+     "ETHUSDT": {
+      "n": 176,
+      "mean_r": 0.01648,
+      "ci_lo": -0.17026,
+      "ci_hi": 0.20322
+     },
+     "SOLUSDT": {
+      "n": 205,
+      "mean_r": 0.02735,
+      "ci_lo": -0.13529,
+      "ci_hi": 0.18999
+     }
+    },
+    "by_side": {
+     "long": {
+      "n": 129,
+      "mean_r": 0.10576,
+      "ci_lo": -0.09843,
+      "ci_hi": 0.30994
+     },
+     "short": {
+      "n": 252,
+      "mean_r": -0.02038,
+      "ci_lo": -0.17369,
+      "ci_hi": 0.13293
+     }
+    },
+    "by_symbol_side": {
+     "ETHUSDT/long": {
+      "n": 61,
+      "mean_r": 0.04957,
+      "ci_lo": -0.24299,
+      "ci_hi": 0.34212
+     },
+     "ETHUSDT/short": {
+      "n": 115,
+      "mean_r": -0.00107,
+      "ci_lo": -0.24191,
+      "ci_hi": 0.23977
+     },
+     "SOLUSDT/long": {
+      "n": 68,
+      "mean_r": 0.15616,
+      "ci_lo": -0.13025,
+      "ci_hi": 0.44258
+     },
+     "SOLUSDT/short": {
+      "n": 137,
+      "mean_r": -0.03658,
+      "ci_lo": -0.23397,
+      "ci_hi": 0.16081
+     }
+    },
+    "by_hour_block_utc": {
+     "00h": {
+      "n": 124,
+      "mean_r": -0.02618,
+      "ci_lo": -0.2417,
+      "ci_hi": 0.18934
+     },
+     "06h": {
+      "n": 45,
+      "mean_r": 0.30867,
+      "ci_lo": -0.08248,
+      "ci_hi": 0.69981
+     },
+     "12h": {
+      "n": 154,
+      "mean_r": 0.03915,
+      "ci_lo": -0.15155,
+      "ci_hi": 0.22985
+     },
+     "18h": {
+      "n": 58,
+      "mean_r": -0.14079,
+      "ci_lo": -0.43734,
+      "ci_hi": 0.15577
+     }
+    },
+    "by_exit_reason": {
+     "sl": {
+      "n": 178,
+      "mean_r": -1.05645,
+      "ci_lo": -1.05992,
+      "ci_hi": -1.05299
+     },
+     "take_profit": {
+      "n": 87,
+      "mean_r": 1.76537,
+      "ci_lo": 1.64389,
+      "ci_hi": 1.88685
+     },
+     "time": {
+      "n": 116,
+      "mean_r": 0.37043,
+      "ci_lo": 0.24664,
+      "ci_hi": 0.49421
+     }
+    },
+    "by_month": {
+     "2025-10": {
+      "n": 43,
+      "mean_r": 0.11028,
+      "ci_lo": -0.2867,
+      "ci_hi": 0.50726
+     },
+     "2025-11": {
+      "n": 36,
+      "mean_r": -0.11738,
+      "ci_lo": -0.49211,
+      "ci_hi": 0.25735
+     },
+     "2025-12": {
+      "n": 28,
+      "mean_r": -0.20455,
+      "ci_lo": -0.64688,
+      "ci_hi": 0.23777
+     },
+     "2026-01": {
+      "n": 41,
+      "mean_r": -0.01348,
+      "ci_lo": -0.41728,
+      "ci_hi": 0.39032
+     },
+     "2026-02": {
+      "n": 39,
+      "mean_r": -0.05848,
+      "ci_lo": -0.45728,
+      "ci_hi": 0.34033
+     },
+     "2026-03": {
+      "n": 38,
+      "mean_r": 0.268,
+      "ci_lo": -0.15437,
+      "ci_hi": 0.69037
+     },
+     "2026-04": {
+      "n": 28,
+      "mean_r": -0.08616,
+      "ci_lo": -0.44795,
+      "ci_hi": 0.27563
+     },
+     "2026-05": {
+      "n": 22,
+      "mean_r": -0.27115,
+      "ci_lo": -0.71619,
+      "ci_hi": 0.17388
+     },
+     "2026-06": {
+      "n": 41,
+      "mean_r": 0.17737,
+      "ci_lo": -0.21499,
+      "ci_hi": 0.56974
+     },
+     "2026-07": {
+      "n": 24,
+      "mean_r": -0.45857,
+      "ci_lo": -0.7972,
+      "ci_hi": -0.11994
+     },
+     "2026-08": {
+      "n": 25,
+      "mean_r": 0.54082,
+      "ci_lo": 0.01751,
+      "ci_hi": 1.06413
+     },
+     "2026-09": {
+      "n": 16,
+      "mean_r": 0.30992,
+      "ci_lo": -0.19971,
+      "ci_hi": 0.81954
+     }
+    },
+    "cost_components": {
+     "gross_mean_r": 0.08391,
+     "cost_mean_r": 0.06158,
+     "net_mean_r_without_commission_bps_rt": 0.05343,
+     "commission_bps_rt_mean_r": 0.0311,
+     "net_mean_r_without_slippage_bps_rt": 0.03788,
+     "slippage_bps_rt_mean_r": 0.01555,
+     "net_mean_r_without_swap_daily": 0.03727,
+     "swap_daily_mean_r": 0.01494
+    }
+   }
+  }
+ },
+ "risk": {
+  "read_state": "not_run"
+ },
+ "minedge": {
+  "read_state": "not_run"
+ }
+}

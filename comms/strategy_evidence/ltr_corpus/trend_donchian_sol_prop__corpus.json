@@ -1,0 +1,32 @@
+{
+  "leg": "trend_donchian_sol_prop",
+  "purpose": "full-history per-trade corpus for the live-trade-review outcome table (scripts/research/live_review_outcomes.py --corpus auto); NOT a promotion-evidence record (the Stage-0 gate reads comms/strategy_evidence/trend_donchian_sol_prop.json)",
+  "produced_by": "committed forming-bar arm of RQ-20261022-4de5-01 (forming_bar_pooled_regrade.leg_run, config-exact), fee re-costed 7.5 -> 11.0 bps round-trip by build_ltr_corpus.recost",
+  "builder": "scripts/research/build_ltr_corpus.py (mode recost)",
+  "source_file": "comms/research/RQ-20261022-4de5-01/sol/arms/trend_donchian_sol_prop__B_forming__trades.jsonl",
+  "decision_bar": "forming",
+  "data_start": "2020-09-24 16:00:00+00:00",
+  "data_end": "2026-10-20 23:00:00+00:00",
+  "n_trades": 589,
+  "net_total_r": 29.6642,
+  "fee_bps_roundtrip": 11.0,
+  "slippage_bps_roundtrip": 3.0,
+  "funding_bps_per_window": 1.0,
+  "params": {
+    "timeframe": "1h",
+    "long_only": true,
+    "symbols": [
+      "SOLUSDT"
+    ],
+    "donchian": 20,
+    "atr_period": 14,
+    "atr_stop_mult": 2.5,
+    "trail_mult": 3.5,
+    "tp_r": 6.0,
+    "min_confidence": 0.8
+  },
+  "config_fingerprint": "sha256:788c4e29332bb4e5f12bcf09810b1913",
+  "trades_sha256": "cf6d184d189f26f27de6750d04a95de2a618b738e102c9b1351111577895d05b",
+  "staleness": "regenerate when the leg's declared params or decision_bar change (config_fingerprint no longer matches comms/strategy_evidence/trend_donchian_sol_prop.json) or when the cost stack moves",
+  "recosted_from_fee_bps_roundtrip": 7.5
+}

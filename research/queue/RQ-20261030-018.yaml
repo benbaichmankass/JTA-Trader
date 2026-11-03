@@ -69,13 +69,14 @@ generated:
     timeframe: 2h
 last_dispatched_at: '2026-10-30T08:59:00+00:00'
 grading:
-  auto: true
+  attested: RULE-TPL-ROSTER-WALKFORWARD-NET-OF-COST
+  auto: false
   decision_rule_id: RULE-TPL-ROSTER-WALKFORWARD-NET-OF-COST
   evidence:
   - research/results/RQ-20261030-018/41030130730.jsonl
   graded_at: '2026-10-31'
-  grader: scripts/research/queue_grade.py
-  needs_review: true
-  reason: 'verdicts not unanimous-mechanical: [''wiring_only'']'
+  grader: RESEARCH-OPS-20261031-1120 (session)
+  reason: 'Template rule applied by hand (mapper cannot read its shape): net-of-cost OOS R -13.74 <= 0 with n 46 >= 39 -> FAIL (first FAIL; the rule re-queues one confirmatory
+    run, two consecutive FAILs are a Gate-2 demotion INPUT, never a demotion by this unit). htf_pullback_trend_2h also failed last week per the 20261030T1525Z record.'
   rows: 1
-  verdict: null
+  verdict: fail

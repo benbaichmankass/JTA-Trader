@@ -2348,3 +2348,23 @@ nodes:
     - unit: RQ-20261028-d1f5-02
       verdict: fail
     needs_authoring: 'MODEL feed from P1 (programme review 2026-10-28). PR #20967 commits 12,500 per-check-in priced labels (comms/research/desk_lifecycle/full-c4e/, for the F.2 ML target): at each check-in the R value of hold vs close vs tighten, net of the full cost stack, on 938 walked trades from two entry sources. The finding to learn from: holds were worth +0.142 R vs closing and tightens -0.097 R, so the class that matters is ''tighten loses'' (the negative class) and the rare ''close at <= -0.5 R wins''. Author ONE ml_bakeoff unit once #20967 is on main: purged walk-forward by week (the run''s own cluster), features = the per-bar path state already used by RQ-20261024-09a6-01 (open R, peak, bars since peak, momentum, ADX slope) plus vol ratio; target = sign(value(close) - value(hold)); metric log-loss vs the class prior AND net R of the policy ''close when P > tau'' vs hold vs a matched-random close, at tau fixed before the run. Decision: PASS -> an exit-head candidate that composes with P1-Q8; FAIL -> in-trade state does not separate close-worthy check-ins beyond the prior on this sample, and the desk exit line rests on mechanical rules (P1-Q4). Check first that the labels'' entry sources do not leak future bars (the run''s isolation audit covers the judge, not the label join).'
+  - id: P2-VOLWIN-direction-head
+    goal: G4
+    theme: ml_health
+    roadmap: [M23, L-DESK]
+    value: {usd_at_stake_per_month: 200, confidence: 0.15}
+    after:
+    - {unit: RQ-20261031-28bf-01, verdict: pass}
+    needs_authoring: >-
+      GATED on VOL-WINDOW stage A (RQ-20261031-28bf-01) naming >= 1 qualifying cell. Author ONE ml_bakeoff unit: a direction classifier
+      for the qualifying windows (target = sign of the return from the entry bar to the window end, net-of-cost win label; features
+      available at the window start ONLY: the prior sessions' returns and ranges, the vol regime, the trailing realised vol vs
+      baseline, the pre-window gap/overnight move, the day-of-week and the first 5/15-minute path if the entry is after it; no
+      feature built from bars inside the decision window beyond the entry bar), purged walk-forward CV by week with a one-day
+      embargo. BASELINE = the simple stage-A rule on the same trades (not the class prior alone); metric = log-loss vs the prior AND net
+      R of 'take the trade when P > tau' vs take-all-rule trades vs matched-random skips, tau fixed before the run; cost-net labels
+      only (the cost gate, ml/promotion/cost_gate.py). The unit must carry the ml_consumer block naming the consumer: the desk time-window
+      wake (P1-VOLWIN-desk-wake) or the checklist row that builds the Stage-1 leg, and the decision the head would change (skip or take
+      the window trade); a head with no consumer is not queued. PASS -> a shadow candidate under the mechanical 1-2 prediction soak;
+      FAIL -> the simple rule stands as the stage-A baseline and the ML line for these windows is closed for this feature set.
+      Not authored if stage A fails.

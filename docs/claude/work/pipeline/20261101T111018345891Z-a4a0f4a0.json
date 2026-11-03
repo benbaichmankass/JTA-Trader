@@ -1,0 +1,16 @@
+{
+  "due_when": {
+    "check_every_days": 3,
+    "due_date": "2026-11-03",
+    "kind": "date"
+  },
+  "id": "PI-20261101-RXABACKP-0003",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "checklist ALPACA-LIVE-ACTIVITY-ML",
+    "rerun": "grep -n 'cs\\[\"fees\"\\] > 0' scripts/ops/mandate_resolver.py"
+  },
+  "state": "queued",
+  "what": "[mandate_resolver defect / R-HOLDOUT on commission-free venues] scripts/ops/mandate_resolver.py::_holdout requires holdout_confirmation.cost_stack.fees > 0. Alpaca ETFs are commission-free: resolve_fee_bps_roundtrip('SPY') = 0.0, and the holdout harness writes fees 0.0 (RQ-20261023-be01-02 measurement.holdout_confirmation.cost_stack). So NO Alpaca leg can ever pass R-HOLDOUT, whatever its result. Fix (loosens a wrong check, no new gate): accept fees == the venue fee from resolve_fee_bps_roundtrip(symbol) when slippage > 0; keep fees > 0 for venues that charge one. Test with the be01-02 block."
+}

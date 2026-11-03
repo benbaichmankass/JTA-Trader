@@ -1,0 +1,23 @@
+{
+  "due_when": {
+    "clears_when": "a research-queue-dispatch run completes its land job and last_dispatched_at advances on main",
+    "event": "next research-ops pass or manager reads the dispatch runs",
+    "kind": "event"
+  },
+  "id": "PI-20261102-RODISPATCHLAND-0001",
+  "next_action": "check_observation",
+  "observation": {
+    "due_by": "2026-11-03",
+    "how_to_check": "python3 scripts/research/research_ops_checks.py --out /tmp/c.json; read pipeline.fired_24h and hours_since_last_dispatch",
+    "what": "newest dispatch run completes land job and fired_24h > 0"
+  },
+  "origin": {
+    "kind": "session",
+    "ref": "lane RESEARCH-OPS-20261102-1555",
+    "rerun": "python3 scripts/ci/check_research_queue_dispatch_liveness.py; mcp actions_list_workflow_jobs on newest research-queue-dispatch run"
+  },
+  "severity": "high",
+  "state": "queued",
+  "tier": 1,
+  "what": "research-queue-dispatch 'land' job stuck: run 41455400075 job 'land' in_progress on step 'Land the dispatch stamps on main' since 14:26Z (batch landing step took 26 min; checkout 2 min). Run 41471395020 (15:25Z) also in progress. checks packet: fired_24h 0, hours_since_last_dispatch 27.6, idle_alarm true, though dispatch_queue.py dry run would dispatch (runnable 144). Last 8 dispatch runs: 1 success, 1 failure, 4 cancelled, 2 in progress. Stamps not landing on main means last_dispatched_at does not advance. 34 units also at retry cap 'needs a human' (non-verdict outcomes)."
+}

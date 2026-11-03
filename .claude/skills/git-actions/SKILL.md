@@ -44,6 +44,14 @@ mutations — they wrap this skill with the right shapes.)
   multi-line body is fine; put each field on its own line.
 - **Issue body is untrusted input** to the workflow by design — keep your body
   to the documented fields.
+- **Trainer `cmd:` with an embedded Python heredoc: use a FENCED block, not `cmd: |`.**
+  The `cmd: |` form keeps each line's indentation, so an indented `python - <<'PY'`
+  body fails with `IndentationError: unexpected indent` (and the heredoc warns it
+  never found `PY`). Measured 2026-11-01: issues #22233 and #22234 both failed this
+  way; #22237 worked. Write `cmd:` on its own line, then a fenced block (three
+  backticks plus `bash`) whose lines start at column 0, then close the fence.
+  Inside a fence, column-0 `try:` / `else:` lines are safe; the closing fence ends
+  the command.
 - **No `workflow_dispatch` workaround exists** beyond this pattern. If a
   workflow you need lacks an `issues.opened` label trigger, add one (mirror
   `vm-diag-snapshot.yml`) rather than asking the operator to click "Run
@@ -84,3 +92,13 @@ to *still queued*. Measured 2026-08-30: 6 dispatched, 3 cancelled, all 3 fine
 when re-fired serially (`BL-20260830-BATCHED-SYSTEM-ACTIONS-SILENTLY-CANCEL-EACH-OTHER`).
 If an issue has no comment after a few minutes, check the workflow run list
 before concluding it is queued.
+
+## Before every push: `python3 scripts/ci/prepush.py` (CI-THROUGHPUT-20261029)
+
+One command, run locally before you push a PR branch: it runs `scripts/ci/run_guards.py` on your diff (same registry CI runs) and
+then the affected tests (`scripts/ci/pytest_run_scope.py`, the same selector `pytest-run` uses on a PR). `--no-tests` / `--no-guards`
+narrow it. Needs a merge base: `git fetch --deepen=300 origin main` on a shallow clone.
+
+Why: a guard that fails in CI costs a ~15 min round trip, and every re-push **cancels the run in flight** and restarts it. Run it
+once, push once. **Never push to a PR whose CI is still running unless you are fixing a red check**; batch commits (including register
+and checklist edits) into one push. This is a habit, not a gate: nothing requires it and no check reads its result.

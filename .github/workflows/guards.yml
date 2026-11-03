@@ -58,6 +58,41 @@ on:
     branches: [main]
   push:
     branches: [main]
+    # BOT-DATA PUSHES SKIP THE PUSH RUN (RUNNER CENSUS 2026-11-01, row GRADE-EVERYTHING-CONTINUOUSLY / lane FORECAST-GRADE-FIRST-PASSAGE).
+    # A push to main whose changed files ALL match this list is a bot data landing whose own PR already ran this check on the
+    # identical tree. Any other file in the commit (code, config, workflows, tests, a path the suite or a guard-test reads)
+    # runs it as before. PRs are NOT affected: `pull_request` has no filter, so no guard is skipped on any PR.
+    # The same list is in pytest-run / guards / repo-inventory / pytest-collect; tests/test_push_paths_ignore_bot_data.py pins
+    # them identical and DISJOINT from every committed path the test suite reads.
+    paths-ignore:
+      - '.github/merge-slots/**'
+      - '.github/pr-automerge-requests/**'
+      - '.github/pr-landing/**'
+      - 'comms/research/RQ-*/**'
+      - 'comms/research/CF-*/**'
+      - 'comms/research/counterfactual_grades/**'
+      - 'comms/research/soak_book_grade/**'
+      - 'comms/research/utilization/**'
+      - 'comms/research/health/**'
+      - 'research/results/**'
+      - 'comms/desk/decisions.jsonl'
+      - 'comms/desk/packets/**'
+      - 'comms/desk/role_grade.json'
+      - 'comms/desk/forecast_grade.json'
+      - 'comms/desk/forecast_ledger.jsonl'
+      - 'comms/desk/am_judgement_grade.json'
+      - 'comms/desk/feed_gaps.jsonl'
+      - 'comms/desk/touches.jsonl'
+      - 'comms/live_review/rows/**'
+      - 'comms/live_review/outcomes.jsonl'
+      - 'comms/live_review/killed_rows.json'
+      - 'comms/claude_strategy_scores.jsonl'
+      - 'comms/news_alpha/**'
+      - 'docs/claude/pending-pings.jsonl'
+      - 'docs/claude/work/WORK-DIGEST.json'
+      - 'docs/claude/work/research-queue-dispatch-receipt.json'
+      - 'docs/claude/work/USAGE-READINGS.jsonl'
+      - 'docs/claude/work/TRAINER-CAPTURE-WATCH.json'
   workflow_dispatch:
 
 permissions:

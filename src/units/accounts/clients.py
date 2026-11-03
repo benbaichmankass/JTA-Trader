@@ -1272,8 +1272,9 @@ def _record_position_read_observation(obs: Dict[str, Any]) -> None:
             from src.utils.paths import runtime_logs_dir
             target = runtime_logs_dir() / POSITION_READ_SOAK_LOG_NAME
             target.parent.mkdir(parents=True, exist_ok=True)
-            with open(target, "a", encoding="utf-8") as fh:
-                fh.write(json.dumps(line, ensure_ascii=False) + "\n")
+            from src.utils.jsonl_rotate import append_line
+            # Size-capped (VM-DISK-GROWTH-20261102): gzipped rotation at the cap.
+            append_line(target, json.dumps(line, ensure_ascii=False) + "\n", 100)
         except Exception:  # noqa: BLE001 - a soak write must never break a read
             pass
         if deduped:

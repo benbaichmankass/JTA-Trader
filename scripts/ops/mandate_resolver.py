@@ -600,7 +600,9 @@ def _account_snapshot(root: Path, account: str) -> Dict[str, Any]:
         raise _NeedsData("R-AFFORD", f"{rel} is for account_id={snap.get('account_id')!r}",
                          _afford_data_task(account, f"{rel} names another account"))
     eq = snap.get("equity_usd")
-    if not _finite(eq) or eq < 0:
+    if isinstance(snap.get("legs"), dict) and eq is None:
+        pass  # v2: per-leg affordability, no balance committed (checked in _affordability)
+    elif not _finite(eq) or eq < 0:
         raise _NeedsData("R-AFFORD", f"{rel} equity_usd={eq!r} is not a measurement",
                          _afford_data_task(account, "equity_usd missing"))
     ts = _parse_ts(snap.get("captured_at"))
@@ -621,8 +623,84 @@ def _account_snapshot(root: Path, account: str) -> Dict[str, Any]:
     return {**snap, "_rel": rel, "_age_days": round(age_d, 2)}
 
 
+AFFORD_SNAPSHOT_SCHEMA = 2
+
+
+def _affordability_from_legs(leg: str, account: str, record: Dict[str, Any], snap: Dict[str, Any],
+                             ctx: Dict[str, Any]) -> None:
+    """R-AFFORD from a v2 snapshot: the writer ran THIS resolver's sizer for every leg at capture time and committed
+    only the per-leg answer, never the balance (manager 2026-11-01: a committed balance is a rule violation in this
+    public repo). The answer is valid only for the record it was computed against."""
+    rel = snap["_rel"]
+    entry = (snap.get("legs") or {}).get(leg)
+    ev: Dict[str, Any] = {"snapshot": rel, "captured_at": snap.get("captured_at"),
+                          "snapshot_age_days": snap["_age_days"], "basis": "per-leg answer (no balance committed)"}
+    ctx["evidence"]["affordability"] = ev
+    why = None
+    if not isinstance(entry, dict):
+        why = f"{rel} carries no affordability answer for {leg}"
+    elif entry.get("config_fingerprint") != record.get("config_fingerprint") \
+            or entry.get("source_run") != record.get("source_run"):
+        why = (f"{rel}'s answer for {leg} was computed against another record "
+               f"({entry.get('config_fingerprint')!r}, {entry.get('source_run')!r})")
+    if why:
+        raise _NeedsData("R-AFFORD", why, _afford_data_task(account, why))
+    ev.update({k: entry.get(k) for k in ("setups_in_run", "setups_permitted", "setups_sized", "ref_price",
+                                         "ref_price_at", "whole_units", "side_filter")})
+    if entry.get("refuse"):
+        raise _Refuse("R-AFFORD", f"{leg} on {account}: {entry['refuse']}")
+    ok, permitted = entry.get("setups_sized"), entry.get("setups_permitted")
+    if not (isinstance(ok, int) and isinstance(permitted, int)):
+        raise _NeedsData("R-AFFORD", f"{rel}'s answer for {leg} is malformed",
+                         _afford_data_task(account, "malformed per-leg answer"))
+    if ok == 0:
+        raise _Refuse("R-AFFORD", f"0 of {permitted} permitted setups size above zero on {account} at "
+                                  f"{leg}'s latest committed price {entry.get('ref_price')} -- the edit would land "
+                                  "a leg that cannot place an order")
+    if ok < permitted:
+        ctx["caveats"].append(f"AFFORDABILITY PARTIAL: {ok} of {permitted} permitted setups size on {account}; "
+                              "the rest refuse at the sizer")
+
+
+def _no_balance(text: str) -> str:
+    """Strip every account-money figure from a message bound for a committed file: the sizer's refuse text names
+    the equity / buying power it read (``(equity $193.56, buying power $193.56, ...)``)."""
+    import re
+    text = re.sub(r"\(equity \$[^)]*\)", "(balance read, not committed)", text)
+    return re.sub(r"\$\s?[0-9][0-9,]*(\.[0-9]+)?", "$<redacted>", text)
+
+
+def affordability_answer(leg: str, account: str, equity_usd: float, buying_power_usd: Optional[float],
+                         root: Path = REPO) -> Dict[str, Any]:
+    """The per-leg R-AFFORD answer the snapshot WRITER commits (scripts/ops/snapshot_account_for_mandate.py):
+    this resolver's own sizer run at a measured balance held only in memory. Returns the counts, or ``refuse`` /
+    ``needs_data`` with the reason. The balance is not in the return value."""
+    from datetime import datetime, timezone
+    acfg = (_yaml(root, ACCOUNTS_REL) or {}).get("accounts") or {}
+    record = _json(root / EVIDENCE_DIR_REL / f"{leg}.json") or {}
+    out: Dict[str, Any] = {"config_fingerprint": record.get("config_fingerprint"),
+                           "source_run": record.get("source_run")}
+    exchange = str((acfg.get(account) or {}).get("exchange") or "")
+    mem = {"account_id": account, "captured_at": datetime.now(timezone.utc).isoformat(), "equity_usd": equity_usd,
+           "buying_power_usd": buying_power_usd, "_rel": "(in memory)", "_age_days": 0.0}
+    ctx: Dict[str, Any] = {"evidence": {}, "caveats": []}
+    try:
+        _affordability(leg, account, exchange, record, acfg, root, ctx, snap=mem)
+    except _Refuse as e:
+        out["refuse"] = _no_balance(e.detail if hasattr(e, "detail") else str(e))
+    except _NeedsData as e:
+        out["needs_data"] = _no_balance(e.detail if hasattr(e, "detail") else str(e))
+    ev = ctx["evidence"].get("affordability") or {}
+    out.update({k: ev.get(k) for k in ("setups_in_run", "setups_permitted", "setups_sized", "ref_price",
+                                       "ref_price_at", "whole_units", "side_filter")})
+    out["affordable"] = bool(isinstance(out.get("setups_sized"), int) and out["setups_sized"] > 0
+                             and not out.get("refuse") and not out.get("needs_data"))
+    return out
+
+
 def _affordability(leg: str, account: str, exchange: str, record: Dict[str, Any],
-                   acfg: Dict[str, Any], root: Path, ctx: Dict[str, Any]) -> None:
+                   acfg: Dict[str, Any], root: Path, ctx: Dict[str, Any],
+                   snap: Optional[Dict[str, Any]] = None) -> None:
     """R-AFFORD: would `account`'s own sizer size this leg's setups at all?
 
     Population: every setup in the record's committed `source_run` whose
@@ -646,7 +724,10 @@ def _affordability(leg: str, account: str, exchange: str, record: Dict[str, Any]
     a strategy-level long_only/side_filter. Every one of those can only make
     the live sizer refuse MORE, so a REFUSE here is decisive and a pass is not.
     """
-    snap = _account_snapshot(root, account)
+    snap = snap if snap is not None else _account_snapshot(root, account)
+    if isinstance(snap.get("legs"), dict):
+        _affordability_from_legs(leg, account, record, snap, ctx)
+        return
     cfg = acfg.get(account) or {}
     sys.path.insert(0, str(REPO))
     from src.core.coordinator import OrderPackage
@@ -980,7 +1061,14 @@ def _add_risk(leg: str, frm: str, to: str, account: str, exchange: str,
     if not isinstance(bar, dict) or not isinstance(cap, dict):
         raise _Refuse("R-MANDATE-NOT-GRANTED", f"{m['id']} does not state its `bar:` and `cap:`")
 
-    if (frm, to) == ("S1", "S2"):
+    # PROMOTION-NO-SOAK (operator, 2026-11-01; OPERATING-PLAN § 2 "The soak is MECHANICAL"): a leg whose
+    # execution mechanics are already proven (soak_state.mechanics_proven, from records) skips the paper soak.
+    # Only an entry whose `bar:` states `mechanics_proven: true` reads this; the Stage-0 bar below is untouched.
+    mech = None
+    if (frm, to) == ("S1", "S2") and bar.get("mechanics_proven"):
+        mech = _mechanics_proven(leg, root, acfg)
+        ctx["evidence"]["mechanics"] = mech
+    if (frm, to) == ("S1", "S2") and not (mech and mech.get("proven")):
         soak = SOAK_ACCOUNT.get(exchange)
         if not soak or leg not in rosters.get(soak, {}).get("legs", []):
             raise _NeedsData("R-NOT-SOAKED", f"{leg} is not on the Stage-1 soak roster {soak!r}; "
@@ -1188,6 +1276,20 @@ def _holdout_data_task(leg: str, frm: str, to: str, why: str, root: Path) -> Dic
     }
 
 
+def _venue_fee_bps(symbol: Any) -> Optional[float]:
+    """The instrument's MEASURED venue round-trip fee (profile_loader.roundtrip_fee_bps_for): 0.0 for a declared
+    commission-free venue, a number for a measured venue, None when the venue is unknown (never read as zero)."""
+    if not symbol:
+        return None
+    try:
+        sys.path.insert(0, str(REPO))
+        from src.core.profile_loader import roundtrip_fee_bps_for
+        v = roundtrip_fee_bps_for(str(symbol))
+    except Exception:  # noqa: BLE001 -- an unreadable venue is "unknown", which keeps the fees > 0 requirement
+        return None
+    return float(v) if v is not None else None
+
+
 def _holdout(leg: str, frm: str, to: str, record: Dict[str, Any], bar: Dict[str, Any],
              m: Dict[str, Any], root: Path, ctx: Dict[str, Any]) -> None:
     hc = record.get(HOLDOUT_FIELD)
@@ -1224,9 +1326,17 @@ def _holdout(leg: str, frm: str, to: str, record: Dict[str, Any], bar: Dict[str,
     if not in_repo(root, hc.get("source_run")):
         need(f"source_run {hc.get('source_run')!r} is not a committed file")
     cs = hc.get("cost_stack") or {}
-    if not (isinstance(cs, dict) and _num(cs.get("fees")) and cs["fees"] > 0
-            and _num(cs.get("slippage")) and "funding" in cs):
-        need(f"cost_stack={cs!r} is not the full stack (fees > 0, slippage, funding stated)")
+    venue_fee = _venue_fee_bps(record.get("symbol"))
+    ev["venue_fee_bps"] = venue_fee
+    # fees must be > 0, EXCEPT a MEASURED zero: the record's instrument resolves to a commission-free venue in
+    # config/instruments.yaml (profile_loader.roundtrip_fee_bps_for == 0.0, e.g. US ETFs on Alpaca). An unknown
+    # venue resolves to None (the estimator's default would apply), so a zero there is still a fail (operator
+    # 2026-11-01 ~11:47Z "Yes, and fix the bug (Rec.)"; PI-20261101-RXABACKP-0003).
+    fees_ok = _num(cs.get("fees")) and (cs["fees"] > 0 or (cs["fees"] == 0 and venue_fee == 0.0)) \
+        if isinstance(cs, dict) else False
+    if not (isinstance(cs, dict) and fees_ok and _num(cs.get("slippage")) and "funding" in cs):
+        need(f"cost_stack={cs!r} is not the full stack (fees > 0, or 0 on a measured commission-free venue "
+             f"[this instrument's venue fee: {venue_fee!r}]; slippage, funding stated)")
     disc, hold = hc.get("discovery") or {}, hc.get("holdout") or {}
     d_end, h_start = _parse_ts(disc.get("end")), _parse_ts(hold.get("start"))
     if d_end is None or h_start is None or not d_end < h_start:
@@ -1299,6 +1409,25 @@ COST_BASIS_VENUE_SYMBOL = "venue_symbol"
 #: R3 row account_class -> the basis R3 names its cells by. Real money first:
 #: a real fill is the venue's cost; a demo fill is a simulator's.
 VENUE_BASIS_ORDER = (("real_money", "market"), ("paper", "simulator"))
+
+
+def _mechanics_proven(leg: str, root: Path, acfg: Dict[str, Any]) -> Dict[str, Any]:
+    """soak_state.mechanics_proven over the records the resolver may read: SOAKS.json PASS dispositions
+    plus the newest fresh committed soak snapshot (the resolver never opens the live journal)."""
+    import soak_state as ss  # noqa: PLC0415
+    states: List[Dict[str, Any]] = []
+    doc = _json(root / SOAKS_REL)
+    for c in (doc or {}).get("soaks") or []:
+        d = (c or {}).get("disposition") or {}
+        if isinstance(c, dict) and d.get("verdict") == "PASS" and d.get("trades"):
+            states.append({"id": c.get("id"), "leg": c.get("leg"), "account": c.get("account"), "state": "passed"})
+    rel, snap = latest_soak_snapshot(root)
+    if snap is not None:
+        states += [r for r in snap.get("soaks") or [] if isinstance(r, dict)]
+    xo = {a: str((cfg or {}).get("exchange") or "") for a, cfg in acfg.items() if isinstance(cfg, dict)}
+    out = ss.mechanics_proven(leg, states, ss.load_mechanics_paths(root / "config/mechanics_paths.yaml"), xo)
+    out["snapshot"] = rel
+    return out
 
 
 def _soak_passed(leg: str, soak: str, m: Dict[str, Any], root: Path,

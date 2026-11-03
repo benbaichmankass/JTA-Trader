@@ -1,0 +1,15 @@
+Traceback (most recent call last):
+  File "/home/runner/work/JTA-Trader/JTA-Trader/docs/research/ml-entry-prop-gate-2026-11-02/build_ledger.py", line 26, in <module>
+    tab = E.build_table(cache, syms)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/work/JTA-Trader/JTA-Trader/scripts/research/ml_decision_entry.py", line 269, in build_table
+    df = pd.read_pickle(cache / f"{sym}.pkl").reset_index(drop=True)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/hostedtoolcache/Python/3.11.17/x64/lib/python3.11/site-packages/pandas/io/pickle.py", line 235, in read_pickle
+    with get_handle(
+         ^^^^^^^^^^^
+  File "/opt/hostedtoolcache/Python/3.11.17/x64/lib/python3.11/site-packages/pandas/io/common.py", line 948, in get_handle
+    handle = open(handle, ioargs.mode)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory: '/tmp/ml_decision_klines/ADAUSDT.pkl'
+{"n": 381, "enriched": false, "decomp": "needs_enriched_ledger:pred_net_r,ret_168,vol_ratio (symbol/side/hour/exit/cost parts are ok)", "risk": "not_run", "minedge": "not_run"}

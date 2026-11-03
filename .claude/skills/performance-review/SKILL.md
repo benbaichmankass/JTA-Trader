@@ -167,6 +167,12 @@ restating the CHECKS tables as findings; mechanics findings filed as performance
 call without Layer 0; a "new" finding the repo had already answered; a recommendation that names no
 owner and no check.
 
+## Done-condition (audit-outcome contract, operator 2026-11-01)
+
+The review is done only when **every decision/proposal maps to a checklist row with `owner`, `due_by` and a `roadmap` ref (or a research unit with a
+`roadmap` ref and run date), or to a recorded operator decision**; the `## 3. Decisions` ending column names the row and its `due_by`. Manager skill
+§ "The audit-outcome contract".
+
 ## Output
 
 Two files, one PR. The markdown is for the operator; the JSON is for the next review and the tools.

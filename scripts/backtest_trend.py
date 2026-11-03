@@ -50,6 +50,9 @@ if str(_REPO_ROOT) in sys.path:
 sys.path.insert(0, str(_REPO_ROOT))
 
 from src.runtime import execution_costs  # noqa: E402  (the ONE shared cost model)
+from src.runtime.structure_levels import (  # noqa: E402  (STRUCTURE-EXITS-DEFAULT: the ONE causal detector)
+    StructureExit as _StructureExit, StructureLevels as _StructureLevels,
+    parse_structure_exit as _parse_structure_exit)
 from src.research.metric_trigger import TriggerPlan, trigger_flag_errors  # noqa: E402  (HARNESS-METRIC-TRIGGER)
 from src.research.path_state_gate import (  # noqa: E402  (PATHSTATE-TRAIL-GATE)
     FEATURES as PS_FEATURES, OPS as PS_OPS, build_gate as build_path_state_gate, gate_row as path_state_row,
@@ -337,6 +340,10 @@ def run_backtest(df: pd.DataFrame, *, donchian: int, atr_period: int,
                  trail_level_pivot_k: int = 3,
                  trail_level_round_step: float = 0.0,
                  trail_level_min_r: float = 0.0,
+                 structure_exit: str = "",
+                 structure_buffer_atr: float = 0.25,
+                 structure_min_r: float = 1.0,
+                 structure_fvg: bool = True,
                  giveback_frac: float = 0.0,
                  trigger_action: str = "",
                  trigger_file: str = "",
@@ -362,7 +369,8 @@ def run_backtest(df: pd.DataFrame, *, donchian: int, atr_period: int,
                  decision_cfg: Optional[Dict[str, Any]] = None,
                  decision_workers: int = 4,
                  emit_paths_path: Optional[str] = None,
-                 emit_features: bool = False) -> Dict[str, Any]:
+                 emit_features: bool = False,
+                 cf: bool = False) -> Dict[str, Any]:
     # FORMING-BAR DECISION MODE (PI-20260929-VOLSKIP-SIGNAL-0002; default
     # "closed" = byte-identical). Live evaluates the WHOLE entry signal on the
     # still-forming bar every ~2 min; "forming" replays that decision with the
@@ -445,6 +453,14 @@ def run_backtest(df: pd.DataFrame, *, donchian: int, atr_period: int,
     # the first bar that trades through it the trail tightens to
     # trail_level_tight_mult x ATR for the rest of the trade (latched).
     level_on = level_trail_armed(trail_level, trail_level_tight_mult)
+    # STRUCTURE-EXITS-DEFAULT: causal swing/FVG SL+TP (src/runtime/structure_levels.py).
+    # '' = off, byte-identical. SL beyond the last CONFIRMED swing (- ATR buffer, clamped to
+    # [0.5, 3.0] x the declared ATR-stop distance); ratchets toward price only; TP at the
+    # nearest opposing level >= structure_min_r R, extend-only. Replaces the ATR chandelier.
+    _sx_n = _parse_structure_exit(structure_exit)
+    _sx_levels = (_StructureLevels(df["high"].to_numpy(float), df["low"].to_numpy(float), _sx_n)
+                  if _sx_n else None)
+    _sx_fallback = 0
     # HARNESS-METRIC-TRIGGER (default off = byte-identical): act only on trades an out-of-fold
     # metric flagged (or on every trade open at bar K, the control); src/research/metric_trigger.py.
     _trig = TriggerPlan(trigger_action, trigger_file, trigger_all)
@@ -771,6 +787,15 @@ def run_backtest(df: pd.DataFrame, *, donchian: int, atr_period: int,
             _anc = float(_ov["sl_anchor"])
         sl = _anc - atr_stop_mult * atr if direction == "long" else _anc + atr_stop_mult * atr
         risk = abs(_anc - sl)
+        _sx = None
+        if _sx_levels is not None:
+            _sx = _StructureExit.start(_sx_levels, entry_i, entry, direction == "long", atr,
+                                       abs(_anc - sl), buffer_atr=structure_buffer_atr,
+                                       min_r=structure_min_r, fvg=structure_fvg)
+            if _sx is None:
+                _sx_fallback += 1          # no confirmed adverse swing: declared ATR stop, no TP
+            else:
+                sl, risk = _sx.sl, _sx.risk
         if risk <= 0 or (direction == "long" and entry <= sl) or (direction == "short" and entry >= sl):
             # a fill already through the stop is refused by the venue (Bybit
             # 10001 SL-side guard); with no anchor entry==_anc so never trips.
@@ -797,6 +822,8 @@ def run_backtest(df: pd.DataFrame, *, donchian: int, atr_period: int,
         # GEOM-B1: a finite entry-time target and/or a target that moves
         # (scripts/research/tp_geometry.py). Skipped entirely at default, so the
         # legacy `tp_price` above is untouched.
+        if _sx is not None:
+            tp_price = _sx.tp              # None -> no resting TP until a level is confirmed
         _tpt = None
         if tp_geom.armed:
             tp_price = _tpg.entry_target(
@@ -894,6 +921,7 @@ def run_backtest(df: pd.DataFrame, *, donchian: int, atr_period: int,
                 exit_price, exit_reason = _hit
                 exit_idx = j
                 break
+            _trail_pre_sx = trail
             if direction == "long":
                 if bh > ext:
                     peak_j = j
@@ -911,6 +939,8 @@ def run_backtest(df: pd.DataFrame, *, donchian: int, atr_period: int,
                         and level_r_gate_open(trail_level_min_r, (ext - entry) / risk))):
                     _lvl_touch_j = j if _lvl_touch_j is None else _lvl_touch_j
                     trail = max(trail, ext - trail_level_tight_mult * atr)
+                if _sx is not None:
+                    trail = _trail_pre_sx
                 mfe = max(mfe, (ext - entry) / risk)
                 # MI-165 break-even FLOOR lever (0 = off, byte-identical).
                 # Once the trade has SEEN >= be_floor_r R, the stop may never
@@ -941,11 +971,16 @@ def run_backtest(df: pd.DataFrame, *, donchian: int, atr_period: int,
                         and level_r_gate_open(trail_level_min_r, (entry - ext) / risk))):
                     _lvl_touch_j = j if _lvl_touch_j is None else _lvl_touch_j
                     trail = min(trail, ext + trail_level_tight_mult * atr)
+                if _sx is not None:
+                    trail = _trail_pre_sx
                 mfe = max(mfe, (entry - ext) / risk)
                 # MI-165 break-even FLOOR — short side. `min()` is the
                 # tightening direction here, mirroring the ratchet above.
                 if be_floor_r > 0.0 and mfe >= be_floor_r:
                     trail = min(trail, entry)
+            if _sx is not None:
+                # bar j has CLOSED: new confirmed levels bind from bar j+1 (ratchet / extend-only)
+                trail, tp_price = _sx.on_bar_close(j, float(df["close"].iloc[j]), trail, tp_price, entry)
             # GEOM-B1 target revision (off unless --tp-extend-r / --tp-retarget-mode).
             # On the bar's CLOSE, after its own stop/target test; the revised level
             # binds from the NEXT bar. NOT a levered exit: it only moves tp_price.
@@ -1153,6 +1188,12 @@ def run_backtest(df: pd.DataFrame, *, donchian: int, atr_period: int,
         trades_out.extend(trades)
     if emit_path:
         Path(emit_path).parent.mkdir(parents=True, exist_ok=True)
+        _cf_bars = _cf_horizon = None
+        if cf:        # CF-C1-HARNESS-HOOK (opt-in here; harness_stage0 passes it by default): adds one `cf` key per row
+            import cf_harness as _cf_h
+            _cf_horizon = {"timeframe": timeframe, "max_hold_bars": timeout_bars}
+            _cf_bars = (_cf_h.FrameBars(df, timeframe=timeframe, bar_label=bar_label)
+                        if timeframe in _cf_h.TF_SECONDS else None)
         with open(emit_path, "w", encoding="utf-8") as fh:
             for t in trades:
                 cb = _cost_breakdown(t)
@@ -1220,7 +1261,10 @@ def run_backtest(df: pd.DataFrame, *, donchian: int, atr_period: int,
                     **(t.mom or {}),
                     **(t.level or {}),
                     **(_tpg_row(t) if tp_geom.armed else {}),
-                    **(t.extra or {})}, default=str) + "\n")
+                    **(t.extra or {}),
+                    **({} if not cf else {"cf": _cf_fields_for(t, cb, strategy_name, symbol, _cf_bars, _cf_horizon,
+                                                              atr_stop_mult, trail_mult, tp_r)})},
+                    default=str) + "\n")
     params: Dict[str, Any] = {"donchian": donchian, "atr_stop_mult": atr_stop_mult,
                               "trail_mult": trail_mult, "min_confidence": min_confidence}
     if adx_min is not None:
@@ -1250,6 +1294,10 @@ def run_backtest(df: pd.DataFrame, *, donchian: int, atr_period: int,
         params["giveback_frac"] = giveback_frac
     if level_on and trail_level_min_r > 0.0:
         params["trail_level_min_r"] = trail_level_min_r
+    if _sx_n:
+        params.update(structure_exit=structure_exit, structure_buffer_atr=structure_buffer_atr,
+                      structure_min_r=structure_min_r, structure_fvg=structure_fvg,
+                      structure_no_swing_fallbacks=_sx_fallback)
     if _trig.on:
         params["trigger_action"] = trigger_action
         params["trigger_all"] = trigger_all
@@ -1362,6 +1410,26 @@ def _cost_breakdown(t: Trade) -> Dict[str, float]:
     return {"fee_r": fee_r, "slippage_r": cb["slippage_r"], "funding_r": cb["funding_r"],
             "total_cost_r": fee_r + cb["slippage_r"] + cb["funding_r"],
             "funding_windows": cb["funding_windows"]}
+
+
+def _cf_fields_for(t: Trade, cb: Dict[str, float], strategy_name: str, symbol: str, frame_bars: Any,
+                   horizon_cfg: Dict[str, Any], atr_stop_mult: float, trail_mult: float, tp_r: float) -> Dict[str, Any]:
+    """The `cf` block (schema cf_trade/1) for one emitted row; see scripts/research/cf_harness.py. Pure of the run."""
+    import cf_core
+    import cf_harness
+    row = {"strategy": strategy_name, "symbol": symbol, "entry_time": str(t.entry_time), "exit_time": str(t.exit_time),
+           "entry": t.entry, "sl": t.sl, "direction": t.direction, "exit_price": t.exit_price, "exit_reason": t.outcome,
+           "net_r": round(t.r_multiple - cb["total_cost_r"], 4), "cost_fee_r": cb["fee_r"], "cost_funding_r": cb["funding_r"]}
+    if frame_bars is None:
+        return cf_harness.cf_fields(row, [], horizon_cfg=horizon_cfg)
+    import live_review_counterfactual as lrc
+    t_in, t_out = lrc._ts(row["entry_time"]), lrc._ts(row["exit_time"])
+    h = cf_core.resolve_horizon({"timeframe": horizon_cfg["timeframe"]}, horizon_cfg)
+    bars = frame_bars.slice(t_in, t_out + h["seconds"]) if t_in is not None and t_out is not None else []
+    sign = 1.0 if t.direction == "long" else -1.0
+    meta = {"atr": t.risk / atr_stop_mult if atr_stop_mult else None, "trail_mult": trail_mult,
+            "tp": (t.entry + sign * tp_r * t.risk) if (tp_r and tp_r < 50.0) else None}
+    return cf_harness.cf_fields(row, bars, horizon_cfg=horizon_cfg, leg_meta=meta)
 
 
 def _fee_r(t: Trade) -> float:
@@ -1765,6 +1833,18 @@ def main(argv: List[str]) -> int:
                    help="LEVEL-TRAIL-R-GATE (0 = off, byte-identical): a level touch latches the tight "
                         "trail only once the trade's peak open profit has reached this many R (AND, not "
                         "the OR a --trail-decay-arm-r composition gives). Needs --trail-level.")
+    p.add_argument("--structure-exit", default="",
+                   help="STRUCTURE-EXITS-DEFAULT ('' = off, byte-identical): pivot=N. SL beyond the last "
+                        "CONFIRMED N-bar swing minus --structure-buffer-atr x ATR (distance clamped to "
+                        "[0.5, 3.0] x the declared ATR stop), ratcheting toward price only; TP at the "
+                        "nearest opposing swing / unfilled FVG edge >= --structure-min-r R, extend-only. "
+                        "Replaces the ATR chandelier. Causal: src/runtime/structure_levels.py.")
+    p.add_argument("--structure-buffer-atr", type=float, default=0.25,
+                   help="ATR buffer beyond the swing for the structure stop (arm: 0 = no buffer).")
+    p.add_argument("--structure-min-r", type=float, default=1.0,
+                   help="Minimum distance of the structure TP from entry, in R.")
+    p.add_argument("--structure-no-fvg", action="store_true",
+                   help="Structure TP uses swing highs/lows only (no unfilled FVG edges).")
     p.add_argument("--giveback-frac", type=float, default=0.0,
                    help="GIVEBACK-FRAC-FLAG (0 = off, byte-identical): giveback stop as a SHARE of the "
                         "peak -- exit at the bar close when open R <= F x peak R, armed by "
@@ -1842,6 +1922,9 @@ def main(argv: List[str]) -> int:
                         "f_* context columns (ADX-14 + label, ATR pct/percentile/bucket, "
                         "regime cell proxy, rolling log-return vol, 20-bar return, UTC "
                         "hour/dow) to every --emit-trades row. Existing keys unchanged.")
+    p.add_argument("--cf", action="store_true",
+                   help="CF-C1-HARNESS-HOOK (opt-in): add a `cf` counterfactual-arms block (schema cf_trade/1) to every "
+                        "--emit-trades row. Existing keys unchanged; off = byte-identical.")
     args = p.parse_args(argv[1:])
     # The ATR percentile these flags compare against is rolling rank(pct=True), a 0-1 scale.
     # A value > 1 (e.g. "50" meant as the 50th percentile) skips every bar once the window
@@ -1893,6 +1976,12 @@ def main(argv: List[str]) -> int:
     _lvl_errs = level_flag_errors(args.trail_level, args.trail_level_tight_mult, args.trail_mult,
                                   args.trail_level_lookback, args.trail_level_pivot_k,
                                   args.trail_level_round_step, args.trail_level_min_r)
+    try:
+        _parse_structure_exit(args.structure_exit)
+    except ValueError as _e:
+        _lvl_errs.append(str(_e))
+    if args.structure_exit and args.trail_level:
+        _lvl_errs.append("--structure-exit replaces the trail; do not combine with --trail-level")
     _lvl_errs += giveback_flag_errors(args.giveback_min_mfe_r, args.giveback_frac)
     _lvl_errs += trigger_flag_errors(
         args.trigger_action, args.trigger_file, args.trigger_all, args.bank_frac, args.bank_at_r,
@@ -1989,6 +2078,10 @@ def main(argv: List[str]) -> int:
                      trail_level_pivot_k=args.trail_level_pivot_k,
                      trail_level_round_step=args.trail_level_round_step,
                      trail_level_min_r=args.trail_level_min_r,
+                     structure_exit=args.structure_exit,
+                     structure_buffer_atr=args.structure_buffer_atr,
+                     structure_min_r=args.structure_min_r,
+                     structure_fvg=not args.structure_no_fvg,
                      giveback_frac=args.giveback_frac,
                      trigger_action=args.trigger_action,
                      trigger_file=args.trigger_file,
@@ -2018,7 +2111,7 @@ def main(argv: List[str]) -> int:
     else:
         out = run_backtest(df, emit_path=args.emit_trades, strategy_name=args.strategy_name,
                            emit_paths_path=args.emit_paths,
-                           emit_features=args.emit_features,
+                           emit_features=args.emit_features, cf=args.cf,
                            **decision_kw,
                            min_confidence=args.min_confidence, **bt_kwargs)
         print(_fmt(out))

@@ -285,6 +285,8 @@ EXPECTED_ACTIONS = {
     "backfill-intent-reduce-pnl": "backfill_intent_reduce_pnl_action.sh",
     "backfill-own-fill-exits": "backfill_own_fill_exits_action.sh",
     "prune-db-backups": "prune_db_backups.sh",
+    # 2026-11-02 — VM-SPARSE-SYNC one-time recovery; piped over ssh stdin.
+    "vm-sparse-bootstrap": "vm_sparse_bootstrap.sh",
     # 2026-07-06 — one-shot repair of the mis-linked ETH prop close
     # (BL-20260706-PROP-CLOSE-MISLINK; root cause fixed in #5744): relink the
     # close fill to the real position ticket, close it, restore the phantom.
@@ -407,6 +409,9 @@ EXPECTED_ACTIONS = {
     # ABORTS on a failed capture; a leg flat at the venue, an unreadable account,
     # and a payload naming no accounts are each a REFUSAL, never a write.
     "reattach-stranded-package-legs": "reattach_stranded_package_legs_action.sh",
+    "relabel-package-close-reasons": "relabel_package_close_reasons_action.sh",
+    "backfill-package-risk-meta": "backfill_package_risk_meta_action.sh",
+    "relink-orphan-trade-5209": "relink_orphan_trade_5209_action.sh",
 }
 
 TIER_2_ACTIONS = {
@@ -475,6 +480,7 @@ TIER_2_ACTIONS = {
     "backfill-intent-reduce-pnl",
     "backfill-own-fill-exits",
     "prune-db-backups",
+    "vm-sparse-bootstrap",
     "fix-prop-mislinked-close",
     "prop-ticket-expire",
     "prop-ticket-reissue",
@@ -497,6 +503,9 @@ TIER_2_ACTIONS = {
     "cancel-stale-tpsl-legs",
     "backfill-tpsl-leg-ids",
     "reattach-stranded-package-legs",
+    "relabel-package-close-reasons",
+    "backfill-package-risk-meta",
+    "relink-orphan-trade-5209",
     "amend-position-sl",
     "live-review-dry-run",
     "live-review-apply",
@@ -1151,3 +1160,16 @@ def test_no_long_run_script_holds_an_expression() -> None:
         if "run" in step and len(step["run"]) > 15000 and "${{" in step["run"]
     ]
     assert not offenders, offenders
+
+
+def test_prune_db_backups_forwards_every_action_var_its_script_reads() -> None:
+    """prune_db_backups.sh reads ACTION_* vars with defaults (``${X:-}``), which
+    the ``${VAR:?`` guard above cannot see. #22483 added ``file``/``confirm`` but
+    never forwarded them, so the VM ran the default plan (issue #22512)."""
+    text = (OPS_DIR / "prune_db_backups.sh").read_text()
+    read = set(re.findall(r"\bACTION_[A-Z0-9_]+\b", text))
+    forwarded = _forwarded_env_by_action().get("prune-db-backups", set())
+    # positive control: the known-good vars must be seen on both sides
+    assert {"ACTION_APPLY", "ACTION_DAYS", "ACTION_KEEP"} <= read & forwarded
+    assert {"ACTION_FILE", "ACTION_CONFIRM"} <= read, "script no longer reads file/confirm?"
+    assert not (read - forwarded), f"read but not forwarded: {sorted(read - forwarded)}"

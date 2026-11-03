@@ -264,13 +264,21 @@ def test_monitor_long_trail_no_change_when_candidate_below_current_sl():
     assert verdict is None
 
 
-def test_monitor_long_trail_never_above_current_price():
-    # A spike to 200 in the window but current price only 120: the naive
-    # candidate (200 - 31.5 = 168.5) is ABOVE the current price, which
-    # would be an instant stop-out. The guard must suppress it.
+def test_monitor_long_trail_through_price_closes_strategy_close():
+    # TRAIL-RATCHET-AUDIT (Tier 3, operator 2026-10-29). A spike to 200 in the
+    # window but current price only 120: the candidate (200 - 31.5 = 168.5) is
+    # THROUGH the price. The harness has exited; live used to ignore it and sit
+    # on the looser 83.75 stop. It must close, never amend the stop past price.
     frame = _price_frame([200, 130], [150, 118], [180, 120.0])
     verdict = monitor({}, frame, _long_pkg())
-    assert verdict is None
+    assert verdict == {"action": "close", "reason": "strategy_close", "exit_price": 120.0}
+
+
+def test_monitor_short_trail_through_price_closes_strategy_close():
+    # Mirror: low 20 -> candidate 20 + 32.1 = 52.1, current price 70 is above it.
+    frame = _price_frame([60, 72], [20, 66], [30, 70.0])
+    verdict = monitor({}, frame, _short_pkg())
+    assert verdict == {"action": "close", "reason": "strategy_close", "exit_price": 70.0}
 
 
 def test_monitor_short_trail_ratchets_down():

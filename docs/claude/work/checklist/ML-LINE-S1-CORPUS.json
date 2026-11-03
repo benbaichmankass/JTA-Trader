@@ -2,21 +2,33 @@
   "id": "ML-LINE-S1-CORPUS",
   "title": "[MODEL] ML line S1: standing per-leg Stage-0 corpus producer for every money leg then the demo floor (config-exact harness trades + paths, cost-net labels from the exit actually traded), pooled by family into an ml/datasets family",
   "phase": null,
-  "state": "queued",
+  "state": "landed_unproven",
   "owner": "manager",
-  "lane": null,
+  "lane": "ML-LINE-S1-CORPUS",
   "model": null,
   "ceiling_usd": null,
   "spend_usd": null,
   "tier": 1,
-  "prs": [],
+  "prs": [
+    21960,
+    21966
+  ],
   "blocked_on": [],
-  "note": "Origin: ML-PIPELINE-DESIGN (docs/plans/ml-pipeline-design-2026-10-29.md section 2 S1/section 3). MEASURED at main@9341857a: corpora exist for 6 of 7 money legs only as one run artifact (RQ-20261024-09a6-01 run 40143286436; trades eth_prop 1085, sol_prop 403, ada 402, xrp_pb 394, eth_4h 275, xrp_4h 68); iaum_pullback_1d has none; 0 of 75 ml/configs manifests name a money leg; eth_4h/xrp_4h bt.json read timeframe '1h' while 275/275 and 68/68 entries are on 4h boundaries (label defect, INFERRED). Extends ML-LEG-CORPUS (landed_unproven), does not replace it. Owner: weekly recurring research unit per family (queue_replenish template) on the free runner; trainer ingests. Station metrics: coverage (money legs with corpus <= 7d / money legs), fidelity (harness params hash == leg config hash), cost completeness (fee+slippage+funding non-null share). CLOSES WHEN: all 7 money legs have a corpus <= 7 days old with bt.json timeframe equal to config, and an ml/datasets family reads them pooled by family with leg as a feature.",
+  "note": "[2026-10-31 lane session_01AFoLuJwBvR58WBtD4qc5Gp] Timeframe defect VERIFIED FIXED AT SOURCE: backtest_trend/pullback write timeframe=args.resample or args.timeframe (FP-TF-LABEL); a --resample 4h run reads 4h in bt.json; the '1h' labels are in the old run artifact only. BUILT: scripts/research/leg_corpus_s1.py (per-family producer, money legs re-parsed from config, station metrics), research/templates/leg-corpus-s1.yaml + units RQ-20261031-020..023 (one per family incl. pullback_1d/iaum, which ran locally: n=41, tf equal, params hash equal), ml/datasets/families/leg_corpus.py (+tests). OBSERVATION THAT CLOSES: first producer run of each unit lands a <=7d corpus for every money leg (verdict.json coverage 7/7 across the 4 units). [2026-10-31 manager decision] leg-corpus-s1 template weight is 1 (a standing refresh must not skew the research allocator). Coverage station metric (money legs with a corpus <= 7d / money legs) stays on the row: if coverage is below 7/7 one week after landing, raise the weight. Re-cut PR: #21966 (supersedes #21960).",
   "priority_rank": 2,
-  "updated_at": "2026-10-29T08:25:41Z",
-  "updated_by": "session_01AFoLuJ3Z8WoJgLG7jVvqha",
+  "updated_at": "2026-10-31T21:06:52Z",
+  "updated_by": "session_01AFoLuJV2KtzyNPoYFQ56pS",
   "roadmap": [
     "L-ML-LIVE"
   ],
+  "writeback": {
+    "roadmap": "none: L-ML-LIVE where/next are owned by the manager's roadmap pass; this row only adds the standing S1 producer and dataset family, the closing observation below is what moves it",
+    "arch": "none: Tier-1 research tooling, a read-only ml/datasets family and generated queue units; no runtime component, path or contract changed"
+  },
+  "observation": {
+    "what": "the four leg-corpus-s1 units (RQ-20261031-020..023) each land read_state measured; the union of their verdict.json coverage lists is every money leg with a corpus <= 7 days old and bt.json timeframe equal to config",
+    "how_to_check": "ls research/results/RQ-20261031-02*/; python3 scripts/research/leg_corpus_s1.py --list-families; read verdict.json measurement.coverage in comms/research/RQ-20261031-02*/<run_id>/",
+    "due_by": "2026-11-07"
+  },
   "_seq": 782
 }

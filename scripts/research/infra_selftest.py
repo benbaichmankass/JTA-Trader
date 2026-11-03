@@ -333,6 +333,32 @@ def routed_targets_exist() -> dict[str, Any]:
             "n": checked, "measurement": {"n_missing": len(missing), "missing": missing[:10]}}
 
 
+def run_inputs_unit_matches() -> dict[str, Any]:
+    """A cloned unit keeps its parent's ``run.inputs.research_unit``: the dispatch then stamps and lands results
+    under the PARENT's id. Every queued authored unit that declares it must name ITSELF."""
+    units, bad = _queued_authored(), []
+    for i, u in units:
+        ru = ((u.get("run") or {}).get("inputs") or {}).get("research_unit")
+        if ru is not None and str(ru) != str(i):
+            bad.append({"unit": i, "research_unit": ru})
+    return {"verdict": "fail" if bad else "pass", "read_state": "measured" if units else "no_data",
+            "population": f"{len(units)} queued authored unit(s); run.inputs.research_unit compared with the unit id", "n": len(units),
+            "measurement": {"n_mismatch": len(bad), "mismatch": bad[:10]}}
+
+
+def rule_registered_before_run() -> dict[str, Any]:
+    """Every queued authored unit with a decision_rule states ``registered_before_run: true`` and an id
+    (the rule is fixed before the run; an unregistered rule is the post-hoc-rule failure class)."""
+    units, bad = _queued_authored(), []
+    for i, u in units:
+        dr = u.get("decision_rule")
+        if isinstance(dr, dict) and (dr.get("registered_before_run") is not True or not dr.get("id")):
+            bad.append(i)
+    return {"verdict": "fail" if bad else "pass", "read_state": "measured" if units else "no_data",
+            "population": f"{len(units)} queued authored unit(s); those with a decision_rule block checked", "n": len(units),
+            "measurement": {"n_unregistered": len(bad), "sample": bad[:10]}}
+
+
 CHECKS = {"runner_deps": runner_deps, "results_readable": results_readable, "queue_integrity": queue_integrity,
           "disposition_census": disposition_census, "programme_coverage": programme_coverage,
           "machinery_selftests": machinery_selftests,
@@ -341,7 +367,9 @@ CHECKS = {"runner_deps": runner_deps, "results_readable": results_readable, "que
           "duplicate_commands": duplicate_commands, "power_declared": power_declared,
           "roadmap_ref_valid": roadmap_ref_valid, "never_dispatched_age": never_dispatched_age,
           "related_paths_exist": related_paths_exist,
-          "routed_targets_exist": routed_targets_exist}
+          "routed_targets_exist": routed_targets_exist,
+          "run_inputs_unit_matches": run_inputs_unit_matches,
+          "rule_registered_before_run": rule_registered_before_run}
 
 
 def main() -> int:

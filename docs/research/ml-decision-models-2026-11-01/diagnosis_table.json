@@ -1,0 +1,3824 @@
+{
+ "population": {
+  "ml_units_with_results": 175,
+  "result_dirs": 1500,
+  "result_dirs_without_unit": 7,
+  "rule": "research/results/<id>/ with a unit in research/queue/**; ML = theme ml_health OR ML term in title"
+ },
+ "rows": [
+  {
+   "clock": [],
+   "cost_stack": "full_or_stated",
+   "decides": true,
+   "id": "RQ-20260922-007",
+   "label_source": "strategy_trades",
+   "metric": "net_r",
+   "n": 73,
+   "n_records": 3,
+   "pooling": "unstated",
+   "symbols_named": [],
+   "task": "in_trade_exit",
+   "theme": null,
+   "title": "Is trend_donchian's net-negative verdict the leg, or a harness blind to its exit head?",
+   "verdict": "pass"
+  },
+  {
+   "clock": [
+    "1h"
+   ],
+   "cost_stack": "full_or_stated",
+   "decides": true,
+   "id": "RQ-20260927-001",
+   "label_source": "strategy_trades",
+   "metric": "net_r",
+   "n": 352,
+   "n_records": 1,
+   "pooling": "per_symbol",
+   "symbols_named": [
+    "BTC"
+   ],
+   "task": "in_trade_exit",
+   "theme": null,
+   "title": "RQ-20260922-007's exit-head-donchian-1h-v1 recovered_R, genuinely out-of-sample",
+   "verdict": "pass"
+  },
+  {
+   "clock": [
+    "1h"
+   ],
+   "cost_stack": "full_or_stated",
+   "decides": true,
+   "id": "RQ-20260927-002",
+   "label_source": "strategy_trades",
+   "metric": "net_r",
+   "n": 1389,
+   "n_records": 1,
+   "pooling": "per_symbol",
+   "symbols_named": [
+    "BTC"
+   ],
+   "task": "in_trade_exit",
+   "theme": null,
+   "title": "exit-head-donchian-1h-v1 recovered_R, multi-fold embargoed walk-forward",
+   "verdict": "fail"
+  },
+  {
+   "clock": [
+    "1h",
+    "daily"
+   ],
+   "cost_stack": "full_or_stated",
+   "decides": false,
+   "id": "RQ-20260927-003",
+   "label_source": "none",
+   "metric": "net_r",
+   "n": null,
+   "n_records": 4,
+   "pooling": "per_symbol",
+   "symbols_named": [
+    "BTC",
+    "ETH",
+    "SOL"
+   ],
+   "task": "infra_parity_drift",
+   "theme": "ml_health",
+   "title": "exit-head-for-prop-legs feasibility look (trend_donchian_sol_prop / trend_donchian_eth_prop)",
+   "verdict": "not_applicable"
+  },
+  {
+   "clock": [
+    "15m",
+    "1h"
+   ],
+   "cost_stack": "full_or_stated",
+   "decides": true,
+   "id": "RQ-20260928-005",
+   "label_source": "strategy_trades",
+   "metric": "net_r",
+   "n": null,
+   "n_records": 5,
+   "pooling": "pooled_cross_symbol",
+   "symbols_named": [
+    "BTC",
+    "ETH",
+    "SOL",
+    "XRP"
+   ],
+   "task": "in_trade_exit",
+   "theme": null,
+   "title": "M19 S2-exit \u2014 does the walk-forward exit head recover net R on the ict_scalp 15m family, or only on trend_donchian?",
+   "verdict": "indeterminate"
+  },
+  {
+   "clock": [
+    "15m"
+   ],
+   "cost_stack": "full_or_stated",
+   "decides": true,
+   "id": "RQ-20260929-401",
+   "label_source": "strategy_trades",
+   "metric": "net_r",
+   "n": 99,
+   "n_records": 1,
+   "pooling": "per_symbol",
+   "symbols_named": [
+    "ETH",
+    "SOL",
+    "XRP"
+   ],
+   "task": "in_trade_exit",
+   "theme": null,
+   "title": "M19 S2-exit (re-registered) \u2014 does the shipped below_half_r exit head recover net R on the ict_scalp 15m family, graded on the FINAL per-year fold?",
+   "verdict": "indeterminate"
+  },
+  {
+   "clock": [],
+   "cost_stack": "full_or_stated",
+   "decides": true,
+   "id": "RQ-20260930-402",
+   "label_source": "strategy_trades",
+   "metric": "net_r",
+   "n": 108,
+   "n_records": 1,
+   "pooling": "per_symbol",
+   "symbols_named": [
+    "ETH",
+    "SOL",
+    "XRP"
+   ],
+   "task": "in_trade_exit",
+   "theme": null,
+   "title": "M19 S2-exit REFINE re-run \u2014 is XRP's positive exit-head result (RQ-20260929-401, 2026 fold) persistent on the 2025 fold?",
+   "verdict": "fail"
+  },
+  {
+   "clock": [],
+   "cost_stack": "full_or_stated",
+   "decides": true,
+   "id": "RQ-20260930-701",
+   "label_source": "strategy_trades",
+   "metric": "net_r",
+   "n": 259,
+   "n_records": 1,
+   "pooling": "unstated",
+   "symbols_named": [],
+   "task": "entry_filter_meta",
+   "theme": "regime",
+   "title": "Regime impact scoping (TREND axis): if a classifier of accuracy A in {0.55, 0.60, 0.70, oracle} gates each leg's losing ADX-14 cells, what is the change in full",
+   "verdict": "fail"
+  },
+  {
+   "clock": [
+    "15m"
+   ],
+   "cost_stack": "full_or_stated",
+   "decides": true,
+   "id": "RQ-20261008-900",
+   "label_source": "strategy_trades",
+   "metric": "net_r",
+   "n": 108,
+   "n_records": 1,
+   "pooling": "per_symbol",
+   "symbols_named": [
+    "XRP"
+   ],
+   "task": "in_trade_exit",
+   "theme": "ml_health",
+   "title": "Exit-head XRP ict_scalp 15m multi-fold confirmation: is the head's recovered_R_oos > 0 on a majority of the 2022-2024 folds (completes the XRP per-fold table be",
+   "verdict": "fail"
+  },
+  {
+   "clock": [
+    "15m",
+    "1h"
+   ],
+   "cost_stack": "full_or_stated",
+   "decides": true,
+   "id": "RQ-20261008-902",
+   "label_source": "strategy_trades",
+   "metric": "net_r",
+   "n": 49,
+   "n_records": 1,
+   "pooling": "per_symbol",
+   "symbols_named": [
+    "BTC"
+   ],
+   "task": "entry_filter_meta",
+   "theme": "live_strategy",
+   "title": "Regime head as entry gate: does the btc-regime-15m-lgbm-fc-pcv-v2 vol label (advisory) drop money-losing entries on BTCUSDT legs out of sample?",
+   "verdict": "pass"
+  },
+  {
+   "clock": [
+    "15m",
+    "1h"
+   ],
+   "cost_stack": "full_or_stated",
+   "decides": true,
+   "id": "RQ-20261008-903",
+   "label_source": "strategy_trades",
+   "metric": "net_r",
+   "n": null,
+   "n_records": 1,
+   "pooling": "per_symbol",
+   "symbols_named": [
+    "SOL"
+   ],
+   "task": "entry_filter_meta",
+   "theme": "live_strategy",
+   "title": "Regime head as entry gate: does the sol-regime-15m-lgbm-fc-pcv-v2 vol label (advisory) drop money-losing entries on SOLUSDT legs out of sample?",
+   "verdict": "pass"
+  },
+  {
+   "clock": [],
+   "cost_stack": "none_statistical_metric",
+   "decides": false,
+   "id": "RQ-20261011-0ac8-01",
+   "label_source": "none",
+   "metric": "statistical",
+   "n": 2400,
+   "n_records": 1,
+   "pooling": "unstated",
+   "symbols_named": [],
+   "task": "infra_parity_drift",
+   "theme": "infra",
+   "title": "ML-RQ-RUNNER smoke: the trainer-side bake-off path end to end on a synthetic planted-signal dataset (plumbing, not research)",
+   "verdict": "pass"
+  },
+  {
+   "clock": [],
+   "cost_stack": "unstated",
+   "decides": false,
+   "id": "RQ-20261011-17f4-02",
+   "label_source": "none",
+   "metric": "other",
+   "n": null,
+   "n_records": 1,
+   "pooling": "unstated",
+   "symbols_named": [],
+   "task": "infra_parity_drift",
+   "theme": "ml_health",
+   "title": "ML label wall: does any strategy x symbol cell reach the pooled-label gate (n>=300 parity-held) that a per-cell take/skip head needs?",
+   "verdict": "fail"
+  },
+  {
+   "clock": [
+    "15m"
+   ],
+   "cost_stack": "none_statistical_metric",
+   "decides": false,
+   "id": "RQ-20261011-6e85-01",
+   "label_source": "none",
+   "metric": "statistical",
+   "n": null,
+   "n_records": 1,
+   "pooling": "per_symbol",
+   "symbols_named": [
+    "BTC",
+    "SOL"
+   ],
+   "task": "infra_parity_drift",
+   "theme": "ml_health",
+   "title": "Is the SOL/BTC advisory regime heads' live score drift input-mix shift or model decay?",
+   "verdict": "fail"
+  },
+  {
+   "clock": [
+    "15m"
+   ],
+   "cost_stack": "none_statistical_metric",
+   "decides": false,
+   "id": "RQ-20261011-9da8-01",
+   "label_source": "bar_market",
+   "metric": "statistical",
+   "n": 175272,
+   "n_records": 3,
+   "pooling": "per_symbol",
+   "symbols_named": [
+    "BTC",
+    "ETH",
+    "SOL"
+   ],
+   "task": "regime_vol_head",
+   "theme": "regime",
+   "title": "Frontier: time-series foundation-model forecaster bake-off for the volatility-regime head (Chronos-2, TimesFM-2.5, TiRex-2, Kronos vs the shipped Chronos-Bolt-T",
+   "verdict": "fail"
+  },
+  {
+   "clock": [
+    "4h"
+   ],
+   "cost_stack": "full_or_stated",
+   "decides": true,
+   "id": "RQ-20261012-75b2-01",
+   "label_source": "strategy_trades",
+   "metric": "net_r",
+   "n": 116,
+   "n_records": 1,
+   "pooling": "unstated",
+   "symbols_named": [],
+   "task": "entry_filter_meta",
+   "theme": "regime",
+   "title": "Regime impact scoping (TREND axis) on Donchian 4h family [ndon], selection arm min_cell_n=8 loss_se=0: does a realistic-accuracy classifier have headroom in thi",
+   "verdict": "fail"
+  },
+  {
+   "clock": [
+    "4h"
+   ],
+   "cost_stack": "full_or_stated",
+   "decides": true,
+   "id": "RQ-20261012-75b2-02",
+   "label_source": "strategy_trades",
+   "metric": "net_r",
+   "n": 116,
+   "n_records": 1,
+   "pooling": "unstated",
+   "symbols_named": [],
+   "task": "entry_filter_meta",
+   "theme": "regime",
+   "title": "Regime impact scoping (TREND axis) on Donchian 4h family [ndon], selection arm min_cell_n=20 loss_se=1: does a realistic-accuracy classifier have headroom in th",
+   "verdict": "fail"
+  },
+  {
+   "clock": [
+    "2h"
+   ],
+   "cost_stack": "full_or_stated",
+   "decides": true,
+   "id": "RQ-20261012-75b2-03",
+   "label_source": "strategy_trades",
+   "metric": "net_r",
+   "n": 116,
+   "n_records": 1,
+   "pooling": "unstated",
+   "symbols_named": [],
+   "task": "entry_filter_meta",
+   "theme": "regime",
+   "title": "Regime impact scoping (TREND axis) on 2h pullback family [pb2h], selection arm min_cell_n=8 loss_se=0: does a realistic-accuracy classifier have headroom in thi",
+   "verdict": "fail"
+  },
+  {
+   "clock": [
+    "2h"
+   ],
+   "cost_stack": "full_or_stated",
+   "decides": true,
+   "id": "RQ-20261012-75b2-04",
+   "label_source": "strategy_trades",
+   "metric": "net_r",
+   "n": 116,
+   "n_records": 1,
+   "pooling": "unstated",
+   "symbols_named": [],
+   "task": "entry_filter_meta",
+   "theme": "regime",
+   "title": "Regime impact scoping (TREND axis) on 2h pullback family [pb2h], selection arm min_cell_n=20 loss_se=1: does a realistic-accuracy classifier have headroom in th",
+   "verdict": "fail"
+  },
+  {
+   "clock": [
+    "15m",
+    "5m"
+   ],
+   "cost_stack": "full_or_stated",
+   "decides": true,
+   "id": "RQ-20261012-75b2-05",
+   "label_source": "strategy_trades",
+   "metric": "net_r",
+   "n": 190,
+   "n_records": 1,
+   "pooling": "unstated",
+   "symbols_named": [],
+   "task": "entry_filter_meta",
+   "theme": "regime",
+   "title": "Regime impact scoping (TREND axis) on ICT scalp family (5m+15m) [scalp], selection arm min_cell_n=8 loss_se=0: does a realistic-accuracy classifier have headroo",
+   "verdict": "pass"
+  },
+  {
+   "clock": [
+    "15m",
+    "5m"
+   ],
+   "cost_stack": "full_or_stated",
+   "decides": true,
+   "id": "RQ-20261012-75b2-06",
+   "label_source": "strategy_trades",
+   "metric": "net_r",
+   "n": 190,
+   "n_records": 1,
+   "pooling": "unstated",
+   "symbols_named": [],
+   "task": "entry_filter_meta",
+   "theme": "regime",
+   "title": "Regime impact scoping (TREND axis) on ICT scalp family (5m+15m) [scalp], selection arm min_cell_n=20 loss_se=1: does a realistic-accuracy classifier have headro",
+   "verdict": "fail"
+  },
+  {
+   "clock": [
+    "1h",
+    "2h"
+   ],
+   "cost_stack": "full_or_stated",
+   "decides": true,
+   "id": "RQ-20261012-75b2-07",
+   "label_source": "strategy_trades",
+   "metric": "net_r",
+   "n": 400,
+   "n_records": 1,
+   "pooling": "unstated",
+   "symbols_named": [],
+   "task": "entry_filter_meta",
+   "theme": "regime",
+   "title": "Regime impact scoping (TREND axis) on all pullback legs (1h+2h) [pbany], selection arm min_cell_n=8 loss_se=0: does a realistic-accuracy classifier have headroo",
+   "verdict": "fail"
+  },
+  {
+   "clock": [
+    "1h",
+    "2h"
+   ],
+   "cost_stack": "full_or_stated",
+   "decides": true,
+   "id": "RQ-20261012-75b2-08",
+   "label_source": "strategy_trades",
+   "metric": "net_r",
+   "n": 400,
+   "n_records": 1,
+   "pooling": "unstated",
+   "symbols_named": [],
+   "task": "entry_filter_meta",
+   "theme": "regime",
+   "title": "Regime impact scoping (TREND axis) on all pullback legs (1h+2h) [pbany], selection arm min_cell_n=20 loss_se=1: does a realistic-accuracy classifier have headro",
+   "verdict": "fail"
+  },
+  {
+   "clock": [],
+   "cost_stack": "full_or_stated",
+   "decides": true,
+   "id": "RQ-20261012-75b2-09",
+   "label_source": "strategy_trades",
+   "metric": "net_r",
+   "n": 549,
+   "n_records": 1,
+   "pooling": "unstated",
+   "symbols_named": [],
+   "task": "entry_filter_meta",
+   "theme": "regime",
+   "title": "Regime impact scoping (TREND axis) on all non-scalp, non-equity-named crypto legs [swing], selection arm min_cell_n=8 loss_se=0: does a realistic-accuracy class",
+   "verdict": "fail"
+  },
+  {
+   "clock": [],
+   "cost_stack": "full_or_stated",
+   "decides": true,
+   "id": "RQ-20261012-75b2-10",
+   "label_source": "strategy_trades",
+   "metric": "net_r",
+   "n": 549,
+   "n_records": 1,
+   "pooling": "unstated",
+   "symbols_named": [],
+   "task": "entry_filter_meta",
+   "theme": "regime",
+   "title": "Regime impact scoping (TREND axis) on all non-scalp, non-equity-named crypto legs [swing], selection arm min_cell_n=20 loss_se=1: does a realistic-accuracy clas",
+   "verdict": "fail"
+  },
+  {
+   "clock": [],
+   "cost_stack": "full_or_stated",
+   "decides": true,
+   "id": "RQ-20261012-75b2-11",
+   "label_source": "strategy_trades",
+   "metric": "net_r",
+   "n": 549,
+   "n_records": 1,
+   "pooling": "unstated",
+   "symbols_named": [],
+   "task": "entry_filter_meta",
+   "theme": "regime",
+   "title": "Regime impact scoping (TREND axis) on all non-scalp, non-equity-named crypto legs [swing], selection arm min_cell_n=12 loss_se=0.5: does a realistic-accuracy cl",
+   "verdict": "fail"
+  },
+  {
+   "clock": [],
+   "cost_stack": "full_or_stated",
+   "decides": true,
+   "id": "RQ-20261012-75b2-12",
+   "label_source": "strategy_trades",
+   "metric": "net_r",
+   "n": 549,
+   "n_records": 1,
+   "pooling": "unstated",
+   "symbols_named": [],
+   "task": "entry_filter_meta",
+   "theme": "regime",
+   "title": "Regime impact scoping (TREND axis) on full committed crypto-perp ledger population [full], selection arm min_cell_n=12 loss_se=0.5: does a realistic-accuracy cl",
+   "verdict": "fail"
+  },
+  {
+   "clock": [],
+   "cost_stack": "full_or_stated",
+   "decides": true,
+   "id": "RQ-20261012-75b2-13",
+   "label_source": "strategy_trades",
+   "metric": "net_r",
+   "n": 549,
+   "n_records": 1,
+   "pooling": "unstated",
+   "symbols_named": [],
+   "task": "entry_filter_meta",
+   "theme": "regime",
+   "title": "Regime impact scoping (TREND axis) on full committed crypto-perp ledger population [full], selection arm min_cell_n=30 loss_se=0: does a realistic-accuracy clas",
+   "verdict": "fail"
+  },
+  {
+   "clock": [],
+   "cost_stack": "full_or_stated",
+   "decides": true,
+   "id": "RQ-20261012-75b2-14",
+   "label_source": "strategy_trades",
+   "metric": "net_r",
+   "n": 549,
+   "n_records": 1,
+   "pooling": "unstated",
+   "symbols_named": [],
+   "task": "entry_filter_meta",
+   "theme": "regime",
+   "title": "Regime impact scoping (TREND axis) on full committed crypto-perp ledger population [full], selection arm min_cell_n=8 loss_se=2: does a realistic-accuracy class",
+   "verdict": "fail"
+  },
+  {
+   "clock": [],
+   "cost_stack": "full_or_stated",
+   "decides": true,
+   "id": "RQ-20261012-75b2-15",
+   "label_source": "strategy_trades",
+   "metric": "net_r",
+   "n": 549,
+   "n_records": 1,
+   "pooling": "unstated",
+   "symbols_named": [],
+   "task": "entry_filter_meta",
+   "theme": "regime",
+   "title": "Regime impact scoping (TREND axis) on full committed crypto-perp ledger population [full], selection arm min_cell_n=50 loss_se=0: does a realistic-accuracy clas",
+   "verdict": "fail"
+  },
+  {
+   "clock": [
+    "15m"
+   ],
+   "cost_stack": "none_statistical_metric",
+   "decides": false,
+   "id": "RQ-20261012-75b2-16",
+   "label_source": "none",
+   "metric": "statistical",
+   "n": 60000,
+   "n_records": 1,
+   "pooling": "per_symbol",
+   "symbols_named": [
+    "BTC"
+   ],
+   "task": "infra_parity_drift",
+   "theme": "ml_health",
+   "title": "Regime-head drift: BTCUSDT 15m regime_label, LightGBM vs class prior, purged CV vs last-90d holdout (does the head's skill hold out of sample?)",
+   "verdict": "fail"
+  },
+  {
+   "clock": [
+    "15m"
+   ],
+   "cost_stack": "none_statistical_metric",
+   "decides": false,
+   "id": "RQ-20261012-75b2-17",
+   "label_source": "none",
+   "metric": "statistical",
+   "n": 60000,
+   "n_records": 1,
+   "pooling": "per_symbol",
+   "symbols_named": [
+    "ETH"
+   ],
+   "task": "infra_parity_drift",
+   "theme": "ml_health",
+   "title": "Regime-head drift: ETHUSDT 15m regime_label, LightGBM vs class prior, purged CV vs last-90d holdout (does the head's skill hold out of sample?)",
+   "verdict": "fail"
+  },
+  {
+   "clock": [
+    "15m"
+   ],
+   "cost_stack": "none_statistical_metric",
+   "decides": false,
+   "id": "RQ-20261012-75b2-18",
+   "label_source": "none",
+   "metric": "statistical",
+   "n": 60000,
+   "n_records": 1,
+   "pooling": "per_symbol",
+   "symbols_named": [
+    "SOL"
+   ],
+   "task": "infra_parity_drift",
+   "theme": "ml_health",
+   "title": "Regime-head drift: SOLUSDT 15m regime_label, LightGBM vs class prior, purged CV vs last-90d holdout (does the head's skill hold out of sample?)",
+   "verdict": "fail"
+  },
+  {
+   "clock": [
+    "15m"
+   ],
+   "cost_stack": "none_statistical_metric",
+   "decides": false,
+   "id": "RQ-20261012-75b2-19",
+   "label_source": "bar_market",
+   "metric": "statistical",
+   "n": 60000,
+   "n_records": 2,
+   "pooling": "per_symbol",
+   "symbols_named": [
+    "BTC"
+   ],
+   "task": "regime_vol_head",
+   "theme": "ml_health",
+   "title": "Learner-family check: BTCUSDT 15m regime_label, sklearn HistGradientBoosting vs the incumbent LightGBM on identical purged folds",
+   "verdict": "indeterminate"
+  },
+  {
+   "clock": [
+    "15m"
+   ],
+   "cost_stack": "none_statistical_metric",
+   "decides": false,
+   "id": "RQ-20261012-75b2-20",
+   "label_source": "bar_market",
+   "metric": "statistical",
+   "n": 60000,
+   "n_records": 3,
+   "pooling": "per_symbol",
+   "symbols_named": [
+    "ETH"
+   ],
+   "task": "regime_vol_head",
+   "theme": "ml_health",
+   "title": "Learner-family check: ETHUSDT 15m regime_label, sklearn HistGradientBoosting vs the incumbent LightGBM on identical purged folds",
+   "verdict": "fail"
+  },
+  {
+   "clock": [
+    "15m"
+   ],
+   "cost_stack": "none_statistical_metric",
+   "decides": false,
+   "id": "RQ-20261012-75b2-21",
+   "label_source": "bar_market",
+   "metric": "statistical",
+   "n": 60000,
+   "n_records": 3,
+   "pooling": "per_symbol",
+   "symbols_named": [
+    "SOL"
+   ],
+   "task": "regime_vol_head",
+   "theme": "ml_health",
+   "title": "Learner-family check: SOLUSDT 15m regime_label, sklearn HistGradientBoosting vs the incumbent LightGBM on identical purged folds",
+   "verdict": "fail"
+  },
+  {
+   "clock": [
+    "15m"
+   ],
+   "cost_stack": "none_statistical_metric",
+   "decides": false,
+   "id": "RQ-20261012-75b2-22",
+   "label_source": "bar_market",
+   "metric": "statistical",
+   "n": 60000,
+   "n_records": 2,
+   "pooling": "per_symbol",
+   "symbols_named": [
+    "BTC"
+   ],
+   "task": "regime_vol_head",
+   "theme": "ml_health",
+   "title": "Feature ablation: BTCUSDT 15m regime_label, LightGBM + HAR-RV horizons (d/w/m realised-variance) vs LightGBM on the shipped features",
+   "verdict": "indeterminate"
+  },
+  {
+   "clock": [
+    "15m"
+   ],
+   "cost_stack": "none_statistical_metric",
+   "decides": false,
+   "id": "RQ-20261012-75b2-23",
+   "label_source": "bar_market",
+   "metric": "statistical",
+   "n": 60000,
+   "n_records": 1,
+   "pooling": "per_symbol",
+   "symbols_named": [
+    "ETH"
+   ],
+   "task": "regime_vol_head",
+   "theme": "ml_health",
+   "title": "Feature ablation: ETHUSDT 15m regime_label, LightGBM + HAR-RV horizons (d/w/m realised-variance) vs LightGBM on the shipped features",
+   "verdict": "indeterminate"
+  },
+  {
+   "clock": [
+    "15m"
+   ],
+   "cost_stack": "none_statistical_metric",
+   "decides": false,
+   "id": "RQ-20261012-75b2-24",
+   "label_source": "bar_market",
+   "metric": "statistical",
+   "n": 60000,
+   "n_records": 1,
+   "pooling": "per_symbol",
+   "symbols_named": [
+    "SOL"
+   ],
+   "task": "regime_vol_head",
+   "theme": "ml_health",
+   "title": "Feature ablation: SOLUSDT 15m regime_label, LightGBM + HAR-RV horizons (d/w/m realised-variance) vs LightGBM on the shipped features",
+   "verdict": "indeterminate"
+  },
+  {
+   "clock": [
+    "15m"
+   ],
+   "cost_stack": "none_statistical_metric",
+   "decides": false,
+   "id": "RQ-20261012-75b2-25",
+   "label_source": "bar_market",
+   "metric": "statistical",
+   "n": 20000,
+   "n_records": 1,
+   "pooling": "per_symbol",
+   "symbols_named": [
+    "BTC"
+   ],
+   "task": "regime_vol_head",
+   "theme": "ml_health",
+   "title": "Training-window sensitivity: BTCUSDT 15m regime_label with only the last 20000 rows (~208 days), LightGBM vs prior, purged CV vs last-30d holdout",
+   "verdict": "fail"
+  },
+  {
+   "clock": [
+    "15m"
+   ],
+   "cost_stack": "none_statistical_metric",
+   "decides": false,
+   "id": "RQ-20261012-75b2-26",
+   "label_source": "bar_market",
+   "metric": "statistical",
+   "n": 20000,
+   "n_records": 1,
+   "pooling": "per_symbol",
+   "symbols_named": [
+    "ETH"
+   ],
+   "task": "regime_vol_head",
+   "theme": "ml_health",
+   "title": "Training-window sensitivity: ETHUSDT 15m regime_label with only the last 20000 rows (~208 days), LightGBM vs prior, purged CV vs last-30d holdout",
+   "verdict": "fail"
+  },
+  {
+   "clock": [
+    "15m"
+   ],
+   "cost_stack": "none_statistical_metric",
+   "decides": false,
+   "id": "RQ-20261012-75b2-27",
+   "label_source": "bar_market",
+   "metric": "statistical",
+   "n": 20000,
+   "n_records": 1,
+   "pooling": "per_symbol",
+   "symbols_named": [
+    "SOL"
+   ],
+   "task": "regime_vol_head",
+   "theme": "ml_health",
+   "title": "Training-window sensitivity: SOLUSDT 15m regime_label with only the last 20000 rows (~208 days), LightGBM vs prior, purged CV vs last-30d holdout",
+   "verdict": "fail"
+  },
+  {
+   "clock": [
+    "15m"
+   ],
+   "cost_stack": "none_statistical_metric",
+   "decides": false,
+   "id": "RQ-20261013-1414-01",
+   "label_source": "bar_market",
+   "metric": "statistical",
+   "n": 60000,
+   "n_records": 1,
+   "pooling": "per_symbol",
+   "symbols_named": [
+    "BTC",
+    "ETH",
+    "SOL"
+   ],
+   "task": "regime_vol_head",
+   "theme": "ml_health",
+   "title": "AI trader / linear family: is a multinomial logit as good as LightGBM on the BTC/ETH/SOL 15m volatility-regime heads? (family has 0 registered models)",
+   "verdict": "indeterminate"
+  },
+  {
+   "clock": [
+    "15m"
+   ],
+   "cost_stack": "none_statistical_metric",
+   "decides": false,
+   "id": "RQ-20261013-1414-02",
+   "label_source": "bar_market",
+   "metric": "statistical",
+   "n": 60000,
+   "n_records": 1,
+   "pooling": "per_symbol",
+   "symbols_named": [
+    "BTC",
+    "ETH",
+    "SOL"
+   ],
+   "task": "regime_vol_head",
+   "theme": "ml_health",
+   "title": "AI trader / probability quality: do the 15m regime learners beat the class prior on LOG-LOSS, not only on thresholded macro-F1? (the prerequisite for conformal ",
+   "verdict": "indeterminate"
+  },
+  {
+   "clock": [
+    "15m",
+    "1h"
+   ],
+   "cost_stack": "none_statistical_metric",
+   "decides": false,
+   "id": "RQ-20261013-1414-03",
+   "label_source": "bar_market",
+   "metric": "statistical",
+   "n": 60000,
+   "n_records": 1,
+   "pooling": "per_symbol",
+   "symbols_named": [
+    "BTC",
+    "ETH"
+   ],
+   "task": "direction_head",
+   "theme": "ml_health",
+   "title": "AI trader / direction: does ANY non-boosted family (logit, ExtraTrees, MLP) beat the class prior on direction_label for ETH 1h and BTC 15m?",
+   "verdict": "indeterminate"
+  },
+  {
+   "clock": [
+    "15m"
+   ],
+   "cost_stack": "none_statistical_metric",
+   "decides": false,
+   "id": "RQ-20261013-1414-04",
+   "label_source": "bar_market",
+   "metric": "statistical",
+   "n": 60000,
+   "n_records": 1,
+   "pooling": "per_symbol",
+   "symbols_named": [
+    "BTC",
+    "ETH",
+    "SOL"
+   ],
+   "task": "regime_vol_head",
+   "theme": "ml_health",
+   "title": "AI trader / the missing control: does the shipped Chronos-Bolt-Tiny fc_* lift survive a classical HAR-RV control on the BTC/ETH/SOL 15m regime head?",
+   "verdict": "indeterminate"
+  },
+  {
+   "clock": [
+    "1d",
+    "daily"
+   ],
+   "cost_stack": "none_statistical_metric",
+   "decides": false,
+   "id": "RQ-20261013-1414-05",
+   "label_source": "bar_market",
+   "metric": "statistical",
+   "n": 2939,
+   "n_records": 1,
+   "pooling": "per_symbol",
+   "symbols_named": [
+    "MES"
+   ],
+   "task": "regime_vol_head",
+   "theme": "ml_health",
+   "title": "AI trader / small-n equity: on the MES 1d regime head (~2k daily rows), is LightGBM the right learner or does a logit / ExtraTrees / MLP match it?",
+   "verdict": "pass"
+  },
+  {
+   "clock": [
+    "15m",
+    "1d",
+    "daily"
+   ],
+   "cost_stack": "none_statistical_metric",
+   "decides": false,
+   "id": "RQ-20261013-1414-06",
+   "label_source": "bar_market",
+   "metric": "statistical",
+   "n": null,
+   "n_records": 4,
+   "pooling": "per_symbol",
+   "symbols_named": [
+    "BTC",
+    "MES"
+   ],
+   "task": "regime_vol_head",
+   "theme": "ml_health",
+   "title": "Frontier / tabular foundation models at small n: TabICL and TabPFN (research-eval) vs LightGBM on a 3,000-row regime head (BTC 15m tail, MES 1d)",
+   "verdict": "not_applicable"
+  },
+  {
+   "clock": [
+    "15m"
+   ],
+   "cost_stack": "none_statistical_metric",
+   "decides": false,
+   "id": "RQ-20261013-1414-07",
+   "label_source": "bar_market",
+   "metric": "statistical",
+   "n": 60000,
+   "n_records": 1,
+   "pooling": "per_symbol",
+   "symbols_named": [
+    "BTC",
+    "ETH",
+    "SOL"
+   ],
+   "task": "regime_vol_head",
+   "theme": "ml_health",
+   "title": "Frontier / family diversity: do bagged randomised trees (ExtraTrees) or a small MLP beat LightGBM on the BTC/ETH/SOL 15m regime heads?",
+   "verdict": "indeterminate"
+  },
+  {
+   "clock": [
+    "15m"
+   ],
+   "cost_stack": "none_statistical_metric",
+   "decides": false,
+   "id": "RQ-20261013-a793-01",
+   "label_source": "bar_market",
+   "metric": "statistical",
+   "n": 60000,
+   "n_records": 1,
+   "pooling": "per_symbol",
+   "symbols_named": [
+    "BTC"
+   ],
+   "task": "regime_vol_head",
+   "theme": "ml_health",
+   "title": "Feature ablation: BTCUSDT 15m regime_label, LightGBM + HAR-RV horizons (d/w/m realised-variance) vs LightGBM on the shipped features",
+   "verdict": "indeterminate"
+  },
+  {
+   "clock": [
+    "15m"
+   ],
+   "cost_stack": "none_statistical_metric",
+   "decides": false,
+   "id": "RQ-20261013-a793-02",
+   "label_source": "bar_market",
+   "metric": "statistical",
+   "n": 60000,
+   "n_records": 1,
+   "pooling": "per_symbol",
+   "symbols_named": [
+    "SOL"
+   ],
+   "task": "regime_vol_head",
+   "theme": "ml_health",
+   "title": "Feature ablation: SOLUSDT 15m regime_label, LightGBM + HAR-RV horizons (d/w/m realised-variance) vs LightGBM on the shipped features",
+   "verdict": "indeterminate"
+  },
+  {
+   "clock": [
+    "15m"
+   ],
+   "cost_stack": "none_statistical_metric",
+   "decides": false,
+   "id": "RQ-20261013-a793-03",
+   "label_source": "bar_market",
+   "metric": "statistical",
+   "n": 120000,
+   "n_records": 1,
+   "pooling": "per_symbol",
+   "symbols_named": [
+    "ETH"
+   ],
+   "task": "regime_vol_head",
+   "theme": "ml_health",
+   "title": "Feature ablation: ETHUSDT 15m regime_label, LightGBM + HAR-RV horizons (d/w/m realised-variance) vs LightGBM on the shipped features",
+   "verdict": "indeterminate"
+  },
+  {
+   "clock": [
+    "1h"
+   ],
+   "cost_stack": "none_statistical_metric",
+   "decides": false,
+   "id": "RQ-20261014-4591-01",
+   "label_source": "bar_market",
+   "metric": "statistical",
+   "n": 40000,
+   "n_records": 2,
+   "pooling": "unstated",
+   "symbols_named": [],
+   "task": "regime_vol_head",
+   "theme": "ml_health",
+   "title": "AI trader / probability quality, out-of-time: does the 1h regime log-loss lift over the class prior (RQ-20261014-65cc-10 PASS) survive a post-2025-10-01 holdout",
+   "verdict": "pass"
+  },
+  {
+   "clock": [
+    "1h"
+   ],
+   "cost_stack": "none_statistical_metric",
+   "decides": false,
+   "id": "RQ-20261014-4591-02",
+   "label_source": "bar_market",
+   "metric": "statistical",
+   "n": 40000,
+   "n_records": 1,
+   "pooling": "per_symbol",
+   "symbols_named": [
+    "BTC",
+    "ETH"
+   ],
+   "task": "direction_head",
+   "theme": "ml_health",
+   "title": "AI trader / direction at 1h on published data: does LightGBM or the logit beat the class prior on direction_label LOG-LOSS (BTC, ETH)?",
+   "verdict": "fail"
+  },
+  {
+   "clock": [
+    "1h"
+   ],
+   "cost_stack": "none_statistical_metric",
+   "decides": false,
+   "id": "RQ-20261014-4591-03",
+   "label_source": "bar_market",
+   "metric": "statistical",
+   "n": 40000,
+   "n_records": 1,
+   "pooling": "unstated",
+   "symbols_named": [],
+   "task": "regime_vol_head",
+   "theme": "ml_health",
+   "title": "AI trader / nonlinearity: on the 1h regime label, does LightGBM beat the plain logit on LOG-LOSS (is there nonlinear information worth a tree head)?",
+   "verdict": "pass"
+  },
+  {
+   "clock": [
+    "1h"
+   ],
+   "cost_stack": "none_statistical_metric",
+   "decides": false,
+   "id": "RQ-20261014-4591-04",
+   "label_source": "bar_market",
+   "metric": "statistical",
+   "n": 40000,
+   "n_records": 1,
+   "pooling": "unstated",
+   "symbols_named": [],
+   "task": "regime_vol_head",
+   "theme": "ml_health",
+   "title": "Frontier / model-family diversity: on the 1h regime label, does CatBoost, ExtraTrees or sklearn HistGradientBoosting beat the LightGBM incumbent on LOG-LOSS?",
+   "verdict": "indeterminate"
+  },
+  {
+   "clock": [
+    "1h"
+   ],
+   "cost_stack": "none_statistical_metric",
+   "decides": false,
+   "id": "RQ-20261014-4591-05",
+   "label_source": "bar_market",
+   "metric": "statistical",
+   "n": 40000,
+   "n_records": 1,
+   "pooling": "per_symbol",
+   "symbols_named": [
+    "BTC",
+    "ETH"
+   ],
+   "task": "direction_head",
+   "theme": "ml_health",
+   "title": "Frontier / model-family diversity on direction: does CatBoost or sklearn HistGradientBoosting beat the class prior on 1h direction_label LOG-LOSS (BTC, ETH)?",
+   "verdict": "indeterminate"
+  },
+  {
+   "clock": [
+    "1h"
+   ],
+   "cost_stack": "none_statistical_metric",
+   "decides": false,
+   "id": "RQ-20261014-4591-06",
+   "label_source": "bar_market",
+   "metric": "statistical",
+   "n": 12000,
+   "n_records": 2,
+   "pooling": "unstated",
+   "symbols_named": [],
+   "task": "regime_vol_head",
+   "theme": "ml_health",
+   "title": "AI trader / recency: does the 1h regime log-loss lift over the class prior hold on only the most recent 12,000 hours (about 500 days)?",
+   "verdict": "pass"
+  },
+  {
+   "clock": [
+    "1h"
+   ],
+   "cost_stack": "none_statistical_metric",
+   "decides": false,
+   "id": "RQ-20261014-65cc-06",
+   "label_source": "bar_market",
+   "metric": "statistical",
+   "n": 3000,
+   "n_records": 1,
+   "pooling": "per_symbol",
+   "symbols_named": [
+    "BTC",
+    "ETH"
+   ],
+   "task": "regime_vol_head",
+   "theme": "ml_health",
+   "title": "Frontier / tabular foundation models on Kaggle GPU: TabICL and TabPFN (research-eval) vs LightGBM on the BTC and ETH 1h regime head at a 3,000-row tail (off-tra",
+   "verdict": "indeterminate"
+  },
+  {
+   "clock": [
+    "1h"
+   ],
+   "cost_stack": "none_statistical_metric",
+   "decides": false,
+   "id": "RQ-20261014-65cc-07",
+   "label_source": "bar_market",
+   "metric": "statistical",
+   "n": 6000,
+   "n_records": 1,
+   "pooling": "per_symbol",
+   "symbols_named": [
+    "BTC",
+    "ETH"
+   ],
+   "task": "direction_head",
+   "theme": "ml_health",
+   "title": "AI trader / direction on Kaggle GPU: does ANY pretrained tabular learner (TabICL, TabPFN) beat the class prior on 1h direction_label (BTC, ETH) at a 6,000-row t",
+   "verdict": "indeterminate"
+  },
+  {
+   "clock": [
+    "1h"
+   ],
+   "cost_stack": "none_statistical_metric",
+   "decides": false,
+   "id": "RQ-20261014-65cc-08",
+   "label_source": "bar_market",
+   "metric": "statistical",
+   "n": 12000,
+   "n_records": 2,
+   "pooling": "per_symbol",
+   "symbols_named": [
+    "BTC",
+    "ETH"
+   ],
+   "task": "regime_vol_head",
+   "theme": "ml_health",
+   "title": "Frontier / scaling on Kaggle GPU: does TabICL keep its edge over LightGBM at a 12,000-row tail on the BTC and ETH 1h regime head?",
+   "verdict": "indeterminate"
+  },
+  {
+   "clock": [
+    "1h"
+   ],
+   "cost_stack": "none_statistical_metric",
+   "decides": false,
+   "id": "RQ-20261014-65cc-09",
+   "label_source": "bar_market",
+   "metric": "statistical",
+   "n": 40000,
+   "n_records": 3,
+   "pooling": "per_symbol",
+   "symbols_named": [
+    "BTC",
+    "ETH"
+   ],
+   "task": "regime_vol_head",
+   "theme": "ml_health",
+   "title": "AI trader / linear family at 1h on published data: is a multinomial logit within 0.01 macro-F1 of LightGBM on the BTC and ETH 1h regime head? (off-trainer twin ",
+   "verdict": "fail"
+  },
+  {
+   "clock": [
+    "1h"
+   ],
+   "cost_stack": "none_statistical_metric",
+   "decides": false,
+   "id": "RQ-20261014-65cc-10",
+   "label_source": "bar_market",
+   "metric": "statistical",
+   "n": 40000,
+   "n_records": 1,
+   "pooling": "per_symbol",
+   "symbols_named": [
+    "BTC",
+    "ETH"
+   ],
+   "task": "regime_vol_head",
+   "theme": "ml_health",
+   "title": "AI trader / probability quality at 1h on published data: do the BTC and ETH 1h regime learners beat the class prior on LOG-LOSS, not only macro-F1? (off-trainer",
+   "verdict": "pass"
+  },
+  {
+   "clock": [],
+   "cost_stack": "unstated",
+   "decides": false,
+   "id": "RQ-20261014-736c-01",
+   "label_source": "bar_market",
+   "metric": "other",
+   "n": null,
+   "n_records": 1,
+   "pooling": "unstated",
+   "symbols_named": [],
+   "task": "regime_vol_head",
+   "theme": "ml_health",
+   "title": "ML plan X1 (ML-LEG-CORPUS): build the six-live-leg per-trade corpus (config-exact uncapped harness emits, 1830 d) that unblocks the TP-predict head and the P1 Q",
+   "verdict": "pass"
+  },
+  {
+   "clock": [],
+   "cost_stack": "unstated",
+   "decides": false,
+   "id": "RQ-20261014-9d20-01",
+   "label_source": "none",
+   "metric": "net_r",
+   "n": 5063,
+   "n_records": 1,
+   "pooling": "unstated",
+   "symbols_named": [],
+   "task": "infra_parity_drift",
+   "theme": "ml_health",
+   "title": "AI trader / exit line: peak-to-exit census over the committed test-result ledgers -- how much R is given back between the in-trade peak (mfe_r) and the exit, pe",
+   "verdict": "pass"
+  },
+  {
+   "clock": [],
+   "cost_stack": "none_statistical_metric",
+   "decides": false,
+   "id": "RQ-20261014-9d20-02",
+   "label_source": "strategy_trades",
+   "metric": "statistical",
+   "n": 1796,
+   "n_records": 2,
+   "pooling": "unstated",
+   "symbols_named": [],
+   "task": "entry_filter_meta",
+   "theme": "ml_health",
+   "title": "AI trader / meta-labeling (M23 revived): on the committed test-result ledgers, do the decision-time columns the harness emits carry today (confidence, direction",
+   "verdict": "fail"
+  },
+  {
+   "clock": [],
+   "cost_stack": "none_statistical_metric",
+   "decides": false,
+   "id": "RQ-20261014-9d20-03",
+   "label_source": "strategy_trades",
+   "metric": "statistical",
+   "n": 1680,
+   "n_records": 2,
+   "pooling": "unstated",
+   "symbols_named": [],
+   "task": "in_trade_exit",
+   "theme": "ml_health",
+   "title": "AI trader / exit line: is a large peak-to-exit giveback (giveback_frac > 0.5) predictable WITHIN a leg from the decision-time columns the committed ledgers carr",
+   "verdict": "fail"
+  },
+  {
+   "clock": [
+    "1h"
+   ],
+   "cost_stack": "none_statistical_metric",
+   "decides": false,
+   "id": "RQ-20261014-9d20-05",
+   "label_source": "bar_market",
+   "metric": "statistical",
+   "n": 20000,
+   "n_records": 1,
+   "pooling": "per_symbol",
+   "symbols_named": [
+    "BTC",
+    "ETH"
+   ],
+   "task": "regime_vol_head",
+   "theme": "ml_health",
+   "title": "AI trader / family diversity on published 1h data: do bagged randomised trees (ExtraTrees) or a small MLP beat LightGBM on the BTC and ETH 1h volatility-regime ",
+   "verdict": "indeterminate"
+  },
+  {
+   "clock": [],
+   "cost_stack": "none_statistical_metric",
+   "decides": false,
+   "id": "RQ-20261014-d6e7-02",
+   "label_source": "strategy_trades",
+   "metric": "statistical",
+   "n": 2389,
+   "n_records": 1,
+   "pooling": "unstated",
+   "symbols_named": [],
+   "task": "in_trade_exit",
+   "theme": "ml_health",
+   "title": "In-trade exit line, rung 2: does a SIMPLE in-trade state (open R, bars since peak, giveback from peak) predict SL-before-TP beyond the calibrated distance-only ",
+   "verdict": "fail"
+  },
+  {
+   "clock": [],
+   "cost_stack": "none_statistical_metric",
+   "decides": false,
+   "id": "RQ-20261014-d6e7-04",
+   "label_source": "strategy_trades",
+   "metric": "statistical",
+   "n": 2389,
+   "n_records": 1,
+   "pooling": "unstated",
+   "symbols_named": [],
+   "task": "in_trade_exit",
+   "theme": "ml_health",
+   "title": "In-trade exit line, rung 4: do momentum / ADX-slope / range / regime features in the in-trade state predict SL-before-TP beyond the distance-only reference -- t",
+   "verdict": "indeterminate"
+  },
+  {
+   "clock": [
+    "1h"
+   ],
+   "cost_stack": "none_statistical_metric",
+   "decides": false,
+   "id": "RQ-20261014-de02-01",
+   "label_source": "bar_market",
+   "metric": "statistical",
+   "n": 40000,
+   "n_records": 1,
+   "pooling": "unstated",
+   "symbols_named": [],
+   "task": "regime_vol_head",
+   "theme": "ml_health",
+   "title": "Frontier / model-family diversity (re-ask after the CatBoost verbose fix): on the 1h regime label, does CatBoost, ExtraTrees or HistGradientBoosting beat the Li",
+   "verdict": "pass"
+  },
+  {
+   "clock": [
+    "1h"
+   ],
+   "cost_stack": "unstated",
+   "decides": false,
+   "id": "RQ-20261015-8b93-01",
+   "label_source": "none",
+   "metric": "other",
+   "n": 8694.0,
+   "n_records": 2,
+   "pooling": "per_symbol",
+   "symbols_named": [
+    "ETH"
+   ],
+   "task": "infra_parity_drift",
+   "theme": "ml_health",
+   "title": "Training parity, REFERENCE side: train eth-regime-1h-lgbm-v1 on the trainer VM on rows ts < 2026-10-01 (no registry write)",
+   "verdict": "pass"
+  },
+  {
+   "clock": [
+    "1h"
+   ],
+   "cost_stack": "none_statistical_metric",
+   "decides": false,
+   "id": "RQ-20261015-8b93-02",
+   "label_source": "none",
+   "metric": "statistical",
+   "n": 0.0,
+   "n_records": 1,
+   "pooling": "per_symbol",
+   "symbols_named": [
+    "ETH"
+   ],
+   "task": "infra_parity_drift",
+   "theme": "ml_health",
+   "title": "Training parity, OFF-VM side: does eth-regime-1h-lgbm-v1 trained in a Kaggle CPU kernel match the trainer-VM run on the same rows?",
+   "verdict": "pass"
+  },
+  {
+   "clock": [
+    "1h"
+   ],
+   "cost_stack": "none_statistical_metric",
+   "decides": false,
+   "id": "RQ-20261015-ab54-01",
+   "label_source": "bar_market",
+   "metric": "statistical",
+   "n": 43000,
+   "n_records": 1,
+   "pooling": "per_symbol",
+   "symbols_named": [
+    "BTC",
+    "ETH"
+   ],
+   "task": "regime_vol_head",
+   "theme": "ml_health",
+   "title": "AI trader / family diversity, EXTEND n: RQ-20261014-9d20-05 (ExtraTrees / small MLP vs LightGBM, BTC+ETH 1h regime head) read INDETERMINATE at tail_rows 20000; ",
+   "verdict": "indeterminate"
+  },
+  {
+   "clock": [
+    "15m"
+   ],
+   "cost_stack": "none_statistical_metric",
+   "decides": false,
+   "id": "RQ-20261015-eda2-01",
+   "label_source": "bar_market",
+   "metric": "statistical",
+   "n": 175272,
+   "n_records": 1,
+   "pooling": "per_symbol",
+   "symbols_named": [
+    "BTC",
+    "ETH",
+    "SOL"
+   ],
+   "task": "regime_vol_head",
+   "theme": "ml_health",
+   "title": "AI trader / probability quality, RE-RUN with all rows and a holdout that exists: do the 15m regime learners beat the class prior on LOG-LOSS? (pre-registered fo",
+   "verdict": "pass"
+  },
+  {
+   "clock": [
+    "15m",
+    "1d"
+   ],
+   "cost_stack": "none_statistical_metric",
+   "decides": false,
+   "id": "RQ-20261015-eda2-02",
+   "label_source": "strategy_trades",
+   "metric": "statistical",
+   "n": 3000,
+   "n_records": 1,
+   "pooling": "per_symbol",
+   "symbols_named": [
+    "BTC",
+    "MES"
+   ],
+   "task": "other",
+   "theme": "ml_health",
+   "title": "Frontier / TabPFN-only research-eval at small n (3,000-row BTC 15m tail, MES 1d) vs LightGBM -- the TabPFN arm RQ-20261013-1414-06 could not run (licence, then ",
+   "verdict": "indeterminate"
+  },
+  {
+   "clock": [
+    "1h"
+   ],
+   "cost_stack": "none_statistical_metric",
+   "decides": false,
+   "id": "RQ-20261016-001",
+   "label_source": "bar_market",
+   "metric": "statistical",
+   "n": 43000,
+   "n_records": 1,
+   "pooling": "per_symbol",
+   "symbols_named": [
+    "BTC",
+    "ETH"
+   ],
+   "task": "regime_vol_head",
+   "theme": "ml_health",
+   "title": "AI trader / family diversity, n EXTENDED: do ExtraTrees or a small MLP come within 0.01 macro-F1 of LightGBM on the BTC and ETH 1h volatility-regime head over t",
+   "verdict": "indeterminate"
+  },
+  {
+   "clock": [],
+   "cost_stack": "none_statistical_metric",
+   "decides": false,
+   "id": "RQ-20261016-012",
+   "label_source": "strategy_trades",
+   "metric": "statistical",
+   "n": 2192,
+   "n_records": 1,
+   "pooling": "unstated",
+   "symbols_named": [],
+   "task": "in_trade_exit",
+   "theme": "ml_health",
+   "title": "In-trade exit line, rung 2 FAILED -> the registered refinement: does the RICH in-trade state predict SL-before-TP beyond the calibrated distance-only reference ",
+   "verdict": "fail"
+  },
+  {
+   "clock": [],
+   "cost_stack": "full_or_stated",
+   "decides": true,
+   "id": "RQ-20261016-013",
+   "label_source": "strategy_trades",
+   "metric": "net_r",
+   "n": 3140,
+   "n_records": 1,
+   "pooling": "unstated",
+   "symbols_named": [],
+   "task": "in_trade_exit",
+   "theme": "ml_health",
+   "title": "In-trade exit line, rung 4 INDETERMINATE -> the decisive money test: does an exit-now policy on the RICH in-trade state beat holding the fixed 2R bracket, net o",
+   "verdict": "fail"
+  },
+  {
+   "clock": [
+    "4h"
+   ],
+   "cost_stack": "full_or_stated",
+   "decides": true,
+   "id": "RQ-20261016-1fa6-06",
+   "label_source": "strategy_trades",
+   "metric": "net_r",
+   "n": 556,
+   "n_records": 2,
+   "pooling": "unstated",
+   "symbols_named": [],
+   "task": "in_trade_exit",
+   "theme": "ml_health",
+   "title": "In-trade exit line on the HIGHER-timeframe legs: does an exit-now policy on the RICH in-trade state add >= 0.10 R per trade net on pullback_2h + Donchian 4h leg",
+   "verdict": "fail"
+  },
+  {
+   "clock": [
+    "15m"
+   ],
+   "cost_stack": "none_statistical_metric",
+   "decides": false,
+   "id": "RQ-20261016-1fa6-08",
+   "label_source": "bar_market",
+   "metric": "statistical",
+   "n": 60000,
+   "n_records": 2,
+   "pooling": "per_symbol",
+   "symbols_named": [
+    "BTC",
+    "ETH",
+    "SOL"
+   ],
+   "task": "regime_vol_head",
+   "theme": "ml_health",
+   "title": "Learner family is second-order: on the 15m regime label, scored on LOG-LOSS, is a ridge logit WITH HAR-RV inputs within 0.002 nats of LightGBM on BTC, ETH and S",
+   "verdict": "fail"
+  },
+  {
+   "clock": [
+    "1h"
+   ],
+   "cost_stack": "unstated",
+   "decides": false,
+   "id": "RQ-20261016-65ff-20",
+   "label_source": "none",
+   "metric": "other",
+   "n": 8689.0,
+   "n_records": 1,
+   "pooling": "per_symbol",
+   "symbols_named": [
+    "BTC"
+   ],
+   "task": "infra_parity_drift",
+   "theme": "ml_health",
+   "title": "Training parity, REFERENCE side, class HMM: train btc-regime-1h-hmm-v1 on the trainer VM on rows ts < 2026-10-01 (no registry write)",
+   "verdict": "pass"
+  },
+  {
+   "clock": [
+    "1h"
+   ],
+   "cost_stack": "none_statistical_metric",
+   "decides": false,
+   "id": "RQ-20261016-65ff-21",
+   "label_source": "none",
+   "metric": "statistical",
+   "n": null,
+   "n_records": 2,
+   "pooling": "per_symbol",
+   "symbols_named": [
+    "BTC"
+   ],
+   "task": "infra_parity_drift",
+   "theme": "ml_health",
+   "title": "Training parity, OFF-VM side, class HMM: does btc-regime-1h-hmm-v1 trained in a Kaggle CPU kernel match the trainer-VM run on the same rows?",
+   "verdict": "indeterminate"
+  },
+  {
+   "clock": [
+    "1h"
+   ],
+   "cost_stack": "unstated",
+   "decides": false,
+   "id": "RQ-20261016-65ff-22",
+   "label_source": "none",
+   "metric": "other",
+   "n": 8689.0,
+   "n_records": 1,
+   "pooling": "per_symbol",
+   "symbols_named": [
+    "BTC"
+   ],
+   "task": "infra_parity_drift",
+   "theme": "ml_health",
+   "title": "Training parity, REFERENCE side, class RegimeClassifier: train baseline-regime-classifier on the trainer VM on rows ts < 2026-10-01 (no registry write)",
+   "verdict": "pass"
+  },
+  {
+   "clock": [
+    "1h"
+   ],
+   "cost_stack": "none_statistical_metric",
+   "decides": false,
+   "id": "RQ-20261016-65ff-23",
+   "label_source": "none",
+   "metric": "statistical",
+   "n": null,
+   "n_records": 2,
+   "pooling": "per_symbol",
+   "symbols_named": [
+    "BTC"
+   ],
+   "task": "infra_parity_drift",
+   "theme": "ml_health",
+   "title": "Training parity, OFF-VM side, class RegimeClassifier: does baseline-regime-classifier trained in a Kaggle CPU kernel match the trainer-VM run on the same rows?",
+   "verdict": "indeterminate"
+  },
+  {
+   "clock": [
+    "15m",
+    "1h"
+   ],
+   "cost_stack": "none_statistical_metric",
+   "decides": false,
+   "id": "RQ-20261016-65ff-24",
+   "label_source": "none",
+   "metric": "statistical",
+   "n": 40000,
+   "n_records": 1,
+   "pooling": "per_symbol",
+   "symbols_named": [
+    "BTC",
+    "ETH",
+    "SOL"
+   ],
+   "task": "infra_parity_drift",
+   "theme": "ml_health",
+   "title": "AI trader / drift at 1h on published data: do the 1h regime learners keep their LOG-LOSS lift over the class prior on the LAST 90 DAYS as well as under CV, on B",
+   "verdict": "indeterminate"
+  },
+  {
+   "clock": [
+    "1h"
+   ],
+   "cost_stack": "none_statistical_metric",
+   "decides": false,
+   "id": "RQ-20261016-65ff-25",
+   "label_source": "bar_market",
+   "metric": "statistical",
+   "n": 40000,
+   "n_records": 2,
+   "pooling": "per_symbol",
+   "symbols_named": [
+    "BTC",
+    "ETH",
+    "SOL"
+   ],
+   "task": "regime_vol_head",
+   "theme": "ml_health",
+   "title": "AI trader / conformal abstention at 1h on PUBLISHED data: does split-conformal abstention on the BTC/ETH/SOL 1h regime learner beat a plain max-probability thre",
+   "verdict": "fail"
+  },
+  {
+   "clock": [
+    "15m",
+    "1h",
+    "5m"
+   ],
+   "cost_stack": "unstated",
+   "decides": false,
+   "id": "RQ-20261016-65ff-27",
+   "label_source": "none",
+   "metric": "other",
+   "n": 19060,
+   "n_records": 1,
+   "pooling": "unstated",
+   "symbols_named": [],
+   "task": "infra_parity_drift",
+   "theme": "ml_health",
+   "title": "Drift remediation (PI-20261016-P3PFA1GK-0001): is the persistent drift flag on the same 9 heads an INSTRUMENT artifact (scores pooled across model versions / in",
+   "verdict": "indeterminate"
+  },
+  {
+   "clock": [
+    "1h"
+   ],
+   "cost_stack": "none_statistical_metric",
+   "decides": false,
+   "id": "RQ-20261016-65ff-30",
+   "label_source": "bar_market",
+   "metric": "statistical",
+   "n": 40000,
+   "n_records": 1,
+   "pooling": "per_symbol",
+   "symbols_named": [
+    "BTC",
+    "ETH",
+    "SOL"
+   ],
+   "task": "regime_vol_head",
+   "theme": "ml_health",
+   "title": "Frontier / CatBoost CONFIRMATION out of time and out of symbol: does the RQ-20261014-de02-01 CatBoost log-loss win over LightGBM on the 1h regime label hold on ",
+   "verdict": "indeterminate"
+  },
+  {
+   "clock": [
+    "1h"
+   ],
+   "cost_stack": "none_statistical_metric",
+   "decides": false,
+   "id": "RQ-20261016-8b93-01",
+   "label_source": "none",
+   "metric": "statistical",
+   "n": 0.0,
+   "n_records": 1,
+   "pooling": "per_symbol",
+   "symbols_named": [
+    "ETH"
+   ],
+   "task": "infra_parity_drift",
+   "theme": "ml_health",
+   "title": "Training parity re-run WITH artefact: eth-regime-1h-lgbm-v1 on a Kaggle CPU kernel vs the trainer reference; on PASS emit the ml/offload-inbox drop for the one ",
+   "verdict": "pass"
+  },
+  {
+   "clock": [],
+   "cost_stack": "none_statistical_metric",
+   "decides": false,
+   "id": "RQ-20261017-003",
+   "label_source": "strategy_trades",
+   "metric": "statistical",
+   "n": 703,
+   "n_records": 1,
+   "pooling": "unstated",
+   "symbols_named": [],
+   "task": "in_trade_exit",
+   "theme": "ml_health",
+   "title": "AI trader / exit line, class split (P2-Q3.1): does the RICH in-trade state carry information about SL-before-TP beyond where the trade is, on the DONCHIAN famil",
+   "verdict": "indeterminate"
+  },
+  {
+   "clock": [],
+   "cost_stack": "none_statistical_metric",
+   "decides": false,
+   "id": "RQ-20261017-004",
+   "label_source": "strategy_trades",
+   "metric": "statistical",
+   "n": 1184,
+   "n_records": 1,
+   "pooling": "unstated",
+   "symbols_named": [],
+   "task": "in_trade_exit",
+   "theme": "ml_health",
+   "title": "AI trader / exit line, class split (P2-Q3.1): does the RICH in-trade state carry information about SL-before-TP beyond where the trade is, on the PULLBACK famil",
+   "verdict": "indeterminate"
+  },
+  {
+   "clock": [],
+   "cost_stack": "none_statistical_metric",
+   "decides": false,
+   "id": "RQ-20261017-005",
+   "label_source": "strategy_trades",
+   "metric": "statistical",
+   "n": 212,
+   "n_records": 1,
+   "pooling": "unstated",
+   "symbols_named": [],
+   "task": "in_trade_exit",
+   "theme": "ml_health",
+   "title": "AI trader / exit line, class split (P2-Q3.1): does the RICH in-trade state carry information about SL-before-TP beyond where the trade is, on the SCALP family a",
+   "verdict": "indeterminate"
+  },
+  {
+   "clock": [
+    "15m"
+   ],
+   "cost_stack": "none_statistical_metric",
+   "decides": false,
+   "id": "RQ-20261018-ff8f-01",
+   "label_source": "bar_market",
+   "metric": "statistical",
+   "n": 60000,
+   "n_records": 1,
+   "pooling": "per_symbol",
+   "symbols_named": [
+    "BTC",
+    "SOL"
+   ],
+   "task": "regime_vol_head",
+   "theme": "ml_health",
+   "title": "Shadow->advisory champion-challenger for the BTC/SOL 15m regime head: the range-vol (yz) feature set vs the ADVISORY fc feature set vs both, on identical purged",
+   "verdict": "indeterminate"
+  },
+  {
+   "clock": [
+    "15m"
+   ],
+   "cost_stack": "none_statistical_metric",
+   "decides": false,
+   "id": "RQ-20261018-ff8f-02",
+   "label_source": "bar_market",
+   "metric": "statistical",
+   "n": 12000,
+   "n_records": 2,
+   "pooling": "per_symbol",
+   "symbols_named": [
+    "BTC",
+    "ETH",
+    "SOL"
+   ],
+   "task": "regime_vol_head",
+   "theme": "ml_health",
+   "title": "Frontier / tabular foundation model at FULL n: TabICL vs LightGBM on the BTC/ETH/SOL 15m volatility-regime head (tabular_foundation_model, trainer-resident; Tab",
+   "verdict": "indeterminate"
+  },
+  {
+   "clock": [
+    "1h"
+   ],
+   "cost_stack": "none_statistical_metric",
+   "decides": false,
+   "id": "RQ-20261018-ff8f-03",
+   "label_source": "bar_market",
+   "metric": "statistical",
+   "n": 40000,
+   "n_records": 4,
+   "pooling": "per_symbol",
+   "symbols_named": [
+    "BTC",
+    "ETH",
+    "SOL"
+   ],
+   "task": "regime_vol_head",
+   "theme": "ml_health",
+   "title": "Frontier / calibrated LINEAR head: is an isotonic-calibrated multinomial logit non-inferior to LightGBM on LOG-LOSS and BRIER for the BTC/ETH/SOL 1h volatility-",
+   "verdict": "fail"
+  },
+  {
+   "clock": [
+    "15m"
+   ],
+   "cost_stack": "none_statistical_metric",
+   "decides": false,
+   "id": "RQ-20261018-ff8f-04",
+   "label_source": "bar_market",
+   "metric": "statistical",
+   "n": 40000,
+   "n_records": 1,
+   "pooling": "per_symbol",
+   "symbols_named": [
+    "BTC",
+    "ETH",
+    "SOL"
+   ],
+   "task": "regime_vol_head",
+   "theme": "ml_health",
+   "title": "Frontier / sequence model with a NEW input shape: a small GRU over 32-bar windows of the 6 shared features (plus the 4 range-vol estimators) vs LightGBM on the ",
+   "verdict": "indeterminate"
+  },
+  {
+   "clock": [
+    "15m"
+   ],
+   "cost_stack": "none_statistical_metric",
+   "decides": false,
+   "id": "RQ-20261022-38be-01",
+   "label_source": "bar_market",
+   "metric": "statistical",
+   "n": 12000,
+   "n_records": 1,
+   "pooling": "per_symbol",
+   "symbols_named": [
+    "BTC",
+    "ETH",
+    "SOL"
+   ],
+   "task": "regime_vol_head",
+   "theme": "ml_health",
+   "title": "REDESIGN of 4a3b-01 (timed out at 300 min with the CPU TabPFN control in the run; control dropped, rule unchanged): Frontier / tabular foundation model, capped-",
+   "verdict": "indeterminate"
+  },
+  {
+   "clock": [
+    "15m"
+   ],
+   "cost_stack": "none_statistical_metric",
+   "decides": false,
+   "id": "RQ-20261022-3a84-08",
+   "label_source": "bar_market",
+   "metric": "statistical",
+   "n": 60000,
+   "n_records": 1,
+   "pooling": "per_symbol",
+   "symbols_named": [
+    "ETH"
+   ],
+   "task": "regime_vol_head",
+   "theme": "ml_health",
+   "title": "Range-vol feature lift for the ETHUSDT 15m regime head: LightGBM with the four range-vol estimators (yz set) vs the base feature set, identical purged folds",
+   "verdict": "indeterminate"
+  },
+  {
+   "clock": [
+    "1h"
+   ],
+   "cost_stack": "none_statistical_metric",
+   "decides": false,
+   "id": "RQ-20261022-3a84-09",
+   "label_source": "bar_market",
+   "metric": "statistical",
+   "n": 40000,
+   "n_records": 2,
+   "pooling": "per_symbol",
+   "symbols_named": [
+    "BTC"
+   ],
+   "task": "regime_vol_head",
+   "theme": "ml_health",
+   "title": "Range-vol feature lift for the BTCUSDT 1h regime head: LightGBM with the four range-vol estimators (yz set) vs the base feature set, identical purged folds",
+   "verdict": "fail"
+  },
+  {
+   "clock": [
+    "1h"
+   ],
+   "cost_stack": "none_statistical_metric",
+   "decides": false,
+   "id": "RQ-20261022-3a84-10",
+   "label_source": "bar_market",
+   "metric": "statistical",
+   "n": 40000,
+   "n_records": 1,
+   "pooling": "per_symbol",
+   "symbols_named": [
+    "ETH"
+   ],
+   "task": "regime_vol_head",
+   "theme": "ml_health",
+   "title": "Range-vol feature lift for the ETHUSDT 1h regime head: LightGBM with the four range-vol estimators (yz set) vs the base feature set, identical purged folds",
+   "verdict": "indeterminate"
+  },
+  {
+   "clock": [
+    "1h"
+   ],
+   "cost_stack": "none_statistical_metric",
+   "decides": false,
+   "id": "RQ-20261022-3a84-11",
+   "label_source": "bar_market",
+   "metric": "statistical",
+   "n": 40000,
+   "n_records": 1,
+   "pooling": "per_symbol",
+   "symbols_named": [
+    "SOL"
+   ],
+   "task": "regime_vol_head",
+   "theme": "ml_health",
+   "title": "Range-vol feature lift for the SOLUSDT 1h regime head: LightGBM with the four range-vol estimators (yz set) vs the base feature set, identical purged folds",
+   "verdict": "pass"
+  },
+  {
+   "clock": [
+    "15m"
+   ],
+   "cost_stack": "none_statistical_metric",
+   "decides": false,
+   "id": "RQ-20261022-4a3b-01",
+   "label_source": "bar_market",
+   "metric": "statistical",
+   "n": null,
+   "n_records": 1,
+   "pooling": "per_symbol",
+   "symbols_named": [
+    "BTC",
+    "ETH",
+    "SOL"
+   ],
+   "task": "regime_vol_head",
+   "theme": "ml_health",
+   "title": "Frontier / tabular foundation model, capped-ensemble arm on the WIDER feature set: TabICL (3 x 4,000-row members) vs LightGBM on the BTC/ETH/SOL 15m volatility-",
+   "verdict": "not_applicable"
+  },
+  {
+   "clock": [],
+   "cost_stack": "none_statistical_metric",
+   "decides": false,
+   "id": "RQ-20261022-4b82-22",
+   "label_source": "strategy_trades",
+   "metric": "statistical",
+   "n": 1011,
+   "n_records": 1,
+   "pooling": "unstated",
+   "symbols_named": [],
+   "task": "in_trade_exit",
+   "theme": "ml_health",
+   "title": "Giveback VARIANT with a non-degenerate target: is a giveback above 80% of the peak predictable from the entry columns within the four ledgers with n >= 300?",
+   "verdict": "fail"
+  },
+  {
+   "clock": [],
+   "cost_stack": "none_statistical_metric",
+   "decides": false,
+   "id": "RQ-20261022-4b82-23",
+   "label_source": "strategy_trades",
+   "metric": "statistical",
+   "n": 1011,
+   "n_records": 1,
+   "pooling": "unstated",
+   "symbols_named": [],
+   "task": "in_trade_exit",
+   "theme": "ml_health",
+   "title": "Giveback VARIANT, near-full giveback and fewer features: is a giveback above 95% of the peak (the trade round-trips) predictable from confidence, side and ADX a",
+   "verdict": "fail"
+  },
+  {
+   "clock": [],
+   "cost_stack": "none_statistical_metric",
+   "decides": false,
+   "id": "RQ-20261022-c0d1-01",
+   "label_source": "bar_market",
+   "metric": "statistical",
+   "n": 40000,
+   "n_records": 1,
+   "pooling": "per_symbol",
+   "symbols_named": [
+    "BTC",
+    "ETH",
+    "SOL"
+   ],
+   "task": "regime_vol_head",
+   "theme": "ml_health",
+   "title": "Sequence learner variant 1/3 -- FAIR CONTROL: GRU(32 bars) vs LightGBM given the SAME 10 features, 8 folds",
+   "verdict": "indeterminate"
+  },
+  {
+   "clock": [],
+   "cost_stack": "none_statistical_metric",
+   "decides": false,
+   "id": "RQ-20261022-c0d2-01",
+   "label_source": "bar_market",
+   "metric": "statistical",
+   "n": 40000,
+   "n_records": 1,
+   "pooling": "per_symbol",
+   "symbols_named": [
+    "BTC",
+    "ETH",
+    "SOL"
+   ],
+   "task": "other",
+   "theme": "ml_health",
+   "title": "Sequence learner variant 2/3 -- WINDOW SWEEP: GRU over 16 / 64 / 96 bars (hidden 64, 20 epochs, lr 1e-3) vs the wide LightGBM",
+   "verdict": "indeterminate"
+  },
+  {
+   "clock": [],
+   "cost_stack": "none_statistical_metric",
+   "decides": false,
+   "id": "RQ-20261022-c0d3-01",
+   "label_source": "bar_market",
+   "metric": "statistical",
+   "n": 40000,
+   "n_records": 1,
+   "pooling": "per_symbol",
+   "symbols_named": [
+    "BTC",
+    "ETH",
+    "SOL"
+   ],
+   "task": "regime_vol_head",
+   "theme": "ml_health",
+   "title": "Sequence learner variant 3/3 -- TRAINING REGIME: deeper/slower GRU (2x64, W48, 30 epochs, lr 5e-4) vs the wide LightGBM",
+   "verdict": "indeterminate"
+  },
+  {
+   "clock": [
+    "15m",
+    "1h"
+   ],
+   "cost_stack": "none_statistical_metric",
+   "decides": false,
+   "id": "RQ-20261022-c584-01",
+   "label_source": "bar_market",
+   "metric": "statistical",
+   "n": 43800,
+   "n_records": 1,
+   "pooling": "per_symbol",
+   "symbols_named": [
+    "BTC",
+    "ETH",
+    "SOL"
+   ],
+   "task": "regime_vol_head",
+   "theme": "ml_health",
+   "title": "CONFIRMATION of RQ-20261022-3a84-11: does the four-estimator range-vol lift on the SOLUSDT 1h regime head hold on a longer tail that adds ~20000 earlier bars th",
+   "verdict": "pass"
+  },
+  {
+   "clock": [
+    "1h"
+   ],
+   "cost_stack": "none_statistical_metric",
+   "decides": false,
+   "id": "RQ-20261023-a1f3-12",
+   "label_source": "bar_market",
+   "metric": "statistical",
+   "n": 40000,
+   "n_records": 1,
+   "pooling": "per_symbol",
+   "symbols_named": [
+    "BTC",
+    "ETH",
+    "SOL"
+   ],
+   "task": "direction_head",
+   "theme": "ml_health",
+   "title": "Direction at 1h, REGULARISED learner (first test failed -> variant): does a heavily regularised LightGBM (7 leaves, 100 trees, min leaf 300) beat the class prio",
+   "verdict": "indeterminate"
+  },
+  {
+   "clock": [
+    "1h"
+   ],
+   "cost_stack": "none_statistical_metric",
+   "decides": false,
+   "id": "RQ-20261023-a1f3-13",
+   "label_source": "bar_market",
+   "metric": "statistical",
+   "n": 17520,
+   "n_records": 2,
+   "pooling": "per_symbol",
+   "symbols_named": [
+    "BTC",
+    "ETH",
+    "SOL"
+   ],
+   "task": "direction_head",
+   "theme": "ml_health",
+   "title": "Direction at 1h, RECENT window (first test failed -> variant): does the 1h direction head beat the class prior on log-loss when fit on only the last ~2 years (1",
+   "verdict": "fail"
+  },
+  {
+   "clock": [
+    "1h"
+   ],
+   "cost_stack": "none_statistical_metric",
+   "decides": false,
+   "id": "RQ-20261023-a1f3-14",
+   "label_source": "bar_market",
+   "metric": "statistical",
+   "n": 40000,
+   "n_records": 2,
+   "pooling": "per_symbol",
+   "symbols_named": [
+    "BTC",
+    "ETH",
+    "SOL"
+   ],
+   "task": "direction_head",
+   "theme": "ml_health",
+   "title": "Direction at 1h with RANGE-VOL features (first test failed -> variant): do the four range-vol estimators lift a LightGBM direction head above the class prior on",
+   "verdict": "fail"
+  },
+  {
+   "clock": [
+    "1h"
+   ],
+   "cost_stack": "none_statistical_metric",
+   "decides": false,
+   "id": "RQ-20261023-a1f3-15",
+   "label_source": "bar_market",
+   "metric": "statistical",
+   "n": 40000,
+   "n_records": 1,
+   "pooling": "per_symbol",
+   "symbols_named": [
+    "BTC",
+    "ETH"
+   ],
+   "task": "regime_vol_head",
+   "theme": "ml_health",
+   "title": "Range-vol lift for the BTC and ETH 1h regime head scored on LOG-LOSS (first test failed -> variant): does lgbm_yz beat lgbm_base on log-loss, not just macro-F1?",
+   "verdict": "pass"
+  },
+  {
+   "clock": [
+    "1h"
+   ],
+   "cost_stack": "none_statistical_metric",
+   "decides": false,
+   "id": "RQ-20261023-a1f3-16",
+   "label_source": "bar_market",
+   "metric": "statistical",
+   "n": 40000,
+   "n_records": 2,
+   "pooling": "per_symbol",
+   "symbols_named": [
+    "BTC",
+    "ETH",
+    "SOL"
+   ],
+   "task": "direction_head",
+   "theme": "ml_health",
+   "title": "Direction at 1h with a WIDER EMBARGO (first test failed -> variant): does the 1h direction head beat the class prior on log-loss when the purge embargo is 96 ro",
+   "verdict": "fail"
+  },
+  {
+   "clock": [
+    "1h"
+   ],
+   "cost_stack": "none_statistical_metric",
+   "decides": false,
+   "id": "RQ-20261024-001",
+   "label_source": "bar_market",
+   "metric": "statistical",
+   "n": 40000,
+   "n_records": 2,
+   "pooling": "per_symbol",
+   "symbols_named": [
+    "BTC",
+    "ETH",
+    "SOL"
+   ],
+   "task": "regime_vol_head",
+   "theme": "ml_health",
+   "title": "AI trader / conformal abstention at 1h, VARIANT (first test failed -> variant, P2-Q1.5-fail): does a GLOBAL (non-Mondrian) split-conformal rule beat the plain m",
+   "verdict": "fail"
+  },
+  {
+   "clock": [
+    "1h"
+   ],
+   "cost_stack": "none_statistical_metric",
+   "decides": false,
+   "id": "RQ-20261024-002",
+   "label_source": "bar_market",
+   "metric": "statistical",
+   "n": 40000,
+   "n_records": 1,
+   "pooling": "per_symbol",
+   "symbols_named": [
+    "BTC",
+    "ETH",
+    "SOL"
+   ],
+   "task": "regime_vol_head",
+   "theme": "ml_health",
+   "title": "Range-vol lift for the SOL 1h regime head scored on LOG-LOSS (transfer of RQ-20261023-a1f3-15): does lgbm_yz beat lgbm_base on SOLUSDT?",
+   "verdict": "pass"
+  },
+  {
+   "clock": [
+    "1h"
+   ],
+   "cost_stack": "none_statistical_metric",
+   "decides": false,
+   "id": "RQ-20261025-001",
+   "label_source": "bar_market",
+   "metric": "statistical",
+   "n": 40000,
+   "n_records": 2,
+   "pooling": "per_symbol",
+   "symbols_named": [
+    "BTC",
+    "ETH",
+    "SOL"
+   ],
+   "task": "regime_vol_head",
+   "theme": "ml_health",
+   "title": "AI trader / linear floor (P2-Q4-var-price-vector): does a causal rolling VAR price-vector feature set lift the BTC/ETH/SOL 1h regime head over the six shared fe",
+   "verdict": "fail"
+  },
+  {
+   "clock": [
+    "15m",
+    "1h",
+    "5m"
+   ],
+   "cost_stack": "none_statistical_metric",
+   "decides": false,
+   "id": "RQ-20261025-004",
+   "label_source": "none",
+   "metric": "statistical",
+   "n": null,
+   "n_records": 1,
+   "pooling": "per_symbol",
+   "symbols_named": [
+    "BTC",
+    "SOL"
+   ],
+   "task": "infra_parity_drift",
+   "theme": "ml_health",
+   "title": "Regime-head drift (Q1.3), persistence read at 2026-10-25: across the eight crypto heads the shadow scan flags, is the live score drift input-mix shift, or does ",
+   "verdict": "fail"
+  },
+  {
+   "clock": [
+    "1h"
+   ],
+   "cost_stack": "none_statistical_metric",
+   "decides": false,
+   "id": "RQ-20261025-008",
+   "label_source": "bar_market",
+   "metric": "statistical",
+   "n": 40000,
+   "n_records": 2,
+   "pooling": "per_symbol",
+   "symbols_named": [
+    "BTC",
+    "ETH",
+    "SOL"
+   ],
+   "task": "regime_vol_head",
+   "theme": "ml_health",
+   "title": "Is the shipped regime-head LightGBM under-capacity: does a larger one (400 trees, 63 leaves, min_child_samples 20) lift macro_f1 by >= 0.005 on the 1h published",
+   "verdict": "fail"
+  },
+  {
+   "clock": [
+    "1h"
+   ],
+   "cost_stack": "none_statistical_metric",
+   "decides": false,
+   "id": "RQ-20261025-009",
+   "label_source": "bar_market",
+   "metric": "statistical",
+   "n": 40000,
+   "n_records": 1,
+   "pooling": "per_symbol",
+   "symbols_named": [
+    "BTC",
+    "ETH",
+    "SOL"
+   ],
+   "task": "regime_vol_head",
+   "theme": "ml_health",
+   "title": "Is the shipped regime-head LightGBM over-capacity: does a much smaller one (100 trees, 7 leaves, min_child_samples 200) stay within 0.01 macro_f1 of it on the 1",
+   "verdict": "indeterminate"
+  },
+  {
+   "clock": [
+    "1h"
+   ],
+   "cost_stack": "none_statistical_metric",
+   "decides": false,
+   "id": "RQ-20261025-010",
+   "label_source": "bar_market",
+   "metric": "statistical",
+   "n": 40000,
+   "n_records": 1,
+   "pooling": "per_symbol",
+   "symbols_named": [
+    "BTC",
+    "ETH",
+    "SOL"
+   ],
+   "task": "other",
+   "theme": "ml_health",
+   "title": "Does heavier regularisation (min_child_samples 200, reg_lambda 5, same trees and leaves) generalise to the post-2026-07-12 holdout at least as well as the shipp",
+   "verdict": "indeterminate"
+  },
+  {
+   "clock": [
+    "1h"
+   ],
+   "cost_stack": "none_statistical_metric",
+   "decides": false,
+   "id": "RQ-20261025-3947-19",
+   "label_source": "bar_market",
+   "metric": "statistical",
+   "n": 40000,
+   "n_records": 1,
+   "pooling": "per_symbol",
+   "symbols_named": [
+    "BTC",
+    "ETH",
+    "SOL"
+   ],
+   "task": "regime_vol_head",
+   "theme": "ml_health",
+   "title": "Regime head: does sklearn HistGradientBoosting beat the shipped-shape LightGBM on logloss on the 1h published shards (all three symbols)?",
+   "verdict": "indeterminate"
+  },
+  {
+   "clock": [
+    "1h"
+   ],
+   "cost_stack": "none_statistical_metric",
+   "decides": false,
+   "id": "RQ-20261025-3947-20",
+   "label_source": "bar_market",
+   "metric": "statistical",
+   "n": 40000,
+   "n_records": 2,
+   "pooling": "per_symbol",
+   "symbols_named": [
+    "BTC",
+    "ETH",
+    "SOL"
+   ],
+   "task": "regime_vol_head",
+   "theme": "ml_health",
+   "title": "Regime head: does sklearn ExtraTrees beat the shipped-shape LightGBM on logloss on the 1h published shards (all three symbols)?",
+   "verdict": "fail"
+  },
+  {
+   "clock": [
+    "1h"
+   ],
+   "cost_stack": "none_statistical_metric",
+   "decides": false,
+   "id": "RQ-20261025-3947-21",
+   "label_source": "bar_market",
+   "metric": "statistical",
+   "n": 40000,
+   "n_records": 2,
+   "pooling": "per_symbol",
+   "symbols_named": [
+    "BTC",
+    "ETH",
+    "SOL"
+   ],
+   "task": "regime_vol_head",
+   "theme": "ml_health",
+   "title": "Regime head: does sklearn MLP beat the shipped-shape LightGBM on logloss on the 1h published shards (all three symbols)?",
+   "verdict": "fail"
+  },
+  {
+   "clock": [
+    "1h"
+   ],
+   "cost_stack": "none_statistical_metric",
+   "decides": false,
+   "id": "RQ-20261025-3947-22",
+   "label_source": "bar_market",
+   "metric": "statistical",
+   "n": 40000,
+   "n_records": 1,
+   "pooling": "per_symbol",
+   "symbols_named": [
+    "BTC",
+    "ETH",
+    "SOL"
+   ],
+   "task": "regime_vol_head",
+   "theme": "ml_health",
+   "title": "Regime head: does CatBoost beat the shipped-shape LightGBM on logloss on the 1h published shards (all three symbols)?",
+   "verdict": "indeterminate"
+  },
+  {
+   "clock": [
+    "1h"
+   ],
+   "cost_stack": "none_statistical_metric",
+   "decides": false,
+   "id": "RQ-20261025-3947-23",
+   "label_source": "bar_market",
+   "metric": "statistical",
+   "n": null,
+   "n_records": 2,
+   "pooling": "per_symbol",
+   "symbols_named": [
+    "BTC",
+    "ETH",
+    "SOL"
+   ],
+   "task": "regime_vol_head",
+   "theme": "ml_health",
+   "title": "Regime head: does multinomial logit (numpy) beat the shipped-shape LightGBM on logloss on the 1h published shards (all three symbols)?",
+   "verdict": "not_applicable"
+  },
+  {
+   "clock": [
+    "15m"
+   ],
+   "cost_stack": "none_statistical_metric",
+   "decides": false,
+   "id": "RQ-20261025-3947-24",
+   "label_source": "bar_market",
+   "metric": "statistical",
+   "n": 60000,
+   "n_records": 1,
+   "pooling": "per_symbol",
+   "symbols_named": [
+    "BTC",
+    "ETH",
+    "SOL"
+   ],
+   "task": "regime_vol_head",
+   "theme": "ml_health",
+   "title": "Regime head: does sklearn HistGradientBoosting beat the shipped-shape LightGBM on logloss on the 15m published shards (all three symbols)?",
+   "verdict": "indeterminate"
+  },
+  {
+   "clock": [
+    "15m"
+   ],
+   "cost_stack": "none_statistical_metric",
+   "decides": false,
+   "id": "RQ-20261025-3947-25",
+   "label_source": "bar_market",
+   "metric": "statistical",
+   "n": 60000,
+   "n_records": 1,
+   "pooling": "per_symbol",
+   "symbols_named": [
+    "BTC",
+    "ETH",
+    "SOL"
+   ],
+   "task": "regime_vol_head",
+   "theme": "ml_health",
+   "title": "Regime head: does sklearn ExtraTrees beat the shipped-shape LightGBM on logloss on the 15m published shards (all three symbols)?",
+   "verdict": "indeterminate"
+  },
+  {
+   "clock": [
+    "15m"
+   ],
+   "cost_stack": "none_statistical_metric",
+   "decides": false,
+   "id": "RQ-20261025-3947-26",
+   "label_source": "bar_market",
+   "metric": "statistical",
+   "n": 60000,
+   "n_records": 2,
+   "pooling": "per_symbol",
+   "symbols_named": [
+    "BTC",
+    "ETH",
+    "SOL"
+   ],
+   "task": "regime_vol_head",
+   "theme": "ml_health",
+   "title": "Regime head: does LightGBM large (400 trees, 63 leaves) beat the shipped-shape LightGBM on logloss on the 15m published shards (all three symbols)?",
+   "verdict": "fail"
+  },
+  {
+   "clock": [
+    "1h"
+   ],
+   "cost_stack": "none_statistical_metric",
+   "decides": false,
+   "id": "RQ-20261025-916f-01",
+   "label_source": "bar_market",
+   "metric": "statistical",
+   "n": 40000,
+   "n_records": 2,
+   "pooling": "per_symbol",
+   "symbols_named": [
+    "BTC",
+    "ETH",
+    "SOL"
+   ],
+   "task": "regime_vol_head",
+   "theme": "ml_health",
+   "title": "Regime head: does a calibrated multinomial logit (non-tree family) match or beat the shipped-shape LightGBM on logloss on the 1h published shards (all three sym",
+   "verdict": "fail"
+  },
+  {
+   "clock": [
+    "15m"
+   ],
+   "cost_stack": "none_statistical_metric",
+   "decides": false,
+   "id": "RQ-20261026-90d3-01",
+   "label_source": "bar_market",
+   "metric": "statistical",
+   "n": 60000,
+   "n_records": 2,
+   "pooling": "per_symbol",
+   "symbols_named": [
+    "BTC",
+    "ETH",
+    "SOL"
+   ],
+   "task": "regime_vol_head",
+   "theme": "ml_health",
+   "title": "Regime head: does sklearn MLP beat the shipped-shape LightGBM on logloss on the 15m published shards (all three symbols)?",
+   "verdict": "indeterminate"
+  },
+  {
+   "clock": [
+    "15m"
+   ],
+   "cost_stack": "none_statistical_metric",
+   "decides": false,
+   "id": "RQ-20261026-90d3-02",
+   "label_source": "bar_market",
+   "metric": "statistical",
+   "n": 60000,
+   "n_records": 1,
+   "pooling": "per_symbol",
+   "symbols_named": [
+    "BTC",
+    "ETH",
+    "SOL"
+   ],
+   "task": "regime_vol_head",
+   "theme": "ml_health",
+   "title": "Regime head: does CatBoost beat the shipped-shape LightGBM on logloss on the 15m published shards (all three symbols)?",
+   "verdict": "indeterminate"
+  },
+  {
+   "clock": [
+    "15m"
+   ],
+   "cost_stack": "none_statistical_metric",
+   "decides": false,
+   "id": "RQ-20261026-90d3-03",
+   "label_source": "bar_market",
+   "metric": "statistical",
+   "n": 60000,
+   "n_records": 3,
+   "pooling": "per_symbol",
+   "symbols_named": [
+    "BTC",
+    "ETH",
+    "SOL"
+   ],
+   "task": "regime_vol_head",
+   "theme": "ml_health",
+   "title": "Regime head: does multinomial logit (numpy) beat the shipped-shape LightGBM on logloss on the 15m published shards (all three symbols)?",
+   "verdict": "fail"
+  },
+  {
+   "clock": [
+    "15m"
+   ],
+   "cost_stack": "none_statistical_metric",
+   "decides": false,
+   "id": "RQ-20261026-a142-01",
+   "label_source": "bar_market",
+   "metric": "statistical",
+   "n": 60000,
+   "n_records": 3,
+   "pooling": "per_symbol",
+   "symbols_named": [
+    "BTC",
+    "ETH",
+    "SOL"
+   ],
+   "task": "regime_vol_head",
+   "theme": "ml_health",
+   "title": "Regime head: does a REGULARISED sklearn MLP (one 16-unit layer, alpha 0.1) beat the shipped-shape LightGBM on logloss on the 15m published shards, after the def",
+   "verdict": "fail"
+  },
+  {
+   "clock": [
+    "1h"
+   ],
+   "cost_stack": "none_statistical_metric",
+   "decides": false,
+   "id": "RQ-20261026-ed1c-29",
+   "label_source": "bar_market",
+   "metric": "statistical",
+   "n": 40000,
+   "n_records": 1,
+   "pooling": "per_symbol",
+   "symbols_named": [
+    "BTC",
+    "ETH",
+    "SOL"
+   ],
+   "task": "regime_vol_head",
+   "theme": "ml_health",
+   "title": "Regime head at 1h: does sklearn HistGradientBoosting beat the shipped-shape LightGBM on logloss on the BTC/ETH/SOL 1h published shards (1h transfer of RQ-202610",
+   "verdict": "indeterminate"
+  },
+  {
+   "clock": [
+    "1h"
+   ],
+   "cost_stack": "none_statistical_metric",
+   "decides": false,
+   "id": "RQ-20261026-ed1c-30",
+   "label_source": "bar_market",
+   "metric": "statistical",
+   "n": 40000,
+   "n_records": 2,
+   "pooling": "per_symbol",
+   "symbols_named": [
+    "BTC",
+    "ETH",
+    "SOL"
+   ],
+   "task": "regime_vol_head",
+   "theme": "ml_health",
+   "title": "Regime head at 1h: does sklearn ExtraTrees beat the shipped-shape LightGBM on logloss on the BTC/ETH/SOL 1h published shards (1h transfer of RQ-20261026-90d3-01",
+   "verdict": "fail"
+  },
+  {
+   "clock": [
+    "1h"
+   ],
+   "cost_stack": "none_statistical_metric",
+   "decides": false,
+   "id": "RQ-20261026-ed1c-31",
+   "label_source": "bar_market",
+   "metric": "statistical",
+   "n": 40000,
+   "n_records": 2,
+   "pooling": "per_symbol",
+   "symbols_named": [
+    "BTC",
+    "ETH",
+    "SOL"
+   ],
+   "task": "regime_vol_head",
+   "theme": "ml_health",
+   "title": "Regime head at 1h: does sklearn MLP beat the shipped-shape LightGBM on logloss on the BTC/ETH/SOL 1h published shards (1h transfer of RQ-20261026-90d3-01..03)?",
+   "verdict": "fail"
+  },
+  {
+   "clock": [
+    "1h"
+   ],
+   "cost_stack": "none_statistical_metric",
+   "decides": false,
+   "id": "RQ-20261026-ed1c-32",
+   "label_source": "bar_market",
+   "metric": "statistical",
+   "n": 40000,
+   "n_records": 2,
+   "pooling": "per_symbol",
+   "symbols_named": [
+    "BTC",
+    "ETH",
+    "SOL"
+   ],
+   "task": "regime_vol_head",
+   "theme": "ml_health",
+   "title": "Regime head at 1h: does CatBoost beat the shipped-shape LightGBM on logloss on the BTC/ETH/SOL 1h published shards (1h transfer of RQ-20261026-90d3-01..03)?",
+   "verdict": "fail"
+  },
+  {
+   "clock": [
+    "1h"
+   ],
+   "cost_stack": "none_statistical_metric",
+   "decides": false,
+   "id": "RQ-20261026-ed1c-33",
+   "label_source": "bar_market",
+   "metric": "statistical",
+   "n": 40000,
+   "n_records": 2,
+   "pooling": "per_symbol",
+   "symbols_named": [
+    "BTC",
+    "ETH",
+    "SOL"
+   ],
+   "task": "regime_vol_head",
+   "theme": "ml_health",
+   "title": "Regime head at 1h: does multinomial logit (numpy) beat the shipped-shape LightGBM on logloss on the BTC/ETH/SOL 1h published shards (1h transfer of RQ-20261026-",
+   "verdict": "fail"
+  },
+  {
+   "clock": [
+    "1h"
+   ],
+   "cost_stack": "none_statistical_metric",
+   "decides": false,
+   "id": "RQ-20261026-ed1c-34",
+   "label_source": "bar_market",
+   "metric": "statistical",
+   "n": 40000,
+   "n_records": 2,
+   "pooling": "per_symbol",
+   "symbols_named": [
+    "BTC",
+    "ETH",
+    "SOL"
+   ],
+   "task": "regime_vol_head",
+   "theme": "ml_health",
+   "title": "Regime head at 1h: does calibrated sklearn logistic regression beat the shipped-shape LightGBM on logloss on the BTC/ETH/SOL 1h published shards (1h transfer of",
+   "verdict": "fail"
+  },
+  {
+   "clock": [
+    "1h"
+   ],
+   "cost_stack": "none_statistical_metric",
+   "decides": false,
+   "id": "RQ-20261027-002",
+   "label_source": "bar_market",
+   "metric": "statistical",
+   "n": 43800,
+   "n_records": 1,
+   "pooling": "per_symbol",
+   "symbols_named": [
+    "ETH",
+    "SOL"
+   ],
+   "task": "regime_vol_head",
+   "theme": "ml_health",
+   "title": "LONGER-TAIL CONFIRMATION of the range-vol lift on the ETHUSDT 1h regime head: does lgbm_yz beat lgbm_base on 60000 bars when the first read on 40000 was INDETER",
+   "verdict": "indeterminate"
+  },
+  {
+   "clock": [
+    "1h"
+   ],
+   "cost_stack": "none_statistical_metric",
+   "decides": false,
+   "id": "RQ-20261027-006",
+   "label_source": "bar_market",
+   "metric": "statistical",
+   "n": 43800,
+   "n_records": 2,
+   "pooling": "per_symbol",
+   "symbols_named": [
+    "BTC",
+    "SOL"
+   ],
+   "task": "regime_vol_head",
+   "theme": "ml_health",
+   "title": "LONGER-TAIL CONFIRMATION of the range-vol lift on the BTCUSDT 1h regime head: does lgbm_yz beat lgbm_base on 60000 bars when the first read on 40000 failed with",
+   "verdict": "fail"
+  },
+  {
+   "clock": [
+    "15m",
+    "1h"
+   ],
+   "cost_stack": "none_statistical_metric",
+   "decides": false,
+   "id": "RQ-20261027-3e41-15",
+   "label_source": "bar_market",
+   "metric": "statistical",
+   "n": 60000,
+   "n_records": 1,
+   "pooling": "per_symbol",
+   "symbols_named": [
+    "BTC",
+    "ETH",
+    "SOL"
+   ],
+   "task": "direction_head",
+   "theme": "ml_health",
+   "title": "Direction at 15m, LightGBM regularised: does it beat the class prior on log-loss on BTC, ETH and SOL 15m shards (the sub-hour information question the desk prog",
+   "verdict": "indeterminate"
+  },
+  {
+   "clock": [
+    "15m",
+    "1h"
+   ],
+   "cost_stack": "none_statistical_metric",
+   "decides": false,
+   "id": "RQ-20261027-3e41-16",
+   "label_source": "bar_market",
+   "metric": "statistical",
+   "n": 60000,
+   "n_records": 1,
+   "pooling": "per_symbol",
+   "symbols_named": [
+    "BTC",
+    "ETH",
+    "SOL"
+   ],
+   "task": "direction_head",
+   "theme": "ml_health",
+   "title": "Direction at 15m, CatBoost depth 4: does it beat the class prior on log-loss on BTC, ETH and SOL 15m shards (the sub-hour information question the desk program ",
+   "verdict": "indeterminate"
+  },
+  {
+   "clock": [
+    "15m"
+   ],
+   "cost_stack": "none_statistical_metric",
+   "decides": false,
+   "id": "RQ-20261027-b376-01",
+   "label_source": "bar_market",
+   "metric": "statistical",
+   "n": 60000,
+   "n_records": 1,
+   "pooling": "per_symbol",
+   "symbols_named": [
+    "BTC",
+    "ETH",
+    "SOL"
+   ],
+   "task": "regime_vol_head",
+   "theme": "ml_health",
+   "title": "Regime head: does a bagged-tree ExtraTrees arm (300 trees, min_samples_leaf 20, a different inductive bias from boosting) beat the shipped-shape LightGBM on log",
+   "verdict": "indeterminate"
+  },
+  {
+   "clock": [],
+   "cost_stack": "unstated",
+   "decides": false,
+   "id": "RQ-20261027-fe57-03",
+   "label_source": "bar_market",
+   "metric": "other",
+   "n": null,
+   "n_records": 1,
+   "pooling": "unstated",
+   "symbols_named": [],
+   "task": "other",
+   "theme": "live_strategy",
+   "title": "Desk edge program, lever 5: is the fitted model's most confident tail a REVERSAL edge? Fade the top 1% / 0.2% of ridge-on-P+ picks on the era folds 2022-01..202",
+   "verdict": "not_applicable"
+  },
+  {
+   "clock": [
+    "1h"
+   ],
+   "cost_stack": "none_statistical_metric",
+   "decides": false,
+   "id": "RQ-20261028-2a2e-09",
+   "label_source": "bar_market",
+   "metric": "statistical",
+   "n": 40000,
+   "n_records": 1,
+   "pooling": "per_symbol",
+   "symbols_named": [
+    "SOL"
+   ],
+   "task": "regime_vol_head",
+   "theme": "ml_health",
+   "title": "Model-family transfer to the SOL 1h regime head: does sklearn HistGradientBoosting or ExtraTrees beat the class prior on LOG-LOSS (SOLUSDT)?",
+   "verdict": "pass"
+  },
+  {
+   "clock": [
+    "1h"
+   ],
+   "cost_stack": "none_statistical_metric",
+   "decides": false,
+   "id": "RQ-20261028-2a2e-10",
+   "label_source": "bar_market",
+   "metric": "statistical",
+   "n": 40000,
+   "n_records": 2,
+   "pooling": "per_symbol",
+   "symbols_named": [
+    "SOL"
+   ],
+   "task": "direction_head",
+   "theme": "ml_health",
+   "title": "Direction-label model-family transfer to SOL 1h: does CatBoost or HistGradientBoosting beat the class prior on LOG-LOSS (SOLUSDT)?",
+   "verdict": "fail"
+  },
+  {
+   "clock": [
+    "1h"
+   ],
+   "cost_stack": "none_statistical_metric",
+   "decides": false,
+   "id": "RQ-20261028-2a2e-11",
+   "label_source": "none",
+   "metric": "statistical",
+   "n": 40000,
+   "n_records": 1,
+   "pooling": "per_symbol",
+   "symbols_named": [
+    "BTC",
+    "ETH",
+    "SOL"
+   ],
+   "task": "infra_parity_drift",
+   "theme": "ml_health",
+   "title": "Regime-head health monitor (weekly): does LightGBM still beat the class prior on 1h regime LOG-LOSS on BTC, ETH and SOL on the latest 40,000 bars?",
+   "verdict": "pass"
+  },
+  {
+   "clock": [
+    "2h",
+    "4h"
+   ],
+   "cost_stack": "full_or_stated",
+   "decides": true,
+   "id": "RQ-20261029-5785-01",
+   "label_source": "strategy_trades",
+   "metric": "net_r",
+   "n": null,
+   "n_records": 2,
+   "pooling": "unstated",
+   "symbols_named": [],
+   "task": "entry_filter_meta",
+   "theme": "ml_health",
+   "title": "ML-REAL-MONEY-OVERLAY: is a reduce-only meta-label overlay (TAKE 1.0 / REDUCE 0.5), trained on the real-money legs' own Stage-0 trade corpora, NON-INFERIOR to t",
+   "verdict": "indeterminate"
+  },
+  {
+   "clock": [],
+   "cost_stack": "unstated",
+   "decides": false,
+   "id": "RQ-20261029-5785-02",
+   "label_source": "none",
+   "metric": "other",
+   "n": null,
+   "n_records": 2,
+   "pooling": "per_symbol",
+   "symbols_named": [
+    "SOL"
+   ],
+   "task": "infra_parity_drift",
+   "theme": "ml_health",
+   "title": "ML-REAL-MONEY-OVERLAY V2: the RQ-20261029-5785-01 overlay gate with trade-identity corpus parity and a BLIND fresh-window holdout (2017-09..2020-06) that a fami",
+   "verdict": "pass"
+  },
+  {
+   "clock": [],
+   "cost_stack": "none_statistical_metric",
+   "decides": false,
+   "id": "RQ-20261029-5785-03",
+   "label_source": "strategy_trades",
+   "metric": "statistical",
+   "n": null,
+   "n_records": 2,
+   "pooling": "unstated",
+   "symbols_named": [],
+   "task": "entry_filter_meta",
+   "theme": "ml_health",
+   "title": "ML-REAL-MONEY-OVERLAY refine 1/3 -- CALIBRATION: do the overlay's probabilities carry skill over the training base rate once an isotonic calibrator is fit insid",
+   "verdict": "pass"
+  },
+  {
+   "clock": [],
+   "cost_stack": "full_or_stated",
+   "decides": true,
+   "id": "RQ-20261029-5785-04",
+   "label_source": "strategy_trades",
+   "metric": "net_r",
+   "n": null,
+   "n_records": 2,
+   "pooling": "unstated",
+   "symbols_named": [],
+   "task": "entry_filter_meta",
+   "theme": "ml_health",
+   "title": "ML-REAL-MONEY-OVERLAY refine 2/3 -- NESTED SELECTION: does the overlay still pass when the configuration is chosen inside each outer CPCV training set (the PBO ",
+   "verdict": "pass"
+  },
+  {
+   "clock": [],
+   "cost_stack": "full_or_stated",
+   "decides": true,
+   "id": "RQ-20261029-7294-02",
+   "label_source": "strategy_trades",
+   "metric": "net_r",
+   "n": null,
+   "n_records": 1,
+   "pooling": "unstated",
+   "symbols_named": [],
+   "task": "in_trade_exit",
+   "theme": "ml_health",
+   "title": "Q-TM1: does a GBDT action-value exit/tighten policy beat the incumbent (hold-to-bracket and the best rule lever) on the six money legs as traded, net of cost, u",
+   "verdict": "fail"
+  },
+  {
+   "clock": [],
+   "cost_stack": "full_or_stated",
+   "decides": true,
+   "id": "RQ-20261029-a7e1-01",
+   "label_source": "strategy_trades",
+   "metric": "net_r",
+   "n": 1831,
+   "n_records": 1,
+   "pooling": "unstated",
+   "symbols_named": [],
+   "task": "in_trade_exit",
+   "theme": "ml_health",
+   "title": "ML-AM-NEXT-LIVE: an ML-gated 50% PARTIAL CLOSE on the real-money legs -- non-inferior on net R, a material risk cut (RULE-AM-RISK-ADJUSTED-V1), and better than ",
+   "verdict": "fail"
+  },
+  {
+   "clock": [
+    "15m",
+    "1h"
+   ],
+   "cost_stack": "none_statistical_metric",
+   "decides": false,
+   "id": "RQ-20261030-41cc-12",
+   "label_source": "bar_market",
+   "metric": "statistical",
+   "n": 60000,
+   "n_records": 1,
+   "pooling": "per_symbol",
+   "symbols_named": [
+    "BTC",
+    "ETH",
+    "SOL"
+   ],
+   "task": "regime_vol_head",
+   "theme": "ml_health",
+   "title": "Regime head at 15m, LightGBM vs class prior with a forward holdout: does the 1h log-loss lift (2a2e-11) hold on the 15m published shards, CV and rows after 2026",
+   "verdict": "pass"
+  },
+  {
+   "clock": [
+    "1h"
+   ],
+   "cost_stack": "none_statistical_metric",
+   "decides": false,
+   "id": "RQ-20261030-41cc-13",
+   "label_source": "bar_market",
+   "metric": "statistical",
+   "n": 40000,
+   "n_records": 1,
+   "pooling": "per_symbol",
+   "symbols_named": [
+    "BTC",
+    "ETH",
+    "SOL"
+   ],
+   "task": "regime_vol_head",
+   "theme": "ml_health",
+   "title": "Regime head at 1h without calendar features: does LightGBM still beat the class prior when hour_of_day and dayofweek are removed (volatility and returns only)?",
+   "verdict": "pass"
+  },
+  {
+   "clock": [
+    "1h"
+   ],
+   "cost_stack": "none_statistical_metric",
+   "decides": false,
+   "id": "RQ-20261030-41cc-14",
+   "label_source": "bar_market",
+   "metric": "statistical",
+   "n": 40000,
+   "n_records": 1,
+   "pooling": "per_symbol",
+   "symbols_named": [
+    "BTC",
+    "ETH",
+    "SOL"
+   ],
+   "task": "regime_vol_head",
+   "theme": "ml_health",
+   "title": "Regime head at 1h with a forward holdout: does LightGBM beat the class prior on rows after 2026-07-12, not only in CV, on BTC, ETH and SOL?",
+   "verdict": "pass"
+  },
+  {
+   "clock": [
+    "1h"
+   ],
+   "cost_stack": "none_statistical_metric",
+   "decides": false,
+   "id": "RQ-20261030-41cc-15",
+   "label_source": "bar_market",
+   "metric": "statistical",
+   "n": 40000,
+   "n_records": 1,
+   "pooling": "per_symbol",
+   "symbols_named": [
+    "BTC",
+    "ETH",
+    "SOL"
+   ],
+   "task": "direction_head",
+   "theme": "ml_health",
+   "title": "Direction at 1h, LightGBM regularised: does it beat the class prior on log-loss on BTC, ETH and SOL 1h published shards?",
+   "verdict": "indeterminate"
+  },
+  {
+   "clock": [
+    "15m"
+   ],
+   "cost_stack": "none_statistical_metric",
+   "decides": false,
+   "id": "RQ-20261030-41cc-16",
+   "label_source": "bar_market",
+   "metric": "statistical",
+   "n": 60000,
+   "n_records": 1,
+   "pooling": "per_symbol",
+   "symbols_named": [
+    "BTC",
+    "ETH",
+    "SOL"
+   ],
+   "task": "regime_vol_head",
+   "theme": "ml_health",
+   "title": "Regime head at 15m without calendar features: does LightGBM still beat the class prior when hour_of_day and dayofweek are removed?",
+   "verdict": "pass"
+  },
+  {
+   "clock": [
+    "1h"
+   ],
+   "cost_stack": "none_statistical_metric",
+   "decides": false,
+   "id": "RQ-20261030-41cc-25",
+   "label_source": "bar_market",
+   "metric": "statistical",
+   "n": 40000,
+   "n_records": 1,
+   "pooling": "per_symbol",
+   "symbols_named": [
+    "BTC",
+    "ETH",
+    "SOL"
+   ],
+   "task": "direction_head",
+   "theme": "ml_health",
+   "title": "Direction at 1h without calendar features: does regularised LightGBM beat the class prior when hour_of_day and dayofweek are removed?",
+   "verdict": "indeterminate"
+  },
+  {
+   "clock": [
+    "1h"
+   ],
+   "cost_stack": "none_statistical_metric",
+   "decides": false,
+   "id": "RQ-20261030-41cc-26",
+   "label_source": "bar_market",
+   "metric": "statistical",
+   "n": 43800,
+   "n_records": 1,
+   "pooling": "per_symbol",
+   "symbols_named": [
+    "BTC",
+    "ETH",
+    "SOL"
+   ],
+   "task": "regime_vol_head",
+   "theme": "ml_health",
+   "title": "Regime head at 1h on a longer history: does LightGBM beat the class prior on the latest 90,000 bars (about 10 years) of BTC, ETH and SOL?",
+   "verdict": "pass"
+  },
+  {
+   "clock": [
+    "15m"
+   ],
+   "cost_stack": "none_statistical_metric",
+   "decides": false,
+   "id": "RQ-20261030-41cc-27",
+   "label_source": "bar_market",
+   "metric": "statistical",
+   "n": 175272,
+   "n_records": 2,
+   "pooling": "per_symbol",
+   "symbols_named": [
+    "BTC",
+    "ETH",
+    "SOL"
+   ],
+   "task": "regime_vol_head",
+   "theme": "ml_health",
+   "title": "Regime head at 15m on a longer history: does LightGBM beat the class prior on the latest 200,000 bars of BTC, ETH and SOL?",
+   "verdict": "pass"
+  },
+  {
+   "clock": [],
+   "cost_stack": "unstated",
+   "decides": false,
+   "id": "RQ-20261030-824b-01",
+   "label_source": "none",
+   "metric": "net_r",
+   "n": 2627,
+   "n_records": 1,
+   "pooling": "pooled_cross_symbol",
+   "symbols_named": [],
+   "task": "infra_parity_drift",
+   "theme": "ml_health",
+   "title": "TM-BENCH v1 re-entry test: does scripts/research/tm_bench.py pass its selfcheck, score HOLD against itself as exactly 0, and reproduce the 0.756 R/trade hindsig",
+   "verdict": "pass"
+  },
+  {
+   "clock": [],
+   "cost_stack": "full_or_stated",
+   "decides": true,
+   "id": "RQ-20261030-c7a1-01",
+   "label_source": "strategy_trades",
+   "metric": "net_r",
+   "n": 2627,
+   "n_records": 1,
+   "pooling": "unstated",
+   "symbols_named": [],
+   "task": "in_trade_exit",
+   "theme": "ml_health",
+   "title": "Q-TM1b: is the TM-BENCH per-action advantage PREDICTABLE out of fold at all (rank calibration vs a shuffled control), and does an action-value policy restricted",
+   "verdict": "fail"
+  },
+  {
+   "clock": [
+    "1h"
+   ],
+   "cost_stack": "none_statistical_metric",
+   "decides": false,
+   "id": "RQ-20261031-a4e7-05",
+   "label_source": "bar_market",
+   "metric": "statistical",
+   "n": 43800,
+   "n_records": 1,
+   "pooling": "per_symbol",
+   "symbols_named": [
+    "BTC",
+    "ETH",
+    "SOL"
+   ],
+   "task": "regime_vol_head",
+   "theme": "ml_health",
+   "title": "Regime head at 1h: does ExtraTrees match the default LightGBM on log-loss on BTC, ETH and SOL (non-inferiority)?",
+   "verdict": "fail"
+  },
+  {
+   "clock": [
+    "15m"
+   ],
+   "cost_stack": "none_statistical_metric",
+   "decides": false,
+   "id": "RQ-20261031-a4e7-06",
+   "label_source": "bar_market",
+   "metric": "statistical",
+   "n": 60000,
+   "n_records": 1,
+   "pooling": "per_symbol",
+   "symbols_named": [
+    "BTC",
+    "ETH",
+    "SOL"
+   ],
+   "task": "regime_vol_head",
+   "theme": "ml_health",
+   "title": "Regime head at 15m: does sklearn HistGradientBoosting match the default LightGBM on log-loss on BTC, ETH and SOL (non-inferiority)?",
+   "verdict": "pass"
+  },
+  {
+   "clock": [
+    "1h"
+   ],
+   "cost_stack": "none_statistical_metric",
+   "decides": false,
+   "id": "RQ-20261031-a4e7-07",
+   "label_source": "bar_market",
+   "metric": "statistical",
+   "n": 43800,
+   "n_records": 1,
+   "pooling": "per_symbol",
+   "symbols_named": [
+    "BTC",
+    "ETH",
+    "SOL"
+   ],
+   "task": "regime_vol_head",
+   "theme": "ml_health",
+   "title": "Regime head at 1h: does a calibrated linear head match the default LightGBM on log-loss on BTC, ETH and SOL (non-inferiority)?",
+   "verdict": "fail"
+  },
+  {
+   "clock": [
+    "1h"
+   ],
+   "cost_stack": "none_statistical_metric",
+   "decides": false,
+   "id": "RQ-20261031-a4e7-08",
+   "label_source": "bar_market",
+   "metric": "statistical",
+   "n": 43800,
+   "n_records": 1,
+   "pooling": "per_symbol",
+   "symbols_named": [
+    "BTC",
+    "ETH",
+    "SOL"
+   ],
+   "task": "regime_vol_head",
+   "theme": "ml_health",
+   "title": "Regime head at 1h with a 96-row embargo (4x the standard): does LightGBM still beat the class prior on log-loss on BTC, ETH and SOL?",
+   "verdict": "pass"
+  },
+  {
+   "clock": [
+    "15m"
+   ],
+   "cost_stack": "none_statistical_metric",
+   "decides": false,
+   "id": "RQ-20261031-a4e7-09",
+   "label_source": "bar_market",
+   "metric": "statistical",
+   "n": 60000,
+   "n_records": 1,
+   "pooling": "per_symbol",
+   "symbols_named": [
+    "BTC",
+    "ETH",
+    "SOL"
+   ],
+   "task": "direction_head",
+   "theme": "ml_health",
+   "title": "Direction head at 15m: does the regularised LightGBM beat the class prior on log-loss on BTC, ETH and SOL?",
+   "verdict": "indeterminate"
+  },
+  {
+   "clock": [
+    "1h"
+   ],
+   "cost_stack": "none_statistical_metric",
+   "decides": false,
+   "id": "RQ-20261031-a4e7-10",
+   "label_source": "bar_market",
+   "metric": "statistical",
+   "n": 43800,
+   "n_records": 1,
+   "pooling": "per_symbol",
+   "symbols_named": [
+    "BTC",
+    "ETH",
+    "SOL"
+   ],
+   "task": "direction_head",
+   "theme": "ml_health",
+   "title": "Direction head at 1h: does ExtraTrees beat the class prior on log-loss on BTC, ETH and SOL?",
+   "verdict": "indeterminate"
+  },
+  {
+   "clock": [
+    "1h"
+   ],
+   "cost_stack": "none_statistical_metric",
+   "decides": false,
+   "id": "RQ-20261031-d5dd-17",
+   "label_source": "bar_market",
+   "metric": "statistical",
+   "n": 43800,
+   "n_records": 1,
+   "pooling": "per_symbol",
+   "symbols_named": [
+    "BTC",
+    "ETH",
+    "SOL"
+   ],
+   "task": "regime_vol_head",
+   "theme": "ml_health",
+   "title": "Regime head at 1h: does adding HAR-RV day/week/month realised-variance features lift LightGBM log-loss over LightGBM on the shipped features on BTC, ETH and SOL",
+   "verdict": "pass"
+  },
+  {
+   "clock": [
+    "15m"
+   ],
+   "cost_stack": "none_statistical_metric",
+   "decides": false,
+   "id": "RQ-20261031-d5dd-18",
+   "label_source": "bar_market",
+   "metric": "statistical",
+   "n": 60000,
+   "n_records": 1,
+   "pooling": "per_symbol",
+   "symbols_named": [
+    "BTC",
+    "ETH",
+    "SOL"
+   ],
+   "task": "regime_vol_head",
+   "theme": "ml_health",
+   "title": "Regime head at 15m: does a shallow, strongly regularised LightGBM (7 leaves, min_child 200, lambda 5) match the default LightGBM on log-loss on BTC, ETH and SOL",
+   "verdict": "pass"
+  },
+  {
+   "clock": [
+    "1h"
+   ],
+   "cost_stack": "none_statistical_metric",
+   "decides": false,
+   "id": "RQ-20261031-d5dd-19",
+   "label_source": "bar_market",
+   "metric": "statistical",
+   "n": 43800,
+   "n_records": 1,
+   "pooling": "per_symbol",
+   "symbols_named": [
+    "BTC",
+    "ETH",
+    "SOL"
+   ],
+   "task": "direction_head",
+   "theme": "ml_health",
+   "title": "Direction head at 1h: does adding HAR-RV features lift regularised LightGBM log-loss over the class prior on BTC, ETH and SOL?",
+   "verdict": "indeterminate"
+  },
+  {
+   "clock": [
+    "1h"
+   ],
+   "cost_stack": "none_statistical_metric",
+   "decides": false,
+   "id": "RQ-20261031-d5dd-20",
+   "label_source": "bar_market",
+   "metric": "statistical",
+   "n": 43800,
+   "n_records": 2,
+   "pooling": "per_symbol",
+   "symbols_named": [
+    "BTC",
+    "ETH",
+    "SOL"
+   ],
+   "task": "regime_vol_head",
+   "theme": "ml_health",
+   "title": "Regime head at 1h: does the regularised LightGBM (7 leaves, min_child 200) match the default LightGBM on log-loss on BTC, ETH and SOL (non-inferiority)?",
+   "verdict": "fail"
+  }
+ ],
+ "summary": {
+  "bar_level_market_label_AND_net_r_AND_pooled": 0,
+  "clock_counts": {
+   "15m": 59,
+   "1d": 3,
+   "1h": 84,
+   "2h": 5,
+   "4h": 4,
+   "5m": 4,
+   "daily": 3,
+   "unstated": 36
+  },
+  "cost_stack": {
+   "full_or_stated": 33,
+   "none_statistical_metric": 132,
+   "unstated": 10
+  },
+  "decides": {
+   "False": 143,
+   "True": 32
+  },
+  "label_source": {
+   "bar_market": 110,
+   "none": 21,
+   "strategy_trades": 44
+  },
+  "median_n_by_label_source": {
+   "bar_market": 40000,
+   "none": 8694.0,
+   "strategy_trades": 549
+  },
+  "median_n_by_task": {
+   "direction_head": 40000,
+   "entry_filter_meta": 400,
+   "in_trade_exit": 1011,
+   "infra_parity_drift": 8694.0,
+   "other": 40000,
+   "regime_vol_head": 40000
+  },
+  "metric": {
+   "net_r": 35,
+   "other": 8,
+   "statistical": 132
+  },
+  "n_unread_by_task": {
+   "entry_filter_meta": 4,
+   "in_trade_exit": 2,
+   "infra_parity_drift": 7,
+   "other": 1,
+   "regime_vol_head": 4
+  },
+  "pass_by_metric": {
+   "net_r": {
+    "fail": 23,
+    "indeterminate": 3,
+    "not_applicable": 1,
+    "pass": 8
+   },
+   "other": {
+    "fail": 1,
+    "indeterminate": 1,
+    "not_applicable": 1,
+    "pass": 5
+   },
+   "statistical": {
+    "fail": 45,
+    "indeterminate": 57,
+    "not_applicable": 3,
+    "pass": 27
+   }
+  },
+  "pooling": {
+   "per_symbol": 127,
+   "pooled_cross_symbol": 2,
+   "unstated": 46
+  },
+  "task": {
+   "direction_head": 16,
+   "entry_filter_meta": 22,
+   "in_trade_exit": 21,
+   "infra_parity_drift": 21,
+   "other": 4,
+   "regime_vol_head": 91
+  },
+  "task_label_metric_verdict": [
+   {
+    "count": 36,
+    "label_source": "bar_market",
+    "metric": "statistical",
+    "task": "regime_vol_head",
+    "verdict": "indeterminate"
+   },
+   {
+    "count": 29,
+    "label_source": "bar_market",
+    "metric": "statistical",
+    "task": "regime_vol_head",
+    "verdict": "fail"
+   },
+   {
+    "count": 22,
+    "label_source": "bar_market",
+    "metric": "statistical",
+    "task": "regime_vol_head",
+    "verdict": "pass"
+   },
+   {
+    "count": 15,
+    "label_source": "strategy_trades",
+    "metric": "net_r",
+    "task": "entry_filter_meta",
+    "verdict": "fail"
+   },
+   {
+    "count": 11,
+    "label_source": "bar_market",
+    "metric": "statistical",
+    "task": "direction_head",
+    "verdict": "indeterminate"
+   },
+   {
+    "count": 8,
+    "label_source": "strategy_trades",
+    "metric": "net_r",
+    "task": "in_trade_exit",
+    "verdict": "fail"
+   },
+   {
+    "count": 5,
+    "label_source": "none",
+    "metric": "statistical",
+    "task": "infra_parity_drift",
+    "verdict": "fail"
+   },
+   {
+    "count": 5,
+    "label_source": "bar_market",
+    "metric": "statistical",
+    "task": "direction_head",
+    "verdict": "fail"
+   },
+   {
+    "count": 5,
+    "label_source": "strategy_trades",
+    "metric": "statistical",
+    "task": "in_trade_exit",
+    "verdict": "fail"
+   },
+   {
+    "count": 4,
+    "label_source": "strategy_trades",
+    "metric": "net_r",
+    "task": "entry_filter_meta",
+    "verdict": "pass"
+   },
+   {
+    "count": 4,
+    "label_source": "none",
+    "metric": "statistical",
+    "task": "infra_parity_drift",
+    "verdict": "pass"
+   },
+   {
+    "count": 4,
+    "label_source": "strategy_trades",
+    "metric": "statistical",
+    "task": "in_trade_exit",
+    "verdict": "indeterminate"
+   },
+   {
+    "count": 4,
+    "label_source": "none",
+    "metric": "other",
+    "task": "infra_parity_drift",
+    "verdict": "pass"
+   },
+   {
+    "count": 3,
+    "label_source": "bar_market",
+    "metric": "statistical",
+    "task": "regime_vol_head",
+    "verdict": "not_applicable"
+   },
+   {
+    "count": 3,
+    "label_source": "none",
+    "metric": "statistical",
+    "task": "infra_parity_drift",
+    "verdict": "indeterminate"
+   },
+   {
+    "count": 2,
+    "label_source": "strategy_trades",
+    "metric": "net_r",
+    "task": "in_trade_exit",
+    "verdict": "pass"
+   },
+   {
+    "count": 2,
+    "label_source": "strategy_trades",
+    "metric": "net_r",
+    "task": "in_trade_exit",
+    "verdict": "indeterminate"
+   },
+   {
+    "count": 2,
+    "label_source": "none",
+    "metric": "net_r",
+    "task": "infra_parity_drift",
+    "verdict": "pass"
+   },
+   {
+    "count": 2,
+    "label_source": "bar_market",
+    "metric": "statistical",
+    "task": "other",
+    "verdict": "indeterminate"
+   },
+   {
+    "count": 1,
+    "label_source": "none",
+    "metric": "net_r",
+    "task": "infra_parity_drift",
+    "verdict": "not_applicable"
+   },
+   {
+    "count": 1,
+    "label_source": "none",
+    "metric": "other",
+    "task": "infra_parity_drift",
+    "verdict": "fail"
+   },
+   {
+    "count": 1,
+    "label_source": "bar_market",
+    "metric": "other",
+    "task": "regime_vol_head",
+    "verdict": "pass"
+   },
+   {
+    "count": 1,
+    "label_source": "strategy_trades",
+    "metric": "statistical",
+    "task": "entry_filter_meta",
+    "verdict": "fail"
+   },
+   {
+    "count": 1,
+    "label_source": "strategy_trades",
+    "metric": "statistical",
+    "task": "other",
+    "verdict": "indeterminate"
+   },
+   {
+    "count": 1,
+    "label_source": "none",
+    "metric": "other",
+    "task": "infra_parity_drift",
+    "verdict": "indeterminate"
+   },
+   {
+    "count": 1,
+    "label_source": "bar_market",
+    "metric": "other",
+    "task": "other",
+    "verdict": "not_applicable"
+   },
+   {
+    "count": 1,
+    "label_source": "strategy_trades",
+    "metric": "net_r",
+    "task": "entry_filter_meta",
+    "verdict": "indeterminate"
+   },
+   {
+    "count": 1,
+    "label_source": "strategy_trades",
+    "metric": "statistical",
+    "task": "entry_filter_meta",
+    "verdict": "pass"
+   }
+  ],
+  "verdict": {
+   "fail": 69,
+   "indeterminate": 61,
+   "not_applicable": 5,
+   "pass": 40
+  }
+ }
+}

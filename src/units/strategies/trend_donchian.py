@@ -57,6 +57,7 @@ from typing import Any, Dict, Optional
 
 import pandas as pd
 
+from src.runtime.trail_cross import trail_cross_verdict
 from src.runtime.tp_revision import merge_verdict, plan_tp_revision
 from src.runtime.tp_venue_cap import (  # the ONE owner of the clamp
     TP_VENUE_CAP_PCT as _TP_SENTINEL_CAP_PCT)
@@ -483,7 +484,10 @@ def order_package(cfg: dict, candles_df: Optional[pd.DataFrame] = None) -> dict:
                  "momentum_stale_bars", "momentum_stale_adx_below", "adx_period",
                  # TP doctrine B1: the declared TP-revision rule
                  # (src/runtime/tp_revision.py). Absent = no revision.
-                 "tp_revision"):
+                 "tp_revision",
+                 # STRUCTURE-EXITS-DEFAULT: the declared structure exit
+                 # (src/runtime/structure_exit_live.py). Absent = off, byte-identical.
+                 "structure_exit"):
         if cfg.get(_key) is not None:
             package["meta"][_key] = cfg[_key]
     if confirm_bars > 0:
@@ -803,6 +807,16 @@ def monitor(cfg, candles_df, open_pkg):
     if eh_verdict is not None:
         return eh_verdict
 
+    # 2.9 STRUCTURE-EXITS-DEFAULT: a leg that DECLARES `structure_exit` has its
+    # SL+TP stepped by the shared causal structure detector instead of the
+    # chandelier + TP revision (the harness arm replaces the chandelier the same
+    # way). Every close path above has already had its turn (a close beats a
+    # move). Undeclared = this block is skipped, byte-identical.
+    from src.runtime.structure_exit_live import declared as _sx_declared
+    if _sx_declared(meta) is not None:
+        from src.runtime.structure_exit_live import structure_exit_verdict
+        return structure_exit_verdict(meta, open_pkg, candles_df)
+
     # 3. Chandelier trail ratchet, then (TP doctrine B1) the declared TP
     # revision merged into the same verdict. A close verdict above has already
     # returned; a revision never rides on a close.
@@ -958,15 +972,20 @@ def _trail_verdict(meta, cfg_dict, open_pkg, candles_df, current_price, directio
         if direction == "long":
             ext = float(window["high"].max())
             candidate = ext - trail_mult * atr
-            # Ratchet up only; never above the current price.
-            if candidate > sl and candidate < current_price:
-                return {"sl": round(candidate, 8)}
+            # Ratchet up only. Through the price = the harness has exited
+            # (TRAIL-RATCHET-AUDIT): close, do not keep the looser stop.
+            if candidate > sl:
+                if candidate < current_price:
+                    return {"sl": round(candidate, 8)}
+                return trail_cross_verdict(direction, candidate, sl, current_price)
         else:
             ext = float(window["low"].min())
             candidate = ext + trail_mult * atr
-            # Ratchet down only; never below the current price.
-            if candidate < sl and candidate > current_price:
-                return {"sl": round(candidate, 8)}
+            # Ratchet down only; through the price = close (see long side).
+            if candidate < sl:
+                if candidate > current_price:
+                    return {"sl": round(candidate, 8)}
+                return trail_cross_verdict(direction, candidate, sl, current_price)
     except (KeyError, ValueError, TypeError):
         return None
 

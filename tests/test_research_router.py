@@ -81,7 +81,7 @@ def test_runpod_is_never_auto_routed():
 
 def test_capacity_makes_a_unit_wait_and_a_fallback_class_moves_on():
     st = cr.BackendState(quota_hours=29.98)
-    st.inflight["github_runner"] = 3
+    st.inflight["github_runner"] = CFG["backends"]["github_runner"]["max_concurrent"]
     w = cr.resolve(unit(compute="cpu_light"), CFG, st)
     assert w.ok and w.wait and "at capacity" in w.reason
     st.inflight["kaggle"] = 1
@@ -238,6 +238,7 @@ def test_gpu_unit_waits_when_quota_is_unknown_or_below_floor_and_never_blocks_th
 
 def test_fire_dispatches_the_resolved_workflow_for_a_compute_only_unit(tmp_path, monkeypatch):
     monkeypatch.setattr(dq, "pending_stamp_units", lambda api=None: {})
+    monkeypatch.setattr(dq, "fired_run_units", lambda now, api=None, **k: {})
     monkeypatch.setattr(dq, "declared_inputs", lambda *a, **k: ["research_unit", "power_state"])
     monkeypatch.setattr(script_run, "plan", lambda *a, **k: type("P", (), {"ok": True, "errors": []})())
     dec, fired = _dry(tmp_path, monkeypatch, [("RQ-20300110-002", {"compute": "cpu_light", "routing": CPU_ROUTE})],
@@ -303,6 +304,7 @@ def test_utilization_record_has_explicit_read_state_and_week_rolls_up(tmp_path):
 
 def test_idle_fill_pulls_an_opted_in_recurring_unit_forward_only_into_free_capacity(tmp_path, monkeypatch):
     monkeypatch.setattr(dq, "pending_stamp_units", lambda api=None: {})
+    monkeypatch.setattr(dq, "fired_run_units", lambda now, api=None, **k: {})
     monkeypatch.setattr(dq, "declared_inputs", lambda *a, **k: ["research_unit", "power_state"])
     monkeypatch.setattr(script_run, "plan", lambda *a, **k: type("P", (), {"ok": True, "errors": []})())
     recent = (datetime.now(timezone.utc) - timedelta(hours=1)).isoformat()
@@ -314,8 +316,8 @@ def test_idle_fill_pulls_an_opted_in_recurring_unit_forward_only_into_free_capac
                       runs={"in_progress": [{"workflowName": "x", "createdAt": datetime.now(timezone.utc).isoformat()}]})
     assert dec["RQ-20300110-002"]["outcome"] == dq.DISPATCHED and dec["RQ-20300110-002"]["idle_fill"] is True
     assert dec["RQ-20300110-003"]["outcome"] == dq.NOT_DUE
-    # no free capacity -> no fill: three runner runs already in flight
-    busy = [{"workflowName": "research-script-run", "createdAt": datetime.now(timezone.utc).isoformat()}] * 3
+    # no free capacity -> no fill: the runner backend is at its max_concurrent (read from the config, not hard-coded)
+    busy = [{"workflowName": "research-script-run", "createdAt": datetime.now(timezone.utc).isoformat()}] * CFG["backends"]["github_runner"]["max_concurrent"]
     dec2, _ = _dry(tmp_path / "b", monkeypatch, units, fire=True, runs={"in_progress": busy}) \
         if (tmp_path / "b").mkdir() is None else (None, None)
     assert dec2["RQ-20300110-002"]["outcome"] != dq.DISPATCHED
@@ -343,3 +345,40 @@ def test_a_recurring_unit_waits_from_when_it_came_due_not_from_its_last_stamp():
     # due long enough, it still gets served first: nothing starves
     monthly.raw["last_dispatched_at"] = (NOW - timedelta(days=41)).isoformat()
     assert dq.fair_order([monthly, hand], NOW, TH, CFG)[0] is monthly
+
+
+# ── COMPUTE-PREFER-KAGGLE (operator 2026-11-01): Kaggle CPU first for long CPU units; the runner is the fallback ──
+def _r(**kw):
+    return {"needs_trainer_resident_data": False, "needs_gpu": False, **kw}
+
+
+def test_kaggle_first_cpu_long_and_long_cpu_light():
+    assert cr.plan(unit(compute="cpu_long", routing=_r(est_minutes=90)), CFG).backend == "kaggle_cpu"
+    assert cr.plan(unit(compute="auto", routing=_r(est_minutes=90)), CFG).backend == "kaggle_cpu"
+    assert cr.plan(unit(compute="cpu_light", routing=_r(est_minutes=45)), CFG).backend == "kaggle_cpu"   # over the 30 min threshold
+    assert cr.plan(unit(compute="cpu_light", routing=_r(est_minutes=20)), CFG).backend == "github_runner"
+    assert cr.plan(unit(compute="cpu_light", routing=_r()), CFG).backend == "github_runner"             # no estimate: not promoted
+
+
+def test_kaggle_first_runner_only_stays_on_runner():
+    for k, v in [("why_runner", "fetches keyless public candles"), ("runner_only", True),
+                 ("needs_secrets", True), ("needs_internet", True)]:
+        for cls in ("cpu_long", "cpu_light"):
+            assert cr.plan(unit(compute=cls, routing=_r(est_minutes=90, **{k: v})), CFG).backend == "github_runner", (k, cls)
+
+
+def test_kaggle_first_falls_back_when_kaggle_full_and_explicit_wins():
+    u = unit(compute="cpu_long", routing=_r(est_minutes=90))
+    st = cr.BackendState(total_inflight=0, now=NOW)
+    assert cr.resolve(u, CFG, st).backend == "kaggle_cpu"
+    st.inflight["kaggle_cpu"] = 1
+    r = cr.resolve(u, CFG, st)
+    assert (r.ok, r.wait, r.backend) == (True, False, "github_runner") and "fallback" in r.reason
+    ex = cr.plan(unit(compute="cpu_long", workflow="research-script-run.yml", routing=_r(est_minutes=90)), CFG)
+    assert (ex.backend, ex.source) == ("github_runner", "explicit")
+
+
+def test_kaggle_first_gpu_classes_unchanged_and_published_not_duplicated():
+    assert cr.class_backends("gpu", unit(), CFG)[0] == "kaggle"
+    assert cr.class_backends("gpu_preferred", unit(), CFG) == ["kaggle", "github_runner"]
+    assert len(set(cr.class_backends("cpu_long", unit(), CFG))) == len(cr.class_backends("cpu_long", unit(), CFG))

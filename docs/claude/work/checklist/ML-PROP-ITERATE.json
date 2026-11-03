@@ -1,0 +1,22 @@
+{
+  "id": "ML-PROP-ITERATE",
+  "title": "ML-PROP-ITERATE: backtest every ML variant on the props until one passes the prop gate; keep the data to choose levers vs a prop-specific ML",
+  "phase": "build",
+  "state": "in_flight",
+  "owner": "manager",
+  "lane": "ML-PROP-ITERATE",
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [],
+  "blocked_on": [],
+  "note": "OPERATOR 2026-11-02 ~11:35Z, verbatim: \"for the prop accounts - we should continue backtesting on each variation of the ml until one passes, and also keep data to see if we need to pull different levers or create a prop specific ml\". Earlier popup, still binding: \"Run gate now, auto-add if pass (Rec.)\" - an ML variant that PASSES RULE-P5-GATE-BRK-PER-LEG-V3 on a firm may be added to that prop roster via a held Tier-3 PR the manager merges. BASELINE: ml_entry v1 FAILED all 3 firms (PR #22360; ETH+SOL n=381; edge CI lower bound -0.106 R; EV below the zero-edge null; ADA carries the pooled edge). MACHINERY (programme 05, research/programmes/05-prop.yaml): P5-MLV-GATE-* nodes gate each variant via scripts/research/ml_variant_prop_gate.py once its own Stage-0 unit passes (b621-b626 timeframe, 383f-01 moving TP, b609 v2); P5-MLV-GATE-DYNSL/-STRUCT/-NEXT = standing needs_authoring nodes for the dynamic-SL arms, structure-exit arms and future recipe fixes (authored in the same PR as the variant); P5-MLDIAG-DECOMP/-RISKCURVE/-MINEDGE = diagnostics (regime/side/tau/hour/cost-component decomposition; p_breach vs risk_pct; minimum edge per firm); P5-MLPROP-ENTRY-ETHSOL = pre-registered prop-specific ENTRY design, needs_authoring (docs/research/ml-prop-iterate-2026-11-02/PROP-ML-DESIGN.md). KNOWN GAP: no variant unit emits ledger_ethsol.jsonl yet, so a gate node that unlocks today returns read_state no_variant_ledger / INDETERMINATE naming the missing piece, never a PASS. CLOSES ONLY when a variant passes on a firm (held Tier-3 roster PR) or the programme review retires the line with a recorded reason - NEVER on an attempt count. Each result reports prior_ml_records_on_this_window (variants already graded on the same spent window) as provenance, not as a new gate.",
+  "due_by": "2026-11-09",
+  "roadmap": [
+    "L-PROP"
+  ],
+  "updated_at": "2026-11-02T11:37:22Z",
+  "updated_by": "session_01AFoLuHhBHn6jADuxMU2bu7",
+  "_seq": 893
+}

@@ -76,6 +76,13 @@ def bundle(unit: str, run_id: str, username: str, out: Path, *, repo: Path = _RE
         if problem:
             raise SystemExit("kaggle bundle refused: " + problem)
         published.append(pcfg[name]["kaggle_dataset"])
+    # KAGGLE-CANDLES: a unit whose run-time candle fetch the published candle dataset covers gets it mounted too.
+    try:
+        from scripts.research import candle_dataset as _cd
+        if _cd.covers(raw)[0] and _cd.DATASET_SLUG not in published:
+            published.append(_cd.DATASET_SLUG)
+    except Exception as exc:  # allow-silent: no coverage -> no extra mount; the unit then fetches from the network as before
+        print(f"candle dataset not attached: {type(exc).__name__}: {str(exc)[:120]}", file=sys.stderr)
     files = sorted(set(_tracked([*BUNDLE_ROOTS, f"research/queue/{unit}.yaml", *extra], repo)))
     out.mkdir(parents=True, exist_ok=True)
     tgz = out / "repo.tar.gz"

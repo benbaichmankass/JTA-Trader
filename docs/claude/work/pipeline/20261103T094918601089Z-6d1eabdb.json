@@ -1,0 +1,16 @@
+{
+  "due_when": {
+    "check_every_days": 7,
+    "due_date": "2026-11-10",
+    "kind": "date"
+  },
+  "id": "PI-20261103-6GNSZYUN-0010",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "SOAK-REGRADE 2026-11-03, docs/claude/work/findings/soak-regrade-20261103.md (ITERATE orphan)",
+    "rerun": "python3 scripts/research/iteration_orphans.py --json  # ml_entry_v2 must read covered; and python3 scripts/ops/mandate_resolver.py --leg ml_entry_v2 --from S1 --to S2 --account <real-money acct> --json"
+  },
+  "state": "queued",
+  "what": "ITERATION ORPHAN ml_entry_v2 (Stage-0 verdict none): no queued research unit carries an iteration: block for it (programme-review rule). No committed comms/strategy_evidence/ml_entry_v2.json (resolver R-RECORD-MISSING) — iteration_orphans reads ml_entry.json for it (n=907, +24.6R), a mismatch to resolve. First iteration: produce its own Stage-0 record (build_strategy_evidence.py) under RULE-D1. Close when a unit with iteration.subject=ml_entry_v2 is queued (iteration_orphans reads covered)."
+}

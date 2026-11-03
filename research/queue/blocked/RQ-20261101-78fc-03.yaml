@@ -1,0 +1,87 @@
+# Hand-authored 2026-11-01 by lane RESEARCH-ITERATE (Tier 1), dispatched by Manager Session 2026-11-01a. ITERATION unit: authored from a written diagnosis of the subject's last result. Decision rule registered BEFORE any run. Gates: none.
+id: RQ-20261101-78fc-03
+title: 'ITERATION 1 of ml-exit-head-donchian-1h (fail): does exit-head-donchian-1h-v1 add value OUT OF SAMPLE on trend_donchian_eth (the one leg
+  it still closes), and on the transitional/volatile cell where B3 refused it?'
+status: blocked
+cadence: once
+theme: ml_health
+priority: 1
+roadmap:
+- L-ML-LIVE
+programme: P2
+kind: experiment
+question: On a purged walk-forward of trend_donchian_eth's trades 2020-07..2026-10, does closing on the exit head beat the leg's own exits (B0)
+  by >= 0 R/trade with a trade-clustered 95% CI lower bound > -0.02 R?
+why_this_matters: 'Operator 2026-11-01 ~12:59Z: "if the data doesn''t pass, it goes back into research for improvments and testing. THere is no
+  other pipeline for underperforming strategies/mls." ml-exit-head-donchian-1h is not on real money and had no live research iteration (scripts/research/iteration_orphans.py,
+  2026-11-01).'
+iteration:
+  subject: ml-exit-head-donchian-1h
+  subject_kind: ml_model
+  from_result: Row ML-EXITHEAD-VALUE (B4)
+  verdict_read: fail
+  diagnosis: 'Row ML-EXITHEAD-VALUE: BTC FAIL OOS (-0.0141 R/trade, n_oos 1041, 1/3 folds) and SOL FAIL in-sample (-0.0246 R/trade) -> annotate;
+    ETH is +0.0215 R/trade IN-SAMPLE ONLY (n=583) and still closes live trades. A head trained on pooled 1h Donchian paths that loses on 2 of
+    3 symbols most likely learned the pooled sample, not a per-symbol exit signal; the ETH number has never been read out of sample.'
+  hypothesis: the ETH in-sample lift is overfit; out of sample it is <= 0 and the head should annotate on ETH too, unless it survives on the volatile
+    cell
+  attempt: 1
+  due_by: '2026-11-05'
+power:
+  expected_n: 500
+  min_detectable_effect: 0.02
+  effect_units: metric
+  sd: 1.0
+  design: paired
+  alpha: 0.05
+  power: 0.8
+  basis: INFERRED from the source result's population; the rule's own INDETERMINATE floor governs.
+  feasibility:
+    source: none
+    accrual_basis: Replays existing corpora; nothing accrues.
+decision_rule:
+  id: RULE-RQ-20261101-78fc-03
+  registered_at: '2026-11-01'
+  registered_before_run: true
+  statistic: On a purged walk-forward of trend_donchian_eth's trades 2020-07..2026-10, does closing on the exit head beat the leg's own exits
+    (B0) by >= 0 R/trade with a trade-clustered 95% CI lower bound > -0.02 R?
+  rule: 'KEEP iff OOS dR/trade >= 0 AND trade-clustered 95% CI LB > -0.02 R (the P5 rule, registered 2026-10-28, unchanged). Else a data-backed
+    Tier-3 de-risk: exit_head_action -> annotate on trend_donchian_eth, and the head returns to diagnosis (iteration 2: per-symbol heads). INDETERMINATE
+    if n_oos < 300.'
+  what_it_does_not_do: Serves, promotes or applies nothing; changes no config; places no order.
+practice_precedent: 'T1, M6 (docs/reference/trading-and-model-practice-principles.md): purged walk-forward, matched-random control, one pre-registered
+  read.'
+compute: cpu_long
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 8.0
+  est_minutes: 120
+  basis: Estimate; the first run replaces it.
+  why_runner: Replays committed or public corpora on CPU.
+value:
+  usd_at_stake_per_month: 120
+  confidence: 0.15
+  bucket: ai_trader
+  basis: planning weight by money rank; an estimate, not a measurement
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- RESEARCH-ITERATE
+- ML-VOLGATE-EXITHEAD-REPLAY
+what_it_does_not_do: Serves, promotes or applies nothing; changes no config; places no order.
+blocked_on:
+- kind: work_item
+  ref: ML-VOLGATE-EXITHEAD-REPLAY
+  what: 'PI-20261029-IFMPNGJK-0004: the ETH OOS walk-forward replay of the exit head on the B4 corpus'
+  clears_when: the replay command lands (row ML-VOLGATE-EXITHEAD-REPLAY); then git-mv to research/queue/ (rule unchanged)
+intervention_controls:
+  not_applicable: an offline model evaluation; the consumer's own gate applies any action
+ml_consumer:
+  consumer: src/runtime/exit_head_apply.py
+  decision: close or annotate on trend_donchian_eth
+  legs:
+  - trend_donchian_eth
+  book: demo_floor

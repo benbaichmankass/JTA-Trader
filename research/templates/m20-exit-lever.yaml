@@ -4,6 +4,23 @@ kind: experiment
 cadence: monthly
 theme: live_strategy
 priority: 3
+# Already a STRUCTURED design (control = the config-exact base book; one-factor cells per hard exit lever, IS/OOS gated); the
+# `structured:` block records that in the unit (design / levers_declared / iteration / arms counted) -- RESEARCH-TEMPLATES-STRUCTURED.
+structured:
+  mode: internal_sweep
+  lever: exit
+  correction: "per-cell IS+OOS gate (Path A/B); cells counted, a PASS is a Tier-3 declare PROPOSAL needing a fresh record"
+  k_variants: 7
+  hypothesis: a hard exit lever (stale / giveback / trail / momentum) moves net R and maxDD on this leg in both IS and OOS
+  arms:
+    - {key: A, note: "config-exact base book"}
+    - {key: stale_stop, note: "workflow-internal cell grid"}
+    - {key: giveback_stop, note: "workflow-internal cell grid"}
+    - {key: trail_geometry, note: "workflow-internal cell grid"}
+    - {key: trail_decay, note: "workflow-internal cell grid"}
+    - {key: vol_trail, note: "workflow-internal cell grid"}
+    - {key: momentum_trail, note: "workflow-internal cell grid"}
+    - {key: momentum_stale, note: "workflow-internal cell grid"}
 title: "M20 exit-lever sweep: {leg} (generated, monthly)"
 practice_precedent: "T2, T3, T4 (docs/reference/trading-and-model-practice-principles.md): stop/trail value is per-leg and net of the full cost stack [S4, S5, S6]"
 question: >-

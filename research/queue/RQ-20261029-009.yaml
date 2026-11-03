@@ -5,7 +5,7 @@ id: RQ-20261029-009
 title: 'M22 small-timeframe SCOPING (15m, Donchian-20 breakout): at the harness default family parameters
   and the full cost stack, does a plain 15m Donchian breakout clear the pooled Stage-0 rule on BTC, ETH,
   XRP and BNB (liquid perps NOT covered by the 15m ADA/AVAX/SOL reads)?'
-status: queued
+status: done
 cadence: once
 roadmap:
 - M22
@@ -131,3 +131,15 @@ generated:
   params:
     node: P3-M22-small-tf-scoping
 last_dispatched_at: '2026-10-31T02:59:36+00:00'
+grading:
+  auto: true
+  decision_rule_id: RULE-P3-M22-SMALL-TF-TREND-15M
+  evidence:
+  - research/results/RQ-20261029-009/41162400556.jsonl
+  graded_at: '2026-10-31'
+  grader: scripts/research/queue_grade.py
+  note: 'deterministic harness: FAIL closes this cell with no same-window replay; it does not retire the
+    family (family-retirement protocol, #18557)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail

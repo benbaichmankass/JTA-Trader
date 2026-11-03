@@ -52,3 +52,63 @@ class TestTelegramTokenPattern:
         # The scanner skips lines carrying an allow word — the contract this
         # test file (and test_log_redaction.py's FAKE_TOKEN) depends on.
         assert is_allowed(f'FAKE_TOKEN = "{_FAKE}"')
+
+
+# Built at runtime so this file itself carries no literal that matches a secret pattern.
+_PLANT = "api" + "_key = '{}'\n"
+
+
+def _load_scan():
+    import importlib.util
+    from pathlib import Path
+    root = Path(__file__).resolve().parents[1]
+    spec = importlib.util.spec_from_file_location("ss_pr", root / "scripts/secret_scan.py")
+    m = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(m)
+    return m
+
+
+def test_pr_mode_catches_planted_secret_in_changed_file_only(tmp_path, monkeypatch):
+    m = _load_scan()
+    bad, other = tmp_path / "bad.py", tmp_path / "other.py"
+    bad.write_text(_PLANT.format("A" * 24))
+    other.write_text(_PLANT.format("B" * 24))
+    monkeypatch.setattr(m, "ROOT", tmp_path)
+    monkeypatch.setattr(m, "tracked_files", lambda: [bad, other])
+    d = tmp_path / "p.diff"
+    d.write_text("diff --git a/bad.py b/bad.py\n")
+    assert m.main(["--pr-diff", str(d)]) == 1          # changed file: caught
+    d.write_text("diff --git a/clean.md b/clean.md\n")
+    assert m.main(["--pr-diff", str(d)]) == 0          # untouched files not scanned on a PR
+
+
+def test_full_mode_scans_everything_without_flag_or_with_empty_diff(tmp_path, monkeypatch):
+    m = _load_scan()
+    other = tmp_path / "other.py"
+    other.write_text(_PLANT.format("B" * 24))
+    monkeypatch.setattr(m, "ROOT", tmp_path)
+    monkeypatch.setattr(m, "tracked_files", lambda: [other])
+    assert m.main([]) == 1                                # push / --all: full tree
+    e = tmp_path / "e.diff"
+    e.write_text("")
+    assert m.main(["--pr-diff", str(e)]) == 1             # empty diff: full tree
+    assert m.main(["--pr-diff", str(tmp_path / "missing")]) == 1
+
+
+def test_rename_scans_both_sides(tmp_path):
+    m = _load_scan()
+    d = tmp_path / "p.diff"
+    d.write_text("diff --git a/old.py b/new.py\n")
+    assert m.files_in_diff(str(d)) == {"old.py", "new.py"}
+
+
+def test_guard_registry_passes_pr_diff_only_via_pr_argv():
+    import importlib.util
+    from pathlib import Path
+    root = Path(__file__).resolve().parents[1]
+    spec = importlib.util.spec_from_file_location("rg_ss", root / "scripts/ci/run_guards.py")
+    rg = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(rg)
+    g = next(x for x in rg.GUARDS if x["name"] == "secret-scan")
+    step = g["steps"][0]
+    assert "--pr-diff" not in step["argv"] and "--pr-diff" in step["pr_argv"]

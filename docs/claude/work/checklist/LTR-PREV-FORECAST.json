@@ -1,0 +1,34 @@
+{
+  "id": "LTR-PREV-FORECAST",
+  "title": "Live-review packet previous_review carries the prior row's forecast (and thesis), so each judgement_cadence review continues the last one instead of starting cold (handoff 2026-10-31 \u00a7 5, PI-20261031-9KC5G3FG-0004 named there but never filed)",
+  "phase": null,
+  "state": "done",
+  "owner": "manager",
+  "lane": "session_01AFoLuJkLZx1wnFWtq8RReU",
+  "model": "claude-sonnet-5-5",
+  "ceiling_usd": 6,
+  "spend_usd": null,
+  "tier": 2,
+  "prs": [
+    21827
+  ],
+  "blocked_on": [],
+  "note": "Closing observation: the first judgement_cadence packet after deploy whose context.previous_review.forecast is non-null, with a reviewer row that states whether that forecast held. [Manager Session 2026-10-31a, 08:15Z] DONE: MERGED #21827 (3823876e7); DEPLOYED via ict-git-sync (packet builder is a subprocess script, no restart); OBSERVED in the 08:00Z judgement_cadence slot: 4 of 5 inline packets carried previous_review.forecast (GLD null: prior row was flag_mechanics), and the book reviewer's 11 rows (commit 63c14da1cd13 on live-review/rows) stated per package whether the prior forecast held: 10 held, 0 failed, 1 null. Lane cost 1.56 USD vs 6 ceiling.",
+  "priority_rank": 1,
+  "updated_at": "2026-10-31T08:11:16Z",
+  "updated_by": "session_01AFoLuJwBvR58WBtD4qc5Gp",
+  "roadmap": [
+    "L-DESK",
+    "L-ATM"
+  ],
+  "writeback": {
+    "roadmap": "none: packet field addition inside L-DESK/L-ATM",
+    "arch": "none: packet field addition, no architecture section changes"
+  },
+  "observation": {
+    "what": "A judgement_cadence packet built after deploy carries context.previous_review.forecast non-null for a package whose prior review row had a forecast, and the reviewer row states whether it held",
+    "how_to_check": "Read a post-deploy judgement_cadence packet (comms/live_review/packets/<review_id>.json on live-review/rows, or the ltr-wake comment) for a package with 2+ reviews: previous_review.forecast must equal the prior row forecast in reviews.jsonl; and the new row reason says whether it held",
+    "due_by": "2026-11-03"
+  },
+  "_seq": 850
+}

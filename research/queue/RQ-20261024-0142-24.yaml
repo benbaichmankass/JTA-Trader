@@ -1,7 +1,7 @@
 id: RQ-20261024-0142-24
 title: 'Programme 07 Q2 variant (first test failed -> variant): does a 24 h / 48 h / 96 h Donchian lookback at 15m cut the turnover that sank the 20-bar breakout
   on ADA/AVAX/SOL?'
-status: queued
+status: done
 cadence: once
 roadmap:
 - L-TIMEFRAMES
@@ -115,3 +115,17 @@ related:
 - scripts/research/harness_stage0.py
 - research/programmes/07-timeframes.yaml
 - AUTHOR-FLOOR-1024
+last_dispatched_at: '2026-11-03T01:57:20+00:00'
+grading:
+  attested: RULE-RQ202610240142-24-15M-LONG-LOOKBACK
+  auto: true
+  decision_rule_id: RULE-RQ202610240142-24-15M-LONG-LOOKBACK
+  evidence:
+  - research/results/RQ-20261024-0142-24/41556487163.jsonl
+  graded_at: '2026-11-03'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail

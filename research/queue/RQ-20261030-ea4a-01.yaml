@@ -113,13 +113,13 @@ what_it_does_not_do: 'Not a promotion case and not a config edit: a PASS only li
   this window and does not retire the cooldown family.'
 grading:
   attested: RULERQ2026103030ea4a01
-  auto: true
+  auto: false
   decision_rule_id: RULERQ2026103030ea4a01
   evidence:
   - research/results/RQ-20261030-ea4a-01/41094371183.jsonl
   graded_at: '2026-10-31'
-  grader: scripts/research/queue_grade.py
-  needs_review: true
-  reason: 'read_state not unanimously measured: [''producer_failed'']'
+  grader: RESEARCH-OPS-20261031-1120 (session)
+  reason: 'producer_failed, not a verdict: argv --days 1064 fetched only 2023-12 onward so the 2020-07..2023-05 window was empty (ValueError in fold_edges). Harness/argv defect,
+    not the idea. Re-run with --days 2330 authored as RQ-20261031-c6fc-01.'
   rows: 1
-  verdict: null
+  verdict: indeterminate

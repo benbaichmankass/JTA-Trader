@@ -173,7 +173,7 @@ case "${action}" in
             *) result="FAILED (exit ${exit_code})"; priority="urgent" ;;
         esac
         ;;
-    backfill-pnl-nulls|backfill-orphan-pnl|backfill-closed-null-pnl|backfill-monitor-closed-pnl|revert-backfill-monitor-closed-pnl|mark-reconciler-incomplete|mark-operator-flattened|cap-vm-logs|set-journal-trade-qty|reconcile-orphan-history|supersede-options-adoption-artifacts|supersede-reset-orphan-artifacts|supersede-intent-reduce-phantom-pnl|backfill-intent-reduce-pnl|backfill-own-fill-exits|prune-db-backups|fix-prop-mislinked-close|repair-prop-fill-direction|rebuild-pnl-from-bybit|backfill-shadow-predictions|backfill-account-class|backfill-exit-labels|backfill-closed-at|backfill-trade-costs|backfill-broker-order-id|backfill-broker-truth-costs|backfill-fabricated-exits|migrate-closed-at-iso|pull-exchange-fills|pull-bybit-transaction-log|pull-exchange-funding|pull-mes-ibkr-history|pull-mes-ibkr-history-daily|pull-ibkr-history|rotate-account-keys|init-diag-token|reset-daily-risk-state|repair-malformed-notes|repair-netted-rows|reconcile-netting-phantom-rows|reconcile-netting-rows|mark-netted-duplicate-pnl|validate-partial-tpsl|validate-bybit-naked-rearm)
+    backfill-pnl-nulls|backfill-orphan-pnl|backfill-closed-null-pnl|backfill-monitor-closed-pnl|revert-backfill-monitor-closed-pnl|mark-reconciler-incomplete|mark-operator-flattened|cap-vm-logs|set-journal-trade-qty|reconcile-orphan-history|supersede-options-adoption-artifacts|supersede-reset-orphan-artifacts|supersede-intent-reduce-phantom-pnl|backfill-intent-reduce-pnl|backfill-own-fill-exits|prune-db-backups|vm-sparse-bootstrap|fix-prop-mislinked-close|repair-prop-fill-direction|rebuild-pnl-from-bybit|backfill-shadow-predictions|backfill-account-class|backfill-exit-labels|backfill-closed-at|backfill-trade-costs|backfill-broker-order-id|backfill-broker-truth-costs|backfill-fabricated-exits|migrate-closed-at-iso|pull-exchange-fills|pull-bybit-transaction-log|pull-exchange-funding|pull-mes-ibkr-history|pull-mes-ibkr-history-daily|pull-ibkr-history|rotate-account-keys|init-diag-token|reset-daily-risk-state|repair-malformed-notes|repair-netted-rows|reconcile-netting-phantom-rows|reconcile-netting-rows|mark-netted-duplicate-pnl|validate-partial-tpsl|validate-bybit-naked-rearm)
         tier=2
         case "${exit_code}" in
             0) result="ok"; priority="normal" ;;
@@ -503,6 +503,32 @@ case "${action}" in
         case "${exit_code}" in
             0) result="ok (dry-run preview or backfilled)"; priority="normal" ;;
             *) result="FAILED/refused (exit ${exit_code}) — trade still on legacy add-a-leg path"; priority="normal" ;;
+        esac
+        ;;
+    relink-orphan-trade-5209)
+        # 2026-11-01 GLD-ORPHAN-5209: re-link trade 5209 to pkg-8106, reopen it,
+        # close pkg-6a8e. Journal-only; dry-run unless apply:true.
+        tier=2
+        case "${exit_code}" in
+            0) result="ok (dry-run preview, no-op or re-linked)"; priority="normal" ;;
+            *) result="FAILED/refused (exit ${exit_code}) -- nothing written"; priority="normal" ;;
+        esac
+        ;;
+    relabel-package-close-reasons)
+        # 2026-11-01 CLOSE-REASON-XRP-1220: relabel 13 closed packages to their
+        # linked trades' sl/tp. Journal-only; dry-run unless apply:true.
+        tier=2
+        case "${exit_code}" in
+            0) result="ok (dry-run preview or relabelled)"; priority="normal" ;;
+            *) result="FAILED/refused (exit ${exit_code}) -- no package relabelled"; priority="normal" ;;
+        esac
+        ;;
+    backfill-package-risk-meta)
+        # 2026-11-02 ML-ENTRY-RISK-META: add meta.risk_per_unit/entry_time to open ml_entry/claude_desk packages.
+        tier=2
+        case "${exit_code}" in
+            0) result="ok (dry-run preview or backfilled)"; priority="normal" ;;
+            *) result="FAILED (exit ${exit_code}) -- meta not fully written"; priority="normal" ;;
         esac
         ;;
     reattach-stranded-package-legs)

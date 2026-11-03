@@ -23,6 +23,11 @@ incident marker (named step, run url) per bar.
 Cadence (operator 2026-10-30, ``scan_wake_every_h`` in config/desk_triggers.yaml): the packet lands every hour, but the
 marker is posted only on bars whose UTC hour % N == 0; the other bars are ``skipped_by_cadence``, never a silent gap.
 
+Trigger-first (operator 2026-10-31, ``scan_wake_min_move_atr``): a cadence bar wakes only if the packet differs materially
+from the LAST WOKEN packet (an open-position change, a new near-signal, or a symbol move >= that many ATR); otherwise
+``skipped_nothing_new`` with the reason. The packet is still built and landed every hour. The desk's event triggers
+(config/desk_triggers.yaml) are the primary path and are not touched.
+
 Usage:
   desk_wake_marker.py gate [--ref origin/desk/decisions] [--github-output FILE]
   desk_wake_marker.py post --stage DIR --commit SHA [--run-url URL] [--live]
@@ -81,6 +86,77 @@ def wake_due(bar: str, every: Optional[int] = None) -> bool:
     return datetime.fromisoformat(bar.replace("Z", "+00:00")).hour % n == 0
 
 
+def scan_wake_min_move_atr(path: Optional[Path] = None) -> Optional[float]:
+    """``scan_wake_min_move_atr`` in config/desk_triggers.yaml: a symbol must have moved at least this many ATR since the
+    last WOKEN packet for a scheduled scan bar to wake on price alone (TRIGGER-FIRST-REVIEWS, operator 2026-10-31).
+    Absent / invalid = None = the nothing-new gate is OFF (every cadence bar wakes, the pre-2026-10-31 behaviour)."""
+    try:
+        import yaml
+        v = (yaml.safe_load((path or CONFIG).read_text()) or {}).get("scan_wake_min_move_atr")
+        return None if v is None else float(v)
+    except Exception:  # noqa: BLE001 -- a config fault wakes more, never less
+        return None
+
+
+def packet_fingerprint(packet: dict) -> Dict[str, Any]:
+    """Pure. The few facts a scheduled wake compares: open positions, near-signals, and per-symbol close + ATR.
+    ``open`` / ``near`` are None when that book could not be read (never an empty list: we could not look)."""
+    sb = packet.get("system_book") or {}
+    sb_ok = sb.get("read_state") == "read" and sb.get("items") is not None
+    items = [i for i in (sb.get("items") or []) if isinstance(i, dict)] if sb_ok else []
+    near_ok = sb_ok and sb.get("near_signals_read_state") == "read"
+    px, atr = {}, {}
+    for r in packet.get("universe") or []:
+        if isinstance(r, dict) and r.get("tier") == "full" and r.get("last_close") is not None:
+            px[str(r.get("symbol"))], atr[str(r.get("symbol"))] = r.get("last_close"), r.get("atr")
+    return {
+        "open": sorted(str(i.get("order_package_id") or f"{i.get('leg')}:{i.get('symbol')}")
+                       for i in items if i.get("status") == "open") if sb_ok else None,
+        "near": sorted(f"{i.get('leg')}:{i.get('symbol')}:{i.get('side')}" for i in items
+                       if i.get("status") != "open" and i.get("bars_to_signal") in NEAR_BARS) if near_ok else None,
+        "px": px, "atr": atr}
+
+
+def material_change(cur: Dict[str, Any], prior: Optional[Dict[str, Any]],
+                    min_move_atr: Optional[float]) -> "tuple[bool, str]":
+    """Pure. ``(wake, why)``: does this packet differ materially from the last WOKEN packet's fingerprint?
+    Material = an open-position change, a NEW near-signal, or a symbol that moved >= ``min_move_atr`` x ATR. Anything
+    that cannot be compared (gate off, no prior fingerprint, an unread book, a symbol without an ATR) wakes, with the
+    reason: a skipped wake must be a measured skip."""
+    if min_move_atr is None:
+        return True, "nothing-new gate off (scan_wake_min_move_atr unset)"
+    if not prior:
+        return True, "no prior woken fingerprint to compare with"
+    if cur.get("open") is None or prior.get("open") is None:
+        return True, "open-position book unread: cannot compare"
+    if cur["open"] != prior["open"]:
+        a, b = set(cur["open"]) - set(prior["open"]), set(prior["open"]) - set(cur["open"])
+        return True, f"open-position change (+{len(a)} -{len(b)})"
+    if cur.get("near") is None or prior.get("near") is None:
+        return True, "near-signal book unread: cannot compare"
+    fresh = sorted(set(cur["near"]) - set(prior["near"]))
+    if fresh:
+        return True, f"new near-signal: {', '.join(fresh[:3])}"
+    for sym, px in sorted((cur.get("px") or {}).items()):
+        old, atr = (prior.get("px") or {}).get(sym), (cur.get("atr") or {}).get(sym)
+        if old is None:
+            return True, f"{sym}: no price in the last woken packet"
+        if not atr or atr <= 0:
+            return True, f"{sym}: no ATR, move unmeasurable"
+        move = abs(float(px) - float(old)) / float(atr)
+        if move >= min_move_atr:
+            return True, f"{sym} moved {move:.2f} ATR >= {min_move_atr:g} since the last woken packet"
+    return False, (f"nothing new since the last woken packet: same {len(cur['open'])} open position(s), no new near-signal, "
+                   f"no symbol moved >= {min_move_atr:g} ATR")
+
+
+def last_woken_fingerprint(markers: List[dict]) -> Optional[Dict[str, Any]]:
+    """The fingerprint carried by the newest desk-wake marker, None when it has none (an older marker)."""
+    for m in reversed([m for m in markers if m.get("kind") == MARKER]):
+        return (m.get("context") or {}).get("fingerprint")
+    return None
+
+
 def parse_markers(comments: Optional[list]) -> List[dict]:
     out: List[dict] = []
     for c in comments or []:
@@ -136,6 +212,7 @@ def packet_context(packet: dict, now: datetime) -> Dict[str, Any]:
                          if near_ok else None),
         "calendar_events": _calendar_events([r for r in packet.get("universe") or [] if isinstance(r, dict)], now)[:4],
         "unread": unread,
+        "fingerprint": packet_fingerprint(packet),
     }
 
 
@@ -260,6 +337,12 @@ def main(argv: Optional[List[str]] = None) -> int:
         verdict, body = plan_fail(bar, markers), render_fail(a.step, bar, now, a.run_url)
     if a.cmd == "post" and verdict == "post" and not wake_due(entry["bar"]):
         verdict = "skipped_by_cadence"
+    if a.cmd == "post" and verdict == "post":
+        wake, why = material_change(entry["context"]["fingerprint"], last_woken_fingerprint(markers),
+                                    scan_wake_min_move_atr())
+        if not wake:
+            verdict = "skipped_nothing_new"
+            print(f"desk-wake-marker: {why}")
     print(f"desk-wake-marker {a.cmd}: {verdict}")
     if verdict != "post":
         return 0

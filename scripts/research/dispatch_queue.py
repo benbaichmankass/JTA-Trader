@@ -37,7 +37,7 @@ import subprocess
 import sys
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Sequence
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
@@ -350,6 +350,19 @@ def stamp_lost(entry: Dict[str, Any]) -> Optional[datetime]:
     return result_at
 
 
+def rearm_marked(path: Path) -> bool:
+    """True when the unit file's top-level `last_dispatched_at:` is null AND carries a trailing `# comment`
+    (how research-ops records a re-arm). The marker is on the line itself, so it needs no result rows."""
+    try:
+        for ln in path.read_text().splitlines():
+            if ln.startswith("last_dispatched_at:"):
+                val = ln.split(":", 1)[1]
+                return bool(re.match(r"\s*(null|~)?\s+#", val)) or bool(re.match(r"\s*#", val))
+    except OSError:
+        return False
+    return False
+
+
 def cleared_on_purpose(entry: Dict[str, Any]) -> bool:
     """Is this unit's missing stamp a DELIBERATE re-arm, not a dropped stamp?
 
@@ -411,6 +424,13 @@ def _is_due(entry: Dict[str, Any], now: datetime) -> tuple:
     result_at, result_rows = latest_result_at(uid) if uid else (None, 0)
     if not last and not result_rows:
         return True, "never dispatched"
+    # RESEARCH-FLOW 2026-11-02: an explicit, dated re-arm. `rearmed_at` on the unit says every row landed BEFORE it was produced by a
+    # defect that has since been fixed (b62x: ran to completion, wrote no verdict.json -> producer_failed x3 -> retry cap). Those
+    # earlier rows no longer count against the cap, so the unit is due once. After it fires, its stamp and any new row apply as normal
+    # (a new producer_failed row still counts toward the cap, so this can never loop).
+    _ra = _parse_ts(entry.get("rearmed_at")) if entry.get("rearmed_at") else None
+    if not last and _ra is not None and (result_at is None or result_at < _ra):
+        return True, f"re-armed at {_ra.isoformat()}: {result_rows} earlier row(s) predate the fix and do not count against the cap"
     if not last and result_rows and confirmatory_requeue(entry, result_at):
         # The GRADER cleared the stamp on purpose (queue_grade.decide: first FAIL
         # -> `last_dispatched_at: null`, grading.confirmatory_run 1) after
@@ -730,7 +750,9 @@ def _stamp(path: Path, when: datetime) -> Optional[str]:
         for i, existing in enumerate(lines):
             # Top-level key only: a nested one would be indented.
             if existing.startswith("last_dispatched_at:"):
-                lines[i] = line
+                # Keep a trailing `# comment` (re-arm provenance) -- only the value is rewritten.
+                tail = re.search(r"\s+#.*$", existing.split(":", 1)[1])
+                lines[i] = line + (tail.group(0) if tail else "")
                 break
         else:
             lines.append(line)
@@ -980,7 +1002,7 @@ def _run_age_hours(row: Dict[str, Any], now: datetime) -> Optional[float]:
 def backpressure(research_names: Dict[str, str], *, max_inflight: int, max_queued: int,
                  runs_by_status: Optional[Dict[str, Optional[List[Dict[str, Any]]]]] = None,
                  now: Optional[datetime] = None, stale_after_hours: float = STALE_PRESSURE_HOURS,
-                 infra_names: Optional[List[str]] = None) -> Dict[str, Any]:
+                 infra_names: Optional[List[str]] = None, infra_yield_at: int = 1) -> Dict[str, Any]:
     """What the runner pool looks like before this cycle fires anything.
 
     Returns {inflight_research, repo_queued, stale_ignored, block, detail}.
@@ -1036,7 +1058,9 @@ def backpressure(research_names: Dict[str, str], *, max_inflight: int, max_queue
            "detail": f"research compute in flight {inflight} (cap {max_inflight}); repo runs queued "
                      f"{len(competing)} (cap {max_queued}; {listeners} workflow_run listener run(s) not counted); "
                      f"{stale} stuck run(s) older than {stale_after_hours:g} h ignored"}
-    if infra_queued:
+    # RESEARCH-FLOW 2026-11-02 (manager, relaying the operator's "get research flowing"): defer only when infra_yield_at or more
+    # infra runs are queued (config limits.infra_yield_at; default 1 = the original rule). --max-repo-queued is untouched.
+    if infra_queued >= max(1, int(infra_yield_at)):
         out["block_kind"] = "infra"
         out["block"] = (f"{infra_queued} infra run(s) queued ({', '.join(infra_waiting)}): research yields "
                         "the shared GitHub runner pool to infra -- deferring every fire this cycle")
@@ -1141,6 +1165,51 @@ def pending_stamp_units(api: Any = _gh_api_json) -> Optional[Dict[str, str]]:
             if m and m.group(1) not in out:
                 out[m.group(1)] = f"PR #{num} ({ref})"
     return out
+
+
+#: The workflows whose runs carry a unit id in their `run-name` (REFILL 2026-11-03).
+RESEARCH_RUN_WORKFLOW_FILES = ("research-script-run.yml", "research-script-run-data.yml",
+                               "research-script-run-kaggle.yml", "research-script-run-kaggle-cpu.yml",
+                               "research-script-run-trainer.yml")
+_UNIT_IN_TITLE_RE = re.compile(r"\b(RQ-\d{8}-(?:\d{3}|[0-9a-f]{4}-\d{2}))\b")
+
+
+def fired_run_units(now: datetime, api: Any = _gh_api_json, *, hours: float = 48.0,
+                    files: Sequence[str] = RESEARCH_RUN_WORKFLOW_FILES) -> Optional[Dict[str, datetime]]:
+    """{unit id -> created_at of its NEWEST research run} over the last `hours`, or None when gh could not answer.
+
+    WHY (REFILL, 2026-11-03): a unit fired by a cycle has no stamp on main until its stamp PR merges, no
+    open stamp PR until the `land` job (which first lands the previous batch, up to ~50 min) reaches its
+    stamp step, and no result row until the run's artifact is collected by a LATER cycle. A cycle every
+    ~10 min instead of every ~40 would re-fire it in that gap. The run itself is the one record that exists
+    the moment the fire succeeds, and `run-name` puts the unit id in its `display_title`. Read as evidence
+    of dispatch exactly like an open stamp PR: see `unit_pending_by_run`."""
+    since = (now - timedelta(hours=hours)).strftime("%Y-%m-%dT%H:%M:%SZ")
+    out: Dict[str, datetime] = {}
+    for fname in files:
+        data = api(f"repos/{{owner}}/{{repo}}/actions/workflows/{fname}/runs?per_page=100&created=%3E%3D{since}")
+        if not isinstance(data, dict) or not isinstance(data.get("workflow_runs"), list):
+            return None
+        for r in data["workflow_runs"]:
+            if not isinstance(r, dict):
+                continue
+            m = _UNIT_IN_TITLE_RE.search(str(r.get("display_title") or ""))
+            when = _parse_ts(r.get("created_at"))
+            if m and when is not None and (m.group(1) not in out or when > out[m.group(1)]):
+                out[m.group(1)] = when
+    return out
+
+
+def unit_pending_by_run(entry: Dict[str, Any], run_at: Optional[datetime], result_at: Optional[datetime]) -> bool:
+    """True when the unit's newest research run is NEWER than both its stamp on main and its latest landed
+    result, i.e. it was fired and neither bookkeeping record has caught up. Once either does, the ordinary
+    cadence/retry logic in `_is_due` owns the unit again, so a failed run is still retried on its terms."""
+    if run_at is None:
+        return False
+    for ref in (_parse_ts(entry.get("last_dispatched_at")), result_at):
+        if ref is not None and ref >= run_at:
+            return False
+    return True
 
 
 _STAMP_PATCH_RE = re.compile(r"^\+last_dispatched_at:\s*'?([^'\s]+)'?\s*$", re.M)
@@ -1379,7 +1448,8 @@ def main(argv: Optional[List[str]] = None) -> int:
         pressure = backpressure(wf_names, max_inflight=max_inflight,
                                 max_queued=args.max_repo_queued,
                                 stale_after_hours=args.pressure_stale_hours,
-                                infra_names=list((cfg or {}).get("limits", {}).get("infra_workflows") or []))
+                                infra_names=list((cfg or {}).get("limits", {}).get("infra_workflows") or []),
+                                infra_yield_at=int((cfg or {}).get("limits", {}).get("infra_yield_at", 1)))
         print(f"backpressure: {pressure.get('detail') or pressure.get('block')}", file=sys.stderr)
         _starve_h = args.starvation_hours if args.starvation_hours is not None else \
             float((cfg or {}).get("limits", {}).get("starvation_hours", STARVATION_HOURS))
@@ -1435,6 +1505,16 @@ def main(argv: Optional[List[str]] = None) -> int:
                     if cur is not None and cur >= when:
                         pending.pop(uid, None)   # main already carries this stamp or newer
                         continue
+                    if cur is None and rearm_marked(job.path):
+                        # A `last_dispatched_at: null   # re-armed ...` line is a re-arm by record. Adoption
+                        # never writes onto it, whatever the landed rows say: RQ-20260929-104 / RQ-20261101-2df8-01 (run 41471395020, PRs
+                        # #22408/#22392) were re-armed by research-ops, had no verdict rows so
+                        # `cleared_on_purpose` was False, and got the OLD stamp + a dropped comment, which
+                        # pr-landing R5 refused -- stalling dispatch 27.6 h (PI-20261102-RODISPATCHLAND-0001).
+                        pending.pop(uid, None)
+                        print(f"::notice::{uid}: not adopting the stranded stamp from {src} -- main's stamp "
+                              "is null (re-armed); the unit is due on its own terms", file=sys.stderr)
+                        continue
                     if cleared_on_purpose(job.raw):
                         # A null on main here is a re-arm, not a dropped stamp: adopting the old stamp
                         # would silently undo it (PI-20261013-HOPS1447-0001). The stranded PR stays
@@ -1461,6 +1541,22 @@ def main(argv: Optional[List[str]] = None) -> int:
             if pending:
                 print("pending stamps (open stamp PRs, treated as dispatched): "
                       + ", ".join(f"{u} <- {p}" for u, p in sorted(pending.items())), file=sys.stderr)
+    # REFILL 2026-11-03: units fired by a recent cycle whose stamp PR / result row does not exist yet (see fired_run_units).
+    if args.fire and args.check_open_stamp_prs and not pressure["block"] and pending is not None:
+        _runs = fired_run_units(now)
+        if _runs is None:
+            print("::warning::research-queue-dispatch could not list recent research runs via gh -- "
+                  "deferring every fire this cycle (a unit may already be dispatched)", file=sys.stderr)
+            pending = None
+        else:
+            _by_run = 0
+            for _j in jobs:
+                _res_at, _ = latest_result_at(_j.id)
+                if _j.id not in pending and unit_pending_by_run(_j.raw, _runs.get(_j.id), _res_at):
+                    pending[_j.id] = f"run fired {_runs[_j.id].isoformat()} (no stamp / result yet)"
+                    _by_run += 1
+            if _by_run:
+                print(f"pending by in-flight/recent run (treated as dispatched): {_by_run} unit(s)", file=sys.stderr)
     # IDLE-CAPACITY FILL (RESEARCH-ROUTER, operator 2026-10-13: "get the most out of all the resources"): when a backend
     # has more free slots than units due for it, pull forward recurring units that opted in with `idle_fill: true`
     # and are waiting only on their cadence. Fire path only (a dry run has no occupancy to fill), lowest priority
@@ -1540,8 +1636,7 @@ def main(argv: Optional[List[str]] = None) -> int:
             # not merged yet. Not due for THIS cycle, and not stamped again
             # (a second stamp of the same line is what made #16770 `dirty`).
             row.update(outcome=NOT_DUE,
-                       reason=f"already dispatched: open stamp {pending[job.id]} modifies "
-                              f"research/queue/{job.id}.yaml and has not merged yet")
+                       reason=f"already dispatched: {pending[job.id]} -- its stamp has not merged / its result has not landed yet")
             decisions.append(row)
             continue
 

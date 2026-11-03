@@ -1,0 +1,35 @@
+{
+  "run": "RESEARCH-OPS-20261101-0940",
+  "finished_at": "2026-11-01T10:45:00Z",
+  "by": "session_01AFoLuJRBdk2erte7Z3Fbdv",
+  "floor": 63,
+  "floor_basis": "computed_floor(fired_24h 79) from the checks packet; runnable 97 (TRADING 78, MODEL 10, INFRA 9); floor met, nothing authored to fill it (STOP-GENERATED-AUTHORING)",
+  "authoring_queue_depth": null,
+  "needs_review_triaged": 0,
+  "needs_review_left": 34,
+  "throughput": {"fired_24h": 79, "results_landed_24h": 83, "hours_since_last_dispatch": 1.8, "idle_alarm": false},
+  "results_read": {"since": "2026-11-01T04:10Z", "rows": 23, "graded": {"pass": 2, "fail": 3, "indeterminate": 1}, "ungraded": 17},
+  "unlocked": [],
+  "retired": [],
+  "levers_filed": [],
+  "units_authored_held_pr": [],
+  "units_repaired": ["RQ-20261101-2df8-01"],
+  "followups_filed": ["RESULT-PR-GUARDS-STUCK fix: PR #22090 (SOAK-TOUCH-SPLIT.md stamp + index row)", "2df8-01 re-arm: window fix + producer population fix (this PR)"],
+  "authoring": {"count": 0, "reason": "STOP-GENERATED-AUTHORING: no result read this pass calls for a new mechanism-bearing follow-up; one existing unit repaired, not added"},
+  "analysis": {
+    "priority_1": "The three stuck automated R5 soak-grade result PRs (#22029, #22061 confirmed; #22040 same pattern but its failing-guard line was not read) fail document-index-guard: soak-book-grade-weekly.yml commits docs/claude/work/SOAK-TOUCH-SPLIT.md, which carries no Doc-status header and has no DOCUMENT-INDEX row (R1/R3). Producer fault, not a guard mis-classification. Fixed in #22090; the three PRs need their branches updated onto main after it merges.",
+    "TRADING": "7b6f ADX-ceiling transfer: -02 (avax_pullback_2h) FAIL, -07 (trend_donchian_1h) FAIL, -06 (SOL pullback 2h) PASS; -03/-04/-05 need review; -08..-12 ungraded. The transfer lever is 1 pass of 3 graded, so the prior call 'at least 3 of 7b6f-01..08 PASS' (p 0.3) is leaning no, still unresolved. 2df8-01 (sol_4h confirmation on the disjoint 2020-10..2023-10 window) produced NO measurement: the window lay outside the trailing 1110d candle fetch and the gate's failure verdict omitted population, so it graded not_applicable. Repaired and re-armed; the 0410Z call on it stays open, resolves when it re-runs.",
+    "MODEL": "a4e7: -05 ExtraTrees vs LightGBM regime head FAIL on non-inferiority, -08 PASS, -09 indeterminate; -10/-11 ungraded. c692-01/-06: the only rows on main are the session-local ones landed by #22071 (+0.0073 R/decision n=11,240; +0.0263 n=907); the runner has NOT yet reproduced them (units queued, would_dispatch in a dry run); no match/mismatch statement is possible yet."
+  },
+  "prior_calls_scorecard": [
+    {"call": "at least 3 of 7b6f-01..08 PASS", "p": 0.3, "outcome": "unresolved, leaning miss", "note": "1 pass (-06) of 3 graded; 5 of the 8 still ungraded or in review"},
+    {"call": "2df8-01 sol_4h confirmation PASSes on the disjoint window", "p": 0.3, "outcome": "unresolved", "note": "no measurement was produced (fault above); re-armed"}
+  ],
+  "calls": [
+    {"call": "2df8-01 re-run produces a graded verdict (not producer_failed)", "p": 0.8, "check": {"command": "python3 scripts/research/research_ops_checks.py --since 2026-11-02", "rule": "read_state of RQ-20261101-2df8-01 is not producer_failed", "resolves_when": "2026-11-03"}},
+    {"call": "runner-produced c692-01 mean_net_r agrees in sign with +0.0073 and is within 0.01 of it", "p": 0.7, "check": {"command": "python3 scripts/research/research_ops_checks.py --since 2026-11-02", "rule": "compare measurement.mean_net_r of the runner row with the local row", "resolves_when": "2026-11-03"}}
+  ],
+  "not_run": ["blocked-unit audit: 86 units in research/queue/blocked/ sampled by blocker text only (dated build dependencies); none verified unlockable or retirable, none changed", "needs_review triage (34 owned, none re-triaged)", "Actions run list not queried; dispatch/collector judged from receipt + results landed (dispatcher last fired 08:40Z)"],
+  "limits": ["#22040's failing guard line was not read", "run_guards.py ran locally: ruff cannot be reproduced (local ruff has no repo config) and layer-guard could not run (no lint-imports); CI is the authority", "RESULT-PR-GUARDS-STUCK row is not on main yet (#22087), so it was not set via checklist.py"],
+  "handoff": ["Manager: after #22090 merges, update the branches of #22029/#22040/#22061 onto main and confirm their guards go green (I will also do this if still running)", "Manager: set/close RESULT-PR-GUARDS-STUCK once #22087 lands"]
+}

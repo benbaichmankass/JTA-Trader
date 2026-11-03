@@ -3,7 +3,7 @@
   "title": "breakout_2: app 1b.188 finds the Positions tab but the row reads 'unparsed' (symbol/side/qty missing)",
   "phase": null,
   "state": "landed_unproven",
-  "owner": "build lane (Opus)",
+  "owner": "manager",
   "lane": null,
   "model": "claude-opus-5-5",
   "ceiling_usd": 15,
@@ -15,9 +15,9 @@
     18109
   ],
   "blocked_on": [],
-  "note": "[2026-10-15T06:10Z lane BREAKOUT-SL-AMEND-CLICK] 1b.199 / 1b.205 MEASURED: side cell is div.ds-table-cell role=cell with no side word in any attribute, so the attribute-word read cannot work; positions_state read via the journal (ESTIMATED, ETH short 0.54 @ 2461.52). The sheet-based MEASURED side (#18114) did not open on 1b.205 (sheet_not_open); probe PR follows. [2026-10-21 WEEKLY-AUDIT-2026-10-19 C6 stale-in_flight sweep] Lane session archived (get_session: SESSION_STATUS_ARCHIVED) and PR(s) merged to main (#18109), so in_flight was false; set landed_unproven, lane nulled, spend_usd=9.67 from get_session cost_usd. Closing observation unchanged.",
-  "updated_at": "2026-10-24T06:01:02Z",
-  "updated_by": "session_01TcTW6muiYDAQFZz2qdhTEW",
+  "note": "[2026-10-15T06:10Z lane BREAKOUT-SL-AMEND-CLICK] 1b.199 / 1b.205 MEASURED: side cell is div.ds-table-cell role=cell with no side word in any attribute, so the attribute-word read cannot work; positions_state read via the journal (ESTIMATED, ETH short 0.54 @ 2461.52). The sheet-based MEASURED side (#18114) did not open on 1b.205 (sheet_not_open); probe PR follows. [2026-10-21 WEEKLY-AUDIT-2026-10-19 C6 stale-in_flight sweep] Lane session archived (get_session: SESSION_STATUS_ARCHIVED) and PR(s) merged to main (#18109), so in_flight was false; set landed_unproven, lane nulled, spend_usd=9.67 from get_session cost_usd. Closing observation unchanged. | [BACKLOG-DRAIN 2026-11-01] PENDING: PARTIAL. GET /api/bot/prop/status?account_id=breakout_2 at 2026-11-01 11:29Z: source phone_executor, positions_state=read, positions=[] (empty, equity==balance, unrealized 0). The parse works only when a position exists; none is open to prove the ETH short parse. Fill 124 still reason 'venue Positions read overrides the inferred fill', exit null.",
+  "updated_at": "2026-11-01T11:43:33Z",
+  "updated_by": "BACKLOG-DRAIN-20261101",
   "roadmap": [
     "L-PROP"
   ],
@@ -28,12 +28,12 @@
   "observation": {
     "what": "breakout_2 phone status reports positions_state=read with the ETH short parsed side=short, and fill 124 becomes MEASURED",
     "how_to_check": "GET /api/bot/prop/status?account_id=breakout_2 and /api/bot/prop/fills?account_id=breakout_2 after the operator installs the APK from run 38640497636",
-    "due_by": "2026-10-31",
+    "due_by": "2026-11-08",
     "redated": {
-      "on": "2026-10-24",
-      "from": "2026-10-16",
-      "by": "REGISTER-SWEEP-W43",
-      "reason": "not observed yet: the closing observation needs a live VM/diag read, a deploy, a human, or a future event that this register lane cannot take (repo-only, no VM egress); re-checked for repo-visible evidence this session (research/results, PR state) and none closes it; date moved one week for the daily-review pull"
+      "on": "2026-11-01",
+      "from": "2026-10-31",
+      "by": "BACKLOG-DRAIN-20261101",
+      "reason": "PARTIAL. GET /api/bot/prop/status?account_id=breakout_2 at 2026-11-01 11:29Z: source phone_executor, positions_state=read, positions=[] (empty, equity==balance, unrealized 0). The parse works only when a position exists; none is open to prove the ETH short parse. Fill 124 still reason 'venue Positions read overrides the inferred fill', exit null."
     }
   },
   "_seq": 496

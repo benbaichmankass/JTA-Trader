@@ -1,0 +1,17 @@
+{
+  "based_on": "20261101T132836569175Z-8d4b1cb3.json",
+  "due_when": {
+    "check_every_days": 1,
+    "due_date": "2026-11-03",
+    "kind": "date"
+  },
+  "id": "PI-20261101-HIPIPRHQ-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "checklist RESEARCH-ITERATE",
+    "rerun": "grep -n '\"--adx-max\"' scripts/backtest_ict_scalp.py; grep -l 'adx-max' research/queue/RQ-20261031-7b6f-0[345].yaml"
+  },
+  "state": "queued",
+  "what": "[research harness defect] RQ-20261031-7b6f-03/-04/-05 (ADX-ceiling TRANSFER AX40/AX50 to ict_scalp_sol_15m / xrp_15m / xrp_5m) pass --adx-max=40/50 as a raw harness flag, but scripts/backtest_ict_scalp.py has NO --adx-max argument (its argparse list, 2026-11-01), so every candidate arm aborts with 'unrecognized arguments' -> harness_failed, never a verdict. Fix: either add an ADX ceiling to backtest_ict_scalp.py (+ the _SCALP_LEVER_FLAG map) and keep the units, or retire the three units with this reason. Iteration units RQ-20261101-78fc-48/-49/-50 deliberately use only flags the scalp harness has. || PROGRESS 2026-11-01: --adx-max added to backtest_ict_scalp.py (default off, 4 tests); 7b6f-03/04/05 re-armed (last_dispatched_at null, grading.owner set). NOT closed until the re-dispatched runs land with a verdict instead of harness_failed."
+}

@@ -1,0 +1,41 @@
+{
+  "leg": "iaum_pullback_1d",
+  "purpose": "full-history per-trade corpus for the live-trade-review outcome table (scripts/research/live_review_outcomes.py --corpus auto); NOT a promotion-evidence record (the Stage-0 gate reads comms/strategy_evidence/iaum_pullback_1d.json)",
+  "produced_by": "scripts/research/exit_lever_ablation.py --leg iaum_pullback_1d arm A (the leg as declared in config/strategies.yaml; closed-bar harness)",
+  "builder": "scripts/research/build_ltr_corpus.py (mode harness)",
+  "source_file": "comms/research/RQ-20261016-014/39103759555/data/IAUM_1d.csv",
+  "decision_bar": "forming",
+  "data_start": "2018-02-26 00:00:00+00:00",
+  "data_end": "2026-09-21 00:00:00+00:00",
+  "n_trades": 68,
+  "net_total_r": 34.6081,
+  "fee_bps_roundtrip": 0.0,
+  "slippage_bps_roundtrip": 5.0,
+  "funding_bps_per_window": 0.0,
+  "params": {
+    "timeframe": "1d",
+    "symbols": [
+      "IAUM"
+    ],
+    "trend_lookback": 40,
+    "pullback_lookback": 15,
+    "pullback_frac": 0.618,
+    "atr_period": 14,
+    "atr_stop_mult": 2.0,
+    "trail_mult": 4.0,
+    "trail_decay_stall_bars": 10,
+    "trail_decay_tight_mult": 2.0,
+    "tp_r": 3.5,
+    "tp_intent": {
+      "mode": "r_multiple",
+      "basis": "RQ-20261016-014_pooled_kstar_3.5R",
+      "calibrated": true
+    },
+    "min_confidence": 0.0
+  },
+  "config_fingerprint": "sha256:59b8d4b365bf510d1881fe4cd05d1a12",
+  "trades_sha256": "aa56f10f0df8ba1b973d15a98e079a3db7c35ccd3469668eaed1b2e5ba2add3d",
+  "staleness": "regenerate when the leg's declared params or decision_bar change (config_fingerprint no longer matches comms/strategy_evidence/iaum_pullback_1d.json) or when the cost stack moves",
+  "candles": "comms/research/RQ-20261016-014/39103759555/data/IAUM_1d.csv",
+  "note": "Alpaca equity ETF leg: Yahoo daily candles, fidelity approximate per comms/strategy_evidence/iaum_pullback_1d.json; fee 0, slippage 5 bps"
+}

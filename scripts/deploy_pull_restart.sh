@@ -141,10 +141,48 @@ echo ">>> Fetching latest from origin..."
 # Re-provisioning a fresh VM needs vm-git-credential-bootstrap.yml re-run
 # once (its own header explains why) — the global config doesn't survive a
 # fresh clone/home-dir.
-git fetch --prune origin
+#
+# VM-SPARSE-SYNC (2026-11-02, operator OK "let's try both fixes - better
+# organizing the data"): #22365 put 21.6 GB of research caches on main and this
+# fetch + reset filled the 45G root disk, blinding the web API. Two defences:
+#   (1) a blob size filter on the fetch, so blobs > VM_FETCH_BLOB_LIMIT never
+#       enter .git (the clone becomes a partial clone; a blob the checkout DOES
+#       need is lazily fetched by git with the same global credential), and
+#   (2) a sparse checkout whose patterns live in ONE versioned file,
+#       deploy/vm-sparse-checkout, read from origin/main AFTER the fetch (so the
+#       newest patterns apply on this very tick) and re-applied every run, so
+#       bulk research artefacts are never written to the working tree.
+# Both are contained: a failure is a WARNING and the sync continues with a
+# full checkout (no halting — Prime Directive rule 7).
+# >>> VM-SPARSE-SYNC begin (extracted + run by tests/test_vm_sparse_checkout.py)
+VM_FETCH_BLOB_LIMIT="${VM_FETCH_BLOB_LIMIT:-5m}"
+if ! git fetch --prune --filter="blob:limit=${VM_FETCH_BLOB_LIMIT}" origin; then
+    echo ">>> WARNING: filtered fetch failed — retrying an unfiltered fetch."
+    git fetch --prune origin
+fi
+
+SPARSE_SRC="deploy/vm-sparse-checkout"
+SPARSE_DST="$(git rev-parse --git-path info/sparse-checkout)"
+if SPARSE_PATTERNS="$(git show "origin/main:${SPARSE_SRC}" 2>/dev/null)" && [ -n "${SPARSE_PATTERNS}" ]; then
+    mkdir -p "$(dirname "${SPARSE_DST}")"
+    printf '%s\n' "${SPARSE_PATTERNS}" > "${SPARSE_DST}.tmp" && mv -f "${SPARSE_DST}.tmp" "${SPARSE_DST}"
+    git config core.sparseCheckout true
+    git config core.sparseCheckoutCone false
+    echo ">>> Sparse checkout patterns applied from origin/main:${SPARSE_SRC}."
+else
+    echo ">>> WARNING: origin/main:${SPARSE_SRC} unreadable — leaving the current checkout shape unchanged."
+fi
 
 echo ">>> Hard-resetting to origin/main (VM is a read-only mirror)..."
 git reset --hard origin/main
+# reset --hard only re-evaluates entries it updates; re-apply the patterns to
+# the WHOLE index so files already on disk that now match an exclusion are
+# removed (the one-time cleanup) and the shape is idempotent every tick.
+# `read-tree -mu HEAD` is the portable form of `git sparse-checkout reapply`.
+if [ "$(git config --bool core.sparseCheckout 2>/dev/null || echo false)" = "true" ]; then
+    git read-tree -mu HEAD || echo ">>> WARNING: sparse re-apply (git read-tree -mu HEAD) failed — continuing."
+fi
+# <<< VM-SPARSE-SYNC end
 
 POST_SYNC_HEAD=$(git rev-parse HEAD 2>/dev/null || echo "unknown")
 echo ">>> Post-sync HEAD: ${POST_SYNC_HEAD}"
@@ -572,7 +610,7 @@ fi
 # because instance names vary: the restart loop below skips every `@` unit
 # outright, since restarting one would send a bogus "unit FAILED" ping.
 # ---------------------------------------------------------------------------
-DEFAULT_SKIP="ict-smoke-once.service ict-env-check.service ict-hourly-snapshot.service ict-heartbeat.service ict-git-sync.service ict-mes-ibkr-pull.service ict-exchange-fills-pull.service ict-alpaca-fills-pull.service ict-ib-executions-pull.service ict-prop-feed.service ict-prop-executor.service ict-trainer-disk-alarm.service ict-phone-capture-purge.service"
+DEFAULT_SKIP="ict-smoke-once.service ict-env-check.service ict-hourly-snapshot.service ict-heartbeat.service ict-git-sync.service ict-mes-ibkr-pull.service ict-exchange-fills-pull.service ict-alpaca-fills-pull.service ict-ib-executions-pull.service ict-prop-feed.service ict-prop-executor.service ict-trainer-disk-alarm.service ict-phone-capture-purge.service ict-ml-decision-shadow.service"
 SKIP_LIST="${DEPLOY_RESTART_SKIP:-${DEFAULT_SKIP}}"
 
 # list-units --all surfaces inactive units too; --type=service excludes

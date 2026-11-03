@@ -1,0 +1,10 @@
+Fetching USO 60 candles 2018-06-17 -> 2026-11-02 (source=dukascopy) …
+  dukascopy: USO -> INSTRUMENT_ETF_CFD_US_USO_US_USD (relation=same_ticker_cfd: same underlying, CFD)
+INFO:DUKASCRIPT:current timestamp :2026-11-02T17:00:00
+Wrote 14680 rows (2018-06-18 -> 2026-11-02) to /tmp/exit_lever_ablation_hb04nzyu/uso_trend_1h__data.csv
+[A] /opt/hostedtoolcache/Python/3.11.17/x64/bin/python3 /home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_trend.py --donchian 24 --data <data> --symbol USO --resample 1h --atr-period 14 --atr-stop-mult 2.0 --trail-mult 4.0 --min-confidence 0.0 --fee-bps-roundtrip 0.0 --emit-trades comms/research/RQ-20261101-78fc-19/41496984843/arms/A__trades.jsonl --json comms/research/RQ-20261101-78fc-19/41496984843/arms/A__bt.json --long-only --giveback-min-mfe-r 1.0 --giveback-r 1.0 --tp-cap-pct 0.099 --tp-r 4.0 --start 2018-06-01 --end 2026-10-15 23:59
+{
+ "verdict": "pass",
+ "label": "confirmed",
+ "why": "A (selected from 1 on discovery) reads net_r=29.0009 over n=75 held-back trades, read once"
+}

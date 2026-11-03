@@ -671,6 +671,69 @@ def backfill(ref: str = "HEAD") -> Dict[str, Any]:
             "soaks": out}
 
 
+# ── mechanics_proven (operator, 2026-11-01, PROMOTION-NO-SOAK) ──────────────
+MECHANICS_PATHS = REPO / "config/mechanics_paths.yaml"
+MECHANICS_DELTAS = ("none", "new_code")
+
+
+def load_mechanics_paths(path: Path = MECHANICS_PATHS) -> Dict[str, Dict[str, Any]]:
+    """``leg -> {path, exchange, delta}`` from config/mechanics_paths.yaml (absent = {})."""
+    if not path.is_file():
+        return {}
+    import yaml  # noqa: PLC0415
+    legs = (yaml.safe_load(path.read_text(encoding="utf-8")) or {}).get("legs") or {}
+    return {k: v for k, v in legs.items() if isinstance(v, dict)}
+
+
+def mechanics_problems(legs: Dict[str, Dict[str, Any]]) -> List[str]:
+    """Schema problems of the registry. A registry entry is an evidence input, not a gate."""
+    out = []
+    for leg, e in sorted(legs.items()):
+        for f in ("path", "exchange", "delta"):
+            if not e.get(f):
+                out.append(f"{leg}: missing {f}")
+        if e.get("delta") and e["delta"] not in MECHANICS_DELTAS:
+            out.append(f"{leg}: delta {e['delta']!r} not in {MECHANICS_DELTAS}")
+        out += [f"{leg}: calendar/accrual field {b!r}" for b in BANNED_FIELDS if b in e]
+    return out
+
+
+def mechanics_proven(leg: str, states: Iterable[Dict[str, Any]],
+                     legs: Optional[Dict[str, Dict[str, Any]]] = None,
+                     exchange_of_account: Optional[Dict[str, str]] = None) -> Dict[str, Any]:
+    """Decide from RECORDS whether ``leg``'s execution mechanics are already proven.
+
+    Proven when EITHER (own) the leg's own soak contract reads ``passed``, OR (path) the leg is
+    registered with ``delta: none`` and a DIFFERENT leg registered on the same ``path`` and
+    ``exchange`` has a soak contract that reads ``passed`` on an account of that exchange (a
+    ``passed`` contract = >= 1 clean closed trade graded by ``grade_trade``). ``delta: new_code``
+    is never proven by a path: that leg proves its own mechanics with one small trade.
+    Returns {proven, basis, path, reason}; ``states`` is ``soak_states()`` output."""
+    legs = load_mechanics_paths() if legs is None else legs
+    xo = exchange_of_account or {}
+    rows = [r for r in states if isinstance(r, dict)]
+    own = next((r for r in rows if r.get("leg") == leg and r.get("state") == "passed"), None)
+    if own:
+        return {"proven": True, "basis": "own_soak", "path": None, "reason": f"{own.get('id')} passed"}
+    e = legs.get(leg)
+    if not e:
+        return {"proven": False, "basis": None, "path": None, "reason": f"{leg} has no own passed soak "
+                f"and is not registered in config/mechanics_paths.yaml"}
+    if e.get("delta") != "none":
+        return {"proven": False, "basis": None, "path": e.get("path"),
+                "reason": f"{leg} delta={e.get('delta')!r}: new mechanics need their own one-trade proof"}
+    for other, oe in sorted(legs.items()):
+        if other == leg or oe.get("path") != e.get("path") or oe.get("exchange") != e.get("exchange"):
+            continue
+        for r in rows:
+            if r.get("leg") == other and r.get("state") == "passed" \
+                    and xo.get(str(r.get("account")), e.get("exchange")) == e.get("exchange"):
+                return {"proven": True, "basis": "path_soak", "path": e.get("path"),
+                        "reason": f"path {e.get('path')!r} proven by {r.get('id')} (passed)"}
+    return {"proven": False, "basis": None, "path": e.get("path"),
+            "reason": f"no leg on path {e.get('path')!r} / {e.get('exchange')!r} has a passed soak"}
+
+
 def _self_test() -> int:
     ok = True
 

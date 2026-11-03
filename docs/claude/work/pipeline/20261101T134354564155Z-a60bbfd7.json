@@ -1,0 +1,17 @@
+{
+  "due_when": {
+    "due_date": "2026-11-04",
+    "kind": "date"
+  },
+  "id": "PI-20261101-ETFHIST-0003",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "lane ETF-HISTORY-PIPELINE: operator rule 2026-11-01 (store 1m, derive higher timeframes); derivation is asserted by unit tests on synthetic bars only",
+    "rerun": "python3 - <<< 'from scripts.ops.fetch_etf_history import read_bars, fetch_bars' on the trainer after the 1m backfill: read_bars(root,'SPY','1h',start='2026-09-01',end='2026-09-30') vs fetch_bars(get,'SPY','1h',...) with the Alpaca keys on a runner"
+  },
+  "severity": "medium",
+  "state": "queued",
+  "tier": 1,
+  "what": "Cross-check the DERIVED 1h/5m bars (resample_bars from the 1m base) against Alpaca's NATIVE 1Hour/5Min bars for SPY, QQQ, GLD, TLT over one month, once the 1m backfill has landed: report the share of bars whose OHLC and volume differ, and why (session-edge partial bars, bar-open alignment, SIP vs consolidated volume). The lake's validate.py may cover part of it."
+}

@@ -42,8 +42,10 @@ GENERAL_PAPER = ("bybit_1", "alpaca_paper", "ib_paper")
 REAL_MONEY_MIRROR: Dict[str, Optional[str]] = {
     "bybit_2": "bybit_portfolio", "alpaca_live": "alpaca_portfolio", "ib_live": None,
 }
-#: The one sanctioned mirror divergence (tests/test_paper_portfolio_accounts.py::_ALPACA_PROXY_STRATEGIES).
-MIRROR_CARVE_OUT = {"alpaca_portfolio": frozenset({"splg_trend_long_1d", "iaum_pullback_1d"})}
+#: A live affordability proxy is mirrored by the full-size leg it proxies, never dropped (operator 2026-11-01, reversing
+#: the B2 carve-out; tests/test_paper_portfolio_accounts.py::_ALPACA_PROXY_UNDERLYING is the same map, asserted equal).
+MIRROR_PROXY_UNDERLYING = {"alpaca_portfolio": {"iaum_pullback_1d": "gld_pullback_1d",
+                                                "splg_trend_long_1d": "spy_trend_long_1d"}}
 
 TESTING, PRODUCTION, INACTIVE = "testing", "production", "inactive"
 

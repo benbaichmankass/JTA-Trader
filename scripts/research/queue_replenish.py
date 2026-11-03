@@ -56,7 +56,7 @@ import json
 import re
 import subprocess
 import sys
-from datetime import date, datetime, timezone
+from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
@@ -68,13 +68,79 @@ TEMPLATES = Path("research/templates")
 # is "landing machinery" (check_pr_landing R12) and would force a human read of every such change.
 # A template may still override with its own `roadmap:` field.
 FAMILY_ROADMAP = {"e35-bracket": ["M20"], "m20-exit-lever": ["M20"], "macro-valuation": ["M28"],
-                  "prop-fit-breakout": ["L-PROP"], "roster-walkforward": ["L-LADDER"]}
+                  "prop-fit-breakout": ["L-PROP"], "roster-walkforward": ["L-LADDER"], "leg-corpus-s1": ["L-ML-LIVE"]}
 QUEUE = Path("research/queue")
 DEFAULT_TARGET = 25
 _PLACEHOLDER = re.compile(r"\{([a-z_]+)\}")
 # The three the runner substitutes itself (scripts/research/script_run.py
 # `_substitute`); anything else left in a rendered unit is a template bug.
 RUNNER_PLACEHOLDERS = frozenset({"out_dir", "unit", "run_id"})
+
+
+def _stamp_design(unit: Dict[str, Any]) -> None:
+    """DEFAULT, never a refusal (OPERATING-PLAN § 2 research loop, 2026-11-01): record what the unit varies.
+
+    `design: structured` = a baseline arm (empty spec) plus >= 1 variant; else `single_config`. `levers_declared` = the lever
+    families its arms change (scripts/research/iteration_orphans.py `_lever_of`). A unit that already states them keeps its own."""
+    cmd = [str(x) for x in ((unit.get("run") or {}).get("command") or [])]
+    arms = [cmd[i + 1] for i in range(len(cmd) - 1) if cmd[i] == "--arm"]
+    unit.setdefault("design", "structured" if len(arms) >= 2 and any(a.partition("=")[2] == "" for a in arms)
+                    else "single_config")
+    if "levers_declared" not in unit:
+        try:
+            sys.path.insert(0, str(Path(__file__).resolve().parent))
+            from iteration_orphans import _lever_of
+        except ImportError:
+            return
+        fams = sorted({f for a in arms for t in a.partition("=")[2].split(";") if t.strip() and (f := _lever_of(t.strip()))})
+        if fams:
+            unit["levers_declared"] = fams
+
+
+def _stamp_iteration(unit: Dict[str, Any], tpl: Dict[str, Any], params: Dict[str, Any], day: str) -> None:
+    """The `iteration:` block of a STRUCTURED template unit (DEFAULT, never a refusal): the subject, the lever chosen from the
+    lever map and why, the arms counted against multiple testing, and the registered correction. A template without
+    `structured:` is untouched (it keeps the `standing_remeasure` origin above)."""
+    st = tpl.get("structured")
+    if st and st.get("mode") == "siblings":
+        # arms are SIBLING units, one per value of the template's `control_axis`; the control sibling is the declared one
+        axis, ctrl = str(st["axis"]), str(st["control"])
+        vals = [str(v) for v in (tpl.get("grid") or {}).get(axis, [])]
+        unit["design"] = "structured" if len(vals) >= 2 else "single_config"
+        unit["levers_declared"] = [str(st["lever"])]
+        unit["design_arms"] = {"axis": axis, "control": ctrl, "this_arm": str(params.get(axis)),
+                               "is_control": str(params.get(axis)) == ctrl, "siblings": vals,
+                               "attributable": bool(st.get("attributable", False)), "gap": str(st.get("gap") or "")}
+        return
+    if not st or "design_json" not in params:
+        return
+    d = json.loads(params["design_json"])
+    blocks = d if st.get("mode") == "per_leg" else {str(params["leg"]): d}
+    k = sum(int(b.get("k_variants") or 0) for b in blocks.values())
+    arms_n = k + len(blocks)
+    first = next(iter(blocks.values()), {})
+    unit["design"] = "structured" if k >= 1 else "single_config"
+    fams = sorted({str(b["lever"]) for b in blocks.values() if b.get("lever")})
+    if fams:
+        unit["levers_declared"] = fams
+    unit["iteration"] = {
+        "subject": (list(blocks) if len(blocks) != 1 else next(iter(blocks))), "subject_kind": "strategy_leg",
+        "from_result": str(first.get("from_result") or "none: no subject"), "verdict_read": str(first.get("verdict_read") or "pending"),
+        "diagnosis": "; ".join(sorted({str(b.get("diagnosis")) for b in blocks.values()}))[:1200] if blocks else "no money leg in this family",
+        "hypothesis": (str(st.get("hypothesis") or "the chosen lever moves net R monotonically and fold-stably").strip()),
+        "attempt": 1, "due_by": (date.fromisoformat(day) + timedelta(days=14)).isoformat(),
+        "design": {"control": "A (the subject as configured)", "kind": "one-factor sweep around the control",
+                   "levers": {lg: b.get("lever") for lg, b in blocks.items()},
+                   "lever_basis": {lg: b.get("lever_basis") for lg, b in blocks.items()},
+                   "why_this_lever": {lg: b.get("why_this_lever") for lg, b in blocks.items()},
+                   "map_entries": {lg: b.get("map_entries") for lg, b in blocks.items() if b.get("map_entries")},
+                   "arms": {lg: b.get("arms") for lg, b in blocks.items()}},
+        "multiple_testing": {"arms_counted": arms_n, "variants_vs_control": k, "correction": str(st.get("correction") or "Holm"),
+                             "note": "every variant is fixed before the run; a best-of-k pass is a LEAD that needs a holdout read, never a finding"},
+    }
+    gaps = {lg: b["design_gap"] for lg, b in blocks.items() if b.get("design_gap")}
+    if gaps:
+        unit["iteration"]["design_gap"] = gaps
 
 
 def unresolved_placeholders(text: str) -> List[str]:
@@ -131,7 +197,10 @@ def repo_facts(root: Path) -> Dict[str, Any]:
             evidence[leg] = {"trades_file": rows.relative_to(root).as_posix(), "n_trades": n}
         except (OSError, ValueError, KeyError, TypeError):
             continue
-    return {"legs": legs, "evidence": evidence}
+    from scripts.research.leg_corpus_s1 import money_families
+    mf = money_families(root)
+    return {"legs": legs, "evidence": evidence, "money_families": sorted(mf), "money_family_legs": {k: list(v) for k, v in mf.items()},
+            "configs": {k: v for k, v in strategies.items() if isinstance(v, dict)}, "root": str(root)}
 
 
 # ── expansion ───────────────────────────────────────────────────────────────
@@ -163,6 +232,21 @@ def _leg_source(name: str, tpl: Dict[str, Any], facts: Dict[str, Any]) -> List[D
         for leg, info in legs.items():
             if leg in sweepable:
                 out.append({"leg": leg, **info})
+    elif name == "live_roster_legs_ablatable":
+        # roster legs whose harness family exit_lever_ablation can route (regime_debt_matrix.classify): the structured
+        # walk-forward is a config-exact arm sweep, so a leg it cannot route has no design here (orb / chop_scalp: see
+        # the pipeline item filed by RESEARCH-TEMPLATES-STRUCTURED).
+        from scripts.research.regime_debt_matrix import classify
+        for leg, info in legs.items():
+            cfg = facts.get("configs", {}).get(leg) or {}
+            fam = classify(cfg)
+            if fam:
+                out.append({"leg": leg, **info, "harness": fam})
+    elif name == "money_leg_families":
+        # one point per FAMILY that has a money leg right now (ML-LINE-S1-CORPUS): the producer re-resolves
+        # the family's legs from config at run time, so a roster change never needs a new unit.
+        for fam in facts["money_families"]:
+            out.append({"family": fam, "family_key": fam})
     elif name == "evidence_legs_with_breakout_market":
         markets = tpl.get("markets") or {}
         for leg, info in legs.items():
@@ -246,7 +330,49 @@ def expand(tpl: Dict[str, Any], facts: Dict[str, Any]) -> List[Dict[str, Any]]:
                     q[axis] = str(v)
                 nxt.append(q)
         points = nxt
+    if tpl.get("structured"):
+        points = [_structure(tpl, p, facts) for p in points]
     return points
+
+
+def _structure(tpl: Dict[str, Any], p: Dict[str, Any], facts: Dict[str, Any]) -> Dict[str, Any]:
+    """STRUCTURED LEVER DESIGN by DEFAULT (OPERATING-PLAN § 2 research workflow; scripts/research/lever_design.py).
+
+    Adds the design to the point as strings (they travel in `generated.params`, so `verify` reproduces the unit from the
+    map AT HEAD and a hand-made design is refused). `lever_key` joins the identity only when the template ROTATES: a new
+    lever is then a new unit, an old one is never edited."""
+    from scripts.research import lever_design as ld
+    st = tpl["structured"]
+    if st.get("mode") == "siblings":           # macro-valuation: arms are sibling UNITS (grid axis), nothing to compute per point
+        return dict(p)
+    root = Path(facts.get("root") or ".")
+    cfgs, q = facts.get("configs", {}), dict(p)
+    fams = ld.families_for(root, "strategy_leg")
+    mode = str(st.get("mode"))
+    if mode == "per_leg":                      # one unit over several legs (leg-corpus-s1): each leg gets its own design
+        legs = (facts.get("money_family_legs") or {}).get(str(p.get("family")), [])
+        blocks = {lg: ld.design_block(lg, "strategy_leg", cfgs.get(lg) or {}, ld.read_map(root, lg), fams) for lg in legs}
+        q["design_json"] = json.dumps(blocks, sort_keys=True)
+        q["arms_json"] = json.dumps({lg: b["arms"] for lg, b in blocks.items()}, sort_keys=True)
+        return q
+    leg = str(p["leg"])
+    cfg, mp = cfgs.get(leg) or {}, ld.read_map(root, leg)
+    fixed = str(st["lever"]) if st.get("lever") else None
+    blk = ld.design_block(leg, "strategy_leg", cfg, mp, fams, fam_override=fixed)
+    if mode == "fixed_arms":                   # prop-fit: the template names the arms (control first); the lever is fixed
+        blk["arms"] = [[str(a["key"]), str(a.get("args", ""))] for a in st["arms"]]
+        blk["k_variants"] = len(blk["arms"]) - 1
+        blk.pop("design_gap", None)
+    if mode == "internal_sweep":               # m20 / e35: the WORKFLOW owns the cell grid; the template declares it
+        blk["arms"] = [[str(a["key"]), str(a.get("note", ""))] for a in st["arms"]]
+        blk["k_variants"] = int(st.get("k_variants") or len(blk["arms"]) - 1)
+        blk.pop("design_gap", None)
+    q["design_json"] = json.dumps(blk, sort_keys=True)
+    q["arms_json"] = json.dumps(blk["arms"])
+    q["lever"] = str(blk["lever"] or "none")
+    if st.get("rotate"):
+        q["lever_key"] = q["lever"]
+    return q
 
 
 def point_key(family: str, p: Dict[str, Any]) -> str:
@@ -305,12 +431,28 @@ def render(tpl: Dict[str, Any], tpl_path: str, tpl_sha: str, params: Dict[str, A
     unit["decision_rule"] = rule
     unit["routing"] = _fill(tpl["routing"], p)
     run = _fill(tpl["run"], p)
+    if "@ARMS@" in (run.get("command") or []):
+        # the structured design's arms, one `--arm LABEL=spec` pair each, control first (scripts/research/lever_design.py)
+        flat: List[str] = []
+        for lab, spec in json.loads(p["arms_json"]):
+            flat += ["--arm", f"{lab}={spec}"]
+        cmd: List[str] = []
+        for tok in run["command"]:
+            cmd += flat if tok == "@ARMS@" else [tok]
+        run["command"] = cmd
     inputs = dict(run.get("inputs") or {})
     if run.get("workflow") == "research-script-run.yml":
         inputs["research_unit"] = unit_id
     run["inputs"] = inputs
     unit["run"] = run
     unit["lands"] = _fill(tpl["lands"], p)
+    # The research loop (OPERATING-PLAN § 2 "What does not pass goes back into research", 2026-11-01): every unit records
+    # its place in the loop. A template unit is a standing re-measurement, filled by DEFAULT here -- never a refusal.
+    _stamp_design(unit)
+    _stamp_iteration(unit, tpl, p, day)
+    if "iteration" not in unit and "origin" not in unit:
+        unit["origin"] = "standing_remeasure"
+        unit["origin_reason"] = f"template {tpl['family']}: a standing re-measurement of a declared configuration"
     unit["generated"] = {"family": str(tpl["family"]), "template": tpl_path, "template_sha": tpl_sha,
                          "key": point_key(str(tpl["family"]), params),
                          "params": {k: str(v) for k, v in sorted(params.items())}}
@@ -621,6 +763,12 @@ def render_node(node: Dict[str, Any], prog_path: str, prog_sha: str, programme: 
         run["inputs"] = {**dict(run.get("inputs") or {}), "research_unit": unit_id}
     if run:
         unit["run"] = run
+    # The research loop (OPERATING-PLAN § 2, 2026-11-01): a node that does not say it iterates on a result is a first test of
+    # a plan question -- filled by DEFAULT, never a refusal. A node body may carry its own `iteration:` or `origin:`.
+    _stamp_design(unit)
+    if "iteration" not in unit and "origin" not in unit:
+        unit["origin"] = "new_hypothesis"
+        unit["origin_reason"] = f"programme {programme} node {node['id']}" + (f" (goal {node.get('goal')})" if node.get("goal") else "")
     unit["programme_node"] = {"programme": programme, "node": node["id"], "goal": node.get("goal"),
                               "after": node.get("after") or []}
     unit["generated"] = {"family": f"{PROGRAMME_FAMILY}:{programme}", "template": prog_path,
@@ -1108,7 +1256,13 @@ def _self_test() -> int:
 
 
 def _default_target() -> int:
-    """The refill aims at the SAME floor the health check grades against, not the fixed 25.
+    """STOP-GENERATED-AUTHORING (operator, 2026-11-01, row AUDIT-1101-DECISIONS, verbatim "Stop floor-driven
+    units (Rec.)"): the refill NO LONGER aims at a runnable count. A floor gap is REPORTED (health check,
+    brief, research-ops packet), never filled by generating units. Already-queued units keep running; an
+    explicit `--target N` (the workflow's manual `target` input) still expands templates, so a hypothesis-led
+    family can be run on purpose. The computed floor is still printed so the gap stays visible.
+
+    HISTORY (kept, superseded): the refill aimed at the SAME floor the health check grades against, not the fixed 25.
 
     RESEARCH-SLO-ROOTCAUSE 2026-10-28: the daily cron and the health-triggered dispatch both passed 25 while
     `computed_floor` was 57-63 (fired_24h 72-78), so every refill stopped 30+ units short of the floor and the
@@ -1116,10 +1270,11 @@ def _default_target() -> int:
     """
     try:
         from scripts.research.queue_throughput import computed_floor, throughput  # noqa: PLC0415
-        return max(DEFAULT_TARGET, computed_floor(throughput(_REPO).get("fired_24h")))
-    except Exception as e:  # allow-silent: a refill must still run when the measurement cannot; the warning below logs it and DEFAULT_TARGET holds
-        print(f"::warning::queue_replenish: fired_24h unread ({e!r}); target falls back to {DEFAULT_TARGET}")
-        return DEFAULT_TARGET
+        floor = max(DEFAULT_TARGET, computed_floor(throughput(_REPO).get("fired_24h")))
+        print(f"queue_replenish: floor-driven generation is OFF (STOP-GENERATED-AUTHORING); computed floor {floor} is reported, not filled")
+    except Exception as e:  # allow-silent: the target is 0 either way; this only loses the floor figure in the log line
+        print(f"::warning::queue_replenish: fired_24h unread ({e!r}); floor-driven generation is OFF regardless")
+    return 0
 
 
 def main(argv: Optional[List[str]] = None) -> int:

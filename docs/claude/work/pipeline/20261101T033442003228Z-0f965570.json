@@ -1,0 +1,18 @@
+{
+  "due_when": {
+    "clears_when": "a post-2026-10-15 window of sol_pullback_2h has n >= 39 trades and a confirmation unit (same statistic, bar) is authored and graded",
+    "due_date": "2026-11-20",
+    "kind": "date"
+  },
+  "id": "PI-20261101-3G8CL3NV-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "RESEARCH-OPS-20261101-0330 (session_01AFoLuLk8ieY7Ff3g8CL3nV); RQ-20261026-ed1c-11 result 41263186432",
+    "rerun": "python3 scripts/research/research_ops_checks.py --since 7d"
+  },
+  "severity": "medium",
+  "state": "queued",
+  "tier": 3,
+  "what": "RESEARCH-OPS 2026-11-01: ed1c-11 PASS (sol_pullback_2h, ADX<20/25 tighter trail M1: net R 10.50 vs 7.20, >=4/6 folds) is a discovery on the whole 2020-07..2026-10-15 history; its rule demands ONE confirmation unit on a disjoint partition, but the unit already spans all available history, so no earlier disjoint window exists. Confirm on bars after 2026-10-15 once enough accrue (sol_pullback_2h trades ~1/wk) or via the live-producer check; then Tier-3 declare proposal with mirror. Denominator: 2 arms in ed1c-11."
+}

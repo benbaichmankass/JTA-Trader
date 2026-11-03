@@ -6,6 +6,7 @@ import os
 from datetime import datetime, timezone
 from typing import Any, Dict
 
+from src.utils.jsonl_rotate import append_line
 from src.utils.paths import runtime_logs_dir
 
 logger = logging.getLogger(__name__)
@@ -20,6 +21,7 @@ logger = logging.getLogger(__name__)
 # written at the repo path.
 BASE = runtime_logs_dir()
 SIGNAL_FILE = BASE / "signal_audit.jsonl"
+SIGNAL_AUDIT_ROTATE_MB = 256  # env JSONL_ROTATE_MAX_MB overrides
 SUMMARY_FILE = BASE / "summary_markers.json"
 
 
@@ -53,8 +55,8 @@ def _dual_write_to_db(payload: Dict[str, Any]) -> None:
 def log_signal(event: Dict[str, Any]) -> None:
     payload = dict(event or {})
     payload.setdefault("logged_at_utc", datetime.now(timezone.utc).isoformat())
-    with SIGNAL_FILE.open("a", encoding="utf-8") as f:
-        f.write(json.dumps(payload, default=str) + "\n")
+    # Size-capped (VM-DISK-GROWTH-20261102): rotates to a gzipped sibling at the cap.
+    append_line(SIGNAL_FILE, json.dumps(payload, default=str) + "\n", SIGNAL_AUDIT_ROTATE_MB)
     # Dual-write to trade_journal.db::signals (S-034 transition).
     _dual_write_to_db(payload)
     # M12 S5 — mobile-push observer for buy/sell rows. Matches the

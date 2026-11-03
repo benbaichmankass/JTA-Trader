@@ -1708,6 +1708,14 @@ def _apply_update(db, open_pkg: dict, verdict: Dict[str, Any],
             leg_floor = sl_floor_from(leg.get("notes"))
             if floor_blocks(leg.get("direction"), leg_updates["sl"], leg_floor):
                 leg_updates.pop("sl")
+            # TRAIL-RATCHET-AUDIT: the ratchet inside each strategy monitor compares a
+            # candidate to the PACKAGE stop, which does not move while any sibling leg's
+            # amend failed. A leg that already applied a tighter stop must not be sent a
+            # looser one: its own synced `trades.stop_loss` is the floor too.
+            elif floor_blocks(leg.get("direction"), leg_updates["sl"],
+                              _coerce_float(leg.get("stop_loss"))):
+                leg_floor = _coerce_float(leg.get("stop_loss"))
+                leg_updates.pop("sl")
         if not leg_updates:
             logger.info(
                 "order_monitor: pkg=%s trade=%s account=%s held at its sl_floor %s "
@@ -1734,7 +1742,8 @@ def _apply_update(db, open_pkg: dict, verdict: Dict[str, Any],
         )
         if ex_result.get("ok"):
             leg_outcomes.append({"leg": leg, "outcome": "applied",
-                                 "updates": leg_updates})
+                                 "updates": leg_updates,
+                                 "venue_readback": _venue_ack(ex_result)})
             continue
         err_str = ex_result.get("error") or "unknown"
         if _is_unsupported_op_error(err_str):
@@ -1757,7 +1766,14 @@ def _apply_update(db, open_pkg: dict, verdict: Dict[str, Any],
                 err_str,
             )
             leg_outcomes.append({"leg": leg, "outcome": "failed",
-                                 "error": err_str})
+                                 "error": err_str,
+                                 "venue_readback": _venue_ack(ex_result)})
+
+    # STRUCTURE-EXITS-DEFAULT: journal the venue's answer per leg for a move the
+    # structure_exit verdict source proposed (no-op for every other verdict).
+    if isinstance(verdict, dict) and "structure_move" in verdict:
+        from src.runtime.structure_exit_live import journal_venue_outcomes
+        journal_venue_outcomes(open_pkg, verdict, leg_outcomes)
 
     applied = [o for o in leg_outcomes if o["outcome"] == "applied"]
     not_applied = [o for o in leg_outcomes
@@ -2491,6 +2507,19 @@ def _capture_fill_details(
     except Exception as exc:  # noqa: BLE001
         logger.warning("_capture_fill_details: %s", exc)
         return None
+
+
+def _venue_ack(ex_result: Any) -> Dict[str, Any]:
+    """The venue's own answer to an amend, trimmed for the structure-exit journal
+    (ok / skipped / retCode / error). An ACK, not a position re-read."""
+    try:
+        r = ex_result if isinstance(ex_result, dict) else {}
+        resp = r.get("exchange_response")
+        ret = resp.get("retCode") if isinstance(resp, dict) else None
+        return {"kind": "ack", "ok": r.get("ok"), "skipped": r.get("skipped"),
+                "retCode": ret, "error": r.get("error")}
+    except Exception:  # noqa: BLE001
+        return {"kind": "ack"}
 
 
 def _send_modify_to_exchange(matched_trade: Dict[str, Any], *,
@@ -4422,6 +4451,7 @@ def _reconcile_orphan_exchange_positions(db) -> Dict[str, int]:
                         # journal mis-attribution into a live reduce-only
                         # flatten, which is strictly worse than the bug.
                         position_size=r["position_size"],
+                        account_id=r["account_id"],
                     )
                     if _attr.read_failed:
                         # We could not look (package read raised). Unknown is
@@ -5127,6 +5157,8 @@ def _recover_orphan_attribution(
     *, db, symbol: str, direction: str, entry_price: float,
     max_rel_diff: float = 0.02, limit: int = 30,
     position_size: Optional[float] = None,
+    account_id: Optional[str] = None,
+    venue_sl: Optional[float] = None, venue_tp: Optional[float] = None,
 ) -> _OrphanAttribution:
     """Find the order package that opened an exchange orphan, and say whether
     its ``strategy_name`` can be SUPPORTED.
@@ -5161,6 +5193,21 @@ def _recover_orphan_attribution(
     ⚠️ **A REFUSAL NEVER PROPOSES A SECOND CANDIDATE.** It stops at the first
     price-match rather than walking on to the next-best guess: picking again is
     exactly the behaviour that produced the incident.
+
+    ⚠️ **``account_id`` IS AN IDENTITY FILTER, NOT A GUESS** (GLD-ORPHAN-5209,
+    2026-11-01). A package is shared by every account a signal fans out to, so a
+    symbol + price match says nothing about WHICH account's fill it was. Trade
+    5209 (alpaca_paper GLD 39) was re-adopted onto the newest price-matching
+    package, ``pkg-6a8e3fb325464be3``, where alpaca_paper's own row had been
+    REJECTED; the shares were ``pkg-8106d5eef6fc425c``'s. With ``account_id``
+    given, a candidate where this account has no FILLED row (status open or
+    closed) cannot own its position and is passed over, exactly like a wrong
+    direction. If price-matching candidates exist and NONE has this account's
+    fill, the result is a named REFUSAL (``no_account_fill``), never "no
+    candidate", so the caller never flattens on it. With ``venue_sl`` /
+    ``venue_tp`` given (the legs resting at the venue), a candidate whose
+    stored bracket disagrees is REFUSED (``bracket_mismatch``); without them
+    the bracket is unread and the detail says so.
     """
     want = _canon_dir(direction)
     if not want or not entry_price:
@@ -5178,6 +5225,7 @@ def _recover_orphan_attribution(
         return _OrphanAttribution(
             read_failed=True, detail="order-package read failed",
         )
+    no_fill: list = []
     for c in candidates:
         if _canon_dir(c.get("direction")) != want:
             continue
@@ -5189,6 +5237,24 @@ def _recover_orphan_attribution(
                 continue
         except (TypeError, ValueError, ZeroDivisionError):
             continue
+        if account_id:
+            fill = _account_filled_in_package(db, c.get("order_package_id"), account_id)
+            if fill is None:
+                return _OrphanAttribution(
+                    read_failed=True,
+                    detail=f"trades read failed for {c.get('order_package_id')} / {account_id}",
+                )
+            if not fill:
+                no_fill.append(str(c.get("order_package_id")))
+                continue
+            bad = _bracket_mismatch(c, venue_sl, venue_tp)
+            if bad:
+                claimed = str(c.get("strategy_name") or "")
+                logger.warning(
+                    "_recover_orphan_attribution: %s REFUSED attribution to %r - %s",
+                    symbol, claimed, bad,
+                )
+                return _OrphanAttribution(refused=True, refused_strategy=claimed, detail=bad)
 
         stale = _orphan_package_stale(c)
         if stale:
@@ -5233,7 +5299,42 @@ def _recover_orphan_attribution(
         return _OrphanAttribution(
             refused=True, refused_strategy=claimed, detail=verdict.detail,
         )
+    if no_fill:
+        detail = (f"no_account_fill: {len(no_fill)} price-matching package(s) "
+                  f"({', '.join(no_fill[:5])}) carry no filled row for {account_id}")
+        logger.warning("_recover_orphan_attribution: %s REFUSED - %s", symbol, detail)
+        return _OrphanAttribution(refused=True, refused_strategy="", detail=detail)
     return _OrphanAttribution(detail="no price-matching candidate")
+
+
+#: Relative tolerance for a stored package bracket vs the legs resting at the venue (a tick / cent rounding).
+_BRACKET_REL_TOL = 1e-3
+
+
+def _account_filled_in_package(db, order_package_id: Any, account_id: str) -> Optional[bool]:
+    """Did ``account_id`` FILL in this package (a trade row open or closed, not rejected)? None = could not look."""
+    try:
+        rows = db.get_trades(filters={"order_package_id": order_package_id, "account_id": account_id})
+    except Exception as exc:  # noqa: BLE001 - reported as could-not-look, never as "no fill"
+        logger.warning("_account_filled_in_package: trades read failed for %s / %s: %s",
+                       order_package_id, account_id, exc)
+        return None
+    return any(str(r.get("status") or "") in ("open", "closed") and not r.get("is_backtest") for r in rows or [])
+
+
+def _bracket_mismatch(pkg: dict, venue_sl: Optional[float], venue_tp: Optional[float]) -> Optional[str]:
+    """A named reason when the package's stored sl/tp disagree with the legs resting at the venue, else None."""
+    for name, venue, stored in (("sl", venue_sl, pkg.get("sl")), ("tp", venue_tp, pkg.get("tp"))):
+        if venue is None or stored is None:
+            continue
+        try:
+            v, st = float(venue), float(stored)
+        except (TypeError, ValueError):
+            continue
+        if abs(v - st) > _BRACKET_REL_TOL * max(abs(v), 1e-12):
+            return (f"bracket_mismatch: package {pkg.get('order_package_id')} {name} {st:g} "
+                    f"!= venue {name} {v:g}")
+    return None
 
 
 def _recover_orphan_order_package(
@@ -5338,6 +5439,7 @@ def _reattach_adopted_orphans(db, summary: Dict[str, int]) -> None:
         attribution = _recover_orphan_attribution(
             db=db, symbol=r["symbol"], direction=r["direction"],
             entry_price=entry_price, position_size=r["position_size"],
+            account_id=r["account_id"],
         )
         recovered = attribution.package
         if attribution.refused:
@@ -5593,7 +5695,7 @@ def _adopt_orphan_position(
     # established. It never picks a different candidate.
     recovered = _recover_orphan_attribution(
         db=db, symbol=symbol, direction=direction, entry_price=entry_price,
-        position_size=size,
+        position_size=size, account_id=account_id,
     ).package
     if recovered is not None:
         opid = recovered.get("order_package_id")
@@ -5743,7 +5845,11 @@ def _reconcile_open_trades(db) -> Dict[str, int]:
             conn.row_factory = __import__("sqlite3").Row
             rows = conn.execute(
                 "SELECT id, account_id, symbol, direction, notes, created_at, "
-                "       entry_price, position_size, setup_type "
+                "       entry_price, position_size, setup_type, "
+                # CLOSE-REASON-XRP-1220 recurrence (trade 6836): the close path's
+                # _own_bracket_fill_from_venue reads these two off this row; they
+                # were never selected, so the #22138 fix was a silent no-op.
+                "       sl_order_id, tp_order_id "
                 "  FROM trades WHERE status='open' AND COALESCE(is_backtest,0)=0"
             ).fetchall()
         finally:
@@ -8057,6 +8163,59 @@ def _cascade_close_netted_siblings(
     return closed
 
 
+def _own_bracket_fill_from_venue(
+    cfg: Optional[Dict[str, Any]], row: Dict[str, Any], *, is_reduce_leg: bool = False,
+) -> Optional[Dict[str, Any]]:
+    """The venue fill of THIS trade's own SL/TP leg, read at close time.
+
+    CLOSE-REASON-XRP-1220 (2026-11-01). ``bybit_1`` trade 6817 (XRPUSDT long, pkg
+    pkg-f07b659a7db94e8a) was stopped out by the venue at 12:16:49Z (its own
+    ``sl_order_id`` Filled at 1.2476). The reconciler finalised it at 12:20:15Z as
+    ``reconciler_filled`` with ``exit_price`` NULL because on a DEMO account the
+    closed-pnl lookup resolves only from the local fills store, which an hourly
+    timer fills, so a fresh close finds nothing. The label was only repaired later
+    by ``_sweep_exit_label_from_bracket_order``, and until then every reader saw a
+    non-TP/SL close with no price.
+
+    The venue already says which leg filled and at what price on
+    ``/v5/order/history``, keyed by the order id the journal holds. This is the
+    same per-order read the reconciler already makes for the ENTRY order
+    (``account_order_status``), made once per finalisation, never per tick.
+
+    Returns ``{"leg": "sl"|"tp", "avg_price", "exec_time", "order_id"}`` only when
+    a tracked leg is ``Filled``, with a positive price and a filled qty within 5 %
+    of the row's size. Otherwise ``None`` and the caller keeps its generic
+    fallback (we could not establish it; never a guess). Intent-reduce legs are
+    excluded: their bracket may be inverted. Never raises.
+    """
+    if cfg is None or is_reduce_leg:
+        return None
+    qty = _safe_float(row.get("position_size")) or 0.0
+    if qty <= 0:
+        return None
+    try:
+        from src.units.accounts.clients import account_order_status
+    except Exception:  # noqa: BLE001
+        return None
+    for leg, key in (("sl", "sl_order_id"), ("tp", "tp_order_id")):
+        oid = str(row.get(key) or "").strip()
+        if not oid or not _is_real_order_id(oid):
+            continue
+        try:
+            st = account_order_status(cfg, oid)
+        except Exception:  # noqa: BLE001
+            continue
+        if not isinstance(st, dict) or str(st.get("status") or "") != "Filled":
+            continue
+        px = _safe_float(st.get("avg_price")) or 0.0
+        fq = _safe_float(st.get("filled_qty")) or 0.0
+        if px <= 0 or fq <= 0 or abs(fq - qty) / qty > 0.05:
+            continue
+        return {"leg": leg, "avg_price": px,
+                "exec_time": st.get("exec_time"), "order_id": oid}
+    return None
+
+
 def _close_trade_from_order_status(
     db,
     row: Dict[str, Any],
@@ -8261,6 +8420,39 @@ def _close_trade_from_order_status(
                     )
             except (TypeError, ValueError):
                 pass
+    elif (_own_leg := _own_bracket_fill_from_venue(
+            cfg, row, is_reduce_leg=is_reduce_leg)) is not None:
+        # CLOSE-REASON-XRP-1220: the closed-pnl path found nothing (demo reads a
+        # local store filled hourly) but the venue says THIS trade's own SL/TP
+        # order filled. Book that fill: real exit price, real close time, the
+        # leg's true reason, attributed by order identity (MEASURED). `pnl` is
+        # left NULL for the local-compute sweep, exactly as the late-price path
+        # does, so no PnL is invented here.
+        final_exit_reason = _own_leg["leg"]
+        closed_at = (
+            normalize_closed_at_value(_own_leg.get("exec_time"))
+            or datetime.now(timezone.utc).isoformat()
+        )
+        notes.update({
+            "closed_at": closed_at,
+            "closed_by": "monitor_reconciler",
+            "closed_reason":
+                "reconciler — Bybit reports order filled and position flat",
+            "exit_price_source": "exchange_fill",
+            "exit_reason_source": BRACKET_ORDER_LABEL_SOURCE,
+            "finalised_by": "reconciler",
+        })
+        updates = {
+            "status": "closed",
+            "exit_reason": final_exit_reason,
+            "exit_price": _own_leg["avg_price"],
+            "closed_at": closed_at,
+            "notes": dump_capped(notes, 500),
+        }
+        _entry_avg_price = _safe_float(order_status.get("avg_price"))
+        _entry_current = _safe_float(row.get("entry_price"))
+        if _entry_avg_price > 0 and _entry_avg_price != _entry_current:
+            updates["entry_price"] = _entry_avg_price
     else:
         # Fallback: gate clears but exit_price stays NULL with the
         # unreliable-source flag (pre-2026-05-16 contract preserved

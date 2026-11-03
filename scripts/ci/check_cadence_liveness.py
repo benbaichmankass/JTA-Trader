@@ -175,6 +175,24 @@ class Cadence(NamedTuple):
 #: healthy-looking watch forever". That is the new-table-wiring lesson: a guard
 #: cheaper to lie to than to satisfy is worse than no guard.
 CADENCE_REGISTRY: dict[str, dict] = {
+    # ── ETF-HISTORY-PIPELINE (2026-11-01): the stores live on the trainer, not in git, so there is no repo receipt.
+    "etf-history-pipeline.yml": {
+        "receipt": None,
+        "why": "writes the ETF bar store on the trainer (data/etf_history/), not in git, so no repo receipt exists; every run grades the "
+               "store's own freshness (etf_history_verify.py exits 1 on a stale/missing series and turns the run red) and a dead run is "
+               "observed by claude-run-failure-alert",
+    },
+    "sp500-membership-refresh.yml": {
+        "receipt": "config/data_universe/sp500_membership.csv",
+        "why": "lands the membership table through commit-to-main, so the last commit touching it IS the receipt (quarterly; a refresh that "
+               "changes nothing opens no PR, so a quiet quarter can read old -- the file's own newest snapshot date is the real freshness)",
+    },
+    "options-snapshot-capture.yml": {
+        "receipt": None,
+        "why": "writes the option-snapshot store on the trainer (data/options_history/), not in git, so no repo receipt exists; every run "
+               "verifies per-underlying freshness (capture_options_snapshot.py --mode verify exits 1 when stale) and a dead run is "
+               "observed by claude-run-failure-alert",
+    },
     # ── the one verified pairing on day one ──────────────────────────────
     "trainer-capture-watch.yml": {
         "receipt": "docs/claude/work/TRAINER-CAPTURE-WATCH.json",
@@ -194,6 +212,12 @@ CADENCE_REGISTRY: dict[str, dict] = {
         "why": "writes the incident ledger only when an incident occurs, so a quiet watchdog leaves no receipt by design; "
                "a stopped watchdog is observed by claude-run-failure-alert (crashed runs) and by research-ops reading the Actions run list",
     },
+    "reset-protocol-backup.yml": {
+        "receipt": None,
+        "why": "weekly (Wed 18:15Z / 19:00Z); posts an ops-flags comment only when the reset has no receipt in "
+               "comms/ops/reset_receipts.jsonl, so a reset the primary trigger already handled leaves no artifact by design; "
+               "a crashing run is observed by claude-run-failure-alert, and the receipt's absence IS the signal it reports",
+    },
     "live-review-wake.yml": {
         "receipt": None,
         "why": "posts an ops-flags comment only when a live-review event is newly due (or a could-not-look flag "
@@ -205,6 +229,11 @@ CADENCE_REGISTRY: dict[str, dict] = {
         "why": "writes main only when an order package closed since the last run (one record per package), so a quiet hour leaves no "
                "receipt by design; a crashing run is observed by claude-run-failure-alert and a closed package without a record in "
                "comms/research/counterfactual_grades/ is the staleness signal",
+    },
+    "forecast-grade.yml": {
+        "receipt": None,
+        "why": "writes main only when a forecast changed state (the ledger is final-row-frozen), so a quiet hour leaves no receipt by "
+               "design; a crashing run is observed by claude-run-failure-alert and each run uploads its grade as a run summary",
     },
     "live-review-rows-mirror.yml": {
         "receipt": None,
@@ -249,6 +278,7 @@ CADENCE_REGISTRY: dict[str, dict] = {
     #    just has not been declared yet. Measured 2026-09-22: 9 of the 18
     #    scheduled workflows contain a commit-to-main / git push step. Naming
     #    the output path for each is the obvious next shrink of this file.
+    "market-data-lake.yml": {"receipt": None, "why": "its output is the PRIVATE HF dataset bentzbk/jta-market-lake (MARKET-DATA-LAKE 2026-11-01); the daily run also lands comms/data_lake/health_latest.json, but that file does not exist until the first run, so it is not yet declared as the receipt (follow-up: switch receipt once it lands). A dropped slot is re-dispatched by schedule_keeper (stale_hours 26), a dead run is caught by claude-run-failure-alert, and stale data by the health record's per-feed staleness check"},
     "ml-data-export-kaggle.yml": {"receipt": None, "why": "its output is a PRIVATE Kaggle dataset version plus 14-day run artifacts, nothing committed to git (ML-DATA-OFF-TRAINER 2026-10-13); a dead run is caught by claude-run-failure-alert, and a stale dataset by the MANIFEST generated_at that every consumer re-reads"},
     "grading-freshness-alert.yml": {"receipt": None, "why": "quiet by design when grading is fresh: it commits nothing and its only output is a Telegram ping on stale/unreadable; a dead run is caught by claude-run-failure-alert (GRADE-ALERT 2026-09-29)"},
     "schedule-keeper.yml": {"receipt": None, "why": "no in-repo trace by design: it reads the Actions API and dispatches; it also fires on every push to main, so its own cron is only the night-time floor (W6-OPS-R 2026-09-27)"},
@@ -412,6 +442,7 @@ CADENCE_REGISTRY: dict[str, dict] = {
     "ict-mes-ibkr-pull.timer": {"receipt": None, "why": "VM-side; diag relay is the surface"},
     "ict-research-results-gate.timer": {"receipt": None, "why": "VM-side; diag relay is the surface"},
     "ict-shadow-log-rotate.timer": {"receipt": None, "why": "VM-side; diag relay is the surface"},
+    "ict-ml-decision-shadow.timer": {"receipt": None, "why": "VM-side (2026-11-01, observe-only ML ENTRY decision shadow); it writes runtime_logs/ml_decision_shadow.jsonl on the live VM, not in the repo; graded on the VM by health check ml_decision_shadow (newest row's logged_at, four states) and readable via /api/diag/log_file?name=ml_decision_shadow"},
     "ict-trainer-git-sync.timer": {"receipt": None, "why": "VM-side; diag relay is the surface"},
     "ict-web-api-watchdog.timer": {"receipt": None, "why": "VM-side; diag relay is the surface"},
     "ict-work-digest.timer": {"receipt": None, "why": "VM-side; diag relay is the surface"},

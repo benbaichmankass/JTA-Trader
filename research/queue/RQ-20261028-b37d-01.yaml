@@ -91,13 +91,22 @@ lands:
   store: research/results/
   assert_field: read_state
   min_rows: 1
-grading:
-  auto: false
-  owner: RESEARCH-OPS-20261028-2048
-  owner_reason: both-neighbour clause is not what the mechanical sweep grader reads (it passes on any one candidate); the next research-ops pass grades from grade.candidates.
 related:
 - RQ-20261027-3e41-03
 - scripts/research/exit_lever_ablation.py
 - RQ-20261022-326f-05
 - RQ-20261023-a1f3-11
 last_dispatched_at: '2026-10-29T21:23:58+00:00'
+grading:
+  attested: RULE-RQ20261028B37D01-VOLSKIP_PLATEAU
+  auto: false
+  decision_rule_id: RULE-RQ20261028B37D01-VOLSKIP_PLATEAU
+  evidence:
+  - research/results/RQ-20261028-b37d-01/40957476407.jsonl
+  graded_at: '2026-10-31'
+  grader: RESEARCH-OPS-20261031-1120 (session)
+  reason: 'PLATEAU applied verbatim from grade.candidates: VL25 dR +20.91 R / dDD -4.16 / 3 of 4 folds; VL35 dR +21.80 R / dDD -10.57 / 3 of 4 folds -> both neighbours clear
+    dR >= 1.0, dDD <= 0, folds >= 3 -> PASS (plateau). A lead, NOT a confirmation: chosen from the 3e41 batch; the forward-window re-run is filed as a pipeline item. No Tier-3
+    action from this unit.'
+  rows: 1
+  verdict: pass

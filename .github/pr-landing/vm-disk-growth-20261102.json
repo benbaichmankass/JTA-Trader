@@ -1,0 +1,7 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "hold_reason": "tier_2_3_needs_approval",
+  "hold_text": "Tier-2 runtime writer change (size-capped gzip rotation of signal_audit.jsonl and position_read_state_soak.jsonl) plus a one-off prune-db-backups file path. Lane policy: landing: hold; the manager merges.",
+  "why": "Live VM disk grew about 5 GB in 6h; signal_audit.jsonl (1.5 GB) had no cap and the Oct-17 journal backup (2.0 GB) was undeletable under keep >= 1. Operator approved the backup delete (popup 2026-11-02 ~21:13Z)."
+}

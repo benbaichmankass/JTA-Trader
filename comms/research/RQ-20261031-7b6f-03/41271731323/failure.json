@@ -1,0 +1,38 @@
+{
+  "stage": "harness",
+  "arm": "AX40",
+  "exit_code": 2,
+  "argv": [
+    "/opt/hostedtoolcache/Python/3.11.17/x64/bin/python3",
+    "/home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_ict_scalp.py",
+    "--data",
+    "<data>",
+    "--symbol",
+    "SOLUSDT",
+    "--timeframe",
+    "15m",
+    "--strategy-name",
+    "ict_scalp_sol_15m",
+    "--fee-bps-roundtrip",
+    "11.0",
+    "--emit-trades",
+    "comms/research/RQ-20261031-7b6f-03/41271731323/arms/AX40__trades.jsonl",
+    "--json",
+    "comms/research/RQ-20261031-7b6f-03/41271731323/arms/AX40__bt.json",
+    "--htf-rule",
+    "1h",
+    "--htf-ema-period",
+    "20",
+    "--sim-breakeven",
+    "--adx-max",
+    "40",
+    "--start",
+    "2025-10-05",
+    "--end",
+    "2026-10-04 23:59"
+  ],
+  "arms_completed": [
+    "A"
+  ],
+  "stderr_tail": "usage: backtest_ict_scalp.py [-h] [--data DATA] [--timeframe TIMEFRAME]\n                             [--symbol SYMBOL] [--start START] [--end END]\n                             [--warmup-bars WARMUP_BARS]\n                             [--timeout-bars TIMEOUT_BARS]\n                             [--cooldown-bars COOLDOWN_BARS]\n                             [--fee-bps-roundtrip FEE_BPS_ROUNDTRIP]\n                             [--slippage-bps-roundtrip SLIPPAGE_BPS_ROUNDTRIP]\n                             [--funding-bps-per-window FUNDING_BPS_PER_WINDOW]\n                             [--funding-window-hours FUNDING_WINDOW_HOURS]\n                             [--htf-rule HTF_RULE]\n                             [--htf-ema-period HTF_EMA_PERIOD]\n                             [--json JSON_OUT] [--ignore-yaml]\n                             [--min-confidence MIN_CONFIDENCE]\n                             [--confidence-sweep GRID] [--strategy-name NAME]\n                             [--tp-cap-pct TP_CAP_PCT]\n                             [--tp-target-r TP_TARGET_R]\n                             [--tp-extend-r TP_EXTEND_R]\n                             [--tp-approach-frac TP_APPROACH_FRAC]\n                             [--tp-max-extends TP_MAX_EXTENDS]\n                             [--tp-thesis {native,always,unknown}]\n                             [--tp-retarget-mode {atr_rescale,stall_pull_in}]\n                             [--tp-retarget-stall-bars TP_RETARGET_STALL_BARS]\n                             [--tp-report]\n                             [--tp-retarget-pull-r TP_RETARGET_PULL_R]\n                             [--no-tp] [--emit-trades PATH] [--stamp-regime]\n                             [--vol-spec-json PATH] [--be-arm-on-touch]\n                             [--sim-breakeven] [--stale-exit-bars N]\n                             [--stale-exit-below-r R] [--giveback-min-mfe-r R]\n                             [--bank-frac F] [--bank-at-r R] [--tp-at-r R]\n                             [--atr-sl-buffer-mult M] [--giveback-r R]\n                             [--entry-mode {market,limit}]\n                             [--limit-expire-bars N]\n                             [--maker-fee-bps MAKER_FEE_BPS]\n                             [--taker-fee-bps TAKER_FEE_BPS]\nbacktest_ict_scalp.py: error: unrecognized arguments: --adx-max 40\n"
+}

@@ -92,6 +92,8 @@ in-trade form is `RULE-AM-RISK-ADJUSTED-V1`. Point at it; never restate it.
                               ▼  GATE 1  ▼
   STAGE 1   Soak                         bybit_1 · alpaca_paper
             Do the MECHANICS work? (edge was already proven at Stage 0)
+            SKIPPED when the leg's mechanics are already proven (§ "The soak is
+            MECHANICAL", 2026-11-01): Stage 0 -> Gate 2 directly.
             Passes when — the first 1–2 CLEAN trades: the signal fires, the
             order is placed with the right size and side, a real SL and TP
             rest at the venue, management (trail/amend) works, the exit is
@@ -131,7 +133,7 @@ help by cleaning up duplicate trades in the books and creating a more integrated
 - **The status is DERIVED, never declared** (`scripts/ops/strategy_status.py`): inactive = retired by record; production = on a real-money
   roster; testing = otherwise. A `status:` field would be a third gate (CLAUDE.md § "The two execution gates") and a second copy of the
   roster, free to drift from it.
-- **Promotion MOVES a leg.** Gate 2 (`MD-PROMOTE-S1-S2`, human-merge PR) adds it to real money **and** the mirror and removes it from its
+- **Promotion MOVES a leg** (and, when its mechanics are already proven, it MOVES straight from Stage 0 to real money without ever being on general paper — § "The soak is MECHANICAL", 2026-11-01). Gate 2 (`MD-PROMOTE-S1-S2`, manager-merged PR on the data-backed rule, CLAUDE-RULES-CANONICAL § "Data-backed Tier-2/3 decisions"; no operator merge, 2026-11-03) adds it to real money **and** the mirror and removes it from its
   general paper account in the same PR (`mandate_resolver._delta` proposes all three edits). Production legs keep logging every trade on
   real money and the mirror, so general paper loses no record a production leg would have made — except where real money cannot size a
   trade the paper book would (measured below).
@@ -193,16 +195,61 @@ mechanical bugs while we're still improving the actual function."*
 - **The floor is the default home.** A leg trades on its demo floor from the moment it exists until a retirement record removes it. A missing Stage-0 pass does not keep a leg off the floor. It keeps the leg off **real money and the mirror** (Gate 2), and nothing else.
 - **`execution: shadow` is not a holding stage.** Shadow is no longer used for non-retired legs. A mechanism still being built (the desk leg, the short-hold lane, a new ML head) goes on the floor early, so mechanical bugs show up while the function is still improving.
 - **Demotion stops at the floor** (and, since 2026-10-28, a demoted production leg is put back ON it). The operator's popup answer, 2026-10-27, verbatim, was *"Demote stops at the floor (Recommended)"*. A leg that fails Stage 0 or underperforms is demoted out of real money and the mirror and stays on its demo floor. `MD-S1-CUT-ON-STAGE0-FAIL` and `MD-DEMOTE-S1-OFF` are rewritten to match. **Only an explicit retirement record removes a leg from its floor.**
-- **Real money is promotion only.** Gate 2 (`MD-PROMOTE-S1-S2`, human-merge PR) and the prop superset gate are unchanged.
+- **Real money is promotion only.** Gate 2 (`MD-PROMOTE-S1-S2`, manager-merged PR on the data-backed rule, CLAUDE-RULES-CANONICAL § "Data-backed Tier-2/3 decisions"; no operator merge, 2026-11-03) and the prop superset gate are unchanged.
 - **Exceptions are named, never silent.** A leg no demo venue can serve (e.g. `xauusd_trend_1h`: OANDA practice is `dry_run` and OANDA US cannot trade XAU_USD) or one blocked by a guard (same-symbol allocation without slices on alpaca_paper) is listed with the reason on its checklist row until the blocker is fixed.
 
-### The soak is MECHANICAL — 1–2 clean trades, no calendar (operator, 2026-10-15, binding)
+### The soak is MECHANICAL — and a leg with proven mechanics skips it (operator, 2026-10-15 and 2026-11-01, binding)
 
 <!-- SOAK-RULE-CANONICAL: the ONE statement of the soak rule. Every other doc points here
      (soak-doctrine-guard CHECK E refuses a live doc or skill that restates a long soak). -->
 
-Verbatim: *"A soak is a mechanical verification that was already proven in backtesting, and nothing
+**Gates this adds or changes:** it REMOVES one — Gate 2 no longer requires a paper soak for a leg whose mechanics are already proven.
+It adds none (`config/mechanics_paths.yaml` is an evidence input to `MD-PROMOTE-S1-S2`, not a switch on what trades).
+
+Verbatim (2026-10-15): *"A soak is a mechanical verification that was already proven in backtesting, and nothing
 needs to soak for more than one or two trades."*
+
+**2026-11-01 — mechanics proven means no paper soak.** Operator directive, verbatim (chat to Manager Session 2026-11-01a, ~07:55Z):
+*"I also want us to, in general, we need to sort of update the process for promotion. Like, not everything really needs to be soaked,
+because if the whole idea is that we're basing the decisions off of the quality of the testing, and we're not using the soaking for
+performance, which we're not, and we shouldn't be, then, like, we don't need to prove everything on, a mechanical soak. If it's not
+using a new training mechanism, then there's no reason, like, if it needs to, it can also be tested on, one very small trade, just to
+make sure that everything works end-to-end, and then, it doesn't need to keep on soaking in paper. If it proved itself on the back test
+and the mechanics are proven, for that, paper and real money are the same, so we can do, fake trade on paper money just to test the
+mechanics and then move it to real money. There's no reason why we need to, watch it trade on paper first if we're confident enough in
+the results, and that is the pipeline here, right? Good testing results, and then we're not, testing things in a real simulation for
+weeks on end, because we just don't have that amount of time for the kind of data that we're generating."*
+
+⚠️ **Confirmed reading:** "new training mechanism" means **new execution mechanism**. Operator confirmation, 2026-11-01 ~08:00Z (relayed by Manager Session 2026-11-01a), verbatim: "Yes, that is the correct interpretation."
+
+**The rule, in order:**
+1. **Mechanics already proven → straight to real money.** A leg that clears Stage 0 (committed, pre-registered evidence record, net of
+   the full cost stack, holdout) goes to Stage 2 (live + mirror) with NO paper soak when `soak_state.mechanics_proven(leg)` is true.
+   Its first 1–2 live trades are a **named closing observation** on the PR and checklist row (what executes, what it is compared to).
+2. **New mechanics → ONE small end-to-end trade, then real money.** A leg with new code on the order path (new adapter, broker,
+   bracket/management code) proves it with one clean small trade — on paper, or at minimum size on real money — then moves. No extended
+   paper watching. That trade is a soak with `n_needed: 1`.
+3. **Edge is never decided here.** Stage 0 decides edge. Realized cost and live-vs-backtest are monitoring (the mirror's net-of-cost
+   window is the demotion signal). The prop superset below is unchanged. TESTING legs that have not cleared Stage 0 stay on the demo floor.
+4. **2026-11-03: the two tracks are independent.** Mechanics (build if new + one small clean trade) and edge (Stage 0, iterated
+   until it passes) run in parallel and in either order; a leg promotes the moment BOTH are green. Builds are still prioritised,
+   not automatic. Operator, verbatim (chat to Manager Session 2026-11-03a, ~10:00Z): *"if we come up with a new strategy that
+   needs new mechanics, then we can build and test those regardless of what happens on the backtesting side. At least if, like,
+   we shouldn't necessarily build everything, but ... the backtesting should be its own separate path. That's not dependent on
+   the mechanical trade, right? Like, that doesn't have to be chronological."*
+5. **2026-11-03: promotion is manager-merged, not operator-merged.** A promotion with a committed Stage-0 evidence record and
+   proven mechanics is decided, merged and deployed by the manager, which then notifies the operator (CLAUDE-RULES-CANONICAL
+   § "Data-backed Tier-2/3 decisions"). Operator, verbatim (same session, ~10:05Z): *"promotion shouldn't need my merge at this
+   point in the end. We've already established that if the data supports it, then that pipeline is supposed to run
+   automatically and doesn't need me for tier 3 changes as long as there's data supporting the changes being made."* Popup
+   ~10:06Z, same session: `autoland` is NOT added to `MD-PROMOTE-S1-S2` ("Manager merges (Recommended)"): a manager session
+   verifies the evidence record before real money moves. **Gates this changes:** removes the operator merge; adds none.
+
+**`mechanics_proven` is decided by a script from records, not prose** (`scripts/ops/soak_state.py::mechanics_proven`, read by
+`mandate_resolver` when `MD-PROMOTE-S1-S2`'s `bar.mechanics_proven` is set). True when EITHER (own) the leg's own soak contract reads
+`passed`, OR (path) the leg is registered `delta: none` in `config/mechanics_paths.yaml` and a *different* leg registered on the same
+`path` and `exchange` has a `passed` soak (≥ 1 clean closed trade, graded by `grade_trade`). `delta: new_code` is never proven by a
+path. The registry starts empty; the promoting PR adds the entry, and the resolver verifies it against SOAKS.json.
 
 - **What a soak asks:** do the mechanics work for this leg? Edge was settled offline at Stage 0.
 - **PASS** = the first `n_needed` (1 or 2) CLEAN trades. Clean = the signal fires · the order is placed
@@ -219,16 +266,15 @@ needs to soak for more than one or two trades."*
   account); a passed shadow soak is not a Stage-1 soak. **Live prop trades count** as soak trades.
 - **Where it lives:** contracts `docs/claude/work/SOAKS.json` (a mechanical `checklist`, `n_needed` ≤ 2);
   state `scripts/ops/soak_state.py::soak_states()` (`passed` · `mechanical_fail` · `in_progress` ·
-  `awaiting_first_trade` · `unknown`); guards `soak-contract-guard` (the contracts) and
-  `soak-doctrine-guard` (the docs, skills and generators).
-- **Open:** the granted `MD-PROMOTE-S1-S2` still reads a per-leg R3 `consistent` verdict (a cost sample).
-  Its amendment is PROPOSED in `config/mandates.yaml` (`MD-PROMOTE-S1-S2-SOAK-AMEND`); granting it is the
-  operator's.
+  `awaiting_first_trade` · `unknown`) and `mechanics_proven()`; registry `config/mechanics_paths.yaml`; guards
+  `soak-contract-guard` (the contracts and the registry's shape) and `soak-doctrine-guard` (the docs, skills and generators).
+- **Open:** the 2026-11-01 amendment of `MD-PROMOTE-S1-S2` (`bar.mechanics_proven`) is Tier 3 and lands only on the operator's yes.
+
 - **Exception — a config-only improvement to an existing, already-live strategy (operator, 2026-10-18,
   binding).** Verbatim: *"in general, yes, things need to pass a mechanical test on paper, but if it's an
   improvement like this to an existing strategy, and it's just configuration that's already based on, like,
   the theory that's proven itself, then we should move forward with that and just monitor the first trades
-  to make sure that they execute correctly."* So a change that is **configuration only** on a leg that is
+  to make sure that they execute correctly."* This is the `delta: none` case of the rule above, generalised from config-only to any proven path. So a change that is **configuration only** on a leg that is
   **already live**, backed by a **committed, pre-registered evidence record** (net of the full cost stack,
   clearing a rule registered before the run), goes live directly — no soak alias, no separate soak stage —
   and its **first 1–2 live trades are monitored** for correct execution. The monitoring is a named closing
@@ -236,6 +282,7 @@ needs to soak for more than one or two trades."*
   there is a mechanical fault like any other (fix it, or revert the config). **New strategies and new code
   paths still soak** as above; so does anything that needs code to run. This relaxes the *placement* of the
   mechanical check (live, watched), not the evidence bar, and it does not touch the prop superset below.
+
 - **The Claude desk (`claude_desk`): one passed paper/demo soak covers later packet, brief and symbol changes
   (operator, chat 2026-10-27 ~16:00Z, binding).** Verbatim: *"once the demo soak is placed now, that on the paper
   accounts, that's good enough. That's the same as passing a soak once there's an edge, because the mechanics are
@@ -250,11 +297,197 @@ needs to soak for more than one or two trades."*
 same strategies and take the same trades at all times (operator, 2026-09-21).
 The mirror is the honest-size read of the live book, not a separate rung.
 
+⚠️ **Alpaca mirror = SUPERSET (operator, 2026-11-01, chat, verbatim):** *"The paper portfolio decision is wrong - it should mirror
+the live account, as per the definition of paper mirror."* and *"The only difference with alpaca mirror is that it also has shorting
+and includes the symbols we can't yet trade on alpaca live, but there's no excuse for that account having nothing/less than alpaca
+live trading, that's a serious process flaw that is unacceptable"*. **Supersedes B2** (strict equality minus the affordability
+proxies, "empty live ⇒ empty mirror"). `alpaca_portfolio` carries every `alpaca_live` leg (each proxy as its full-size underlying),
+trades both sides, and may carry the symbols live cannot yet trade; `tests/test_paper_portfolio_accounts.py` fails on an empty or
+smaller mirror. The Bybit pair stays strict equality.
+
 **Consequence: R4 becomes a DEMOTION gate, not a promotion gate.** A mirror
 that carries identical strategies only ever holds data for legs already live,
 so it cannot gate entry. It gates exit. This is the falsifier the system has
 never had — nothing currently demotes anything, and 21 retirement candidates
 have produced zero retirements.
+
+### What does not pass goes back into research — THE research workflow (operator, 2026-11-01, binding)
+
+<!-- RESEARCH-LOOP-CANONICAL: the ONE statement of the research workflow. Skills and docs point here; they never restate it. -->
+
+**Gates this adds or changes:** none on research work. Retirement gets HARDER: the count-based minimum in
+`scripts/research/family_retirement_policy.yaml` (v2 `configs_tested: 3`) is replaced by lever exhaustion (v3). Every field below
+is filled by default by the tools; nothing refuses a unit for lacking one.
+
+**The operator, verbatim, 2026-11-01:**
+1. ~12:59Z: *"first, these rules apply to MLs as well, not just strategies or live reviews. second, if the data doesn't pass, it
+   goes back into research for improvments and testing. THere is no other pipeline for underperforming strategies/mls. I don' twant
+   to keep finding strategies sitting arround on paper testing with no clear plan"*
+2. ~13:01Z: *"its also not jsut that each one gets a plan as a one off - this is the only kosher workflow in the research side of
+   the system, and it must be upheld going forward"*
+3. ~14:00Z: *"Okay so not quite. First of all, I don't know why we decided one hypothesis sometimes like that's not necessarily a
+   format that's going to be good across all the different things. So get rid of that like we need to think of how we're actually
+   doing an iteration. Not just have like the one I hypothesis thing. That's ridiculous. Been through several operations and we
+   really have dated to support the idea that there's no levers that we can pull to affect the outcome then we can. we can retire
+   strategies ever. There's just like it cannot possibly be that a strategy that we haven't made a decision to retire a strategy and
+   it isn't doesn't have an edge and we're not doing anything with it. That's what's unacceptable here. That's why we need to have
+   iterations if we've integrated and we have actual not. We've done three random tests and those three tests didn't pass, so we're
+   done. No, that's not how it works. Once we've proven conclusively that we cannot find an edge on a certain strategy, we can retire
+   it, and until then it needs to be an iteration. We cannot have a situation where we either retire something because we tried once
+   and it didn't work or we just leave. Things that aren't working is not working because we don't have a process for iterating.
+   That is the problem that I still don't understand how we have, and that's the problem that we're fixing here. That's what needs
+   to be in the process that we're building here"*
+4. ~14:04Z: *"And yes, part of the iterative process is understanding why something is failing. It can't just be, oh, it didn't
+   work, then let's try something else random. No, we have to have a process here by which we understand how to test the different
+   levers so that we can understand how each lever affects the outcome, and based on that, decide if something has potential or not
+   have potential. We can't just keep on doing this each time is a complete, guess of luck, and either it works or doesn't work.
+   That's just not how, that's definitely not how trading firms work, and I don't understand how that's still the process that we're
+   working by, considering how many times we've tried to go back and fix the process to be more like how actual trading firms work.
+   So we need to make sure that our research process helps us understand the outcomes and not just test them and then randomly test
+   something else."*
+5. ~14:04Z: *"And that isn't just applied to things that aren't working right now. This is the workflow. It's building and
+   designing in a way that allows us to test specific variables and then iterate based on those results, not just random crapshoots
+   every time."*
+6. ~14:09Z: *"And just in case it isn't explicitly clear, this is part of the mandate of the regular research operations skill and
+   routine. But why would we, what are we doing with it if not using it in order to improve and figure out what we're doing? Like,
+   this is just so, it's very frustrating, and we need to make sure that it's not, that we're not falling into these traps. We need
+   to design correctly from the beginning, and I don't understand how many times we can audit and redesign the system and still be
+   finding ourselves in fucking amateur hour. It's insane."*
+
+**The workflow — for EVERYTHING, by design.** It covers every strategy leg, ML model or decision head, and live-review action
+class: new ones, failing ones, and ones that pass and trade live. It is the research workflow, not a remediation path. Its centre is
+**understanding how each lever moves the outcome**, never pass/fail alone.
+
+1. **DESIGN PARAMETERISED FROM THE START.** A new strategy, model or class is built with its levers declared up front, in a lever
+   manifest (`research/levers/<subject>.yaml` `declared:` — each lever, its range and its hypothesised effect). The harness can
+   vary each lever independently. The first test is a **structured design**: one-factor sweeps or ablations of the declared levers,
+   with the base as the control. It is never a single configuration. No unit type is exempt from declaring which variables it
+   measures; an `origin: new_hypothesis` unit carries its manifest too.
+2. **ATTRIBUTE EVERY RESULT FIRST**, before any next test is chosen. Net R is decomposed into:
+   - entry quality: MFE, and the share of trades that reach 1 R;
+   - exit capture: realised vs MFE, and losers that had reached 1 R;
+   - filter effect (read from the filter lever's arms in the map);
+   - cost share: gross vs net.
+   
+   Each component is split by year, direction, exit reason and regime / ADX bucket (by symbol and session too where a subject
+   spans several; the tool does not compute those two splits yet). A shared tool computes it from
+   the committed trade rows (`scripts/research/lever_map.py`, reusing the harness emits). The finding is written into the result's
+   disposition.
+3. **KEEP A LEVER RESPONSE MAP PER SUBJECT**, persistent and cumulative (`research/levers/<subject>.yaml`). For each lever family it
+   records:
+   - the values tested;
+   - the measured response: n, net R and the delta vs baseline;
+   - the shape: flat, monotone, peaked, noisy or single point;
+   - fold and regime stability.
+   
+   Every result appends to it. It answers "how does each lever affect the outcome":
+   - a **smooth, fold-stable** response on a lever is **potential**;
+   - a **spiky single-point optimum** is **overfit**, not an edge;
+   - a **flat or noisy** response on every material lever is evidence of **no edge**.
+4. **CHOOSE THE NEXT TEST FROM THE MAP, NEVER AT RANDOM.** Each unit cites the attribution finding, the map entries it builds on,
+   the lever it measures next, and why that lever, by expected information or value. The methods are a desk's:
+   - one-factor sensitivity and ablation before combinations;
+   - response surfaces where interactions are suspected;
+   - every variant registered before the run and counted against multiple-testing correction;
+   - walk-forward and regime splits;
+   - ONE holdout read for a survivor.
+5. **LIVE THINGS KEEP BEING MAPPED.** A leg or model that passed and trades live still has a map. Its levers are re-measured on new
+   data on a standing cadence, so the demotion signal is mechanistic: we see **which lever's response decayed**, not only that P&L
+   fell. Improvements to live legs come from the same map.
+
+The lever families (`scripts/research/family_retirement_policy.yaml` v3 `lever_families`):
+- **strategy leg:** entry rule / threshold, exits / brackets / TP / trailing, filters, regime gating, timeframe, symbol set,
+  direction, session, sizing vs cost;
+- **ML model:** features, labels / targets, recipe / learner, universe, horizon, decision threshold, calibration;
+- **live-review class:** trigger, timing, action bounds.
+
+**Exactly two states for anything that has not passed:** it is **ITERATING**, or it is **RETIRED by a lever-exhaustion record**.
+Two states are forbidden, by name:
+- **(a) retired after a few tries.** An attempt count, a number of failed tests or a date is never grounds for retirement.
+- **(b) failing with no active iteration.**
+
+**Potential vs retirement is read from the map.** A subject retires only when its map shows every material lever family flat or
+noisy, at adequate declared power, net of the full cost stack, across regimes (disjoint windows or ≥ 4 folds).
+- The record is a family review (`research/family_reviews/<family>.yaml`) whose `lever_map` lists each family and its evidence, or
+  why that family does not apply. It also carries the six existing protocol items.
+- `family-retirement-guard` checks the record.
+- Until that record exists, the subject **iterates**.
+- Practice basis: `docs/reference/trading-and-model-practice-principles.md` R7–R8 (and R5, reconciled: uncounted trial is the
+  anti-metric, counted lever search is not; M4–M5 for selection control).
+
+**Every result gets exactly one disposition, in the pass that reads it:**
+- **pass** → holdout once → promotion proposal (Tier 3, through the ladder above);
+- **next iteration** → chosen from the map and authored in the same pass;
+- **retired** → only by a lever-exhaustion record.
+
+**Worked example — `trend_donchian_eth_prop`** (the one leg on three prop books that fails Stage 0):
+- **Attribution** (`research/levers/trend_donchian_eth_prop.yaml`, from its Stage-0 trades, n = 165):
+  - +14.5 R gross against 14.7 R of total cost. The cost share is 1.02 of gross, so cost erases a real gross edge.
+  - Shorts net +2.7 R; longs net −3.0 R.
+  - Stops lose 43.9 R. 11 losers had reached 1 R of MFE first.
+- **Map:** exit, filter, session and sizing have been tested. Entry, regime gating, timeframe, symbol set and **direction** have
+  never been.
+- **Next tests, from the map:**
+  - entry selectivity (min_confidence 0.7 / 0.8) and an ADX ≥ 20 filter (`RQ-20261101-78fc-14`);
+  - then direction (long vs short only), which the attribution points at;
+  - then regime gating by vol cell.
+  
+  Each is a one-factor sweep against the declared leg. A smooth, fold-stable response goes to one holdout read and the prop gate.
+- The ML and live-review loops work the same way: ENTRY's recipe and target levers (`fs05-01`, `fs06-01`) after the feature
+  ablation read inside its noise floor; the tighten class's timing and bounds levers (`78fc-09`) after the early-cell loss.
+
+**Every unit has its place in the loop**, recorded on the unit and filled by default by the tools (`queue_replenish.py` stamps
+`origin`, `design` and `levers_declared`):
+- `iteration:` — the subject; `from_result`; the diagnosis (the attribution finding); `search` (the lever families and grid this
+  pass measures, and why); `map_entries` (the map readings it builds on); `levers`; `attempt`; and `due_by`. Or:
+- `origin: new_hypothesis` — with `origin_reason` and its lever manifest. The template refill stamps `origin: standing_remeasure`.
+
+**Visible every day, measured, not prose.** These numbers have a `could_not_look` state and are reported in the manager's daily
+review (step 4c) and in every research-ops checks packet (`iteration` block):
+- the **orphan count**: subjects failing with no live iteration. Target **0**.
+- **lever coverage** per subject: families tested, live and remaining (`iteration_orphans.py --levers`, `lever_map.py --summary`).
+- **workflow shares**, each with its population:
+  - structured designs vs single configs;
+  - units citing a parent result or map entry;
+  - units declaring their levers;
+  - results recorded in a lever map.
+
+The weekly audit samples 5 units against this section (C14).
+
+**Why the earlier redesigns did not stick (root cause, measured 2026-11-01):**
+- **The rules lived in prose.** Since 2026-10-01, 14 commits changed the research rule docs and skills (research-ops,
+  programme-review, PLANNING.md, this plan), against 5 for the generators (`research/templates/*`, `queue_replenish.py`).
+- **The tools that generate work kept generating single configurations.** 4 of the 6 templates emit one configuration per unit
+  (roster-walkforward, prop-fit, leg-corpus, macro-valuation); only m20 and e35 sweep a lever. Of the 1,580 units authored
+  2026-10-02..11-01, **42%** were structured designs (a baseline arm plus variants, or a lever sweep), and **32%** varied one lever
+  family against a baseline control.
+- **Results were cited, but nothing was learned per lever.** 72% of those units cite a prior result in their text. Yet there was no
+  per-subject record of how each lever moved the outcome. As a result, **93 of 495** lever families across the 55 rostered legs have
+  ever had a graded test, and 23 of the 49 testing legs had none in any family.
+- **Nothing measured whether a result informed the next test.** The 2026-10-28 checks packet counted FAILs with no next test named
+  (`fails_without_next`), not whether the next test came from what the result taught.
+
+This section fixes each one in the tools: the lever map and its backfill, the default design and lever stamps in the replenisher,
+the workflow shares in the daily packet, and the C14 audit sample. Converting the 4 single-config templates into structured
+designs is the remaining build (row `RESEARCH-TEMPLATES-STRUCTURED`).
+
+**Superseded by this section:**
+- authoring research to meet a runnable-queue floor, and tests that change no decision: STOP-GENERATED-AUTHORING (operator popup
+  2026-11-01 *"Stop floor-driven units (Rec.)"*, #22107);
+- volume targets: RESEARCH-SLO-YIELD (*"Replace with yield SLOs (Rec.)"*). The pipeline is measured by **understanding gained**
+  (results attributed, map entries added, next tests chosen from the map), **iterations advanced and survivors found**, never by
+  units authored;
+- any retirement or forced decision keyed on a count of attempts;
+- any "one hypothesis per variant" format.
+
+**Where it is carried out (each points here):**
+- research-ops — its CORE MANDATE every pass (`.claude/skills/research-ops/SKILL.md` § "THE CORE MANDATE");
+- programme-review (weekly);
+- the manager's daily review (4c) and research-ops dispatch;
+- `/perf-followup` Track 1, `/ml-review` and `model-training`;
+- `frontier-research` intake;
+- `new-strategy`, `exit-refinement`, `live-trade-review` class design and `backtesting`;
+- weekly-audit C14.
 
 ### Prop legs clear a SUPERSET of the ladder (operator, 2026-10-15, binding)
 
@@ -286,7 +519,7 @@ nor a fault. **Live-vs-backtest (`scripts/research/live_vs_backtest.py`, PR #183
 ongoing monitoring, not soak clauses** — a promotion to bybit_2 still checks cost against **Bybit's own
 MEASURED cost for that symbol**, and today the granted `MD-PROMOTE-S1-S2` still asks for a PER-LEG R3
 `consistent` verdict (see the proposed amendment above). A PASS feeds `MD-PROMOTE-S1-S2`:
-a PR adding the leg to bybit_2 **and** bybit_portfolio together (mirror equality tests, human merge, not auto-land),
+a PR adding the leg to bybit_2 **and** bybit_portfolio together (mirror equality tests; the manager merges on the data-backed rule, not auto-land),
 and the evidence record must first carry a **portfolio-overlap check** (e.g. `trend_donchian_eth_prop` 1h beside
 `trend_donchian_eth_4h`: signal/return correlation and combined drawdown). The bybit_1 soak stays as a parallel
 source; contracts carry both (`sources` in `SOAKS.json`). This PR promotes nothing.
@@ -297,6 +530,7 @@ source; contracts carry both (`sources` in `SOAKS.json`). This PR promotes nothi
   `tests/test_paper_portfolio_accounts.py::test_bybit_portfolio_mirrors_bybit_2_exactly`
   pins the rosters together. `bybit_2`: 6 strategies, `bybit_portfolio`: 6.
 - **The Alpaca mirror is a SUBSET invariant, not an equality one.**
+  ⚠️ **SUPERSEDED 2026-11-01** (operator: the Alpaca mirror is a SUPERSET, § "Stage 2 is one stage"). History:
   ⚠️ **RESOLVED BY B2, 2026-09-21** — the operator chose strict equality and the
   invariant now reads
   `test_alpaca_portfolio_mirrors_alpaca_live_exactly_minus_proxies`. The
@@ -358,6 +592,8 @@ cadences. The machine is running against an empty input.
   already agreed, and the number that met it.
 - **Kill** → closes the question and lands in the ledger. A null is an asset,
   not a memo.
+
+**Since 2026-11-01 the loop itself is stated once, in § 2 "What does not pass goes back into research — THE research workflow"; this section's queue schema and result routing serve it.**
 
 ⚠️ **The default is refinement, not a one-strike kill** (operator, 2026-09-27):
 *"our default is never to just kill ideas because of one bad pass, we should
@@ -795,7 +1031,7 @@ deletion and rewiring; nothing new gets built until C.
 | id | item | who |
 |---|---|---|
 | **B1** | **Invert the execution-gate guard.** Demotion becomes free. A new guard blocks any leg reaching a Stage-2 roster without a fresh evidence record that clears its declared bar. **This is the load-bearing change.** | operator + build lane |
-| **B2** | **Decide what the Alpaca mirror is FOR, then make its invariant say that.** ⚠️ Re-scoped 2026-09-21: the first draft said *"extend the Bybit roster-sync test"* on the false premise that no invariant existed. One does — a deliberate SUBSET assertion (`test_alpaca_portfolio_mirrors_alpaca_live_minus_proxies`) that protects real money and does not make the mirror representative. Live 5 legs vs mirror 14, so Gate 2's demotion signal cannot be read off the mirror's aggregate. The test argues against blind equality during a staged go-live and that argument must be answered, not overwritten. | operator + build lane |
+| **B2** | ⚠️ **SUPERSEDED 2026-11-01 (operator: Alpaca mirror is a superset of alpaca_live, two-sided).** **Decide what the Alpaca mirror is FOR, then make its invariant say that.** ⚠️ Re-scoped 2026-09-21: the first draft said *"extend the Bybit roster-sync test"* on the false premise that no invariant existed. One does — a deliberate SUBSET assertion (`test_alpaca_portfolio_mirrors_alpaca_live_minus_proxies`) that protects real money and does not make the mirror representative. Live 5 legs vs mirror 14, so Gate 2's demotion signal cannot be read off the mirror's aggregate. The test argues against blind equality during a staged go-live and that argument must be answered, not overwritten. | operator + build lane |
 | **B3** | **R4 as the demotion gate.** Flip to enforcing, pointed at demotion rather than promotion. Recommended 2026-07-30, built, shipped observe-only, never armed. | operator + build lane |
 | **B4** | **Re-scope the review packet.** Grade Stage 2 on money and Stage 1 on mechanics (§ 2 "The soak is MECHANICAL"; cost fidelity is monitoring). Without this it keeps grading 52 legs against a 20-trade floor and emitting nothing, forever. | build lane |
 | **B5** | **The mandate mechanism** (`config/mandates.yaml` + a resolver + a guard). A standing authorization the operator grants ONCE that lets the system act inside stated bounds without asking again. `direction: derisk_only` mandates carry no rate ceiling because their worst case is trading less than we could; `add_risk` mandates carry a hard cap on total risk added, a per-leg size bound and a count. Every action records which mandate authorized it. **Pairs with B1** — the guard that requires evidence before a Stage-2 roster is the same guard that reads what is already authorized. | operator + build lane |

@@ -1,0 +1,98 @@
+# Hand-authored 2026-11-03 by DAILY-RESEARCH-AUTHORING-20261103 (Tier 1), dispatched by Manager session_01AFoLuJ1apgy8sfngu4WyNH. Decision rule registered BEFORE any run. Gates: none.
+id: RQ-20261103-b3c9-12
+title: 'Prop replacement candidate trend_donchian_eth_4h: Stage 0 at the prop cost stack then RULE-P5-GATE-BRK-PER-LEG-V3 on breakout_2 / tradeify_1 / velotrade_1,
+  1110 d and trailing 365 d'
+status: queued
+cadence: once
+kind: experiment
+theme: new_strategy_prop
+priority: 1
+roadmap:
+- L-PROP
+question: Does trend_donchian_eth_4h clear the V3 prop gate on all three prop accounts at the prop cost stack (window 2023-10-13..2026-10-11 (default, plus trailing
+  365 d))? Peer legs (sol_4h, xrp_4h, ada_4h, avax_4h and the pullback legs) have a gate unit; trend_donchian_eth_4h has none.
+why_this_matters: 'Scan of research/queue 2026-11-03: prop_candidate_gate.py has units for sol_4h, xrp_4h, ada_4h, avax_4h and the xrp/ada/eth/sol pullback legs,
+  but 0 for trend_donchian_eth_4h. Supplies the missing candidate so the prop-replacement ranking is complete.'
+power:
+  expected_n: 120
+  min_detectable_effect: 0.3
+  effect_units: R
+  sd: 1.2
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: 'Per-trade net-R sd about 1.2; n about 100 to 130 trades on a 3-year 2h/4h leg (recorded OOS n 46 to 135). The 95% CI half-width at n=120 is about 0.21 R,
+    so only an edge of about 0.3 R or more can have a lower bound above 0: most outcomes will be FAIL_EDGE or INDETERMINATE by construction, which is the honest reading
+    of a thin leg. expected_n is an ESTIMATE from the recorded OOS n, not a measurement.'
+  feasibility:
+    source: none
+    accrual_basis: Re-measure of public price history at the prop stack; nothing accrues. If n < 88 on 3y the verdict is INDETERMINATE and the leg is not a candidate
+      until it accrues.
+decision_rule:
+  id: RULE-RQ20261103b3c912-V3
+  registered_at: '2026-11-03'
+  registered_before_run: true
+  statistic: 'scripts/research/prop_candidate_gate.py (self-tested; chains exit_lever_ablation.py --grade stage0 arm P = fee 8 / slip 3 / funding 5 bps per 24 h on
+    SOLUSDT, 2023-10-13..2026-10-11 20:00, with scripts/research/prop_gate.py V2 + V3 and prop_ev_sim.py, 5 seeds x 1000 lives, one-leg book at each account configured
+    risk_pct, daily-DD switch 0.8, arms cur and ven). Windows: 3y = the whole ledger; 365d = entries >= 2025-10-11 20:00. Verdict per cell: prop_gate.grade_v3.'
+  rule: PASS iff the V3 verdict is PASS on ALL THREE accounts on the 3y window and arm cur (V2 ceiling and EV>0 at every seed AND edge CI lower bound > 0). CONTESTED
+    (reported as FAIL for routing) iff that holds but the 365d window has n >= 88 and median EV < 0 on >= 2 accounts. FAIL if any 3y/cur account is FAIL or FAIL_EDGE.
+    INDETERMINATE (verdict indeterminate) if n < 88 on 3y or the harness failed (read_state producer_failed). Thresholds are not changed after any result; the ven
+    arm is reported, not graded.
+  min_n: 88 trades on the 3y window
+  proposal_mapping: 'PASS -> the manager brings ONE Tier-3 swap PR to the operator: pull trend_donchian_eth_prop from breakout_2 / tradeify_1 / velotrade_1 and add
+    this leg with the SAME risk_pct and mirror rules per OPERATING-PLAN, citing this record and the batch denominator (k PASS of 4). If more than one candidate PASSes,
+    the PR proposes the one with the higher worst-seed EV percent at breakout_2 on the 3y cur cell, stated before either result is read. Nothing is applied by this
+    unit; the leg must also be on the soak path (a Stage-1 mechanical count of 1 to 2 clean trades).'
+  what_it_does_not_do: Changes no roster, risk, sizing or config; reads no live book P&L; prices the leg ALONE (the gate population), not the account book; a PASS
+    is a discovery with a batch denominator of 4, not a confirmation.
+compute: cpu_long
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 3.0
+  est_minutes: 45
+  basis: One harness run (about 1100 d public candle fetch plus a backtest, about 45 min in RQ-20261015-1bf3-05) then 60 prop_ev_sim cells (about 65 s each over 4
+    procs, about 17 min); estimate, not measured for this leg.
+value:
+  bucket: information
+  usd_at_stake_per_month: 300
+  confidence: 0.15
+  basis: 'stand-in: decides whether a replacement for the one rostered prop leg exists; no balances stated'
+run:
+  workflow: research-script-run.yml
+  timeout_minutes: 150
+  command:
+  - python3
+  - scripts/research/prop_candidate_gate.py
+  - --leg
+  - trend_donchian_eth_4h
+  - --out
+  - '{out_dir}'
+  inputs:
+    research_unit: RQ-20261103-b3c9-12
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+practice_precedent: 'docs/reference/trading-and-model-practice-principles.md (judge an edge ex a single window; track every configuration tried): four candidates
+  fixed before any run, denominator stated'
+related:
+- RQ-20261031-a4e7-04
+- RQ-20261101-2df8-01
+- scripts/research/prop_gate.py
+programme: P5
+intervention_controls:
+  not_applicable: offline prop survival simulation; no in-trade action is evaluated
+grading:
+  attested: RULE-RQ-20261031-a4e7-04-PROP-CANDIDATE
+  auto: true
+  decision_rule_id: RULE-RQ-20261031-a4e7-04-PROP-CANDIDATE
+  evidence:
+  - research/results/RQ-20261031-a4e7-04/41263182116.jsonl
+  graded_at: '2026-11-01'
+  grader: scripts/research/queue_grade.py
+  reason: 1 row(s), all measured, all pass
+  rows: 1
+  verdict: pass
+last_dispatched_at: '2026-11-03T10:33:29+00:00'

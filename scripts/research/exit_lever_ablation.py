@@ -711,6 +711,8 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--leg", required=True, help="config/strategies.yaml key")
     ap.add_argument("--arm", action="append", required=True, help='LABEL=tok;tok (see module docstring)')
     ap.add_argument("--days", type=int, default=740, help="trailing days to FETCH (the window is pinned by --start/--end)")
+    ap.add_argument("--symbol", default=None,
+                    help="config-exact TWIN: replace the leg's symbols[0] (every other config field unchanged). Default: the leg's own symbol")
     ap.add_argument("--start", default=None, help="harness --start (ISO), pinned to the record's data_start")
     ap.add_argument("--end", default=None, help="harness --end (ISO datetime), pinned to the record's data_end")
     ap.add_argument("--data-csv", default=None, help="skip the fetch and use this candle CSV (tests)")
@@ -817,6 +819,8 @@ def main(argv: list[str] | None = None) -> int:
         with open(REPO / p if not os.path.isabs(p) else p, encoding="utf-8") as fh:
             control_bt = json.load(fh)
 
+    if a.symbol:
+        base = {**base, "symbols": [a.symbol]}
     wd = Path(tempfile.mkdtemp(prefix="exit_lever_ablation_"))
     csv = a.data_csv or str(wd / f"{a.leg}__data.csv")
     feed: dict[str, Any] = {"resample": base.get("timeframe"), "source": "explicit --data-csv"}

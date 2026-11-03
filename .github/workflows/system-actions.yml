@@ -72,6 +72,7 @@ on:
           - status-check
           - disk-usage-report
           - prune-db-backups
+          - vm-sparse-bootstrap
           - cap-vm-logs
           - list-listening-ports
           - gateway-logs
@@ -183,6 +184,9 @@ on:
           - cancel-stale-tpsl-legs
           - backfill-tpsl-leg-ids
           - reattach-stranded-package-legs
+          - relabel-package-close-reasons
+          - backfill-package-risk-meta
+          - relink-orphan-trade-5209
           - amend-position-sl
           - live-review-dry-run
           - live-review-apply
@@ -680,6 +684,15 @@ jobs:
                      | grep -i -m1 '^[[:space:]]*keep[[:space:]]*:' \
                      | sed -E 's/^[[:space:]]*[Kk]eep[[:space:]]*:[[:space:]]*//' \
                      | tr -d '[:space:]' || true)
+            # prune-db-backups one-off: exact backup basename + explicit confirm.
+            file=$(printf '%s\n' "${ISSUE_BODY}" \
+                     | grep -i -m1 '^[[:space:]]*file[[:space:]]*:' \
+                     | sed -E 's/^[[:space:]]*[Ff]ile[[:space:]]*:[[:space:]]*//' \
+                     | tr -d '[:space:]' || true)
+            confirm=$(printf '%s\n' "${ISSUE_BODY}" \
+                     | grep -i -m1 '^[[:space:]]*confirm[[:space:]]*:' \
+                     | sed -E 's/^[[:space:]]*[Cc]onfirm[[:space:]]*:[[:space:]]*//' \
+                     | tr -d '[:space:]' || true)
             # supersede-*-artifacts: optional comma-separated trade-id allowlist.
             ids=$(printf '%s\n' "${ISSUE_BODY}" \
                      | grep -i -m1 '^[[:space:]]*ids[[:space:]]*:' \
@@ -848,6 +861,8 @@ jobs:
           echo "ACTION_ALLOW_MIRROR=${allow_mirror:-}" >>"$GITHUB_ENV"
           echo "ACTION_IDS=${ids:-}" >>"$GITHUB_ENV"
           echo "ACTION_KEEP=${keep:-}" >>"$GITHUB_ENV"
+          echo "ACTION_FILE=${file:-}" >>"$GITHUB_ENV"
+          echo "ACTION_CONFIRM=${confirm:-}" >>"$GITHUB_ENV"
           echo "ACTION_EQUAL_ONLY=${equal_only:-}" >>"$GITHUB_ENV"
           echo "ACTION_EXIT_PRICE=${exit_price:-}" >>"$GITHUB_ENV"
           echo "ACTION_CLOSED_AT=${closed_at:-}" >>"$GITHUB_ENV"
@@ -874,7 +889,7 @@ jobs:
             status-check|verify-account-mode|disk-usage-report|list-listening-ports|gateway-logs|gateway-forensics|pull-latest-logs|inspect-closed-pnl|bybit-account-audit|bybit-bracket-audit|strategy-performance-audit|monitor-miss-analysis|vwap-backtest-sweep|send-ping|send-prop-test-ping|phone-dry-test|phone-drill|generate-strategy-review-packets|grade-closed-trades|net-r-regrade|get-env|passkey-enrol-code|live-review-dry-run)
               echo "tier=1" >>"$GITHUB_ENV"
               ;;
-            pull-and-deploy|init-web-session-pepper|install-web-api-deps|cap-vm-logs|set-journal-trade-qty|restart-bot-service|stop-bot-service|start-bot-service|reboot-vm|enable-closed-flat-invariant|disable-closed-flat-invariant|set-mobile-push-secrets|enable-insights-generator|disable-insights-generator|inspect-insights|kick-insights|enable-signal-dual-write|disable-signal-dual-write|backfill-pnl-nulls|backfill-orphan-pnl|backfill-closed-null-pnl|backfill-monitor-closed-pnl|revert-backfill-monitor-closed-pnl|mark-reconciler-incomplete|mark-operator-flattened|rebuild-pnl-from-bybit|backfill-shadow-predictions|backfill-account-class|backfill-exit-labels|backfill-closed-at|backfill-trade-costs|backfill-broker-order-id|backfill-broker-truth-costs|backfill-fabricated-exits|migrate-closed-at-iso|pull-exchange-fills|pull-bybit-transaction-log|pull-exchange-funding|pull-mes-ibkr-history|pull-mes-ibkr-history-daily|pull-ibkr-history|set-account-mode|fix-data-dir|rotate-account-keys|init-diag-token|set-env|unset-env|scrub-env-noncompliant|pause-autoheal|resume-autoheal|sync-clock|purge-cloudflared|purge-vm-runner|flatten-ib-position|flatten-bybit-position|switch-bybit-position-mode|set-bybit-collateral-switch|flatten-alpaca-position|rearm-alpaca-protective|cancel-ib-order|attach-ib-target|rearm-ib-protective|close-stranded-journal-row|reconcile-orphan-history|supersede-options-adoption-artifacts|supersede-reset-orphan-artifacts|supersede-intent-reduce-phantom-pnl|backfill-intent-reduce-pnl|backfill-own-fill-exits|prune-db-backups|fix-prop-mislinked-close|prop-ticket-expire|prop-ticket-reissue|prop-report-close|repair-prop-fill-direction|breakout-login-check|breakout-terminal-probe|egress-landing-probe|velotrade-api-probe|velotrade-api-roundtrip|velotrade-trade-history-read|reset-daily-risk-state|repair-malformed-notes|repair-netted-rows|reconcile-netting-phantom-rows|reconcile-netting-rows|mark-netted-duplicate-pnl|validate-partial-tpsl|validate-bybit-naked-rearm|cancel-stale-tpsl-legs|backfill-tpsl-leg-ids|reattach-stranded-package-legs|amend-position-sl|live-review-apply|run-desk-judge)
+            pull-and-deploy|vm-sparse-bootstrap|init-web-session-pepper|install-web-api-deps|cap-vm-logs|set-journal-trade-qty|restart-bot-service|stop-bot-service|start-bot-service|reboot-vm|enable-closed-flat-invariant|disable-closed-flat-invariant|set-mobile-push-secrets|enable-insights-generator|disable-insights-generator|inspect-insights|kick-insights|enable-signal-dual-write|disable-signal-dual-write|backfill-pnl-nulls|backfill-orphan-pnl|backfill-closed-null-pnl|backfill-monitor-closed-pnl|revert-backfill-monitor-closed-pnl|mark-reconciler-incomplete|mark-operator-flattened|rebuild-pnl-from-bybit|backfill-shadow-predictions|backfill-account-class|backfill-exit-labels|backfill-closed-at|backfill-trade-costs|backfill-broker-order-id|backfill-broker-truth-costs|backfill-fabricated-exits|migrate-closed-at-iso|pull-exchange-fills|pull-bybit-transaction-log|pull-exchange-funding|pull-mes-ibkr-history|pull-mes-ibkr-history-daily|pull-ibkr-history|set-account-mode|fix-data-dir|rotate-account-keys|init-diag-token|set-env|unset-env|scrub-env-noncompliant|pause-autoheal|resume-autoheal|sync-clock|purge-cloudflared|purge-vm-runner|flatten-ib-position|flatten-bybit-position|switch-bybit-position-mode|set-bybit-collateral-switch|flatten-alpaca-position|rearm-alpaca-protective|cancel-ib-order|attach-ib-target|rearm-ib-protective|close-stranded-journal-row|reconcile-orphan-history|supersede-options-adoption-artifacts|supersede-reset-orphan-artifacts|supersede-intent-reduce-phantom-pnl|backfill-intent-reduce-pnl|backfill-own-fill-exits|prune-db-backups|fix-prop-mislinked-close|prop-ticket-expire|prop-ticket-reissue|prop-report-close|repair-prop-fill-direction|breakout-login-check|breakout-terminal-probe|egress-landing-probe|velotrade-api-probe|velotrade-api-roundtrip|velotrade-trade-history-read|reset-daily-risk-state|repair-malformed-notes|repair-netted-rows|reconcile-netting-phantom-rows|reconcile-netting-rows|mark-netted-duplicate-pnl|validate-partial-tpsl|validate-bybit-naked-rearm|cancel-stale-tpsl-legs|backfill-tpsl-leg-ids|reattach-stranded-package-legs|relabel-package-close-reasons|backfill-package-risk-meta|relink-orphan-trade-5209|amend-position-sl|live-review-apply|run-desk-judge)
               echo "tier=2" >>"$GITHUB_ENV"
               if [ -z "${REASON// }" ]; then
                 echo "::error::Tier-2 action '${ACTION}' requires a non-empty 'reason' input."
@@ -1534,6 +1549,10 @@ jobs:
           fi
           # prune-db-backups: days >= 0, keep 1-99 (the newest backup is never pruned); apply true/false.
           if [ "${ACTION}" = "prune-db-backups" ]; then
+            if [ -n "${ACTION_FILE// }" ] && ! printf '%s' "${ACTION_FILE}" | grep -Eq '^[A-Za-z0-9._-]+$'; then
+              echo "::error::prune-db-backups file must be a bare backup basename (got '${ACTION_FILE}')."
+              exit 1
+            fi
             if [ -n "${ACTION_KEEP// }" ] && ! printf '%s' "${ACTION_KEEP}" | grep -Eq '^[1-9][0-9]?$'; then
               echo "::error::prune-db-backups keep must be a whole number 1-99 (got '${ACTION_KEEP}')."
               exit 1
@@ -1600,7 +1619,7 @@ jobs:
           # (5474, bybit_2). Operator approval is recorded as
           # DEC-20260910-F39-REATTACH-XRPUSDT-APPROVED; it covers the DB write
           # ONLY and authorises no order action on any account.
-          if [ "${ACTION}" = "reattach-stranded-package-legs" ]; then
+          if [ "${ACTION}" = "reattach-stranded-package-legs" ] || [ "${ACTION}" = "relabel-package-close-reasons" ] || [ "${ACTION}" = "backfill-package-risk-meta" ] || [ "${ACTION}" = "relink-orphan-trade-5209" ]; then
             case "${ACTION_APPLY:-}" in
               ""|true|false|True|False) ;;
               *)
@@ -1871,6 +1890,7 @@ jobs:
             status-check)                       SCRIPT="status_check.sh" ;;
             disk-usage-report)                  SCRIPT="disk_usage_report.sh" ;;
             prune-db-backups)                   SCRIPT="prune_db_backups.sh" ;;
+            vm-sparse-bootstrap)                SCRIPT="vm_sparse_bootstrap.sh" ;;
             cap-vm-logs)                        SCRIPT="cap_vm_logs_action.sh" ;;
             list-listening-ports)               SCRIPT="list_listening_ports.sh" ;;
             gateway-logs)                       SCRIPT="gateway_logs.sh" ;;
@@ -1982,6 +2002,9 @@ jobs:
             run-desk-judge)                     SCRIPT="run_desk_judge_action.sh" ;;
             backfill-tpsl-leg-ids)              SCRIPT="backfill_tpsl_leg_ids_action.sh" ;;
             reattach-stranded-package-legs) SCRIPT="reattach_stranded_package_legs_action.sh" ;;
+            relabel-package-close-reasons) SCRIPT="relabel_package_close_reasons_action.sh" ;;
+            backfill-package-risk-meta) SCRIPT="backfill_package_risk_meta_action.sh" ;;
+            relink-orphan-trade-5209) SCRIPT="relink_orphan_trade_5209_action.sh" ;;
             repair-prop-fill-direction)         SCRIPT="repair_prop_fill_direction_action.sh" ;;
             breakout-login-check)               SCRIPT="breakout_login_check_action.sh" ;;
             breakout-terminal-probe)            SCRIPT="breakout_terminal_probe_action.sh" ;;
@@ -2284,8 +2307,16 @@ jobs:
           if [ "${ACTION}" = "backfill-intent-reduce-pnl" ]; then
             REMOTE_CMD="ACTION_APPLY=$(printf '%q' "${ACTION_APPLY:-}") ACTION_IDS=$(printf '%q' "${ACTION_IDS:-}") ${REMOTE_CMD}"
           fi
+          # vm-sparse-bootstrap (VM-SPARSE-SYNC): the VM's checkout is stale and its
+          # disk full, so the wrapper is NOT run from the VM's tree — it is piped
+          # from THIS checkout over ssh stdin (see the ssh step), with the sparse
+          # patterns forwarded base64-encoded.
+          if [ "${ACTION}" = "vm-sparse-bootstrap" ]; then
+            SPARSE_PATTERNS_B64="$(base64 -w0 < deploy/vm-sparse-checkout)"
+            REMOTE_CMD="ACTION_APPLY=$(printf '%q' "${ACTION_APPLY:-}") SPARSE_PATTERNS_B64=$(printf '%q' "${SPARSE_PATTERNS_B64}") bash -s"
+          fi
           if [ "${ACTION}" = "prune-db-backups" ]; then
-            REMOTE_CMD="ACTION_APPLY=$(printf '%q' "${ACTION_APPLY:-}") ACTION_DAYS=$(printf '%q' "${ACTION_DAYS:-}") ACTION_KEEP=$(printf '%q' "${ACTION_KEEP:-}") ${REMOTE_CMD}"
+            REMOTE_CMD="ACTION_APPLY=$(printf '%q' "${ACTION_APPLY:-}") ACTION_DAYS=$(printf '%q' "${ACTION_DAYS:-}") ACTION_KEEP=$(printf '%q' "${ACTION_KEEP:-}") ACTION_FILE=$(printf '%q' "${ACTION_FILE:-}") ACTION_CONFIRM=$(printf '%q' "${ACTION_CONFIRM:-}") ${REMOTE_CMD}"
           fi
           if [ "${ACTION}" = "backfill-own-fill-exits" ]; then
             REMOTE_CMD="ACTION_APPLY=$(printf '%q' "${ACTION_APPLY:-}") ACTION_IDS=$(printf '%q' "${ACTION_IDS:-}") ${REMOTE_CMD}"
@@ -2371,6 +2402,15 @@ jobs:
           fi
           if [ "${ACTION}" = "reattach-stranded-package-legs" ]; then
             REMOTE_CMD="ACTION_APPLY=$(printf '%q' "${ACTION_APPLY:-}") ${REMOTE_CMD}"
+          fi
+          # relabel-package-close-reasons: its apply was never forwarded (found 2026-11-01, LTR-PACKET-FIXES),
+          # so `apply: true` ran as a dry run on the VM.
+          if [ "${ACTION}" = "relabel-package-close-reasons" ] || [ "${ACTION}" = "backfill-package-risk-meta" ]; then
+            REMOTE_CMD="ACTION_APPLY=$(printf '%q' "${ACTION_APPLY:-}") ${REMOTE_CMD}"
+          fi
+          # relink-orphan-trade-5209 (GLD-ORPHAN-5209): dry-run unless apply:true; the reason is stamped on the rows.
+          if [ "${ACTION}" = "relink-orphan-trade-5209" ]; then
+            REMOTE_CMD="ACTION_APPLY=$(printf '%q' "${ACTION_APPLY:-}") ACTION_REASON=$(printf '%q' "${REASON}") ${REMOTE_CMD}"
           fi
           # mark-netted-duplicate-pnl: dry-run unless apply:true. account_id is an
           # optional review scope (the blast radius is concentrated in bybit_1),
@@ -2573,10 +2613,18 @@ jobs:
           # Capture both stdout and exit code; never let the SSH wrap
           # swallow the wrapper's exit status.
           set +e
-          ssh "${SSH_ARGS[@]}" \
-              "${VM_SSH_USER}@${SSH_TARGET_HOST}" \
-              "${REMOTE_CMD}" \
-              > action-output.txt 2>&1
+          if [ "${ACTION}" = "vm-sparse-bootstrap" ]; then
+            ssh "${SSH_ARGS[@]}" \
+                "${VM_SSH_USER}@${SSH_TARGET_HOST}" \
+                "${REMOTE_CMD}" \
+                < scripts/ops/vm_sparse_bootstrap.sh \
+                > action-output.txt 2>&1
+          else
+            ssh "${SSH_ARGS[@]}" \
+                "${VM_SSH_USER}@${SSH_TARGET_HOST}" \
+                "${REMOTE_CMD}" \
+                > action-output.txt 2>&1
+          fi
           rc=$?
           set -e
           echo "exit_code=${rc}" >>"$GITHUB_OUTPUT"

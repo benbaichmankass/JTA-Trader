@@ -188,10 +188,32 @@ def self_test() -> int:
     return 0
 
 
+def files_in_diff(diff_path: str) -> set[str]:
+    """Paths named by `diff --git a/X b/Y` headers (covers binary + renamed files).
+
+    Returns an empty set when the diff is unreadable or names nothing, which the
+    caller reads as "scan everything".
+    """
+    try:
+        text = Path(diff_path).read_text(errors="replace")
+    except OSError:
+        return set()
+    out: set[str] = set()
+    for line in text.splitlines():
+        if line.startswith("diff --git a/") and " b/" in line:
+            out.add(line.rsplit(" b/", 1)[1])
+    return out
+
+
 def main(argv=None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--self-test", action="store_true",
                         help="prove the guard can fail, then exit")
+    parser.add_argument("--pr-diff", default=None,
+                        help="scan only the files named in this unified diff "
+                             "(each file's verdict is independent, so a PR can only change "
+                             "the verdict of files it touches). Unreadable/empty diff => "
+                             "the whole tree, never fewer files.")
     parser.add_argument("paths", nargs="*",
                         help="optional explicit paths; default is every tracked file")
     args = parser.parse_args(argv)
@@ -199,7 +221,14 @@ def main(argv=None) -> int:
     if args.self_test:
         return self_test()
 
-    targets = [Path(p) for p in args.paths] if args.paths else _tracked_files()
+    if args.paths:
+        targets = [Path(p) for p in args.paths]
+    else:
+        targets = _tracked_files()
+        if args.pr_diff:
+            touched = files_in_diff(args.pr_diff)
+            if touched:
+                targets = [t for t in targets if _rel(t) in touched]
     graded, skipped, _ = collect(targets)
 
     degenerate = [(p, g) for p, g in graded if g.state == "degenerate"]

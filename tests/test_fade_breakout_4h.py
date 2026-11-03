@@ -316,12 +316,13 @@ def test_monitor_long_trail_ratchets_up():
     assert verdict == {"sl": pytest.approx(118.5)}
 
 
-def test_monitor_long_trail_never_above_current_price():
-    # Spike to 200 in-window but current price 120: naive candidate 168.5 is
-    # above price (instant stop-out) → suppressed.
+def test_monitor_long_trail_through_price_closes_strategy_close():
+    # TRAIL-RATCHET-AUDIT (Tier 3): spike to 200 in-window but current price 120:
+    # candidate 168.5 is THROUGH the price. It is never sent as a stop amend (an
+    # instant stop-out); the harness has exited, so the monitor closes.
     frame = _price_frame([200, 130], [150, 118], [180, 120.0])
     verdict = monitor({}, frame, _long_pkg())
-    assert verdict is None
+    assert verdict == {"action": "close", "reason": "strategy_close", "exit_price": 120.0}
 
 
 def test_monitor_short_trail_ratchets_down():

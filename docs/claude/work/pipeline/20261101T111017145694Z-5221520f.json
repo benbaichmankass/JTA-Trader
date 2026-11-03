@@ -1,0 +1,16 @@
+{
+  "due_when": {
+    "check_every_days": 3,
+    "due_date": "2026-11-03",
+    "kind": "date"
+  },
+  "id": "PI-20261101-RXABACKP-0002",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "checklist ALPACA-LIVE-ACTIVITY-ML / docs/research/alpaca-promotion-inventory-2026-11-01.md",
+    "rerun": "grep -A12 '^grading:' research/queue/RQ-20261023-be01-02.yaml research/queue/RQ-20261016-d37f-06.yaml research/queue/RQ-20261030-028.yaml | grep -E 'selected|confirmed_cells|verdict'"
+  },
+  "state": "queued",
+  "what": "[alpaca promotion / holdout picked another config] The holdout re-runs CONFIRMED a configuration other than the leg's own: tqqq_trend_long_1d (RQ-20261023-be01-02 selected C3 donchian 20, record runs 30; n=34, +3.20 R), scha_trend_long_1d (RQ-20261016-d37f-06 confirmed exit cell vt_hot90_t2), slv_trend_1h (RQ-20261030-028 confirmed exit cell rrfloor1, 2026-11-01). R-HOLDOUT needs selected_config_fingerprint == the record's, so each needs a Tier-3 parameter proposal (adopt the confirmed cell, re-run the record) before a holdout_confirmation block can be written. Then MD-PROMOTE-S1-S2 can decide alpaca_live + alpaca_portfolio."
+}

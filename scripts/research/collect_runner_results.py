@@ -49,6 +49,7 @@ from __future__ import annotations
 
 import argparse
 import ast
+import hashlib
 import json
 import re
 import subprocess
@@ -121,6 +122,84 @@ def run_artifacts(repo_slug: str, run_id: int) -> Optional[List[Dict[str, Any]]]
     return rows if isinstance(rows, list) else None
 
 
+#: GitHub refuses any pushed blob over 100 MB, and one such file rejects the WHOLE results batch
+#: (COLLECTOR-STUCK 2026-11-02: a 164.84 MB work/table.pkl in two runs blocked every batch since 2026-11-01 evening).
+MAX_COLLECTED_FILE_BYTES = 50 * 1024 * 1024
+
+
+def prune_oversize(d: Path, limit: int = MAX_COLLECTED_FILE_BYTES) -> List[str]:
+    """Replace every file over `limit` with a `<name>.oversize.txt` stub (size + note); return the pruned relative paths.
+    The run's record and manifest still land; the bulky intermediate stays only in the expiring Actions artifact."""
+    pruned: List[str] = []
+    for f in sorted(d.rglob("*")):
+        if f.is_file() and not f.is_symlink() and f.stat().st_size > limit:
+            size = f.stat().st_size
+            f.unlink()
+            f.with_name(f.name + ".oversize.txt").write_text(
+                f"pruned by collect_runner_results.prune_oversize: {size} bytes exceeds {limit}; not committed.\n", encoding="utf-8")
+            pruned.append(str(f.relative_to(d)))
+    return pruned
+
+
+#: INCIDENT 2026-11-02 (#22365): per-run data caches (streams/**, work/**, *.pkl, klines csv) were committed to main,
+#: 21.65 GB, filling the live VM's disk. The collector now stages ONLY small result files; everything else stays in the
+#: Actions artifact and is listed in one small manifest. A batch over MAX_BATCH_BYTES is refused (fail-safe on a write path).
+MAX_RESULT_FILE_BYTES = 1024 * 1024
+MAX_BATCH_BYTES = 50 * 1024 * 1024
+CACHE_MANIFEST = "data-cache-manifest.json"
+_CACHE_DIRS = ("streams", "work")
+_CACHE_SUFFIXES = (".pkl", ".parquet", ".feather", ".npy")
+
+
+def is_data_cache(rel: Path, size: int) -> bool:
+    parts = rel.parts[:-1]
+    return (any(p in _CACHE_DIRS for p in parts) or rel.name.lower().endswith(_CACHE_SUFFIXES)
+            or size > MAX_RESULT_FILE_BYTES)
+
+
+def quarantine_caches(d: Path, artifact: str) -> List[Dict[str, Any]]:
+    """Delete every data-cache file under `d` and write ONE `data-cache-manifest.json` (path, bytes, sha256, artifact)."""
+    skipped: List[Dict[str, Any]] = []
+    for f in sorted(d.rglob("*")):
+        if not f.is_file() or f.is_symlink() or f.name == CACHE_MANIFEST:
+            continue
+        size = f.stat().st_size
+        rel = f.relative_to(d)
+        if is_data_cache(rel, size):
+            h = hashlib.sha256()
+            with f.open("rb") as fh:
+                for chunk in iter(lambda: fh.read(1 << 20), b""):
+                    h.update(chunk)
+            skipped.append({"path": rel.as_posix(), "bytes": size, "sha256": h.hexdigest()})
+            f.unlink()
+    for sub in sorted((x for x in d.rglob("*") if x.is_dir()), reverse=True):
+        try:
+            sub.rmdir()   # drop now-empty cache dirs; non-empty ones raise and stay
+        except OSError:
+            pass
+    if skipped:
+        (d / CACHE_MANIFEST).write_text(json.dumps(
+            {"note": "data caches NOT committed; they live only in the (expiring) Actions artifact", "artifact": artifact,
+             "skipped": skipped}, indent=2) + "\n", encoding="utf-8")
+    return skipped
+
+
+def staged_total_bytes(paths: List[Path]) -> int:
+    return sum(p.stat().st_size for p in paths if p.is_file() and not p.is_symlink())
+
+
+def check_staged_list(listfile: Path, root: Path, limit: int = MAX_BATCH_BYTES) -> int:
+    """0 if the files named in `listfile` (one path per line, relative to `root`) total <= limit, else 1 with a loud error."""
+    files = [root / ln.strip() for ln in listfile.read_text(encoding="utf-8").splitlines() if ln.strip()]
+    total = staged_total_bytes(files)
+    if total > limit:
+        big = sorted(files, key=lambda p: p.stat().st_size if p.is_file() else 0, reverse=True)[:5]
+        print(f"::error::research batch REFUSED: staged {total} bytes > {limit} cap; largest: "
+              + ", ".join(f"{p} ({p.stat().st_size})" for p in big if p.is_file()), file=sys.stderr)
+        return 1
+    return 0
+
+
 def download(run_id: int, name: str, dest: Path) -> bool:
     """Download into a scratch dir and merge, because `gh run download -D <dir>` refuses
     to extract over an existing file -- a half-landed directory must not read as a failure."""
@@ -129,12 +208,32 @@ def download(run_id: int, name: str, dest: Path) -> bool:
     with tempfile.TemporaryDirectory() as td:
         if _gh(["run", "download", str(run_id), "-n", name, "-D", td], timeout=600) is None:
             return False
+        dropped = quarantine_caches(Path(td), name)
+        if dropped:
+            print(f"collect: run {run_id}: kept {len(dropped)} data-cache file(s) out of git (see {CACHE_MANIFEST})", file=sys.stderr)
         dest.mkdir(parents=True, exist_ok=True)
         shutil.copytree(td, dest, dirs_exist_ok=True)
     return True
 
 
+def _on_origin_main(root: Path, unit: str, run_id: int) -> bool:
+    """True when the run's record/manifest is on origin/main even though this checkout is stale.
+
+    #22504/#22499 (2026-11-03): a checkout older than main re-collected a run a later batch had landed
+    (add/add on research/results/RQ-20261101-78fc-20/41541540586.jsonl) and the dirty PR stranded 4 other runs."""
+    for rel in (f"research/results/{unit}/{run_id}.jsonl", f"comms/research/{unit}/{run_id}/run-manifest.json"):
+        try:
+            if subprocess.run(["git", "-C", str(root), "cat-file", "-e", f"origin/main:{rel}"],
+                              capture_output=True, timeout=30, check=False).returncode == 0:
+                return True
+        except (OSError, subprocess.SubprocessError):
+            return False
+    return False
+
+
 def already_landed(root: Path, unit: str, run_id: int) -> bool:
+    if _on_origin_main(root, unit, run_id):
+        return True
     return ((root / "comms" / "research" / unit / str(run_id) / "run-manifest.json").exists()
             or (root / "research" / "results" / unit / f"{run_id}.jsonl").exists())
 
@@ -333,6 +432,30 @@ def collect(root: Path, *, repo_slug: str, runs: Optional[List[Dict[str, Any]]] 
 # ── self-test ───────────────────────────────────────────────────────────────
 def _self_test() -> int:
     import tempfile
+    with tempfile.TemporaryDirectory() as td0:
+        big = Path(td0) / "w"
+        big.mkdir()
+        (big / "table.pkl").write_bytes(b"x" * 20)
+        (big / "ok.json").write_text("{}")
+        assert prune_oversize(Path(td0), limit=10) == ["w/table.pkl"] and (big / "table.pkl.oversize.txt").exists() \
+            and not (big / "table.pkl").exists() and not prune_oversize(Path(td0), limit=1000)
+    with tempfile.TemporaryDirectory() as tdq:
+        q = Path(tdq)
+        for rel, n in (("streams/a/k.csv", 5), ("work/t.txt", 5), ("x.pkl", 5), ("y.parquet", 5), ("z.npy", 5),
+                       ("big.json", MAX_RESULT_FILE_BYTES + 1), ("verdict.json", 5), ("logs/cmd-0.log", 5),
+                       ("run-manifest.json", 5), ("record-inputs.json", 5), ("m.jsonl", 5)):
+            (q / rel).parent.mkdir(parents=True, exist_ok=True)
+            (q / rel).write_bytes(b"x" * n)
+        got = quarantine_caches(q, "art-1")
+        assert sorted(x["path"] for x in got) == sorted(["streams/a/k.csv", "work/t.txt", "x.pkl", "y.parquet", "z.npy", "big.json"]), got
+        assert all(len(x["sha256"]) == 64 for x in got)
+        assert sorted(p.name for p in q.rglob("*") if p.is_file()) == sorted(
+            [CACHE_MANIFEST, "verdict.json", "cmd-0.log", "run-manifest.json", "record-inputs.json", "m.jsonl"])
+        assert not (q / "streams").exists() and not (q / "work").exists()
+        assert json.loads((q / CACHE_MANIFEST).read_text())["artifact"] == "art-1"
+        lst = q / "list.txt"
+        lst.write_text("verdict.json\nm.jsonl\n")
+        assert check_staged_list(lst, q) == 0 and check_staged_list(lst, q, limit=4) == 1
     with tempfile.TemporaryDirectory() as td:
         root = Path(td)
         (root / "scripts/research").mkdir(parents=True)
@@ -417,6 +540,23 @@ def _self_test() -> int:
         assert _RECORD_PATH_RE.match("research/results/RQ-1-001/12.jsonl") and not _RECORD_PATH_RE.match("comms/x/1.jsonl")
         res5 = collect(root, repo_slug="o/r", runs=runs2[:1], artifacts_for=arts2, downloader=lambda *a: False)
         assert not (res5["lost"] or res5["unreadable"] or res5["read_error"] or res5["landed"]), res5
+    # 2026-11-03: a run on origin/main but absent from a STALE checkout is "already landed" (the 78fc-20 add/add race)
+    with tempfile.TemporaryDirectory() as td:
+        rr = Path(td)
+        def _g(*a):
+            subprocess.run(["git", "-C", str(rr), *a], check=True, capture_output=True)
+        _g("init", "-q", "-b", "main")
+        _g("config", "user.email", "t@t")
+        _g("config", "user.name", "t")
+        (rr / "research/results/RQ-20300101-070").mkdir(parents=True)
+        (rr / "research/results/RQ-20300101-070/70.jsonl").write_text("{}\n")
+        _g("add", "-A")
+        _g("commit", "-qm", "landed")
+        _g("update-ref", "refs/remotes/origin/main", "HEAD")
+        (rr / "research/results/RQ-20300101-070/70.jsonl").unlink()      # stale checkout lacks the record
+        assert not (rr / "research/results/RQ-20300101-070/70.jsonl").exists()
+        assert already_landed(rr, "RQ-20300101-070", 70), "run on origin/main must read as landed"
+        assert not already_landed(rr, "RQ-20300101-070", 71), "an unlanded run must not read as landed"
     # orphan re-collect: an artifact dir with record-inputs.json and no E5 record gets one; `local-*` is skipped
     with tempfile.TemporaryDirectory() as td:
         r2 = Path(td)
@@ -452,11 +592,15 @@ def main(argv: Optional[List[str]] = None) -> int:
     ap.add_argument("--repo", default="", help="owner/name (default: $GITHUB_REPOSITORY)")
     ap.add_argument("--recollect-orphans", action="store_true",
                     help="re-emit E5 records for landed artifact dirs that have none; then exit")
+    ap.add_argument("--check-staged", default="", metavar="LISTFILE",
+                    help="fail-safe: exit 1 if the files listed (relative to the repo) total over 50 MB; then exit")
     ap.add_argument("--dry-run", action="store_true", help="list what would be collected; write nothing")
     ap.add_argument("--json-out", default="", help="write the batch manifest here (the dispatcher reads it)")
     args = ap.parse_args(argv)
     if args.self_test:
         return _self_test()
+    if args.check_staged:
+        return check_staged_list(Path(args.check_staged), _REPO)
     import os
     slug = args.repo or os.environ.get("GITHUB_REPOSITORY") or ""
     if not slug:

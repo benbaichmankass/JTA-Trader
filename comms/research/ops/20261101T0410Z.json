@@ -1,0 +1,164 @@
+{
+ "run": "RESEARCH-OPS-20261101-0330",
+ "finished_at": "2026-11-01T04:10:00Z",
+ "by": "session_01AFoLuLk8ieY7Ff3g8CL3nV",
+ "floor": 65,
+ "floor_basis": "computed_floor(fired_24h 82)",
+ "authoring_queue_depth": null,
+ "idle_backends": [
+  "github_runner_data",
+  "kaggle",
+  "trainer"
+ ],
+ "needs_review_triaged": 0,
+ "needs_review_left": 31,
+ "throughput": {
+  "runnable_before": 96,
+  "runnable_after": 97,
+  "queued": 244,
+  "fired_24h": 82,
+  "results_landed_24h": 80,
+  "hours_since_last_dispatch": 1.6,
+  "idle_alarm": false
+ },
+ "mechanism": {
+  "dispatch_receipt": "tree_only (receipt/health read; Actions run list not queried)",
+  "collector": "ok (80 results landed 24h)",
+  "stranded_stamp_prs": [],
+  "incident": null
+ },
+ "results_read": {
+  "pass": 3,
+  "fail": 7,
+  "indeterminate": 1,
+  "units": [
+   "a4e7-04 PASS sol_4h prop (opened verdict.json)",
+   "a4e7-01 INDETERMINATE n34",
+   "a4e7-02 FAIL",
+   "a4e7-03 FAIL_EDGE",
+   "7b6f-01 FAIL (ada_pullback_2h AX40/AX50: configuration closed; family stays open; next = other 7b6f transfers)",
+   "d5dd-05 FAIL (spy MS8/MS15 configuration closed; family open)",
+   "a4e7-05 MODEL FAIL (et vs lgbm worse every symbol)",
+   "a4e7-06 MODEL PASS (hgb non-inferior to lgbm; CI spans 0 on 15m)",
+   "ed1c-11 PASS (sol_pullback_2h ADX trail, discovery; PI-20261101-3G8CL3NV-0001)",
+   "ed1c-04 FAIL, ed1c-02/03 FAIL, 3947-12 FAIL, 4b82-19 FAIL (not opened row-by-row)"
+  ]
+ },
+ "unlocked": [],
+ "retired": [],
+ "levers_filed": [],
+ "units_authored_held_pr": [
+  "RQ-20261101-2df8-01"
+ ],
+ "followups_filed": [
+  "PI-20261101-3G8CL3NV-0001",
+  "PROP-REPLACEMENT note (Tier-3 proposal, sol_4h)"
+ ],
+ "authoring": {
+  "queue_depth": null,
+  "nodes_drafted": 0,
+  "skipped_on_purpose": true,
+  "reason": "budget; one confirmation unit authored instead; theme shortfalls (prop, macro, infra) left for next pass",
+  "theme_shortfall": {
+   "new_strategy_prop": 8,
+   "macro": 3,
+   "infra": 4,
+   "live_strategy": 1,
+   "ml_health": 1
+  }
+ },
+ "prior_calls_scorecard": [
+  {
+   "call": "at least 3 of 7b6f-01..08 PASS",
+   "p": 0.3,
+   "outcome": "unresolved",
+   "note": "only 7b6f-01 landed (FAIL)"
+  },
+  {
+   "call": "P3-VOLWIN-A2 passes",
+   "p": 0.1,
+   "outcome": "unresolved",
+   "note": "a4e7-15 not yet landed"
+  },
+  {
+   "call": "runnable >= computed floor at 02:47Z",
+   "p": 0.5,
+   "outcome": "hit",
+   "note": "96 vs 65"
+  }
+ ],
+ "analysis": {
+  "rows_opened": [
+   "RQ-20261031-a4e7-04",
+   "a4e7-01..03 cells",
+   "a4e7-05/06",
+   "7b6f-01",
+   "ed1c-04",
+   "ed1c-11"
+  ],
+  "trading": {
+   "meaning": [
+    "Prop candidates: 1 of 4 passes (sol_4h); xrp_4h cannot be judged (n 34 < 88), the two pullback legs lack an edge, so the PASS has a batch denominator of 4 and a razor-thin CI lower bound (+0.011 R), so it is a discovery, not a swap case.",
+    "sol_4h trailing 365d (n 34) has negative median EV on all three accounts, but the registered CONTESTED clause needs n>=88 on 365d and could not fire, so the rule never tested recency; the confirmation unit 2df8-01 tests a disjoint earlier window instead."
+   ],
+   "fail_diagnoses": [
+    {
+     "cluster": "ADX-ceiling transfers 7b6f",
+     "hypotheses": [
+      "noise",
+      "power",
+      "idea wrong for pullback legs"
+     ],
+     "survivor": "idea",
+     "next": "read remaining 7b6f-02..08 before authoring variants"
+    }
+   ],
+   "next_tests": [
+    {
+     "id_or_node": "RQ-20261101-2df8-01",
+     "decision_changed": "whether the sol_4h swap PR goes to the operator",
+     "on_pass": "swap proposal strengthened",
+     "on_fail": "keep eth_prop until another candidate; no swap",
+     "premortem": "earlier window n<88 gives INDETERMINATE"
+    }
+   ]
+  },
+  "model": {
+   "meaning": [
+    "et loses to lgbm on every symbol (-0.026 nats BTC 1h) so ET is not a replacement; hgb is non-inferior by the registered margin but its CI spans 0, so it earns no serve proposal until a consumer is named."
+   ],
+   "fail_diagnoses": [],
+   "next_tests": []
+  },
+  "cross_track": [],
+  "surprises": [
+   "sol_4h V3 PASS at 3y alongside negative last-365d EV"
+  ]
+ },
+ "calls": [
+  {
+   "call": "2df8-01 sol_4h confirmation PASSes on the disjoint window",
+   "p": 0.3,
+   "check": {
+    "command": "python3 scripts/research/research_ops_checks.py --since 2026-11-01",
+    "rule": "verdict of RQ-20261101-2df8-01",
+    "resolves_when": "2026-11-03"
+   }
+  }
+ ],
+ "not_run": [
+  "C: needs_review triage (31 owned, none re-triaged)"
+ ],
+ "limits": [
+  "Actions run list not queried; dispatch/collector judged from receipt + results landed",
+  "7b6f-02..08 and a4e7-07..15 had not landed at pass time",
+  "MODEL runnable 9 vs thin; ml_health unit not authored"
+ ],
+ "handoff": [
+  "Manager: Tier-3 sol_4h swap proposal on checklist row PROP-REPLACEMENT (wait for 2df8-01 recommended)",
+  "STALE_BLOCK ML-AM-NEXT-LIVE: row TMBENCH-QTM1B-BUILD is done, unblock or retire",
+  "Author units for short themes new_strategy_prop (8), macro (3), infra (4)",
+  "Unbound: RQ-20261022-3a84-12 ungraded",
+  "31 needs_review owned, not re-triaged"
+ ]
+}

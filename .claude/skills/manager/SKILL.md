@@ -267,6 +267,11 @@ A Tier-1 lane self-lands: `.github/pr-landing/<slug>.json` (`tier: 1`, `landing:
 Review"), the lane re-declares `landing: hold` with `hold_reason: operator_asked_to_hold`, reports the exact refused command in one line,
 and the manager lands it. Tier-2/3 lane PRs always carry `landing: hold` (manager for Tier 2, the operator's recorded approval for Tier 3).
 
+**Push less, push checked** (CI-THROUGHPUT-20261029; a habit, not a gate). Before every push run `python3 scripts/ci/prepush.py`
+(guards on the diff + affected tests, locally). **Never push to a PR while its CI runs unless you are fixing a red check** — a re-push
+cancels the run in flight and restarts the ~15 min guards job. **Batch register commits** (checklist rows, pipeline appends, landing
+files) into one push instead of one push per edit; this applies to the manager's own register branch too.
+
 ### No new gates (operator, 2026-10-29, binding)
 
 Never add, and never dispatch a lane to add, a gate (approval step, hold, readiness condition, cap, flag, review step) without the operator's explicit permission; read ambiguous friction as less; green Tier-1/2 deploys are automatic; every design doc or approval packet opens with "Gates this adds or changes" (or `Gates: none`) and the popup names them. Canonical § "No new gates without the operator's permission".
@@ -278,15 +283,18 @@ Never add, and never dispatch a lane to add, a gate (approval step, hold, readin
   same review. Apply what its pre-registered rules decide; classify its Tier-3 proposals per § "Before any operator popup".
 - **`RESEARCH-OPS-<date>-<slot>`** (operator, 2026-10-10): at 02:47, 08:47, 14:47, 20:47 UTC dispatch ONE lane on the `research-ops` skill —
   Sonnet, ceiling $6, row first. Skip a slot while the previous research-ops lane still runs; a running TOPIC lane (`RESEARCH-NIGHT-*`,
-  `PERF-FOLLOWUP-*`, `REGIME-*`, ML, readouts) never causes a skip (operator 2026-10-11) — tell it which topic lanes are live. **A research
-  floor gap is due work, not a note**: while the brief's §0 shows `### 🚨 RESEARCH FLOOR GAP`, dispatch a same-day authoring lane sized to
-  the gap (`queue_replenish.py --authoring-queue`; aim at the `H1-THEME` shortfalls). Record `comms/research/ops/<stamp>.json`; one line in
-  "what moved".
+  `PERF-FOLLOWUP-*`, `REGIME-*`, ML, readouts) never causes a skip (operator 2026-10-11) — tell it which topic lanes are live. Its first job is THE
+  ITERATION LOOP (research-ops SKILL § "THE CORE MANDATE"; the rule: [`docs/plans/OPERATING-PLAN-2026-09-21.md`](../../../docs/plans/OPERATING-PLAN-2026-09-21.md) § 2 "What does not pass goes back into research — THE research workflow"). **A research floor gap is NOT due work**
+  (STOP-GENERATED-AUTHORING, operator popup 2026-11-01 *"Stop floor-driven units (Rec.)"*, reversing the 2026-10-16 rule): never dispatch
+  a lane to author units to a count; orphans are the due work (daily review step 4c). Its CORE MANDATE (put it in the dispatch text): attribute every result read, update the
+  lever maps (`lever_map.py --backfill`), choose the next tests from the maps. Record `comms/research/ops/<stamp>.json`; one line in
+  "what moved" led by results attributed, map entries added, next tests chosen from the map, lever coverage, orphans, survivors.
 - **Research SLO escalation** (operator, 2026-10-16, binding): SLOs are in `scripts/research/research_slo.yaml` (measured every 2 h; one
   Telegram message per state change + one comment on the ops-flags PR, marker `research-slo`). **When any SLO is `breach` or
   `could_not_look`, dispatch the lane that moves it the same day** (a note or far-`due_when` row is not a disposition): `runnable_floor` /
-  `authoring_supply_ratio_7d` / `theme_share_min_ratio` / `programme_coverage_pct` → an AUTHORING lane (supply is the lever, never the
-  threshold); `undispositioned_24h` / `grade_latency_p*_d` → a GRADING lane over `result_disposition_check.py --list`; `research_ops_not_run`
+  `authoring_supply_ratio_7d` / `theme_share_min_ratio` → a DIAGNOSTIC since 2026-11-01 (STOP-GENERATED-AUTHORING; RESEARCH-SLO-YIELD replaces
+  volume SLOs with yield SLOs): no authoring lane is dispatched for them -- check `iteration_orphans.py` instead and dispatch the loop if it
+  shows orphans; `programme_coverage_pct` → add the missing plan nodes; `undispositioned_24h` / `grade_latency_p*_d` → a GRADING lane over `result_disposition_check.py --list`; `research_ops_not_run`
   / `research_ops_age_h` → next slot finishes the named steps; `blocked_over_age` → unblock-or-retire lane; `hold_pr_wait_h` → you land or
   close the held PRs; `fires_24h` / `lands_24h` / `dispatcher_age_h` / `collector_age_h` / `grader_age_h` → a fix lane on that stage.
   Thresholds change only in the YAML, in a PR that says why; loosening one to clear a breach is the failure this rule exists to stop.
@@ -370,7 +378,7 @@ edit it with ad-hoc python.** The CLI writes one row atomically, checks it again
 declared `states` (and `priority_rank`: a positive number or null), and never touches the shared header:
 
 ```bash
-python3 scripts/ops/checklist.py add  NEW-ROW --title "one line" --state queued --owner me --tier 1 --rank 3 --by "$SESSION"
+python3 scripts/ops/checklist.py add  NEW-ROW --title "one line" --state queued --due-by 2026-11-05 --roadmap L-OPS --tier 1 --rank 3 --by "$SESSION"
 python3 scripts/ops/checklist.py set  A3 state=in_flight lane=session_01... ceiling_usd=25 --by "$SESSION"
 python3 scripts/ops/checklist.py set  A3 prs='[123,456]' blocked_on='[]'     # values parse as JSON, else string
 python3 scripts/ops/checklist.py note A3 "what is true about this row"        # --append to add to it
@@ -378,6 +386,21 @@ python3 scripts/ops/checklist.py archive-lane A3                              # 
 python3 scripts/ops/checklist.py queue --limit 10                             # the ranked runnable queue
 python3 scripts/ops/checklist.py header last_review '{"report_id": "...", "reviewed_at": "..."}'   # rare: the header is shared
 ```
+
+⚠️ **Process, not gates (operator, 2026-11-01, binding; lane `CHECKLIST-OWNER-DUE`).** The manager owns every row and does not assign owners
+to sessions; `add`/`set` therefore FILL `owner=manager`, a computed `due_by` (the observation date the row names; else in_flight +2d, blocked
++7d, landed_unproven +3d, queued by `priority_rank` +1/+3/+7d) and `roadmap=["unmapped"]` + a reason (the weekly pass maps it). Nothing is
+refused; only a *deliberate clearing* of owner/due_by/roadmap errors. The date is what step 4b of § "The daily review" measures. Gates this adds
+or changes: **none.**
+
+### The audit-outcome contract (operator, 2026-11-01, binding)
+
+*"There needs to be this specific outcome where we have an audit and then a work plan to make sure that those items get taken care of."* An
+audit or review lane — `weekly-audit`, `health-review`, `performance-review`, `ml-review`, `programme-review`, any from-scratch audit — is **done only
+when every proposal it makes maps to** (a) a checklist row with `owner`, `due_by` and a `roadmap` ref (or a research queue unit carrying a
+`roadmap` ref and a run date), **or** (b) a recorded operator decision (a row, popup answer or `config/mandates.yaml` entry it names). A proposal
+that is "in the report" and in neither is **not filed**, whatever the report says. The lane's final section lists each proposal id → row/unit
+id → `due_by`, and the manager checks that list against `checklist.py` before accepting the lane (`close-out` check 4 repeats it). This is a process step, not a guard: a dated row is what the daily review (step 4b) works, so a proposal that is not one will never be observed.
 
 A refused edit (state outside `states`, duplicate id, unknown row, `state`/`status`
 disagreement, path-shaped id) prints `checklist: refused -- <why>` and writes
@@ -458,6 +481,16 @@ mandatory in the planning routine's prompt and come BEFORE part (B) 1:
 0. **First agenda item: the numbers.** Run `python3 scripts/ops/review_followthrough.py --window-days 7` and put its table (with its
    population line) at the top of the Artifact. Each review's Layer 0 runs the same script with `--source <review>` first, so a review starts
    by grading its own prior follow-ups.
+0b. **The backlog: reviewed weekly, budgeted in planning, drained the same morning (operator, 2026-11-01, binding).** *"The backlog is supposed
+   to be reviewed and handled during the weekly review sessions so that we can account for that in the Thursday planning sessions."* Collect
+   every review's backlog numbers (weekly-audit C6, health H15, ml C9 `backlog_coverage`, performance backlog gate) plus
+   `checklist_daily_measure.py`; put one **BACKLOG** line in the workplan (due / overdue / unrouted, oldest age, opened vs closed 7 d, last
+   week's drain result); budget the week's drain inside the capacity plan; and **dispatch that drain lane the same morning**. **Never
+   bulk-drop**: every drop is a row with its own reason. One process, two cadences: **daily** (§ "The daily review" step 4b) drains what is
+   due; **weekly** the reviews measure, planning budgets and dispatches. *What went wrong without it:* the 2026-10-28 weekly audit measured
+   C6 **fail** (510 due, 59 unrouted, oldest unrouted 94 d) and health H15 **concern** (same 510; 275 of 337 health-backlog items with no
+   owner), no drain lane was dispatched, and the 2026-10-29 bulk reset then dropped rows instead of working them (the register now holds 143
+   `dropped` rows over all time; I did NOT verify how many came from that reset).
 1. **Carry-over first.** Last week's (a) items that are not `done` are scheduled first this week, ahead of anything new, or re-dispositioned
    to (b) or (c) with a reason. A second carry-over of the same item is a decision for the operator, not a third silent carry.
 2. **Every follow-up, insight and idea this week's reviews filed gets exactly ONE disposition:** **(a) scheduled this week** — a checklist
@@ -576,6 +609,22 @@ The review routine IS the periodic check; its prompt names `GET /api/bot/work/re
 3. **Work every item: dispatch** (`state: routed`, `routed_to: <session>`, a checklist row for a build), **close** (`done`/`killed` with a
    `terminal_reason`) or **decide** (§ "Before any operator popup"). A `routed` item still due means its lane has not delivered.
 4. **Every silence alarm gets a fix lane the same day**; anything due at a known time gets a `send_later` wake.
+4b. **The backlog drain — MANDATORY, once a day (the 05:52Z run) (operator, 2026-11-01, binding).** *"The manager owns everything, including the
+   backlog ... check it once a day and open a lane that fixes the things that need to get fixed ... It's not like an open-ended optional."*
+   The manager owns ALL checklist rows and pipeline items and **does not assign owners to sessions** (a row's `owner` is `manager`; `lane` is
+   only who is working it now). Run `python3 scripts/ops/checklist_daily_measure.py`: rows by state, overdue, `landed_unproven` observations due,
+   pipeline due, research units queued-not-run, and rows opened vs closed over 24 h and 7 d. Rank what is due (oldest and most money-relevant
+   first) and **dispatch ONE `BACKLOG-DRAIN-<date>` lane** on the ranked set (one question per lane, row first, ceiling stated; it observes the
+   soaks, closes or re-dates with a reason, and kills what is stale with a reason). A review that skips the drain lane has failed close-out. If
+   inflow exceeds outflow three days running, put it in "decisions for you". No cap on starting work (operator: "No cap, metric only"). A lane
+   that lands a change as `landed_unproven` writes the runnable `observe: {when, how}` on its row; lanes archive as normal and are not kept open.
+
+4c. **Orphan drain — the research loop, daily (operator 2026-11-01, binding).** Run `python3 scripts/research/iteration_orphans.py`.
+   The rule: [`docs/plans/OPERATING-PLAN-2026-09-21.md`](../../../docs/plans/OPERATING-PLAN-2026-09-21.md) § 2 "What does not pass goes back into research — THE research workflow". Report the orphan count per kind as a NUMBER every review (target 0), and from `--levers` the subjects whose lever map has untested families with no live unit. Every
+   `ORPHAN` (a testing leg, a non-live ML model or a live-review class with no live iteration unit) and every `overdue` iteration gets
+   ONE disposition this run: the next research-ops slot is told to author it first (name the subjects in its prompt), a topic lane is
+   dispatched for it, or the family-review path is opened (`research/family_reviews/`). Put the counts per kind in the brief's
+   "what is running"; an orphan carried past two reviews is a dispatch failure of the manager, not of research-ops.
 5. **Record the review**: `checklist.py header last_review '{report_id, reviewed_at, by, counts: {dispatched, closed, decided, carried}}'`, push.
 6. **Roadmap hook**: `roadmap_map.py --report`, work its findings (§ "The roadmap loop").
 
@@ -614,6 +663,8 @@ what is blocked and on what>) then fire_trigger(<id>). Never set run_once_at (it
 If your PR waits on the manager (landing: hold), wake it AGAIN once CI on your head is green, with the PR
 number and head sha; you stay subscribed to your own PR and fix red CI yourself. If that prompts, comment on your PR instead.
 Then continue, or run close-out. Never stop to wait for direction.
+Before EVERY push run `python3 scripts/ci/prepush.py` (guards on your diff + affected tests, locally); never push to a PR while its
+CI runs unless fixing red; batch your commits into one push.
 ```
 
 **Reading scope for the lane (operator 2026-10-27, `CONTEXT-DIET`).** A lane reads only what CLAUDE.md § "Every session" step 1 names from
@@ -625,7 +676,7 @@ gated"). **Put in the prompt any other canonical section the lane's task needs**
 
 Stated once: [`OPERATING-PLAN` § 2 "The soak is MECHANICAL"](../../../docs/plans/OPERATING-PLAN-2026-09-21.md) — never restate it in a
 dispatch, row note or contract. A Stage-1 placement needs a contract in `docs/claude/work/SOAKS.json` (`soak_state.py --backfill`). Per live
-state: `passed` → promotion candidate, run `MD-PROMOTE-S1-S2` · `mechanical_fail` → dispatch the fix, the next clean trades re-soak it ·
+state: `passed` → promotion candidate, run `MD-PROMOTE-S1-S2` (a `mechanics_proven` leg is a candidate with no contract at all, 2026-11-01) · `mechanical_fail` → dispatch the fix, the next clean trades re-soak it ·
 `awaiting_first_trade` / `in_progress` → nothing, no deadline · `unknown` → we could not look; find out why. A grade's `kill` calls are
 applied under `MD-DEMOTE-S1-OFF` / `MD-KILL-QUESTION` or filed with a reason, never just read.
 
@@ -643,6 +694,73 @@ review** (05:52Z, 17:52Z; prompt names `GET /api/bot/work/report?since=…` and 
 your session id by its own trigger. 4. `curl -sS 'https://ict-bot.duckdns.org/api/bot/work/report?since=<yesterday>'`; if absent/stale check
 `/api/diag/services` for the two timers — fixing that comes first. 5. Run the review; clear `ask_operator` items first by classification,
 not forwarding; record `last_review`, push, then answer.
+
+## Weekly reset protocol (operator, 2026-11-02, binding)
+
+> **Gates this adds or changes: none.** It fixes WHAT the manager does after the weekly usage reset and WHEN; it decides no execution, mode,
+> promotion or merge.
+
+Operator, verbatim excerpt: *"I just keep on going over this every week ... after the reset at 6 o'clock on UTC ... all the reviews that we
+need to do in order to start the planning session ... if there are like monthly reviews ... spaced so that it doesn't happen every week ...
+any work that was left undone, if we ran out of usage automatically, like we know how to close it up ... a reset protocol. Preferably with at
+least a backup trigger from the VM ... even if I'm not necessarily available right after a reset ... kick things off after the reset as soon
+as possible."* The strategy review stays WEEKLY with a 30-day lookback every week (`perf-review-prep`, `lookback_days: 30`).
+
+**One source:** [`config/reset_protocol.yaml`](../../../config/reset_protocol.yaml) (`jobs` with cadence / order / offset / model / ceiling /
+skill / dedupe tag, and one-shot `after_reset` items). **Machinery:** `scripts/ops/reset_protocol.py` (`--plan <reset-ts>`, `--receipt`,
+`--sweep`, `--self-test`). **Receipt store:** `comms/ops/reset_receipts.jsonl`, append-only, committed by the manager to `main` (no DB, no
+second source of truth). **Triggers:** primary = a Claude routine Wed **18:05Z** (resolves the current manager by title; it forwards, never
+dispatches on its own authority); backup = `.github/workflows/reset-protocol-backup.yml` (18:15Z wake comment on the ops-flags PR #17895 if no
+receipt; 19:00Z RED-FLAG comment + `send-ping` if still none). The protocol dispatches each job at its offset itself (the legacy per-job routines are disabled; their prompts are the briefs, see
+step 3). Primary routine `trig_018F2BmrzKwWTYoSYCCbroqy`; Thursday planning stays its own routine.
+
+**The steps, in order. Step 0 is the claim; everything else is skipped by whoever finds the claim already made.**
+
+0. **Claim.** `python3 scripts/ops/reset_protocol.py --receipt <reset-ts> --write started --by <your session id> --json '{"jobs_due":[...]}'`,
+   then push that line to `main` at once. Exit 4 = another trigger owns this reset: stop in one line. The 18:15Z backup reads `main`, so the
+   claim must be pushed before then.
+1. **Restore the pacing cadence.** The pre-reset pacing (6 h check-ins, event wakes only) ends at the reset: put the check-in back to its
+   normal cadence (`17 */3 * * *`, manager SKILL § Manager handover V2) with `update_trigger` and say so in the Telegram line.
+2. **Stuck-work sweep.** `python3 scripts/ops/reset_protocol.py --sweep` lists checklist rows `in_flight`/`blocked`, open PRs older than 12 h
+   and PIPELINE items with `due_when.event == weekly_reset` (the paused-work item, below). The script **cannot see sessions**: add
+   `list_sessions(mine=true)` and find every lane that is blocked, failed or paused, plus every row with no working lane and every green-waiting
+   or red PR. **Each gets exactly one disposition with a reason:** resumed (`SendMessage`/`fire_trigger`), re-dispatched (fresh lane, the
+   resume note on its row as the brief), or closed (row `dropped`/`done`, reason written). A row `blocked` on a typed edge that is still
+   open is a valid blocked row: say so and leave it. An empty sweep is read-state `ok`, never silence.
+3. **Dispatch the due jobs.** `--plan <reset-ts>` prints them (monthly jobs appear on the first Wednesday reset of the month and
+   `supersedes` the weekly job they replace). For each at its offset: check the `dedupe_tag` in `list_sessions` (created inside
+   `dedupe_hours` = skip), then `create_session` with the config's `model` and `ceiling_usd`, tags `lane:<NAME>`, `manager:<id>`, `metis-lane`.
+   **The lane brief:** read each weekly job's brief with `get_trigger(<brief_trigger>)` (a DISABLED legacy routine whose stored prompt is
+   the brief; review prep's one brief covers its three lanes) and use it verbatim with the current manager id substituted. Monthly jobs use
+   their config `note` as the brief. On a monthly week the deep audit replaces the weekly audit. The legacy per-job routines are disabled:
+   this protocol is now the only dispatcher of these jobs.
+   **Thursday planning** is its own routine, now `trig_01QhYHMBFSnMB5CYYAyy7MH6` (assistant session, forwards to the manager); the old
+   `trig_01VKbpUoD72EAAs8oPUVU5Lm` is disabled.
+4. **Start the `after_reset` items** the plan lists (key + reason); each starts once and is removed from the config in the PR that confirms
+   it started.
+5. **Receipt and ONE Telegram line.** `--receipt <reset-ts> --write complete --by <id> --json '{"dispatched":[...],"skipped":[...],
+   "after_reset_started":[...],"stuck":{"resumed":n,"redispatched":n,"closed":n}}'`, push, then ONE `send-ping` line (sections separated by
+   " || ", the workflow sends only the first line): what was dispatched, what was stuck and its disposition, what is waiting on the operator.
+
+### Close-up on low usage (the other half)
+
+At about **90% of the weekly bar**, or on any limit hit (a lane or the manager reads "usage limit"): **every running lane writes a resume
+note on its checklist row** (what is done, the exact next command, branch/PR, what it owes) **and stops**; it opens no new work and starts no
+new lane. The manager then files **ONE PIPELINE item** listing all paused work, due at the next reset, so the sweep above finds it:
+
+```
+python3 - <<'PY'
+import sys; sys.path.insert(0, "scripts/ops"); import pipeline
+pipeline.append({"id": pipeline.mint_id("<session id>"),
+  "what": "PAUSED AT LOW USAGE <date>: <lane> (row <ID>, PR #n, resume note on the row); ...",
+  "origin": {"kind": "session", "ref": "<session id>", "rerun": "python3 scripts/ops/reset_protocol.py --sweep"},
+  "due_when": {"kind": "event", "event": "weekly_reset", "clears_when": "every listed lane is resumed, re-dispatched or closed with a reason"},
+  "next_action": "dispatch_lane", "state": "queued"}, intent="new")
+PY
+```
+
+`due_when.event: weekly_reset` is the marker `--sweep` reads. Close the item (`terminal_reason`) only when every listed lane has a disposition.
+Hibernating before a usage-limit outage (§ above) is the same act at the manager level.
 
 ## Manager handover (rotation)
 
@@ -668,6 +786,7 @@ run of § "The operating loop" and the first turn after every compaction starts 
    `Manager Session YYYY-MM-DD<letter>`, and a prompt: read this skill and the handoff doc in full; `CLAUDE.md` is in the system prompt; from
    the canonical doc read only the sections named in § "Start of session" step 2; perform V1 (including its own depth) and wait for the old
    manager's diff; no routine work yet.
+   *Before archiving:* the outgoing manager runs `python3 scripts/ops/routine_prompt_check.py <list_triggers JSON>` (all pages) and repoints any enabled routine whose prompt names its own session id (advisory, not a gate; row ROUTINE-PROMPTS-ON-ROTATION).
 3. **REWIRE.** `update_trigger` cannot change a trigger's target: (a) for each trigger on the old session `create_trigger` the same
    name/cron/prompt with `persistent_session_id=<new>`, then disable the old (delete only at step 5); (b) update every prompt naming the old
    id (research-ops, assistant-manager charter, review and check-in routines, live-lane briefs; lanes by fired trigger naming the new wake
@@ -695,7 +814,7 @@ control · V4 round-trips (trigger id, assistant evidence, lane id) · V5 operat
 ## The ladder the manager is moving things along
 
 Stage 0 backtest (edge net of the FULL cost stack) → Gate 1 → Stage 1 soak (`bybit_1` · `alpaca_paper`; MECHANICS on 1–2 clean trades,
-2026-10-15) → Gate 2 → Stage 2 live + mirror (identical rosters and trades; the mirror's net-of-cost window is the DEMOTION signal).
+2026-10-15; SKIPPED when `mechanics_proven`, 2026-11-01 — OPERATING-PLAN § 2 "The soak is MECHANICAL") → Gate 2 → Stage 2 live + mirror (identical rosters and trades; the mirror's net-of-cost window is the DEMOTION signal).
 **Edge is decided offline; a book only checks mechanics and cost** — a lane proposing Stage 2 on live-book evidence is a category error.
 Canonical: CLAUDE.md § "The promotion ladder".
 

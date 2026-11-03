@@ -52,4 +52,14 @@ related:
 - scripts/ci/check_prop_roster_gate.py
 - docs/claude/work/checklist/PROP-GATE-RERUN-20261029.json
 what_it_does_not_do: 'Changes no roster, risk, sizing, switch or config. Does not read live book P&L. Prices each leg ALONE (the gate''s population), not the two-leg account book. The old comms/prop_survival records are left in place; V2 records sit beside them.'
+amendments:
+- id: RULE-P5-GATE-BRK-PER-LEG-V3
+  registered_at: '2026-10-31T00:00:00Z'
+  registered_before_run: true
+  lane: PROP-GATE-EDGE-SENSITIVE
+  why: 'V2 is not sensitive to edge (PI-20261030-9KC5G3FG-0007): the E4 ledger (n=1619; trailing-365d n=847, mean net R -0.017) PASSed all 12 cells because a cheap evaluation fee against 80% of a 9-12% profit target plus near-break-even breach ceilings makes a ~zero-edge random walk +EV per attempt. Prop legs clear a SUPERSET of the real-money bar (CLAUDE.md), so a PASS must also show an edge.'
+  rule: 'PASS iff the V2 rule above passes AND the ledger''s net-of-cost per-trade edge (mean net R, priced by the cell''s own cost arm via prop_ev_sim.build_trades) has its two-sided 95% CI lower bound (mean - 1.959964*sd/sqrt(n), trades treated as independent) > 0. V2 PASS with CI lower bound <= 0 -> FAIL_EDGE; a missing edge read -> INDETERMINATE; V2 FAIL / INDETERMINATE are unchanged. Every verdict also reports the zero-edge NULL EV per account: same ledger, gross_r shifted so mean net R = 0, re-simulated once (seed 1, 1000 lives, the cells'' protocol).'
+  code: scripts/research/prop_gate.py (the ONE implementation; the three aggregate.py copies call it)
+  self_test: tests/test_prop_gate_edge.py
+  regrade: docs/research/prop-gate-edge-regrade-2026-10-31/RESULT.md
 result: 'GRADED 2026-10-29 against RULE-P5-GATE-BRK-PER-LEG-V2 (primary = current-stack arm, 3y window). eth_prop PASS on breakout_2/tradeify_1/velotrade_1 (breakout_2 365d EV ~0, worst seed +$0.32: marginal). sol_prop FAIL on all three (EV < 0 at median and worst seed on both cost arms; 365d INDETERMINATE n=65). Proposal to operator: keep eth_prop; PULL sol_prop from the three prop rosters (Tier-3, not applied). Table: docs/research/prop-gate-rerun-2026-10-29/RQ-20261029-9a2c-01/summary.json; records comms/prop_survival/v2/.'

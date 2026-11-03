@@ -73,6 +73,8 @@ from typing import Any, Dict, Optional
 
 import pandas as pd
 
+from src.runtime.trail_cross import trail_cross_verdict
+from src.runtime.exit_levers import closed_frame
 from src.runtime.tp_venue_cap import (  # the ONE owner of the clamp
     TP_VENUE_CAP_PCT as _TP_SENTINEL_CAP_PCT)
 from src.runtime.tp_revision import declared_rule, merge_verdict, plan_tp_revision
@@ -444,7 +446,10 @@ def order_package(cfg: dict, candles_df: Optional[pd.DataFrame] = None) -> dict:
                  # TP doctrine B1 (TPX-PULLBACK-PRODUCER): the declared
                  # TP-revision rule (src/runtime/tp_revision.py). Absent = no
                  # revision.
-                 "tp_revision"):
+                 "tp_revision",
+                 # STRUCTURE-EXITS-DEFAULT: the declared structure exit
+                 # (src/runtime/structure_exit_live.py). Absent = off, byte-identical.
+                 "structure_exit"):
         if cfg.get(_key) is not None:
             package["meta"][_key] = cfg[_key]
     if declared_rule(cfg) is not None:
@@ -732,6 +737,14 @@ def monitor(cfg, candles_df, open_pkg):
     # has already returned; a revision never rides on a close. Undeclared =
     # None = the resting TP is never moved (byte-identical for every leg that
     # does not declare `tp_revision`).
+    # STRUCTURE-EXITS-DEFAULT: a leg that DECLARES `structure_exit` has its SL+TP
+    # stepped by the shared causal structure detector instead of the chandelier +
+    # TP revision; every close path above has already had its turn (a close beats
+    # a move). Undeclared = skipped, byte-identical.
+    from src.runtime.structure_exit_live import declared as _sx_declared
+    if _sx_declared(meta) is not None:
+        from src.runtime.structure_exit_live import structure_exit_verdict
+        return structure_exit_verdict(meta, open_pkg, candles_df)
     _tp_rev = _revise_tp(meta, cfg_dict, candles_df, open_pkg, current_price, direction)
 
     atr = _coerce_float(meta.get("atr"))
@@ -749,7 +762,7 @@ def monitor(cfg, candles_df, open_pkg):
         or _coerce_float(cfg_dict.get("trail_mult"))
         or float(_DEFAULTS["trail_mult"])
     )
-    window = _since_entry(candles_df, open_pkg)
+    window = _since_entry(closed_frame(candles_df, meta, cfg_dict), open_pkg)  # harness: closed bars
     # M20 P4.1 trail-decay lever — shared runtime helper; see
     # trend_donchian.monitor for the contract (YAML-declared per leg /
     # annotate-only undeclared; fail-safe to the base mult).
@@ -825,13 +838,15 @@ def monitor(cfg, candles_df, open_pkg):
         if direction == "long":
             ext = float(window["high"].max())
             candidate = ext - trail_mult * atr
-            if candidate > sl and candidate < current_price:
-                _trail = {"sl": round(candidate, 8)}
+            if candidate > sl:
+                _trail = ({"sl": round(candidate, 8)} if candidate < current_price
+                          else trail_cross_verdict(direction, candidate, sl, current_price))
         else:
             ext = float(window["low"].min())
             candidate = ext + trail_mult * atr
-            if candidate < sl and candidate > current_price:
-                _trail = {"sl": round(candidate, 8)}
+            if candidate < sl:
+                _trail = ({"sl": round(candidate, 8)} if candidate > current_price
+                          else trail_cross_verdict(direction, candidate, sl, current_price))
     except (KeyError, ValueError, TypeError):
         _trail = None
     return merge_verdict(_trail, _tp_rev)

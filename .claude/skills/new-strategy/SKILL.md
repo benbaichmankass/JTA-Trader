@@ -5,6 +5,8 @@ description: Wiring checklist + scaffold for adding a new live trading strategy 
 
 > **Doc status:** `live` · category `instruction` · last verified `2026-09-07` · registered in [`docs/DOCUMENT-INDEX.md`](../../../docs/DOCUMENT-INDEX.md)
 
+> **The research loop (binding, 2026-11-01):** [`docs/plans/OPERATING-PLAN-2026-09-21.md`](../../../docs/plans/OPERATING-PLAN-2026-09-21.md) § 2 "What does not pass goes back into research — THE research workflow" -- a new strategy is BUILT parameterised: declare its levers up front (`research/levers/<leg>.yaml` `declared:` -- each lever, its range, its hypothesised effect), make each lever independently variable in the harness, and make the first Stage-0 test a STRUCTURED design (one-factor sweeps or ablations of the declared levers, the base as control), never one configuration.
+
 # /new-strategy — wire a new trading strategy through the execution layer
 
 The execution layer (intent multiplexer + delta-aware dispatcher,
@@ -128,6 +130,11 @@ why a shadow strategy's safe home is **bybit_1 (demo)**.
 [`docs/CLAUDE-RULES-CANONICAL.md`](../../../docs/CLAUDE-RULES-CANONICAL.md)
 § "Promotion evidence — **offline edge, live mechanics**" (binding; a
 soak-doctrine CI guard enforces this). Read that rule before wiring anything.
+
+⚠️ **Updated 2026-11-01 (operator, PROMOTION-NO-SOAK): not every leg soaks.** A leg whose execution mechanics are already proven
+(`soak_state.mechanics_proven`, registry `config/mechanics_paths.yaml`) goes from Stage 0 to real money with no paper soak; only a leg
+with NEW order-path code proves it with one small trade. The rule is stated once in
+[`OPERATING-PLAN` § 2 "The soak is MECHANICAL"](../../../docs/plans/OPERATING-PLAN-2026-09-21.md); steps 1–2 below are the new-mechanics case.
 
 The **edge is decided OFFLINE, before the soak** — a live-faithful backtest
 (config-exact, live-exit-faithful) plus the backfill / live-simulator over deep

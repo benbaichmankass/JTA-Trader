@@ -223,7 +223,10 @@ def test_telemetry_less_real_money_package_can_be_due_on_daily_floor(tmp_path):
     due = {d["order_package_id"]: d for d in out["due"]}
     assert "pkg-4" in due  # bybit_2 trade row, never reviewed -> daily_floor needs no telemetry
     # + the DESK-AM-REFOCUS judgement slot, which also needs no telemetry
-    assert [e["event"] for e in due["pkg-4"]["events"]] == ["daily_floor", "judgement_cadence"]
+    # the judgement slot rides along only while the shipped config declares hours for the leg's timeframe
+    shipped_slots = (lrd.load_config()["events"].get("judgement_cadence") or {}).get("hours_by_timeframe") or {}
+    want = ["daily_floor"] + (["judgement_cadence"] if shipped_slots else [])
+    assert [e["event"] for e in due["pkg-4"]["events"]] == want
     assert due["pkg-4"]["telemetry_state"] == "telemetry_absent"
     assert due["pkg-4"]["telemetry_stale"] is None
     assert "pkg-2" not in due  # no account known -> no floor; still listed, not dropped
@@ -360,24 +363,31 @@ def test_branch_read_failure_falls_back_to_main_only(tmp_path):
 
 # ----------------------------------------------------------------------------- DESK-AM-REFOCUS judgement_cadence
 
+# The slot mechanics are tested against an explicit cadence, not the shipped value: the shipped hours may be
+# emptied temporarily (WEEKEND-TRIGGER-ONLY 2026-10-31 -> restore Mon 2026-11-02 13:30Z) and must stay editable.
+CFG_CAD = {**CFG_LIVE, "events": {**CFG_LIVE["events"], "judgement_cadence": {
+    **(CFG_LIVE["events"].get("judgement_cadence") or {}),       # keep the shipped min_move_atr etc.
+    "hours_by_timeframe": {"30m": 4, "1h": 4, "2h": 4, "4h": 4, "1d": 4}}}}
+
+
 def _prior(last=None):
     return {"fired": set(), "last": last, "peak": None, "mech": None}
 
 
 def test_judgement_cadence_is_one_utc_slot_per_timeframe():
     now = datetime(2026, 10, 31, 9, 30, tzinfo=timezone.utc)
-    ev = lrd.judgement_cadence_event(_prior(), CFG_LIVE, now, 7200)                 # 2h leg: 4h slots
+    ev = lrd.judgement_cadence_event(_prior(), CFG_CAD, now, 7200)                 # 2h leg: 4h slots
     assert ev[0] == "judgement_cadence" and ev[1] == "2026-10-31T08:00:00+00:00"
     # operator 2026-10-30: every timeframe every 4h
-    assert lrd.judgement_cadence_event(_prior(), CFG_LIVE, now, 14400)[1] == "2026-10-31T08:00:00+00:00"
-    assert lrd.judgement_cadence_event(_prior(), CFG_LIVE, now, 86400)[1] == "2026-10-31T08:00:00+00:00"
+    assert lrd.judgement_cadence_event(_prior(), CFG_CAD, now, 14400)[1] == "2026-10-31T08:00:00+00:00"
+    assert lrd.judgement_cadence_event(_prior(), CFG_CAD, now, 86400)[1] == "2026-10-31T08:00:00+00:00"
 
 
 def test_a_review_inside_the_slot_satisfies_it_and_short_hold_timeframes_get_none():
     now = datetime(2026, 10, 31, 9, 30, tzinfo=timezone.utc)
-    assert lrd.judgement_cadence_event(_prior(datetime(2026, 10, 31, 8, 5, tzinfo=timezone.utc)), CFG_LIVE, now, 7200) is None
-    assert lrd.judgement_cadence_event(_prior(datetime(2026, 10, 31, 7, 55, tzinfo=timezone.utc)), CFG_LIVE, now, 7200) is not None
-    assert lrd.judgement_cadence_event(_prior(), CFG_LIVE, now, 900) is None          # 15m: the short-hold lane
+    assert lrd.judgement_cadence_event(_prior(datetime(2026, 10, 31, 8, 5, tzinfo=timezone.utc)), CFG_CAD, now, 7200) is None
+    assert lrd.judgement_cadence_event(_prior(datetime(2026, 10, 31, 7, 55, tzinfo=timezone.utc)), CFG_CAD, now, 7200) is not None
+    assert lrd.judgement_cadence_event(_prior(), CFG_CAD, now, 900) is None          # 15m: the short-hold lane
     assert lrd.judgement_cadence_event(_prior(), {"events": {}}, now, 7200) is None   # block removed = reverted
 
 
@@ -385,12 +395,12 @@ def test_judgement_cadence_reaches_the_due_list_and_dedupes_on_its_slot():
     now = datetime(2026, 10, 31, 9, 30, tzinfo=timezone.utc)
     row = {"order_package_id": "pkg-jc", "strategy": "ada_pullback_2h", "account_id": "bybit_2", "lifecycle": "open",
            "open_r": 0.2, "peak_r": 0.3, "updated_at": now.isoformat()}
-    due = lrd.compute_due([row], [], CFG_LIVE, now=now)
+    due = lrd.compute_due([row], [], CFG_CAD, now=now)
     evs = [e for d in due["due"] for e in d["events"] if e["event"] == "judgement_cadence"]
     assert len(evs) == 1 and evs[0]["level"] == "2026-10-31T08:00:00+00:00"
     answered = {"order_package_id": "pkg-jc", "reviewed_at": "2026-10-31T09:31:00Z",
                 "trigger": {"event": "judgement_cadence", "level": "2026-10-31T08:00:00+00:00"}}
-    again = lrd.compute_due([row], [answered], CFG_LIVE, now=now + timedelta(minutes=5))
+    again = lrd.compute_due([row], [answered], CFG_CAD, now=now + timedelta(minutes=5))
     assert not [e for d in again["due"] for e in d["events"] if e["event"] == "judgement_cadence"]
 
 
@@ -399,6 +409,169 @@ def test_judgement_cadence_skips_unreviewed_accounts_and_mandate_scoped_packages
     row = {"order_package_id": "pkg-jc", "strategy": "ada_pullback_2h", "lifecycle": "open",
            "open_r": 0.2, "peak_r": 0.3, "updated_at": now.isoformat()}
     jc = lambda res: [e for d in res["due"] for e in d["events"] if e["event"] == "judgement_cadence"]  # noqa: E731
-    assert not jc(lrd.compute_due([dict(row, account_id="oanda_practice")], [], CFG_LIVE, now=now))
+    assert not jc(lrd.compute_due([dict(row, account_id="oanda_practice")], [], CFG_CAD, now=now))
     cad = {"pkg-jc": {"mandate": "MD-X", "minutes": 60}}
-    assert not jc(lrd.compute_due([dict(row, account_id="bybit_2")], [], CFG_LIVE, now=now, cadence=cad))
+    assert not jc(lrd.compute_due([dict(row, account_id="bybit_2")], [], CFG_CAD, now=now, cadence=cad))
+
+
+def test_shipped_cadence_hours_drive_the_event_not_a_pinned_value():
+    """Reads the shipped config: empty hours -> no slot event for any timeframe; declared hours -> one."""
+    now = datetime(2026, 10, 31, 9, 30, tzinfo=timezone.utc)
+    hours = (CFG_LIVE["events"].get("judgement_cadence") or {}).get("hours_by_timeframe") or {}
+    for label, tf in (("30m", 1800), ("1h", 3600), ("2h", 7200), ("4h", 14400), ("1d", 86400)):
+        ev = lrd.judgement_cadence_event(_prior(), CFG_LIVE, now, tf)
+        assert (ev is None) == (not hours.get(label)), label
+
+
+# ----------------------------------------------------------------------------- TRIGGER-FIRST-REVIEWS (2026-10-31)
+
+TF_NOW = datetime(2026, 11, 3, 15, 10, tzinfo=timezone.utc)      # Tuesday, US RTH and CME open; 2h bar began 14:00
+TF_CLOSED = datetime(2026, 11, 1, 15, 10, tzinfo=timezone.utc)   # Sunday: US equity closed; CME not yet open (18:00 ET)
+
+
+def _tf_cfg(min_move=0.5):
+    cfg = {"events": {"judgement_cadence": {"hours_by_timeframe": {"2h": 2}}}}
+    if min_move is not None:
+        cfg["events"]["judgement_cadence"]["min_move_atr"] = min_move
+    return cfg
+
+
+def _hist(prices, now, tf=7200, atr=2.0):
+    """One path-history bar per tf, newest last, ending at the current bar."""
+    n = len(prices)
+    return {"history": [{"bar_ts": (lrd.bar_start(now, tf) - timedelta(seconds=tf * (n - 1 - i))).isoformat(),
+                         "last_price": p, "atr": atr} for i, p in enumerate(prices)]}
+
+
+def _jc(symbol, prior, ctx, now=TF_NOW, cfg=None):
+    skips = []
+    ev = lrd.judgement_cadence_event(prior, cfg or _tf_cfg(), now, 7200,
+                                     {"order_package_id": "pkg-tf", "symbol": symbol}, ctx, skips)
+    return ev, skips
+
+
+def test_trigger_first_closed_market_package_gets_no_slot():
+    for sym in ("SPY", "MGC"):
+        ev, skips = _jc(sym, _prior(), None, now=datetime(2026, 11, 1, 12, 0, tzinfo=timezone.utc))  # Sunday midday
+        assert ev is None and len(skips) == 1
+        assert skips[0]["state"] == "skipped_closed_market" and skips[0]["order_package_id"] == "pkg-tf"
+    ev, skips = _jc("BTCUSDT", _prior(), None, now=datetime(2026, 11, 1, 12, 0, tzinfo=timezone.utc))
+    assert ev is not None and not skips                                              # crypto is always open
+
+
+def test_trigger_first_open_market_no_new_bar_gets_no_slot():
+    last = datetime(2026, 11, 3, 14, 5, tzinfo=timezone.utc)                          # inside the current 2h bar
+    cfg = _tf_cfg()
+    cfg["events"]["judgement_cadence"]["hours_by_timeframe"] = {"2h": 1}              # slot 15:00 > last, bar 14:00 <= last
+    ev, skips = _jc("SPY", _prior(last), _hist([100, 101], TF_NOW), cfg=cfg)
+    assert ev is None and skips[0]["state"] == "skipped_nothing_new" and "no closed 2h bar" in skips[0]["reason"]
+
+
+def test_trigger_first_new_bar_but_small_move_gets_no_slot_and_big_move_fires():
+    last = datetime(2026, 11, 3, 13, 55, tzinfo=timezone.utc)                         # a bar has closed since
+    small = _jc("SPY", _prior(last), _hist([100.0, 100.0, 100.9], TF_NOW))            # 0.9 / ATR 2 = 0.45 < 0.5
+    assert small[0] is None and small[1][0]["state"] == "skipped_nothing_new" and "0.45 ATR" in small[1][0]["reason"]
+    at = _jc("SPY", _prior(last), _hist([100.0, 100.0, 101.0], TF_NOW))               # exactly 0.5 ATR
+    assert at[0] is not None and at[0][0] == "judgement_cadence" and not at[1]
+    down = _jc("MGC", _prior(last), _hist([100.0, 100.0, 98.0], TF_NOW))              # moves are absolute
+    assert down[0] is not None and not down[1]
+
+
+def test_trigger_first_unreadable_inputs_and_unknown_class_fire_with_a_reason():
+    last = datetime(2026, 11, 3, 13, 55, tzinfo=timezone.utc)
+    ev, skips = _jc("SPY", _prior(last), None)                                        # no history at all
+    assert ev is not None and not skips and "unreadable" in lrd.package_novelty(_prior(last), None, 0.5, TF_NOW, 7200)[1]
+    ev, _ = _jc("ZZZ-UNPROFILED", _prior(last), _hist([1, 1, 1], TF_NOW))             # unknown symbol -> crypto/open, moves 0
+    assert ev is None                                                                  # open, but measured quiet
+    ok, cls, why = lrd.package_market_state("SPY", TF_NOW)
+    assert ok and cls == "us_equity"
+
+
+def test_trigger_first_unknown_asset_class_reads_open_and_says_why(monkeypatch):
+    import src.runtime.market_hours as mh
+    monkeypatch.setattr(mh, "asset_class_for_symbol", lambda s: "weird_class")
+    ok, cls, why = lrd.package_market_state("X", TF_NOW)
+    assert ok and cls == "weird_class" and "not modelled" in why
+    monkeypatch.setattr(mh, "asset_class_for_symbol", lambda s: (_ for _ in ()).throw(RuntimeError("boom")))
+    ok, cls, why = lrd.package_market_state("X", TF_NOW)
+    assert ok and "market_hours_unreadable" in why
+
+
+def test_trigger_first_without_min_move_atr_only_the_market_gate_applies():
+    last = datetime(2026, 11, 3, 14, 5, tzinfo=timezone.utc)
+    ev, skips = _jc("SPY", _prior(last), _hist([100, 100], TF_NOW), cfg=_tf_cfg(None))
+    assert ev is None and not skips                                                    # the slot was already reviewed (legacy rule)
+    ev, skips = _jc("SPY", _prior(datetime(2026, 11, 3, 11, 0, tzinfo=timezone.utc)), None, cfg=_tf_cfg(None))
+    assert ev is not None and not skips
+
+
+def test_trigger_first_compute_due_records_skips_and_daily_floor_skips_only_closed_markets():
+    cfg = dict(CFG_CAD)   # explicit cadence hours: the shipped hours may be temporarily empty (WEEKEND-TRIGGER-ONLY)
+    floor = (cfg["events"]["daily_floor"].get("accounts") or ["bybit_2"])[0]
+    row = {"order_package_id": "pkg-spy", "strategy": "ada_pullback_2h", "symbol": "SPY", "account_id": floor,
+           "lifecycle": "open", "open_r": 0.1, "peak_r": 0.1}
+    sun = datetime(2026, 11, 1, 12, 0, tzinfo=timezone.utc)
+    res = lrd.compute_due([dict(row, updated_at=sun.isoformat())], [], cfg, now=sun)
+    names = {e["event"] for d in res["due"] for e in d["events"]}
+    assert "daily_floor" not in names and "judgement_cadence" not in names
+    assert {s["event"] for s in res["skipped_slots"]} == {"daily_floor", "judgement_cadence"}
+    assert all(s["state"] == "skipped_closed_market" for s in res["skipped_slots"])
+    assert res["skipped_slots_count"] == 2
+    tue = datetime(2026, 11, 3, 15, 10, tzinfo=timezone.utc)                          # open, never reviewed
+    res = lrd.compute_due([dict(row, updated_at=tue.isoformat())], [], cfg, now=tue)
+    names = {e["event"] for d in res["due"] for e in d["events"]}
+    assert {"daily_floor", "judgement_cadence"} <= names and not res["skipped_slots"]
+
+
+# ----------------------------------------------------------------------------- LTR-PACKET-FIXES F (2026-11-01)
+# Closed market: no new closed bar, no new EVENT. Measured case: pkg-92d1 (USO, alpaca_paper) was reviewed HOLD
+# at 14:38Z Sunday on the Friday 19:00Z bar (trigger momentum_flip), then fell due again at 15:00Z with
+# structure_break on that SAME bar: the per-bar cooldown keys on the wall-clock bar, which advances hourly.
+
+FRI_LAST_BAR = datetime(2026, 10, 30, 19, 0, tzinfo=timezone.utc)
+SUN = datetime(2026, 11, 1, 15, 10, tzinfo=timezone.utc)
+
+
+def _fri_hist(n=4):
+    return {"history": [{"bar_ts": (FRI_LAST_BAR - timedelta(hours=n - 1 - i)).isoformat(),
+                         "last_price": 100.0 + i, "atr": 1.0} for i in range(n)]}
+
+
+def test_closed_market_event_reviewed_after_the_last_bar_is_skipped():
+    sk = lrd.closed_market_event_skip("structure_break", "USO", "pkg-uso",
+                                      _prior(datetime(2026, 11, 1, 14, 38, tzinfo=timezone.utc)), _fri_hist(), SUN, 3600)
+    assert sk is not None and sk["state"] == "skipped_closed_market" and "no closed bar since" in sk["reason"]
+
+
+def test_closed_market_event_fires_when_never_reviewed_or_a_bar_closed_since():
+    assert lrd.closed_market_event_skip("structure_break", "USO", "p", _prior(), _fri_hist(), SUN, 3600) is None
+    before_final = datetime(2026, 10, 30, 19, 30, tzinfo=timezone.utc)        # reviewed inside the session's last bar
+    assert lrd.closed_market_event_skip("structure_break", "USO", "p", _prior(before_final), _fri_hist(), SUN, 3600) is None
+
+
+def test_open_market_crypto_and_mechanics_are_never_skipped():
+    last = datetime(2026, 11, 1, 14, 38, tzinfo=timezone.utc)
+    assert lrd.closed_market_event_skip("structure_break", "BTCUSDT", "p", _prior(last), _fri_hist(), SUN, 3600) is None
+    assert lrd.closed_market_event_skip("mechanics", "USO", "p", _prior(last), _fri_hist(), SUN, 3600) is None
+    tue = datetime(2026, 11, 3, 15, 10, tzinfo=timezone.utc)
+    assert lrd.closed_market_event_skip("structure_break", "USO", "p", _prior(last), _fri_hist(), tue, 3600) is None
+
+
+def test_closed_market_without_history_skips_only_a_reviewed_package():
+    last = datetime(2026, 11, 1, 14, 38, tzinfo=timezone.utc)
+    assert lrd.closed_market_event_skip("giveback", "SPY", "p", _prior(last), None, SUN, 3600)["state"] == "skipped_closed_market"
+    assert lrd.closed_market_event_skip("giveback", "SPY", "p", _prior(), None, SUN, 3600) is None
+
+
+def test_compute_due_records_the_closed_market_event_skip():
+    r = {"order_package_id": "pkg-uso", "strategy": "uso_trend_1h", "symbol": "USO", "account_id": "oanda_practice",
+         "lifecycle": "open", "open_r": 2.4, "peak_r": 2.5, "giveback_r": 0.1, "r_to_target": 3.0,
+         "updated_at": SUN.isoformat()}
+    reviewed = [review(pkg="pkg-uso", event="momentum_flip", level=FRI_LAST_BAR.isoformat(),
+                       at=datetime(2026, 11, 1, 14, 38, tzinfo=timezone.utc), peak=1.0)]
+    res = lrd.compute_due([r], reviewed, CFG, SUN, market={"pkg-uso": _fri_hist()})
+    assert res["due_count"] == 0, res["due"]
+    assert any(s["event"] == "r_milestone" and s["state"] == "skipped_closed_market" for s in res["skipped_slots"])
+    tue = datetime(2026, 11, 3, 15, 10, tzinfo=timezone.utc)                   # same state, market open: due
+    res = lrd.compute_due([dict(r, updated_at=tue.isoformat())], reviewed, CFG, tue, market={"pkg-uso": _fri_hist()})
+    assert "r_milestone" in [e["event"] for d in res["due"] for e in d["events"]]
