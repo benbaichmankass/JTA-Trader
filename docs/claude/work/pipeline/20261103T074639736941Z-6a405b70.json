@@ -11,5 +11,5 @@
     "rerun": "curl https://ict-bot.duckdns.org/api/bot/prop/tickets?account_id=breakout_2&limit=8 (pkg-591f76d3005e4cc8); /api/diag/journal?table=order_packages for that package's sl history"
   },
   "state": "queued",
-  "what": "Possible wrong-side stop on prop package pkg-591f76d3005e4cc8 (trend_donchian_eth_prop SHORT, 2026-10-29 21:02Z): every account's ticket has entry 2258.04, sl 2257.2575, i.e. the stop is BELOW entry on a short (0.03% away, profit side). UNVERIFIED whether the signal emitted it or a trail rewrote the ticket after entry; if the signal emitted it, it is a stop-geometry bug on a prop money path."
+  "what": "Possible wrong-side stop on prop package pkg-591f76d3005e4cc8 (trend_donchian_eth_prop SHORT, 2026-10-29 21:02Z): every account's ticket has entry 2258.04, sl 2257.2575, i.e. the stop is BELOW entry on a short (population: the 3 prop tickets of that one package, breakout_2 / tradeify_1 / velotrade_1, read from /api/bot/prop/tickets at 2026-11-03 ~07:55Z; all three carry the same values; the gap is 0.78 USD = 0.035% of the 2258.04 entry, on the profit side). UNVERIFIED whether the signal emitted it or a trail rewrote the ticket after entry; if the signal emitted it, it is a stop-geometry bug on a prop money path."
 }
