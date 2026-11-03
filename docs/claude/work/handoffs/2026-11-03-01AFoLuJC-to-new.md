@@ -1,6 +1,6 @@
 # Manager handoff 2026-11-03 (2): session_01AFoLuJCo138TgfjBcbwcLh (Manager Session 2026-11-03a) -> new
 
-> Doc status: `live` · category `record` · 2026-11-03 · rotation reason: operator popup ~10:45Z "Fresh manager + quiet (Rec.)" — usage cut (weekly 91% at 10:41Z, app warns run-out tonight; old manager context ~623k, every wake re-reads it). Reset Wed 2026-11-04 18:00Z.
+> **Doc status:** `unknown` · category `handoff` · last verified `2026-11-03` · registered in [`docs/DOCUMENT-INDEX.md`](../../../DOCUMENT-INDEX.md)
 
 ## Operator directives in force (verbatim where quoted)
 
