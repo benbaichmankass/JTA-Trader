@@ -1,6 +1,6 @@
 # Soak regrade under the 2026-11-01 rule — 2026-11-03
 
-> **Doc status:** `live` · category `finding` · lane SOAK-REGRADE (dispatched by Manager Session 2026-11-03a) · measured 2026-11-03 against `origin/main` @ the commit this file lands on.
+> **Doc status:** `unknown` · category `unknown` · last verified `never` · lane SOAK-REGRADE (dispatched by Manager Session 2026-11-03a) · measured 2026-11-03 against `origin/main` @ the commit this file lands on.
 
 Gates this adds or changes: none.
 
