@@ -163,11 +163,12 @@ def _wf():
     return text, yaml.safe_load(text)
 
 
-def test_schedule_is_every_30_minutes():
+def test_schedule_is_every_2_hours():
+    # CI-STREAMLINE (2026-11-03): with no push trigger this is the only post-merge full run.
     _, wf = _wf()
     on = wf.get("on", wf.get(True))
     crons = [c["cron"] for c in on["schedule"]]
-    assert crons == ["13,43 * * * *"], "the stated bound (~30 min + run time) depends on this cadence"
+    assert crons == ["13 */2 * * *"], "the stated bound (~2 h + run time) depends on this cadence"
 
 
 def test_backstop_ticks_share_one_group_and_never_cancel():
@@ -216,8 +217,9 @@ _kspec.loader.exec_module(sk)
 def test_keeper_targets_pytest_run_with_a_starvation_waiver():
     spec = sk.TARGETS.get("pytest-run.yml")
     assert spec, "schedule-keeper must dispatch the backstop: GitHub dropped its cron"
-    # a 30-min cron's slot never ages past GRACE_MIN; without starved_min the keeper never dispatches
-    assert spec.get("starved_min") and spec["starved_min"] <= 30
+    # CI-STREAMLINE (2026-11-03): 2-h cron; starved_min is one missed slot + grace, never the old 30 (which would
+    # re-create a ~48-runs/day full-suite cadence now that no push run marks HEAD graded)
+    assert spec.get("starved_min") and 120 <= spec["starved_min"] <= 180
     assert spec.get("self_dedupes")
 
 
