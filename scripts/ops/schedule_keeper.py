@@ -126,8 +126,12 @@ TARGETS: dict[str, dict] = {
     # keeper dispatches it only through starved_min: no schedule/dispatch run for 30 min -> dispatch.
     # It needs no `dedupe` job: each tick is itself a no-op unless main's HEAD code lacks a completed
     # full-suite run (scripts/ci/pytest_run_backstop.py), and cron + keeper share one serialised
-    # concurrency group. stale_hours 2 = four missed ticks before the keeper pages.
-    "pytest-run.yml": {"stale_hours": 2, "starved_min": 30,
+    # concurrency group.
+    # CI-STREAMLINE (2026-11-03): the push trigger is gone and the cron is `13 */2 * * *`, so the backstop is
+    # the ONLY post-merge full run. starved_min 150 = one missed 2-h slot + grace before the keeper dispatches;
+    # at the old 30 the keeper alone would re-create the ~48 full runs/day this change removes. stale_hours 5 =
+    # two missed slots before it pages.
+    "pytest-run.yml": {"stale_hours": 5, "starved_min": 150,
                        "self_dedupes": "scripts/ci/pytest_run_backstop.py no-ops a tick whose HEAD is already graded"},
     # RESEARCH-PIPELINE-SLO (manager 2026-10-16): the `41 */2 * * *` cron (merged 11:17Z, #18579)
     # NEVER fired -- its 12:41Z and 14:41Z slots created no run; the only runs were manual dispatches.
