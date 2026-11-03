@@ -74,7 +74,7 @@ for i in $(seq 1 "$COUNT"); do
   if [ ! -f "$D/.runner" ]; then
     sudo -u "$U" tar -xzf "$TARBALL" -C "$D"
     sudo -u "$U" bash -c "cd '$D' && ./config.sh --unattended --replace --url '$REPO_URL' --token \"\$(cat)\" \
-        --name '$NAME' --labels '$LABELS' --work _work --disableupdate=false" <<<"$REG_TOKEN" >/dev/null
+        --name '$NAME' --labels '$LABELS' --work _work" <<<"$REG_TOKEN" >/dev/null
     echo "configured $NAME"
   else
     echo "already_configured $NAME"
