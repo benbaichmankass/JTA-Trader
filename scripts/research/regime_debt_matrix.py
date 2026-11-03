@@ -225,6 +225,12 @@ _TREND_LEVER_FLAG = {
     "trail_adx_tight_mult": "--trail-adx-tight-mult",
     "momentum_stale_bars": "--momentum-stale-bars",
     "momentum_stale_adx_below": "--momentum-stale-adx-below",
+    # STRUCTURE-EXITS-ENABLE (2026-11-03): the declared live structure exit
+    # (src/runtime/structure_exit_live.py) is the harness arm `--structure-exit
+    # pivot=N` (same detector, src/runtime/structure_levels.py). The string form
+    # "pivot=N" passes through verbatim; harness defaults buffer 0.25 / min_r 1.0
+    # equal the live parser's defaults for that form.
+    "structure_exit": "--structure-exit",
 }
 # Pullback lever config-key -> harness flag (these the pullback harness DOES model).
 _PB_LEVER_FLAG = {
@@ -245,6 +251,7 @@ _PB_LEVER_FLAG = {
     "trail_adx_tight_mult": "--trail-adx-tight-mult",
     "momentum_stale_bars": "--momentum-stale-bars",
     "momentum_stale_adx_below": "--momentum-stale-adx-below",
+    "structure_exit": "--structure-exit",  # as on _TREND_LEVER_FLAG (STRUCTURE-EXITS-ENABLE)
 }
 _PB_PLAIN = {"model", "signal_prefixes", "enabled", "execution", "timeframe", "symbols",
              "trend_lookback", "pullback_lookback", "pullback_frac", "atr_period",
