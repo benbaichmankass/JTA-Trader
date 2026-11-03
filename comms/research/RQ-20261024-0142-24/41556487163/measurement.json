@@ -1,0 +1,4010 @@
+{
+  "family": "trend",
+  "timeframe": "15m",
+  "params": {},
+  "best_arm": null,
+  "thresholds": {
+    "n_floor": 39,
+    "pooled_n_floor": 88,
+    "folds": 6,
+    "fold_majority": 4,
+    "breadth_frac": 0.67,
+    "min_powered_cells": 2,
+    "holm_alpha": 0.05,
+    "baseline": "B",
+    "delta_r_per_trade": 0.05
+  },
+  "arms": {
+    "B": {
+      "sets": {},
+      "unsets": [],
+      "extra_flags": [],
+      "cells": {
+        "ADAUSDT": {
+          "state": "measured",
+          "n": 4511,
+          "net_r": -510.5315,
+          "max_drawdown_r": 546.0277,
+          "folds": [
+            {
+              "fold": 1,
+              "start": "2022-01-08 00:00:00+00:00",
+              "end": "2022-10-26 00:00:00+00:00",
+              "trades": 782,
+              "net_r": -73.4408
+            },
+            {
+              "fold": 2,
+              "start": "2022-10-26 00:00:00+00:00",
+              "end": "2023-08-13 00:00:00+00:00",
+              "trades": 765,
+              "net_r": -143.1508
+            },
+            {
+              "fold": 3,
+              "start": "2023-08-13 00:00:00+00:00",
+              "end": "2024-05-30 00:00:00+00:00",
+              "trades": 772,
+              "net_r": -113.0819
+            },
+            {
+              "fold": 4,
+              "start": "2024-05-30 00:00:00+00:00",
+              "end": "2025-03-17 00:00:00+00:00",
+              "trades": 781,
+              "net_r": -82.3272
+            },
+            {
+              "fold": 5,
+              "start": "2025-03-17 00:00:00+00:00",
+              "end": "2026-01-02 00:00:00+00:00",
+              "trades": 722,
+              "net_r": -40.7722
+            },
+            {
+              "fold": 6,
+              "start": "2026-01-02 00:00:00+00:00",
+              "end": "2026-10-20 00:00:00+00:00",
+              "trades": 689,
+              "net_r": -57.7587
+            }
+          ],
+          "folds_pos": 0,
+          "net_r_per_capital_day": -0.5116,
+          "mean_bars_held": 21.237,
+          "hold_days_mean": 0.221,
+          "net_r_per_trade": -0.1132,
+          "t_one_sided_p": 0.9999999999043571,
+          "by_outcome": {
+            "trail_stop": 3711,
+            "stop": 786,
+            "timeout": 14
+          },
+          "cost_stack": {
+            "fee_bps_roundtrip": 11.0,
+            "slippage_bps_roundtrip": 3.0,
+            "funding_bps_per_window": 1.0
+          },
+          "params": {
+            "donchian": 20,
+            "atr_stop_mult": 2.5,
+            "trail_mult": 3.0,
+            "min_confidence": 0.0
+          },
+          "data_start": "2022-01-08 00:00:00+00:00",
+          "data_end": "2026-10-20 00:00:00+00:00",
+          "grade": "fail",
+          "argv": [
+            "/home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_trend.py",
+            "--donchian",
+            "20",
+            "--data",
+            "comms/research/RQ-20261024-0142-24/41556487163/data/ADAUSDT_15.csv",
+            "--symbol",
+            "ADAUSDT",
+            "--resample",
+            "15m",
+            "--atr-period",
+            "14",
+            "--atr-stop-mult",
+            "2.5",
+            "--trail-mult",
+            "3.0",
+            "--min-confidence",
+            "0.0",
+            "--fee-bps-roundtrip",
+            "11.0",
+            "--emit-trades",
+            "comms/research/RQ-20261024-0142-24/41556487163/cells/trend_ADAUSDT_15m_B__trades.jsonl",
+            "--json",
+            "comms/research/RQ-20261024-0142-24/41556487163/cells/trend_ADAUSDT_15m_B__bt.json",
+            "--timeframe",
+            "15m",
+            "--start",
+            "2022-01-01",
+            "--end",
+            "2026-10-20",
+            "--cf"
+          ],
+          "cf_summary": {
+            "schema": "cf_summary/1",
+            "n_rows": 4511,
+            "n_with_cf": 4511,
+            "n_graded": 4511,
+            "n_could_not_grade": 0,
+            "provenance": "ESTIMATED",
+            "original_brackets": {
+              "n": 4511,
+              "mean_net_r": -0.1021,
+              "ci95_mean": [
+                -0.1337,
+                -0.067
+              ]
+            },
+            "replayed_actual": {
+              "n": 4511,
+              "mean_net_r": -0.1021,
+              "ci95_mean": [
+                -0.1337,
+                -0.067
+              ]
+            },
+            "alt_brackets_mean_by_cell": {
+              "sl0.75x_tp2R": {
+                "n": 4511,
+                "mean_net_r": -0.1198
+              },
+              "sl0.75x_tp3R": {
+                "n": 4511,
+                "mean_net_r": -0.1326
+              },
+              "sl0.75x_tp4R": {
+                "n": 4511,
+                "mean_net_r": -0.1273
+              },
+              "sl0.75x_tp5R": {
+                "n": 4511,
+                "mean_net_r": -0.1276
+              },
+              "sl0.75x_tp6R": {
+                "n": 4511,
+                "mean_net_r": -0.127
+              },
+              "sl1.25x_tp2R": {
+                "n": 4511,
+                "mean_net_r": -0.0878
+              },
+              "sl1.25x_tp3R": {
+                "n": 4511,
+                "mean_net_r": -0.0842
+              },
+              "sl1.25x_tp4R": {
+                "n": 4511,
+                "mean_net_r": -0.0819
+              },
+              "sl1.25x_tp5R": {
+                "n": 4511,
+                "mean_net_r": -0.0841
+              },
+              "sl1.25x_tp6R": {
+                "n": 4511,
+                "mean_net_r": -0.0844
+              },
+              "sl1.5x_tp2R": {
+                "n": 4511,
+                "mean_net_r": -0.0707
+              },
+              "sl1.5x_tp3R": {
+                "n": 4511,
+                "mean_net_r": -0.0693
+              },
+              "sl1.5x_tp4R": {
+                "n": 4511,
+                "mean_net_r": -0.0698
+              },
+              "sl1.5x_tp5R": {
+                "n": 4511,
+                "mean_net_r": -0.0708
+              },
+              "sl1.5x_tp6R": {
+                "n": 4511,
+                "mean_net_r": -0.0714
+              },
+              "sl1x_tp2R": {
+                "n": 4511,
+                "mean_net_r": -0.1014
+              },
+              "sl1x_tp3R": {
+                "n": 4511,
+                "mean_net_r": -0.1004
+              },
+              "sl1x_tp5R": {
+                "n": 4511,
+                "mean_net_r": -0.0977
+              },
+              "sl1x_tp6R": {
+                "n": 4511,
+                "mean_net_r": -0.0997
+              }
+            },
+            "more_management_mean_by_arm": {
+              "more_atr_trail_1.5x": {
+                "n": 4511,
+                "mean_net_r": -0.0951
+              },
+              "more_atr_trail_2x": {
+                "n": 4511,
+                "mean_net_r": -0.1057
+              },
+              "more_atr_trail_3x": {
+                "n": 4511,
+                "mean_net_r": -0.1021
+              },
+              "more_atr_trail_4x": {
+                "n": 4511,
+                "mean_net_r": -0.1097
+              },
+              "more_rule_1.5R_to_0R": {
+                "n": 4511,
+                "mean_net_r": -0.1021
+              },
+              "more_rule_1R_to_0R": {
+                "n": 4511,
+                "mean_net_r": -0.1012
+              },
+              "more_rule_2R_to_1R": {
+                "n": 4511,
+                "mean_net_r": -0.0998
+              },
+              "more_rule_ladder_be1_lock2": {
+                "n": 4511,
+                "mean_net_r": -0.0989
+              }
+            },
+            "p_random_ge_actual": {
+              "n": 0,
+              "mean": null
+            },
+            "post_exit_verdict_mix": {
+              "null": 4284,
+              "neutral": 37,
+              "exit_saved_r": 7,
+              "exited_early": 183
+            },
+            "fidelity_abs_gap_r": {
+              "n": 4511,
+              "mean": 0.0147,
+              "max": 1.0347
+            }
+          }
+        },
+        "AVAXUSDT": {
+          "state": "measured",
+          "n": 4630,
+          "net_r": -272.301,
+          "max_drawdown_r": 310.1828,
+          "folds": [
+            {
+              "fold": 1,
+              "start": "2022-01-08 00:00:00+00:00",
+              "end": "2022-10-26 00:00:00+00:00",
+              "trades": 734,
+              "net_r": -17.8574
+            },
+            {
+              "fold": 2,
+              "start": "2022-10-26 00:00:00+00:00",
+              "end": "2023-08-13 00:00:00+00:00",
+              "trades": 770,
+              "net_r": -78.9174
+            },
+            {
+              "fold": 3,
+              "start": "2023-08-13 00:00:00+00:00",
+              "end": "2024-05-30 00:00:00+00:00",
+              "trades": 785,
+              "net_r": -33.251
+            },
+            {
+              "fold": 4,
+              "start": "2024-05-30 00:00:00+00:00",
+              "end": "2025-03-17 00:00:00+00:00",
+              "trades": 773,
+              "net_r": -33.6109
+            },
+            {
+              "fold": 5,
+              "start": "2025-03-17 00:00:00+00:00",
+              "end": "2026-01-02 00:00:00+00:00",
+              "trades": 792,
+              "net_r": -51.11
+            },
+            {
+              "fold": 6,
+              "start": "2026-01-02 00:00:00+00:00",
+              "end": "2026-10-20 00:00:00+00:00",
+              "trades": 776,
+              "net_r": -57.5517
+            }
+          ],
+          "folds_pos": 0,
+          "net_r_per_capital_day": -0.2713,
+          "mean_bars_held": 20.809,
+          "hold_days_mean": 0.217,
+          "net_r_per_trade": -0.0588,
+          "t_one_sided_p": 0.9993207470444823,
+          "by_outcome": {
+            "trail_stop": 3861,
+            "stop": 758,
+            "timeout": 11
+          },
+          "cost_stack": {
+            "fee_bps_roundtrip": 11.0,
+            "slippage_bps_roundtrip": 3.0,
+            "funding_bps_per_window": 1.0
+          },
+          "params": {
+            "donchian": 20,
+            "atr_stop_mult": 2.5,
+            "trail_mult": 3.0,
+            "min_confidence": 0.0
+          },
+          "data_start": "2022-01-08 00:00:00+00:00",
+          "data_end": "2026-10-20 00:00:00+00:00",
+          "grade": "fail",
+          "argv": [
+            "/home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_trend.py",
+            "--donchian",
+            "20",
+            "--data",
+            "comms/research/RQ-20261024-0142-24/41556487163/data/AVAXUSDT_15.csv",
+            "--symbol",
+            "AVAXUSDT",
+            "--resample",
+            "15m",
+            "--atr-period",
+            "14",
+            "--atr-stop-mult",
+            "2.5",
+            "--trail-mult",
+            "3.0",
+            "--min-confidence",
+            "0.0",
+            "--fee-bps-roundtrip",
+            "11.0",
+            "--emit-trades",
+            "comms/research/RQ-20261024-0142-24/41556487163/cells/trend_AVAXUSDT_15m_B__trades.jsonl",
+            "--json",
+            "comms/research/RQ-20261024-0142-24/41556487163/cells/trend_AVAXUSDT_15m_B__bt.json",
+            "--timeframe",
+            "15m",
+            "--start",
+            "2022-01-01",
+            "--end",
+            "2026-10-20",
+            "--cf"
+          ],
+          "cf_summary": {
+            "schema": "cf_summary/1",
+            "n_rows": 4630,
+            "n_with_cf": 4630,
+            "n_graded": 4630,
+            "n_could_not_grade": 0,
+            "provenance": "ESTIMATED",
+            "original_brackets": {
+              "n": 4630,
+              "mean_net_r": -0.0457,
+              "ci95_mean": [
+                -0.0855,
+                -0.0104
+              ]
+            },
+            "replayed_actual": {
+              "n": 4630,
+              "mean_net_r": -0.0457,
+              "ci95_mean": [
+                -0.0855,
+                -0.0104
+              ]
+            },
+            "alt_brackets_mean_by_cell": {
+              "sl0.75x_tp2R": {
+                "n": 4630,
+                "mean_net_r": -0.0705
+              },
+              "sl0.75x_tp3R": {
+                "n": 4630,
+                "mean_net_r": -0.0662
+              },
+              "sl0.75x_tp4R": {
+                "n": 4630,
+                "mean_net_r": -0.0665
+              },
+              "sl0.75x_tp5R": {
+                "n": 4630,
+                "mean_net_r": -0.0593
+              },
+              "sl0.75x_tp6R": {
+                "n": 4630,
+                "mean_net_r": -0.0517
+              },
+              "sl1.25x_tp2R": {
+                "n": 4630,
+                "mean_net_r": -0.0438
+              },
+              "sl1.25x_tp3R": {
+                "n": 4630,
+                "mean_net_r": -0.0395
+              },
+              "sl1.25x_tp4R": {
+                "n": 4630,
+                "mean_net_r": -0.0337
+              },
+              "sl1.25x_tp5R": {
+                "n": 4630,
+                "mean_net_r": -0.0364
+              },
+              "sl1.25x_tp6R": {
+                "n": 4630,
+                "mean_net_r": -0.0342
+              },
+              "sl1.5x_tp2R": {
+                "n": 4630,
+                "mean_net_r": -0.0364
+              },
+              "sl1.5x_tp3R": {
+                "n": 4630,
+                "mean_net_r": -0.0291
+              },
+              "sl1.5x_tp4R": {
+                "n": 4630,
+                "mean_net_r": -0.0287
+              },
+              "sl1.5x_tp5R": {
+                "n": 4630,
+                "mean_net_r": -0.0287
+              },
+              "sl1.5x_tp6R": {
+                "n": 4630,
+                "mean_net_r": -0.0282
+              },
+              "sl1x_tp2R": {
+                "n": 4630,
+                "mean_net_r": -0.0517
+              },
+              "sl1x_tp3R": {
+                "n": 4630,
+                "mean_net_r": -0.0558
+              },
+              "sl1x_tp5R": {
+                "n": 4630,
+                "mean_net_r": -0.0433
+              },
+              "sl1x_tp6R": {
+                "n": 4630,
+                "mean_net_r": -0.0434
+              }
+            },
+            "more_management_mean_by_arm": {
+              "more_atr_trail_1.5x": {
+                "n": 4630,
+                "mean_net_r": -0.0628
+              },
+              "more_atr_trail_2x": {
+                "n": 4630,
+                "mean_net_r": -0.0602
+              },
+              "more_atr_trail_3x": {
+                "n": 4630,
+                "mean_net_r": -0.0457
+              },
+              "more_atr_trail_4x": {
+                "n": 4630,
+                "mean_net_r": -0.0179
+              },
+              "more_rule_1.5R_to_0R": {
+                "n": 4630,
+                "mean_net_r": -0.0457
+              },
+              "more_rule_1R_to_0R": {
+                "n": 4630,
+                "mean_net_r": -0.0481
+              },
+              "more_rule_2R_to_1R": {
+                "n": 4630,
+                "mean_net_r": -0.0465
+              },
+              "more_rule_ladder_be1_lock2": {
+                "n": 4630,
+                "mean_net_r": -0.049
+              }
+            },
+            "p_random_ge_actual": {
+              "n": 0,
+              "mean": null
+            },
+            "post_exit_verdict_mix": {
+              "null": 4400,
+              "exited_early": 195,
+              "neutral": 34,
+              "exit_saved_r": 1
+            },
+            "fidelity_abs_gap_r": {
+              "n": 4630,
+              "mean": 0.0139,
+              "max": 3.2369
+            }
+          }
+        },
+        "SOLUSDT": {
+          "state": "measured",
+          "n": 4544,
+          "net_r": -453.3581,
+          "max_drawdown_r": 455.2246,
+          "folds": [
+            {
+              "fold": 1,
+              "start": "2022-01-08 00:00:00+00:00",
+              "end": "2022-10-26 00:00:00+00:00",
+              "trades": 749,
+              "net_r": -51.2731
+            },
+            {
+              "fold": 2,
+              "start": "2022-10-26 00:00:00+00:00",
+              "end": "2023-08-13 00:00:00+00:00",
+              "trades": 774,
+              "net_r": -61.0856
+            },
+            {
+              "fold": 3,
+              "start": "2023-08-13 00:00:00+00:00",
+              "end": "2024-05-30 00:00:00+00:00",
+              "trades": 792,
+              "net_r": -99.0969
+            },
+            {
+              "fold": 4,
+              "start": "2024-05-30 00:00:00+00:00",
+              "end": "2025-03-17 00:00:00+00:00",
+              "trades": 754,
+              "net_r": -69.4482
+            },
+            {
+              "fold": 5,
+              "start": "2025-03-17 00:00:00+00:00",
+              "end": "2026-01-02 00:00:00+00:00",
+              "trades": 748,
+              "net_r": -80.4036
+            },
+            {
+              "fold": 6,
+              "start": "2026-01-02 00:00:00+00:00",
+              "end": "2026-10-20 00:00:00+00:00",
+              "trades": 727,
+              "net_r": -92.0529
+            }
+          ],
+          "folds_pos": 0,
+          "net_r_per_capital_day": -0.4491,
+          "mean_bars_held": 21.327,
+          "hold_days_mean": 0.222,
+          "net_r_per_trade": -0.0998,
+          "t_one_sided_p": 0.9999999944094397,
+          "by_outcome": {
+            "trail_stop": 3791,
+            "stop": 738,
+            "timeout": 15
+          },
+          "cost_stack": {
+            "fee_bps_roundtrip": 11.0,
+            "slippage_bps_roundtrip": 3.0,
+            "funding_bps_per_window": 1.0
+          },
+          "params": {
+            "donchian": 20,
+            "atr_stop_mult": 2.5,
+            "trail_mult": 3.0,
+            "min_confidence": 0.0
+          },
+          "data_start": "2022-01-08 00:00:00+00:00",
+          "data_end": "2026-10-20 00:00:00+00:00",
+          "grade": "fail",
+          "argv": [
+            "/home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_trend.py",
+            "--donchian",
+            "20",
+            "--data",
+            "comms/research/RQ-20261024-0142-24/41556487163/data/SOLUSDT_15.csv",
+            "--symbol",
+            "SOLUSDT",
+            "--resample",
+            "15m",
+            "--atr-period",
+            "14",
+            "--atr-stop-mult",
+            "2.5",
+            "--trail-mult",
+            "3.0",
+            "--min-confidence",
+            "0.0",
+            "--fee-bps-roundtrip",
+            "11.0",
+            "--emit-trades",
+            "comms/research/RQ-20261024-0142-24/41556487163/cells/trend_SOLUSDT_15m_B__trades.jsonl",
+            "--json",
+            "comms/research/RQ-20261024-0142-24/41556487163/cells/trend_SOLUSDT_15m_B__bt.json",
+            "--timeframe",
+            "15m",
+            "--start",
+            "2022-01-01",
+            "--end",
+            "2026-10-20",
+            "--cf"
+          ],
+          "cf_summary": {
+            "schema": "cf_summary/1",
+            "n_rows": 4544,
+            "n_with_cf": 4544,
+            "n_graded": 4544,
+            "n_could_not_grade": 0,
+            "provenance": "ESTIMATED",
+            "original_brackets": {
+              "n": 4544,
+              "mean_net_r": -0.0887,
+              "ci95_mean": [
+                -0.123,
+                -0.0538
+              ]
+            },
+            "replayed_actual": {
+              "n": 4544,
+              "mean_net_r": -0.0887,
+              "ci95_mean": [
+                -0.123,
+                -0.0538
+              ]
+            },
+            "alt_brackets_mean_by_cell": {
+              "sl0.75x_tp2R": {
+                "n": 4544,
+                "mean_net_r": -0.1041
+              },
+              "sl0.75x_tp3R": {
+                "n": 4544,
+                "mean_net_r": -0.0996
+              },
+              "sl0.75x_tp4R": {
+                "n": 4544,
+                "mean_net_r": -0.1133
+              },
+              "sl0.75x_tp5R": {
+                "n": 4544,
+                "mean_net_r": -0.1107
+              },
+              "sl0.75x_tp6R": {
+                "n": 4544,
+                "mean_net_r": -0.1133
+              },
+              "sl1.25x_tp2R": {
+                "n": 4544,
+                "mean_net_r": -0.0652
+              },
+              "sl1.25x_tp3R": {
+                "n": 4544,
+                "mean_net_r": -0.0662
+              },
+              "sl1.25x_tp4R": {
+                "n": 4544,
+                "mean_net_r": -0.0679
+              },
+              "sl1.25x_tp5R": {
+                "n": 4544,
+                "mean_net_r": -0.0698
+              },
+              "sl1.25x_tp6R": {
+                "n": 4544,
+                "mean_net_r": -0.0682
+              },
+              "sl1.5x_tp2R": {
+                "n": 4544,
+                "mean_net_r": -0.0578
+              },
+              "sl1.5x_tp3R": {
+                "n": 4544,
+                "mean_net_r": -0.0566
+              },
+              "sl1.5x_tp4R": {
+                "n": 4544,
+                "mean_net_r": -0.0581
+              },
+              "sl1.5x_tp5R": {
+                "n": 4544,
+                "mean_net_r": -0.0571
+              },
+              "sl1.5x_tp6R": {
+                "n": 4544,
+                "mean_net_r": -0.0567
+              },
+              "sl1x_tp2R": {
+                "n": 4544,
+                "mean_net_r": -0.0733
+              },
+              "sl1x_tp3R": {
+                "n": 4544,
+                "mean_net_r": -0.0881
+              },
+              "sl1x_tp5R": {
+                "n": 4544,
+                "mean_net_r": -0.0859
+              },
+              "sl1x_tp6R": {
+                "n": 4544,
+                "mean_net_r": -0.088
+              }
+            },
+            "more_management_mean_by_arm": {
+              "more_atr_trail_1.5x": {
+                "n": 4544,
+                "mean_net_r": -0.0986
+              },
+              "more_atr_trail_2x": {
+                "n": 4544,
+                "mean_net_r": -0.0854
+              },
+              "more_atr_trail_3x": {
+                "n": 4544,
+                "mean_net_r": -0.0887
+              },
+              "more_atr_trail_4x": {
+                "n": 4544,
+                "mean_net_r": -0.0875
+              },
+              "more_rule_1.5R_to_0R": {
+                "n": 4544,
+                "mean_net_r": -0.0887
+              },
+              "more_rule_1R_to_0R": {
+                "n": 4544,
+                "mean_net_r": -0.0855
+              },
+              "more_rule_2R_to_1R": {
+                "n": 4544,
+                "mean_net_r": -0.0878
+              },
+              "more_rule_ladder_be1_lock2": {
+                "n": 4544,
+                "mean_net_r": -0.0846
+              }
+            },
+            "p_random_ge_actual": {
+              "n": 0,
+              "mean": null
+            },
+            "post_exit_verdict_mix": {
+              "null": 4349,
+              "exited_early": 152,
+              "neutral": 38,
+              "exit_saved_r": 5
+            },
+            "fidelity_abs_gap_r": {
+              "n": 4544,
+              "mean": 0.0139,
+              "max": 2.0085
+            }
+          }
+        }
+      },
+      "pooled": {
+        "n": 13685,
+        "net_r": -1236.1903,
+        "folds": [
+          {
+            "fold": 1,
+            "start": "2022-01-08 00:00:00+00:00",
+            "end": "2022-10-26 00:00:00+00:00",
+            "trades": 2265,
+            "net_r": -142.5713
+          },
+          {
+            "fold": 2,
+            "start": "2022-10-26 00:00:00+00:00",
+            "end": "2023-08-13 00:00:00+00:00",
+            "trades": 2309,
+            "net_r": -283.1538
+          },
+          {
+            "fold": 3,
+            "start": "2023-08-13 00:00:00+00:00",
+            "end": "2024-05-30 00:00:00+00:00",
+            "trades": 2349,
+            "net_r": -245.4298
+          },
+          {
+            "fold": 4,
+            "start": "2024-05-30 00:00:00+00:00",
+            "end": "2025-03-17 00:00:00+00:00",
+            "trades": 2308,
+            "net_r": -185.3863
+          },
+          {
+            "fold": 5,
+            "start": "2025-03-17 00:00:00+00:00",
+            "end": "2026-01-02 00:00:00+00:00",
+            "trades": 2262,
+            "net_r": -172.2858
+          },
+          {
+            "fold": 6,
+            "start": "2026-01-02 00:00:00+00:00",
+            "end": "2026-10-20 00:00:00+00:00",
+            "trades": 2192,
+            "net_r": -207.3633
+          }
+        ],
+        "folds_pos": 0,
+        "max_drawdown_r_sequential": 1291.719,
+        "net_r_per_trade": -0.0903,
+        "t_one_sided_p": 1.0,
+        "window": [
+          "2022-01-08 00:00:00+00:00",
+          "2026-10-20 00:00:00+00:00"
+        ],
+        "cf_summary": {
+          "schema": "cf_summary/1",
+          "n_rows": 13685,
+          "n_with_cf": 13685,
+          "n_graded": 13685,
+          "n_could_not_grade": 0,
+          "provenance": "ESTIMATED",
+          "original_brackets": {
+            "n": 13685,
+            "mean_net_r": -0.0786,
+            "ci95_mean": [
+              -0.0996,
+              -0.0566
+            ]
+          },
+          "replayed_actual": {
+            "n": 13685,
+            "mean_net_r": -0.0786,
+            "ci95_mean": [
+              -0.0996,
+              -0.0566
+            ]
+          },
+          "alt_brackets_mean_by_cell": {
+            "sl0.75x_tp2R": {
+              "n": 13685,
+              "mean_net_r": -0.0979
+            },
+            "sl0.75x_tp3R": {
+              "n": 13685,
+              "mean_net_r": -0.0992
+            },
+            "sl0.75x_tp4R": {
+              "n": 13685,
+              "mean_net_r": -0.1021
+            },
+            "sl0.75x_tp5R": {
+              "n": 13685,
+              "mean_net_r": -0.0989
+            },
+            "sl0.75x_tp6R": {
+              "n": 13685,
+              "mean_net_r": -0.097
+            },
+            "sl1.25x_tp2R": {
+              "n": 13685,
+              "mean_net_r": -0.0654
+            },
+            "sl1.25x_tp3R": {
+              "n": 13685,
+              "mean_net_r": -0.0631
+            },
+            "sl1.25x_tp4R": {
+              "n": 13685,
+              "mean_net_r": -0.0609
+            },
+            "sl1.25x_tp5R": {
+              "n": 13685,
+              "mean_net_r": -0.0632
+            },
+            "sl1.25x_tp6R": {
+              "n": 13685,
+              "mean_net_r": -0.062
+            },
+            "sl1.5x_tp2R": {
+              "n": 13685,
+              "mean_net_r": -0.0548
+            },
+            "sl1.5x_tp3R": {
+              "n": 13685,
+              "mean_net_r": -0.0515
+            },
+            "sl1.5x_tp4R": {
+              "n": 13685,
+              "mean_net_r": -0.052
+            },
+            "sl1.5x_tp5R": {
+              "n": 13685,
+              "mean_net_r": -0.052
+            },
+            "sl1.5x_tp6R": {
+              "n": 13685,
+              "mean_net_r": -0.0519
+            },
+            "sl1x_tp2R": {
+              "n": 13685,
+              "mean_net_r": -0.0753
+            },
+            "sl1x_tp3R": {
+              "n": 13685,
+              "mean_net_r": -0.0812
+            },
+            "sl1x_tp5R": {
+              "n": 13685,
+              "mean_net_r": -0.0754
+            },
+            "sl1x_tp6R": {
+              "n": 13685,
+              "mean_net_r": -0.0768
+            }
+          },
+          "more_management_mean_by_arm": {
+            "more_atr_trail_1.5x": {
+              "n": 13685,
+              "mean_net_r": -0.0853
+            },
+            "more_atr_trail_2x": {
+              "n": 13685,
+              "mean_net_r": -0.0836
+            },
+            "more_atr_trail_3x": {
+              "n": 13685,
+              "mean_net_r": -0.0786
+            },
+            "more_atr_trail_4x": {
+              "n": 13685,
+              "mean_net_r": -0.0713
+            },
+            "more_rule_1.5R_to_0R": {
+              "n": 13685,
+              "mean_net_r": -0.0786
+            },
+            "more_rule_1R_to_0R": {
+              "n": 13685,
+              "mean_net_r": -0.078
+            },
+            "more_rule_2R_to_1R": {
+              "n": 13685,
+              "mean_net_r": -0.0778
+            },
+            "more_rule_ladder_be1_lock2": {
+              "n": 13685,
+              "mean_net_r": -0.0773
+            }
+          },
+          "p_random_ge_actual": {
+            "n": 0,
+            "mean": null
+          },
+          "post_exit_verdict_mix": {
+            "null": 13033,
+            "neutral": 109,
+            "exit_saved_r": 13,
+            "exited_early": 530
+          },
+          "fidelity_abs_gap_r": {
+            "n": 13685,
+            "mean": 0.0141,
+            "max": 3.2369
+          }
+        }
+      },
+      "grade": {
+        "verdict": "fail",
+        "cells_pass": 0,
+        "need": 3,
+        "delta_r_per_trade_vs_baseline": null,
+        "why": "pooled net_r <= 0 or folds short",
+        "role": "baseline",
+        "holm_survivors": []
+      }
+    },
+    "D96": {
+      "sets": {
+        "donchian": 96
+      },
+      "unsets": [],
+      "extra_flags": [],
+      "cells": {
+        "ADAUSDT": {
+          "state": "measured",
+          "n": 2088,
+          "net_r": -178.8981,
+          "max_drawdown_r": 205.6618,
+          "folds": [
+            {
+              "fold": 1,
+              "start": "2022-01-08 00:00:00+00:00",
+              "end": "2022-10-26 00:00:00+00:00",
+              "trades": 357,
+              "net_r": -28.3907
+            },
+            {
+              "fold": 2,
+              "start": "2022-10-26 00:00:00+00:00",
+              "end": "2023-08-13 00:00:00+00:00",
+              "trades": 313,
+              "net_r": -34.4736
+            },
+            {
+              "fold": 3,
+              "start": "2023-08-13 00:00:00+00:00",
+              "end": "2024-05-30 00:00:00+00:00",
+              "trades": 344,
+              "net_r": -47.1107
+            },
+            {
+              "fold": 4,
+              "start": "2024-05-30 00:00:00+00:00",
+              "end": "2025-03-17 00:00:00+00:00",
+              "trades": 378,
+              "net_r": -18.9838
+            },
+            {
+              "fold": 5,
+              "start": "2025-03-17 00:00:00+00:00",
+              "end": "2026-01-02 00:00:00+00:00",
+              "trades": 356,
+              "net_r": -41.1467
+            },
+            {
+              "fold": 6,
+              "start": "2026-01-02 00:00:00+00:00",
+              "end": "2026-10-20 00:00:00+00:00",
+              "trades": 340,
+              "net_r": -8.792
+            }
+          ],
+          "folds_pos": 0,
+          "net_r_per_capital_day": -0.3838,
+          "mean_bars_held": 21.429,
+          "hold_days_mean": 0.223,
+          "net_r_per_trade": -0.0857,
+          "t_one_sided_p": 0.9993558373928152,
+          "by_outcome": {
+            "trail_stop": 1719,
+            "stop": 361,
+            "timeout": 8
+          },
+          "cost_stack": {
+            "fee_bps_roundtrip": 11.0,
+            "slippage_bps_roundtrip": 3.0,
+            "funding_bps_per_window": 1.0
+          },
+          "params": {
+            "donchian": 96,
+            "atr_stop_mult": 2.5,
+            "trail_mult": 3.0,
+            "min_confidence": 0.0
+          },
+          "data_start": "2022-01-08 00:00:00+00:00",
+          "data_end": "2026-10-20 00:00:00+00:00",
+          "grade": "fail",
+          "argv": [
+            "/home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_trend.py",
+            "--donchian",
+            "96",
+            "--data",
+            "comms/research/RQ-20261024-0142-24/41556487163/data/ADAUSDT_15.csv",
+            "--symbol",
+            "ADAUSDT",
+            "--resample",
+            "15m",
+            "--atr-period",
+            "14",
+            "--atr-stop-mult",
+            "2.5",
+            "--trail-mult",
+            "3.0",
+            "--min-confidence",
+            "0.0",
+            "--fee-bps-roundtrip",
+            "11.0",
+            "--emit-trades",
+            "comms/research/RQ-20261024-0142-24/41556487163/cells/trend_ADAUSDT_15m_D96__trades.jsonl",
+            "--json",
+            "comms/research/RQ-20261024-0142-24/41556487163/cells/trend_ADAUSDT_15m_D96__bt.json",
+            "--timeframe",
+            "15m",
+            "--start",
+            "2022-01-01",
+            "--end",
+            "2026-10-20",
+            "--cf"
+          ],
+          "cf_summary": {
+            "schema": "cf_summary/1",
+            "n_rows": 2088,
+            "n_with_cf": 2088,
+            "n_graded": 2088,
+            "n_could_not_grade": 0,
+            "provenance": "ESTIMATED",
+            "original_brackets": {
+              "n": 2088,
+              "mean_net_r": -0.075,
+              "ci95_mean": [
+                -0.1263,
+                -0.0202
+              ]
+            },
+            "replayed_actual": {
+              "n": 2088,
+              "mean_net_r": -0.075,
+              "ci95_mean": [
+                -0.1263,
+                -0.0202
+              ]
+            },
+            "alt_brackets_mean_by_cell": {
+              "sl0.75x_tp2R": {
+                "n": 2088,
+                "mean_net_r": -0.1051
+              },
+              "sl0.75x_tp3R": {
+                "n": 2088,
+                "mean_net_r": -0.1046
+              },
+              "sl0.75x_tp4R": {
+                "n": 2088,
+                "mean_net_r": -0.1105
+              },
+              "sl0.75x_tp5R": {
+                "n": 2088,
+                "mean_net_r": -0.1096
+              },
+              "sl0.75x_tp6R": {
+                "n": 2088,
+                "mean_net_r": -0.1124
+              },
+              "sl1.25x_tp2R": {
+                "n": 2088,
+                "mean_net_r": -0.0644
+              },
+              "sl1.25x_tp3R": {
+                "n": 2088,
+                "mean_net_r": -0.0601
+              },
+              "sl1.25x_tp4R": {
+                "n": 2088,
+                "mean_net_r": -0.0584
+              },
+              "sl1.25x_tp5R": {
+                "n": 2088,
+                "mean_net_r": -0.0565
+              },
+              "sl1.25x_tp6R": {
+                "n": 2088,
+                "mean_net_r": -0.058
+              },
+              "sl1.5x_tp2R": {
+                "n": 2088,
+                "mean_net_r": -0.0505
+              },
+              "sl1.5x_tp3R": {
+                "n": 2088,
+                "mean_net_r": -0.0507
+              },
+              "sl1.5x_tp4R": {
+                "n": 2088,
+                "mean_net_r": -0.0465
+              },
+              "sl1.5x_tp5R": {
+                "n": 2088,
+                "mean_net_r": -0.0487
+              },
+              "sl1.5x_tp6R": {
+                "n": 2088,
+                "mean_net_r": -0.0477
+              },
+              "sl1x_tp2R": {
+                "n": 2088,
+                "mean_net_r": -0.0816
+              },
+              "sl1x_tp3R": {
+                "n": 2088,
+                "mean_net_r": -0.0755
+              },
+              "sl1x_tp5R": {
+                "n": 2088,
+                "mean_net_r": -0.075
+              },
+              "sl1x_tp6R": {
+                "n": 2088,
+                "mean_net_r": -0.0715
+              }
+            },
+            "more_management_mean_by_arm": {
+              "more_atr_trail_1.5x": {
+                "n": 2088,
+                "mean_net_r": -0.0918
+              },
+              "more_atr_trail_2x": {
+                "n": 2088,
+                "mean_net_r": -0.1019
+              },
+              "more_atr_trail_3x": {
+                "n": 2088,
+                "mean_net_r": -0.075
+              },
+              "more_atr_trail_4x": {
+                "n": 2088,
+                "mean_net_r": -0.1266
+              },
+              "more_rule_1.5R_to_0R": {
+                "n": 2088,
+                "mean_net_r": -0.075
+              },
+              "more_rule_1R_to_0R": {
+                "n": 2088,
+                "mean_net_r": -0.0797
+              },
+              "more_rule_2R_to_1R": {
+                "n": 2088,
+                "mean_net_r": -0.0734
+              },
+              "more_rule_ladder_be1_lock2": {
+                "n": 2088,
+                "mean_net_r": -0.0782
+              }
+            },
+            "p_random_ge_actual": {
+              "n": 0,
+              "mean": null
+            },
+            "post_exit_verdict_mix": {
+              "null": 1974,
+              "exited_early": 88,
+              "neutral": 21,
+              "exit_saved_r": 5
+            },
+            "fidelity_abs_gap_r": {
+              "n": 2088,
+              "mean": 0.0142,
+              "max": 1.0312
+            }
+          }
+        },
+        "AVAXUSDT": {
+          "state": "measured",
+          "n": 2197,
+          "net_r": -152.3804,
+          "max_drawdown_r": 172.9136,
+          "folds": [
+            {
+              "fold": 1,
+              "start": "2022-01-08 00:00:00+00:00",
+              "end": "2022-10-26 00:00:00+00:00",
+              "trades": 361,
+              "net_r": -26.7743
+            },
+            {
+              "fold": 2,
+              "start": "2022-10-26 00:00:00+00:00",
+              "end": "2023-08-13 00:00:00+00:00",
+              "trades": 324,
+              "net_r": -26.1166
+            },
+            {
+              "fold": 3,
+              "start": "2023-08-13 00:00:00+00:00",
+              "end": "2024-05-30 00:00:00+00:00",
+              "trades": 376,
+              "net_r": -23.8573
+            },
+            {
+              "fold": 4,
+              "start": "2024-05-30 00:00:00+00:00",
+              "end": "2025-03-17 00:00:00+00:00",
+              "trades": 378,
+              "net_r": 2.1482
+            },
+            {
+              "fold": 5,
+              "start": "2025-03-17 00:00:00+00:00",
+              "end": "2026-01-02 00:00:00+00:00",
+              "trades": 392,
+              "net_r": -28.1481
+            },
+            {
+              "fold": 6,
+              "start": "2026-01-02 00:00:00+00:00",
+              "end": "2026-10-20 00:00:00+00:00",
+              "trades": 366,
+              "net_r": -49.6338
+            }
+          ],
+          "folds_pos": 1,
+          "net_r_per_capital_day": -0.32,
+          "mean_bars_held": 20.808,
+          "hold_days_mean": 0.217,
+          "net_r_per_trade": -0.0694,
+          "t_one_sided_p": 0.9957300168312226,
+          "by_outcome": {
+            "trail_stop": 1820,
+            "stop": 373,
+            "timeout": 4
+          },
+          "cost_stack": {
+            "fee_bps_roundtrip": 11.0,
+            "slippage_bps_roundtrip": 3.0,
+            "funding_bps_per_window": 1.0
+          },
+          "params": {
+            "donchian": 96,
+            "atr_stop_mult": 2.5,
+            "trail_mult": 3.0,
+            "min_confidence": 0.0
+          },
+          "data_start": "2022-01-08 00:00:00+00:00",
+          "data_end": "2026-10-20 00:00:00+00:00",
+          "grade": "fail",
+          "argv": [
+            "/home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_trend.py",
+            "--donchian",
+            "96",
+            "--data",
+            "comms/research/RQ-20261024-0142-24/41556487163/data/AVAXUSDT_15.csv",
+            "--symbol",
+            "AVAXUSDT",
+            "--resample",
+            "15m",
+            "--atr-period",
+            "14",
+            "--atr-stop-mult",
+            "2.5",
+            "--trail-mult",
+            "3.0",
+            "--min-confidence",
+            "0.0",
+            "--fee-bps-roundtrip",
+            "11.0",
+            "--emit-trades",
+            "comms/research/RQ-20261024-0142-24/41556487163/cells/trend_AVAXUSDT_15m_D96__trades.jsonl",
+            "--json",
+            "comms/research/RQ-20261024-0142-24/41556487163/cells/trend_AVAXUSDT_15m_D96__bt.json",
+            "--timeframe",
+            "15m",
+            "--start",
+            "2022-01-01",
+            "--end",
+            "2026-10-20",
+            "--cf"
+          ],
+          "cf_summary": {
+            "schema": "cf_summary/1",
+            "n_rows": 2197,
+            "n_with_cf": 2197,
+            "n_graded": 2197,
+            "n_could_not_grade": 0,
+            "provenance": "ESTIMATED",
+            "original_brackets": {
+              "n": 2197,
+              "mean_net_r": -0.0571,
+              "ci95_mean": [
+                -0.1118,
+                -0.003
+              ]
+            },
+            "replayed_actual": {
+              "n": 2197,
+              "mean_net_r": -0.0571,
+              "ci95_mean": [
+                -0.1118,
+                -0.003
+              ]
+            },
+            "alt_brackets_mean_by_cell": {
+              "sl0.75x_tp2R": {
+                "n": 2197,
+                "mean_net_r": -0.0884
+              },
+              "sl0.75x_tp3R": {
+                "n": 2197,
+                "mean_net_r": -0.0882
+              },
+              "sl0.75x_tp4R": {
+                "n": 2197,
+                "mean_net_r": -0.0937
+              },
+              "sl0.75x_tp5R": {
+                "n": 2197,
+                "mean_net_r": -0.0836
+              },
+              "sl0.75x_tp6R": {
+                "n": 2197,
+                "mean_net_r": -0.0774
+              },
+              "sl1.25x_tp2R": {
+                "n": 2197,
+                "mean_net_r": -0.0524
+              },
+              "sl1.25x_tp3R": {
+                "n": 2197,
+                "mean_net_r": -0.047
+              },
+              "sl1.25x_tp4R": {
+                "n": 2197,
+                "mean_net_r": -0.0418
+              },
+              "sl1.25x_tp5R": {
+                "n": 2197,
+                "mean_net_r": -0.0434
+              },
+              "sl1.25x_tp6R": {
+                "n": 2197,
+                "mean_net_r": -0.0434
+              },
+              "sl1.5x_tp2R": {
+                "n": 2197,
+                "mean_net_r": -0.0448
+              },
+              "sl1.5x_tp3R": {
+                "n": 2197,
+                "mean_net_r": -0.0356
+              },
+              "sl1.5x_tp4R": {
+                "n": 2197,
+                "mean_net_r": -0.0339
+              },
+              "sl1.5x_tp5R": {
+                "n": 2197,
+                "mean_net_r": -0.0368
+              },
+              "sl1.5x_tp6R": {
+                "n": 2197,
+                "mean_net_r": -0.0374
+              },
+              "sl1x_tp2R": {
+                "n": 2197,
+                "mean_net_r": -0.0666
+              },
+              "sl1x_tp3R": {
+                "n": 2197,
+                "mean_net_r": -0.0671
+              },
+              "sl1x_tp5R": {
+                "n": 2197,
+                "mean_net_r": -0.0521
+              },
+              "sl1x_tp6R": {
+                "n": 2197,
+                "mean_net_r": -0.0499
+              }
+            },
+            "more_management_mean_by_arm": {
+              "more_atr_trail_1.5x": {
+                "n": 2197,
+                "mean_net_r": -0.0624
+              },
+              "more_atr_trail_2x": {
+                "n": 2197,
+                "mean_net_r": -0.0646
+              },
+              "more_atr_trail_3x": {
+                "n": 2197,
+                "mean_net_r": -0.0571
+              },
+              "more_atr_trail_4x": {
+                "n": 2197,
+                "mean_net_r": -0.0375
+              },
+              "more_rule_1.5R_to_0R": {
+                "n": 2197,
+                "mean_net_r": -0.0571
+              },
+              "more_rule_1R_to_0R": {
+                "n": 2197,
+                "mean_net_r": -0.0568
+              },
+              "more_rule_2R_to_1R": {
+                "n": 2197,
+                "mean_net_r": -0.0572
+              },
+              "more_rule_ladder_be1_lock2": {
+                "n": 2197,
+                "mean_net_r": -0.0555
+              }
+            },
+            "p_random_ge_actual": {
+              "n": 0,
+              "mean": null
+            },
+            "post_exit_verdict_mix": {
+              "null": 2082,
+              "exited_early": 96,
+              "neutral": 18,
+              "exit_saved_r": 1
+            },
+            "fidelity_abs_gap_r": {
+              "n": 2197,
+              "mean": 0.0127,
+              "max": 2.0551
+            }
+          }
+        },
+        "SOLUSDT": {
+          "state": "measured",
+          "n": 2133,
+          "net_r": -228.7639,
+          "max_drawdown_r": 241.76,
+          "folds": [
+            {
+              "fold": 1,
+              "start": "2022-01-08 00:00:00+00:00",
+              "end": "2022-10-26 00:00:00+00:00",
+              "trades": 356,
+              "net_r": -38.9594
+            },
+            {
+              "fold": 2,
+              "start": "2022-10-26 00:00:00+00:00",
+              "end": "2023-08-13 00:00:00+00:00",
+              "trades": 323,
+              "net_r": -27.2854
+            },
+            {
+              "fold": 3,
+              "start": "2023-08-13 00:00:00+00:00",
+              "end": "2024-05-30 00:00:00+00:00",
+              "trades": 351,
+              "net_r": -46.0421
+            },
+            {
+              "fold": 4,
+              "start": "2024-05-30 00:00:00+00:00",
+              "end": "2025-03-17 00:00:00+00:00",
+              "trades": 387,
+              "net_r": -46.6248
+            },
+            {
+              "fold": 5,
+              "start": "2025-03-17 00:00:00+00:00",
+              "end": "2026-01-02 00:00:00+00:00",
+              "trades": 374,
+              "net_r": -62.0702
+            },
+            {
+              "fold": 6,
+              "start": "2026-01-02 00:00:00+00:00",
+              "end": "2026-10-20 00:00:00+00:00",
+              "trades": 342,
+              "net_r": -7.7833
+            }
+          ],
+          "folds_pos": 0,
+          "net_r_per_capital_day": -0.4736,
+          "mean_bars_held": 21.739,
+          "hold_days_mean": 0.226,
+          "net_r_per_trade": -0.1072,
+          "t_one_sided_p": 0.9999908667975924,
+          "by_outcome": {
+            "trail_stop": 1808,
+            "stop": 318,
+            "timeout": 7
+          },
+          "cost_stack": {
+            "fee_bps_roundtrip": 11.0,
+            "slippage_bps_roundtrip": 3.0,
+            "funding_bps_per_window": 1.0
+          },
+          "params": {
+            "donchian": 96,
+            "atr_stop_mult": 2.5,
+            "trail_mult": 3.0,
+            "min_confidence": 0.0
+          },
+          "data_start": "2022-01-08 00:00:00+00:00",
+          "data_end": "2026-10-20 00:00:00+00:00",
+          "grade": "fail",
+          "argv": [
+            "/home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_trend.py",
+            "--donchian",
+            "96",
+            "--data",
+            "comms/research/RQ-20261024-0142-24/41556487163/data/SOLUSDT_15.csv",
+            "--symbol",
+            "SOLUSDT",
+            "--resample",
+            "15m",
+            "--atr-period",
+            "14",
+            "--atr-stop-mult",
+            "2.5",
+            "--trail-mult",
+            "3.0",
+            "--min-confidence",
+            "0.0",
+            "--fee-bps-roundtrip",
+            "11.0",
+            "--emit-trades",
+            "comms/research/RQ-20261024-0142-24/41556487163/cells/trend_SOLUSDT_15m_D96__trades.jsonl",
+            "--json",
+            "comms/research/RQ-20261024-0142-24/41556487163/cells/trend_SOLUSDT_15m_D96__bt.json",
+            "--timeframe",
+            "15m",
+            "--start",
+            "2022-01-01",
+            "--end",
+            "2026-10-20",
+            "--cf"
+          ],
+          "cf_summary": {
+            "schema": "cf_summary/1",
+            "n_rows": 2133,
+            "n_with_cf": 2133,
+            "n_graded": 2133,
+            "n_could_not_grade": 0,
+            "provenance": "ESTIMATED",
+            "original_brackets": {
+              "n": 2133,
+              "mean_net_r": -0.097,
+              "ci95_mean": [
+                -0.1484,
+                -0.044
+              ]
+            },
+            "replayed_actual": {
+              "n": 2133,
+              "mean_net_r": -0.097,
+              "ci95_mean": [
+                -0.1484,
+                -0.044
+              ]
+            },
+            "alt_brackets_mean_by_cell": {
+              "sl0.75x_tp2R": {
+                "n": 2133,
+                "mean_net_r": -0.1165
+              },
+              "sl0.75x_tp3R": {
+                "n": 2133,
+                "mean_net_r": -0.1173
+              },
+              "sl0.75x_tp4R": {
+                "n": 2133,
+                "mean_net_r": -0.1188
+              },
+              "sl0.75x_tp5R": {
+                "n": 2133,
+                "mean_net_r": -0.1216
+              },
+              "sl0.75x_tp6R": {
+                "n": 2133,
+                "mean_net_r": -0.1183
+              },
+              "sl1.25x_tp2R": {
+                "n": 2133,
+                "mean_net_r": -0.0774
+              },
+              "sl1.25x_tp3R": {
+                "n": 2133,
+                "mean_net_r": -0.0732
+              },
+              "sl1.25x_tp4R": {
+                "n": 2133,
+                "mean_net_r": -0.0685
+              },
+              "sl1.25x_tp5R": {
+                "n": 2133,
+                "mean_net_r": -0.0759
+              },
+              "sl1.25x_tp6R": {
+                "n": 2133,
+                "mean_net_r": -0.0721
+              },
+              "sl1.5x_tp2R": {
+                "n": 2133,
+                "mean_net_r": -0.061
+              },
+              "sl1.5x_tp3R": {
+                "n": 2133,
+                "mean_net_r": -0.059
+              },
+              "sl1.5x_tp4R": {
+                "n": 2133,
+                "mean_net_r": -0.0628
+              },
+              "sl1.5x_tp5R": {
+                "n": 2133,
+                "mean_net_r": -0.0607
+              },
+              "sl1.5x_tp6R": {
+                "n": 2133,
+                "mean_net_r": -0.0619
+              },
+              "sl1x_tp2R": {
+                "n": 2133,
+                "mean_net_r": -0.0912
+              },
+              "sl1x_tp3R": {
+                "n": 2133,
+                "mean_net_r": -0.0921
+              },
+              "sl1x_tp5R": {
+                "n": 2133,
+                "mean_net_r": -0.0875
+              },
+              "sl1x_tp6R": {
+                "n": 2133,
+                "mean_net_r": -0.0957
+              }
+            },
+            "more_management_mean_by_arm": {
+              "more_atr_trail_1.5x": {
+                "n": 2133,
+                "mean_net_r": -0.0777
+              },
+              "more_atr_trail_2x": {
+                "n": 2133,
+                "mean_net_r": -0.0837
+              },
+              "more_atr_trail_3x": {
+                "n": 2133,
+                "mean_net_r": -0.097
+              },
+              "more_atr_trail_4x": {
+                "n": 2133,
+                "mean_net_r": -0.0895
+              },
+              "more_rule_1.5R_to_0R": {
+                "n": 2133,
+                "mean_net_r": -0.097
+              },
+              "more_rule_1R_to_0R": {
+                "n": 2133,
+                "mean_net_r": -0.0926
+              },
+              "more_rule_2R_to_1R": {
+                "n": 2133,
+                "mean_net_r": -0.0972
+              },
+              "more_rule_ladder_be1_lock2": {
+                "n": 2133,
+                "mean_net_r": -0.0928
+              }
+            },
+            "p_random_ge_actual": {
+              "n": 0,
+              "mean": null
+            },
+            "post_exit_verdict_mix": {
+              "null": 2035,
+              "exited_early": 77,
+              "neutral": 18,
+              "exit_saved_r": 3
+            },
+            "fidelity_abs_gap_r": {
+              "n": 2133,
+              "mean": 0.0119,
+              "max": 0.652
+            }
+          }
+        }
+      },
+      "pooled": {
+        "n": 6418,
+        "net_r": -560.0446,
+        "folds": [
+          {
+            "fold": 1,
+            "start": "2022-01-08 00:00:00+00:00",
+            "end": "2022-10-26 00:00:00+00:00",
+            "trades": 1074,
+            "net_r": -94.1244
+          },
+          {
+            "fold": 2,
+            "start": "2022-10-26 00:00:00+00:00",
+            "end": "2023-08-13 00:00:00+00:00",
+            "trades": 960,
+            "net_r": -87.8756
+          },
+          {
+            "fold": 3,
+            "start": "2023-08-13 00:00:00+00:00",
+            "end": "2024-05-30 00:00:00+00:00",
+            "trades": 1071,
+            "net_r": -117.0101
+          },
+          {
+            "fold": 4,
+            "start": "2024-05-30 00:00:00+00:00",
+            "end": "2025-03-17 00:00:00+00:00",
+            "trades": 1143,
+            "net_r": -63.4604
+          },
+          {
+            "fold": 5,
+            "start": "2025-03-17 00:00:00+00:00",
+            "end": "2026-01-02 00:00:00+00:00",
+            "trades": 1122,
+            "net_r": -131.365
+          },
+          {
+            "fold": 6,
+            "start": "2026-01-02 00:00:00+00:00",
+            "end": "2026-10-20 00:00:00+00:00",
+            "trades": 1048,
+            "net_r": -66.2091
+          }
+        ],
+        "folds_pos": 0,
+        "max_drawdown_r_sequential": 606.0066,
+        "net_r_per_trade": -0.0873,
+        "t_one_sided_p": 0.9999999968674008,
+        "window": [
+          "2022-01-08 00:00:00+00:00",
+          "2026-10-20 00:00:00+00:00"
+        ],
+        "cf_summary": {
+          "schema": "cf_summary/1",
+          "n_rows": 6418,
+          "n_with_cf": 6418,
+          "n_graded": 6418,
+          "n_could_not_grade": 0,
+          "provenance": "ESTIMATED",
+          "original_brackets": {
+            "n": 6418,
+            "mean_net_r": -0.0762,
+            "ci95_mean": [
+              -0.1062,
+              -0.0463
+            ]
+          },
+          "replayed_actual": {
+            "n": 6418,
+            "mean_net_r": -0.0762,
+            "ci95_mean": [
+              -0.1062,
+              -0.0463
+            ]
+          },
+          "alt_brackets_mean_by_cell": {
+            "sl0.75x_tp2R": {
+              "n": 6418,
+              "mean_net_r": -0.1032
+            },
+            "sl0.75x_tp3R": {
+              "n": 6418,
+              "mean_net_r": -0.1032
+            },
+            "sl0.75x_tp4R": {
+              "n": 6418,
+              "mean_net_r": -0.1075
+            },
+            "sl0.75x_tp5R": {
+              "n": 6418,
+              "mean_net_r": -0.1047
+            },
+            "sl0.75x_tp6R": {
+              "n": 6418,
+              "mean_net_r": -0.1024
+            },
+            "sl1.25x_tp2R": {
+              "n": 6418,
+              "mean_net_r": -0.0646
+            },
+            "sl1.25x_tp3R": {
+              "n": 6418,
+              "mean_net_r": -0.0599
+            },
+            "sl1.25x_tp4R": {
+              "n": 6418,
+              "mean_net_r": -0.0561
+            },
+            "sl1.25x_tp5R": {
+              "n": 6418,
+              "mean_net_r": -0.0585
+            },
+            "sl1.25x_tp6R": {
+              "n": 6418,
+              "mean_net_r": -0.0577
+            },
+            "sl1.5x_tp2R": {
+              "n": 6418,
+              "mean_net_r": -0.052
+            },
+            "sl1.5x_tp3R": {
+              "n": 6418,
+              "mean_net_r": -0.0483
+            },
+            "sl1.5x_tp4R": {
+              "n": 6418,
+              "mean_net_r": -0.0476
+            },
+            "sl1.5x_tp5R": {
+              "n": 6418,
+              "mean_net_r": -0.0486
+            },
+            "sl1.5x_tp6R": {
+              "n": 6418,
+              "mean_net_r": -0.0489
+            },
+            "sl1x_tp2R": {
+              "n": 6418,
+              "mean_net_r": -0.0797
+            },
+            "sl1x_tp3R": {
+              "n": 6418,
+              "mean_net_r": -0.0782
+            },
+            "sl1x_tp5R": {
+              "n": 6418,
+              "mean_net_r": -0.0713
+            },
+            "sl1x_tp6R": {
+              "n": 6418,
+              "mean_net_r": -0.0721
+            }
+          },
+          "more_management_mean_by_arm": {
+            "more_atr_trail_1.5x": {
+              "n": 6418,
+              "mean_net_r": -0.0771
+            },
+            "more_atr_trail_2x": {
+              "n": 6418,
+              "mean_net_r": -0.0831
+            },
+            "more_atr_trail_3x": {
+              "n": 6418,
+              "mean_net_r": -0.0762
+            },
+            "more_atr_trail_4x": {
+              "n": 6418,
+              "mean_net_r": -0.0837
+            },
+            "more_rule_1.5R_to_0R": {
+              "n": 6418,
+              "mean_net_r": -0.0762
+            },
+            "more_rule_1R_to_0R": {
+              "n": 6418,
+              "mean_net_r": -0.0762
+            },
+            "more_rule_2R_to_1R": {
+              "n": 6418,
+              "mean_net_r": -0.0758
+            },
+            "more_rule_ladder_be1_lock2": {
+              "n": 6418,
+              "mean_net_r": -0.0753
+            }
+          },
+          "p_random_ge_actual": {
+            "n": 0,
+            "mean": null
+          },
+          "post_exit_verdict_mix": {
+            "null": 6091,
+            "exited_early": 261,
+            "neutral": 57,
+            "exit_saved_r": 9
+          },
+          "fidelity_abs_gap_r": {
+            "n": 6418,
+            "mean": 0.0129,
+            "max": 2.0551
+          }
+        }
+      },
+      "grade": {
+        "verdict": "fail",
+        "cells_pass": 0,
+        "need": 3,
+        "delta_r_per_trade_vs_baseline": 0.003,
+        "why": "net_r/trade -0.0873 beats the baseline's -0.0903 by 0.003 < the 0.05 materiality bar",
+        "role": "candidate",
+        "holm_survivors": []
+      }
+    },
+    "D192": {
+      "sets": {
+        "donchian": 192
+      },
+      "unsets": [],
+      "extra_flags": [],
+      "cells": {
+        "ADAUSDT": {
+          "state": "measured",
+          "n": 1383,
+          "net_r": -122.5498,
+          "max_drawdown_r": 141.8672,
+          "folds": [
+            {
+              "fold": 1,
+              "start": "2022-01-08 00:00:00+00:00",
+              "end": "2022-10-26 00:00:00+00:00",
+              "trades": 226,
+              "net_r": -9.7001
+            },
+            {
+              "fold": 2,
+              "start": "2022-10-26 00:00:00+00:00",
+              "end": "2023-08-13 00:00:00+00:00",
+              "trades": 205,
+              "net_r": -21.311
+            },
+            {
+              "fold": 3,
+              "start": "2023-08-13 00:00:00+00:00",
+              "end": "2024-05-30 00:00:00+00:00",
+              "trades": 233,
+              "net_r": -41.9258
+            },
+            {
+              "fold": 4,
+              "start": "2024-05-30 00:00:00+00:00",
+              "end": "2025-03-17 00:00:00+00:00",
+              "trades": 253,
+              "net_r": -7.21
+            },
+            {
+              "fold": 5,
+              "start": "2025-03-17 00:00:00+00:00",
+              "end": "2026-01-02 00:00:00+00:00",
+              "trades": 247,
+              "net_r": -40.7628
+            },
+            {
+              "fold": 6,
+              "start": "2026-01-02 00:00:00+00:00",
+              "end": "2026-10-20 00:00:00+00:00",
+              "trades": 219,
+              "net_r": -1.6384
+            }
+          ],
+          "folds_pos": 0,
+          "net_r_per_capital_day": -0.4295,
+          "mean_bars_held": 19.808,
+          "hold_days_mean": 0.206,
+          "net_r_per_trade": -0.0886,
+          "t_one_sided_p": 0.996458169254735,
+          "by_outcome": {
+            "trail_stop": 1132,
+            "stop": 250,
+            "timeout": 1
+          },
+          "cost_stack": {
+            "fee_bps_roundtrip": 11.0,
+            "slippage_bps_roundtrip": 3.0,
+            "funding_bps_per_window": 1.0
+          },
+          "params": {
+            "donchian": 192,
+            "atr_stop_mult": 2.5,
+            "trail_mult": 3.0,
+            "min_confidence": 0.0
+          },
+          "data_start": "2022-01-08 00:00:00+00:00",
+          "data_end": "2026-10-20 00:00:00+00:00",
+          "grade": "fail",
+          "argv": [
+            "/home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_trend.py",
+            "--donchian",
+            "192",
+            "--data",
+            "comms/research/RQ-20261024-0142-24/41556487163/data/ADAUSDT_15.csv",
+            "--symbol",
+            "ADAUSDT",
+            "--resample",
+            "15m",
+            "--atr-period",
+            "14",
+            "--atr-stop-mult",
+            "2.5",
+            "--trail-mult",
+            "3.0",
+            "--min-confidence",
+            "0.0",
+            "--fee-bps-roundtrip",
+            "11.0",
+            "--emit-trades",
+            "comms/research/RQ-20261024-0142-24/41556487163/cells/trend_ADAUSDT_15m_D192__trades.jsonl",
+            "--json",
+            "comms/research/RQ-20261024-0142-24/41556487163/cells/trend_ADAUSDT_15m_D192__bt.json",
+            "--timeframe",
+            "15m",
+            "--start",
+            "2022-01-01",
+            "--end",
+            "2026-10-20",
+            "--cf"
+          ],
+          "cf_summary": {
+            "schema": "cf_summary/1",
+            "n_rows": 1383,
+            "n_with_cf": 1383,
+            "n_graded": 1383,
+            "n_could_not_grade": 0,
+            "provenance": "ESTIMATED",
+            "original_brackets": {
+              "n": 1383,
+              "mean_net_r": -0.078,
+              "ci95_mean": [
+                -0.1444,
+                -0.0188
+              ]
+            },
+            "replayed_actual": {
+              "n": 1383,
+              "mean_net_r": -0.078,
+              "ci95_mean": [
+                -0.1444,
+                -0.0188
+              ]
+            },
+            "alt_brackets_mean_by_cell": {
+              "sl0.75x_tp2R": {
+                "n": 1383,
+                "mean_net_r": -0.1102
+              },
+              "sl0.75x_tp3R": {
+                "n": 1383,
+                "mean_net_r": -0.1147
+              },
+              "sl0.75x_tp4R": {
+                "n": 1383,
+                "mean_net_r": -0.1147
+              },
+              "sl0.75x_tp5R": {
+                "n": 1383,
+                "mean_net_r": -0.11
+              },
+              "sl0.75x_tp6R": {
+                "n": 1383,
+                "mean_net_r": -0.1088
+              },
+              "sl1.25x_tp2R": {
+                "n": 1383,
+                "mean_net_r": -0.0789
+              },
+              "sl1.25x_tp3R": {
+                "n": 1383,
+                "mean_net_r": -0.0722
+              },
+              "sl1.25x_tp4R": {
+                "n": 1383,
+                "mean_net_r": -0.0699
+              },
+              "sl1.25x_tp5R": {
+                "n": 1383,
+                "mean_net_r": -0.0706
+              },
+              "sl1.25x_tp6R": {
+                "n": 1383,
+                "mean_net_r": -0.0689
+              },
+              "sl1.5x_tp2R": {
+                "n": 1383,
+                "mean_net_r": -0.0631
+              },
+              "sl1.5x_tp3R": {
+                "n": 1383,
+                "mean_net_r": -0.0586
+              },
+              "sl1.5x_tp4R": {
+                "n": 1383,
+                "mean_net_r": -0.0579
+              },
+              "sl1.5x_tp5R": {
+                "n": 1383,
+                "mean_net_r": -0.0579
+              },
+              "sl1.5x_tp6R": {
+                "n": 1383,
+                "mean_net_r": -0.0583
+              },
+              "sl1x_tp2R": {
+                "n": 1383,
+                "mean_net_r": -0.0841
+              },
+              "sl1x_tp3R": {
+                "n": 1383,
+                "mean_net_r": -0.0823
+              },
+              "sl1x_tp5R": {
+                "n": 1383,
+                "mean_net_r": -0.0758
+              },
+              "sl1x_tp6R": {
+                "n": 1383,
+                "mean_net_r": -0.0746
+              }
+            },
+            "more_management_mean_by_arm": {
+              "more_atr_trail_1.5x": {
+                "n": 1383,
+                "mean_net_r": -0.0963
+              },
+              "more_atr_trail_2x": {
+                "n": 1383,
+                "mean_net_r": -0.1051
+              },
+              "more_atr_trail_3x": {
+                "n": 1383,
+                "mean_net_r": -0.078
+              },
+              "more_atr_trail_4x": {
+                "n": 1383,
+                "mean_net_r": -0.0859
+              },
+              "more_rule_1.5R_to_0R": {
+                "n": 1383,
+                "mean_net_r": -0.078
+              },
+              "more_rule_1R_to_0R": {
+                "n": 1383,
+                "mean_net_r": -0.0763
+              },
+              "more_rule_2R_to_1R": {
+                "n": 1383,
+                "mean_net_r": -0.0761
+              },
+              "more_rule_ladder_be1_lock2": {
+                "n": 1383,
+                "mean_net_r": -0.0745
+              }
+            },
+            "p_random_ge_actual": {
+              "n": 0,
+              "mean": null
+            },
+            "post_exit_verdict_mix": {
+              "null": 1307,
+              "neutral": 17,
+              "exited_early": 58,
+              "exit_saved_r": 1
+            },
+            "fidelity_abs_gap_r": {
+              "n": 1383,
+              "mean": 0.012,
+              "max": 0.7746
+            }
+          }
+        },
+        "AVAXUSDT": {
+          "state": "measured",
+          "n": 1468,
+          "net_r": -65.4236,
+          "max_drawdown_r": 74.5368,
+          "folds": [
+            {
+              "fold": 1,
+              "start": "2022-01-08 00:00:00+00:00",
+              "end": "2022-10-26 00:00:00+00:00",
+              "trades": 251,
+              "net_r": -27.4657
+            },
+            {
+              "fold": 2,
+              "start": "2022-10-26 00:00:00+00:00",
+              "end": "2023-08-13 00:00:00+00:00",
+              "trades": 215,
+              "net_r": -14.6772
+            },
+            {
+              "fold": 3,
+              "start": "2023-08-13 00:00:00+00:00",
+              "end": "2024-05-30 00:00:00+00:00",
+              "trades": 244,
+              "net_r": -7.9365
+            },
+            {
+              "fold": 4,
+              "start": "2024-05-30 00:00:00+00:00",
+              "end": "2025-03-17 00:00:00+00:00",
+              "trades": 265,
+              "net_r": 11.4107
+            },
+            {
+              "fold": 5,
+              "start": "2025-03-17 00:00:00+00:00",
+              "end": "2026-01-02 00:00:00+00:00",
+              "trades": 268,
+              "net_r": -6.7751
+            },
+            {
+              "fold": 6,
+              "start": "2026-01-02 00:00:00+00:00",
+              "end": "2026-10-20 00:00:00+00:00",
+              "trades": 225,
+              "net_r": -19.9798
+            }
+          ],
+          "folds_pos": 1,
+          "net_r_per_capital_day": -0.2104,
+          "mean_bars_held": 20.33,
+          "hold_days_mean": 0.212,
+          "net_r_per_trade": -0.0446,
+          "t_one_sided_p": 0.9245194533859039,
+          "by_outcome": {
+            "trail_stop": 1232,
+            "stop": 233,
+            "timeout": 3
+          },
+          "cost_stack": {
+            "fee_bps_roundtrip": 11.0,
+            "slippage_bps_roundtrip": 3.0,
+            "funding_bps_per_window": 1.0
+          },
+          "params": {
+            "donchian": 192,
+            "atr_stop_mult": 2.5,
+            "trail_mult": 3.0,
+            "min_confidence": 0.0
+          },
+          "data_start": "2022-01-08 00:00:00+00:00",
+          "data_end": "2026-10-20 00:00:00+00:00",
+          "grade": "fail",
+          "argv": [
+            "/home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_trend.py",
+            "--donchian",
+            "192",
+            "--data",
+            "comms/research/RQ-20261024-0142-24/41556487163/data/AVAXUSDT_15.csv",
+            "--symbol",
+            "AVAXUSDT",
+            "--resample",
+            "15m",
+            "--atr-period",
+            "14",
+            "--atr-stop-mult",
+            "2.5",
+            "--trail-mult",
+            "3.0",
+            "--min-confidence",
+            "0.0",
+            "--fee-bps-roundtrip",
+            "11.0",
+            "--emit-trades",
+            "comms/research/RQ-20261024-0142-24/41556487163/cells/trend_AVAXUSDT_15m_D192__trades.jsonl",
+            "--json",
+            "comms/research/RQ-20261024-0142-24/41556487163/cells/trend_AVAXUSDT_15m_D192__bt.json",
+            "--timeframe",
+            "15m",
+            "--start",
+            "2022-01-01",
+            "--end",
+            "2026-10-20",
+            "--cf"
+          ],
+          "cf_summary": {
+            "schema": "cf_summary/1",
+            "n_rows": 1468,
+            "n_with_cf": 1468,
+            "n_graded": 1468,
+            "n_could_not_grade": 0,
+            "provenance": "ESTIMATED",
+            "original_brackets": {
+              "n": 1468,
+              "mean_net_r": -0.0308,
+              "ci95_mean": [
+                -0.0963,
+                0.0343
+              ]
+            },
+            "replayed_actual": {
+              "n": 1468,
+              "mean_net_r": -0.0308,
+              "ci95_mean": [
+                -0.0963,
+                0.0343
+              ]
+            },
+            "alt_brackets_mean_by_cell": {
+              "sl0.75x_tp2R": {
+                "n": 1468,
+                "mean_net_r": -0.0331
+              },
+              "sl0.75x_tp3R": {
+                "n": 1468,
+                "mean_net_r": -0.0466
+              },
+              "sl0.75x_tp4R": {
+                "n": 1468,
+                "mean_net_r": -0.0567
+              },
+              "sl0.75x_tp5R": {
+                "n": 1468,
+                "mean_net_r": -0.0449
+              },
+              "sl0.75x_tp6R": {
+                "n": 1468,
+                "mean_net_r": -0.0553
+              },
+              "sl1.25x_tp2R": {
+                "n": 1468,
+                "mean_net_r": -0.0241
+              },
+              "sl1.25x_tp3R": {
+                "n": 1468,
+                "mean_net_r": -0.0183
+              },
+              "sl1.25x_tp4R": {
+                "n": 1468,
+                "mean_net_r": -0.0241
+              },
+              "sl1.25x_tp5R": {
+                "n": 1468,
+                "mean_net_r": -0.0229
+              },
+              "sl1.25x_tp6R": {
+                "n": 1468,
+                "mean_net_r": -0.0227
+              },
+              "sl1.5x_tp2R": {
+                "n": 1468,
+                "mean_net_r": -0.0219
+              },
+              "sl1.5x_tp3R": {
+                "n": 1468,
+                "mean_net_r": -0.02
+              },
+              "sl1.5x_tp4R": {
+                "n": 1468,
+                "mean_net_r": -0.0189
+              },
+              "sl1.5x_tp5R": {
+                "n": 1468,
+                "mean_net_r": -0.0194
+              },
+              "sl1.5x_tp6R": {
+                "n": 1468,
+                "mean_net_r": -0.0224
+              },
+              "sl1x_tp2R": {
+                "n": 1468,
+                "mean_net_r": -0.0209
+              },
+              "sl1x_tp3R": {
+                "n": 1468,
+                "mean_net_r": -0.0279
+              },
+              "sl1x_tp5R": {
+                "n": 1468,
+                "mean_net_r": -0.026
+              },
+              "sl1x_tp6R": {
+                "n": 1468,
+                "mean_net_r": -0.0235
+              }
+            },
+            "more_management_mean_by_arm": {
+              "more_atr_trail_1.5x": {
+                "n": 1468,
+                "mean_net_r": -0.041
+              },
+              "more_atr_trail_2x": {
+                "n": 1468,
+                "mean_net_r": -0.0415
+              },
+              "more_atr_trail_3x": {
+                "n": 1468,
+                "mean_net_r": -0.0308
+              },
+              "more_atr_trail_4x": {
+                "n": 1468,
+                "mean_net_r": 0.0
+              },
+              "more_rule_1.5R_to_0R": {
+                "n": 1468,
+                "mean_net_r": -0.0308
+              },
+              "more_rule_1R_to_0R": {
+                "n": 1468,
+                "mean_net_r": -0.0322
+              },
+              "more_rule_2R_to_1R": {
+                "n": 1468,
+                "mean_net_r": -0.0301
+              },
+              "more_rule_ladder_be1_lock2": {
+                "n": 1468,
+                "mean_net_r": -0.0293
+              }
+            },
+            "p_random_ge_actual": {
+              "n": 0,
+              "mean": null
+            },
+            "post_exit_verdict_mix": {
+              "null": 1394,
+              "exited_early": 59,
+              "neutral": 14,
+              "exit_saved_r": 1
+            },
+            "fidelity_abs_gap_r": {
+              "n": 1468,
+              "mean": 0.0145,
+              "max": 4.1362
+            }
+          }
+        },
+        "SOLUSDT": {
+          "state": "measured",
+          "n": 1413,
+          "net_r": -134.992,
+          "max_drawdown_r": 146.0285,
+          "folds": [
+            {
+              "fold": 1,
+              "start": "2022-01-08 00:00:00+00:00",
+              "end": "2022-10-26 00:00:00+00:00",
+              "trades": 239,
+              "net_r": -29.9442
+            },
+            {
+              "fold": 2,
+              "start": "2022-10-26 00:00:00+00:00",
+              "end": "2023-08-13 00:00:00+00:00",
+              "trades": 204,
+              "net_r": -5.1036
+            },
+            {
+              "fold": 3,
+              "start": "2023-08-13 00:00:00+00:00",
+              "end": "2024-05-30 00:00:00+00:00",
+              "trades": 236,
+              "net_r": -18.2988
+            },
+            {
+              "fold": 4,
+              "start": "2024-05-30 00:00:00+00:00",
+              "end": "2025-03-17 00:00:00+00:00",
+              "trades": 250,
+              "net_r": -23.5755
+            },
+            {
+              "fold": 5,
+              "start": "2025-03-17 00:00:00+00:00",
+              "end": "2026-01-02 00:00:00+00:00",
+              "trades": 260,
+              "net_r": -60.0477
+            },
+            {
+              "fold": 6,
+              "start": "2026-01-02 00:00:00+00:00",
+              "end": "2026-10-20 00:00:00+00:00",
+              "trades": 224,
+              "net_r": 1.977
+            }
+          ],
+          "folds_pos": 1,
+          "net_r_per_capital_day": -0.4361,
+          "mean_bars_held": 21.028,
+          "hold_days_mean": 0.219,
+          "net_r_per_trade": -0.0955,
+          "t_one_sided_p": 0.9990157439242394,
+          "by_outcome": {
+            "trail_stop": 1204,
+            "stop": 207,
+            "timeout": 2
+          },
+          "cost_stack": {
+            "fee_bps_roundtrip": 11.0,
+            "slippage_bps_roundtrip": 3.0,
+            "funding_bps_per_window": 1.0
+          },
+          "params": {
+            "donchian": 192,
+            "atr_stop_mult": 2.5,
+            "trail_mult": 3.0,
+            "min_confidence": 0.0
+          },
+          "data_start": "2022-01-08 00:00:00+00:00",
+          "data_end": "2026-10-20 00:00:00+00:00",
+          "grade": "fail",
+          "argv": [
+            "/home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_trend.py",
+            "--donchian",
+            "192",
+            "--data",
+            "comms/research/RQ-20261024-0142-24/41556487163/data/SOLUSDT_15.csv",
+            "--symbol",
+            "SOLUSDT",
+            "--resample",
+            "15m",
+            "--atr-period",
+            "14",
+            "--atr-stop-mult",
+            "2.5",
+            "--trail-mult",
+            "3.0",
+            "--min-confidence",
+            "0.0",
+            "--fee-bps-roundtrip",
+            "11.0",
+            "--emit-trades",
+            "comms/research/RQ-20261024-0142-24/41556487163/cells/trend_SOLUSDT_15m_D192__trades.jsonl",
+            "--json",
+            "comms/research/RQ-20261024-0142-24/41556487163/cells/trend_SOLUSDT_15m_D192__bt.json",
+            "--timeframe",
+            "15m",
+            "--start",
+            "2022-01-01",
+            "--end",
+            "2026-10-20",
+            "--cf"
+          ],
+          "cf_summary": {
+            "schema": "cf_summary/1",
+            "n_rows": 1413,
+            "n_with_cf": 1413,
+            "n_graded": 1413,
+            "n_could_not_grade": 0,
+            "provenance": "ESTIMATED",
+            "original_brackets": {
+              "n": 1413,
+              "mean_net_r": -0.0857,
+              "ci95_mean": [
+                -0.1463,
+                -0.0233
+              ]
+            },
+            "replayed_actual": {
+              "n": 1413,
+              "mean_net_r": -0.0857,
+              "ci95_mean": [
+                -0.1463,
+                -0.0233
+              ]
+            },
+            "alt_brackets_mean_by_cell": {
+              "sl0.75x_tp2R": {
+                "n": 1413,
+                "mean_net_r": -0.108
+              },
+              "sl0.75x_tp3R": {
+                "n": 1413,
+                "mean_net_r": -0.1068
+              },
+              "sl0.75x_tp4R": {
+                "n": 1413,
+                "mean_net_r": -0.1065
+              },
+              "sl0.75x_tp5R": {
+                "n": 1413,
+                "mean_net_r": -0.1146
+              },
+              "sl0.75x_tp6R": {
+                "n": 1413,
+                "mean_net_r": -0.1104
+              },
+              "sl1.25x_tp2R": {
+                "n": 1413,
+                "mean_net_r": -0.0639
+              },
+              "sl1.25x_tp3R": {
+                "n": 1413,
+                "mean_net_r": -0.0655
+              },
+              "sl1.25x_tp4R": {
+                "n": 1413,
+                "mean_net_r": -0.0608
+              },
+              "sl1.25x_tp5R": {
+                "n": 1413,
+                "mean_net_r": -0.0693
+              },
+              "sl1.25x_tp6R": {
+                "n": 1413,
+                "mean_net_r": -0.0652
+              },
+              "sl1.5x_tp2R": {
+                "n": 1413,
+                "mean_net_r": -0.0533
+              },
+              "sl1.5x_tp3R": {
+                "n": 1413,
+                "mean_net_r": -0.0516
+              },
+              "sl1.5x_tp4R": {
+                "n": 1413,
+                "mean_net_r": -0.0559
+              },
+              "sl1.5x_tp5R": {
+                "n": 1413,
+                "mean_net_r": -0.055
+              },
+              "sl1.5x_tp6R": {
+                "n": 1413,
+                "mean_net_r": -0.0542
+              },
+              "sl1x_tp2R": {
+                "n": 1413,
+                "mean_net_r": -0.0757
+              },
+              "sl1x_tp3R": {
+                "n": 1413,
+                "mean_net_r": -0.0779
+              },
+              "sl1x_tp5R": {
+                "n": 1413,
+                "mean_net_r": -0.0766
+              },
+              "sl1x_tp6R": {
+                "n": 1413,
+                "mean_net_r": -0.0842
+              }
+            },
+            "more_management_mean_by_arm": {
+              "more_atr_trail_1.5x": {
+                "n": 1413,
+                "mean_net_r": -0.067
+              },
+              "more_atr_trail_2x": {
+                "n": 1413,
+                "mean_net_r": -0.0749
+              },
+              "more_atr_trail_3x": {
+                "n": 1413,
+                "mean_net_r": -0.0857
+              },
+              "more_atr_trail_4x": {
+                "n": 1413,
+                "mean_net_r": -0.0574
+              },
+              "more_rule_1.5R_to_0R": {
+                "n": 1413,
+                "mean_net_r": -0.0857
+              },
+              "more_rule_1R_to_0R": {
+                "n": 1413,
+                "mean_net_r": -0.0818
+              },
+              "more_rule_2R_to_1R": {
+                "n": 1413,
+                "mean_net_r": -0.0868
+              },
+              "more_rule_ladder_be1_lock2": {
+                "n": 1413,
+                "mean_net_r": -0.083
+              }
+            },
+            "p_random_ge_actual": {
+              "n": 0,
+              "mean": null
+            },
+            "post_exit_verdict_mix": {
+              "null": 1352,
+              "exited_early": 46,
+              "neutral": 14,
+              "exit_saved_r": 1
+            },
+            "fidelity_abs_gap_r": {
+              "n": 1413,
+              "mean": 0.0106,
+              "max": 0.8388
+            }
+          }
+        }
+      },
+      "pooled": {
+        "n": 4264,
+        "net_r": -322.9645,
+        "folds": [
+          {
+            "fold": 1,
+            "start": "2022-01-08 00:00:00+00:00",
+            "end": "2022-10-26 00:00:00+00:00",
+            "trades": 716,
+            "net_r": -67.11
+          },
+          {
+            "fold": 2,
+            "start": "2022-10-26 00:00:00+00:00",
+            "end": "2023-08-13 00:00:00+00:00",
+            "trades": 624,
+            "net_r": -41.0918
+          },
+          {
+            "fold": 3,
+            "start": "2023-08-13 00:00:00+00:00",
+            "end": "2024-05-30 00:00:00+00:00",
+            "trades": 713,
+            "net_r": -68.1611
+          },
+          {
+            "fold": 4,
+            "start": "2024-05-30 00:00:00+00:00",
+            "end": "2025-03-17 00:00:00+00:00",
+            "trades": 768,
+            "net_r": -19.3748
+          },
+          {
+            "fold": 5,
+            "start": "2025-03-17 00:00:00+00:00",
+            "end": "2026-01-02 00:00:00+00:00",
+            "trades": 775,
+            "net_r": -107.5856
+          },
+          {
+            "fold": 6,
+            "start": "2026-01-02 00:00:00+00:00",
+            "end": "2026-10-20 00:00:00+00:00",
+            "trades": 668,
+            "net_r": -19.6412
+          }
+        ],
+        "folds_pos": 0,
+        "max_drawdown_r_sequential": 348.8246,
+        "net_r_per_trade": -0.0757,
+        "t_one_sided_p": 0.9999836438777788,
+        "window": [
+          "2022-01-08 00:00:00+00:00",
+          "2026-10-20 00:00:00+00:00"
+        ],
+        "cf_summary": {
+          "schema": "cf_summary/1",
+          "n_rows": 4264,
+          "n_with_cf": 4264,
+          "n_graded": 4264,
+          "n_could_not_grade": 0,
+          "provenance": "ESTIMATED",
+          "original_brackets": {
+            "n": 4264,
+            "mean_net_r": -0.0643,
+            "ci95_mean": [
+              -0.1005,
+              -0.0254
+            ]
+          },
+          "replayed_actual": {
+            "n": 4264,
+            "mean_net_r": -0.0643,
+            "ci95_mean": [
+              -0.1005,
+              -0.0254
+            ]
+          },
+          "alt_brackets_mean_by_cell": {
+            "sl0.75x_tp2R": {
+              "n": 4264,
+              "mean_net_r": -0.0829
+            },
+            "sl0.75x_tp3R": {
+              "n": 4264,
+              "mean_net_r": -0.0886
+            },
+            "sl0.75x_tp4R": {
+              "n": 4264,
+              "mean_net_r": -0.092
+            },
+            "sl0.75x_tp5R": {
+              "n": 4264,
+              "mean_net_r": -0.0891
+            },
+            "sl0.75x_tp6R": {
+              "n": 4264,
+              "mean_net_r": -0.0909
+            },
+            "sl1.25x_tp2R": {
+              "n": 4264,
+              "mean_net_r": -0.055
+            },
+            "sl1.25x_tp3R": {
+              "n": 4264,
+              "mean_net_r": -0.0514
+            },
+            "sl1.25x_tp4R": {
+              "n": 4264,
+              "mean_net_r": -0.0511
+            },
+            "sl1.25x_tp5R": {
+              "n": 4264,
+              "mean_net_r": -0.0537
+            },
+            "sl1.25x_tp6R": {
+              "n": 4264,
+              "mean_net_r": -0.0518
+            },
+            "sl1.5x_tp2R": {
+              "n": 4264,
+              "mean_net_r": -0.0456
+            },
+            "sl1.5x_tp3R": {
+              "n": 4264,
+              "mean_net_r": -0.043
+            },
+            "sl1.5x_tp4R": {
+              "n": 4264,
+              "mean_net_r": -0.0438
+            },
+            "sl1.5x_tp5R": {
+              "n": 4264,
+              "mean_net_r": -0.0437
+            },
+            "sl1.5x_tp6R": {
+              "n": 4264,
+              "mean_net_r": -0.0446
+            },
+            "sl1x_tp2R": {
+              "n": 4264,
+              "mean_net_r": -0.0595
+            },
+            "sl1x_tp3R": {
+              "n": 4264,
+              "mean_net_r": -0.0621
+            },
+            "sl1x_tp5R": {
+              "n": 4264,
+              "mean_net_r": -0.0589
+            },
+            "sl1x_tp6R": {
+              "n": 4264,
+              "mean_net_r": -0.0602
+            }
+          },
+          "more_management_mean_by_arm": {
+            "more_atr_trail_1.5x": {
+              "n": 4264,
+              "mean_net_r": -0.0675
+            },
+            "more_atr_trail_2x": {
+              "n": 4264,
+              "mean_net_r": -0.0732
+            },
+            "more_atr_trail_3x": {
+              "n": 4264,
+              "mean_net_r": -0.0643
+            },
+            "more_atr_trail_4x": {
+              "n": 4264,
+              "mean_net_r": -0.0469
+            },
+            "more_rule_1.5R_to_0R": {
+              "n": 4264,
+              "mean_net_r": -0.0643
+            },
+            "more_rule_1R_to_0R": {
+              "n": 4264,
+              "mean_net_r": -0.0629
+            },
+            "more_rule_2R_to_1R": {
+              "n": 4264,
+              "mean_net_r": -0.0638
+            },
+            "more_rule_ladder_be1_lock2": {
+              "n": 4264,
+              "mean_net_r": -0.0618
+            }
+          },
+          "p_random_ge_actual": {
+            "n": 0,
+            "mean": null
+          },
+          "post_exit_verdict_mix": {
+            "null": 4053,
+            "neutral": 45,
+            "exited_early": 163,
+            "exit_saved_r": 3
+          },
+          "fidelity_abs_gap_r": {
+            "n": 4264,
+            "mean": 0.0124,
+            "max": 4.1362
+          }
+        }
+      },
+      "grade": {
+        "verdict": "fail",
+        "cells_pass": 0,
+        "need": 3,
+        "delta_r_per_trade_vs_baseline": 0.0146,
+        "why": "net_r/trade -0.0757 beats the baseline's -0.0903 by 0.0146 < the 0.05 materiality bar",
+        "role": "candidate",
+        "holm_survivors": []
+      }
+    },
+    "D384": {
+      "sets": {
+        "donchian": 384
+      },
+      "unsets": [],
+      "extra_flags": [],
+      "cells": {
+        "ADAUSDT": {
+          "state": "measured",
+          "n": 892,
+          "net_r": -41.9523,
+          "max_drawdown_r": 60.977,
+          "folds": [
+            {
+              "fold": 1,
+              "start": "2022-01-08 00:00:00+00:00",
+              "end": "2022-10-26 00:00:00+00:00",
+              "trades": 150,
+              "net_r": 7.3723
+            },
+            {
+              "fold": 2,
+              "start": "2022-10-26 00:00:00+00:00",
+              "end": "2023-08-13 00:00:00+00:00",
+              "trades": 130,
+              "net_r": -9.7425
+            },
+            {
+              "fold": 3,
+              "start": "2023-08-13 00:00:00+00:00",
+              "end": "2024-05-30 00:00:00+00:00",
+              "trades": 146,
+              "net_r": -18.8317
+            },
+            {
+              "fold": 4,
+              "start": "2024-05-30 00:00:00+00:00",
+              "end": "2025-03-17 00:00:00+00:00",
+              "trades": 161,
+              "net_r": 2.0366
+            },
+            {
+              "fold": 5,
+              "start": "2025-03-17 00:00:00+00:00",
+              "end": "2026-01-02 00:00:00+00:00",
+              "trades": 161,
+              "net_r": -14.4026
+            },
+            {
+              "fold": 6,
+              "start": "2026-01-02 00:00:00+00:00",
+              "end": "2026-10-20 00:00:00+00:00",
+              "trades": 144,
+              "net_r": -8.3833
+            }
+          ],
+          "folds_pos": 2,
+          "net_r_per_capital_day": -0.2299,
+          "mean_bars_held": 19.64,
+          "hold_days_mean": 0.205,
+          "net_r_per_trade": -0.047,
+          "t_one_sided_p": 0.8725165339013521,
+          "by_outcome": {
+            "trail_stop": 733,
+            "stop": 159
+          },
+          "cost_stack": {
+            "fee_bps_roundtrip": 11.0,
+            "slippage_bps_roundtrip": 3.0,
+            "funding_bps_per_window": 1.0
+          },
+          "params": {
+            "donchian": 384,
+            "atr_stop_mult": 2.5,
+            "trail_mult": 3.0,
+            "min_confidence": 0.0
+          },
+          "data_start": "2022-01-08 00:00:00+00:00",
+          "data_end": "2026-10-20 00:00:00+00:00",
+          "grade": "fail",
+          "argv": [
+            "/home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_trend.py",
+            "--donchian",
+            "384",
+            "--data",
+            "comms/research/RQ-20261024-0142-24/41556487163/data/ADAUSDT_15.csv",
+            "--symbol",
+            "ADAUSDT",
+            "--resample",
+            "15m",
+            "--atr-period",
+            "14",
+            "--atr-stop-mult",
+            "2.5",
+            "--trail-mult",
+            "3.0",
+            "--min-confidence",
+            "0.0",
+            "--fee-bps-roundtrip",
+            "11.0",
+            "--emit-trades",
+            "comms/research/RQ-20261024-0142-24/41556487163/cells/trend_ADAUSDT_15m_D384__trades.jsonl",
+            "--json",
+            "comms/research/RQ-20261024-0142-24/41556487163/cells/trend_ADAUSDT_15m_D384__bt.json",
+            "--timeframe",
+            "15m",
+            "--start",
+            "2022-01-01",
+            "--end",
+            "2026-10-20",
+            "--cf"
+          ],
+          "cf_summary": {
+            "schema": "cf_summary/1",
+            "n_rows": 892,
+            "n_with_cf": 892,
+            "n_graded": 892,
+            "n_could_not_grade": 0,
+            "provenance": "ESTIMATED",
+            "original_brackets": {
+              "n": 892,
+              "mean_net_r": -0.0364,
+              "ci95_mean": [
+                -0.1064,
+                0.0493
+              ]
+            },
+            "replayed_actual": {
+              "n": 892,
+              "mean_net_r": -0.0364,
+              "ci95_mean": [
+                -0.1064,
+                0.0493
+              ]
+            },
+            "alt_brackets_mean_by_cell": {
+              "sl0.75x_tp2R": {
+                "n": 892,
+                "mean_net_r": -0.0573
+              },
+              "sl0.75x_tp3R": {
+                "n": 892,
+                "mean_net_r": -0.0506
+              },
+              "sl0.75x_tp4R": {
+                "n": 892,
+                "mean_net_r": -0.0592
+              },
+              "sl0.75x_tp5R": {
+                "n": 892,
+                "mean_net_r": -0.0558
+              },
+              "sl0.75x_tp6R": {
+                "n": 892,
+                "mean_net_r": -0.0529
+              },
+              "sl1.25x_tp2R": {
+                "n": 892,
+                "mean_net_r": -0.0404
+              },
+              "sl1.25x_tp3R": {
+                "n": 892,
+                "mean_net_r": -0.0383
+              },
+              "sl1.25x_tp4R": {
+                "n": 892,
+                "mean_net_r": -0.0365
+              },
+              "sl1.25x_tp5R": {
+                "n": 892,
+                "mean_net_r": -0.0398
+              },
+              "sl1.25x_tp6R": {
+                "n": 892,
+                "mean_net_r": -0.0387
+              },
+              "sl1.5x_tp2R": {
+                "n": 892,
+                "mean_net_r": -0.0342
+              },
+              "sl1.5x_tp3R": {
+                "n": 892,
+                "mean_net_r": -0.0293
+              },
+              "sl1.5x_tp4R": {
+                "n": 892,
+                "mean_net_r": -0.0319
+              },
+              "sl1.5x_tp5R": {
+                "n": 892,
+                "mean_net_r": -0.0327
+              },
+              "sl1.5x_tp6R": {
+                "n": 892,
+                "mean_net_r": -0.0329
+              },
+              "sl1x_tp2R": {
+                "n": 892,
+                "mean_net_r": -0.04
+              },
+              "sl1x_tp3R": {
+                "n": 892,
+                "mean_net_r": -0.0369
+              },
+              "sl1x_tp5R": {
+                "n": 892,
+                "mean_net_r": -0.032
+              },
+              "sl1x_tp6R": {
+                "n": 892,
+                "mean_net_r": -0.0334
+              }
+            },
+            "more_management_mean_by_arm": {
+              "more_atr_trail_1.5x": {
+                "n": 892,
+                "mean_net_r": -0.1029
+              },
+              "more_atr_trail_2x": {
+                "n": 892,
+                "mean_net_r": -0.0933
+              },
+              "more_atr_trail_3x": {
+                "n": 892,
+                "mean_net_r": -0.0364
+              },
+              "more_atr_trail_4x": {
+                "n": 892,
+                "mean_net_r": -0.0146
+              },
+              "more_rule_1.5R_to_0R": {
+                "n": 892,
+                "mean_net_r": -0.0364
+              },
+              "more_rule_1R_to_0R": {
+                "n": 892,
+                "mean_net_r": -0.0294
+              },
+              "more_rule_2R_to_1R": {
+                "n": 892,
+                "mean_net_r": -0.0345
+              },
+              "more_rule_ladder_be1_lock2": {
+                "n": 892,
+                "mean_net_r": -0.0276
+              }
+            },
+            "p_random_ge_actual": {
+              "n": 0,
+              "mean": null
+            },
+            "post_exit_verdict_mix": {
+              "null": 851,
+              "neutral": 12,
+              "exited_early": 29
+            },
+            "fidelity_abs_gap_r": {
+              "n": 892,
+              "mean": 0.0109,
+              "max": 0.7746
+            }
+          }
+        },
+        "AVAXUSDT": {
+          "state": "measured",
+          "n": 971,
+          "net_r": -52.0342,
+          "max_drawdown_r": 61.4639,
+          "folds": [
+            {
+              "fold": 1,
+              "start": "2022-01-08 00:00:00+00:00",
+              "end": "2022-10-26 00:00:00+00:00",
+              "trades": 169,
+              "net_r": -16.2977
+            },
+            {
+              "fold": 2,
+              "start": "2022-10-26 00:00:00+00:00",
+              "end": "2023-08-13 00:00:00+00:00",
+              "trades": 139,
+              "net_r": -21.2672
+            },
+            {
+              "fold": 3,
+              "start": "2023-08-13 00:00:00+00:00",
+              "end": "2024-05-30 00:00:00+00:00",
+              "trades": 162,
+              "net_r": 14.2701
+            },
+            {
+              "fold": 4,
+              "start": "2024-05-30 00:00:00+00:00",
+              "end": "2025-03-17 00:00:00+00:00",
+              "trades": 184,
+              "net_r": -3.1998
+            },
+            {
+              "fold": 5,
+              "start": "2025-03-17 00:00:00+00:00",
+              "end": "2026-01-02 00:00:00+00:00",
+              "trades": 171,
+              "net_r": 1.4932
+            },
+            {
+              "fold": 6,
+              "start": "2026-01-02 00:00:00+00:00",
+              "end": "2026-10-20 00:00:00+00:00",
+              "trades": 146,
+              "net_r": -27.0321
+            }
+          ],
+          "folds_pos": 2,
+          "net_r_per_capital_day": -0.2644,
+          "mean_bars_held": 19.455,
+          "hold_days_mean": 0.203,
+          "net_r_per_trade": -0.0536,
+          "t_one_sided_p": 0.9197191907953879,
+          "by_outcome": {
+            "trail_stop": 805,
+            "stop": 165,
+            "timeout": 1
+          },
+          "cost_stack": {
+            "fee_bps_roundtrip": 11.0,
+            "slippage_bps_roundtrip": 3.0,
+            "funding_bps_per_window": 1.0
+          },
+          "params": {
+            "donchian": 384,
+            "atr_stop_mult": 2.5,
+            "trail_mult": 3.0,
+            "min_confidence": 0.0
+          },
+          "data_start": "2022-01-08 00:00:00+00:00",
+          "data_end": "2026-10-20 00:00:00+00:00",
+          "grade": "fail",
+          "argv": [
+            "/home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_trend.py",
+            "--donchian",
+            "384",
+            "--data",
+            "comms/research/RQ-20261024-0142-24/41556487163/data/AVAXUSDT_15.csv",
+            "--symbol",
+            "AVAXUSDT",
+            "--resample",
+            "15m",
+            "--atr-period",
+            "14",
+            "--atr-stop-mult",
+            "2.5",
+            "--trail-mult",
+            "3.0",
+            "--min-confidence",
+            "0.0",
+            "--fee-bps-roundtrip",
+            "11.0",
+            "--emit-trades",
+            "comms/research/RQ-20261024-0142-24/41556487163/cells/trend_AVAXUSDT_15m_D384__trades.jsonl",
+            "--json",
+            "comms/research/RQ-20261024-0142-24/41556487163/cells/trend_AVAXUSDT_15m_D384__bt.json",
+            "--timeframe",
+            "15m",
+            "--start",
+            "2022-01-01",
+            "--end",
+            "2026-10-20",
+            "--cf"
+          ],
+          "cf_summary": {
+            "schema": "cf_summary/1",
+            "n_rows": 971,
+            "n_with_cf": 971,
+            "n_graded": 971,
+            "n_could_not_grade": 0,
+            "provenance": "ESTIMATED",
+            "original_brackets": {
+              "n": 971,
+              "mean_net_r": -0.0426,
+              "ci95_mean": [
+                -0.1111,
+                0.0314
+              ]
+            },
+            "replayed_actual": {
+              "n": 971,
+              "mean_net_r": -0.0426,
+              "ci95_mean": [
+                -0.1111,
+                0.0314
+              ]
+            },
+            "alt_brackets_mean_by_cell": {
+              "sl0.75x_tp2R": {
+                "n": 971,
+                "mean_net_r": -0.0264
+              },
+              "sl0.75x_tp3R": {
+                "n": 971,
+                "mean_net_r": -0.0492
+              },
+              "sl0.75x_tp4R": {
+                "n": 971,
+                "mean_net_r": -0.0563
+              },
+              "sl0.75x_tp5R": {
+                "n": 971,
+                "mean_net_r": -0.0469
+              },
+              "sl0.75x_tp6R": {
+                "n": 971,
+                "mean_net_r": -0.0535
+              },
+              "sl1.25x_tp2R": {
+                "n": 971,
+                "mean_net_r": -0.031
+              },
+              "sl1.25x_tp3R": {
+                "n": 971,
+                "mean_net_r": -0.0298
+              },
+              "sl1.25x_tp4R": {
+                "n": 971,
+                "mean_net_r": -0.0315
+              },
+              "sl1.25x_tp5R": {
+                "n": 971,
+                "mean_net_r": -0.0309
+              },
+              "sl1.25x_tp6R": {
+                "n": 971,
+                "mean_net_r": -0.0287
+              },
+              "sl1.5x_tp2R": {
+                "n": 971,
+                "mean_net_r": -0.0291
+              },
+              "sl1.5x_tp3R": {
+                "n": 971,
+                "mean_net_r": -0.0267
+              },
+              "sl1.5x_tp4R": {
+                "n": 971,
+                "mean_net_r": -0.0273
+              },
+              "sl1.5x_tp5R": {
+                "n": 971,
+                "mean_net_r": -0.0241
+              },
+              "sl1.5x_tp6R": {
+                "n": 971,
+                "mean_net_r": -0.0244
+              },
+              "sl1x_tp2R": {
+                "n": 971,
+                "mean_net_r": -0.0293
+              },
+              "sl1x_tp3R": {
+                "n": 971,
+                "mean_net_r": -0.04
+              },
+              "sl1x_tp5R": {
+                "n": 971,
+                "mean_net_r": -0.0359
+              },
+              "sl1x_tp6R": {
+                "n": 971,
+                "mean_net_r": -0.0373
+              }
+            },
+            "more_management_mean_by_arm": {
+              "more_atr_trail_1.5x": {
+                "n": 971,
+                "mean_net_r": -0.0686
+              },
+              "more_atr_trail_2x": {
+                "n": 971,
+                "mean_net_r": -0.0609
+              },
+              "more_atr_trail_3x": {
+                "n": 971,
+                "mean_net_r": -0.0426
+              },
+              "more_atr_trail_4x": {
+                "n": 971,
+                "mean_net_r": -0.0186
+              },
+              "more_rule_1.5R_to_0R": {
+                "n": 971,
+                "mean_net_r": -0.0426
+              },
+              "more_rule_1R_to_0R": {
+                "n": 971,
+                "mean_net_r": -0.0416
+              },
+              "more_rule_2R_to_1R": {
+                "n": 971,
+                "mean_net_r": -0.0423
+              },
+              "more_rule_ladder_be1_lock2": {
+                "n": 971,
+                "mean_net_r": -0.0381
+              }
+            },
+            "p_random_ge_actual": {
+              "n": 0,
+              "mean": null
+            },
+            "post_exit_verdict_mix": {
+              "null": 915,
+              "neutral": 14,
+              "exited_early": 42
+            },
+            "fidelity_abs_gap_r": {
+              "n": 971,
+              "mean": 0.011,
+              "max": 1.9357
+            }
+          }
+        },
+        "SOLUSDT": {
+          "state": "measured",
+          "n": 922,
+          "net_r": -66.4981,
+          "max_drawdown_r": 80.0461,
+          "folds": [
+            {
+              "fold": 1,
+              "start": "2022-01-08 00:00:00+00:00",
+              "end": "2022-10-26 00:00:00+00:00",
+              "trades": 159,
+              "net_r": -6.0354
+            },
+            {
+              "fold": 2,
+              "start": "2022-10-26 00:00:00+00:00",
+              "end": "2023-08-13 00:00:00+00:00",
+              "trades": 137,
+              "net_r": -5.2349
+            },
+            {
+              "fold": 3,
+              "start": "2023-08-13 00:00:00+00:00",
+              "end": "2024-05-30 00:00:00+00:00",
+              "trades": 155,
+              "net_r": -7.0471
+            },
+            {
+              "fold": 4,
+              "start": "2024-05-30 00:00:00+00:00",
+              "end": "2025-03-17 00:00:00+00:00",
+              "trades": 161,
+              "net_r": -7.3815
+            },
+            {
+              "fold": 5,
+              "start": "2025-03-17 00:00:00+00:00",
+              "end": "2026-01-02 00:00:00+00:00",
+              "trades": 169,
+              "net_r": -30.6497
+            },
+            {
+              "fold": 6,
+              "start": "2026-01-02 00:00:00+00:00",
+              "end": "2026-10-20 00:00:00+00:00",
+              "trades": 141,
+              "net_r": -10.1495
+            }
+          ],
+          "folds_pos": 0,
+          "net_r_per_capital_day": -0.345,
+          "mean_bars_held": 20.067,
+          "hold_days_mean": 0.209,
+          "net_r_per_trade": -0.0721,
+          "t_one_sided_p": 0.9748677958108828,
+          "by_outcome": {
+            "trail_stop": 778,
+            "stop": 142,
+            "timeout": 2
+          },
+          "cost_stack": {
+            "fee_bps_roundtrip": 11.0,
+            "slippage_bps_roundtrip": 3.0,
+            "funding_bps_per_window": 1.0
+          },
+          "params": {
+            "donchian": 384,
+            "atr_stop_mult": 2.5,
+            "trail_mult": 3.0,
+            "min_confidence": 0.0
+          },
+          "data_start": "2022-01-08 00:00:00+00:00",
+          "data_end": "2026-10-20 00:00:00+00:00",
+          "grade": "fail",
+          "argv": [
+            "/home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_trend.py",
+            "--donchian",
+            "384",
+            "--data",
+            "comms/research/RQ-20261024-0142-24/41556487163/data/SOLUSDT_15.csv",
+            "--symbol",
+            "SOLUSDT",
+            "--resample",
+            "15m",
+            "--atr-period",
+            "14",
+            "--atr-stop-mult",
+            "2.5",
+            "--trail-mult",
+            "3.0",
+            "--min-confidence",
+            "0.0",
+            "--fee-bps-roundtrip",
+            "11.0",
+            "--emit-trades",
+            "comms/research/RQ-20261024-0142-24/41556487163/cells/trend_SOLUSDT_15m_D384__trades.jsonl",
+            "--json",
+            "comms/research/RQ-20261024-0142-24/41556487163/cells/trend_SOLUSDT_15m_D384__bt.json",
+            "--timeframe",
+            "15m",
+            "--start",
+            "2022-01-01",
+            "--end",
+            "2026-10-20",
+            "--cf"
+          ],
+          "cf_summary": {
+            "schema": "cf_summary/1",
+            "n_rows": 922,
+            "n_with_cf": 922,
+            "n_graded": 922,
+            "n_could_not_grade": 0,
+            "provenance": "ESTIMATED",
+            "original_brackets": {
+              "n": 922,
+              "mean_net_r": -0.0629,
+              "ci95_mean": [
+                -0.1472,
+                0.0159
+              ]
+            },
+            "replayed_actual": {
+              "n": 922,
+              "mean_net_r": -0.0629,
+              "ci95_mean": [
+                -0.1472,
+                0.0159
+              ]
+            },
+            "alt_brackets_mean_by_cell": {
+              "sl0.75x_tp2R": {
+                "n": 922,
+                "mean_net_r": -0.0342
+              },
+              "sl0.75x_tp3R": {
+                "n": 922,
+                "mean_net_r": -0.0231
+              },
+              "sl0.75x_tp4R": {
+                "n": 922,
+                "mean_net_r": -0.0308
+              },
+              "sl0.75x_tp5R": {
+                "n": 922,
+                "mean_net_r": -0.0495
+              },
+              "sl0.75x_tp6R": {
+                "n": 922,
+                "mean_net_r": -0.054
+              },
+              "sl1.25x_tp2R": {
+                "n": 922,
+                "mean_net_r": -0.0306
+              },
+              "sl1.25x_tp3R": {
+                "n": 922,
+                "mean_net_r": -0.0483
+              },
+              "sl1.25x_tp4R": {
+                "n": 922,
+                "mean_net_r": -0.0519
+              },
+              "sl1.25x_tp5R": {
+                "n": 922,
+                "mean_net_r": -0.0577
+              },
+              "sl1.25x_tp6R": {
+                "n": 922,
+                "mean_net_r": -0.0534
+              },
+              "sl1.5x_tp2R": {
+                "n": 922,
+                "mean_net_r": -0.0304
+              },
+              "sl1.5x_tp3R": {
+                "n": 922,
+                "mean_net_r": -0.0434
+              },
+              "sl1.5x_tp4R": {
+                "n": 922,
+                "mean_net_r": -0.0474
+              },
+              "sl1.5x_tp5R": {
+                "n": 922,
+                "mean_net_r": -0.0454
+              },
+              "sl1.5x_tp6R": {
+                "n": 922,
+                "mean_net_r": -0.0482
+              },
+              "sl1x_tp2R": {
+                "n": 922,
+                "mean_net_r": -0.0358
+              },
+              "sl1x_tp3R": {
+                "n": 922,
+                "mean_net_r": -0.0339
+              },
+              "sl1x_tp5R": {
+                "n": 922,
+                "mean_net_r": -0.0544
+              },
+              "sl1x_tp6R": {
+                "n": 922,
+                "mean_net_r": -0.0593
+              }
+            },
+            "more_management_mean_by_arm": {
+              "more_atr_trail_1.5x": {
+                "n": 922,
+                "mean_net_r": -0.0483
+              },
+              "more_atr_trail_2x": {
+                "n": 922,
+                "mean_net_r": -0.0473
+              },
+              "more_atr_trail_3x": {
+                "n": 922,
+                "mean_net_r": -0.0629
+              },
+              "more_atr_trail_4x": {
+                "n": 922,
+                "mean_net_r": -0.0224
+              },
+              "more_rule_1.5R_to_0R": {
+                "n": 922,
+                "mean_net_r": -0.0629
+              },
+              "more_rule_1R_to_0R": {
+                "n": 922,
+                "mean_net_r": -0.0596
+              },
+              "more_rule_2R_to_1R": {
+                "n": 922,
+                "mean_net_r": -0.0644
+              },
+              "more_rule_ladder_be1_lock2": {
+                "n": 922,
+                "mean_net_r": -0.0612
+              }
+            },
+            "p_random_ge_actual": {
+              "n": 0,
+              "mean": null
+            },
+            "post_exit_verdict_mix": {
+              "null": 883,
+              "exited_early": 27,
+              "neutral": 11,
+              "exit_saved_r": 1
+            },
+            "fidelity_abs_gap_r": {
+              "n": 922,
+              "mean": 0.0104,
+              "max": 0.8388
+            }
+          }
+        }
+      },
+      "pooled": {
+        "n": 2785,
+        "net_r": -160.4828,
+        "folds": [
+          {
+            "fold": 1,
+            "start": "2022-01-08 00:00:00+00:00",
+            "end": "2022-10-26 00:00:00+00:00",
+            "trades": 478,
+            "net_r": -14.9608
+          },
+          {
+            "fold": 2,
+            "start": "2022-10-26 00:00:00+00:00",
+            "end": "2023-08-13 00:00:00+00:00",
+            "trades": 406,
+            "net_r": -36.2446
+          },
+          {
+            "fold": 3,
+            "start": "2023-08-13 00:00:00+00:00",
+            "end": "2024-05-30 00:00:00+00:00",
+            "trades": 463,
+            "net_r": -11.6087
+          },
+          {
+            "fold": 4,
+            "start": "2024-05-30 00:00:00+00:00",
+            "end": "2025-03-17 00:00:00+00:00",
+            "trades": 506,
+            "net_r": -8.5447
+          },
+          {
+            "fold": 5,
+            "start": "2025-03-17 00:00:00+00:00",
+            "end": "2026-01-02 00:00:00+00:00",
+            "trades": 501,
+            "net_r": -43.5591
+          },
+          {
+            "fold": 6,
+            "start": "2026-01-02 00:00:00+00:00",
+            "end": "2026-10-20 00:00:00+00:00",
+            "trades": 431,
+            "net_r": -45.5649
+          }
+        ],
+        "folds_pos": 0,
+        "max_drawdown_r_sequential": 185.7418,
+        "net_r_per_trade": -0.0576,
+        "t_one_sided_p": 0.9949941684703127,
+        "window": [
+          "2022-01-08 00:00:00+00:00",
+          "2026-10-20 00:00:00+00:00"
+        ],
+        "cf_summary": {
+          "schema": "cf_summary/1",
+          "n_rows": 2785,
+          "n_with_cf": 2785,
+          "n_graded": 2785,
+          "n_could_not_grade": 0,
+          "provenance": "ESTIMATED",
+          "original_brackets": {
+            "n": 2785,
+            "mean_net_r": -0.0473,
+            "ci95_mean": [
+              -0.094,
+              -0.0009
+            ]
+          },
+          "replayed_actual": {
+            "n": 2785,
+            "mean_net_r": -0.0473,
+            "ci95_mean": [
+              -0.094,
+              -0.0009
+            ]
+          },
+          "alt_brackets_mean_by_cell": {
+            "sl0.75x_tp2R": {
+              "n": 2785,
+              "mean_net_r": -0.0389
+            },
+            "sl0.75x_tp3R": {
+              "n": 2785,
+              "mean_net_r": -0.041
+            },
+            "sl0.75x_tp4R": {
+              "n": 2785,
+              "mean_net_r": -0.0488
+            },
+            "sl0.75x_tp5R": {
+              "n": 2785,
+              "mean_net_r": -0.0506
+            },
+            "sl0.75x_tp6R": {
+              "n": 2785,
+              "mean_net_r": -0.0535
+            },
+            "sl1.25x_tp2R": {
+              "n": 2785,
+              "mean_net_r": -0.0339
+            },
+            "sl1.25x_tp3R": {
+              "n": 2785,
+              "mean_net_r": -0.0386
+            },
+            "sl1.25x_tp4R": {
+              "n": 2785,
+              "mean_net_r": -0.0398
+            },
+            "sl1.25x_tp5R": {
+              "n": 2785,
+              "mean_net_r": -0.0426
+            },
+            "sl1.25x_tp6R": {
+              "n": 2785,
+              "mean_net_r": -0.0401
+            },
+            "sl1.5x_tp2R": {
+              "n": 2785,
+              "mean_net_r": -0.0312
+            },
+            "sl1.5x_tp3R": {
+              "n": 2785,
+              "mean_net_r": -0.0331
+            },
+            "sl1.5x_tp4R": {
+              "n": 2785,
+              "mean_net_r": -0.0354
+            },
+            "sl1.5x_tp5R": {
+              "n": 2785,
+              "mean_net_r": -0.0339
+            },
+            "sl1.5x_tp6R": {
+              "n": 2785,
+              "mean_net_r": -0.035
+            },
+            "sl1x_tp2R": {
+              "n": 2785,
+              "mean_net_r": -0.0349
+            },
+            "sl1x_tp3R": {
+              "n": 2785,
+              "mean_net_r": -0.037
+            },
+            "sl1x_tp5R": {
+              "n": 2785,
+              "mean_net_r": -0.0408
+            },
+            "sl1x_tp6R": {
+              "n": 2785,
+              "mean_net_r": -0.0433
+            }
+          },
+          "more_management_mean_by_arm": {
+            "more_atr_trail_1.5x": {
+              "n": 2785,
+              "mean_net_r": -0.0729
+            },
+            "more_atr_trail_2x": {
+              "n": 2785,
+              "mean_net_r": -0.0668
+            },
+            "more_atr_trail_3x": {
+              "n": 2785,
+              "mean_net_r": -0.0473
+            },
+            "more_atr_trail_4x": {
+              "n": 2785,
+              "mean_net_r": -0.0186
+            },
+            "more_rule_1.5R_to_0R": {
+              "n": 2785,
+              "mean_net_r": -0.0473
+            },
+            "more_rule_1R_to_0R": {
+              "n": 2785,
+              "mean_net_r": -0.0437
+            },
+            "more_rule_2R_to_1R": {
+              "n": 2785,
+              "mean_net_r": -0.0471
+            },
+            "more_rule_ladder_be1_lock2": {
+              "n": 2785,
+              "mean_net_r": -0.0424
+            }
+          },
+          "p_random_ge_actual": {
+            "n": 0,
+            "mean": null
+          },
+          "post_exit_verdict_mix": {
+            "null": 2649,
+            "neutral": 37,
+            "exited_early": 98,
+            "exit_saved_r": 1
+          },
+          "fidelity_abs_gap_r": {
+            "n": 2785,
+            "mean": 0.0108,
+            "max": 1.9357
+          }
+        }
+      },
+      "grade": {
+        "verdict": "fail",
+        "cells_pass": 0,
+        "need": 3,
+        "delta_r_per_trade_vs_baseline": 0.0327,
+        "why": "net_r/trade -0.0576 beats the baseline's -0.0903 by 0.0327 < the 0.05 materiality bar",
+        "role": "candidate",
+        "holm_survivors": []
+      }
+    }
+  }
+}

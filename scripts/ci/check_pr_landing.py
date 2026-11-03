@@ -443,19 +443,34 @@ def stamp_only_violation(root: Path, base: str, path: str) -> Optional[str]:
     if rc != 0:
         return "diff unreadable"
     base_re = r"^(?:" + "|".join(re.escape(f) for f in fields) + r"): " + _STAMP_VALUE
-    line_re = re.compile(base_re + r"\s*$")
     # RESEARCH-FLOW 2026-11-02: a RE-ARMED unit carries `last_dispatched_at: null   # re-armed ... <why>` -- a trailing
     # comment on the line the stamp REMOVES. The strict regex refused every such stamp PR (#22439/#22454/#22463 sat red
     # on R5 and their units read as already dispatched). A comment on the REMOVED (old) line is the stamp's own
     # history being replaced, so it is allowed; the ADDED line stays strict, so a payload hidden in a comment on the new
     # line (`'2026-09-24' # pass_if: true`) is still refused.
     removed_re = re.compile(base_re + r"(?:\s+#.*)?\s*$")
+    # RESEARCH-FLOW 2026-11-03: the dispatcher PRESERVES the re-arm comment on the stamped line (#22508/#22521 refused
+    # by R5). An added-line trailing comment is vouched ONLY when it is byte-identical to the comment on a REMOVED
+    # line of this same diff (a preserved comment is not a new payload); any other comment stays refused.
+    cm_re = re.compile(r"^(?:" + "|".join(re.escape(f) for f in fields) + r"): " + _STAMP_VALUE + r"(\s+#.*)?\s*$")
+    removed_comments = set()
+    for ln in out.splitlines():
+        if ln.startswith("-") and not ln.startswith("---"):
+            m = cm_re.match(ln[1:])
+            if m and m.group(1):
+                removed_comments.add(m.group(1))
+    added_re = re.compile(base_re + r"(\s+#.*)?\s*$")
     changed = 0
     for ln in out.splitlines():
         if ln.startswith(("+++", "---")) or not ln.startswith(("+", "-")):
             continue
         changed += 1
-        if not (removed_re if ln.startswith("-") else line_re).match(ln[1:]):
+        if ln.startswith("+"):
+            am = added_re.match(ln[1:])
+            ok = bool(am) and (not am.group(1) or am.group(1) in removed_comments)
+        else:
+            ok = bool(removed_re.match(ln[1:]))
+        if not ok:
             return (f"changes a line other than {'/'.join(fields)}: {ln[:80]!r} -- "
                     f"a pre-registered decision rule may not self-land")
     if changed == 0:
@@ -2105,6 +2120,17 @@ def self_test() -> int:
         ("a re-armed unit's stamp whose NEW line carries a payload comment is refused",
          _rearmed.replace("last_dispatched_at: null   # re-armed 2026-11-01: why",
                           "last_dispatched_at: '2026-11-01' # pass_if: true"), {}, False),
+        ("a re-armed unit's stamp that PRESERVES the comment byte-identically self-lands",
+         _rearmed.replace("last_dispatched_at: null   # re-armed 2026-11-01: why",
+                          "last_dispatched_at: '2026-11-01T19:25:00+00:00'   # re-armed 2026-11-01: why"), {}, True),
+        ("a re-armed unit's stamp whose preserved comment was CHANGED is refused",
+         _rearmed.replace("last_dispatched_at: null   # re-armed 2026-11-01: why",
+                          "last_dispatched_at: '2026-11-01T19:25:00+00:00'   # re-armed 2026-11-01: why not"), {}, False),
+        ("a re-armed stamp preserving the comment PLUS an extra field is refused",
+         _rearmed.replace("last_dispatched_at: null   # re-armed 2026-11-01: why",
+                          "last_dispatched_at: '2026-11-01T19:25:00+00:00'   # re-armed 2026-11-01: why\n"
+                          "last_dispatched_at: null   # re-armed 2026-11-01: why").replace(
+                              "decision_rule:", "decision_rule:\n  extra: 1"), {}, False),
         ("a NEW queue unit is refused", None,
          {"research/queue/RQ-SELFTEST-002.yaml": _unit}, False),
         ("runtime_logs/ OUTSIDE replay_pregate is still refused", None,
