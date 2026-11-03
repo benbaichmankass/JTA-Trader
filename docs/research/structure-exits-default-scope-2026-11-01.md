@@ -132,3 +132,21 @@ Gates this adds or changes: **none** (research tooling and pre-registered units;
 
 **Not done, said plainly:** no run has been made (no results exist for any of these units); the live monitor adapter, venue amend paths, replay-parity fixtures and journal schema (§5.4 steps 2-4) are untouched; the random-exit control harness is not built; the coverage-matrix `structure_exit` column is not added.
 **Timeframe caveat:** the harness `--structure-exit` reads pivots on the leg's own bar frame; legs with overnight gaps (alpaca ETFs on 1h) need the daily/session mapping that only the 5e03 path implements.
+
+## 7. Live wiring 2026-11-03 (lane STRUCTURE-EXITS-LIVE-WIRING; § 5.4 steps 2-4 built now)
+
+Operator 2026-11-03 ~07:05Z, verbatim: *"Build it now - we said it's the new default until we prove something else works better (instead of default being no active management)"*.
+Gates this adds or changes: **none** (a declared per-leg exit field like `tp_revision`; no `*_ENABLED` flag, no third gate; no leg declares it in this change).
+
+| Piece | Where | State |
+|---|---|---|
+| `structure_exit` verdict source (pure; imports `structure_levels.py`, no new swing code) | `src/runtime/structure_exit_live.py` | built. Selected per leg by `structure_exit: "pivot=N"` or `{pivot, buffer_atr, min_r, fvg}` in `config/strategies.yaml`, threaded into package meta |
+| Monitor wiring | `trend_donchian`, `htf_pullback_trend_2h`, `ml_entry`, `ml_entry_v2` `monitor()` | built; runs after every close path (a close beats a move) and replaces the chandelier + `tp_revision` for a selected leg. Unselected: 0 diffs vs `origin/main` d706ab1c over 1,728 monitor ticks (829 non-None verdicts) on the recorded ADA 2h fixture, one-off check; committed test asserts the structure code is never reached |
+| Venue amend | existing exchange-first modify path (`order_monitor._apply_update` -> `modify_open_order`: Bybit trading-stop / leg amend, Alpaca stop via `alpaca_amend.tighten` read-back + TP PATCH, IB OCA re-arm); prop via `prop_trail.plan_trail` / `_tp_step` (structure branch; TP only where `TP_AMEND_SUPPORTED`) | reused, not rewritten. A refused amend leaves `order_packages.sl/tp` unchanged so the deterministic verdict re-fires next tick (retried, never dropped) |
+| Move journal | `runtime_logs/structure_exit_moves.jsonl`, schema `JOURNAL_FIELDS` (level type, price, formed/confirmed bar, reason, before/after SL+TP, bar id, per-leg outcome, venue answer) | built. `venue_readback` is the venue's ACK (`kind: ack`); Alpaca's SL path is itself a read-back (`alpaca_amend.tighten`); Bybit/IB are not re-read here |
+| Replay parity + lookahead-negative | `tests/test_structure_exit_live.py` | built: live monitor ticked on growing frames == harness form (full-frame detector + `StructureExit.on_bar_close`) on recorded 2h and 4h bars, same level list each bar; future-bar mutation never changes a verdict |
+
+**Measured (step 2), `/api/diag/*` 2026-11-03 07:32Z:** monitor pass interval max 72.2 s over 28 intervals since the 07:18Z process start (requirement 60 s, 1 breach), pass duration last 4.3 s / max 45.6 s; candles are fetched fresh from the venue each pass (`_build_monitor_ohlcv_fetcher`). So bar-close-to-verdict latency is bounded by one pass interval plus one pass, about 1-2 min, against bars of 1h / 2h / 4h / 1d (leg timeframes from `config/strategies.yaml`: trend_donchian 1h and 4h legs, htf_pullback 2h / 1h / 1d legs, ml_entry / ml_entry_v2 1h). Per-move latency is not measured until a leg is selected (journal `ts` minus `bar_ts`).
+
+**Stated difference from the harness arm:** the harness `start()` can set the initial stop WIDER than the ATR stop (clamped to 3x); live never loosens past the entry stop (§ 5.2 rule 3), so on those trades live starts at the tighter stop and R is the entry R. When a structure TP is absent the harness rests no TP; live keeps the resting TP (both brackets always exist).
+**Not done:** no leg selected (Tier-3, per-leg); first observed move per venue (the mechanics proof) needs a selected leg.
