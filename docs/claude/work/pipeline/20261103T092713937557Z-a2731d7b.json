@@ -1,0 +1,16 @@
+{
+  "due_when": {
+    "clears_when": "a per-leg structure_exit enable is proposed for any *_pullback_1h ETF leg, or structure_exit_live gains a session-aware frame with a parity test",
+    "kind": "event"
+  },
+  "id": "PI-20261103-GVVPXRH2-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "PR #22587 / row STRUCTURE-EXITS-DEFAULT / lane STRUCTURE-EXITS-LIVE-WIRING 2026-11-03",
+    "rerun": "grep -n 'Timeframe caveat' docs/research/structure-exits-default-scope-2026-11-01.md; grep -n 'drop_forming_bar\\|_ts_col' src/runtime/structure_exit_live.py"
+  },
+  "roadmap": "L-AM-STANDARD",
+  "state": "queued",
+  "what": "STRUCTURE-EXITS live wiring (#22587) detects levels on the leg's own bar frame. Legs with overnight gaps (alpaca ETF *_pullback_1h: gld/spy/qqq/tlt) need the daily/session-aware level frame that only the 5e03 research path implements (scope doc 2026-11-01 section 6 'Timeframe caveat'). Until built, the enable proposal keeps those legs OFF. Build: a session-aware frame option in src/runtime/structure_exit_live.py (t_map like ml_structure_bracket.structure_outcome) + parity test."
+}

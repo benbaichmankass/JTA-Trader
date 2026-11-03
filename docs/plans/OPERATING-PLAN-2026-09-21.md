@@ -133,7 +133,7 @@ help by cleaning up duplicate trades in the books and creating a more integrated
 - **The status is DERIVED, never declared** (`scripts/ops/strategy_status.py`): inactive = retired by record; production = on a real-money
   roster; testing = otherwise. A `status:` field would be a third gate (CLAUDE.md § "The two execution gates") and a second copy of the
   roster, free to drift from it.
-- **Promotion MOVES a leg** (and, when its mechanics are already proven, it MOVES straight from Stage 0 to real money without ever being on general paper — § "The soak is MECHANICAL", 2026-11-01). Gate 2 (`MD-PROMOTE-S1-S2`, human-merge PR) adds it to real money **and** the mirror and removes it from its
+- **Promotion MOVES a leg** (and, when its mechanics are already proven, it MOVES straight from Stage 0 to real money without ever being on general paper — § "The soak is MECHANICAL", 2026-11-01). Gate 2 (`MD-PROMOTE-S1-S2`, manager-merged PR on the data-backed rule, CLAUDE-RULES-CANONICAL § "Data-backed Tier-2/3 decisions"; no operator merge, 2026-11-03) adds it to real money **and** the mirror and removes it from its
   general paper account in the same PR (`mandate_resolver._delta` proposes all three edits). Production legs keep logging every trade on
   real money and the mirror, so general paper loses no record a production leg would have made — except where real money cannot size a
   trade the paper book would (measured below).
@@ -195,7 +195,7 @@ mechanical bugs while we're still improving the actual function."*
 - **The floor is the default home.** A leg trades on its demo floor from the moment it exists until a retirement record removes it. A missing Stage-0 pass does not keep a leg off the floor. It keeps the leg off **real money and the mirror** (Gate 2), and nothing else.
 - **`execution: shadow` is not a holding stage.** Shadow is no longer used for non-retired legs. A mechanism still being built (the desk leg, the short-hold lane, a new ML head) goes on the floor early, so mechanical bugs show up while the function is still improving.
 - **Demotion stops at the floor** (and, since 2026-10-28, a demoted production leg is put back ON it). The operator's popup answer, 2026-10-27, verbatim, was *"Demote stops at the floor (Recommended)"*. A leg that fails Stage 0 or underperforms is demoted out of real money and the mirror and stays on its demo floor. `MD-S1-CUT-ON-STAGE0-FAIL` and `MD-DEMOTE-S1-OFF` are rewritten to match. **Only an explicit retirement record removes a leg from its floor.**
-- **Real money is promotion only.** Gate 2 (`MD-PROMOTE-S1-S2`, human-merge PR) and the prop superset gate are unchanged.
+- **Real money is promotion only.** Gate 2 (`MD-PROMOTE-S1-S2`, manager-merged PR on the data-backed rule, CLAUDE-RULES-CANONICAL § "Data-backed Tier-2/3 decisions"; no operator merge, 2026-11-03) and the prop superset gate are unchanged.
 - **Exceptions are named, never silent.** A leg no demo venue can serve (e.g. `xauusd_trend_1h`: OANDA practice is `dry_run` and OANDA US cannot trade XAU_USD) or one blocked by a guard (same-symbol allocation without slices on alpaca_paper) is listed with the reason on its checklist row until the blocker is fixed.
 
 ### The soak is MECHANICAL — and a leg with proven mechanics skips it (operator, 2026-10-15 and 2026-11-01, binding)
@@ -231,6 +231,19 @@ weeks on end, because we just don't have that amount of time for the kind of dat
    paper watching. That trade is a soak with `n_needed: 1`.
 3. **Edge is never decided here.** Stage 0 decides edge. Realized cost and live-vs-backtest are monitoring (the mirror's net-of-cost
    window is the demotion signal). The prop superset below is unchanged. TESTING legs that have not cleared Stage 0 stay on the demo floor.
+4. **2026-11-03: the two tracks are independent.** Mechanics (build if new + one small clean trade) and edge (Stage 0, iterated
+   until it passes) run in parallel and in either order; a leg promotes the moment BOTH are green. Builds are still prioritised,
+   not automatic. Operator, verbatim (chat to Manager Session 2026-11-03a, ~10:00Z): *"if we come up with a new strategy that
+   needs new mechanics, then we can build and test those regardless of what happens on the backtesting side. At least if, like,
+   we shouldn't necessarily build everything, but ... the backtesting should be its own separate path. That's not dependent on
+   the mechanical trade, right? Like, that doesn't have to be chronological."*
+5. **2026-11-03: promotion is manager-merged, not operator-merged.** A promotion with a committed Stage-0 evidence record and
+   proven mechanics is decided, merged and deployed by the manager, which then notifies the operator (CLAUDE-RULES-CANONICAL
+   § "Data-backed Tier-2/3 decisions"). Operator, verbatim (same session, ~10:05Z): *"promotion shouldn't need my merge at this
+   point in the end. We've already established that if the data supports it, then that pipeline is supposed to run
+   automatically and doesn't need me for tier 3 changes as long as there's data supporting the changes being made."* Popup
+   ~10:06Z, same session: `autoland` is NOT added to `MD-PROMOTE-S1-S2` ("Manager merges (Recommended)"): a manager session
+   verifies the evidence record before real money moves. **Gates this changes:** removes the operator merge; adds none.
 
 **`mechanics_proven` is decided by a script from records, not prose** (`scripts/ops/soak_state.py::mechanics_proven`, read by
 `mandate_resolver` when `MD-PROMOTE-S1-S2`'s `bar.mechanics_proven` is set). True when EITHER (own) the leg's own soak contract reads
@@ -506,7 +519,7 @@ nor a fault. **Live-vs-backtest (`scripts/research/live_vs_backtest.py`, PR #183
 ongoing monitoring, not soak clauses** — a promotion to bybit_2 still checks cost against **Bybit's own
 MEASURED cost for that symbol**, and today the granted `MD-PROMOTE-S1-S2` still asks for a PER-LEG R3
 `consistent` verdict (see the proposed amendment above). A PASS feeds `MD-PROMOTE-S1-S2`:
-a PR adding the leg to bybit_2 **and** bybit_portfolio together (mirror equality tests, human merge, not auto-land),
+a PR adding the leg to bybit_2 **and** bybit_portfolio together (mirror equality tests; the manager merges on the data-backed rule, not auto-land),
 and the evidence record must first carry a **portfolio-overlap check** (e.g. `trend_donchian_eth_prop` 1h beside
 `trend_donchian_eth_4h`: signal/return correlation and combined drawdown). The bybit_1 soak stays as a parallel
 source; contracts carry both (`sources` in `SOAKS.json`). This PR promotes nothing.
