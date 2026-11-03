@@ -160,11 +160,11 @@ def _load_model_state(
     branch matched.
     """
     p = Path(model_state_path)
-    if p.is_file():
+    if _is_readable_file(p):
         candidate = p
     else:
         candidate = _resolve_state_path_via_mirror(p, registry_root)
-        if candidate is None or not candidate.is_file():
+        if candidate is None or not _is_readable_file(candidate):
             raise ShadowFactoryError(
                 f"model_state_path not found at {p}"
                 + (f" (also tried mirror fallback {candidate})" if candidate else "")
@@ -175,6 +175,21 @@ def _load_model_state(
         raise ShadowFactoryError(
             f"failed to read model state at {candidate}: {exc}"
         ) from exc
+
+
+def _is_readable_file(path: Path) -> bool:
+    """``Path.is_file()`` that treats an unstat-able path as absent.
+
+    Python 3.11's ``is_file`` swallows only ENOENT/ENOTDIR/EBADF/ELOOP; a
+    parent directory we cannot traverse (EACCES, e.g. a foreign
+    ``/home/ubuntu`` on a CI runner or a VM with tighter perms) raises
+    ``PermissionError`` instead of returning False, which skipped the
+    mirror fallback entirely. Unreadable means "not here" for resolution.
+    """
+    try:
+        return path.is_file()
+    except OSError:
+        return False
 
 
 def _resolve_state_path_via_mirror(
