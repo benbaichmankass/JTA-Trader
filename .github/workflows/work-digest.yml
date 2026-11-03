@@ -117,6 +117,15 @@ jobs:
   # of work and it must answer on EVERY push, never queue behind a running
   # digest and get cancelled. Only the expensive half is serialised.
   gate:
+    # GH-QUEUE-DEDUPE (2026-11-03): the gate re-reads CURRENT main (digest_due.py
+    # + the window base), it reports no per-event payload, so a pending gate
+    # replaced by a newer push loses nothing: the newer gate answers for the same
+    # state. cancel-in-progress stays false so a RUNNING gate always finishes
+    # (its digest job needs it). A replaced pending run is a never-started
+    # `cancelled`, which claude-run-failure-alert already treats as superseded.
+    concurrency:
+      group: work-digest-gate
+      cancel-in-progress: false
     runs-on: ubuntu-latest
     timeout-minutes: 5
     outputs:
