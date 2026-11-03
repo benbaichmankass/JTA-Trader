@@ -1,5 +1,7 @@
 {
   "tier": 1,
-  "landing": "self",
-  "why": "Logging only: appends the 20-feature row, own-bar ts/close/volume and eval time to the ml_entry / ml_entry_v2 below_tau and cost_gate audit reasons (PI-20261103-MLV2-0001). Same raise points, same decisions, same packages; the tail is computed in a try/except that returns an empty string."
+  "landing": "hold",
+  "hold_reason": "unvouchable_paths",
+  "hold_text": "Logging-only change, but it edits src/units/strategies/ml_entry.py, a path named Tier-3 that pr-landing-guard cannot vouch for. Same raise points, same decisions, same packages; the tail is built in a try/except returning an empty string. The manager reads and lands it (dispatch 2026-11-03 16:42Z).",
+  "why": "Appends the 20-feature row, own-bar ts/close/volume and eval time to the ml_entry / ml_entry_v2 below_tau and cost_gate audit reasons (PI-20261103-MLV2-0001)."
 }
