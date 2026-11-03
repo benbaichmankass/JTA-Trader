@@ -1000,14 +1000,80 @@ def evidence_extend_only(args) -> int:
     return 0
 
 
+def ledger_row(t, entry: float, risk: float, side_s: int, px: float, j: int, reason: int, fav: float,
+               entry_time, exit_time, net_r: float) -> dict:
+    """One per-trade gross-R ledger row (the shape of docs/research/ml-entry-prop-gate-2026-11-02/ledgers/ml_entry_ethsol.jsonl)."""
+    gross = side_s * (px - entry) / risk
+    return {"leg": "ml_entry", "strategy": "ml_entry", "symbol": t.symbol, "direction": t.side,
+            "entry_time": str(entry_time), "exit_time": str(exit_time), "entry": entry, "sl": entry - side_s * risk,
+            "exit_reason": {0: "time", 1: "sl", 2: "take_profit"}[reason], "gross_r": round(gross, 6),
+            "mfe_r": round(max(fav / risk, gross), 6), "net_r_evidence": round(net_r, 6)}
+
+
+def ledger_ethsol(args) -> int:
+    """Emit ledger_ethsol.jsonl: the moving-TP variant's per-trade gross R on ETHUSDT+SOLUSDT, SAME population as the v1 prop-gate
+    ledger (served ENTRY trades 2025-10-01..2026-09-30 on the bybit_2 symbols, TP model fold trained < 2025-10-01, margin from the
+    dev stage) under the policy RQ-20261101-383f-01 registered (two-way unless --extend-only). Net-R evidence is asserted equal to
+    the evidence_extend_only two_way mean when --expect-mean is given. Consumed by scripts/research/ml_variant_prop_gate.py."""
+    cache, out = Path(args.cache), Path(args.out)
+    out.mkdir(parents=True, exist_ok=True)
+    dev = json.loads(Path(args.dev_json).read_text())
+    art = json.loads(SERVED.read_text())
+    syms = E.universe()
+    tab = E.build_table(cache, syms)
+    bars = load_bars(cache, syms)
+    panel = feature_panel(bars)
+    cut = pd.Timestamp(E.HOLDOUT_START, tz="UTC") - pd.Timedelta(days=E.EMBARGO_DAYS) - pd.Timedelta(hours=H + 1)
+    tm = fit_tp_model(training_rows(tab, bars, panel, cut, SEED))
+    trades = served_trades(tab, E.HOLDOUT_START, DEV_END, art)
+    trades = trades[trades.symbol.isin(E.traded_symbols())].reset_index(drop=True)
+    ck = trade_checkins(trades, bars, panel)
+    probs = probs_by_trade(ck, predict_probs(tm, ck))
+    sc = Scorer(trades, bars, probs, tm["class_mean_net_r"])
+    rec, g = [], globals()
+    orig = g["walk"]
+
+    def spy(*a, **k):
+        r = orig(*a, **k)
+        rec.append(r[:3])
+        return r
+    g["walk"] = spy
+    try:
+        pol = sc.policy(float(dev["margin_star"]), extend_only=args.extend_only)
+    finally:
+        g["walk"] = orig
+    assert len(rec) == len(pol) == len(trades), (len(rec), len(pol), len(trades))
+    mean = float(np.mean([x[0] for x in pol]))
+    print("5-symbol mean net R", mean, "n", len(pol), flush=True)
+    if args.expect_mean is not None:
+        assert abs(mean - args.expect_mean) < 1e-6, f"does not reproduce the evidence record: {mean} vs {args.expect_mean}"
+    led = []
+    for k, t in trades.iterrows():
+        px, j, reason = rec[k]
+        s = 1 if t.side == "long" else -1
+        Ob, Hh, L, _C = sc.win[k]
+        entry, risk = float(Ob[0]), E.SL_ATR * float(t.atr)
+        ts = bars[t.symbol]["ts"]
+        fav = (Hh[:j].max() - entry) if s > 0 else (entry - L[:j].min())
+        led.append(ledger_row(t, entry, risk, s, px, j, reason, fav, ts.iloc[int(t.i) + 1],
+                              ts.iloc[int(t.i) + j] + pd.Timedelta(hours=1), pol[k][0]))
+    df = pd.DataFrame(led)
+    sub = df[df.symbol.isin(["ETHUSDT", "SOLUSDT"])].sort_values("entry_time")
+    (out / "ledger_ethsol.jsonl").write_text("\n".join(json.dumps(r) for r in sub.to_dict("records")) + "\n")
+    print("ledger_ethsol", len(sub), "evidence-stack mean net R", sub.net_r_evidence.mean(), flush=True)
+    return 0
+
+
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser()
-    ap.add_argument("cmd", nargs="?", default="run", choices=["run", "export", "entry-forward", "evidence-extend-only"])
+    ap.add_argument("cmd", nargs="?", default="run", choices=["run", "export", "entry-forward", "evidence-extend-only", "ledger-ethsol"])
     ap.add_argument("--cache", default="/tmp/ml_decision_klines")
     ap.add_argument("--out", default="/tmp/ml_entry_tp_revision_out")
     ap.add_argument("--unit", default=UNIT)
     ap.add_argument("--dev-only", action="store_true", help="stop before the one read of the forward window")
     ap.add_argument("--self-test", action="store_true")
+    ap.add_argument("--extend-only", action="store_true", help="ledger-ethsol: extend-only policy (default two-way, as 383f-01 registered)")
+    ap.add_argument("--expect-mean", type=float, default=None, help="ledger-ethsol: assert the 5-symbol mean net R equals this")
     ap.add_argument("--dev-json", default="comms/research/RQ-20261101-383f-01/local-20261101T1030Z/dev.json")
     ap.add_argument("--summary", default="", help="export: the run summary.json whose final fit is reproduced")
     ap.add_argument("--artifact", default=str(REPO / "ml" / "served" / "ml_entry_tp_revision_v1" / "model.json"))
@@ -1015,6 +1081,8 @@ def main(argv=None) -> int:
     if a.self_test:
         _self_test()
         return 0
+    if a.cmd == "ledger-ethsol":
+        return ledger_ethsol(a)
     if a.cmd == "evidence-extend-only":
         return evidence_extend_only(a)
     if a.cmd == "entry-forward":
