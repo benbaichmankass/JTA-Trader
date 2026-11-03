@@ -1,0 +1,16 @@
+{
+  "due_when": {
+    "check_every_days": 3,
+    "clears_when": "exit_plan.targets for a package with a logged tp revision equals the package/venue TP, or the divergence is documented as intended and killed with a reason",
+    "kind": "observation"
+  },
+  "id": "PI-20261103-EXITPLAN-TP-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "audit",
+    "ref": "manager question 2026-11-03 (ML-V1-PARITY TP mismatch check)",
+    "rerun": "journalctl?unit=ict-trader-live&grep=ml_first_passage vs journal?table=order_packages tp vs live-review packet context_v3.exit_plan.targets for the same package"
+  },
+  "state": "queued",
+  "what": "exit_plan.targets (src/runtime/exit_plan_materializer.py, shown in live-review context_v3) holds the ENTRY-time TP and does not follow ml_first_passage TP revisions. MEASURED on pkg-609dc0420b7d4ee6 (SOLUSDT short, bybit_2/bybit_portfolio): entry TP 88.919 (3 ATR, signal log 00:01Z), revised 08:00:32Z to 85.8486 (+6R... 6 x ATR14 from entry) by order_monitor ml_first_passage, exchange modify retCode 0 on both accounts, package row tp=85.8486. exit_plan still shows 88.92, so a live-review reading it sees a TP the venue no longer rests. Decide whether exit_plan should read the revised TP (package tp / tp_revision meta) and fix; Tier 1 if read-only display."
+}
