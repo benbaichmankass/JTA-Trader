@@ -26,5 +26,5 @@ def test_alias_file_is_well_formed():
     assert len(names) == len(set(names))
     for m in models.values():
         assert m["name"].split("-")[0] in breeds
-    assert display_name("exit-policy-v1") == "Retriever-1"
-    assert display_name("ml-decision-entry-v2") == "Bloodhound-2"
+    assert display_name("exit-policy-v1") == "Labrador-1"
+    assert display_name("ml-decision-entry-v2") == "Foxhound-2"
