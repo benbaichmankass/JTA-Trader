@@ -56,43 +56,16 @@ on:
     # no ready trigger would be unmergeable forever.
     types: [opened, synchronize, reopened]
     branches: [main]
-  push:
-    branches: [main]
-    # BOT-DATA PUSHES SKIP THE PUSH RUN (RUNNER CENSUS 2026-11-01, row GRADE-EVERYTHING-CONTINUOUSLY / lane FORECAST-GRADE-FIRST-PASSAGE).
-    # A push to main whose changed files ALL match this list is a bot data landing whose own PR already ran this check on the
-    # identical tree. Any other file in the commit (code, config, workflows, tests, a path the suite or a guard-test reads)
-    # runs it as before. PRs are NOT affected: `pull_request` has no filter, so no guard is skipped on any PR.
-    # The same list is in pytest-run / guards / repo-inventory / pytest-collect; tests/test_push_paths_ignore_bot_data.py pins
-    # them identical and DISJOINT from every committed path the test suite reads.
-    paths-ignore:
-      - '.github/merge-slots/**'
-      - '.github/pr-automerge-requests/**'
-      - '.github/pr-landing/**'
-      - 'comms/research/RQ-*/**'
-      - 'comms/research/CF-*/**'
-      - 'comms/research/counterfactual_grades/**'
-      - 'comms/research/soak_book_grade/**'
-      - 'comms/research/utilization/**'
-      - 'comms/research/health/**'
-      - 'research/results/**'
-      - 'comms/desk/decisions.jsonl'
-      - 'comms/desk/packets/**'
-      - 'comms/desk/role_grade.json'
-      - 'comms/desk/forecast_grade.json'
-      - 'comms/desk/forecast_ledger.jsonl'
-      - 'comms/desk/am_judgement_grade.json'
-      - 'comms/desk/feed_gaps.jsonl'
-      - 'comms/desk/touches.jsonl'
-      - 'comms/live_review/rows/**'
-      - 'comms/live_review/outcomes.jsonl'
-      - 'comms/live_review/killed_rows.json'
-      - 'comms/claude_strategy_scores.jsonl'
-      - 'comms/news_alpha/**'
-      - 'docs/claude/pending-pings.jsonl'
-      - 'docs/claude/work/WORK-DIGEST.json'
-      - 'docs/claude/work/research-queue-dispatch-receipt.json'
-      - 'docs/claude/work/USAGE-READINGS.jsonl'
-      - 'docs/claude/work/TRAINER-CAPTURE-WATCH.json'
+  # NO PUSH-TO-MAIN TRIGGER (CI-STREAMLINE, operator 2026-11-03). Every PR already runs its relevant guards; the push run
+  # re-ran `--all` over the merged tree. MEASURED 2026-11-02 13:43Z -> 11-03 21:19Z: 100 push runs, p50 24.6 wall-min,
+  # ~3,355 wall-min. Replaced by ONE scheduled `--all` run of main every 2 h (below), which still catches what only a
+  # whole-tree run can: a semantic conflict between two PRs each green on an older base, and calendar-driven guards that
+  # go red with nobody's diff. GIVES UP: per-push latency (now <= 2 h + run time) and per-sha attribution of a main red.
+  # main-tree-watch.yml still grades the diff-independent rules hourly. A red scheduled run surfaces through
+  # render_due_list.py::src_red_crons. Pinned by tests/test_ci_streamline_no_push.py.
+  schedule:
+    # Every 2 h at :29 (off the hour on purpose). `--all` on main, never cancelled (see concurrency below).
+    - cron: '29 */2 * * *'
   workflow_dispatch:
 
 permissions:
@@ -142,9 +115,10 @@ permissions:
 #
 # The PR arm is deliberately UNCHANGED (`pull_request.number`), so the 2026-08-06
 # stacking fix this block exists for is untouched.
+# CI-STREAMLINE: a scheduled run of main is never cancelled (a cancelled backstop reads as red in src_red_crons and graded nothing).
 concurrency:
   group: guards-${{ github.event_name }}-${{ github.event.pull_request.number || github.sha }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.event_name != 'schedule' }}
 
 jobs:
   guards:
@@ -242,7 +216,7 @@ jobs:
           # (BL-20260809-GUARD-STEP-WHEN-SKIPS-ON-PUSH).
           EXTRA=""
           case "${{ github.event_name }}" in
-            push|workflow_dispatch) EXTRA="--all" ;;
+            push|workflow_dispatch|schedule) EXTRA="--all" ;;
           esac
           python3 scripts/ci/run_guards.py $EXTRA
           echo "exit=$?" >> "$GITHUB_OUTPUT"
