@@ -1,6 +1,6 @@
 # Manager handoff 2026-11-03: session_01AFoLuJ1apgy8sfngu4WyNH (Manager Session 2026-11-01a) -> new
 
-> Doc status: `live` · category `record` · 2026-11-03 · rotation reason: operator popup ~06:30Z ("Hand over to a fresh manager now") to cut usage (old manager context ~611k tokens; weekly plan usage 89% at 06:28Z, reset Wed 2026-11-04 18:00Z).
+> **Doc status:** `unknown` · category `handoff` · last verified `2026-11-03` · registered in [`docs/DOCUMENT-INDEX.md`](../../../DOCUMENT-INDEX.md) · rotation reason: operator popup ~06:30Z ("Hand over to a fresh manager now") to cut usage (old manager context ~611k tokens; weekly plan usage 89% at 06:28Z, reset Wed 2026-11-04 18:00Z).
 
 ## Operator directives in force (verbatim where quoted)
 
