@@ -109,6 +109,15 @@ TARGETS: dict[str, dict] = {
     # RQ-RUN (2026-09-28): the queue's own replenisher (daily) and mechanical
     # grader (every 6 h) are what make it run without a session; a dropped
     # slot on either is exactly the silence this keeper exists to cover.
+    # GH-CAPACITY-INFRA-RUNNER / PI-20261103-RAM7EH86-0005 (2026-11-03): the hosted-fallback router for the
+    # self-hosted jta-infra runners. Its `4,19,34,49 * * * *` cron created ZERO schedule runs in its first ~4 h
+    # (only workflow_dispatch runs), and that is why nothing fell back when the trainer disk hit 100% and a
+    # real-money flatten died (system-actions 41650362029, 14:10Z). A 15-min cron's slot never ages past
+    # GRACE_MIN, so like pytest-run it is kept only through starved_min. Self-dedupes: each run re-reads the
+    # runner list + trainer disk and rewrites INFRA_RUNS_ON only on a state change (decide() is idempotent),
+    # under a cancel-in-progress concurrency group.
+    "infra-runner-health.yml": {"stale_hours": 2, "starved_min": 20,
+                                "self_dedupes": "decide() re-measures and only writes INFRA_RUNS_ON on a change; idempotent per tick"},
     "research-queue-replenish.yml": {"stale_hours": 26},
     "research-queue-grade.yml": {"stale_hours": 26},
     # GH-CAPACITY-PR-CI-FANOUT (manager 2026-10-15T13:06Z): pytest-run's post-merge backstop.
