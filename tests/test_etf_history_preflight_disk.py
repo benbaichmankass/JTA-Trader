@@ -130,3 +130,34 @@ def test_backfill_continues_itself_and_has_a_backstop_schedule():
         "steps.cont.outputs.continuing" in red["if"]
     )  # intermediate runs with pending series are not red
     assert "--max-new 60 --workers 6" in text
+
+
+def test_hf_storage_limit_is_described_in_full_and_not_retried():
+    """Run 41552388391 chunks 3-4: the reason ('Private storage limit reached') sat after a newline that str(e)[:300] cut off,
+    and the upload was retried with sleeps although waiting can never free space."""
+    import importlib.util
+
+    spec = importlib.util.spec_from_file_location(
+        "hf_publish_t", REPO / "scripts" / "data_lake" / "hf_publish.py"
+    )
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+
+    class Resp:
+        status_code = 403
+
+    class Quota(Exception):
+        response = Resp()
+
+    q = Quota(
+        "(Request ID: Root=1-abc)\n\n403 Forbidden: Private storage limit reached for user bentzbk, please upgrade your plan"
+    )
+    msg, retryable = mod.describe_hf_error(q)
+    assert (
+        "Private storage limit reached for user bentzbk" in msg
+        and "HTTP 403" in msg
+        and "Quota" in msg
+    )
+    assert retryable is False
+    assert mod.describe_hf_error(RuntimeError("HTTP 500 gateway timeout"))[1] is True
+    assert "LAKE=0" in (WF / "etf-history-pipeline.yml").read_text()

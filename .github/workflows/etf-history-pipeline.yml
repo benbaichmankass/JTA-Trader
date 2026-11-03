@@ -241,6 +241,9 @@ jobs:
                 lake_ok=1
               else
                 echo "::error::chunk ${chunk}: lake publish FAILED; pushing this chunk to the trainer in full instead (nothing is dropped)"; rc=1
+                # A failed publish (e.g. HF 'Private storage limit reached') is retried ONCE per run, not once per chunk: every further chunk would
+                # spend minutes failing the same way. The next run tries the lake again, so it heals as soon as space is freed.
+                LAKE=0; echo "::warning::lake publishing is skipped for the rest of this run; the trainer keeps the full chunks"
               fi
             fi
             if [ "$lake_ok" = "1" ]; then
