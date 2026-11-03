@@ -2316,7 +2316,7 @@ jobs:
             REMOTE_CMD="ACTION_APPLY=$(printf '%q' "${ACTION_APPLY:-}") SPARSE_PATTERNS_B64=$(printf '%q' "${SPARSE_PATTERNS_B64}") bash -s"
           fi
           if [ "${ACTION}" = "prune-db-backups" ]; then
-            REMOTE_CMD="ACTION_APPLY=$(printf '%q' "${ACTION_APPLY:-}") ACTION_DAYS=$(printf '%q' "${ACTION_DAYS:-}") ACTION_KEEP=$(printf '%q' "${ACTION_KEEP:-}") ${REMOTE_CMD}"
+            REMOTE_CMD="ACTION_APPLY=$(printf '%q' "${ACTION_APPLY:-}") ACTION_DAYS=$(printf '%q' "${ACTION_DAYS:-}") ACTION_KEEP=$(printf '%q' "${ACTION_KEEP:-}") ACTION_FILE=$(printf '%q' "${ACTION_FILE:-}") ACTION_CONFIRM=$(printf '%q' "${ACTION_CONFIRM:-}") ${REMOTE_CMD}"
           fi
           if [ "${ACTION}" = "backfill-own-fill-exits" ]; then
             REMOTE_CMD="ACTION_APPLY=$(printf '%q' "${ACTION_APPLY:-}") ACTION_IDS=$(printf '%q' "${ACTION_IDS:-}") ${REMOTE_CMD}"
