@@ -1,0 +1,15 @@
+{
+  "due_when": {
+    "due_date": "2026-11-05",
+    "kind": "date"
+  },
+  "id": "PI-20261103-01AFOLUJ-0002",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "manager session_01AFoLuJCo138TgfjBcbwcLh 2026-11-03 ~07:55Z prop pipeline check",
+    "rerun": "curl https://ict-bot.duckdns.org/api/bot/prop/tickets?account_id=breakout_2&limit=8 (pkg-591f76d3005e4cc8); /api/diag/journal?table=order_packages for that package's sl history"
+  },
+  "state": "queued",
+  "what": "Possible wrong-side stop on prop package pkg-591f76d3005e4cc8 (trend_donchian_eth_prop SHORT, 2026-10-29 21:02Z): every account's ticket has entry 2258.04, sl 2257.2575, i.e. the stop is BELOW entry on a short (0.03% away, profit side). UNVERIFIED whether the signal emitted it or a trail rewrote the ticket after entry; if the signal emitted it, it is a stop-geometry bug on a prop money path."
+}
