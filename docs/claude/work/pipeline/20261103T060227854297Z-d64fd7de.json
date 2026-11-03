@@ -1,0 +1,16 @@
+{
+  "due_when": {
+    "clears_when": "both probes read ok on the receipt, or each breach is traced to a named row/lane and owned",
+    "due_date": "2026-11-05",
+    "kind": "date"
+  },
+  "id": "PI-20261103-03PROBES-0001",
+  "next_action": "check_observation",
+  "origin": {
+    "kind": "review",
+    "ref": "runtime_logs/attention_watch_receipt.json at 2026-11-03T05:01:28Z",
+    "rerun": "scripts/ops/diag_fetch.sh 'log_file?name=attention_watch_receipt&lines=40' and read probes"
+  },
+  "state": "queued",
+  "what": "Attention receipt 2026-11-03T05:01Z: probes inflight=breached and live_review_due_stale=breached (all other probes ok, incl. research and prop_feed)."
+}
