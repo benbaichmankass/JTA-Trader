@@ -1,0 +1,16 @@
+{
+  "due_when": {
+    "check_every_days": 7,
+    "due_date": "2026-11-07",
+    "kind": "date"
+  },
+  "id": "PI-20261103-6GNSZYUN-0011",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "SOAK-REGRADE 2026-11-03, docs/claude/work/findings/soak-regrade-20261103.md (manager follow-up item 3)",
+    "rerun": "python3 scripts/ops/mandate_resolver.py --leg mgc_pullback_1d --from S1 --to S2 --account ib_live --json  # must no longer say 'no soak contract'; and python3 scripts/ci/check_soak_contracts.py"
+  },
+  "state": "queued",
+  "what": "Six ib_paper testing legs have NO soak contract in docs/claude/work/SOAKS.json: claude_desk, ict_scalp_mgc_15m, mes_trend_long_1d, mgc_pullback_1d, mgc_trend_1h, mhg_pullback_1d. mandate_resolver reports R-SOAK-NOT-PASSED 'no soak contract SOAK-stage1-ib_paper-<leg>' for each, so none can ever pass mechanics on ib_paper. Fix: run `python3 scripts/ops/soak_state.py --backfill` on a FULL clone (it dates contracts from git history via soak_report.start_dates; NOT run in this lane because the session clone is shallow and would mis-date them) and land the new contracts as a Tier-1 PR."
+}

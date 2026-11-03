@@ -1,0 +1,16 @@
+{
+  "due_when": {
+    "check_every_days": 7,
+    "due_date": "2026-11-07",
+    "kind": "date"
+  },
+  "id": "PI-20261103-6GNSZYUN-0012",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "SOAK-REGRADE 2026-11-03, docs/claude/work/findings/soak-regrade-20261103.md (manager follow-up item 3)",
+    "rerun": "python3 -c \"import sys;sys.path.insert(0,'scripts/ops');import mandate_resolver as m,strategy_status as s;from pathlib import Path;a,_=s.load();print(m._mechanics_proven('trend_donchian_sol_4h',Path('.'),a))\"  # must read proven: True, basis path_soak"
+  },
+  "state": "queued",
+  "what": "config/mechanics_paths.yaml registers only the Alpaca path (alpaca_equity_bracket_v1); no Bybit perp bracket path exists, so every crypto testing leg can prove mechanics only by its OWN soak. Passed bybit_1 soaks already exist (SOAKS.json PASS dispositions: ada_pullback_2h, trend_donchian_eth_4h, trend_donchian_sol_prop, trend_donchian_xrp_4h, xrp_pullback_2h, trend_donchian_eth_prop). Register e.g. bybit_perp_bracket_v1 (exchange bybit) for those proven legs plus every bybit_1 testing leg whose order path is config-only (delta: none), checking each leg's code path (e.g. ml_entry_v2 / e4_oi_shock_1h / claude_desk may be new_code). Per the registry header the entries land in a promoting PR or with a stated per-leg delta audit."
+}
