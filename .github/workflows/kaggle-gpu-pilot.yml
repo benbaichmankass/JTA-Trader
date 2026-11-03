@@ -42,7 +42,7 @@ jobs:
         with:
           python-version: "3.11"
       - name: Install kaggle client (>=2 for KGAT tokens)
-        run: pip install -q "kaggle>=2.0"
+        run: pip install -q "kaggle>=2.0" six
       - name: Auth smoke test + quota
         run: |
           if [ -z "$KAGGLE_API_TOKEN" ]; then echo "KAGGLE_API_TOKEN secret is empty"; exit 1; fi

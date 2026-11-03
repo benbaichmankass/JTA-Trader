@@ -69,7 +69,7 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
-      - run: pip install "kaggle>=2.0"
+      - run: pip install "kaggle>=2.0" six
       - name: Self-test the exporter
         run: python3 scripts/research/market_data_export.py self-test
       - name: Pull the allowlisted shards from the trainer
@@ -149,7 +149,7 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
-      - run: pip install "kaggle>=2.0"
+      - run: pip install "kaggle>=2.0" six
       - name: Download the published dataset on a GitHub runner and re-hash it
         run: |
           set -uo pipefail
@@ -177,7 +177,7 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
-      - run: pip install "kaggle>=2.0"
+      - run: pip install "kaggle>=2.0" six
       - name: Mount the dataset in a CPU Kaggle kernel and re-hash it
         run: |
           set -uo pipefail
