@@ -1,0 +1,17 @@
+{
+  "based_on": "20261103T115220798503Z-fd613728.json",
+  "due_when": {
+    "check_every_days": 2,
+    "due_date": "2026-11-07",
+    "kind": "date"
+  },
+  "id": "PI-20261103-MB3OAWAX-0002",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "lane STRUCTURE-EXITS-ENABLE 2026-11-03, PR #22626 pytest-run STALE fix",
+    "rerun": "python3 -c \"import json,glob;print(sorted(json.load(open(p))['strategy'] for p in glob.glob('comms/strategy_evidence/*.json') if 'structure_exit' in (json.load(open(p)).get('omitted_levers') or [])))\""
+  },
+  "state": "queued",
+  "what": "[re-measure under structure_exit] 18 comms/strategy_evidence records (avax/eth/eth_prop/sol/htf _pullback_2h; gdx/ief/mgc/mhg/slv/tlt _pullback_1d; trend_donchian, _1h, _eth, _sol, _sol_4h, _ada_4h, _avax_4h) were downgraded to fidelity=approximate with structure_exit in omitted_levers by PR #22626, because those legs now declare structure_exit 'pivot=5' and the records measured the chandelier exit. Re-run scripts/ops/build_strategy_evidence.py for each (the trend + pullback harnesses now forward structure_exit via regime_debt_matrix _TREND/_PB_LEVER_FLAG) so the records are faithful to the live exit again. ALSO ml_entry: held OFF in #22626 because bybit_2 is real money and check_roster_promotion_evidence C5 forbids an approximate real-money record without a faithful re-measure; needs the ML structure runner (RQ-20261101-5e01-09..11), then declare structure_exit on ml_entry. Supersedes item (a) of PI-20261103-MB3OAWAX-0001 (ml_entry no longer declares structure_exit). UPDATE 2026-11-03 ~17:30Z: ml_entry is no longer held. The operator's one-time override (#22645) and option B ('stop only') put structure_exit 'pivot=5;sl_only' on ml_entry in the ml_entry SL-only PR; its record reads approximate and bybit_2/ml_entry is in FIDELITY_BASELINE on RQ-20261103-5e04-01 (blocked on build ML-SL-ONLY-STRUCTURE-ARM, about 0.5 day). The 18 trend/pullback records still need build_strategy_evidence re-runs."
+}
