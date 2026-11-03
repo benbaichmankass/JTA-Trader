@@ -6,6 +6,11 @@
   },
   "id": "PI-20261103-RAM7EH86-0001",
   "next_action": "check_observation",
+  "observation": {
+    "due_by": "2026-11-05",
+    "how_to_check": "actions list_workflow_jobs on the newest system-actions (or vm-diag-snapshot) run and the newest research-queue-dispatch run; read runner_name and started_at minus created_at",
+    "what": "after PR #22624 merges and the install + smoke issues run, one system-actions or vm-diag-snapshot job and one research-queue-dispatch dispatch job run on a trainer-jta-infra-* runner"
+  },
   "origin": {
     "kind": "session",
     "ref": "branch claude/infra-runner-jta-infra (held Tier-2 PR)",
