@@ -1,0 +1,18 @@
+{
+  "based_on": "20261103T094938466867Z-a1229c0a.json",
+  "due_when": {
+    "check_every_days": 1,
+    "clears_when": "after the perp-candles fix is merged and deployed, live p_long/p_short (audit reasons) match the ml_decision_shadow row within 0.002 with equal n_ref on the next 3 decision bars; and the other Bybit-fed strategies are checked for the same spot resolution",
+    "kind": "observation"
+  },
+  "id": "PI-20261103-MLV2-0001",
+  "next_action": "check_observation",
+  "origin": {
+    "kind": "audit",
+    "ref": "ML-ENTRY-V2-SILENT lane 2026-11-03",
+    "rerun": "audit_query?event=ml_entry_eval&since=<d> vs log_file?name=ml_decision_shadow&grep=<SYM>, compare per (bar_close,symbol) best pred on trading bars"
+  },
+  "routed_to": "branch claude/ml-v1-parity-perp-candles (held for Manager Session 2026-11-03b merge)",
+  "state": "routed",
+  "what": "ml_entry LIVE vs ml_decision_shadow score divergence. MEASURED 2026-11-03 over 5 USDT traded symbols x 4h decision bars 2026-11-02T08Z..11-03T08Z (n=20 pairs, v1 only): live best-pred vs shadow best-pred agree on 11-02T20Z/11-03T08Z but diverge up to 2x on 11-02T08Z (BTC live 0.0422 vs shadow 0.1237; ETH 0.0858 vs 0.1715; SOL 0.0689 vs 0.1473; tau 0.10) and 11-03T00Z (ADA 0.0711 vs 0.1100). Shadow crossed tau for BTC/ETH on 11-02T08Z, live did not, so live took no BTC short. Cause UNVERIFIED (reference-frame timing 08:03 vs 08:01, n_reference, forming bar). Probe: after the logging PR claude/ml-entry-eval-scores deploys, diff live eval n_ref/p_long/p_short against the shadow row for the same bar_close. || ROOT CAUSE (lane ML-V1-PARITY 2026-11-03, MEASURED on the 12:00Z bar): live candles come through BybitConnector's ccxt (defaultType=spot), so bare BTCUSDT resolves to the SPOT market where one exists (40 of 52 reference perps; perp-only symbols fall back to linear): a spot/perp mix the model never saw. Trainer-VM replay: all-perp frames reproduce the shadow score exactly (BTC -0.2009/-0.0896, n=52); spot-where-fresh + perp otherwise, minus one symbol, reproduces the LIVE score to 4 decimals (BTC -0.1747/-0.1159, n=51). Fix held: fetch BASE/USDT:USDT. WIDER, UNVERIFIED: other Bybit-fed strategies use the same connector with bare symbols."
+}
