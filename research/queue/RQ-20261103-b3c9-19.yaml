@@ -144,3 +144,17 @@ grading:
   reason: 1 row(s), all measured, all pass
   rows: 1
   verdict: pass
+ml_consumer:
+  consumer: src/runtime/regime_shadow.py
+  decision: whether the regime head (and its vol/direction feature set) may advance candidate -> shadow -> advisory as the vol/trend gate input on the rostered real-money
+    legs (it acts only through the regime router, never an order)
+  legs:
+  - trend_donchian_eth_4h
+  - trend_donchian_xrp_4h
+  - xrp_pullback_2h
+  - ada_pullback_2h
+  book: money
+practice_precedent: 'M6 (docs/reference/trading-and-model-practice-principles.md): a recurring model-health monitor reads the incumbent against the class prior on
+  purged walk-forward folds, per symbol, never pooled'
+intervention_controls:
+  not_applicable: a model-quality bake-off on a static published shard, not an in-trade action or active-management intervention
