@@ -170,6 +170,69 @@ def nonverdict_attempts(uid: str, results_root: Optional[Path] = None) -> int:
     return rows
 
 
+#: PI-20261103-BCZDXJNR-0002 (Manager Session 2026-11-03b, operator "do all the fixes now"): a producer_failed row whose
+#: note says the script RAN TO COMPLETION but wrote no verdict.json is a deterministic authoring/harness defect, not an
+#: infrastructure blip -- re-running the same script at the same code gives the same nothing. MEASURED 2026-11-03: units
+#: on RULE-P5-MLDIAG-* / RULE-P5-MLV-GATE-MOVINGTP / RULE-P5-SX-GATE-* were re-dispatched 2-3x in 24 h this way, each a
+#: runner plus bookkeeping PRs. Such a unit is not re-armed until its script changes; any other non-verdict cause keeps
+#: the existing MAX_NONVERDICT_RETRIES retry.
+DETERMINISTIC_FAILURE_MARK = "no verdict.json"
+UNCHANGED_SINCE_FAILURE_MARK = "deterministic producer_failed, script unchanged"
+
+
+def _latest_nonverdict_row(uid: str, results_root: Optional[Path] = None) -> Optional[Dict[str, Any]]:
+    rdir = (results_root if results_root is not None else RESULTS_ROOT) / uid
+    best, best_ts = None, None
+    for f in sorted(rdir.glob("*.jsonl")) if rdir.is_dir() else []:
+        try:
+            lines = f.read_text(encoding="utf-8").splitlines()
+        except OSError:
+            continue
+        for ln in lines:
+            try:
+                r = json.loads(ln) if ln.strip() else None
+            except ValueError:
+                continue
+            if not isinstance(r, dict) or str(r.get("read_state") or "") not in NON_VERDICT_READ_STATES:
+                continue
+            ts = _parse_ts(r.get("generated_at"))
+            if best is None or (ts and (best_ts is None or ts > best_ts)):
+                best, best_ts = r, ts
+    return best
+
+
+def _script_unchanged(path: str, since_sha: str, repo: Path) -> Optional[bool]:
+    """True/False from `git diff --quiet <sha> HEAD -- <path>`; None when git cannot answer (unknown sha, no git)."""
+    try:
+        rc = subprocess.run(["git", "diff", "--quiet", since_sha, "HEAD", "--", path], cwd=repo,
+                            capture_output=True, timeout=30, check=False).returncode
+    except (OSError, subprocess.SubprocessError):
+        return None
+    return {0: True, 1: False}.get(rc)
+
+
+def deterministic_failure_block(entry: Dict[str, Any], uid: str, results_root: Optional[Path] = None,
+                                repo: Optional[Path] = None) -> Optional[str]:
+    """A reason NOT to re-arm, or None (fall back to the ordinary retry). Blocks only when ALL hold: the latest non-verdict
+    row says the script completed without a verdict.json; the unit still runs that same tool; and git PROVES the tool's
+    script is byte-identical between the failing row's commit and HEAD. Anything git cannot answer -> None (retry as before)."""
+    row = _latest_nonverdict_row(uid, results_root)
+    if not row or DETERMINISTIC_FAILURE_MARK not in str(row.get("note") or ""):
+        return None
+    pb = row.get("produced_by") or {}
+    tool, sha = str(pb.get("tool") or ""), str(pb.get("commit_sha") or "")
+    if not tool or not sha or tool not in json.dumps(entry.get("run") or {}):
+        return None   # no tool recorded, or the unit's command changed -> let it run
+    script = next((t for t in tool.split() if t.endswith((".py", ".sh")) and "/" in t), None)
+    if not script:
+        return None
+    same = _script_unchanged(script, sha, repo if repo is not None else _REPO)
+    if same is not True:
+        return None
+    return (f"{UNCHANGED_SINCE_FAILURE_MARK}: the last run ({pb.get('run_id')}) completed without verdict.json and "
+            f"{script} is unchanged since {sha[:9]} -- fix the script (or re-author/kill the unit), then it re-arms")
+
+
 def rearmable(entry: Dict[str, Any]) -> bool:
     """A stamp-cleared unit whose only landed rows are non-verdict outcomes and
     that is still under the retry cap."""
@@ -439,6 +502,9 @@ def _is_due(entry: Dict[str, Any], now: datetime) -> tuple:
                       f"{(entry.get('grading') or {}).get('graded_at')} (the {result_rows} landed "
                       "row(s) were already read)")
     if not last and result_rows and nonverdict_attempts(uid):
+        blocked = deterministic_failure_block(entry, uid)
+        if blocked:
+            return False, blocked
         attempts = nonverdict_attempts(uid)
         if attempts <= MAX_NONVERDICT_RETRIES:
             return True, (f"re-armed: all {attempts} landed row(s) are non-verdict outcomes "

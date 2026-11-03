@@ -1,0 +1,17 @@
+{
+  "due_when": {
+    "check_every_days": 2,
+    "clears_when": "The P5 MLDIAG/MLV/SX-GATE unit scripts emit verdict.json graded against their registered rule (or the units are re-authored/killed with a reason). The dispatcher stops re-dispatching a unit after a producer_failed landing until its command/script changes. research_slo producer_failed_rate_24h reads ok (<=0.25) on two consecutive passes.",
+    "kind": "observation"
+  },
+  "id": "PI-20261103-BCZDXJNR-0002",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "Manager Session 2026-11-03b, research-slo alert on #17895 21:24Z",
+    "rerun": "python3 scripts/research/research_slo.py; grep -h '\"read_state\": \"producer_failed\"' research/results/*/*.jsonl | tail"
+  },
+  "roadmap": "RESEARCH-FLOW",
+  "state": "queued",
+  "what": "Research SLO producer_failed_rate_24h breached at 2026-11-03T21:23:55Z: 0.305 vs <=0.25 (open breaches now 3 of 19). MEASURED over research/results/*/*.jsonl rows with generated_at >= 2026-11-02T21:30Z: 47 producer_failed rows. Dominant cause: 'no verdict.json. The script ran but did not grade its own output against RULE-...', on RULE-P5-MLDIAG-MINEDGE, RULE-P5-MLV-GATE-MOVINGTP, RULE-P5-MLDIAG-RISKCURVE, RULE-P5-MLDIAG-DECOMP and RULE-P5-SX-GATE-{SOL,ETH}-{P,SW15,SW15R1}. The units' scripts do not emit verdict.json, so this is an authoring/harness contract defect, not compute. Minor causes: 'no run-manifest.json' (e.g. RQ-20261025-3947-05 via research-script-run-kaggle-cpu run 41531253672) and cmd exit=1 (RQ-20261031-7b6f-13). Each failing unit was re-dispatched 2-3 times in 24 h (e.g. RQ-20261102-002/-003, RQ-20261103-001, RQ-20261101-5e01-02, RQ-20261101-78fc-37): the dispatcher re-runs a unit whose producer cannot grade, which burns compute and adds bookkeeping PRs (relevant to CI-STREAMLINE / COMPUTE-ALLOCATION)."
+}
