@@ -7,6 +7,11 @@
   },
   "id": "PI-20261103-MLV2-0001",
   "next_action": "check_observation",
+  "observation": {
+    "due_by": "2026-11-04",
+    "how_to_check": "audit?limit=600 (ml_entry_eval reasons) vs log_file?name=ml_decision_shadow&grep=<bar_close> with strategy=ml_entry, tf_offset 0m",
+    "what": "After PR #22650 is merged and deployed, live ml_entry p_long/p_short/n_ref equal the ml_decision_shadow row for the same bar_close on the first decision bar, for BTC, ETH, SOL, ADA, XRP (5 symbols x 1 bar = 5 pairs)"
+  },
   "origin": {
     "kind": "audit",
     "ref": "ML-ENTRY-V2-SILENT lane 2026-11-03",
