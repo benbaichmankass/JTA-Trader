@@ -3,13 +3,14 @@
   "strategy": "mhg_pullback_1d",
   "symbol": "MHG",
   "timeframe": "1d",
-  "config_fingerprint": "sha256:0caf3a8588bd113fa46ecd2c9a00c1fb",
+  "config_fingerprint": "sha256:478d371c542c2c640a30ea74796f7329",
   "basis": "harness_timefolds",
   "coverage_state": "measured",
   "fidelity": "approximate",
   "omitted_levers": [
     "trail_decay_stall_bars",
-    "trail_decay_tight_mult"
+    "trail_decay_tight_mult",
+    "structure_exit"
   ],
   "net_r_oos": 4.0986,
   "expectancy_r_oos": 0.4099,
@@ -86,5 +87,6 @@
   "generated_by": "scripts/ops/build_strategy_evidence.py",
   "source_run": "comms/strategy_evidence/runs/2026-09-24-e55/mhg_pullback_1d__trades.jsonl",
   "error": null,
-  "harness": "pullback"
+  "harness": "pullback",
+  "fidelity_basis": "2026-11-03 STRUCTURE-EXITS-ENABLE (PR #22626): the leg now declares structure_exit 'pivot=5' (live structure SL+TP replacing the chandelier). This record was measured WITHOUT it, so structure_exit is listed in omitted_levers and fidelity is downgraded approximate -> approximate. No measured field was changed; config_fingerprint refreshed to the current config so the record is tied to it as an APPROXIMATE measurement. Re-measure: PI-20261103-MB3OAWAX-0002."
 }
