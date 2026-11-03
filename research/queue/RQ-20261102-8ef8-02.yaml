@@ -1,7 +1,7 @@
 id: RQ-20261102-8ef8-02
 title: 'PROP STRUCTURE EXITS (programme 05): does a swing-structure trail (--trail-level swing) on trend_donchian_sol_prop beat the config-exact exit at the prop venue stack, 1110 d? Arms P / SW15 / SW10
   / SW15R1; feeds the prop gate per arm'
-status: queued
+status: done
 cadence: once
 kind: experiment
 theme: new_strategy_prop
@@ -99,3 +99,14 @@ intervention_controls:
   not_applicable: Arm P is the config-exact hold control and the three swing arms are one pre-registered lever family graded against it over 4 calendar folds. No matched-random or best-static draw is run
     here; the V3 prop gate downstream supplies the edge CI and the zero-edge null.
 last_dispatched_at: '2026-11-02T20:48:50+00:00'
+grading:
+  attested: RULE-RQ-20261102-8ef8-02-STRUCT-SWEEP
+  auto: true
+  decision_rule_id: RULE-RQ-20261102-8ef8-02-STRUCT-SWEEP
+  evidence:
+  - research/results/RQ-20261102-8ef8-02/41514291135.jsonl
+  graded_at: '2026-11-03'
+  grader: scripts/research/queue_grade.py
+  reason: 1 row(s), all measured, all pass
+  rows: 1
+  verdict: pass
