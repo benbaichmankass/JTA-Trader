@@ -54,16 +54,19 @@ TARBALL="/var/cache/actions-runner-${VER}-${ARCH}.tar.gz"
   "https://github.com/actions/runner/releases/download/v${VER}/actions-runner-linux-${ARCH}-${VER}.tar.gz"
 echo "runner_version=$VER arch=$ARCH"
 
-# Job-completed hook: wipe credentials a job may have written.
-cat > /usr/local/bin/jta-runner-job-cleanup <<'HOOK'
+# Job-completed hook: wipe credentials a job may have written. The runner only runs a hook whose path ends in
+# .sh/.ps1/.js (install run 41634697190 logged "not a valid path to a script" for the extensionless name, so the
+# wipe never ran); the workspace is NOT deleted -- actions/checkout cleans it, and keeping the clone avoids a
+# ~2:49 full re-clone of the ~2 GB tree on every job (vm-diag-snapshot run 41636162263).
+rm -f /usr/local/bin/jta-runner-job-cleanup
+cat > /usr/local/bin/jta-runner-job-cleanup.sh <<'HOOK'
 #!/usr/bin/env bash
 # ACTIONS_RUNNER_HOOK_JOB_COMPLETED for the jta-infra runners (install_infra_runner.sh).
 rm -rf "$HOME/.ssh" "$HOME/.config/gh" "$HOME/.kaggle" "$HOME/.netrc" "$HOME/.git-credentials" 2>/dev/null || true
-[ -n "${GITHUB_WORKSPACE:-}" ] && find "$GITHUB_WORKSPACE" -mindepth 1 -delete 2>/dev/null || true
 find /tmp -maxdepth 1 -user "$(id -u)" -mmin +0 -exec rm -rf {} + 2>/dev/null || true
 exit 0
 HOOK
-chmod 755 /usr/local/bin/jta-runner-job-cleanup
+chmod 755 /usr/local/bin/jta-runner-job-cleanup.sh
 
 for i in $(seq 1 "$COUNT"); do
   U="ghr$i"; D="$BASE/$U"; NAME="trainer-jta-infra-$i"
@@ -79,8 +82,8 @@ for i in $(seq 1 "$COUNT"); do
   else
     echo "already_configured $NAME"
   fi
-  grep -q ACTIONS_RUNNER_HOOK_JOB_COMPLETED "$D/.env" 2>/dev/null || \
-    echo "ACTIONS_RUNNER_HOOK_JOB_COMPLETED=/usr/local/bin/jta-runner-job-cleanup" >> "$D/.env"
+  touch "$D/.env"; sed -i '/^ACTIONS_RUNNER_HOOK_JOB_COMPLETED=/d' "$D/.env"
+  echo "ACTIONS_RUNNER_HOOK_JOB_COMPLETED=/usr/local/bin/jta-runner-job-cleanup.sh" >> "$D/.env"
   chown "$U:$U" "$D/.env"
   systemctl list-unit-files --no-legend 'actions.runner.*' | grep -qF "${NAME}.service" || ( cd "$D" && ./svc.sh install "$U" >/dev/null )
   # Per-service private /tmp: the moved workflows write fixed /tmp/<name> paths, so two concurrent jobs on two
