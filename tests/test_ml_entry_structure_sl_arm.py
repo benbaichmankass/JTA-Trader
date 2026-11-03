@@ -102,7 +102,6 @@ def test_bad_spec_refused():
 
 
 def test_walk_without_path_is_the_fixed_stop_walk(bars):
-    o, hi, lo, cl = _arrays(bars)
     for i, side, entry, atr in list(_cases(bars))[:20]:
         Ob, Hh, L, C = HM.windows(bars, np.array([i]))
         e = Ob[0][0]
@@ -114,7 +113,10 @@ def test_walk_without_path_is_the_fixed_stop_walk(bars):
 
 def test_walk_structure_cross_exits_at_close_and_tp_still_moves():
     H = HM.H
-    Ob = np.full(H, 100.0); Hh = np.full(H, 100.5); L = np.full(H, 99.5); C = np.full(H, 100.0)
+    Ob = np.full(H, 100.0)
+    Hh = np.full(H, 100.5)
+    L = np.full(H, 99.5)
+    C = np.full(H, 100.0)
     atr = 1.0
     path = [None, 98.0, 98.0] + [100.2] * (H - 2)          # after bar 2 closes the stop is above the close (100)
     px, j, reason, _ = HM.walk(Ob, Hh, L, C, 100.0, atr, 1, None, None, path)
