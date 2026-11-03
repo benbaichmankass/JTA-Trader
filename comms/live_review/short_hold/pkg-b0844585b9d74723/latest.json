@@ -1,7 +1,7 @@
 {
- "bar": "2026-11-03T11:45:00Z",
- "bar_close": "2026-11-03T11:50:00Z",
- "built_at": "2026-11-03T11:50:22Z",
+ "bar": "2026-11-03T11:50:00Z",
+ "bar_close": "2026-11-03T11:55:00Z",
+ "built_at": "2026-11-03T11:55:42Z",
  "closed": false,
  "order_package_id": "pkg-b0844585b9d74723",
  "packet": {
@@ -85,25 +85,31 @@
      "MGC",
      "short",
      "mgc_pullback_1d",
-     null
+     2.51
+    ],
+    [
+     "SPY",
+     "long",
+     "spy_trend_long_1d",
+     -0.165
     ],
     [
      "BTCUSDT",
      "short",
      "trend_donchian_1h",
-     null
+     1.11
     ],
     [
      "SOLUSDT",
      "short",
      "ml_entry",
-     null
+     -0.293
     ],
     [
      "IAUM",
      "short",
      "iaum_pullback_1d",
-     null
+     2.13
     ],
     [
      "GLD",
@@ -112,22 +118,22 @@
      null
     ],
     [
-     null,
-     null,
-     null,
-     null
+     "MHG",
+     "short",
+     "mhg_pullback_1d",
+     0.768
     ],
     [
      "ADAUSDT",
      "short",
      "trend_donchian_ada_4h",
-     null
+     0.0915
     ],
     [
      "SOLUSDT",
      "short",
      "trend_donchian_sol_4h",
-     null
+     1.37
     ]
    ],
    "book_note": "[symbol, direction, leg, open_r (null = not measured)] per OTHER open package, either side",
@@ -531,21 +537,16 @@
    "r_to_target": null
   },
   "generator": {
-   "head": null,
-   "reason": "origin/main not readable in this checkout",
-   "state": "could_not_look"
+   "head": "294bbcd36f",
+   "state": "current"
   },
-  "info_cutoff_at": "2026-11-03T11:50:39Z",
+  "info_cutoff_at": "2026-11-03T11:55:59Z",
   "leg": "claude_desk",
   "mechanics": {
    "evidence": "package sl 2290.0 / tp 2150.0 agree with every readable account",
    "verdict": "match"
   },
   "missing_inputs": [
-   {
-    "field": "read:telemetry",
-    "reason": "diag position_telemetry?limit=300: exit 3 (/ict-bot.duckdns.org -> unreachable. Use the issue relay only if every candidate is 'unreachable'; an 'answered_*' or 'timed_out_after_connect' means the web"
-   },
    {
     "field": "state.open_r",
     "reason": "no position_telemetry row for this package (telemetry covers the donchian/pullback family) and no /api/bot/positions row"
@@ -582,25 +583,18 @@
    "cell_now": null,
    "trend_now": "chop"
   },
-  "review_id": "LR-20261103T1150Z-pkg-b0844585b9d74723",
+  "review_id": "LR-20261103T1155Z-pkg-b0844585b9d74723",
   "short_hold": {
-   "atr": 3.047857142857213,
-   "bar": "2026-11-03T11:45:00Z",
-   "bar_close": "2026-11-03T11:50:00Z",
+   "atr": 2.982142857142922,
+   "bar": "2026-11-03T11:50:00Z",
+   "bar_close": "2026-11-03T11:55:00Z",
    "entry": 2253.34,
-   "mark": 2268.7,
-   "minutes_held": 699.6,
-   "open_r_at_mark": -0.419,
+   "mark": 2266.45,
+   "minutes_held": 704.9,
+   "open_r_at_mark": -0.3576,
    "r_unit": "entry_to_current_sl",
    "read_state": "read",
    "recent_bars": [
-    {
-     "close": 2269.94,
-     "high": 2271.36,
-     "low": 2269.18,
-     "open": 2271.36,
-     "t": "2026-11-03T10:50:00Z"
-    },
     {
      "close": 2272.19,
      "high": 2272.73,
@@ -677,6 +671,13 @@
      "low": 2264.65,
      "open": 2265.85,
      "t": "2026-11-03T11:45:00Z"
+    },
+    {
+     "close": 2266.45,
+     "high": 2268.7,
+     "low": 2266.44,
+     "open": 2268.7,
+     "t": "2026-11-03T11:50:00Z"
     }
    ],
    "risk_per_unit": null,
@@ -695,25 +696,18 @@
    "tp": 2150.0
   }
  },
- "packet_sha": "4959b948f8557a119164e71e53c38e38dd8350e27a259808a659b42add276f09",
+ "packet_sha": "88386cc2b95d62442108e62707bee407f9bdc257d8cc2158e2096cc793fcb951",
  "short_hold": {
-  "atr": 3.047857142857213,
-  "bar": "2026-11-03T11:45:00Z",
-  "bar_close": "2026-11-03T11:50:00Z",
+  "atr": 2.982142857142922,
+  "bar": "2026-11-03T11:50:00Z",
+  "bar_close": "2026-11-03T11:55:00Z",
   "entry": 2253.34,
-  "mark": 2268.7,
-  "minutes_held": 699.6,
-  "open_r_at_mark": -0.419,
+  "mark": 2266.45,
+  "minutes_held": 704.9,
+  "open_r_at_mark": -0.3576,
   "r_unit": "entry_to_current_sl",
   "read_state": "read",
   "recent_bars": [
-   {
-    "close": 2269.94,
-    "high": 2271.36,
-    "low": 2269.18,
-    "open": 2271.36,
-    "t": "2026-11-03T10:50:00Z"
-   },
    {
     "close": 2272.19,
     "high": 2272.73,
@@ -790,6 +784,13 @@
     "low": 2264.65,
     "open": 2265.85,
     "t": "2026-11-03T11:45:00Z"
+   },
+   {
+    "close": 2266.45,
+    "high": 2268.7,
+    "low": 2266.44,
+    "open": 2268.7,
+    "t": "2026-11-03T11:50:00Z"
    }
   ],
   "risk_per_unit": null,
