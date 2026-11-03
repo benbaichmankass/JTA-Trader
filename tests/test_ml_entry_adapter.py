@@ -298,3 +298,23 @@ def test_reference_frames_are_fetched_as_perps_but_keyed_by_the_plain_id(monkeyp
     B._ml_entry_reference_frames(["BTCUSDT"], "2026-01-30T17:00:00+00:00", object(), venue="alpaca")
     assert asked[-1] == "BTC/USDT:USDT"                                           # the Alpaca path reads Bybit PERPS too
     B._ML_ENTRY_REF_CACHE.clear()
+
+
+def test_eval_reasons_carry_the_audit_inputs_and_change_no_decision():
+    """PI-20261103-MLV2-0001: the below_tau reason ends with the 20-feature row, the own bar and the eval time, and the
+    refusal/package decisions are exactly what they were."""
+    df = _frame(2)
+    with pytest.raises(ValueError) as e:
+        M.order_package({"symbol": "ETHUSDT"}, candles_df=df, reference_frames=_refs(), model=_model(0.05, 0.02))
+    msg = str(e.value)
+    assert msg.startswith("below_tau:pred=") and ";n_ref=" in msg
+    feat = msg.split(";feat=")[1].split(";")[0].split(",")
+    assert len(feat) == len(F.FEATURES) and all(float(x) == float(x) for x in feat)
+    assert ";own_bar=" in msg and ";eval_at=" in msg
+    ok = M.order_package({"symbol": "ETHUSDT"}, candles_df=df, reference_frames=_refs(), model=_model(0.3, 0.05))
+    assert ok["direction"] == "long" and "feat=" not in str(ok["meta"])             # a package is untouched
+
+
+def test_audit_tail_never_raises():
+    assert M._audit_inputs({}, _frame(1), 5) == "" or M._audit_inputs({}, _frame(1), 5).startswith(";feat=")
+    assert M._audit_inputs({"ret_1": "x"}, None, 5) == ""
