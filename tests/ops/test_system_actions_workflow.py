@@ -1160,3 +1160,16 @@ def test_no_long_run_script_holds_an_expression() -> None:
         if "run" in step and len(step["run"]) > 15000 and "${{" in step["run"]
     ]
     assert not offenders, offenders
+
+
+def test_prune_db_backups_forwards_every_action_var_its_script_reads() -> None:
+    """prune_db_backups.sh reads ACTION_* vars with defaults (``${X:-}``), which
+    the ``${VAR:?`` guard above cannot see. #22483 added ``file``/``confirm`` but
+    never forwarded them, so the VM ran the default plan (issue #22512)."""
+    text = (OPS_DIR / "prune_db_backups.sh").read_text()
+    read = set(re.findall(r"\bACTION_[A-Z0-9_]+\b", text))
+    forwarded = _forwarded_env_by_action().get("prune-db-backups", set())
+    # positive control: the known-good vars must be seen on both sides
+    assert {"ACTION_APPLY", "ACTION_DAYS", "ACTION_KEEP"} <= read & forwarded
+    assert {"ACTION_FILE", "ACTION_CONFIRM"} <= read, "script no longer reads file/confirm?"
+    assert not (read - forwarded), f"read but not forwarded: {sorted(read - forwarded)}"
