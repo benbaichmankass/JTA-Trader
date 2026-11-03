@@ -17,15 +17,15 @@
    "n_rows": 3
   }
  },
- "computed_at": "2026-11-03T08:26:15Z",
+ "computed_at": "2026-11-03T13:29:18Z",
  "forecast": {
-  "brier": 0.1792,
+  "brier": 0.1809,
   "brier_ref_constant_0_5": 0.25,
   "hits": 9,
-  "n_scored": 53,
+  "n_scored": 55,
   "unresolved": 11
  },
- "population": "live-review rows with a forecast reviewed from 2026-10-31T00:00:00Z: 64 rows, 23 packages",
+ "population": "live-review rows with a forecast reviewed from 2026-10-31T00:00:00Z: 66 rows, 23 packages",
  "rows": [
   {
    "action": "hold",
@@ -678,7 +678,7 @@
   {
    "action": "hold",
    "d_hold": 0.0,
-   "d_mech": 0.0,
+   "d_mech": null,
    "forecast_outcome": "expired",
    "order_package_id": "pkg-c569fc01db464fb2",
    "p_target": 0.5,
@@ -715,7 +715,7 @@
    "action": "hold",
    "d_hold": null,
    "d_mech": null,
-   "forecast_outcome": null,
+   "forecast_outcome": "expired",
    "order_package_id": "pkg-4e74f4bdc6d44735",
    "p_target": 0.5,
    "price_reason": "no_path_change_trade_open_or_unjoined",
@@ -727,7 +727,7 @@
    "action": "hold",
    "d_hold": null,
    "d_mech": null,
-   "forecast_outcome": null,
+   "forecast_outcome": "expired",
    "order_package_id": "pkg-609dc0420b7d4ee6",
    "p_target": 0.45,
    "price_reason": "no_path_change_trade_open_or_unjoined",
@@ -750,7 +750,7 @@
   {
    "action": "hold",
    "d_hold": 0.0,
-   "d_mech": 0.0,
+   "d_mech": null,
    "forecast_outcome": "hit",
    "order_package_id": "pkg-c569fc01db464fb2",
    "p_target": 0.5,
@@ -794,6 +794,30 @@
    "price_state": "not_a_call",
    "review_id": "LR-20261103T0621Z-pkg-976b459f5c954df0",
    "trigger": "daily_floor"
+  },
+  {
+   "action": "hold",
+   "d_hold": null,
+   "d_mech": null,
+   "forecast_outcome": null,
+   "order_package_id": "pkg-609dc0420b7d4ee6",
+   "p_target": 0.3,
+   "price_reason": "no_path_change_trade_open_or_unjoined",
+   "price_state": "not_a_call",
+   "review_id": "LR-20261103T1222Z-pkg-609dc0420b7d4ee6",
+   "trigger": "stall"
+  },
+  {
+   "action": "hold",
+   "d_hold": null,
+   "d_mech": null,
+   "forecast_outcome": null,
+   "order_package_id": "pkg-609dc0420b7d4ee6",
+   "p_target": 0.28,
+   "price_reason": "no_path_change_trade_open_or_unjoined",
+   "price_state": "not_a_call",
+   "review_id": "LR-20261103T1224Z-pkg-609dc0420b7d4ee6",
+   "trigger": "adverse_r"
   }
  ],
  "rule": "RULE-DESK-AM-JUDGEMENT-V1",
@@ -803,10 +827,10 @@
    0.1815
   ],
   "mean_d_hold": 0.0618,
-  "mean_d_mech": 0.0407,
+  "mean_d_mech": 0.0438,
   "min_packages": 30,
   "n_packages": 15,
-  "n_packages_mech": 14,
+  "n_packages_mech": 13,
   "rule": "RULE-DESK-AM-JUDGEMENT-V1",
   "verdict": "accruing"
  }
