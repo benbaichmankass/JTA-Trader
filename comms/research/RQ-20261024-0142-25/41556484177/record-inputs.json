@@ -1,0 +1,18 @@
+{
+  "artifact_locator": "comms/research/RQ-20261024-0142-25/41556484177/ (run-manifest.json + verdict.json + logs/)",
+  "artifact_store": "comms/research/RQ-20261024-0142-25/41556484177",
+  "data_fingerprint": "{\"state\": \"not_established\", \"why\": \"the run named no existing input file or directory in its argv or in verdict.json data_inputs\"}",
+  "decision_rule_id": "RULE-RQ202610240142-25-1D-SLOW-DONCHIAN",
+  "decision_rule_registered_at": "2026-10-24",
+  "measurement_file": "comms/research/RQ-20261024-0142-25/41556484177/measurement.json",
+  "min_rows": "1",
+  "n": "567",
+  "note": "FAIL: B: pooled net_r <= 0 or folds short; D55: net_r/trade -0.0417 beats the baseline's 0.0717 by -0.1134 < the 0.1 materiality bar; D100: net_r/trade 0.1256 beats the baseline's 0.0717 by 0.0539 < the 0.1 materiality bar. Thresholds: n_floor 20, pooled_n_floor 39, folds 6 majority 4, breadth 0.5 over >= 2 powered cells, holm alpha 0.05, baseline B with materiality 0.1 R/trade. Crypto candles are Binance USD-M (PROXY for Bybit linear); the cost stack is the harness's venue-aware fee + slippage + funding. A pass is an input to a re-entry case, never a roster act.",
+  "population": "family=trend timeframe=1d symbols=BNBUSDT,DOGEUSDT,LINKUSDT,LTCUSDT,BCHUSDT,DOTUSDT arms=['B', 'D55', 'D100'] window=2020-06-01..2026-10-20 days=2400; 18 of 18 cells measured; trades net of fee+slippage+funding",
+  "power_state": "accruing",
+  "read_state": "measured",
+  "records_file": "",
+  "research_unit": "RQ-20261024-0142-25",
+  "tool": "python3 scripts/research/harness_stage0.py",
+  "verdict": "fail"
+}
