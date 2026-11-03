@@ -362,6 +362,16 @@ jobs:
                 description: 'Triggers vwap-backtest workflow — HTF trend-filter comparison backtest on the live VM.',
               },
               {
+                name: 'infra-runner-install',
+                color: 'b60205',
+                description: 'Triggers infra-runner-install — installs the self-hosted jta-infra runners on the trainer VM (GH-CAPACITY-INFRA-RUNNER, Tier 2). Owner-opened issues only.',
+              },
+              {
+                name: 'infra-runner-smoke',
+                color: 'b60205',
+                description: 'Triggers infra-runner-smoke — smoke job ON the jta-infra runner; arms vars.INFRA_RUNS_ON on green. Owner-opened issues only.',
+              },
+              {
                 name: 'trainer-vm-diag-request',
                 color: '5319e7',
                 description: 'Triggers trainer-vm-diag workflow — full-visibility SSH command runner on the trainer VM (autonomous Claude). QUICK read-only pulls (parallel-safe).',
