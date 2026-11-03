@@ -684,6 +684,23 @@ def slice_qty(
 
 
 
+#: One short wait before the single journal re-read when the venue is flatter
+#: than the ledger (a close that has not landed in the journal yet).
+JOURNAL_LAG_WAIT_S = 1.5
+
+
+def _venue_flatter_divergence(rec: Mapping[str, Any]) -> bool:
+    """DIVERGENT with |venue_net| < |ledger_net|, same sign or flat venue."""
+    if rec.get("state") != DIVERGENT:
+        return False
+    led, ven = rec.get("ledger_net"), rec.get("venue_net")
+    if led is None or ven is None:
+        return False
+    if abs(ven) >= abs(led):
+        return False
+    return abs(ven) <= ABS_TOL or (ven > 0) == (led > 0)
+
+
 def admit_slice(
     *,
     account_id: str,
@@ -701,6 +718,7 @@ def admit_slice(
     tpsl_mode_fn: Optional[Callable[[], str]] = None,
     hedge_fn: Optional[Callable[[str, str], bool]] = None,
     budget_trades: Optional[float] = None,
+    sleep_fn: Optional[Callable[[float], None]] = None,
 ) -> Dict[str, Any]:
     """May this strategy add a slice to (account, symbol) -- and how big?
 
@@ -758,6 +776,29 @@ def admit_slice(
             logger.warning("admit_slice: venue read failed for %s: %s", account_id, exc)
             positions = None
         rec = reconcile(slices, positions, symbol)
+        if _venue_flatter_divergence(rec):
+            # Same-tick journal-lag race (ADMISSION-JOURNAL-LAG-RACE, 2026-10-28
+            # trend_donchian_sol): the venue already closed a slice whose journal
+            # close has not landed. Re-read the journal ONCE after a short wait,
+            # then re-reconcile. Still divergent -> refused below, never resized.
+            detail["lag_recheck"] = {"first": dict(rec), "wait_s": JOURNAL_LAG_WAIT_S}
+            (sleep_fn or _time.sleep)(JOURNAL_LAG_WAIT_S)
+            fresh = (slices_reader or open_slices)(account_id, symbol)
+            if fresh is not None:
+                try:
+                    positions2 = (positions_reader or _default_positions_reader)(account_cfg)
+                except Exception as exc:  # noqa: BLE001
+                    logger.warning("admit_slice: venue re-read failed for %s: %s", account_id, exc)
+                    positions2 = None
+                rec2 = reconcile(fresh, positions2, symbol)
+                detail["lag_recheck"]["second"] = dict(rec2)
+                if rec2["state"] == RECONCILED:
+                    slices = fresh
+                    rec = rec2
+                    own = strategy_signed_qty(slices, strategy)
+                    detail.update({"n_slices": len(slices),
+                                   "ledger_net": ledger_net(slices), "own_signed": own})
+                    detail["lag_recheck"]["resolved"] = True
         detail["reconcile"] = rec
         if rec["state"] == UNREADABLE:
             return {"ok": False, "reason": "slice_ledger_venue_unreadable", "qty": 0.0,

@@ -106,3 +106,52 @@ def test_contenders_do_not_count_against_each_other():
     meta = {"slice_allocation": {"bybit_1": {"weight": 0.5, "contenders": ["a", "b"]}}}
     out = _admit([_slice("a", "long", 1.0)], _pos(1.0), meta=meta)
     assert out["ok"] and out["qty"] == pytest.approx(1.0)  # 0.5 of the full budget
+
+
+# --- ADMISSION-JOURNAL-LAG-RACE: re-read once when the venue is flatter ---------
+
+def _lagged(first, later, positions, **kw):
+    """Journal reader that returns *first* on call 1 and *later* afterwards."""
+    calls = {"n": 0, "slept": []}
+
+    def reader(a, s):
+        calls["n"] += 1
+        return first if calls["n"] == 1 else later
+
+    out = admit_slice(
+        account_id="bybit_1", account_cfg=CFG, strategy=kw.get("strategy", "b"),
+        symbol="ETHUSDT", direction=kw.get("direction", "long"), entry=100.0,
+        sl=95.0 if kw.get("direction", "long") == "long" else 105.0, meta=None,
+        sized_qty=2.0, dry=False, slices_reader=reader,
+        positions_reader=lambda cfg: positions, tpsl_mode_fn=lambda: "partial",
+        hedge_fn=lambda a, s: True, budget_trades=1.0,
+        sleep_fn=calls["slept"].append)
+    return out, calls
+
+
+def test_close_landing_between_reads_is_admitted():
+    stale = [_slice("a", "short", 1.0, sl=100.0)]
+    out, calls = _lagged(stale, [], _pos(0))
+    assert out["ok"], out
+    assert calls["n"] == 2 and len(calls["slept"]) == 1
+    assert out["detail"]["lag_recheck"]["resolved"] is True
+
+
+def test_persistent_divergence_is_still_refused():
+    stale = [_slice("a", "long", 1.0, sl=100.0)]
+    out, calls = _lagged(stale, stale, _pos(0.4))
+    assert not out["ok"] and out["reason"] == "slice_ledger_divergent"
+    assert calls["n"] == 2 and len(calls["slept"]) == 1  # exactly one re-read
+
+
+def test_venue_larger_than_ledger_is_refused_without_reread():
+    book = [_slice("a", "long", 1.0, sl=100.0)]
+    out, calls = _lagged(book, [], _pos(2.0))
+    assert not out["ok"] and out["reason"] == "slice_ledger_divergent"
+    assert calls["n"] == 1 and calls["slept"] == []
+
+
+def test_opposite_sign_venue_is_refused_without_reread():
+    book = [_slice("a", "long", 1.0, sl=100.0)]
+    out, calls = _lagged(book, [], _pos(-0.5))
+    assert not out["ok"] and calls["n"] == 1 and calls["slept"] == []
