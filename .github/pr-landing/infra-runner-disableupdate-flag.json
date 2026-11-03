@@ -3,5 +3,5 @@
   "landing": "hold",
   "hold_reason": "operator_asked_to_hold",
   "hold_text": "Follow-up to held Tier-2 PR #22624 (GH-CAPACITY-INFRA-RUNNER); the manager merges this lane's PRs.",
-  "why": "Fix two install defects found on the first live runs: (1) the job-completed credential-wipe hook never ran -- the runner refuses a hook path without .sh/.ps1/.js ('not a valid path to a script', vm-diag-snapshot run 41636162263), so ~/.ssh keys written by jobs persist; renamed to jta-runner-job-cleanup.sh and each runner .env repointed idempotently; (2) drop the invalid '--disableupdate=false' config.sh argument. Also stop deleting the workspace in the hook (actions/checkout cleans it; avoids a 2:49 full re-clone per job). Takes effect when infra-runner-install is re-run."
+  "why": "Fix two install defects found on the first live runs: (1) the job-completed credential-wipe hook never ran -- the runner refuses a hook path without .sh/.ps1/.js ('not a valid path to a script', vm-diag-snapshot run 41636162263), so ~/.ssh keys written by jobs persist; renamed to jta-runner-job-cleanup.sh and each runner .env repointed idempotently; (2) drop the invalid '--disableupdate=false' config.sh argument. The hook still deletes the workspace: a checkout measured 6.6 GB vs 17 GB free on the trainer. Takes effect when infra-runner-install is re-run."
 }

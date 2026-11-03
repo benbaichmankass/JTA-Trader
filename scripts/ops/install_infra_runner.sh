@@ -55,14 +55,16 @@ TARBALL="/var/cache/actions-runner-${VER}-${ARCH}.tar.gz"
 echo "runner_version=$VER arch=$ARCH"
 
 # Job-completed hook: wipe credentials a job may have written. The runner only runs a hook whose path ends in
-# .sh/.ps1/.js (install run 41634697190 logged "not a valid path to a script" for the extensionless name, so the
-# wipe never ran); the workspace is NOT deleted -- actions/checkout cleans it, and keeping the clone avoids a
-# ~2:49 full re-clone of the ~2 GB tree on every job (vm-diag-snapshot run 41636162263).
+# .sh/.ps1/.js (vm-diag-snapshot run 41636162263 logged "not a valid path to a script" for the extensionless name,
+# so the wipe never ran and every job concluded failure). The workspace IS deleted after each job: one checkout
+# measured 6.6 GB (ghr1/_work, 2026-11-03) against 17 GB free on the trainer, so four kept workspaces would fill
+# the disk the trainer trains on. The cost is a full re-clone per job (2:49 measured); see PI-20261103-RAM7EH86-0003.
 rm -f /usr/local/bin/jta-runner-job-cleanup
 cat > /usr/local/bin/jta-runner-job-cleanup.sh <<'HOOK'
 #!/usr/bin/env bash
 # ACTIONS_RUNNER_HOOK_JOB_COMPLETED for the jta-infra runners (install_infra_runner.sh).
 rm -rf "$HOME/.ssh" "$HOME/.config/gh" "$HOME/.kaggle" "$HOME/.netrc" "$HOME/.git-credentials" 2>/dev/null || true
+[ -n "${GITHUB_WORKSPACE:-}" ] && find "$GITHUB_WORKSPACE" -mindepth 1 -delete 2>/dev/null || true
 find /tmp -maxdepth 1 -user "$(id -u)" -mmin +0 -exec rm -rf {} + 2>/dev/null || true
 exit 0
 HOOK
