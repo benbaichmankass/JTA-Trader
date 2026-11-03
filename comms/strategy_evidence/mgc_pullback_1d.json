@@ -3,11 +3,13 @@
   "strategy": "mgc_pullback_1d",
   "symbol": "MGC",
   "timeframe": "1d",
-  "config_fingerprint": "sha256:a6d42b94f8dd8bbee44e4b4322671a93",
+  "config_fingerprint": "sha256:77e8a2479deeeeae1f5e9388526e1733",
   "basis": "harness_timefolds",
   "coverage_state": "measured",
-  "fidelity": "faithful",
-  "omitted_levers": [],
+  "fidelity": "approximate",
+  "omitted_levers": [
+    "structure_exit"
+  ],
   "net_r_oos": 3.8725,
   "expectancy_r_oos": 0.4841,
   "n_trades_oos": 8,
@@ -84,5 +86,6 @@
   "source_run": "comms/strategy_evidence/runs/2026-09-24-e55/mgc_pullback_1d__trades.jsonl",
   "error": null,
   "harness": "pullback",
-  "low_n_warning": "n_trades_oos=8 < 10; the pooled number is reported but is not a basis for a verdict."
+  "low_n_warning": "n_trades_oos=8 < 10; the pooled number is reported but is not a basis for a verdict.",
+  "fidelity_basis": "2026-11-03 STRUCTURE-EXITS-ENABLE (PR #22626): the leg now declares structure_exit 'pivot=5' (live structure SL+TP replacing the chandelier). This record was measured WITHOUT it, so structure_exit is listed in omitted_levers and fidelity is downgraded faithful -> approximate. No measured field was changed; config_fingerprint refreshed to the current config so the record is tied to it as an APPROXIMATE measurement. Re-measure: PI-20261103-MB3OAWAX-0002."
 }

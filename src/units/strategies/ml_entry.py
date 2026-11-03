@@ -240,7 +240,8 @@ def _checkin_frames(symbol: str, bar_iso: str, xs_symbols) -> tuple:
     from src.runtime.strategy_signal_builders import _ml_entry_reference_frames
     key = f"{symbol}|{bar_iso}"
     if key not in _TP_FRAMES:
-        own = _frame(fetch_candles(symbol, "1h", limit=400, bypass_cache=True))
+        from src.runtime.strategy_signal_builders import _ml_entry_candle_symbol
+        own = _frame(fetch_candles(_ml_entry_candle_symbol(symbol), "1h", limit=400, bypass_cache=True))
         if own is not None and (not len(own) or own["ts"].iloc[-1].isoformat() != bar_iso):
             own = None
         if len(_TP_FRAMES) > 256:
