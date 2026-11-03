@@ -107,8 +107,21 @@ related:
 - RQ-20261022-eba2-15
 - scripts/research/exit_lever_ablation.py
 - AUTHOR-FLOOR-1024
-status: queued
+status: done
 practice_precedent: 'T3, T9 (docs/reference/trading-and-model-practice-principles.md): net of the full cost stack; a conditional action is judged against its UNCONDITIONAL same-action control (UT20) so a PASS cannot be any early action; one dose carried over, a corroboration on a different leg is not a re-selection'
 intervention_controls:
   not_applicable: a static, pre-declared exit-parameter arm replayed in the harness (no discretionary or model-chosen action); graded against the declared leg A (hold) and the ungated same-action control UT20, so matched-random and best-static menus do not apply
 last_dispatched_at: '2026-11-01T19:47:59+00:00'
+grading:
+  attested: RULE-RQ-20261101e5b115-ERGATE-CORROB
+  auto: true
+  decision_rule_id: RULE-RQ-20261101e5b115-ERGATE-CORROB
+  evidence:
+  - research/results/RQ-20261101-e5b1-15/41341142257.jsonl
+  graded_at: '2026-11-03'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail

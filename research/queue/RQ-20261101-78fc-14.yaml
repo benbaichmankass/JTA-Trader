@@ -3,7 +3,7 @@ id: RQ-20261101-78fc-14
 title: 'ITERATION 1 of trend_donchian_eth_prop (fail): On trend_donchian_eth_prop over 2020-07-01..2026-10-15 23:59, does any of MC07 (min_confidence=0.7),
   MC08 (min_confidence=0.8), AD20 (adx_min=20) beat the declared leg (A) net of the full cost stack, by >= 0.02 R x n(A), in >= 4 of 6 calendar
   folds, wit'
-status: queued
+status: done
 cadence: once
 theme: live_strategy
 priority: 1
@@ -125,3 +125,15 @@ related:
 - comms/strategy_evidence/trend_donchian_eth_prop.json
 what_it_does_not_do: Edits no config, roster or rule; places no order; a PASS is an input to the next iteration, not a promotion.
 last_dispatched_at: '2026-11-02T16:55:11+00:00'
+grading:
+  attested: RULE-RQ-20261101-78fc-14
+  auto: true
+  decision_rule_id: RULE-RQ-20261101-78fc-14
+  evidence:
+  - research/results/RQ-20261101-78fc-14/41440203221.jsonl
+  - research/results/RQ-20261101-78fc-14/41472044639.jsonl
+  graded_at: '2026-11-03'
+  grader: scripts/research/queue_grade.py
+  reason: 2 row(s), all measured, all pass
+  rows: 2
+  verdict: pass
