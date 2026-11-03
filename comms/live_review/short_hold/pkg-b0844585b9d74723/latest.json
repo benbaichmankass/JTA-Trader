@@ -1,7 +1,7 @@
 {
- "bar": "2026-11-03T01:30:00Z",
- "bar_close": "2026-11-03T01:35:00Z",
- "built_at": "2026-11-03T01:36:48Z",
+ "bar": "2026-11-03T01:35:00Z",
+ "bar_close": "2026-11-03T01:40:00Z",
+ "built_at": "2026-11-03T01:44:47Z",
  "closed": false,
  "order_package_id": "pkg-b0844585b9d74723",
  "packet": {
@@ -87,9 +87,9 @@
    "previous_review": {
     "action": "hold",
     "forecast": null,
-    "reason": "Mark 2263.4 (-0.27R), slow grind up but 21.6 points under invalidation 2285; brackets match; the 4-hourly review takes over after this session.",
-    "review_id": "LR-20261103T0133Z-pkg-b0844585b9d74723",
-    "reviewed_at": "2026-11-03T01:34:43Z",
+    "reason": "Mark 2261.59 (-0.23R), pulled back from 2263; invalidation 2285 untouched, brackets match; handing to the 4-hourly review at the cap.",
+    "review_id": "LR-20261103T0136Z-pkg-b0844585b9d74723",
+    "reviewed_at": "2026-11-03T01:37:29Z",
     "route": null
    },
    "symbol": "ETHUSDT"
@@ -112,13 +112,13 @@
      "BTCUSDT",
      "short",
      "trend_donchian_1h",
-     1.07
+     1.14
     ],
     [
      "SOLUSDT",
      "short",
      "ml_entry",
-     -0.195
+     -0.122
     ],
     [
      "IAUM",
@@ -136,7 +136,7 @@
      "XRPUSDT",
      "short",
      "ml_entry",
-     0.0196
+     0.0523
     ],
     [
      "MHG",
@@ -148,25 +148,25 @@
      "ADAUSDT",
      "short",
      "trend_donchian_ada_4h",
-     0.0915
+     0.128
     ],
     [
      "AVAXUSDT",
      "short",
      "ict_scalp_avax_5m",
-     -0.0888
+     0.133
     ],
     [
      "ADAUSDT",
      "short",
      "ml_entry",
-     0.306
+     0.442
     ],
     [
      "SOLUSDT",
      "short",
      "trend_donchian_sol_4h",
-     1.44
+     1.49
     ]
    ],
    "book_note": "[symbol, direction, leg, open_r (null = not measured)] per OTHER open package, either side",
@@ -487,16 +487,8 @@
    "basis": null
   },
   "desk_handoff": {
-   "chain_length": 15,
+   "chain_length": 16,
    "chain_tail": [
-    {
-     "action": "hold",
-     "forecast": null,
-     "reason": "Mark 2259.68 (-0.17R), drifting back down after the 2261 high; invalidation 2285 untouched, brackets match, no new information.",
-     "review_id": "LR-20261103T0117Z-pkg-b0844585b9d74723",
-     "reviewed_at": "2026-11-03T01:18:47Z",
-     "verdict": "confirm"
-    },
     {
      "action": "hold",
      "forecast": null,
@@ -519,6 +511,14 @@
      "reason": "Mark 2263.4 (-0.27R), slow grind up but 21.6 points under invalidation 2285; brackets match; the 4-hourly review takes over after this session.",
      "review_id": "LR-20261103T0133Z-pkg-b0844585b9d74723",
      "reviewed_at": "2026-11-03T01:34:43Z",
+     "verdict": "confirm"
+    },
+    {
+     "action": "hold",
+     "forecast": null,
+     "reason": "Mark 2261.59 (-0.23R), pulled back from 2263; invalidation 2285 untouched, brackets match; handing to the 4-hourly review at the cap.",
+     "review_id": "LR-20261103T0136Z-pkg-b0844585b9d74723",
+     "reviewed_at": "2026-11-03T01:37:29Z",
      "verdict": "confirm"
     }
    ],
@@ -550,7 +550,7 @@
     "timeframe": "1h",
     "tp": 2150.0
    },
-   "prior_decision_id": "LR-20261103T0133Z-pkg-b0844585b9d74723",
+   "prior_decision_id": "LR-20261103T0136Z-pkg-b0844585b9d74723",
    "protocol": "DESK-HANDOFF-PROTOCOL",
    "read_state": "read"
   },
@@ -564,10 +564,10 @@
    "r_to_target": null
   },
   "generator": {
-   "head": "c88bb2954d",
+   "head": "d61dbd1cb0",
    "state": "current"
   },
-  "info_cutoff_at": "2026-11-03T01:37:06Z",
+  "info_cutoff_at": "2026-11-03T01:45:07Z",
   "leg": "claude_desk",
   "mechanics": {
    "evidence": "package sl 2290.0 / tp 2150.0 agree with every readable account",
@@ -614,25 +614,18 @@
    "cell_now": null,
    "trend_now": "chop"
   },
-  "review_id": "LR-20261103T0136Z-pkg-b0844585b9d74723",
+  "review_id": "LR-20261103T0144Z-pkg-b0844585b9d74723",
   "short_hold": {
-   "atr": 3.2378571428571052,
-   "bar": "2026-11-03T01:30:00Z",
-   "bar_close": "2026-11-03T01:35:00Z",
+   "atr": 3.376428571428505,
+   "bar": "2026-11-03T01:35:00Z",
+   "bar_close": "2026-11-03T01:40:00Z",
    "entry": 2253.34,
-   "mark": 2261.59,
-   "minutes_held": 86.0,
-   "open_r_at_mark": -0.225,
+   "mark": 2258.95,
+   "minutes_held": 94.0,
+   "open_r_at_mark": -0.153,
    "r_unit": "entry_to_current_sl",
    "read_state": "read",
    "recent_bars": [
-    {
-     "close": 2258.85,
-     "high": 2262.54,
-     "low": 2258.76,
-     "open": 2258.89,
-     "t": "2026-11-03T00:35:00Z"
-    },
     {
      "close": 2256.24,
      "high": 2259.59,
@@ -709,6 +702,13 @@
      "low": 2260.12,
      "open": 2263.4,
      "t": "2026-11-03T01:30:00Z"
+    },
+    {
+     "close": 2258.95,
+     "high": 2261.62,
+     "low": 2258.05,
+     "open": 2261.59,
+     "t": "2026-11-03T01:35:00Z"
     }
    ],
    "risk_per_unit": null,
@@ -727,25 +727,18 @@
    "tp": 2150.0
   }
  },
- "packet_sha": "59cad578eb06567796b848427dd44203cb0a99d4bbbf816cf049d06cf8ade217",
+ "packet_sha": "6b48f9ef1596eea3887f36df26269ecd591ef3cf087aa8af3dcc03f3ec95d703",
  "short_hold": {
-  "atr": 3.2378571428571052,
-  "bar": "2026-11-03T01:30:00Z",
-  "bar_close": "2026-11-03T01:35:00Z",
+  "atr": 3.376428571428505,
+  "bar": "2026-11-03T01:35:00Z",
+  "bar_close": "2026-11-03T01:40:00Z",
   "entry": 2253.34,
-  "mark": 2261.59,
-  "minutes_held": 86.0,
-  "open_r_at_mark": -0.225,
+  "mark": 2258.95,
+  "minutes_held": 94.0,
+  "open_r_at_mark": -0.153,
   "r_unit": "entry_to_current_sl",
   "read_state": "read",
   "recent_bars": [
-   {
-    "close": 2258.85,
-    "high": 2262.54,
-    "low": 2258.76,
-    "open": 2258.89,
-    "t": "2026-11-03T00:35:00Z"
-   },
    {
     "close": 2256.24,
     "high": 2259.59,
@@ -822,6 +815,13 @@
     "low": 2260.12,
     "open": 2263.4,
     "t": "2026-11-03T01:30:00Z"
+   },
+   {
+    "close": 2258.95,
+    "high": 2261.62,
+    "low": 2258.05,
+    "open": 2261.59,
+    "t": "2026-11-03T01:35:00Z"
    }
   ],
   "risk_per_unit": null,
