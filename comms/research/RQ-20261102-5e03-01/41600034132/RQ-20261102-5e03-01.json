@@ -1,0 +1,523 @@
+{
+ "schema_version": 1,
+ "research_unit": "RQ-20261102-5e03-01",
+ "read_state": "measured",
+ "verdict": "fail",
+ "note": "alpaca_live long-only held-out mean net R per decision -0.0347 < 0 at n=110",
+ "generated_at": "2026-11-03T08:50:10Z",
+ "decision_rule": {
+  "id": "RULE-RQ20261102-5E03-01-ENTRY-STRUCTURE-ON-ALPACA",
+  "registered_at": "2026-11-02",
+  "registered_before_run": true
+ },
+ "population": {
+  "n": 110,
+  "description": "frozen ml-decision-entry-v1 (tau 0.1) LONG decisions on alpaca_live symbols ['SPY', 'QQQ', 'GLD', 'IWM', 'TLT', 'IEF', 'SLV', 'USO', 'GDX', 'SPYM', 'IAUM'], Yahoo 1h RTH bars, held-out 2025-10-01..2026-09-30, net of fee 0.0 + slippage 5.0 + regulatory 0.5 bps round trip, funding 0.0"
+ },
+ "variants_read_on_this_heldout": 2,
+ "multiple_comparison_note": "second read on the bdc2-01 held-out window, bracket chosen after the first read failed; PASS is a discovery needing the unused forward window",
+ "bracket": "structure: daily pivot=3 (SL beyond last confirmed daily swing - 0.25 dATR, clamp [0.5,3]x2 dATR, ratchet; TP nearest opposing daily swing/unfilled FVG >=1R, extend-only); levels read as of the PREVIOUS completed session",
+ "measurement": {
+  "schema": "ml_entry_alpaca_score/1",
+  "model_sha256": "d4bdcfa13464269cd458be05eac509f27154ee8cfe62e0bc67511db65b590c1c",
+  "model_meta": {
+   "model_id": "ml-decision-entry-v1",
+   "schema": "ml_decision_entry_model/1",
+   "evidence": [
+    "research/results/RQ-20261101-c692-01/local-20261101T0835Z.jsonl",
+    "research/results/RQ-20261101-c692-06/local-20261101T0840Z.jsonl",
+    "research-script-run run 41324824079 (c692-01 runner reproduction) and 41324826751 (c692-06 runner reproduction + this artifact)"
+   ],
+   "provenance": "RUNNER-BUILT: fit by the research runner (GitHub Actions, lightgbm 4.6.0, scikit-learn 1.7.2) running scripts/research/ml_decision_entry.py traded-subset for RQ-20261101-c692-06, run 41324826751 (artifact research-script-run-RQ-20261101-c692-06-41324826751, commit 5019e22). Replaces the PROVISIONAL sandbox fit (lightgbm 4.7.0): same features, params, training cut and tree structure; runner reproduction c692-01 / c692-06 matched the session-local figures exactly.",
+   "features": [
+    "ret_1",
+    "ret_4",
+    "ret_12",
+    "ret_24",
+    "ret_72",
+    "ret_168",
+    "vol24",
+    "vol_ratio",
+    "atr_pct",
+    "range_pos_24",
+    "range_pos_168",
+    "vol_z",
+    "rsi14",
+    "hour",
+    "dow",
+    "xs_rank_ret24",
+    "btc_ret24",
+    "btc_vol24",
+    "breadth_up24",
+    "rel_vol"
+   ],
+   "tau": 0.1,
+   "train_rows": 662930,
+   "train_end_exclusive": "2025-09-22 19:00:00+00:00",
+   "lgb_params": {
+    "n_estimators": 300,
+    "learning_rate": 0.03,
+    "num_leaves": 31,
+    "min_child_samples": 500,
+    "subsample": 0.8,
+    "subsample_freq": 1,
+    "colsample_bytree": 0.8,
+    "reg_lambda": 5.0,
+    "random_state": 20261101,
+    "verbose": -1,
+    "n_jobs": 4
+   },
+   "bracket": {
+    "sl_atr": 2.0,
+    "tp_atr": 3.0,
+    "atr_n": 14,
+    "horizon_h": 24,
+    "decision_every_h": 4
+   },
+   "git_sha": "5019e22ca768bc568c96e6e7967d8cab5bdbb5d3",
+   "pooled_heldout_mean_net_r": 0.007301455114681035
+  },
+  "tau": 0.1,
+  "alpaca_live_long_only": {
+   "n": 110,
+   "mean_net_r": -0.03472466862395605,
+   "sum_net_r": -3.819713548635165,
+   "mean_gross_r": -0.02261578104541207,
+   "mean_cost_r": 0.012108887578543982,
+   "n_symbols": 11,
+   "by_side": {
+    "long": {
+     "n": 110,
+     "mean_net_r": -0.03472466862395605
+    }
+   },
+   "exit_reason_counts": {
+    "time": 83,
+    "sl": 23,
+    "tp": 4
+   },
+   "per_symbol": {
+    "GDX": {
+     "n": 20,
+     "mean_net_r": -0.0128
+    },
+    "GLD": {
+     "n": 11,
+     "mean_net_r": -0.1839
+    },
+    "IAUM": {
+     "n": 11,
+     "mean_net_r": -0.1859
+    },
+    "IEF": {
+     "n": 3,
+     "mean_net_r": 0.1501
+    },
+    "IWM": {
+     "n": 12,
+     "mean_net_r": -0.0123
+    },
+    "QQQ": {
+     "n": 9,
+     "mean_net_r": 0.0745
+    },
+    "SLV": {
+     "n": 19,
+     "mean_net_r": -0.2631
+    },
+    "SPY": {
+     "n": 4,
+     "mean_net_r": 0.0244
+    },
+    "SPYM": {
+     "n": 3,
+     "mean_net_r": 0.1797
+    },
+    "TLT": {
+     "n": 3,
+     "mean_net_r": 0.3615
+    },
+    "USO": {
+     "n": 15,
+     "mean_net_r": 0.1873
+    }
+   },
+   "by_month": {
+    "2025-10": {
+     "n": 9,
+     "mean_net_r": 0.1882
+    },
+    "2025-11": {
+     "n": 1,
+     "mean_net_r": 0.1948
+    },
+    "2025-12": {
+     "n": 12,
+     "mean_net_r": 0.1146
+    },
+    "2026-01": {
+     "n": 5,
+     "mean_net_r": 0.6421
+    },
+    "2026-02": {
+     "n": 33,
+     "mean_net_r": 0.2075
+    },
+    "2026-03": {
+     "n": 5,
+     "mean_net_r": -0.5562
+    },
+    "2026-04": {
+     "n": 7,
+     "mean_net_r": -0.0427
+    },
+    "2026-05": {
+     "n": 2,
+     "mean_net_r": 0.0119
+    },
+    "2026-06": {
+     "n": 19,
+     "mean_net_r": -0.6112
+    },
+    "2026-08": {
+     "n": 12,
+     "mean_net_r": 0.0174
+    },
+    "2026-09": {
+     "n": 5,
+     "mean_net_r": -0.536
+    }
+   },
+   "bootstrap_ci95_reported_not_gating": [
+    -0.1421044960296126,
+    0.07927905391198911
+   ]
+  },
+  "reported_alpaca_live_both_sides": {
+   "n": 278,
+   "mean_net_r": -0.09174536293515843,
+   "sum_net_r": -25.505210895974045,
+   "mean_gross_r": -0.08092343875526466,
+   "mean_cost_r": 0.010821924179893761,
+   "n_symbols": 11,
+   "by_side": {
+    "long": {
+     "n": 90,
+     "mean_net_r": -0.00155988930242728
+    },
+    "short": {
+     "n": 188,
+     "mean_net_r": -0.13491925988699782
+    }
+   },
+   "exit_reason_counts": {
+    "time": 209,
+    "sl": 61,
+    "tp": 8
+   },
+   "per_symbol": {
+    "GDX": {
+     "n": 50,
+     "mean_net_r": -0.0244
+    },
+    "GLD": {
+     "n": 33,
+     "mean_net_r": -0.1191
+    },
+    "IAUM": {
+     "n": 33,
+     "mean_net_r": -0.1186
+    },
+    "IEF": {
+     "n": 3,
+     "mean_net_r": 0.1501
+    },
+    "IWM": {
+     "n": 26,
+     "mean_net_r": -0.0639
+    },
+    "QQQ": {
+     "n": 17,
+     "mean_net_r": 0.0043
+    },
+    "SLV": {
+     "n": 50,
+     "mean_net_r": -0.2056
+    },
+    "SPY": {
+     "n": 6,
+     "mean_net_r": 0.0024
+    },
+    "SPYM": {
+     "n": 5,
+     "mean_net_r": 0.0896
+    },
+    "TLT": {
+     "n": 4,
+     "mean_net_r": 0.1384
+    },
+    "USO": {
+     "n": 51,
+     "mean_net_r": -0.1184
+    }
+   },
+   "by_month": {
+    "2025-10": {
+     "n": 22,
+     "mean_net_r": 0.0074
+    },
+    "2025-11": {
+     "n": 6,
+     "mean_net_r": -0.4481
+    },
+    "2025-12": {
+     "n": 22,
+     "mean_net_r": -0.0628
+    },
+    "2026-01": {
+     "n": 21,
+     "mean_net_r": -0.3899
+    },
+    "2026-02": {
+     "n": 35,
+     "mean_net_r": 0.152
+    },
+    "2026-03": {
+     "n": 34,
+     "mean_net_r": -0.0781
+    },
+    "2026-04": {
+     "n": 25,
+     "mean_net_r": -0.0001
+    },
+    "2026-05": {
+     "n": 17,
+     "mean_net_r": -0.0263
+    },
+    "2026-06": {
+     "n": 38,
+     "mean_net_r": -0.2229
+    },
+    "2026-07": {
+     "n": 18,
+     "mean_net_r": -0.0353
+    },
+    "2026-08": {
+     "n": 23,
+     "mean_net_r": -0.1882
+    },
+    "2026-09": {
+     "n": 17,
+     "mean_net_r": -0.1289
+    }
+   },
+   "bootstrap_ci95_reported_not_gating": [
+    -0.16326519304452664,
+    -0.027326851271710736
+   ]
+  },
+  "reported_mirror_symbols_both_sides": {
+   "n": 240,
+   "mean_net_r": -0.09182846119676476,
+   "sum_net_r": -22.03883068722354,
+   "mean_gross_r": -0.08138450207012951,
+   "mean_cost_r": 0.010443959126635276,
+   "n_symbols": 9,
+   "by_side": {
+    "long": {
+     "n": 78,
+     "mean_net_r": 0.002535299871249442
+    },
+    "short": {
+     "n": 162,
+     "mean_net_r": -0.1372628646739568
+    }
+   },
+   "exit_reason_counts": {
+    "time": 180,
+    "sl": 53,
+    "tp": 7
+   },
+   "per_symbol": {
+    "GDX": {
+     "n": 50,
+     "mean_net_r": -0.0244
+    },
+    "GLD": {
+     "n": 33,
+     "mean_net_r": -0.1191
+    },
+    "IEF": {
+     "n": 3,
+     "mean_net_r": 0.1501
+    },
+    "IWM": {
+     "n": 26,
+     "mean_net_r": -0.0639
+    },
+    "QQQ": {
+     "n": 17,
+     "mean_net_r": 0.0043
+    },
+    "SLV": {
+     "n": 50,
+     "mean_net_r": -0.2056
+    },
+    "SPY": {
+     "n": 6,
+     "mean_net_r": 0.0024
+    },
+    "TLT": {
+     "n": 4,
+     "mean_net_r": 0.1384
+    },
+    "USO": {
+     "n": 51,
+     "mean_net_r": -0.1184
+    }
+   },
+   "by_month": {
+    "2025-10": {
+     "n": 19,
+     "mean_net_r": -0.0043
+    },
+    "2025-11": {
+     "n": 6,
+     "mean_net_r": -0.4481
+    },
+    "2025-12": {
+     "n": 19,
+     "mean_net_r": -0.0691
+    },
+    "2026-01": {
+     "n": 18,
+     "mean_net_r": -0.2629
+    },
+    "2026-02": {
+     "n": 29,
+     "mean_net_r": 0.1542
+    },
+    "2026-03": {
+     "n": 28,
+     "mean_net_r": -0.1064
+    },
+    "2026-04": {
+     "n": 22,
+     "mean_net_r": -0.0108
+    },
+    "2026-05": {
+     "n": 15,
+     "mean_net_r": 0.0004
+    },
+    "2026-06": {
+     "n": 33,
+     "mean_net_r": -0.2113
+    },
+    "2026-07": {
+     "n": 16,
+     "mean_net_r": -0.0794
+    },
+    "2026-08": {
+     "n": 20,
+     "mean_net_r": -0.1822
+    },
+    "2026-09": {
+     "n": 15,
+     "mean_net_r": -0.1732
+    }
+   },
+   "bootstrap_ci95_reported_not_gating": [
+    -0.1708169313463617,
+    -0.012289973515649545
+   ]
+  },
+  "reported_always_long_same_mechanics": {
+   "n": 875,
+   "mean_net_r": -0.03891998129200199
+  },
+  "decision_rows": 5378,
+  "decision_rows_by_symbol": {
+   "GDX": 497,
+   "GLD": 497,
+   "IAUM": 497,
+   "IEF": 498,
+   "IWM": 497,
+   "QQQ": 498,
+   "SLV": 497,
+   "SPY": 497,
+   "SPYM": 405,
+   "TLT": 498,
+   "USO": 497
+  },
+  "perp_reference_loaded": 60,
+  "median_n_reference": 60.0,
+  "fetch": {
+   "GDX": {
+    "rows": 2627,
+    "first": "2025-05-01 13:30:00+00:00",
+    "last": "2026-10-30 19:30:00+00:00"
+   },
+   "GLD": {
+    "rows": 2627,
+    "first": "2025-05-01 13:30:00+00:00",
+    "last": "2026-10-30 19:30:00+00:00"
+   },
+   "IAUM": {
+    "rows": 2627,
+    "first": "2025-05-01 13:30:00+00:00",
+    "last": "2026-10-30 19:30:00+00:00"
+   },
+   "IEF": {
+    "rows": 2628,
+    "first": "2025-05-01 13:30:00+00:00",
+    "last": "2026-10-30 19:30:00+00:00"
+   },
+   "IWM": {
+    "rows": 2627,
+    "first": "2025-05-01 13:30:00+00:00",
+    "last": "2026-10-30 19:30:00+00:00"
+   },
+   "QQQ": {
+    "rows": 2628,
+    "first": "2025-05-01 13:30:00+00:00",
+    "last": "2026-10-30 19:30:00+00:00"
+   },
+   "SLV": {
+    "rows": 2627,
+    "first": "2025-05-01 13:30:00+00:00",
+    "last": "2026-10-30 19:30:00+00:00"
+   },
+   "SPY": {
+    "rows": 2627,
+    "first": "2025-05-01 13:30:00+00:00",
+    "last": "2026-10-30 19:30:00+00:00"
+   },
+   "SPYM": {
+    "rows": 1741,
+    "first": "2025-10-31 13:30:00+00:00",
+    "last": "2026-10-30 19:30:00+00:00"
+   },
+   "TLT": {
+    "rows": 2628,
+    "first": "2025-05-01 13:30:00+00:00",
+    "last": "2026-10-30 19:30:00+00:00"
+   },
+   "USO": {
+    "rows": 2627,
+    "first": "2025-05-01 13:30:00+00:00",
+    "last": "2026-10-30 19:30:00+00:00"
+   }
+  },
+  "costs": {
+   "fee_bps": 0.0,
+   "slippage_bps": 5.0,
+   "regulatory_bps": 0.5,
+   "funding_bps": 0.0
+  }
+ },
+ "produced_by": {
+  "tool": "python3 scripts/research/ml_entry_alpaca_score.py",
+  "where": "research-script-run",
+  "runtime_s": 49.8
+ }
+}
