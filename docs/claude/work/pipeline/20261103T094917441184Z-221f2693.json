@@ -1,0 +1,16 @@
+{
+  "due_when": {
+    "check_every_days": 7,
+    "due_date": "2026-11-10",
+    "kind": "date"
+  },
+  "id": "PI-20261103-6GNSZYUN-0008",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "SOAK-REGRADE 2026-11-03, docs/claude/work/findings/soak-regrade-20261103.md (ITERATE orphan)",
+    "rerun": "python3 scripts/research/iteration_orphans.py --json  # slv_pullback_1d must read covered; and python3 scripts/ops/mandate_resolver.py --leg slv_pullback_1d --from S1 --to S2 --account <real-money acct> --json"
+  },
+  "state": "queued",
+  "what": "ITERATION ORPHAN slv_pullback_1d (Stage-0 verdict indeterminate): no queued research unit carries an iteration: block for it (programme-review rule). n=10 OOS (below R-N 30), +3.00R, fidelity approximate (omits trail_decay_stall_bars, trail_decay_tight_mult -> R-B1-C5). Iteration: model the omitted levers in the harness and raise n. Close when a unit with iteration.subject=slv_pullback_1d is queued (iteration_orphans reads covered)."
+}
