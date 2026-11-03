@@ -9,6 +9,13 @@ priority: 1
 roadmap:
 - L-AM-STANDARD
 kind: experiment
+practice_precedent: 'T3, T8 (docs/reference/trading-and-model-practice-principles.md): the exit change is judged net of the full
+  cost stack with the entries fixed (the frozen served model''s own decisions); parent bar RULE-RQ20261101-c692-06-TRADED-SUBSET.'
+intervention_controls:
+  not_applicable: 'VERIFICATION of an exit the operator already chose and deployed (one-time override #22645, option B), graded
+    against the leg''s original Stage-0 point-estimate bar; it does not select or credit an intervention among alternatives. The
+    matched-random / best-static selection test for structure exits on this leg is RQ-20261101-5e01-09. The harness computes no
+    random-SL control (stated, not claimed).'
 question: 'ml_entry (bybit_2 real money + bybit_portfolio mirror) now trades with structure_exit "pivot=5;sl_only": the stop ratchets to
   each newly confirmed swing (N=5, 0.25 ATR buffer, tighten-only, never looser than the entry stop) while the ml_first_passage TP
   revision (extend-only, 4h check-ins) stays the only TP owner. This went live BEFORE measurement under the operator''s one-time
@@ -55,7 +62,7 @@ blocked_on:
     walk() (StructureLevels over the trade''s own closed bars, the same on_bar_close SL step as structure_exit_live.replay, tighten-only,
     never looser than the entry stop), an arm flag (e.g. --structure-sl pivot=5), and a parity test against
     structure_exit_live.replay on recorded bars. Size: about 0.5 day, ~$4-6 (one lane).'
-  clears_when: The flag exists with its parity test on main; then fill run.command, git mv to research/queue/, set status queued.
+  clears_when: 'The flag exists with its parity test on main (PR #22709); then remove blocked_on and set status: queued (run.command is already filled).'
 compute: cpu_long
 value:
   usd_at_stake_per_month: 400
@@ -70,7 +77,17 @@ routing:
   basis: 'Estimate from RQ-20261101-383f-01 (same harness, same window, timeout 240). The first run replaces it.'
 run:
   workflow: research-script-run.yml
-  command: []
+  command:
+  - python3
+  - scripts/research/ml_entry_tp_revision.py
+  - evidence-extend-only
+  - --cache
+  - /tmp/ml_decision_klines
+  - --structure-sl
+  - pivot=5
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 240
   inputs:
     research_unit: RQ-20261103-5e04-01
 lands:
