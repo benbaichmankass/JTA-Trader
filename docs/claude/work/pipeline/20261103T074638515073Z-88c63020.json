@@ -1,0 +1,15 @@
+{
+  "due_when": {
+    "due_date": "2026-11-05",
+    "kind": "date"
+  },
+  "id": "PI-20261103-01AFOLUJ-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "manager session_01AFoLuJCo138TgfjBcbwcLh 2026-11-03 ~07:55Z prop pipeline check",
+    "rerun": "curl https://ict-bot.duckdns.org/api/bot/prop/fills?account_id=breakout_2&limit=8 (and tradeify_1); curl .../api/bot/prop/status?account_id=breakout_2 -> phone_positions_diag, phone_captures_last"
+  },
+  "state": "queued",
+  "what": "breakout_2 prop exits are not recorded: fills for tickets prop-manual-3a663e0a29b2 (11-02 04:01Z ETH long, 0.57 @2309.14) and prop-manual-29067b29bbad (10-29 ETH short) have entry rows but no exit_price/pnl, while /api/bot/prop/status shows unrealized 0.0 (flat) and phone_positions_diag 'closed_empty_unconfirmed'; phone_captures show repeated 'positions_miss' failed runs (11-02 05:09-07:20Z). tradeify_1 fill id 212 for the 11-02 ticket has null qty/entry. Effect: prop P&L, grading and the prop survival gate see these trades as unclosed/unknown. Root-cause the phone positions read and backfill the exits from the venue."
+}

@@ -446,7 +446,10 @@ def order_package(cfg: dict, candles_df: Optional[pd.DataFrame] = None) -> dict:
                  # TP doctrine B1 (TPX-PULLBACK-PRODUCER): the declared
                  # TP-revision rule (src/runtime/tp_revision.py). Absent = no
                  # revision.
-                 "tp_revision"):
+                 "tp_revision",
+                 # STRUCTURE-EXITS-DEFAULT: the declared structure exit
+                 # (src/runtime/structure_exit_live.py). Absent = off, byte-identical.
+                 "structure_exit"):
         if cfg.get(_key) is not None:
             package["meta"][_key] = cfg[_key]
     if declared_rule(cfg) is not None:
@@ -734,6 +737,14 @@ def monitor(cfg, candles_df, open_pkg):
     # has already returned; a revision never rides on a close. Undeclared =
     # None = the resting TP is never moved (byte-identical for every leg that
     # does not declare `tp_revision`).
+    # STRUCTURE-EXITS-DEFAULT: a leg that DECLARES `structure_exit` has its SL+TP
+    # stepped by the shared causal structure detector instead of the chandelier +
+    # TP revision; every close path above has already had its turn (a close beats
+    # a move). Undeclared = skipped, byte-identical.
+    from src.runtime.structure_exit_live import declared as _sx_declared
+    if _sx_declared(meta) is not None:
+        from src.runtime.structure_exit_live import structure_exit_verdict
+        return structure_exit_verdict(meta, open_pkg, candles_df)
     _tp_rev = _revise_tp(meta, cfg_dict, candles_df, open_pkg, current_price, direction)
 
     atr = _coerce_float(meta.get("atr"))

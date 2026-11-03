@@ -1,0 +1,15 @@
+{
+  "due_when": {
+    "due_date": "2026-11-05",
+    "kind": "date"
+  },
+  "id": "PI-20261103-01AFOLUJ-0005",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "manager session_01AFoLuJCo138TgfjBcbwcLh 2026-11-03 ~09:50Z",
+    "rerun": "python3 scripts/ops/strategy_status.py | grep gld_pullback_1h; /api/diag/open_packages (pkg-8106d5eef6fc425c); /api/diag/exchange_positions alpaca_paper GLD"
+  },
+  "state": "queued",
+  "what": "gld_pullback_1h is INACTIVE per scripts/ops/strategy_status.py (2026-11-03, population 60 legs: inactive 3), yet its package pkg-8106d5eef6fc425c / trade 5209 (GLD LONG, 39 sh on alpaca_paper, entry 2026-08-29) is still OPEN: venue SL 416.09 / TP 461.27 resting, unrealised about -2,391 USD (/api/diag/exchange_positions 07:44Z). A retired leg still holding a position: confirm which monitor manages it now (is its monitor() still ticking after retirement?), and decide close vs keep under its retirement record."
+}
