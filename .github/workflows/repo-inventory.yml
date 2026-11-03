@@ -20,12 +20,17 @@ name: repo-inventory
 on:
   # Dormant until the native merge queue is enabled (BL-20260726 merge-queue enablement);
   # required checks MUST run on the merge_group ref or the queue stalls.
-  merge_group:
-  pull_request:
-    branches: [main]
-  # NO PUSH-TO-MAIN TRIGGER (CI-STREAMLINE, operator 2026-11-03). Advisory inventory, not a required check; the PR run
-  # already produced it for the merged tree. GIVES UP: an inventory artifact per main commit (nothing reads it).
+  # NO PULL_REQUEST, MERGE_GROUP OR PUSH TRIGGER (CI-STREAMLINE, manager item 0, 2026-11-03). This is ADVISORY, not in
+  # branch-protection-sync.yml REQUIRED_CONTEXTS (pytest-collect / pytest-run / guards); #22730 merged with it cancelled.
+  # Yet as a per-PR check it blocked landings: its 5-min job was cancelled INSIDE actions/checkout under load
+  # (#22730 job 126204368161, #22705 job 126162423119, #22704), and scripts/ops/ci_settle.py rightly reads any cancelled
+  # check as "no verdict", so the PR never read settled and sessions re-ran it by hand.
+  # A cheaper checkout cannot fix it: scripts/repo_inventory.py stats EVERY file in the working tree (sizes + names), so
+  # it needs the whole ~6.4 GB tree; sparse would change what it measures and blobless still fetches every HEAD blob.
+  # It now runs once a day on main. GIVES UP: the per-PR inventory artifact (3-day retention; nothing reads it).
   # Pinned by tests/test_ci_streamline_no_push.py.
+  schedule:
+    - cron: '47 4 * * *'
   # workflow_dispatch (2026-08-10, BL-20260807-REQUIRED-CHECKS-LACK-WORKFLOW-DISPATCH).
   # The three REQUIRED checks (pytest-collect, pytest-run, guards) already carry
   # one — verified against branch-protection-sync.yml REQUIRED_CONTEXTS. This one
@@ -45,8 +50,8 @@ on:
 # NEVER be cancelled by a `pull_request` run on the same ref, or the merge queue
 # stalls on a required check that reports `cancelled`. Same shape as guards.yml.
 concurrency:
-  group: repo-inventory-${{ github.event_name }}-${{ github.event.pull_request.number || github.ref }}
-  cancel-in-progress: true
+  group: repo-inventory-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: false
 
 permissions:
   contents: read
@@ -54,7 +59,8 @@ permissions:
 jobs:
   repo-inventory:
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    # 5 -> 20 (CI-STREAMLINE): a daily off-peak run; the 5-min cap only existed to bound a per-PR cost.
+    timeout-minutes: 20
     steps:
       - name: Checkout
         uses: actions/checkout@v4

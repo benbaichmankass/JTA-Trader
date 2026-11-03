@@ -219,7 +219,7 @@ exists to arm CI, and read CI with `get_check_runs`, never `get_status`.
 | `env-gate-guard` | AUTO | PR | — |
 | `silent-empty-guard` | AUTO | PR | — |
 | `arch-doc-guard` | AUTO | PR | — |
-| `repo-inventory.yml` | AUTO | PR (no push since CI-STREAMLINE 2026-11-03) | — |
+| `repo-inventory.yml` | AUTO | daily schedule `47 4 * * *` + dispatch (off PRs and push since CI-STREAMLINE 2026-11-03) | — |
 | `bootstrap-labels.yml` | AUTO / AUTONOMOUS | push (paths: this file) + B-sentinel or `workflow_dispatch` | `.github/triggers/bootstrap-labels` |
 | `branch-protection-sync.yml` | AUTO | push to `main` + workflow_dispatch | — |
 | `health-snapshot.yml` | AUTONOMOUS | A or E (every 6h) | `health-snapshot-trigger` |
@@ -286,7 +286,7 @@ they self-fire. Touching a guard's own logic is **Tier 3**.
 | `canonical-config-loaders` | PR to `main` | Fails PRs that add a hand-rolled parser for `config/accounts.yaml` outside the canonical loader module. | Yes |
 | `canonical-db-resolver` | PR to `main` | Fails PRs that add an inline `trade_journal.db` path fallback outside the canonical resolver. | Yes |
 | `arch-doc-guard` | PR to `main` | Emits `::warning` when high-impact subsystems change without an architecture-doc update. Always exits 0 (advisory). | No |
-| `repo-inventory.yml` | PR (push `main` removed 2026-11-03, CI-STREAMLINE) | Uploads `scripts/repo_inventory.py` output as build artifact. Advisory only. | No |
+| `repo-inventory.yml` | daily schedule on `main` + dispatch (PR and push removed 2026-11-03, CI-STREAMLINE: its per-PR run was cancelled in checkout under load and ci_settle read that as no verdict) | Uploads `scripts/repo_inventory.py` output as build artifact. Advisory only. | No |
 
 `REQUIRED_CONTEXTS` in `branch-protection-sync.yml` is the authoritative
 list of blocking checks — **read it there, this copy is a convenience mirror.**

@@ -335,6 +335,8 @@ on:
       - pytest-run
       # CI-STREAMLINE (2026-11-03): guards' 2-h scheduled `--all` run of main replaced its per-push run; a red one must page.
       - Guards
+      # CI-STREAMLINE: repo-inventory moved from every PR to a daily run of main.
+      - repo-inventory
     types: [completed]
     # MAIN ONLY at the trigger (manager decision 2026-10-16, lane RESEARCH-DISPATCH-STALL-1016). `branches`
     # filters on the WATCHED run's head_branch, so a PR's pytest-run completion no longer CREATES a run here

@@ -7,7 +7,8 @@ What replaces the push run, pinned here so the post-merge net cannot silently di
   * pytest-run: the scheduled backstop (full suite on main when HEAD's code is not already graded), every 2 h.
   * guards: a scheduled `--all` run of main every 2 h, never cancelled.
   * pytest-collect: covered by the pytest-run backstop, which collects the whole tree.
-  * repo-inventory: advisory; nothing replaces it.
+  * repo-inventory: advisory and not required; moved off PRs entirely to one daily run of main (its PR job was
+    cancelled inside checkout under load, which ci_settle reads as "no verdict" and so held PRs).
 The PR and merge_group triggers are untouched, so every required check still reports on every PR.
 """
 from __future__ import annotations
@@ -59,3 +60,13 @@ def test_keeper_does_not_re_create_the_30_minute_cadence():
     mod = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(mod)
     assert mod.TARGETS["pytest-run.yml"]["starved_min"] >= 120
+
+
+def test_repo_inventory_is_daily_on_main_not_per_pr():
+    on = _on("repo-inventory")
+    assert "pull_request" not in on and "merge_group" not in on and "push" not in on
+    assert on["schedule"] and "workflow_dispatch" in on
+    import re
+    bp = (WF / "branch-protection-sync.yml").read_text()
+    m = re.search(r"REQUIRED_CONTEXTS='(\[.*?\])'", bp)
+    assert m and "repo-inventory" not in m.group(1), "repo-inventory became required; it must run on PRs again"

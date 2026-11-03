@@ -40,7 +40,7 @@ def test_the_lists_are_identical():
 
 
 def test_pull_requests_have_no_path_filter():
-    for wf in WORKFLOWS:
+    for wf in ("pytest-run", "guards", "pytest-collect"):   # repo-inventory: no PR trigger since CI-STREAMLINE
         pr = _on(wf)["pull_request"]
         assert "paths" not in pr and "paths-ignore" not in pr, wf
 
