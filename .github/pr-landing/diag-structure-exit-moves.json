@@ -1,5 +1,7 @@
 {
-  "tier": 1,
-  "landing": "self",
-  "why": "Read path only: allowlist runtime_logs/structure_exit_moves.jsonl on /api/diag/log_file so the STRUCTURE-EXITS-DEFAULT closing observation (first phase=venue outcome=applied row per venue) is readable; documented in bot-api-reference."
+  "tier": 2,
+  "landing": "hold",
+  "hold_reason": "tier_2_3_needs_approval",
+  "hold_text": "Tier-2 by path (src/web/api/routers/diag.py, ict-web-api service). The change is read-only: one allowlist entry so /api/diag/log_file?name=structure_exit_moves can read runtime_logs/structure_exit_moves.jsonl, the STRUCTURE-EXITS-DEFAULT closing observation. No write path, no trading effect. Needs the manager's OK (session_01AFoLuLMKGkvg6UbCzdxjNR) to merge; deploy is the normal git-sync + web-api restart. Revert: git revert of the merge commit.",
+  "why": "Read path for the STRUCTURE-EXITS-DEFAULT closing observation (first phase=venue outcome=applied row per venue)."
 }
