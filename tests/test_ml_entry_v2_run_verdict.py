@@ -44,3 +44,21 @@ def test_timeframe_result_maps_its_registered_word(tmp_path):
 def test_timeframe_unknown_word_writes_nothing(tmp_path):
     (tmp_path / "U_result.json").write_text(json.dumps({"schema": "ml_entry_timeframe/1", "verdict": "weird"}))
     assert not m.write_verdict("U", tmp_path)
+
+
+def test_timeframe_rows_dict_gives_an_integer_n(tmp_path):
+    """The real ml_entry_timeframe/* shape: `rows` is {"<tf>/<scaling>": {"decision_rows": N}}. A null n with
+    read_state=measured is inadmissible to research_result.py and lost b620..b626 (run 41566793018, 2026-11-03)."""
+    (tmp_path / "U_result.json").write_text(json.dumps({
+        "schema": "ml_entry_timeframe/1", "verdict": "does_not_reproduce", "timeframe": "1h",
+        "rows": {"1h/bar": {"decision_rows": 1500, "symbols": 3}, "1h/clock": {"decision_rows": 800, "symbols": 3}}}))
+    assert m.write_verdict("U", tmp_path)
+    v = json.loads((tmp_path / "verdict.json").read_text())
+    assert v["n"] == 2300 and isinstance(v["n"], int)
+
+
+def test_timeframe_rows_dict_without_counts_stays_null_not_invented(tmp_path):
+    (tmp_path / "U_result.json").write_text(json.dumps({
+        "schema": "ml_entry_timeframe/1", "verdict": "indeterminate", "timeframe": "1h", "rows": {"1h/bar": {"symbols": 3}}}))
+    assert m.write_verdict("U", tmp_path)
+    assert json.loads((tmp_path / "verdict.json").read_text())["n"] is None

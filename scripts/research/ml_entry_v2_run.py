@@ -123,6 +123,13 @@ def write_verdict(unit: str, out: Path) -> bool:
             if v is None:
                 return False
             rows = d.get("rows")
+            if isinstance(rows, dict):
+                # ml_entry_timeframe/* writes rows as {"<tf>/<scaling>": {"decision_rows": N, ...}}; the evaluated population
+                # is the sum of decision_rows. A null n with read_state=measured is refused by research_result.py
+                # (inadmissible record), which lost b620/b621/b622/b624/b625/b626 in run 41566793018 (2026-11-03).
+                drs = [v.get("decision_rows") for v in rows.values() if isinstance(v, dict)]
+                drs = [x for x in drs if isinstance(x, int) and not isinstance(x, bool)]
+                rows = sum(drs) if drs else None
             (out / "verdict.json").write_text(json.dumps({
                 "verdict": v, "read_state": "measured",
                 "population": f"{unit}: timeframe {d.get('timeframe')} ENTRY pipeline, DEV FOLDS ONLY; registered word {w!r} "
