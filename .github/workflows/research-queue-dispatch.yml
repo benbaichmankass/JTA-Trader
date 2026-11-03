@@ -54,6 +54,20 @@ on:
     # 6 h "runnable" horizon (queue_replenish.py DISPATCH_CYCLE_HOURS) and
     # the 12 h idle alarm (queue_throughput.py) are deliberately NOT retuned.
     - cron: "20 * * * *"
+  # REFILL 2026-11-03 (manager, lane RESEARCH-CAPACITY): MEASURED 24h to 2026-11-03T02:45Z, the runner backend had 0 research runs in
+  # flight 61% of minutes (avg 0.82 of 6) because a light unit finishes in a median 8.4 min but slots were refilled once per
+  # 40-60 min cycle. A finished research run now asks for a cycle. Safe by construction: (1) the `dispatch` job holds the
+  # `research-queue-dispatch` group and GitHub keeps ONE pending run per group, so a burst of completions is one cycle;
+  # (2) the first step of a workflow_run cycle exits if the previous dispatch started under 10 min ago; (3) every existing
+  # brake (caps, infra yield, open-stamp-PR dedupe, and the new recent-run dedupe in dispatch_queue.fired_run_units) is unchanged.
+  workflow_run:
+    workflows:
+      - research-script-run
+      - research-script-run-data
+      - research-script-run-kaggle
+      - research-script-run-kaggle-cpu
+      - research-script-run-trainer
+    types: [completed]
   workflow_dispatch:
     inputs:
       fire:
@@ -105,6 +119,31 @@ jobs:
           python3 scripts/ops/schedule_keeper.py dedupe
           --run-id "${{ github.run_id }}" --schedule "${{ github.event.schedule }}"
 
+  # REFILL 2026-11-03: a research-run completion asks for a cycle, but never faster than one per 10 min. Skip when any other dispatch
+  # run of this workflow was created in the last 10 min (running, queued or finished). Fails open to "run": the concurrency group and
+  # its one-pending-run rule still serialise, and a wrong "run" costs one idempotent cycle. Separate from `dedupe` (schedule-only).
+  gap:
+    if: github.event_name == 'workflow_run'
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    permissions:
+      actions: read
+    outputs:
+      skip: ${{ steps.gap.outputs.skip }}
+    steps:
+      - id: gap
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          THIS_RUN: ${{ github.run_id }}
+        run: |
+          set -euo pipefail
+          recent=$(gh api "repos/${GH_REPO}/actions/workflows/research-queue-dispatch.yml/runs?per_page=10" \
+            --jq '[.workflow_runs[] | select((.id|tostring) != env.THIS_RUN) | select((.created_at|fromdateiso8601) > (now - 600))] | length')
+          echo "other dispatch runs created in the last 10 min: ${recent}"
+          if [ "${recent}" != "0" ]; then echo "skip=true" >> "$GITHUB_OUTPUT"; fi
+
   # ⚠️ SPLIT 2026-10-07 (lane RQ-CADENCE, PI-20261007-APBY4NTV-0004): THIS JOB NO
   # LONGER LANDS ANYTHING. It used to hold the `research-queue-dispatch`
   # concurrency group for the whole run INCLUDING three `commit-to-main`
@@ -123,10 +162,11 @@ jobs:
   # only holder of the group, and the open-stamp-PR / landed-results checks in
   # dispatch_queue.py cover the minutes between "fired" and "stamp PR open".
   dispatch:
-    needs: dedupe
+    needs: [dedupe, gap]
     if: |
-      !cancelled() && needs.dedupe.outputs.skip != 'true' && (
+      !cancelled() && needs.dedupe.outputs.skip != 'true' && needs.gap.outputs.skip != 'true' && (
       github.event_name == 'schedule' ||
+      github.event_name == 'workflow_run' ||
       github.event_name == 'workflow_dispatch'
       )
     runs-on: ubuntu-latest
@@ -155,7 +195,7 @@ jobs:
       # runs are the only workflow_dispatch runs whose actor is the bot
       # (scripts/ops/schedule_keeper.py KEEPER_ACTOR); a human's hand
       # dispatch still defaults to dry.
-      FIRE: ${{ github.event_name == 'schedule' || inputs.fire == true || (github.event_name == 'workflow_dispatch' && github.actor == 'github-actions[bot]') }}
+      FIRE: ${{ github.event_name == 'schedule' || github.event_name == 'workflow_run' || inputs.fire == true || (github.event_name == 'workflow_dispatch' && github.actor == 'github-actions[bot]') }}
     steps:
       - uses: actions/checkout@v4
         with:

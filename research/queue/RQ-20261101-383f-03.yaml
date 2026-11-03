@@ -1,7 +1,7 @@
 # Hand-authored 2026-11-01 by lane ML-ENTRY-TP-REVISION (Tier 1), dispatched by Manager Session 2026-11-01a (session_01AFoLuJ1apgy8sfngu4WyNH).
 # Rule registered BEFORE this unit's run. NOT BLIND: see decision_rule.not_blind. Gates: none (the outcome is monitoring only, operator 2026-11-01 ~10:25Z).
 id: RQ-20261101-383f-03
-status: queued
+status: done
 cadence: once
 theme: ml_health
 priority: 1
@@ -90,3 +90,16 @@ ml_consumer:
   book: money
 what_it_does_not_do: Registers, serves and promotes nothing; changes no config; places no order.
 last_dispatched_at: '2026-11-01T10:35:50+00:00'
+grading:
+  attested: RULE-RQ20261101-383f-03-ENTRY-FORWARD-OCT
+  auto: true
+  decision_rule_id: RULE-RQ20261101-383f-03-ENTRY-FORWARD-OCT
+  evidence:
+  - research/results/RQ-20261101-383f-03/local-20261101T1045Z.jsonl
+  graded_at: '2026-11-03'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail

@@ -47,6 +47,14 @@ permissions:
   issues: write
   actions: write   # the backfill re-dispatches itself while run.remaining > 0
 
+env:
+  # OPERATOR DECISION 2026-11-03 ~05:56Z (popup "Keep it on the trainer (Rec.)"): the TRAINER is the ETF 1m history store of record; there is
+  # NO Hugging Face PRO upgrade and nothing is pruned from the lake. Why: the HF account is on the FREE plan and its private storage limit was
+  # reached ("403 Forbidden: Private storage limit reached for user bentzbk", run 41552388391 chunks 3-4), so an HF publish of ETF 1m is an
+  # EXPECTED refusal and would turn every run red. This is the ONE switch that re-enables the attempt: set to "1" (and have the space).
+  # Supersedes the 2026-11-01 "lake is the store of record" design for ETF 1m only. Trainer headroom: docs/claude/work/checklist/ETF-HISTORY-PIPELINE.json.
+  ETF_LAKE_PUBLISH: "0"
+
 jobs:
   etf-history:
     # JOB-level (not workflow-level): a workflow-level group lets every skipped issue event queue behind this multi-hour run, and a
@@ -138,6 +146,8 @@ jobs:
           # MEASURED 2026-11-01 (trainer-vm-diag #22140): 97 GB disk, 53 GB used, 45 GB free. PROJECTION for the 1m base on ~770 symbols
           # with data: ~14 GB (range 10-25; synthetic-bar bytes/row x estimated rows, NOT yet measured on the real data). Floor: do not
           # START below 15 GB free, and stop mid-run below 10 GB; never silently shrink the universe or the timeframe.
+          # MEASURED 2026-11-03 (run 41552388391): 3,688 MB for ~120 symbols (~31 MB/symbol) on the trainer; free 41 GB after that run. The 681
+          # symbols still pending add ~20 GB, so ~20 GB should be left when the backfill completes: above both floors (15 start / 10 stop).
           if [ -z "${avail}" ] || ! [ "${avail}" -ge 15 ] 2>/dev/null; then
             echo "go=0" >> "$GITHUB_OUTPUT"
             echo "lowdisk=1" >> "$GITHUB_OUTPUT"
@@ -197,7 +207,7 @@ jobs:
           except Exception as e:
               print(f"stooq 1d: ERR {str(e)[:100]}")
           PY
-      - name: Fetch the 1m base in chunks (lake is the store of record; trainer keeps a tail cache; per-symbol failures contained)
+      - name: Fetch the 1m base in chunks (the TRAINER is the store of record; HF lake publish is OFF by default; per-symbol failures contained)
         id: fetch
         if: (steps.mode.outputs.mode == 'backfill' || steps.mode.outputs.mode == 'refresh') && steps.disk.outputs.go == '1'
         continue-on-error: true
@@ -213,15 +223,14 @@ jobs:
           SSH="ssh -i $HOME/.ssh/trainer_key -o LogLevel=ERROR -o BatchMode=yes -o StrictHostKeyChecking=accept-new -o ConnectTimeout=20"
           DEST="${TRAINER_USER}@${TRAINER_IP}:ict-trading-bot/data/etf_history/"
           YM="$(date -u +%Y-%m)"; YM1="$(date -u -d "$(date -u +%Y-%m-01) -1 month" +%Y-%m)"
-          # DECISION (manager, operator's design mandate 2026-11-01): the HF market-data lake (bentzbk/jta-market-lake) is the STORE OF RECORD;
-          # the trainer keeps only a TAIL CACHE (current + previous month). ONE publisher: lane MARKET-DATA-LAKE's scripts/data_lake/*. If that
-          # code (PR #22148) or HF_TOKEN is absent, or a chunk's publish fails, that chunk is pushed to the trainer IN FULL instead, so no
-          # history is ever dropped; the run goes red once.
+          # STORE OF RECORD = the TRAINER (operator 2026-11-03, see ETF_LAKE_PUBLISH at the top). The HF lake publish below runs ONLY when
+          # ETF_LAKE_PUBLISH=1 (and the lake code + HF_TOKEN exist). When it is off, or a chunk's publish fails, the chunk is pushed to the
+          # trainer IN FULL, so no history is ever dropped; with it off nothing is red for the expected HF quota refusal.
           LAKE=0
-          if [ -f scripts/data_lake/free_sources.py ] && [ -f scripts/data_lake/hf_publish.py ] && [ -n "${HF_TOKEN:-}" ]; then
+          if [ "${ETF_LAKE_PUBLISH:-0}" = "1" ] && [ -f scripts/data_lake/free_sources.py ] && [ -f scripts/data_lake/hf_publish.py ] && [ -n "${HF_TOKEN:-}" ]; then
             python -m pip install --quiet huggingface_hub && LAKE=1
           fi
-          echo "lake publisher available: ${LAKE}"
+          echo "lake publisher available: ${LAKE} (ETF_LAKE_PUBLISH=${ETF_LAKE_PUBLISH:-0}; the trainer is the ETF 1m store of record)"
           RUN_START="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
           rc=0
           SECONDS=0

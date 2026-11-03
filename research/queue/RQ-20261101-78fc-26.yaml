@@ -2,7 +2,7 @@
 id: RQ-20261101-78fc-26
 title: 'ITERATION 1 of mgc_trend_1h (pass_unconfirmed): Does mgc_trend_1h as declared, selected on 2018-06-01..(holdout boundary), stay net-positive
   once on the held-back latest span?'
-status: queued
+status: done
 cadence: once
 theme: live_strategy
 priority: 2
@@ -116,4 +116,17 @@ related:
 - RESEARCH-ITERATE
 - comms/strategy_evidence/mgc_trend_1h.json
 what_it_does_not_do: Edits no config, roster or rule; places no order; a PASS is an input to the next iteration, not a promotion.
-last_dispatched_at: '2026-11-03T04:15:50+00:00'
+last_dispatched_at: '2026-11-03T05:11:44+00:00'
+grading:
+  attested: RULE-RQ-20261101-78fc-26
+  auto: true
+  decision_rule_id: RULE-RQ-20261101-78fc-26
+  evidence:
+  - research/results/RQ-20261101-78fc-26/41577260489.jsonl
+  graded_at: '2026-11-03'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail
