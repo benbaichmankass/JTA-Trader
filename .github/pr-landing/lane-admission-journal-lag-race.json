@@ -1,0 +1,7 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "hold_reason": "tier_2_3_needs_approval",
+  "hold_text": "Tier-2 order-path change (src/runtime/positions.py admit_slice). Operator approval: popup 2026-11-03 ~06:01Z, verbatim answer 'Yes, build and ship (Rec.)', relayed by the manager (session_01AFoLuJ1apgy8sfngu4WyNH) in the lane dispatch. A branch cannot write its own R15 credential, so the dispatched lane merges this held PR by hand under that approval once CI is green. Revert: git revert.",
+  "why": "ADMISSION-JOURNAL-LAG-RACE: when admit_slice sees DIVERGENT with the venue flatter than the ledger, it re-reads the journal once after 1.5 s and re-reconciles before refusing. Still divergent -> refused; venue larger -> refused with no re-read; never resizes; no gate, no flag."
+}
