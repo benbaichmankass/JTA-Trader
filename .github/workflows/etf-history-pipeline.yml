@@ -34,6 +34,9 @@ on:
         default: "refresh"
   schedule:
     - cron: "17 2 * * 2-6"
+    # BACKSTOP for the self-dispatch chain below: a backfill that stalled (no progress) or whose chain broke is retried here, so the
+    # pipeline keeps trying without a manager. A finished backfill makes this a cheap no-op (every series is fresh -> skipped).
+    - cron: "37 */6 * * *"
   issues:
     # `labeled` (not `opened`): a label added after creation, or re-added, must also trigger; creating an issue WITH the label
     # fires `labeled` too. Under `opened` alone a late/re-added label (#22406) could never start a run.
@@ -42,13 +45,15 @@ on:
 permissions:
   contents: read
   issues: write
-
-concurrency:
-  group: etf-history-pipeline
-  cancel-in-progress: false
+  actions: write   # the backfill re-dispatches itself while run.remaining > 0
 
 jobs:
   etf-history:
+    # JOB-level (not workflow-level): a workflow-level group lets every skipped issue event queue behind this multi-hour run, and a
+    # newer pending run then CANCELS an older pending real request (observed on runs 16/17, 2026-11-02).
+    concurrency:
+      group: etf-history-pipeline
+      cancel-in-progress: false
     if: >-
       github.event_name != 'issues' ||
       ((github.event.issue.user.login == github.repository_owner ||
@@ -63,10 +68,12 @@ jobs:
           EVENT: ${{ github.event_name }}
           INPUT_MODE: ${{ inputs.mode }}
           ISSUE_BODY: ${{ github.event.issue.body }}
+          SCHEDULE: ${{ github.event.schedule }}
         run: |
           set -euo pipefail
           m="refresh"
           if [ "$EVENT" = "workflow_dispatch" ]; then m="${INPUT_MODE:-refresh}"; fi
+          if [ "$EVENT" = "schedule" ] && [ "$SCHEDULE" = "37 */6 * * *" ]; then m="backfill"; fi
           if [ "$EVENT" = "issues" ]; then
             m="$(printf '%s\n' "$ISSUE_BODY" | sed -n 's/^mode:[[:space:]]*\([a-z]*\).*/\1/p' | head -1)"
             m="${m:-refresh}"
@@ -221,7 +228,7 @@ jobs:
           for chunk in $(seq 1 200); do
             left=$(( (9900 - SECONDS) / 60 ))   # 165 min budget; the job cap is 210
             if [ "$left" -lt 3 ]; then echo "time budget used; the next run resumes"; break; fi
-            python3 -u scripts/ops/fetch_etf_history.py --mode "$MODE" --out store --tfs 1m --max-new 25 --budget-min "$left" \
+            python3 -u scripts/ops/fetch_etf_history.py --mode "$MODE" --out store --tfs 1m --max-new 60 --workers 6 --budget-min "$left" \
               --skip-fetched-after "$RUN_START" || rc=1
             rm -rf chunk lake
             moved="$(python3 scripts/ops/etf_chunk_split.py --store store --chunk chunk --since "$RUN_START" 2>/dev/null)"
@@ -317,6 +324,23 @@ jobs:
             verify_full.md
             health.json
           if-no-files-found: ignore
+      - name: Continue the backfill (self-dispatch while run.remaining > 0 AND this run made progress)
+        id: cont
+        if: always() && steps.mode.outputs.mode == 'backfill' && steps.fetch.outcome != 'skipped'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -uo pipefail
+          read -r rem fetched < <(python3 -c "import json;r=json.load(open('store/MANIFEST.json'))['run'];print(r['remaining'],r['fetched'])" 2>/dev/null || echo "")
+          echo "run.remaining=${rem:-unknown} run.fetched=${fetched:-unknown}"
+          if [ -z "${rem:-}" ] || [ "${rem}" = "0" ]; then echo "backfill complete or manifest unreadable: not re-dispatching"; exit 0; fi
+          if [ "${fetched:-0}" = "0" ]; then
+            echo "::warning::backfill made NO progress this run (remaining=${rem}); not re-dispatching in a hot loop. The 6-hourly backstop schedule retries."
+            exit 0
+          fi
+          echo "continuing=1" >> "$GITHUB_OUTPUT"   # intermediate runs are not red: pending series are expected until remaining is 0
+          if gh workflow run etf-history-pipeline.yml -f mode=backfill; then echo "re-dispatched backfill (remaining=${rem})"
+          else echo "::warning::could not re-dispatch (the 6-hourly backstop schedule continues it)"; fi
       - name: Comment result on the issue
         if: always() && github.event_name == 'issues'
         uses: actions/github-script@v7
@@ -334,7 +358,7 @@ jobs:
             await github.rest.issues.createComment({ owner: context.repo.owner, repo: context.repo.repo, issue_number: context.issue.number, body });
             await github.rest.issues.update({ owner: context.repo.owner, repo: context.repo.repo, issue_number: context.issue.number, state: 'closed' });
       - name: Red flag on a failed fetch, stale/missing series or low disk (ONE flag; the next run retries)
-        if: always() && (steps.fetch.outcome == 'failure' || steps.verify.outcome == 'failure' || steps.disk.outputs.lowdisk == '1' || steps.disk.outputs.readfail == '1' || steps.fetch.outputs.lowdisk == '1')
+        if: always() && (steps.fetch.outcome == 'failure' || (steps.verify.outcome == 'failure' && steps.cont.outputs.continuing != '1') || steps.disk.outputs.lowdisk == '1' || steps.disk.outputs.readfail == '1' || steps.fetch.outputs.lowdisk == '1')
         run: |
           echo "::error::etf-history: fetch=${{ steps.fetch.outcome }} verify=${{ steps.verify.outcome }} lowdisk=${{ steps.disk.outputs.lowdisk }} (see steps above)"
           exit 1

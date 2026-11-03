@@ -544,6 +544,8 @@ and sat in `ROADMAP.md` M20 as *"the bracket must carry a predictive expectation
 at entry"*. It was in no canonical doc and nothing enforced it. This section is
 the doctrine; the guard below is the enforcement.
 
+**Default exit (operator 2026-11-01):** structure-based SL and TP are the default; see § "Active management", "The default exit". Gates this adds or changes: none.
+
 ### The four clauses
 
 1. **Every leg's bracket carries a REAL predictive take-profit at entry.** The
@@ -784,6 +786,31 @@ own RiskManager). Guard: `scripts/ci/check_no_action_rate_cap.py`.
    - **R giveback:** peak MFE in R minus realised net R per trade, as a mean and a p95.
    - **Overall net P&L:** in % per account and per book, net of the full cost stack.
    - **Net P&L in $:** only from the book simulation. Balances are never committed to this public repo.
+
+### The default exit: dynamic, structure-based SL and TP (operator, 2026-11-01)
+
+**Gates this adds or changes: none.** The two execution gates, `RULE-AM-RISK-ADJUSTED-V1` and every Tier-3 merge requirement are untouched.
+
+The operator, verbatim, 2026-11-01 ~23:00Z (relayed by Manager Session 2026-11-01a; row `STRUCTURE-EXITS-DEFAULT`):
+
+> *"In general, dynamic structure based sls and tps should be the default for all strategies and mls, until something else is proven better."*
+
+**The rule.** A dynamic SL and TP anchored on market structure (confirmed swing highs/lows, FVG edges, liquidity levels), moving with
+structure as the trade develops, is the **default exit for every strategy and every ML**, until a leg's own net-of-cost evidence proves
+another exit better. The default sets two things only: **what we TEST FIRST** for a leg, and **what an untested leg is moved TOWARD**.
+It is not a live change. Applying it to a leg is leg by leg: a pre-registered test, then a Tier-3 merge (a stop or TP geometry change on
+a live leg is strategy logic). Until that merge a leg keeps its declared exit. A leg that has no structure-exit test registered is an
+untested leg, and its exit is a debt to test, listed in the scope memo `docs/research/structure-exits-default-scope-2026-11-01.md`.
+
+**How it composes with the clauses above (flagged, not resolved):**
+- Clause 4 says an in-trade action class stays advice-only until it passes `RULE-AM-RISK-ADJUSTED-V1`, and the 2026-10-29 re-grade passed no
+  class. The default does not override that: a structure exit that MOVES a bracket in-trade is still graded by clause 4 before it
+  executes. What the default changes is the priority and the baseline-to-beat's direction (structure first), not the bar. **Operator, if you
+  intended "default" to also lower clause 4's bar for the structure class, say so; this text does not.**
+- TP doctrine clause 1 requires a real predictive TP; a structure TP (the next opposing liquidity level) is such a TP, and clause 3 (trail
+  as profit exit does not exempt a leg) is unchanged.
+- An **entry-time** structure SL/TP (initial bracket placed at structure) is entry geometry, a Tier-3 param change by the usual path, not
+  an in-trade class.
 
 ### The rule's record and the objective it serves (operator, 2026-10-29)
 
@@ -1689,6 +1716,7 @@ filtered to architecture-level deltas only.
 | 2026-10-29 | AM-RISK-ADJUSTED-RULE (lane, Tier-3 doctrine the operator decided; landing hold) | **Active management graduates on a RISK-ADJUSTED rule.** Operator decision 2026-10-29 (verbatim in § "Active management"): clause 4's "judged against hold" (mean net R) becomes `RULE-AM-RISK-ADJUSTED-V1`, measured on the whole book. A class passes if R1 it gives up <= 0.05 R per baseline trade, R2 it cuts book max drawdown or the worst-5% weekly outcome by >= 15%, R3 it holds in a fold majority, and R4 it beats a matched random-intervention control. Each class is still judged on its own test, registered before the run and net of the full cost stack. The system's trading objective is stated once: absolute net P&L ($ and % return per account and book) first; risk reduction is the tie-breaker, and it wins when it costs little P&L; ratios are not the objective. Measurement of record: a book-level $ simulation per account with the production sizer and caps. No harness has that yet (row `BOOK-SIM-REAL-SIZER`), so the per-trade-R grader `scripts/research/am_risk_adjusted.py` (also `exit_lever_ablation.py --grade risk_adjusted`) is a screen until one does. Re-grade of landed records: no class passes. Unit RQ-20261029-1f39-01 (break-even after peak, real-money legs) is registered and blocked on rows `HARNESS-BE-RANDOM-CONTROL` and `BOOK-SIM-REAL-SIZER`. | `docs/ARCHITECTURE-CANONICAL.md`, `scripts/research/am_risk_adjusted.py`, `scripts/research/exit_lever_ablation.py`, `tests/test_am_risk_adjusted.py`, `comms/research/am_risk_adjusted/`, `research/queue/blocked/RQ-20261029-1f39-01.yaml`, skills `exit-refinement` / `live-trade-review` / `trading-desk`, `docs/reference/trading-and-model-practice-principles.md`, `docs/plans/OPERATING-PLAN-2026-09-21.md`, `config/mandates.yaml` (comment only) | None to what trades today. Every in-trade class stays advice-only; no order path, config field, mandate or param changes. Graduating a class is still a Tier-3 / mandate change on its own passed record. |
 | 2026-10-31 | DESK-HANDOFF-PROTOCOL (lane, Tier 3 operator-approved conditional; landing hold) | **Desk-opened positions get a hand-off chain, and the claude_desk live `max_hold_min` <= 60 cap is removed.** Operator popup 2026-10-30 ~22:30Z, verbatim: *"We can lift it completely if we have a protocol for trade desk hand-offs"*. (a) Every desk `propose_entry` carries `proposal.forecast` (the live-review forecast object; target = tp, p = p_hit, `invalidation_px` between entry and stop) and `proposal.exit_plan`, compiled by `desk_write.py`. (b) The live-review packet for a `claude_desk` package carries `desk_handoff` (opening record, chain tail, `prior_decision_id`); every review row on it carries `handoff` {verdict confirm/revise/exit, `prior_decision_id`, reason, read_state}, validated against the committed packet (one chain per position; `exit` <=> `close`). (c) claude_desk is on the 4h `judgement_cadence` (pinned by test). (d) `attention_watch` `desk_orphan` flags an open desk position with no decision in 4h + 1h (a flag, never a gate). (e) A `could_not_look` hand-off or mechanics read is still judged; any non-hold action routes `operator_ask`; the position keeps its venue SL/TP. `max_hold_min` becomes an optional time stop with no cap. Scope bybit_1 demo + existing paper books; no mode, roster, real-money or prop change; every in-trade class stays advice-only (§ Active management clause 4). | `src/runtime/desk_handoff.py`, `scripts/ops/live_review_packet.py`, `scripts/ci/{check_live_review_records,check_desk_records}.py`, `.claude/skills/trading-desk/{desk_write,short_hold_write}.py`, `comms/schema/{live_review,desk_decision}.schema.json`, `scripts/ops/attention_watch.py`, the desk + LTR briefs, `src/units/strategies/claude_desk.py` (docstring), config comments, this file, + tests | Tier-3 (desk entry cap) + Tier-2 (packet, validator, short-hold writer, probe). PR #21756 (stacked on #21750); landing hold, manager merges. |
 | 2026-10-31 | TRIGGER-FIRST-REVIEWS (lane, Tier 2; landing hold) | **Scheduled live-review slots are trigger-first.** Operator 2026-10-31, verbatim: "Maybe in general, that should be the workflow, like, have more trigger-based events and not waste capacity on regular reviews if there's nothing new really to review." `live_review_due.judgement_cadence_event` and the `daily_floor` event no longer fire for a package whose market is closed (`src/runtime/market_hours.py`; unknown class = open, with the reason); `judgement_cadence` additionally needs a new closed bar of the leg's timeframe AND a price move >= `judgement_cadence.min_move_atr` x ATR since the last review. Withheld slots are returned in `skipped_slots` (`skipped_closed_market` / `skipped_nothing_new`), never silent. Event triggers are unchanged. The desk scan wake (`desk_wake_marker.material_change`, `scan_wake_min_move_atr`) wakes only on a material change vs the last woken packet, else receipt `skipped_nothing_new`; the packet still lands hourly. The `desk_orphan` probe bound follows (`desk_handoff.trigger_first_bound`). Design: `docs/plans/live-trade-review-DESIGN.md` § 2. |
+| 2026-11-01 | STRUCTURE-EXITS-DEFAULT (lane, Tier-1) | **Dynamic structure-based SL and TP is the default exit for every strategy and ML until a leg's own net-of-cost evidence proves another exit better** (operator 2026-11-01, verbatim in § Active management, 'The default exit'). Sets what is tested first and what an untested leg moves toward; applying it to a leg is a test plus a Tier-3 merge. 15 research units registered (blocked on a shared detector and harness arms), scope memo and project row. | `docs/ARCHITECTURE-CANONICAL.md`, `.claude/skills/exit-refinement/SKILL.md`, `docs/research/structure-exits-default-scope-2026-11-01.md`, `research/queue/blocked/RQ-20261101-5e01-*.yaml` | None to what trades today: docs, research registrations and a checklist row. Gates this adds or changes: none. |
 
 ## Known gaps
 

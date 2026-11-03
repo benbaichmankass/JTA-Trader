@@ -1,0 +1,116 @@
+id: RQ-20261102-5e03-01
+title: 'Frozen ml_entry v1, LONG only, on alpaca_live symbols with a DAILY session-aware structure SL/TP (stop outside the overnight gap): mean net R per decision
+  >= 0 at n >= 30, same clock and cost stack as bdc2-01 (FAILED -0.308 R, n=128, 59 SPY gap-throughs)?'
+status: queued
+cadence: once
+theme: ml_health
+priority: 1
+roadmap:
+- L-ML-LIVE
+kind: experiment
+practice_precedent: 'T1, M6 (docs/reference/trading-and-model-practice-principles.md): one frozen model, one read of a sealed window; RQ-20261101-c692-06 (the same
+  frozen model scored on the bybit_2 symbols) is the precedent this mirrors.'
+question: 'bdc2-01 read the frozen ml-decision-entry-v1 on alpaca_live LONG with a 2 x 1h-ATR stop and FAILED (-0.308 R, n=128); 59 of 497 SPY longs gapped THROUGH
+  the stop overnight. Same model, same decisions, same clock, same cost stack, same held-out window; ONE change: the bracket is structure-based on DAILY bars (SL
+  beyond the last confirmed daily swing, TP at the next opposing daily structure level), so the stop sits outside the overnight gap. Operator approved 2026-11-01
+  17:30Z ("Yes let''s do that"); STRUCTURE-EXITS-DEFAULT.'
+why_this_matters: 'Operator 2026-11-01: structure-based SL/TP is the default exit; 2026-11-02 "let''s try to push that up". If the bracket, not the model, was why
+  alpaca_live FAILED, this is the cheapest route to an ML entry on a real-money cash book. A PASS is a DISCOVERY: it needs the forward-window read (RQ-20261101-5b6b-01)
+  before any live step.'
+power:
+  expected_n: 120
+  min_detectable_effect: 0.26
+  effect_units: metric
+  sd: 1.0
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: 'INFERRED: 11 symbols x ~250 sessions x 2 decision bars a session (UTC close hours 16 and 20) = ~5,500 decision rows; holds up to 24 bars (~3.4 sessions)
+    and a long-only take at tau 0.10 give an expected ~60-250 taken decisions. sd ~1 R. The operator bar is a point estimate; the floor 30 (the c692-06 traded-subset
+    floor) only keeps a sign readable. An honest read at this n has a wide CI (reported).'
+  feasibility:
+    source: none
+    accrual_basis: Replays public history; nothing accrues. Yahoo 1h history reaches ~730 days back, which covers the window plus feature warm-up.
+decision_rule:
+  id: RULE-RQ20261102-5E03-01-ENTRY-STRUCTURE-ON-ALPACA
+  registered_at: '2026-11-02'
+  registered_before_run: true
+  statistic: 'scripts/research/ml_entry_alpaca_score.py verdict(): held-out mean net R per TAKEN LONG decision on the alpaca_live symbols, n, per symbol. Reported,
+    never gating: bootstrap CI95; the same frozen model with BOTH sides on the alpaca_live symbols and on the alpaca_portfolio symbols (the mirror takes shorts);
+    always-long under identical mechanics; by month; the c692-06 bybit_2 read; the October long-side monitoring figure above.'
+  rule: 'REGISTERED 2026-11-02 BEFORE THE RUN. INDETERMINATE IF held-out n < 30 LONG decisions on the alpaca_live symbols. PASS IF held-out mean net R per taken LONG
+    decision >= 0 (point estimate; the operator bar of bdc2-01). FAIL otherwise. One bracket spec, fixed here and never tuned: daily pivot N=3; SL = last confirmed
+    daily swing low below entry minus 0.25 daily-ATR14, distance clamped to [0.5, 3.0] x 2 daily-ATR14; SL ratchets toward price only; TP = nearest opposing daily
+    swing high / unfilled daily FVG edge >= 1.0 R, extend-only; levels read as of the PREVIOUS completed session (the forming session is never read); no confirmed
+    swing => no read (row dropped, counted). Same model (sha256 recorded), tau 0.10, 24-bar horizon, clock, costs as bdc2-01. HONEST WINDOW: this is a SECOND READ
+    on the same held-out window 2025-10-01..2026-09-30 that bdc2-01 already read once (variants_read_on_this_heldout = 2). MULTIPLE-COMPARISON NOTE: the bracket was
+    chosen AFTER the first read failed and its failure mechanism was diagnosed on these same bars, so a PASS here is a discovery with an optimistic bias and is NOT
+    promotable: it requires an unused-window confirmation (the forward window 2026-11-02..2026-11-30 of RQ-20261101-5b6b-01, which this unit does NOT consume) before
+    any Tier-3 step. PASS -> file the confirmation read, no config change. FAIL -> the bracket is not what separates this model from alpaca_live; B3 (5b6b-01) proceeds
+    unchanged. Thresholds are not changed after any result.'
+  what_it_does_not_do: No re-fit, no new model, no tau choice, no sizing, no config change, no order, no live wiring. Does not consume the forward window. Yahoo bars
+    proxy Alpaca fills; 5 bps slippage is a placeholder.
+  min_n: 30
+  unit_rule_id: RULE-RQ20261102-5E03-01-ENTRY-STRUCTURE-ON-ALPACA
+compute: cpu_light
+value:
+  bucket: ai_trader
+  usd_at_stake_per_month: 60
+  confidence: 0.2
+  basis: 'stand-in: the operator goal (an ML decision maker live on the real-money Alpaca book); not a P&L measurement.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 2.0
+  est_minutes: 15
+  why_runner: 'cpu_light inference + keyless Yahoo/Binance Vision fetch: research-script-run.yml (the bdc2-01 route); Kaggle also viable (KAGGLE-CANDLES, #22410).'
+  basis: 'MEASURED fetch probe: IAUM 1h RTH 2025-05-01..2026-10-30 = 2,627 bars; 60 perps x 18 monthly zips.'
+run:
+  workflow: research-script-run.yml
+  command:
+  - python3
+  - scripts/research/ml_entry_alpaca_score.py
+  - run
+  - --model
+  - ml/served/ml_decision_entry_v1/model.json
+  - --cache
+  - /tmp/ml_entry_alpaca
+  - --unit
+  - '{unit}'
+  - --out
+  - '{out_dir}'
+  - --where
+  - research-script-run
+  - --structure-pivot
+  - '3'
+  - --rule-id
+  - RULE-RQ20261102-5E03-01-ENTRY-STRUCTURE-ON-ALPACA
+  - --registered-at
+  - '2026-11-02'
+  - --variants-read
+  - '2'
+  - --mc-note
+  - second read on the bdc2-01 held-out window, bracket chosen after the first read failed; PASS is a discovery needing the unused forward window
+  timeout_minutes: 60
+  inputs:
+    research_unit: RQ-20261102-5e03-01
+holdout_lock_note: 'ML-FEATURE-INFRA (relayed by the manager 2026-11-01 12:03Z): this read is a symbol-holdout read of ENTRY-v1-frozen on 2025-10-01..2026-09-30 for
+  the 11 alpaca_live ETFs (absent from v1 training), CORRELATED evidence (same calendar window as c692-01). It was read 2026-11-01 ~12:05Z, BEFORE scripts/research/holdout_lock.py
+  existed on main; the lock claim is back-filled once PR #22097 lands (PI item ALPACA lane), and the lock will stamp read_at as the back-fill time, not the true read
+  time.'
+ml_consumer:
+  consumer: ALPACA-LIVE-ACTIVITY-ML
+  decision: 'whether the ONE ml_entry implementation (held PR #22079) gets a per-account block that opens LONG positions on alpaca_live (and both sides on its mirror
+    alpaca_portfolio) on the ETFs alpaca_live pulls, beside the rostered leg below that shares that real-money cash book'
+  legs:
+  - iaum_pullback_1d
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- RQ-20261101-bdc2-01
+- RQ-20261101-5b6b-01
+- docs/research/alpaca-live-activity-2026-11-01.md
+- src/runtime/structure_levels.py
+- STRUCTURE-EXITS-DEFAULT

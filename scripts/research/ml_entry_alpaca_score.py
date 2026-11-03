@@ -141,7 +141,23 @@ def perp_context(perps: dict[str, pd.DataFrame]) -> pd.DataFrame:
     return R, V
 
 
-def equity_rows(sym: str, df: pd.DataFrame, R: pd.DataFrame, V: pd.DataFrame, slip_bps: float, fee_bps: float) -> pd.DataFrame:
+def daily_structure(df: pd.DataFrame, pivot_n: int):
+    """Session-aware DAILY structure for hourly RTH bars (STRUCTURE-EXITS-DEFAULT).
+    Returns (StructureLevels over daily bars, daily ATR14 array, t_map). ``t_map[k]`` = index of the last
+    COMPLETED session before bar k's own session (strictly earlier: the session still forming is never read), -1 if none."""
+    from src.runtime.structure_levels import StructureLevels
+    sess = df.ts.dt.tz_convert("America/New_York").dt.date
+    codes = pd.factorize(sess)[0]                      # session index per hourly bar, ascending in time
+    g = df.assign(_s=codes).groupby("_s")
+    dh, dl, dc = g["high"].max().to_numpy(float), g["low"].min().to_numpy(float), g["close"].last().to_numpy(float)
+    pc = np.r_[np.nan, dc[:-1]]
+    tr = np.nanmax(np.vstack([dh - dl, np.abs(dh - pc), np.abs(dl - pc)]), axis=0)
+    datr = pd.Series(tr).rolling(14, min_periods=14).mean().to_numpy()
+    return StructureLevels(dh, dl, pivot_n), datr, codes - 1
+
+
+def equity_rows(sym: str, df: pd.DataFrame, R: pd.DataFrame, V: pd.DataFrame, slip_bps: float, fee_bps: float,
+                structure_pivot: int = 0) -> pd.DataFrame:
     f = E.features_symbol(df[["ts", "open", "high", "low", "close", "volume"]])
     # hour / dow are the model's "close hour" features: read from the bar's real close time
     f["hour"] = df.close_ts.dt.hour.to_numpy()
@@ -160,8 +176,18 @@ def equity_rows(sym: str, df: pd.DataFrame, R: pd.DataFrame, V: pd.DataFrame, sl
     a = atr[cand]
     risk = 2.0 * a
     out = {"i": cand, "ts": close_ts.to_numpy()[cand], "symbol": sym, "entry": entry, "atr": a}
+    if structure_pivot:
+        from ml_structure_bracket import structure_outcome
+        lv_d, datr, tmap = daily_structure(df, structure_pivot)
+        a_d = np.where(tmap[cand] >= 0, datr[np.clip(tmap[cand], 0, None)], np.nan)
+        out["atr"] = a_d
     for name, side in (("long", 1), ("short", -1)):
-        px, j, reason = E.bracket_outcome(o[win], h[win], lo[win], c[win], entry, a, side)
+        if structure_pivot:
+            px, j, reason, risk_s, _fb = structure_outcome(lv_d, o[win], h[win], lo[win], c[win], cand, entry, a_d, side,
+                                                           sl_atr=2.0, tp_atr=3.0, t_map=tmap)
+            risk = risk_s
+        else:
+            px, j, reason = E.bracket_outcome(o[win], h[win], lo[win], c[win], entry, a, side)
         gross = side * (px - entry) / risk
         per_r = ((np.abs(entry) + np.abs(px)) / 2.0) / risk
         cost = (fee_bps + slip_bps + REGULATORY_BPS) / 1e4 * per_r
@@ -262,7 +288,7 @@ def run(a) -> int:
         try:
             df = fetch_equity_1h(s, cache)
             fetch_rep[s] = {"rows": len(df), "first": str(df.ts.min()), "last": str(df.ts.max())}
-            frames.append(equity_rows(s, df, R, V, slip, fee))
+            frames.append(equity_rows(s, df, R, V, slip, fee, structure_pivot=a.structure_pivot))
         except Exception as e:  # noqa: BLE001  # allow-silent: recorded per symbol, never dropped
             fetch_rep[s] = {"rows": 0, "error": str(e)[:200]}
     tab = pd.concat(frames, ignore_index=True)
@@ -291,12 +317,15 @@ def run(a) -> int:
     row = {
         "schema_version": 1, "research_unit": a.unit, "read_state": "measured", "verdict": v, "note": why,
         "generated_at": pd.Timestamp.now(tz="UTC").strftime("%Y-%m-%dT%H:%M:%SZ"),
-        "decision_rule": {"id": "RULE-RQ20261101-bdc2-01-ENTRY-ON-ALPACA", "registered_at": "2026-11-01",
-                          "registered_before_run": True},
+        "decision_rule": {"id": a.rule_id, "registered_at": a.registered_at, "registered_before_run": True},
         "population": {"n": m["n"], "description": f"frozen ml-decision-entry-v1 (tau {tau}) LONG decisions on alpaca_live "
                        f"symbols {live}, Yahoo 1h RTH bars, held-out {HOLDOUT_START}..{HOLDOUT_END}, net of fee {fee} + "
                        f"slippage {slip} + regulatory {REGULATORY_BPS} bps round trip, funding {fund}"},
-        "variants_read_on_this_heldout": 1,
+        "variants_read_on_this_heldout": a.variants_read,
+        "multiple_comparison_note": (a.mc_note or None),
+        "bracket": ("structure: daily pivot=%d (SL beyond last confirmed daily swing - 0.25 dATR, clamp [0.5,3]x2 dATR, ratchet; "
+                    "TP nearest opposing daily swing/unfilled FVG >=1R, extend-only); levels read as of the PREVIOUS completed session"
+                    % a.structure_pivot) if a.structure_pivot else "fixed ATR 2/3 (hourly ATR14)",
         "measurement": {"schema": SCHEMA, "model_sha256": sha, "model_meta": {k: v for k, v in meta.items() if k != "xs_reference"},
                         "tau": tau, "alpaca_live_long_only": m,
                         "reported_alpaca_live_both_sides": live_both,
@@ -346,6 +375,12 @@ def main(argv=None) -> int:
     r.add_argument("--out", required=True)
     r.add_argument("--unit", default="RQ-20261101-bdc2-01")
     r.add_argument("--where", default="local")
+    r.add_argument("--structure-pivot", type=int, default=0,
+                   help="0 = the fixed ATR bracket (bdc2-01, byte-identical); N>=1 = DAILY session-aware structure SL/TP (STRUCTURE-EXITS-DEFAULT).")
+    r.add_argument("--rule-id", default="RULE-RQ20261101-bdc2-01-ENTRY-ON-ALPACA")
+    r.add_argument("--registered-at", default="2026-11-01")
+    r.add_argument("--variants-read", type=int, default=1)
+    r.add_argument("--mc-note", default="")
     a = ap.parse_args(argv)
     if a.self_test:
         return self_test()

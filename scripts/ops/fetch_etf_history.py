@@ -72,28 +72,81 @@ def _keys() -> Dict[str, str]:
     raise SystemExit("no Alpaca data keys in the environment (ALPACA_API_KEY_ID_LIVE / ALPACA_API_SECRET_KEY_LIVE)")
 
 
-def make_getter() -> Getter:
+class RateGate:
+    """Thread-safe request pacer shared by every worker. Rate adapts: raised to ~80% of the plan's declared per-minute limit
+    (X-Ratelimit-Limit header, read from the first response), halved on a 429, and recovering slowly after."""
+
+    def __init__(self, rps: float = 1.0 / MIN_INTERVAL_S, cap_rps: float = 60.0) -> None:
+        import threading
+
+        self._lock = threading.Lock()
+        self._next = 0.0
+        self.rps = rps
+        self.base_rps = rps
+        self.cap_rps = cap_rps
+        self.declared_per_min: Optional[int] = None
+        self.stats = {"requests": 0, "http_429": 0, "http_5xx": 0}
+
+    def wait(self) -> None:
+        with self._lock:
+            now = time.monotonic()
+            at = max(self._next, now)
+            self._next = at + 1.0 / self.rps
+            self.stats["requests"] += 1
+        if at > now:
+            time.sleep(at - now)
+
+    def declare(self, per_min: Optional[int]) -> None:
+        with self._lock:
+            if per_min and self.declared_per_min is None:
+                self.declared_per_min = per_min
+                self.base_rps = self.rps = min(self.cap_rps, max(self.rps, 0.8 * per_min / 60.0))
+                print(f"[rate] plan declares {per_min} req/min -> pacing at {self.rps:.2f} req/s", flush=True)
+
+    def penalize(self, kind: str) -> None:
+        with self._lock:
+            self.stats[kind] += 1
+            self.rps = max(0.5, self.rps * 0.5)
+
+    def recover(self) -> None:
+        with self._lock:
+            if self.rps < self.base_rps:
+                self.rps = min(self.base_rps, self.rps * 1.05)
+
+
+def make_getter(gate: Optional[RateGate] = None) -> Getter:
+    import threading
+
     import requests
 
-    sess = requests.Session()
-    sess.headers.update(_keys())
-    last = [0.0]
+    gate = gate or RateGate()
+    local = threading.local()
+    headers = _keys()
+
+    def session() -> Any:
+        if not hasattr(local, "s"):
+            local.s = requests.Session()
+            local.s.headers.update(headers)
+        return local.s
 
     def get(path: str, params: Dict[str, Any]) -> Any:
         for attempt in range(8):
-            wait = MIN_INTERVAL_S - (time.monotonic() - last[0])
-            if wait > 0:
-                time.sleep(wait)
-            last[0] = time.monotonic()
-            r = sess.get(DATA_URL + path, params=params, timeout=60)
+            gate.wait()
+            r = session().get(DATA_URL + path, params=params, timeout=60)
+            lim = r.headers.get("X-Ratelimit-Limit") or r.headers.get("X-RateLimit-Limit")
+            if lim and str(lim).isdigit():
+                gate.declare(int(lim))
             if r.status_code == 429 or r.status_code >= 500:
+                gate.penalize("http_429" if r.status_code == 429 else "http_5xx")
                 time.sleep(min(60, 2 ** attempt))
                 continue
             if r.status_code >= 400:
                 raise RuntimeError(f"HTTP {r.status_code} {path}: {r.text[:200]}")  # a key is in a header we never echo
+            gate.recover()
             return r.json()
         raise RuntimeError(f"HTTP retries exhausted {path}")
 
+    get.gate = gate  # type: ignore[attr-defined]
     return get
 
 
@@ -367,6 +420,9 @@ def main(argv: Optional[List[str]] = None) -> int:
     ap.add_argument("--max-new", type=int, default=0,
                     help="stop cleanly after fetching this many series (0 = no limit); the workflow loops chunks, syncing + clearing the local store "
                          "between them so the runner disk never holds the whole store. manifest run.remaining says how many are left")
+    ap.add_argument("--workers", type=int, default=6,
+                    help="symbols fetched in parallel; ONE shared pacer keeps the total request rate under the plan's limit "
+                         "(X-Ratelimit-Limit header), so more workers hide request latency without raising the rate")
     a = ap.parse_args(argv)
 
     get = make_getter()
@@ -389,11 +445,9 @@ def main(argv: Optional[List[str]] = None) -> int:
     failures: List[str] = []
     done = skipped = no_data = 0
     stopped = False
+    todo: List[tuple] = []
     for tf in tfs:  # timeframe-major; within a timeframe the universe order is priority order (core first)
         for sym in syms:
-            if (deadline and time.monotonic() > deadline) or (a.max_new and done >= a.max_new):
-                stopped = True
-                break
             key = f"{sym}/{tf}"
             prior = manifest["series"].get(key) or {}
             if a.skip_fetched_after and (prior.get("fetched_at") or "") >= a.skip_fetched_after:
@@ -402,17 +456,38 @@ def main(argv: Optional[List[str]] = None) -> int:
             if a.mode == "backfill" and prior.get("status") in ("ok", "no_data") and (prior.get("status") == "no_data" or _fresh(prior, now)):
                 skipped += 1
                 continue
-            try:
-                rec = update_symbol(get, root, sym, tf, feed, start, end, full=False, prior=prior if prior.get("status") == "ok" else None)
+            todo.append((sym, tf, key, prior))
+    if a.max_new and len(todo) > a.max_new:
+        todo, stopped = todo[: a.max_new], True
+
+    def work(job: tuple) -> tuple:
+        sym, tf, key, prior = job
+        if deadline and time.monotonic() > deadline:
+            return job, None, "deadline"
+        try:
+            return job, update_symbol(get, root, sym, tf, feed, start, end, full=False,
+                                      prior=prior if prior.get("status") == "ok" else None), None
+        except Exception as e:  # contained per item: one symbol never halts the run
+            return job, None, str(e)[:140]
+
+    from concurrent.futures import ThreadPoolExecutor
+
+    with ThreadPoolExecutor(max_workers=max(1, a.workers)) as pool:
+        for job, rec, err in pool.map(work, todo):
+            key = job[2]
+            if err == "deadline":
+                stopped = True
+            elif err:
+                failures.append(f"{key}: {err}")
+                print(f"FAIL {key}: {err}", file=sys.stderr, flush=True)
+            else:
                 manifest["series"][key] = rec
                 done += 1
                 no_data += rec["status"] == "no_data"
                 print(f"{key} [{rec['feed']}] {rec['status']} rows={rec['rows']} +{rec['added']} {rec['first']} -> {rec['last']} {rec['note']}", flush=True)
-            except Exception as e:  # contained per item: one symbol never halts the run
-                failures.append(f"{key}: {str(e)[:140]}")
-                print(f"FAIL {key}: {str(e)[:140]}", file=sys.stderr, flush=True)
-        if stopped:
-            break
+    gate = getattr(get, "gate", None)
+    if gate is not None:
+        print(f"[rate] workers={a.workers} stats={json.dumps(gate.stats)} declared_per_min={gate.declared_per_min} final_rps={gate.rps:.2f}", flush=True)
     if not stopped:
         try:
             ca = fetch_corporate_actions(get, syms, start, end)

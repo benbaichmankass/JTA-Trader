@@ -101,3 +101,32 @@ def test_options_snapshot_installs_pyyaml_and_probe_fails_loudly():
     assert "pyyaml" in install["run"]
     probe = next(s for s in steps if str(s.get("name", "")).startswith("Probe"))
     assert "pipefail" in probe["run"]
+
+
+def test_concurrency_is_job_level_so_skipped_issue_events_cannot_cancel_a_real_request():
+    for name in ("etf-history-pipeline.yml", "options-snapshot-capture.yml"):
+        wf = yaml.safe_load((WF / name).read_text())
+        assert "concurrency" not in wf, (
+            f"{name}: workflow-level concurrency lets skipped events cancel a pending real run"
+        )
+        job = next(iter(wf["jobs"].values()))
+        assert job["concurrency"]["cancel-in-progress"] is False
+
+
+def test_backfill_continues_itself_and_has_a_backstop_schedule():
+    text = (WF / "etf-history-pipeline.yml").read_text()
+    wf = yaml.safe_load(text)
+    on = wf.get("on", wf.get(True))
+    assert {"cron": "37 */6 * * *"} in on["schedule"]
+    assert wf["permissions"]["actions"] == "write"
+    steps = next(iter(wf["jobs"].values()))["steps"]
+    cont = next(s for s in steps if s.get("id") == "cont")
+    assert "gh workflow run etf-history-pipeline.yml -f mode=backfill" in cont["run"]
+    assert (
+        "NO progress" in cont["run"]
+    )  # a no-progress run is never re-dispatched in a hot loop
+    red = next(s for s in steps if str(s.get("name", "")).startswith("Red flag"))
+    assert (
+        "steps.cont.outputs.continuing" in red["if"]
+    )  # intermediate runs with pending series are not red
+    assert "--max-new 60 --workers 6" in text

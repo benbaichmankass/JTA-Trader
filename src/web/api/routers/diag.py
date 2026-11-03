@@ -2828,40 +2828,58 @@ def aggregate_jsonl(path: Path, fields: list[str], count_true: list[str],
     days: dict[str, dict[str, Any]] = {}
     scanned = unparseable = no_day = 0
     state = "complete"
-    with path.open("rb") as fh:
-        for raw in fh:
-            scanned += 1
-            if scanned % 2000 == 0 and time.monotonic() - t0 > time_budget_s:
-                state = "time_budget_hit"
-                break
+    # Rotated siblings (oldest first, gz or plain) then the live file, so a
+    # multi-day aggregate survives writer-side rotation (VM-DISK-GROWTH-20261102).
+    from src.utils.jsonl_rotate import open_rotated, rotated_siblings
+    handles = [(p, True) for p in rotated_siblings(path)] + [(path, False)]
+
+    def _rows():
+        for hp, rot in handles:
             try:
-                row = json.loads(raw)
-            except ValueError:
-                unparseable += 1
-                continue
-            if not isinstance(row, dict):
-                unparseable += 1
-                continue
-            day = _agg_day(row)
-            if day is None:
-                no_day += 1
-                continue
-            d = days.setdefault(day, {"rows": 0, "by_account": {}, "values": {}, "true_counts": {}})
-            d["rows"] += 1
-            acct = row.get(account_key)
-            if acct is not None:
-                d["by_account"][str(acct)] = d["by_account"].get(str(acct), 0) + 1
-            for f in fields:
-                if f in row:
-                    bucket = d["values"].setdefault(f, {})
-                    key = json.dumps(row[f], sort_keys=True) if not isinstance(row[f], str) else row[f]
-                    if key not in bucket and len(bucket) >= _AGG_MAX_VALUES:
-                        key = "(other)"
-                    bucket[key] = bucket.get(key, 0) + 1
-            for f in count_true:
-                v = row.get(f)
-                if v is True or (isinstance(v, (int, float)) and not isinstance(v, bool) and v > 0):
-                    d["true_counts"][f] = d["true_counts"].get(f, 0) + 1
+                fh = open_rotated(hp) if rot else hp.open("rb")
+            except OSError:
+                if rot:
+                    continue  # rotated file gzipped/pruned between glob and open
+                raise
+            with fh:
+                try:
+                    yield from fh
+                except (OSError, EOFError):
+                    continue  # truncated gz (still being written) -- partial rows counted
+
+    for raw in _rows():
+        scanned += 1
+        if scanned % 2000 == 0 and time.monotonic() - t0 > time_budget_s:
+            state = "time_budget_hit"
+            break
+        try:
+            row = json.loads(raw)
+        except ValueError:
+            unparseable += 1
+            continue
+        if not isinstance(row, dict):
+            unparseable += 1
+            continue
+        day = _agg_day(row)
+        if day is None:
+            no_day += 1
+            continue
+        d = days.setdefault(day, {"rows": 0, "by_account": {}, "values": {}, "true_counts": {}})
+        d["rows"] += 1
+        acct = row.get(account_key)
+        if acct is not None:
+            d["by_account"][str(acct)] = d["by_account"].get(str(acct), 0) + 1
+        for f in fields:
+            if f in row:
+                bucket = d["values"].setdefault(f, {})
+                key = json.dumps(row[f], sort_keys=True) if not isinstance(row[f], str) else row[f]
+                if key not in bucket and len(bucket) >= _AGG_MAX_VALUES:
+                    key = "(other)"
+                bucket[key] = bucket.get(key, 0) + 1
+        for f in count_true:
+            v = row.get(f)
+            if v is True or (isinstance(v, (int, float)) and not isinstance(v, bool) and v > 0):
+                d["true_counts"][f] = d["true_counts"].get(f, 0) + 1
     return {
         "read_state": state,
         "scanned_lines": scanned,
