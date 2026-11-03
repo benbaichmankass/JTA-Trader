@@ -344,8 +344,48 @@ def valid_levels(side: int, entry: float, atr: float, close: float) -> np.ndarra
     return beyond & cap
 
 
-def walk(Ob, Hh, L, C, entry, atr, side, chooser, tie=None):
-    """Sequential first passage with a TP that may move at each check-in (applies from the next bar). SL fixed.
+#: ML-SL-ONLY-STRUCTURE-ARM (RQ-20261103-5e04-01): bars of history before the decision bar handed to the structure
+#: detector. A level older than this is not seen; the live monitor's candle fetch is also bounded, so this is a
+#: stated window, not a fidelity claim beyond it (the parity test pins the arm to structure_exit_live.replay on
+#: the same window).
+STRUCT_LOOKBACK = 500
+
+
+def structure_sl_path(highs, lows, closes, i: int, entry: float, atr: float, side: int, spec: str,
+                      lookback: int = STRUCT_LOOKBACK) -> list:
+    """The SL-ONLY structure stop for one trade, from the LIVE verdict source itself
+    (src/runtime/structure_exit_live.replay, the function the ml_entry monitor calls), so the arm cannot drift
+    from live. ``sl_path[j]`` (j = 1..H) is the stop resting DURING walk bar j (df index i + j): the replayed SL
+    after the close of bar i + j - 1. Bar ``i`` is the decision bar (the live entry_idx: ts <= entry_time), the
+    entry stop is ``entry - side * SL_ATR * atr`` and the stop never loosens past it. Causal: every value at
+    bar k uses bars <= k only (StructureLevels confirms a pivot N bars after it; pinned by the parity test)."""
+    from src.runtime import structure_exit_live as sxl
+    params = sxl.declared({"structure_exit": spec})
+    if params is None:
+        raise ValueError(f"--structure-sl expects pivot=N, got {spec!r}")
+    a = max(0, i - lookback)
+    end = min(len(closes), i + H)            # last bar index + 1 the walk can need (bar i + H - 1 closes before i + H)
+    risk = E.SL_ATR * atr
+    entry_sl = entry - side * risk
+    out = sxl.replay(highs=highs[a:end], lows=lows[a:end], closes=closes[a:end], entry_idx=i - a, entry=entry,
+                     is_long=side > 0, entry_sl=entry_sl, atr=atr, params=params)
+    by_bar = {}
+    for mv in out["moves"]:
+        if mv.get("sl_after") is not None:
+            by_bar[mv["bar_idx"] + a] = mv["sl_after"]
+    path, sl = [None], entry_sl
+    for j in range(1, H + 1):
+        k = i + j - 1                        # the bar whose close sets the stop for walk bar j
+        if k in by_bar:
+            sl = by_bar[k]
+        path.append(sl)
+    return path
+
+
+def walk(Ob, Hh, L, C, entry, atr, side, chooser, tie=None, sl_path=None):
+    """Sequential first passage with a TP that may move at each check-in (applies from the next bar). SL fixed,
+    unless ``sl_path`` (structure_sl_path) is given: then the stop resting in bar j is ``sl_path[j]``, and a stop
+    the replay ratchets THROUGH the bar's close exits at that close (live: structure_sl_cross closes at price).
     Gap rule and tie rule exactly as ml_decision_entry.bracket_outcome (tie -> ``tie`` callback, default SL).
     ``chooser(jc, tp_level_idx) -> new level idx | None``. Returns (exit_px, exit_j, reason, moves)."""
     risk = E.SL_ATR * atr
@@ -354,6 +394,8 @@ def walk(Ob, Hh, L, C, entry, atr, side, chooser, tie=None):
     tp = entry + side * GRID[q] * atr
     moves = []
     for j in range(1, H + 1):
+        if sl_path is not None:
+            sl = sl_path[j]
         o, h, lo = Ob[j - 1], Hh[j - 1], L[j - 1]
         hit_sl = lo <= sl if side > 0 else h >= sl
         hit_tp = h >= tp if side > 0 else lo <= tp
@@ -366,6 +408,10 @@ def walk(Ob, Hh, L, C, entry, atr, side, chooser, tie=None):
             return (o if gap else sl), j, 1, moves
         if hit_tp:
             return tp, j, 2, moves
+        if sl_path is not None and j < H:
+            nxt = sl_path[j + 1]
+            if (side > 0 and nxt >= C[j - 1]) or (side < 0 and nxt <= C[j - 1]):
+                return C[j - 1], j, 1, moves       # the ratcheted stop is through the close: close at price
         if j in CHECKINS and chooser is not None:
             nq = chooser(j, q)
             if nq is not None and nq != q:
@@ -385,8 +431,10 @@ def trade_net(entry, px, j, atr, t_ns, i):
 class Scorer:
     """Scores a trade set under: fixed TP (any grid level), the model policy (margin m), matched random moves."""
 
-    def __init__(self, trades: pd.DataFrame, bars: dict, probs: dict, means: np.ndarray, tie_maker=None):
+    def __init__(self, trades: pd.DataFrame, bars: dict, probs: dict, means: np.ndarray, tie_maker=None,
+                 structure_sl: str = ""):
         self.trades = trades.reset_index(drop=True)
+        self.structure_sl = structure_sl
         self.bars, self.probs, self.means = bars, probs, means
         self.tie_maker = tie_maker
         self.t_ns = {s: df["ts"].to_numpy().astype("datetime64[ns]").astype("int64") for s, df in bars.items()}
@@ -403,7 +451,12 @@ class Scorer:
         entry = Ob[0]
         ch = chooser_factory(k, t, s, entry, C) if chooser_factory else None
         tie = self.tie_maker(t, s) if self.tie_maker else None
-        px, j, reason, moves = walk(Ob, Hh, L, C, entry, t.atr, s, ch, tie)
+        slp = None
+        if self.structure_sl:
+            df = self.bars[t.symbol]
+            slp = structure_sl_path(df["high"].to_numpy(float), df["low"].to_numpy(float),
+                                    df["close"].to_numpy(float), int(t.i), entry, t.atr, s, self.structure_sl)
+        px, j, reason, moves = walk(Ob, Hh, L, C, entry, t.atr, s, ch, tie, slp)
         g, c = trade_net(entry, px, j, t.atr, self.t_ns[t.symbol], int(t.i))
         return s * g - c, reason, moves
 
@@ -993,6 +1046,21 @@ def evidence_extend_only(args) -> int:
                      "exit_reasons": {str(r): int(sum(1 for x in pol if x[1] == r)) for r in (0, 1, 2)},
                      "per_symbol": {s: round(float(v[(trades.symbol == s).to_numpy()].mean()), 4)
                                     for s in traded if (trades.symbol == s).any()}}
+    if getattr(args, "structure_sl", ""):
+        # RQ-20261103-5e04-01 arm F: the LIVE ml_entry exit (operator option B): SL-only structure stop + the
+        # extend-only ml_first_passage TP, same trades, same TP model, same margin, same cost stack.
+        scf = Scorer(trades, bars, probs, tm["class_mean_net_r"], structure_sl=args.structure_sl)
+        polf = scf.policy(m, extend_only=True)
+        vf = np.array([x[0] for x in polf])
+        res["structure_sl"] = args.structure_sl
+        res["extend_only_structure_sl"] = {
+            "mean_net_r": float(vf.mean()), "sum_net_r": float(vf.sum()),
+            "mean_delta_vs_extend_only": float((vf - np.array([x[0] for x in sc.policy(m, extend_only=True)])).mean()),
+            "exit_reasons": {str(r): int(sum(1 for x in polf if x[1] == r)) for r in (0, 1, 2)},
+            "per_symbol": {s: round(float(vf[(trades.symbol == s).to_numpy()].mean()), 4)
+                           for s in traded if (trades.symbol == s).any()},
+            "rule": "RULE-RQ20261103-5E04-01-ML-SLONLY: PASS if mean_net_r >= 0 (parent RULE-RQ20261101-c692-06-TRADED-SUBSET)",
+            "verdict": "pass" if vf.mean() >= 0 else "fail"}
     res["elapsed_s"] = round(time.time() - t0)
     res["git_sha"] = E._git_sha()
     (out / "evidence_extend_only.json").write_text(json.dumps(res, indent=1, default=str) + "\n")
@@ -1010,6 +1078,8 @@ def main(argv=None) -> int:
     ap.add_argument("--self-test", action="store_true")
     ap.add_argument("--dev-json", default="comms/research/RQ-20261101-383f-01/local-20261101T1030Z/dev.json")
     ap.add_argument("--summary", default="", help="export: the run summary.json whose final fit is reproduced")
+    ap.add_argument("--structure-sl", default="",
+                    help="evidence-extend-only: add arm F = SL-only structure stop pivot=N (RQ-20261103-5e04-01)")
     ap.add_argument("--artifact", default=str(REPO / "ml" / "served" / "ml_entry_tp_revision_v1" / "model.json"))
     a = ap.parse_args(argv)
     if a.self_test:
