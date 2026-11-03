@@ -1,7 +1,7 @@
 # Hand-authored 2026-10-31 by lane RESEARCH-PROP-REPLACEMENT-20261031 (Tier 1, Sonnet), dispatched by Manager Session 2026-10-31a. Decision rule registered BEFORE any run. Gates: none.
 id: RQ-20261031-a4e7-07
 title: 'Regime head at 1h: does a calibrated linear head match the default LightGBM on log-loss on BTC, ETH and SOL (non-inferiority)?'
-status: queued
+status: done
 cadence: once
 theme: ml_health
 priority: 2
@@ -153,14 +153,12 @@ grading:
   confirmatory_run: 1
   decision_rule_id: RULERQ20261031a4e707
   evidence:
-  - research/results/RQ-20261031-a4e7-07/41267535136.jsonl
-  - research/results/RQ-20261031-a4e7-07/41289874314.jsonl
-  - research/results/RQ-20261031-a4e7-07/41357671819.jsonl
+  - research/results/RQ-20261031-a4e7-07/41670629468.jsonl
   first_fail: 1 row(s), all measured, all fail (2 earlier producer_failed / re-graded wiring_only row(s)
     superseded)
   graded_at: '2026-11-03'
   grader: scripts/research/queue_grade.py
-  note: 'first FAIL: re-queued for a confirmatory run (last_dispatched_at reset), not killed'
-  reason: 1 row(s), all measured, all fail (2 earlier producer_failed / re-graded wiring_only row(s) superseded)
+  note: two consecutive FAIL passes; closed as fail (never on one pass)
+  reason: 1 row(s), all measured, all fail
   rows: 1
   verdict: fail
