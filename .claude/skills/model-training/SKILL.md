@@ -152,6 +152,8 @@ the full cost stack plus an enforced cost gate on model promotion; revert is one
 - **Soak:** the `shadow_soak` gate is mechanical — 1–2 clean scored shadow predictions, no
   calendar term (operator 2026-10-28, *"Same as trades: 1-2 clean"*).
 
+**Naming:** a model promoted to shadow or above gets a display alias (breed = its job, `Breed-<gen><variant>`) in `ml/model_names.yaml` in the same PR as the `promote-stage` record. Aliases are display only; ids never change.
+
 ## The 3-stage deployment ladder
 
 `candidate → shadow → advisory`

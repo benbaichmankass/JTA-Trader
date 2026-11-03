@@ -38,6 +38,13 @@ from urllib.request import urlopen
 
 import yaml
 
+try:  # display aliases only (ml/model_names.yaml); the id stays the key
+    sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+    from ml.model_names import labelled as _labelled
+except Exception:  # pragma: no cover - never let a display alias break the report
+    def _labelled(model_id, models=None):
+        return model_id
+
 REPO = Path(__file__).resolve().parents[2]
 PLAN = REPO / "docs/plans/ml-plan-items.yaml"
 API = "https://ict-bot.duckdns.org/api/bot"
@@ -216,10 +223,10 @@ def plumbing(plan: dict, status: dict, stats: dict, now=None) -> list[str]:
             t = tracked.get(m)
             sev = "ADVISORY-" if stg == "advisory" else ""
             if t:
-                f.append(f"NOTE {sev}{label}(tracked by {t['by']}): {m} -- {t['why']}")
+                f.append(f"NOTE {sev}{label}(tracked by {t['by']}): {_labelled(m)} -- {t['why']}")
             else:
                 f.append(
-                    f"{sev}{label}(UNTRACKED): {m} stage={stg} last_seen={r.get('last_seen')} -- file a row or add to plumbing.tracked"
+                    f"{sev}{label}(UNTRACKED): {_labelled(m)} stage={stg} last_seen={r.get('last_seen')} -- file a row or add to plumbing.tracked"
                 )
     return f
 
