@@ -2,7 +2,7 @@
 id: RQ-20261103-5e04-01
 title: 'ml_entry with SL-ONLY structure stop (pivot 5) + the ml_first_passage moving TP: does it clear ml_entry''s original Stage-0 rule
   net of the full cost stack, held-out? (re-measure for the operator one-time override, #22645 + option B)'
-status: blocked
+status: queued
 cadence: once
 theme: live_strategy
 priority: 1
@@ -55,14 +55,6 @@ decision_rule:
     and removes the bybit_2/ml_entry FIDELITY_BASELINE entry. No re-run, no re-tune before reverting.'
   on_pass: 'Regenerate comms/strategy_evidence/ml_entry.json faithful to the live exit and remove the FIDELITY_BASELINE entry.'
   what_it_does_not_do: Places no order. A PASS does not change sizing or rosters.
-blocked_on:
-- kind: work_item
-  ref: ML-SL-ONLY-STRUCTURE-ARM
-  what: 'scripts/research/ml_entry_tp_revision.py walk() holds a FIXED stop. Needed: an optional causal structure-SL ratchet inside
-    walk() (StructureLevels over the trade''s own closed bars, the same on_bar_close SL step as structure_exit_live.replay, tighten-only,
-    never looser than the entry stop), an arm flag (e.g. --structure-sl pivot=5), and a parity test against
-    structure_exit_live.replay on recorded bars. Size: about 0.5 day, ~$4-6 (one lane).'
-  clears_when: 'The flag exists with its parity test on main (PR #22709); then remove blocked_on and set status: queued (run.command is already filled).'
 compute: cpu_long
 value:
   usd_at_stake_per_month: 400
