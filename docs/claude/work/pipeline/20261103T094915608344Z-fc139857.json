@@ -1,0 +1,16 @@
+{
+  "due_when": {
+    "check_every_days": 7,
+    "due_date": "2026-11-10",
+    "kind": "date"
+  },
+  "id": "PI-20261103-6GNSZYUN-0005",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "SOAK-REGRADE 2026-11-03, docs/claude/work/findings/soak-regrade-20261103.md (ITERATE orphan)",
+    "rerun": "python3 scripts/research/iteration_orphans.py --json  # mgc_trend_1h must read covered; and python3 scripts/ops/mandate_resolver.py --leg mgc_trend_1h --from S1 --to S2 --account <real-money acct> --json"
+  },
+  "state": "queued",
+  "what": "ITERATION ORPHAN mgc_trend_1h (Stage-0 verdict pass_unconfirmed): no queued research unit carries an iteration: block for it (programme-review rule). n=118, net +25.61R, faithful, RULE-D1 pass, positive in 2 of 4 folds (R-FOLDS REFUSE); no IB soak contract (SOAK-stage1-ib_paper-mgc_trend_1h absent) and shadow soak REFUSE. Diagnose fold dispersion; separately the ib_paper soak contract is missing (run soak_state.py --backfill). Close when a unit with iteration.subject=mgc_trend_1h is queued (iteration_orphans reads covered)."
+}

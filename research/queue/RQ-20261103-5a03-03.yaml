@@ -1,0 +1,109 @@
+id: RQ-20261103-5a03-03
+title: 'FORWARD CONFIRMATION, tqqq_trend_long_1d with donchian=20 FIXED (no arm selection): on bars from 2026-11-03 (a window no arm has read),
+  does the C3 configuration selected by RQ-20261023-be01-02 hold net-positive net of the full cost stack?'
+status: queued
+cadence: monthly
+kind: experiment
+theme: live_strategy
+priority: 1
+roadmap:
+- L-LADDER
+question: 'RQ-20261023-be01-02 SELECTED C3 (donchian=20) on discovery and read it on the held-back span from 2022-09-16 (PASS, n=34, net +3.20R),
+  but C3 was best-of-5 arms on that window, so the window is spent for C3. HOLDOUT-LOCK reserves 2024-07-01 onward and be01-02 already read everything
+  after 2022-09-16, so no unspent historical window remains. The confirmation is therefore FORWARD: donchian=20 fixed, one arm, bars from 2026-11-03.'
+why_this_matters: 'Manager decision 2026-11-03 (SOAK-REGRADE): the config is NOT changed on be01-02 alone; the data leaves it open, so this unit
+  gets the data. tqqq_trend_long_1d is mechanics-proven (own PASS soak); a PASS here is the evidence for the Tier-3 donchian 30 -> 20 change plus
+  promotion to alpaca_live + alpaca_portfolio under MD-PROMOTE-S1-S2. Highest-value unit class in the queue.'
+power:
+  expected_n: 25
+  min_detectable_effect: 0.57
+  effect_units: sd
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: 'Registered n floor 25 forward trades (the same holdout_min_n as MD-PROMOTE-S1-S2 bar.holdout_min_n). Accrual ESTIMATE from be01-02:
+    34 held-back trades over 2022-09-16..2026-10-22 (~4.1 y), about 8 per year, so the floor is reached in roughly 3 years. Until then each monthly
+    run is INDETERMINATE (underpowered), which is the intended reading, not a defect. Said before any run.'
+  feasibility:
+    source: none
+    accrual_basis: Forward daily bars from 2026-11-03; the harness replays fetched candles and the trade count accrues with calendar time (~8/yr
+      ESTIMATE).
+decision_rule:
+  id: RULE-RQ-20261103-5a03-03-TQQQ-D20-FORWARD
+  registered_at: '2026-11-03'
+  registered_before_run: true
+  statistic: 'scripts/research/exit_lever_ablation.py on tqqq_trend_long_1d, ONE arm D20 = donchian=20 (all other params as declared), window
+    2026-11-03 to the run date, one continuous harness pass (argv via regime_debt_matrix.build_harness_cmd), net of the full cost stack the harness
+    resolves for Alpaca equities (fee + the provisional 5.0 bps slippage). Read: the arm''s total_trades n and net_total_r from the harness --json
+    summary.'
+  rule: 'INDETERMINATE IF n < 25 (underpowered: no verdict; never FAIL on thin n). Otherwise PASS IFF net_total_r > 0; FAIL otherwise (closes
+    donchian=20 on this leg, never the family). ON PASS: the result is the evidence for ONE promotion PR that changes tqqq_trend_long_1d donchian
+    30 -> 20 and adds the leg to alpaca_live + alpaca_portfolio under MD-PROMOTE-S1-S2 (the manager merges on the data-backed rule). The n floor,
+    the arm value and the bar are not changed after any result. The read is claimed once in comms/research/holdout_reads.jsonl (scripts/research/holdout_lock.py)
+    when n first reaches 25.'
+  what_it_does_not_do: Selects nothing (one fixed arm), edits no config or roster, places no order; not a P&L claim.
+compute: cpu_light
+value:
+  bucket: own_losses
+  usd_at_stake_per_month: 200
+  confidence: 0.35
+  basis: 'stand-in: a testing leg one confirmation from alpaca_live + alpaca_portfolio; not a P&L measurement.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 2.0
+  est_minutes: 25
+  why_runner: Fetches keyless public candles for a pinned window; reads no trainer data.
+  basis: One keyless candle fetch of the window and one harness pass per arm; same shape as RQ-20261022-326f-05 and RQ-20261023-a1f3-11 (estimate,
+    not measured).
+run:
+  command:
+  - python3
+  - scripts/research/exit_lever_ablation.py
+  - --leg
+  - tqqq_trend_long_1d
+  - --arm
+  - D20=donchian=20
+  - --days
+  - '400'
+  - --start
+  - '2026-11-03'
+  - --grade
+  - sweep
+  - --baseline
+  - D20
+  - --delta-r
+  - '0'
+  - --fold-majority
+  - '3'
+  - --n-floor
+  - '25'
+  - --research-unit
+  - RQ-20261103-5a03-03
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 60
+  inputs:
+    research_unit: RQ-20261103-5a03-03
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+iteration:
+  subject: tqqq_trend_long_1d
+  subject_kind: strategy_leg
+  from_result: research/results/RQ-20261023-be01-02/40033387353.jsonl
+  verdict_read: pass_unconfirmed
+  diagnosis: be01-02 PASSed with C3 (donchian=20) selected as best of 5 arms on discovery and read on the held-back span; best-of-arms on that
+    span means the declared config is unconfirmed and C3 needs a read on a window it has never seen.
+  hypothesis: donchian=20, fixed in advance, stays net-positive net of the full cost stack on forward bars
+  attempt: 1
+  due_by: '2026-12-03'
+related:
+- RQ-20261023-be01-02
+- HOLDOUT-LOCK
+- MD-PROMOTE-S1-S2
+- PROMOTION-BAR-MULTIPLICITY
+- comms/strategy_evidence/tqqq_trend_long_1d.json
+practice_precedent: 'R5 + M10 (docs/reference/trading-and-model-practice-principles.md): variants registered before the run, counted, and confirmed
+  ONCE on a span they were not selected on, net of cost; same protocol as RQ-20261023-be01-02.'

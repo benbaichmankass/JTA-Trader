@@ -11,12 +11,13 @@
   "tier": 1,
   "prs": [],
   "blocked_on": [],
-  "note": "Filed by lane SYSTEM-CONFORMANCE-AUDIT 2026-10-29 (Manager Session 2026-10-29c; operator ~07:30Z audit ask, verbatim on WEEKLY-PLANNING). Evidence: docs/reviews/2026-10-29-system-conformance-audit.md \u00a74.7. MEASURED: comms/soak_state/2026-10-04.json is 25 days old vs mandate_resolver soak_snapshot_max_age_days 7 (~line 1325); bybit_2 snapshot 13 days old; the snapshot scripts are referenced only under scripts/ops, by no .github/workflows file. Done when: a workflow commits fresh snapshots daily and the resolver reads a snapshot <= 7 days old.",
+  "note": "Filed by lane SYSTEM-CONFORMANCE-AUDIT 2026-10-29 (Manager Session 2026-10-29c; operator ~07:30Z audit ask, verbatim on WEEKLY-PLANNING). Evidence: docs/reviews/2026-10-29-system-conformance-audit.md \u00a74.7. MEASURED: comms/soak_state/2026-10-04.json is 25 days old vs mandate_resolver soak_snapshot_max_age_days 7 (~line 1325); bybit_2 snapshot 13 days old; the snapshot scripts are referenced only under scripts/ops, by no .github/workflows file. Done when: a workflow commits fresh snapshots daily and the resolver reads a snapshot <= 7 days old. 2026-11-03 SOAK-REGRADE: still live today. comms/mandate_evidence/soak_state/2026-10-04.json is the newest snapshot, 30 days old against mandate_resolver soak_snapshot_max_age_days 7. So every soak without a committed PASS disposition reads state None (R-SOAK-NOT-PASSED) across the 50 testing legs; the 35 one-trade-pending legs read that way for this reason or for lack of a registered path. Findings: docs/claude/work/findings/soak-regrade-20261103.md (PR #22616).",
   "priority_rank": 4,
   "roadmap": [
     "L-LADDER"
   ],
-  "updated_at": "2026-10-29T07:33:15Z",
-  "updated_by": "session_01AFoLuLR4k6vdJP5WxbrTSS",
+  "updated_at": "2026-11-03T10:12:04Z",
+  "updated_by": "session_01AFoLuLuqcjQnad6gnsZYUn",
+  "due_by": "2026-11-06",
   "_seq": 787
 }
