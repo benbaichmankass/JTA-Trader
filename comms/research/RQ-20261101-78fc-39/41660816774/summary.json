@@ -1,0 +1,162 @@
+{
+  "leg": "mhg_pullback_1d",
+  "grade": {
+    "verdict": "fail",
+    "label": "stage0_no_edge",
+    "baseline": "A",
+    "net_r": -0.6688,
+    "n": 76,
+    "max_drawdown_r": 7.6314,
+    "folds_positive": 2,
+    "n_folds": 6,
+    "fold_majority": 4,
+    "n_floor": 30,
+    "control": null,
+    "why": "net_r=-0.6688 with 2/6 positive folds (needs > 0 and >= 4)"
+  },
+  "arms": {
+    "A": {
+      "reach_ge_6r": 0.0,
+      "n": 76,
+      "net_r": -0.6688,
+      "net_r_fee_only": 0.6091,
+      "max_drawdown_r": 7.6314,
+      "by_outcome": {
+        "trail_stop": 32,
+        "stop": 20,
+        "take_profit": 23,
+        "timeout": 1
+      },
+      "mean_bars_held": 10.921,
+      "net_r_per_capital_day": -0.0008,
+      "cost_stack": {
+        "fee_bps_roundtrip": 7.5,
+        "slippage_bps_roundtrip": 5.0,
+        "funding_bps_per_window": 0.0
+      },
+      "params": {
+        "trend_lookback": 40,
+        "pullback_lookback": 15,
+        "pullback_frac": 0.5,
+        "atr_stop_mult": 2.0,
+        "trail_mult": 3.0,
+        "min_confidence": 0.0,
+        "structure_exit": "pivot=5",
+        "structure_buffer_atr": 0.25,
+        "structure_min_r": 1.0,
+        "structure_fvg": true,
+        "structure_no_swing_fallbacks": 0
+      },
+      "data_start": "2018-06-01 00:00:00+00:00",
+      "data_end": "2026-10-15 00:00:00+00:00",
+      "folds": [
+        {
+          "fold": 1,
+          "start": "2018-06-01 00:00:00+00:00",
+          "end": "2019-10-23 19:59:50+00:00",
+          "trades": 14,
+          "net_r": -5.7083
+        },
+        {
+          "fold": 2,
+          "start": "2019-10-23 19:59:50+00:00",
+          "end": "2021-03-16 15:59:40+00:00",
+          "trades": 12,
+          "net_r": 12.353
+        },
+        {
+          "fold": 3,
+          "start": "2021-03-16 15:59:40+00:00",
+          "end": "2022-08-08 11:59:30+00:00",
+          "trades": 11,
+          "net_r": -3.5126
+        },
+        {
+          "fold": 4,
+          "start": "2022-08-08 11:59:30+00:00",
+          "end": "2023-12-31 07:59:20+00:00",
+          "trades": 11,
+          "net_r": -0.8166
+        },
+        {
+          "fold": 5,
+          "start": "2023-12-31 07:59:20+00:00",
+          "end": "2025-05-24 03:59:10+00:00",
+          "trades": 10,
+          "net_r": 1.3864
+        },
+        {
+          "fold": 6,
+          "start": "2025-05-24 03:59:10+00:00",
+          "end": "2026-10-15 23:59:00+00:00",
+          "trades": 18,
+          "net_r": -4.3711
+        }
+      ],
+      "argv": [
+        "/opt/hostedtoolcache/Python/3.11.17/x64/bin/python3",
+        "/home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_pullback.py",
+        "--trend-lookback",
+        "40",
+        "--pullback-lookback",
+        "15",
+        "--pullback-frac",
+        "0.5",
+        "--data",
+        "<data>",
+        "--symbol",
+        "MHG",
+        "--resample",
+        "1d",
+        "--atr-period",
+        "14",
+        "--atr-stop-mult",
+        "2.0",
+        "--trail-mult",
+        "3.0",
+        "--min-confidence",
+        "0.0",
+        "--fee-bps-roundtrip",
+        "7.5",
+        "--emit-trades",
+        "comms/research/RQ-20261101-78fc-39/41660816774/arms/A__trades.jsonl",
+        "--json",
+        "comms/research/RQ-20261101-78fc-39/41660816774/arms/A__bt.json",
+        "--trail-decay-stall-bars",
+        "10",
+        "--trail-decay-tight-mult",
+        "1.5",
+        "--structure-exit",
+        "pivot=5",
+        "--tp-cap-pct",
+        "0.099",
+        "--tp-r",
+        "50.0",
+        "--start",
+        "2018-06-01",
+        "--end",
+        "2026-10-15 23:59"
+      ]
+    }
+  },
+  "window": {
+    "start": "2018-06-01",
+    "end": "2026-10-15 23:59",
+    "fetch_days": 3060,
+    "feed": {
+      "source": "yahoo",
+      "ticker": "HG=F",
+      "interval": "1d",
+      "resample": "1d"
+    },
+    "fold_edges": [
+      "2018-06-01 00:00:00+00:00",
+      "2019-10-23 19:59:50+00:00",
+      "2021-03-16 15:59:40+00:00",
+      "2022-08-08 11:59:30+00:00",
+      "2023-12-31 07:59:20+00:00",
+      "2025-05-24 03:59:10+00:00",
+      "2026-10-15 23:59:00+00:00"
+    ]
+  }
+}
