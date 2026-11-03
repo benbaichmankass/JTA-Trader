@@ -267,3 +267,34 @@ def test_ml_entry_is_an_exclusive_hold_leg_on_a_non_slice_book():
     assert r("claude_desk", 3.0, None).startswith(cd.R_DESK_HELD)        # desk default unchanged
     src = (REPO / "src/core/coordinator.py").read_text()
     assert "for _ex in _cd.EXCLUSIVE_HOLD_LEGS:" in src and "exclusive=_ex" in src
+
+
+# PI-20261103-MLV2-0001 (lane ML-V1-PARITY): BybitConnector's ccxt is defaultType=spot, so a bare ``BTCUSDT`` resolved to
+# the SPOT market wherever one exists. The model is defined on the linear perps; the fetch must ask for them.
+def test_candle_symbol_asks_for_the_linear_perp_on_bybit_only():
+    from src.runtime import strategy_signal_builders as B
+    class BybitConnector: ...
+    assert B._ml_entry_candle_symbol("BTCUSDT") == "BTC/USDT:USDT"
+    assert B._ml_entry_candle_symbol("SOLUSDT", BybitConnector(), "bybit") == "SOL/USDT:USDT"
+    assert B._ml_entry_candle_symbol("BTC/USDT:USDT") == "BTC/USDT:USDT"          # already unified
+    assert B._ml_entry_candle_symbol("SPY", object(), "alpaca") == "SPY"          # equities untouched
+    assert B._ml_entry_candle_symbol("BTCUSDT", object(), "alpaca") == "BTCUSDT"  # not a Bybit client
+
+
+def test_reference_frames_are_fetched_as_perps_but_keyed_by_the_plain_id(monkeypatch):
+    import src.runtime.market_data as md
+    from src.runtime import strategy_signal_builders as B
+    asked = []
+
+    def fake_fetch(symbol, timeframe, *, settings=None, limit, exchange_client=None, since=None, bypass_cache=False):
+        asked.append(symbol)
+        return _frame(len(asked), n=300).rename(columns={"ts": "timestamp"})
+    monkeypatch.setattr(md, "fetch_candles", fake_fetch)
+    monkeypatch.setattr("src.runtime.closed_bars.drop_forming_bar", lambda df, tf: df)
+    B._ML_ENTRY_REF_CACHE.clear()
+    frames = B._ml_entry_reference_frames(["BTCUSDT", "ETHUSDT"], "2026-01-30T16:00:00+00:00", None, venue="bybit")
+    assert asked == ["BTC/USDT:USDT", "ETH/USDT:USDT"] and set(frames) == {"BTCUSDT", "ETHUSDT"}
+    B._ML_ENTRY_REF_CACHE.clear()
+    B._ml_entry_reference_frames(["BTCUSDT"], "2026-01-30T17:00:00+00:00", object(), venue="alpaca")
+    assert asked[-1] == "BTC/USDT:USDT"                                           # the Alpaca path reads Bybit PERPS too
+    B._ML_ENTRY_REF_CACHE.clear()
