@@ -1,0 +1,22 @@
+{
+  "id": "CI-STREAMLINE",
+  "title": "CI streamline: no duplicate re-runs of already-approved code; triage required checks by what a PR touches; measure before paid resources",
+  "phase": "ci",
+  "state": "in_flight",
+  "owner": "lane",
+  "lane": "session_01AFoLuHkvWi7dqNdMx6Ey51",
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [],
+  "blocked_on": [],
+  "note": "Operator 2026-11-03 ~21:20Z: cut CI per PR, no checks on already-approved code, triage by importance, then measure. BASELINE (ESTIMATED, run wall-min from the Actions API incl. job queue): push-to-main 2026-11-02 13:43Z->11-03 21:19Z (100 runs each): guards 3355 (p50 24.6), pytest-run 2448 (48 cancelled), pytest-collect 882, repo-inventory 400. PR runs 11:06Z->21:07Z (100 each): pytest-run 2369 (p50 21.9), guards 1264 (p50 10.0). PR open->merge, 183 PRs merged in 24h to 21:20Z: p50 28.6 / p90 91.8 min (human n=57 p50 47.8 / p90 166.9; data-commit n=46 p50 26.2; research bookkeeping n=58 p50 25.7). PLAN: (1) drop push-to-main triggers of pytest-run/guards/pytest-collect/repo-inventory, scheduled 2h backstops; (2) shallow checkout in pytest-run+guards; (3) change-class map for guards+pytest-run; (4) affected-tests already exists on PRs (pytest_run_scope.py); (5) batch bookkeeping PRs -> next row; (6) update_pull_request_branch on stuck PRs.",
+  "due_by": "2026-11-05",
+  "roadmap": [
+    "L-OPS"
+  ],
+  "updated_at": "2026-11-03T21:31:27Z",
+  "updated_by": "session_01AFoLuHkvWi7dqNdMx6Ey51",
+  "_seq": 900
+}

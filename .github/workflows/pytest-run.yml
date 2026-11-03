@@ -61,53 +61,23 @@ on:
     # no ready trigger would be unmergeable forever.
     types: [opened, synchronize, reopened]
     branches: [main]
-  push:
-    branches: [main]
-    # BOT-DATA PUSHES SKIP THE PUSH RUN (RUNNER CENSUS 2026-11-01, row GRADE-EVERYTHING-CONTINUOUSLY / lane FORECAST-GRADE-FIRST-PASSAGE).
-    # A push to main whose changed files ALL match this list is a bot data landing whose own PR already ran this check on the
-    # identical tree. Any other file in the commit (code, config, workflows, tests, a path the suite or a guard-test reads)
-    # runs it as before. PRs are NOT affected: `pull_request` has no filter, so no guard is skipped on any PR.
-    # The same list is in pytest-run / guards / repo-inventory / pytest-collect; tests/test_push_paths_ignore_bot_data.py pins
-    # them identical and DISJOINT from every committed path the test suite reads.
-    paths-ignore:
-      - '.github/merge-slots/**'
-      - '.github/pr-automerge-requests/**'
-      - '.github/pr-landing/**'
-      - 'comms/research/RQ-*/**'
-      - 'comms/research/CF-*/**'
-      - 'comms/research/counterfactual_grades/**'
-      - 'comms/research/soak_book_grade/**'
-      - 'comms/research/utilization/**'
-      - 'comms/research/health/**'
-      - 'research/results/**'
-      - 'comms/desk/decisions.jsonl'
-      - 'comms/desk/packets/**'
-      - 'comms/desk/role_grade.json'
-      - 'comms/desk/forecast_grade.json'
-      - 'comms/desk/forecast_ledger.jsonl'
-      - 'comms/desk/am_judgement_grade.json'
-      - 'comms/desk/feed_gaps.jsonl'
-      - 'comms/desk/touches.jsonl'
-      - 'comms/live_review/rows/**'
-      - 'comms/live_review/outcomes.jsonl'
-      - 'comms/live_review/killed_rows.json'
-      - 'comms/claude_strategy_scores.jsonl'
-      - 'comms/news_alpha/**'
-      - 'docs/claude/pending-pings.jsonl'
-      - 'docs/claude/work/WORK-DIGEST.json'
-      - 'docs/claude/work/research-queue-dispatch-receipt.json'
-      - 'docs/claude/work/USAGE-READINGS.jsonl'
-      - 'docs/claude/work/TRAINER-CAPTURE-WATCH.json'
-  # POST-MERGE BACKSTOP (GH-CAPACITY-PR-CI-FANOUT, 2026-10-15). PRs run only the import-graph-
+  # NO PUSH-TO-MAIN TRIGGER (CI-STREAMLINE, operator 2026-11-03: "We definitely don't need to run checks on code that was
+  # already approved"). A push run re-tested a tree whose PR already ran this check; MEASURED 2026-11-02 13:43Z ->
+  # 11-03 21:19Z: 100 push runs, 48 cancelled, ~2,448 wall-min. The post-merge net is the SCHEDULED backstop below (full
+  # suite on main only when HEAD's code is not already graded). GIVES UP: per-push grading -- a cross-module break that a
+  # PR's affected-tests selection missed is now caught within one backstop period (2 h) + suite time instead of on the
+  # next user-credential push, and the red names a commit RANGE, not one sha. Pinned by tests/test_ci_streamline_no_push.py.
+  # POST-MERGE BACKSTOP (GH-CAPACITY-PR-CI-FANOUT, 2026-10-15; every 2 h since CI-STREAMLINE 2026-11-03, when it became
+  # the ONLY post-merge full run -- the push trigger is gone, so a 30-min tick would run the full suite ~48x/day). PRs run only the import-graph-
   # affected tests, so the full suite on main is what catches a break a PR's selection missed --
   # and push runs do not carry it reliably: an auto-merged (GITHUB_TOKEN) merge commit starts no
   # run, and the next push run's `before...sha` range starts AT that commit, so its code is outside
-  # the range. Every 30 min this tick asks scripts/ci/pytest_run_backstop.py whether main's HEAD
+  # the range. Every 2 h this tick asks scripts/ci/pytest_run_backstop.py whether main's HEAD
   # code is already graded by a completed full run; if not, it runs the full suite (no-op otherwise).
-  # Bound: a post-merge break is detected within ~30 min + the suite's run time + runner queueing.
+  # Bound: a post-merge break is detected within ~2 h + the suite's run time + runner queueing.
   # Off the hour on purpose (most crons sit on :00). Pinned by tests/test_pytest_run_backstop.py.
   schedule:
-    - cron: '13,43 * * * *'
+    - cron: '13 */2 * * *'
   # Manually dispatchable so a FEATURE BRANCH can always run the suite.
   # Without this, `push` is main-only and `pull_request` is the sole event that
   # can run these tests on a branch — so the one confirmed dropped
