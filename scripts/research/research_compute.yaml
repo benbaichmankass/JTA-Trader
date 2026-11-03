@@ -125,6 +125,9 @@ limits:
   # GitHub capacity only when infra is not waiting. Class backend order already puts the dedicated backend
   # first wherever the unit can run there (gpu/gpu_preferred -> kaggle; published-data cpu units ->
   # kaggle_cpu via published_variant; needs_vm_data -> trainer); github_runner is the spill-over.
+  # RESEARCH-FLOW 2026-11-02 (manager 21:25Z): research may fire while at most 1 infra run is queued and defers at 2 or more
+  # (was: defer at 1, which deferred every fire on cycle 41521258380). --max-repo-queued still bounds the whole pool.
+  infra_yield_at: 2
   infra_workflows:
     - system-actions
     - system-actions-cancel-guard
