@@ -1,0 +1,118 @@
+{
+ "schema_version": 1,
+ "review_id": "LR-20261103T0931Z-pkg-b8aef658ed1b4032",
+ "reviewed_at": "2026-11-03T09:40:00Z",
+ "order_package_id": "pkg-b8aef658ed1b4032",
+ "trade_id": null,
+ "leg": "ict_scalp_5m",
+ "accounts": [
+  "bybit_1"
+ ],
+ "trigger": {
+  "event": "adverse_r",
+  "level": -0.75,
+  "l0_snapshot_at": "2026-11-03T09:30:42Z"
+ },
+ "info_cutoff_at": "2026-11-03T09:31:15Z",
+ "state": {
+  "atr_now_over_entry": 0.8481,
+  "bars_held": 14,
+  "giveback_r": 1.138,
+  "open_r": -0.7543,
+  "peak_provenance": "estimated",
+  "peak_r": 0.3837,
+  "regime_cell_entry": "chop/volatile",
+  "regime_cell_now": null,
+  "sl": 76994.62285714,
+  "tp": 76125.56571429
+ },
+ "features_at_review": {
+  "atr_now_over_entry": 0.8481,
+  "bars_since_peak": 10,
+  "giveback_r": 1.138,
+  "open_r": -0.7543,
+  "peak_r": 0.3837,
+  "r_to_stop": 0.2457,
+  "r_to_target": 2.2543
+ },
+ "mechanics": {
+  "evidence": "package sl 76994.62285714 / tp 76125.56571429 agree with every readable account",
+  "verdict": "match"
+ },
+ "options": [
+  {
+   "action": "hold",
+   "level": null,
+   "n": 46,
+   "mean_r": 0.2693,
+   "sd_r": 0.8057,
+   "worst_r": -1.2573,
+   "net": null
+  },
+  {
+   "action": "tighten",
+   "level": "atr:1.0..2.0 / r:1.0..2.0 (all)",
+   "n": 46,
+   "mean_r": null,
+   "sd_r": null,
+   "worst_r": null,
+   "net": null
+  }
+ ],
+ "outcome_table_source": null,
+ "recommendation": {
+  "action": "hold",
+  "level": null,
+  "level_atr": null,
+  "ev_delta_r": null,
+  "worst_case_delta_r": null,
+  "basis": "ev_positive",
+  "confidence": "measured",
+  "evidence_source": "table",
+  "judgement_confidence": null,
+  "reason": "Tool cell (ict_scalp_5m short, open -0.754R, peak +0.384R, 14 bars, n=46, 22 never-peaked excluded as separate pop): hold mean +0.27R, worst -1.26R. All 5 tighten specs are invalid_level (price 76903 is only ~0.25R from the 76994.6 stop; any tighter short stop would sit below market), so tightening is not available; close would lock -0.75R vs hold EV +0.27R. Price is retesting the 76911-76914 swing-high cluster (since-entry high 76914.4, close 76903.3) in a 1h chop/ADX 17 context, stop 91 pts (1.2 ATR5m) above, TP 2.25R away. Honest caveat: the leg's full-corpus backtest expectancy is -0.29R and a retest of the highs is a real risk; stop is the protection and is intact.",
+  "size_fraction": null
+ },
+ "judge_prior": null,
+ "applied": false,
+ "apply_policy": {
+  "bound_r": 0.25,
+  "within_bound": null,
+  "tighten_r": null
+ },
+ "shadow_policy": {
+  "bound_r": 0.5,
+  "within_bound": null,
+  "would_apply": null,
+  "tighten_r": null
+ },
+ "context_flags": [
+  "tighten: all 5 specs invalid_level at current price (stop 0.25R away); tighten biases flatter, none applicable",
+  "regime: entry chop/volatile, now chop (ADX 17.4), ATR ratio 0.85",
+  "overlay: leg backtest expectancy -0.29R (n=146) while this state's cell is +0.27R (n=46): conditional cell trusted, full-leg prior is a caution",
+  "book: 7 other open shorts incl. BTC trend_donchian_1h +1.32R (same-direction crypto beta)",
+  "calendar: none next 24h; news neutral",
+  "mechanics: brackets match to the tick; paper bybit_1 record-only scope, auto-apply path not needed for a hold",
+  "funding and regime.vol_now not readable (missing inputs)"
+ ],
+ "account_reads": [
+  {
+   "account_id": "bybit_1",
+   "account_class": "paper",
+   "read": "no_action",
+   "evidence": "hold changes nothing; bybit_orders: SL 76994.6 / TP 76125.6, position True, matched by order_id, 1 sibling package(s) on BTCUSDT; apply paths close, move_tp, reduce, tighten, widen_sl; would_apply = an executor reaches this leg, NOT that its RiskManager approved (LTR-6 gap)"
+  }
+ ],
+ "disposition": {
+  "route": "none",
+  "mandate": null,
+  "action_issue": null,
+  "applied_at": null,
+  "verified_readback": null
+ },
+ "model": "sonnet-tier",
+ "session": "session_01AFoLuJ6DckkMow3MC9Vvb8",
+ "prompt_sha": null,
+ "skill_sha": null,
+ "packet_sha": "f96bed06239f22108951e5619cac98362d192d9e857bcfdd09865bf019964218"
+}
