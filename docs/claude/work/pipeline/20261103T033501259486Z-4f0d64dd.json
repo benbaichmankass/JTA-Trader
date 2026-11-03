@@ -1,0 +1,15 @@
+{
+  "due_when": {
+    "clears_when": "hf_publish succeeds for a full chunk again (chunk line shows lake=1), or the trainer fallback is accepted/limited by the operator",
+    "kind": "event"
+  },
+  "id": "PI-20261102-PTDVAI3R-0006",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "run 41552388391 chunks 3-4 (02:24Z, 03:15Z)",
+    "rerun": "grep 'Commit of .* files failed' in the etf-history-pipeline fetch log; check 'lake=' on each 'chunk N:' line"
+  },
+  "state": "queued",
+  "what": "HF lake publish FAILED for chunks 3 and 4 of run 41552388391 (log: 'Commit of 250/200/125/100/75/50 files failed (BadRequestError ... then HfHubHTTPError ...)'; the HTTP reason is truncated in the log). Chunks 1-2 published. The designed fallback pushed 120 symbols in FULL to the trainer: etf_history 3,688 MB / 15,295 partitions, free disk 45 -> 41 GB. If the lake keeps failing, the remaining 681 symbols add ~20 GB (free ~21 GB; the mid-run stop floor is 10 GB) and every run goes red. Cause undiagnosed; unverified hypotheses: an HF repo commit-rate or size limit. Owner: lane MARKET-DATA-LAKE (scripts/data_lake/hf_publish.py: log the full HfHubHTTPError text/status)."
+}
