@@ -238,6 +238,7 @@ def test_gpu_unit_waits_when_quota_is_unknown_or_below_floor_and_never_blocks_th
 
 def test_fire_dispatches_the_resolved_workflow_for_a_compute_only_unit(tmp_path, monkeypatch):
     monkeypatch.setattr(dq, "pending_stamp_units", lambda api=None: {})
+    monkeypatch.setattr(dq, "fired_run_units", lambda now, api=None, **k: {})
     monkeypatch.setattr(dq, "declared_inputs", lambda *a, **k: ["research_unit", "power_state"])
     monkeypatch.setattr(script_run, "plan", lambda *a, **k: type("P", (), {"ok": True, "errors": []})())
     dec, fired = _dry(tmp_path, monkeypatch, [("RQ-20300110-002", {"compute": "cpu_light", "routing": CPU_ROUTE})],
@@ -303,6 +304,7 @@ def test_utilization_record_has_explicit_read_state_and_week_rolls_up(tmp_path):
 
 def test_idle_fill_pulls_an_opted_in_recurring_unit_forward_only_into_free_capacity(tmp_path, monkeypatch):
     monkeypatch.setattr(dq, "pending_stamp_units", lambda api=None: {})
+    monkeypatch.setattr(dq, "fired_run_units", lambda now, api=None, **k: {})
     monkeypatch.setattr(dq, "declared_inputs", lambda *a, **k: ["research_unit", "power_state"])
     monkeypatch.setattr(script_run, "plan", lambda *a, **k: type("P", (), {"ok": True, "errors": []})())
     recent = (datetime.now(timezone.utc) - timedelta(hours=1)).isoformat()
