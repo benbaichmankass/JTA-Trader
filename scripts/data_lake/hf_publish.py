@@ -149,6 +149,26 @@ def cmd_preflight(a) -> int:
     return 0
 
 
+def describe_hf_error(e: BaseException) -> tuple:
+    """(message, retryable). The FULL text: huggingface_hub puts the server's reason AFTER a newline that `str(e)[:300]` cut off
+    (run 41552388391: the log showed only 'BadRequestError((Request ID: ...)' while the reason, 'Private storage limit reached
+    for user bentzbk', sat on the next lines). A storage-limit refusal is NOT retryable: waiting never frees space."""
+    parts = [type(e).__name__]
+    resp = getattr(e, "response", None)
+    status = getattr(resp, "status_code", None)
+    if status is not None:
+        parts.append(f"HTTP {status}")
+    body = " ".join(str(e).split())
+    parts.append(body[:1500])
+    server = getattr(e, "server_message", None)
+    if server and str(server) not in body:
+        parts.append(f"server_message={str(server)[:500]}")
+    text = " | ".join(parts)
+    low = text.lower()
+    quota = "storage limit" in low or "quota" in low and "exceed" in low
+    return text, not quota
+
+
 def cmd_upload(a) -> int:
     api = _api()
     ensure_private_repo(api, a.repo)
@@ -166,7 +186,12 @@ def cmd_upload(a) -> int:
             print(f"uploaded {src} -> {a.repo}/{a.prefix}")
             return 0
         except Exception as e:
-            print(f"upload attempt {attempt + 1} failed: {str(e)[:300]}")
+            msg, retryable = describe_hf_error(e)
+            print(f"upload attempt {attempt + 1} failed: {msg}")
+            if not retryable:
+                print("::error::HF private storage limit reached: NOT retryable (waiting frees no space). Free space in the HF "
+                      "account or upgrade its plan; the caller keeps the data on the trainer meanwhile.")
+                return 2
             time.sleep(min(120, 10 * 2 ** attempt))
     print("::error::upload failed after retries")
     return 1
@@ -334,7 +359,7 @@ def cmd_manifest(a) -> int:
                 print(f"published MANIFEST ({len(m['files'])} files), tag {tag}")
                 return 0
             except Exception as e:
-                print(f"manifest upload attempt {attempt + 1} failed: {str(e)[:300]}")
+                print(f"manifest upload attempt {attempt + 1} failed: {describe_hf_error(e)[0]}")
                 time.sleep(min(120, 10 * 2 ** attempt))
         return 1
     return 0
