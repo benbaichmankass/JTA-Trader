@@ -1,0 +1,110 @@
+# Decision rule registered BEFORE any run. Gates: none.
+id: RQ-20261103-5e04-01
+title: 'ml_entry with SL-ONLY structure stop (pivot 5) + the ml_first_passage moving TP: does it clear ml_entry''s original Stage-0 rule
+  net of the full cost stack, held-out? (re-measure for the operator one-time override, #22645 + option B)'
+status: blocked
+cadence: once
+theme: live_strategy
+priority: 1
+roadmap:
+- L-AM-STANDARD
+kind: experiment
+practice_precedent: 'T3, T8 (docs/reference/trading-and-model-practice-principles.md): the exit change is judged net of the full
+  cost stack with the entries fixed (the frozen served model''s own decisions); parent bar RULE-RQ20261101-c692-06-TRADED-SUBSET.'
+intervention_controls:
+  not_applicable: 'VERIFICATION of an exit the operator already chose and deployed (one-time override #22645, option B), graded
+    against the leg''s original Stage-0 point-estimate bar; it does not select or credit an intervention among alternatives. The
+    matched-random / best-static selection test for structure exits on this leg is RQ-20261101-5e01-09. The harness computes no
+    random-SL control (stated, not claimed).'
+question: 'ml_entry (bybit_2 real money + bybit_portfolio mirror) now trades with structure_exit "pivot=5;sl_only": the stop ratchets to
+  each newly confirmed swing (N=5, 0.25 ATR buffer, tighten-only, never looser than the entry stop) while the ml_first_passage TP
+  revision (extend-only, 4h check-ins) stays the only TP owner. This went live BEFORE measurement under the operator''s one-time
+  override (#22645; option "B: stop only (Recommended)", pop-up ~16:53Z 2026-11-03). This unit is the measurement the override deferred:
+  the faithful arm is exactly the live exit.'
+why_this_matters: 'Its evidence record (comms/strategy_evidence/ml_entry.json) reads fidelity=approximate with structure_exit omitted,
+  and bybit_2/ml_entry sits in check_roster_promotion_evidence FIDELITY_BASELINE on THIS unit. A real-money leg runs an unmeasured exit
+  until this grades.'
+power:
+  expected_n: 900
+  min_detectable_effect: 0.05
+  effect_units: R
+  sd: 1.0
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: 'ESTIMATE: the c692-06 held-out population had n=907 decisions on the 5 traded symbols; sd 1.0 R per decision is assumed (the
+    first run replaces it). The rule is the original point-estimate bar, not a significance test.'
+  feasibility:
+    source: none
+    accrual_basis: Replays the same pinned held-out window as RQ-20261101-c692-06 / 383f-01 on public klines; nothing accrues.
+decision_rule:
+  id: RULE-RQ20261103-5E04-01-ML-SLONLY
+  parent_rule_id: RULE-RQ20261101-c692-06-TRADED-SUBSET
+  registered_at: '2026-11-03'
+  registered_before_run: true
+  statistic: 'Same frozen served model, same entries, same held-out window and traded 5-symbol population as RQ-20261101-c692-06 and
+    the TP-revision harness of RQ-20261101-383f-01 (scripts/research/ml_entry_tp_revision.py), net of the full cost stack that harness
+    applies (fee + slippage + funding). Arm F (faithful) = the live exit: entry stop 2 x ATR14, SL-only structure ratchet pivot 5 /
+    buffer 0.25 ATR via src/runtime/structure_levels.py on closed bars only, ml_first_passage extend-only TP revision at each 4h
+    check-in, 24h time stop. Arm A (reference, reported not graded) = the pre-override exit (ATR bracket + the same TP revision).'
+  rule: 'PASS IF held-out mean net R per decision of arm F on the traded symbols >= 0 (the original Stage-0 bar,
+    RULE-RQ20261101-c692-06-TRADED-SUBSET, point estimate). FAIL IF < 0. INDETERMINATE if n < 100 or the harness cannot reproduce arm A
+    within 0.005 R/decision of the 383f-01 record. Thresholds, window and parameters are fixed here and not changed after any result.'
+  on_fail: 'REVERT CLAUSE: open the Tier-3 PR that deletes structure_exit from ml_entry in config/strategies.yaml (back to the ATR
+    bracket + ml_first_passage TP revision), restores comms/strategy_evidence/ml_entry.json to fidelity faithful with no omitted lever,
+    and removes the bybit_2/ml_entry FIDELITY_BASELINE entry. No re-run, no re-tune before reverting.'
+  on_pass: 'Regenerate comms/strategy_evidence/ml_entry.json faithful to the live exit and remove the FIDELITY_BASELINE entry.'
+  what_it_does_not_do: Places no order. A PASS does not change sizing or rosters.
+blocked_on:
+- kind: work_item
+  ref: ML-SL-ONLY-STRUCTURE-ARM
+  what: 'scripts/research/ml_entry_tp_revision.py walk() holds a FIXED stop. Needed: an optional causal structure-SL ratchet inside
+    walk() (StructureLevels over the trade''s own closed bars, the same on_bar_close SL step as structure_exit_live.replay, tighten-only,
+    never looser than the entry stop), an arm flag (e.g. --structure-sl pivot=5), and a parity test against
+    structure_exit_live.replay on recorded bars. Size: about 0.5 day, ~$4-6 (one lane).'
+  clears_when: 'The flag exists with its parity test on main (PR #22709); then remove blocked_on and set status: queued (run.command is already filled).'
+compute: cpu_long
+value:
+  usd_at_stake_per_month: 400
+  confidence: 0.3
+  bucket: own_losses
+  basis: 'stand-in estimate, as RQ-20261101-5e01-09: governs the exit of a real-money leg; not a measurement.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 4.0
+  est_minutes: 240
+  basis: 'Estimate from RQ-20261101-383f-01 (same harness, same window, timeout 240). The first run replaces it.'
+run:
+  workflow: research-script-run.yml
+  command:
+  - python3
+  - scripts/research/ml_entry_tp_revision.py
+  - evidence-extend-only
+  - --cache
+  - /tmp/ml_decision_klines
+  - --structure-sl
+  - pivot=5
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 240
+  inputs:
+    research_unit: RQ-20261103-5e04-01
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+programme: P1
+related:
+- research/queue/RQ-20261101-c692-06.yaml
+- research/queue/RQ-20261101-383f-01.yaml
+- research/queue/blocked/RQ-20261101-5e01-09.yaml
+- src/runtime/structure_exit_live.py
+- scripts/research/ml_entry_tp_revision.py
+- STRUCTURE-EXITS-DEFAULT
+ml_consumer:
+  consumer: STRUCTURE-EXITS-DEFAULT
+  decision: keep or revert the SL-only structure stop on ml_entry (bybit_2 + bybit_portfolio)
+  legs:
+  - ml_entry
+  book: money

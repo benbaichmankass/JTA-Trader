@@ -174,14 +174,52 @@ def monitor(cfg, candles_df, open_pkg):
     if isinstance(base, dict) and base.get("action") == "close":
         return base
     _sx = structure_verdict(open_pkg, candles_df)
-    if _sx is not _NOT_DECLARED:
-        return _sx
+    if _sx is not _NOT_DECLARED and not _structure_sl_only(open_pkg):
+        return _sx  # full structure mode owns SL + TP (the TP revision does not run)
     try:
         from src.runtime.tp_revision import merge_verdict
-        return merge_verdict(base, tp_revision(cfg, candles_df, open_pkg))
+        merged = merge_verdict(base, tp_revision(cfg, candles_df, open_pkg))
     except Exception:  # noqa: BLE001 -- a monitor must never raise
         logger.debug("ml_entry.monitor: tp revision failed", exc_info=True)
-        return base
+        merged = base
+    if _sx is _NOT_DECLARED:
+        return merged
+    return merge_structure_sl(merged, _sx)
+
+
+def _structure_sl_only(open_pkg: Any) -> bool:
+    try:
+        from src.runtime.structure_exit_live import declared
+        p = declared(_meta(open_pkg))
+        return bool(p and p.get("sl_only"))
+    except Exception:  # noqa: BLE001
+        return False
+
+
+def merge_structure_sl(tp_side: Optional[Dict[str, Any]], sx: Optional[Dict[str, Any]]) -> Optional[Dict[str, Any]]:
+    """SL-ONLY structure mode (operator 2026-11-03, option B; record #22645): ONE owner per bracket side.
+
+    ``tp_side`` is the time-stop / ml_first_passage verdict and contributes ONLY its TP (``tp``, ``tp_reason``)
+    or a close; ``sx`` is the SL-only structure verdict and contributes ONLY ``sl`` (+ its ``structure_move``
+    journal record) or its ``structure_sl_cross`` close. A close from either side wins (the time stop's close
+    never reaches here). Any SL key on ``tp_side`` and any TP key on ``sx`` is dropped, so one tick can never
+    carry two SL owners or two TP owners to the venue."""
+    tp_side = dict(tp_side) if isinstance(tp_side, dict) else None
+    sx = dict(sx) if isinstance(sx, dict) else None
+    for v in (tp_side, sx):
+        if v is not None and v.get("action") == "close":
+            return v
+    out: Dict[str, Any] = {}
+    if tp_side:
+        out.update({k: v for k, v in tp_side.items() if k not in ("sl", "sl_reason")})
+    if sx:
+        if sx.get("sl") is not None:
+            out["sl"] = sx["sl"]
+        if isinstance(sx.get("structure_move"), dict):
+            mv = dict(sx["structure_move"])
+            mv["tp_after"] = mv.get("tp_before")  # the structure source did not move the TP
+            out["structure_move"] = mv
+    return out or None
 
 
 _NOT_DECLARED = object()
