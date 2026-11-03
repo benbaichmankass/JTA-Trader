@@ -236,6 +236,9 @@ exists to arm CI, and read CI with `get_check_runs`, never `get_status`.
 | `deploy-trainer-bootstrap.yml` | AUTONOMOUS | B | `.github/triggers/deploy-trainer-bootstrap` |
 | `system-actions.yml` | OPERATOR-APPROVAL | A | `system-action` |
 | `system-actions-cancel-guard.yml` | AUTO | `workflow_run` (system-actions completed, cancelled) | — |
+| `infra-runner-install.yml` | OPERATOR-APPROVAL | A (owner-opened) or `workflow_dispatch` | `infra-runner-install` |
+| `infra-runner-smoke.yml` | AUTONOMOUS | A (owner-opened) or `workflow_dispatch` (runs ON the self-hosted `jta-infra` runner; arms `vars.INFRA_RUNS_ON` on green) | `infra-runner-smoke` |
+| `infra-runner-health.yml` | AUTO | E (every 15 min; hosted fallback for `vars.INFRA_RUNS_ON` when no `jta-infra` runner is online) | — |
 | `vm-net-fix.yml` | OPERATOR-APPROVAL | A | `vm-net-fix-request` |
 | `vm-cloud-fix.yml` | OPERATOR-APPROVAL | A | `vm-cloud-fix-request` |
 | `vm-cloud-open-ib-port.yml` | OPERATOR-APPROVAL | A | `vm-cloud-open-ib-port` |

@@ -1,0 +1,16 @@
+{
+  "due_when": {
+    "check_every_days": 7,
+    "clears_when": "rescue built, or 30 days of health runs with no offline transition (then kill: not needed)",
+    "kind": "observation"
+  },
+  "id": "PI-20261103-RAM7EH86-0002",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "scripts/ops/infra_runner_health.py",
+    "rerun": "grep -n rescue scripts/ops/infra_runner_health.py; if absent and the runner has ever gone offline (a health run failed with 'no online jta-infra runner'), build it"
+  },
+  "state": "queued",
+  "what": "infra-runner-health fallback flips vars.INFRA_RUNS_ON to hosted when no jta-infra runner is online, but jobs ALREADY queued on the self-hosted label stay queued until a runner returns (GitHub fails them after 24h). Rescue: on fallback, cancel+rerun runs of the moved workflows queued >10 min (a rerun re-evaluates runs-on). Not built in v1 to keep the PR small."
+}

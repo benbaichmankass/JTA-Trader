@@ -175,6 +175,12 @@ class Cadence(NamedTuple):
 #: healthy-looking watch forever". That is the new-table-wiring lesson: a guard
 #: cheaper to lie to than to satisfy is worse than no guard.
 CADENCE_REGISTRY: dict[str, dict] = {
+    # ── GH-CAPACITY-INFRA-RUNNER (2026-11-03): a routing check, writes nothing to git.
+    "infra-runner-health.yml": {
+        "receipt": None,
+        "why": "reads the runner list and writes only the repo variable INFRA_RUNS_ON (not in git), so no repo receipt exists; a run that "
+               "falls back to hosted exits 1 and a dead run is observed by claude-run-failure-alert",
+    },
     # ── ETF-HISTORY-PIPELINE (2026-11-01): the stores live on the trainer, not in git, so there is no repo receipt.
     "etf-history-pipeline.yml": {
         "receipt": None,

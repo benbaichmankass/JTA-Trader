@@ -1,0 +1,79 @@
+name: infra-runner-smoke
+
+# Smoke job ON the self-hosted `jta-infra` runner (row GH-CAPACITY-INFRA-RUNNER). Exercises what the moved
+# workflows need (checkout, setup-python 3.11 + pip, gh, jq, ssh, github-script) and, only if every step is green,
+# points vars.INFRA_RUNS_ON at the runner. Until then every moved workflow stays on ubuntu-latest.
+# Dispatched by hand/issue after an install, and by infra-runner-health.yml when it re-arms after a fallback.
+# SECURITY: workflow_dispatch / owner-gated issues only; tests/test_self_hosted_runner_guard.py pins that no
+# pull_request / pull_request_target workflow targets the label.
+# Gates this adds or changes: none.
+
+on:
+  workflow_dispatch:
+  issues:
+    types: [opened]
+
+permissions:
+  contents: read
+  issues: write
+  actions: read
+
+concurrency:
+  group: infra-runner-smoke
+  cancel-in-progress: false
+
+jobs:
+  smoke:
+    if: |
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'issues' &&
+       github.event.issue.user.login == github.repository_owner &&
+       contains(github.event.issue.labels.*.name, 'infra-runner-smoke'))
+    runs-on: [self-hosted, jta-infra]
+    timeout-minutes: 15
+    env:
+      GH_REPO: ${{ github.repository }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Tooling the moved workflows use
+        env:
+          TRAINER_IP: ${{ secrets.TRAINER_VM_IP }}
+          VM_SSH_HOST: ${{ secrets.VM_SSH_HOST }}
+        run: |
+          set -euo pipefail
+          pip install --quiet pyyaml requests
+          python -c "import yaml, requests; print('py', __import__('sys').version.split()[0])"
+          gh --version | head -1; jq --version; openssl version; ssh -V 2>&1; command -v scp
+          echo "runner=${RUNNER_NAME} user=$(id -un) arch=$(uname -m) tmp=$(mktemp)"
+          ! sudo -n true 2>/dev/null || { echo "::error::runner user has sudo"; exit 1; }
+          ! test -r /home/ubuntu/.ssh 2>/dev/null || { echo "::error::runner user can read /home/ubuntu/.ssh"; exit 1; }
+          ssh-keyscan -T 10 -t ed25519 "${TRAINER_IP}" >/dev/null 2>&1 && echo "trainer_ssh_reachable=yes" || echo "trainer_ssh_reachable=no"
+          ssh-keyscan -T 10 -t ed25519 "${VM_SSH_HOST}" >/dev/null 2>&1 && echo "live_ssh_reachable=yes" || { echo "::error::live VM ssh not reachable from runner"; exit 1; }
+      - name: Queue-to-start latency of this job
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh api "repos/${GH_REPO}/actions/runs/${GITHUB_RUN_ID}/jobs" --jq '.jobs[] | "job \(.name) created=\(.created_at) started=\(.started_at) runner=\(.runner_name)"' | tee /tmp/latency.txt
+      - name: Point vars.INFRA_RUNS_ON at the runner
+        env:
+          GH_TOKEN: ${{ secrets.BRANCH_PROTECTION_TOKEN }}
+        run: |
+          set -euo pipefail
+          gh variable set INFRA_RUNS_ON --repo "${GH_REPO}" --body '["self-hosted","jta-infra"]' \
+            && echo "INFRA_RUNS_ON=self-hosted" | tee -a /tmp/latency.txt \
+            || { echo "::error::could not set INFRA_RUNS_ON (PAT needs Variables: read+write)"; echo "INFRA_RUNS_ON=NOT_SET (PAT lacks Variables write)" >> /tmp/latency.txt; exit 1; }
+      - uses: actions/github-script@v7
+        if: always() && github.event_name == 'issues'
+        with:
+          script: |
+            const fs = require('fs'); let t = '(none)'; try { t = fs.readFileSync('/tmp/latency.txt','utf8') } catch {}
+            await github.rest.issues.createComment({...context.repo, issue_number: context.issue.number,
+              body: `**infra-runner-smoke** ${process.env.JOB_STATUS} on \`${process.env.RUNNER_NAME}\` — run ${context.runId}\n\n\`\`\`\n${t}\n\`\`\``});
+            await github.rest.issues.update({...context.repo, issue_number: context.issue.number, state: 'closed'});
+        env:
+          JOB_STATUS: ${{ job.status }}
