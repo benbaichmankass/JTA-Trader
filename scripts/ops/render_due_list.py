@@ -768,6 +768,10 @@ def src_red_crons(
 #: inter-merge gap 2.7 min -- not a gap.
 _PUSH_RUN_NOT_A_FINDING = (None, "success", "cancelled", "skipped")
 
+#: The post-merge backstops of main since CI-STREAMLINE (2026-11-03) removed their push triggers. Their latest
+#: SCHEDULED run on main is graded beside the push runs in `src_red_main_runs`.
+BACKSTOP_WORKFLOWS = ("pytest-run.yml", "guards.yml")
+
 
 #: Three never-collapsed answers to "how far behind `main`'s tip was the commit
 #: this verdict actually graded?". `distance_unknown` is *we could not look* and
@@ -917,6 +921,25 @@ def src_red_main_runs(
         if name not in latest:            # the API returns newest-first
             latest[name] = run
 
+    # CI-STREAMLINE (2026-11-03): pytest-run and guards no longer run on push; their post-merge grading of main is a
+    # SCHEDULED backstop. Read each one's latest completed scheduled run on main directly, so this source keeps
+    # watching them. src_red_crons reads only the 100 most recent scheduled runs repo-wide, which can be ~2 h of
+    # history -- shorter than the backstop's own period -- so it alone could let a red backstop age out unseen.
+    # A failure to read one is a note, never a suppressed red.
+    backstop_note = ""
+    for wf_file in BACKSTOP_WORKFLOWS:
+        try:
+            bd = _gh(f"/repos/{REPO}/actions/workflows/{wf_file}/runs"
+                     f"?event=schedule&branch=main&status=completed&per_page=1", token)
+        except (urllib.error.URLError, OSError, ValueError) as exc:
+            backstop_note += f" could not read the {wf_file} backstop ({type(exc).__name__});"
+            continue
+        for run in bd.get("workflow_runs", [])[:1]:
+            name = run.get("name") or wf_file
+            prev = latest.get(name)
+            if prev is None or (run.get("created_at") or "") > (prev.get("created_at") or ""):
+                latest[name] = run
+
     rows = []
     placements: dict[str, tuple[str, int | None]] = {}
     for name, run in sorted(latest.items()):
@@ -925,14 +948,14 @@ def src_red_main_runs(
         if run.get("conclusion") in _PUSH_RUN_NOT_A_FINDING:
             continue
         rows.append(_row("red_main_runs", name, name,
-                         f"the latest push-to-main run of {name} concluded "
+                         f"the latest {run.get('event') or 'push'}-on-main run of {name} concluded "
                          f"{run.get('conclusion')!r} — the DEFAULT BRANCH is "
                          f"red, and until 2026-09-13 nothing read this. Graded "
                          f"at {sha[:9] or '(no sha)'}, "
                          f"{_placement_phrase(*placements[name])}",
                          loud=True, link=run.get("html_url", "")))
     return SourceResult("red_main_runs", "read", rows,
-                        note=_red_main_note(placements, len(rows), commits_note))
+                        note=_red_main_note(placements, len(rows), commits_note) + backstop_note)
 
 
 

@@ -257,6 +257,7 @@ CATEGORY_RULES: List[Tuple[str, str, str]] = [
 # a directory. Each is a file this session opened.
 CATEGORY_EXPLICIT: Dict[str, Tuple[str, str]] = {
     "CLAUDE.md": ("instruction", "read:repo-orientation-and-binding-brief"),
+    "docs/plans/COMPUTE-ALLOCATION-2026-11-03.md": ("plan", "read:compute-allocation-design-forward-build-plan"),
     "docs/CLAUDE-RULES-CANONICAL.md": ("instruction", "read:hierarchy-rank-1"),
     "docs/ARCHITECTURE-CANONICAL.md": ("architecture", "read:hierarchy-rank-2"),
     "ROADMAP.md": ("plan", "read:hierarchy-rank-3-milestone-record"),

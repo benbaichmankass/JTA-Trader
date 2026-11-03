@@ -61,53 +61,23 @@ on:
     # no ready trigger would be unmergeable forever.
     types: [opened, synchronize, reopened]
     branches: [main]
-  push:
-    branches: [main]
-    # BOT-DATA PUSHES SKIP THE PUSH RUN (RUNNER CENSUS 2026-11-01, row GRADE-EVERYTHING-CONTINUOUSLY / lane FORECAST-GRADE-FIRST-PASSAGE).
-    # A push to main whose changed files ALL match this list is a bot data landing whose own PR already ran this check on the
-    # identical tree. Any other file in the commit (code, config, workflows, tests, a path the suite or a guard-test reads)
-    # runs it as before. PRs are NOT affected: `pull_request` has no filter, so no guard is skipped on any PR.
-    # The same list is in pytest-run / guards / repo-inventory / pytest-collect; tests/test_push_paths_ignore_bot_data.py pins
-    # them identical and DISJOINT from every committed path the test suite reads.
-    paths-ignore:
-      - '.github/merge-slots/**'
-      - '.github/pr-automerge-requests/**'
-      - '.github/pr-landing/**'
-      - 'comms/research/RQ-*/**'
-      - 'comms/research/CF-*/**'
-      - 'comms/research/counterfactual_grades/**'
-      - 'comms/research/soak_book_grade/**'
-      - 'comms/research/utilization/**'
-      - 'comms/research/health/**'
-      - 'research/results/**'
-      - 'comms/desk/decisions.jsonl'
-      - 'comms/desk/packets/**'
-      - 'comms/desk/role_grade.json'
-      - 'comms/desk/forecast_grade.json'
-      - 'comms/desk/forecast_ledger.jsonl'
-      - 'comms/desk/am_judgement_grade.json'
-      - 'comms/desk/feed_gaps.jsonl'
-      - 'comms/desk/touches.jsonl'
-      - 'comms/live_review/rows/**'
-      - 'comms/live_review/outcomes.jsonl'
-      - 'comms/live_review/killed_rows.json'
-      - 'comms/claude_strategy_scores.jsonl'
-      - 'comms/news_alpha/**'
-      - 'docs/claude/pending-pings.jsonl'
-      - 'docs/claude/work/WORK-DIGEST.json'
-      - 'docs/claude/work/research-queue-dispatch-receipt.json'
-      - 'docs/claude/work/USAGE-READINGS.jsonl'
-      - 'docs/claude/work/TRAINER-CAPTURE-WATCH.json'
-  # POST-MERGE BACKSTOP (GH-CAPACITY-PR-CI-FANOUT, 2026-10-15). PRs run only the import-graph-
+  # NO PUSH-TO-MAIN TRIGGER (CI-STREAMLINE, operator 2026-11-03: "We definitely don't need to run checks on code that was
+  # already approved"). A push run re-tested a tree whose PR already ran this check; MEASURED 2026-11-02 13:43Z ->
+  # 11-03 21:19Z: 100 push runs, 48 cancelled, ~2,448 wall-min. The post-merge net is the SCHEDULED backstop below (full
+  # suite on main only when HEAD's code is not already graded). GIVES UP: per-push grading -- a cross-module break that a
+  # PR's affected-tests selection missed is now caught within one backstop period (2 h) + suite time instead of on the
+  # next user-credential push, and the red names a commit RANGE, not one sha. Pinned by tests/test_ci_streamline_no_push.py.
+  # POST-MERGE BACKSTOP (GH-CAPACITY-PR-CI-FANOUT, 2026-10-15; every 2 h since CI-STREAMLINE 2026-11-03, when it became
+  # the ONLY post-merge full run -- the push trigger is gone, so a 30-min tick would run the full suite ~48x/day). PRs run only the import-graph-
   # affected tests, so the full suite on main is what catches a break a PR's selection missed --
   # and push runs do not carry it reliably: an auto-merged (GITHUB_TOKEN) merge commit starts no
   # run, and the next push run's `before...sha` range starts AT that commit, so its code is outside
-  # the range. Every 30 min this tick asks scripts/ci/pytest_run_backstop.py whether main's HEAD
+  # the range. Every 2 h this tick asks scripts/ci/pytest_run_backstop.py whether main's HEAD
   # code is already graded by a completed full run; if not, it runs the full suite (no-op otherwise).
-  # Bound: a post-merge break is detected within ~30 min + the suite's run time + runner queueing.
+  # Bound: a post-merge break is detected within ~2 h + the suite's run time + runner queueing.
   # Off the hour on purpose (most crons sit on :00). Pinned by tests/test_pytest_run_backstop.py.
   schedule:
-    - cron: '13,43 * * * *'
+    - cron: '13 */2 * * *'
   # Manually dispatchable so a FEATURE BRANCH can always run the suite.
   # Without this, `push` is main-only and `pull_request` is the sole event that
   # can run these tests on a branch — so the one confirmed dropped
@@ -226,6 +196,7 @@ jobs:
           # --no-renames: list the OLD path of a rename too, so moving a file OUT of a
           # suite-read tree is seen (CI-DIET; only ever widens the relevant set).
           FILES=$(git diff --name-only --no-renames $RANGE || true)
+          printf '%s\n' "$FILES" > /tmp/changed-files.txt   # CI-STREAMLINE: the data step selects per touched tree
           echo "Changed files ($RANGE):"
           echo "$FILES"
           # Run the full suite when the diff touches code/test-config OR
@@ -377,7 +348,7 @@ jobs:
           # on the backlog row; it is a bigger change than this one.
           #
           # Pinned in tests/test_pytest_run_filter.py::COVERED.
-          if echo "$FILES" | grep -Eq '\.py$|requirements(-test)?\.txt$|pytest\.ini$|setup\.cfg$|pyproject\.toml$|^config/|^\.github/workflows/|^\.github/actions/|^scripts/|^deploy/|^comms/|^docs/research/exit-refinement-coverage\.json$|^docs/research/m20-sweep-corpus\.jsonl$|^docs/claude/system-actions\.md$|^docs/ARCHITECTURE-CANONICAL\.md$|^docs/research/m20-exit-head-rounds\.jsonl$|^docs/research/m20-fold-dispersion-arms-consolidated\.jsonl$|^docs/research/m20-fold-dispersion-2026-08-15\.md$|^docs/claude/impossibility-claim-baseline\.json$|^docs/claude/SUNSET-DISPOSITIONS\.json$|^docs/claude/CONSTRAINT\.json$|^docs/claude/diag-relay\.md$|^docs/claude/work/SESSIONS\.json$|^docs/archive/2026-09-21-operating-reset/work/SESSIONS\.json$|^docs/claude/session-board\.json$|^docs/claude/work/objects/WO-20260901-PHASE-G\.yaml$|^docs/research/e35-bracket-corpus\.jsonl$|^docs/research/research-disposition-ledger\.jsonl$|^ml/|^automation/|^research/|^\.claude/|^\.env\.example$|^tests/|^data/backtest_candles\.csv$|^data/btc_1m_sample\.csv$|^data/ict_validate_manifest\.csv$|^docs/claude/soak-doctrine-exceptions\.json$|^docs/claude/system-review-checklist\.json$|^docs/research/data/backtest-mfe-reference-2026-09-07\.json$|^docs/claude/work/objects/|^docs/api-tier-policy\.md$|^docs/CLAUDE-RULES-CANONICAL\.md$|^docs/sprint-logs|^docs/claude/health-review-backlog\.json$|^docs/claude/OPEN-ITEMS\.json$|^docs/claude/work/checklist/|^docs/claude/work/PIPELINE\.jsonl$|^docs/claude/work/OPEN-PRS\.json$|^\.gitleaks-baseline\.json$|^docs/security/gitleaks-baseline\.md$|^tools/phone-executor/test/fixtures'; then
+          if echo "$FILES" | grep -Eq '\.py$|requirements(-test)?\.txt$|pytest\.ini$|setup\.cfg$|pyproject\.toml$|^config/|^\.github/workflows/|^\.github/actions/|^\.github/ci-change-classes\.json$|^scripts/|^deploy/|^comms/|^docs/research/exit-refinement-coverage\.json$|^docs/research/m20-sweep-corpus\.jsonl$|^docs/claude/system-actions\.md$|^docs/ARCHITECTURE-CANONICAL\.md$|^docs/research/m20-exit-head-rounds\.jsonl$|^docs/research/m20-fold-dispersion-arms-consolidated\.jsonl$|^docs/research/m20-fold-dispersion-2026-08-15\.md$|^docs/claude/impossibility-claim-baseline\.json$|^docs/claude/SUNSET-DISPOSITIONS\.json$|^docs/claude/CONSTRAINT\.json$|^docs/claude/diag-relay\.md$|^docs/claude/work/SESSIONS\.json$|^docs/archive/2026-09-21-operating-reset/work/SESSIONS\.json$|^docs/claude/session-board\.json$|^docs/claude/work/objects/WO-20260901-PHASE-G\.yaml$|^docs/research/e35-bracket-corpus\.jsonl$|^docs/research/research-disposition-ledger\.jsonl$|^ml/|^automation/|^research/|^\.claude/|^\.env\.example$|^tests/|^data/backtest_candles\.csv$|^data/btc_1m_sample\.csv$|^data/ict_validate_manifest\.csv$|^docs/claude/soak-doctrine-exceptions\.json$|^docs/claude/system-review-checklist\.json$|^docs/research/data/backtest-mfe-reference-2026-09-07\.json$|^docs/claude/work/objects/|^docs/api-tier-policy\.md$|^docs/CLAUDE-RULES-CANONICAL\.md$|^docs/sprint-logs|^docs/claude/health-review-backlog\.json$|^docs/claude/OPEN-ITEMS\.json$|^docs/claude/work/checklist/|^docs/claude/work/PIPELINE\.jsonl$|^docs/claude/work/OPEN-PRS\.json$|^\.gitleaks-baseline\.json$|^docs/security/gitleaks-baseline\.md$|^tools/phone-executor/test/fixtures'; then
             echo "relevant=true" >> "$GITHUB_OUTPUT"
             # CI-DIET (2026-10-13): of the relevant diffs, a DATA-ONLY one (checklist
             # rows, pipeline rows, research queue/results, comms/ outputs, pr-landing /
@@ -437,12 +408,13 @@ jobs:
             echo "${SCOPE_REASON}"
           } >> "$GITHUB_STEP_SUMMARY"
 
-      - name: Run tests (data-only diff - every test file that reads the data trees)
+      - name: Run tests (data-only diff - the test files that read the touched data trees)
         if: steps.changed.outputs.relevant == 'true' && steps.changed.outputs.mode == 'data'
         env:
           PYTHONPATH: ${{ github.workspace }}
         run: |
-          python3 scripts/ci/pytest_run_scope.py --select-tests > /tmp/data-tests.txt
+          # CI-STREAMLINE (2026-11-03): only the readers of the data trees THIS diff touches (.github/ci-change-classes.json).
+          python3 scripts/ci/pytest_run_scope.py --select-tests --changed /tmp/changed-files.txt > /tmp/data-tests.txt
           echo "selected $(wc -l < /tmp/data-tests.txt) test files"
           pytest -q -n auto --dist loadfile $(cat /tmp/data-tests.txt) \
             --ignore=tests/test_main_loop.py \

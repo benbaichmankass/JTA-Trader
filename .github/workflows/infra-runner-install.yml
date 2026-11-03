@@ -17,7 +17,7 @@ on:
     inputs:
       count:
         description: "Runner instances to install (one unprivileged user each)"
-        default: "4"
+        default: "2"
   issues:
     types: [opened]
 
@@ -40,7 +40,7 @@ jobs:
     timeout-minutes: 20
     env:
       GH_REPO: ${{ github.repository }}
-      COUNT: ${{ inputs.count || '4' }}
+      COUNT: ${{ inputs.count || '2' }}
     steps:
       - uses: actions/checkout@v4
         with:

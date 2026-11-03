@@ -386,6 +386,29 @@ class TestModelStatePathMirrorFallback:
         state_path.write_text('{"trainer": "x", "constant": 0.5}')
         return state_path
 
+    def test_unstatable_literal_path_falls_back_to_mirror(self, tmp_path: Path, monkeypatch):
+        # A CI runner (or VM) where /home/ubuntu exists but is not traversable:
+        # Path.is_file() raises PermissionError instead of returning False.
+        # The loader must treat that as "not here" and use the mirror
+        # (pytest-run job 126162377943, 2026-11-03).
+        trainer_abs = Path(
+            "/home/ubuntu/ict-trading-bot/ml/experiments-runs/m1/r1/model_state.json"
+        )
+        self._make_state_file(tmp_path, mid="m1", run_id="r1")
+        registry_root = tmp_path / "trainer-mirror" / "models"
+        real_is_file = Path.is_file
+
+        def is_file(self):
+            if str(self).startswith("/home/ubuntu/"):
+                raise PermissionError(13, "Permission denied", str(self))
+            return real_is_file(self)
+
+        monkeypatch.setattr(Path, "is_file", is_file)
+        assert _load_model_state(trainer_abs, registry_root=registry_root) == {
+            "trainer": "x",
+            "constant": 0.5,
+        }
+
     def test_resolver_extracts_suffix_from_experiments_runs(self, tmp_path: Path):
         # Trainer-VM absolute path the entry stored.
         trainer_abs = Path(
