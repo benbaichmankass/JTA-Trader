@@ -81,3 +81,18 @@ Gates this adds or changes: none.
 | `trend_donchian_xrp_adx25` | bybit_1 | pass_unconfirmed | bybit_2: NEEDS-DATA R-HOLDOUT | not proven | bybit_1/stage1 n2 open | ITERATE | covered |
 | `turtle_soup` | bybit_1 | indeterminate | bybit_2: REFUSE R-SOURCE-RUN-ABSENT | not proven | bybit_1/stage1 n1 open; -/shadow n1 open | ITERATE | covered |
 | `uso_trend_1h` | alpaca_paper | pass_unconfirmed | alpaca_live: REFUSE R-FOLDS | path:alpaca_equity_bracket_v1 | alpaca_paper/stage1 n1 open | ITERATE | orphan → PI-20261103-6GNSZYUN-0004 |
+
+## Two independent tracks (manager relay 2026-11-03 ~09:45Z: MECHANICS × EDGE, promoted when both green, in either order)
+
+MECHANICS from `mandate_resolver._mechanics_proven` (SOAKS.json PASS dispositions + newest soak snapshot, which is stale 2026-10-04 so live passes may be missing) over `config/mechanics_paths.yaml`; EDGE from the soak-bypassed resolver run above (pass = FIRE).
+
+| | EDGE pass | EDGE iterate |
+|---|---|---|
+| **MECHANICS proven** | **0** | **15** |
+| **MECHANICS one-trade-pending** | **0** | **35** |
+| **MECHANICS new-code-unbuilt** | **0** | **0** |
+
+- **proven (15):** gdx_pullback_1d, gld_pullback_1d, ief_pullback_1d, iwm_trend_long_1d, qld_trend_long_1d, qqq_trend_long_1d, scha_trend_long_1d, slv_pullback_1d, slv_trend_1h, splg_trend_long_1d, spy_trend_long_1d, tlt_pullback_1d, tqqq_trend_long_1d, trend_donchian_eth_prop, uso_trend_1h.
+- **one-trade-pending (35):** code is built and on a roster but has no own passed soak or registered proven path: avax_pullback_2h, claude_desk, e4_oi_shock_1h, eth_pullback_2h, eth_pullback_prop_2h, fade_breakout_4h, fvg_range_15m, htf_pullback_trend_2h, ict_scalp_5m, ict_scalp_avax_5m, ict_scalp_eth_15m, ict_scalp_mgc_15m, ict_scalp_sol_15m, ict_scalp_sol_5m, ict_scalp_xrp_15m, ict_scalp_xrp_5m, mes_trend_long_1d, mgc_pullback_1d, mgc_trend_1h, mhg_pullback_1d, ml_entry_v2, qqq_pullback_1h, sol_pullback_2h, spy_pullback_1h, squeeze_breakout_4h, tlt_pullback_1h, trend_donchian, trend_donchian_1h, trend_donchian_ada_4h, trend_donchian_avax_4h, trend_donchian_eth, trend_donchian_sol, trend_donchian_sol_4h, trend_donchian_xrp_adx25, turtle_soup.
+- **new-code-unbuilt: 0.** Every testing leg's order path already exists (all 47 rostered legs run; the 3 unhomed ones ran before their soaks were KILLED). **Build priority list: empty.** The highest-value *mechanics* action is not a build: register a Bybit perp bracket path in `config/mechanics_paths.yaml` from the existing PASS soaks (ada_pullback_2h, trend_donchian_eth_4h, trend_donchian_sol_prop, trend_donchian_xrp_4h, xrp_pullback_2h, trend_donchian_eth_prop on bybit_1). That would move most crypto legs from one-trade-pending to proven by path. That entry goes in the promoting PR (per the registry header), so it is listed, not landed here. Second: refresh the soak snapshot (row MANDATE-EVIDENCE-SNAPSHOT-CRON), since several one-trade-pending legs may already have passed on the VM.
+- **Promotion-ready (both green): 0.** No promotion PR is opened.
