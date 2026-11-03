@@ -1,0 +1,15 @@
+{
+  "due_when": {
+    "due_date": "2026-11-06",
+    "kind": "date"
+  },
+  "id": "PI-20261103-01AFOLUJ-0004",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "manager session_01AFoLuJCo138TgfjBcbwcLh 2026-11-03 09:35Z, from the LTR reviewer report on pkg-b8aef658ed1b4032",
+    "rerun": "python3 scripts/ops/check_live_review_records.py on main (and on branch live-review/rows); read the failing line numbers"
+  },
+  "state": "queued",
+  "what": "scripts/ops/check_live_review_records.py FAILS on older lines of comms/live_review/reviews.jsonl (reported by LTR reviewer session_01AFoLuJ6DckkMow3MC9Vvb8 at 09:34Z: a trigger.level stored as a string, and a 'handoff' field the schema does not know). So the live-review record validator is red on history, which hides any NEW malformed row behind an already-failing check. Fix: either migrate or grandfather the legacy lines (named by line/ts) so the check is green, then keep it strict for new rows."
+}

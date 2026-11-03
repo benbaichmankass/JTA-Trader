@@ -1,0 +1,16 @@
+{
+  "due_when": {
+    "check_every_days": 7,
+    "due_date": "2026-11-10",
+    "kind": "date"
+  },
+  "id": "PI-20261103-6GNSZYUN-0003",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "SOAK-REGRADE 2026-11-03, docs/claude/work/findings/soak-regrade-20261103.md (ITERATE orphan)",
+    "rerun": "python3 scripts/research/iteration_orphans.py --json  # scha_trend_long_1d must read covered; and python3 scripts/ops/mandate_resolver.py --leg scha_trend_long_1d --from S1 --to S2 --account <real-money acct> --json"
+  },
+  "state": "queued",
+  "what": "ITERATION ORPHAN scha_trend_long_1d (Stage-0 verdict pass_unconfirmed): no queued research unit carries an iteration: block for it (programme-review rule). n=78, net +4.64R, exp +0.06R, 5/8 folds, faithful, RULE-D1 pass; mechanics path-proven (alpaca_equity_bracket_v1). Blocker: no holdout_confirmation, no holdout unit — author one; thin expectancy so also diagnose whether the edge survives at 2x slippage. Close when a unit with iteration.subject=scha_trend_long_1d is queued (iteration_orphans reads covered)."
+}

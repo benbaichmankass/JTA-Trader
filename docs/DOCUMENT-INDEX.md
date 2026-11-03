@@ -503,6 +503,7 @@ real top-level `docs/*.md` and fails if the population builder cannot see it.
 | `docs/claude/work/SOAK-TOUCH-SPLIT.md` | unknown | unknown | — | never | `not-assessed / not-assessed` | — |
 | `docs/claude/work/designs/world-event-prediction-engine-v0.1.md` | unknown | unknown | — | never | `not-assessed / not-assessed` | — |
 | `docs/claude/work/findings/E18-starved-triage-post-E35-20260926.md` | unknown | unknown | — | never | `not-assessed / not-assessed` | — |
+| `docs/claude/work/findings/soak-regrade-20261103.md` | unknown | unknown | — | never | `not-assessed / not-assessed` | — |
 | `docs/claude/work/handoffs/2026-10-21-01VduHYz-to-new.md` | unknown | unknown | — | never | `not-assessed / not-assessed` | — |
 | `docs/claude/work/handoffs/2026-10-22-01CSwhZW-to-new.md` | unknown | unknown | — | never | `not-assessed / not-assessed` | — |
 | `docs/claude/work/handoffs/2026-10-23-01Hsp3aD-to-new.md` | unknown | unknown | — | never | `not-assessed / not-assessed` | — |
@@ -524,6 +525,7 @@ real top-level `docs/*.md` and fails if the population builder cannot see it.
 | `docs/claude/work/handoffs/2026-10-30-01AFoLuK-to-new.md` | unknown | unknown | — | never | `not-assessed / not-assessed` | — |
 | `docs/claude/work/handoffs/2026-10-31-01AFoLuJ-to-new.md` | unknown | unknown | — | never | `not-assessed / not-assessed` | — |
 | `docs/claude/work/handoffs/2026-11-01-01AFoLuJ-to-new.md` | unknown | unknown | — | never | `not-assessed / not-assessed` | — |
+| `docs/claude/work/handoffs/2026-11-03-01AFoLuJC-to-new.md` | unknown | unknown | — | never | `not-assessed / not-assessed` | — |
 | `docs/claude/work/handoffs/2026-11-03-01AFoLuJ-to-new.md` | unknown | unknown | — | never | `not-assessed / not-assessed` | — |
 | `docs/claude/work/triage-2026-09-28.md` | unknown | unknown | — | never | `not-assessed / not-assessed` | — |
 | `docs/claude/workplan.md` | plan | historical | — | 2026-09-07 | `name:workplan-is-a-forward-commitment / mi159:plan-status-header:historical` | — |

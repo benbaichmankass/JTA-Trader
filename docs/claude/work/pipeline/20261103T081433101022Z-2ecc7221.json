@@ -1,0 +1,16 @@
+{
+  "based_on": "20261103T074638515073Z-88c63020.json",
+  "due_when": {
+    "due_date": "2026-11-05",
+    "kind": "date"
+  },
+  "id": "PI-20261103-01AFOLUJ-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "manager session_01AFoLuJCo138TgfjBcbwcLh 2026-11-03 ~07:55Z prop pipeline check",
+    "rerun": "curl https://ict-bot.duckdns.org/api/bot/prop/fills?account_id=breakout_2&limit=8 (and tradeify_1); curl .../api/bot/prop/status?account_id=breakout_2 -> phone_positions_diag, phone_captures_last"
+  },
+  "state": "queued",
+  "what": "breakout_2 prop exits are not recorded: fills for tickets prop-manual-3a663e0a29b2 (11-02 04:01Z ETH long, 0.57 @2309.14) and prop-manual-29067b29bbad (10-29 ETH short) have entry rows but no exit_price/pnl, while /api/bot/prop/status shows unrealized 0.0 (flat) and phone_positions_diag 'closed_empty_unconfirmed'; phone_captures show repeated 'positions_miss' failed runs (11-02 05:09-07:20Z). tradeify_1 fill id 212 for the 11-02 ticket has null qty/entry. Effect: prop P&L, grading and the prop survival gate see these trades as unclosed/unknown. Root-cause the phone positions read and backfill the exits from the venue. || UPDATE 2026-11-03 ~08:15Z (operator screenshots, docs/claude/work/findings/breakout-trades-tab-20261103/): the read path for closed trades is the 'Trades' tab, at the FAR RIGHT of the tab menu (after Favorites, Order book, Portfolio, Closed orders). It lists Market | Side | Position (Open/Close) rows; tapping a row opens a detail sheet (Terms tab) with Order ID, Price, Date (local phone time, UTC+2), Leverage, Fee (Taker), Order type (e.g. 'Short - Stop loss'), Quantity, Market, Notional value, Trade ID; a 'Trade ledger entries' tab sits beside Terms. Breakout labels the CLOSE of a long as 'Short ... Stop loss'. VERIFIED from the screenshot: the 11-02 ETH long (ticket prop-manual-3a663e0a29b2, 0.57 @2309.14) closed by STOP LOSS at 2,278.51 on 11/2/26 9:35 AM local (= 07:35Z), fee 0.5195 USD, order XOU5HEN-RDWTE-7MT72M, trade XTPH777-4M4KP-PZG6ZS -> gross about -17.46 USD before fees. FIX: teach the phone executor's exit read to use Trades -> row -> detail sheet, and backfill every breakout_2 ticket with an entry fill but no exit from that flow."
+}
