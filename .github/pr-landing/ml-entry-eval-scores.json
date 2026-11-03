@@ -1,5 +1,7 @@
 {
-  "tier": 1,
-  "landing": "self",
-  "why": "Audit-reason logging only: ml_entry / ml_entry_v2 below_tau and cost_gate refusals now carry p_long, p_short, tau and n_ref so live scores can be compared with the ml_decision_shadow log. No decision, threshold, bracket or order-path change; ValueError still raised at the same points."
+  "tier": 3,
+  "landing": "hold",
+  "hold_reason": "tier_2_3_needs_approval",
+  "hold_text": "Edits src/units/strategies/ml_entry.py (Tier-3 by name). Logging only: the below_tau and cost_gate ValueError reasons gain p_long/p_short/tau/n_ref; no decision, threshold, bracket or order-path change. Needs the manager's merge.",
+  "why": "Audit-reason logging on a strategy file; Tier-3 by path, so it is held for a human merge rather than self-landed."
 }
