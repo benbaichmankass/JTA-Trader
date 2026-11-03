@@ -1,0 +1,20 @@
+Traceback (most recent call last):
+  File "/home/runner/work/JTA-Trader/JTA-Trader/scripts/research/ml_entry_tp_revision.py", line 1096, in <module>
+    sys.exit(main())
+             ^^^^^^
+  File "/home/runner/work/JTA-Trader/JTA-Trader/scripts/research/ml_entry_tp_revision.py", line 1089, in main
+    return evidence_extend_only(a)
+           ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/work/JTA-Trader/JTA-Trader/scripts/research/ml_entry_tp_revision.py", line 1023, in evidence_extend_only
+    tab = E.build_table(cache, syms)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/work/JTA-Trader/JTA-Trader/scripts/research/ml_decision_entry.py", line 269, in build_table
+    df = pd.read_pickle(cache / f"{sym}.pkl").reset_index(drop=True)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/hostedtoolcache/Python/3.11.17/x64/lib/python3.11/site-packages/pandas/io/pickle.py", line 235, in read_pickle
+    with get_handle(
+         ^^^^^^^^^^^
+  File "/opt/hostedtoolcache/Python/3.11.17/x64/lib/python3.11/site-packages/pandas/io/common.py", line 948, in get_handle
+    handle = open(handle, ioargs.mode)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory: '/tmp/ml_decision_klines/ADAUSDT.pkl'
