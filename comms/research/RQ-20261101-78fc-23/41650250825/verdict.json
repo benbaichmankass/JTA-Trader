@@ -1,0 +1,203 @@
+{
+  "verdict": "pass",
+  "read_state": "measured",
+  "population": "qqq_trend_long_1d: 42 trades in the baseline arm 'A' on QQQ 1d candles 2018-06-01 .. 2026-10-15 23:59, net of fee+slippage+funding (the harness's venue-aware stack); arms ['A']",
+  "n": 42,
+  "measurement": {
+    "leg": "qqq_trend_long_1d",
+    "label": "stage0_edge",
+    "grade": {
+      "verdict": "pass",
+      "label": "stage0_edge",
+      "baseline": "A",
+      "net_r": 23.3356,
+      "n": 42,
+      "max_drawdown_r": 4.694,
+      "folds_positive": 4,
+      "n_folds": 6,
+      "fold_majority": 4,
+      "n_floor": 30,
+      "control": null,
+      "why": "net_r=23.3356 > 0 with 4/6 positive folds at this arm's cost stack"
+    },
+    "arms": {
+      "A": {
+        "reach_ge_6r": 0.0,
+        "n": 42,
+        "net_r": 23.3356,
+        "net_r_fee_only": 24.0893,
+        "max_drawdown_r": 4.694,
+        "by_outcome": {
+          "stop": 15,
+          "take_profit": 16,
+          "trail_stop": 11
+        },
+        "mean_bars_held": 20.548,
+        "net_r_per_capital_day": 0.027,
+        "cost_stack": {
+          "fee_bps_roundtrip": 0.0,
+          "slippage_bps_roundtrip": 5.0,
+          "funding_bps_per_window": 0.0
+        },
+        "params": {
+          "donchian": 30,
+          "atr_stop_mult": 2.0,
+          "trail_mult": 4.0,
+          "min_confidence": 0.0,
+          "trail_decay_arm_r": 0.0,
+          "trail_decay_stall_bars": 0,
+          "trail_decay_tight_mult": 2.0
+        },
+        "data_start": "2018-06-18 00:00:00+00:00",
+        "data_end": "2026-10-15 00:00:00+00:00",
+        "folds": [
+          {
+            "fold": 1,
+            "start": "2018-06-18 00:00:00+00:00",
+            "end": "2019-11-06 23:59:50+00:00",
+            "trades": 5,
+            "net_r": 3.3021
+          },
+          {
+            "fold": 2,
+            "start": "2019-11-06 23:59:50+00:00",
+            "end": "2021-03-27 23:59:40+00:00",
+            "trades": 10,
+            "net_r": 5.8125
+          },
+          {
+            "fold": 3,
+            "start": "2021-03-27 23:59:40+00:00",
+            "end": "2022-08-16 23:59:30+00:00",
+            "trades": 7,
+            "net_r": -1.4089
+          },
+          {
+            "fold": 4,
+            "start": "2022-08-16 23:59:30+00:00",
+            "end": "2024-01-05 23:59:20+00:00",
+            "trades": 5,
+            "net_r": 6.4369
+          },
+          {
+            "fold": 5,
+            "start": "2024-01-05 23:59:20+00:00",
+            "end": "2025-05-26 23:59:10+00:00",
+            "trades": 6,
+            "net_r": 9.541
+          },
+          {
+            "fold": 6,
+            "start": "2025-05-26 23:59:10+00:00",
+            "end": "2026-10-15 23:59:00+00:00",
+            "trades": 9,
+            "net_r": -0.3479
+          }
+        ],
+        "argv": [
+          "/opt/hostedtoolcache/Python/3.11.17/x64/bin/python3",
+          "/home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_trend.py",
+          "--donchian",
+          "30",
+          "--data",
+          "<data>",
+          "--symbol",
+          "QQQ",
+          "--resample",
+          "1d",
+          "--atr-period",
+          "14",
+          "--atr-stop-mult",
+          "2.0",
+          "--trail-mult",
+          "4.0",
+          "--min-confidence",
+          "0.0",
+          "--fee-bps-roundtrip",
+          "0.0",
+          "--emit-trades",
+          "comms/research/RQ-20261101-78fc-23/41650250825/arms/A__trades.jsonl",
+          "--json",
+          "comms/research/RQ-20261101-78fc-23/41650250825/arms/A__bt.json",
+          "--long-only",
+          "--trail-decay-tight-mult",
+          "2.0",
+          "--tp-cap-pct",
+          "0.099",
+          "--tp-r",
+          "3.0",
+          "--start",
+          "2018-06-01",
+          "--end",
+          "2026-10-15 23:59"
+        ]
+      }
+    },
+    "window": {
+      "start": "2018-06-01",
+      "end": "2026-10-15 23:59",
+      "fetch_days": 3060,
+      "feed": {
+        "source": "dukascopy",
+        "ticker": "QQQ",
+        "interval": "1d",
+        "resample": "1d"
+      },
+      "fold_edges": [
+        "2018-06-18 00:00:00+00:00",
+        "2019-11-06 23:59:50+00:00",
+        "2021-03-27 23:59:40+00:00",
+        "2022-08-16 23:59:30+00:00",
+        "2024-01-05 23:59:20+00:00",
+        "2025-05-26 23:59:10+00:00",
+        "2026-10-15 23:59:00+00:00"
+      ]
+    },
+    "argv": {
+      "A": {
+        "argv": [
+          "/opt/hostedtoolcache/Python/3.11.17/x64/bin/python3",
+          "/home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_trend.py",
+          "--donchian",
+          "30",
+          "--data",
+          "<data>",
+          "--symbol",
+          "QQQ",
+          "--resample",
+          "1d",
+          "--atr-period",
+          "14",
+          "--atr-stop-mult",
+          "2.0",
+          "--trail-mult",
+          "4.0",
+          "--min-confidence",
+          "0.0",
+          "--fee-bps-roundtrip",
+          "0.0",
+          "--emit-trades",
+          "comms/research/RQ-20261101-78fc-23/41650250825/arms/A__trades.jsonl",
+          "--json",
+          "comms/research/RQ-20261101-78fc-23/41650250825/arms/A__bt.json",
+          "--long-only",
+          "--trail-decay-tight-mult",
+          "2.0",
+          "--tp-cap-pct",
+          "0.099",
+          "--tp-r",
+          "3.0",
+          "--start",
+          "2018-06-01",
+          "--end",
+          "2026-10-15 23:59"
+        ],
+        "cfg_set": {},
+        "cfg_unset": [],
+        "extra_flags": [],
+        "omitted_levers_per_builder": []
+      }
+    }
+  },
+  "note": "PASS / stage0_edge: net_r=23.3356 > 0 with 4/6 positive folds at this arm's cost stack"
+}

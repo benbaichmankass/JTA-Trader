@@ -1,0 +1,111 @@
+{
+  "verdict": "indeterminate",
+  "read_state": "measured",
+  "population": "symbols measured 10 of 10 (BTCUSDT,ETHUSDT,SPY,QQQ,GLD,SLV,USO,IAUM,MES,MGC); 5m candles; window 2020-01-01..2026-10-31; 276 (symbol x window x rule) cells evaluated, 3 vol-stable, 0 shortlisted on discovery, 0 qualify; trades net of fee+slippage+perp funding",
+  "n": 0,
+  "note": "INDETERMINATE: 0 qualifying cell(s). M (Bonferroni over shortlist) = 1; uncorrected false shortlist expected if no edge ~ 0.15 of 3 vol-stable cells. Symbols without data: none. Crypto candles are Binance USD-M (PROXY for Bybit linear); funding is a directionless magnitude per 8h boundary crossed.",
+  "decision_rule_id": "RULE-VOLWIN-A2-LONGER-HOLD",
+  "data_inputs": [
+    "comms/research/RQ-20261031-a4e7-15/41640955586/data/BTCUSDT_5.csv",
+    "comms/research/RQ-20261031-a4e7-15/41640955586/data/ETHUSDT_5.csv",
+    "comms/research/RQ-20261031-a4e7-15/41640955586/data/GLD_5.csv",
+    "comms/research/RQ-20261031-a4e7-15/41640955586/data/IAUM_5.csv",
+    "comms/research/RQ-20261031-a4e7-15/41640955586/data/MES_5.csv",
+    "comms/research/RQ-20261031-a4e7-15/41640955586/data/MGC_5.csv",
+    "comms/research/RQ-20261031-a4e7-15/41640955586/data/QQQ_5.csv",
+    "comms/research/RQ-20261031-a4e7-15/41640955586/data/SLV_5.csv",
+    "comms/research/RQ-20261031-a4e7-15/41640955586/data/SPY_5.csv",
+    "comms/research/RQ-20261031-a4e7-15/41640955586/data/USO_5.csv"
+  ],
+  "measurement": {
+    "thresholds": {
+      "folds": 6,
+      "vol_ratio": 1.5,
+      "n_floor": 150,
+      "alpha": 0.05,
+      "embargo_days": 1.0,
+      "lengths_min": [
+        120,
+        240
+      ],
+      "rules": [
+        "C15",
+        "F15",
+        "O15"
+      ]
+    },
+    "counts": {
+      "cells_evaluated": 276,
+      "vol_stable": 3,
+      "shortlisted": 0,
+      "M_bonferroni": 1,
+      "expected_false_shortlist_if_no_edge": 0.15
+    },
+    "symbol_status": {
+      "BTCUSDT": {
+        "state": "measured",
+        "bars": 719424,
+        "first": "2019-12-31T00:00:00+00:00",
+        "last": "2026-11-02T23:55:00+00:00"
+      },
+      "ETHUSDT": {
+        "state": "measured",
+        "bars": 719424,
+        "first": "2019-12-31T00:00:00+00:00",
+        "last": "2026-11-02T23:55:00+00:00"
+      },
+      "SPY": {
+        "state": "measured",
+        "bars": 133611,
+        "first": "2019-12-30T14:30:00+00:00",
+        "last": "2026-11-02T20:55:00+00:00"
+      },
+      "QQQ": {
+        "state": "measured",
+        "bars": 133594,
+        "first": "2019-12-30T14:30:00+00:00",
+        "last": "2026-11-02T20:55:00+00:00"
+      },
+      "GLD": {
+        "state": "measured",
+        "bars": 133610,
+        "first": "2019-12-30T14:30:00+00:00",
+        "last": "2026-11-02T20:55:00+00:00"
+      },
+      "SLV": {
+        "state": "measured",
+        "bars": 129019,
+        "first": "2019-12-30T14:30:00+00:00",
+        "last": "2026-11-02T20:55:00+00:00"
+      },
+      "USO": {
+        "state": "measured",
+        "bars": 133566,
+        "first": "2019-12-30T14:30:00+00:00",
+        "last": "2026-11-02T20:55:00+00:00"
+      },
+      "IAUM": {
+        "state": "measured",
+        "bars": 133610,
+        "first": "2019-12-30T14:30:00+00:00",
+        "last": "2026-11-02T20:55:00+00:00"
+      },
+      "MES": {
+        "state": "measured",
+        "bars": 468867,
+        "first": "2019-12-30T00:00:00+00:00",
+        "last": "2026-11-03T13:05:00+00:00"
+      },
+      "MGC": {
+        "state": "measured",
+        "bars": 485761,
+        "first": "2019-12-30T00:00:00+00:00",
+        "last": "2026-11-03T13:05:00+00:00"
+      }
+    },
+    "symbols_without_data": [],
+    "ranked_qualifying_cells": [],
+    "shortlisted_cells": [],
+    "vol_stable_top_by_ratio": []
+  }
+}

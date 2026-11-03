@@ -1,0 +1,10 @@
+Fetching IWM D candles 2018-06-18 -> 2026-11-03 (source=dukascopy) …
+  dukascopy: IWM -> INSTRUMENT_ETF_CFD_US_IWM_US_USD (relation=same_ticker_cfd: same underlying, CFD)
+INFO:DUKASCRIPT:current timestamp :2026-11-02T00:00:00
+Wrote 2090 rows (2018-06-18 -> 2026-11-02) to /tmp/exit_lever_ablation_i18a_qt8/iwm_trend_long_1d__data.csv
+[A] /opt/hostedtoolcache/Python/3.11.17/x64/bin/python3 /home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_trend.py --donchian 30 --data <data> --symbol IWM --resample 1d --atr-period 14 --atr-stop-mult 2.0 --trail-mult 4.0 --min-confidence 0.0 --fee-bps-roundtrip 0.0 --emit-trades comms/research/RQ-20261101-78fc-36/41650271135/arms/A__trades.jsonl --json comms/research/RQ-20261101-78fc-36/41650271135/arms/A__bt.json --long-only --trail-decay-stall-bars 10 --trail-decay-tight-mult 2.0 --tp-cap-pct 0.099 --tp-r 3.0 --start 2018-06-01 --end 2026-10-15 23:59
+{
+ "verdict": "pass",
+ "label": "stage0_edge",
+ "why": "net_r=10.7363 > 0 with 5/6 positive folds at this arm's cost stack"
+}
