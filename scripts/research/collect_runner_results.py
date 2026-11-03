@@ -216,7 +216,24 @@ def download(run_id: int, name: str, dest: Path) -> bool:
     return True
 
 
+def _on_origin_main(root: Path, unit: str, run_id: int) -> bool:
+    """True when the run's record/manifest is on origin/main even though this checkout is stale.
+
+    #22504/#22499 (2026-11-03): a checkout older than main re-collected a run a later batch had landed
+    (add/add on research/results/RQ-20261101-78fc-20/41541540586.jsonl) and the dirty PR stranded 4 other runs."""
+    for rel in (f"research/results/{unit}/{run_id}.jsonl", f"comms/research/{unit}/{run_id}/run-manifest.json"):
+        try:
+            if subprocess.run(["git", "-C", str(root), "cat-file", "-e", f"origin/main:{rel}"],
+                              capture_output=True, timeout=30).returncode == 0:
+                return True
+        except (OSError, subprocess.SubprocessError):
+            return False
+    return False
+
+
 def already_landed(root: Path, unit: str, run_id: int) -> bool:
+    if _on_origin_main(root, unit, run_id):
+        return True
     return ((root / "comms" / "research" / unit / str(run_id) / "run-manifest.json").exists()
             or (root / "research" / "results" / unit / f"{run_id}.jsonl").exists())
 
@@ -523,6 +540,23 @@ def _self_test() -> int:
         assert _RECORD_PATH_RE.match("research/results/RQ-1-001/12.jsonl") and not _RECORD_PATH_RE.match("comms/x/1.jsonl")
         res5 = collect(root, repo_slug="o/r", runs=runs2[:1], artifacts_for=arts2, downloader=lambda *a: False)
         assert not (res5["lost"] or res5["unreadable"] or res5["read_error"] or res5["landed"]), res5
+    # 2026-11-03: a run on origin/main but absent from a STALE checkout is "already landed" (the 78fc-20 add/add race)
+    with tempfile.TemporaryDirectory() as td:
+        rr = Path(td)
+        def _g(*a):
+            subprocess.run(["git", "-C", str(rr), *a], check=True, capture_output=True)
+        _g("init", "-q", "-b", "main")
+        _g("config", "user.email", "t@t")
+        _g("config", "user.name", "t")
+        (rr / "research/results/RQ-20300101-070").mkdir(parents=True)
+        (rr / "research/results/RQ-20300101-070/70.jsonl").write_text("{}\n")
+        _g("add", "-A")
+        _g("commit", "-qm", "landed")
+        _g("update-ref", "refs/remotes/origin/main", "HEAD")
+        (rr / "research/results/RQ-20300101-070/70.jsonl").unlink()      # stale checkout lacks the record
+        assert not (rr / "research/results/RQ-20300101-070/70.jsonl").exists()
+        assert already_landed(rr, "RQ-20300101-070", 70), "run on origin/main must read as landed"
+        assert not already_landed(rr, "RQ-20300101-070", 71), "an unlanded run must not read as landed"
     # orphan re-collect: an artifact dir with record-inputs.json and no E5 record gets one; `local-*` is skipped
     with tempfile.TemporaryDirectory() as td:
         r2 = Path(td)
