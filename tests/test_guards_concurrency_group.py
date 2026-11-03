@@ -65,9 +65,11 @@ class TestTwoPushesToMainAreDistinct:
 
         Turning `cancel-in-progress` off would undo the 2026-08-06 stacking fix
         this block exists for, which is a worse trade than the bug.
+        CI-STREAMLINE (2026-11-03): every event still supersedes EXCEPT the scheduled
+        whole-tree backstop of main, which must finish to grade anything.
         """
         _, cancel = _block()
-        assert cancel == "true", cancel
+        assert cancel == "${{ github.event_name != 'schedule' }}", cancel
 
 
 class TestThePullRequestArmIsUntouched:
@@ -111,10 +113,13 @@ class TestTheRequiredContractIsUnchanged:
         assert re.search(r"^jobs:\n  guards:\n", body, re.M), \
             "the required check's job id is no longer `guards`"
 
-    def test_the_push_trigger_still_exists(self):
-        """Keying per-sha is pointless if the trigger is gone."""
+    def test_the_post_merge_backstop_still_exists(self):
+        """CI-STREAMLINE (2026-11-03) removed the push trigger (a re-run of an
+        already-approved tree); the post-merge net is now the scheduled `--all`
+        run, pinned in tests/test_ci_streamline_no_push.py."""
         body = WF.read_text(encoding="utf-8")
-        assert re.search(r"^  push:\n    branches: \[main\]$", body, re.M)
+        assert not re.search(r"^  push:$", body, re.M)
+        assert re.search(r"^  schedule:\n(?:    #.*\n)*    - cron: '29 \*/2 \* \* \*'$", body, re.M)
 
     @pytest.mark.parametrize("ctx", ["github.event_name", "github.sha",
                                      "github.event.pull_request.number"])
