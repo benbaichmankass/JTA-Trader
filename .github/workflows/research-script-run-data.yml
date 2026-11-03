@@ -85,7 +85,7 @@ jobs:
           KAGGLE_API_TOKEN: ${{ secrets.KAGGLE_API_TOKEN }}
         run: |
           set -euo pipefail
-          pip install "kaggle>=2.0" lightgbm scikit-learn pyarrow
+          pip install "kaggle>=2.0" six lightgbm scikit-learn pyarrow
           python3 scripts/research/published_data.py self-test
           python3 scripts/research/published_data.py fetch --unit "${UNIT}" --dest "${RUNNER_TEMP}/mldata" --run-id "${GITHUB_RUN_ID}"
       - name: Run the unit's command(s)

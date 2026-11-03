@@ -219,7 +219,7 @@ jobs:
                 --max-repo-queued 10 --utilization-dir comms/research/utilization)
           # Kaggle weekly GPU quota (token-free): unreadable = GPU units WAIT, never routed blind.
           if [ -n "${KAGGLE_API_TOKEN:-}" ]; then
-            pip install --quiet "kaggle>=2.0" && kaggle quota > /tmp/kaggle-quota.txt 2>/dev/null || true
+            pip install --quiet "kaggle>=2.0" six && kaggle quota > /tmp/kaggle-quota.txt 2>/dev/null || true
             if [ -s /tmp/kaggle-quota.txt ]; then ARGS+=(--kaggle-quota-file /tmp/kaggle-quota.txt); fi
           fi
           # --check-open-stamp-prs rides with the fire flag (same FIRE gate): a

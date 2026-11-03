@@ -410,7 +410,7 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
-      - run: python -m pip install --quiet pandas pyarrow pyyaml "kaggle>=1.6"
+      - run: python -m pip install --quiet pandas pyarrow pyyaml "kaggle>=1.6" six
       - name: RAW aggTrades, traded universe, trailing months -> private Kaggle dataset (backfill + Sundays)
         env:
           KAGGLE_API_TOKEN: ${{ secrets.KAGGLE_API_TOKEN }}
