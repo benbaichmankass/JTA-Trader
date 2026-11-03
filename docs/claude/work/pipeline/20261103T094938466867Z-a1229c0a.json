@@ -1,0 +1,16 @@
+{
+  "due_when": {
+    "check_every_days": 2,
+    "clears_when": "live and shadow best-pred agree within 0.01 on every shared trading bar over 7 days, or the divergence is root-caused to a named feature/timing difference and fixed or killed with a stated reason",
+    "kind": "observation"
+  },
+  "id": "PI-20261103-MLV2-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "audit",
+    "ref": "ML-ENTRY-V2-SILENT lane 2026-11-03",
+    "rerun": "audit_query?event=ml_entry_eval&since=<d> vs log_file?name=ml_decision_shadow&grep=<SYM>, compare per (bar_close,symbol) best pred on trading bars"
+  },
+  "state": "queued",
+  "what": "ml_entry LIVE vs ml_decision_shadow score divergence. MEASURED 2026-11-03 over 5 USDT traded symbols x 4h decision bars 2026-11-02T08Z..11-03T08Z (n=20 pairs, v1 only): live best-pred vs shadow best-pred agree on 11-02T20Z/11-03T08Z but diverge up to 2x on 11-02T08Z (BTC live 0.0422 vs shadow 0.1237; ETH 0.0858 vs 0.1715; SOL 0.0689 vs 0.1473; tau 0.10) and 11-03T00Z (ADA 0.0711 vs 0.1100). Shadow crossed tau for BTC/ETH on 11-02T08Z, live did not, so live took no BTC short. Cause UNVERIFIED (reference-frame timing 08:03 vs 08:01, n_reference, forming bar). Probe: after the logging PR claude/ml-entry-eval-scores deploys, diff live eval n_ref/p_long/p_short against the shadow row for the same bar_close."
+}

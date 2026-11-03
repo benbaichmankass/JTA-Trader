@@ -108,10 +108,12 @@ def order_package(cfg: dict, candles_df: Optional[pd.DataFrame] = None,
         raise ValueError(f"reference_symbols:{n_ref}<{min_ref}")
     d = decide(row, model)
     if d["gated"]:
-        raise ValueError(f"cost_gate:est_cost_r={d['cost_r_est']:.4f}>{float(meta['cost_gate']['max_cost_r']):g}")
+        raise ValueError(f"cost_gate:est_cost_r={d['cost_r_est']:.4f}>{float(meta['cost_gate']['max_cost_r']):g}"
+                         f";p_long={d['p_long']:.4f};p_short={d['p_short']:.4f};tau={float(meta['tau']):.4f};n_ref={n_ref}")
     from src.runtime.tp_revision import declared_rule
     if d["side"] == "none":
-        raise ValueError(f"below_tau:pred={d['pred_net_r']:.4f}")
+        raise ValueError(f"below_tau:pred={d['pred_net_r']:.4f};p_long={d['p_long']:.4f};p_short={d['p_short']:.4f}"
+                         f";tau={float(meta['tau']):.4f};n_ref={n_ref}")
     atr = F.atr_last(df)
     entry = float(df["close"].iloc[-1])  # next-bar open ~ this close; the venue fills at market
     s = 1.0 if d["side"] == "long" else -1.0
@@ -238,7 +240,8 @@ def _checkin_frames(symbol: str, bar_iso: str, xs_symbols) -> tuple:
     from src.runtime.strategy_signal_builders import _ml_entry_reference_frames
     key = f"{symbol}|{bar_iso}"
     if key not in _TP_FRAMES:
-        own = _frame(fetch_candles(symbol, "1h", limit=400, bypass_cache=True))
+        from src.runtime.strategy_signal_builders import _ml_entry_candle_symbol
+        own = _frame(fetch_candles(_ml_entry_candle_symbol(symbol), "1h", limit=400, bypass_cache=True))
         if own is not None and (not len(own) or own["ts"].iloc[-1].isoformat() != bar_iso):
             own = None
         if len(_TP_FRAMES) > 256:

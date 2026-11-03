@@ -1,0 +1,16 @@
+{
+  "due_when": {
+    "check_every_days": 2,
+    "clears_when": "a per-strategy table shows, for each Bybit-fed strategy, spot-or-perp candles in live vs its Stage-0 corpus, with the measured feature gap; or it is killed with a reason",
+    "kind": "observation"
+  },
+  "id": "PI-20261103-SPOTCANDLES-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "audit",
+    "ref": "ML-V1-PARITY lane 2026-11-03",
+    "rerun": "trainer-vm replay: fetch category=spot vs category=linear 1h klines for the strategy's symbols and compare the features its builder computes; plus read src/exchange/bybit_connector.py defaultType"
+  },
+  "state": "queued",
+  "what": "UNVERIFIED, money path: BybitConnector.get_ohlcv calls ccxt fetch_ohlcv with bare ids (BTCUSDT) on a client built defaultType=spot (src/exchange/bybit_connector.py). For ml_entry this resolved to SPOT markets (proven, PI-20261103-MLV2-0001). Every other Bybit-fed strategy that passes a bare symbol to fetch_candles may be reading spot candles while trading the linear perp. Check which strategies, whether their Stage-0 corpus was perp, and the measured spot-vs-perp feature gap. Tier-3 if a fix changes strategy inputs."
+}
