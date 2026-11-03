@@ -4,6 +4,7 @@ Pins: (1) the run-name carries the unit id on every research-script-run workflow
 close the gap between a fire and its stamp PR / result row, so a faster cadence cannot double-fire; (3) the workflow_run
 trigger lists only the research-script-run family (never the dispatcher itself: no loop), shares the ONE FIRE decision,
 and is rate-limited by the `gap` step. No new gate: nothing here changes a cap, the infra yield or what may trade."""
+import importlib
 import sys
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -13,7 +14,7 @@ import yaml
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "scripts" / "research"))
-import dispatch_queue as dq
+dq = importlib.import_module("dispatch_queue")
 
 WF = ROOT / ".github" / "workflows"
 FAMILY = ["research-script-run", "research-script-run-data", "research-script-run-kaggle",
