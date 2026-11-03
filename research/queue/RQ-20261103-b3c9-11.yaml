@@ -1,0 +1,122 @@
+# Hand-authored 2026-11-03 by DAILY-RESEARCH-AUTHORING-20261103 (Tier 1), dispatched by Manager session_01AFoLuJ1apgy8sfngu4WyNH. Decision rule registered BEFORE any run. Gates: none.
+id: RQ-20261103-b3c9-11
+title: 'Daily fade (mean-reversion) on twelve perps: LONG-only and SHORT-only vs the two-sided base, net of cost'
+status: queued
+cadence: once
+roadmap:
+- L-TIMEFRAMES
+theme: timeframes
+priority: 3
+kind: experiment
+compute: cpu_long
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 4.0
+  est_minutes: 90
+  basis: Estimate from comparable harness_stage0 runs of 2026-10-18..29 scaled by cells x arms x bars; the first run replaces it.
+  why_runner: harness_stage0.py fetches keyless public candles and runs the repo harnesses; these symbols/bars are not in the metis-market-data allowlist, so no idle
+    published-data backend can hold it; CPU only.
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+question: On twelve USD-M perps (BTC ETH SOL XRP ADA AVAX BNB DOGE LINK LTC BCH DOT) at the 1d bar, does the fade family at its declared base params, or its LONG-only
+  / SHORT-only side, clear the pooled Stage-0 rule net of the full cost stack AND beat the two-sided base by >= 0.10 R/trade? (1d is the one horizon the fade family
+  has no registered unit at; the 1h/2h/4h reads are not transferred.)
+why_this_matters: 'Programme 07 (timeframes) asks whether families that fail or pass at 1h-4h behave differently on the slow end. Scan of research/queue 2026-11-03:
+  harness_stage0 --family fade --timeframe 1d appears in 0 units. Arms and thresholds are fixed now; a PASS is a lead for ONE symbol-disjoint or later-window confirmation,
+  never a roster edit.'
+power:
+  expected_n: 100
+  min_detectable_effect: 0.45
+  effect_units: sd
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: d=0.45 at alpha 0.05 / power 0.8 needs 39 trades (the repo standing floor) = the pooled floor 39; expected_n is an ESTIMATE from comparable runs, NOT a measurement
+    for these arms; below the floor the unit grades indeterminate, never FAIL. The 0.10 R/trade delta over the baseline is a materiality bar, so a PASS is a LEAD.
+  feasibility:
+    source: none
+    accrual_basis: Re-measurement on freshly fetched public candles over a pinned window; nothing accrues.
+practice_precedent: 'M4, M5 (docs/reference/trading-and-model-practice-principles.md): pre-registered rule, selection-deflated across the arms tried'
+intervention_controls:
+  not_applicable: a Stage-0 parameter/horizon arm comparison through the harness, not an in-trade action or active-management intervention
+decision_rule:
+  id: RULE-RQ20261103b3c911
+  registered_at: '2026-11-03'
+  registered_before_run: true
+  statistic: 'harness_stage0.py --family fade --timeframe 1d on 12 perps, 2020-06-01..2026-11-02; arms fixed now: B=declared base; L=--side-filter=long; S=--side-filter=short;
+    baseline B. Net of the harness venue-aware fee + slippage + funding stack (execution_costs.resolve_cost_policy).'
+  rule: 'A candidate (L, S) PASSES iff it passes the pooled Stage-0 rule (pooled n >= 39, pooled net_r > 0, >= 4 of 6 calendar folds net positive, >= half of the
+    powered cells pass) AND beats B pooled net R/trade by >= 0.10. PASS IF one or more pass: the best by pooled net R is named and the follow-up is ONE confirmation
+    unit on a symbol-disjoint basket or later window (a pass on one window is a lead), never a roster edit. FAIL IF every candidate fails with pooled n >= 39: this
+    arm grid is closed on this basket and window; the family and horizon are NOT retired. INDETERMINATE otherwise; cells under the floor are named, the floor is never
+    lowered. Thresholds and arms are not changed after any result.'
+  what_it_does_not_do: Edits no config, roster or risk; is not a promotion case; Binance USD-M candles are a PROXY for Bybit linear; each R is net of the harness's
+    own cost stack with a directionless funding magnitude (execution_costs P1).
+value:
+  usd_at_stake_per_month: 60
+  confidence: 0.3
+  bucket: frontier
+  basis: stand-in planning weight for the programme node this question belongs to; an estimate, not a measurement.
+run:
+  command:
+  - python3
+  - scripts/research/harness_stage0.py
+  - --family
+  - fade
+  - --symbols
+  - BTCUSDT,ETHUSDT,SOLUSDT,XRPUSDT,ADAUSDT,AVAXUSDT,BNBUSDT,DOGEUSDT,LINKUSDT,LTCUSDT,BCHUSDT,DOTUSDT
+  - --timeframe
+  - 1d
+  - --days
+  - '2500'
+  - --start
+  - '2020-06-01'
+  - --end
+  - '2026-11-02'
+  - --arm
+  - B=
+  - --arm
+  - L=--side-filter=long
+  - --arm
+  - S=--side-filter=short
+  - --baseline
+  - B
+  - --delta-r-per-trade
+  - '0.1'
+  - --folds
+  - '6'
+  - --fold-majority
+  - '4'
+  - --n-floor
+  - '20'
+  - --pooled-n-floor
+  - '39'
+  - --breadth-frac
+  - '0.5'
+  - --rule-id
+  - RULE-RQ20261103b3c911
+  - --data-dir
+  - '{out_dir}/data'
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 330
+  inputs:
+    research_unit: RQ-20261103-b3c9-11
+related:
+- RQ-20261029-a538-03
+- RQ-20261029-a538-04
+grading:
+  attested: RULE-RQ20261029A53804
+  auto: true
+  decision_rule_id: RULE-RQ20261029A53804
+  evidence:
+  - research/results/RQ-20261029-a538-04/40982977788.jsonl
+  graded_at: '2026-10-30'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template confirmatory re-run)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail
