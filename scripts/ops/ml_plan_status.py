@@ -38,11 +38,11 @@ from urllib.request import urlopen
 
 import yaml
 
-try:  # display aliases only (ml/model_names.yaml); the id stays the key
-    sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
-    from ml.model_names import labelled as _labelled
-except Exception:  # pragma: no cover - never let a display alias break the report
-    def _labelled(model_id, models=None):
+try:  # display aliases only (docs/reference/model_names.yaml); the id stays the key
+    sys.path.insert(0, str(Path(__file__).resolve().parent))
+    from model_names import labelled as _labelled
+except ImportError:  # pragma: no cover - never let a display alias break the report
+    def _labelled(model_id):
         return model_id
 
 REPO = Path(__file__).resolve().parents[2]

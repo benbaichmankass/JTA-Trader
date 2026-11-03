@@ -38,7 +38,7 @@ already measured with a locator (e.g. `ML-COVERAGE-AUDIT`, `ML-PROGRAMME-PLAN`).
 
 ---
 
-**Model names:** models at shadow or above carry a display alias (breed per job) in `ml/model_names.yaml`; use it in review lines (`ml.model_names.labelled(id)`) and add any model promoted this week to that file.
+**Model names:** models at shadow or above carry a display alias (breed per job) in `docs/reference/model_names.yaml`; use it in review lines (`scripts/ops/model_names.py labelled(id)`) and add any model promoted this week to that file.
 
 ## Layer 0 — PRIOR CALLS (always first)
 

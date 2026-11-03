@@ -1,6 +1,11 @@
 import yaml
 
-from ml.model_names import _PATH, display_name, labelled
+import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts" / "ops"))
+
+from model_names import _PATH, display_name, labelled
 
 
 def test_fallback_to_id():

@@ -1,6 +1,6 @@
 """Display aliases for ML models (lane MODEL-NAMES, operator 2026-11-03).
 
-Pure lookup over ml/model_names.yaml: model id -> display name, falling back to the id. Aliases are for
+Pure lookup over docs/reference/model_names.yaml: model id -> display name, falling back to the id. Aliases are for
 human-facing lines only; never use them as a key, never rename a model id."""
 from __future__ import annotations
 
@@ -9,7 +9,7 @@ from pathlib import Path
 
 import yaml
 
-_PATH = Path(__file__).with_name("model_names.yaml")
+_PATH = Path(__file__).resolve().parents[2] / "docs" / "reference" / "model_names.yaml"
 
 
 @lru_cache(maxsize=1)
