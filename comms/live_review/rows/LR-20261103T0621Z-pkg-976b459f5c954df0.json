@@ -1,0 +1,122 @@
+{
+ "schema_version": 1,
+ "review_id": "LR-20261103T0621Z-pkg-976b459f5c954df0",
+ "reviewed_at": "2026-11-03T06:30:00Z",
+ "order_package_id": "pkg-976b459f5c954df0",
+ "trade_id": null,
+ "leg": "mhg_pullback_1d",
+ "accounts": [
+  "ib_paper"
+ ],
+ "trigger": {
+  "event": "daily_floor",
+  "level": "2026-11-03",
+  "l0_snapshot_at": "2026-11-03T06:20:41Z"
+ },
+ "info_cutoff_at": "2026-11-03T06:21:15Z",
+ "state": {
+  "atr_now_over_entry": null,
+  "bars_held": 32,
+  "giveback_r": 0.0633,
+  "open_r": 0.6854,
+  "peak_provenance": "estimated",
+  "peak_r": 0.7487,
+  "regime_cell_entry": null,
+  "regime_cell_now": null,
+  "sl": 6.75394643,
+  "tp": 5.9641695
+ },
+ "features_at_review": {
+  "atr_now_over_entry": null,
+  "bars_since_peak": 6,
+  "giveback_r": 0.0633,
+  "open_r": 0.6854,
+  "peak_r": 0.7487,
+  "r_to_stop": 1.0904,
+  "r_to_target": 1.2889
+ },
+ "mechanics": {
+  "evidence": "package sl 6.75394643 / tp 5.9641695 agree with every readable account",
+  "verdict": "match"
+ },
+ "options": [
+  {
+   "action": "hold",
+   "level": null,
+   "n": 0,
+   "mean_r": null,
+   "sd_r": null,
+   "worst_r": null,
+   "net": null
+  }
+ ],
+ "outcome_table_source": "comms/live_review/tables/LR-20261103T0621Z-pkg-976b459f5c954df0.json",
+ "recommendation": {
+  "action": "hold",
+  "level": null,
+  "level_atr": null,
+  "ev_delta_r": null,
+  "worst_case_delta_r": null,
+  "basis": "judgement",
+  "confidence": "anecdote",
+  "evidence_source": "judgement",
+  "judgement_confidence": 0.6,
+  "reason": "Short +0.69R (peak +0.75R, giveback only 0.06R), price ~6.39 (derived from open_r, R=0.332) is 0.02 above the prior forecast target 6.371 and 0.36 below the 6.754 stop; TP 5.964 is 1.29R away, stop 1.09R away. Trade is working with the prior thesis; no candles in the packet (chart/htf null) so no new structure evidence to move either bracket. HOLD expresses the view; tighten is advice-only and a 0.06R giveback does not justify it. Carry forecast forward.",
+  "size_fraction": null
+ },
+ "judge_prior": null,
+ "applied": false,
+ "apply_policy": {
+  "bound_r": 0.25,
+  "within_bound": null,
+  "tighten_r": null
+ },
+ "shadow_policy": {
+  "bound_r": 0.5,
+  "within_bound": null,
+  "would_apply": null,
+  "tighten_r": null
+ },
+ "context_flags": [
+  "judgement: hold n=0 insufficient_n (corpus 10 trades < floor 20); tighten cells could_not_look no_candles",
+  "mechanics: ib_paper venue SL/TP read this time (matched by oca_group), verdict match; ib could_not_look from earlier reviews is not true for this one",
+  "missing_inputs: context_v3.chart, context_v3.htf, regime.*, context.news (no closed candles on leg tf/1w)",
+  "book: correlated with the metals shorts (MGC, IAUM; copper is metal beta)",
+  "calendar: none in next 24h; stale pullback trade, 32 bars held"
+ ],
+ "account_reads": [
+  {
+   "account_id": "ib_paper",
+   "account_class": "paper",
+   "read": "no_action",
+   "evidence": "hold changes nothing; ib_orders SL 6.754 / TP 5.964, position True; no apply path for interactive_brokers"
+  }
+ ],
+ "disposition": {
+  "route": "none",
+  "mandate": null,
+  "action_issue": null,
+  "applied_at": null,
+  "verified_readback": null
+ },
+ "model": "sonnet-tier (repo lane)",
+ "session": "session_01AFoLuJhnmna3rs1gfzkwSJ",
+ "prompt_sha": null,
+ "skill_sha": "ce31519c30f9287eb2f2970ac8460bb763a5e744",
+ "packet_sha": "431624419680be79337e98ea3968f9da78742faf4752e81fe91157517f049d04",
+ "forecast": {
+  "thesis": "Trade near prior target; chop on 1d/1w per last review, so I expect a probe of 6.371 before any rally above 6.70.",
+  "direction": "with_trade",
+  "target_px": 6.371,
+  "p_target": 0.55,
+  "invalidation_px": 6.7,
+  "horizon_bars": 5,
+  "timeframe": "1d",
+  "evidence": [
+   "features: open_r 0.69, giveback 0.06, r_to_target 1.29, r_to_stop 1.09",
+   "exit_plan: sl 6.754 / tp 5.964",
+   "context.previous_review.forecast: target 6.371 unresolved, price ~6.39",
+   "packet: chart/htf null (no candles), no new structure read"
+  ]
+ }
+}
