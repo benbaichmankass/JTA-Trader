@@ -136,15 +136,24 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0
+          # Depth 2, not 0 (PI-20261103-COLLECT-TIMEOUT): a full-history fetch of this repo hit the 10-min
+          # job timeout on 13 of 20 runs on 2026-11-03 (cancelled inside actions/checkout). The only history
+          # this job needs is the changed-file list below: on pull_request HEAD is the merge commit, so
+          # HEAD^1 is the base tip; on push the `before` commit is fetched on its own.
+          fetch-depth: 2
 
       - name: Determine relevant changed files
         id: changed
         run: |
           set -e
           if [ "${{ github.event_name }}" = "pull_request" ]; then
-            git fetch origin "${{ github.base_ref || 'main' }}" --quiet
-            RANGE="origin/${{ github.base_ref || 'main' }}...HEAD"
+            # HEAD = refs/pull/N/merge; first parent = the base tip it merges into.
+            if ! git rev-parse --verify --quiet HEAD^1 >/dev/null; then
+              echo "relevant=true" >> "$GITHUB_OUTPUT"
+              echo "::notice::Merge parent not available — running the full check."
+              exit 0
+            fi
+            RANGE="HEAD^1 HEAD"
           else
             BEFORE="${{ github.event.before }}"
             if [ -z "$BEFORE" ] || [ "$BEFORE" = "0000000000000000000000000000000000000000" ]; then
@@ -152,7 +161,12 @@ jobs:
               echo "::notice::No prior commit to diff against — running the full check."
               exit 0
             fi
-            RANGE="$BEFORE...${{ github.sha }}"
+            if ! git cat-file -e "$BEFORE^{commit}" 2>/dev/null && ! git fetch --depth=1 --quiet origin "$BEFORE"; then
+              echo "relevant=true" >> "$GITHUB_OUTPUT"
+              echo "::notice::Could not fetch $BEFORE — running the full check."
+              exit 0
+            fi
+            RANGE="$BEFORE ${{ github.sha }}"
           fi
           FILES=$(git diff --name-only $RANGE || true)
           echo "Changed files ($RANGE):"
