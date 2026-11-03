@@ -1,0 +1,41 @@
+{
+  "unit": "RQ-20261102-5e03-01",
+  "run_id": "41600034132",
+  "commit_sha": "1b941245ebe00a00df6617add9d610e9df1f6ec0",
+  "run_url": "https://github.com/benbaichmankass/JTA-Trader/actions/runs/41600034132",
+  "timeout_minutes": 60,
+  "commands": [
+    {
+      "index": 0,
+      "argv": [
+        "python3",
+        "scripts/research/ml_entry_alpaca_score.py",
+        "run",
+        "--model",
+        "ml/served/ml_decision_entry_v1/model.json",
+        "--cache",
+        "/tmp/ml_entry_alpaca",
+        "--unit",
+        "RQ-20261102-5e03-01",
+        "--out",
+        "comms/research/RQ-20261102-5e03-01/41600034132",
+        "--where",
+        "research-script-run",
+        "--structure-pivot",
+        "3",
+        "--rule-id",
+        "RULE-RQ20261102-5E03-01-ENTRY-STRUCTURE-ON-ALPACA",
+        "--registered-at",
+        "2026-11-02",
+        "--variants-read",
+        "2",
+        "--mc-note",
+        "second read on the bdc2-01 held-out window, bracket chosen after the first read failed; PASS is a discovery needing the unused forward window"
+      ],
+      "log": "comms/research/RQ-20261102-5e03-01/41600034132/logs/cmd-0.log",
+      "exit_code": 0,
+      "seconds": 50.3
+    }
+  ],
+  "all_ok": true
+}
