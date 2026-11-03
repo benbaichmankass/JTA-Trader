@@ -172,7 +172,7 @@ The first run of each new year compacts the previous year automatically and prun
       lake file per symbol per year (`us_equity/alpaca/1m/<SYM>/<YYYY>.parquet`) and merged with the lake's existing
       year, so a partial or tail import replaces only the months it supplies and never shrinks history.
     - 5m/15m/30m/1h/4h/1d are derived in the lake (`us_equity/alpaca/derived/`, volume-weighted vwap).
-    - The lake is the store of record; the trainer keeps a tail cache.
+    - **ETF 1m: the TRAINER is the store of record** (operator decision 2026-11-03: "Keep it on the trainer (Rec.)"; no HF PRO upgrade, nothing pruned from the lake). The HF account is on the free plan and its private storage limit was reached (run 41552388391), so the ETF pipeline no longer publishes ETF 1m to the lake (`ETF_LAKE_PUBLISH: "0"` in `.github/workflows/etf-history-pipeline.yml`; set `"1"` to re-enable). Chunks 3-4 of that run (120 symbols) were never published to the lake. This supersedes the earlier "the lake is the store of record; the trainer keeps a tail cache" design for ETF 1m only; other lake streams are unchanged.
     - Manifest fragments are uniquely named and folded into MANIFEST.json idempotently by `hf_publish.py manifest`,
       which then deletes them, so two publishers cannot overwrite each other.
 
