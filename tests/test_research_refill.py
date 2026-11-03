@@ -13,7 +13,7 @@ import yaml
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "scripts" / "research"))
-import dispatch_queue as dq  # noqa: E402
+import dispatch_queue as dq
 
 WF = ROOT / ".github" / "workflows"
 FAMILY = ["research-script-run", "research-script-run-data", "research-script-run-kaggle",
@@ -41,7 +41,9 @@ def _api(runs_by_file):
 
 
 def test_fired_run_units_takes_the_newest_run_per_unit():
-    t = lambda m: (NOW - timedelta(minutes=m)).strftime("%Y-%m-%dT%H:%M:%SZ")
+    def t(m):
+        return (NOW - timedelta(minutes=m)).strftime("%Y-%m-%dT%H:%M:%SZ")
+
     api = _api({"research-script-run.yml": [
         {"display_title": "research-script-run RQ-20261102-5e03-01", "created_at": t(30)},
         {"display_title": "research-script-run RQ-20261102-5e03-01", "created_at": t(5)},
