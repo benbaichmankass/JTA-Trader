@@ -79,41 +79,70 @@ WORKFLOW = REPO / ".github" / "workflows" / "pytest-run.yml"
 #   enumerated docs/ readers   -- read as-committed by tests that do not mention
 #                                 any token below (see test_pytest_run_filter.COVERED)
 #   anything under src/ scripts/ tests/ config/ .github/workflows/ ml/ .claude/
-DATA_ALLOWLIST: tuple[str, ...] = (
-    r"^docs/claude/work/checklist/",
-    r"^docs/claude/work/pipeline/",
-    r"^docs/claude/work/PIPELINE\.jsonl$",
-    r"^research/queue/[^/]+\.ya?ml$",
-    r"^research/queue/blocked/[^/]+\.ya?ml$",
-    r"^research/results/",
-    r"^comms/(?!schema/)",
-    r"^\.github/pr-landing/",
-    r"^\.github/pr-automerge-requests/",
-    r"^\.github/merge-slots/",
-)
-DATA_RE = re.compile("|".join(DATA_ALLOWLIST))
+# CI-STREAMLINE (2026-11-03): the data trees, their path patterns and the tokens that name their readers live in ONE
+# file, .github/ci-change-classes.json (also the order-path class, which always gets the full suite). These module
+# names are DERIVED from it so every existing caller and pin keeps working. JSON so the scope step needs no pip install.
+CLASS_MAP = REPO / ".github" / "ci-change-classes.json"
 
-# A test file is a "data reader" if its text names one of the data trees: by path
-# literal, by the module that loads it, or by the quoted path SEGMENT a
-# `Path(...) / "comms" / ...` join spells.  Segment spellings are included on
-# purpose: the repo has already been bitten by a reader (`os.path.join`) that
-# the literal-path scan could not see (tests/test_pytest_run_filter.py).  The
-# bare words "checklist" / "pipeline" / "comms" are NOT tokens -- they appear in
-# ~190 files that only talk about those things (the ML/trade "pipeline"), and
-# selecting on them ran 25% of the suite, measured 2026-10-13 (5,650 tests,
-# 21 min) for no added coverage of the data trees.  Over-selecting costs minutes;
-# under-selecting is the 'green tick that ran nothing' failure.
-TEST_TOKENS = re.compile(
-    r"work/checklist|checklist_store|checklist\.py|MANAGER-CHECKLIST|[\"']checklist[\"']|\bchecklist/"
-    r"|PIPELINE\.jsonl|work/pipeline|ops/pipeline|ops import pipeline|ops\.pipeline|import pipeline"
-    r"|[\"']pipeline[\"']|pipeline\.py"
-    r"|research/queue|research_queue|research/results|[\"']queue[\"']|[\"']results[\"']"
-    r"|queue_loader|dispatch_queue"
-    r"|comms/|[\"']comms[\"']"
-    r"|pr-landing|pr-automerge|merge-slots|merge_slot|pr_landing|pr_automerge"
-    r"|check_pr_landing|claim_merge",
-    re.IGNORECASE,
+
+def load_class_map(path: Path = CLASS_MAP) -> dict:
+    import json
+    return json.loads(path.read_text())
+
+
+def _glob_re(pattern: str) -> re.Pattern[str]:
+    out, i = [], 0
+    while i < len(pattern):
+        if pattern.startswith("**/", i):
+            out.append("(?:.*/)?")
+            i += 3
+        elif pattern.startswith("**", i):
+            out.append(".*")
+            i += 2
+        elif pattern[i] == "*":
+            out.append("[^/]*")
+            i += 1
+        elif pattern[i] == "?":
+            out.append("[^/]")
+            i += 1
+        else:
+            out.append(re.escape(pattern[i]))
+            i += 1
+    return re.compile("^" + "".join(out) + "$")
+
+
+_MAP = load_class_map()
+DATA_TREES: tuple[dict, ...] = tuple(
+    t for c in _MAP["classes"] if c.get("behaviour") == "data" for t in c["trees"]
 )
+DATA_ALLOWLIST: tuple[str, ...] = tuple(p for t in DATA_TREES for p in t["paths"])
+DATA_RE = re.compile("|".join(DATA_ALLOWLIST))
+# A test file is a "data reader" if its text names one of the data trees: by path literal, by the module that loads it,
+# or by the quoted path SEGMENT a `Path(...) / "comms" / ...` join spells (see the history in tests/test_pytest_run_filter.py;
+# bare words "checklist"/"pipeline"/"comms" are NOT tokens -- selecting on them ran 25% of the suite for no coverage).
+TEST_TOKENS = re.compile("|".join(t["tokens"] for t in DATA_TREES), re.IGNORECASE)
+_TREE_PATHS = [(t["tree"], re.compile("|".join(t["paths"])), re.compile(t["tokens"], re.IGNORECASE)) for t in DATA_TREES]
+
+
+def class_of(path: str, class_map: dict | None = None) -> str:
+    """The first class in the map whose globs (or data-tree paths) match ``path``; ``unclassified`` otherwise."""
+    for c in (class_map or _MAP)["classes"]:
+        if "trees" in c:
+            if any(re.search(p, path) for t in c["trees"] for p in t["paths"]):
+                return c["name"]
+        elif any(_glob_re(g).match(path) for g in c["globs"]):
+            return c["name"]
+    return "unclassified"
+
+
+def full_suite_class(path: str) -> bool:
+    """True for a path whose class is behaviour=full (order path / risk / sizing / gate config) or unclassified."""
+    name = class_of(path)
+    if name == "unclassified":
+        return True
+    return next(c for c in _MAP["classes"] if c["name"] == name).get("behaviour") == "full"
+
+
 ALWAYS = (
     "tests/test_pytest_run_filter.py",
     "tests/test_pytest_run_scope.py",
@@ -140,21 +169,32 @@ def classify(files: list[str], relevant_re: str) -> tuple[str, str]:
     reason = (
         f"all {len(relevant)} suite-relevant changed file(s) are data-only "
         "(checklist/pipeline/research queue+results/comms/pr-landing/merge-slot/automerge) "
-        "-> ran every test file that reads those trees; guards run separately"
+        f"-> ran the test files that read the tree(s) touched ({', '.join(trees_touched(relevant)) or 'all'}); guards run separately"
     )
     return "data", reason
 
 
-def select_tests(tests_dir: Path | None = None) -> list[str]:
+def trees_touched(changed: list[str]) -> list[str]:
+    return [name for name, paths, _ in _TREE_PATHS if any(paths.search(f) for f in changed)]
+
+
+def select_tests(tests_dir: Path | None = None, changed: list[str] | None = None) -> list[str]:
+    """Test files that read the data trees. With ``changed`` (CI-STREAMLINE), only the readers of the trees that
+    diff touches; a ``changed`` list that touches no known tree falls back to EVERY tree's readers (never fewer)."""
     tests_dir = tests_dir or REPO / "tests"
     root = tests_dir.parent
     out = set(ALWAYS)
+    rx = TEST_TOKENS
+    if changed is not None:
+        hit = trees_touched(changed)
+        if hit:
+            rx = re.compile("|".join(tok.pattern for name, _, tok in _TREE_PATHS if name in hit), re.IGNORECASE)
     for p in tests_dir.rglob("test_*.py"):
         rel = p.relative_to(root).as_posix()
         if rel in IGNORED:
             continue
         try:
-            if TEST_TOKENS.search(p.read_text(errors="replace")):
+            if rx.search(p.read_text(errors="replace")):
                 out.add(rel)
         except OSError:
             continue
@@ -469,7 +509,13 @@ def classify_affected(
     guards = guard_scripts(graph.repo if graph else REPO)
     data_files = [f for f in relevant if DATA_RE.search(f)]
     code_files = [f for f in relevant if not DATA_RE.search(f)]
+    repo_root = graph.repo if graph else REPO
     for f in code_files:
+        # CI-STREAMLINE: order-path / risk / sizing / gate config never get a subset. "unclassified" (a tree the map
+        # does not know) is full too -- against THIS repo only; a fixture repo's made-up paths are not this map's tree.
+        cls = class_of(f)
+        if full_suite_class(f) and (cls != "unclassified" or repo_root.resolve() == REPO.resolve()):
+            return "full", f"affected: {f} is class {cls} (.github/ci-change-classes.json) -> full suite", []
         if FULL_FALLBACK.search(f):
             return "full", f"affected: {f} is conftest/requirements/.github/scripts/ci -> full suite", []
         if f in guards:
@@ -503,7 +549,7 @@ def classify_affected(
         selected |= reach
     selected |= {t for t in tests_all if TREE_SCAN.search(graph.text.get(t, ""))}
     if data_files:
-        selected |= set(select_tests(graph.repo / "tests"))
+        selected |= set(select_tests(graph.repo / "tests", changed=data_files))
     selected = {t for t in selected if (graph.repo / t).exists() and t not in IGNORED}
     if len(selected) > limit:
         return "full", f"affected: selection is {len(selected)} of {len(tests_all)} test files -> full suite", []
@@ -518,6 +564,8 @@ def classify_affected(
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--select-tests", action="store_true", help="print the data-reader test files and exit")
+    ap.add_argument("--changed", type=Path,
+                    help="with --select-tests: a file listing the diff, so only the readers of the touched trees are printed")
     ap.add_argument("--workflow", type=Path, default=WORKFLOW)
     ap.add_argument(
         "--event", default="",
@@ -529,7 +577,8 @@ def main(argv: list[str] | None = None) -> int:
     )
     args = ap.parse_args(argv)
     if args.select_tests:
-        print("\n".join(select_tests()))
+        changed = args.changed.read_text().splitlines() if args.changed else None
+        print("\n".join(select_tests(changed=[c for c in changed if c.strip()] if changed is not None else None)))
         return 0
     files = sys.stdin.read().splitlines()
     relevant_re = relevance_regex(args.workflow)

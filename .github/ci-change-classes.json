@@ -1,0 +1,175 @@
+{
+ "_doc": [
+  "CI-STREAMLINE (operator 2026-11-03): ONE map of what each kind of change gets in CI. Read by scripts/ci/pytest_run_scope.py; pinned by tests/test_ci_change_classes.py.",
+  "Classes are tried IN ORDER; the first whose globs match a path wins. A path matching no class is 'unclassified' and gets the FULL suite (fail toward testing).",
+  "behaviour: full = always the whole suite; data = only the test files that read the data trees THIS diff touches; default = the existing pytest-run logic (relevance filter, then affected-tests on pull_request, full otherwise).",
+  "The guards job is not narrowed by this map: every guard keeps its own `when` in scripts/ci/run_guards.py, and they are the validators for data/record files.",
+  "JSON, not YAML: the scope step runs on the runner's system python before any pip install."
+ ],
+ "classes": [
+  {
+   "name": "order_path",
+   "behaviour": "full",
+   "why": "order path, execution, risk, sizing, the live entrypoint/runtime loop and the gate configs: never a test subset (operator 2026-11-03: never weaken a check on order-path/config/risk/sizing code)",
+   "globs": [
+    "src/units/accounts/**",
+    "src/exchange/**",
+    "src/core/coordinator.py",
+    "src/core/allocator.py",
+    "src/core/order_contract.py",
+    "src/core/account_profile.py",
+    "src/core/portfolio_state.py",
+    "src/units/strategies/pairs_executor.py",
+    "src/prop/*executor*.py",
+    "src/prop/*sizing*.py",
+    "src/prop/*risk*.py",
+    "src/prop/*trail*.py",
+    "src/prop/*reconcile*.py",
+    "src/main.py",
+    "src/runtime/**",
+    "config/strategies.yaml",
+    "config/accounts.yaml",
+    "config/pairs.yaml",
+    "config/mandates.yaml",
+    "config/*risk*",
+    "config/regime_policy.yaml"
+   ]
+  },
+  {
+   "name": "data_record",
+   "behaviour": "data",
+   "why": "bookkeeping records written by bots and sessions; the suite reads them only through the test files that name the tree",
+   "trees": [
+    {
+     "tree": "checklist",
+     "paths": [
+      "^docs/claude/work/checklist/"
+     ],
+     "tokens": "work/checklist|checklist_store|checklist\\.py|MANAGER-CHECKLIST|[\"']checklist[\"']|\\bchecklist/"
+    },
+    {
+     "tree": "pipeline",
+     "paths": [
+      "^docs/claude/work/pipeline/",
+      "^docs/claude/work/PIPELINE\\.jsonl$"
+     ],
+     "tokens": "PIPELINE\\.jsonl|work/pipeline|ops/pipeline|ops import pipeline|ops\\.pipeline|import pipeline|[\"']pipeline[\"']|pipeline\\.py"
+    },
+    {
+     "tree": "research",
+     "paths": [
+      "^research/queue/[^/]+\\.ya?ml$",
+      "^research/queue/blocked/[^/]+\\.ya?ml$",
+      "^research/results/"
+     ],
+     "tokens": "research/queue|research_queue|research/results|[\"']queue[\"']|[\"']results[\"']|queue_loader|dispatch_queue"
+    },
+    {
+     "tree": "comms",
+     "paths": [
+      "^comms/(?!schema/)"
+     ],
+     "tokens": "comms/|[\"']comms[\"']"
+    },
+    {
+     "tree": "landing",
+     "paths": [
+      "^\\.github/pr-landing/",
+      "^\\.github/pr-automerge-requests/",
+      "^\\.github/merge-slots/"
+     ],
+     "tokens": "pr-landing|pr-automerge|merge-slots|merge_slot|pr_landing|pr_automerge|check_pr_landing|claim_merge"
+    }
+   ]
+  },
+  {
+   "name": "tests_ci",
+   "behaviour": "default",
+   "why": "tests, CI, workflows, test config; .github/** and scripts/ci/** already force the full suite inside pytest_run_scope.FULL_FALLBACK",
+   "globs": [
+    "tests/**",
+    ".github/**",
+    "scripts/ci/**",
+    "conftest.py",
+    "requirements*.txt",
+    "pytest.ini",
+    "ruff.toml",
+    "pyproject.toml",
+    "setup.cfg"
+   ]
+  },
+  {
+   "name": "runtime_code",
+   "behaviour": "default",
+   "why": "code and config off the order path: affected tests on a PR (import graph), full on anything undecidable",
+   "globs": [
+    "src/**",
+    "ml/**",
+    "automation/**",
+    "deploy/**",
+    "config/**",
+    "tools/**",
+    "bin/**",
+    "utils/**",
+    "runtime_flags/**",
+    "*.py",
+    "*.sh",
+    "Dockerfile",
+    "sim/**"
+   ]
+  },
+  {
+   "name": "tooling",
+   "behaviour": "default",
+   "why": "ops/research scripts and skills: affected tests via the import graph and path readers",
+   "globs": [
+    "scripts/**",
+    ".claude/**",
+    "notebooks/**"
+   ]
+  },
+  {
+   "name": "schema_and_research_other",
+   "behaviour": "default",
+   "why": "schemas the suite validates against and research files that are not queue units/results",
+   "globs": [
+    "comms/schema/**",
+    "research/**"
+   ]
+  },
+  {
+   "name": "docs",
+   "behaviour": "default",
+   "why": "docs: no tests unless the suite reads the file (the relevance filter in pytest-run.yml names those)",
+   "globs": [
+    "docs/**",
+    "*.md",
+    "*.txt",
+    ".gitignore",
+    ".gitattributes",
+    ".env.example",
+    ".importlinter",
+    ".gitleaks*",
+    "*.toml",
+    "*.cfg",
+    "*.ini",
+    "*.json",
+    "*.yaml",
+    "*.yml",
+    ".dockerignore"
+   ]
+  },
+  {
+   "name": "logs_and_artifacts",
+   "behaviour": "default",
+   "why": "committed run logs, experiment outputs and fixtures data; read by the suite only where the relevance filter says",
+   "globs": [
+    "runtime_logs/**",
+    "experiments/**",
+    "data/**",
+    "artifacts/**",
+    "logs/**"
+   ]
+  }
+ ]
+}

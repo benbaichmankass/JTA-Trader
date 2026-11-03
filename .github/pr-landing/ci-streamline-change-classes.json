@@ -1,0 +1,5 @@
+{
+  "tier": 1,
+  "landing": "self",
+  "why": "Tier-1 CI tooling only (CI-STREAMLINE PR3): one change-class map (.github/ci-change-classes.json) read by scripts/ci/pytest_run_scope.py. A data-only PR runs only the readers of the data trees it touches (the union is unchanged: 225 files); order-path / risk / sizing / gate-config files now ALWAYS get the full suite on a PR (previously affected-mode could pick a subset); an unclassified path gets the full suite. Guards are not narrowed. No src/, config/, deploy/, order path, strategy, risk or mandate file is changed."
+}
