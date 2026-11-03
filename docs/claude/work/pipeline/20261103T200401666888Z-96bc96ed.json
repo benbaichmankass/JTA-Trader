@@ -1,0 +1,17 @@
+{
+  "due_when": {
+    "check_every_days": 7,
+    "clears_when": "Each of the 6 runs is read and given a cause. The m20 sweep either refuses an unclassified leg at dispatch, with a named error to the dispatcher, or runs it. The two failing sweep legs are fixed or killed with a reason. The research-loss-detector's next pass shows B_unlanded_result_runs without these 6 (no-result-by-design failures are excluded or reclassified), and C reads CLEAN or FINDINGS, not COULD_NOT_READ.",
+    "kind": "observation"
+  },
+  "id": "PI-20261103-BCZDXJNR-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "Manager Session 2026-11-03b, operator-pasted research-loss alert 19:52Z",
+    "rerun": "python3 scripts/ops/research_loss_detector.py; gh api repos/{repo}/actions/runs/<id>/jobs for each run id above"
+  },
+  "roadmap": "M20",
+  "state": "queued",
+  "what": "research-loss-detector run 41705085421 (2026-11-03T19:52Z) reports B_unlanded_result_runs=6, all m20-exit-lever-sweep.yml failures: 41195608647, 41187215930, 41068790597, 40994427469, 40978648245, 40095366642. Read 4 of 6 so far. None LOST a result. Each failed BEFORE producing one, so nothing reached the research_result step to land. (a) 41195608647 (10-31): plan failed with '::error::legs with no family/harness: [turtle_soup]', so the sweep was skipped and research_result exited 1 ('no dispatched legs and no rows'). 41187215930 (10-31) also failed in plan; the log tail did not show the reason. (b) 41068790597 (10-30, sweep leg iaum_pullback_1d) and 40095366642 (10-24, sweep leg trend_donchian_xrp_adx25): the sweep job itself failed; its cause is not yet read (the log tail was cleanup only). 40994427469 and 40978648245: not yet read. TWO DEFECTS: (1) the m20 sweep has failing dispatches. turtle_soup is dispatched although the harness lists it under no_harness_levers (m20_fleet_exit_sweep.py:70), and two legs' sweep jobs fail. (2) the detector counts a run that never produced a result as 'lost', so it re-alerts on the same 6 runs every pass. C_expiring_unlanded_artifacts on the same run was a transient HTTP 500 from the artifacts API: re-check on the next pass."
+}

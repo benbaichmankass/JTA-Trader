@@ -82,6 +82,13 @@ JOURNAL_FIELDS = (
     "tp_after", "account_id", "trade_id", "outcome", "venue_readback", "error",
 )
 _DEFAULTS = {"pivot": 3, "buffer_atr": 0.25, "min_r": 1.0, "fvg": True}
+#: SL-ONLY mode (operator 2026-11-03, option B for ml_entry; record #22645 + the B choice): the structure
+#: verdict moves ONLY the stop (same tighten-only ratchet, never looser than the entry stop) and never
+#: emits a TP, so another declared source (ml_entry's ml_first_passage tp_revision) stays the TP's one
+#: owner. Spelled "pivot=N;sl_only" or {pivot: N, sl_only: true}. The SL path is identical to the full
+#: mode: StructureExit.on_bar_close ratchets the SL independently of the TP. The key is present in
+#: declared() output ONLY when set, so every full-mode declaration parses byte-identically.
+SL_ONLY_FLAG = "sl_only"
 
 
 def _f(v: Any) -> Optional[float]:
@@ -104,8 +111,13 @@ def declared(leg: Optional[Mapping[str, Any]]) -> Optional[Dict[str, Any]]:
     try:
         if isinstance(raw, str):
             from src.runtime.structure_levels import parse_structure_exit
-            n = parse_structure_exit(raw)
+            head, *flags = [p.strip() for p in raw.split(";")]
+            if any(f != SL_ONLY_FLAG for f in flags):
+                raise ValueError(f"unknown structure_exit flag in {raw!r}")
+            n = parse_structure_exit(head)
             out = dict(_DEFAULTS, pivot=n)
+            if SL_ONLY_FLAG in flags:
+                out[SL_ONLY_FLAG] = True
         elif isinstance(raw, Mapping):
             out = dict(_DEFAULTS)
             out.update({k: raw[k] for k in _DEFAULTS if k in raw})
@@ -113,6 +125,8 @@ def declared(leg: Optional[Mapping[str, Any]]) -> Optional[Dict[str, Any]]:
             out["buffer_atr"] = float(out["buffer_atr"])
             out["min_r"] = float(out["min_r"])
             out["fvg"] = bool(out["fvg"])
+            if raw.get(SL_ONLY_FLAG) is True:
+                out[SL_ONLY_FLAG] = True
         else:
             return None
         if out["pivot"] < 1:
@@ -266,7 +280,8 @@ def structure_exit_verdict(meta: Mapping[str, Any], open_pkg: Mapping[str, Any],
                                   reason=REASON_SL_CROSS)
                 return v
             verdict["sl"] = round(tsl, 8)
-        ttp = out["tp"]
+        # SL-ONLY: the structure TP is never proposed; the leg's other TP owner moves it.
+        ttp = None if params.get("sl_only") else out["tp"]
         if ttp is not None:
             from src.runtime.tp_revision import clamp_to_venue_cap, tp_revision_rejection
             placed, clamped = clamp_to_venue_cap(direction, ttp, price)

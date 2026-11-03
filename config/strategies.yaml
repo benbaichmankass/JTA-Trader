@@ -1446,9 +1446,12 @@ strategies:
     enabled: true
     execution: live
     timeframe: "1h"
-    # STRUCTURE-EXITS-ENABLE 2026-11-03: structure_exit deliberately NOT declared here yet. bybit_2 is real money and
-    # check_roster_promotion_evidence C5 forbids a real-money slot whose record omits a lever (structure_exit) without a
-    # faithful re-measure (needs the ML structure runner, RQ-20261101-5e01-09..11). Declare it when that arm clears.
+    # STRUCTURE EXIT, SL-ONLY (Tier 3; operator 2026-11-03: one-time override recorded in #22645, then option
+    # "B: stop only (Recommended)" by pop-up ~16:53Z, relayed by the manager). The structure verdict moves ONLY the
+    # stop (tighten-only, never looser than the entry stop); the ml_first_passage tp_revision above stays the TP's
+    # one owner. Unmeasured on this leg: the evidence record reads approximate (C5 baseline) and the re-measure
+    # is RQ-20261103-5e04-01 (revert clause inside). Revert: delete this line.
+    structure_exit: "pivot=5;sl_only"
     decision_bar: closed
     symbols: [BTCUSDT, ETHUSDT, XRPUSDT, ADAUSDT, SOLUSDT, SPY, QQQ, IWM, TLT, IEF, SLV, USO, GDX, TQQQ, QLD, SPYM, IAUM, SCHA]
     # 2026-11-01 ALPACA PAPER (row ALPACA-LIVE-ACTIVITY-ML, Tier 3; operator popup ~11:47Z verbatim "Paper now, v2 for
