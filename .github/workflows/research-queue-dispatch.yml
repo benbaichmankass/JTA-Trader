@@ -511,6 +511,7 @@ jobs:
         uses: ./.github/actions/commit-to-main
         with:
           verify-merged: "true"
+          close-on-fail: "true"   # a dirty/unmergeable batch PR strands its runs (#22504); closing lets the next cycle re-collect
           token: ${{ secrets.BRANCH_PROTECTION_TOKEN }}
           paths: comms/research research/results
           message: "research: batch-land ${{ needs.dispatch.outputs.collect_count }} runner result(s) (dispatcher run ${{ github.run_id }})"
