@@ -155,7 +155,7 @@ def _unit_text(uid: str, **kw) -> str:
     return yaml.safe_dump(d, sort_keys=False)
 
 
-def _cycle(tmp_path, monkeypatch, units, pending):
+def _cycle(tmp_path, monkeypatch, units, pending, runs=None):
     q = tmp_path / "queue"
     q.mkdir(exist_ok=True)
     for uid, kw in units:
@@ -174,6 +174,7 @@ def _cycle(tmp_path, monkeypatch, units, pending):
     monkeypatch.setattr(dq, "gh_runs", lambda status, limit=200: [])
     monkeypatch.setattr(dq, "declared_inputs", lambda *a, **k: {"research_unit", "power_state"})
     monkeypatch.setattr(dq, "pending_stamp_units", lambda api=None: pending)
+    monkeypatch.setattr(dq, "fired_run_units", lambda now, api=None, **k: {} if runs is None else runs)
     monkeypatch.setattr(dq.subprocess, "run", fake_run)
     monkeypatch.setattr(dq, "RESULTS_ROOT", tmp_path / "results")
     import io
@@ -512,3 +513,12 @@ def test_the_stamp_land_step_closes_a_stuck_pr_instead_of_blocking():
     act = (REPO / ".github/actions/commit-to-main/action.yml").read_text()
     assert 'close-on-fail: "true"' in wf
     assert act.count("close_pr_on_fail") >= 3 and "gh pr close" in act
+
+
+def test_a_unit_with_a_recent_run_but_no_stamp_or_stamp_pr_is_not_fired_again(tmp_path, monkeypatch):
+    """REFILL 2026-11-03: the gap between a fire and its stamp PR (the land job's batch wait) must not re-fire the unit."""
+    from datetime import datetime, timezone
+    run = datetime.now(timezone.utc)
+    fired, dec, stamps = _cycle(tmp_path, monkeypatch, [(UID, {}), (UID2, {})], {}, runs={UID: run})
+    assert fired == [f"research_unit={UID2}"]
+    assert dec[UID]["outcome"] == "not_due" and "already dispatched" in dec[UID]["reason"]
