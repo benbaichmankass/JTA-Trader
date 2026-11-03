@@ -107,3 +107,38 @@ levers:
       best_delta_r_per_trade: 0.0688
       fold_stability: 0.75
       reading: 'smooth, fold-stable gain: potential -- confirm on a holdout'
+    cooldown_bars:
+      tests:
+      - value: '3'
+        baseline_value: 'off'
+        arm: CD3
+        unit: RQ-20261031-d5dd-06
+        window: 2000-05-26..2026-10-27
+        n: 117
+        net_r: 22.9574
+        baseline_n: 118
+        baseline_net_r: 22.8198
+        delta_net_r: 0.1376
+        folds_ge_baseline: 3/4
+        max_drawdown_r: 8.4932
+        verdict: fail
+        joint_change: false
+      - value: '6'
+        baseline_value: 'off'
+        arm: CD6
+        unit: RQ-20261031-d5dd-06
+        window: 2000-05-26..2026-10-27
+        n: 113
+        net_r: 19.4197
+        baseline_n: 118
+        baseline_net_r: 22.8198
+        delta_net_r: -3.4001
+        folds_ge_baseline: 2/4
+        max_drawdown_r: 8.2391
+        verdict: fail
+        joint_change: false
+      shape: monotone
+      points: 2
+      best_delta_r_per_trade: 0.0012
+      fold_stability: 0.625
+      reading: 'smooth, fold-stable gain: potential -- confirm on a holdout'

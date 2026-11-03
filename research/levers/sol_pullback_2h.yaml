@@ -9,7 +9,7 @@ baseline:
   record: comms/strategy_evidence/sol_pullback_2h.json
   net_r: 6.9287
   n: 17
-  fidelity: faithful
+  fidelity: approximate
   rule_verdict: pass
 attribution:
   read_state: measured
@@ -1274,9 +1274,65 @@ levers:
         max_drawdown_r: 8.8877
         verdict: pass
         joint_change: false
+      - value: '0.8'
+        baseline_value: 'off'
+        arm: VH80
+        unit: RQ-20261031-7b6f-16
+        window: 2020-07-01..2026-10-15
+        n: 117
+        net_r: 13.3725
+        baseline_n: 147
+        baseline_net_r: 7.1958
+        delta_net_r: 6.1767
+        folds_ge_baseline: 5/6
+        max_drawdown_r: 8.6113
+        verdict: pass
+        joint_change: false
+      - value: '0.8'
+        baseline_value: 'off'
+        arm: VH80
+        unit: RQ-20261031-7b6f-16
+        window: 2020-07-01..2026-10-15
+        n: 117
+        net_r: 13.3725
+        baseline_n: 147
+        baseline_net_r: 7.1958
+        delta_net_r: 6.1767
+        folds_ge_baseline: 5/6
+        max_drawdown_r: 8.6113
+        verdict: pass
+        joint_change: false
+      - value: '0.9'
+        baseline_value: 'off'
+        arm: VH90
+        unit: RQ-20261031-7b6f-16
+        window: 2020-07-01..2026-10-15
+        n: 131
+        net_r: 19.5413
+        baseline_n: 147
+        baseline_net_r: 7.1958
+        delta_net_r: 12.3455
+        folds_ge_baseline: 6/6
+        max_drawdown_r: 9.3355
+        verdict: pass
+        joint_change: false
+      - value: '0.9'
+        baseline_value: 'off'
+        arm: VH90
+        unit: RQ-20261031-7b6f-16
+        window: 2020-07-01..2026-10-15
+        n: 131
+        net_r: 19.5413
+        baseline_n: 147
+        baseline_net_r: 7.1958
+        delta_net_r: 12.3455
+        folds_ge_baseline: 6/6
+        max_drawdown_r: 9.3355
+        verdict: pass
+        joint_change: false
       shape: peaked
-      points: 5
-      best_delta_r_per_trade: 0.0839
+      points: 9
+      best_delta_r_per_trade: 0.084
       fold_stability: 0.917
       reading: 'smooth, fold-stable gain: potential -- confirm on a holdout'
     cooldown_bars:

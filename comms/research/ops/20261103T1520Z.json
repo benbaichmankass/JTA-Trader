@@ -1,0 +1,135 @@
+{
+ "run": "RESEARCH-OPS-20261103-1450",
+ "finished_at": "2026-11-03T15:20:00Z",
+ "by": "session_01AFoLuLHh13MHv4KBYRkKbS",
+ "floor": 69,
+ "floor_basis": "computed_floor(fired_24h 87)",
+ "needs_review_left": 56,
+ "throughput": {
+  "runnable_after": 116,
+  "queued": 294,
+  "fired_24h": 87,
+  "results_landed_24h": 126,
+  "hours_since_last_dispatch": 1.8,
+  "idle_alarm": false
+ },
+ "mechanism": {
+  "dispatch_receipt": "ok",
+  "collector": "ok",
+  "stranded_stamp_prs": [],
+  "incident": "none: the 2026-11-02 dispatch land stall is cleared (fired_24h 0 -> 87)",
+  "read_state": "tree_only for workflow runs (checks packet + throughput script)"
+ },
+ "results_read": {
+  "note": "checks packet 83 units with rows: 19 pass, 27 fail, 8 indeterminate, 28 ungraded; 15 e35 results unread by research_disposition --unread-only; rows not individually opened this pass (budget)"
+ },
+ "unlocked": [],
+ "retired": [],
+ "blocked_audit": {
+  "blocked_over_age": 12,
+  "threshold": 10,
+  "dispositions": [
+   {
+    "unit": "RQ-20261009-900",
+    "disposition": "re-scoped",
+    "reason": "clears_when met (736c-01 verdict pass, corpus on main); only lever left is the grader, row TP-PREDICT-GRADER"
+   },
+   {
+    "unit": "RQ-20261009-901",
+    "disposition": "kept",
+    "reason": "requires 900 pass"
+   },
+   {
+    "unit": "RQ-20261012-5bd1-14",
+    "disposition": "kept",
+    "reason": "requires U02 pass; U02 0/36 pass; news family not retired"
+   },
+   {
+    "unit": "RQ-20261007-018/019, 20261008-901, 20261011-17f4-01/-03, 9da8-02/-03/-04/-07, 20261009-901",
+    "disposition": "kept",
+    "reason": "each reviewed 2026-11-01, blocker named and owned, re-dated 2026-11-15; blocker_watch STALE_BLOCK rows are checklist rows, not these units"
+   }
+  ],
+  "slo_note": "blocked_over_age counts by RQ id date with no blocked_at field, so it stays in breach while any unit awaits a build; threshold unchanged"
+ },
+ "levers_filed": [
+  {
+   "lever": "verdict grader for RULE-RQ1009-900",
+   "ref": "TP-PREDICT-GRADER"
+  }
+ ],
+ "units_authored": [],
+ "followups_filed": [
+  "TP-PREDICT-GRADER"
+ ],
+ "authoring": {
+  "queue_depth": null,
+  "nodes_drafted": 0,
+  "skipped_on_purpose": true,
+  "reason": "lean pass, budget; orphans handed off by name"
+ },
+ "iteration": {
+  "results_attributed": {
+   "count": 0,
+   "of": null,
+   "note": "lever_map --backfill rebuilt 10 maps; attribution not read per result"
+  },
+  "orphans_before": {
+   "strategy_leg": 10,
+   "ml_model": 0,
+   "ltr_class": 5
+  },
+  "orphans_after": {
+   "strategy_leg": 10,
+   "ml_model": 0,
+   "ltr_class": 5
+  },
+  "advanced": 0,
+  "survivors": [],
+  "overdue": []
+ },
+ "prior_calls_scorecard": [
+  {
+   "call": "dispatch land completes and fired_24h>0",
+   "p": 0.6,
+   "outcome": "hit",
+   "action_happened": true
+  }
+ ],
+ "checks": {
+  "packet_as_of": "2026-11-03T14:51Z",
+  "runnable_by_track": {
+   "TRADING": 97,
+   "MODEL": 13,
+   "INFRA": 6
+  },
+  "fails_without_next": null,
+  "needs_review": 56,
+  "could_not_look": []
+ },
+ "analysis": {},
+ "calls": [
+  {
+   "call": "TP-PREDICT-GRADER lands and RQ-20261009-900 leaves blocked/ by 2026-11-10",
+   "p": 0.4,
+   "check": {
+    "command": "ls research/queue/blocked/RQ-20261009-900.yaml",
+    "rule": "file absent",
+    "resolves_when": "2026-11-10"
+   }
+  }
+ ],
+ "not_run": [
+  "ANALYSIS per track (rows not opened)",
+  "E authoring / iteration units"
+ ],
+ "limits": [
+  "github MCP actions_list not used; workflow health read from receipt/throughput"
+ ],
+ "handoff": [
+  "strategy_leg orphans: gdx_pullback_1d mgc_trend_1h ml_entry_v2 qqq_pullback_1h slv_pullback_1d tlt_pullback_1d trend_donchian_eth_prop trend_donchian_sol_4h trend_donchian_xrp_adx25 uso_trend_1h (5 of them pass_unconfirmed: need confirmation units)",
+  "ltr_class orphans: 5 (from 20261102T1620Z handoff)",
+  "15 e35 results unread; 31 needs_review unowned",
+  "fails_without_next populated (e.g. RQ-20261024-0142-24/25)"
+ ]
+}
