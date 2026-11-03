@@ -1,0 +1,40 @@
+{
+  "unit": "RQ-20261101-e5b1-01",
+  "run_id": "41577241163",
+  "commit_sha": "27a04a1af7f9169ef952d64f5629eacc6155c7ee",
+  "run_url": "https://github.com/benbaichmankass/JTA-Trader/actions/runs/41577241163",
+  "timeout_minutes": 30,
+  "commands": [
+    {
+      "index": 0,
+      "argv": [
+        "python3",
+        "scripts/research/macro_event_study_run.py",
+        "--kind",
+        "nahb_housing_market_index",
+        "--snapshots",
+        "comms/macro/econ_calendar_snapshots.jsonl,comms/macro/econ_calendar_snapshots_survey_backfill.jsonl",
+        "--symbol",
+        "XHB",
+        "--horizons",
+        "1,3,5",
+        "--primary-horizons",
+        "1,3,5",
+        "--min-n",
+        "100",
+        "--t-bar",
+        "3.5",
+        "--expected-sign",
+        "either",
+        "--population",
+        "nahb_housing_market_index releases (live feed + survey-consensus backfill) joined to XHB daily closes",
+        "--out",
+        "comms/research/RQ-20261101-e5b1-01/41577241163"
+      ],
+      "log": "comms/research/RQ-20261101-e5b1-01/41577241163/logs/cmd-0.log",
+      "exit_code": 0,
+      "seconds": 1.6
+    }
+  ],
+  "all_ok": true
+}
