@@ -1,4 +1,5 @@
 name: research-script-run-kaggle
+run-name: research-script-run-kaggle ${{ inputs.research_unit }}   # REFILL 2026-11-03: the unit id is visible on an in-flight run, so dispatch_queue.fired_run_units can dedupe before any stamp PR exists
 
 # RESEARCH-ROUTER (2026-10-13): the KAGGLE GPU twin of research-script-run.yml / -trainer.yml.
 # A unit with `compute: gpu` is sent here by the token-free dispatcher (scripts/research/research_compute.yaml);

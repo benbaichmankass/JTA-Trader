@@ -37,7 +37,7 @@ import subprocess
 import sys
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Sequence
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
@@ -1167,6 +1167,51 @@ def pending_stamp_units(api: Any = _gh_api_json) -> Optional[Dict[str, str]]:
     return out
 
 
+#: The workflows whose runs carry a unit id in their `run-name` (REFILL 2026-11-03).
+RESEARCH_RUN_WORKFLOW_FILES = ("research-script-run.yml", "research-script-run-data.yml",
+                               "research-script-run-kaggle.yml", "research-script-run-kaggle-cpu.yml",
+                               "research-script-run-trainer.yml")
+_UNIT_IN_TITLE_RE = re.compile(r"\b(RQ-\d{8}-(?:\d{3}|[0-9a-f]{4}-\d{2}))\b")
+
+
+def fired_run_units(now: datetime, api: Any = _gh_api_json, *, hours: float = 48.0,
+                    files: Sequence[str] = RESEARCH_RUN_WORKFLOW_FILES) -> Optional[Dict[str, datetime]]:
+    """{unit id -> created_at of its NEWEST research run} over the last `hours`, or None when gh could not answer.
+
+    WHY (REFILL, 2026-11-03): a unit fired by a cycle has no stamp on main until its stamp PR merges, no
+    open stamp PR until the `land` job (which first lands the previous batch, up to ~50 min) reaches its
+    stamp step, and no result row until the run's artifact is collected by a LATER cycle. A cycle every
+    ~10 min instead of every ~40 would re-fire it in that gap. The run itself is the one record that exists
+    the moment the fire succeeds, and `run-name` puts the unit id in its `display_title`. Read as evidence
+    of dispatch exactly like an open stamp PR: see `unit_pending_by_run`."""
+    since = (now - timedelta(hours=hours)).strftime("%Y-%m-%dT%H:%M:%SZ")
+    out: Dict[str, datetime] = {}
+    for fname in files:
+        data = api(f"repos/{{owner}}/{{repo}}/actions/workflows/{fname}/runs?per_page=100&created=%3E%3D{since}")
+        if not isinstance(data, dict) or not isinstance(data.get("workflow_runs"), list):
+            return None
+        for r in data["workflow_runs"]:
+            if not isinstance(r, dict):
+                continue
+            m = _UNIT_IN_TITLE_RE.search(str(r.get("display_title") or ""))
+            when = _parse_ts(r.get("created_at"))
+            if m and when is not None and (m.group(1) not in out or when > out[m.group(1)]):
+                out[m.group(1)] = when
+    return out
+
+
+def unit_pending_by_run(entry: Dict[str, Any], run_at: Optional[datetime], result_at: Optional[datetime]) -> bool:
+    """True when the unit's newest research run is NEWER than both its stamp on main and its latest landed
+    result, i.e. it was fired and neither bookkeeping record has caught up. Once either does, the ordinary
+    cadence/retry logic in `_is_due` owns the unit again, so a failed run is still retried on its terms."""
+    if run_at is None:
+        return False
+    for ref in (_parse_ts(entry.get("last_dispatched_at")), result_at):
+        if ref is not None and ref >= run_at:
+            return False
+    return True
+
+
 _STAMP_PATCH_RE = re.compile(r"^\+last_dispatched_at:\s*'?([^'\s]+)'?\s*$", re.M)
 
 
@@ -1496,6 +1541,22 @@ def main(argv: Optional[List[str]] = None) -> int:
             if pending:
                 print("pending stamps (open stamp PRs, treated as dispatched): "
                       + ", ".join(f"{u} <- {p}" for u, p in sorted(pending.items())), file=sys.stderr)
+    # REFILL 2026-11-03: units fired by a recent cycle whose stamp PR / result row does not exist yet (see fired_run_units).
+    if args.fire and args.check_open_stamp_prs and not pressure["block"] and pending is not None:
+        _runs = fired_run_units(now)
+        if _runs is None:
+            print("::warning::research-queue-dispatch could not list recent research runs via gh -- "
+                  "deferring every fire this cycle (a unit may already be dispatched)", file=sys.stderr)
+            pending = None
+        else:
+            _by_run = 0
+            for _j in jobs:
+                _res_at, _ = latest_result_at(_j.id)
+                if _j.id not in pending and unit_pending_by_run(_j.raw, _runs.get(_j.id), _res_at):
+                    pending[_j.id] = f"run fired {_runs[_j.id].isoformat()} (no stamp / result yet)"
+                    _by_run += 1
+            if _by_run:
+                print(f"pending by in-flight/recent run (treated as dispatched): {_by_run} unit(s)", file=sys.stderr)
     # IDLE-CAPACITY FILL (RESEARCH-ROUTER, operator 2026-10-13: "get the most out of all the resources"): when a backend
     # has more free slots than units due for it, pull forward recurring units that opted in with `idle_fill: true`
     # and are waiting only on their cadence. Fire path only (a dry run has no occupancy to fill), lowest priority
@@ -1575,8 +1636,7 @@ def main(argv: Optional[List[str]] = None) -> int:
             # not merged yet. Not due for THIS cycle, and not stamped again
             # (a second stamp of the same line is what made #16770 `dirty`).
             row.update(outcome=NOT_DUE,
-                       reason=f"already dispatched: open stamp {pending[job.id]} modifies "
-                              f"research/queue/{job.id}.yaml and has not merged yet")
+                       reason=f"already dispatched: {pending[job.id]} -- its stamp has not merged / its result has not landed yet")
             decisions.append(row)
             continue
 
