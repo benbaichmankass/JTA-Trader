@@ -82,6 +82,19 @@ def decide(row: Mapping[str, float], model: Dict[str, Any]) -> Dict[str, Any]:
             "pred_net_r": best, "cost_r_est": est, "gated": gated}
 
 
+def _audit_inputs(row: Mapping[str, float], df: pd.DataFrame, n_ref: int) -> str:
+    """``;feat=<20 values in meta.features order, 5dp>;own_bar=<ts>|close|volume;eval_at=<UTC>`` appended to the eval audit
+    reasons so a live score can be diffed against a replay (PI-20261103-MLV2-0001: the BTC/XRP residual after the
+    perp-candles fix). LOGGING ONLY: it reads values already computed, never changes a decision, and never raises."""
+    try:
+        feats = ",".join(f"{float(row[k]):.5f}" for k in F.FEATURES if k in row)
+        last = df.iloc[-1]
+        return (f";feat={feats};own_bar={pd.Timestamp(last['ts']).strftime('%Y-%m-%dT%H:%M')}|{float(last['close']):.6g}"
+                f"|{float(last['volume']):.8g};eval_at={pd.Timestamp.now(tz='UTC').strftime('%H:%M:%S')}")
+    except Exception:  # noqa: BLE001 -- an audit tail must never change or break a decision
+        return ""
+
+
 def order_package(cfg: dict, candles_df: Optional[pd.DataFrame] = None,
                   reference_frames: Optional[Mapping[str, pd.DataFrame]] = None,
                   model: Optional[Dict[str, Any]] = None) -> dict:
@@ -103,17 +116,18 @@ def order_package(cfg: dict, candles_df: Optional[pd.DataFrame] = None,
     if row is None:
         raise ValueError("feature_row_unformable")
     n_ref = int(row.pop("_n_reference"))
+    audit_tail = _audit_inputs(row, df, n_ref)   # logging only (PI-20261103-MLV2-0001): the inputs behind the score
     min_ref = int(cfg.get("min_reference_symbols", 40))
     if n_ref < min_ref:
         raise ValueError(f"reference_symbols:{n_ref}<{min_ref}")
     d = decide(row, model)
     if d["gated"]:
         raise ValueError(f"cost_gate:est_cost_r={d['cost_r_est']:.4f}>{float(meta['cost_gate']['max_cost_r']):g}"
-                         f";p_long={d['p_long']:.4f};p_short={d['p_short']:.4f};tau={float(meta['tau']):.4f};n_ref={n_ref}")
+                         f";p_long={d['p_long']:.4f};p_short={d['p_short']:.4f};tau={float(meta['tau']):.4f};n_ref={n_ref}{audit_tail}")
     from src.runtime.tp_revision import declared_rule
     if d["side"] == "none":
         raise ValueError(f"below_tau:pred={d['pred_net_r']:.4f};p_long={d['p_long']:.4f};p_short={d['p_short']:.4f}"
-                         f";tau={float(meta['tau']):.4f};n_ref={n_ref}")
+                         f";tau={float(meta['tau']):.4f};n_ref={n_ref}{audit_tail}")
     atr = F.atr_last(df)
     entry = float(df["close"].iloc[-1])  # next-bar open ~ this close; the venue fills at market
     s = 1.0 if d["side"] == "long" else -1.0
