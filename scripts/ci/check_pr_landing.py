@@ -443,7 +443,6 @@ def stamp_only_violation(root: Path, base: str, path: str) -> Optional[str]:
     if rc != 0:
         return "diff unreadable"
     base_re = r"^(?:" + "|".join(re.escape(f) for f in fields) + r"): " + _STAMP_VALUE
-    line_re = re.compile(base_re + r"\s*$")
     # RESEARCH-FLOW 2026-11-02: a RE-ARMED unit carries `last_dispatched_at: null   # re-armed ... <why>` -- a trailing
     # comment on the line the stamp REMOVES. The strict regex refused every such stamp PR (#22439/#22454/#22463 sat red
     # on R5 and their units read as already dispatched). A comment on the REMOVED (old) line is the stamp's own

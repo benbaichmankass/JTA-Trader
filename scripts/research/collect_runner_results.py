@@ -224,7 +224,7 @@ def _on_origin_main(root: Path, unit: str, run_id: int) -> bool:
     for rel in (f"research/results/{unit}/{run_id}.jsonl", f"comms/research/{unit}/{run_id}/run-manifest.json"):
         try:
             if subprocess.run(["git", "-C", str(root), "cat-file", "-e", f"origin/main:{rel}"],
-                              capture_output=True, timeout=30).returncode == 0:
+                              capture_output=True, timeout=30, check=False).returncode == 0:
                 return True
         except (OSError, subprocess.SubprocessError):
             return False
