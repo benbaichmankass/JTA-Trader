@@ -1,0 +1,16 @@
+{
+  "based_on": "20261103T033501259486Z-4f0d64dd.json",
+  "due_when": {
+    "clears_when": "the operator decides: HF plan upgrade, freed lake space, or trainer as the ETF store; then the 120 trainer-only symbols are re-published (etf_chunk_split + free_sources import-etf + hf_publish upload) and a chunk line shows lake=1",
+    "kind": "event"
+  },
+  "id": "PI-20261102-PTDVAI3R-0006",
+  "next_action": "ask_operator",
+  "origin": {
+    "kind": "session",
+    "ref": "run 41552388391 chunks 3-4 (02:24Z, 03:15Z)",
+    "rerun": "grep 'Commit of .* files failed' in the etf-history-pipeline fetch log; check 'lake=' on each 'chunk N:' line"
+  },
+  "state": "queued",
+  "what": "HF lake publish FAILED for chunks 3 and 4 of run 41552388391 (log: 'Commit of 250/200/125/100/75/50 files failed (BadRequestError ... then HfHubHTTPError ...)'; the HTTP reason is truncated in the log). Chunks 1-2 published. The designed fallback pushed 120 symbols in FULL to the trainer: etf_history 3,688 MB / 15,295 partitions, free disk 45 -> 41 GB. If the lake keeps failing, the remaining 681 symbols add ~20 GB (free ~21 GB; the mid-run stop floor is 10 GB) and every run goes red. Cause undiagnosed; unverified hypotheses: an HF repo commit-rate or size limit. Owner: lane MARKET-DATA-LAKE (scripts/data_lake/hf_publish.py: log the full HfHubHTTPError text/status). UPDATE 2026-11-03 (CAUSE FOUND from the same run log; the reason was on the lines after each failure line): '403 Forbidden: Private storage limit reached for user bentzbk, please upgrade your plan to increase your private storage limit'. The HF account is on the FREE plan (is_pro=false; this repo's PLAN_PRIVATE_BYTES assumes 100 GB private for free, 1 TB for pro); the core crypto lake alone is projected ~50 GB and the ETF 1m base ~31 GB (3,688 MB for ~120 symbols, an inference), so the ETF base cannot fit. Chunks 3-4 (120 symbols) stay on the trainer until space exists. Decision for the operator: upgrade the HF plan (PRO), or free lake space, or accept the trainer as the ETF store of record. hf_publish.py now logs the full reason and treats it as non-retryable (PR for lane ETF-throughput)."
+}
