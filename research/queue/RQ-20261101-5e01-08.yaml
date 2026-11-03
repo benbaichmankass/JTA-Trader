@@ -1,7 +1,7 @@
 id: RQ-20261101-5e01-08
 title: 'Structure-based SL+TP (causal swing / FVG, ratcheting) vs the declared exit on gld_pullback_1d (alpaca_portfolio (mirror)): does it beat the current
   exit net of the full cost stack, held-out?'
-status: queued
+status: done
 cadence: once
 theme: live_strategy
 priority: 1
@@ -128,3 +128,17 @@ related:
 - docs/research/structure-exits-default-scope-2026-11-01.md
 - src/runtime/structure_levels.py
 last_dispatched_at: '2026-11-03T01:57:22+00:00'
+grading:
+  attested: RULE-STRUCTURE-EXITS-V1
+  auto: true
+  awaiting: more_data
+  decision_rule_id: RULE-STRUCTURE-EXITS-V1
+  evidence:
+  - research/results/RQ-20261101-5e01-08/41556493311.jsonl
+  graded_at: '2026-11-03'
+  grader: scripts/research/queue_grade.py
+  note: 'indeterminate is the pre-registered under-powered/null outcome: complete, but NOT a pass and
+    NOT a kill'
+  reason: 1 row(s), all measured, all indeterminate
+  rows: 1
+  verdict: indeterminate

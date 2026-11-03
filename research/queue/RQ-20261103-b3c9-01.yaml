@@ -84,7 +84,7 @@ run:
   inputs:
     research_unit: RQ-20261103-b3c9-01
   timeout_minutes: 30
-status: queued
+status: done
 theme: macro
 title: 'Calendar event study (wholesale_inventories): does the wholesale_inventories surprise vs the PIT survey consensus predict SPY forward returns at 1-5 trading
   days?'
@@ -98,3 +98,17 @@ why_this_matters: '`wholesale_inventories` has NO macro event study in the queue
   0 wholesale_inventories units), while sibling classes already have repeated reads; the calendar-event-types work (CALENDAR-EVENT-TYPES, operator 2026-10-26) needs
   every collected class with a defined survey surprise measured before any non-zero news-layer weight. wholesale inventory build is a demand/pipeline read; broad
   equity (SPY) is the liquid exposure. The t-bar is 3.5 as in the d5dd/3ef3/e5b1 batches, so a single-class PASS is a discovery lead, not a result.'
+last_dispatched_at: '2026-11-03T11:54:43+00:00'
+grading:
+  attested: RULERQ20261103b3c901
+  auto: true
+  decision_rule_id: RULERQ20261103b3c901
+  evidence:
+  - research/results/RQ-20261103-b3c9-01/41631551376.jsonl
+  graded_at: '2026-11-03'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail

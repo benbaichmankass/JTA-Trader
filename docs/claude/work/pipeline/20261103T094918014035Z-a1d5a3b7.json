@@ -1,0 +1,16 @@
+{
+  "due_when": {
+    "check_every_days": 7,
+    "due_date": "2026-11-10",
+    "kind": "date"
+  },
+  "id": "PI-20261103-6GNSZYUN-0009",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "SOAK-REGRADE 2026-11-03, docs/claude/work/findings/soak-regrade-20261103.md (ITERATE orphan)",
+    "rerun": "python3 scripts/research/iteration_orphans.py --json  # trend_donchian_eth_prop must read covered; and python3 scripts/ops/mandate_resolver.py --leg trend_donchian_eth_prop --from S1 --to S2 --account <real-money acct> --json"
+  },
+  "state": "queued",
+  "what": "ITERATION ORPHAN trend_donchian_eth_prop (Stage-0 verdict fail): no queued research unit carries an iteration: block for it (programme-review rule). n=165, net -0.25R, 1/4 folds positive, faithful, full cost stack (11 fee/3 slip/1 funding) -> RULE-D1 FAIL. Also on prop rosters breakout_2/tradeify_1/velotrade_1 (prop superset applies). Diagnose the loss from source_run rows (cost drag vs signal), register the next variant; never retire here. Close when a unit with iteration.subject=trend_donchian_eth_prop is queued (iteration_orphans reads covered)."
+}

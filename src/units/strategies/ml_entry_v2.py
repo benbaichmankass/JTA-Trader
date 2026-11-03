@@ -59,7 +59,12 @@ def monitor(cfg, candles_df, open_pkg):  # noqa: ARG001 -- canonical signature
     try:
         from datetime import datetime, timezone
         from src.units.strategies.claude_desk import max_hold_verdict
-        return max_hold_verdict(open_pkg, datetime.now(timezone.utc))
+        base = max_hold_verdict(open_pkg, datetime.now(timezone.utc))
+        if isinstance(base, dict) and base.get("action") == "close":
+            return base
+        # STRUCTURE-EXITS-DEFAULT: the declared structure exit (absent = byte-identical).
+        _sx = _base.structure_verdict(open_pkg, candles_df)
+        return base if _sx is _base._NOT_DECLARED else _sx
     except Exception:  # noqa: BLE001 -- a monitor must never raise
         logger.debug("ml_entry_v2.monitor: verdict failed", exc_info=True)
         return None

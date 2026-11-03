@@ -130,7 +130,7 @@ jobs:
        (github.event.issue.user.login == github.repository_owner ||
         github.event.issue.user.login == 'github-actions[bot]') &&
        contains(github.event.issue.labels.*.name, 'vm-diag-request'))
-    runs-on: ubuntu-latest
+    runs-on: ${{ fromJSON(vars.INFRA_RUNS_ON || '"ubuntu-latest"') }}  # GH-CAPACITY-INFRA-RUNNER: self-hosted jta-infra when vars.INFRA_RUNS_ON is armed, else hosted
     timeout-minutes: 5
     steps:
       - name: Require VM host secrets (fail closed)

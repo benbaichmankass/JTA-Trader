@@ -132,3 +132,44 @@ Gates this adds or changes: **none** (research tooling and pre-registered units;
 
 **Not done, said plainly:** no run has been made (no results exist for any of these units); the live monitor adapter, venue amend paths, replay-parity fixtures and journal schema (§5.4 steps 2-4) are untouched; the random-exit control harness is not built; the coverage-matrix `structure_exit` column is not added.
 **Timeframe caveat:** the harness `--structure-exit` reads pivots on the leg's own bar frame; legs with overnight gaps (alpaca ETFs on 1h) need the daily/session mapping that only the 5e03 path implements.
+
+## 7. Live wiring 2026-11-03 (lane STRUCTURE-EXITS-LIVE-WIRING; § 5.4 steps 2-4 built now)
+
+Operator 2026-11-03 ~07:05Z, verbatim: *"Build it now - we said it's the new default until we prove something else works better (instead of default being no active management)"*.
+Gates this adds or changes: **none** (a declared per-leg exit field like `tp_revision`; no `*_ENABLED` flag, no third gate; no leg declares it in this change).
+
+| Piece | Where | State |
+|---|---|---|
+| `structure_exit` verdict source (pure; imports `structure_levels.py`, no new swing code) | `src/runtime/structure_exit_live.py` | built. Selected per leg by `structure_exit: "pivot=N"` or `{pivot, buffer_atr, min_r, fvg}` in `config/strategies.yaml`, threaded into package meta |
+| Monitor wiring | `trend_donchian`, `htf_pullback_trend_2h`, `ml_entry`, `ml_entry_v2` `monitor()` | built; runs after every close path (a close beats a move) and replaces the chandelier + `tp_revision` for a selected leg. Unselected: 0 diffs vs `origin/main` d706ab1c over 1,728 monitor ticks (829 non-None verdicts) on the recorded ADA 2h fixture, one-off check; committed test asserts the structure code is never reached |
+| Venue amend | existing exchange-first modify path (`order_monitor._apply_update` -> `modify_open_order`: Bybit trading-stop / leg amend, Alpaca stop via `alpaca_amend.tighten` read-back + TP PATCH, IB OCA re-arm); prop via `prop_trail.plan_trail` / `_tp_step` (structure branch; TP only where `TP_AMEND_SUPPORTED`) | reused, not rewritten. A refused amend leaves `order_packages.sl/tp` unchanged so the deterministic verdict re-fires next tick (retried, never dropped) |
+| Move journal | `runtime_logs/structure_exit_moves.jsonl`, schema `JOURNAL_FIELDS` (level type, price, formed/confirmed bar, reason, before/after SL+TP, bar id, per-leg outcome, venue answer) | built. `venue_readback` is the venue's ACK (`kind: ack`); Alpaca's SL path is itself a read-back (`alpaca_amend.tighten`); Bybit/IB are not re-read here |
+| Replay parity + lookahead-negative | `tests/test_structure_exit_live.py` | built: live monitor ticked on growing frames == harness form (full-frame detector + `StructureExit.on_bar_close`) on recorded 2h and 4h bars, same level list each bar; future-bar mutation never changes a verdict |
+
+**Measured (step 2), `/api/diag/*` 2026-11-03 07:32Z:** monitor pass interval max 72.2 s over 28 intervals since the 07:18Z process start (requirement 60 s, 1 breach), pass duration last 4.3 s / max 45.6 s; candles are fetched fresh from the venue each pass (`_build_monitor_ohlcv_fetcher`). So bar-close-to-verdict latency is bounded by one pass interval plus one pass, about 1-2 min, against bars of 1h / 2h / 4h / 1d (leg timeframes from `config/strategies.yaml`: trend_donchian 1h and 4h legs, htf_pullback 2h / 1h / 1d legs, ml_entry / ml_entry_v2 1h). Per-move latency is not measured until a leg is selected (journal `ts` minus `bar_ts`).
+
+**Stated difference from the harness arm:** the harness `start()` can set the initial stop WIDER than the ATR stop (clamped to 3x); live never loosens past the entry stop (§ 5.2 rule 3), so on those trades live starts at the tighter stop and R is the entry R. When a structure TP is absent the harness rests no TP; live keeps the resting TP (both brackets always exist).
+**Not done:** no leg selected (Tier-3, per-leg); first observed move per venue (the mechanics proof) needs a selected leg.
+
+### 7.1 Per-leg enable proposal (for the manager; each ON is a Tier-3 `structure_exit:` declaration, operator merge)
+
+Frame (operator 2026-11-03): structure is the default exit unless something else is PROVEN better on a measured unit. Verdicts read from `research/queue/*.yaml` `grade.verdict` on `origin/main` 2026-11-03 ~09:30Z. 5e01 = dynamic `--structure-exit` (the form now wired live); 5e02 = static `--trail-level` swing/FVG. FAIL = the declared exit beat every structure arm net of cost; INDETERMINATE = incumbent below the n floor.
+
+| Leg | Current exit | Measured structure verdict | Proposed | Why |
+|---|---|---|---|---|
+| trend_donchian_xrp_4h | chandelier + stale 8 | 5e01-05 FAIL, 5e02-05 FAIL | **OFF** | declared exit proven better (A +13.7R vs S 2.5..3.8R) |
+| trend_donchian_sol_prop | chandelier | 5e01-06 FAIL, 5e02-06 FAIL | **OFF** | declared exit proven better (A +48.3R vs S <= 35.9R) |
+| trend_donchian_eth_prop (+ breakout_2) | chandelier | 5e01-07 FAIL, 5e02-07 FAIL | **OFF** | declared exit proven better |
+| trend_donchian_eth_4h | chandelier + measured-move TP | 5e02-04 FAIL; 5e01-04 re-armed, pending | **OFF** | a structure form measured worse; re-read when 5e01-04 lands |
+| ada_pullback_2h | chandelier | 5e02-02 FAIL; 5e01-02 pending | **OFF** | as above (5e01-02 pending) |
+| xrp_pullback_2h | chandelier | 5e02-03 FAIL; 5e01-03 pending | **OFF** | as above (5e01-03 pending) |
+| iaum_pullback_1d + gld_pullback_1d | chandelier | 5e01-01/08 + 5e02-01/08 INDETERMINATE (ONE test: IAUM maps to GLD data) | **ON** | nothing proven better (incumbent n=38 < 39); structure arms +7.3..11.1R vs A +21.7R is directional against, so the manager may prefer to wait for the n floor |
+| trend_donchian_xrp_adx25 | chandelier + stale 8 | none (sibling xrp_4h FAIL, same symbol/exit family) | **OFF (judgement)** | strict frame says ON; the sibling's FAIL on the same symbol and exit is the better prior |
+| ml_entry | ATR bracket + `ml_first_passage` TP revision | 5e03-01 queued, no result | **ON** | none measured; note it REPLACES the TP revision; live levels use the 1h frame, 5e03 measures DAILY levels, so the live form is not the one under test |
+| ml_entry_v2 | ATR bracket, 24h time stop | none | **ON** | none measured |
+| trend_donchian, trend_donchian_1h, _sol, _eth (1h); _sol_4h, _ada_4h, _avax_4h | chandelier | none | **ON** | none measured |
+| htf_pullback_trend_2h, eth_pullback_2h, eth_pullback_prop_2h, sol_pullback_2h, avax_pullback_2h | chandelier | none | **ON** | none measured |
+| mgc / mhg / tlt / ief / slv / gdx _pullback_1d | chandelier | none | **ON** | none measured |
+| gld / spy / qqq / tlt _pullback_1h | chandelier (gld: stale 24) | none | **OFF until built** | overnight-gap legs need the session-aware level frame the live path lacks (PI-20261103-GVVPXRH2-0001); not a verdict |
+
+Every ON is a proposal, not a decision: the structure arm on these legs has no evidence for or against, and the live form starts from the entry stop (never wider), so the first live move per venue is the mechanics proof (OPERATING-PLAN § 2). The roster/status of each leg (testing vs production) is not re-derived here; `scripts/ops/strategy_status.py` is the source.

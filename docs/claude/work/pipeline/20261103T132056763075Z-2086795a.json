@@ -1,0 +1,23 @@
+{
+  "based_on": "20261103T102021927195Z-fe79b320.json",
+  "due_when": {
+    "check_every_days": 1,
+    "clears_when": "a system-actions or vm-diag-snapshot job AND a research-queue-dispatch dispatch job each show runner_name trainer-jta-infra-*",
+    "kind": "observation"
+  },
+  "id": "PI-20261103-RAM7EH86-0001",
+  "next_action": "check_observation",
+  "observation": {
+    "due_by": "2026-11-05",
+    "how_to_check": "actions list_workflow_jobs on the newest system-actions (or vm-diag-snapshot) run and the newest research-queue-dispatch run; read runner_name and started_at minus created_at",
+    "what": "after PR #22624 merges and the install + smoke issues run, one system-actions or vm-diag-snapshot job and one research-queue-dispatch dispatch job run on a trainer-jta-infra-* runner"
+  },
+  "origin": {
+    "kind": "session",
+    "ref": "branch claude/infra-runner-jta-infra (held Tier-2 PR)",
+    "rerun": "open owner issue labelled infra-runner-install, then infra-runner-smoke; read their comments; list_workflow_jobs on the next system-actions + research-queue-dispatch runs and read runner_name/started_at"
+  },
+  "state": "done",
+  "terminal_reason": "OBSERVED 2026-11-03: (1) diag relay trainer-vm-diag run 41637864532 on trainer-jta-infra-3, created 12:41:40Z started 12:41:43Z (3 s), success (earlier vm-diag-snapshot run 41636162263 on trainer-jta-infra-3, 2 s); (2) research-queue-dispatch run 41639320813 dispatch job on trainer-jta-infra-4, created 12:52:06Z started 12:52:08Z (2 s), success; smoke run 41635578220 on trainer-jta-infra-1, 2 s. Defect found and hot-fixed: job hook needed a .sh path (every job read red 12:28-12:41Z), durable fix PR #22652. Remaining cost: full re-clone per job (checkout 6:34 on the dispatch job) is PI-20261103-RAM7EH86-0003.",
+  "what": "GH-CAPACITY-INFRA-RUNNER post-merge: install the jta-infra runners (infra-runner-install issue), smoke them (infra-runner-smoke, arms vars.INFRA_RUNS_ON), then observe one system-action / diag relay and one research-queue-dispatch run land on a trainer-jta-infra-* runner with queued->started time. Row stays landed_unproven until observed."
+}

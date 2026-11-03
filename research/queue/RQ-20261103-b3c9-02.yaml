@@ -84,7 +84,7 @@ run:
   inputs:
     research_unit: RQ-20261103-b3c9-02
   timeout_minutes: 30
-status: queued
+status: done
 theme: macro
 title: 'Calendar event study (construction_spending_mom): does the construction_spending_mom surprise vs the PIT survey consensus predict XHB forward returns at 1-5
   trading days?'
@@ -98,3 +98,17 @@ why_this_matters: '`construction_spending_mom` has NO macro event study in the q
   0 construction_spending_mom units), while sibling classes already have repeated reads; the calendar-event-types work (CALENDAR-EVENT-TYPES, operator 2026-10-26)
   needs every collected class with a defined survey surprise measured before any non-zero news-layer weight. construction spending feeds homebuilders directly (XHB),
   sign not pre-registered. The t-bar is 3.5 as in the d5dd/3ef3/e5b1 batches, so a single-class PASS is a discovery lead, not a result.'
+last_dispatched_at: '2026-11-03T11:54:43+00:00'
+grading:
+  attested: RULERQ20261103b3c902
+  auto: true
+  decision_rule_id: RULERQ20261103b3c902
+  evidence:
+  - research/results/RQ-20261103-b3c9-02/41631553969.jsonl
+  graded_at: '2026-11-03'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail

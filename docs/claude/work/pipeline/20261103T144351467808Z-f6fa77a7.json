@@ -1,0 +1,21 @@
+{
+  "due_when": {
+    "check_every_days": 1,
+    "clears_when": "schedule-event runs of infra-runner-health appear at ~15-min spacing for 2 h, or a root cause is filed and fixed",
+    "kind": "observation"
+  },
+  "id": "PI-20261103-RAM7EH86-0005",
+  "next_action": "check_observation",
+  "observation": {
+    "due_by": "2026-11-04",
+    "how_to_check": "list_workflow_runs infra-runner-health.yml filtered event=schedule",
+    "what": "infra-runner-health fires on its schedule"
+  },
+  "origin": {
+    "kind": "session",
+    "ref": "infra-runner-health run list 2026-11-03",
+    "rerun": "actions list_workflow_runs infra-runner-health.yml, event=schedule; expect one run per 15 min"
+  },
+  "state": "queued",
+  "what": "infra-runner-health's schedule ('4,19,34,49 * * * *') never fired between the #22624 merge (~12:18Z) and 14:40Z on 2026-11-03: the run list holds only 3 workflow_dispatch runs. So the automatic hosted fallback was not running when the trainer disk filled. Cause unknown (GitHub schedule activation lag on a new workflow, or schedule throttling on this repo); not yet investigated. Also: on a graceful runner stop GitHub kept reporting runners 'online' for >1 min (health run 41654838473 at 14:33:31Z read online=2/4, action=noop)."
+}
