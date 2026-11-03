@@ -1,0 +1,40 @@
+{
+  "unit": "RQ-20261103-b3c9-02",
+  "run_id": "41631553969",
+  "commit_sha": "294bbcd36fa04faeb408067ed0e66c70bf5e0431",
+  "run_url": "https://github.com/benbaichmankass/JTA-Trader/actions/runs/41631553969",
+  "timeout_minutes": 30,
+  "commands": [
+    {
+      "index": 0,
+      "argv": [
+        "python3",
+        "scripts/research/macro_event_study_run.py",
+        "--kind",
+        "construction_spending_mom",
+        "--snapshots",
+        "comms/macro/econ_calendar_snapshots.jsonl,comms/macro/econ_calendar_snapshots_survey_backfill.jsonl",
+        "--symbol",
+        "XHB",
+        "--horizons",
+        "1,3,5",
+        "--primary-horizons",
+        "1,3,5",
+        "--min-n",
+        "100",
+        "--t-bar",
+        "3.5",
+        "--expected-sign",
+        "either",
+        "--population",
+        "construction_spending_mom releases (live feed + survey-consensus backfill) joined to XHB daily closes",
+        "--out",
+        "comms/research/RQ-20261103-b3c9-02/41631553969"
+      ],
+      "log": "comms/research/RQ-20261103-b3c9-02/41631553969/logs/cmd-0.log",
+      "exit_code": 0,
+      "seconds": 2.3
+    }
+  ],
+  "all_ok": true
+}

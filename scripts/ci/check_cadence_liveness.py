@@ -175,6 +175,12 @@ class Cadence(NamedTuple):
 #: healthy-looking watch forever". That is the new-table-wiring lesson: a guard
 #: cheaper to lie to than to satisfy is worse than no guard.
 CADENCE_REGISTRY: dict[str, dict] = {
+    # ── GH-CAPACITY-INFRA-RUNNER (2026-11-03): a routing check, writes nothing to git.
+    "infra-runner-health.yml": {
+        "receipt": None,
+        "why": "reads the runner list and writes only the repo variable INFRA_RUNS_ON (not in git), so no repo receipt exists; a run that "
+               "falls back to hosted exits 1 and a dead run is observed by claude-run-failure-alert",
+    },
     # ── ETF-HISTORY-PIPELINE (2026-11-01): the stores live on the trainer, not in git, so there is no repo receipt.
     "etf-history-pipeline.yml": {
         "receipt": None,
@@ -414,7 +420,9 @@ CADENCE_REGISTRY: dict[str, dict] = {
     "doc-audit-weekly.yml": {"receipt": None, "why": "no in-repo trace; Actions API only"},
     "health-snapshot.yml": {"receipt": None, "why": "no in-repo trace; Actions API only"},
     "main-tree-watch.yml": {"receipt": None, "why": "no in-repo trace; Actions API only"},
-    "pytest-run.yml": {"receipt": None, "why": "the 30-min post-merge backstop (GH-CAPACITY-PR-CI-FANOUT 2026-10-15) commits nothing: a tick either no-ops (HEAD already graded) or runs the full suite; its trace is the Actions run history it reads itself, and a red/dead tick pages via claude-run-failure-alert"},
+    "repo-inventory.yml": {"receipt": None, "why": "advisory daily inventory of main (CI-STREAMLINE 2026-11-03, moved off PRs); writes only a 3-day Actions artifact, nothing in git; a dead run pages via claude-run-failure-alert"},
+    "guards.yml": {"receipt": None, "why": "the 2-h post-merge `--all` backstop of main (CI-STREAMLINE 2026-11-03, replacing the per-push run) commits nothing; its trace is the Actions run history, a red/dead scheduled run pages via claude-run-failure-alert and surfaces in render_due_list.py::src_red_crons"},
+    "pytest-run.yml": {"receipt": None, "why": "the 2-h (was 30-min until CI-STREAMLINE 2026-11-03) post-merge backstop (GH-CAPACITY-PR-CI-FANOUT 2026-10-15) commits nothing: a tick either no-ops (HEAD already graded) or runs the full suite; its trace is the Actions run history it reads itself, and a red/dead tick pages via claude-run-failure-alert"},
     "oci-inventory.yml": {"receipt": None, "why": "no in-repo trace; Actions API only"},
     "purge-artifacts.yml": {"receipt": None, "why": "no in-repo trace; Actions API only"},
     "research-backtest-augment.yml": {"receipt": None, "why": "no in-repo trace; Actions API only"},

@@ -82,6 +82,19 @@ def decide(row: Mapping[str, float], model: Dict[str, Any]) -> Dict[str, Any]:
             "pred_net_r": best, "cost_r_est": est, "gated": gated}
 
 
+def _audit_inputs(row: Mapping[str, float], df: pd.DataFrame, n_ref: int) -> str:
+    """``;feat=<20 values in meta.features order, 5dp>;own_bar=<ts>|close|volume;eval_at=<UTC>`` appended to the eval audit
+    reasons so a live score can be diffed against a replay (PI-20261103-MLV2-0001: the BTC/XRP residual after the
+    perp-candles fix). LOGGING ONLY: it reads values already computed, never changes a decision, and never raises."""
+    try:
+        feats = ",".join(f"{float(row[k]):.5f}" for k in F.FEATURES if k in row)
+        last = df.iloc[-1]
+        return (f";feat={feats};own_bar={pd.Timestamp(last['ts']).strftime('%Y-%m-%dT%H:%M')}|{float(last['close']):.6g}"
+                f"|{float(last['volume']):.8g};eval_at={pd.Timestamp.now(tz='UTC').strftime('%H:%M:%S')}")
+    except Exception:  # noqa: BLE001 -- an audit tail must never change or break a decision
+        return ""
+
+
 def order_package(cfg: dict, candles_df: Optional[pd.DataFrame] = None,
                   reference_frames: Optional[Mapping[str, pd.DataFrame]] = None,
                   model: Optional[Dict[str, Any]] = None) -> dict:
@@ -103,15 +116,18 @@ def order_package(cfg: dict, candles_df: Optional[pd.DataFrame] = None,
     if row is None:
         raise ValueError("feature_row_unformable")
     n_ref = int(row.pop("_n_reference"))
+    audit_tail = _audit_inputs(row, df, n_ref)   # logging only (PI-20261103-MLV2-0001): the inputs behind the score
     min_ref = int(cfg.get("min_reference_symbols", 40))
     if n_ref < min_ref:
         raise ValueError(f"reference_symbols:{n_ref}<{min_ref}")
     d = decide(row, model)
     if d["gated"]:
-        raise ValueError(f"cost_gate:est_cost_r={d['cost_r_est']:.4f}>{float(meta['cost_gate']['max_cost_r']):g}")
+        raise ValueError(f"cost_gate:est_cost_r={d['cost_r_est']:.4f}>{float(meta['cost_gate']['max_cost_r']):g}"
+                         f";p_long={d['p_long']:.4f};p_short={d['p_short']:.4f};tau={float(meta['tau']):.4f};n_ref={n_ref}{audit_tail}")
     from src.runtime.tp_revision import declared_rule
     if d["side"] == "none":
-        raise ValueError(f"below_tau:pred={d['pred_net_r']:.4f}")
+        raise ValueError(f"below_tau:pred={d['pred_net_r']:.4f};p_long={d['p_long']:.4f};p_short={d['p_short']:.4f}"
+                         f";tau={float(meta['tau']):.4f};n_ref={n_ref}{audit_tail}")
     atr = F.atr_last(df)
     entry = float(df["close"].iloc[-1])  # next-bar open ~ this close; the venue fills at market
     s = 1.0 if d["side"] == "long" else -1.0
@@ -129,6 +145,8 @@ def order_package(cfg: dict, candles_df: Optional[pd.DataFrame] = None,
                  + ("; re-predicted at each 4h check-in by the ml_first_passage TP revision (RQ-20261101-383f-01)"
                     if declared_rule(cfg) == TP_RULE else ""),
                  **({"tp_revision": cfg["tp_revision"]} if declared_rule(cfg) == TP_RULE else {}),
+                 # STRUCTURE-EXITS-DEFAULT: declared structure exit; absent = no key, byte-identical.
+                 **({"structure_exit": cfg["structure_exit"]} if cfg.get("structure_exit") else {}),
                  "max_hold_min": int(br["horizon_h"]) * 60,
                  "features": {k: round(float(v), 6) for k, v in row.items()}},
     }
@@ -169,12 +187,70 @@ def monitor(cfg, candles_df, open_pkg):
         logger.debug("ml_entry.monitor: time-stop verdict failed", exc_info=True)
     if isinstance(base, dict) and base.get("action") == "close":
         return base
+    _sx = structure_verdict(open_pkg, candles_df)
+    if _sx is not _NOT_DECLARED and not _structure_sl_only(open_pkg):
+        return _sx  # full structure mode owns SL + TP (the TP revision does not run)
     try:
         from src.runtime.tp_revision import merge_verdict
-        return merge_verdict(base, tp_revision(cfg, candles_df, open_pkg))
+        merged = merge_verdict(base, tp_revision(cfg, candles_df, open_pkg))
     except Exception:  # noqa: BLE001 -- a monitor must never raise
         logger.debug("ml_entry.monitor: tp revision failed", exc_info=True)
-        return base
+        merged = base
+    if _sx is _NOT_DECLARED:
+        return merged
+    return merge_structure_sl(merged, _sx)
+
+
+def _structure_sl_only(open_pkg: Any) -> bool:
+    try:
+        from src.runtime.structure_exit_live import declared
+        p = declared(_meta(open_pkg))
+        return bool(p and p.get("sl_only"))
+    except Exception:  # noqa: BLE001
+        return False
+
+
+def merge_structure_sl(tp_side: Optional[Dict[str, Any]], sx: Optional[Dict[str, Any]]) -> Optional[Dict[str, Any]]:
+    """SL-ONLY structure mode (operator 2026-11-03, option B; record #22645): ONE owner per bracket side.
+
+    ``tp_side`` is the time-stop / ml_first_passage verdict and contributes ONLY its TP (``tp``, ``tp_reason``)
+    or a close; ``sx`` is the SL-only structure verdict and contributes ONLY ``sl`` (+ its ``structure_move``
+    journal record) or its ``structure_sl_cross`` close. A close from either side wins (the time stop's close
+    never reaches here). Any SL key on ``tp_side`` and any TP key on ``sx`` is dropped, so one tick can never
+    carry two SL owners or two TP owners to the venue."""
+    tp_side = dict(tp_side) if isinstance(tp_side, dict) else None
+    sx = dict(sx) if isinstance(sx, dict) else None
+    for v in (tp_side, sx):
+        if v is not None and v.get("action") == "close":
+            return v
+    out: Dict[str, Any] = {}
+    if tp_side:
+        out.update({k: v for k, v in tp_side.items() if k not in ("sl", "sl_reason")})
+    if sx:
+        if sx.get("sl") is not None:
+            out["sl"] = sx["sl"]
+        if isinstance(sx.get("structure_move"), dict):
+            mv = dict(sx["structure_move"])
+            mv["tp_after"] = mv.get("tp_before")  # the structure source did not move the TP
+            out["structure_move"] = mv
+    return out or None
+
+
+_NOT_DECLARED = object()
+
+
+def structure_verdict(open_pkg: Any, candles_df: Any):
+    """STRUCTURE-EXITS-DEFAULT: the declared structure exit on 1h closed bars (replaces the moving TP when
+    declared). Returns ``_NOT_DECLARED`` when the package does not declare it (byte-identical path)."""
+    try:
+        from src.runtime.structure_exit_live import declared, structure_exit_verdict
+        meta = _meta(open_pkg)
+        if declared(meta) is None:
+            return _NOT_DECLARED
+        return structure_exit_verdict(meta, open_pkg, candles_df, timeframe="1h")
+    except Exception:  # noqa: BLE001 -- a monitor must never raise
+        logger.debug("ml_entry.structure_verdict failed", exc_info=True)
+        return None
 
 
 # ----------------------------------------------------------------------------------------------- moving TP
@@ -216,7 +292,8 @@ def _checkin_frames(symbol: str, bar_iso: str, xs_symbols) -> tuple:
     from src.runtime.strategy_signal_builders import _ml_entry_reference_frames
     key = f"{symbol}|{bar_iso}"
     if key not in _TP_FRAMES:
-        own = _frame(fetch_candles(symbol, "1h", limit=400, bypass_cache=True))
+        from src.runtime.strategy_signal_builders import _ml_entry_candle_symbol
+        own = _frame(fetch_candles(_ml_entry_candle_symbol(symbol), "1h", limit=400, bypass_cache=True))
         if own is not None and (not len(own) or own["ts"].iloc[-1].isoformat() != bar_iso):
             own = None
         if len(_TP_FRAMES) > 256:

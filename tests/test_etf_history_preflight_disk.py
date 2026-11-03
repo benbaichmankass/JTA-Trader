@@ -161,3 +161,25 @@ def test_hf_storage_limit_is_described_in_full_and_not_retried():
     assert retryable is False
     assert mod.describe_hf_error(RuntimeError("HTTP 500 gateway timeout"))[1] is True
     assert "LAKE=0" in (WF / "etf-history-pipeline.yml").read_text()
+
+
+def test_etf_lake_publish_is_off_by_default_with_one_switch():
+    """Operator decision 2026-11-03: the TRAINER is the ETF 1m store of record; HF lake publish is OFF (one switch), so an
+    expected storage-quota refusal cannot turn every run red."""
+    text = (WF / "etf-history-pipeline.yml").read_text()
+    wf = yaml.safe_load(text)
+    assert wf["env"]["ETF_LAKE_PUBLISH"] == "0"
+    fetch = next(
+        s for s in next(iter(wf["jobs"].values()))["steps"] if s.get("id") == "fetch"
+    )
+    assert (
+        '"${ETF_LAKE_PUBLISH:-0}" = "1"' in fetch["run"]
+    )  # the lake attempt is gated on the switch
+    assert "TRAINER" in fetch["name"] and "OFF by default" in fetch["name"]
+    assert (
+        'rsync -a --partial -e "$SSH" chunk/ "$DEST"' in fetch["run"]
+    )  # lake off => the chunk is pushed to the trainer in full
+    assert (
+        "$(date" in fetch["run"] and "-lt 10" in fetch["run"]
+    )  # the 10 GB mid-run stop floor is unchanged
+    assert "-ge 15" in text  # and so is the 15 GB start floor

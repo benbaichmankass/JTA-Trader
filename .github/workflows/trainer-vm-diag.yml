@@ -155,7 +155,7 @@ jobs:
         github.event.issue.user.login == 'github-actions[bot]') &&
        (contains(github.event.issue.labels.*.name, 'trainer-vm-diag-request') ||
         contains(github.event.issue.labels.*.name, 'trainer-vm-heavy-request')))
-    runs-on: ubuntu-latest
+    runs-on: ${{ fromJSON(vars.INFRA_RUNS_ON || '"ubuntu-latest"') }}  # GH-CAPACITY-INFRA-RUNNER: self-hosted jta-infra when vars.INFRA_RUNS_ON is armed, else hosted
     # 2026-07-28: raised 10 -> 60. A 10-min cap silently killed legitimate heavy
     # trainer reads (a deep multi-year backtest / k-fold, a dataset build) at
     # exactly 10 min — and because a job-timeout renders as `cancelled()`, the

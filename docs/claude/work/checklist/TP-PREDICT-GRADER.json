@@ -1,0 +1,22 @@
+{
+  "id": "TP-PREDICT-GRADER",
+  "title": "Build the verdict grader that applies RULE-RQ1009-900-MFE-HEAD-VS-NAIVE-TP to ml2_bracket_train_eval output, then unblock RQ-20261009-900",
+  "phase": "research",
+  "state": "queued",
+  "owner": "unassigned",
+  "lane": null,
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [],
+  "blocked_on": [],
+  "note": "Lever for blocked units RQ-20261009-900/-901. Corpus RQ-20261014-736c-01 landed (verdict pass, corpus at comms/research/RQ-20261014-736c-01/38738465656/ml2_live_leg_corpus.jsonl). Remaining: a small script that runs ml2_bracket_train_eval.py --outcome mfe_r --per-leg --per-stratum at splits .55/.65/.75 and writes verdict.json per the unit's registered rule (S1 eval n ~74 < 88 so S1 will grade INDETERMINATE under the rule as written; decide window before promoting; rule not edited). Then git mv the unit out of blocked/ and set run.workflow research-script-run.yml + lands.store. Tier-1.",
+  "due_by": "2026-11-10",
+  "roadmap": [
+    "L-PROGRAMMES"
+  ],
+  "updated_at": "2026-11-03T14:54:30Z",
+  "updated_by": "session_01AFoLuLHh13MHv4KBYRkKbS",
+  "_seq": 899
+}

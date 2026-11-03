@@ -1,0 +1,52 @@
+name: infra-runner-health
+
+# Hosted-runner fallback for the self-hosted `jta-infra` runners (row GH-CAPACITY-INFRA-RUNNER; Prime Directive:
+# no halting). Every 15 min: if vars.INFRA_RUNS_ON points at the runner and none is online, set it back to
+# ubuntu-latest (and fail this run once — the one red flag); when a runner is back, dispatch infra-runner-smoke,
+# which re-arms the variable only on a green smoke. Logic + decision table: scripts/ops/infra_runner_health.py.
+# Also falls back when the trainer's free disk is under 15 GB or unreadable (2026-11-03 14:10Z: disk 100% full,
+# a real-money flatten died on the runner). Runs on ubuntu-latest by design (it must run when the runner is down).
+# Gates this adds or changes: none.
+
+on:
+  schedule:
+    - cron: "4,19,34,49 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: infra-runner-health
+  cancel-in-progress: true
+
+jobs:
+  health:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          sparse-checkout: scripts/ops/infra_runner_health.py
+          sparse-checkout-cone-mode: false
+      - name: Read trainer free disk (one job clones ~7 GB; a full disk halted a real-money close 2026-11-03)
+        id: disk
+        env:
+          VM_SSH_KEY: ${{ secrets.VM_SSH_KEY }}
+          TRAINER_IP: ${{ secrets.TRAINER_VM_IP }}
+          TRAINER_USER: ${{ vars.TRAINER_VM_USER || 'ubuntu' }}
+        run: |
+          set -uo pipefail
+          mkdir -p ~/.ssh && chmod 700 ~/.ssh
+          printf '%s\n' "${VM_SSH_KEY}" > ~/.ssh/k && chmod 600 ~/.ssh/k
+          gb=$(ssh -i ~/.ssh/k -o BatchMode=yes -o StrictHostKeyChecking=accept-new -o ConnectTimeout=15 \
+               "${TRAINER_USER}@${TRAINER_IP}" "df --output=avail -k / | tail -1" 2>/dev/null | awk '{printf "%.1f", $1/1048576}')
+          rm -f ~/.ssh/k
+          echo "free_gb=${gb}" >> "$GITHUB_OUTPUT"; echo "trainer free disk: ${gb:-UNREADABLE} GB"
+      - name: Check runners and route
+        env:
+          GH_TOKEN: ${{ secrets.BRANCH_PROTECTION_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          TRAINER_DISK_FREE_GB: ${{ steps.disk.outputs.free_gb }}
+        run: python3 scripts/ops/infra_runner_health.py

@@ -43,6 +43,8 @@ on:
       - etf-history-pipeline
       - options-snapshot-capture
       - sp500-membership-refresh
+      # GH-CAPACITY-INFRA-RUNNER (2026-11-03): fails ONCE when it falls back to hosted (no jta-infra runner online) — the one red flag.
+      - infra-runner-health
       # MARKET-DATA-LAKE (2026-11-01): the pooled-ML market data lake on HF; a dead run leaves the general models on stale data.
       - market-data-lake
       # LEDGER-REFRESH (2026-10-10): the broker-truth freshness grader; its death
@@ -325,12 +327,16 @@ on:
       # other cron entry above exists for.
       - soak-book-grade-weekly
       # GH-CAPACITY-PR-CI-FANOUT (2026-10-15): PRs now run only the import-graph-affected
-      # tests, so a cross-module break can merge. The FULL suite still runs on push to main;
+      # tests, so a cross-module break can merge. The FULL suite runs on main on the 2-h schedule (push arm removed, CI-STREAMLINE 2026-11-03);
       # a red one there is the post-merge signal and must page. PUSH/SCHEDULE ON MAIN ONLY (the
       # schedule arm is the 30-min post-merge backstop) -- the
       # job `if:` below drops pull_request / merge_group / dispatch runs of this workflow,
       # which are visible on their PR (ordinary CI is deliberately out of scope here).
       - pytest-run
+      # CI-STREAMLINE (2026-11-03): guards' 2-h scheduled `--all` run of main replaced its per-push run; a red one must page.
+      - Guards
+      # CI-STREAMLINE: repo-inventory moved from every PR to a daily run of main.
+      - repo-inventory
     types: [completed]
     # MAIN ONLY at the trigger (manager decision 2026-10-16, lane RESEARCH-DISPATCH-STALL-1016). `branches`
     # filters on the WATCHED run's head_branch, so a PR's pytest-run completion no longer CREATES a run here
@@ -362,6 +368,9 @@ jobs:
       (github.event.workflow_run.name != 'pytest-run' ||
        ((github.event.workflow_run.event == 'push' ||
          github.event.workflow_run.event == 'schedule') &&
+        github.event.workflow_run.head_branch == 'main')) &&
+      (github.event.workflow_run.name != 'Guards' ||
+       (github.event.workflow_run.event == 'schedule' &&
         github.event.workflow_run.head_branch == 'main'))
     runs-on: ubuntu-latest
     timeout-minutes: 5

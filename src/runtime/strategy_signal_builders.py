@@ -6437,6 +6437,23 @@ def e4_oi_shock_1h_signal_builder(settings: dict) -> Dict[str, Any]:
 _ML_ENTRY_REF_CACHE: Dict[str, Any] = {}
 
 
+def _ml_entry_candle_symbol(symbol: str, exchange: Any = None, venue: str = "bybit") -> str:
+    """The symbol to ASK the venue for when fetching ml_entry's candles.
+
+    BybitConnector builds ccxt with ``defaultType: spot``, so the bare id ``BTCUSDT`` resolves to the SPOT market
+    wherever one exists (and to the linear perp only where it does not): a spot/perp MIX the model was never trained or
+    scored on (volume features, basis, a different reference set). The model is defined on the LINEAR PERPS
+    (``ml_decision_shadow`` and the Stage-0 corpus read category=linear), so a Bybit fetch asks for ccxt's unified
+    perp symbol ``BASE/USDT:USDT``. Non-Bybit venues and already-unified symbols pass through unchanged
+    (PI-20261103-MLV2-0001, lane ML-V1-PARITY)."""
+    s = str(symbol or "")
+    if str(venue or "bybit").lower() != "bybit" or "/" in s or not s.endswith("USDT") or len(s) <= 4:
+        return s
+    if exchange is not None and "bybit" not in type(exchange).__name__.lower():
+        return s
+    return f"{s[:-4]}/USDT:USDT"
+
+
 def _ml_entry_frame(df: Any) -> Any:
     """Normalise a fetched candle frame to ``ts`` (UTC bar OPEN time) + OHLCV, the shape the features read."""
     import pandas as pd
@@ -6472,9 +6489,11 @@ def _ml_entry_reference_frames(symbols: list, bar_open_iso: str, exchange: Any, 
     for s in symbols:
         try:
             if on_bybit:
-                df = fetch_candles(s, "1h", exchange_client=exchange, limit=limit, bypass_cache=True)
+                df = fetch_candles(_ml_entry_candle_symbol(s, exchange), "1h", exchange_client=exchange, limit=limit,
+                                   bypass_cache=True)
             else:
-                df = fetch_candles(s, "1h", settings={"EXCHANGE": "bybit"}, limit=limit, bypass_cache=True)
+                df = fetch_candles(_ml_entry_candle_symbol(s), "1h", settings={"EXCHANGE": "bybit"}, limit=limit,
+                                   bypass_cache=True)
             if df is None or len(df) == 0:
                 continue
             fr = _ml_entry_frame(drop_forming_bar(df, "1h"))
@@ -6515,7 +6534,9 @@ def ml_entry_signal_builder(settings: dict) -> Dict[str, Any]:
         return _with_signal_package(NAME, {"symbol": symbol, "side": "none",
                                            "meta": {"strategy_name": NAME, "reason": _skip}})
     exchange = _build_killzone_exchange(settings)
-    raw = fetch_candles(symbol, timeframe, exchange_client=exchange, limit=400, bypass_cache=True)
+    _venue = str(settings.get("EXCHANGE") or settings.get("exchange") or "bybit").lower()
+    raw = fetch_candles(_ml_entry_candle_symbol(symbol, exchange, _venue), timeframe, exchange_client=exchange,
+                        limit=400, bypass_cache=True)
     if raw is None:
         raise RuntimeError(f"{NAME}: no candle data for symbol={symbol}")
     _publish_liquidity_state(symbol, raw)
@@ -6587,7 +6608,9 @@ def ml_entry_v2_signal_builder(settings: dict) -> Dict[str, Any]:
         return _with_signal_package(NAME, {"symbol": symbol, "side": "none",
                                            "meta": {"strategy_name": NAME, "reason": _skip}})
     exchange = _build_killzone_exchange(settings)
-    raw = fetch_candles(symbol, timeframe, exchange_client=exchange, limit=400, bypass_cache=True)
+    _venue = str(settings.get("EXCHANGE") or settings.get("exchange") or "bybit").lower()
+    raw = fetch_candles(_ml_entry_candle_symbol(symbol, exchange, _venue), timeframe, exchange_client=exchange,
+                        limit=400, bypass_cache=True)
     if raw is None:
         raise RuntimeError(f"{NAME}: no candle data for symbol={symbol}")
     _publish_liquidity_state(symbol, raw)

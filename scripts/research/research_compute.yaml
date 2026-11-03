@@ -15,7 +15,7 @@
 backends:
   github_runner:
     workflow: research-script-run.yml
-    max_concurrent: 10         # RESEARCH-FLOW 2026-11-03 (lane RESEARCH-CAPACITY): 6 -> 10; 24h runs 2026-11-02T03:30Z..11-03T02:45Z: avg 0.82 of 6 in flight, 0 in flight 61% of minutes, 6 reached 23 min; every cycle fills 6/6 and defers ~128. Was: 3 -> 6 RESEARCH-FLOW 2026-11-02 (operator: get research flowing asap): 3 -> 6. Light units finish in ~2 min (runs 1297-1306), so a slot is held briefly; --max-repo-queued 10 + yield-to-infra still protect system-actions/CI
+    max_concurrent: 4          # OPERATOR 2026-11-03 ~22:00Z (D5 option A, COMPUTE-ALLOCATION-2026-11-03): 10 -> 4 so research stops crowding the 20-slot hosted pool merge path; kaggle_first left at >30 min (widening it to 10 failed test_research_dispatch_money_first scoring, post-reset item). Was: RESEARCH-FLOW 2026-11-03 (lane RESEARCH-CAPACITY): 6 -> 10; 24h runs 2026-11-02T03:30Z..11-03T02:45Z: avg 0.82 of 6 in flight, 0 in flight 61% of minutes, 6 reached 23 min; every cycle fills 6/6 and defers ~128. Was: 3 -> 6 RESEARCH-FLOW 2026-11-02 (operator: get research flowing asap): 3 -> 6. Light units finish in ~2 min (runs 1297-1306), so a slot is held briefly; --max-repo-queued 10 + yield-to-infra still protect system-actions/CI
     cost_weight: 1.0           # relative cost of one hour here (free, but it shares the repo's runner pool)
     # A unit with routing.published_data runs on this backend's published twin instead. KAGGLE-CPU-ROUTE (2026-10-14): the twin is
     # kaggle_cpu, NOT github_runner_data -- kaggle 2.2.4 DownloadDataset 404s for the private dataset from a GitHub runner (runs
@@ -24,7 +24,7 @@ backends:
     what: "GitHub-hosted runner: free, ~20 concurrent repo-wide, 6 h/job"
   github_runner_data:
     workflow: research-script-run-data.yml
-    max_concurrent: 2          # shares the runner pool with github_runner; each run downloads ~1.5 GB, so it is capped lower
+    max_concurrent: 1          # OPERATOR 2026-11-03 D5-A: 2 -> 1. shares the runner pool with github_runner; each run downloads ~1.5 GB, so it is capped lower
     cost_weight: 1.0
     what: "GitHub-hosted runner + the private published ML dataset (ML-DATA-OFF-TRAINER): explicit run.workflow only since KAGGLE-CPU-ROUTE; its fetch 404s from a runner"
   kaggle_cpu:
@@ -116,7 +116,7 @@ kaggle_first:
 #   the waiting units (5) were routed to `trainer` (cap 1, compute_spare saturated, deliberately unchanged).
 #   research-script-run.yml's concurrency group is per-unit, so --max-fires-per-workflow=1 does not throttle it.
 limits:
-  max_total_inflight: 15       # runner 10 + runner_data 2 + trainer 1 + kaggle 1 + kaggle_cpu 1 (RESEARCH-FLOW 2026-11-03; was 11 at runner 6)
+  max_total_inflight: 8        # OPERATOR 2026-11-03 D5-A: runner 4 + runner_data 1 + trainer 1 + kaggle 1 + kaggle_cpu 1. Was 15: runner 10 + runner_data 2 + trainer 1 + kaggle 1 + kaggle_cpu 1 (RESEARCH-FLOW 2026-11-03; was 11 at runner 6)
   max_repo_queued: 10          # unchanged from the dispatcher's flag default
   starvation_hours: 0.75       # nothing dispatched this long -> the repo-queued block is lifted for ONE fire/cycle (dispatch_queue.starvation_override)
   # YIELD TO INFRA (GH-CAPACITY-INFRA-FIRST, operator 2026-10-15): while any fresh run of one of these

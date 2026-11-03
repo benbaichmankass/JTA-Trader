@@ -17,7 +17,7 @@ lands:
   assert_field: read_state
   min_rows: 1
 id: RQ-20261101-c692-07
-status: queued
+status: done
 kind: deterministic
 title: 'ml_entry serve-parity preflight: do live Bybit V5 1h bars give the same features and LONG/SHORT/NONE decisions as the Binance Vision bars
   the ENTRY model was trained on, over the last 30 days of decision bars on the bybit_2 symbols?'
@@ -69,3 +69,16 @@ ml_consumer:
   - ml_entry
   book: money
 last_dispatched_at: '2026-11-01T14:53:09+00:00'
+grading:
+  attested: RULE-RQ20261101-c692-07-SERVE-PARITY
+  auto: true
+  decision_rule_id: RULE-RQ20261101-c692-07-SERVE-PARITY
+  evidence:
+  - research/results/RQ-20261101-c692-07/41306541056.jsonl
+  - research/results/RQ-20261101-c692-07/41307919288.jsonl
+  - research/results/RQ-20261101-c692-07/trainer-41314355162.jsonl
+  graded_at: '2026-11-03'
+  grader: scripts/research/queue_grade.py
+  reason: 1 row(s), all measured, all pass (2 earlier producer_failed / re-graded wiring_only row(s) superseded)
+  rows: 1
+  verdict: pass

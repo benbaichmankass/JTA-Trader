@@ -52,43 +52,9 @@ on:
     # no ready trigger would be unmergeable forever.
     types: [opened, synchronize, reopened]
     branches: [main]
-  push:
-    branches: [main]
-    # BOT-DATA PUSHES SKIP THE PUSH RUN (RUNNER CENSUS 2026-11-01, row GRADE-EVERYTHING-CONTINUOUSLY / lane FORECAST-GRADE-FIRST-PASSAGE).
-    # A push to main whose changed files ALL match this list is a bot data landing whose own PR already ran this check on the
-    # identical tree. Any other file in the commit (code, config, workflows, tests, a path the suite or a guard-test reads)
-    # runs it as before. PRs are NOT affected: `pull_request` has no filter, so no guard is skipped on any PR.
-    # The same list is in pytest-run / guards / repo-inventory / pytest-collect; tests/test_push_paths_ignore_bot_data.py pins
-    # them identical and DISJOINT from every committed path the test suite reads.
-    paths-ignore:
-      - '.github/merge-slots/**'
-      - '.github/pr-automerge-requests/**'
-      - '.github/pr-landing/**'
-      - 'comms/research/RQ-*/**'
-      - 'comms/research/CF-*/**'
-      - 'comms/research/counterfactual_grades/**'
-      - 'comms/research/soak_book_grade/**'
-      - 'comms/research/utilization/**'
-      - 'comms/research/health/**'
-      - 'research/results/**'
-      - 'comms/desk/decisions.jsonl'
-      - 'comms/desk/packets/**'
-      - 'comms/desk/role_grade.json'
-      - 'comms/desk/forecast_grade.json'
-      - 'comms/desk/forecast_ledger.jsonl'
-      - 'comms/desk/am_judgement_grade.json'
-      - 'comms/desk/feed_gaps.jsonl'
-      - 'comms/desk/touches.jsonl'
-      - 'comms/live_review/rows/**'
-      - 'comms/live_review/outcomes.jsonl'
-      - 'comms/live_review/killed_rows.json'
-      - 'comms/claude_strategy_scores.jsonl'
-      - 'comms/news_alpha/**'
-      - 'docs/claude/pending-pings.jsonl'
-      - 'docs/claude/work/WORK-DIGEST.json'
-      - 'docs/claude/work/research-queue-dispatch-receipt.json'
-      - 'docs/claude/work/USAGE-READINGS.jsonl'
-      - 'docs/claude/work/TRAINER-CAPTURE-WATCH.json'
+  # NO PUSH-TO-MAIN TRIGGER (CI-STREAMLINE, operator 2026-11-03). The PR run already collected this tree. GIVES UP: a
+  # separate ~5-min collection signal on main; a post-merge collection break still fails pytest-run's scheduled full-suite
+  # backstop (which collects the whole tree) within 2 h. Pinned by tests/test_ci_streamline_no_push.py.
   # Manually dispatchable so a FEATURE BRANCH can always run collection —
   # the same remedy `pytest-run.yml` and `guards.yml` already carry for
   # BL-20260730-PR-CI-NOT-ATTACHING, which this file never received. That gap
@@ -136,15 +102,24 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0
+          # Depth 2, not 0 (PI-20261103-COLLECT-TIMEOUT): a full-history fetch of this repo hit the 10-min
+          # job timeout on 13 of 20 runs on 2026-11-03 (cancelled inside actions/checkout). The only history
+          # this job needs is the changed-file list below: on pull_request HEAD is the merge commit, so
+          # HEAD^1 is the base tip; on push the `before` commit is fetched on its own.
+          fetch-depth: 2
 
       - name: Determine relevant changed files
         id: changed
         run: |
           set -e
           if [ "${{ github.event_name }}" = "pull_request" ]; then
-            git fetch origin "${{ github.base_ref || 'main' }}" --quiet
-            RANGE="origin/${{ github.base_ref || 'main' }}...HEAD"
+            # HEAD = refs/pull/N/merge; first parent = the base tip it merges into.
+            if ! git rev-parse --verify --quiet HEAD^1 >/dev/null; then
+              echo "relevant=true" >> "$GITHUB_OUTPUT"
+              echo "::notice::Merge parent not available — running the full check."
+              exit 0
+            fi
+            RANGE="HEAD^1 HEAD"
           else
             BEFORE="${{ github.event.before }}"
             if [ -z "$BEFORE" ] || [ "$BEFORE" = "0000000000000000000000000000000000000000" ]; then
@@ -152,7 +127,12 @@ jobs:
               echo "::notice::No prior commit to diff against — running the full check."
               exit 0
             fi
-            RANGE="$BEFORE...${{ github.sha }}"
+            if ! git cat-file -e "$BEFORE^{commit}" 2>/dev/null && ! git fetch --depth=1 --quiet origin "$BEFORE"; then
+              echo "relevant=true" >> "$GITHUB_OUTPUT"
+              echo "::notice::Could not fetch $BEFORE — running the full check."
+              exit 0
+            fi
+            RANGE="$BEFORE ${{ github.sha }}"
           fi
           FILES=$(git diff --name-only $RANGE || true)
           echo "Changed files ($RANGE):"

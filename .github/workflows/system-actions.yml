@@ -317,7 +317,7 @@ jobs:
        (github.event.issue.user.login == github.repository_owner ||
         github.event.issue.user.login == 'github-actions[bot]') &&
        contains(github.event.issue.labels.*.name, 'system-action'))
-    runs-on: ubuntu-latest
+    runs-on: ${{ fromJSON(vars.INFRA_RUNS_ON || '"ubuntu-latest"') }}  # GH-CAPACITY-INFRA-RUNNER: self-hosted jta-infra when vars.INFRA_RUNS_ON is armed, else hosted
     timeout-minutes: 3
     permissions:
       contents: read
@@ -362,7 +362,7 @@ jobs:
        (github.event.issue.user.login == github.repository_owner ||
         github.event.issue.user.login == 'github-actions[bot]') &&
        contains(github.event.issue.labels.*.name, 'system-action'))
-    runs-on: ubuntu-latest
+    runs-on: ${{ fromJSON(vars.INFRA_RUNS_ON || '"ubuntu-latest"') }}  # GH-CAPACITY-INFRA-RUNNER: self-hosted jta-infra when vars.INFRA_RUNS_ON is armed, else hosted
     # 10 min covers status-check / restart-bot-service / reboot-vm.
     # pull-and-deploy can pip-install on a cold cache + restart 14 units, so
     # allow headroom; deploy_pull_restart.sh takes ~2-4 min on a typical run,

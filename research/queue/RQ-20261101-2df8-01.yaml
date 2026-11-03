@@ -1,7 +1,7 @@
 # Hand-authored 2026-11-01 by RESEARCH-OPS-20261101-0330 (Tier 1, Sonnet) as the CONFIRMATION of RQ-20261031-a4e7-04 PASS (a discovery, batch denominator 1 of 4). Decision rule registered BEFORE any run. Gates: none.
 id: RQ-20261101-2df8-01
 title: 'CONFIRMATION of a4e7-04 on a DISJOINT earlier window: trend_donchian_sol_4h at the prop stack, V3 on breakout_2 / tradeify_1 / velotrade_1, 2020-10-01..2023-10-12'
-status: queued
+status: done
 cadence: once
 kind: experiment
 theme: new_strategy_prop
@@ -99,3 +99,17 @@ programme: P5
 intervention_controls:
   not_applicable: offline prop survival simulation; no in-trade action is evaluated
 last_dispatched_at: '2026-11-01T18:12:29+00:00'   # re-armed 2026-11-01 (RESEARCH-OPS-20261101-0940): run 41278837200 produced NO measurement (window 2020-10..2023-10-12 was outside the trailing 1110d fetch; fixed with --days 2300); rule and window unchanged
+grading:
+  attested: RULE-RQ-20261101-2df8-01-PROP-CONFIRM
+  auto: true
+  decision_rule_id: RULE-RQ-20261101-2df8-01-PROP-CONFIRM
+  evidence:
+  - research/results/RQ-20261101-2df8-01/41278837200.jsonl
+  - research/results/RQ-20261101-2df8-01/41327512591.jsonl
+  graded_at: '2026-11-03'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 2 row(s), all measured, all fail (1 earlier producer_failed / re-graded wiring_only row(s) superseded)
+  rows: 2
+  verdict: fail

@@ -1,6 +1,6 @@
 id: RQ-20261024-0142-25
 title: 'Programme 07 Q5 variant (first test failed -> variant): does a slower daily Donchian (55 / 100) on the six untested alts beat the 20-day channel?'
-status: queued
+status: done
 cadence: once
 roadmap:
 - L-TIMEFRAMES
@@ -113,3 +113,16 @@ related:
 - research/programmes/07-timeframes.yaml
 - AUTHOR-FLOOR-1024
 last_dispatched_at: '2026-11-03T01:57:18+00:00'
+grading:
+  attested: RULE-RQ202610240142-25-1D-SLOW-DONCHIAN
+  auto: true
+  decision_rule_id: RULE-RQ202610240142-25-1D-SLOW-DONCHIAN
+  evidence:
+  - research/results/RQ-20261024-0142-25/41556484177.jsonl
+  graded_at: '2026-11-03'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail

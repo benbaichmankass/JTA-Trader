@@ -1,0 +1,16 @@
+{
+  "due_when": {
+    "check_every_days": 2,
+    "due_date": "2026-11-06",
+    "kind": "date"
+  },
+  "id": "PI-20261103-MB3OAWAX-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "lane STRUCTURE-EXITS-ENABLE 2026-11-03 (row STRUCTURE-EXITS-DEFAULT)",
+    "rerun": "grep -c structure_exit scripts/ci/check_tp_doctrine.py; python3 scripts/ci/check_tp_doctrine.py | tail -6"
+  },
+  "state": "queued",
+  "what": "[TP-doctrine guard gap] scripts/ci/check_tp_doctrine.py does not recognise a declared `structure_exit` (src/runtime/structure_exit_live.py, extend-only structure TP moved by monitor()) as a tp_revision producer. Two effects since STRUCTURE-EXITS-ENABLE (20 legs declare structure_exit 'pivot=5'): (a) ml_entry reads COMPLIANT on its declared ml_first_passage tp_revision, but for packages opened after the enable the monitor returns the structure verdict first (ml_entry.monitor: structure_verdict before merge_verdict(tp_revision)), so the revision that makes it compliant no longer runs; (b) the other 19 structure legs, whose TP now does move, still read tp_revision FAIL in the baseline. Fix: teach the guard's tp_revision dimension that a declared structure_exit on a leg whose monitor reaches structure_exit_live is a producer, shrink the baseline for those routings, and keep ml_entry compliant on that basis. Tier 1 (CI)."
+}

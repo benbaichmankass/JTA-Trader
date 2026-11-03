@@ -2,7 +2,7 @@
 id: RQ-20261103-b3c9-12
 title: 'Prop replacement candidate trend_donchian_eth_4h: Stage 0 at the prop cost stack then RULE-P5-GATE-BRK-PER-LEG-V3 on breakout_2 / tradeify_1 / velotrade_1,
   1110 d and trailing 365 d'
-status: queued
+status: done
 cadence: once
 kind: experiment
 theme: new_strategy_prop
@@ -84,14 +84,17 @@ related:
 programme: P5
 intervention_controls:
   not_applicable: offline prop survival simulation; no in-trade action is evaluated
+last_dispatched_at: '2026-11-03T10:33:29+00:00'
 grading:
-  attested: RULE-RQ-20261031-a4e7-04-PROP-CANDIDATE
+  attested: RULE-RQ20261103b3c912-V3
   auto: true
-  decision_rule_id: RULE-RQ-20261031-a4e7-04-PROP-CANDIDATE
+  decision_rule_id: RULE-RQ20261103b3c912-V3
   evidence:
-  - research/results/RQ-20261031-a4e7-04/41263182116.jsonl
-  graded_at: '2026-11-01'
+  - research/results/RQ-20261103-b3c9-12/41613026390.jsonl
+  graded_at: '2026-11-03'
   grader: scripts/research/queue_grade.py
-  reason: 1 row(s), all measured, all pass
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 1 row(s), all measured, all fail
   rows: 1
-  verdict: pass
+  verdict: fail

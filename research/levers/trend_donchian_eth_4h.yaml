@@ -1376,8 +1376,50 @@ levers:
         max_drawdown_r: 20.0019
         verdict: fail
         joint_change: true
+      - value: fvg
+        baseline_value: 'off'
+        arm: FVG
+        unit: RQ-20261101-5e02-04
+        window: 2020-07-01..2026-10-15
+        n: 283
+        net_r: 73.7931
+        baseline_n: 275
+        baseline_net_r: 83.6211
+        delta_net_r: -9.828
+        folds_ge_baseline: 2/6
+        max_drawdown_r: 23.043
+        verdict: fail
+        joint_change: true
+      - value: swing
+        baseline_value: 'off'
+        arm: SW3
+        unit: RQ-20261101-5e02-04
+        window: 2020-07-01..2026-10-15
+        n: 301
+        net_r: 64.3357
+        baseline_n: 275
+        baseline_net_r: 83.6211
+        delta_net_r: -19.2854
+        folds_ge_baseline: 0/6
+        max_drawdown_r: 17.4907
+        verdict: fail
+        joint_change: true
+      - value: swing
+        baseline_value: 'off'
+        arm: SW5
+        unit: RQ-20261101-5e02-04
+        window: 2020-07-01..2026-10-15
+        n: 300
+        net_r: 59.3928
+        baseline_n: 275
+        baseline_net_r: 83.6211
+        delta_net_r: -24.2283
+        folds_ge_baseline: 0/6
+        max_drawdown_r: 19.6271
+        verdict: fail
+        joint_change: true
       shape: monotone
-      points: 3
+      points: 6
       best_delta_r_per_trade: -0.0307
       fold_stability: 0.111
       reading: every tested value is worse than the baseline
@@ -1425,8 +1467,50 @@ levers:
         max_drawdown_r: 20.0019
         verdict: fail
         joint_change: true
-      shape: monotone
-      points: 3
+      - value: '1.0'
+        baseline_value: 'off'
+        arm: FVG
+        unit: RQ-20261101-5e02-04
+        window: 2020-07-01..2026-10-15
+        n: 283
+        net_r: 73.7931
+        baseline_n: 275
+        baseline_net_r: 83.6211
+        delta_net_r: -9.828
+        folds_ge_baseline: 2/6
+        max_drawdown_r: 23.043
+        verdict: fail
+        joint_change: true
+      - value: '1.0'
+        baseline_value: 'off'
+        arm: SW3
+        unit: RQ-20261101-5e02-04
+        window: 2020-07-01..2026-10-15
+        n: 301
+        net_r: 64.3357
+        baseline_n: 275
+        baseline_net_r: 83.6211
+        delta_net_r: -19.2854
+        folds_ge_baseline: 0/6
+        max_drawdown_r: 17.4907
+        verdict: fail
+        joint_change: true
+      - value: '1.0'
+        baseline_value: 'off'
+        arm: SW5
+        unit: RQ-20261101-5e02-04
+        window: 2020-07-01..2026-10-15
+        n: 300
+        net_r: 59.3928
+        baseline_n: 275
+        baseline_net_r: 83.6211
+        delta_net_r: -24.2283
+        folds_ge_baseline: 0/6
+        max_drawdown_r: 19.6271
+        verdict: fail
+        joint_change: true
+      shape: noisy
+      points: 6
       best_delta_r_per_trade: -0.0307
       fold_stability: 0.111
       reading: every tested value is worse than the baseline
@@ -2907,6 +2991,41 @@ levers:
       best_delta_r_per_trade: 0.0018
       fold_stability: 0.667
       reading: no response at the tested values
+    trail_level_pivot_k:
+      tests:
+      - value: '3'
+        baseline_value: 'off'
+        arm: SW3
+        unit: RQ-20261101-5e02-04
+        window: 2020-07-01..2026-10-15
+        n: 301
+        net_r: 64.3357
+        baseline_n: 275
+        baseline_net_r: 83.6211
+        delta_net_r: -19.2854
+        folds_ge_baseline: 0/6
+        max_drawdown_r: 17.4907
+        verdict: fail
+        joint_change: true
+      - value: '5'
+        baseline_value: 'off'
+        arm: SW5
+        unit: RQ-20261101-5e02-04
+        window: 2020-07-01..2026-10-15
+        n: 300
+        net_r: 59.3928
+        baseline_n: 275
+        baseline_net_r: 83.6211
+        delta_net_r: -24.2283
+        folds_ge_baseline: 0/6
+        max_drawdown_r: 19.6271
+        verdict: fail
+        joint_change: true
+      shape: monotone
+      points: 2
+      best_delta_r_per_trade: -0.0701
+      fold_stability: 0.0
+      reading: every tested value is worse than the baseline
   filter:
     vol_skip_above_pctl:
       tests:

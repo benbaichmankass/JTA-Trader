@@ -109,6 +109,15 @@ TARGETS: dict[str, dict] = {
     # RQ-RUN (2026-09-28): the queue's own replenisher (daily) and mechanical
     # grader (every 6 h) are what make it run without a session; a dropped
     # slot on either is exactly the silence this keeper exists to cover.
+    # GH-CAPACITY-INFRA-RUNNER / PI-20261103-RAM7EH86-0005 (2026-11-03): the hosted-fallback router for the
+    # self-hosted jta-infra runners. Its `4,19,34,49 * * * *` cron created ZERO schedule runs in its first ~4 h
+    # (only workflow_dispatch runs), and that is why nothing fell back when the trainer disk hit 100% and a
+    # real-money flatten died (system-actions 41650362029, 14:10Z). A 15-min cron's slot never ages past
+    # GRACE_MIN, so like pytest-run it is kept only through starved_min. Self-dedupes: each run re-reads the
+    # runner list + trainer disk and rewrites INFRA_RUNS_ON only on a state change (decide() is idempotent),
+    # under a cancel-in-progress concurrency group.
+    "infra-runner-health.yml": {"stale_hours": 2, "starved_min": 20,
+                                "self_dedupes": "decide() re-measures and only writes INFRA_RUNS_ON on a change; idempotent per tick"},
     "research-queue-replenish.yml": {"stale_hours": 26},
     "research-queue-grade.yml": {"stale_hours": 26},
     # GH-CAPACITY-PR-CI-FANOUT (manager 2026-10-15T13:06Z): pytest-run's post-merge backstop.
@@ -117,8 +126,12 @@ TARGETS: dict[str, dict] = {
     # keeper dispatches it only through starved_min: no schedule/dispatch run for 30 min -> dispatch.
     # It needs no `dedupe` job: each tick is itself a no-op unless main's HEAD code lacks a completed
     # full-suite run (scripts/ci/pytest_run_backstop.py), and cron + keeper share one serialised
-    # concurrency group. stale_hours 2 = four missed ticks before the keeper pages.
-    "pytest-run.yml": {"stale_hours": 2, "starved_min": 30,
+    # concurrency group.
+    # CI-STREAMLINE (2026-11-03): the push trigger is gone and the cron is `13 */2 * * *`, so the backstop is
+    # the ONLY post-merge full run. starved_min 150 = one missed 2-h slot + grace before the keeper dispatches;
+    # at the old 30 the keeper alone would re-create the ~48 full runs/day this change removes. stale_hours 5 =
+    # two missed slots before it pages.
+    "pytest-run.yml": {"stale_hours": 5, "starved_min": 150,
                        "self_dedupes": "scripts/ci/pytest_run_backstop.py no-ops a tick whose HEAD is already graded"},
     # RESEARCH-PIPELINE-SLO (manager 2026-10-16): the `41 */2 * * *` cron (merged 11:17Z, #18579)
     # NEVER fired -- its 12:41Z and 14:41Z slots created no run; the only runs were manual dispatches.

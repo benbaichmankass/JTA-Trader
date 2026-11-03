@@ -9,7 +9,7 @@ baseline:
   record: comms/strategy_evidence/trend_donchian_1h.json
   net_r: -16.0939
   n: 159
-  fidelity: faithful
+  fidelity: approximate
   rule_verdict: fail
 attribution:
   read_state: measured
@@ -549,6 +549,69 @@ levers:
       fold_stability: 0.333
       reading: every tested value is worse than the baseline
   filter:
+    vol_skip_above_pctl:
+      tests:
+      - value: '0.8'
+        baseline_value: 'off'
+        arm: VH80
+        unit: RQ-20261031-7b6f-17
+        window: 2020-07-01..2026-10-15
+        n: 939
+        net_r: -28.4098
+        baseline_n: 986
+        baseline_net_r: 16.1661
+        delta_net_r: -44.5759
+        folds_ge_baseline: 1/6
+        max_drawdown_r: 79.8463
+        verdict: fail
+        joint_change: false
+      - value: '0.8'
+        baseline_value: 'off'
+        arm: VH80
+        unit: RQ-20261031-7b6f-17
+        window: 2020-07-01..2026-10-15
+        n: 939
+        net_r: -28.4098
+        baseline_n: 986
+        baseline_net_r: 16.1661
+        delta_net_r: -44.5759
+        folds_ge_baseline: 1/6
+        max_drawdown_r: 79.8463
+        verdict: fail
+        joint_change: false
+      - value: '0.9'
+        baseline_value: 'off'
+        arm: VH90
+        unit: RQ-20261031-7b6f-17
+        window: 2020-07-01..2026-10-15
+        n: 962
+        net_r: -5.1145
+        baseline_n: 986
+        baseline_net_r: 16.1661
+        delta_net_r: -21.2806
+        folds_ge_baseline: 1/6
+        max_drawdown_r: 56.2246
+        verdict: fail
+        joint_change: false
+      - value: '0.9'
+        baseline_value: 'off'
+        arm: VH90
+        unit: RQ-20261031-7b6f-17
+        window: 2020-07-01..2026-10-15
+        n: 962
+        net_r: -5.1145
+        baseline_n: 986
+        baseline_net_r: 16.1661
+        delta_net_r: -21.2806
+        folds_ge_baseline: 1/6
+        max_drawdown_r: 56.2246
+        verdict: fail
+        joint_change: false
+      shape: monotone
+      points: 4
+      best_delta_r_per_trade: -0.0216
+      fold_stability: 0.167
+      reading: every tested value is worse than the baseline
     adx_max:
       tests:
       - value: '40'
