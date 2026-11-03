@@ -391,6 +391,11 @@ _CANONICAL_UNITS: tuple[str, ...] = (
 )
 
 _ADVISORY_LOG = runtime_logs_dir() / "advisory_decisions.jsonl"
+# STRUCTURE-EXITS-DEFAULT (2026-11-03): the live structure-exit move journal
+# (src/runtime/structure_exit_live.py JOURNAL_NAME, phase proposed|venue). Written by
+# ict-trader-live via runtime_logs_dir(), the same writer/resolver as _AUDIT_LOG, so
+# the reader resolves it the same way. Read: log_file?name=structure_exit_moves.
+_STRUCTURE_EXIT_MOVES_LOG = runtime_logs_dir() / "structure_exit_moves.jsonl"
 _SHADOW_PRED_LOG = runtime_logs_dir() / "shadow_predictions.jsonl"
 _SHADOW_PRED_BACKFILL_LOG = runtime_logs_dir() / "shadow_predictions_backfill.jsonl"
 _IBKR_MES_PULL_LOG = runtime_logs_dir() / "ibkr_mes_pull.jsonl"
@@ -666,6 +671,8 @@ def _prop_executor_state_dir(account: str) -> Path:
 
 _LOG_FILES: dict[str, Path] = {
     "audit": _AUDIT_LOG,
+    # STRUCTURE-EXITS-DEFAULT closing observation: first phase=venue outcome=applied row per venue.
+    "structure_exit_moves": _STRUCTURE_EXIT_MOVES_LOG,
     # MI-83. "Has the hourly digest actually fired?" — answerable by READING,
     # not by trusting an `OnCalendar=` line. This repo has measured that a
     # declared cadence is not a run.
