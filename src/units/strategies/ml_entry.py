@@ -129,6 +129,8 @@ def order_package(cfg: dict, candles_df: Optional[pd.DataFrame] = None,
                  + ("; re-predicted at each 4h check-in by the ml_first_passage TP revision (RQ-20261101-383f-01)"
                     if declared_rule(cfg) == TP_RULE else ""),
                  **({"tp_revision": cfg["tp_revision"]} if declared_rule(cfg) == TP_RULE else {}),
+                 # STRUCTURE-EXITS-DEFAULT: declared structure exit; absent = no key, byte-identical.
+                 **({"structure_exit": cfg["structure_exit"]} if cfg.get("structure_exit") else {}),
                  "max_hold_min": int(br["horizon_h"]) * 60,
                  "features": {k: round(float(v), 6) for k, v in row.items()}},
     }
@@ -169,12 +171,32 @@ def monitor(cfg, candles_df, open_pkg):
         logger.debug("ml_entry.monitor: time-stop verdict failed", exc_info=True)
     if isinstance(base, dict) and base.get("action") == "close":
         return base
+    _sx = structure_verdict(open_pkg, candles_df)
+    if _sx is not _NOT_DECLARED:
+        return _sx
     try:
         from src.runtime.tp_revision import merge_verdict
         return merge_verdict(base, tp_revision(cfg, candles_df, open_pkg))
     except Exception:  # noqa: BLE001 -- a monitor must never raise
         logger.debug("ml_entry.monitor: tp revision failed", exc_info=True)
         return base
+
+
+_NOT_DECLARED = object()
+
+
+def structure_verdict(open_pkg: Any, candles_df: Any):
+    """STRUCTURE-EXITS-DEFAULT: the declared structure exit on 1h closed bars (replaces the moving TP when
+    declared). Returns ``_NOT_DECLARED`` when the package does not declare it (byte-identical path)."""
+    try:
+        from src.runtime.structure_exit_live import declared, structure_exit_verdict
+        meta = _meta(open_pkg)
+        if declared(meta) is None:
+            return _NOT_DECLARED
+        return structure_exit_verdict(meta, open_pkg, candles_df, timeframe="1h")
+    except Exception:  # noqa: BLE001 -- a monitor must never raise
+        logger.debug("ml_entry.structure_verdict failed", exc_info=True)
+        return None
 
 
 # ----------------------------------------------------------------------------------------------- moving TP

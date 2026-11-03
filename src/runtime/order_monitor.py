@@ -1742,7 +1742,8 @@ def _apply_update(db, open_pkg: dict, verdict: Dict[str, Any],
         )
         if ex_result.get("ok"):
             leg_outcomes.append({"leg": leg, "outcome": "applied",
-                                 "updates": leg_updates})
+                                 "updates": leg_updates,
+                                 "venue_readback": _venue_ack(ex_result)})
             continue
         err_str = ex_result.get("error") or "unknown"
         if _is_unsupported_op_error(err_str):
@@ -1765,7 +1766,14 @@ def _apply_update(db, open_pkg: dict, verdict: Dict[str, Any],
                 err_str,
             )
             leg_outcomes.append({"leg": leg, "outcome": "failed",
-                                 "error": err_str})
+                                 "error": err_str,
+                                 "venue_readback": _venue_ack(ex_result)})
+
+    # STRUCTURE-EXITS-DEFAULT: journal the venue's answer per leg for a move the
+    # structure_exit verdict source proposed (no-op for every other verdict).
+    if isinstance(verdict, dict) and "structure_move" in verdict:
+        from src.runtime.structure_exit_live import journal_venue_outcomes
+        journal_venue_outcomes(open_pkg, verdict, leg_outcomes)
 
     applied = [o for o in leg_outcomes if o["outcome"] == "applied"]
     not_applied = [o for o in leg_outcomes
@@ -2499,6 +2507,19 @@ def _capture_fill_details(
     except Exception as exc:  # noqa: BLE001
         logger.warning("_capture_fill_details: %s", exc)
         return None
+
+
+def _venue_ack(ex_result: Any) -> Dict[str, Any]:
+    """The venue's own answer to an amend, trimmed for the structure-exit journal
+    (ok / skipped / retCode / error). An ACK, not a position re-read."""
+    try:
+        r = ex_result if isinstance(ex_result, dict) else {}
+        resp = r.get("exchange_response")
+        ret = resp.get("retCode") if isinstance(resp, dict) else None
+        return {"kind": "ack", "ok": r.get("ok"), "skipped": r.get("skipped"),
+                "retCode": ret, "error": r.get("error")}
+    except Exception:  # noqa: BLE001
+        return {"kind": "ack"}
 
 
 def _send_modify_to_exchange(matched_trade: Dict[str, Any], *,

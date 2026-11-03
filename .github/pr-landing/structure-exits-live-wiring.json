@@ -1,0 +1,7 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "hold_reason": "tier_2_3_needs_approval",
+  "hold_text": "Tier-2 by path (src/runtime/order_monitor.py, strategy monitor() modules, src/prop/prop_trail.py). Approval: the operator's decision relayed by the manager (session_01AFoLuJCo138TgfjBcbwcLh) 2026-11-03 ~07:05Z, verbatim on row STRUCTURE-EXITS-DEFAULT: \"Build it now - we said it's the new default until we prove something else works better (instead of default being no active management)\". The lane merges on green CI and deploys via vm-ops. No leg declares structure_exit, so nothing live changes: unselected monitors are byte-identical (tests + a 1,728-tick diff vs origin/main). Turning a leg ON is Tier-3 and not in this PR. Revert: git revert of the merge commit.",
+  "why": "STRUCTURE-EXITS-DEFAULT scope 5.4 steps 2-4: structure_exit verdict source in 4 monitors + prop_trail, move journal, replay parity + lookahead-negative tests."
+}
