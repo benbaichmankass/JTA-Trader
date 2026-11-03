@@ -108,10 +108,12 @@ def order_package(cfg: dict, candles_df: Optional[pd.DataFrame] = None,
         raise ValueError(f"reference_symbols:{n_ref}<{min_ref}")
     d = decide(row, model)
     if d["gated"]:
-        raise ValueError(f"cost_gate:est_cost_r={d['cost_r_est']:.4f}>{float(meta['cost_gate']['max_cost_r']):g}")
+        raise ValueError(f"cost_gate:est_cost_r={d['cost_r_est']:.4f}>{float(meta['cost_gate']['max_cost_r']):g}"
+                         f";p_long={d['p_long']:.4f};p_short={d['p_short']:.4f};tau={float(meta['tau']):.4f};n_ref={n_ref}")
     from src.runtime.tp_revision import declared_rule
     if d["side"] == "none":
-        raise ValueError(f"below_tau:pred={d['pred_net_r']:.4f}")
+        raise ValueError(f"below_tau:pred={d['pred_net_r']:.4f};p_long={d['p_long']:.4f};p_short={d['p_short']:.4f}"
+                         f";tau={float(meta['tau']):.4f};n_ref={n_ref}")
     atr = F.atr_last(df)
     entry = float(df["close"].iloc[-1])  # next-bar open ~ this close; the venue fills at market
     s = 1.0 if d["side"] == "long" else -1.0
