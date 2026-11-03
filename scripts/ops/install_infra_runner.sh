@@ -16,7 +16,7 @@
 # Idempotent: an instance already configured is left alone (its service is (re)enabled and started).
 set -euo pipefail
 
-COUNT="${1:-4}"
+COUNT="${1:-2}"
 REPO_URL="${2:?usage: install_infra_runner.sh <count> <https://github.com/owner/repo>}"
 LABELS="${3:-jta-infra}"
 BASE=/opt/actions-runner
@@ -64,7 +64,9 @@ cat > /usr/local/bin/jta-runner-job-cleanup.sh <<'HOOK'
 #!/usr/bin/env bash
 # ACTIONS_RUNNER_HOOK_JOB_COMPLETED for the jta-infra runners (install_infra_runner.sh).
 rm -rf "$HOME/.ssh" "$HOME/.config/gh" "$HOME/.kaggle" "$HOME/.netrc" "$HOME/.git-credentials" 2>/dev/null || true
-[ -n "${GITHUB_WORKSPACE:-}" ] && find "$GITHUB_WORKSPACE" -mindepth 1 -delete 2>/dev/null || true
+# Absolute path, not $GITHUB_WORKSPACE: workspaces of 6.8 / 8.6 GB survived the env-var form and filled the trainer disk
+# to 100% on 2026-11-03 14:10Z (system-actions run 41650362029 died "No space left on device").
+rm -rf "/opt/actions-runner/$(id -un)/_work/JTA-Trader" 2>/dev/null || true
 find /tmp -maxdepth 1 -user "$(id -u)" -mmin +0 -exec rm -rf {} + 2>/dev/null || true
 exit 0
 HOOK
@@ -99,6 +101,14 @@ for i in $(seq 1 "$COUNT"); do
   else
     echo "WARN: no systemd unit found for $NAME"
   fi
+done
+# Instances above COUNT (e.g. a 4 -> 2 shrink) are stopped and disabled; GitHub shows them offline and the
+# health check counts only online runners. Concurrency is bounded because each job clones ~7 GB.
+for d in "$BASE"/ghr*; do
+  i="${d##*/ghr}"; [ "$i" -le "$COUNT" ] 2>/dev/null && continue
+  u="$(systemctl list-unit-files --no-legend 'actions.runner.*' | awk '{print $1}' | grep -F "trainer-jta-infra-${i}.service" | head -1)"
+  [ -n "$u" ] && { systemctl disable --now "$u" >/dev/null 2>&1 || true; echo "disabled $u"; }
+  rm -rf "$d/_work/JTA-Trader" 2>/dev/null || true
 done
 unset REG_TOKEN
 systemctl list-units --all 'actions.runner*' --no-legend | awk '{print "unit", $1, $3, $4}'

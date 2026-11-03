@@ -5,7 +5,8 @@ Prime Directive (no halting): a moved workflow must never sit queued forever beh
 Decision table (pure function `decide`, pinned by tests/test_infra_runner_health.py):
 
     var unset                      -> noop   (never smoked: stays hosted by the workflows' default)
-    var=self-hosted, online == 0   -> fallback  (set '"ubuntu-latest"'; exit 1 once = ONE red flag)
+    var=self-hosted, online == 0 or trainer disk < 15 GB / unreadable
+                                   -> fallback  (set '"ubuntu-latest"'; exit 1 once = ONE red flag)
     var=hosted,      online >= 1   -> resmoke  (dispatch infra-runner-smoke.yml; it re-arms on green),
                                       unless a smoke run started < 60 min ago
     otherwise                      -> noop
@@ -27,13 +28,20 @@ HOSTED = '"ubuntu-latest"'
 LABEL = "jta-infra"
 
 
-def decide(var_value: str | None, online: int, minutes_since_smoke: float | None) -> str:
+DISK_FLOOR_GB = 15.0  # one job clones ~7 GB; 2026-11-03 14:10Z the trainer disk hit 100% and a real-money close died
+
+
+def decide(var_value: str | None, online: int, minutes_since_smoke: float | None,
+           disk_free_gb: float | None = None) -> str:
+    """disk_free_gb: trainer root free space; None = could not look (treated as unknown, not as fine
+    when routing is armed -- an unreadable disk falls back, because a full disk halts every job)."""
     if var_value is None:
         return "noop"
     v = var_value.replace(" ", "")
-    if "jta-infra" in v and online == 0:
+    disk_bad = disk_free_gb is None or disk_free_gb < DISK_FLOOR_GB
+    if "jta-infra" in v and (online == 0 or disk_bad):
         return "fallback"
-    if "jta-infra" not in v and online >= 1:
+    if "jta-infra" not in v and online >= 1 and not disk_bad:
         if minutes_since_smoke is not None and minutes_since_smoke < 60:
             return "noop"
         return "resmoke"
@@ -77,11 +85,18 @@ def main() -> int:
         t = dt.datetime.fromisoformat(smokes["workflow_runs"][0]["created_at"].replace("Z", "+00:00"))
         since = (dt.datetime.now(dt.timezone.utc) - t).total_seconds() / 60
 
-    action = decide(value, online, since)
-    print(f"INFRA_RUNS_ON={value!r} online={online}/{len(mine)} minutes_since_smoke={since} action={action}")
+    raw = os.environ.get("TRAINER_DISK_FREE_GB", "").strip()
+    try:
+        disk = float(raw) if raw else None
+    except ValueError:
+        disk = None
+    action = decide(value, online, since, disk)
+    print(f"INFRA_RUNS_ON={value!r} online={online}/{len(mine)} trainer_disk_free_gb={disk} "
+          f"(floor {DISK_FLOOR_GB}) minutes_since_smoke={since} action={action}")
     if action == "fallback":
         c, _ = _api("PATCH", "/actions/variables/INFRA_RUNS_ON", {"name": "INFRA_RUNS_ON", "value": HOSTED})
-        print(f"::error::no online {LABEL} runner — INFRA_RUNS_ON set to hosted (HTTP {c}); moved workflows run on ubuntu-latest")
+        print(f"::error::no online {LABEL} runner or trainer disk below {DISK_FLOOR_GB} GB / unreadable "
+              f"(online={online}, disk={disk}) — INFRA_RUNS_ON set to hosted (HTTP {c}); moved workflows run on ubuntu-latest")
         return 1
     if action == "resmoke":
         c, _ = _api("POST", "/actions/workflows/infra-runner-smoke.yml/dispatches", {"ref": "main"})
