@@ -1,0 +1,126 @@
+{
+ "schema_version": 1,
+ "review_id": "LR-20261104T2002Z-pkg-430a556efc974643",
+ "reviewed_at": "2026-11-04T20:08:00Z",
+ "order_package_id": "pkg-430a556efc974643",
+ "trade_id": null,
+ "leg": "trend_donchian_eth_4h",
+ "accounts": [
+  "bybit_2",
+  "bybit_portfolio"
+ ],
+ "trigger": {
+  "event": "giveback",
+  "level": null,
+  "l0_snapshot_at": null
+ },
+ "info_cutoff_at": "2026-11-04T20:02:00Z",
+ "state": {
+  "open_r": 0.5358,
+  "peak_r": 1.2824,
+  "peak_provenance": "estimated",
+  "giveback_r": 0.7466,
+  "bars_held": 2,
+  "sl": 2325.92214286,
+  "tp": 2562.85,
+  "atr_now_over_entry": 1.1596,
+  "regime_cell_now": null,
+  "regime_cell_entry": null
+ },
+ "features_at_review": {
+  "atr_now_over_entry": 1.1596,
+  "bars_since_peak": 1,
+  "giveback_r": 0.7466,
+  "open_r": 0.5358,
+  "peak_r": 1.2824,
+  "r_to_stop": 1.5358,
+  "r_to_target": 2.7966
+ },
+ "mechanics": {
+  "verdict": "match",
+  "evidence": "package sl 2325.92214286 / tp 2562.85 agree with every readable account"
+ },
+ "options": [
+  {
+   "action": "hold",
+   "level": null,
+   "n": 108,
+   "mean_r": 1.6802,
+   "sd_r": 2.7113,
+   "worst_r": -1.2501,
+   "net": true
+  }
+ ],
+ "outcome_table_source": "comms/live_review/tables/LR-20261104T2002Z-pkg-430a556efc974643.json",
+ "recommendation": {
+  "action": "hold",
+  "level": null,
+  "level_atr": null,
+  "ev_delta_r": null,
+  "worst_case_delta_r": null,
+  "basis": "ev_positive",
+  "confidence": "measured",
+  "evidence_source": "table",
+  "judgement_confidence": null,
+  "reason": "Measured HOLD cell from this exact state (open +0.54R, peak 1.28R): n=108, mean +1.68R, worst -1.25R, corpus 446 trades; no measured alternative beats it (atr:1.0 and r:x levels sit above price = invalid; atr:1.5/2.0 no_candles = could not look, not priced). Giveback 0.75R trips the marker, but this is a 6xATR-trail trend leg whose own history already averages +1.68R from here. Stop 2325.9 is 1.54R away, TP 2562.85."
+ },
+ "judge_prior": null,
+ "applied": false,
+ "apply_policy": {
+  "bound_r": 0.25,
+  "within_bound": null,
+  "tighten_r": null
+ },
+ "shadow_policy": {
+  "bound_r": 0.5,
+  "within_bound": null,
+  "would_apply": null,
+  "tighten_r": null
+ },
+ "context_flags": [
+  "correlated: ETH long in 4+ packages (eth_prop, e4_oi_shock, b76b0655 on bybit_1/prop) - one crypto-beta bet; not duplicated here",
+  "regime: 1d ADX 30.6 trending, 4h adx_now 20.8 transitional (cooling); atr_now/entry 1.16",
+  "tighten not priced: atr:1.0/r:x invalid_level, atr:1.5/2.0 no_candles (could_not_look) - no tighten recommended; any tighten would be flattered by stop-at-price fills",
+  "missing_inputs: regime.vol_now, regime.cell_entry, context.funding",
+  "structure_exit pivot=5 revert on losing legs (#22626) is lane STRUCTURE-EXITS-ENABLE's; config untouched"
+ ],
+ "account_reads": [
+  {
+   "account_id": "bybit_2",
+   "account_class": "real_money",
+   "read": "no_action",
+   "evidence": "bybit_orders: SL 2325.92 / TP 2562.85, position True, matched by order_id; apply paths close, move_tp, reduce, tighten, widen_sl; would_apply = an executor reaches this leg, NOT that its RiskManager approved (LTR-6 gap)"
+  },
+  {
+   "account_id": "bybit_portfolio",
+   "account_class": "paper",
+   "read": "no_action",
+   "evidence": "bybit_orders: SL 2325.92 / TP 2562.85, position True, matched by order_id; apply paths close, move_tp, reduce, tighten, widen_sl; would_apply = an executor reaches this leg, NOT that its RiskManager approved (LTR-6 gap)"
+  }
+ ],
+ "disposition": {
+  "route": "none",
+  "mandate": null,
+  "action_issue": null,
+  "applied_at": null,
+  "verified_readback": null
+ },
+ "model": "sonnet-tier (repo lane)",
+ "session": "session_01AFoLuNAQWHE7oKMpSZPpBB",
+ "prompt_sha": null,
+ "skill_sha": "ce31519c30f9287eb2f2970ac8460bb763a5e744",
+ "packet_sha": "34baf2c51456fadfb4f79f477f1e8776ebd678360ca0ea17eaeedf8976833f5b",
+ "forecast": {
+  "thesis": "4h trend leg: 19:00Z bar closed 2410 after a 2450 spike; holds above broken 2339 level, continuation to TP/trail.",
+  "direction": "with_trade",
+  "target_px": 2500.0,
+  "p_target": 0.4,
+  "invalidation_px": 2326.0,
+  "horizon_bars": 6,
+  "timeframe": "4h",
+  "evidence": [
+   "priced_options.hold n=108 mean +1.68R",
+   "chart.since_entry low 2405.5 above 2339 breakout"
+  ]
+ }
+}
