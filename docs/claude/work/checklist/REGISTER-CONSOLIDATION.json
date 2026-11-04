@@ -2,22 +2,28 @@
   "id": "REGISTER-CONSOLIDATION",
   "title": "Consolidate follow-through into ONE register (checklist vs PIPELINE.jsonl): design proposal, nothing changes until the operator approves the design",
   "phase": null,
-  "state": "queued",
-  "owner": "manager",
-  "lane": null,
+  "state": "blocked",
+  "owner": "lane WORK-STORE-DESIGN (dispatched by Manager Session 2026-11-04b)",
+  "lane": "session_01AFoLuKFYUoKzs5TXjGfEdh",
   "model": null,
   "ceiling_usd": null,
   "spend_usd": null,
   "tier": 1,
   "prs": [],
-  "blocked_on": [],
-  "note": "Deep audit 2026-11-04 (PR #22902): follow-through split across the checklist (617 open rows, 549 undated) and PIPELINE.jsonl (577 due, 166 unrouted, oldest 156 d). OPERATOR 2026-11-04 ~19:01Z (popup, verbatim answer): \"One register\" (a lane designs a consolidation; nothing changes until the operator approves the design). 2026-11-04 20:05Z manager: deep audit landed (docs/reviews/2026-11-04-weekly-audit.md (#22902, merged 19:37Z)); unblocked, queued for the next refill (over the capacity rate tonight). [2026-11-04 re-prioritization] PRIORITY A, due this week (due_by 2026-11-08, priority_rank 1; the register has no separate priority-A field). Operator, verbatim: [2026-11-04 re-prioritization] PRIORITY A, due this week (due_by 2026-11-08, priority_rank 1; the register has no separate priority-A field). Operator, verbatim: \"The work from the redesign and like strategic changes that we want to make, that should take priority alongside real money, even if it means burning a little faster at first. But part of the point of putting that off until the reset was that we could start with that and then do the rest of the work within the updated system. Especially like as far as streamlining the workflow, not using the repo as a database, like we need to see where that's taking us and make sure that our weekly work plan is in line with the system that we're building this week and not what we have now.\" (operator, 2026-11-04 ~22:27Z)",
+  "blocked_on": [
+    {
+      "kind": "operator_decision",
+      "ref": "WORK-STORE-DESIGN D1-D9",
+      "what": "operator approves or amends docs/plans/WORK-STORE-DESIGN-2026-11.md section 8 (one manager popup)"
+    }
+  ],
+  "note": "Deep audit 2026-11-04 (PR #22902): follow-through split across the checklist (617 open rows, 549 undated) and PIPELINE.jsonl (577 due, 166 unrouted, oldest 156 d). OPERATOR 2026-11-04 ~19:01Z (popup, verbatim answer): \"One register\" (a lane designs a consolidation; nothing changes until the operator approves the design). 2026-11-04 20:05Z manager: deep audit landed (docs/reviews/2026-11-04-weekly-audit.md (#22902, merged 19:37Z)); unblocked, queued for the next refill (over the capacity rate tonight). 2026-11-04 lane WORK-STORE-DESIGN (session_01AFoLuKFYUoKzs5TXjGfEdh) started: one design doc at docs/plans/WORK-STORE-DESIGN-2026-11.md covering this row, SYSTEM-AUDIT-REPO-FLOWS and AUD-20261104-TWO-PICKUP-REGISTERS; target land 2026-11-06. 2026-11-04 ~23:55Z lane WORK-STORE-DESIGN: design written, docs/plans/WORK-STORE-DESIGN-2026-11.md (lands with this PR). One register = items+events in work_store.db (SQLite, live VM, behind /api/bot/work/*), checklist row and pipeline item merged into one item model with computed due_at; hash-chained events replace git log; CLI work.py over an authenticated API (WORK_STORE_TOKEN via env proxy, issue-outbox fallback). Migration dry run (main@b78decb3f): 1,303 rows + 2,619 items, 0 id collisions, nothing closed by the importer; 504 undated open rows + 292 orphan/unrouted items need the triage drain (D2). Build order S1-S8 in section 6; Tier 2 at S1 (new store, Generation Discipline rule 3) needs operator D1. Blocked on the operator popup D1-D9 (section 8). Not built: nothing. [2026-11-04 re-prioritization] PRIORITY A, due this week (due_by 2026-11-08, priority_rank 1; the register has no separate priority-A field). Operator, verbatim: \"The work from the redesign and like strategic changes that we want to make, that should take priority alongside real money, even if it means burning a little faster at first. But part of the point of putting that off until the reset was that we could start with that and then do the rest of the work within the updated system. Especially like as far as streamlining the workflow, not using the repo as a database, like we need to see where that's taking us and make sure that our weekly work plan is in line with the system that we're building this week and not what we have now.\" (operator, 2026-11-04 ~22:27Z)",
   "due_by": "2026-11-08",
   "roadmap": [
     "L-OPS"
   ],
   "priority_rank": 1,
-  "updated_at": "2026-11-04T22:40:39Z",
+  "updated_at": "2026-11-04T23:23:17Z",
   "updated_by": "PLANNING-CLOSE-20261104",
   "_seq": 913
 }
