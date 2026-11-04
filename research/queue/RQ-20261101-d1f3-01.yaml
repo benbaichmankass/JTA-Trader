@@ -2,7 +2,7 @@
 id: RQ-20261101-d1f3-01
 title: Does a regime gate, rebalance frequency or universe size lift the vol-targeted crypto time-series momentum portfolio over the T4 control, net of the full cost
   stack?
-status: queued
+status: done
 cadence: once
 theme: new_strategy_prop
 priority: 2
@@ -107,3 +107,16 @@ related:
 - scripts/research/edge_portfolio_discovery.py
 - RQ-20261101-58e4-01
 last_dispatched_at: '2026-11-04T04:56:05+00:00'
+grading:
+  attested: RULE-RQ-20261101-d1f3-01
+  auto: true
+  decision_rule_id: RULE-RQ-20261101-d1f3-01
+  evidence:
+  - research/results/RQ-20261101-d1f3-01/41776294812.jsonl
+  graded_at: '2026-11-04'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail

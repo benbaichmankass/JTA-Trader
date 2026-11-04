@@ -2,7 +2,7 @@
 id: RQ-20261101-d1f3-06
 title: Does replacing the forecast-minus-IV signal with always-short variance, with and without a trailing-IV tail gate, clear the registered rule on the variance-swap
   proxy?
-status: queued
+status: done
 cadence: once
 theme: new_strategy_prop
 priority: 2
@@ -105,3 +105,16 @@ related:
 - OPTIONS-IV-HISTORY-GAP
 - RQ-20261101-58e4-07
 last_dispatched_at: '2026-11-04T04:04:47+00:00'
+grading:
+  attested: RULE-RQ-20261101-d1f3-06
+  auto: true
+  decision_rule_id: RULE-RQ-20261101-d1f3-06
+  evidence:
+  - research/results/RQ-20261101-d1f3-06/41771142704.jsonl
+  graded_at: '2026-11-04'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail
