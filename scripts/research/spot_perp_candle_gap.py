@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# wiring: manual-only - one-off SPOTCANDLES-AUDIT measurement run on the trainer via trainer-vm-diag (needs api.bybit.com)
 """spot-perp-candle-gap: what does feeding a perp-traded Bybit leg SPOT candles change? (SPOTCANDLES-AUDIT)
 
 WHY. ``BybitConnector`` built ccxt with ``defaultType: spot`` and every Bybit signal builder passes a bare id
@@ -57,7 +58,8 @@ def fetch(symbol: str, tf: str, category: str, start_ms: int, end_ms: int) -> Li
                 data = r.json()
                 if data.get("retCode") == 0:
                     break
-            except Exception:  # noqa: BLE001 - retried, then reported
+            except (requests.RequestException, ValueError) as exc:
+                print(f"kline fetch retry {attempt} {symbol} {tf} {category}: {exc}", file=sys.stderr)
                 data = None
             time.sleep(2 ** attempt)
         lst = ((data or {}).get("result") or {}).get("list") or []
@@ -190,7 +192,8 @@ def main(argv: Optional[List[str]] = None) -> int:
     (out / "spot").mkdir(parents=True, exist_ok=True)
     (out / "linear").mkdir(parents=True, exist_ok=True)
     (out / "runs").mkdir(parents=True, exist_ok=True)
-    accts = yaml.safe_load((REPO / "config/accounts.yaml").read_text())["accounts"]
+    from src.config.accounts_loader import load_accounts_dict
+    accts = load_accounts_dict(REPO / "config/accounts.yaml")
     strats = yaml.safe_load((REPO / "config/strategies.yaml").read_text())["strategies"]
     roster: Dict[str, List[str]] = {}
     for acct, c in accts.items():
