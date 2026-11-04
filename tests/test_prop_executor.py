@@ -5082,3 +5082,52 @@ def test_browser_marketable_entry_keeps_waiting_with_one_alert_per_state_change(
     alerts.append(_rcycle(ad, api, env, 3).alerts)
     assert len(_end_alerts(alerts)) == 1 and _places(ad) == []
     assert len(_end_alerts([_rcycle(ad, api, env, 4).alerts])) == 0
+
+
+# ── AUD-PROP-VENUE-POSITIONS-TRADEIFY-VELOTRADE: the account_status carries the cycle's Positions read ──
+
+
+def _status(api):
+    return [p for p in api.posts if p.get("kind") == "account_status"][-1]
+
+
+def test_account_status_carries_the_positions_read_in_units_and_bot_symbols(env):
+    pos = _p(quantity=0.5)
+    api = FakeApi(fills=[{"id": 1, "account_id": "breakout_1", "symbol": "SOLUSDT", "direction": "long",
+                          "status": "open", "qty": 0.5, "sl": 118.0, "created_at": "1"}])
+    run(FakeAdapter(positions=[pos]), api, env)
+    st = _status(api)
+    assert st["positions_state"] == "read" and st["positions_provenance"] == "MEASURED"
+    assert st["positions"] == [{"symbol": "SOLUSDT", "venue_symbol": "SOLUSD", "direction": "long", "qty": 0.5,
+                                "lots": 0.5, "entry": 120.0, "sl": 118.0, "tp": 126.0, "upnl": 0.0}]
+
+
+def test_account_status_flat_read_is_an_empty_list_not_absent(env):
+    api = FakeApi()
+    run(FakeAdapter(), api, env)
+    st = _status(api)
+    assert st["positions_state"] == "read" and st["positions"] == [] and st["positions_count"] == 0
+
+
+def test_a_failed_positions_read_posts_no_status_at_all(env):
+    # step 2 returns on a read error, so no account_status can claim a read it did not make
+    api = FakeApi()
+    run(FakeAdapter(read_error="no positions table"), api, env)
+    assert [p for p in api.posts if p.get("kind") == "account_status"] == []
+
+
+def test_the_posted_positions_grade_in_inv_prop_positions(env):
+    # end-to-end against the reader: the executor's body, stored verbatim as status.raw, is a clean look
+    import importlib.util, pathlib
+    spec = importlib.util.spec_from_file_location(
+        "system_invariants", pathlib.Path(__file__).resolve().parents[1] / "scripts/ops/system_invariants.py")
+    si = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(si)
+    api = FakeApi()
+    run(FakeAdapter(positions=[_p(quantity=0.5)]), api, env)
+    ctx = {"prop_status": [{"account_id": "breakout_1", "present": True, "status_freshness": "ok",
+                            "status": {"raw": json.dumps(_status(api))}}],
+           "prop_fills": {"present": True, "fills": [{"account_id": "breakout_1", "symbol": "SOLUSDT",
+                                                      "direction": "long", "status": "open", "qty": 0.5}]}}
+    r = si.inv_prop_positions_reconcile(ctx)
+    assert r.verdict == si.PASS and r.n == 1, r
