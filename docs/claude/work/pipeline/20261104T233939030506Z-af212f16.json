@@ -6,6 +6,11 @@
   },
   "id": "PI-20261104-YUTXA21Z-0002",
   "next_action": "check_observation",
+  "observation": {
+    "due_by": "2026-11-11",
+    "how_to_check": "GET /api/bot/prop/status?account_id=<a>: raw.positions_state=read and positions[].qty (units) equals the open /api/bot/prop/fills qty; system_invariants INV-PROP-POSITIONS PASS with no 'qty differs'",
+    "what": "first non-empty DXtrade prop positions read (tradeify_1 or velotrade_1 holding an open position) after #22982"
+  },
   "origin": {
     "kind": "session",
     "ref": "lane AUD-PROP-VENUE-POSITIONS-TRADEIFY-VELOTRADE 2026-11-04, PR #22982",
