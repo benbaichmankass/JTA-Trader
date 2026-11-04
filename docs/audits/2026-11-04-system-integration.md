@@ -221,12 +221,140 @@ row.
 
 ---
 
-## Design: pending DEEP-AUDIT-20261104
+## Design: how alerts, data and state reach the manager
 
-On hold by manager direction (2026-11-04 18:35Z, relaying the operator, 18:33Z): the audit results come in
-before any restructuring design is written. The routing design for alerts → manager is written once the
-DEEP-AUDIT-20261104 PR lands, using both audits. The findings above, and the rows they map to below, are final
-for this pass.
+Written 2026-11-04 ~20:06Z, after `DEEP-AUDIT-20261104` merged (#22902, `docs/reviews/2026-11-04-weekly-audit.md`).
+Two operator decisions made tonight bind it:
+
+- **Audit #11, "Yes, report-only":** a detector lands as a non-blocking report, without asking permission per
+  detector.
+- **Audit #13, "One register":** there is one follow-through register, and `REGISTER-CONSOLIDATION` owns
+  building it.
+
+### Gates this adds or changes
+
+**None.** Nothing here blocks, delays or conditions a send, a trade, a merge or a pipeline step.
+
+- Every new piece is either a best-effort side-write or a read. A failed ledger write logs a warning, and the
+  Telegram send goes ahead exactly as it does today.
+- The detectors below are reports. Under audit #11 they need no per-detector permission.
+- No default-off flag is introduced. Each piece is on from its first deploy.
+
+### What the deep audit changes in this design
+
+1. **The alert ledger is an event log, not a follow-through register.**
+   - Audit #13 forbids a third "pick this up later" store. The ledger records what fired; it records no work.
+   - An alert class that needs work becomes a row in the one register, through the normal
+     `checklist.py add` path, with a `due_by`.
+   - The audit's main root cause is that 549 of 617 open rows are undated, so nothing surfaces them. An undated
+     follow-up row is therefore not filed at all.
+   - There is no `alert disposition` list. "Expected" or "handled" is said once, in the review that read the
+     alert, and cited by the ledger row's `ts`.
+2. **No reducers.** The audit found three: owner_liveness silent, producer "OK" over `could_not_look`, and H3
+   "8/8" while excluding prop. So:
+   - Every summary here names its population and its `could_not_look` inputs.
+   - A ledger that could not be read renders `read_state: could_not_look`, never "0 alerts".
+3. **Prop visibility is now this row's** (AUD-20261019-PROP-INVARIANT-BLIND was re-scoped here, due 11-11).
+   The design closes it through the data path in step 5 below, not through a new prop surface.
+
+### Shape: one ledger, one read, one wake, and the manager's schedule
+
+1. **One ledger at the send chokepoint (VM, Tier 2): row `ALERT-LEDGER-TO-MANAGER`.**
+   - **Where it is written.** Python senders funnel through `notify.send_telegram_direct`, which is where the
+     FCM mirror lives. Add one append there for every kind except `reply` / `command_reply`. The append goes to
+     `runtime_logs/alerts_ledger.jsonl`, rotated the way `operator_alerts.jsonl` is.
+   - **Row shape:** `{ts, kind, channel, priority, dedup_key, body[:1024], delivered}`.
+     - `delivered` is `telegram_ok`, `skipped_no_creds` or `raised`. Today a skipped send and a sent one look
+       identical; this field splits them.
+   - **Shell and workflow senders** (`prop_executor_tick.sh`, `guards.yml`, `claude-run-failure-alert.yml`, …)
+     curl Telegram directly. They add one authenticated `POST /api/bot/alerts`, using the same
+     `DASHBOARD_API_TOKEN` pattern `exec-js-signature` already uses. A failed POST is ignored.
+   - `operator_alerts.jsonl` stays as it is: its banner readers and its `route` field depend on it. The new
+     ledger is a superset of it, not a replacement.
+   - **Detector (report):** a test that reads `telegram_channels.SENDERS` and fails a Python sender that
+     bypasses the chokepoint. It makes the F2 count (37 of 82) a measured number, not a grep estimate.
+2. **One read (VM API, Tier 1).**
+   - `GET /api/bot/alerts?since=&kind=&channel=`, mirrored at `/api/diag/alerts` so `diag_fetch.sh` reads it.
+   - It returns the rows, counts by kind, the newest `ts`, `read_state` (`read | could_not_look | absent`) and
+     the population (lines scanned, truncated or not).
+3. **One wake (VM, Tier 2), extending the existing carrier.**
+   - Canonical § "Due work must reach someone who acts", rule 1, says to extend this carrier and not add
+     another. So `scripts/ops/attention_watch.py` gains an `alert_watch` pass, run by the
+     `ict-work-digest` service.
+   - **It runs on the VM, every 5 minutes, not on GitHub cron.** F3 measured GitHub cron's lateness; the VM
+     timer is what makes the 10-minute target reachable.
+   - **The cadence change.** `deploy/ict-work-digest.timer` is `OnCalendar=hourly` today; it becomes
+     `*:0/5`. The hourly digest itself stays hourly, because `work_digest_now.py` already gates its own send
+     (`_cadence_gate`). The 5-minute firings run only the alert pass. That is one carrier on a faster clock, not
+     a second timer.
+   - **What wakes the manager:** `channel == system` or `priority == high` (the trades channel never wakes it).
+     Each new burst gets ONE compact comment, at most 1,500 characters, on ops-flags PR #17895, the channel the
+     manager already subscribes to.
+   - **Dedup:** by `dedup_key`, at most one comment per kind per 30 minutes, with a count.
+   - **Example:** `ALERT ×3 all_accounts_failed · bybit_1 slice_budget_exhausted · ict_scalp_sol_5m ·
+     09:53–10:12Z → /api/bot/alerts?since=…`. The detail stays in the ledger.
+   - The same pass trims the existing LTR wake comments (measured at up to 35,485 characters) to the same
+     compact form plus a link, so the manager's context stops paying for full packets.
+4. **The manager reads on its schedule; the routine does the remembering.**
+   - **Start of session** (manager skill § "Start of session"):
+     1. call `subscribe_pr_activity(#17895)`, so the per-session subscription is explicit rather than assumed
+        (F3);
+     2. read `/api/bot/alerts?since=<last review ts>`.
+   - **The 05:52Z and 17:52Z reviews:** read every alert-class kind in the ledger and dispose of it in the
+     review. A kind that needs work gets a dated row in the one register; a kind that does not is named
+     "expected" with its count.
+   - The work report (`work_report.py`) gains an `alerts` section built from the ledger, so the persisted
+     report carries the alerts too. A ledger it could not read is shown as such, never as an empty list.
+5. **The data that reaches the manager has to be complete: prop, the register, and latency.**
+   - **Prop positions (closes AUD-20261019-PROP-INVARIANT-BLIND).** The executor report fix on
+     `AUD-PROP-VENUE-POSITIONS-TRADEIFY-VELOTRADE` (due 11-07, Tier 2) adds `positions_state` and `positions`
+     to the DXtrade `account_status`. INV-PROP-POSITIONS then grades all 3 live prop accounts, not just
+     breakout_2.
+     - **Closing observation:** `system_invariants.py` reports `n=3` for prop, with no `could_not_look`.
+     - **Same PR:** health H3 (audit C8) adds the prop accounts to its population, ending the "8/8 over a
+       population that excludes prop" reducer.
+     - **breakout_2's unrecorded fate** (`BREAKOUT-UNRECORDED`) needs the phone executor to report closed
+       orders, under the same contract.
+   - **The register behind the work-queue card** (`CHECKLIST-STATE-TRUTH`, due 11-06):
+     - **Fix the instrument first.** `owner_liveness.py` gets the `main()` described on
+       AUD-20261104-OWNER-LIVENESS-ZOMBIE: it grades in_flight rows against a pasted `list_sessions` result.
+     - **Then the card shows its own staleness.** `/work/snapshot` adds per-row `ageHours` and a
+       `staleInFlight` count from that instrument.
+     - **Dispatch sets `in_flight` in the same push as `create_session`.** This lane's row read `queued` while it
+       ran.
+     - The card's source then tells the truth, so the card does too.
+   - **Latency** (`TICK-DURATION-115S`, Tier 2). The 115 s tick is the floor under every "minimal latency"
+     goal on the trade path:
+     - 5m signals are evaluated at most about every 2 minutes;
+     - the API reads compete with the tick for the same VM (F10).
+     - **Target:** a 5m bar evaluated within 30 s of its close. The latency work starts there.
+6. **Inbound: the operator → the manager (F4).**
+   - Typed text in the manager bot that is not a command is appended to the ledger as `kind: operator_message`
+     and acknowledged in Telegram ("queued for the manager").
+   - It wakes the manager through the same `alert_watch` pass. The operator never needs GitHub to reach Claude.
+   - It is an event in the ledger, not a register; a request that needs work becomes a dated row.
+
+### Ruled out
+
+- **A Telegram poller inside a Claude session.** A session cannot hold one, and a second `getUpdates`
+  consumer of the same bot breaks the bots that already poll it.
+- **Committing alerts to the repo.** That is the flow `SYSTEM-AUDIT-REPO-FLOWS` is removing: CI on every
+  commit, and add/add conflicts.
+- **A wake per alert.** 14 `all_accounts_failed` in one day would mean 14 wakes. Hence the dedup by burst.
+- **A separate alert backlog or acknowledgement list.** Audit #13 rules out a third register (see "What the
+  deep audit changes" above).
+
+### Build order and proof
+
+| Step | Row | Tier | Proof that closes it |
+|---|---|---|---|
+| Ledger + `/api/bot/alerts` | `ALERT-LEDGER-TO-MANAGER` | 2 | A synthetic `send_route_test_ping.py` ping appears in `/api/bot/alerts` with `delivered` set |
+| `alert_watch` wake + compact LTR comments | `ALERT-LEDGER-TO-MANAGER` | 2 | The same ping reaches #17895 as one comment of ≤ 1,500 chars within 10 min, with no paste |
+| Manager skill: subscribe + read at start and at reviews; work report `alerts` section | `ALERT-LEDGER-TO-MANAGER` | 1 | Re-run F1: the share of the day's `operator_alerts.jsonl` kinds found on the manager's surfaces goes from 0/30 to 30/30 |
+| Inbound `operator_message` | `ALERT-LEDGER-TO-MANAGER` | 2 | A typed test message reaches the manager through #17895 |
+| Prop `positions_state` in the DXtrade report | `AUD-PROP-VENUE-POSITIONS-TRADEIFY-VELOTRADE` | 2 | INV-PROP-POSITIONS grades n=3 prop accounts; this also closes AUD-20261019-PROP-INVARIANT-BLIND |
+| owner_liveness `main()` + `staleInFlight` on the card | `CHECKLIST-STATE-TRUTH`, AUD-20261104-OWNER-LIVENESS-ZOMBIE | 1 | `staleInFlight` reads 0 rows older than 48h with no live lane |
+| Tick under 30 s | `TICK-DURATION-115S` | 2 | `tick_cost` mean under 30,000 ms over at least 20 ticks |
 
 ---
 
@@ -235,10 +363,11 @@ for this pass.
 | Finding | Row / item | due_by | Tier | State after this lane |
 |---|---|---|---|---|
 | F1 VM alerts invisible to the manager | `ALERT-LEDGER-TO-MANAGER` (new) · existing `PI-20261104-BCZDXJNR-0002` (the slice refusal itself) | 2026-11-11 · 2026-11-06 | 2 | queued |
-| F2 37 of 82 senders with no durable sink | `ALERT-LEDGER-TO-MANAGER` (design pending) | 2026-11-11 | 2 | queued |
-| F3 ops-flags is the only push; oversized comments; subscription assumed | `ALERT-LEDGER-TO-MANAGER` (design pending) | 2026-11-11 | 2 | queued |
-| F4 operator Telegram text never reaches Claude | `ALERT-LEDGER-TO-MANAGER` (design pending) | 2026-11-11 | 2 | queued |
+| F2 37 of 82 senders with no durable sink | `ALERT-LEDGER-TO-MANAGER` (design step 1) | 2026-11-11 | 2 | queued |
+| F3 ops-flags is the only push; oversized comments; subscription assumed | `ALERT-LEDGER-TO-MANAGER` (design steps 3–4) | 2026-11-11 | 2 | queued |
+| F4 operator Telegram text never reaches Claude | `ALERT-LEDGER-TO-MANAGER` (design step 6) | 2026-11-11 | 2 | queued |
 | F5 DXtrade executor omits positions; placed → open about 59 min | `AUD-PROP-VENUE-POSITIONS-TRADEIFY-VELOTRADE` (existing; root cause and exact fix added) | 2026-11-07 | 2 | queued |
+| F5 (re-scoped here by the deep audit) prop invariant blind to 2 of 3 accounts | `AUD-20261019-PROP-INVARIANT-BLIND`, closed by the fix above (design step 5) | 2026-11-11 | 1 | landed_unproven |
 | F6 breakout_2 placed ticket with no recorded fate | `BREAKOUT-UNRECORDED` (existing; evidence added) | 2026-11-11 | 2 | queued |
 | F7 stale register drives the stale card | `CHECKLIST-STATE-TRUTH` (new) | 2026-11-06 | 1 | queued |
 | F8 115 s tick | `TICK-DURATION-115S` (new) | 2026-11-10 | 2 | queued |
@@ -246,3 +375,4 @@ for this pass.
 | F10 read latency | `UI-LIVE-STACK-REDESIGN` (existing; evidence added) | 2026-11-10 | 1 | queued |
 | F11 trainer data about 1 day behind | none: by design (daily retrain), stated above | — | — | killed with reason |
 | Schema artifact errors | this doc's input table (corrections) | — | — | done |
+| The design itself | this doc's design section; builds on the rows above | — | — | done |
