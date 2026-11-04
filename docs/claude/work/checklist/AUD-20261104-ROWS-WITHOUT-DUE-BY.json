@@ -1,0 +1,22 @@
+{
+  "id": "AUD-20261104-ROWS-WITHOUT-DUE-BY",
+  "title": "549 of 617 open checklist rows (and 272 of 287 landed_unproven) carry no due_by, so the daily review's 'due_by passed' sweep never surfaces them",
+  "phase": "ops",
+  "state": "queued",
+  "owner": "manager",
+  "lane": null,
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [],
+  "blocked_on": [],
+  "note": "DEEP-AUDIT-20261104 (docs/reviews/2026-11-04-weekly-audit.md). MEASURED via checklist_store.load_path, 1274 rows: open (queued/in_flight/landed_unproven/blocked) 617, with due_by 68, past due 12. All 10 AUD-20261028 rows had no due_by and 0 of 10 changed state in 7 d (9 queued). Manager SKILL 'audit-outcome contract' (11-01) requires owner+due_by+roadmap. This audit set due_by on every AUD row it touched. Fix (Tier 1): checklist.py add refuses an AUD-*/review row without --due-by (the contract already binds; operator OK needed only if read as a gate), plus the drain lane re-dates the rest. DETECTOR: checklist.py --check count of open rows without due_by, reported in brief section 1. CHECK: {command: count open rows without due_by, rule: falls week on week, resolves_when: < 100}. next_action: ask_operator only on the add-refusal (No new gates).",
+  "due_by": "2026-11-11",
+  "roadmap": [
+    "L-OPS"
+  ],
+  "updated_at": "2026-11-04T18:46:38Z",
+  "updated_by": "session_01AFoLuJHHNrJpWUPrhHXtjo",
+  "_seq": 911
+}
