@@ -1,0 +1,22 @@
+{
+  "id": "AUD-20261104-TICK-SIZE-OWNERS",
+  "title": "IB futures tick sizes are defined in 4+ places (config/instruments.yaml, src/core/instrument_profile.py, src/units/accounts/ib_client.py constants+map, scripts/ops/broker_bracket_reconcile.py twice)",
+  "phase": "ops",
+  "state": "queued",
+  "owner": "manager",
+  "lane": null,
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [],
+  "blocked_on": [],
+  "note": "DEEP-AUDIT-20261104 (docs/reviews/2026-11-04-weekly-audit.md). MEASURED: grep MES/MGC/MHG tick literals. A drift between owners mis-rounds stop/target prices on an IB order path. Fix (Tier 1 refactor of read paths; the ib_client change is Tier 2): one owner (config/instruments.yaml via instrument_profile), others import it; register in a single-owner check modelled on check_cost_model_single_owner.py (non-blocking report unless the operator OKs a guard). CHECK: {command: grep tick literal maps outside the owner, rule: 0, resolves_when: 0}.",
+  "due_by": "2026-11-18",
+  "roadmap": [
+    "L-OPS"
+  ],
+  "updated_at": "2026-11-04T18:46:39Z",
+  "updated_by": "session_01AFoLuJHHNrJpWUPrhHXtjo",
+  "_seq": 915
+}
