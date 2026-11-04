@@ -25,6 +25,12 @@ THE RULE (one function, :func:`apply`), for one account whose venue is ``venue``
 
 The rule only ever ADDS ("not stricter than ... the ML had been designed for"). Today no record exists for any leg, so every account's
 set is byte-identical to before this module.
+
+ADD-ONLY BY DESIGN (Manager Session 2026-11-04a decision ~20:22Z, on canonical docs/CLAUDE-RULES-CANONICAL.md § "An account configures
+strategies, never symbols", #22914): this resolver never shrinks a set, so a bad or partial record cannot take symbols off a real-money
+account. Rule point 5 (a TESTING ML on the demo/paper floor trades its pending test's population) is met by a separate, explicit Tier-3
+config PR with the per-symbol diff in its body, never by this resolver removing symbols -- e.g. ml_entry on alpaca_paper and
+ml_entry_v2 on bybit_1.
 """
 from __future__ import annotations
 
