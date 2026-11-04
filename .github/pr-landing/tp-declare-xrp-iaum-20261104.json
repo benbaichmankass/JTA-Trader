@@ -1,0 +1,7 @@
+{
+  "tier": 3,
+  "landing": "hold",
+  "hold_reason": "tier_2_3_needs_approval",
+  "hold_text": "Tier-3 config: tp_revision {rule: tp_extend, extend_r: 1.0, approach_frac: 0.85, max_extends: 3} declared on xrp_pullback_2h, iaum_pullback_1d and gld_pullback_1d (config/strategies.yaml, nothing else in that file), plus the six now-stale tp-doctrine baseline lines removed. Operator popup 2026-11-04 ~22:49Z, verbatim: xrp_pullback_2h 'Apply (Recommended)'; iaum_pullback_1d + gld_pullback_1d mirror 'Apply, flag low-n (Recommended)'. Evidence: research/results/RQ-20261104-c6f1-02/local-20261104.jsonl (held-out n=94) and research/results/RQ-20261104-c6f1-06/local-20261104.jsonl (held-out n=14, LOW POWER, GLD twin). Revert: delete the three tp_revision lines and restore the six baseline lines (git revert). Approval sought: the operator granted it (quotes above); the manager merges on green.",
+  "why": "TP doctrine compliance for two real-money legs (bybit_2 xrp_pullback_2h, alpaca_live iaum_pullback_1d) and their mirrors, on held-out evidence the operator approved."
+}
