@@ -1,0 +1,22 @@
+{
+  "id": "AUD-20261104-FLATTEN-LABEL",
+  "title": "2 operator-flatten closes (bybit_2 real-money 6844 + mirror 6845, 11-03) carry exit_reason reconciler_filled although notes.operator_flatten_intent=true",
+  "phase": "ops",
+  "state": "queued",
+  "owner": "manager",
+  "lane": null,
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 2,
+  "prs": [],
+  "blocked_on": [],
+  "note": "DEEP-AUDIT-20261104 (docs/reviews/2026-11-04-weekly-audit.md). MEASURED: diag journal?table=trades&limit=1000 (newest 1000 rows, 09-18..11-04): 7 closed rows with operator_flatten_intent=true, 2 not converted to operator_flatten_reconciled. Cause: the conversion is a separate manual step (scripts/ops/mark_operator_flattened.py --from-intent, system-action mark-operator-flattened) that was not run after the 11-03 SOL flatten. Fix (Tier 2 writeback, exists): run system-action mark-operator-flattened --from-intent; then make the conversion automatic or detected. DETECTOR (Tier 1): invariant in system_invariants.py: closed row with flatten intent and exit_reason != operator_flatten_reconciled = FAIL. CHECK: {command: same journal pull + filter, rule: mislabelled == 0, resolves_when: 0 for 7 d}. next_action: ask_operator (Tier 2 writeback).",
+  "due_by": "2026-11-06",
+  "roadmap": [
+    "L-OPS"
+  ],
+  "updated_at": "2026-11-04T18:46:38Z",
+  "updated_by": "session_01AFoLuJHHNrJpWUPrhHXtjo",
+  "_seq": 908
+}

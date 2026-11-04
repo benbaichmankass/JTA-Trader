@@ -1,0 +1,30 @@
+{
+  "based_on": "20261025T060622305192Z-06a86726.json",
+  "due_when": {
+    "due_date": "2026-11-06",
+    "kind": "date"
+  },
+  "evidence": "issue #18954 result comment, run 39122591821",
+  "filed_by": "lane ACTIVE-MGMT-DRIVE-1018 session_013oEUJzaNgUnEAFrpHccwkx",
+  "id": "PI-20261018-MARKSQLITE-0001",
+  "money_path": false,
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "lane ACTIVE-MGMT-DRIVE-1018 read of system-action run 39122591821 (issue #18954)",
+    "rerun": "grep -n 'sqlite3 ' scripts/ops/mark_operator_flattened_action.sh scripts/ops/*_action.sh | head; and the next mark-operator-flattened run's comment: holds while it prints 'sqlite3: command not found'"
+  },
+  "redate": {
+    "evidence": "grep -ln 'sqlite3 ' scripts/ops/*_action.sh (14 files, main 2026-11-04T20:03Z)",
+    "observation": "RECURRED 2026-11-04 (relabel 6844/6845 via system-action, PR #22903): mark_operator_flattened_action.sh BEFORE/AFTER tables failed again, sqlite3 CLI not on the VM; python apply ran. Scope widened: 'grep -ln \"sqlite3 \" scripts/ops/*_action.sh' lists 14 action wrappers using the CLI, so every wrapper's readback is blind. Fix = replace the CLI table prints with python3 -c sqlite3 (stdlib) in all 14; Tier 1.",
+    "observed_at": "2026-11-04"
+  },
+  "roadmap": [
+    "M39"
+  ],
+  "routed_2026_10_25": "Checked on main 2026-10-25: sqlite3 CLI still at lines 81 and 100 of mark_operator_flattened_action.sh.",
+  "routed_to": "checklist:MARK-FLATTENED-SQLITE-PREVIEW",
+  "state": "routed",
+  "terminal_reason": null,
+  "what": "FIX (Tier 1, tooling): scripts/ops/mark_operator_flattened_action.sh prints its BEFORE/AFTER tables with the sqlite3 CLI, which is not installed on the live VM ('sqlite3: command not found', lines 81 and 100, run 39122591821, 2026-10-18). The python plan/apply/self-test ran and the mark landed, so the action is sound, but the audit record the wrapper promises (the rows as they stand, before and after) is missing from every run on this box. Replace the two shell previews with the python sqlite3 module (same SELECT) or make the wrapper fail loudly when the preview cannot be produced. Check the sibling *_action.sh wrappers for the same idiom."
+}

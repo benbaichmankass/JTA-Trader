@@ -1,0 +1,23 @@
+{
+  "id": "ALERT-LEDGER-TO-MANAGER",
+  "title": "Every operator alert reaches the manager: one durable alert ledger on the VM, served by the API, pushed to the manager by a wake, not only Telegram",
+  "phase": null,
+  "state": "queued",
+  "owner": "manager",
+  "lane": null,
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 2,
+  "prs": [],
+  "blocked_on": [],
+  "note": "[SYSTEM-AUDIT-INTEGRATION F1-F4, docs/audits/2026-11-04-system-integration.md] MEASURED 2026-11-04: runtime_logs/operator_alerts.jsonl held 30 alerts 00:00-18:07Z (14 all_accounts_failed, 10 stuck_strategy, 4 orphan_reconciliation, 2 close_failure); 0 of them appear in GET /api/bot/work/report?since= digestLog (19 hourly entries) or /work/brief. 14 alert kinds write that ring; the other Telegram senders (82 files in telegram_channels.SENDERS; 37 with no durable-sink marker by a grep probe) reach Telegram+FCM only. The only manager push channel is ops-flags PR #17895 (research watchdog, SLO, LTR wake, desk wake). Operator free text in Telegram never reaches Claude (src/bot/claude_bridge.py:262). CANDIDATE BUILD (design pending DEEP-AUDIT-20261104; draft only): (1) one chokepoint ledger write in telegram_channels.send for every non-reply kind, (2) GET /api/bot/alerts?since= with read_state, (3) a VM-side wake that comments ONE compact line per new alert-class event (dedup by kind+key, rate-capped) on #17895, (4) the manager's start-of-session + review step reads /alerts?since=<last review>. Gates this adds: none (no send is blocked; the ledger write is best-effort). DETECTOR: an all_accounts_failed alert fired on the VM appears in /api/bot/alerts and as a #17895 comment within 10 min, without anyone pasting it.",
+  "due_by": "2026-11-11",
+  "roadmap": [
+    "L-OPS"
+  ],
+  "priority_rank": 2,
+  "updated_at": "2026-11-04T18:36:45Z",
+  "updated_by": "session_01AFoLuLCbQTSU5jK9dbmcvU",
+  "_seq": 907
+}

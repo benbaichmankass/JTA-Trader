@@ -272,12 +272,17 @@ def _venue_exit_prices(s: Snapshot, account: str, exchange: str, symbol: str, di
     pos = None
     amb_sl = amb_tp = False
     match = "symbol"
+    levels: Dict[str, Optional[List[float]]] = {"sl": None, "tp": None}
     if exchange == "bybit":
         res = acct.get("result") or {}
         pos = next((p for p in res.get("positions", []) if p.get("symbol") == symbol and (p.get("size") or 0) > 0), None)
         sl_legs, tp_legs = [], []
         for o in res.get("orders", []):
             if o.get("symbol") != symbol:
+                continue
+            # a leg on the OTHER book of a hedge symbol (its side is this package's entry side) is not this
+            # package's protection; legs with no side keep the pre-2026-11-04 behaviour (counted)
+            if o.get("side") and str(o.get("side")).lower() != exit_side:
                 continue
             kind = str(o.get("stop_order_type") or "")
             if "StopLoss" in kind:
@@ -297,6 +302,11 @@ def _venue_exit_prices(s: Snapshot, account: str, exchange: str, symbol: str, di
             return None, True
         sl, amb_sl = _pick(sl_legs, sl_order_id)
         tp, amb_tp = _pick(tp_legs, tp_order_id)
+        # SHARED-BRACKET-FIX (2026-11-04): every resting leg LEVEL on this book, so the mechanics check can
+        # compare the package's levels when no leg is provably this package's (the 02:44Z packet read "match"
+        # while comparing none).
+        levels = {"sl": [x for x in (_f(o.get("trigger_price")) for o in sl_legs) if x is not None],
+                  "tp": [x for x in (_f(o.get("trigger_price")) for o in tp_legs) if x is not None]}
         match = "order_id" if (sl_order_id or tp_order_id) else "symbol"
         if not sl_legs and sl is None and pos and siblings <= 0:
             sl = _f(pos.get("stop_loss"))
@@ -349,7 +359,8 @@ def _venue_exit_prices(s: Snapshot, account: str, exchange: str, symbol: str, di
         amb_tp = amb or len(lmt) > 1
         pos_present = sl is not None or tp is not None or bool(cands)
     return {"state": "read", "position": pos_present, "sl": sl, "tp": tp, "src": src,
-            "ambiguous": bool(amb_sl or amb_tp), "matched_by": match}
+            "ambiguous": bool(amb_sl or amb_tp), "matched_by": match,
+            "sl_levels": levels["sl"], "tp_levels": levels["tp"]}
 
 
 # ----------------------------------------------------------------------------- candles: ATR and regime
@@ -647,6 +658,52 @@ def prop_apply_paths(account_id: str) -> Optional[List[str]]:
     return sorted(set(lra.ACTION_PATHS.get(cls, ())) | ({"tighten"} if cls in TIGHTEN_CLASSES else set()))
 
 
+def _compare_levels(aid: str, symbol: str, exchange: str, sl: Optional[float], tp: Optional[float],
+                    v: dict) -> Tuple[int, List[str], int]:
+    """Compare THIS package's SL/TP levels with the venue read for one account with an open trade.
+
+    Returns ``(mismatches, evidence, levels_compared)``. SHARED-BRACKET-FIX (2026-11-04): the packet used to
+    write "levels not compared" for an ambiguous read and still return ``match``. Now:
+
+    * a leg matched to this package (by id) is compared to the package level, as before;
+    * an ambiguous Bybit read (legs rest, none carries this package's id) compares the package level with
+      EVERY resting leg level on the book: present -> evidence only (the level exists, the id differs);
+      absent -> a mismatch (nothing at the venue protects this package's level);
+    * a Bybit position with no resting leg of that kind at all -> a mismatch (TP doctrine: a real TP rests).
+    ``levels_compared`` = 0 tells the caller nothing was compared, so it can never read as ``match``.
+    """
+    bad, ev, compared = 0, [], 0
+    for name, key, pkg in (("SL", "sl", sl), ("TP", "tp", tp)):
+        if pkg is None:
+            continue
+        got = v.get(key)
+        if got is not None:
+            compared += 1
+            if not _close(got, pkg):
+                bad += 1
+                ev.append(f"{aid}: venue {name} {got} != package {name} {pkg}")
+            continue
+        lv = v.get(f"{key}_levels")
+        if exchange != "bybit" or lv is None:
+            if name == "TP":
+                ev.append(f"{aid}: no resting TP found at the venue read")
+            continue
+        if lv:
+            compared += 1
+            if any(_close(x, pkg) for x in lv):
+                ev.append(f"{aid}: this package's own {name} leg id is not resting, but a {symbol} {name} leg rests "
+                          f"at the package level {pkg}")
+            else:
+                bad += 1
+                ev.append(f"{aid}: no resting {symbol} {name} leg at the package level {pkg} (resting {name} "
+                          f"levels: {', '.join(str(x) for x in lv)}); this package's own {name} leg is not resting")
+        elif v.get("position"):
+            compared += 1
+            bad += 1
+            ev.append(f"{aid}: {symbol} position at the venue with NO resting {name} leg (package {name} {pkg})")
+    return bad, ev, compared
+
+
 def _mechanics(s: Snapshot, view: dict, accts: List[dict], sl: Optional[float], tp: Optional[float],
                direction: str, symbol: str) -> Tuple[dict, List[dict]]:
     """Venue vs journal vs package for every account; one verdict plus the evidence, and the per-account reads."""
@@ -714,16 +771,13 @@ def _mechanics(s: Snapshot, view: dict, accts: List[dict], sl: Optional[float], 
                     bad += 1
                     ev.append(f"{aid}: journal open but no {symbol} position/protection at the venue")
                 elif trade_open:
-                    if sl is not None and v["sl"] is not None and not _close(v["sl"], sl):
-                        bad += 1
-                        ev.append(f"{aid}: venue SL {v['sl']} != package SL {sl}")
-                    if tp is not None and v["tp"] is not None and not _close(v["tp"], tp):
-                        bad += 1
-                        ev.append(f"{aid}: venue TP {v['tp']} != package TP {tp}")
-                    if v.get("ambiguous"):
-                        ev.append(f"{aid}: several {symbol} bracket legs rest at the venue and none matches this package's order ids; levels not compared")
-                    elif tp is not None and v["tp"] is None:
-                        ev.append(f"{aid}: no resting TP found at the venue read")
+                    bad_i, ev_i, compared = _compare_levels(aid, symbol, ex or "", sl, tp, v)
+                    bad += bad_i
+                    ev.extend(ev_i)
+                    if not compared:
+                        # no level of this package was compared on this account: that is NOT a match
+                        looked_fail += 1
+                        ev.append(f"{aid}: no package level could be compared with a venue leg (levels not compared)")
                 elif v["position"] and sibs:
                     ev.append(f"{aid}: venue holds {symbol} for sibling package(s) {', '.join(sibs)}; this package's trade row is not open")
                 elif v["position"]:

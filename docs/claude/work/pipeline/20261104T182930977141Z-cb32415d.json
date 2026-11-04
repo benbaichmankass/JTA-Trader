@@ -1,0 +1,16 @@
+{
+  "due_when": {
+    "check_every_days": 7,
+    "due_date": "2026-11-11",
+    "kind": "date"
+  },
+  "id": "PI-20261104-FNDGJ1YB-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "lane SHARED-BRACKET-FIX (PI-20261104-MXMXDI3X-0001), 2026-11-04",
+    "rerun": "scripts/ops/diag_fetch.sh 'journal?table=trades&limit=600' | python3 -c \"import json,sys;r=[x for x in json.load(sys.stdin) if x.get('account_id','').startswith('bybit') and x.get('status')=='closed' and x.get('closed_at','')>='2026-11-04'];print(sum('pre_label_exit_reason\\\": \\\"netting_attributed' in (x.get('notes') or '') for x in r),'of',len(r))\""
+  },
+  "state": "queued",
+  "what": "[Bybit close label is netting_attributed at close time, corrected only after the hourly fills pull] MEASURED 2026-11-04 bybit_1: 4 of 4 sibling-row closes examined (trades 6855, 6857, 6858, 6864) were first written by _netting_apply_close as netting_attributed with a candle exit, although each row's OWN Partial TP/SL order had filled (bybit_raw_order_history); _sweep_upgrade_anchored_exit_to_fill and _sweep_exit_label_from_bracket_order fixed reason and price only after the :20 hourly exchange_fills pull. So the close ping and any reader in that window see a non-TP/SL reason. Fix direction (Tier 2): before attributing, ask the venue for the row's own sl_order_id/tp_order_id status (account_order_status, one call per divergent row, only on a confirmed divergence) and close it sl/tp at its fill when one Filled; netting attribution stays the fallback. Not covered by SHARED-BRACKET-FIX's PR, which only stops a stale anchor and lets the sweeps reach a late own fill."
+}

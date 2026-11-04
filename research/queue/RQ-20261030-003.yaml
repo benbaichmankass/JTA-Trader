@@ -4,7 +4,7 @@
 id: RQ-20261030-003
 title: 'Breakout prop fit: htf_pullback_trend_2h at sizing cushion-fit room 0.50 at 1.5% under RULE-B6
   V2 (generated)'
-status: queued
+status: done
 cadence: once
 kind: experiment
 theme: new_strategy_prop
@@ -102,3 +102,15 @@ generated:
     timeframe: 2h
     trades_file: comms/strategy_evidence/runs/2026-10-28/htf_pullback_trend_2h__trades.jsonl
 last_dispatched_at: '2026-11-04T11:43:24+00:00'
+grading:
+  auto: true
+  decision_rule_id: RULE-TPL-PROP-FIT-B6V2-htf_pullback_trend_2h-room050
+  evidence:
+  - research/results/RQ-20261030-003/41823450177.jsonl
+  graded_at: '2026-11-04'
+  grader: scripts/research/queue_grade.py
+  note: 'deterministic harness: FAIL closes this cell with no same-window replay; it does not retire the
+    family (family-retirement protocol, #18557)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail
