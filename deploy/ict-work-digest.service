@@ -1,6 +1,6 @@
 # ============================================
 # ICT WORK DIGEST SYSTEMD SERVICE (MI-83)
-# Fires scripts/ops/work_digest_now.py once an hour.
+# Fires scripts/ops/work_digest_now.py every 5 min: alert_watch each time, the digest hourly (self-gated).
 # Save to: /etc/systemd/system/ict-work-digest.service
 # ============================================
 #
@@ -18,7 +18,7 @@
 # scripts/install_systemd_units.sh on every deploy.
 
 [Unit]
-Description=ICT hourly work digest — render and send through send_ping
+Description=ICT work digest (hourly, self-gated) + alert_watch (every 5 min)
 After=network.target ict-trader-live.service
 
 [Service]

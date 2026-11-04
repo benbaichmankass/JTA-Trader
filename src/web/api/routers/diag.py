@@ -2727,6 +2727,21 @@ def get_version(request: Request) -> dict[str, Any]:
     }
 
 
+@router.get("/alerts")
+def get_alerts_ledger(
+    request: Request,
+    since: str | None = None,
+    kind: str | None = None,
+    channel: str | None = None,
+    limit: int = 500,
+) -> dict[str, Any]:
+    """Mirror of ``GET /api/bot/alerts`` (the alert ledger, ALERT-LEDGER-TO-MANAGER)
+    for ``diag_fetch.sh``. ``read_state`` first: ``could_not_look`` is never 0 alerts."""
+    _require_diag_token(request)
+    from src.web.api.routers.alerts import read_ledger
+    return read_ledger(since, kind, channel, limit)
+
+
 @router.get("/log_file")
 def get_log_file(
     request: Request,
