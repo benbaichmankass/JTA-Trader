@@ -1,0 +1,107 @@
+{
+ "schema_version": 1,
+ "review_id": "LR-20261104T2002Z-pkg-e3a1aff66ea74ecc",
+ "reviewed_at": "2026-11-04T20:10:00Z",
+ "order_package_id": "pkg-e3a1aff66ea74ecc",
+ "trade_id": null,
+ "leg": "e4_oi_shock_1h",
+ "accounts": [
+  "bybit_1"
+ ],
+ "trigger": {
+  "event": "momentum_flip+structure_break",
+  "level": null,
+  "l0_snapshot_at": "2026-11-04T20:01:48Z"
+ },
+ "info_cutoff_at": "2026-11-04T20:02:53Z",
+ "state": {
+  "atr_now_over_entry": null,
+  "bars_held": 0,
+  "giveback_r": null,
+  "open_r": -0.4403,
+  "peak_provenance": "estimated",
+  "peak_r": null,
+  "regime_cell_entry": "trending/volatile",
+  "regime_cell_now": null,
+  "sl": 2384.6282142857144,
+  "tp": 2509.5835714285718
+ },
+ "features_at_review": {
+  "atr_now_over_entry": null,
+  "bars_since_peak": null,
+  "giveback_r": null,
+  "open_r": -0.4403,
+  "peak_r": null,
+  "r_to_stop": 0.5597,
+  "r_to_target": 2.4403
+ },
+ "mechanics": {
+  "verdict": "match",
+  "evidence": "package sl 2384.6282142857144 / tp 2509.5835714285718 agree with every readable account; bybit_1 carries 2 sibling ETHUSDT packages: per-package qty-scoped protection not visible in packet (shared-bracket/netting bug of PR #22894 cannot be ruled out, not worked around)"
+ },
+ "options": [
+  {
+   "action": "hold",
+   "level": null,
+   "n": 0,
+   "mean_r": null,
+   "sd_r": null,
+   "worst_r": null,
+   "net": true
+  }
+ ],
+ "outcome_table_source": null,
+ "recommendation": {
+  "action": "hold",
+  "level": null,
+  "level_atr": null,
+  "ev_delta_r": null,
+  "worst_case_delta_r": null,
+  "basis": "judgement",
+  "confidence": "anecdote",
+  "evidence_source": "judgement",
+  "judgement_confidence": 0.5,
+  "reason": "OI-shock long entered 2426.28 failed: 3 bars against, close 2406.53 is below the prior review's 2415 invalidation and 0.04 ATR above since-entry low; open -0.44R. No Stage-0 evidence record, so no priced cell (evidence_missing). A tighten is impossible: the 1x ATR noise floor puts any allowed stop at ~2382, below the resting 2384.63. Closing now locks -0.44R vs a stop at -1R; thesis is weakened but 4h is only transitional and no priced edge favours close, so hold the plan; stop is the exit. Close is operator-only."
+ },
+ "judge_prior": null,
+ "applied": false,
+ "apply_policy": {
+  "bound_r": 0.25,
+  "within_bound": null,
+  "tighten_r": null
+ },
+ "shadow_policy": {
+  "bound_r": 0.5,
+  "within_bound": null,
+  "would_apply": null,
+  "tighten_r": null
+ },
+ "context_flags": [
+  "momentum_flip + structure_break same bar 19:00Z",
+  "invalidation_px 2415 broken",
+  "evidence_missing: no comms/strategy_evidence/e4_oi_shock_1h.json",
+  "correlated: 3 long ETHUSDT packages on bybit_1 (pkg-3245, pkg-b76b, this) plus BTC long",
+  "missing_inputs: regime.atr_now_over_entry, vol_now, funding",
+  "bybit_1 paper: record-only scope"
+ ],
+ "account_reads": [
+  {
+   "account_id": "bybit_1",
+   "account_class": "paper",
+   "read": "no_action",
+   "evidence": "hold; nothing to apply"
+  }
+ ],
+ "disposition": {
+  "route": "none",
+  "mandate": null,
+  "action_issue": null,
+  "applied_at": null,
+  "verified_readback": null
+ },
+ "model": "sonnet-tier (live-review lane)",
+ "session": "session_01AFoLuKpAY4PGkRy1XBHWFc",
+ "prompt_sha": null,
+ "skill_sha": null,
+ "packet_sha": "647b6a5839627686350c3945a7244e7a4920de28ae36273a98dae47dac4cd1bc"
+}
