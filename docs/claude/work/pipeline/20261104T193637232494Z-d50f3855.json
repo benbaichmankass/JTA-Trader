@@ -1,0 +1,15 @@
+{
+  "due_when": {
+    "due_date": "2026-11-07",
+    "kind": "date"
+  },
+  "id": "PI-20261104-KKPOFDJQ-0003",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "lane PAPER-MECHANICS-20261104, system-action #22915 (run 41896479939)",
+    "rerun": "file a cancel-ib-order apply (force_client_id: true) for any resting ib_paper order owned by clientId 497 while ict-trader-live is up; expect 'Error 326 ... client id is already in use' and action cancel_failed"
+  },
+  "state": "queued",
+  "what": "cancel-ib-order CANNOT cancel an order owned by a RUNNING trader's clientId, and its own text says otherwise. MEASURED 2026-11-04 19:28Z, issue #22915 (ib_paper TLT order 1232, owner clientId 497): APPLY with force_client_id -> 'Error 326, reqId -1: Unable to connect as the client id is already in use', then the ops process tripped its own 120 s breaker; action cancel_failed, nothing cancelled. The dry run (#22910) and docs/claude/system-actions.md both say connecting as the owner 'evicts' the trader's session. IBKR refuses a duplicate clientId instead (same finding as BL-20260822-ATTACH-IB-TARGET-USES-TRADER-CLIENTID for attach-ib-target). So the action's only route for the class it exists for (a stray protective owned by the live trader, e.g. an over-cover group) is dead while the trader runs, and the dry run reports it as ready. FIX options: (a) route the cancel through the trader's own session (a trader-side cancel request the order monitor consumes, scoped by order id), or (b) a stop-trader/cancel/start sequence as one Tier-2 system-action; and in any case correct the dry-run 'would' line and the doc row so a dry run never reports an impossible apply as ready."
+}

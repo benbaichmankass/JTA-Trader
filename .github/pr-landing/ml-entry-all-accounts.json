@@ -1,0 +1,7 @@
+{
+  "tier": 3,
+  "landing": "hold",
+  "hold_reason": "tier_2_3_needs_approval",
+  "hold_text": "Tier-3 strategy logic (ml_entry decision path). Lane ML-ENTRY-ALL-ACCOUNTS holds for Manager Session 2026-11-04a, which brings it to the operator for a yes/no. No account declares a profile in this PR, so bybit_2 / bybit_portfolio / alpaca_paper take the pre-change path (parity evidence in the PR body). Revert: git revert of the squash commit.",
+  "why": "One ml_entry implementation for every account: the five hard-coded crypto/Bybit assumptions from the #22079 audit (anchor, reference source + cache key, sides, session-aware decision bars, cost basis) become strategies.yaml::ml_entry.account_profiles.<acct>. Plus the pre-registered Stage-0 unit RQ-20261104-a41f-01 for alpaca_live and the harness flags it runs with."
+}
