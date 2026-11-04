@@ -580,7 +580,7 @@ def build():
         d._text(s, x + Inches(0.2), y + Inches(0.9), bw - Inches(0.4), Inches(0.9), q, size=18, color=WHITE)
         d._text(s, x + Inches(0.2), y + Inches(1.8), bw - Inches(0.4), Inches(1.3), body, size=15, color=WHITE)
         if i < 2:
-            a = d._box(s, x + bw + Inches(0.07), y + bh / 2 - Inches(0.25), Inches(0.42), Inches(0.5), GREY,
+            d._box(s, x + bw + Inches(0.07), y + bh / 2 - Inches(0.25), Inches(0.42), Inches(0.5), GREY,
                        shape=MSO_SHAPE.RIGHT_ARROW)
         d.md.append(f"- **{h1}** — {q} {body}")
     d.md.append("")
@@ -670,7 +670,7 @@ def build():
 
     s = d.new("Costs are charged in full, and they matter",
               f"Why we insist on the full cost stack. Taking the production legs that have a fee-only number "
-              f"on file, adding slippage and funding allowances removed between {pct(f['cost_cut_min'])} and "
+              f"on file (n = {f['cost_cut_n']} of {len(f['prod_rows'])} production legs), adding slippage and funding allowances removed between {pct(f['cost_cut_min'])} and "
               f"{pct(f['cost_cut_max'])} of their fee-only net result. That range is ESTIMATED because the "
               f"slippage allowance is an assumption, not a measurement of our fills. A strategy that only "
               f"passes on fees alone does not pass.", tags=("MEASURED", "ESTIMATED"))
@@ -835,7 +835,7 @@ def build():
         ("New horizons", ["Daily and weekly holds, and sub-hour breakout families, tested net of cost."]),
     ], cols=2, size=16)
     d.footnote(s, "Source: ROADMAP.md live block (generated from docs/roadmap/milestones.yaml), goal G1. "
-                  f"Testing-leg count MEASURED as on slide 13.")
+                  "Testing-leg count MEASURED as on slide 13.")
     d.end_md()
 
     s = d.new("Roadmap 2 — machine learning",
