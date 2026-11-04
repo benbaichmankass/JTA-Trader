@@ -1,0 +1,150 @@
+{
+ "schema_version": 1,
+ "review_id": "LR-20261104T2002Z-pkg-3245fc73e2f64536",
+ "reviewed_at": "2026-11-04T20:08:00Z",
+ "order_package_id": "pkg-3245fc73e2f64536",
+ "trade_id": null,
+ "leg": "trend_donchian_eth_prop",
+ "accounts": [
+  "breakout_2",
+  "tradeify_1",
+  "velotrade_1",
+  "bybit_1"
+ ],
+ "trigger": {
+  "event": "structure_break+momentum_flip",
+  "level": null,
+  "l0_snapshot_at": "2026-11-04T20:02:12Z"
+ },
+ "info_cutoff_at": "2026-11-04T20:02:35Z",
+ "state": {
+  "atr_now_over_entry": 1.024,
+  "bars_held": 6,
+  "giveback_r": 0.7138,
+  "open_r": 0.4766,
+  "peak_provenance": "estimated",
+  "peak_r": 1.1904,
+  "regime_cell_entry": "trending/volatile",
+  "regime_cell_now": null,
+  "sl": 2366.7925,
+  "tp": 2614.91664
+ },
+ "features_at_review": {
+  "atr_now_over_entry": 1.024,
+  "bars_since_peak": 4,
+  "giveback_r": 0.7138,
+  "open_r": 0.4766,
+  "peak_r": 1.1904,
+  "r_to_stop": 0.6862,
+  "r_to_target": 3.4518
+ },
+ "mechanics": {
+  "evidence": "2 account(s) could not be read",
+  "verdict": "match"
+ },
+ "options": [
+  {
+   "action": "hold",
+   "level": null,
+   "n": 27,
+   "mean_r": 1.714,
+   "sd_r": 1.5008,
+   "worst_r": -0.2663,
+   "net": true
+  },
+  {
+   "action": "tighten_sl",
+   "level": 2379.36,
+   "n": 27,
+   "mean_r": 1.6831,
+   "sd_r": 1.5222,
+   "worst_r": -0.1283,
+   "net": true
+  }
+ ],
+ "outcome_table_source": "comms/live_review/tables/LR-20261104T2002Z-pkg-3245fc73e2f64536.json",
+ "recommendation": {
+  "action": "tighten_sl",
+  "level": 2379.36,
+  "level_atr": 1.11,
+  "ev_delta_r": -0.0309,
+  "worst_case_delta_r": 0.138,
+  "basis": "table",
+  "confidence": "measured",
+  "evidence_source": "table",
+  "judgement_confidence": null,
+  "reason": "Two structure events (close broke since-entry low close >0.1 ATR at 18Z; 3 closed bars against, net >=1 ATR at 19Z): price 2406.53 is 0.04 ATR above the since-entry low 2405.47, open +0.48R vs peak +1.19R (giveback 0.71R). Re-priced at the live state (tool, ETH 1h candles, comparable n=27, measured): hold +1.714R worst -0.266R; tighten to breakeven r:0.0 (2379.36, 1.11 ATR under price, clears the 1 ATR noise floor) costs 0.031R (se 0.044, within the 0.25R bound) and lifts worst case +0.138R to -0.128R. r:0.1/0.3 sit inside 1 ATR of price so are excluded; atr:2.0 costs 0.248R (borderline), not chosen. Not close: close forfeits the +1.7R hold EV (and p(giveback>0.5R) is only 0.26). Hold is still the EV leader by a hair but breakeven buys tail protection for ~0.03R, which is noise on this n; both structure signals are with-the-prior-hold-thesis invalidated (invalidation 2400 not broken on close, 2406.5). Real-money sibling pkg-430a556e (eth_4h) is another lane's."
+ },
+ "judge_prior": null,
+ "applied": false,
+ "apply_policy": {
+  "bound_r": 0.25,
+  "within_bound": true,
+  "tighten_r": 1.6831
+ },
+ "shadow_policy": {
+  "bound_r": 0.5,
+  "within_bound": true,
+  "would_apply": true,
+  "tighten_r": 1.6831
+ },
+ "context_flags": [
+  "mechanics_unread: breakout_2 reads 0 open (phone_amend no_position); tradeify_1/velotrade_1 positions unreadable (no positions field); visibility gap owned by SYSTEM-AUDIT-INTEGRATION; only bybit_1 brackets verified (SL 2366.79 / TP 2614.92)",
+  "tighten_flattered: stop fills at stop price; real cost of tightening is, if anything, larger",
+  "structure_break+momentum_flip: close 2406.53, since-entry low 2405.47 (-0.04 ATR); 1h ADX 20.75 (htf) ; 2 sibling ETH packages on bybit_1",
+  "correlated: ETH long in 6+ packages (incl. real-money pkg-430a556e, other lane)",
+  "missing_inputs: regime.vol_now, context.funding"
+ ],
+ "account_reads": [
+  {
+   "account_id": "breakout_2",
+   "account_class": "prop",
+   "read": "unknown",
+   "evidence": "apply paths move_tp, tighten (live_review_apply.py); positions read: 0 open"
+  },
+  {
+   "account_id": "tradeify_1",
+   "account_class": "prop",
+   "read": "unknown",
+   "evidence": "apply paths tighten (live_review_apply.py); positions unreadable (status carries no positions field)"
+  },
+  {
+   "account_id": "velotrade_1",
+   "account_class": "prop",
+   "read": "unknown",
+   "evidence": "apply paths tighten (live_review_apply.py); positions unreadable (status carries no positions field)"
+  },
+  {
+   "account_id": "bybit_1",
+   "account_class": "paper",
+   "read": "would_apply",
+   "evidence": "bybit_orders: SL 2366.79 / TP 2614.92, position True, matched by order_id, 2 sibling package(s) on ETHUSDT; apply paths close, move_tp, reduce, tighten, widen_sl; would_apply = an executor reaches this leg, NOT that its RiskManager approved (LTR-6 gap)"
+  }
+ ],
+ "disposition": {
+  "route": "recommended",
+  "mandate": null,
+  "action_issue": null,
+  "applied_at": null,
+  "verified_readback": null
+ },
+ "model": "sonnet-tier (live-review lane)",
+ "session": "session_01AFoLuKLqDooyRP3Ds41Syc",
+ "prompt_sha": null,
+ "skill_sha": "ce31519c30f9287eb2f2970ac8460bb763a5e744",
+ "packet_sha": "ccc98786a839112c3bb2542a2297786c4e3fc4413425e621a74b53b3390594d1",
+ "forecast": {
+  "thesis": "Pullback to the since-entry low (2405) is holding; breakout retest of 2450.74 remains possible but momentum has faded after 3 down bars; breakeven stop caps downside at ~0.",
+  "direction": "with_trade",
+  "target_px": 2450.74,
+  "p_target": 0.4,
+  "invalidation_px": 2379.36,
+  "horizon_bars": 8,
+  "timeframe": "1h",
+  "evidence": [
+   "priced_options: hold n=27 +1.71R",
+   "chart.since_entry low_dist_atr -0.04",
+   "3 bars against"
+  ]
+ }
+}
