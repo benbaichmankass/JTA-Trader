@@ -12181,6 +12181,33 @@ def _snapshot_venue_read(row, account_id: str, venue: str, *,
         logger.debug("venue snapshot hook failed", exc_info=True)
 
 
+def _bybit_snapshot_cov(state: Optional[dict], direction: Any) -> Optional[dict]:
+    """The coverage dict the venue snapshot stores for ONE journal row's book.
+
+    SHARED-BRACKET-FIX (2026-11-04). MEASURED: bybit_1 SOLUSDT long
+    pkg-5414797739ba4589 closed at its stop (trade 6889, 94.80, 19:01:54Z) while
+    the hedge short (Sell 293, idx 2) stayed live; the symbol read returned the
+    SHORT book and its side-blind stop list, so the long package's snapshot held
+    the short's stop 99.49 and ``live_review_due`` fired ``venue_sl_diverges``.
+    Here the row's own book decides: the read graded the OTHER book -> this
+    row's book holds nothing (``size`` 0, so the snapshot says ``none_resting``
+    / ``venue_flat``); same book -> only the legs that exit this book. A read
+    without the per-book split (Full-mode position stop, flat) is passed through
+    unchanged. Observe-only: nothing here feeds a re-arm or an order. Pure.
+    """
+    if not state:
+        return state
+    book = _norm_position_side(direction)
+    side = str(state.get("side") or "")
+    if book and side and side != book:
+        return {**state, "size": 0.0, "stop_prices": [], "target_prices": []}
+    split = (state.get("prices_by_book") or {}).get(book) if book else None
+    if split is None:
+        return state
+    return {**state, "stop_prices": list(split.get("stop") or []),
+            "target_prices": list(split.get("target") or [])}
+
+
 def _bybit_full_mode_target(pos: dict) -> List[float]:
     """The position-level ``takeProfit`` as a one-element list, or ``[]``.
 
@@ -12462,14 +12489,24 @@ def _bybit_position_protection(client, category: str, symbol: str,
     # LTR-MECHANICS-VENUE-SNAPSHOT: resting TP trigger levels, read from the
     # same StopOrder list (no extra venue call). OBSERVE-ONLY.
     tp_leg_prices: List[float] = []
+    # SHARED-BRACKET-FIX (2026-11-04, bybit_1 SOLUSDT pkg-54147977): the same
+    # prices split by the BOOK each leg protects (a Sell leg exits a long, a Buy
+    # leg a short). OBSERVE-ONLY, for the venue snapshot: the side-blind lists
+    # above let a closed long package be graded against the live short's stop.
+    # A leg with no readable side is left out of both (never guessed).
+    by_book: Dict[str, Dict[str, List[float]]] = {
+        "long": {"stop": [], "target": []}, "short": {"stop": [], "target": []}}
     for o in legs:
         _kind = str(o.get("stopOrderType") or "").lower()
+        _book = {"sell": "long", "buy": "short"}.get(str(o.get("side") or "").lower())
         if _kind in _SL_LEG_TYPES_MON or _kind in _TP_LEG_TYPES_MON:
             protective_legs += 1
         if _kind in _TP_LEG_TYPES_MON:
             _tpx = _bybit_sl_leg_trigger(o)
             if _tpx is not None:
                 tp_leg_prices.append(_tpx)
+                if _book:
+                    by_book[_book]["target"].append(_tpx)
         if _kind not in _SL_LEG_TYPES_MON:
             continue
         sl_legs_seen.append(o)
@@ -12484,9 +12521,13 @@ def _bybit_position_protection(client, category: str, symbol: str,
         _lpx = _bybit_sl_leg_trigger(o)
         if _lpx is not None:
             leg_prices.append(_lpx)
+            if _book:
+                by_book[_book]["stop"].append(_lpx)
     return {
         "size": size, "side": side, "covered_qty": covered,
         "source": "partial_sl_legs",
+        "prices_by_book": {b: {k: sorted(v) for k, v in d.items()}
+                           for b, d in by_book.items()},
         # Size of the OTHER live book(s) on this symbol, or None (see above).
         "sibling_book_live_size": sibling_live_size,
         # The VENUE's position mode for this book (0 one-way / 1 hedge-long
@@ -13548,7 +13589,8 @@ def _check_broker_naked_bybit_positions(db) -> Dict[str, int]:
                     refused_syms.setdefault(sym_key, _rs)
                 continue
             readable_syms.add(sym_key)
-            _snapshot_venue_read(row, account_id, "bybit", cov=state)
+            _snapshot_venue_read(row, account_id, "bybit",
+                                 cov=_bybit_snapshot_cov(state, row["direction"]))
             size = float(state["size"])
             covered = float(state["covered_qty"])
             exch_side = str(state.get("side") or "")

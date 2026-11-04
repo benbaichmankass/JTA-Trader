@@ -343,3 +343,104 @@ def test_a_lagging_close_is_NOT_moved_forward(tmp_path):
     assert abs(r["exit_price"] - 1.3177) < 1e-9
     assert om._isoformat_to_ms(r["closed_at"]) == int(closed.timestamp() * 1000)
     assert "closed_at_source" not in json.loads(r["notes"])
+
+
+# ---------- 3. SOLUSDT 19:04Z: a closed long graded against the live short's stop
+# MEASURED (manager relay, row LR-20261104T1904Z-pkg-5414797739ba4589): bybit_1
+# SOLUSDT long pkg-54147977 (trade 6889) closed at its stop 94.80 at 19:01:54Z;
+# the hedge short (Sell 293, idx 2, trend_donchian_sol_4h) kept its Partial SL
+# 99.49 / TP 87.02. `venue_sl_diverges` fired "venue stop 99.49 vs package sl 94.80".
+
+class _SolClient:
+    def get_positions(self, **kw):
+        return {"result": {"list": [
+            {"symbol": "SOLUSDT", "side": "", "size": "0", "positionIdx": 1, "stopLoss": ""},
+            {"symbol": "SOLUSDT", "side": "Sell", "size": "293", "positionIdx": 2, "stopLoss": ""}]}}
+
+    def get_open_orders(self, **kw):
+        return {"result": {"list": [
+            {"orderId": "s-sl", "side": "Buy", "stopOrderType": "PartialStopLoss",
+             "qty": "293", "triggerPrice": "99.49", "positionIdx": 2},
+            {"orderId": "s-tp", "side": "Buy", "stopOrderType": "PartialTakeProfit",
+             "qty": "293", "triggerPrice": "87.02", "positionIdx": 2}]}}
+
+
+def test_protection_read_splits_leg_prices_by_book():
+    st = om._bybit_position_protection(_SolClient(), "linear", "SOLUSDT")
+    assert st is not None and st["side"] == "short"
+    assert st["prices_by_book"]["short"] == {"stop": [99.49], "target": [87.02]}
+    assert st["prices_by_book"]["long"] == {"stop": [], "target": []}
+    assert st["stop_prices"] == [99.49]  # the side-blind list is unchanged
+
+
+def test_closed_long_is_not_snapshotted_with_the_shorts_stop():
+    from src.runtime import venue_protection_snapshot as vps
+    st = om._bybit_position_protection(_SolClient(), "linear", "SOLUSDT")
+    cov = om._bybit_snapshot_cov(st, "long")
+    row = vps.build_snapshot_row(
+        order_package_id="pkg-5414797739ba4589", account_id="bybit_1", direction="long",
+        stop_prices=cov["stop_prices"], target_prices=cov["target_prices"],
+        position_size=cov["size"], ref_sl=94.80, ref_tp=101.23)
+    assert row["read_state"] == "none_resting" and row["venue_sl"] is None
+    # the short's own package still reads its own stop
+    cov_s = om._bybit_snapshot_cov(st, "short")
+    row_s = vps.build_snapshot_row(
+        order_package_id="pkg-short", account_id="bybit_1", direction="short",
+        stop_prices=cov_s["stop_prices"], position_size=cov_s["size"], ref_sl=99.49)
+    assert row_s["read_state"] == "measured" and row_s["venue_sl"] == 99.49
+
+
+def test_same_book_snapshot_keeps_only_that_books_legs():
+    st = {"size": 128.8, "side": "long", "stop_prices": [94.8, 99.49],
+          "target_prices": [87.02, 101.23],
+          "prices_by_book": {"long": {"stop": [94.8], "target": [101.23]},
+                             "short": {"stop": [99.49], "target": [87.02]}}}
+    cov = om._bybit_snapshot_cov(st, "long")
+    assert cov["stop_prices"] == [94.8] and cov["target_prices"] == [101.23]
+    assert om._bybit_snapshot_cov(None, "long") is None
+    full = {"size": 1.0, "side": "long", "stop_prices": [90.0], "target_prices": []}
+    assert om._bybit_snapshot_cov(full, "long") is full  # no split: unchanged
+
+
+def test_venue_sl_diverges_skips_a_snapshot_whose_trade_closed():
+    from datetime import datetime, timezone
+    from src.runtime import live_review_due as lrd
+    now = datetime(2026, 11, 4, 19, 4, tzinfo=timezone.utc)
+    snap = {"account_id": "bybit_1", "read_state": "measured", "venue_sl": 99.49,
+            "ref_sl": 94.80, "read_at": "2026-11-04T19:00:30+00:00", "trade_id": "6889"}
+    cfg = {"events": {"mechanics": {"venue_sl_tolerance_atr": 0.5}}}
+
+    def ctx(status):
+        return {"venue": {"state": "read", "pkg_sl": 94.80, "meta_atr": 1.0,
+                          "snapshots": [dict(snap, trade_status=status)]}}
+    ev, _ = lrd.venue_events({}, ctx("closed"), cfg, now)
+    assert ev == []
+    ev, _ = lrd.venue_events({}, ctx("open"), cfg, now)
+    assert ev and ev[0][1] == "venue_sl_diverges"   # an OPEN trade is still graded
+    ev, _ = lrd.venue_events({}, ctx(None), cfg, now)
+    assert ev and ev[0][1] == "venue_sl_diverges"   # unknown status: graded as before
+
+
+def test_read_venue_context_carries_each_snapshots_trade_status(tmp_path):
+    from src.runtime import live_review_due as lrd
+    from src.runtime import venue_protection_snapshot as vps
+    db = _LiveDB(tmp_path / "j.db")
+    _seed(db, tid=6889, qty=128.8, sl_id="l-sl", strategy="trend_donchian_sol",
+          symbol="SOLUSDT", entry=97.0)
+    c = sqlite3.connect(db.path)
+    c.execute("UPDATE trades SET status='closed', order_package_id='pkg-5414797739ba4589' WHERE id=6889")
+    cols = {r[1] for r in c.execute("PRAGMA table_info(order_packages)")}
+    vals = {"order_package_id": "pkg-5414797739ba4589", "sl": "94.80", "tp": "101.23",
+            "meta": "{}", "symbol": "SOLUSDT", "direction": "long", "status": "open",
+            "strategy_name": "trend_donchian_sol", "created_at": "2026-11-04T10:00:00+00:00",
+            "updated_at": "2026-11-04T19:01:54+00:00", "entry": "97.0"}
+    vals = {k: v for k, v in vals.items() if k in cols}
+    c.execute(f"INSERT INTO order_packages ({','.join(vals)}) VALUES ({','.join('?' * len(vals))})",
+              tuple(vals.values()))
+    c.commit()
+    c.close()
+    assert vps.record_read(account_id="bybit_1", trade_id=6889, symbol="SOLUSDT", direction="long",
+                           venue="bybit", stop_prices=[99.49], position_size=293.0, db_path=db.path)
+    ctx = lrd.read_venue_context(["pkg-5414797739ba4589"], db_path=db.path)
+    sn = ctx["pkg-5414797739ba4589"]["snapshots"]
+    assert len(sn) == 1 and sn[0]["trade_status"] == "closed"
