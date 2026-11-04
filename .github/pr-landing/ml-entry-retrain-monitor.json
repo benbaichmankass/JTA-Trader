@@ -1,0 +1,7 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "hold_reason": "tier_2_3_needs_approval",
+  "hold_text": "Tier-2 by path: src/main.py gains a best-effort hourly tick for a REPORT-ONLY monitor (src/runtime/ml_entry_live_monitor.py), and a new cron workflow (.github/workflows/ml-entry-retrain.yml) produces a CANDIDATE ENTRY artifact weekly. Operator decision 2026-11-04 ~20:08Z (popup verbatim, relayed by Manager Session 2026-11-04a): 'Merge when green (Recommended)'. The manager merges and deploys it in the combined trader restart. Nothing writes ml/served or config; a flag halts, demotes and sizes nothing. Revert: git revert of the merge commit (removes the tick and the workflow).",
+  "why": "ML-ENTRY-RETRAIN-CADENCE + ML-ENTRY-LIVE-MONITOR: weekly candidate retrain (first run 2026-11-08T04:00Z) and the pre-registered live ENTRY monitor + served-model freshness line, all report-only."
+}

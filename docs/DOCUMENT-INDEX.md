@@ -529,6 +529,7 @@ real top-level `docs/*.md` and fails if the population builder cannot see it.
 | `docs/claude/work/handoffs/2026-11-01-01AFoLuJ-to-new.md` | unknown | unknown | — | never | `not-assessed / not-assessed` | — |
 | `docs/claude/work/handoffs/2026-11-03-01AFoLuJC-to-new.md` | unknown | unknown | — | never | `not-assessed / not-assessed` | — |
 | `docs/claude/work/handoffs/2026-11-03-01AFoLuJ-to-new.md` | unknown | unknown | — | never | `not-assessed / not-assessed` | — |
+| `docs/claude/work/handoffs/2026-11-04-01AFoLuH-to-new.md` | unknown | unknown | — | never | `not-assessed / not-assessed` | — |
 | `docs/claude/work/handoffs/2026-11-04-01AFoLuL-to-new.md` | history | unknown | — | never | `not-assessed / not-assessed` | — |
 | `docs/claude/work/triage-2026-09-28.md` | unknown | unknown | — | never | `not-assessed / not-assessed` | — |
 | `docs/claude/workplan.md` | plan | historical | — | 2026-09-07 | `name:workplan-is-a-forward-commitment / mi159:plan-status-header:historical` | — |
@@ -591,6 +592,7 @@ real top-level `docs/*.md` and fails if the population builder cannot see it.
 | `docs/operator/setup-api-keys.md` | lookup | unknown | — | never | `dir:operator-setup-procedures / not-assessed` | — |
 | `docs/ops/tradeify-bot-ownership-note.md` | lookup | unknown | — | never | `dir:operator-setup-procedures / ownership statement and evidence procedure` | — |
 | `docs/pipeline/stage-contracts.md` | architecture | unknown | — | never | `name:declares-a-contract / not-assessed` | — |
+| `docs/pitch/jta-trader-pitch-deck.md` | unknown | live | — | 2026-11-04 | `not-assessed / read:PITCH-DECK-lane-authored-it-2026-11-04-generated-from-files` | JTA Trader pitch deck: markdown source and speaker notes (generated) |
 | `docs/plans/DATA-EXPLORER-SPA-HANDOFF.md` | history | historical | — | 2026-10-13 | `name:record-of-a-past-state / dir:record-of-a-completed-session` | — |
 | `docs/plans/ENGINEERING-PLAN-2026-09-21.md` | plan | unknown | — | never | `name:plan-is-a-forward-commitment / not-assessed` | — |
 | `docs/plans/ML-PROGRAMME-2026-10-28.md` | plan | unknown | — | never | `name:plan-is-a-forward-commitment / not-assessed` | ONE consolidated ML programme: models that manage trades, TM-BENCH, 8 tracks, proposed infra rows, learning ledger. |

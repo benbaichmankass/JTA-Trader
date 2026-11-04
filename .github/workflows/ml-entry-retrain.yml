@@ -1,0 +1,77 @@
+name: ml-entry-retrain
+run-name: ml-entry-retrain ${{ github.event_name }} ${{ inputs.run_date || '' }}
+
+# WEEKLY CANDIDATE RETRAIN of the live ENTRY model (row ML-ENTRY-RETRAIN-CADENCE, Tier 2, held PR; operator 2026-11-01:
+# "a plan for feeding and retraining on more and better data now, not at an unspecified date").
+#
+# Sunday 04:00Z, first scheduled run 2026-11-08T04:00Z. Refits the REGISTERED c692-01 recipe on all data through the
+# previous UTC day minus the registered embargo (scripts/research/ml_entry_retrain.py) and uploads the CANDIDATE artifact
+# + freshness.json (feature list, sha256, data-through date) as the run artifact (kept 90 days).
+#
+# IT NEVER SWAPS THE SERVED MODEL: nothing here writes ml/served/ or any config. Serving a new artifact on real money is
+# the operator's call (promotion ladder). NO HALTING: a failed retrain leaves the previous artifact serving, writes
+# retrain_status.json, and the red Actions run is the ONE red flag; the next Sunday tries again (no retry loop, no gate).
+# The trader-side freshness line (src/runtime/ml_entry_live_monitor.py) grades the SERVED artifact's data-through date.
+#
+# no-durable-result: weekly CANDIDATE artifact (model + freshness.json) with no verdict or measurement; serving it is the operator's call and the candidate has had no held-out read
+# Keyless: public Binance Vision archives only, no secrets, no VM, persist-credentials: false.
+# Gates this adds or changes: none.
+
+on:
+  schedule:
+    - cron: "0 4 * * 0"
+  workflow_dispatch:
+    inputs:
+      run_date:
+        description: "UTC date to treat as 'today' (YYYY-MM-DD); empty = now. Dry runs only; never a command."
+        default: ""
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ml-entry-retrain
+  cancel-in-progress: false
+
+jobs:
+  retrain:
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install deps (the versions the research runner and the trader pin)
+        run: |
+          python -m pip install --upgrade pip
+          pip install numpy pandas pyyaml requests lightgbm==4.6.0 scikit-learn==1.7.2
+      - name: Recipe self-test (the recipe still matches the served artifact)
+        run: python3 scripts/research/ml_entry_retrain.py --self-test
+      - name: Retrain the candidate
+        env:
+          RUN_DATE: ${{ inputs.run_date }}
+        run: |
+          set -euo pipefail
+          python3 scripts/research/ml_entry_retrain.py run --out out --cache /tmp/ml_entry_klines ${RUN_DATE:+--run-date "$RUN_DATE"}
+      - name: Upload the candidate (also on failure, retrain_status.json says why)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ml-entry-retrain-${{ github.run_id }}
+          path: out
+          retention-days: 90
+          if-no-files-found: warn
+      - name: Summarize the freshness line
+        if: always()
+        run: |
+          {
+            echo "### ml-entry-retrain"
+            echo
+            echo '```'
+            cat out/freshness.json 2>/dev/null | head -40 || true
+            cat out/retrain_status.json 2>/dev/null || echo "(no retrain_status.json)"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"

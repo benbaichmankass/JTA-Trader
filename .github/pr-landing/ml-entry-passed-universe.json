@@ -1,0 +1,7 @@
+{
+  "tier": 3,
+  "landing": "hold",
+  "hold_reason": "depends_on_unmerged_pr",
+  "hold_text": "Stacked on #22900 (ml_entry per-account profile, held Tier 3); must land after #22900. Tier-3 (what an ML trades): Manager Session 2026-11-04a brings it to the operator. Byte-identical today: no comms/ml_universe/<leg>.json record exists, so every leg's symbol set is the configured one (test_ml_universe_record.py walks every leg x account). Revert: git revert of the squash commit.",
+  "why": "Operator 2026-11-04 ~19:06Z: an ML's traded symbols are internal to the ML, set by which tests passed; ~19:33Z 'Group-level (Recommended)'. leg_symbols(leg=) applies the leg's POPULATION pass record comms/ml_universe/<leg>.json: a passed population adds its symbols on the account's venue, nothing is removed, no record = configured set. a24c-01 stays pooled (quote added); a41f-01 re-registered pooled on a pre-registered Alpaca ETF pool before any run."
+}

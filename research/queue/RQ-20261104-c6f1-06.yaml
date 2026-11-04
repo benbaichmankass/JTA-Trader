@@ -1,0 +1,163 @@
+# Hand-authored 2026-11-04 by lane TP-REALMONEY-UNITS (Tier 1), dispatched by Manager Session 2026-11-04a.
+# Operator decision 2026-11-04 'Yes, test all 6 (Recommended)'. Decision rule registered BEFORE any arm of this unit ran.
+id: RQ-20261104-c6f1-06
+title: 'TP doctrine, real money, HELD-OUT: does a predictive take-profit (X351, X3505) selected on the earlier span of iaum_pullback_1d''s
+  history beat its current exit on a later span selection never saw, net of the full cost stack?'
+status: done
+cadence: once
+roadmap:
+- L-ATM
+- M20
+theme: live_strategy
+priority: 1
+kind: experiment
+practice_precedent: T3 (net of the full cost stack) + T9 (on trend legs the TP doctrine requires MEASURING the cost of a target,
+  not assuming it); binding source docs/ARCHITECTURE-CANONICAL.md § TP doctrine; holdout design = PROMOTION-BAR-HOLDOUT-1016
+  (exit_lever_ablation.py --grade holdout).
+question: 'iaum_pullback_1d is on alpaca_live real money (its mirror twin on alpaca_portfolio is the gold proxy gld_pullback_1d)
+  and FAILS tp-doctrine-guard on tp_revision (rule_undeclared); entry TP 3.5R declared (tp_intent r_multiple, family-pooled
+  K*) (scripts/ci/check_tp_doctrine.py on main 745bcf758, 2026-11-04). Candidates: tp_extend (registered live rule) anchored
+  at the declared 3.5R: extend 1R (X351) and 0.5R (X3505). Baseline B = the declared static 3.5R target (--tp-target-r=3.5).
+  Selected on the discovery span only and read ONCE on a later held-out span, does a candidate beat B?'
+why_this_matters: 'Operator decision 2026-11-04 (weekly planning popup, relayed by Manager Session 2026-11-04a): ''Yes, test
+  all 6 (Recommended)'' -- every non-compliant REAL-MONEY leg gets ONE pre-registered TP test. Prior tests on this leg: RQ-20261015-cab7-06
+  (family-pooled K*, indeterminate); RQ-20261101-5e01-01 (structure SL+TP, indeterminate, n 38). None held a span back from
+  selection; this one does, so a PASS here is the evidence record a Tier-3 declare needs and a FAIL closes these configurations
+  honestly.'
+power:
+  expected_n: 60
+  min_detectable_effect: 0.63
+  effect_units: sd
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: '(1.96 + 0.8416)^2 / 0.63^2 = 19.8 trades -> the registered discovery floor 20 / held-out floor 12. MEASURED: IAUM
+    alone holds 38 baseline trades 2021-07..2026-10 (research/results/RQ-20261101-5e01-01, arm A) -- too few for any held-out
+    design. This unit runs the config-exact GOLD TWIN (--symbol GLD, every other field unchanged; IAUM and GLD hold the same
+    bullion) from 2018-07 on the dukascopy lane. INFERRED ~60 trades; the floors are registered low and the MDE says what
+    that costs.'
+  feasibility:
+    source: none
+    accrual_basis: Replays history on freshly fetched public candles for a pinned window; nothing accrues.
+decision_rule:
+  id: RULE-RQ20261104c6f106-TP-HOLDOUT
+  statistic: 'scripts/research/exit_lever_ablation.py --grade holdout on iaum_pullback_1d, window 2018-07-01 .. 2026-11-03
+    23:59, net of the full cost stack the harness resolves per venue (execution_costs.resolve_cost_policy: fees + slippage
+    + funding; recorded per arm as cost_stack). Every arm runs once over the whole window. The boundary is fixed from B''s
+    ENTRY TIMES before any outcome is read: the latest 25% of the window, grown in 1% steps until it holds 12 of B''s entries,
+    capped at 40%. DISCOVERY = trades whose entry AND exit precede the boundary, cut into 4 equal calendar folds (multi-fold
+    walk-forward); HELD-OUT = trades entered on/after it (no overlap; straddlers excluded). Per arm: n, net R, per-fold net
+    R, max DD R, by_outcome. Reported, not graded: tp_share = by_outcome.take_profit / n.'
+  rule: 'ELIGIBLE on discovery iff n >= 20, net R > 0 and >= 3 of 4 discovery folds net-positive; the eligible arm with the
+    highest discovery net R is SELECTED (a tie goes to B). PASS iff ALL of: (1) the selected arm is a candidate (X351, X3505),
+    not B; (2) its held-out n >= 12 and held-out net R > 0 (harness label confirmed); (3) on the SAME held-out span its net
+    R >= B''s held-out net R (paired read of arms/<label>__trades.jsonl, read once, no re-selection). FAIL iff B is selected
+    (the declared exit wins discovery), or the harness labels no_discovery / not_replicated, or clause 3 fails. INDETERMINATE
+    iff insufficient_discovery or underpowered (a power shortfall, never evidence against the leg). The negative control XU
+    (--tp-thesis unknown: the extension never fires) MUST equal B in n and net R over the whole window; if it does not, the
+    run is INVALID (harness defect), not a verdict, and XU is never a candidate even if the harness selects it. PASS -> doctrine
+    read: tp_share(selected) >= 0.10 on the held-out span, else forwarded as ''P&L without a reachable prediction'', not a
+    declare; otherwise ONE Tier-3 proposal on row TP-DECLARE-ALPACA-PB1D: tp_revision: {rule: tp_extend, extend_r: <sel>,
+    approach_frac: 0.85, max_extends: 3} on iaum_pullback_1d (and its mirror proxy by the alpaca superset rule), bybit/alpaca
+    live + mirror in one revertible PR, operator''s approval. Thresholds are not changed after any result. A FAIL closes these
+    configurations, never the family (research-ops § D).'
+  what_it_does_not_do: Edits no config, places no order. The leg's ENTRY params were chosen on windows that overlap both spans;
+    the held-out span is independent of the TP selection made here, not of the leg's construction. A one-leg per-trade-R read,
+    not the book simulation.
+  registered_before_run: true
+  registered_at: '2026-11-04'
+compute: cpu_light
+value:
+  bucket: own_losses
+  usd_at_stake_per_month: 300
+  confidence: 0.3
+  basis: 'stand-in: TP-doctrine compliance of a real-money leg''s bracket; not a P&L measurement.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 2.0
+  est_minutes: 30
+  why_runner: Fetches keyless public candles for a pinned window; reads no trainer data.
+  basis: 'Runner. One harness invocation per arm (a7c3 / bea9 precedent: minutes per arm incl. the fetch).'
+run:
+  command:
+  - python3
+  - scripts/research/exit_lever_ablation.py
+  - --leg
+  - iaum_pullback_1d
+  - --arm
+  - B=--tp-target-r=3.5
+  - --arm
+  - X351=--tp-target-r=3.5;--tp-extend-r=1.0;--tp-approach-frac=0.85;--tp-max-extends=3;--tp-thesis=native
+  - --arm
+  - X3505=--tp-target-r=3.5;--tp-extend-r=0.5;--tp-approach-frac=0.85;--tp-max-extends=3;--tp-thesis=native
+  - --arm
+  - XU=--tp-target-r=3.5;--tp-extend-r=1.0;--tp-approach-frac=0.85;--tp-max-extends=3;--tp-thesis=unknown
+  - --days
+  - '3050'
+  - --symbol
+  - GLD
+  - --non-crypto-source
+  - dukascopy
+  - --start
+  - '2018-07-01'
+  - --end
+  - 2026-11-03 23:59
+  - --grade
+  - holdout
+  - --baseline
+  - B
+  - --delta-r
+  - '0'
+  - --folds
+  - '4'
+  - --fold-majority
+  - '3'
+  - --n-floor
+  - '20'
+  - --holdout-frac
+  - '0.25'
+  - --holdout-min-trades
+  - '12'
+  - --holdout-max-frac
+  - '0.40'
+  - --research-unit
+  - RQ-20261104-c6f1-06
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 150
+  inputs:
+    research_unit: RQ-20261104-c6f1-06
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- TP-DOCTRINE
+- TP-DECLARE-ALPACA-PB1D
+- docs/ARCHITECTURE-CANONICAL.md#tp-doctrine
+grading:
+  auto: false
+  verdict: pass
+  decision_rule_id: RULE-RQ20261104c6f106-TP-HOLDOUT
+  graded_at: '2026-11-04'
+  grader: lane TP-REALMONEY-UNITS (session read of the registered clauses 1-3 + control)
+  reason: X351 selected, confirmed, held-out net R 15.4986 >= B 14.7
+  harness_label: confirmed
+  selected: X351
+  boundary: '2024-10-02 06:00:00+00:00'
+  evidence:
+  - research/results/RQ-20261104-c6f1-06/local-20261104.jsonl
+  - comms/research/RQ-20261104-c6f1-06/local-20261104/rule-read.json
+  - comms/research/RQ-20261104-c6f1-06/local-20261104/verdict.json
+  ran: locally via scripts/research/script_run.py --run --run-id local-20261104 (laptop-class), 2026-11-04
+  observation: X351 won discovery (23.55 vs 22.71 R, n 49/51, 4 of 4 folds) and held out (15.50 vs 14.70 R, n 14, tp_share
+    0.286). Control XU == B over the whole window.
+  proposal: 'Tier-3 PROPOSAL (manager carries to the operator; not merged here): config/strategies.yaml under iaum_pullback_1d
+    AND its alpaca_portfolio mirror proxy gld_pullback_1d add ''tp_revision: {rule: tp_extend, extend_r: 1.0, approach_frac:
+    0.85, max_extends: 3}'' (tp_r 3.5 unchanged). Routings on alpaca_live, alpaca_portfolio, alpaca_paper and ib_paper move
+    to compliant (scratch probe, not committed); the same PR removes the stale baseline lines. CAVEATS the operator should
+    see: (a) measured on the config-exact GOLD TWIN (--symbol GLD, dukascopy GLD CFD -- the same instrument the dukascopy
+    lane maps IAUM to) because IAUM alone holds 38 trades; (b) the held-out span holds only 14 trades (registered floor 12),
+    so the pass is +0.80 R over 14 trades, low power. Revert = delete the two lines. Row TP-DECLARE-ALPACA-PB1D.'
+  doctrine_read: declare

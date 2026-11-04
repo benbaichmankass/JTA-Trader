@@ -1375,6 +1375,16 @@ def main() -> None:
             except Exception:  # noqa: BLE001
                 logger.exception("losing_streak_check tick failed")
 
+            # ML ENTRY live monitor (row ML-ENTRY-LIVE-MONITOR): the pre-registered demotion SIGNAL for the live
+            # ENTRY model, per account, every 50 closes once n >= 100. REPORT-ONLY (operator 2026-11-04): one ping
+            # + a brief line; it halts, demotes and sizes nothing. Reads the journal already written, no broker call;
+            # internally cadence-gated (hourly); best-effort.
+            try:
+                from src.runtime.ml_entry_live_monitor import run_ml_entry_live_monitor
+                run_ml_entry_live_monitor()
+            except Exception:  # noqa: BLE001
+                logger.exception("ml_entry_live_monitor tick failed")
+
             # The gap that is invisible to every JOURNAL-keyed detector, because
             # it produces no journal row at all: an account the per-symbol
             # arbitration keeps electing and then discarding. 2026-09-11:

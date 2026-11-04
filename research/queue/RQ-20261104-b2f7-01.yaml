@@ -1,0 +1,116 @@
+# Hand-authored 2026-11-04 by lane PULLBACK-2H-WF (Tier 1), dispatched by Manager Session 2026-11-04a
+# (session_01AFoLuHgZaSYnm9avjeZE33). Re-opens the pullback-2h family walk-forward (weekly walkthrough 2026-11-04 Q4/E4/D4;
+# killed 2026-10-29 as "value unknown", re-opened by the operator at the 2026-11-04 weekly planning popup "Re-open it (Recommended)").
+# Decision rule registered BEFORE any run and pushed before the run. Gates: none.
+id: RQ-20261104-b2f7-01
+title: >-
+  Pullback-2h family walk-forward (re-opened): is the demo-floor sag of the five pullback_2h legs REGIME (inside the family's own
+  4-fold history, net of the full cost stack) or DECAY / NO_EDGE, graded on a held-out last fold disjoint from the reference folds?
+status: done
+cadence: once
+theme: live_strategy
+priority: 1
+kind: experiment
+roadmap:
+- M21
+- L-LADDER
+practice_precedent: 'none: re-opening an operator-killed internal walk-forward on already-registered config-exact legs; method is the repo own direction_walkforward fold test (RQ-20261015-72ad-01), no external precedent applies'
+question: >-
+  The 2026-11-04 weekly walkthrough (Q4) shows the pullback-2h cells at -$11,725 lifetime on the paper book against +$12,355 for
+  trend, the tracker flagging DECAY for the second week, while ada_pullback_2h is the best paper leg over 30d. The walk-forward that
+  would separate regime from decay was killed on 2026-10-29 ("value unknown") and re-opened by the operator on 2026-11-04. Question,
+  asked before the run: at config-exact live params (no parameter is fitted), pooled over eth/sol/xrp/ada/avax_pullback_2h on 1830 d
+  split into 4 contiguous equal-count folds, is the LAST fold (held out; disjoint from the three reference folds) per-trade net R
+  inside the range the reference folds span, with >= 2 folds net-positive and the whole window net-positive?
+why_this_matters: >-
+  Stage-1 demo-floor legs trade regardless; this decides whether the family stays a Stage-0 survivor candidate for the ladder
+  (REGIME) or the recent weakness is a structural break (DECAY) / the family never had net edge (NO_EDGE). It feeds the xrp
+  real-money leg's standing and the weekly DECAY flag. It touches no config.
+power:
+  expected_n: 450
+  min_detectable_effect: 0.28
+  effect_units: sd
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: >-
+    Pooled family trades per fold >= 100 (prior replay RQ-20261015-72ad-01: ~96 trades per fold on avax alone over the same 1830 d,
+    ~385 per leg; five legs pooled ~1,500-1,900 total, ~400+ per fold; the sol leg is short-only so it contributes fewer). With
+    sd ~1.2 R per trade (assumption, from the 72ad-01 per-fold sums) n=100 detects d=0.28 ((1.96+0.8416)^2/0.28^2 ~ 100). The
+    fold test is a sign/range comparison, not a significance claim.
+  feasibility:
+    source: none
+    accrual_basis: >-
+      Data and harness exist (binance_vision candles via leg_replay_emit.py); nothing accrues. Any fold below 100 pooled trades
+      grades INDETERMINATE, never FAIL.
+decision_rule:
+  id: RULE-RQ-20261104-b2f7-01-PREREG
+  registered_at: '2026-11-04'
+  registered_before_run: true
+  statistic: >-
+    Pooled per-fold net R and per-trade net R (harness net_r, net of the resolve_cost_policy cost stack the harness charges: fees,
+    slippage, funding) from direction_walkforward on leg_replay_emit emits at config-exact params, 4 folds. Reference window =
+    folds 1-3; held-out window = fold 4 (last). Graded by scripts/research/leg_replay_emit.py --rule family-regime
+    (grade_family_regime).
+  rule: >-
+    INDETERMINATE IF any fold has < 100 pooled trades (or fewer than 3 folds). Else DECAY (honest negative) IF fold-4 per-trade net R
+    < min(per-trade net R of folds 1-3) AND fold-4 net R < 0. Else REGIME (PASS: the family is a Stage-0 survivor; note it for the
+    ladder, no config change) IF folds with net R > 0 >= 2 of 4 AND pooled whole-window net R > 0. Else NO_EDGE (honest negative).
+  what_it_does_not_do: >-
+    Touches no config and promotes or demotes nothing; a PASS is a note for the promotion ladder, not Gate 1. It says nothing about
+    the long/short sides (RQ-20261010-419b-02 and RQ-20261015-72ad-01 closed those) or bracket geometry. Folds are equal-count by
+    trade order, not calendar quarters.
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 2.0
+  est_minutes: 60
+  basis: >-
+    Runner, one leg-replay-emit invocation over five legs (the 72ad-01 shape took two legs in one dispatcher run). An estimate, not a
+    measurement. Candles are fetched from binance_vision, which this lane's sandbox cannot reach, so the unit is dispatched through the
+    queue (research-script-run.yml) rather than run locally.
+run:
+  workflow: research-script-run.yml
+  command:
+  - python3
+  - scripts/research/leg_replay_emit.py
+  - --legs
+  - eth_pullback_2h,sol_pullback_2h,xrp_pullback_2h,ada_pullback_2h,avax_pullback_2h
+  - --days
+  - '1830'
+  - --rule
+  - family-regime
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 150
+  inputs:
+    research_unit: RQ-20261104-b2f7-01
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+  note: research/results/RQ-20261104-b2f7-01/<run_id>.jsonl (E5 contract); emits, daily_r and replay.json under comms/research/RQ-20261104-b2f7-01/<run_id>/.
+related:
+- docs/reviews/2026-11-04-weekly-walkthrough.md
+- RQ-20261015-72ad-01
+- RQ-20261010-419b-02
+- scripts/research/leg_replay_emit.py
+last_dispatched_at: '2026-11-04T22:50:00+00:00'
+grading:
+  auto: false
+  confirmatory_run: 1
+  decision_rule_id: RULE-RQ-20261104-b2f7-01-PREREG
+  evidence:
+  - research/results/RQ-20261104-b2f7-01/local-lane-pullback-2h-wf-20261104.jsonl
+  graded_at: '2026-11-04'
+  grader: scripts/research/leg_replay_emit.py --rule family-regime (rule applied verbatim, no hand grading)
+  note: >-
+    Run locally by the lane (binance_vision reachable, ~3 min), not by the dispatcher. Honest negative: outcome DECAY, verdict fail.
+    Pooled 1458 trades, 4 folds of 364-365: per-trade net R +0.044, +0.126, -0.055, -0.064; fold net R +15.98, +46.00, -20.02,
+    -23.35; whole-window +18.61 R (+0.013 R/trade; longs -30.66, shorts +49.27). Held-out fold 4 (2025-07-24..2026-11-02) per-trade
+    -0.064 is below the worst reference fold (+0.044) and its net R is < 0 -> DECAY. Folds 3 and 4 are both negative, so this is not
+    one bad window. Per-leg whole-window net R: sol +27.29, ada +16.47, avax +1.60, eth -11.25, xrp -15.49. The family is NOT a Stage-0
+    survivor on this rule; no config touched.
+  reason: DECAY (fold-4 per-trade net R below the worst reference fold and net-negative)
+  rows: 1
+  verdict: fail

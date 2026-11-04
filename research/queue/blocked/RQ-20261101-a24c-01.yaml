@@ -73,6 +73,13 @@ decision_rule:
   reference_order_notional_basis: 'Registered before the run as the impact model''s Q. A stand-in for one default-risk ml_entry order (1.5 percent
     at a median 2.5 percent stop is ~0.6 x equity); the account balance is not stated in this public repo. The run also reports the pooled result
     at Q x 0.25 and Q x 4 as a sensitivity (reported, not gating).'
+operator_2026_11_04: 'GROUP-LEVEL universe (operator popup ~19:33Z, verbatim "Group-level (Recommended)", REPLACING "Per-symbol passes" /
+  "Per-symbol tests" (~19:08Z) and "Shrunk >= 0, n >= 100" (~19:18Z); context ~19:25Z verbatim: "Maybe it shouldn''t be gated at a per symbol
+  basis, but rather it should be kept more general ... I didn''t mean to make the rules stricter than they had and the ML had been designed for.").
+  This unit stays the POOLED test above (rule unchanged, nothing added before any run): a PASS adds the dev-chosen universe U(C) (the Bybit-listed
+  population minus the cost/liquidity filter fixed on the dev folds) to ml_entry''s traded set on the Bybit accounts, written as the population
+  record comms/ml_universe/ml_entry.json (src/config/ml_universe.py); per-symbol results are REPORTED only. Until it reports, bybit_2 /
+  bybit_portfolio keep the 5 coins of the c692-06 pooled PASS. Added 2026-11-04 by lane ML-ENTRY-ALL-ACCOUNTS.'
 compute: cpu_long
 value:
   bucket: ai_trader

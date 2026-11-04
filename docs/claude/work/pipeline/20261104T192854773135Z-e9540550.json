@@ -1,0 +1,17 @@
+{
+  "due_when": {
+    "check_every_days": 2,
+    "clears_when": "a research runner or a committed lake export returns SPY 1h RTH bars back to 2021-01-01 (positive control logged) and RQ-20261104-a41f-01 is git-mv'd back to research/queue/ status queued, rule unchanged",
+    "kind": "observation"
+  },
+  "id": "PI-20261104-ELSFP54S-0003",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "lane ML-ENTRY-ALL-ACCOUNTS (session_01AFoLuHssTryUyRELsfP54s), Manager Session 2026-11-04a 19:22Z instruction",
+    "rerun": "grep -ln 'ALPACA' .github/workflows/*.yml; sed -n '/^blocked_on:/,$p' research/queue/blocked/RQ-20261104-a41f-01.yaml"
+  },
+  "roadmap": "L-ML-LIVE",
+  "state": "queued",
+  "what": "DATA BLOCKER for RQ-20261104-a41f-01 (research/queue/blocked/, per-symbol ml_entry test on Alpaca, operator 2026-11-04 'Per-symbol tests (Recommended)' + 'Shrunk >= 0, n >= 100 (Recommended)'): per-symbol n >= 100 needs multi-year Alpaca history (bdc2-01 MEASURED 3..22 long takes per ETF per 12 months). research-script-run.yml carries NO ALPACA secrets (grep: ALPACA_* appears in market-data-lake.yml, test-alpaca-creds.yml, options-snapshot-capture.yml, sync-vm-secrets.yml, test-alpaca-from-vm.yml only); Yahoo 1h reaches ~730 days. Needed: Alpaca 1h RTH bars back to 2021-01-01 + daily bars back to 2019-01-01 + the asset list, either as Alpaca market-data keys on the research runner (operator-approved secret scope; no new secret VALUE) or a committed export from the market-data lake. Plus the harness flags in the unit's blocked_on."
+}
