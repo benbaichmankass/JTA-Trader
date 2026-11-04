@@ -81,6 +81,7 @@ if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 
 from src.prop.platform import API_PLATFORMS, FeasibilityError, adapter_for_platform, load_platform_config  # noqa: E402
+from src.prop.positions_report import account_symbols, positions_fields  # noqa: E402
 
 EXIT_OK, EXIT_ERROR, EXIT_UNPARSED, EXIT_FEASIBILITY, EXIT_ENV = 0, 1, 3, 4, 5
 EXIT_TRANSIENT = 7  # prop_executor_tick.py owns 6 (no session); keep the codes distinct
@@ -160,6 +161,9 @@ def build_status_report(
         "source": "breakout_login_check",
         "open_positions": None if positions is None else _strip_raw(positions),
         "open_orders": None if orders is None else _strip_raw(orders),
+        # AUD-PROP-VENUE-POSITIONS: the same read in the consumer shape (positions_state + positions in units,
+        # bot symbols) that GET /api/bot/prop/status readers grade; this tick's status is often the newest row.
+        **positions_fields(positions, account_symbols(account_id)),
     }
 
 
