@@ -1,0 +1,17 @@
+{
+  "due_when": {
+    "check_every_days": 3,
+    "clears_when": "collect skips a run whose result is already in ANY open automation/research-results-batch-* PR, or the batch landing tolerates an identical-except-generated_at duplicate. No dispatcher_fires watchdog incident caused by a batch conflict for 7 days.",
+    "kind": "observation"
+  },
+  "id": "PI-20261104-BCZDXJNR-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "Manager Session 2026-11-03b, research watchdog dispatcher_fires@20261104T0245Z",
+    "rerun": "gh api repos/{repo}/pulls?state=open | jq '.[].head.ref' | grep research-results-batch; check each for mergeable=CONFLICTING"
+  },
+  "roadmap": "RESEARCH-FLOW",
+  "state": "queued",
+  "what": "research-queue-dispatch double-collect, measured 2026-11-04 ~02:50Z. Dispatcher runs 41753165175 (785) and 41754064513 (786) BOTH collected runner result RQ-20261103-b3c9-16/41744435132. 785 landed it via #22774. 786's batch PR #22776 then hit an add/add conflict on research/results/RQ-20261103-b3c9-16/41744435132.jsonl; the two copies differ only in generated_at. 786's land job sat waiting on its own PR, and the dispatcher's concurrency group queued run 787 behind it, so NO research compute started for about 76 min (watchdog dispatcher_fires incident 20261104T0245Z; 84 runnable). The manager resolved it by hand (kept main's copy, merge commit on the batch branch) and closed the stale #22775 (research-slo) and #22769 (receipt). Cause: collect_runner_results dedupes against manifests ON MAIN, but not against results sitting in another run's not-yet-merged batch PR. This is the pending_in_open_batches drift risk named on CI-BATCH-BOOKKEEPING. Related: B6, the dispatcher waiting on verify-merged while holding the queue."
+}

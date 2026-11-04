@@ -1,0 +1,106 @@
+# Decision rule registered BEFORE any run. Gates: none.
+id: RQ-20261104-5e05-01
+title: 'Structure exit START TP: pull in to the structure level (live, as designed) vs extend-only from the declared TP, per leg
+  family (trend_donchian / htf_pullback), net of the full cost stack'
+status: blocked
+cadence: once
+theme: live_strategy
+priority: 2
+roadmap:
+- L-AM-STANDARD
+kind: experiment
+practice_precedent: 'T1, T3, T8, T9 (docs/reference/trading-and-model-practice-principles.md): one exit factor changed, entries
+  fixed, judged net of the full cost stack against hold and a matched random control; TP pull-in vs extend is measured, not assumed.'
+intervention_controls:
+  hold_to_bracket: true
+  matched_random:
+    draws: 100
+  best_static:
+    grid:
+    - start_tp_structure
+    - start_tp_declared_extend_only
+    excludes_test_folds: true
+  bootstrap_group: week
+question: 'Since #22626 (2026-11-03) 19 legs declare structure_exit "pivot=5". The live verdict source
+  (src/runtime/structure_exit_live.replay) and the harness arm (StructureExit.start) set the START TP to the nearest structure
+  level >= 1.0 R at the entry bar, which can PULL THE TP IN from the declared target (first live move, 2026-11-04 03:05Z,
+  trend_donchian_eth ETHUSDT short on bybit_1: 5.58 R -> 1.48 R), then extend-only. Alternative arm X: keep the declared entry TP
+  as the floor and only EXTEND to structure levels beyond it. Which is better net of cost, per leg family?'
+why_this_matters: 'Manager decision 2026-11-04 ~03:18Z: keep the pull-in as designed (it matches the harness, and it replaces
+  fictional TPs such as tp_r 50.0 with real levels, per the TP doctrine) and MEASURE the question instead of changing config.
+  Row STRUCTURE-EXITS-DEFAULT.'
+power:
+  expected_n: 400
+  min_detectable_effect: 0.05
+  effect_units: R
+  sd: 1.2
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: 'ESTIMATE, as RQ-20261101-5e01-*: per-trade sd 1.2 R assumed; paired per-trade difference (same entries) has a smaller
+    sd, so conservative. n per family is the sum over its declared legs 2020-07..2026-10. The first run replaces it.'
+  feasibility:
+    source: none
+    accrual_basis: Replays history on public candles for a pinned window; nothing accrues.
+decision_rule:
+  id: RULE-RQ20261104-5E05-01-START-TP
+  registered_at: '2026-11-04'
+  registered_before_run: true
+  statistic: 'Per leg family (trend = the 7 declared trend_donchian legs; pullback = the 11 declared htf_pullback-family legs),
+    exit_lever_ablation.py on each leg''s own Stage-0 harness (backtest_trend.py / backtest_pullback.py), window 2020-07-01..2026-10-15,
+    6 equal calendar folds, full cost stack (fee + slippage + funding). Arms, all with --structure-exit pivot=5 and fixed entries:
+    S = start TP at the structure level (current live); X = start TP = the declared entry TP, extend-only to structure levels beyond
+    it; R = 100 matched random-exit controls. Per-trade net R differences pooled per family.'
+  rule: 'Per family. PASS_X: mean net R per trade of X exceeds S, the paired week-bootstrap 95% lower bound of (X - S) > 0, in >= 4
+    of 6 folds, and X beats the 95th pct of R -> propose (Tier 3, per family) switching the live start TP to extend-only. PASS_S: the
+    same with S and X swapped -> keep as is, close the question. INDETERMINATE: n < 39 per family, or neither passes. Thresholds,
+    window and arms are fixed here and not changed after any result. A PASS is a discovery, then one confirmation run on
+    post-window data before any Tier-3 PR.'
+  what_it_does_not_do: Edits no config and places no order.
+blocked_on:
+- kind: work_item
+  ref: STRUCTURE-START-TP-ARM
+  what: 'A harness flag for arm X, e.g. --structure-start-tp declared, in src/runtime/structure_levels.py StructureExit.start and
+    the two harnesses (default = structure, byte-identical), plus a parity test. About 0.25 day.'
+  clears_when: The flag and its parity test are on main; then fill run.command, git mv to research/queue/, set status queued.
+compute: cpu_long
+value:
+  usd_at_stake_per_month: 150
+  confidence: 0.25
+  bucket: own_losses
+  basis: 'stand-in estimate: governs the start TP of 19 live/paper legs; not a measurement.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 4.0
+  est_minutes: 240
+  basis: 'Estimate from the 5e01 units (same harnesses, same window). The first run replaces it.'
+run:
+  workflow: research-script-run.yml
+  command:
+  - python3
+  - scripts/research/exit_lever_ablation.py
+  - --leg
+  - trend_donchian_eth
+  - --grade
+  - replace
+  - --out
+  - '{out_dir}'
+  inputs:
+    research_unit: RQ-20261104-5e05-01
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+programme: P1
+related:
+- src/runtime/structure_exit_live.py
+- src/runtime/structure_levels.py
+- research/queue/blocked/RQ-20261101-5e01-09.yaml
+- STRUCTURE-EXITS-DEFAULT
+ml_consumer:
+  consumer: STRUCTURE-EXITS-DEFAULT
+  decision: keep the structure start-TP pull-in, or switch the live start TP to extend-only from the declared TP, per leg family
+  legs:
+  - trend_donchian_eth
+  book: demo_floor

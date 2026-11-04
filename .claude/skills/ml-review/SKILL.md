@@ -38,6 +38,8 @@ already measured with a locator (e.g. `ML-COVERAGE-AUDIT`, `ML-PROGRAMME-PLAN`).
 
 ---
 
+**Model names:** models at shadow or above carry a display alias (breed per job) in `docs/reference/model_names.yaml`; use it in review lines (`scripts/ops/model_names.py labelled(id)`) and add any model promoted this week to that file.
+
 ## Layer 0 — PRIOR CALLS (always first)
 
 **Follow-through first (2026-10-28):** run `python3 scripts/ops/review_followthrough.py --source ml-review --window-days 7` and record its cohort and backlog line before grading calls; an open item older than 14 d with no owner is a call to schedule or kill, not to re-file.

@@ -185,6 +185,17 @@ jobs:
         # checkout, which git log confirms this workflow has never had.
         if: steps.dedup.outputs.skip != 'true'
         uses: actions/checkout@v4
+        with:
+          # GH-CAPACITY-INFRA-RUNNER / PI-20261103-RAM7EH86-0003: sparse + blobless so a job on the self-hosted trainer
+          # runner costs ~0.5 GB, not the 6-8 GB full clone that filled the trainer disk on 2026-11-03.
+          # comms/research (5.0 GB of tracked unit data) and comms/macro are never read by this job.
+          # Pinned by tests/test_infra_runner_sparse_checkout.py.
+          filter: blob:none
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            /*
+            !/comms/research/
+            !/comms/macro/
 
       # ────────────────────────────────────────────────────────────
       # workflow_dispatch path: single path, operator-driven, unchanged
