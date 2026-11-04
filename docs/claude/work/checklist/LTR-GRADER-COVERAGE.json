@@ -11,10 +11,10 @@
   "tier": 1,
   "prs": [],
   "blocked_on": [],
-  "note": "62% of holds unpriced (replay_mismatch 41, no_candles 11, unresolved 5, candles window 2, trade_open 46). applied.jsonl has no diag route; every reviews.jsonl row says applied:false. Feeds GRADE-EVERYTHING-CONTINUOUSLY. Source: comms/research/ltr_class_grade/VERDICT.md (lane LTR-CLASS-GRADE). Gates this adds: none. Basis: 105 of 170 hold calls unpriced (62%), over 318 review rows 2026-10-25..2026-11-01.",
+  "note": "62% of holds unpriced (replay_mismatch 41, no_candles 11, unresolved 5, candles window 2, trade_open 46). applied.jsonl has no diag route; every reviews.jsonl row says applied:false. Feeds GRADE-EVERYTHING-CONTINUOUSLY. Source: comms/research/ltr_class_grade/VERDICT.md (lane LTR-CLASS-GRADE). Gates this adds: none. Basis: 105 of 170 hold calls unpriced (62%), over 318 review rows 2026-10-25..2026-11-01. 2026-11-04 lane HANDOFF-REGISTER-ITEMS-20261104: handoff item (c) 'live_review_outcomes returns no_candles for the 4h atr cells' is this row's no_candles bullet (scripts/research/live_review_outcomes.py:346-423 counts and labels it; 11 of 105 unpriced holds on 2026-11-01). The 4h-atr-specific cause (candle window/interval for 4h cells) was NOT re-measured here; whoever takes this row should run live_review_outcomes for a 4h atr leg and read the no_candles reason first. No new row (one home).",
   "priority_rank": 2,
-  "updated_at": "2026-11-01T13:40:47Z",
-  "updated_by": "session_01AFoLuJYbPJ8e5Lv2fZHWWw",
+  "updated_at": "2026-11-04T23:19:04Z",
+  "updated_by": "session_01AFoLuKQrL2kMz3EUzGFeCP",
   "due_by": "2026-11-05",
   "roadmap": [
     "L-ATM"
