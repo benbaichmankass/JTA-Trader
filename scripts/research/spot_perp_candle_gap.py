@@ -181,7 +181,6 @@ def leg_gap(spot: Dict[str, Any], perp: Dict[str, Any], tf: str) -> Dict[str, An
 
 
 def main(argv: Optional[List[str]] = None) -> int:
-    import yaml
     ap = argparse.ArgumentParser()
     ap.add_argument("--out", required=True)
     ap.add_argument("--legs", default="", help="comma list; default = every leg on a Bybit account roster")
@@ -194,7 +193,8 @@ def main(argv: Optional[List[str]] = None) -> int:
     (out / "runs").mkdir(parents=True, exist_ok=True)
     from src.config.accounts_loader import load_accounts_dict
     accts = load_accounts_dict(REPO / "config/accounts.yaml")
-    strats = yaml.safe_load((REPO / "config/strategies.yaml").read_text())["strategies"]
+    from src.units.strategies import load_strategy_config
+    strats = dict(load_strategy_config() or {})
     roster: Dict[str, List[str]] = {}
     for acct, c in accts.items():
         if str(c.get("exchange", "")).lower() == "bybit":
