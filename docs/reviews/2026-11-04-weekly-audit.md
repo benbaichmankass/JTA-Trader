@@ -1,6 +1,6 @@
 # Weekly audit 2026-11-04 (monthly deep) — the money-path controls fire, but last week's audit rows never moved: none had a due date, so nothing surfaced them
 
-> **Doc status:** `live` · category `evidence` · last verified `2026-11-04` · lane `DEEP-AUDIT-20261104` (session_01AFoLuJHHNrJpWUPrhHXtjo, dispatched by Manager Session 2026-11-04a under RESET-JOBS-20261104) · window 2026-10-28T18Z → 2026-11-04T18:40Z · **all four deep passes** (monthly; ISO week 45 mod 4 = 1 would run CONSISTENCY+LIVENESS alone) · live reads 18:35Z via diag direct transport
+> **Doc status:** `unknown` · category `evidence` · last verified `2026-11-04` · lane `DEEP-AUDIT-20261104` (session_01AFoLuJHHNrJpWUPrhHXtjo, dispatched by Manager Session 2026-11-04a under RESET-JOBS-20261104) · window 2026-10-28T18Z → 2026-11-04T18:40Z · **all four deep passes** (monthly; ISO week 45 mod 4 = 1 would run CONSISTENCY+LIVENESS alone) · live reads 18:35Z via diag direct transport
 
 ## 0. Prior calls (2026-10-28 audit: 11 calls; 2026-10-19 audit: 11 calls)
 
