@@ -1,5 +1,6 @@
 """ML universe from the per-symbol pass record (row ML-ENTRY-ALL-ACCOUNTS, PR B): no record = configured set, byte-identical;
-a fail removes, a pass on the account's venue adds, indeterminate keeps."""
+GROUP-LEVEL (operator 2026-11-04 ~19:33Z "Group-level (Recommended)"): a passed population adds its symbols on the account's
+venue; a fail / indeterminate population changes nothing; nothing is ever removed."""
 from __future__ import annotations
 
 import json
@@ -44,15 +45,19 @@ def _old_roster(roster, cfgs, account_id):
     return out
 
 
+def _pop(verdict, syms, unit="RQ-X"):
+    return {"unit": unit, "verdict": verdict, "symbols": {s: {"venues": v} for s, v in syms.items()}}
+
+
 def test_apply_rule():
-    rec = {"BTCUSDT": {"verdict": "fail"}, "ETHUSDT": {"verdict": "indeterminate"},
-           "AAVEUSDT": {"verdict": "pass", "venues": ["bybit"]}, "SPY": {"verdict": "pass", "venues": ["alpaca"]},
-           "ZECUSDT": {"verdict": "indeterminate"}}
+    rec = [_pop("pass", {"AAVEUSDT": ["bybit"], "BTCUSDT": ["bybit"], "SPY": ["alpaca"]}),
+           _pop("fail", {"ZECUSDT": ["bybit"], "ETHUSDT": ["bybit"]}),
+           _pop("indeterminate", {"DOGEUSDT": ["bybit"]})]
     conf = ["BTCUSDT", "ETHUSDT", "SOLUSDT"]
     assert MU.apply(conf, None, "bybit") == conf                                   # no record: unchanged
-    assert MU.apply(conf, rec, "bybit") == ["ETHUSDT", "SOLUSDT", "AAVEUSDT"]      # fail out; pass on venue in
-    assert MU.apply(conf, rec, "alpaca") == ["ETHUSDT", "SOLUSDT", "SPY"]          # venue decides which passes
-    assert MU.apply([], rec, "bybit") == ["AAVEUSDT"]                              # indeterminate never adds
+    assert MU.apply(conf, rec, "bybit") == ["BTCUSDT", "ETHUSDT", "SOLUSDT", "AAVEUSDT"]  # pass adds; fail never removes
+    assert MU.apply(conf, rec, "alpaca") == conf + ["SPY"]                         # the venue decides which passes
+    assert MU.apply([], rec, None) == []                                           # no venue: nothing added
 
 
 def _write(tmp_path, doc):
@@ -63,22 +68,22 @@ def _write(tmp_path, doc):
 
 
 def test_record_flows_through_leg_symbols_with_the_account_venue(tmp_path, monkeypatch):
-    d = _write(tmp_path, {"schema": MU.SCHEMA, "leg": "ml_entry", "symbols": {
-        "BTCUSDT": {"verdict": "fail", "n": 120, "shrunk_mean_net_r": -0.01},
-        "AAVEUSDT": {"verdict": "pass", "n": 246, "shrunk_mean_net_r": 0.004, "venues": ["bybit"]}}})
+    d = _write(tmp_path, {"schema": MU.SCHEMA, "leg": "ml_entry", "populations": [
+        _pop("pass", {"AAVEUSDT": ["bybit"], "BTCUSDT": ["bybit"]}, "RQ-20261101-a24c-01"),
+        _pop("fail", {"ETHUSDT": ["bybit"]}, "RQ-OTHER")]})
     monkeypatch.setattr(MU, "RECORD_DIR", d)
     MU._CACHE.clear()
     cfg = _cfgs()["ml_entry"]
-    b2 = leg_symbols(cfg, "bybit_2", leg="ml_entry")
-    assert "BTCUSDT" not in b2 and "AAVEUSDT" in b2 and b2[:4] == ["ETHUSDT", "XRPUSDT", "ADAUSDT", "SOLUSDT"]
+    five = ["BTCUSDT", "ETHUSDT", "XRPUSDT", "ADAUSDT", "SOLUSDT"]
+    assert leg_symbols(cfg, "bybit_2", leg="ml_entry") == five + ["AAVEUSDT"]       # widened, never narrowed
     assert "AAVEUSDT" not in leg_symbols(cfg, "alpaca_paper", leg="ml_entry")     # not listed on alpaca
     assert "AAVEUSDT" in leg_symbols(cfg, None, leg="ml_entry")                    # the builder's union sees it
-    assert leg_symbols(cfg, "bybit_2") == ["BTCUSDT", "ETHUSDT", "XRPUSDT", "ADAUSDT", "SOLUSDT"]  # no leg: config
+    assert leg_symbols(cfg, "bybit_2") == five                                     # no leg name: config
     MU._CACHE.clear()
 
 
 def test_a_malformed_or_foreign_record_changes_nothing(tmp_path, monkeypatch):
-    d = _write(tmp_path, {"schema": MU.SCHEMA, "leg": "other_leg", "symbols": {"BTCUSDT": {"verdict": "fail"}}})
+    d = _write(tmp_path, {"schema": MU.SCHEMA, "leg": "other_leg", "populations": [_pop("pass", {"AAVEUSDT": ["bybit"]})]})
     monkeypatch.setattr(MU, "RECORD_DIR", d)
     MU._CACHE.clear()
     cfg = _cfgs()["ml_entry"]

@@ -1,9 +1,9 @@
 # Hand-authored 2026-11-04 by lane ML-ENTRY-ALL-ACCOUNTS (Tier 1), dispatched by Manager Session 2026-11-04a (session_01AFoLuHgZaSYnm9avjeZE33).
-# RE-REGISTERED per symbol 2026-11-04 ~19:30Z BEFORE ANY RUN (see re_registered). Gates: none.
+# RE-REGISTERED 2026-11-04 ~19:45Z BEFORE ANY RUN, GROUP-LEVEL (see re_registered). Gates: none.
 id: RQ-20261104-a41f-01
-title: 'ENTRY on Alpaca, PER SYMBOL: which Alpaca-tradable ETFs (a population fixed by a pre-registered dev-window liquidity rule) does the frozen
-  ml-decision-entry-v1 (tau 0.10, no re-fit) PASS per symbol -- n >= 100 and empirically-Bayes-shrunk mean net R >= 0, under the profile the one
-  ml_entry reads from config (restricted long argmax, session us_equity, Bybit-perp references, BTCUSDT anchor, Alpaca cost stack)?'
+title: 'ENTRY on Alpaca, GROUP-LEVEL: does the frozen ml-decision-entry-v1 (tau 0.10, no re-fit), under the profile the one ml_entry reads from
+  config (restricted long argmax, session us_equity, Bybit-perp references, BTCUSDT anchor, Alpaca cost stack), reach POOLED mean net R per decision
+  >= 0 on a pre-registered Alpaca ETF population (liquidity rule fixed on a dev window)?'
 status: blocked
 cadence: once
 theme: ml_health
@@ -30,31 +30,36 @@ why_this_matters: 'The operator target (row ML-ENTRY-ALL-ACCOUNTS 2026-11-03 ~10
   decision (n=128) for the SERVED side rule (a SHORT argmax -> nothing) with decisions at the session close. This unit tests the two execution
   rules the profile changes (restricted long argmax; session gate) on a window bdc2-01 never read.'
 power:
-  expected_n: 'per symbol: ~10..60 restricted-long takes / year (bdc2-01 MEASURED 3..22 / 12 months under the served rule; the restricted argmax
-    adds longs); n >= 100 needs ~2..10 years, so most symbols are expected INDETERMINATE on the first read'
-  min_detectable_effect: 0.26
+  expected_n: 300
+  min_detectable_effect: 0.16
   effect_units: metric
   sd: 1.0
-  design: per_symbol_shrinkage
+  design: one_sample
   alpha: 0.05
   power: 0.8
-  basis: INFERRED from bdc2-01 per_symbol n (GDX 22, SLV 22, USO 19, IWM 14, QQQ 11, SPY 6, TLT 3 in 12 months) and the c692-01 per-symbol se
-    ~0.087 R at n ~225. Stated before the run.
+  basis: 'INFERRED from bdc2-01 (MEASURED 128 long takes / 12 months / 11 ETFs under the served rule, ~1 per ETF-month): a pool of ~30-80 liquid
+    ETFs x ~5.7 years x ~1 take per ETF-month x ~1.0 (session gate -25 percent, restricted argmax +30 percent) = several hundred to a few thousand
+    pooled decisions; 300 is the conservative floor stated before the run. sd ~1 R.'
   feasibility:
     source: alpaca_historical_bars
-    accrual_basis: Replays Alpaca 1h + daily history (needs Alpaca market-data keys on the runner, or the market-data lake); nothing accrues except
-      the monthly re-read.
+    accrual_basis: Replays Alpaca 1h RTH history 2021-01-01 onward (Yahoo 1h reaches only ~730 days); nothing accrues.
 decision_rule:
-  id: RULE-ML-UNIVERSE-PER-SYMBOL-SHRUNK-N100
+  id: RULE-RQ20261104-a41f-01-ENTRY-ALPACA-POOLED
   registered_at: '2026-11-04'
   registered_before_run: true
-  statistic: see per_symbol_rule.statistic
-  rule: see per_symbol_rule.rule (one rule for this unit and RQ-20261101-a24c-01)
-  what_it_does_not_do: 'No re-fit, no tau choice, no sizing, no config change, no order. FIDELITY, declared: the live leg also declares structure_exit
-    "pivot=5;sl_only" and the ml_first_passage TP revision; this harness models the fixed 2/3 ATR bracket only, so a record built on it reads
-    fidelity approximate and roster-promotion-evidence-guard C5 does not clear on it alone. THE EQUITY DISTRIBUTION QUESTION (row item 6): ret_168
-    / vol168 / vol_z / range_pos_168 count BARS and hour / dow sit in a 6.5-hour session -- measured AS-IS, not fixed.'
-  min_n: 100 decisions per symbol
+  statistic: 'scripts/research/ml_entry_alpaca_score.py run --side-rule restricted --session-gate: POOLED held-out mean net R per taken LONG decision
+    over the population, n, n_symbols. Window 2021-01-01..the last complete month before the run (Alpaca 1h RTH bars), net of fee 0.0 + slippage
+    5.0 bps (PROVISIONAL) + regulatory 0.5 bps round trip, funding 0. Decisions at RTH closes with UTC hour % 4 == 0 that pass the live session
+    gate; LONG when p_long > tau; entry next RTH open; SL 2 / TP 3 ATR14 / 24-bar time stop; one position per symbol. Reported, never gating:
+    per-symbol n and mean; bootstrap CI95; by year; the 2025-10-01-onward slice (clean of v1s training calendar); the 13 alpaca_paper ETFs pooled.'
+  rule: 'INDETERMINATE IF pooled n < 30. PASS IF pooled mean net R per decision >= 0 (point estimate, the operator bar). FAIL otherwise. A PASS
+    writes the population record comms/ml_universe/ml_entry.json (src/config/ml_universe.py): the population symbols join ml_entrys traded set
+    wherever the accounts venue lists them (alpaca). A FAIL or INDETERMINATE adds nothing. Thresholds never change after any result.'
+  what_it_does_not_do: 'No re-fit, no tau choice, no sizing, no config change, no order. CALENDAR OVERLAP, declared: crypto reference rows before
+    2025-09-22 are inside v1s training calendar; the ETFs were never trained on. FIDELITY, declared: the live leg declares structure_exit "pivot=5;sl_only"
+    and the ml_first_passage TP revision; this harness models the fixed 2/3 ATR bracket, so the record reads fidelity approximate and roster-promotion-evidence-guard
+    C5 does not clear on it alone. THE EQUITY DISTRIBUTION QUESTION (row item 6) is measured AS-IS.'
+  min_n: 30 pooled decisions
 compute: cpu_light
 value:
   bucket: ai_trader
@@ -106,52 +111,24 @@ related:
 - ALPACA-LIVE-ACTIVITY-ML
 - RQ-20261101-bdc2-01
 - RQ-20261101-c692-01
-re_registered: '2026-11-04 ~19:30Z by lane ML-ENTRY-ALL-ACCOUNTS on the operator decisions of ~19:08Z ("Per-symbol tests (Recommended)") and ~19:18Z
-  ("Shrunk >= 0, n >= 100 (Recommended)"), BEFORE ANY RUN (the unit has never run; no result exists). Supersedes the pooled 2025-02-10..2025-09-21
-  design registered earlier today (RULE-RQ20261104-a41f-01-ENTRY-ALPACA-PROFILE, never read): a per-symbol n >= 100 is unreachable on Yahoos ~730-day
-  1h reach (bdc2-01 MEASURED 3..22 long takes per ETF per 12 months), so the window is the multi-year Alpaca history below.'
-population: 'CANDIDATE POOL, fixed before the run and independent of any accounts symbols: every Alpaca asset that is status=active, tradable,
-  class=us_equity and an ETF (Alpaca asset list read at run time, recorded with its sha256), whose median daily dollar volume over the DEV window
-  2019-01-01..2020-12-31 (Alpaca daily bars) is >= 50,000,000 USD. The dev window is used ONLY for this filter and is excluded from scoring. Symbols
-  that fail the filter are not tested (counted and listed).'
-per_symbol_rule:
-  id: RULE-ML-UNIVERSE-PER-SYMBOL-SHRUNK-N100
-  registered_at: '2026-11-04'
-  registered_before_run: true
-  operator_decision: 'Operator 2026-11-04 ~19:18Z popup answer, verbatim (relayed by Manager Session 2026-11-04a): "Shrunk ≥ 0, n ≥ 100 (Recommended)".
-    Earlier ~19:08Z: "Per-symbol passes (Recommended)", "Per-symbol tests (Recommended)". ~19:06Z: "the MLs trade whatever is whatever they''re
-    set to trade. They don''t have their roster is internal to the ML, and it''s based on what tests have passed versus which ones have not."'
-  population: 'the CANDIDATE POOL in `population` (and every ETF ml_entry trades on alpaca_paper today: SPY QQQ IWM TLT IEF SLV USO GDX TQQQ QLD
-    SPYM IAUM SCHA, tested whether or not the filter keeps them)'
-  window: '2021-01-01..the last complete month before the run (Alpaca 1h RTH bars; the crypto reference perps need >= 2020 history). DECLARED:
-    the crypto rows of that calendar overlap v1s training (train_end_exclusive 2025-09-22 19:00Z) for the CROSS-SECTIONAL reference features;
-    the ETFs were never trained on. Reported beside each verdict, never gating: the same statistic on 2025-10-01 onward only (the clean part).'
-  statistic: 'Per symbol s, over the arm-A (tau policy, one position per symbol) decisions on the window, each net of fee 0.0 (Alpaca commission-free)
-    + slippage 5.0 bps round trip (PROVISIONAL, src/runtime/execution_costs.resolve_cost_policy) + regulatory 0.5 bps round trip, funding 0: n_s,
-    m_s = mean net R per decision, se_s = sd_s / sqrt(n_s). Pooled mu = the inverse-variance-weighted mean of m_s over symbols with n_s >= 100;
-    between-symbol variance tau2 by DerSimonian-Laird (floored at 0). shrunk_s = mu + tau2 / (tau2 + se_s^2) x (m_s - mu) (empirical-Bayes, shrunk
-    to the pooled mean by its own SE). With tau2 = 0 every symbol reads mu: the per-symbol verdicts then coincide with the pooled sign (stated
-    here, before the run). Decisions: RTH bar closes with UTC hour % 4 == 0 that pass the live session gate (us_equity open at the close and at
-    close + 24h); LONG when p_long > tau (restricted argmax); entry next RTH open; SL 2 ATR14 / TP 3 ATR14 / 24-bar time stop; one position per
-    symbol.'
-  rule: 'Per symbol: INDETERMINATE IF n_s < 100 (keeps the account''s current set for that symbol). PASS IF n_s >= 100 AND shrunk_s >= 0. FAIL
-    IF n_s >= 100 AND shrunk_s < 0. Re-evaluated monthly on the window extended by each new forward month (pooled per symbol; a monthly re-read
-    is a new claim, rule unchanged); a FAIL removes the symbol. The run writes comms/ml_universe/ml_entry.json (schema ml_universe/1, src/config/ml_universe.py)
-    with every tested symbol''s verdict, n, m, se, shrunk and the venues that list it at run time; that record, not config, decides what ml_entry
-    trades. Thresholds never change after any result.'
-  multiple_comparison_note: 'Shrinkage is the multiple-comparison control across symbols (no per-symbol alpha); a symbol is never selected on
-    its raw mean. MEASURED context (comms/research/ML-ENTRY-UNIVERSE/local-20261101T1830Z/summary.json): per-symbol n median 225, se ~0.087 R,
-    pooled edge +0.0073; 25 of 51 raw re-costed means read >= 0.'
+re_registered: '2026-11-04 ~19:45Z by lane ML-ENTRY-ALL-ACCOUNTS BEFORE ANY RUN (the unit has never run; no result exists), on the operator popup
+  ~19:33Z, verbatim "Group-level (Recommended)", which REPLACES "Per-symbol passes" / "Per-symbol tests" (~19:08Z) and "Shrunk >= 0, n >= 100"
+  (~19:18Z); context ~19:25Z verbatim: "Maybe it shouldnt be gated at a per symbol basis, but rather it should be kept more general ... I didnt
+  mean to make the rules stricter than they had and the ML had been designed for." The ~19:30Z per-symbol draft (never pushed to main, never run)
+  is withdrawn; the pass rule is the ORIGINAL pooled rule of this unit (mean net R per decision >= 0 at n >= 30), the population is now a pre-registered
+  pool instead of the alpaca_live pull list.'
+population: 'POOLED, fixed before the run and independent of any accounts symbols: every Alpaca asset that is status=active, tradable, class=us_equity
+  and an ETF (Alpaca asset list read at run time, recorded with its sha256), whose median daily dollar volume over the DEV window 2019-01-01..2020-12-31
+  (daily bars) is >= 50,000,000 USD. The dev window is used ONLY for this filter and is never scored. Filtered-out symbols are counted and listed.
+  Reported, never gating: the same pooled statistic on the 13 ETFs alpaca_paper trades today.'
 blocked_on:
 - kind: data
-  ref: Alpaca market data (historical 1h + daily bars, asset list)
-  what: research-script-run.yml carries no ALPACA secrets (market-data-lake.yml does); Yahoo 1h reaches ~730 days, too short for n >= 100 per
-    symbol
-  clears_when: a research runner (or a committed market-data-lake export) returns 1h RTH bars for SPY back to 2021-01-01 and daily bars back to
-    2019-01-01, positive control logged
+  ref: Alpaca market data (asset list, 1h + daily bars)
+  what: research-script-run.yml carries no ALPACA secrets (market-data-lake.yml does); Yahoo 1h reaches only ~730 days
+  clears_when: a research runner (or a committed market-data-lake export) returns the Alpaca asset list and SPY 1h RTH bars back to 2021-01-01
+    and daily bars back to 2019-01-01, positive control logged
 - kind: harness
   ref: scripts/research/ml_entry_alpaca_score.py
-  what: --population alpaca-liquidity (the pre-registered pool), --bars alpaca, per-symbol m/se/DerSimonian-Laird shrinkage and the comms/ml_universe/ml_entry.json
+  what: --population alpaca-liquidity (the pre-registered pool), --bars alpaca, --window, and the comms/ml_universe/ml_entry.json population-record
     writer (shared with RQ-20261101-a24c-01)
-  clears_when: 'self-test: a planted n=40 positive symbol reads INDETERMINATE, an n=200 symbol shrunk below 0 reads FAIL, and the record round-trips
-    through src/config/ml_universe.load'
+  clears_when: 'self-test: a planted illiquid ETF is excluded by the dev-window filter, and a PASS record round-trips through src/config/ml_universe.load'

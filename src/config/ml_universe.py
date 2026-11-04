@@ -1,25 +1,30 @@
-"""An ML leg's traded symbols come from its PER-SYMBOL PASS RECORD, not from account config (row ML-ENTRY-ALL-ACCOUNTS; Tier 3).
+"""An ML leg's traded symbols come from its POPULATION PASS RECORD, not from account config (row ML-ENTRY-ALL-ACCOUNTS; Tier 3).
 
 Operator 2026-11-04 ~19:06Z, verbatim: "There's no per symbol configuration. There's only per strategy configuration. Specific
 strategies trade one symbol usually, but the MLs trade whatever is whatever they're set to trade. They don't have their roster is
-internal to the ML, and it's based on what tests have passed versus which ones have not." Popup answers ~19:08Z: "Per-symbol passes
-(Recommended)", "Per-symbol tests (Recommended)"; ~19:18Z the bar: "Shrunk >= 0, n >= 100 (Recommended)".
+internal to the ML, and it's based on what tests have passed versus which ones have not." Popup ~19:33Z, verbatim: "Group-level
+(Recommended)" (replacing the ~19:08Z / ~19:18Z per-symbol answers); context ~19:25Z, verbatim: "Maybe it shouldn't be gated at a per
+symbol basis, but rather it should be kept more general ... I didn't mean to make the rules stricter than they had and the ML had been
+designed for."
 
-THE RECORD: ``comms/ml_universe/<leg>.json`` -- written by the per-symbol units (RQ-20261101-a24c-01 for the Bybit perps,
-RQ-20261104-a41f-01 for Alpaca), never by hand::
+THE RECORD: ``comms/ml_universe/<leg>.json`` -- written by the pooled units (RQ-20261101-a24c-01 for the Bybit perps, RQ-20261104-a41f-01
+for Alpaca), never by hand::
 
-    {"schema": "ml_universe/1", "leg": "ml_entry", "rule_id": "...", "generated_at": "...",
-     "symbols": {"<SYMBOL>": {"verdict": "pass" | "fail" | "indeterminate", "n": int, "shrunk_mean_net_r": float,
-                              "venues": ["bybit", ...], "unit": "RQ-...", "result": "research/results/..."}}}
+    {"schema": "ml_universe/1", "leg": "ml_entry",
+     "populations": [{"unit": "RQ-...", "rule_id": "...", "verdict": "pass" | "fail" | "indeterminate", "result": "research/results/...",
+                      "symbols": {"<SYMBOL>": {"venues": ["bybit", ...]}}}]}
+
+``symbols`` is the tested population AFTER the unit's pre-registered cost / liquidity filter; ``venues`` is the venue listing the unit read
+at run time.
 
 THE RULE (one function, :func:`apply`), for one account whose venue is ``venue``:
 
-* no record (file absent / unreadable / wrong leg): the configured set, UNCHANGED -- no widening by default;
-* ``fail``: removed (a fail removes it, re-evaluated monthly by the unit);
-* ``pass`` and the record lists the account's venue: added (the record's ``venues`` is the unit's run-time venue listing);
-* ``indeterminate`` (n < 100) or ``pass`` on a venue it does not list: unchanged -- in if configured, out if not.
+* no record (file absent / unreadable / wrong leg): the configured set, UNCHANGED;
+* every population whose verdict is ``pass`` ADDS its symbols that list the account's venue;
+* a ``fail`` / ``indeterminate`` population adds nothing and removes nothing (group-level: a failed widening keeps the set it had).
 
-Today no record exists for any leg, so every account's set is byte-identical to before this module.
+The rule only ever ADDS ("not stricter than ... the ML had been designed for"). Today no record exists for any leg, so every account's
+set is byte-identical to before this module.
 """
 from __future__ import annotations
 
@@ -42,8 +47,8 @@ def record_path(leg: str, base: Optional[Path] = None) -> Path:
     return (base or RECORD_DIR) / f"{leg}.json"
 
 
-def load(leg: Optional[str], base: Optional[Path] = None) -> Optional[Dict[str, Dict[str, Any]]]:
-    """``{symbol: entry}`` from the leg's record, or ``None`` (no record / unreadable / malformed: never raises).
+def load(leg: Optional[str], base: Optional[Path] = None) -> Optional[List[Dict[str, Any]]]:
+    """The leg's populations (each with a valid verdict), or ``None`` (no record / unreadable / malformed: never raises).
     Cached on (path, mtime)."""
     if not leg:
         return None
@@ -57,15 +62,15 @@ def load(leg: Optional[str], base: Optional[Path] = None) -> Optional[Dict[str, 
         return hit[1]
     try:
         doc = json.loads(p.read_text(encoding="utf-8"))
-        if doc.get("schema") != SCHEMA or str(doc.get("leg")) != str(leg) or not isinstance(doc.get("symbols"), dict):
+        if doc.get("schema") != SCHEMA or str(doc.get("leg")) != str(leg) or not isinstance(doc.get("populations"), list):
             raise ValueError("schema/leg mismatch")
-        syms = {str(s): dict(e) for s, e in doc["symbols"].items()
-                if isinstance(e, dict) and e.get("verdict") in VERDICTS}
+        pops = [dict(x) for x in doc["populations"]
+                if isinstance(x, dict) and x.get("verdict") in VERDICTS and isinstance(x.get("symbols"), dict)]
     except Exception as exc:  # noqa: BLE001 -- a bad record must never change what trades: fall back to config
         logger.warning("ml_universe: record %s unreadable (%s); configured set kept", p, exc)
-        syms = None
-    _CACHE[str(p)] = (mt, syms)
-    return syms
+        pops = None
+    _CACHE[str(p)] = (mt, pops)
+    return pops
 
 
 def account_venue(account_id: Optional[str]) -> Optional[str]:
@@ -80,18 +85,26 @@ def account_venue(account_id: Optional[str]) -> Optional[str]:
         return None
 
 
-def apply(configured: List[str], record: Optional[Dict[str, Dict[str, Any]]], venue: Optional[str]) -> List[str]:
-    """The traded set for one account. ``record=None`` returns ``configured`` unchanged (same list order)."""
-    if record is None:
-        return list(configured)
-    out = [s for s in configured if (record.get(s) or {}).get("verdict") != "fail"]
-    if venue:
-        for s, e in record.items():
-            if e.get("verdict") == "pass" and venue in [str(v).lower() for v in (e.get("venues") or [])] \
-                    and s not in out:
-                out.append(s)
+def passed_symbols(record: Optional[List[Dict[str, Any]]], venue: Optional[str] = None) -> List[str]:
+    """Symbols of every PASSED population, in record order; with ``venue``, only those that list it."""
+    out: List[str] = []
+    for pop in record or []:
+        if pop.get("verdict") != "pass":
+            continue
+        for s, e in pop["symbols"].items():
+            venues = [str(v).lower() for v in ((e or {}).get("venues") or [])] if isinstance(e, dict) else []
+            if (venue is None or venue in venues) and s not in out:
+                out.append(str(s))
     return out
 
 
-def passed_symbols(record: Optional[Dict[str, Dict[str, Any]]]) -> List[str]:
-    return [s for s, e in (record or {}).items() if e.get("verdict") == "pass"]
+def apply(configured: List[str], record: Optional[List[Dict[str, Any]]], venue: Optional[str]) -> List[str]:
+    """The traded set for one account: ``configured`` plus every passed population's symbols on ``venue``. Never removes;
+    ``record=None`` returns ``configured`` unchanged (same list order)."""
+    out = list(configured)
+    if record is None or not venue:
+        return out
+    for s in passed_symbols(record, venue):
+        if s not in out:
+            out.append(s)
+    return out

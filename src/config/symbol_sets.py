@@ -122,12 +122,12 @@ def leg_symbols(strategy_cfg: Optional[Mapping[str, Any]],
     outside the leg's own ``symbols:`` is dropped, so the map can only NARROW
     the union. ``roster-symbol-reachability`` reports both shapes in CI.
 
-    ``leg`` (the leg's NAME): an ML leg with a per-symbol pass record
+    ``leg`` (the leg's NAME): an ML leg with a population pass record
     (``comms/ml_universe/<leg>.json``, ``src/config/ml_universe.py``; operator
     2026-11-04 "the MLs trade whatever ... their roster is internal to the ML,
-    and it's based on what tests have passed") has its configured set narrowed by
-    its fails and widened by its passes on the account's venue. No record (every
-    leg today) = the configured set, byte-identical.
+    and it's based on what tests have passed", group-level) has its configured
+    set WIDENED by every passed population's symbols on the account's venue; it
+    never narrows. No record (every leg today) = the configured set, byte-identical.
     """
     scfg = strategy_cfg if isinstance(strategy_cfg, Mapping) else {}
     syms = _clean(scfg.get("symbols"))
@@ -142,8 +142,8 @@ def leg_symbols(strategy_cfg: Optional[Mapping[str, Any]],
     rec = _mu.load(leg)
     if rec is None:
         return out
-    if account_id is None:   # the union the builder evaluates: configured minus fails, plus every pass
-        return _mu.apply(out, rec, None) + [s for s in _mu.passed_symbols(rec) if s not in out]
+    if account_id is None:   # the union the builder evaluates: configured plus every passed population, any venue
+        return out + [s for s in _mu.passed_symbols(rec) if s not in out]
     return _mu.apply(out, rec, _mu.account_venue(account_id))
 
 
