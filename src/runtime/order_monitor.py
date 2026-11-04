@@ -12184,6 +12184,33 @@ def _snapshot_venue_read(row, account_id: str, venue: str, *,
         logger.debug("venue snapshot hook failed", exc_info=True)
 
 
+def _bybit_snapshot_cov(state: Optional[dict], direction: Any) -> Optional[dict]:
+    """The coverage dict the venue snapshot stores for ONE journal row's book.
+
+    SHARED-BRACKET-FIX (2026-11-04). MEASURED: bybit_1 SOLUSDT long
+    pkg-5414797739ba4589 closed at its stop (trade 6889, 94.80, 19:01:54Z) while
+    the hedge short (Sell 293, idx 2) stayed live; the symbol read returned the
+    SHORT book and its side-blind stop list, so the long package's snapshot held
+    the short's stop 99.49 and ``live_review_due`` fired ``venue_sl_diverges``.
+    Here the row's own book decides: the read graded the OTHER book -> this
+    row's book holds nothing (``size`` 0, so the snapshot says ``none_resting``
+    / ``venue_flat``); same book -> only the legs that exit this book. A read
+    without the per-book split (Full-mode position stop, flat) is passed through
+    unchanged. Observe-only: nothing here feeds a re-arm or an order. Pure.
+    """
+    if not state:
+        return state
+    book = _norm_position_side(direction)
+    side = str(state.get("side") or "")
+    if book and side and side != book:
+        return {**state, "size": 0.0, "stop_prices": [], "target_prices": []}
+    split = (state.get("prices_by_book") or {}).get(book) if book else None
+    if split is None:
+        return state
+    return {**state, "stop_prices": list(split.get("stop") or []),
+            "target_prices": list(split.get("target") or [])}
+
+
 def _bybit_full_mode_target(pos: dict) -> List[float]:
     """The position-level ``takeProfit`` as a one-element list, or ``[]``.
 
@@ -12465,14 +12492,24 @@ def _bybit_position_protection(client, category: str, symbol: str,
     # LTR-MECHANICS-VENUE-SNAPSHOT: resting TP trigger levels, read from the
     # same StopOrder list (no extra venue call). OBSERVE-ONLY.
     tp_leg_prices: List[float] = []
+    # SHARED-BRACKET-FIX (2026-11-04, bybit_1 SOLUSDT pkg-54147977): the same
+    # prices split by the BOOK each leg protects (a Sell leg exits a long, a Buy
+    # leg a short). OBSERVE-ONLY, for the venue snapshot: the side-blind lists
+    # above let a closed long package be graded against the live short's stop.
+    # A leg with no readable side is left out of both (never guessed).
+    by_book: Dict[str, Dict[str, List[float]]] = {
+        "long": {"stop": [], "target": []}, "short": {"stop": [], "target": []}}
     for o in legs:
         _kind = str(o.get("stopOrderType") or "").lower()
+        _book = {"sell": "long", "buy": "short"}.get(str(o.get("side") or "").lower())
         if _kind in _SL_LEG_TYPES_MON or _kind in _TP_LEG_TYPES_MON:
             protective_legs += 1
         if _kind in _TP_LEG_TYPES_MON:
             _tpx = _bybit_sl_leg_trigger(o)
             if _tpx is not None:
                 tp_leg_prices.append(_tpx)
+                if _book:
+                    by_book[_book]["target"].append(_tpx)
         if _kind not in _SL_LEG_TYPES_MON:
             continue
         sl_legs_seen.append(o)
@@ -12487,9 +12524,13 @@ def _bybit_position_protection(client, category: str, symbol: str,
         _lpx = _bybit_sl_leg_trigger(o)
         if _lpx is not None:
             leg_prices.append(_lpx)
+            if _book:
+                by_book[_book]["stop"].append(_lpx)
     return {
         "size": size, "side": side, "covered_qty": covered,
         "source": "partial_sl_legs",
+        "prices_by_book": {b: {k: sorted(v) for k, v in d.items()}
+                           for b, d in by_book.items()},
         # Size of the OTHER live book(s) on this symbol, or None (see above).
         "sibling_book_live_size": sibling_live_size,
         # The VENUE's position mode for this book (0 one-way / 1 hedge-long
@@ -12737,6 +12778,25 @@ def _netting_rows_to_attribute(rows, excess, live_leg_ids):
     return picked
 
 
+def _netting_divergence_grew(first_excess, excess) -> bool:
+    """Did the journal over-claim on one key GROW since its first observation?
+
+    SHARED-BRACKET-FIX (2026-11-04). The anchor recorded at the first observation
+    is an upper bound on the close time of the qty that was missing THEN. Qty that
+    went missing later belongs to a later close, so a growth beyond the same
+    relative tolerance the divergence test uses (``_BYBIT_QTY_DIVERGENCE_FRAC`` of
+    the first excess) means the anchor no longer bounds every row the pass would
+    attribute. An unreadable first excess is treated as not grown (pre-existing
+    behaviour). Pure.
+    """
+    try:
+        first = float(first_excess)
+        now = float(excess)
+    except (TypeError, ValueError):
+        return False
+    return now > first + max(abs(first) * _BYBIT_QTY_DIVERGENCE_FRAC, 1e-9)
+
+
 def _is_pairs_sleeve_row(row) -> bool:
     """Is this open journal row owned by the isolated pairs executor?
 
@@ -12799,7 +12859,7 @@ def _reconcile_netting_partial_closes(db) -> Dict[str, int]:
         "closed": 0, "annotated": 0, "declared_unmeasured": 0,
         "apply_suppressed_by_allowlist": 0,
         "deferred_anchor": 0, "skipped_unreadable": 0, "skipped_pairs": 0,
-        "errors": 0,
+        "reanchored": 0, "errors": 0,
     }
     mode = _netting_attribution_mode()
     allow = _netting_attribution_accounts()
@@ -12921,7 +12981,21 @@ def _reconcile_netting_partial_closes(db) -> Dict[str, int]:
                 )
                 summary["pending_confirm"] += 1
                 continue
-            first_mono, _first_excess, first_seen_iso = seen
+            first_mono, first_excess, first_seen_iso = seen
+            if _netting_divergence_grew(first_excess, excess):
+                # SHARED-BRACKET-FIX (2026-11-04, bybit_1 XRPUSDT trade 6860): the
+                # over-claim GREW after it was first observed, so a SECOND row's
+                # position ended after the anchor. Confirming now would stamp that
+                # row with the FIRST close's observation time and bar — a close
+                # time BEFORE its own fill, which also puts the fill outside every
+                # own-order-fill sweep's window, so its real sl/tp label and price
+                # are never recovered. Re-anchor at this observation instead.
+                _NETTING_DIVERGENCE_SEEN[(aid, sym, direction)] = (
+                    now_mono, excess, now_iso,
+                )
+                summary["pending_confirm"] += 1
+                summary["reanchored"] += 1
+                continue
             if (now_mono - float(first_mono)) < max(confirm_s, 0.0):
                 summary["pending_confirm"] += 1
                 continue
@@ -12951,6 +13025,7 @@ def _reconcile_netting_partial_closes(db) -> Dict[str, int]:
                 else ("allowlisted" if aid in allow else "not_allowlisted")
             )
 
+            wrote_any = False
             for row, take, basis in picked:
                 _netting_soak_row(
                     account_id=aid, symbol=sym, direction=direction,
@@ -12981,10 +13056,19 @@ def _reconcile_netting_partial_closes(db) -> Dict[str, int]:
                 )
                 if closed_ok == "closed":
                     summary["closed"] += 1
+                    wrote_any = True
                 elif closed_ok == "unmeasured":
                     summary["declared_unmeasured"] += 1
+                    wrote_any = True
                 else:
                     summary["errors"] += 1
+            if wrote_any:
+                # SHARED-BRACKET-FIX: the divergence this anchor described has been
+                # written off the journal. Forget it, so the NEXT divergence on this
+                # key (a sibling row closing later) gets its own first observation,
+                # its own confirm and its own anchor — never this one's. Annotate
+                # mode writes nothing and keeps its anchor (the over-claim persists).
+                _NETTING_DIVERGENCE_SEEN.pop((aid, sym, direction), None)
         except Exception as exc:  # noqa: BLE001 — one bad key never aborts the sweep
             logger.warning(
                 "_reconcile_netting_partial_closes: %s/%s/%s raised: %s",
@@ -13508,7 +13592,8 @@ def _check_broker_naked_bybit_positions(db) -> Dict[str, int]:
                     refused_syms.setdefault(sym_key, _rs)
                 continue
             readable_syms.add(sym_key)
-            _snapshot_venue_read(row, account_id, "bybit", cov=state)
+            _snapshot_venue_read(row, account_id, "bybit",
+                                 cov=_bybit_snapshot_cov(state, row["direction"]))
             size = float(state["size"])
             covered = float(state["covered_qty"])
             exch_side = str(state.get("side") or "")
@@ -15198,9 +15283,24 @@ def _bracket_exit_fills(fconn, row: Dict[str, Any]) -> List[Dict[str, Any]]:
         return []
     closed = _isoformat_to_ms(row.get("closed_at"))
     start = datetime.fromtimestamp((opened - 60_000) / 1000.0, tz=timezone.utc)
+    end_ms = (closed + 120_000) if closed is not None else None
+    if end_ms is not None:
+        # SHARED-BRACKET-FIX: a row closed BEFORE its own leg filled (a premature
+        # netting attribution) still owns that fill; extend to cover it.
+        from src.runtime.fills_pnl import own_order_last_fill_ms
+        own_ms = own_order_last_fill_ms(
+            account_id=str(row.get("account_id") or ""),
+            symbol=str(row.get("symbol") or ""),
+            direction=str(row.get("direction") or ""),
+            opened_at_ms=opened,
+            own_order_ids=(row.get("sl_order_id"), row.get("tp_order_id")),
+            conn=fconn,
+        )
+        if own_ms is not None and own_ms + 1_000 > end_ms:
+            end_ms = own_ms + 1_000
     end = (
-        datetime.fromtimestamp((closed + 120_000) / 1000.0, tz=timezone.utc)
-        if closed is not None else datetime.now(timezone.utc)
+        datetime.fromtimestamp(end_ms / 1000.0, tz=timezone.utc)
+        if end_ms is not None else datetime.now(timezone.utc)
     )
     out = []
     for oid, qty, sym in fconn.execute(
@@ -15464,7 +15564,9 @@ def _sweep_upgrade_anchored_exit_to_fill(
         "lost_race": 0, "errors": 0,
     }
     try:
-        from src.runtime.fills_pnl import FILL_EXIT_SOURCE, exit_from_one_order_fills
+        from src.runtime.fills_pnl import (
+            FILL_EXIT_SOURCE, exit_from_one_order_fills, own_order_last_fill_ms,
+        )
         from src.runtime.local_pnl import (
             compute_pnl_percent, compute_realized_pnl, contract_value_usd_for,
         )
@@ -15509,14 +15611,27 @@ def _sweep_upgrade_anchored_exit_to_fill(
             if opened_ms is None or closed_ms is None or not qty or not entry:
                 summary["no_own_fill"] += 1
                 continue
+            # The fill precedes a detection-time close; the +2 min covers a row
+            # whose recorded close lags the fill, like the label sweep.
+            # SHARED-BRACKET-FIX: a row closed BEFORE its own leg filled still owns
+            # that fill (order identity), so the window extends to cover it.
+            end_ms = closed_ms + 120_000
+            own_ms = own_order_last_fill_ms(
+                account_id=str(row.get("account_id") or ""),
+                symbol=str(row.get("symbol") or ""),
+                direction=str(row.get("direction") or ""),
+                opened_at_ms=opened_ms,
+                own_order_ids=(row.get("sl_order_id"), row.get("tp_order_id")),
+                conn_factory=fills_conn_factory,
+            )
+            if own_ms is not None and own_ms + 1_000 > end_ms:
+                end_ms = own_ms + 1_000
             fill = exit_from_one_order_fills(
                 account_id=str(row.get("account_id") or ""),
                 symbol=str(row.get("symbol") or ""),
                 direction=str(row.get("direction") or ""),
                 opened_at_ms=opened_ms,
-                # The fill precedes a detection-time close; the +2 min covers a
-                # row whose recorded close lags the fill, like the label sweep.
-                closed_at_ms=closed_ms + 120_000,
+                closed_at_ms=end_ms,
                 qty=qty,
                 own_order_ids=(row.get("sl_order_id"), row.get("tp_order_id")),
                 conn_factory=fills_conn_factory,
@@ -15549,16 +15664,30 @@ def _sweep_upgrade_anchored_exit_to_fill(
             notes["pnl_source"] = "local_compute"
             notes["exit_fill"] = {"order_id": fill.get("order_id"),
                                   "match": fill.get("match")}
+            # SHARED-BRACKET-FIX: the row was closed in the journal BEFORE its own
+            # order filled (a premature attribution), so its recorded close time
+            # is earlier than the venue's. The fill time is the close. Only ever
+            # moved FORWARD here; moving a lagging detection time back is
+            # `_sweep_correct_closed_at_from_own_fill`'s job.
+            new_closed_at = row.get("closed_at")
+            fill_iso = normalize_closed_at_value(fill.get("closed_at"))
+            fill_ms = _isoformat_to_ms(fill_iso)
+            if fill_iso is not None and fill_ms is not None and fill_ms > closed_ms:
+                notes["closed_at_detected"] = row.get("closed_at")
+                notes["closed_at"] = fill_iso
+                notes["closed_at_source"] = "own_bracket_fill"
+                new_closed_at = fill_iso
             wconn = db.connect()
             try:
                 cur = wconn.execute(
                     "UPDATE trades SET exit_price = ?, pnl = ?, pnl_percent = ?, "  # writer-conformance: allow conditional reprice; update_trade cannot guard its WHERE on the candle marker + prior exit_price (same reasoning as the bracket-order relabel)
-                    "                  notes = ? "
+                    "                  notes = ?, closed_at = ? "
                     " WHERE id = ? AND status = 'closed' "
                     "   AND COALESCE(notes, '') LIKE ? "
                     "   AND exit_price IS ?",
                     (round(px, 10), pnl, pct, dump_capped(notes, 500),
-                     int(row["id"]), _ANCHORED_EXIT_NOTES_LIKE, prior_px),
+                     new_closed_at, int(row["id"]), _ANCHORED_EXIT_NOTES_LIKE,
+                     prior_px),
                 )
                 wconn.commit()
                 changed = cur.rowcount

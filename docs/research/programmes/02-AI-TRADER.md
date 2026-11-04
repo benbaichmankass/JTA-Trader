@@ -8,6 +8,35 @@
 
 ---
 
+## Programme review 2026-11-04 (lane PROGRAMME-REVIEW-20261104) — MODEL track
+
+Population: units with a result row generated 2026-10-28T19:41Z..2026-11-04T19:41Z (`research_ops_checks.py --kind programme_review --since 7d`, 1,932 units read, 0 unreadable, 662 result rows): **447 units with rows** — 107 pass, 210 fail, 25 indeterminate, 11 no_action_warranted, 94 with no unit verdict yet (76 ungraded + 18 needs_review/null). 302 carry a programme field (P1 53, P2 54, P3 95, P4 24, P5 48, P6 18, P7 10), 145 do not (live_strategy 70, new_strategy_prop 32, infra 13, ml_health 13, timeframes 6, macro 5, regime 5, none 1) — assigned below by what they ask. Every PASS is a discovery until its confirmation passes.
+
+**P2 in the window:** 54 units with `programme: P2` (20 pass, 10 fail, 7 indeterminate, 1 no_action, 16 ungraded) plus 13 unprogrammed `ml_health`. **Runnable MODEL units: 0** (`runnable_by_track`), a SUPPLY gap, while 30 of 54 P2 units graded this week.
+
+**What was learned (beliefs, with evidence)**
+- **The regime head's log-loss lift over the class prior is robust to everything thrown at it** — removing calendar features (41cc-13/-16), a forward holdout after 2026-07-12 (41cc-14, -12 at 15m), a 4× embargo (a4e7-08), 10 years of history (41cc-26/-27), the latest 20k bars only (a4e7-11): 11 PASS, BTC/ETH/SOL pooled, 1h and 15m. **No learner family beats LightGBM on it**: HistGB and a shallow LightGBM are non-inferior (a4e7-06, d5dd-18), ExtraTrees, a calibrated linear head and the regularised 1h LightGBM are inferior (a4e7-05/-07, d5dd-20). **HAR-RV features add lift** (d5dd-17; also on CatBoost, b3c9-18) — the first feature (not learner) result. The open question is not whether the head is skilful but whether it changes a money decision: log-loss lift is not a gate.
+- **Direction head at 1h: CatBoost, HistGB and ExtraTrees each beat LightGBM on direction log-loss** (b3c9-14/-15/-16) — learner family matters on the direction target where it did not on regime. 3 arms, 1 batch; a discovery.
+- **ML timeframes do not scale down** (PR #22907, cited): 15m and 5m ENTRY decisions are not viable net of cost (cost R/decision rises from 0.064 at 1h to 0.09–0.11 at 15m), but the 1h harness itself DOES NOT REPRODUCE round 1 (b620-01: +0.0108 vs +0.0090), so every timeframe read is PROVISIONAL until the harness is fixed.
+- **5e03-01 FAIL and 5e04-01 PASS** (cited): the ml_entry SL-only structure stop + moving TP clears Stage 0 held-out; the alpaca score unit fails.
+- **Operator rule today (~19:33Z, "Group-level (Recommended)")**: an ML trades the population its pooled test passed on, net of each symbol's own costs, minus a pre-set cost/liquidity filter; per-symbol results never gate. No per-symbol gating unit is authored.
+
+**Failed first tests — diagnosis.** Learner-family FAILs on regime (3): *idea* — the target is low-dimensional and GBDT already captures it; not a reason to stop, but a reason to move capacity to the consumer question (D2 on a real-money leg). b620 non-reproduction: *harness*.
+
+**Answered / unlocked / retired.** Answered: "does any learner family beat LightGBM on the regime head" (no). Unlocked: three needs_authoring nodes from the ML roadmap MECE draft (PR #22892, held for DEEP-AUDIT): P2-MECE-D5-aggregator-voi, P2-MECE-D6-pointer-v0, P2-MECE-D2-regime-real-money. Retired: no further regime-head learner-family units (moot by answer, not by a fail).
+
+**Next 3–4 weeks (value-ranked)**
+
+| node / unit | decision it changes | on PASS | on FAIL | cost | pre-mortem |
+|---|---|---|---|---|---|
+| P2-MECE-D2-regime-real-money | whether the skilful regime head changes a real-money leg's trades | Tier-3 regime cell packet | head stays advisory on bybit_1 | runner | the off-cells gate too few trades on these legs |
+| P2-MECE-D6-pointer-v0 | first learned bracket-at-entry | shadow candidate | bar-0 first-passage head variant | runner + $5 | an in-trade revision model has no bar-0 signal |
+| b620 harness reproduction fix (row ML-TIMEFRAME) | whether the timeframe reads stand | timeframe reads final | — | build | the drift is a data refresh, not code |
+| P2-MECE-D5-aggregator-voi | whether D5 deserves a build | AGG-HARNESS | D5 "none yet" | $4 | M18 already showed same-symbol ranking ≈ priority |
+| P2-Q2-costnet-metalabel-regate (build-gated, PI-20261028-V8KBRR5H-0004 still `routed`) | whether any metalabel head survives cost-net eval | re-gate | heads stay refused | build | the frozen datasets cannot be rebuilt cost-net cheaply |
+
+**Feeds.** MODEL → TRADING: the regime head is not a gate until D2 passes on a money leg. TRADING → MODEL: the five 1h ETF survivor/holdout legs (P3) and the structure-exit results (P1) are labels for D6/D7. The MECE map (#22892) becomes the slot index for every P2 node once it lands.
+
 ## Programme review 2026-10-28 (lane PROGRAMME-REVIEW-20261028) — MODEL track
 
 Population: research units with a result row generated 2026-10-21T19:30Z..2026-10-28T19:30Z (`research_ops_checks.py --kind programme_review --since 7d`, 1,480 units read, 0 unreadable): **445 units, 412 graded** (70 pass, 50 indeterminate, 292 fail), 285 with a programme field and 160 without (live_strategy 70, regime 27, ml_health 21, macro 20, infra 13, new_strategy_prop 8, none 1). This review assigns the 160 by what they ask, not by the field (map section). Every PASS below is a discovery until its confirmation unit passes. **Cost basis:** about 36 of the 70 PASS rows are crypto-harness runs charged 7.5 bps round-trip (MEASURED from each result's argv); only RQ-20261028-001 carried the measured Bybit-linear 11.0 bps. A lever A/B delta is nearly fee-neutral (both arms pay it); an absolute Stage-0 or breadth PASS is not.

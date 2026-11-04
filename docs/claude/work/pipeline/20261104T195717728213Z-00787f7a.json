@@ -1,0 +1,15 @@
+{
+  "due_when": {
+    "due_date": "2026-11-11",
+    "kind": "date"
+  },
+  "id": "PI-20261104-SVCWDSDX-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "PROGRAMME-REVIEW-20261104 session_01AFoLuN1KJZaUK3SVCWdSdx",
+    "rerun": "python3 -c \"import sys;sys.path.insert(0,'scripts/research');import regime_debt_matrix as m;print('skip_hours' in m._PB_LEVER_FLAG)\""
+  },
+  "state": "queued",
+  "what": "EVIDENCE BUILDER OMITS skip_hours FOR PULLBACK LEGS. MEASURED 2026-11-04: scripts/research/regime_debt_matrix.py _TREND_LEVER_FLAG maps skip_hours -> --skip-hours but _PB_LEVER_FLAG does not, while scripts/backtest_pullback.py accepts --skip-hours. Effect: spy_pullback_1h (declares skip_hours '19,20') grades fidelity approximate with omitted_levers [skip_hours] in comms/strategy_evidence/spy_pullback_1h.json and RQ-20261101-78fc-55 (omitted_levers_per_builder [skip_hours]), so every A arm measures the leg WITHOUT its session filter. Fix (Tier 1 tooling, changes evidence fidelity only): add skip_hours to _PB_LEVER_FLAG with a self-test that a pullback leg declaring it emits --skip-hours, then rebuild the affected evidence records. Done = the rerun prints True and spy_pullback_1h's record has omitted_levers []."
+}

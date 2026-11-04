@@ -68,13 +68,71 @@ attribution:
       net_r: -19.683
       gross_r: -12.131
 manifest:
-  entry: untested
+  entry: tested
   exit: untested
-  filter: untested
+  filter: tested
   regime_gating: untested
   timeframe: untested
   symbol_set: untested
   direction: untested
   session: untested
   sizing_vs_cost: untested
-levers: {}
+levers:
+  entry:
+    trend_lookback:
+      tests:
+      - value: '80'
+        baseline_value: '40'
+        arm: TL80
+        unit: RQ-20261101-78fc-33
+        window: 2020-07-01..2026-10-15
+        n: 1004
+        net_r: -96.1373
+        baseline_n: 851
+        baseline_net_r: -83.5047
+        delta_net_r: -12.6326
+        folds_ge_baseline: 2/6
+        max_drawdown_r: 96.6887
+        verdict: pass
+        joint_change: false
+      shape: flat
+      points: 1
+      best_delta_r_per_trade: -0.0148
+      fold_stability: 0.333
+      reading: no response at the tested values
+  filter:
+    adx_min:
+      tests:
+      - value: '25'
+        baseline_value: 'off'
+        arm: AD25
+        unit: RQ-20261101-78fc-33
+        window: 2020-07-01..2026-10-15
+        n: 474
+        net_r: -40.1974
+        baseline_n: 851
+        baseline_net_r: -83.5047
+        delta_net_r: 43.3073
+        folds_ge_baseline: 6/6
+        max_drawdown_r: 41.9796
+        verdict: pass
+        joint_change: false
+      - value: '30'
+        baseline_value: 'off'
+        arm: AD30
+        unit: RQ-20261101-78fc-33
+        window: 2020-07-01..2026-10-15
+        n: 331
+        net_r: -16.2187
+        baseline_n: 851
+        baseline_net_r: -83.5047
+        delta_net_r: 67.286
+        folds_ge_baseline: 6/6
+        max_drawdown_r: 20.8962
+        verdict: pass
+        joint_change: false
+      shape: monotone
+      points: 2
+      best_delta_r_per_trade: 0.0791
+      fold_stability: 1.0
+      reading: 'smooth, fold-stable gain: potential -- confirm on a holdout'

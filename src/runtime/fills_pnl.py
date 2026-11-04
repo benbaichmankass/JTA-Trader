@@ -384,3 +384,77 @@ def exit_from_one_order_fills(
         "order_id": oid,
         "match": match,
     }
+
+
+def _exec_ms(value: Any) -> Optional[int]:
+    """An ``exchange_fills.exec_time`` (ISO-8601, ``Z`` or offset) as epoch ms."""
+    try:
+        txt = str(value or "").strip().replace("Z", "+00:00")
+        if not txt:
+            return None
+        dt = datetime.fromisoformat(txt)
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=timezone.utc)
+        return int(dt.timestamp() * 1000)
+    except (TypeError, ValueError):
+        return None
+
+
+def own_order_last_fill_ms(
+    *,
+    account_id: str,
+    symbol: str,
+    direction: str,
+    opened_at_ms: int,
+    own_order_ids: Any = (),
+    conn: Any = None,
+    conn_factory: Optional[Callable[[], Any]] = None,
+) -> Optional[int]:
+    """Epoch ms of the LAST close-side fill on one of the trade's OWN order ids.
+
+    SHARED-BRACKET-FIX (2026-11-04). The own-order-fill sweeps window the fills
+    store as ``[open - 60 s, closed_at + 2 min]`` because a detection-time close
+    LAGS the fill. A row the netting reconciler closed BEFORE its own leg filled
+    (MEASURED: bybit_1 XRPUSDT trade 6860 stamped 14:43:57Z, its own take-profit
+    78e74e28 filled 26292.9 @ 1.3177 at 14:48:08Z) has its fill after that window,
+    so its real label and price were never recovered. A venue order id belongs to
+    one row, so its fill is identity whatever the clock says; callers extend their
+    window end to cover it. ``None`` = no own fill (or the store could not be read).
+    *conn* is borrowed (never closed); otherwise one is opened via *conn_factory*.
+    Never raises.
+    """
+    side = {"long": "sell", "short": "buy"}.get(str(direction or "").lower())
+    want_sym = normalize_symbol(symbol)
+    acct = str(account_id or "").strip()
+    own = [str(o) for o in dict.fromkeys(own_order_ids or ()) if o]
+    if not side or not want_sym or not acct or not own:
+        return None
+    try:
+        start_ms = int(opened_at_ms) - _OPEN_SLACK_MS
+    except (TypeError, ValueError):
+        return None
+    owned = conn is None
+    try:
+        c = _open_ro(conn_factory) if owned else conn
+        if c is None:
+            return None
+        try:
+            marks = ",".join("?" for _ in own)
+            rows = c.execute(
+                "SELECT exec_time, symbol FROM exchange_fills "
+                " WHERE account_id = ? AND side = ? "
+                f"  AND order_id IN ({marks}) "
+                "   AND datetime(exec_time) >= datetime(?)",
+                (acct, side, *own, _iso(start_ms)),
+            ).fetchall()
+        finally:
+            if owned:
+                try:
+                    c.close()
+                except Exception:  # noqa: BLE001
+                    pass
+    except Exception:  # noqa: BLE001 — a store read never breaks the monitor tick
+        return None
+    times = [_exec_ms(t) for t, sym in rows if normalize_symbol(sym) == want_sym]
+    times = [t for t in times if t is not None]
+    return max(times) if times else None

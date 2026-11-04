@@ -2,6 +2,29 @@
 
 > **Doc status:** `unknown` · category `evidence` · last verified `2026-10-16` · registered in [`../../DOCUMENT-INDEX.md`](../../DOCUMENT-INDEX.md) · lane `P5-PROP-PROGRAMME` (manager dispatch, weekly planning 2026-10-14) · map: [`RESEARCH-MAP.md`](RESEARCH-MAP.md) · roadmap `L-PROP` · **Tier-1 document: it proposes tests; every roster, sizing or switch change it leads to is Tier-3 with an evidence record.**
 
+## Programme review 2026-11-04 (lane PROGRAMME-REVIEW-20261104) — TRADING track
+
+Population: units with a result row generated 2026-10-28T19:41Z..2026-11-04T19:41Z (`research_ops_checks.py --kind programme_review --since 7d`, 1,932 units read, 0 unreadable, 662 result rows): **447 units with rows** — 107 pass, 210 fail, 25 indeterminate, 11 no_action_warranted, 94 with no unit verdict yet (76 ungraded + 18 needs_review/null). 302 carry a programme field (P1 53, P2 54, P3 95, P4 24, P5 48, P6 18, P7 10), 145 do not (live_strategy 70, new_strategy_prop 32, infra 13, ml_health 13, timeframes 6, macro 5, regime 5, none 1) — assigned below by what they ask. Every PASS is a discovery until its confirmation passes.
+
+**P5 in the window:** 48 units with `programme: P5` (4 pass, 25 fail, 4 indeterminate, 15 ungraded) plus 32 unprogrammed `new_strategy_prop` units, which are P5/P3 by what they ask.
+
+**What was learned.** The **stop-out cooldown on trend_donchian_eth_prop** (CD4/CD8) passed its discovery (41cc-24) and its re-run confirmation on a disjoint window (c6fc-01) — the one prop lever with two windows this week. **M2 momentum-stale exit passes on eth_pullback_prop_2h** (3ef3-19). **trend_donchian_sol_4h passes Stage 0 at the prop cost stack and the breakout_2 per-leg gate** (a4e7-04) as a prop replacement candidate, while eth_4h as a replacement failed twice. The "prop pace" family (fade / squeeze / pooled trend / pullback at short horizons on the AVAX/NEAR/ATOM/FIL/TRX/ETC basket) failed across the board (≈6 FAIL): *idea/cost* — faster pace on alt baskets pays the prop cost stack on smaller moves.
+
+**Failed first tests — diagnosis.** Prop pace: *cost drag* (the prop stack 8 / 3 / 5 bps on short-horizon moves) is the leading cause, *regime* second; the variant is pace at 4h with the measured-move TP, not more 1h baskets. Thesis-keyed TP extension (2 FAIL): *design* (extension after X R reached converts to giveback).
+
+**Answered / unlocked / retired.** Answered: CD on eth_prop (PASS ×2 → a prop declare proposal, Tier 3, the manager's, against the firm's DD limits via `comms/prop_survival/`). Unlocked: sol_4h as a prop replacement (P5 superset gate next). Retired: none.
+
+**Next 3–4 weeks**
+
+| node / unit | decision it changes | on PASS | on FAIL | cost | pre-mortem |
+|---|---|---|---|---|---|
+| CD on eth_prop → prop survival read (manager / research-ops) | prop declare | Tier-3 proposal | stays declared-off | $0–runner | the survival gate binds on DD, not EV |
+| sol_4h prop replacement → survival gate + mechanics on ONE small trade | replacement on breakout_2 | Tier-3 roster proposal | stays a candidate | runner | prop DD limit binds at sol's vol |
+| P5-RG1025-trend-pooled (follows f679-02/-03) | pooled prop trend read | ONE confirmation | config closed | — | — |
+| P5-MLV-GATE-* (standing; follow ML-ENTRY-DYNAMIC-SL arms) | per-arm prop gate | gate read | — | — | no arm has run yet (row note, #22907) |
+
+**Feeds.** P1 ↔ P5: M2 and the cooldown are exit/entry levers shared with the 2h pullback family; a P1 confirmation counts for P5 only with the prop superset gate on top.
+
 ## Programme review 2026-10-28 (lane PROGRAMME-REVIEW-20261028) — TRADING track
 
 Population: research units with a result row generated 2026-10-21T19:30Z..2026-10-28T19:30Z (`research_ops_checks.py --kind programme_review --since 7d`, 1,480 units read, 0 unreadable): **445 units, 412 graded** (70 pass, 50 indeterminate, 292 fail), 285 with a programme field and 160 without (live_strategy 70, regime 27, ml_health 21, macro 20, infra 13, new_strategy_prop 8, none 1). This review assigns the 160 by what they ask, not by the field (map section). Every PASS below is a discovery until its confirmation unit passes. **Cost basis:** about 36 of the 70 PASS rows are crypto-harness runs charged 7.5 bps round-trip (MEASURED from each result's argv); only RQ-20261028-001 carried the measured Bybit-linear 11.0 bps. A lever A/B delta is nearly fee-neutral (both arms pay it); an absolute Stage-0 or breadth PASS is not.

@@ -68,12 +68,56 @@ attribution:
       gross_r: -1.06
 manifest:
   entry: untested
-  exit: untested
-  filter: untested
+  exit: tested
+  filter: tested
   regime_gating: untested
   timeframe: untested
   symbol_set: untested
   direction: untested
   session: untested
   sizing_vs_cost: untested
-levers: {}
+levers:
+  exit:
+    atr_stop_mult:
+      tests:
+      - value: '2.5'
+        baseline_value: '1.5'
+        arm: SL25
+        unit: RQ-20261101-78fc-55
+        window: 2018-06-01..2026-10-15
+        n: 268
+        net_r: 26.9419
+        baseline_n: 343
+        baseline_net_r: 66.7477
+        delta_net_r: -39.8058
+        folds_ge_baseline: 1/6
+        max_drawdown_r: 20.7794
+        verdict: fail
+        joint_change: false
+      shape: single_point
+      points: 1
+      best_delta_r_per_trade: -0.1161
+      fold_stability: 0.167
+      reading: every tested value is worse than the baseline
+  filter:
+    adx_min:
+      tests:
+      - value: '25'
+        baseline_value: 'off'
+        arm: AD25
+        unit: RQ-20261101-78fc-55
+        window: 2018-06-01..2026-10-15
+        n: 213
+        net_r: 27.035
+        baseline_n: 343
+        baseline_net_r: 66.7477
+        delta_net_r: -39.7127
+        folds_ge_baseline: 1/6
+        max_drawdown_r: 17.45
+        verdict: fail
+        joint_change: false
+      shape: single_point
+      points: 1
+      best_delta_r_per_trade: -0.1158
+      fold_stability: 0.167
+      reading: every tested value is worse than the baseline
