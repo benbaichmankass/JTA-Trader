@@ -813,7 +813,8 @@ def build():
         "the operator.",
     ]
     d.bullets(s, items)
-    d.footnote(s, "MEASURED: comms/strategy_evidence/ml_entry.json (basis heldout_window, fidelity approximate). "
+    d.footnote(s, "MEASURED: comms/strategy_evidence/ml_entry.json (basis "
+                  f"{ml['basis'] if ml else '—'}, fidelity {ml['fidelity'] if ml else '—'}). "
                   "The ML plan's lessons: ROADMAP.md § “AI trader (ML) — build plan”.")
     d.end_md()
 
