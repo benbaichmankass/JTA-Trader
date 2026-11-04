@@ -660,33 +660,6 @@ milestones:
     architecture: ["Promotion ladder, mandates and the roadmap loop"]
     owner: manager (research-ops lane 4x/day)
     reviewed: 2026-10-22
-  - id: L-ML-MECE
-    goal: G4
-    name: Every trade-lifecycle decision has one owning model family with a registered question, baseline, label and harness
-    status: active
-    where: >-
-      2026-11-04 (lane ML-ROADMAP-MECE): docs/plans/ML-ROADMAP-MECE-2026-11.md maps 10 decisions (D1-D10) to one family each;
-      3 have no model at any stage (D5 aggregation, D6 bracket at entry, D10 review); the registry holds none of the 3 models
-      that change real-money orders (trainer-vm-diag #22883).
-    next: >-
-      Done when (a) one serving inventory lists every order-changing model with its slot and books (P1), and (b) the
-      weekly /ml-review prints a slot report where every open ML row/unit names a slot and every slot names its next unit (P3).
-    no_rows_reason: "rows ML-SERVING-INVENTORY / ML-SLOT-REPORT / WHIPPET-FILL-REPLAY and units RQ-20261105-mece-* are filed in Thursday planning 2026-11-05 (PR #22892 § 9)"
-    owner: manager
-    reviewed: 2026-11-04
-  - id: L-ML-AGGREGATOR
-    goal: G4
-    name: Position aggregator (Mastiff) -- research before build
-    status: backlog
-    where: >-
-      Operator candidate 2026-11-04 ~10:15Z; baseline slices (src/runtime/allocator_ev.py + config/slice_allocation.yaml);
-      M18 prior: single-symbol EV ranking ~= priority (96-97% agreement).
-    next: >-
-      VOI census first (P2, RQ-20261105-mece-01); harness and rule arms A0-A4 only if concurrent episodes are material; learned arm last.
-      Tier 3 when it changes allocation. Scope question to the operator (doc § 4.6). Becomes active when the VOI census unit is filed.
-    no_rows_reason: "VOI census unit RQ-20261105-mece-01 filed in Thursday planning; build rows only if concurrent episodes are material"
-    owner: manager
-    reviewed: 2026-11-04
   - id: L-ALERT-INTEGRATION
     goal: G3
     name: Every alert and venue state reaches Claude without the operator relaying it
