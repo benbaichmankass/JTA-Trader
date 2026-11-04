@@ -1,0 +1,441 @@
+{
+  "verdict": "pass",
+  "read_state": "measured",
+  "n": 78840,
+  "population": "3 group(s) ['BTCUSDT_1h', 'ETHUSDT_1h', 'SOLUSDT_1h']; baseline lgbm; candidates ['sklearn_extratrees']; metric logloss; n = baseline OOS test rows summed over groups; cv folds per group >= 5",
+  "note": "candidate(s) ['sklearn_extratrees'] meet every pass_if clause",
+  "measurement": {
+    "engine": "scripts/research/ml_bakeoff.py",
+    "metric": "logloss",
+    "higher_is_better": false,
+    "metric_caveats": [],
+    "delta_sign": "positive = learner better than reference",
+    "baseline": "lgbm",
+    "controls": [
+      "prior"
+    ],
+    "candidates": [
+      "sklearn_extratrees"
+    ],
+    "arm_status": {
+      "prior": "ok",
+      "lgbm": "ok",
+      "sklearn_extratrees": "ok"
+    },
+    "groups": {
+      "BTCUSDT_1h": {
+        "n_rows": 43800,
+        "classes": [
+          "down",
+          "flat",
+          "up"
+        ],
+        "arms": {
+          "prior": {
+            "status": "ok",
+            "features": [
+              "rolling_log_return_vol",
+              "log_return",
+              "log_return_lag_1",
+              "log_return_lag_2",
+              "hour_of_day",
+              "dayofweek"
+            ],
+            "windows": {
+              "cv": {
+                "fold_metric": [
+                  0.6948652537359217,
+                  0.6950443013378614,
+                  0.6949788618691541,
+                  0.6955923775258357,
+                  0.6948761426848546
+                ],
+                "n_test_rows": 26280
+              }
+            }
+          },
+          "lgbm": {
+            "status": "ok",
+            "features": [
+              "rolling_log_return_vol",
+              "log_return",
+              "log_return_lag_1",
+              "log_return_lag_2",
+              "hour_of_day",
+              "dayofweek"
+            ],
+            "windows": {
+              "cv": {
+                "fold_metric": [
+                  0.6964950613606427,
+                  0.7062000677570157,
+                  0.7015761724846016,
+                  0.7039418868151789,
+                  0.6981776616473174
+                ],
+                "n_test_rows": 26280
+              }
+            }
+          },
+          "sklearn_extratrees": {
+            "status": "ok",
+            "features": [
+              "rolling_log_return_vol",
+              "log_return",
+              "log_return_lag_1",
+              "log_return_lag_2",
+              "hour_of_day",
+              "dayofweek"
+            ],
+            "windows": {
+              "cv": {
+                "fold_metric": [
+                  0.693791359935383,
+                  0.6948704344818458,
+                  0.6938782844419077,
+                  0.69551488041851,
+                  0.6943305945209661
+                ],
+                "n_test_rows": 26280
+              }
+            }
+          }
+        }
+      },
+      "ETHUSDT_1h": {
+        "n_rows": 43800,
+        "classes": [
+          "down",
+          "flat",
+          "up"
+        ],
+        "arms": {
+          "prior": {
+            "status": "ok",
+            "features": [
+              "rolling_log_return_vol",
+              "log_return",
+              "log_return_lag_1",
+              "log_return_lag_2",
+              "hour_of_day",
+              "dayofweek"
+            ],
+            "windows": {
+              "cv": {
+                "fold_metric": [
+                  0.6945769942345101,
+                  0.6953157244139327,
+                  0.6962207746143351,
+                  0.6952222428990511,
+                  0.6948755683264531
+                ],
+                "n_test_rows": 26280
+              }
+            }
+          },
+          "lgbm": {
+            "status": "ok",
+            "features": [
+              "rolling_log_return_vol",
+              "log_return",
+              "log_return_lag_1",
+              "log_return_lag_2",
+              "hour_of_day",
+              "dayofweek"
+            ],
+            "windows": {
+              "cv": {
+                "fold_metric": [
+                  0.7015036687901836,
+                  0.7091907776348094,
+                  0.7044272129977388,
+                  0.6990553397936227,
+                  0.6984126630640503
+                ],
+                "n_test_rows": 26280
+              }
+            }
+          },
+          "sklearn_extratrees": {
+            "status": "ok",
+            "features": [
+              "rolling_log_return_vol",
+              "log_return",
+              "log_return_lag_1",
+              "log_return_lag_2",
+              "hour_of_day",
+              "dayofweek"
+            ],
+            "windows": {
+              "cv": {
+                "fold_metric": [
+                  0.6947852707318365,
+                  0.694790386848961,
+                  0.6955831860612731,
+                  0.693911172076424,
+                  0.6952132376471168
+                ],
+                "n_test_rows": 26280
+              }
+            }
+          }
+        }
+      },
+      "SOLUSDT_1h": {
+        "n_rows": 43800,
+        "classes": [
+          "down",
+          "flat",
+          "up"
+        ],
+        "arms": {
+          "prior": {
+            "status": "ok",
+            "features": [
+              "rolling_log_return_vol",
+              "log_return",
+              "log_return_lag_1",
+              "log_return_lag_2",
+              "hour_of_day",
+              "dayofweek"
+            ],
+            "windows": {
+              "cv": {
+                "fold_metric": [
+                  0.700367491406449,
+                  0.703001760423107,
+                  0.7057326490429534,
+                  0.7097744115232865,
+                  0.719881328101933
+                ],
+                "n_test_rows": 26280
+              }
+            }
+          },
+          "lgbm": {
+            "status": "ok",
+            "features": [
+              "rolling_log_return_vol",
+              "log_return",
+              "log_return_lag_1",
+              "log_return_lag_2",
+              "hour_of_day",
+              "dayofweek"
+            ],
+            "windows": {
+              "cv": {
+                "fold_metric": [
+                  0.705805128782493,
+                  0.711995798224147,
+                  0.709280127577705,
+                  0.7148498603757528,
+                  0.7348833132010388
+                ],
+                "n_test_rows": 26280
+              }
+            }
+          },
+          "sklearn_extratrees": {
+            "status": "ok",
+            "features": [
+              "rolling_log_return_vol",
+              "log_return",
+              "log_return_lag_1",
+              "log_return_lag_2",
+              "hour_of_day",
+              "dayofweek"
+            ],
+            "windows": {
+              "cv": {
+                "fold_metric": [
+                  0.6997919280685914,
+                  0.7024158754752504,
+                  0.7046685573643287,
+                  0.7084230134236276,
+                  0.7208283739227578
+                ],
+                "n_test_rows": 26280
+              }
+            }
+          }
+        }
+      }
+    },
+    "deltas": {
+      "BTCUSDT_1h": {
+        "cv": {
+          "prior": {
+            "lgbm": {
+              "n_folds": 5,
+              "mean": 0.006206782582225734,
+              "ci95": [
+                0.0014540027444355352,
+                0.010959562420015933
+              ],
+              "sign_consistent": true
+            },
+            "prior": {
+              "n_folds": 5,
+              "mean": 0.0,
+              "ci95": [
+                0.0,
+                0.0
+              ],
+              "sign_consistent": false
+            }
+          },
+          "sklearn_extratrees": {
+            "lgbm": {
+              "n_folds": 5,
+              "mean": 0.0068010592532287365,
+              "ci95": [
+                0.002435125195414542,
+                0.011166993311042931
+              ],
+              "sign_consistent": true
+            },
+            "prior": {
+              "n_folds": 5,
+              "mean": 0.0005942766710030023,
+              "ci95": [
+                -5.157140486148639e-06,
+                0.0011937104824921532
+              ],
+              "sign_consistent": true
+            }
+          }
+        }
+      },
+      "ETHUSDT_1h": {
+        "cv": {
+          "prior": {
+            "lgbm": {
+              "n_folds": 5,
+              "mean": 0.007275671558424501,
+              "ci95": [
+                0.0020686088040410616,
+                0.012482734312807942
+              ],
+              "sign_consistent": true
+            },
+            "prior": {
+              "n_folds": 5,
+              "mean": 0.0,
+              "ci95": [
+                0.0,
+                0.0
+              ],
+              "sign_consistent": false
+            }
+          },
+          "sklearn_extratrees": {
+            "lgbm": {
+              "n_folds": 5,
+              "mean": 0.00766128178295864,
+              "ci95": [
+                0.0023234325349488095,
+                0.01299913103096847
+              ],
+              "sign_consistent": true
+            },
+            "prior": {
+              "n_folds": 5,
+              "mean": 0.0003856102245341386,
+              "ci95": [
+                -0.0004507283353032508,
+                0.001221948784371528
+              ],
+              "sign_consistent": false
+            }
+          }
+        }
+      },
+      "SOLUSDT_1h": {
+        "cv": {
+          "prior": {
+            "lgbm": {
+              "n_folds": 5,
+              "mean": 0.007611317532681561,
+              "ci95": [
+                0.0019153001910139772,
+                0.013307334874349144
+              ],
+              "sign_consistent": true
+            },
+            "prior": {
+              "n_folds": 5,
+              "mean": 0.0,
+              "ci95": [
+                0.0,
+                0.0
+              ],
+              "sign_consistent": false
+            }
+          },
+          "sklearn_extratrees": {
+            "lgbm": {
+              "n_folds": 5,
+              "mean": 0.008137295981316184,
+              "ci95": [
+                0.0034521911419767744,
+                0.012822400820655593
+              ],
+              "sign_consistent": true
+            },
+            "prior": {
+              "n_folds": 5,
+              "mean": 0.000525978448634623,
+              "ci95": [
+                -0.0005751406632051896,
+                0.0016270975604744356
+              ],
+              "sign_consistent": false
+            }
+          }
+        }
+      }
+    },
+    "rule_evaluation": {
+      "verdict": "pass",
+      "why": "candidate(s) ['sklearn_extratrees'] meet every pass_if clause",
+      "passing": [
+        "sklearn_extratrees"
+      ],
+      "candidates": {
+        "sklearn_extratrees": {
+          "evaluated": true,
+          "passes_all": true,
+          "clauses": [
+            {
+              "holds": true,
+              "what": "['BTCUSDT_1h', 'ETHUSDT_1h', 'SOLUSDT_1h'] >= 0.001 vs lgbm/cv"
+            }
+          ]
+        }
+      }
+    },
+    "headline_checks": [],
+    "licences": {
+      "prior": {
+        "kind": "prior",
+        "licence": "n/a",
+        "research_only": false,
+        "weights": ""
+      },
+      "lgbm": {
+        "kind": "lightgbm",
+        "licence": "MIT",
+        "research_only": false,
+        "weights": ""
+      },
+      "sklearn_extratrees": {
+        "kind": "sklearn_extratrees",
+        "licence": "BSD-3-Clause",
+        "research_only": false,
+        "weights": ""
+      }
+    },
+    "n_folds_cv_min_over_groups": 5,
+    "seconds": 72.2
+  }
+}
