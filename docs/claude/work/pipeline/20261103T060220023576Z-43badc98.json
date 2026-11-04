@@ -1,0 +1,17 @@
+{
+  "due_when": {
+    "clears_when": "check_research_queue_throughput.py reports idle_alarm false",
+    "kind": "observation",
+    "observation": "idle_alarm false"
+  },
+  "id": "PI-20261103-1103IDLE-0001",
+  "next_action": "check_observation",
+  "origin": {
+    "kind": "research",
+    "ref": "comms/research/ops/20261102T1620Z.json throughput",
+    "rerun": "python3 scripts/ci/check_research_queue_throughput.py --json (want idle_alarm false)"
+  },
+  "state": "killed",
+  "terminal_reason": "KILLED, self-cleared: throughput read 2026-11-03T06:01Z shows idle_alarm false, fired_24h 61, last_dispatched 04:15:50Z (1.8h). The record was a point-in-time read during a dispatch gap that ended.",
+  "what": "Research-dispatch idle_alarm recorded in comms/research/ops/20261102T1620Z.json (fired_24h 0, 27.6h since last dispatch, runnable 144)."
+}

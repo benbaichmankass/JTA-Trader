@@ -1159,7 +1159,7 @@ nodes:
   value:
     usd_at_stake_per_month: 60
     confidence: 0.3
-  needs_authoring: 'slv_trend_1h (alpaca_paper, alpaca_options_paper; execution shadow) reads 1.06 R per capital-day
+  needs_authoring: 'ANSWERED ELSEWHERE (programme review 2026-11-04): RQ-20261101-78fc-18 (ITERATION 1, dukascopy 1h, a second feed, 2018-06..2026-10) CONFIRMED the leg on a holdout: discovery n 316 net +41.66 R (3 of 4 folds), holdout 2024-09..2026-10 n 104 net +35.99 R; RQ-20261103-5a03-02 PASS agrees. The figure is not a Yahoo feed artifact; the next step is the leg''s promotion proposal (manager, Tier 3), not a unit. Do not re-author. Original ask: slv_trend_1h (alpaca_paper, alpaca_options_paper; execution shadow) reads 1.06 R per capital-day
     (n=68, +53.1 R on 365d) -- ~6x any other leg (programme 03 § 1: check before anyone quotes it). A preceding-window
     Stage 0 is underpowered (Yahoo 1h is capped at ~730 days: ~5 months before the record, ~19 trades). Register
     a data-fidelity unit instead: the same leg on Alpaca 1h bars vs Yahoo 1h bars over the record window (same argv),
@@ -1971,3 +1971,676 @@ nodes:
     confirm on its own rule. PASS -> a re-entry case for the Stage-1 demo floor (bybit_1 for crypto, alpaca_paper / ib_paper for the
     rest) under MD-PROMOTE-S0-S1, built as a new evidence record; never a roster edit from this node. FAIL -> closes the CONFIGURATION
     (these brackets on these cells), not the window finding. Not authored if stage A fails: retire this node with that verdict as the reason.
+# --- PROGRAMME-REVIEW-2026-11-04: ITERATION 2 nodes for orphan subjects (iteration_orphans.py 2026-11-04: each had a graded iteration 1 and no next step), each from a diagnosis of its iteration-1 result ---
+- id: P3-ITER2-htf-pullback-trend-2h
+  goal: G1
+  theme: live_strategy
+  roadmap:
+  - L-PROGRAMMES
+  - L-ATM
+  value:
+    usd_at_stake_per_month: 40
+    confidence: 0.1
+  after: []
+  unit:
+    title: 'ITERATION 2 of htf_pullback_trend_2h (iteration 1 PASS on adx_min 30 but the book still loses): on BTC 2h over 2020-07..2026-10, does a stricter
+      ADX floor (35 / 40), the AD30 leg long-only, or the AD30 leg without the pivot-5 structure exit beat AD30 net of cost?'
+    cadence: once
+    theme: live_strategy
+    priority: 2
+    kind: experiment
+    question: Over 2020-07-01..2026-10-26 (6 calendar folds, full cost stack), with AD30 (adx_min 30, the iteration-1 winner) as the incumbent, does any
+      of AD35, AD40, AD30L (adx_min 30 + --side-filter=long) or AD30NX (adx_min 30, structure_exit removed) beat AD30 by the registered bar, and is any
+      arm net-positive in absolute terms?
+    why_this_matters: 'Decision it changes: whether htf_pullback_trend_2h has a configuration with an ABSOLUTE Stage-0 edge (a re-entry case for its floor
+      book) or whether the ADX lever only shrinks a loss (then the next pass moves to the untested exit/direction families or, if those are flat too, a
+      lever-exhaustion family review). AD30NX also reads the pivot-5 structure exit on a leg that declares it (STRUCTURE-EXITS-DEFAULT, PR #22907).'
+    iteration:
+      subject: htf_pullback_trend_2h
+      subject_kind: strategy_leg
+      from_result: comms/strategy_evidence/htf_pullback_trend_2h.json
+      verdict_read: fail
+      diagnosis: 'RQ-20261101-78fc-33 (iteration 1, 2020-07..2026-10-15, 6 folds, 11.0 bps + slip + funding, A carried structure_exit pivot=5): A net about
+        -83.5 R; AD25 net -40.20 R (delta +43.31, 6 of 6 folds), AD30 net -16.22 R (delta +67.29, 6 of 6 folds, maxDD 20.9 R), TL80 delta -12.63 (2 of 6).
+        The rule PASSED on AD30, but every arm loses in absolute terms. Reading: the ADX floor removes the losing low-trend pullbacks monotonically (25
+        -> 30 helps more), so the dose is not yet at its optimum; the gross book is still negative (the 365d record: fee-only -16.1 R). Competing: noise
+        (one passing dose of two), and the structure exit costing R (5 of 6 powered legs lost with structure arms this week, #22907).'
+      search: 'regime_gating narrowed around the passing dose (AD35 / AD40: a near-miss narrows the grid), then direction and exit one-factor on top of
+        AD30; incumbent = AD30 so the read is incremental.'
+      attempt: 2
+      due_by: '2026-11-11'
+      levers:
+      - regime_gating
+      - direction
+      - exit
+      map_entries:
+      - research/levers/htf_pullback_trend_2h.yaml
+    power:
+      expected_n: 150
+      min_detectable_effect: 0.45
+      effect_units: sd
+      design: one_sample
+      alpha: 0.05
+      power: 0.8
+      basis: 'INFERRED from 78fc-33: the 0.02 R x n bar there implies n(A) ~ 600 over the window; an ADX >= 30 floor keeps roughly a quarter to a third.
+        Floor 39 trades per arm (d=0.45, alpha 0.05, power 0.8: (1.96+0.8416)^2/0.45^2 = 38.8); below it the unit grades INDETERMINATE, never FAIL.'
+      feasibility:
+        source: none
+        accrual_basis: Replays history on freshly fetched candles over a pinned window; nothing accrues.
+    decision_rule:
+      id: RULE-P3-ITER2-htf-pullback-trend-2h
+      registered_at: '2026-11-04'
+      registered_before_run: true
+      statistic: 'scripts/research/exit_lever_ablation.py --leg htf_pullback_trend_2h --grade replace, window 2020-07-01 .. 2026-10-26 23:59, 6 equal calendar
+        folds by entry time, net of the full cost stack the harness resolves per venue (execution_costs.resolve_cost_policy, recorded per arm as cost_stack).
+        Arms fixed now: AD30 (adx_min=30), AD35 (adx_min=35), AD40 (adx_min=40), AD30L (adx_min=30;--side-filter=long), AD30NX (adx_min=30;-structure_exit).
+        Per arm: n, net_total_r, max_drawdown_r, net R per fold.'
+      rule: 'INDETERMINATE IF n(AD30) < 39 or IF every candidate arm is byte-identical to AD30 (the lever never fired). A candidate C PASSES iff net_r(C)
+        > net_r(AD30) AND delta >= 0.02 R x n(AD30) AND net R(C) >= net R(AD30) in >= 4 of 6 folds AND maxDD(C) <= maxDD(AD30) x 1.35. PASS IF one or more
+        pass: the best by net R is named (denominator: 4 candidate arms) and the follow-up is ONE confirmation unit on a disjoint window. FAIL IF none passes
+        with n(AD30) >= 39: this arm grid is closed on htf_pullback_trend_2h for this window, the lever FAMILIES stay open (scripts/research/family_retirement_policy.yaml)
+        and the record names the arm that moved closest. Also REPORTED, not graded: net_r(AD30) over the long window and its fold signs (whether the 365d
+        record''s fail holds on the long window). Thresholds and the arm grid are not changed after any result.'
+      what_it_does_not_do: 'Serves, promotes or applies nothing; changes no config or roster; places no order. A PASS is a discovery lead: ONE confirmation,
+        then a live-producer check and a Tier-3 declare PROPOSAL with the mirror in the same PR.'
+    compute: cpu_light
+    value:
+      bucket: structural
+      usd_at_stake_per_month: 40
+      confidence: 0.1
+      basis: planning weight by money rank (floor / paper book); an estimate, not a measurement
+    routing:
+      needs_trainer_resident_data: false
+      needs_gpu: false
+      peak_memory_gb: 4.0
+      est_minutes: 60
+      basis: Estimate from comparable exit_lever_ablation runs (7b6f-*, 2026-10-31..11-03); the first run replaces it.
+      why_runner: Fetches keyless public candles (or the dukascopy lane research-script-run.yml installs) for a pinned window; reads no trainer data; CPU
+        only.
+    run:
+      command:
+      - python3
+      - scripts/research/exit_lever_ablation.py
+      - --leg
+      - htf_pullback_trend_2h
+      - --arm
+      - AD30=adx_min=30
+      - --arm
+      - AD35=adx_min=35
+      - --arm
+      - AD40=adx_min=40
+      - --arm
+      - AD30L=adx_min=30;--side-filter=long
+      - --arm
+      - AD30NX=adx_min=30;-structure_exit
+      - --days
+      - '2400'
+      - --start
+      - '2020-07-01'
+      - --end
+      - 2026-10-26 23:59
+      - --grade
+      - replace
+      - --baseline
+      - AD30
+      - --delta-r
+      - '0'
+      - --delta-r-per-trade
+      - '0.02'
+      - --dd-tol-frac
+      - '0.35'
+      - --folds
+      - '6'
+      - --fold-majority
+      - '4'
+      - --n-floor
+      - '39'
+      - --out
+      - '{out_dir}'
+      timeout_minutes: 150
+    lands:
+      store: research/results/
+      assert_field: read_state
+      min_rows: 1
+    intervention_controls:
+      not_applicable: a harness ablation / Stage-0 re-measurement of declared geometry, not an in-trade action
+    what_it_does_not_do: 'Serves, promotes or applies nothing; changes no config or roster; places no order. A PASS is a discovery lead: ONE confirmation,
+      then a live-producer check and a Tier-3 declare PROPOSAL with the mirror in the same PR.'
+    roadmap:
+    - L-PROGRAMMES
+    - L-ATM
+    related:
+    - RESEARCH-ITERATE
+    - PROGRAMME-REVIEW-2026-11-04
+    - scripts/research/exit_lever_ablation.py
+- id: P3-ITER2-trend-donchian-1h
+  goal: G1
+  theme: live_strategy
+  roadmap:
+  - L-PROGRAMMES
+  - L-ATM
+  value:
+    usd_at_stake_per_month: 40
+    confidence: 0.1
+  after: []
+  unit:
+    title: 'ITERATION 2 of trend_donchian_1h (stage0 FAIL at power: n 1333, -88.2 R, 0 of 6 folds): does a slower Donchian (40 / 55), an ADX >= 25 gate,
+      or removing the pivot-5 structure exit beat the leg as declared on BTC 1h over 2020-07..2026-10?'
+    cadence: once
+    theme: live_strategy
+    priority: 2
+    kind: experiment
+    question: Over 2020-07-01..2026-10-26 (6 calendar folds, full cost stack), does any of D40 (donchian 40), D55 (donchian 55), ADX25 (--adx-min=25) or
+      NOSX (structure_exit removed) beat trend_donchian_1h AS DECLARED by the registered bar, and is any arm net-positive in absolute terms?
+    why_this_matters: 'Decision it changes: whether this 1h Donchian is a turnover problem (slower lookback wins), a regime problem (ADX gate wins), an
+      exit problem (NOSX wins) or none of them, which sets its next lever family; iteration 1 measured only the declared leg. This week''s ML-TIMEFRAME
+      read (cost R per decision rises as bars shrink) predicts the turnover cause.'
+    iteration:
+      subject: trend_donchian_1h
+      subject_kind: strategy_leg
+      from_result: comms/strategy_evidence/trend_donchian_1h.json
+      verdict_read: fail
+      diagnosis: 'RQ-20261101-78fc-43 (iteration 1, stage0 at power, 2020-07..2026-10-15, A as declared incl. structure_exit pivot=5): n 1333, net -88.18
+        R (-0.066 R/trade), 0 of 6 folds positive, maxDD 93.1 R -- the 365d record (n 159, -16.1 R, fee-only -7.5 R) is not a window artifact. About half
+        the 365d loss is cost (11.0 bps on a 2.5 ATR 1h stop), and the gross book is slightly negative. Most likely cause: a 20-bar 1h channel trades too
+        often for its per-trade move (design / cost), with the declared structure exit and regime (chop) competing; noise is unlikely at n 1333 with 0 of
+        6 folds.'
+      search: 'entry (Donchian lookback 40 / 55: fewer, larger breakouts), regime_gating (ADX >= 25) and exit (the declared structure exit removed); one-factor
+        arms against A.'
+      attempt: 2
+      due_by: '2026-11-11'
+      levers:
+      - entry
+      - regime_gating
+      - exit
+      map_entries:
+      - research/levers/trend_donchian_1h.yaml
+    power:
+      expected_n: 1300
+      min_detectable_effect: 0.45
+      effect_units: sd
+      design: one_sample
+      alpha: 0.05
+      power: 0.8
+      basis: 'MEASURED for A in 78fc-43 (n 1333 on 2020-07..2026-10-15); D55 trades roughly a third as often (INFERRED). Floor 39 trades per arm (d=0.45,
+        alpha 0.05, power 0.8: (1.96+0.8416)^2/0.45^2 = 38.8); below it the unit grades INDETERMINATE, never FAIL.'
+      feasibility:
+        source: none
+        accrual_basis: Replays history on freshly fetched candles over a pinned window; nothing accrues.
+    decision_rule:
+      id: RULE-P3-ITER2-trend-donchian-1h
+      registered_at: '2026-11-04'
+      registered_before_run: true
+      statistic: 'scripts/research/exit_lever_ablation.py --leg trend_donchian_1h --grade replace, window 2020-07-01 .. 2026-10-26 23:59, 6 equal calendar
+        folds by entry time, net of the full cost stack the harness resolves per venue (execution_costs.resolve_cost_policy, recorded per arm as cost_stack).
+        Arms fixed now: A, D40 (donchian=40), D55 (donchian=55), ADX25 (--adx-min=25), NOSX (-structure_exit). Per arm: n, net_total_r, max_drawdown_r,
+        net R per fold.'
+      rule: 'INDETERMINATE IF n(A) < 39 or IF every candidate arm is byte-identical to A (the lever never fired). A candidate C PASSES iff net_r(C) > net_r(A)
+        AND delta >= 0.02 R x n(A) AND net R(C) >= net R(A) in >= 4 of 6 folds AND maxDD(C) <= maxDD(A) x 1.35. PASS IF one or more pass: the best by net
+        R is named (denominator: 4 candidate arms) and the follow-up is ONE confirmation unit on a disjoint window. FAIL IF none passes with n(A) >= 39:
+        this arm grid is closed on trend_donchian_1h for this window, the lever FAMILIES stay open (scripts/research/family_retirement_policy.yaml) and
+        the record names the arm that moved closest. Also REPORTED, not graded: net_r(A) over the long window and its fold signs (whether the 365d record''s
+        fail holds on the long window). Thresholds and the arm grid are not changed after any result.'
+      what_it_does_not_do: 'Serves, promotes or applies nothing; changes no config or roster; places no order. A PASS is a discovery lead: ONE confirmation,
+        then a live-producer check and a Tier-3 declare PROPOSAL with the mirror in the same PR.'
+    compute: cpu_light
+    value:
+      bucket: structural
+      usd_at_stake_per_month: 40
+      confidence: 0.1
+      basis: planning weight by money rank (floor / paper book); an estimate, not a measurement
+    routing:
+      needs_trainer_resident_data: false
+      needs_gpu: false
+      peak_memory_gb: 4.0
+      est_minutes: 70
+      basis: Estimate from comparable exit_lever_ablation runs (7b6f-*, 2026-10-31..11-03); the first run replaces it.
+      why_runner: Fetches keyless public candles (or the dukascopy lane research-script-run.yml installs) for a pinned window; reads no trainer data; CPU
+        only.
+    run:
+      command:
+      - python3
+      - scripts/research/exit_lever_ablation.py
+      - --leg
+      - trend_donchian_1h
+      - --arm
+      - A=
+      - --arm
+      - D40=donchian=40
+      - --arm
+      - D55=donchian=55
+      - --arm
+      - ADX25=--adx-min=25
+      - --arm
+      - NOSX=-structure_exit
+      - --days
+      - '2400'
+      - --start
+      - '2020-07-01'
+      - --end
+      - 2026-10-26 23:59
+      - --grade
+      - replace
+      - --baseline
+      - A
+      - --delta-r
+      - '0'
+      - --delta-r-per-trade
+      - '0.02'
+      - --dd-tol-frac
+      - '0.35'
+      - --folds
+      - '6'
+      - --fold-majority
+      - '4'
+      - --n-floor
+      - '39'
+      - --out
+      - '{out_dir}'
+      timeout_minutes: 150
+    lands:
+      store: research/results/
+      assert_field: read_state
+      min_rows: 1
+    intervention_controls:
+      not_applicable: a harness ablation / Stage-0 re-measurement of declared geometry, not an in-trade action
+    what_it_does_not_do: 'Serves, promotes or applies nothing; changes no config or roster; places no order. A PASS is a discovery lead: ONE confirmation,
+      then a live-producer check and a Tier-3 declare PROPOSAL with the mirror in the same PR.'
+    roadmap:
+    - L-PROGRAMMES
+    - L-ATM
+    related:
+    - RESEARCH-ITERATE
+    - PROGRAMME-REVIEW-2026-11-04
+    - scripts/research/exit_lever_ablation.py
+- id: P3-ITER2-spy-pullback-1h-holdout
+  goal: G1
+  theme: live_strategy
+  roadmap:
+  - L-PROGRAMMES
+  - L-LADDER
+  value:
+    usd_at_stake_per_month: 30
+    confidence: 0.2
+  after: []
+  unit:
+    title: 'ITERATION 2 of spy_pullback_1h (365d record FAIL, but positive on the 8-year window in iteration 1): does the leg AS DECLARED, selected on 2018-06..the
+      holdout boundary, stay net-positive once on the held-back latest 25% (dukascopy 1h, full cost stack)?'
+    cadence: once
+    theme: live_strategy
+    priority: 2
+    kind: experiment
+    question: On the dukascopy 1h lane over 2018-06-01..2026-10-26, with the boundary fixed before the run (latest 25%, grown to hold 25 entries, cap 40%),
+      is spy_pullback_1h AS DECLARED eligible on discovery (n >= 20, net > 0, >= 3 of 4 folds) and net-positive on the holdout with n >= 25?
+    why_this_matters: 'Decision it changes: whether spy_pullback_1h is a SURVIVOR (confirmed on a holdout -> promotion proposal to the manager, as slv/uso/qqq
+      1h were this week) or its long-window positive is front-loaded (FAIL -> back to diagnosis on the session / sizing_vs_cost families). The 365d Yahoo
+      window is the binding constraint on every 1h ETF record (Yahoo caps 1h history at ~730 d).'
+    iteration:
+      subject: spy_pullback_1h
+      subject_kind: strategy_leg
+      from_result: comms/strategy_evidence/spy_pullback_1h.json
+      verdict_read: fail
+      diagnosis: 'RQ-20261101-78fc-55: iteration 1 (AD25 / SL25 vs A, dukascopy 2018-06..2026-10-15, 6 folds) FAILED its arms, but its own numbers put A
+        at about +66.7 R (net(AD25) +27.04 = net(A) - 39.71; the 0.02 R x n bar of 6.86 R implies n(A) ~ 343): the leg as declared is POSITIVE on the 8-year
+        window while its 365d Yahoo record reads -8.55 R (n 75, 2 of 4 folds). The 365d fail is a window read; the long-window positive is a discovery that
+        has not been held out. Fidelity caveat: the builder still omits the declared skip_hours 19,20 for pullback legs (_PB_LEVER_FLAG has no skip_hours),
+        so A here is the leg WITHOUT its session filter.'
+      search: 'none changed: the long-window positive is a discovery, so the iteration is ONE holdout confirmation of the declared leg (research-ops SKILL
+        "How to run an iteration"), the RQ-20261101-78fc-18 shape that confirmed slv_trend_1h.'
+      attempt: 2
+      due_by: '2026-11-11'
+      map_entries:
+      - research/levers/spy_pullback_1h.yaml
+    power:
+      expected_n: 80
+      min_detectable_effect: 0.45
+      effect_units: sd
+      design: one_sample
+      alpha: 0.05
+      power: 0.8
+      basis: 'INFERRED from the iteration-1 bar (n(A) over the window); the holdout holds >= 25 entries by construction or grades INDETERMINATE. Floor 39
+        trades per arm (d=0.45, alpha 0.05, power 0.8: (1.96+0.8416)^2/0.45^2 = 38.8); below it the unit grades INDETERMINATE, never FAIL.'
+      feasibility:
+        source: none
+        accrual_basis: Replays history on freshly fetched candles over a pinned window; nothing accrues.
+    decision_rule:
+      id: RULE-P3-ITER2-spy-pullback-1h-holdout
+      registered_at: '2026-11-04'
+      registered_before_run: true
+      statistic: 'scripts/research/exit_lever_ablation.py --leg spy_pullback_1h --grade holdout, window 2018-06-01 .. 2026-10-26 23:59, 4 equal calendar
+        folds by entry time, net of the full cost stack the harness resolves per venue (execution_costs.resolve_cost_policy, recorded per arm as cost_stack).
+        Arms fixed now: A. Per arm: n, net_total_r, max_drawdown_r, net R per fold.'
+      rule: 'Select-then-confirm, one arm (the leg as declared). The boundary is fixed before any outcome: the latest 25% of the window, grown in 1% steps
+        until it holds 25 of A''s entries, capped at 40%. A is eligible iff its discovery n >= 20, discovery net R > 0 and >= 3 of 4 discovery folds net-positive.
+        PASS (confirmed) iff n_holdout >= 25 and holdout net R > 0: the verdict carries holdout_confirmation in the shape mandate_resolver R-HOLDOUT reads,
+        and the next step is the leg''s promotion PROPOSAL (Tier 3, the manager''s), never a config edit here. FAIL (not_replicated / no_discovery): back
+        to diagnosis for the next iteration. INDETERMINATE (underpowered / insufficient_discovery) is a power shortfall, never evidence against the leg.
+        The RQ-20261101-78fc-18 rule, unchanged; not changed after any result.'
+      what_it_does_not_do: 'Serves, promotes or applies nothing; changes no config or roster; places no order. A PASS is a discovery lead: ONE confirmation,
+        then a live-producer check and a Tier-3 declare PROPOSAL with the mirror in the same PR.'
+    compute: cpu_light
+    value:
+      bucket: structural
+      usd_at_stake_per_month: 30
+      confidence: 0.2
+      basis: planning weight by money rank (floor / paper book); an estimate, not a measurement
+    routing:
+      needs_trainer_resident_data: false
+      needs_gpu: false
+      peak_memory_gb: 4.0
+      est_minutes: 45
+      basis: Estimate from comparable exit_lever_ablation runs (7b6f-*, 2026-10-31..11-03); the first run replaces it.
+      why_runner: Fetches keyless public candles (or the dukascopy lane research-script-run.yml installs) for a pinned window; reads no trainer data; CPU
+        only.
+    run:
+      command:
+      - python3
+      - scripts/research/exit_lever_ablation.py
+      - --leg
+      - spy_pullback_1h
+      - --arm
+      - A=
+      - --days
+      - '3080'
+      - --start
+      - '2018-06-01'
+      - --end
+      - 2026-10-26 23:59
+      - --non-crypto-source
+      - dukascopy
+      - --grade
+      - holdout
+      - --baseline
+      - A
+      - --delta-r
+      - '0'
+      - --holdout-frac
+      - '0.25'
+      - --holdout-min-trades
+      - '25'
+      - --holdout-max-frac
+      - '0.40'
+      - --folds
+      - '4'
+      - --fold-majority
+      - '3'
+      - --n-floor
+      - '20'
+      - --out
+      - '{out_dir}'
+      timeout_minutes: 150
+    lands:
+      store: research/results/
+      assert_field: read_state
+      min_rows: 1
+    intervention_controls:
+      not_applicable: a harness ablation / Stage-0 re-measurement of declared geometry, not an in-trade action
+    what_it_does_not_do: 'Serves, promotes or applies nothing; changes no config or roster; places no order. A PASS is a discovery lead: ONE confirmation,
+      then a live-producer check and a Tier-3 declare PROPOSAL with the mirror in the same PR.'
+    roadmap:
+    - L-PROGRAMMES
+    - L-LADDER
+    related:
+    - RESEARCH-ITERATE
+    - PROGRAMME-REVIEW-2026-11-04
+    - scripts/research/exit_lever_ablation.py
+- id: P3-ITER2-tlt-pullback-1h-holdout
+  goal: G1
+  theme: live_strategy
+  roadmap:
+  - L-PROGRAMMES
+  - L-LADDER
+  value:
+    usd_at_stake_per_month: 30
+    confidence: 0.2
+  after: []
+  unit:
+    title: 'ITERATION 2 of tlt_pullback_1h (365d record FAIL, but positive on the 8-year window in iteration 1): does the leg AS DECLARED, selected on 2018-06..the
+      holdout boundary, stay net-positive once on the held-back latest 25% (dukascopy 1h, full cost stack)?'
+    cadence: once
+    theme: live_strategy
+    priority: 2
+    kind: experiment
+    question: On the dukascopy 1h lane over 2018-06-01..2026-10-26, with the boundary fixed before the run (latest 25%, grown to hold 25 entries, cap 40%),
+      is tlt_pullback_1h AS DECLARED eligible on discovery (n >= 20, net > 0, >= 3 of 4 folds) and net-positive on the holdout with n >= 25?
+    why_this_matters: 'Decision it changes: whether tlt_pullback_1h is a SURVIVOR (confirmed on a holdout -> promotion proposal to the manager, as slv/uso/qqq
+      1h were this week) or its long-window positive is front-loaded (FAIL -> back to diagnosis on the session / sizing_vs_cost families). The 365d Yahoo
+      window is the binding constraint on every 1h ETF record (Yahoo caps 1h history at ~730 d).'
+    iteration:
+      subject: tlt_pullback_1h
+      subject_kind: strategy_leg
+      from_result: comms/strategy_evidence/tlt_pullback_1h.json
+      verdict_read: fail
+      diagnosis: 'RQ-20261101-78fc-56: iteration 1 (SL30 / TL120 vs A, dukascopy 2018-06..2026-10-15, 6 folds) FAILED its arms (TL120 +24.6 R but 3 of 6
+        folds), and its own numbers put A at about +119.6 R (net(SL30) +87.33 = net(A) - 32.23; bar 11.48 R implies n(A) ~ 574), while the 365d record reads
+        -6.73 R (n 94, fee-only +2.65). The cost-drag diagnosis of the 365d record does not hold on 8 years: the leg as declared is positive long-run and
+        the last year is a weak window. Not held out yet.'
+      search: 'none changed: the long-window positive is a discovery, so the iteration is ONE holdout confirmation of the declared leg (research-ops SKILL
+        "How to run an iteration"), the RQ-20261101-78fc-18 shape that confirmed slv_trend_1h.'
+      attempt: 2
+      due_by: '2026-11-11'
+      map_entries:
+      - research/levers/tlt_pullback_1h.yaml
+    power:
+      expected_n: 80
+      min_detectable_effect: 0.45
+      effect_units: sd
+      design: one_sample
+      alpha: 0.05
+      power: 0.8
+      basis: 'INFERRED from the iteration-1 bar (n(A) over the window); the holdout holds >= 25 entries by construction or grades INDETERMINATE. Floor 39
+        trades per arm (d=0.45, alpha 0.05, power 0.8: (1.96+0.8416)^2/0.45^2 = 38.8); below it the unit grades INDETERMINATE, never FAIL.'
+      feasibility:
+        source: none
+        accrual_basis: Replays history on freshly fetched candles over a pinned window; nothing accrues.
+    decision_rule:
+      id: RULE-P3-ITER2-tlt-pullback-1h-holdout
+      registered_at: '2026-11-04'
+      registered_before_run: true
+      statistic: 'scripts/research/exit_lever_ablation.py --leg tlt_pullback_1h --grade holdout, window 2018-06-01 .. 2026-10-26 23:59, 4 equal calendar
+        folds by entry time, net of the full cost stack the harness resolves per venue (execution_costs.resolve_cost_policy, recorded per arm as cost_stack).
+        Arms fixed now: A. Per arm: n, net_total_r, max_drawdown_r, net R per fold.'
+      rule: 'Select-then-confirm, one arm (the leg as declared). The boundary is fixed before any outcome: the latest 25% of the window, grown in 1% steps
+        until it holds 25 of A''s entries, capped at 40%. A is eligible iff its discovery n >= 20, discovery net R > 0 and >= 3 of 4 discovery folds net-positive.
+        PASS (confirmed) iff n_holdout >= 25 and holdout net R > 0: the verdict carries holdout_confirmation in the shape mandate_resolver R-HOLDOUT reads,
+        and the next step is the leg''s promotion PROPOSAL (Tier 3, the manager''s), never a config edit here. FAIL (not_replicated / no_discovery): back
+        to diagnosis for the next iteration. INDETERMINATE (underpowered / insufficient_discovery) is a power shortfall, never evidence against the leg.
+        The RQ-20261101-78fc-18 rule, unchanged; not changed after any result.'
+      what_it_does_not_do: 'Serves, promotes or applies nothing; changes no config or roster; places no order. A PASS is a discovery lead: ONE confirmation,
+        then a live-producer check and a Tier-3 declare PROPOSAL with the mirror in the same PR.'
+    compute: cpu_light
+    value:
+      bucket: structural
+      usd_at_stake_per_month: 30
+      confidence: 0.2
+      basis: planning weight by money rank (floor / paper book); an estimate, not a measurement
+    routing:
+      needs_trainer_resident_data: false
+      needs_gpu: false
+      peak_memory_gb: 4.0
+      est_minutes: 45
+      basis: Estimate from comparable exit_lever_ablation runs (7b6f-*, 2026-10-31..11-03); the first run replaces it.
+      why_runner: Fetches keyless public candles (or the dukascopy lane research-script-run.yml installs) for a pinned window; reads no trainer data; CPU
+        only.
+    run:
+      command:
+      - python3
+      - scripts/research/exit_lever_ablation.py
+      - --leg
+      - tlt_pullback_1h
+      - --arm
+      - A=
+      - --days
+      - '3080'
+      - --start
+      - '2018-06-01'
+      - --end
+      - 2026-10-26 23:59
+      - --non-crypto-source
+      - dukascopy
+      - --grade
+      - holdout
+      - --baseline
+      - A
+      - --delta-r
+      - '0'
+      - --holdout-frac
+      - '0.25'
+      - --holdout-min-trades
+      - '25'
+      - --holdout-max-frac
+      - '0.40'
+      - --folds
+      - '4'
+      - --fold-majority
+      - '3'
+      - --n-floor
+      - '20'
+      - --out
+      - '{out_dir}'
+      timeout_minutes: 150
+    lands:
+      store: research/results/
+      assert_field: read_state
+      min_rows: 1
+    intervention_controls:
+      not_applicable: a harness ablation / Stage-0 re-measurement of declared geometry, not an in-trade action
+    what_it_does_not_do: 'Serves, promotes or applies nothing; changes no config or roster; places no order. A PASS is a discovery lead: ONE confirmation,
+      then a live-producer check and a Tier-3 declare PROPOSAL with the mirror in the same PR.'
+    roadmap:
+    - L-PROGRAMMES
+    - L-LADDER
+    related:
+    - RESEARCH-ITERATE
+    - PROGRAMME-REVIEW-2026-11-04
+    - scripts/research/exit_lever_ablation.py
+- id: P3-ITER2-mgc-trend-1h-dukascopy-holdout
+  goal: G1
+  theme: live_strategy
+  roadmap:
+  - L-PROGRAMMES
+  - L-LADDER
+  value:
+    usd_at_stake_per_month: 40
+    confidence: 0.2
+  after: []
+  unit:
+    title: 'ITERATION 2 of mgc_trend_1h (iteration 1 no_discovery on a 2024-06 data start): on the dukascopy XAU/USD 1h proxy over 2018-06..2026-10, does
+      the leg AS DECLARED confirm on a held-back latest 25%?'
+    cadence: once
+    theme: live_strategy
+    priority: 2
+    kind: experiment
+    question: On the dukascopy 1h lane (MGC mapped to XAU_USD, dukascopy_span_probe.py) over 2018-06-01..2026-10-26, with the boundary fixed before the
+      run, is mgc_trend_1h AS DECLARED eligible on discovery (n >= 20, net > 0, >= 3 of 4 folds) and net-positive on the holdout with n >= 25, at the leg's
+      own cost stack?
+    why_this_matters: 'Decision it changes: whether mgc_trend_1h (ib_paper floor) has a confirmed edge (promotion proposal) or its 365d pass was window-specific.
+      Iteration 1 could not decide: its data started 2024-06 (the GC=F Yahoo 1h cap), so the discovery span was 21 months and only 2 of 4 folds were positive.'
+    iteration:
+      subject: mgc_trend_1h
+      subject_kind: strategy_leg
+      from_result: comms/strategy_evidence/mgc_trend_1h.json
+      verdict_read: pass_unconfirmed
+      diagnosis: 'RQ-20261101-78fc-26 (iteration 1, holdout grade, requested 2018-06..2026-10-15) graded FAIL as no_discovery: the fetched series started
+        2024-06-24 (Yahoo GC=F 1h cap ~730 d), discovery n 158 net +12.68 R with folds -3.0 / -7.8 / +11.9 / +11.6 (2 of 4, so not eligible), holdout never
+        evaluated. That is a DATA-WINDOW failure, not evidence against the leg (harness/window cause). Fidelity caveat: XAU/USD spot CFD is a proxy for
+        the MGC future (no roll, different session), stated in the record.'
+      search: 'none changed: re-run the same holdout confirmation on a feed that reaches the requested window (dukascopy), the iteration the data-window
+        diagnosis names.'
+      attempt: 2
+      due_by: '2026-11-11'
+      map_entries:
+      - research/levers/mgc_trend_1h.yaml
+    power:
+      expected_n: 120
+      min_detectable_effect: 0.45
+      effect_units: sd
+      design: one_sample
+      alpha: 0.05
+      power: 0.8
+      basis: 'INFERRED: 118 trades / 365d in the record implies ~900 over 8 years; the holdout holds >= 25 by construction. Floor 39 trades per arm (d=0.45,
+        alpha 0.05, power 0.8: (1.96+0.8416)^2/0.45^2 = 38.8); below it the unit grades INDETERMINATE, never FAIL.'
+      feasibility:
+        source: none
+        accrual_basis: Replays history on freshly fetched candles over a pinned window; nothing accrues.
+    decision_rule:
+      id: RULE-P3-ITER2-mgc-trend-1h-dukascopy-holdout
+      registered_at: '2026-11-04'
+      registered_before_run: true
+      statistic: 'scripts/research/exit_lever_ablation.py --leg mgc_trend_1h --grade holdout, window 2018-06-01 .. 2026-10-26 23:59, 4 equal calendar folds
+        by entry time, net of the full cost stack the harness resolves per venue (execution_costs.resolve_cost_policy, recorded per arm as cost_stack).
+        Arms fixed now: A. Per arm: n, net_total_r, max_drawdown_r, net R per fold.'
+      rule: 'Select-then-confirm, one arm (the leg as declared). The boundary is fixed before any outcome: the latest 25% of the window, grown in 1% steps
+        until it holds 25 of A''s entries, capped at 40%. A is eligible iff its discovery n >= 20, discovery net R > 0 and >= 3 of 4 discovery folds net-positive.
+        PASS (confirmed) iff n_holdout >= 25 and holdout net R > 0: the verdict carries holdout_confirmation in the shape mandate_resolver R-HOLDOUT reads,
+        and the next step is the leg''s promotion PROPOSAL (Tier 3, the manager''s), never a config edit here. FAIL (not_replicated / no_discovery): back
+        to diagnosis for the next iteration. INDETERMINATE (underpowered / insufficient_discovery) is a power shortfall, never evidence against the leg.
+        The RQ-20261101-78fc-18 rule, unchanged; not changed after any result.'
+      what_it_does_not_do: 'Serves, promotes or applies nothing; changes no config or roster; places no order. A PASS is a discovery lead: ONE confirmation,
+        then a live-producer check and a Tier-3 declare PROPOSAL with the mirror in the same PR.'
+    compute: cpu_light
+    value:
+      bucket: structural
+      usd_at_stake_per_month: 40
+      confidence: 0.2
+      basis: planning weight by money rank (floor / paper book); an estimate, not a measurement
+    routing:
+      needs_trainer_resident_data: false
+      needs_gpu: false
+      peak_memory_gb: 4.0
+      est_minutes: 45
+      basis: Estimate from comparable exit_lever_ablation runs (7b6f-*, 2026-10-31..11-03); the first run replaces it.
+      why_runner: Fetches keyless public candles (or the dukascopy lane research-script-run.yml installs) for a pinned window; reads no trainer data; CPU
+        only.
+    run:
+      command:
+      - python3
+      - scripts/research/exit_lever_ablation.py
+      - --leg
+      - mgc_trend_1h
+      - --arm
+      - A=
+      - --days
+      - '3080'
+      - --start
+      - '2018-06-01'
+      - --end
+      - 2026-10-26 23:59
+      - --non-crypto-source
+      - dukascopy
+      - --grade
+      - holdout
+      - --baseline
+      - A
+      - --delta-r
+      - '0'
+      - --holdout-frac
+      - '0.25'
+      - --holdout-min-trades
+      - '25'
+      - --holdout-max-frac
+      - '0.40'
+      - --folds
+      - '4'
+      - --fold-majority
+      - '3'
+      - --n-floor
+      - '20'
+      - --out
+      - '{out_dir}'
+      timeout_minutes: 150
+    lands:
+      store: research/results/
+      assert_field: read_state
+      min_rows: 1
+    intervention_controls:
+      not_applicable: a harness ablation / Stage-0 re-measurement of declared geometry, not an in-trade action
+    what_it_does_not_do: 'Serves, promotes or applies nothing; changes no config or roster; places no order. A PASS is a discovery lead: ONE confirmation,
+      then a live-producer check and a Tier-3 declare PROPOSAL with the mirror in the same PR.'
+    roadmap:
+    - L-PROGRAMMES
+    - L-LADDER
+    related:
+    - RESEARCH-ITERATE
+    - PROGRAMME-REVIEW-2026-11-04
+    - scripts/research/exit_lever_ablation.py

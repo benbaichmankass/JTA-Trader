@@ -157,6 +157,34 @@ Common to every rung:
 
 A FAIL is written with its number and closes only the line its rule names. It never closes the family ("first test failed → variants queued", exit-refinement § "Reading a FAIL").
 
+## Programme review 2026-11-04 (lane PROGRAMME-REVIEW-20261104) — TRADING track
+
+Population: units with a result row generated 2026-10-28T19:41Z..2026-11-04T19:41Z (`research_ops_checks.py --kind programme_review --since 7d`, 1,932 units read, 0 unreadable, 662 result rows): **447 units with rows** — 107 pass, 210 fail, 25 indeterminate, 11 no_action_warranted, 94 with no unit verdict yet (76 ungraded + 18 needs_review/null). 302 carry a programme field (P1 53, P2 54, P3 95, P4 24, P5 48, P6 18, P7 10), 145 do not (live_strategy 70, new_strategy_prop 32, infra 13, ml_health 13, timeframes 6, macro 5, regime 5, none 1) — assigned below by what they ask. Every PASS is a discovery until its confirmation passes.
+
+**P1 in the window:** 53 units with `programme: P1` (5 pass, 39 fail, 4 indeterminate, 5 ungraded); the unprogrammed exit-lever units (M20 sweeps, structure exits) are read here too.
+
+**What was learned (beliefs, with evidence)**
+- **The static, entry-anchored structure trail does not beat the current exit on 5 of 6 powered legs** (5e02, replace grade, 2020-07..2026-10-15, full cost stack incl. funding; ada_2h n 402, xrp_2h n 394, eth_4h n 275, xrp_4h n 68, sol_prop n 403 all FAIL; eth_prop n 1085 +16.8 R, a near-miss on the +0.02 R/trade bar). **The ratcheting SL + structure-TP form lost on all 3 legs run** (5e01-05/06/07). Cited from PR #22907, not re-derived. This cuts against the `structure_exit: pivot=5` default now declared on **20 legs** in `config/strategies.yaml` (MEASURED today, `structure_exit` key count) — a Tier-3 question for the manager, not a review edit.
+- **Momentum-keyed stale exits carry across the 2h pullback family**: M2 (12 bars, ADX < 20) passed on eth_pullback_2h, sol_pullback_2h and eth_pullback_prop_2h (3ef3-13/-14/-19) — 3 legs, 1 batch (3ef3: 17 units, 3 pass). Still discoveries; each needs ONE disjoint confirmation, and the live producer (MOMENTUM-LEVERS-LIVE) is deployed but NOT observed firing.
+- **The CHOP-gated tight trail (C75) did not confirm** on its disjoint window (RQ-20261029-006 FAIL, the call at p 0.25): the ed1c family's 1 of 8 passes was a single-window lead.
+- **The deep loss-cut on ada_pullback_2h failed** (RQ-20261029-002), consistent with the desk lifecycle finding that cutting on open R loses on these legs.
+- **ml_entry with a pivot-5 SL-only structure stop + the first-passage moving TP cleared ml_entry's original Stage-0 rule held-out** (5e04-01 PASS, PR #22907) — the one structure result that passes, on an ML entry rather than a rule leg.
+
+**Failed first tests — diagnosis.** Structure exits (9 FAIL rows): most likely *design* — a swing stop on 2h/4h crypto sits inside normal noise, so it converts winners to scratches; *noise* is the competing hypothesis for eth_prop only (n 1085, 4 of 4 folds). Variant already queued by #22907 (RQ-20261104-7a3e-01, eth_prop tighten-multiple). ER-gate corroboration (2 FAIL): *regime* — ER < 0.30 is near-unconditional on 4h crypto (same diagnosis as the ADX 25 trail); the family stays open.
+
+**Answered / unlocked / retired.** Answered: P1-ATM-ed1c10-c75-confirm (FAIL), P1-Q4-desk-losscut-ada-pb (FAIL). Unlocked: nothing to a declare. Retired: none. **Live-review class orphans (5)**: ltr-partial-close, ltr-widen-sl, ltr-sl-to-structure, ltr-tp-extend, ltr-tp-pull-in are listed as `pending: awaiting lane LTR-CLASS-GRADE` in `scripts/research/iteration_subjects.yaml`, but `comms/research/ltr_class_grade/VERDICT.md` is on main and reads INDETERMINATE for them (partial_close n 1, widen_sl / move_tp never called). Diagnosis: *power* — the desk does not make these calls, so no live grade can accrue; the iteration is the offline Q15 C2/C3/C5/C7 Stage-0 units, which need an action-replay instrument per class. Named in the record's handoff, not authored (no driver).
+
+**Next 3–4 weeks (value-ranked)**
+
+| node / unit | decision it changes | on PASS | on FAIL | cost | pre-mortem |
+|---|---|---|---|---|---|
+| structure-exit Tier-3 packet (manager) | keep or remove `structure_exit: pivot=5` on the 20 declaring legs | — (a data-backed de-risk, the manager's) | — | $0 compute | the 5e01 dynamic units 02/03/04 (re-dispatching after #22907's Kaggle fix) reverse the static read |
+| M2 confirmations on eth/sol pullback 2h + eth_prop 2h (research-ops, one per leg) | M2 declare proposal per leg | live-parity on 1–2 trades → Tier-3 | family open, next dose | cpu_light ×3, ~40 min | the 2020-07..2026-10 window was the discovery; a 2017–2020 window has few 2h trades on SOL |
+| RQ-20261104-7a3e-01 (eth_prop tighten multiple, #22907) | whether the eth_prop near-miss is a dose problem | ONE confirmation | eth_prop structure configuration closed | cpu_light | the near-miss was noise |
+| P1-Q15 C2/C3/C5/C7 (needs an action-replay instrument) | whether any non-tighten desk action class beats hold offline | Stage-0 per class | class stays advice-only | build ~$12 | n is fine offline; the risk is a trigger defined post hoc |
+
+**Feeds.** P1 → P2: the 5e04-01 pass is the first D6 (bracket) evidence for an ML entry — destination P2-MECE-D6-pointer-v0 (needs_authoring). P1 → P3: the 20-leg structure default is a roster-wide exit question; the two P3 iteration-2 nodes on htf_pullback_trend_2h / trend_donchian_1h each carry a no-structure-exit arm.
+
 ## Programme review 2026-10-28 (lane PROGRAMME-REVIEW-20261028) — TRADING track
 
 Population: research units with a result row generated 2026-10-21T19:30Z..2026-10-28T19:30Z (`research_ops_checks.py --kind programme_review --since 7d`, 1,480 units read, 0 unreadable): **445 units, 412 graded** (70 pass, 50 indeterminate, 292 fail), 285 with a programme field and 160 without (live_strategy 70, regime 27, ml_health 21, macro 20, infra 13, new_strategy_prop 8, none 1). This review assigns the 160 by what they ask, not by the field (map section). Every PASS below is a discovery until its confirmation unit passes. **Cost basis:** about 36 of the 70 PASS rows are crypto-harness runs charged 7.5 bps round-trip (MEASURED from each result's argv); only RQ-20261028-001 carried the measured Bybit-linear 11.0 bps. A lever A/B delta is nearly fee-neutral (both arms pay it); an absolute Stage-0 or breadth PASS is not.
