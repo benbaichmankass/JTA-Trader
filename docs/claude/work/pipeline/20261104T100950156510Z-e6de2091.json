@@ -1,0 +1,16 @@
+{
+  "due_when": {
+    "check_every_days": 1,
+    "due_date": "2026-11-06",
+    "kind": "date"
+  },
+  "id": "PI-20261104-BCZDXJNR-0002",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "Manager Session 2026-11-03b, operator 2026-11-04 ~10:05Z (Telegram alert pasted into chat)",
+    "rerun": "grep -n symbol_budget_trades config/slice_allocation.yaml; grep -rn slice_budget_exhausted src/runtime/positions.py; python3 scripts/ops/diag_fetch.sh exchange_positions"
+  },
+  "state": "queued",
+  "what": "[LOST TRADES, sizing/mechanics, post-reset] Operator 2026-11-04: 'we need to make sure we're clear about how we perform these trades so we don't keep losing trades because of technical errors'. Alert: 'ALL accounts failed to dispatch - ict_scalp_sol_5m SOLUSDT buy - bybit_1: slice_budget_exhausted'. Mechanism (read from code, src/runtime/positions.py slice admission step 7): bybit_1 is position_model: slices; config/slice_allocation.yaml symbol_budget_trades: 1.0 gives each (account, symbol) ONE trade of stop-risk; the open trend_donchian_sol_4h SOLUSDT short holds that risk at its current stop, so slice_qty() sizes the scalp's long to 0 and refuses. Also note opposite-direction slices on a one-way book are refused separately (opposite_slice_one_way_book); SOL is a hedge book (idx 2). TODO: (1) count how many intents were refused per reason (slice_budget_exhausted / opposite_slice_one_way_book / ledger_divergent / ...) over the last 14d on every slice account, and which of those were real-money (bybit_2); (2) decide by account class: is a per-symbol 1-trade budget the intended risk policy (then the alert must stop reading as a dispatch FAILURE and become an expected refusal with a count), or should paper bybit_1 (demo floor: every testing leg must trade) get declared_slices / a larger budget so testing legs are not starved (Tier-3 sizing; MD-DEMO-FLOOR-BUILD allowlist covers bybit_1 only); (3) feed SYSTEM-AUDIT-INTEGRATION: this alert reached the manager only because the operator pasted it from Telegram."
+}
