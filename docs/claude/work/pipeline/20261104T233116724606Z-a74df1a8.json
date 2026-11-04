@@ -1,0 +1,17 @@
+{
+  "due_when": {
+    "check_every_days": 7,
+    "clears_when": "a pooled donchian-4h exit-head unit is registered in research/queue/ with its rule before the run (then this item closes pointing at it), or the manager kills the variant with a stated reason",
+    "kind": "observation"
+  },
+  "id": "PI-20261104-NHN7JV7U-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "research",
+    "ref": "research/queue/RQ-20261104-e4a1-01.yaml (lane EXIT-HEAD-ETH-REGISTER)",
+    "rerun": "python3 scripts/research/script_run.py --unit RQ-20261104-e4a1-01 --run-id <id> --run  (reads comms/research/RQ-20261104-e4a1-01/<id>/verdict.json)"
+  },
+  "owner": "manager",
+  "state": "queued",
+  "what": "Author + run the exit-head VARIANT for trend_donchian_eth_4h (research-ops § D, 'first test failed -> variants queued'): RQ-20261104-e4a1-01 FAILED its registered rule only on the matched random-truncation control (selected age8_below_half_r tau 0.2: held-out 15.45 vs B 13.97 R, n 76; control median 19.34 / p95 29.14). The read was underpowered (MDE 0.32 sd vs the fleet's ~0.105 typical head effect; 2 usable discovery folds). Variant: a POOLED donchian-4h family head (eth/sol/xrp/ada/avax, each leg at its own declared exit via exit_lever_ablation's config-exact argv builder), same boundary rule, same 19 arms + the same matched control, graded per leg with eth_4h's held-out span as the primary read; optionally --features extended / --target peak_is_in as a second registered arm family. Needs scripts/research/exit_head_holdout.py extended to multiple --leg (E0 already pools by family). New unit id, rule registered before the run."
+}

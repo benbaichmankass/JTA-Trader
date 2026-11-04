@@ -5,7 +5,7 @@
 id: RQ-20261104-e4a1-01
 title: 'Exit head, real money, HELD-OUT: does an E1/E1.5 ML exit head, selected on the earlier span of trend_donchian_eth_4h''s
   history, beat the leg''s CURRENT declared exit on a later span selection never saw, net of the full cost stack?'
-status: queued
+status: done
 cadence: once
 roadmap:
 - L-ATM
@@ -134,3 +134,36 @@ related:
 - RQ-20261028-a7c3-04
 - docs/research/M20-exit-head-PROGRAM.md
 - docs/research/exit-refinement-coverage.json
+grading:
+  auto: false
+  verdict: fail
+  decision_rule_id: RULE-RQ20261104e4a101-EXITHEAD-HOLDOUT
+  graded_at: '2026-11-04'
+  grader: lane EXIT-HEAD-ETH-REGISTER (the driver applies the registered clauses as code; read back by the lane)
+  reason: age8_below_half_r_tau_0.2 selected on discovery; held-out clauses 1-5 hold, clause 6 fails (15.45 R does not beat the
+    random-truncation control's p95 29.14 R; it is below the control median 19.34 R)
+  selected: age8_below_half_r_tau_0.2
+  boundary: '2025-04-03 15:00:00+00:00'
+  evidence:
+  - research/results/RQ-20261104-e4a1-01/local-20261104b.jsonl
+  - comms/research/RQ-20261104-e4a1-01/local-20261104b/verdict.json
+  ran: 'locally via scripts/research/script_run.py --run --run-id local-20261104b (laptop-class, lightgbm 4.7.0 vs the runner''s
+    pinned 4.6.0), 2026-11-04 ~23:30Z, after the rule was committed (e99e5a736, 23:25Z). An earlier attempt (run id
+    local-20261104) crashed BEFORE any model was fit (scikit-learn missing locally) and was deleted; it read no outcome.'
+  observation: 'MEASURED (verdict.json): reproduction exact vs c6f1-04 (discovery B n 202 / 67.4308 R; held-out B n 76 /
+    13.966 R; boundary identical); cost self-check max gap 1.3e-05 R over 278 trades. Discovery: 2 usable 50-trade folds
+    (42 trailing trades in no fold), mean OOS AUC 0.5727 (folds 0.596 / 0.550); 3 of 19 head arms eligible, all
+    age8_below_half_r; selected tau 0.2 at walk-forward 45.44 vs B 41.88 R. Held-out (n 76, read once): selected 15.45 R,
+    maxDD 16.96 vs B 13.97 R / 21.14; stale_8_0 14.26 R; giveback_1_1 15.23 R; held-out AUC 0.602; k = 23 trades truncated.
+    Control (2000 draws, k 23): median 19.34 R, p95 29.14 R. Reported, not graded: the best held-out arm was age8_tau_0.1 at
+    20.05 R (never selected). WHY the control is so strong (post-hoc diagnostic, ungraded, same data): a bar close before
+    the exit always sits above the then-current stop, so truncating a LOSER at a random earlier close gains ~+0.8 R
+    (discovery 121 losers +0.868; held-out 50 losers +0.799) and truncating a WINNER costs ~-1.2 R (71 winners -1.293; 21
+    -1.177). Random truncation therefore pays in proportion to the loser share: +0.07 R/cut on discovery, +0.21 R/cut on the
+    loser-heavy held-out span. The head gained +0.064 R per cut there, below that base rate: it did not pick its cuts better
+    than chance.'
+  next: 'Honest negative for this configuration (first test failed -> variants queued, research-ops § D): the read is
+    underpowered for a typical head effect (MDE 0.32 sd vs ~0.105 typical), so the variant is a POOLED donchian-4h family head
+    (eth/sol/xrp/ada/avax trades, each at its declared exit) graded per leg against this same control; filed on
+    docs/claude/work/PIPELINE.jsonl. No Tier-3 proposal (no PASS). The coverage matrix exit_head_ml cell stays
+    honest_negative with this ref appended.'
