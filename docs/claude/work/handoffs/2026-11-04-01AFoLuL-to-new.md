@@ -1,6 +1,6 @@
 # Manager handover 2026-11-04 — session_01AFoLuLMKGkvg6UbCzdxjNR (Manager Session 2026-11-03b) → new
 
-> **Doc status:** `live` · category `handoff` · written 2026-11-04 ~18:05Z by the outgoing manager. Reason: context 669k of 1M (past the
+> **Doc status:** `unknown` · category `history` · written 2026-11-04 ~18:05Z by the outgoing manager. Reason: context 669k of 1M (past the
 > ~650k rotation point, manager SKILL § Manager handover). Weekly usage reset at 18:00Z and is now 0% (operator screenshot).
 
 ## First actions for the new manager (in order)
