@@ -31,7 +31,7 @@ The register and the bot's output move into one **SQLite database on the live VM
 model with a computed due**. Every change is an **append-only, hash-chained event**, and that event table replaces `git log` as the audit trail.
 Sessions write through a CLI that calls an authenticated API. The SPA reads the same routes it reads today, now live, not 5 minutes behind.
 **Git keeps what is reviewed:** code, config, docs, skills, research-unit *specs* (the git timestamp is the pre-registration proof), and the
-evidence records a promotion cites. Bot output becomes **ledgers** in the same database, with large research payloads in object storage. These
+evidence records a promotion cites. Bot output becomes **ledgers** in the same database. Research results go to a results store on the trainer VM, mirrored to the live VM's `trainer_store.db` (§ 9). These
 are records of what happened, not registers of work. **ict-git-sync stays**, because automatic deploys are the operator's rule. It then deploys
 only code. On 11-04, all 21 trader restarts followed bot or research writes; none followed a human code merge.
 
@@ -222,8 +222,8 @@ CREATE VIEW due_now AS SELECT * FROM items WHERE state NOT IN ('done','dropped')
 ## 3. What moves off the repo, what stays, and why
 
 **Rule.** A file stays in git if a human reviews it, a running process loads it as code or config, or its **git timestamp is itself evidence**
-(pre-registration). Anything a bot appends on a clock is a record. Records go to a ledger table, or, when large, to object storage with the
-hash in a ledger row.
+(pre-registration). Anything a bot appends on a clock is a record. Records go to a ledger table. Research results go to the trainer's results store (payloads by sha256, rows mirrored to
+`trainer_store.db`).
 
 | Stays in git | Why |
 |---|---|
@@ -235,13 +235,13 @@ hash in a ledger row.
 | Moves to the work store | Today | Becomes |
 |---|---|---|
 | Checklist rows, pipeline items, `SOAKS.json` contracts, `soak-state.json` | files + PRs | `items` / `events` (soak contract = `due_rule.soak`) |
-| Dispatch stamps and grading state on unit YAML | 107 + 28 commits/wk editing the **spec** file | `research_runs` ledger (unit id, run id, dispatched_at, verdict, grade). The spec file stops being edited after registration, which also makes the pre-registration claim cleaner. |
+| Dispatch stamps and grading state on unit YAML | 107 + 28 commits/wk editing the **spec** file | `research_runs` in the trainer's research results store (with the results it describes, § 9). The spec file stops being edited after registration, which also makes the pre-registration claim cleaner. |
 | Liveness, capture-watch and loss-detector receipts, usage readings | 145 commits/wk (103 + 21 + 14 + 7) | `receipts` ledger: `{producer, at, run_id, read_state, body}` |
 | Pending pings from GitHub producers | `docs/claude/pending-pings.jsonl` via git-sync | `POST /api/bot/alerts` (ALERT-LEDGER step 1). This is the same chokepoint, so the repo stops being a message queue. |
 | Research SLO, forecast grade, counterfactual and closed-trade grades, parity, utilisation, data-lake health, strategy-review packets | 175 commits/wk | ledger tables, one per record family (`slo_readings`, `grades`, …); each served by the API |
 | `config/economic_calendar.yaml`, rewritten by the econ-calendar bot (7 commits/wk) | a bot editing **config**, which restarts every unit | an `econ_calendar` ledger the reader queries. The build checks which keys in that file are bot-written; `config/` keeps the human-set ones |
 | Desk decisions + packets, live-review rows + packets + tables | branch + mirror PR (328 commits/wk) | `desk_decisions` and `live_reviews` ledgers written by the session through the API (D4) |
-| Research result payloads (`comms/research/RQ-*`; the whole `comms/research/` tree is 5.1 GB) | batch-land PRs (127/wk, 13,566 files) | object storage (OCI bucket or the trainer's disk, D7) keyed by sha256; the `research_runs` row holds the verdict, the metrics and the payload hash |
+| Research result payloads (`comms/research/RQ-*`; the whole `comms/research/` tree is 5.1 GB) | batch-land PRs (127/wk, 13,566 files) | the **research results store on the trainer VM** (System Map v2, adopted, § 9): payloads on the trainer's disk keyed by sha256, plus a `research_runs` table (unit, run, dispatched_at, verdict, metrics, grade, payload hash) in the trainer's store. It reaches the live VM through the existing 2-min trainer mirror into `trainer_store.db` (D7). |
 
 **One store or two?** One database file holds two table families:
 
@@ -356,7 +356,7 @@ case. It is not in the default plan.
 | **S3** | `scripts/ops/work.py` CLI; `checklist.py` / `pipeline.py` become shims; outbox fallback workflow | 1 | S1 | a write from a cloud session lands through each path (direct and outbox) |
 | **S4** | Readers flip: `/work/*` routes, `attention_watch`, `work_digest_now`, `work_report`, `blocker_watch`, brief section 0 from `due_now`; guards repointed (§ 7) | 2 (VM services) | S2, S3 | `/work/checklist` byte-shape unchanged for the SPA; the brief's section-0 count equals `due_now` |
 | **S5** | `CHECKLIST-STATE-TRUTH` (b)+(c): dispatch sets `in_flight` **in the same API call** that records the lane; `staleInFlight` / `ageHours` as views; `owner_liveness.main()` reads the store | 1 | S4 | `staleInFlight` reads 0 for a day, with the denominator printed |
-| **S6** | Ledgers + flow moves, in order of restart and CI cost: work-digest pings → alerts POST; desk + live-review → API (D4); forecast/grades/SLO/receipts → ledgers; stamps + grading → `research_runs`; research payloads → object storage (D7) | 1–2 per flow | S1; ALERT-LEDGER step 1 for pings | each flow: 0 commits/wk on `main` from its subject, and its readers reading the API (re-run § 1) |
+| **S6** | Ledgers + flow moves, in order of restart and CI cost: work-digest pings → alerts POST; desk + live-review → API (D4); forecast/grades/SLO/receipts → ledgers; stamps, grading and research results → `research_runs` + payloads in the trainer's results store (D7) | 1–2 per flow | S1; ALERT-LEDGER step 1 for pings; the trainer mirror for results | each flow: 0 commits/wk on `main` from its subject, and its readers reading the API (re-run § 1) |
 | **S7** | Retire the mirror workflows and data `commit-to-main` callers; archive the files; weekly export (D5) | 1 | S6 | § 1 re-run: data-only commits on `main` ≤ 10/wk (from 1,227) |
 | **S8** | Triage drain of the 504 undated rows and 292 orphan/unrouted items (D2) | 1 | S4 | 0 open items without a computable due; orphan count published every day |
 
@@ -423,9 +423,51 @@ call `GET /api/bot/work/items` through the existing diag transport. A failed rea
 | **D4** | Desk and live-review rows move from protected branches + mirror PRs to API writes. This changes the 10-26 "rows branch + pinned commit" design: the apply reads the row from the store by `review_id` + content hash. | **Move them (Recommended)** | They are 328 of the 1,227 data commits a week, and the mirrors drive the restarts. The pinned-content property is kept by the hash. |
 | **D5** | Keep a weekly JSONL export of the register committed to git | **Yes (Recommended)** | Public history and a recovery point for about 1 PR a week |
 | **D6** | Defer a trader restart that would land within ±2 min of an hourly bar close by up to 3 min. **This is a gate.** | **Not now (Recommended)** | On 11-04, 0 of the 21 restarts followed a human code merge. Measure the restarts left after the data moves first. |
-| **D7** | Research payloads (5.1 GB under `comms/research/`): OCI object storage, or the trainer VM's disk | **Trainer disk first (Recommended)**, behind the same hash interface | No new vendor. It moves to OCI if the disk alarm fires. |
+| **D7** | Research results (5.1 GB under `comms/research/`, plus stamps and grades): the research results store on the trainer VM, mirrored to the live VM's `trainer_store.db` (System Map v2) | **Yes (Recommended)** | Results land where they are computed. The 2-min trainer mirror already exists and was fresh at 114–118 s on 11-04 (F11). It needs no new vendor, and the trainer's disk alarm already watches the disk. |
 | **D8** | Deploy path | **Keep ict-git-sync, automatic (Recommended)** plus the `deploys` ledger and a report-only drift detector. Manager-driven deploys would add a gate (No new gates, c). | — |
 | **D9** | Drop COMPUTE-ALLOCATION B5 (`CI-BATCH-BOOKKEEPING`) in favour of S6 | **Yes, unless S6 slips past 11-18 (Recommended)** | It batches PRs the design deletes |
+
+---
+
+## 9. Changes vs System Map v2
+
+The manager's target map, ["JTA Trader System Map v2"](https://claude.ai/artifact/KkQR8MPXijGgpBA4uS2nN5), was read 2026-11-04 ~23:30Z. For
+each of its PROPOSED items:
+
+| v2 item | Verdict | Evidence, or what changes |
+|---|---|---|
+| `work.db` on the live VM, behind the API | **Confirmed**, with two changes | (1) **A separate file** from `trade_journal.db` (v2 says "beside"; same directory, separate file, so a register write never takes the journal's lock). (2) **The audit trail is the hash-chained `events` table, not the nightly export.** The export is a backup (§ 2.4). The name `work.db` is fine; this doc's `work_store.db` can take it. |
+| "The design lane weighs the trainer VM instead, to keep reads off the trader's box (F10)" | **Live VM** | F10's slow reads (`/work/brief` 60.85 s cold) come from building the brief per request on a VM with a 115 s tick. The register's own writes are tiny. The fix is computing the brief on the digest timer and paging `/work/checklist` (§ 2.3, § 7). On the trainer VM the register would need a second API surface, and the operator's page and every session write would cross VMs. |
+| Research results store on the trainer VM, mirrored to `trainer_store.db` | **Adopted; it replaces this doc's first draft** (payloads in object storage, `research_runs` in the work store) | Results land where they are computed. The mirror exists and is fresh (F11). **One addition:** dispatch stamps and grades live in the same `research_runs` table, beside the results they describe. GitHub-runner results reach the trainer through the path `collect_runner_results.py` already uses. **The join PASS-TO-DECISION-SLO needs** (a PASS with no decision item) is a read on the live VM across `work.db` and the `trainer_store.db` mirror, both local files. |
+| Live-review rows written through the API | **Confirmed** (D4) | 96 mirror commits/wk. The mirrors are behind 19 of 21 restarts (§ 5). The pinned-commit property of the 10-26 design is kept by the row's content hash. **The same applies to desk decisions** (232 mirror commits/wk), which v2 does not list. |
+| Promotion evidence + queue specs stay in git | **Confirmed, and widened** | Add `comms/mandate_evidence/` (read by `mandate_resolver.py`, `r4_demotion_gate.py`, `snapshot_*_for_mandate.py`) and `comms/prop_survival/` (read by `check_prop_roster_gate.py`, prop-roster-gate-guard). Both are what a real-money or prop decision cites. Reviews and audits stay as documents. |
+| Deploy path left open | **Answered: keep ict-git-sync** (D8) | § 5: manager-driven deploys put a person in the deploy path, which is a new gate against "deploys of green Tier-1/2 work are automatic". All 21 restarts on 11-04 followed bot or research writes, so the fix is to stop data going through `main`, not to stop auto-deploy. |
+| ("569 bookkeeping PRs a week") | **Number updated** | That is the COMPUTE-ALLOCATION 7-day census. This doc's census (10-28..11-04) counts 1,227 data-only commits on `main`, because it covers every bot flow, not only research bookkeeping. |
+
+**v2's five "Decisions coming to you":**
+
+1. **Where `work.db` lives:** the live VM (D1), for the reasons above.
+2. **git-sync or deliberate deploys:** keep git-sync (D8), plus a `deploys` ledger and a report-only drift detector.
+3. **What stays in git:**
+   - code, config, docs and skills;
+   - queue specs and templates;
+   - promotion, mandate and prop-survival evidence;
+   - reviews and audits;
+   - the weekly register export (D5).
+4. **Backups and history:** "sturdier than nightly" (§ 2.4):
+   - the audit trail is the hash-chained `events` table;
+   - an hourly local `.backup` (48 kept);
+   - a nightly copy to the trainer;
+   - a weekly export committed to git;
+   - a monthly restore drill (report-only).
+5. **The migration cutover:** no quiet window is needed. Nothing on the trade path reads the register. The dry-run count is shown first (Appendix A, re-run on the day), then two days of shadow parity, then the freeze-and-flip (§ 4). Only the S4 reader flip restarts `ict-web-api`; the trader is not restarted.
+
+**For the page:**
+- mark `work.db` "separate file";
+- add desk decisions beside live-review rows;
+- add mandate and prop-survival evidence to "stays in git";
+- change the audit trail from "nightly export" to "the events table, plus backups";
+- set Deploy to "keep git-sync (recommended)".
 
 ---
 
