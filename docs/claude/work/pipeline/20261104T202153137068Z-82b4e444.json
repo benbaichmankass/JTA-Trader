@@ -1,0 +1,16 @@
+{
+  "due_when": {
+    "check_every_days": 7,
+    "due_date": "2026-12-04",
+    "kind": "date"
+  },
+  "id": "PI-20261104-COSTINFRA-0004",
+  "next_action": "check_observation",
+  "origin": {
+    "kind": "session",
+    "ref": "COST-INFRA-REVIEW lane 2026-11-04 see docs/reviews/2026-11-04-cost-infra-review.md",
+    "rerun": "python3 scripts/ops/spend_meter.py --section-5"
+  },
+  "state": "queued",
+  "what": "[F1] Lane dollars UNKNOWN for the month: cost_usd not reachable from a lane and list_sessions window is 3 days. Manager to pull get_session cost_usd for the month's lanes from an interactive session and feed spend_meter --session-costs at the next monthly review."
+}
