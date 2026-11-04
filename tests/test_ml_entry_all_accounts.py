@@ -134,7 +134,7 @@ def test_side_filter_resolves_through_the_shared_resolver_and_unions_across_acco
 def test_session_gates_decision_bars_on_market_hours():
     model = _model(0.3, 0.1)
     sess = {"symbol": "SPY", "_profile": {"session": "us_equity"}}
-    refs = lambda end: _refs(end) | {"BTCUSDT": _frame(1, end=end)}  # noqa: E731
+    refs = lambda end: _refs(end) | {"BTCUSDT": _frame(1, end=end)}
     # Tue 2026-07-14: bar 15:00 closes 16:00 UTC (RTH 13:30-20:00 in DST); +24h is Wed 16:00 -> open
     end = "2026-07-14 15:00"
     assert isinstance(_pkg(sess, model, _frame(2, end=end), refs(end)), dict)

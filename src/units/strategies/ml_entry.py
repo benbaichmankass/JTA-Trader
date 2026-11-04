@@ -143,7 +143,7 @@ def order_package(cfg: dict, candles_df: Optional[pd.DataFrame] = None,
     prof = cfg.get("_profile") if isinstance(cfg.get("_profile"), Mapping) else {}
     if prof.get("conflict"):
         raise ValueError(f"profile_conflict:{prof['conflict']}")
-    from src.runtime import ml_entry_profile as PR
+    import src.runtime.ml_entry_profile as PR
     _sess = PR.session_refusal(prof.get("session"), symbol, t + pd.Timedelta(hours=1), int(br["horizon_h"]) * 60)
     if _sess:
         raise ValueError(_sess)
