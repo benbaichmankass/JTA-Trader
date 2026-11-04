@@ -19,6 +19,8 @@ ATR_N = 14
 FEATURES = ["ret_1", "ret_4", "ret_12", "ret_24", "ret_72", "ret_168", "vol24", "vol_ratio", "atr_pct",
             "range_pos_24", "range_pos_168", "vol_z", "rsi14", "hour", "dow",
             "xs_rank_ret24", "btc_ret24", "btc_vol24", "breadth_up24", "rel_vol"]
+#: The default cross-sectional anchor (``btc_ret24`` / ``btc_vol24``): the symbol the v1/v2 artifacts were trained on.
+ANCHOR = "BTCUSDT"
 MIN_BARS = 169 + 168  # ret_168 needs 168 bars of vol24 history plus 168 of returns; vol_z needs a 168-bar window
 
 
@@ -64,7 +66,7 @@ def _asof(fr: pd.DataFrame, close_ts: pd.Timestamp) -> pd.DataFrame:
     return fr[fr["ts"] + pd.Timedelta(hours=1) <= close_ts]
 
 
-def _same_ts_row(symbol: str, frames: Mapping[str, pd.DataFrame]) -> Optional[Dict[str, float]]:
+def _same_ts_row(symbol: str, frames: Mapping[str, pd.DataFrame], anchor: str = ANCHOR) -> Optional[Dict[str, float]]:
     """The pre-2026-11-01 rule, unchanged: cross-sectional context from every frame whose last bar has the SAME
     timestamp as ``symbol``'s (``symbol`` itself among them). ``ml_decision_shadow.decision_rows`` is pinned
     bit-identical to this."""
@@ -79,15 +81,15 @@ def _same_ts_row(symbol: str, frames: Mapping[str, pd.DataFrame]) -> Optional[Di
             continue
         ff = features_symbol(fr.iloc[-200:].reset_index(drop=True)).iloc[-1]
         r24[s], v24[s] = ff["ret24_raw"], ff["vol24"]
-    if "BTCUSDT" not in r24 or symbol not in r24:
+    if anchor not in r24 or symbol not in r24:
         return None
     rv = pd.Series(r24, dtype=float)
     vv = pd.Series(v24, dtype=float)
     rank = rv.rank(pct=True)
     row = {k: float(fo[k]) for k in FEATURES if k in fo.index}
     row["xs_rank_ret24"] = float(rank[symbol])
-    row["btc_ret24"] = float(rv["BTCUSDT"])
-    row["btc_vol24"] = float(vv["BTCUSDT"])
+    row["btc_ret24"] = float(rv[anchor])
+    row["btc_vol24"] = float(vv[anchor])
     row["breadth_up24"] = float((rv > 0).sum() / rv.notna().sum())
     row["rel_vol"] = float(fo["vol24"] / vv.median())
     if any(not np.isfinite(row.get(k, np.nan)) for k in FEATURES):
@@ -97,7 +99,7 @@ def _same_ts_row(symbol: str, frames: Mapping[str, pd.DataFrame]) -> Optional[Di
 
 
 def decision_row(symbol: str, frames: Mapping[str, pd.DataFrame],
-                 reference: Optional[Iterable[str]] = None) -> Optional[Dict[str, float]]:
+                 reference: Optional[Iterable[str]] = None, anchor: str = ANCHOR) -> Optional[Dict[str, float]]:
     """The 20-feature row for ``symbol`` at the last bar of ``frames[symbol]``. ``None`` if it cannot be formed.
 
     ``reference``: the model's reference symbols (``meta["xs_reference"]``). A symbol IN the reference set (every
@@ -106,9 +108,12 @@ def decision_row(symbol: str, frames: Mapping[str, pd.DataFrame],
     alpaca_paper, row ALPACA-LIVE-ACTIVITY-ML) reads the references AS-OF its bar's close: each reference frame is cut
     to its bars closed at or before it and used only if its last closed bar closed within the hour before it; the
     symbol's 24-bar return is ranked among the references with itself inserted, and breadth / median vol are the
-    references' -- the definition scripts/research/ml_entry_alpaca_score.py scored."""
+    references' -- the definition scripts/research/ml_entry_alpaca_score.py scored.
+
+    ``anchor``: the symbol behind the ``btc_ret24`` / ``btc_vol24`` columns (row ML-ENTRY-ALL-ACCOUNTS: per-account
+    config via ``src/runtime/ml_entry_profile.py``). Default ``BTCUSDT``, the symbol the artifact was trained on."""
     if reference is None or symbol in set(reference):
-        return _same_ts_row(symbol, frames)
+        return _same_ts_row(symbol, frames, anchor)
     own = frames.get(symbol)
     if own is None or len(own) < MIN_BARS:
         return None
@@ -123,7 +128,7 @@ def decision_row(symbol: str, frames: Mapping[str, pd.DataFrame],
             continue
         ff = features_symbol(cut.iloc[-200:].reset_index(drop=True)).iloc[-1]
         r24[s], v24[s] = ff["ret24_raw"], ff["vol24"]
-    if "BTCUSDT" not in r24:
+    if anchor not in r24:
         return None
     rv_ref = pd.Series(r24, dtype=float)
     vv_ref = pd.Series(v24, dtype=float)
@@ -132,8 +137,8 @@ def decision_row(symbol: str, frames: Mapping[str, pd.DataFrame],
     rank = rv.rank(pct=True)
     row = {k: float(fo[k]) for k in FEATURES if k in fo.index}
     row["xs_rank_ret24"] = float(rank[symbol])
-    row["btc_ret24"] = float(rv_ref["BTCUSDT"])
-    row["btc_vol24"] = float(vv_ref["BTCUSDT"])
+    row["btc_ret24"] = float(rv_ref[anchor])
+    row["btc_vol24"] = float(vv_ref[anchor])
     row["breadth_up24"] = float((rv_ref > 0).sum() / rv_ref.notna().sum())
     row["rel_vol"] = float(fo["vol24"] / vv_ref.median())
     if any(not np.isfinite(row.get(k, np.nan)) for k in FEATURES):

@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 # wiring: research/queue/RQ-20261101-bdc2-01.yaml (lane ALPACA-LIVE-ACTIVITY-ML, deliverable B1); spec docs/research/alpaca-live-activity-2026-11-01.md section B
+# wiring: research/queue/RQ-20261104-a41f-01.yaml (lane ML-ENTRY-ALL-ACCOUNTS): --side-rule restricted / --session-gate / window flags
 """Score THE frozen ENTRY model (c692-01 final fit, served artifact ml-decision-entry-v1) on alpaca_live's symbols.
 
 NOT a new model and NOT a re-fit (operator 2026-11-01 ~10:40Z: "the supra-symbol mls are for all symbols on all
@@ -27,6 +28,15 @@ funding / OI input), so no missing-feature handling is needed.
 
     python3 scripts/research/ml_entry_alpaca_score.py run --model /path/model.json --cache /tmp/c --out /tmp/o
     python3 scripts/research/ml_entry_alpaca_score.py --self-test
+
+Row ML-ENTRY-ALL-ACCOUNTS (2026-11-04) adds three OPT-IN flags that score exactly what the per-account profile
+(``src/runtime/ml_entry_profile.py``) does live; every default is the bdc2-01 read, byte-identical:
+
+* ``--side-rule restricted``: on the long-only book the argmax runs over the ALLOWED side only (``long`` when
+  ``p_long > tau``), the live ``side_filter: long`` profile rule; ``served`` (default) = SHORT -> nothing.
+* ``--session-gate``: a decision is taken only when ``market_hours.is_market_open('us_equity')`` holds at the bar's close
+  AND at close + 24h (the live ``session: us_equity`` refusals ``market_closed`` / ``market_closes_before_max_hold``).
+* ``--holdout-start`` / ``--holdout-end`` / ``--fetch-start``: the scored window (default the c692 sealed window).
 """
 from __future__ import annotations
 
@@ -69,7 +79,7 @@ def mirror_symbols() -> list[str]:
 
 def fetch_equity_1h(sym: str, cache: Path) -> pd.DataFrame:
     import requests
-    p = cache / f"eq_{sym}.pkl"
+    p = cache / (f"eq_{sym}.pkl" if FETCH_START == "2025-05-01" else f"eq_{sym}_{FETCH_START}.pkl")
     if p.exists():
         return pd.read_pickle(p)
     p1 = int(pd.Timestamp(FETCH_START, tz="UTC").timestamp())
@@ -107,7 +117,8 @@ def fetch_perps(cache: Path, symbols: list[str]) -> dict[str, pd.DataFrame]:
     months = E._months(FETCH_START, HOLDOUT_END)
 
     def one(sym):
-        p = cache / f"perp_{sym}.pkl"
+        p = cache / (f"perp_{sym}.pkl" if (FETCH_START, HOLDOUT_END) == ("2025-05-01", "2026-09-30")
+                     else f"perp_{sym}_{FETCH_START}_{HOLDOUT_END}.pkl")
         if p.exists():
             return sym, pd.read_pickle(p)
         frames = [d for m in months if (d := E._fetch_month(sym, m)) is not None]
@@ -224,8 +235,11 @@ def load_model(path: Path) -> dict:
             "short": lgb.Booster(model_str=art["booster_txt"]["short"])}
 
 
-def take(rows: pd.DataFrame, pl: np.ndarray, ps: np.ndarray, tau: float, long_only: bool) -> pd.DataFrame:
-    """The served decide() + one position per symbol. long_only: a SHORT decision is not taken (no position opens)."""
+def take(rows: pd.DataFrame, pl: np.ndarray, ps: np.ndarray, tau: float, long_only: bool,
+         side_rule: str = "served") -> pd.DataFrame:
+    """The served decide() + one position per symbol. long_only: a SHORT decision is not taken (no position opens).
+    ``side_rule="restricted"`` with ``long_only``: the argmax runs over LONG only (the live ``side_filter: long``
+    profile, ``ml_entry.decide(sides=("long",))``), so a long whose p_long clears tau is taken even when p_short is larger."""
     t = rows.assign(p_long=pl, p_short=ps).sort_values(["symbol", "i"])
     out = []
     for sym, g in t.groupby("symbol", sort=False):
@@ -233,7 +247,7 @@ def take(rows: pd.DataFrame, pl: np.ndarray, ps: np.ndarray, tau: float, long_on
         for r in g.itertuples(index=False):
             if r.i <= busy:
                 continue
-            side = "long" if r.p_long >= r.p_short else "short"
+            side = "long" if (r.p_long >= r.p_short or (long_only and side_rule == "restricted")) else "short"
             best = r.p_long if side == "long" else r.p_short
             if best <= tau or (long_only and side == "short"):
                 continue
@@ -267,7 +281,17 @@ def verdict(m: dict) -> tuple[str, str]:
     return "fail", f"alpaca_live long-only held-out mean net R per decision {m['mean_net_r']:+.4f} < 0 at n={m['n']}"
 
 
+def session_ok(close_ts: pd.Series, hold_h: int = H) -> np.ndarray:
+    """The live ``session: us_equity`` gate: open at the decision close AND at close + ``hold_h`` hours."""
+    from src.runtime.market_hours import is_market_open
+    t = pd.to_datetime(close_ts, utc=True)
+    return np.array([is_market_open("us_equity", x.to_pydatetime())
+                     and is_market_open("us_equity", (x + pd.Timedelta(hours=hold_h)).to_pydatetime()) for x in t], bool)
+
+
 def run(a) -> int:
+    global HOLDOUT_START, HOLDOUT_END, FETCH_START
+    HOLDOUT_START, HOLDOUT_END, FETCH_START = a.holdout_start, a.holdout_end, a.fetch_start
     from src.runtime.execution_costs import resolve_cost_policy, resolve_fee_bps_roundtrip
     t0 = time.time()
     cache, out = Path(a.cache), Path(a.out)
@@ -295,11 +319,14 @@ def run(a) -> int:
     tab["ts"] = pd.to_datetime(tab.ts, utc=True)
     hs, he = pd.Timestamp(HOLDOUT_START, tz="UTC"), pd.Timestamp(HOLDOUT_END, tz="UTC") + pd.Timedelta(days=1)
     test = tab[(tab.ts >= hs) & (tab.ts < he)].replace([np.inf, -np.inf], np.nan).dropna(subset=feats + ["net_long"])
+    n_before_gate = int(len(test))
+    if a.session_gate:
+        test = test[session_ok(test.ts)]
     # provenance: predict -- Booster.predict is the regressed net R of that side (the served model), not a probability
     pl = model["long"].predict(test[feats])
     ps = model["short"].predict(test[feats])
     tk_live = take(test[test.symbol.isin(live)], pl[test.symbol.isin(live).to_numpy()],
-                   ps[test.symbol.isin(live).to_numpy()], tau, long_only=True)
+                   ps[test.symbol.isin(live).to_numpy()], tau, long_only=True, side_rule=a.side_rule)
     m = summ(tk_live)
     v, why = verdict(m)
     msk = test.symbol.isin(mirror).to_numpy()
@@ -331,6 +358,8 @@ def run(a) -> int:
                         "reported_alpaca_live_both_sides": live_both,
                         "reported_mirror_symbols_both_sides": mirror_both,
                         "reported_always_long_same_mechanics": {"n": len(alw), "mean_net_r": float(np.mean(alw)) if alw else None},
+                        "side_rule": a.side_rule, "session_gate": bool(a.session_gate),
+                        "decision_rows_before_session_gate": n_before_gate,
                         "decision_rows": int(len(test)), "decision_rows_by_symbol": test.groupby("symbol").size().to_dict(),
                         "perp_reference_loaded": len(perps), "median_n_reference": float(test.n_reference.median()),
                         "fetch": fetch_rep, "costs": {"fee_bps": fee, "slippage_bps": slip, "regulatory_bps": REGULATORY_BPS,
@@ -361,6 +390,10 @@ def self_test() -> int:
     assert tk.net_r.tolist() == [1.0], tk          # row 1 blocked (busy), row 3 is a SHORT -> nothing on a cash book
     tk2 = take(rows, np.array([0.2, 0.2, 0.0]), np.array([0.0, 0.0, 0.5]), 0.1, long_only=False)
     assert tk2.side.tolist() == ["long", "short"], tk2
+    tk3 = take(rows, np.array([0.2, 0.2, 0.15]), np.array([0.0, 0.0, 0.5]), 0.1, long_only=True, side_rule="restricted")
+    assert tk3.side.tolist() == ["long", "long"] and tk3.net_r.tolist() == [1.0, 0.5], tk3   # row 3: long clears tau
+    g = session_ok(pd.Series(pd.to_datetime(["2026-07-14 16:00", "2026-07-14 20:00", "2026-07-17 16:00"], utc=True)))
+    assert g.tolist() == [True, False, False], g   # Tue mid-session ok; the session close; Fri (+24h = Sat)
     assert verdict({"n": 29, "mean_net_r": 1.0})[0] == "indeterminate"
     assert verdict({"n": 30, "mean_net_r": 0.0})[0] == "pass"
     assert verdict({"n": 30, "mean_net_r": -0.01})[0] == "fail"
@@ -384,6 +417,13 @@ def main(argv=None) -> int:
     r.add_argument("--registered-at", default="2026-11-01")
     r.add_argument("--variants-read", type=int, default=1)
     r.add_argument("--mc-note", default="")
+    r.add_argument("--side-rule", choices=("served", "restricted"), default="served",
+                   help="served (bdc2-01): SHORT -> nothing; restricted: argmax over LONG only (live side_filter: long profile)")
+    r.add_argument("--session-gate", action="store_true",
+                   help="decide only when us_equity is open at the close and at close + 24h (live session: us_equity)")
+    r.add_argument("--holdout-start", default=HOLDOUT_START)
+    r.add_argument("--holdout-end", default=HOLDOUT_END)
+    r.add_argument("--fetch-start", default=FETCH_START)
     a = ap.parse_args(argv)
     if a.self_test:
         return self_test()
