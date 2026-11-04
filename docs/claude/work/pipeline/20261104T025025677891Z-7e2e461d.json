@@ -1,0 +1,16 @@
+{
+  "due_when": {
+    "check_every_days": 2,
+    "due_date": "2026-11-06",
+    "kind": "date"
+  },
+  "id": "PI-20261104-MXMXDI3X-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "live-review lane, review packet LR-20261104T0244Z-pkg-1bb434d29c654597 (evidence commit 9f45890a4135 on live-review/rows)",
+    "rerun": "scripts/ops/diag_fetch.sh 'bybit_open_orders' | python3 -c \"import json,sys;a=[x for x in json.load(sys.stdin)['accounts'] if x['account_id']=='bybit_1'][0]['result'];print([(p['symbol'],p['size']) for p in a['positions']],[(o['symbol'],o['stop_order_type'],o['qty'],o['trigger_price']) for o in a['orders'] if o['symbol']=='BTCUSDT'])\""
+  },
+  "state": "queued",
+  "what": "[bybit_1 BTCUSDT two packages, one venue bracket] MEASURED 2026-11-04 02:49Z via bybit_open_orders: bybit_1 holds ONE BTCUSDT short, size 0.59, position_idx 2, with exactly ONE Partial SL (79165.4) + ONE Partial TP (70960.6), both qty 0.59. Those levels are trend_donchian_1h's (pkg-4e74f4bdc6d44735, sl 79165.39 tp 70960.6). The sibling ict_scalp_5m pkg-1bb434d29c654597 (entry 77448.7, journal sl 77332.5 tightened, tp 76602.8) has NO venue bracket of its own, so its tightened stop and 1.5R target do not exist at the venue; its only venue protection is the sibling's much wider stop. The packet read 'match' because it compared no levels (mechanics evidence: 'several BTCUSDT bracket legs rest ... none matches this package's order ids; levels not compared'). Open question for the owner: bybit_1 runs position_model: slices (NETTED-SLICES, qty-scoped Partial brackets per package), yet BTC shows a single full-qty bracket. Is BTCUSDT admitted as slices, or is the second package's bracket amend overwriting/merging into the first (Bybit allows one Partial SL/TP set per qty-scope; the shared order 8ca52700 has updated_time later than created_time)? Fix direction (Tier-2, not tonight): per-package qty-scoped brackets for every same-symbol pair, and make the mechanics check compare levels so a missing own bracket reads mismatch, not match. Not covered by NETTED-SLICES (observed ETH/XRP/SOL only) or SAME-SYMBOL-ALLOCATION (which allocates by head-to-head, not brackets)."
+}

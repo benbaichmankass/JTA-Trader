@@ -75,19 +75,19 @@
   "live_review": {
    "brier_by_class": {
     "expired": {
-     "brier": 0.1632,
-     "n": 35
+     "brier": 0.1643,
+     "n": 36
     },
     "invalidation_first": {
      "brier": 0.1456,
      "n": 17
     },
     "target_first": {
-     "brier": 0.2888,
-     "n": 12
+     "brier": 0.2821,
+     "n": 13
     }
    },
-   "brier_overall": 0.1821,
+   "brier_overall": 0.1827,
    "brier_ref_constant_0_5": 0.25,
    "calibration_bins": [
     {
@@ -105,11 +105,11 @@
      "target_first_rate": 0.0526
     },
     {
-     "mean_p": 0.4495,
-     "n": 42,
+     "mean_p": 0.4518,
+     "n": 44,
      "p_hi": 0.6,
      "p_lo": 0.4,
-     "target_first_rate": 0.2619
+     "target_first_rate": 0.2727
     },
     {
      "mean_p": null,
@@ -127,25 +127,25 @@
     }
    ],
    "classes": {
-    "expired": 35,
+    "expired": 36,
     "invalidation_first": 17,
     "no_data": 5,
-    "pending": 3,
-    "target_first": 12,
+    "pending": 2,
+    "target_first": 13,
     "tie_unresolved": 0
    },
    "direction_hit_rate": {
-    "n": 54,
-    "rate": 0.3704
+    "n": 56,
+    "rate": 0.3929
    },
-   "n": 72,
-   "n_graded": 64,
-   "n_packages": 24,
-   "n_scored_with_p": 64,
+   "n": 73,
+   "n_graded": 66,
+   "n_packages": 25,
+   "n_scored_with_p": 66,
    "unresolved_ties": 0
   }
  },
- "computed_at": "2026-11-03T23:07:19Z",
+ "computed_at": "2026-11-04T03:14:02Z",
  "inventory": {
   "desk_entry": {
    "no_trade_without_forecast": 150,
@@ -153,8 +153,8 @@
    "with_forecast": 11
   },
   "live_review": {
-   "records": 379,
-   "with_forecast": 72
+   "records": 380,
+   "with_forecast": 73
   },
   "ml_prediction_logs": "none found carrying target/invalidation/horizon (grep invalidation_px|target_px over *.py, *.jsonl, *.yaml outside docs/tests: only the review, desk and ML-family readers)"
  },
@@ -164,39 +164,32 @@
    "horizon_end": "2026-11-05T00:30:00Z",
    "source": "live_review",
    "symbol": "SPY",
-   "time_remaining_s": 91360
+   "time_remaining_s": 76557
   },
   {
    "fid": "LR-20261103T0021Z-pkg-32a5162bbbdd4ef6",
    "horizon_end": "2026-11-08T00:32:00Z",
    "source": "live_review",
    "symbol": "SPY",
-   "time_remaining_s": 350680
-  },
-  {
-   "fid": "LR-20261103T0021Z-pkg-f76bb92289d143e5",
-   "horizon_end": "2026-11-04T00:32:00Z",
-   "source": "live_review",
-   "symbol": "SOLUSDT",
-   "time_remaining_s": 5080
+   "time_remaining_s": 335877
   }
  ],
  "pooled": {
   "brier_by_class": {
    "expired": {
-    "brier": 0.1563,
-    "n": 42
+    "brier": 0.1574,
+    "n": 43
    },
    "invalidation_first": {
     "brier": 0.1434,
     "n": 19
    },
    "target_first": {
-    "brier": 0.2948,
-    "n": 14
+    "brier": 0.2887,
+    "n": 15
    }
   },
-  "brier_overall": 0.1789,
+  "brier_overall": 0.1795,
   "brier_ref_constant_0_5": 0.25,
   "calibration_bins": [
    {
@@ -214,11 +207,11 @@
     "target_first_rate": 0.04
    },
    {
-    "mean_p": 0.4453,
-    "n": 47,
+    "mean_p": 0.4476,
+    "n": 49,
     "p_hi": 0.6,
     "p_lo": 0.4,
-    "target_first_rate": 0.2766
+    "target_first_rate": 0.2857
    },
    {
     "mean_p": null,
@@ -236,24 +229,24 @@
    }
   ],
   "classes": {
-   "expired": 42,
+   "expired": 43,
    "invalidation_first": 19,
    "no_data": 5,
-   "pending": 3,
-   "target_first": 14,
+   "pending": 2,
+   "target_first": 15,
    "tie_unresolved": 0
   },
   "direction_hit_rate": {
-   "n": 65,
-   "rate": 0.4
+   "n": 67,
+   "rate": 0.4179
   },
-  "n": 83,
-  "n_graded": 75,
-  "n_packages": 24,
-  "n_scored_with_p": 75,
+  "n": 84,
+  "n_graded": 77,
+  "n_packages": 25,
+  "n_scored_with_p": 77,
   "unresolved_ties": 0
  },
- "population": "83 forecasts: live_review=72, desk_entry=11 (every record carrying target+invalidation+horizon+probability)",
+ "population": "84 forecasts: live_review=73, desk_entry=11 (every record carrying target+invalidation+horizon+probability)",
  "read_state": {
   "candles": "live /api/bot/candles (tf + 1m)",
   "desk": {
@@ -263,9 +256,9 @@
   },
   "ledger": "comms/desk/forecast_ledger.jsonl",
   "live_review": {
-   "main_reviews": 367,
-   "rows_branch": 155,
-   "union": 379
+   "main_reviews": 368,
+   "rows_branch": 156,
+   "union": 380
   },
   "null_means": "could-not-look (no_data / tie_unresolved), never 0",
   "packages_read": 1000
