@@ -4,10 +4,11 @@
 > **Checklist row:** [`ML-ROADMAP-MECE`](../claude/work/checklist/ML-ROADMAP-MECE.json) (rank 1) · lane dispatched by Manager Session 2026-11-04a · Tier 1, planning only · track **MODEL**.
 > **Feeds:** Thursday planning 2026-11-05 with the operator. **Parent / siblings (not replaced):** [`ML-PROGRAMME-2026-10-28.md`](ML-PROGRAMME-2026-10-28.md) (trade management, TM-BENCH), [`ml-live-promotion-plan-2026-10-29.md`](ml-live-promotion-plan-2026-10-29.md) (short path to live), [`COMPUTE-ALLOCATION-2026-11-03.md`](COMPUTE-ALLOCATION-2026-11-03.md) (capacity; § 6 here feeds it demand, it does not design capacity).
 
-> ⚠️ **DRAFT: § 6 (infrastructure) and § 8/§ 10 (ranked proposals) are NOT final.** Manager instruction 2026-11-04 18:35Z,
-> relaying the operator (~18:33Z): resource allocation and restructuring wait for the **DEEP-AUDIT-20261104** result
-> (and ML-FRONTIER-PREP if it has landed). §§ 1–5, 7 and 9 (inventory, MECE map, per-slot specs, aggregator design,
-> dependency graph, milestone diff, practice research) are the evidence draft. §§ 6, 8 and 10 are re-ranked after the audit lands.
+> **Finalised 2026-11-04 ~20:30Z** against the deep audit [`docs/reviews/2026-11-04-weekly-audit.md`](../reviews/2026-11-04-weekly-audit.md)
+> (#22902) and the operator's **group-level population rule** (19:33Z, popup *"Group-level (Recommended)"*, relayed by the
+> manager 20:03Z, trigger `trig_017i1xxVkA8feWp1wEQveuYD`; ⚠️ no record of it on `main` was found at 20:10Z by
+> `git grep -i group-level` over `docs/claude/work` and `docs/plans`, so the manager should record it). § 3.0 applies the rule;
+> §§ 6, 8 and 10 are re-ranked on the audit. ML-FRONTIER-PREP had not landed on `main` at 20:10Z.
 
 ## Gates this adds or changes
 
@@ -54,8 +55,11 @@ stack, then the existing tiers.
    the **all-legs Stage-0 corpus**, and **TM-BENCH**. The **feature store** is a fourth root for the market-context models.
 9. **Infra** (§ 6) is stated as **demand** for COMPUTE-ALLOCATION-DESIGN: which jobs, how often, roughly how heavy,
    on which backend. It contains no capacity design.
-10. **Proposals** (§ 8): 12, ranked by value per cost, each with a proposed row or unit id. The top three cost about
-    $20 of session budget plus free runner time, and they turn the map into a weekly report.
+10. **Proposals** (§ 8), re-ranked on the 2026-11-04 deep audit: 10 ranked plus 3 parked with re-entry tests.
+    Each is dated, names a lane, and iterates on a parent. Only **2 new rows and 4 new units** are needed; the rest
+    extend existing entries, because the audit found 474 units authored in 7 days and only 18.8% iterating on a
+    parent. The top three cost about $18 of session budget plus free runner time. The operator's group-level
+    population rule is applied in § 3.0, and the Thursday questions are in § 10.
 
 ---
 
@@ -94,7 +98,7 @@ decisions on which books"*.
 
 ---
 
-## 2. The MECE map: nine decisions, one family each
+## 2. The MECE map: ten decisions, one family each
 
 ### 2.1 How the lifecycle is cut
 
@@ -145,6 +149,23 @@ gate, not a decision. **Desk** decisions span D3/D7/D8 as a benchmark and a labe
 `src/runtime/execution_costs.py`), out of sample, on the same decision points, under a rule registered before the
 run. Every slot also beats a **matched random** control (practice principle M6). Harness names are files that exist
 on `main` unless marked **(build)**.
+
+### 3.0 The population rule (operator, 2026-11-04 19:33Z, binding once recorded)
+
+**An ML trades the whole population its registered pooled test passed on, net of each symbol's own costs, minus a
+cost/liquidity filter set before the run. Per-symbol results are monitoring only.** What it means per slot:
+
+| slot | the registered population | what the rule changes (all Tier 3 to apply; proposals only) |
+|---|---|---|
+| D3 Foxhound-1 | the 60 Binance USDT-M perps of manifest `bp2-f4271084b120` (`research/queue/RQ-20261101-c692-01.yaml`, PASS rule: held-out n ≥ 300 on ≥ 10 symbols) | live it trades **5** of them on `bybit_2`/`bybit_portfolio`, and **13 ETFs on `alpaca_paper` that are outside the tested population** (`strategies.yaml::ml_entry.account_symbols`). Under the rule the real-money book widens to the 60-perp population ∩ symbols the venue lists ∩ the pre-set filter; the `c692-06` bybit_2-symbol read (+0.0263, n=907) becomes monitoring. The ETF leg is outside the pass, so it is a Stage-1 testing leg with no edge claim. **No named cost/liquidity filter was found** (grep of `config/`, `scripts/research/`, `src/runtime/` for `liquidity_filter`, `cost_filter`, `min_liquidity`, "liquidity filter": 0 hits; Foxhound-2's artifact carries a cost-per-R gate of 0.06, per the `ml_entry_v2` comment). So the filter has to be registered before the widening is evaluated (§ 8, P4). |
+| D4 TD overlay | the TD family pooled (`RULE-ML-OVERLAY-NONINFERIOR-V2`, n 1,830) | already group-level: PASS on the TD family, FAIL on PB2H. The two `annotate` legs are out for a **mechanics** reason (forming-bar entry, −329 bps), not a per-symbol result, so the rule leaves them as they are. |
+| D2 Collie heads | per symbol by construction (each head's training symbol) | the rule binds the head's own population. The off-cell **gates** are strategy decisions under the regime-selectivity skill, not an ML trading a population. |
+| D5–D8, D10 | each unit names its pooled population in its registration | a per-symbol or per-leg split is reported, never a promote/demote input |
+
+**Tension, stated rather than resolved:** practice principle **M12** (added 2026-11-04 by `PRACTICE-REFRESH-20261104`)
+says to score a model *per asset* against the simple domain baseline before crediting skill. Under the operator rule,
+per-asset scores are **monitoring**, so M12 decides what is *reported* and the pooled test decides what *trades*. If
+the manager reads M12 as a promotion input, that conflict goes to the operator; nobody edits either side.
 
 ### D1 Universe & book: none yet, on purpose
 
@@ -346,28 +367,33 @@ graph TD
 
 ---
 
-## 6. Infrastructure: demand for COMPUTE-ALLOCATION-DESIGN (DRAFT, pending DEEP-AUDIT-20261104)
+## 6. Infrastructure: demand for COMPUTE-ALLOCATION-DESIGN
 
 This section states **what the roadmap needs to run**. It does not size machines or route jobs; that is
-`COMPUTE-ALLOCATION-DESIGN` (row blocked; design `COMPUTE-ALLOCATION-2026-11-03.md`). Heaviness figures are ESTIMATED
-from the named measurements.
+`COMPUTE-ALLOCATION-DESIGN` (design [`COMPUTE-ALLOCATION-2026-11-03.md`](COMPUTE-ALLOCATION-2026-11-03.md)).
 
-| layer | job | cadence | weight (ESTIMATED) | fits on |
-|---|---|---|---|---|
-| training | regime heads (D2) nightly cycle | daily | 5m heads peak RSS ~4.7 GB vs 4.5 GiB MemoryMax (MEASURED 2026-10-18, ROADMAP ML § update) | trainer VM; 5m heads are the memory risk |
-| training | Foxhound/Pointer/Labrador pooled models (D3/D6/D7) on the 60-perp archive | weekly (`ML-ENTRY-RETRAIN-CADENCE`) + per lever unit | CPU GBDT, minutes to ~1 h per fit | Kaggle CPU / runner (`ML-DATA-OFF-TRAINER` publishes shards off the trainer) |
-| training | frontier families (TSFM, TabICL/TabPFN, GRU) | per bake-off unit | GPU-optional | Kaggle GPU (`COMPUTE-GPU-WIRE`) |
-| evaluation | TM-BENCH runs (D6–D8) | per unit | replay-bound, CPU | research runner |
-| evaluation | same-symbol multi-leg replay (D5) | per unit, after P2 | replay-bound, CPU, small | research runner |
-| evaluation | trial ledger + CPCV | weekly | light | runner (exists, weekly) |
-| serving | registry advisory path (D2) and served-artifact path (D3/D7/D4) | every tick | already live | live VM; two serving paths, one inventory needed (P1) |
-| monitoring | per-slot demotion signal: CUSUM (D4 exists), live-vs-band (D3 queued), drift split (D2 exists) | daily | light | runner / VM read routes |
-| data | feature store as-of join with `available_at` (Feast-style point-in-time) | build once, then daily | storage-bound | trainer disk / runner cache |
+**What the audit changes here (deep pass 3, decision #7 `AUD-20261104-ITERATION-ORPHANS`, decision #8
+`AUD-20261019-RESEARCH-SLO-RED`):** research authoring produced **474 units in 7 days, and only 18.8% iterate on a
+parent**; the research SLO is red. So the binding constraint is **not compute for more units, it is fewer units that
+each answer a slot's open question**. This roadmap therefore **adds no runner volume; it re-points it**: every ML unit
+it proposes names its slot and its parent unit (§ 10), and P3 makes "names a slot / a parent" a reported share for
+the weekly `/ml-review`.
 
-**The one infra gap this map adds (P1):** one serving inventory over both serving paths, keyed by slot. Everything
-else in the table already has a row.
+| layer | job | cadence | weight (ESTIMATED from the named measurement) | fits on | change from this roadmap |
+|---|---|---|---|---|---|
+| training | regime heads (D2), nightly cycle | daily | 5m heads peak RSS ~4.7 GB vs 4.5 GiB MemoryMax (MEASURED 2026-10-18) | trainer VM | none; the 5m memory risk stays with the existing rows |
+| training | Foxhound / Pointer / Labrador pooled fits (D3/D6/D7) on the 60-perp archive | weekly (`ML-ENTRY-RETRAIN-CADENCE`) + per unit | CPU GBDT, minutes to ~1 h per fit | Kaggle CPU / runner (shards off the trainer, `ML-DATA-OFF-TRAINER`) | +1 scoring run (P5, no training) |
+| training | frontier families (TSFM, TabICL/TabPFN, GRU) | per bake-off unit | GPU-optional | Kaggle GPU (`COMPUTE-GPU-WIRE`) | none |
+| evaluation | TM-BENCH (D6–D8) | per unit | replay-bound CPU | research runner | +1 unit (P5) |
+| evaluation | same-symbol multi-leg replay (D5) | per unit, only if P2's census says it is worth it | replay-bound CPU, small | research runner | +1 harness build, +1 unit (P6), conditional |
+| evaluation | trial ledger + CPCV | weekly | light | runner (exists) | none |
+| serving | registry advisory path (D2) **and** served-artifact path (D3/D4/D7) | every tick | already live | live VM | **one inventory over both paths (P1)**; no new serving path |
+| monitoring | per-slot demotion signal: CUSUM (D4, exists), live-vs-band (D3, queued), drift split (D2, exists) | daily | light | runner / VM read routes | slot report reads them (P3), report-only |
+| data | as-of feature store with `available_at` | build once, then daily | storage-bound | trainer disk / runner cache | none new (`ML-FS-STORE` exists) |
 
----
+**Net demand from this roadmap (ESTIMATED):** 3 runner units, 1 scoring run, 1 conditional harness build and 3 small
+report scripts, spread over two weeks, against a queue that authored 474 units last week. Its compute footprint is
+negligible; its value lies in **ordering** the existing ~142 ML-touching rows by slot.
 
 ## 7. Proposed `docs/roadmap/milestones.yaml` change (described, NOT applied)
 
@@ -406,34 +432,37 @@ the next M18 question. Not applied; another lane's entry is not reworded here.
 
 ---
 
-## 8. Proposals, ranked by value per cost (DRAFT ranking, pending DEEP-AUDIT-20261104; propose only; nothing is queued)
+## 8. Proposals, ranked by value per cost (propose only; nothing is queued)
 
-Cost = session ceiling (USD) + runner time. Value = what decision it unblocks. Each names the **proposed** id; the
-manager assigns final ids on filing. Units follow the queue's `RQ-<date>-<hex>-NN` form; `mece` is a placeholder.
+Re-ranked on the audit. Three rules shape the list. **(i) Iterate before you author:** six of the twelve draft
+proposals now extend an existing row, unit or pipeline item instead of opening a new one (audit decision #7).
+**(ii) Born dated and laned:** every proposal carries a `due_by` and a lane class (deep pass 3: *"an audit row without
+a date or a lane is a memo with an id"*). **(iii) Report, never gate:** P3 and P1 are reports. Whether audit-style
+detectors may land as non-blocking reports is the operator's open question `AUD-20261104-DETECTOR-IS-A-GATE` (due
+11-06); nothing here pre-empts it.
 
-| rank | proposal | slot | what | value | cost | proposed id |
-|---|---|---|---|---|---|---|
-| **1** | **Serving inventory** | all | `scripts/ops/ml_inventory.py`: join the registry, `ml/served/*`, `ml/overlay/*`, `strategies.yaml` / `overlay_policy.yaml` / `regime_policy.yaml` consumers → one table: model, display name, slot, stage, books it changes, demotion signal, last scored. Report-only; on `/ml-review` step 1 | closes the SR 11-7 inventory gap; every later monitor keys on it | Sonnet $6 | row **ML-SERVING-INVENTORY** |
-| **2** | **Aggregator VOI census** | D5 | 14-day refusal counts by reason per slices account (real vs demo) + Stage-0 count of concurrent same-symbol episodes per symbol | decides whether D5 is worth any build; folds `PI-20261104-BCZDXJNR-0002` TODO 1 | runner + Sonnet $4 | unit **RQ-20261105-mece-01** |
-| **3** | **Slot report** | all | `lifecycle_slot` field (D1–D10) in `model_names.yaml` and `docs/plans/ml-plan-items.yaml`; `ml_plan_status.py --slots` prints, per slot, open rows/units, next unit, and flags unslotted ML rows. Report-only, never a gate | turns this map into the weekly driver; ends "random test-guessing" | Sonnet $8 | row **ML-SLOT-REPORT** |
-| 4 | **Pointer v0 from Labrador-1b** | D6 | score the served TP-revision model at bar 0 of Foxhound-1 entries vs the fixed 3-ATR TP, on the frozen held-out window, one read | first D6 evidence at near-zero build cost (model exists) | runner + Sonnet $5 | unit **RQ-20261105-mece-02** |
-| 5 | **Aggregator rule arms** | D5 | `AGG-HARNESS` same-symbol multi-leg replay + A0–A4, pre-registered; **only if P2 shows material concurrency** | answers "is a rule split better than slices" before any ML | Sonnet $12 | row **AGG-HARNESS** + unit **RQ-20261105-mece-03** |
-| 6 | **Regime gate on a real-money leg** | D2 | `regime_cell_walkforward` for the real-money roster legs (XRP/ETH TD, pullbacks) on the advisory vol label where it exists, rule label elsewhere | first D2 evidence off the BTC demo legs | runner | unit **RQ-20261105-mece-04** |
-| 7 | **Breed restatement** | naming | `model_names.yaml`: Pointer → D6, Mastiff → D5, Chihuahua → 5m D2 sub-brand (§ 2.2) | names match jobs; MECE visible on the UI | Haiku $1 | rides on **ML-SLOT-REPORT** (operator OK first) |
-| 8 | **Aggregator learned arm** | D5 | stacked out-of-fold package scores vs the best of A0–A4, purged by episode | the operator's candidate, properly tested | runner + Sonnet $8 | unit **RQ-20261105-mece-05** (blocked on 5) |
-| 9 | **Whippet fill replay** | D9 | maker-first vs today's order type on journal fills; missed fills priced | caps realised cost; small on current n | Sonnet $8 | row **WHIPPET-FILL-REPLAY** |
-| 10 | **Basset vs CUSUM** | D10 | does a grade predict next-N decay earlier than a CUSUM on R | earlier demotion signal; label factory | runner + Sonnet $6 | unit **RQ-20261105-mece-06** |
-| 11 | **Promotion rule adds DSR/PBO** | all | each new slot unit's rule states the trial count from `trial_ledger.py` and a deflated-Sharpe / PBO line | multiplicity control per question (Bailey et al. 2017) | in each unit's text, $0 | no row: a drafting standard for units 01–06 |
-| 12 | **D1 stays a rule** | D1 | record "none yet" with the re-entry test (§ 3 D1) | stops a leg-selector being built on n≈51 | $0 | no row: lives in this doc and `L-ML-MECE` |
+Cost = session ceiling + free runner time. "Extends" = no new register entry.
 
-**Existing rows this map absorbs rather than duplicates** (not new work; they get a slot): D2 `REGIME-PROGRAM`,
-`ML-REGIME-15M-DRIFT`, `ML-HEAD-AGREEMENT-JOIN`; D3 `ML-DECISION-MODELS`, `ML-RECIPE`, `ML-FS-ENTRY-V2`,
-`ML-ENTRY-FINETUNE`, `ML-TIMEFRAME`; D4 `ML-REAL-MONEY-OVERLAY`, `ML-P1-COSTNET-REBUILD`, `ML-P1-REGATE-POOLED-HEADS`;
-D5 `NETTED-SLICES`, `SAME-SYMBOL-ALLOCATION`; D6 `ML-FS-BRACKETS-HOLD`, `BRACKETS-AS-PREDICTIONS`; D7/D8 `TM-BENCH`,
-`ML-AM-NEXT-LIVE`, `ML-HOLDBIAS-EXIT-MODEL`, `ML-ENTRY-TP-REVISION`, `IN-TRADE-EXIT-MODEL`; D9 desk maker fills; D10
+| rank | proposal | slot | what | iterates on (parent) | value | cost · lane | due_by |
+|---|---|---|---|---|---|---|---|
+| **1** | **Serving inventory** | all | extend `ML-REGISTRY-LADDER-GAPS` (I4) from "status field wrong" to **one table over both serving paths**: registry + `ml/served/*` + `ml/overlay/*` + the consumers in `strategies.yaml` / `overlay_policy.yaml` / `regime_policy.yaml` → model, display name, slot, registered population, books it changes, demotion signal, last scored. Report on `/ml-review` step 1 | **extends** row `ML-REGISTRY-LADDER-GAPS` | closes the inventory gap (the 3 real-money models are not in the registry); every monitor keys on it | Sonnet $6 · build lane | 11-11 |
+| **2** | **Aggregator VOI census** | D5 | 14-day refusal counts by reason per slices account (real vs demo) + Stage-0 count of concurrent same-symbol episodes per symbol | **extends** pipeline item `PI-20261104-BCZDXJNR-0002` (its TODO 1, due 11-06) | decides whether D5 deserves any build | runner + Sonnet $4 · that item's lane | 11-06 |
+| **3** | **Slot report** | all | `lifecycle_slot` (D1–D10) on `docs/plans/ml-plan-items.yaml` + `model_names.yaml`; `ml_plan_status.py --slots` prints per slot: open rows/units, the slot's open question, the next unit, and two shares: **ML units naming a slot** and **naming a parent**. Report-only | **extends** `ml_plan_status.py` (ML-ROADMAP-LOOP's tool); feeds `AUD-20261104-ITERATION-ORPHANS`'s measurement | turns this map into the weekly driver; attacks the 18.8% parent share for ML units | Sonnet $8 · build lane | 11-12 |
+| **4** | **Foxhound-1 pre-set filter + population widening read** | D3 | register a cost/liquidity filter (e.g. cost-per-R and venue listing) **before** looking; then one read of frozen v1 on the filtered 60-perp ∩ Bybit-listed population vs its held-out record; per-symbol rows reported as monitoring | **iterates** `RQ-20261101-c692-01` (pooled PASS) and `c692-06` | applies the 19:33Z rule to the only real-money ML entry; Tier 3 to widen | runner + Sonnet $5 · research | 11-10 |
+| **5** | **Pointer v0 from Labrador-1b** | D6 | score the served TP-revision model at bar 0 of Foxhound-1's entries vs the fixed 3-ATR TP, frozen held-out window, one read, pooled | **iterates** `RQ-20261101-383f-01` (forward PASS +0.0081 R) | first D6 evidence; no new model | runner + Sonnet $5 · research | 11-10 |
+| **6** | **Aggregator harness + rule arms A0–A4** | D5 | same-symbol multi-leg replay + arms, pre-registered. **Only if P2 shows material concurrency** (threshold set in P2's registration) | **iterates** `RQ-20261015-1631-01/-02` (SAME-SYMBOL-ALLOCATION) and M18's single-symbol result | answers "rule split vs slices" before any ML | Sonnet $12 · build lane | 11-18, if P2 passes |
+| 7 | **Breed restatement** | naming | Pointer → D6, Mastiff → D5, Chihuahua → 5m D2 (§ 2.2) | rides on P3 | names match jobs | Haiku $1 · with P3 | 11-12, after operator OK |
+| 8 | **Aggregator learned arm** | D5 | stacked out-of-fold package scores vs the best of A0–A4, purged by episode | **iterates** P6's unit | the operator's candidate, tested properly | runner + Sonnet $8 · research | due when P6 is graded (computed, not declared) |
+| 9 | **Regime gate on the real-money TD family** | D2 | `regime_cell_walkforward` on the real-money TD legs **pooled as a family**, advisory vol label where it exists | **iterates** `RQ-20261016-65ff-01..08` (L-REGIME confirmations) | first D2 evidence off the BTC demo legs | runner · research | 11-14 |
+| 10 | **DSR/PBO line in every slot rule** | all | each P4/P5/P6/P8/P9 registration states the trial count from `trial_ledger.py` and a deflated-Sharpe / PBO line | drafting standard | multiplicity control per question | $0 · in each unit | with each unit |
+| — | **Parked, with re-entry tests** (no row, no unit) | D9, D10, D1 | **Whippet** fill replay: reopen when ≥ 300 real-money fills carry a decision price. **Basset** vs CUSUM: reopen when the CJ blind store reaches n ≥ 150 graded closes on one leg family (`CJ-4`'s own bar). **D1** stays a rule (§ 3 D1) | — | parking keeps them out of the 474-unit firehose | $0 | — |
+
+**Existing rows this map absorbs** (they get a slot, not new work): D2 `REGIME-PROGRAM`, `ML-REGIME-15M-DRIFT`,
+`ML-HEAD-AGREEMENT-JOIN`; D3 `ML-DECISION-MODELS`, `ML-RECIPE`, `ML-FS-ENTRY-V2`, `ML-ENTRY-FINETUNE`, `ML-TIMEFRAME`;
+D4 `ML-REAL-MONEY-OVERLAY`, `ML-P1-COSTNET-REBUILD`, `ML-P1-REGATE-POOLED-HEADS`; D5 `NETTED-SLICES`,
+`SAME-SYMBOL-ALLOCATION`; D6 `ML-FS-BRACKETS-HOLD`, `BRACKETS-AS-PREDICTIONS`; D7/D8 `TM-BENCH`, `ML-AM-NEXT-LIVE`,
+`ML-HOLDBIAS-EXIT-MODEL`, `ML-ENTRY-TP-REVISION`, `IN-TRADE-EXIT-MODEL`; D9 desk maker fills; D10
 `CJ-4-LABEL-VALIDATION`, `CF-D1-LABELS`; roots `ML-LINE-S1-CORPUS`, `ML-FS-STORE`, `ML-LINE-S2-CPCV`.
-
----
 
 ## 9. How investment-grade operations run the ML iterative workflow (deep research)
 
@@ -482,26 +511,36 @@ folds, one-read held-out discipline, a trial ledger, CUSUM demotion on the overl
 
 ---
 
-## 10. Proposal → proposed row/unit id (DRAFT, pending DEEP-AUDIT-20261104)
+## 10. Proposal → proposed row/unit id
 
-| proposal (§ 8 rank) | proposed id | kind | tier | roadmap |
-|---|---|---|---|---|
-| 1 Serving inventory | `ML-SERVING-INVENTORY` | checklist row | 1 | L-ML-MECE, M25 |
-| 2 Aggregator VOI census | `RQ-20261105-mece-01` | queue unit | 1 | L-ML-AGGREGATOR, M18 |
-| 3 Slot report + `lifecycle_slot` field | `ML-SLOT-REPORT` | checklist row | 1 | L-ML-MECE |
-| 4 Pointer v0 from Labrador-1b | `RQ-20261105-mece-02` | queue unit | 1 (Tier 3 to apply) | L-ML-MECE, L-ML-LIVE |
-| 5 Aggregator harness + rule arms | `AGG-HARNESS` + `RQ-20261105-mece-03` | row + unit | 1 (Tier 3 to apply) | L-ML-AGGREGATOR |
-| 6 Regime gate on real-money legs | `RQ-20261105-mece-04` | queue unit | 1 (Tier 3 to apply) | L-REGIME |
-| 7 Breed restatement | rides on `ML-SLOT-REPORT` | — | 1 (operator naming OK) | L-ML-MECE |
-| 8 Aggregator learned arm | `RQ-20261105-mece-05` | queue unit (blocked on 5) | 1 (Tier 3 to apply) | L-ML-AGGREGATOR |
-| 9 Whippet fill replay | `WHIPPET-FILL-REPLAY` | checklist row | 1 | L-ML-MECE |
-| 10 Basset vs CUSUM | `RQ-20261105-mece-06` | queue unit | 1 | L-ML-MECE |
-| 11 DSR/PBO line in slot rules | — | drafting standard | — | — |
-| 12 D1 stays a rule | — | recorded here | — | L-ML-MECE |
+The manager assigns final ids on filing. `mece` is a placeholder in the queue's `RQ-<date>-<hex>-NN` form.
+**New register entries: 2 rows + 4 units.** Everything else extends something that exists.
 
-**Thursday decisions for the operator:** (a) the § 4.6 scope question (is splitting and netting the existing
-per-symbol budget inside the "no position sizing" rule?); (b) adopt the § 7 milestones; (c) the § 2.2 breed
-restatement. Everything else is Tier 1 and can be filed by the manager once the map is agreed.
+| proposal (§ 8 rank) | proposed id | kind | tier | roadmap | due_by |
+|---|---|---|---|---|---|
+| 1 Serving inventory | **extends** `ML-REGISTRY-LADDER-GAPS` | existing row, scope note | 1 | L-ML-MECE, M25 | 11-11 |
+| 2 Aggregator VOI census | **extends** `PI-20261104-BCZDXJNR-0002` | existing pipeline item | 1 | L-ML-AGGREGATOR, M18 | 11-06 |
+| 3 Slot report | `ML-SLOT-REPORT` | **new** checklist row | 1 | L-ML-MECE | 11-12 |
+| 4 Foxhound-1 filter + population read | `RQ-20261105-mece-01` | **new** queue unit (parent `RQ-20261101-c692-01`) | 1 (Tier 3 to widen) | L-ML-LIVE, L-ML-MECE | 11-10 |
+| 5 Pointer v0 | `RQ-20261105-mece-02` | **new** queue unit (parent `RQ-20261101-383f-01`) | 1 (Tier 3 to apply) | L-ML-MECE | 11-10 |
+| 6 Aggregator harness + rule arms | `AGG-HARNESS` + `RQ-20261105-mece-03` | **new** row + unit (parent `RQ-20261015-1631-01`), conditional on 2 | 1 (Tier 3 to apply) | L-ML-AGGREGATOR | 11-18 if 2 passes |
+| 7 Breed restatement | rides on `ML-SLOT-REPORT` | — | 1 (operator naming OK) | L-ML-MECE | 11-12 |
+| 8 Aggregator learned arm | `RQ-20261105-mece-04` | **new** unit, filed only when 6 is graded | 1 (Tier 3 to apply) | L-ML-AGGREGATOR | computed |
+| 9 Regime gate, TD family | next unit under `RQ-20261016-65ff-*` | iteration of an existing line | 1 (Tier 3 to apply) | L-REGIME | 11-14 |
+| 10 DSR/PBO line | — | drafting standard | — | — | — |
+| parked: Whippet, Basset, D1 | — | re-entry tests in § 8 | — | L-ML-MECE | — |
+
+### Thursday questions for the operator (2026-11-05)
+
+1. **Aggregator scope (§ 4.6):** is a model that splits and nets the per-symbol budget the RiskManager already set
+   **inside** the 2026-11-01 *"no position sizing"* rule, or outside it? No data settles this.
+2. **Milestones (§ 7):** adopt `L-ML-MECE` and `L-ML-AGGREGATOR` as written?
+3. **Breed restatement (§ 2.2):** Pointer → bracket at entry, Mastiff → aggregator, Chihuahua → 5m regime sub-brand?
+4. **Population rule, applied (§ 3.0):** under the 19:33Z rule, should Foxhound-1's real-money book widen from 5 symbols
+   to its tested 60-perp population (∩ Bybit-listed ∩ a filter registered first, P4)? Should the 13 `alpaca_paper`
+   ETFs, which lie outside that population, stay as a Stage-1 testing leg with no edge claim? P4 brings the evidence;
+   the widening itself is Tier 3.
+5. **M12 vs the population rule (§ 3.0):** confirm that per-asset scores (M12) are reported but never decide what trades.
 
 ## 11. What this lane did and did not verify
 
@@ -513,4 +552,5 @@ restatement. Everything else is Tier 1 and can be filed by the manager once the 
   2026-11-01; the "~142 open ML-touching rows" count is a keyword match on row ids over `docs/claude/work/checklist/`
   (states other than done/killed/archived) and over-counts desk rows; full texts of all § 9 sources.
 - **Not done, by design:** no unit queued, no row filed, no milestone applied, no config touched.
-- **ML-FRONTIER-PREP** had not landed output on `main` by 18:22Z; nothing from it is folded in.
+- **ML-FRONTIER-PREP** had not landed output on `main` by 20:10Z; nothing from it is folded in.
+- **Audit inputs used:** `docs/reviews/2026-11-04-weekly-audit.md` § 2 (deep pass 3) and § 3 decisions #7, #8, #11; rows `AUD-20261104-ITERATION-ORPHANS` and `AUD-20261104-DETECTOR-IS-A-GATE` read on `main` at 20:08Z.
