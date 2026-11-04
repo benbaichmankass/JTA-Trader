@@ -2,23 +2,23 @@
   "id": "ML-ROADMAP-MECE",
   "title": "ML roadmap: MECE map of models to every trade-lifecycle decision, research per model, dependency graph, and the infra to run it",
   "phase": null,
-  "state": "queued",
+  "state": "in_flight",
   "owner": "manager",
-  "lane": null,
-  "model": null,
-  "ceiling_usd": null,
+  "lane": "session_01AFoLuM2bfX6Kg9AfWQbT2U",
+  "model": "claude-opus-5-5",
+  "ceiling_usd": 25,
   "spend_usd": null,
   "tier": 1,
   "prs": [],
   "blocked_on": [],
-  "note": "Operator 2026-11-04 item 3, TOP PRIORITY next week: detailed AI roadmap covering the dog-named models now running (Collie/Chihuahua/Foxhound/Labrador/Mutt, docs/reference/model_names.yaml), the overall AI trader we are working toward, and any added later. MECE-approved matching of models to the steps/decisions of the whole trade lifecycle; the research wanted for each; which research depends on which results; a roadmap that drives work and stops random test-guessing. Planning AND infrastructure. Deep research into how an investment-grade operation designs the ML iterative workflow. Composes with frontier-research, ml-review, programme-review. Operator 2026-11-04 ~10:15Z, candidate model for the MECE map: an ML POSITION AGGREGATOR (meta-allocator) per (account, symbol). It takes every live trade package on a coin (strategy, direction, conviction, stop, target, model scores) and manages ONE unified net position by weighting and aggregating them, instead of the rule-based slice budget (symbol_budget_trades) that today refuses later packages (PI-20261104-BCZDXJNR-0002). Lifecycle slot: sizing / position management, between the entry models (Foxhound) and the exit models (Labrador). Design questions: baseline to beat (current slices + config/slice_allocation.yaml EV weights in src/runtime/allocator_ev.py), how the unified bracket is set, label definition (portfolio-level net R per symbol), and what a fair offline harness looks like. Research before build; Tier-3 when it changes sizing. Operator 2026-11-04 ~18:33Z, verbatim: \"make sure the we get all the review session results before the strategic restructuring tasks (resource allocation, system restructuring, etc)\". Design/restructuring work on this row starts only after every review from the 2026-11-04 reset has landed (deep audit, perf, ML+frontier, practice refresh, health, programme review, roadmap re-baseline, cost/infra; row RESET-JOBS-20261104). Audits that GATHER evidence may run now; synthesis/design waits. Clarified by the operator a minute later, verbatim: \"or sorry, mostly the audit\". So the binding input is the DEEP-AUDIT-20261104 result (lane session_01AFoLuJHHNrJpWUPrhHXtjo, row RESET-JOBS-20261104); the other review results are folded in where they have landed, but do not hold the design. Operator, same minute, verbatim: \"the performance review is less relevant to that planning\". Do not wait on PERF-REVIEW-PREP for this row.",
+  "note": "Operator 2026-11-04 item 3, TOP PRIORITY next week: detailed AI roadmap covering the dog-named models now running (Collie/Chihuahua/Foxhound/Labrador/Mutt, docs/reference/model_names.yaml), the overall AI trader we are working toward, and any added later. MECE-approved matching of models to the steps/decisions of the whole trade lifecycle; the research wanted for each; which research depends on which results; a roadmap that drives work and stops random test-guessing. Planning AND infrastructure. Deep research into how an investment-grade operation designs the ML iterative workflow. Composes with frontier-research, ml-review, programme-review. Operator 2026-11-04 ~10:15Z, candidate model for the MECE map: an ML POSITION AGGREGATOR (meta-allocator) per (account, symbol). It takes every live trade package on a coin (strategy, direction, conviction, stop, target, model scores) and manages ONE unified net position by weighting and aggregating them, instead of the rule-based slice budget (symbol_budget_trades) that today refuses later packages (PI-20261104-BCZDXJNR-0002). Lifecycle slot: sizing / position management, between the entry models (Foxhound) and the exit models (Labrador). Design questions: baseline to beat (current slices + config/slice_allocation.yaml EV weights in src/runtime/allocator_ev.py), how the unified bracket is set, label definition (portfolio-level net R per symbol), and what a fair offline harness looks like. Research before build; Tier-3 when it changes sizing. Operator 2026-11-04 ~18:33Z, verbatim: \"make sure the we get all the review session results before the strategic restructuring tasks (resource allocation, system restructuring, etc)\" / \"or sorry, mostly the audit\" / \"the performance review is less relevant to that planning\". Evidence-gathering runs now; design/synthesis (alert-routing design; ML infra section + ranked proposals) waits for the DEEP-AUDIT-20261104 result (lane session_01AFoLuJHHNrJpWUPrhHXtjo). Perf review is not an input.",
   "due_by": "2026-11-08",
   "roadmap": [
-    "unmapped"
+    "L-ML-LIVE"
   ],
   "roadmap_unmapped_reason": "infra/ops; operator 2026-11-04 ~08:20Z audit+planning request, spans every milestone",
   "priority_rank": 1,
-  "updated_at": "2026-11-04T18:35:09Z",
+  "updated_at": "2026-11-04T18:44:53Z",
   "updated_by": "session_01AFoLuHgZaSYnm9avjeZE33",
   "_seq": 905
 }
