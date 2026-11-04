@@ -13,6 +13,6 @@
     "rerun": "after #22956 merges, dispatch system-action gateway-disk-report; ledger: grep '\"host\": \"gateway\"' comms/cloud/compute_util_ledger.jsonl | tail -3 (disk_pct must be <80)"
   },
   "state": "queued",
-  "summary": "Gateway disk 51% (10-13) -> 75% (11-01, ~+1.3pt/day) -> 100% (11-02) -> 94% (11-04), MEASURED daily samples. Writer NOT yet read. Suspect: ib-gateway docker json-file log; deploy/ib-gateway.compose.yml has no logging max-size. Fixes (Tier 2, recreate needs manager): compose logging max-size/max-file, journald cap, truncate current log.",
+  "summary": "Population: gateway VM root filesystem, one daily disk_pct sample per day in comms/cloud/compute_util_ledger.jsonl (host=gateway), window 2026-10-13..2026-11-04. Gateway disk 51% (10-13) -> 75% (11-01, ~+1.3pt/day) -> 100% (11-02) -> 94% (11-04), MEASURED daily samples. Writer NOT yet read. Suspect: ib-gateway docker json-file log; deploy/ib-gateway.compose.yml has no logging max-size. Fixes (Tier 2, recreate needs manager): compose logging max-size/max-file, journald cap, truncate current log.",
   "what": "IB gateway VM disk: read the writer via gateway-disk-report (PR #22956), then cap docker log / journald"
 }
