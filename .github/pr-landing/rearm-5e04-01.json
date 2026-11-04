@@ -1,5 +1,7 @@
 {
   "tier": 1,
-  "landing": "self",
-  "why": "research/queue/RQ-20261103-5e04-01.yaml only: clears last_dispatched_at (the 02:49Z dispatch ran on the unfixed code and failed, run 41763350275) and moves rearmed_at to 04:40Z, after #22796 merged the kline-cache fix. Lets the dispatcher run the operator-requested ml_entry SL-only verification backtest on the fixed harness. Revert: git revert."
+  "landing": "hold",
+  "hold_reason": "unvouchable_paths",
+  "hold_text": "research/queue/RQ-20261103-5e04-01.yaml only: clears last_dispatched_at (the 02:49Z dispatch ran on the unfixed code and failed, run 41763350275) and moves rearmed_at to 04:40Z, after #22796 merged the kline-cache fix. R5 cannot vouch for research/queue paths, so the manager (session_01AFoLuLMKGkvg6UbCzdxjNR) merges. Revert: git revert.",
+  "why": "Let the dispatcher run the operator-requested ml_entry SL-only verification backtest on the fixed harness."
 }
