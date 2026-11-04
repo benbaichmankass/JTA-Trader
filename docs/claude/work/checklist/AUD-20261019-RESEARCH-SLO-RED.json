@@ -11,12 +11,13 @@
   "tier": 1,
   "prs": [],
   "blocked_on": [],
-  "note": "[WEEKLY-AUDIT-2026-10-19, session_014UeddhjFnc6fSA41bo5V65] CLAIM: the research pipeline SLO monitor has alerted for a week without a same-day disposition. EVIDENCE: comms/research/health/2026-10-16..21.json: not_ok in every run of every day for grade_latency_p90_d, theme_share_min_ratio, research_ops_not_run (n=72 runs); blocked_over_age every run 10-19..21; runnable_floor 6/15 runs 10-18, 4/12 10-20, 10/10 10-21; max inter-run gap 4.3h (10-16), 4.6h (10-19), 4.1h (10-20) > the 4h liveness bound. Context: usage wind-down until weekly reset 2026-10-21 18:00Z explains research_ops_not_run, not grade latency or theme share. POSITIVE CONTROL: research_slo.py --self-test OK (planted starved queue alerts once). NEXT: manager dispatches research-ops after the reset and records per-SLO disposition (fix, threshold PR, or row). DETECTOR: research-slo.yml itself; this row closes when one full day of runs has no grade_latency/research_ops_not_run breach. [WEEKLY-AUDIT-2026-10-28 L0] call HIT, action moving: breaches 7 of 7 days 10-22..10-28 (research_ops_not_run 6/7, theme_share 6/7, runnable_floor 5/7); grade latency cleared. Root cause + fix on hold PR #20970 (RESEARCH-SLO-ROOTCAUSE, needs a human merge).",
-  "updated_at": "2026-10-28T19:04:31Z",
-  "updated_by": "session_014UeddhjFnc6fSA41bo5V65",
+  "note": "[WEEKLY-AUDIT-2026-10-19, session_014UeddhjFnc6fSA41bo5V65] CLAIM: the research pipeline SLO monitor has alerted for a week without a same-day disposition. EVIDENCE: comms/research/health/2026-10-16..21.json: not_ok in every run of every day for grade_latency_p90_d, theme_share_min_ratio, research_ops_not_run (n=72 runs); blocked_over_age every run 10-19..21; runnable_floor 6/15 runs 10-18, 4/12 10-20, 10/10 10-21; max inter-run gap 4.3h (10-16), 4.6h (10-19), 4.1h (10-20) > the 4h liveness bound. Context: usage wind-down until weekly reset 2026-10-21 18:00Z explains research_ops_not_run, not grade latency or theme share. POSITIVE CONTROL: research_slo.py --self-test OK (planted starved queue alerts once). NEXT: manager dispatches research-ops after the reset and records per-SLO disposition (fix, threshold PR, or row). DETECTOR: research-slo.yml itself; this row closes when one full day of runs has no grade_latency/research_ops_not_run breach. [WEEKLY-AUDIT-2026-10-28 L0] call HIT, action moving: breaches 7 of 7 days 10-22..10-28 (research_ops_not_run 6/7, theme_share 6/7, runnable_floor 5/7); grade latency cleared. Root cause + fix on hold PR #20970 (RESEARCH-SLO-ROOTCAUSE, needs a human merge). [DEEP-AUDIT-20261104 L0] STALLED across 2 audits and WORSE (follow-through finding): breaches per run 1-3 (10-28..10-31) -> 7-8 (11-02..11-04): survivors_per_month, trials_per_survivor, producer_failed_rate_24h, grade_latency_p90_d, undispositioned_24h, blocked_over_age, runnable_floor, research_ops_age_h. Why it stalls: owner manager, never laned. Decision: put to Thursday planning as a dispatched lane, not re-filed.",
+  "updated_at": "2026-11-04T18:47:04Z",
+  "updated_by": "session_01AFoLuJHHNrJpWUPrhHXtjo",
   "roadmap": [
     "L-OPS"
   ],
   "next_action": "dispatch_lane",
+  "due_by": "2026-11-07",
   "_seq": 582
 }

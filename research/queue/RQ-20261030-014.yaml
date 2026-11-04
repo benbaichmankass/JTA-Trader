@@ -3,7 +3,7 @@
 # only while `queue_replenish.py --verify` reproduces it byte-for-byte from the template.
 id: RQ-20261030-014
 title: 'Breakout prop fit: ict_scalp_avax_5m at sizing flat 0.5% of balance under RULE-B6 V2 (generated)'
-status: queued
+status: done
 cadence: once
 kind: experiment
 theme: new_strategy_prop
@@ -101,3 +101,15 @@ generated:
     timeframe: 5m
     trades_file: comms/strategy_evidence/runs/2026-10-28/ict_scalp_avax_5m__trades.jsonl
 last_dispatched_at: '2026-11-04T16:22:11+00:00'
+grading:
+  auto: true
+  decision_rule_id: RULE-TPL-PROP-FIT-B6V2-ict_scalp_avax_5m-bal005
+  evidence:
+  - research/results/RQ-20261030-014/41855427731.jsonl
+  graded_at: '2026-11-04'
+  grader: scripts/research/queue_grade.py
+  note: 'deterministic harness: FAIL closes this cell with no same-window replay; it does not retire the
+    family (family-retirement protocol, #18557)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail
