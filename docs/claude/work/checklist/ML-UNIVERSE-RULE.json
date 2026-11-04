@@ -9,15 +9,17 @@
   "ceiling_usd": 20,
   "spend_usd": null,
   "tier": 3,
-  "prs": [],
+  "prs": [
+    22914
+  ],
   "blocked_on": [],
-  "note": "OPERATOR 2026-11-04, verbatim. ~19:04Z: \"the configuration doesn't specify what trades. It doesn't specify like what coins or what security trades. It just specifies which strategies, including which MLs, are active on that account. That's it.\" ~19:06Z: \"It's not just for Alpaca. That's like a general rule across how all of the accounts are configured. There's no per symbol configuration. There's only per strategy configuration. Specific strategies trade one symbol usually, but the MLs trade whatever is whatever they're set to trade. They don't have their roster is internal to the ML, and it's based on what tests have passed versus which ones have not.\" ~19:08Z: \"start the ML-UNIVERSE-RULE lane now\" (dispatched 19:05Z, Opus, $20). Popups ~19:08Z: \"Split (Recommended)\", \"Per-symbol passes (Recommended)\", \"Per-symbol tests (Recommended)\"; ~19:18Z pass bar: \"Shrunk >= 0, n >= 100 (Recommended)\". Rule as recorded: the set is derived from a committed per-symbol pass record; an absent/indeterminate record keeps the current set.",
+  "note": "OPERATOR 2026-11-04, verbatim. ~19:04Z: \"the configuration doesn't specify what trades. It doesn't specify like what coins or what security trades. It just specifies which strategies, including which MLs, are active on that account. That's it.\" ~19:06Z: \"It's not just for Alpaca. That's like a general rule across how all of the accounts are configured. There's no per symbol configuration. There's only per strategy configuration. Specific strategies trade one symbol usually, but the MLs trade whatever is whatever they're set to trade. They don't have their roster is internal to the ML, and it's based on what tests have passed versus which ones have not.\" ~19:08Z: \"start the ML-UNIVERSE-RULE lane now\" (dispatched 19:05Z, Opus, $20). Popups ~19:08Z: \"Split (Recommended)\", \"Per-symbol passes (Recommended)\", \"Per-symbol tests (Recommended)\"; ~19:18Z pass bar: \"Shrunk >= 0, n >= 100 (Recommended)\". Rule as recorded: the set is derived from a committed per-symbol pass record; an absent/indeterminate record keeps the current set. OPERATOR DECISION 2026-11-04 ~19:33Z (popup to Manager Session 2026-11-04a, verbatim): \"Group-level (Recommended)\". SUPERSEDES the per-symbol rule recorded above (~19:08Z \"Per-symbol passes\"/\"Per-symbol tests\", ~19:18Z \"Shrunk >= 0, n >= 100\"), which is WITHDRAWN and never ran. Meaning, as put to the operator: an ML trades the WHOLE population its registered pooled test passed on, net of each symbol's own costs, minus a cost/liquidity filter fixed before the run; per-symbol results are monitoring only and never add or remove a symbol. Context, operator ~19:25Z verbatim excerpt: \"Maybe it shouldn't be gated at a per symbol basis, but rather it should be kept more general ... I didn't mean to make the rules stricter than they had and the ML had been designed for.\" Canonical text: #22914 (merged fbbcd906, canonical \u00a7 \"An account configures strategies, never symbols\"). Manager decisions 20:22-20:23Z: the resolver (#22928) is ADD-ONLY; a testing ML trades its pending test's REGISTERED population (a41f-01 = the pre-registered Alpaca liquidity pool, not the 11 alpaca_live symbols) via an explicit Tier-3 config PR once that pool is a committed file; until then alpaca_paper keeps its 13; bybit_2/bybit_portfolio keep the 5 c692-06 perps until a24c-01 passes. 2026-11-04 21:20Z manager: #22914 merged; lane archived. Left on this row: (1) claude_desk.account_symbols (paper, Tier-3 config PR), (2) the roster-promotion-evidence guard cannot see a symbol-set change; closing that is a new check and needs the operator under No new gates -> Thursday planning question.",
   "due_by": "2026-11-06",
   "roadmap": [
     "L-ML-LIVE"
   ],
   "priority_rank": 2,
-  "updated_at": "2026-11-04T19:23:09Z",
+  "updated_at": "2026-11-04T21:19:17Z",
   "updated_by": "session_01AFoLuHgZaSYnm9avjeZE33",
   "_seq": 914
 }
