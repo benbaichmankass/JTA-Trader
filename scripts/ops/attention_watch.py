@@ -515,9 +515,33 @@ def _lr_refuses() -> Any:
             schema = json.loads(rules.SCHEMA.read_text())
         finally:
             sys.path.pop(0)
-        return lambda row: bool(rules.row_problems(row, "reviews", schema)) if isinstance(row, dict) else True
+        killed = _lr_killed_ids()
+
+        def refuses(row: Any) -> bool:
+            if not isinstance(row, dict):
+                return True
+            if str(row.get("review_id")) in killed:   # the mirror reports it under `killed`, never copies it
+                return True
+            if rules.row_problems(row, "reviews", schema):
+                return True
+            if row.get("packet_sha"):                  # the mirror's LTR-PACKET-ECHO refusal (packet_sha / handoff)
+                blob = _git("show", f"{LR_ROWS_REF}:comms/live_review/packets/{row.get('review_id')}.json")
+                if blob is not None and rules.packet_blob_problems(row, blob.encode()):
+                    return True
+            return False
+        return refuses
     except Exception:  # noqa: BLE001  # allow-silent: caller reports unknown
         return None
+
+
+def _lr_killed_ids() -> set[str]:
+    """review_ids main records as killed (comms/live_review/killed_rows.json): the mirror never copies
+    them, so they are not a stall. Unreadable -> empty (the schema/packet refusals still apply)."""
+    try:
+        doc = json.loads((REPO_ROOT / "comms/live_review/killed_rows.json").read_text())
+        return {str(k["review_id"]) for k in doc.get("killed") or []}
+    except (OSError, ValueError, KeyError, TypeError):
+        return set()
 
 
 def _lr_due_clause(now: datetime, mins: float, due_doc: dict | None, seen_path: Path,

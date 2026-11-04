@@ -1,0 +1,16 @@
+{
+  "due_when": {
+    "clears_when": "iteration_orphans.py reads strategy_leg ORPHAN 0 and ltr_class ORPHAN 0 (author units from a diagnosis, programme-review)",
+    "kind": "observation",
+    "observation": "orphans 0"
+  },
+  "id": "PI-20261103-3ORPHANS-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "review",
+    "ref": "python3 scripts/research/iteration_orphans.py 2026-11-03",
+    "rerun": "python3 scripts/research/iteration_orphans.py | grep -i orphan"
+  },
+  "state": "queued",
+  "what": "Iteration orphans (iteration_orphans.py 2026-11-03): strategy_leg ml_entry_v2 (verdict pass_unconfirmed) and 5 ltr_class (partial-close, widen-sl, sl-to-structure, tp-extend, tp-pull-in; verdict pending) have no live iteration unit. Blocks RESEARCH-ITERATE."
+}
