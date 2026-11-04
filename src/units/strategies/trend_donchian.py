@@ -814,6 +814,12 @@ def monitor(cfg, candles_df, open_pkg):
     # move). Undeclared = this block is skipped, byte-identical.
     from src.runtime.structure_exit_live import declared as _sx_declared
     if _sx_declared(meta) is not None:
+        # The telemetry hook lives inside _trail_verdict, which this branch
+        # never reaches, so every structure-exit leg wrote NO position_telemetry
+        # row and the live review read it as could_not_look (PAPER-MECHANICS-
+        # 20261104 item 5: bybit_1 trend_donchian_{sol,eth,1h} opened 11-04).
+        _structure_leg_telemetry(meta, cfg_dict, open_pkg, candles_df,
+                                 current_price, direction, sl)
         from src.runtime.structure_exit_live import structure_exit_verdict
         return structure_exit_verdict(meta, open_pkg, candles_df)
 
@@ -881,6 +887,35 @@ def _trail_window(meta, cfg_dict, candles_df, open_pkg):
     except Exception:  # noqa: BLE001 — never break the trail
         pass
     return window
+
+
+def _structure_leg_telemetry(meta, cfg_dict, open_pkg, candles_df,
+                             current_price, direction, sl):
+    """M31 P2 position telemetry for a leg on the structure-exit branch.
+
+    Observe-only and never raises: the same writer, frame (`_trail_window`) and
+    ATR source `_trail_verdict` hands it, so a structure-exit leg's row means
+    the same as a chandelier leg's. It reads nothing back into the verdict.
+    """
+    try:
+        atr = _coerce_float(meta.get("atr"))
+        if atr is None or atr <= 0:
+            period = int(meta.get("atr_period") or cfg_dict.get("atr_period")
+                         or _DEFAULTS["atr_period"])
+            atr = float(_atr(candles_df, period).iloc[-1])
+        window = _trail_window(meta, cfg_dict, candles_df, open_pkg)
+        from src.runtime.position_telemetry import record_position_telemetry
+
+        record_position_telemetry(
+            candles_df=candles_df, atr=atr,
+            open_pkg=open_pkg, meta=meta, window=window, direction=direction,
+            current_price=current_price, stop=sl,
+            target=_coerce_float(open_pkg.get("tp")),
+            strategy=str(meta.get("strategy_label")
+                         or open_pkg.get("strategy_name") or "") or None,
+        )
+    except Exception:  # noqa: BLE001 — telemetry must never break the exit
+        pass
 
 
 def _trail_verdict(meta, cfg_dict, open_pkg, candles_df, current_price, direction, sl):
