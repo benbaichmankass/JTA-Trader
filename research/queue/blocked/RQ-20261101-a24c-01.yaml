@@ -73,6 +73,30 @@ decision_rule:
   reference_order_notional_basis: 'Registered before the run as the impact model''s Q. A stand-in for one default-risk ml_entry order (1.5 percent
     at a median 2.5 percent stop is ~0.6 x equity); the account balance is not stated in this public repo. The run also reports the pooled result
     at Q x 0.25 and Q x 4 as a sensitivity (reported, not gating).'
+per_symbol_rule:
+  id: RULE-ML-UNIVERSE-PER-SYMBOL-SHRUNK-N100
+  registered_at: '2026-11-04'
+  registered_before_run: true
+  operator_decision: 'Operator 2026-11-04 ~19:18Z popup answer, verbatim (relayed by Manager Session 2026-11-04a): "Shrunk ≥ 0, n ≥ 100 (Recommended)".
+    Earlier ~19:08Z: "Per-symbol passes (Recommended)", "Per-symbol tests (Recommended)". ~19:06Z: "the MLs trade whatever is whatever they''re
+    set to trade. They don''t have their roster is internal to the ML, and it''s based on what tests have passed versus which ones have not."'
+  population: every symbol of the c692-01 held-out population that Bybit lists as Trading USDT LinearPerpetual at run time, U(C) or not, and ALWAYS
+    the 5 coins ml_entry trades today on bybit_2 / bybit_portfolio (BTCUSDT ETHUSDT XRPUSDT ADAUSDT SOLUSDT), each re-checked per symbol
+  window: 'the 2025-10-01..2026-09-30 c692-01 held-out decisions (NOT sealed: read by c692-01, c692-02 and the 2026-11-01 re-cost; declared here)
+    pooled per symbol with every forward month from 2026-10 (claimed via holdout_lock as each month lands)'
+  statistic: 'Per symbol s, over the arm-A (tau policy, one position per symbol) decisions on the window, each net of that symbol''s own historical
+    spread + square-root impact (cost model (1) above, Q = reference_order_notional_usd): n_s, m_s = mean net R per decision, se_s = sd_s / sqrt(n_s).
+    Pooled mu = the inverse-variance-weighted mean of m_s over symbols with n_s >= 100; between-symbol variance tau2 by DerSimonian-Laird (floored
+    at 0). shrunk_s = mu + tau2 / (tau2 + se_s^2) x (m_s - mu) (empirical-Bayes, shrunk to the pooled mean by its own SE). With tau2 = 0 every
+    symbol reads mu: the per-symbol verdicts then coincide with the pooled sign (stated here, before the run).'
+  rule: 'Per symbol: INDETERMINATE IF n_s < 100 (keeps the account''s current set for that symbol). PASS IF n_s >= 100 AND shrunk_s >= 0. FAIL
+    IF n_s >= 100 AND shrunk_s < 0. Re-evaluated monthly on the window extended by each new forward month (pooled per symbol; a monthly re-read
+    is a new claim, rule unchanged); a FAIL removes the symbol. The run writes comms/ml_universe/ml_entry.json (schema ml_universe/1, src/config/ml_universe.py)
+    with every tested symbol''s verdict, n, m, se, shrunk and the venues that list it at run time; that record, not config, decides what ml_entry
+    trades. Thresholds never change after any result.'
+  multiple_comparison_note: 'Shrinkage is the multiple-comparison control across symbols (no per-symbol alpha); a symbol is never selected on
+    its raw mean. MEASURED context (comms/research/ML-ENTRY-UNIVERSE/local-20261101T1830Z/summary.json): per-symbol n median 225, se ~0.087 R,
+    pooled edge +0.0073; 25 of 51 raw re-costed means read >= 0.'
 compute: cpu_long
 value:
   bucket: ai_trader
@@ -117,6 +141,12 @@ related:
 - comms/research/ML-ENTRY-UNIVERSE/local-20261101T1830Z/summary.json
 what_it_does_not_do: Registers, serves or promotes nothing; changes no config; places no order; sizes nothing.
 blocked_on:
+- kind: harness
+  ref: scripts/research/ml_decision_entry.py
+  what: 'per_symbol_rule (registered 2026-11-04): per-symbol m/se/DerSimonian-Laird shrinkage over the sealed + forward decisions, and the
+    comms/ml_universe/ml_entry.json writer (schema ml_universe/1, src/config/ml_universe.py)'
+  clears_when: 'a self-test plants one symbol whose raw mean is positive at n=40 (INDETERMINATE) and one at n=200 shrunk below 0 (FAIL), and the
+    writer round-trips through src/config/ml_universe.load'
 - kind: harness
   ref: scripts/research/ml_decision_entry.py
   what: 'the universe-costed subcommand: Corwin-Schultz spread + square-root impact cost model per symbol-month, the dev-fold liquidity rule over

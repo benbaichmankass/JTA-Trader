@@ -113,7 +113,7 @@ ACCOUNT_SYMBOLS_KEY = "account_symbols"
 
 
 def leg_symbols(strategy_cfg: Optional[Mapping[str, Any]],
-                account_id: Optional[str] = None) -> list[str]:
+                account_id: Optional[str] = None, *, leg: Optional[str] = None) -> list[str]:
     """The symbols one leg trades — on ``account_id`` when it is given.
 
     No ``account_id``, or a leg without ``account_symbols``: the leg's
@@ -121,13 +121,30 @@ def leg_symbols(strategy_cfg: Optional[Mapping[str, Any]],
     account its map does not name trades nothing there (``[]``); a scoped entry
     outside the leg's own ``symbols:`` is dropped, so the map can only NARROW
     the union. ``roster-symbol-reachability`` reports both shapes in CI.
+
+    ``leg`` (the leg's NAME): an ML leg with a per-symbol pass record
+    (``comms/ml_universe/<leg>.json``, ``src/config/ml_universe.py``; operator
+    2026-11-04 "the MLs trade whatever ... their roster is internal to the ML,
+    and it's based on what tests have passed") has its configured set narrowed by
+    its fails and widened by its passes on the account's venue. No record (every
+    leg today) = the configured set, byte-identical.
     """
     scfg = strategy_cfg if isinstance(strategy_cfg, Mapping) else {}
     syms = _clean(scfg.get("symbols"))
     scope = scfg.get(ACCOUNT_SYMBOLS_KEY)
     if account_id is None or not isinstance(scope, Mapping):
-        return syms
-    return [s for s in _clean(scope.get(str(account_id))) if s in syms]
+        out = syms
+    else:
+        out = [s for s in _clean(scope.get(str(account_id))) if s in syms]
+    if leg is None:
+        return out
+    from src.config import ml_universe as _mu
+    rec = _mu.load(leg)
+    if rec is None:
+        return out
+    if account_id is None:   # the union the builder evaluates: configured minus fails, plus every pass
+        return _mu.apply(out, rec, None) + [s for s in _mu.passed_symbols(rec) if s not in out]
+    return _mu.apply(out, rec, _mu.account_venue(account_id))
 
 
 def roster_symbols(roster: Optional[Sequence[Any]],
@@ -148,7 +165,7 @@ def roster_symbols(roster: Optional[Sequence[Any]],
         scfg = cfgs.get(name) or {}
         if not isinstance(scfg, Mapping):
             continue
-        for sym in leg_symbols(scfg, account_id):
+        for sym in leg_symbols(scfg, account_id, leg=str(name)):
             if sym not in out:
                 out.append(sym)
     return out
