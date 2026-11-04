@@ -220,7 +220,15 @@ Each declares a
 (`intent_multiplexer._collect_intents`, 2026-06-02): a strategy is skipped
 on any tick symbol not in its `symbols:` — so a strategy no longer
 "evaluates every configured symbol each tick" (the earlier MES-mirror
-behaviour is intentionally retired). **The authoritative per-cell
+behaviour is intentionally retired). **Who decides the symbols** (operator
+2026-11-04, binding; CLAUDE-RULES-CANONICAL § "An account configures
+strategies, never symbols"): an account configures only its roster. A
+non-ML leg's `symbols:` is the symbol its own evidence measured. An ML leg's
+universe is the set its registered tests PASSED, limited to what the venue
+can trade. Per-account symbol maps (`account_symbols` on `ml_entry` and
+`claude_desk`) still exist in today's config but violate the rule; the
+inventory and fixes are in
+`docs/audits/2026-11-04-per-symbol-config-inventory.md`. **The authoritative per-cell
 `execution:`/`enabled:`/`symbols:` matrix is `config/strategies.yaml`,
 surfaced on `/api/bot/strategies` — it is deliberately NOT re-enumerated in
 prose here** (an exhaustive per-cell list in this doc is exactly what drifted

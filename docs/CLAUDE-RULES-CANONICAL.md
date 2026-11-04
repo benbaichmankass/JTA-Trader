@@ -1199,6 +1199,63 @@ decides whether to intervene.
    `roster-symbol-reachability` says so in those words rather than naming
    the leg. Reverse it only by reopening that decision.
 
+   #### An account configures strategies, never symbols (operator directive 2026-11-04, binding)
+
+   **Gates this adds or changes: none.** The rule removes per-account symbol
+   decisions. It adds no switch, flag or refusal. The two execution gates
+   (`mode:` and `execution:`) are untouched.
+
+   The operator, verbatim, 2026-11-04:
+   - ~19:04Z: *"the configuration doesn't specify what trades. It doesn't
+     specify like what coins or what security trades. It just specifies which
+     strategies, including which MLs, are active on that account. That's it."*
+   - ~19:06Z: *"It's not just for Alpaca. That's like a general rule across how
+     all of the accounts are configured. There's no per symbol configuration.
+     There's only per strategy configuration. Specific strategies trade one
+     symbol usually, but the MLs trade whatever is whatever they're set to
+     trade. They don't have their roster is internal to the ML, and it's based
+     on what tests have passed versus which ones have not."*
+
+   **The rule.**
+   1. **An account's whole trading configuration is its `strategies:` roster.**
+      That roster says which strategies and MLs are active on the account.
+      Nothing on an account says which symbols trade. Nothing on a leg keyed by
+      account says it either: a per-account symbol map such as
+      `strategies.yaml::<leg>.account_symbols` is account configuration placed
+      on the leg. `accounts.yaml::symbols` remains the data-pull list (above);
+      it never decides what trades.
+   2. **A non-ML strategy defines its own symbol, usually one.** It is the
+      symbol its Stage-0 evidence was measured on, declared once on the leg.
+   3. **An ML's traded universe is internal to the ML.** It is the set of
+      symbols its registered tests PASSED, read from its committed evidence
+      record (`comms/strategy_evidence/<leg>.json` and the research results it
+      cites). At trade time it is intersected with what the account's venue can
+      physically trade: listed instruments, and the sides the account can take
+      (e.g. `side_filter: long` on a cash account). Nobody edits that universe
+      by hand. It changes when a test passes or fails.
+   4. **A test's population is chosen from the ML's own candidate universe,
+      never re-read from an account's config.** A universe test that scores
+      "the symbols account X trades" lets the account decide the ML's symbols.
+      That is this rule inverted.
+
+   **What does NOT change.** Changing a strategy's or ML's universe on a
+   real-money account is still a Tier-3 decision. It needs § "Promotion
+   evidence" (C1-C5), and a data-backed decision follows § "Data-backed
+   Tier-2/3 decisions". The evidence record is what lets the decision through;
+   it is not a new gate. The Stage-1 demo floor, the three strategy statuses
+   and the promotion ladder are unchanged (OPERATING-PLAN § 2).
+
+   **Not decided yet, and carried to the operator by the manager (row
+   `ML-UNIVERSE-RULE`):** what a TESTING ML trades on the Stage-1 floor before
+   any test has passed. Example: `ml_entry_v2` has one FAIL and no PASS. The
+   rule as stated gives it an empty universe. The Stage-1 floor says every
+   testing leg trades.
+
+   **Today's configuration against this rule:**
+   [`docs/audits/2026-11-04-per-symbol-config-inventory.md`](audits/2026-11-04-per-symbol-config-inventory.md).
+   It lists every place config or code decides a symbol per account, whether
+   each one complies, and the fix for each.
+
    **Precise scope of the rule** (settled 2026-07-09, full-system-audit
    Phase 0). What is forbidden is a **default-off `*_ENABLED` flag in
    front of a *required* capability** (the MES-stranding class). Three

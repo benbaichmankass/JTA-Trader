@@ -187,6 +187,7 @@ Exactly two declared, default-permissive switches decide whether a strategy trad
 **`accounts.yaml::symbols` is NOT a gate**: the `strategies:` roster decides what trades; `symbols:` is an additive data-pull list, and a
 symbol missing from it is a bug in the PULL LIST, never a reason a rostered leg does not trade (operator, 2026-09-22;
 `roster-symbol-reachability` prints current counts).
+**An account configures strategies, never symbols** (operator, 2026-11-04, binding): an account's configuration is its roster; a strategy defines its own symbol; an ML's universe is the set its tests PASSED, limited to what the venue can trade. No per-account symbol map. See canonical § "An account configures strategies, never symbols".
 
 The trader runs 24/7 and never switches itself off — no auto-flip, no mode-toggling breaker, no go-dry-on-boot default; transient issues
 route through `RiskManager` per-trade (canonical § Prime Directive).
