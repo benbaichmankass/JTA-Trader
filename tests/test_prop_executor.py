@@ -5118,7 +5118,9 @@ def test_a_failed_positions_read_posts_no_status_at_all(env):
 
 def test_the_posted_positions_grade_in_inv_prop_positions(env):
     # end-to-end against the reader: the executor's body, stored verbatim as status.raw, is a clean look
-    import importlib.util, pathlib
+    import importlib.util
+    import pathlib
+
     spec = importlib.util.spec_from_file_location(
         "system_invariants", pathlib.Path(__file__).resolve().parents[1] / "scripts/ops/system_invariants.py")
     si = importlib.util.module_from_spec(spec)
