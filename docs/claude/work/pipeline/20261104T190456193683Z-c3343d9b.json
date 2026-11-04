@@ -1,0 +1,17 @@
+{
+  "due_when": {
+    "check_every_days": 7,
+    "clears_when": "python3 scripts/research/live_vs_backtest.py --leg ml_entry prints a verdict other than NO_BACKTEST for bybit_2 realMoney",
+    "kind": "event"
+  },
+  "id": "PI-20261104-PREP1104-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "performance-review 2026-11-04 (lane PERF-REVIEW-PREP-20261104, manager session_01AFoLuHgZaSYnm9avjeZE33); docs/reviews/2026-11-04-weekly-walkthrough.md PERFORMANCE section 3",
+    "rerun": "python3 scripts/research/live_vs_backtest.py --leg ml_entry"
+  },
+  "owner": "ml-review",
+  "state": "queued",
+  "what": "[performance][tooling] C2 cannot band the real-money leg ml_entry: live_vs_backtest.py returns NO_BACKTEST on bybit_2 and bybit_portfolio because comms/strategy_evidence/ml_entry.json source_run research/results/RQ-20261101-c692-06/local-20261101T0840Z.jsonl carries 0 per-trade net_r rows (MEASURED 2026-11-04). The leg went straight to real money on 2026-11-01 (expR +0.0271, n=907 held-out; fixed-TP CI95 [-0.042, +0.099]) and has 4 real-money closes (+1.35 R). Without a band there is no demotion signal for it. Fix: have scripts/research/ml_decision_entry.py (or the extend-only replay) emit the per-trade net_r rows for the c692-06 population and point source_run at them."
+}

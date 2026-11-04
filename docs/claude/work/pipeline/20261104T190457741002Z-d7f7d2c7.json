@@ -1,0 +1,17 @@
+{
+  "due_when": {
+    "check_every_days": 7,
+    "clears_when": "realized_slippage.py analyze exits 0 on a fresh pull and states how many rows it skipped for missing net_r",
+    "kind": "event"
+  },
+  "id": "PI-20261104-PREP1104-0004",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "performance-review 2026-11-04 (lane PERF-REVIEW-PREP-20261104, manager session_01AFoLuHgZaSYnm9avjeZE33); docs/reviews/2026-11-04-weekly-walkthrough.md PERFORMANCE section 3",
+    "rerun": "python3 scripts/research/realized_slippage.py pull --out-dir /tmp/slip && python3 scripts/research/realized_slippage.py analyze --in-dir /tmp/slip --out /tmp/slip.json"
+  },
+  "owner": "perf-followup",
+  "state": "queued",
+  "what": "[performance][tooling] C5 is VOID: scripts/research/realized_slippage.py analyze crashes with KeyError 'net_r' in reprice() (line ~377) on a fresh pull (4198 fills pulled 2026-11-04). Last week it ran (bybit_perps 0.66 bps round trip vs 3.0 assumed). Some Stage-0 trade row it reprices now lacks net_r; skip or count those rows instead of crashing."
+}
