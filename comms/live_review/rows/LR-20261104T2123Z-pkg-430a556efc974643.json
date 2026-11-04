@@ -1,0 +1,123 @@
+{
+ "schema_version": 1,
+ "review_id": "LR-20261104T2123Z-pkg-430a556efc974643",
+ "reviewed_at": "2026-11-04T21:23:49Z",
+ "order_package_id": "pkg-430a556efc974643",
+ "trade_id": null,
+ "leg": "trend_donchian_eth_4h",
+ "accounts": [
+  "bybit_2",
+  "bybit_portfolio"
+ ],
+ "trigger": {
+  "event": "giveback",
+  "level": 1.0,
+  "l0_snapshot_at": null
+ },
+ "info_cutoff_at": "2026-11-04T21:23:07Z",
+ "state": {
+  "open_r": 0.7382,
+  "peak_r": 1.2935,
+  "peak_provenance": "estimated",
+  "giveback_r": 0.5553,
+  "bars_held": 2,
+  "sl": 2325.92214286,
+  "tp": 2564.39,
+  "atr_now_over_entry": 1.1754,
+  "regime_cell_now": null,
+  "regime_cell_entry": null
+ },
+ "features_at_review": {
+  "atr_now_over_entry": 1.1754,
+  "bars_since_peak": 1,
+  "giveback_r": 0.5553,
+  "open_r": 0.7382,
+  "peak_r": 1.2935,
+  "r_to_stop": 1.7382,
+  "r_to_target": 2.6223
+ },
+ "mechanics": {
+  "evidence": "package sl 2325.92214286 / tp 2564.39 agree with every readable account",
+  "verdict": "match"
+ },
+ "options": [
+  {
+   "action": "hold",
+   "level": null,
+   "n": 49,
+   "mean_r": 1.5505,
+   "sd_r": 3.1627,
+   "worst_r": -1.1986,
+   "net": true
+  },
+  {
+   "action": "tighten_sl",
+   "level": 2378.43,
+   "n": 49,
+   "mean_r": 1.5789,
+   "sd_r": 2.3427,
+   "worst_r": -0.1161,
+   "net": true
+  }
+ ],
+ "outcome_table_source": "comms/live_review/tables/LR-20261104T2123Z-pkg-430a556efc974643.json",
+ "recommendation": {
+  "action": "tighten_sl",
+  "level": 2378.43,
+  "level_atr": 1.17,
+  "ev_delta_r": 0.0284,
+  "worst_case_delta_r": 1.0825,
+  "basis": "preference_within_bound",
+  "confidence": "measured",
+  "evidence_source": "table",
+  "judgement_confidence": null,
+  "reason": "Re-priced at live state (open +0.74R, peak 1.29R, giveback 0.56R, 2 bars; tool, ETH 4h candles, comparable n=49, measured): hold +1.55R sd 3.16 worst -1.20R; tighten to atr:2.0 (~breakeven, 2378.43, 1.17 ATR under mark, clears the 1 ATR floor) mean +1.58R sd 2.34 worst -0.12R. EV delta +0.03R (se 0.25, noise) but worst case lifts +1.08R and sd falls; within 0.25R bound. Changed since 20:05Z: previous review could not price any tighten (no_candles) and held on a larger corpus n=108; candles now present so tighten is priced and dominates hold on tail at ~zero EV cost. Price 2421 (+0.20R vs 20:05Z), peak 1.29 (vs 1.28), giveback 0.56R. atr:1.0/1.5 cost 0.15/0.07R so not chosen; not close (forfeits +1.55R EV)."
+ },
+ "judge_prior": null,
+ "applied": false,
+ "apply_policy": {
+  "bound_r": 0.25,
+  "within_bound": true,
+  "tighten_r": -0.0284
+ },
+ "shadow_policy": {
+  "bound_r": 0.5,
+  "within_bound": true,
+  "would_apply": true,
+  "tighten_r": -0.0284
+ },
+ "context_flags": [
+  "tighten_flattered: stop fills at stop price; ev delta within noise (se 0.25), real cost if anything larger",
+  "corpus differs from 20:05Z review (n=49 forming-run long-only comparable vs n=108): hold mean +1.55 vs +1.68, same conclusion direction",
+  "correlated: ETH long in 4+ packages (eth_prop, e4_oi_shock, bybit_1/prop) - one crypto-beta bet",
+  "regime: 4h adx_now 20.6 transitional, atr_now/entry 1.18",
+  "funding could-not-look: no read-only funding route (puller outage NOT established; /api/diag freshness route not served - 404 on 'freshness')",
+  "missing_inputs: regime.vol_now, regime.cell_entry, context.funding, context.calendar"
+ ],
+ "account_reads": [
+  {
+   "account_id": "bybit_2",
+   "account_class": "real_money",
+   "read": "would_apply",
+   "evidence": "bybit_orders: SL 2325.92 / TP 2564.39, position True, matched by order_id; apply paths close, move_tp, reduce, tighten, widen_sl; would_apply = an executor reaches this leg, NOT that its RiskManager approved (LTR-6 gap)"
+  },
+  {
+   "account_id": "bybit_portfolio",
+   "account_class": "paper",
+   "read": "would_apply",
+   "evidence": "bybit_orders: SL 2325.92 / TP 2564.39, position True, matched by order_id; apply paths close, move_tp, reduce, tighten, widen_sl; would_apply = an executor reaches this leg, NOT that its RiskManager approved (LTR-6 gap)"
+  }
+ ],
+ "disposition": {
+  "route": "recommended",
+  "mandate": null,
+  "action_issue": null,
+  "applied_at": null,
+  "verified_readback": null
+ },
+ "model": "sonnet-tier (live-review lane)",
+ "session": "session_01AFoLuJnmAnQGe9AHjY93HY",
+ "prompt_sha": null,
+ "skill_sha": null,
+ "packet_sha": "daca7359cd31959a96534da868d8f069131af75a84abd1fc6b9b1902f2f3d63e"
+}
