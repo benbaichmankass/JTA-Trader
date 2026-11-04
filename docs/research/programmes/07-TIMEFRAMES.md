@@ -4,6 +4,20 @@
 
 Machine tree: [`research/programmes/07-timeframes.yaml`](../../../research/programmes/07-timeframes.yaml). Units: `RQ-20261018-ef5d-01..09` (runnable), `blocked/RQ-20261018-ef5d-10/-11`. Instruments (this lane): `scripts/research/timeframe_breakeven.py`, `scripts/research/harness_stage0.py`. Numbers marked MEASURED were measured in this lane on 2026-10-18 from the file or command named beside them; re-run the command rather than quoting the figure.
 
+## Programme review 2026-11-04 (lane PROGRAMME-REVIEW-20261104) — TRADING track
+
+Population: units with a result row generated 2026-10-28T19:41Z..2026-11-04T19:41Z (`research_ops_checks.py --kind programme_review --since 7d`, 1,932 units read, 0 unreadable, 662 result rows): **447 units with rows** — 107 pass, 210 fail, 25 indeterminate, 11 no_action_warranted, 94 with no unit verdict yet (76 ungraded + 18 needs_review/null). 302 carry a programme field (P1 53, P2 54, P3 95, P4 24, P5 48, P6 18, P7 10), 145 do not (live_strategy 70, new_strategy_prop 32, infra 13, ml_health 13, timeframes 6, macro 5, regime 5, none 1) — assigned below by what they ask. Every PASS is a discovery until its confirmation passes.
+
+**P7 in the window:** 10 units with `programme: P7` (2 pass, 7 fail, 1 indeterminate) plus 6 unprogrammed `timeframes` units.
+
+**What was learned.** **Daily long-only Donchian-20 clears Stage 0 on the 14 ETFs where the weekly bar passed** (84ef-03), and the **daily lookback neighbourhood is a plateau, not a spike** — Donchian-10 and -40 also pass on seventeen perps beside the -20 lead (84ef-05). The 15m Donchian variants (24/48/96 h lookbacks, the cut-turnover variant of Q2) and the slower daily Donchian on six untested alts failed; the cross-programme reading agrees with P2's ML-TIMEFRAME result: **edge per decision does not survive shrinking the bar** — cost R per decision rises faster than gross R as bars shrink, for rules and for the ML entry alike.
+
+**Failed first tests — diagnosis.** 15m: *cost drag* (the turnover variant still pays 11 bps per round-trip on 15m moves) — the remaining variant is maker entry (P7-Q2-frontier-pass, f679-04, the perfect-fill upper bound), which is decisive: if a perfect maker fill cannot pass, 15m Donchian is closed for this cost structure.
+
+**Next.** P7-Q5-confirm (disjoint-symbol check of the 12-perp pooled LONG read), P7-Q6-weekly-etf (overlap of the weekly/daily ETF legs with the live alpaca 1d legs — one equity-beta factor), the f679-04 maker bound.
+
+**Feeds.** P7 → P2: the timeframe-scaling belief is shared; no 15m/5m ML units until P2's harness reproduces.
+
 ## Programme review 2026-10-28 (lane PROGRAMME-REVIEW-20261028) — TRADING track
 
 Population: research units with a result row generated 2026-10-21T19:30Z..2026-10-28T19:30Z (`research_ops_checks.py --kind programme_review --since 7d`, 1,480 units read, 0 unreadable): **445 units, 412 graded** (70 pass, 50 indeterminate, 292 fail), 285 with a programme field and 160 without (live_strategy 70, regime 27, ml_health 21, macro 20, infra 13, new_strategy_prop 8, none 1). This review assigns the 160 by what they ask, not by the field (map section). Every PASS below is a discovery until its confirmation unit passes. **Cost basis:** about 36 of the 70 PASS rows are crypto-harness runs charged 7.5 bps round-trip (MEASURED from each result's argv); only RQ-20261028-001 carried the measured Bybit-linear 11.0 bps. A lever A/B delta is nearly fee-neutral (both arms pay it); an absolute Stage-0 or breadth PASS is not.

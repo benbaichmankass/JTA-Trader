@@ -1,6 +1,8 @@
-# Compute allocation: who gets which compute, and how it is enforced (2026-11-03) — DRAFT
+# Compute allocation: who gets which compute, and how it is enforced (2026-11-03)
 
-> **DRAFT, PAUSED** (operator ~21:30Z via manager: "hold off on the resources till after the reset"). This lands the measured inventory (§ 1) and the design direction. Phase 2 is paused until after the 2026-11-04 18:00Z reset. The lane resumes then, with CI-STREAMLINE's 24 h measurement.
+> **Resumed 2026-11-04 ~20:05Z** after the reset and the deep audit (#22902), by Manager Session 2026-11-04a. **Phase 1 is
+> measured (§ 8): it met V1 and V2 on its first 20 h. Phase 2 (paid resources) is not needed now** and stays parked until the 7-day
+> re-measure (M1, due 2026-11-11).
 
 > **Doc status:** `unknown` · category `plan` · last verified `never` · registered in [`docs/DOCUMENT-INDEX.md`](../DOCUMENT-INDEX.md)
 
@@ -246,12 +248,14 @@ Re-measure with `scripts/ops/actions_capacity_inventory.py --days 7 --dense-hour
 - D2: self-hosted runners stay OFF the trainer.
 - Nothing paid until phase 1 is measured.
 
-**Still open (proposed to the manager; a preference, not a data question):**
-- **D5: research cap on hosted runners.**
-  - (A, recommended) 4 (+1 data), and widen `kaggle_first` to units over 10 min, so research moves to free Kaggle CPU rather than stopping.
-  - (B) keep 10, as raised today (RESEARCH-FLOW).
+**D5 (research cap on hosted runners) is withdrawn as a question (2026-11-04).** After phase 1, the data settles it:
+- research held 15% of slots in the minutes when a required check waited (was 20%);
+- research's own queue p95 is 0.8 min;
+- required-check queue p95 is 3.3 min.
+So the cap stays at 10 (RESEARCH-FLOW). The lever is re-opened only if M1 shows required-check queue p95 above 5 min with research
+holding 25% or more of the slots. That is data, so it needs no pop-up.
 
-**Phase 2, no pop-up until phase 1 is measured.** This applies only if V1–V2 (§ 5) still fail after phase 1:
+**Phase 2: parked.** Phase 1 met V1–V2 on its first 20 h (§ 8). Phase 2 is revisited only if M1 (7 d) fails V1–V2:
 - (P2-A) **GitHub Pro**: hosted cap 20 → 40, with nothing to operate. Price: the pricing page fetched 2026-11-03 lists Team at
   $4/user/month and does not show Pro; confirm in Settings → Billing.
 - (P2-B) a paid OCI A1 VM (2 OCPU / 12 GB / 100 GB) as a dedicated ops runner host. Self-hosted queue→start was measured at 3 s; the
@@ -275,12 +279,13 @@ CI-STREAMLINE's measured before/after is written back here when it lands.
 | B1 | this doc + inventory tool + baseline record | — | this lane (this PR) |
 | B3 | drop the push-to-main re-runs of pytest-run and Guards (D3); add a Guards backstop beside `pytest_run_backstop` | ≈ 719 job-h/wk | CI-STREAMLINE |
 | B4 | low-importance-PR fast path (data records, logging, docs) in the 4 required checks (D4) | most of ≈ 685 job-h/wk | CI-STREAMLINE |
-| B2 | shallow checkout + diff-by-depth in `guards.yml` / `pytest-run.yml` (sparse profiles: 6.4 → 0.56–0.78 GB per the runner lane); pin `ubuntu-24.04` on the required checks | checkout p95 back to ≤ 3 min | CI-STREAMLINE |
+| B2 | ~~shallow/blobless checkout~~ **DROPPED**: blobless checkout (#22738) measured no faster and timed guards out; shallow conflicts with git-log readers (CI-STREAMLINE). Checkout p95 is back to 1–4 min with the 11-03 Git incident over (§ 8) | — | closed |
 | B5 | batch research bookkeeping into one landing per dispatcher cycle and one per SLO/grade cycle | 569 → ~170 PRs/wk | CI-STREAMLINE or a research lane (manager's call) |
 | B6 | the dispatcher stops holding a runner in verify-merged (GH-CAPACITY-LAND-VERIFY-OFF-RUNNER) | ≈ 175 job-h/wk | free move; manager assigns |
 | B8 | Kaggle/trainer pollers submit-and-exit + collector pickup; research workflows off `INFRA_RUNS_ON` | holds no slot while Kaggle or the trainer computes | free move; manager assigns |
 | B12 | stop re-dispatching a unit after a `producer_failed` landing until its command or script changes (PI-20261103-BCZDXJNR-0002, #22734). MEASURED on `research/results/**` on `main` (read 21:35Z): 137 `producer_failed` records in the 7-d window across 61 units; 43 units failed ≥ 2 times (76 repeat records). 136 matched Actions runs: research-script-run* ~98, research-script-run-kaggle-cpu ~38. Mean 6.6 job-min per run (n=35 sampled) | ≈ 15 job-h/wk on GitHub (≈ 8 h of repeats), about 0.5% of the pool. It also frees the single Kaggle CPU slot, which 38 of the failures held | free move; research dispatcher, not CI |
-| B7 | D5 if granted: research caps, yield on queued required checks, `kaggle_first` > 10 min | caps research's peak share (20% at saturation) | free move, after D5 |
+| B13 | one owner for "which workflows are ops" (§ 9, audit #14): `research_compute.yaml` `limits.infra_workflows`; move the 3 research workflows off `INFRA_RUNS_ON`; non-blocking single-owner report | stops research reaching the ops pool | free move; Tier 1 |
+| B7 | D5 withdrawn (§ 6); only if M1 re-opens it: research caps, yield on queued required checks, `kaggle_first` > 10 min | caps research's peak share (20% at saturation) | free move, after D5 |
 | B9 | uninstall the trainer runner units and confirm `INFRA_RUNS_ON` stays unset (D2) | — | Tier 2, manager assigns |
 | M1 | **measure**: re-run `actions_capacity_inventory.py --days 7` 7 days after B3+B4 land; write the before/after into § 1 and the row | — | this row |
 
@@ -290,3 +295,71 @@ CI-STREAMLINE's measured before/after is written back here when it lands.
 |---|---|---|
 | B10 | P2-A or P2-B (§ 6) via a manager pop-up carrying the M1 numbers | operator / 2 |
 | B11 | verification V1–V6 with the inventory tool; write back to the row | 1 |
+
+## 8. Phase-1 result: measured 2026-11-04 (first 20.3 h after the cuts)
+
+**Population.** Every run created 2026-11-03T23:42Z → 2026-11-04T20:00Z (20.3 h, from the merge of #22737): 5,049 runs, 0 failed reads.
+Job-level data: every non-skipped run created 05:00–20:00Z (1,284 runs) plus a sample before that (347 runs), giving 1,734 jobs.
+- Tool: `scripts/ops/actions_capacity_inventory.py`.
+- Record: `comms/ci/compute-allocation-inventory-2026-11-04-after-cuts.json`.
+- Job-hours are ESTIMATED, as in § 1. The "before" column is the 7-day baseline scaled to 20.3 h, or for queue and checkout times its
+  11-03 06–21Z window.
+- Caveats: one weekday, the overnight hours are included, and GitHub's 11-03 Git incident had ended. Read the checkout gain as partly
+  GitHub's.
+
+| measure | before | after | target |
+|---|---|---|---|
+| mean hosted concurrency | 20.0 | **8.0** | V1 ≤ 12 ✅ |
+| merge-path job-h per 20.3 h | ≈ 267 | **73** (−73%) | — |
+| automation / research / landing job-h per 20.3 h | ≈ 77 / 48 / 10 | 48 / 36 / 4 | — |
+| required-check queue p95 (Guards / pytest-run / pytest-collect) | 48.2 / 38.6 / 31.7 min | **3.3 / 3.3 / 3.4 min** | V2 ≤ 5 ✅ |
+| required-check checkout p95 (Guards / pytest-run / pytest-collect) | 18.2 / 19.0 / 7.8 min | 3.7 / 4.1 / 1.2 min | V2 ≤ 3 ⚠️ close |
+| pytest-run exec p50 | 19.9 min | 9.9 min | — |
+| ops queue p95 (n=30) | 32.1 min | 6.2 min (max 8.0) | V3 ≤ 5 ⚠️, includes own concurrency groups |
+| landing queue p95 | 77.2 min | 4.3 min | — |
+| minutes a required check waited with ≥ 18 hosted jobs | 275 of 900 | 48 of 900 | V6/V4 → M1 |
+| peak hosted concurrency | 20 (the cap) | 20 (the cap) | bursts remain |
+
+CI-STREAMLINE's own 6-h readout agrees in direction:
+- PR pytest-run p50 21.9 → 13.4 min;
+- PR guards p90 25.3 → 11.8 min;
+- PR open → merge p50 28.6 → 13.0 min (n=41, merged only).
+
+Its 24-h readout had not been posted to row CI-STREAMLINE when this was read (20:05Z). Blobless checkout (#22738) was disproved and
+closed there, so B2 is DROPPED as a lever.
+
+**Reading.**
+- The pool is no longer full on average; 8 of 20 slots are used.
+- The merge path is no longer queued in normal hours.
+- What remains is bursts: the pool still reaches 20, and in 48 minutes a required check waited. The next demand lever is B5 (row
+  CI-BATCH-BOOKKEEPING, about 360 research bookkeeping PRs/wk → about 120).
+- Buying capacity is not justified by this data.
+
+## 9. Audit decisions folded in (DEEP-AUDIT-20261104, #22902)
+
+**#13: one follow-through register (operator chose "One register").** Every follow-up of this design lives as a checklist row with
+`due_by`; none is filed to the pipeline. Proposed for the manager to dispose:
+- PI-20261103-RAM7EH86-0002 (stuck-queue rescue), -0004 (re-arm gate) and -0005 (keeper observation of infra-runner-health) →
+  `killed`, reason "trainer runners retired by D2; follow-through on row COMPUTE-ALLOCATION-DESIGN (B9)".
+- PI-20261103-RAM7EH86-0003 (sparse checkout) → `killed`, reason "B2 disproved: blobless checkout #22738 closed by CI-STREAMLINE".
+- The build steps B5 (CI-BATCH-BOOKKEEPING), B6, B8, B9 and B13 each need a row with `due_by`, or a line on this row. None may be a
+  pipeline item.
+
+**#14: one owner per fact (tick sizes had 4+ owners).** The same defect exists in compute routing. **"Which workflows are money-path
+ops" has three owners that disagree** (MEASURED on `main`, 2026-11-04):
+- (a) `research_compute.yaml` `limits.infra_workflows`: 28 names;
+- (b) the 11 workflows that read `vars.INFRA_RUNS_ON`;
+- (c) the class regex in `actions_capacity_inventory.py`.
+
+3 of (b) are research workflows (`research-queue-dispatch`, `research-script-run-kaggle`, `research-script-run-kaggle-cpu`); that is
+how research reached the ops pool on 11-03. 25 of (a) do not read (b). **B13**: (a) becomes the one owner; (b) must be a subset of (a)
+plus the runner-admin workflows; the tool already reads (a). The check is a NON-BLOCKING report modelled on
+`check_cost_model_single_owner.py`; a blocking guard needs the operator's OK (No new gates). The bot-data paths list is the second
+multi-owner fact: it lives in `.github/ci-change-classes.json` plus the `paths-ignore` blocks of `work-digest.yml` and
+`branch-sync.yml`. Fold it into the change-class map (CI-STREAMLINE's owner).
+
+**Usage.** The Claude weekly plan is the scarcest compute this system runs on (`docs/claude/work/USAGE-READINGS.jsonl`, the 3 readings 2026-11-03T06:28Z..11-04T18:00Z: 89% and 91% on
+11-03 before the 2026-11-04 18:00Z reset; 0% at the reset). How much of last week's plan went to sessions waiting on CI is UNMEASURED.
+The 11-03 merge path (1-line PRs over 1 h) is the mechanism that converts CI queue into plan spend. M1 should read the week's
+`USAGE-READINGS` beside the CI numbers.
+

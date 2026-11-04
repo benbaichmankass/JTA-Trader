@@ -442,7 +442,10 @@ def test_ib_siblings_without_keyed_groups_are_ambiguous_never_a_mismatch():
     v = L._venue_exit_prices(s, "ib_paper", "interactive_brokers", "MGC", "short", trade_id=6673, siblings=1)
     assert (v["sl"], v["tp"], v["ambiguous"], v["position"]) == (None, None, True, True)
     p = _build(A_PKG, s, cfg={"ib_paper": {"exchange": "interactive_brokers"}})
-    assert p["mechanics"]["verdict"] == "match" and "venue SL" not in p["mechanics"]["evidence"]
+    # never a mismatch from a leg that is not this package's -- and, since SHARED-BRACKET-FIX (2026-11-04), never
+    # a "match" either: no level was compared, so the only honest verdict is could_not_look
+    assert p["mechanics"]["verdict"] == "could_not_look" and "venue SL" not in p["mechanics"]["evidence"]
+    assert "levels not compared" in p["mechanics"]["evidence"]
 
 
 def test_ib_single_package_legacy_group_still_reads_by_symbol():
@@ -561,3 +564,67 @@ def test_a_closed_package_is_not_read_as_an_open_position_held_by_its_sibling():
     assert b["own_position"] is False and "position False" in b["evidence"]
     assert "belongs to " + sib in b["evidence"] and b["read_if_amend"] == "unknown"
     assert p["mechanics"]["verdict"] == "match" and "sibling package(s) " + sib in p["mechanics"]["evidence"]
+
+
+# --------------------------------------------------------------------------- SHARED-BRACKET-FIX (2026-11-04)
+# Packet LR-20261104T0244Z-pkg-1bb434d29c654597 read "match" with the evidence "levels not compared": bybit_1
+# BTCUSDT held a sibling's legs (79165.4 / 70960.6) and none of this package's own ids. A packet that compares no
+# level must never say match, and an ambiguous Bybit read compares the package level against every resting leg.
+
+SCALP, DONCH = "pkg-1bb434d29c654597", "pkg-4e74f4bdc6d44735"
+
+
+def _btc_snap(orders, size=0.59):
+    acct = {"accounts": [{"account_id": "bybit_1", "read_state": "orders_read", "result": {
+        "positions": [{"symbol": "BTCUSDT", "side": "Sell", "size": size, "position_idx": 2}], "orders": orders}}]}
+    s = _snap(bybit_orders=acct)
+    for pid, sl, tp, tid, q, sl_id, tp_id in (
+            (SCALP, "77332.52695", "76602.83928571", 6855, 0.549, "db0ef1ff", "901541e3"),
+            (DONCH, "79165.39", "70960.5976", 6784, 0.59, "8ca52700", "2e8e6ea2")):
+        s.packages[pid] = {"order_package_id": pid, "strategy_name": "x", "symbol": "BTCUSDT", "direction": "short",
+                           "entry": "77448.7", "sl": sl, "tp": tp, "status": "open", "meta": "{}"}
+        s.trades.append({"id": tid, "order_package_id": pid, "account_id": "bybit_1", "status": "open",
+                         "symbol": "BTCUSDT", "position_size": q, "account_class": "paper",
+                         "sl_order_id": sl_id, "tp_order_id": tp_id})
+    return s
+
+
+_DONCH_LEGS = [
+    {"symbol": "BTCUSDT", "side": "Buy", "order_id": "8ca52700", "stop_order_type": "PartialStopLoss", "trigger_price": 79165.4},
+    {"symbol": "BTCUSDT", "side": "Buy", "order_id": "2e8e6ea2", "stop_order_type": "PartialTakeProfit", "trigger_price": 70960.6}]
+
+
+def test_btc_0244z_packet_shape_is_a_mismatch_not_a_match():
+    p = _build(SCALP, _btc_snap(list(_DONCH_LEGS)))
+    m = p["mechanics"]
+    assert m["verdict"] == "mismatch", m
+    assert "no resting BTCUSDT SL leg at the package level 77332.52695" in m["evidence"]
+    assert "79165.4" in m["evidence"]
+
+
+def test_sibling_with_its_own_legs_still_matches():
+    p = _build(DONCH, _btc_snap(list(_DONCH_LEGS)))
+    assert p["mechanics"]["verdict"] == "match", p["mechanics"]
+
+
+def test_ambiguous_read_with_a_leg_at_the_package_level_is_not_a_mismatch():
+    legs = list(_DONCH_LEGS) + [
+        {"symbol": "BTCUSDT", "side": "Buy", "order_id": "other-sl", "stop_order_type": "PartialStopLoss", "trigger_price": 77332.5},
+        {"symbol": "BTCUSDT", "side": "Buy", "order_id": "other-tp", "stop_order_type": "PartialTakeProfit", "trigger_price": 76602.8}]
+    m = _build(SCALP, _btc_snap(legs, size=1.139))["mechanics"]
+    assert m["verdict"] == "match", m
+    assert "own SL leg id is not resting, but a BTCUSDT SL leg rests at the package level" in m["evidence"]
+
+
+def test_other_book_legs_are_not_this_packages_protection():
+    """Hedge book: Sell-side legs act on the LONG book and are never compared with a short package's levels."""
+    legs = [dict(o, side="Sell", trigger_price=77332.5 if "Stop" in o["stop_order_type"] else 76602.8,
+                 order_id="long-" + o["order_id"]) for o in _DONCH_LEGS]
+    m = _build(SCALP, _btc_snap(legs))["mechanics"]
+    assert m["verdict"] == "mismatch" and "with NO resting SL leg" in m["evidence"], m
+
+
+def test_bybit_position_with_no_tp_leg_is_a_mismatch():
+    legs = [_DONCH_LEGS[0]]
+    m = _build(DONCH, _btc_snap(legs))["mechanics"]
+    assert m["verdict"] == "mismatch" and "NO resting TP leg" in m["evidence"], m

@@ -1,0 +1,131 @@
+cadence: once
+theme: live_strategy
+priority: 1
+roadmap:
+- L-AM-STANDARD
+kind: experiment
+practice_precedent: 'T1, T2, T3, T4, T8 (docs/reference/trading-and-model-practice-principles.md): intervention judged against hold AND a matched random intervention,
+  per leg, entries fixed, net of cost.'
+intervention_controls:
+  not_applicable: Static exit geometry chosen at entry by an existing harness flag (--trail-level-tight-mult), not a triggered in-trade action; hold is arm A (the
+    leg as declared). Same shape as the parent 5e02-07.
+power:
+  expected_n: 400
+  min_detectable_effect: 0.1
+  effect_units: R
+  sd: 1.2
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: ESTIMATE as parent 5e02-07; n=1085 measured there, so the +0.02 R/trade bar is 21.7 R.
+  feasibility:
+    source: none
+    accrual_basis: Replays history on freshly fetched public candles for a pinned window; nothing accrues. The detector and harness arms are the blockers, not the
+      data.
+compute: cpu_long
+value:
+  usd_at_stake_per_month: 400
+  confidence: 0.25
+  bucket: own_losses
+  basis: 'stand-in estimate: governs the default exit of a leg that trades real money; not a measurement.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 4.0
+  est_minutes: 90
+  why_runner: 'Operator rule (row COMPUTE-PREFER-KAGGLE, not present in this clone, cited from the dispatch): compute on Kaggle first. Keyless public candles, CPU
+    only; route to research-script-run-kaggle.yml if the router allows a CPU class there, else the runner. The harness must run on both.'
+  basis: 'Estimate: 4 arms x one leg over the pinned window; one 2h-leg arm took about 20 s on the runner (ed1c-17 / 9a7e-01 logs). The first run replaces it.'
+programme: P1
+related:
+- research/levers/ltr-sl-to-structure.yaml
+- src/runtime/tp_revision.py
+- scripts/research/exit_lever_ablation.py
+- docs/research/structure-exits-default-scope-2026-11-01.md
+- RQ-20261101-5e01-07 (blocked full dynamic form)
+- 'RQ-20261101-5e02-07 (parent: SW5 near-miss)'
+- research/results/RQ-20261101-5e02-07/41573397862.jsonl
+id: RQ-20261104-7a3e-01
+title: 'Structure trail tightening multiple (the one factor; pivot 5 fixed): does loosening SW5''s tighten-to level from 1.0 to 1.5 / 2.0 / 3.0 ATR clear the registered
+  +0.02 R/trade bar on trend_donchian_eth_prop, net of the full cost stack? Iteration on the 5e02-07 near-miss'
+status: queued
+question: '5e02-07 (trend_donchian_eth_prop, n=1085, 2020-07-01..2026-10-15, full venue cost stack): SW5 (pivot 5, tighten-to 1.0 ATR) net R +26.65 vs incumbent +8.72
+  = +17.93 R = +0.0165 R/trade; 4 of 4 folds at or above the incumbent (needs 4), max DD 23.4 R vs incumbent 37.5 R (cap 50.6) -- it FAILED only the registered +0.02
+  R/trade bar (21.7 R at n=1085). SW3 +16.8 R and FVG +14.0 R fell short the same way; every arm beat A, so the direction is consistent. The incumbent is a trail
+  (819 of 1085 trades exit by trail_stop) and the structure arm tightens to 1.0 ATR on first touch; the diagnosis is that 1.0 ATR is too tight for a trend follower
+  on 1h bars and gives back some of the gain. Measure the tightening multiple, nothing else.'
+why_this_matters: Row STRUCTURE-EXITS-DEFAULT / operator 2026-11-01 default-exit decision. trend_donchian_eth_prop is the only one of 7 legs where a structure trail
+  beat the incumbent in 5e02 (the other six lost to it); a near-miss with a consistent sign is exactly the lever-map case to iterate (research-ops core mandate).
+  A PASS is a discovery, never a config change.
+iteration:
+  subject: trend_donchian_eth_prop
+  subject_kind: strategy_leg
+  from_result: RQ-20261101-5e02-07
+  verdict_read: fail
+  diagnosis: SW3/SW5/FVG all beat A by +14.0..+17.9 R (n=1085) but below the registered +21.7 R bar; 4/4 folds for SW5 and FVG; lower DD than A. Tighten-to 1.0 ATR
+    is the untested parameter.
+  search: 'trail_geometry family: tight_mult in {1.5, 2.0, 3.0} at pivot_k=5 (the best arm), 3 candidates.'
+  levers:
+  - exit
+  attempt: 2
+  due_by: '2026-11-18'
+decision_rule:
+  id: RULE-RQ20261104-7A3E-01-TIGHT-MULT
+  registered_at: '2026-11-04'
+  registered_before_run: true
+  statistic: 'exit_lever_ablation.py --grade replace over 2020-07-01 (2021-07-01 for the dukascopy ETF legs)..2026-10-15, 6 equal calendar folds by entry time, net
+    of the full cost stack the harness resolves per venue (cost_stack recorded per arm), baseline A, parameters unchanged from RQ-20261101-5e02-07: delta-r 0, delta-r-per-trade
+    0.02, fold-majority 4 of 6, dd-tol-frac 0.35, n-floor 39.'
+  rule: 'Registered 2026-11-04 before any run. Candidates SW5T15, SW5T20, SW5T30 (tight-mult 1.5 / 2.0 / 3.0; pivot_k 5; multiplicity 3, plus the 3 arms already read
+    on this window in 5e02-07 = 6 tries on this leg and window). One factor: the tightening multiple. A candidate PASSES when the harness''s replace verdict passes
+    with the unchanged parameters (delta-r-per-trade 0.02, fold-majority 4 of 6, dd-tol-frac 0.35, n-floor 39). FAIL if none passes. INDETERMINATE if n < 39 or no
+    arm fires the level. HONEST WINDOW: second read of the same 2020-07-01..2026-10-15 window, so a PASS is a DISCOVERY with an optimistic bias: it needs one confirmation
+    on post-window data (forward trades from 2026-10-16, not consumed here) before any Tier-3 per-leg apply PR. Thresholds, arms, grid, window not changed after any
+    result.'
+  what_it_does_not_do: Edits no config or roster, places no order, does not test a ratcheting SL or structure TP, does not touch other legs.
+  min_n: 39
+run:
+  command:
+  - python3
+  - scripts/research/exit_lever_ablation.py
+  - --leg
+  - trend_donchian_eth_prop
+  - --arm
+  - A=
+  - --arm
+  - SW5T15=--trail-level=swing;--trail-level-pivot-k=5;--trail-level-tight-mult=1.5
+  - --arm
+  - SW5T20=--trail-level=swing;--trail-level-pivot-k=5;--trail-level-tight-mult=2.0
+  - --arm
+  - SW5T30=--trail-level=swing;--trail-level-pivot-k=5;--trail-level-tight-mult=3.0
+  - --days
+  - '2330'
+  - --start
+  - '2020-07-01'
+  - --end
+  - 2026-10-15 23:59
+  - --grade
+  - replace
+  - --baseline
+  - A
+  - --delta-r
+  - '0'
+  - --delta-r-per-trade
+  - '0.02'
+  - --folds
+  - '6'
+  - --fold-majority
+  - '4'
+  - --dd-tol-frac
+  - '0.35'
+  - --n-floor
+  - '39'
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 150
+  inputs:
+    research_unit: RQ-20261104-7a3e-01
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1

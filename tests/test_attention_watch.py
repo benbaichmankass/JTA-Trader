@@ -340,3 +340,12 @@ def test_desk_wake_post_probe_does_not_flag_skipped_by_cadence(tmp_path, monkeyp
     monkeypatch.setattr(a, "REPO_ROOT", tmp_path)
     p = a.probe_desk_wake_post(_DNOW)
     assert p["status"] == a.OK and "skipped_by_cadence" in p["detail"]
+
+
+def test_killed_row_is_not_a_rows_mirror_stall(tmp_path, monkeypatch):
+    """The mirror never copies a row in killed_rows.json; the probe must not call it a stuck row
+    (BACKLOG-DRAIN-20261104: LR-20261031T1529Z-pkg-821a... held live_review_due_stale at BREACHED)."""
+    monkeypatch.setattr(a, "_lr_killed_ids", lambda: {"KILLED"})
+    refuses = a._lr_refuses()
+    assert refuses is not None
+    assert refuses({"review_id": "KILLED", "reviewed_at": "2026-10-31T15:36:00Z"}) is True

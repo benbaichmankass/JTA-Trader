@@ -1,0 +1,17 @@
+{
+  "due_when": {
+    "check_every_days": 7,
+    "clears_when": "the root cause is named and the next real-money close carrying operator_flatten_intent=true is labelled operator_flatten_reconciled",
+    "kind": "event"
+  },
+  "id": "PI-20261104-PREP1104-0002",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "performance-review 2026-11-04 (lane PERF-REVIEW-PREP-20261104, manager session_01AFoLuHgZaSYnm9avjeZE33); docs/reviews/2026-11-04-weekly-walkthrough.md PERFORMANCE section 3",
+    "rerun": "scripts/ops/diag_fetch.sh 'journal?table=trades&limit=1000' | python3 -c \"import json,sys;[print(r['id'],r['exit_reason'],r['notes'][:200]) for r in json.load(sys.stdin) if r['id'] in (6844,6845)]\""
+  },
+  "owner": "health-review",
+  "state": "queued",
+  "what": "[performance->health][mechanics] Real-money close mislabelled: journal trades 6844 (bybit_2) and 6845 (bybit_portfolio), ml_entry SOLUSDT short, package pkg-609dc0420b7d4ee6, closed 2026-11-03 ~14:48-14:59Z with notes.operator_flatten_intent=true and closed_by monitor_reconciler, but exit_reason reads reconciler_filled with exit_reason_source 'unresolved'. Other operator flattens in the same journal read operator_flatten_reconciled, so the label path missed this one. The live reviewer had recommended close on this package at 14:08Z (advice-only). Find why the flatten intent did not reach the exit label; fix the labeller."
+}

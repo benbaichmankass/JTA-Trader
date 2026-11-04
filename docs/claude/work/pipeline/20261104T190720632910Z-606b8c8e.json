@@ -1,0 +1,17 @@
+{
+  "due_when": {
+    "check_every_days": 7,
+    "clears_when": "A trainer read names the cause (one of H1/H2/H3 or another, with the per-day volatile-label share as evidence) AND either the MES baselines' recall_volatile is back above 0 on a cycle, or the baselines are recorded as non-comparators (constant-by-construction) with ML-HYGIENE's constant-scorer rule.",
+    "kind": "observation"
+  },
+  "id": "PI-20261104-DGUBH8UA-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "review",
+    "ref": "ml-review 2026-11-04 (lane ML-FRONTIER-PREP-20261104)",
+    "rerun": "GET https://ict-bot.duckdns.org/api/bot/ml/registry -> runs[].metrics.{macro_f1,recall_volatile,support_volatile} for mes-regime-5m-baseline-v1, mes-regime-15m-baseline-v1, mes-regime-5m-lgbm-v2 by run date"
+  },
+  "routed_to": "ML-HYGIENE",
+  "state": "routed",
+  "what": "[ml] MES regime BASELINES went degenerate on the 2026-11-02 cycle and the MES-5m ADVISORY head lost 3.3 macro-F1 points at the same moment. MEASURED from /api/bot/ml/registry runs: mes-regime-5m-baseline-v1 macro_f1 0.674 (11-01) -> 0.371 (11-02, 11-03, 11-04) with recall_volatile 0.47 -> 0.00 (predicts 'range' on every row); mes-regime-15m-baseline-v1 0.577 -> 0.376, same 0.00; mes-regime-5m-lgbm-v2 (advisory, Chihuahua-1d) 0.713 -> 0.680/0.678/0.685, recall_volatile 0.75 -> 0.63/0.62/0.64. Same cycles: support_volatile jumped 3,761 -> 4,046 (+285) while n_eval grew only +157, i.e. the LABEL distribution moved, not just the sample. BTC/SOL heads unchanged (control: btc fc-pcv-v2 0.575->0.578, sol 0.544->0.543). Competing hypotheses: (H1) US DST ended 2026-11-01 and MES session-bound bars/labels or hour_of_day shifted by 1h in UTC; (H2) a change in the MES candle source or label code in 0cf82cc3e..d1ed0a830 (224 commits; none touches ml/configs/mes* by path); (H3) a genuine regime shift in MES. Discriminating test: on the trainer, volatile-label share of datasets-out/market_features/MES*/5m by bar date for 10-25..11-04, plus the baseline manifest's threshold input; H3 predicts the share moves with realised vol, H1 predicts a step at 11-01/02 in session-hour rows. Money impact LOW: MES-5m advisory changes 0 legs (C3). Also voids the PI-20261028-GNVUF1ES-0001 margin series (baseline no longer a comparator)."
+}
