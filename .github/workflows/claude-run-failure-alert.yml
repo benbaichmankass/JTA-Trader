@@ -367,10 +367,12 @@ jobs:
        github.event.workflow_run.conclusion == 'timed_out') &&
       (github.event.workflow_run.name != 'pytest-run' ||
        ((github.event.workflow_run.event == 'push' ||
-         github.event.workflow_run.event == 'schedule') &&
+         github.event.workflow_run.event == 'schedule' ||
+         github.event.workflow_run.event == 'workflow_dispatch') &&
         github.event.workflow_run.head_branch == 'main')) &&
       (github.event.workflow_run.name != 'Guards' ||
-       (github.event.workflow_run.event == 'schedule' &&
+       ((github.event.workflow_run.event == 'schedule' ||
+         github.event.workflow_run.event == 'workflow_dispatch') &&
         github.event.workflow_run.head_branch == 'main'))
     runs-on: ubuntu-latest
     timeout-minutes: 5

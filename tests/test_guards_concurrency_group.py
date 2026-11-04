@@ -69,7 +69,7 @@ class TestTwoPushesToMainAreDistinct:
         whole-tree backstop of main, which must finish to grade anything.
         """
         _, cancel = _block()
-        assert cancel == "${{ github.event_name != 'schedule' }}", cancel
+        assert cancel == "${{ github.event_name != 'schedule' && !(github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main') }}", cancel
 
 
 class TestThePullRequestArmIsUntouched:
