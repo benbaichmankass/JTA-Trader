@@ -2,7 +2,7 @@
   "id": "UI-OVERVIEW-HEALTH-CARDS",
   "title": "Overview page: whole-system health cards above the executive summary (trading per account, research/ML per resource, work queue, ML summary)",
   "phase": null,
-  "state": "queued",
+  "state": "blocked",
   "owner": "manager",
   "lane": null,
   "model": null,
@@ -10,15 +10,21 @@
   "spend_usd": null,
   "tier": 1,
   "prs": [],
-  "blocked_on": [],
-  "note": "Operator 2026-11-04 item 2.2: cards with a health indicator that open to detail. Trading pipeline -> per account incl. last verification the connection is live. Research/ML pipeline -> health, tests running, completed in last 4h, per-resource usage/health/count/last-completed timestamp. Work-queue card (fix staleness, see SYSTEM-AUDIT-INTEGRATION). ML summary -> ML versions on real money/prop/paper, last version update, last decisions logged. Not exhaustive: the design session must find components lacking visibility.",
+  "blocked_on": [
+    {
+      "kind": "work_item",
+      "ref": "RESET-JOBS-20261104",
+      "what": "DEEP-AUDIT-20261104 result landed (operator 2026-11-04 ~18:33Z: audit results before strategic restructuring)"
+    }
+  ],
+  "note": "Operator 2026-11-04 item 2.2: cards with a health indicator that open to detail. Trading pipeline -> per account incl. last verification the connection is live. Research/ML pipeline -> health, tests running, completed in last 4h, per-resource usage/health/count/last-completed timestamp. Work-queue card (fix staleness, see SYSTEM-AUDIT-INTEGRATION). ML summary -> ML versions on real money/prop/paper, last version update, last decisions logged. Not exhaustive: the design session must find components lacking visibility. Operator 2026-11-04 ~18:33Z, verbatim: \"make sure the we get all the review session results before the strategic restructuring tasks (resource allocation, system restructuring, etc)\". Design/restructuring work on this row starts only after every review from the 2026-11-04 reset has landed (deep audit, perf, ML+frontier, practice refresh, health, programme review, roadmap re-baseline, cost/infra; row RESET-JOBS-20261104). Audits that GATHER evidence may run now; synthesis/design waits. Clarified by the operator a minute later, verbatim: \"or sorry, mostly the audit\". So the binding input is the DEEP-AUDIT-20261104 result (lane session_01AFoLuJHHNrJpWUPrhHXtjo, row RESET-JOBS-20261104); the other review results are folded in where they have landed, but do not hold the design.",
   "due_by": "2026-11-10",
   "roadmap": [
     "unmapped"
   ],
   "roadmap_unmapped_reason": "infra/ops; operator 2026-11-04 ~08:20Z audit+planning request, spans every milestone",
   "priority_rank": 4,
-  "updated_at": "2026-11-04T08:23:10Z",
-  "updated_by": "session_01AFoLuLMKGkvg6UbCzdxjNR",
+  "updated_at": "2026-11-04T18:34:57Z",
+  "updated_by": "session_01AFoLuHgZaSYnm9avjeZE33",
   "_seq": 904
 }
