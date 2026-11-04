@@ -1020,6 +1020,10 @@ def evidence_extend_only(args) -> int:
     dev = json.loads(Path(args.dev_json).read_text())
     art = json.loads(SERVED.read_text())
     syms = E.universe()
+    # RQ-20261103-5e04-01 runs 41730977727 / 41735818537: producer_failed (FileNotFoundError on
+    # /tmp/ml_decision_klines/<SYM>.pkl) because this subcommand assumed a warm cache on a fresh runner.
+    # E.fetch is idempotent (a cached symbol is read, not re-downloaded), as dev_stage() already calls it.
+    E.fetch(cache, syms)
     tab = E.build_table(cache, syms)
     bars = load_bars(cache, syms)
     panel = feature_panel(bars)
