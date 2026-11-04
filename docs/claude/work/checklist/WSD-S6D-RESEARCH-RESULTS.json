@@ -1,0 +1,28 @@
+{
+  "id": "WSD-S6D-RESEARCH-RESULTS",
+  "title": "WORK-STORE S6d: research results store on the trainer VM (payloads by sha256 + research_runs with stamps, verdicts, grades), mirrored to the live VM's trainer_store.db; stop batch-land, stamp and grading commits",
+  "phase": null,
+  "state": "queued",
+  "owner": "manager",
+  "lane": null,
+  "model": "claude-opus-5-5",
+  "ceiling_usd": 15,
+  "spend_usd": null,
+  "tier": 2,
+  "prs": [],
+  "blocked_on": [
+    {
+      "kind": "work_item",
+      "ref": "WSD-S1-STORE-API",
+      "what": "needs WSD-S1-STORE-API landed"
+    }
+  ],
+  "note": "docs/plans/WORK-STORE-DESIGN-2026-11.md \u00a73, \u00a79, D7 (approved). Unit specs stay in git and stop being edited after registration. CI SAVING CHECK: batch-land 127 + single results 52 + stamps 107 + grading 28 + replenish stamps per wk go to 0 commits on main; research-queue-dispatch (175 job-h/wk est.) loses its landing waits. Supersedes CI-BATCH-BOOKKEEPING (D9).",
+  "due_by": "2026-11-20",
+  "roadmap": [
+    "L-OPS"
+  ],
+  "updated_at": "2026-11-04T23:37:25Z",
+  "updated_by": "session_01AFoLuKFYUoKzs5TXjGfEdh",
+  "_seq": 928
+}

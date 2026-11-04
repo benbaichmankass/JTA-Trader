@@ -415,6 +415,21 @@ call `GET /api/bot/work/items` through the existing diag transport. A failed rea
 
 ## 8. Decisions for the operator (one popup)
 
+> **DECIDED, operator popup 2026-11-04 ~23:37Z** (relayed by Manager Session 2026-11-04b), verbatim:
+> - D1, D3, D4, D5, D7, D8, D9: *"Approve all 7 (Recommended)"*
+> - D2: *"Funded drain (Recommended)"*
+> - D6: *"Not now (Recommended)"*, so **no restart gate is added**
+> - `DEPLOY-RESTART-ON-DATA-MIRRORS`: *"Pre-approve (Recommended)"*: build it, then merge + deploy when green once the no-import-cache
+>   condition is proven. That is its own lane.
+>
+> **The build is filed as checklist rows**, in the existing checklist until S1 exists:
+> - `WSD-S1-STORE-API`, `WSD-S2-IMPORTER-PARITY`, `WSD-S3-CLI-OUTBOX`, `WSD-S4-READERS-FLIP`, `WSD-S5-STATE-VIEWS`;
+> - `WSD-S6A-PINGS-TO-ALERTS`, `WSD-S6B-DESK-LTR-API`, `WSD-S6C-RECORD-LEDGERS`, `WSD-S6D-RESEARCH-RESULTS`, `WSD-S7-RETIRE-ARCHIVE`;
+> - the D2 drain waves `WSD-DRAIN-W1`, `WSD-DRAIN-W2`, `WSD-DRAIN-W3` (they replace S8).
+>
+> Each row carries a due_by, a tier, a model, a ceiling and blocked_on edges for its dependencies. The D3 token instruction is on
+> `WSD-S1-STORE-API`.
+
 | # | Decision | Recommendation | Why |
 |---|---|---|---|
 | **D1** | Approve the design: one SQLite `work_store.db` on the live VM behind the API, with `items` + `events` as the one register and ledgers for bot output (Generation Discipline rule 3: a new store needs your OK + a backfill, § 4) | **Approve (Recommended)** | Zero new services. It fixes the 5-min lag and moves the 74% of `main` commits that are data off the merge path. |
