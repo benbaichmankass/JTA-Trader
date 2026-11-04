@@ -4,6 +4,27 @@
 
 **Standing (operator):** the news layer and WEPE are **not retired** (NEWS-ALPHA-PROGRAM directive 2026-10-12; WEPE-BUILDOUT 2026-10-08). The research queue is fed only from programme plans; this is P4's.
 
+## Programme review 2026-11-04 (lane PROGRAMME-REVIEW-20261104) — TRADING track
+
+Population: units with a result row generated 2026-10-28T19:41Z..2026-11-04T19:41Z (`research_ops_checks.py --kind programme_review --since 7d`, 1,932 units read, 0 unreadable, 662 result rows): **447 units with rows** — 107 pass, 210 fail, 25 indeterminate, 11 no_action_warranted, 94 with no unit verdict yet (76 ungraded + 18 needs_review/null). 302 carry a programme field (P1 53, P2 54, P3 95, P4 24, P5 48, P6 18, P7 10), 145 do not (live_strategy 70, new_strategy_prop 32, infra 13, ml_health 13, timeframes 6, macro 5, regime 5, none 1) — assigned below by what they ask. Every PASS is a discovery until its confirmation passes.
+
+**P4 in the window:** 24 units with `programme: P4` — **24 FAIL, 0 pass**; plus 5 unprogrammed `macro` units (1 pass: 41cc-09, ppi_mom surprise vs PIT consensus predicts QQQ 1–5 d forward returns).
+
+**What was learned.** The macro event-study sweep (retail sales, ISM services, core CPI, Chicago PMI, CPI/PPI YoY, personal income; one unit each) finds **no surprise-vs-consensus predictor on the tested index/horizon cells** — 24 of 24, one batch per family. The single positive is ppi_mom → QQQ (41cc-09), which agrees with the earlier ppi → RTY IC pass with a clean placebo (RQ-20261016-7769-02). Belief: PPI m/m is the one print with a repeated signal; the others are noise at this n.
+
+**Failed first tests — diagnosis.** 24 FAILs with one design: *power / n* is the leading cause (monthly prints give ~100 events over 8 years; a 1–5 d return IC needs a large effect to clear), *idea* second. Not retired: the variant is pooling prints by type (inflation / activity) and testing the economic rung (P4-Q2-ppi-rty-econ) where the IC already passed.
+
+**Answered / unlocked / retired.** Answered: the per-print sweep (FAIL, configuration closed per print). Unlocked: P4-Q2-ppi-rty-econ (needs_authoring, re-pointed last week to spy/qqq_trend_long_1d) — now with two PPI ICs behind it. Retired: none.
+
+**Next 3–4 weeks**
+
+| node / unit | decision it changes | on PASS | on FAIL | cost | pre-mortem |
+|---|---|---|---|---|---|
+| P4-Q2-ppi-rty-econ (author, research-ops) | whether PPI becomes a sleeve rule on the daily equity legs | Stage-0 sleeve leg | PPI line closed at the economic rung | cpu_light | a symmetric sign book cannot beat long unless the index falls after adverse prints |
+| P4-Q4-g2-rerun (not before 2026-11-07) | PM-implied vs consensus surprise | — | — | — | paired n still 68 |
+
+**Feeds.** P4 → P3: a PPI rule is a filter candidate on spy/qqq_trend_long_1d.
+
 ## Programme review 2026-10-28 (lane PROGRAMME-REVIEW-20261028) — TRADING track
 
 Population: research units with a result row generated 2026-10-21T19:30Z..2026-10-28T19:30Z (`research_ops_checks.py --kind programme_review --since 7d`, 1,480 units read, 0 unreadable): **445 units, 412 graded** (70 pass, 50 indeterminate, 292 fail), 285 with a programme field and 160 without (live_strategy 70, regime 27, ml_health 21, macro 20, infra 13, new_strategy_prop 8, none 1). This review assigns the 160 by what they ask, not by the field (map section). Every PASS below is a discovery until its confirmation unit passes. **Cost basis:** about 36 of the 70 PASS rows are crypto-harness runs charged 7.5 bps round-trip (MEASURED from each result's argv); only RQ-20261028-001 carried the measured Bybit-linear 11.0 bps. A lever A/B delta is nearly fee-neutral (both arms pay it); an absolute Stage-0 or breadth PASS is not.

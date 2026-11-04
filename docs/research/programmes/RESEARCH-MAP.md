@@ -6,6 +6,29 @@
 
 How this fits the work system: a programme is a *plan*, not a third category of work (CLAUDE.md § "Two categories"). Each question below becomes a `research/queue/` unit and each build a checklist row, every one carrying a `roadmap` milestone ref. Full plan per programme: `01-ACTIVE-TRADE-MANAGEMENT.md`, `02-AI-TRADER.md`, `03-STRATEGY-IMPROVEMENT.md` (lane P3-STRATEGY-PROGRAMME), `04-MACRO-SLEEVE.md` (lane P4-MACRO-PROGRAMME) and `05-PROP.md` (lane P5-PROP-PROGRAMME) are all landed (2026-10-14); none is owed.
 
+## Programme review 2026-11-04 (lane PROGRAMME-REVIEW-20261104)
+
+Population: units with a result row generated 2026-10-28T19:41Z..2026-11-04T19:41Z (`research_ops_checks.py --kind programme_review --since 7d`, 1,932 units read, 0 unreadable, 662 result rows): **447 units with rows** — 107 pass, 210 fail, 25 indeterminate, 11 no_action_warranted, 94 with no unit verdict yet (76 ungraded + 18 needs_review/null). 302 carry a programme field (P1 53, P2 54, P3 95, P4 24, P5 48, P6 18, P7 10), 145 do not (live_strategy 70, new_strategy_prop 32, infra 13, ml_health 13, timeframes 6, macro 5, regime 5, none 1) — assigned below by what they ask. Every PASS is a discovery until its confirmation passes.
+
+**Unprogrammed units, assigned by what they ask:** live_strategy 70 → P3 (Stage-0 re-reads, M20 sweeps, same-symbol reads) and P1 (exit levers); new_strategy_prop 32 → P5 (prop pace, replacements) and P3 (structure exits on prop legs → P1); ml_health 13 → P2; infra 13 → P6; timeframes 6 → P7; macro 5 → P4; regime 5 → P3 (entry regime levers) / P2 (heads).
+
+**Two-track summary.**
+- **TRADING.** The strongest result of the week is not a lever but a window: three 1h ETF legs (slv/uso/qqq) confirmed on an 8-year dukascopy holdout, and two more (spy/tlt) whose 365-day records fail are positive over 8 years — the 365-day Yahoo record is the binding constraint on every 1h ETF verdict. Against that, the 1h/2h BTC legs lose at power, and the roster-wide `structure_exit: pivot=5` default (20 legs) lost on 5 of 6 powered legs in its static form and on all 3 legs run in its ratcheting form.
+- **MODEL.** The regime head is skilful and robust (11 passes against the class prior, no learner family better), so the question has moved from "is the model good" to "does it change a money decision" (D2 on a real-money leg, not yet tested). ML timeframes do not scale below 1h, and the 1h harness itself does not reproduce round 1 — every timeframe read is provisional. MODEL has 0 runnable units: a supply gap that the MECE nodes fill once PR #22892 lands.
+
+**Feed table (this week's changes)**
+
+| from | to | what | destination | state |
+|---|---|---|---|---|
+| P1 | P3 | structure exit pivot=5 lost on 5/6 legs | NOSX arms in P3-ITER2-htf-pullback-trend-2h, P3-ITER2-trend-donchian-1h; manager Tier-3 packet | authored / handoff |
+| P1 | P2 | 5e04-01 PASS: SL-only structure stop + moving TP on ml_entry | P2-MECE-D6-pointer-v0 | needs_authoring |
+| P2 | P1/P3 | regime head skilful, not yet a gate | P2-MECE-D2-regime-real-money | needs_authoring |
+| P2 | P7 | 15m/5m ENTRY not viable net of cost (provisional) | no 15m/5m ML units until b620 reproduces | standing |
+| P3 | P2 | 5 1h ETF legs with 8-year evidence | ETF labels for D3/D6 | open |
+| P3 | manager | survivors slv_trend_1h, uso_trend_1h, qqq_pullback_1h | mandate_resolver S1→S2 proposals (Tier 3) | handoff |
+| P6 | all | evidence builder omits skip_hours on pullback legs | pipeline item (this review) | filed |
+| P1 ↔ P5 | — | M2 stale exit passes on 3 2h pullback legs incl. eth_prop | per-leg confirmations | research-ops |
+
 ## Programme review 2026-10-28 (lane PROGRAMME-REVIEW-20261028)
 
 Population: research units with a result row generated 2026-10-21T19:30Z..2026-10-28T19:30Z (`research_ops_checks.py --kind programme_review --since 7d`, 1,480 units read, 0 unreadable): **445 units, 412 graded** (70 pass, 50 indeterminate, 292 fail), 285 with a programme field and 160 without (live_strategy 70, regime 27, ml_health 21, macro 20, infra 13, new_strategy_prop 8, none 1). This review assigns the 160 by what they ask, not by the field (map section). Every PASS below is a discovery until its confirmation unit passes. **Cost basis:** about 36 of the 70 PASS rows are crypto-harness runs charged 7.5 bps round-trip (MEASURED from each result's argv); only RQ-20261028-001 carried the measured Bybit-linear 11.0 bps. A lever A/B delta is nearly fee-neutral (both arms pay it); an absolute Stage-0 or breadth PASS is not.

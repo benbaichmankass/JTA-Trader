@@ -1,0 +1,14 @@
+{
+ "run_id": "cj7-weekly-20261104",
+ "lane": "CJ-7-WEEKLY-20261104",
+ "grader_model": "claude-sonnet-5-5",
+ "journal_read": "2026-11-04 via diag_fetch (6895 trades, 5692 packages); eligible 663; newest graded closed_at before run 2026-10-28T18:02:47Z; 34 new closes after it, 0 other ungraded",
+ "n_blind_new": 34,
+ "n_reveal_new": 34,
+ "n_reveal_retried": 35,
+ "reveal_still_missing": 0,
+ "rejected_passes": [],
+ "safeguard_recurrences": 0,
+ "cost_usd": {"blind_new34": 0.3262, "reveal_old35": 0.3191, "reveal_new34": 0.2972, "grader_total_measured": 0.9425, "own_session": "not measured (est. ~1.0-1.5, INFERRED)", "cap": 3.0},
+ "notes": "The 12 old r07 reveal inputs (branch rv-r07-2) no longer existed; rebuilt from the journal with a fresh salt and relabelled to the original packet ids; blind packet_sha in the reveal rows is the stored blind row's. Reveal rows for those 12 and the other 23 were ingested by script from stored blind rows (original blind prompt_sha kept in blind_judgment_id). Gates: one row per packet, enums valid, theses/notes all distinct (34/34, 35/35, 34/34), varied grades; reveal changed 0 of 35 (old, notes hand-written and distinct) and 1 of 34 (new). Binance spot data-api mirror used for candles."
+}

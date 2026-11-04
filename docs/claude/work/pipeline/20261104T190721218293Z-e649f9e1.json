@@ -1,0 +1,17 @@
+{
+  "due_when": {
+    "check_every_days": 7,
+    "clears_when": "A retrained ENTRY artifact with data-through within 8 days of its publish date is served (model.json train_end_exclusive), the retrain is scheduled (timer or workflow on main), and ML-ENTRY-LIVE-MONITOR reports realised net R per closed ENTRY decision on bybit_2.",
+    "kind": "observation"
+  },
+  "id": "PI-20261104-DGUBH8UA-0002",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "review",
+    "ref": "ml-review 2026-11-04 (lane ML-FRONTIER-PREP-20261104)",
+    "rerun": "python3 -c \"import json;print(json.load(open('ml/served/ml_decision_entry_v1/model.json'))['train_end_exclusive'])\"; GET /api/bot/trades/closed?account_id=bybit_2&since=2026-11-01T00:00:00"
+  },
+  "routed_to": "manager (ML-ENTRY-RETRAIN-CADENCE + ML-ENTRY-LIVE-MONITOR dispatch)",
+  "state": "routed",
+  "what": "[ml] The LIVE real-money ENTRY model (ml-decision-entry-v1, Foxhound-1; strategies.yaml::ml_entry on bybit_2 + bybit_portfolio since PR #22261, 2026-11-01) is served with data-through 2025-09-22 (ml/served/ml_decision_entry_v1/model.json train_end_exclusive) = 408 days stale at 2026-11-04, against the weekly cadence the operator asked for on 2026-11-01 (row ML-ENTRY-RETRAIN-CADENCE: 'held PR for the manager by 2026-11-02T18:00Z', first run 2026-11-08T04:00Z -- row still queued, no PR). Its realised-R monitor (row ML-ENTRY-LIVE-MONITOR) is also still queued, so nothing reads live ENTRY net R. Live so far (MEASURED /api/bot/trades/closed since 2026-11-01): bybit_2 n=4 closed ml_entry trades, pnl% +1.60/+1.97/-0.23/-1.79 (one SOL close is closeReason 'reconciler', two are 'other'); registered held-out figure +0.0073 R/decision (model.json pooled_heldout_mean_net_r); its own W1 window read -0.0405 R (ml_decision_entry_v2 dev_evidence, n=320). Weekly-lines 3 (retrain freshness) is RED. Not a demotion call: the operator ruled 2026-11-01 that a failed Oct test does not block ENTRY (ML-DECISION-MODELS). This item is the schedule slip, raised to the manager."
+}
