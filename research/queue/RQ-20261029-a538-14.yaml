@@ -1,6 +1,6 @@
 id: RQ-20261029-a538-14
 title: 'Stage-1 floor leg: does SL x1.25 (3.125 ATR) or x0.8 (2.0 ATR) beat the declared 2.5 ATR on sol_pullback_2h (short-only) net of cost?'
-status: queued
+status: done
 cadence: once
 roadmap:
 - L-PROP
@@ -104,3 +104,16 @@ related:
 practice_precedent: 'M4, M5 (docs/reference/trading-and-model-practice-principles.md): pre-registered arm grid, every arm counted, baseline =
   the declared leg'
 last_dispatched_at: '2026-11-04T04:04:47+00:00'
+grading:
+  attested: RULERQ20261029A53814
+  auto: true
+  decision_rule_id: RULERQ20261029A53814
+  evidence:
+  - research/results/RQ-20261029-a538-14/41771145378.jsonl
+  graded_at: '2026-11-04'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail

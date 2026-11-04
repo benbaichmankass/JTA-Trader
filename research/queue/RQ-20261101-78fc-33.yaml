@@ -3,7 +3,7 @@ id: RQ-20261101-78fc-33
 title: 'ITERATION 1 of htf_pullback_trend_2h (fail): On htf_pullback_trend_2h over 2020-07-01..2026-10-15 23:59, does any of AD25 (adx_min=25),
   AD30 (adx_min=30), TL80 (trend_lookback=80) beat the declared leg (A) net of the full cost stack, by >= 0.02 R x n(A), in >= 4 of 6 calendar
   folds, with maxDD <= 1.'
-status: queued
+status: done
 cadence: once
 theme: live_strategy
 priority: 2
@@ -123,3 +123,14 @@ related:
 - comms/strategy_evidence/htf_pullback_trend_2h.json
 what_it_does_not_do: Edits no config, roster or rule; places no order; a PASS is an input to the next iteration, not a promotion.
 last_dispatched_at: '2026-11-04T02:49:20+00:00'
+grading:
+  attested: RULE-RQ-20261101-78fc-33
+  auto: true
+  decision_rule_id: RULE-RQ-20261101-78fc-33
+  evidence:
+  - research/results/RQ-20261101-78fc-33/41763361686.jsonl
+  graded_at: '2026-11-04'
+  grader: scripts/research/queue_grade.py
+  reason: 1 row(s), all measured, all pass
+  rows: 1
+  verdict: pass

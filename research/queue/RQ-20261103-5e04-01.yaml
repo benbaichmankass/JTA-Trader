@@ -105,3 +105,17 @@ ml_consumer:
 # All three rows predate the fix; the third was dispatched at 02:49Z on the unfixed code.
 rearmed_at: '2026-11-04T04:40:00+00:00'
 last_dispatched_at: '2026-11-04T06:04:59+00:00'
+grading:
+  attested: RULE-RQ20261103-5E04-01-ML-SLONLY
+  auto: true
+  decision_rule_id: RULE-RQ20261103-5E04-01-ML-SLONLY
+  evidence:
+  - research/results/RQ-20261103-5e04-01/41730977727.jsonl
+  - research/results/RQ-20261103-5e04-01/41735818537.jsonl
+  - research/results/RQ-20261103-5e04-01/41763350275.jsonl
+  graded_at: '2026-11-04'
+  grader: scripts/research/queue_grade.py
+  needs_review: true
+  reason: 'read_state not unanimously measured: [''producer_failed'']'
+  rows: 3
+  verdict: null
