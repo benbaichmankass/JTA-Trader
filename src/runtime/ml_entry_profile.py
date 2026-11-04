@@ -46,12 +46,12 @@ _SHARED_KEYS = ("reference_venue", "reference_universe", "anchor", "session", "c
 _COST_KEYS = ("fee_bps_rt", "slippage_bps_rt", "funding_bps_per_8h", "artifact_bps_rt")
 
 
-def _accounts_for(leg_cfg: Mapping[str, Any], symbol: str) -> List[str]:
+def _accounts_for(leg_cfg: Mapping[str, Any], symbol: str, leg: Optional[str] = None) -> List[str]:
     from src.config.symbol_sets import ACCOUNT_SYMBOLS_KEY, leg_symbols
     scope = leg_cfg.get(ACCOUNT_SYMBOLS_KEY)
     if not isinstance(scope, Mapping):
         return []
-    return [str(a) for a in scope if symbol in leg_symbols(leg_cfg, str(a))]
+    return [str(a) for a in scope if symbol in leg_symbols(leg_cfg, str(a), leg=leg)]
 
 
 def _norm_cost(raw: Any) -> Optional[Dict[str, float]]:
@@ -79,7 +79,7 @@ def _one(profile: Mapping[str, Any], leg_side: str) -> Dict[str, Any]:
     }
 
 
-def resolve(leg_cfg: Mapping[str, Any], symbol: str) -> Dict[str, Any]:
+def resolve(leg_cfg: Mapping[str, Any], symbol: str, leg: Optional[str] = None) -> Dict[str, Any]:
     """The resolved profile for ``symbol`` on this leg. Always returns a dict; ``conflict`` is a key name or None.
 
     A leg without ``account_profiles`` returns the defaults with ``declared=False`` -- the caller then takes the
@@ -88,7 +88,7 @@ def resolve(leg_cfg: Mapping[str, Any], symbol: str) -> Dict[str, Any]:
     leg_cfg = leg_cfg if isinstance(leg_cfg, Mapping) else {}
     leg_side = _resolve_side_filter(dict(leg_cfg))
     profiles = leg_cfg.get(PROFILES_KEY) if isinstance(leg_cfg.get(PROFILES_KEY), Mapping) else {}
-    accounts = _accounts_for(leg_cfg, symbol)
+    accounts = _accounts_for(leg_cfg, symbol, leg)
     resolved = [_one(profiles.get(a) if isinstance(profiles.get(a), Mapping) else {}, leg_side) for a in accounts]
     if not resolved:
         resolved = [_one({}, leg_side)]
