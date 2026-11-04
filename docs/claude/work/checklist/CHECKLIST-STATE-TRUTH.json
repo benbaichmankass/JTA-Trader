@@ -11,13 +11,13 @@
   "tier": 1,
   "prs": [],
   "blocked_on": [],
-  "note": "[SYSTEM-AUDIT-INTEGRATION F7, docs/audits/2026-11-04-system-integration.md] MEASURED 2026-11-04 ~18:27Z: GET /api/bot/work/snapshot served 1273 rows (main had 1274; treeState synced, so the VM pull is NOT the cause). in_flight 38, of which 33 updated >48h ago (median 79h, 4 >7d); newest done/dropped row ML-ENTRY-RISK-META 2026-11-02T21:22Z; 9 of 1274 rows updated in the last 24h. This lane's own row read state=queued lane=null at 18:18Z while the lane was running (manager SKILL step 3 'set in_flight on dispatch' not applied). Recurrence: AUD-20261019-STALE-INFLIGHT counted 32 on 10-28 and was dropped in the 10-29 bulk reset. FIX (Tier 1): (a) manager sweep now: every in_flight row checked against get_session, set to queued/landed_unproven/done with a reason; (b) dispatch writes in_flight in the same push as create_session; (c) /work/snapshot adds per-row ageHours and a staleInFlight count so the card shows its own staleness. DETECTOR: snapshot staleInFlight == 0 rows >48h without a live lane, re-run daily.",
-  "due_by": "2026-11-06",
+  "note": "[SYSTEM-AUDIT-INTEGRATION F7, docs/audits/2026-11-04-system-integration.md] MEASURED 2026-11-04 ~18:27Z: GET /api/bot/work/snapshot served 1273 rows (main had 1274; treeState synced, so the VM pull is NOT the cause). in_flight 38, of which 33 updated >48h ago (median 79h, 4 >7d); newest done/dropped row ML-ENTRY-RISK-META 2026-11-02T21:22Z; 9 of 1274 rows updated in the last 24h. This lane's own row read state=queued lane=null at 18:18Z while the lane was running (manager SKILL step 3 'set in_flight on dispatch' not applied). Recurrence: AUD-20261019-STALE-INFLIGHT counted 32 on 10-28 and was dropped in the 10-29 bulk reset. FIX (Tier 1): (a) manager sweep now: every in_flight row checked against get_session, set to queued/landed_unproven/done with a reason; (b) dispatch writes in_flight in the same push as create_session; (c) /work/snapshot adds per-row ageHours and a staleInFlight count so the card shows its own staleness. DETECTOR: snapshot staleInFlight == 0 rows >48h without a live lane, re-run daily. [2026-11-04T20:06Z lane session_01AFoLuLCbQTSU5jK9dbmcvU] Design step 5: build owner_liveness.py's main() first (AUD-20261104-OWNER-LIVENESS-ZOMBIE), then /work/snapshot staleInFlight reads from it. Deep audit C6 agrees: >=20 of 39 in_flight unsupported. [2026-11-04 re-prioritization] PRIORITY A, due this week (due_by 2026-11-08, priority_rank 1; the register has no separate priority-A field). Operator, verbatim:",
+  "due_by": "2026-11-08",
   "roadmap": [
     "L-OPS"
   ],
-  "priority_rank": 3,
-  "updated_at": "2026-11-04T18:30:20Z",
-  "updated_by": "session_01AFoLuLCbQTSU5jK9dbmcvU",
+  "priority_rank": 1,
+  "updated_at": "2026-11-04T22:39:31Z",
+  "updated_by": "PLANNING-CLOSE-20261104",
   "_seq": 908
 }
