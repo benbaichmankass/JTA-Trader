@@ -59,8 +59,8 @@ attribution:
       net_r: -6.729
       gross_r: 2.655
 manifest:
-  entry: untested
-  exit: untested
+  entry: tested
+  exit: tested
   filter: untested
   regime_gating: untested
   timeframe: untested
@@ -68,4 +68,48 @@ manifest:
   direction: untested
   session: untested
   sizing_vs_cost: untested
-levers: {}
+levers:
+  entry:
+    trend_lookback:
+      tests:
+      - value: '120'
+        baseline_value: '60'
+        arm: TL120
+        unit: RQ-20261101-78fc-56
+        window: 2018-06-01..2026-10-15
+        n: 628
+        net_r: 144.1704
+        baseline_n: 574
+        baseline_net_r: 119.5597
+        delta_net_r: 24.6107
+        folds_ge_baseline: 3/6
+        max_drawdown_r: 11.3435
+        verdict: fail
+        joint_change: false
+      shape: single_point
+      points: 1
+      best_delta_r_per_trade: 0.0429
+      fold_stability: 0.5
+      reading: 'one-point or fold-unstable gain: overfit until a holdout says otherwise'
+  exit:
+    atr_stop_mult:
+      tests:
+      - value: '3.0'
+        baseline_value: '2.0'
+        arm: SL30
+        unit: RQ-20261101-78fc-56
+        window: 2018-06-01..2026-10-15
+        n: 558
+        net_r: 87.3273
+        baseline_n: 574
+        baseline_net_r: 119.5597
+        delta_net_r: -32.2324
+        folds_ge_baseline: 1/6
+        max_drawdown_r: 10.3951
+        verdict: fail
+        joint_change: false
+      shape: single_point
+      points: 1
+      best_delta_r_per_trade: -0.0562
+      fold_stability: 0.167
+      reading: every tested value is worse than the baseline
