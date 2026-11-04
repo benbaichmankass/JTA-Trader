@@ -4,7 +4,7 @@
 id: RQ-20261027-003
 title: 'Re-validation at power, leg AS NOW DECLARED (finite 3.5 R TP): does ief_pullback_1d clear Stage
   0 on 2006-10-02 .. 2025-04-09, net of the full cost stack?'
-status: queued
+status: done
 cadence: once
 roadmap:
 - L-LADDER
@@ -133,3 +133,15 @@ iteration:
   hypothesis: measured at power, faithful, the declared leg clears Stage 0
   attempt: 1
   due_by: '2026-11-08'
+grading:
+  auto: true
+  decision_rule_id: RULE-P3-Q3-IEF-FINITE-TP-STAGE0
+  evidence:
+  - research/results/RQ-20261027-003/41660798764.jsonl
+  graded_at: '2026-11-03'
+  grader: scripts/research/queue_grade.py
+  note: 'deterministic harness: FAIL closes this cell with no same-window replay; it does not retire the
+    family (family-retirement protocol, #18557)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail
