@@ -1,0 +1,65 @@
+{
+  "unit": "RQ-20261101-d1f3-05",
+  "run_id": "41814307210",
+  "commit_sha": "3b1b6068f875ac8988a48feb5a2d514b07e02e52",
+  "run_url": "https://github.com/benbaichmankass/JTA-Trader/actions/runs/41814307210",
+  "timeout_minutes": 150,
+  "commands": [
+    {
+      "index": 0,
+      "argv": [
+        "python3",
+        "scripts/research/edge_movement_capture.py",
+        "--build-data",
+        "--data-root",
+        "comms/research/_scratch_edge_data",
+        "--rt-bps",
+        "14",
+        "--dsr-trials",
+        "16",
+        "--out",
+        "comms/research/RQ-20261101-d1f3-05/41814307210/ctl.json"
+      ],
+      "log": "comms/research/RQ-20261101-d1f3-05/41814307210/logs/cmd-0.log",
+      "exit_code": 0,
+      "seconds": 49.3
+    },
+    {
+      "index": 1,
+      "argv": [
+        "python3",
+        "scripts/research/edge_movement_capture.py",
+        "--data-root",
+        "comms/research/_scratch_edge_data",
+        "--rt-bps",
+        "4",
+        "--dsr-trials",
+        "16",
+        "--out",
+        "comms/research/RQ-20261101-d1f3-05/41814307210/arm_rt4.json"
+      ],
+      "log": "comms/research/RQ-20261101-d1f3-05/41814307210/logs/cmd-1.log",
+      "exit_code": 0,
+      "seconds": 40.2
+    },
+    {
+      "index": 2,
+      "argv": [
+        "python3",
+        "scripts/research/edge_iteration_verdict.py",
+        "--control",
+        "comms/research/RQ-20261101-d1f3-05/41814307210/ctl.json",
+        "--arm",
+        "comms/research/RQ-20261101-d1f3-05/41814307210/arm_rt4.json",
+        "--factor",
+        "maker-fill cost ceiling (round trip 14 -> 4 bps)",
+        "--out",
+        "comms/research/RQ-20261101-d1f3-05/41814307210"
+      ],
+      "log": "comms/research/RQ-20261101-d1f3-05/41814307210/logs/cmd-2.log",
+      "exit_code": 0,
+      "seconds": 0.0
+    }
+  ],
+  "all_ok": true
+}

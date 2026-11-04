@@ -1,0 +1,12 @@
+Fetching TLT 60 candles 2018-06-19 -> 2026-11-04 (source=dukascopy) …
+  dukascopy: TLT -> INSTRUMENT_ETF_CFD_US_TLT_US_USD (relation=same_ticker_cfd: same underlying, CFD)
+INFO:DUKASCRIPT:current timestamp :2026-11-03T20:00:00
+Wrote 14683 rows (2018-06-19 -> 2026-11-03) to /tmp/exit_lever_ablation_3fxtbw7l/tlt_pullback_1h__data.csv
+[A] /opt/hostedtoolcache/Python/3.11.18/x64/bin/python3 /home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_pullback.py --trend-lookback 60 --pullback-lookback 12 --pullback-frac 0.5 --data <data> --symbol TLT --resample 1h --atr-period 14 --atr-stop-mult 2.0 --trail-mult 3.0 --min-confidence 0.0 --fee-bps-roundtrip 0.0 --emit-trades comms/research/RQ-20261101-78fc-56/41807536672/arms/A__trades.jsonl --json comms/research/RQ-20261101-78fc-56/41807536672/arms/A__bt.json --trail-decay-stall-bars 6 --trail-decay-tight-mult 1.5 --tp-cap-pct 0.099 --tp-r 50.0 --start 2018-06-01 --end 2026-10-15 23:59
+[SL30] /opt/hostedtoolcache/Python/3.11.18/x64/bin/python3 /home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_pullback.py --trend-lookback 60 --pullback-lookback 12 --pullback-frac 0.5 --data <data> --symbol TLT --resample 1h --atr-period 14 --atr-stop-mult 3.0 --trail-mult 3.0 --min-confidence 0.0 --fee-bps-roundtrip 0.0 --emit-trades comms/research/RQ-20261101-78fc-56/41807536672/arms/SL30__trades.jsonl --json comms/research/RQ-20261101-78fc-56/41807536672/arms/SL30__bt.json --trail-decay-stall-bars 6 --trail-decay-tight-mult 1.5 --tp-cap-pct 0.099 --tp-r 50.0 --start 2018-06-01 --end 2026-10-15 23:59
+[TL120] /opt/hostedtoolcache/Python/3.11.18/x64/bin/python3 /home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_pullback.py --trend-lookback 120 --pullback-lookback 12 --pullback-frac 0.5 --data <data> --symbol TLT --resample 1h --atr-period 14 --atr-stop-mult 2.0 --trail-mult 3.0 --min-confidence 0.0 --fee-bps-roundtrip 0.0 --emit-trades comms/research/RQ-20261101-78fc-56/41807536672/arms/TL120__trades.jsonl --json comms/research/RQ-20261101-78fc-56/41807536672/arms/TL120__bt.json --trail-decay-stall-bars 6 --trail-decay-tight-mult 1.5 --tp-cap-pct 0.099 --tp-r 50.0 --start 2018-06-01 --end 2026-10-15 23:59
+{
+ "verdict": "fail",
+ "label": "incumbent_stands",
+ "why": "no candidate clears net R / fold / drawdown: the incumbent exit stands"
+}
