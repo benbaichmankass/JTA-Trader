@@ -1,0 +1,498 @@
+{
+ "request_id": "HEALTH-REVIEW-20261104",
+ "reviewed_at": "2026-11-04T19:45:00+00:00",
+ "reviewer": "session_01AFoLuJuS137LaGTV3KwRtZ",
+ "lane": "HEALTH-REVIEW-20261104 (RESET-JOBS-20261104, manager session_01AFoLuHgZaSYnm9avjeZE33)",
+ "window_start": "2026-10-28T19:40:00+00:00",
+ "window_end": "2026-11-04T19:35:00+00:00",
+ "window": "newest prior reviewed_at 2026-10-28T19:40Z to now",
+ "overall_assessment": "investigate",
+ "operator_attention_required": true,
+ "prior_calls_scorecard": {
+  "source_record": "comms/reviews/health/2026-10-28-health-review.json",
+  "n_calls": 6,
+  "hit": 4,
+  "miss": 1,
+  "unresolved": 1,
+  "void": 0,
+  "brier": "INDETERMINATE",
+  "calls": [
+   {
+    "id": "HR-20261028-C1",
+    "result": "unresolved",
+    "action_state": "stalled",
+    "note": "GLD orders still survive cancel (19:08Z); 5th review; ask_operator outstanding"
+   },
+   {
+    "id": "HR-20261028-C2",
+    "result": "hit",
+    "action_state": "closed-no-detector",
+    "note": "SPYM evaluates; row set done"
+   },
+   {
+    "id": "HR-20261028-C3",
+    "result": "hit",
+    "action_state": "closed-no-detector",
+    "note": "live disk 64.4% used <= 85%"
+   },
+   {
+    "id": "HR-20261028-C4",
+    "result": "miss",
+    "action_state": "stalled",
+    "note": "unrouted 166; row queued 7 d"
+   },
+   {
+    "id": "HR-20261028-C5",
+    "result": "hit",
+    "action_state": "moving",
+    "note": "real_money compliant 1 of 7"
+   },
+   {
+    "id": "HR-20261028-C6",
+    "result": "hit",
+    "action_state": "closed+detector",
+    "note": "self-test 66/66"
+   }
+  ]
+ },
+ "checks": [
+  {
+   "id": "H1",
+   "status": "watch",
+   "value": "all canonical trader-VM units active (ict-git-sync/ict-work-report activating = timer run); heartbeat 24-33 s; health snapshots 917 in 168 h: 888 ok / 29 watch; max gap 172 min 2026-11-02T11:46Z (next 15.4 min); bot_uptime 46-108 s at pull = restart churn (21/day, owned by SYSTEM-AUDIT-INTEGRATION)",
+   "population": "canonical units in diag services; snapshots 2026-10-28T19:20Z..2026-11-04T19:17Z",
+   "window": "2026-10-28T19:40:00+00:00..2026-11-04T19:35:00+00:00",
+   "evidence": "diag status, services; api/bot/health/history?hours=168",
+   "prior": [
+    "10-28 ok 813/815, max gap 15.5 min"
+   ],
+   "coverage": "complete"
+  },
+  {
+   "id": "H2",
+   "status": "ok",
+   "value": "running b129d38c5 = on-disk = origin/main at pull; 0 src/config files differ",
+   "population": "src/ + config/ since running SHA",
+   "window": "2026-10-28T19:40:00+00:00..2026-11-04T19:35:00+00:00",
+   "evidence": "diag status git_sha_running vs git rev-parse origin/main",
+   "prior": [
+    "10-28 ok 0 files"
+   ],
+   "coverage": "complete"
+  },
+  {
+   "id": "H3",
+   "status": "ok",
+   "value": "8/8 probeable accounts api_ok and reachability down=false; not probed: breakout_1/2, tradeify_1, velotrade_1 (manual bridge), ib_live/oanda_practice shelved; ib_paper was not-ok ~00:10-03:01Z 11-03",
+   "population": "8 broker-API accounts (re-parsed accounts.yaml live flags)",
+   "window": "2026-10-28T19:40:00+00:00..2026-11-04T19:35:00+00:00",
+   "evidence": "api/bot/accounts/balances; log_file account_reachability_alert_state; exchange_positions",
+   "prior": [
+    "10-28 ok 8/8"
+   ],
+   "coverage": "complete"
+  },
+  {
+   "id": "H4",
+   "status": "concern",
+   "value": "11 invariants: 2 FAIL, 3 NOT-MEASURED, 6 pass. FAIL INV-PROTECT-OVERCOVER ib_paper/TLT 7443 long vs 12743 resting stop over 2 OCA groups (171%); FAIL INV-JOURNAL-EXCHANGE ib_paper/MGC journal 14 vs broker 11. NOT-MEASURED prop x2 (no payload), exit interval (n=5 after restart)",
+   "population": "IB open positions n=3; journal-venue pairs n=16; protective legs n=20 (bybit)",
+   "window": "2026-10-28T19:40:00+00:00..2026-11-04T19:35:00+00:00",
+   "evidence": "system_invariants.py --payloads (ib_open_orders, bybit_open_orders, exchange_positions, positions?include_paper=true, journal trades 500, exit_loop_health, order_packages 300)",
+   "prior": [
+    "10-28 watch 1 FAIL (MGC 14 vs 12)"
+   ],
+   "coverage": "complete"
+  },
+  {
+   "id": "H5",
+   "status": "watch",
+   "value": "128 opens, 62 closes in window (journal 500 rows reach 10-02, covers window); audit tail 18:55-19:19Z (24 min, partial): 178 pipeline_result all skipped (no_intents 177, no_account_elected 1), 0 failed/raised; journalctl ERROR/WARN sample 18:56-19:23Z: 68 set_leverage preflight failures on equity symbols, 1 Bybit rate-limit, GLD close refused (venue wedge)",
+   "population": "journal trades in window; audit last 600; journalctl grep error|traceback|critical (50,300 matches, newest 1000 read)",
+   "window": "2026-10-28T19:40:00+00:00..2026-11-04T19:35:00+00:00",
+   "evidence": "diag journal trades, audit?limit=600, journalctl window",
+   "prior": "partial: audit 24 min; journalctl newest 27 min of matches",
+   "coverage": [
+    "10-28 watch 24 closes, audit 21 min"
+   ]
+  },
+  {
+   "id": "H6",
+   "status": "watch",
+   "value": "62 closes: sl 29, tp 14, sl_cross 4, tp_cross 1, strategy exits 10 (max_hold 4, stale_stop 2, intent_reduce_executed 2, e4_time_stop_24h 1, strategy_close 1), operator_flatten_reconciled 3, netting_attributed 1 (6860 bybit_1 XRP, owned by SHARED-BRACKET-FIX #22894); 0 reconciler/watchdog/orphan closes; orphan_events log readable (61 lines, newest 2026-09-17) = positive control; GLD wedge persists",
+   "population": "closed rows in window by account class (paper 53, real_money 9)",
+   "window": "2026-10-28T19:40:00+00:00..2026-11-04T19:35:00+00:00",
+   "evidence": "journal trades exit_reason+exit_price; log_file orphan_events",
+   "prior": [
+    "10-28 concern sl 20 tp 1 sl_cross 1 desk 2"
+   ],
+   "coverage": "complete"
+  },
+  {
+   "id": "H7",
+   "status": "ok",
+   "value": "0 closed rows missing exit_price/pnl; 0 closed_at<opened_at (62 closes); db_integrity log could_not_look (diag log name absent); health snapshot db check ok",
+   "population": "closed rows in window",
+   "window": "2026-10-28T19:40:00+00:00..2026-11-04T19:35:00+00:00",
+   "evidence": "journal trades; health/latest db check",
+   "prior": "partial: INV-1..8 not re-read",
+   "coverage": [
+    "10-28 ok"
+   ]
+  },
+  {
+   "id": "H8",
+   "status": "watch",
+   "value": "5/5 producer ledgers fresh + non-vacuous; news_decisions could_not_look (diag log absent, same as 10-28)",
+   "population": "producer ledgers in check_producer_liveness",
+   "window": "2026-10-28T19:40:00+00:00..2026-11-04T19:35:00+00:00",
+   "evidence": "python3 scripts/macro/check_producer_liveness.py",
+   "prior": [
+    "10-28 watch same"
+   ],
+   "coverage": "complete"
+  },
+  {
+   "id": "H9",
+   "status": "ok",
+   "value": "39 research-health alert runs, 39 delivered.telegram true; VM alert routing (0/30 to /work/report) is SYSTEM-AUDIT-INTEGRATION #22905, cited not re-measured",
+   "population": "alert runs in comms/research/health 10-28..11-04",
+   "window": "2026-10-28T19:40:00+00:00..2026-11-04T19:35:00+00:00",
+   "evidence": "comms/research/health/*.json runs[].delivered",
+   "prior": [
+    "10-28 ok 19/19"
+   ],
+   "coverage": "complete"
+  },
+  {
+   "id": "H10",
+   "status": "concern",
+   "value": "104 monitor runs, max gap 3.6 h (0 > 4 h); breach SLOs per day 1,0,1,0,4,7,7,7: survivors_per_month 0 (14.2 d span), trials_per_survivor 2832 (<=500), producer_failed_rate_24h, grade_latency_p90_d, undispositioned_24h, blocked_over_age, runnable_floor",
+   "population": "8 daily files x 19 SLOs",
+   "window": "2026-10-28T19:40:00+00:00..2026-11-04T19:35:00+00:00",
+   "evidence": "comms/research/health/2026-10-28..11-04.json latest[]",
+   "prior": [
+    "10-28 watch 4 SLOs 4/5 days"
+   ],
+   "coverage": "complete"
+  },
+  {
+   "id": "H11",
+   "status": "watch",
+   "value": "ict-trainer.timer active+enabled; 2 cycles/24h, last 08:47Z rc 0 (already_done 73, trained 0); dataset builds 24h ok 122 failed 0; registry 98 models; trainer disk 80.3% used (20.5 GB free) vs 52% on 10-28",
+   "population": "trainer cycles 24 h",
+   "window": "2026-10-28T19:40:00+00:00..2026-11-04T19:35:00+00:00",
+   "evidence": "api/bot/ml/status, cycle, builds; trainer-vm-diag #22919",
+   "prior": [
+    "10-28 ok, disk 52%"
+   ],
+   "coverage": "complete"
+  },
+  {
+   "id": "H12",
+   "status": "concern",
+   "value": "live VM disk 64.4% used (was 77.5% 10-28): prune held; CPU 52-100%, mem 13-14%. TRAINER disk 52% -> 81% in 7 d, free 41 -> 20 GB since 11-03: crosses the 90% alarm ~11-05/06 at the 11-03..11-04 rate",
+   "population": "both VMs",
+   "window": "2026-10-28T19:40:00+00:00..2026-11-04T19:35:00+00:00",
+   "evidence": "diag status vm_health; api/bot/ml/status disk; trainer-vm-diag #22919 du",
+   "prior": [
+    "10-28 live 77.5% used concern",
+    "10-24 73.3%",
+    "10-17 93%"
+   ],
+   "coverage": "complete"
+  },
+  {
+   "id": "H13",
+   "status": "watch",
+   "value": "ssh sweep 504 windows, 1 unreadable (11-02 00:00-00:20Z); 15,141 accepts; 87 non-trainer, all ubuntu/publickey/key Xoek (same key as prior weeks); per-run matching to workflow runs not done; run_secret_scanning not run",
+   "population": "live VM ssh.service, window",
+   "window": "2026-10-28T19:40:00+00:00..2026-11-04T19:35:00+00:00",
+   "evidence": "python3 scripts/ops/ssh_auth_sweep.py --since 2026-10-28T19:40Z --until 2026-11-04T19:30Z",
+   "prior": "partial: 503/504 windows",
+   "coverage": [
+    "10-28 watch 262 non-trainer, one key"
+   ]
+  },
+  {
+   "id": "H14",
+   "status": "ok",
+   "value": "127 of 1,599 commits touched Tier-2/3 paths; 62 titled tier/held/operator; 3 sampled untitled live-path commits (#22587, #21384, #22497) each carry an operator record or hold declaration in the body; no new *_ENABLED default-off gate seen in titles",
+   "population": "commits on main in window (history deepened)",
+   "window": "2026-10-28T19:40:00+00:00..2026-11-04T19:35:00+00:00",
+   "evidence": "git log origin/main --since=2026-10-28T19:40 -- config/ src/runtime/ src/core/ src/units/accounts/ deploy/ .github/workflows/ scripts/ops/*.sh",
+   "prior": "sampled bodies, not every PR",
+   "coverage": [
+    "10-28 ok 76/1013"
+   ]
+  },
+  {
+   "id": "H15",
+   "status": "concern",
+   "value": "gate 274 (unrouted 174, owner_closed 96, high_severity 4); due 577; unrouted 166 alarm BREACHED oldest 156 d; follow-through: health-review cohort 7 filed / 2 done / 5 open; backlog 83 open, 46 no owner, median 71 d",
+   "population": "pipeline store 2591 items / 7153 records",
+   "window": "2026-10-28T19:40:00+00:00..2026-11-04T19:35:00+00:00",
+   "evidence": "pipeline.py --stats, --gate; review_followthrough.py --source health-review --window-days 7",
+   "prior": [
+    "10-28 gate 87 due 510 unrouted 59",
+    "10-24 due 369",
+    "10-21 due 256"
+   ],
+   "coverage": "complete"
+  },
+  {
+   "id": "H16",
+   "status": "could_not_look",
+   "value": "SOAKS.json as_of 2026-11-01, 72 soaks with no state field; soak gates not graded this run",
+   "population": "soaks in flight",
+   "window": "2026-10-28T19:40:00+00:00..2026-11-04T19:35:00+00:00",
+   "evidence": "docs/claude/work/SOAKS.json",
+   "prior": "not read beyond header",
+   "coverage": [
+    "10-28 watch stale soak-state"
+   ]
+  }
+ ],
+ "analysis": {
+  "trend": [
+   "live disk recovered 77.5 -> 64.4% used (prune held)",
+   "trainer disk 52 -> 80.3% in 7 d, accelerating (~10 GB/day 11-03..11-04)",
+   "pipeline due 110 -> 256 -> 369 -> 510 -> 577; unrouted 59 -> 166",
+   "research SLO breaches 0-1/day -> 7/day from 11-02",
+   "IB journal/venue MGC gap 2 -> 3 lots"
+  ],
+  "questions": [
+   {
+    "q": "Is the TLT over-cover real money-at-risk?",
+    "hypotheses": [
+     "instrument double-counts (as MGC 10-28)",
+     "two live OCA groups at IB"
+    ],
+    "test": "read ib_open_orders legs and oca_group",
+    "eliminated": "instrument: four distinct order ids, two OCA ids, both GTC",
+    "survivor": "two live groups",
+    "p": 0.95
+   },
+   {
+    "q": "Why is trainer disk falling 10 GB/day?",
+    "hypotheses": [
+     "noise/transient tmp",
+     "ETF 1m store growth (#22571)",
+     "datasets-out rewrite",
+     "git pack"
+    ],
+    "test": "trainer-vm-diag du #22919",
+    "eliminated": "journald 342 MB; tmp not in top",
+    "survivor": "data 25G + datasets-out 12G growth; ETF store of record",
+    "p": 0.7
+   },
+   {
+    "q": "Why 68 Bybit leverage failures in 27 min?",
+    "hypotheses": [
+     "Bybit outage",
+     "preflight loops venue-foreign symbols each boot"
+    ],
+    "test": "symbol list in WARNINGs vs config rosters",
+    "eliminated": "outage: only equity/futures symbols fail",
+    "survivor": "_symbols_for_account union",
+    "p": 0.95
+   }
+  ],
+  "correlations": [
+   "restart churn (21/day, SYSTEM-AUDIT) multiplies preflight API calls and resets exit_loop_health so INV-EXIT-INTERVAL never accrues n"
+  ],
+  "hunt": "compared journalctl ERROR/WARNING signatures (newest 1000 of 50,300 matches): new vs 10-28 = set_leverage equity symbols, TLT disjoint-OCA ERROR, bybit_1 SOL journal/broker divergence (1 line, transient, ADMISSION-JOURNAL-LAG-RACE owns)",
+  "surprises": "trainer disk acceleration"
+ },
+ "calls": [
+  {
+   "id": "HR-20261104-C1",
+   "rank": 1,
+   "money_class": "demo_floor",
+   "claim": "ib_paper/TLT stays over-covered (two OCA groups) until group 1712634399 is cancelled; a TP fill at 83.59 leaves a 7443 TP + 5300 stop able to open a naked short",
+   "evidence": "ib_open_orders 19:2xZ orders 1232-1235; over_cover_proposal.py -> cancel_group",
+   "population": "ib_paper open positions n=3",
+   "trend": "new this window (trade 6879 opened 11-04 14:49Z)",
+   "cause": "re-arm of full keyed group oca-protect-t6879 over a partial (5300) reqId bracket group; INFERRED",
+   "p": 0.6,
+   "blast_radius": "ib_paper ~$600k notional paper",
+   "tier": 2,
+   "check": {
+    "command": "system_invariants.py --payloads <dir>",
+    "rule": "INV-PROTECT-OVERCOVER pass for ib_paper/TLT",
+    "resolves_when": "2026-11-05"
+   },
+   "ending": "row HEALTH-20261104-TLT-OVERCOVER due 2026-11-05"
+  },
+  {
+   "id": "HR-20261104-C2",
+   "rank": 2,
+   "money_class": "learning_liveness",
+   "claim": "trainer disk reaches 90% by 2026-11-06 without retention on the ETF 1m store / datasets-out",
+   "evidence": "api/bot/ml/status disk; trainer-vm-diag #22919",
+   "population": "trainer VM root",
+   "trend": "52% -> 80.3% in 7 d; 41 -> 20.5 GB free 11-03..11-04",
+   "cause": "#22571 trainer as ETF store of record + backfill; INFERRED",
+   "p": 0.7,
+   "blast_radius": "all training/dataset builds",
+   "tier": 2,
+   "check": {
+    "command": "curl api/bot/ml/status | .status.disk.used_pct",
+    "rule": "< 90 on 2026-11-06 and a retention change merged",
+    "resolves_when": "2026-11-06"
+   },
+   "ending": "row HEALTH-20261104-TRAINER-DISK due 2026-11-06"
+  },
+  {
+   "id": "HR-20261104-C3",
+   "rank": 3,
+   "money_class": "demo_floor",
+   "claim": "ib_paper/MGC journal stays wrong (14 vs broker 11) and widens while no row owns it",
+   "evidence": "INV-JOURNAL-EXCHANGE FAIL; 10-26 reading 14 vs 12",
+   "population": "(account,symbol) pairs n=16",
+   "trend": "12 -> 11 at broker, journal flat",
+   "cause": "unjournaled reduce; MEASURED drift, mechanism unknown",
+   "p": 0.8,
+   "blast_radius": "MGC P&L grading, sizing reads",
+   "tier": 2,
+   "check": {
+    "command": "system_invariants.py",
+    "rule": "INV-JOURNAL-EXCHANGE pass ib_paper/MGC",
+    "resolves_when": "2026-11-11"
+   },
+   "ending": "row HEALTH-20261104-MGC-JOURNAL-DRIFT due 2026-11-11"
+  },
+  {
+   "id": "HR-20261104-C4",
+   "rank": 4,
+   "money_class": "observability",
+   "claim": "every trader boot sends 17 invalid symbols to Bybit set_leverage",
+   "evidence": "journalctl 68 WARNINGs / 27 min",
+   "population": "3 bybit accounts x restarts",
+   "trend": "scales with restart count (21/day)",
+   "cause": "src/main.py _symbols_for_account unions multi-venue strategy symbols",
+   "p": 0.95,
+   "blast_radius": "Bybit REST budget",
+   "tier": 2,
+   "check": {
+    "command": "journalctl grep 'set_leverage pre-flight' over one boot",
+    "rule": "0 symbol invalid lines",
+    "resolves_when": "2026-11-13"
+   },
+   "ending": "row HEALTH-20261104-LEVERAGE-PREFLIGHT-EQUITY due 2026-11-13"
+  },
+  {
+   "id": "HR-20261104-C5",
+   "rank": 5,
+   "money_class": "observability",
+   "claim": "the 172-min snapshot gap and 3 h ib_paper not-ok on 11-02/11-03 had a cause nobody was told about",
+   "evidence": "health/history",
+   "population": "917 snapshots",
+   "trend": "one each",
+   "cause": "unknown",
+   "p": 0.5,
+   "blast_radius": "monitoring",
+   "tier": 1,
+   "check": {
+    "command": "health/history?hours=168",
+    "rule": "max gap < 30 min next window",
+    "resolves_when": "2026-11-11"
+   },
+   "ending": "row HEALTH-20261104-OBS-GAPS due 2026-11-11"
+  },
+  {
+   "id": "HR-20261104-C6",
+   "rank": 6,
+   "money_class": "paper",
+   "claim": "GLD wedge (alpaca_paper 39 long, orders 2e843e04/891ddff0) still needs a venue action; 5th review",
+   "evidence": "journalctl 19:08Z cancel_accepted_ineffective",
+   "population": "1 position",
+   "trend": "stalled since 09-30",
+   "cause": "Alpaca paper venue",
+   "p": 0.85,
+   "blast_radius": "alpaca_paper GLD",
+   "tier": 2,
+   "check": {
+    "command": "diag alpaca_open_orders GLD",
+    "rule": "orders gone",
+    "resolves_when": "next review"
+   },
+   "ending": "PI-20260930-ZPDIPMDA-0001 (ask_operator, carried; stalled)"
+  },
+  {
+   "id": "HR-20261104-C7",
+   "rank": 7,
+   "money_class": "research_liveness",
+   "claim": "research SLO breaches 1 -> 7/day since 11-01 stay red without an owner acting",
+   "evidence": "comms/research/health latest[]",
+   "population": "19 SLOs x 8 days",
+   "trend": "worsening 3 consecutive days",
+   "cause": "0 survivors in 14 d at 2832 trials/survivor; producer failures",
+   "p": 0.7,
+   "blast_radius": "research pipeline",
+   "tier": 1,
+   "check": {
+    "command": "latest comms/research/health/<date>.json",
+    "rule": "breach count <= 3",
+    "resolves_when": "2026-11-11"
+   },
+   "ending": "row AUD-20261019-RESEARCH-SLO-RED (existing, programme-review today)"
+  },
+  {
+   "id": "HR-20261104-C8",
+   "rank": 8,
+   "money_class": "observability",
+   "claim": "unrouted pipeline items keep rising",
+   "evidence": "pipeline.py --stats",
+   "population": "2591 items",
+   "trend": "59 -> 166 unrouted, due 510 -> 577",
+   "cause": "no routing owner (10-28 call C4 miss)",
+   "p": 0.7,
+   "blast_radius": "follow-through",
+   "tier": 1,
+   "check": {
+    "command": "pipeline.py --stats",
+    "rule": "unrouted_alarm.breached empty",
+    "resolves_when": "two weekly reviews"
+   },
+   "ending": "row HEALTH-20261028-PIPELINE-ROUTING-OWNER (stalled; BACKLOG-DRAIN-20261104 working)"
+  }
+ ],
+ "backlog_coverage": {
+  "open_at_start": 274,
+  "due_total": 577,
+  "excluded": 303,
+  "count_untriaged": 274,
+  "note": "open-set walk not done this run (budget); BACKLOG-DRAIN-20261104 lane owns the register today"
+ },
+ "security_check": {
+  "ssh_windows": 504,
+  "unreadable": 1,
+  "total_accepts": 15141,
+  "non_trainer": 87,
+  "keys": [
+   "Xoek"
+  ],
+  "secret_scanning": "not run",
+  "collaborators": "not re-read"
+ },
+ "new_work_compliance": {
+  "commits": 1599,
+  "tier23_path_commits": 127,
+  "titled_marked": 62,
+  "sampled_bodies": 3,
+  "violations_found": 0
+ },
+ "soak_decisions_due": [],
+ "recommended_action": "Manager: decide the TLT cancel (2 cancel-ib-order dry-runs then apply) today; dispatch the trainer-disk retention fix by 11-06.",
+ "findings": [
+  "ib_paper/TLT stays over-covered (two OCA groups) until group 1712634399 is cancelled; a TP fill at 83.59 leaves a 7443 TP + 5300 stop able to open a naked short",
+  "trainer disk reaches 90% by 2026-11-06 without retention on the ETF 1m store / datasets-out",
+  "ib_paper/MGC journal stays wrong (14 vs broker 11) and widens while no row owns it",
+  "every trader boot sends 17 invalid symbols to Bybit set_leverage",
+  "the 172-min snapshot gap and 3 h ib_paper not-ok on 11-02/11-03 had a cause nobody was told about",
+  "GLD wedge (alpaca_paper 39 long, orders 2e843e04/891ddff0) still needs a venue action; 5th review",
+  "research SLO breaches 1 -> 7/day since 11-01 stay red without an owner acting",
+  "unrouted pipeline items keep rising"
+ ]
+}
