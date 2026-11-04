@@ -1,7 +1,7 @@
 # Hand-authored 2026-11-01 by lane RESEARCH-OPS-20261101-1447 (Tier 1), dispatched by Manager Session 2026-11-01a. ITERATION unit: chosen from the subject's lever map (research/levers/movement-capture.yaml), one-factor/ablation against the base control, every arm counted, rule registered BEFORE the graded run. Gates: none.
 id: RQ-20261101-d1f3-05
 title: Does a maker-fill cost ceiling (4 bps round trip vs 14) rescue the two-sided stop-bracket movement capture over the same 8-config grid?
-status: queued
+status: done
 cadence: once
 theme: new_strategy_prop
 priority: 2
@@ -124,3 +124,16 @@ related:
 - scripts/research/edge_iteration_verdict.py
 - RQ-20261101-58e4-06
 last_dispatched_at: '2026-11-04T11:43:17+00:00'
+grading:
+  attested: RULE-RQ-20261101-d1f3-05
+  auto: true
+  decision_rule_id: RULE-RQ-20261101-d1f3-05
+  evidence:
+  - research/results/RQ-20261101-d1f3-05/41814307210.jsonl
+  graded_at: '2026-11-04'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail
