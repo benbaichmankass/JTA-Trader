@@ -1,0 +1,45 @@
+{
+ "verdict": "fail",
+ "read_state": "measured",
+ "n": 1491,
+ "population": "maker-fill cost ceiling (round trip 14 -> 4 bps): control vs arm over the same 8-config grid, 10 symbols, daily, n_days=1491, arm DSR N=16",
+ "note": "arm selected FD1g Sharpe -0.226 vs control FD1g -0.72; arm verdict fail",
+ "measurement": {
+  "factor": "maker-fill cost ceiling (round trip 14 -> 4 bps)",
+  "control": {
+   "selected": "FD1g",
+   "sharpe": -0.72,
+   "ann": -0.151,
+   "verdict": "fail"
+  },
+  "arm": {
+   "selected": "FD1g",
+   "sharpe": -0.226,
+   "ann": -0.0472,
+   "stress_sharpe": -0.424,
+   "dsr": 0.011588,
+   "checks": {
+    "sharpe>=0.5": false,
+    "stress_sharpe>0": false,
+    "both_halves>0": false,
+    "boot_p05>0": false,
+    "dsr>0.95": false,
+    "clause:years": false,
+    "clause:concentration": false,
+    "clause:sides": false,
+    "clause:subperiods": false
+   },
+   "per_config_sharpe": {
+    "BO1": -4.084,
+    "BO2": -2.922,
+    "BO3": -1.249,
+    "FD1": -0.464,
+    "FD2": -0.906,
+    "FD3": -0.636,
+    "BO1g": -3.081,
+    "FD1g": -0.226
+   }
+  },
+  "delta_sharpe": 0.494
+ }
+}

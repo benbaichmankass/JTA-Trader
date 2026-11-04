@@ -1,0 +1,12 @@
+Fetching SPY 60 candles 2018-06-19 -> 2026-11-04 (source=dukascopy) …
+  dukascopy: SPY -> INSTRUMENT_ETF_CFD_US_SPY_US_USD (relation=same_ticker_cfd: same underlying, CFD)
+INFO:DUKASCRIPT:current timestamp :2026-11-03T20:00:00
+Wrote 14669 rows (2018-06-19 -> 2026-11-03) to /tmp/exit_lever_ablation_ylw875vx/spy_pullback_1h__data.csv
+[A] /opt/hostedtoolcache/Python/3.11.18/x64/bin/python3 /home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_pullback.py --trend-lookback 60 --pullback-lookback 12 --pullback-frac 0.618 --data <data> --symbol SPY --resample 1h --atr-period 14 --atr-stop-mult 1.5 --trail-mult 5.0 --min-confidence 0.0 --fee-bps-roundtrip 0.0 --emit-trades comms/research/RQ-20261101-78fc-55/41807532610/arms/A__trades.jsonl --json comms/research/RQ-20261101-78fc-55/41807532610/arms/A__bt.json --tp-cap-pct 0.099 --tp-r 50.0 --start 2018-06-01 --end 2026-10-15 23:59
+[AD25] /opt/hostedtoolcache/Python/3.11.18/x64/bin/python3 /home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_pullback.py --trend-lookback 60 --pullback-lookback 12 --pullback-frac 0.618 --data <data> --symbol SPY --resample 1h --atr-period 14 --atr-stop-mult 1.5 --trail-mult 5.0 --min-confidence 0.0 --fee-bps-roundtrip 0.0 --emit-trades comms/research/RQ-20261101-78fc-55/41807532610/arms/AD25__trades.jsonl --json comms/research/RQ-20261101-78fc-55/41807532610/arms/AD25__bt.json --adx-min 25 --tp-cap-pct 0.099 --tp-r 50.0 --start 2018-06-01 --end 2026-10-15 23:59
+[SL25] /opt/hostedtoolcache/Python/3.11.18/x64/bin/python3 /home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_pullback.py --trend-lookback 60 --pullback-lookback 12 --pullback-frac 0.618 --data <data> --symbol SPY --resample 1h --atr-period 14 --atr-stop-mult 2.5 --trail-mult 5.0 --min-confidence 0.0 --fee-bps-roundtrip 0.0 --emit-trades comms/research/RQ-20261101-78fc-55/41807532610/arms/SL25__trades.jsonl --json comms/research/RQ-20261101-78fc-55/41807532610/arms/SL25__bt.json --tp-cap-pct 0.099 --tp-r 50.0 --start 2018-06-01 --end 2026-10-15 23:59
+{
+ "verdict": "fail",
+ "label": "incumbent_stands",
+ "why": "no candidate clears net R / fold / drawdown: the incumbent exit stands"
+}
