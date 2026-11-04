@@ -1226,17 +1226,32 @@ decides whether to intervene.
       it never decides what trades.
    2. **A non-ML strategy defines its own symbol, usually one.** It is the
       symbol its Stage-0 evidence was measured on, declared once on the leg.
-   3. **An ML's traded universe is internal to the ML.** It is the set of
-      symbols its registered tests PASSED, read from its committed evidence
-      record (`comms/strategy_evidence/<leg>.json` and the research results it
-      cites). At trade time it is intersected with what the account's venue can
-      physically trade: listed instruments, and the sides the account can take
-      (e.g. `side_filter: long` on a cash account). Nobody edits that universe
-      by hand. It changes when a test passes or fails.
-   4. **A test's population is chosen from the ML's own candidate universe,
-      never re-read from an account's config.** A universe test that scores
-      "the symbols account X trades" lets the account decide the ML's symbols.
-      That is this rule inverted.
+   3. **An ML's traded universe is internal to the ML. It is derived from a
+      committed PER-SYMBOL pass record.** Each symbol is in the set if it passes
+      a per-symbol test that is registered before the run and net of THAT
+      symbol's measured cost. **An absent record keeps the current set:** no
+      symbol is added and no symbol is removed by default until the per-symbol
+      test reports. At trade time the set is intersected with what the
+      account's venue can physically trade: listed instruments, and the sides
+      the account can take (e.g. `side_filter: long` on a cash account). Nobody
+      edits the set by hand. It changes when a per-symbol test passes or fails.
+      A pooled pass over many symbols is not a per-symbol pass.
+   4. **A venue outside the ML's training universe is tested per symbol, on a
+      population registered before the run; only the symbols that pass trade
+      there.** Example: Alpaca instruments for the crypto-trained `ml_entry`.
+      The population is chosen from the ML's candidate instruments, never
+      re-read from an account's config. A test that scores "the symbols
+      account X trades" lets the account decide the ML's symbols. That is this
+      rule inverted.
+   5. **Parametrisation is separate from the universe.** Per-venue model
+      parameters (anchor, reference venue, sides, session, cost basis; PR
+      #22900's `account_profiles`) describe how the ML trades on a venue. A
+      change to them never changes which symbols the ML trades, and a
+      universe change never rides a parametrisation change.
+
+   Operator decisions, 2026-11-04 ~19:08Z (popup answers relayed by Manager
+   Session 2026-11-04a), verbatim: *"Split (Recommended)"* · *"Per-symbol
+   passes (Recommended)"* · *"Per-symbol tests (Recommended)"*.
 
    **What does NOT change.** Changing a strategy's or ML's universe on a
    real-money account is still a Tier-3 decision. It needs § "Promotion
@@ -1245,11 +1260,9 @@ decides whether to intervene.
    it is not a new gate. The Stage-1 demo floor, the three strategy statuses
    and the promotion ladder are unchanged (OPERATING-PLAN § 2).
 
-   **Not decided yet, and carried to the operator by the manager (row
-   `ML-UNIVERSE-RULE`):** what a TESTING ML trades on the Stage-1 floor before
-   any test has passed. Example: `ml_entry_v2` has one FAIL and no PASS. The
-   rule as stated gives it an empty universe. The Stage-1 floor says every
-   testing leg trades.
+   **A testing ML with no per-symbol record yet** (e.g. `ml_entry_v2`) keeps
+   its current set on the Stage-1 floor, under point 3, until its per-symbol
+   test reports.
 
    **Today's configuration against this rule:**
    [`docs/audits/2026-11-04-per-symbol-config-inventory.md`](audits/2026-11-04-per-symbol-config-inventory.md).
