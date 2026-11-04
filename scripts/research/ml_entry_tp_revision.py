@@ -1065,6 +1065,31 @@ def evidence_extend_only(args) -> int:
                            for s in traded if (trades.symbol == s).any()},
             "rule": "RULE-RQ20261103-5E04-01-ML-SLONLY: PASS if mean_net_r >= 0 (parent RULE-RQ20261101-c692-06-TRADED-SUBSET)",
             "verdict": "pass" if vf.mean() >= 0 else "fail"}
+        # RQ-20261103-5e04-01 grading: the runner pipeline reads <out>/verdict.json (run 41783308121 measured
+        # arm F but wrote no verdict.json -> producer_failed). The registered INDETERMINATE clause: arm A
+        # (extend_only, the pre-override exit) must reproduce the committed record within 0.005 R/decision.
+        rec_path = REPO / "comms" / "strategy_evidence" / "ml_entry.json"
+        try:
+            rec_exp = float(json.loads(rec_path.read_text())["expectancy_r_oos"])
+        except Exception:  # noqa: BLE001 -- an unreadable record is "could not check", never a pass
+            rec_exp = None
+        a_mean = res["extend_only"]["mean_net_r"]
+        repro_ok = rec_exp is not None and abs(a_mean - rec_exp) <= 0.005
+        n_f = int(len(vf))
+        verdict = ("indeterminate" if (n_f < 100 or not repro_ok)
+                   else ("pass" if vf.mean() >= 0 else "fail"))
+        vj = {"verdict": verdict, "read_state": "measured", "n": n_f,
+              "population": res["population"] + "; net of the full cost stack this harness applies",
+              "rule_id": "RULE-RQ20261103-5E04-01-ML-SLONLY",
+              "rule": "PASS IF arm F held-out mean net R/decision >= 0 (parent RULE-RQ20261101-c692-06-TRADED-SUBSET); "
+                      "INDETERMINATE if n < 100 or arm A does not reproduce the committed record within 0.005 R",
+              "measurement": {"arm_F_mean_net_r": float(vf.mean()), "arm_F_sum_net_r": float(vf.sum()),
+                              "arm_A_extend_only_mean_net_r": a_mean,
+                              "arm_A_record_expectancy_r_oos": rec_exp, "arm_A_reproduces": repro_ok,
+                              "fixed_3atr_mean_net_r": res["fixed_3atr"]["mean_net_r"],
+                              **{k: v for k, v in res["extend_only_structure_sl"].items()
+                                 if k not in ("rule", "verdict")}}}
+        (out / "verdict.json").write_text(json.dumps(vj, indent=1, default=str) + "\n")
     res["elapsed_s"] = round(time.time() - t0)
     res["git_sha"] = E._git_sha()
     (out / "evidence_extend_only.json").write_text(json.dumps(res, indent=1, default=str) + "\n")
