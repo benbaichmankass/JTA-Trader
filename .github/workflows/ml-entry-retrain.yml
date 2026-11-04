@@ -13,6 +13,7 @@ run-name: ml-entry-retrain ${{ github.event_name }} ${{ inputs.run_date || '' }}
 # retrain_status.json, and the red Actions run is the ONE red flag; the next Sunday tries again (no retry loop, no gate).
 # The trader-side freshness line (src/runtime/ml_entry_live_monitor.py) grades the SERVED artifact's data-through date.
 #
+# no-durable-result: weekly CANDIDATE artifact (model + freshness.json) with no verdict or measurement; serving it is the operator's call and the candidate has had no held-out read
 # Keyless: public Binance Vision archives only, no secrets, no VM, persist-credentials: false.
 # Gates this adds or changes: none.
 
