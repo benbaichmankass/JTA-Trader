@@ -1,0 +1,89 @@
+{
+ "verdict": "fail",
+ "read_state": "measured",
+ "n": 191,
+ "population": "vol-premium iteration: 4 arms incl. control A0, 6 underlyings, 21d periods, 2008-07-01..2024-06-30, DSR N_cum=12",
+ "note": "selected S2; passes the unchanged registered rule: False",
+ "measurement": {
+  "control": "A0",
+  "selected": "S2",
+  "arms": {
+   "A0": {
+    "spec": {
+     "lam": 0.94,
+     "thr": 0.02,
+     "h": 21
+    },
+    "sharpe": 0.506,
+    "delta_sharpe_vs_control": 0.0,
+    "h1": 0.601,
+    "h2": 0.399,
+    "stress_sharpe": -0.007,
+    "dsr": 0.611456,
+    "frac_short_var": 0.69,
+    "frac_long_var": 0.089
+   },
+   "S0": {
+    "spec": {
+     "lam": 0.94,
+     "thr": 0.02,
+     "h": 21,
+     "mode": "short_always"
+    },
+    "sharpe": 0.664,
+    "delta_sharpe_vs_control": 0.158,
+    "h1": 0.729,
+    "h2": 0.595,
+    "stress_sharpe": 0.114,
+    "dsr": 0.761932,
+    "frac_short_var": 1.0,
+    "frac_long_var": 0.0
+   },
+   "S1": {
+    "spec": {
+     "lam": 0.94,
+     "thr": 0.02,
+     "h": 21,
+     "mode": "short_always",
+     "tail_q": 0.8
+    },
+    "sharpe": 0.918,
+    "delta_sharpe_vs_control": 0.412,
+    "h1": 0.896,
+    "h2": 0.949,
+    "stress_sharpe": 0.293,
+    "dsr": 0.907501,
+    "frac_short_var": 0.831,
+    "frac_long_var": 0.0
+   },
+   "S2": {
+    "spec": {
+     "lam": 0.94,
+     "thr": 0.02,
+     "h": 21,
+     "mode": "short_always",
+     "tail_q": 0.9
+    },
+    "sharpe": 0.981,
+    "delta_sharpe_vs_control": 0.475,
+    "h1": 0.878,
+    "h2": 1.116,
+    "stress_sharpe": 0.337,
+    "dsr": 0.928163,
+    "frac_short_var": 0.898,
+    "frac_long_var": 0.0
+   }
+  },
+  "checks_of_selected": {
+   "sharpe>=0.5": true,
+   "stress_sharpe>0": true,
+   "both_halves>0": true,
+   "boot_p05>0": true,
+   "dsr>0.95": false,
+   "clause:years": true,
+   "clause:concentration": true,
+   "clause:sides": true,
+   "clause:subperiods": true
+  }
+ }
+}
