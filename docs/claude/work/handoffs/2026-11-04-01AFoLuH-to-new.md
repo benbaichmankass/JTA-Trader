@@ -1,6 +1,6 @@
 # Manager handover 2026-11-04 — session_01AFoLuHgZaSYnm9avjeZE33 (Manager Session 2026-11-04a) → new
 
-> **Doc status:** `live` · category `handoff` · last verified `2026-11-04`
+> **Doc status:** `unknown` · category `history` · last verified `2026-11-04`
 
 Old manager context: 756k of 1M tokens at 22:23Z (MEASURED, get_session), with auto-compaction at 784k. The operator asked for a rollover at a good cutoff ("you're already past the context limit"). Cutoff: weekly planning is closed, the combined deploy is finished and observed, and no merge or deploy is half-done.
 
