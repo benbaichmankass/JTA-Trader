@@ -1,0 +1,18 @@
+{
+  "due_when": {
+    "due_date": "2026-11-05",
+    "kind": "date"
+  },
+  "filed_by": "lane GATEWAY-DISK session_01AFoLuKDcu1Rnu8GPUrx3ek",
+  "id": "PI-20261104-GWDISK-0001",
+  "money_path": true,
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "COST-INFRA-REVIEW gateway disk lane; PR #22956; related PI-20261104-COSTINFRA-0001..5 (on PR #22951, not yet on main)",
+    "rerun": "after #22956 merges, dispatch system-action gateway-disk-report; ledger: grep '\"host\": \"gateway\"' comms/cloud/compute_util_ledger.jsonl | tail -3 (disk_pct must be <80)"
+  },
+  "state": "queued",
+  "summary": "Gateway disk 51% (10-13) -> 75% (11-01, ~+1.3pt/day) -> 100% (11-02) -> 94% (11-04), MEASURED daily samples. Writer NOT yet read. Suspect: ib-gateway docker json-file log; deploy/ib-gateway.compose.yml has no logging max-size. Fixes (Tier 2, recreate needs manager): compose logging max-size/max-file, journald cap, truncate current log.",
+  "what": "IB gateway VM disk: read the writer via gateway-disk-report (PR #22956), then cap docker log / journald"
+}
