@@ -1,7 +1,7 @@
 """The alert ledger: ONE append-only EVENT LOG of what the system told the operator.
 
 Row shape ``{ts, kind, channel, priority, dedup_key, body[:1024], delivered}``,
-written at the send chokepoint (``notify.send_telegram_direct``) and by
+written at the send chokepoint (``notify``'s direct-send function) and by
 ``POST /api/bot/alerts`` for shell / workflow senders that curl Telegram directly.
 Design: ``docs/audits/2026-11-04-system-integration.md`` § "Design: how alerts,
 data and state reach the manager" (row ``ALERT-LEDGER-TO-MANAGER``).
