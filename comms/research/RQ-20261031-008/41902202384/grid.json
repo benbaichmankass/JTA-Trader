@@ -1,0 +1,258 @@
+{
+  "tool": "scripts/research/prop_ev_grid.py",
+  "sim": "scripts/research/prop_ev_sim.py",
+  "mode": "path",
+  "common": [
+    "--ruleset",
+    "config/prop_rulesets/breakout_turbo_1step.yaml",
+    "--costs",
+    "breakout",
+    "--funded-start",
+    "fresh",
+    "--swap-model",
+    "dxtrade"
+  ],
+  "arms": {
+    "A": [
+      "--sizing",
+      "room",
+      "--risk-pct",
+      "0.015",
+      "--room-frac",
+      "0.50"
+    ]
+  },
+  "seeds": [
+    1,
+    2,
+    3,
+    4,
+    5
+  ],
+  "grade": "pass_all_seeds",
+  "overall": "all",
+  "legs": {
+    "trend_donchian_eth": {
+      "trades_file": "comms/strategy_evidence/runs/2026-10-28/trend_donchian_eth__trades.jsonl",
+      "resolved_by": "evidence record comms/strategy_evidence/trend_donchian_eth.json -> cost_stack.source",
+      "n_trades": 108
+    }
+  },
+  "cells": [
+    {
+      "leg": "trend_donchian_eth",
+      "arm": "A",
+      "seed": 1,
+      "exit_code": 0,
+      "seconds": 425.2,
+      "argv": [
+        "scripts/research/prop_ev_sim.py",
+        "--trades",
+        "trend_donchian_eth=comms/strategy_evidence/runs/2026-10-28/trend_donchian_eth__trades.jsonl",
+        "--ruleset",
+        "config/prop_rulesets/breakout_turbo_1step.yaml",
+        "--costs",
+        "breakout",
+        "--funded-start",
+        "fresh",
+        "--swap-model",
+        "dxtrade",
+        "--sizing",
+        "room",
+        "--risk-pct",
+        "0.015",
+        "--room-frac",
+        "0.50",
+        "--seed",
+        "1",
+        "--out",
+        "/home/runner/work/JTA-Trader/JTA-Trader/comms/research/RQ-20261031-008/41902202384/sims/trend_donchian_eth__A__seed1.json"
+      ],
+      "out": "comms/research/RQ-20261031-008/41902202384/sims/trend_donchian_eth__A__seed1.json",
+      "stats": {
+        "ev": -0.98,
+        "ev_se": 1.35,
+        "p_net_positive": 0.0838,
+        "p_alive_at_horizon": 1.0,
+        "p_pass_by_days": {
+          "30": 0.096,
+          "90": 0.2065,
+          "180": 0.2315
+        },
+        "rule_v2_verdict": "indeterminate"
+      }
+    },
+    {
+      "leg": "trend_donchian_eth",
+      "arm": "A",
+      "seed": 2,
+      "exit_code": 0,
+      "seconds": 447.1,
+      "argv": [
+        "scripts/research/prop_ev_sim.py",
+        "--trades",
+        "trend_donchian_eth=comms/strategy_evidence/runs/2026-10-28/trend_donchian_eth__trades.jsonl",
+        "--ruleset",
+        "config/prop_rulesets/breakout_turbo_1step.yaml",
+        "--costs",
+        "breakout",
+        "--funded-start",
+        "fresh",
+        "--swap-model",
+        "dxtrade",
+        "--sizing",
+        "room",
+        "--risk-pct",
+        "0.015",
+        "--room-frac",
+        "0.50",
+        "--seed",
+        "2",
+        "--out",
+        "/home/runner/work/JTA-Trader/JTA-Trader/comms/research/RQ-20261031-008/41902202384/sims/trend_donchian_eth__A__seed2.json"
+      ],
+      "out": "comms/research/RQ-20261031-008/41902202384/sims/trend_donchian_eth__A__seed2.json",
+      "stats": {
+        "ev": -2.26,
+        "ev_se": 1.23,
+        "p_net_positive": 0.0828,
+        "p_alive_at_horizon": 1.0,
+        "p_pass_by_days": {
+          "30": 0.0915,
+          "90": 0.192,
+          "180": 0.213
+        },
+        "rule_v2_verdict": "indeterminate"
+      }
+    },
+    {
+      "leg": "trend_donchian_eth",
+      "arm": "A",
+      "seed": 3,
+      "exit_code": 0,
+      "seconds": 445.1,
+      "argv": [
+        "scripts/research/prop_ev_sim.py",
+        "--trades",
+        "trend_donchian_eth=comms/strategy_evidence/runs/2026-10-28/trend_donchian_eth__trades.jsonl",
+        "--ruleset",
+        "config/prop_rulesets/breakout_turbo_1step.yaml",
+        "--costs",
+        "breakout",
+        "--funded-start",
+        "fresh",
+        "--swap-model",
+        "dxtrade",
+        "--sizing",
+        "room",
+        "--risk-pct",
+        "0.015",
+        "--room-frac",
+        "0.50",
+        "--seed",
+        "3",
+        "--out",
+        "/home/runner/work/JTA-Trader/JTA-Trader/comms/research/RQ-20261031-008/41902202384/sims/trend_donchian_eth__A__seed3.json"
+      ],
+      "out": "comms/research/RQ-20261031-008/41902202384/sims/trend_donchian_eth__A__seed3.json",
+      "stats": {
+        "ev": -2.56,
+        "ev_se": 1.22,
+        "p_net_positive": 0.083,
+        "p_alive_at_horizon": 1.0,
+        "p_pass_by_days": {
+          "30": 0.0907,
+          "90": 0.1913,
+          "180": 0.2142
+        },
+        "rule_v2_verdict": "indeterminate"
+      }
+    },
+    {
+      "leg": "trend_donchian_eth",
+      "arm": "A",
+      "seed": 4,
+      "exit_code": 0,
+      "seconds": 436.3,
+      "argv": [
+        "scripts/research/prop_ev_sim.py",
+        "--trades",
+        "trend_donchian_eth=comms/strategy_evidence/runs/2026-10-28/trend_donchian_eth__trades.jsonl",
+        "--ruleset",
+        "config/prop_rulesets/breakout_turbo_1step.yaml",
+        "--costs",
+        "breakout",
+        "--funded-start",
+        "fresh",
+        "--swap-model",
+        "dxtrade",
+        "--sizing",
+        "room",
+        "--risk-pct",
+        "0.015",
+        "--room-frac",
+        "0.50",
+        "--seed",
+        "4",
+        "--out",
+        "/home/runner/work/JTA-Trader/JTA-Trader/comms/research/RQ-20261031-008/41902202384/sims/trend_donchian_eth__A__seed4.json"
+      ],
+      "out": "comms/research/RQ-20261031-008/41902202384/sims/trend_donchian_eth__A__seed4.json",
+      "stats": {
+        "ev": -2.34,
+        "ev_se": 1.29,
+        "p_net_positive": 0.077,
+        "p_alive_at_horizon": 1.0,
+        "p_pass_by_days": {
+          "30": 0.0953,
+          "90": 0.1973,
+          "180": 0.2228
+        },
+        "rule_v2_verdict": "indeterminate"
+      }
+    },
+    {
+      "leg": "trend_donchian_eth",
+      "arm": "A",
+      "seed": 5,
+      "exit_code": 0,
+      "seconds": 216.8,
+      "argv": [
+        "scripts/research/prop_ev_sim.py",
+        "--trades",
+        "trend_donchian_eth=comms/strategy_evidence/runs/2026-10-28/trend_donchian_eth__trades.jsonl",
+        "--ruleset",
+        "config/prop_rulesets/breakout_turbo_1step.yaml",
+        "--costs",
+        "breakout",
+        "--funded-start",
+        "fresh",
+        "--swap-model",
+        "dxtrade",
+        "--sizing",
+        "room",
+        "--risk-pct",
+        "0.015",
+        "--room-frac",
+        "0.50",
+        "--seed",
+        "5",
+        "--out",
+        "/home/runner/work/JTA-Trader/JTA-Trader/comms/research/RQ-20261031-008/41902202384/sims/trend_donchian_eth__A__seed5.json"
+      ],
+      "out": "comms/research/RQ-20261031-008/41902202384/sims/trend_donchian_eth__A__seed5.json",
+      "stats": {
+        "ev": -3.08,
+        "ev_se": 1.24,
+        "p_net_positive": 0.078,
+        "p_alive_at_horizon": 1.0,
+        "p_pass_by_days": {
+          "30": 0.097,
+          "90": 0.1973,
+          "180": 0.216
+        },
+        "rule_v2_verdict": "indeterminate"
+      }
+    }
+  ]
+}

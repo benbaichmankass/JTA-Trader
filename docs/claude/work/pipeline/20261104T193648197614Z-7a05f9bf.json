@@ -1,0 +1,16 @@
+{
+  "due_when": {
+    "check_every_days": 14,
+    "clears_when": "m20_fleet_exit_sweep.base_args output for trend_donchian_xrp_adx25 is shown to carry its ADX filter (or the harness lacks one and the gap is recorded), with a replay whose trades differ from trend_donchian_xrp_4h where the ADX filter binds; or killed with a reason",
+    "kind": "observation"
+  },
+  "id": "PI-20261104-TCANDLES-0002",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "audit",
+    "ref": "SPOTCANDLES-AUDIT lane 2026-11-04 (trainer relay #22896)",
+    "rerun": "python3 -c \"import sys;sys.path[:0]=['scripts','scripts/research'];import m20_fleet_exit_sweep as m,yaml;s=yaml.safe_load(open('config/strategies.yaml'))['strategies'];[print(n,m.base_args(n,s[n],'donchian','X',None)) for n in ('trend_donchian_xrp_4h','trend_donchian_xrp_adx25')]\""
+  },
+  "state": "queued",
+  "what": "UNVERIFIED parity gap: in the SPOTCANDLES replay (same XRPUSDT 4h frames, 2025-11-04..2026-11-04) trend_donchian_xrp_adx25 and trend_donchian_xrp_4h produced IDENTICAL harness results on both spot and linear (15/14 trades, net R 3.585/4.357). If the two legs differ only by an ADX>=25 entry filter, m20_fleet_exit_sweep.base_args (the arg builder every Stage-0 sweep uses) may not forward that filter, so the adx25 leg's Stage-0 evidence would be the plain leg's. Check the two legs' config diff and base_args output."
+}

@@ -42,8 +42,12 @@ CLAUDE-GRADE-LOOP additions (rules registered here, before any run reads them):
   2026-10-26, recorded 76866a39 = SKILL.md at b21f6fb9 -- or REVIEWER-BRIEF.md for a repo-less one), so an
   amendment's effect is measurable. Versions are never pooled silently; ``unrecorded`` is its own bucket.
 * USE RULES (``use_rules``), the generalised apply alarm, one per altering action class over its priced
-  calls (applied and recommended-only pooled: either way ``delta_r`` measures the call):
-  n < ``USE_MIN_N`` -> ``HOLD_SCOPE`` (INDETERMINATE); 95% CI of mean ``delta_r`` entirely < 0 ->
+  calls (applied and recommended-only pooled: either way ``delta_r`` measures the call). The unit of
+  evidence is the ORDER PACKAGE, not the review: repeated reviews of one package are one observation
+  (their mean ``delta_r``), because a reviewer re-issuing the same call every few minutes is not new
+  evidence (MEASURED 2026-11-04: 20 priced ``close`` calls were 5 packages, 19 of them from two
+  ``ict_scalp_xrp_15m`` packages; counting reviews read PROPOSE_WIDEN on an effective n of 5).
+  n_packages < ``USE_MIN_N`` -> ``HOLD_SCOPE`` (INDETERMINATE); 95% CI of the per-package mean ``delta_r`` entirely < 0 ->
   ``PROPOSE_NARROW`` (the class goes recommend-only); entirely > 0 AND that class's calibration is not
   OVERCONFIDENT -> ``PROPOSE_WIDEN`` (a candidate for the next scope step); else ``HOLD_SCOPE``.
   Every verdict is a PROPOSAL for the operator (mandates are granted, never self-granted).
@@ -222,13 +226,21 @@ def _ci95(xs: List[float]) -> Optional[List[float]]:
 def use_rules(results: List[dict], cal_by_action: Dict[str, Any]) -> Dict[str, Any]:
     out: Dict[str, Any] = {}
     for act in cf.ALTERING:
-        xs = [r["outcome"]["delta_r"] for r in results if r["action"] == act and r["state"] == "priced"]
-        ci = _ci95(xs)
-        row: Dict[str, Any] = {**_stats(xs), "ci95": ci, "n_applied": sum(1 for r in results if r["action"] == act
-                                                                           and r["state"] == "priced" and r["applied"])}
+        priced = [r for r in results if r["action"] == act and r["state"] == "priced"]
+        xs = [r["outcome"]["delta_r"] for r in priced]
+        by_pkg: Dict[str, List[float]] = defaultdict(list)
+        for r in priced:   # the package is the independent unit; repeated reviews of it are one observation
+            by_pkg[r.get("order_package_id") or r["review_id"]].append(r["outcome"]["delta_r"])
+        pkg_means = [statistics.fmean(v) for v in by_pkg.values()]
+        ci = _ci95(pkg_means)
+        row: Dict[str, Any] = {**_stats(xs), "n_packages": len(pkg_means),
+                               "mean_dr_per_package": round(statistics.fmean(pkg_means), 4) if pkg_means else None,
+                               "ci95": ci, "ci95_basis": "per-package mean delta_r",
+                               "n_applied": sum(1 for r in priced if r["applied"])}
         verdict_cal = (cal_by_action.get(f"{act}/all") or {}).get("verdict", "")
-        if len(xs) < USE_MIN_N or ci is None:
-            row["verdict"] = f"HOLD_SCOPE (INDETERMINATE: n={len(xs)} < {USE_MIN_N})"
+        if len(pkg_means) < USE_MIN_N or ci is None:
+            row["verdict"] = (f"HOLD_SCOPE (INDETERMINATE: n_packages={len(pkg_means)} < {USE_MIN_N}"
+                              f"{'' if len(xs) == len(pkg_means) else f'; {len(xs)} priced calls'})")
         elif ci[1] < 0:
             row["verdict"] = "PROPOSE_NARROW"
         elif ci[0] > 0 and verdict_cal != "OVERCONFIDENT":
@@ -334,7 +346,8 @@ def render(g: Dict[str, Any], window: str) -> str:
                  f"{v['calibration']['verdict']}")
     L += ["", "**Use rules** (proposals only; the operator grants scope):"]
     for act, u in g["use_rules"].items():
-        L.append(f"- {act}: n={u['n']} (applied {u['n_applied']}), mean dR {u['mean_dr']}, CI95 {u['ci95']} -> **{u['verdict']}**")
+        L.append(f"- {act}: n={u['n']} calls on {u.get('n_packages')} package(s) (applied {u['n_applied']}), mean dR {u['mean_dr']}, "
+                 f"per-package mean {u.get('mean_dr_per_package')}, CI95 (per package) {u['ci95']} -> **{u['verdict']}**")
     L.append("")
     L += [f"**Applied-action alarm:** {al['applied_priced']} priced apply(ies), net dR {al['net_delta_r']}; "
           f"proposes recommend mode: {al['proposes_recommend_mode']}. Replay fidelity: {g['replay_fidelity'] or 'n/a'}.",

@@ -1,0 +1,17 @@
+{
+  "due_when": {
+    "check_every_days": 3,
+    "clears_when": "an alpaca_paper ml_entry package shows a ml_first_passage tp_revision check-in evaluated (move or explicit keep) in the journal/audit, or the lever is removed from alpaca_paper by record",
+    "kind": "observation"
+  },
+  "id": "PI-20261104-ELSFP54S-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "lane ML-ENTRY-ALL-ACCOUNTS (session_01AFoLuHssTryUyRELsfP54s), Manager Session 2026-11-04a",
+    "rerun": "grep -n '_checkin_frames' -A20 src/units/strategies/ml_entry.py; diag: journal order_packages strategy=ml_entry on alpaca_paper -> any tp_revision move rows (expect none)"
+  },
+  "roadmap": "L-ML-LIVE",
+  "state": "queued",
+  "what": "CODE READ, not observed live: on alpaca_paper the ml_entry moving TP (tp_revision ml_first_passage) cannot run. src/units/strategies/ml_entry.py::_checkin_frames fetched the package's OWN 1h frame with fetch_candles(symbol, '1h') and no settings, i.e. the default Bybit client, so an ETF (SPY, QQQ, ...) frame comes back empty or errors, own=None, and tp_revision returns None (keeps the resting 3-ATR TP) on every check-in. Safe direction (no wrong TP) but a declared lever that never executes. Lane ML-ENTRY-ALL-ACCOUNTS (branch claude/ml-entry-all-accounts) adds meta.candle_venue + a venue-aware fetch, active only for an account that declares ml_entry.account_profiles (alpaca_paper declares none, so it is still affected). Fix = declare an alpaca_paper profile (Tier 3 config) or drop the venue gate; also the TP model was fit on crypto only (an evidence question for the TP unit)."
+}

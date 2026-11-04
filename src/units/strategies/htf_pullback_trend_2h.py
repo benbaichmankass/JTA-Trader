@@ -743,6 +743,11 @@ def monitor(cfg, candles_df, open_pkg):
     # a move). Undeclared = skipped, byte-identical.
     from src.runtime.structure_exit_live import declared as _sx_declared
     if _sx_declared(meta) is not None:
+        # The telemetry hook sits below, past this return, so every
+        # structure-exit pullback leg (tlt/gld/… pivot=5) wrote NO
+        # position_telemetry row (PAPER-MECHANICS-20261104 item 5).
+        _structure_leg_telemetry(meta, cfg_dict, open_pkg, candles_df,
+                                 current_price, direction, sl)
         from src.runtime.structure_exit_live import structure_exit_verdict
         return structure_exit_verdict(meta, open_pkg, candles_df)
     _tp_rev = _revise_tp(meta, cfg_dict, candles_df, open_pkg, current_price, direction)
@@ -850,6 +855,35 @@ def monitor(cfg, candles_df, open_pkg):
     except (KeyError, ValueError, TypeError):
         _trail = None
     return merge_verdict(_trail, _tp_rev)
+
+
+def _structure_leg_telemetry(meta, cfg_dict, open_pkg, candles_df,
+                             current_price, direction, sl):
+    """M31 P2 position telemetry for a leg on the structure-exit branch.
+
+    Observe-only and never raises: the same writer, closed-bar since-entry
+    frame and ATR source the chandelier path hands it in :func:`monitor`, so
+    the row means the same thing on either branch. Nothing is read back.
+    """
+    try:
+        atr = _coerce_float(meta.get("atr"))
+        if atr is None or atr <= 0:
+            period = int(meta.get("atr_period") or cfg_dict.get("atr_period")
+                         or _DEFAULTS["atr_period"])
+            atr = float(_atr(candles_df, period).iloc[-1])
+        window = _since_entry(closed_frame(candles_df, meta, cfg_dict), open_pkg)
+        from src.runtime.position_telemetry import record_position_telemetry
+
+        record_position_telemetry(
+            candles_df=candles_df, atr=atr,
+            open_pkg=open_pkg, meta=meta, window=window, direction=direction,
+            current_price=current_price, stop=sl,
+            target=_coerce_float(open_pkg.get("tp")),
+            strategy=str(meta.get("strategy_label")
+                         or open_pkg.get("strategy_name") or "") or None,
+        )
+    except Exception:  # noqa: BLE001 — telemetry must never break the exit
+        pass
 
 
 def _revise_tp(meta, cfg_dict, candles_df, open_pkg, current_price, direction):

@@ -1,0 +1,19 @@
+{
+  "based_on": "20261102T212744806347Z-6ad24725.json",
+  "due_when": {
+    "check_every_days": 1,
+    "clears_when": "manifest run.remaining == 0 for tfs [1m] and no STALE series, or the operator kills the 1m-universe goal",
+    "kind": "observation"
+  },
+  "id": "PI-20261102-PTDVAI3R-0001",
+  "next_action": "ask_operator",
+  "origin": {
+    "kind": "session",
+    "ref": "issue #22441 / run 41500756635",
+    "rerun": "file an etf-history-request issue with 'mode: backfill'; read manifest run.remaining in the result comment"
+  },
+  "owner": "manager",
+  "state": "done",
+  "terminal_reason": "Clear condition met: trainer etf_history MANIFEST.json read 2026-11-04 19:24Z via trainer-vm-diag (#22919/#22929/#22931/#22933, lane TRAINER-DISK) shows run.remaining 0, failed 0, 1019 symbols for the 1m backfill (refresh fetched 59 / skipped 960 fresh). SPLG STALE: not re-read here; the 2026-11-04 health review (#22926) reports its SPLG row done. Closed by Manager Session 2026-11-04a; the item was blocking operator-owed-guard on every PR.",
+  "what": "ETF 1m backfill throughput: 24 symbols fetched in 2h48m, 920 of 1019 still PENDING (stopped_early); ~38 more runs at this rate. Cause undiagnosed (per-symbol pull time vs API rate limit vs chunk loop). Also SPLG/1m STALE (last bar 2025-10-30)."
+}

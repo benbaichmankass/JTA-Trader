@@ -3108,8 +3108,12 @@ def modify_open_order(
     sl_order_id: Optional[str] = None,
     tp_order_id: Optional[str] = None,
     trade_id: Optional[Any] = None,
+    entry_order_id: Optional[Any] = None,
 ) -> dict:
     """Modify SL/TP on an open position on the account's exchange.
+
+    ``entry_order_id`` (IB only; ``trades.broker_order_id``) lets the IB re-arm
+    cancel the trade's own entry-bracket children, not just its keyed group.
 
     Wired integrations:
       * **bybit** — Unified Trading ``set_trading_stop(category=<resolved>,
@@ -3341,6 +3345,13 @@ def modify_open_order(
             _ib_order["account_id"] = account_cfg.get("account_id")
             if trade_id is not None and str(trade_id).strip():
                 _ib_order["oca_key"] = str(trade_id).strip()
+                # The trade's ENTRY order id, so the keyed pre-cancel also
+                # removes this trade's original parent-linked bracket children
+                # on its first re-arm (PAPER-MECHANICS-20261104 item 1: ib_paper
+                # TLT trade 6879 kept entry 1231's STP+LMT beside
+                # oca-protect-t6879 — 2 disjoint stop groups on one long).
+                if entry_order_id is not None and str(entry_order_id).strip():
+                    _ib_order["entry_order_id"] = str(entry_order_id).strip()
             else:
                 logger.warning(
                     "modify_open_order: no trade_id for account=%s symbol=%s — "
