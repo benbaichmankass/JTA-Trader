@@ -1071,7 +1071,10 @@ def evidence_extend_only(args) -> int:
         rec_path = REPO / "comms" / "strategy_evidence" / "ml_entry.json"
         try:
             rec_exp = float(json.loads(rec_path.read_text())["expectancy_r_oos"])
-        except Exception:  # noqa: BLE001 -- an unreadable record is "could not check", never a pass
+        except (OSError, ValueError, KeyError, TypeError) as exc:
+            # An unreadable/malformed record is "could not check" -> verdict INDETERMINATE below, never a pass.
+            print(f"[5e04-01] committed record {rec_path} unreadable ({type(exc).__name__}: {exc}); "
+                  f"INDETERMINATE clause applies", file=sys.stderr)
             rec_exp = None
         a_mean = res["extend_only"]["mean_net_r"]
         repro_ok = rec_exp is not None and abs(a_mean - rec_exp) <= 0.005
