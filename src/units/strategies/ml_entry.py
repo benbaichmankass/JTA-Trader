@@ -59,27 +59,55 @@ def is_decision_bar(ts: pd.Timestamp, every_h: int) -> bool:
     return int((ts + pd.Timedelta(hours=1)).hour) % int(every_h) == 0
 
 
-def cost_r_estimate(meta: Mapping[str, Any], row: Mapping[str, float]) -> Optional[float]:
+def _bracket_k(meta: Mapping[str, Any], cost_basis: Mapping[str, float]) -> float:
+    """``k_cost_x_atr`` re-derived from an ACCOUNT cost basis (row ML-ENTRY-ALL-ACCOUNTS): bps / 1e4 / sl_atr."""
+    from src.runtime.ml_entry_profile import total_bps_rt
+    br = meta.get("bracket") or {}
+    return total_bps_rt(cost_basis, float(br.get("horizon_h", 24))) / 1e4 / float(br.get("sl_atr", 2.0))
+
+
+def cost_r_estimate(meta: Mapping[str, Any], row: Mapping[str, float],
+                    cost_basis: Optional[Mapping[str, float]] = None) -> Optional[float]:
     """Estimated round-trip cost per R when the artifact declares a ``cost_gate`` (None otherwise, so v1 is untouched).
     Cost per R = (fee + slippage + funding, in bps) / 1e4 / (2 x ATR/price), so it needs only ``atr_pct`` from the feature
-    row and the constant ``k_cost_x_atr`` = total round-trip bps / 20,000 fixed from the research cost stack."""
+    row and the constant ``k_cost_x_atr`` = total round-trip bps / 20,000 fixed from the research cost stack.
+    ``cost_basis`` (an account profile's, ``src/runtime/ml_entry_profile.py``) replaces that constant with the
+    account's own stack; ``None`` = the artifact's constant, unchanged."""
     g = meta.get("cost_gate")
     if not g:
         return None
     a = float(row[g.get("input", "atr_pct")])
-    return float(g["k_cost_x_atr"]) / a if a > 0 else float("inf")
+    k = _bracket_k(meta, cost_basis) if cost_basis else float(g["k_cost_x_atr"])
+    return k / a if a > 0 else float("inf")
 
 
-def decide(row: Mapping[str, float], model: Dict[str, Any]) -> Dict[str, Any]:
+def decide(row: Mapping[str, float], model: Dict[str, Any], *, sides: tuple = ("long", "short"),
+           cost_basis: Optional[Mapping[str, float]] = None) -> Dict[str, Any]:
+    """LONG / SHORT / NOTHING for one feature row. With the defaults (both sides, the artifact's cost stack) this is
+    the pre-2026-11-04 rule verbatim. ``sides``: the argmax runs over the ALLOWED sides only. ``cost_basis`` with an
+    ``artifact_bps_rt``: ``pred_net_r`` is re-based from the artifact's stack to the account's (cost per R at this
+    row's ATR) before the tau compare; without ``artifact_bps_rt`` the prediction is left as the artifact made it."""
     x = pd.DataFrame([[row[k] for k in model["meta"]["features"]]], columns=model["meta"]["features"])
     p_long = float(model["long"].predict(x)[0])
     p_short = float(model["short"].predict(x)[0])
-    side = "long" if p_long >= p_short else "short"
+    if tuple(sides) == ("long",):
+        side = "long"
+    elif tuple(sides) == ("short",):
+        side = "short"
+    else:
+        side = "long" if p_long >= p_short else "short"
     best = p_long if side == "long" else p_short
-    est = cost_r_estimate(model["meta"], row)
+    pred = best
+    if cost_basis and cost_basis.get("artifact_bps_rt") is not None:
+        from src.runtime.ml_entry_profile import cost_r, total_bps_rt
+        br = model["meta"].get("bracket") or {}
+        a, sl = float(row.get("atr_pct", 0.0)), float(br.get("sl_atr", 2.0))
+        pred = best + cost_r(float(cost_basis["artifact_bps_rt"]), a, sl) \
+            - cost_r(total_bps_rt(cost_basis, float(br.get("horizon_h", 24))), a, sl)
+    est = cost_r_estimate(model["meta"], row, cost_basis)
     gated = est is not None and est > float(model["meta"]["cost_gate"]["max_cost_r"])
-    return {"p_long": p_long, "p_short": p_short, "side": side if (best > float(model["meta"]["tau"]) and not gated) else "none",
-            "pred_net_r": best, "cost_r_est": est, "gated": gated}
+    return {"p_long": p_long, "p_short": p_short, "side": side if (pred > float(model["meta"]["tau"]) and not gated) else "none",
+            "pred_net_r": pred, "cost_r_est": est, "gated": gated}
 
 
 def _audit_inputs(row: Mapping[str, float], df: pd.DataFrame, n_ref: int) -> str:
@@ -110,9 +138,19 @@ def order_package(cfg: dict, candles_df: Optional[pd.DataFrame] = None,
     t = pd.Timestamp(df["ts"].iloc[-1])
     if not is_decision_bar(t, int(br["decision_every_h"])):
         raise ValueError("not_a_decision_bar")
+    # Per-account profile (row ML-ENTRY-ALL-ACCOUNTS): resolved by the builder from strategies.yaml::<leg>.account_profiles;
+    # absent / undeclared = the artifact defaults, i.e. the pre-2026-11-04 path verbatim (bybit parity).
+    prof = cfg.get("_profile") if isinstance(cfg.get("_profile"), Mapping) else {}
+    if prof.get("conflict"):
+        raise ValueError(f"profile_conflict:{prof['conflict']}")
+    from src.runtime import ml_entry_profile as PR
+    _sess = PR.session_refusal(prof.get("session"), symbol, t + pd.Timedelta(hours=1), int(br["horizon_h"]) * 60)
+    if _sess:
+        raise ValueError(_sess)
     frames = dict(reference_frames or {})
     frames[symbol] = df
-    row = F.decision_row(symbol, frames, reference=meta.get("xs_reference"))
+    _ref = PR.reference_universe(prof, meta) if prof.get("reference_universe") else meta.get("xs_reference")
+    row = F.decision_row(symbol, frames, reference=_ref, anchor=PR.anchor(prof, meta))
     if row is None:
         raise ValueError("feature_row_unformable")
     n_ref = int(row.pop("_n_reference"))
@@ -120,7 +158,8 @@ def order_package(cfg: dict, candles_df: Optional[pd.DataFrame] = None,
     min_ref = int(cfg.get("min_reference_symbols", 40))
     if n_ref < min_ref:
         raise ValueError(f"reference_symbols:{n_ref}<{min_ref}")
-    d = decide(row, model)
+    _cost = prof.get("cost_basis") or None
+    d = decide(row, model, sides=PR.allowed_sides(prof.get("side_filter") or "both"), cost_basis=_cost)
     if d["gated"]:
         raise ValueError(f"cost_gate:est_cost_r={d['cost_r_est']:.4f}>{float(meta['cost_gate']['max_cost_r']):g}"
                          f";p_long={d['p_long']:.4f};p_short={d['p_short']:.4f};tau={float(meta['tau']):.4f};n_ref={n_ref}{audit_tail}")
@@ -152,6 +191,13 @@ def order_package(cfg: dict, candles_df: Optional[pd.DataFrame] = None,
     }
     if d["cost_r_est"] is not None:  # only a gated artifact (v2) reports it; the v1 package meta is unchanged
         pkg["meta"]["cost_r_est"] = round(d["cost_r_est"], 5)
+    if prof.get("declared"):  # only a leg that declares account_profiles carries it; bybit_2's meta is unchanged
+        pkg["meta"]["account_profile"] = {
+            "accounts": list(prof.get("accounts") or []), "reference_venue": prof.get("reference_venue"),
+            "anchor": PR.anchor(prof, meta), "side_filter": prof.get("side_filter"), "session": prof.get("session"),
+            "cost_basis": _cost, "pred_net_r": round(d["pred_net_r"], 5)}
+    if cfg.get("_candle_venue"):  # non-Bybit account: the moving-TP check-in fetches the own frame from this venue
+        pkg["meta"]["candle_venue"] = str(cfg["_candle_venue"])
     return pkg
 
 
@@ -286,20 +332,28 @@ def checkin_bars_held(decision_bar: Any, last_closed_bar: Any, checkins) -> Opti
     return int(k) if float(k).is_integer() and int(k) in set(int(x) for x in checkins) else None
 
 
-def _checkin_frames(symbol: str, bar_iso: str, xs_symbols) -> tuple:
-    """(own 400-bar closed frame, reference frames) for this check-in bar; fetched once per (symbol, bar)."""
+def _checkin_frames(symbol: str, bar_iso: str, xs_symbols, venue: Optional[str] = None) -> tuple:
+    """(own 400-bar closed frame, reference frames) for this check-in bar; fetched once per (symbol, bar).
+
+    ``venue``: the package's ``meta.candle_venue`` (a non-Bybit account, row ML-ENTRY-ALL-ACCOUNTS). ``None`` = the
+    pre-2026-11-04 fetch verbatim (default client = Bybit). Before this an alpaca_paper package asked BYBIT for SPY's
+    own frame, got nothing, and the moving TP silently never ran there."""
     from src.runtime.market_data import fetch_candles
     from src.runtime.strategy_signal_builders import _ml_entry_reference_frames
-    key = f"{symbol}|{bar_iso}"
+    key = f"{symbol}|{bar_iso}" if not venue else f"{venue}|{symbol}|{bar_iso}"
     if key not in _TP_FRAMES:
         from src.runtime.strategy_signal_builders import _ml_entry_candle_symbol
-        own = _frame(fetch_candles(_ml_entry_candle_symbol(symbol), "1h", limit=400, bypass_cache=True))
+        if venue:
+            own = _frame(fetch_candles(_ml_entry_candle_symbol(symbol, None, venue), "1h", settings={"EXCHANGE": venue},
+                                       limit=400, bypass_cache=True))
+        else:
+            own = _frame(fetch_candles(_ml_entry_candle_symbol(symbol), "1h", limit=400, bypass_cache=True))
         if own is not None and (not len(own) or own["ts"].iloc[-1].isoformat() != bar_iso):
             own = None
         if len(_TP_FRAMES) > 256:
             _TP_FRAMES.clear()
         _TP_FRAMES[key] = own
-    return _TP_FRAMES[key], _ml_entry_reference_frames(list(xs_symbols), bar_iso, None)
+    return _TP_FRAMES[key], _ml_entry_reference_frames(list(xs_symbols), bar_iso, None, venue=venue or "bybit")
 
 
 def tp_revision(cfg: Any, candles_df: Any, open_pkg: Any, *, frames_fn=None, tp_model=None):
@@ -322,10 +376,14 @@ def tp_revision(cfg: Any, candles_df: Any, open_pkg: Any, *, frames_fn=None, tp_
         symbol = str(open_pkg.get("symbol") or "")
         bar_iso = bars["ts"].iloc[-1].isoformat()
         xs = load_model()["meta"]["xs_reference"]
-        own, refs = (frames_fn or _checkin_frames)(symbol, bar_iso, xs)
+        _ap = meta.get("account_profile") if isinstance(meta.get("account_profile"), dict) else {}
+        _venue = meta.get("candle_venue")
+        own, refs = ((frames_fn or _checkin_frames)(symbol, bar_iso, xs) if not _venue
+                     else (frames_fn or _checkin_frames)(symbol, bar_iso, xs, _venue))
         if own is None:
             return None
-        leg = {**meta, "_own": own, "_refs": refs, "_resting_tp": open_pkg.get("tp"), "_bars_held": jc,
+        leg = {**meta, "_xs": (list(xs) if _venue else None), "_anchor": _ap.get("anchor"),
+               "_cost_basis": _ap.get("cost_basis"), "_own": own, "_refs": refs, "_resting_tp": open_pkg.get("tp"), "_bars_held": jc,
                "_symbol": symbol, "_tp_model": model, "min_reference_symbols": (cfg or {}).get("min_reference_symbols", 40)}
         return plan_tp_revision(leg=leg, direction=str(open_pkg.get("direction") or meta.get("direction") or ""),
                                 entry=open_pkg.get("entry"), risk=float(tm["sl_atr"]) * float(meta.get("atr14") or 0),
@@ -358,7 +416,10 @@ def _register_rule() -> None:
         win = df.iloc[int(at[-1]) + 1:]
         frames = dict(leg.get("_refs") or {})
         frames[leg["_symbol"]] = df
-        row = F.decision_row(leg["_symbol"], frames)
+        # A non-Bybit package (meta.candle_venue) reads its references AS-OF, as at entry; a Bybit one keeps the
+        # equal-timestamp rule verbatim (reference=None, the default anchor).
+        row = (F.decision_row(leg["_symbol"], frames) if not leg.get("_xs") and not leg.get("_anchor")
+               else F.decision_row(leg["_symbol"], frames, reference=leg.get("_xs"), anchor=leg.get("_anchor") or F.ANCHOR))
         if row is None or int(row.pop("_n_reference")) < int(leg.get("min_reference_symbols") or 40):
             return None
         close = float(df["close"].iloc[-1])
@@ -369,8 +430,14 @@ def _register_rule() -> None:
         ridx = P.grid_index(leg.get("_resting_tp"), entry, atr, side, grid)
         if ridx is None:
             return None                       # an off-grid resting TP was set by something else: do not fight it
-        slip, fund = resolve_cost_policy(leg["_symbol"])
-        cost = P.level_cost(entry, atr, side, grid, sl_atr, float(tm["fee_bps"]), slip, fund)
+        cb = leg.get("_cost_basis") if isinstance(leg.get("_cost_basis"), dict) else None
+        if cb:  # the account profile's cost stack (row ML-ENTRY-ALL-ACCOUNTS); absent = the crypto stack, unchanged
+            fee, slip, fund = (float(cb.get("fee_bps_rt", 0.0)), float(cb.get("slippage_bps_rt", 0.0)),
+                               float(cb.get("funding_bps_per_8h", 0.0)))
+        else:
+            fee = float(tm["fee_bps"])
+            slip, fund = resolve_cost_policy(leg["_symbol"])
+        cost = P.level_cost(entry, atr, side, grid, sl_atr, fee, slip, fund)
         from src.runtime.tp_venue_cap import TP_VENUE_CAP_PCT
         c = P.choose(P.class_probs(model, {**row, **st}), tm["class_mean_net_r"], side=side, entry=entry, atr=atr,
                      close=close, resting_idx=ridx, grid=grid, sl_atr=sl_atr, min_gap_atr=float(tm["min_gap_atr"]),
