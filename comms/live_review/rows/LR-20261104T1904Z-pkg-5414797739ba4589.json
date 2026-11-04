@@ -1,0 +1,106 @@
+{
+ "schema_version": 1,
+ "review_id": "LR-20261104T1904Z-pkg-5414797739ba4589",
+ "reviewed_at": "2026-11-04T19:07:34Z",
+ "order_package_id": "pkg-5414797739ba4589",
+ "trade_id": 6889,
+ "leg": "trend_donchian_sol",
+ "accounts": [
+  "bybit_1"
+ ],
+ "trigger": {
+  "event": "mechanics",
+  "level": "venue_sl_diverges",
+  "l0_snapshot_at": null
+ },
+ "info_cutoff_at": "2026-11-04T19:06:58Z",
+ "state": {
+  "open_r": null,
+  "peak_r": null,
+  "peak_provenance": "unverified",
+  "giveback_r": null,
+  "bars_held": null,
+  "sl": 94.80464286,
+  "tp": 101.23,
+  "atr_now_over_entry": 0.9727,
+  "regime_cell_now": null,
+  "regime_cell_entry": null
+ },
+ "features_at_review": {
+  "atr_now_over_entry": 0.9727,
+  "bars_since_peak": null,
+  "giveback_r": null,
+  "open_r": null,
+  "peak_r": null,
+  "r_to_stop": null,
+  "r_to_target": null
+ },
+ "mechanics": {
+  "verdict": "mismatch_check_bug",
+  "evidence": "Trigger compared package sl 94.80 (LONG, pos idx1, 128.8) against venue stop 99.49 = the SHORT book's stop (pkg trend_donchian_sol_4h: PartialStopLoss qty 293, Buy, reduce-only, created 1793306774938; TP 87.02; position_idx 2). Fresh bybit_open_orders 19:06:58Z: bybit_1 SOLUSDT positions = Sell 293 idx2 only; no Buy idx1 position. journal trades id 6889 (this pkg, bybit_1, long 128.8 @97.35) status closed, exit_reason sl, exit_price 94.80, closed_at 19:01:54Z - stopped out ~2 min before the 19:04:13Z trigger. The long is NOT unprotected; it is closed. Check bug: it attributed the sibling short's order/position (position_idx not compared; 'SL None/TP None, position True' in packet = the short's position row) and evaluated a package that was already closed."
+ },
+ "options": [],
+ "outcome_table_source": null,
+ "recommendation": {
+  "action": "flag_mechanics",
+  "level": null,
+  "level_atr": null,
+  "ev_delta_r": null,
+  "worst_case_delta_r": null,
+  "basis": "mechanics",
+  "confidence": "measured",
+  "evidence_source": "venue_readback",
+  "judgement_confidence": null,
+  "reason": "Check mis-attribution, not an unprotected position. Long closed by its own SL 94.80 at 19:01:54Z (exit_reason sl, journal id 6889); 99.49 belongs to the hedge-mode short book (idx2, 293). Nothing to protect, no apply. Bug: venue_sl_diverges check must compare position_idx/qty (and skip journal-closed packages) - same area as lane SHARED-BRACKET-FIX PR #22894. Side note: the short's 293 stop 99.49 / TP 87.02 are resting and intact."
+ },
+ "judge_prior": null,
+ "applied": false,
+ "apply_policy": {
+  "bound_r": 0.25,
+  "within_bound": null,
+  "tighten_r": null
+ },
+ "shadow_policy": {
+  "bound_r": 0.5,
+  "within_bound": null,
+  "would_apply": null,
+  "tighten_r": null
+ },
+ "context_flags": [
+  "check_misattributed_sibling_short_order",
+  "package_already_closed_by_sl_at_19:01:54Z",
+  "hedge_mode_idx1_idx2_not_compared"
+ ],
+ "account_reads": [
+  {
+   "account_id": "bybit_1",
+   "account_class": "paper",
+   "read": "no_action",
+   "evidence": "position closed at venue and in journal (sl, 19:01:54Z); no apply issued"
+  }
+ ],
+ "disposition": {
+  "route": "none",
+  "mandate": null,
+  "action_issue": null,
+  "applied_at": null,
+  "verified_readback": null
+ },
+ "model": "sonnet-tier (repo lane)",
+ "session": "live-review lane (mechanics)",
+ "prompt_sha": null,
+ "skill_sha": "ce31519c30f9287eb2f2970ac8460bb763a5e744",
+ "packet_sha": "9680d5c7f26e",
+ "forecast": {
+  "thesis": "Entry sat at the spike high; price chops 95.5-98 and retests 98.17 before losing 94.8.",
+  "direction": "with_trade",
+  "target_px": 98.17,
+  "p_target": 0.35,
+  "invalidation_px": 94.8,
+  "horizon_bars": 8,
+  "timeframe": "1h",
+  "evidence": [
+   "context_v3.chart.since_entry: high 98.17 low 95.53"
+  ]
+ }
+}
