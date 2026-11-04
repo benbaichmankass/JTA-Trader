@@ -1,6 +1,6 @@
 # Weekly walkthrough 2026-11-04
 
-> Doc status: `live` · category `review` · one brief, three lanes (PERF-REVIEW-PREP, ML-FRONTIER-PREP, PRACTICE-REFRESH), each writing between its own markers. Feeds Thursday planning.
+> **Doc status:** `unknown` · category `evidence` · last verified `2026-11-04` · registered in [`docs/DOCUMENT-INDEX.md`](../DOCUMENT-INDEX.md) · one brief, three lanes (PERF-REVIEW-PREP, ML-FRONTIER-PREP, PRACTICE-REFRESH), each writing between its own markers; feeds Thursday planning.
 
 <!-- ML-FRONTIER-PREP:BEGIN -->
 # MODEL track — /ml-review 2026-11-04 — ML now changes real-money orders, but only through models the registry does not hold, and the one on real money is trained on data that ends 2025-09-22
