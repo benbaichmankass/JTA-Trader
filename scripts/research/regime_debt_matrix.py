@@ -262,7 +262,12 @@ _PB_PLAIN = {"model", "signal_prefixes", "enabled", "execution", "timeframe", "s
              # modelled and is added to the omitted set in build_harness_cmd. Without
              # this, xrp/ada_pullback_2h's operator-approved `decision_bar: closed`
              # (DECISION-BAR-MATCH, 2026-10-22) graded their records `approximate`.
-             "decision_bar"}
+             "decision_bar",
+             # tp_revision (TP doctrine B1, rule tp_extend): modelled via
+             # `_pb_tp_revision_flags` (the GEOM-B1 --tp-* flags). Any OTHER rule is
+             # added back to the omitted set in build_harness_cmd, so it grades
+             # `approximate`, never silently faithful.
+             "tp_revision"}
 # Squeeze (TTM-style BB-inside-KC) lever config-key -> harness flag. The squeeze
 # harness (scripts/backtest_squeeze.py) is the SAME harness that validated the
 # strategy in docs/audits/squeeze-breakout-complement-2026-05-24.md — it was simply
@@ -881,6 +886,26 @@ def _tp_revision_flags(cfg: dict) -> List[str]:
     return flags
 
 
+def _pb_tp_revision_flags(cfg: dict) -> List[str]:
+    """Pullback harness argv for a leg that declares `tp_revision: {rule: tp_extend, ...}`
+    (TPX-PULLBACK-PRODUCER; the live producer is htf_pullback_trend_2h.monitor via
+    tp_revision.tp_extend_path), else `[]`. The flags are the GEOM-B1 `--tp-*` set
+    (scripts/research/tp_geometry.py) anchored at the leg's declared tp_r with the
+    strategy's own thesis test (`--tp-thesis native`) -- exactly the arm shape the
+    TP-REALMONEY-UNITS held-out units measured (RQ-20261104-c6f1-02/-06). Any other rule,
+    or a tp_extend without `extend_r` (it has no default), returns `[]` and the caller
+    counts `tp_revision` as OMITTED, never as silently modelled."""
+    raw = cfg.get("tp_revision")
+    if not isinstance(raw, dict) or raw.get("rule") != "tp_extend" or raw.get("extend_r") is None:
+        return []
+    target = raw.get("target_r", cfg.get("tp_r"))
+    if target is None:
+        return []
+    return ["--tp-target-r", str(target), "--tp-extend-r", str(raw["extend_r"]),
+            "--tp-approach-frac", str(raw.get("approach_frac", 0.85)),
+            "--tp-max-extends", str(raw.get("max_extends", 3)), "--tp-thesis", "native"]
+
+
 def _tp_r_flags(cfg: dict) -> List[str]:
     """``--tp-cap-pct``/``--tp-r`` argv, or ``[]`` when the leg declares no `tp_r`.
 
@@ -1115,8 +1140,12 @@ def build_harness_cmd(name: str, cfg: dict, harness: str, csv: str, resample: st
         # E55 — model the leg's declared tp_r (the live-capped TP formula).
         # See `_tp_r_flags`. `[]` when the leg declares no tp_r.
         argv += _tp_r_flags(cfg)
+        _pb_tpx = _pb_tp_revision_flags(cfg)
+        argv += _pb_tpx
         omitted = sorted(set(k for k in cfg
                              if k not in _PB_PLAIN and k not in _PB_LEVER_FLAG)
+                         | ({"tp_revision"} if cfg.get("tp_revision") is not None and not _pb_tpx
+                            else set())
                          | set(conditional_omissions("pullback", cfg, argv))
                          | ({"decision_bar"}
                             if str(cfg.get("decision_bar") or "").lower() == "forming" else set()))
