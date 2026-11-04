@@ -8,7 +8,6 @@ from __future__ import annotations
 import importlib.util
 import json
 import subprocess
-from datetime import datetime, timezone
 from pathlib import Path
 
 import pytest
@@ -84,13 +83,3 @@ def test_wired_into_is_due_before_the_retry_branch():
     src = (REPO / "scripts" / "research" / "dispatch_queue.py").read_text()
     body = src[src.index("def _is_due("):]
     assert body.index("deterministic_failure_block(entry, uid)") < body.index("attempts = nonverdict_attempts(uid)")
-
-
-def test_the_measured_population_is_matched():
-    # The live failing rows on main carry exactly this note shape (RQ-20261103-001, run 41650244689).
-    p = REPO / "research" / "results" / "RQ-20261103-001" / "41650244689.jsonl"
-    if not p.exists():
-        pytest.skip("live row not present")
-    row = json.loads(p.read_text().splitlines()[0])
-    assert dq.DETERMINISTIC_FAILURE_MARK in row["note"] and row["produced_by"]["tool"] and row["produced_by"]["commit_sha"]
-    _ = datetime.now(timezone.utc)

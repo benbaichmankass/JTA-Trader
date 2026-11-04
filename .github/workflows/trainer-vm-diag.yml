@@ -333,6 +333,7 @@ jobs:
         if: steps.dedup.outputs.skip != 'true'
         uses: actions/checkout@v4
         with:
+          filter: blob:none   # PI-20261103-RAM7EH86-0003: never ship every blob to the self-hosted runner
           sparse-checkout: |
             scripts/ops
             src/utils

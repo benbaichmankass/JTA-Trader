@@ -200,6 +200,18 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          # GH-CAPACITY-INFRA-RUNNER / PI-20261103-RAM7EH86-0003: blobless + sparse. Inside comms/research/RQ-*/ only the
+          # *.json files are materialized: collect_runner_results.py dedupes on run-manifest.json and globs
+          # record-inputs.json, so those MUST stay; the unit data (csv/parquet/jsonl/logs, ~5 GB) is never read here,
+          # and new run dirs it writes are untracked files, so `git ls-files -m -o` still sees them.
+          # Pinned by tests/test_infra_runner_sparse_checkout.py.
+          filter: blob:none
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            /*
+            !/comms/research/RQ-*/**
+            /comms/research/RQ-*/**/*.json
+            !/comms/macro/
 
       - uses: actions/setup-python@v5
         with:

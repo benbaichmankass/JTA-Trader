@@ -37,6 +37,12 @@ jobs:
       - uses: actions/checkout@v4
         with:
           persist-credentials: false
+          filter: blob:none   # same sparse profile as the moved jobs (PI-20261103-RAM7EH86-0003)
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            /*
+            !/comms/research/
+            !/comms/macro/
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"

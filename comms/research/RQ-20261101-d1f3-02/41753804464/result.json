@@ -1,0 +1,757 @@
+{
+ "family": "xsec",
+ "registered": {
+  "primary": "X1",
+  "n_universe": 20,
+  "rule": "Same thresholds as tsmom. Long-short graded on its own net return; long-only graded on net return MINUS the equal-weight universe benchmark (same rebalance, same cost). PRIMARY is X1 (L=28, q=0.3, long-short)."
+ },
+ "fee_bps_roundtrip": 11.0,
+ "slippage_bps_roundtrip": 3.0,
+ "discovery_end": "2024-06-30",
+ "eval_start": "2020-06-01",
+ "configs": {},
+ "funding_symbols": 106,
+ "funding_missing_symbols": [],
+ "iteration": {
+  "control": "A0",
+  "n_arms": 7,
+  "n_trials_cumulative": 17,
+  "arms": {
+   "A0": {
+    "spec": {
+     "base": "X1"
+    },
+    "primary": {
+     "state": "computed",
+     "n_days": 1491,
+     "first": "2020-06-01",
+     "last": "2024-06-30",
+     "ann_return_net": 0.3947,
+     "ann_vol": 0.298,
+     "sharpe_net": 1.325,
+     "max_drawdown": -0.2381,
+     "worst_month": -0.1156,
+     "sharpe_h1": 2.132,
+     "sharpe_h2": 0.259,
+     "ann_return_h1": 0.7257,
+     "ann_return_h2": 0.0642,
+     "boot_ann_mean_p05": 0.152,
+     "turnover_per_year": 36.43,
+     "dsr": 0.804779,
+     "psr_n1": 0.996638,
+     "dsr_state": "computed",
+     "n_trials": 17
+    },
+    "primary_parts": {
+     "gross": 1.6863465943201792,
+     "funding": -0.14704054166666666,
+     "cost": 0.10791666666666666
+    },
+    "side_net_sum": {
+     "long": 1.8427,
+     "short": -0.2302
+    },
+    "by_year_net_sum": {
+     "2020": 0.5022,
+     "2021": 1.0914,
+     "2022": 0.0058,
+     "2023": 0.0816,
+     "2024": -0.0686
+    },
+    "stress": {
+     "state": "computed",
+     "n_days": 1491,
+     "first": "2020-06-01",
+     "last": "2024-06-30",
+     "ann_return_net": 0.3692,
+     "ann_vol": 0.2978,
+     "sharpe_net": 1.24,
+     "max_drawdown": -0.2685,
+     "worst_month": -0.1175,
+     "sharpe_h1": 2.062,
+     "sharpe_h2": 0.151,
+     "ann_return_h1": 0.7015,
+     "ann_return_h2": 0.0374,
+     "boot_ann_mean_p05": 0.1266,
+     "turnover_per_year": 36.43,
+     "dsr": 0.753287,
+     "psr_n1": 0.994376,
+     "dsr_state": "computed",
+     "n_trials": 17
+    },
+    "stress_parts": {
+     "gross": 1.6863465943201792,
+     "funding": -0.14704054166666666,
+     "cost": 0.21583333333333332
+    },
+    "verdict": {
+     "verdict": "fail",
+     "checks": {
+      "sharpe>=0.5": true,
+      "stress_sharpe>0": true,
+      "both_halves>0": true,
+      "boot_p05>0": true,
+      "dsr>0.95": false
+     }
+    }
+   },
+   "R1": {
+    "spec": {
+     "base": "X1",
+     "gate": "shorts_btc_dn"
+    },
+    "primary": {
+     "state": "computed",
+     "n_days": 1491,
+     "first": "2020-06-01",
+     "last": "2024-06-30",
+     "ann_return_net": 0.4497,
+     "ann_vol": 0.3984,
+     "sharpe_net": 1.129,
+     "max_drawdown": -0.3792,
+     "worst_month": -0.1686,
+     "sharpe_h1": 1.601,
+     "sharpe_h2": 0.535,
+     "ann_return_h1": 0.717,
+     "ann_return_h2": 0.1828,
+     "boot_ann_mean_p05": 0.1438,
+     "turnover_per_year": 26.4,
+     "dsr": 0.673284,
+     "psr_n1": 0.988202,
+     "dsr_state": "computed",
+     "n_trials": 17
+    },
+    "primary_parts": {
+     "gross": 2.3435832271430663,
+     "funding": 0.226438845,
+     "cost": 0.07746666666666666
+    },
+    "side_net_sum": {
+     "long": 1.8427,
+     "short": -0.0057
+    },
+    "by_year_net_sum": {
+     "2020": 0.4894,
+     "2021": 1.0864,
+     "2022": 0.0058,
+     "2023": 0.3272,
+     "2024": -0.0718
+    },
+    "stress": {
+     "state": "computed",
+     "n_days": 1491,
+     "first": "2020-06-01",
+     "last": "2024-06-30",
+     "ann_return_net": 0.4312,
+     "ann_vol": 0.3984,
+     "sharpe_net": 1.082,
+     "max_drawdown": -0.4119,
+     "worst_month": -0.1695,
+     "sharpe_h1": 1.558,
+     "sharpe_h2": 0.483,
+     "ann_return_h1": 0.6979,
+     "ann_return_h2": 0.1649,
+     "boot_ann_mean_p05": 0.1235,
+     "turnover_per_year": 26.4,
+     "dsr": 0.639203,
+     "psr_n1": 0.985055,
+     "dsr_state": "computed",
+     "n_trials": 17
+    },
+    "stress_parts": {
+     "gross": 2.3435832271430663,
+     "funding": 0.226438845,
+     "cost": 0.1549333333333333
+    },
+    "verdict": {
+     "verdict": "fail",
+     "checks": {
+      "sharpe>=0.5": true,
+      "stress_sharpe>0": true,
+      "both_halves>0": true,
+      "boot_p05>0": true,
+      "dsr>0.95": false
+     }
+    }
+   },
+   "R2": {
+    "spec": {
+     "base": "X1",
+     "gate": "flat_btc_dn"
+    },
+    "primary": {
+     "state": "computed",
+     "n_days": 1491,
+     "first": "2020-06-01",
+     "last": "2024-06-30",
+     "ann_return_net": 0.3874,
+     "ann_vol": 0.2601,
+     "sharpe_net": 1.49,
+     "max_drawdown": -0.2031,
+     "worst_month": -0.1156,
+     "sharpe_h1": 2.602,
+     "sharpe_h2": -0.017,
+     "ann_return_h1": 0.7791,
+     "ann_return_h2": -0.0037,
+     "boot_ann_mean_p05": 0.1823,
+     "turnover_per_year": 28.27,
+     "dsr": 0.886405,
+     "psr_n1": 0.998952,
+     "dsr_state": "computed",
+     "n_trials": 17
+    },
+    "primary_parts": {
+     "gross": 1.665248420741043,
+     "funding": -0.11499547916666666,
+     "cost": 0.08458333333333333
+    },
+    "side_net_sum": {
+     "long": 1.8226,
+     "short": -0.2399
+    },
+    "by_year_net_sum": {
+     "2020": 0.5022,
+     "2021": 1.088,
+     "2022": 0.0,
+     "2023": 0.061,
+     "2024": -0.0686
+    },
+    "stress": {
+     "state": "computed",
+     "n_days": 1491,
+     "first": "2020-06-01",
+     "last": "2024-06-30",
+     "ann_return_net": 0.3677,
+     "ann_vol": 0.2599,
+     "sharpe_net": 1.414,
+     "max_drawdown": -0.2082,
+     "worst_month": -0.1175,
+     "sharpe_h1": 2.535,
+     "sharpe_h2": -0.106,
+     "ann_return_h1": 0.7584,
+     "ann_return_h2": -0.0225,
+     "boot_ann_mean_p05": 0.162,
+     "turnover_per_year": 28.27,
+     "dsr": 0.853452,
+     "psr_n1": 0.998238,
+     "dsr_state": "computed",
+     "n_trials": 17
+    },
+    "stress_parts": {
+     "gross": 1.665248420741043,
+     "funding": -0.11499547916666666,
+     "cost": 0.16916666666666666
+    },
+    "verdict": {
+     "verdict": "fail",
+     "checks": {
+      "sharpe>=0.5": true,
+      "stress_sharpe>0": true,
+      "both_halves>0": false,
+      "boot_p05>0": true,
+      "dsr>0.95": false
+     }
+    }
+   },
+   "F1": {
+    "spec": {
+     "base": "X1",
+     "rb": 3
+    },
+    "primary": {
+     "state": "computed",
+     "n_days": 1491,
+     "first": "2020-06-01",
+     "last": "2024-06-30",
+     "ann_return_net": 0.42,
+     "ann_vol": 0.3073,
+     "sharpe_net": 1.367,
+     "max_drawdown": -0.3753,
+     "worst_month": -0.1399,
+     "sharpe_h1": 2.063,
+     "sharpe_h2": 0.456,
+     "ann_return_h1": 0.7238,
+     "ann_return_h2": 0.1165,
+     "boot_ann_mean_p05": 0.1691,
+     "turnover_per_year": 56.96,
+     "dsr": 0.829737,
+     "psr_n1": 0.997601,
+     "dsr_state": "computed",
+     "n_trials": 17
+    },
+    "primary_parts": {
+     "gross": 1.8592533999572196,
+     "funding": -0.15092228533333332,
+     "cost": 0.16785999999999995
+    },
+    "side_net_sum": {
+     "long": 2.1173,
+     "short": -0.4018
+    },
+    "by_year_net_sum": {
+     "2020": 0.5687,
+     "2021": 0.9913,
+     "2022": -0.0238,
+     "2023": 0.0916,
+     "2024": 0.0878
+    },
+    "stress": {
+     "state": "computed",
+     "n_days": 1491,
+     "first": "2020-06-01",
+     "last": "2024-06-30",
+     "ann_return_net": 0.3801,
+     "ann_vol": 0.3073,
+     "sharpe_net": 1.237,
+     "max_drawdown": -0.415,
+     "worst_month": -0.1433,
+     "sharpe_h1": 1.95,
+     "sharpe_h2": 0.299,
+     "ann_return_h1": 0.6841,
+     "ann_return_h2": 0.0765,
+     "boot_ann_mean_p05": 0.1284,
+     "turnover_per_year": 56.96,
+     "dsr": 0.753091,
+     "psr_n1": 0.994587,
+     "dsr_state": "computed",
+     "n_trials": 17
+    },
+    "stress_parts": {
+     "gross": 1.8592533999572196,
+     "funding": -0.15092228533333332,
+     "cost": 0.3357199999999999
+    },
+    "verdict": {
+     "verdict": "fail",
+     "checks": {
+      "sharpe>=0.5": true,
+      "stress_sharpe>0": true,
+      "both_halves>0": true,
+      "boot_p05>0": true,
+      "dsr>0.95": false
+     }
+    }
+   },
+   "F2": {
+    "spec": {
+     "base": "X1",
+     "rb": 14
+    },
+    "primary": {
+     "state": "computed",
+     "n_days": 1491,
+     "first": "2020-06-01",
+     "last": "2024-06-30",
+     "ann_return_net": 0.1226,
+     "ann_vol": 0.2879,
+     "sharpe_net": 0.426,
+     "max_drawdown": -0.375,
+     "worst_month": -0.1173,
+     "sharpe_h1": 0.865,
+     "sharpe_h2": -0.116,
+     "ann_return_h1": 0.275,
+     "ann_return_h2": -0.0296,
+     "boot_ann_mean_p05": -0.1028,
+     "turnover_per_year": 27.99,
+     "dsr": 0.166328,
+     "psr_n1": 0.805499,
+     "dsr_state": "computed",
+     "n_trials": 17
+    },
+    "primary_parts": {
+     "gross": 0.5183667769110677,
+     "funding": -0.13191423041666664,
+     "cost": 0.08213333333333332
+    },
+    "side_net_sum": {
+     "long": 1.1167,
+     "short": -0.6158
+    },
+    "by_year_net_sum": {
+     "2020": 0.1653,
+     "2021": 0.5549,
+     "2022": -0.1413,
+     "2023": 0.0769,
+     "2024": -0.1548
+    },
+    "stress": {
+     "state": "computed",
+     "n_days": 1491,
+     "first": "2020-06-01",
+     "last": "2024-06-30",
+     "ann_return_net": 0.103,
+     "ann_vol": 0.2878,
+     "sharpe_net": 0.358,
+     "max_drawdown": -0.3935,
+     "worst_month": -0.1185,
+     "sharpe_h1": 0.804,
+     "sharpe_h2": -0.195,
+     "ann_return_h1": 0.2558,
+     "ann_return_h2": -0.0496,
+     "boot_ann_mean_p05": -0.1227,
+     "turnover_per_year": 27.99,
+     "dsr": 0.134345,
+     "psr_n1": 0.765418,
+     "dsr_state": "computed",
+     "n_trials": 17
+    },
+    "stress_parts": {
+     "gross": 0.5183667769110677,
+     "funding": -0.13191423041666664,
+     "cost": 0.16426666666666664
+    },
+    "verdict": {
+     "verdict": "fail",
+     "checks": {
+      "sharpe>=0.5": false,
+      "stress_sharpe>0": true,
+      "both_halves>0": false,
+      "boot_p05>0": false,
+      "dsr>0.95": false
+     }
+    }
+   },
+   "U1": {
+    "spec": {
+     "base": "X1",
+     "n": 10
+    },
+    "primary": {
+     "state": "computed",
+     "n_days": 1491,
+     "first": "2020-06-01",
+     "last": "2024-06-30",
+     "ann_return_net": 0.3126,
+     "ann_vol": 0.3456,
+     "sharpe_net": 0.905,
+     "max_drawdown": -0.377,
+     "worst_month": -0.1591,
+     "sharpe_h1": 1.575,
+     "sharpe_h2": 0.115,
+     "ann_return_h1": 0.5896,
+     "ann_return_h2": 0.0359,
+     "boot_ann_mean_p05": 0.0543,
+     "turnover_per_year": 39.58,
+     "dsr": 0.49982,
+     "psr_n1": 0.966663,
+     "dsr_state": "computed",
+     "n_trials": 17
+    },
+    "primary_parts": {
+     "gross": 1.305543779914308,
+     "funding": -0.15043245083333331,
+     "cost": 0.11736666666666665
+    },
+    "side_net_sum": {
+     "long": 1.5637,
+     "short": -0.2868
+    },
+    "by_year_net_sum": {
+     "2020": 0.5365,
+     "2021": 0.6931,
+     "2022": -0.1756,
+     "2023": 0.3862,
+     "2024": -0.1632
+    },
+    "stress": {
+     "state": "computed",
+     "n_days": 1491,
+     "first": "2020-06-01",
+     "last": "2024-06-30",
+     "ann_return_net": 0.2849,
+     "ann_vol": 0.3455,
+     "sharpe_net": 0.825,
+     "max_drawdown": -0.4031,
+     "worst_month": -0.1608,
+     "sharpe_h1": 1.501,
+     "sharpe_h2": 0.025,
+     "ann_return_h1": 0.5623,
+     "ann_return_h2": 0.0079,
+     "boot_ann_mean_p05": 0.0251,
+     "turnover_per_year": 39.58,
+     "dsr": 0.435443,
+     "psr_n1": 0.952669,
+     "dsr_state": "computed",
+     "n_trials": 17
+    },
+    "stress_parts": {
+     "gross": 1.305543779914308,
+     "funding": -0.15043245083333331,
+     "cost": 0.2347333333333333
+    },
+    "verdict": {
+     "verdict": "fail",
+     "checks": {
+      "sharpe>=0.5": true,
+      "stress_sharpe>0": true,
+      "both_halves>0": true,
+      "boot_p05>0": true,
+      "dsr>0.95": false
+     }
+    }
+   },
+   "U2": {
+    "spec": {
+     "base": "X1",
+     "n": 40
+    },
+    "primary": {
+     "state": "computed",
+     "n_days": 1491,
+     "first": "2020-06-01",
+     "last": "2024-06-30",
+     "ann_return_net": 0.2029,
+     "ann_vol": 0.2621,
+     "sharpe_net": 0.774,
+     "max_drawdown": -0.3618,
+     "worst_month": -0.1063,
+     "sharpe_h1": 1.546,
+     "sharpe_h2": -0.281,
+     "ann_return_h1": 0.4664,
+     "ann_return_h2": -0.0603,
+     "boot_ann_mean_p05": 0.0032,
+     "turnover_per_year": 37.12,
+     "dsr": 0.395756,
+     "psr_n1": 0.941492,
+     "dsr_state": "computed",
+     "n_trials": 17
+    },
+    "primary_parts": {
+     "gross": 0.9267549298523446,
+     "funding": -0.1168757908526335,
+     "cost": 0.1099891919191919
+    },
+    "side_net_sum": {
+     "long": 1.5488,
+     "short": -0.72
+    },
+    "by_year_net_sum": {
+     "2020": 0.5446,
+     "2021": 0.4836,
+     "2022": -0.0839,
+     "2023": -0.1123,
+     "2024": -0.0032
+    },
+    "stress": {
+     "state": "computed",
+     "n_days": 1491,
+     "first": "2020-06-01",
+     "last": "2024-06-30",
+     "ann_return_net": 0.1769,
+     "ann_vol": 0.2619,
+     "sharpe_net": 0.676,
+     "max_drawdown": -0.3965,
+     "worst_month": -0.1087,
+     "sharpe_h1": 1.463,
+     "sharpe_h2": -0.406,
+     "ann_return_h1": 0.4412,
+     "ann_return_h2": -0.087,
+     "boot_ann_mean_p05": -0.0227,
+     "turnover_per_year": 37.12,
+     "dsr": 0.321295,
+     "psr_n1": 0.914239,
+     "dsr_state": "computed",
+     "n_trials": 17
+    },
+    "stress_parts": {
+     "gross": 0.9267549298523446,
+     "funding": -0.1168757908526335,
+     "cost": 0.2199783838383838
+    },
+    "verdict": {
+     "verdict": "fail",
+     "checks": {
+      "sharpe>=0.5": true,
+      "stress_sharpe>0": true,
+      "both_halves>0": false,
+      "boot_p05>0": true,
+      "dsr>0.95": false
+     }
+    }
+   }
+  },
+  "delta_sharpe_vs_control": {
+   "R1": -0.196,
+   "R2": 0.165,
+   "F1": 0.042,
+   "F2": -0.899,
+   "U1": -0.42,
+   "U2": -0.551
+  },
+  "passing_arms": [],
+  "measurement": {
+   "control": "A0",
+   "delta_sharpe_vs_control": {
+    "R1": -0.196,
+    "R2": 0.165,
+    "F1": 0.042,
+    "F2": -0.899,
+    "U1": -0.42,
+    "U2": -0.551
+   },
+   "passing_arms": [],
+   "arms": {
+    "A0": {
+     "spec": {
+      "base": "X1"
+     },
+     "sharpe": 1.325,
+     "h1": 2.132,
+     "h2": 0.259,
+     "dsr": 0.804779,
+     "stress_sharpe": 1.24,
+     "side_net_sum": {
+      "long": 1.8427,
+      "short": -0.2302
+     },
+     "by_year_net_sum": {
+      "2020": 0.5022,
+      "2021": 1.0914,
+      "2022": 0.0058,
+      "2023": 0.0816,
+      "2024": -0.0686
+     },
+     "verdict": "fail"
+    },
+    "R1": {
+     "spec": {
+      "base": "X1",
+      "gate": "shorts_btc_dn"
+     },
+     "sharpe": 1.129,
+     "h1": 1.601,
+     "h2": 0.535,
+     "dsr": 0.673284,
+     "stress_sharpe": 1.082,
+     "side_net_sum": {
+      "long": 1.8427,
+      "short": -0.0057
+     },
+     "by_year_net_sum": {
+      "2020": 0.4894,
+      "2021": 1.0864,
+      "2022": 0.0058,
+      "2023": 0.3272,
+      "2024": -0.0718
+     },
+     "verdict": "fail"
+    },
+    "R2": {
+     "spec": {
+      "base": "X1",
+      "gate": "flat_btc_dn"
+     },
+     "sharpe": 1.49,
+     "h1": 2.602,
+     "h2": -0.017,
+     "dsr": 0.886405,
+     "stress_sharpe": 1.414,
+     "side_net_sum": {
+      "long": 1.8226,
+      "short": -0.2399
+     },
+     "by_year_net_sum": {
+      "2020": 0.5022,
+      "2021": 1.088,
+      "2022": 0.0,
+      "2023": 0.061,
+      "2024": -0.0686
+     },
+     "verdict": "fail"
+    },
+    "F1": {
+     "spec": {
+      "base": "X1",
+      "rb": 3
+     },
+     "sharpe": 1.367,
+     "h1": 2.063,
+     "h2": 0.456,
+     "dsr": 0.829737,
+     "stress_sharpe": 1.237,
+     "side_net_sum": {
+      "long": 2.1173,
+      "short": -0.4018
+     },
+     "by_year_net_sum": {
+      "2020": 0.5687,
+      "2021": 0.9913,
+      "2022": -0.0238,
+      "2023": 0.0916,
+      "2024": 0.0878
+     },
+     "verdict": "fail"
+    },
+    "F2": {
+     "spec": {
+      "base": "X1",
+      "rb": 14
+     },
+     "sharpe": 0.426,
+     "h1": 0.865,
+     "h2": -0.116,
+     "dsr": 0.166328,
+     "stress_sharpe": 0.358,
+     "side_net_sum": {
+      "long": 1.1167,
+      "short": -0.6158
+     },
+     "by_year_net_sum": {
+      "2020": 0.1653,
+      "2021": 0.5549,
+      "2022": -0.1413,
+      "2023": 0.0769,
+      "2024": -0.1548
+     },
+     "verdict": "fail"
+    },
+    "U1": {
+     "spec": {
+      "base": "X1",
+      "n": 10
+     },
+     "sharpe": 0.905,
+     "h1": 1.575,
+     "h2": 0.115,
+     "dsr": 0.49982,
+     "stress_sharpe": 0.825,
+     "side_net_sum": {
+      "long": 1.5637,
+      "short": -0.2868
+     },
+     "by_year_net_sum": {
+      "2020": 0.5365,
+      "2021": 0.6931,
+      "2022": -0.1756,
+      "2023": 0.3862,
+      "2024": -0.1632
+     },
+     "verdict": "fail"
+    },
+    "U2": {
+     "spec": {
+      "base": "X1",
+      "n": 40
+     },
+     "sharpe": 0.774,
+     "h1": 1.546,
+     "h2": -0.281,
+     "dsr": 0.395756,
+     "stress_sharpe": 0.676,
+     "side_net_sum": {
+      "long": 1.5488,
+      "short": -0.72
+     },
+     "by_year_net_sum": {
+      "2020": 0.5446,
+      "2021": 0.4836,
+      "2022": -0.0839,
+      "2023": -0.1123,
+      "2024": -0.0032
+     },
+     "verdict": "fail"
+    }
+   }
+  }
+ }
+}

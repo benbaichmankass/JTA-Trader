@@ -45,6 +45,25 @@ jobs:
       - uses: actions/checkout@v4
         with:
           persist-credentials: false
+          # GH-CAPACITY-INFRA-RUNNER / PI-20261103-RAM7EH86-0003: sparse + blobless so a job on the self-hosted trainer
+          # runner costs ~0.5 GB, not the 6-8 GB full clone that filled the trainer disk on 2026-11-03.
+          # comms/research (5.0 GB of tracked unit data) and comms/macro are never read by this job.
+          # Pinned by tests/test_infra_runner_sparse_checkout.py.
+          filter: blob:none
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            /*
+            !/comms/research/
+            !/comms/macro/
+      - name: Materialize this unit's run.bundle_paths (sparse checkout excludes comms/research by default)
+        # kaggle_run.py bundle tars `git ls-files` of BUNDLE_ROOTS + run.bundle_paths; a bundle path under comms/ must be
+        # in the sparse set or tarfile.add() hits a missing file. Blobs are fetched lazily (public repo, no credential).
+        env:
+          UNIT: ${{ inputs.research_unit }}
+        run: |
+          set -euo pipefail
+          paths=$(python3 -c "import sys,yaml; d=yaml.safe_load(open('research/queue/'+sys.argv[1]+'.yaml')) or {}; print('\n'.join((d.get('run') or {}).get('bundle_paths') or []))" "$UNIT")
+          if [ -n "$paths" ]; then printf '%s\n' "$paths" | sed 's|^|/|' | git sparse-checkout add --stdin; echo "added bundle_paths:"; echo "$paths"; else echo "no run.bundle_paths"; fi
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
