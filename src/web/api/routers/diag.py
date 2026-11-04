@@ -1229,6 +1229,10 @@ _LOG_FILES: dict[str, Path] = {
         runtime_logs_dir() / "losing_streak_alert_state.json",
     "losing_streak_observed_state":
         runtime_logs_dir() / "losing_streak_observed_state.json",
+    # ML-ENTRY-LIVE-MONITOR: last observation per account (n, mean, SE, flags at the latest 50-close checkpoint) +
+    # __last_check__, so "never fired" and "cannot run" stay distinguishable. Report-only detector.
+    "ml_entry_live_monitor_state":
+        runtime_logs_dir() / "ml_entry_live_monitor_state.json",
     # MI-303. The latch that rate-limits the DECISION-CHANNEL page. Allowlisted
     # in the SAME commit that shipped the writer, for the reason the
     # `exit_loop_health` #8778 lesson records: a latch that suppresses an
