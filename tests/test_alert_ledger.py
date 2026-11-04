@@ -5,7 +5,6 @@ from __future__ import annotations
 
 import json
 import re
-import subprocess
 import warnings
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -229,8 +228,9 @@ def test_ltr_compaction_keeps_marker_and_shrinks():
 
 def test_ltr_compaction_only_old_oversized(monkeypatch):
     marker = '<!-- ltr-wake {"kind":"due","entries":[]} -->'
-    mk = lambda age_h, size: {"id": 1, "created_at": (NOW - timedelta(hours=age_h)).strftime("%Y-%m-%dT%H:%M:%SZ"),
-                              "body": "<details>" + "p" * size + "</details>\n" + marker}
+    def mk(age_h, size):
+        return {"id": 1, "created_at": (NOW - timedelta(hours=age_h)).strftime("%Y-%m-%dT%H:%M:%SZ"),
+                "body": "<details>" + "p" * size + "</details>\n" + marker}
     patched = []
 
     def http(method, url, body, auth):
