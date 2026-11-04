@@ -92,7 +92,7 @@ What the new manager must do with it:
    - workflow streamlining and CI load (COMPUTE-ALLOCATION B5/B6/B8);
    - UI-LIVE-STACK-REDESIGN / UI-OVERVIEW-HEALTH-CARDS;
    - ML-ROADMAP-MECE.
-   A faster burn at first is accepted, still within the 85% stop.
+   A faster burn at first is accepted, still within the 85% stop. <!-- population-ok: operator-quoted pacing threshold (manager direction), not a measured claim -->
 2. **Real-money lanes keep running:** TP-REALMONEY-UNITS, the #22942 restart, gateway disk, and EXIT-HEAD-ETH (trend_donchian_eth trades real money on bybit_2).
 3. **Everything else is RE-SCOPED to the system being built this week, not today's:**
    - LIVE-DECAY-MONITOR, PASS-TO-DECISION-SLO, ML-LEARNING-LEDGER, research-SLO fixes, the backlog drain's register writes, and new registers or ledgers;
