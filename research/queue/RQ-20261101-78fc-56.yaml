@@ -3,7 +3,7 @@ id: RQ-20261101-78fc-56
 title: 'ITERATION 1 of tlt_pullback_1h (fail): On tlt_pullback_1h over 2018-06-01..2026-10-15 23:59, does any of SL30 (atr_stop_mult=3.0), TL120
   (trend_lookback=120) beat the declared leg (A) net of the full cost stack, by >= 0.02 R x n(A), in >= 4 of 6 calendar folds, with maxDD <= 1.35
   x A?'
-status: queued
+status: done
 cadence: once
 theme: live_strategy
 priority: 2
@@ -122,3 +122,16 @@ related:
 - comms/strategy_evidence/tlt_pullback_1h.json
 what_it_does_not_do: Edits no config, roster or rule; places no order; a PASS is an input to the next iteration, not a promotion.
 last_dispatched_at: '2026-11-04T11:43:12+00:00'
+grading:
+  attested: RULE-RQ-20261101-78fc-56
+  auto: true
+  decision_rule_id: RULE-RQ-20261101-78fc-56
+  evidence:
+  - research/results/RQ-20261101-78fc-56/41807536672.jsonl
+  graded_at: '2026-11-04'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail
