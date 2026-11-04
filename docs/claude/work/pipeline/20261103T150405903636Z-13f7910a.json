@@ -1,0 +1,16 @@
+{
+  "due_when": {
+    "check_every_days": 2,
+    "clears_when": "a flatten-bybit-position close journals exit_reason as the operator/system-action close (not reconciler_filled) with exit_price and pnl set on both legs, and trades 6844/6845 are backfilled",
+    "kind": "observation"
+  },
+  "id": "PI-20261103-NBYZCENX-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "live-review lane pkg-609dc0420b7d4ee6, manager verify task 2026-11-03 15:02Z",
+    "rerun": "scripts/ops/diag_fetch.sh 'journal?table=trades&limit=200' and read id 6844/6845: exit_reason, exit_price, pnl, notes.closed_by, notes.operator_flatten_intent, notes.exit_reason_source"
+  },
+  "state": "queued",
+  "what": "Journal close reason for operator-flattened SOL ml_entry trades is reconciler_filled/monitor_reconciler, not the operator close: trades 6844 (bybit_2) and 6845 (bybit_portfolio) have exit_reason reconciler_filled and closed_by monitor_reconciler although notes carry operator_flatten_intent true (flatten-bybit-position #22680/#22681). 6844 also has exit_reason_source unresolved and finalised_by empty; 6845 has NO exit_price and NO pnl (exit_price_source entry_order_avg_price_unreliable). A reconciler-only close is a bug class: it hides who closed the trade and leaves the mirror leg ungradable."
+}
