@@ -101,7 +101,13 @@ def load_facts() -> dict:
     f["measured_fail"] = sum(1 for d in meas.values() if (d.get("decision_rule") or {}).get("verdict") == "fail")
     fam = collections.defaultdict(list)
     for k, d in meas.items():
-        fam[d.get("harness")].append(d)
+        h = str(d.get("harness"))
+        # A record's harness field can carry a full run descriptor, e.g.
+        # "ml_entry_tp_revision ... (on ml_decision_entry)"; group by the family it names.
+        for known in ("ml_decision_entry", "event_oi_shock"):
+            if known in h:
+                h = known
+        fam[h].append(d)
     f["families"] = {
         h: dict(records=len(v),
                 passed=sum(1 for d in v if (d.get("decision_rule") or {}).get("verdict") == "pass"),
