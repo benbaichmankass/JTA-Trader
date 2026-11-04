@@ -1,0 +1,17 @@
+{
+  "due_when": {
+    "check_every_days": 7,
+    "clears_when": "research/queue/PLANNING.md (or the ml_bakeoff schema docstring) requires a beats-prior clause on classification-target bake-offs, and the 3 b3c9 dispositions note 'matches prior, no skill'.",
+    "kind": "observation"
+  },
+  "id": "PI-20261104-DGUBH8UA-0003",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "review",
+    "ref": "ml-review 2026-11-04 (lane ML-FRONTIER-PREP-20261104)",
+    "rerun": "research/results/RQ-20261103-b3c9-14/*.jsonl -> measurement.deltas.<sym>.cv.{catboost,prior}.{lgbm,prior}"
+  },
+  "routed_to": "ML-PROGRAMME-PLAN (research-ops rule-drafting standard)",
+  "state": "routed",
+  "what": "[ml] Direction-label 'PASS' verdicts are learners reaching the class PRIOR, not skill: RQ-20261103-b3c9-14/15/16 PASS (catboost / sklearn_hgb / extratrees beat lightgbm on 1h direction_label log-loss by +0.006..+0.007, 5 folds) but in the same records LightGBM is WORSE than the class prior by 0.006-0.007 and catboost-vs-prior is -0.0001..-0.0006 (CI spans 0). The rule pass_if compares to the 'lgbm' baseline only, with no 'beats prior' clause, so a learner that predicts the base rate passes. Fix (rule drafting standard, research-ops intake): every ml_bakeoff rule on a classification target carries a 'candidate beats prior' clause; read b3c9-14..16 as NO direction skill at 1h."
+}
