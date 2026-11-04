@@ -12,5 +12,10 @@
     "rerun": "python3 scripts/ops/spend_meter.py --section-5"
   },
   "state": "queued",
-  "what": "[F1] Lane dollars UNKNOWN for the month: cost_usd not reachable from a lane and list_sessions window is 3 days. Manager to pull get_session cost_usd for the month's lanes from an interactive session and feed spend_meter --session-costs at the next monthly review."
+  "what": "[F1] Lane dollars UNKNOWN for the month: cost_usd not reachable from a lane and list_sessions window is 3 days. Manager to pull get_session cost_usd for the month's lanes from an interactive session and feed spend_meter --session-costs at the next monthly review.",
+  "observation": {
+    "what": "the month's lane cost_usd totals are recorded in spend_meter (via --session-costs) so lane dollars stop reading UNKNOWN",
+    "how_to_check": "python3 scripts/ops/spend_meter.py --section-5 shows a lane-dollar total with provenance MEASURED for the month",
+    "due_by": "2026-12-04"
+  }
 }
