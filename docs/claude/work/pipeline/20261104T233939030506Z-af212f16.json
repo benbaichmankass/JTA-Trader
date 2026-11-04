@@ -1,0 +1,16 @@
+{
+  "due_when": {
+    "check_every_days": 2,
+    "due_date": "2026-11-11",
+    "kind": "date"
+  },
+  "id": "PI-20261104-YUTXA21Z-0002",
+  "next_action": "check_observation",
+  "origin": {
+    "kind": "session",
+    "ref": "lane AUD-PROP-VENUE-POSITIONS-TRADEIFY-VELOTRADE 2026-11-04, PR #22982",
+    "rerun": "for a in tradeify_1 velotrade_1; do curl -sS \"https://ict-bot.duckdns.org/api/bot/prop/status?account_id=$a\" | python3 -c \"import json,sys;d=json.load(sys.stdin);r=d['status']['raw'];r=json.loads(r) if isinstance(r,str) else r;print('$a',r.get('positions_state'),r.get('positions'))\"; done"
+  },
+  "state": "queued",
+  "what": "First live NON-EMPTY DXtrade positions read after #22982: when tradeify_1 or velotrade_1 next holds an open prop position, confirm /api/bot/prop/status raw.positions_state=read with positions[].qty in UNITS matching the open fill qty (lots x lot_units), and INV-PROP-POSITIONS PASS (not 'qty differs'). Observed 2026-11-04T23:38Z only on flat accounts (n=3 PASS, all positions=[]); the lots->units path is test-proven only."
+}
