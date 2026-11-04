@@ -1,0 +1,99 @@
+{
+ "schema_version": 1,
+ "review_id": "LR-20261104T1808Z-pkg-dc63bb3b4bbf4723",
+ "reviewed_at": "2026-11-04T18:11:39Z",
+ "order_package_id": "pkg-dc63bb3b4bbf4723",
+ "trade_id": null,
+ "leg": "tlt_pullback_1d",
+ "accounts": [
+  "alpaca_paper",
+  "ib_paper"
+ ],
+ "trigger": {
+  "event": "daily_floor",
+  "level": "2026-11-04",
+  "l0_snapshot_at": "2026-11-04T18:01:35Z"
+ },
+ "info_cutoff_at": "2026-11-04T18:08:37Z",
+ "state": {
+  "open_r": null,
+  "peak_r": null,
+  "peak_provenance": "unverified",
+  "giveback_r": null,
+  "bars_held": null,
+  "sl": 79.4125,
+  "tp": 83.59,
+  "atr_now_over_entry": 1.1241,
+  "regime_cell_now": null,
+  "regime_cell_entry": null
+ },
+ "features_at_review": {
+  "atr_now_over_entry": 1.1241,
+  "bars_since_peak": null,
+  "giveback_r": null,
+  "open_r": null,
+  "peak_r": null,
+  "r_to_stop": null,
+  "r_to_target": null
+ },
+ "mechanics": {
+  "verdict": "mismatch",
+  "evidence": "venue vs package: extra stale bracket on ib_paper TLT (stop qty 12,743 > position 7,443; extra TP 87.57)"
+ },
+ "options": [],
+ "outcome_table_source": null,
+ "recommendation": {
+  "action": "flag_mechanics",
+  "level": null,
+  "level_atr": null,
+  "ev_delta_r": null,
+  "worst_case_delta_r": null,
+  "basis": "mechanics",
+  "confidence": "anecdote",
+  "evidence_source": "none",
+  "judgement_confidence": null,
+  "reason": "ib_paper TLT carries TWO protective sets: the package's own (oca-protect-t6879: SELL STP 79.41 + LMT 83.59, 7443 each) and a stale parent bracket (oca 1712634399: LMT 87.57 x7443, STP 79.41 x5300). Resting SELL stops total 12,743 vs a 7,443-share long, and a TP 87.57 the package never set. Alpaca TLT (632) matches. IB open-order read is a known stale view (BL-20260826): verify with a fresh client."
+ },
+ "judge_prior": null,
+ "applied": false,
+ "apply_policy": {
+  "bound_r": 0.25,
+  "within_bound": null,
+  "tighten_r": null
+ },
+ "shadow_policy": {
+  "bound_r": 0.5,
+  "within_bound": null,
+  "would_apply": null,
+  "tighten_r": null
+ },
+ "context_flags": [
+  "missing_inputs: state.open_r, regime.vol_now, regime.cell_entry, priced_options, context_v3.chart.since_entry"
+ ],
+ "account_reads": [
+  {
+   "account_id": "alpaca_paper",
+   "account_class": "paper",
+   "read": "no_action",
+   "evidence": "alpaca_orders: SL 79.41 / TP 83.59, position True, matched by sl:order_id,tp:qty; apply paths close, move_tp, tighten; would_apply = an executor reaches this leg, NOT that its RiskManager approved (LTR-6 gap)"
+  },
+  {
+   "account_id": "ib_paper",
+   "account_class": "paper",
+   "read": "no_action",
+   "evidence": "ib_orders: SL 79.41 / TP 83.59, position True, matched by oca_group; no apply path for interactive_brokers (live_review_apply.py ACTION_PATHS / tighten dispatch: none)"
+  }
+ ],
+ "disposition": {
+  "route": "operator_ask",
+  "mandate": null,
+  "action_issue": null,
+  "applied_at": null,
+  "verified_readback": null
+ },
+ "model": "sonnet-tier (repo lane)",
+ "session": "session_01AFoLuMiqciU1RmHeiPWPEn",
+ "prompt_sha": null,
+ "skill_sha": "ce31519c30f9287eb2f2970ac8460bb763a5e744",
+ "packet_sha": "9d2b4eacd7450a78780cef3174b559e21d4b78b84104e3243d90619e0f8f5f14"
+}

@@ -1,0 +1,125 @@
+{
+ "schema_version": 1,
+ "review_id": "LR-20261104T1808Z-pkg-350f9f48e68d48ce",
+ "reviewed_at": "2026-11-04T18:11:39Z",
+ "order_package_id": "pkg-350f9f48e68d48ce",
+ "trade_id": null,
+ "leg": "trend_donchian_sol_prop",
+ "accounts": [
+  "bybit_2",
+  "bybit_portfolio"
+ ],
+ "trigger": {
+  "event": "giveback",
+  "level": 1.0,
+  "l0_snapshot_at": "2026-11-04T18:01:35Z"
+ },
+ "info_cutoff_at": "2026-11-04T18:08:37Z",
+ "state": {
+  "open_r": 0.2344,
+  "peak_r": 1.0419,
+  "peak_provenance": "estimated",
+  "giveback_r": 0.8074,
+  "bars_held": 4,
+  "sl": 94.4075,
+  "tp": 104.81163,
+  "atr_now_over_entry": 1.0877,
+  "regime_cell_now": null,
+  "regime_cell_entry": null
+ },
+ "features_at_review": {
+  "atr_now_over_entry": 1.0877,
+  "bars_since_peak": 2,
+  "giveback_r": 0.8074,
+  "open_r": 0.2344,
+  "peak_r": 1.0419,
+  "r_to_stop": 0.5926,
+  "r_to_target": 3.2787
+ },
+ "mechanics": {
+  "verdict": "match",
+  "evidence": "package sl 94.4075 / tp 104.81163 agree with every readable account"
+ },
+ "options": [
+  {
+   "action": "hold",
+   "level": null,
+   "n": 261,
+   "mean_r": 1.0865,
+   "sd_r": 1.3173,
+   "worst_r": -0.4715,
+   "net": true
+  }
+ ],
+ "outcome_table_source": "comms/live_review/tables/LR-20261104T1808Z-pkg-350f9f48e68d48ce.json",
+ "recommendation": {
+  "action": "hold",
+  "level": null,
+  "level_atr": null,
+  "ev_delta_r": null,
+  "worst_case_delta_r": null,
+  "basis": "ev_positive",
+  "confidence": "measured",
+  "evidence_source": "table",
+  "judgement_confidence": null,
+  "reason": "Prev forecast (target 100, inv 94.4, p .45) is still live: since-entry high 98.17 not exceeded, 94.4 not touched; price 96.0 is retesting after the spike bar. Hold cell n=261 mean +1.09R beats every priced alternative (tighten cells invalid_level); 4h ADX 33 trend intact; stop 94.41 = leg trail (98.17-3.5xATR). Carry forward, p cut to .40 as the retest has run 1.5h with no new high."
+ },
+ "judge_prior": null,
+ "applied": false,
+ "apply_policy": {
+  "bound_r": 0.25,
+  "within_bound": null,
+  "tighten_r": null
+ },
+ "shadow_policy": {
+  "bound_r": 0.5,
+  "within_bound": null,
+  "would_apply": null,
+  "tighten_r": null
+ },
+ "context_flags": [
+  "correlated: SOL long also on bybit_1 (pkg-5414, 128.8) and bybit_portfolio; SOL short on bybit_1 (pkg-f76b)",
+  "giveback: 0.81R from 1.04R peak in 4 bars (one spike bar)",
+  "missing_inputs: regime.vol_now, regime.cell_entry, context.funding"
+ ],
+ "account_reads": [
+  {
+   "account_id": "bybit_2",
+   "account_class": "real_money",
+   "read": "no_action",
+   "evidence": "bybit_orders: SL 94.41 / TP 104.81, position True, matched by order_id; apply paths close, move_tp, reduce, tighten, widen_sl; would_apply = an executor reaches this leg, NOT that its RiskManager approved (LTR-6 gap)"
+  },
+  {
+   "account_id": "bybit_portfolio",
+   "account_class": "paper",
+   "read": "no_action",
+   "evidence": "bybit_orders: SL 94.41 / TP 104.81, position True, matched by order_id; apply paths close, move_tp, reduce, tighten, widen_sl; would_apply = an executor reaches this leg, NOT that its RiskManager approved (LTR-6 gap)"
+  }
+ ],
+ "disposition": {
+  "route": "none",
+  "mandate": null,
+  "action_issue": null,
+  "applied_at": null,
+  "verified_readback": null
+ },
+ "model": "sonnet-tier (repo lane)",
+ "session": "session_01AFoLuMiqciU1RmHeiPWPEn",
+ "prompt_sha": null,
+ "skill_sha": "ce31519c30f9287eb2f2970ac8460bb763a5e744",
+ "packet_sha": "09662ecb1f3de8db0b298de0d512156f16d4587f1d2c693ec17af3150daaf7a8",
+ "forecast": {
+  "thesis": "4h trend intact; retest of the 95.9-96 breakout zone holds above the 94.4 trail, then resumes toward 100 before the stop.",
+  "direction": "with_trade",
+  "target_px": 100.0,
+  "p_target": 0.4,
+  "invalidation_px": 94.4,
+  "horizon_bars": 10,
+  "timeframe": "1h",
+  "evidence": [
+   "chart.swings: highs <=95.9 below price",
+   "exit_plan: trail stop 94.4075",
+   "priced_options: hold n=261 mean +1.09R"
+  ]
+ }
+}

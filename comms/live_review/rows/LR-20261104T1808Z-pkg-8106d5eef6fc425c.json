@@ -1,0 +1,92 @@
+{
+ "schema_version": 1,
+ "review_id": "LR-20261104T1808Z-pkg-8106d5eef6fc425c",
+ "reviewed_at": "2026-11-04T18:11:39Z",
+ "order_package_id": "pkg-8106d5eef6fc425c",
+ "trade_id": null,
+ "leg": "gld_pullback_1h",
+ "accounts": [
+  "alpaca_paper"
+ ],
+ "trigger": {
+  "event": "daily_floor",
+  "level": "2026-11-04",
+  "l0_snapshot_at": "2026-11-04T18:01:35Z"
+ },
+ "info_cutoff_at": "2026-11-04T18:08:37Z",
+ "state": {
+  "open_r": null,
+  "peak_r": null,
+  "peak_provenance": "unverified",
+  "giveback_r": null,
+  "bars_held": null,
+  "sl": 416.08857143,
+  "tp": 461.27228,
+  "atr_now_over_entry": 1.1418,
+  "regime_cell_now": null,
+  "regime_cell_entry": null
+ },
+ "features_at_review": {
+  "atr_now_over_entry": 1.1418,
+  "bars_since_peak": null,
+  "giveback_r": null,
+  "open_r": null,
+  "peak_r": null,
+  "r_to_stop": null,
+  "r_to_target": null
+ },
+ "mechanics": {
+  "verdict": "mismatch",
+  "evidence": "alpaca_paper GLD: price ~372.8 is below the resting stop 416.09 (OCO stop leg 'held', not fired); package/venue levels equal but the stop is not protecting"
+ },
+ "options": [],
+ "outcome_table_source": null,
+ "recommendation": {
+  "action": "flag_mechanics",
+  "level": null,
+  "level_atr": null,
+  "ev_delta_r": null,
+  "worst_case_delta_r": null,
+  "basis": "mechanics",
+  "confidence": "anecdote",
+  "evidence_source": "none",
+  "judgement_confidence": null,
+  "reason": "alpaca_paper GLD long 39 (entry 419.5) is -$1,823 (~372.8/sh), 10% BELOW its resting OCO stop 416.09, and the stop leg is still status 'held'. The stop did not protect. Package is open since 2026-08-27 (trade 5209, the retired GLD-ORPHAN-5209); telemetry has no row for it, hence unmeasured."
+ },
+ "judge_prior": null,
+ "applied": false,
+ "apply_policy": {
+  "bound_r": 0.25,
+  "within_bound": null,
+  "tighten_r": null
+ },
+ "shadow_policy": {
+  "bound_r": 0.5,
+  "within_bound": null,
+  "would_apply": null,
+  "tighten_r": null
+ },
+ "context_flags": [
+  "missing_inputs: state.open_r, regime.vol_now, regime.cell_entry, priced_options, context.news"
+ ],
+ "account_reads": [
+  {
+   "account_id": "alpaca_paper",
+   "account_class": "paper",
+   "read": "no_action",
+   "evidence": "alpaca_orders: SL 416.09 / TP 461.27, position True, matched by qty; apply paths close, move_tp, tighten; would_apply = an executor reaches this leg, NOT that its RiskManager approved (LTR-6 gap)"
+  }
+ ],
+ "disposition": {
+  "route": "operator_ask",
+  "mandate": null,
+  "action_issue": null,
+  "applied_at": null,
+  "verified_readback": null
+ },
+ "model": "sonnet-tier (repo lane)",
+ "session": "session_01AFoLuMiqciU1RmHeiPWPEn",
+ "prompt_sha": null,
+ "skill_sha": "ce31519c30f9287eb2f2970ac8460bb763a5e744",
+ "packet_sha": "224b1f66d0b37eb2d97ce4a6c3cfa146b0ce09362d70f9803c19946c51e8e1f3"
+}

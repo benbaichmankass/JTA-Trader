@@ -1,0 +1,108 @@
+{
+ "schema_version": 1,
+ "review_id": "LR-20261104T1808Z-pkg-07365d3b76ef4fb3",
+ "reviewed_at": "2026-11-04T18:11:39Z",
+ "order_package_id": "pkg-07365d3b76ef4fb3",
+ "trade_id": null,
+ "leg": "trend_donchian_eth_prop",
+ "accounts": [
+  "breakout_2",
+  "tradeify_1",
+  "velotrade_1"
+ ],
+ "trigger": {
+  "event": "manual",
+  "level": null,
+  "l0_snapshot_at": null
+ },
+ "info_cutoff_at": "2026-11-04T18:08:37Z",
+ "state": {
+  "open_r": null,
+  "peak_r": null,
+  "peak_provenance": "unverified",
+  "giveback_r": null,
+  "bars_held": null,
+  "sl": 2356.86035714,
+  "tp": 2666.48172,
+  "atr_now_over_entry": 0.9592,
+  "regime_cell_now": null,
+  "regime_cell_entry": "trending/volatile"
+ },
+ "features_at_review": {
+  "atr_now_over_entry": 0.9592,
+  "bars_since_peak": null,
+  "giveback_r": null,
+  "open_r": null,
+  "peak_r": null,
+  "r_to_stop": null,
+  "r_to_target": null
+ },
+ "mechanics": {
+  "verdict": "match",
+  "evidence": "order_packages status=emitted close_reason=prop_ticket_emitted; tradeify_1: ticket filled, positions field absent in status; velotrade_1: ticket filled, positions field absent in status; 2 account(s) could not be read"
+ },
+ "options": [],
+ "outcome_table_source": null,
+ "recommendation": {
+  "action": "no_recommendation",
+  "level": null,
+  "level_atr": null,
+  "ev_delta_r": null,
+  "worst_case_delta_r": null,
+  "basis": "could_not_look",
+  "confidence": "anecdote",
+  "evidence_source": "none",
+  "judgement_confidence": null,
+  "reason": "Prop ETH package with no trades row and no telemetry row (order_packages status=emitted, close_reason=prop_ticket_emitted); open_r, peak_r, bars_held all null and prop positions not readable, so no call can be made. Not an absence of risk."
+ },
+ "judge_prior": null,
+ "applied": false,
+ "apply_policy": {
+  "bound_r": 0.25,
+  "within_bound": null,
+  "tighten_r": null
+ },
+ "shadow_policy": {
+  "bound_r": 0.5,
+  "within_bound": null,
+  "would_apply": null,
+  "tighten_r": null
+ },
+ "context_flags": [
+  "unmeasured: no position_telemetry row and no linked trade row (prop-ticket package)",
+  "second ETH prop package alongside pkg-3245 on the same prop accounts: confirm it is a distinct signal and not a duplicate entry",
+  "missing_inputs: state.open_r, regime.vol_now, priced_options, context.funding"
+ ],
+ "account_reads": [
+  {
+   "account_id": "breakout_2",
+   "account_class": "prop",
+   "read": "no_action",
+   "evidence": "apply paths move_tp, tighten (live_review_apply.py); positions read: 0 open"
+  },
+  {
+   "account_id": "tradeify_1",
+   "account_class": "prop",
+   "read": "no_action",
+   "evidence": "apply paths tighten (live_review_apply.py); positions unreadable (status carries no positions field)"
+  },
+  {
+   "account_id": "velotrade_1",
+   "account_class": "prop",
+   "read": "no_action",
+   "evidence": "apply paths tighten (live_review_apply.py); positions unreadable (status carries no positions field)"
+  }
+ ],
+ "disposition": {
+  "route": "none",
+  "mandate": null,
+  "action_issue": null,
+  "applied_at": null,
+  "verified_readback": null
+ },
+ "model": "sonnet-tier (repo lane)",
+ "session": "session_01AFoLuMiqciU1RmHeiPWPEn",
+ "prompt_sha": null,
+ "skill_sha": "ce31519c30f9287eb2f2970ac8460bb763a5e744",
+ "packet_sha": "ff39fef959141f6340b3f6071973c484f983e6039a6910fa3ddea66db8fc4feb"
+}

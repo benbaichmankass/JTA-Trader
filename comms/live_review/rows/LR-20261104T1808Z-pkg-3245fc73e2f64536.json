@@ -1,0 +1,138 @@
+{
+ "schema_version": 1,
+ "review_id": "LR-20261104T1808Z-pkg-3245fc73e2f64536",
+ "reviewed_at": "2026-11-04T18:11:39Z",
+ "order_package_id": "pkg-3245fc73e2f64536",
+ "trade_id": null,
+ "leg": "trend_donchian_eth_prop",
+ "accounts": [
+  "breakout_2",
+  "tradeify_1",
+  "velotrade_1",
+  "bybit_1"
+ ],
+ "trigger": {
+  "event": "daily_floor",
+  "level": "2026-11-04",
+  "l0_snapshot_at": "2026-11-04T18:01:35Z"
+ },
+ "info_cutoff_at": "2026-11-04T18:08:37Z",
+ "state": {
+  "open_r": 0.844,
+  "peak_r": 1.1904,
+  "peak_provenance": "estimated",
+  "giveback_r": 0.3464,
+  "bars_held": 4,
+  "sl": 2366.7925,
+  "tp": 2614.91664,
+  "atr_now_over_entry": 1.1104,
+  "regime_cell_now": null,
+  "regime_cell_entry": "trending/volatile"
+ },
+ "features_at_review": {
+  "atr_now_over_entry": 1.1104,
+  "bars_since_peak": 2,
+  "giveback_r": 0.3464,
+  "open_r": 0.844,
+  "peak_r": 1.1904,
+  "r_to_stop": 1.0536,
+  "r_to_target": 3.0844
+ },
+ "mechanics": {
+  "verdict": "match",
+  "evidence": "2 account(s) could not be read"
+ },
+ "options": [
+  {
+   "action": "hold",
+   "level": null,
+   "n": 219,
+   "mean_r": 1.2847,
+   "sd_r": 1.1637,
+   "worst_r": -0.4716,
+   "net": true
+  }
+ ],
+ "outcome_table_source": "comms/live_review/tables/LR-20261104T1808Z-pkg-3245fc73e2f64536.json",
+ "recommendation": {
+  "action": "hold",
+  "level": null,
+  "level_atr": null,
+  "ev_delta_r": null,
+  "worst_case_delta_r": null,
+  "basis": "ev_positive",
+  "confidence": "measured",
+  "evidence_source": "table",
+  "judgement_confidence": null,
+  "reason": "Hold cell n=219 mean +1.28R worst -0.47R (measured). Open +0.81R after peak +1.19R; trail stop 2366.8 is 63 below price; 1h ADX 19 (weak) so the retest of 2450.7 is not guaranteed. No priced alternative beats hold. First test: swing high 2450.74 (0.97 ATR above)."
+ },
+ "judge_prior": null,
+ "applied": false,
+ "apply_policy": {
+  "bound_r": 0.25,
+  "within_bound": null,
+  "tighten_r": null
+ },
+ "shadow_policy": {
+  "bound_r": 0.5,
+  "within_bound": null,
+  "would_apply": null,
+  "tighten_r": null
+ },
+ "context_flags": [
+  "mechanics_unread: breakout_2/tradeify_1/velotrade_1 positions not readable in status (2 accounts could not be read); only the bybit_1 paper leg's brackets are verified at the venue",
+  "correlated: ETH long in 6 packages",
+  "missing_inputs: regime.vol_now, context.funding"
+ ],
+ "account_reads": [
+  {
+   "account_id": "breakout_2",
+   "account_class": "prop",
+   "read": "no_action",
+   "evidence": "apply paths move_tp, tighten (live_review_apply.py); positions read: 0 open"
+  },
+  {
+   "account_id": "tradeify_1",
+   "account_class": "prop",
+   "read": "no_action",
+   "evidence": "apply paths tighten (live_review_apply.py); positions unreadable (status carries no positions field)"
+  },
+  {
+   "account_id": "velotrade_1",
+   "account_class": "prop",
+   "read": "no_action",
+   "evidence": "apply paths tighten (live_review_apply.py); positions unreadable (status carries no positions field)"
+  },
+  {
+   "account_id": "bybit_1",
+   "account_class": "paper",
+   "read": "no_action",
+   "evidence": "bybit_orders: SL 2366.79 / TP 2614.92, position True, matched by order_id, 2 sibling package(s) on ETHUSDT; apply paths close, move_tp, reduce, tighten, widen_sl; would_apply = an executor reaches this leg, NOT that its RiskManager approved"
+  }
+ ],
+ "disposition": {
+  "route": "none",
+  "mandate": null,
+  "action_issue": null,
+  "applied_at": null,
+  "verified_readback": null
+ },
+ "model": "sonnet-tier (repo lane)",
+ "session": "session_01AFoLuMiqciU1RmHeiPWPEn",
+ "prompt_sha": null,
+ "skill_sha": "ce31519c30f9287eb2f2970ac8460bb763a5e744",
+ "packet_sha": "d5d7dc40df18590ca40caf07b2134d00cab8361c99041784dd8593332167c241",
+ "forecast": {
+  "thesis": "Price is 0.97 ATR under the 2450.74 swing high with the breakout intact; first trade is the retest of 2450.74 before a loss of 2400.",
+  "direction": "with_trade",
+  "target_px": 2450.74,
+  "p_target": 0.55,
+  "invalidation_px": 2400.0,
+  "horizon_bars": 8,
+  "timeframe": "1h",
+  "evidence": [
+   "chart.swings: high 2450.74",
+   "priced_options: hold n=219 +1.28R"
+  ]
+ }
+}

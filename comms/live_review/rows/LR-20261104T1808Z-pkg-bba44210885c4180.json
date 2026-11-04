@@ -1,0 +1,117 @@
+{
+ "schema_version": 1,
+ "review_id": "LR-20261104T1808Z-pkg-bba44210885c4180",
+ "reviewed_at": "2026-11-04T18:11:39Z",
+ "order_package_id": "pkg-bba44210885c4180",
+ "trade_id": null,
+ "leg": "trend_donchian_ada_4h",
+ "accounts": [
+  "bybit_1"
+ ],
+ "trigger": {
+  "event": "momentum_flip",
+  "level": "2026-11-04T12:00:00+00:00",
+  "l0_snapshot_at": "2026-11-04T18:01:35Z"
+ },
+ "info_cutoff_at": "2026-11-04T18:08:37Z",
+ "state": {
+  "open_r": -0.6131,
+  "peak_r": 0.7869,
+  "peak_provenance": "estimated",
+  "giveback_r": 1.4,
+  "bars_held": 35,
+  "sl": 0.20172857,
+  "tp": 0.1719108,
+  "atr_now_over_entry": 0.7529,
+  "regime_cell_now": null,
+  "regime_cell_entry": null
+ },
+ "features_at_review": {
+  "atr_now_over_entry": 0.7529,
+  "bars_since_peak": 33,
+  "giveback_r": 1.4,
+  "open_r": -0.6131,
+  "peak_r": 0.7869,
+  "r_to_stop": 0.3869,
+  "r_to_target": 2.3415
+ },
+ "mechanics": {
+  "verdict": "match",
+  "evidence": "package sl 0.20172857 / tp 0.1719108 agree with every readable account"
+ },
+ "options": [
+  {
+   "action": "hold",
+   "level": null,
+   "n": 13,
+   "mean_r": null,
+   "sd_r": null,
+   "worst_r": null,
+   "net": true
+  }
+ ],
+ "outcome_table_source": "comms/live_review/tables/LR-20261104T1808Z-pkg-bba44210885c4180.json",
+ "recommendation": {
+  "action": "hold",
+  "level": null,
+  "level_atr": null,
+  "ev_delta_r": null,
+  "worst_case_delta_r": null,
+  "basis": "judgement",
+  "confidence": "anecdote",
+  "evidence_source": "judgement",
+  "judgement_confidence": 0.55,
+  "reason": "Prev forecast FAILED: invalidation 0.1949 was breached (high 0.2016, price 0.1973). Momentum flip and a close above the since-entry high say the short is losing, -0.59R, stop 0.4R away. Close vs hold: closing banks -0.59R; holding risks -1R but keeps 2.2R of target; hold wins unless a stop is >90% likely. Hold cell n=13 thin. New view: the stop is the likely first trade (p .6)."
+ },
+ "judge_prior": null,
+ "applied": false,
+ "apply_policy": {
+  "bound_r": 0.25,
+  "within_bound": null,
+  "tighten_r": null
+ },
+ "shadow_policy": {
+  "bound_r": 0.5,
+  "within_bound": null,
+  "would_apply": null,
+  "tighten_r": null
+ },
+ "context_flags": [
+  "structure: prior invalidation 0.1949 breached",
+  "correlated: short alt-beta against a long-bias crypto book (ETH/SOL/BTC longs)",
+  "missing_inputs: regime.vol_now, regime.cell_entry, context.funding"
+ ],
+ "account_reads": [
+  {
+   "account_id": "bybit_1",
+   "account_class": "paper",
+   "read": "no_action",
+   "evidence": "bybit_orders: SL 0.2017 / TP 0.1719, position True, matched by order_id; apply paths close, move_tp, reduce, tighten, widen_sl; would_apply = an executor reaches this leg, NOT that its RiskManager approved (LTR-6 gap)"
+  }
+ ],
+ "disposition": {
+  "route": "none",
+  "mandate": null,
+  "action_issue": null,
+  "applied_at": null,
+  "verified_readback": null
+ },
+ "model": "sonnet-tier (repo lane)",
+ "session": "session_01AFoLuMiqciU1RmHeiPWPEn",
+ "prompt_sha": null,
+ "skill_sha": "ce31519c30f9287eb2f2970ac8460bb763a5e744",
+ "packet_sha": "2d8192dfa0e4c35688d6659c454a04952a872d4a5d17f5dde12a0dde7ccdf15c",
+ "forecast": {
+  "thesis": "Higher highs/lows on 4h with momentum flipped; price more likely tags the 0.2017 stop than the 0.1864 target. Wrong if it loses 0.1927.",
+  "direction": "against_trade",
+  "target_px": 0.20173,
+  "p_target": 0.6,
+  "invalidation_px": 0.1927,
+  "horizon_bars": 6,
+  "timeframe": "4h",
+  "evidence": [
+   "events: momentum_flip, structure_break at 2026-11-04T12:00Z",
+   "chart.swings: highs 0.1927/0.1949 broken"
+  ]
+ }
+}
