@@ -1,0 +1,21 @@
+{
+  "due_when": {
+    "clears_when": "that signal either sizes >=1 contract, or is refused with a reason that names its actual cause; and the refusal text change below is merged or killed with a reason",
+    "event": "the next mgc_trend_1h / ict_scalp_mgc_15m signal dispatched to ib_paper after 2026-11-04T19:38Z",
+    "kind": "event"
+  },
+  "id": "PI-20261104-KKPOFDJQ-0004",
+  "next_action": "check_observation",
+  "observation": {
+    "due_by": "2026-11-06",
+    "how_to_check": "scripts/ops/diag_fetch.sh 'journal?table=trades&limit=100' (ib_paper MGC rows after 19:38Z: position_size / notes.reason)",
+    "what": "next ib_paper MGC entry sizes >=1 (exposure headroom ~ $120.8k after the 6673 writeback), or its refusal names its true cause"
+  },
+  "origin": {
+    "kind": "session",
+    "ref": "lane PAPER-MECHANICS-20261104, manager item BACKLOG-DRAIN-20261104 (ib_paper MGC risk_refused sized_qty=0)",
+    "rerun": "sum over journal trades WHERE account_id='ib_paper' AND status='open' of position_size*entry_price*contract_value_usd_for(symbol), vs 1.5 x balance (config/accounts.yaml ib_paper.risk.max_gross_exposure_pct)"
+  },
+  "state": "queued",
+  "what": "ib_paper MGC 'risk_refused: sized_qty=0' (4 rows 2026-11-04 16:50-18:00Z: 6892, 6893 ict_scalp_mgc_15m; 6894, 6895 mgc_trend_1h) is NOT a sizing bug. It is the gross-exposure headroom clamp (RiskManager.position_size -> exposure_headroom_usd). That clamp measures exposure from the JOURNAL. MEASURED arithmetic: open ib_paper rows MHG 5886 22x6.6195x2500=364,072 + TLT 6879 7443x81.225=604,558 + MGC 6673 14x4180.9x10=585,326 = 1,553,956 vs cap 1.5 x 1,032,858.32 = 1,549,287, so headroom <= 0 and every MGC contract (~40.8k notional) floors to 0. Onset matches TLT 6879's fill at 14:49Z. The 6 earlier refusals that day are intent_noop flip_suppressed_hold_policy, a different cause. Two contributors: (a) the 6673 row overstated MGC by 3 contracts (~$125k phantom notional); fixed 19:37Z by set-journal-trade-qty #22923 -> journal gross ~1,428.5k, headroom ~120.8k (2 MGC). (b) The ceiling itself is doing its job. DEFECTS TO FIX: (1) Tier 1/2 observability. _explain_zero_sized_qty (src/core/coordinator.py) emits a generic 'check daily-loss budget / liquidation buffer / max_borrow' and never names the exposure ceiling, so the operator could not see the cause. Add an 'exposure_ceiling:' token carrying notional/cap/headroom when risk_manager.exposure_headroom_usd() is not None and < one unit's notional. (2) Tier 3, a proposal for the operator: on a NETTED venue (IB), a long MGC against the held 6673 short REDUCES gross, but the clamp treats every entry as additive, so a de-risking order can be refused by the exposure ceiling. Decide whether a netting-reducing order is exempt."
+}

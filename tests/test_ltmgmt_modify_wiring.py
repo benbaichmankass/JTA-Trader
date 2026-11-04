@@ -520,7 +520,8 @@ def test_send_modify_to_exchange_ib_forwards_context(monkeypatch):
 
     def _modify(client, c, *, symbol, sl=None, tp=None,
                 side=None, qty=None, cur_sl=None, cur_tp=None,
-                sl_order_id=None, tp_order_id=None, trade_id=None):
+                sl_order_id=None, tp_order_id=None, trade_id=None,
+                entry_order_id=None):
         captured.update(
             symbol=symbol, sl=sl, tp=tp, side=side, qty=qty,
             cur_sl=cur_sl, cur_tp=cur_tp, trade_id=trade_id,
