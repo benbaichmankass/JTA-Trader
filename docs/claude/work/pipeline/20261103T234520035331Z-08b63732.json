@@ -1,0 +1,17 @@
+{
+  "due_when": {
+    "check_every_days": 3,
+    "clears_when": "The PR timeline (GET /repos/{repo}/issues/22737/timeline) or claude-pr-automerge's run logs for #22737 around 23:30-23:37Z name the refusal reason, and EITHER claude-pr-automerge is fixed (e.g. re-arms after a post-arming push, or arms with the PAT) OR the cause is shown to be a one-off and this is killed with that reason.",
+    "kind": "observation"
+  },
+  "id": "PI-20261103-DMX6EY51-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "CI-STREAMLINE lane session_01AFoLuHkvWi7dqNdMx6Ey51, manager request 2026-11-03T23:44Z",
+    "rerun": "gh api repos/benbaichmankass/JTA-Trader/issues/22737/timeline --paginate --jq '.[] | select(.event|test(\"auto_merge\")) | [.event,.created_at,.actor.login] | @tsv'"
+  },
+  "roadmap": "L-OPS",
+  "state": "queued",
+  "what": "Auto-merge on PR #22737 (Tier-1, workflow-path diff: pytest-run/guards/pytest-collect/repo-inventory/claude-run-failure-alert .yml) was DISABLED by GitHub at 2026-11-03T23:36:53Z, event auto_merge_disabled, attributed actor github-actions[bot], WITHOUT a merge. MEASURED: head 38cc5981 had pytest-run/guards/pytest-collect green (pytest-run completed 23:34:30Z) and mergeable_state=clean. Auto-merge had been enabled 22:02:42Z by github-actions[bot] via claude-pr-automerge, and a second commit was pushed to the branch at ~22:20Z after arming. No automation/pr-automerge-disable request named 22737, and the PR had 0 comments. The manager's manual squash at ~23:41Z succeeded (main 76f84bda0). Comparator: #22739 (also a workflow-path diff, also armed by github-actions[bot]) auto-merged normally at 22:55Z, so 'GITHUB_TOKEN cannot merge workflow files' does NOT explain it on its own. Confounder: this lane called enable_pr_auto_merge on #22737 at ~23:36Z, seconds before the disable, so the call may have played a part. INFERRED, not verified: GitHub's auto-merge attempt was refused (candidates: the post-arming push, a token-scope rule on the second commit's files, or an interaction with the re-enable call). Why it matters: a green Tier-1 PR silently stops landing and needs a human merge, and nothing alerts."
+}
