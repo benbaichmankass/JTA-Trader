@@ -1199,6 +1199,82 @@ decides whether to intervene.
    `roster-symbol-reachability` says so in those words rather than naming
    the leg. Reverse it only by reopening that decision.
 
+   #### An account configures strategies, never symbols (operator directive 2026-11-04, binding)
+
+   **Gates this adds or changes: none.** The rule removes per-account symbol
+   decisions. It adds no switch, flag or refusal. The two execution gates
+   (`mode:` and `execution:`) are untouched.
+
+   The operator, verbatim, 2026-11-04:
+   - ~19:04Z: *"the configuration doesn't specify what trades. It doesn't
+     specify like what coins or what security trades. It just specifies which
+     strategies, including which MLs, are active on that account. That's it."*
+   - ~19:06Z: *"It's not just for Alpaca. That's like a general rule across how
+     all of the accounts are configured. There's no per symbol configuration.
+     There's only per strategy configuration. Specific strategies trade one
+     symbol usually, but the MLs trade whatever is whatever they're set to
+     trade. They don't have their roster is internal to the ML, and it's based
+     on what tests have passed versus which ones have not."*
+
+   **The rule.**
+   1. **An account's whole trading configuration is its `strategies:` roster.**
+      That roster says which strategies and MLs are active on the account.
+      Nothing on an account says which symbols trade. Nothing on a leg keyed by
+      account says it either: a per-account symbol map such as
+      `strategies.yaml::<leg>.account_symbols` is account configuration placed
+      on the leg. `accounts.yaml::symbols` remains the data-pull list (above);
+      it never decides what trades.
+   2. **A non-ML strategy defines its own symbol, usually one.** It is the
+      symbol its Stage-0 evidence was measured on, declared once on the leg.
+   3. **An ML's traded universe is internal to the ML: it is the whole
+      POPULATION its registered population-level test passed on.** The test
+      is pooled over the population. It is registered before the run, and it
+      is net of the full cost stack, with each symbol charged its own costs.
+      Symbols that fail a cost/liquidity filter fixed BEFORE the run are left
+      out of the population. **Per-symbol results are reported for
+      monitoring and never move a symbol in or out.** At trade time the
+      population is intersected with what the account's venue can physically
+      trade: listed instruments, and the sides the account can take (e.g.
+      `side_filter: long` on a cash account). Nobody edits the population by
+      hand.
+   4. **Widening the population on a real-money account needs its own
+      registered population test.** Until that test passes, the population
+      that already passed stays. The test's population is chosen from the
+      ML's candidate instruments and the pre-run filter. It is never re-read
+      from an account's config: a test that scores "the symbols account X
+      trades" lets the account decide the ML's symbols, which inverts this
+      rule.
+   5. **A TESTING ML on the demo/paper floor trades the population of its
+      pending registered test**, for mechanics only (OPERATING-PLAN § 2:
+      Stage 1 checks mechanics, never edge).
+   6. **Parametrisation is separate from the universe.** Per-venue model
+      parameters (anchor, reference venue, sides, session, cost basis; PR
+      #22900's `account_profiles`) describe how the ML trades on a venue.
+      Changing them never changes which symbols the ML trades, and a
+      universe change never rides along with a parametrisation change.
+
+   Operator decisions, 2026-11-04 (popup answers relayed by Manager Session
+   2026-11-04a), verbatim:
+   - ~19:08Z: *"Split (Recommended)"*.
+   - ~19:33Z: *"Group-level (Recommended)"*. This replaces the ~19:08Z
+     "Per-symbol passes" / "Per-symbol tests" answers and the ~19:18Z
+     "Shrunk ≥ 0, n ≥ 100" answer. The operator's context, ~19:25Z: *"Maybe
+     it shouldn't be gated at a per symbol basis, but rather it should be kept
+     more general ... I didn't mean to make the rules stricter than they had
+     and the ML had been designed for."*
+
+   **What does NOT change.** Changing a strategy's or ML's universe on a
+   real-money account is still a Tier-3 decision. It needs § "Promotion
+   evidence" (C1-C5), and a data-backed decision follows § "Data-backed
+   Tier-2/3 decisions". The evidence record is what lets the decision through;
+   it is not a new gate. The Stage-1 demo floor, the three strategy statuses
+   and the promotion ladder are unchanged (OPERATING-PLAN § 2).
+
+   **Today's configuration against this rule:**
+   [`docs/audits/2026-11-04-per-symbol-config-inventory.md`](audits/2026-11-04-per-symbol-config-inventory.md).
+   It lists every place config or code decides a symbol per account, whether
+   each one complies, and the fix for each.
+
    **Precise scope of the rule** (settled 2026-07-09, full-system-audit
    Phase 0). What is forbidden is a **default-off `*_ENABLED` flag in
    front of a *required* capability** (the MES-stranding class). Three
