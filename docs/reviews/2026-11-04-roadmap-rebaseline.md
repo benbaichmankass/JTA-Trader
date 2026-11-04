@@ -1,6 +1,6 @@
 # Roadmap re-baseline 2026-11-04 — 30 of 33 milestones are past their review date, three week-priority targets end today or have already passed, and nine entries carry a status, `where` or `no_rows_reason` that their own counts contradict
 
-> **Doc status:** `live` · category `evidence` · last verified `2026-11-04` · lane `ROADMAP-REBASELINE` (monthly reset job `roadmap-rebaseline`, `config/reset_protocol.yaml`; dispatched by Manager Session 2026-11-04a under row RESET-JOBS-20261104) · tree `origin/main` @ `5da5ac35e` (2026-11-04 ~19:50Z)
+> **Doc status:** `unknown` · category `evidence` · last verified `2026-11-04` · lane `ROADMAP-REBASELINE` (monthly reset job `roadmap-rebaseline`, `config/reset_protocol.yaml`; dispatched by Manager Session 2026-11-04a under row RESET-JOBS-20261104) · tree `origin/main` @ `5da5ac35e` (2026-11-04 ~19:50Z)
 
 ## Gates this adds or changes
 
