@@ -24,6 +24,13 @@ question: 'Operator 2026-11-01, verbatim (row ML-ENTRY-ALL-ACCOUNTS): "the supra
   the live session gate (us_equity open at the close and at close + 24h); LONG when p_long > tau (the restricted argmax: p_short is never
   compared); entry next RTH open; first passage SL 2 ATR14 / TP 3 ATR14 / 24-bar time stop; one position per symbol. Net of fee 0.0 + slippage
   5.0 bps (PROVISIONAL) + regulatory 0.5 bps round trip, funding 0. Score 2025-02-10..2025-09-21 ONCE.'
+universe_rule: 'Operator 2026-11-04 ~19:06Z (relayed by Manager Session 2026-11-04a), verbatim: "There''s no per symbol configuration. There''s
+  only per strategy configuration. ... the MLs trade whatever ... they''re set to trade. They don''t have their roster is internal to the ML, and
+  it''s based on what tests have passed versus which ones have not." So this unit is a TEST WHOSE PASS ADDS SYMBOLS to ml_entry''s passed set:
+  a PASS adds every symbol of the scored population (the alpaca_live symbols re-parsed at run time are the CANDIDATE POOL being tested, not a
+  trade list) to the set ml_entry trades wherever the account''s venue can trade it; per-symbol n and mean net R are reported beside it, never
+  gating (a per-symbol rule would have to be registered as its own unit). A FAIL or INDETERMINATE adds nothing. Registered before the run;
+  this field was added 2026-11-04 ~19:10Z before any run.'
 why_this_matters: 'The operator target (row ML-ENTRY-ALL-ACCOUNTS 2026-11-03 ~10:50Z, verbatim: "If we can get that going Wednesday night, then
   maybe we can get it trading by Thursday evening or Friday") is ml_entry on alpaca_live. The code that makes it a CONFIG change is the held Tier-3
   PR of this lane; the roster add needs THIS record. The prior read is a FAIL and is context, not a gate: RQ-20261101-bdc2-01 read -0.308 R per
