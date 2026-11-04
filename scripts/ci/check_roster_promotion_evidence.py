@@ -192,11 +192,6 @@ FIDELITY_BASELINE: Dict[Tuple[str, str], str] = {
     # RQ-20261011-6707-01 faithful arm, record window, full cost stack: ief +2.33R
     # (n=8), slv +2.48R (n=11), iaum +9.85R (n=8) — all clear RULE-D1.
     ("alpaca_live", "iaum_pullback_1d"): "RQ-20261011-6707-01",
-    # bybit_2 — omitted structure_exit (SL-only, pivot 5). NOT a re-measured entry: the operator granted a
-    # ONE-TIME OVERRIDE to run it before measurement (record #22645, 2026-11-03; then option "B: stop only"
-    # by pop-up ~16:53Z). The faithful re-measure is the named unit; its decision_rule carries the revert
-    # clause (FAIL -> revert ml_entry's exit and remove this entry). Remove on PASS once the record is faithful.
-    ("bybit_2", "ml_entry"): "RQ-20261103-5e04-01",
 }
 
 
