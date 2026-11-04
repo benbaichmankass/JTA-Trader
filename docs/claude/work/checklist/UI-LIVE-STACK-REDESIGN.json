@@ -11,14 +11,14 @@
   "tier": 1,
   "prs": [],
   "blocked_on": [],
-  "note": "Operator 2026-11-04 item 2.1: data not updating fast enough; system collapses under low load. Design the tech stack from scratch: per-tick feed for the most important items, real embedded TradingView chart per tick with system signals/trades/brackets; work out requirements and hosting that does not use our limited resources. Research-first, then design doc for operator. Operator 2026-11-04 12:37Z (system-map comment), two design requirements: (1) PUSH, not poll: the backend pushes updates to the UI (websocket / SSE / pub-sub fan-out), and the UI must not poll the API. (2) Tick-level market data does NOT have to go through the VM: e.g. an embedded TradingView chart can take its own live feed straight from the provider in the browser. Route only the system's own events (signals, orders, fills, brackets, health) through our stack, so per-tick load never lands on the trader VM's limited resources.",
+  "note": "Operator 2026-11-04 item 2.1: data not updating fast enough; system collapses under low load. Design the tech stack from scratch: per-tick feed for the most important items, real embedded TradingView chart per tick with system signals/trades/brackets; work out requirements and hosting that does not use our limited resources. Research-first, then design doc for operator. Operator 2026-11-04 12:37Z (system-map comment), two design requirements: (1) PUSH, not poll: the backend pushes updates to the UI (websocket / SSE / pub-sub fan-out), and the UI must not poll the API. (2) Tick-level market data does NOT have to go through the VM: e.g. an embedded TradingView chart can take its own live feed straight from the provider in the browser. Route only the system's own events (signals, orders, fills, brackets, health) through our stack, so per-tick load never lands on the trader VM's limited resources. [from SYSTEM-AUDIT-INTEGRATION F10, docs/audits/2026-11-04-system-integration.md] read latency MEASURED 2026-11-04 ~18:20Z from this container: /api/bot/work/brief cold 60.85 s (1 of 3 calls; warm 0.47/0.74 s); /prop/overview?window=7d 3.1-5.1 s for 2.6 KB; /work/checklist 4.19 MB in 1.2-1.5 s (work.py comment says ~435 KB); /work/snapshot 0.97-3.57 s; /config 1.42 s; /notifications 0.47-0.60 s. The API shares the VM with a trader whose tick is ~115 s (TICK-DURATION-115S).",
   "due_by": "2026-11-10",
   "roadmap": [
     "unmapped"
   ],
   "roadmap_unmapped_reason": "infra/ops; operator 2026-11-04 ~08:20Z audit+planning request, spans every milestone",
   "priority_rank": 3,
-  "updated_at": "2026-11-04T12:38:09Z",
-  "updated_by": "session_01AFoLuLMKGkvg6UbCzdxjNR",
+  "updated_at": "2026-11-04T18:30:51Z",
+  "updated_by": "session_01AFoLuLCbQTSU5jK9dbmcvU",
   "_seq": 903
 }

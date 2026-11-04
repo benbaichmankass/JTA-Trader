@@ -11,14 +11,14 @@
   "tier": 1,
   "prs": [],
   "blocked_on": [],
-  "note": "Operator 2026-11-04 item 1.2: test results and analyses belong in a well-designed database, not merged to the repo with full CI. Inventory every bot/automation flow that commits or opens PRs (research results batches, grading, SLO, live-review rows mirror, checklist/pipeline writes, utilization records); measure volume and CI cost per flow; design the DB-backed alternative. Feeds COMPUTE-ALLOCATION-DESIGN. Operator 2026-11-04 ~08:35Z: include the DEPLOY path. ict-git-sync (VM pulls main every 5 min) is a legacy flow meant to spare the operator manual pushes. Since managers can deploy themselves (system-actions pull-and-deploy / restart via workflows), evaluate replacing auto-sync with manager-driven, deliberate update/sync/restart only when actually needed. Weigh: merged-but-undeployed drift, the Workflow page reading the VM tree (needs another source if sync stops), data-only merges no longer touching the VM, rollback, and the 'merged != deployed != observed' rule.",
+  "note": "Operator 2026-11-04 item 1.2: test results and analyses belong in a well-designed database, not merged to the repo with full CI. Inventory every bot/automation flow that commits or opens PRs (research results batches, grading, SLO, live-review rows mirror, checklist/pipeline writes, utilization records); measure volume and CI cost per flow; design the DB-backed alternative. Feeds COMPUTE-ALLOCATION-DESIGN. Operator 2026-11-04 ~08:35Z: include the DEPLOY path. ict-git-sync (VM pulls main every 5 min) is a legacy flow meant to spare the operator manual pushes. Since managers can deploy themselves (system-actions pull-and-deploy / restart via workflows), evaluate replacing auto-sync with manager-driven, deliberate update/sync/restart only when actually needed. Weigh: merged-but-undeployed drift, the Workflow page reading the VM tree (needs another source if sync stops), data-only merges no longer touching the VM, rollback, and the 'merged != deployed != observed' rule. [from SYSTEM-AUDIT-INTEGRATION F9, docs/audits/2026-11-04-system-integration.md] deploy-path evidence: journalctl ict-trader-live 2026-11-04 00:00-18:18Z (complete scan, 236,703 lines) shows 21 'Started ICT Trader Live' (01:02, 01:40, 02:07, 02:39, 02:57, 03:22, 03:27, 04:05, 07:32, 09:35, 11:48, 15:12, 15:39, 15:45, 16:23, 16:34, 16:55, 17:01, 17:22, 17:28, 17:44). Each restart costs a boot (~12 s to boot_audit) plus warm-up, and 17:01:23 landed one minute after an hourly bar close. Running sha 156f1b1a8 vs on-disk 2c37e7330 at 18:18Z.",
   "due_by": "2026-11-07",
   "roadmap": [
     "unmapped"
   ],
   "roadmap_unmapped_reason": "infra/ops; operator 2026-11-04 ~08:20Z audit+planning request, spans every milestone",
   "priority_rank": 2,
-  "updated_at": "2026-11-04T08:31:41Z",
-  "updated_by": "session_01AFoLuLMKGkvg6UbCzdxjNR",
+  "updated_at": "2026-11-04T18:30:51Z",
+  "updated_by": "session_01AFoLuLCbQTSU5jK9dbmcvU",
   "_seq": 902
 }
