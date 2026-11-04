@@ -1,0 +1,436 @@
+{
+  "schema": "ml_entry_alpaca_score/1",
+  "model_sha256": "d4bdcfa13464269cd458be05eac509f27154ee8cfe62e0bc67511db65b590c1c",
+  "model_meta": {
+    "model_id": "ml-decision-entry-v1",
+    "schema": "ml_decision_entry_model/1",
+    "evidence": [
+      "research/results/RQ-20261101-c692-01/local-20261101T0835Z.jsonl",
+      "research/results/RQ-20261101-c692-06/local-20261101T0840Z.jsonl",
+      "research-script-run run 41324824079 (c692-01 runner reproduction) and 41324826751 (c692-06 runner reproduction + this artifact)"
+    ],
+    "provenance": "RUNNER-BUILT: fit by the research runner (GitHub Actions, lightgbm 4.6.0, scikit-learn 1.7.2) running scripts/research/ml_decision_entry.py traded-subset for RQ-20261101-c692-06, run 41324826751 (artifact research-script-run-RQ-20261101-c692-06-41324826751, commit 5019e22). Replaces the PROVISIONAL sandbox fit (lightgbm 4.7.0): same features, params, training cut and tree structure; runner reproduction c692-01 / c692-06 matched the session-local figures exactly.",
+    "features": [
+      "ret_1",
+      "ret_4",
+      "ret_12",
+      "ret_24",
+      "ret_72",
+      "ret_168",
+      "vol24",
+      "vol_ratio",
+      "atr_pct",
+      "range_pos_24",
+      "range_pos_168",
+      "vol_z",
+      "rsi14",
+      "hour",
+      "dow",
+      "xs_rank_ret24",
+      "btc_ret24",
+      "btc_vol24",
+      "breadth_up24",
+      "rel_vol"
+    ],
+    "tau": 0.1,
+    "train_rows": 662930,
+    "train_end_exclusive": "2025-09-22 19:00:00+00:00",
+    "lgb_params": {
+      "n_estimators": 300,
+      "learning_rate": 0.03,
+      "num_leaves": 31,
+      "min_child_samples": 500,
+      "subsample": 0.8,
+      "subsample_freq": 1,
+      "colsample_bytree": 0.8,
+      "reg_lambda": 5.0,
+      "random_state": 20261101,
+      "verbose": -1,
+      "n_jobs": 4
+    },
+    "bracket": {
+      "sl_atr": 2.0,
+      "tp_atr": 3.0,
+      "atr_n": 14,
+      "horizon_h": 24,
+      "decision_every_h": 4
+    },
+    "git_sha": "5019e22ca768bc568c96e6e7967d8cab5bdbb5d3",
+    "pooled_heldout_mean_net_r": 0.007301455114681035
+  },
+  "tau": 0.1,
+  "alpaca_live_long_only": {
+    "n": 40,
+    "mean_net_r": -0.17680677967897074,
+    "sum_net_r": -7.0722711871588295,
+    "mean_gross_r": -0.13384213797604452,
+    "mean_cost_r": 0.04296464170292623,
+    "n_symbols": 10,
+    "by_side": {
+      "long": {
+        "n": 40,
+        "mean_net_r": -0.17680677967897074
+      }
+    },
+    "exit_reason_counts": {
+      "sl": 25,
+      "tp": 14,
+      "time": 1
+    },
+    "per_symbol": {
+      "GDX": {
+        "n": 6,
+        "mean_net_r": -0.285
+      },
+      "GLD": {
+        "n": 3,
+        "mean_net_r": 0.5609
+      },
+      "IAUM": {
+        "n": 4,
+        "mean_net_r": 0.1603
+      },
+      "IEF": {
+        "n": 2,
+        "mean_net_r": 0.1377
+      },
+      "IWM": {
+        "n": 5,
+        "mean_net_r": -0.8193
+      },
+      "QQQ": {
+        "n": 5,
+        "mean_net_r": -0.5353
+      },
+      "SLV": {
+        "n": 5,
+        "mean_net_r": 0.3731
+      },
+      "SPY": {
+        "n": 4,
+        "mean_net_r": -0.4474
+      },
+      "TLT": {
+        "n": 3,
+        "mean_net_r": -0.2223
+      },
+      "USO": {
+        "n": 3,
+        "mean_net_r": -0.199
+      }
+    },
+    "by_month": {
+      "2025-02": {
+        "n": 9,
+        "mean_net_r": -0.2203
+      },
+      "2025-03": {
+        "n": 16,
+        "mean_net_r": -0.308
+      },
+      "2025-04": {
+        "n": 13,
+        "mean_net_r": 0.1492
+      },
+      "2025-05": {
+        "n": 1,
+        "mean_net_r": -1.0569
+      },
+      "2025-08": {
+        "n": 1,
+        "mean_net_r": -1.0427
+      }
+    },
+    "bootstrap_ci95_reported_not_gating": [
+      -0.5574871149725927,
+      0.1917653609065943
+    ]
+  },
+  "reported_alpaca_live_both_sides": {
+    "n": 92,
+    "mean_net_r": 0.12726993491061617,
+    "sum_net_r": 11.708834011776688,
+    "mean_gross_r": 0.16896332650021376,
+    "mean_cost_r": 0.041693391589597575,
+    "n_symbols": 10,
+    "by_side": {
+      "long": {
+        "n": 36,
+        "mean_net_r": -0.0640870326833227
+      },
+      "short": {
+        "n": 56,
+        "mean_net_r": 0.2502851283638625
+      }
+    },
+    "exit_reason_counts": {
+      "sl": 43,
+      "tp": 40,
+      "time": 9
+    },
+    "per_symbol": {
+      "GDX": {
+        "n": 19,
+        "mean_net_r": 0.4237
+      },
+      "GLD": {
+        "n": 7,
+        "mean_net_r": 0.9912
+      },
+      "IAUM": {
+        "n": 7,
+        "mean_net_r": 0.7074
+      },
+      "IEF": {
+        "n": 2,
+        "mean_net_r": 0.1377
+      },
+      "IWM": {
+        "n": 10,
+        "mean_net_r": -0.212
+      },
+      "QQQ": {
+        "n": 11,
+        "mean_net_r": -0.2944
+      },
+      "SLV": {
+        "n": 9,
+        "mean_net_r": 0.3451
+      },
+      "SPY": {
+        "n": 7,
+        "mean_net_r": 0.0306
+      },
+      "TLT": {
+        "n": 4,
+        "mean_net_r": -0.437
+      },
+      "USO": {
+        "n": 16,
+        "mean_net_r": -0.295
+      }
+    },
+    "by_month": {
+      "2025-02": {
+        "n": 12,
+        "mean_net_r": -0.2177
+      },
+      "2025-03": {
+        "n": 19,
+        "mean_net_r": 0.2861
+      },
+      "2025-04": {
+        "n": 32,
+        "mean_net_r": 0.3051
+      },
+      "2025-05": {
+        "n": 7,
+        "mean_net_r": -0.0492
+      },
+      "2025-06": {
+        "n": 11,
+        "mean_net_r": -0.2857
+      },
+      "2025-07": {
+        "n": 5,
+        "mean_net_r": 0.8233
+      },
+      "2025-08": {
+        "n": 4,
+        "mean_net_r": -0.4741
+      },
+      "2025-09": {
+        "n": 2,
+        "mean_net_r": 0.1945
+      }
+    },
+    "bootstrap_ci95_reported_not_gating": [
+      -0.13837754607179792,
+      0.38227823578931114
+    ]
+  },
+  "reported_mirror_symbols_both_sides": {
+    "n": 85,
+    "mean_net_r": 0.07949796701371864,
+    "sum_net_r": 6.757327196166084,
+    "mean_gross_r": 0.11945853994939662,
+    "mean_cost_r": 0.03996057293567799,
+    "n_symbols": 9,
+    "by_side": {
+      "long": {
+        "n": 32,
+        "mean_net_r": -0.09212941821346005
+      },
+      "short": {
+        "n": 53,
+        "mean_net_r": 0.18312204866031706
+      }
+    },
+    "exit_reason_counts": {
+      "sl": 41,
+      "tp": 35,
+      "time": 9
+    },
+    "per_symbol": {
+      "GDX": {
+        "n": 19,
+        "mean_net_r": 0.4237
+      },
+      "GLD": {
+        "n": 7,
+        "mean_net_r": 0.9912
+      },
+      "IEF": {
+        "n": 2,
+        "mean_net_r": 0.1377
+      },
+      "IWM": {
+        "n": 10,
+        "mean_net_r": -0.212
+      },
+      "QQQ": {
+        "n": 11,
+        "mean_net_r": -0.2944
+      },
+      "SLV": {
+        "n": 9,
+        "mean_net_r": 0.3451
+      },
+      "SPY": {
+        "n": 7,
+        "mean_net_r": 0.0306
+      },
+      "TLT": {
+        "n": 4,
+        "mean_net_r": -0.437
+      },
+      "USO": {
+        "n": 16,
+        "mean_net_r": -0.295
+      }
+    },
+    "by_month": {
+      "2025-02": {
+        "n": 11,
+        "mean_net_r": -0.1392
+      },
+      "2025-03": {
+        "n": 18,
+        "mean_net_r": 0.2223
+      },
+      "2025-04": {
+        "n": 29,
+        "mean_net_r": 0.2766
+      },
+      "2025-05": {
+        "n": 6,
+        "mean_net_r": -0.2986
+      },
+      "2025-06": {
+        "n": 11,
+        "mean_net_r": -0.2857
+      },
+      "2025-07": {
+        "n": 4,
+        "mean_net_r": 0.677
+      },
+      "2025-08": {
+        "n": 4,
+        "mean_net_r": -0.4741
+      },
+      "2025-09": {
+        "n": 2,
+        "mean_net_r": 0.1945
+      }
+    },
+    "bootstrap_ci95_reported_not_gating": [
+      -0.16424472339574267,
+      0.33583114560939076
+    ]
+  },
+  "reported_always_long_same_mechanics": {
+    "n": 710,
+    "mean_net_r": 0.0033700158113810262
+  },
+  "side_rule": "restricted",
+  "session_gate": true,
+  "decision_rows_before_session_gate": 3070,
+  "decision_rows": 1510,
+  "decision_rows_by_symbol": {
+    "GDX": 151,
+    "GLD": 151,
+    "IAUM": 151,
+    "IEF": 151,
+    "IWM": 151,
+    "QQQ": 151,
+    "SLV": 151,
+    "SPY": 151,
+    "TLT": 151,
+    "USO": 151
+  },
+  "perp_reference_loaded": 60,
+  "median_n_reference": 60.0,
+  "fetch": {
+    "GDX": {
+      "rows": 3398,
+      "first": "2024-11-18 14:30:00+00:00",
+      "last": "2026-10-30 19:30:00+00:00"
+    },
+    "GLD": {
+      "rows": 3398,
+      "first": "2024-11-18 14:30:00+00:00",
+      "last": "2026-10-30 19:30:00+00:00"
+    },
+    "IAUM": {
+      "rows": 3398,
+      "first": "2024-11-18 14:30:00+00:00",
+      "last": "2026-10-30 19:30:00+00:00"
+    },
+    "IEF": {
+      "rows": 3399,
+      "first": "2024-11-18 14:30:00+00:00",
+      "last": "2026-10-30 19:30:00+00:00"
+    },
+    "IWM": {
+      "rows": 3398,
+      "first": "2024-11-18 14:30:00+00:00",
+      "last": "2026-10-30 19:30:00+00:00"
+    },
+    "QQQ": {
+      "rows": 3399,
+      "first": "2024-11-18 14:30:00+00:00",
+      "last": "2026-10-30 19:30:00+00:00"
+    },
+    "SLV": {
+      "rows": 3398,
+      "first": "2024-11-18 14:30:00+00:00",
+      "last": "2026-10-30 19:30:00+00:00"
+    },
+    "SPY": {
+      "rows": 3398,
+      "first": "2024-11-18 14:30:00+00:00",
+      "last": "2026-10-30 19:30:00+00:00"
+    },
+    "SPYM": {
+      "rows": 1860,
+      "first": "2024-11-18 14:30:00+00:00",
+      "last": "2026-10-30 19:30:00+00:00"
+    },
+    "TLT": {
+      "rows": 3399,
+      "first": "2024-11-18 14:30:00+00:00",
+      "last": "2026-10-30 19:30:00+00:00"
+    },
+    "USO": {
+      "rows": 3398,
+      "first": "2024-11-18 14:30:00+00:00",
+      "last": "2026-10-30 19:30:00+00:00"
+    }
+  },
+  "costs": {
+    "fee_bps": 0.0,
+    "slippage_bps": 5.0,
+    "regulatory_bps": 0.5,
+    "funding_bps": 0.0
+  }
+}
