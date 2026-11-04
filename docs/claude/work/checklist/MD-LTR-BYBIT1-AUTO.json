@@ -13,10 +13,10 @@
     22130
   ],
   "blocked_on": [],
-  "note": "2026-11-01 MERGED #22130 (36d5d1e, 12:50Z). DEPLOYED: trader running 36d5d1e at 12:52:05Z (/api/diag/version trader_git_sha, restart_pending false). NOT YET OBSERVED: no in-trade call on a paper package since the deploy. The XRP package pkg-f07b659a7db94e8a closed by SL at 12:16:49Z before the deploy (its close calls 11:21-12:16Z were advice-only). Closing observation: the first rows_watch.jsonl entry after 12:52Z with auto_mandate MD-LTR-PAPER-AUTO on a bybit_1 or alpaca_paper package -> applied.jsonl accounts_applied naming only that account -> venue read-back -> the trade row exit_reason (close) or the moved bracket. Open paper legs at 12:55Z: bybit_1 BTC/ETH/SOL/ADA, alpaca_paper USO/SLV, ib_paper MGC (no executor). Revert: delete the MD-LTR-PAPER-AUTO entry. | 2026-11-01 manager decision: oanda_practice and alpaca_options_paper (account_class paper, no paper_role, not on the demo floor) stay OUT of MD-LTR-PAPER-AUTO for now. ib_paper's missing in-trade executor is filed as row IB-PAPER-INTRADE-EXECUTOR (due 2026-11-05).",
-  "updated_at": "2026-11-01T15:38:46Z",
-  "updated_by": "MD-LTR-BYBIT1-AUTO",
-  "due_by": "2026-11-01",
+  "note": "2026-11-01 MERGED #22130 (36d5d1e, 12:50Z). DEPLOYED: trader running 36d5d1e at 12:52:05Z (/api/diag/version trader_git_sha, restart_pending false). NOT YET OBSERVED: no in-trade call on a paper package since the deploy. The XRP package pkg-f07b659a7db94e8a closed by SL at 12:16:49Z before the deploy (its close calls 11:21-12:16Z were advice-only). Closing observation: the first rows_watch.jsonl entry after 12:52Z with auto_mandate MD-LTR-PAPER-AUTO on a bybit_1 or alpaca_paper package -> applied.jsonl accounts_applied naming only that account -> venue read-back -> the trade row exit_reason (close) or the moved bracket. Open paper legs at 12:55Z: bybit_1 BTC/ETH/SOL/ADA, alpaca_paper USO/SLV, ib_paper MGC (no executor). Revert: delete the MD-LTR-PAPER-AUTO entry. | 2026-11-01 manager decision: oanda_practice and alpaca_options_paper (account_class paper, no paper_role, not on the demo floor) stay OUT of MD-LTR-PAPER-AUTO for now. ib_paper's missing in-trade executor is filed as row IB-PAPER-INTRADE-EXECUTOR (due 2026-11-05). 2026-11-03 BACKLOG-DRAIN: re-dated 11-05 (matches observation due). diag live_review_rows_watch (235 lines, complete): 0 lines with auto_mandate / MD-LTR-PAPER-AUTO; every review after 2026-11-01T12:52Z up to 11-03T03:12Z is not_dispatchable (action_hold / flag_mechanics / no_recommendation). No paper-package action call has occurred since deploy, so nothing to apply: not a failure, still unobserved. [salvaged from #22570 by BACKLOG-DRAIN-20261104; evidence re-verified 2026-11-04]",
+  "updated_at": "2026-11-04T18:48:28Z",
+  "updated_by": "session_01AFoLuM1JYKXSjfqdp6rzT1",
+  "due_by": "2026-11-05",
   "roadmap": [
     "L-AM-STANDARD"
   ],

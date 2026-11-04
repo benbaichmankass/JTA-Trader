@@ -2,7 +2,7 @@
   "id": "ML-BAR-ONE-READ",
   "title": "ML live bar applies to ONE pre-registered model per question: held-out window read once, number of variants tried reported beside the result; a second variant needs a fresh held-out window",
   "phase": null,
-  "state": "in_flight",
+  "state": "done",
   "owner": "manager",
   "lane": "ML-FEATURE-INFRA",
   "model": "claude-opus-5-5",
@@ -11,10 +11,10 @@
   "tier": 3,
   "prs": [],
   "blocked_on": [],
-  "note": "OPERATOR 2026-11-01 ~08:48Z popup, verbatim: \"Yes, one model, one read (Rec.)\". The 'point estimate >= 0' bar itself is unchanged. ENTRY (RQ-20261101-c692-01) is one model, one read; the bybit_2-symbol check c692-06 is a read of the same frozen model on the traded population (operator-requested). Record on ML-DECISION-MODELS and in its DESIGN.md. Source: docs/audits/2026-11-01-from-scratch/AUDIT.md section 8 (lane SYSTEM-AUDIT-FROM-SCRATCH, PR #22072); walk-through https://claude.ai/artifact/T9ztV5nc1fUAGbdjsbZHSf. Operator 2026-11-01 ~08:45Z popup, verbatim: \"Walk through it today (Rec.)\" (Tier-1 proposals filed straight away). Gates this adds: none. [2026-11-01 manager] Operator 2026-11-01 ~11:05Z popup, verbatim: \"Fold into running lanes (Rec.)\". Owner: lane ML-FEATURE-INFRA. Target: rule applied to ENTRY v2 and every later increment from 2026-11-01; read-once log committed with each read.",
+  "note": "OPERATOR 2026-11-01 ~08:48Z popup, verbatim: \"Yes, one model, one read (Rec.)\". The 'point estimate >= 0' bar itself is unchanged. ENTRY (RQ-20261101-c692-01) is one model, one read; the bybit_2-symbol check c692-06 is a read of the same frozen model on the traded population (operator-requested). Record on ML-DECISION-MODELS and in its DESIGN.md. Source: docs/audits/2026-11-01-from-scratch/AUDIT.md section 8 (lane SYSTEM-AUDIT-FROM-SCRATCH, PR #22072); walk-through https://claude.ai/artifact/T9ztV5nc1fUAGbdjsbZHSf. Operator 2026-11-01 ~08:45Z popup, verbatim: \"Walk through it today (Rec.)\" (Tier-1 proposals filed straight away). Gates this adds: none. [2026-11-01 manager] Operator 2026-11-01 ~11:05Z popup, verbatim: \"Fold into running lanes (Rec.)\". Owner: lane ML-FEATURE-INFRA. Target: rule applied to ENTRY v2 and every later increment from 2026-11-01; read-once log committed with each read. 2026-11-03 BACKLOG-DRAIN: rule recorded in docs/research/ml-decision-models-2026-11-01/DESIGN.md s1c (variant count reported); read-once ledger comms/research/holdout_reads.jsonl has 5 committed reads via holdout_lock.py. [salvaged from #22570 by BACKLOG-DRAIN-20261104; evidence re-verified 2026-11-04]",
   "priority_rank": 1,
-  "updated_at": "2026-11-01T11:08:34Z",
-  "updated_by": "session_01AFoLuJ1apgy8sfngu4WyNH",
+  "updated_at": "2026-11-04T18:48:28Z",
+  "updated_by": "session_01AFoLuM1JYKXSjfqdp6rzT1",
   "roadmap": [
     "L-ML-LIVE"
   ],
