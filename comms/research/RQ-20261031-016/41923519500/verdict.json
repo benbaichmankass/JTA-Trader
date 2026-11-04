@@ -1,0 +1,92 @@
+{
+  "verdict": "indeterminate",
+  "read_state": "measured",
+  "population": "1 leg(s) [trend_donchian_sol_4h], 116 committed trades in total; grade=pass_all_seeds, overall=all",
+  "n": 116,
+  "measurement": {
+    "leg_verdicts": {
+      "trend_donchian_sol_4h": "indeterminate"
+    },
+    "grade": "pass_all_seeds",
+    "overall": "all",
+    "cells": 5
+  },
+  "note": "trend_donchian_sol_4h: NULL: ev > 0 on all seeds but P(net>0) < 0.7 on at least one",
+  "records": [
+    {
+      "verdict": "indeterminate",
+      "read_state": "measured",
+      "population": "trend_donchian_sol_4h: 116 committed trades from comms/strategy_evidence/runs/2026-10-28/trend_donchian_sol_4h__trades.jsonl (evidence record comms/strategy_evidence/trend_donchian_sol_4h.json -> cost_stack.source); prop_ev_sim path-mode over 1 arm(s) x 5 seed(s), --ruleset config/prop_rulesets/breakout_turbo_1step.yaml --costs breakout --funded-start fresh --swap-model dxtrade",
+      "n": 116,
+      "measurement": {
+        "leg": "trend_donchian_sol_4h",
+        "trades_file": "comms/strategy_evidence/runs/2026-10-28/trend_donchian_sol_4h__trades.jsonl",
+        "arms": {
+          "A": {
+            "1": {
+              "ev": 126.19,
+              "ev_se": 3.86,
+              "p_net_positive": 0.4373,
+              "p_alive_at_horizon": 1.0,
+              "p_pass_by_days": {
+                "30": 0.0107,
+                "90": 0.1192,
+                "180": 0.3108
+              },
+              "rule_v2_verdict": "pass"
+            },
+            "2": {
+              "ev": 128.65,
+              "ev_se": 3.89,
+              "p_net_positive": 0.4385,
+              "p_alive_at_horizon": 1.0,
+              "p_pass_by_days": {
+                "30": 0.0107,
+                "90": 0.1345,
+                "180": 0.32
+              },
+              "rule_v2_verdict": "pass"
+            },
+            "3": {
+              "ev": 131.9,
+              "ev_se": 3.9,
+              "p_net_positive": 0.4505,
+              "p_alive_at_horizon": 1.0,
+              "p_pass_by_days": {
+                "30": 0.0125,
+                "90": 0.1335,
+                "180": 0.3212
+              },
+              "rule_v2_verdict": "pass"
+            },
+            "4": {
+              "ev": 126.57,
+              "ev_se": 3.82,
+              "p_net_positive": 0.442,
+              "p_alive_at_horizon": 1.0,
+              "p_pass_by_days": {
+                "30": 0.0138,
+                "90": 0.1293,
+                "180": 0.317
+              },
+              "rule_v2_verdict": "pass"
+            },
+            "5": {
+              "ev": 130.69,
+              "ev_se": 3.92,
+              "p_net_positive": 0.4385,
+              "p_alive_at_horizon": 1.0,
+              "p_pass_by_days": {
+                "30": 0.01,
+                "90": 0.1205,
+                "180": 0.3018
+              },
+              "rule_v2_verdict": "pass"
+            }
+          }
+        }
+      },
+      "note": "NULL: ev > 0 on all seeds but P(net>0) < 0.7 on at least one"
+    }
+  ]
+}
