@@ -1,0 +1,16 @@
+{
+  "due_when": {
+    "check_every_days": 7,
+    "due_date": "2026-11-11",
+    "kind": "date"
+  },
+  "id": "PI-20261104-COSTINFRA-0002",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "COST-INFRA-REVIEW lane 2026-11-04 see docs/reviews/2026-11-04-cost-infra-review.md",
+    "rerun": "gh api 'repos/benbaichmankass/JTA-Trader/actions/workflows/live-review-wake.yml/runs?created=2026-10-05..2026-11-04&per_page=1' --jq .total_count"
+  },
+  "state": "queued",
+  "what": "[F2] Scheduled cron cadence is not delivered: live-review-wake (*/5) ran 41 times in 30d vs ~8640 nominal. Decide: move live-review wake to a VM timer/other trigger, or stop treating */5 as a guarantee."
+}
