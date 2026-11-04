@@ -87,6 +87,41 @@ manifest:
   sizing_vs_cost: untested
 levers:
   exit:
+    timeout_bars:
+      tests:
+      - value: '60'
+        baseline_value: 'off'
+        arm: TO1
+        unit: RQ-20261031-3ef3-12
+        window: 2020-07-01..2026-10-15
+        n: 446
+        net_r: -8.4108
+        baseline_n: 440
+        baseline_net_r: -13.2429
+        delta_net_r: 4.8321
+        folds_ge_baseline: 4/6
+        max_drawdown_r: 18.9308
+        verdict: fail
+        joint_change: false
+      - value: '120'
+        baseline_value: 'off'
+        arm: TO2
+        unit: RQ-20261031-3ef3-12
+        window: 2020-07-01..2026-10-15
+        n: 440
+        net_r: -13.4207
+        baseline_n: 440
+        baseline_net_r: -13.2429
+        delta_net_r: -0.1778
+        folds_ge_baseline: 5/6
+        max_drawdown_r: 21.7667
+        verdict: fail
+        joint_change: false
+      shape: flat
+      points: 2
+      best_delta_r_per_trade: 0.011
+      fold_stability: 0.75
+      reading: no response at the tested values
     trail_decay_arm_r:
       tests:
       - value: '1.5'
@@ -135,6 +170,55 @@ levers:
       points: 3
       best_delta_r_per_trade: 0.0003
       fold_stability: 0.611
+      reading: no response at the tested values
+    atr_stop_mult:
+      tests:
+      - value: '2.5'
+        baseline_value: '2'
+        arm: SL125
+        unit: RQ-20261029-a538-15
+        window: 2020-07-01..2026-10-15
+        n: 439
+        net_r: -15.4426
+        baseline_n: 440
+        baseline_net_r: -13.2429
+        delta_net_r: -2.1997
+        folds_ge_baseline: 4/6
+        max_drawdown_r: 20.4383
+        verdict: fail
+        joint_change: false
+      - value: '1.6'
+        baseline_value: '2'
+        arm: SL80
+        unit: RQ-20261029-a538-15
+        window: 2020-07-01..2026-10-15
+        n: 444
+        net_r: -15.2626
+        baseline_n: 440
+        baseline_net_r: -13.2429
+        delta_net_r: -2.0197
+        folds_ge_baseline: 2/6
+        max_drawdown_r: 22.5386
+        verdict: fail
+        joint_change: false
+      - value: '2.5'
+        baseline_value: '2'
+        arm: SL25
+        unit: RQ-20261101-78fc-51
+        window: 2020-07-01..2026-10-15
+        n: 439
+        net_r: -15.4426
+        baseline_n: 440
+        baseline_net_r: -13.2429
+        delta_net_r: -2.1997
+        folds_ge_baseline: 4/6
+        max_drawdown_r: 20.4383
+        verdict: pass
+        joint_change: false
+      shape: flat
+      points: 3
+      best_delta_r_per_trade: -0.0046
+      fold_stability: 0.556
       reading: no response at the tested values
     be_floor_r:
       tests:
@@ -676,6 +760,41 @@ levers:
       fold_stability: 0.333
       reading: no response at the tested values
   filter:
+    adx_min:
+      tests:
+      - value: '30'
+        baseline_value: '25'
+        arm: AD30
+        unit: RQ-20261101-78fc-51
+        window: 2020-07-01..2026-10-15
+        n: 322
+        net_r: -1.2066
+        baseline_n: 440
+        baseline_net_r: -13.2429
+        delta_net_r: 12.0363
+        folds_ge_baseline: 5/6
+        max_drawdown_r: 12.9162
+        verdict: pass
+        joint_change: false
+      - value: '35'
+        baseline_value: '25'
+        arm: AD35
+        unit: RQ-20261101-78fc-51
+        window: 2020-07-01..2026-10-15
+        n: 232
+        net_r: -3.5097
+        baseline_n: 440
+        baseline_net_r: -13.2429
+        delta_net_r: 9.7332
+        folds_ge_baseline: 5/6
+        max_drawdown_r: 11.5102
+        verdict: pass
+        joint_change: false
+      shape: monotone
+      points: 2
+      best_delta_r_per_trade: 0.0274
+      fold_stability: 0.833
+      reading: 'smooth, fold-stable gain: potential -- confirm on a holdout'
     adx_max:
       tests:
       - value: '30'
@@ -825,12 +944,82 @@ levers:
         max_drawdown_r: 17.8191
         verdict: fail
         joint_change: false
+      - value: '0.2'
+        baseline_value: '0.1'
+        arm: VL20
+        unit: RQ-20261031-7b6f-28
+        window: 2020-07-01..2026-10-15
+        n: 404
+        net_r: -15.3285
+        baseline_n: 440
+        baseline_net_r: -13.2429
+        delta_net_r: -2.0856
+        folds_ge_baseline: 3/6
+        max_drawdown_r: 23.659
+        verdict: fail
+        joint_change: false
+      - value: '0.3'
+        baseline_value: '0.1'
+        arm: VL30
+        unit: RQ-20261031-7b6f-28
+        window: 2020-07-01..2026-10-15
+        n: 379
+        net_r: -10.8133
+        baseline_n: 440
+        baseline_net_r: -13.2429
+        delta_net_r: 2.4296
+        folds_ge_baseline: 3/6
+        max_drawdown_r: 19.1438
+        verdict: fail
+        joint_change: false
       shape: flat
-      points: 1
-      best_delta_r_per_trade: 0.002
-      fold_stability: 0.25
+      points: 3
+      best_delta_r_per_trade: 0.0055
+      fold_stability: 0.417
       reading: no response at the tested values
   other:
+    momentum_stale_bars:
+      tests:
+      - value: '12'
+        baseline_value: 'off'
+        arm: M2
+        unit: RQ-20261031-3ef3-15
+        window: 2020-07-01..2026-10-15
+        n: 449
+        net_r: -15.513
+        baseline_n: 440
+        baseline_net_r: -13.2429
+        delta_net_r: -2.2701
+        folds_ge_baseline: 3/6
+        max_drawdown_r: 25.7514
+        verdict: fail
+        joint_change: true
+      shape: flat
+      points: 1
+      best_delta_r_per_trade: -0.0052
+      fold_stability: 0.5
+      reading: no response at the tested values
+    momentum_stale_adx_below:
+      tests:
+      - value: '20'
+        baseline_value: 'off'
+        arm: M2
+        unit: RQ-20261031-3ef3-15
+        window: 2020-07-01..2026-10-15
+        n: 449
+        net_r: -15.513
+        baseline_n: 440
+        baseline_net_r: -13.2429
+        delta_net_r: -2.2701
+        folds_ge_baseline: 3/6
+        max_drawdown_r: 25.7514
+        verdict: fail
+        joint_change: true
+      shape: flat
+      points: 1
+      best_delta_r_per_trade: -0.0052
+      fold_stability: 0.5
+      reading: no response at the tested values
     direction_filter:
       tests:
       - value: di

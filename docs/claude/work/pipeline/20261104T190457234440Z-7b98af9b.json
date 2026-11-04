@@ -1,0 +1,17 @@
+{
+  "due_when": {
+    "check_every_days": 7,
+    "clears_when": "calibration_by_action and hold_vs_close report n_packages beside n and gate their verdicts on n_packages, with a test like test_use_rules_count_packages_not_repeated_reviews",
+    "kind": "event"
+  },
+  "id": "PI-20261104-PREP1104-0003",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "performance-review 2026-11-04 (lane PERF-REVIEW-PREP-20261104, manager session_01AFoLuHgZaSYnm9avjeZE33); docs/reviews/2026-11-04-weekly-walkthrough.md PERFORMANCE section 3",
+    "rerun": "python3 scripts/ops/live_review_grade.py --live --since 2026-10-28 | grep -E 'close/all|hold/all|Hold vs close'"
+  },
+  "owner": "perf-followup",
+  "state": "queued",
+  "what": "[performance][tooling] live_review_grade.py still counts REVIEWS, not packages, in calibration_by_action and hold_vs_close. The 2026-11-04 fix moved use_rules to per-package (20 priced close calls were 3 packages; it had read PROPOSE_WIDEN). The calibration strata (close/all n=20 UNDERCONFIDENT, hold/all n=108 OVERCONFIDENT) and hold-vs-close (n=130 reviews) are pseudo-replicated the same way, so their verdicts overstate n."
+}

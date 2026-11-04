@@ -1,0 +1,15 @@
+{
+  "due_when": {
+    "due_date": "2026-11-08",
+    "kind": "date"
+  },
+  "id": "PI-20261104-SVCWDSDX-0002",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "PROGRAMME-REVIEW-20261104 session_01AFoLuN1KJZaUK3SVCWdSdx",
+    "rerun": "grep -n -A3 'ltr-partial-close\\|ltr-widen-sl\\|ltr-sl-to-structure\\|ltr-tp-extend\\|ltr-tp-pull-in' scripts/research/iteration_subjects.yaml | grep basis"
+  },
+  "state": "queued",
+  "what": "STALE LIVE-REVIEW SUBJECTS: scripts/research/iteration_subjects.yaml lists ltr-partial-close, ltr-widen-sl, ltr-sl-to-structure, ltr-tp-extend, ltr-tp-pull-in as verdict pending / basis 'awaiting lane LTR-CLASS-GRADE', but comms/research/ltr_class_grade/VERDICT.md is on main and grades them INDETERMINATE (partial_close n 1 call, move_tp 0, widen_sl 0). Update each subject's verdict + basis to the record, and give each an iteration: the offline P1-Q15 C2/C3/C5/C7 Stage-0 units need an action-replay instrument per class (no driver exists; name it on row LTR-CLASS-RULE-PACKAGE-N or a new row). These are 5 of this week's 41 iteration orphans (iteration_orphans.py 2026-11-04). Done = iteration_orphans.py --legacy --json shows each as covered or with a blocked iteration unit naming its instrument."
+}

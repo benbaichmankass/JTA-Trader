@@ -1,0 +1,405 @@
+{
+ "run": "ML-FRONTIER-PREP-20261104",
+ "finished_at": "2026-11-04T20:00:00Z",
+ "plan_items": 80,
+ "open": 39,
+ "flags": {
+  "before": "85 flagged (9 CLOSED-OPEN, 63 UNPLANNED, REGISTRY-STAGES-CHANGED, TRAINING-STALENESS)",
+  "after": "77 flagged; 0 CLOSED-OPEN"
+ },
+ "plumbing_findings": [
+  "REGISTRY-STAGES-CHANGED owned by ML-REGISTRY-LADDER-GAPS",
+  "TRAINING-STALENESS stale 4 never 2",
+  "63 UNPLANNED -> MECE ML-SLOT-REPORT"
+ ],
+ "results_read": [
+  {
+   "unit": "RQ-20261029-7294-02",
+   "verdict": "FAIL",
+   "plan_item": "Q-TM1"
+  },
+  {
+   "unit": "RQ-20261030-c7a1-01",
+   "verdict": "FAIL",
+   "plan_item": "Q-TM1b"
+  },
+  {
+   "unit": "RQ-20261030-824b-01",
+   "verdict": "PASS",
+   "plan_item": "TM-BENCH v1"
+  },
+  {
+   "unit": "33 ml_bakeoff units",
+   "verdict": "17 PASS/5 IND/4 FAIL/7 producer_failed",
+   "plan_item": "regime/direction learners"
+  }
+ ],
+ "ideas": [
+  {
+   "id": "P3 taker-flow ENTRY variant",
+   "source": "frontier 2602.00776 + G-Research + ml-feature-inventory",
+   "rule_registered": false,
+   "power_unit": "decision-days, W2 forward window"
+  },
+  {
+   "id": "P4 LambdaRank ENTRY",
+   "source": "frontier 2512.08124 / 2606.27670",
+   "rule_registered": false,
+   "power_unit": "timestamp cross-sections, 6 purged folds"
+  }
+ ],
+ "frontier": {
+  "run": "ML-FRONTIER-PREP-20261104",
+  "finished_at": "2026-11-04T20:00:00Z",
+  "previous_scan_read": [
+   {
+    "unit": "RQ-20261029-7294-02",
+    "verdict": "FAIL",
+    "family": "gbdt"
+   },
+   {
+    "unit": "P3 TTM+LogHAR",
+    "verdict": "not-run",
+    "family": "ts_foundation_model"
+   },
+   {
+    "unit": "P4 desk attribution",
+    "verdict": "not-run",
+    "family": "rule_baseline"
+   },
+   {
+    "unit": "RQ-20261029-7294-03 Q-SEL1-BROAD",
+    "verdict": "not-run (blocked corpus v2)",
+    "family": "conformal_calibration"
+   }
+  ],
+  "grades": [
+   {
+    "candidate": "TTM-r2 + Log-HAR",
+    "call": "kept",
+    "grade": "unresolved",
+    "evidence": "not registered"
+   },
+   {
+    "candidate": "TradeLens desk attribution",
+    "call": "kept",
+    "grade": "unresolved",
+    "evidence": "not registered"
+   },
+   {
+    "candidate": "conformal wrapper on Q-SEL1",
+    "call": "kept",
+    "grade": "miss",
+    "evidence": "Q-SEL1-BROAD blocked on corpus v2"
+   },
+   {
+    "candidate": "regime/direction learner variants",
+    "call": "dropped",
+    "grade": "hit",
+    "evidence": "33/33 units this week; no material gain; direction PASSes reach the prior"
+   },
+   {
+    "candidate": "TiRex-2 remaining-move",
+    "call": "dropped",
+    "grade": "unresolved",
+    "evidence": "Q-TM1 FAILed on R1 state; no consumer"
+   }
+  ],
+  "diversity": {
+   "command": "ml_plan_status.py --diversity",
+   "findings": [
+    "MANIFEST-CONCENTRATION gbdt 77/98",
+    "no FAIL-STREAK",
+    "3 items untagged: ML-N1, ML-V1, ML-D3"
+   ]
+  },
+  "lever_rows": {
+   "queued_ge_2_scans": [
+    "FRONTIER-LEVER-HARNESS-COSTS",
+    "FRONTIER-LEVER-LEADLAG",
+    "FRONTIER-LEVER-TABULAR",
+    "FRONTIER-LEVER-TSFM-TIMESTRAL"
+   ],
+   "silent_in_flight": [
+    "FRONTIER-LEVER-XSEC-RUNNER"
+   ],
+   "disposition": "raised to manager"
+  },
+  "sources_checked": [
+   {
+    "source": "hf-papers-trending+search",
+    "date": "2026-11-04",
+    "state": "checked",
+    "note": "2512.08124, 2606.27670, 2602.00776, 2510.13654 abstracts (primary)"
+   },
+   {
+    "source": "arxiv",
+    "date": "2026-11-04",
+    "state": "checked",
+    "note": "via HF + web: 2607.09426 title only"
+   },
+   {
+    "source": "lab-releases",
+    "date": "2026-11-04",
+    "state": "checked",
+    "note": "secondary only: Toto 2.0, TiRex-2, TimesFM-3, t0-gamma, Timestral, TimeH2O-v1 (fev-bench claim unverified)"
+   },
+   {
+    "source": "quant-practitioner",
+    "date": "2026-11-04",
+    "state": "checked",
+    "note": "thin; no 2026 SSRN primary on taker-flow"
+   },
+   {
+    "source": "competitions/github",
+    "date": "2026-11-04",
+    "state": "checked",
+    "note": "G-Research crypto recap: top-3 LightGBM, features > models (secondary, gresearch.com); CryptoGAT repo link"
+   }
+  ],
+  "candidates": [
+   {
+    "name": "taker-flow + premium features (replace-not-add) for ENTRY",
+    "family": "gbdt",
+    "licence": "n/a (exchange data)",
+    "gate_failed": "none",
+    "kept": true,
+    "unit_or_row": "PROPOSED P3 as a variant on ML-FS-ENTRY-V2",
+    "baseline": "Foxhound v1/v2 20-column recipe",
+    "kill": "< +0.010 R net or < 6/8 folds positive, or fails the noise control",
+    "business_question": "ENTRY decisions on bybit_2 (real money) and bybit_1",
+    "power": {
+     "unit": "decision-days",
+     "n": null,
+     "mde": 0.01,
+     "ok": false
+    },
+    "p_pass": 0.2
+   },
+   {
+    "name": "cross-sectional ranking objective (LambdaRank) for ENTRY",
+    "family": "gbdt",
+    "licence": "method",
+    "gate_failed": "none",
+    "kept": true,
+    "unit_or_row": "PROPOSED P4",
+    "baseline": "incumbent regression head + tau rule",
+    "kill": "top-k net R not above incumbent across 6 purged folds",
+    "business_question": "D3 entry selection; D5 aggregation input",
+    "power": {
+     "unit": "folds",
+     "n": 6,
+     "mde": null,
+     "ok": false
+    },
+    "p_pass": 0.2
+   },
+   {
+    "name": "TSFM raw forecasters (TimesFM-3/Toto 2.0/TiRex-2/TimeH2O)",
+    "family": "ts_foundation_model",
+    "licence": "mixed (secondary)",
+    "gate_failed": "business_question",
+    "kept": false,
+    "unit_or_row": "dropped",
+    "baseline": "-",
+    "kill": "-",
+    "business_question": "no consumer reads a point forecast",
+    "power": {
+     "unit": "folds",
+     "n": null,
+     "mde": null,
+     "ok": false
+    },
+    "p_pass": null
+   },
+   {
+    "name": "LOB state-space FM (2610.28753)",
+    "family": "ssl_representation",
+    "licence": "-",
+    "gate_failed": "data",
+    "kept": false,
+    "unit_or_row": "dropped",
+    "baseline": "-",
+    "kill": "-",
+    "business_question": "-",
+    "power": {
+     "unit": "-",
+     "n": null,
+     "mde": null,
+     "ok": false
+    },
+    "p_pass": null
+   },
+   {
+    "name": "multi-agent LLM traders (TradingAgents)",
+    "family": "-",
+    "licence": "-",
+    "gate_failed": "leakage",
+    "kept": false,
+    "unit_or_row": "dropped",
+    "baseline": "-",
+    "kill": "-",
+    "business_question": "desk is B3 already",
+    "power": {
+     "unit": "-",
+     "n": null,
+     "mde": null,
+     "ok": false
+    },
+    "p_pass": null
+   },
+   {
+    "name": "regime/direction learner variants",
+    "family": "various",
+    "licence": "-",
+    "gate_failed": "business_question",
+    "kept": false,
+    "unit_or_row": "dropped (2nd week)",
+    "baseline": "shipped LightGBM",
+    "kill": "-",
+    "business_question": "no consumer prices the gain",
+    "power": {
+     "unit": "folds",
+     "n": 5,
+     "mde": 0.001,
+     "ok": false
+    },
+    "p_pass": null
+   }
+  ],
+  "strategy_ideas": [],
+  "none_because": null
+ },
+ "practice": {
+  "run": "PRACTICE-REFRESH-20261104 (sibling lane)",
+  "none_because": "owned by the sibling lane this week"
+ },
+ "drift": {
+  "scan_rc": 0,
+  "heads_scanned": 23,
+  "drifted": [],
+  "persistent": [],
+  "watch": [
+   "btc-regime-15m-lgbm-yz-v1 (KS moderate 2nd read; dead vol_bucket)"
+  ],
+  "rows_filed": [],
+  "could_not_look": []
+ },
+ "checks": {
+  "C1": "finding",
+  "C2": "finding",
+  "C3": "finding",
+  "C4": "finding",
+  "C5": "finding",
+  "C6": "finding",
+  "C7": "watch",
+  "C8": "finding",
+  "C9": "finding"
+ },
+ "calls": [
+  {
+   "id": "ML-20261104-1",
+   "claim": "No retrained ENTRY artifact (data-through >= 2026-10-28) is served on bybit_2 by the 2026-11-11 review unless the manager dispatches P1.",
+   "p": 0.6,
+   "impact": "real-money ENTRY (Foxhound-1) on bybit_2 + bybit_portfolio",
+   "decision": "P1 proposed; PI-20261104-DGUBH8UA-0002",
+   "tier": "1",
+   "check": {
+    "command": "python3 -c \"import json;print(json.load(open('ml/served/ml_decision_entry_v1/model.json'))['train_end_exclusive'])\" on main",
+    "rule": "hit if train_end_exclusive < 2026-10-28 at the 11-11 review; miss if >= 2026-10-28",
+    "resolves_when": "2026-11-11 ml-review"
+   },
+   "ending": "PI-20261104-DGUBH8UA-0002"
+  },
+  {
+   "id": "ML-20261104-2",
+   "claim": "The 11-02 MES baseline collapse is a data/label construction change (DST session shift or a code/source change), not a market regime shift.",
+   "p": 0.75,
+   "impact": "MES-5m advisory (0 legs) + the MES refinement series",
+   "decision": "P6 trainer read",
+   "tier": "1",
+   "check": {
+    "command": "trainer: per-day volatile-label share of datasets-out/market_features/MES*/5m for 2026-10-25..11-04",
+    "rule": "hit if the share steps at 11-01/02 in session-hour rows with no matching step in realised vol; miss if it tracks realised vol",
+    "resolves_when": "PI-20261104-DGUBH8UA-0001 read"
+   },
+   "ending": "PI-20261104-DGUBH8UA-0001"
+  },
+  {
+   "id": "ML-20261104-3",
+   "claim": "Of the ML units graded in the next 7 days, >= 70% still target regime_label or direction_label.",
+   "p": 0.8,
+   "impact": "research capacity",
+   "decision": "P3/P4 propose order-changing questions instead",
+   "tier": "1",
+   "check": {
+    "command": "research/results/* committed 2026-11-04..11-11 whose unit has ml_bakeoff; share with target in {regime_label,direction_label}",
+    "rule": "hit if >= 0.70; miss if < 0.50",
+    "resolves_when": "2026-11-11 ml-review"
+   },
+   "ending": "no action, because P6 (pause) was bulk-killed by the operator reset 2026-10-29; this tracks it"
+  },
+  {
+   "id": "ML-20261104-4",
+   "claim": "Live ENTRY (ml_entry, bybit_2) mean realised pnl% per closed trade is <= 0 once n >= 30.",
+   "p": 0.55,
+   "impact": "real-money ENTRY",
+   "decision": "monitor via P1 (ML-ENTRY-LIVE-MONITOR); no demotion on n=4",
+   "tier": "1",
+   "check": {
+    "command": "GET /api/bot/trades/closed?account_id=bybit_2&since=2026-11-01T00:00:00 filtered pattern==ml_entry; mean realizedPnlPct",
+    "rule": "hit if mean <= 0 at n >= 30; miss if > 0",
+    "resolves_when": "n >= 30 closed ml_entry trades on bybit_2"
+   },
+   "ending": "PI-20261104-DGUBH8UA-0002"
+  },
+  {
+   "id": "ML-20261104-5",
+   "claim": "btc-regime-15m-lgbm-yz-v1 drift is the dead live vol_bucket, not regime: its KS stays moderate+ while the fc-pcv siblings on the same symbol/timeframe read no_change or minor.",
+   "p": 0.7,
+   "impact": "shadow yz heads (0 legs)",
+   "decision": "no DRIFT-REMEDIATE row; fold into PI-20260927-3WM5HADW-0005",
+   "tier": "1",
+   "check": {
+    "command": "GET /api/bot/shadow/drift?model_id=btc-regime-15m-lgbm-yz-v1 and ...fc-pcv-v2",
+    "rule": "hit if yz verdict in {moderate,significant} and fc-pcv-v2 in {no_change,minor}; miss if both move together",
+    "resolves_when": "2026-11-11 ml-review"
+   },
+   "ending": "PI-20260927-3WM5HADW-0005"
+  },
+  {
+   "id": "ML-20261104-6",
+   "claim": "The Q-TM1 next iteration (RQ-20261101-78fc-04) is still blocked at the next review.",
+   "p": 0.6,
+   "impact": "D7/D8 trade management on the six money legs",
+   "decision": "raised to the manager",
+   "tier": "1",
+   "check": {
+    "command": "ls research/queue/RQ-20261101-78fc-04.yaml research/queue/blocked/RQ-20261101-78fc-04.yaml",
+    "rule": "hit if still under blocked/; miss if queued or graded",
+    "resolves_when": "2026-11-11 ml-review"
+   },
+   "ending": "no action, because the unit's own clears_when owns it"
+  }
+ ],
+ "writebacks": [
+  "docs/plans/ml-plan-items.yaml: 10 CLOSED-OPEN items closed (ML-D2,D3,D6,F0,F2T,F14,F27,F22L,M0,L1)",
+  "pipeline: 7 re-dated, 1 done (WH81NW96-0001)"
+ ],
+ "rows_filed": [],
+ "units_filed": [],
+ "pipeline_filed": [
+  "PI-20261104-DGUBH8UA-0001",
+  "PI-20261104-DGUBH8UA-0002",
+  "PI-20261104-DGUBH8UA-0003"
+ ],
+ "next_by_value_per_cost": [
+  "P1 ENTRY retrain+monitor",
+  "P2 serving inventory (MECE P1)",
+  "P6 MES trainer read",
+  "P5 beats-prior clause",
+  "P3 taker-flow ENTRY variant",
+  "P4 LambdaRank ENTRY"
+ ],
+ "handoff": "Manager: dispatch P1; decide the 4 lever rows queued >=2 scans and XSEC-RUNNER; trainer disk 80.2% to /health-review; ml_entry reconciler/other closes to /performance-review."
+}

@@ -8,16 +8,18 @@
   "model": "claude-opus-5-5",
   "ceiling_usd": 15,
   "spend_usd": null,
-  "tier": 2,
-  "prs": [],
+  "tier": 3,
+  "prs": [
+    "#22897"
+  ],
   "blocked_on": [],
-  "note": "",
+  "note": "PR #22897 (Tier 3, landing hold): connector-level fix, bare Bybit USDT ids resolve to the linear perp. All 34 Bybit-rostered legs read SPOT candles while trading linear with perp Stage-0 corpora (ml_entry* already fixed by #22650). Measured gap (trainer relay #22896): spot-perp close basis median +4.4..+7.3 bps; entry-bar Jaccard 0.42-0.96 over 24 replayed legs, net-R delta both signs (14+/10-); table in the PR body + PI-20261103-SPOTCANDLES-0001. OPERATOR DECISION 2026-11-04 ~19:50Z (popup, relayed by Manager Session 2026-11-04a): \"Merge when green (Recommended)\" - manager merges after CI green, restarts the trader, verifies category=linear candle reads on the next tick. Follow-ups filed: PI-20261104-TCANDLES-0001 (dead spot-default order path), -0002 (adx25 harness parity).",
   "due_by": "2026-11-05",
   "roadmap": [
     "L-OPS"
   ],
   "priority_rank": 2,
-  "updated_at": "2026-11-04T18:16:39Z",
-  "updated_by": "session_01AFoLuHgZaSYnm9avjeZE33",
+  "updated_at": "2026-11-04T19:52:07Z",
+  "updated_by": "session_01AFoLuHgEywPMzgjbLqgLYC",
   "_seq": 908
 }

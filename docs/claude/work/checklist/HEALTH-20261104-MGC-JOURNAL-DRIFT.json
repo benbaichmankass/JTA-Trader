@@ -1,0 +1,22 @@
+{
+  "id": "HEALTH-20261104-MGC-JOURNAL-DRIFT",
+  "title": "ib_paper/MGC open row 6673 says 14 short; broker now holds 11 (was 12 on 10-26): an unjournaled 1-lot reduce happened in the window; the 10-29 bulk kill of PI-20261026-CDTDGVDN-0001 left a growing accounting error",
+  "phase": "floor",
+  "state": "queued",
+  "owner": "manager",
+  "lane": null,
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 2,
+  "prs": [],
+  "blocked_on": [],
+  "note": "[HEALTH-REVIEW-20261104] MEASURED: system_invariants INV-JOURNAL-EXCHANGE FAIL ib_paper/MGC journal 14 vs exchange 11 (exchange_positions 19:20Z; journal trades limit=500). 2026-10-26 reading was 14 vs 12 (PI-20261026-CDTDGVDN-0001, killed 10-29 'bulk reset: value unknown (operator)'). New fact: the broker side moved 12 -> 11 with no journal change, so it is not a static one-off. Root-cause from IB executions for MGC since 10-26 and repair through repair-netted-rows / reconcile-netting-rows. Closing observation: INV-JOURNAL-EXCHANGE pass on ib_paper/MGC.",
+  "due_by": "2026-11-11",
+  "roadmap": [
+    "L-OPS"
+  ],
+  "updated_at": "2026-11-04T19:32:21Z",
+  "updated_by": "session_01AFoLuJuS137LaGTV3KwRtZ",
+  "_seq": 915
+}

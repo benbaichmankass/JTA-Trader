@@ -186,6 +186,25 @@ def test_use_rules_narrow_widen_and_hold_scope():
     assert "Use rules" in gr.render(neg, "t")
 
 
+def test_use_rules_count_packages_not_repeated_reviews():
+    # 2026-11-04: 20 priced closes were 5 packages; repeated reviews of one package are ONE observation
+    n = gr.USE_MIN_N
+    rvs, res = [], []
+    for i in range(n):
+        rv, rs = _rv(i), _res(i, delta=0.8 + (0.05 if i % 2 else -0.05))
+        pkg = f"pkg-{i % 5}"
+        rv["order_package_id"] = rs["order_package_id"] = pkg
+        rvs.append(rv)
+        res.append(rs)
+    u = gr.grade(rvs, res)["use_rules"]["tighten_sl"]
+    assert u["n"] == n and u["n_packages"] == 5
+    assert u["verdict"].startswith("HOLD_SCOPE (INDETERMINATE: n_packages=5")
+    # distinct packages still widen exactly as before
+    pos = gr.grade([_rv(i) for i in range(n)], [_res(i, delta=0.3 + (0.05 if i % 2 else -0.05)) for i in range(n)])
+    assert pos["use_rules"]["tighten_sl"]["n_packages"] == n
+    assert pos["use_rules"]["tighten_sl"]["verdict"] == "PROPOSE_WIDEN"
+
+
 # --------------------------------------------------------------------------- ML use rule (c)
 
 def test_call_class_weight_three_states():

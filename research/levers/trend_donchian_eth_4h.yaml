@@ -3099,10 +3099,38 @@ levers:
         max_drawdown_r: 21.5289
         verdict: fail
         joint_change: false
+      - value: '0.8'
+        baseline_value: 'off'
+        arm: VH80
+        unit: RQ-20261031-7b6f-20
+        window: 2020-07-01..2026-10-15
+        n: 230
+        net_r: 62.4102
+        baseline_n: 275
+        baseline_net_r: 83.6211
+        delta_net_r: -21.2109
+        folds_ge_baseline: 1/6
+        max_drawdown_r: 22.0537
+        verdict: fail
+        joint_change: false
+      - value: '0.9'
+        baseline_value: 'off'
+        arm: VH90
+        unit: RQ-20261031-7b6f-20
+        window: 2020-07-01..2026-10-15
+        n: 250
+        net_r: 74.582
+        baseline_n: 275
+        baseline_net_r: 83.6211
+        delta_net_r: -9.0391
+        folds_ge_baseline: 2/6
+        max_drawdown_r: 22.0537
+        verdict: fail
+        joint_change: false
       shape: peaked
-      points: 5
-      best_delta_r_per_trade: -0.0333
-      fold_stability: 0.35
+      points: 7
+      best_delta_r_per_trade: -0.0329
+      fold_stability: 0.321
       reading: every tested value is worse than the baseline
     cooldown_bars:
       tests:
@@ -3148,10 +3176,38 @@ levers:
         max_drawdown_r: 14.3564
         verdict: fail
         joint_change: false
+      - value: '4'
+        baseline_value: 'off'
+        arm: CD4
+        unit: RQ-20261031-c6fc-02
+        window: 2020-07-01..2026-10-15
+        n: 262
+        net_r: 83.3507
+        baseline_n: 275
+        baseline_net_r: 83.6211
+        delta_net_r: -0.2704
+        folds_ge_baseline: 4/6
+        max_drawdown_r: 18.7634
+        verdict: fail
+        joint_change: false
+      - value: '8'
+        baseline_value: 'off'
+        arm: CD8
+        unit: RQ-20261031-c6fc-02
+        window: 2020-07-01..2026-10-15
+        n: 250
+        net_r: 81.7908
+        baseline_n: 275
+        baseline_net_r: 83.6211
+        delta_net_r: -1.8303
+        folds_ge_baseline: 3/6
+        max_drawdown_r: 17.709
+        verdict: fail
+        joint_change: false
       shape: noisy
-      points: 3
+      points: 5
       best_delta_r_per_trade: 0.0531
-      fold_stability: 0.667
+      fold_stability: 0.633
       reading: 'smooth, fold-stable gain: potential -- confirm on a holdout'
     adx_max:
       tests:

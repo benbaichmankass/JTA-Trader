@@ -1,0 +1,22 @@
+{
+  "id": "HEALTH-20261104-TRAINER-DISK",
+  "title": "Trainer VM disk 52% (10-28) -> 81% used (11-04), free 41 -> 20 GB since 11-03; at ~10 GB/day it crosses the 90% alarm ~11-05/06 and training then fails: cap the ETF 1m store / datasets-out",
+  "phase": "floor",
+  "state": "queued",
+  "owner": "manager",
+  "lane": null,
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 2,
+  "prs": [],
+  "blocked_on": [],
+  "note": "[HEALTH-REVIEW-20261104] MEASURED: /api/bot/ml/status disk used_pct 80.3 free 20.49 GB of 103.86 (19:2xZ); trainer-vm-diag #22919 df / 81% 20G avail; du: data 25G, datasets-out 12G (market_features 5m v002 1.35 GB x3 rewritten 11-04), ml 9.2G, comms 5.4G, .git 2.4G (pack 2.26 GB 11-03), trade_journal.db copy 2.4G. Prior: 52% in HEALTH-REVIEW-20261028 H11; PI-20261102-PTDVAI3R-0006 recorded free 45 -> 41 GB from the ETF-history full-push fallback. Cause INFERRED p0.7: #22571 made the trainer the ETF 1m store of record (HF lake off) + #22488 self-dispatching backfill; PI-20261102-ARSESYNC-0001 (trainer git-sync full fetch) contributes. Both PIs queued, no owner. Fix: retention/compaction for data/etf_history and datasets-out old versions, or lake publish back on. Closing observation: /api/bot/ml/status disk.used_pct <= 75 and flat over 3 days.",
+  "due_by": "2026-11-06",
+  "roadmap": [
+    "L-OPS"
+  ],
+  "updated_at": "2026-11-04T19:32:21Z",
+  "updated_by": "session_01AFoLuJuS137LaGTV3KwRtZ",
+  "_seq": 914
+}

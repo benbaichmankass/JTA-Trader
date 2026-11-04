@@ -6,6 +6,18 @@
 
 ---
 
+## Programme review 2026-11-04 (lane PROGRAMME-REVIEW-20261104) — INFRA / MODEL plumbing
+
+Population: units with a result row generated 2026-10-28T19:41Z..2026-11-04T19:41Z (`research_ops_checks.py --kind programme_review --since 7d`, 1,932 units read, 0 unreadable, 662 result rows): **447 units with rows** — 107 pass, 210 fail, 25 indeterminate, 11 no_action_warranted, 94 with no unit verdict yet (76 ungraded + 18 needs_review/null). 302 carry a programme field (P1 53, P2 54, P3 95, P4 24, P5 48, P6 18, P7 10), 145 do not (live_strategy 70, new_strategy_prop 32, infra 13, ml_health 13, timeframes 6, macro 5, regime 5, none 1) — assigned below by what they ask. Every PASS is a discovery until its confirmation passes.
+
+**P6 in the window:** 18 units (4 pass, 11 fail, 3 ungraded) plus 13 unprogrammed `infra` units (7 pass). Pipeline: 455 fired / 7 d, 31 runnable, last dispatch 1.8 h before the run, idle alarm off (`research_ops_checks.py` pipeline block). `needs_review` rose from 28 (flat for 17 records) to **72** in the last two ops records (owner `None` on 49).
+
+**What was learned.** Queue hygiene units pass (starvation, roadmap refs, related paths). The discovery units filed under P6 (vol-targeted TSMOM portfolios, cross-sectional crypto momentum, movement capture, EWMA-vs-implied vol) all FAILED — they are P3/P4 questions by content and are assigned there; the P6 field on them is a filing error. **Two instrument faults surfaced this week:** the Kaggle `candle_dataset.serve()` IsADirectoryError that stranded 5e01-02/03/04 (fixed in #22907), and **the evidence builder omits `skip_hours` for pullback legs** (`regime_debt_matrix._PB_LEVER_FLAG`; trend legs forward it), so spy_pullback_1h and any pullback leg declaring a session filter grade `approximate` for a wiring reason (filed this review).
+
+**Next.** The needs_review jump (28 → 72, 49 unowned) is the P6 item with money behind it: a result that is not triaged is not read. Recorded as a call.
+
+**Feeds.** P6 → everyone: the `_PB_LEVER_FLAG` fix makes every pullback leg's A arm config-exact.
+
 ## Programme review 2026-10-28 (lane PROGRAMME-REVIEW-20261028) — INFRA / MODEL plumbing
 
 Population: research units with a result row generated 2026-10-21T19:30Z..2026-10-28T19:30Z (`research_ops_checks.py --kind programme_review --since 7d`, 1,480 units read, 0 unreadable): **445 units, 412 graded** (70 pass, 50 indeterminate, 292 fail), 285 with a programme field and 160 without (live_strategy 70, regime 27, ml_health 21, macro 20, infra 13, new_strategy_prop 8, none 1). This review assigns the 160 by what they ask, not by the field (map section). Every PASS below is a discovery until its confirmation unit passes. **Cost basis:** about 36 of the 70 PASS rows are crypto-harness runs charged 7.5 bps round-trip (MEASURED from each result's argv); only RQ-20261028-001 carried the measured Bybit-linear 11.0 bps. A lever A/B delta is nearly fee-neutral (both arms pay it); an absolute Stage-0 or breadth PASS is not.

@@ -6469,7 +6469,7 @@ def _ml_entry_frame(df: Any) -> Any:
 
 
 def _ml_entry_reference_frames(symbols: list, bar_open_iso: str, exchange: Any, limit: int = 200,
-                               venue: str = "bybit") -> Dict[str, Any]:
+                               venue: str = "bybit", reference_venue: str = "bybit") -> Dict[str, Any]:
     """Closed 1h frames of the cross-sectional reference perps, fetched ONCE per (venue, decision bar).
 
     The model's cross-sectional / BTC features are defined against its 60 Bybit-listed USDT perps, so the frames
@@ -6478,22 +6478,29 @@ def _ml_entry_reference_frames(symbols: list, bar_open_iso: str, exchange: Any, 
     every decision read n_reference=0). On a Bybit account the account's own client is reused. Frames are NOT
     filtered on timestamp equality here: ``ml_decision_features.decision_row`` aligns them AS-OF the decision bar's
     close. A symbol that fails to fetch is skipped and counted by the caller (``n_reference``); the strategy
-    refuses below its ``min_reference_symbols``."""
+    refuses below its ``min_reference_symbols``.
+
+    ``reference_venue`` (row ML-ENTRY-ALL-ACCOUNTS; ``account_profiles.<acct>.reference.venue``): the reference
+    source is a per-account declaration INDEPENDENT of the trading venue; default ``bybit`` (the pre-2026-11-04 rule).
+    The account's own client is reused only when it IS the reference venue. The cache holds one slot per
+    (reference venue, trading venue, universe, decision bar), so a tick that walks bybit and alpaca symbols in turn
+    fetches each set once instead of refetching on every switch."""
     from src.runtime.closed_bars import drop_forming_bar
     from src.runtime.market_data import fetch_candles
-    key = (str(venue or "bybit").lower(), bar_open_iso)
-    if _ML_ENTRY_REF_CACHE.get("key") == key:
-        return _ML_ENTRY_REF_CACHE["frames"]
-    on_bybit = key[0] == "bybit"
+    ref_venue = str(reference_venue or "bybit").lower()
+    key = (ref_venue, str(venue or "bybit").lower(), bar_open_iso, tuple(str(x) for x in symbols))
+    if key in _ML_ENTRY_REF_CACHE:
+        return _ML_ENTRY_REF_CACHE[key]
+    reuse_client = key[1] == ref_venue
     frames: Dict[str, Any] = {}
     for s in symbols:
         try:
-            if on_bybit:
-                df = fetch_candles(_ml_entry_candle_symbol(s, exchange), "1h", exchange_client=exchange, limit=limit,
-                                   bypass_cache=True)
+            if reuse_client:
+                df = fetch_candles(_ml_entry_candle_symbol(s, exchange, ref_venue), "1h", exchange_client=exchange,
+                                   limit=limit, bypass_cache=True)
             else:
-                df = fetch_candles(_ml_entry_candle_symbol(s), "1h", settings={"EXCHANGE": "bybit"}, limit=limit,
-                                   bypass_cache=True)
+                df = fetch_candles(_ml_entry_candle_symbol(s, None, ref_venue), "1h", settings={"EXCHANGE": ref_venue},
+                                   limit=limit, bypass_cache=True)
             if df is None or len(df) == 0:
                 continue
             fr = _ml_entry_frame(drop_forming_bar(df, "1h"))
@@ -6501,7 +6508,9 @@ def _ml_entry_reference_frames(symbols: list, bar_open_iso: str, exchange: Any, 
                 frames[s] = fr
         except Exception:  # noqa: BLE001 -- one missing reference symbol never blocks the decision
             logger.debug("ml_entry: reference fetch failed for %s", s, exc_info=True)
-    _ML_ENTRY_REF_CACHE.update(key=key, frames=frames)
+    if any(k[2] != bar_open_iso for k in _ML_ENTRY_REF_CACHE) or len(_ML_ENTRY_REF_CACHE) >= 8:
+        _ML_ENTRY_REF_CACHE.clear()  # a new decision bar: older slots can never be asked for again
+    _ML_ENTRY_REF_CACHE[key] = frames
     return frames
 
 
@@ -6552,8 +6561,15 @@ def ml_entry_signal_builder(settings: dict) -> Dict[str, Any]:
         if not is_decision_bar(df["ts"].iloc[-1], int(model["meta"]["bracket"]["decision_every_h"])):
             raise ValueError("not_a_decision_bar")  # before the reference fetch: 60 venue calls only every 4th bar
         venue = str(settings.get("EXCHANGE") or settings.get("exchange") or "bybit").lower()
-        refs = _ml_entry_reference_frames(list(model["meta"]["xs_reference"]), df["ts"].iloc[-1].isoformat(), exchange,
-                                          venue=venue)
+        # Per-account profile (row ML-ENTRY-ALL-ACCOUNTS, src/runtime/ml_entry_profile.py): reference source, anchor,
+        # sides, session and cost basis from strategies.yaml::ml_entry.account_profiles; none declared = defaults.
+        from src.runtime import ml_entry_profile as _PR
+        prof = _PR.resolve(vcfg, symbol)
+        cfg["_profile"] = prof
+        if venue != "bybit" and prof["declared"]:
+            cfg["_candle_venue"] = venue  # the moving-TP check-in reads the own frame from this venue (else Bybit)
+        refs = _ml_entry_reference_frames(_PR.reference_universe(prof, model["meta"]), df["ts"].iloc[-1].isoformat(),
+                                          exchange, venue=venue, reference_venue=prof["reference_venue"])
         pkg = order_package(cfg, candles_df=df, reference_frames=refs, model=model)
     except ValueError as exc:
         _record_closed_decision(key, frame, timeframe, vcfg, _now)
