@@ -1226,32 +1226,42 @@ decides whether to intervene.
       it never decides what trades.
    2. **A non-ML strategy defines its own symbol, usually one.** It is the
       symbol its Stage-0 evidence was measured on, declared once on the leg.
-   3. **An ML's traded universe is internal to the ML. It is derived from a
-      committed PER-SYMBOL pass record.** Each symbol is in the set if it passes
-      a per-symbol test that is registered before the run and net of THAT
-      symbol's measured cost. **An absent record keeps the current set:** no
-      symbol is added and no symbol is removed by default until the per-symbol
-      test reports. At trade time the set is intersected with what the
-      account's venue can physically trade: listed instruments, and the sides
-      the account can take (e.g. `side_filter: long` on a cash account). Nobody
-      edits the set by hand. It changes when a per-symbol test passes or fails.
-      A pooled pass over many symbols is not a per-symbol pass.
-   4. **A venue outside the ML's training universe is tested per symbol, on a
-      population registered before the run; only the symbols that pass trade
-      there.** Example: Alpaca instruments for the crypto-trained `ml_entry`.
-      The population is chosen from the ML's candidate instruments, never
-      re-read from an account's config. A test that scores "the symbols
-      account X trades" lets the account decide the ML's symbols. That is this
-      rule inverted.
-   5. **Parametrisation is separate from the universe.** Per-venue model
+   3. **An ML's traded universe is internal to the ML: it is the whole
+      POPULATION its registered population-level test passed on.** The test
+      is pooled over the population. It is registered before the run, and it
+      is net of the full cost stack, with each symbol charged its own costs.
+      Symbols that fail a cost/liquidity filter fixed BEFORE the run are left
+      out of the population. **Per-symbol results are reported for
+      monitoring and never move a symbol in or out.** At trade time the
+      population is intersected with what the account's venue can physically
+      trade: listed instruments, and the sides the account can take (e.g.
+      `side_filter: long` on a cash account). Nobody edits the population by
+      hand.
+   4. **Widening the population on a real-money account needs its own
+      registered population test.** Until that test passes, the population
+      that already passed stays. The test's population is chosen from the
+      ML's candidate instruments and the pre-run filter. It is never re-read
+      from an account's config: a test that scores "the symbols account X
+      trades" lets the account decide the ML's symbols, which inverts this
+      rule.
+   5. **A TESTING ML on the demo/paper floor trades the population of its
+      pending registered test**, for mechanics only (OPERATING-PLAN § 2:
+      Stage 1 checks mechanics, never edge).
+   6. **Parametrisation is separate from the universe.** Per-venue model
       parameters (anchor, reference venue, sides, session, cost basis; PR
-      #22900's `account_profiles`) describe how the ML trades on a venue. A
-      change to them never changes which symbols the ML trades, and a
-      universe change never rides a parametrisation change.
+      #22900's `account_profiles`) describe how the ML trades on a venue.
+      Changing them never changes which symbols the ML trades, and a
+      universe change never rides along with a parametrisation change.
 
-   Operator decisions, 2026-11-04 ~19:08Z (popup answers relayed by Manager
-   Session 2026-11-04a), verbatim: *"Split (Recommended)"* · *"Per-symbol
-   passes (Recommended)"* · *"Per-symbol tests (Recommended)"*.
+   Operator decisions, 2026-11-04 (popup answers relayed by Manager Session
+   2026-11-04a), verbatim:
+   - ~19:08Z: *"Split (Recommended)"*.
+   - ~19:33Z: *"Group-level (Recommended)"*. This replaces the ~19:08Z
+     "Per-symbol passes" / "Per-symbol tests" answers and the ~19:18Z
+     "Shrunk ≥ 0, n ≥ 100" answer. The operator's context, ~19:25Z: *"Maybe
+     it shouldn't be gated at a per symbol basis, but rather it should be kept
+     more general ... I didn't mean to make the rules stricter than they had
+     and the ML had been designed for."*
 
    **What does NOT change.** Changing a strategy's or ML's universe on a
    real-money account is still a Tier-3 decision. It needs § "Promotion
@@ -1259,10 +1269,6 @@ decides whether to intervene.
    Tier-2/3 decisions". The evidence record is what lets the decision through;
    it is not a new gate. The Stage-1 demo floor, the three strategy statuses
    and the promotion ladder are unchanged (OPERATING-PLAN § 2).
-
-   **A testing ML with no per-symbol record yet** (e.g. `ml_entry_v2`) keeps
-   its current set on the Stage-1 floor, under point 3, until its per-symbol
-   test reports.
 
    **Today's configuration against this rule:**
    [`docs/audits/2026-11-04-per-symbol-config-inventory.md`](audits/2026-11-04-per-symbol-config-inventory.md).
