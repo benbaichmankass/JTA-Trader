@@ -1,0 +1,23 @@
+{
+  "id": "ML-UNIVERSE-RULE",
+  "title": "System-wide config rule: accounts configure only which strategies/MLs are active; no per-symbol config; an ML's traded symbols are internal to the ML, set by which per-symbol tests passed. Codify in the canonical docs and apply to every ML (ml_entry, ml_entry_v2, others)",
+  "phase": null,
+  "state": "queued",
+  "owner": "manager",
+  "lane": null,
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 3,
+  "prs": [],
+  "blocked_on": [],
+  "note": "OPERATOR 2026-11-04 ~19:04Z, verbatim: \"the configuration doesn't specify what trades. It doesn't specify like what coins or what security trades. It just specifies which strategies, including which MLs, are active on that account. That's it.\" and ~19:06Z, verbatim: \"It's not just for Alpaca. That's like a general rule across how all of the accounts are configured. There's no per symbol configuration. There's only per strategy configuration. Specific strategies trade one symbol usually, but the MLs trade whatever is whatever they're set to trade. They don't have their roster is internal to the ML, and it's based on what tests have passed versus which ones have not.\" Scope: (1) a canonical-doc section stating the rule (Tier 1); (2) inventory every place config holds per-symbol trading decisions (strategies.yaml symbols/account_symbols for MLs, accounts.yaml symbols is already only a pull list) and every ML; (3) per ML, the passed-tests record that sets its symbols, and the real-money delta if derived from it (Tier 3 per ML, operator yes/no). ml_entry itself is being done in PR #22900 (lane ML-ENTRY-ALL-ACCOUNTS).",
+  "due_by": "2026-11-05",
+  "roadmap": [
+    "L-ML-LIVE"
+  ],
+  "priority_rank": 2,
+  "updated_at": "2026-11-04T19:03:41Z",
+  "updated_by": "session_01AFoLuHgZaSYnm9avjeZE33",
+  "_seq": 914
+}
