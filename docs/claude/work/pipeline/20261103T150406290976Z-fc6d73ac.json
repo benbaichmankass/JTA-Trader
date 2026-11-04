@@ -12,5 +12,10 @@
     "rerun": "python3 scripts/ops/live_review_grade.py (close class use_rules) and scripts/ops/diag_fetch.sh 'journal?table=trades&limit=200' for 6844/6845"
   },
   "state": "queued",
-  "what": "Evidence for graduating the real-money close class: on pkg-609dc0420b7d4ee6 (SOLUSDT short, ml_entry, bybit_2 real money + bybit_portfolio mirror) the reviewer recommended CLOSE at 14:00Z, open_r -0.69; because close is advice-only (ADVICE_ONLY_ACTIONS) the operator-approved flatten ran at about 14:48Z (bybit_2) and 14:56Z (mirror), i.e. 48 min later. bybit_2 exit 93.5 vs entry 91.95: -0.743R gross, journal pnl -2.30 USDT; delay cost about 0.05R on this leg (-0.69 to -0.74) and the stop (94.04) was not reached. Population: n=1 recommended close, 2 legs, one package; this is an anecdote on delay cost, NOT a graduation test result. The graduating rule RULE-AM-RISK-ADJUSTED-V1 needs n >= 20 priced calls."
+  "what": "Evidence for graduating the real-money close class: on pkg-609dc0420b7d4ee6 (SOLUSDT short, ml_entry, bybit_2 real money + bybit_portfolio mirror) the reviewer recommended CLOSE at 14:00Z, open_r -0.69; because close is advice-only (ADVICE_ONLY_ACTIONS) the operator-approved flatten ran at about 14:48Z (bybit_2) and 14:56Z (mirror), i.e. 48 min later. bybit_2 exit 93.5 vs entry 91.95: -0.743R gross, journal pnl -2.30 USDT; delay cost about 0.05R on this leg (-0.69 to -0.74) and the stop (94.04) was not reached. Population: n=1 recommended close, 2 legs, one package; this is an anecdote on delay cost, NOT a graduation test result. The graduating rule RULE-AM-RISK-ADJUSTED-V1 needs n >= 20 priced calls.",
+  "observation": {
+    "what": "the real-money close class reaches n >= 20 applied-or-priced calls graded under RULE-AM-RISK-ADJUSTED-V1, counting this SOL trade (6844/6845)",
+    "how_to_check": "python3 scripts/ops/live_review_grade.py and read the close class's graded n and verdict",
+    "due_by": "2026-12-03"
+  }
 }
