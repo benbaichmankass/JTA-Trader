@@ -1,0 +1,16 @@
+{
+  "due_when": {
+    "clears_when": "both observations below read on the deployed sha: (1) a new IB trade's first re-arm leaves no parent-linked entry-bracket child resting beside its oca-protect-t<id> group; (2) every open structure_exit package has a position_telemetry row",
+    "event": "PR claude/paper-mechanics-20261104 merged and the trader restarted on its sha",
+    "kind": "event"
+  },
+  "id": "PI-20261104-KKPOFDJQ-0002",
+  "next_action": "check_observation",
+  "origin": {
+    "kind": "session",
+    "ref": "lane PAPER-MECHANICS-20261104 items 1+5 (session_01AFoLuLRhwymaBRKkPofDjQ)",
+    "rerun": "scripts/ops/diag_fetch.sh 'ib_open_orders?account_id=ib_paper' (no resting leg whose parent_id is an open trade's broker_order_id beside its oca-protect-t<id> group) and scripts/ops/diag_fetch.sh 'position_telemetry?limit=300' (a row for every open package whose meta declares structure_exit)"
+  },
+  "state": "queued",
+  "what": "Closing observations for the PAPER-MECHANICS-20261104 PR (landed_unproven until both are read). (1) IB: after the first post-deploy TP/SL re-arm of a NEW IB trade, ib_open_orders shows ONLY its oca-protect-t<id> group; the entry bracket children (parent_id = trades.broker_order_id) are gone, and the trader journal's cancel verdict for 'OCA group oca-protect-t<id>' lists them confirmed_gone. (2) Telemetry: position_telemetry has rows for the structure_exit legs that had none on 11-04 (bybit_1 pkg-5414797739ba4589 trend_donchian_sol, pkg-b76b0655d305485e trend_donchian_eth, pkg-d1654b5c98574bf6 trend_donchian_1h; pkg-dc63bb3b4bbf4723 tlt_pullback_1d) if still open, else for the next structure_exit package. Separately the CURRENT ib_paper TLT over-cover (group 1712634399: orders 1232 LMT 87.57 x7443 + 1233 STP 79.41) stays until cancelled (manager: cancel-ib-order, bodies from scripts/ops/over_cover_proposal.py) or until trade 6879's next re-arm, when the armed stray sweep (PROTECTION_STRAY_GROUP_MODE=apply on ib_paper) should classify the now-populated numeric group stray_unkeyed and cancel it."
+}

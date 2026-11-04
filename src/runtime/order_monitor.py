@@ -2584,6 +2584,9 @@ def _send_modify_to_exchange(matched_trade: Dict[str, Any], *,
             # Scopes the IB pre-cancel to this trade's own OCA group; ignored by
             # every non-IB branch. See modify_open_order's IB branch for why.
             trade_id=matched_trade.get("id"),
+            # IB only: the entry order id, so the re-arm also cancels this
+            # trade's original parent-linked bracket (PAPER-MECHANICS-20261104).
+            entry_order_id=matched_trade.get("broker_order_id"),
         )
     except Exception as exc:  # noqa: BLE001
         logger.warning("order_monitor: exchange modify failed: %s", exc)

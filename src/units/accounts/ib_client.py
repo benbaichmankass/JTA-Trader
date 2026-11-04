@@ -1873,7 +1873,14 @@ class IBClient:
         precancel: Optional[Dict[str, Any]] = None
         try:
             if oca_group:
-                precancel = self._cancel_oca_group_for_symbol(ib, sym, oca_group)
+                # `entry_order_id` (trades.broker_order_id) widens the keyed
+                # pre-cancel to THIS trade's own entry-bracket children, which
+                # rest under IBKR's bare-numeric bracket OCA name rather than
+                # `oca-protect-t<key>` (PAPER-MECHANICS-20261104 item 1, ib_paper
+                # TLT trade 6879). Keyless callers are unchanged.
+                precancel = self._cancel_oca_group_for_symbol(
+                    ib, sym, oca_group,
+                    parent_order_id=order.get("entry_order_id"))
             else:
                 logger.warning(
                     "place_protective: no oca_key for %s — falling back to the "
@@ -3572,7 +3579,8 @@ class IBClient:
         return plan
 
     def _cancel_oca_group_for_symbol(
-        self, ib: Any, symbol: str, oca_group: str
+        self, ib: Any, symbol: str, oca_group: str,
+        parent_order_id: Optional[int] = None,
     ) -> int:
         """Cancel only the legs of ONE OCA group on *symbol* — best-effort.
 
@@ -3592,9 +3600,29 @@ class IBClient:
         this envelope exists to make impossible
         (BL-20260825-PLACE-PROTECTIVE-COUNTS-THE-CANCEL-CALL-NOT-ITS-EFFECT).
         Branch on ``verify_state`` + ``still_resting``, never on ``cancelled``.
+
+        ``parent_order_id`` — the trade's own ENTRY order id
+        (``trades.broker_order_id``). When given, a leg whose ``parentId`` equals
+        it is cancelled too: it is THIS trade's original entry-bracket child
+        (:meth:`place` attaches the TP/SL with ``parentId`` = the entry, and IBKR
+        groups them under a bare-numeric OCA name, not ``oca-protect-t<id>``).
+        Without it, the first re-arm of a trade left that bracket resting beside
+        the keyed group — measured ib_paper TLT 2026-11-04: trade 6879's TP move
+        at 14:49:27Z armed ``oca-protect-t6879`` (STP+LMT x7443) while entry
+        1231's children 1232/1233 (OCA ``1712634399``) kept resting, i.e. two
+        disjoint stop groups against one 7,443-share long. The stray sweep could
+        not catch it: at that instant ib_insync still held the children with an
+        empty ``ocaGroup`` (IBKR assigns the bracket's group server-side), so
+        they classified ``ungrouped`` — report-only, by design.
+        Scope is still THIS trade: ``parentId`` is per-clientId and
+        ``openTrades()`` is this session's book.
         """
         sym = str(symbol or "").upper()
         group = str(oca_group or "")
+        try:
+            parent = int(float(parent_order_id)) if parent_order_id is not None else 0
+        except (TypeError, ValueError):
+            parent = 0
         if not group:
             return {"cancelled": 0, "verify_state": "not_attempted",
                     "still_resting": [], "confirmed_gone": [],
@@ -3610,7 +3638,17 @@ class IBClient:
                     if sym and trade_sym and trade_sym != sym:
                         continue
                     order = getattr(trade, "order", None)
-                    if str(getattr(order, "ocaGroup", "") or "") != group:
+                    in_group = str(getattr(order, "ocaGroup", "") or "") == group
+                    own_bracket_child = False
+                    if parent > 0 and not in_group:
+                        try:
+                            own_bracket_child = (
+                                int(float(getattr(order, "parentId", 0) or 0)) == parent
+                                and _protective_leg_side(
+                                    getattr(order, "orderType", "")) is not None)
+                        except (TypeError, ValueError):
+                            own_bracket_child = False
+                    if not (in_group or own_bracket_child):
                         continue
                     key = self._leg_identity(order)
                     if key:

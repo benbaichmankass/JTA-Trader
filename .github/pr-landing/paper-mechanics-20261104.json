@@ -1,0 +1,7 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "hold_reason": "unvouchable_paths",
+  "hold_text": "Tier-2 order path (src/units/accounts/ib_client.py, execute.py, order_monitor.py): the IB re-arm's keyed pre-cancel now also cancels the trade's OWN entry-bracket children (parentId == trades.broker_order_id). Root cause MEASURED on ib_paper TLT trade 6879 2026-11-04 14:49Z (journal + ib_open_orders): the first TP move left entry 1231's STP/LMT resting beside oca-protect-t6879, 12,743 sh of sell stop against a 7,443 long. Plus observe-only position_telemetry on the structure_exit branch of trend_donchian / htf_pullback_trend_2h (no verdict change, test-pinned). Paper accounts are the only IB books on this path today; needs the manager's one operator OK. Revert: git revert <merge sha>.",
+  "why": "Stop IB re-arms from leaving a second, non-mutually-cancelling stop group (naked-reverse hazard), and stop every structure_exit leg from being unreviewable for lack of telemetry."
+}
