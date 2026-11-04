@@ -1,0 +1,105 @@
+{
+ "run": "RESEARCH-OPS-20261104-1448",
+ "finished_at": "2026-11-04T15:30:00Z",
+ "by": "lane RESEARCH-OPS-20261104-1448 (dispatched by session_01AFoLuLMKGkvg6UbCzdxjNR)",
+ "floor": 69,
+ "floor_basis": "computed_floor(fired_24h 87)",
+ "needs_review_triaged": 0,
+ "needs_review_left": 72,
+ "throughput": {"runnable_after": 38, "queued": 228, "units": 1932, "fired_24h": 87, "results_landed_24h": 130, "hours_since_last_dispatch": 1.4, "idle_alarm": false},
+ "mechanism": {
+  "dispatch_receipt": "fresh (1.35 h; receipt conclusion=failure with fired=true, units did fire: newest last_dispatched_at 13:27Z)",
+  "collector": "ok (result_files_unreadable 0)",
+  "stranded_stamp_prs": [],
+  "incident": "none open; producer_failed_rate_24h is a new SLO breach (31.2%, 39 of 125 rows, MEASURED) diagnosed below",
+  "read_state": "tree_only (checks packet, throughput/liveness scripts, health file 2026-11-04); GitHub workflow runs not listed"
+ },
+ "results_read": {
+  "note": "checks packet since 2026-11-03T15:20Z; 17 e35 rows unread (all power accruing/infeasible, n_oos 8-59 of 7 required rounds: no verdict is possible, they stay corpus rows for lever_map); opened rows: RQ-20261101-b607-01 (and its 4 landed runs)",
+  "units": ["RQ-20261101-b607-01"]
+ },
+ "unlocked": [],
+ "retired": [],
+ "blocked_audit": {
+  "blocked_over_age": 13,
+  "threshold": 10,
+  "method": "recomputed from research/queue/blocked ids older than 21 d: 13 units, read each clears_when against the named lever row",
+  "dispositions": [
+   {"unit": "RQ-20261007-018 / -019", "disposition": "kept", "reason": "funding-rate history unreachable from runners (HTTP 403) / no basis instrument; owner PI-20261007-X9UFEF4U-0001; no config-level change unblocks them"},
+   {"unit": "RQ-20261008-901", "disposition": "kept", "reason": "exit-head replay loads the trend harness only; pullback harness build is its lever"},
+   {"unit": "RQ-20261009-900 / -901", "disposition": "kept", "reason": "only lever left is the verdict grader, row TP-PREDICT-GRADER (filed 2026-11-03); -901 requires 900 pass"},
+   {"unit": "RQ-20261011-17f4-01", "disposition": "kept", "reason": "mes head parity read OK; two fc heads await ML-PARITY-FC-SHADOWLOG"},
+   {"unit": "RQ-20261011-17f4-03 / 9da8-03", "disposition": "kept", "reason": "shadow-log joiner ML-HEAD-AGREEMENT-JOIN (queued) is the single blocker; scorer exists"},
+   {"unit": "RQ-20261011-9da8-02", "disposition": "kept", "reason": "FRONTIER-LEVER-TABULAR (queued): catboost/tabicl/tabpfn not installed on the trainer venv (Tier-2); also peak_memory_gb 8.0 > 6 GB trainer, router refuses it; re-declare memory from the first measured run"},
+   {"unit": "RQ-20261011-9da8-04 / 9da8-07", "disposition": "kept", "reason": "ML-LEG-CORPUS corpus run / lead-lag harness (FRONTIER-LEVER-LEADLAG) not built"},
+   {"unit": "RQ-20261012-5bd1-14", "disposition": "kept", "reason": "requires the U02 vol PASS; news family is not retired on G1/G2"},
+   {"unit": "RQ-20261013-1414-09", "disposition": "kept", "reason": "FUNDING-OI-DATASETS-ETH-SOL (queued, trainer-side build) and covariate builder"}
+  ],
+  "slo_note": "none of the 13 can be unblocked or retired at config level today: each names an owned lever row or PI, no family_retirement_policy C-verdict exists, and the SLO threshold is unchanged. blocker_watch STALE_BLOCK rows (7) are checklist rows, handed off by name."
+ },
+ "levers_filed": [],
+ "units_authored": [],
+ "followups_filed": ["RESEARCH-OPS-20261104-1448 observation: producer_failed units regrade on the next dispatch"],
+ "authoring": {"queue_depth": 45, "nodes_drafted": 0, "skipped_on_purpose": true, "reason": "STOP-GENERATED-AUTHORING: no orphan diagnosis or plan question with a stated mechanism was reached this pass; a runnable gap and H1-THEME shortfalls are diagnostics"},
+ "iteration": {
+  "results_attributed": {"count": 1, "of": 17, "note": "lever_map --backfill ran (maps rebuilt); only b607 was attributed by hand; the 17 unread e35 rows are accruing and unattributed"},
+  "map_entries_added": 0,
+  "next_tests_from_map": 0,
+  "lever_coverage": {"strategy_leg": {"orphans": 36, "of": 57, "covered": 21}, "ml_model": {"orphans": 0, "of": 9}, "ltr_class": {"orphans": 5, "of": 7}},
+  "orphans_before": {"strategy_leg": 36, "ml_model": 0, "ltr_class": 5, "note": "the 11-03 record said strategy_leg 10; today's iteration_orphans.py counts 36 of 57 subjects. The population changed or the 11-03 count was a different cut; not reconciled this pass"},
+  "orphans_after": {"strategy_leg": 36, "ml_model": 0, "ltr_class": 5},
+  "results_iterated": [],
+  "advanced": 0, "survivors": [], "overdue": []
+ },
+ "prior_calls_scorecard": [
+  {"call": "TP-PREDICT-GRADER lands and RQ-20261009-900 leaves blocked/ by 2026-11-10", "p": 0.4, "check_rerun": "ls research/queue/blocked/RQ-20261009-900.yaml", "outcome": "unresolved", "action_happened": false}
+ ],
+ "checks": {
+  "packet_as_of": "2026-11-04T14:51Z",
+  "since": "2026-11-03T15:20Z",
+  "runnable_by_track": {"TRADING": 35, "MODEL": 0, "INFRA": 3},
+  "graded_by_window": {},
+  "fails_without_next": "see packet (RQ-20261027-003/-004 ief/slv pullback re-validations, RQ-20261029-016/-017 htf prop fit, more)",
+  "followups": {},
+  "needs_review": 72,
+  "needs_review_owners": {"none": 47, "PI-20261030-20261030-0001": 18, "other": 7},
+  "slo_breaches": ["survivors_per_month 0 (>=1)", "trials_per_survivor 2832 (<=500)", "producer_failed_rate_24h 0.312 (<=0.25)", "blocked_over_age 13 (<=10)", "undispositioned_24h 50 (<=5)", "research_ops_age_h 22.1 (<=8)", "runnable_floor 41 (>=65, diagnostic)", "grade_latency_p90_d 3 (<=2, diagnostic)"],
+  "could_not_look": ["GitHub workflow run list (read-only tree and scripts used instead)"]
+ },
+ "analysis": {
+  "rows_opened": ["RQ-20261101-b607-01 (4 runs; latest result b607_result.json arms)", "research/queue/blocked/RQ-20261011-9da8-02, -9da8-03, -1414-09, -17f4-01"],
+  "trading": {
+   "meaning": [
+    "No TRADING result was opened beyond the packet; 17 e35 rows are n_oos 8-59 against 7 required rounds with power accruing/infeasible, so none can move a belief, and orphans stand at 36 of 57 legs: the iteration loop is behind, not the queue."
+   ],
+   "fail_diagnoses": [],
+   "next_tests": []
+  },
+  "model": {
+   "meaning": [
+    "b607 (ENTRY lever 4b, matched decision share, dev folds only): its own per-arm verdicts name 4 winners, R1_single, R2_single, E2_R1_ens3 and E3_R2_ens3 (E3 +0.0225 over a base of +0.0080, 7 of 8 folds, noise-immune), but the run produced no verdict.json, so the grader recorded producer_failed on all 4 runs. So the evidence exists on main and has been read by no one: it is a DISCOVERY (4 candidates among 6 arms, 1 of 14 in batch 78fc/b6xx is a different batch) that goes to the ONE combined held-out read (ML-BAR-ONE-READ), not to a config."
+   ],
+   "fail_diagnoses": [
+    {"cluster": "producer_failed 39 of 125 rows in 24 h (b60x, b62x, a508: 15 units)", "hypotheses": ["noise", "harness defect", "test design"], "test": "scripts/research/ml_entry_v2_run.py write_verdict landed (comment dated 2026-11-02, plus a 11-03 fix for null n); these units' newest landed runs predate it", "survivor": "harness", "next": "regrade on the next dispatch cycle: the units are cadence once but a producer_failed row is not a verdict, so they re-fire; see checklist observation"}
+   ],
+   "next_tests": [
+    {"id_or_node": "ML-BAR-ONE-READ (existing combined held-out read named in b604/b606/b626)", "decision_changed": "whether R1/R2/ensemble recipe is admitted as an ENTRY head candidate", "on_pass": "Tier-3 proposal note for the manager", "on_fail": "recipe stays v1; lever map marks R1/R2 as dev-only", "premortem": "winners were selected on dev among several arms; the held-out read may erase them"}
+   ]
+  },
+  "cross_track": [{"from": "MODEL", "finding": "MODEL runnable is 0 (TRADING 35, INFRA 3) while 15 ml units wait to regrade", "feeds": "next dispatch regrade; ml_health theme supply 0 of 10"}],
+  "surprises": ["dispatch receipt says conclusion=failure while fired=true and units were stamped: the receipt conclusion field is not a liveness signal on its own"]
+ },
+ "calls": [
+  {"call": "after the next two dispatch cycles at least 10 of the 15 b60x/b62x/a508 units carry a measured verdict", "p": 0.6,
+   "check": {"command": "python3 scripts/research/research_ops_checks.py --since 24h", "rule": "producer_failed share of rows landed in 24 h <= 0.25", "resolves_when": "2026-11-06"}}
+ ],
+ "not_run": ["ANALYSIS per track beyond b607 (budget)", "E authoring / iteration units"],
+ "limits": ["GitHub MCP workflow runs not listed; tree-only mechanism read", "shallow clone: git log timestamps on results/ all resolve to one commit, so result ages came from run ids", "needs_review triage not done: 47 unowned units remain (result_disposition_check --list)"],
+ "handoff": [
+  "36 strategy_leg + 5 ltr_class orphans (iteration_orphans.py --levers): need diagnosis-chosen iteration units; the manager or a lane with budget",
+  "47 UNOWNED needs_review + 5 UNGRADED units (result_disposition_check --list; undispositioned_24h 50 vs threshold 5)",
+  "7 blocker_watch STALE_BLOCK checklist rows: COMPUTE-ALLOCATION-DESIGN, ETF-HISTORY-PIPELINE, LTR-TIGHTEN-FRESH-GO, ML-AM-NEXT-LIVE, OPTIONS-IV-HISTORY-GAP, STRUCTURE-EXITS-DEFAULT, WEPE-BUILDOUT",
+  "RQ-20261014-470a-11 and RQ-20261016-7ea6-01 NOT_RUNNING (last dispatched 156 h ago / never)",
+  "research_ops_age_h 22 h: the 11-04 02:47Z and 08:47Z passes left no record"
+ ]
+}
