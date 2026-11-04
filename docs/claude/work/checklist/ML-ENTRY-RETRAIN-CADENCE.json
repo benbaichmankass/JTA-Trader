@@ -1,8 +1,8 @@
 {
   "phase": "research",
-  "state": "queued",
+  "state": "in_flight",
   "owner": "manager",
-  "lane": null,
+  "lane": "ML-ENTRY-RETRAIN-MONITOR",
   "model": "claude-sonnet-5-5",
   "tier": 2,
   "prs": [],
@@ -14,13 +14,14 @@
   "id": "ML-ENTRY-RETRAIN-CADENCE",
   "title": "Standing retrain cadence for the live ENTRY model: weekly Sunday 04:00Z workflow/timer, artifact with data-through date and sha, freshness line graded by the review (Tier 2, held PR for the manager)",
   "ceiling_usd": 5,
-  "note": "Operator 2026-11-01: a plan for feeding and retraining on more and better data now, not at an unspecified date. This is a schedule, not a promise: a workflow or trainer timer, first scheduled run 2026-11-08T04:00Z, held PR for the manager by 2026-11-02T18:00Z. Retrain refits on all data through the previous day minus embargo with the registered recipe; publishes feature list, sha, data-through date. No halting: a failed retrain keeps the previous artifact and raises ONE red flag. Plan: docs/research/ml-feature-inventory-2026-11-01.md section 1b (dated, UTC). Gates: none.",
+  "note": "Operator 2026-11-01: a plan for feeding and retraining on more and better data now, not at an unspecified date. This is a schedule, not a promise: a workflow or trainer timer, first scheduled run 2026-11-08T04:00Z, held PR for the manager by 2026-11-02T18:00Z. Retrain refits on all data through the previous day minus embargo with the registered recipe; publishes feature list, sha, data-through date. No halting: a failed retrain keeps the previous artifact and raises ONE red flag. Plan: docs/research/ml-feature-inventory-2026-11-01.md section 1b (dated, UTC). Gates: none. [2026-11-04 lane ML-ENTRY-RETRAIN-MONITOR] BUILT, held PR for the manager (Tier 2: new cron workflow; nothing under ml/served or config is written). .github/workflows/ml-entry-retrain.yml (cron 0 4 * * 0, first run 2026-11-08T04:00Z) -> scripts/research/ml_entry_retrain.py (registered c692-01 recipe via ml_decision_entry, tau carried from the served artifact, monthly + daily Binance archives through the previous UTC day, purge_train embargo 7d+25h => train_end ~8d before the run) -> artifact candidate_model.json + freshness.json (features, sha256, data_through) kept 90d. Failure = previous artifact kept + retrain_status.json + the red run, wired into claude-run-failure-alert (the ONE red flag). Served-model freshness (data-through date + age + grade, limit 22d) added to src/runtime/ml_entry_live_monitor.py, graded on the hourly tick, ONE report-only ping per 7d. MEASURED: served ml_decision_entry_v1 train_end_exclusive 2025-09-22 19:00Z = 408.0 days at 2026-11-04. NOT verified here: a real network retrain (sandbox cannot reach Binance Vision; only the date arithmetic self-test and a synthetic-table candidate build ran). FIRST OBSERVATION: Actions run list for ml-entry-retrain on 2026-11-08 ~04:00Z is green and the artifact freshness.json has data_through 2026-11-07 and candidate_train_end_exclusive ~2026-10-30 22:00Z; fetch.latest_bar_fetched shows how far Binance's daily archive actually reached.",
   "observation": {
     "what": "the schedule exists on main and the first scheduled run produced an artifact with a data-through date",
     "how_to_check": "gh/MCP: workflow ml-entry-retrain run list; artifact metadata data_through",
     "due_by": "2026-11-09"
   },
-  "updated_at": "2026-11-02T07:33:59Z",
-  "updated_by": "session_01AFoLuL5qrtXsc8bv7JrN4Z",
+  "updated_at": "2026-11-04T20:05:54Z",
+  "updated_by": "session_01AFoLuKxLAGHCQUGQ43ognm",
+  "due_by": "2026-11-09",
   "_seq": 880
 }
