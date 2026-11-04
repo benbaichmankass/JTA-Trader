@@ -45,7 +45,7 @@ import random
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 REPO = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO))
@@ -53,8 +53,8 @@ sys.path.insert(0, str(REPO / "scripts" / "ml"))
 sys.path.insert(0, str(REPO / "scripts" / "research"))
 
 import numpy as np  # noqa: E402
-
 import train_exit_head as te  # noqa: E402
+
 from src.runtime import execution_costs as ec  # noqa: E402
 
 TF_S = te.TF_S
@@ -75,25 +75,29 @@ def _iso(t: float) -> str:
     return datetime.fromtimestamp(t, tz=timezone.utc).isoformat()
 
 
-def arm_names() -> List[str]:
+def arm_names() -> list[str]:
     out = [f"tau_{t}" for t in te.TAUS]
     out += [f"{s}_tau_{t}" for s in te._SHAPES for t in (0.10, 0.15, 0.20)]
     return out
 
 
-def exit_index(arm: str, bars: List[dict], probs: np.ndarray) -> Optional[int]:
+def exit_index(arm: str, bars: list[dict], probs: np.ndarray) -> int | None:
     """Bar index the arm exits at (None = rides to the declared exit). Uses the trainer's predicates."""
     if arm == "stale_8_0":
-        cond = (lambda i: bars[i]["age_bars"] >= 8 and float(bars[i]["open_r"]) < 0.0)
+        def cond(i):
+            return (bars[i]["age_bars"] >= 8 and float(bars[i]["open_r"]) < 0.0)
     elif arm == "giveback_1_1":
-        cond = (lambda i: float(bars[i]["mfe_r"]) >= 1.0 and float(bars[i]["giveback_r"]) >= 1.0)
+        def cond(i):
+            return (float(bars[i]["mfe_r"]) >= 1.0 and float(bars[i]["giveback_r"]) >= 1.0)
     elif arm.startswith("tau_"):
         tau = float(arm.split("_")[1])
-        cond = (lambda i: probs[i] < tau)
+        def cond(i):
+            return (probs[i] < tau)
     else:
         shape, tau = arm.rsplit("_tau_", 1)
         sh, tau = te._SHAPES[shape], float(tau)
-        cond = (lambda i: probs[i] < tau and sh(bars, i))
+        def cond(i):
+            return (probs[i] < tau and sh(bars, i))
     for i in range(len(bars)):
         if cond(i):
             return None if i >= len(bars) - 1 else i
@@ -103,7 +107,7 @@ def exit_index(arm: str, bars: List[dict], probs: np.ndarray) -> Optional[int]:
 class Pricer:
     """Net R of each trade under an exit index, on the baseline arm's own cost stack."""
 
-    def __init__(self, emit: Dict[str, dict], stack: Dict[str, float], tf_s: int):
+    def __init__(self, emit: dict[str, dict], stack: dict[str, float], tf_s: int):
         self.emit, self.stack, self.tf_s = emit, stack, tf_s
 
     def risk(self, e: dict) -> float:
@@ -123,7 +127,7 @@ class Pricer:
         emitted = float(e["cost_fee_r"]) + float(e["cost_slippage_r"]) + float(e["cost_funding_r"])
         return abs(emitted - self.cost(e, xp, e["exit_time"]))
 
-    def net(self, tk: str, bars: Optional[List[dict]], idx: Optional[int]) -> Dict[str, float]:
+    def net(self, tk: str, bars: list[dict] | None, idx: int | None) -> dict[str, float]:
         e = self.emit[tk]
         if bars is None or idx is None:
             return {"r": float(e["net_r"]), "mfe": float(e["mfe_r"]), "bars": len(bars or [None]),
@@ -139,7 +143,7 @@ class Pricer:
         return {"r": r, "mfe": float(bars[idx]["mfe_r"]), "bars": idx + 1, "cut": 1}
 
 
-def summarize(res: List[Dict[str, float]], tf_s: int) -> Dict[str, Any]:
+def summarize(res: list[dict[str, float]], tf_s: int) -> dict[str, Any]:
     if not res:
         return {"n": 0}
     rs = np.array([x["r"] for x in res])
@@ -154,7 +158,7 @@ def summarize(res: List[Dict[str, float]], tf_s: int) -> Dict[str, Any]:
             "net_r_per_pos_day": round(float(rs.sum()) / days, 4) if days > 0 else None}
 
 
-def score(model, trades: Dict[str, List[dict]]) -> Dict[str, np.ndarray]:
+def score(model, trades: dict[str, list[dict]]) -> dict[str, np.ndarray]:
     rows = [b for bars in trades.values() for b in bars]
     if not rows:
         return {}
@@ -167,8 +171,8 @@ def score(model, trades: Dict[str, List[dict]]) -> Dict[str, np.ndarray]:
     return out
 
 
-def run_arm(arm: str, keys: List[str], resolv: Dict[str, List[dict]], probs: Dict[str, np.ndarray],
-            pricer: Pricer) -> List[Dict[str, float]]:
+def run_arm(arm: str, keys: list[str], resolv: dict[str, list[dict]], probs: dict[str, np.ndarray],
+            pricer: Pricer) -> list[dict[str, float]]:
     out = []
     for tk in keys:
         bars = resolv.get(tk)
@@ -221,7 +225,7 @@ def prepare(a) -> str:
     return v["measurement"]["grade"]["plan"]["boundary"]
 
 
-def main(argv: List[str]) -> int:
+def main(argv: list[str]) -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--leg", default=None, help="full chain: fetch + baseline arm + E0 build, then grade")
     ap.add_argument("--days", type=int, default=2350)
@@ -250,7 +254,7 @@ def main(argv: List[str]) -> int:
     resolv = {tk: b for tk, b in te.group_trades(te.load_rows(Path(a.rows))).items() if tk in emit}
     pricer = Pricer(emit, stack, tf_s)
     boundary = _epoch(a.boundary)
-    out: Dict[str, Any] = {"unit": "RQ-20261104-e4a1-01", "boundary": a.boundary,
+    out: dict[str, Any] = {"unit": "RQ-20261104-e4a1-01", "boundary": a.boundary,
                            "harness_boundary": harness_boundary, "cost_stack": stack,
                            "n_emitted": len(emit), "n_resolvable": len(resolv)}
 

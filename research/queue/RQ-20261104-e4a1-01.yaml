@@ -86,6 +86,12 @@ decision_rule:
     validation set, because bybit_2 closes on this leg are too few to carry the E1 sign-agreement check; stated, not hidden).'
   registered_before_run: true
   registered_at: '2026-11-04'
+ml_consumer:
+  consumer: src/runtime/exit_head_shadow.py
+  decision: close (or tighten to breakeven) an open trend_donchian_eth_4h position before its declared exit when the head fires (exit_head_model / exit_head_threshold / exit_head_action on the leg, Tier-3)
+  legs:
+  - trend_donchian_eth_4h
+  book: money
 compute: cpu_light
 value:
   bucket: own_losses
