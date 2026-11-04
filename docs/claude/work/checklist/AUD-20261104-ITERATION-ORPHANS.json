@@ -1,0 +1,22 @@
+{
+  "id": "AUD-20261104-ITERATION-ORPHANS",
+  "title": "Research iteration loop not followed: of 474 units authored 10-28..11-04, 18.8% cite a parent result or lever map; 36 of 57 strategy legs and 5 of 7 LTR classes have no iteration unit",
+  "phase": "ops",
+  "state": "queued",
+  "owner": "manager",
+  "lane": null,
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [],
+  "blocked_on": [],
+  "note": "DEEP-AUDIT-20261104 (docs/reviews/2026-11-04-weekly-audit.md). MEASURED: research_ops_checks.py iteration.workflow + iteration.counts; sample of 5 (seed 20261104): 0/5 name a parent, 2/5 a lever, 2/5 arms. OPERATING-PLAN 2 'What does not pass goes back into research'. Owner in practice: the PROGRAMME-REVIEW lane (reset job programme-review, tonight) authors orphans; this row holds the measurement. DETECTOR: research_ops_checks.py shares (exist). CHECK: {command: research_ops_checks.py, rule: units_citing_parent_or_map share >= 0.5 and strategy_leg orphans <= 10, resolves_when: next audit}.",
+  "due_by": "2026-11-07",
+  "roadmap": [
+    "L-OPS"
+  ],
+  "updated_at": "2026-11-04T18:46:39Z",
+  "updated_by": "session_01AFoLuJHHNrJpWUPrhHXtjo",
+  "_seq": 913
+}

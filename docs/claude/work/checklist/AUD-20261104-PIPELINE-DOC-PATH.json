@@ -1,0 +1,22 @@
+{
+  "id": "AUD-20261104-PIPELINE-DOC-PATH",
+  "title": "CLAUDE.md and canonical (5 mentions) name docs/claude/work/PIPELINE.jsonl as the intake; the store is the docs/claude/work/pipeline/ directory and pipeline.py treats a flat PIPELINE.jsonl as a resurrected-sibling defect",
+  "phase": "ops",
+  "state": "queued",
+  "owner": "manager",
+  "lane": null,
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [],
+  "blocked_on": [],
+  "note": "DEEP-AUDIT-20261104 (docs/reviews/2026-11-04-weekly-audit.md). MEASURED: ls docs/claude/work/PIPELINE.jsonl -> absent; docs/claude/work/pipeline/ 7153 records; pipeline.py:1439 self-test. Field beats comment. Fix (Tier 1 doc): replace the path in CLAUDE.md and canonical with the directory + 'via scripts/ops/pipeline.py'. DETECTOR: canonical-doc-coherence path-exists check. CHECK: {command: grep PIPELINE.jsonl CLAUDE.md docs/CLAUDE-RULES-CANONICAL.md, rule: 0 live mentions, resolves_when: 0}.",
+  "due_by": "2026-11-11",
+  "roadmap": [
+    "L-OPS"
+  ],
+  "updated_at": "2026-11-04T18:46:39Z",
+  "updated_by": "session_01AFoLuJHHNrJpWUPrhHXtjo",
+  "_seq": 916
+}

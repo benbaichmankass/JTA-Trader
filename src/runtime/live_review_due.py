@@ -687,6 +687,11 @@ def venue_events(row: Dict[str, Any], ctx: Optional[Dict[str, Any]], cfg: Dict[s
         state = sn.get("read_state")
         if state == "none_resting":
             continue  # looked, nothing resting: the naked sweeps own it
+        if sn.get("trade_status") not in (None, "open"):
+            # SHARED-BRACKET-FIX (2026-11-04, SOLUSDT pkg-54147977): this account's
+            # trade has CLOSED in the journal since the read; a venue stop resting
+            # now belongs to whatever else holds the symbol, not to this package.
+            continue
         # collapsed-state: measured -- this is `venue_protection_snapshot.read_state`, not
         # `position_telemetry.peak_state`; the guard matches the bare word. The three
         # read states are branched on separately: none_resting above, measured here,
@@ -1247,6 +1252,20 @@ def read_venue_context(pkgs: List[str], db_path: Optional[str] = None) -> Dict[s
         snaps: Dict[str, List[Dict[str, Any]]] = {}
         for r in conn.execute(f"SELECT * FROM venue_protection_snapshot WHERE order_package_id IN ({marks})", pkgs):
             snaps.setdefault(str(r["order_package_id"]), []).append(dict(r))
+        # SHARED-BRACKET-FIX: the journal status of each snapshot's own trade, so a
+        # snapshot taken while the trade was open is not graded after it closed.
+        tids = sorted({str(sn.get("trade_id")) for rows in snaps.values() for sn in rows
+                       if sn.get("trade_id") not in (None, "")})
+        status: Dict[str, Any] = {}
+        if tids:
+            try:
+                status = {str(r[0]): r[1] for r in conn.execute(
+                    f"SELECT id, status FROM trades WHERE id IN ({','.join('?' * len(tids))})", tids)}
+            except sqlite3.Error:
+                status = {}  # allow-silent: an unread status is "trade_status unknown", graded as before
+        for rows in snaps.values():
+            for sn in rows:
+                sn["trade_status"] = status.get(str(sn.get("trade_id")))
         try:
             levels = {str(r["order_package_id"]): r for r in conn.execute(
                 f"SELECT order_package_id, sl, tp, meta FROM order_packages WHERE order_package_id IN ({marks})", pkgs)}

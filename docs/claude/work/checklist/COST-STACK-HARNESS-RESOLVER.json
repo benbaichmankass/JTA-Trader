@@ -2,8 +2,8 @@
   "id": "COST-STACK-HARNESS-RESOLVER",
   "title": "Stage-0 crypto harnesses charge the 7.5 bps default, not the measured Bybit linear 11.0: route their fee through roundtrip_fee_bps_for",
   "phase": null,
-  "state": "in_flight",
-  "owner": "COST-STACK-HARNESS-RESOLVER",
+  "state": "landed_unproven",
+  "owner": "manager",
   "lane": "COST-STACK-HARNESS-RESOLVER",
   "model": null,
   "ceiling_usd": 8,
@@ -11,11 +11,21 @@
   "tier": 2,
   "prs": [],
   "blocked_on": [],
-  "note": "IN PR (stacked on #20783; Tier-2 hold): execution_costs.resolve_fee_bps_roundtrip(symbol, explicit=None) = explicit > profile_loader.roundtrip_fee_bps_for > DEFAULT; routed backtest_trend/pullback/ict_scalp/squeeze/fade/chop_scalp/fvg_range, run_backtest_vwap, exit_head_final_fold_replay, pullback_frac_cross_leg_sweep. build_strategy_evidence is NOT a direct reader: it goes through regime_debt_matrix.roundtrip_fee_bps which already uses the resolver. NOT routed: backtest_xsec_momentum/pairs/funding_carry/system (multi-symbol or own cost struct), src/research/run_costs (prop eval shares it), vol_skip_forming_bar_replay, pairs_configured_stage0, news_*/live_review_* readers. Evidence records NOT re-run: 28 crypto legs shift -0.008..-0.083 R/trade (one flip ict_scalp_eth_15m), table in comms/research/desk_edge/levers/bybit-fee-recost-impact-2026-10-28.json; operator chooses a re-cost sweep.",
-  "updated_at": "2026-10-28T04:38:19Z",
-  "updated_by": "session_01AFoLuL3GLCAL6NDYe9K2Nw",
+  "note": "IN PR (stacked on #20783; Tier-2 hold): execution_costs.resolve_fee_bps_roundtrip(symbol, explicit=None) = explicit > profile_loader.roundtrip_fee_bps_for > DEFAULT; routed backtest_trend/pullback/ict_scalp/squeeze/fade/chop_scalp/fvg_range, run_backtest_vwap, exit_head_final_fold_replay, pullback_frac_cross_leg_sweep. build_strategy_evidence is NOT a direct reader: it goes through regime_debt_matrix.roundtrip_fee_bps which already uses the resolver. NOT routed: backtest_xsec_momentum/pairs/funding_carry/system (multi-symbol or own cost struct), src/research/run_costs (prop eval shares it), vol_skip_forming_bar_replay, pairs_configured_stage0, news_*/live_review_* readers. Evidence records NOT re-run: 28 crypto legs shift -0.008..-0.083 R/trade (one flip ict_scalp_eth_15m), table in comms/research/desk_edge/levers/bybit-fee-recost-impact-2026-10-28.json; operator chooses a re-cost sweep. 2026-11-03 BACKLOG-DRAIN: lane dead 6d; resolver execution_costs.resolve_fee_bps_roundtrip is on main (found by grep). Re-owned to manager as landed_unproven. Open operator choice (unchanged): re-cost sweep of 28 crypto legs, shifts -0.008..-0.083 R/trade, one flip ict_scalp_eth_15m (comms/research/desk_edge/levers/bybit-fee-recost-impact-2026-10-28.json). [salvaged from #22570 by BACKLOG-DRAIN-20261104; evidence re-verified 2026-11-04]",
+  "updated_at": "2026-11-04T19:07:03Z",
+  "updated_by": "session_01AFoLuM1JYKXSjfqdp6rzT1",
   "roadmap": [
     "L-LADDER"
   ],
+  "due_by": "2026-11-06",
+  "writeback": {
+    "roadmap": "none: register disposition by BACKLOG-DRAIN-20261104; no milestone text changed",
+    "arch": "none: register disposition; no architecture change"
+  },
+  "observation": {
+    "what": "a Stage-0 crypto harness run charges Bybit linear 11.0 bps roundtrip via execution_costs.resolve_fee_bps_roundtrip, not the 7.5 default",
+    "how_to_check": "grep -rn resolve_fee_bps_roundtrip scripts/ src/ | head; run one harness with --help/--self-test and read its fee line",
+    "due_by": "2026-11-06"
+  },
   "_seq": 742
 }

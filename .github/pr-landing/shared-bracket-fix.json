@@ -1,0 +1,7 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "hold_reason": "tier_2_3_needs_approval",
+  "hold_text": "Lane SHARED-BRACKET-FIX (Manager Session 2026-11-04a, PI-20261104-MXMXDI3X-0001). Tier 2: changes the live order monitor's journal close attribution (src/runtime/order_monitor.py _reconcile_netting_partial_closes, the own-order-fill reprice and relabel sweeps) and src/runtime/fills_pnl.py, which run on every Bybit account including real-money bybit_2. Per CLAUDE.md Tier 2 the manager asks the operator for one OK in chat, merges, restarts the trader and verifies trade 6860 is relabelled tp @1.3177. Nothing here places, amends or cancels a venue order.",
+  "why": "Stops a stale netting-divergence anchor from closing a second sibling row before its own TP/SL fill, lets the own-fill sweeps recover that fill's real reason/price/time, and makes the live-review mechanics check compare levels. Adds no gate."
+}
