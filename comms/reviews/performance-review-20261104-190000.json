@@ -1,0 +1,262 @@
+{
+ "request_id": "PERF-REVIEW-PREP-20261104",
+ "reviewed_at": "2026-11-04T19:00:00Z",
+ "reviewer": "claude (lane PERF-REVIEW-PREP-20261104, manager session_01AFoLuHgZaSYnm9avjeZE33)",
+ "window_start": "2026-10-05T19:00:00Z",
+ "window_end": "2026-11-04T19:00:00Z",
+ "_scope_note": "30d main window (operator 2026-11-02) plus lifetime / 90d (census subset only; API has no 90d) / 7d. OBSERVED on the live read-only API + diag journal 2026-11-04 18:55-19:05Z; TP table on repo config at main 924aeee35.",
+ "overall_assessment": "Flat week (real money +1.41R/9 7d, -7.36R/29 30d). ml_entry went to real money with no C2 band; the reviewer's close PROPOSE_WIDEN was 20 reviews on 3 packages (grader fixed); xrp_pullback_2h still BELOW with 1 post-fix close.",
+ "prior_calls_scorecard": {
+  "n_calls": 7,
+  "hit": 1,
+  "miss": 0,
+  "unresolved": 4,
+  "void": 2,
+  "brier": "INDETERMINATE",
+  "note": "D2/D3/D4/D7 items killed by operator bulk reset 2026-10-29 ('value unknown'); not re-filed. D5 hit carries a pseudo-replication caveat.",
+  "series": [
+   {
+    "review": "2026-10-28",
+    "n_resolved": 1,
+    "brier": "INDETERMINATE"
+   },
+   {
+    "review": "2026-11-04",
+    "n_resolved": 1,
+    "brier": "INDETERMINATE"
+   }
+  ]
+ },
+ "checks": {
+  "C1": {
+   "status": "ok",
+   "population": "/api/bot/performance window=7d|30d|all, real_money top-level + paper + paperPortfolio blocks",
+   "result": "real 7d 9/+1.41R, 30d 29/-7.36R, all 476/-155.89R; paper 7d 52/+0.57R, 30d 231/-14.13R, all 1702/-141.31R; mirror 30d 32/-0.19R. 90d: could_not_look (API has no 90d window)."
+  },
+  "C2": {
+   "status": "ok",
+   "population": "live_vs_backtest.py default Stage-2 legs, whole history per book",
+   "result": "xrp_pullback_2h real BELOW n=20 pct 1.5; ml_entry NO_BACKTEST (0 per-trade net_r rows); others CONSISTENT or INSUFFICIENT_N."
+  },
+  "C3": {
+   "status": "could_not_look",
+   "population": "no sequential decay instrument (row PERF-CHECKS-SCORECARD)",
+   "result": "interim: paper expR 7d +0.01 / 30d -0.06 / life -0.08; real 30d -0.25 vs life ex-vwap -0.06"
+  },
+  "C4": {
+   "status": "ok",
+   "population": "real_money_close_attribution.analyse() over the diag journal dump: 132 of 495 wire rows joinable (2026-06-27..11-03), decision set 124",
+   "result": "strategy exits 80.6%, non-strategy 17.7% (reconciler_filled 15), unknown 1.6% (max_hold 2). Unmodified script VOID (401)."
+  },
+  "C5": {
+   "status": "could_not_look",
+   "population": "realized_slippage.py pull 4198 fills",
+   "result": "analyze KeyError net_r (PI-20261104-PREP1104-0004)"
+  },
+  "C6": {
+   "status": "ok",
+   "population": "live_review_grade / desk_grade --live since 2026-10-28; claude_role_grade --live",
+   "result": "LTR 291 reviews/56 pkgs; close 20 calls on 3 pkgs (was PROPOSE_WIDEN, now HOLD_SCOPE per package); hold vs close n=130 reviews mean -0.11. Desk 6 priced +0.01R, vs random -0.90R INDETERMINATE."
+  },
+  "C7": {
+   "status": "ok",
+   "population": "check_tp_doctrine.py, 75 routings / 54 legs",
+   "result": "compliant 3/75 (real_money 1/7 ml_entry, mirror 1/7, paper 1/58, prop 0/3)"
+  },
+  "C8": {
+   "status": "ok",
+   "population": "classify_paper_records.py journal 30d n=260",
+   "result": "A 128, B 8, C 17, P 107"
+  },
+  "C9": {
+   "status": "ok",
+   "population": "claude_strategy_scores.jsonl packages reviewed since 2026-08-06 joined to journal, n=1222",
+   "result": "A 7 (100%, leaked), B 324 (39.2%), C 782 (44.9%), D 109 (36.7%): grade_drift persists. Freshness 0.6d."
+  },
+  "C10": {
+   "status": "ok",
+   "population": "research_disposition --unread-only",
+   "result": "dispositioned 154, unread 17, superseded_unread 297, corpus_unreadable 0"
+  },
+  "C11": {
+   "status": "ok",
+   "population": "paper_book_tracker bybit_1 1520 rows -> cohort 195; trade_quality_review breakout_1",
+   "result": "DECAY FLAG 2nd week: recent 30d n=21 -$5907 vs prior +$6538; pullback -$11725 vs trend +$12355. Prop 23 fills -$205 WR 21.7%."
+  },
+  "C12": {
+   "status": "ok",
+   "population": "review_followthrough performance-review backlog 31 open",
+   "result": "count_untriaged 0"
+  }
+ },
+ "analysis": {
+  "questions": [
+   {
+    "q": "Q1 ml_entry on real money: can we tell if it works?",
+    "survivor": "H-noise for P&L; H-measurement confirmed (no band)",
+    "p": 0.8
+   },
+   {
+    "q": "Q2 xrp_pullback_2h post-fix",
+    "survivor": "untestable at n=1 post-fix",
+    "p": 0.55
+   },
+   {
+    "q": "Q3 close PROPOSE_WIDEN",
+    "survivor": "pseudo-replication (22 recs = 5 pkgs, 12 on one; 3 priced)",
+    "p": 0.9
+   },
+   {
+    "q": "Q4 pullback-2h demo floor",
+    "survivor": "regime/noise (ada best paper leg 30d)",
+    "p": 0.6
+   },
+   {
+    "q": "Q5 giveback",
+    "survivor": "regime; rise flattened 133%->102% 7d",
+    "p": 0.55
+   },
+   {
+    "q": "Q6 trend_donchian_sol_prop 0/4",
+    "survivor": "noise P~0.3",
+    "p": 0.7
+   }
+  ],
+  "surprises": [
+   "close PROPOSE_WIDEN was 12 reviews of one trade",
+   "real-money operator flatten labelled reconciler_filled (6844/6845)",
+   "17 unread research results reappeared",
+   "/api/bot/performance has no 90d window"
+  ]
+ },
+ "calls": [
+  {
+   "id": "E1",
+   "claim": "ml_entry live R stays inside its Stage-0 band",
+   "p": 0.8,
+   "money_at_stake": "~40 decisions/month x +0.027R = ~+1R/month expected; unseen decay is the risk",
+   "decision": "build per-trade band (tooling)",
+   "tier": 1,
+   "check": {
+    "command": "python3 scripts/research/live_vs_backtest.py --leg ml_entry",
+    "rule": "CONSISTENT or INSUFFICIENT_N hit; BELOW_BACKTEST miss; NO_BACKTEST void",
+    "resolves_when": "per-trade net_r rows committed for the c692-06 population"
+   },
+   "ending": "PI-20261104-PREP1104-0001"
+  },
+  {
+   "id": "E2",
+   "claim": "close PROPOSE_WIDEN was pseudo-replication; per package close stays HOLD_SCOPE until n_packages>=20",
+   "p": 0.9,
+   "money_at_stake": "a premature widen lets one leg's reviews decide real-money closes on every account",
+   "decision": "grader fixed in this PR (use_rules per package); calibration + hold_vs_close follow-up",
+   "tier": 1,
+   "check": {
+    "command": "python3 scripts/ops/live_review_grade.py --live",
+    "rule": "at n_packages>=20: per-package CI95 lower>0 = real support; <=0 = not",
+    "resolves_when": "close n_packages>=20"
+   },
+   "ending": "this PR + PI-20261104-PREP1104-0003"
+  },
+  {
+   "id": "E3",
+   "claim": "trend_donchian_sol_prop 0/4 packages is noise",
+   "p": 0.7,
+   "money_at_stake": "~3R/month real at current rate",
+   "decision": "no action, because P(4 losses)~0.3 at an assumed 25% hit rate (rate not in the record)",
+   "tier": null,
+   "check": {
+    "command": "python3 scripts/research/live_vs_backtest.py --leg trend_donchian_sol_prop",
+    "rule": "real-money pct>=5 at n>=5 hit; <5 miss",
+    "resolves_when": "n>=5 real-money closes"
+   },
+   "ending": "no action, because noise is the surviving hypothesis"
+  },
+  {
+   "id": "E4",
+   "claim": "pullback-2h demo-floor sag is regime not decay",
+   "p": 0.6,
+   "money_at_stake": "paper pullback cells -$11.7k lifetime; real via xrp/ada",
+   "decision": "candidate for Thursday; walk-forward item killed by operator 2026-10-29",
+   "tier": 1,
+   "check": {
+    "command": "python3 scripts/ops/paper_book_tracker.py --trades-json <bybit_1 full book> --no-append",
+    "rule": "pullback cells recent-30d net >$0 within 4 weeks hit; still <0 miss",
+    "resolves_when": "2026-12-02"
+   },
+   "ending": "candidate (manager decides)"
+  },
+  {
+   "id": "E5",
+   "claim": "giveback has stopped rising",
+   "p": 0.55,
+   "money_at_stake": "~12R/month paper giveback at deep-then-loss 25%",
+   "decision": "no action, because the rise flattened with the regime",
+   "tier": null,
+   "check": {
+    "command": "giveback_census.py on a 30d closed_at-filtered journal dump",
+    "rule": "30d paper share<=1.05 hit; >1.15 miss",
+    "resolves_when": "next review"
+   },
+   "ending": "no action, because no exit change is in the window"
+  },
+  {
+   "id": "E6",
+   "claim": "trades 6844/6845 mislabelled reconciler_filled despite operator_flatten_intent",
+   "p": 0.8,
+   "money_at_stake": "close-reason integrity on real money",
+   "decision": "route to health",
+   "tier": 1,
+   "check": {
+    "command": "see PI rerun",
+    "rule": "root cause named; next flatten labelled operator_flatten_reconciled",
+    "resolves_when": "next real-money operator flatten"
+   },
+   "ending": "PI-20261104-PREP1104-0002"
+  },
+  {
+   "id": "E7",
+   "claim": "C5 void until realized_slippage analyze tolerates rows without net_r",
+   "p": 0.9,
+   "money_at_stake": "cost-drift blind",
+   "decision": "tooling fix",
+   "tier": 1,
+   "check": {
+    "command": "python3 scripts/research/realized_slippage.py analyze --in-dir <pull> --out <f>",
+    "rule": "exit 0 on a fresh pull",
+    "resolves_when": "fix lands"
+   },
+   "ending": "PI-20261104-PREP1104-0004"
+  }
+ ],
+ "strategy_performance": "see docs/reviews/2026-11-04-weekly-walkthrough.md PERFORMANCE section 1 C1",
+ "trade_decision_grades": [],
+ "_trade_decision_grades_note": "no new grades written by this lane; the daily rubric cron is fresh (C9)",
+ "insights_review": null,
+ "_insights_note": "M13 insights not pulled this week",
+ "proposed_tweaks": [],
+ "backlog_drain": {
+  "count_open": 31,
+  "count_untriaged": 0
+ },
+ "paper_book_tracker": {
+  "flag": "DECAY",
+  "recent_30d_n": 21,
+  "recent_30d_net_usd": -5907.44,
+  "appended": false
+ },
+ "real_money_allocation_benchmark": null,
+ "live_review": "C6",
+ "desk": "C6",
+ "anomalies": [
+  "trade 6844/6845 exit label",
+  "realized_slippage analyze crash",
+  "real_money_close_attribution 401"
+ ],
+ "recommended_action": "Give ml_entry a per-trade backtest band (E1); keep the reviewer's close class advice-only until 20 packages (E2); Thursday: decide on TP-doctrine Tier-3 proposals for real money and whether to re-open the pullback walk-forward.",
+ "operator_attention_required": [
+  "PI-20261028-PVRNY2JI-0005 (IAUM re-evidence) has no owner",
+  "whether to re-open the pullback-2h walk-forward the 10-29 reset killed"
+ ],
+ "claude_channel_ping": null
+}

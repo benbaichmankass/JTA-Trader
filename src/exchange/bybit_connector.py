@@ -15,6 +15,31 @@ logger = logging.getLogger(__name__)
 #   BYBIT_TESTNET=false -> live mode (default if var is missing)
 
 
+def market_symbol(symbol, market_type="linear"):
+    """The ccxt symbol to ASK for, given this connector's account ``market_type``.
+
+    The ccxt client below is built with ``defaultType: spot``, and ccxt resolves a
+    bare exchange id (``BTCUSDT``) through ``markets_by_id`` by that default -- so a
+    bare id read the SPOT market wherever Bybit lists one, while every Bybit account
+    in ``config/accounts.yaml`` trades the LINEAR perp and every Stage-0 corpus is
+    linear (``scripts/ops/fetch_backtest_candles.py`` category=linear;
+    ``ml/datasets/adapters/bybit_offvm.py`` ccxt default ``swap``).
+    PI-20261103-SPOTCANDLES-0001 / lane SPOTCANDLES-AUDIT; #22650 fixed ml_entry
+    alone, this fixes it for every caller in one place.
+
+    A bare ``<BASE>USDT`` id becomes ccxt's unified ``<BASE>/USDT:USDT`` (linear)
+    for a non-spot connector and ``<BASE>/USDT`` for a spot one. Anything already
+    unified (contains ``/``) or not a USDT id passes through unchanged.
+    """
+    s = str(symbol or "")
+    if "/" in s or not s.endswith("USDT") or len(s) <= 4:
+        return symbol
+    base = s[:-4]
+    if str(market_type or "linear").strip().lower() == "spot":
+        return f"{base}/USDT"
+    return f"{base}/USDT:USDT"
+
+
 def _read_testnet_flag() -> bool:
     raw = os.getenv("BYBIT_TESTNET", "false").strip().lower()
     return raw == "true"
@@ -58,7 +83,7 @@ class BybitConnector:
 
     def get_price(self, symbol="BTC/USDT:USDT"):
         try:
-            ticker = self.exchange.fetch_ticker(symbol)
+            ticker = self.exchange.fetch_ticker(market_symbol(symbol, self.market_type))
             return ticker["last"]
         except Exception as e:
             print(f"Error fetching price: {e}")
@@ -70,7 +95,10 @@ class BybitConnector:
         # to reconstruct MFE/MAE over a closed trade's holding window. Default
         # None = the exchange's most-recent ``limit`` candles (unchanged behaviour).
         try:
-            ohlcv = self.exchange.fetch_ohlcv(symbol, timeframe, since=since, limit=limit)
+            # market_symbol: a bare id on this defaultType=spot client read SPOT
+            # candles for perp-traded legs (PI-20261103-SPOTCANDLES-0001).
+            ohlcv = self.exchange.fetch_ohlcv(
+                market_symbol(symbol, self.market_type), timeframe, since=since, limit=limit)
             df = pd.DataFrame(ohlcv, columns=["timestamp","open","high","low","close","volume"])
             df["timestamp"] = pd.to_datetime(df["timestamp"], unit="ms")
             return df

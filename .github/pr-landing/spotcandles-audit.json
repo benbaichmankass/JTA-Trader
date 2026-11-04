@@ -1,0 +1,7 @@
+{
+  "tier": 3,
+  "landing": "hold",
+  "hold_reason": "tier_2_3_needs_approval",
+  "hold_text": "Changes the live INPUTS of every Bybit-rostered leg (bybit_1, real-money bybit_2, bybit_portfolio): candles move from SPOT to the LINEAR perp the legs trade and were backtested on. Lane SPOTCANDLES-AUDIT; the manager decides (data-backed: perp-backtested legs fed spot) or takes it to the operator with the measured gap table in the PR body.",
+  "why": "BybitConnector built ccxt defaultType=spot, so every bare BTCUSDT candle read resolved to the SPOT market. One connector-level fix: bare USDT ids resolve to BASE/USDT:USDT for linear connectors, BASE/USDT for spot ones. PI-20261103-SPOTCANDLES-0001."
+}
