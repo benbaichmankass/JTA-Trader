@@ -1,0 +1,22 @@
+{
+  "id": "AUD-20261104-OWNER-LIVENESS-ZOMBIE",
+  "title": "weekly-audit C6 instrument scripts/ops/owner_liveness.py has no CLI (exits 0, prints nothing) and reads the retired SESSIONS.json; in_flight claims go ungraded",
+  "phase": "ops",
+  "state": "queued",
+  "owner": "manager",
+  "lane": null,
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [],
+  "blocked_on": [],
+  "note": "DEEP-AUDIT-20261104 (docs/reviews/2026-11-04-weekly-audit.md). MEASURED: python3 scripts/ops/owner_liveness.py -> rc 0, empty stdout; SESSIONS_RELPATH = docs/claude/work/SESSIONS.json (archived 2026-09-21, absent). Manual re-grade this run: 39 in_flight rows; 19 name no session id, 1 owner archived, 2 idle, 1 running (this lane), 16 owners older than list_sessions page 1 (created < 11-01). So >= 20 of 39 in_flight claims are unsupported. Fix (Tier 1): give it a main() that grades in_flight rows against a pasted list_sessions JSON (--session-costs pattern in spend_meter.py), drop the SESSIONS.json read. DETECTOR: its self-test + a CLI smoke test. CHECK: {command: python3 scripts/ops/owner_liveness.py --sessions <paste>, rule: prints a census with n, resolves_when: next audit C6 uses it}.",
+  "due_by": "2026-11-11",
+  "roadmap": [
+    "L-OPS"
+  ],
+  "updated_at": "2026-11-04T18:46:38Z",
+  "updated_by": "session_01AFoLuJHHNrJpWUPrhHXtjo",
+  "_seq": 910
+}
