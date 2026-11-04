@@ -1,0 +1,404 @@
+{
+ "request_id": "ML-REVIEW-20261104",
+ "reviewed_at": "2026-11-04T20:00:00Z",
+ "reviewer": "lane ML-FRONTIER-PREP-20261104 (session_01AFoLuLV6bXmu3ydgUBH8uA) for Manager Session 2026-11-04a",
+ "window_start": "2026-10-28T20:00:00Z",
+ "window_end": "2026-11-04T20:00:00Z",
+ "overall_assessment": "caution",
+ "overall_assessment_reason": "All required checks looked (trainer #22899 landed 19:11Z) except C7(b) and weekly line 1 (no instrument). The order-changing real-money/prop models sit outside every standing ML control; the ENTRY artifact's data is 408 days stale; MES baselines are degenerate since 11-02.",
+ "prior_calls_scorecard": {
+  "grades": [
+   {
+    "call": "ML-20261028-1",
+    "grade": "unresolved",
+    "evidence": "PI-20261028-V8KBRR5H-0004 still routed, due 2026-11-06"
+   },
+   {
+    "call": "ML-20261028-2",
+    "grade": "miss",
+    "evidence": "17 variant units since 10-28: 7 PASS / 4 FAIL / 6 producer_failed; bars +-0.001; 3 direction PASSes = reaching the prior (PI-20261104-DGUBH8UA-0003)"
+   },
+   {
+    "call": "ML-20261028-3",
+    "grade": "miss",
+    "evidence": "real money 2/7 (bybit_2 ml_entry via #22261; trend_donchian_xrp_4h overlay reduce via #21213), outside the registry"
+   },
+   {
+    "call": "ML-20261028-4",
+    "grade": "void",
+    "evidence": "margins 4.03/3.71/3.77/3.91 then 30.9/30.7: mes-regime-5m-baseline-v1 degenerate from 2026-11-02 (macro_f1 0.371, recall_volatile 0)"
+   },
+   {
+    "call": "ML-20261028-5",
+    "grade": "hit",
+    "evidence": "btc fc-pcv-v2 no_change KS 0.029; sol fc-pcv-v2 no_change KS 0.045"
+   },
+   {
+    "call": "ML-20261028-6",
+    "grade": "unresolved",
+    "evidence": "P3 not registered; void if still unregistered at 2026-11-25"
+   }
+  ],
+  "hit": 1,
+  "miss": 2,
+  "unresolved": 2,
+  "void": 1,
+  "brier": "INDETERMINATE (n<10 resolved)",
+  "followthrough": {
+   "ml-review": "cohort 6 filed/0 done/2 killed/4 open; backlog 14 open, 57% due, median 17d, 0 no-owner",
+   "frontier": "cohort 18/6/6/6; backlog 16 open"
+  }
+ },
+ "checks": {
+  "C1": {
+   "state": "finding",
+   "population": "98 registry rows; last cycle 2026-11-04T08:47Z",
+   "reading": "rc 0 complete_with_refusals; 3 refusing manifests tracked; trainer disk 80.2% (52% on 10-28); REGISTRY-STAGES-CHANGED shadow 20/candidate 74 vs plan 21/72, owned by ML-REGISTRY-LADDER-GAPS; stage-guard pending #22899; trainer #22899: stage-guard 98/98 hold, cycles 11-01..04 rc0, no oom lines"
+  },
+  "C2": {
+   "state": "finding",
+   "population": "73 manifests; 124 builds 24h",
+   "reading": "builds 122 ok/0 failed; TRAINING-STALENESS 4 stale 2 never; shards whole; Foxhound-1 data-through 2025-09-22"
+  },
+  "C3": {
+   "state": "finding",
+   "population": "75 rostered (account,leg) pairs; 7 real-money; 3 prop",
+   "reading": "14/75; real money 2/7; prop 3/3; all order-changing real/prop models are served artifacts outside the registry; SOL-15m and MES-5m advisory change 0"
+  },
+  "C4": {
+   "state": "finding",
+   "population": "ML-PROGRAMME s7 sources since 10-28",
+   "reading": "H1-H5 ok; H4 teacher 0 manifests; H6 0 stage changes; H7 reached by served artifacts with no H6"
+  },
+  "C5": {
+   "state": "finding",
+   "population": "6 heads gate-checked (#22899)",
+   "reading": "parity pass btc fc-pcv-v2 27/27, fc-pcv-v1 27/27, sol 24/24, mes-5m 50/50; yz-v1 FAIL vol_bucket dead live; 1h-v2 insufficient (9 rows post-reset)"
+  },
+  "C6": {
+   "state": "finding",
+   "population": "registry heads; ml_bakeoff units since 10-28",
+   "reading": "cost gate 0/not_applicable everywhere; direction-label rule lacks a prior floor; Foxhound-1 held-out +0.0073 R vs W1 -0.0405 R (n=320)"
+  },
+  "C7": {
+   "state": "watch",
+   "population": "3 advisory + 3 shadow heads",
+   "reading": "btc fc-pcv-v2 no_change 0.029; sol no_change 0.045; mes minor 0.095; yz-v1 moderate 0.122 (2nd moderate; dead vol_bucket, INFERRED); (b) could-not-look no instrument; plan-only scan rc0, 23 rows, 0 drifted, 0 persistent"
+  },
+  "C8": {
+   "state": "finding",
+   "population": "registry; 33 ML units graded",
+   "reading": "gbdt 77/98; 33/33 ML units on regime_label(22)/direction_label(11)"
+  },
+  "C9": {
+   "state": "finding",
+   "population": "443 units with results since 10-28T20Z; 33 ml_bakeoff",
+   "reading": "17 PASS/5 IND/4 FAIL/7 producer_failed; Q-TM1 FAIL, Q-TM1b FAIL, TM-BENCH v1 PASS"
+  }
+ },
+ "weekly_progress_lines": {
+  "data_coverage": "could_not_look (no instrument)",
+  "feature_count": "live 20 vs admitted 20 (market_features schema 108, not read by ENTRY)",
+  "retrain_freshness_days": 408,
+  "retrain_freshness_state": "RED",
+  "live_vs_heldout": "n=4 closed ml_entry on bybit_2, pnl% +1.60/+1.97/-0.23/-1.79 (R not on route); held-out +0.0073 R/decision"
+ },
+ "analysis": {
+  "questions": [
+   {
+    "q": "Why do the order-changing models have no standing ML controls?",
+    "hypotheses": [
+     "nobody owns them (rows queued, undispatched)",
+     "blocked on infra (serving inventory, feature store)"
+    ],
+    "verdict": "(i) then (ii); INFERRED from row states",
+    "rejected": "register served models into the trainer registry"
+   },
+   {
+    "q": "What do this week's 33 ML units mean?",
+    "hypotheses": [
+     "real skill gains",
+     "rule/target artefacts"
+    ],
+    "verdict": "direction PASSes reach the prior (MEASURED in-record); HAR lift d5dd-17 points right but feeds no consumer"
+   },
+   {
+    "q": "Why did MES baselines collapse on 11-02?",
+    "hypotheses": [
+     "H1 DST session shift",
+     "H2 code/source change",
+     "H3 regime shift"
+    ],
+    "verdict": "H1/H2 favoured by timing and MES-only; untested (P6)"
+   },
+   {
+    "q": "Is trade-management ML learning?",
+    "hypotheses": [
+     "policy beats hold",
+     "no predictable advantage on R1 state"
+    ],
+    "verdict": "Q-TM1 FAIL powered; Q-TM1b no OOF skill; closes the R1/corpus-v1 configuration only"
+   }
+  ],
+  "surprises": [
+   "trainer disk +28 points in 7 days",
+   "ml_entry real-money closes labelled reconciler/other"
+  ]
+ },
+ "calls": [
+  {
+   "id": "ML-20261104-1",
+   "claim": "No retrained ENTRY artifact (data-through >= 2026-10-28) is served on bybit_2 by the 2026-11-11 review unless the manager dispatches P1.",
+   "p": 0.6,
+   "impact": "real-money ENTRY (Foxhound-1) on bybit_2 + bybit_portfolio",
+   "decision": "P1 proposed; PI-20261104-DGUBH8UA-0002",
+   "tier": "1",
+   "check": {
+    "command": "python3 -c \"import json;print(json.load(open('ml/served/ml_decision_entry_v1/model.json'))['train_end_exclusive'])\" on main",
+    "rule": "hit if train_end_exclusive < 2026-10-28 at the 11-11 review; miss if >= 2026-10-28",
+    "resolves_when": "2026-11-11 ml-review"
+   },
+   "ending": "PI-20261104-DGUBH8UA-0002"
+  },
+  {
+   "id": "ML-20261104-2",
+   "claim": "The 11-02 MES baseline collapse is a data/label construction change (DST session shift or a code/source change), not a market regime shift.",
+   "p": 0.75,
+   "impact": "MES-5m advisory (0 legs) + the MES refinement series",
+   "decision": "P6 trainer read",
+   "tier": "1",
+   "check": {
+    "command": "trainer: per-day volatile-label share of datasets-out/market_features/MES*/5m for 2026-10-25..11-04",
+    "rule": "hit if the share steps at 11-01/02 in session-hour rows with no matching step in realised vol; miss if it tracks realised vol",
+    "resolves_when": "PI-20261104-DGUBH8UA-0001 read"
+   },
+   "ending": "PI-20261104-DGUBH8UA-0001"
+  },
+  {
+   "id": "ML-20261104-3",
+   "claim": "Of the ML units graded in the next 7 days, >= 70% still target regime_label or direction_label.",
+   "p": 0.8,
+   "impact": "research capacity",
+   "decision": "P3/P4 propose order-changing questions instead",
+   "tier": "1",
+   "check": {
+    "command": "research/results/* committed 2026-11-04..11-11 whose unit has ml_bakeoff; share with target in {regime_label,direction_label}",
+    "rule": "hit if >= 0.70; miss if < 0.50",
+    "resolves_when": "2026-11-11 ml-review"
+   },
+   "ending": "no action, because P6 (pause) was bulk-killed by the operator reset 2026-10-29; this tracks it"
+  },
+  {
+   "id": "ML-20261104-4",
+   "claim": "Live ENTRY (ml_entry, bybit_2) mean realised pnl% per closed trade is <= 0 once n >= 30.",
+   "p": 0.55,
+   "impact": "real-money ENTRY",
+   "decision": "monitor via P1 (ML-ENTRY-LIVE-MONITOR); no demotion on n=4",
+   "tier": "1",
+   "check": {
+    "command": "GET /api/bot/trades/closed?account_id=bybit_2&since=2026-11-01T00:00:00 filtered pattern==ml_entry; mean realizedPnlPct",
+    "rule": "hit if mean <= 0 at n >= 30; miss if > 0",
+    "resolves_when": "n >= 30 closed ml_entry trades on bybit_2"
+   },
+   "ending": "PI-20261104-DGUBH8UA-0002"
+  },
+  {
+   "id": "ML-20261104-5",
+   "claim": "btc-regime-15m-lgbm-yz-v1 drift is the dead live vol_bucket, not regime: its KS stays moderate+ while the fc-pcv siblings on the same symbol/timeframe read no_change or minor.",
+   "p": 0.7,
+   "impact": "shadow yz heads (0 legs)",
+   "decision": "no DRIFT-REMEDIATE row; fold into PI-20260927-3WM5HADW-0005",
+   "tier": "1",
+   "check": {
+    "command": "GET /api/bot/shadow/drift?model_id=btc-regime-15m-lgbm-yz-v1 and ...fc-pcv-v2",
+    "rule": "hit if yz verdict in {moderate,significant} and fc-pcv-v2 in {no_change,minor}; miss if both move together",
+    "resolves_when": "2026-11-11 ml-review"
+   },
+   "ending": "PI-20260927-3WM5HADW-0005"
+  },
+  {
+   "id": "ML-20261104-6",
+   "claim": "The Q-TM1 next iteration (RQ-20261101-78fc-04) is still blocked at the next review.",
+   "p": 0.6,
+   "impact": "D7/D8 trade management on the six money legs",
+   "decision": "raised to the manager",
+   "tier": "1",
+   "check": {
+    "command": "ls research/queue/RQ-20261101-78fc-04.yaml research/queue/blocked/RQ-20261101-78fc-04.yaml",
+    "rule": "hit if still under blocked/; miss if queued or graded",
+    "resolves_when": "2026-11-11 ml-review"
+   },
+   "ending": "no action, because the unit's own clears_when owns it"
+  }
+ ],
+ "trainer_findings": [
+  "#22899: timer active next 11-05 00:10Z; stage-guard 98 hold; gate ready: btc fc-pcv-v2, mes-5m, btc fc-pcv-v1; not ready: sol (sample 4), yz-v1 (vol_bucket dead live), 1h-v2 (parity insufficient); cost_net insufficient_data on all 6; drift scan rc0 0 drifted; disk 81%"
+ ],
+ "model_status": [
+  {
+   "model_id": "btc-regime-15m-lgbm-fc-pcv-v2",
+   "stage": "advisory",
+   "legs_changed": "bybit_1 trend_donchian/ict_scalp_5m/squeeze_breakout_4h cells"
+  },
+  {
+   "model_id": "sol-regime-15m-lgbm-fc-pcv-v2",
+   "stage": "advisory",
+   "legs_changed": "0"
+  },
+  {
+   "model_id": "mes-regime-5m-lgbm-v2",
+   "stage": "advisory",
+   "legs_changed": "0; macro-F1 -3.3 pts on 11-02"
+  },
+  {
+   "model_id": "ml-decision-entry-v1 (served)",
+   "stage": "served, not in registry",
+   "legs_changed": "bybit_2 + bybit_portfolio ml_entry; alpaca_paper"
+  },
+  {
+   "model_id": "ml-decision-entry-v2 (served)",
+   "stage": "served, not in registry",
+   "legs_changed": "bybit_1 ml_entry_v2"
+  },
+  {
+   "model_id": "ml-entry-tp-revision-v1 (served)",
+   "stage": "served, not in registry",
+   "legs_changed": "ml_entry TP"
+  },
+  {
+   "model_id": "overlay_td (served)",
+   "stage": "served, not in registry",
+   "legs_changed": "reduce: bybit_2/bybit_portfolio trend_donchian_xrp_4h; trend_donchian_eth_prop on bybit_1 + 3 prop"
+  },
+  {
+   "model_id": "exit-head-donchian-1h-v1",
+   "stage": "not in registry",
+   "legs_changed": "close: bybit_1 trend_donchian_eth"
+  }
+ ],
+ "model_status_summary": "98 registry rows: advisory 3, shadow 20, candidate 74 (77 gbdt), research_only 1; candidate-only models change nothing.",
+ "promotion_recommendations": [],
+ "promotion_note": "none: no head is gate-ready on a decision value; SOL/MES advisory change 0 legs.",
+ "experiments_proposed": [
+  {
+   "id": "P1",
+   "track": "MODEL",
+   "what": "dispatch ML-ENTRY-RETRAIN-CADENCE + ML-ENTRY-LIVE-MONITOR"
+  },
+  {
+   "id": "P2",
+   "track": "MODEL",
+   "what": "endorse MECE P1 ML-SERVING-INVENTORY as C3 instrument"
+  },
+  {
+   "id": "P3",
+   "track": "MODEL",
+   "what": "taker-flow replace-not-add variant of ML-FS-ENTRY-V2"
+  },
+  {
+   "id": "P4",
+   "track": "MODEL",
+   "what": "LambdaRank cross-sectional objective for ENTRY"
+  },
+  {
+   "id": "P5",
+   "track": "MODEL",
+   "what": "beats-prior clause in bake-off rules"
+  },
+  {
+   "id": "P6",
+   "track": "MODEL",
+   "what": "MES 11-02 root-cause trainer read"
+  },
+  {
+   "id": "P7",
+   "track": "TRADING",
+   "what": "ml_entry reconciler/other close reasons -> performance/health review"
+  }
+ ],
+ "backlog_drain": [
+  {
+   "id": "PI-20261018-WH81NW96-0001",
+   "disposition": "resolved"
+  },
+  {
+   "id": "PI-20261028-GNVUF1ES-0001",
+   "disposition": "kept_open (re-read)"
+  },
+  {
+   "id": "PI-20261028-GNVUF1ES-0002",
+   "disposition": "kept_open (re-read)"
+  },
+  {
+   "id": "PI-20260927-3WM5HADW-0004",
+   "disposition": "kept_open (re-read)"
+  },
+  {
+   "id": "PI-20261014-MVBJLVJ3-0001",
+   "disposition": "kept_open (re-read)"
+  },
+  {
+   "id": "BL-20260911-THE-DRIFT-GATE-READS-ONE-UNROTATED-FILE-SO-ITS-30-DAY-REFERENCE-WINDOW-COVERS-28-DAYS-AND-71-PERCENT-OF-THE-FLEET-IS-BLOCKED-ON-AN-UNTRUSTWORTHY-VERDICT",
+   "disposition": "kept_open (re-read)"
+  },
+  {
+   "id": "PI-20260929-UAOAYGBB-0001",
+   "disposition": "kept_open (re-read)"
+  },
+  {
+   "id": "PI-20261009-01FXMMUG-0001",
+   "disposition": "kept_open (re-read)"
+  },
+  {
+   "id": "PI-20260927-3WM5HADW-0005",
+   "disposition": "kept_open (needs trainer #22899)"
+  },
+  {
+   "id": "MB-20260719-PROMOREADY-OOSEDGE-OOM",
+   "disposition": "kept_open (trainer RSS; not re-read)"
+  },
+  {
+   "id": "PI-20261004-AHCVAAF5-0002",
+   "disposition": "kept_open (calibrator holdout; not re-read)"
+  },
+  {
+   "id": "MB-20260712-SHADOW-LOG-HISTORY",
+   "disposition": "kept_open (SA-DATA test)"
+  },
+  {
+   "id": "PI-20261013-CAZHXZNE-0001",
+   "disposition": "kept_open (GPU route)"
+  },
+  {
+   "id": "PI-20261015-SBAQDDVQ-0001",
+   "disposition": "kept_open (not due, 11-11)"
+  }
+ ],
+ "backlog_coverage": {
+  "open_at_start": 14,
+  "triaged": 14,
+  "resolved": 1,
+  "fixed_now": 0,
+  "closed_stale": 0,
+  "kept_open": 13,
+  "count_untriaged": 0
+ },
+ "anomalies": [
+  "MES baselines degenerate since 2026-11-02 (PI-20261104-DGUBH8UA-0001)",
+  "ENTRY artifact data-through 2025-09-22 (PI-20261104-DGUBH8UA-0002)",
+  "trainer disk 80.2% (+28 pts/7d)",
+  "7 ml_bakeoff units producer_failed"
+ ],
+ "recommended_action": "Manager: dispatch P1 (ENTRY retrain + live monitor) and fold MECE P1 serving inventory in as C3's instrument; P6 one trainer read.",
+ "operator_attention_required": false,
+ "claude_channel_ping": "/ml-review \u2014 ML changes 14/75 legs (real-money 2/7, all outside registry); chain: H6->H7 bypassed; 7 proposals; calls hit/miss 1/2; trainer=ok rc0, disk 81%.",
+ "sources": [
+  "comms/ml-plan/20261104T2000Z-ML-FRONTIER-PREP.json",
+  "docs/reviews/2026-11-04-weekly-walkthrough.md",
+  "https://ict-bot.duckdns.org/api/bot/ml/{status,registry,cycle,builds} ~19:00Z",
+  "/api/bot/shadow/drift x6",
+  "/api/bot/trades/closed bybit_2/bybit_portfolio/bybit_1/alpaca_paper since 11-01",
+  "trainer-vm-diag #22899",
+  "PR #22892 (ML-ROADMAP-MECE)"
+ ]
+}

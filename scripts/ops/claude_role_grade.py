@@ -276,7 +276,12 @@ def role_table(desk_g: Dict[str, Any], ltr_g: Optional[Dict[str, Any]], nt_g: Di
                          why=dict(ltr_g["population"]["could_not_price_reasons"]) if rs else {}, needed=N_NEEDED_LTR,
                          verdict=u.get("verdict"), rate=_rate_per_day([dg._ts(r.get("reviewed_at")) for r in rs], now),
                          lag_days=1.0, now=now,
-                         extra={"n_applied": u.get("n_applied", 0), "mean_delta_r": u.get("mean_dr"), "ci95_delta_r": u.get("ci95")}))
+                         # the package is the independent unit (live_review_grade.use_rules): many calls on few
+                         # packages is still thin evidence, so the state keys on n_packages, not on n_graded calls
+                         state=("insufficient_n" if rs and u.get("n_packages") is not None
+                                and u["n_packages"] < N_NEEDED_LTR else None),
+                         extra={"n_applied": u.get("n_applied", 0), "n_packages": u.get("n_packages"),
+                                "mean_delta_r": u.get("mean_dr"), "ci95_delta_r": u.get("ci95")}))
     holds = acts.get("hold", [])
     hv = ltr_g["hold_vs_close"]
     cal = ltr_g["calibration"].get("hold") or {}

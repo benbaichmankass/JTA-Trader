@@ -2368,3 +2368,45 @@ nodes:
       the window trade); a head with no consumer is not queued. PASS -> a shadow candidate under the mechanical 1-2 prediction soak;
       FAIL -> the simple rule stands as the stage-A baseline and the ML line for these windows is closed for this feature set.
       Not authored if stage A fails.
+  # --- PROGRAMME-REVIEW-2026-11-04: MODEL-track feeds from the ML roadmap MECE draft (PR #22892, held for DEEP-AUDIT-20261104).
+  # runnable_by_track MODEL = 0 on 2026-11-04 (research_ops_checks.py): a SUPPLY gap. These stay needs_authoring until #22892's
+  # section 8 ranking is final; ids are the draft's proposed ids, the manager assigns final ones. Operator rule 2026-11-04 ~19:33Z
+  # ("Group-level (Recommended)"): an ML trades the population its pooled test passed on; per-symbol results never gate -- none of these
+  # is a per-symbol gating unit.
+  - id: P2-MECE-D5-aggregator-voi
+    goal: G4
+    theme: ml_health
+    roadmap: [L-ML-LIVE]
+    value: {usd_at_stake_per_month: 150, confidence: 0.2}
+    after: []
+    needs_authoring: 'ML-ROADMAP-MECE (PR #22892) proposal 2 (unit RQ-20261105-mece-01, draft id): VALUE-OF-INFORMATION census before
+      any position-aggregator (Mastiff, slot D5) build -- 14-day refusal counts by reason per slices account (real vs demo) plus a Stage-0
+      count of concurrent same-symbol episodes per symbol. Decision it changes: whether D5 is worth any build (AGG-HARNESS). Pre-mortem: if
+      it shows little concurrency, the most likely reason is that the M18 same-symbol reads (EV pick ~96-97% = priority) already captured
+      it -- then D5 is recorded "none yet" with a re-entry test. Consumer: the RiskManager slice split on bybit_2 / bybit_portfolio. Author
+      when #22892 lands (its section 4.6 scoping question is the operator''s, a preference no data settles).'
+  - id: P2-MECE-D6-pointer-v0
+    goal: G4
+    theme: ml_health
+    roadmap: [L-ML-LIVE, L-AM-STANDARD]
+    value: {usd_at_stake_per_month: 120, confidence: 0.2}
+    after: []
+    needs_authoring: 'ML-ROADMAP-MECE (PR #22892) proposal 4 (unit RQ-20261105-mece-02, draft id): POINTER v0 (slot D6, bracket at
+      entry) -- score the SERVED Labrador-1b TP-revision model at bar 0 of Foxhound-1 entries vs the fixed 3-ATR TP, on the frozen held-out
+      window, one read, net of the full cost stack, pooled over the population Foxhound-1 trades (group-level rule). Decision it changes:
+      whether bracket-at-entry gets a learned candidate (first D6 evidence) or stays rule-set. Pre-mortem: FAIL most likely because a
+      revision model trained on in-trade state carries no bar-0 signal; first variant = a bar-0-trained first-passage head (c692-03 family).
+      Consumer: ml_entry / ml_entry_v2 brackets on bybit_2 + bybit_portfolio (Foxhound-1) -- a live change is Tier 3.'
+  - id: P2-MECE-D2-regime-real-money
+    goal: G4
+    theme: regime
+    roadmap: [L-REGIME, L-ML-LIVE]
+    value: {usd_at_stake_per_month: 200, confidence: 0.15}
+    after: []
+    needs_authoring: 'ML-ROADMAP-MECE (PR #22892) proposal 6 (unit RQ-20261105-mece-04, draft id): the advisory regime heads (Collie,
+      slot D2) on a REAL-MONEY leg -- regime_cell_walkforward.py on the real-money roster legs (xrp/eth Donchian, ada/xrp pullbacks) on the
+      advisory vol label where it exists, rule label elsewhere (regime-selectivity skill: no cosmetic cell, walk-forward before Tier 3).
+      Decision it changes: whether the head that beat the class prior on 1h/15m log-loss this week (41cc-12..27, a4e7-08/-11, d5dd-17)
+      changes a money decision at all -- log-loss lift is not a gate. Pre-mortem: FAIL most likely because the off-cells on these legs
+      gate few trades (axis fidelity); first variant = the HAR-RV feature head (d5dd-17 PASS) as the label. Consumer: config/regime_policy.yaml
+      trend_vol cells for the named legs (Tier 3).'

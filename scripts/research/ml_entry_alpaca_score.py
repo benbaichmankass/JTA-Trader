@@ -369,6 +369,9 @@ def run(a) -> int:
     }
     p = out / f"{a.unit}.json"
     p.write_text(json.dumps(row, indent=1, default=str))
+    # The runner pipeline grades from <out>/verdict.json; without it a measured FAIL lands as producer_failed
+    # (RQ-20261102-5e03-01, run 41600034132: VERDICT fail printed, nothing graded). Same fix as ml_entry_tp_revision.py.
+    (out / "verdict.json").write_text(json.dumps({**row, "n": m["n"]}, indent=1, default=str) + "\n")
     print(f"VERDICT {v}: {why}\nwrote {p}", flush=True)
     return 0
 

@@ -1,0 +1,22 @@
+{
+  "id": "HEALTH-20261104-OBS-GAPS",
+  "title": "Two unexplained monitoring gaps this window: health snapshots stopped 172 min (11-02 11:46-14:38Z) and ib_paper accounts_api not-ok ~3 h (11-03 00:10-03:01Z); find why, no alert reached /work/report",
+  "phase": "floor",
+  "state": "queued",
+  "owner": "manager",
+  "lane": null,
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [],
+  "blocked_on": [],
+  "note": "[HEALTH-REVIEW-20261104] MEASURED: /api/bot/health/history?hours=168: 917 snapshots, 888 ok / 29 watch, max gap 172.25 min from 2026-11-02T11:46Z (next max 15.4 min); 17 watch rows 11-03 00:10-02:47Z 'not-ok: accounts_api'; account_reachability_alert_state ib_paper last_change 2026-11-03T03:01Z. Not covered by SYSTEM-AUDIT-INTEGRATION's alert-routing finding except as one more instance. Read ict-health-snapshot.timer journal for 11-02 11:40-14:40Z and the IB gateway watchdog for 11-03 00:00-03:05Z.",
+  "due_by": "2026-11-11",
+  "roadmap": [
+    "L-OPS"
+  ],
+  "updated_at": "2026-11-04T19:32:21Z",
+  "updated_by": "session_01AFoLuJuS137LaGTV3KwRtZ",
+  "_seq": 917
+}
