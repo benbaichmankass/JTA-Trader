@@ -1,0 +1,15 @@
+{
+  "due_when": {
+    "due_date": "2026-11-06",
+    "kind": "date"
+  },
+  "id": "PI-20261104-KKPOFDJQ-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "lane PAPER-MECHANICS-20261104 item 2 (session_01AFoLuLRhwymaBRKkPofDjQ)",
+    "rerun": "scripts/ops/diag_fetch.sh 'ib_open_orders?account_id=ib_paper' (MGC STP/LMT qty) and scripts/ops/diag_fetch.sh 'journal?table=trades&limit=400&offset=0' (row 6673 position_size) and 'journal?table=trades&limit=400&offset=400' (sibling ib_paper MGC rows 6740, 6803)"
+  },
+  "state": "queued",
+  "what": "ib_paper MGC: the netted short under journal row 6673 (mgc_pullback_1d, pkg-011a7bf85ee54a6f, entry 10-19 qty 14) keeps SHRINKING at the venue with no journal reduce: 14 -> 12 by 2026-10-26 20:03Z (killed item PI-20261026-CDTDGVDN-0001, row AUD-20261028-MGC-JOURNAL-QTY) -> 11 now (MEASURED 2026-11-04 18:24Z /api/diag/ib_open_orders: oca-protect-t6673 BUY STP 4160.3 x11 + LMT 3767.0 x11; row 6673 still 14, protection_repairs=1 naked_rearm 2026-11-02T14:41:19Z). The venue (11) is right; the journal over-states by 3. INFERRED mechanism, not proven: each lost contract lines up with a 1-lot SIBLING short on the same netted contract closing. Sibling 6740 (ict_scalp_mgc_15m short 1, 10-26 14:09 -> 17:24 sl_cross) precedes the 14->12 read; sibling 6803 (mgc_trend_1h short 1, 10-30 07:14 -> 11-02 14:33:22 sl_cross, pnl +405) closed 8 min before 6673's naked_rearm at 14:41:19, which sized to the broker's 11. Shape consistent with a sibling's close over-closing the netted position (its own venue stop fill PLUS a monitor sl_cross market close, or a symbol-wide close cancelling 6673's bracket, which would explain the naked_rearm). The trader journal is not retained back to 11-02 (journalctl since=2026-11-02 14:38 scanned 1 line), so the fills must come from IB execution history. DO: pull ib_paper MGC executions 10-19..11-04 (reqExecutions via an ops client or TWS statement), attribute each BUY to a journal row, name the over-close path in code, fix it, then correct row 6673 via repair-netted-rows with that evidence. Real-money relevance: ib_live nets the same way."
+}
