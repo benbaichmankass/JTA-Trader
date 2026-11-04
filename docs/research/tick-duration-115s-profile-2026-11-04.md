@@ -75,9 +75,15 @@ runs `multiplexed_intent_signal_builder` over **all 24 symbols** in the
 08:00, 13:00, 14:00, 15:00, 16:00, 20:00Z), carrying state across timepoints in
 one process, so debounce/ledger paths run identically in both arms.
 
-Result: see § 4a (filled in from the run). A first pass at one timepoint
-(15:00Z, 24 symbols) was identical in all 24 (23 `none`, 1 `buy`); cache stats
-202 hits / 2 parses.
+**Result: 192 of 192 builds byte-identical** (JSON with sorted keys, every field
+of every returned signal: side, price, entry/SL/TP, confidence,
+`candidate_signal_packages`, `account_rounds`, meta). Population: 182 `none`,
+**10 actionable `buy`** (ETHUSDT ×7, SPYM, SCHA, SPY), 0 errors. Cached arm: 2
+real parses, 1,720 cache hits. A first single-timepoint pass (15:00Z, 24
+symbols) was also identical. Limits, stated: seeded synthetic candles, not
+recorded venue candles; no `sell` occurred in this population; the OI feed was
+empty in both arms. The structural argument (§ 3: same pure function on the
+same text, private copy per caller) covers what the sample does not.
 
 Plus unit tests: `tests/test_yaml_parse_cache.py` (real configs equal a fresh
 parse incl. key order; private copy per call; anchor aliasing preserved; an
