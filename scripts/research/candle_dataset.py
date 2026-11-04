@@ -240,6 +240,11 @@ def serve(key: FeedKey, days: int, out: str, root: Optional[str] = None) -> bool
         p = base / f["file"]
         if not p.is_file():
             p = base / f["file"][:-3]            # Kaggle may extract an uploaded .gz
+        if p.is_dir():                           # ...or into a DIRECTORY of that name (seen 2026-11-02, 5e01-02/03/04: IsADirectoryError)
+            inner = sorted(q for q in p.iterdir() if q.is_file() and q.suffix in (".csv", ".gz"))
+            if not inner:
+                return False
+            p = inner[0]
         df = pd.read_csv(p)
         ts = pd.to_datetime(df["timestamp"], utc=True)
         df = df[ts >= ts.max() - pd.Timedelta(days=days)]

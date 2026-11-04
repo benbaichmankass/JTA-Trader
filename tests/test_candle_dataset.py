@@ -45,6 +45,19 @@ def test_serve_survives_kaggle_extracting_the_gz(tmp_path):
     assert cd.serve(KEY, 30, str(tmp_path / "o.csv"), root=str(tmp_path))
 
 
+def test_serve_survives_kaggle_extracting_into_a_directory(tmp_path):
+    """5e01-02/03/04 died on IsADirectoryError: the extracted name was a directory holding the csv."""
+    info = cd._write_csv_gz(_frame(), tmp_path / cd.file_name(KEY))
+    gz = tmp_path / cd.file_name(KEY)
+    d = tmp_path / cd.file_name(KEY)[:-3]
+    d.mkdir()
+    gz.rename(d / "c.csv.gz")
+    (tmp_path / cd.MANIFEST_NAME).write_text(json.dumps({"feeds": {cd.feed_id(KEY): {"status": "ok", "file": cd.file_name(KEY), "days_built": 100, **info}}}))
+    assert cd.serve(KEY, 30, str(tmp_path / "o.csv"), root=str(tmp_path))
+    d2 = tmp_path / "empty"
+    d2.mkdir()
+
+
 def _cov(status="ok", days=2330, key=("binance", "ETHUSDT", "120")):
     return {"feeds": {cd.feed_id(key): {"status": status, "days_built": days, "rows": 1, "last_ts": "t"}}}
 
