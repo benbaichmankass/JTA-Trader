@@ -322,6 +322,15 @@ STATUS_EXPLICIT: Dict[str, Tuple[str, str, str]] = {
     # audit and measured per-class depth of the HF market data lake; its numbers are measurements from that lane's
     # runs (archive size census, real-data pipeline run) and tests/test_data_lake.py pins the code it describes.
     # Goes `history` if the lake moves off Hugging Face.
+    # Written 2026-11-04 by lane PROJECT-PITCH-DECK (session_01AFoLuLr3fpRCuMnfGbGGoK), which wrote it: the
+    # generated markdown source + speaker notes of the pitch deck. Every number is computed by
+    # docs/pitch/build_deck.py from config/ and comms/strategy_evidence/ at build time. Goes `history` when
+    # the deck is rebuilt for a new audience or the build stops being re-run.
+    "docs/pitch/jta-trader-pitch-deck.md": (
+        "live",
+        "read:PITCH-DECK-lane-authored-it-2026-11-04-generated-from-files",
+        "JTA Trader pitch deck: markdown source and speaker notes (generated)",
+    ),
     "docs/data/market-data-lake.md": (
         "live",
         "read:MARKET-DATA-LAKE-lane-authored-it-2026-11-01-measured",
