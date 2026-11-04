@@ -21,7 +21,6 @@ import pytest
 
 from src.runtime import position_telemetry as pt
 from src.runtime import structure_exit_live as sxl
-
 from tests.test_structure_exit_live import _pkg, bars2h  # noqa: F401  (fixture)
 
 _MODS = [

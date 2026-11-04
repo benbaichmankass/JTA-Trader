@@ -21,7 +21,10 @@ from __future__ import annotations
 import pathlib
 
 from tests.test_ib_protection_quantity import (
-    _IB, _Position, _Trade, _place_client,
+    _IB,
+    _place_client,
+    _Position,
+    _Trade,
 )
 
 _REPO = pathlib.Path(__file__).resolve().parents[1]

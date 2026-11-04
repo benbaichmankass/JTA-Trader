@@ -6,6 +6,11 @@
   },
   "id": "PI-20261104-KKPOFDJQ-0002",
   "next_action": "check_observation",
+  "observation": {
+    "due_by": "2026-11-07",
+    "how_to_check": "scripts/ops/diag_fetch.sh 'ib_open_orders?account_id=ib_paper' and scripts/ops/diag_fetch.sh 'position_telemetry?limit=300' on the deployed sha",
+    "what": "(1) a new IB trade's first post-deploy re-arm leaves no entry-bracket child (parent_id = trades.broker_order_id) resting beside its oca-protect-t<id> group; (2) every open structure_exit package has a position_telemetry row"
+  },
   "origin": {
     "kind": "session",
     "ref": "lane PAPER-MECHANICS-20261104 items 1+5 (session_01AFoLuLRhwymaBRKkPofDjQ)",
