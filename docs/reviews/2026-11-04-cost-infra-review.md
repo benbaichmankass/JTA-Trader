@@ -1,6 +1,6 @@
 # Monthly cost / infra review — 2026-10-05..2026-11-04
 
-> **Doc status:** `live` · category `review` · lane `COST-INFRA-REVIEW` (job `cost-infra-review`, `config/reset_protocol.yaml`) · Gates: none. Report only; nothing was disabled, deleted or changed.
+> **Doc status:** `unknown` · category `evidence` · lane `COST-INFRA-REVIEW` (job `cost-infra-review`, `config/reset_protocol.yaml`) · Gates: none. Report only; nothing was disabled, deleted or changed.
 
 Provenance tags: **MEASURED** (read this session), **ESTIMATED** (derived), **UNKNOWN** (could not look — not zero).
 
