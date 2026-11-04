@@ -14,9 +14,9 @@
   "note": "DEEP-AUDIT-20261104 (docs/reviews/2026-11-04-weekly-audit.md). MEASURED 18:35Z: diag ib_open_orders -> system_invariants.py INV-PROTECT-OVERCOVER FAIL (n=3 IB positions). Orders: parent 1231 children LMT 7443@87.57 + STP 5300@79.41 (oca 1712634399); group oca-protect-t6879 STP 7443@79.41 + LMT 7443@83.59. IB limits are not reduce-only: once one group fills the other can open a 5300-7443 share SHORT. Two questions: (a) why the entry bracket's stop is 5300 not 7443; (b) why a protect group was armed while the bracket rested (order_monitor.py ~11906 says re-arm must not add on top of a surviving stop). If within SHARED-BRACKET-FIX scope (live lane, row not on main at 18:40Z), route there. Fix: cancel the stale group via system-action cancel-ib-order (Tier 2), root-cause the arm path. DETECTOR: INV-PROTECT-OVERCOVER (exists, fires). CHECK: {command: system_invariants.py --payloads <fresh>, rule: OVERCOVER pass, resolves_when: pass on 2 consecutive pulls}. next_action: ask_operator.",
   "due_by": "2026-11-06",
   "roadmap": [
-    "L-OPS"
+    "M39"
   ],
-  "updated_at": "2026-11-04T18:46:38Z",
-  "updated_by": "session_01AFoLuJHHNrJpWUPrhHXtjo",
+  "updated_at": "2026-11-04T22:27:14Z",
+  "updated_by": "PLANNING-CLOSE-20261104",
   "_seq": 909
 }

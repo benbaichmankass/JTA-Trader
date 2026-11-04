@@ -854,12 +854,12 @@ bind:
    [`OPERATING-PLAN` § 2 "The soak is MECHANICAL"](plans/OPERATING-PLAN-2026-09-21.md).
    This extends § "A soak must carry its own alarm". It does not replace it: the
    alarm says *when to look*, and the contract says *what ends the wait*.
-4. **The manager reviews a persisted report, on a schedule, twice a day.**
+4. **The manager reviews a persisted report, on a schedule, once a day.**
    - `ict-work-report.timer` (05:30 UTC) writes `WR-YYYYMMDD-HHMMZ`, served at
      `GET /api/bot/work/report`.
    - `?since=` adds every hourly digest block that was sent. A session cannot
      read Telegram, so this is how the manager sees what went out.
-   - Routines at 05:52Z and 17:52Z fire the review. The manager gets no push;
+   - A routine at 05:52Z fires the review (once a day; operator, 2026-11-04: "we switched the twice daily to once daily leave it like that"). The manager gets no push;
      the routine is the check.
    - A missing, stale or errored report is itself an alarm.
 5. **Lanes PUSH, and the manager POLLS.**

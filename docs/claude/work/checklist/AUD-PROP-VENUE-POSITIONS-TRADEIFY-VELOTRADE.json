@@ -12,10 +12,10 @@
   "prs": [],
   "blocked_on": [],
   "note": "[AUD-20261019-PROP-INVARIANT-BLIND] Live pull 2026-10-23: /api/bot/prop/status status.raw for tradeify_1 and velotrade_1 carries source=prop_executor and NO positions_state/positions; only breakout_2 (phone executor) posts a clean read. The new invariant reports them could-not-read (correct, not ok). To close: the prop executor for those venues must report open positions in the account_status raw (positions_state=read). That is src/prop executor work (Tier 2), out of scope for the invariants lane. DETECTOR: INV-PROP-POSITIONS lists them as reconciled instead of could-not-read. [SYSTEM-AUDIT-INTEGRATION F5, docs/audits/2026-11-04-system-integration.md, 2026-11-04] ROOT CAUSE (code): src/prop/prop_executor.py reads positions every cycle (adapter.read_positions at :1106; DXtrade read_positions raises LookupError when no table, so a returned list IS a clean read) but the account_status report at :1259-1263 sends only balance/equity/unrealized/realized_today/day_start_balance -- positions and positions_state are never put in it. EXACT FIX (Tier 2, executor report path, not the order clicks): add positions_state='read' and positions=[p.as_dict() for p in positions] to that _report dict (same shape phone_executor.py:431-442 posts). LIVE 18:18Z: tradeify_1 raw has unrealized 5.51 and no positions while fill 221 ETHUSDT long 0.72 is open since 17:03:31Z; velotrade_1 unrealized null (overview falls back to mark_estimate 3.06, ESTIMATED) with fill 220 open 0.36. Prop trades ARE placed: ticket 16:01:25Z -> placed 16:03:39Z/16:04:04Z -> open 17:03Z on both. ALSO OPEN: placed->open took ~59 min on both accounts (unexplained: resting entry, or the fill read lags); measure it from prop_executor journal lines in the fix PR.",
-  "updated_at": "2026-11-04T18:30:52Z",
-  "updated_by": "session_01AFoLuLCbQTSU5jK9dbmcvU",
+  "updated_at": "2026-11-04T22:27:14Z",
+  "updated_by": "PLANNING-CLOSE-20261104",
   "roadmap": [
-    "L-OPS"
+    "L-ALERT-INTEGRATION"
   ],
   "due_by": "2026-11-07",
   "_seq": 619

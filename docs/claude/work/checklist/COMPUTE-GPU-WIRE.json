@@ -12,10 +12,10 @@
   "prs": [],
   "blocked_on": [],
   "note": "Let a research queue unit request the M19 GPU burst (compute: gpu -> labelled gpu-burst-train issue with est_cost/max_minutes); start with status_only to read GPU_BURST_ARMED/GPU_PROVIDER/key state; read why 3 of 7 July runs failed. $10 cap unchanged. Source: docs/plans/COMPUTE-ARCH-REVIEW-2026-10-13.md (ranked recommendations). [2026-10-13 RESEARCH-ROUTER lane] A queue unit now requests GPU with compute: gpu (or gpu_preferred) and the token-free dispatcher routes it to research-script-run-kaggle.yml under the weekly Kaggle quota (30 GPU h/week observed; floor 3 h; waits, never halts). DESIGN CHOICE: the M19 RunPod burst is NOT auto-routed (scripts/research/research_compute.yaml auto_route: false): it needs an issue-shaped request, GPU_BURST_ARMED and the $10/month ledger, all operator-armed; a unit can still name gpu-burst-train.yml explicitly. Kaggle first because it is free and proven (pilot run 38383862376). landed_unproven until a gpu unit lands a measured record through the collector (proof: RQ-20261013-0b07-01).",
-  "updated_at": "2026-10-30T06:13:03Z",
-  "updated_by": "session_01AFoLuL99YDu1fHUkJvG55s",
+  "updated_at": "2026-11-04T22:27:15Z",
+  "updated_by": "PLANNING-CLOSE-20261104",
   "roadmap": [
-    "M14"
+    "L-ML-MECE"
   ],
   "observation": {
     "what": "Let a research queue unit request the M19 GPU burst (compute: gpu -> labelled gpu-burst-train issue with est_cost/max_minutes); start with status_only to read GPU_BURST_ARMED/GPU_PROVIDER/key state; read why 3 of 7 July runs failed",
@@ -32,5 +32,6 @@
     "roadmap": "M14 where/next: a unit requests GPU with compute: gpu and is routed to Kaggle under the weekly quota; RunPod stays explicit and operator-armed",
     "arch": "none: Tier-1 research tooling; no architecture change"
   },
+  "due_by": "2026-11-06",
   "_seq": 448
 }

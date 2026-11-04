@@ -14,10 +14,10 @@
   "note": "[SYSTEM-AUDIT-INTEGRATION F8, docs/audits/2026-11-04-system-integration.md] MEASURED GET /api/diag/tick_cost 2026-11-04T18:22Z over 13 ticks since process start 17:45:06Z: mean 115.0 s, max 139.2 s (18:01:53Z); run_one_tick mean 79.3 s; pipeline.signal_build 299 calls mean 2.45 s = 49.0% of total; order_monitor mean 31.9 s per tick = 27.8%; monitor.check_broker_naked_equity_positions 8.0 s, reconcile_open_trades 6.8 s, reconcile_orphan_exchange_positions 6.3 s per tick. order_packages created_at minus 1h bar close for closed-bar 1h legs (n=8, journal tail 2026-11-04): +17..+226 s. Package -> trade row is fast (n=40, median 2.5 s, max 7.6 s). TASK: profile signal_build (2.45 s per call: per-symbol fetch.1h mean 720 ms, fetchvenue.alpaca 421 ms) and move order_monitor's broker sweeps off the signal loop (it already has an off-loop hook set); target: a 5m bar evaluated within 30 s of close. Order-path runtime change: Tier 2, not fixed in the audit lane. DETECTOR: tick_cost mean_ms < 30000 over >= 20 ticks.",
   "due_by": "2026-11-10",
   "roadmap": [
-    "L-OPS"
+    "L-ALERT-INTEGRATION"
   ],
   "priority_rank": 4,
-  "updated_at": "2026-11-04T18:30:20Z",
-  "updated_by": "session_01AFoLuLCbQTSU5jK9dbmcvU",
+  "updated_at": "2026-11-04T22:27:14Z",
+  "updated_by": "PLANNING-CLOSE-20261104",
   "_seq": 909
 }
