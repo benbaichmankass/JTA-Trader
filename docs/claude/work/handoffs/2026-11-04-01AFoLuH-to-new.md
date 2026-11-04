@@ -81,6 +81,25 @@ Run 2-3 concurrent work lanes and stop new work at 85% of weekly usage (0% at th
 9. Audit-design builds (ALERT-LEDGER-TO-MANAGER, CHECKLIST-STATE-TRUTH, TICK-DURATION-115S), CI-demand lane (COMPUTE-ALLOCATION B5/B6/B8; kill PI-20261103-RAM7EH86-0002..0005 after verifying), DATA-DERIV-ARCHIVE, a24c-01 unblock (PI-20261104-ELSFP54S-0002, Foxhound-1 widening), register consolidation.
 10. /perf-followup (Opus).
 
+## ⚠️ RE-PRIORITIZATION (operator, 2026-11-04 ~22:27Z, verbatim; supersedes the order above)
+"The work from the redesign and like strategic changes that we want to make, that should take priority alongside real money, even if it means burning a little faster at first. But part of the point of putting that off until the reset was that we could start with that and then do the rest of the work within the updated system. Especially like as far as streamlining the workflow, not using the repo as a database, like we need to see where that's taking us and make sure that our weekly work plan is in line with the system that we're building this week and not what we have now."
+
+What the new manager must do with it:
+1. **Tier A (now, together):** real-money items AND the redesign / strategic builds. The redesign covers:
+   - SYSTEM-AUDIT-INTEGRATION design #22954 and its builds;
+   - REGISTER-CONSOLIDATION;
+   - moving work state off the repo-as-database;
+   - workflow streamlining and CI load (COMPUTE-ALLOCATION B5/B6/B8);
+   - UI-LIVE-STACK-REDESIGN / UI-OVERVIEW-HEALTH-CARDS;
+   - ML-ROADMAP-MECE.
+   A faster burn at first is accepted, still within the 85% stop.
+2. **Real-money lanes keep running:** TP-REALMONEY-UNITS, the #22942 restart, gateway disk, and EXIT-HEAD-ETH (trend_donchian_eth trades real money on bybit_2).
+3. **Everything else is RE-SCOPED to the system being built this week, not today's:**
+   - LIVE-DECAY-MONITOR, PASS-TO-DECISION-SLO, ML-LEARNING-LEDGER, research-SLO fixes, the backlog drain's register writes, and new registers or ledgers;
+   - for each, check whether it should be built on the new store or flow; if so, sequence it after that piece exists.
+   - Do not build new repo-JSON registers this week.
+4. **First action:** read #22954 and the REGISTER-CONSOLIDATION / COMPUTE-ALLOCATION rows. Write the redesign build sequence (what replaces repo-as-DB, in what order, what each later item depends on). Bring the operator ONE revised weekly workplan for confirmation (popup), then dispatch the first redesign lanes.
+
 ## Observations owed (deploy 21:46Z, sha d8a34e41b)
 - Trade 6860 should show exit_reason tp at 1.3177 and pkg-4eed7ec08f5845c1 close_reason tp, after the :20 fills pull. Then note SHARED-BRACKET-FIX.
 - Journal grep for "Error fetching OHLCV|BadSymbol|Traceback" since 21:44Z should be 0. Then close PI-20261103-SPOTCANDLES-0001.
