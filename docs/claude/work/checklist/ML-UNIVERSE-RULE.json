@@ -1,0 +1,23 @@
+{
+  "id": "ML-UNIVERSE-RULE",
+  "title": "System-wide config rule: accounts configure only which strategies/MLs are active; no per-symbol config; an ML's traded symbols are internal to the ML, set by which per-symbol tests passed. Codify in the canonical docs and apply to every ML",
+  "phase": null,
+  "state": "in_flight",
+  "owner": "manager",
+  "lane": "session_01AFoLuHqpgjzEo83Ug8wzwk",
+  "model": "claude-opus-5-5",
+  "ceiling_usd": 20,
+  "spend_usd": null,
+  "tier": 3,
+  "prs": [],
+  "blocked_on": [],
+  "note": "OPERATOR 2026-11-04, verbatim. ~19:04Z: \"the configuration doesn't specify what trades. It doesn't specify like what coins or what security trades. It just specifies which strategies, including which MLs, are active on that account. That's it.\" ~19:06Z: \"It's not just for Alpaca. That's like a general rule across how all of the accounts are configured. There's no per symbol configuration. There's only per strategy configuration. Specific strategies trade one symbol usually, but the MLs trade whatever is whatever they're set to trade. They don't have their roster is internal to the ML, and it's based on what tests have passed versus which ones have not.\" ~19:08Z: \"start the ML-UNIVERSE-RULE lane now\" (dispatched 19:05Z, Opus, $20). Popups ~19:08Z: \"Split (Recommended)\", \"Per-symbol passes (Recommended)\", \"Per-symbol tests (Recommended)\"; ~19:18Z pass bar: \"Shrunk >= 0, n >= 100 (Recommended)\". Rule as recorded: the set is derived from a committed per-symbol pass record; an absent/indeterminate record keeps the current set.",
+  "due_by": "2026-11-06",
+  "roadmap": [
+    "L-ML-LIVE"
+  ],
+  "priority_rank": 2,
+  "updated_at": "2026-11-04T19:23:09Z",
+  "updated_by": "session_01AFoLuHgZaSYnm9avjeZE33",
+  "_seq": 914
+}
