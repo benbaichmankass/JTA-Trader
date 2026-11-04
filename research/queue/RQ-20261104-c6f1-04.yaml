@@ -1,0 +1,148 @@
+# Hand-authored 2026-11-04 by lane TP-REALMONEY-UNITS (Tier 1), dispatched by Manager Session 2026-11-04a.
+# Operator decision 2026-11-04 'Yes, test all 6 (Recommended)'. Decision rule registered BEFORE any arm of this unit ran.
+id: RQ-20261104-c6f1-04
+title: 'TP doctrine, real money, HELD-OUT: does a predictive take-profit (T3, T4, T5) selected on the earlier span of trend_donchian_eth_4h''s
+  history beat its current exit on a later span selection never saw, net of the full cost stack?'
+status: done
+cadence: once
+roadmap:
+- L-ATM
+- M20
+theme: live_strategy
+priority: 1
+kind: experiment
+practice_precedent: T3 (net of the full cost stack) + T9 (on trend legs the TP doctrine requires MEASURING the cost of a target,
+  not assuming it); binding source docs/ARCHITECTURE-CANONICAL.md § TP doctrine; holdout design = PROMOTION-BAR-HOLDOUT-1016
+  (exit_lever_ablation.py --grade holdout).
+question: 'trend_donchian_eth_4h is on bybit_2 real money (+ bybit_portfolio mirror) and FAILS tp-doctrine-guard on entry_tp
+  (sentinel tp_r 50 resting at the venue cap); the measured-move revision (width 0.5) is already declared and produces (scripts/ci/check_tp_doctrine.py
+  on main 745bcf758, 2026-11-04). Candidates: a FINITE entry target tp_r 3 / 4 / 5 R, the declared measured-move revision
+  kept on every arm. Baseline B = the leg as declared (50R sentinel at the 9.9% venue cap + the declared measured-move revision).
+  Selected on the discovery span only and read ONCE on a later held-out span, does a candidate beat B?'
+why_this_matters: 'Operator decision 2026-11-04 (weekly planning popup, relayed by Manager Session 2026-11-04a): ''Yes, test
+  all 6 (Recommended)'' -- every non-compliant REAL-MONEY leg gets ONE pre-registered TP test. Prior tests on this leg: RQ-20261028-a7c3-04
+  (T3/T4 full-window replace, pass, no held-out span); RQ-20261101-5e01-04 (structure SL+TP, queued). None held a span back
+  from selection; this one does, so a PASS here is the evidence record a Tier-3 declare needs and a FAIL closes these configurations
+  honestly.'
+power:
+  expected_n: 277
+  min_detectable_effect: 0.45
+  effect_units: sd
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: '(1.96 + 0.8416)^2 / 0.45^2 = 38.8 trades -> the registered discovery floor 39 / held-out floor 25. MEASURED: 277
+    baseline trades over 2020-07-01..2026-10-26 in research/results/RQ-20261028-a7c3-04/40826186111.jsonl (arm A).'
+  feasibility:
+    source: none
+    accrual_basis: Replays history on freshly fetched public candles for a pinned window; nothing accrues.
+decision_rule:
+  id: RULE-RQ20261104c6f104-TP-HOLDOUT
+  statistic: 'scripts/research/exit_lever_ablation.py --grade holdout on trend_donchian_eth_4h, window 2020-07-01 .. 2026-11-03
+    23:59, net of the full cost stack the harness resolves per venue (execution_costs.resolve_cost_policy: fees + slippage
+    + funding; recorded per arm as cost_stack). Every arm runs once over the whole window. The boundary is fixed from B''s
+    ENTRY TIMES before any outcome is read: the latest 25% of the window, grown in 1% steps until it holds 25 of B''s entries,
+    capped at 40%. DISCOVERY = trades whose entry AND exit precede the boundary, cut into 4 equal calendar folds (multi-fold
+    walk-forward); HELD-OUT = trades entered on/after it (no overlap; straddlers excluded). Per arm: n, net R, per-fold net
+    R, max DD R, by_outcome. Reported, not graded: tp_share = by_outcome.take_profit / n.'
+  rule: 'ELIGIBLE on discovery iff n >= 39, net R > 0 and >= 3 of 4 discovery folds net-positive; the eligible arm with the
+    highest discovery net R is SELECTED (a tie goes to B). PASS iff ALL of: (1) the selected arm is a candidate (T3, T4, T5),
+    not B; (2) its held-out n >= 25 and held-out net R > 0 (harness label confirmed); (3) on the SAME held-out span its net
+    R >= B''s held-out net R (paired read of arms/<label>__trades.jsonl, read once, no re-selection). FAIL iff B is selected
+    (the declared exit wins discovery), or the harness labels no_discovery / not_replicated, or clause 3 fails. INDETERMINATE
+    iff insufficient_discovery or underpowered (a power shortfall, never evidence against the leg). PASS -> doctrine read:
+    tp_share(selected) >= 0.10 on the held-out span, else forwarded as ''P&L without a reachable prediction'', not a declare;
+    otherwise ONE Tier-3 proposal on row RM-AM-ETH4H-ENTRYTP: tp_r: <sel> (replacing 50.0) and tp_intent: {mode: r_multiple,
+    basis: RQ-20261104-c6f1-04}, bybit/alpaca live + mirror in one revertible PR, operator''s approval. Thresholds are not
+    changed after any result. A FAIL closes these configurations, never the family (research-ops § D).'
+  what_it_does_not_do: Edits no config, places no order. The leg's ENTRY params were chosen on windows that overlap both spans;
+    the held-out span is independent of the TP selection made here, not of the leg's construction. A one-leg per-trade-R read,
+    not the book simulation.
+  registered_before_run: true
+  registered_at: '2026-11-04'
+compute: cpu_light
+value:
+  bucket: own_losses
+  usd_at_stake_per_month: 300
+  confidence: 0.3
+  basis: 'stand-in: TP-doctrine compliance of a real-money leg''s bracket; not a P&L measurement.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 2.0
+  est_minutes: 30
+  why_runner: Fetches keyless public candles for a pinned window; reads no trainer data.
+  basis: 'Runner. One harness invocation per arm (a7c3 / bea9 precedent: minutes per arm incl. the fetch).'
+run:
+  command:
+  - python3
+  - scripts/research/exit_lever_ablation.py
+  - --leg
+  - trend_donchian_eth_4h
+  - --arm
+  - B=
+  - --arm
+  - T3=tp_r=3
+  - --arm
+  - T4=tp_r=4
+  - --arm
+  - T5=tp_r=5
+  - --days
+  - '2350'
+  - --start
+  - '2020-07-01'
+  - --end
+  - 2026-11-03 23:59
+  - --grade
+  - holdout
+  - --baseline
+  - B
+  - --delta-r
+  - '0'
+  - --folds
+  - '4'
+  - --fold-majority
+  - '3'
+  - --n-floor
+  - '39'
+  - --holdout-frac
+  - '0.25'
+  - --holdout-min-trades
+  - '25'
+  - --holdout-max-frac
+  - '0.40'
+  - --research-unit
+  - RQ-20261104-c6f1-04
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 150
+  inputs:
+    research_unit: RQ-20261104-c6f1-04
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- TP-DOCTRINE
+- RM-AM-ETH4H-ENTRYTP
+- docs/ARCHITECTURE-CANONICAL.md#tp-doctrine
+grading:
+  auto: false
+  verdict: fail
+  decision_rule_id: RULE-RQ20261104c6f104-TP-HOLDOUT
+  graded_at: '2026-11-04'
+  grader: lane TP-REALMONEY-UNITS (session read of the registered clauses 1-3 + control)
+  reason: B selected on discovery (label confirmed)
+  harness_label: confirmed
+  selected: B
+  boundary: '2025-04-03 15:00:00+00:00'
+  evidence:
+  - research/results/RQ-20261104-c6f1-04/local-20261104.jsonl
+  - comms/research/RQ-20261104-c6f1-04/local-20261104/rule-read.json
+  - comms/research/RQ-20261104-c6f1-04/local-20261104/verdict.json
+  ran: locally via scripts/research/script_run.py --run --run-id local-20261104 (laptop-class), 2026-11-04
+  observation: 'Every finite target ties B exactly on discovery (n 202, net 67.43 R): the declared measured-move revision
+    supersedes the entry target before it binds, so the tie goes to B by the registered rule. On the held-out span T4 reads
+    15.92 vs B 13.97 R (n 76) -- reported, NOT graded (selection never picked it). The RQ-20261028-a7c3-04 full-window pass
+    stays the record for RM-AM-ETH4H-ENTRYTP; this unit neither confirms nor refutes it.'
+  next: A FAIL closes these configurations, never the family (research-ops § D); the leg stays on the TP-DOCTRINE debt list.
