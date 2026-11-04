@@ -48,3 +48,11 @@ def test_a_newer_green_backstop_supersedes_an_old_red_push_run(monkeypatch):
 
 def test_the_backstops_are_the_two_scheduled_post_merge_checks():
     assert set(R.BACKSTOP_WORKFLOWS) == {"pytest-run.yml", "guards.yml"}
+
+
+def test_a_keeper_dispatched_backstop_counts_and_pr_runs_do_not(monkeypatch):
+    runs = [_run("Guards", "success", "2026-11-04T05:00:00Z", event="pull_request"),
+            _run("Guards", "failure", "2026-11-04T04:29:00Z", event="workflow_dispatch")]
+    _stub(monkeypatch, [], {"guards.yml": runs, "pytest-run.yml": []})
+    res = R.src_red_main_runs(REPO, datetime.date.today(), token="t")
+    assert any("Guards" in str(r) for r in res.rows), res.rows

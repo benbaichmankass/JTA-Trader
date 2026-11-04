@@ -922,7 +922,7 @@ def src_red_main_runs(
             latest[name] = run
 
     # CI-STREAMLINE (2026-11-03): pytest-run and guards no longer run on push; their post-merge grading of main is a
-    # SCHEDULED backstop. Read each one's latest completed scheduled run on main directly, so this source keeps
+    # backstop (cron or keeper dispatch). Read each one's latest completed backstop run on main directly, so this source keeps
     # watching them. src_red_crons reads only the 100 most recent scheduled runs repo-wide, which can be ~2 h of
     # history -- shorter than the backstop's own period -- so it alone could let a red backstop age out unseen.
     # A failure to read one is a note, never a suppressed red.
@@ -930,11 +930,13 @@ def src_red_main_runs(
     for wf_file in BACKSTOP_WORKFLOWS:
         try:
             bd = _gh(f"/repos/{REPO}/actions/workflows/{wf_file}/runs"
-                     f"?event=schedule&branch=main&status=completed&per_page=1", token)
+                     f"?branch=main&status=completed&per_page=20", token)
         except (urllib.error.URLError, OSError, ValueError) as exc:
             backstop_note += f" could not read the {wf_file} backstop ({type(exc).__name__});"
             continue
-        for run in bd.get("workflow_runs", [])[:1]:
+        # The backstop is the cron OR schedule-keeper's workflow_dispatch on main (2026-11-04: GitHub dropped the new crons,
+        # so the keeper carries both). Newest-first; take the newest backstop run, skipping PR/merge-queue runs.
+        for run in [r for r in bd.get("workflow_runs", []) if r.get("event") in ("schedule", "workflow_dispatch")][:1]:
             name = run.get("name") or wf_file
             prev = latest.get(name)
             if prev is None or (run.get("created_at") or "") > (prev.get("created_at") or ""):

@@ -51,7 +51,7 @@ def test_guards_backstop_is_scheduled_whole_tree_and_never_cancelled():
     text = (WF / "guards.yml").read_text()
     assert 'push|workflow_dispatch|schedule) EXTRA="--all"' in text, "a scheduled guards run must be --all (its diff is empty)"
     cc = yaml.safe_load(text)["concurrency"]
-    assert cc["cancel-in-progress"] == "${{ github.event_name != 'schedule' }}"
+    assert cc["cancel-in-progress"] == "${{ github.event_name != 'schedule' && !(github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main') }}"
 
 
 def test_keeper_does_not_re_create_the_30_minute_cadence():

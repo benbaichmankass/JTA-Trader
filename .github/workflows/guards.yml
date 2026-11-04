@@ -115,10 +115,11 @@ permissions:
 #
 # The PR arm is deliberately UNCHANGED (`pull_request.number`), so the 2026-08-06
 # stacking fix this block exists for is untouched.
-# CI-STREAMLINE: a scheduled run of main is never cancelled (a cancelled backstop reads as red in src_red_crons and graded nothing).
+# CI-STREAMLINE: the backstop run of main (the cron, or schedule-keeper's workflow_dispatch on main when GitHub drops the cron) is
+# never cancelled: a cancelled backstop graded nothing and pages as red.
 concurrency:
   group: guards-${{ github.event_name }}-${{ github.event.pull_request.number || github.sha }}
-  cancel-in-progress: ${{ github.event_name != 'schedule' }}
+  cancel-in-progress: ${{ github.event_name != 'schedule' && !(github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main') }}
 
 jobs:
   guards:

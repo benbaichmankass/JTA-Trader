@@ -131,6 +131,12 @@ TARGETS: dict[str, dict] = {
     # the ONLY post-merge full run. starved_min 150 = one missed 2-h slot + grace before the keeper dispatches;
     # at the old 30 the keeper alone would re-create the ~48 full runs/day this change removes. stale_hours 5 =
     # two missed slots before it pages.
+    # CI-STREAMLINE 6-h re-measure (2026-11-04 05:47Z): guards' `29 */2 * * *` cron created ZERO schedule runs in its first
+    # 6 h (slots 00:29, 02:29, 04:29Z) while pytest-run's backstop ran 3x via this keeper -- the same dropped-new-cron pattern
+    # pytest-run hit on 2026-10-15. Same keeping as pytest-run. A duplicate run (late cron on top of a dispatch) costs one extra
+    # --all pass and changes no state; the never-cancel concurrency on main serialises them.
+    "guards.yml": {"stale_hours": 5, "starved_min": 150,
+                   "self_dedupes": "a guards --all run of main is read-only and idempotent: a late cron on top of a keeper dispatch only re-grades the same tree"},
     "pytest-run.yml": {"stale_hours": 5, "starved_min": 150,
                        "self_dedupes": "scripts/ci/pytest_run_backstop.py no-ops a tick whose HEAD is already graded"},
     # RESEARCH-PIPELINE-SLO (manager 2026-10-16): the `41 */2 * * *` cron (merged 11:17Z, #18579)
