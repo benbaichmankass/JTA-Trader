@@ -21,7 +21,11 @@ from src.runtime import directed_actions as da
 from src.runtime import live_review_intent as lri
 from src.runtime import live_review_rows_watch as watch
 from tests.test_live_review_apply import ACCOUNTS, PKG, STRATS, _ApplyDB, _intent, _trade
-from tests.test_live_review_apply import wired as wired  # noqa: F401  (fixture reuse)
+from tests import test_live_review_apply as _tlra
+
+# Fixture reuse. Bound by assignment, not import, so ruff F811 does not read
+# each test's `wired` parameter as a redefinition of an unused import.
+wired = _tlra.wired
 
 NOW = datetime(2026, 10, 29, 8, 30, 0, tzinfo=timezone.utc)
 QUOTE = "move the ADA stop to 0.21 now"
