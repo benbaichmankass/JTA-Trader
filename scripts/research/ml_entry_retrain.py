@@ -159,7 +159,7 @@ def run(a) -> int:
         (out / "retrain_status.json").write_text(json.dumps({"status": "ok", "plan": p}, indent=1) + "\n")
         print(fr["freshness_line"], flush=True)
         return 0
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:  # noqa: BLE001  # allow-silent: not silent, writes retrain_status.json (failed + why) and exits 1, so the run is the red flag
         # No halting: nothing serving is touched. The non-zero exit makes this run the ONE red flag.
         (out / "retrain_status.json").write_text(json.dumps(
             {"status": "failed", "error": f"{type(exc).__name__}: {exc}"[:500], "plan": p,

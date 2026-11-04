@@ -56,7 +56,7 @@ jobs:
         run: |
           set -euo pipefail
           python3 scripts/research/ml_entry_retrain.py run --out out --cache /tmp/ml_entry_klines ${RUN_DATE:+--run-date "$RUN_DATE"}
-      - name: Upload the candidate (also on failure: retrain_status.json says why)
+      - name: Upload the candidate (also on failure, retrain_status.json says why)
         if: always()
         uses: actions/upload-artifact@v4
         with:
