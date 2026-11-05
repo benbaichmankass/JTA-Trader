@@ -5,7 +5,7 @@ id: RQ-20261104-004
 title: 'ITERATION 2 of htf_pullback_trend_2h (iteration 1 PASS on adx_min 30 but the book still loses):
   on BTC 2h over 2020-07..2026-10, does a stricter ADX floor (35 / 40), the AD30 leg long-only, or the
   AD30 leg without the pivot-5 structure exit beat AD30 net of cost?'
-status: queued
+status: done
 cadence: once
 roadmap:
 - L-PROGRAMMES
@@ -168,3 +168,13 @@ generated:
   params:
     node: P3-ITER2-htf-pullback-trend-2h
 last_dispatched_at: '2026-11-04T23:47:33+00:00'
+grading:
+  auto: true
+  decision_rule_id: RULE-P3-ITER2-htf-pullback-trend-2h
+  evidence:
+  - research/results/RQ-20261104-004/41936610630.jsonl
+  graded_at: '2026-11-05'
+  grader: scripts/research/queue_grade.py
+  reason: 1 row(s), all measured, all pass
+  rows: 1
+  verdict: pass
