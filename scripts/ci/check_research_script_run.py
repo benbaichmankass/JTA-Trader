@@ -88,8 +88,10 @@ def check(queue_dir: Path = _REPO / "research" / "queue", workflow: Path = WORKF
 
     # R2/R3 — each workflow's own surface. The trainer twin holds VM_SSH_KEY (reaching the trainer IS the
     # point) and TRAINER_VM_IP (the trainer's address, a masked secret rather than a literal: IP-IN-PUBLIC-LOGS) and TABPFN_TOKEN (ML-TABPFN-LICENCE: the Prior Labs weights key, sent over ssh stdin only) and nothing
-    # else; the runner holds nothing beyond GITHUB_TOKEN.
-    problems += _check_workflow(workflow, {"GITHUB_TOKEN"})
+    # else; the runner holds GITHUB_TOKEN plus the PAPER Alpaca key pair (operator decision 2026-11-05, popup answer
+    # verbatim "Allow paper pair (Rec.)", row ALPACA-PAPER-KEYS-R3: for RQ-20261104-a41f-01's read-only bars; the
+    # LIVE pair stays excluded, and the workflow scopes the pair to its run step).
+    problems += _check_workflow(workflow, {"GITHUB_TOKEN", "ALPACA_API_KEY_ID", "ALPACA_API_SECRET_KEY"})
     if trainer_workflow is not None:
         problems += _check_workflow(trainer_workflow, {"GITHUB_TOKEN", "VM_SSH_KEY", "TABPFN_TOKEN", "TRAINER_VM_IP"})
     # RESEARCH-ROUTER: the Kaggle GPU twin holds KAGGLE_API_TOKEN (the kernel itself receives no secret).

@@ -1,0 +1,7 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "hold_reason": "tier_2_3_needs_approval",
+  "hold_text": "Lane NETTING-RECONCILER-CLOSE-REASON (Manager Session 2026-11-05b, PI-20261105-BBTN6WTC-0001). Tier 2: changes the live order monitor's journal close attribution (src/runtime/order_monitor.py _reconcile_netting_partial_closes) on every Bybit account including real-money bybit_2, and adds one read-only /v5/order/history lookup per candidate row after a confirmed divergence. Nothing here places, amends or cancels a venue order; no strategy, risk, sizing or exit logic changes. The manager asks the operator for one OK in chat, merges, restarts the trader and verifies the next netted own-leg close books sl/tp at the venue avg price on its first write.",
+  "why": "A netted row whose OWN SL/TP leg filled at the venue now closes with that leg's reason, venue avg price and exec time (MEASURED) instead of netting_attributed at a candle (ESTIMATED); attribution stays the fallback for the rest. Adds no gate."
+}

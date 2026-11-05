@@ -148,7 +148,74 @@ def collect(wanted: Optional[List[str]] = None, *, max_pages: int = 3, diag: Cal
         have = {t.get("order_package_id") for t in s.trades}
         if open_ids <= have or len(rows) < 1000:
             break
+    _read_consumed_bybit_legs(s, open_ids, diag)
     return s
+
+
+def _bybit_history_key(account: str, symbol: str) -> str:
+    return f"bybit_history:{account}:{symbol}"
+
+
+def _read_consumed_bybit_legs(s: Snapshot, open_ids: set, diag: Callable[[str], Any]) -> None:
+    """Read the venue order history for every Bybit (account, symbol) where a wanted package's OWN leg id is not
+    resting (LTR-MECH-PROP-MIRROR-BRACKET, 2026-11-05).
+
+    A package whose own SL/TP leg ids are missing from the open-orders read is either a bracket that FIRED (the
+    package closed at the venue and the journal close lags the read by seconds) or one that was CANCELLED while the
+    position stayed open. Those are opposite findings; the open-orders read alone cannot tell them apart, so
+    LR-20261105T1228Z-pkg-3245fc73e2f64536 called a stop that had filled 24 s before the read a lost bracket.
+    One history read per (account, symbol), only when needed."""
+    doc = s.get("bybit_orders") or {}
+    resting: Dict[str, set] = {}
+    for a in doc.get("accounts", []):
+        resting[a.get("account_id")] = {str(o.get("order_id")) for o in (a.get("result") or {}).get("orders", [])
+                                        if o.get("order_id")}
+    windows: Dict[Tuple[str, str], int] = {}
+    for t in s.trades:
+        aid, sym = t.get("account_id"), t.get("symbol")
+        if t.get("order_package_id") not in open_ids or aid not in resting or not sym:
+            continue
+        ids = [str(i) for i in (t.get("sl_order_id"), t.get("tp_order_id")) if i]
+        if not ids or all(i in resting[aid] for i in ids):
+            continue
+        try:
+            start = datetime.fromisoformat(str(t.get("created_at") or t.get("timestamp")).replace("Z", "+00:00"))
+            start_ms = int(start.timestamp() * 1000) - 60_000
+        except ValueError:
+            start_ms = int((datetime.now(timezone.utc) - timedelta(days=7)).timestamp() * 1000)
+        k = (aid, sym)
+        windows[k] = min(windows.get(k, start_ms), start_ms)
+    end_ms = int(datetime.now(timezone.utc).timestamp() * 1000) + 60_000
+    for (aid, sym), start_ms in windows.items():
+        name = _bybit_history_key(aid, sym)
+        try:
+            s.reads[name] = diag(f"bybit_raw_order_history?account_id={aid}&symbol={sym}"
+                                 f"&start_ms={start_ms}&end_ms={end_ms}")
+            s.read_at[name] = _now_iso()
+        except Exception as exc:  # allow-silent: recorded in errors; the mechanics evidence says it was not read
+            s.errors[name] = str(exc)[:200]
+
+
+def _own_leg_fates(s: Snapshot, account: str, symbol: str, leg_ids: Dict[str, Optional[str]]) -> Optional[Dict[str, dict]]:
+    """``{"sl"|"tp": {order_id, status, cancel_type, avg_price, updated}}`` for this package's own Bybit legs from
+    the venue order history, or None when the history was not read. A leg absent from the history is omitted."""
+    doc = s.get(_bybit_history_key(account, symbol))
+    if not isinstance(doc, dict) or doc.get("read_state") != "order_history_read":
+        return None
+    recs = {str(r.get("order_id")): r for r in ((doc.get("result") or {}).get("records") or [])}
+    out: Dict[str, dict] = {}
+    for kind, oid in leg_ids.items():
+        r = recs.get(str(oid)) if oid else None
+        if r is None:
+            continue
+        upd = r.get("updated_time")
+        try:
+            when = datetime.fromtimestamp(int(upd) / 1000, timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+        except (TypeError, ValueError):
+            when = None
+        out[kind] = {"order_id": str(oid), "status": r.get("order_status"), "cancel_type": r.get("cancel_type"),
+                     "avg_price": _f(r.get("avg_price")), "trigger_price": _f(r.get("trigger_price")), "at": when}
+    return out
 
 
 def generator_state() -> dict:
@@ -763,6 +830,48 @@ def _mechanics(s: Snapshot, view: dict, accts: List[dict], sl: Optional[float], 
                                    qty=_f(tr.get("position_size")), siblings=len(sibs))
             tr = a.get("trade")
             trade_open = (tr or {}).get("status") == "open" or (a.get("telemetry") or {}).get("lifecycle") == "open"
+            # the journal is the record of whether THIS account's trade is open; position_telemetry lags a close
+            # (LR-20261105T1228Z: telemetry still "open" 7 s after the journal closed the row)
+            jrows = [t for t in view["trades"] if t.get("account_id") == aid]
+            if trade_open and (tr or {}).get("status") != "open" and jrows \
+                    and not any(t.get("status") == "open" for t in jrows):
+                closed = jrows[0]
+                ev.append(f"{aid}: journal trade {closed.get('id')} is {closed.get('status')} "
+                          f"({closed.get('exit_reason')} at {closed.get('closed_at')}); position_telemetry still "
+                          f"reads open (lags the close), not read as an open trade")
+                tr = closed
+                trade_open = False
+            if ex == "bybit" and sibs:
+                ev.append(f"{aid}: {symbol} is NETTED across {len(sibs) + 1} open packages on this account (per side) "
+                          f"(this one + {', '.join(sibs)}); each package's own qty-scoped Partial SL/TP legs are "
+                          f"matched by order id, never by level alone")
+            fates = (_own_leg_fates(s, aid, symbol, {"sl": (tr or {}).get("sl_order_id"),
+                                                    "tp": (tr or {}).get("tp_order_id")})
+                     if ex == "bybit" and v.get("state") == "read" else None)
+            fired = {k: f for k, f in (fates or {}).items() if f.get("status") == "Filled"}
+            if trade_open and fired:
+                # the package's own bracket FIRED at the venue: protected throughout, closed at its own level; the
+                # journal close lags the read. Not a lost bracket and not an open position to review.
+                k, f = next(iter(fired.items()))
+                other = (fates or {}).get("tp" if k == "sl" else "sl") or {}
+                ev.append(f"{aid}: this package's own {k.upper()} leg {f['order_id']} FILLED at the venue at "
+                          f"{f['at']} (trigger {f['trigger_price']}, avg {f['avg_price']})"
+                          + (f"; its {('tp' if k == 'sl' else 'sl').upper()} leg {other.get('status')} "
+                             f"({other.get('cancel_type')})" if other else "")
+                          + "; the bracket closed the package at the venue, the journal close lags this read")
+                trade_open = False
+                v = dict(v, position=bool(sibs) and v.get("position"))
+            elif trade_open and fates:
+                for k, f in fates.items():
+                    if f.get("status") not in ("New", "Untriggered", "Active"):
+                        ev.append(f"{aid}: this package's own {k.upper()} leg {f['order_id']} is {f.get('status')} "
+                                  f"({f.get('cancel_type')}) at {f['at']} while its trade is open: the package's "
+                                  f"bracket was removed at the venue, not consumed")
+            elif trade_open and ex == "bybit" and v.get("state") == "read" and v.get("ambiguous"):
+                hist_err = s.errors.get(_bybit_history_key(aid, symbol))
+                if hist_err:
+                    ev.append(f"{aid}: venue order history not read ({hist_err}); a missing own leg cannot be told "
+                              f"apart from a fired one")
             if v["state"] != "read":
                 looked_fail += 1
                 item["evidence"] = v["why"]

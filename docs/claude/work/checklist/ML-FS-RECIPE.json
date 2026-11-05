@@ -14,18 +14,25 @@
   "id": "ML-FS-RECIPE",
   "title": "Fix the recipe, not the columns: stronger fixed regularisation or fold-internal shadow-feature selection with noise-column controls, threshold set against the measured seed spread (unit RQ-20261101-fs05-01)",
   "ceiling_usd": 6,
-  "note": "Manager 2026-11-01 ~12:03Z: a family ablation at +0.010 cannot admit anything when the recipe overfits with any extra column (baseline LOFO +0.0010; baseline plus 9 pure-noise columns -0.0157, measured 2026-11-01). Dated: unit registered 2026-11-01 (PR #22133, blocked); harness (arms R1/R2/R3, noise sets, 3 seeds) 2026-11-01T17:00Z; dev run (about 6 h CPU if serial, parallel arms on the runner) done by 2026-11-01T23:00Z; verdict 2026-11-02T08:00Z; the fixed recipe then reads ONE forward window once: W1 if RQ-20261101-fs02-01 did not run, else W2 (earliest 2026-11-11, forward accrual about 31 decisions/day). Gates: none. [2026-11-05 lane ML-FS-RECIPE] ROOT CAUSE of the slipped date: none of the three suspects. (1) Harness IS built: scripts/research/ml_entry_recipe.py via ml_entry_v2_run.py recipe (arms R0..R3, sets S0..S2, seeds 7/11/13). (2) The dispatcher never fired it and it did not fail: the unit sits in research/queue/blocked/ and its fs* id fails script_run _ID_RE and timeout 600>330 cap (row RESEARCH-UNIT-ID-REGEX), so it was run LOCALLY. (3) Not backend-blocked. THE RESULT ALREADY EXISTS and is on main: comms/research/RQ-20261101-fs05-01/local-20261101T1700Z/ (RESULT.md, result.json, 36 run files), graded 2026-11-01 17:00Z, 0 sealed windows read. This row's observation checked research/results/, the wrong store, and the row was never closed. Rule applied as registered, thresholds unchanged: fixed recipe = R0 (only gradeable noise-immune arm, S0 -0.0018), no family admitted; R1/R2/R3 INDETERMINATE (a fold under 1000 decisions); seed spread 0.012-0.040 vs 0.0017 assumed. Nothing re-run. Unit file in blocked/ left untouched (re-registering after a run would breach the rule; its iteration continues as d507-01). Next ML row: ML-FS-LABELS / RQ-20261101-fs06-01 is ALSO already graded locally per the ML-RECIPE note (no target admitted), so check that row for the same stale state before dispatching.",
+  "note": "Manager 2026-11-01 ~12:03Z: a family ablation at +0.010 cannot admit anything when the recipe overfits with any extra column (baseline LOFO +0.0010; baseline plus 9 pure-noise columns -0.0157, measured 2026-11-01). Dated: unit registered 2026-11-01 (PR #22133, blocked); harness (arms R1/R2/R3, noise sets, 3 seeds) 2026-11-01T17:00Z; dev run (about 6 h CPU if serial, parallel arms on the runner) done by 2026-11-01T23:00Z; verdict 2026-11-02T08:00Z; the fixed recipe then reads ONE forward window once: W1 if RQ-20261101-fs02-01 did not run, else W2 (earliest 2026-11-11, forward accrual about 31 decisions/day). Gates: none. [2026-11-05 lane ML-FS-RECIPE] ROOT CAUSE of the slipped date: none of the three suspects. (1) Harness IS built: scripts/research/ml_entry_recipe.py via ml_entry_v2_run.py recipe (arms R0..R3, sets S0..S2, seeds 7/11/13). (2) The dispatcher never fired it and it did not fail: the unit sits in research/queue/blocked/ and its fs* id fails script_run _ID_RE and timeout 600>330 cap (row RESEARCH-UNIT-ID-REGEX), so it was run LOCALLY. (3) Not backend-blocked. THE RESULT ALREADY EXISTS and is on main: comms/research/RQ-20261101-fs05-01/local-20261101T1700Z/ (RESULT.md, result.json, 36 run files), graded 2026-11-01 17:00Z, 0 sealed windows read. This row's observation checked research/results/, the wrong store, and the row was never closed. Rule applied as registered, thresholds unchanged: fixed recipe = R0 (only gradeable noise-immune arm, S0 -0.0018), no family admitted; R1/R2/R3 INDETERMINATE (a fold under 1000 decisions); seed spread 0.012-0.040 vs 0.0017 assumed. Nothing re-run. Unit file in blocked/ left untouched (re-registering after a run would breach the rule; its iteration continues as d507-01).",
   "observation": {
     "what": "RQ-20261101-fs05-01 result record on main: fixed recipe R0, no family admitted, R1/R2/R3 INDETERMINATE, spread and noise-control deltas",
     "how_to_check": "ls comms/research/RQ-20261101-fs05-01/local-20261101T1700Z/",
     "due_by": "2026-11-02"
   },
-  "updated_at": "2026-11-05T14:36:08Z",
+  "updated_at": "2026-11-05T15:01:07Z",
   "updated_by": "session_01AFoLuLmhUKeUzHC6CHz2uP",
+  "week_lane": "throttle",
   "due_by": "2026-11-06",
   "writeback": {
     "roadmap": "none: row closure only; the fs05-01 outcome (fixed recipe R0, no family admitted) was recorded 2026-11-01 in research/levers/ml-entry.yaml, no milestone line changed here",
     "arch": "none: no component changed"
   },
+  "lane_history": [
+    {
+      "lane": "session_01AFoLuL5SYTWKXeuE1pfqzX",
+      "archived_at": "2026-11-05T15:01:07Z"
+    }
+  ],
   "_seq": 882
 }

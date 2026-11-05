@@ -2,22 +2,29 @@
   "id": "RESTART-GAP-EXIT-FIRST",
   "title": "Restart gap breaches the 60 s exit-eval requirement (62.2 s 09:31Z, 64.1 s 10:58Z): start the exit loop before heavy boot init, and stop restarting the trader for trainer-only files",
   "phase": null,
-  "state": "queued",
-  "owner": "manager",
-  "lane": null,
+  "state": "done",
+  "owner": "lane",
+  "lane": "RESTART-GAP-EXIT-FIRST",
   "model": null,
   "ceiling_usd": null,
   "spend_usd": null,
   "tier": 2,
-  "prs": [],
+  "prs": [
+    23283
+  ],
   "blocked_on": [],
-  "note": "[TICK-STAGE2 lane, MEASURED 2026-11-05 via relay #23266/#23271: trader journalctl, ict-git-sync journalctl, exit_interval_soak, exit_loop_health] 10:58Z restart, gap 64.1 s = (a) 26.2 s: old process's last exit pass ~10:57:28.8 (derived: first-pass 10:58:32.88 minus 64.1 s) to systemctl restart 10:57:55 -- the old loop was mid-sleep; (b) <1 s stop (Stopping/Stopped/Started all 10:57:55); (c) 1.9 s to the WAL line 10:57:56.9; (d) 13.4 s restart-report broker reads to boot_audit line 10:58:10.3 (main() joins start_restart_report_thread up to REPORT_WAIT_S=45 s BEFORE _start_exit_loop); (e) 9.0 s strategy_versions snapshot + _apply_per_account_leverage + adapter/telegram build to 'exit-evaluation loop DECOUPLED' 10:58:19.4; (f) 13.5 s cold first pass (max_pass_ms 13478.7; steady passes ~1 s). Boot-to-exit-thread = 23.5 s, of which 22.4 s is init the exit loop does not need. ROOT CAUSE OF THIS RESTART: ict-git-sync 'Trader restart gate: restart (fec3de0..d123bec: non_py_runtime: deploy/trainer/Caddyfile.console)' -- scripts/ops/trader_import_closure.NON_RUNTIME_PATHS_RE (lockstep with scripts/deploy_pull_restart.sh and diag _NON_RUNTIME_PATHS_RE, pinned by tests/test_diag_restart_pending_lockstep.py) does not list deploy/trainer/, so a trainer-VM-only file restarted the live trader. 10:21Z restart for comparison: report 10:21:14, exit thread 10:21:23, first pass 13.3 s, gap 49.0 s. FIX (held PR, Tier 2): (1) start the exit loop right after WAL init, before the restart-report join, leverage and adapter build (saves ~22 s; check the report thread and the first exit pass do not contend on the IB pinned socket); (2) add deploy/trainer/ to the non-runtime set in all three lockstep places; (3) optional: bound (a) by a final exit pass on SIGTERM or by ict-git-sync waiting for the exit loop's pass boundary. Expected gap after (1): 26 + ~2 + ~13.5 = ~42 s < 45 s target, INFERRED. PROOF: a unit test that main() starts the exit-evaluation thread before start_restart_report_thread, plus the next deploy's 'exit restart gap: within - <45000ms' journal line and no EXIT-EVAL RESTART GAP BREACHED in /api/bot/alerts.",
+  "note": "[TICK-STAGE2 lane, MEASURED 2026-11-05 via relay #23266/#23271: trader journalctl, ict-git-sync journalctl, exit_interval_soak, exit_loop_health] 10:58Z restart, gap 64.1 s = (a) 26.2 s: old process's last exit pass ~10:57:28.8 (derived: first-pass 10:58:32.88 minus 64.1 s) to systemctl restart 10:57:55 -- the old loop was mid-sleep; (b) <1 s stop (Stopping/Stopped/Started all 10:57:55); (c) 1.9 s to the WAL line 10:57:56.9; (d) 13.4 s restart-report broker reads to boot_audit line 10:58:10.3 (main() joins start_restart_report_thread up to REPORT_WAIT_S=45 s BEFORE _start_exit_loop); (e) 9.0 s strategy_versions snapshot + _apply_per_account_leverage + adapter/telegram build to 'exit-evaluation loop DECOUPLED' 10:58:19.4; (f) 13.5 s cold first pass (max_pass_ms 13478.7; steady passes ~1 s). Boot-to-exit-thread = 23.5 s, of which 22.4 s is init the exit loop does not need. ROOT CAUSE OF THIS RESTART: ict-git-sync 'Trader restart gate: restart (fec3de0..d123bec: non_py_runtime: deploy/trainer/Caddyfile.console)' -- scripts/ops/trader_import_closure.NON_RUNTIME_PATHS_RE (lockstep with scripts/deploy_pull_restart.sh and diag _NON_RUNTIME_PATHS_RE, pinned by tests/test_diag_restart_pending_lockstep.py) does not list deploy/trainer/, so a trainer-VM-only file restarted the live trader. 10:21Z restart for comparison: report 10:21:14, exit thread 10:21:23, first pass 13.3 s, gap 49.0 s. FIX (held PR, Tier 2): (1) start the exit loop right after WAL init, before the restart-report join, leverage and adapter build (saves ~22 s; check the report thread and the first exit pass do not contend on the IB pinned socket); (2) add deploy/trainer/ to the non-runtime set in all three lockstep places; (3) optional: bound (a) by a final exit pass on SIGTERM or by ict-git-sync waiting for the exit loop's pass boundary. Expected gap after (1): 26 + ~2 + ~13.5 = ~42 s < 45 s target, INFERRED. PROOF: a unit test that main() starts the exit-evaluation thread before start_restart_report_thread, plus the next deploy's 'exit restart gap: within - <45000ms' journal line and no EXIT-EVAL RESTART GAP BREACHED in /api/bot/alerts. [RESTART-GAP-EXIT-FIRST lane, 2026-11-05 13:05Z] DONE. #23283 merged 12:45:52Z (squash 13a2e8d8), deployed with 33b8d35 (git merge-base: 13a2e8d8 is its ancestor; restart ping 12:49:37Z 'cause: deploy 33b8d35'). OBSERVED from /api/bot/exit-interval/soak (200-row window, 5 processes): the 12:49:35Z boundary is old process last row 12:49:18.386 -> new process first row 12:49:35.445 = 17,059 ms (first pass 12,449 ms) against the 60 s requirement and the 45 s target. The three boundaries before it in the same window, on the old code: 56,552 / 51,517 / 62,664 ms. /api/bot/alerts after 12:45Z: no EXIT-EVAL RESTART GAP BREACHED and no NEAR MISS. Not read: the trader's own 'exit restart gap' journal line (diag routes need a token the session proxy does not inject) and whether the old process's last row came from the SIGTERM final pass. Population n=1 post-fix restart; the soak log keeps grading every restart.",
   "due_by": "2026-11-08",
   "roadmap": [
     "L-OPS"
   ],
   "priority_rank": 2,
-  "updated_at": "2026-11-05T11:07:42Z",
-  "updated_by": "session_01AFoLuLzq1snbogF2qX97Pi",
+  "updated_at": "2026-11-05T14:17:36Z",
+  "updated_by": "session_01AFoLuLmhUKeUzHC6CHz2uP",
+  "writeback": {
+    "roadmap": "none: L-OPS tracks the landed_unproven population, not per-row lines; this row records its own outcome",
+    "arch": "ARCHITECTURE-CANONICAL change log row 2026-11-05 RESTART-GAP-EXIT-FIRST (boot order + SIGTERM final pass)"
+  },
+  "week_lane": "surge",
   "_seq": 945
 }
