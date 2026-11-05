@@ -78,13 +78,13 @@ registration_addendum_2026_11_05:
     bar close (price-triggered, applied from the next bar), learned arm at the 4h check-ins'
   window: dev = ENTRY walk-forward OOS trades 2022-01-01..2025-09-30; held-out 2025-10-01..2026-09-30 claimed once per model via holdout_lock
     (variants_on_window reported; the window is not fresh for ENTRY-family models). 2026-10 spent for frozen ENTRY v1 and not used. Forward confirm
-    on 2026-11+ registered separately and required before any Tier-3 change.
+    on 2026-11+ filed separately (PI-20261105-EHARNESS-0001) as RECOMMENDED evidence to gather, not a gate.
   stricter_than_the_entry_bar: The operator's point-estimate >= 0 bar (popup 2026-11-01) is for ONE decision model that must not lose money. An
     improvement over a free baseline (keep the fixed stop) is vacuous at >= 0 (an arm that never fires has delta 0), so this rule needs delta
     > 0 with CI95 lower > 0. A research decision rule, not a runtime gate. The operator may relax it BEFORE the run.
   not_covered: 'time-decay is arm (c); structure-based SL (arm e) is not authored here: it is an entry-time bracket choice already under 5e04-01
     / 5e01-09..11; the interaction with extend-only TP is tested after single-arm winners.'
-  disclosure: see RQ-20261101-c692-03 addendum (smoke peek on 2026-11-05; nothing chosen from it).
+  disclosure: 'see the RQ-20261101-c692-03 addendum (verbatim): a 2026-11-05 smoke printed part of the sealed-window MANAGE summary for ADAUSDT, BCHUSDT, BTCUSDT, ETCUSDT, ETHUSDT, LINKUSDT, LTCUSDT, TRXUSDT, XLMUSDT; nothing was chosen from it. This arm''s verdict carries heldout.peek (peeked_symbols and the delta ex those 9) because the arm trades them.'
 power:
   expected_n: 11000
   min_detectable_effect: 0.02

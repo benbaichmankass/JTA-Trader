@@ -180,16 +180,14 @@ no action touches a trade that already exited, CLOSE/BE/TRAIL availability, no-o
 - **Windows.** Dev = ENTRY walk-forward OOS trades 2022-01-01..2025-09-30 (MANAGE folds 2023-01..2025-07, purge + 7-day embargo). Held-out
   2025-10-01..2026-09-30, claimed once per model with `holdout_lock` (`variants_on_window` reported). **That window is not fresh for ENTRY-family
   models**; 2026-10 is spent for frozen ENTRY v1 and is not used; a forward confirm on 2026-11+ (when n >= 300 accrues) is registered as a pipeline row
-  and is required before any Tier-3 live change.
+  and is RECOMMENDED evidence, not a gate (no new gates without the operator's permission).
 - **Rules.** -03: unchanged (PASS iff managed mean net R per trade >= 0 AND mean delta per non-HOLD action >= 0; `proposal_eligible` additionally needs the
   paired CI95 lower bound of delta vs hold > 0). -08..-11: not read if the dev delta <= 0; INDETERMINATE below 300 trades / 10 symbols; PASS iff held-out
   paired delta vs hold-to-bracket > 0 and CI95 lower > 0. Deliberately stricter than the ENTRY bar: against a free baseline, delta >= 0 is satisfied by an arm
   that never fires. A research rule, not a runtime gate; the operator may relax it before the run.
 - **Not authored:** structure-based SL (arm e) is an entry-time bracket choice, already under 5e04-01 / 5e01-09..11; the interaction with extend-only TP is
   tested after single-arm winners.
-- **Disclosure.** A plumbing smoke on 2026-11-05 (9 symbols, pseudo held-out from 2024-10-01) pulled the sealed window by mistake (`E.fetch`'s `end` default is
-  bound at import) and its MANAGE summary was printed. Nothing (rule, margin, parameter, grid) was chosen from it; the bug is fixed and the smoke now refuses
-  data >= 2025-10-01.
+- **Disclosure.** a plumbing smoke of this harness (--arm manage, 9 symbols: ADAUSDT, BCHUSDT, BTCUSDT, ETCUSDT, ETHUSDT, LINKUSDT, LTCUSDT, TRXUSDT, XLMUSDT; pseudo held-out starting 2024-10-01) mistakenly included the sealed 2025-10-01..2026-09-30 window in its data, because E.fetch's default `end` is bound at import. What was printed to the lane: the tail of the smoke's manage-arm summary for those 9 symbols over 2024-10..2026-09 (by-month delta vs hold, giveback, the matched-random and single-static-action deltas, the action mix); the headline delta, CI and n were truncated from view and not read. The smoke's model was trained on rows before 2024-10-01, not the registered final fit. NOTHING (rule, margin, parameter, grid, action set) was chosen from it. The bug is fixed and guarded (smoke refuses data >= 2025-10-01). Every arm's verdict records peeked_symbols and the held-out delta ex those 9 symbols, so a reader can weigh it.
 
 ## 5. If none passes — the levers, in order
 

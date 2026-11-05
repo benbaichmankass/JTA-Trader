@@ -54,6 +54,7 @@ MIN_TRADES, MIN_SYMBOLS = 300, 10
 DEV_MIN_TRADES = 1000
 MANAGE_FOLDS = E.DEV_FOLDS[2:]                  # ENTRY OOS dev trades exist from 2022-01; MANAGE needs one fold of history
 BOOT = 2000
+PEEKED_SYMBOLS = ["ADAUSDT", "BCHUSDT", "BTCUSDT", "ETCUSDT", "ETHUSDT", "LINKUSDT", "LTCUSDT", "TRXUSDT", "XLMUSDT"]   # seen in the 2026-11-05 smoke (DESIGN 4a)
 
 
 # ------------------------------------------------------------------------------------------------ simulator
@@ -349,6 +350,13 @@ def paired_boot(d: np.ndarray, seed: int = E.SEED) -> list:
     return [float(np.percentile(ms, 2.5)), float(np.percentile(ms, 97.5))]
 
 
+def peek_report(d: np.ndarray, symbols) -> dict:
+    """Held-out delta ex the symbols whose sealed-window outcomes a smoke printed on 2026-11-05 (DESIGN 4a disclosure)."""
+    keep = ~np.isin(np.asarray(symbols), PEEKED_SYMBOLS)
+    return {"peeked_symbols": PEEKED_SYMBOLS, "n_ex_peeked": int(keep.sum()),
+            "delta_vs_hold_ex_peeked": float(d[keep].mean()) if keep.any() else None}
+
+
 def giveback(res: dict) -> float:
     return float(np.mean(np.maximum(res["mfe"] - res["gross"], 0.0)))
 
@@ -454,7 +462,7 @@ def arm_rule(a, tab, df_by, dev_tr, ho_tr) -> dict:
     s = stats(r["net"], hb["net"], sy)
     ci = paired_boot(d)
     res["heldout"] = {**s, "hold": stats(hb["net"], hb["net"], sy), "delta_ci95": ci, "giveback_r": giveback(r), "giveback_r_hold": giveback(hb),
-                      "by_month_delta": month_split(ts, d), "reason_counts": {str(k): int(v) for k, v in pd.Series(r["reason"]).value_counts().items()}}
+                      "peek": peek_report(d, sy), "by_month_delta": month_split(ts, d), "reason_counts": {str(k): int(v) for k, v in pd.Series(r["reason"]).value_counts().items()}}
     res["variants_read_on_window"] = (claim or {}).get("variants_on_window")
     if s["n"] < MIN_TRADES or s["n_symbols"] < MIN_SYMBOLS:
         v, why = "indeterminate", f"held-out trades={s['n']} / symbols={s['n_symbols']} below floor"
@@ -552,7 +560,7 @@ def arm_model(a, tab, df_by, dev_tr, ho_tr) -> dict:
         rr = realised(hrows, len(ho_tr), hP, hb, fk)
         static[f"{a_}_at_8h"] = float(np.mean(rr["net"] - hb["net"]))
     res["heldout"] = {**s, "hold": stats(hb["net"], hb["net"], sy), "delta_ci95": ci, "giveback_r": giveback(r), "giveback_r_hold": giveback(hb),
-                      "by_month_delta": month_split(ho_tr["ts"].to_numpy(), d),
+                      "peek": peek_report(d, sy), "by_month_delta": month_split(ho_tr["ts"].to_numpy(), d),
                       "matched_random_delta": {"draws": 200, "mean": float(np.mean(draws)), "p95": float(np.percentile(draws, 95))},
                       "static_single_action_delta_reported": static, "action_mix_checkins": pd.Series(act).value_counts().to_dict()}
     res["variants_read_on_window"] = (claim or {}).get("variants_on_window")
