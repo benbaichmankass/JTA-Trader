@@ -11,14 +11,14 @@
   "tier": 2,
   "prs": [],
   "blocked_on": [],
-  "note": "MEASURED by LIVE-REVIEW lane session_01AFoLuMb8WEET4qAxe1a7oA, row LR-20261105T1228Z-pkg-3245fc73e2f64536 (commit 992fcdb7), flag_mechanics, route operator_ask. Facts:\n- the package's own SL is 2408.177 and its TP 2614.92;\n- the bybit_1 resting ETH orders are SL 2384.63 / 2367.11 and TP 2509.58 / 2677.03;\n- 2384.63 / 2509.58 belong to sibling e4_oi_shock_1h; the ltr-wake read venue_sl_diverges with a gap of 23.547 > 0.25 x ATR.\nThe three prop accounts read 0 open positions. bybit_1 is netting one ETH position across 3 packages (trend_donchian_eth_prop, trend_donchian_eth, e4_oi_shock_1h), so a package-level bracket may not exist per package.\nTASK:\n- Establish whether this is (a) netting by design with the package bracket kept only in the journal (then the packet's mechanics check must read netted positions correctly), or (b) a lost bracket on a live position (then fix it in the order path; a Tier 3 merge).\n- Prime Directive: every position keeps both brackets.\nRe-entry test: the next ltr packet for an ETH bybit_1 package reads mechanics match, or names netting explicitly.",
+  "note": "MEASURED by LIVE-REVIEW lane session_01AFoLuMb8WEET4qAxe1a7oA, row LR-20261105T1228Z-pkg-3245fc73e2f64536 (commit 992fcdb7), flag_mechanics, route operator_ask. Facts:\n- the package's own SL is 2408.177 and its TP 2614.92;\n- the bybit_1 resting ETH orders are SL 2384.63 / 2367.11 and TP 2509.58 / 2677.03;\n- 2384.63 / 2509.58 belong to sibling e4_oi_shock_1h; the ltr-wake read venue_sl_diverges with a gap of 23.547 > 0.25 x ATR.\nThe three prop accounts read 0 open positions. bybit_1 is netting one ETH position across 3 packages (trend_donchian_eth_prop, trend_donchian_eth, e4_oi_shock_1h), so a package-level bracket may not exist per package.\nTASK:\n- Establish whether this is (a) netting by design with the package bracket kept only in the journal (then the packet's mechanics check must read netted positions correctly), or (b) a lost bracket on a live position (then fix it in the order path; a Tier 3 merge).\n- Prime Directive: every position keeps both brackets.\nRe-entry test: the next ltr packet for an ETH bybit_1 package reads mechanics match, or names netting explicitly. OPERATOR APPROVAL 2026-11-05 ~14:26Z for the follow-up PR #23347 (NETTING-RECONCILER-CLOSE-REASON, Tier 2; popup verbatim \"Yes, merge + restart (Rec.)\"): merge once CI is green, restart the trader, verify the next netted own-leg close records sl/tp at the venue price.",
   "due_by": "2026-11-06",
   "roadmap": [
     "unmapped"
   ],
   "roadmap_unmapped_reason": "weekly pass maps it (execution mechanics)",
   "priority_rank": 1,
-  "updated_at": "2026-11-05T14:06:41Z",
+  "updated_at": "2026-11-05T14:27:14Z",
   "updated_by": "session_01AFoLuLmhUKeUzHC6CHz2uP",
   "week_lane": "surge",
   "_seq": 951
