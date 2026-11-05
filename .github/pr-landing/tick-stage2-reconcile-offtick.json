@@ -1,0 +1,11 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "hold_reason": "tier_2_3_needs_approval",
+  "hold_text": "Tier-2 live-trader runtime change (main loop threading, entry-dispatch lock, exit-thread sqlite busy timeout). The lane builds and validates; the manager merges and deploys. Rollback without redeploy: RECONCILE_OFFTICK_DISABLED=1 (reconciliation back on the tick); EXIT_LOOP_DB_WRITE_TIMEOUT_SECONDS=5 (old exit-thread write wait).",
+  "why": "MEASURED 2026-11-05 tick_cost (one process, 78 ticks): tick mean 47.4 s, order_monitor (reconciliation half) 23.6 s of it. The 08:01:12Z EXIT-EVAL INTERVAL BREACH (71.2 s) was an exit pass of 42.0 s, in which each package took 2-7 s while the journal write lock was held elsewhere ('database is locked' on the main thread at the same seconds). This PR moves reconciliation onto its own 60 s thread behind a journal_sync lock shared with entry dispatch and the pairs tick, and bounds the exit thread's best-effort telemetry writes to a 0.25 s busy timeout.",
+  "recorded_decision": {
+    "kind": "operator_decision",
+    "ref": "TICK-STAGE2-RECONCILE-OFFTICK"
+  }
+}
