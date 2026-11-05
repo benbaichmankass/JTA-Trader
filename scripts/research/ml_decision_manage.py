@@ -45,6 +45,10 @@ CHECKINS = [4, 8, 12, 16, 20]
 ACTIONS = ["HOLD", "CLOSE", "BE", "TRAIL", "TPX"]
 LEARNED = ["CLOSE", "BE", "TRAIL", "TPX"]
 SL_ONLY = ["BE", "TRAIL"]                       # the ML-SL-revision arm (d): SL tighten actions only
+SL2 = ["BE", "BE1", "TRAIL", "TRAIL15"]      # variant mlsl2: BE needs close > entry; BE1 needs a close >= +1R; TRAIL 1.0 ATR; TRAIL15 1.5 ATR
+MARGIN_GRID2 = [0.15, 0.20, 0.25, 0.30, 0.40]   # variant mlsl2: the grid extended PAST the 0.15 edge of the first read
+TRAIL_DIST = {"TRAIL": 1.0, "TRAIL15": 1.5}
+DEV_FOLDS_POSITIVE_MIN = 4                      # of the 6 MANAGE dev folds, for the dev-stage pass
 MARGIN_GRID = [0.0, 0.02, 0.05, 0.10, 0.15]    # predicted delta net R an action must exceed; chosen on dev only
 BE_R = 1.0                                      # arm (a): break-even after a bar close >= +1R
 TRAIL_ACT_R = 1.0                               # arm (b): trail activates after a bar close >= +1R
@@ -137,20 +141,21 @@ def action_hook(k: int, action: str, mask: np.ndarray, avail_out: np.ndarray | N
                 st["close"] = st["close"] | m
             elif action == "TPX":
                 st["tp"] = np.where(m, st["tp"] + P.atr, st["tp"])
-            elif action == "BE":
-                ok = m & (c > P.e) & (P.e > st["sl"])
+            elif action in ("BE", "BE1"):
+                gate = (c > P.e) if action == "BE" else (c >= P.e + BE_R * P.risk)
+                ok = m & gate & (P.e > st["sl"])
                 st["sl"] = np.where(ok, P.e, st["sl"])
                 if avail_out is not None:
                     avail_out[:] = ok
-            elif action == "TRAIL":
-                lvl = P.h[:, max(0, j - 3):j + 1].max(axis=1) - P.atr
+            elif action in TRAIL_DIST:
+                lvl = P.h[:, max(0, j - 3):j + 1].max(axis=1) - TRAIL_DIST[action] * P.atr
                 ok = m & (lvl < c) & (lvl > st["sl"])
                 st["sl"] = np.where(ok, lvl, st["sl"])
                 trail_on[:] = ok
                 if avail_out is not None:
                     avail_out[:] = ok
-        if action == "TRAIL" and b >= k:
-            lvl = st["runmax"] - P.atr
+        if action in TRAIL_DIST and b >= k:
+            lvl = st["runmax"] - TRAIL_DIST[action] * P.atr
             tight = trail_on & al & (lvl > st["sl"])
             st["sl"] = np.where(tight, lvl, st["sl"])
     return hook
@@ -235,17 +240,17 @@ def gather(trades: pd.DataFrame, df_by_sym: dict, atr_by: pd.DataFrame) -> Paths
 
 
 # ------------------------------------------------------------------------------------------------ labels and features
-def label_actions(P: Paths) -> dict:
+def label_actions(P: Paths, acts: list[str] | None = None) -> dict:
     """HOLD outcome plus, for each check-in k and action a, the paired delta net R and availability."""
     base = simulate(P)
     lab = {"base": base, "delta": {}, "avail": {}}
     everyone = np.ones(P.n, bool)
     for k in CHECKINS:
-        for a in LEARNED:
+        for a in (acts or LEARNED):
             av = np.zeros(P.n, bool)
             r = simulate(P, action_hook(k, a, everyone, av))
             alive = base["bars"] > k
-            ok = alive & (av if a in ("BE", "TRAIL") else True)
+            ok = alive & (av if a in ("BE", "BE1", "TRAIL", "TRAIL15") else True)
             lab["delta"][(k, a)] = np.where(ok, r["net"] - base["net"], np.nan)
             lab["avail"][(k, a)] = ok
     return lab
@@ -254,7 +259,7 @@ def label_actions(P: Paths) -> dict:
 STATE_COLS = ["open_r", "bars_held", "mfe_r", "mae_r", "dist_sl_atr", "dist_tp_atr", "side_n", "ret_since_entry_atr"]
 
 
-def checkin_table(trades: pd.DataFrame, P: Paths, lab: dict, tab: pd.DataFrame) -> pd.DataFrame:
+def checkin_table(trades: pd.DataFrame, P: Paths, lab: dict, tab: pd.DataFrame, acts: list[str] | None = None) -> pd.DataFrame:
     """One row per (trade, check-in) with the trade still alive: market features at the check-in bar (the tab row of the same
     symbol at index i+k, all <= that bar's close) + trade state + the paired deltas."""
     base = lab["base"]
@@ -281,7 +286,7 @@ def checkin_table(trades: pd.DataFrame, P: Paths, lab: dict, tab: pd.DataFrame) 
         d["k"] = k
         d["ts"] = tr["ts"].to_numpy()
         d["symbol"] = tr["symbol"].to_numpy()
-        for a in LEARNED:
+        for a in (acts or LEARNED):
             d[f"d_{a}"] = lab["delta"][(k, a)][alive]
             d[f"av_{a}"] = lab["avail"][(k, a)][alive]
         rows.append(d)
@@ -320,7 +325,7 @@ def realised(rows: pd.DataFrame, trades_n: int, P: Paths, base: dict, action_by_
     ignored), and re-simulate the whole path. Returns the managed net R per trade."""
     acts = action_by_row[action_by_row != "HOLD"]
     first = rows.loc[acts.index].assign(act=acts).sort_values("k").drop_duplicates("trade")
-    n_act = {a: 0 for a in LEARNED}
+    n_act = {a: 0 for a in set(action_by_row) - {"HOLD"}}
     acted = np.zeros(trades_n, bool)
     managed = base["net"].copy()
     gross, bars, mfe = base["gross"].copy(), base["bars"].copy(), base["mfe"].copy()
@@ -330,7 +335,7 @@ def realised(rows: pd.DataFrame, trades_n: int, P: Paths, base: dict, action_by_
         r = simulate(P, action_hook(int(k), a, mask))
         managed[mask] = r["net"][mask]
         gross[mask], bars[mask], mfe[mask] = r["gross"][mask], r["bars"][mask], r["mfe"][mask]
-        n_act[a] += int(mask.sum())
+        n_act[a] = n_act.get(a, 0) + int(mask.sum())
         acted |= mask
     return {"net": managed, "gross": gross, "bars": bars, "mfe": mfe, "n_actions": n_act, "acted": acted}
 
@@ -425,7 +430,7 @@ def run(a) -> int:
                 "elapsed_s": round(time.time() - t0)})
     v, why = res.pop("verdict"), res.pop("why")
     (out / "summary.json").write_text(json.dumps({**res, "verdict": v, "why": why}, indent=1, default=str) + "\n")
-    vj = {"verdict": v, "read_state": "measured", "n": res["heldout"]["n"] if res.get("heldout") else 0, "measurement": res,
+    vj = {"verdict": v, "read_state": "measured", "n": res["heldout"]["n"] if res.get("heldout") else res.get("dev", {}).get("n_trades", 0), "measurement": res,
           "note": why, "population": (f"{a.arm}: frozen ENTRY (tau {tau}) trades, static {BASE_SL}/{BASE_TP} ATR bracket, 24h, held-out "
                                       f"{E.HOLDOUT_START}..{E.END}, 60-perp bp2-f4271084b120, full cost stack, paired vs hold-to-bracket")}
     (out / "verdict.json").write_text(json.dumps(vj, indent=1, default=str) + "\n")
@@ -489,15 +494,17 @@ def claim_read(a, model_id: str) -> dict | None:
 
 
 def arm_model(a, tab, df_by, dev_tr, ho_tr) -> dict:
-    actions = LEARNED if a.arm == "manage" else SL_ONLY
+    actions = {"manage": LEARNED, "mlsl": SL_ONLY, "mlsl2": SL2}[a.arm]
+    grid = MARGIN_GRID2 if a.arm == "mlsl2" else MARGIN_GRID
     dP, _ = gather(dev_tr, df_by, atr_series(tab, dev_tr))
-    dlab = label_actions(dP)
-    dev_rows = checkin_table(dev_tr, dP, dlab, tab)
+    dlab = label_actions(dP, actions)
+    dev_rows = checkin_table(dev_tr, dP, dlab, tab, actions)
     # dev walk-forward for the margin: expanding folds over MANAGE_FOLDS, trade-level purge by exit time
     dev_tr = dev_tr.reset_index(drop=True)
     bounds = [pd.Timestamp(x, tz="UTC") for x in MANAGE_FOLDS] + [pd.Timestamp(E.HOLDOUT_START, tz="UTC")]
-    fold_net = {m: [] for m in MARGIN_GRID}
-    n_by_margin = {m: 0 for m in MARGIN_GRID}
+    fold_net = {m: [] for m in grid}
+    fold_means = {m: [] for m in grid}
+    n_by_margin = {m: 0 for m in grid}
     for lo, hi in itertools.pairwise(bounds):
         cut = lo - pd.Timedelta(days=E.EMBARGO_DAYS) - pd.Timedelta(hours=H + 1)
         tr_rows = dev_rows[dev_rows.ts < cut]
@@ -507,20 +514,35 @@ def arm_model(a, tab, df_by, dev_tr, ho_tr) -> dict:
         heads = fit_heads(tr_rows, actions)
         pred = predict_heads(heads, te_rows)
         te_trades = np.unique(te_rows["trade"])
-        for m in MARGIN_GRID:
+        for m in grid:
             act = choose(pred, m)
             r = realised(te_rows, len(dev_tr), dP, simulate(dP), act)
             d = (r["net"] - simulate(dP)["net"])[te_trades]
             fold_net[m].append(d)
+            fold_means[m].append(float(d.mean()))
             n_by_margin[m] += int((act != "HOLD").sum())
         print(f"MANAGE dev fold {lo.date()} done", flush=True)
     dev_delta = {m: float(np.mean(np.concatenate(v))) if v else None for m, v in fold_net.items()}
-    elig = [m for m in MARGIN_GRID if dev_delta[m] is not None and n_by_margin[m] >= 1]
+    elig = [m for m in grid if dev_delta[m] is not None and n_by_margin[m] >= 1]
     margin = max(elig, key=lambda m: (dev_delta[m], m)) if elig else None
     res = {"dev": {"delta_by_margin": {str(m): (None if v is None else round(v, 5)) for m, v in dev_delta.items()},
                    "actions_by_margin": n_by_margin, "chosen_margin": margin}, "heldout": None}
     if margin is None or dev_delta[margin] <= 0:
         res.update(verdict="fail", why=f"dev walk-forward delta vs hold <= 0 at every margin (best {margin}: {dev_delta.get(margin)}): not read on the held-out (registered)")
+        return res
+    if a.arm == "mlsl2":      # DEV STAGE ONLY: never touches the held-out or any forward window; freezes the config for the single forward read
+        dall = np.concatenate(fold_net[margin])
+        ci = paired_boot(dall)
+        pos = int(sum(1 for x in fold_means[margin] if x > 0))
+        res["dev"].update(delta_ci95=ci, fold_means=[round(x, 5) for x in fold_means[margin]], folds_positive=pos, n_trades=int(len(dall)),
+                          at_grid_edge=bool(margin == max(grid)),
+                          frozen_config={"actions": actions, "margin": margin, "base": f"{BASE_SL}/{BASE_TP} ATR, 24h", "tau": None})
+        ok = dev_delta[margin] > 0 and ci[0] > 0 and pos >= DEV_FOLDS_POSITIVE_MIN
+        res["variants_read_on_window"] = 0
+        res.update(verdict="pass" if ok else "fail",
+                   why=(f"DEV STAGE: delta vs hold {dev_delta[margin]:+.5f} R/trade, CI95 [{ci[0]:+.5f}, {ci[1]:+.5f}], folds positive {pos}/{len(fold_means[margin])}, "
+                        f"margin {margin}{' (AT THE GRID EDGE)' if margin == max(grid) else ''}; frozen for the forward read" if ok else
+                        f"DEV STAGE: delta {dev_delta[margin]:+.5f}, CI95 [{ci[0]:+.5f}, {ci[1]:+.5f}], folds positive {pos}: does not clear the dev rule"))
         return res
     claim = claim_read(a, a.arm)
     heads = fit_heads(dev_rows[dev_rows.ts < pd.Timestamp(E.HOLDOUT_START, tz="UTC") - pd.Timedelta(days=E.EMBARGO_DAYS) - pd.Timedelta(hours=H + 1)], actions)
@@ -619,6 +641,11 @@ def _self_test() -> None:
     av = np.zeros(P.n, bool)
     simulate(P, action_hook(8, "BE", ev, av))
     assert (av <= (P.c[:, 7] > P.e)).all()
+    # 4b. BE1 only where the bar-k close is >= +1R; TRAIL15 never trails closer than TRAIL (1.5 ATR behind vs 1.0)
+    av1 = np.zeros(P.n, bool)
+    simulate(P, action_hook(8, "BE1", ev, av1))
+    assert (av1 <= (P.c[:, 7] >= P.e + BE_R * P.risk)).all()
+    assert (av1 <= av).all()
     # 5. a rule with an inert parameter is a no-op (time-decay whose final distance equals the base stop)
     assert np.allclose(simulate(P, rule_hook("timedecay", BASE_SL))["net"], base["net"])
     # 6. a BE stop never loses more than the hold stop on a trade it touches (SL moved up only)
@@ -633,7 +660,7 @@ def _self_test() -> None:
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("cmd", nargs="?", default="run", choices=["run"])
-    ap.add_argument("--arm", default="manage", choices=["manage", "be", "trail", "timedecay", "mlsl"])
+    ap.add_argument("--arm", default="manage", choices=["manage", "be", "trail", "timedecay", "mlsl", "mlsl2"])
     ap.add_argument("--entry-summary", default=str(REPO / "comms/research/RQ-20261101-c692-01/local-20261101T0835Z/summary.json"))
     ap.add_argument("--cache", default="/tmp/ml_decision_klines")
     ap.add_argument("--out", default="/tmp/ml_decision_manage_out")

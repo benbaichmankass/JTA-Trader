@@ -1,0 +1,130 @@
+# Hand-authored 2026-11-05 by lane ML-MANAGE-HARNESS (Tier 1), manager decision 2026-11-05 15:14Z. Decision rule registered BEFORE any run. Gates this adds or changes: none.
+id: RQ-20261105-c692-13
+title: 'ML SL revision v2, FORWARD READ: does the c692-12 frozen config beat hold-to-bracket on the 2026-11 forward window, paired, net of the
+  full cost stack?'
+status: blocked
+cadence: once
+theme: ml_health
+priority: 1
+roadmap:
+- L-ML-LIVE
+kind: experiment
+practice_precedent: 'T1, M6 (docs/reference/trading-and-model-practice-principles.md): purged + embargoed walk-forward with a sealed held-out
+  window; triple-barrier first-passage labels (Lopez de Prado 2018, ch. 3); docs/research/ml-decision-models-2026-11-01/DESIGN.md.'
+question: The single read of the c692-12 variant (manager decision 2026-11-05 15:14Z). Forward window only; nothing re-selected.
+why_this_matters: 'Operator 2026-11-01 ~23:00Z (row ML-ENTRY-DYNAMIC-SL): "we also need to test dynamic sl features for the ml". Active management,
+  SL side. A live change is Tier 3.'
+decision_rule:
+  id: RULE-RQ20261105c69213-MLSL2
+  registered_at: '2026-11-05'
+  registered_before_run: true
+  statistic: Forward paired delta net R per trade vs hold-to-bracket (full cost stack), trade-grouped paired bootstrap CI95; also win rate, p05
+    and min net R, giveback, by-day delta, acted share, matched random.
+  rule: INDETERMINATE IF forward trades < 300 OR distinct symbols < 10. PASS IF forward mean paired delta vs hold-to-bracket > 0 AND the trade-grouped
+    paired bootstrap CI95 lower bound > 0. FAIL otherwise. Thresholds are not changed after any result. A PASS is a Tier-3 PROPOSAL (new serving
+    adapter for the BE/TRAIL heads on ml_entry) for the operator, never a change.
+  what_it_does_not_do: No sizing, no config change, no order, no serving adapter. A PASS is a Tier-3 PROPOSAL to the operator, not a change.
+  min_n: 300 trades on >= 10 symbols (forward stage)
+compute: cpu_long
+value:
+  bucket: ai_trader
+  usd_at_stake_per_month: 800
+  confidence: 0.2
+  basis: 'stand-in: operator priority (row ML-ENTRY-DYNAMIC-SL); not a P&L measurement.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 6.0
+  est_minutes: 45
+  why_runner: Keyless public Binance Vision klines; GBDT on CPU; no trainer data.
+  basis: 'INFERRED: ~4,500 monthly zips (~40 KB each), ~0.8M decision rows x 20 features, 9 LightGBM pairs of fits, a 200-draw random baseline
+    in pure Python.'
+run:
+  workflow: research-script-run.yml
+  command:
+  - python3
+  - scripts/research/ml_decision_manage.py
+  - run
+  - --arm
+  - mlsl2
+  - --stage
+  - forward
+  - --cache
+  - /tmp/ml_decision_klines
+  - --unit
+  - '{unit}'
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 240
+  inputs:
+    research_unit: RQ-20261105-c692-13
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- RQ-20261105-c692-11
+- ML-DECISION-MODELS
+- ML-ENTRY-DYNAMIC-SL
+- PI-20261105-EHARNESS-0001
+- docs/research/ml-decision-models-2026-11-01/DESIGN.md
+what_it_does_not_do: Registers, serves or promotes nothing; changes no config; places no order; sizes nothing.
+registration_addendum_2026_11_05:
+  purpose: The SINGLE forward read of the c692-12 frozen config.
+  requires: 'RQ-20261105-c692-12 verdict pass (its frozen_config: actions, margin).'
+  window: forward 2026-11-01..2026-11-30 (or the next disjoint month); frozen ENTRY v1 (ml/served/ml_decision_entry_v1) supplies the trades; MANAGE
+    heads trained on dev ENTRY-OOS trades only (<= 2025-09), margin and actions as frozen; NO refit of margin or actions.
+  rule_note: Stricter than the ENTRY bar for the same reason as -08..-11 (improvement over a free baseline).
+  disclosure: 'see the RQ-20261101-c692-03 addendum (verbatim): a 2026-11-05 smoke printed part of the sealed-window MANAGE summary for ADAUSDT,
+    BCHUSDT, BTCUSDT, ETCUSDT, ETHUSDT, LINKUSDT, LTCUSDT, TRXUSDT, XLMUSDT; nothing was chosen from it. This arm''s verdict carries heldout.peek
+    (peeked_symbols and the delta ex those 9) because the arm trades them.'
+power:
+  expected_n: 11000
+  min_detectable_effect: 0.02
+  effect_units: metric
+  sd: 0.5
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: 'INFERRED: ~11,000 held-out ENTRY trades; sd 0.5 R guessed for the paired delta; MDE = 2.8*sd/sqrt(n) ~ 0.013 rounded up to 0.02. The
+    run records observed n and sd.'
+  feasibility:
+    source: none
+    accrual_basis: Replays public history; nothing accrues. The run records the observed n and sd.
+intervention_controls:
+  hold_to_bracket: true
+  matched_random:
+    draws: 200
+  best_static:
+    grid:
+    - be_at_1r
+    - trail_1atr
+    - tp_plus_1atr
+    - close_at_12h
+    excludes_test_folds: true
+  bootstrap_group: trade
+ml_consumer:
+  consumer: ML-ENTRY-LIVE-ADAPTER
+  decision: whether the ml_entry leg's open positions get a tightened stop (break-even / trail / ML revision) on bybit_2 + bybit_portfolio
+  legs:
+  - xrp_pullback_2h
+  book: money
+requires_result:
+  unit: RQ-20261105-c692-12
+  verdict: pass
+blocked_on:
+- kind: data
+  ref: https://data.binance.vision/data/futures/um/monthly/klines/BTCUSDT/1h/BTCUSDT-1h-2026-11.zip
+  what: the 2026-11 monthly kline zip (~2026-12-02) so a forward window of >= 300 trades exists
+  clears_when: the URL returns 200
+- kind: harness
+  ref: scripts/research/ml_decision_manage.py
+  what: 'a `--stage forward --fwd-start/--fwd-end` path: frozen ENTRY v1 + the c692-12 frozen config, one claim via holdout_lock, no refit of
+    margin/actions'
+  clears_when: lands on main with a self-test; the lane git-mvs this file to research/queue/ status queued (rule unchanged)
+blocked_review:
+  by: lane ML-MANAGE-HARNESS
+  disposition: kept
+  due_by: '2026-12-05'
+  note: waits on the 2026-11 data and the forward-stage harness; owner row ML-DECISION-MODELS
+  reviewed: '2026-11-05'

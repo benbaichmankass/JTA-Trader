@@ -1,0 +1,118 @@
+# Hand-authored 2026-11-05 by lane ML-MANAGE-HARNESS (Tier 1), manager decision 2026-11-05 15:14Z. Decision rule registered BEFORE any run. Gates this adds or changes: none.
+id: RQ-20261105-c692-12
+title: 'ML SL revision v2, DEV STAGE: do BE / BE1 / TRAIL / TRAIL15 heads with the margin grid extended past 0.15 add net R over hold-to-bracket
+  on the dev walk-forward (pooled, paired, positive in >= 4 of 6 folds, CI95 lower > 0)?'
+status: queued
+cadence: once
+theme: ml_health
+priority: 1
+roadmap:
+- L-ML-LIVE
+kind: experiment
+practice_precedent: 'T1, M6 (docs/reference/trading-and-model-practice-principles.md): purged + embargoed walk-forward with a sealed held-out
+  window; triple-barrier first-passage labels (Lopez de Prado 2018, ch. 3); docs/research/ml-decision-models-2026-11-01/DESIGN.md.'
+question: 'Manager decision 2026-11-05 15:14Z on c692-11 (fragile PASS). Select action set and margin on DEV ONLY; freeze the config for a single
+  forward read (c692-13). Look-before-retest: c692-11 (margin 0.15 at the grid edge; dev +0.00023), c692-08/-09 (rule BE@+1R and trail failed
+  dev), c692-03 (full head failed dev). What differs: margin grid {0.15..0.40}, BE1 and TRAIL15 actions, and the read moves to a forward window.'
+why_this_matters: 'Operator 2026-11-01 ~23:00Z (row ML-ENTRY-DYNAMIC-SL): "we also need to test dynamic sl features for the ml". Active management,
+  SL side. A live change is Tier 3.'
+decision_rule:
+  id: RULE-RQ20261105c69212-MLSL2
+  registered_at: '2026-11-05'
+  registered_before_run: true
+  statistic: Held-out delta is NOT computed; the statistic is the pooled dev OOS paired delta net R per trade vs hold-to-bracket (full cost stack)
+    with a trade-grouped paired bootstrap CI95 and the per-fold means.
+  rule: 'PASS (dev stage) iff pooled dev OOS delta vs hold-to-bracket at the dev-chosen margin > 0 AND its trade-grouped paired bootstrap CI95
+    lower bound > 0 AND the delta is positive in >= 4 of the 6 MANAGE dev folds. Else FAIL: the variant is not sent to the forward read. The result
+    records at_grid_edge and the frozen config.'
+  what_it_does_not_do: No sizing, no config change, no order, no serving adapter. A PASS is a Tier-3 PROPOSAL to the operator, not a change.
+  min_n: 'dev stage: pooled dev OOS trades (~60k) via 6 MANAGE folds'
+compute: cpu_long
+value:
+  bucket: ai_trader
+  usd_at_stake_per_month: 800
+  confidence: 0.2
+  basis: 'stand-in: operator priority (row ML-ENTRY-DYNAMIC-SL); not a P&L measurement.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 6.0
+  est_minutes: 45
+  why_runner: Keyless public Binance Vision klines; GBDT on CPU; no trainer data.
+  basis: 'INFERRED: ~4,500 monthly zips (~40 KB each), ~0.8M decision rows x 20 features, 9 LightGBM pairs of fits, a 200-draw random baseline
+    in pure Python.'
+run:
+  workflow: research-script-run.yml
+  command:
+  - python3
+  - scripts/research/ml_decision_manage.py
+  - run
+  - --arm
+  - mlsl2
+  - --cache
+  - /tmp/ml_decision_klines
+  - --unit
+  - '{unit}'
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 240
+  inputs:
+    research_unit: RQ-20261105-c692-12
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- RQ-20261105-c692-11
+- ML-DECISION-MODELS
+- ML-ENTRY-DYNAMIC-SL
+- PI-20261105-EHARNESS-0001
+- docs/research/ml-decision-models-2026-11-01/DESIGN.md
+what_it_does_not_do: Registers, serves or promotes nothing; changes no config; places no order; sizes nothing.
+registration_addendum_2026_11_05:
+  purpose: ONE pre-registered variant of RQ-20261105-c692-11 (manager decision 2026-11-05 15:14Z), DEV STAGE only. c692-11 passed its held-out
+    read fragilely (CI95 lower +0.0001; chosen margin 0.15 at the edge of its grid; dev delta +0.00023).
+  changes_vs_c692_11: 'margin grid extended PAST the edge: {0.15, 0.20, 0.25, 0.30, 0.40}; action set {BE (close > entry), BE1 (close >= +1R),
+    TRAIL (1.0 ATR), TRAIL15 (1.5 ATR)}; everything else identical (base trades, features, LightGBM recipe, check-ins, paired labels).'
+  selection: 'DEV ONLY (ENTRY walk-forward OOS trades 2022-01..2025-09; MANAGE folds 2023-01..2025-07). The 2025-10..2026-09 window is read by
+    5 variants and is NOT used by this unit: the dev stage never reads it and never claims it.'
+  single_read: The ONE read of this variant is the forward window 2026-11 (unit RQ-20261105-c692-13, blocked on the data and a forward-stage harness),
+    claimed once via holdout_lock. A disjoint forward month is acceptable if November is spent by PI-20261105-EHARNESS-0001's re-score of c692-11;
+    the model_id differs, the window must not be reused by this variant.
+  dev_rule: 'PASS (dev stage) iff pooled dev OOS delta vs hold-to-bracket at the dev-chosen margin > 0 AND its trade-grouped paired bootstrap
+    CI95 lower bound > 0 AND the delta is positive in >= 4 of the 6 MANAGE dev folds. Else FAIL: the variant is not sent to the forward read.
+    The result records at_grid_edge and the frozen config.'
+  disclosure: 'see the RQ-20261101-c692-03 addendum (verbatim): a 2026-11-05 smoke printed part of the sealed-window MANAGE summary for ADAUSDT,
+    BCHUSDT, BTCUSDT, ETCUSDT, ETHUSDT, LINKUSDT, LTCUSDT, TRXUSDT, XLMUSDT; nothing was chosen from it. This arm''s verdict carries heldout.peek
+    (peeked_symbols and the delta ex those 9) because the arm trades them.'
+power:
+  expected_n: 11000
+  min_detectable_effect: 0.02
+  effect_units: metric
+  sd: 0.5
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: 'INFERRED: ~11,000 held-out ENTRY trades; sd 0.5 R guessed for the paired delta; MDE = 2.8*sd/sqrt(n) ~ 0.013 rounded up to 0.02. The
+    run records observed n and sd.'
+  feasibility:
+    source: none
+    accrual_basis: Replays public history; nothing accrues. The run records the observed n and sd.
+intervention_controls:
+  hold_to_bracket: true
+  matched_random:
+    draws: 200
+  best_static:
+    grid:
+    - be_at_1r
+    - trail_1atr
+    - tp_plus_1atr
+    - close_at_12h
+    excludes_test_folds: true
+  bootstrap_group: trade
+ml_consumer:
+  consumer: ML-ENTRY-LIVE-ADAPTER
+  decision: whether the ml_entry leg's open positions get a tightened stop (break-even / trail / ML revision) on bybit_2 + bybit_portfolio
+  legs:
+  - xrp_pullback_2h
+  book: money
