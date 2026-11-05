@@ -54,6 +54,13 @@ def test_diag_classifier_matches_the_deploy_on_the_edge_paths():
     assert not _is_runtime_path("tools/phone-executor/app/src/main/assets/exec.js")
     assert not _is_runtime_path("tools/phone-probe/README.md")
     assert _is_runtime_path("tools/gemini_delegate.ipynb")  # only the two app trees
+    # RESTART-GAP-EXIT-FIRST: trainer-VM-only files never restart the live VM...
+    assert not _is_runtime_path("deploy/trainer/Caddyfile.console")
+    assert not _is_runtime_path("deploy/trainer/ict-trainer.service")
+    # ...but the live VM's own units (deploy/*.service, installed by
+    # install_systemd_units.sh) stay runtime.
+    assert _is_runtime_path("deploy/ict-trader-live.service")
+    assert _is_runtime_path("deploy/vm-sparse-checkout")
     assert not _is_runtime_path("scripts/research/regime_matrix.py")
     assert _is_runtime_path("scripts/research/queue_throughput.py")
     assert not _is_runtime_path("comms/claude_strategy_scores.jsonl")  # read per request
@@ -97,3 +104,17 @@ def test_diag_trader_pending_uses_the_deploy_trader_rule():
     assert _is_runtime_path("src/web/api/routers/work.py")
     assert classify_path("src/web/api/routers/work.py", closure) is None
     assert classify_path("src/main.py", closure) == "in_closure"
+
+
+def test_trainer_only_deploy_files_do_not_restart_the_trader():
+    """RESTART-GAP-EXIT-FIRST: 2026-11-05 10:58Z the trader restarted for
+    deploy/trainer/Caddyfile.console alone ("non_py_runtime"). Trainer-VM-only
+    files must SKIP; the live VM's own deploy/ units must still restart it."""
+    from scripts.ops.trader_import_closure import RESTART, SKIP, classify_path, decide
+    closure = {"src/main.py"}
+    assert classify_path("deploy/trainer/Caddyfile.console", closure) is None
+    assert decide(["deploy/trainer/Caddyfile.console",
+                   "deploy/trainer/ict-trainer.timer"], closure)[0] == SKIP
+    assert classify_path("deploy/ict-trader-live.service", closure) == "non_py_runtime"
+    assert decide(["deploy/trainer/Caddyfile.console",
+                   "deploy/ict-trader-live.service"], closure)[0] == RESTART

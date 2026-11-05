@@ -1088,6 +1088,8 @@ def verify_readback(device: PhoneDevice, body: Dict[str, Any], *, now: Optional[
         vu = _parse(r["valid_until"])
         if mode == "live" and (vu is None or vu <= now):
             reasons.append("ticket validity expired before the live submit")
+        if mode == "live" and not reasons:
+            reasons += live_cushion_refusals(device.account_id, fields, send=send)
         if reasons:
             ph["verify"] = {"at": now.isoformat(), "ok": False, "reasons": reasons[:12]}
             m["phone"] = ph
@@ -1114,6 +1116,41 @@ def verify_readback(device: PhoneDevice, body: Dict[str, Any], *, now: Optional[
     logger.info("phone_executor: go-token issued %s %s mode=%s", device.account_id, tid, mode)
     return {"ok": True, "ticket_id": tid, "mode": mode, "token": token, "readback_sha256": rb_hash,
             "expires_at": expires.isoformat(), "ttl_s": GO_TOKEN_TTL_S}
+
+
+def live_cushion_refusals(account_id: str, fields: Dict[str, Any], *, send=None) -> list:
+    """The account's drawdown cushion, graded against the risk at the stop of the form the phone is about to submit
+    (PROP-SIZE-EXCEEDS-DD-CUSHION, 2026-11-05). ``[]`` = submit may proceed; else the refusal reasons.
+
+    The phone entry path was the one prop entry path with no cushion check: the VM executor grades
+    ``prop_risk_gate`` in ENFORCE inside ``prop_executor.evaluate_guards``, while this path only verified the form
+    against the ticket. breakout_2 ETH ``prop-manual-8468ab1f682f`` was live-submitted at 0.29 ETH (risk at stop
+    ~$17.39) with $11.94 left to the static floor, so a stop-out would have ended the account.
+
+    Same two kinds of "no" as ``evaluate_guards``:
+      * HARD in every mode: the risk could not be computed from the form, or the cushion could not be read
+        (``cushion_unknown`` / ``no_risk_declared``). "We could not look" never submits.
+      * BREACH, per ``accounts.yaml::<acct>.risk.breach_guards``: ``exceeds_cushion`` refuses under ``enforce``
+        (the default); under ``report`` it pings and lets the submit proceed.
+
+    Risk is ``qty * |price - sl|``: phone instruments are quoted per base unit (``prop_platforms.yaml``
+    ``phone_accounts.<acct>.instruments``: qty in ETH/SOL). The form values are the ones the server just verified
+    against the ticket, so this grades what will actually be submitted."""
+    from src.prop import prop_risk_gate
+
+    qty, price, sl = _num(fields.get("qty")), _num(fields.get("price")), _num(fields.get("sl"))
+    if qty is None or price is None or sl is None or qty <= 0:
+        return ["risk gate: risk at the stop could not be computed from the form (qty/price/sl unreadable)"]
+    risk = round(qty * abs(price - sl), 6)
+    grade = prop_risk_gate.grade_account_ticket_risk(account_id, risk_usd=risk)
+    state = grade.get("state")
+    if state == prop_risk_gate.WITHIN:
+        return []
+    why = f"risk gate: {state} (risk at stop ${risk:,.2f}; {grade.get('reason')})"
+    if state == prop_risk_gate.EXCEEDS and prop_risk_gate.breach_guards_for(account_id) == "report":
+        _ping(f"phone {account_id}: {why} -- breach_guards=report, submit proceeds", send=send)
+        return []
+    return [why]
 
 
 def _verify_refused(device: PhoneDevice, tid: str, reasons: list, rb_hash: Optional[str], *, send=None) -> Dict[str, Any]:

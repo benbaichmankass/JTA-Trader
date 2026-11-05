@@ -114,3 +114,40 @@ def apply(configured: List[str], record: Optional[List[Dict[str, Any]]], venue: 
         if s not in out:
             out.append(s)
     return out
+
+
+def write_population(leg: str, population: Dict[str, Any], base: Optional[Path] = None,
+                     seed_from: Optional[Path] = None) -> Path:
+    """Upsert one pooled unit's population into ``<base>/<leg>.json`` (the only writer; units call it, nobody edits by hand).
+
+    A population with the same ``unit`` replaces the earlier one; others are kept. ``seed_from`` (a directory) supplies the existing
+    populations when ``base`` has no file yet, so a research runner writing to its output dir carries the committed record forward.
+    Validates before writing (a bad population raises, nothing is written). Atomic (tmp + replace)."""
+    for k in ("unit", "rule_id", "verdict", "result", "symbols"):
+        if k not in population:
+            raise ValueError(f"population missing {k!r}")
+    if population["verdict"] not in VERDICTS:
+        raise ValueError(f"verdict must be one of {VERDICTS}, got {population['verdict']!r}")
+    if not isinstance(population["symbols"], dict) or any(
+            not isinstance(e, dict) or not isinstance(e.get("venues"), list) or not e["venues"]
+            for e in population["symbols"].values()):
+        raise ValueError("symbols must map SYMBOL -> {'venues': [non-empty list]}")
+    dest = record_path(leg, base)
+    existing: List[Dict[str, Any]] = []
+    for src in (base, seed_from):
+        if src is None:
+            continue
+        if record_path(leg, src).exists():
+            doc = json.loads(record_path(leg, src).read_text(encoding="utf-8"))
+            if doc.get("schema") != SCHEMA or str(doc.get("leg")) != str(leg):
+                raise ValueError(f"existing record {record_path(leg, src)} has a different schema/leg")
+            existing = [dict(x) for x in doc.get("populations", [])]
+            break
+    pops = [x for x in existing if x.get("unit") != population["unit"]] + [dict(population)]
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    tmp = dest.with_suffix(".json.tmp")
+    tmp.write_text(json.dumps({"schema": SCHEMA, "leg": str(leg), "populations": pops}, indent=1, sort_keys=True) + "\n",
+                   encoding="utf-8")
+    os.replace(tmp, dest)
+    _CACHE.pop(str(dest), None)
+    return dest

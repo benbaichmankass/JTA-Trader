@@ -1,0 +1,11 @@
+{
+  "tier": 3,
+  "landing": "hold",
+  "hold_reason": "tier_2_3_needs_approval",
+  "hold_text": "Tier 3 (risk on the live prop entry path + config/accounts.yaml breakout_2 breach_guards). Operator approved 2026-11-05 ~10:59Z; the manager merges.",
+  "why": "PROP-SIZE-EXCEEDS-DD-CUSHION: breakout_2's phone entry path was the only prop entry path with no cushion check. prop-manual-8468ab1f682f was live-submitted at 0.29 ETH (risk at stop ~$17.39) with $11.94 to the static floor. verify_readback now grades prop_risk_gate against the form it is about to submit, with the same HARD/BREACH split as prop_executor.evaluate_guards: cushion_unknown or an unreadable form refuses in every mode; exceeds_cushion refuses under breach_guards enforce (breakout_2's default) and pings under report. Dry verifies are not graded. Tests: tests/test_phone_executor.py (69 passed). Per the operator decision, breakout_2 is set to breach_guards: report (config/accounts.yaml), so its exceeds_cushion pings and proceeds; the HARD refusals stay. tests/test_prop_breach_guards_report.py pins breakout_1 + breakout_2 as the report accounts.",
+  "recorded_decision": {
+    "kind": "operator_decision",
+    "ref": "PROP-SIZE-EXCEEDS-DD-CUSHION: operator popup 2026-11-05 ~10:59Z, verbatim \"Merge, breakout_2 on report (Rec.)\"; context, operator this week: \"don't worry about account breach, it's a small test account and we'll just buy another one\"; relayed by Manager Session 2026-11-05a session_01AFoLuJnejB97CXXc8yn9oA"
+  }
+}

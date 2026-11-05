@@ -51,14 +51,17 @@ def test_report_never_overrides_dry_run():
     assert rm.evaluate(_pkg()) == (False, "account_mode_dry_run")
 
 
-def test_only_breakout_1_is_report_in_the_real_config():
+def test_only_breakout_1_and_breakout_2_are_report_in_the_real_config():
     import yaml
     from pathlib import Path
     data = yaml.safe_load((Path(__file__).resolve().parents[1] / "config" / "accounts.yaml").read_text())
     accounts = data["accounts"]
     report = sorted(a for a, c in accounts.items()
                     if isinstance(c, dict) and breach_guards_mode(c.get("risk")) == "report")
-    assert report == ["breakout_1"]
+    # breakout_2 added 2026-11-05 (Tier-3, operator popup ~10:59Z verbatim "Merge, breakout_2 on report (Rec.)";
+    # row PROP-SIZE-EXCEEDS-DD-CUSHION): an over-cushion phone submit pings and proceeds.
+    assert report == ["breakout_1", "breakout_2"]
+    assert prop_risk_gate.breach_guards_for("breakout_2") == "report"
     # tradeify_1 (TRADEIFY-WIRE) deliberately ENFORCES: manager review of
     # #14672 — "'report' places orders through a breach; it must refuse".
     assert prop_risk_gate.breach_guards_for("tradeify_1") == "enforce"

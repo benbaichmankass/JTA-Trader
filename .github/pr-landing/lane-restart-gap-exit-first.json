@@ -1,0 +1,12 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "hold_reason": "tier_2_3_needs_approval",
+  "hold_text": "Tier 2: changes trader boot order (exit loop starts right after WAL), adds a SIGTERM final exit pass, and widens the deploy non-runtime set with deploy/trainer/. Data-settled by the 10:58Z restart measurement; Manager Session 2026-11-05a merges.",
+  "why": "The 10:58Z restart's exit gap was 64.1 s vs 60 s: 22.4 s of boot init ran before the exit thread and 26.2 s of pre-stop idle. Revert: git revert.",
+  "recorded_decision": {
+    "kind": "standing_authorization",
+    "ref": "RESTART-GAP-EXIT-FIRST 2026-09-27 data-backed standing authorization; Manager Session 2026-11-05a dispatch, data-settled; docs/research/restart-gap-exit-first-2026-11-05.md",
+    "evidence": "docs/research/restart-gap-exit-first-2026-11-05.md"
+  }
+}
