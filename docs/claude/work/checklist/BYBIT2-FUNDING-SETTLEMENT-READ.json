@@ -1,0 +1,23 @@
+{
+  "id": "BYBIT2-FUNDING-SETTLEMENT-READ",
+  "title": "REAL MONEY: bybit_2 funding settlement absent for ~24h, and no diag route reads per-settlement funding to confirm or refute it",
+  "phase": null,
+  "state": "queued",
+  "owner": "manager",
+  "lane": null,
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [],
+  "blocked_on": [],
+  "note": "Reported by the outgoing manager handoff (docs/claude/work/handoffs/2026-11-04-01AFoLuH-to-new.md, PR #23007): no funding settlement for bybit_2 in 24h. NOT re-measured live by this lane (no diag read of it exists -- that is the finding). Verified in code on main 8f000b7: funding lands in two stores -- (1) exchange_funding (src/runtime/exchange_fills_store.py:90, pulled by scripts/pull_exchange_funding.py, read ONLY by the offline broker-truth cost sweep; NO /api/diag route), (2) bybit_transaction_log (pulled hourly by scripts/ops/pull_bybit_transaction_log.py), exposed by /api/diag bybit_wallet_truth (src/web/api/routers/diag.py:3631) but only as an aggregate funding_usd per window, no per-settlement timestamps, so a 24h gap cannot be seen. DONE WHEN: (1) a Tier-1 read-only diag route returns the last N funding rows per account (funding_time, funding_usd, symbol) with the store's last-pulled-at and a read_state (measured / no_rows_in_window / not_pulled / unreadable, never 0); (2) bybit_2 is read through it and the 24h absence is confirmed (puller down vs venue settled nothing: Bybit settles every 8h, so >=3 settlements are expected per open perp per 24h) or refuted; (3) if puller down, restart/fix it (Tier 2 only for a service change). Rerun: diag route above, account bybit_2.",
+  "due_by": "2026-11-05",
+  "roadmap": [
+    "L-DATA"
+  ],
+  "priority_rank": 1,
+  "updated_at": "2026-11-04T23:18:53Z",
+  "updated_by": "session_01AFoLuKQrL2kMz3EUzGFeCP",
+  "_seq": 920
+}
