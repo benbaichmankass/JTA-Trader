@@ -212,3 +212,69 @@ def test_committed_ada_corpus_is_the_full_history_harness_run():
     rows, src = lro.load_trades("ada_pullback_2h", corpus="auto")
     assert src.endswith("ltr_corpus/ada_pullback_2h__trades.jsonl") and len(rows) >= 400
     assert all("net_r" in r and "mfe_r" in r and "cost_funding_r" in r for r in rows)   # full cost stack
+
+
+# ---- LTR-GRADER-COVERAGE (2026-11-05): on-demand venue bars (no repo data) + named invalid_level ----------------
+
+BARS_FULL = [(100, 100, 100, 100), (100, 100.2, 96, 96.5), (96.5, 98.5, 96.4, 98), (98, 100.5, 97.9, 100.4)]
+
+
+def _stub_fetch(calls):
+    """A Bybit stand-in serving BARS_FULL (2h bars from T0); records every call."""
+    def f(symbol, code, start_ms, end_ms):
+        calls.append((symbol, code, start_ms, end_ms))
+        df = _candles(BARS_FULL).reset_index()
+        return [{"timestamp": r.timestamp.to_pydatetime(), "open": r.open, "high": r.high, "low": r.low,
+                 "close": r.close, "volume": 1.0} for r in df.itertuples()]
+    return f
+
+
+def test_venue_candles_fetches_once_into_cache_outside_repo(tmp_path):
+    """The live VM has no research candles; bars come from the venue once, then from the cache (no network)."""
+    trades = [_short(-1.0, 3, 4.0)]
+    calls = []
+    p = lro.venue_candles("ADAUSDT", "2h", trades, cache_dir=tmp_path, fetch=_stub_fetch(calls))
+    assert p and Path(p).parent == tmp_path and len(calls) == 1 and calls[0][1] == "120"
+    assert len(lro.load_candles(p)) == 4
+    p2 = lro.venue_candles("ADAUSDT", "2h", trades, cache_dir=tmp_path, fetch=_stub_fetch(calls))
+    assert p2 == p and len(calls) == 1           # covered -> no second fetch
+
+
+def test_venue_candles_degrades_to_none_never_raises(tmp_path):
+    trades = [_short(-1.0, 3, 4.0)]
+    def boom(*a):
+        raise RuntimeError("403")
+    assert lro.venue_candles("ADAUSDT", "2h", trades, cache_dir=tmp_path, fetch=boom) is None
+    assert lro.venue_candles("SPY", "1d", trades, cache_dir=tmp_path, fetch=_stub_fetch([])) is None   # not a perp
+    assert lro.venue_candles("ADAUSDT", "7h", trades, cache_dir=tmp_path, fetch=_stub_fetch([])) is None
+    assert lro.venue_candles("ADAUSDT", "2h", [], cache_dir=tmp_path, fetch=_stub_fetch([])) is None
+
+
+def test_venue_bars_price_a_tighten_that_was_no_candles(tmp_path):
+    trades = [_short(-1.0, 3, 4.0)] * 25
+    kw = dict(side="short", open_r=3.2, peak_r=3.5, bars_held=None, atr_stop_mult=2.0, tighten=["atr:1.0"])
+    none = lro.build_table(trades, None, **kw)
+    o = [x for x in none["options"] if x["action"] == "tighten"][0]
+    assert (o["state"], o["reason"]) == ("could_not_look", "no_candles")
+    c = lro.load_candles(lro.venue_candles("ADAUSDT", "2h", trades, cache_dir=tmp_path, fetch=_stub_fetch([])))
+    got = lro.build_table(trades, c, **kw)
+    o = [x for x in got["options"] if x["action"] == "tighten"][0]
+    assert o["state"] == "measured" and o["mean_r"] is not None
+    # positive control: the same bars handed in directly price to identical numbers
+    ref = lro.build_table(trades, _candles(BARS_FULL), **kw)
+    assert [x for x in ref["options"] if x["action"] == "tighten"][0] == o
+
+
+def test_invalid_level_names_its_reason():
+    """r:2.0 with the trade only at +0.02R is a stop above price: invalid by construction, and says so."""
+    trades = [_short(-1.0, 3, 4.0)] * 25
+    t = lro.build_table(trades, None, side="short", open_r=0.02, peak_r=0.2, bars_held=None, atr_stop_mult=2.0,
+                        tighten=["r:2.0"])
+    opt = [o for o in t["options"] if o["action"] == "tighten"][0]
+    assert opt["state"] == "invalid_level" and opt["reason"] == "stop_level_not_below_price"
+
+
+def test_no_candle_data_is_committed_for_the_live_review_pricer():
+    """Operator 2026-11-04/05: the repo is not a database - the pricer must not depend on committed candle stores."""
+    assert not (REPO / "comms/live_review/candles").exists()
+    assert not hasattr(lro, "LTR_CANDLE_STORE")

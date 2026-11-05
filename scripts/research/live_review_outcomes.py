@@ -155,6 +155,10 @@ def find_candles(symbol: str, timeframe: str, repo: Path = REPO, widest_span: bo
 
     ``widest_span`` also reads the ``data/<SYM>_<tf>.csv`` files (full-history pulls the filename-days
     pattern does not match) and ranks every candidate by the days it actually covers."""
+    return _find_candles_research(symbol, timeframe, repo, widest_span)
+
+
+def _find_candles_research(symbol: str, timeframe: str, repo: Path, widest_span: bool) -> Optional[str]:
     # provenance: cpath — the chosen file is printed on every run as res["candles"]; widest span wins
     hits = glob.glob(str(repo / "comms" / "research" / "*" / "*" / "candles" / f"{symbol}_{timeframe}_*d.csv"))
     if widest_span:
@@ -175,6 +179,75 @@ def find_candles(symbol: str, timeframe: str, repo: Path = REPO, widest_span: bo
         except ValueError:
             return 0
     return max(hits, key=lambda p: (days(p), p)) if hits else None
+
+
+#: On-demand venue bars (LTR-GRADER-COVERAGE, 2026-11-05). ``deploy/vm-sparse-checkout`` removes the research candle
+#: files from the live VM, so ``find_candles`` returns None there. Nothing on the VM holds multi-year bars (the trader
+#: keeps only an in-memory cache of the last N), so the pricer fetches the span its corpus needs from Bybit's public
+#: klines (the venue the trainer's history was pulled from) ONCE into ``<data_dir>/ltr_candles/`` - outside the repo.
+VENUE_CACHE_SUBDIR = "ltr_candles"
+_TF_CODE = {"5m": "5", "15m": "15", "1h": "60", "2h": "120", "4h": "240", "1d": "D"}
+
+
+def _venue_cache_dir(cache_dir: Optional[Path] = None) -> Path:
+    if cache_dir is not None:
+        return Path(cache_dir)
+    from src.utils.paths import data_dir
+    return Path(data_dir()) / VENUE_CACHE_SUBDIR
+
+
+def _default_fetch(symbol: str, code: str, start_ms: int, end_ms: int) -> List[Dict[str, Any]]:
+    sys.path.insert(0, str(REPO / "scripts" / "ops"))
+    import fetch_backtest_candles as fbc  # noqa: E402
+    return fbc.fetch_klines(symbol, code, start_ms, end_ms)
+
+
+def venue_candles(symbol: str, timeframe: str, trades: List[Dict[str, Any]], cache_dir: Optional[Path] = None,
+                  fetch=None) -> Optional[str]:
+    """Path of a cached CSV of ``symbol`` bars covering the corpus span, fetching what is missing; None when it cannot.
+
+    Crypto perps only (Bybit). Covers [first corpus entry, last corpus exit]; an existing cache that already covers
+    that is used as is, so after the first call there is no network. Any failure returns None (the caller then reports
+    ``no_candles``, as before) - this never raises into the pricing path."""
+    code = _TF_CODE.get(timeframe)
+    if not code or not symbol.endswith("USDT") or not trades:
+        return None
+    try:
+        fetch = fetch or _default_fetch
+        step = pd.Timedelta(milliseconds=_tf_ms(timeframe))
+        need0 = min(pd.Timestamp(t["entry_time"]) for t in trades)
+        need1 = max(pd.Timestamp(t["exit_time"]) for t in trades)
+        need0 = need0.tz_localize("UTC") if need0.tzinfo is None else need0.tz_convert("UTC")
+        need1 = need1.tz_localize("UTC") if need1.tzinfo is None else need1.tz_convert("UTC")
+        d = _venue_cache_dir(cache_dir)
+        d.mkdir(parents=True, exist_ok=True)
+        path = d / f"{symbol}_{timeframe}.csv"
+        have = pd.DataFrame(columns=["timestamp", "open", "high", "low", "close", "volume"])
+        if path.is_file():
+            have = pd.read_csv(path)
+            have["timestamp"] = pd.to_datetime(have["timestamp"], utc=True)
+        lo = have["timestamp"].min() if len(have) else None
+        hi = have["timestamp"].max() if len(have) else None
+        if lo is not None and lo <= need0 + step and hi >= need1 - step:
+            return str(path)
+        rows = fetch(symbol, code, int(need0.timestamp() * 1000), int((need1 + step).timestamp() * 1000))
+        if not rows:
+            return None
+        new = pd.DataFrame(rows)
+        new["timestamp"] = pd.to_datetime(new["timestamp"], utc=True)
+        out = pd.concat([have, new[have.columns]]).drop_duplicates("timestamp").sort_values("timestamp")
+        tmp = path.with_suffix(".csv.tmp")
+        out.to_csv(tmp, index=False)
+        tmp.replace(path)
+        return str(path)
+    except Exception as exc:  # noqa: BLE001  # allow-silent: logged to stderr and the caller records reason=no_candles (a named read-state, not a 0); a venue outage must not crash the review
+        print(f"venue_candles({symbol},{timeframe}) failed: {type(exc).__name__}: {str(exc)[:160]}", file=sys.stderr)
+        return None
+
+
+def _tf_ms(timeframe: str) -> int:
+    n, unit = int(timeframe[:-1]), timeframe[-1]
+    return n * {"m": 60_000, "h": 3_600_000, "d": 86_400_000}[unit]
 
 
 def parse_tighten(spec: str) -> Tuple[str, float]:
@@ -391,7 +464,9 @@ def build_table(trades: List[Dict[str, Any]], candles: Optional[pd.DataFrame], *
         lvl_r = val if kind == "r" else peak_r - val * atr_over_r
         base = {"action": "tighten", "spec": spec, "stop_at_r_now": round(lvl_r, 4)}
         if lvl_r >= open_r:
+            # a stop at or above the current price is not a stop; named so a reader can tell it from a data gap
             out["options"].append({**base, "n": len(rows), "state": "invalid_level",
+                                   "reason": "stop_level_not_below_price",
                                    "mean_r": None, "sd_r": None, "worst_r": None, "p05_r": None,
                                    "p_giveback_gt_half": None, "ev_cost_r": None,
                                    "ev_cost_se_r": None, "worst_case_gain_r": None,
@@ -489,6 +564,8 @@ def main(argv: Optional[List[str]] = None) -> int:
         # source_run keeps the candle selection that run was built with
         full = a.corpus == "auto" and str(src).startswith(LTR_CORPUS_DIR)
         cpath = find_candles(sym, tf, widest_span=full) if sym and tf else None
+        if cpath is None and sym and tf:
+            cpath = venue_candles(sym, tf, trades)
     candles = load_candles(cpath) if cpath else None
     res = build_table(trades, candles, side=a.side, open_r=a.open_r, peak_r=a.peak_r,
                       bars_held=a.bars_held, atr_stop_mult=a.atr_stop_mult,
