@@ -58,6 +58,7 @@ Adding an action requires a PR that updates this doc, the workflow's
 | `list-listening-ports` | 1 | `scripts/ops/list_listening_ports.sh` | no |
 | `gateway-logs` | 1 | `scripts/ops/gateway_logs.sh` | no |
 | `gateway-forensics` | 1 | `scripts/ops/gateway_forensics.sh` | Read-only, runs on the **gateway VM** (ProxyJump via the trader, like `gateway-logs`). Prints `docker inspect` RestartCount / State.ExitCode / State.FinishedAt / State.StartedAt / restart policy for the `ib-gateway` container, plus is-active / is-enabled and the last ~50 journal lines of `ict-ib-gateway-watchdog.{service,timer}` and `ict-ib-gateway-reset.{service,timer}`. Answers *who restarts the container* (watchdog vs Docker restart policy vs IBC) which `gateway-logs` cannot. No restart, no stop; IPv4 addresses and `DU…` account ids are masked in the output (public repo). Added 2026-10-08 for IB-GATEWAY-DOWN. |
+| `gateway-disk-report` | 1 | `scripts/ops/gateway_disk_report.sh` | Read-only, runs on the **gateway VM** (ProxyJump via the trader). df, bounded du, the `ib-gateway` docker json-file log size + LogConfig, `docker system df`, journald, apt cache, core dumps, /tmp and the 15 largest files; IPv4/account ids masked; unreadable sections print `could_not_look`, never 0. Deletes/restarts nothing. Added 2026-11-04 (COST-INFRA-REVIEW, gateway disk 75%→100%→94%). |
 | `pull-latest-logs` | 1 | `scripts/ops/pull_logs.sh` | no |
 | `pull-and-deploy` | 2 | `scripts/ops/pull_and_deploy.sh` | git worktree + systemd units |
 | `restart-bot-service` | 2 | `scripts/ops/restart_bot.sh` | systemd unit only |
@@ -296,6 +297,7 @@ Claude may dispatch these without operator approval:
 - `status-check`
 - `disk-usage-report`
 - `gateway-forensics` — read-only restart forensics on the IB gateway VM
+- `gateway-disk-report` — read-only disk breakdown on the IB gateway VM
 - `verify-account-mode` — read-only post-state check of an account's mode
   on the VM (see § 2.1). Normally dispatched by `account-mode-verify.yml`.
 - `list-listening-ports`

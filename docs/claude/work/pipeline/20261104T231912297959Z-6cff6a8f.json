@@ -1,0 +1,16 @@
+{
+  "due_when": {
+    "due_date": "2026-11-06",
+    "kind": "date"
+  },
+  "id": "PI-20261104-EUZGFECP-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "lane HANDOFF-REGISTER-ITEMS-20261104 (handoff item e; POST-DEPLOY-OBS #23005)",
+    "rerun": "/api/diag journal?table=order_packages (open) joined to position_telemetry on order_package_id, grouped by exit mode (structure_exit, trailing, momentum, fixed bracket); count open packages with no telemetry row, per mode, with the open-package denominator"
+  },
+  "roadmap": "L-ATM",
+  "state": "queued",
+  "what": "telemetry_absent on open paper packages: POST-DEPLOY-OBS (#23005) found all 3 open structure_exit packages HAVE telemetry, so the gap (if any) is in the other exit modes. NOT measured by this lane (live read needed; population = open paper packages after the 2026-11-04 21:46Z deploy of #22908, which fixed the pivot=5 legs that skipped the telemetry hook). Related records: PI-20261104-KKPOFDJQ-0002 (pivot=5 hook check), RETIRED-LEG-OPEN-TELEMETRY (retired leg open positions), LTR-DUE-TELEMETRY-LESS (done: live_review_due now counts telemetry-less packages). DONE WHEN: per-exit-mode counts of open packages with vs without telemetry are recorded, any mode with absent telemetry gets a fix row, or the item is killed with 'all modes carry telemetry' and the denominator."
+}

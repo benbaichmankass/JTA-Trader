@@ -51,6 +51,7 @@ from pathlib import Path
 from typing import Any, Callable, Dict, List, Mapping, Optional, Sequence, Tuple
 
 from src.prop import prop_rule_guards
+from src.prop.positions_report import positions_fields
 from src.prop.platform.base import (
     AccountSnapshot,
     BracketSpec,
@@ -1260,7 +1261,10 @@ def _run_cycle(*, adapter: Any, page: Any, api: Any, cfg: ExecutorConfig, mode: 
         _report(res, post, {"kind": "account_status", "account_id": cfg.account_id,
                             "balance": acct.balance, "equity": acct.equity,
                             "unrealized": acct.unrealized, "realized_today": acct.realized_today,
-                            "day_start_balance": ds, "source": "prop_executor"})
+                            "day_start_balance": ds, "source": "prop_executor",
+                            # AUD-PROP-VENUE-POSITIONS: the Positions read of THIS cycle (step 2 raised on a failed
+                            # read, so this list is a clean read), in the consumer shape phone_executor posts.
+                            **positions_fields(positions, cfg.symbols)})
     if journal_error:
         # Before intake, so no ticket reaches the guards and is refused: it is
         # taken in by the next clean cycle.
