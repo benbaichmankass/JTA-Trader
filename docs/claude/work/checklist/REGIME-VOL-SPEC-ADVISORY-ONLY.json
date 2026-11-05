@@ -1,0 +1,22 @@
+{
+  "id": "REGIME-VOL-SPEC-ADVISORY-ONLY",
+  "title": "[STRUCTURAL FIX, Tier-2/3 held] vol_detector.resolve_vol_specs must read ADVISORY-stage heads only, so a shadow head can never change an order through the trend_vol router (PI-20261029-Q17QWHDZ-0003)",
+  "phase": "W45",
+  "state": "queued",
+  "owner": "manager",
+  "lane": null,
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 3,
+  "prs": [],
+  "blocked_on": [],
+  "note": "OPERATOR 2026-11-05 (JTA Console note on PI-20261029-Q17QWHDZ-0003), verbatim: \"this seems like it needs a structural fix more than a decision - we shouldn't need exceptions to allow expected system behavior, and if its not expected, it needs to be fixed\". IS THE BEHAVIOUR EXPECTED? NO. Under the ladder a shadow-stage head is observe-only; src/runtime/regime/vol_detector.py::resolve_vol_specs (read 2026-11-05) builds its frozen vol-bucket edges from discover_shadow_stage_model_ids, and intents._decision_vol_regime keeps that frozen label when no advisory head answers, so a candidate->shadow promotion for a symbol with authored trend_vol cells starts those cells gating. FIX (no recorded exception, no SKILL.md carve-out): gate path takes edges only from advisory heads or the config-declared fit-time edges; the shadow-sourced edges stay for the observe-only regime_ml_vol_shadow row. Needs: a test that promoting a shadow head to existing-cell symbol leaves gate decisions unchanged; before/after count of intents whose gate label changes (population: live trend_vol cells, current registry). Tier-2/3: order path, so a held PR needing operator OK or a committed evidence record. Closes PI-20261029-Q17QWHDZ-0003.",
+  "due_by": "2026-11-12",
+  "roadmap": [
+    "L-REGIME"
+  ],
+  "updated_at": "2026-11-05T11:04:32Z",
+  "updated_by": "session_01AFoLuKMSCYK8SPEYVeekJn",
+  "_seq": 944
+}
