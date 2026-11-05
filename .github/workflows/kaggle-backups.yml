@@ -121,7 +121,7 @@ jobs:
     needs: gate
     if: needs.gate.outputs.models == 'true' && (github.event_name != 'issues' || ((github.event.issue.user.login == github.repository_owner || github.event.issue.user.login == 'github-actions[bot]') && contains(github.event.issue.labels.*.name, 'kaggle-backup-request')))
     runs-on: ubuntu-latest
-    timeout-minutes: 90
+    timeout-minutes: 120
     permissions:
       contents: write
       pull-requests: write
@@ -214,30 +214,6 @@ jobs:
           for INST in served registry-store; do
             kaggle models instances versions list "$USERNAME/$M/other/$INST" 2>&1 | scrub | tail -6 | tee "/tmp/versions-$INST.txt"
           done
-      - name: Read back every instance's latest version and re-hash it against MANIFEST.json (timed)
-        run: |
-          set -uo pipefail
-          echo "::add-mask::${KAGGLE_API_TOKEN}"
-          USERNAME=$(cat /tmp/kuser); echo "::add-mask::$USERNAME"
-          scrub() { sed "s|$USERNAME|<user>|g"; }
-          M=metis-ml-backup
-          rm -rf /tmp/rb && mkdir -p /tmp/rb
-          T0=$(date +%s)
-          for INST in served registry-store; do
-            VER=$(kaggle models instances versions list "$USERNAME/$M/other/$INST" --csv 2>/dev/null | awk -F, 'NR>1 {print $1}' | sort -n | tail -1)
-            [ -n "$VER" ] || VER=1
-            echo "$INST latest version: $VER"
-            OK=0
-            for n in 1 2 3 4 5 6; do
-              rm -rf "/tmp/rb/$INST" && mkdir -p "/tmp/rb/$INST"
-              if kaggle models instances versions download "$USERNAME/$M/other/$INST/$VER" -p "/tmp/rb/$INST" --untar > /tmp/dl.log 2>&1; then OK=1; break; fi
-              grep -v "it/s\|B/s" /tmp/dl.log | scrub | tail -8; sleep 40
-            done
-            [ "$OK" = "1" ] || { echo "::error::download of $INST failed"; exit 1; }
-          done
-          T1=$(date +%s); echo "{\"readback_seconds\": $((T1-T0))}" | tee /tmp/readback.json
-          find /tmp/rb -maxdepth 3 | head -20
-          python3 scripts/ops/kaggle_backup.py verify --root /tmp/rb --record /tmp/verify.json
       - name: Load the backed-up files inside a CPU Kaggle kernel (internet off, no download)
         run: |
           set -uo pipefail
@@ -274,6 +250,34 @@ jobs:
           cat kout/result.json | tee /tmp/kernel.json
           echo "{\"kernel_push_to_complete_seconds\": $((T1-T0))}" | tee /tmp/kernel-timing.json
           python3 -c "import json,sys; r=json.load(open('/tmp/kernel.json')); sys.exit(0 if r.get('ok') else 1)"
+      - name: Read back every instance's latest version and re-hash it against MANIFEST.json (timed)
+        run: |
+          set -uo pipefail
+          echo "::add-mask::${KAGGLE_API_TOKEN}"
+          USERNAME=$(cat /tmp/kuser); echo "::add-mask::$USERNAME"
+          scrub() { sed "s|$USERNAME|<user>|g"; }
+          M=metis-ml-backup
+          rm -rf /tmp/rb && mkdir -p /tmp/rb
+          T0=$(date +%s)
+          for INST in served registry-store; do
+            VER=$(kaggle models instances versions list "$USERNAME/$M/other/$INST" --csv 2>/dev/null | awk -F, 'NR>1 {print $1}' | sort -n | tail -1)
+            [ -n "$VER" ] || VER=1
+            echo "$INST latest version: $VER"
+            # Kaggle builds a download archive per version; DownloadModelInstanceVersion answers 404 until it exists (observed
+            # 2026-11-05: still 404 after 4 min). The kernel mount (previous step) does not need it. Poll up to 40 min.
+            OK=0; W0=$(date +%s)
+            for n in $(seq 1 80); do
+              rm -rf "/tmp/rb/$INST" && mkdir -p "/tmp/rb/$INST"
+              if kaggle models instances versions download "$USERNAME/$M/other/$INST/$VER" -p "/tmp/rb/$INST" --untar > /tmp/dl.log 2>&1; then OK=1; break; fi
+              [ $((n % 10)) = 1 ] && { echo "$INST download attempt ${n} (+$(( $(date +%s) - W0 ))s):"; grep -v "it/s\|B/s" /tmp/dl.log | scrub | tail -3; }
+              sleep 30
+            done
+            [ "$OK" = "1" ] || { echo "::error::download of $INST failed"; exit 1; }
+            echo "$INST archive available after $(( $(date +%s) - W0 )) s"
+          done
+          T1=$(date +%s); echo "{\"readback_seconds\": $((T1-T0))}" | tee /tmp/readback.json
+          find /tmp/rb -maxdepth 3 | head -20
+          python3 scripts/ops/kaggle_backup.py verify --root /tmp/rb --record /tmp/verify.json
       - name: Freshness stamp (ok)
         if: success()
         run: |

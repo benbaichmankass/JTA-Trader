@@ -67,9 +67,9 @@ def list_hf_candidates(repo: str, token: str) -> list[dict]:
     return sorted(out, key=lambda e: e["path"])
 
 
-def list_local_candidates(root: Path) -> list[dict]:
+def list_local_candidates(root: Path, prefix: str = PREFIX) -> list[dict]:
     out = []
-    for p in sorted((root / PREFIX).rglob("*.parquet")):
+    for p in sorted((root / prefix).rglob("*.parquet")):
         rel = p.relative_to(root).as_posix()
         if is_frozen_name(rel):
             out.append({"path": rel, "bytes": p.stat().st_size})
@@ -141,14 +141,15 @@ def make_shards(src: Path, files: list[dict], out: Path, tag: str) -> list[dict]
     return shards
 
 
-def write_dataset_files(out: Path, username: str, shards: list[dict], note: str) -> None:
+def write_dataset_files(out: Path, username: str, shards: list[dict], note: str, slug: str = "metis-market-lake",
+                        extra: dict | None = None) -> None:
     man = {"schema": "metis-market-lake-pilot/v1", "generated_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
            "note": note, "prefix": PREFIX, "files": shards,
            "n_partitions": sum(s["n_partitions"] for s in shards)}
+    man.update(extra or {})
     (out / "MANIFEST.json").write_text(json.dumps(man, indent=1))
     (out / "dataset-metadata.json").write_text(json.dumps({
-        "title": "metis-market-lake", "id": f"{username}/metis-market-lake",
-        "licenses": [{"name": "other"}]}, indent=1))
+        "title": slug, "id": f"{username}/{slug}", "licenses": [{"name": "other"}]}, indent=1))
 
 
 def cmd_stage(a) -> int:
@@ -224,6 +225,115 @@ def cmd_build_stage(a) -> int:
     write_dataset_files(out, a.username, shards, f"10GB trial: {n_files} frozen partitions, {len(used)} symbols")
     print(json.dumps({"symbols": len(used), "partitions": n_files, "shards": len(shards), "staged_bytes": staged,
                       "top_level_entries": len(shards) + 2, "seconds": round(time.time() - t0)}))
+    return 0
+
+
+def cmd_plan(a) -> int:
+    """Read-only: list the HF lake tree (listing still works at the cap), measure the FROZEN bytes per (market, label), and slice the
+    frozen set by symbol into parts of at most --part-gb, each part one (market, stream) so a part is one builder invocation."""
+    token = os.environ.get("HF_TOKEN", "")
+    from huggingface_hub import HfApi
+    api = HfApi(token=token)
+    sys.path.insert(0, str(Path(__file__).resolve().parent))
+    import binance_vision_lake as bvl
+    label_stream = {v["label"]: k for k, v in bvl.STREAMS.items()}
+    groups: dict[tuple, dict] = {}
+    t0 = time.time()
+    for it in api.list_repo_tree(a.repo, path_in_repo="crypto", repo_type="dataset", recursive=True, expand=True):
+        if it.__class__.__name__ != "RepoFile" or not it.path.endswith(".parquet"):
+            continue
+        parts = it.path.split("/")
+        if len(parts) != 5:
+            continue
+        _, market, label, sym, fn = parts
+        size = int(getattr(getattr(it, "lfs", None), "size", None) or getattr(it, "size", 0) or 0)
+        g = groups.setdefault((market, label), {"files": 0, "bytes": 0, "frozen_files": 0, "frozen_bytes": 0, "symbols": {}})
+        g["files"] += 1
+        g["bytes"] += size
+        if is_frozen_name(fn):
+            g["frozen_files"] += 1
+            g["frozen_bytes"] += size
+            sy = g["symbols"].setdefault(sym, [0, 0])
+            sy[0] += 1
+            sy[1] += size
+    summary = {f"{m}/{lb}": {"files": g["files"], "bytes": g["bytes"], "frozen_files": g["frozen_files"],
+                             "frozen_bytes": g["frozen_bytes"], "frozen_symbols": len(g["symbols"]),
+                             "stream": label_stream.get(lb)} for (m, lb), g in sorted(groups.items())}
+    cap = int(a.part_gb * 10 ** 9)
+    parts = []
+    for (market, label), g in sorted(groups.items()):
+        stream = label_stream.get(label)
+        if not stream or not g["symbols"]:
+            continue
+        cur, cur_b, cur_f = [], 0, 0
+        for sym in sorted(g["symbols"]):
+            nf, nb = g["symbols"][sym]
+            if cur and cur_b + nb > cap:
+                parts.append({"market": market, "label": label, "stream": stream, "symbols": cur,
+                              "expected_partitions": cur_f, "expected_bytes": cur_b})
+                cur, cur_b, cur_f = [], 0, 0
+            cur.append(sym)
+            cur_b += nb
+            cur_f += nf
+        if cur:
+            parts.append({"market": market, "label": label, "stream": stream, "symbols": cur,
+                          "expected_partitions": cur_f, "expected_bytes": cur_b})
+    for i, pt in enumerate(parts):
+        pt["part"] = f"p{i:03d}"
+        pt["slug"] = f"metis-market-lake-p{i:03d}"
+    plan = {"generated_at": datetime.now(timezone.utc).isoformat(timespec="seconds"), "part_gb": a.part_gb,
+            "listing_seconds": round(time.time() - t0), "summary": summary,
+            "frozen_total_bytes": sum(v["frozen_bytes"] for v in summary.values()),
+            "frozen_total_files": sum(v["frozen_files"] for v in summary.values()), "n_parts": len(parts),
+            "plan_id": hashlib.sha256(json.dumps([[p["part"], p["market"], p["stream"], p["symbols"]] for p in parts]).encode()).hexdigest()[:16],
+            "parts": parts}
+    Path(a.out).write_text(json.dumps(plan))
+    print(json.dumps({k: v for k, v in plan.items() if k != "parts"}, indent=1))
+    print(json.dumps([{k: v for k, v in p.items() if k != "symbols"} | {"n_symbols": len(p["symbols"])} for p in parts]))
+    return 0
+
+
+def cmd_copy_part(a) -> int:
+    """Build ONE planned part (market, stream, symbols) from data.binance.vision, keep only FROZEN partitions, shard them with
+    per-member SHA-256, and check completeness against the HF listing (every expected frozen path present)."""
+    import shutil
+
+    sys.path.insert(0, str(Path(__file__).resolve().parent))
+    import binance_vision_lake as bvl
+    plan = json.loads(Path(a.plan).read_text())
+    part = next(p for p in plan["parts"] if p["part"] == a.part)
+    label = part["label"]
+    prefix = f"crypto/{part['market']}/{label}"
+    out, tmp = Path(a.out), Path(a.out + "-batch")
+    out.mkdir(parents=True, exist_ok=True)
+    syms = part["symbols"]
+    shards: list[dict] = []
+    have: set[str] = set()
+    t0 = time.time()
+    for i in range(0, len(syms), a.batch):
+        batch = syms[i:i + a.batch]
+        shutil.rmtree(tmp, ignore_errors=True)
+        rc = bvl.main(["--market", part["market"], "--stream", part["stream"], "--out", str(tmp), "--symbols", ",".join(batch),
+                       "--parallel", "4"])
+        files = list_local_candidates(tmp, prefix)
+        for c in files:
+            c["got"] = c["bytes"]
+            have.add(c["path"])
+        if files:
+            shards += make_shards(tmp, files, out, f"{part['part']}-b{i // a.batch:03d}")
+        print(json.dumps({"batch": i // a.batch, "rc": rc, "symbols": len(batch), "partitions": len(files),
+                          "shards": len(shards), "seconds": round(time.time() - t0)}), flush=True)
+        shutil.rmtree(tmp, ignore_errors=True)
+    rep = {"part": part["part"], "market": part["market"], "stream": part["stream"], "symbols": len(syms),
+           "built_partitions": len(have), "built_bytes": sum(m["bytes"] for sh in shards for m in sh["members"]),
+           "expected_partitions": part["expected_partitions"], "expected_hf_bytes": part["expected_bytes"],
+           "shards": len(shards), "top_level_entries": len(shards) + 2, "seconds": round(time.time() - t0)}
+    write_dataset_files(out, a.username, shards, f"cold lake {part['part']} plan {plan['plan_id']}: {len(have)} frozen partitions",
+                        slug=part["slug"], extra={"part": part["part"], "plan_id": plan["plan_id"], "market": part["market"],
+                                                  "stream": part["stream"], "symbols": syms,
+                                                  "expected_partitions": part["expected_partitions"]})
+    print(json.dumps(rep))
+    Path(a.out + "-report.json").write_text(json.dumps(rep))
     return 0
 
 
@@ -329,7 +439,7 @@ def cmd_verify(a) -> int:
 
 def main(argv: Sequence[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("cmd", choices=["stage", "extra", "flat", "verify", "build-stage"])
+    ap.add_argument("cmd", choices=["stage", "extra", "flat", "verify", "build-stage", "plan", "copy-part"])
     ap.add_argument("--out", default="stage")
     ap.add_argument("--repo", default="bentzbk/jta-market-lake")
     ap.add_argument("--username", default="")
@@ -339,12 +449,15 @@ def main(argv: Sequence[str] | None = None) -> int:
     ap.add_argument("--n", type=int, default=120)
     ap.add_argument("--batch", type=int, default=4)
     ap.add_argument("--expect-min-files", type=int, default=0)
+    ap.add_argument("--part-gb", type=float, default=22.0)
+    ap.add_argument("--plan", default="plan.json")
+    ap.add_argument("--part", default="")
     ap.add_argument("--skip-symbols", default="")
     ap.add_argument("--root", default="")
     ap.add_argument("--record", default="")
     a = ap.parse_args(argv)
     return {"stage": cmd_stage, "extra": cmd_extra, "flat": cmd_flat, "verify": cmd_verify,
-            "build-stage": cmd_build_stage}[a.cmd](a)
+            "build-stage": cmd_build_stage, "plan": cmd_plan, "copy-part": cmd_copy_part}[a.cmd](a)
 
 
 if __name__ == "__main__":
