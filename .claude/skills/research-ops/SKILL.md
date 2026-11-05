@@ -92,6 +92,12 @@ proposal or retirement record — was written this pass), survivors (a subject w
 authored to meet a queue count** (STOP-GENERATED-AUTHORING, operator 2026-11-01 popup *"Stop floor-driven units (Rec.)"*, #22107):
 the runnable count is a diagnostic, not a target.
 
+## RESEARCH ITERATES ON IN-HAND DATA — never wait for a future month (operator 2026-11-05, binding; lane RESEARCH-NO-WAIT)
+
+> **Operator, 2026-11-05 ~17:08Z (verbatim):** *"Why does it need to wait for November? That's not the workflow - we iterate in the data we have till we find what works, we don't wait for new months of data"*
+
+No unit waits for a future month, a "forward window", a zip landing or trades accruing to a sample size. The confirming read of a discovery uses an **untouched in-hand holdout, registered before the run**, taken in this order: (1) **pre-dev history** earlier than the dev folds (the model is fit on later rows only); (2) a **symbol holdout** (symbols never in the training or selection population, claimed in `holdout_lock.py` with a symbols list; correlated evidence, said so); (3) **another venue's history**; (4) a **longer lookback**. The rule and its thresholds stay fixed; only the window moves — an `amendments:` entry (`before_any_run: true`) on a unit that has not run, or a superseding unit plus `retired_reason` on one that has. Only live execution mechanics and cost (fills, slippage, funding, broker-sourced costs, live-vs-backtest divergence) are read on live/paper accrual, and those are monitoring, never a gate. **Gates this adds or changes: none** (no guard unless the operator approves one). Audit: `git grep -l -i -E "forward[- ](window|read)|fresh (forward )?window|not_before|accrual" -- research/queue/` on live units, and classify each hit A (in-hand window exists: re-register) / B (live mechanics: monitoring) / C (false positive).
+
 ## What this is, and what it is not
 
 A short, bounded **operations check** around the iteration loop above. The git infrastructure keeps the queue moving
@@ -463,8 +469,8 @@ apply the rule **verbatim** — never a rule written after seeing the number:
   checklist row for the manager**. Never a config edit, never a claim a leg is promoted.
   **A PASS read on one window is a discovery, not a confirmation** (RESEARCH-OPS-BENCHMARK-1016,
   `docs/research/research-ops-benchmark-2026-10-16.md` § 2; P3 already works this way): before it feeds a
-  Tier-3 proposal, its follow-up is ONE confirmation unit on a disjoint or most-recent window the PASS did not
-  see, registered with the same statistic and bar. Name in the note how many cells or configurations the
+  Tier-3 proposal, its follow-up is ONE confirmation unit on a disjoint IN-HAND window the PASS did not
+  see (pre-dev history, a symbol holdout, another venue, a longer lookback: § "RESEARCH ITERATES ON IN-HAND DATA"; never a future month), registered with the same statistic and bar. Name in the note how many cells or configurations the
   PASS was chosen from: that count is the multiple-testing denominator (row `RESEARCH-TRIAL-LEDGER`).
 - **fail →** the rule's disposition, then the **fail-is-not-dead** read (operator, 2026-10-22: *"we don't
   just drop an idea because we ran one test and it didn't pass… we need to study them, do open source
