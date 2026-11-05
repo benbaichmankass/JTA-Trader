@@ -1,8 +1,13 @@
 """E57: the research loss detector's own self-test, run under pytest so a
 regression in it reds CI rather than waiting for its next scheduled run."""
 import importlib.util
+import io
+import json as _json
 import sys
+import urllib.error
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
+from unittest import mock
 
 _P = Path(__file__).resolve().parents[1] / "scripts/ops/research_loss_detector.py"
 _spec = importlib.util.spec_from_file_location("research_loss_detector", _P)
@@ -26,12 +31,6 @@ def test_could_not_read_is_never_clean():
 
 
 # ---- RESEARCH-LOSS-DETECTOR-RED: question C must survive an intermittent 500 ----
-import io
-import json as _json
-import urllib.error
-from datetime import datetime, timedelta, timezone
-from unittest import mock
-
 _NOW = datetime(2026, 11, 5, 12, tzinfo=timezone.utc)
 
 
