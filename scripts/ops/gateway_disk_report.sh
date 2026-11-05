@@ -95,7 +95,7 @@ if [ -d "${RB}" ]; then
   echo "-- loose objects (outside pack/ and info/): count and total size:"
   ${SUDO} find "${RB}/.git/objects" -mindepth 2 -type f ! -path '*/pack/*' ! -path '*/info/*' -printf '%s\n' 2>/dev/null | awk '{n++;s+=$1} END{printf "%d loose, %.2fG\n",n,s/1073741824}'
   echo "-- .git top-level du:"; timeout 100 ${SUDO} du -sh "${RB}/.git"/* 2>/dev/null | sort -rh | first 12
-  echo "-- gc.log present?:"; ${SUDO} ls -la --time-style=+%Y-%m-%dT%H:%M "${RB}/.git/gc.log" 2>&1 | first 2; ${SUDO} head -c 400 "${RB}/.git/gc.log" 2>/dev/null || true
+  echo "-- gc.log present?:"; { ${SUDO} ls -la --time-style=+%Y-%m-%dT%H:%M "${RB}/.git/gc.log" 2>&1 | first 2; } || true; ${SUDO} head -c 400 "${RB}/.git/gc.log" 2>/dev/null || true
   echo "-- gc / fetch / sparse config (names+values):"
   ${SUDO} ${G} config --get-regexp '^(gc|fetch|core\.(sparse|bare|preload)|pack|maintenance|extensions)' 2>/dev/null | first 20 || true
   echo "-- sparse-checkout list (first 25):"; ${SUDO} ${G} sparse-checkout list 2>&1 | first 25
@@ -103,5 +103,17 @@ if [ -d "${RB}" ]; then
   timeout 100 ${SUDO} find "${RB}/comms/research" -xdev -type f \( -name '*.pkl' -o -name '*.npz' -o -name '*.parquet' -o -name '*.csv' -o -name '*.gz' -o -name '*.zip' -o -name '*.joblib' \) -printf '%s\n' 2>/dev/null | awk '{n++;s+=$1} END{printf "%d files, %.2fG\n",n,s/1073741824}'
   timeout 100 ${SUDO} du -xh --max-depth=2 "${RB}/comms/research" 2>/dev/null | sort -rh | first 12
   echo "-- ict-git-sync now / last journal lines:"; systemctl is-active ict-git-sync.service 2>&1 || true; ${SUDO} journalctl -u ict-git-sync.service -n 12 --no-pager 2>/dev/null | cut -c1-200
+  echo "-- round 3: worktree vs tracked (is comms/research bigger than main tracks?):"
+  { ${SUDO} ${G} ls-files -z -- comms/research 2>/dev/null | (cd "${RB}" && ${SUDO} xargs -0 -r stat -c %s 2>/dev/null) | awk '{n++;s+=$1} END{printf "tracked comms/research present on disk: %d files, %.2fG\n",n,s/1073741824}'; } || true
+  { timeout 100 ${SUDO} ${G} status --porcelain --ignored 2>/dev/null | awk '{c[substr($0,1,2)]++} END{for(k in c)printf "status %s: %d\n",k,c[k]}' | first 10; } || true
+  echo "-- comms/research depth 3 (top 15):"; { timeout 100 ${SUDO} du -xh --max-depth=3 "${RB}/comms/research" 2>/dev/null | sort -rh | first 15; } || true
+  echo "-- loose objects by age (files, size): <=14d / >14d:"
+  { ${SUDO} find "${RB}/.git/objects" -mindepth 2 -type f ! -path '*/pack/*' ! -path '*/info/*' -mtime -14 -printf '%s\n' 2>/dev/null | awk '{n++;s+=$1} END{printf "<=14d: %d files, %.2fG\n",n,s/1073741824}'; } || true
+  { ${SUDO} find "${RB}/.git/objects" -mindepth 2 -type f ! -path '*/pack/*' ! -path '*/info/*' -mtime +14 -printf '%s\n' 2>/dev/null | awk '{n++;s+=$1} END{printf ">14d: %d files, %.2fG\n",n,s/1073741824}'; } || true
+  echo "-- loose objects already in a pack (prune-packed dry run): count and size:"
+  { timeout 120 ${SUDO} ${G} prune-packed -n 2>/dev/null | awk '{print $NF}' | (cd "${RB}" && ${SUDO} xargs -r stat -c %s 2>/dev/null) | awk '{n++;s+=$1} END{printf "%d objects, %.2fG\n",n,s/1073741824}'; } || echo "could_not_look"
+  echo "-- unreachable loose objects older than 14d (prune dry run): count:"
+  { timeout 240 ${SUDO} ${G} prune -n --expire=2.weeks.ago 2>/dev/null | wc -l; } || echo "could_not_look"
+  echo "-- snap disabled revisions / apt (small levers):"; { snap list --all 2>/dev/null | awk '/disabled/' | first 10; } || true
 fi
 } 2>&1 | mask
