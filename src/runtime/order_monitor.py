@@ -8339,6 +8339,21 @@ def _close_trade_from_order_status(
         resolved_reason = _classify_broker_exit(
             db, row, avg_exit_price, is_reduce_leg=is_reduce_leg,
         )
+        reason_source = "price_vs_pkg_bracket" if resolved_reason else "unresolved"
+        if not resolved_reason:
+            # RECONCILER-CLOSEDPNL-OWN-LEG (2026-11-05, bybit_2 trade 6881): the
+            # price classifier could not place the venue exit against the
+            # bracket, so the row kept the generic `reconciler_filled` while its
+            # own SL/TP order had filled (its bybit_portfolio mirror 6882, closed
+            # in the same second through the no-record branch below, read `sl`).
+            # Ask the venue which of THIS row's legs filled, by order id — the
+            # same once-per-finalisation read that branch makes. Only the LABEL
+            # is taken from it; the broker closed-pnl price and pnl stand.
+            _own = _own_bracket_fill_from_venue(
+                cfg, row, is_reduce_leg=is_reduce_leg)
+            if _own is not None:
+                resolved_reason = _own["leg"]
+                reason_source = BRACKET_ORDER_LABEL_SOURCE
         final_exit_reason = resolved_reason or "reconciler_filled"
         notes.update({
             "closed_at": closed_at,
@@ -8354,8 +8369,7 @@ def _close_trade_from_order_status(
             _broker_pnl_note_key(closed_pnl_rec):
                 closed_pnl_rec.get("closed_pnl"),
             "finalised_by": "reconciler",
-            "exit_reason_source":
-                ("price_vs_pkg_bracket" if resolved_reason else "unresolved"),
+            "exit_reason_source": reason_source,
         })
         updates: Dict[str, Any] = {
             "status": "closed",
