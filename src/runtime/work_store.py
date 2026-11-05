@@ -251,6 +251,15 @@ def _validate(item: dict, prior: dict | None, today: date | None) -> list[str]:
         item["owner"] = row["owner"]
         item["roadmap"] = row["roadmap"]
         item["roadmap_unmapped_reason"] = row.get("roadmap_unmapped_reason")
+        if not item["roadmap"]:
+            # fill_defaults leaves TERMINAL rows alone (checklist rows closed long ago carry no
+            # roadmap), but items.roadmap is NOT NULL: a done/dropped build created without one
+            # was a 500 (IntegrityError) on the live API, 2026-11-05T07:43Z. Fill, never refuse
+            # (G1 tightens none), with the same default reason fill_defaults uses.
+            item["roadmap"] = [cs.UNMAPPED]
+            item["roadmap_unmapped_reason"] = item.get("roadmap_unmapped_reason") or (
+                "not set at filing -- manager to map to a milestone at the next weekly pass")
+            filled.append('roadmap=["unmapped"]')
         if row.get("due_by"):
             rule = dict(item.get("due_rule") or {})
             rule.setdefault("kind", "date")
@@ -347,6 +356,11 @@ class WorkStore:
             try:
                 yield conn
                 conn.execute("COMMIT")
+            except sqlite3.IntegrityError as exc:
+                # A schema constraint the validator did not anticipate is the caller's bad
+                # input (422 with the constraint named), never an unhandled 500.
+                conn.execute("ROLLBACK")
+                raise WorkStoreValidationError(f"refused by a store constraint: {exc}") from None
             except BaseException:
                 conn.execute("ROLLBACK")
                 raise
