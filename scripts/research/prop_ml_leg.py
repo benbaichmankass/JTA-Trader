@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 # wiring: research/queue/RQ-20261105-fd68-01.yaml (Tradeify-only ML leg) and its Breakout/Velotrade sibling (checklist TRADEIFY-OWN-LEG-DRIVER, lane TRADEIFY-OWN-LEG)
+# ruff: noqa: E402, E701, E702, E731
 """Prop ML entry leg: pooled ML entry model -> net-of-cost ledger -> V3 prop gate -> distinctness D1-D4. Tier-1 research tooling.
 
 The pre-registered design lives in the queue unit, not here; this file only implements it:
