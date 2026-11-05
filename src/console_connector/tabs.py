@@ -217,6 +217,12 @@ LEG_FIELDS = ("trades", "wins", "winRate", "totalPnl", "totalPnlMeasured", "tota
 BOOKS = (("real_money", None), ("paper", "paper"), ("paper_portfolio", "paperPortfolio"))
 
 
+def _signal_catalog(repo: Path) -> dict:
+    """docs/reference/signal-catalog.yaml (row SIGNAL-CATALOG), parsed."""
+    import yaml
+    return yaml.safe_load((repo / "docs/reference/signal-catalog.yaml").read_text(encoding="utf-8")) or {}
+
+
 def system_catalog(repo: Path, signals_limit: int = 400) -> dict:
     """The System tab: strategy legs (status, books, venue, symbol), ML models and the signal catalog.
 
@@ -225,7 +231,6 @@ def system_catalog(repo: Path, signals_limit: int = 400) -> dict:
     leg's status is the roster's status at the register commit, not a venue read. ML ``target_stage`` is the
     manifest's target, not the live registry stage (that is `performance` -> ml_models).
     """
-    import yaml
     sections: dict[str, Any] = {}
     # (a) strategy legs
     try:
@@ -253,9 +258,8 @@ def system_catalog(repo: Path, signals_limit: int = 400) -> dict:
     except Exception as exc:  # noqa: BLE001 - a failed source says so; it is never an empty list
         sections["legs"] = {"read_state": "could_not_look", "population": {"legs": None}, "reason": _err(exc)}
     # (b) ML models + signals from the catalog artifact (row SIGNAL-CATALOG)
-    cat_path = repo / "docs/reference/signal-catalog.yaml"
     try:
-        cat = yaml.safe_load(cat_path.read_text(encoding="utf-8")) or {}
+        cat = _signal_catalog(repo)
         models = [{"model_id": m.get("model_id"), "family": m.get("model_family"),
                    "target_stage": m.get("target_deployment_stage"),
                    "dataset": (m.get("dataset") or {}).get("family"),
