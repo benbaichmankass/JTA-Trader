@@ -19,7 +19,16 @@
     "L-OPS"
   ],
   "priority_rank": 2,
-  "updated_at": "2026-11-05T00:56:26Z",
+  "updated_at": "2026-11-05T01:02:44Z",
   "updated_by": "session_01AFoLuN7HERxg65eHjtmMYE",
+  "observation": {
+    "what": "alert ledger reads + alert_watch wake on #17895 at 5-min cadence",
+    "how_to_check": "GET /api/diag/alerts read_state=read with rows since 2026-11-05T00:53Z; >=2 alert-watch comments <=1500 chars on #17895 spaced by the *:0/5 timer (seen 00:55Z and 01:00Z)",
+    "due_by": "2026-11-06"
+  },
+  "writeback": {
+    "roadmap": "none: infra row, no milestone line changes",
+    "arch": "none: the alert ledger is documented in docs/audits/2026-11-04-system-integration.md Design; ARCHITECTURE update rides WSD"
+  },
   "_seq": 907
 }
