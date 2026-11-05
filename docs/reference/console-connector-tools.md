@@ -22,7 +22,7 @@ A section inside `sections` repeats `read_state` + `population` for itself; the 
 
 | tool | needs `CONSOLE_CONNECTOR_AUTH=google` | why |
 |---|---|---|
-| `hello`, `work_rows`, `inbox`, `work_items`, `workplan`, `ml_roadmap` | no | public repo registers only |
+| `hello`, `work_rows`, `inbox`, `work_items`, `workplan`, `ml_roadmap`, `system_catalog` | no | public repo registers only |
 | `performance`, `system_health`, `data_query` | **yes** | P&L, journal rows, live-VM state |
 
 Without `google` the three gated tools are **absent from `tools/list`** and a direct `tools/call` returns
@@ -42,6 +42,14 @@ tier due_by overdue age_hours blocked_on[] prs priority_rank roadmap note_tail`.
 `sections.milestones.items[]` (`id goal name status week_priority target reviewed where next`; goal G4 or `L-ML*`),
 `sections.plan_status.items[]` (`ml_plan_status.analyse`: `id track plan ref ref_state flags[]`), `sections.rows.items[]` (live
 `ML-*`/`REGIME-*`/`EXIT-HEAD*`/`TP-PREDICT*`/`FUNDING-OI*` checklist rows: slim row + `next`).
+
+### `system_catalog` `{signals_limit?: 1..500 = 400}` (TTL 300 s, public)
+Committed files only (no live read): `sections.legs.items[]` (`leg status books[] venues[] book_classes{} symbols[] timeframe execution model`;
+status from `scripts/ops/strategy_status.py`), `sections.ml_models.items[]` (`model_id family target_stage dataset symbol_scope timeframe
+n_features`; the stage is the manifest TARGET, the live registry stage is `performance` -> `ml_models`), `sections.signals.items[]`
+(`id name family kind timeframe used_by[] health definition`) from `docs/reference/signal-catalog.yaml` (`health` is whether a metric exists;
+`unmeasured` is never healthy). `population.generated` is the catalog's date. A source that cannot be read is `could_not_look` with `reason`.
+Console System tab row `UI-CONSOLE-TABS-DATA`; the page renders a committed snapshot until this tool is deployed.
 
 ### `performance` `{}` (TTL 300 s, sign-in)
 * `sections.legs.books.{real_money,paper,paper_portfolio}`: `totals{7d,30d,all}` and `legs{<leg>:{7d,30d,all:{trades wins winRate totalPnl
@@ -77,6 +85,12 @@ identifier is checked against the live schema.
   `TRAINER_STORE_DB`). The live journal is not on the trainer; the trainer holds the `sync_trainer_data.sh` snapshot at
   `$DATA_DIR/trade_journal.db`, so the unit needs `TRADE_JOURNAL_DB` pointed at it. `provenance.db_file` and `provenance.db_file_age_s`
   say which file answered and how old it is. A missing file reports `could_not_look` for that database, never an empty table.
+
+### `work_rows` (changed, console Overview)
+Sections are now `due`, `in_flight`, `blocked`, `queued` (with a due date) and **`open_other`** (every other live row: queued without a due date,
+`landed_unproven`), so a consumer can see all open rows. `limit` is per section (1..200). Each row also carries `week_lane`
+(`standing|surge|throttle|null`; the key is always present, null means not in this week's plan), `roadmap` (list of milestone ids, or the
+`none: <reason>` string) and `writeback`. `view` accepts `open_other`.
 
 ### `inbox` (changed)
 Items in `decisions_checklist` and `asks_pipeline` gain `options: string[] | null`: the source `blocked_on` edge / row / pipeline item's
