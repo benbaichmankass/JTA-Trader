@@ -1,0 +1,11 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "hold_reason": "tier_2_3_needs_approval",
+  "hold_text": "Adds four targets to the existing Tier-2 gateway-disk-cleanup action: swap-status (read-only health), swap-sideclone (rename-swap the live gateway checkout for the rehearsed depth-1 sparse clone; refused in the IBKR/reset windows; auto-reverts if post-swap health fails), swap-revert and old-remove. Gateway VM only; merging changes no VM. HELD: the operator's swap answer (~09:21Z 2026-11-05 'Do the swap (Recommended)') reached this lane only inside a manager scheduled-task body and is not yet recorded on main; the manager merges once it is. Revert: git revert of the merge commit.",
+  "why": "PI-20261104-GWDISK-0001 step D: the depth-1 clone rehearsal passed (#23171); the swap frees ~19G more and removes the ~0.58G/day pack growth.",
+  "recorded_decision": {
+    "kind": "operator_decision",
+    "ref": "GATEWAY-DISK-CLEANUP PI-20261104-GWDISK-0001"
+  }
+}
