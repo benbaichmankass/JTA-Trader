@@ -11,3 +11,5 @@ The registered rule and tolerance of b620-01 are NOT changed; this is a diagnosi
    So round 1's code does not reproduce round 1 on current data either: the b620 fail is data drift plus a fixed-tau metric whose seed range
    (0.0065 to 0.0136 across these runs) exceeds the registered 0.0005 tolerance, not a mechanical fault in the timeframe harness.
 Not established: which months changed upstream (round 1's table is not committed), and the lightgbm/pandas build differences between hosts.
+
+Method scripts are kept as `*.py.txt` (one-off diagnostics, not repo code; they read the scratchpad caches they built).
