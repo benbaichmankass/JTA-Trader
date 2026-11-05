@@ -1229,6 +1229,10 @@ _LOG_FILES: dict[str, Path] = {
         runtime_logs_dir() / "losing_streak_alert_state.json",
     "losing_streak_observed_state":
         runtime_logs_dir() / "losing_streak_observed_state.json",
+    # ML-ENTRY-LIVE-MONITOR: last observation per account (n, mean, SE, flags at the latest 50-close checkpoint) +
+    # __last_check__, so "never fired" and "cannot run" stay distinguishable. Report-only detector.
+    "ml_entry_live_monitor_state":
+        runtime_logs_dir() / "ml_entry_live_monitor_state.json",
     # MI-303. The latch that rate-limits the DECISION-CHANNEL page. Allowlisted
     # in the SAME commit that shipped the writer, for the reason the
     # `exit_loop_health` #8778 lesson records: a latch that suppresses an
@@ -2725,6 +2729,21 @@ def get_version(request: Request) -> dict[str, Any]:
         "deployed_sha_by_unit": _deployed_sha_by_unit(),
         "captured_at": datetime.now(timezone.utc).isoformat(),
     }
+
+
+@router.get("/alerts")
+def get_alerts_ledger(
+    request: Request,
+    since: str | None = None,
+    kind: str | None = None,
+    channel: str | None = None,
+    limit: int = 500,
+) -> dict[str, Any]:
+    """Mirror of ``GET /api/bot/alerts`` (the alert ledger, ALERT-LEDGER-TO-MANAGER)
+    for ``diag_fetch.sh``. ``read_state`` first: ``could_not_look`` is never 0 alerts."""
+    _require_diag_token(request)
+    from src.web.api.routers.alerts import read_ledger
+    return read_ledger(since, kind, channel, limit)
 
 
 @router.get("/log_file")

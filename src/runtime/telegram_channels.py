@@ -151,6 +151,7 @@ SENDERS: Final[dict[str, tuple[str, ...]]] = {
     "src/runtime/ltr_first_proof.py": ("alert",),   # LTR first-proof pings, one per stage, once ever (operator 2026-10-26)
     "src/runtime/live_review_rows_watch.py": ("alert",),   # LTR-ROWS-SWAP-TRUNCATION: ONE flag per incident when the rows branch shrank (tip refused)
     "src/runtime/losing_streak_alert.py": ("alert",),
+    "src/runtime/ml_entry_live_monitor.py": ("alert",),   # ML-ENTRY-LIVE-MONITOR: report-only flag per account per checkpoint
     "src/runtime/silent_refusal_alert.py": ("alert",),
     "src/runtime/starved_account_alert.py": ("alert",),
     "src/runtime/package_leg_coverage.py": ("alert",),
@@ -276,7 +277,8 @@ def send(kind: str, text: str, *, parse_mode: Optional[str] = None,
     try:
         return bool(send_telegram_direct(
             text, parse_mode=parse_mode, mirror_to_fcm=mirror_to_fcm,
-            bot_token=route.token, chat_id=route.chat_id, reply_markup=reply_markup))
+            bot_token=route.token, chat_id=route.chat_id, reply_markup=reply_markup,
+            kind=kind, channel=ch))
     except Exception as exc:  # noqa: BLE001
         if ch == SYSTEM:
             raise
@@ -286,7 +288,8 @@ def send(kind: str, text: str, *, parse_mode: Optional[str] = None,
         sysr = channel_route(SYSTEM)
         return bool(send_telegram_direct(
             f"[meant for {ch.upper()}] {text}", parse_mode=parse_mode,
-            mirror_to_fcm=mirror_to_fcm, bot_token=sysr.token, chat_id=sysr.chat_id))
+            mirror_to_fcm=mirror_to_fcm, bot_token=sysr.token, chat_id=sysr.chat_id,
+            kind=kind, channel=SYSTEM))
 
 
 def enabled(kind: str) -> bool:

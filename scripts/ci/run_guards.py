@@ -520,9 +520,18 @@ GUARDS: List[Dict[str, Any]] = [
     {
         "name": "operator-owed-guard",
         "when": None,
+        # COMPUTE-ALLOCATION (manager, 2026-11-05): this grades REPOSITORY STATE (the age of operator-owed pipeline rows),
+        # not the diff, so one stale row reddened every open PR (11 of 20 red pre-final heads on human PRs over 24 h,
+        # comms/ci/human-pr-prefinal-heads-2026-11-04.json). On a pull_request it now runs only when the diff touches the
+        # pipeline store or this guard; on the scheduled backstop / push / --all it always runs, so a stale owed row still
+        # raises its red there and reaches the manager. Reduces friction; adds no gate.
         "steps": [
             ["python3", "scripts/ci/check_operator_owed.py", "--self-test"],
-            ["python3", "scripts/ci/check_operator_owed.py"],
+            {"argv": ["python3", "scripts/ci/check_operator_owed.py"],
+             "pr_skip_unless": {"globs": [
+                 "docs/claude/work/pipeline/**", "docs/claude/work/PIPELINE.jsonl",
+                 "scripts/ops/pipeline.py", "scripts/ci/check_operator_owed.py",
+             ]}},
         ],
     },
     {
@@ -1973,9 +1982,17 @@ GUARDS: List[Dict[str, Any]] = [
         # subject is a committed receipt file, not this PR's diff.
         "name": "research-queue-dispatch-liveness",
         "when": None,
+        # Same scoping as operator-owed-guard (COMPUTE-ALLOCATION): the subject is a committed receipt graded against the
+        # clock, not the diff, so a stale receipt reddened unrelated PRs. On a pull_request it runs only when the diff
+        # touches the receipt, the dispatcher or this guard; the scheduled backstop / push / --all always run it.
         "steps": [
             ["python3", "scripts/ci/check_research_queue_dispatch_liveness.py", "--self-test"],
-            ["python3", "scripts/ci/check_research_queue_dispatch_liveness.py"],
+            {"argv": ["python3", "scripts/ci/check_research_queue_dispatch_liveness.py"],
+             "pr_skip_unless": {"globs": [
+                 "docs/claude/work/research-queue-dispatch-receipt.json",
+                 ".github/workflows/research-queue-dispatch.yml", "scripts/research/dispatch_queue.py",
+                 "scripts/ci/check_research_queue_dispatch_liveness.py",
+             ]}},
         ],
     },
     {

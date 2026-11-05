@@ -2,7 +2,7 @@
   "id": "SPOTCANDLES-AUDIT",
   "title": "PI-20261103-SPOTCANDLES-0001: audit every Bybit-fed strategy's candle source for ccxt defaultType=spot (perp-backtested legs fed spot candles); fix those that read spot",
   "phase": null,
-  "state": "in_flight",
+  "state": "done",
   "owner": "manager",
   "lane": "session_01AFoLuHgEywPMzgjbLqgLYC",
   "model": "claude-opus-5-5",
@@ -13,13 +13,17 @@
     "#22897"
   ],
   "blocked_on": [],
-  "note": "PR #22897 (Tier 3, landing hold): connector-level fix, bare Bybit USDT ids resolve to the linear perp. All 34 Bybit-rostered legs read SPOT candles while trading linear with perp Stage-0 corpora (ml_entry* already fixed by #22650). Measured gap (trainer relay #22896): spot-perp close basis median +4.4..+7.3 bps; entry-bar Jaccard 0.42-0.96 over 24 replayed legs, net-R delta both signs (14+/10-); table in the PR body + PI-20261103-SPOTCANDLES-0001. OPERATOR DECISION 2026-11-04 ~19:50Z (popup, relayed by Manager Session 2026-11-04a): \"Merge when green (Recommended)\" - manager merges after CI green, restarts the trader, verifies category=linear candle reads on the next tick. Follow-ups filed: PI-20261104-TCANDLES-0001 (dead spot-default order path), -0002 (adx25 harness parity). DEPLOYED 2026-11-04 21:43-21:46Z by Manager Session 2026-11-04a: #22973 pause-autoheal -> #22976 stop-bot-service -> #22977 cancel-ib-order 1232 (IBKR 202 confirmed) -> #22978 cancel 1233 (not_found, gone with the OCA) -> #22979 pull-and-deploy (trader + telegram + web-api restarted) -> #22987 resume-autoheal (timer enabled+active). OBSERVED: /api/diag/status 21:46:56Z git_sha_running d8a34e41b (includes #22894 6aa3c502, #22897 6f2ed30e, #22900 1b7dd758, #22908 d8a34e41), heartbeat 44 s, order_monitor errors=0 on every leg. #22897 MERGED+DEPLOYED+OBSERVED: diag #22989 api/bot/candles BTCUSDT 1h bar 21:00Z (time 1793822400) close 80098.6 == Bybit category=linear close 80098.6, spot was 80134.8 (trainer #22984). Trader journalctl since the 21:44Z restart: 0 'Error fetching OHLCV'/'BadSymbol'/Traceback lines (window read 21:47Z, short). Close PI-20261103-SPOTCANDLES-0001 after one more clean journal read.",
+  "note": "PR #22897 (Tier 3, landing hold): connector-level fix, bare Bybit USDT ids resolve to the linear perp. All 34 Bybit-rostered legs read SPOT candles while trading linear with perp Stage-0 corpora (ml_entry* already fixed by #22650). Measured gap (trainer relay #22896): spot-perp close basis median +4.4..+7.3 bps; entry-bar Jaccard 0.42-0.96 over 24 replayed legs, net-R delta both signs (14+/10-); table in the PR body + PI-20261103-SPOTCANDLES-0001. OPERATOR DECISION 2026-11-04 ~19:50Z (popup, relayed by Manager Session 2026-11-04a): \"Merge when green (Recommended)\" - manager merges after CI green, restarts the trader, verifies category=linear candle reads on the next tick. Follow-ups filed: PI-20261104-TCANDLES-0001 (dead spot-default order path), -0002 (adx25 harness parity). DEPLOYED 2026-11-04 21:43-21:46Z by Manager Session 2026-11-04a: #22973 pause-autoheal -> #22976 stop-bot-service -> #22977 cancel-ib-order 1232 (IBKR 202 confirmed) -> #22978 cancel 1233 (not_found, gone with the OCA) -> #22979 pull-and-deploy (trader + telegram + web-api restarted) -> #22987 resume-autoheal (timer enabled+active). OBSERVED: /api/diag/status 21:46:56Z git_sha_running d8a34e41b (includes #22894 6aa3c502, #22897 6f2ed30e, #22900 1b7dd758, #22908 d8a34e41), heartbeat 44 s, order_monitor errors=0 on every leg. #22897 MERGED+DEPLOYED+OBSERVED: diag #22989 api/bot/candles BTCUSDT 1h bar 21:00Z (time 1793822400) close 80098.6 == Bybit category=linear close 80098.6, spot was 80134.8 (trainer #22984). Trader journalctl since the 21:44Z restart: 0 'Error fetching OHLCV'/'BadSymbol'/Traceback lines (window read 21:47Z, short). Close PI-20261103-SPOTCANDLES-0001 after one more clean journal read. [2026-11-04 ~22:45Z POST-DEPLOY-OBS] BTCUSDT 1h bar 21:00Z: live close 80200.0 == Bybit linear 80200 (spot 80250.5), trainer relay #22997. Journal since 21:44Z: 2 matches, both bybit 10006 rate limit, 0 BadSymbol/Traceback (complete, 10919 lines). PI-20261103-SPOTCANDLES-0001 closed; 10006 filed as PI-20261104-GEVRW4ZM-0001.",
   "due_by": "2026-11-05",
   "roadmap": [
     "L-OPS"
   ],
   "priority_rank": 2,
-  "updated_at": "2026-11-04T22:00:58Z",
-  "updated_by": "session_01AFoLuHgZaSYnm9avjeZE33",
+  "updated_at": "2026-11-05T00:21:36Z",
+  "updated_by": "session_01AFoLuMsKLXWPomGevRw4ZM",
+  "writeback": {
+    "roadmap": "L-OPS: BTCUSDT 1h last closed bar close 80200.0 == Bybit linear 80200 (spot 80250.5) after deploy d8a34e41b (trainer relay #22997); PI-20261103-SPOTCANDLES-0001 closed; 10006 rate-limit lines filed as PI-20261104-GEVRW4ZM-0001",
+    "arch": "none: observation only"
+  },
   "_seq": 908
 }

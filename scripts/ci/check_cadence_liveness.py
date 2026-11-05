@@ -175,6 +175,13 @@ class Cadence(NamedTuple):
 #: healthy-looking watch forever". That is the new-table-wiring lesson: a guard
 #: cheaper to lie to than to satisfy is worse than no guard.
 CADENCE_REGISTRY: dict[str, dict] = {
+    # ── ML-ENTRY-RETRAIN-CADENCE (2026-11-04): weekly candidate retrain; the artifact is a run artifact, not in git.
+    "ml-entry-retrain.yml": {
+        "receipt": None,
+        "why": "uploads the candidate model + freshness.json as a 90-day Actions artifact, not in git, so no repo receipt exists; a failed "
+               "run turns red and is observed by claude-run-failure-alert, and the served model's own data-through age is graded on the "
+               "trader tick (src/runtime/ml_entry_live_monitor.py served_model_freshness)",
+    },
     # ── GH-CAPACITY-INFRA-RUNNER (2026-11-03): a routing check, writes nothing to git.
     "infra-runner-health.yml": {
         "receipt": None,

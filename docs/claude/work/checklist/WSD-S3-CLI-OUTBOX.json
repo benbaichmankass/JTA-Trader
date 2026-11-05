@@ -1,0 +1,28 @@
+{
+  "id": "WSD-S3-CLI-OUTBOX",
+  "title": "WORK-STORE S3: scripts/ops/work.py CLI (add/set/note/close/observe/reopen/queue); checklist.py and pipeline.py become shims over it; issue-outbox fallback workflow",
+  "phase": null,
+  "state": "queued",
+  "owner": "manager",
+  "lane": null,
+  "model": "claude-sonnet-5-5",
+  "ceiling_usd": 8,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [],
+  "blocked_on": [
+    {
+      "kind": "work_item",
+      "ref": "WSD-S1-STORE-API",
+      "what": "needs WSD-S1-STORE-API landed"
+    }
+  ],
+  "note": "docs/plans/WORK-STORE-DESIGN-2026-11.md \u00a72.3, \u00a76 S3. Needs the D3 token provisioned (see WSD-S1-STORE-API). CLOSES WHEN: a write from a cloud session lands through the direct path AND through the outbox path, each with its op_id once.",
+  "due_by": "2026-11-11",
+  "roadmap": [
+    "L-OPS"
+  ],
+  "updated_at": "2026-11-04T23:37:23Z",
+  "updated_by": "session_01AFoLuKFYUoKzs5TXjGfEdh",
+  "_seq": 922
+}

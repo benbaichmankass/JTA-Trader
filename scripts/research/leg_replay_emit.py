@@ -22,6 +22,7 @@ different experiment):
   long-drag    PI-20261011-HOPS1447-0001 unit  short-drag with sides swapped; side-constrained legs are controls
   trend-asym   RQ-20261010-419b-03  per leg, short-only / long-only legs are controls and never graded
   portfolio    RQ-20261010-419b-04  PROPOSE / REDUCE-CONCENTRATION = pass, NO ACTION = no_action_warranted
+  family-regime  pullback-2h family walk-forward re-open (weekly planning 2026-11-04): pass = REGIME, fail = DECAY / NO_EDGE
   none         (default) replay + folds only; verdict is ``indeterminate`` with the raw results in measurement.
 Net R is the harness's ``net_r`` (full cost stack the harness charges). Tier-1 research code; writes only --out.
 """
@@ -391,6 +392,35 @@ def grade_portfolio(series: Dict[str, Dict[str, float]], symbols: Dict[str, str]
 
 
 # ── driver ──────────────────────────────────────────────────────────────────
+# ── rule: family-regime (pullback-2h family walk-forward, re-opened 2026-11-04) ─────────────────────────
+MIN_FAMILY_FOLD_TRADES = 100      # registered floor: pooled trades per fold (sd~1.2R -> d=0.28 at power 0.8)
+
+
+def grade_family_regime(pooled: Dict[str, Any]) -> Dict[str, Any]:
+    """Is the family's recent sag REGIME (inside its own historical fold range) or DECAY / NO_EDGE?
+
+    No parameter is fitted (config-exact live legs), so folds 1..K-1 are the REFERENCE window and the last fold
+    is the disjoint HELD-OUT window. INDETERMINATE if any fold has < MIN_FAMILY_FOLD_TRADES pooled trades.
+    DECAY   held-out per-trade net R < min(reference folds' per-trade net R) AND held-out net R < 0.
+    REGIME  not DECAY AND >= 2 of the folds net R > 0 AND pooled whole-window net R > 0.
+    NO_EDGE everything else.  pass = REGIME only; a pass is a Stage-0 note, never a config change."""
+    bf = pooled.get("by_fold") or []
+    if len(bf) < 3 or any(f["trades"] < MIN_FAMILY_FOLD_TRADES for f in bf):
+        return {"outcome": "INDETERMINATE", "verdict": "indeterminate"}
+    pt = [f["net_r"] / f["trades"] for f in bf]
+    held, ref = pt[-1], pt[:-1]
+    pos = sum(1 for f in bf if f["net_r"] > 0)
+    total = pooled["pooled"]["net_r"]
+    if held < min(ref) and bf[-1]["net_r"] < 0:
+        outcome = "DECAY"
+    elif pos >= 2 and total > 0:
+        outcome = "REGIME"
+    else:
+        outcome = "NO_EDGE"
+    return {"outcome": outcome, "verdict": "pass" if outcome == "REGIME" else "fail",
+            "per_trade_net_r": [round(x, 4) for x in pt], "folds_positive": pos, "pooled_net_r": total}
+
+
 def write_verdict(out: Path, v: Dict[str, Any]) -> None:
     (out / "verdict.json").write_text(json.dumps(v, indent=1) + "\n", encoding="utf-8")
 
@@ -417,6 +447,8 @@ def assemble(legs: List[str], emits: Dict[str, str], strategies: Dict[str, Any],
         g = grade_long_drag(per_leg, pooled, meas["side_constraints"])
     elif rule == "trend-asym":
         g = grade_trend_asym(per_leg, meas["side_constraints"])
+    elif rule == "family-regime":
+        g = grade_family_regime(pooled)
     elif rule == "portfolio":
         syms = {lg: str((strategies[lg].get("symbols") or ["?"])[0]) for lg in per_leg}
         g = grade_portfolio(series, syms)
@@ -437,7 +469,7 @@ def main(argv: Optional[List[str]] = None) -> int:
     ap.add_argument("--out", required=True)
     ap.add_argument("--days", type=int, default=1830)
     ap.add_argument("--end", default=None, help="window end YYYY-MM-DD (default: yesterday UTC)")
-    ap.add_argument("--rule", choices=("none", "short-drag", "long-drag", "trend-asym", "portfolio"), default="none")
+    ap.add_argument("--rule", choices=("none", "short-drag", "long-drag", "trend-asym", "portfolio", "family-regime"), default="none")
     ap.add_argument("--data-dir", default=None, help="candle dir (default: <out>/data)")
     ap.add_argument("--from-emits", default=None, help="SMOKE/TEST: dir of <leg>.jsonl emits; skips fetch+harness")
     a = ap.parse_args(argv)

@@ -6522,6 +6522,7 @@ def ml_entry_signal_builder(settings: dict) -> Dict[str, Any]:
     from src.units.strategies import load_strategy_config
     from src.units.strategies.ml_entry import NAME, load_model, order_package
     from src.runtime.market_data import fetch_candles
+    from src.config.symbol_sets import leg_symbols
 
     try:
         strategies_cfg = load_strategy_config()
@@ -6530,7 +6531,8 @@ def ml_entry_signal_builder(settings: dict) -> Dict[str, Any]:
     vcfg = dict(strategies_cfg.get(NAME, {}) or {})
     vcfg.setdefault("decision_bar", "closed")
     symbol = str(settings.get("SYMBOL", settings.get("symbol", "")) or "")
-    syms = [str(s) for s in (vcfg.get("symbols") or [])]
+    # The leg's union, after its per-symbol pass record (src/config/ml_universe.py); no record = symbols: verbatim.
+    syms = [str(s) for s in leg_symbols(vcfg, None, leg=NAME)]
     if not bool(vcfg.get("enabled", False)) or (syms and symbol not in syms):
         return _with_signal_package(NAME, {"symbol": symbol, "side": "none",
                                            "meta": {"strategy_name": NAME, "reason": "disabled_or_out_of_scope"}})
@@ -6564,7 +6566,7 @@ def ml_entry_signal_builder(settings: dict) -> Dict[str, Any]:
         # Per-account profile (row ML-ENTRY-ALL-ACCOUNTS, src/runtime/ml_entry_profile.py): reference source, anchor,
         # sides, session and cost basis from strategies.yaml::ml_entry.account_profiles; none declared = defaults.
         from src.runtime import ml_entry_profile as _PR
-        prof = _PR.resolve(vcfg, symbol)
+        prof = _PR.resolve(vcfg, symbol, NAME)
         cfg["_profile"] = prof
         if venue != "bybit" and prof["declared"]:
             cfg["_candle_venue"] = venue  # the moving-TP check-in reads the own frame from this venue (else Bybit)

@@ -229,6 +229,7 @@ jobs:
         if: steps.guards.outputs.exit != '0' && github.event_name == 'pull_request'
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          DASHBOARD_API_TOKEN: ${{ secrets.DASHBOARD_API_TOKEN }}  # ALERT-LEDGER-TO-MANAGER (best-effort ledger write)
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
         run: |
           if [ ! -s /tmp/guards-notify.txt ]; then
@@ -248,6 +249,7 @@ jobs:
             "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
             -d "chat_id=${TELEGRAM_CHAT_ID}" \
             -d "text=${MESSAGE}" >/dev/null
+          bash scripts/ops/post_alert.sh alert system high telegram_ok "${MESSAGE}" "guards:${{ github.event.pull_request.number }}"
 
       - name: Fail the check on any guard failure
         if: steps.guards.outputs.exit != '0'

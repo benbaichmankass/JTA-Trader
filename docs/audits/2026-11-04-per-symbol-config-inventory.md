@@ -56,7 +56,7 @@ The scan was checked against a known positive: it finds `claude_desk.account_sym
 | (reported, not a gate) re-cost of c692-01 at measured Bybit spreads | 51 Bybit-listed perps | −0.0050 (vs +0.0065 at flat 3 bps) | `comms/research/ML-ENTRY-UNIVERSE/local-20261101T1830Z/summary.json` |
 | (reported, not a gate) frozen-v1 reference in RQ-20261101-b609-01 | W1 2026-10, 49 symbols | −0.0405, n=894 | `comms/research/RQ-20261101-b609-01/local-20261101T2000Z/result.json` |
 | RQ-20261101-a24c-01 (blocked: harness + 2026-10 data) | Dev-chosen universe U(C) over the perps, re-costed per symbol-month | not run | `research/queue/blocked/RQ-20261101-a24c-01.yaml` |
-| RQ-20261104-a41f-01 (PR #22900, queued) | The alpaca_live ETFs under an Alpaca profile | not run | PR #22900 |
+| RQ-20261104-a41f-01 (PR #22928, blocked: Alpaca bars) | A pre-registered Alpaca ETF pool (active, tradable us_equity ETF, median daily $vol >= 50M USD over the 2019-2020 dev window), POOLED, under an Alpaca profile | not run | PR #22928 |
 
 **The rule (operator ~19:33Z, "Group-level").** An ML trades the whole population its registered pooled test passed
 on, net of each symbol's own costs, minus a cost/liquidity filter fixed before the run. Per-symbol numbers are monitoring
@@ -75,13 +75,13 @@ points (n 3–22 each).
 **RQ-20261101-a24c-01** (blocked: harness + 2026-10 data). Until a24c-01 passes, the five stay.
 
 **The 11 alpaca_live ETFs FAILED as a population** (bdc2-01, −0.308 R long-only, n=128). The pending population test on
-Alpaca is **RQ-20261104-a41f-01** (#22900), over the alpaca_live symbols.
+Alpaca is **RQ-20261104-a41f-01** (#22928), POOLED over its REGISTERED population: a pre-registered Alpaca ETF liquidity pool, not the alpaca_live list (Manager Session 2026-11-04a, ~20:23Z: "the population is the one a41f-01 is REGISTERED on").
 
 | Account (status) | Venue can trade | Configured today | Universe under the rule | Delta (from → to) | Tier |
 |---|---|---|---|---|---|
 | bybit_2 (real money) | Bybit USDT perps | BTC ETH XRP ADA SOL | the passed population: the same 5 | **none** | — |
 | bybit_portfolio (real-money mirror) | Bybit USDT perps | BTC ETH XRP ADA SOL | the same 5 | **none** | — |
-| alpaca_paper (paper; a testing use of ml_entry, held there by the `DUAL_BOOK_EXCEPTIONS` entry) | US equities/ETFs (no Alpaca crypto instrument profile) | SPY QQQ IWM TLT IEF SLV USO GDX TQQQ QLD SPYM IAUM SCHA (13) | a41f-01's population = the alpaca_live symbols: SPY QQQ GLD IWM TLT IEF SLV USO GDX SPYM IAUM (11) | **−TQQQ −QLD −SCHA, +GLD** (13 → 11). GLD has an operator-kept zombie OCO on alpaca_paper (PI-20261025-ALQWWPXT-0001), which is why it was left out; that needs the operator's word before it is added | Tier 3 paper, **proposed only** |
+| alpaca_paper (paper; a testing use of ml_entry, held there by the `DUAL_BOOK_EXCEPTIONS` entry) | US equities/ETFs (no Alpaca crypto instrument profile) | SPY QQQ IWM TLT IEF SLV USO GDX TQQQ QLD SPYM IAUM SCHA (13) | a41f-01's REGISTERED population (the pre-registered Alpaca ETF liquidity pool) ∩ Alpaca-tradable, once the pool list exists as a committed file | **none yet**: the current 13 stay (add-only resolver) until the pool is materialised; then ONE Tier-3 paper-set PR with the per-symbol diff. GLD has an operator-kept zombie OCO on alpaca_paper (PI-20261025-ALQWWPXT-0001), so it needs the operator's word before it is added | Tier 3 paper, **proposed only** |
 
 A future real-money widening (bybit_2/bybit_portfolio → a24c-01's U(C)) is a Tier-3 change decided on that unit's
 record, with the guard gap in inventory #14 closed first.
@@ -110,13 +110,13 @@ exit head on ml_entry's own trades and has no universe of its own. `entry_head_p
 
 1. **Real money: no change.** bybit_2/bybit_portfolio keep the passed 5. A widening waits on a24c-01.
 2. **Paper/demo proposals (Tier 3):**
-   - alpaca_paper ml_entry 13 → a41f-01's 11. Whether GLD goes in is the operator's call.
+   - alpaca_paper ml_entry: 13 → a41f-01's registered pool ∩ Alpaca-tradable, opened only once the pool list is a committed file (until then the 13 stay). Whether GLD goes in is the operator's call. (Corrected 2026-11-04 by lane ML-ENTRY-ALL-ACCOUNTS on the manager's ~20:23Z decision; this line first read "13 → a41f-01's 11".)
    - bybit_1 ml_entry_v2 5 → the Bybit-listed frozen-60, after a margin/slice check.
-3. **The per-symbol machinery is superseded.** The `comms/ml_universe/<leg>.json` per-symbol shrunk-pass record and the
-   per-symbol rule added to a24c-01/a41f-01 (lane ML-ENTRY-ALL-ACCOUNTS, ~19:32Z) followed the replaced decisions. Under
-   "Group-level" those per-symbol results are monitoring only, and must not gate a symbol.
+3. **The per-symbol machinery is superseded, and was withdrawn.** The per-symbol rule drafted on a24c-01/a41f-01 (lane
+   ML-ENTRY-ALL-ACCOUNTS, ~19:32Z) was withdrawn before any run and never reached main; `comms/ml_universe/<leg>.json` is
+   now a POPULATION pass record (PR #22928). Under "Group-level" per-symbol results are monitoring only, and never gate a symbol.
 4. **The resolver** (inventory #6, #7, #10–13, #15) belongs to lane ML-ENTRY-ALL-ACCOUNTS (PR B). It is Tier 2, with a
-   landing hold and parity tests.
+   landing hold and parity tests. It is PR #22928 (Tier 3, held): ADD-ONLY, so point 2's paper proposals are separate config PRs.
 5. **Still on row `ML-UNIVERSE-RULE`:** `claude_desk.account_symbols` (#9, paper/demo, Tier 3) and the guard gap (#14).
    #14 needs the operator's say under "No new gates".
 

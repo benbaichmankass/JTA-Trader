@@ -11,6 +11,7 @@ from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from src.web.api.routers import accounts as accounts_router
+from src.web.api.routers import alerts as alerts_router
 from src.web.api.routers import auth as auth_router
 from src.web.api.routers import auth_google as auth_google_router
 from src.web.api import auth as auth_module
@@ -121,6 +122,7 @@ app.include_router(insights_router.router)
 app.include_router(gpu_spend_router.router)
 app.include_router(news_router.router)
 app.include_router(notifications_router.router)
+app.include_router(alerts_router.router)
 app.include_router(exit_ladder_router.router)
 app.include_router(fc_geometry_router.router)
 app.include_router(allocator_router.router)
