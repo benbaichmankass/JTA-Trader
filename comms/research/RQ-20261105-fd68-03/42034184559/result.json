@@ -1,0 +1,151 @@
+{
+ "schema": "prop_ml_leg/1",
+ "profile": "tradeify",
+ "smoke": false,
+ "rehearsal": false,
+ "bar_hours": 4,
+ "taus": [
+  0.4,
+  0.45,
+  0.5,
+  0.55
+ ],
+ "horizon_bars": 12,
+ "arms_run": [
+  "F0",
+  "F0+F1",
+  "F0+F1+F2"
+ ],
+ "arms_unavailable": [
+  "F0+F1+F2+F3"
+ ],
+ "arm_denominator_registered": 16,
+ "arms_graded": 12,
+ "discovery_table": [
+  {
+   "arm": "F0",
+   "tau": 0.4,
+   "n": 1478,
+   "sum_net_r": -66.87,
+   "folds_with_trades": 15,
+   "folds_positive": 4,
+   "eligible": false
+  },
+  {
+   "arm": "F0",
+   "tau": 0.45,
+   "n": 929,
+   "sum_net_r": -7.049,
+   "folds_with_trades": 15,
+   "folds_positive": 6,
+   "eligible": false
+  },
+  {
+   "arm": "F0",
+   "tau": 0.5,
+   "n": 543,
+   "sum_net_r": -22.186,
+   "folds_with_trades": 15,
+   "folds_positive": 6,
+   "eligible": false
+  },
+  {
+   "arm": "F0",
+   "tau": 0.55,
+   "n": 276,
+   "sum_net_r": -5.797,
+   "folds_with_trades": 15,
+   "folds_positive": 8,
+   "eligible": false
+  },
+  {
+   "arm": "F0+F1",
+   "tau": 0.4,
+   "n": 1558,
+   "sum_net_r": -23.928,
+   "folds_with_trades": 15,
+   "folds_positive": 6,
+   "eligible": false
+  },
+  {
+   "arm": "F0+F1",
+   "tau": 0.45,
+   "n": 1031,
+   "sum_net_r": -15.801,
+   "folds_with_trades": 15,
+   "folds_positive": 6,
+   "eligible": false
+  },
+  {
+   "arm": "F0+F1",
+   "tau": 0.5,
+   "n": 622,
+   "sum_net_r": -31.302,
+   "folds_with_trades": 15,
+   "folds_positive": 7,
+   "eligible": false
+  },
+  {
+   "arm": "F0+F1",
+   "tau": 0.55,
+   "n": 335,
+   "sum_net_r": -15.294,
+   "folds_with_trades": 15,
+   "folds_positive": 7,
+   "eligible": false
+  },
+  {
+   "arm": "F0+F1+F2",
+   "tau": 0.4,
+   "n": 1896,
+   "sum_net_r": -151.285,
+   "folds_with_trades": 15,
+   "folds_positive": 4,
+   "eligible": false
+  },
+  {
+   "arm": "F0+F1+F2",
+   "tau": 0.45,
+   "n": 1476,
+   "sum_net_r": -102.876,
+   "folds_with_trades": 15,
+   "folds_positive": 5,
+   "eligible": false
+  },
+  {
+   "arm": "F0+F1+F2",
+   "tau": 0.5,
+   "n": 1043,
+   "sum_net_r": -29.135,
+   "folds_with_trades": 15,
+   "folds_positive": 8,
+   "eligible": false
+  },
+  {
+   "arm": "F0+F1+F2",
+   "tau": 0.55,
+   "n": 695,
+   "sum_net_r": -20.368,
+   "folds_with_trades": 15,
+   "folds_positive": 10,
+   "eligible": true
+  }
+ ],
+ "folds": 15,
+ "data_rows": 39995,
+ "elapsed_s": 313,
+ "selected": {
+  "arm": "F0+F1+F2",
+  "tau": 0.55,
+  "discovery_sum_net_r": -20.368,
+  "discovery_n": 695
+ },
+ "heldout": {
+  "n": 35,
+  "mean_net_r": -0.12551354285714286
+ },
+ "verdict": "INDETERMINATE",
+ "read_state": "n_below_floor",
+ "n_heldout": 35,
+ "floor": 150
+}
