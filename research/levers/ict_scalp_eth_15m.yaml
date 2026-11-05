@@ -73,12 +73,77 @@ attribution:
       gross_r: 6.44
 manifest:
   entry: untested
-  exit: untested
-  filter: untested
+  exit: tested
+  filter: tested
   regime_gating: untested
   timeframe: untested
   symbol_set: untested
   direction: untested
   session: untested
   sizing_vs_cost: untested
-levers: {}
+levers:
+  exit:
+    tp_at_r:
+      tests:
+      - value: '2.0'
+        baseline_value: 'off'
+        arm: TP2
+        unit: RQ-20261101-78fc-48
+        window: 2024-10-05..2026-10-04
+        n: 152
+        net_r: -4.8805
+        baseline_n: 152
+        baseline_net_r: -3.0566
+        delta_net_r: -1.8239
+        folds_ge_baseline: 3/6
+        max_drawdown_r: 16.128
+        verdict: fail
+        joint_change: false
+      shape: flat
+      points: 1
+      best_delta_r_per_trade: -0.012
+      fold_stability: 0.5
+      reading: no response at the tested values
+  filter:
+    cooldown_bars:
+      tests:
+      - value: '8'
+        baseline_value: 'off'
+        arm: CD8
+        unit: RQ-20261101-78fc-48
+        window: 2024-10-05..2026-10-04
+        n: 151
+        net_r: -2.7177
+        baseline_n: 152
+        baseline_net_r: -3.0566
+        delta_net_r: 0.3389
+        folds_ge_baseline: 5/6
+        max_drawdown_r: 13.9885
+        verdict: fail
+        joint_change: false
+      shape: flat
+      points: 1
+      best_delta_r_per_trade: 0.0022
+      fold_stability: 0.833
+      reading: no response at the tested values
+    htf_rule:
+      tests:
+      - value: 4h
+        baseline_value: 1h
+        arm: H4
+        unit: RQ-20261101-78fc-48
+        window: 2024-10-05..2026-10-04
+        n: 149
+        net_r: -7.7625
+        baseline_n: 152
+        baseline_net_r: -3.0566
+        delta_net_r: -4.7059
+        folds_ge_baseline: 3/6
+        max_drawdown_r: 13.84
+        verdict: fail
+        joint_change: false
+      shape: single_point
+      points: 1
+      best_delta_r_per_trade: -0.031
+      fold_stability: 0.5
+      reading: every tested value is worse than the baseline

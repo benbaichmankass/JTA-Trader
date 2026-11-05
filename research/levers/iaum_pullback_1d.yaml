@@ -8,66 +8,66 @@ books:
 - alpaca_paper
 baseline:
   record: comms/strategy_evidence/iaum_pullback_1d.json
-  net_r: 7.1631
+  net_r: 10.6758
   n: 8
-  fidelity: approximate
+  fidelity: faithful
   rule_verdict: pass
 attribution:
   read_state: measured
   n: 8
-  net_r: 7.163
-  gross_r: 7.268
-  cost_r: 0.106
-  cost_share_of_gross: 0.015
+  net_r: 10.676
+  gross_r: 10.785
+  cost_r: 0.11
+  cost_share_of_gross: 0.01
   verdict_hint: gross edge survives cost
   entry_quality:
-    mean_mfe_r: 1.538
-    share_mfe_ge_1r: 0.625
+    mean_mfe_r: 1.949
+    share_mfe_ge_1r: 0.75
     n_with_mfe: 8
   exit_capture:
-    median_net_over_mfe_winners: 1.006
+    median_net_over_mfe_winners: 1.013
     n_winners: 5
     losers_that_reached_1r_mfe: 1
   by_year:
     '2025':
       n: 3
-      net_r: 8.366
-      gross_r: 8.413
+      net_r: 9.565
+      gross_r: 9.616
     '2026':
       n: 5
-      net_r: -1.203
-      gross_r: -1.144
+      net_r: 1.111
+      gross_r: 1.17
   by_direction:
     long:
       n: 5
-      net_r: 6.35
-      gross_r: 6.415
+      net_r: 9.226
+      gross_r: 9.295
     short:
       n: 3
-      net_r: 0.813
-      gross_r: 0.854
+      net_r: 1.45
+      gross_r: 1.49
   by_exit_reason:
     stop:
-      n: 2
-      net_r: -2.026
-      gross_r: -2.0
+      n: 1
+      net_r: -1.014
+      gross_r: -1.0
     take_profit:
       n: 4
-      net_r: 9.903
-      gross_r: 9.957
+      net_r: 11.102
+      gross_r: 11.16
     timeout:
       n: 1
-      net_r: 0.29
-      gross_r: 0.309
+      net_r: 0.927
+      gross_r: 0.946
     trail_stop:
-      n: 1
-      net_r: -1.004
-      gross_r: -0.998
+      n: 2
+      net_r: -0.339
+      gross_r: -0.32
   by_adx_at_entry:
     unknown:
       n: 8
-      net_r: 7.163
-      gross_r: 7.268
+      net_r: 10.676
+      gross_r: 10.785
 manifest:
   entry: tested
   exit: tested

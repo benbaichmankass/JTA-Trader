@@ -69,7 +69,7 @@ attribution:
       gross_r: -3.118
 manifest:
   entry: untested
-  exit: untested
+  exit: tested
   filter: tested
   regime_gating: untested
   timeframe: untested
@@ -78,6 +78,28 @@ manifest:
   session: untested
   sizing_vs_cost: untested
 levers:
+  exit:
+    tp_at_r:
+      tests:
+      - value: '2.0'
+        baseline_value: 'off'
+        arm: TP2
+        unit: RQ-20261101-78fc-50
+        window: 2024-10-05..2026-10-04
+        n: 156
+        net_r: -11.9299
+        baseline_n: 156
+        baseline_net_r: -9.8546
+        delta_net_r: -2.0753
+        folds_ge_baseline: 2/6
+        max_drawdown_r: 17.4637
+        verdict: fail
+        joint_change: false
+      shape: flat
+      points: 1
+      best_delta_r_per_trade: -0.0133
+      fold_stability: 0.333
+      reading: no response at the tested values
   filter:
     cooldown_bars:
       tests:
@@ -123,8 +145,43 @@ levers:
         max_drawdown_r: 12.8911
         verdict: fail
         joint_change: false
+      - value: '8'
+        baseline_value: 'off'
+        arm: CD8
+        unit: RQ-20261101-78fc-50
+        window: 2024-10-05..2026-10-04
+        n: 156
+        net_r: -9.8546
+        baseline_n: 156
+        baseline_net_r: -9.8546
+        delta_net_r: 0.0
+        folds_ge_baseline: 6/6
+        max_drawdown_r: 14.1353
+        verdict: fail
+        joint_change: false
       shape: flat
-      points: 3
+      points: 4
       best_delta_r_per_trade: 0.0001
-      fold_stability: 0.833
+      fold_stability: 0.875
+      reading: no response at the tested values
+    htf_rule:
+      tests:
+      - value: 4h
+        baseline_value: 1h
+        arm: H4
+        unit: RQ-20261101-78fc-50
+        window: 2024-10-05..2026-10-04
+        n: 159
+        net_r: -8.9285
+        baseline_n: 156
+        baseline_net_r: -9.8546
+        delta_net_r: 0.9261
+        folds_ge_baseline: 3/6
+        max_drawdown_r: 18.0536
+        verdict: fail
+        joint_change: false
+      shape: flat
+      points: 1
+      best_delta_r_per_trade: 0.0059
+      fold_stability: 0.5
       reading: no response at the tested values
