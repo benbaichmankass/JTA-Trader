@@ -1,0 +1,16 @@
+{
+  "due_when": {
+    "check_every_days": 3,
+    "clears_when": "for each gap the cause is named from a measurement (which stop/entry is the venue's truth and which writer left the other) and either fixed or killed with a stated reason",
+    "kind": "observation"
+  },
+  "id": "PI-20261105-QSEQAVLT-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "audit",
+    "ref": "MECH-FOLLOWUPS-1105 lane 2026-11-05 (manager ack 23:31Z: file, do not chase now)",
+    "rerun": "scripts/ops/diag_fetch.sh 'journal?table=order_packages&limit=150' and 'journal?table=trades&limit=150'; for every open or recently closed package compare order_packages.entry vs its trades.entry_price, and trades.stop_loss vs order_packages.sl BEFORE any notes.sl_amends; count mismatches over the stated population"
+  },
+  "state": "queued",
+  "what": "Two unexplained journal gaps, found incidentally 2026-11-05, NOT root-caused. (1) ENTRY: BTC pkg-0710342763bf4d18 (e4_oi_shock_1h LONG, bybit_1) order_packages.entry 76350.1 vs trades 6930 entry_price 76159.9 (190.2 apart, 0.25%) - package entry is not the fill; unknown whether it is the signal price, a stale quote or a writer bug, and how often. (2) STOP: SOL pkg-f76bb92289d143e5 (trend_donchian_sol_4h SHORT, bybit_1) before the 16:31:13Z live-review apply, trades 6788 stop_loss 98.83643 vs order_packages.sl 98.38643 (0.45 apart; the venue held 98.84, so the package value was the odd one); unknown which writer moved the package sl or whether the monitor trail did. Population: 2 packages read, out of ~150 recent rows pulled; no rate is established. Why it matters: mechanics and R maths read package entry/sl, so a gap skews open_r and the packet's mismatch verdicts. Suggested owner: the journal/order-monitor owner (TICK-STAGE2 lane); first step is the rerun count above."
+}
