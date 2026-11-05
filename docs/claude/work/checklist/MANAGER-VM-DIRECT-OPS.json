@@ -11,13 +11,13 @@
   "tier": 2,
   "prs": [],
   "blocked_on": [],
-  "note": "BLOCKED ON: operator OK of the exact change (Tier 2, live-VM mutation surface), plus WSD-S1 (token path) and ALERT-LEDGER-TO-MANAGER (#23033). Operator comment on System Map v2 artifact, 2026-11-05T00:36Z, verbatim: \"I think we maybe need more direct two way comms between the manager and vm - I yiu should get alerts directly, not through the repo, and you should also be able to take direct actions on the live vms, including their configuration, no?\" Manager reply (same thread): config changes stay in git (reviewed + tested; git is the change record); deploy becomes direct; actions keep the same tiers and approval rules, only the pipe changes. OPEN (UNVERIFIED): whether any supported channel lets an external host wake a cloud session other than GitHub events / scheduled tasks; verify before design.",
+  "note": "BLOCKED ON: operator OK of the exact change (Tier 2, live-VM mutation surface), plus WSD-S1 (token path) and ALERT-LEDGER-TO-MANAGER (#23033). Operator comment on System Map v2 artifact, 2026-11-05T00:36Z, verbatim: \"I think we maybe need more direct two way comms between the manager and vm - I yiu should get alerts directly, not through the repo, and you should also be able to take direct actions on the live vms, including their configuration, no?\" Manager reply (same thread): config changes stay in git (reviewed + tested; git is the change record); deploy becomes direct; actions keep the same tiers and approval rules, only the pipe changes. OPEN (UNVERIFIED): whether any supported channel lets an external host wake a cloud session other than GitHub events / scheduled tasks; verify before design. OPERATOR DECIDED 2026-11-05 ~00:47Z (popup, verbatim answers): Direct ops = \"Approve (Recommended)\" (file as build rows after WSD-S1; Tier 2 ships under this OK + post-deploy observe); Config path = \"Keep via git (Recommended)\" (the direct channel carries actions, not config edits); Deploy = \"Keep git-sync (Recommended)\" (no change; add a direct 'sync now' action for urgent fixes); Alert wake = \"Tiny GitHub doorbell (Recommended)\" (content-free 'check alerts' ping on the ops PR, system/high priority only; content read from /api/bot/alerts). Remaining block: WSD-S1 + ALERT-LEDGER-TO-MANAGER (#23033).",
   "due_by": "2026-11-12",
   "roadmap": [
     "unmapped"
   ],
   "roadmap_unmapped_reason": "redesign extension; maps with WSD rows once the operator OKs it",
-  "updated_at": "2026-11-05T00:42:13Z",
+  "updated_at": "2026-11-05T00:46:28Z",
   "updated_by": "session_01AFoLuN7HERxg65eHjtmMYE",
   "_seq": 933
 }
