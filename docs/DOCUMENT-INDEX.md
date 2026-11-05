@@ -529,6 +529,7 @@ real top-level `docs/*.md` and fails if the population builder cannot see it.
 | `docs/claude/work/handoffs/2026-11-01-01AFoLuJ-to-new.md` | unknown | unknown | — | never | `not-assessed / not-assessed` | — |
 | `docs/claude/work/handoffs/2026-11-03-01AFoLuJC-to-new.md` | unknown | unknown | — | never | `not-assessed / not-assessed` | — |
 | `docs/claude/work/handoffs/2026-11-03-01AFoLuJ-to-new.md` | unknown | unknown | — | never | `not-assessed / not-assessed` | — |
+| `docs/claude/work/handoffs/2026-11-04-01AFoLuH-to-new.md` | unknown | unknown | — | never | `not-assessed / not-assessed` | — |
 | `docs/claude/work/handoffs/2026-11-04-01AFoLuL-to-new.md` | history | unknown | — | never | `not-assessed / not-assessed` | — |
 | `docs/claude/work/triage-2026-09-28.md` | unknown | unknown | — | never | `not-assessed / not-assessed` | — |
 | `docs/claude/workplan.md` | plan | historical | — | 2026-09-07 | `name:workplan-is-a-forward-commitment / mi159:plan-status-header:historical` | — |
@@ -591,6 +592,7 @@ real top-level `docs/*.md` and fails if the population builder cannot see it.
 | `docs/operator/setup-api-keys.md` | lookup | unknown | — | never | `dir:operator-setup-procedures / not-assessed` | — |
 | `docs/ops/tradeify-bot-ownership-note.md` | lookup | unknown | — | never | `dir:operator-setup-procedures / ownership statement and evidence procedure` | — |
 | `docs/pipeline/stage-contracts.md` | architecture | unknown | — | never | `name:declares-a-contract / not-assessed` | — |
+| `docs/pitch/jta-trader-pitch-deck.md` | unknown | live | — | 2026-11-04 | `not-assessed / read:PITCH-DECK-lane-authored-it-2026-11-04-generated-from-files` | JTA Trader pitch deck: markdown source and speaker notes (generated) |
 | `docs/plans/DATA-EXPLORER-SPA-HANDOFF.md` | history | historical | — | 2026-10-13 | `name:record-of-a-past-state / dir:record-of-a-completed-session` | — |
 | `docs/plans/ENGINEERING-PLAN-2026-09-21.md` | plan | unknown | — | never | `name:plan-is-a-forward-commitment / not-assessed` | — |
 | `docs/plans/ML-PROGRAMME-2026-10-28.md` | plan | unknown | — | never | `name:plan-is-a-forward-commitment / not-assessed` | ONE consolidated ML programme: models that manage trades, TM-BENCH, 8 tracks, proposed infra rows, learning ledger. |
@@ -620,6 +622,7 @@ real top-level `docs/*.md` and fails if the population builder cannot see it.
 | `docs/plans/soak-verdicts-2026-10-04.md` | unknown | unknown | — | never | `not-assessed / not-assessed` | — |
 | `docs/plans/ui-upgrade-1-auth-and-keys-design.md` | architecture | unknown | — | never | `name:design-declares-a-contract / not-assessed` | — |
 | `docs/plans/work-system-2026-10-04.md` | plan | unknown | — | never | `name:plan-is-a-forward-commitment / not-assessed` | — |
+| `docs/plans/WORK-STORE-DESIGN-2026-11.md` | plan | unknown | — | never | `name:plan-is-a-forward-commitment / not-assessed` | WORK-STORE-DESIGN: one register (items+events SQLite on the VM behind the API) replacing checklist+pipeline files; bot-output ledgers off the repo; measured repo-flow inventory; deploy path (keep ict-git-sync); migration dry-run; build order; operator decisions D1-D9. Design only. |
 | `docs/proposals/sizer-margin-base-2026-10-28.md` | unknown | unknown | — | never | `not-assessed / not-assessed` | — |
 | `docs/proposals/tier2-sweep-candle-anchoring-2026-07-30.md` | unknown | unknown | — | never | `not-assessed / not-assessed` | — |
 | `docs/reference/backtest-data-loading.md` | lookup | unknown | — | never | `dir:reference-is-lookup / not-assessed` | — |
@@ -1154,6 +1157,7 @@ real top-level `docs/*.md` and fails if the population builder cannot see it.
 | `docs/reviews/2026-10-22-weekly-planning-preread.md` | unknown | unknown | — | never | `not-assessed / not-assessed` | — |
 | `docs/reviews/2026-10-28-health-review.md` | evidence | unknown | — | never | `name:audit-measures / not-assessed` | — |
 | `docs/reviews/2026-11-04-health-review.md` | evidence | unknown | — | never | `name:audit-measures / not-assessed` | — |
+| `docs/reviews/2026-11-04-weekly-planning-preread.md` | evidence | unknown | — | never | `not-assessed / not-assessed` | — |
 | `docs/reviews/2026-10-28-weekly-walkthrough.md` | unknown | unknown | — | never | `not-assessed / not-assessed` | — |
 | `docs/reviews/2026-10-29-followthrough-triage.md` | unknown | unknown | — | never | `not-assessed / not-assessed` | — |
 | `docs/reviews/2026-10-29-system-conformance-audit.md` | evidence | unknown | — | never | `name:audit-measures / not-assessed` | — |

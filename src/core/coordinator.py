@@ -230,7 +230,7 @@ def _leg_account_scope(strategy: Optional[str]) -> Optional[Dict[str, List[str]]
             for name, scfg in (load_strategy_config() or {}).items():
                 sc = scfg.get(ACCOUNT_SYMBOLS_KEY) if isinstance(scfg, dict) else None
                 if isinstance(sc, dict):
-                    scopes[str(name)] = {str(a): leg_symbols(scfg, str(a)) for a in sc}
+                    scopes[str(name)] = {str(a): leg_symbols(scfg, str(a), leg=str(name)) for a in sc}
             _LEG_SCOPE_CACHE = (mtime, scopes)
     except Exception as exc:  # noqa: BLE001
         logger.warning("[coordinator] leg account scope unreadable for %s: %s", strategy, exc)

@@ -1,0 +1,28 @@
+{
+  "id": "WSD-S6B-DESK-LTR-API",
+  "title": "WORK-STORE S6b: desk decisions and live-review rows written through the API (desk_decisions / live_reviews ledgers, content-hash pinned); retire desk/decisions + live-review/rows mirrors",
+  "phase": null,
+  "state": "queued",
+  "owner": "manager",
+  "lane": null,
+  "model": "claude-opus-5-5",
+  "ceiling_usd": 12,
+  "spend_usd": null,
+  "tier": 2,
+  "prs": [],
+  "blocked_on": [
+    {
+      "kind": "work_item",
+      "ref": "WSD-S4-READERS-FLIP",
+      "what": "needs WSD-S4-READERS-FLIP landed"
+    }
+  ],
+  "note": "docs/plans/WORK-STORE-DESIGN-2026-11.md \u00a73, D4 (approved). The live-review apply reads the row by review_id + content hash (keeps the 10-26 pinned-commit property). CI SAVING CHECK: desk mirror 232/wk + live-review mirror 96/wk commits go to 0; producer job-h 133 + 97/wk (est.) lose the verify-merged wait; trader restarts after data merges stay 0 (DEPLOY-RESTART-ON-DATA-MIRRORS).",
+  "due_by": "2026-11-16",
+  "roadmap": [
+    "L-OPS"
+  ],
+  "updated_at": "2026-11-04T23:37:24Z",
+  "updated_by": "session_01AFoLuKFYUoKzs5TXjGfEdh",
+  "_seq": 926
+}

@@ -1,0 +1,18 @@
+{
+  "based_on": "20261104T191310392456Z-eac0eade.json",
+  "due_when": {
+    "check_every_days": 2,
+    "clears_when": "scripts/research/ml_decision_entry.py has a universe-costed subcommand with a self-test, RQ-20261101-a24c-01 carries a registered per-symbol rule, and the unit is git-mv'd back to research/queue/ status queued",
+    "kind": "observation"
+  },
+  "id": "PI-20261104-ELSFP54S-0002",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "lane ML-ENTRY-ALL-ACCOUNTS (session_01AFoLuHssTryUyRELsfP54s), Manager Session 2026-11-04a 19:10Z instruction",
+    "rerun": "sed -n '/^blocked_on:/,/^ml_consumer:/p' research/queue/blocked/RQ-20261101-a24c-01.yaml; grep -n 'universe-costed\\|universe_costed' scripts/research/ml_decision_entry.py"
+  },
+  "roadmap": "L-ML-LIVE",
+  "state": "queued",
+  "what": "UNBLOCK RQ-20261101-a24c-01 (research/queue/blocked/): it is the unit the operator named 2026-11-04 ~19:08Z (popup 'Per-symbol passes (Recommended)') to set ml_entry's bybit_2/bybit_portfolio symbol set PER SYMBOL net of each symbol's measured spread, including a re-check of today's 5 (BTC ETH XRP ADA SOL). Blockers, from its blocked_on: (1) HARNESS: the 'universe-costed' subcommand in scripts/research/ml_decision_entry.py (Corwin-Schultz spread floored at one Bybit tick + square-root impact per symbol-month, dev-fold liquidity C grid {10,15,20,30,50,inf}, arm A tau policy + arm B ml.promotion.cost_gate on the same forward rows, holdout_lock claim before any outcome read); no row or lane owns it (checked: checklist COST-PER-SYMBOL-SPREAD and COMPUTE-PREFER-KAGGLE only mention it). (2) DATA: Binance Vision {SYMBOL}-1h-2026-10.zip for BTCUSDT and every candidate. (3) THE UNIT IS POOLED, NOT PER-SYMBOL: its rule must gain a registered per-symbol verdict before any run. MEASURED (comms/research/ML-ENTRY-UNIVERSE/local-20261101T1830Z/summary.json, 51 Bybit-listed, re-costed, 12-month sealed window): per-symbol n median 225 (min 42), SE ~0.087 R vs pooled edge +0.0073; 25 of 51 read >= 0, so a per-symbol point-estimate bar is ~a coin flip. The per-symbol bar (point estimate / shrunk >= 0 at n >= 100 / lower bound > 0) is an operator choice, sent to Manager Session 2026-11-04a 19:12Z. | UPDATE 2026-11-04 ~19:50Z: GROUP-LEVEL (operator popup ~19:33Z, verbatim \"Group-level (Recommended)\", REPLACING the ~19:08Z/~19:18Z per-symbol answers). Point (3) above is WITHDRAWN: a24c-01 stays the POOLED test (rule unchanged); its PASS adds U(C) to ml_entry on bybit_2/bybit_portfolio via the population record comms/ml_universe/ml_entry.json (src/config/ml_universe.py, PR #22928, whose writer the harness must also add); per-symbol results reported only; until it reports the 5 coins of the c692-06 pooled PASS stay."
+}

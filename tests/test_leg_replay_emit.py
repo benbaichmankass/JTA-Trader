@@ -178,3 +178,18 @@ def test_long_drag_never_grades_side_constrained_leg(tmp_path):
     assert g["pooled_confirmed"] is False        # pool holds a control -> never graded
     only = lre.grade_long_drag({"sol": a}, a, {"sol": "short"})
     assert only["verdict"] == "indeterminate"
+
+
+def _family(tmp_path, per_fold_r, n=120):
+    rows = []
+    for k, r in enumerate(per_fold_r):
+        rows += [(k * 1000 + i, "long" if i % 2 else "short", r) for i in range(n)]
+    return lre.leg_folds([write_emit(tmp_path / "f.jsonl", "f", rows)], "f")
+
+
+def test_family_regime_grades(tmp_path):
+    assert lre.grade_family_regime(_family(tmp_path, [0.4, -0.3, 0.2, -0.1]))["outcome"] == "REGIME"
+    assert lre.grade_family_regime(_family(tmp_path, [0.2, 0.3, 0.1, -0.5]))["outcome"] == "DECAY"
+    assert lre.grade_family_regime(_family(tmp_path, [-0.2, -0.3, 0.1, -0.1]))["outcome"] == "NO_EDGE"
+    g = lre.grade_family_regime(_family(tmp_path, [0.2, 0.3, 0.1, 0.1], n=40))
+    assert g["outcome"] == "INDETERMINATE" and g["verdict"] == "indeterminate"

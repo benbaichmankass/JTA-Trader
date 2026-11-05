@@ -1,0 +1,48 @@
+{
+  "unit": "RQ-20261104-a41f-01",
+  "run_id": "41929994350",
+  "commit_sha": "b78decb3f7efac4d68e64128dba798c09456d4cf",
+  "run_url": "https://github.com/benbaichmankass/JTA-Trader/actions/runs/41929994350",
+  "timeout_minutes": 60,
+  "commands": [
+    {
+      "index": 0,
+      "argv": [
+        "python3",
+        "scripts/research/ml_entry_alpaca_score.py",
+        "run",
+        "--model",
+        "ml/served/ml_decision_entry_v1/model.json",
+        "--cache",
+        "/tmp/ml_entry_alpaca_a41f",
+        "--unit",
+        "RQ-20261104-a41f-01",
+        "--out",
+        "comms/research/RQ-20261104-a41f-01/41929994350",
+        "--where",
+        "research-script-run",
+        "--side-rule",
+        "restricted",
+        "--session-gate",
+        "--fetch-start",
+        "2024-11-18",
+        "--holdout-start",
+        "2025-02-10",
+        "--holdout-end",
+        "2025-09-21",
+        "--rule-id",
+        "RULE-RQ20261104-a41f-01-ENTRY-ALPACA-PROFILE",
+        "--registered-at",
+        "2026-11-04",
+        "--variants-read",
+        "1",
+        "--mc-note",
+        "first read of 2025-02-10 to 2025-09-21 for this population; bdc2-01 (served rule, c692 window) read once before, not re-read"
+      ],
+      "log": "comms/research/RQ-20261104-a41f-01/41929994350/logs/cmd-0.log",
+      "exit_code": 0,
+      "seconds": 40.5
+    }
+  ],
+  "all_ok": true
+}
