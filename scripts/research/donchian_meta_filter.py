@@ -51,7 +51,9 @@ def load(paths: dict[str, str]) -> pd.DataFrame:
     for leg, p in paths.items():
         for line in (REPO / p).read_text().splitlines():
             if line.strip():
-                r = json.loads(line); r["leg"] = leg; rows.append(r)
+                r = json.loads(line)
+                r["leg"] = leg
+                rows.append(r)
     d = pd.DataFrame(rows)
     d["entry_time"] = pd.to_datetime(d["entry_time"], utc=True)
     d["exit_time"] = pd.to_datetime(d["exit_time"], utc=True)
@@ -96,7 +98,8 @@ def walk_forward(d: pd.DataFrame) -> pd.DataFrame:
 
 
 def edge(x) -> dict:
-    x = np.asarray(x, float); n = len(x)
+    x = np.asarray(x, float)
+    n = len(x)
     if n < 2:
         return {"n": n, "mean_r": float(x.mean()) if n else None, "ci_lo": None, "ci_hi": None}
     se = x.std(ddof=1) / math.sqrt(n)
@@ -106,7 +109,9 @@ def edge(x) -> dict:
 
 def lift(o: pd.DataFrame) -> dict:
     """kept-minus-all mean net R, with a bootstrap over trades (paired by resampling the scored set)."""
-    rng = np.random.default_rng(SEED); n = len(o); diffs = []
+    rng = np.random.default_rng(SEED)
+    n = len(o)
+    diffs = []
     net, keep = o["net_r"].to_numpy(), o["keep"].to_numpy()
     for _ in range(BOOT):
         i = rng.integers(0, n, n)
@@ -140,7 +145,8 @@ def write_ledger(p: Path, g: pd.DataFrame) -> None:
 
 def decide(s: dict, gate: dict | None) -> dict:
     """The rule registered in RQ-20261105-d256-02 (decision_rule.rule), applied mechanically."""
-    k = s["oos_all"]["kept"]; h = s["heldout"]
+    k = s["oos_all"]["kept"]
+    h = s["heldout"]
     if k["n"] < N_GATE_FLOOR or gate is None or gate.get("read_state") != "graded":
         return {"verdict": "INDETERMINATE", "reason": f"kept OOS n={k['n']} < {N_GATE_FLOOR} or gate not graded"}
     firms = {a: {arm: gate["firms"][a][arm]["v3_verdict"] for arm in ("ven", "cur")} for a in gate["firms"]}
@@ -157,8 +163,10 @@ def main(argv=None) -> int:
     ap.add_argument("--out", required=True)
     ap.add_argument("--no-gate", action="store_true", help="skip the V3 gate (self-check only)")
     a = ap.parse_args(argv)
-    out = Path(a.out); out.mkdir(parents=True, exist_ok=True)
-    d = features(load(LEDGERS)); d["y"] = (d["net_r"] > 0).astype(int)
+    out = Path(a.out)
+    out.mkdir(parents=True, exist_ok=True)
+    d = features(load(LEDGERS))
+    d["y"] = (d["net_r"] > 0).astype(int)
     o = walk_forward(d)
     s = split(o)
     write_ledger(out / "ledger_all_oos.jsonl", o)
