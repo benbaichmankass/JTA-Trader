@@ -132,7 +132,10 @@ def workplan(repo: Path, limit: int = 40, today: date | None = None) -> dict:
     state_counts: dict[str, int] = {}
     for r in slim:
         state_counts[str(r["state"])] = state_counts.get(str(r["state"]), 0) + 1
-    srt = lambda rows, k: sorted(rows, key=k)[:limit]
+
+    def srt(rows, k):
+        return sorted(rows, key=k)[:limit]
+
     return _env(repo, "read",
                 {"rows_scanned": len(items), "live_rows": len(live), "limit_per_list": limit,
                  "window": {"from": today.isoformat(), "to": week_end},
