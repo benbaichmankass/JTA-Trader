@@ -2,7 +2,7 @@
   "id": "PAPER-TIGHTEN-NOT-APPLIED",
   "title": "Paper tighten_sl never applied under MD-LTR-PAPER-AUTO: dispatcher refused judgement tightens evidence_not_committed",
   "phase": null,
-  "state": "in_flight",
+  "state": "landed_unproven",
   "owner": "session_01AFoLuKUaYvmypJzRG9EC7v",
   "lane": "PAPER-TIGHTEN-NOT-APPLIED",
   "model": null,
@@ -13,13 +13,13 @@
     23113
   ],
   "blocked_on": [],
-  "note": "MEASURED (VM rows_watch.jsonl, last 300 lines, complete): 4/4 tighten_sl rows on pkg-e079380f0c104dea (bybit_1) got auto_mandate MD-LTR-PAPER-AUTO, then the dispatcher refused them mandate_precondition:evidence_not_committed; the apply never ran. The packet fallback was trade-actions only. Verdict (b): a dispatcher bug, not ADVICE_ONLY precedence. Fix PR #23113 (landing hold, Tier 2); its tests fail on the old code. Closes on: merged + deployed + a bybit_1 judgement tighten_sl dispatched in rows_watch.jsonl with a venue readback in applied.jsonl.",
+  "note": "2026-11-05T04:49Z #23113 MERGED (green sha 82003003c2b8). The VM runs the dispatcher from the git-sync checkout (~5 min), so deploy = ict-git-sync. NOT yet observed. Closing observation: the next bybit_1 (or alpaca_paper) judgement tighten_sl row reads verdict dispatched (not evidence_not_committed) in runtime_logs/live_review/rows_watch.jsonl, and its applied.jsonl entry shows a venue readback at the new stop.",
   "due_by": "2026-11-07",
   "roadmap": [
     "unmapped"
   ],
   "roadmap_unmapped_reason": "order-path bug fix under an existing mandate; no milestone",
-  "updated_at": "2026-11-05T04:02:46Z",
+  "updated_at": "2026-11-05T04:49:34Z",
   "updated_by": "session_01AFoLuKUaYvmypJzRG9EC7v",
   "_seq": 936
 }
