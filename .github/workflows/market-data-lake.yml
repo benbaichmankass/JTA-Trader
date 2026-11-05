@@ -492,6 +492,12 @@ jobs:
           python3 scripts/data_lake/hf_publish.py manifest --dir lake --previous prev/MANIFEST.json > depth.md
           { echo; echo '### measurements'; cat lake/_measure/*.json 2>/dev/null || echo "none"; } >> depth.md
           { echo '### market-data-lake depth'; cat depth.md; echo; echo '### health'; cat health.txt; } >> "$GITHUB_STEP_SUMMARY"
+      - name: Retention - squash the lake's HF history when account private storage passes 40 GB (HF keeps every LFS version; the manifest is rewritten each refresh)
+        if: needs.preflight.outputs.mode == 'refresh'
+        continue-on-error: true
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+        run: python3 scripts/data_lake/hf_storage.py squash --if-over-gb 40 | tee -a "$GITHUB_STEP_SUMMARY"
       - name: Land the repo health copy (read by /health-review and /ml-review)
         uses: ./.github/actions/commit-to-main
         with:
