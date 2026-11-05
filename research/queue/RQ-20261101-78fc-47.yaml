@@ -114,7 +114,7 @@ run:
   - '39'
   - --out
   - '{out_dir}'
-  timeout_minutes: 360
+  timeout_minutes: 330   # was 360: script_run preflight refuses > 330 (MAX_TIMEOUT_MIN), so the unit could never dispatch
   inputs:
     research_unit: RQ-20261101-78fc-47
 lands:
@@ -125,3 +125,4 @@ related:
 - RESEARCH-ITERATE
 - comms/strategy_evidence/ict_scalp_avax_5m.json
 what_it_does_not_do: Edits no config, roster or rule; places no order; a PASS is an input to the next iteration, not a promotion.
+last_dispatched_at: '2026-11-05T06:05:01+00:00'

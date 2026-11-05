@@ -1,11 +1,5 @@
 {
-  "tier": 2,
-  "landing": "hold",
-  "hold_reason": "tier_2_3_needs_approval",
-  "hold_text": "Tier-2 notification routing on the VM (changes no trading behaviour). The operator's Tier-2 OK is the instruction relayed by Manager Session 2026-11-04b, verbatim: \"Regarding the Telegram channels, basically I want to turn off all of the regular recurring updates there. [...] for the trader bot, so basically I want to trim it down so that the only pings I get there are for live trades [...] For each trade package I should get one update. If there's a trade both on real money and paper, make a note of it. And then for the ones where it's only on the paper portfolio [...] then I want to get just the update for that one. [...] maybe we can kick that off now and get that set up.\" (full quote: config/telegram_policy.yaml). The manager merges and deploys. Revert: git revert, or edit config/telegram_policy.yaml.",
-  "why": "Turn off recurring Telegram posts and trim the trades channel to one ping per order package (real money + mirror note; paper-portfolio-only legs; no testing paper), recording every suppressed message.",
-  "recorded_decision": {
-    "kind": "operator_decision",
-    "ref": "TELEGRAM-TRIM popup 2026-11-05 00:28Z \"Both right (Recommended)\" + operator chat instruction 2026-11-04 ~23:35Z (quoted in hold_text)"
-  }
+  "tier": 1,
+  "landing": "self",
+  "why": "Checklist record only: row TELEGRAM-TRIM notes the observed post-deploy result of #23122 (committed work digest recorded as suppressed_by_policy at 05:14:37Z, 0 sent) and narrows its remaining observation. No code, config or runtime change."
 }

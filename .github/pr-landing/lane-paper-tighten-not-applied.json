@@ -1,0 +1,11 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "hold_reason": "tier_2_3_needs_approval",
+  "hold_text": "Order-path dispatcher fix (scripts/ops/live_review_dispatch.py). A judgement tighten_sl row with no outcome table (every short-hold row) was refused mandate_precondition:evidence_not_committed BEFORE the apply ran, because the packet-as-evidence fallback covered the trade actions only. MEASURED on the VM (rows_watch.jsonl, last 300 lines, read_state complete): 4/4 tighten_sl rows under MD-LTR-PAPER-AUTO on pkg-e079380f0c104dea (bybit_1) refused this way, 0 tightens applied; the same package's judgement close applied. Fix: one evidence_path() helper gives a JUDGEMENT tighten the same committed-packet fallback; a TABLE tighten still needs its table. No change to the apply, the advice-only tuple, any mandate, RiskManager, sizing or config. The lane reports to the manager before merge. Revert: git revert.",
+  "why": "MD-LTR-PAPER-AUTO grants every in-trade class on Stage-1 paper, tighten included; the dispatcher silently refused every short-hold tighten, so the tighten class collects no applied paper calls to be graded on.",
+  "recorded_decision": {
+    "kind": "operator_decision",
+    "ref": "MD-LTR-PAPER-AUTO (config/mandates.yaml, operator 2026-11-01 \"Auto-apply on bybit_1 (Rec.)\", widened to every Stage-1 demo-floor account); lane PAPER-TIGHTEN-NOT-APPLIED dispatched by Manager Session 2026-11-04b session_01AFoLuN7HERxg65eHjtmMYE"
+  }
+}

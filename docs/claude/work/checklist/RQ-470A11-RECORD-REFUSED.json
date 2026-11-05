@@ -1,0 +1,22 @@
+{
+  "id": "RQ-470A11-RECORD-REFUSED",
+  "title": "Collector reports run 41963398081 (RQ-20261014-470a-11) LOST every dispatcher cycle: research_result.py --emit refused its record ('Use verdict=not_applicable')",
+  "phase": null,
+  "state": "queued",
+  "owner": "unassigned (research dispatcher / collector)",
+  "lane": null,
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [],
+  "blocked_on": [],
+  "note": "MEASURED 2026-11-05 04:50Z dispatcher run 41970260849, dispatch job: '##[error]41963398081: research_result.py --emit refused: the world. Use verdict=not_applicable.' then 'LOST RQ-20261014-470a-11 run 41963398081 record emit refused', and the step 'collect_runner_results.py reported a lost run' turns the dispatch job RED every cycle (the dispatch itself still runs: that cycle dispatched=7, deferred=9, no dispatch_failed). The run itself concluded success (research-script-run, created 11-05T03:43:51Z); its artifact has verdict.json, records.jsonl and measurement.json under comms/research/RQ-20261014-470a-11/41963398081/. Question: why does the emit refuse (the verdict the run wrote vs the verdict vocabulary the record schema accepts) and should the collector land such a run as a producer_failed record instead of leaving it LOST? Rerun: the dispatch job log, grep LOST. Closes when the run lands a record or is dispositioned and the dispatch job stops reporting it. Found by CI-STREAMLINE-W45 while verifying the kaggle_cpu fix.",
+  "due_by": "2026-11-07",
+  "roadmap": [
+    "L-OPS"
+  ],
+  "updated_at": "2026-11-05T04:57:16Z",
+  "updated_by": "CI-STREAMLINE-W45",
+  "_seq": 937
+}
