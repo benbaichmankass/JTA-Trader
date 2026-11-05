@@ -33,15 +33,26 @@ from __future__ import annotations
 import hashlib
 import json
 import sqlite3
+from collections.abc import Iterator
 from contextlib import contextmanager
 from datetime import date, datetime, timezone
 from pathlib import Path
-from typing import Any, Iterator
+from typing import Any
 
 __all__ = [
-    "GENESIS_HASH", "ITEM_STATES", "KINDS", "OPS", "TERMINAL", "WRITABLE_FIELDS",
-    "ConflictError", "NotFoundError", "WorkStoreError", "WorkStoreValidationError",
-    "WorkStore", "canonical_json", "event_hash",
+    "GENESIS_HASH",
+    "ITEM_STATES",
+    "KINDS",
+    "OPS",
+    "TERMINAL",
+    "WRITABLE_FIELDS",
+    "ConflictError",
+    "NotFoundError",
+    "WorkStore",
+    "WorkStoreError",
+    "WorkStoreValidationError",
+    "canonical_json",
+    "event_hash",
 ]
 
 KINDS = ("build", "observation")
@@ -513,13 +524,17 @@ class WorkStore:
                    offset: int = 0) -> list[dict]:
         where, args = [], []
         if state:
-            where.append("state = ?"); args.append(state)
+            where.append("state = ?")
+            args.append(state)
         if kind:
-            where.append("kind = ?"); args.append(kind)
+            where.append("kind = ?")
+            args.append(kind)
         if parent:
-            where.append("parent_id = ?"); args.append(parent)
+            where.append("parent_id = ?")
+            args.append(parent)
         if since:
-            where.append("updated_at >= ?"); args.append(since)
+            where.append("updated_at >= ?")
+            args.append(since)
         table = "due_now" if due else "items"
         sql = f"SELECT * FROM {table}" + (f" WHERE {' AND '.join(where)}" if where else "")
         sql += " ORDER BY updated_at DESC, id LIMIT ? OFFSET ?"

@@ -15,6 +15,7 @@ store stay canonical until S2 (importer + parity) and S4 (reader flip).
 from __future__ import annotations
 
 import hmac
+import logging
 import os
 from typing import Any
 
@@ -22,6 +23,8 @@ from fastapi import APIRouter, Header, HTTPException, Query, Request
 from fastapi.responses import JSONResponse
 
 from src.runtime import work_store as ws
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/bot/work", tags=["work-items"])
 
@@ -146,7 +149,8 @@ def list_items(state: str | None = None, due: bool = False, parent: str | None =
         items = s.list_items(state=state, due=due, parent=parent, since=since, kind=kind,
                              limit=limit, offset=offset)
         total = s.count_items()
-    except Exception as exc:  # noqa: BLE001 -- a failed read is could_not_look, never "0 items"
+    except Exception as exc:  # allow-silent: not silent -- logged with stack + 503 readState could_not_look, items null (never "0 items")
+        logger.exception("work_items: list read failed")
         return JSONResponse(status_code=503, content={
             "readState": "could_not_look", "error": str(exc), "items": None, "total": None})
     return {"readState": "read", "items": items, "returned": len(items), "total": total,
