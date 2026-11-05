@@ -260,3 +260,53 @@ def test_api_201_then_read_then_409(client, monkeypatch):
     assert client.post("/api/bot/work/items", json=bad, headers=auth).status_code == 422
     # a duplicate create is 409
     assert client.post("/api/bot/work/items", json=dict(BODY, op_id=None), headers=auth).status_code == 409
+
+
+# ── WSD-S1-PROXY-AUTH-COLLISION: the dedicated X-Work-Store-Token header ────────
+
+
+def test_api_x_work_store_token_header_is_accepted(client, monkeypatch):
+    monkeypatch.setenv("WORK_STORE_TOKEN", "secret")
+    r = client.post("/api/bot/work/items", json=dict(BODY, id="WSD-HDR-1"),
+                    headers={"X-Work-Store-Token": "secret"})
+    assert r.status_code == 201, r.text
+    # the header also carries set/note/close
+    r = client.post("/api/bot/work/items/WSD-HDR-1/note", json={"text": "n", "by": "x"},
+                    headers={"X-Work-Store-Token": "secret", "If-Match": "1"})
+    assert r.status_code == 200, r.text
+
+
+def test_api_bearer_fallback_still_accepted(client, monkeypatch):
+    """Deprecated carrier, kept while the environment secret moves headers."""
+    monkeypatch.setenv("WORK_STORE_TOKEN", "secret")
+    r = client.post("/api/bot/work/items", json=dict(BODY, id="WSD-HDR-2"),
+                    headers={"Authorization": "Bearer secret"})
+    assert r.status_code == 201, r.text
+
+
+@pytest.mark.parametrize("headers,detail", [
+    ({"X-Work-Store-Token": "nope"}, "bad token"),
+    ({"X-Work-Store-Token": "   "}, "empty X-Work-Store-Token"),
+    # the dedicated header alone decides: a right Bearer does not rescue a wrong header
+    ({"X-Work-Store-Token": "nope", "Authorization": "Bearer secret"}, "bad token"),
+    ({}, "missing authorization"),
+])
+def test_api_header_401_paths(client, monkeypatch, headers, detail):
+    monkeypatch.setenv("WORK_STORE_TOKEN", "secret")
+    r = client.post("/api/bot/work/items", json=dict(BODY, id="WSD-HDR-401"), headers=headers)
+    assert r.status_code == 401 and r.json()["detail"] == detail
+
+
+def test_api_header_does_not_open_writes_when_token_unset(client, monkeypatch):
+    monkeypatch.delenv("WORK_STORE_TOKEN", raising=False)
+    r = client.post("/api/bot/work/items", json=BODY, headers={"X-Work-Store-Token": "anything"})
+    assert r.status_code == 503
+
+
+def test_api_header_ignores_a_foreign_bearer_in_authorization(client, monkeypatch):
+    """The point of the fix: a session's own Authorization (e.g. DIAG_READ_TOKEN) can ride
+    alongside the work-store header without either clobbering the other."""
+    monkeypatch.setenv("WORK_STORE_TOKEN", "secret")
+    r = client.post("/api/bot/work/items", json=dict(BODY, id="WSD-HDR-3"),
+                    headers={"X-Work-Store-Token": "secret", "Authorization": "Bearer diag-token"})
+    assert r.status_code == 201, r.text
