@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# wiring: manual-only - a one-off validation harness for TICK-STAGE2-RECONCILE-OFFTICK, run by hand by the lane/manager; it touches no venue and no live DB
 """Dry contention soak for TICK-STAGE2-RECONCILE-OFFTICK. Touches no venue, no live DB.
 
 Runs, against a temporary WAL journal, the REAL modules in this change:
@@ -55,6 +56,7 @@ def main(argv=None) -> int:
     db = os.path.join(tmp, "j.db")
     with sqlite3.connect(db) as c:
         c.execute("PRAGMA journal_mode=WAL")
+        # data-wiring: throwaway fixture in a tempfile DB for this soak only; no canonical store, never persisted, nothing to backfill
         c.execute("CREATE TABLE trades (id INTEGER PRIMARY KEY, sym TEXT, ts REAL)")
         c.execute(f"""CREATE TABLE {pt.TABLE} (
             order_package_id TEXT PRIMARY KEY, trade_id TEXT, strategy TEXT,
