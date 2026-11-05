@@ -450,7 +450,11 @@ def rth_hourly(df: pd.DataFrame) -> pd.DataFrame:
     return df
 
 
-def fetch_alpaca_1h(client, syms: list[str], cache: Path, end: str) -> dict[str, pd.DataFrame]:
+def fetch_alpaca_1h(client, syms: list[str], cache: Path, end: str, workers: int = 4) -> dict[str, pd.DataFrame]:
+    """One request series PER SYMBOL (a multi-symbol request took ~63 calls/symbol in run 42047465240 against ~3 needed, and the
+    run died at the 180-min timeout with 160/176 symbols fetched), ``workers`` threads on the client's ONE shared pacing clock, so
+    the call rate stays under the data limit however many threads run. Execution-only change: same endpoint, window and rule."""
+    import concurrent.futures as cf
     out, need = {}, []
     for s in syms:
         p = cache / f"alp1h_{s}_{POOL_START}_{end}.pkl"
@@ -459,14 +463,23 @@ def fetch_alpaca_1h(client, syms: list[str], cache: Path, end: str) -> dict[str,
         else:
             need.append(s)
     cache.mkdir(parents=True, exist_ok=True)
-    for i in range(0, len(need), 20):
-        b = need[i:i + 20]
-        got = client.bars(b, "1Hour", f"{POOL_START}T00:00:00Z", f"{end}T00:00:00Z")
-        for s in b:
-            if got.get(s):
-                out[s] = rth_hourly(alpaca_bars_df(got[s]))
-                out[s].to_pickle(cache / f"alp1h_{s}_{POOL_START}_{end}.pkl")
-        print(f"[alpaca] 1h {min(i + 20, len(need))}/{len(need)} symbols, calls={client.calls} 429s={client.n_429}", flush=True)
+
+    def one(s):
+        c0 = client.calls
+        got = client.bars([s], "1Hour", f"{POOL_START}T00:00:00Z", f"{end}T00:00:00Z")
+        df = rth_hourly(alpaca_bars_df(got[s])) if got.get(s) else None
+        if df is not None:
+            df.to_pickle(cache / f"alp1h_{s}_{POOL_START}_{end}.pkl")
+        return s, df, len(got.get(s) or []), client.calls - c0
+
+    done = 0
+    with cf.ThreadPoolExecutor(workers) as ex:
+        for s, df, nraw, ncalls in ex.map(one, need):
+            done += 1
+            if df is not None:
+                out[s] = df
+            print(f"[alpaca] 1h {done}/{len(need)} {s} raw_bars={nraw} rth_bars={0 if df is None else len(df)} ~calls={ncalls} "
+                  f"total_calls={client.calls} 429s={client.n_429} t={time.strftime('%H:%M:%S')}", flush=True)
     return out
 
 
@@ -526,8 +539,10 @@ def run_pool(a) -> int:
         raise RuntimeError(f"positive control failed: {control}")
     print(f"[control] {control}", flush=True)
     # 3. features/rows, window, gate, decisions
+    print(f"[phase] alpaca 1h done t={time.strftime('%H:%M:%S')}; fetching {len(meta['xs_reference'])} perp references", flush=True)
     perps = fetch_perps(cache, list(meta["xs_reference"]))
     R, V = perp_context(perps)
+    print(f"[phase] perps done ({len(perps)} loaded) t={time.strftime('%H:%M:%S')}; building rows", flush=True)
     frames, fetch_rep = [], {}
     for s in want:
         if s not in bars:

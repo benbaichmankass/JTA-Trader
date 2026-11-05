@@ -97,7 +97,7 @@ run:
   - alpaca
   - --population
   - alpaca-liquidity
-  timeout_minutes: 180
+  timeout_minutes: 300
   inputs:
     research_unit: RQ-20261104-a41f-01
 ml_consumer:
@@ -133,3 +133,10 @@ etf_rule_registration: 'Registered 2026-11-05 BEFORE ANY RUN (the unit has never
   Data access: read-only allowlisted client, paper key, 429 back-off (operator 2026-11-05 ~10:05Z). decision_rule above is UNCHANGED.'
 etf_rule_sha256: e9702661d1a596a0f7e84e632c0ca8b5c2743a728f02147477c003644a0858e2
 last_dispatched_at: '2026-11-04T23:47:30+00:00'
+execution_amendment: 'EXECUTION-ONLY amendment 2026-11-05 ~18:0xZ by lane ML-ENTRY-ALL-ACCOUNTS, recorded BEFORE the re-run, on the manager instruction (Manager Session 2026-11-05b, 17:52Z).
+  Run 42047465240 (14:42:57Z) hit the 180-min unit timeout during the Alpaca 1h fetch (160/176 symbols, 10,042 calls = ~63 per symbol against ~3
+  needed; the multi-symbol request paged far below its limit); it never reached the perp fetch, scoring or a verdict, so NO window or holdout was
+  read and nothing was graded. Changes: 1h bars are requested per symbol (one request series each) on 4 threads sharing ONE pacing clock
+  (<= 2.5 calls/s, under the 200/min data limit); phase and per-symbol progress lines; timeout_minutes 180 -> 300. UNCHANGED: decision_rule, population
+  rule (POOL_RULE sha256 above), model, tau, window 2021-01-01..last complete month, costs, bracket, side rule, session gate. If this run also times
+  out, the fallback is symbol-sharded runs with trade-level pooling (not an average of shard results).'

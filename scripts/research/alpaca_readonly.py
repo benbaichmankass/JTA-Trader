@@ -18,6 +18,7 @@ A key value is never printed, logged or put in an exception message.
 from __future__ import annotations
 
 import os
+import threading
 import time
 from typing import Any, Callable, Dict, List, Optional
 from urllib.parse import urlsplit
@@ -56,8 +57,8 @@ class AlpacaReadOnly:
         self._h = {"APCA-API-KEY-ID": key_id, "APCA-API-SECRET-KEY": secret,
                    "User-Agent": "jta-trader-research (read-only market data)"}
         self.key_kind, self.min_interval, self.max_retries = key_kind, float(min_interval), int(max_retries)
-        self._last = 0.0
-        self.calls, self.n_429 = 0, 0
+        self._next, self._lock = 0.0, threading.Lock()   # one shared pacing clock: N threads never exceed 1/min_interval calls/s
+        self.calls, self.n_429, self.n_bars = 0, 0, 0
 
     @classmethod
     def from_env(cls, **kw) -> "AlpacaReadOnly":
@@ -73,14 +74,18 @@ class AlpacaReadOnly:
         url = f"https://{host}{path}"
         check_request("GET", url)
         for attempt in range(self.max_retries):
-            wait = self.min_interval - (time.monotonic() - self._last)
-            if wait > 0:
-                self._sleep(wait)
-            self._last = time.monotonic()
+            with self._lock:
+                now = time.monotonic()
+                start = max(now, self._next)
+                self._next = start + self.min_interval
+            if start - now > 0:
+                self._sleep(start - now)
             r = self._s.get(url, headers=self._h, params=params, timeout=120)
-            self.calls += 1
+            with self._lock:
+                self.calls += 1
             if r.status_code == 429 or r.status_code >= 500:
-                self.n_429 += r.status_code == 429
+                with self._lock:
+                    self.n_429 += r.status_code == 429
                 ra = (getattr(r, "headers", None) or {}).get("Retry-After")
                 try:
                     delay = float(ra) if ra is not None else float(min(60, 2 ** attempt))
@@ -108,6 +113,8 @@ class AlpacaReadOnly:
             j = self.get(DATA_HOST, BARS_PATH, p)
             for s, bl in (j.get("bars") or {}).items():
                 out.setdefault(s, []).extend(bl)
+                with self._lock:
+                    self.n_bars += len(bl)
             tok = j.get("next_page_token")
             if not tok:
                 return out

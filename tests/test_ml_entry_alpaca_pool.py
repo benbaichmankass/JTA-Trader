@@ -25,3 +25,26 @@ def test_pool_rule_is_frozen():
 
 def test_default_path_flags_unchanged():
     assert S.HOLDOUT_START == "2025-10-01" and S.FETCH_START == "2025-05-01"
+
+
+def test_fetch_is_one_request_series_per_symbol(tmp_path):
+    import pandas as pd
+
+    class FakeClient:
+        calls, n_429 = 0, 0
+
+        def __init__(self):
+            self.reqs = []
+
+        def bars(self, symbols, tf, start, end, **kw):
+            self.reqs.append(list(symbols))
+            self.calls += 1
+            ts = pd.date_range("2021-01-04 14:00", periods=30, freq="h", tz="UTC")
+            return {s: [{"t": t.isoformat(), "o": 1.0, "h": 1.0, "l": 1.0, "c": 1.0, "v": 1} for t in ts] for s in symbols}
+
+    fc = FakeClient()
+    out = S.fetch_alpaca_1h(fc, ["SPY", "QQQ", "IWM"], tmp_path, "2021-02-01", workers=3)
+    assert sorted(map(tuple, fc.reqs)) == [("IWM",), ("QQQ",), ("SPY",)] and set(out) == {"SPY", "QQQ", "IWM"}
+    fc2 = FakeClient()
+    S.fetch_alpaca_1h(fc2, ["SPY", "QQQ", "IWM"], tmp_path, "2021-02-01")      # cache hit: no request at all
+    assert fc2.reqs == []
