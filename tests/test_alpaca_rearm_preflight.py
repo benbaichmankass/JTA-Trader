@@ -996,3 +996,39 @@ def test_iso_age_seconds_reads_alpaca_nanosecond_stamps():
     assert abs(om._iso_age_seconds("2026-11-05T14:30:25.123456789Z", now) - 38.876544) < 1e-3
     assert om._iso_age_seconds(None, now) is None
     assert om._iso_age_seconds("not-a-time", now) is None
+
+
+# ── ML-ENTRY-WATCHDOG-EXIT (2026-11-05): target gone because the stop FILLED ──
+#
+# MEASURED (diag alpaca_order_history, alpaca_paper SCHA trade 6877): TP leg
+# 6aaddc28 canceled 17:01:17.155Z, stop filled 17:01:18.485Z @32.36 (873 sh),
+# then the ~17:01:55Z sweep paged CRITICAL alpaca_target_naked "position 873.0
+# has 0.0 of take-profit coverage" on a symbol the venue already held flat.
+# A FILLED stop has left the open-order legs, so #23384's stop_released_at
+# reads None and target_exiting cannot catch it.
+
+def test_target_gone_on_a_flat_venue_grades_target_flat_not_naked(world):
+    db, _pages, mp = world
+    _close_row(db, 5928)
+    v = _Venue(qty=0.0, price=735.0)      # stop filled: no position, no legs
+    v.resting = []
+    _use(mp, v)
+    alerts = _target_alerts(mp)
+    s = om._check_broker_naked_equity_positions(db)
+    assert s["target_flat"] == 1
+    assert s["target_naked"] == 0 and alerts == []
+    assert v.posts() == []                # the flat pre-flight still refuses
+
+
+def test_target_gone_with_a_live_position_still_pages_target_naked(world):
+    """Positive control: same row, venue still HOLDS the shares and no target
+    rests — that is a real target-naked book and must page."""
+    db, _pages, mp = world
+    _close_row(db, 5928)
+    v = _Venue(qty=56.0, price=735.0)
+    v.resting = [_released_stop(30, status="held")]
+    _use(mp, v)
+    alerts = _target_alerts(mp)
+    s = om._check_broker_naked_equity_positions(db)
+    assert s["target_flat"] == 0
+    assert s["target_naked"] == 1 and len(alerts) == 1

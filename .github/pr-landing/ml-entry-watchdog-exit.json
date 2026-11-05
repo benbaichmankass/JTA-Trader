@@ -1,0 +1,7 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "why": "ML-ENTRY-WATCHDOG-EXIT. Journal LABEL + alert grading only; no order is placed, moved or cancelled and no exit or watchdog threshold changes. (1) _sweep_local_pnl_for_unpriced and _sweep_pending_pnl_from_bybit treat stuck_strategy_watchdog as a flat detector (like exchange_flat_reconciled): relabel sl/tp off a MEASURED exit price only (10 bps), prior label kept in pre_label_exit_reason; ESTIMATED is refused with a stamp. MEASURED: alpaca_paper ml_entry SLV 6920 stop leg filled 47.643 vs package SL 47.6443 and was booked stuck_strategy_watchdog, faulting the Stage-1 mechanics soak. (2) scripts/ops/backfill_exit_labels.py mirrors the rule for history (run via system-action backfill-exit-labels after merge). (3) The Alpaca naked sweep grades target_flat (logged, not paged) when its own positions read shows the symbol flat (SCHA 6877 paged CRITICAL alpaca_target_naked ~37 s after its stop filled). src/** is TIER2_PATHS, so this lands on the manager's merge.",
+  "hold_reason": "tier_2_3_needs_approval",
+  "hold_text": "src/** is a Tier-2 path; the manager merges on its own (operator-delegated) authority after reviewing the label/alert-only change."
+}
