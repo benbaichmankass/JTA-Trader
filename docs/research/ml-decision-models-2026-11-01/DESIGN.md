@@ -58,7 +58,8 @@ across symbols.
 > **Superseded 2026-11-05 (operator, HOLDOUT-DEFLATED-REUSE; principles M13).** The held-out window is NOT spent after one
 > read. A re-read is allowed: the holdout ledger records it, and it is graded on a deflated bar (Šidák CI, or the
 > Bailey–López de Prado point hurdle). As of 2026-11-05 the ledger holds 2 ENTRY reads on 2025-10..2026-09, 1 BRACKETS and
-> 2 MANAGE, so the next ENTRY or MANAGE read is read 3: z 2.39, t ≥ 0.85. A holdout overlapping training is still refused.
+> 4 MANAGE (incl. the c692-13/-14 xs claims), so the next ENTRY read is read 3 (z 2.39, t ≥ 0.85) and the next MANAGE read is
+> read 5 (z 2.57, t ≥ 1.19). A holdout overlapping training is refused.
 > The text below is the 2026-11-01 rule, kept as history.
 
 Verbatim popup answer: *"Yes, one model, one read (Rec.)"*. The point-estimate ≥ 0 bar is unchanged; it applies to ONE

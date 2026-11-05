@@ -97,7 +97,7 @@ run:
   - alpaca
   - --population
   - alpaca-liquidity
-  timeout_minutes: 180
+  timeout_minutes: 300
   inputs:
     research_unit: RQ-20261104-a41f-01
 ml_consumer:
@@ -133,3 +133,21 @@ etf_rule_registration: 'Registered 2026-11-05 BEFORE ANY RUN (the unit has never
   Data access: read-only allowlisted client, paper key, 429 back-off (operator 2026-11-05 ~10:05Z). decision_rule above is UNCHANGED.'
 etf_rule_sha256: e9702661d1a596a0f7e84e632c0ca8b5c2743a728f02147477c003644a0858e2
 last_dispatched_at: '2026-11-04T23:47:30+00:00'
+execution_amendment: 'EXECUTION-ONLY amendment 2026-11-05 ~18:0xZ by lane ML-ENTRY-ALL-ACCOUNTS, recorded BEFORE the re-run, on the manager instruction (Manager Session 2026-11-05b, 17:52Z).
+  Run 42047465240 (14:42:57Z) hit the 180-min unit timeout during the Alpaca 1h fetch (160/176 symbols, 10,042 calls = ~63 per symbol against ~3
+  needed; the multi-symbol request paged far below its limit); it never reached the perp fetch, scoring or a verdict, so NO window or holdout was
+  read and nothing was graded. Changes: 1h bars are requested per symbol (one request series each) on 4 threads sharing ONE pacing clock
+  (<= 2.5 calls/s, under the 200/min data limit); phase and per-symbol progress lines; timeout_minutes 180 -> 300. UNCHANGED: decision_rule, population
+  rule (POOL_RULE sha256 above), model, tau, window 2021-01-01..last complete month, costs, bracket, side rule, session gate. If this run also times
+  out, the fallback is symbol-sharded runs with trade-level pooling (not an average of shard results).'
+window_amendment: 'WINDOW AMENDMENT 2026-11-05 ~18:4xZ by lane ML-ENTRY-ALL-ACCOUNTS, recorded BEFORE the re-run, on the manager instruction (Manager Session
+  2026-11-05b 18:34Z, PI-20261105-GEXSLEAK-0001). The served model ml/served/ml_decision_entry_v1/model.json carries train_end_exclusive 2025-09-22 19:00:00+00:00
+  and was fit on crypto rows from the harness START 2020-07-01, so the registered scored window 2021-01-01..last complete month OVERLAPPED the training
+  calendar for ~4.7 of ~5.8 years; ENTRY market-wide features (btc_ret24, btc_vol24, breadth_up24, hour, dow) effectively identify the DATE, so a pooled read
+  on those dates is inflated (non-pool HOLD baseline +0.513 R/trade on training-overlapping dates vs +0.014 time-held-out) and a PASS on them is NOT admissible.
+  The scored window SHRINKS to the model sealed holdout 2025-10-01 .. the last complete month (2026-10-31): 8.2 days after train_end_exclusive, embargo
+  required = 2 x horizon_h = 48 h (the script now REFUSES any start earlier: check_window_disjoint, self-tested; the dates are written into the record).
+  Bars are fetched from 2025-05-01 only to supply feature history. UNCHANGED: decision_rule (rule text, PASS >= 0 at n >= 30, INDETERMINATE n < 30), the
+  population rule and POOL_RULE sha256 (dev window 2019-2020 liquidity filter), model, tau, costs, bracket, side rule, session gate. POWER: ~13 months x
+  ~176 ETFs; bdc2-01 measured 128 long takes / 12 months / 11 ETFs under the served rule (~1 per ETF-month), so the pooled n is expected in the low
+  thousands (>= expected_n 300, MDE 0.16 R at n 300 with sd 1 R); the n floor of 30 is the rule, and the record states n. The 2021-2025 dates are NOT scored.'
