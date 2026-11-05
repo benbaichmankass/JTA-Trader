@@ -1,0 +1,23 @@
+{
+  "id": "IAUM-6655-NAKED-FLAT",
+  "title": "IAUM 6655 alpaca_paper: target_naked was real (TP leg canceled 14:30:08Z, actor unknown); rearm_refused_flat was a post-fill ordering race; close sl_cross correct",
+  "phase": null,
+  "state": "in_flight",
+  "owner": "manager",
+  "lane": "IAUM-6655-NAKED-FLAT",
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [],
+  "blocked_on": [],
+  "note": "MEASURED 2026-11-05 (diag relays; alpaca_paper IAUM trade 6655, iaum_pullback_1d SHORT 137). (1) CLOSE IS CORRECT: venue buy-stop 659384a4 (stop 40.60, trail-locked since 10-30) FILLED 41.14 at 14:31:20Z; journal closed_at 14:32:33Z exit_reason=sl_cross exit_price=41.15 - reason matches the venue (SL), no bug in the reason; exit price is the monitor candle verdict 41.15 vs venue fill 41.14 (0.01/sh x137 = 1.37 USD, pnl column is NULL) - writeback PROPOSED, NOT RUN: set exit_price=41.14 (MEASURED venue fill) on 6655, operator OK needed. (2) ALERT target_naked was a TRUE POSITIVE, not a false positive: venue TP leg b3dee712 (limit 37.35) was CANCELED at 14:30:08Z (order history) while the stop was replaced/resubmitted at 14:30:25Z; sweep 14:31:04Z saw target_naked=1 with a real 137-share position + resting stop (stop_qty 137), then the stop filled 76s after the TP vanished. The 14:30:01Z sweep had target_naked=0 so the TP was there until 14:30:08. (3) ALERT rearm_refused (flat) is a BENIGN ORDERING RACE: the stop filled 14:31:20Z; the journal row stayed open until the 2-read flat-confirm (armed 14:31:50, 2nd read 14:32:00) so the 14:32:04Z sweep graded a row with no venue shares (target_naked=1 again, cooldown-suppressed; rearm_refused_flat=1) and _alpaca_rearm_preflight (order_monitor.py ~10484) correctly REFUSED to re-arm but paged CRITICAL for a position already gone. (4) UNKNOWN (not proven): WHO canceled the TP at 14:30:08Z. No cancel/modify/patch line in ict-trader-live or ict-web-api journals 14:29:00-14:31:00Z (read_state complete, 337 trader lines scanned); no other alpaca_paper symbol lost a leg that window; 14:30Z = US open +8s. Candidates: venue-side action at the open, or an out-of-process caller (system-action/desk) whose log is not in these units. Fed to BRACKETS-ALWAYS (a leg was removed, not moved). NEXT: (a) Tier-1 held for design call: skip the flat refusal page (or WARN-level) when the row is already in flat-confirm pending-finalize, and do not count/page target_naked when coverage source==flat (order_monitor.py ~11014 / ~11100); existing test test_single_row_whose_stop_filled_is_never_rearmed_on_a_flat_position asserts the page so it needs the change. (b) rerun: pull alpaca_order_history for any alpaca_paper symbol whose bracket loses a leg and diff canceled_at vs bot logs to identify the actor; add a venue-orders audit line when the bot cancels a TP.",
+  "due_by": "2026-11-07",
+  "roadmap": [
+    "unmapped"
+  ],
+  "roadmap_unmapped_reason": "not set at filing -- manager to map to a milestone at the next weekly pass",
+  "updated_at": "2026-11-05T14:41:08Z",
+  "updated_by": "session_01AFoLuLmhUKeUzHC6CHz2uP",
+  "_seq": 954
+}
