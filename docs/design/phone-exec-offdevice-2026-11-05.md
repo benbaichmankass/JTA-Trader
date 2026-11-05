@@ -1,6 +1,6 @@
 # Running the Breakout executor off the operator's phone — viability and design spec (2026-11-05)
 
-> **Doc status:** `live` · category `architecture` · last verified `2026-11-05` · registered in [`docs/DOCUMENT-INDEX.md`](../DOCUMENT-INDEX.md)
+> **Doc status:** `unknown` · category `architecture` · last verified `never` · registered in [`docs/DOCUMENT-INDEX.md`](../DOCUMENT-INDEX.md) · **nobody has verified this document's status — do not act on it as current**
 >
 > **Lane PHONE-EXEC-OFFDEVICE** (dispatched by Manager Session 2026-11-04b). Tier-1, docs only. **Nothing here is built, and no live executor, account or credential was touched.**
 >
