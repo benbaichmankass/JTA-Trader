@@ -1277,6 +1277,7 @@ header before triggering a mutating one).
 
 | Workflow | Category | Autonomy | Trigger | Purpose |
 |---|---|---|---|---|
+| `work-store-outbox.yml` | Ops relay | AUTONOMOUS | `issue_comment` on the issue titled `work-store outbox` + cron `41 * * * *` backstop + dispatch | WSD-S3-CLI-OUTBOX (design `docs/plans/WORK-STORE-DESIGN-2026-11.md` § 2.3): applies `scripts/ops/work.py --via outbox` op comments to `POST /api/bot/work/items*` with `WORK_STORE_TOKEN`, idempotent by `op_id`. Applies ONLY comments whose `author_association` is OWNER/MEMBER/COLLABORATOR; marks an applied comment with a rocket, a refused one with confused + a reply. No PR, no repo write. |
 | `account-class-guard` | CI guard | AUTO | PR | Fails PR when an accounts.yaml account is missing account_class. |
 | `canonical-doc-coherence` | CI guard | AUTO | PR/push | Mechanical guard against governance-doc drift (the doc-coherence 'teeth'). |
 | `new-table-wiring-guard` | CI guard | AUTO | PR | Fails+pings when a PR adds a persistent table without wiring it into the canonical store. |
