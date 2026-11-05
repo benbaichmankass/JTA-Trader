@@ -11,13 +11,13 @@
   "tier": 2,
   "prs": [],
   "blocked_on": [],
-  "note": "Lane row for UI-CONSOLE-CONNECTOR + UI-CONSOLE-ARTIFACT (operator 11-05 pull-forward). Console artifact: https://claude.ai/artifact/YU4ZwddDFB1AD2xWV2oE3g (v1 shell published 07:00Z, placeholder Work/Inbox, real notes in page db inbox/*). Probe artifact: https://claude.ai/artifact/9rodWzoqc6xq6z1UP8WUBm. Operator ~06:58Z via manager: comments on both go to the MANAGER, not the lane; lane watches stopped 07:01Z (bare watch listing empty). Manager re-watches both at start of session and reads open threads at each lane check-in (manager SKILL).",
+  "note": "Lane row for UI-CONSOLE-CONNECTOR + UI-CONSOLE-ARTIFACT (operator 11-05 pull-forward). Console artifact: https://claude.ai/artifact/YU4ZwddDFB1AD2xWV2oE3g (v1 shell published 07:00Z, placeholder Work/Inbox, real notes in page db inbox/*). Probe artifact: https://claude.ai/artifact/9rodWzoqc6xq6z1UP8WUBm. Operator ~06:58Z via manager: comments on both go to the MANAGER, not the lane; lane watches stopped 07:01Z (bare watch listing empty). Manager re-watches both at start of session and reads open threads at each lane check-in (manager SKILL). v5 SHIPPED 2026-11-05 (lane UI-CONSOLE-ITEM-FEEDBACK, same URL, artifact version 6). Every real Work/Inbox row has a Reply box (prefilled 'Re <id> (<kind>): ') with Save and 'Send to Claude now' (comments.sendToClaude anchored to the row, only when canSendToClaude==available). Option buttons render from item.options[] on decisions and asks. Each choice/reply writes page-db doc inbox/fb-<ts>: {item_id,item_kind(work|ask|decision|alert),choice|null,text|null,created_at,by,status:queued,route:manager_drain,[sent_to_claude_at]}; the row then shows 'you chose X' / 'you replied' + status. Old global form is now a collapsed 'General note' (docs without item_kind). Header label and PAGE_VERSION = v5; diag/view-* telemetry kept. MANAGER READ PATH: at each check-in run ArtifactData action=list collection=inbox url=<console url> (query limit 200); docs with item_kind are item feedback (act on choice/text for item_id), docs without are general notes; after acting, ArtifactData update the doc status to filed|closed (page shows it). CONNECTOR NEEDS (lane UI-CONSOLE-V1, not edited here): inbox payload carries NO options today (one live call 10:33Z: decisions_checklist and asks_pipeline items have id,title,source,state,due only). Add options[] (strings or {id,label}) to decisions_checklist and asks_pipeline items; until then the UI shows 'options not in feed yet: reply below'. Unverified: db writes and send-to-Claude were not exercised from a live viewer session (inbox collection empty on read).",
   "due_by": "2026-11-10",
   "roadmap": [
     "L-OPS"
   ],
-  "updated_at": "2026-11-05T07:01:49Z",
-  "updated_by": "lane-UI-CONSOLE-V1",
+  "updated_at": "2026-11-05T10:36:50Z",
+  "updated_by": "session_01AFoLuKPFatiYC8ciYMxABr",
   "console_artifact_url": "https://claude.ai/artifact/YU4ZwddDFB1AD2xWV2oE3g",
   "probe_artifact_url": "https://claude.ai/artifact/9rodWzoqc6xq6z1UP8WUBm",
   "_seq": 939
