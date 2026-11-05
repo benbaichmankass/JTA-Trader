@@ -390,7 +390,7 @@ def write_record(record: Dict[str, Any], db_path: Optional[str] = None) -> bool:
     try:
         from src.utils.paths import trade_journal_db_path
         path = db_path or str(trade_journal_db_path())
-        with sqlite3.connect(path, timeout=5.0) as conn:
+        with sqlite3.connect(path, timeout=_write_busy_timeout(5.0)) as conn:
             record = dict(record)
             record["account_id"] = _resolve_account_id(conn, record)
             record.setdefault("peak_authoritative", 0)
@@ -738,3 +738,14 @@ def telemetry_by_trade_id(db_path: Optional[str] = None) -> Dict[str, Dict[str, 
     except Exception:  # noqa: BLE001 — a reader must never break its caller
         logger.debug("position_telemetry: by-trade-id read failed", exc_info=True)
         return {}
+
+
+def _write_busy_timeout(default: float) -> float:
+    """5 s everywhere, but the short bound on the exit-evaluation thread
+    (src/runtime/journal_sync.py; TICK-STAGE2-RECONCILE-OFFTICK): a best-effort
+    telemetry write must not hold an exit pass past the 60 s requirement."""
+    try:
+        from src.runtime.journal_sync import write_busy_timeout
+        return write_busy_timeout(default)
+    except Exception:  # noqa: BLE001
+        return default

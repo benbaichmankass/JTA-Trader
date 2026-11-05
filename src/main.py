@@ -1118,6 +1118,31 @@ def main() -> None:
             "tick (pre-2026-08-12 behaviour); the 60s ask is NOT met in this mode"
         )
 
+    # ------------------------------------------------------ reconciliation loop
+    # TICK-STAGE2-RECONCILE-OFFTICK (Tier 2, 2026-11-05). The reconciliation half
+    # (23.6 s mean per tick, MEASURED tick_cost 78 ticks 2026-11-05) runs on its
+    # own 60 s cadence, serialized with entry dispatch by journal_sync (see
+    # src/runtime/journal_sync.py for why that lock is load-bearing). Only when
+    # the exit half is decoupled too: with EXIT_LOOP_DECOUPLE_DISABLED the old
+    # run_monitor_tick path is kept whole. Rollback: RECONCILE_OFFTICK_DISABLED.
+    from src.runtime import reconcile_loop as _reconcile_loop
+
+    def _reconcile_pass():
+        from src.runtime.order_monitor import run_reconciliation_tick
+        run_reconciliation_tick(
+            ohlcv_fetcher=_build_monitor_ohlcv_fetcher(settings),
+        )
+
+    reconcile_offtick = decoupled and _reconcile_loop.offtick_enabled()
+    if reconcile_offtick:
+        _reconcile_loop.start(_reconcile_pass)
+        logger.info("reconciliation loop moved OFF the tick onto its own thread")
+    elif decoupled:
+        logger.warning(
+            "RECONCILE_OFFTICK_DISABLED set: reconciliation rides the main tick "
+            "(pre-2026-11-05 behaviour)"
+        )
+
     logger.info("Starting continuous loop. TICK_INTERVAL_SECONDS=%s", interval)
     tick_count = 0
     last_tick_status = "starting"
@@ -1180,17 +1205,18 @@ def main() -> None:
             # verdicts to the DB unit. Best-effort; never raises.
             with _tick_hook("order_monitor"):
                 try:
-                    if decoupled:
+                    if reconcile_offtick:
+                        # Off the tick: restart a dead thread and raise ONE
+                        # latched flag if passes keep failing or go stale.
+                        _reconcile_loop.ensure_running(_reconcile_pass)
+                    elif decoupled:
                         # The exit half runs on its own loop; this tick keeps the
                         # reconcilers/sweeps, whose latency governs how fast the
                         # JOURNAL catches up with the broker (a real requirement,
                         # a different one from exit-evaluation latency).
-                        from src.runtime.order_monitor import (
-                            run_reconciliation_tick,
-                        )
-                        run_reconciliation_tick(
-                            ohlcv_fetcher=_build_monitor_ohlcv_fetcher(settings),
-                        )
+                        from src.runtime.journal_sync import journal_sync
+                        with journal_sync("reconciliation_inline"):
+                            _reconcile_pass()
                     else:
                         from src.runtime.order_monitor import run_monitor_tick
                         run_monitor_tick(
@@ -1238,7 +1264,12 @@ def main() -> None:
             # is authored; best-effort (never raises into the loop).
             try:
                 from src.units.strategies.pairs_executor import run_pairs_tick
-                run_pairs_tick(settings)
+                # Places + journals its two legs: same journal_sync as entry
+                # dispatch, so a reconciliation pass never adopts a leg that
+                # is placed but not yet journaled.
+                from src.runtime.journal_sync import journal_sync
+                with journal_sync("pairs_tick"):
+                    run_pairs_tick(settings)
             except Exception:  # noqa: BLE001
                 logger.exception("pairs_tick failed")
 

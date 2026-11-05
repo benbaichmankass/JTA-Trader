@@ -1,0 +1,22 @@
+{
+  "based_on": "20261105T071021114889Z-ab5e2610.json",
+  "due_when": {
+    "check_every_days": 1,
+    "clears_when": "a live review table dated after the deploy for a 4h trend leg shows >=1 tighten option state=measured (candles not null)",
+    "kind": "observation"
+  },
+  "id": "PI-20261105-LTR-CANDLE-STORE-OBS",
+  "next_action": "check_observation",
+  "observation": {
+    "due_by": "2026-11-08",
+    "how_to_check": "newest comms/live_review/tables/*.json for trend_donchian_*_4h: candles != null and an atr tighten with state measured",
+    "what": "next live review on a 4h trend leg prices >=1 tighten option"
+  },
+  "origin": {
+    "kind": "session",
+    "ref": "row LTR-GRADER-COVERAGE; lane session_01AFoLuN7HERxg65eHjtmMYE dispatch",
+    "rerun": "python3 -c \"import json;rows=[json.loads(l) for l in open('comms/live_review/reviews.jsonl')];print([r['review_id'] for r in rows[-40:]])\" then open the newest comms/live_review/tables/<id>.json for a 4h trend leg and count options with action=tighten and state=measured"
+  },
+  "state": "queued",
+  "what": "live_review_outcomes candle store (comms/live_review/candles, PR for LTR-GRADER-COVERAGE no_candles bullet) is landed but unobserved on the VM: deploy/vm-sparse-checkout hid all research candles so VM-priced tighten options were no_candles. Closes when a live review on a 4h trend leg prices >=1 tighten option. Remaining on the row, not done here: replay_mismatch, trade_open, unresolved holds; applied.jsonl diag route; r-level defaults (r:1/r:2 are stop_level_not_below_price whenever open_r<1 - a breakeven r:0 default would give those cells a priceable r option). || SUPERSEDED 2026-11-05 08:30Z (manager: repo is not a database): the committed store was dropped; live_review_outcomes.venue_candles fetches the corpus span from Bybit public klines once into <data_dir>/ltr_candles/ (gitignored). UNOBSERVED - the fetch was only stub-tested (lane sandbox gets 403 from Bybit). Equity/futures legs (mgc/iaum/gdx/mhg/spy/slv/uso) stay no_candles: no on-VM multi-year bars exist; needs a source decision."
+}
