@@ -2278,6 +2278,9 @@ strategies:
     # the sentinel +0.003 R/trade CI [-0.061, +0.069]. The trail is UNCHANGED.
     # ROLLBACK: restore `tp_r: 50.0` + the prior `tp_intent: {mode: none}` block (git history).
     tp_r: 3.5
+    # TP doctrine (Tier-3, lane TP-REALMONEY-UNITS): mirror proxy of iaum_pullback_1d (alpaca superset); RQ-20261104-c6f1-06 PASS (held-out n=14, LOW POWER); operator 2026-11-04 ~22:49Z "Apply, flag low-n (Recommended)".
+    # Evidence research/results/RQ-20261104-c6f1-06/local-20261104.jsonl. ROLLBACK: delete this tp_revision line.
+    tp_revision: {rule: tp_extend, extend_r: 1.0, approach_frac: 0.85, max_extends: 3}
     tp_intent:
       mode: r_multiple
       basis: RQ-20261016-014_pooled_kstar_3.5R
@@ -2863,6 +2866,9 @@ strategies:
     # the sentinel +0.003 R/trade CI [-0.061, +0.069]. The trail is UNCHANGED.
     # ROLLBACK: restore `tp_r: 50.0` + the prior `tp_intent: {mode: none}` block (git history).
     tp_r: 3.5
+    # TP doctrine (Tier-3, lane TP-REALMONEY-UNITS): RQ-20261104-c6f1-06 PASS on the GLD twin (held-out n=14, LOW POWER); operator 2026-11-04 ~22:49Z "Apply, flag low-n (Recommended)".
+    # Evidence research/results/RQ-20261104-c6f1-06/local-20261104.jsonl. ROLLBACK: delete this tp_revision line.
+    tp_revision: {rule: tp_extend, extend_r: 1.0, approach_frac: 0.85, max_extends: 3}
     tp_intent:
       mode: r_multiple
       basis: RQ-20261016-014_pooled_kstar_3.5R
@@ -3176,6 +3182,9 @@ strategies:
     # baseline AND is train/OOS-consistent; the only one of six pullback legs where
     # the sweep found a shipping value. ROLLBACK: set back to 50.0.
     tp_r: 3.0
+    # TP doctrine (Tier-3, lane TP-REALMONEY-UNITS): RQ-20261104-c6f1-02 PASS (held-out n=94); operator 2026-11-04 ~22:49Z "Apply (Recommended)".
+    # Evidence research/results/RQ-20261104-c6f1-02/local-20261104.jsonl. ROLLBACK: delete this tp_revision line.
+    tp_revision: {rule: tp_extend, extend_r: 1.0, approach_frac: 0.85, max_extends: 3}
     min_confidence: 0.0
     adx_min: 25             # ADX>=25 regime gate (Tier-3, operator-approved 2026-06-18): pullback wants an established trend. OOP holdout PASSED (BNB reject->paper_ready, LINK +53%, ETH->live_ready). PAPER soak. ROLLBACK: remove this line.
     # shadow_model_ids OMITTED (symbol-aware auto-wire). Observe-only.

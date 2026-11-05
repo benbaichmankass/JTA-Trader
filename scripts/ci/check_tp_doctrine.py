@@ -217,12 +217,9 @@ ER: frozenset[str] = frozenset({DIM_ENTRY, DIM_REVISION})
 E: frozenset[str] = frozenset({DIM_ENTRY})  # entry_tp only: a tp_revision rule is declared and plumbed
 BASELINE_2026_10_06: dict[str, frozenset[str]] = {
     # ── real_money ──────────────────────────────────────────────────────────
-    "alpaca_portfolio/gld_pullback_1d": R,  # 2026-11-01 mirror superset (operator): the underlying of alpaca_live/iaum_pullback_1d, same params, same debt, not new: tp_r 3.5 declared, tp_revision still undeclared
-    "alpaca_live/iaum_pullback_1d": R,  # 2026-10-22 tp_r 3.5 declared (OPERATOR-DECISIONS-1022); tp_revision still undeclared
     "bybit_2/ada_pullback_2h": R,
     "bybit_2/trend_donchian_eth_4h": E,  # 2026-10-18 tp_revision declared (TIER3-PACKETS-1018); entry_tp still the 50 R sentinel
     "bybit_2/trend_donchian_xrp_4h": R,
-    "bybit_2/xrp_pullback_2h": R,
     # 2026-10-15 PROMOTE-PROP-LEGS (Tier-3, operator pre-authorized): trend_donchian_sol_prop is
     # promoted with the SAME exit recipe it runs on the prop books (declared 6 R target, TP-REACH-FLOOR
     # fail), so it inherits the breakout_2 / bybit_1 debt line verbatim. A visible, deliberate line on a
@@ -255,7 +252,6 @@ BASELINE_2026_10_06: dict[str, frozenset[str]] = {
     "bybit_portfolio/ada_pullback_2h": R,
     "bybit_portfolio/trend_donchian_eth_4h": E,  # 2026-10-18 tp_revision declared (TIER3-PACKETS-1018); entry_tp still the 50 R sentinel
     "bybit_portfolio/trend_donchian_xrp_4h": R,
-    "bybit_portfolio/xrp_pullback_2h": R,
     "bybit_portfolio/trend_donchian_sol_prop": ER,   # mirrors bybit_2 (PROMOTE-PROP-LEGS, above)
     # ── paper ───────────────────────────────────────────────────────────────
     "alpaca_options_paper/gdx_pullback_1d": R,  # 2026-10-22 tp_r 3.5 declared (OPERATOR-DECISIONS-1022); tp_revision still undeclared
@@ -276,7 +272,6 @@ BASELINE_2026_10_06: dict[str, frozenset[str]] = {
     # 2026-10-15 PROP-GATE-PARITY: the two prop legs enter the Stage-1 soak on bybit_1 with the
     # SAME exit recipe they run on the prop books (declared 6 R target, TP-REACH-FLOOR fail), so
     # they inherit the breakout_2 debt lines above verbatim. A visible, deliberate line.
-    "alpaca_paper/iaum_pullback_1d": R,  # 2026-10-22 tp_r 3.5 declared (OPERATOR-DECISIONS-1022); tp_revision still undeclared
     "bybit_1/trend_donchian_1h": ER,
     "bybit_1/trend_donchian_eth_prop": ER,
     # 2026-10-22 OPERATOR-DECISIONS-1022: the incumbent leaves bybit_1 for its soak alias (same tp_r 3,
@@ -332,7 +327,6 @@ BASELINE_2026_10_06: dict[str, frozenset[str]] = {
     # live_review_apply move_tp, and this scan reads neither. Both lines leave together when it does.
     "alpaca_paper/claude_desk": ER,
     "ib_paper/claude_desk": ER,
-    "ib_paper/gld_pullback_1d": R,  # moved from alpaca_paper 2026-10-25 (GLD-SOAK-REPLACE); same debt, not new: tp_r 3.5 declared (OPERATOR-DECISIONS-1022), tp_revision still undeclared
     "ib_paper/ict_scalp_mgc_15m": R,
     "ib_paper/iwm_trend_long_1d": R,
     "ib_paper/mes_trend_long_1d": ER,

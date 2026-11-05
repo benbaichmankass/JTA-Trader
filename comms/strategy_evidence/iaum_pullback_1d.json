@@ -3,32 +3,29 @@
   "strategy": "iaum_pullback_1d",
   "symbol": "IAUM",
   "timeframe": "1d",
-  "config_fingerprint": "sha256:59b8d4b365bf510d1881fe4cd05d1a12",
+  "config_fingerprint": "sha256:22e79d52f5e87055b22b2cc9444b1522",
   "basis": "harness_timefolds",
   "coverage_state": "measured",
-  "fidelity": "approximate",
-  "omitted_levers": [
-    "trail_decay_stall_bars",
-    "trail_decay_tight_mult"
-  ],
-  "net_r_oos": 7.1631,
-  "expectancy_r_oos": 0.8954,
+  "fidelity": "faithful",
+  "omitted_levers": [],
+  "net_r_oos": 10.6758,
+  "expectancy_r_oos": 1.3345,
   "n_trades_oos": 8,
   "folds": 4,
   "fold_detail": [
     {
       "fold": 1,
       "trades": 2,
-      "net_r": 5.4743,
-      "expectancy_r": 2.7372,
-      "start": "2025-08-01 00:00:00+00:00",
+      "net_r": 6.6732,
+      "expectancy_r": 3.3366,
+      "start": "2025-08-13 00:00:00+00:00",
       "end": "2025-10-23 00:00:00+00:00"
     },
     {
       "fold": 2,
       "trades": 2,
-      "net_r": 1.8878,
-      "expectancy_r": 0.9439,
+      "net_r": 2.8876,
+      "expectancy_r": 1.4438,
       "start": "2025-12-30 00:00:00+00:00",
       "end": "2026-02-03 00:00:00+00:00"
     },
@@ -43,24 +40,24 @@
     {
       "fold": 4,
       "trades": 2,
-      "net_r": -0.7219,
-      "expectancy_r": -0.3609,
+      "net_r": 0.5921,
+      "expectancy_r": 0.2961,
       "start": "2026-09-02 00:00:00+00:00",
       "end": "2026-10-16 00:00:00+00:00"
     }
   ],
-  "folds_positive": 3,
+  "folds_positive": 4,
   "window_days": 365,
   "fee_bps_roundtrip": 0.0,
   "path_stats": {
     "series_location": "source_run (the per-trade rows, in order, with net_r)",
     "n": 8,
-    "max_drawdown_r": 2.0264,
+    "max_drawdown_r": 1.3491,
     "max_drawdown_at_trade": 7,
-    "final_equity_r": 7.1631,
-    "max_equity_r": 8.899,
+    "final_equity_r": 10.6758,
+    "max_equity_r": 11.0977,
     "worst_trade_r": -1.014,
-    "best_trade_r": 3.479,
+    "best_trade_r": 4.6779,
     "worst_day_r": -1.014,
     "worst_day_date": "2026-08-05",
     "trades_without_exit_time": 0,
@@ -72,9 +69,9 @@
     "slippage": 5.0,
     "funding": 0.0,
     "unit": "bps_roundtrip (funding: bps per funding window)",
-    "source": "comms/strategy_evidence/runs/2026-10-22-odc1022/iaum_pullback_1d__bt.json"
+    "source": "comms/strategy_evidence/runs/2026-11-05/iaum_pullback_1d__bt.json"
   },
-  "net_r_oos_fee_only": 7.2685,
+  "net_r_oos_fee_only": 10.7854,
   "decision_rule": {
     "id": "RULE-D1-STAGE0-NET-OF-FULL-COST",
     "rule": "Stage 0 requires net_r_oos -- pooled net_total_r from the harness's out-of-sample time-folds, net of the FULL cost stack (fee + slippage + funding) -- to be > 0. Restates the existing promotion-ladder Stage-0 bar as a checkable predicate over this record's own fields; does not itself authorize or perform any roster change.",
@@ -82,11 +79,33 @@
     "verdict": "pass"
   },
   "param_selection_provenance": "not_established",
-  "generated_at": "2026-10-22T07:38:24.058833+00:00",
+  "generated_at": "2026-11-05T00:25:14.504358+00:00",
   "generated_by": "scripts/ops/build_strategy_evidence.py",
-  "source_run": "comms/strategy_evidence/runs/2026-10-22-odc1022/iaum_pullback_1d__trades.jsonl",
+  "source_run": "comms/strategy_evidence/runs/2026-11-05/iaum_pullback_1d__trades.jsonl",
   "error": null,
   "harness": "pullback",
   "low_n_warning": "n_trades_oos=8 < 10; the pooled number is reported but is not a basis for a verdict.",
+  "reproduce": {
+    "window_days": 365,
+    "window_days_source": "committed_record",
+    "folds": 4,
+    "data_start": "2025-05-23 00:00:00+00:00",
+    "data_end": "2026-11-04 00:00:00+00:00",
+    "git_sha": "b79826a7d9a6e3712b9c2e44eb479ead29d393f6",
+    "argv": [
+      "python3",
+      "scripts/ops/build_strategy_evidence.py",
+      "--strategy",
+      "iaum_pullback_1d",
+      "--days",
+      "365",
+      "--folds",
+      "4",
+      "--window-start",
+      "2025-05-23 00:00:00+00:00",
+      "--window-end",
+      "2026-11-04 00:00:00+00:00"
+    ]
+  },
   "venue_bracket_arm": null
 }
