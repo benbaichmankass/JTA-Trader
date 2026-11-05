@@ -11,12 +11,12 @@
   "tier": 2,
   "prs": [],
   "blocked_on": [],
-  "note": "disk-usage-report #22476 (20:59Z): new .git pack 1.35 GB written 18:57Z by ict-git-sync despite the sparse/filter fix (PI-20261102-ARSESYNC-0002; git 2.34 has no repack --filter, so re-clone as partial); signal_audit.jsonl 1.5 GB live with no writer cap; position_read_state_soak.jsonl 343 MB; trade_journal.db 2.4 GB; old backup .bak-own-fill-exits-20261017 2.0 GB (prune keep>=1 keeps it, so deleting needs an operator OK); journald 4.0 GB + syslog.1 724 MB (cap-vm-logs journald needs a one-time operator sudoers line).",
-  "due_by": "2026-11-04",
+  "note": "disk-usage-report #22476 (20:59Z): new .git pack 1.35 GB written 18:57Z by ict-git-sync despite the sparse/filter fix (PI-20261102-ARSESYNC-0002; git 2.34 has no repack --filter, so re-clone as partial); signal_audit.jsonl 1.5 GB live with no writer cap; position_read_state_soak.jsonl 343 MB; trade_journal.db 2.4 GB; old backup .bak-own-fill-exits-20261017 2.0 GB (prune keep>=1 keeps it, so deleting needs an operator OK); journald 4.0 GB + syslog.1 724 MB (cap-vm-logs journald needs a one-time operator sudoers line). [2026-11-05 BACKLOG-DRAIN-20261105] MEASURED live /api/diag/status vm_health.disk=62.5 (%) on 2026-11-05T06:00Z vs 71% at 11-02 21:15Z after the resize to 52G and journald cap: no regrowth. Still open: signal_audit.jsonl (1.5 GB, no writer cap), the .git pack re-clone (PI-20261102-ARSESYNC-0002) and the 2.0 GB .bak-own-fill-exits-20261017 (needs operator OK to delete). Condition to close: a second reading 24h later <= 65% and a capped signal_audit writer or its row.",
+  "due_by": "2026-11-06",
   "roadmap": [
     "L-OPS"
   ],
-  "updated_at": "2026-11-02T21:23:52Z",
-  "updated_by": "session_01AFoLuJ1apgy8sfngu4WyNH",
+  "updated_at": "2026-11-05T06:09:40Z",
+  "updated_by": "session_01AFoLuLoMgjGPiy3UA2Ua8P",
   "_seq": 896
 }
