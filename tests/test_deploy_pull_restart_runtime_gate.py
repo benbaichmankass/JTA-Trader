@@ -195,9 +195,10 @@ def test_mixed_diff_restarts(fake_repo):
 
 
 def test_comms_change_restarts(fake_repo):
-    """comms/ is read at runtime (insights/order-package/comms-handler), so
-    a comms-only change is NOT in the safe-list and must restart."""
-    fake_repo["diff_files"].write_text("comms/claude_strategy_scores.jsonl\n")
+    """comms/ outside the listed data trees is runtime: comms/ml_universe/ is
+    read by the trader (src/config/ml_universe.py, an mtime-keyed cache), so a
+    change to it is NOT in the safe-list and must restart."""
+    fake_repo["diff_files"].write_text("comms/ml_universe/ml_entry.json\n")
     res = _run(fake_repo)
     assert res.returncode == 0, res.stderr
     assert "ict-trader-live.service" in _restarted(fake_repo)
@@ -244,6 +245,26 @@ def test_empty_diff_fails_safe_to_restart(fake_repo):
     "tools/phone-executor/app/src/main/java/com/metis/phoneexec/MainActivity.kt",
     "tools/phone-probe/app/build.gradle.kts",
     "scripts/research/x/queue_throughput.py",
+    # DEPLOY-RESTART-ON-DATA-MIRRORS 2026-11-04: bot data flows. Every reader in a
+    # long-running unit opens the file per call/request (or reads a git ref /
+    # the GitHub API); none reads at import or holds a cache across calls.
+    "comms/desk/role_grade.json",
+    "comms/desk/forecast_ledger.jsonl",
+    "comms/live_review/reviews.jsonl",
+    "comms/live_review/packets/p1.json",
+    "comms/live_parity/latest.json",
+    "comms/cloud/compute_util_ledger.jsonl",
+    "comms/claude_strategy_scores.jsonl",
+    "comms/prop_survival/mlv_movingtp.json",
+    "comms/claude_judgments/blind_grades.jsonl",
+    "comms/reviews/health/x.json",
+    "comms/ops/reset_receipts.jsonl",
+    "comms/ci/compute-allocation-inventory-2026-11-04.json",
+    "comms/ml-plan/20261104T2000Z-ML-FRONTIER-PREP.json",
+    "comms/news_alpha/x.json",
+    "comms/strategy_reviews/2026-09-01/INDEX.json",
+    "comms/reports/index.json",
+    "comms/data_lake/health.json",
 ])
 def test_widened_non_runtime_paths_skip_restart(fake_repo, path):
     fake_repo["diff_files"].write_text(f"docs/x.md\n{path}\n")
@@ -257,8 +278,11 @@ def test_widened_non_runtime_paths_skip_restart(fake_repo, path):
     "scripts/ops/pipeline.py",            # imported by the web API
     "scripts/ml/replay_pregate_live.py",  # imported by src/
     "scripts/prop/prop_executor_tick.py",  # coupled to src/prop
-    "comms/strategy_reviews/2026-09-01/INDEX.json",
-    "comms/macroeconomics/x.json",         # prefix must be the comms/macro/ directory
+    "comms/ml_universe/ml_entry.json",     # trader input, mtime-keyed cache
+    "comms/macroeconomics/x.json",
+    "comms/desks/x.json",                  # prefix must be the comms/desk/ directory
+    "comms/claude_strategy_scores.jsonl.bak",  # the scores file is anchored
+    "comms/broker_truth_ledger.json",      # comms/ outside the listed trees stays runtime         # prefix must be the comms/macro/ directory
     # OA-16(d): imported in-process by the web-api brief (render_daily_brief.py)
     "scripts/research/queue_throughput.py",
     "scripts/research/queue_grade.py",

@@ -94,6 +94,7 @@ jobs:
         continue-on-error: true
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          DASHBOARD_API_TOKEN: ${{ secrets.DASHBOARD_API_TOKEN }}  # ALERT-LEDGER-TO-MANAGER (best-effort ledger write)
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
           # Untrusted fields via env — never inline-interpolated into the shell.
           ISSUE_NUMBER: ${{ github.event.issue.number }}
@@ -119,3 +120,9 @@ jobs:
             --data-urlencode "text=${MESSAGE}" >/dev/null \
             && echo "Telegram alert sent." \
             || echo "::warning::Telegram alert failed (issue was still labelled + commented)."
+          # ALERT-LEDGER-TO-MANAGER: best-effort ledger write (inline: this job has no checkout). Never a gate.
+          if [ -n "${DASHBOARD_API_TOKEN:-}" ]; then
+            LEDGER_BODY="${MESSAGE}" python3 -c 'import json,os;print(json.dumps({"kind":"alert","channel":"system","priority":"high","delivered":"unknown","dedup_key":"external-issue","body":os.environ["LEDGER_BODY"]}))' \
+              | curl -sS --max-time 15 -o /dev/null -H "Authorization: Bearer ${DASHBOARD_API_TOKEN}" -H 'Content-Type: application/json' \
+                  -X POST "${BOT_API_BASE:-https://ict-bot.duckdns.org}/api/bot/alerts" -d @- || echo "ledger write failed (ignored)"
+          fi

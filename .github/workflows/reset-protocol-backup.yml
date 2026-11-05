@@ -75,10 +75,11 @@ jobs:
               "0 19 * * 3")  MODE=check ;;
               *) echo "unknown schedule $SCHEDULE" >&2; exit 1 ;;
             esac
-            RESET_DATE="$(date -u +%Y-%m-%d)"
+            # The most recent Wednesday <= now, NOT "today": a cron run delayed past midnight UTC is Thursday.
+            RESET_DATE="$(bash scripts/ops/last_wednesday.sh)"
           else
             MODE="$IN_MODE"; LIVE="$IN_LIVE"
-            RESET_DATE="${IN_DATE:-$(date -u +%Y-%m-%d)}"
+            RESET_DATE="${IN_DATE:-$(bash scripts/ops/last_wednesday.sh)}"
           fi
           case "$RESET_DATE" in [0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]) ;; *) echo "bad reset_date" >&2; exit 1 ;; esac
           TS="${RESET_DATE}T18:00Z"

@@ -277,7 +277,8 @@ def send(kind: str, text: str, *, parse_mode: Optional[str] = None,
     try:
         return bool(send_telegram_direct(
             text, parse_mode=parse_mode, mirror_to_fcm=mirror_to_fcm,
-            bot_token=route.token, chat_id=route.chat_id, reply_markup=reply_markup))
+            bot_token=route.token, chat_id=route.chat_id, reply_markup=reply_markup,
+            kind=kind, channel=ch))
     except Exception as exc:  # noqa: BLE001
         if ch == SYSTEM:
             raise
@@ -287,7 +288,8 @@ def send(kind: str, text: str, *, parse_mode: Optional[str] = None,
         sysr = channel_route(SYSTEM)
         return bool(send_telegram_direct(
             f"[meant for {ch.upper()}] {text}", parse_mode=parse_mode,
-            mirror_to_fcm=mirror_to_fcm, bot_token=sysr.token, chat_id=sysr.chat_id))
+            mirror_to_fcm=mirror_to_fcm, bot_token=sysr.token, chat_id=sysr.chat_id,
+            kind=kind, channel=SYSTEM))
 
 
 def enabled(kind: str) -> bool:

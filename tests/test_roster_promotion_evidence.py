@@ -292,7 +292,10 @@ def test_c5_baseline_entries_pass_on_their_real_committed_records():
     assertion — that is the signal to delete the baseline entry, not to edit
     the test."""
     accounts = G.rosters(REAL_ACCOUNTS)
-    assert G.FIDELITY_BASELINE, "an empty baseline makes this probe vacuous"
+    # An EMPTY baseline is the ratchet's end state (2026-11-05: the last approximate
+    # risk-bearing record was regenerated faithful), not a vacuous probe: there is no
+    # entry to check. `test_c5_baseline_is_exactly_the_approximate_risk_bearing_slots`
+    # proves, with a planted positive, that an approximate slot would still be seen.
     for (acct, leg), unit in G.FIDELITY_BASELINE.items():
         assert leg in accounts[acct]["legs"], f"{acct}/{leg} is no longer rostered"
         assert (REPO / "research/queue" / f"{unit}.yaml").is_file(), unit
@@ -310,16 +313,34 @@ def test_c5_baseline_is_exactly_the_approximate_risk_bearing_slots():
     slot cannot appear without a promotion this guard would refuse, and a
     baseline entry cannot outlive its approximate record."""
     accounts = G.rosters(REAL_ACCOUNTS)
-    approx = set()
-    for acct, cfg in accounts.items():
-        if not G.is_risk_bearing(cfg["class"]):
-            continue
-        for leg in cfg["legs"]:
-            rec = G.load_record(leg, EVIDENCE)
-            if rec is not None and rec.get("fidelity") == "approximate":
-                approx.add((acct, leg))
-    assert approx, "no approximate risk-bearing slot found — probe cannot see a positive"
-    assert approx == set(G.FIDELITY_BASELINE)
+
+    def approximate_slots(evidence_dir):
+        found = set()
+        for acct, cfg in accounts.items():
+            if not G.is_risk_bearing(cfg["class"]):
+                continue
+            for leg in cfg["legs"]:
+                rec = G.load_record(leg, evidence_dir)
+                if rec is not None and rec.get("fidelity") == "approximate":
+                    found.add((acct, leg))
+        return found
+
+    # Positive control: plant ONE risk-bearing leg's real record as approximate in a
+    # copy of the evidence dir; the same probe must see it. Without this an empty
+    # result could mean "the probe cannot see a positive", not "there is none".
+    import shutil
+    import tempfile
+    acct, cfg = next((a, c) for a, c in accounts.items()
+                     if G.is_risk_bearing(c["class"]) and any((EVIDENCE / f"{lg}.json").is_file() for lg in c["legs"]))
+    leg = next(lg for lg in cfg["legs"] if (EVIDENCE / f"{lg}.json").is_file())
+    with tempfile.TemporaryDirectory() as tmp:
+        shutil.copytree(EVIDENCE, tmp, dirs_exist_ok=True, ignore=shutil.ignore_patterns("runs"))
+        rec = json.loads((Path(tmp) / f"{leg}.json").read_text(encoding="utf-8"))
+        rec["fidelity"] = "approximate"
+        (Path(tmp) / f"{leg}.json").write_text(json.dumps(rec), encoding="utf-8")
+        assert (acct, leg) in approximate_slots(Path(tmp)), "probe cannot see a planted positive"
+
+    assert approximate_slots(EVIDENCE) == set(G.FIDELITY_BASELINE)
 
 
 # --------------------------------------------------------------------------

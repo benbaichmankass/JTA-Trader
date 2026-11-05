@@ -1,0 +1,22 @@
+{
+  "id": "UI-CHART-FUTURES-FEED",
+  "title": "Chart phase 3 (futures): Databento CME real-time via a thin trainer-VM relay (recommended) or Massive futures WS (~$999/mo per exchange, UNVERIFIED); retire the /ws/market candle loop",
+  "phase": null,
+  "state": "queued",
+  "owner": "manager",
+  "lane": null,
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 2,
+  "prs": [],
+  "blocked_on": [],
+  "note": "Step T3c of docs/plans/UI-TWO-SURFACE-DESIGN-2026-11.md. A spend decision goes to the operator with fresh vendor quotes when this starts; it is not a gate on other work. The relay runs on the trainer VM, not the trader VM, and keeps the key server-side. Depends on UI-CHART-EQUITIES-FEED. Closing: /ws/market connections 0 for a day; VM broker-candle fetches attributable to the UI = 0.",
+  "due_by": "2026-12-09",
+  "roadmap": [
+    "L-OPS"
+  ],
+  "updated_at": "2026-11-05T00:39:47Z",
+  "updated_by": "lane-UI-TWO-SURFACE-DESIGN",
+  "_seq": 935
+}

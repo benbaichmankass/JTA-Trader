@@ -507,6 +507,7 @@ jobs:
         if: steps.selfping.outputs.state != 'self_pinged' && steps.superseded.outputs.state != 'superseded'
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          DASHBOARD_API_TOKEN: ${{ secrets.DASHBOARD_API_TOKEN }}  # ALERT-LEDGER-TO-MANAGER (best-effort ledger write)
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
           WF_NAME: ${{ github.event.workflow_run.name }}
           WF_CONCLUSION: ${{ github.event.workflow_run.conclusion }}
@@ -536,4 +537,10 @@ jobs:
             "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
             -d "chat_id=${TELEGRAM_CHAT_ID}" \
             --data-urlencode "text=${MSG}" >/dev/null
+          # ALERT-LEDGER-TO-MANAGER: best-effort ledger write (inline: this job has no checkout). Never a gate.
+          if [ -n "${DASHBOARD_API_TOKEN:-}" ]; then
+            LEDGER_BODY="${MSG}" python3 -c 'import json,os;print(json.dumps({"kind":"alert","channel":"system","priority":"high","delivered":"unknown","dedup_key":"run-failure","body":os.environ["LEDGER_BODY"]}))' \
+              | curl -sS --max-time 15 -o /dev/null -H "Authorization: Bearer ${DASHBOARD_API_TOKEN}" -H 'Content-Type: application/json' \
+                  -X POST "${BOT_API_BASE:-https://ict-bot.duckdns.org}/api/bot/alerts" -d @- || echo "ledger write failed (ignored)"
+          fi
           echo "Alerted: ${WF_NAME} concluded ${WF_CONCLUSION} (${WF_URL})"

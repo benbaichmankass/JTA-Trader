@@ -104,6 +104,14 @@ def main(argv=None) -> int:
                 f"works — not that live pings route here yet.")
         ok, detail = _send(r.token, r.chat_id, text)
         print(f"  {'OK' if ok else 'FAIL'} — {detail}")
+        # ALERT-LEDGER-TO-MANAGER: this sender curls Telegram directly (it deliberately
+        # bypasses the chokepoint), so it records itself. Best-effort; never changes the
+        # exit code. channel=system + priority=high so the alert_watch pass wakes the manager
+        # (the synthetic ping is the row's closing proof).
+        from src.runtime import alerts_ledger  # noqa: E402
+        alerts_ledger.append("route_test_ping", "system", text, priority="high",
+                             dedup_key=f"route_test_ping:{name}:{stamp}",
+                             delivered="telegram_ok" if ok else "raised")
         failed |= not ok
 
     if not any_deliverable:

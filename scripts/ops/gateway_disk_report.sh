@@ -52,4 +52,35 @@ for d in /var/cache/apt /var/lib/systemd/coredump /var/crash /tmp /var/tmp /home
 done
 echo; echo "===== 15 largest files on / (>=50M, no content shown) ====="
 timeout 150 ${SUDO} find / -xdev -type f -size +50M -printf '%s\t%TY-%Tm-%Td\t%p\n' 2>/dev/null | sort -rn | first 15 | awk -F'\t' '{printf "%.0fM\t%s\t%s\n",$1/1048576,$2,$3}' | mask
+echo; echo "===== /home/ubuntu depth 3 (the 33G; GWDISK-0001) ====="
+timeout 150 ${SUDO} du -xh --max-depth=3 /home/ubuntu 2>/dev/null | sort -rh | first 30 || echo "could_not_look: du /home/ubuntu"
+echo; echo "===== /home/ubuntu top-level entries (ls -la, sizes in bytes) ====="
+${SUDO} ls -la --time-style=+%Y-%m-%dT%H:%M /home/ubuntu 2>&1 | first 40 || echo "could_not_look: ls /home/ubuntu"
+echo; echo "===== files >=500M under /home/ubuntu ====="
+timeout 150 ${SUDO} find /home/ubuntu -xdev -type f -size +500M -printf '%s\t%TY-%Tm-%Td\t%p\n' 2>/dev/null | sort -rn | first 20 | awk -F'\t' '{printf "%.0fM\t%s\t%s\n",$1/1048576,$2,$3}' || echo "could_not_look: find big"
+echo; echo "===== growth: bytes modified under /home/ubuntu in last 60 min / 24 h (is anything still writing) ====="
+for m in 60 1440; do
+  printf 'last %s min: ' "${m}"
+  timeout 100 ${SUDO} find /home/ubuntu -xdev -type f -mmin -"${m}" -printf '%s\n' 2>/dev/null | awk '{s+=$1;n++} END{printf "%d files, %.0fM\n",n,s/1048576}' || echo "could_not_look"
+done
+echo "newest 10 files >=1M:"
+timeout 100 ${SUDO} find /home/ubuntu -xdev -type f -size +1M -printf '%TY-%Tm-%TdT%TH:%TM\t%s\t%p\n' 2>/dev/null | sort -r | first 10 | awk -F'\t' '{printf "%s\t%.0fM\t%s\n",$1,$2/1048576,$3}' || echo "could_not_look"
+echo; echo "===== ict-trading-bot checkout on the gateway ====="
+RB=/home/ubuntu/ict-trading-bot
+if [ -d "${RB}" ]; then
+  timeout 60 ${SUDO} du -sh "${RB}/.git" 2>/dev/null || echo "could_not_look: du .git"
+  timeout 60 ${SUDO} du -sh --exclude=.git "${RB}" 2>/dev/null || echo "could_not_look: du worktree"
+  ${SUDO} git -c safe.directory="${RB}" -C "${RB}" count-objects -vH 2>&1 | first 12
+  ${SUDO} git -c safe.directory="${RB}" -C "${RB}" log -1 --format='HEAD %h committed %cd' --date=iso-strict 2>&1 | first 2
+  ${SUDO} git -c safe.directory="${RB}" -C "${RB}" rev-parse --is-shallow-repository 2>&1 | first 2
+  ${SUDO} ls -la --time-style=+%Y-%m-%dT%H:%M "${RB}" 2>&1 | first 40
+else
+  echo "absent: ${RB}"
+fi
+echo; echo "===== who references the checkout path (units, timers, cron, compose, mounts) ====="
+${SUDO} grep -rIl 'ict-trading-bot' /etc/systemd/system /etc/cron.d /etc/cron.daily /etc/cron.hourly /var/spool/cron /home/ubuntu/.config/systemd 2>/dev/null | first 30 || true
+echo "-- ubuntu crontab:"; ${SUDO} crontab -u ubuntu -l 2>&1 | grep -v '^#' | first 20 || true
+echo "-- active timers:"; systemctl list-timers --all --no-pager 2>&1 | first 20
+echo "-- ib-gateway mounts:"; ${SUDO} docker inspect ib-gateway --format '{{range .Mounts}}{{.Source}} -> {{.Destination}}{{"\n"}}{{end}}' 2>&1 | first 10
+echo "-- processes with cwd or files under the checkout:"; timeout 60 ${SUDO} lsof +D "${RB}" 2>/dev/null | awk 'NR>1{print $1}' | sort | uniq -c | first 10 || echo "none_or_lsof_missing"
 } 2>&1 | mask

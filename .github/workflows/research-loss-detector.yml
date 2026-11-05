@@ -96,6 +96,7 @@ jobs:
         if: always() && steps.detect.outputs.rc != '0'
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          DASHBOARD_API_TOKEN: ${{ secrets.DASHBOARD_API_TOKEN }}  # ALERT-LEDGER-TO-MANAGER (best-effort ledger write)
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
           RC: ${{ steps.detect.outputs.rc }}
@@ -117,6 +118,7 @@ jobs:
             "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
             --data-urlencode "chat_id=${TELEGRAM_CHAT_ID}" \
             --data-urlencode "text=${MSG}" > /dev/null
+          bash scripts/ops/post_alert.sh alert system high telegram_ok "${MSG}" "research-loss-detector"
 
       - name: Land the receipt on main
         if: always() && steps.detect.outputs.rc != ''
