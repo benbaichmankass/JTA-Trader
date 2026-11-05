@@ -1152,7 +1152,10 @@ decides whether to intervene.
    to get updated on every trade there. It's not really important."* A testing-paper rejection (account
    class `paper` without `paper_role: portfolio`) is still recorded, one row per refusal, in
    `runtime_logs/operator_alerts.jsonl` with `route: ledger_only` (diag `log_file?name=operator_alerts`),
-   so the rate stays measurable; it is not pinged. Policy: `config/telegram_policy.yaml`.
+   so the rate stays measurable; it is not pinged. Confirmed by the operator, popup 2026-11-05 ~00:28Z,
+   verbatim *"Both right (Recommended)"*, to the two calls: prop accounts (`account_class: prop`) count as LIVE
+   (their trade and rejection pings stay); rejection pings stay for real-money and prop accounts, testing-paper
+   rejections go to the ledger/UI only. Policy: `config/telegram_policy.yaml`.
 
 5. **Boot always starts the trader live (per YAML).** No
    "refuse-to-start until ack." No "raise on mismatch." Whatever

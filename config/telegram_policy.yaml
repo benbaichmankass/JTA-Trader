@@ -23,6 +23,10 @@
 #   to get just the update for that one. Yeah, so it should be not a huge reconfiguration, so maybe we
 #   can kick that off now and get that set up."
 #
+# OPERATOR, popup 2026-11-05 ~00:28Z, verbatim: "Both right (Recommended)" — confirming (1) prop accounts
+# count as LIVE, so their trade pings stay; (2) rejection pings stay for real-money and prop accounts, and
+# testing-paper rejections go to the ledger/UI only (Prime Directive rule 4 amended).
+#
 # ROLLBACK: delete a kind from `recurring_off` (or set `trades.testing_paper: send`) and push; the
 # VM picks it up on the next ict-git-sync pull (read at call time, no restart needed for scripts;
 # the trader re-reads within `reload_s`).
