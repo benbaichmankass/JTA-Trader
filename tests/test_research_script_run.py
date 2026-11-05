@@ -89,11 +89,13 @@ def test_the_dispatcher_lands_the_batch_once_per_cycle_and_asserts_it():
     lsteps = wf["jobs"]["land"]["steps"]
     lnames = [s.get("name", "") for s in lsteps]
     i_batch = next(i for i, n in enumerate(lnames) if n.startswith("Land the batch"))
-    i_assert = next(i for i, n in enumerate(lnames) if n.startswith("Assert every batched"))
-    assert i_batch < i_assert
+    # B6: the same-cycle per-record assertion is gone; the NEXT cycle's collect_runner_results.py re-collects any run whose
+    # record is not on main (pinned in DEFERRED_VERIFY), and the stale-batch reaper clears a batch PR that did not merge.
+    assert not [n for n in lnames if n.startswith("Assert every batched")]
+    assert any(n.startswith("Close stale landing PRs") for n in lnames)
     batch = lsteps[i_batch]
     assert batch["uses"] == "./.github/actions/commit-to-main"
-    assert str(batch["with"]["verify-merged"]).lower() == "true"
+    assert str(batch["with"]["verify-merged"]).lower() == "false"
     assert batch["with"]["paths"] == "comms/research research/results"
     assert "needs.dispatch.outputs.collect_count" in batch["if"]
 
