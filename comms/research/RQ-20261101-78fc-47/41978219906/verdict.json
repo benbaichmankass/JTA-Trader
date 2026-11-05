@@ -1,0 +1,620 @@
+{
+  "verdict": "pass",
+  "read_state": "measured",
+  "population": "ict_scalp_avax_5m: 430 trades in the baseline arm 'A' on AVAXUSDT 5m candles 2024-10-05 .. 2026-10-04 23:59, net of fee+slippage+funding (the harness's venue-aware stack); arms ['A', 'H4', 'SLB', 'LIM']",
+  "n": 430,
+  "measurement": {
+    "leg": "ict_scalp_avax_5m",
+    "label": "candidate_replaces_incumbent",
+    "grade": {
+      "verdict": "pass",
+      "label": "candidate_replaces_incumbent",
+      "best": "LIM",
+      "baseline": "A",
+      "candidates": {
+        "H4": {
+          "net_r": -85.4035,
+          "delta_net_r": -29.8085,
+          "max_drawdown_r": 86.3756,
+          "max_drawdown_cap": 90.5648,
+          "folds_ge_incumbent": 2,
+          "passes": false,
+          "lever_fired": true,
+          "tp_doctrine": {
+            "declared_tp_r": null,
+            "reach_ge_6r": 0.0,
+            "satisfies_reach_floor": null,
+            "note": "tp_r >= 50 (or undeclared) is the sentinel: non-compliant by definition; reach is P(mfe_r >= 6) over this arm's own trades"
+          }
+        },
+        "SLB": {
+          "net_r": -137.19,
+          "delta_net_r": -81.595,
+          "max_drawdown_r": 147.6388,
+          "max_drawdown_cap": 90.5648,
+          "folds_ge_incumbent": 2,
+          "passes": false,
+          "lever_fired": true,
+          "tp_doctrine": {
+            "declared_tp_r": null,
+            "reach_ge_6r": 0.0046,
+            "satisfies_reach_floor": null,
+            "note": "tp_r >= 50 (or undeclared) is the sentinel: non-compliant by definition; reach is P(mfe_r >= 6) over this arm's own trades"
+          }
+        },
+        "LIM": {
+          "net_r": -40.6294,
+          "delta_net_r": 14.9656,
+          "max_drawdown_r": 52.3852,
+          "max_drawdown_cap": 90.5648,
+          "folds_ge_incumbent": 6,
+          "passes": true,
+          "lever_fired": true,
+          "tp_doctrine": {
+            "declared_tp_r": null,
+            "reach_ge_6r": 0.0,
+            "satisfies_reach_floor": null,
+            "note": "tp_r >= 50 (or undeclared) is the sentinel: non-compliant by definition; reach is P(mfe_r >= 6) over this arm's own trades"
+          }
+        }
+      },
+      "fold_majority": 4,
+      "n_floor": 39,
+      "dd_tol_frac": 0.35,
+      "control": null,
+      "delta_r_per_trade": 0.02,
+      "delta_r_bar": 8.6,
+      "why": "LIM beats the incumbent A (net R -40.6294 vs -55.595) in >= 4/6 folds within the drawdown tolerance: a data-backed Tier-3 PROPOSAL (config is not edited here)"
+    },
+    "arms": {
+      "A": {
+        "reach_ge_6r": 0.0,
+        "n": 430,
+        "net_r": -55.595,
+        "net_r_fee_only": -40.888,
+        "max_drawdown_r": 67.085,
+        "by_outcome": {
+          "timeout": 197,
+          "sl_hit": 137,
+          "tp_hit": 79,
+          "be_stop": 17
+        },
+        "mean_bars_held": 18.312,
+        "net_r_per_capital_day": -2.0334,
+        "cost_stack": {
+          "fee_bps_roundtrip": 11.0,
+          "slippage_bps_roundtrip": 3.0,
+          "funding_bps_per_window": 1.0
+        },
+        "params": null,
+        "data_start": "2024-10-06 00:00:00+00:00",
+        "data_end": "2026-10-04 23:55:00+00:00",
+        "folds": [
+          {
+            "fold": 1,
+            "start": "2024-10-06 00:00:00+00:00",
+            "end": "2025-02-04 11:59:50+00:00",
+            "trades": 85,
+            "net_r": 9.3243
+          },
+          {
+            "fold": 2,
+            "start": "2025-02-04 11:59:50+00:00",
+            "end": "2025-06-05 23:59:40+00:00",
+            "trades": 81,
+            "net_r": -11.1536
+          },
+          {
+            "fold": 3,
+            "start": "2025-06-05 23:59:40+00:00",
+            "end": "2025-10-05 11:59:30+00:00",
+            "trades": 85,
+            "net_r": -7.1153
+          },
+          {
+            "fold": 4,
+            "start": "2025-10-05 11:59:30+00:00",
+            "end": "2026-02-03 23:59:20+00:00",
+            "trades": 64,
+            "net_r": -9.6745
+          },
+          {
+            "fold": 5,
+            "start": "2026-02-03 23:59:20+00:00",
+            "end": "2026-06-05 11:59:10+00:00",
+            "trades": 53,
+            "net_r": -22.2595
+          },
+          {
+            "fold": 6,
+            "start": "2026-06-05 11:59:10+00:00",
+            "end": "2026-10-04 23:59:00+00:00",
+            "trades": 62,
+            "net_r": -14.7168
+          }
+        ],
+        "argv": [
+          "/opt/hostedtoolcache/Python/3.11.18/x64/bin/python3",
+          "/home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_ict_scalp.py",
+          "--data",
+          "<data>",
+          "--symbol",
+          "AVAXUSDT",
+          "--timeframe",
+          "5m",
+          "--strategy-name",
+          "ict_scalp_avax_5m",
+          "--fee-bps-roundtrip",
+          "11.0",
+          "--emit-trades",
+          "comms/research/RQ-20261101-78fc-47/41978219906/arms/A__trades.jsonl",
+          "--json",
+          "comms/research/RQ-20261101-78fc-47/41978219906/arms/A__bt.json",
+          "--htf-rule",
+          "1h",
+          "--htf-ema-period",
+          "20",
+          "--sim-breakeven",
+          "--start",
+          "2024-10-05",
+          "--end",
+          "2026-10-04 23:59"
+        ]
+      },
+      "H4": {
+        "reach_ge_6r": 0.0,
+        "n": 553,
+        "net_r": -85.4035,
+        "net_r_fee_only": -65.3642,
+        "max_drawdown_r": 86.3756,
+        "by_outcome": {
+          "timeout": 247,
+          "tp_hit": 99,
+          "sl_hit": 184,
+          "be_stop": 23
+        },
+        "mean_bars_held": 18.047,
+        "net_r_per_capital_day": -2.4646,
+        "cost_stack": {
+          "fee_bps_roundtrip": 11.0,
+          "slippage_bps_roundtrip": 3.0,
+          "funding_bps_per_window": 1.0
+        },
+        "params": null,
+        "data_start": "2024-10-06 00:00:00+00:00",
+        "data_end": "2026-10-04 23:55:00+00:00",
+        "folds": [
+          {
+            "fold": 1,
+            "start": "2024-10-06 00:00:00+00:00",
+            "end": "2025-02-04 11:59:50+00:00",
+            "trades": 120,
+            "net_r": -11.2194
+          },
+          {
+            "fold": 2,
+            "start": "2025-02-04 11:59:50+00:00",
+            "end": "2025-06-05 23:59:40+00:00",
+            "trades": 91,
+            "net_r": -9.5976
+          },
+          {
+            "fold": 3,
+            "start": "2025-06-05 23:59:40+00:00",
+            "end": "2025-10-05 11:59:30+00:00",
+            "trades": 97,
+            "net_r": -17.2773
+          },
+          {
+            "fold": 4,
+            "start": "2025-10-05 11:59:30+00:00",
+            "end": "2026-02-03 23:59:20+00:00",
+            "trades": 86,
+            "net_r": -1.4284
+          },
+          {
+            "fold": 5,
+            "start": "2026-02-03 23:59:20+00:00",
+            "end": "2026-06-05 11:59:10+00:00",
+            "trades": 74,
+            "net_r": -24.9811
+          },
+          {
+            "fold": 6,
+            "start": "2026-06-05 11:59:10+00:00",
+            "end": "2026-10-04 23:59:00+00:00",
+            "trades": 85,
+            "net_r": -20.9001
+          }
+        ],
+        "argv": [
+          "/opt/hostedtoolcache/Python/3.11.18/x64/bin/python3",
+          "/home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_ict_scalp.py",
+          "--data",
+          "<data>",
+          "--symbol",
+          "AVAXUSDT",
+          "--timeframe",
+          "5m",
+          "--strategy-name",
+          "ict_scalp_avax_5m",
+          "--fee-bps-roundtrip",
+          "11.0",
+          "--emit-trades",
+          "comms/research/RQ-20261101-78fc-47/41978219906/arms/H4__trades.jsonl",
+          "--json",
+          "comms/research/RQ-20261101-78fc-47/41978219906/arms/H4__bt.json",
+          "--htf-rule",
+          "4h",
+          "--htf-ema-period",
+          "20",
+          "--sim-breakeven",
+          "--start",
+          "2024-10-05",
+          "--end",
+          "2026-10-04 23:59"
+        ]
+      },
+      "SLB": {
+        "reach_ge_6r": 0.0046,
+        "n": 431,
+        "net_r": -137.19,
+        "net_r_fee_only": -105.313,
+        "max_drawdown_r": 147.6388,
+        "by_outcome": {
+          "timeout": 234,
+          "sl_hit": 121,
+          "be_stop": 9,
+          "tp_hit": 67
+        },
+        "mean_bars_held": 19.84,
+        "net_r_per_capital_day": -4.6206,
+        "cost_stack": {
+          "fee_bps_roundtrip": 11.0,
+          "slippage_bps_roundtrip": 3.0,
+          "funding_bps_per_window": 1.0
+        },
+        "params": null,
+        "data_start": "2024-10-06 00:00:00+00:00",
+        "data_end": "2026-10-04 23:55:00+00:00",
+        "folds": [
+          {
+            "fold": 1,
+            "start": "2024-10-06 00:00:00+00:00",
+            "end": "2025-02-04 11:59:50+00:00",
+            "trades": 84,
+            "net_r": 9.2408
+          },
+          {
+            "fold": 2,
+            "start": "2025-02-04 11:59:50+00:00",
+            "end": "2025-06-05 23:59:40+00:00",
+            "trades": 82,
+            "net_r": -94.6431
+          },
+          {
+            "fold": 3,
+            "start": "2025-06-05 23:59:40+00:00",
+            "end": "2025-10-05 11:59:30+00:00",
+            "trades": 85,
+            "net_r": -2.7144
+          },
+          {
+            "fold": 4,
+            "start": "2025-10-05 11:59:30+00:00",
+            "end": "2026-02-03 23:59:20+00:00",
+            "trades": 65,
+            "net_r": -11.8088
+          },
+          {
+            "fold": 5,
+            "start": "2026-02-03 23:59:20+00:00",
+            "end": "2026-06-05 11:59:10+00:00",
+            "trades": 53,
+            "net_r": -20.8045
+          },
+          {
+            "fold": 6,
+            "start": "2026-06-05 11:59:10+00:00",
+            "end": "2026-10-04 23:59:00+00:00",
+            "trades": 62,
+            "net_r": -16.4596
+          }
+        ],
+        "argv": [
+          "/opt/hostedtoolcache/Python/3.11.18/x64/bin/python3",
+          "/home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_ict_scalp.py",
+          "--data",
+          "<data>",
+          "--symbol",
+          "AVAXUSDT",
+          "--timeframe",
+          "5m",
+          "--strategy-name",
+          "ict_scalp_avax_5m",
+          "--fee-bps-roundtrip",
+          "11.0",
+          "--emit-trades",
+          "comms/research/RQ-20261101-78fc-47/41978219906/arms/SLB__trades.jsonl",
+          "--json",
+          "comms/research/RQ-20261101-78fc-47/41978219906/arms/SLB__bt.json",
+          "--htf-rule",
+          "1h",
+          "--htf-ema-period",
+          "20",
+          "--sim-breakeven",
+          "--atr-sl-buffer-mult",
+          "1.0",
+          "--start",
+          "2024-10-05",
+          "--end",
+          "2026-10-04 23:59"
+        ]
+      },
+      "LIM": {
+        "reach_ge_6r": 0.0,
+        "n": 410,
+        "net_r": -40.6294,
+        "net_r_fee_only": -33.3463,
+        "max_drawdown_r": 52.3852,
+        "by_outcome": {
+          "timeout": 195,
+          "sl_hit": 132,
+          "tp_hit": 68,
+          "be_stop": 15
+        },
+        "mean_bars_held": 17.483,
+        "net_r_per_capital_day": -1.6324,
+        "cost_stack": {
+          "fee_bps_roundtrip": 11.0,
+          "slippage_bps_roundtrip": 3.0,
+          "funding_bps_per_window": 1.0
+        },
+        "params": null,
+        "data_start": "2024-10-06 00:00:00+00:00",
+        "data_end": "2026-10-04 23:55:00+00:00",
+        "folds": [
+          {
+            "fold": 1,
+            "start": "2024-10-06 00:00:00+00:00",
+            "end": "2025-02-04 11:59:50+00:00",
+            "trades": 83,
+            "net_r": 10.3056
+          },
+          {
+            "fold": 2,
+            "start": "2025-02-04 11:59:50+00:00",
+            "end": "2025-06-05 23:59:40+00:00",
+            "trades": 78,
+            "net_r": -9.0959
+          },
+          {
+            "fold": 3,
+            "start": "2025-06-05 23:59:40+00:00",
+            "end": "2025-10-05 11:59:30+00:00",
+            "trades": 78,
+            "net_r": -1.139
+          },
+          {
+            "fold": 4,
+            "start": "2025-10-05 11:59:30+00:00",
+            "end": "2026-02-03 23:59:20+00:00",
+            "trades": 61,
+            "net_r": -8.6958
+          },
+          {
+            "fold": 5,
+            "start": "2026-02-03 23:59:20+00:00",
+            "end": "2026-06-05 11:59:10+00:00",
+            "trades": 51,
+            "net_r": -20.1815
+          },
+          {
+            "fold": 6,
+            "start": "2026-06-05 11:59:10+00:00",
+            "end": "2026-10-04 23:59:00+00:00",
+            "trades": 59,
+            "net_r": -11.8241
+          }
+        ],
+        "argv": [
+          "/opt/hostedtoolcache/Python/3.11.18/x64/bin/python3",
+          "/home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_ict_scalp.py",
+          "--data",
+          "<data>",
+          "--symbol",
+          "AVAXUSDT",
+          "--timeframe",
+          "5m",
+          "--strategy-name",
+          "ict_scalp_avax_5m",
+          "--fee-bps-roundtrip",
+          "11.0",
+          "--emit-trades",
+          "comms/research/RQ-20261101-78fc-47/41978219906/arms/LIM__trades.jsonl",
+          "--json",
+          "comms/research/RQ-20261101-78fc-47/41978219906/arms/LIM__bt.json",
+          "--htf-rule",
+          "1h",
+          "--htf-ema-period",
+          "20",
+          "--sim-breakeven",
+          "--entry-mode",
+          "limit",
+          "--start",
+          "2024-10-05",
+          "--end",
+          "2026-10-04 23:59"
+        ]
+      }
+    },
+    "window": {
+      "start": "2024-10-05",
+      "end": "2026-10-04 23:59",
+      "fetch_days": 760,
+      "feed": {
+        "source": "binance",
+        "ticker": "AVAXUSDT",
+        "interval": "5",
+        "resample": "5m"
+      },
+      "fold_edges": [
+        "2024-10-06 00:00:00+00:00",
+        "2025-02-04 11:59:50+00:00",
+        "2025-06-05 23:59:40+00:00",
+        "2025-10-05 11:59:30+00:00",
+        "2026-02-03 23:59:20+00:00",
+        "2026-06-05 11:59:10+00:00",
+        "2026-10-04 23:59:00+00:00"
+      ]
+    },
+    "argv": {
+      "A": {
+        "argv": [
+          "/opt/hostedtoolcache/Python/3.11.18/x64/bin/python3",
+          "/home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_ict_scalp.py",
+          "--data",
+          "<data>",
+          "--symbol",
+          "AVAXUSDT",
+          "--timeframe",
+          "5m",
+          "--strategy-name",
+          "ict_scalp_avax_5m",
+          "--fee-bps-roundtrip",
+          "11.0",
+          "--emit-trades",
+          "comms/research/RQ-20261101-78fc-47/41978219906/arms/A__trades.jsonl",
+          "--json",
+          "comms/research/RQ-20261101-78fc-47/41978219906/arms/A__bt.json",
+          "--htf-rule",
+          "1h",
+          "--htf-ema-period",
+          "20",
+          "--sim-breakeven",
+          "--start",
+          "2024-10-05",
+          "--end",
+          "2026-10-04 23:59"
+        ],
+        "cfg_set": {},
+        "cfg_unset": [],
+        "extra_flags": [],
+        "omitted_levers_per_builder": []
+      },
+      "H4": {
+        "argv": [
+          "/opt/hostedtoolcache/Python/3.11.18/x64/bin/python3",
+          "/home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_ict_scalp.py",
+          "--data",
+          "<data>",
+          "--symbol",
+          "AVAXUSDT",
+          "--timeframe",
+          "5m",
+          "--strategy-name",
+          "ict_scalp_avax_5m",
+          "--fee-bps-roundtrip",
+          "11.0",
+          "--emit-trades",
+          "comms/research/RQ-20261101-78fc-47/41978219906/arms/H4__trades.jsonl",
+          "--json",
+          "comms/research/RQ-20261101-78fc-47/41978219906/arms/H4__bt.json",
+          "--htf-rule",
+          "4h",
+          "--htf-ema-period",
+          "20",
+          "--sim-breakeven",
+          "--start",
+          "2024-10-05",
+          "--end",
+          "2026-10-04 23:59"
+        ],
+        "cfg_set": {},
+        "cfg_unset": [],
+        "extra_flags": [
+          "--htf-rule",
+          "4h"
+        ],
+        "omitted_levers_per_builder": []
+      },
+      "SLB": {
+        "argv": [
+          "/opt/hostedtoolcache/Python/3.11.18/x64/bin/python3",
+          "/home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_ict_scalp.py",
+          "--data",
+          "<data>",
+          "--symbol",
+          "AVAXUSDT",
+          "--timeframe",
+          "5m",
+          "--strategy-name",
+          "ict_scalp_avax_5m",
+          "--fee-bps-roundtrip",
+          "11.0",
+          "--emit-trades",
+          "comms/research/RQ-20261101-78fc-47/41978219906/arms/SLB__trades.jsonl",
+          "--json",
+          "comms/research/RQ-20261101-78fc-47/41978219906/arms/SLB__bt.json",
+          "--htf-rule",
+          "1h",
+          "--htf-ema-period",
+          "20",
+          "--sim-breakeven",
+          "--atr-sl-buffer-mult",
+          "1.0",
+          "--start",
+          "2024-10-05",
+          "--end",
+          "2026-10-04 23:59"
+        ],
+        "cfg_set": {},
+        "cfg_unset": [],
+        "extra_flags": [
+          "--atr-sl-buffer-mult",
+          "1.0"
+        ],
+        "omitted_levers_per_builder": []
+      },
+      "LIM": {
+        "argv": [
+          "/opt/hostedtoolcache/Python/3.11.18/x64/bin/python3",
+          "/home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_ict_scalp.py",
+          "--data",
+          "<data>",
+          "--symbol",
+          "AVAXUSDT",
+          "--timeframe",
+          "5m",
+          "--strategy-name",
+          "ict_scalp_avax_5m",
+          "--fee-bps-roundtrip",
+          "11.0",
+          "--emit-trades",
+          "comms/research/RQ-20261101-78fc-47/41978219906/arms/LIM__trades.jsonl",
+          "--json",
+          "comms/research/RQ-20261101-78fc-47/41978219906/arms/LIM__bt.json",
+          "--htf-rule",
+          "1h",
+          "--htf-ema-period",
+          "20",
+          "--sim-breakeven",
+          "--entry-mode",
+          "limit",
+          "--start",
+          "2024-10-05",
+          "--end",
+          "2026-10-04 23:59"
+        ],
+        "cfg_set": {},
+        "cfg_unset": [],
+        "extra_flags": [
+          "--entry-mode",
+          "limit"
+        ],
+        "omitted_levers_per_builder": []
+      }
+    }
+  },
+  "note": "PASS / candidate_replaces_incumbent: LIM beats the incumbent A (net R -40.6294 vs -55.595) in >= 4/6 folds within the drawdown tolerance: a data-backed Tier-3 PROPOSAL (config is not edited here)"
+}
