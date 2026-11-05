@@ -315,6 +315,8 @@ is missing" is exactly what a tier inventory is for.
 
 ## Tier 2.5 — token-gated diagnostics
 
+> **Token carrier (2026-11-05, WSD-S1-PROXY-AUTH-COLLISION).** `DIAG_READ_TOKEN` is accepted in `X-Diag-Token: <token>` as well as `Authorization: Bearer <token>`. When `X-Diag-Token` is present it alone decides (wrong or empty → 401). Same token, same scope, no new secret. Why: a cloud environment that holds any network secret for `ict-bot.duckdns.org` alters the session's `Authorization` header, so `scripts/ops/diag_fetch.sh` now sends both.
+
 The `/api/diag/*` surface is read-only but uses a **separate** bearer token
 (`DIAG_READ_TOKEN`) instead of the dashboard's JWT. This is a PM-side /
 operator-script surface, not a dashboard surface — see
