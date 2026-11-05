@@ -82,7 +82,7 @@ jobs:
 
   dbsize:
     needs: gate
-    if: needs.gate.outputs.dbsize == 'true'
+    if: needs.gate.outputs.dbsize == 'true' && (github.event_name != 'issues' || ((github.event.issue.user.login == github.repository_owner || github.event.issue.user.login == 'github-actions[bot]') && contains(github.event.issue.labels.*.name, 'kaggle-backup-request')))
     runs-on: ubuntu-latest
     timeout-minutes: 15
     env:
@@ -119,7 +119,7 @@ jobs:
 
   models:
     needs: gate
-    if: needs.gate.outputs.models == 'true'
+    if: needs.gate.outputs.models == 'true' && (github.event_name != 'issues' || ((github.event.issue.user.login == github.repository_owner || github.event.issue.user.login == 'github-actions[bot]') && contains(github.event.issue.labels.*.name, 'kaggle-backup-request')))
     runs-on: ubuntu-latest
     timeout-minutes: 90
     permissions:
