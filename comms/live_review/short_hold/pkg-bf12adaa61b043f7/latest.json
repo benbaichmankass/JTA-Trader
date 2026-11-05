@@ -1,7 +1,7 @@
 {
- "bar": "2026-11-05T16:30:00Z",
- "bar_close": "2026-11-05T16:35:00Z",
- "built_at": "2026-11-05T16:35:54Z",
+ "bar": "2026-11-05T16:35:00Z",
+ "bar_close": "2026-11-05T16:40:00Z",
+ "built_at": "2026-11-05T16:40:52Z",
  "closed": false,
  "order_package_id": "pkg-bf12adaa61b043f7",
  "packet": {
@@ -124,19 +124,19 @@
      "MGC",
      "short",
      "mgc_pullback_1d",
-     0.573
+     0.526
     ],
     [
      "BTCUSDT",
      "short",
      "ml_entry",
-     -0.63
+     -0.524
     ],
     [
      "ETHUSDT",
      "short",
      "trend_donchian_eth",
-     -0.39
+     -0.255
     ],
     [
      "SPY",
@@ -154,25 +154,25 @@
      "GDX",
      "short",
      "gdx_pullback_1d",
-     -0.11
+     -0.0639
     ],
     [
      "MHG",
      "short",
      "mhg_pullback_1d",
-     0.904
+     0.91
     ],
     [
      "SLV",
      "short",
      "ml_entry",
-     -0.753
+     -0.646
     ],
     [
      "SCHA",
      "long",
      "scha_trend_long_1d",
-     -0.792
+     -0.837
     ],
     [
      "TLT",
@@ -184,19 +184,19 @@
      "TQQQ",
      "short",
      "ml_entry",
-     -0.558
+     -0.441
     ],
     [
      "BTCUSDT",
      "short",
      "trend_donchian_1h",
-     -0.488
+     -0.403
     ],
     [
      "IAUM",
      "short",
      "ml_entry",
-     -0.484
+     -0.524
     ],
     [
      "QQQ",
@@ -208,7 +208,7 @@
      "SOLUSDT",
      "short",
      "trend_donchian_sol_4h",
-     1.88
+     2.07
     ]
    ],
    "book_note": "[symbol, direction, leg, open_r (null = not measured)] per OTHER open package, either side",
@@ -529,8 +529,16 @@
    "basis": null
   },
   "desk_handoff": {
-   "chain_length": 1,
+   "chain_length": 2,
    "chain_tail": [
+    {
+     "action": "hold",
+     "forecast": null,
+     "reason": "Mark 1.2538 vs entry 1.2446 is about -0.35R on a 5m bounce (last closes 1.2581, 1.2545, 1.2538 are fading); still well inside the desk invalidation 1.265 and venue SL 1.2711, and mechanics match. No structure break yet; 5m ATR 0.0077 means any tighter stop would sit inside noise.",
+     "review_id": "LR-20261105T1635Z-pkg-bf12adaa61b043f7",
+     "reviewed_at": "2026-11-05T16:38:27Z",
+     "verdict": "confirm"
+    },
     {
      "action": "hold",
      "forecast": {
@@ -592,7 +600,7 @@
    "head": "b0e916e238",
    "state": "current"
   },
-  "info_cutoff_at": "2026-11-05T16:36:13Z",
+  "info_cutoff_at": "2026-11-05T16:41:07Z",
   "leg": "claude_desk",
   "mechanics": {
    "evidence": "package sl 1.2711 / tp 1.1916 agree with every readable account",
@@ -656,25 +664,18 @@
    "cell_now": null,
    "trend_now": "trending"
   },
-  "review_id": "LR-20261105T1635Z-pkg-bf12adaa61b043f7",
+  "review_id": "LR-20261105T1640Z-pkg-bf12adaa61b043f7",
   "short_hold": {
-   "atr": 0.00772857142857145,
-   "bar": "2026-11-05T16:30:00Z",
-   "bar_close": "2026-11-05T16:35:00Z",
+   "atr": 0.0077214285714285935,
+   "bar": "2026-11-05T16:35:00Z",
+   "bar_close": "2026-11-05T16:40:00Z",
    "entry": 1.2446,
-   "mark": 1.2538,
-   "minutes_held": 2.7,
-   "open_r_at_mark": -0.3472,
+   "mark": 1.2495,
+   "minutes_held": 7.7,
+   "open_r_at_mark": -0.1849,
    "r_unit": "entry_to_current_sl",
    "read_state": "read",
    "recent_bars": [
-    {
-     "close": 1.2586,
-     "high": 1.2634,
-     "low": 1.2568,
-     "open": 1.2602,
-     "t": "2026-11-05T15:35:00Z"
-    },
     {
      "close": 1.258,
      "high": 1.2611,
@@ -751,6 +752,13 @@
      "low": 1.2496,
      "open": 1.2545,
      "t": "2026-11-05T16:30:00Z"
+    },
+    {
+     "close": 1.2495,
+     "high": 1.2572,
+     "low": 1.2494,
+     "open": 1.2538,
+     "t": "2026-11-05T16:35:00Z"
     }
    ],
    "risk_per_unit": null,
@@ -769,25 +777,18 @@
    "tp": 1.1916
   }
  },
- "packet_sha": "0fbc68ea3ae74f13e2b6e09db96ca2578b2c207fbfe22bc7259c4f3a9a67ed95",
+ "packet_sha": "51b2036176567012406688b241c712f67bf8a9e64eca88b6c98e87b5ae4bb23a",
  "short_hold": {
-  "atr": 0.00772857142857145,
-  "bar": "2026-11-05T16:30:00Z",
-  "bar_close": "2026-11-05T16:35:00Z",
+  "atr": 0.0077214285714285935,
+  "bar": "2026-11-05T16:35:00Z",
+  "bar_close": "2026-11-05T16:40:00Z",
   "entry": 1.2446,
-  "mark": 1.2538,
-  "minutes_held": 2.7,
-  "open_r_at_mark": -0.3472,
+  "mark": 1.2495,
+  "minutes_held": 7.7,
+  "open_r_at_mark": -0.1849,
   "r_unit": "entry_to_current_sl",
   "read_state": "read",
   "recent_bars": [
-   {
-    "close": 1.2586,
-    "high": 1.2634,
-    "low": 1.2568,
-    "open": 1.2602,
-    "t": "2026-11-05T15:35:00Z"
-   },
    {
     "close": 1.258,
     "high": 1.2611,
@@ -864,6 +865,13 @@
     "low": 1.2496,
     "open": 1.2545,
     "t": "2026-11-05T16:30:00Z"
+   },
+   {
+    "close": 1.2495,
+    "high": 1.2572,
+    "low": 1.2494,
+    "open": 1.2538,
+    "t": "2026-11-05T16:35:00Z"
    }
   ],
   "risk_per_unit": null,
