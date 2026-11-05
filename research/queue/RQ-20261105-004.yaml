@@ -3,7 +3,7 @@
 # only while `queue_replenish.py --verify` reproduces it byte-for-byte from the template.
 id: RQ-20261105-004
 title: 'Breakout prop fit: htf_pullback_trend_2h across the sizing arms under RULE-B6 V2 (generated)'
-status: queued
+status: done
 cadence: once
 kind: experiment
 theme: new_strategy_prop
@@ -167,3 +167,15 @@ generated:
     timeframe: 2h
     trades_file: comms/strategy_evidence/runs/2026-10-28/htf_pullback_trend_2h__trades.jsonl
 last_dispatched_at: '2026-11-05T04:52:09+00:00'
+grading:
+  auto: true
+  decision_rule_id: RULE-TPL-PROP-FIT-B6V2-ARMS-htf_pullback_trend_2h
+  evidence:
+  - research/results/RQ-20261105-004/41970535036.jsonl
+  graded_at: '2026-11-05'
+  grader: scripts/research/queue_grade.py
+  note: 'deterministic harness: FAIL closes this cell with no same-window replay; it does not retire the
+    family (family-retirement protocol, #18557)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail
