@@ -1,0 +1,28 @@
+{
+  "id": "WSD-S2-IMPORTER-PARITY",
+  "title": "WORK-STORE S2: importer + dry-run + 2-day shadow parity (files -> work.db every 5 min; /work/checklist?source=db vs file payload)",
+  "phase": null,
+  "state": "queued",
+  "owner": "manager",
+  "lane": null,
+  "model": "claude-sonnet-5-5",
+  "ceiling_usd": 8,
+  "spend_usd": null,
+  "tier": 2,
+  "prs": [],
+  "blocked_on": [
+    {
+      "kind": "work_item",
+      "ref": "WSD-S1-STORE-API",
+      "what": "needs WSD-S1-STORE-API landed"
+    }
+  ],
+  "note": "docs/plans/WORK-STORE-DESIGN-2026-11.md \u00a74 steps 1-2. No bulk drop: every open item imports open; closed items keep their reason. CLOSES WHEN: the parity report shows 0 differing rows over 2 days and the counts equal Appendix A re-run that day (dry run 11-04: 1,303 rows, 2,619 items, 0 id collisions).",
+  "due_by": "2026-11-11",
+  "roadmap": [
+    "L-OPS"
+  ],
+  "updated_at": "2026-11-04T23:37:23Z",
+  "updated_by": "session_01AFoLuKFYUoKzs5TXjGfEdh",
+  "_seq": 921
+}

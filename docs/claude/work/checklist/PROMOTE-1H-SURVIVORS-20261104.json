@@ -1,0 +1,22 @@
+{
+  "id": "PROMOTE-1H-SURVIVORS-20261104",
+  "title": "Promote slv_trend_1h, uso_trend_1h, qqq_pullback_1h to production (alpaca_live + alpaca_portfolio) if each evidence record clears every promotion check",
+  "phase": null,
+  "state": "queued",
+  "owner": "manager",
+  "lane": null,
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 3,
+  "prs": [],
+  "blocked_on": [],
+  "note": "Source: PROGRAMME-REVIEW-20261104 (#22938): survivors confirmed on the 8-yr dukascopy holdout (78fc-18 + 5a03-02 slv, 78fc-19 uso, 78fc-25 qqq). OPERATOR 2026-11-04 ~21:31Z (popup, verbatim): \"Check, then promote (Recommended)\": a lane builds one promotion PR per leg, runs every promotion check (committed evidence record, registered rule, net of the full cost stack, faithful harness, C1-C5, strategy-status-guard: off general paper), merges only legs that clear; any that do not come back to the operator. Lane dispatched by the manager. (Row landed from #22971 by HANDOFF-REGISTER-ITEMS-20261104.) 2026-11-04 lane PROMOTE-1H-SURVIVORS (session_01AFoLuKxcXKrTDHkZJUwzxA): NO leg cleared every check, so there are no promotion PRs. All three clear C1-C5 (check_roster_promotion_evidence clean; RULE-D1 registered 2026-09-22 before the 09-24 runs; fee 0 + slippage 5 bps; fidelity faithful) and the 8-yr dukascopy holdout (78fc-18 slv +35.99R n=104; 78fc-19 uso +29.00R n=75; 78fc-25 qqq +11.35R n=72). All three FAIL tp-doctrine-guard as new real-money routings (simulated). Caveat: the 365-day evidence window lies inside the 2024-09..2026-10 holdout, and param provenance is not_established. USO: closed for promotion, stays on paper. Operator ~22:05Z verbatim: \"No, USO stays off real money (Recommended)\". The 2026-08-29 fossil-fuel exclusion stands. SLV: operator ~22:05Z verbatim: \"Reopen, promote if it clears (Recommended)\". This lifts the 2026-08-24 'MUST NOT BE PROPOSED BACK'. Promotion follows only a real-TP test with a clean holdout: RQ-20261104-7fdb-02 (tp_r 2/3/4/6; holdout pinned to start ~2026-08-30, after the last parameter choice, the M20 B4 packet of 2026-08-26; not_before 2027-03-16). Open, not re-searched: 5a03-02 selected atr_stop_mult 1.0. QQQ: RQ-20261104-7fdb-01 (tp_r 2/3/4/6 on the 8-yr series; it re-reads the holdout 78fc-25 already read, which is disclosed in the unit). A PASS means a Tier-3 tp_r change, a regenerated record, then the promotion PR. Both units landed in PR #22981 (merged 2026-11-04 22:54Z). config/accounts.yaml was not touched.",
+  "due_by": "2026-11-06",
+  "roadmap": [
+    "L-LADDER"
+  ],
+  "updated_at": "2026-11-05T00:00:31Z",
+  "updated_by": "session_01AFoLuKQrL2kMz3EUzGFeCP",
+  "_seq": 921
+}

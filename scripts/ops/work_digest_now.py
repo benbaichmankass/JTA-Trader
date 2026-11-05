@@ -463,6 +463,13 @@ def main(argv: list[str] | None = None) -> int:
     a = ap.parse_args(argv)
     if a.self_test:
         return _self_test()
+    # ALERT-LEDGER-TO-MANAGER: the unit fires every 5 min; the alert pass runs on EVERY firing, the hourly
+    # digest below keeps its own hour latch + _cadence_gate. The alert pass never raises and never gates the digest.
+    try:
+        from scripts.ops import attention_watch  # noqa: PLC0415
+        attention_watch.alert_watch(dry_run=a.dry_run)
+    except Exception as exc:  # noqa: BLE001
+        print(f"work-digest-now: alert_watch failed (digest unaffected): {exc}")
     return run(dry_run=a.dry_run, force=a.force)
 
 
