@@ -2,21 +2,27 @@
   "id": "RESET-PROTOCOL",
   "title": "Weekly reset protocol: config, receipt, backup trigger, manager skill section",
   "phase": "ops",
-  "state": "in_flight",
+  "state": "done",
   "owner": "RESET-PROTOCOL lane",
-  "lane": "RESET-PROTOCOL",
+  "lane": null,
   "model": null,
   "ceiling_usd": null,
   "spend_usd": null,
   "tier": 1,
   "prs": [],
   "blocked_on": [],
-  "note": "Operator 2026-11-02 ('Build now as specced'). Built: config/reset_protocol.yaml (one source), scripts/ops/reset_protocol.py (--plan/--receipt/--sweep/--self-test), .github/workflows/reset-protocol-backup.yml (Wed 18:15Z wake comment on ops-flags PR #17895 if no receipt; 19:00Z RED-FLAG + send-ping), manager SKILL \u00a7 Weekly reset protocol. Gates this adds or changes: none. HELD for operator merge. Remaining after merge (manager): create the 18:05Z primary routine and re-time the per-job routines from the config; push the started receipt first at each reset. Close when one real Wednesday reset writes a started+complete receipt (first: 2026-11-04). Monthly caps (deep audit $30, roadmap re-baseline $10, cost/infra $8) are PROPOSED.",
+  "note": "Operator 2026-11-02 ('Build now as specced'). Built: config/reset_protocol.yaml (one source), scripts/ops/reset_protocol.py (--plan/--receipt/--sweep/--self-test), .github/workflows/reset-protocol-backup.yml (Wed 18:15Z wake comment on ops-flags PR #17895 if no receipt; 19:00Z RED-FLAG + send-ping), manager SKILL \u00a7 Weekly reset protocol. Gates this adds or changes: none. HELD for operator merge. Remaining after merge (manager): create the 18:05Z primary routine and re-time the per-job routines from the config; push the started receipt first at each reset. Close when one real Wednesday reset writes a started+complete receipt (first: 2026-11-04). Monthly caps (deep audit $30, roadmap re-baseline $10, cost/infra $8) are PROPOSED. 2026-11-05 CHECKLIST-STATE-TRUTH sweep: close condition met: comms/ops/reset_receipts.jsonl has reset 2026-11-04 'started' AND 'complete' (read this sweep); config/reset_protocol.yaml, scripts/ops/reset_protocol.py and the backup workflow are on main.",
   "due_by": "2026-11-04",
   "roadmap": [
     "L-OPS"
   ],
-  "updated_at": "2026-11-02T10:16:38Z",
-  "updated_by": "session_01AFoLuMzGYk7AEbXfkH48Nc",
+  "updated_at": "2026-11-05T09:20:56Z",
+  "updated_by": "session_01AFoLuMS3KAfkdSSB4xiqmg",
+  "lane_history": [
+    {
+      "lane": "RESET-PROTOCOL",
+      "archived_at": "2026-11-05T09:20:56Z"
+    }
+  ],
   "_seq": 892
 }
