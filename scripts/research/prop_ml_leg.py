@@ -499,10 +499,10 @@ def run(a) -> int:
     hl = run_policy(held, p, tau, rp)
     dev = sel["_led"].drop(columns=["fold"])
     res["heldout"] = {"n": len(hl), "mean_net_r": float(hl["net_r"].mean()) if len(hl) else None}
-    return finish(out, res, prof, hl, dev, held=held, rp=rp, cache=cache, extra_refs=a.ref_ledger)
+    return finish(out, res, prof, hl, dev, held=held, extra_refs=a.ref_ledger)
 
 
-def finish(out: Path, res: dict, prof: dict, hl, dev, held=None, rp=None, cache=None, extra_refs=()) -> int:
+def finish(out: Path, res: dict, prof: dict, hl, dev, held=None, extra_refs=()) -> int:
     if hl is None:
         return _write(out, res, "fail")
     rows = hl.to_dict("records")
