@@ -2131,6 +2131,7 @@ class AlpacaClient:
         stop = target = False
         stop_prices: list = []
         target_prices: list = []
+        stop_released_at: str | None = None
         for o in legs:
             otype = str(o.get("type") or o.get("order_type") or "").lower()
             if "stop" in otype or "trail" in otype:      # incl. "stop_limit"
@@ -2138,6 +2139,25 @@ class AlpacaClient:
                 px = self._leg_price(o, "stop")
                 if px is not None:
                     stop_prices.append(px)
+                # RELEASED bracket/OCO stop (ALPACA-TP-CANCEL-AT-OPEN,
+                # 2026-11-05). A bracket/OCO stop child rests ``held`` while its
+                # take-profit sibling rests. When the stop TRIGGERS, Alpaca
+                # cancels the take-profit FIRST and then submits the stop
+                # (``submitted_at`` moves to the trigger instant, status leaves
+                # ``held``). MEASURED on alpaca_live 2026-09-28 (SLV: TP
+                # canceled 13:30:01.911Z, stop submitted 13:30:02.350Z, filled
+                # 13:30:03.144Z; IAUM: 13:30:02.116 / 02.485 / 02.867) and on
+                # alpaca_paper IAUM 6655 2026-11-05 (14:30:08.292 / 14:30:25 /
+                # filled 14:31:20 at 41.14 on a gap open through 40.60). In that
+                # window the book is EXITING through its stop, not target-naked.
+                # Additive and observe-only: no re-arm decision reads it.
+                is_child = (str(o.get("order_class") or "").lower()
+                            in ("bracket", "oco") or bool(o.get("parent_id")))
+                released = str(o.get("status") or "").lower() not in ("", "held")
+                ts = o.get("submitted_at") or o.get("updated_at")
+                if is_child and released and ts and (
+                        stop_released_at is None or str(ts) > stop_released_at):
+                    stop_released_at = str(ts)
             elif "limit" in otype:
                 target = True
                 px = self._leg_price(o, "target")
@@ -2158,6 +2178,9 @@ class AlpacaClient:
             # reconciler use, so no venue gets its own definition of "diverges".
             "stop_prices": sorted(stop_prices),
             "target_prices": sorted(target_prices),
+            # ISO time a bracket/OCO stop leg left ``held`` (its target sibling
+            # is gone because the stop triggered), else None. See above.
+            "stop_released_at": stop_released_at,
         }
 
     #: Protective leg types, STOP FAMILY FIRST. A stop-limit's type string
