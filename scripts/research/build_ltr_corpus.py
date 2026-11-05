@@ -16,6 +16,13 @@ Two producers, both the canonical cost-complete harness (fee + slippage + fundin
   RQ-20261022-4de5-01 (``forming_bar_pooled_regrade``, Binance USD-M 1m proxy), re-costed from the fee that run used to
   the current Bybit-linear round-trip fee. Exits do not depend on cost, so only ``cost_fee_r`` / ``net_r`` /
   ``net_r_fee_only`` move; the fee scaling was checked 2026-10-31 against a fresh harness run: cost_fee_r agrees within 0.0013 R per trade.
+* ``ledger`` - a POOLED model leg (ml_entry; row ML-ENTRY-LTR-OUTCOME-TABLE): its committed Stage-0 per-trade ledger
+  (``{symbol, direction, entry_time, exit_time, entry, sl, exit_reason, gross_r, mfe_r, net_r_evidence}``, e.g.
+  ``docs/research/ml-entry-prop-gate-2026-11-02/ledgers/ml_entry_5sym.jsonl``, which build_ledger.py asserts reproduces
+  the evidence record to 1e-6). ``net_r`` = the harness's own ``net_r_evidence`` (never re-derived); the cost columns are
+  split from it: fee and slippage at the stated bps on the trade's own R distance, funding = the residual the harness
+  charged, so ``gross_r - fee - slippage - funding == net_r`` exactly per row. Rows span several symbols: the reader
+  prices them against each row's own symbol's candles.
 
 Nothing is fetched (the exchange APIs are geo-blocked from research containers); a leg whose candles are not
 committed is reported and skipped, never invented.
@@ -57,6 +64,22 @@ def recost(rows: List[Dict[str, Any]], from_bps: float, to_bps: float) -> List[D
     return out
 
 
+def from_ledger(rows: List[Dict[str, Any]], fee_bps: float = 11.0, slip_bps: float = 3.0) -> List[Dict[str, Any]]:
+    """Corpus rows from a pooled leg's gate ledger: ``net_r`` = ``net_r_evidence`` verbatim, cost legs split from it."""
+    out = []
+    for t in rows:
+        t = dict(t)
+        if "net_r_evidence" not in t or "direction" not in t:
+            raise ValueError(f"ledger row lacks net_r_evidence/direction: {sorted(t)}")
+        per_unit = float(t["entry"]) / abs(float(t["entry"]) - float(t["sl"])) / 1e4
+        fee, slip = round(fee_bps * per_unit, 6), round(slip_bps * per_unit, 6)
+        net = float(t.pop("net_r_evidence"))
+        t.update({"net_r": round(net, 6), "cost_fee_r": fee, "cost_slippage_r": slip,
+                  "cost_funding_r": round(float(t["gross_r"]) - fee - slip - net, 6)})
+        out.append(t)
+    return out
+
+
 def run_harness(leg: str, csv: str) -> tuple[List[Dict[str, Any]], Dict[str, Any]]:
     with tempfile.TemporaryDirectory(prefix="ltr_corpus_") as td:
         cmd = [sys.executable, str(REPO / "scripts/research/exit_lever_ablation.py"), "--leg", leg, "--arm", "A=",
@@ -84,6 +107,13 @@ def build(leg: str, mode: str, source: str, *, fee_to: float = 11.0, fee_from: f
                     "config-exact), fee re-costed %.1f -> %.1f bps round-trip by build_ltr_corpus.recost" % (fee_from, fee_to))
         costs = {"fee_bps_roundtrip": fee_to, "slippage_bps_roundtrip": 3.0, "funding_bps_per_window": 1.0}
         extra = {"recosted_from_fee_bps_roundtrip": fee_from}
+    elif mode == "ledger":
+        rows = from_ledger(_read(REPO / source), fee_bps=fee_to)
+        produced = ("committed Stage-0 per-trade ledger %s (pooled leg; net_r = the harness's net_r_evidence, cost legs "
+                    "split from it by build_ltr_corpus.from_ledger)" % source)
+        costs = {"fee_bps_roundtrip": fee_to, "slippage_bps_roundtrip": 3.0, "funding_bps_per_window": 1.0}
+        extra = {"symbols": sorted({str(t["symbol"]) for t in rows}),
+                 "candles": "per symbol: live_review_outcomes.find_candles(<symbol>, '1h', widest_span=True), else venue_candles"}
     else:
         raise ValueError(mode)
     rows.sort(key=lambda t: str(t["entry_time"]))
@@ -121,8 +151,8 @@ def build(leg: str, mode: str, source: str, *, fee_to: float = 11.0, fee_from: f
 def main(argv: Optional[List[str]] = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     ap.add_argument("--leg", required=True)
-    ap.add_argument("--mode", choices=("harness", "recost"), required=True)
-    ap.add_argument("--source", required=True, help="harness: committed candle CSV; recost: committed trades JSONL")
+    ap.add_argument("--mode", choices=("harness", "recost", "ledger"), required=True)
+    ap.add_argument("--source", required=True, help="harness: committed candle CSV; recost: committed trades JSONL; ledger: committed pooled-leg ledger JSONL")
     ap.add_argument("--fee-to", type=float, default=11.0)
     ap.add_argument("--fee-from", type=float, default=7.5)
     ap.add_argument("--note")
