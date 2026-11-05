@@ -299,3 +299,25 @@ def test_inbox_items_carry_options_key():
     for sec in ("decisions_checklist", "asks_pipeline"):
         items = out["sections"][sec]["items"]
         assert items and all("options" in i for i in items)
+
+
+# ── system_catalog (public: committed config only) ─────────────────────
+def test_system_catalog_is_public_and_projects_committed_files():
+    names = {t["name"] for t in server.handle({"jsonrpc": "2.0", "id": 1, "method": "tools/list"})["result"]["tools"]}
+    assert "system_catalog" in names and "system_catalog" not in server.GATED_TOOLS
+    out = _call("system_catalog", {"signals_limit": 5})
+    assert all(k in out for k in ENVELOPE)
+    legs = out["sections"]["legs"]
+    assert legs["read_state"] == "read" and legs["items"]
+    assert {r["status"] for r in legs["items"]} <= {"testing", "production", "inactive"}
+    assert sum(legs["population"]["by_status"].values()) == len(legs["items"]) == legs["population"]["legs"]
+    sig = out["sections"]["signals"]
+    assert len(sig["items"]) == 5 and sig["population"]["truncated"] is True
+    assert out["sections"]["ml_models"]["items"]
+
+
+def test_system_catalog_missing_source_is_could_not_look_not_empty(tmp_path):
+    out = tabs.system_catalog(tmp_path)
+    assert out["read_state"] == "could_not_look"
+    for sec in out["sections"].values():
+        assert sec["read_state"] == "could_not_look" and "items" not in sec and sec["reason"]

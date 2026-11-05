@@ -1,0 +1,16 @@
+{
+  "due_when": {
+    "check_every_days": 2,
+    "clears_when": "the 50 producer_failed needs_review units listed in what re-grade to a measured verdict (result_disposition_check --list needs_review_unowned == 0 for them)",
+    "kind": "event"
+  },
+  "id": "PI-20261105-WDWYHZCN-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "RESEARCH-OPS-20261105-1449 (session_01AFoLuL33gYmMaHWdWyhzcn)",
+    "rerun": "python3 scripts/research/result_disposition_check.py --list | grep needs_review_unowned | wc -l; python3 scripts/research/research_ops_checks.py --since 24h"
+  },
+  "state": "queued",
+  "what": "50 units have needs_review + producer_failed as the newest result row and no owner (MEASURED 2026-11-05, result_disposition_check --list: 52 unowned = these 50 + RQ-20261003-004/RQ-20261004-657 mixed verdicts). Four failure modes by newest row text: (a) 'cmd 0 exit=1' 18 units - 78fc-* exit_lever_ablation.py fetch_candles -> fetch_backtest_candles.py CalledProcessError (sample RQ-20261101-78fc-16 TQQQ dukascopy D; also 5e01-02..04, 3ef3-09/10, 7b6f-13, c6fc-07, 7a3e-01); (b) 'no verdict.json' 20 units - a508-01, b601..b608, 102-002/003, 5e03-01, 20261103-001..009 (script ran, never wrote verdict.json; the write_verdict harness fix is on main per the 11-04 record, regrade pending); (c) 'no run-manifest.json' 9 units - 3947-05, f18f-01, a4e7-12..14, e5b1-04..07; (d) 'verdict.json malformed: population is required' 3 units - e5b1-08..10. Each fires 3 times with the same text (3 result files), so retries do not heal them. DO: per mode, read one cmd-0.log / run dir under comms/research/<unit>/<run_id>/, fix the producer (Tier-1 scripts) or re-route, and re-queue; then confirm the regrade. Owner stamped on each unit's grading.owner in the same PR."
+}

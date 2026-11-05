@@ -1,0 +1,16 @@
+{
+  "due_when": {
+    "check_every_days": 3,
+    "clears_when": "iteration_orphans.py --levers reports strategy_leg orphans <= 15 and every pass_unconfirmed orphan above has a confirmation unit or a retirement record",
+    "kind": "event"
+  },
+  "id": "PI-20261105-WDWYHZCN-0002",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "RESEARCH-OPS-20261105-1449 (session_01AFoLuL33gYmMaHWdWyhzcn)",
+    "rerun": "python3 scripts/research/iteration_orphans.py --levers | grep -c '^orphan'"
+  },
+  "state": "queued",
+  "what": "ITERATION ORPHANS (iteration_orphans.py --levers, 2026-11-05, MEASURED over 57 strategy_leg / 9 ml_model / 7 ltr_class subjects): strategy_leg 31 orphans (26 covered), ml_model 0, ltr_class 5. Highest value first: PASS-unconfirmed orphans need ONE holdout confirmation each (template RQ-20261104-7fdb-02, exit_lever_ablation.py --grade holdout; check each leg's tp_r is TP-doctrine compliant first): mgc_trend_1h (Stage-0 net 25.6R n118), qqq_pullback_1h (10.8R n55), scha_trend_long_1d (4.6R n78), plus the two M20 sweeps whose newest row is PASS under RULE-EXIT-REFINEMENT-P2-GATE: ief_pullback_1d (RQ-20261003-004) and mhg_pullback_1d (RQ-20261004-657). Then the FAIL orphans (htf_pullback_trend_2h, ict_scalp_{avax_5m,eth_15m,sol_15m,xrp_15m}, mes_trend_long_1d, spy_pullback_1h, tlt_pullback_1h, trend_donchian) need a diagnosis from their result rows and a lever-family arm unit; indeterminate ones (1d ETF pullback/trend legs) are n/power-limited, so their next iteration is a longer window or pooled population, not a new lever. 4 pass-orphans is the survivors path (survivors_per_month 0 vs >=1 is the standing breach)."
+}
