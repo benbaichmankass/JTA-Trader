@@ -444,11 +444,12 @@ def run_unit(unit: str, out: Path, cache: Path, n_jobs: int, smoke: bool) -> dic
     first = "2021-01" if smoke else "2020-07"
     started = time.time()
     arms = [("1h", "bar")] if tf == "1h" else [("1h", "bar"), (tf, scaling)]
-    wfs, pop, rows = {}, {}, {}
+    wfs, pop, rows, pins = {}, {}, {}, {}
     for t, sc in arms:
         fr = fetch_all(cache, syms, t, first=first)
         sp = spec(t, sc)
         tab = build_table(cache, syms, sp, drop_ts_before=f"{first}-01")
+        pins[f"{t}/{sc}"] = data_pin(cache, syms, t)
         rows[f"{t}/{sc}"] = {"decision_rows": len(tab), "symbols": int(tab.symbol.nunique()), "bars_fetched": int(sum(x["rows"] for x in fr)),
                              "missing_months": int(sum(x.get("missing_months", 0) for x in fr))}
         print(unit, t, sc, rows[f"{t}/{sc}"], flush=True)
@@ -460,7 +461,8 @@ def run_unit(unit: str, out: Path, cache: Path, n_jobs: int, smoke: bool) -> dic
     base_wf, arm_wf = wfs[("1h", "bar")], wfs[(tf, scaling)]
     res = {"unit": unit, "schema": "ml_entry_timeframe/1", "read_state": "read", "timeframe": tf, "scaling": scaling, "smoke": smoke,
            "spec": pop[(tf, scaling)], "tau": TAU, "gate": {"max_cost_r": GATE_MAX_COST_R, "k_cost_x_atr": gate_k()}, "rows": rows,
-           "dev_only": "no month after 2025-09 is downloaded", "folds": arm_wf["folds"], "baseline_1h_folds": base_wf["folds"]}
+           "dev_only": "no month after 2025-09 is downloaded", "mask_frozen_bars": True, "data_pin": pins,
+           "folds": arm_wf["folds"], "baseline_1h_folds": base_wf["folds"]}
     for var in ("ungated", "gated"):
         b, a = arm_stats(base_wf, var), arm_stats(arm_wf, var)
         res[var] = {"arm": a, "base_1h": b, "headline": headline(b, a) if tf != "1h" else {"verdict": "base", "viable": viable(a)},

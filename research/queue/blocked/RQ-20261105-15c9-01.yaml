@@ -1,7 +1,7 @@
 # Authored 2026-11-05 by lane ML-FS-RECIPE (Tier 1) on the manager decision 2026-11-05 ~15:27Z (K-seed ensemble, tolerance against the measured K-seed spread, input data pinned). Decision rule registered BEFORE any run. Gates: none.
 id: RQ-20261105-15c9-01
 title: 'ENTRY 1h baseline on PINNED data: does the corrected timeframe harness (frozen bars masked, float64 features) reproduce round 1 on the single seeds, and what are the K=3 ensemble mean and its across-draw spread that every later 1h comparison is judged against? Dev folds only'
-status: queued
+status: blocked
 cadence: once
 theme: ml_health
 priority: 1
@@ -90,3 +90,7 @@ programme_node:
   programme: P2
   node: P2-ENTRY-LEVERS
   goal: G4
+blocked_on:
+- kind: decision
+  what: 'DROPPED by the manager 2026-11-05 ~15:41Z: the premise (a single seed cannot be reproduced, so a K-seed baseline is needed) was withdrawn the same day; with the frozen-bar mask and float64 features a single seed reproduces round 1 exactly. Usage is tight this week. Kept, not dispatched.'
+  clears_when: 'the manager re-opens it by git-mv to research/queue/ with status queued (rule unchanged); the harness side (run_baseline, baseline_verdict, data_pin) is already in scripts/research/ml_entry_timeframe.py'
