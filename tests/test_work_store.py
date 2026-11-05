@@ -310,3 +310,31 @@ def test_api_header_ignores_a_foreign_bearer_in_authorization(client, monkeypatc
     r = client.post("/api/bot/work/items", json=dict(BODY, id="WSD-HDR-3"),
                     headers={"X-Work-Store-Token": "secret", "Authorization": "Bearer diag-token"})
     assert r.status_code == 201, r.text
+
+
+# ── a closed build created without a roadmap: 500 on the live API, 2026-11-05T07:43Z ──
+
+
+@pytest.mark.parametrize("state", ["done", "dropped"])
+def test_terminal_build_without_roadmap_is_filled_not_500(store, state):
+    out = store.create({"id": f"T-{state}", "kind": "build", "title": "closed", "state": state},
+                       by="t", today=TODAY)
+    assert out["item"]["roadmap"] == ["unmapped"]
+    assert len(out["item"]["roadmap_unmapped_reason"]) >= 10
+    import json
+    assert 'roadmap=["unmapped"]' in json.loads(out["event"]["patch"])["filled"]
+
+
+def test_store_constraint_is_a_422_not_a_500(store, monkeypatch):
+    """Any schema constraint the validator misses surfaces as WorkStoreValidationError."""
+    monkeypatch.setattr(ws, "_validate", lambda item, prior, today: item.__setitem__("title", None) or [])
+    with pytest.raises(ws.WorkStoreValidationError, match="store constraint"):
+        store.create(_build(id="C-1"), by="t", today=TODAY)
+    assert store.count_items() == 0 and store.events() == []
+
+
+def test_api_terminal_build_without_roadmap_is_201(client, monkeypatch):
+    monkeypatch.setenv("WORK_STORE_TOKEN", "secret")
+    r = client.post("/api/bot/work/items", headers={"X-Work-Store-Token": "secret"},
+                    json={"id": "WSD-T-1", "kind": "build", "title": "probe", "state": "dropped", "by": "t"})
+    assert r.status_code == 201, r.text
