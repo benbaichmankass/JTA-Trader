@@ -36,7 +36,7 @@ T0 = pd.Timestamp("2026-01-01 00:00", tz="UTC")
 
 def _frame(closes_hi_lo):
     idx = [T0 + pd.Timedelta(hours=i) for i in range(len(closes_hi_lo))]
-    return pd.DataFrame([(c, h, l, c) for c, h, l in closes_hi_lo], index=pd.DatetimeIndex(idx, name="timestamp"),
+    return pd.DataFrame([(c, h, lo, c) for c, h, lo in closes_hi_lo], index=pd.DatetimeIndex(idx, name="timestamp"),
                         columns=["open", "high", "low", "close"])
 
 
