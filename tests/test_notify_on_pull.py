@@ -823,3 +823,49 @@ def test_committed_work_digest_still_sends_under_an_empty_policy(monkeypatch, tm
     q.write_text(json.dumps({"event": "work_digest", "message": "[work digest] x"}) + "\n")
     out = nop._drain_pending_pings(q)
     assert len(out) == 1 and out[0][0] != nop.SUPPRESSED_PRIORITY
+
+
+def _merge_main_setup(monkeypatch, tmp_path, queue_lines):
+    inbox = tmp_path / "pending_pings"
+    queue = tmp_path / "queue.jsonl"
+    queue.write_text("".join(json.dumps(x) + "\n" for x in queue_lines))
+    monkeypatch.setattr(nop, "CHECKPOINT_LOG", tmp_path / "log.md")
+    monkeypatch.setattr(nop, "PENDING_PINGS", queue)
+    monkeypatch.setattr(nop, "DELIVERED_HASHES", tmp_path / "delivered.txt")
+    monkeypatch.setattr(nop, "_blocker_pings", lambda pre, post: [])
+    monkeypatch.setattr(nop, "_training_workflow_pings", lambda pre, post: [])
+    monkeypatch.setattr(nop, "_merge_pings", lambda pre, post: [
+        ("normal", "🔀 2 PRs merged to main\n#1 a\n#2 b")])
+    monkeypatch.setattr(nop, "_diff_touched_checkpoint_log", lambda pre, post: False)
+    sys.path.insert(0, str(REPO_ROOT / "scripts"))
+    import send_ping
+    monkeypatch.setattr(send_ping, "PENDING_CLAUDE_PINGS_DIR", inbox)
+    monkeypatch.setattr(send_ping, "PENDING_PINGS_DIR", tmp_path / "trader_unused")
+    return inbox
+
+
+def test_pr_merged_ping_is_recorded_not_sent_and_a_real_alert_still_sends(monkeypatch, tmp_path):
+    """TELEGRAM-TRIM (operator popup 2026-11-05, "Turn them off (Recommended)"): the
+    rolled-up "N PRs merged to main" ping (kind pr_merged) is recorded in the alert
+    ledger as suppressed_by_policy and NOT enqueued. Positive control: a real queued
+    ask on the same pull is still enqueued."""
+    inbox = _merge_main_setup(monkeypatch, tmp_path,
+                              [{"target": "claude", "priority": "high", "message": "a real ask"}])
+    assert nop.main(["--pre", "abc", "--post", "def"]) == 0
+    queued = [json.loads(p.read_text()) for p in sorted(inbox.glob("*.json"))]
+    assert len(queued) == 1 and "a real ask" in queued[0]["body"]
+    assert not any("PRs merged" in q["body"] for q in queued)
+    import os
+    led = [json.loads(x) for x in open(os.environ["ALERTS_LEDGER_PATH"]).read().splitlines()]
+    row = [r for r in led if r["kind"] == "pr_merged"][-1]
+    assert row["delivered"] == "suppressed_by_policy" and "PRs merged to main" in row["body"]
+
+
+def test_pr_merged_ping_still_sends_when_policy_does_not_list_it(monkeypatch, tmp_path):
+    p = tmp_path / "empty.yaml"
+    p.write_text("{}\n")
+    monkeypatch.setenv("TELEGRAM_POLICY_PATH", str(p))
+    inbox = _merge_main_setup(monkeypatch, tmp_path, [])
+    assert nop.main(["--pre", "abc", "--post", "def"]) == 0
+    queued = [json.loads(q.read_text()) for q in sorted(inbox.glob("*.json"))]
+    assert len(queued) == 1 and "PRs merged to main" in queued[0]["body"]

@@ -1,0 +1,17 @@
+{
+  "based_on": "20261103T033500968863Z-c1bd2775.json",
+  "due_when": {
+    "check_every_days": 1,
+    "clears_when": "manifest remaining == 0",
+    "kind": "observation"
+  },
+  "id": "PI-20261102-PTDVAI3R-0005",
+  "next_action": "check_observation",
+  "origin": {
+    "kind": "session",
+    "ref": "run 41552388391 / issue #22514",
+    "rerun": "read the '[rate] plan declares' and '[rate] workers= stats=' lines in the etf-history-pipeline fetch log; remaining from the issue comment"
+  },
+  "state": "queued",
+  "what": "ETF backfill is limiter-bound at the Alpaca data plan's declared 200 req/min (paced at 80% = 2.67 req/s, 0 x 429/5xx over ~22,167 requests in run 41552388391): 239 symbols in 2h55m (~82/h) vs 99 in 2h48m (~35/h) before #22488 = ~2.3x, not 10x. More workers cannot help. 681 of 1019 symbols remain (~8 h, ~3 self-dispatched runs). Decision for the operator: upgrade the Alpaca market-data plan for a higher request limit, or accept the wait; optionally raise pacing from 80% to ~95% of the declared limit (+~19%). OPERATOR DECISION 2026-11-05 ~05:35Z (popup, verbatim): \"Accept the pace (Recommended)\" -- no plan upgrade; pacing stays as is. Only observation remains (next_action observe): close with terminal_reason \"done: backfill complete; operator accepted the pace 2026-11-05\" once manifest remaining == 0 (last read: 681 remaining, issue #22514 comment 2026-11-03T03:23Z)."
+}

@@ -39,6 +39,7 @@ recurring_off:
   - hourly_report      # legacy combined hourly report (outcomes.send_scheduled fallback)
   - daily_heartbeat    # ict-heartbeat 13:00Z daily status (scripts/daily_heartbeat.py)
   - manager_update     # ict-work-digest hourly digest; NEW actionable items still go (see below)
+  - pr_merged          # scripts/notify_on_pull.py rolled-up "N PRs merged to main" ping (operator popup 2026-11-05 ~05:35Z, "Turn them off (Recommended)")
 
 # The hourly work digest also carries edge-triggered ATTENTION items. Those are event pings, so
 # they are still sent — as a short event message, only when one is new. Prefixes as rendered by
