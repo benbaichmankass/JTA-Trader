@@ -1,0 +1,24 @@
+{
+  "id": "ALERT-NOISE-SUPERSEDED-CANCEL",
+  "title": "Run-failure alert fires 'RUN cancelled' (system/high) for concurrency-superseded runs: work-digest pending runs are replaced by newer pushes by design, not failures",
+  "phase": null,
+  "state": "queued",
+  "owner": "manager",
+  "lane": null,
+  "model": "claude-sonnet-5-5",
+  "ceiling_usd": 3,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [],
+  "blocked_on": [],
+  "note": "[Manager 2026-11-05a] MEASURED: work-digest.yml push runs 2026-11-05 10:15..11:23Z: 12 runs, 8 cancelled (10:15, 10:31, 10:33, 10:37, 10:39, 10:57, 10:58Z, plus 09:35Z earlier) and successes interleaved (10:42, 10:52, 10:54, 11:04Z). The job's concurrency group 'work-digest' has cancel-in-progress false, so GitHub cancels the PENDING run when a newer one queues: superseded by design. Yet each cancellation raised a \ud83d\udd34 '[RUN cancelled] work-digest' alert (system/high) on ops-flags #17895 and in the alert ledger: noise. FIX (Tier 1): in the run-failure alerter (claude-run-failure-alert workflow / notify path), skip conclusion=cancelled when a newer run of the same workflow + concurrency group started after it, or classify it low/info. Done when a superseded work-digest cancel raises no high alert and a real failure still does.",
+  "due_by": "2026-11-08",
+  "roadmap": [
+    "L-OPS"
+  ],
+  "priority_rank": 5,
+  "updated_at": "2026-11-05T15:21:18Z",
+  "updated_by": "session_01AFoLuLmhUKeUzHC6CHz2uP",
+  "week_lane": "throttle",
+  "_seq": 945
+}
