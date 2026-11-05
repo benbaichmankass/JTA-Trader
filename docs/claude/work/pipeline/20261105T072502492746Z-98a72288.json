@@ -1,0 +1,16 @@
+{
+  "due_when": {
+    "check_every_days": 1,
+    "clears_when": "the daily live-replay-parity run reports 0 of this class for this leg, with the cause root-caused, or killed with a stated reason",
+    "kind": "observation"
+  },
+  "id": "PI-20261105-LRP-37B98D08",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "audit",
+    "ref": "live-replay-parity:trend_donchian_eth:missed_signal",
+    "rerun": "python3 scripts/ops/live_replay_parity.py --base-url <tunnel to the live web-api> --days 7  (or label an issue `live-replay-parity`; the workflow .github/workflows/live-replay-parity.yml runs it daily and commits comms/live_parity/latest.json)"
+  },
+  "state": "queued",
+  "what": "Live-vs-replay parity: leg `trend_donchian_eth` — missed_signal ×7 (paper roster) in window 2026-10-29T06:45:00+00:00..2026-11-05T06:45:00+00:00. MEASURED by scripts/ops/live_replay_parity.py; artifact comms/live_parity/2026-11-05.json. Examples: [{\"class\": \"missed_signal\", \"bar\": \"2026-11-03T12:00:00+00:00\", \"t\": \"2026-11-03T12:29:34+00:00\", \"live\": {\"side\": \"none\", \"adx\": 15.1641, \"close\": 2284.9, \"reason\": \"Strategy 'trend_donchian_eth': confidence 0.5499 below min_confidence 0.6 \\u2014 non-actionable.\"}, \"replay\": {\"sides\": [\"long\"], \"adx_range\": [13.9522, 15.0693], \"candidates\": [\"2026-11-03T12:15:00+00:00\"], \"diag_adx\": {\"final_bar_200\": 15.107, \"closed_only_199\": 14.35, \"closed_only_200\": 14.3503, \"next_bar_200\": 17.2021}, \"fine_candle\": {\"time\": 1793708100, \"low\": 2268.04, \"high\": 2285.5}}}, {\"class\": \"missed_signal\", \"bar\": \"2026-11-03T12:00:00+00:00\", \"t\": \"2026-11-03T12:32:12+00:00\", \"live\": {\"side\": \"none\", \"adx\": 15.1641, \"close\": 2284.9, \"reason\": \"Strategy 'trend_donchian_eth': confidence 0.5499 below min_confidence 0.6 \\u2014 non-actionable.\"}, \"replay\": {\"sides\": [\"long\"], \"adx_range\": [13.9522, 15.0693], \"candid"
+}
