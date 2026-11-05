@@ -74,10 +74,32 @@ manifest:
   regime_gating: untested
   timeframe: untested
   symbol_set: untested
-  direction: untested
+  direction: tested
   session: untested
   sizing_vs_cost: untested
 levers:
+  direction:
+    side_filter:
+      tests:
+      - value: long
+        baseline_value: 'off'
+        arm: AD30L
+        unit: RQ-20261104-004
+        window: 2020-07-01..2026-10-26
+        n: 165
+        net_r: 3.0892
+        baseline_n: 332
+        baseline_net_r: -16.1585
+        delta_net_r: 19.2477
+        folds_ge_baseline: 4/6
+        max_drawdown_r: 10.4867
+        verdict: pass
+        joint_change: false
+      shape: single_point
+      points: 1
+      best_delta_r_per_trade: 0.058
+      fold_stability: 0.667
+      reading: 'one-point or fold-unstable gain: overfit until a holdout says otherwise'
   entry:
     trend_lookback:
       tests:
@@ -131,8 +153,58 @@ levers:
         max_drawdown_r: 20.8962
         verdict: pass
         joint_change: false
-      shape: monotone
-      points: 2
+      - value: '35'
+        baseline_value: '30'
+        arm: AD35
+        unit: RQ-20261104-004
+        window: 2020-07-01..2026-10-26
+        n: 226
+        net_r: -11.0941
+        baseline_n: 332
+        baseline_net_r: -16.1585
+        delta_net_r: 5.0644
+        folds_ge_baseline: 5/6
+        max_drawdown_r: 17.1551
+        verdict: pass
+        joint_change: false
+      - value: '40'
+        baseline_value: '30'
+        arm: AD40
+        unit: RQ-20261104-004
+        window: 2020-07-01..2026-10-26
+        n: 162
+        net_r: -0.8214
+        baseline_n: 332
+        baseline_net_r: -16.1585
+        delta_net_r: 15.3371
+        folds_ge_baseline: 5/6
+        max_drawdown_r: 11.1963
+        verdict: pass
+        joint_change: false
+      shape: peaked
+      points: 4
       best_delta_r_per_trade: 0.0791
-      fold_stability: 1.0
+      fold_stability: 0.917
       reading: 'smooth, fold-stable gain: potential -- confirm on a holdout'
+  other:
+    structure_exit:
+      tests:
+      - value: 'off'
+        baseline_value: pivot=5
+        arm: AD30NX
+        unit: RQ-20261104-004
+        window: 2020-07-01..2026-10-26
+        n: 281
+        net_r: 20.0336
+        baseline_n: 332
+        baseline_net_r: -16.1585
+        delta_net_r: 36.1921
+        folds_ge_baseline: 5/6
+        max_drawdown_r: 18.3856
+        verdict: pass
+        joint_change: false
+      shape: single_point
+      points: 1
+      best_delta_r_per_trade: 0.109
+      fold_stability: 0.833
+      reading: 'one-point or fold-unstable gain: overfit until a holdout says otherwise'
