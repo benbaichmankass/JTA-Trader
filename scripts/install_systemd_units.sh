@@ -273,6 +273,23 @@ if [ -f "${_R4GATE_DROPIN_SRC}" ]; then
     fi
 fi
 
+# Why ict-work-store-import needs the data-dir drop-in (WSD-S2-IMPORTER-PARITY):
+#   the importer writes work_store.db via work_store_db_path() (DATA_DIR-aware) and its
+#   parity report under runtime_logs_dir(). ict-web-api -- the store's API and the parity
+#   route's reader -- runs with DATA_DIR=/data/bot-data. Without this drop-in the oneshot would
+#   import into <repo>/work_store.db, a store nobody serves, and parity would prove nothing.
+_WSIMPORT_DROPIN_SRC="${_DATADIR_DROPIN_SRC}"
+_WSIMPORT_DROPIN_DST="${SYSTEMD_DIR}/ict-work-store-import.service.d/data-dir.conf"
+if [ -f "${_WSIMPORT_DROPIN_SRC}" ]; then
+    if [ ! -e "${_WSIMPORT_DROPIN_DST}" ] || ! cmp -s "${_WSIMPORT_DROPIN_SRC}" "${_WSIMPORT_DROPIN_DST}"; then
+        echo ">>> install_systemd_units: dropin data-dir.conf → ${_WSIMPORT_DROPIN_DST}"
+        "${SUDO[@]}" mkdir -p "$(dirname "${_WSIMPORT_DROPIN_DST}")"
+        "${SUDO[@]}" cp "${_WSIMPORT_DROPIN_SRC}" "${_WSIMPORT_DROPIN_DST}"
+        "${SUDO[@]}" chmod 0644 "${_WSIMPORT_DROPIN_DST}"
+        changed=1
+    fi
+fi
+
 # Why ict-claude-bridge needs the data-dir drop-in:
 #   The bridge is the OWNER of the Claude update channel — it reads
 #   $DATA_DIR/runtime_logs/pending_claude_pings (via runtime_logs_dir()).
