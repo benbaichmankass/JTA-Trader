@@ -2,22 +2,41 @@
   "id": "MODEL-NAMES",
   "title": "Breed display aliases for ML models (docs/reference/model_names.yaml + lookup helper)",
   "phase": "build",
-  "state": "in_flight",
+  "state": "landed_unproven",
   "owner": "session_01AFoLuLzUgA9eDPgE5WQbPv",
-  "lane": "session_01AFoLuLzUgA9eDPgE5WQbPv",
+  "lane": null,
   "model": null,
   "ceiling_usd": null,
   "spend_usd": null,
   "tier": 1,
   "prs": [],
   "blocked_on": [],
-  "note": "OPERATOR 2026-11-03 ~08:15Z VERBATIM (relayed by Manager Session 2026-11-03a): \"on the naming convention, let's push that forward. The only thing I want to make sure is that there's ... some connection between ... the breed and the function, right? So like just as an example, something that's like looking for ... entry should be something that's sniffing, or something that's about exit should be like a retriever ... keeping a little bit of logic behind it, but at the same time, it looks good. We should definitely go with that.\" Delivered: docs/reference/model_names.yaml (convention, breed table, 27 id->name entries; stage MEASURED from /api/bot/ml/registry 2026-11-03), scripts/ops/model_names.py lookup, used in scripts/ops/ml_plan_status.py plumbing lines, pointers in ml-review and model-training skills. Display only; no ids renamed. Ceiling $4. [2026-11-03 ~08:20Z operator changes via manager, VERBATIM] \"the only update that I want to make to the names is Golden Retriever. Let's change that to Labrador.\" | \"let's go with Foxhound.\" (entry breed final; Foxhound-<n>P for prop entry) | \"if there's a model that can be named after a Kna'ani dog, then let's do that as well.\" (Canaan Dog, Kelev Kna'ani, = prop rule compliance; prop-mission-policy = Canaan-1, replaces German Shepherd) | Chihuahua \"if there's something that would be appropriate\": no shadow+ anomaly/drift detector exists, so assigned to the 5m regime heads (Chihuahua-1a..1d, 2a). Applied on #22599.",
+  "note": "OPERATOR 2026-11-03 ~08:15Z VERBATIM (relayed by Manager Session 2026-11-03a): \"on the naming convention, let's push that forward. The only thing I want to make sure is that there's ... some connection between ... the breed and the function, right? So like just as an example, something that's like looking for ... entry should be something that's sniffing, or something that's about exit should be like a retriever ... keeping a little bit of logic behind it, but at the same time, it looks good. We should definitely go with that.\" Delivered: docs/reference/model_names.yaml (convention, breed table, 27 id->name entries; stage MEASURED from /api/bot/ml/registry 2026-11-03), scripts/ops/model_names.py lookup, used in scripts/ops/ml_plan_status.py plumbing lines, pointers in ml-review and model-training skills. Display only; no ids renamed. Ceiling $4. [2026-11-03 ~08:20Z operator changes via manager, VERBATIM] \"the only update that I want to make to the names is Golden Retriever. Let's change that to Labrador.\" | \"let's go with Foxhound.\" (entry breed final; Foxhound-<n>P for prop entry) | \"if there's a model that can be named after a Kna'ani dog, then let's do that as well.\" (Canaan Dog, Kelev Kna'ani, = prop rule compliance; prop-mission-policy = Canaan-1, replaces German Shepherd) | Chihuahua \"if there's something that would be appropriate\": no shadow+ anomaly/drift detector exists, so assigned to the 5m regime heads (Chihuahua-1a..1d, 2a). Applied on #22599. 2026-11-05 CHECKLIST-STATE-TRUTH sweep: landed in #22599; session_01AFoLuLzUgA9eDPgE5WQbPv idle/completed, its own summary says row stays landed_unproven until an alias shows in a live --plumbing run (due 2026-11-10); close-out #22765 green, awaiting automerge (not verified merged by this sweep).",
   "due_by": "2026-11-05",
   "roadmap": [
     "M25"
   ],
   "roadmap_unmapped_reason": "display aliases only; no milestone line",
-  "updated_at": "2026-11-03T08:39:07Z",
-  "updated_by": "session_01AFoLuLzUgA9eDPgE5WQbPv",
+  "updated_at": "2026-11-05T09:32:31Z",
+  "updated_by": "session_01AFoLuMS3KAfkdSSB4xiqmg",
+  "lane_history": [
+    {
+      "lane": "session_01AFoLuLzUgA9eDPgE5WQbPv",
+      "archived_at": "2026-11-05T09:20:54Z"
+    }
+  ],
+  "observe": {
+    "when": "2026-11-10",
+    "how": "python3 scripts/ops/ml_plan_status.py --plumbing shows a breed alias beside a model id"
+  },
+  "observation": {
+    "what": "State unproven since landing; closes on the observation named in how_to_check",
+    "how_to_check": "python3 scripts/ops/ml_plan_status.py --plumbing shows a breed alias beside a model id",
+    "due_by": "2026-11-10"
+  },
+  "writeback": {
+    "roadmap": "none: register state correction by the CHECKLIST-STATE-TRUTH sweep; no milestone changed",
+    "arch": "none: no component changed"
+  },
   "_seq": 898
 }
