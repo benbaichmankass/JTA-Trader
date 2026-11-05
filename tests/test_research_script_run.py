@@ -62,7 +62,18 @@ def test_the_runner_lands_nothing_itself_and_holds_no_pat():
     assert list(wf["jobs"]) == ["run"], list(wf["jobs"])
     jobs_text = yaml.safe_dump(wf["jobs"])   # the jobs, not the header prose
     assert "BRANCH_PROTECTION_TOKEN" not in jobs_text and "commit-to-main" not in jobs_text
-    assert "secrets." not in jobs_text
+    # The ONE exception (operator 2026-11-05, popup "Allow paper pair (Rec.)", row ALPACA-PAPER-KEYS-R3):
+    # the PAPER Alpaca key pair, on the unit's run step only. No other secret, no other step, never the LIVE pair.
+    steps_all = wf["jobs"]["run"]["steps"]
+    for s in steps_all:
+        env = s.get("env") or {}
+        secret_vals = {k: v for k, v in env.items() if "secrets." in str(v)}
+        if s.get("id") == "run":
+            assert set(secret_vals) <= {"ALPACA_API_KEY_ID", "ALPACA_API_SECRET_KEY"}, secret_vals
+        else:
+            assert not secret_vals, (s.get("name"), secret_vals)
+        assert "secrets." not in yaml.safe_dump({k: v for k, v in s.items() if k != "env"})
+    assert "LIVE" not in "".join(str(v) for s in steps_all for v in (s.get("env") or {}).values() if "secrets." in str(v))
     steps = wf["jobs"]["run"]["steps"]
     derive = [s for s in steps if "record-inputs.json" in str(s.get("run", ""))]
     assert derive and "--derive-record" in derive[0]["run"] and "--power-state" in derive[0]["run"]

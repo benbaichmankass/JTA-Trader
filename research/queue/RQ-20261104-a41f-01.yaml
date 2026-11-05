@@ -4,7 +4,7 @@ id: RQ-20261104-a41f-01
 title: 'ENTRY on Alpaca, GROUP-LEVEL: does the frozen ml-decision-entry-v1 (tau 0.10, no re-fit), under the profile the one ml_entry reads from
   config (restricted long argmax, session us_equity, Bybit-perp references, BTCUSDT anchor, Alpaca cost stack), reach POOLED mean net R per decision
   >= 0 on a pre-registered Alpaca ETF population (liquidity rule fixed on a dev window)?'
-status: blocked
+status: queued
 cadence: once
 theme: ml_health
 priority: 1
@@ -41,7 +41,7 @@ power:
     ETFs x ~5.7 years x ~1 take per ETF-month x ~1.0 (session gate -25 percent, restricted argmax +30 percent) = several hundred to a few thousand
     pooled decisions; 300 is the conservative floor stated before the run. sd ~1 R.'
   feasibility:
-    source: alpaca_historical_bars
+    source: none
     accrual_basis: Replays Alpaca 1h RTH history 2021-01-01 onward (Yahoo 1h reaches only ~730 days); nothing accrues.
 decision_rule:
   id: RULE-RQ20261104-a41f-01-ENTRY-ALPACA-POOLED

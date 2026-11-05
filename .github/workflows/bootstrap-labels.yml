@@ -377,6 +377,11 @@ jobs:
                 description: 'Triggers trainer-console-ingress: opens 80/443 to the console connector on the trainer VM (OCI security list + host firewall + Caddy). Row UI-CONSOLE-V1.',
               },
               {
+                name: 'trainer-console-connector-install',
+                color: '0e8a16',
+                description: 'Triggers trainer-console-connector-install: installs the persistent jta-console-connector unit on the trainer VM and retires the quick tunnel. Row UI-CONSOLE-CONNECTOR-PERSIST.',
+              },
+              {
                 name: 'trainer-vm-diag-request',
                 color: '5319e7',
                 description: 'Triggers trainer-vm-diag workflow — full-visibility SSH command runner on the trainer VM (autonomous Claude). QUICK read-only pulls (parallel-safe).',
