@@ -1,0 +1,23 @@
+{
+  "due_when": {
+    "due_date": "2026-11-08",
+    "kind": "date"
+  },
+  "filed_by": "lane ML-ENTRY-SERVE-FIXES session_01AFoLuK7HeWiq4wwSKqN47K",
+  "id": "PI-20261105-WSKQN47K-0001",
+  "money_path": true,
+  "next_action": "dispatch_lane",
+  "observation": {
+    "due_by": "2026-11-08",
+    "how_to_check": "diag log_file?name=operator_alerts&grep=hard-to-borrow",
+    "what": "no 'only day orders are allowed for hard-to-borrow' rejection on any alpaca account; an HTB short either places or is refused by name"
+  },
+  "origin": {
+    "kind": "session",
+    "ref": "row ML-ENTRY-ALPACA-BAR-PARITY BUG 2; comms/research/ml_entry_alpaca_bar_parity/serve_clock_20261105.json",
+    "rerun": "diag log_file?name=operator_alerts&grep=hard-to-borrow (0 matches over a complete scan after the fix = closed)"
+  },
+  "state": "queued",
+  "summary": "MEASURED (operator_alerts.jsonl via relay #23280): 2026-11-02T16:02:30Z alpaca_paper ml_entry USO SELL 320 -> 'Alpaca rejected order for USO: only day orders are allowed for hard-to-borrow asset \"USO\"'; accounts_placed 0. Population: 1 rejection found over 551 alert lines (read_state complete). The broker_shorting_gate reads only account-level shorting_enabled, not the asset's easy_to_borrow (AlpacaClient asset read already returns it, alpaca_client.py:945). Options for the order-path owner (Tier 3 merge, src/units/accounts/alpaca_client.py): (a) pre-flight refuse an HTB short with a named reason asset_hard_to_borrow (no venue round trip, journal row), or (b) send DAY TIF for HTB shorts and rely on the re-arm path for overnight protection. Not changed by this lane.",
+  "what": "Alpaca hard-to-borrow SHORT sent as a GTC bracket is rejected by the venue (only DAY orders allowed for HTB)"
+}

@@ -1,0 +1,7 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "hold_reason": "tier_2_market_data_path",
+  "hold_text": "Tier 2 market-data path (src/exchange/alpaca_connector.py, read-only bars fetch used by every Alpaca leg). Data-settled by the measurement (relays #23280/#23285: 7/13 ETFs capped at 203-267 bars, constant per symbol, vs MIN_BARS 337); the manager lands it per the dispatch. Revert: git revert <merge sha>; the trader picks it up on the next restart.",
+  "why": "ml_entry refused 7 of 13 alpaca_paper ETFs insufficient_bars at every decision since 11-02: get_ohlcv read only Alpaca's first page."
+}

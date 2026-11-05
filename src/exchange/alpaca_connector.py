@@ -175,6 +175,11 @@ class AlpacaMarketData:
                 break
         else:
             logger.warning("alpaca: %s %s stopped at %d pages with %d/%d bars", symbol, tf, _MAX_PAGES, len(out), limit)
+            return out[:limit]
+        if len(out) < limit:
+            # the post-deploy observation reads this: a short frame with no token left is the venue's whole answer
+            logger.info("alpaca: %s %s %d/%d bars after %d page(s), next_page_token=%s",
+                        symbol, tf, len(out), limit, page + 1, "set" if token else "none")
         return out[:limit]
 
     def get_price(self, symbol: str):
