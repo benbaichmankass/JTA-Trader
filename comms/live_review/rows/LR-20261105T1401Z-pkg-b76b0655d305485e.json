@@ -1,0 +1,64 @@
+{
+ "schema_version": 1,
+ "review_id": "LR-20261105T1401Z-pkg-b76b0655d305485e",
+ "reviewed_at": "2026-11-05T14:14:00Z",
+ "order_package_id": "pkg-b76b0655d305485e",
+ "trade_id": null,
+ "leg": "trend_donchian_eth",
+ "accounts": ["bybit_1"],
+ "trigger": {"event": "structure_break", "level": "2026-11-05T12:00Z", "l0_snapshot_at": "2026-11-05T14:01:20Z"},
+ "info_cutoff_at": "2026-11-05T14:01:20Z",
+ "state": {"atr_now_over_entry": 0.5478, "bars_held": 23, "giveback_r": 0.9382, "open_r": -0.7133, "peak_provenance": "estimated", "peak_r": 0.225, "regime_cell_entry": "trending/volatile", "regime_cell_now": null, "sl": 2367.11035714, "tp": 2677.03212},
+ "features_at_review": {"atr_now_over_entry": 0.5478, "bars_since_peak": 22, "giveback_r": 0.9382, "open_r": -0.7133, "peak_r": 0.225, "r_to_stop": 0.2867, "r_to_target": 4.2199},
+ "mechanics": {"evidence": "package sl 2367.11035714 / tp 2677.03212 agree with every readable account", "verdict": "match"},
+ "options": [
+  {"action": "hold", "level": null, "n": 49, "mean_r": 0.1307, "sd_r": 2.0564, "worst_r": -1.1814, "net": true},
+  {"action": "tighten_sl", "level": null, "n": 49, "mean_r": null, "sd_r": null, "worst_r": null, "net": null},
+  {"action": "tighten_sl", "level": null, "n": 49, "mean_r": null, "sd_r": null, "worst_r": null, "net": null},
+  {"action": "tighten_sl", "level": null, "n": 49, "mean_r": null, "sd_r": null, "worst_r": null, "net": null},
+  {"action": "close", "level": null, "n": 49, "mean_r": -0.7918, "sd_r": 0.0402, "worst_r": -0.9075, "net": true}
+ ],
+ "outcome_table_source": "comms/live_review/tables/LR-20261105T1401Z-pkg-b76b0655d305485e.json",
+ "recommendation": {
+  "action": "hold", "level": null, "level_atr": null, "ev_delta_r": null, "worst_case_delta_r": null,
+  "basis": "judgement", "confidence": "anecdote", "evidence_source": "judgement", "judgement_confidence": 0.55,
+  "reason": "Previous forecast (12:56Z hold, target 2411.2 / invalidation 2380, 4x1h) is still open: 2 of 4 bars elapsed, 2411.2 not touched, invalidation 2380 not touched but the low is 2384.35, 4.4 pts away. Open R went -0.60 to -0.71 on a failed breakout (entry 2435.88, 2.5 ATR(1h) stop 68.8 pts); 4h/1d trend intact (4h ADX 26) but 1h made lower lows under 2404/2406/2411. Closing locks -0.71R to save at most 0.29R of further loss; the table prices close at mean -0.79R vs hold +0.13R (n=49, sd 2.06; peak-pullback population, not this -0.7R state) and a trend leg's value is its right tail. Tighten is unavailable by geometry: ATR(1h) has halved since entry (ratio 0.55), so the 2367.11 stop is already 1.3 current ATR from the 2386.67 mark and a 1 ATR floor level (about 2371.6) gains 4.5 pts (0.07R) while sitting inside noise. Hold to the stop or a reclaim; marginal call, close vs hold is near even on my probabilities (p stop about 0.55). Book: ETH long x4 packages (this -0.72R, trend_donchian_eth_4h +0.09R, eth_pullback_2h 0.0R, eth_pullback_prop_2h 0.0R) vs 1 short (trend_donchian_eth_prop +0.17R); the two new 2h pullback longs added at 2386.76 are the same bet, so a stop-out is a correlated loss, roughly -0.29R here plus about -1R on each new package."
+ },
+ "judge_prior": null,
+ "applied": false,
+ "apply_policy": {"bound_r": 0.25, "within_bound": null, "tighten_r": null},
+ "shadow_policy": {"bound_r": 0.5, "within_bound": null, "would_apply": null, "tighten_r": null},
+ "context_flags": [
+  "judgement: hold n=49 mean +0.13R sd 2.06 worst -1.18R (measured, conditioned on peak-then-pullback paths, not this -0.7R state); close n=49 mean -0.79R; leg backtest +0.06R n=108",
+  "prev_forecast: 12:56Z target 2411.2 not touched, invalidation 2380 not touched (low 2384.35), horizon 2/4 bars elapsed: carried forward, p_target 0.45 to 0.38",
+  "overlay: correlated ETHUSDT longs x4 incl. this one (trend_donchian_eth_4h +0.09R, eth_pullback_2h 0.0R, eth_pullback_prop_2h 0.0R) vs one short trend_donchian_eth_prop +0.17R; BTCUSDT long trend_donchian_1h +0.73R adds crypto beta; sizes not in packet",
+  "overlay: atr_now_over_entry 0.5478 (<=0.67): volatility halved since entry, the 2.5x entry-ATR stop is 1.3 current ATR away",
+  "table_note: all 3 tighten options invalid_level (stop_level_not_below_price 3/3, atr 1.0/1.5/2.0 x entry ATR sit below the 2367.11 stop) although packet_health is ok",
+  "tighten_guardrail: 1 ATR(1h) floor from 2386.67 is about 2371.6, only 4.5 pts above the current stop",
+  "missing_inputs: regime.vol_now, context.funding; regime.cell_now null",
+  "live_vs_backtest: NO_LIVE_TRADES on realMoney and mirror books (0 closed with an R basis); no live evidence either way"
+ ],
+ "account_reads": [
+  {"account_id": "bybit_1", "account_class": "paper", "read": "no_action", "evidence": "bybit_orders: SL 2367.11 / TP 2677.03, position True, matched by order_id, 1 sibling package(s) on ETHUSDT; apply paths close, move_tp, reduce, tighten, widen_sl; would_apply = an executor reaches this leg, NOT that its RiskManager approved (LTR-6 gap)"}
+ ],
+ "disposition": {"route": "none", "mandate": null, "action_issue": null, "applied_at": null, "verified_readback": null},
+ "model": "sonnet-tier (repo-less reviewer)",
+ "session": "session_01AFoLuMDLd8CDHfecMCCTCVC",
+ "prompt_sha": null,
+ "skill_sha": null,
+ "packet_defects": [],
+ "packet_sha": "e66eb1dff536bbd7a3f7ec9b91d98fbbf84f1076b679cce4f072a92f642adca6",
+ "forecast": {
+  "thesis": "The 1h breakdown under 2404/2406/2411 is a dip inside an intact 4h/1d uptrend (4h ADX 26, trending), but this breakout is already -0.7R and price sits 4 pts above the 2380 line; a reclaim of the 2411.2 swing low before 2372 is slightly less likely than not, and below 2372 the 2367.11 stop is the exit.",
+  "direction": "with_trade", "target_px": 2411.2, "p_target": 0.38, "invalidation_px": 2372.0, "horizon_bars": 4, "timeframe": "1h",
+  "evidence": [
+   "context.previous_review.forecast: target 2411.2 / invalidation 2380 untouched, 2 of 4 bars used",
+   "chart.since_entry: low 2384.35 (-0.15 ATR), last_close 2386.67",
+   "chart.swings: lows 2411.2/2406.11/2404.18 all broken",
+   "htf 4h: trending, adx 26.15, last_close 2420.48",
+   "exit_plan: stop 2367.11, TP 2677.03",
+   "priced_options: hold n=49 mean +0.13R, close n=49 mean -0.79R",
+   "book: ETH long x4"
+  ]
+ }
+}
