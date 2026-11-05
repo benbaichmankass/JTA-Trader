@@ -1,0 +1,53 @@
+name: lake-parity
+
+# Row ML-DATA-WIRING (Tier 1, read-only): measure the market-data-lake klines cache against the Binance-Vision streams cache on the
+# REAL lake (the synthetic-lake test cannot), and run `build-table --source lake`'s table build on it. Needs HF_TOKEN (read use).
+# Output: artifact lake_parity.json (population beside every number) + the lake MANIFEST rows for crypto/um_perp/1h.
+#
+# no-durable-result: measurement run; the durable record is committed by the lane that reads the artifact (comms/research/ml_data_wiring/)
+# GATES THIS ADDS OR CHANGES: none.
+
+on:
+  workflow_dispatch:
+    inputs:
+      max_symbols:
+        description: "0 = the whole bp2 universe"
+        default: "0"
+  pull_request:
+    paths:
+      - ".github/workflows/lake-parity.yml"
+      - "scripts/research/lake_parity_run.py"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: lake-parity-${{ github.head_ref || 'main' }}
+  cancel-in-progress: false
+
+jobs:
+  parity:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    env:
+      HF_TOKEN: ${{ secrets.HF_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: python -m pip install --quiet pandas numpy pyarrow pyyaml requests huggingface_hub
+      - name: Lake vs streams parity (real lake)
+        run: |
+          set -uo pipefail
+          [ -n "${HF_TOKEN}" ] || { echo "::error::HF_TOKEN empty"; exit 1; }
+          python3 scripts/research/lake_parity_run.py --out out --max-symbols "${{ inputs.max_symbols || 0 }}"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: lake-parity-${{ github.run_id }}
+          path: out/lake_parity.json
+          retention-days: 30
+          if-no-files-found: warn
