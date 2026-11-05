@@ -82,18 +82,24 @@ def write_manifest(root: Path, kind: str, note: str = "") -> dict:
     return man
 
 
-def _pack(d: Path, kind: str, out: Path) -> None:
-    """Replace directory `d` with `<kind>.tar` + MANIFEST.json (members carry bytes + sha256)."""
+def _pack(d: Path, kind: str, out: Path, archive: str | None = None) -> None:
+    """Replace directory `d` with one archive + MANIFEST.json (members carry bytes + sha256).
+
+    Kaggle UNPACKS archives by extension (.tar/.zip/.tgz) and then counts the files: a Model instance over 50 files is accepted at
+    create time (2 top-level files) but its version never becomes downloadable and never mounts (observed 2026-11-05: the 106-file
+    registry-store stayed 404 for 40 min and was dropped from the kernel mount, while the 3-file `served.tar` worked). An archive
+    with an unrecognised extension is stored as ONE opaque file; tarfile reads it by magic number, not by name."""
+    archive = archive or f"{kind}.tar"
     members = [{"path": p.relative_to(d).as_posix(), "bytes": p.stat().st_size, "sha256": sha256_file(p)}
                for p in sorted(d.rglob("*")) if p.is_file()]
-    arch = out / f"{kind}.tar"
+    arch = out / archive
     with tarfile.open(arch, "w") as tf:
         for m in members:
             tf.add(d / m["path"], arcname=m["path"])
     shutil.rmtree(d)
     d.mkdir()
-    shutil.move(str(arch), str(d / f"{kind}.tar"))
-    man = {"schema": "kaggle-backup/v1", "kind": kind, "archive": f"{kind}.tar",
+    shutil.move(str(arch), str(d / archive))
+    man = {"schema": "kaggle-backup/v1", "kind": kind, "archive": archive,
            "generated_at": datetime.now(timezone.utc).isoformat(timespec="seconds"), "n_files": len(members),
            "bytes": sum(m["bytes"] for m in members), "files": members}
     (d / "MANIFEST.json").write_text(json.dumps(man, indent=1))
@@ -131,9 +137,9 @@ def cmd_stage(a) -> int:
     # Both instances ship as ONE tar + MANIFEST.json (per-member SHA-256). Why: Kaggle Models refuse more than 50 files
     # ("The file count exceeds the maximum of 50", observed 2026-11-05 with 106 registry files) and `-r skip` ignores sub-directories
     # (ml/served is three model folders).
-    for d, kind in ((served, "served"), (reg, "registry-store")):
+    for d, kind, archive in ((served, "served", "served.tar"), (reg, "registry-store", "registry-store.tar.dat")):
         if d.is_dir():
-            _pack(d, kind, out)
+            _pack(d, kind, out, archive)
     print(json.dumps({"staged": True, "served_files": n_served, "registry_files": n_reg,
                       "bytes": sum(p.stat().st_size for p in out.rglob("*") if p.is_file())}))
     return 0

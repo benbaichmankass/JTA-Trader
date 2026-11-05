@@ -268,7 +268,9 @@ def cmd_plan(a) -> int:
         cur, cur_b, cur_f = [], 0, 0
         for sym in sorted(g["symbols"]):
             nf, nb = g["symbols"][sym]
-            if cur and cur_b + nb > cap:
+            # metrics are rebuilt from DAILY zips (~30x the downloads per month of a monthly stream): cap symbols per part so one runner
+            # job cannot exceed its time limit
+            if cur and (cur_b + nb > cap or (stream == "metrics" and len(cur) >= a.max_symbols_daily)):
                 parts.append({"market": market, "label": label, "stream": stream, "symbols": cur,
                               "expected_partitions": cur_f, "expected_bytes": cur_b})
                 cur, cur_b, cur_f = [], 0, 0
@@ -313,8 +315,9 @@ def cmd_copy_part(a) -> int:
     for i in range(0, len(syms), a.batch):
         batch = syms[i:i + a.batch]
         shutil.rmtree(tmp, ignore_errors=True)
+        daily = part["stream"] == "metrics"
         rc = bvl.main(["--market", part["market"], "--stream", part["stream"], "--out", str(tmp), "--symbols", ",".join(batch),
-                       "--parallel", "4"])
+                       "--parallel", "8" if daily else "4", "--workers", "12" if daily else "8"])
         files = list_local_candidates(tmp, prefix)
         for c in files:
             c["got"] = c["bytes"]
@@ -450,6 +453,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     ap.add_argument("--batch", type=int, default=4)
     ap.add_argument("--expect-min-files", type=int, default=0)
     ap.add_argument("--part-gb", type=float, default=22.0)
+    ap.add_argument("--max-symbols-daily", type=int, default=250)
     ap.add_argument("--plan", default="plan.json")
     ap.add_argument("--part", default="")
     ap.add_argument("--skip-symbols", default="")
