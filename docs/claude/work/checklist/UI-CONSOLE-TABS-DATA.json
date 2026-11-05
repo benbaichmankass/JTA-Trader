@@ -11,13 +11,13 @@
   "tier": 2,
   "prs": [],
   "blocked_on": [],
-  "note": "Operator 2026-11-05 ~11:11Z verbatim: \"We also need to add some tabs to the console: 1. Weekly workplan tracker 2. ML Roadmap tracker 3. Performance tracker for MLs and live strategies 4. Systems/resource health and allocation 5. Data viewer - trade journal and other databases\". Tools in src/console_connector/tabs.py; doc docs/reference/console-connector-tools.md. performance/system_health/data_query register only when CONSOLE_CONNECTOR_AUTH=google. Tier 2 landing hold. Closing: unit restarted after merge (manager asks UI-CONSOLE-V1), each tool returns read_state read from the console, data_query reads the live journal (OPEN: trade_journal.db is on the live VM, not the trainer).",
+  "note": "Operator 2026-11-05 ~11:11Z verbatim: \"We also need to add some tabs to the console: 1. Weekly workplan tracker 2. ML Roadmap tracker 3. Performance tracker for MLs and live strategies 4. Systems/resource health and allocation 5. Data viewer - trade journal and other databases\". Tools in src/console_connector/tabs.py; doc docs/reference/console-connector-tools.md. performance/system_health/data_query register only when CONSOLE_CONNECTOR_AUTH=google. Tier 2 landing hold. Closing: unit restarted after merge (manager asks UI-CONSOLE-V1), each tool returns read_state read from the console, data_query reads the live journal (OPEN: trade_journal.db is on the live VM, not the trainer). OPERATOR APPROVED PR #23377 2026-11-05 ~15:46Z (popup, relayed by manager), verbatim: 'Yes, merge + install (Rec.)'. Scope of #23377: work_rows rows carry week_lane/roadmap/writeback; new work_rows section open_other (queued without due_by, landed_unproven); new public read-only tool system_catalog; tests + doc. Next: manager merges when CI is green, then the one-restart install (trainer-console-connector-install), then verify (healthz auth=google, unauth /mcp 401, unit active, token store intact, tools/list=10 incl. system_catalog, work_rows rows carry week_lane). Console Overview/System switch to the served fields on republish. Merged/deployed/observed are recorded separately when each is established.",
   "due_by": "2026-11-07",
   "roadmap": [
     "L-OPS"
   ],
-  "updated_at": "2026-11-05T14:06:41Z",
-  "updated_by": "session_01AFoLuLmhUKeUzHC6CHz2uP",
+  "updated_at": "2026-11-05T15:47:01Z",
+  "updated_by": "session_01AFoLuKPFatiYC8ciYMxABr",
   "week_lane": "surge",
   "_seq": 945
 }
