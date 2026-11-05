@@ -1,0 +1,7 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "hold_reason": "tier_2_3_needs_approval",
+  "hold_text": "Tier-2 by path: scripts/deploy_pull_restart.sh is the ict-git-sync deploy that decides whether ict-trader-live and the other long-running units restart; trader_import_closure.py is the trader restart gate it calls; diag.py carries the third lockstep copy. The operator pre-approved this fix by popup at ~23:37Z 2026-11-04, verbatim \"Pre-approve (Recommended)\" (build it, merge + deploy when green once the no-import-cache condition is proven), relayed by Manager Session 2026-11-04b (session_01AFoLuN7HERxg65eHjtmMYE), which merges. Change: fifteen bot-written comms/ data trees (desk, live_review, live_parity, cloud, prop_survival, claude_judgments, reviews, ops, ci, ml-plan, news_alpha, strategy_reviews, reports, data_lake, plus comms/claude_strategy_scores.jsonl) join the non-runtime set in all three lists. Proof in the PR body: no long-running unit reads any of them at import or caches them; replay of 11-04 moves 45 data-only merges to no-restart and 0 code/config merges. Revert: git revert of the merge commit.",
+  "why": "DEPLOY-RESTART-ON-DATA-MIRRORS: all 21 trader restarts on 2026-11-04 followed a bot data merge, none a human code merge; each one stops exit evaluation for its duration and resets in-memory state."
+}
