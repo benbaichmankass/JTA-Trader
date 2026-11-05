@@ -1,0 +1,22 @@
+{
+  "id": "UI-CONSOLE-CONNECTOR-PERSIST",
+  "title": "Make the trainer console connector + tunnel survive a reboot (persistent systemd units)",
+  "phase": null,
+  "state": "queued",
+  "owner": "manager",
+  "lane": null,
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 2,
+  "prs": [],
+  "blocked_on": [],
+  "note": "Found by lane UI-CONSOLE-V1 2026-11-05: jta-console-connector (127.0.0.1:8765) and jta-mcp-tunnel run as TRANSIENT systemd-run units on ict-trainer-vm (#23224/#23254), so a trainer reboot or OOM kill takes the console's data path down with no restart. Caddy (systemd-enabled, #23262) does survive. Fix: commit deploy/trainer/jta-console-connector.service (Restart=always, Nice=10, MemoryMax=400M, EnvironmentFile for CONSOLE_CONNECTOR_AUTH/BASE_URL/GOOGLE_OAUTH_CLIENT_ID/ALLOWED_EMAIL) and install+enable it via a trainer workflow; retire jta-mcp-tunnel once 'JTA Trader' (sslip.io) replaces 'JTA Console Probe'. Closing observation: after 'sudo systemctl restart' of the trainer (or kill -9 of the process), https://158-178-209-121.sslip.io/healthz returns 200 within 60 s without manual action.",
+  "due_by": "2026-11-09",
+  "roadmap": [
+    "L-OPS"
+  ],
+  "updated_at": "2026-11-05T11:38:07Z",
+  "updated_by": "lane-UI-CONSOLE-V1",
+  "_seq": 946
+}
