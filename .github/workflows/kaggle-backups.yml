@@ -157,7 +157,8 @@ jobs:
           for attempt in 1 2 3 4; do
             rsync -a --partial --bwlimit=20000 --rsync-path="nice -n 19 ionice -c3 rsync" -e "$SSH" "$SRC" /tmp/reg/ 2>&1 | sed "s|${TRAINER_IP}|<trainer>|g" | tail -3
             # consistency: a second dry-run must find nothing left to transfer (the registry is appended by training cycles)
-            CH=$(rsync -an --itemize-changes -e "$SSH" "$SRC" /tmp/reg/ 2>/dev/null | grep -c '^>f')
+            # grep -c exits 1 when it counts 0 (the SUCCESS case); under pipefail + bash -e that killed the step (run 42081373898)
+            CH=$(rsync -an --itemize-changes -e "$SSH" "$SRC" /tmp/reg/ 2>/dev/null | { grep -c '^>f' || true; })
             if [ "${CH:-1}" = "0" ]; then OK=1; break; fi
             echo "registry-store changed while copying (${CH} files); retry ${attempt}"; sleep 30
           done
