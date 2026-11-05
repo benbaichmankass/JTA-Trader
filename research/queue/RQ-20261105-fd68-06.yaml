@@ -156,6 +156,13 @@ amendments:
     a POSITIVE discovery sum, so RQ-20261105-fd68-03 selected a net-negative arm (F0+F1+F2 tau 0.55, sum -20.4 R). This unit adds: AND discovery sum net R > 0. Nothing else in the E1-E4 rule changes, and
     the RQ-20261105-fd68-03 thresholds are NOT edited.'
   - 'Held-out span is spent for this lane (see split.held_out), so this unit is a forward/accruing design: discovery-only now, graded on bars after 2026-09-30 later.'
+- at: '2026-11-05'
+  before_any_run: true
+  by: lane RESEARCH-NO-WAIT
+  text:
+  - 'RESEARCH-NO-WAIT (lane of Manager Session 2026-11-05b). Operator 2026-11-05 ~17:08Z, verbatim: "Why does it need to wait for November? That''s not the workflow - we iterate in the data we have till we find what works, we don''t wait for new months of data". Window registered BEFORE any run; no outcome inside it was read by this lane; the rule text and every threshold are NOT edited.'
+  - 'WINDOW CHANGE: the "forward window (all bars after 2026-09-30) graded by a successor unit" is REPLACED by a backward read of the FROZEN selection on the pre-dev span 2020-09-01..2021-12-31 (ETHUSDT, SOLUSDT from its 2020-09 listing, XRPUSDT; Binance Vision, in hand, never in discovery 2022-01-01..2025-09-30 nor in the spent held-out 2025-10-01..2026-09-30; no HOLDOUT-LOCK claim exists for it). The selected arm and tau stay frozen in result.json; E1-E4 + V3 + D1-D4 run exactly as in RQ-20261105-fd68-03 on that span. Rule text and thresholds are NOT changed.'
+  - 'This unit still runs now (discovery-only). The graded read is a successor unit registered on this window; the driver option is a lever on checklist row TRADEIFY-OWN-LEG-DRIVER: scripts/research/prop_ml_leg.py needs --predev-read (reads 2020-09-01..2021-12-31 with the frozen arm, refusing a second read).'
 related:
 - TRADEIFY-OWN-LEG
 - TRADEIFY-OWN-LEG-DRIVER

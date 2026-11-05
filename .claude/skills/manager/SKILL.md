@@ -57,9 +57,14 @@ register, never in a session's head or a trigger prompt: a new manager inherits 
 4. **LAND.** List every open PR. Each green one that waits on the manager (`landing: hold`, a refused
    self-land, a research hold PR) is landed now (Tier 1/2), or put to the operator on its recorded approval
    path (Tier 3). A green PR waiting on the manager is the manager's failure.
-5. **CLOSE.** `list_sessions(mine=true)` → `lane_reconcile.py`; run § "Archive protocol" on every
-   finished lane it lists — only this project's, after checking it owns no open PR — then
-   `checklist.py archive-lane <ROW>`.
+5. **CLOSE — a FULL sweep of the account, not just your own children** (operator, 2026-11-05, binding: *"We also need to make sure that
+   we're not forgetting to archive old lanes. That does not seem to be passing through to all the managers correctly. We need to make sure
+   that it's happening."*). Page `list_sessions` to the end (every page until `has_more` is false; save each page to a file), run
+   `python3 scripts/ops/lane_reconcile.py --sweep --sessions <page files...>`, and archive every ARCHIVE candidate it prints, whoever
+   spawned it: earlier managers' lanes, desk wakes and single-package live reviews included (MEASURED 2026-11-05: 35 finished-but-unarchived
+   sessions, back to 11-01, left by 5 earlier managers, because each manager archived only its own children). The KEEP list carries a
+   reason for each lane left open; only this project's sessions, never the LEFT ALONE block, after checking the lane owns no open PR
+   (`--pr-state` takes a `{session: open|merged|closed}` file for `review_ready` lanes). Then `checklist.py archive-lane <ROW>`.
    A `landed_unproven` row whose closing observation can be produced on demand and cheaply is triggered now, not left for the next
    schedule (canonical § "Validate early when it is cheap").
    **Console threads (operator, 2026-11-05, via UI-CONSOLE-V1):** at every check-in, `ArtifactComments` `action: "read"` each console
@@ -168,6 +173,9 @@ each **one marker, one lane, never spawn twice for the same id**; a `could_not_*
      skill and the handoff doc in full; from the canonical doc read only: RULE ONE; Permission Tiers + Data-backed Tier-2/3 decisions; Prime
      Directive; "Lanes answer to the manager" + "Reading is never gated".
    - **A dispatched lane** reads those same four sections (not the whole doc) plus any section its dispatch names (§ "Required dispatch block").
+2a. **Run the full sweep before dispatching anything** (operator, 2026-11-05, binding; quote in § "The operating loop" step 5): page
+    `list_sessions` to the end, run `lane_reconcile.py --sweep`, and archive every candidate, including the outgoing manager's finished lanes.
+    A handover that skips this orphans them.
 2b. **Subscribe to the ops-flags PR** (§ "Standing alert subscriptions").
 2c. **Re-watch the console artifact(s)** listed on row `UI-CONSOLE-V1` (`console_artifact_url`, `probe_artifact_url`): `ArtifactComments`
     `action: "watch"` with each `url`, then read open threads (`action: "read"`) so nothing sent during the handoff is lost (operator,
@@ -830,6 +838,10 @@ run of § "The operating loop" and the first turn after every compaction starts 
 `external_metadata.context_usage.used_tokens`; past ~650k, plan the handover for the next boundary and say so in the loop's operator line.
 **Never mid-incident, never with a merge or deploy half-done.**
 
+0. **ARCHIVE FIRST** (operator, 2026-11-05, binding: *"We also need to make sure that we're not forgetting to archive old lanes. That does not
+   seem to be passing through to all the managers correctly."*). Before PREPARE, the outgoing manager runs the full sweep (§ "The operating
+   loop" step 5) and archives **every finished lane it owns**; the handoff doc lists each lane left open **with a reason** (the sweep's KEEP
+   list). The incoming manager re-runs the sweep as its first act (§ "Start of session" 2a), so a miss here is caught within one hand-off.
 1. **PREPARE.** Write `docs/claude/work/handoffs/<YYYY-MM-DD>-<old-short>-to-new.md` (old-short = first 8 chars of the old id): live lanes
    (id, row, doing, owes); PRs needing the manager; operator asks in exact wording; every trigger/`send_later` targeting the old session (id,
    name); watched artifacts/PRs; capacity state; operator directives not yet in rows (put them in rows first); the new manager's first actions;

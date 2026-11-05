@@ -1,0 +1,33 @@
+{
+  "id": "HOLDOUT-DEFLATED-REUSE",
+  "title": "Holdout re-reads allowed on a deflated bar: holdout_lock from refusal to ledger, doctrine M13, re-open lines stopped only on a spent window",
+  "phase": null,
+  "state": "landed_unproven",
+  "owner": "session_01AFoLuLmhUKeUzHC6CHz2uP",
+  "lane": "HOLDOUT-DEFLATED-REUSE",
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [
+    23461
+  ],
+  "blocked_on": [],
+  "note": "[2026-11-05 lane HOLDOUT-DEFLATED-REUSE, operator 'Adopt (Rec.)' ~19:05Z; principles M13] Built: (A) doctrine principles M13 (operator quoted) + M5/R5 amended; research-ops SKILL; research/queue/PLANNING.md 1d; ml-decision-models DESIGN 1c superseded; ML-ROADMAP-MECE table. Gates added: none; this REMOVES the one-read block. (B) scripts/research/holdout_lock.py is now a ledger: every read records family, variant, window, train_end and n_tries, and returns bar (this read) plus next_bar. bar_for(N): Sidak one-sided alpha_N = 1-0.975^(1/N) for CI bars (z 1.96/2.24/2.39/2.57 at N 1/2/3/5); BLdP expected max of N null t-stats for point bars (0/0.52/0.85/1.19 SE). check_window_disjoint is the one hard refusal. Self-test plus tests/test_holdout_lock_deflated.py. Graders wired: ml_decision_entry, ml_decision_manage, ml_entry_v2, ml_entry_levers, prop_ml_leg, ml_variant_prop_gate/prop_gate.edge_ci. (C) Re-opened (notes on rows): ML-PROP-ITERATE, ML-DECISION-MODELS (c692), ML-ENTRY-DYNAMIC-SL, ML-RECIPE (b610-01), ML-ENTRY-TP-REVISION (383f-02); also RQ-20261103-5a03-03 (L-LADDER donchian C3: 'no unspent historical window remains, so confirm FORWARD'). Its reads are NOT in the ledger, and its harness exit_lever_ablation --grade holdout does not yet claim. Not wired: ml_entry_tp_revision.py, exit_lever_ablation.py, desk_edge_devloop.assert_not_locked (a dev-promote sequencing lock, not a one-read lock). CLOSES WHEN the first re-read after merge commits a ledger line with n_tries >= 2 and its grader's verdict cites the deflated bar. Merge of main 2026-11-05 ~19:30Z: main added the MANAGE xs claims c692-13/-14 (window 2020-07-01..2026-09-30). MANAGE now has n_tries=4 on the held-out year, so the next read is read 5 (z 2.57, t >= 1.19). Those two reads would now be refused under rule 4; they stay in the ledger as history.",
+  "due_by": "2026-11-12",
+  "roadmap": [
+    "L-ML-LIVE"
+  ],
+  "updated_at": "2026-11-05T19:56:58Z",
+  "updated_by": "session_01AFoLuK7rP227Z9WVyyYh3j",
+  "observation": {
+    "what": "the first holdout re-read after merge is recorded with n_tries >= 2 and graded on the deflated bar",
+    "how_to_check": "python3 scripts/research/holdout_lock.py list | tail: a line written after the merge with n_tries >= 2 and a bar field; that unit verdict.json cites the deflated z or SE hurdle",
+    "due_by": "2026-11-12"
+  },
+  "writeback": {
+    "roadmap": "none: research doctrine and offline tooling; no L-ML-LIVE milestone status changes (re-opened lines keep their own rows)",
+    "arch": "none: no runtime, trade-path or contract change; doctrine lives in docs/reference/trading-and-model-practice-principles.md M13"
+  },
+  "_seq": 956
+}

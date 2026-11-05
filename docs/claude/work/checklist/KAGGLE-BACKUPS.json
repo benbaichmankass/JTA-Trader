@@ -1,0 +1,22 @@
+{
+  "id": "KAGGLE-BACKUPS",
+  "title": "Standing private Kaggle backups: trainer registry-store + ml/served (Kaggle Model), trade_journal.db + trainer_store.db snapshots and the cold data lake (private datasets), scheduled, checksum-verified, freshness stamp",
+  "phase": null,
+  "state": "in_flight",
+  "owner": "session_01AFoLuNBcS5NT55ncec8xTw",
+  "lane": "HF-LAKE-SQUASH",
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [],
+  "blocked_on": [],
+  "note": "OPERATOR DECISION (chat, ~17:02Z 2026-11-05, verbatim): \"Ok, let's also keep backups on kaggle (on private)\". Via manager Manager Session 2026-11-05b. SPEC: (a) this row; (b) a scheduled GitHub Actions backup to PRIVATE Kaggle only: trainer model registry-store + ml/served as versions of a private Kaggle Model; snapshots of trade_journal.db and trainer_store.db (sqlite backup API, consistent copy) and the cold data lake as private datasets; NEVER credentials (no env files, account keys, secrets); verify each backup by checksum; record a freshness stamp the health review can read; on failure retry and raise ONE red flag, never halt. (c) Retention: keep last N versions; delete NOTHING on Kaggle or anywhere without asking the operator first; propose N. Nothing reads from Kaggle on the trade path; live trader and trainer keep local copies as the source of truth. Ship as a PR; report the green SHA plus the first verified backup run; BEFORE the first upload tell the manager the first full size vs the operator quota (datasets 2.89 GB of 214.75 GB, models 0 of 214.75 GB). SEQUENCE: after the 10 GB dataset trial and the Kaggle Models pilot both pass. NOTE: docs/research/ml-data-classification-2026-10-13.md kept OUR data (trades, fills, signals, PnL) out of the Kaggle export; this operator decision supersedes it for PRIVATE backups.",
+  "due_by": "2026-11-08",
+  "roadmap": [
+    "L-OPS"
+  ],
+  "updated_at": "2026-11-05T17:02:54Z",
+  "updated_by": "session_01AFoLuNBcS5NT55ncec8xTw",
+  "_seq": 955
+}
