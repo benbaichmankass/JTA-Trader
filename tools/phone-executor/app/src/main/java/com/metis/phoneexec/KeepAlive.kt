@@ -45,7 +45,7 @@ class KeepAliveService : Service() {
         nm.createNotificationChannel(NotificationChannel("exec_attn", "Executor needs a tap", NotificationManager.IMPORTANCE_HIGH))
         val open = PendingIntent.getActivity(this, 0, Intent(this, MainActivity::class.java)
             .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK), PendingIntent.FLAG_IMMUTABLE)
-        val n = Notification.Builder(this, "exec").setContentTitle("Metis executor running")
+        val n = Notification.Builder(this, "exec").setContentTitle("JTA executor running")
             .setContentText(i?.getStringExtra("status") ?: "kiosk active").setSmallIcon(android.R.drawable.stat_notify_sync)
             .setOngoing(true).setContentIntent(open).build()
         if (Build.VERSION.SDK_INT >= 34) startForeground(1, n, ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE)
@@ -90,7 +90,7 @@ class KeepAliveService : Service() {
             "Tap this, then tap ALLOW on the prompt. Without it Android can stop the executor while the screen is off.",
             Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS, Uri.parse("package:$packageName")))
         post(3, Settings.canDrawOverlays(this), "Executor: allow display over other apps",
-            "Tap this, find Metis Executor and switch ON \"Allow display over other apps\". Without it the executor cannot restart itself.",
+            "Tap this, find JTA Executor and switch ON \"Allow display over other apps\". Without it the executor cannot restart itself.",
             Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:$packageName")))
     }
 
