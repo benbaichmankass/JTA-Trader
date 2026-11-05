@@ -628,3 +628,61 @@ def test_bybit_position_with_no_tp_leg_is_a_mismatch():
     legs = [_DONCH_LEGS[0]]
     m = _build(DONCH, _btc_snap(legs))["mechanics"]
     assert m["verdict"] == "mismatch" and "NO resting TP leg" in m["evidence"], m
+
+
+# --- PACKET-HEALTH (operator 2026-11-05): computed, never typed -------------------------------------------------
+
+def _opts(*pairs):
+    return [{"action": "hold", "n": 9, "mean_r": 1.0, "state": "measured"}] + [
+        ({"action": "tighten", "state": st, "reason": rs, "n": 0, "mean_r": None} if mean is None
+         else {"action": "tighten", "state": st, "n": 20, "mean_r": mean}) for st, rs, mean in pairs]
+
+
+def _pk(options=None, **kw):
+    p = {"priced_options": {"options": options} if options is not None else None,
+         "priced_options_state": "priced" if options is not None else "could_not_price",
+         "generator": {"state": "current"}, "mechanics": {"verdict": "match", "evidence": "ok"},
+         "account_bounds": [{"account_id": "a"}], "state": {"open_r": 1.0},
+         "context_v3": {"chart": {}, "htf": {}, "live_vs_backtest": {}}}
+    p.update(kw)
+    return p
+
+
+def test_packet_health_ok_when_nothing_is_wrong():
+    g = L
+    assert g.packet_health(_pk(_opts(("measured", None, 0.5), ("invalid_level", None, None)))) == {"status": "ok", "defects": []}
+
+
+def test_all_options_unpriced_for_one_reason_is_degraded_never_ok():
+    g = L
+    h = g.packet_health(_pk(_opts(*[("could_not_look", "no_candles", None)] * 5)))
+    assert h["status"] == "degraded"
+    assert {"field": "priced_options.options", "reason": "all_options_unpriced:no_candles", "count": 5, "denominator": 5} in h["defects"]
+    assert {"field": "priced_options.candles", "reason": "candles_missing", "count": 5, "denominator": 5} in h["defects"]
+
+
+def test_the_0700z_eth_packet_shape_is_degraded():
+    """3 no_candles + 2 invalid_level, every tighten option unpriced (LR-20261105T0700Z-pkg-b76b0655d305485e)."""
+    g = L
+    h = g.packet_health(_pk(_opts(*([("could_not_look", "no_candles", None)] * 3 + [("invalid_level", None, None)] * 2))))
+    assert h["status"] == "degraded"
+    assert any(d["reason"] == "all_options_unpriced:invalid_level+no_candles" and d["count"] == 5 for d in h["defects"])
+    assert any(d["reason"] == "candles_missing" and (d["count"], d["denominator"]) == (3, 5) for d in h["defects"])
+
+
+def test_other_defects_carry_a_reason_count_and_denominator():
+    g = L
+    h = g.packet_health(_pk(None, generator={"state": "stale_vs_origin_main"},
+                            mechanics={"verdict": "match", "evidence": "1 account(s) could not be read"},
+                            account_bounds=[{"account_id": "a"}, {"account_id": "b"}],
+                            context_v3={"chart": None, "htf": {}, "live_vs_backtest": {}}))
+    got = {(d["reason"], d["count"], d["denominator"]) for d in h["defects"]}
+    assert ("could_not_price", 1, 1) in got and ("generator_stale", 1, 1) in got
+    assert ("venue_read_unreachable", 1, 2) in got and ("context_null:chart", 1, 1) in got
+    assert h["status"] == "degraded"
+
+
+def test_a_packet_that_saw_nothing_is_could_not_look():
+    g = L
+    h = g.packet_health(_pk(None, mechanics={"verdict": "could_not_look", "evidence": "x"}))
+    assert h["status"] == "could_not_look"

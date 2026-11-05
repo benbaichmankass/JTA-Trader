@@ -1078,7 +1078,65 @@ def build_packet(pkg: str, s: Snapshot, now: datetime, *, write_tables: bool = F
                   "peak_provenance": provenance, "peak_r": peak_r, "regime_cell_entry": cell_entry, "regime_cell_now": None,
                   "sl": sl, "tp": tp},
     }
+    packet["packet_health"] = packet_health(packet)  # computed last, from the finished packet
     return packet
+
+
+# ----------------------------------------------------------------------------- packet health
+# PACKET-HEALTH (operator 2026-11-05 ~08:25Z, "we need to make sure the lanes know how to report when something is wrong
+# with the review packet, like missing live data"). Precedent failure: LR-20261105T0700Z-pkg-b76b0655d305485e priced every
+# tighten option as unpriced (atr levels no_candles, r levels invalid_level) and the lane never said so. The block is
+# COMPUTED from the finished packet, never typed by a reviewer; a count that reads 0 may mean "we could not look", so every
+# defect carries its numerator AND its denominator.
+
+#: Chart blocks whose absence means the discretionary read has no market data to look at.
+HEALTH_CONTEXT_BLOCKS = ("chart", "htf", "live_vs_backtest")
+_COULD_NOT_READ = re.compile(r"(\d+) account\(s\) could not be read")
+
+
+def _defect(field_: str, reason: str, count: Optional[int], denominator: Optional[int]) -> dict:
+    return {"field": field_, "reason": reason, "count": count, "denominator": denominator}
+
+
+def packet_health(packet: dict) -> dict:
+    """``{"status": ok | degraded | could_not_look, "defects": [{field, reason, count, denominator}]}``.
+
+    ``degraded`` = at least one defect; ``could_not_look`` = the packet carries no usable read of the trade itself
+    (every account's venue read failed, or neither open_r nor a chart could be read). Never a gate: the call is still made."""
+    defects: List[dict] = []
+    po = packet.get("priced_options")
+    state = packet.get("priced_options_state")
+    if po is None:
+        if state != "not_priced":
+            defects.append(_defect("priced_options", str(state or "could_not_price"), 1, 1))
+    else:
+        opts = [o for o in po.get("options") or [] if o.get("action") != "hold"]
+        unpriced = [o for o in opts if o.get("mean_r") is None]
+        reasons = sorted({str(o.get("reason") or o.get("state") or "unpriced") for o in unpriced})
+        if opts and len(unpriced) == len(opts):
+            defects.append(_defect("priced_options.options", "all_options_unpriced:" + "+".join(reasons),
+                                   len(unpriced), len(opts)))
+        no_candles = [o for o in opts if o.get("reason") == "no_candles"]
+        if no_candles:
+            defects.append(_defect("priced_options.candles", "candles_missing", len(no_candles), len(opts)))
+    gen = (packet.get("generator") or {}).get("state")
+    if gen in ("stale_vs_origin_main", "could_not_look"):
+        defects.append(_defect("generator", "generator_stale" if gen == "stale_vs_origin_main" else "generator_unverified", 1, 1))
+    bounds = packet.get("account_bounds") or []
+    mech = packet.get("mechanics") or {}
+    m = _COULD_NOT_READ.search(str(mech.get("evidence") or ""))
+    unread = int(m.group(1)) if m else (len(bounds) if mech.get("verdict") == "could_not_look" else 0)
+    if unread:
+        defects.append(_defect("mechanics", "venue_read_unreachable", unread, len(bounds) or unread))
+    ctx = packet.get("context_v3") or {}
+    for k in HEALTH_CONTEXT_BLOCKS:
+        if ctx.get(k) is None:
+            defects.append(_defect(f"context_v3.{k}", f"context_null:{k}", 1, 1))
+    st = packet.get("state") or {}
+    if st.get("open_r") is None:
+        defects.append(_defect("state.open_r", "context_null:state.open_r", 1, 1))
+    blind = (bool(unread) and unread >= (len(bounds) or unread)) or (st.get("open_r") is None and ctx.get("chart") is None)
+    return {"status": "could_not_look" if blind else ("degraded" if defects else "ok"), "defects": defects}
 
 
 # ----------------------------------------------------------------------------- CLI
