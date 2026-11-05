@@ -1,0 +1,23 @@
+{
+  "due_when": {
+    "due_date": "2026-11-09",
+    "kind": "date"
+  },
+  "filed_by": "lane ML-ENTRY-SERVE-FIXES session_01AFoLuK7HeWiq4wwSKqN47K",
+  "id": "PI-20261105-WSKQN47K-0002",
+  "money_path": false,
+  "next_action": "dispatch_lane",
+  "observation": {
+    "due_by": "2026-11-09",
+    "how_to_check": "ls comms/research/ml_entry_alpaca_bar_parity/",
+    "what": "a committed comparison with the 20 features both ways at every decision bar of 30 sessions and the frozen model's decision agreement"
+  },
+  "origin": {
+    "kind": "session",
+    "ref": "row ML-ENTRY-ALPACA-BAR-PARITY observation.how_to_check",
+    "rerun": "python3 scripts/research/ml_entry_alpaca_score.py (A41F reader) for Alpaca IEX 1h + Yahoo RTH 1h, features via ml_decision_entry.features_symbol, compare at each decision bar"
+  },
+  "state": "queued",
+  "summary": "Row ML-ENTRY-ALPACA-BAR-PARITY's numeric half. Clock difference is MEASURED (live decides 16:00Z/20:00Z, research 16:30Z/20:30Z in EST) and the feature-basis difference is stated from code in comms/research/ml_entry_alpaca_bar_parity/serve_clock_20261105.json; the per-feature gap over 30 sessions x 13 ETFs is NOT measured (no Alpaca data key in the lane sandbox). Build on lane ML-ENTRY-ALPACA-A41F's read-only Alpaca bar reader (operator 2026-11-05 ~10:05Z: read-only data API, paper key first, 429 backoff); do not build a second reader.",
+  "what": "ml_entry Alpaca serve parity: per-feature gap + decision agreement, IEX clock-hour bars (incl. extended hours) vs the RTH :30 bars bdc2-01 scored on"
+}
