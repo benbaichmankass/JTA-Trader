@@ -388,6 +388,11 @@ _CANONICAL_UNITS: tuple[str, ...] = (
     # with the deploy/ units so check_diag_unit_allowlist.py stays green.
     "ict-research-results-gate.service",
     "ict-research-results-gate.timer",
+    # 2026-11-05 (WSD-S2-IMPORTER-PARITY): the work-store shadow importer + parity, every
+    # 5 min. Queryable so a session can confirm the 2-day parity clock is actually running
+    # (journal + unit state); its report is GET /api/bot/work/parity.
+    "ict-work-store-import.service",
+    "ict-work-store-import.timer",
 )
 
 _ADVISORY_LOG = runtime_logs_dir() / "advisory_decisions.jsonl"
@@ -1386,6 +1391,10 @@ _ISO_TIMESTAMP_RE = re.compile(
 )
 
 
+#: The dedicated header the diag token may travel in (Authorization: Bearer still works).
+DIAG_TOKEN_HEADER = "X-Diag-Token"
+
+
 def _diag_token() -> str | None:
     tok = os.environ.get("DIAG_READ_TOKEN", "").strip()
     return tok or None
@@ -1398,6 +1407,19 @@ def _require_diag_token(request: Request) -> None:
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail={"error": "diag_disabled"},
         )
+    # X-Diag-Token (WSD-S1-PROXY-AUTH-COLLISION, 2026-11-05): the same token in its own
+    # header. A cloud environment that holds ANY network secret for this host alters
+    # the session's Authorization header (measured: 401 from a fresh ICT-env session
+    # whose DIAG_READ_TOKEN fingerprint matched the VM's), so sessions send it here.
+    # When present it alone decides, so the two carriers can never disagree silently.
+    header_tok = request.headers.get(DIAG_TOKEN_HEADER)
+    if header_tok is not None:
+        if not header_tok.strip() or not hmac.compare_digest(header_tok.strip(), expected):
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail={"error": "invalid_token"},
+            )
+        return
     auth = request.headers.get("Authorization", "")
     if not auth.startswith("Bearer "):
         raise HTTPException(

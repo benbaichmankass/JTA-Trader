@@ -20,6 +20,7 @@ from typing import Any
 from fastapi import FastAPI, Request, Response
 
 from src.console_connector import data
+from src.console_connector import oauth as oauth_mod
 
 REPO = Path(os.environ.get("CONSOLE_CONNECTOR_REPO") or Path(__file__).resolve().parents[2])
 LOG = Path(os.environ.get("CONSOLE_CONNECTOR_LOG") or REPO / "runtime_logs" / "console_connector.jsonl")
@@ -123,13 +124,82 @@ def _log(rec: dict[str, Any]) -> None:
         pass  # allow-silent: request logging must never fail a read
 
 
-def create_app():
+def create_app(auth: oauth_mod.OAuthServer | None | str = "env"):
+    """The ASGI app. `auth` = an OAuthServer, None (no sign-in), or "env" (read CONSOLE_CONNECTOR_AUTH)."""
+    from urllib.parse import parse_qsl
 
+    from fastapi.responses import HTMLResponse, JSONResponse
+
+    if auth == "env":
+        auth = oauth_mod.from_env(REPO / "runtime_logs" / "console_connector_oauth.json")
+    misconfigured = bool(auth) and not (auth.base and auth.google_client_id and auth.allowed_email)
     app = FastAPI(docs_url=None, redoc_url=None, openapi_url=None)
+
+    def _oauth_error(exc: oauth_mod.OAuthError):
+        return JSONResponse(exc.body(), status_code=exc.status, headers={"Cache-Control": "no-store"})
+
+    if auth is not None:
+        @app.get("/.well-known/oauth-protected-resource")
+        @app.get("/.well-known/oauth-protected-resource/mcp")
+        async def prm():
+            return auth.resource_metadata()
+
+        @app.get("/.well-known/oauth-authorization-server")
+        async def asm():
+            return auth.server_metadata()
+
+        @app.post("/register")
+        async def register(req: Request):
+            try:
+                body = await req.json()
+                return JSONResponse(auth.register(body if isinstance(body, dict) else {}), status_code=201)
+            except oauth_mod.OAuthError as exc:
+                return _oauth_error(exc)
+            except ValueError:
+                return _oauth_error(oauth_mod.OAuthError(400, "invalid_client_metadata", "body must be JSON"))
+
+        @app.get("/authorize")
+        async def authorize(req: Request):
+            try:
+                rid = auth.begin_authorize(dict(req.query_params))
+            except oauth_mod.OAuthError as exc:
+                return HTMLResponse(f"<p>Sign-in request refused: {exc.description}</p>", status_code=exc.status)
+            return HTMLResponse(auth.sign_in_page(rid), headers={"Cache-Control": "no-store",
+                                                                  "Referrer-Policy": "no-referrer"})
+
+        @app.post("/authorize/google")
+        async def authorize_google(req: Request):
+            try:
+                body = await req.json()
+            except ValueError:
+                body = {}
+            try:
+                url = auth.complete_authorize(str(body.get("rid", "")), str(body.get("id_token", "")))
+            except oauth_mod.OAuthError as exc:
+                return _oauth_error(exc)
+            return JSONResponse({"redirect": url}, headers={"Cache-Control": "no-store"})
+
+        @app.post("/token")
+        async def token(req: Request):
+            form = dict(parse_qsl((await req.body()).decode("utf-8", "replace")))
+            try:
+                return JSONResponse(auth.token(form), headers={"Cache-Control": "no-store", "Pragma": "no-cache"})
+            except oauth_mod.OAuthError as exc:
+                return _oauth_error(exc)
 
     @app.post("/mcp")
     async def mcp(req: Request):
         t0 = time.time()
+        if auth is not None:
+            if misconfigured:
+                _log({"t": round(t0, 3), "denied": "misconfigured"})
+                return JSONResponse({"error": "server_misconfigured",
+                                     "error_description": "sign-in is on but not configured; refusing all reads"},
+                                    status_code=503)
+            if not auth.check_bearer(req.headers.get("authorization")):
+                _log({"t": round(t0, 3), "denied": "no_valid_token", "ua": req.headers.get("user-agent")})
+                return JSONResponse({"error": "invalid_token"}, status_code=401,
+                                    headers={"WWW-Authenticate": auth.challenge_header()})
         try:
             body = await req.json()
         except Exception:  # noqa: BLE001
@@ -142,7 +212,7 @@ def create_app():
               "tools": [(m.get("params") or {}).get("name") for m in msgs
                         if isinstance(m, dict) and m.get("method") == "tools/call"],
               "ua": req.headers.get("user-agent"), "proto": req.headers.get("mcp-protocol-version"),
-              "ms": round((time.time() - t0) * 1000, 2)})
+              "authed": auth is not None, "ms": round((time.time() - t0) * 1000, 2)})
         if not outs:
             return Response(status_code=202)
         return Response(json.dumps(outs if isinstance(body, list) else outs[0], default=str),
@@ -154,7 +224,7 @@ def create_app():
 
     @app.get("/healthz")
     async def healthz():
-        return {"ok": True, "repo": str(REPO), "cache_builds": CACHE.builds}
+        return {"ok": True, "auth": "google" if auth is not None else "none", "cache_builds": CACHE.builds}
 
     return app
 

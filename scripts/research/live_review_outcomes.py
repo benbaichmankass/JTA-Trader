@@ -65,6 +65,7 @@ import glob
 import json
 import math
 import statistics
+from datetime import datetime, timezone
 import sys
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
@@ -89,6 +90,25 @@ AUTO_BOUND_R = 0.25      # design Q1 auto-apply bound (proposed)
 SHADOW_BOUND_R = 0.5     # design shadow bound (proposed)
 MFE_TOL_R = 0.05         # replayed-vs-recorded MFE agreement used by the fidelity check
 DEFAULT_TIGHTEN = ("atr:1.0", "atr:1.5", "atr:2.0", "r:1.0", "r:2.0")
+ATR_TIGHTEN = ("atr:1.0", "atr:1.5", "atr:2.0")
+
+
+def default_tighten(open_r: float, stop_r: Optional[float] = None) -> List[str]:
+    """Tighten specs worth pricing from THIS state (LTR-GRADER-COVERAGE, 2026-11-05).
+
+    The old fixed grid offered r:1.0 / r:2.0 whatever the trade's state, so a trade at +0.02R got two stops above
+    the market (``invalid_level``: 307 of 520 options in a week). An R-stop is only a tighten when it sits above the
+    CURRENT stop and below the current price: breakeven (r:0), half the open profit, and the old whole-R rungs where
+    they fit. The ATR trails are state-relative by construction and always offered."""
+    lo = stop_r if stop_r is not None else -math.inf
+    cands = [0.0, round(open_r * 0.5, 2), 1.0, 2.0]
+    seen: List[float] = []
+    for c in cands:
+        if lo < c < open_r and c not in seen:
+            seen.append(c)
+    return list(ATR_TIGHTEN) + [f"r:{c:g}" for c in sorted(seen)]
+
+
 BIASES = (
     "stop fills at the stop price (a gap fills at the open): flatters every tighten, so the real "
     "cost of tightening is, if anything, larger",
@@ -211,18 +231,51 @@ def _venue_cache_dir(cache_dir: Optional[Path] = None) -> Path:
 def _default_fetch(symbol: str, code: str, start_ms: int, end_ms: int) -> List[Dict[str, Any]]:
     sys.path.insert(0, str(REPO / "scripts" / "ops"))
     import fetch_backtest_candles as fbc  # noqa: E402
-    return fbc.fetch_klines(symbol, code, start_ms, end_ms)
+    if symbol.endswith("USDT"):
+        return fbc.fetch_klines(symbol, code, start_ms, end_ms)
+    return _fetch_non_crypto(fbc, symbol, code, start_ms, end_ms)
+
+
+def _fetch_non_crypto(fbc: Any, symbol: str, code: str, start_ms: int, end_ms: int) -> List[Dict[str, Any]]:
+    """Equity/ETF/futures bars. Yahoo FIRST: it is the source the Stage-0 corpora for these legs were built on
+    (``--non-crypto-source yfinance``; regular-session 1h bars), so the replay sees the bars the corpus saw. Alpaca's
+    market-data API (the trader's own venue keys) is the fallback for equities when Yahoo is unavailable - it serves no
+    futures, and its 1h bars include extended hours, so a fallback table is flagged on stderr. Nothing is fabricated: no
+    rows -> [] -> the caller reports no_candles."""
+    try:
+        rows = fbc.fetch_klines_yfinance(symbol, code, start_ms, end_ms)
+        if rows:
+            return rows
+    except Exception as exc:  # noqa: BLE001  # allow-silent: logged; falls through to the Alpaca fallback, then no_candles
+        print(f"yfinance {symbol} {code} failed: {type(exc).__name__}: {str(exc)[:120]}", file=sys.stderr)
+    tf = {"60": "1h", "D": "1d"}.get(code)
+    if tf is None:
+        return []
+    try:
+        import fetch_etf_history as feh  # noqa: E402
+        get = feh.make_getter()
+        feed = feh.pick_feed(get, "sip")
+        df = feh.fetch_bars(get, symbol, tf, datetime.fromtimestamp(start_ms / 1000, tz=timezone.utc),
+                            datetime.fromtimestamp(end_ms / 1000, tz=timezone.utc), feed)
+    except (Exception, SystemExit) as exc:  # noqa: BLE001  # allow-silent: logged; no_candles is the named read-state
+        print(f"alpaca {symbol} {tf} failed: {type(exc).__name__}: {str(exc)[:120]}", file=sys.stderr)
+        return []
+    if df.empty:
+        return []
+    print(f"WARNING {symbol} {tf}: bars from Alpaca ({feed}), not the corpus' Yahoo source", file=sys.stderr)
+    return [{"timestamp": r.timestamp.to_pydatetime(), "open": float(r.open), "high": float(r.high),
+             "low": float(r.low), "close": float(r.close), "volume": float(r.volume)} for r in df.itertuples()]
 
 
 def venue_candles(symbol: str, timeframe: str, trades: List[Dict[str, Any]], cache_dir: Optional[Path] = None,
                   fetch=None) -> Optional[str]:
     """Path of a cached CSV of ``symbol`` bars covering the corpus span, fetching what is missing; None when it cannot.
 
-    Crypto perps only (Bybit). Covers [first corpus entry, last corpus exit]; an existing cache that already covers
+    Crypto perps from Bybit; equities/ETFs/futures from Yahoo (Alpaca fallback). Covers [first corpus entry, last corpus exit]; an existing cache that already covers
     that is used as is, so after the first call there is no network. Any failure returns None (the caller then reports
     ``no_candles``, as before) - this never raises into the pricing path."""
     code = _TF_CODE.get(timeframe)
-    if not code or not symbol.endswith("USDT") or not trades:
+    if not code or not trades:
         return None
     try:
         fetch = fetch or _default_fetch
@@ -434,7 +487,7 @@ def build_table(trades: List[Dict[str, Any]], candles: Any, *, side: Optional[st
                 dist_target_atr: Optional[float] = None, condition: str = "peak",
                 partial: Optional[List[float]] = None,
                 move_tp: Optional[List[float]] = None, close: bool = False,
-                symbol: Optional[str] = None) -> Dict[str, Any]:
+                symbol: Optional[str] = None, stop_r: Optional[float] = None) -> Dict[str, Any]:
     """``candles``: one frame (single-symbol leg) or ``{symbol: frame}`` (pooled leg); None = could not look."""
     atr_over_r = 1.0 / atr_stop_mult
     pop = {"corpus_trades": len(trades), "side_filter": side, "side_excluded": 0, "no_candles": 0,
@@ -490,10 +543,11 @@ def build_table(trades: List[Dict[str, Any]], candles: Any, *, side: Optional[st
         kind, val = parse_tighten(spec)
         lvl_r = val if kind == "r" else peak_r - val * atr_over_r
         base = {"action": "tighten", "spec": spec, "stop_at_r_now": round(lvl_r, 4)}
-        if lvl_r >= open_r:
-            # a stop at or above the current price is not a stop; named so a reader can tell it from a data gap
+        if lvl_r >= open_r or (stop_r is not None and lvl_r <= stop_r):
+            # not a tighten: a stop at/above the price is no stop, one at/below the current stop is a loosen
             out["options"].append({**base, "n": len(rows), "state": "invalid_level",
-                                   "reason": "stop_level_not_below_price",
+                                   "reason": ("stop_level_not_below_price" if lvl_r >= open_r
+                                              else "stop_level_not_above_current_stop"),
                                    "mean_r": None, "sd_r": None, "worst_r": None, "p05_r": None,
                                    "p_giveback_gt_half": None, "ev_cost_r": None,
                                    "ev_cost_se_r": None, "worst_case_gain_r": None,
@@ -567,6 +621,8 @@ def main(argv: Optional[List[str]] = None) -> int:
     ap.add_argument("--bars-held", type=int)
     ap.add_argument("--bars-slack", type=float, help="review bar must be <= bars_held*(1+slack)")
     ap.add_argument("--atr-stop-mult", type=float, required=True, help="1R = this x entry ATR (the leg's atr_stop_mult)")
+    ap.add_argument("--stop-r", type=float, help="the CURRENT stop in R (open_r - r_to_stop); default tighten levels are "
+                    "generated relative to it and to --open-r")
     ap.add_argument("--dist-stop-atr", type=float)
     ap.add_argument("--dist-target-atr", type=float)
     ap.add_argument("--candles", help="candle CSV; default = widest committed file for the symbol/timeframe")
@@ -612,7 +668,8 @@ def main(argv: Optional[List[str]] = None) -> int:
         candles = load_candles(cpath) if cpath else None
     res = build_table(trades, candles, side=a.side, open_r=a.open_r, peak_r=a.peak_r,
                       bars_held=a.bars_held, atr_stop_mult=a.atr_stop_mult,
-                      tighten=a.tighten or list(DEFAULT_TIGHTEN), n_floor=a.n_floor,
+                      tighten=a.tighten or default_tighten(a.open_r, a.stop_r), n_floor=a.n_floor,
+                      stop_r=a.stop_r,
                       bars_slack=a.bars_slack, stop_fill_slip_r=a.stop_fill_slip_r,
                       auto_bound=a.auto_bound_r, shadow_bound=a.shadow_bound_r,
                       dist_stop_atr=a.dist_stop_atr, dist_target_atr=a.dist_target_atr, condition=a.condition,

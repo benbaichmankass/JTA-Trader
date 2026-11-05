@@ -149,6 +149,10 @@ cfg="$(mktemp)"
 chmod 600 "$cfg"
 trap 'rm -f "$cfg"' EXIT
 printf 'header = "Authorization: Bearer %s"\n' "$DIAG_READ_TOKEN" > "$cfg"
+# X-Diag-Token carries the same token in its own header: a cloud environment holding a
+# network secret for this host alters Authorization (WSD-S1-PROXY-AUTH-COLLISION,
+# 2026-11-05). The server prefers it; Authorization stays for older servers.
+printf 'header = "X-Diag-Token: %s"\n' "$DIAG_READ_TOKEN" >> "$cfg"
 
 _seen=""
 _stages=""

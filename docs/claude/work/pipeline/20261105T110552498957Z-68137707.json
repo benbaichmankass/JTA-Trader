@@ -1,0 +1,18 @@
+{
+  "based_on": "20261104T202152458886Z-fe3b175e.json",
+  "due_when": {
+    "check_every_days": 7,
+    "due_date": "2026-11-05",
+    "kind": "date"
+  },
+  "id": "PI-20261104-COSTINFRA-0001",
+  "next_action": "check_observation",
+  "origin": {
+    "kind": "session",
+    "ref": "COST-INFRA-REVIEW lane 2026-11-04 see docs/reviews/2026-11-04-cost-infra-review.md",
+    "rerun": "python3 -c \"import json;[print(r['date'],r['host'],r['disk_pct']) for r in map(json.loads,open('comms/cloud/compute_util_ledger.jsonl')) if r.get('disk_pct') is not None and r['host']in('gateway','trainer')][-10:]\""
+  },
+  "state": "done",
+  "terminal_reason": "OPERATOR 2026-11-05 (JTA Console note), verbatim: \"is this being fixed laready with the gateway infra fixes?\". Yes: closed into checklist row GATEWAY-DISK-CLEANUP (done). Row records MEASURED gateway root fs 45G: A #23155 80%->72%, B #23158 72%->53%, side-clone rehearsal #23171 at 58% / 19.00G free 2026-11-05T07:18Z; swap tooling #23212 merged, swap decision stays on PI-20261104-GWDISK-0001 (due 2026-11-06). Not independently re-read from the VM this pass.",
+  "what": "[F4 URGENT] IB gateway disk hit 100% on 2026-11-02, 94% on 11-04 (population: compute_util_ledger daily rows, hosts gateway+trainer, n=4 days 2026-11-01..11-04, MEASURED, window 2026-11-01..11-04; was 75% on 11-01). Trainer disk +24pp in 4 days to 81%. Find what fills the gateway disk (logs/IBC/Xvfb) and clear/cap it; Tier-2 cleanup is operator-gated."
+}
