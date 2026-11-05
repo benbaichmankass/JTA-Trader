@@ -21,7 +21,7 @@ from pathlib import Path
 from typing import Any
 
 ROW_FIELDS = ("id", "title", "state", "owner", "lane", "tier", "due_by", "updated_at", "updated_by", "prs",
-              "priority_rank", "roadmap")
+              "priority_rank", "roadmap", "week_lane", "writeback")
 LIVE_STATES = ("in_flight", "blocked", "queued", "landed_unproven")
 
 
@@ -114,7 +114,8 @@ def _slim(row: dict, today: date, now: datetime) -> dict:
 
 
 def work_rows(repo: Path, view: str = "all", limit: int = 25, today: date | None = None) -> dict[str, Any]:
-    """Checklist rows for the Work tab: due (overdue, live), in_flight, blocked, queued (with a due date)."""
+    """Checklist rows for the Work tab: due (overdue, live), in_flight, blocked, queued (with a due date) and
+    open_other (queued without a due date, landed_unproven). Rows carry week_lane, roadmap and writeback."""
     now = _now()
     today = today or now.date()
     base: dict[str, Any] = {"as_of": _iso(now), "source": "checklist", "view": view,
@@ -134,6 +135,10 @@ def work_rows(repo: Path, view: str = "all", limit: int = 25, today: date | None
         "blocked": sorted([r for r in live if r["state"] == "blocked"], key=lambda r: r["id"]),
         "queued": sorted([r for r in live if r["state"] == "queued" and r["due_by"] and not r["overdue"]],
                          key=lambda r: (r["due_by"], r.get("priority_rank") or 9999, r["id"])),
+        # every other live row, so the console Roadmap card is complete: queued WITHOUT a due date, and
+        # landed_unproven (neither is in due / in_flight / blocked / queued above)
+        "open_other": sorted([r for r in live if r["state"] not in ("in_flight", "blocked") and not r["overdue"]
+                              and not (r["state"] == "queued" and r["due_by"])], key=lambda r: r["id"]),
     }
     if view != "all":
         if view not in sections:

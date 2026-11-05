@@ -47,10 +47,10 @@ TOOLS: list[dict[str, Any]] = [
      "annotations": _RO},
     {"name": "work_rows", "title": "Work rows",
      "description": "Checklist rows for the console Work tab, in sections due (overdue), in_flight, blocked "
-                    "and queued (with a due date). Each response has as_of, read_state, population and the "
+                    "queued (with a due date) and open_other (queued without a due date, landed_unproven); each row carries week_lane, roadmap and writeback. Each response has as_of, read_state, population and the "
                     "git commit the register was read at.",
      "inputSchema": {"type": "object", "properties": {
-         "view": {"type": "string", "enum": ["all", "due", "in_flight", "blocked", "queued"], "default": "all"},
+         "view": {"type": "string", "enum": ["all", "due", "in_flight", "blocked", "queued", "open_other"], "default": "all"},
          "limit": {"type": "integer", "minimum": 1, "maximum": 200, "default": 25}}},
      "annotations": _RO},
     {"name": "inbox", "title": "Inbox",

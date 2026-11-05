@@ -86,6 +86,12 @@ identifier is checked against the live schema.
   `$DATA_DIR/trade_journal.db`, so the unit needs `TRADE_JOURNAL_DB` pointed at it. `provenance.db_file` and `provenance.db_file_age_s`
   say which file answered and how old it is. A missing file reports `could_not_look` for that database, never an empty table.
 
+### `work_rows` (changed, console Overview)
+Sections are now `due`, `in_flight`, `blocked`, `queued` (with a due date) and **`open_other`** (every other live row: queued without a due date,
+`landed_unproven`), so a consumer can see all open rows. `limit` is per section (1..200). Each row also carries `week_lane`
+(`standing|surge|throttle|null`; the key is always present, null means not in this week's plan), `roadmap` (list of milestone ids, or the
+`none: <reason>` string) and `writeback`. `view` accepts `open_other`.
+
 ### `inbox` (changed)
 Items in `decisions_checklist` and `asks_pipeline` gain `options: string[] | null`: the source `blocked_on` edge / row / pipeline item's
 `options` (or `choices`) labels. Null when the source carries none (today none do), so render a dash.
