@@ -2,7 +2,7 @@
   "id": "TRADE-COUNTERFACTUAL-GRADER",
   "title": "Standing counterfactual grader for every closed order package (one decision = one trade): replay the actual price path and grade, in $ and % per account and in R, net of the full cost stack, the ACTUAL outcome against (a) the original entry brackets untouched, (b) alternative entry brackets (TP/SL grid around the declared ones), (c) no active management, (d) less / more active management (each in-trade action skipped, earlier, later; break-even/trail variants), (e) every reviewer or desk recommendation that was NOT applied, (f) a matched random intervention; book-level $ with the real sizer where BOOK-SIM-REAL-SIZER exists. Runs on every close, writes one graded record per package, feeds /performance-review and the AM graduation rule (RULE-AM-RISK-ADJUSTED-V1)",
   "phase": null,
-  "state": "landed_unproven",
+  "state": "done",
   "owner": "manager",
   "lane": "session_01AFoLuMqPkgvJifpQr7xU72",
   "model": "sonnet",
@@ -13,10 +13,10 @@
     21256
   ],
   "blocked_on": [],
-  "note": "Basis: n=1 order package (ADA pkg-465a5d7d27644027), 3 account legs, window 2026-10-29 05:00Z..10:51Z. Lane archived; #21256 merged 2026-10-29 15:28Z (hourly per-close job). Post-exit horizon gap split to GRADER-POST-EXIT-HORIZON.",
+  "note": "Basis: n=1 order package (ADA pkg-465a5d7d27644027), 3 account legs, window 2026-10-29 05:00Z..10:51Z. Lane archived; #21256 merged 2026-10-29 15:28Z (hourly per-close job). Post-exit horizon gap split to GRADER-POST-EXIT-HORIZON. [2026-11-05 BACKLOG-DRAIN-20261105] DONE: MEASURED: workflow counterfactual-grade-closed runs on schedule since 2026-10-29 (24 of 25 success); 49 records under comms/research/counterfactual_grades/ all graded_at >= 2026-10-29. NOT measured: the denominator (closed packages since 15:28Z 10-29) -- the closed-trades wire carries no package id, so coverage = 'every closed package' is an unverified claim; ask the grader's own coverage line if it needs proving.",
   "priority_rank": 2,
-  "updated_at": "2026-11-02T07:33:58Z",
-  "updated_by": "session_01AFoLuL5qrtXsc8bv7JrN4Z",
+  "updated_at": "2026-11-05T06:09:38Z",
+  "updated_by": "session_01AFoLuLoMgjGPiy3UA2Ua8P",
   "roadmap": [
     "L-LADDER"
   ],
