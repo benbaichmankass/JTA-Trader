@@ -2269,7 +2269,7 @@ nodes:
   value:
     usd_at_stake_per_month: 100
     confidence: 0.1
-  needs_authoring: 'PRE-REGISTERED DESIGN, runnable once the three diagnostics land (P5-MLDIAG-DECOMP / -RISKCURVE / -MINEDGE; full text docs/research/ml-prop-iterate-2026-11-02/PROP-ML-DESIGN.md): a PROP-SPECIFIC
+  needs_authoring: 'AUTHORED 2026-11-05 as research/queue/RQ-20261105-d256-01.yaml (lane PROP-BASELINE-AND-ML, Manager Session 2026-11-05b; operator direction "Prop-specific model", 2026-11-05): the two-symbol firm-cost-label arm (design arm C) already ran as RQ-20261105-fd68-01..06 with every forward held-out span spent, so d256-01 grades it on the one unread time-disjoint span (BACKWARD, 2020-07..2021-12, discovery 2022+). Do NOT re-author; arms A (re-threshold v1) and B (pooled prop-cost label) stay open below. ORIGINAL TEXT: PRE-REGISTERED DESIGN, runnable once the three diagnostics land (P5-MLDIAG-DECOMP / -RISKCURVE / -MINEDGE; full text docs/research/ml-prop-iterate-2026-11-02/PROP-ML-DESIGN.md): a PROP-SPECIFIC
     ENTRY candidate - the pooled ENTRY model re-thresholded / re-trained on ETHUSDT+SOLUSDT only with the firm cost stack inside the label and a firm-DD-aware selection objective, graded by RULE-P5-GATE-BRK-PER-LEG-V3
     through ml_variant_prop_gate.py on dev-OOS folds then ONE forward read on November+ data. MISSING PIECES (harness change, so needs_authoring): (1) a trainer entry point in scripts/research/ml_decision_entry.py
     that accepts --symbols ETHUSDT,SOLUSDT and a label built with the venue cost arm (prop_gate.SIM[acct].ven) instead of the flat cost; (2) a dev-fold tau/objective selector that calls prop_ev_sim on dev-OOS
