@@ -1,0 +1,122 @@
+# Hand-authored 2026-11-05 by lane ML-MANAGE-HARNESS (Tier 1), operator override ~17:08Z via the manager. Decision rule registered BEFORE any run. Gates this adds or changes: none.
+id: RQ-20261105-c692-14
+title: 'ML SL revision v1 (c692-11), CONFIRMING READ (cross-sectional): does the c692-11 frozen config (BE/TRAIL heads, margin 0.15) beat hold-to-bracket
+  on 100 perps outside the training pool?'
+status: queued
+cadence: once
+theme: ml_health
+priority: 1
+roadmap:
+- L-ML-LIVE
+kind: experiment
+practice_precedent: 'T1, M6 (docs/reference/trading-and-model-practice-principles.md): purged + embargoed walk-forward with a sealed held-out
+  window; triple-barrier first-passage labels (Lopez de Prado 2018, ch. 3); docs/research/ml-decision-models-2026-11-01/DESIGN.md.'
+question: 'The re-score of the c692-11 fragile PASS (PI-20261105-EHARNESS-0001) re-scoped from ''November'' to in-hand data by the same operator
+  override: the same non-pool cross-sectional window as c692-13, frozen config actions BE/TRAIL, margin 0.15, NO re-selection.'
+why_this_matters: 'Operator 2026-11-01 ~23:00Z (row ML-ENTRY-DYNAMIC-SL): "we also need to test dynamic sl features for the ml". Active management,
+  SL side. A live change is Tier 3.'
+decision_rule:
+  id: RULE-RQ20261105-c692-14-MLSL
+  registered_at: '2026-11-05'
+  registered_before_run: true
+  statistic: Non-pool paired mean delta net R per trade vs hold-to-bracket (full cost stack), trade-grouped paired bootstrap CI95; also acted
+    share, by-era delta, share of symbols positive, delta ex the top-|delta| symbol, matched random (40 draws), tail and giveback.
+  rule: INDETERMINATE IF acted trades < 300 OR non-pool symbols with trades < 30. PASS IF the pooled non-pool paired delta vs hold > 0 AND its
+    trade-grouped paired bootstrap CI95 lower bound > 0 AND the delta is > 0 in BOTH the 2022-01..2025-09 era and the 2025-10+ era (point estimates).
+    FAIL otherwise. The pre-2022 era is reported, not gating. Thresholds are not changed after any result. A PASS is a Tier-3 PROPOSAL (new serving
+    adapter for the BE/TRAIL heads on ml_entry) for the operator, never a change.
+  what_it_does_not_do: No sizing, no config change, no order, no serving adapter. A PASS is a Tier-3 PROPOSAL to the operator, not a change.
+  min_n: 300 acted trades on >= 30 non-pool symbols
+compute: cpu_long
+value:
+  bucket: ai_trader
+  usd_at_stake_per_month: 800
+  confidence: 0.2
+  basis: 'stand-in: operator priority (row ML-ENTRY-DYNAMIC-SL); not a P&L measurement.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 6.0
+  est_minutes: 40
+  why_runner: Keyless public Binance Vision klines; GBDT on CPU; no trainer data.
+  basis: 'INFERRED: ~4,500 monthly zips (~40 KB each), ~0.8M decision rows x 20 features, 9 LightGBM pairs of fits, a 200-draw random baseline
+    in pure Python.'
+run:
+  workflow: research-script-run.yml
+  command:
+  - python3
+  - scripts/research/ml_decision_manage.py
+  - run
+  - --arm
+  - mlsl
+  - --stage
+  - xs
+  - --cache
+  - /tmp/ml_decision_klines
+  - --unit
+  - '{unit}'
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 240
+  inputs:
+    research_unit: RQ-20261105-c692-14
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- RQ-20261105-c692-11
+- RQ-20261105-c692-13
+- PI-20261105-EHARNESS-0001
+- ML-DECISION-MODELS
+what_it_does_not_do: Registers, serves or promotes nothing; changes no config; places no order; sizes nothing.
+registration_addendum_2026_11_05:
+  purpose: Confirming read of the c692-11 frozen config; requires nothing (c692-11 already passed its held-out read fragilely).
+  window: 'CONFIRMING WINDOW (operator override 2026-11-05 ~17:08Z, verbatim: "Why does it need to wait for November? That''s not the workflow
+    - we iterate in the data we have till we find what works, we don''t wait for new months of data"): the perps OUTSIDE the 60-perp training
+    pool: the first 100 USDT-M perps not in manifest bp2-f4271084b120, in select_universe (listing-age) order, over their WHOLE available Binance
+    Vision 1h history (2020-07..2026-09). No variant or model of any lane has trained or selected on them. It is a CROSS-SECTIONAL holdout: the
+    dates overlap the training dates, so it is correlated evidence by regime, reported by era (pre-2022 / 2022-01..2025-09 / 2025-10+) and gated
+    on the two post-2022 eras. Claimed ONCE via holdout_lock with the symbol list (a disjoint symbol set over a window is a separate claim).'
+  rule_note: Stricter than the ENTRY bar for the same reason as -08..-11 (improvement over a free baseline).
+  disclosure: 'see the RQ-20261101-c692-03 addendum (verbatim): a 2026-11-05 smoke printed part of the sealed-window MANAGE summary for ADAUSDT,
+    BCHUSDT, BTCUSDT, ETCUSDT, ETHUSDT, LINKUSDT, LTCUSDT, TRXUSDT, XLMUSDT; nothing was chosen from it. This arm''s verdict carries heldout.peek
+    (peeked_symbols and the delta ex those 9) because the arm trades them.'
+  power: 'POWER (stated before the run): ENTRY took ~66,800 trades on the 53 pool symbols over 3.75 dev years (~336 trades per symbol-year); 100
+    non-pool perps over their available history (~3.5 years average, INFERRED) give ~100k+ trades; at the dev acted share of 1.4% that is ~1.5k
+    acted trades, well above the 300 floor. Paired-delta sd per trade ~0.064 (acted 1.4% x sd ~0.5 per acted trade), so SE at 100k trades ~0.0002
+    against an effect of 0.0029: the read is powered; one pooled cross-sectional read (candidate b) is therefore enough and candidate (a) pre-2022
+    history is NOT needed (it would also need an ENTRY refit that excludes it). The run records the observed n, acted n and sd.'
+  rescope: Re-scoped 2026-11-05 ~17:12Z from 'the 2026-11 forward month' (the manager's 15:14Z decision, not doctrine) to the in-hand cross-sectional
+    window above, by the operator's override. PI-20261105-EHARNESS-0001's November data becomes extra monitoring, never a gate.
+power:
+  expected_n: 1500
+  min_detectable_effect: 0.0007
+  effect_units: metric
+  sd: 0.064
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: 'INFERRED: ~100k non-pool trades x 1.4% acted; paired-delta sd ~0.064 per trade; MDE = 2.8*sd/sqrt(100000) ~ 0.0006, rounded up. The
+    run records observed n and sd.'
+  feasibility:
+    source: none
+    accrual_basis: Replays public history; nothing accrues. The run records the observed n and sd.
+intervention_controls:
+  hold_to_bracket: true
+  matched_random:
+    draws: 200
+  best_static:
+    grid:
+    - be_at_1r
+    - trail_1atr
+    - tp_plus_1atr
+    - close_at_12h
+    excludes_test_folds: true
+  bootstrap_group: trade
+ml_consumer:
+  consumer: ML-ENTRY-LIVE-ADAPTER
+  decision: whether the ml_entry leg's open positions get a tightened stop (break-even / trail / ML revision) on bybit_2 + bybit_portfolio
+  legs:
+  - xrp_pullback_2h
+  book: money
