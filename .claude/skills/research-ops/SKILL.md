@@ -35,7 +35,8 @@ python3 scripts/research/research_disposition.py --unread-only
 3. **CHOOSE THE NEXT TEST FROM THE MAP, never at random.** For each subject whose result you read, and each ORPHAN: the next
    unit cites the attribution finding, the map entries it builds on (`iteration.map_entries`), the lever it measures next and why
    (expected information or value). Desk methods: one-factor sweeps and ablations against a baseline control first, response
-   surfaces where interactions are suspected, every arm counted, walk-forward and regime splits, ONE holdout read for a survivor.
+   surfaces where interactions are suspected, every arm counted, walk-forward and regime splits, a holdout read for a survivor (re-reads
+   allowed, each recorded and graded on a stricter, deflated bar: principles M13).
    A pass result → its holdout → promotion proposal (Tier 3). An OVERDUE iteration: fix its route, re-date it with the reason,
    or replace it.
 4. **PASSING AND LIVE SUBJECTS KEEP BEING MAPPED.** A production leg's levers are re-measured on new data on a standing cadence;
@@ -67,7 +68,13 @@ which trades, regimes and months lost; gross vs net; entry vs exit vs filter; n 
 `python3 scripts/research/iteration_orphans.py --levers` and map the diagnosis onto the subject's lever map — the families the
 diagnosis implicates first, then the families never tested (`.`). (3) Author as many arms as the diagnosis supports — a sweep,
 an ablation or a grid, across one family or several — each registered before the run, the arm denominator stated, the
-survivor read once on a holdout. One unit per lever family is a fine shape; one variant per pass is not a rule. (4) A flat
+survivor read on a holdout. One unit per lever family is a fine shape; one variant per pass is not a rule. **A read holdout
+is not spent** (operator 2026-11-05, verbatim: *"We can't just, like, give up on a certain line of research because we've already
+trained a model on all the data that we have. That's ridiculous."*; principles M13). Retrain and tweak on the training-period slices
+without limit. Re-test on the same holdout as often as the diagnosis supports. `holdout_lock.claim_read(..., train_end=...)` records
+each read and returns the deflated bar (`bar["ci_z"]` for CI bars, `bar["point_t_min"]` for point bars) that the grader applies.
+`holdout_lock.py families` prints `n_tries` per family and window. The only refusal is a window overlapping training. A unit that
+stops because "the window is spent" is a mis-stop: re-open it under M13. (4) A flat
 result moves the next pass to untested families; a near-miss narrows the grid. Retirement only when the map is exhausted
 (lever-exhaustion family review; never an attempt count). A lever TRANSFER or a template re-run is not an iteration unless a
 diagnosis of this subject chose it. A PASS that is still a discovery iterates to ONE

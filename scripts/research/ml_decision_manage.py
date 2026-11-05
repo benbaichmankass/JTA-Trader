@@ -352,11 +352,14 @@ def stats(net, base_net, symbols) -> dict:
             "n_symbols": len(set(symbols)), "share_changed": float(np.mean(np.abs(d) > 1e-12))}
 
 
-def paired_boot(d: np.ndarray, seed: int = E.SEED) -> list:
+def paired_boot(d: np.ndarray, seed: int = E.SEED, bar: dict | None = None) -> list:
+    """Percentile bootstrap CI of the paired mean delta. ``bar`` = the holdout ledger's deflated bar for this read: the 1st read of
+    the family on the window is the CI95 used before 2026-11-05; the N-th read widens it (Sidak; HOLDOUT-DEFLATED-REUSE)."""
+    import holdout_lock as HL
     rng = np.random.default_rng(seed)
     n = len(d)
     ms = [float(d[rng.integers(0, n, n)].mean()) for _ in range(BOOT)]
-    return [float(np.percentile(ms, 2.5)), float(np.percentile(ms, 97.5))]
+    return HL.boot_ci(ms, bar)
 
 
 def peek_report(d: np.ndarray, symbols) -> dict:
@@ -480,7 +483,7 @@ def arm_rule(a, tab, df_by, dev_tr, ho_tr) -> dict:
     sy = ho_tr.loc[h_idx, "symbol"].to_numpy()
     ts = ho_tr.loc[h_idx, "ts"].to_numpy()
     s = stats(r["net"], hb["net"], sy)
-    ci = paired_boot(d)
+    ci = paired_boot(d, bar=(claim or {}).get("bar"))
     res["heldout"] = {**s, "hold": stats(hb["net"], hb["net"], sy), "delta_ci95": ci, "giveback_r": giveback(r), "giveback_r_hold": giveback(hb),
                       "peek": peek_report(d, sy), "by_month_delta": month_split(ts, d), "reason_counts": {str(k): int(v) for k, v in pd.Series(r["reason"]).value_counts().items()}}
     res["variants_read_on_window"] = (claim or {}).get("variants_on_window")
@@ -495,8 +498,10 @@ def arm_rule(a, tab, df_by, dev_tr, ho_tr) -> dict:
 
 
 def claim_read(a, model_id: str, symbols: list[str] | None = None, start: str | None = None) -> dict | None:
-    """Claim the sealed window ONCE per model (holdout_lock). The runner does not commit the repo ledger, so the claim is made
-    against a COPY inside the out dir (which lands with the result); the lane appends that line to comms/research/holdout_reads.jsonl."""
+    """Record the held-out read in the holdout ledger (family MANAGE) and get its deflated bar; a re-read is allowed and graded
+    stricter, a window overlapping training is refused (HOLDOUT-DEFLATED-REUSE). The runner does not commit the repo ledger, so the
+    claim is made against a COPY inside the out dir (which lands with the result); the lane appends that line to
+    comms/research/holdout_reads.jsonl."""
     if a.smoke:
         return None
     import shutil
@@ -505,7 +510,9 @@ def claim_read(a, model_id: str, symbols: list[str] | None = None, start: str | 
     led = Path(a.out) / "holdout_reads.jsonl"
     if not led.exists() and HL.LEDGER.exists():
         shutil.copy(HL.LEDGER, led)
-    return HL.claim_read(model_id=f"MANAGE-{model_id}", start=start or E.HOLDOUT_START, end=E.END, unit=a.unit, reader=a.reader, ledger=led, symbols=symbols)
+    train_end = str((pd.Timestamp(E.HOLDOUT_START) - pd.Timedelta(days=1)).date())   # ENTRY + heads fit on rows before HOLDOUT_START
+    return HL.claim_read(model_id=f"MANAGE-{model_id}", start=start or E.HOLDOUT_START, end=E.END, unit=a.unit, reader=a.reader, ledger=led,
+                         symbols=symbols, train_end=train_end)
 
 
 def arm_model(a, tab, df_by, dev_tr, ho_tr) -> dict:
@@ -575,7 +582,7 @@ def arm_model(a, tab, df_by, dev_tr, ho_tr) -> dict:
     n_act = int(r["acted"].sum())
     s["n_actions"] = r["n_actions"]
     s["mean_delta_per_nonhold_action"] = float(d[r["acted"]].mean()) if n_act else None
-    ci = paired_boot(d)
+    ci = paired_boot(d, bar=(claim or {}).get("bar"))
     # controls: matched random (same count and type of actions at random valid check-ins of the SAME trades) and best static action
     rng = np.random.default_rng(E.SEED)
     draws = []
@@ -605,7 +612,12 @@ def arm_model(a, tab, df_by, dev_tr, ho_tr) -> dict:
     if s["n"] < MIN_TRADES or s["n_symbols"] < MIN_SYMBOLS:
         v, why = "indeterminate", f"held-out trades={s['n']} / symbols={s['n_symbols']} below floor"
     elif a.arm == "manage":
-        ok = s["mean_net_r"] >= 0 and (s["mean_delta_per_nonhold_action"] is None or s["mean_delta_per_nonhold_action"] >= 0)
+        import holdout_lock as HL  # point bars, deflated on a re-read of the MANAGE family on this window (HOLDOUT-DEFLATED-REUSE)
+        bar = (claim or {}).get("bar")
+        se_net = float(np.std(r["net"], ddof=1) / np.sqrt(len(r["net"]))) if len(r["net"]) > 1 else None
+        se_act = float(np.std(d[r["acted"]], ddof=1) / np.sqrt(n_act)) if n_act > 1 else None
+        ok = HL.point_ok(s["mean_net_r"], se_net, bar) and (s["mean_delta_per_nonhold_action"] is None
+                                                             or HL.point_ok(s["mean_delta_per_nonhold_action"], se_act, bar))
         v = "pass" if ok else "fail"
         why = (f"managed mean net R/trade {s['mean_net_r']:+.4f}, delta/non-HOLD action {s['mean_delta_per_nonhold_action']}, delta vs hold "
                f"{s['delta_vs_hold']:+.4f} CI95 {ci} at n={s['n']}; proposal_eligible={res['proposal_eligible']}")
@@ -661,7 +673,13 @@ def run_xs(a, tau) -> dict:
     df_np = {s_: pd.read_pickle(cache / f"{s_}.pkl").reset_index(drop=True) for s_ in nonpool}
     np_tr = entry_trades(np_tab, pl, ps, tau, df_np).sort_values(["symbol", "i"], kind="stable").reset_index(drop=True)
     res = {"xs": {"nonpool_symbols": nonpool, "n_nonpool_requested": len(nonpool), "pool_symbols": len(pool), "config": {"actions": acts, "margin": margin}}, "heldout": None}
-    claim = claim_read(a, f"{a.arm}-xs-{margin}", symbols=nonpool, start=str(np_tr.ts.min().date()) if len(np_tr) else E.START)
+    import holdout_lock as HL
+    try:   # rule 4 (HOLDOUT-DEFLATED-REUSE, PI-20261105-GEXSLEAK-0001): other symbols over the TRAINING dates is not a holdout
+        claim = claim_read(a, f"{a.arm}-xs-{margin}", symbols=nonpool, start=str(np_tr.ts.min().date()) if len(np_tr) else E.START)
+    except HL.WindowOverlapsTraining as exc:
+        res.update(verdict="indeterminate", why=f"refused before any outcome was read: {exc}; a symbol holdout must also start after "
+                   f"the training end ({E.HOLDOUT_START}), so re-point the xs stage at the post-training era")
+        return res
     P, _ = gather(np_tr, df_np, atr_series(np_tab, np_tr))
     lab = label_actions(P, acts)
     base = lab["base"]
@@ -675,7 +693,7 @@ def run_xs(a, tau) -> dict:
     s["acted_share"] = float(r["acted"].mean())
     s["n_actions"] = r["n_actions"]
     s["mean_delta_per_acted_trade"] = float(d[r["acted"]].mean()) if r["acted"].any() else None
-    ci = paired_boot(d)
+    ci = paired_boot(d, bar=(claim or {}).get("bar"))
     per_sym = pd.Series(d).groupby(sy).mean()
     top = per_sym.abs().idxmax() if len(per_sym) else None
     ex = sy != top

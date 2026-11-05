@@ -55,6 +55,12 @@ across symbols.
 
 ## 1c. One model, one read (operator, 2026-11-01 ~08:48Z, audit ML-BAR-ONE-READ)
 
+> **Superseded 2026-11-05 (operator, HOLDOUT-DEFLATED-REUSE; principles M13).** The held-out window is NOT spent after one
+> read. A re-read is allowed: the holdout ledger records it, and it is graded on a deflated bar (Šidák CI, or the
+> Bailey–López de Prado point hurdle). As of 2026-11-05 the ledger holds 2 ENTRY reads on 2025-10..2026-09, 1 BRACKETS and
+> 2 MANAGE, so the next ENTRY or MANAGE read is read 3: z 2.39, t ≥ 0.85. A holdout overlapping training is still refused.
+> The text below is the 2026-11-01 rule, kept as history.
+
 Verbatim popup answer: *"Yes, one model, one read (Rec.)"*. The point-estimate ≥ 0 bar is unchanged; it applies to ONE
 pre-registered model per question, the held-out window (2025-10-01..2026-09-30) is read ONCE, and the number of variants
 tried is reported beside every result. **ENTRY variants read on that window so far: 1** (c692-01; c692-06 re-scores the
@@ -179,7 +185,7 @@ no action touches a trade that already exited, CLOSE/BE/TRAIL availability, no-o
   distance falls linearly from 2 ATR to f ATR at 24 h, f in {0.5, 1.0, 1.5} chosen on dev.
 - **Windows.** Dev = ENTRY walk-forward OOS trades 2022-01-01..2025-09-30 (MANAGE folds 2023-01..2025-07, purge + 7-day embargo). Held-out
   2025-10-01..2026-09-30, claimed once per model with `holdout_lock` (`variants_on_window` reported). **That window is not fresh for ENTRY-family
-  models**; 2026-10 is spent for frozen ENTRY v1 and is not used; a forward confirm on 2026-11+ (when n >= 300 accrues) is registered as a pipeline row
+  models** (superseded 2026-11-05: a re-read is allowed on a deflated bar, § 1c note / principles M13); 2026-10 is spent for frozen ENTRY v1 and is not used; a forward confirm on 2026-11+ (when n >= 300 accrues) is registered as a pipeline row
   and is RECOMMENDED evidence, not a gate (no new gates without the operator's permission).
 - **Rules.** -03: unchanged (PASS iff managed mean net R per trade >= 0 AND mean delta per non-HOLD action >= 0; `proposal_eligible` additionally needs the
   paired CI95 lower bound of delta vs hold > 0). -08..-11: not read if the dev delta <= 0; INDETERMINATE below 300 trades / 10 symbols; PASS iff held-out
