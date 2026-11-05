@@ -1,6 +1,6 @@
 """``/api/bot/work/items`` -- the work store's API (WSD-S1-STORE-API, design § 2.3).
 
-Writes (``POST``) are behind ``WORK_STORE_TOKEN`` -- a write-scoped bearer accepted by
+Writes (``POST``) are behind ``WORK_STORE_TOKEN`` (sent as ``X-Work-Store-Token``; Bearer is a deprecated fallback) -- a write-scoped token accepted by
 these routes ONLY (never ``prop/report`` or ``decision``), fail-closed exactly like
 ``work._require_decision_write_token``: 503 when the token is unset on the VM, 401 when
 missing / wrong scheme / wrong. Optimistic concurrency (G3): every write after create
@@ -42,11 +42,31 @@ def _store() -> ws.WorkStore:
     return _STORE
 
 
-def _require_work_store_token(authorization: str | None) -> None:
-    """Fail-closed bearer gate (design G2), the ``_require_decision_write_token`` pattern."""
+#: The dedicated header the work-store token travels in (WSD-S1-PROXY-AUTH-COLLISION).
+#: A cloud environment's proxy injects a saved network secret into EVERY request to the
+#: host; carried in ``Authorization`` it overwrote every other bearer a session sends to
+#: ict-bot.duckdns.org (DIAG_READ_TOKEN on /api/diag/*, measured 2026-11-05T06:43Z). In
+#: its own header it touches nothing else.
+WORK_STORE_HEADER = "X-Work-Store-Token"
+
+
+def _require_work_store_token(authorization: str | None, x_work_store_token: str | None = None) -> None:
+    """Fail-closed token gate (design G2), the ``_require_decision_write_token`` pattern.
+
+    ``X-Work-Store-Token: <token>`` is the primary carrier. ``Authorization: Bearer <token>``
+    is a DEPRECATED fallback kept while the environment secret moves to the new header.
+    When the dedicated header is present it alone decides: a wrong value there is 401 even if
+    ``Authorization`` would pass, so the two carriers can never disagree silently.
+    """
     expected = os.environ.get("WORK_STORE_TOKEN", "").strip()
     if not expected:
         raise HTTPException(status_code=503, detail="work store is not configured to accept writes")
+    if x_work_store_token is not None:
+        if not x_work_store_token.strip():
+            raise HTTPException(status_code=401, detail=f"empty {WORK_STORE_HEADER}")
+        if not hmac.compare_digest(x_work_store_token.strip(), expected):
+            raise HTTPException(status_code=401, detail="bad token")
+        return
     if not authorization:
         raise HTTPException(status_code=401, detail="missing authorization")
     if not authorization.lower().startswith("bearer "):
@@ -95,9 +115,10 @@ def _answer(fn, *, created: bool = False) -> JSONResponse:
 
 
 @router.post("/items")
-async def create_item(request: Request, authorization: str | None = Header(default=None)):
+async def create_item(request: Request, authorization: str | None = Header(default=None),
+                   x_work_store_token: str | None = Header(default=None, alias=WORK_STORE_HEADER)):
     """Create one item. Body: ``{id, kind, title, ..., by, op_id?}``. 201, or 200 on a replayed op_id."""
-    _require_work_store_token(authorization)
+    _require_work_store_token(authorization, x_work_store_token)
     body = await _body(request)
     by, op_id = _by(body), body.pop("op_id", None)
     return _answer(lambda: _store().create(body, by=by, op_id=op_id), created=True)
@@ -105,9 +126,10 @@ async def create_item(request: Request, authorization: str | None = Header(defau
 
 @router.post("/items/{item_id}/set")
 async def set_item(item_id: str, request: Request, authorization: str | None = Header(default=None),
+                   x_work_store_token: str | None = Header(default=None, alias=WORK_STORE_HEADER),
                    if_match: str | None = Header(default=None)):
     """Patch fields. Body: ``{fields: {...}, by, op_id?}``; ``If-Match: <version>`` required."""
-    _require_work_store_token(authorization)
+    _require_work_store_token(authorization, x_work_store_token)
     body = await _body(request)
     by, op_id = _by(body), body.pop("op_id", None)
     fields = body.get("fields")
@@ -119,9 +141,10 @@ async def set_item(item_id: str, request: Request, authorization: str | None = H
 
 @router.post("/items/{item_id}/note")
 async def note_item(item_id: str, request: Request, authorization: str | None = Header(default=None),
+                   x_work_store_token: str | None = Header(default=None, alias=WORK_STORE_HEADER),
                     if_match: str | None = Header(default=None)):
     """Append a note event. Body: ``{text, summary?, by, op_id?}``; ``If-Match`` required."""
-    _require_work_store_token(authorization)
+    _require_work_store_token(authorization, x_work_store_token)
     body = await _body(request)
     by, op_id = _by(body), body.pop("op_id", None)
     return _answer(lambda: _store().note(item_id, body.get("text"), summary=body.get("summary"),
@@ -130,9 +153,10 @@ async def note_item(item_id: str, request: Request, authorization: str | None = 
 
 @router.post("/items/{item_id}/close")
 async def close_item(item_id: str, request: Request, authorization: str | None = Header(default=None),
+                   x_work_store_token: str | None = Header(default=None, alias=WORK_STORE_HEADER),
                      if_match: str | None = Header(default=None)):
     """Close with a stated reason. Body: ``{state: done|dropped, reason, by, op_id?}``."""
-    _require_work_store_token(authorization)
+    _require_work_store_token(authorization, x_work_store_token)
     body = await _body(request)
     by, op_id = _by(body), body.pop("op_id", None)
     return _answer(lambda: _store().close(item_id, state=body.get("state", "done"), reason=body.get("reason"),
