@@ -194,6 +194,20 @@ FAITHFUL = "faithful"
 #: The baseline is now EMPTY: every risk-bearing slot's record is faithful.
 FIDELITY_BASELINE: Dict[Tuple[str, str], str] = {}
 
+#: C5 OPERATOR WAIVER -- (account, leg) slots the operator admitted on an
+#: `approximate` record BY NAME, with the verbatim decision. Distinct from the
+#: baseline above (that one cites a faithful re-measure; this one does not have
+#: one). Remove an entry when the leg's record is regenerated `fidelity: faithful`.
+#: 2026-11-05 prop BASELINE, operator popup ~21:05Z verbatim: "Both now, waive both"
+#: (option text: "Add both legs today: 6 take-profit exception lines, plus extend
+#: your baseline exception to sol_4h's approximate evidence."). Record: ML-PROP-ITERATE.
+#: The faithful re-measure (structure_exit modelled) is owed on that row.
+FIDELITY_OPERATOR_WAIVER: Dict[Tuple[str, str], str] = {
+    ("breakout_2", "trend_donchian_sol_4h"): "operator 2026-11-05 ~21:05Z 'Both now, waive both' (prop baseline)",
+    ("tradeify_1", "trend_donchian_sol_4h"): "operator 2026-11-05 ~21:05Z 'Both now, waive both' (prop baseline)",
+    ("velotrade_1", "trend_donchian_sol_4h"): "operator 2026-11-05 ~21:05Z 'Both now, waive both' (prop baseline)",
+}
+
 
 # --------------------------------------------------------------------------
 # config reading
@@ -454,6 +468,10 @@ def clause_verdicts(record: Optional[Dict[str, Any]], account: Optional[str] = N
     elif baseline_unit and fidelity == "approximate":
         out.append(("C5", True, f"fidelity=approximate, BASELINED for {account}/{leg} — "
                                 f"faithful re-measure {baseline_unit} cleared Stage 0"))
+    elif (account and leg and fidelity == "approximate"
+          and FIDELITY_OPERATOR_WAIVER.get((account, leg))):
+        out.append(("C5", True, f"fidelity=approximate, OPERATOR WAIVER for {account}/{leg} — "
+                                f"{FIDELITY_OPERATOR_WAIVER[(account, leg)]}; faithful re-measure owed"))
     else:
         out.append(("C5", False,
                     f"fidelity={fidelity!r} (not {FAITHFUL!r}), omitted_levers="
