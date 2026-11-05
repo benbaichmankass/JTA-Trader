@@ -49,6 +49,9 @@ _TIMEFRAME_MINUTES = {
 _INTRADAY_CALENDAR_FACTOR = 6.0
 _DAILY_CALENDAR_FACTOR = 1.6
 _LOOKBACK_BUFFER_DAYS = 10
+# Bars pagination (row ML-ENTRY-ALPACA-BAR-PARITY): Alpaca's per-request cap, and a bound on pages per fetch.
+_PAGE_LIMIT_MAX = 10000
+_MAX_PAGES = 10
 
 
 def _lookback_start(timeframe_key: str, limit: int) -> str:
@@ -93,26 +96,7 @@ class AlpacaMarketData:
             logger.warning("alpaca: unsupported timeframe %r", timeframe)
             return None
         try:
-            resp = requests.get(
-                f"{self.base_url}/v2/stocks/{symbol}/bars",
-                params={
-                    "timeframe": tf,
-                    "limit": int(limit),
-                    # Explicit lookback — without it Alpaca only returns the
-                    # current day's bars (see _lookback_start docstring).
-                    "start": _lookback_start(tf_key, limit),
-                    "adjustment": "split",
-                    "feed": self.feed,
-                    "sort": "desc",
-                },
-                headers={
-                    "APCA-API-KEY-ID": self.api_key,
-                    "APCA-API-SECRET-KEY": self.api_secret,
-                },
-                timeout=self.timeout,
-            )
-            resp.raise_for_status()
-            bars = (resp.json() or {}).get("bars") or []
+            bars = self._bars_paged(symbol, tf, tf_key, int(limit))
             if not bars:
                 logger.warning(
                     "alpaca: empty bars for %s %s (limit=%s feed=%s) — "
@@ -135,12 +119,68 @@ class AlpacaMarketData:
             df["timestamp"] = pd.to_datetime(df["timestamp"], utc=True, errors="coerce")
             return (
                 df.dropna(subset=["timestamp"])
+                .drop_duplicates("timestamp", keep="last")   # a page boundary must never double a bar
                 .sort_values("timestamp")
                 .reset_index(drop=True)
             )
         except Exception as exc:  # noqa: BLE001
             logger.warning("alpaca: get_ohlcv failed for %s %s (%s)", symbol, timeframe, exc)
             return None
+
+    def _bars_paged(self, symbol: str, tf: str, tf_key: str, limit: int) -> list:
+        """Up to ``limit`` most-recent bars, following ``next_page_token``.
+
+        Alpaca can answer a page SHORT of ``limit`` and hand back a ``next_page_token`` for the rest; reading only the
+        first page left ml_entry's ``limit=400`` 1h fetch with 203-267 bars on 7 of the 13 alpaca_paper ETFs at the
+        2026-11-02 16:00Z decision (``insufficient_bars`` vs MIN_BARS 337; row ML-ENTRY-ALPACA-BAR-PARITY). Pages are
+        read until ``limit`` bars are in hand, the token runs out, or ``_MAX_PAGES`` (a bound on venue calls). A page
+        after the first that fails keeps the bars already read (logged); the first page failing raises to the caller."""
+        out: list = []
+        token = None
+        start = _lookback_start(tf_key, limit)
+        for page in range(_MAX_PAGES):
+            params = {
+                "timeframe": tf,
+                "limit": max(1, min(limit - len(out), _PAGE_LIMIT_MAX)),
+                # Explicit lookback — without it Alpaca only returns the
+                # current day's bars (see _lookback_start docstring).
+                "start": start,
+                "adjustment": "split",
+                "feed": self.feed,
+                "sort": "desc",
+            }
+            if token:
+                params["page_token"] = token
+            try:
+                resp = requests.get(
+                    f"{self.base_url}/v2/stocks/{symbol}/bars",
+                    params=params,
+                    headers={
+                        "APCA-API-KEY-ID": self.api_key,
+                        "APCA-API-SECRET-KEY": self.api_secret,
+                    },
+                    timeout=self.timeout,
+                )
+                resp.raise_for_status()
+                body = resp.json() or {}
+            except Exception as exc:  # noqa: BLE001
+                if page == 0:
+                    raise
+                logger.warning("alpaca: page %d of %s %s failed (%s) — keeping %d bars already read",
+                               page + 1, symbol, tf, exc, len(out))
+                break
+            out.extend(body.get("bars") or [])
+            token = body.get("next_page_token")
+            if len(out) >= limit or not token:
+                break
+        else:
+            logger.warning("alpaca: %s %s stopped at %d pages with %d/%d bars", symbol, tf, _MAX_PAGES, len(out), limit)
+            return out[:limit]
+        if len(out) < limit:
+            # the post-deploy observation reads this: a short frame with no token left is the venue's whole answer
+            logger.info("alpaca: %s %s %d/%d bars after %d page(s), next_page_token=%s",
+                        symbol, tf, len(out), limit, page + 1, "set" if token else "none")
+        return out[:limit]
 
     def get_price(self, symbol: str):
         """Latest trade price, or ``None`` on error."""

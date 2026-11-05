@@ -176,3 +176,70 @@ def test_asset_class_for_exchange():
     assert asset_class_for_exchange("oanda") == "fx"
     assert asset_class_for_exchange("alpaca") == "us_equity"
     assert asset_class_for_exchange("bybit") == "crypto"
+
+
+def _hourly(n, end="2026-11-02T15:00:00Z"):
+    t1 = datetime.fromisoformat(end.replace("Z", "+00:00"))
+    from datetime import timedelta
+    return [{"t": (t1 - timedelta(hours=i)).strftime("%Y-%m-%dT%H:%M:%SZ"), "o": 1, "h": 2, "l": 0.5, "c": 1.5, "v": 10}
+            for i in range(n)]  # newest first, as sort=desc returns them
+
+
+def test_alpaca_follows_next_page_token_until_limit(monkeypatch):
+    """Row ML-ENTRY-ALPACA-BAR-PARITY: a short first page + next_page_token left ml_entry with 203-267 of 400 bars."""
+    allbars = _hourly(500)
+    calls = []
+
+    def fake_get(url, params=None, **kwargs):
+        calls.append(dict(params))
+        off = int(params.get("page_token") or 0)
+        page = allbars[off:off + min(223, int(params["limit"]))]   # the venue answers short of limit
+        nxt = off + len(page)
+        return _Resp({"bars": page, "next_page_token": str(nxt) if nxt < len(allbars) else None})
+
+    monkeypatch.setattr("src.exchange.alpaca_connector.requests.get", fake_get)
+    df = AlpacaMarketData(api_key="k", api_secret="s").get_ohlcv("SPY", "1h", limit=400)
+    assert len(df) == 400 and df["timestamp"].is_monotonic_increasing and df["timestamp"].is_unique
+    assert len(calls) == 2 and "page_token" not in calls[0] and calls[1]["page_token"] == "223"
+    assert calls[1]["limit"] == 400 - 223                  # asks only for the remainder
+    assert calls[0]["start"] == calls[1]["start"]          # one window across pages
+    assert df["timestamp"].iloc[-1].isoformat().startswith("2026-11-02T15:00")   # the newest bars are kept
+
+
+def test_alpaca_single_page_is_one_call(monkeypatch):
+    calls = []
+
+    def fake_get(url, params=None, **kwargs):
+        calls.append(params)
+        return _Resp({"bars": _hourly(int(params["limit"])), "next_page_token": "x"})
+
+    monkeypatch.setattr("src.exchange.alpaca_connector.requests.get", fake_get)
+    assert len(AlpacaMarketData(api_key="k", api_secret="s").get_ohlcv("SPY", "1h", limit=50)) == 50
+    assert len(calls) == 1
+
+
+def test_alpaca_later_page_failure_keeps_first_page(monkeypatch):
+    calls = []
+
+    def fake_get(url, params=None, **kwargs):
+        calls.append(params)
+        if params.get("page_token"):
+            return _Resp({}, status=429)
+        return _Resp({"bars": _hourly(100), "next_page_token": "p2"})
+
+    monkeypatch.setattr("src.exchange.alpaca_connector.requests.get", fake_get)
+    df = AlpacaMarketData(api_key="k", api_secret="s").get_ohlcv("SPY", "1h", limit=400)
+    assert len(df) == 100 and len(calls) == 2
+
+
+def test_alpaca_page_loop_is_bounded(monkeypatch):
+    import src.exchange.alpaca_connector as ac
+    calls = []
+
+    def fake_get(url, params=None, **kwargs):
+        calls.append(params)
+        return _Resp({"bars": _hourly(1, end=f"2026-11-0{1 + len(calls) % 2}T10:00:00Z"), "next_page_token": "again"})
+
+    monkeypatch.setattr("src.exchange.alpaca_connector.requests.get", fake_get)
+    AlpacaMarketData(api_key="k", api_secret="s").get_ohlcv("SPY", "1h", limit=400)
+    assert len(calls) == ac._MAX_PAGES

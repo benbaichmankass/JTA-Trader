@@ -1,0 +1,11 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "hold_reason": "tier_2_3_needs_approval",
+  "hold_text": "Console connector sign-in (G1) for the trainer VM service. Merging changes nothing at runtime: sign-in is off unless the unit sets CONSOLE_CONNECTOR_AUTH=google, which the post-merge deploy does. Operator decision 2026-11-05 ~09:55Z, verbatim popup option: \"Open 443 + Google OAuth (Recommended)\", plus U5 (sign-in). The manager lands it.",
+  "why": "OAuth 2.1 for claude.ai: RFC 9728/8414 discovery, RFC 7591 registration limited to claude.ai and claude.com redirect hosts, authorization code with S256 PKCE, refresh-token rotation, and a 401 Bearer challenge on /mcp. The person signs in with a Google ID token for the dashboard's public client id, and the verified email must equal ALLOWED_EMAIL. There is no client secret anywhere. Tokens are stored as SHA-256 hashes only. If sign-in is on but unconfigured, the server refuses reads (503). Tests: tests/console_connector (22).",
+  "recorded_decision": {
+    "kind": "operator_decision",
+    "ref": "UI-CONSOLE-V1 operator 2026-11-05 ~09:55Z popup: \"Open 443 + Google OAuth (Recommended)\"; U5 sign-in"
+  }
+}

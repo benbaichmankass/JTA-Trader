@@ -1,0 +1,24 @@
+{
+  "id": "OPRA-INDICATIVE-FEED",
+  "title": "Options capture: switch Alpaca options data to the free feed=indicative; defer Algo Trader Plus/OPRA; check past nightly captures vs the #22449 pyyaml bug",
+  "phase": null,
+  "state": "queued",
+  "owner": "manager",
+  "lane": null,
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [],
+  "blocked_on": [],
+  "note": "OPERATOR DECISION 2026-11-05 ~12:2xZ, popup answer verbatim: \"Indicative feed, defer (Rec.)\" (relayed by Manager Session 2026-11-05b). Context: Alpaca OPRA returns 403 'agreement not signed'; per Alpaca staff the real cause is a missing Algo Trader Plus subscription; indicative works for snapshots/latest trades without it (lane OPERATOR-NOTES-DRAIN-20261105, item PTDVAI3R-0003). TASK: set the options capture to feed=indicative, observe one nightly capture landing rows, and report whether past nightly captures failed on the missing pyyaml fixed in #22449. Re-entry for OPRA: a later operator decision to buy Algo Trader Plus.",
+  "due_by": "2026-11-08",
+  "roadmap": [
+    "unmapped"
+  ],
+  "roadmap_unmapped_reason": "weekly pass maps it",
+  "priority_rank": 5,
+  "updated_at": "2026-11-05T12:42:42Z",
+  "updated_by": "session_01AFoLuLmhUKeUzHC6CHz2uP",
+  "_seq": 949
+}

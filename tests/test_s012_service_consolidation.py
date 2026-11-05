@@ -162,6 +162,9 @@ EXPECTED_SERVICES = {
     # install_systemd_units.sh's deploy/*.timer glob, and is TIER-2 (merging is
     # the VM mutation). Recorded in docs/claude/deployment-ops.md.
     "ict-work-digest.service",
+    # 2026-11-05 (WSD-S2-IMPORTER-PARITY): work-store shadow importer + parity, timer-fired
+    # oneshot every 5 min; writes only work_store.db and its parity report (Tier 2).
+    "ict-work-store-import.service",
     # 2026-10-04 (WORK-SYSTEM, #16387): daily 05:30Z work-report GENERATOR,
     # timer-fired oneshot; persists the report the manager reviews, sends nothing.
     "ict-work-report.service",

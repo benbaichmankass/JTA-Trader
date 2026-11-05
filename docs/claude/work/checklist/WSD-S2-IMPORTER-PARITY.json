@@ -2,14 +2,16 @@
   "id": "WSD-S2-IMPORTER-PARITY",
   "title": "WORK-STORE S2: importer + dry-run + 2-day shadow parity (files -> work.db every 5 min; /work/checklist?source=db vs file payload)",
   "phase": null,
-  "state": "queued",
+  "state": "landed_unproven",
   "owner": "manager",
   "lane": null,
   "model": "claude-sonnet-5-5",
   "ceiling_usd": 8,
   "spend_usd": null,
   "tier": 2,
-  "prs": [],
+  "prs": [
+    23225
+  ],
   "blocked_on": [
     {
       "kind": "work_item",
@@ -17,12 +19,31 @@
       "what": "needs WSD-S1-STORE-API landed"
     }
   ],
-  "note": "docs/plans/WORK-STORE-DESIGN-2026-11.md \u00a74 steps 1-2. No bulk drop: every open item imports open; closed items keep their reason. CLOSES WHEN: the parity report shows 0 differing rows over 2 days and the counts equal Appendix A re-run that day (dry run 11-04: 1,303 rows, 2,619 items, 0 id collisions).",
-  "due_by": "2026-11-11",
+  "note": "docs/plans/WORK-STORE-DESIGN-2026-11.md \u00a74 steps 1-2. No bulk drop: every open item imports open; closed items keep their reason. CLOSES WHEN: the parity report shows 0 differing rows over 2 days and the counts equal Appendix A re-run that day (dry run 11-04: 1,303 rows, 2,619 items, 0 id collisions).  2026-11-05 lane session_01AFoLuLxKwXrxDXYuPZvffX: built src/runtime/work_store_import.py (lossless row/pipeline <-> item mapping, extra column for unmapped fields), scripts/ops/work_store_import.py (--dry-run/--apply/--summary), ict-work-store-import.timer (5 min, data-dir drop-in), GET /api/bot/work/parity, /work/checklist?source=db. DRY RUN main 4dc63b2e2 (scratch store): 1,348 rows + 2,649 items imported, 8,579 migrate events (1 per row + 1 per pipeline record, 7,231), 0 differing / 0 missing / 0 db-only, Appendix A equal over both sources (open 625, undated 448; items queued-due 218, routed->closed row 120), chain ok; rerun = 0 events. PR held Tier 2 for the manager. CLOSES WHEN: GET /api/bot/work/parity window(hours=48).window_clean=true (runs cover 48h, every run clean) AND latest.appendix_a.equal on that day.  OPERATOR TIER-2 OK (popup 2026-11-05 ~09:55Z, relayed by Manager Session 2026-11-05a session_01AFoLuJnejB97CXXc8yn9oA), verbatim option: \"Deploy when green (Recommended)\" for #23225. 2026-11-05T11:40Z #23225 MERGED (ca73d4a2, hand merge by the manager). DEPLOYED + OBSERVED (GET /api/bot/work/parity): first run 11:42:20Z on head_sha ca73d4a22 (import 4,004 created, 8,590 events, 0 errors, 2.66 s); rows 1,351/1,351 equal, items 2,653/2,653 equal, 0 differing, 0 missing, 0 db-only; Appendix A equal over both sources (rows 1,351, open 622, undated 432; items 2,653, queued-due 219, routed->closed row 120); chain ok over 8,608 events; 9 native S1/S3 probe items listed, not drift. Runs 11:42:59Z and 11:47:12Z (the timer slot): clean, 0 events, 4,004 unchanged, so the 5-min timer fires and a rerun is a no-op. The 48h shadow clock started at 11:42:20Z (clean_streak_since); window_covered fills at ~2026-11-07T11:45Z.",
+  "due_by": "2026-11-07",
   "roadmap": [
     "L-OPS"
   ],
-  "updated_at": "2026-11-04T23:37:23Z",
-  "updated_by": "session_01AFoLuKFYUoKzs5TXjGfEdh",
+  "updated_at": "2026-11-05T12:46:34Z",
+  "updated_by": "session_01AFoLuLxKwXrxDXYuPZvffX",
+  "observe": {
+    "when": "2026-11-07",
+    "how": "GET /api/bot/work/parity?hours=48 -> window.window_clean true (window_covered true, unclean_runs 0) and latest.appendix_a.equal true; then WSD-S4-READERS-FLIP (the freeze) is unblocked"
+  },
+  "writeback": {
+    "roadmap": "none: S2 is a shadow (the store is not canonical until S4); the L-OPS line is updated at WSD-S4-READERS-FLIP",
+    "arch": "none: nothing reads work_store.db as truth yet; ARCHITECTURE-CANONICAL gets the store at WSD-S4-READERS-FLIP"
+  },
+  "observation": {
+    "what": "the 48h shadow parity window is clean: every 5-min import+parity run since 2026-11-05T11:42:20Z clean (0 differing / missing / db-only rows and items, Appendix A equal over both sources, chain ok) and the runs cover the window",
+    "how_to_check": "GET /api/bot/work/parity?hours=48 -> window.window_covered true, window.unclean_runs 0, window.window_clean true, and latest.appendix_a.equal true",
+    "due_by": "2026-11-07"
+  },
+  "lane_history": [
+    {
+      "lane": "session_01AFoLuLxKwXrxDXYuPZvffX",
+      "archived_at": "2026-11-05T12:46:34Z"
+    }
+  ],
   "_seq": 921
 }

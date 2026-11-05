@@ -1,0 +1,18 @@
+{
+  "based_on": "20261104T202153403365Z-1a900889.json",
+  "due_when": {
+    "check_every_days": 7,
+    "due_date": "2026-11-18",
+    "kind": "date"
+  },
+  "id": "PI-20261104-COSTINFRA-0005",
+  "next_action": "check_observation",
+  "origin": {
+    "kind": "session",
+    "ref": "COST-INFRA-REVIEW lane 2026-11-04 see docs/reviews/2026-11-04-cost-infra-review.md",
+    "rerun": "grep -rn -E '^\\s*(import|from) anthropic' --include=*.py src scripts"
+  },
+  "state": "killed",
+  "terminal_reason": "OPERATOR 2026-11-05 (JTA Console note), verbatim: \"yes we can close this\". Closed on the operator's call; note the VM .env key residue was UNVERIFIED and still is, no removal was requested.",
+  "what": "[F5] Confirm the VM .env no longer holds a funded ANTHROPIC_API_KEY (code paths hard-refuse; key residue UNVERIFIED). Operator Tier-2 if removal wanted."
+}

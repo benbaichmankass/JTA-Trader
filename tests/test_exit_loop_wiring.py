@@ -131,3 +131,134 @@ def test_start_exit_loop_never_raises_into_startup(monkeypatch):
         raise RuntimeError("cannot spawn")
     monkeypatch.setattr(main.threading, "Thread", bad_thread)
     main._start_exit_loop({})    # must not raise
+
+
+# --- RESTART-GAP-EXIT-FIRST (2026-11-05): exit loop first, final pass on SIGTERM
+
+@pytest.fixture
+def _fresh_shutdown_events(monkeypatch):
+    """The shutdown events are module state; give every test its own."""
+    import threading
+    monkeypatch.setattr(main, "_EXIT_LOOP_SHUTDOWN", threading.Event())
+    monkeypatch.setattr(main, "_EXIT_LOOP_FINAL_PASS_DONE", threading.Event())
+    monkeypatch.setattr(main, "_EXIT_LOOP_THREAD", None)
+
+
+def _boot_main(monkeypatch, order, *, loop="true"):
+    """Run main() up to the restart-report join, recording the boot order."""
+    import src.runtime.boot_audit as ba
+    import src.utils.db_init as dbi
+    monkeypatch.setenv("LOOP", loop)
+    monkeypatch.delenv("EXIT_LOOP_DECOUPLE_DISABLED", raising=False)
+    monkeypatch.setattr(main, "load_dotenv", lambda *a, **k: None)
+    monkeypatch.setattr(main, "build_settings_from_env", lambda: {})
+    monkeypatch.setattr(main, "validate_startup", lambda: None)
+    monkeypatch.setattr(dbi, "enable_wal_mode", lambda *a, **k: order.append("wal"))
+    monkeypatch.setattr(main, "_start_exit_loop", lambda s: order.append("exit_loop"))
+    monkeypatch.setattr(main, "_install_final_pass_on_sigterm",
+                        lambda: order.append("sigterm_handler"))
+    import src.units.accounts.dup_key_check as dk
+    monkeypatch.setattr(dk, "warn_on_duplicate_keys", lambda *a, **k: None)
+
+    def report(*a, **k):
+        order.append("restart_report")
+        raise KeyboardInterrupt          # stop boot here; everything after is not under test
+    monkeypatch.setattr(ba, "start_restart_report_thread", report)
+    with pytest.raises(KeyboardInterrupt):
+        main.main()
+
+
+def test_main_starts_the_exit_loop_before_the_restart_report(monkeypatch, _fresh_shutdown_events):
+    """MEASURED 2026-11-05 10:58Z: the report join (13.4s) plus leverage and the
+    adapter build (9.0s) ran before the exit thread, inside a 64.1s restart gap.
+    The exit loop must start right after WAL, ahead of all of them."""
+    order: list[str] = []
+    _boot_main(monkeypatch, order)
+    assert order == ["wal", "exit_loop", "sigterm_handler", "restart_report"], order
+
+
+def test_single_tick_mode_starts_no_exit_loop(monkeypatch, _fresh_shutdown_events):
+    """LOOP=false runs one tick and returns; it never had an exit thread."""
+    order: list[str] = []
+    _boot_main(monkeypatch, order, loop="false")
+    assert "exit_loop" not in order and "sigterm_handler" not in order, order
+
+
+def test_shutdown_during_the_sleep_runs_one_final_pass(monkeypatch, _fresh_shutdown_events):
+    """SIGTERM while the loop sleeps cuts the sleep short; exactly one more pass
+    runs, is recorded, and the loop returns with FINAL_PASS_DONE set."""
+    import src.runtime.exit_loop_health as h
+    import src.runtime.order_monitor as om
+    passes: list[int] = []
+    recorded: list[float] = []
+    slept: list[float] = []
+
+    def a_pass(**kwargs):
+        passes.append(1)
+
+    def sleep(s):
+        slept.append(s)
+        main._EXIT_LOOP_SHUTDOWN.set()   # SIGTERM lands during the first sleep step
+
+    monkeypatch.setattr(om, "run_exit_evaluation_tick", a_pass)
+    monkeypatch.setattr(h, "record_pass", lambda ms, **_: recorded.append(ms))
+    monkeypatch.setattr(h, "write_state_file", lambda *a, **k: None)
+    monkeypatch.setattr(main, "_build_monitor_ohlcv_fetcher", lambda s: None)
+    monkeypatch.setattr(main.time, "sleep", sleep)
+
+    main._exit_loop({})                  # returns instead of looping forever
+    assert len(passes) == 2 and len(recorded) == 2
+    assert slept == [1.0], "sleep must stop at the first step once shutdown is set"
+    assert main._EXIT_LOOP_FINAL_PASS_DONE.is_set()
+
+
+def test_sleep_steps_cover_the_whole_slack(_fresh_shutdown_events, monkeypatch):
+    slept: list[float] = []
+    monkeypatch.setattr(main.time, "sleep", lambda s: slept.append(s))
+    main._exit_loop_sleep(2.5)
+    assert slept == [1.0, 1.0, 0.5]
+    slept.clear()
+    main._exit_loop_sleep(0.0)
+    assert slept == []
+
+
+def test_sigterm_handler_always_re_raises_sigterm(monkeypatch, _fresh_shutdown_events):
+    """Whatever happens, the process still dies by SIGTERM (systemd records the
+    same exit, restart_cause is unchanged). No exit thread -> no wait."""
+    import signal
+    calls: list = []
+    monkeypatch.setattr(signal, "signal", lambda sig, h: calls.append(("signal", sig, h)))
+    monkeypatch.setattr(main.os, "kill", lambda pid, sig: calls.append(("kill", sig)))
+    main._on_sigterm(signal.SIGTERM, None)
+    assert main._EXIT_LOOP_SHUTDOWN.is_set()
+    assert calls == [("signal", signal.SIGTERM, signal.SIG_DFL), ("kill", signal.SIGTERM)]
+
+
+def test_sigterm_handler_waits_for_the_final_pass(monkeypatch, _fresh_shutdown_events):
+    import signal
+    import threading
+    calls: list = []
+    monkeypatch.setattr(signal, "signal", lambda sig, h: calls.append("signal"))
+    monkeypatch.setattr(main.os, "kill", lambda pid, sig: calls.append("kill"))
+
+    def fake_loop():
+        main._EXIT_LOOP_SHUTDOWN.wait(5)
+        calls.append("final_pass")
+        main._EXIT_LOOP_FINAL_PASS_DONE.set()
+    t = threading.Thread(target=fake_loop, daemon=True)
+    t.start()
+    monkeypatch.setattr(main, "_EXIT_LOOP_THREAD", t)
+    main._on_sigterm(signal.SIGTERM, None)
+    assert calls == ["final_pass", "signal", "kill"]
+
+
+def test_final_pass_rollback_installs_no_handler(monkeypatch):
+    import signal
+    installed: list = []
+    monkeypatch.setattr(signal, "signal", lambda sig, h: installed.append(sig))
+    monkeypatch.setenv("EXIT_LOOP_FINAL_PASS_DISABLED", "1")
+    assert main._install_final_pass_on_sigterm() is False
+    assert installed == []
+    monkeypatch.delenv("EXIT_LOOP_FINAL_PASS_DISABLED")
+    assert main._install_final_pass_on_sigterm() is True
+    assert installed == [signal.SIGTERM]

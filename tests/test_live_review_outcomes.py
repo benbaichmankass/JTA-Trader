@@ -245,7 +245,6 @@ def test_venue_candles_degrades_to_none_never_raises(tmp_path):
     def boom(*a):
         raise RuntimeError("403")
     assert lro.venue_candles("ADAUSDT", "2h", trades, cache_dir=tmp_path, fetch=boom) is None
-    assert lro.venue_candles("SPY", "1d", trades, cache_dir=tmp_path, fetch=_stub_fetch([])) is None   # not a perp
     assert lro.venue_candles("ADAUSDT", "7h", trades, cache_dir=tmp_path, fetch=_stub_fetch([])) is None
     assert lro.venue_candles("ADAUSDT", "2h", [], cache_dir=tmp_path, fetch=_stub_fetch([])) is None
 
@@ -278,3 +277,41 @@ def test_no_candle_data_is_committed_for_the_live_review_pricer():
     """Operator 2026-11-04/05: the repo is not a database - the pricer must not depend on committed candle stores."""
     assert not (REPO / "comms/live_review/candles").exists()
     assert not hasattr(lro, "LTR_CANDLE_STORE")
+
+
+def test_non_crypto_prefers_yahoo_then_alpaca_then_nothing(monkeypatch):
+    """Equity/futures bars: Yahoo first (the corpus' own source), Alpaca only as fallback, [] when neither serves."""
+    import types
+    row = {"timestamp": T0.to_pydatetime(), "open": 1.0, "high": 2.0, "low": 0.5, "close": 1.5, "volume": 3.0}
+    yf_ok = types.SimpleNamespace(fetch_klines_yfinance=lambda *a: [row])
+    assert lro._fetch_non_crypto(yf_ok, "MGC", "D", 0, 1) == [row]
+    def boom(*a):
+        raise RuntimeError("no yfinance")
+    yf_bad = types.SimpleNamespace(fetch_klines_yfinance=boom)
+    feh = types.SimpleNamespace(make_getter=lambda: (lambda *a: None), pick_feed=lambda g, f: "iex",
+                                fetch_bars=lambda *a: pd.DataFrame([{**row, "timestamp": pd.Timestamp(T0)}]))
+    monkeypatch.setitem(sys.modules, "fetch_etf_history", feh)
+    got = lro._fetch_non_crypto(yf_bad, "SPY", "D", 0, 10**12)
+    assert len(got) == 1 and got[0]["close"] == 1.5
+    feh.fetch_bars = lambda *a: pd.DataFrame(columns=["timestamp", "open", "high", "low", "close", "volume"])
+    assert lro._fetch_non_crypto(yf_bad, "MGC", "D", 0, 10**12) == []         # futures: Alpaca serves none
+    assert lro._fetch_non_crypto(yf_bad, "SPY", "2h", 0, 10**12) == []        # unsupported tf, no fabricated bars
+
+
+def test_default_tighten_levels_are_relative_to_the_current_state():
+    """Was a fixed r:1/r:2 grid: at +0.02R both were stops above the market (307 of 520 options a week)."""
+    low = lro.default_tighten(0.0179, -1.0)
+    assert "r:0" in low and "r:1" not in low and "r:2" not in low
+    hi = lro.default_tighten(2.6, -1.0)                       # whole-R rungs return where they fit
+    assert {"r:0", "r:1", "r:1.3", "r:2"} <= set(hi)
+    assert "r:0" not in lro.default_tighten(1.5, 0.0)         # a stop already at breakeven: r:0 would not tighten
+    assert lro.default_tighten(-0.4, -1.0) == list(lro.ATR_TIGHTEN)   # underwater: no R stop fits between stop and price
+    assert lro.default_tighten(0.8) [:3] == list(lro.ATR_TIGHTEN)
+
+
+def test_explicit_r_level_at_or_below_the_current_stop_is_invalid_not_priced():
+    trades = [_short(-1.0, 3, 4.0)] * 25
+    t = lro.build_table(trades, _candles(BARS_FULL), side="short", open_r=3.2, peak_r=3.5, bars_held=None,
+                        atr_stop_mult=2.0, tighten=["r:1.0"], stop_r=1.5)
+    o = [x for x in t["options"] if x["action"] == "tighten"][0]
+    assert o["state"] == "invalid_level" and o["reason"] == "stop_level_not_above_current_stop"

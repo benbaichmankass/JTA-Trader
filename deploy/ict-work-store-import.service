@@ -1,0 +1,36 @@
+# ============================================
+# ICT WORK STORE IMPORTER + SHADOW PARITY (WSD-S2-IMPORTER-PARITY)
+# Fires scripts/ops/work_store_import.py --apply every 5 min: imports the checklist row files and
+# the pipeline store (the canonical sources during the shadow) into work_store.db, one-way, then
+# appends a parity report to runtime_logs/work_store_parity.jsonl (served by GET /api/bot/work/parity).
+# Save to: /etc/systemd/system/ict-work-store-import.service
+# Design: docs/plans/WORK-STORE-DESIGN-2026-11.md § 4 steps 1-2, § 6 S2.
+# ============================================
+#
+# WHY THE DATA-DIR DROP-IN. ict-web-api (the store's API) runs with DATA_DIR=/data/bot-data, so it
+# resolves work_store_db_path() to /data/bot-data/work_store.db. Without the same drop-in this oneshot
+# would resolve a DIFFERENT file next to the repo and the parity would compare the files with a store
+# nobody serves (the writer/reader split, BL-20260611-M15-2). install_systemd_units.sh installs it.
+#
+# Never touches the trade path: it reads docs/claude/work/ (the files ict-git-sync keeps current), writes
+# only work_store.db and its own report, and runs at idle priority so it never competes with the tick.
+
+[Unit]
+Description=ICT work store: import checklist + pipeline files (one-way) and record shadow parity
+After=network.target ict-web-api.service
+
+[Service]
+Type=oneshot
+User=ubuntu
+WorkingDirectory=/home/ubuntu/ict-trading-bot
+EnvironmentFile=-/home/ubuntu/ict-trading-bot/.env
+Environment=PYTHONPATH=/home/ubuntu/ict-trading-bot
+Nice=19
+IOSchedulingClass=idle
+TimeoutStartSec=240
+ExecStart=/usr/bin/python3 /home/ubuntu/ict-trading-bot/scripts/ops/work_store_import.py --apply
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

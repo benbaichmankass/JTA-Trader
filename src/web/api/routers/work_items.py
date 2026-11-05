@@ -197,3 +197,27 @@ def item_events(item_id: str):
     if s.get(item_id) is None:
         raise HTTPException(status_code=404, detail=f"no item {item_id!r}")
     return {"item_id": item_id, "events": s.events(item_id), "chain": s.verify_chain()}
+
+
+@router.get("/parity")
+def parity(hours: int = Query(default=48, ge=1, le=24 * 14)):
+    """WSD-S2 shadow parity: the latest importer report and the window summary.
+
+    Written by ``ict-work-store-import.timer`` (``scripts/ops/work_store_import.py --apply``)
+    to ``runtime_logs/work_store_parity*.json*``. A missing log is ``readState: absent``, never
+    a clean window."""
+    import json as _json
+
+    from scripts.ops import work_store_import as wsi
+    try:
+        lines = wsi.read_log()
+        latest_path = wsi.log_dir() / wsi.LATEST_NAME
+        latest = _json.loads(latest_path.read_text(encoding="utf-8")) if latest_path.is_file() else None
+    except Exception as exc:  # allow-silent: not silent -- logged with stack + 503 readState could_not_look
+        logger.exception("work_items: parity read failed")
+        return JSONResponse(status_code=503, content={"readState": "could_not_look", "error": str(exc)})
+    if not lines:
+        return {"readState": "absent", "latest": None, "window": None,
+                "note": "no parity run recorded yet (ict-work-store-import.timer not fired here)"}
+    return {"readState": "read", "latest": latest, "window": wsi.summarize(lines, hours=hours)}
+
