@@ -1,0 +1,22 @@
+{
+  "id": "KAGGLE-CPU-7B6F27-STUCK",
+  "title": "RQ-20261031-7b6f-27 stuck as 'already dispatched' since 2026-11-03T14:05Z: its kaggle-cpu run 41650218012 FAILED and no record/stamp landed",
+  "phase": null,
+  "state": "queued",
+  "owner": "unassigned (research dispatcher)",
+  "lane": null,
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [],
+  "blocked_on": [],
+  "note": "MEASURED 2026-11-05 (CI-STREAMLINE-W45, watchdog escalation 03:39Z backend:kaggle_cpu): the dispatcher prints 'RQ-20261031-7b6f-27 not_due already dispatched: run fired 2026-11-03T14:05:07+00:00 (no stamp / result yet)' 39 h later. The run (research-script-run-kaggle-cpu 41650218012) concluded failure on 11-03; comms/research/RQ-20261031-7b6f-27 and research/results/RQ-20261031-7b6f-27 do not exist on main; the watchdog counts it 'runnable' (9th of 9 kaggle_cpu units) while the dispatcher counts it dispatched, so it can never start again. Predates #23021 (11-05 01:40Z). Question for the owner: why was the failed run never collected as a producer_failed record, and why does fired_run_units keep a 39-h-old fire alive? Rerun: python3 scripts/research/dispatch_queue.py --ref main | grep 7b6f-27. Closes when the unit either has a landed record or dispatches.",
+  "due_by": "2026-11-07",
+  "roadmap": [
+    "L-OPS"
+  ],
+  "updated_at": "2026-11-05T03:53:32Z",
+  "updated_by": "CI-STREAMLINE-W45",
+  "_seq": 936
+}

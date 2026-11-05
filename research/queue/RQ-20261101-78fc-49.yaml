@@ -113,7 +113,7 @@ run:
   - '39'
   - --out
   - '{out_dir}'
-  timeout_minutes: 360
+  timeout_minutes: 330   # was 360: script_run preflight refuses > 330 (MAX_TIMEOUT_MIN), so the unit could never dispatch
   inputs:
     research_unit: RQ-20261101-78fc-49
 lands:

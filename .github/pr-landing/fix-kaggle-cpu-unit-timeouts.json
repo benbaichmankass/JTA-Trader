@@ -1,0 +1,5 @@
+{
+  "tier": 1,
+  "landing": "self",
+  "why": "Tier-1 research-queue data fix (manager request after the 2026-11-05 03:39Z watchdog escalation on backend:kaggle_cpu). Eight units (RQ-20261101-78fc-44..50, -53) declared run.timeout_minutes 360; script_run.plan refuses > 330, so the dispatcher logged dispatch_failed for them every cycle and they could never run. Lowered to 330 (the job ceiling is 360); the experiment, commands and pre-registered rule are untouched. Adds a whole-queue test (1,472 units with a timeout, 0 out of range) with a failing-before control. Not caused by #23021 (the cause predates it). No gate, order path or config changed."
+}
