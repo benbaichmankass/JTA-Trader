@@ -1,0 +1,168 @@
+# Hand-authored 2026-11-05 by lane TRADEIFY-OWN-LEG (Tier 1), iteration of RQ-20261105-fd68-02. Gates this adds or changes: NONE. Registered BEFORE any run.
+id: RQ-20261105-fd68-04
+title: '4h-bar iteration of RQ-20261105-fd68-02: Breakout/Velotrade shared ML leg: can a pooled ETH/SOL ML entry model, trained on every source the driver can read point-in-time, beat the declared baselines
+  NET OF the stricter of Breakout''s and Velotrade''s cost stacks and clear the V3 prop EV/survival gate on breakout_2 and/or velotrade_1?'
+status: queued
+cadence: once
+theme: new_strategy_prop
+priority: 1
+kind: experiment
+roadmap:
+- L-PROP
+- L-ML-LIVE
+practice_precedent: T3 (net of the full cost stack) + M-principles on purged walk-forward with one held-out read; prop gate = scripts/research/prop_gate.py RULE-P5-GATE-BRK-PER-LEG-V3 (edge clause); docs/research/tradeify-portfolio-feasibility-2026-09-30.md;
+  default regime-robustness clause = backtesting SKILL.
+question: 'ITERATION 2 (4h bar). breakout_2 and velotrade_1 are live prop accounts whose only leg, trend_donchian_eth_prop, is removed by PR #23154 (operator-approved). Operator, popup ~09:21Z 2026-11-05
+  (relayed by the manager), verbatim: "We need to get prop mls up and running asap - don''t worry about account breach, it''s a small test account and we''ll just buy a other one if needed". Neither firm
+  has Tradeify''s multi-firm rule, so ONE model may serve both. Does a pooled ETH/SOL ML entry leg have measured net-of-cost edge and clear the V3 prop gate against each firm''s DD limits? The operator''s
+  breach tolerance does NOT lower the registered gate: the gate is applied exactly as for every other prop leg.'
+why_this_matters: 'ITERATION 2 (4h bar). It is the fastest route to a non-empty roster on breakout_2/velotrade_1. The general ml_entry already FAILED this gate (comms/prop_survival/ml_entry.json, RQ-20261102-5e1a-01:
+  breakout_2 EV -$13.55, velotrade_1 EV -$26.75, edge +0.017 R with 95% CI [-0.106, +0.140], n 381), so this is a different design, not a re-test. Sibling of RQ-20261105-fd68-01 (Tradeify-only model); Tradeify''s
+  model must stay distinct from this one (graded THERE, not here).'
+instrument_universe:
+  basis: 'config/prop_platforms.yaml enabled_venue_symbols: breakout_2 [SOLUSD, ETHUSD], velotrade_1 [ETHUSD, SOLUSD]'
+  tradeable_now:
+  - ETHUSDT
+  - SOLUSDT
+  population_rule: Pooled ML over both symbols (an account configures strategies, never symbols; per-symbol results never gate).
+data_sources:
+  status: CANDIDATES from the repo; history depth/point-in-time coverage per family is UNVERIFIED and is the first thing the driver audits (arm unavailable => arm not run and reported, never silently dropped).
+  candidates:
+  - 'F0 price/volume only: ml/datasets/families/market_features.py, volatility_estimators.py, forecast_features.py (candles; lake um_perp 1m klines per config/data_universe.yaml)'
+  - 'F1 derivatives positioning: ml/datasets/funding_oi_features.py, orderflow_features.py (funding, OI, long/short ratio, taker flow; lake "metrics" + funding streams)'
+  - 'F2 cross-asset + macro: ml/datasets/cross_asset_features.py, macro_features.py (config/macro_econ_series.yaml, macro_events.yaml, macro_valuation.yaml; comms/macro/*)'
+  - 'F3 text/embedding: ml/datasets/embedding_features.py, corpus_embedding_features.py (news, config/news_feeds.yaml) - arm runs only if point-in-time history exists'
+  inventory_population: 'docs/reference/signal-catalog.yaml (static inventory 2026-10-08, 335 inputs): ml/ml_feature 105; regime_macro macro_series 54, news 31, event_calendar 20, regime_input 32, valuation
+    10, cross_asset 6, crowding 1; strategy derived_indicator 35. Stale by design (dated); the driver re-reads the manifests, not this list.'
+  the_35: NOT ASSUMED. No list of "35 data sources" was found in the repo (searched signal-catalog, ml/configs, config/*, docs/reference). The only 35 in the catalog is strategy derived_indicator = 35 (a
+    count of indicators, not sources). Open operator question Q1 on checklist row TRADEIFY-OWN-LEG; arms F0-F3 are the proxy until it is answered.
+label_and_horizon:
+  bar: '4h (--bar-hours 4); horizon 12 bars = 48 h; features are computed on 4h bars (windows in bars: ret_24 = 96 h)'
+  entry: model scores each closed 1h bar per symbol; entry at the NEXT bar open when score >= tau; one position per symbol; no simultaneous opposite-side position in the same symbol (the firm's no-hedging
+    rule), long and short both allowed.
+  label: 'y = 1 iff the bracket trade opened at the next bar open (stop 1.5 x ATR14, take-profit at the registered target below, max hold 48 bars = 2 days) realises net R >= +0.5 after the Tradeify cost
+    stack. A second head regresses the favourable excursion (MFE in R) and sets the take-profit at its q60 clipped to [1.5R, 4.0R] (TP doctrine: a real predictive TP, never tp_r 50 / rest-at-cap; scripts/ci/check_tp_doctrine.py
+    is re-run on the driver).'
+  horizon_bars: 12
+baselines:
+  cost_stack: 'Stricter of the two firms'' declared stacks on each term: commission 4 bps/side, slippage 3 bps/side, swap 5 bps/night prorated (Velotrade 5 bps; Breakout 3.3 bps). E4 re-prices with each
+    firm''s own gate arms (G.SIM) unchanged.'
+  B0: 'flat (net R 0): the leg must beat doing nothing, i.e. EV > 0 on its own.'
+  B1: 'class prior / all-bars control: the SAME bracket opened on EVERY eligible bar of the same population, same cost stack (zero-edge null), and a matched random-selection control (2000 draws, seed 20261105,
+    same trade count k per symbol).'
+  B2: 'the incumbent trend_donchian_eth_prop on ETHUSDT over the identical held-out span, same cost stack (the leg PR #23154 removes).'
+  B3: the general ml_entry on the same ETH+SOL span, V3 FAIL on breakout_2 and velotrade_1 (RQ-20261102-5e1a-01), reference only.
+arms:
+  denominator: 'At most 16 registered arms: feature sets {F0, F0+F1, F0+F1+F2, F0+F1+F2+F3} x tau {0.40, 0.45, 0.50, 0.55}; F3 has no point-in-time source so the 12 other arms are graded. Selection uses
+    DISCOVERY only; the held-out span is read ONCE for the single selected arm. All graded arms are counted and reported.'
+  models: LightGBM, unchanged default hyperparameters set once in the driver (no tuning loop); ml_bakeoff.py is the harness family for any comparison against a second learner, not part of this rule.
+split:
+  discovery: 2022-01-01 .. 2025-09-30, purged expanding walk-forward by calendar quarter, embargo = max hold (48 bars) + 7 d
+  held_out: 2025-10-01 .. 2026-09-30 (the same span as the RQ-20261102-5e1a-01 ml_entry gate, so B3 is comparable); read once
+power:
+  expected_n: 150
+  min_detectable_effect: 0.203
+  effect_units: sd
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: 'ESTIMATED, not measured: (1.645 + 0.8416) / sqrt(150) = 0.203 sd of per-trade net R, one-sided. Basis for n: the general ml_entry produced 381 ETH+SOL held-out trades in this span (MEASURED, RQ-20261102-5e1a-01);
+    a thresholded leg on 3 symbols is expected to trade less often than the unfiltered model; the driver''s first act records the realised held-out n. n < 150 => INDETERMINATE (cannot answer), never FAIL.
+    4h bars give roughly a quarter of the 1h decision rows; n < 150 held-out trades => INDETERMINATE (cannot answer), never FAIL.'
+  feasibility:
+    source: none
+    accrual_basis: Replays history on a pinned window; nothing accrues.
+decision_rule:
+  id: RULE-RQ20261105fd6804-BV-OWN-LEG-4H
+  statistic: 'Held-out span, the single arm selected on discovery (highest summed walk-forward net R among arms with >= 2/3 of quarterly folds net-positive and >= 100 discovery trades), scored by the driver
+    with the Tradeify cost stack and graded with scripts/research/prop_gate.py V3 (prop_ev_sim path mode, 5 seeds x 1000 lives, configured risk_pct 0.5%, daily_dd_switch 0.8, each firm ruleset (breakout_turbo_1step,
+    velotrade_classic_1step)) on the held-out ledger. DISTINCTNESS is computed on the held-out span AND the full out-of-sample walk-forward ledger against EVERY other prop leg ledger: the legs on any prop
+    roster in config/accounts.yaml at run time, plus trend_donchian_eth_prop, trend_donchian_sol_prop, eth_pullback_prop_2h and the B3 ml_entry ledger even if unrostered; the bybit legs are reported as
+    a diagnostic, not graded.'
+  rule: 'INDETERMINATE iff held-out n < 150, the ledger is missing, or a self-check fails. Otherwise PASS iff ALL: (E1) net R per trade >= +0.10 AND trade-block bootstrap 95% CI lower bound > 0; (E2) beats
+    B0, B1 (all-bars and matched-random p95) and B2 on the identical span; (E3) regime clause (>= 3 of 4 years 2023..2026 net-positive, no year > 50% of total, long and short each >= 0, both OOS halves
+    positive); (E4) V3 PASS on BOTH gate arms (firm and current-stack) for each account named in pass_accounts; the verdict PASSES for the accounts that clear it (any >= 1), and a roster PR names only those.
+    Distinctness between Breakout and Velotrade is NOT required (no multi-firm rule between them); distinctness against the committed prop ledgers is REPORTED, not graded. Thresholds are not changed after
+    any result. PASS -> a held Tier-3 roster-add PR for the passing accounts only, with comms/prop_survival/<leg>.json and a Stage-1 soak of 1-2 clean trades (OPERATING-PLAN 2). FAIL -> honest negative
+    into the lever map and the next lever as a new pre-registered unit.'
+  what_it_does_not_do: Trains and promotes nothing, edits no config or roster, places no order. Offline read at the declared power, not live edge. Does not lower the prop gate for the operator's stated
+    breach tolerance.
+  registered_before_run: true
+  registered_at: '2026-11-05'
+ml_consumer:
+  not_applicable: 'The consumer leg does not exist yet, so it cannot be on a mode: live roster: it is built by checklist row TRADEIFY-OWN-LEG-DRIVER (tooling) and would be added to breakout_2/velotrade_1
+    only by a held Tier-3 roster PR after a PASS. Decision it would change: whether those two accounts run any leg after PR #23183/#23154. Not a false keyword hit.'
+compute: cpu_long
+value:
+  bucket: ai_trader
+  usd_at_stake_per_month: 150
+  confidence: 0.15
+  basis: 'stand-in, not a P&L measurement: two live prop accounts with an empty roster; low confidence because the nearest ML precedent failed this gate.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 6.0
+  est_minutes: 180
+  why_runner: 'ESTIMATED: LightGBM on 3 symbols x 4 years of 1h bars plus a 12-arm walk-forward; reads the keyless public lake/candles. Re-estimate at first run; Kaggle CPU if the audit shows a larger feature
+    table.'
+  basis: Runner. The 1h runs of this driver took about 6 minutes (MEASURED, run 42018823856); the 4h table is smaller.
+run:
+  workflow: research-script-run.yml
+  command:
+  - python3
+  - scripts/research/prop_ml_leg.py
+  - run
+  - --profile
+  - bv
+  - --bar-hours
+  - '4'
+  - --taus
+  - 0.40,0.45,0.50,0.55
+  - --cache
+  - /tmp/prop_ml_cache
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 330
+  inputs:
+    research_unit: RQ-20261105-fd68-04
+  note: 'Runner, not Kaggle: the driver reads Binance Vision (klines, funding, daily metrics) and FRED over the internet, which a Kaggle kernel does not have. Needs lightgbm and scikit-learn (research-script-run.yml
+    installs both). Driver: scripts/research/prop_ml_leg.py (checklist TRADEIFY-OWN-LEG-DRIVER); `--self-test` reproduces B3 (+0.01704 R, n 381) and B2 (n 165, net -0.2512) and unit-tests D1-D4. No Anthropic
+    API.'
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+amendments:
+- at: '2026-11-05'
+  before_any_run: true
+  by: lane TRADEIFY-OWN-LEG (iteration)
+  text:
+  - 'Same registered rule as RQ-20261105-fd68-02 (E1-E4; distinctness reported, not graded): no threshold, pass clause or baseline changes. Only the bar length, the horizon expressed in bars, and the tau
+    grid differ. See that unit and its amendments A1-A8 for sources, costs, E2/E3 readings and the leverage key.'
+  - The driver gained --bar-hours and --taus (default 1 and the registered 1h grid, so the 1h units are reproducible); its self-test, a 4h smoke on dev data <= 2022-12-31 and no held-out read precede this
+    registration.
+related:
+- TRADEIFY-OWN-LEG
+- TRADEIFY-OWN-LEG-DRIVER
+- RQ-20261105-fd68-01
+- RQ-20261102-5e1a-01
+- comms/prop_survival/ml_entry.json
+- RQ-20261105-fd68-02
+- research/queue/RQ-20261105-fd68-02.yaml
+iteration:
+  subject: bv_shared_ml_leg
+  subject_kind: ml_model
+  from_result: RQ-20261105-fd68-02
+  verdict_read: fail
+  attempt: 2
+  due_by: '2026-11-06'
+  diagnosis: 'Prior result: RQ-20261105-fd68-02 (run 42018828772, 2026-11-05): FAIL, no arm x tau eligible on discovery; pooled ETH/SOL 1h, 107,129 rows, 15 quarterly folds; nearest miss F0+F1 tau .60 +18.2
+    R over 142 trades with 7 of 12 folds positive (needed 8); held-out never read. Dev-only diagnosis (bars before 2025-10-01, all bars, both sides, 3R reference bracket, unit cost stack): gross edge is
+    about zero (+0.004..+0.035 R per trade) while cost is 0.077..0.124 R per trade at 1h, so the all-bars net is -0.07..-0.12 R; at 4h bars cost is 0.042..0.065 R and the all-bars net -0.016..-0.051 R.
+    P(net R >= 0.5) is 0.26..0.30, so tau 0.55..0.65 was about 2x the base rate. More feature families produced more trades and larger losses (F2 worst).'
+  search: 'Lever family: bar length (cost per unit of risk), 1h -> 4h, label horizon held at 48 h (12 bars), plus the selectivity grid re-based to the base rate: tau {0.40, 0.45, 0.50, 0.55}. Feature families,
+    label, pass rule and thresholds unchanged. The 1h result stays the control (already run).'
+  levers:
+  - bar_length
+  - selectivity
+  map_entries: []
