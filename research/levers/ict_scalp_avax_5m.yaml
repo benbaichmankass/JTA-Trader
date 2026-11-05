@@ -69,12 +69,78 @@ attribution:
       gross_r: -15.757
 manifest:
   entry: untested
-  exit: untested
-  filter: untested
+  exit: tested
+  filter: tested
   regime_gating: untested
   timeframe: untested
   symbol_set: untested
   direction: untested
   session: untested
-  sizing_vs_cost: untested
-levers: {}
+  sizing_vs_cost: tested
+levers:
+  exit:
+    atr_sl_buffer_mult:
+      tests:
+      - value: '1.0'
+        baseline_value: 'off'
+        arm: SLB
+        unit: RQ-20261101-78fc-47
+        window: 2024-10-05..2026-10-04
+        n: 431
+        net_r: -137.19
+        baseline_n: 430
+        baseline_net_r: -55.595
+        delta_net_r: -81.595
+        folds_ge_baseline: 2/6
+        max_drawdown_r: 147.6388
+        verdict: pass
+        joint_change: false
+      shape: single_point
+      points: 1
+      best_delta_r_per_trade: -0.1898
+      fold_stability: 0.333
+      reading: every tested value is worse than the baseline
+  filter:
+    htf_rule:
+      tests:
+      - value: 4h
+        baseline_value: 1h
+        arm: H4
+        unit: RQ-20261101-78fc-47
+        window: 2024-10-05..2026-10-04
+        n: 553
+        net_r: -85.4035
+        baseline_n: 430
+        baseline_net_r: -55.595
+        delta_net_r: -29.8085
+        folds_ge_baseline: 2/6
+        max_drawdown_r: 86.3756
+        verdict: pass
+        joint_change: false
+      shape: single_point
+      points: 1
+      best_delta_r_per_trade: -0.0693
+      fold_stability: 0.333
+      reading: every tested value is worse than the baseline
+  sizing_vs_cost:
+    entry_mode:
+      tests:
+      - value: limit
+        baseline_value: 'off'
+        arm: LIM
+        unit: RQ-20261101-78fc-47
+        window: 2024-10-05..2026-10-04
+        n: 410
+        net_r: -40.6294
+        baseline_n: 430
+        baseline_net_r: -55.595
+        delta_net_r: 14.9656
+        folds_ge_baseline: 6/6
+        max_drawdown_r: 52.3852
+        verdict: pass
+        joint_change: false
+      shape: single_point
+      points: 1
+      best_delta_r_per_trade: 0.0348
+      fold_stability: 1.0
+      reading: 'one-point or fold-unstable gain: overfit until a holdout says otherwise'
