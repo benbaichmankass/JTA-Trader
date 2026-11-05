@@ -2,7 +2,7 @@
   "id": "HF-LAKE-STORAGE-403",
   "title": "HF private storage limit reached for bentzbk: jta-market-lake (incl. MANIFEST.json) returns 403 to runners; ml.datasets.lake consumers blocked or falling back",
   "phase": null,
-  "state": "blocked",
+  "state": "in_flight",
   "owner": "manager",
   "lane": null,
   "model": null,
@@ -10,19 +10,14 @@
   "spend_usd": null,
   "tier": 1,
   "prs": [],
-  "blocked_on": [
-    {
-      "kind": "operator",
-      "ref": "HF plan upgrade or free private storage for bentzbk"
-    }
-  ],
-  "note": "MEASURED 2026-11-05 11:48Z by lane ML-DATA-WIRING (session_01AFoLuNLZwgzom32C3hBXFE): the lake-parity run on #23287 (job 127222923139, head c0b111029) got HTTP 403 from huggingface.co/datasets/bentzbk/jta-market-lake/resolve/main/MANIFEST.json, body 'Private repository storage limit reached for bentzbk, please upgrade your plan ... or free up space'. HF_TOKEN present and the request reaches HF. Manager read 11:5xZ via HF MCP: the account bentzbk has 3 private repos (model woof_trade_organziation 2025-07-04, space wto 2025-07-07, dataset jta-market-lake last modified 2026-11-05) plus 2 public (ict-signals-dataset, space ict-training-job); the per-repo storage sizes were NOT readable from the tools. NOT established: whether the daily market-data-lake refresh is failing for the same cause. Blocked on: operator act (upgrade the HF plan, or free private storage, e.g. delete the two 2025 private repos if unused). Then: lane ML-DATA-WIRING re-runs parity; a health read of the daily lake refresh run follows.",
+  "blocked_on": [],
+  "note": "MEASURED 2026-11-05 11:48Z by lane ML-DATA-WIRING (session_01AFoLuNLZwgzom32C3hBXFE): the lake-parity run on #23287 (job 127222923139, head c0b111029) got HTTP 403 from huggingface.co/datasets/bentzbk/jta-market-lake/resolve/main/MANIFEST.json, body 'Private repository storage limit reached for bentzbk, please upgrade your plan ... or free up space'. HF_TOKEN present and the request reaches HF. Manager read 11:5xZ via HF MCP: the account bentzbk has 3 private repos (model woof_trade_organziation 2025-07-04, space wto 2025-07-07, dataset jta-market-lake last modified 2026-11-05) plus 2 public (ict-signals-dataset, space ict-training-job); the per-repo storage sizes were NOT readable from the tools. NOT established: whether the daily market-data-lake refresh is failing for the same cause. Blocked on: operator act (upgrade the HF plan, or free private storage, e.g. delete the two 2025 private repos if unused). Then: lane ML-DATA-WIRING re-runs parity; a health read of the daily lake refresh run follows. [2026-11-05 ~13:1xZ, Manager Session 2026-11-05b]\nOPERATOR proposed more free accounts. Checked against the providers' own pages:\n- KAGGLE forbids it. Terms of Use, read via rendered page: \"You also may not have, control, or operate under more than one active Kaggle account or Kaggle User ID ... we may take action without notice, including banning your user account\".\n- HF terms do not name multiple accounts, but they ban \"bypass restrictions\", abuse of services and \"Hosting excessive or irrelevant data\", and allow suspension \"with or without cause\".\nHF storage table: free user or org 100GB private; PRO $9/mo 1TB private.\nMeasured: MANIFEST.json is 33.6 MB (LFS), rewritten each refresh.\nOPERATOR DECISION, popup verbatim: \"Squash first, then free org\".\nPLAN:\n(1) Lane HF-LAKE-SQUASH measures current versus history storage, super-squashes jta-market-lake, and adds a retention rule.\n(2) If the account is still near the cap, the operator creates a free HF organization they own; the lane moves the lake there and repoints the loaders and HF_TOKEN use. This needs an operator act, which goes on the console asks panel.",
   "due_by": "2026-11-06",
   "roadmap": [
     "M14"
   ],
   "priority_rank": 1,
-  "updated_at": "2026-11-05T11:49:14Z",
+  "updated_at": "2026-11-05T13:10:04Z",
   "updated_by": "session_01AFoLuLmhUKeUzHC6CHz2uP",
   "_seq": 946
 }
