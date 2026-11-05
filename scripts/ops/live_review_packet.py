@@ -846,7 +846,9 @@ def _price(leg: str, side: str, tel: dict, atr_mult: Optional[float], review_id:
            "--open-r", str(tel["open_r"]), "--peak-r", str(tel["peak_r"]), "--atr-stop-mult", str(atr_mult), "--json",
            # the leg's committed full-history corpus (comms/strategy_evidence/ltr_corpus/) when it has one, else
            # the evidence record's source_run; the packet records which one priced it (corpus_source)
-           "--corpus", "auto"]
+           "--corpus", "auto",
+           # CLOSE NOW priced beside hold / tighten (row ML-ENTRY-LTR-OUTCOME-TABLE: "prices hold/tighten/close")
+           "--close"]
     if tel.get("bars_held") is not None:
         cmd += ["--bars-held", str(int(tel["bars_held"]))]
     out = subprocess.run(cmd, capture_output=True, text=True, cwd=REPO, timeout=300)
@@ -868,6 +870,16 @@ def _price(leg: str, side: str, tel: dict, atr_mult: Optional[float], review_id:
 
 
 EVIDENCE_MISSING = "evidence_missing"
+
+
+def atr_stop_mult_of(meta: dict) -> Optional[float]:
+    """1R in entry-ATR units: the declared ``atr_stop_mult``, else ``risk_per_unit / atr14`` (ml_entry packages carry
+    those two and no atr_stop_mult; its SL is 2 x ATR14, row ML-ENTRY-LTR-OUTCOME-TABLE). None when neither is there."""
+    m = _f(meta.get("atr_stop_mult"))
+    if m is not None and m > 0:
+        return m
+    rpu, atr = _f(meta.get("risk_per_unit")), _f(meta.get("atr14") or meta.get("atr"))
+    return round(rpu / atr, 6) if rpu and atr and rpu > 0 and atr > 0 else None
 
 
 def priced_state(priced: Optional[dict], why: Optional[str], asked: bool) -> str:
@@ -1007,7 +1019,7 @@ def build_packet(pkg: str, s: Snapshot, now: datetime, *, write_tables: bool = F
     priced = why = None
     if price and direction:
         priced, why = _price(leg, direction, {"open_r": open_r, "peak_r": peak_r, "bars_held": bars_held},
-                             _f(meta.get("atr_stop_mult")), review_id, write_tables, tables_out)
+                             atr_stop_mult_of(meta), review_id, write_tables, tables_out)
         if why:
             miss("priced_options", why)
     cost = {"basis": "evidence-record net_r per trade (fee + slippage + funding, execution_costs.resolve_cost_policy)"} if priced else {"basis": None}
