@@ -222,8 +222,11 @@ jobs:
           scrub() { sed "s|$USERNAME|<user>|g"; }
           M=metis-ml-backup
           SRCS=""
+          # `versions list` returns the versions of EVERY instance of the model (not only $INST): take the max over rows whose slug column is
+          # this instance. (Taking the max over all rows asked for registry-store/4 when it had 3 versions: 40 min of 404 on 2026-11-05.)
           for INST in served registry-store; do
-            VER=$(kaggle models instances versions list "$USERNAME/$M/other/$INST" --csv 2>/dev/null | awk -F, 'NR>1 {print $1}' | sort -n | tail -1); VER=${VER:-1}
+            VER=$(kaggle models instances versions list "$USERNAME/$M/other/$INST" --csv 2>/dev/null | awk -F, -v inst="$INST" 'NR>1 { for (i=1;i<=NF;i++) if ($i==inst) { print $1; break } }' | sort -n | tail -1); VER=${VER:-}
+            case "$VER" in ''|*[!0-9]*) echo "::error::cannot read a numeric version for $INST from: $(kaggle models instances versions list "$USERNAME/$M/other/$INST" --csv 2>&1 | head -3)"; exit 1;; esac
             SRCS="$SRCS\"$USERNAME/$M/other/$INST/$VER\","
           done
           mkdir -p /tmp/k && cp scripts/ops/kaggle_backup_kernel/kernel_models_read.py /tmp/k/
@@ -260,8 +263,8 @@ jobs:
           rm -rf /tmp/rb && mkdir -p /tmp/rb
           T0=$(date +%s)
           for INST in served registry-store; do
-            VER=$(kaggle models instances versions list "$USERNAME/$M/other/$INST" --csv 2>/dev/null | awk -F, 'NR>1 {print $1}' | sort -n | tail -1)
-            [ -n "$VER" ] || VER=1
+            VER=$(kaggle models instances versions list "$USERNAME/$M/other/$INST" --csv 2>/dev/null | awk -F, -v inst="$INST" 'NR>1 { for (i=1;i<=NF;i++) if ($i==inst) { print $1; break } }' | sort -n | tail -1)
+            case "$VER" in ''|*[!0-9]*) echo "::error::cannot read a numeric version for $INST"; exit 1;; esac
             echo "$INST latest version: $VER"
             # Kaggle builds a download archive per version; DownloadModelInstanceVersion answers 404 until it exists (observed
             # 2026-11-05: still 404 after 4 min). The kernel mount (previous step) does not need it. Poll up to 40 min.
