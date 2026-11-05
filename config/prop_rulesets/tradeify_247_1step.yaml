@@ -107,3 +107,6 @@ sizing:
   mode: flat
   flat:
     max_risk_usd: 50
+    per_leg_risk_usd:              # OPERATOR BASELINE 2026-11-05 ("Baseline at min size (Rec.)", row ML-PROP-ITERATE):
+      trend_donchian_eth_4h: 10    # $10/ticket = SizingConfig.min_risk_usd, the smallest ticket the sizer emits;
+      trend_donchian_sol_4h: 10    # size_lots rounds DOWN and refuses below the venue min_lots. REVERT: delete this block.

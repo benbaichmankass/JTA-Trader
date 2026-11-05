@@ -52,6 +52,11 @@ PASSABLE = {
         "trail_decay_stall_bars": "--trail-decay-stall-bars",
         "trail_decay_tight_mult": "--trail-decay-tight-mult",
     },
+    # RQ-20261105-d256-03 (prop baseline, C5 waiver re-measure): scripts/backtest_trend.py models
+    # the pivot structure exit via --structure-exit (it replaces the trail; never combined with --trail-level).
+    "trend": {
+        "structure_exit": "--structure-exit",
+    },
 }
 
 #: Instrument-control tolerance on the approximate arm vs the committed record.
@@ -100,7 +105,9 @@ def measure(leg: str, cfg: Dict[str, Any], record: Dict[str, Any], out: Path) ->
     feed = rdm.resolve_feed(sym, tf)
     csv = str(out / f"{leg}__data.csv")
     try:
-        rdm._fetch_csv(feed, FETCH_DAYS, csv)
+        import pandas as pd
+        span = (pd.Timestamp.now(tz="UTC") - pd.to_datetime(start, utc=True)).days + 30 if start else 0
+        rdm._fetch_csv(feed, max(FETCH_DAYS, span), csv)   # a window longer than FETCH_DAYS is fetched whole
         row["bars"] = _trim(csv, start, end)
     except Exception as e:  # noqa: BLE001  # allow-silent: not silent — the leg grades read_state=no_data with the exception text, never pass/fail
         row.update(verdict="indeterminate", read_state="no_data",
