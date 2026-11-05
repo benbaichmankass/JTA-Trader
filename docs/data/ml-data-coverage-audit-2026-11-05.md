@@ -1,6 +1,6 @@
 # Per-model data-coverage audit (row ML-DATA-WIRING, lane 2026-11-05)
 
-> **Doc status:** `live` · category `reference` · last verified `2026-11-05` · registered in [`docs/DOCUMENT-INDEX.md`](../DOCUMENT-INDEX.md)
+> **Doc status:** `unknown` · category `lookup` · last verified `2026-11-05` · registered in [`docs/DOCUMENT-INDEX.md`](../DOCUMENT-INDEX.md)
 > **Gates this adds or changes:** none (report-style coverage; not a CI refusal, not a promotion input).
 
 **Projection, no new store.** Rows come from the registry's own definition of "a model": `ml/configs/*.yaml` (73 `*.yaml` manifests, dataset `family` +
