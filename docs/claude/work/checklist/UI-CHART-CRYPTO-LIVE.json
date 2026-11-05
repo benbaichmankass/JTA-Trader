@@ -1,0 +1,22 @@
+{
+  "id": "UI-CHART-CRYPTO-LIVE",
+  "title": "Chart phase 1 (crypto, first): Lightweight Charts on the Bybit public v5 WebSocket in the browser, with signal/order/fill/bracket markers; /ws/market stops fetching *USDT candles",
+  "phase": null,
+  "state": "queued",
+  "owner": "manager",
+  "lane": null,
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 2,
+  "prs": [],
+  "blocked_on": [],
+  "note": "Step T3a of docs/plans/UI-TWO-SURFACE-DESIGN-2026-11.md \u00a7 4.3/\u00a7 5.1 (operator U3, 2026-11-05 ~00:36Z: \"Full library, but in phases so that we get crypto live fast\"). Lightweight Charts beats the widget for phase 1: it is already the SPA's dependency (components/LiveChart.svelte), and the Bybit public stream needs no key or relay. Cost $0. Live markers depend on UI-TRADING-PUSH T1; until then markers come from a REST snapshot. Tier 1 SPA plus a Tier 2 candle-loop change in market_ws.py. Closing: the crypto chart ticks with zero API candle fetches for *USDT; a fill marker appears within 2 s of its journal row once T1 is live.",
+  "due_by": "2026-11-12",
+  "roadmap": [
+    "L-OPS"
+  ],
+  "updated_at": "2026-11-05T00:39:47Z",
+  "updated_by": "lane-UI-TWO-SURFACE-DESIGN",
+  "_seq": 933
+}
