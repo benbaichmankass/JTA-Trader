@@ -69,10 +69,16 @@ def main(argv: list[str] | None = None) -> int:
     a = ap.parse_args(argv)
     import oci
     cfg = _config()
-    compartment = os.environ["OCI_COMPARTMENT_OCID"]
-    inst, vnic = find_trainer(cfg, compartment, a.ip)
+    # The trainer sits in the tenancy ROOT compartment (instance metadata, #23233), which need not be
+    # OCI_COMPARTMENT_OCID: search both, configured compartment first.
+    compartments = list(dict.fromkeys(c for c in (os.environ.get("OCI_COMPARTMENT_OCID"), cfg["tenancy"]) if c))
+    inst = vnic = None
+    for compartment in compartments:
+        inst, vnic = find_trainer(cfg, compartment, a.ip)
+        if inst is not None:
+            break
     if inst is None:
-        print(f"::error::no RUNNING instance in the compartment has public ip {a.ip}")
+        print(f"::error::no RUNNING instance with public ip {a.ip} in {len(compartments)} compartment(s) searched")
         return 2
     net = oci.core.VirtualNetworkClient(cfg)
     subnet = net.get_subnet(vnic.subnet_id).data
