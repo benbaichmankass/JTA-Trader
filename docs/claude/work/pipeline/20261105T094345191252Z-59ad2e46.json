@@ -1,0 +1,23 @@
+{
+  "due_when": {
+    "due_date": "2026-11-06",
+    "kind": "date"
+  },
+  "filed_by": "lane OPERATOR-ANSWERS-0505B session_01AFoLuJT8TkysBjWHmKTqyJ",
+  "id": "PI-20261105-IAGTOKEN-0001",
+  "money_path": false,
+  "next_action": "dispatch_lane",
+  "observation": {
+    "due_by": "2026-11-06",
+    "how_to_check": "scripts/ops/diag_fetch.sh status; exit 0 and JSON on stdout",
+    "what": "diag_fetch.sh returns 200 JSON for 'version' and 'status' with the sandbox DIAG_READ_TOKEN"
+  },
+  "origin": {
+    "kind": "session",
+    "ref": "lane OPERATOR-ANSWERS-0505B (Manager Session 2026-11-04b dispatch), PR #23154 deploy check",
+    "rerun": "scripts/ops/diag_fetch.sh version (exit 0 with JSON = fixed; 'answered_401' on stderr = still broken); compare with the init-diag-token system-action record and the VM's accepted-token config"
+  },
+  "state": "queued",
+  "summary": "MEASURED from this lane's sandbox, scripts/ops/diag_fetch.sh against https://ict-bot.duckdns.org: 06:40Z-07:00Z 2026-11-05 open_packages was served 200; from ~08:57Z every /api/diag path tried (version, status, services) answered 401 (diag_fetch: 'answered_401'). Population: 3 distinct routes, 1-2 attempts each, one sandbox. The vm-diag-snapshot issue relay (#23203, #23214) still served status at 08:56Z and 09:28Z, so the web-api is up and the problem is the token (rotated, expired, or the VM's accepted token set changed) -- cause NOT established. Effect: every session's Transport A falls back to the slower, Actions-billed relay. Not a trade-path issue.",
+  "what": "Direct diag transport: DIAG_READ_TOKEN now gets HTTP 401 on every /api/diag route (relay still works)"
+}
