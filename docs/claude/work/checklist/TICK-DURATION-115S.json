@@ -16,10 +16,10 @@
   "note": "[SYSTEM-AUDIT-INTEGRATION F8, docs/audits/2026-11-04-system-integration.md] MEASURED GET /api/diag/tick_cost 2026-11-04T18:22Z over 13 ticks since process start 17:45:06Z: mean 115.0 s, max 139.2 s (18:01:53Z); run_one_tick mean 79.3 s; pipeline.signal_build 299 calls mean 2.45 s = 49.0% of total; order_monitor mean 31.9 s per tick = 27.8%; monitor.check_broker_naked_equity_positions 8.0 s, reconcile_open_trades 6.8 s, reconcile_orphan_exchange_positions 6.3 s per tick. order_packages created_at minus 1h bar close for closed-bar 1h legs (n=8, journal tail 2026-11-04): +17..+226 s. Package -> trade row is fast (n=40, median 2.5 s, max 7.6 s). TASK: profile signal_build (2.45 s per call: per-symbol fetch.1h mean 720 ms, fetchvenue.alpaca 421 ms) and move order_monitor's broker sweeps off the signal loop (it already has an off-loop hook set); target: a 5m bar evaluated within 30 s of close. Order-path runtime change: Tier 2, not fixed in the audit lane. DETECTOR: tick_cost mean_ms < 30000 over >= 20 ticks. [lane 2026-11-04 profile] MEASURED tick_cost 23:22Z, 37 ticks: tick 100.8 s, CYCLE 159 s (loop slept a flat 60 s after each tick). signal_build 23 calls/tick x 2.04 s, of which fetch 0.22 s; local cProfile: 90% was ~14 re-parses of strategies.yaml per symbol (16.7 s -> 1.76 s with cache). Stage 1 (this PR): content-keyed YAML parse cache + boundary-aligned tick pacing; INFERRED tick ~66 s, cycle ~71 s. Stage 2: reconciliation half off-tick behind a journal_sync lock with entry dispatch (orphan adopt race). Stage 3: regime_bar_scoring 12 s/tick. Record: docs/research/tick-duration-115s-profile-2026-11-04.md. [operator via Manager Session 2026-11-04b, popup ~23:35Z, verbatim: \"Wait for me (Recommended)\"] Order-path change: NOT merged or deployed overnight; PR lands landing: hold for the operator morning review. OPERATOR 2026-11-04 ~23:35Z (popup, relayed by Manager Session 2026-11-04b), verbatim: \"Wait for me (Recommended)\". [carried from main during merge] [operator via Manager Session 2026-11-04b, popup 2026-11-05 ~00:28Z, verbatim: \"Merge + deploy when green (Recommended)\"] for PR #23029 (stage 1); supersedes the 23:35Z hold. Stages 2-3 filed as rows TICK-STAGE2-RECONCILE-OFFTICK and TICK-STAGE3-REGIME-SCORING.",
   "due_by": "2026-11-10",
   "roadmap": [
-    "L-OPS"
+    "L-ALERT-INTEGRATION"
   ],
   "priority_rank": 4,
-  "updated_at": "2026-11-05T00:42:34Z",
-  "updated_by": "session_01AFoLuM4gBmcaHHv8iooKDb",
+  "updated_at": "2026-11-05T01:41:01Z",
+  "updated_by": "session_01AFoLuN7HERxg65eHjtmMYE",
   "_seq": 909
 }
