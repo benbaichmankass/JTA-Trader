@@ -1,0 +1,97 @@
+id: RQ-20261105-17bf-01
+title: 'Exit-model training data from the vol_trail lever: does adding vt_hot90_t2.5 lever-state features + its counterfactual label to the exit-head rows improve the embargoed walk-forward recovered_R
+  on ada_pullback_2h trades? (PI-20261029-KXR1VUPP-0001)'
+status: blocked
+cadence: once
+kind: experiment
+compute: cpu_long
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 2.0
+  est_minutes: 80
+  basis: Ten harness runs (own-long, own-common, 8 twins), each a ~2000 d public candle fetch and one backtest; RQ-20261015-1bf3-05 took about 45 min for one ~1100 d run, so about 80 min with fetches in
+    parallel with nothing else.
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+practice_precedent: R1 and T1 of docs/reference/trading-and-model-practice-principles.md (judge an edge ex a single window; track every configuration tried); config-exact twins as a family-level pooled
+  estimate, never best-of-N
+theme: live_strategy
+priority: 2
+roadmap:
+- L-ML-LIVE
+question: 'Operator 2026-11-05: "we should add this back into the research pipeline and see if we can use it as part of training for exit models". The M20 sweep graded vol_trail vt_hot90_t2.5 on ada_pullback_2h
+  path_b_wf_pass but not a Path-A pass (IS n 200-208 d_net_r +7.35..+7.71R; OOS n 33-42 d_net_r +0.91..+3.08R, maxDD 0.37R worse; 14 cells tried; fresh-holdout RQ-20260930-901 unrun). Instead of declaring
+  the lever by hand, test whether it carries information for a learned exit head. Arms on the same ada_pullback_2h trade set, same embargoed walk-forward folds (exit_head_walkforward_multifold.py convention:
+  7d embargo, sequential trade-count blocks): (BASE) the shipped exit-head feature recipe; (LEVER) BASE + ATR-percentile (window 200) and an indicator of the vt_hot90 tightening being active at bar t +
+  bars-since-activation; (LEVER_LABEL) LEVER plus the lever arm''s counterfactual future_r_delta as an auxiliary target. Same cost stack (fee+slippage+funding) via exit_head_replay.py. Prior work cited:
+  RQ-20260928-007, RQ-20261007-040, RQ-20260928-019, RQ-20260930-901; M20-exit-head-PROGRAM.md.'
+why_this_matters: The lever was proposed as a hand-declared Tier-3 change on a selected cell; as training data it is judged by out-of-sample recovered R against BASE rather than by the selected-cell IS/OOS
+  split.
+power:
+  expected_n: 200
+  min_detectable_effect: 0.5
+  effect_units: R
+  sd: 1.2
+  design: paired
+  alpha: 0.05
+  power: 0.8
+  basis: ada_pullback_2h has ~60 trades/yr; the walk-forward test pool is ~40-60 trades, so only a large recovered_R lift is detectable; below that the unit is INCONCLUSIVE and states the n needed. Not
+    a promotion case.
+  feasibility:
+    source: none
+    accrual_basis: Re-measure of existing trade paths; nothing accrues.
+decision_rule:
+  id: RULE-RQ-20261105-17bf-01-VOLTRAIL-TRAINSET
+  registered_at: '2026-11-05T12:00:00Z'
+  registered_before_run: true
+  statistic: 'Per arm: embargoed walk-forward recovered_R_oos (net of full cost stack), paired by trade vs BASE, trade-cluster bootstrap 2000 draws seed 1; plus the matched-random and hold-to-bracket controls
+    from scripts/research/intervention_controls.py.'
+  rule: PASS IF LEVER or LEVER_LABEL beats BASE by >= +0.5R total recovered_R_oos with bootstrap lower bound > 0 AND beats matched_random (draws>=100) AND best_static; FAIL IF the bootstrap upper bound
+    < +0.5R with n >= 40 test trades (closes this feature set on this leg only); INCONCLUSIVE otherwise.
+  what_it_does_not_do: Changes no config, roster, exit lever or model stage. Not a promotion case; a PASS only justifies a wider multi-leg test.
+  min_n: '40'
+intervention_controls:
+  hold_to_bracket: true
+  matched_random:
+    draws: 100
+  best_static:
+    grid:
+    - vt_hot90_t2.5
+    - none
+    excludes_test_folds: true
+  bootstrap_group: trade
+value:
+  bucket: information
+  usd_at_stake_per_month: 100
+  confidence: 0.3
+  basis: stand-in; informs whether vol-regime lever state is a useful exit-head feature
+run:
+  workflow: research-script-run.yml
+  timeout_minutes: 120
+  command:
+  - python3
+  - scripts/research/exit_head_voltrail_trainset.py
+  - --leg
+  - ada_pullback_2h
+  - --out
+  - '{out_dir}'
+  inputs:
+    research_unit: RQ-20261105-17bf-01
+blocked_on:
+- kind: work_item
+  ref: EXIT-VOLTRAIL-TRAINSET-DRIVER
+  what: The driver scripts/research/exit_head_voltrail_trainset.py does not exist yet.
+  clears_when: 'the driver is on main; then git mv this file to research/queue/, remove blocked_on, set status: queued.'
+blocked_review:
+  by: OPERATOR-NOTES-DRAIN-20261105
+  disposition: kept
+  due_by: '2026-11-12'
+  note: 'run date: first dispatch the day after the driver lands, target week of 2026-11-12'
+  reviewed: '2026-11-05'
+related:
+- research/queue/RQ-20260930-901.yaml
+- docs/research/M20-exit-head-PROGRAM.md
+- scripts/research/exit_head_walkforward_multifold.py
