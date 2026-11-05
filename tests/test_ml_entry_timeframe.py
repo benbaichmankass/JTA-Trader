@@ -24,7 +24,7 @@ def test_count_model_matches_the_registered_ratios():
 
 
 # ---- b620-01 repair (2026-11-05): frozen-bar mask + float64 reproduce round 1 EXACTLY; the rule is untouched; the K-seed unit is parked ----
-import json
+import json  # noqa: E402
 
 _DIAG = Path(__file__).resolve().parents[1] / "comms" / "research" / "RQ-20261101-b620-01" / "diagnosis-20261105"
 

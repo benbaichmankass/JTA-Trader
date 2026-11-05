@@ -538,6 +538,7 @@ def run_baseline(unit: str, out: Path, cache: Path, n_jobs: int, smoke: bool) ->
         P = {}
         for sd in seeds:
             params = {**E.LGB_PARAMS, "random_state": sd, "n_jobs": n_jobs}
+            # provenance: predict — LGBMRegressor.predict is the regressed net R of that side, not a probability (as in walk_forward)
             P[sd] = tuple(lgb.LGBMRegressor(**params).fit(train[E.FEATURES], train[f"net_{side}"]).predict(test[E.FEATURES]) for side in ("long", "short"))
         for i, dr in enumerate(DRAWS):
             pl, ps = (np.mean([P[sd][j] for sd in dr], axis=0) for j in (0, 1))
@@ -549,7 +550,9 @@ def run_baseline(unit: str, out: Path, cache: Path, n_jobs: int, smoke: bool) ->
             if len(tk):
                 single[sd].append(tk.assign(fold=k, year=pd.to_datetime(tk.ts, utc=True).dt.year))
         print(json.dumps({"fold": k, "test_start": str(a.date()), "n_train": len(train), "n_test_rows": len(test)}), flush=True)
-    cat = lambda lst: pd.concat(lst, ignore_index=True) if lst else pd.DataFrame(columns=["symbol", "ts", "side", "net_r", "gross_r", "cost_r", "reason", "pred", "fold", "year"])
+    def cat(lst: list) -> pd.DataFrame:
+        return pd.concat(lst, ignore_index=True) if lst else pd.DataFrame(columns=["symbol", "ts", "side", "net_r", "gross_r", "cost_r", "reason", "pred", "fold", "year"])
+
     draw_stats = [stats_or_empty(cat(ens[i])) for i in range(len(DRAWS))]
     single_stats = [stats_or_empty(cat(single[sd])) for sd in DRAWS[0]]
     v = baseline_verdict(draw_stats, single_stats, pin, smoke, n_symbols=len(syms))
