@@ -104,6 +104,11 @@ def verify_manifest(api, repo: str) -> dict:
 def cmd_measure(a) -> int:
     rec = measure(_api(), a.repo)
     print(json.dumps(rec, indent=1))
+    used = rec["account"]["private_used_bytes"]
+    if a.alert_over_gb and used >= a.alert_over_gb * 10 ** 9:
+        # an annotation, never a halt: the pipeline keeps running (Prime Directive rule 7)
+        print(f"::warning::HF private storage {used / 1e9:.1f} GB >= {a.alert_over_gb} GB of the {rec['allowance_bytes'] / 1e9:.0f} GB "
+              f"allowance (history overhead {rec['history_overhead_bytes']} B): uploads will 403 at the cap; see row HF-LAKE-STORAGE-403")
     return 0
 
 
@@ -148,6 +153,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("cmd", choices=["measure", "squash"])
     ap.add_argument("--repo", default=_repo_from_config())
+    ap.add_argument("--alert-over-gb", type=float, default=0.0, help="measure: emit a ::warning:: at or above this many GB")
     ap.add_argument("--if-over-gb", type=float, default=0.0)
     ap.add_argument("--record", default="")
     a = ap.parse_args(argv)
