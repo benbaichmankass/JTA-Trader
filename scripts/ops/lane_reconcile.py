@@ -492,6 +492,246 @@ def render(res: Dict[str, Any], read_at: str = "(read time not stated)"
 
 
 # --------------------------------------------------------------------------
+# The FULL-ACCOUNT SWEEP (LANE-ARCHIVE-HYGIENE, operator 2026-11-05)
+# --------------------------------------------------------------------------
+# Operator, 2026-11-05 ~18:50Z, verbatim: "We also need to make sure that we're not forgetting to
+# archive old lanes. That does not seem to be passing through to all the managers correctly. We need
+# to make sure that it's happening."
+#
+# MEASURED 2026-11-05 by Manager Session 2026-11-05b: a full sweep over 4 pages of list_sessions found
+# 35 finished-but-unarchived sessions, back to 11-01, left by at least 5 earlier managers. Cause: each
+# manager archived only the lanes IT spawned (at best) and the 3-hourly check-in listed only its own
+# children, so a handover orphaned the previous manager's lanes. This is the same read as `reconcile`
+# but over EVERY page and EVERY manager, with a reason beside every verdict. It writes nothing and is
+# not a gate: it prints candidates; the manager archives them (manager SKILL § "Archive protocol").
+DESK_RE = re.compile(r"desk[- ]?wake|trading[- ]desk|single[- ]package|live[- ]review|\bLTR\b",
+                     re.IGNORECASE)
+WARM_RE = re.compile(r"warm", re.IGNORECASE)
+DESK_MIN_AGE_H = 1.0
+WARM_MAX_AGE_H = 2.0
+
+
+def _parse_ts(ts: str):
+    from datetime import datetime, timezone
+    try:
+        d = datetime.fromisoformat(str(ts).replace("Z", "+00:00"))
+        return d if d.tzinfo else d.replace(tzinfo=timezone.utc)
+    except Exception:  # noqa: BLE001
+        return None
+
+
+def _age_h(sess: dict, now) -> Optional[float]:
+    t = _parse_ts(sess.get("updated_at") or sess.get("created_at") or "")
+    return None if t is None else (now - t).total_seconds() / 3600.0
+
+
+def is_manager(sess: dict) -> bool:
+    tags = [str(t) for t in sess.get("tags") or []]
+    return ("manager" in tags
+            or (sess.get("title") or "").startswith("Manager Session"))
+
+
+def load_pages(paths: List[str]) -> Tuple[Dict[str, dict], bool]:
+    """Merge several list_sessions pages. Returns (sessions, complete).
+
+    ⚠️ `complete` is True only if some page says has_more=false: a dump of pages 1-3 of 4 would
+    otherwise read as a clean account. A bare list carries no paging info and counts as complete only
+    when it is the sole input."""
+    merged: Dict[str, dict] = {}
+    terminal = False
+    for p in paths:
+        payload = json.loads(Path(p).read_text(encoding="utf-8"))
+        merged.update(_sessions_from(payload))
+        env = payload.get("ccr", payload) if isinstance(payload, dict) else None
+        if isinstance(env, dict):
+            if env.get("has_more") is False:
+                terminal = True
+        elif len(paths) == 1:
+            terminal = True
+    return merged, terminal
+
+
+def _foreign(sess: dict) -> bool:
+    return any(r not in PROJECT_REPOS for r in _repos(sess))
+
+
+def sweep(rows: List[dict], sessions: Dict[str, dict], now,
+          pr_state: Optional[Dict[str, str]] = None) -> Dict[str, Any]:
+    """Classify EVERY non-archived session on the account: archive candidate / keep / left alone.
+
+    pr_state: optional {session_id: "open"|"merged"|"closed"}. Absent = PR state UNKNOWN, which
+    keeps a review_ready lane rather than archiving it (we could not look)."""
+    pr_state = pr_state or {}
+    logged = logged_lanes(rows)
+    owned_open = {r["lane"] for r in rows if r.get("lane")
+                  and r.get("state") in ("in_flight", "blocked")}
+    managers = {sid for sid, s in sessions.items() if is_manager(s)}
+    archive, keep, left_alone = [], [], []
+    live = 0
+    for sid, s in sessions.items():
+        if s.get("session_status") == ARCHIVED:
+            continue
+        live += 1
+        title = (s.get("title") or "")[:78]
+        age = _age_h(s, now)
+        age_s = "age unknown" if age is None else f"{age:.1f}h"
+        bucket = s.get("status_bucket", "")
+        ent = {"lane": sid, "title": title, "age_h": age, "bucket":
+               bucket.replace("SESSION_STATUS_BUCKET_", ""),
+               "parent": s.get("parent_session_id"),
+               "cost": lane_cost(s)[0]}
+
+        def put(lst, why):
+            lst.append({**ent, "why": why})
+
+        if sid in managers:
+            put(keep, "manager session")
+            continue
+        ok, why = archive_eligible(sid, s, logged)
+        if not ok and s.get("parent_session_id") in managers and not _foreign(s):
+            ok, why = True, "untagged, parent is a manager session"
+        if not ok:
+            put(left_alone, why)
+            continue
+        if bucket == WORKING or s.get("session_status") == "SESSION_STATUS_RUNNING":
+            put(keep, f"working ({age_s} since update)")
+        elif bucket == "SESSION_STATUS_BUCKET_BLOCKED":
+            put(keep, "BLOCKED on a prompt: surface it, a human clears it")
+        elif pr_state.get(sid) == "open" or sid in owned_open:
+            put(keep, "owns an open PR or an in_flight/blocked checklist row")
+        elif DESK_RE.search(s.get("title") or "") and WARM_RE.search(s.get("title") or "") \
+                and age is not None and age < WARM_MAX_AGE_H:
+            put(keep, f"designated warm batch live-review lane, {age_s} < {WARM_MAX_AGE_H:g}h")
+        elif bucket in FINISHED:
+            desk = bool(DESK_RE.search(s.get("title") or ""))
+            if bucket == "SESSION_STATUS_BUCKET_REVIEW_READY" \
+                    and pr_state.get(sid) not in ("merged", "closed"):
+                put(keep, "review_ready and its PR is not known merged "
+                          "(PR state " + ("unknown" if sid not in pr_state else pr_state[sid]) + ")")
+            elif desk and (age is None or age < DESK_MIN_AGE_H):
+                put(keep, f"desk-wake/live-review finished {age_s} ago, under {DESK_MIN_AGE_H:g}h")
+            elif desk:
+                put(archive, f"desk-wake / single-package live review finished, {age_s} old")
+            elif bucket == "SESSION_STATUS_BUCKET_REVIEW_READY":
+                put(archive, f"review_ready with its PR {pr_state.get(sid)}, {age_s} old")
+            else:
+                put(archive, f"completed, nothing owed ({age_s} old)")
+        else:
+            put(keep, f"bucket {bucket or 'unknown'}: not classifiable, left open (COULD NOT JUDGE)")
+    archive.sort(key=lambda d: -(d["age_h"] or 0.0))
+    return {"archive": archive, "keep": keep, "left_alone": left_alone,
+            "live_total": live, "managers": len(managers),
+            "population": len(sessions)}
+
+
+def render_sweep(res: Dict[str, Any], complete: bool, read_at: str) -> Tuple[str, int]:
+    out = [f"FULL-ACCOUNT SWEEP read at {read_at}: {res['population']} sessions in the dump, "
+           f"{res['live_total']} not archived, {res['managers']} manager session(s).",
+           f"ARCHIVE CANDIDATES: {len(res['archive'])}   KEEP: {len(res['keep'])}   "
+           f"LEFT ALONE (not this project): {len(res['left_alone'])}"]
+    if not complete:
+        out.append("⚠️  INCOMPLETE DUMP: no page says has_more=false. Pages were missed, so the "
+                   "counts below are a FLOOR, not the account. Fetch every page.")
+    out.append("")
+    out.append("ARCHIVE (archive_session each; then `checklist.py archive-lane <ROW>` for any row "
+               "that names it):")
+    for a in res["archive"]:
+        out.append(f"  {a['lane']}  {a['bucket']:<12} {a['why']}")
+        out.append(f"       {a['title']}  [parent {a['parent'] or '-'}]")
+    if not res["archive"]:
+        out.append("  (none)")
+    out.append("")
+    out.append("KEEP:")
+    for k in res["keep"]:
+        out.append(f"  {k['lane']}  {k['why']}")
+        out.append(f"       {k['title']}")
+    if not res["keep"]:
+        out.append("  (none)")
+    if res["left_alone"]:
+        out.append("")
+        out.append(f"LEFT ALONE — {len(res['left_alone'])} NOT this project's; never archive:")
+        for n in res["left_alone"][:5]:
+            out.append(f"  {n['lane']}  {n['why']}  {n['title']}")
+    if res["archive"]:
+        oldest = max((a["age_h"] or 0.0) for a in res["archive"])
+        out.append("")
+        out.append(f"{len(res['archive'])} finished lanes unarchived (oldest {oldest:.1f}h)")
+    return "\n".join(out), (1 if (res["archive"] or not complete) else 0)
+
+
+def _sweep_self_test(check) -> None:
+    from datetime import datetime, timedelta, timezone
+    now = datetime(2026, 11, 5, 19, 0, tzinfo=timezone.utc)
+
+    def ago(h):
+        return (now - timedelta(hours=h)).isoformat().replace("+00:00", "Z")
+
+    def s(sid, bucket, title="t", h=5.0, status="SESSION_STATUS_IDLE", tags=None, parent=None):
+        return {"id": sid, "title": title, "status_bucket": "SESSION_STATUS_BUCKET_" + bucket,
+                "session_status": status, "updated_at": ago(h),
+                "tags": tags if tags is not None else ["metis-lane", "manager:Manager Session X"],
+                "parent_session_id": parent}
+
+    sess = {x["id"]: x for x in [
+        s("done", "COMPLETED"),
+        s("deskold", "COMPLETED", "Desk wake 12:00", h=2.0),
+        s("deskyoung", "COMPLETED", "Desk wake 18:40", h=0.3),
+        s("ltr", "COMPLETED", "single-package live review", h=3.0),
+        s("rrmerged", "REVIEW_READY"),
+        s("rrunknown", "REVIEW_READY"),
+        s("rropen", "REVIEW_READY"),
+        s("work", "WORKING", status="SESSION_STATUS_RUNNING", h=0.1),
+        s("blocked", "BLOCKED"),
+        s("rowowned", "COMPLETED"),
+        s("warmyoung", "COMPLETED", "warm batch live-review lane", h=1.0),
+        s("warmold", "COMPLETED", "warm batch live-review lane", h=3.0),
+        s("arch", "COMPLETED", status="SESSION_STATUS_ARCHIVED"),
+        s("mgr", "WORKING", "Manager Session 2026-11-05b", tags=["manager"]),
+        s("orphan", "COMPLETED", tags=["manager:Manager Session 2026-11-01a"], h=100.0),
+        s("untagged", "COMPLETED", tags=[], parent="mgr"),
+    ]}
+    sess["foreign"] = {**s("foreign", "COMPLETED", tags=[]), "session_context": {
+        "sources": [{"git_repository": {"url": "https://github.com/o/other-project"}}]}}
+    rows = [{"id": "R", "state": "in_flight", "lane": "rowowned"}]
+    res = sweep(rows, sess, now, {"rrmerged": "merged", "rropen": "open"})
+    arch = {a["lane"] for a in res["archive"]}
+    keep = {k["lane"]: k["why"] for k in res["keep"]}
+    check("S1 completed + a desk wake over 1h + review_ready with merged PR + an OLD manager's "
+          "orphan + an untagged child are archive candidates",
+          arch == {"done", "deskold", "ltr", "rrmerged", "orphan", "untagged", "warmold"}, str(sorted(arch)))
+    check("S2 working, blocked, row-owned, open-PR, young desk wake, young warm lane, manager "
+          "and unknown-PR review_ready are KEPT",
+          set(keep) == {"work", "blocked", "rowowned", "rropen", "deskyoung", "warmyoung", "mgr",
+                        "rrunknown"}, str(sorted(keep)))
+    check("S3 a warm lane OVER 2h is not kept by the warm rule", "warmold" in arch and "warmold" not in keep,
+          str(keep.get("warmold")))
+    check("S4 an ARCHIVED session appears in neither list",
+          "arch" not in arch and "arch" not in keep)
+    check("S5 a foreign repo is LEFT ALONE, never a candidate",
+          [n["lane"] for n in res["left_alone"]] == ["foreign"] and "foreign" not in arch)
+    check("S6 every verdict carries a reason",
+          all(x["why"] for x in res["archive"] + res["keep"]))
+    text, code = render_sweep(res, True, "T")
+    check("S7 render prints the observability line with the oldest age and exits 1",
+          "7 finished lanes unarchived (oldest 100.0h)" in text and code == 1, text[-120:])
+    clean = sweep([], {"w": sess["work"]}, now)
+    text, code = render_sweep(clean, True, "T")
+    check("S8 nothing to archive on a complete dump exits 0", code == 0)
+    _, code = render_sweep(clean, False, "T")
+    check("S9 an INCOMPLETE dump never reads clean (exit 1, warns)", code == 1)
+    import tempfile
+    with tempfile.TemporaryDirectory() as d:
+        p1, p2 = Path(d, "p1.json"), Path(d, "p2.json")
+        p1.write_text(json.dumps({"ccr": {"data": [s("a", "COMPLETED")], "has_more": True}}))
+        p2.write_text(json.dumps({"ccr": {"data": [s("b", "COMPLETED")], "has_more": False}}))
+        m, comp = load_pages([str(p1), str(p2)])
+        check("S10 pages merge and the last page marks the dump complete",
+              set(m) == {"a", "b"} and comp)
+        m, comp = load_pages([str(p1)])
+        check("S11 a lone page with has_more=true is INCOMPLETE", set(m) == {"a"} and not comp)
+
+
+# --------------------------------------------------------------------------
 # self-test — a check that cannot go red is the state half this register
 # describes, so every branch here is planted and proven.
 # --------------------------------------------------------------------------
@@ -751,6 +991,8 @@ def _self_test() -> int:
     except ValueError:
         check("P8 a malformed dump raises rather than reading as empty", True)
 
+    _sweep_self_test(check)
+
     print("\nself-test: " + ("PASS" if ok else "FAIL"))
     return 0 if ok else 1
 
@@ -904,7 +1146,13 @@ def _read_at_of(path: Path) -> str:
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--sessions", help="path to a list_sessions dump (JSON)")
+    ap.add_argument("--sessions", nargs="+",
+                    help="path(s) to list_sessions dump(s) (JSON); with --sweep pass EVERY page")
+    ap.add_argument("--sweep", action="store_true",
+                    help="FULL-ACCOUNT sweep: archive candidates + KEEP list, each with a reason")
+    ap.add_argument("--pr-state", default=None,
+                    help="optional JSON {session_id: open|merged|closed} for review_ready lanes")
+    ap.add_argument("--now", default=None, help="ISO instant for ages (default: now, UTC)")
     ap.add_argument("--offline", action="store_true",
                     help="the checklist-only half: runs anywhere, reads no "
                          "session state, and says so")
@@ -943,14 +1191,33 @@ def main() -> int:
               "state — that would be a clean bill from a read that never "
               "happened.", file=sys.stderr)
         return 2
+    if a.sweep:
+        try:
+            from datetime import datetime, timezone
+            sessions, complete = load_pages(a.sessions)
+            now = _parse_ts(a.now) if a.now else datetime.now(timezone.utc)
+            prs = json.loads(Path(a.pr_state).read_text()) if a.pr_state else None
+        except Exception as exc:  # noqa: BLE001
+            print(f"ERROR: {exc}", file=sys.stderr)
+            return 2
+        res = sweep(rows, sessions, now, prs)
+        read_at = a.read_at or _read_at_of(Path(a.sessions[-1]))
+        if a.json:
+            print(json.dumps({**res, "complete": complete, "read_at": read_at}, indent=2))
+            return 1 if (res["archive"] or not complete) else 0
+        text, code = render_sweep(res, complete, read_at)
+        print(text)
+        return code
     try:
+        if len(a.sessions) != 1:
+            raise ValueError("several dumps need --sweep")
         sessions = _sessions_from(json.loads(
-            Path(a.sessions).read_text(encoding="utf-8")))
+            Path(a.sessions[0]).read_text(encoding="utf-8")))
     except Exception as exc:  # noqa: BLE001
         print(f"ERROR: {exc}", file=sys.stderr)
         return 2
 
-    read_at = a.read_at or _read_at_of(Path(a.sessions))
+    read_at = a.read_at or _read_at_of(Path(a.sessions[0]))
     res = reconcile(rows, sessions)
     if a.json:
         print(json.dumps({**res, "read_at": read_at}, indent=2))
