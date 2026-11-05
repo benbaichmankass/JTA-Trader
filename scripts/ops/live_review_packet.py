@@ -849,6 +849,8 @@ def _price(leg: str, side: str, tel: dict, atr_mult: Optional[float], review_id:
            "--corpus", "auto"]
     if tel.get("bars_held") is not None:
         cmd += ["--bars-held", str(int(tel["bars_held"]))]
+    if tel.get("stop_r") is not None:       # the CURRENT stop in R: r-levels are generated relative to it
+        cmd += ["--stop-r", str(tel["stop_r"])]
     out = subprocess.run(cmd, capture_output=True, text=True, cwd=REPO, timeout=300)
     if out.returncode != 0:
         return None, f"live_review_outcomes failed: {out.stderr.strip()[-200:]}"
@@ -1006,7 +1008,9 @@ def build_packet(pkg: str, s: Snapshot, now: datetime, *, write_tables: bool = F
     review_id = f"LR-{now.strftime('%Y%m%dT%H%MZ')}-{pkg}"
     priced = why = None
     if price and direction:
-        priced, why = _price(leg, direction, {"open_r": open_r, "peak_r": peak_r, "bars_held": bars_held},
+        r_to_stop = tv("r_to_stop", "rToStop")
+        stop_r = (open_r - r_to_stop) if (open_r is not None and r_to_stop is not None) else None
+        priced, why = _price(leg, direction, {"open_r": open_r, "peak_r": peak_r, "bars_held": bars_held, "stop_r": stop_r},
                              _f(meta.get("atr_stop_mult")), review_id, write_tables, tables_out)
         if why:
             miss("priced_options", why)
