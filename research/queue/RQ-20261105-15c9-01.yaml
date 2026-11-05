@@ -1,0 +1,92 @@
+# Authored 2026-11-05 by lane ML-FS-RECIPE (Tier 1) on the manager decision 2026-11-05 ~15:27Z (K-seed ensemble, tolerance against the measured K-seed spread, input data pinned). Decision rule registered BEFORE any run. Gates: none.
+id: RQ-20261105-15c9-01
+title: 'ENTRY 1h baseline on PINNED data: does the corrected timeframe harness (frozen bars masked, float64 features) reproduce round 1 on the single seeds, and what are the K=3 ensemble mean and its across-draw spread that every later 1h comparison is judged against? Dev folds only'
+status: queued
+cadence: once
+theme: ml_health
+priority: 1
+roadmap:
+- L-ML-LIVE
+kind: experiment
+practice_precedent: 'T1, M6 (docs/reference/trading-and-model-practice-principles.md): purged + embargoed walk-forward; a baseline is only a baseline if the data it was computed on is identified, so a later difference can be attributed.'
+question: 'b620-01 returned DOES_NOT_REPRODUCE (2026-11-03). Diagnosis 2026-11-05 (comms/research/RQ-20261101-b620-01/diagnosis-20261105/): the timeframe harness built its table without the frozen-bar delisting mask of round 1 (36,330 frozen dev-window bars over the 60 symbols; +423 dev rows) and cast features to float32; with the mask and float64 the harness pipeline gives round 1 to the last digit (+0.0089485665675495, n 71,950 / 71,886 / 72,063). This unit runs the corrected harness once as the registered 1h baseline: three independent draws (seeds {7,11,13}, {17,19,23}, {29,31,37}) of K=3 models whose scores are averaged, tau 0.10, ungated, 60 frozen perps, 8 dev folds, with the input data identified (per-symbol rows, first/last bar, frozen bars masked, sha256, and a manifest sha256) in the result.'
+why_this_matters: 'Manager 2026-11-05: a single seed spreads 13-27x the 0.0005 reproduction tolerance, so a baseline must be an ensemble with a tolerance set against the measured spread, and the data must be pinned so a later re-run can tell "data moved" from "result moved".'
+power:
+  expected_n: 72000
+  min_detectable_effect: 0.0136
+  effect_units: metric
+  sd: 1.0
+  design: two_sample
+  alpha: 0.05
+  power: 0.8
+  basis: 'MEASURED 2026-11-01 (d507-01 E1): the across-draw range of the pooled mean of a K=3 ensemble is 0.0136 (draws +0.0156/+0.0055/+0.0019) and E0 (single model) 0.0091; the reproduction tolerance below is registered from that measured number, not from the naive two-sample MDE at n 72,000 (0.0148), which it is close to.'
+  feasibility:
+    source: none
+    accrual_basis: Replays public Binance Vision history through 2025-09-30 (dev folds only); nothing accrues.
+decision_rule:
+  id: RULE-20261105-15c9-01
+  registered_at: '2026-11-05'
+  registered_before_run: true
+  statistic: 'Per draw (K=3 mean score, tau 0.10, ungated, one position per symbol): n and the pooled mean net R per decision, per-fold n and mean, per-year mean; per single seed 7/11/13 (draw-1 members): the same; the data pin (per-symbol rows, first and last bar, frozen bars masked, sha256) and its manifest sha256.'
+  rule: 'GRADEABLE iff every fold of every draw has >= 1000 scored decisions AND the data pin is recorded for all 60 symbols. VERDICT WORD: reproduces iff gradeable AND the b620-01 criterion holds on the draw-1 single members (mean over seeds 7/11/13 within 0.0005 of the round-1 v1 base +0.0089486 AND each seed''s decision count within 1% of 71,950 / 71,886 / 72,063); does_not_reproduce iff gradeable and not; indeterminate otherwise. RECORDED REGARDLESS: the baseline B = mean over the three draws of the pooled ensemble mean, rho = their range, and the manifest sha256. REPRODUCTION TOLERANCE for any later run of this baseline: max(0.0136, rho) on the draw means, applicable only when the later run''s manifest sha256 equals the recorded one; a later run on a different manifest sha256 is "data_moved", never "result_moved". Thresholds are not changed after any result.'
+  what_it_does_not_do: Reads no sealed or held-out window (dev folds only, no month after 2025-09 is downloaded), serves nothing, changes no config or live symbol list, places no order, sizes nothing.
+  min_n: 1000 dev decisions per fold
+compute: cpu_long
+value:
+  bucket: ai_trader
+  usd_at_stake_per_month: 400
+  confidence: 0.3
+  basis: 'stand-in: the operator priority-1 goal (ML decision makers live); not a P&L measurement.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 4.0
+  est_minutes: 40
+  why_runner: Keyless public Binance Vision archives; GBDT on CPU. A GitHub runner (4 vCPU, 16 GB) fits it.
+  basis: 'MEASURED 2026-11-05 locally: one 8-fold seed of the baseline recipe on the 60-symbol table takes about 80 s on 4 threads; this unit fits 9 seeds (about 12 min) plus the klines fetch.'
+run:
+  workflow: research-script-run.yml
+  command:
+  - python3
+  - scripts/research/ml_entry_v2_run.py
+  - timeframe
+  - '{unit}'
+  - '{out_dir}'
+  timeout_minutes: 120
+  inputs:
+    research_unit: RQ-20261105-15c9-01
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- ML-TIMEFRAME
+- ML-FS-RECIPE
+- research/levers/ml-entry.yaml
+- RQ-20261101-b620-01
+- RQ-20261101-d507-01
+- comms/research/RQ-20261101-b620-01/diagnosis-20261105/README.md
+what_it_does_not_do: Registers, serves or promotes nothing; changes no config; places no order; sizes nothing; reads no sealed window.
+ml_consumer:
+  consumer: ML-ENTRY-LIVE-ADAPTER
+  decision: the pinned 1h baseline and its measured seed spread against which b621-b626 (15m/5m/4h) are re-read on the corrected harness
+  legs:
+  - xrp_pullback_2h
+  - trend_donchian_eth_4h
+  - trend_donchian_xrp_4h
+  - ada_pullback_2h
+  - trend_donchian_sol_prop
+  book: money
+iteration:
+  subject: ml-entry
+  subject_kind: ml_model
+  from_result: RQ-20261101-b620-01 (1h harness reproduction, FAIL 2026-11-03; cause found 2026-11-05)
+  verdict_read: fail
+  diagnosis: 'b620-01 failed because the timeframe harness lacked the frozen-bar delisting mask and used float32 features, not because the archive moved (all 3,729 dev-window monthly files last-modified <= 2025-10-02).'
+  hypothesis: the corrected harness reproduces the round-1 base on the single seeds and yields a pinned K=3 ensemble baseline with a measured spread
+  attempt: 2
+  due_by: '2026-11-07'
+programme_node:
+  programme: P2
+  node: P2-ENTRY-LEVERS
+  goal: G4

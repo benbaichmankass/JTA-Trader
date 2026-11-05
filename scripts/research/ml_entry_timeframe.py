@@ -55,6 +55,10 @@ UNITS = {                                  # unit id -> (timeframe, scaling)
     "RQ-20261101-b623-01": ("5m", "bar"), "RQ-20261101-b624-01": ("5m", "clock"),
     "RQ-20261101-b625-01": ("4h", "bar"), "RQ-20261101-b626-01": ("4h", "clock"),
 }
+BASELINE_UNITS = {"RQ-20261105-15c9-01": ("1h", "bar")}   # re-baselined 1h: K-draw ensemble on pinned, frozen-bar-masked data (manager 2026-11-05)
+DRAWS = ((7, 11, 13), (17, 19, 23), (29, 31, 37))          # d507-01's three independent draws of K=3 models; draw 1 = the b620 / round-1 seeds
+REPRO_TOL_FLOOR = 0.0136                                   # d507-01 E1 (K=3) across-draw range of the pooled mean, MEASURED 2026-11-01
+MIN_FOLD_N = 1000                                          # the registered per-fold decision floor
 REF_ROUND1 = {"source": "comms/research/RQ-20261101-b607-01 result.json arms.base (R0, seeds 7/11/13, tau 0.10, dev folds, pooled 60)",
               "mean": 0.0089485665675495, "n": [71950, 71886, 72063], "mean_tol": 0.0005, "n_rel_tol": 0.01}
 FIT_S_PER_MROW = 6.0                       # INFERRED 2026-11-01: LGBMRegressor 300 trees x 20 float features, 4 threads, random data
@@ -129,6 +133,33 @@ def fetch_all(cache: Path, symbols: list[str], tf: str, workers: int = 16, first
         return list(ex.map(lambda s: fetch_symbol(cache, s, tf, first), symbols))
 
 
+def mask_frozen_bars(df: pd.DataFrame) -> pd.DataFrame:
+    """Drop frozen bars (zero volume and flat: high == low) BEFORE any feature or label is computed. This is the explicit delisting mask of
+    ml_entry_v2.build_table, the table path round 1 (b607-01, fs05-01, d507-01) used. MEASURED 2026-11-05: without it the 1h table has 423 more
+    dev rows (36,330 frozen dev-window bars over the 60 symbols, WAVESUSDT 11,439) and b620-01 returned DOES_NOT_REPRODUCE; with it round 1's own
+    code returns round 1 exactly (+0.0089485665675495, n 71,950 / 71,886 / 72,063)."""
+    return df[~((df["volume"] == 0) & (df["high"] == df["low"]))]
+
+
+def data_pin(cache: Path, symbols: list[str], tf: str) -> dict:
+    """Identity of the input data a result was computed on, so a later re-run can tell 'data moved' from 'result moved'. Per symbol: raw bars,
+    first/last bar, frozen bars masked, and a sha256 over the (open_time, close, volume) bytes; the manifest sha256 hashes the sorted per-symbol lines."""
+    import hashlib
+    per = {}
+    for sym in symbols:
+        df = pd.read_pickle(cache / tf / f"{sym}.pkl").reset_index(drop=True)
+        h = hashlib.sha256()
+        h.update(_t_ns(df["ts"]).tobytes())
+        h.update(df["close"].to_numpy(float).tobytes())
+        h.update(df["volume"].to_numpy(float).tobytes())
+        per[sym] = {"rows": len(df), "first": str(df["ts"].min()), "last": str(df["ts"].max()),
+                    "frozen_masked": int(len(df) - len(mask_frozen_bars(df))), "sha256": h.hexdigest()}
+    lines = "\n".join(f"{k}|{v['rows']}|{v['first']}|{v['last']}|{v['frozen_masked']}|{v['sha256']}" for k, v in sorted(per.items()))
+    return {"timeframe": tf, "symbols": len(per), "rows_total": int(sum(v["rows"] for v in per.values())),
+            "frozen_masked_total": int(sum(v["frozen_masked"] for v in per.values())),
+            "manifest_sha256": hashlib.sha256(lines.encode()).hexdigest(), "per_symbol": per}
+
+
 # ----------------------------------------------------------------------------------------------- features / labels (scaled)
 def features_tf(df: pd.DataFrame, sp: dict) -> pd.DataFrame:
     c, h, lo, v = (df[k].astype(float) for k in ("close", "high", "low", "volume"))
@@ -194,20 +225,26 @@ def label_tf(df: pd.DataFrame, sp: dict) -> pd.DataFrame:
     return pd.DataFrame(out)
 
 
-def build_table(cache: Path, symbols: list[str], sp: dict, drop_ts_before: str | None = None) -> pd.DataFrame:
+def build_table(cache: Path, symbols: list[str], sp: dict, drop_ts_before: str | None = None, mask_frozen: bool = True,
+                feat_dtype: str | None = None) -> pd.DataFrame:
     """The c692-01 table (cross-sectional context over ``symbols``), scaled. Panels are taken on the decision grid only (the same values
     ml_decision_entry reads at those timestamps), which keeps the 5m panel small."""
     m, C = sp["m"], sp["C"]
+    # float64 where the table is small (1h, 4h): MEASURED 2026-11-05 that with the frozen-bar mask AND float64 features this pipeline reproduces round 1 to the
+    # last digit at 1h (+0.0089485665675495, n 71,950/71,886/72,063), whereas the float32 cast alone moved single seeds by up to +0.0084 (mean +0.0093).
+    # 15m and 5m keep float32 (b621 peaks at 10 GB and b623 at 13 GB in float32): their per-seed values are therefore not bit-comparable to a float64 table.
+    feat_dtype = feat_dtype or ("float64" if sp["tf"] in ("1h", "4h") else "float32")
     rows, r24s, v24s = [], {}, {}
     for sym in symbols:
-        df = pd.read_pickle(cache / sp["tf"] / f"{sym}.pkl").reset_index(drop=True)
+        df = mask_frozen_bars(pd.read_pickle(cache / sp["tf"] / f"{sym}.pkl")) if mask_frozen else pd.read_pickle(cache / sp["tf"] / f"{sym}.pkl")
+        df = df.reset_index(drop=True)
         if drop_ts_before:
             df = df[df.ts >= pd.Timestamp(drop_ts_before, tz="UTC")].reset_index(drop=True)
         f = features_tf(df, sp)
         lab = label_tf(df, sp).join(f.drop(columns=["ts"]), on="i")
         lab["symbol"] = sym
         feat_cols = [x for x in lab.columns if x in E.FEATURES or x in ("ret24_raw",)]
-        lab[feat_cols] = lab[feat_cols].astype("float32")
+        lab[feat_cols] = lab[feat_cols].astype(feat_dtype)
         lab["i"] = lab["i"].astype("int64")
         rows.append(lab)
         close_min = (_t_ns(df["ts"]) + m * 60_000_000_000) // 60_000_000_000
@@ -218,7 +255,7 @@ def build_table(cache: Path, symbols: list[str], sp: dict, drop_ts_before: str |
     del rows
     r24, v24 = pd.DataFrame(r24s), pd.DataFrame(v24s)
     key = pd.MultiIndex.from_arrays([tab["ts"], tab["symbol"]])
-    tab["xs_rank_ret24"] = r24.rank(axis=1, pct=True).stack().reindex(key).to_numpy().astype("float32")
+    tab["xs_rank_ret24"] = r24.rank(axis=1, pct=True).stack().reindex(key).to_numpy().astype(feat_dtype)
     breadth = (r24 > 0).sum(axis=1) / r24.notna().sum(axis=1)
     med_vol = v24.median(axis=1)
     tab["btc_ret24"] = r24["BTCUSDT"].reindex(tab["ts"]).to_numpy()
@@ -453,6 +490,81 @@ def run_unit(unit: str, out: Path, cache: Path, n_jobs: int, smoke: bool) -> dic
     return res
 
 
+
+def baseline_verdict(draw_stats: list[dict], single_stats: list[dict], pin: dict | None, smoke: bool, n_symbols: int = 60) -> dict:
+    """Pure: the registered rule of the re-baselined 1h unit. GRADEABLE iff every fold of every draw has >= MIN_FOLD_N decisions, the data pin is
+    recorded and the table covers the whole universe. The b620-01 criterion (single seeds 7/11/13 vs round 1: |mean diff| <= 0.0005, n within 1%)
+    is evaluated on the draw-1 members as well. verdict: reproduces | does_not_reproduce | indeterminate | smoke_not_judged."""
+    means = [d["mean"] for d in draw_stats if d["mean"] is not None]
+    gradeable = bool(len(means) == len(draw_stats) == len(DRAWS) and all(d["min_fold_n"] >= MIN_FOLD_N for d in draw_stats)
+                     and pin and pin.get("manifest_sha256") and pin.get("symbols") == n_symbols)
+    b = float(np.mean(means)) if means else None
+    rho = float(max(means) - min(means)) if means else None
+    sm = [x["mean"] for x in single_stats if x["mean"] is not None]
+    ok_mean = bool(len(sm) == 3 and abs(float(np.mean(sm)) - REF_ROUND1["mean"]) <= REF_ROUND1["mean_tol"])
+    ok_n = bool(len(single_stats) == 3 and all(abs(x["n"] - r) <= REF_ROUND1["n_rel_tol"] * r for x, r in zip(single_stats, REF_ROUND1["n"])))
+    if smoke:
+        verdict = "smoke_not_judged"
+    elif not gradeable:
+        verdict = "indeterminate"
+    else:
+        verdict = "reproduces" if (ok_mean and ok_n) else "does_not_reproduce"
+    return {"gradeable": gradeable, "baseline_mean": b, "across_draw_range": rho, "repro_tol": max(REPRO_TOL_FLOOR, rho or 0.0),
+            "single_seed_mean": float(np.mean(sm)) if len(sm) == 3 else None, "single_mean_ok": ok_mean, "single_n_ok": ok_n, "verdict": verdict}
+
+
+def run_baseline(unit: str, out: Path, cache: Path, n_jobs: int, smoke: bool) -> dict:
+    """K=3 x 3 draws at the frozen tau on the masked 1h table, data pinned. Each draw's score is the MEAN of its K models' scores (both sides)."""
+    import lightgbm as lgb
+    tf, scaling = BASELINE_UNITS[unit]
+    syms = universe()[:6] if smoke else universe()
+    first = "2021-01" if smoke else "2020-07"
+    started = time.time()
+    fr = fetch_all(cache, syms, tf, first=first)
+    pin = data_pin(cache, syms, tf)
+    sp = spec(tf, scaling)
+    tab = build_table(cache, syms, sp, drop_ts_before=f"{first}-01", mask_frozen=True, feat_dtype="float64")
+    bounds = [pd.Timestamp(x, tz="UTC") for x in E.DEV_FOLDS] + [pd.Timestamp(E.HOLDOUT_START, tz="UTC")]
+    dev = tab[tab.ts < bounds[-1]]
+    h_td = pd.Timedelta(minutes=sp["m"] * (sp["H"] + 1))
+    seeds = [sd for dr in DRAWS for sd in dr]
+    ens = {i: [] for i in range(len(DRAWS))}
+    single = {sd: [] for sd in DRAWS[0]}
+    for k, (a, b) in enumerate(itertools.pairwise(bounds)):
+        test = dev[(dev.ts >= a) & (dev.ts < b - h_td)]
+        train = dev[dev.ts < a - pd.Timedelta(days=E.EMBARGO_DAYS) - h_td]
+        P = {}
+        for sd in seeds:
+            params = {**E.LGB_PARAMS, "random_state": sd, "n_jobs": n_jobs}
+            P[sd] = tuple(lgb.LGBMRegressor(**params).fit(train[E.FEATURES], train[f"net_{side}"]).predict(test[E.FEATURES]) for side in ("long", "short"))
+        for i, dr in enumerate(DRAWS):
+            pl, ps = (np.mean([P[sd][j] for sd in dr], axis=0) for j in (0, 1))
+            tk = policy_fast(test, pl, ps, TAU)
+            if len(tk):
+                ens[i].append(tk.assign(fold=k, year=pd.to_datetime(tk.ts, utc=True).dt.year))
+        for sd in DRAWS[0]:
+            tk = policy_fast(test, *P[sd], TAU)
+            if len(tk):
+                single[sd].append(tk.assign(fold=k, year=pd.to_datetime(tk.ts, utc=True).dt.year))
+        print(json.dumps({"fold": k, "test_start": str(a.date()), "n_train": len(train), "n_test_rows": len(test)}), flush=True)
+    cat = lambda lst: pd.concat(lst, ignore_index=True) if lst else pd.DataFrame(columns=["symbol", "ts", "side", "net_r", "gross_r", "cost_r", "reason", "pred", "fold", "year"])
+    draw_stats = [stats_or_empty(cat(ens[i])) for i in range(len(DRAWS))]
+    single_stats = [stats_or_empty(cat(single[sd])) for sd in DRAWS[0]]
+    v = baseline_verdict(draw_stats, single_stats, pin, smoke, n_symbols=len(syms))
+    res = {"unit": unit, "schema": "ml_entry_timeframe/baseline-1", "read_state": "read", "timeframe": tf, "scaling": scaling, "smoke": smoke,
+           "tau": TAU, "k_models_per_draw": len(DRAWS[0]), "draws": [list(d) for d in DRAWS], "mask_frozen_bars": True, "feature_dtype": "float64",
+           "dev_only": "no month after 2025-09 is downloaded",
+           "rows": {f"{tf}/{scaling}": {"decision_rows": len(tab), "symbols": int(tab.symbol.nunique()), "bars_fetched": int(sum(x["rows"] for x in fr)),
+                                        "missing_months": int(sum(x.get("missing_months", 0) for x in fr))}},
+           "data_pin": pin, "ensemble_draws": draw_stats, "single_seeds_7_11_13": single_stats, "reference_round1": REF_ROUND1,
+           "baseline": {"mean": v["baseline_mean"], "across_draw_range": v["across_draw_range"], "repro_tol": v["repro_tol"],
+                        "manifest_sha256": pin["manifest_sha256"]},
+           "rule": v, "verdict": v["verdict"], "seconds_total": round(time.time() - started, 1)}
+    out.mkdir(parents=True, exist_ok=True)
+    (out / f"{unit}_result.json").write_text(json.dumps(res, indent=1, default=str))
+    return res
+
+
 # ----------------------------------------------------------------------------------------------- count / ETA model
 def count(dev_decision_rows_1h: int = 668_280, mean_train_frac: float = 0.5) -> dict:
     """Row-count and ETA model, no network. 668,280 = the measured 1h dev decision rows (60 frozen symbols, 2,673,122 1h bars < 2025-10-01,
@@ -522,6 +634,36 @@ def _self_test() -> None:
     assert headline(base, [mk(-0.1)] * 3)["verdict"] == "not_viable"
     assert headline(base, [mk(0.05, n=500)] * 3)["verdict"] == "indeterminate"
     assert headline(base, [stats_or_empty(pd.DataFrame())] * 3)["verdict"] == "indeterminate"
+    # frozen-bar mask: planted zero-volume flat bars are dropped, a real zero-volume bar with a range is kept, a flat bar with volume is kept
+    fz = pd.DataFrame({"ts": pd.date_range("2022-01-01", periods=6, freq="h", tz="UTC"), "open": 1.0, "high": [1, 1, 2, 1, 1, 1.0], "low": [1, 1, 1, 1, 1, 0.5],
+                       "close": 1.0, "volume": [0, 0, 0, 5, 5, 0.0]})
+    kept = mask_frozen_bars(fz)
+    assert list(kept.index) == [2, 3, 4, 5], list(kept.index)               # rows 0,1 frozen (v=0, h==l) dropped; 2 (range), 3/4 (volume), 5 (range) kept
+    # data pin: identical data -> identical manifest; one changed close or one more frozen bar -> a different manifest, and the frozen count is reported
+    import tempfile
+    with tempfile.TemporaryDirectory() as d:
+        c = Path(d)
+        (c / "1h").mkdir()
+        fz.to_pickle(c / "1h" / "AAAUSDT.pkl")
+        p1, p2 = data_pin(c, ["AAAUSDT"], "1h"), data_pin(c, ["AAAUSDT"], "1h")
+        assert p1["manifest_sha256"] == p2["manifest_sha256"] and p1["frozen_masked_total"] == 2 and p1["symbols"] == 1
+        fz2 = fz.copy()
+        fz2.loc[3, "close"] = 1.0001
+        fz2.to_pickle(c / "1h" / "AAAUSDT.pkl")
+        assert data_pin(c, ["AAAUSDT"], "1h")["manifest_sha256"] != p1["manifest_sha256"]
+    # baseline verdict (pure): gradeable + single seeds at round 1 -> reproduces; a thin fold -> indeterminate; off-round-1 singles -> does_not_reproduce; smoke -> not judged
+    def st(mean, n=70000, mfn=3000):
+        return {"mean": mean, "n": n, "min_fold_n": mfn}
+    pin = {"manifest_sha256": "x", "symbols": 60}
+    ds = [st(0.009)] * 3
+    ok_singles = [dict(st(REF_ROUND1["mean"]), n=r) for r in REF_ROUND1["n"]]
+    assert baseline_verdict(ds, ok_singles, pin, False)["verdict"] == "reproduces"
+    assert baseline_verdict([st(0.009, mfn=999)] * 3, ok_singles, pin, False)["verdict"] == "indeterminate"
+    assert baseline_verdict(ds, ok_singles, None, False)["verdict"] == "indeterminate"
+    assert baseline_verdict(ds, [dict(x, mean=0.0125) for x in ok_singles], pin, False)["verdict"] == "does_not_reproduce"
+    assert baseline_verdict(ds, ok_singles, pin, True)["verdict"] == "smoke_not_judged"
+    r = baseline_verdict([st(0.005), st(0.012), st(0.020)], ok_singles, pin, False)
+    assert abs(r["across_draw_range"] - 0.015) < 1e-12 and r["repro_tol"] == 0.015, r      # tolerance = max(0.0136, the unit's own across-draw range)
     print("ml_entry_timeframe self-test OK")
 
 
@@ -542,9 +684,13 @@ def main(argv=None) -> int:
         print(json.dumps(count(), indent=1))
         return 0
     if a.cmd == "run":
-        if a.unit not in UNITS:
-            ap.error(f"--unit must be one of {sorted(UNITS)}")
         out = Path(a.out)
+        if a.unit in BASELINE_UNITS:
+            res = run_baseline(a.unit, out, Path(a.cache) if a.cache else out / "klines", a.n_jobs, a.smoke)
+            print(json.dumps({"unit": a.unit, "verdict": res["verdict"], "baseline": res["baseline"]}))
+            return 0
+        if a.unit not in UNITS:
+            ap.error(f"--unit must be one of {sorted(UNITS) + sorted(BASELINE_UNITS)}")
         res = run_unit(a.unit, out, Path(a.cache) if a.cache else out / "klines", a.n_jobs, a.smoke)
         print(json.dumps({"unit": a.unit, "verdict": res["verdict"], "gated_verdict": res["gated_verdict"]}))
         return 0
