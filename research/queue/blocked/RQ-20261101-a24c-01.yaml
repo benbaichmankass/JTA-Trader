@@ -124,6 +124,14 @@ related:
 - comms/research/ML-ENTRY-UNIVERSE/local-20261101T1830Z/summary.json
 what_it_does_not_do: Registers, serves or promotes nothing; changes no config; places no order; sizes nothing.
 blocked_on:
+- kind: decision
+  ref: manager (lane ML-WEEK-1105 report 2026-11-05)
+  what: 'TWO re-registrations before any graded run, MEASURED 2026-11-05 (comms/research/RQ-20261101-a24c-01/local-20261105/RESULT.md):
+    (1) the registered Corwin-Schultz spread from 1h klines overstates liquid symbols 100-1000x (BTC dev median 13.2 bps vs 0.01
+    quoted), so every C is negative on dev for a reason unrelated to the model; (2) the registered forward window 2026-10 was
+    already read by frozen v1 (ENTRY-v1-frozen-ref-b609, 2026-11-01T20:12Z), so the rule returns INDETERMINATE on it'
+  clears_when: the manager records a venue-matched spread model and a fresh forward window (earliest 2026-11, read >= 2026-12-01) in this
+    file before any run, and the lane git-mvs it to research/queue/ status queued
 - kind: harness
   ref: scripts/research/ml_decision_entry.py
   what: 'the universe-costed subcommand: Corwin-Schultz spread + square-root impact cost model per symbol-month, the dev-fold liquidity rule over
@@ -131,10 +139,13 @@ blocked_on:
     holdout_lock claim before any forward outcome is read'
   clears_when: 'the subcommand lands on main with a self-test (a planted illiquid symbol is excluded by the dev rule; a planted one-tick spread
     floors the estimate); the lane git-mvs this file to research/queue/ with status queued, rule unchanged'
+  cleared: '2026-11-05 lane ML-WEEK-1105: universe-costed landed with its self-test; dry run INDETERMINATE (window clause)'
 - kind: data
   ref: Binance Vision monthly klines 2026-10
   what: the forward window's monthly zip for every U(C) symbol
   clears_when: data.binance.vision lists {SYMBOL}-1h-2026-10.zip for BTCUSDT (positive control) and every candidate
+  cleared: '2026-11-05: BTCUSDT-1h-2026-10.zip HTTP 200; all 60 reference symbols fetched through 2026-10-31 in the dry run (but see the
+    decision blocker: this window was already read)'
 ml_consumer:
   consumer: ML-ENTRY-ALL-ACCOUNTS
   decision: 'whether ml_entry on bybit_2 + bybit_portfolio widens from BTC/ETH/XRP/ADA/SOL to the rule''s universe U(C) beside the rostered legs
