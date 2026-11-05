@@ -1,6 +1,6 @@
 id: RQ-20261105-5e05-14
 title: 'Reverse structure-exit test on tlt_pullback_1d (declares structure_exit pivot=5): does the prior exit beat the structure default, net of the full cost stack?'
-status: queued
+status: done
 cadence: once
 theme: live_strategy
 priority: 1
@@ -113,3 +113,16 @@ related:
 - docs/research/structure-exits-default-scope-2026-11-01.md
 - src/runtime/structure_levels.py
 last_dispatched_at: '2026-11-05T20:03:20+00:00'
+grading:
+  attested: RULE-STRUCTURE-EXITS-REVERSE-V1
+  auto: true
+  decision_rule_id: RULE-STRUCTURE-EXITS-REVERSE-V1
+  evidence:
+  - research/results/RQ-20261105-5e05-14/42096641902.jsonl
+  graded_at: '2026-11-05'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail
