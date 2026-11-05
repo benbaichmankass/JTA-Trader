@@ -1647,6 +1647,17 @@ GUARDS: List[Dict[str, Any]] = [
                   ["python3", "scripts/ci/check_cost_model_single_owner.py"]],
     },
     {
+        "name": "infra-workflows-single-owner",
+        # B13 (COMPUTE-ALLOCATION): REPORT-ONLY (allow_fail) per the operator's 2026-11-04 "Yes, non-blocking OK".
+        # The self-test is blocking on purpose: a detector whose planted controls stopped firing is broken, not clean.
+        "when": {"globs": [
+            ".github/workflows/*.yml", "scripts/research/research_compute.yaml",
+            "scripts/ci/check_infra_workflows_single_owner.py",
+        ]},
+        "steps": [["python3", "scripts/ci/check_infra_workflows_single_owner.py", "--self-test"],
+                  {"argv": ["python3", "scripts/ci/check_infra_workflows_single_owner.py"], "allow_fail": True}],
+    },
+    {
         "name": "tp-venue-cap-single-owner",
         "when": {"globs": [
             "src/runtime/tp_venue_cap.py", "src/units/strategies/*.py",

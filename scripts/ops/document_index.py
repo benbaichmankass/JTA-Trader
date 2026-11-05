@@ -441,6 +441,15 @@ STATUS_EXPLICIT: Dict[str, Tuple[str, str, str]] = {
     # ⚠️ It goes `historical` once RQ-20261007-005..008 land measured records:
     # its verdict table's "no Stage-0 evidence" column is then a statement
     # about the past, and the live answer lives in those records.
+    # Written 2026-11-04 by the TICK-DURATION-115S lane, the session that took
+    # every measurement in it (tick_cost diag read, local cProfile, 192-build
+    # equivalence run). Goes historical once the deploy is observed on tick_cost.
+    "docs/research/tick-duration-115s-profile-2026-11-04.md": (
+        "live",
+        "read:TICK-DURATION-115S-lane-authored-and-measured-it-2026-11-04",
+        "TICK-DURATION-115S profile + staged plan; goes historical once the deployed "
+        "tick is observed on /api/diag/tick_cost",
+    ),
     "docs/research/pairs-stocktake-2026-10-07.md": (
         "live",
         "read:PAIRS-STOCKTAKE-lane-authored-and-measured-it-2026-10-07",

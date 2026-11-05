@@ -86,7 +86,6 @@ def load_accounts(config_path: str = _DEFAULT_ACCOUNTS_YAML) -> "List":
     FileNotFoundError
         When *config_path* does not exist.
     """
-    import yaml
     from src.units.accounts.account import TradingAccount
     from src.units.accounts.risk import RiskManager
     from src.units.accounts.prop_risk import PropRiskManager
@@ -94,7 +93,10 @@ def load_accounts(config_path: str = _DEFAULT_ACCOUNTS_YAML) -> "List":
 
     with open(config_path, "r", encoding="utf-8") as fh:
         source_text = fh.read()
-    raw = yaml.safe_load(source_text) or {}
+    # TICK-DURATION-115S: parse memoized by the exact text read above (deep copy
+    # per caller); see src/utils/yaml_parse_cache.py.
+    from src.utils.yaml_parse_cache import safe_load_text
+    raw = safe_load_text(source_text) or {}
 
     accounts = []
     for name, cfg in (raw.get("accounts") or {}).items():

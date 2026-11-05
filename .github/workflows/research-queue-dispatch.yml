@@ -99,7 +99,7 @@ jobs:
   # "run" — see `dedupe` in replay-pregate-nightly.yml for the same pattern.
   dedupe:
     if: github.event_name == 'schedule'
-    runs-on: ${{ fromJSON(vars.INFRA_RUNS_ON || '"ubuntu-latest"') }}  # GH-CAPACITY-INFRA-RUNNER: self-hosted jta-infra when vars.INFRA_RUNS_ON is armed, else hosted
+    runs-on: ubuntu-latest  # B13 (COMPUTE-ALLOCATION): research never lands on the ops pool; not vars.INFRA_RUNS_ON
     timeout-minutes: 3
     permissions:
       actions: read
@@ -124,7 +124,7 @@ jobs:
   # its one-pending-run rule still serialise, and a wrong "run" costs one idempotent cycle. Separate from `dedupe` (schedule-only).
   gap:
     if: github.event_name == 'workflow_run'
-    runs-on: ${{ fromJSON(vars.INFRA_RUNS_ON || '"ubuntu-latest"') }}  # GH-CAPACITY-INFRA-RUNNER: self-hosted jta-infra when vars.INFRA_RUNS_ON is armed, else hosted
+    runs-on: ubuntu-latest  # B13 (COMPUTE-ALLOCATION): research never lands on the ops pool; not vars.INFRA_RUNS_ON
     timeout-minutes: 3
     permissions:
       actions: read
@@ -169,7 +169,7 @@ jobs:
       github.event_name == 'workflow_run' ||
       github.event_name == 'workflow_dispatch'
       )
-    runs-on: ${{ fromJSON(vars.INFRA_RUNS_ON || '"ubuntu-latest"') }}  # GH-CAPACITY-INFRA-RUNNER: self-hosted jta-infra when vars.INFRA_RUNS_ON is armed, else hosted
+    runs-on: ubuntu-latest  # B13 (COMPUTE-ALLOCATION): research never lands on the ops pool; not vars.INFRA_RUNS_ON
     concurrency:
       # Two dispatchers running at once could fire the same job twice — the
       # ledger cap is monthly and would not stop it inside one window.
@@ -510,7 +510,9 @@ jobs:
     # (MEASURED, 20 completed pushes 2026-10-09), so run 37965310081's batch PR
     # #17287 (pytest-run 44 min) outlived the 50 min wait and the cycle read red
     # with the collector innocent. 255 = 3 x 80 + 15.
-    timeout-minutes: 255
+    # B6: 255 -> 25. No landing in this job waits for a merge any more (all three are deferred to the next cycle), so the
+    # budget covers checkout + three PR openings only. Pinned by test_budget_covers_every_wait_in_the_job (0 waits).
+    timeout-minutes: 25
     env:
       # Read from the dispatch job, which owns THE ONE FIRE DECISION (see its env).
       # `inputs` is deliberately not consulted here: on a schedule event it is empty.
@@ -562,8 +564,11 @@ jobs:
         if: needs.dispatch.outputs.collect_count != '0' && needs.dispatch.outputs.collect_count != ''
         uses: ./.github/actions/commit-to-main
         with:
-          verify-merged: "true"
-          close-on-fail: "true"   # a dirty/unmergeable batch PR strands its runs (#22504); closing lets the next cycle re-collect
+          # "false" (B6 / GH-CAPACITY-LAND-VERIFY-OFF-RUNNER, COMPUTE-ALLOCATION-2026-11-03 section 3.3): the in-run wait held a
+          # runner for a whole CI cycle. Arrival is verified NEXT cycle: collect_runner_results.py re-collects any run whose
+          # record is not on main and not in a fresh open batch PR, and the "Close stale landing PRs" step below clears a
+          # batch PR that did not merge. Pinned in tests/test_commit_to_main_callers.py::DEFERRED_VERIFY.
+          verify-merged: "false"
           token: ${{ secrets.BRANCH_PROTECTION_TOKEN }}
           paths: comms/research research/results
           message: "research: batch-land ${{ needs.dispatch.outputs.collect_count }} runner result(s) (dispatcher run ${{ github.run_id }})"
@@ -576,26 +581,25 @@ jobs:
             readable on main, which the step after this one asserts per record.
           branch-prefix: automation/research-results-batch
 
-      - name: Assert every batched record is readable on main
-        if: needs.dispatch.outputs.collect_count != '0' && needs.dispatch.outputs.collect_count != ''
-        run: |
-          set -euo pipefail
-          git fetch --no-tags origin main
-          python3 - <<'PY2'
-          import json, subprocess, sys
-          batch = json.load(open("/tmp/collected.json"))
-          bad = 0
-          for x in batch["landed"]:
-              rc = subprocess.run([sys.executable, "scripts/ci/assert_rows_landed.py", "--store", x["record"],
-                                   "--ref", "origin/main", "--field", "read_state",
-                                   "--min-rows", str(x.get("min_rows") or 1)]).returncode
-              bad += rc != 0
-          print(f"asserted {len(batch['landed'])} record(s) on main; {bad} missing")
-          sys.exit(1 if bad else 0)
-          PY2
-
       - name: Return to the checked-out base (drop the batch landing's commit)
         run: git checkout -q --detach "${BASE_SHA}"
+
+      # B6: the in-run wait used to close a batch PR that did not merge (close-on-fail). Without the wait, a dirty or red
+      # batch PR would sit open and make collect_runner_results.py skip its runs ("record is in an open results-batch
+      # PR") forever. Close any open batch PR older than 90 min (a healthy one merges in ~15-60 min); the next collect
+      # re-collects its runs. A stamp PR is closed only after 6 h: dispatch_queue.py adopts the stamp of one older than
+      # STRANDED_STAMP_HOURS (3 h) into its own fresh landing first, so the old PR is inert by then. Fails open.
+      - name: Close stale landing PRs (batch results older than 90 min, stamps older than 6 h)
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ secrets.BRANCH_PROTECTION_TOKEN }}
+        run: |
+          set -uo pipefail
+          for n in $(gh api "repos/${GITHUB_REPOSITORY}/pulls?state=open&per_page=100" --paginate \
+                --jq '.[] | select(((.head.ref | startswith("automation/research-results-batch")) and ((now - (.created_at | fromdateiso8601)) > 5400)) or ((.head.ref | startswith("automation/research-queue-stamp")) and ((now - (.created_at | fromdateiso8601)) > 21600))) | .number'); do
+            echo "closing stale landing PR #${n}"
+            gh pr close "${n}" --repo "${GITHUB_REPOSITORY}" --comment "Closed by the research dispatcher (B6): this landing did not merge in time. The next cycle re-collects its runs / adopts its stamps." || true
+          done
 
       # The receipt json is ONE file that every run rewrites, so two receipt PRs
       # open at once conflict (stamp PR #16938 failed_conflict 2026-10-07). With
@@ -677,8 +681,10 @@ jobs:
         if: env.FIRE == 'true'
         uses: ./.github/actions/commit-to-main
         with:
-          verify-merged: "true"
-          close-on-fail: "true"   # an open stamp PR blocks the next cycle (PI-20261102-RODISPATCHLAND-0001)
+          # "false" (B6): arrival is verified NEXT cycle. dispatch_queue.py treats a unit in a fresh open stamp PR as already
+          # dispatched and ADOPTS the stamp of a stranded one (stranded_stamp_adoptions) into its own fresh landing;
+          # research_watchdog.py (own 15-min cron) pages on a stranded stamp. Pinned in DEFERRED_VERIFY.
+          verify-merged: "false"
           # A PAT, not GITHUB_TOKEN: a PR authored by GITHUB_TOKEN does not
           # trigger checks, so its auto-merge would sit forever waiting on
           # required checks that never start. Same reason gpu-burst-train.yml

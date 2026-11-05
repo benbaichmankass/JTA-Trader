@@ -23,7 +23,7 @@ Nothing here was verified against the live VM or Actions run history (read-only 
 
 | # | Function | Cadence | Runs as | Model | Cost/wk |
 |---|---|---|---|---|---|
-| R1 | **Manager review**: fetch the daily work report, disposition every digest item, ask_operator, due items, soaks; record `last_review` | 05:52Z, 17:52Z (14/wk) | fires into the **manager session** | Opus | est. $120–170 (≈25% of manager anchor) |
+| R1 | **Manager review**: fetch the daily work report, disposition every digest item, ask_operator, due items, soaks; record `last_review` | 05:52Z (7/wk; was 05:52Z + 17:52Z until the operator's once-daily change, 2026-11-04) | fires into the **manager session** | Opus | est. $120–170 (≈25% of manager anchor) |
 | R2 | **Manager lane check-in**: list sessions, read each lane's status, handle blocked/idle/over-ceiling, arm auto-merge, archive finished, record spend | every 6 h (28/wk; was 3 h) | manager session | Opus | est. $100–140 (≈20%) |
 | R3 | **Research-ops dispatch**: register row, `create_session` Sonnet lane running the `research-ops` skill, archive it, record spend | 02:47/08:47/14:47/20:47Z (28/wk) | manager session (cheap) + a Sonnet lane | Opus (dispatch) + Sonnet (lane) | lane **MEASURED avg $3.36** over 5 recorded passes (2.50–4.32) → **$94/wk**; dispatch overhead is inside the manager anchor |
 | R4 | **Weekly research-planning** (`PLANNING.md` §4: throughput, grade landed results, re-weight themes, draft units, retire stale, one-page plan) | Mon 06:57Z | fresh session | n/a (prompt budget "~$15") | ≤ $15 (budget stated, not measured) |

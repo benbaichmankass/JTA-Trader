@@ -1,9 +1,11 @@
 from __future__ import annotations
 
 import logging
+import math
 import os
 import threading
 import time
+from typing import Optional
 
 from dotenv import load_dotenv
 
@@ -319,6 +321,61 @@ def _tick_hook(name: str):
 def _truthy(value) -> bool:
     """Env-flag truthiness, matching the repo's other kill-switches."""
     return str(value or "").strip().lower() in {"1", "true", "yes", "on"}
+
+
+# ---------------------------------------------------------------- tick pacing
+# TICK-DURATION-115S (2026-11-04). The loop used to sleep a FULL
+# TICK_INTERVAL_SECONDS after every tick, whatever the tick cost. With the tick
+# at 100.8 s mean (/api/diag/tick_cost, 37 ticks from 21:44:14Z) the measured
+# cycle was 159 s (37 ticks over 5,891 s), not the 60 s the operator's
+# 2026-05-08 "re-evaluate every minute" directive and this knob's name imply,
+# and tick starts drifted to an arbitrary phase against bar closes.
+#
+# Now the sleep runs to the next wall-clock multiple of the interval, plus a
+# small offset so the venue has published the bar that just closed. With the
+# default 60 s interval every 5th boundary IS a 5m close (and every 60th a 1h
+# close), so a tick starts ~TICK_ALIGN_OFFSET_SECONDS after each of them. A tick
+# that overran its boundary is followed by the next one after only
+# TICK_MIN_SLEEP_SECONDS: waiting for the following boundary would add up to a
+# whole interval of latency to a tick that is already late. The floor keeps the
+# loop yielding (heartbeat, web API on the same VM) when ticks run long.
+#
+# Nothing here decides a trade. Cadence only: the same tick runs, earlier.
+def _env_float(name: str, default: float, floor: float) -> float:
+    try:
+        v = float(os.environ.get(name, "") or default)
+    except (TypeError, ValueError):
+        return default
+    return v if v >= floor else default
+
+
+def tick_sleep_seconds(
+    now_epoch: float,
+    tick_started_epoch: float,
+    interval: float,
+    offset: Optional[float] = None,
+    min_sleep: Optional[float] = None,
+) -> float:
+    """Seconds to sleep after a tick that started at ``tick_started_epoch``.
+
+    The target is the first grid point ``k*interval + offset`` strictly after
+    the tick's start. If ``now`` is already past it (the tick overran), sleep
+    only ``min_sleep``. Pure function of its inputs; never negative.
+    """
+    if offset is None:
+        offset = _env_float("TICK_ALIGN_OFFSET_SECONDS", 2.0, 0.0)
+    if min_sleep is None:
+        min_sleep = _env_float("TICK_MIN_SLEEP_SECONDS", 5.0, 0.0)
+    if interval <= 0:
+        return max(0.0, min_sleep)
+    offset = offset % interval
+    # +0.5 s: a sleep that woke a hair early (monotonic vs wall clock) must
+    # count as AT its boundary, or the next target would be that same boundary
+    # and alignment would be lost for a cycle.
+    k = math.floor((tick_started_epoch + 0.5 - offset) / interval) + 1
+    target = k * interval + offset
+    remaining = target - now_epoch
+    return remaining if remaining > min_sleep else max(0.0, min_sleep)
 
 
 def exit_loop_interval_seconds() -> float:
@@ -1066,6 +1123,7 @@ def main() -> None:
     last_tick_status = "starting"
     while True:
         tick_count += 1
+        tick_started_epoch = time.time()
         # Refresh the heartbeat at tick-START, before any work. The IBKR
         # restart-loop incident (2026-06-05) showed why "write only after
         # a successful tick" can starve liveness: a slow tick (e.g. a
@@ -1531,11 +1589,14 @@ def main() -> None:
         )
         if heartbeat_interval <= 0:
             heartbeat_interval = 60
+        # TICK-DURATION-115S: sleep to the next interval boundary (+offset), not
+        # a flat `interval` after the tick; see tick_sleep_seconds.
+        sleep_s = tick_sleep_seconds(time.time(), tick_started_epoch, float(interval))
         logger.info(
-            "Sleeping %s seconds until next tick (heartbeat every %s s).",
-            interval, heartbeat_interval,
+            "Sleeping %.1f seconds until next tick (interval %s s, heartbeat every %s s).",
+            sleep_s, interval, heartbeat_interval,
         )
-        end_time = time.monotonic() + interval
+        end_time = time.monotonic() + sleep_s
         while True:
             remaining = end_time - time.monotonic()
             if remaining <= 0:
