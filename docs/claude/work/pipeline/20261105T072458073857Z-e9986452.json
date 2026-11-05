@@ -1,0 +1,16 @@
+{
+  "due_when": {
+    "check_every_days": 1,
+    "clears_when": "the daily live-replay-parity run reports 0 of this class for this leg, with the cause root-caused, or killed with a stated reason",
+    "kind": "observation"
+  },
+  "id": "PI-20261105-LRP-F61A9CFF",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "audit",
+    "ref": "live-replay-parity:trend_donchian_sol_prop:missed_signal",
+    "rerun": "python3 scripts/ops/live_replay_parity.py --base-url <tunnel to the live web-api> --days 7  (or label an issue `live-replay-parity`; the workflow .github/workflows/live-replay-parity.yml runs it daily and commits comms/live_parity/latest.json)"
+  },
+  "state": "queued",
+  "what": "Live-vs-replay parity: leg `trend_donchian_sol_prop` — missed_signal ×2 (REAL-MONEY roster) in window 2026-10-29T06:45:00+00:00..2026-11-05T06:45:00+00:00. MEASURED by scripts/ops/live_replay_parity.py; artifact comms/live_parity/2026-11-05.json. Examples: [{\"class\": \"missed_signal\", \"bar\": \"2026-11-04T15:00:00+00:00\", \"t\": \"2026-11-04T15:52:09+00:00\", \"live\": {\"side\": \"none\", \"adx\": 18.8168, \"close\": 96.62, \"reason\": \"Strategy 'trend_donchian_sol_prop': confidence 0.7855 below min_confidence 0.8 \\u2014 non-actionable.\"}, \"replay\": {\"sides\": [\"long\"], \"adx_range\": [18.8475, 18.8475], \"candidates\": [\"2026-11-04T15:45:00+00:00\"], \"diag_adx\": {\"final_bar_200\": 18.8475, \"closed_only_199\": 16.5601, \"closed_only_200\": 16.5601, \"next_bar_200\": 20.9709}, \"fine_candle\": {\"time\": 1793807100, \"low\": 96.16, \"high\": 96.87}}}, {\"class\": \"missed_signal\", \"bar\": \"2026-11-04T15:00:00+00:00\", \"t\": \"2026-11-04T15:55:09+00:00\", \"live\": {\"side\": \"none\", \"adx\": 18.8168, \"close\": 96.62, \"reason\": \"Strategy 'trend_donchian_sol_prop': confidence 0.7855 below min_confidence 0.8 \\u2014 non-actionable.\"}, \"replay\": {\"sides\": [\"long\"], \"adx_range\": [18.8475, 18.8475],"
+}
