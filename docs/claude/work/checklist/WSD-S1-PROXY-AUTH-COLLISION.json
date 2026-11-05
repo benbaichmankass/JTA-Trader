@@ -2,22 +2,27 @@
   "id": "WSD-S1-PROXY-AUTH-COLLISION",
   "title": "Env-proxy WORK_STORE_TOKEN overwrites Authorization on every ict-bot.duckdns.org request from the ICT env -> diag Transport A (diag_fetch.sh) 401s",
   "phase": null,
-  "state": "queued",
+  "state": "in_flight",
   "owner": "manager",
-  "lane": null,
+  "lane": "session_01AFoLuJFu3NEJt21ZKxx7N1",
   "model": null,
   "ceiling_usd": null,
   "spend_usd": null,
   "tier": 2,
   "prs": [],
   "blocked_on": [],
-  "note": "Found 2026-11-05T06:43Z by lane WSD-S1-STORE-API (session_01AFoLuJFu3NEJt21ZKxx7N1), caused by its own D3 step: request_credential saved a Bearer network secret for ict-bot.duckdns.org on env ICT; the proxy now REPLACES Authorization on every request to that host, so scripts/ops/diag_fetch.sh 'version' returns answered_401 (MEASURED 06:43Z). Unaffected: the issue relay (Transport B), runner-side callers, browser SPA. Same collision for any other bearer a session sends to this host (DASHBOARD_API_TOKEN routes). Options sent to the manager: (A, recommended) work_items accepts X-Work-Store-Token (Bearer kept as fallback) + operator re-saves the network secret with header_name X-Work-Store-Token, no prefix (one form; same value, or rotate); (B) diag router accepts DIAG_READ_TOKEN in X-Diag-Token and diag_fetch.sh sends it (no operator act, widens diag gate, trap stays); (C) interim: operator deletes the network secret (Transport A back, session writes 401 until A). CLOSES WHEN: diag_fetch.sh 'version' exits 0 from an ICT-env session AND a session write to /api/bot/work/items still returns 201.",
+  "note": "Found 2026-11-05T06:43Z by lane WSD-S1-STORE-API (session_01AFoLuJFu3NEJt21ZKxx7N1), caused by its own D3 step: request_credential saved a Bearer network secret for ict-bot.duckdns.org on env ICT; the proxy now REPLACES Authorization on every request to that host, so scripts/ops/diag_fetch.sh 'version' returns answered_401 (MEASURED 06:43Z). Unaffected: the issue relay (Transport B), runner-side callers, browser SPA. Same collision for any other bearer a session sends to this host (DASHBOARD_API_TOKEN routes). Options sent to the manager: (A, recommended) work_items accepts X-Work-Store-Token (Bearer kept as fallback) + operator re-saves the network secret with header_name X-Work-Store-Token, no prefix (one form; same value, or rotate); (B) diag router accepts DIAG_READ_TOKEN in X-Diag-Token and diag_fetch.sh sends it (no operator act, widens diag gate, trap stays); (C) interim: operator deletes the network secret (Transport A back, session writes 401 until A). CLOSES WHEN: diag_fetch.sh 'version' exits 0 from an ICT-env session AND a session write to /api/bot/work/items still returns 201. 2026-11-05T06:44Z manager decision: build option A (work_items accepts X-Work-Store-Token, Bearer kept as a deprecation fallback; hold PR, recorded_decision standing_authorization). Until the operator re-saves the secret with the new header, diag reads from the ICT env go through Transport B (the issue relay).",
   "due_by": "2026-11-05",
   "roadmap": [
     "L-OPS"
   ],
   "priority_rank": 1,
-  "updated_at": "2026-11-05T06:43:20Z",
+  "updated_at": "2026-11-05T06:52:52Z",
   "updated_by": "session_01AFoLuJFu3NEJt21ZKxx7N1",
+  "observation": {
+    "what": "diag_fetch.sh version answers 200 from a session in the ICT env, AND a session write to POST /api/bot/work/items via X-Work-Store-Token still returns 201",
+    "how_to_check": "after option A is deployed and the operator re-saves the network secret with header_name X-Work-Store-Token (no prefix): run scripts/ops/diag_fetch.sh version (exit 0) and POST /api/bot/work/items from an ICT-env session",
+    "due_by": "2026-11-06"
+  },
   "_seq": 938
 }
