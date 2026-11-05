@@ -43,7 +43,14 @@ def main() -> int:
         rec["manifest_1h_um_perp_series"] = len(rec["manifest_paths"])
     except Exception as e:  # noqa: BLE001  # allow-silent: recorded in the record, nothing halts
         rec["manifest_error"] = f"{type(e).__name__}: {e}"[:300]
-    lcache, lsyms, info = LK.build_klines_cache(out, syms, E.START, end, revision=a.lake_revision)
+    try:
+        lcache, lsyms, info = LK.build_klines_cache(out, syms, E.START, end, revision=a.lake_revision)
+    except Exception as e:  # noqa: BLE001  # allow-silent: the record says "could not look" + why; the step still exits non-zero
+        rec.update(read_state="could_not_look", lake_error=f"{type(e).__name__}: {e}"[:600],
+                   cause_hint="HF 403 'Private repository storage limit reached' means the lake is unreadable until the plan/storage is fixed")
+        (out / "lake_parity.json").write_text(json.dumps(rec, indent=1, default=str))
+        print(json.dumps(rec, indent=1, default=str)[:3000])
+        return 1
     rec["lake"] = info
     VS.run(out / "vs", ["klines12"], E.START, E.END, 16, syms)
     scache = out / "klines_streams"
