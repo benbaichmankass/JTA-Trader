@@ -601,14 +601,14 @@ milestones:
       Adopted 2026-11-04 ~21:33Z, operator (popup, verbatim): "Adopt both". 2026-11-04 (lane ML-ROADMAP-MECE):
       docs/plans/ML-ROADMAP-MECE-2026-11.md maps 10 decisions (D1-D10) to one family each; 3 have no model at any stage
       (D5 aggregation, D6 bracket at entry, D10 review); the registry holds none of the 3 models that change real-money
-      orders (trainer-vm-diag #22883). Form corrected from the plan's section 7 per
+      orders (trainer-vm-diag #22883). Filed 2026-11-05 (lane ML-WEEK-1105, plan section 10): P1 serving inventory = scope on
+      row ML-REGISTRY-LADDER-GAPS (no new row); P3 = row ML-SLOT-REPORT; P5 Pointer v0 = unit RQ-20261105-af07-01 (blocked:
+      harness + 2026-11 forward window); P4 is the existing unit RQ-20261101-a24c-01 (same question, no new unit); Whippet stays
+      parked with its re-entry test (plan section 8), no row. Form corrected from the plan's section 7 per
       docs/reviews/2026-11-04-roadmap-rebaseline.md section 3 (status must be active|dormant|backlog|closed; no_rows_reason).
     next: >-
       Done when (a) one serving inventory lists every order-changing model with its slot and books (P1), and (b) the
       weekly /ml-review prints a slot report where every open ML row/unit names a slot and every slot names its next unit (P3).
-    no_rows_reason: >-
-      adopted 2026-11-04 ~21:33Z; its rows (ML-SERVING-INVENTORY, ML-SLOT-REPORT, WHIPPET-FILL-REPLAY) and units
-      (RQ-20261105-mece-*) are filed in Thursday planning 2026-11-05 (docs/plans/ML-ROADMAP-MECE-2026-11.md section 9)
     owner: manager
     reviewed: 2026-11-04
   - id: L-ML-AGGREGATOR
@@ -622,11 +622,11 @@ milestones:
       (src/runtime/allocator_ev.py + config/slice_allocation.yaml); M18 prior: single-symbol EV ranking ~= priority
       (96-97% agreement).
     next: >-
-      VOI census first (P2, RQ-20261105-mece-01); harness and rule arms A0-A4 only if concurrent episodes are material;
+      VOI census first (P2 = TODO 1 of pipeline item PI-20261104-BCZDXJNR-0002, due 2026-11-06; no new unit); harness and rule arms A0-A4 only if concurrent episodes are material;
       learned arm last. All offline; live use is a separate Tier-3 decision.
     no_rows_reason: >-
-      adopted 2026-11-04 ~21:33Z as offline research only ("Research offline only (Recommended)"); the VOI census unit
-      RQ-20261105-mece-01 is filed in Thursday planning 2026-11-05; no build or live row exists or is authorized -- any live
+      adopted 2026-11-04 ~21:33Z as offline research only ("Research offline only (Recommended)"); the VOI census (TODO 1 of
+      pipeline item PI-20261104-BCZDXJNR-0002, not a unit) is due 2026-11-06; no build or live row exists or is authorized -- any live
       use is a separate Tier-3 decision
     owner: manager
     reviewed: 2026-11-04
