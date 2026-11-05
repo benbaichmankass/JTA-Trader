@@ -775,3 +775,51 @@ def test_already_delivered_rows_log_one_summary_line_not_one_per_row(tmp_path, c
             and "pending-pings" in r.getMessage()]
     assert len(info) == 1, [r.getMessage() for r in info]
     assert "49 already-delivered" in info[0].getMessage()
+
+
+def test_committed_work_digest_is_recorded_not_sent_under_the_trim_policy(monkeypatch, tmp_path):
+    """TELEGRAM-TRIM post-deploy finding (2026-11-05 03:49:52Z): the committed
+    `event: work_digest` row (work-digest.yml, push-on-main, ~hourly) still
+    reached the manager channel through this drain. Under the committed policy it
+    is recorded in the alert ledger, marked delivered, and NOT enqueued; an
+    ordinary queued ping on the same pull still goes."""
+    inbox = tmp_path / "pending_pings"
+    queue = tmp_path / "queue.jsonl"
+    queue.write_text(
+        json.dumps({"target": "claude", "event": "work_digest", "priority": "normal",
+                    "message": "[work digest] 2026-11-05 3 state change(s)"}) + "\n"
+        + json.dumps({"target": "claude", "priority": "high", "message": "a real ask"}) + "\n")
+    monkeypatch.setattr(nop, "CHECKPOINT_LOG", tmp_path / "log.md")
+    monkeypatch.setattr(nop, "PENDING_PINGS", queue)
+    monkeypatch.setattr(nop, "DELIVERED_HASHES", tmp_path / "delivered.txt")
+    monkeypatch.setattr(nop, "_blocker_pings", lambda pre, post: [])
+    monkeypatch.setattr(nop, "_training_workflow_pings", lambda pre, post: [])
+    monkeypatch.setattr(nop, "_merge_pings", lambda pre, post: [])
+    monkeypatch.setattr(nop, "_diff_touched_checkpoint_log", lambda pre, post: False)
+    sys.path.insert(0, str(REPO_ROOT / "scripts"))
+    import send_ping
+    monkeypatch.setattr(send_ping, "PENDING_CLAUDE_PINGS_DIR", inbox)
+    monkeypatch.setattr(send_ping, "PENDING_PINGS_DIR", tmp_path / "trader_unused")
+
+    assert nop.main(["--pre", "abc", "--post", "def"]) == 0
+    queued = [json.loads(p.read_text()) for p in sorted(inbox.glob("*.json"))]
+    assert [q["body"] for q in queued] == ["a real ask"] or (
+        len(queued) == 1 and "a real ask" in queued[0]["body"])
+    assert len((tmp_path / "delivered.txt").read_text().split()) == 2, "both lines marked delivered"
+    import os
+    led = [json.loads(x) for x in open(os.environ["ALERTS_LEDGER_PATH"]).read().splitlines()]
+    assert led[-1]["kind"] == "manager_update" and led[-1]["delivered"] == "suppressed_by_policy"
+    assert "[work digest]" in led[-1]["body"]
+    # a second pull re-sends nothing
+    assert nop.main(["--pre", "abc", "--post", "def"]) == 0
+    assert len(list(inbox.glob("*.json"))) == 1
+
+
+def test_committed_work_digest_still_sends_under_an_empty_policy(monkeypatch, tmp_path):
+    p = tmp_path / "empty.yaml"
+    p.write_text("{}\n")
+    monkeypatch.setenv("TELEGRAM_POLICY_PATH", str(p))
+    q = tmp_path / "q.jsonl"
+    q.write_text(json.dumps({"event": "work_digest", "message": "[work digest] x"}) + "\n")
+    out = nop._drain_pending_pings(q)
+    assert len(out) == 1 and out[0][0] != nop.SUPPRESSED_PRIORITY

@@ -664,6 +664,29 @@ _EMPTY_BODY_NOTE = (
 )
 
 
+#: Sentinel priority for a drained line the TELEGRAM-TRIM policy keeps off
+#: Telegram (recorded in the alert ledger, marked delivered, never enqueued).
+SUPPRESSED_PRIORITY = "suppressed_by_policy"
+
+
+def _digest_suppressed(event: str) -> bool:
+    """TELEGRAM-TRIM (operator 2026-11-04, config/telegram_policy.yaml): a
+    committed ``event: work_digest`` row (``.github/workflows/work-digest.yml``,
+    push-on-main, ~hourly) is the same RECURRING manager digest
+    ``ict-work-digest`` already stopped sending. Fails OPEN (sends) when the
+    policy cannot be read."""
+    if event != "work_digest":
+        return False
+    try:
+        sys.path.insert(0, str(REPO_ROOT))
+        from src.runtime import telegram_policy
+
+        return telegram_policy.recurring_off("manager_update")
+    except Exception as exc:  # noqa: BLE001 — a broken policy sends
+        logger.warning("pending-pings: telegram policy unreadable (%s) — sending", exc)
+        return False
+
+
 def _drain_pending_pings(
     path: Path, delivered: Optional[set[str]] = None,
 ) -> List[Tuple[str, str, str]]:
@@ -711,6 +734,11 @@ def _drain_pending_pings(
                 entry.get("priority")
                 or EVENT_DEFAULT_PRIORITY.get(event, "normal")
             )
+            if _digest_suppressed(event):
+                # TELEGRAM-TRIM: the committed work digest is a RECURRING post.
+                # Marked here; main() records it in the alert ledger and marks
+                # the line delivered instead of enqueueing it.
+                priority = SUPPRESSED_PRIORITY
             out.append((priority, _render_event_body(event, entry), h))
     except OSError as exc:
         logger.warning("pending-pings: read error: %s", exc)
@@ -946,7 +974,21 @@ def main(argv: Optional[Iterable[str]] = None) -> int:
         return 1
 
     failures = 0
+    sent = 0
     for priority, body, line_hash in pings:
+        if priority == SUPPRESSED_PRIORITY:
+            try:
+                from src.runtime import telegram_policy
+
+                telegram_policy.record_suppressed("manager_update", body, reason="recurring_off",
+                                                  channel="manager", source="pending-pings.jsonl")
+            except Exception as exc:  # noqa: BLE001 — recording is best-effort
+                logger.warning("pending-pings: suppressed-ledger record failed: %s", exc)
+            if line_hash is not None:
+                _record_delivered_hash(DELIVERED_HASHES, line_hash)
+            logger.info("pending-pings: work digest suppressed by telegram_policy (recorded, not sent)")
+            continue
+        sent += 1
         try:
             # 2026-05-06 (BUG-058 follow-up): all session pings emitted
             # by this script — blockers, training stages, drained
@@ -968,7 +1010,7 @@ def main(argv: Optional[Iterable[str]] = None) -> int:
     if failures:
         logger.error("%d / %d pings failed to enqueue", failures, len(pings))
         return 1
-    logger.info("Queued %d ping(s) — bot drains within ~5 s", len(pings))
+    logger.info("Queued %d ping(s) — bot drains within ~5 s", sent)
     return 0
 
 
