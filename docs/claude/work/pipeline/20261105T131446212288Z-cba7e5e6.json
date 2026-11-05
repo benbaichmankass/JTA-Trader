@@ -1,0 +1,16 @@
+{
+  "due_when": {
+    "check_every_days": 7,
+    "clears_when": "a netting_attributed close on a bybit slices account whose tracked leg reads Filled no longer occurs: such closes carry exit_reason sl/tp and the venue avg_price",
+    "kind": "event"
+  },
+  "id": "PI-20261105-BBTN6WTC-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "lane LTR-MECH-PROP-MIRROR-BRACKET (session_01AFoLuKwii49zWcbBtn6WTC), live-review row LR-20261105T1228Z-pkg-3245fc73e2f64536",
+    "rerun": "scripts/ops/diag_fetch.sh 'journal?table=trades&limit=400' (row 6886) and 'bybit_raw_order_history?account_id=bybit_1&symbol=ETHUSDT&start_ms=1793804100000&end_ms=1793883900000'; count netting_attributed closes whose tracked sl/tp leg reads Filled in order history"
+  },
+  "state": "queued",
+  "what": "Netting reconciler stamps a VENUE SL FILL as 'netting_attributed' with a candle price. bybit_1 trade 6886 (pkg-3245fc73e2f64536, trend_donchian_eth_prop long 14.12): its own PartialStopLoss b372d2f8 (trigger 2408.18) FILLED at 2026-11-05T12:27:21Z avg 2408.02 (bybit_raw_order_history, cancel of TP 51f83d61 = CancelByOCOTpCanceledBySlTriggered). 17 s later order_monitor._netting_apply_close closed the row exit_reason=netting_attributed, exit_price 2409.82 (exit_price_source candle_at_close, ESTIMATED), and the notes carry netting_attribution_basis='' (empty, not leg_gone). The close should read 'sl' at the MEASURED venue avg 2408.02. _netting_rows_to_attribute's docstring says leg absence 'cannot distinguish fired from cancelled' -- the raw order history (get_order_history: order_status Filled/avg_price) can. Order-path change (Tier 2): before a leg_gone attribution, read the tracked leg's order history; Filled -> close as sl/tp at its avg_price (MEASURED). Also why basis is empty in notes (dump_capped truncation?). Session-start contract: a close that is not TP/SL/strategy-close is a bug."
+}
