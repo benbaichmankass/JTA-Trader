@@ -666,6 +666,8 @@ def test_pending_poll_runs_the_stale_claim_watchdog(tmp_path, monkeypatch, _iso)
 
 def test_live_verify_refuses_when_the_form_risk_exceeds_the_cushion(tmp_path, monkeypatch, _iso):
     _live(tmp_path, monkeypatch, cushion="exceeds_cushion")
+    from src.prop import prop_risk_gate
+    monkeypatch.setattr(prop_risk_gate, "breach_guards_for", lambda acct: "enforce")  # the default for an account
     tid = _claimed()
     v = _verify(tid)
     assert v["ok"] is False and v.get("token") is None
@@ -722,3 +724,19 @@ def test_cushion_risk_is_qty_times_stop_distance():
         prop_risk_gate.grade_account_ticket_risk = orig
     assert abs(calls["r"] - 17.3884) < 1e-6
     assert pe.live_cushion_refusals("breakout_2", {"qty": "", "price": "1", "sl": "1"})[0].startswith("risk gate:")
+
+
+def test_repo_config_puts_breakout_2_on_report_so_an_over_cushion_live_verify_pings_and_proceeds(tmp_path, monkeypatch, _iso):
+    # Operator 2026-11-05 ~10:59Z, verbatim: "Merge, breakout_2 on report (Rec.)" (PROP-SIZE-EXCEEDS-DD-CUSHION).
+    # breach_guards_for is NOT patched: it reads the REAL config/accounts.yaml.
+    from src.prop import prop_risk_gate
+    assert prop_risk_gate.breach_guards_for("breakout_2") == "report"
+    _live(tmp_path, monkeypatch, cushion="exceeds_cushion")
+    v = _verify(_claimed())
+    assert v["ok"] is True and v["mode"] == "live" and v["token"]
+    assert any("breach_guards=report" in m and "exceeds_cushion" in m for m in _iso)
+
+
+def test_breakout_2_on_report_still_refuses_an_unknown_cushion(tmp_path, monkeypatch, _iso):
+    _live(tmp_path, monkeypatch, cushion="cushion_unknown")
+    assert _verify(_claimed())["ok"] is False

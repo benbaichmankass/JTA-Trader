@@ -2136,9 +2136,15 @@ accounts:
       risk_pct: 0.0035                 # was 0.005: FLAT $25/ticket (0.5% x $5k): the flat arm chosen by the rule registered in
                                        # RQ-20261005-853/814 before the run (ETH -> $25; SOL -> $50 not applied: risk is per account,
                                        # per-leg sizing PI-20261005-YUVCGTMJ-0006); ruleset sizing.flat.max_risk_usd matches.
-      # breach_guards: NOT set -> `enforce` (the default) for the prop ticket risk gate
-      # (src/prop/prop_risk_gate.py). The RiskManager DAILY_LOSS_CAP / INTRADAY_DRAWDOWN
-      # refusals it once also softened were folded into daily_dd_switch below (2026-10-09).
+      breach_guards: report            # Tier-3, OPERATOR 2026-11-05 ~10:59Z (popup, relayed by Manager Session
+                                       # 2026-11-05a), verbatim: "Merge, breakout_2 on report (Rec.)"; context, operator
+                                       # this week: "don't worry about account breach, it's a small test account and we'll
+                                       # just buy another one". Row PROP-SIZE-EXCEEDS-DD-CUSHION. Effect: the phone LIVE
+                                       # verify's exceeds_cushion PINGS and the submit proceeds; the ticket caveat renders
+                                       # its report form. HARD refusals stay in every mode (cushion_unknown, risk not
+                                       # computable from the form). The RiskManager DAILY_LOSS_CAP / INTRADAY_DRAWDOWN
+                                       # refusals it once also softened were folded into daily_dd_switch below (2026-10-09).
+                                       # REVERT: delete this line (default `enforce` refuses an over-cushion submit).
       daily_dd_switch:                 # The ONE automatic daily off (operator 2026-10-09, rule 7
         armed: true                    # exception). ARMED 2026-10-09 (operator: "We'll arm all of them"). Limit =
                                        # 0.8 x the firm's daily limit (backtest_ruleset), at the firm's
