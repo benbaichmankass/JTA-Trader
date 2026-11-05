@@ -5,7 +5,6 @@ import sqlite3
 import time
 from types import SimpleNamespace
 
-import pytest
 
 from src.runtime import exchange_accounts, exchange_fills_store as store
 from src.web.api.routers import diag

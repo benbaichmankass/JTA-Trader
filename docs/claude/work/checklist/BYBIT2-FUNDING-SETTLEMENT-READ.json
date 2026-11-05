@@ -19,8 +19,17 @@
     "L-DATA"
   ],
   "priority_rank": 1,
-  "updated_at": "2026-11-05T18:30:57Z",
+  "updated_at": "2026-11-05T18:46:40Z",
   "updated_by": "lane-bybit2-funding",
   "week_lane": "surge",
+  "observation": {
+    "what": "bybit_2 per-settlement funding visible: settlements_last_24h>=1 and newest_settlement_age_h<=8",
+    "how_to_check": "GET /api/diag/funding_settlements?account_id=bybit_2 after #23446 deploys",
+    "due_by": "2026-11-06"
+  },
+  "writeback": {
+    "roadmap": "none: diag read route only, no milestone line changes",
+    "arch": "none: Tier-1 read route documented in docs/api-tier-policy.md"
+  },
   "_seq": 920
 }
