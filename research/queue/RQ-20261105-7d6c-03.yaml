@@ -1,6 +1,6 @@
 id: RQ-20261105-7d6c-03
 title: 'M22 pairs pairs_eth_btc at configured params on an honest R scale (entry-bar hedge ratio): net of the full cost stack, does it clear? (re-scope of RQ-20261014-470a-12, one unit per pair)'
-status: queued
+status: done
 cadence: once
 theme: live_strategy
 priority: 1
@@ -87,3 +87,16 @@ unblocked:
     was one-per-pair in its clears_when (--pair <each>), the script takes one pair, so the unit is split into one per configured Bybit pair. Rule, statistic and power are UNCHANGED from the 2026-10-14 registration.'
 re_scope_of: RQ-20261014-470a-12
 last_dispatched_at: '2026-11-05T17:06:35+00:00'
+grading:
+  attested: RULE-RQ20261014470a12-PAIRS-RSCALE
+  auto: true
+  decision_rule_id: RULE-RQ20261014470a12-PAIRS-RSCALE
+  evidence:
+  - research/results/RQ-20261105-7d6c-03/42071592247.jsonl
+  graded_at: '2026-11-05'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail
