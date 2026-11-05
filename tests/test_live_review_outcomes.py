@@ -212,3 +212,75 @@ def test_committed_ada_corpus_is_the_full_history_harness_run():
     rows, src = lro.load_trades("ada_pullback_2h", corpus="auto")
     assert src.endswith("ltr_corpus/ada_pullback_2h__trades.jsonl") and len(rows) >= 400
     assert all("net_r" in r and "mfe_r" in r and "cost_funding_r" in r for r in rows)   # full cost stack
+
+
+# ---- LTR-GRADER-COVERAGE (2026-11-05): VM candle store + named invalid_level ------------------------------------
+
+def _repo_with(tmp_path, *, research: bool, store: bool):
+    """A fake repo root: optionally a research candle file and/or the VM store file for ADAUSDT 2h."""
+    bars = [(100, 100, 100, 100), (100, 100.2, 96, 96.5), (96.5, 98.5, 96.4, 98), (98, 100.5, 97.9, 100.4)]
+    df = _candles(bars).reset_index()
+    if research:
+        d = tmp_path / "comms/research/RQ-1/run/candles"
+        d.mkdir(parents=True)
+        df.to_csv(d / "ADAUSDT_2h_300d.csv", index=False)
+    if store:
+        d = tmp_path / lro.LTR_CANDLE_STORE
+        d.mkdir(parents=True)
+        df.to_csv(d / "ADAUSDT_2h.csv.gz", index=False)
+    return tmp_path
+
+
+def test_find_candles_falls_back_to_vm_store_when_research_tree_is_sparse(tmp_path):
+    """The live VM's sparse checkout drops comms/research candles; the store must still resolve (was: None)."""
+    repo = _repo_with(tmp_path, research=False, store=True)
+    hit = lro.find_candles("ADAUSDT", "2h", repo=repo)
+    assert hit and hit.endswith("comms/live_review/candles/ADAUSDT_2h.csv.gz")
+    assert len(lro.load_candles(hit)) == 4          # .csv.gz reads like the .csv
+
+
+def test_find_candles_prefers_research_candles_so_priced_legs_do_not_change(tmp_path):
+    """Positive control: where the research file exists the store is never consulted."""
+    repo = _repo_with(tmp_path, research=True, store=True)
+    assert lro.find_candles("ADAUSDT", "2h", repo=repo).endswith("candles/ADAUSDT_2h_300d.csv")
+    assert lro.find_candles("ADAUSDT", "2h", repo=_repo_with(tmp_path / "x", research=False, store=False)) is None
+
+
+def test_store_candles_price_tighten_that_was_no_candles(tmp_path):
+    trades = [_short(-1.0, 3, 4.0)] * 25
+    none = lro.build_table(trades, None, side="short", open_r=3.2, peak_r=3.5, bars_held=None, atr_stop_mult=2.0,
+                           tighten=["atr:1.0"])
+    opt = [o for o in none["options"] if o["action"] == "tighten"][0]
+    assert (opt["state"], opt["reason"]) == ("could_not_look", "no_candles")
+    repo = _repo_with(tmp_path, research=False, store=True)
+    c = lro.load_candles(lro.find_candles("ADAUSDT", "2h", repo=repo))
+    got = lro.build_table(trades, c, side="short", open_r=3.2, peak_r=3.5, bars_held=None, atr_stop_mult=2.0,
+                          tighten=["atr:1.0"])
+    opt = [o for o in got["options"] if o["action"] == "tighten"][0]
+    assert opt["state"] == "measured" and opt["mean_r"] is not None
+
+
+def test_invalid_level_names_its_reason():
+    """r:2.0 with the trade only at +0.02R is a stop above price: invalid by construction, and says so."""
+    trades = [_short(-1.0, 3, 4.0)] * 25
+    t = lro.build_table(trades, None, side="short", open_r=0.02, peak_r=0.2, bars_held=None, atr_stop_mult=2.0,
+                        tighten=["r:2.0"])
+    opt = [o for o in t["options"] if o["action"] == "tighten"][0]
+    assert opt["state"] == "invalid_level" and opt["reason"] == "stop_level_not_below_price"
+
+
+def test_vm_store_is_outside_the_sparse_exclusions():
+    """The store must survive deploy/vm-sparse-checkout (last matching rule wins)."""
+    import fnmatch
+    rules = [ln.strip() for ln in (REPO / "deploy/vm-sparse-checkout").read_text().splitlines()
+             if ln.strip() and not ln.startswith("#")]
+    path = "/" + lro.LTR_CANDLE_STORE + "/ETHUSDT_4h.csv.gz"
+    state = True
+    for r in rules:
+        neg = r.startswith("!")
+        pat = r.lstrip("!")
+        hit = pat == "/*" or fnmatch.fnmatch(path, pat.replace("**", "*")) or path.startswith(pat.rstrip("*"))
+        if hit and pat != "/*":
+            state = not neg
+    assert state, "comms/live_review/candles would be excluded from the VM checkout"
+    assert (REPO / lro.LTR_CANDLE_STORE / "ETHUSDT_4h.csv.gz").is_file()

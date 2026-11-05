@@ -79,6 +79,12 @@ N_FLOOR = 20
 #: peak, a retrace) is usually under the n floor. ``<leg>__trades.jsonl`` + ``<leg>__corpus.json`` here are
 #: a longer run of the SAME harness and cost stack; ``--corpus auto`` prefers them.
 LTR_CORPUS_DIR = "comms/strategy_evidence/ltr_corpus"
+#: VM-resident candle store (LTR-GRADER-COVERAGE, 2026-11-05). ``deploy/vm-sparse-checkout`` (2026-11-02) drops every
+#: ``comms/research/**/candles/`` dir and ``*.csv`` from the live VM, so ``find_candles`` returned None there and every
+#: VM-priced tighten came back ``no_candles``. This dir is outside ``comms/research`` (the sparse rules do not touch it):
+#: one ``<SYMBOL>_<tf>.csv.gz`` per pair, written by ``scripts/research/build_ltr_candle_store.py``. Fallback only: a
+#: checkout that has the research candles keeps using them, so already-priced legs are unchanged.
+LTR_CANDLE_STORE = "comms/live_review/candles"
 AUTO_BOUND_R = 0.25      # design Q1 auto-apply bound (proposed)
 SHADOW_BOUND_R = 0.5     # design shadow bound (proposed)
 MFE_TOL_R = 0.05         # replayed-vs-recorded MFE agreement used by the fidelity check
@@ -155,6 +161,15 @@ def find_candles(symbol: str, timeframe: str, repo: Path = REPO, widest_span: bo
 
     ``widest_span`` also reads the ``data/<SYM>_<tf>.csv`` files (full-history pulls the filename-days
     pattern does not match) and ranks every candidate by the days it actually covers."""
+    hit = _find_candles_research(symbol, timeframe, repo, widest_span)
+    if hit:
+        return hit
+    stored = repo / LTR_CANDLE_STORE / f"{symbol}_{timeframe}.csv.gz"
+    # provenance: cpath — the store file is printed on every run as res["candles"]
+    return str(stored) if stored.is_file() else None
+
+
+def _find_candles_research(symbol: str, timeframe: str, repo: Path, widest_span: bool) -> Optional[str]:
     # provenance: cpath — the chosen file is printed on every run as res["candles"]; widest span wins
     hits = glob.glob(str(repo / "comms" / "research" / "*" / "*" / "candles" / f"{symbol}_{timeframe}_*d.csv"))
     if widest_span:
@@ -391,7 +406,9 @@ def build_table(trades: List[Dict[str, Any]], candles: Optional[pd.DataFrame], *
         lvl_r = val if kind == "r" else peak_r - val * atr_over_r
         base = {"action": "tighten", "spec": spec, "stop_at_r_now": round(lvl_r, 4)}
         if lvl_r >= open_r:
+            # a stop at or above the current price is not a stop; named so a reader can tell it from a data gap
             out["options"].append({**base, "n": len(rows), "state": "invalid_level",
+                                   "reason": "stop_level_not_below_price",
                                    "mean_r": None, "sd_r": None, "worst_r": None, "p05_r": None,
                                    "p_giveback_gt_half": None, "ev_cost_r": None,
                                    "ev_cost_se_r": None, "worst_case_gain_r": None,
