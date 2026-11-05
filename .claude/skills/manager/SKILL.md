@@ -116,6 +116,10 @@ each **one marker, one lane, never spawn twice for the same id**; a `could_not_*
   fallback with the `live-trade-review` skill. **Never create a session with no `source_url`** (403 on every write, MEASURED DESK-6). Do not
   file `live-review-apply` for a `tighten_sl`; the VM rows watcher applies it. The wake poster commits the packet + table to
   `live-review/rows` byte-exact BEFORE posting (entry `evidence_state` `committed`/`exists`, LTR-PACKET-ECHO); the reviewer writes only its
+  row. **Every reviewer dispatch prompt says: "end your report with a `PACKET DEFECTS:` line (REVIEWER-BRIEF § 2d): each defect as field — reason —
+  n/denominator, or `none`"** (PACKET-HEALTH, operator 2026-11-05). The wake comment prints `PACKET HEALTH <pkg>: …` from the packet's computed
+  `packet_health`; a `degraded` / `could_not_look` line with a report that says `none` is a failed report, so re-ask once. **You file each reported
+  defect once** on its one owner (`LTR-GRADER-COVERAGE` pricing, `LTR-PACKET-READ-REACH` venue reads; else a PIPELINE item), never a duplicate and never a new
   row. Never commit a packet or table yourself from the comment text. `packet_state` `could_not_commit` / `evidence_conflict` → no reviewer;
   an incident (the VM receipt `ltr_wake_post_receipt` and the poller run name the http code). An `ltr-mirror-refused` comment (a row the
   mirror refused on `packet_sha` or a missing cited file) is an incident: repair the branch file from the generator's bytes, never by hand.

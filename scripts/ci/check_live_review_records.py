@@ -229,6 +229,36 @@ def forecast_problems(row: dict) -> list[str]:
     return out
 
 
+#: PACKET-HEALTH (operator 2026-11-05 ~08:25Z, "we need to make sure the lanes know how to report when something is wrong with
+#: the review packet, like missing live data"). Precedent failure: LR-20261105T0700Z-pkg-b76b0655d305485e, every tighten option
+#: unpriced (no_candles / invalid_level), recorded `hold`, and the packet defect never reported. Keyed on the COMMITTED PACKET's
+#: computed ``packet_health`` (a packet from an older generator has none and is not checked) and grandfathered by reviewed_at,
+#: so the ~120 older rows are untouched. The defect is REPORTED, never a reason to withhold the call.
+PACKET_DEFECTS_RULE_FROM = "2026-11-05T12:00:00Z"
+
+
+def packet_defect_problems(row: dict, packet: dict) -> list[str]:
+    if str(row.get("reviewed_at") or "") < PACKET_DEFECTS_RULE_FROM:
+        return []
+    ph = packet.get("packet_health") if isinstance(packet, dict) else None
+    if not isinstance(ph, dict) or ph.get("status") == "ok":
+        return []
+    flags = [str(f) for f in row.get("context_flags") or []]
+    listed = [d for d in row.get("packet_defects") or [] if isinstance(d, dict)]
+    out = []
+    for d in ph.get("defects") or []:
+        f = str(d.get("field"))
+        named = any(x.get("field") == f for x in listed) or any(f in fl and "packet_defect" in fl for fl in flags)
+        if not named:
+            out.append(f"packet_health is {ph.get('status')} and defect {d.get('reason')!r} at {f!r} "
+                       f"({d.get('count')}/{d.get('denominator')}) is not reported: add it to `packet_defects` or a "
+                       f"context_flags entry 'packet_defect: {f} ...' (REVIEWER-BRIEF section 2d); the call is still made")
+    if not (ph.get("defects") or []) and not listed and not any("packet_defect" in fl for fl in flags):
+        out.append(f"packet_health is {ph.get('status')} with no defect listed: record `packet_defects` or a "
+                   "'packet_defect: ...' context_flags entry")
+    return out
+
+
 def row_problems(row: dict, kind: str, schema: dict) -> list[str]:
     out: list[str] = []
     _check(row, schema[kind], schema["enums"], kind, out)
@@ -314,7 +344,7 @@ def packet_blob_problems(row: dict, blob: bytes) -> list[str]:
         return [f"packet for {row.get('review_id')} is not JSON"]
     if got != sha:
         return [f"packet_sha does not match {row.get('review_id')}.json"]
-    return handoff_problems(row, packet)
+    return handoff_problems(row, packet) + packet_defect_problems(row, packet)
 
 
 #: DESK-HANDOFF-PROTOCOL (operator 2026-10-30 ~22:30Z, verbatim "We can lift it completely if we have a protocol
@@ -567,6 +597,26 @@ def _self_test() -> int:
         c = bool(findings(rv, oc))
         print(f"  {'PASS' if c else 'FAIL'}  a bad line is refused")
         ok &= c
+    # PACKET-HEALTH planted controls: degraded + unflagged FAILS; degraded + flagged PASSES; ok PASSES; pre-rule row PASSES.
+    deg = {"packet_health": {"status": "degraded", "defects": [
+        {"field": "priced_options.candles", "reason": "candles_missing", "count": 3, "denominator": 5}]}}
+    late = mut(GOOD_REVIEW, lambda r: r.update(reviewed_at="2026-11-05T13:00:00Z"))
+    for label, rw, pk, bad in (
+            ("a degraded packet with no reported defect is refused", late, deg, True),
+            ("a degraded packet with packet_defects passes",
+             mut(late, lambda r: r.update(packet_defects=[{"field": "priced_options.candles", "reason": "candles_missing",
+                                                           "count": 3, "denominator": 5}])), deg, False),
+            ("a degraded packet with a packet_defect context flag passes",
+             mut(late, lambda r: r.update(context_flags=["packet_defect: priced_options.candles candles_missing 3/5"])), deg, False),
+            ("an ok packet passes", late, {"packet_health": {"status": "ok", "defects": []}}, False),
+            ("a degraded packet on a pre-rule row passes (grandfathered)", GOOD_REVIEW, deg, False)):
+        c = bool(packet_defect_problems(rw, pk)) == bad
+        print(f"  {'PASS' if c else 'FAIL'}  {label}")
+        ok &= c
+    c = not row_problems(mut(GOOD_REVIEW, lambda r: r.update(packet_defects=[{"field": "x", "reason": "y", "count": 1, "denominator": 1}])),
+                         "reviews", schema)
+    print(f"  {'PASS' if c else 'FAIL'}  the schema accepts packet_defects")
+    ok &= c
     print("live-review-records-guard self-test:", "PASS" if ok else "FAIL")
     return 0 if ok else 1
 
