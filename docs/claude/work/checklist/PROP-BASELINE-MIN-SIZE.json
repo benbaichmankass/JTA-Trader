@@ -1,0 +1,24 @@
+{
+  "id": "PROP-BASELINE-MIN-SIZE",
+  "title": "PROP-BASELINE-MIN-SIZE: eth_4h + sol_4h on breakout_2/tradeify_1/velotrade_1 at $10/ticket as the operator's measured baseline",
+  "phase": "build",
+  "state": "landed_unproven",
+  "owner": "manager",
+  "lane": null,
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 3,
+  "prs": [
+    23525
+  ],
+  "blocked_on": [],
+  "note": "Operator 2026-11-05 popups verbatim: \"Baseline at min size (Rec.)\" (~18:55Z), \"Proceed, I'll approve (Rec.)\" (~20:50Z), \"Both now, waive both\" (~21:05Z), \"handle it\" (~22:48Z). MERGED #23525 (squash 858c3be4d, 23:29Z). DEPLOYED: /api/bot/runtime-config 23:31:09Z git_sha 5610363c0 (858c3be4d is an ancestor), verdict CURRENT (the trading process loaded the on-disk bytes), bot ticking; /api/bot/config 23:31:04Z shows [trend_donchian_eth_4h, trend_donchian_sol_4h] on breakout_2, tradeify_1, velotrade_1, daily_dd_switch armed on all three, config_load_errors []. restart_pending NOT read (/api/diag/version needs a diag token this lane lacks). NOT YET OBSERVED. CLOSES (done) per account on the FIRST observed baseline ticket for that account (strategy trend_donchian_eth_4h or _sol_4h in /api/bot/prop/tickets) reaching a venue fill or a journaled close, sized at about $10 risk. breakout_2 is the PHONE flow: its first ticket needs the operator's tap. Both legs are 4h Donchian breakouts, so tickets are sparse (about 44 + 38 trades/yr, ESTIMATED from the 3y ledgers n=132/115): no ticket within a week is not a fault. Expectation: trailing-12-month -0.149 R/trade (n=83). OWED: RQ-20261105-d256-03 (sol_4h faithful re-measure; PASS -> delete the 3 FIDELITY_OPERATOR_WAIVER lines, FAIL -> pull-from-prop proposal). The $10 arm is UNSIMULATED.",
+  "due_by": "2026-11-12",
+  "roadmap": [
+    "L-PROP"
+  ],
+  "updated_at": "2026-11-05T23:31:41Z",
+  "updated_by": "session_01AFoLuJiZu24Ggu9S7g7Ujz",
+  "_seq": 958
+}
