@@ -1,0 +1,112 @@
+name: trainer-console-connector-install
+
+# Installs the PERSISTENT jta-console-connector unit on the trainer VM and retires the quick
+# tunnel jta-mcp-tunnel (row UI-CONSOLE-CONNECTOR-PERSIST; Tier 2, no order path; operator
+# approved under the console work, relayed by Manager Session 2026-11-05b).
+#
+# Gates this adds or changes: none.
+#
+# Steps (idempotent): write /etc/jta-console/connector.env (0640 root:ubuntu) from repo secrets
+# + the already-live non-secret values; install deploy/trainer/jta-console-connector.service;
+# stop the transient units, enable --now the persistent one (ONE restart); disable the tunnel;
+# verify healthz / 401 / token store. Secrets are never echoed.
+#
+# Triggers: workflow_dispatch, or an issue labelled `trainer-console-connector-install` opened by
+# the repo owner or github-actions[bot].
+
+on:
+  workflow_dispatch:
+  issues:
+    types: [opened]
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: trainer-console-connector-install
+  cancel-in-progress: false
+
+jobs:
+  install:
+    if: |
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'issues' &&
+       (github.event.issue.user.login == github.repository_owner ||
+        github.event.issue.user.login == 'github-actions[bot]') &&
+       contains(github.event.issue.labels.*.name, 'trainer-console-connector-install'))
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up SSH key
+        env:
+          VM_SSH_KEY: ${{ secrets.VM_SSH_KEY }}
+          TRAINER_IP: ${{ secrets.TRAINER_VM_IP }}
+        run: |
+          set -euo pipefail
+          [ -n "${VM_SSH_KEY}" ] || { echo "::error::VM_SSH_KEY secret is unset."; exit 1; }
+          mkdir -p ~/.ssh && chmod 700 ~/.ssh
+          printf '%s\n' "${VM_SSH_KEY}" > ~/.ssh/trainer_key && chmod 600 ~/.ssh/trainer_key
+          ssh-keyscan -t ed25519,ecdsa,rsa "${TRAINER_IP}" >> ~/.ssh/known_hosts 2>/dev/null || true
+
+      - name: Install unit, env file, retire tunnel
+        env:
+          TRAINER_IP: ${{ secrets.TRAINER_VM_IP }}
+          DIAG_READ_TOKEN: ${{ secrets.DIAG_READ_TOKEN }}
+        run: |
+          set -euo pipefail
+          [ -n "${DIAG_READ_TOKEN}" ] || { echo "::error::DIAG_READ_TOKEN secret is unset."; exit 1; }
+          umask 077
+          {
+            echo "DIAG_READ_TOKEN=${DIAG_READ_TOKEN}"
+            echo "GOOGLE_OAUTH_CLIENT_ID=891024226160-oo4d4g3g99ctg724u1t00ogm1j4lakig.apps.googleusercontent.com"
+            echo "ALLOWED_EMAIL=ben.baichmankass@gmail.com"
+          } > /tmp/connector.env
+          scp -i ~/.ssh/trainer_key /tmp/connector.env "ubuntu@${TRAINER_IP}:/tmp/connector.env"
+          rm -f /tmp/connector.env
+          scp -i ~/.ssh/trainer_key deploy/trainer/jta-console-connector.service "ubuntu@${TRAINER_IP}:/tmp/jta-console-connector.service"
+          ssh -i ~/.ssh/trainer_key "ubuntu@${TRAINER_IP}" 'bash -s' <<'REMOTE' 2>&1 | tee /tmp/install.txt
+          set -euo pipefail
+          R=/home/ubuntu/ict-trading-bot
+          echo "== preconditions"
+          ls -l "$R/data/trade_journal.db" || { echo "synced journal snapshot missing"; exit 1; }
+          echo "token store before:"; ls -l "$R/runtime_logs/console_connector_oauth.json"
+          python3 -c "import json;d=json.load(open('$R/runtime_logs/console_connector_oauth.json'));print({k:(len(v) if hasattr(v,'__len__') else v) for k,v in d.items()})"
+          sudo install -d -m 0750 -o root -g ubuntu /etc/jta-console
+          sudo install -m 0640 -o root -g ubuntu /tmp/connector.env /etc/jta-console/connector.env
+          rm -f /tmp/connector.env
+          sudo install -m 0644 /tmp/jta-console-connector.service /etc/systemd/system/jta-console-connector.service
+          sudo systemctl daemon-reload
+          echo "== swap transient -> persistent (the one restart)"
+          sudo systemctl stop jta-console-connector || true   # transient unit; gone once stopped
+          sudo systemctl reset-failed jta-console-connector 2>/dev/null || true
+          sudo systemctl daemon-reload
+          sudo systemctl enable --now jta-console-connector
+          echo "== retire tunnel"
+          sudo systemctl stop jta-mcp-tunnel 2>/dev/null || true
+          sudo systemctl reset-failed jta-mcp-tunnel 2>/dev/null || true
+          for i in $(seq 1 20); do curl -fs localhost:8765/healthz && break; sleep 2; done; echo
+          echo "== state"
+          systemctl is-enabled jta-console-connector; systemctl is-active jta-console-connector
+          systemctl show jta-console-connector -p FragmentPath,MainPID,ActiveEnterTimestamp
+          pid=$(systemctl show -p MainPID --value jta-console-connector)
+          echo -n "env names: "; sudo tr '\0' '\n' < /proc/$pid/environ | sed -E 's/=.*//' | sort | tr '\n' ' '; echo
+          systemctl list-units --all 'jta-mcp-*' --no-pager | head -5
+          echo "== token store after"; ls -l "$R/runtime_logs/console_connector_oauth.json"
+          python3 -c "import json;d=json.load(open('$R/runtime_logs/console_connector_oauth.json'));print({k:(len(v) if hasattr(v,'__len__') else v) for k,v in d.items()})"
+          echo "== unauth /mcp (expect 401)"
+          curl -s -o /dev/null -w '%{http_code}\n' -X POST https://158-178-209-121.sslip.io/mcp -H 'content-type: application/json' -d '{}'
+          REMOTE
+
+      - name: Report on the issue
+        if: always() && github.event_name == 'issues'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            let out = '(none)'; try { out = fs.readFileSync('/tmp/install.txt', 'utf8').slice(-4000); } catch (e) {}
+            const body = `**trainer-console-connector-install** ${{ job.status }}\nRun: ${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}\n\n` + "```\n" + out + "\n```";
+            await github.rest.issues.createComment({owner: context.repo.owner, repo: context.repo.repo, issue_number: context.issue.number, body});
+            await github.rest.issues.update({owner: context.repo.owner, repo: context.repo.repo, issue_number: context.issue.number, state: 'closed'});

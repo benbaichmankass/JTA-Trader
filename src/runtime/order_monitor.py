@@ -12865,7 +12865,7 @@ def _reconcile_netting_partial_closes(db) -> Dict[str, int]:
         "closed": 0, "annotated": 0, "declared_unmeasured": 0,
         "apply_suppressed_by_allowlist": 0,
         "deferred_anchor": 0, "skipped_unreadable": 0, "skipped_pairs": 0,
-        "reanchored": 0, "errors": 0,
+        "reanchored": 0, "own_leg_filled": 0, "closed_own_leg": 0, "errors": 0,
     }
     mode = _netting_attribution_mode()
     allow = _netting_attribution_accounts()
@@ -12896,7 +12896,7 @@ def _reconcile_netting_partial_closes(db) -> Dict[str, int]:
             rows = conn.execute(
                 "SELECT id, account_id, symbol, direction, position_size, "
                 "       entry_price, created_at, setup_type, strategy_name, "
-                "       sl_order_id, notes "
+                "       sl_order_id, tp_order_id, notes "
                 "  FROM trades WHERE status='open' AND COALESCE(is_backtest,0)=0"
             ).fetchall()
         finally:
@@ -13005,18 +13005,6 @@ def _reconcile_netting_partial_closes(db) -> Dict[str, int]:
             if (now_mono - float(first_mono)) < max(confirm_s, 0.0):
                 summary["pending_confirm"] += 1
                 continue
-            picked = _netting_rows_to_attribute(
-                key_rows, excess, set(state.get("sl_leg_ids") or ()),
-            )
-            summary["rows_selected"] += len(picked)
-
-            anchored, anchor_status = bar_close_at(
-                sym, first_seen_iso, budget=anchor_budget,
-            )
-            if anchor_status == "deferred":
-                # We did NOT look. Retry next tick; declare nothing.
-                summary["deferred_anchor"] += 1
-                continue
 
             # The EFFECTIVE mode for this account, which is what the soak row
             # must record. Stamping the global `mode` would put "apply" on rows
@@ -13030,8 +13018,66 @@ def _reconcile_netting_partial_closes(db) -> Dict[str, int]:
                 "no_allowlist" if not allow
                 else ("allowlisted" if aid in allow else "not_allowlisted")
             )
+            live_leg_ids = set(state.get("sl_leg_ids") or ())
 
+            # NETTING-RECONCILER-CLOSE-REASON (2026-11-05, bybit_1 trade 6886):
+            # a row whose OWN bracket leg FILLED at the venue is not a netting
+            # inference — it is a measured SL/TP. Ask the venue first, by the
+            # order ids the row holds; attribution is the fallback for the rest.
+            own_filled = _netting_own_leg_fills(
+                acc_by_id.get(aid), key_rows, live_leg_ids,
+            )
             wrote_any = False
+            if own_filled:
+                own_qty = 0.0
+                for row, own_leg in own_filled:
+                    take = abs(_safe_float(row["position_size"]) or 0.0)
+                    own_qty += take
+                    summary["own_leg_filled"] += 1
+                    _netting_soak_row(
+                        account_id=aid, symbol=sym, direction=direction,
+                        row=row, take=take, basis="own_leg_fill", mode=eff_mode,
+                        journal_qty=journal_qty, exchange_qty=backed,
+                        anchor_status="own_leg_fill",
+                        anchor_price=own_leg.get("avg_price"),
+                        anchored_at=normalize_closed_at_value(
+                            own_leg.get("exec_time")),
+                        global_mode=mode, apply_scope=apply_scope,
+                        position_idx=state.get("position_idx"),
+                        exchange_read_source=state.get("source"),
+                    )
+                    summary["annotated"] += 1
+                    if not may_write:
+                        if mode == "apply":
+                            summary["apply_suppressed_by_allowlist"] += 1
+                        continue
+                    if _netting_close_from_own_leg(db, row=row, own_leg=own_leg):
+                        summary["closed_own_leg"] += 1
+                        wrote_any = True
+                    else:
+                        summary["errors"] += 1
+                done = {id(r) for r, _ in own_filled}
+                key_rows = [r for r in key_rows if id(r) not in done]
+                excess = excess - own_qty
+                residual_journal = max(journal_qty - own_qty, 0.0)
+                if excess <= max(backed, residual_journal) * _BYBIT_QTY_DIVERGENCE_FRAC:
+                    # Every missing qty is explained by an own-leg fill: there
+                    # is nothing left to infer.
+                    if wrote_any:
+                        _NETTING_DIVERGENCE_SEEN.pop((aid, sym, direction), None)
+                    continue
+
+            picked = _netting_rows_to_attribute(key_rows, excess, live_leg_ids)
+            summary["rows_selected"] += len(picked)
+
+            anchored, anchor_status = bar_close_at(
+                sym, first_seen_iso, budget=anchor_budget,
+            )
+            if anchor_status == "deferred":
+                # We did NOT look. Retry next tick; declare nothing.
+                summary["deferred_anchor"] += 1
+                continue
+
             for row, take, basis in picked:
                 _netting_soak_row(
                     account_id=aid, symbol=sym, direction=direction,
@@ -13083,6 +13129,121 @@ def _reconcile_netting_partial_closes(db) -> Dict[str, int]:
             summary["errors"] += 1
 
     return summary
+
+
+#: Own-leg venue reads made by the netting reconciler, keyed by (account, trade
+#: id, sl id, tp id). A Filled order stays Filled, so a hit is kept; a miss is
+#: re-asked at most every ``_NETTING_OWN_LEG_RECHECK_S`` (bounds broker calls on
+#: an ``annotate`` account, which re-evaluates a confirmed key every tick).
+_NETTING_OWN_LEG_CACHE: Dict[tuple, tuple] = {}
+_NETTING_OWN_LEG_RECHECK_S = 60.0
+
+
+def _netting_own_leg_fills(acc, key_rows, live_leg_ids):
+    """Rows on one netted key whose OWN SL/TP order FILLED at the venue.
+
+    NETTING-RECONCILER-CLOSE-REASON (2026-11-05). ``bybit_1`` trade 6886
+    (pkg-3245fc73e2f64536, trend_donchian_eth_prop ETHUSDT long 14.12): its own
+    Partial SL ``b372d2f8`` FILLED 14.12 @ 2408.02 at 12:27:21Z and Bybit
+    cancelled its TP by OCO. The netting reconciler confirmed the over-claim,
+    picked the row as ``leg_gone`` (its tracked SL was no longer resting) and
+    closed it ``netting_attributed`` at the 1-minute candle 2409.82. Leg
+    ABSENCE was all it read; the venue's order record, which says WHICH leg
+    ended the row and at what price, was never asked. The hourly fills pull
+    let the label/price sweeps repair it ~1 h later, after the close ping and
+    every same-hour reader had seen the inference. 10 of 10 netting closes on
+    bybit_1 in the 14 days to 2026-11-05 were own-leg fills.
+
+    A row is checked only when its tracked SL is NOT resting (a resting leg is
+    positive evidence the venue still holds that row). The read is
+    :func:`_own_bracket_fill_from_venue` — the same once-per-finalisation
+    ``/v5/order/history`` read the per-order reconciler makes, never per tick:
+    this runs only after a divergence passes its 2-observation confirm.
+    Returns ``[(row, own_leg)]``. Never raises; an unreadable order is simply
+    not an own-leg fill and stays with the attribution fallback.
+    """
+    out = []
+    if acc is None:
+        return out
+    now = time.monotonic()
+    for row in key_rows:
+        try:
+            r = dict(row)
+            if str(r.get("sl_order_id") or "") in live_leg_ids:
+                continue
+            ckey = (str(r.get("account_id") or ""), r.get("id"),
+                    str(r.get("sl_order_id") or ""), str(r.get("tp_order_id") or ""))
+            hit = _NETTING_OWN_LEG_CACHE.get(ckey)
+            if hit is not None and (hit[1] is not None
+                                    or now - hit[0] < _NETTING_OWN_LEG_RECHECK_S):
+                leg = hit[1]
+            else:
+                notes = _decode_notes(r.get("notes"))
+                is_reduce = (
+                    str(r.get("setup_type") or "").strip().lower() == "intent_reduce"
+                    or bool(notes.get("intent_reduce"))
+                )
+                leg = _own_bracket_fill_from_venue(acc, r, is_reduce_leg=is_reduce)
+                if len(_NETTING_OWN_LEG_CACHE) > 2000:
+                    _NETTING_OWN_LEG_CACHE.clear()
+                _NETTING_OWN_LEG_CACHE[ckey] = (now, leg)
+        except Exception as exc:  # noqa: BLE001
+            logger.debug("_netting_own_leg_fills: row %s: %s", row["id"], exc)
+            continue
+        if leg is not None:
+            out.append((row, leg))
+    return out
+
+
+def _netting_close_from_own_leg(db, *, row, own_leg) -> bool:
+    """Close one row from its own filled bracket leg (MEASURED). Never raises.
+
+    Same close shape as :func:`_sweep_open_row_own_leg_fill`: ``exit_reason`` is
+    the leg (``sl``/``tp``), ``exit_price`` the venue avg price
+    (``exchange_fill``), ``closed_at`` the order's own exec time. ``pnl`` is left
+    to the PnL sweeps, as every flat-finalise path does. No order is placed,
+    amended or cancelled here (parity with ``_netting_apply_close``).
+    """
+    try:
+        rconn = db.connect()
+        try:
+            cur = rconn.execute(
+                "SELECT status FROM trades WHERE id = ?", (int(row["id"]),),
+            ).fetchone()
+        finally:
+            rconn.close()
+        if cur is None or str(cur[0]) != "open":
+            return False
+        closed_at = (
+            normalize_closed_at_value(own_leg.get("exec_time"))
+            or datetime.now(timezone.utc).isoformat()
+        )
+        notes = _decode_notes(row["notes"])
+        notes.update({
+            "closed_at": closed_at,
+            "closed_by": "netting_own_leg_fill",
+            "exit_reason_source": BRACKET_ORDER_LABEL_SOURCE,
+            "exit_price_source": "exchange_fill",
+            "own_leg_fill": {"leg": own_leg["leg"],
+                             "order_id": own_leg.get("order_id")},
+        })
+        db.update_trade(int(row["id"]), {
+            "status": "closed",
+            "exit_reason": own_leg["leg"],
+            "exit_price": float(own_leg["avg_price"]),
+            "closed_at": closed_at,
+            "notes": dump_capped(notes, 2000),
+        })
+        _cascade_close_linked_package(
+            db, row["id"], close_reason=own_leg["leg"],
+            caller="_netting_close_from_own_leg",
+        )
+        return True
+    except Exception as exc:  # noqa: BLE001
+        logger.warning(
+            "_netting_close_from_own_leg: trade %s failed: %s", row["id"], exc,
+        )
+        return False
 
 
 def _netting_soak_row(
