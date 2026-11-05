@@ -388,6 +388,11 @@ _CANONICAL_UNITS: tuple[str, ...] = (
     # with the deploy/ units so check_diag_unit_allowlist.py stays green.
     "ict-research-results-gate.service",
     "ict-research-results-gate.timer",
+    # 2026-11-05 (WSD-S2-IMPORTER-PARITY): the work-store shadow importer + parity, every
+    # 5 min. Queryable so a session can confirm the 2-day parity clock is actually running
+    # (journal + unit state); its report is GET /api/bot/work/parity.
+    "ict-work-store-import.service",
+    "ict-work-store-import.timer",
 )
 
 _ADVISORY_LOG = runtime_logs_dir() / "advisory_decisions.jsonl"

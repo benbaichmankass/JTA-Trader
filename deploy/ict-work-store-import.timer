@@ -1,0 +1,19 @@
+# ============================================
+# ICT WORK STORE IMPORTER TIMER (WSD-S2-IMPORTER-PARITY)
+# Triggers ict-work-store-import.service every 5 minutes -- the design's shadow cadence
+# (docs/plans/WORK-STORE-DESIGN-2026-11.md § 4 step 1: "the importer runs every 5 min").
+# Save to: /etc/systemd/system/ict-work-store-import.timer
+# ============================================
+
+[Unit]
+Description=Trigger ict-work-store-import every 5 minutes (work-store shadow import + parity)
+
+[Timer]
+OnCalendar=*:2/5
+# Off ict-work-digest's :0/5 minute, so the two oneshots do not start in the same second.
+RandomizedDelaySec=30
+Persistent=true
+Unit=ict-work-store-import.service
+
+[Install]
+WantedBy=timers.target
