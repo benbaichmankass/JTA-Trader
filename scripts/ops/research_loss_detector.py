@@ -98,7 +98,12 @@ RESEARCH_WORKFLOW_RE = re.compile(
 #: queue itself. MEASURED 2026-09-24: the bare regex matched 22 workflow files
 #: and these three were the false positives.
 NOT_RESEARCH_WORKFLOWS = frozenset({
-    "diag-relay-sweep.yml", "stale-automation-sweep.yml", "research-queue-dispatch.yml"})
+    "diag-relay-sweep.yml", "stale-automation-sweep.yml", "research-queue-dispatch.yml",
+    # Data producer, not research: lands comms/news_alpha/gdelt_panel/ on main via
+    # commit-to-main (monthly file overwritten, so a run id never appears there);
+    # the workflow declares no-durable-result. Measured 2026-11-05: 3 false
+    # positives on question C from its 7-day artifacts.
+    "news-gdelt-panel.yml"})
 
 
 def is_research_workflow(name: str) -> bool:

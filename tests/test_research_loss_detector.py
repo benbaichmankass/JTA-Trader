@@ -148,3 +148,8 @@ def test_both_paths_down_stays_could_not_read():
         rep = rld.sweep("o/r", "HEAD", 6, 1, 72)
     assert rep["questions"]["C_expiring_unlanded_artifacts"]["state"] == rld.COULD_NOT_READ
     assert rep["overall"] == rld.COULD_NOT_READ
+
+
+def test_gdelt_panel_producer_is_not_research():
+    assert rld.is_research_workflow("news-gdelt-panel.yml") is False
+    assert rld.is_research_workflow("research-exit-head-build.yml") is True
