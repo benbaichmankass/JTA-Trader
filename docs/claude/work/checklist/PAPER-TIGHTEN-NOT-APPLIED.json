@@ -13,13 +13,13 @@
     23113
   ],
   "blocked_on": [],
-  "note": "2026-11-05T04:49Z #23113 MERGED (green sha 82003003c2b8). The VM runs the dispatcher from the git-sync checkout (~5 min), so deploy = ict-git-sync. NOT yet observed. Closing observation: the next bybit_1 (or alpaca_paper) judgement tighten_sl row reads verdict dispatched (not evidence_not_committed) in runtime_logs/live_review/rows_watch.jsonl, and its applied.jsonl entry shows a venue readback at the new stop.",
+  "note": "2026-11-05T07:00Z unproven, no tighten row occurred: deploy CONFIRMED 05:01Z (git_sha_on_disk 5dbf48053); checks at 05:01, 05:46, 06:30 (VM rows_watch.jsonl, last ~303 lines, read_state complete) and 07:00 (issue relay #23165) found 0 tighten_sl rows after the merge. Rows after the merge: a close under MD-LTR-PAPER-AUTO dispatched at 04:07Z, and holds. State stays landed_unproven; the observation is unchanged (the next bybit_1/alpaca_paper judgement tighten_sl -> dispatched + venue readback). Side finding: at 07:00Z the direct diag route (ict-bot.duckdns.org) rejected DIAG_READ_TOKEN (host answered, bearer refused); it worked at 06:30Z.",
   "due_by": "2026-11-07",
   "roadmap": [
     "unmapped"
   ],
   "roadmap_unmapped_reason": "order-path bug fix under an existing mandate; no milestone",
-  "updated_at": "2026-11-05T04:57:28Z",
+  "updated_at": "2026-11-05T07:03:26Z",
   "updated_by": "session_01AFoLuKUaYvmypJzRG9EC7v",
   "observation": {
     "what": "the next bybit_1/alpaca_paper judgement tighten_sl row after #23113 (5dbf48053) is deployed reads verdict dispatched (not evidence_not_committed) and its apply reads the new stop back from the venue",
