@@ -55,9 +55,13 @@ TRAIL_ACT_R = 1.0                               # arm (b): trail activates after
 TRAIL_GRID = [1.0, 1.5, 2.0]                    # arm (b): trail distance in ATR, chosen on dev
 DECAY_GRID = [0.5, 1.0, 1.5]                    # arm (c): SL distance in ATR reached at 24 h, chosen on dev
 MIN_TRADES, MIN_SYMBOLS = 300, 10
+XS_MIN_SYMBOLS = 30
 DEV_MIN_TRADES = 1000
 MANAGE_FOLDS = E.DEV_FOLDS[2:]                  # ENTRY OOS dev trades exist from 2022-01; MANAGE needs one fold of history
 BOOT = 2000
+XS_N = 100                                       # stage xs: the first XS_N non-pool perps in select_universe (listing-age) order
+XS_FROZEN = {"mlsl2": {"actions": SL2, "margin": 0.40}, "mlsl": {"actions": SL_ONLY, "margin": 0.15}}   # configs frozen by c692-12 / c692-11
+XS_ERAS = [("pre2022", None, "2022-01-01"), ("2022-01..2025-09", "2022-01-01", "2025-10-01"), ("2025-10+", "2025-10-01", None)]
 PEEKED_SYMBOLS = ["ADAUSDT", "BCHUSDT", "BTCUSDT", "ETCUSDT", "ETHUSDT", "LINKUSDT", "LTCUSDT", "TRXUSDT", "XLMUSDT"]   # seen in the 2026-11-05 smoke (DESIGN 4a)
 
 
@@ -421,6 +425,17 @@ def run(a) -> int:
         raise RuntimeError("ENTRY summary has no tau_star")
     out = Path(a.out)
     out.mkdir(parents=True, exist_ok=True)
+    if a.stage == "xs":
+        res = run_xs(a, tau)
+        res.update({"schema": SCHEMA, "unit": a.unit, "arm": a.arm, "stage": "xs", "entry_tau": tau, "git_sha": E._git_sha(), "elapsed_s": round(time.time() - t0)})
+        v, why = res.pop("verdict"), res.pop("why")
+        (out / "summary.json").write_text(json.dumps({**res, "verdict": v, "why": why}, indent=1, default=str) + "\n")
+        vj = {"verdict": v, "read_state": "measured", "n": res["heldout"]["n"], "measurement": res, "note": why,
+              "population": (f"{a.arm} frozen config, cross-sectional read on perps OUTSIDE the 60-perp training pool ({len(res['xs']['nonpool_symbols'])} symbols), "
+                             f"whole available history, ENTRY tau {tau}, static {BASE_SL}/{BASE_TP} ATR 24h, full cost stack, paired vs hold-to-bracket")}
+        (out / "verdict.json").write_text(json.dumps(vj, indent=1, default=str) + "\n")
+        print(json.dumps({"verdict": v, "why": why}), flush=True)
+        return 0
     tab, df_by, dev_tr, ho_tr = build_world(a, tau)
     dev_tr = dev_tr.sort_values(["symbol", "i"], kind="stable").reset_index(drop=True)   # Paths order == trades order
     ho_tr = ho_tr.sort_values(["symbol", "i"], kind="stable").reset_index(drop=True)
@@ -479,7 +494,7 @@ def arm_rule(a, tab, df_by, dev_tr, ho_tr) -> dict:
     return res
 
 
-def claim_read(a, model_id: str) -> dict | None:
+def claim_read(a, model_id: str, symbols: list[str] | None = None, start: str | None = None) -> dict | None:
     """Claim the sealed window ONCE per model (holdout_lock). The runner does not commit the repo ledger, so the claim is made
     against a COPY inside the out dir (which lands with the result); the lane appends that line to comms/research/holdout_reads.jsonl."""
     if a.smoke:
@@ -490,7 +505,7 @@ def claim_read(a, model_id: str) -> dict | None:
     led = Path(a.out) / "holdout_reads.jsonl"
     if not led.exists() and HL.LEDGER.exists():
         shutil.copy(HL.LEDGER, led)
-    return HL.claim_read(model_id=f"MANAGE-{model_id}", start=E.HOLDOUT_START, end=E.END, unit=a.unit, reader=a.reader, ledger=led)
+    return HL.claim_read(model_id=f"MANAGE-{model_id}", start=start or E.HOLDOUT_START, end=E.END, unit=a.unit, reader=a.reader, ledger=led, symbols=symbols)
 
 
 def arm_model(a, tab, df_by, dev_tr, ho_tr) -> dict:
@@ -602,6 +617,95 @@ def arm_model(a, tab, df_by, dev_tr, ho_tr) -> dict:
     return res
 
 
+
+# ------------------------------------------------------------------------------------------------ stage xs
+def era_split(ts, d, acted) -> dict:
+    t = pd.to_datetime(pd.Series(ts), utc=True)
+    out = {}
+    for name, lo, hi in XS_ERAS:
+        m = np.ones(len(t), bool)
+        if lo:
+            m &= (t >= pd.Timestamp(lo, tz="UTC")).to_numpy()
+        if hi:
+            m &= (t < pd.Timestamp(hi, tz="UTC")).to_numpy()
+        out[name] = {"n": int(m.sum()), "n_acted": int((m & acted).sum()), "delta": float(d[m].mean()) if m.any() else None}
+    return out
+
+
+def run_xs(a, tau) -> dict:
+    """CROSS-SECTIONAL confirming read of a frozen config: trades on perps OUTSIDE the 60-perp pool (never in any training set of any
+    variant), over their whole available history. ENTRY = the pool-trained final fit; MANAGE heads = the pool dev trades <= 2025-09 as
+    frozen by c692-12 / c692-11; margin and actions are NOT re-selected."""
+    cfg = XS_FROZEN[a.arm]
+    acts, margin = cfg["actions"], cfg["margin"]
+    pool = E.universe()
+    cache = Path(a.cache)
+    if a.smoke:
+        sm = sorted(set(pool[:9]) | {"BTCUSDT"})
+        nonpool = sm[-3:]
+    else:
+        pset = set(pool)
+        nonpool = [s_ for s_ in E.wide_universe() if s_ not in pset][:XS_N]
+        E.fetch(cache, nonpool, end=E.END)
+    tab, df_by, dev_tr, _ = build_world(a, tau)
+    dev_tr = dev_tr.sort_values(["symbol", "i"], kind="stable").reset_index(drop=True)
+    hs = pd.Timestamp(E.HOLDOUT_START, tz="UTC")
+    dP, _ = gather(dev_tr, df_by, atr_series(tab, dev_tr))
+    dev_rows = checkin_table(dev_tr, dP, label_actions(dP, acts), tab, acts)
+    heads = fit_heads(dev_rows[dev_rows.ts < hs - pd.Timedelta(days=E.EMBARGO_DAYS) - pd.Timedelta(hours=H + 1)], acts)
+    print(f"xs: heads fit on {len(dev_rows)} dev check-in rows; non-pool symbols={len(nonpool)} t+", flush=True)
+    base_syms = sorted(set(pool[:9]) | {"BTCUSDT"}) if a.smoke else pool
+    tab_all = E.build_table(cache, list(base_syms) + [s_ for s_ in nonpool if s_ not in base_syms], xs_symbols=base_syms)
+    np_tab = tab_all[tab_all.symbol.isin(nonpool)].reset_index(drop=True)
+    pl, ps = E.fit_predict(E.purge_train(tab[tab.ts < hs], hs), np_tab)
+    df_np = {s_: pd.read_pickle(cache / f"{s_}.pkl").reset_index(drop=True) for s_ in nonpool}
+    np_tr = entry_trades(np_tab, pl, ps, tau, df_np).sort_values(["symbol", "i"], kind="stable").reset_index(drop=True)
+    res = {"xs": {"nonpool_symbols": nonpool, "n_nonpool_requested": len(nonpool), "pool_symbols": len(pool), "config": {"actions": acts, "margin": margin}}, "heldout": None}
+    claim = claim_read(a, f"{a.arm}-xs-{margin}", symbols=nonpool, start=str(np_tr.ts.min().date()) if len(np_tr) else E.START)
+    P, _ = gather(np_tr, df_np, atr_series(np_tab, np_tr))
+    lab = label_actions(P, acts)
+    base = lab["base"]
+    rows = checkin_table(np_tr, P, lab, np_tab, acts)
+    act = choose(predict_heads(heads, rows), margin)
+    r = realised(rows, len(np_tr), P, base, act)
+    d = r["net"] - base["net"]
+    sy = np_tr["symbol"].to_numpy()
+    s = stats(r["net"], base["net"], sy)
+    s["n_acted"] = int(r["acted"].sum())
+    s["acted_share"] = float(r["acted"].mean())
+    s["n_actions"] = r["n_actions"]
+    s["mean_delta_per_acted_trade"] = float(d[r["acted"]].mean()) if r["acted"].any() else None
+    ci = paired_boot(d)
+    per_sym = pd.Series(d).groupby(sy).mean()
+    top = per_sym.abs().idxmax() if len(per_sym) else None
+    ex = sy != top
+    rng = np.random.default_rng(E.SEED)
+    types = act[act != "HOLD"].tolist()
+    valid_idx = {a_: rows.index[rows[f"av_{a_}"]].to_numpy() for a_ in acts}
+    draws = []
+    for _ in range(40):
+        fake = pd.Series("HOLD", index=rows.index)
+        for a_ in set(types):
+            pick = rng.choice(valid_idx[a_], size=min(types.count(a_), len(valid_idx[a_])), replace=False)
+            fake.loc[pick] = a_
+        draws.append(float(np.mean(realised(rows, len(np_tr), P, base, fake)["net"] - base["net"])))
+    eras = era_split(np_tr["ts"].to_numpy(), d, r["acted"])
+    res["heldout"] = {**s, "hold": stats(base["net"], base["net"], sy), "delta_ci95": ci, "giveback_r": giveback(r), "giveback_r_hold": giveback(base),
+                      "eras": eras, "share_symbols_positive": float((per_sym > 0).mean()), "n_symbols_with_trades": int(per_sym.size),
+                      "top_abs_symbol": top, "delta_ex_top_symbol": float(d[ex].mean()) if ex.any() else None,
+                      "matched_random_delta": {"draws": 40, "mean": float(np.mean(draws)), "p95": float(np.percentile(draws, 95))}}
+    res["variants_read_on_window"] = (claim or {}).get("variants_on_window")
+    e1, e2 = eras["2022-01..2025-09"]["delta"], eras["2025-10+"]["delta"]
+    if s["n_acted"] < MIN_TRADES or per_sym.size < XS_MIN_SYMBOLS:
+        v, why = "indeterminate", f"acted trades={s['n_acted']} (floor {MIN_TRADES}) / non-pool symbols with trades={per_sym.size} (floor {XS_MIN_SYMBOLS})"
+    elif s["delta_vs_hold"] > 0 and ci[0] > 0 and (e1 or 0) > 0 and (e2 or 0) > 0:
+        v, why = "pass", f"non-pool delta vs hold {s['delta_vs_hold']:+.5f} R/trade, CI95 [{ci[0]:+.5f}, {ci[1]:+.5f}], era deltas {e1:+.5f} / {e2:+.5f} > 0, acted {s['n_acted']} of {s['n']}"
+    else:
+        v, why = "fail", f"non-pool delta vs hold {s['delta_vs_hold']:+.5f}, CI95 [{ci[0]:+.5f}, {ci[1]:+.5f}], era deltas {e1} / {e2}: does not clear the rule (acted {s['n_acted']} of {s['n']})"
+    res.update(verdict=v, why=why)
+    return res
+
+
 # ------------------------------------------------------------------------------------------------ self-test
 def _synthetic(n=40, seed=1):
     rng = np.random.default_rng(seed)
@@ -666,6 +770,7 @@ def main(argv=None) -> int:
     ap.add_argument("--out", default="/tmp/ml_decision_manage_out")
     ap.add_argument("--unit", default="")
     ap.add_argument("--reader", default="research-script-run")
+    ap.add_argument("--stage", default="main", choices=["main", "xs"], help="xs = the cross-sectional confirming read of a frozen config")
     ap.add_argument("--smoke", action="store_true", help="dev-only plumbing check on 10 symbols; never touches the sealed window")
     ap.add_argument("--self-test", action="store_true")
     a = ap.parse_args(argv)
