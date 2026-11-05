@@ -97,7 +97,9 @@ def test_prop_account_config():
     assert a["strategies"] == []
     # 2026-10-29 (Tier-3, operator): trend_donchian_sol_prop pulled (V2 gate EV < 0,
     # comms/prop_survival/v2/); eth_prop stays. REVERT: add sol_prop back to this set.
-    assert set(_accounts()["breakout_2"]["strategies"]) == {"trend_donchian_eth_prop"}
+    # 2026-11-05 (Tier-3, operator 'Pull from prop (Recommended)', row PROP-PULL-ETHPROP): eth_prop pulled too
+    # (RQ-20261031-422a-01 FAIL); breakout_2 carries an explicit []. REVERT: re-add eth_prop here.
+    assert _accounts()["breakout_2"]["strategies"] == []
     assert set(a["symbols"]) == {"SOLUSDT", "ETHUSDT"}
 
 
