@@ -1,0 +1,481 @@
+name: hf-lake-kaggle-pilot
+
+# PILOT (row HF-LAKE-STORAGE-403, lane HF-LAKE-SQUASH). Operator decision 2026-11-05 ~14:51Z, verbatim: "Kaggle 1 GB pilot first (Rec.)".
+# Can the FROZEN (closed-month, immutable) crypto 1m history live in a PRIVATE Kaggle dataset `metis-market-lake` on the EXISTING Kaggle
+# account (KAGGLE_API_TOKEN, the secret ml-data-export-kaggle.yml already uses)? Measures: (a) file-count limits and sharding for ~75-90 GB,
+# (b) private-dataset size before/after a second version, (c) read path + speed from a runner (Kaggle API) and from a Kaggle kernel
+# (/kaggle/input), (d) separately, Kaggle's ToS text. NEVER a new account. NOTHING is deleted from Hugging Face (read-only on HF).
+#
+# no-durable-result: storage pilot, computes no research verdict; its measurements are the job summary + a 30-day artifact, reported in the row note
+#
+# GATES THIS ADDS OR CHANGES: none. Data path only: no order path, no config the trader reads, no execution flag. (The commit-message token only selects
+# WHICH measurement runs on this PR; it gates no trading, training or data pipeline.)
+#
+# Runs on pull_request (same-repo) for changes to the pilot itself, so the measurement happens before merge; no schedule, no issue trigger.
+# GATE: GitHub evaluates `paths` against the WHOLE PR diff, so every push to the PR would re-run the uploads. The heavy jobs therefore
+# run only when the PR head commit message carries a token: `[kaggle-pilot]` (the 0.9 GB pilot) or `[kaggle-trial]` (the 10 GB
+# trial, `[kaggle-trial-verify]` re-runs only the two read-backs, operator 2026-11-05 ~16:59Z, "10 GB trial (Rec.)": ~10 GB of cold lake data into the same private dataset, read-back +
+# checksum verification; no deletion anywhere, no new accounts, nothing in the Models space).
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/hf-lake-kaggle-pilot.yml"
+      - "scripts/data_lake/kaggle_pilot.py"
+      - "scripts/data_lake/kaggle_pilot_kernel/**"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: hf-lake-kaggle-pilot-${{ github.head_ref }}
+  cancel-in-progress: false
+
+env:
+  KAGGLE_API_TOKEN: ${{ secrets.KAGGLE_API_TOKEN }}
+
+jobs:
+  gate:
+    if: github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      pilot: ${{ steps.g.outputs.pilot }}
+      trial: ${{ steps.g.outputs.trial }}
+      trialverify: ${{ steps.g.outputs.trialverify }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+          persist-credentials: false
+      - id: g
+        run: |
+          msg="$(git log -1 --format=%B HEAD^2 2>/dev/null || git log -1 --format=%B HEAD)"
+          echo "head commit message: $(echo "$msg" | head -1)"
+          case "$msg" in *"[kaggle-pilot]"*) echo "pilot=true" >> "$GITHUB_OUTPUT";; *) echo "pilot=false" >> "$GITHUB_OUTPUT";; esac
+          case "$msg" in *"[kaggle-trial]"*) echo "trial=true" >> "$GITHUB_OUTPUT";; *) echo "trial=false" >> "$GITHUB_OUTPUT";; esac
+          case "$msg" in *"[kaggle-trial-verify]"*) echo "trialverify=true" >> "$GITHUB_OUTPUT";; *) echo "trialverify=false" >> "$GITHUB_OUTPUT";; esac
+
+  pilot:
+    needs: gate
+    if: needs.gate.outputs.pilot == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 150
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: python -m pip install --quiet "kaggle>=2.0" six huggingface_hub pandas pyarrow pyyaml requests
+      - name: Stage ~1 GB of FROZEN crypto 1m partitions (HF read; falls back to Binance Vision if HF refuses the read)
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+        run: |
+          set -uo pipefail
+          echo "::add-mask::${KAGGLE_API_TOKEN}"
+          USERNAME=$(python - <<'PY'
+          from kaggle.api.kaggle_api_extended import KaggleApi
+          a = KaggleApi(); a.authenticate()
+          print(a.config_values.get("username", ""))
+          PY
+          )
+          [ -n "$USERNAME" ] || { echo "::error::token did not resolve to a Kaggle user"; exit 1; }
+          echo "::add-mask::$USERNAME"
+          echo "$USERNAME" > /tmp/kuser
+          if python3 -u scripts/data_lake/kaggle_pilot.py stage --out /tmp/stage --username "$USERNAME" --target-gb 1.0 > /tmp/stage.json 2> /tmp/stage.err; then
+            echo "source=hf" ; cat /tmp/stage.json
+          else
+            echo "HF stage failed (the account is AT its private cap; a read may be refused): $(tail -c 400 /tmp/stage.err)"
+            echo "falling back to rebuilding 6 symbols from data.binance.vision (same builder as market-data-lake)"
+            python3 -u scripts/data_lake/binance_vision_lake.py --market um_perp --stream klines --out /tmp/lake \
+              --symbols BTCUSDT,ETHUSDT,SOLUSDT,BNBUSDT,XRPUSDT,DOGEUSDT 2>&1 | tail -3
+            rm -rf /tmp/stage /tmp/stage-chosen.json
+            python3 -u scripts/data_lake/kaggle_pilot.py stage --from-dir /tmp/lake --out /tmp/stage --username "$USERNAME" --target-gb 1.0 | tee /tmp/stage.json
+          fi
+          du -sh /tmp/stage; ls -la /tmp/stage | head
+      - name: Quota snapshot 0, create v1, quota snapshot 1, create v2 (extra shard), quota snapshot 2
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+        run: |
+          set -uo pipefail
+          echo "::add-mask::${KAGGLE_API_TOKEN}"
+          USERNAME=$(cat /tmp/kuser); echo "::add-mask::$USERNAME"
+          scrub() { sed "s|$USERNAME|<user>|g"; }
+          DS="$USERNAME/metis-market-lake"
+          cat > /tmp/quota.py <<'PY'
+          import json, sys
+          from kaggle.api.kaggle_api_extended import KaggleApi
+          a = KaggleApi(); a.authenticate()
+          out = {"api_quota_like_methods": [m for m in dir(a) if any(k in m.lower() for k in ("quota", "usage", "storage"))]}
+          rows, total = [], 0
+          try:
+              for d in a.dataset_list(mine=True, page_size=100) if "page_size" in a.dataset_list.__code__.co_varnames else a.dataset_list(mine=True):
+                  tb = getattr(d, "total_bytes", None) or getattr(d, "totalBytes", None)
+                  priv = getattr(d, "is_private", None)
+                  if priv is None:
+                      priv = getattr(d, "isPrivate", None)
+                  ref = str(getattr(d, "ref", ""))
+                  rows.append({"ref": ref.split("/")[-1], "bytes": tb, "private": priv,
+                               "version": getattr(d, "current_version_number", None) or getattr(d, "currentVersionNumber", None)})
+                  if priv and tb:
+                      total += int(tb)
+          except Exception as e:
+              out["list_error"] = str(e)[:300]
+          out["datasets"] = rows
+          out["sum_private_current_version_bytes"] = total
+          print(json.dumps(out))
+          PY
+          snap() { python3 /tmp/quota.py | scrub | tee "/tmp/quota-$1.json"; }
+          wait_ready() {
+            for i in $(seq 1 120); do
+              st=$(kaggle datasets status "$1" 2>&1 | scrub); echo "dataset $1: $st"
+              case "$st" in *[Rr]eady*|*READY*) return 0;; esac
+              sleep 15
+            done
+            return 1
+          }
+          snap 0
+          T0=$(date +%s)
+          if kaggle datasets status "$DS" >/dev/null 2>&1; then
+            echo "dataset exists from an earlier run: versioning instead of creating"
+            kaggle datasets version -p /tmp/stage -r skip -m "pilot v1 $(date -u +%H:%MZ) run ${GITHUB_RUN_ID}" 2>&1 | scrub | grep -v "it/s\|B/s" | tail -5 || true
+          else
+            kaggle datasets create -p /tmp/stage -r skip 2>&1 | scrub | grep -v "it/s\|B/s" | tail -5 || true
+          fi
+          wait_ready "$DS" || echo "::warning::v1 never reported ready"
+          T1=$(date +%s); echo "v1_upload_and_ready_seconds=$((T1-T0))" | tee /tmp/timing.txt
+          snap 1
+          # second version: a different, smaller shard set added next to v1's shards
+          FROM=""; [ -d /tmp/lake ] && FROM="--from-dir /tmp/lake"
+          python3 scripts/data_lake/kaggle_pilot.py extra --out /tmp/stage $FROM --prev-chosen /tmp/stage-chosen.json --target-gb 0.3 2>&1 | tail -2
+          kaggle datasets version -p /tmp/stage -r skip -m "pilot v2 $(date -u +%H:%MZ) run ${GITHUB_RUN_ID}" 2>&1 | scrub | grep -v "it/s\|B/s" | tail -5 || true
+          wait_ready "$DS" || echo "::warning::v2 never reported ready"
+          T2=$(date +%s); echo "v2_upload_and_ready_seconds=$((T2-T1))" | tee -a /tmp/timing.txt
+          snap 2
+          kaggle datasets files "$DS" 2>&1 | scrub | head -20 | tee /tmp/files.txt
+      - name: File-count limit probe (120 tiny TOP-LEVEL files in a separate private dataset)
+        run: |
+          set -uo pipefail
+          echo "::add-mask::${KAGGLE_API_TOKEN}"
+          USERNAME=$(cat /tmp/kuser); echo "::add-mask::$USERNAME"
+          scrub() { sed "s|$USERNAME|<user>|g"; }
+          python3 scripts/data_lake/kaggle_pilot.py flat --out /tmp/flat --username "$USERNAME" --n 120
+          if kaggle datasets status "$USERNAME/metis-market-lake-filecount-probe" >/dev/null 2>&1; then
+            kaggle datasets version -p /tmp/flat -r skip -m "probe $(date -u +%H:%MZ)" 2>&1 | scrub | tail -8 | tee /tmp/flatres.txt || true
+          else
+            kaggle datasets create -p /tmp/flat -r skip 2>&1 | scrub | tail -8 | tee /tmp/flatres.txt || true
+          fi
+          sleep 45
+          kaggle datasets status "$USERNAME/metis-market-lake-filecount-probe" 2>&1 | scrub | tee -a /tmp/flatres.txt
+          kaggle datasets files "$USERNAME/metis-market-lake-filecount-probe" 2>&1 | scrub | wc -l | sed 's/^/files_listed_lines=/' | tee -a /tmp/flatres.txt
+      - name: Summary + artifact
+        if: always()
+        run: |
+          mkdir -p out
+          cp /tmp/stage.json /tmp/stage.err /tmp/quota-*.json /tmp/timing.txt /tmp/files.txt /tmp/flatres.txt out/ 2>/dev/null || true
+          { echo '### hf-lake-kaggle-pilot: stage'; cat /tmp/stage.json 2>/dev/null; echo; echo '### timing'; cat /tmp/timing.txt 2>/dev/null;
+            echo; echo '### quota snapshots 0/1/2'; for i in 0 1 2; do cat /tmp/quota-$i.json 2>/dev/null; echo; done;
+            echo '### file-count probe'; cat /tmp/flatres.txt 2>/dev/null; } >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: hf-lake-kaggle-pilot-${{ github.run_id }}
+          path: out
+          retention-days: 30
+
+  verify-runner:
+    needs: pilot
+    if: ${{ !cancelled() && needs.pilot.result == 'success' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: python -m pip install --quiet "kaggle>=2.0" six
+      - name: Download the dataset on a GitHub runner via the Kaggle API (timed) and re-hash it
+        run: |
+          set -uo pipefail
+          echo "::add-mask::${KAGGLE_API_TOKEN}"
+          USERNAME=$(python - <<'PY'
+          from kaggle.api.kaggle_api_extended import KaggleApi
+          a = KaggleApi(); a.authenticate()
+          print(a.config_values.get("username", ""))
+          PY
+          )
+          echo "::add-mask::$USERNAME"
+          scrub() { sed "s|$USERNAME|<user>|g"; }
+          mkdir -p /tmp/dl
+          # A fresh dataset version can be briefly undownloadable on the API while it is processed (observed 2026-11-05: the
+          # runner download exited 1 within 2 s while the kernel mount of the same version worked). Retry; print the FULL output.
+          OK=0
+          for attempt in 1 2 3 4 5 6; do
+            rm -rf /tmp/dl && mkdir -p /tmp/dl
+            T0=$(date +%s)
+            if kaggle datasets download -d "$USERNAME/metis-market-lake" -p /tmp/dl --unzip > /tmp/dl.log 2>&1; then OK=1; break; fi
+            echo "download attempt ${attempt} failed:"; grep -v "it/s\|B/s" /tmp/dl.log | scrub | tail -15
+            sleep 40
+          done
+          grep -v "it/s\|B/s" /tmp/dl.log | scrub | tail -4
+          [ "$OK" = "1" ] || { echo "::error::download failed after 6 attempts"; exit 1; }
+          T1=$(date +%s)
+          BYTES=$(du -sb /tmp/dl | cut -f1)
+          echo "{\"download_seconds\": $((T1-T0)), \"bytes\": $BYTES, \"MBps\": $(python3 -c "print(round($BYTES/1e6/max($T1-$T0,1),1))")}" | tee verify-runner-download.json
+          python3 scripts/data_lake/kaggle_pilot.py verify --root /tmp/dl --record verify-runner.json
+          { echo '### runner download'; cat verify-runner-download.json; echo; cat verify-runner.json; } >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: hf-lake-kaggle-verify-runner-${{ github.run_id }}
+          path: |
+            verify-runner-download.json
+            verify-runner.json
+          retention-days: 30
+
+  verify-kaggle:
+    needs: pilot
+    if: ${{ !cancelled() && needs.pilot.result == 'success' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: python -m pip install --quiet "kaggle>=2.0" six
+      - name: Mount the dataset in a CPU Kaggle kernel and read it (timed)
+        run: |
+          set -uo pipefail
+          echo "::add-mask::${KAGGLE_API_TOKEN}"
+          USERNAME=$(python - <<'PY'
+          from kaggle.api.kaggle_api_extended import KaggleApi
+          a = KaggleApi(); a.authenticate()
+          print(a.config_values.get("username", ""))
+          PY
+          )
+          echo "::add-mask::$USERNAME"
+          scrub() { sed "s|$USERNAME|<user>|g"; }
+          mkdir -p /tmp/k && cp scripts/data_lake/kaggle_pilot_kernel/kernel_read.py /tmp/k/
+          python3 - "$USERNAME" <<'PY'
+          import json, sys
+          u = sys.argv[1]
+          json.dump({"id": f"{u}/metis-market-lake-read-pilot", "title": "metis-market-lake-read-pilot",
+                     "code_file": "kernel_read.py", "language": "python", "kernel_type": "script",
+                     "is_private": "true", "enable_gpu": "false", "enable_tpu": "false", "enable_internet": "false",
+                     "dataset_sources": [f"{u}/metis-market-lake"], "competition_sources": [],
+                     "kernel_sources": [], "model_sources": []}, open("/tmp/k/kernel-metadata.json", "w"), indent=1)
+          PY
+          timeout 300 kaggle kernels push -p /tmp/k 2>&1 | scrub | tee /tmp/push.txt
+          grep -qi "error\|fail" /tmp/push.txt && { echo "::error::kernel push failed"; exit 1; }
+          deadline=$(( $(date +%s) + 2400 ))
+          while :; do
+            s=$(timeout 90 kaggle kernels status "$USERNAME/metis-market-lake-read-pilot" 2>&1 | scrub); echo "$(date -u +%H:%M:%S) $s"
+            case "$s" in *COMPLETE*|*ERROR*|*CANCEL*) break;; esac
+            [ "$(date +%s)" -gt "$deadline" ] && { echo "::error::kernel timed out"; exit 1; }
+            sleep 30
+          done
+          mkdir -p kout && timeout 300 kaggle kernels output "$USERNAME/metis-market-lake-read-pilot" -p kout 2>&1 | scrub | tail -3
+          cat kout/result.json | tee verify-kaggle.json
+          { echo '### kaggle kernel read'; cat verify-kaggle.json; } >> "$GITHUB_STEP_SUMMARY"
+          python3 -c "import json,sys; r=json.load(open('verify-kaggle.json')); sys.exit(0 if r.get('ok') else 1)"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: hf-lake-kaggle-verify-kernel-${{ github.run_id }}
+          path: verify-kaggle.json
+          retention-days: 30
+
+  trial:
+    needs: gate
+    if: needs.gate.outputs.trial == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 170
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Free runner disk (the staged shards are ~10 GB)
+        run: |
+          sudo rm -rf /usr/share/dotnet /opt/ghc /usr/local/lib/android /opt/hostedtoolcache/CodeQL 2>/dev/null || true
+          df -h / | tail -1
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: python -m pip install --quiet "kaggle>=2.0" six pandas pyarrow pyyaml requests
+      - name: Build ~10 GB of FROZEN crypto 1m partitions from data.binance.vision (batches, shard + delete; HF is not read)
+        run: |
+          set -uo pipefail
+          echo "::add-mask::${KAGGLE_API_TOKEN}"
+          USERNAME=$(python - <<'PY'
+          from kaggle.api.kaggle_api_extended import KaggleApi
+          a = KaggleApi(); a.authenticate()
+          print(a.config_values.get("username", ""))
+          PY
+          )
+          [ -n "$USERNAME" ] || { echo "::error::token did not resolve to a Kaggle user"; exit 1; }
+          echo "::add-mask::$USERNAME"
+          echo "$USERNAME" > /tmp/kuser
+          python3 -u scripts/data_lake/kaggle_pilot.py build-stage --out /tmp/stage --username "$USERNAME" --target-gb 10 --batch 4 \
+            --skip-symbols BTCUSDT,ETHUSDT,SOLUSDT,BNBUSDT,XRPUSDT,DOGEUSDT 2>&1 | grep -v "^\[lake\]" | tee /tmp/stage.log
+          tail -1 /tmp/stage.log > /tmp/stage.json
+          du -sh /tmp/stage; ls /tmp/stage | wc -l; df -h / | tail -1
+      - name: Upload as a new version of the private dataset (timed) and wait for ready
+        run: |
+          set -uo pipefail
+          echo "::add-mask::${KAGGLE_API_TOKEN}"
+          USERNAME=$(cat /tmp/kuser); echo "::add-mask::$USERNAME"
+          scrub() { sed "s|$USERNAME|<user>|g"; }
+          DS="$USERNAME/metis-market-lake"
+          T0=$(date +%s)
+          if kaggle datasets status "$DS" >/dev/null 2>&1; then
+            kaggle datasets version -p /tmp/stage -r skip -m "10GB trial $(date -u +%H:%MZ) run ${GITHUB_RUN_ID}" 2>&1 | scrub | grep -v "it/s\|B/s" | tail -6 || true
+          else
+            kaggle datasets create -p /tmp/stage -r skip 2>&1 | scrub | grep -v "it/s\|B/s" | tail -6 || true
+          fi
+          # `datasets status` reports the PREVIOUS version as ready while the new one is still registering (observed 2026-11-05:
+          # both read-backs verified the old 4-shard version). The new version is ready only when the served MANIFEST.json is ours.
+          WANT=$(python3 -c "import json;print(json.load(open('/tmp/stage/MANIFEST.json'))['note'])")
+          READY=0
+          for i in $(seq 1 180); do
+            rm -rf /tmp/mf && mkdir -p /tmp/mf
+            kaggle datasets download -d "$DS" -f MANIFEST.json -p /tmp/mf --unzip > /dev/null 2>&1 || true
+            GOT=$(python3 -c "import json;print(json.load(open('/tmp/mf/MANIFEST.json')).get('note',''))" 2>/dev/null || echo "")
+            echo "served manifest note: ${GOT}"
+            if [ "$GOT" = "$WANT" ]; then READY=1; break; fi
+            sleep 30
+          done
+          T1=$(date +%s); echo "{\"upload_to_ready_seconds\": $((T1-T0)), \"ready\": $READY}" | tee /tmp/trial-timing.json
+          kaggle datasets files "$DS" 2>&1 | scrub | head -8
+          [ "$READY" = "1" ] || { echo "::error::dataset never became ready"; exit 1; }
+      - name: Summary + artifact
+        if: always()
+        run: |
+          mkdir -p out && cp /tmp/stage.json /tmp/stage.log /tmp/trial-timing.json out/ 2>/dev/null || true
+          { echo '### 10 GB trial: stage'; cat /tmp/stage.json 2>/dev/null; echo; echo '### upload'; cat /tmp/trial-timing.json 2>/dev/null; } >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: hf-lake-kaggle-trial-${{ github.run_id }}
+          path: out
+          retention-days: 30
+
+  trial-verify-runner:
+    needs: [gate, trial]
+    if: ${{ !cancelled() && (needs.trial.result == 'success' || needs.gate.outputs.trialverify == 'true') }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Free runner disk (download + unzip peaks near 2x the dataset)
+        run: |
+          sudo rm -rf /usr/share/dotnet /opt/ghc /usr/local/lib/android /opt/hostedtoolcache/CodeQL 2>/dev/null || true
+          df -h / | tail -1
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: python -m pip install --quiet "kaggle>=2.0" six
+      - name: Download via the Kaggle API (timed, retried) and re-verify every shard against the manifest
+        run: |
+          set -uo pipefail
+          echo "::add-mask::${KAGGLE_API_TOKEN}"
+          USERNAME=$(python - <<'PY'
+          from kaggle.api.kaggle_api_extended import KaggleApi
+          a = KaggleApi(); a.authenticate()
+          print(a.config_values.get("username", ""))
+          PY
+          )
+          echo "::add-mask::$USERNAME"
+          scrub() { sed "s|$USERNAME|<user>|g"; }
+          # Kaggle builds a complete download archive per version; DownloadDataset answers 404 until it exists (the kernel mount
+          # does not need it). Measured 2026-11-05: 0.9 GB took minutes, 10 GB was still 404 ~30 min after `ready`. Poll up to 80 min.
+          OK=0; W0=$(date +%s)
+          for attempt in $(seq 1 160); do
+            rm -rf /tmp/dl && mkdir -p /tmp/dl
+            T0=$(date +%s)
+            if kaggle datasets download -d "$USERNAME/metis-market-lake" -p /tmp/dl --unzip > /tmp/dl.log 2>&1; then OK=1; break; fi
+            [ $((attempt % 10)) = 1 ] && { echo "download attempt ${attempt} (+$(( $(date +%s) - W0 ))s) failed:"; grep -v "it/s\|B/s" /tmp/dl.log | scrub | tail -4; }
+            sleep 30
+          done
+          [ "$OK" = "1" ] || { echo "::error::archive never became downloadable in 80 min"; exit 1; }
+          T1=$(date +%s)
+          BYTES=$(du -sb /tmp/dl | cut -f1)
+          echo "{\"wait_for_archive_seconds\": $((T0-W0)), \"download_seconds\": $((T1-T0)), \"bytes\": $BYTES, \"MBps\": $(python3 -c "print(round($BYTES/1e6/max($T1-$T0,1),1))")}" | tee trial-runner-download.json
+          python3 scripts/data_lake/kaggle_pilot.py verify --root /tmp/dl --expect-min-files 50 --record trial-runner-verify.json
+          { echo '### trial: runner download'; cat trial-runner-download.json; echo; cat trial-runner-verify.json; } >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: hf-lake-kaggle-trial-verify-runner-${{ github.run_id }}
+          path: |
+            trial-runner-download.json
+            trial-runner-verify.json
+          retention-days: 30
+
+  trial-verify-kaggle:
+    needs: [gate, trial]
+    if: ${{ !cancelled() && (needs.trial.result == 'success' || needs.gate.outputs.trialverify == 'true') }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: python -m pip install --quiet "kaggle>=2.0" six
+      - name: Mount in a CPU Kaggle kernel (internet off) and re-verify every shard (timed)
+        run: |
+          set -uo pipefail
+          echo "::add-mask::${KAGGLE_API_TOKEN}"
+          USERNAME=$(python - <<'PY'
+          from kaggle.api.kaggle_api_extended import KaggleApi
+          a = KaggleApi(); a.authenticate()
+          print(a.config_values.get("username", ""))
+          PY
+          )
+          echo "::add-mask::$USERNAME"
+          scrub() { sed "s|$USERNAME|<user>|g"; }
+          mkdir -p /tmp/k && cp scripts/data_lake/kaggle_pilot_kernel/kernel_read.py /tmp/k/
+          python3 - "$USERNAME" <<'PY'
+          import json, sys
+          u = sys.argv[1]
+          json.dump({"id": f"{u}/metis-market-lake-read-trial", "title": "metis-market-lake-read-trial",
+                     "code_file": "kernel_read.py", "language": "python", "kernel_type": "script",
+                     "is_private": "true", "enable_gpu": "false", "enable_tpu": "false", "enable_internet": "false",
+                     "dataset_sources": [f"{u}/metis-market-lake"], "competition_sources": [],
+                     "kernel_sources": [], "model_sources": []}, open("/tmp/k/kernel-metadata.json", "w"), indent=1)
+          PY
+          T0=$(date +%s)
+          timeout 300 kaggle kernels push -p /tmp/k 2>&1 | scrub | tee /tmp/push.txt
+          grep -qi "error\|fail" /tmp/push.txt && { echo "::error::kernel push failed"; exit 1; }
+          deadline=$(( $(date +%s) + 4800 ))
+          while :; do
+            s=$(timeout 90 kaggle kernels status "$USERNAME/metis-market-lake-read-trial" 2>&1 | scrub); echo "$(date -u +%H:%M:%S) $s"
+            case "$s" in *COMPLETE*|*ERROR*|*CANCEL*) break;; esac
+            [ "$(date +%s)" -gt "$deadline" ] && { echo "::error::kernel timed out"; exit 1; }
+            sleep 30
+          done
+          T1=$(date +%s)
+          mkdir -p kout && timeout 300 kaggle kernels output "$USERNAME/metis-market-lake-read-trial" -p kout 2>&1 | scrub | tail -3
+          cat kout/result.json | tee trial-kaggle-verify.json
+          echo "{\"kernel_push_to_complete_seconds\": $((T1-T0))}" | tee trial-kaggle-timing.json
+          { echo '### trial: kaggle kernel read'; cat trial-kaggle-verify.json; echo; cat trial-kaggle-timing.json; } >> "$GITHUB_STEP_SUMMARY"
+          python3 -c "import json,sys; r=json.load(open('trial-kaggle-verify.json')); sys.exit(0 if (r.get('ok') and r.get('files',0) >= 50) else 1)"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: hf-lake-kaggle-trial-verify-kernel-${{ github.run_id }}
+          path: |
+            trial-kaggle-verify.json
+            trial-kaggle-timing.json
+          retention-days: 30
