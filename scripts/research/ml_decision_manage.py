@@ -120,10 +120,6 @@ def simulate(P: Paths, hook=None, sl_m=BASE_SL, tp_m=BASE_TP):
     return {"net": net.astype(np.float64), "gross": gross, "bars": jx, "reason": reason, "mfe": mfe}
 
 
-def _alive_at(P: Paths, k: int, base: dict) -> np.ndarray:
-    return base["bars"] > k
-
-
 def action_hook(k: int, action: str, mask: np.ndarray, avail_out: np.ndarray | None = None):
     """One discrete action at the bar-k check-in for the trades in ``mask`` (and a TRAIL ratchet afterwards)."""
     trail_on = np.zeros(len(mask), bool)
@@ -301,6 +297,7 @@ def fit_heads(train: pd.DataFrame, actions: list[str]) -> dict:
 
 
 def predict_heads(heads: dict, rows: pd.DataFrame) -> pd.DataFrame:
+    # provenance: predict — LGBMRegressor.predict is the regressed delta net R of that action, not a probability
     return pd.DataFrame({a: np.where(rows[f"av_{a}"], m.predict(rows[MODEL_COLS]), -np.inf) for a, m in heads.items()}, index=rows.index)
 
 
@@ -332,7 +329,7 @@ def realised(rows: pd.DataFrame, trades_n: int, P: Paths, base: dict, action_by_
 
 
 # ------------------------------------------------------------------------------------------------ stats
-def stats(net, base_net, symbols, side=None) -> dict:
+def stats(net, base_net, symbols) -> dict:
     d = net - base_net
     return {"n": int(len(net)), "mean_net_r": float(np.mean(net)), "delta_vs_hold": float(np.mean(d)),
             "win_rate": float(np.mean(net > 0)), "p05_net_r": float(np.percentile(net, 5)), "min_net_r": float(np.min(net)),
@@ -409,7 +406,7 @@ def run(a) -> int:
     dev_tr = dev_tr.sort_values(["symbol", "i"], kind="stable").reset_index(drop=True)   # Paths order == trades order
     ho_tr = ho_tr.sort_values(["symbol", "i"], kind="stable").reset_index(drop=True)
     print(f"dev trades={len(dev_tr)} heldout trades={len(ho_tr)} tau={tau} t={time.time()-t0:.0f}s", flush=True)
-    res = (arm_rule if a.arm in ("be", "trail", "timedecay") else arm_model)(a, tab, df_by, dev_tr, ho_tr, tau)
+    res = (arm_rule if a.arm in ("be", "trail", "timedecay") else arm_model)(a, tab, df_by, dev_tr, ho_tr)
     res.update({"schema": SCHEMA, "unit": a.unit, "arm": a.arm, "entry_tau": tau, "git_sha": E._git_sha(),
                 "elapsed_s": round(time.time() - t0)})
     v, why = res.pop("verdict"), res.pop("why")
@@ -426,7 +423,7 @@ def _sim_rule(arm, param, P):
     return simulate(P, rule_hook(arm, param))
 
 
-def arm_rule(a, tab, df_by, dev_tr, ho_tr, tau) -> dict:
+def arm_rule(a, tab, df_by, dev_tr, ho_tr) -> dict:
     grid = {"be": [BE_R], "trail": TRAIL_GRID, "timedecay": DECAY_GRID}[a.arm]
     dP, d_idx = gather(dev_tr, df_by, atr_series(tab, dev_tr))
     dev_base = simulate(dP)
@@ -477,7 +474,7 @@ def claim_read(a, model_id: str) -> dict | None:
     return HL.claim_read(model_id=f"MANAGE-{model_id}", start=E.HOLDOUT_START, end=E.END, unit=a.unit, reader=a.reader, ledger=led)
 
 
-def arm_model(a, tab, df_by, dev_tr, ho_tr, tau) -> dict:
+def arm_model(a, tab, df_by, dev_tr, ho_tr) -> dict:
     actions = LEARNED if a.arm == "manage" else SL_ONLY
     dP, _ = gather(dev_tr, df_by, atr_series(tab, dev_tr))
     dlab = label_actions(dP)
