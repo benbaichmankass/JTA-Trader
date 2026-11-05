@@ -1,0 +1,318 @@
+name: kaggle-backups
+
+# STANDING PRIVATE KAGGLE BACKUPS (row KAGGLE-BACKUPS, lane HF-LAKE-SQUASH). Operator decision 2026-11-05 ~17:02Z, verbatim:
+# "Ok, let's also keep backups on kaggle (on private)". Earlier the same day (~17:00Z): "We can also try hosting private models there
+# if it opens more storage/compute".
+#
+# WHAT: the trainer model registry-store (read over the existing trainer SSH route) + ml/served (this repo) as versions of ONE private
+# Kaggle Model `metis-ml-backup` (instances `served` and `registry-store`). Databases and the cold data lake follow as private DATASETS
+# once the operator has seen their first full size (mode `dbsize` measures it read-only; nothing is uploaded by it).
+#
+# RULES: COPY only, nothing is moved or deleted anywhere (Kaggle retention deletes nothing without the operator's OK); NEVER credentials
+# (env files, account keys, tokens: the staging tree is scanned and a hit REFUSES the backup); Kaggle is a backup + compute surface and
+# is NEVER read on the trade path (the live trader loads ml/served locally; the trainer keeps its local registry); every backup is
+# VERIFIED by re-downloading it and re-hashing against MANIFEST.json, and again inside a CPU Kaggle kernel (the compute angle: a kernel
+# loads the model files straight from /kaggle/input); a freshness stamp comms/backups/kaggle_latest.json is landed for the health review;
+# a failure retries, then ONE red flag after 2 consecutive failed runs (ops-flags comment + Telegram), and never halts anything.
+#
+# no-durable-result: backup job, computes no research verdict; its durable outputs are the private Kaggle Model versions and the freshness stamp comms/backups/kaggle_latest.json landed by commit-to-main
+#
+# GATES THIS ADDS OR CHANGES: none. Data path only: no order path, no config the trader reads, no execution flag. (On a PR the commit-message
+# tokens `[kaggle-backup-models]` / `[kaggle-backup-dbsize]` only select which measurement runs; they gate no pipeline.)
+#
+# MODES  models (default; schedule)  |  dbsize (read-only size of trade_journal.db and trainer_store.db on the trainer; no upload)
+
+on:
+  schedule:
+    - cron: "23 4 * * *"
+  issues:
+    types: [labeled]
+  pull_request:
+    paths:
+      - ".github/workflows/kaggle-backups.yml"
+      - "scripts/ops/kaggle_backup.py"
+      - "scripts/ops/kaggle_backup_kernel/**"
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: kaggle-backups-${{ github.event_name == 'pull_request' && github.head_ref || 'main' }}
+  cancel-in-progress: false
+
+env:
+  KAGGLE_API_TOKEN: ${{ secrets.KAGGLE_API_TOKEN }}
+
+jobs:
+  gate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      models: ${{ steps.g.outputs.models }}
+      dbsize: ${{ steps.g.outputs.dbsize }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+          persist-credentials: false
+      - id: g
+        env:
+          EVENT: ${{ github.event_name }}
+          LABEL: ${{ github.event.label.name }}
+          ISSUE_BODY: ${{ github.event.issue.body }}
+          ISSUE_USER: ${{ github.event.issue.user.login }}
+          OWNER: ${{ github.repository_owner }}
+          SAME_REPO: ${{ github.event.pull_request.head.repo.full_name == github.repository }}
+        run: |
+          set -u
+          m=false; d=false
+          if [ "$EVENT" = "schedule" ]; then m=true; fi
+          if [ "$EVENT" = "pull_request" ] && [ "$SAME_REPO" = "true" ]; then
+            msg="$(git log -1 --format=%B HEAD^2 2>/dev/null || git log -1 --format=%B HEAD)"
+            echo "head commit: $(echo "$msg" | head -1)"
+            case "$msg" in *"[kaggle-backup-models]"*) m=true;; esac
+            case "$msg" in *"[kaggle-backup-dbsize]"*) d=true;; esac
+          fi
+          if [ "$EVENT" = "issues" ] && [ "$LABEL" = "kaggle-backup-request" ] && { [ "$ISSUE_USER" = "$OWNER" ] || [ "$ISSUE_USER" = "github-actions[bot]" ]; }; then
+            mode="$(printf '%s\n' "$ISSUE_BODY" | sed -n 's/^mode:[[:space:]]*\([a-z]*\).*/\1/p' | head -1)"; mode="${mode:-models}"
+            case "$mode" in models) m=true;; dbsize) d=true;; esac
+          fi
+          echo "models=$m" >> "$GITHUB_OUTPUT"; echo "dbsize=$d" >> "$GITHUB_OUTPUT"
+
+  dbsize:
+    needs: gate
+    if: needs.gate.outputs.dbsize == 'true' && (github.event_name != 'issues' || ((github.event.issue.user.login == github.repository_owner || github.event.issue.user.login == 'github-actions[bot]') && contains(github.event.issue.labels.*.name, 'kaggle-backup-request')))
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      VM_SSH_KEY: ${{ secrets.VM_SSH_KEY }}
+      TRAINER_IP: ${{ secrets.TRAINER_VM_IP }}
+      TRAINER_USER: ${{ vars.TRAINER_VM_USER || 'ubuntu' }}
+    steps:
+      - name: Measure the databases on the trainer (READ ONLY, stat + SQLite page counts, no copy, no write)
+        run: |
+          set -uo pipefail
+          [ -n "${TRAINER_IP}" ] && [ -n "${VM_SSH_KEY}" ] || { echo "::error::trainer secrets missing"; exit 1; }
+          mkdir -p ~/.ssh && chmod 700 ~/.ssh
+          printf '%s\n' "${VM_SSH_KEY}" > ~/.ssh/trainer_key && chmod 600 ~/.ssh/trainer_key
+          SSH="ssh -i $HOME/.ssh/trainer_key -o BatchMode=yes -o StrictHostKeyChecking=accept-new -o ConnectTimeout=20"
+          $SSH "${TRAINER_USER}@${TRAINER_IP}" 'cd /home/ubuntu/ict-trading-bot && for f in $(find . -maxdepth 4 \( -name trade_journal.db -o -name trainer_store.db \) -not -path "./.git/*" 2>/dev/null); do
+              python3 - "$f" <<PY
+          import os, sqlite3, sys
+          p = sys.argv[1]
+          c = sqlite3.connect("file:" + p + "?mode=ro", uri=True)
+          pc = c.execute("pragma page_count").fetchone()[0]; ps = c.execute("pragma page_size").fetchone()[0]
+          fl = c.execute("pragma freelist_count").fetchone()[0]
+          print({"path": p, "file_bytes": os.path.getsize(p), "pages_bytes": pc * ps, "free_bytes": fl * ps, "journal_mode": c.execute("pragma journal_mode").fetchone()[0],
+                 "wal_bytes": os.path.getsize(p + "-wal") if os.path.exists(p + "-wal") else 0})
+          PY
+            done; df -h / | tail -1' 2>&1 | sed "s|${TRAINER_IP}|<trainer>|g" | tee dbsize.txt
+          rm -f ~/.ssh/trainer_key
+          { echo '### trainer database sizes (read only)'; cat dbsize.txt; } >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: kaggle-backups-dbsize-${{ github.run_id }}
+          path: dbsize.txt
+          retention-days: 30
+
+  models:
+    needs: gate
+    if: needs.gate.outputs.models == 'true' && (github.event_name != 'issues' || ((github.event.issue.user.login == github.repository_owner || github.event.issue.user.login == 'github-actions[bot]') && contains(github.event.issue.labels.*.name, 'kaggle-backup-request')))
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    permissions:
+      contents: write
+      pull-requests: write
+      issues: write
+    env:
+      VM_SSH_KEY: ${{ secrets.VM_SSH_KEY }}
+      TRAINER_IP: ${{ secrets.TRAINER_VM_IP }}
+      TRAINER_USER: ${{ vars.TRAINER_VM_USER || 'ubuntu' }}
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      GITHUB_REPOSITORY: ${{ github.repository }}
+      TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+      TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+      TELEGRAM_SYSTEM_CHAT_ID: ${{ secrets.TELEGRAM_SYSTEM_CHAT_ID }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ github.event_name == 'schedule' && secrets.BRANCH_PROTECTION_TOKEN || github.token }}
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: python -m pip install --quiet "kaggle>=2.0" six pyyaml requests
+      - name: Pull the trainer registry-store (READ ONLY over the existing SSH route; a copy that changed mid-pull is retried)
+        id: pull
+        run: |
+          set -uo pipefail
+          [ -n "${TRAINER_IP}" ] && [ -n "${VM_SSH_KEY}" ] || { echo "::error::trainer secrets missing"; exit 1; }
+          mkdir -p ~/.ssh && chmod 700 ~/.ssh
+          printf '%s\n' "${VM_SSH_KEY}" > ~/.ssh/trainer_key && chmod 600 ~/.ssh/trainer_key
+          SSH="ssh -i $HOME/.ssh/trainer_key -o BatchMode=yes -o StrictHostKeyChecking=accept-new -o ConnectTimeout=20"
+          SRC="${TRAINER_USER}@${TRAINER_IP}:/home/ubuntu/ict-trading-bot/ml/registry-store/"
+          mkdir -p /tmp/reg
+          OK=0
+          for attempt in 1 2 3 4; do
+            rsync -a --partial --bwlimit=20000 --rsync-path="nice -n 19 ionice -c3 rsync" -e "$SSH" "$SRC" /tmp/reg/ 2>&1 | sed "s|${TRAINER_IP}|<trainer>|g" | tail -3
+            # consistency: a second dry-run must find nothing left to transfer (the registry is appended by training cycles)
+            # grep -c exits 1 when it counts 0 (the SUCCESS case); under pipefail + bash -e that killed the step (run 42081373898)
+            CH=$(rsync -an --itemize-changes -e "$SSH" "$SRC" /tmp/reg/ 2>/dev/null | { grep -c '^>f' || true; })
+            if [ "${CH:-1}" = "0" ]; then OK=1; break; fi
+            echo "registry-store changed while copying (${CH} files); retry ${attempt}"; sleep 30
+          done
+          rm -f ~/.ssh/trainer_key
+          [ "$OK" = "1" ] || { echo "::error::registry-store never settled"; exit 1; }
+          ls /tmp/reg | wc -l; du -sh /tmp/reg
+      - name: Stage ml/served + registry-store, scan for credentials (a hit REFUSES the backup)
+        run: python3 scripts/ops/kaggle_backup.py stage --kind models --out /tmp/stage --served ml/served --registry /tmp/reg | tee /tmp/stage.json
+      - name: Create the private Model + instances if absent, upload a new version of each, wait until readable
+        run: |
+          set -uo pipefail
+          echo "::add-mask::${KAGGLE_API_TOKEN}"
+          USERNAME=$(python - <<'PY'
+          from kaggle.api.kaggle_api_extended import KaggleApi
+          a = KaggleApi(); a.authenticate()
+          print(a.config_values.get("username", ""))
+          PY
+          )
+          [ -n "$USERNAME" ] || { echo "::error::token did not resolve to a Kaggle user"; exit 1; }
+          echo "::add-mask::$USERNAME"; echo "$USERNAME" > /tmp/kuser
+          scrub() { sed "s|$USERNAME|<user>|g"; }
+          retry() { for n in 1 2 3; do "$@" && return 0; echo "retry $n: $*" | scrub; sleep 30; done; return 1; }
+          M=metis-ml-backup
+          if ! kaggle models get "$USERNAME/$M" >/dev/null 2>&1; then
+            mkdir -p /tmp/mm && python3 - "$USERNAME" <<'PY'
+          import json, sys
+          u = sys.argv[1]
+          json.dump({"ownerSlug": u, "title": "metis-ml-backup", "slug": "metis-ml-backup", "subtitle": "private backup of served models and the trainer registry-store",
+                     "isPrivate": True, "description": "Private backup + compute surface. COPY only; the live trader and trainer keep their local copies as the source of truth. Never a serving path.",
+                     "publishTime": "", "provenanceSources": ""}, open("/tmp/mm/model-metadata.json", "w"), indent=1)
+          PY
+            retry kaggle models create -p /tmp/mm 2>&1 | scrub | tail -4
+          fi
+          for INST in served registry-store; do
+            NOTE="backup $(date -u +%Y-%m-%dT%H:%MZ) run ${GITHUB_RUN_ID}"
+            if kaggle models instances get "$USERNAME/$M/other/$INST" >/dev/null 2>&1; then
+              retry kaggle models instances versions create "$USERNAME/$M/other/$INST" -p "/tmp/stage/$INST" -n "$NOTE" -r skip 2>&1 | scrub | grep -v "it/s\|B/s" | tail -4
+            else
+              cp -r "/tmp/stage/$INST" "/tmp/inst-$INST"
+              python3 - "$USERNAME" "$INST" <<'PY'
+          import json, sys
+          u, inst = sys.argv[1:3]
+          json.dump({"ownerSlug": u, "modelSlug": "metis-ml-backup", "instanceSlug": inst, "framework": "other",
+                     "overview": "Private backup of " + inst + ".", "usage": "Backup + compute surface only. Verify with MANIFEST.json.",
+                     "licenseName": "Other (specified in description)", "fineTunable": False, "trainingData": [],
+                     "modelInstanceType": "Unspecified", "baseModelInstanceId": 0, "externalBaseModelUrl": ""},
+                    open("/tmp/inst-" + inst + "/model-instance-metadata.json", "w"), indent=1)
+          PY
+              retry kaggle models instances create -p "/tmp/inst-$INST" -r skip 2>&1 | scrub | grep -v "it/s\|B/s" | tail -4
+            fi
+          done
+          sleep 45
+          for INST in served registry-store; do
+            kaggle models instances versions list "$USERNAME/$M/other/$INST" 2>&1 | scrub | tail -6 | tee "/tmp/versions-$INST.txt"
+          done
+      - name: Load the backed-up files inside a CPU Kaggle kernel (internet off, no download)
+        run: |
+          set -uo pipefail
+          echo "::add-mask::${KAGGLE_API_TOKEN}"
+          USERNAME=$(cat /tmp/kuser); echo "::add-mask::$USERNAME"
+          scrub() { sed "s|$USERNAME|<user>|g"; }
+          M=metis-ml-backup
+          SRCS=""
+          # `versions list` returns the versions of EVERY instance of the model (not only $INST): take the max over rows whose slug column is
+          # this instance. (Taking the max over all rows asked for registry-store/4 when it had 3 versions: 40 min of 404 on 2026-11-05.)
+          for INST in served registry-store; do
+            VER=$(kaggle models instances versions list "$USERNAME/$M/other/$INST" --csv 2>/dev/null | awk -F, -v inst="$INST" 'NR>1 { for (i=1;i<=NF;i++) if ($i==inst) { print $1; break } }' | sort -n | tail -1); VER=${VER:-}
+            case "$VER" in ''|*[!0-9]*) echo "::error::cannot read a numeric version for $INST from: $(kaggle models instances versions list "$USERNAME/$M/other/$INST" --csv 2>&1 | head -3)"; exit 1;; esac
+            SRCS="$SRCS\"$USERNAME/$M/other/$INST/$VER\","
+          done
+          mkdir -p /tmp/k && cp scripts/ops/kaggle_backup_kernel/kernel_models_read.py /tmp/k/
+          python3 - "$USERNAME" "[${SRCS%,}]" <<'PY'
+          import json, sys
+          u, srcs = sys.argv[1], json.loads(sys.argv[2])
+          json.dump({"id": f"{u}/metis-ml-backup-read", "title": "metis-ml-backup-read", "code_file": "kernel_models_read.py",
+                     "language": "python", "kernel_type": "script", "is_private": "true", "enable_gpu": "false", "enable_tpu": "false",
+                     "enable_internet": "false", "dataset_sources": [], "competition_sources": [], "kernel_sources": [],
+                     "model_sources": srcs}, open("/tmp/k/kernel-metadata.json", "w"), indent=1)
+          PY
+          T0=$(date +%s)
+          timeout 300 kaggle kernels push -p /tmp/k 2>&1 | scrub | tee /tmp/push.txt
+          grep -qi "error\|fail" /tmp/push.txt && { echo "::error::kernel push failed"; exit 1; }
+          deadline=$(( $(date +%s) + 1800 ))
+          while :; do
+            s=$(timeout 90 kaggle kernels status "$USERNAME/metis-ml-backup-read" 2>&1 | scrub); echo "$(date -u +%H:%M:%S) $s"
+            case "$s" in *COMPLETE*|*ERROR*|*CANCEL*) break;; esac
+            [ "$(date +%s)" -gt "$deadline" ] && { echo "::error::kernel timed out"; exit 1; }
+            sleep 30
+          done
+          T1=$(date +%s)
+          mkdir -p kout && timeout 300 kaggle kernels output "$USERNAME/metis-ml-backup-read" -p kout 2>&1 | scrub | tail -3
+          cat kout/result.json | tee /tmp/kernel.json
+          echo "{\"kernel_push_to_complete_seconds\": $((T1-T0))}" | tee /tmp/kernel-timing.json
+          python3 -c "import json,sys; r=json.load(open('/tmp/kernel.json')); sys.exit(0 if r.get('ok') else 1)"
+      - name: Read back every instance's latest version and re-hash it against MANIFEST.json (timed)
+        run: |
+          set -uo pipefail
+          echo "::add-mask::${KAGGLE_API_TOKEN}"
+          USERNAME=$(cat /tmp/kuser); echo "::add-mask::$USERNAME"
+          scrub() { sed "s|$USERNAME|<user>|g"; }
+          M=metis-ml-backup
+          rm -rf /tmp/rb && mkdir -p /tmp/rb
+          T0=$(date +%s)
+          for INST in served registry-store; do
+            VER=$(kaggle models instances versions list "$USERNAME/$M/other/$INST" --csv 2>/dev/null | awk -F, -v inst="$INST" 'NR>1 { for (i=1;i<=NF;i++) if ($i==inst) { print $1; break } }' | sort -n | tail -1)
+            case "$VER" in ''|*[!0-9]*) echo "::error::cannot read a numeric version for $INST"; exit 1;; esac
+            echo "$INST latest version: $VER"
+            # Kaggle builds a download archive per version; DownloadModelInstanceVersion answers 404 until it exists (observed
+            # 2026-11-05: still 404 after 4 min). The kernel mount (previous step) does not need it. Poll up to 40 min.
+            OK=0; W0=$(date +%s)
+            for n in $(seq 1 80); do
+              rm -rf "/tmp/rb/$INST" && mkdir -p "/tmp/rb/$INST"
+              if kaggle models instances versions download "$USERNAME/$M/other/$INST/$VER" -p "/tmp/rb/$INST" --untar > /tmp/dl.log 2>&1; then OK=1; break; fi
+              [ $((n % 10)) = 1 ] && { echo "$INST download attempt ${n} (+$(( $(date +%s) - W0 ))s):"; grep -v "it/s\|B/s" /tmp/dl.log | scrub | tail -3; }
+              sleep 30
+            done
+            [ "$OK" = "1" ] || { echo "::error::download of $INST failed"; exit 1; }
+            echo "$INST archive available after $(( $(date +%s) - W0 )) s"
+          done
+          T1=$(date +%s); echo "{\"readback_seconds\": $((T1-T0))}" | tee /tmp/readback.json
+          find /tmp/rb -maxdepth 3 | head -20
+          python3 scripts/ops/kaggle_backup.py verify --root /tmp/rb --record /tmp/verify.json
+      - name: Freshness stamp (ok)
+        if: success()
+        run: |
+          git fetch -q origin main && git show origin/main:comms/backups/kaggle_latest.json > /tmp/prev-stamp.json 2>/dev/null || echo '{}' > /tmp/prev-stamp.json
+          python3 scripts/ops/kaggle_backup.py stamp --kind models --ok --previous /tmp/prev-stamp.json --out comms/backups/kaggle_latest.json \
+            --run-id "${GITHUB_RUN_ID}" --details "$(python3 -c "import json;print(json.dumps({'stage':json.load(open('/tmp/stage.json')),'verify':json.load(open('/tmp/verify.json')),'kernel_ok':json.load(open('/tmp/kernel.json')).get('ok')}))")"
+      - name: Freshness stamp (failed run, counts the failure, raises ONE flag after 2 consecutive failures, never halts)
+        if: failure()
+        run: |
+          git fetch -q origin main && git show origin/main:comms/backups/kaggle_latest.json > /tmp/prev-stamp.json 2>/dev/null || echo '{}' > /tmp/prev-stamp.json
+          python3 scripts/ops/kaggle_backup.py stamp --kind models --fail --flag --previous /tmp/prev-stamp.json --out comms/backups/kaggle_latest.json \
+            --run-id "${GITHUB_RUN_ID}" --details '{"why":"see run logs"}'
+      - name: Land the freshness stamp (scheduled runs only; read by /health-review)
+        if: always() && github.event_name == 'schedule'
+        uses: ./.github/actions/commit-to-main
+        with:
+          verify-merged: "true"
+          token: ${{ secrets.BRANCH_PROTECTION_TOKEN }}
+          paths: comms/backups
+          message: "chore(kaggle-backups): freshness stamp (run ${{ github.run_id }})"
+          pr-title: "chore(kaggle-backups): freshness stamp (auto)"
+          pr-body: >-
+            Machine-readable freshness stamp of the private Kaggle backups (scripts/ops/kaggle_backup.py). Data-only.
+          branch-prefix: automation/kaggle-backups
+      - name: Summary + artifact
+        if: always()
+        run: |
+          mkdir -p out && cp /tmp/stage.json /tmp/verify.json /tmp/readback.json /tmp/kernel.json /tmp/kernel-timing.json /tmp/versions-*.txt comms/backups/kaggle_latest.json out/ 2>/dev/null || true
+          { echo '### kaggle-backups models'; for f in stage verify readback kernel kernel-timing; do echo "$f: $(cat /tmp/$f.json 2>/dev/null | cut -c1-900)"; done; } >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: kaggle-backups-models-${{ github.run_id }}
+          path: out
+          retention-days: 30

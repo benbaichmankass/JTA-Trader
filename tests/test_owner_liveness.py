@@ -346,8 +346,12 @@ def test_archived_lane_fails_only_when_state_is_readable(tmp_path):
     assert no_file.returncode == 0
     assert "COULD NOT LOOK" in no_file.stdout
     assert "stale-in-flight: OK\n" not in no_file.stdout  # never a plain OK
-    lane = ol.owner_session_id(next(
-        r.lane for r in ol.in_flight_rows(REPO_ROOT, None) if ol.owner_session_id(r.lane)))
+    # Pick the session exactly as the guard does (check_stale_in_flight.lane_session_id: the
+    # owner's id if it names one, else the lane's). Keying on the lane alone archived a session
+    # the guard never reads whenever the first in_flight row's owner named a different session
+    # (seen 2026-11-05 on #23448 once STRUCTURE-EXITS-DEFAULT, owner "manager", left in_flight).
+    lane = next(sid for r in ol.in_flight_rows(REPO_ROOT, None)
+                for sid in [ol.owner_session_id(r.owner) or ol.owner_session_id(r.lane)] if sid)
     f = tmp_path / "s.json"
     f.write_text('{"%s": "archived"}' % lane)
     hit = subprocess.run(guard + ["--lane-states", str(f)], cwd=str(REPO_ROOT),
