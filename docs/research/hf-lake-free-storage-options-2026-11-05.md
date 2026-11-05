@@ -52,3 +52,18 @@ already on. Trainer VM root disk, MEASURED today (issue #23351): 100 GB, **85 GB
 **C. Do not use** Oracle for bulk, R2/B2 (10 GB, new accounts), Drive (15 GB shared with Gmail), Zenodo (licence).
 
 **Unresolved and worth one check before committing:** (1) Kaggle's current official limits and whether old dataset versions count against the 200 GB; (2) whether GitHub Releases may carry this data (an alternative cold tier with trivial read path, at ~50 shards); (3) Kaggle's ToS on using datasets as bulk storage.
+
+## Kaggle: current official text (rendered and read 2026-11-05 14:5xZ; pages are client-side rendered, so a plain fetch returns only the title)
+
+[Datasets docs, "Technical Specifications"](https://www.kaggle.com/docs/datasets) -- this **supersedes the UNVERIFIED cells above for the limits**:
+> "We provide resources for storing and processing datasets, but there are certain technical specifications: 200GB per dataset limit. 200GB max private datasets (if you exceed this, either make your datasets public or delete unused datasets). A max of 50 top-level files (if you have more, use a directory structure and upload an archive)."
+
+The docs say nothing on whether old dataset versions count toward the 200 GB (the pilot measures it, see the row note).
+
+[Acceptable Use Policy](https://www.kaggle.com/aup) (effective June 22, 2025): it bars "adding, providing, or uploading data to the Services that violates the intellectual property or privacy rights of others" and "activity unrelated to ML data science" as resource abuse. No clause bans using datasets as storage.
+
+[Terms of Use](https://www.kaggle.com/terms) (effective June 22, 2025), two clauses to put in front of the operator:
+> "You will only use the Services for your own internal, personal, non-commercial use, and not on behalf of or for the benefit of any third party ..."
+> "... you will not contribute any Content or User Submission or otherwise use the Services ... in a manner that ... Copies or stores any significant portion of the Content" (here "Content" is Kaggle's own materials and other users' submissions, not our upload).
+
+**Open question for the operator, not decided here:** (1) whether training a trading system counts as "personal, non-commercial" use (we already use Kaggle for training today, so this is pre-existing exposure, not new); (2) the lake's Binance data has no open licence, and the AUP bars uploading data that violates others' rights, so a *private* Kaggle copy carries the same redistribution question the private HF copy does.
