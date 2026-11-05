@@ -76,14 +76,15 @@ lands:
   min_rows: 1
 power:
   expected_n: 10641
-  min_detectable_effect: 0.009
+  min_detectable_effect: 0.011
   effect_units: metric
   sd: 0.33
   design: one_sample
-  alpha: 0.0101
+  alpha: 0.01
   power: 0.8
   basis: 'MEASURED from c692-11 on the same 10,641 held-out trades: SE of the paired delta 0.00316 (CI95 half-width / 1.96), so sd ~0.33.
-    MDE at z 2.57 + 0.84 = 3.41 x 0.00316 ~ 0.011 for an all-trades delta; c692-12 acts on far fewer trades (522 of 37,713 on dev), so the
+    alpha 0.01 two-sided (z 2.576) is the calculator level nearest the deflated bar (z 2.57; the rule uses the ledger bar, not this field).
+    MDE at z 2.58 + 0.84 = 3.42 x 0.00316 ~ 0.011 for an all-trades delta; c692-12 acts on far fewer trades (522 of 37,713 on dev), so the
     held-out delta will be small and this read may well be underpowered: reported, not a reason to change the bar.'
   feasibility:
     source: none
