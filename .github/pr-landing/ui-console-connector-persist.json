@@ -1,0 +1,11 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "hold_reason": "tier_2_3_needs_approval",
+  "hold_text": "Persistent systemd unit + install workflow for the console connector on the trainer VM (no order path). Operator-approved under the console work (dispatch of lane UI-CONSOLE-CONNECTOR-PERSIST by Manager Session 2026-11-05b). Merging changes nothing at runtime; the install workflow does, and is fired after the merge. The manager lands it.",
+  "why": "Transient systemd-run units do not survive a reboot. The unit sets CONSOLE_CONNECTOR_AUTH=google, TRADE_JOURNAL_DB to the synced snapshot and a fixed file-backed OAuth store path; DIAG_READ_TOKEN comes from an env file written from the repo secret. Gates this adds or changes: none.",
+  "recorded_decision": {
+    "kind": "operator_decision",
+    "ref": "UI-CONSOLE-V1 operator 2026-11-05 ~09:55Z popup: \"Open 443 + Google OAuth (Recommended)\"; lane dispatch UI-CONSOLE-CONNECTOR-PERSIST"
+  }
+}
