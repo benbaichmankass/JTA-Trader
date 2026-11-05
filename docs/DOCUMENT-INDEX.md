@@ -637,6 +637,7 @@ real top-level `docs/*.md` and fails if the population builder cannot see it.
 | `docs/reference/pr-event-wake-policy.md` | lookup | unknown | — | never | `dir:reference-is-lookup / not-assessed` | — |
 | `docs/reference/runtime-notes.md` | lookup | unknown | — | never | `dir:reference-is-lookup / not-assessed` | — |
 | `docs/reference/session-capabilities.md` | lookup | unknown | — | never | `dir:reference-is-lookup / not-assessed` | — |
+| `docs/reference/console-connector-tools.md` | lookup | unknown | — | never | `dir:reference-is-lookup / not-assessed` | Tool names and response schemas of the read-only JTA console connector (workplan, ml_roadmap, performance, system_health, data_query, inbox options) and which need the Google sign-in. |
 | `docs/reference/signal-catalog-review.md` | lookup | unknown | — | never | `dir:reference-is-lookup / not-assessed` | — |
 | `docs/reference/trading-and-model-practice-principles.md` | lookup | unknown | — | never | `dir:reference-is-lookup / not-assessed` | — |
 | `docs/reference/verifying-what-is-trading.md` | lookup | unknown | — | never | `dir:reference-is-lookup / not-assessed` | — |

@@ -1,0 +1,22 @@
+{
+  "id": "UI-CONSOLE-TABS-DATA",
+  "title": "Read-only connector tools behind five console tabs (workplan, ml_roadmap, performance, system_health, data_query) + inbox options[]",
+  "phase": null,
+  "state": "in_flight",
+  "owner": "manager",
+  "lane": "UI-CONSOLE-TABS-DATA",
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 2,
+  "prs": [],
+  "blocked_on": [],
+  "note": "Operator 2026-11-05 ~11:11Z verbatim: \"We also need to add some tabs to the console: 1. Weekly workplan tracker 2. ML Roadmap tracker 3. Performance tracker for MLs and live strategies 4. Systems/resource health and allocation 5. Data viewer - trade journal and other databases\". Tools in src/console_connector/tabs.py; doc docs/reference/console-connector-tools.md. performance/system_health/data_query register only when CONSOLE_CONNECTOR_AUTH=google. Tier 2 landing hold. Closing: unit restarted after merge (manager asks UI-CONSOLE-V1), each tool returns read_state read from the console, data_query reads the live journal (OPEN: trade_journal.db is on the live VM, not the trainer).",
+  "due_by": "2026-11-07",
+  "roadmap": [
+    "L-OPS"
+  ],
+  "updated_at": "2026-11-05T11:27:19Z",
+  "updated_by": "session_01AFoLuNATEbvRrjqtCRiCk2",
+  "_seq": 945
+}

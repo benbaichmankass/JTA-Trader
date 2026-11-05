@@ -19,13 +19,22 @@ from typing import Any
 
 from fastapi import FastAPI, Request, Response
 
-from src.console_connector import data
+from src.console_connector import data, tabs
 
 REPO = Path(os.environ.get("CONSOLE_CONNECTOR_REPO") or Path(__file__).resolve().parents[2])
 LOG = Path(os.environ.get("CONSOLE_CONNECTOR_LOG") or REPO / "runtime_logs" / "console_connector.jsonl")
 PROTOCOL_DEFAULT = "2025-06-18"
 CACHE = data.TTLCache()
-TTL_S = {"work_rows": 30.0, "inbox": 30.0, "work_items": 30.0}
+TTL_S = {"work_rows": 30.0, "inbox": 30.0, "work_items": 30.0, "workplan": 60.0, "ml_roadmap": 120.0,
+         "performance": 300.0, "system_health": 60.0, "data_query": 30.0}
+#: Tools that serve P&L, journal rows or live-VM state: registered ONLY when CONSOLE_CONNECTOR_AUTH=google
+#: (the sign-in is on), so they never serve over the authless tunnel. workplan and ml_roadmap carry only
+#: public-register data (repo files) and are always available.
+GATED_TOOLS = frozenset({"performance", "system_health", "data_query"})
+
+
+def auth_active() -> bool:
+    return os.environ.get("CONSOLE_CONNECTOR_AUTH", "").strip().lower() == "google"
 N_CALLS = {"n": 0}
 
 _RO = {"readOnlyHint": True, "destructiveHint": False, "idempotentHint": True, "openWorldHint": False}
@@ -49,6 +58,35 @@ TOOLS: list[dict[str, Any]] = [
      "inputSchema": {"type": "object", "properties": {
          "limit": {"type": "integer", "minimum": 1, "maximum": 200, "default": 25}}},
      "annotations": _RO},
+    {"name": "workplan", "title": "Weekly workplan",
+     "description": "This week's plan: the WEEKLY-PLANNING row, overdue / due-this-week / priority checklist rows, "
+                    "counts by state, owner and lane, and the latest usage reading with the spend_meter capacity.",
+     "inputSchema": {"type": "object", "properties": {
+         "limit": {"type": "integer", "minimum": 1, "maximum": 200, "default": 40}}}, "annotations": _RO},
+    {"name": "ml_roadmap", "title": "ML roadmap",
+     "description": "ML milestones (milestones.yaml, goal G4), the ML plan-vs-measured status "
+                    "(ml_plan_status) and live ML-* checklist rows with state, next and due.",
+     "inputSchema": {"type": "object", "properties": {
+         "limit": {"type": "integer", "minimum": 1, "maximum": 200, "default": 60}}}, "annotations": _RO},
+    {"name": "performance", "title": "Performance",
+     "description": "SIGN-IN ONLY. Per leg and book: trades, realized R and net P&L over 7d/30d/all with n and "
+                    "pnl provenance; live-vs-backtest band; ML shadow/advisory metrics per model.",
+     "inputSchema": {"type": "object", "properties": {}}, "annotations": _RO},
+    {"name": "system_health", "title": "System health",
+     "description": "SIGN-IN ONLY. Services and timers, trader restarts today, tick_cost / exit-loop health, "
+                    "disk and CPU per VM, lanes running and spend vs the weekly bar.",
+     "inputSchema": {"type": "object", "properties": {}}, "annotations": _RO},
+    {"name": "data_query", "title": "Data viewer",
+     "description": "SIGN-IN ONLY. Read-only rows from the allowlisted trade-journal / trainer-store tables. "
+                    "No SQL: pick a table and optional account, leg, symbol, since, until filters. Omit `table` "
+                    "for the catalog. Rows are capped at 500.",
+     "inputSchema": {"type": "object", "properties": {
+         "table": {"type": "string"}, "account": {"type": "string"}, "leg": {"type": "string"},
+         "symbol": {"type": "string"}, "since": {"type": "string", "description": "ISO date/datetime, inclusive"},
+         "until": {"type": "string", "description": "ISO date/datetime, exclusive"},
+         "time_column": {"type": "string"}, "order": {"type": "string", "enum": ["asc", "desc"]},
+         "limit": {"type": "integer", "minimum": 1, "maximum": 500, "default": 100},
+         "offset": {"type": "integer", "minimum": 0}}}, "annotations": _RO},
     {"name": "work_items", "title": "Work-store items",
      "description": "Work-store items (WORK-STORE S1). Reports could_not_look until that route is live.",
      "inputSchema": {"type": "object", "properties": {}}, "annotations": _RO},
@@ -80,6 +118,25 @@ def call_tool(name: str, args: dict[str, Any]) -> dict[str, Any]:
         return CACHE.get(f"inbox:{limit}", TTL_S["inbox"], lambda: data.inbox(REPO, limit))
     if name == "work_items":
         return CACHE.get("work_items", TTL_S["work_items"], data.work_items)
+    if name in GATED_TOOLS and not auth_active():
+        # never cached, never built: the data is not read at all without the sign-in
+        return {"as_of": data._iso(data._now()), "read_state": "auth_required", "tool": name,
+                "population": {"rows_scanned": None},
+                "reason": "this tool serves P&L / journal / live-VM state and is available only when the "
+                          "connector's Google sign-in is active (CONSOLE_CONNECTOR_AUTH=google)"}
+    if name == "workplan":
+        limit = _clamp(args.get("limit"), 1, 200, 40)
+        return CACHE.get(f"workplan:{limit}", TTL_S[name], lambda: tabs.workplan(REPO, limit))
+    if name == "ml_roadmap":
+        limit = _clamp(args.get("limit"), 1, 200, 60)
+        return CACHE.get(f"ml_roadmap:{limit}", TTL_S[name], lambda: tabs.ml_roadmap(REPO, limit))
+    if name == "performance":
+        return CACHE.get("performance", TTL_S[name], lambda: tabs.performance(REPO))
+    if name == "system_health":
+        return CACHE.get("system_health", TTL_S[name], lambda: tabs.system_health(REPO))
+    if name == "data_query":
+        key = "data_query:" + json.dumps({k: args.get(k) for k in sorted(args)}, sort_keys=True, default=str)
+        return CACHE.get(key, TTL_S[name], lambda: tabs.data_query(REPO, args))
     raise KeyError(name)
 
 
@@ -97,7 +154,7 @@ def handle(msg: dict[str, Any]) -> dict[str, Any] | None:
     elif method == "ping":
         result = {}
     elif method == "tools/list":
-        result = {"tools": TOOLS}
+        result = {"tools": [t for t in TOOLS if t["name"] not in GATED_TOOLS or auth_active()]}
     elif method == "tools/call":
         p = msg.get("params") or {}
         name = p.get("name")
