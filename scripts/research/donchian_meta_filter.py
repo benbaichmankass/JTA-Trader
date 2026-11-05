@@ -24,6 +24,7 @@ Outputs under --out: ledger_all_oos.jsonl, ledger_kept_oos.jsonl, result.json; t
 from __future__ import annotations
 
 import argparse
+import itertools
 import json
 import math
 import subprocess
@@ -81,7 +82,7 @@ def walk_forward(d: pd.DataFrame) -> pd.DataFrame:
     q = pd.date_range(d.entry_time.min().normalize() - pd.offsets.QuarterBegin(1), d.entry_time.max() + pd.offsets.QuarterBegin(1),
                       freq="QS", tz="UTC")
     out = []
-    for lo, hi in zip(q[:-1], q[1:]):
+    for lo, hi in itertools.pairwise(q):
         te = d[(d.entry_time >= lo) & (d.entry_time < hi)]
         tr = d[d.exit_time < lo]                       # purged: only trades CLOSED before the refit
         if te.empty or len(tr) < MIN_TRAIN or tr["y"].nunique() < 2:
@@ -115,7 +116,7 @@ def lift(o: pd.DataFrame) -> dict:
     diffs = np.asarray(diffs)
     return {"kept_minus_all_mean_r": round(float(net[keep].mean() - net.mean()), 4) if keep.any() else None,
             "boot_ci95": [round(float(np.percentile(diffs, 2.5)), 4), round(float(np.percentile(diffs, 97.5)), 4)] if len(diffs) else None,
-            "boot_draws": int(len(diffs))}
+            "boot_draws": len(diffs)}
 
 
 def split(o: pd.DataFrame) -> dict:

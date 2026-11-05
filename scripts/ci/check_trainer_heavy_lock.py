@@ -75,6 +75,9 @@ HEAVY_ENTRYPOINTS = [
 # `.fit(`/`lgb.train(` it belongs above, and the reason recorded here is what
 # makes that reviewable.
 DECLARED_LIGHT = {
+    "scripts/research/donchian_meta_filter.py":
+        "PROP-BASELINE-AND-ML meta-label filter (unit RQ-20261105-d256-02): a scikit-learn logistic regression on ~250 committed ledger rows, seconds of CPU "
+        "in a lane container or a GitHub runner, never needs_vm_data, never routed to the trainer.",
     "scripts/research/prop_ml_leg.py":
         "TRADEIFY-OWN-LEG-DRIVER prop ML entry leg (units RQ-20261105-fd68-01, -fd68-02): fits LightGBM on public Binance Vision klines/funding/metrics and FRED "
         "on a GitHub runner (research-script-run.yml, 4 vCPU, 16 GB, 6 h; the units need internet, so compute cpu_long with why_runner), never needs_vm_data, "
