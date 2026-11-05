@@ -386,10 +386,16 @@ def test_account_status_unread_or_invalid_is_refused(body):
 
 # ---- server-side read-back + go-token (design 3.4, PHONE-GO-TOKEN) ----
 
-def _live(tmp_path: Path, monkeypatch, mode: str = "live") -> None:
+def _live(tmp_path: Path, monkeypatch, mode: str = "live", cushion: str = "within_cushion") -> None:
     acc = tmp_path / "accounts.yaml"
     acc.write_text(yaml.safe_dump({"accounts": {"breakout_2": {"mode": mode}}}))
     monkeypatch.setattr(pe, "ACCOUNTS_PATH", acc)
+    # PROP-SIZE-EXCEEDS-DD-CUSHION: a LIVE verify now grades the drawdown cushion. These tests are about the
+    # read-back / token mechanics, so they stand in a graded cushion; the gate itself is tested below.
+    if cushion is not None:
+        from src.prop import prop_risk_gate
+        monkeypatch.setattr(prop_risk_gate, "grade_account_ticket_risk",
+                            lambda acct, risk_usd=None: {"state": cushion, "risk_usd": risk_usd, "reason": "test"})
 
 
 def _rb(tid: str, **over) -> dict:
@@ -654,3 +660,65 @@ def test_pending_poll_runs_the_stale_claim_watchdog(tmp_path, monkeypatch, _iso)
     c.get("/api/bot/prop/phone/pending", headers={"Authorization": "Bearer " + TOKEN})
     assert len(_iso) == n   # idempotent: no second journal row, no second ping
     assert len(prop_journal.list_fills(account_id="breakout_2")) == 1
+
+
+# --- PROP-SIZE-EXCEEDS-DD-CUSHION (2026-11-05): a LIVE go-token needs the drawdown cushion graded ----------------
+
+def test_live_verify_refuses_when_the_form_risk_exceeds_the_cushion(tmp_path, monkeypatch, _iso):
+    _live(tmp_path, monkeypatch, cushion="exceeds_cushion")
+    tid = _claimed()
+    v = _verify(tid)
+    assert v["ok"] is False and v.get("token") is None
+    assert "exceeds_cushion" in json.dumps(v) and "$25.00" in json.dumps(v)  # 0.50 x |2500 - 2450|
+    assert prop_journal.get_ticket(tid)["meta"]["phone"].get("go") is None
+
+
+def test_live_verify_refuses_when_the_cushion_could_not_be_read(tmp_path, monkeypatch, _iso):
+    _live(tmp_path, monkeypatch, cushion="cushion_unknown")
+    tid = _claimed()
+    v = _verify(tid)
+    assert v["ok"] is False and "cushion_unknown" in json.dumps(v)
+
+
+def test_live_verify_with_the_real_grader_and_no_balance_on_record_fails_closed(tmp_path, monkeypatch, _iso):
+    _live(tmp_path, monkeypatch, cushion=None)  # the real prop_risk_gate wrapper; the temp journal has no status
+    tid = _claimed()
+    v = _verify(tid)
+    assert v["ok"] is False and "risk gate" in json.dumps(v)
+
+
+def test_breach_guards_report_pings_and_lets_the_submit_proceed(tmp_path, monkeypatch, _iso):
+    _live(tmp_path, monkeypatch, cushion="exceeds_cushion")
+    from src.prop import prop_risk_gate
+    monkeypatch.setattr(prop_risk_gate, "breach_guards_for", lambda acct: "report")
+    tid = _claimed()
+    v = _verify(tid)
+    assert v["ok"] is True and v["mode"] == "live"
+    assert any("breach_guards=report" in m for m in _iso)
+
+
+def test_unknown_cushion_refuses_even_under_report(tmp_path, monkeypatch, _iso):
+    _live(tmp_path, monkeypatch, cushion="cushion_unknown")
+    from src.prop import prop_risk_gate
+    monkeypatch.setattr(prop_risk_gate, "breach_guards_for", lambda acct: "report")
+    assert _verify(_claimed())["ok"] is False
+
+
+def test_dry_verify_is_not_graded(tmp_path, monkeypatch, _iso):
+    _live(tmp_path, monkeypatch, mode="dry_run", cushion="exceeds_cushion")
+    v = _verify(_claimed())
+    assert v["ok"] is True and v["mode"] == "dry"
+
+
+def test_cushion_risk_is_qty_times_stop_distance():
+    calls = {}
+    from src.prop import prop_risk_gate
+    orig = prop_risk_gate.grade_account_ticket_risk
+    try:
+        prop_risk_gate.grade_account_ticket_risk = lambda a, risk_usd=None: calls.setdefault("r", risk_usd) and {
+            "state": "within_cushion"} or {"state": "within_cushion"}
+        assert pe.live_cushion_refusals("breakout_2", {"qty": "0.29", "price": "2,379.36", "sl": "2319.40"}) == []
+    finally:
+        prop_risk_gate.grade_account_ticket_risk = orig
+    assert abs(calls["r"] - 17.3884) < 1e-6
+    assert pe.live_cushion_refusals("breakout_2", {"qty": "", "price": "1", "sl": "1"})[0].startswith("risk gate:")
