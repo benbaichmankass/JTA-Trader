@@ -18,7 +18,16 @@
   "roadmap": [
     "L-PROP"
   ],
-  "updated_at": "2026-11-05T23:31:41Z",
+  "updated_at": "2026-11-05T23:42:55Z",
   "updated_by": "session_01AFoLuJiZu24Ggu9S7g7Ujz",
+  "observation": {
+    "what": "first baseline ticket (trend_donchian_eth_4h or trend_donchian_sol_4h) on EACH of breakout_2, tradeify_1, velotrade_1 reaching a venue fill or a journaled close at ~$10 risk",
+    "how_to_check": "GET https://ict-bot.duckdns.org/api/bot/prop/tickets: rows with strategy in {trend_donchian_eth_4h, trend_donchian_sol_4h} per account_id, status filled/closed, risk_usd ~10; breakout_2 needs the operator phone tap",
+    "due_by": "2026-11-12T23:59Z"
+  },
+  "writeback": {
+    "roadmap": "none: the L-PROP milestone line moves when the first baseline ticket is observed (this row closes then)",
+    "arch": "none: no architecture changed; rosters + per_leg_risk_usd config only (docs/ARCHITECTURE-CANONICAL.md unchanged)"
+  },
   "_seq": 958
 }
