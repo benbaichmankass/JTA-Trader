@@ -439,12 +439,14 @@ def run(a) -> int:
         (out / "verdict.json").write_text(json.dumps(vj, indent=1, default=str) + "\n")
         print(json.dumps({"verdict": v, "why": why}), flush=True)
         return 0
+    if a.stage == "heldout" and a.arm != "mlsl2":
+        raise SystemExit("--stage heldout is only for the frozen mlsl2 config (c692-12); the other arms read the held-out in --stage main")
     tab, df_by, dev_tr, ho_tr = build_world(a, tau)
     dev_tr = dev_tr.sort_values(["symbol", "i"], kind="stable").reset_index(drop=True)   # Paths order == trades order
     ho_tr = ho_tr.sort_values(["symbol", "i"], kind="stable").reset_index(drop=True)
     print(f"dev trades={len(dev_tr)} heldout trades={len(ho_tr)} tau={tau} t={time.time()-t0:.0f}s", flush=True)
     res = (arm_rule if a.arm in ("be", "trail", "timedecay") else arm_model)(a, tab, df_by, dev_tr, ho_tr)
-    res.update({"schema": SCHEMA, "unit": a.unit, "arm": a.arm, "entry_tau": tau, "git_sha": E._git_sha(),
+    res.update({"schema": SCHEMA, "unit": a.unit, "arm": a.arm, "stage": a.stage, "entry_tau": tau, "git_sha": E._git_sha(),
                 "elapsed_s": round(time.time() - t0)})
     v, why = res.pop("verdict"), res.pop("why")
     (out / "summary.json").write_text(json.dumps({**res, "verdict": v, "why": why}, indent=1, default=str) + "\n")
@@ -552,7 +554,14 @@ def arm_model(a, tab, df_by, dev_tr, ho_tr) -> dict:
     if margin is None or dev_delta[margin] <= 0:
         res.update(verdict="fail", why=f"dev walk-forward delta vs hold <= 0 at every margin (best {margin}: {dev_delta.get(margin)}): not read on the held-out (registered)")
         return res
-    if a.arm == "mlsl2":      # DEV STAGE ONLY: never touches the held-out or any forward window; freezes the config for the single forward read
+    if a.arm == "mlsl2" and a.stage == "heldout":
+        # HOLDOUT-DEFLATED-REUSE re-read (operator 'Adopt (Rec.)' ~19:05Z 2026-11-05): c692-12's config is FROZEN (XS_FROZEN), never
+        # re-chosen here; the dev walk-forward above is recomputed only to record whether it still picks the frozen margin.
+        res["dev"]["frozen_margin_used"] = XS_FROZEN["mlsl2"]["margin"]
+        res["dev"]["dev_chosen_matches_frozen"] = bool(margin == XS_FROZEN["mlsl2"]["margin"])
+        margin = XS_FROZEN["mlsl2"]["margin"]
+        actions = XS_FROZEN["mlsl2"]["actions"]
+    elif a.arm == "mlsl2":      # DEV STAGE ONLY: never touches the held-out or any forward window; freezes the config for the single forward read
         dall = np.concatenate(fold_net[margin])
         ci = paired_boot(dall)
         pos = int(sum(1 for x in fold_means[margin] if x > 0))
@@ -570,8 +579,9 @@ def arm_model(a, tab, df_by, dev_tr, ho_tr) -> dict:
     heads = fit_heads(dev_rows[dev_rows.ts < pd.Timestamp(E.HOLDOUT_START, tz="UTC") - pd.Timedelta(days=E.EMBARGO_DAYS) - pd.Timedelta(hours=H + 1)], actions)
     ho_tr = ho_tr.reset_index(drop=True)
     hP, _ = gather(ho_tr, df_by, atr_series(tab, ho_tr))
-    hlab = label_actions(hP)
-    hrows = checkin_table(ho_tr, hP, hlab, tab)
+    ho_acts = LEARNED + [x for x in actions if x not in LEARNED]   # == LEARNED for manage/mlsl (unchanged); adds BE1/TRAIL15 for mlsl2
+    hlab = label_actions(hP, ho_acts)
+    hrows = checkin_table(ho_tr, hP, hlab, tab, ho_acts)
     pred = predict_heads(heads, hrows)
     act = choose(pred, margin)
     hb = hlab["base"]
@@ -587,7 +597,7 @@ def arm_model(a, tab, df_by, dev_tr, ho_tr) -> dict:
     rng = np.random.default_rng(E.SEED)
     draws = []
     types = [x for x in act[act != "HOLD"].tolist()]
-    valid_idx = {a_: hrows.index[hrows[f"av_{a_}"]].to_numpy() for a_ in LEARNED}
+    valid_idx = {a_: hrows.index[hrows[f"av_{a_}"]].to_numpy() for a_ in ho_acts}
     for _ in range(200):
         fake = pd.Series("HOLD", index=hrows.index)
         for a_ in set(types):
@@ -597,7 +607,7 @@ def arm_model(a, tab, df_by, dev_tr, ho_tr) -> dict:
         rr = realised(hrows, len(ho_tr), hP, hb, fake)
         draws.append(float(np.mean(rr["net"] - hb["net"])))
     static = {}
-    for a_ in LEARNED:
+    for a_ in ho_acts:
         fk = pd.Series("HOLD", index=hrows.index)
         first = hrows[hrows[f"av_{a_}"] & (hrows.k == 8)]
         fk.loc[first.index] = a_
@@ -788,7 +798,9 @@ def main(argv=None) -> int:
     ap.add_argument("--out", default="/tmp/ml_decision_manage_out")
     ap.add_argument("--unit", default="")
     ap.add_argument("--reader", default="research-script-run")
-    ap.add_argument("--stage", default="main", choices=["main", "xs"], help="xs = the cross-sectional confirming read of a frozen config")
+    ap.add_argument("--stage", default="main", choices=["main", "xs", "heldout"],
+                    help="xs = the cross-sectional confirming read of a frozen config; heldout = the mlsl2 frozen config read on the held-out year "
+                         "under the deflated re-read bar (HOLDOUT-DEFLATED-REUSE)")
     ap.add_argument("--smoke", action="store_true", help="dev-only plumbing check on 10 symbols; never touches the sealed window")
     ap.add_argument("--self-test", action="store_true")
     a = ap.parse_args(argv)
