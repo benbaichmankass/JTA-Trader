@@ -1,0 +1,12 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "hold_reason": "tier_2_3_needs_approval",
+  "hold_text": "Tier 2: the diag read gate accepts DIAG_READ_TOKEN in X-Diag-Token as well as Bearer (read-only, off the trade path). Manager Session 2026-11-05a decided option 2 at 10:56Z; the manager merges.",
+  "why": "Restores diag Transport A from ICT-env sessions: the env proxy alters Authorization for a host with any network secret. Evidence: DIAG_READ_TOKEN fingerprints match (get-env #23253) and a fresh post-change session still 401s. Additive; Bearer unchanged. Revert: git revert.",
+  "recorded_decision": {
+    "kind": "standing_authorization",
+    "ref": "WSD-S1-PROXY-AUTH-COLLISION 2026-09-27 data-backed standing authorization; manager data-settled decision 2026-11-05T10:56Z (fingerprints match, 401 from a post-change session)",
+    "evidence": "docs/plans/WORK-STORE-DESIGN-2026-11.md"
+  }
+}
