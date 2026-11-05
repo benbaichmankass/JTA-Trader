@@ -590,7 +590,11 @@ def exit_plan_block(p: Optional[dict], meta: dict, entry: Optional[float], sl: O
     return {"entry": _sig(entry), "sl_now": _sig(sl), "tp_now": _sig(tp),
             "sl_initial": _sig(meta.get("sl_initial") or meta.get("initial_sl")),
             "declared": {k: meta[k] for k in EXIT_META_KEYS if k in meta},
-            "exit_plan_state": eps or None}
+            "exit_plan_state": eps or None,
+            # exit_plan_state is journaled ONCE at entry (coordinator) and nothing updates it: after a BE ratchet,
+            # trail or live-review tighten its stop is the ENTRY stop (ict_scalp_sol_5m pkg-1114b329: stop 90.3367 vs
+            # package sl 89.2959, MECH-FOLLOWUPS-1105). sl_now / the account reads are the live levels.
+            "exit_plan_state_note": "entry-time snapshot, not updated when the stop moves; trust sl_now"}
 
 
 def live_vs_backtest_block(s: "Snapshot", leg: str) -> Optional[dict]:
