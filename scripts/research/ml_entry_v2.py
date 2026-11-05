@@ -228,16 +228,18 @@ def forward(tab: pd.DataFrame, out: Path, ablation: Path, unit: str, reader: str
         res = {"verdict": "indeterminate", "why": "no tau reaches dev n >= 1000", "walk_forward": wf}
         (out / "forward.json").write_text(json.dumps(res, indent=1, default=str))
         return res
-    claim = holdout_lock.claim_read("ENTRY-v2-" + "+".join(fams), w0, w1, unit, reader, ledger)   # ONE read; refuses a second
+    train_end = str((pd.Timestamp(w0) - pd.Timedelta(days=1)).date())   # E.holdout fits on rows strictly before w0
+    # every read is recorded; a re-read of the ENTRY family on W1 is graded on the ledger's deflated bar (HOLDOUT-DEFLATED-REUSE)
+    claim = holdout_lock.claim_read("ENTRY-v2-" + "+".join(fams), w0, w1, unit, reader, ledger, train_end=train_end)
     h = E.holdout(tab, tau, feats, w0, w1, n_jobs)
     test = tab[(tab.ts >= pd.Timestamp(w0, tz="UTC")) & (tab.ts < pd.Timestamp(w1, tz="UTC") + pd.Timedelta(days=1))]
-    v, why = E.verdict(h)
+    v, why = E.verdict(h, claim["bar"])
     res = {"unit": unit, "verdict": v, "why": why, "read_state": "read", "families": fams, "n_features": len(feats), "tau_star": tau,
            "window": [w0, w1], "holdout_lock": claim, "variants_on_window": claim["variants_on_window"],
            "holdout": h, "benchmarks_reported_not_gating": benchmarks(test), "dev_walk_forward": wf,
            "elapsed_s": round(time.time() - t0)}
     # reported reference: the frozen v1 recipe (20 features) on the same window; a second model read, so the lock counts it
-    claim1 = holdout_lock.claim_read("ENTRY-v1-frozen-ref", w0, w1, unit + "-v1ref", reader, ledger)
+    claim1 = holdout_lock.claim_read("ENTRY-v1-frozen-ref", w0, w1, unit + "-v1ref", reader, ledger, train_end=train_end)
     tau1 = 0.10
     res["v1_reference"] = {"tau": tau1, "holdout_lock": claim1, "holdout": E.holdout(tab, tau1, None, w0, w1, n_jobs)["model"]}
     res["variants_on_window"] = claim1["variants_on_window"]
@@ -255,15 +257,18 @@ def _self_test() -> None:
     folds = [mk(f"2022-0{i}-01", 600, 6.0) for i in range(1, 5)]
     lf = lofo(folds)
     assert lf["n"] == 2400 and abs(lf["mean_net_r"] - 0.01) < 1e-12, lf
-    # forward refuses a second read of the same model on an overlapping window
+    # forward: a second read of the window is recorded and graded on a stricter bar; a window overlapping training is refused
     import tempfile
     with tempfile.TemporaryDirectory() as d:
         led = Path(d) / "l.jsonl"
-        holdout_lock.claim_read("m", *W1, "u", "t", led)
+        te = str((pd.Timestamp(W1[0]) - pd.Timedelta(days=1)).date())
+        c1 = holdout_lock.claim_read("ENTRY-m", *W1, "u", "t", led, train_end=te)
+        c2 = holdout_lock.claim_read("ENTRY-m", *W1, "u", "t", led, train_end=te)
+        assert c1["n_tries"] == 1 and c2["n_tries"] == 2 and c2["bar"]["ci_z"] > c1["bar"]["ci_z"]
         try:
-            holdout_lock.claim_read("m", *W1, "u", "t", led)
-            raise AssertionError("second read allowed")
-        except holdout_lock.HoldoutAlreadyRead:
+            holdout_lock.claim_read("ENTRY-m", *W1, "u", "t", led, train_end=W1[0])
+            raise AssertionError("a window overlapping training was allowed")
+        except holdout_lock.WindowOverlapsTraining:
             pass
     # no arm may read a sealed date: the dev walk's last bound is HOLDOUT_START
     assert E.HOLDOUT_START == "2025-10-01" and "2025-10-01" not in E.DEV_FOLDS
