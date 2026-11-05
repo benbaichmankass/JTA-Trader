@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# ruff: noqa: E402, E701, E702
 # wiring: research/queue/RQ-20261105-fd68-01.yaml (Tradeify-only ML leg) and its Breakout/Velotrade sibling (checklist TRADEIFY-OWN-LEG-DRIVER, lane TRADEIFY-OWN-LEG)
 """Prop ML entry leg: pooled ML entry model -> net-of-cost ledger -> V3 prop gate -> distinctness D1-D4. Tier-1 research tooling.
 
@@ -19,8 +18,8 @@ from __future__ import annotations
 
 import argparse
 import concurrent.futures as cf
-import glob
 import io
+import itertools
 import json
 import math
 import subprocess
@@ -34,8 +33,8 @@ import pandas as pd
 
 REPO = Path(__file__).resolve().parents[2]
 sys.path[:0] = [str(REPO), str(REPO / "scripts" / "research")]
-import ml_decision_entry as E          # klines fetch, features_symbol, bracket_outcome (reused, unchanged)
-import prop_gate as G                  # V3 edge clause + ACCT/SIM
+import ml_decision_entry as E  # klines fetch, features_symbol, bracket_outcome (reused, unchanged)
+import prop_gate as G  # V3 edge clause + ACCT/SIM
 
 SCHEMA = "prop_ml_leg/1"
 H = 48                                 # max hold, bars (registered)
@@ -110,7 +109,7 @@ def fetch_metrics(cache: Path, syms: list[str]) -> dict[str, pd.DataFrame]:
         if p.exists():
             out[s] = pd.read_pickle(p); continue
 
-        def one(d):
+        def one(d, s=s):
             b = _get(f"https://data.binance.vision/data/futures/um/daily/metrics/{s}/{s}-metrics-{d:%Y-%m-%d}.zip")
             if not b:
                 return None
@@ -159,7 +158,7 @@ def f1_features(kl: pd.DataFrame, fund: pd.DataFrame, met: pd.DataFrame) -> pd.D
         out["fund_z"] = z.reindex(f.index.union(close_ts)).ffill().reindex(close_ts).to_numpy()
     if len(met):
         m = met.set_index("ts").astype(float)
-        asof = lambda col: m[col].reindex(m.index.union(close_ts)).ffill().reindex(close_ts)  # noqa: E731
+        asof = lambda col: m[col].reindex(m.index.union(close_ts)).ffill().reindex(close_ts)
         oi = asof("sum_open_interest_value")
         out["oi_chg24"] = (np.log(oi) - np.log(oi.shift(24))).to_numpy()
         out["oi_z"] = ((oi - oi.rolling(168).mean()) / oi.rolling(168).std()).to_numpy()
@@ -331,7 +330,7 @@ def fold_bounds(smoke: bool) -> list[tuple[pd.Timestamp, pd.Timestamp]]:
         edges.append(pd.Timestamp(HOLDOUT_START, tz="UTC"))
     if smoke:
         edges = [e for e in edges if e <= pd.Timestamp("2023-01-01", tz="UTC")]
-    return list(zip(edges[:-1], edges[1:]))
+    return list(itertools.pairwise(edges))
 
 
 def purged_train(tab: pd.DataFrame, start: pd.Timestamp) -> pd.DataFrame:
@@ -476,15 +475,15 @@ def run(a) -> int:
                 led.append(run_policy(te, p, tau, rp).assign(fold=str(lo.date())))
             led = pd.concat(led, ignore_index=True) if led else pd.DataFrame()
             fn = led.groupby("fold")["net_r"].sum() if len(led) else pd.Series(dtype=float)
-            usable = int(len(fn)); posf = int((fn > 0).sum())
-            grid[(name, tau)] = {"arm": name, "tau": tau, "n": int(len(led)), "sum_net_r": round(float(led["net_r"].sum()), 3) if len(led) else 0.0,
+            usable = len(fn); posf = int((fn > 0).sum())
+            grid[(name, tau)] = {"arm": name, "tau": tau, "n": len(led), "sum_net_r": round(float(led["net_r"].sum()), 3) if len(led) else 0.0,
                                  "folds_with_trades": usable, "folds_positive": posf,
                                  "eligible": bool(len(led) >= N_DISC_FLOOR and usable > 0 and posf >= math.ceil(2 * usable / 3)), "_led": led}
     table = [{k: v for k, v in g.items() if k != "_led"} for g in grid.values()]
     elig = [g for g in grid.values() if g["eligible"]]
     res = {"schema": SCHEMA, "profile": a.profile, "smoke": bool(a.smoke), "arms_run": arms, "arms_unavailable": unavailable,
            "arm_denominator_registered": len(FEATURE_SETS) * len(TAUS), "arms_graded": len(grid), "discovery_table": table,
-           "folds": len(folds), "data_rows": int(len(tab)), "elapsed_s": round(time.time() - t0)}
+           "folds": len(folds), "data_rows": len(tab), "elapsed_s": round(time.time() - t0)}
     if a.smoke:
         res.update({"verdict": "smoke", "read_state": "smoke_no_holdout"})
         (out / "result.json").write_text(json.dumps(res, indent=1)); print(json.dumps({k: res[k] for k in ("verdict", "arms_graded", "data_rows")}))
@@ -499,7 +498,7 @@ def run(a) -> int:
     p = fit_predict(purged_train(tab, hs), held, cols)         # ONE fit, ONE read of the sealed span
     hl = run_policy(held, p, tau, rp)
     dev = sel["_led"].drop(columns=["fold"])
-    res["heldout"] = {"n": int(len(hl)), "mean_net_r": float(hl["net_r"].mean()) if len(hl) else None}
+    res["heldout"] = {"n": len(hl), "mean_net_r": float(hl["net_r"].mean()) if len(hl) else None}
     return finish(out, res, prof, hl, dev, held=held, rp=rp, cache=cache, extra_refs=a.ref_ledger)
 
 
@@ -520,7 +519,6 @@ def finish(out: Path, res: dict, prof: dict, hl, dev, held=None, rp=None, cache=
     b1 = {s: float(np.r_[held.loc[held.symbol == s, "net_long"].to_numpy(), held.loc[held.symbol == s, "net_short"].to_numpy()].mean()) for s in prof["symbols"]}
     b1_all = float(np.r_[held["net_long"].to_numpy(), held["net_short"].to_numpy()].mean())
     rng = np.random.default_rng(SEED); k_by = hl.groupby("symbol").size().to_dict(); draws = []
-    tp_med = float(hl["tp_r"].median())
     cache_rows = {s: held[held.symbol == s].reset_index(drop=True) for s in k_by}
     for _ in range(RANDOM_DRAWS):
         tot = []
@@ -537,7 +535,7 @@ def finish(out: Path, res: dict, prof: dict, hl, dev, held=None, rp=None, cache=
             risk = (d["entry"].astype(float) - d["sl"].astype(float)).abs()
             hold_b = ((d.exit_time - d.entry_time).dt.total_seconds() / 3600.0).to_numpy()
             nr = d["g"].to_numpy() - make_cost(prof)(d["entry"].astype(float).to_numpy(), d["entry"].astype(float).to_numpy(), risk.to_numpy(), hold_b)
-            b2 = {"n": int(len(d)), "mean_net_r": float(nr.mean())}
+            b2 = {"n": len(d), "mean_net_r": float(nr.mean())}
     e2 = bool(net.mean() > 0 and net.mean() > b1_all and net.mean() > rand_p95 and (b2 is None or net.mean() > b2["mean_net_r"]))
     oos = pd.concat([dev, hl], ignore_index=True)
     e3 = regime_clause(oos)
@@ -594,7 +592,7 @@ def _self_test() -> int:
     check(f"B2 sum net_r {sum(float(r['net_r']) for r in tr):.4f} equals record {ev['net_r_oos']} within 0.001", abs(sum(float(r['net_r']) for r in tr) - ev["net_r_oos"]) < 0.001)
     # D1-D4 on constructed ledgers
     base = pd.Timestamp("2026-01-01", tz="UTC")
-    mk = lambda d, s, dr, h, g=1.0: {"symbol": s, "direction": dr, "entry_time": str(base + pd.Timedelta(days=d)), "exit_time": str(base + pd.Timedelta(days=d, hours=h)), "gross_r": g}  # noqa: E731
+    mk = lambda d, s, dr, h, g=1.0: {"symbol": s, "direction": dr, "entry_time": str(base + pd.Timedelta(days=d)), "exit_time": str(base + pd.Timedelta(days=d, hours=h)), "gross_r": g}
     A = [mk(i, "ETHUSDT", "long", 5, 1.0 if i % 2 else -1.0) for i in range(0, 90, 3)]
     same = distinct(A, {"same": A}, ("2026-01-01", "2026-04-30"))
     check("identical ledger FAILS (D1=1, |rho|=1)", same["pass"] is False and same["refs"]["same"]["D1_same_bar_overlap_share"] == 1.0)
