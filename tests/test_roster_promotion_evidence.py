@@ -340,7 +340,9 @@ def test_c5_baseline_is_exactly_the_approximate_risk_bearing_slots():
         (Path(tmp) / f"{leg}.json").write_text(json.dumps(rec), encoding="utf-8")
         assert (acct, leg) in approximate_slots(Path(tmp)), "probe cannot see a planted positive"
 
-    assert approximate_slots(EVIDENCE) == set(G.FIDELITY_BASELINE)
+    # FIDELITY_OPERATOR_WAIVER (operator 2026-11-05 'Both now, waive both') is held to the SAME exactness:
+    # a waiver line cannot outlive its approximate record, and no approximate slot exists outside the two dicts.
+    assert approximate_slots(EVIDENCE) == set(G.FIDELITY_BASELINE) | set(G.FIDELITY_OPERATOR_WAIVER)
 
 
 # --------------------------------------------------------------------------
