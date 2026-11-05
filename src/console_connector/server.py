@@ -17,6 +17,8 @@ import time
 from pathlib import Path
 from typing import Any
 
+from fastapi import FastAPI, Request, Response
+
 from src.console_connector import data
 
 REPO = Path(os.environ.get("CONSOLE_CONNECTOR_REPO") or Path(__file__).resolve().parents[2])
@@ -122,7 +124,6 @@ def _log(rec: dict[str, Any]) -> None:
 
 
 def create_app():
-    from fastapi import FastAPI, Request, Response
 
     app = FastAPI(docs_url=None, redoc_url=None, openapi_url=None)
 

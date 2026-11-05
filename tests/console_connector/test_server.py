@@ -87,3 +87,16 @@ def test_tool_result_is_json_text_and_structured():
     r = _call("hello", {"name": "t"})["result"]
     assert json.loads(r["content"][0]["text"]) == r["structuredContent"]
     assert r["structuredContent"]["hello"] == "hello, t"
+
+
+def test_http_post_mcp_round_trip():
+    """The real HTTP route, not just handle(): a JSON-RPC POST must reach the tool (regression: 422)."""
+    from fastapi.testclient import TestClient
+
+    client = TestClient(server.create_app())
+    r = client.post("/mcp", json={"jsonrpc": "2.0", "id": 1, "method": "tools/call",
+                                  "params": {"name": "hello", "arguments": {"name": "http"}}})
+    assert r.status_code == 200
+    assert r.json()["result"]["structuredContent"]["hello"] == "hello, http"
+    assert client.post("/mcp", json={"jsonrpc": "2.0", "method": "notifications/initialized"}).status_code == 202
+    assert client.get("/mcp").status_code == 405
