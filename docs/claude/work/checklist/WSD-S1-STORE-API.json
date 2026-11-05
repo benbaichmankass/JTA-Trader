@@ -2,21 +2,32 @@
   "id": "WSD-S1-STORE-API",
   "title": "WORK-STORE S1: work.db (SQLite WAL, live VM, separate file) + items/events schema with hash chain + filing validator + computed due_at + POST/GET /api/bot/work/items behind WORK_STORE_TOKEN",
   "phase": null,
-  "state": "in_flight",
+  "state": "landed_unproven",
   "owner": "manager",
   "lane": "session_01AFoLuJFu3NEJt21ZKxx7N1",
   "model": "claude-opus-5-5",
   "ceiling_usd": 15,
   "spend_usd": null,
   "tier": 2,
-  "prs": [],
+  "prs": [
+    23044
+  ],
   "blocked_on": [],
-  "note": "docs/plans/WORK-STORE-DESIGN-2026-11.md \u00a72 and \u00a76 S1. Approved under D1+D3. Operator popup 2026-11-04 ~23:37Z (relayed by Manager Session 2026-11-04b), verbatim: D1/D3/D4/D5/D7/D8/D9 \"Approve all 7 (Recommended)\"; D2 \"Funded drain (Recommended)\"; D6 \"Not now (Recommended)\". Generation Discipline rule 3: operator OK = D1; the canonical sources are the checklist + pipeline files (backfill = S2). Not a gate: G1 carries over the existing refusals, G2 is the write token, G3 is optimistic concurrency (doc \u00a7 Gates). CLOSES WHEN: a synthetic item written from a cloud session appears in GET /api/bot/work/items within 1 s with its event row and a valid hash chain (merged + deployed + observed). CI saving: none by itself (enabler). OPERATOR STEP FOR D3 (needed when S1 is merged and before S3 writes): one line, verbatim for the popup: \"Generate a random value (openssl rand -hex 32), add it as the GitHub Actions secret WORK_STORE_TOKEN, paste the same value into the credential form the S1 lane opens for host ict-bot.duckdns.org (Authorization: Bearer), then reply WORK_STORE_TOKEN provisioned.\" Everything else is the lane's: add WORK_STORE_TOKEN to OPTIONAL_SECRETS in sync-vm-secrets.yml (step 0 PR, with the NAME: ${{ secrets.NAME }} lines), dispatch it to write the VM .env, restart ict-web-api via system-actions, and verify 401 without the token and 201 with it via diag. The value is never pasted in chat (credentials-and-vm-mutations: the operator originates secret values only). 2026-11-05 lane session_01AFoLuJFu3NEJt21ZKxx7N1: built src/runtime/work_store.py (file work_store.db per design D1 text; row title's 'work.db' is the same store), src/web/api/routers/work_items.py, paths.work_store_db_path, WORK_STORE_TOKEN in sync-vm-secrets OPTIONAL_SECRETS + both env blocks, tests/test_work_store.py. PR held for the manager (Tier 2). Known S1 limit: a soak-bound observation's due_at is computed at write time only (recomputed on each write); S4 owns live soak recompute.",
+  "note": "docs/plans/WORK-STORE-DESIGN-2026-11.md \u00a72 and \u00a76 S1. Approved under D1+D3. Operator popup 2026-11-04 ~23:37Z (relayed by Manager Session 2026-11-04b), verbatim: D1/D3/D4/D5/D7/D8/D9 \"Approve all 7 (Recommended)\"; D2 \"Funded drain (Recommended)\"; D6 \"Not now (Recommended)\". Generation Discipline rule 3: operator OK = D1; the canonical sources are the checklist + pipeline files (backfill = S2). Not a gate: G1 carries over the existing refusals, G2 is the write token, G3 is optimistic concurrency (doc \u00a7 Gates). CLOSES WHEN: a synthetic item written from a cloud session appears in GET /api/bot/work/items within 1 s with its event row and a valid hash chain (merged + deployed + observed). CI saving: none by itself (enabler). OPERATOR STEP FOR D3 (needed when S1 is merged and before S3 writes): one line, verbatim for the popup: \"Generate a random value (openssl rand -hex 32), add it as the GitHub Actions secret WORK_STORE_TOKEN, paste the same value into the credential form the S1 lane opens for host ict-bot.duckdns.org (Authorization: Bearer), then reply WORK_STORE_TOKEN provisioned.\" Everything else is the lane's: add WORK_STORE_TOKEN to OPTIONAL_SECRETS in sync-vm-secrets.yml (step 0 PR, with the NAME: ${{ secrets.NAME }} lines), dispatch it to write the VM .env, restart ict-web-api via system-actions, and verify 401 without the token and 201 with it via diag. The value is never pasted in chat (credentials-and-vm-mutations: the operator originates secret values only). 2026-11-05 lane session_01AFoLuJFu3NEJt21ZKxx7N1: built src/runtime/work_store.py (file work_store.db per design D1 text; row title's 'work.db' is the same store), src/web/api/routers/work_items.py, paths.work_store_db_path, WORK_STORE_TOKEN in sync-vm-secrets OPTIONAL_SECRETS + both env blocks, tests/test_work_store.py. PR held for the manager (Tier 2). Known S1 limit: a soak-bound observation's due_at is computed at write time only (recomputed on each write); S4 owns live soak recompute. 2026-11-05T04:17Z: #23044 MERGED (head 85b58de7, CI green 4/4). Deployed: not yet observed by this lane (ict-git-sync pull + ict-web-api restart are the manager's). Writes fail-closed 503 until WORK_STORE_TOKEN is provisioned. Remaining (lane, after operator replies 'WORK_STORE_TOKEN provisioned' at the daily sync popup): request_credential for ict-bot.duckdns.org, dispatch sync-vm-secrets, restart ict-web-api via system-actions, verify 401 without/201 with token. CLOSES WHEN: a synthetic item written from a cloud session appears in GET /api/bot/work/items within 1 s with its event row and chain.ok=true.",
   "due_by": "2026-11-09",
   "roadmap": [
     "L-OPS"
   ],
-  "updated_at": "2026-11-05T00:06:42Z",
+  "updated_at": "2026-11-05T04:26:05Z",
   "updated_by": "session_01AFoLuJFu3NEJt21ZKxx7N1",
+  "observation": {
+    "what": "a synthetic item written from a cloud session appears in GET /api/bot/work/items within 1 s, with its create event and chain.ok=true; and POST /api/bot/work/items answers 401 without the token, 201 with it",
+    "how_to_check": "after WORK_STORE_TOKEN is provisioned + sync-vm-secrets + ict-web-api restart: POST /api/bot/work/items (Bearer via the env proxy) then GET /api/bot/work/items?since=<t0> and GET /api/bot/work/items/<id>/events; record timestamps",
+    "due_by": "2026-11-06"
+  },
+  "writeback": {
+    "roadmap": "none: S1 is an enabler, the store is not canonical until S4; the L-OPS line is updated at WSD-S4-READERS-FLIP",
+    "arch": "none: nothing reads work_store.db as truth yet; ARCHITECTURE-CANONICAL gets the store at WSD-S4-READERS-FLIP"
+  },
   "_seq": 920
 }
