@@ -185,6 +185,47 @@ def cmd_stage(a) -> int:
     return 0
 
 
+def cmd_build_stage(a) -> int:
+    """10 GB trial: build frozen crypto 1m partitions from data.binance.vision in small symbol batches, tar the frozen ones
+    into shards straight away and delete the batch, so peak disk is (staged shards + one batch). HF is not read (its reads
+    are refused at the cap). Symbols the 1 GB pilot already used are skipped, so the content is new."""
+    import shutil
+
+    sys.path.insert(0, str(Path(__file__).resolve().parent))
+    import binance_vision_lake as bvl
+    out, tmp = Path(a.out), Path(a.out + "-batch")
+    out.mkdir(parents=True, exist_ok=True)
+    target = int(a.target_gb * 10 ** 9)
+    skip = set(a.skip_symbols.split(",")) if a.skip_symbols else set()
+    syms = [x for x in (bvl.symbols_from_config("um_perp", "klines") or bvl.list_symbols("um_perp")) if x not in skip]
+    shards: list[dict] = []
+    staged, n_files, t0, used = 0, 0, time.time(), []
+    for i in range(0, len(syms), a.batch):
+        if staged >= target:
+            break
+        batch = syms[i:i + a.batch]
+        shutil.rmtree(tmp, ignore_errors=True)
+        rc = bvl.main(["--market", "um_perp", "--stream", "klines", "--out", str(tmp), "--symbols", ",".join(batch),
+                       "--parallel", "4"])
+        files = list_local_candidates(tmp)
+        for c in files:
+            c["got"] = c["bytes"]
+        if files:
+            idx = len(shards)
+            made = make_shards(tmp, files, out, f"crypto-um_perp-1m-b{idx:03d}")
+            shards += made
+            staged += sum(m["bytes"] for m in made)
+            n_files += len(files)
+            used += batch
+        print(json.dumps({"batch": i // a.batch, "rc": rc, "symbols": len(batch), "partitions": len(files),
+                          "staged_bytes": staged, "shards": len(shards), "seconds": round(time.time() - t0)}), flush=True)
+        shutil.rmtree(tmp, ignore_errors=True)
+    write_dataset_files(out, a.username, shards, f"10GB trial: {n_files} frozen partitions, {len(used)} symbols")
+    print(json.dumps({"symbols": len(used), "partitions": n_files, "shards": len(shards), "staged_bytes": staged,
+                      "top_level_entries": len(shards) + 2, "seconds": round(time.time() - t0)}))
+    return 0
+
+
 def cmd_extra(a) -> int:
     """A second dataset version: one more shard set (different partitions) added next to v1's shards."""
     out = Path(a.out)
@@ -273,7 +314,7 @@ def cmd_verify(a) -> int:
 
 def main(argv: Sequence[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("cmd", choices=["stage", "extra", "flat", "verify"])
+    ap.add_argument("cmd", choices=["stage", "extra", "flat", "verify", "build-stage"])
     ap.add_argument("--out", default="stage")
     ap.add_argument("--repo", default="bentzbk/jta-market-lake")
     ap.add_argument("--username", default="")
@@ -281,10 +322,13 @@ def main(argv: Sequence[str] | None = None) -> int:
     ap.add_argument("--from-dir", default="")
     ap.add_argument("--prev-chosen", default="")
     ap.add_argument("--n", type=int, default=120)
+    ap.add_argument("--batch", type=int, default=4)
+    ap.add_argument("--skip-symbols", default="")
     ap.add_argument("--root", default="")
     ap.add_argument("--record", default="")
     a = ap.parse_args(argv)
-    return {"stage": cmd_stage, "extra": cmd_extra, "flat": cmd_flat, "verify": cmd_verify}[a.cmd](a)
+    return {"stage": cmd_stage, "extra": cmd_extra, "flat": cmd_flat, "verify": cmd_verify,
+            "build-stage": cmd_build_stage}[a.cmd](a)
 
 
 if __name__ == "__main__":

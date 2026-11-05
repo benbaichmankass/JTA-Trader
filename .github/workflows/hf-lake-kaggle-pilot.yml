@@ -8,9 +8,14 @@ name: hf-lake-kaggle-pilot
 #
 # no-durable-result: storage pilot, computes no research verdict; its measurements are the job summary + a 30-day artifact, reported in the row note
 #
-# GATES THIS ADDS OR CHANGES: none. Data path only: no order path, no config the trader reads, no execution flag.
+# GATES THIS ADDS OR CHANGES: none. Data path only: no order path, no config the trader reads, no execution flag. (The commit-message token only selects
+# WHICH measurement runs on this PR; it gates no trading, training or data pipeline.)
 #
 # Runs on pull_request (same-repo) for changes to the pilot itself, so the measurement happens before merge; no schedule, no issue trigger.
+# GATE: GitHub evaluates `paths` against the WHOLE PR diff, so every push to the PR would re-run the uploads. The heavy jobs therefore
+# run only when the PR head commit message carries a token: `[kaggle-pilot]` (the 0.9 GB pilot) or `[kaggle-trial]` (the 10 GB
+# trial, operator 2026-11-05 ~16:59Z, "10 GB trial (Rec.)": ~10 GB of cold lake data into the same private dataset, read-back +
+# checksum verification; no deletion anywhere, no new accounts, nothing in the Models space).
 
 on:
   pull_request:
@@ -30,8 +35,28 @@ env:
   KAGGLE_API_TOKEN: ${{ secrets.KAGGLE_API_TOKEN }}
 
 jobs:
-  pilot:
+  gate:
     if: github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      pilot: ${{ steps.g.outputs.pilot }}
+      trial: ${{ steps.g.outputs.trial }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+          persist-credentials: false
+      - id: g
+        run: |
+          msg="$(git log -1 --format=%B HEAD^2 2>/dev/null || git log -1 --format=%B HEAD)"
+          echo "head commit message: $(echo "$msg" | head -1)"
+          case "$msg" in *"[kaggle-pilot]"*) echo "pilot=true" >> "$GITHUB_OUTPUT";; *) echo "pilot=false" >> "$GITHUB_OUTPUT";; esac
+          case "$msg" in *"[kaggle-trial]"*) echo "trial=true" >> "$GITHUB_OUTPUT";; *) echo "trial=false" >> "$GITHUB_OUTPUT";; esac
+
+  pilot:
+    needs: gate
+    if: needs.gate.outputs.pilot == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 150
     steps:
@@ -263,4 +288,184 @@ jobs:
         with:
           name: hf-lake-kaggle-verify-kernel-${{ github.run_id }}
           path: verify-kaggle.json
+          retention-days: 30
+
+  trial:
+    needs: gate
+    if: needs.gate.outputs.trial == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 170
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Free runner disk (the staged shards are ~10 GB)
+        run: |
+          sudo rm -rf /usr/share/dotnet /opt/ghc /usr/local/lib/android /opt/hostedtoolcache/CodeQL 2>/dev/null || true
+          df -h / | tail -1
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: python -m pip install --quiet "kaggle>=2.0" six pandas pyarrow pyyaml requests
+      - name: Build ~10 GB of FROZEN crypto 1m partitions from data.binance.vision (batches, shard + delete; HF is not read)
+        run: |
+          set -uo pipefail
+          echo "::add-mask::${KAGGLE_API_TOKEN}"
+          USERNAME=$(python - <<'PY'
+          from kaggle.api.kaggle_api_extended import KaggleApi
+          a = KaggleApi(); a.authenticate()
+          print(a.config_values.get("username", ""))
+          PY
+          )
+          [ -n "$USERNAME" ] || { echo "::error::token did not resolve to a Kaggle user"; exit 1; }
+          echo "::add-mask::$USERNAME"
+          echo "$USERNAME" > /tmp/kuser
+          python3 -u scripts/data_lake/kaggle_pilot.py build-stage --out /tmp/stage --username "$USERNAME" --target-gb 10 --batch 4 \
+            --skip-symbols BTCUSDT,ETHUSDT,SOLUSDT,BNBUSDT,XRPUSDT,DOGEUSDT 2>&1 | grep -v "^\[lake\]" | tee /tmp/stage.log
+          tail -1 /tmp/stage.log > /tmp/stage.json
+          du -sh /tmp/stage; ls /tmp/stage | wc -l; df -h / | tail -1
+      - name: Upload as a new version of the private dataset (timed) and wait for ready
+        run: |
+          set -uo pipefail
+          echo "::add-mask::${KAGGLE_API_TOKEN}"
+          USERNAME=$(cat /tmp/kuser); echo "::add-mask::$USERNAME"
+          scrub() { sed "s|$USERNAME|<user>|g"; }
+          DS="$USERNAME/metis-market-lake"
+          T0=$(date +%s)
+          if kaggle datasets status "$DS" >/dev/null 2>&1; then
+            kaggle datasets version -p /tmp/stage -r skip -m "10GB trial $(date -u +%H:%MZ) run ${GITHUB_RUN_ID}" 2>&1 | scrub | grep -v "it/s\|B/s" | tail -6 || true
+          else
+            kaggle datasets create -p /tmp/stage -r skip 2>&1 | scrub | grep -v "it/s\|B/s" | tail -6 || true
+          fi
+          READY=0
+          for i in $(seq 1 240); do
+            st=$(kaggle datasets status "$DS" 2>&1 | scrub | tail -1); echo "dataset: $st"
+            case "$st" in *[Rr]eady*|*READY*) READY=1; break;; esac
+            sleep 20
+          done
+          T1=$(date +%s); echo "{\"upload_to_ready_seconds\": $((T1-T0)), \"ready\": $READY}" | tee /tmp/trial-timing.json
+          kaggle datasets files "$DS" 2>&1 | scrub | head -8
+          [ "$READY" = "1" ] || { echo "::error::dataset never became ready"; exit 1; }
+      - name: Summary + artifact
+        if: always()
+        run: |
+          mkdir -p out && cp /tmp/stage.json /tmp/stage.log /tmp/trial-timing.json out/ 2>/dev/null || true
+          { echo '### 10 GB trial: stage'; cat /tmp/stage.json 2>/dev/null; echo; echo '### upload'; cat /tmp/trial-timing.json 2>/dev/null; } >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: hf-lake-kaggle-trial-${{ github.run_id }}
+          path: out
+          retention-days: 30
+
+  trial-verify-runner:
+    needs: trial
+    if: ${{ !cancelled() && needs.trial.result == 'success' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Free runner disk (download + unzip peaks near 2x the dataset)
+        run: |
+          sudo rm -rf /usr/share/dotnet /opt/ghc /usr/local/lib/android /opt/hostedtoolcache/CodeQL 2>/dev/null || true
+          df -h / | tail -1
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: python -m pip install --quiet "kaggle>=2.0" six
+      - name: Download via the Kaggle API (timed, retried) and re-verify every shard against the manifest
+        run: |
+          set -uo pipefail
+          echo "::add-mask::${KAGGLE_API_TOKEN}"
+          USERNAME=$(python - <<'PY'
+          from kaggle.api.kaggle_api_extended import KaggleApi
+          a = KaggleApi(); a.authenticate()
+          print(a.config_values.get("username", ""))
+          PY
+          )
+          echo "::add-mask::$USERNAME"
+          scrub() { sed "s|$USERNAME|<user>|g"; }
+          OK=0
+          for attempt in 1 2 3 4 5 6; do
+            rm -rf /tmp/dl && mkdir -p /tmp/dl
+            T0=$(date +%s)
+            if kaggle datasets download -d "$USERNAME/metis-market-lake" -p /tmp/dl --unzip > /tmp/dl.log 2>&1; then OK=1; break; fi
+            echo "download attempt ${attempt} failed:"; grep -v "it/s\|B/s" /tmp/dl.log | scrub | tail -15
+            sleep 40
+          done
+          [ "$OK" = "1" ] || { echo "::error::download failed after 6 attempts"; exit 1; }
+          T1=$(date +%s)
+          BYTES=$(du -sb /tmp/dl | cut -f1)
+          echo "{\"download_seconds\": $((T1-T0)), \"bytes\": $BYTES, \"MBps\": $(python3 -c "print(round($BYTES/1e6/max($T1-$T0,1),1))")}" | tee trial-runner-download.json
+          python3 scripts/data_lake/kaggle_pilot.py verify --root /tmp/dl --record trial-runner-verify.json
+          { echo '### trial: runner download'; cat trial-runner-download.json; echo; cat trial-runner-verify.json; } >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: hf-lake-kaggle-trial-verify-runner-${{ github.run_id }}
+          path: |
+            trial-runner-download.json
+            trial-runner-verify.json
+          retention-days: 30
+
+  trial-verify-kaggle:
+    needs: trial
+    if: ${{ !cancelled() && needs.trial.result == 'success' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: python -m pip install --quiet "kaggle>=2.0" six
+      - name: Mount in a CPU Kaggle kernel (internet off) and re-verify every shard (timed)
+        run: |
+          set -uo pipefail
+          echo "::add-mask::${KAGGLE_API_TOKEN}"
+          USERNAME=$(python - <<'PY'
+          from kaggle.api.kaggle_api_extended import KaggleApi
+          a = KaggleApi(); a.authenticate()
+          print(a.config_values.get("username", ""))
+          PY
+          )
+          echo "::add-mask::$USERNAME"
+          scrub() { sed "s|$USERNAME|<user>|g"; }
+          mkdir -p /tmp/k && cp scripts/data_lake/kaggle_pilot_kernel/kernel_read.py /tmp/k/
+          python3 - "$USERNAME" <<'PY'
+          import json, sys
+          u = sys.argv[1]
+          json.dump({"id": f"{u}/metis-market-lake-read-trial", "title": "metis-market-lake-read-trial",
+                     "code_file": "kernel_read.py", "language": "python", "kernel_type": "script",
+                     "is_private": "true", "enable_gpu": "false", "enable_tpu": "false", "enable_internet": "false",
+                     "dataset_sources": [f"{u}/metis-market-lake"], "competition_sources": [],
+                     "kernel_sources": [], "model_sources": []}, open("/tmp/k/kernel-metadata.json", "w"), indent=1)
+          PY
+          T0=$(date +%s)
+          timeout 300 kaggle kernels push -p /tmp/k 2>&1 | scrub | tee /tmp/push.txt
+          grep -qi "error\|fail" /tmp/push.txt && { echo "::error::kernel push failed"; exit 1; }
+          deadline=$(( $(date +%s) + 4800 ))
+          while :; do
+            s=$(timeout 90 kaggle kernels status "$USERNAME/metis-market-lake-read-trial" 2>&1 | scrub); echo "$(date -u +%H:%M:%S) $s"
+            case "$s" in *COMPLETE*|*ERROR*|*CANCEL*) break;; esac
+            [ "$(date +%s)" -gt "$deadline" ] && { echo "::error::kernel timed out"; exit 1; }
+            sleep 30
+          done
+          T1=$(date +%s)
+          mkdir -p kout && timeout 300 kaggle kernels output "$USERNAME/metis-market-lake-read-trial" -p kout 2>&1 | scrub | tail -3
+          cat kout/result.json | tee trial-kaggle-verify.json
+          echo "{\"kernel_push_to_complete_seconds\": $((T1-T0))}" | tee trial-kaggle-timing.json
+          { echo '### trial: kaggle kernel read'; cat trial-kaggle-verify.json; echo; cat trial-kaggle-timing.json; } >> "$GITHUB_STEP_SUMMARY"
+          python3 -c "import json,sys; r=json.load(open('trial-kaggle-verify.json')); sys.exit(0 if r.get('ok') else 1)"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: hf-lake-kaggle-trial-verify-kernel-${{ github.run_id }}
+          path: |
+            trial-kaggle-verify.json
+            trial-kaggle-timing.json
           retention-days: 30
