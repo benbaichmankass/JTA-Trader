@@ -80,6 +80,17 @@ case "${action}" in
             priority="high"
         fi
         ;;
+    sync-vm-secrets)
+        # Was unclassified until 2026-11-05: every sync pinged "🚨 URGENT ... UNKNOWN
+        # ACTION" (09:30:40Z and 09:34:45Z), drowning a real failure in noise.
+        # Tier 2: it rewrites the VM .env and restarts the units that read it.
+        tier=2
+        case "${exit_code}" in
+            0) result="ok"; priority="normal" ;;
+            2) result="FAILED — input validation (a required secret missing?)"; priority="urgent" ;;
+            *) result="FAILED (exit ${exit_code})"; priority="urgent" ;;
+        esac
+        ;;
     restart-bot-service)
         tier=2
         case "${exit_code}" in
@@ -186,6 +197,16 @@ case "${action}" in
         tier=2
         case "${exit_code}" in
             0) result="ok — ticket expired (or dry-run plan printed; see run log)"; priority="normal" ;;
+            3) result="refused — nothing written (see run log for the reason)"; priority="high" ;;
+            *) result="FAILED (exit ${exit_code})"; priority="urgent" ;;
+        esac
+        ;;
+    prop-report-skip)
+        # Journals ONE never-filled prop ticket as `skipped` (BREAKOUT-UNRECORDED-1101).
+        # Exit 3 is a guarded REFUSAL, nothing written.
+        tier=2
+        case "${exit_code}" in
+            0) result="ok — ticket skipped (or dry-run plan printed; see run log)"; priority="normal" ;;
             3) result="refused — nothing written (see run log for the reason)"; priority="high" ;;
             *) result="FAILED (exit ${exit_code})"; priority="urgent" ;;
         esac

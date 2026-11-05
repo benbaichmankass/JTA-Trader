@@ -327,7 +327,7 @@ def write_history(row: dict[str, Any] | None,
     try:
         from src.utils.paths import trade_journal_db_path
         path = db_path or str(trade_journal_db_path())
-        with sqlite3.connect(path, timeout=5.0) as conn:
+        with sqlite3.connect(path, timeout=_write_busy_timeout(5.0)) as conn:
             if _is_final(conn, row["order_package_id"]):
                 return False
             if row.get("account_id") in (None, "") and row.get("trade_id"):
@@ -411,3 +411,14 @@ def read_history(db_path: str | None = None, *,
         "packages": len({r["order_package_id"] for r in rows}),
     })
     return envelope
+
+
+def _write_busy_timeout(default: float) -> float:
+    """5 s everywhere, but the short bound on the exit-evaluation thread
+    (src/runtime/journal_sync.py; TICK-STAGE2-RECONCILE-OFFTICK): a best-effort
+    telemetry write must not hold an exit pass past the 60 s requirement."""
+    try:
+        from src.runtime.journal_sync import write_busy_timeout
+        return write_busy_timeout(default)
+    except Exception:  # noqa: BLE001
+        return default

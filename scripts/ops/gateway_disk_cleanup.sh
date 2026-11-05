@@ -68,6 +68,51 @@ wait_git_sync_idle() {
     echo "WARNING: ict-git-sync.service still running after 240s; proceeding (the step is safe against a concurrent fetch)."
 }
 
+OLD_DIR="/home/ubuntu/ict-trading-bot.pre-swap-old"
+FAILED_DIR="/home/ubuntu/ict-trading-bot.swap-failed"
+
+wait_unit_idle() {
+    local i st
+    for i in $(seq 1 36); do
+        st="$(systemctl is-active "$1" 2>/dev/null || true)"
+        if [ "${st}" != "active" ] && [ "${st}" != "activating" ]; then return 0; fi
+        sleep 5
+    done
+    echo "WARNING: $1 still running after 180s; proceeding."
+}
+
+# Health of the gateway's checkout-dependent units. Returns non-zero on a hard failure.
+health_report() {
+    local rc=0 u res st
+    echo "df: $(df_line)"
+    if "${G[@]}" rev-parse --verify -q HEAD >/dev/null; then
+        echo "live: HEAD $("${G[@]}" log -1 --format='%h %cI') shallow=$("${G[@]}" rev-parse --is-shallow-repository) .git=$(du -sh "${LIVE}/.git" 2>/dev/null | awk '{print $1}')"
+    else echo "FAIL: ${LIVE} has no readable HEAD"; rc=1; fi
+    for f in scripts/deploy_pull_restart.sh scripts/check_ib_gateway.py scripts/ops/ib_gateway_local_probe.py; do
+        [ -f "${LIVE}/${f}" ] || { echo "FAIL: missing ${LIVE}/${f}"; rc=1; }
+    done
+    for u in ict-git-sync ict-ib-gateway-watchdog ict-ib-gateway-reset; do
+        res="$(systemctl show -p Result --value "${u}.service" 2>/dev/null || true)"
+        st="$(systemctl show -p ExecMainStatus --value "${u}.service" 2>/dev/null || true)"
+        echo "${u}.service: result=${res:-?} exit=${st:-?} last_exit=$(systemctl show -p ExecMainExitTimestamp --value "${u}.service" 2>/dev/null)"
+    done
+    mkdir -p /tmp/gwdisk-swap
+    [ -f "${LIVE}/runtime_logs/ib_gateway_watchdog_state.json" ] && cp -f "${LIVE}/runtime_logs/ib_gateway_watchdog_state.json" /tmp/gwdisk-swap/state.json
+    local out
+    out="$(cd "${LIVE}" && timeout 180 /usr/bin/python3 -u scripts/check_ib_gateway.py --probe-account ib_paper \
+          --probe-script scripts/ops/ib_gateway_local_probe.py --state /tmp/gwdisk-swap/state.json \
+          --restart-after 2 --max-restarts 3 --cooldown-min 20 --max-backoff-min 60 --dry-run 2>&1 | tail -n 3)" || { echo "FAIL: check_ib_gateway.py --dry-run rc=$?"; rc=1; }
+    echo "check_ib_gateway: ${out}"
+    printf '%s' "${out}" | grep -q "healthy=True" || { echo "WARN: gateway probe not healthy=True (container state, not the checkout)"; }
+    return "${rc}"
+}
+
+revert_swap() {
+    [ -d "${OLD_DIR}" ] || { echo "revert: no ${OLD_DIR}"; return 1; }
+    rm -rf --one-file-system -- "${FAILED_DIR}" 2>/dev/null || true
+    mv -T "${LIVE}" "${FAILED_DIR}" && mv -T "${OLD_DIR}" "${LIVE}" && echo "REVERTED: ${LIVE} is the old checkout again; failed clone at ${FAILED_DIR}"
+}
+
 echo "===== gateway-disk-cleanup target=${TARGET} apply=${APPLY} $(date -u +%Y-%m-%dT%H:%M:%SZ) ====="
 B0="$(avail_b)"
 echo ">>> before: $(df_line)"
@@ -198,7 +243,68 @@ sideclone-remove)
     [ "${SIDE_DIR}" != "${LIVE}" ] || exit 9
     sudo -n rm -rf --one-file-system -- "${SIDE_DIR}"
     ;;
-*) echo "ERROR: target must be journald|research-clean|prune-packed|rehearse-sideclone|sideclone-remove (got '${TARGET}')"; exit 2 ;;
+swap-status)
+    # Read-only: the health picture before/after the swap (no change on any path).
+    health_report
+    ;;
+swap-sideclone)
+    # Operator popup ~09:21Z 2026-11-05 "Do the swap (Recommended)" (relay; see row GATEWAY-DISK-CLEANUP).
+    [ -d "${SIDE_DIR}/.git" ] || { echo "REFUSED: no side-clone at ${SIDE_DIR} (run rehearse-sideclone first)."; exit 3; }
+    [ -e "${OLD_DIR}" ] && { echo "REFUSED: ${OLD_DIR} already exists (a previous swap is not cleaned up)."; exit 3; }
+    hh=$(date -u +%H%M)
+    if { [ "${hh}" -ge 0345 ] && [ "${hh}" -lt 0545 ]; } || { [ "${hh}" -ge 0555 ] && [ "${hh}" -lt 0620 ]; }; then
+        echo "REFUSED: ${hh}Z is inside the IBKR reset window (03:45-05:45Z) or the 06:05Z reset-timer window."; exit 3
+    fi
+    echo "--- pre-swap health (live dir) ---"; health_report
+    echo "planned: sync side-clone; copy the live dir's untracked/ignored files into it; mv ${LIVE} ${OLD_DIR}; mv ${SIDE_DIR} ${LIVE}"
+    if [ "${APPLY}" != "true" ]; then echo "DRY-RUN: nothing changed."; exit 0; fi
+    wait_git_sync_idle
+    wait_unit_idle ict-ib-gateway-watchdog.service
+    wait_unit_idle ict-ib-gateway-reset.service
+    S=(git -c safe.directory="${SIDE_DIR}" -C "${SIDE_DIR}")
+    BLOCK="$(sed -n '/>>> VM-SPARSE-SYNC begin/,/<<< VM-SPARSE-SYNC end/p' "${SIDE_DIR}/scripts/deploy_pull_restart.sh")"
+    [ -n "${BLOCK}" ] || { echo "REFUSED: VM-SPARSE-SYNC block not found in the side-clone."; exit 5; }
+    (cd "${SIDE_DIR}" && bash -c "set -euo pipefail; ${BLOCK}" 2>&1 | tail -n 3)
+    echo "side HEAD $("${S[@]}" rev-parse --short HEAD); live HEAD $("${G[@]}" rev-parse --short HEAD); live origin/main $("${G[@]}" rev-parse --short origin/main)"
+    # Untracked + ignored files of the live dir (runtime_logs/ state, flags, data, logs, .env if any).
+    LST="$(mktemp)"; (cd "${LIVE}" && "${G[@]}" ls-files -o -z) > "${LST}"
+    echo "carrying over $(tr -cd '\0' < "${LST}" | wc -c) untracked/ignored files ($(cd "${LIVE}" && xargs -0 -r du -cb -- < "${LST}" 2>/dev/null | tail -n1 | awk '{print $1}') bytes)"
+    (cd "${LIVE}" && tar --null -T "${LST}" -cf - ) | (cd "${SIDE_DIR}" && tar -xpf -)
+    rm -f "${LST}"
+    echo "side status after carry-over (tracked changes must be 0): $("${S[@]}" status --porcelain --untracked-files=no | grep -c . || true)"
+    if ! mv -T "${LIVE}" "${OLD_DIR}"; then echo "FAILED: first rename; nothing changed."; exit 6; fi
+    if ! mv -T "${SIDE_DIR}" "${LIVE}"; then
+        echo "FAILED: second rename; restoring."; mv -T "${OLD_DIR}" "${LIVE}" && echo "restored ${LIVE}"; exit 6
+    fi
+    echo "SWAPPED at $(date -u +%Y-%m-%dT%H:%M:%SZ): ${LIVE} is now the shallow clone; old checkout at ${OLD_DIR}"
+    G=(git -c safe.directory="${LIVE}" -C "${LIVE}")
+    echo "--- post-swap health (new live dir) ---"
+    if ! health_report; then
+        echo "FAILED post-swap health; reverting."; revert_swap; exit 7
+    fi
+    ;;
+swap-revert)
+    [ -d "${OLD_DIR}" ] || { echo "REFUSED: no ${OLD_DIR} to revert to."; exit 3; }
+    echo "planned: mv ${LIVE} ${FAILED_DIR}; mv ${OLD_DIR} ${LIVE}"
+    if [ "${APPLY}" != "true" ]; then echo "DRY-RUN: nothing changed."; exit 0; fi
+    wait_git_sync_idle; wait_unit_idle ict-ib-gateway-watchdog.service
+    revert_swap
+    G=(git -c safe.directory="${LIVE}" -C "${LIVE}"); health_report || true
+    ;;
+old-remove)
+    [ -d "${OLD_DIR}" ] || { echo "absent: ${OLD_DIR}"; exit 0; }
+    [ "${OLD_DIR}" != "${LIVE}" ] || exit 9
+    [ "$("${G[@]}" rev-parse --is-shallow-repository 2>/dev/null)" = "true" ] || { echo "REFUSED: ${LIVE} is not the shallow clone; old checkout kept."; exit 3; }
+    echo "planned: rm -rf ${OLD_DIR} ($(du -sh "${OLD_DIR}" 2>/dev/null | awk '{print $1}'))"
+    health_report || { echo "REFUSED: health not clean; old checkout kept."; exit 3; }
+    for u in ict-git-sync ict-ib-gateway-watchdog ict-ib-gateway-reset; do
+        since="$(systemctl show -p ExecMainExitTimestamp --value "${u}.service" 2>/dev/null || true)"
+        echo "${u}: last exit ${since:-never}"
+    done
+    if [ "${APPLY}" != "true" ]; then echo "DRY-RUN: nothing removed."; exit 0; fi
+    sudo -n rm -rf --one-file-system -- "${OLD_DIR}"
+    ;;
+*) echo "ERROR: target must be journald|research-clean|prune-packed|rehearse-sideclone|sideclone-remove|swap-status|swap-sideclone|swap-revert|old-remove (got '${TARGET}')"; exit 2 ;;
 esac
 
 B1="$(avail_b)"
