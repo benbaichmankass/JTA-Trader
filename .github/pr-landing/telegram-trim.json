@@ -1,11 +1,5 @@
 {
-  "tier": 2,
-  "landing": "hold",
-  "hold_reason": "tier_2_3_needs_approval",
-  "hold_text": "Tier-2 notification routing on the VM (scripts/notify_on_pull.py, run on every ict-git-sync pull): the post-deploy proof of #23051 found the committed `event: work_digest` row from work-digest.yml still reaching the manager channel (2026-11-05 03:49:52Z). This applies the same operator-approved policy (recurring_off manager_update) to that second carrier: recorded in the alert ledger, marked delivered, not sent. Fails open. The manager merges and deploys. Revert: git revert.",
-  "why": "Close the one recurring-post leak the TELEGRAM-TRIM post-deploy proof found, and record the measured proof on row TELEGRAM-TRIM.",
-  "recorded_decision": {
-    "kind": "operator_decision",
-    "ref": "TELEGRAM-TRIM operator chat instruction 2026-11-04 ~23:40Z (\"turn off all of the regular recurring updates\") + popup 2026-11-05 00:28Z \"Both right (Recommended)\""
-  }
+  "tier": 1,
+  "landing": "self",
+  "why": "Checklist record only: row TELEGRAM-TRIM notes the observed post-deploy result of #23122 (committed work digest recorded as suppressed_by_policy at 05:14:37Z, 0 sent) and narrows its remaining observation. No code, config or runtime change."
 }
