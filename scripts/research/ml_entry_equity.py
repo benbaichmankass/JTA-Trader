@@ -1,0 +1,415 @@
+#!/usr/bin/env python3
+# wiring: research/queue/RQ-20261105-e9a1-01.yaml (dev) and RQ-20261105-e9a1-02.yaml (confirm); lane ML-ENTRY-EQUITY-NATIVE
+"""EQUITY-NATIVE ENTRY model: trained on the 173-ETF Alpaca liquidity pool itself (row ML-ENTRY-EQUITY-NATIVE).
+
+Operator popup 2026-11-05 ~20:50Z, verbatim: "Equity-native model (Rec.)", after the frozen crypto ENTRY v1 FAILED on this pool
+(RQ-20261104-a41f-01: -0.0708 R at n 1099; gross +0.011 R vs cost 0.082 R). NOT the v1 artifact: a NEW LightGBM long-side net-R regressor
+whose features are equity-native; NO BTC / crypto-breadth feature.
+
+* POPULATION: the registered POOL_RULE of ml_entry_alpaca_score.py, UNCHANGED (sha256 e9702661...), rebuilt at run time.
+* FEATURES: own price/volume/volatility (the 15 harness features), cross-sectional ranks and breadth ACROSS THE POOL at the same close,
+  and market context from equity proxies (SPY, QQQ, IWM, TLT, VIXY as the VIX proxy).
+* LABEL / EXECUTION (unchanged from the v1 read so the comparison is like for like): decisions at RTH closes with UTC hour % 4 == 0 that
+  pass the live session gate; LONG when the regressed net R > tau (restricted argmax); entry next RTH open; SL 2 / TP 3 ATR14 / 24-bar
+  time stop; one position per symbol; net of fee 0 + slippage 5 bps (PROVISIONAL) + regulatory 0.5 bps round trip.
+* DEV stage: purged expanding walk-forward on dates <= TRAIN_END ONLY (the confirming window is never loaded), a fixed grid of
+  CONFIGS x TAUS, selection = the registered criterion; unlimited iteration is allowed here (principles M13) and is not claimed.
+* CONFIRM stage: refit the SAME config on all rows <= TRAIN_END (deterministic seed), score the time-disjoint window
+  CONFIRM_START..last complete month ONCE, graded against the deflated bar holdout_lock.bar_for(N) with the read recorded in the ledger.
+
+    python3 scripts/research/ml_entry_equity.py --self-test
+    python3 scripts/research/ml_entry_equity.py dev     --cache /tmp/c --out /tmp/o --unit RQ-... --where research-script-run
+    python3 scripts/research/ml_entry_equity.py confirm --cache /tmp/c --out /tmp/o --unit RQ-... --config A --tau 0.1 --dev-oof-mean 0.01
+"""
+from __future__ import annotations
+
+import argparse
+import hashlib
+import json
+import shutil
+import sys
+import time
+from pathlib import Path
+
+import numpy as np
+import pandas as pd
+
+REPO = Path(__file__).resolve().parents[2]
+sys.path[:0] = [str(REPO), str(REPO / "scripts" / "research")]
+
+import ml_decision_entry as E  # noqa: E402
+import ml_entry_alpaca_score as S  # noqa: E402
+import holdout_lock as HL  # noqa: E402
+
+SCHEMA = "ml_entry_equity/1"
+FAMILY = "ENTRY-EQ"
+DATA_START = "2021-01-01"          # bars fetched from here; first ~337 RTH bars are feature warm-up
+TRAIN_END = "2025-06-30"           # the last date the model may see (dev folds and the final fit stop here)
+CONFIRM_START = "2025-07-15"       # > TRAIN_END + embargo (15 d > 2 x the 24-bar label horizon); enforced
+PURGE_DAYS = 10                    # rows whose 24-bar label window reaches past a cut are dropped from training
+EMBARGO_DAYS = 14
+PROXIES = ["SPY", "QQQ", "IWM", "TLT", "VIXY"]
+DEV_FOLDS = ["2023-01-01", "2023-07-01", "2024-01-01", "2024-07-01", "2025-01-01"]   # each tests [start, next); the last to TRAIN_END
+TAUS = [0.05, 0.10, 0.15, 0.20]
+MIN_OOF_N = 300                    # selection constraint: a config/tau must take at least this many dev OOF trades
+H = S.H
+BASE_PARAMS = {"n_estimators": 300, "learning_rate": 0.03, "num_leaves": 31, "min_child_samples": 500, "subsample": 0.8,
+               "subsample_freq": 1, "colsample_bytree": 0.8, "reg_lambda": 5.0, "random_state": 20261105, "verbose": -1,
+               "n_jobs": 4}
+OWN = ["ret_1", "ret_4", "ret_12", "ret_24", "ret_72", "ret_168", "vol24", "vol_ratio", "atr_pct", "range_pos_24",
+       "range_pos_168", "vol_z", "rsi14", "hour", "dow"]
+XS = ["xs_rank_ret24", "xs_rank_ret168", "xs_rank_vol24", "xs_rank_volz", "breadth_up24", "rel_vol"]
+MKT = ["spy_ret24", "spy_ret168", "spy_vol24", "qqq_ret24", "iwm_ret24", "tlt_ret24", "vixy_ret24", "vixy_vol24", "rel_ret_spy"]
+CONFIGS = {   # the whole grid, fixed here BEFORE any dev result: 3 configs x 4 taus = 12 selection draws
+    "A": {"features": OWN + XS + MKT, "params": {}},
+    "B": {"features": OWN + XS, "params": {}},                                         # no market-context proxies
+    "C": {"features": OWN + XS + MKT, "params": {"n_estimators": 200, "num_leaves": 15, "min_child_samples": 2000}},
+}
+REGISTERED_SELECTION = ("max pooled dev out-of-fold mean net R over (config, tau) subject to >= %d OOF trades" % MIN_OOF_N)
+
+
+def _lgb(params: dict):
+    import lightgbm as lgb
+    return lgb.LGBMRegressor(**{**BASE_PARAMS, **params})
+
+
+def symbol_rows(sym: str, df: pd.DataFrame, slip_bps: float, fee_bps: float) -> pd.DataFrame:
+    """Decision rows for one ETF on its own RTH bar sequence: harness features + the LONG first-passage net R (as equity_rows)."""
+    f = E.features_symbol(df[["ts", "open", "high", "low", "close", "volume"]])
+    f["hour"] = df.close_ts.dt.hour.to_numpy()
+    f["dow"] = df.close_ts.dt.dayofweek.to_numpy()
+    o, h, lo, c = (df[k].to_numpy(float) for k in ("open", "high", "low", "close"))
+    pc = np.r_[np.nan, c[:-1]]
+    tr = np.nanmax(np.vstack([h - lo, np.abs(h - pc), np.abs(lo - pc)]), axis=0)
+    atr = pd.Series(tr).rolling(14, min_periods=14).mean().to_numpy()
+    n = len(df)
+    decision = (df.close_ts.dt.hour % 4 == 0).to_numpy()
+    cand = np.where(decision & ~np.isnan(atr))[0]
+    cand = cand[cand + H < n]
+    if len(cand) == 0:
+        return pd.DataFrame()
+    win = cand[:, None] + np.arange(1, H + 1)[None, :]
+    entry = o[win][:, 0]
+    a = atr[cand]
+    risk = 2.0 * a
+    px, j, reason = E.bracket_outcome(o[win], h[win], lo[win], c[win], entry, a, 1)
+    gross = (px - entry) / risk
+    per_r = ((np.abs(entry) + np.abs(px)) / 2.0) / risk
+    cost = (fee_bps + slip_bps + S.REGULATORY_BPS) / 1e4 * per_r
+    rows = pd.DataFrame({"i": cand, "ts": df.close_ts.to_numpy()[cand], "symbol": sym, "net_long": gross - cost,
+                         "gross_long": gross, "cost_long": cost, "reason_long": reason, "bars_long": j})
+    f["ret168_raw"] = np.log(df["close"].astype(float)) - np.log(df["close"].astype(float).shift(168))
+    rows = rows.join(f.drop(columns=["ts"]), on="i")
+    rows["ts"] = pd.to_datetime(rows["ts"], utc=True)
+    return rows
+
+
+def proxy_frame(bars: dict[str, pd.DataFrame]) -> pd.DataFrame:
+    """One row per close_ts with the equity-proxy context features (indexed by the proxy's own close time)."""
+    out = {}
+    for name, col in (("SPY", "spy"), ("QQQ", "qqq"), ("IWM", "iwm"), ("TLT", "tlt"), ("VIXY", "vixy")):
+        df = bars.get(name)
+        if df is None or len(df) == 0:
+            continue
+        f = E.features_symbol(df[["ts", "open", "high", "low", "close", "volume"]])
+        f.index = pd.to_datetime(df.close_ts, utc=True).to_numpy()
+        f["ret168_raw"] = (np.log(df["close"].astype(float)) - np.log(df["close"].astype(float).shift(168))).to_numpy()
+        out[col] = f
+    ctx = pd.DataFrame(index=sorted(set().union(*[set(v.index) for v in out.values()])))
+    for col, f in out.items():
+        ctx[f"{col}_ret24"] = f["ret24_raw"]
+        if col == "spy":
+            ctx["spy_ret168"], ctx["spy_vol24"] = f["ret168_raw"], f["vol24"]
+        if col == "vixy":
+            ctx["vixy_vol24"] = f["vol24"]
+    return ctx
+
+
+def build_table(bars: dict[str, pd.DataFrame], pool: list[str], slip: float, fee: float) -> pd.DataFrame:
+    frames = [symbol_rows(s, bars[s], slip, fee) for s in pool if s in bars and len(bars[s]) > 400]
+    frames = [f for f in frames if len(f)]
+    t = pd.concat(frames, ignore_index=True)
+    g = t.groupby("ts")
+    t["xs_rank_ret24"] = g["ret24_raw"].rank(pct=True)
+    t["xs_rank_ret168"] = g["ret168_raw"].rank(pct=True)
+    t["xs_rank_vol24"] = g["vol24"].rank(pct=True)
+    t["xs_rank_volz"] = g["vol_z"].rank(pct=True)
+    t["breadth_up24"] = g["ret24_raw"].transform(lambda x: float((x > 0).mean()))
+    t["rel_vol"] = t["vol24"] / g["vol24"].transform("median")
+    ctx = proxy_frame(bars)
+    t = t.join(ctx, on="ts")
+    t["rel_ret_spy"] = t["ret24_raw"] - t["spy_ret24"]
+    return t.replace([np.inf, -np.inf], np.nan)
+
+
+def session_mask(ts: pd.Series) -> np.ndarray:
+    return S.session_ok(ts)
+
+
+def taken_trades(rows: pd.DataFrame, pred: np.ndarray, tau: float) -> pd.DataFrame:
+    return S.take(rows, pred, np.zeros(len(rows)), tau, long_only=True, side_rule="restricted")
+
+
+def _stats(tk: pd.DataFrame) -> dict:
+    if tk.empty:
+        return {"n": 0, "mean_net_r": None}
+    return {"n": int(len(tk)), "mean_net_r": float(tk.net_r.mean()), "mean_gross_r": float(tk.gross_r.mean()),
+            "mean_cost_r": float(tk.cost_r.mean()), "n_symbols": int(tk.symbol.nunique()),
+            "se": float(tk.net_r.std(ddof=1) / np.sqrt(len(tk))) if len(tk) > 1 else None}
+
+
+def purge(train: pd.DataFrame, cut: pd.Timestamp) -> pd.DataFrame:
+    return train[train.ts < cut - pd.Timedelta(days=PURGE_DAYS)]
+
+
+def dev_stage(tab: pd.DataFrame, folds: list[str] = DEV_FOLDS, train_end: str = TRAIN_END, taus=TAUS,
+              configs: dict = CONFIGS, min_oof_n: int = MIN_OOF_N, log=print) -> dict:
+    """Walk-forward on dates <= train_end ONLY. Returns every (config, tau) out-of-fold result and the registered selection."""
+    te = pd.Timestamp(train_end, tz="UTC") + pd.Timedelta(days=1)
+    dev = tab[tab.ts < te].dropna(subset=["net_long"])
+    bounds = [pd.Timestamp(x, tz="UTC") for x in folds] + [te]
+    res = {}
+    for name, cfg in configs.items():
+        feats = cfg["features"]
+        oof = []
+        for k in range(len(folds)):
+            tr = purge(dev[dev.ts < bounds[k]], bounds[k]).dropna(subset=feats)
+            ts_ = dev[(dev.ts >= bounds[k]) & (dev.ts < bounds[k + 1])].dropna(subset=feats)
+            if len(tr) < 1000 or len(ts_) == 0:
+                continue
+            m = _lgb(cfg["params"]).fit(tr[feats], tr["net_long"])
+            # provenance: predict -- LGBMRegressor.predict is the regressed net R of the LONG side, not a probability
+            oof.append(ts_.assign(pred=m.predict(ts_[feats]), fold=k))
+            log(f"[dev] config {name} fold {k} train={len(tr)} test={len(ts_)} t={time.strftime('%H:%M:%S')}")
+        if not oof:
+            continue
+        o = pd.concat(oof)
+        o = o[session_mask(o.ts)]
+        for tau in taus:
+            tk = taken_trades(o, o["pred"].to_numpy(), tau)
+            st = _stats(tk)
+            st["by_fold"] = ({int(k): {"n": int(len(g)), "mean_net_r": round(float(g.net_r.mean()), 4)}
+                              for k, g in tk.assign(fold=_fold_of(tk.ts, bounds)).groupby("fold")} if len(tk) else {})
+            res[f"{name}|{tau}"] = {"config": name, "tau": tau, **st}
+    ok = {k: v for k, v in res.items() if v["n"] >= min_oof_n and v["mean_net_r"] is not None}
+    best = max(ok.items(), key=lambda kv: kv[1]["mean_net_r"]) if ok else None
+    return {"grid": res, "n_selection_draws": len(res), "selection_rule": REGISTERED_SELECTION,
+            "selected": None if best is None else {"key": best[0], **best[1]}, "dev_rows": int(len(dev))}
+
+
+def _fold_of(ts: pd.Series, bounds) -> np.ndarray:
+    t = pd.to_datetime(ts, utc=True)
+    return np.searchsorted(np.array([b.value for b in bounds[1:-1]]), t.astype("int64").to_numpy(), side="right")
+
+
+def confirm_stage(tab: pd.DataFrame, config: str, tau: float, dev_oof_mean: float, unit: str, ledger_dir: Path,
+                  train_end: str = TRAIN_END, start: str = CONFIRM_START, end: str = "2026-10-31", symbols=None,
+                  configs: dict = CONFIGS, claim: bool = True) -> dict:
+    """Refit on rows <= train_end, score [start, end] ONCE, grade against the deflated bar. The read is recorded in the ledger."""
+    HL.check_window_disjoint(train_end, start)
+    if pd.Timestamp(start) < pd.Timestamp(train_end) + pd.Timedelta(days=EMBARGO_DAYS):
+        raise RuntimeError(f"confirm start {start} is inside the {EMBARGO_DAYS}-day embargo after train_end {train_end}")
+    cfg = configs[config]
+    feats = cfg["features"]
+    te = pd.Timestamp(train_end, tz="UTC") + pd.Timedelta(days=1)
+    tr = purge(tab[tab.ts < te], te).dropna(subset=feats + ["net_long"])
+    m = _lgb(cfg["params"]).fit(tr[feats], tr["net_long"])
+    booster_sha = hashlib.sha256(m.booster_.model_to_string().encode()).hexdigest()
+    hs, he = pd.Timestamp(start, tz="UTC"), pd.Timestamp(end, tz="UTC") + pd.Timedelta(days=1)
+    ledger_dir.mkdir(parents=True, exist_ok=True)
+    ledger = ledger_dir / "holdout_reads.jsonl"
+    if HL.LEDGER.exists() and not ledger.exists():
+        shutil.copy(HL.LEDGER, ledger)
+    model_id = f"{FAMILY}-v1-{config}-tau{tau}"
+    if claim:
+        rec = HL.claim_read(model_id, start, end, unit, "lane ML-ENTRY-EQUITY-NATIVE (research-script-run)", ledger=ledger,
+                            symbols=symbols, train_end=train_end, family=FAMILY)
+        bar = rec["bar"]
+    else:
+        bar, rec = HL.bar_for(1), None
+    test = tab[(tab.ts >= hs) & (tab.ts < he)].dropna(subset=feats + ["net_long"])
+    n_before = int(len(test))
+    test = test[session_mask(test.ts)]
+    # provenance: predict -- the regressed LONG net R, not a probability
+    pred = m.predict(test[feats])
+    tk = taken_trades(test, pred, tau)
+    st = _stats(tk)
+    n, mean, se = st["n"], st["mean_net_r"], st.get("se")
+    if n < S.N_FLOOR:
+        v, why = "indeterminate", f"confirm n={n} < {S.N_FLOOR}"
+    else:
+        pass_conf = HL.point_ok(mean, se, bar)
+        pass_dev = dev_oof_mean is not None and dev_oof_mean > 0
+        v = "pass" if (pass_conf and pass_dev) else "fail"
+        why = (f"confirm mean net R {mean:+.4f} (se {se:.4f}, deflated point bar t_min {bar['point_t_min']}, N={bar['n_tries']}) "
+               f"at n={n}; dev OOF mean {dev_oof_mean:+.4f}")
+    mo = tk.assign(m=pd.to_datetime(tk.ts, utc=True).dt.strftime("%Y-%m")).groupby("m").net_r.agg(["count", "mean"]) if n else None
+    clustered_se = None
+    if mo is not None and len(mo) > 1:
+        clustered_se = float(tk.assign(m=pd.to_datetime(tk.ts, utc=True).dt.strftime("%Y-%m")).groupby("m").net_r.sum().std(ddof=1) / n * np.sqrt(len(mo)))
+    return {"verdict": v, "note": why, "stats": st, "bar": bar, "ledger_record": rec, "booster_sha256": booster_sha,
+            "train_rows": int(len(tr)), "config": config, "tau": tau, "dev_oof_mean": dev_oof_mean,
+            "decision_rows_before_session_gate": n_before, "decision_rows": int(len(test)),
+            "by_month": {} if mo is None else {k: {"n": int(r["count"]), "mean_net_r": round(float(r["mean"]), 4)} for k, r in mo.iterrows()},
+            "month_clustered_se_reported": clustered_se,
+            "by_symbol_top": {} if n == 0 else tk.groupby("symbol").net_r.agg(["count", "mean"]).sort_values("count", ascending=False)
+            .head(10).round(4).to_dict("index"),
+            "window": {"train_end": train_end, "start": start, "end": end, "embargo_days": EMBARGO_DAYS}}
+
+
+# ------------------------------------------------------------------------------------------------ runner glue
+def _pool_and_bars(a, end_day: str):
+    """The registered pool (POOL_RULE) + 1h RTH bars for pool and proxies. Read-only allowlisted Alpaca client."""
+    import requests
+    from alpaca_readonly import AlpacaReadOnly
+    client = AlpacaReadOnly.from_env()
+    nq = requests.get(S.NASDAQTRADED_URL, timeout=60, headers={"User-Agent": "jta-trader-research"}).text
+    etfs = S.etf_symbols(nq)
+    assets = client.assets()
+    cand = sorted({x["symbol"] for x in assets if x.get("status") == "active" and x.get("tradable")
+                   and x.get("class", "us_equity") == "us_equity"} & etfs)
+    dev = {}
+    for i in range(0, len(cand), 100):
+        got = client.bars(cand[i:i + 100], "1Day", f"{S.DEV_START}T00:00:00Z", "2021-01-01T00:00:00Z")
+        dev.update({s: S.alpaca_bars_df(bl) for s, bl in got.items() if bl})
+    pool, prep = S.filter_pool(assets, etfs, dev)
+    prep.update({"etf_file_sha256": hashlib.sha256(nq.encode()).hexdigest(), "pool_rule_sha256": S.POOL_RULE_SHA256,
+                 "key_kind": client.key_kind})
+    if prep["pool_rule_sha256"] != "e9702661d1a596a0f7e84e632c0ca8b5c2743a728f02147477c003644a0858e2":
+        raise RuntimeError("POOL_RULE changed: the registered population is not what this module scores")
+    print(f"[pool] {len(pool)} ETFs; {client.calls} calls", flush=True)
+    want = sorted(set(pool) | set(PROXIES))
+    end = (pd.Timestamp(end_day) + pd.Timedelta(days=1)).strftime("%Y-%m-%d")
+    bars = S.fetch_alpaca_1h(client, want, Path(a.cache), end, start=DATA_START)
+    missing = [p for p in PROXIES if p not in bars]
+    if missing:
+        raise RuntimeError(f"proxy bars missing: {missing} (the model needs its market-context features)")
+    return pool, prep, bars, client
+
+
+def main_run(a) -> int:
+    from src.runtime.execution_costs import resolve_cost_policy, resolve_fee_bps_roundtrip
+    t0 = time.time()
+    out = Path(a.out)
+    out.mkdir(parents=True, exist_ok=True)
+    slip, _fund = resolve_cost_policy("SPY")
+    fee = resolve_fee_bps_roundtrip("SPY")
+    end_day = TRAIN_END if a.cmd == "dev" else (pd.Timestamp.now(tz="UTC").normalize().replace(day=1) - pd.Timedelta(days=1)).strftime("%Y-%m-%d")
+    pool, prep, bars, client = _pool_and_bars(a, end_day)
+    tab = build_table(bars, pool, slip, fee)
+    print(f"[table] {len(tab)} decision rows, {tab.symbol.nunique()} symbols t={time.strftime('%H:%M:%S')}", flush=True)
+    if a.cmd == "dev":
+        d = dev_stage(tab)
+        d.update({"train_end": TRAIN_END, "pool": {k: v for k, v in prep.items() if k != "excluded"}, "n_pool": len(pool),
+                  "costs": {"slippage_bps": slip, "fee_bps": fee, "regulatory_bps": S.REGULATORY_BPS},
+                  "configs": {k: {"features": v["features"], "params": v["params"]} for k, v in CONFIGS.items()},
+                  "alpaca_calls": client.calls, "runtime_s": round(time.time() - t0, 1)})
+        sel = d["selected"]
+        row = {"schema_version": 1, "research_unit": a.unit, "read_state": "measured", "verdict": "descriptive",
+               "note": ("DEV stage (walk-forward <= %s; no confirming window loaded). Selected %s: OOF mean net R %s at n=%s"
+                        % (TRAIN_END, None if sel is None else sel["key"], None if sel is None else sel["mean_net_r"],
+                           None if sel is None else sel["n"])),
+               "generated_at": pd.Timestamp.now(tz="UTC").strftime("%Y-%m-%dT%H:%M:%SZ"),
+               "measurement": d, "n": None if sel is None else sel["n"],
+               "produced_by": {"tool": "python3 scripts/research/ml_entry_equity.py dev", "where": a.where}}
+    else:
+        c = confirm_stage(tab, a.config, float(a.tau), float(a.dev_oof_mean), a.unit, out / "ledger", end=end_day,
+                          symbols=pool)
+        row = {"schema_version": 1, "research_unit": a.unit, "read_state": "measured", "verdict": c["verdict"], "note": c["note"],
+               "generated_at": pd.Timestamp.now(tz="UTC").strftime("%Y-%m-%dT%H:%M:%SZ"),
+               "decision_rule": {"id": a.rule_id, "registered_at": a.registered_at, "registered_before_run": True},
+               "population": {"n": c["stats"]["n"], "description": f"equity-native ENTRY ({a.config}, tau {a.tau}) restricted-LONG on the "
+                              f"{len(pool)}-ETF Alpaca liquidity pool, confirming window {CONFIRM_START}..{end_day}, net of the Alpaca cost stack"},
+               "measurement": {**c, "pool": {k: v for k, v in prep.items() if k != "excluded"}, "n_pool": len(pool),
+                               "alpaca_calls": client.calls, "runtime_s": round(time.time() - t0, 1)},
+               "n": c["stats"]["n"], "produced_by": {"tool": "python3 scripts/research/ml_entry_equity.py confirm", "where": a.where}}
+    (out / f"{a.unit}.json").write_text(json.dumps(row, indent=1, default=str))
+    (out / "verdict.json").write_text(json.dumps(row, indent=1, default=str) + "\n")
+    print(f"{a.cmd.upper()} {row['verdict']}: {row['note']}", flush=True)
+    return 0
+
+
+# ------------------------------------------------------------------------------------------------ self-test
+def _synthetic_bars(seed: int = 0, n_days: int = 700) -> dict[str, pd.DataFrame]:
+    rng = np.random.default_rng(seed)
+    days = pd.bdate_range("2021-01-04", periods=n_days, tz="America/New_York")
+    out = {}
+    for s in ["SPY", "QQQ", "IWM", "TLT", "VIXY"] + [f"E{i}" for i in range(8)]:
+        ts, px = [], 100.0
+        rows = []
+        for d in days:
+            for hh in range(9, 16):
+                t = (d + pd.Timedelta(hours=hh)).tz_convert("UTC")
+                r = rng.normal(0, 0.003)
+                o, c = px, px * (1 + r)
+                rows.append((t, o, max(o, c) * 1.001, min(o, c) * 0.999, c, float(rng.integers(1e5, 1e6))))
+                px = c
+        df = pd.DataFrame(rows, columns=["ts", "open", "high", "low", "close", "volume"])
+        et = df.ts.dt.tz_convert("America/New_York")
+        df["close_ts"] = pd.concat([df.ts + pd.Timedelta(hours=1), (et.dt.normalize() + pd.Timedelta(hours=16)).dt.tz_convert("UTC")],
+                                   axis=1).min(axis=1)
+        out[s] = df
+    return out
+
+
+def self_test() -> int:
+    import tempfile
+    bars = _synthetic_bars()
+    pool = [f"E{i}" for i in range(8)]
+    tab = build_table(bars, pool, 5.0, 0.0)
+    assert not any("btc" in c for c in tab.columns), "no crypto feature may exist"
+    assert set(OWN + XS + MKT) <= set(tab.columns), set(OWN + XS + MKT) - set(tab.columns)
+    assert tab["xs_rank_ret24"].dropna().between(0, 1).all() and tab["breadth_up24"].dropna().between(0, 1).all()
+    small = {"A": {"features": OWN + XS + MKT, "params": {"n_estimators": 20, "min_child_samples": 20}},
+             "B": {"features": OWN + XS, "params": {"n_estimators": 20, "min_child_samples": 20}}}
+    # dates: bars cover 2021-01..2023-08; use a miniature calendar
+    d = dev_stage(tab, folds=["2022-09-01", "2023-01-01"], train_end="2023-04-30", taus=[0.0, 0.05], configs=small, min_oof_n=1,
+                  log=lambda *_: None)
+    assert d["n_selection_draws"] == 4 and d["selected"] is not None, d
+    assert tab[tab.ts <= "2023-04-30"].shape[0] < tab.shape[0], "synthetic calendar must extend past train_end"
+    # the confirming window must be refused when it overlaps training or sits inside the embargo
+    for bad in ("2023-04-30", "2023-05-05"):
+        try:
+            confirm_stage(tab, "A", 0.0, 0.01, "RQ-T", Path(tempfile.mkdtemp()), train_end="2023-04-30", start=bad, end="2023-08-31",
+                          configs=small, claim=False)
+        except (HL.WindowOverlapsTraining, RuntimeError):
+            continue
+        raise AssertionError(f"start {bad} must be refused")
+    with tempfile.TemporaryDirectory() as td:
+        r = confirm_stage(tab, "A", 0.0, 0.01, "RQ-T", Path(td), train_end="2023-04-30", start="2023-05-20", end="2023-08-31",
+                          configs=small, symbols=pool)
+        assert r["verdict"] in ("pass", "fail", "indeterminate") and r["bar"]["n_tries"] == 1 and r["ledger_record"]["family"] == FAMILY, r
+        r2 = confirm_stage(tab, "A", 0.0, 0.01, "RQ-T", Path(td), train_end="2023-04-30", start="2023-05-20", end="2023-08-31",
+                           configs=small, symbols=pool)
+        assert r2["bar"]["n_tries"] == 2 and r2["bar"]["point_t_min"] > 0, r2["bar"]      # a re-read is graded against the deflated bar
+    # no dev row may sit in the confirming window and vice versa (the dev stage only ever sees <= TRAIN_END)
+    te = pd.Timestamp("2023-04-30", tz="UTC") + pd.Timedelta(days=1)
+    assert (tab[tab.ts < te].ts.max() < te) and (tab[tab.ts >= pd.Timestamp("2023-05-20", tz="UTC")].ts.min() >= pd.Timestamp("2023-05-20", tz="UTC"))
+    print("self-test ok")
+    return 0
+
+
+def main(argv=None) -> int:
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--self-test", action="store_true")
+    sub = ap.add_subparsers(dest="cmd")
+    for name in ("dev", "confirm"):
+        p = sub.add_parser(name)
+        p.add_argument("--cache", required=True)
+        p.add_argument("--out", required=True)
+        p.add_argument("--unit", required=True)
+        p.add_argument("--where", default="local")
+        if name == "confirm":
+            p.add_argument("--config", required=True, choices=sorted(CONFIGS))
+            p.add_argument("--tau", required=True)
+            p.add_argument("--dev-oof-mean", required=True)
+            p.add_argument("--rule-id", required=True)
+            p.add_argument("--registered-at", required=True)
+    a = ap.parse_args(argv)
+    if a.self_test:
+        return self_test()
+    return main_run(a) if a.cmd in ("dev", "confirm") else 2
+
+
+if __name__ == "__main__":
+    sys.exit(main())
