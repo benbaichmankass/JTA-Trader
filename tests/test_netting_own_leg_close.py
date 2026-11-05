@@ -15,7 +15,6 @@ import datetime as _dt
 import sqlite3
 
 from src.runtime import order_monitor as om
-
 from tests.test_shared_bracket_fix import _ACC, _Clock, _LiveDB, _venue
 
 _FILL_MS = str(int(_dt.datetime(2026, 11, 5, 12, 27, 21,
