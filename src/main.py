@@ -543,7 +543,7 @@ def final_pass_on_sigterm_armed() -> bool:
     before 2026-11-05. A default-OFF kill-switch over an ON capability, the same
     shape as ``EXIT_LOOP_DECOUPLE_DISABLED``; it gates nothing that trades.
     """
-    return not _truthy(os.environ.get("EXIT_LOOP_FINAL_PASS_DISABLED"))
+    return not _truthy(os.environ.get("EXIT_LOOP_FINAL_PASS_DISABLED"))  # allow-silent: default-OFF rollback kill-switch over an ON capability (no SIGTERM final pass); gates no trade
 
 
 def _on_sigterm(signum, frame) -> None:  # noqa: ARG001 - signal handler signature
@@ -1115,7 +1115,7 @@ def main() -> None:
         logger.warning("WAL enable skipped: %s", exc)
 
     loop = str(os.environ.get("LOOP", "true")).strip().lower() not in {"false", "0", "no"}
-    decoupled = not _truthy(os.environ.get("EXIT_LOOP_DECOUPLE_DISABLED"))
+    decoupled = not _truthy(os.environ.get("EXIT_LOOP_DECOUPLE_DISABLED"))  # allow-silent: moved line, unchanged 2026-08-12 operator-approved rollback kill-switch
 
     # ------------------------------------------------------------------ exit loop
     # EXIT-FIRST BOOT (RESTART-GAP-EXIT-FIRST, Tier 2, 2026-11-05). The exit loop

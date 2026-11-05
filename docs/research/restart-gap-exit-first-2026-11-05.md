@@ -1,6 +1,6 @@
 # Restart gap: exit loop first (RESTART-GAP-EXIT-FIRST, 2026-11-05)
 
-> **Doc status:** `live` · category `evidence` · lane `RESTART-GAP-EXIT-FIRST` (Manager Session 2026-11-05a)
+> **Doc status:** `unknown` · category `evidence` · lane `RESTART-GAP-EXIT-FIRST` (Manager Session 2026-11-05a)
 
 **Gates this adds or changes: none.**
 
