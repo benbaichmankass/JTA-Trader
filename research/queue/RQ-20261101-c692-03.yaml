@@ -6,7 +6,7 @@
 id: RQ-20261101-c692-03
 title: 'MANAGE decision model: does ONE pooled LightGBM model choosing HOLD / CLOSE / SL-to-breakeven / trail 1 ATR / TP +1 ATR at each 4h check-in
   keep held-out mean net R per trade >= 0 AND mean delta net R per non-HOLD action >= 0 vs hold-to-bracket?'
-status: queued
+status: done
 cadence: once
 theme: ml_health
 priority: 1
@@ -116,3 +116,16 @@ ml_consumer:
   - trend_donchian_sol_prop
   book: money
 last_dispatched_at: '2026-11-05T14:59:42+00:00'
+grading:
+  attested: RULE-RQ20261101-c692-03-MANAGE
+  auto: true
+  decision_rule_id: RULE-RQ20261101-c692-03-MANAGE
+  evidence:
+  - research/results/RQ-20261101-c692-03/42048164102.jsonl
+  graded_at: '2026-11-05'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail

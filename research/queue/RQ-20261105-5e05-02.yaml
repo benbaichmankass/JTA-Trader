@@ -1,7 +1,7 @@
 id: RQ-20261105-5e05-02
 title: 'Reverse structure-exit test on htf_pullback_trend_2h (declares structure_exit pivot=5): does the prior exit beat the structure default, net of the full cost
   stack?'
-status: queued
+status: done
 cadence: once
 theme: live_strategy
 priority: 1
@@ -112,3 +112,14 @@ related:
 - docs/research/structure-exits-default-scope-2026-11-01.md
 - src/runtime/structure_levels.py
 last_dispatched_at: '2026-11-05T20:27:51+00:00'
+grading:
+  attested: RULE-STRUCTURE-EXITS-REVERSE-V1
+  auto: true
+  decision_rule_id: RULE-STRUCTURE-EXITS-REVERSE-V1
+  evidence:
+  - research/results/RQ-20261105-5e05-02/42090548256.jsonl
+  graded_at: '2026-11-05'
+  grader: scripts/research/queue_grade.py
+  reason: 2 row(s), all measured, all pass
+  rows: 2
+  verdict: pass
