@@ -1,0 +1,22 @@
+{
+  "id": "TELEGRAM-TRIM",
+  "title": "Telegram trim: recurring posts off; trades channel = one ping per order package (real money + mirror note, paper-portfolio-only legs, no testing paper); suppressed messages recorded",
+  "phase": null,
+  "state": "in_flight",
+  "owner": "lane TELEGRAM-TRIM (session_01AFoLuN2SH3cRmXYwvFyWCU)",
+  "lane": "TELEGRAM-TRIM",
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 2,
+  "prs": [],
+  "blocked_on": [],
+  "note": "Operator 2026-11-04 ~23:40Z (verbatim in config/telegram_policy.yaml): turn off recurring Telegram updates, keep event alerts; trades bot: one update per trade package, note real money + paper, paper-portfolio-only legs get their own, no testing-paper pings. Tier-2 OK = the operator instruction relayed by Manager Session 2026-11-04b. Roadmap: no L-ALERT-INTEGRATION milestone exists; M6 (Telegram channels) is the closest. ALERT-LEDGER-TO-MANAGER branch not on origin at start (git ls-remote) \u2014 built standalone, suppressed rows in runtime_logs/telegram_suppressed.jsonl for that lane to fold in. OPERATOR, popup 2026-11-05 ~00:28Z, verbatim: \"Both right (Recommended)\" (relayed by Manager Session 2026-11-04b): (1) prop accounts breakout_2/tradeify_1/velotrade_1 count as LIVE, their trade pings stay; (2) rejection pings stay for real-money and prop, testing-paper rejections ledger/UI only (Prime Directive rule 4 amended, quote recorded there). Lane choice to flag: paper_role:portfolio mirror rejections still PING (a mirror refusal is a live/mirror divergence alarm, not testing paper); say if they should be ledger-only. MANAGER DECISION (Manager Session 2026-11-04b, 2026-11-05 ~00:53Z; a manager call, NOT an operator quote \u2014 the operator can overrule it in one line): rejections on paper_role: portfolio mirror accounts (bybit_portfolio, alpaca_portfolio) KEEP pinging \u2014 a mirror refusal is a live/mirror divergence alarm on the real-money stage. Overrule = telegram_policy.rejection_ledger_only also returning True for PAPER_PORTFOLIO. | Ledger fold: suppressed messages now go to THE alert ledger (#23033, alerts_ledger, delivered=suppressed_by_policy, never wakes the manager); the separate telegram_suppressed.jsonl was dropped before landing. | PyYAML MEASURED present for /usr/bin/python3 on ict-bot-arm: ict-work-digest imports render_daily_brief (top-level import yaml) every run via attention_watch._ranked, whose failure prints 'ranked_items failed'; journalctl 2026-11-03T16:02Z..2026-11-05T00:02Z, 1957 lines scanned complete, 33 runs, 0 such lines (positive control: the same unit's print() lines are present).",
+  "due_by": "2026-11-06",
+  "roadmap": [
+    "M6"
+  ],
+  "updated_at": "2026-11-05T00:58:38Z",
+  "updated_by": "session_01AFoLuN2SH3cRmXYwvFyWCU",
+  "_seq": 919
+}

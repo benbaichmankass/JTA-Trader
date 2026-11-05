@@ -1,0 +1,70 @@
+# ONE Telegram delivery policy — checklist row TELEGRAM-TRIM (Tier 2, notification routing only;
+# changes no trading behaviour). Read by src/runtime/telegram_policy.py; pinned by
+# tests/test_telegram_policy.py.
+#
+# Gates this adds or changes: NONE on trading. It decides which messages reach TELEGRAM; every
+# suppressed message is still RECORDED in the alert ledger (src/runtime/alerts_ledger, delivered:
+# suppressed_by_policy; GET /api/bot/alerts, diag /api/diag/alerts), so the UI and the manager still see it. It is the
+# default behaviour, not a default-off flag.
+#
+# OPERATOR, 2026-11-04 ~23:40Z, verbatim (relayed by Manager Session 2026-11-04b):
+#   "Regarding the Telegram channels, basically I want to turn off all of the regular recurring
+#   updates there. It's basically I don't look at them. It's mostly noise. And with the new UI
+#   updates, I'd rather be focused on being able to check on the UI when I want to check and not
+#   have to like sift through messages to find updates and track changes. So those should stay as
+#   they are, just only with like regular alerts and pings that I'm supposed to get, and not the and
+#   not like the recurring updates. And then for the trader bot, so basically I want to trim it down
+#   so that the only pings I get there are for live trades, because the Bybit one, like the, or in
+#   general the testing paper, I don't need to get updated on every trade there. It's not really
+#   important. And and then like the paper portfolio, so basically like here's what I want to do.
+#   For each trade package I should get one update. If there's a trade both on real money and paper,
+#   make a note of it. And then for the ones where it's only on the paper portfolio, because it's not
+#   something that's being traded yet on the real money, like we have mostly on Alpaca, then I want
+#   to get just the update for that one. Yeah, so it should be not a huge reconfiguration, so maybe we
+#   can kick that off now and get that set up."
+#
+# OPERATOR, popup 2026-11-05 ~00:28Z, verbatim: "Both right (Recommended)" — confirming (1) prop accounts
+# count as LIVE, so their trade pings stay; (2) rejection pings stay for real-money and prop accounts, and
+# testing-paper rejections go to the ledger/UI only (Prime Directive rule 4 amended).
+#
+# ROLLBACK: delete a kind from `recurring_off` (or set `trades.testing_paper: send`) and push; the
+# VM picks it up on the next ict-git-sync pull (read at call time, no restart needed for scripts;
+# the trader re-reads within `reload_s`).
+
+# A. RECURRING / periodic posts -> recorded, not sent to Telegram. Event-driven alerts are never
+#    listed here (the test refuses any telegram_channels.UNMUTABLE kind).
+recurring_off:
+  - system_health      # ict-hourly-snapshot: hourly HEALTH CHECK (scripts/send_hourly_now.py)
+  - trades_snapshot    # ict-hourly-snapshot: hourly PERFORMANCE SNAPSHOT
+  - hourly_report      # legacy combined hourly report (outcomes.send_scheduled fallback)
+  - daily_heartbeat    # ict-heartbeat 13:00Z daily status (scripts/daily_heartbeat.py)
+  - manager_update     # ict-work-digest hourly digest; NEW actionable items still go (see below)
+
+# The hourly work digest also carries edge-triggered ATTENTION items. Those are event pings, so
+# they are still sent — as a short event message, only when one is new. Prefixes as rendered by
+# scripts/ops/attention_watch.py: ❓ new operator decision · 🧪 soak changed state · other alarms.
+# Dropped: 📋 the daily ranked summary, 🔎 research-unit reads (research-ops' job, not the
+# operator's), and the "🟢 No new actionable items" line.
+digest_event_drop_prefixes: ["📋", "🔎"]
+
+# B. TRADES channel: ONE ping per ORDER-PACKAGE event (open / close / update), classed from
+#    config/accounts.yaml (`account_class`, `paper_role`) — never from account names.
+trades:
+  real_money: send          # account_class: real_money — noted "real money + mirror" when its mirror carries the leg
+  prop: send                # account_class: prop — funded accounts; treated as live
+  paper_portfolio: send_if_not_on_real_money   # paper_role: portfolio — only legs real money does not trade yet
+  testing_paper: suppress   # every other paper account (bybit_1, alpaca_paper, ib_paper, ...)
+  unknown_account: send     # an account the classifier cannot place: over-send, never silence
+  # High/urgent-priority trade-update pings are flags (not-applied / keeps-failing / orphan), not
+  # lifecycle noise: they bypass this filter.
+  bypass_priorities: [high, urgent]
+  # An update burst on one package inside this window is one ping.
+  update_bucket_minutes: 10
+  # Fallback dedupe window when an event carries no order_package_id.
+  no_package_bucket_minutes: 5
+
+# D. Prime Directive rule 4 (docs/CLAUDE-RULES-CANONICAL.md, amended 2026-11-04): rejection pings
+#    stay on real-money, prop and portfolio-mirror accounts; testing-paper rejections are recorded
+#    in runtime_logs/operator_alerts.jsonl only (route: ledger_only).
+rejections:
+  testing_paper: ledger_only

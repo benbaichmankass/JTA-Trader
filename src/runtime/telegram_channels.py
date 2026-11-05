@@ -116,6 +116,7 @@ SENDERS: Final[dict[str, tuple[str, ...]]] = {
     "src/runtime/notify.py": ("alert",),
     "src/runtime/telegram_channels.py": ("alert",),
     "src/runtime/telegram_split.py": ("red_flag",),   # .broken ping flag (oversize fix)
+    # (src/runtime/telegram_policy.py decides delivery; it sends nothing — TELEGRAM-TRIM)
     "src/bot/telegram_routes.py": ("alert",),
     "src/bot/cloud_notifier.py": ("execution_alert", "trade-open", "claude_ping"),
     "src/bot/claude_bridge.py": ("claude_ping", "command_reply"),
@@ -274,6 +275,17 @@ def send(kind: str, text: str, *, parse_mode: Optional[str] = None,
     if not enabled(kind):
         logger.info("telegram_channels: kind %r muted in settings — not sent", kind)
         return False
+    # TELEGRAM-TRIM (operator 2026-11-04): recurring posts are recorded, not sent.
+    # Fails open: a policy that cannot be read sends.
+    try:
+        from src.runtime import telegram_policy
+
+        if telegram_policy.recurring_off(kind):
+            telegram_policy.record_suppressed(kind, text, reason="recurring_off", channel=ch)
+            logger.info("telegram_channels: kind %r is recurring_off (telegram_policy) — recorded, not sent", kind)
+            return False
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("telegram_channels: policy check failed (%s) — sending %r", exc, kind)
     try:
         return bool(send_telegram_direct(
             text, parse_mode=parse_mode, mirror_to_fcm=mirror_to_fcm,

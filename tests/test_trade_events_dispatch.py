@@ -59,7 +59,11 @@ def test_telegram_send_fires_unconditionally(monkeypatch: pytest.MonkeyPatch) ->
     )
 
     trade_events.notify_trade_event("trade_opened", {"symbol": "MES"})
-    time.sleep(0.05)  # off-thread send window
+    # off-thread send window — the TELEGRAM-TRIM policy read (accounts.yaml) runs on
+    # that thread first, so poll rather than a fixed 50 ms.
+    deadline = time.time() + 5.0
+    while not sent and time.time() < deadline:
+        time.sleep(0.02)
 
     assert sent == ["called"]
 

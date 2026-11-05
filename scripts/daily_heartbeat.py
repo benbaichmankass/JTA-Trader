@@ -11,8 +11,9 @@ ict-heartbeat.timer) summarising:
   - Last pipeline tick time
 
 Requires only stdlib + requests (already a bot dependency).
-Does NOT import any src.* module — intentionally self-contained so it runs
-even if the main bot virtualenv is broken.
+Does NOT import any src.* module at module level — intentionally self-contained
+so it runs even if the main bot virtualenv is broken. The one exception is the
+lazy, fail-open TELEGRAM-TRIM policy read in main() (2026-11-04).
 """
 from __future__ import annotations
 
@@ -239,8 +240,32 @@ def build_message(
 def main() -> int:
     _load_env()
 
+    # TELEGRAM-TRIM (operator 2026-11-04, config/telegram_policy.yaml): the daily
+    # heartbeat is a RECURRING post — recorded, not sent. The only src import in
+    # this script, lazy and fail-open: an unreadable policy sends as before.
+    suppress = False
+    try:
+        sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+        from src.runtime import telegram_policy
+
+        suppress = telegram_policy.recurring_off("daily_heartbeat")
+    except Exception as exc:  # noqa: BLE001
+        print(f"WARNING: telegram policy unreadable ({exc}) — sending", file=sys.stderr)
+
     token = os.environ.get("TELEGRAM_BOT_TOKEN", "").strip()
     chat_id = os.environ.get("TELEGRAM_CHAT_ID", "365546917").strip()
+
+    if suppress:
+        try:
+            db = _db_path()
+            msg = build_message(kill_switch=_kill_switch_state(), open_positions=_open_positions(db),
+                                today_pnl=_today_pnl(db), news_status=_news_status(),
+                                last_tick=_last_tick(db))
+        except Exception as exc:  # noqa: BLE001
+            msg = f"(heartbeat build failed: {exc})"
+        telegram_policy.record_suppressed("daily_heartbeat", msg, reason="recurring_off", channel="system")
+        print("Heartbeat suppressed by telegram_policy (recurring_off) — recorded, not sent.")
+        return 0
 
     if not token:
         print("ERROR: TELEGRAM_BOT_TOKEN not set — heartbeat not sent.", file=sys.stderr)

@@ -11,10 +11,22 @@ import sqlite3
 from pathlib import Path
 from unittest.mock import patch
 
+import pytest
+
 
 # ---------------------------------------------------------------------------
 # Import the module under test without going through the package system
 # ---------------------------------------------------------------------------
+
+
+@pytest.fixture(autouse=True)
+def _send_everything_policy(tmp_path, monkeypatch):
+    """These tests pin the SEND mechanics, so they run under an empty Telegram
+    policy (== send everything). The TELEGRAM-TRIM suppression of this recurring
+    post is pinned by its own tests below / in tests/test_telegram_policy.py."""
+    p = tmp_path / "telegram_policy_empty.yaml"
+    p.write_text("{}\n")
+    monkeypatch.setenv("TELEGRAM_POLICY_PATH", str(p))
 
 def _import_heartbeat():
     spec = importlib.util.spec_from_file_location(
@@ -222,3 +234,27 @@ def test_kill_switch_reads_the_canonical_flag(tmp_path, monkeypatch):
     assert "RUNNING" in hb._kill_switch_state()
     flag.write_text("halt")
     assert "HALTED" in hb._kill_switch_state()
+
+
+def test_main_records_instead_of_sending_under_the_trim_policy(tmp_path, monkeypatch):
+    """TELEGRAM-TRIM (operator 2026-11-04): the daily heartbeat is a recurring
+    post — under the committed config/telegram_policy.yaml it is recorded in the
+    suppressed ledger and NOT sent."""
+    import json
+
+    monkeypatch.delenv("TELEGRAM_POLICY_PATH", raising=False)
+    db = _make_db(tmp_path)
+    monkeypatch.setenv("TELEGRAM_BOT_TOKEN", "fake_token")
+    monkeypatch.setenv("TRADE_JOURNAL_DB", db)
+    monkeypatch.setenv("NEWS_ENABLED", "false")
+    with (
+        patch.object(hb, "_load_env"),
+        patch.object(hb, "_send_telegram") as send,
+        patch.object(hb, "HALT_FLAG", str(tmp_path / "no_flag")),
+    ):
+        rc = hb.main()
+    assert rc == 0
+    send.assert_not_called()
+    rows = [json.loads(x) for x in open(os.environ["ALERTS_LEDGER_PATH"]).read().splitlines()]
+    assert rows[-1]["kind"] == "daily_heartbeat" and rows[-1]["delivered"] == "suppressed_by_policy"
+    assert "Daily heartbeat" in rows[-1]["body"]

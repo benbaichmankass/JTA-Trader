@@ -93,9 +93,11 @@ system-design counterpart.
    trip, `RiskManager.approve()` returns
    `reject(reason=…, trade=…)` for an individual trade. The account
    mode is never touched. The next signal is evaluated fresh.
-6. **Every rejection is its own Telegram ping.** Per-trade:
+6. **Every rejection on a real-money, prop or portfolio-mirror account is its own
+   Telegram ping; a testing-paper rejection is its own ledger row** (amended 2026-11-04,
+   `TELEGRAM-TRIM`; canonical rules § Prime Directive rule 4 carries the operator quote). Per-trade:
    account, symbol, side, qty, reason, raw exchange error if any.
-   Not aggregate. The operator sees each refusal as it happens so
+   Not aggregate. The operator sees each money-account refusal as it happens so
    they can intervene fast.
 7. **Boot always starts the trader live (per YAML).** `src/main.py`
    reads `accounts.yaml`, resolves modes, and starts ticking. No

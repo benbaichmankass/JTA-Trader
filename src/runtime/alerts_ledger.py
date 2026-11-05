@@ -44,7 +44,11 @@ BODY_MAX = 1024
 #: Reads scan at most this many trailing lines (the population is reported).
 READ_MAX_LINES = 20000
 
-DELIVERED_VALUES = ("telegram_ok", "skipped_no_creds", "raised", "unknown")
+DELIVERED_VALUES = ("telegram_ok", "skipped_no_creds", "raised", "unknown",
+                    # TELEGRAM-TRIM (operator 2026-11-04): kept OFF Telegram by
+                    # config/telegram_policy.yaml — recorded here so the UI and the
+                    # manager still see it. Never wakes the manager (wakes_manager).
+                    "suppressed_by_policy")
 #: Kinds that are replies inside a conversation, not alerts: never ledgered.
 SKIP_KINDS = frozenset({"reply", "command_reply"})
 #: Kinds a human reads as ``high`` priority. Everything else is ``normal``.
@@ -60,6 +64,8 @@ _LOCK = threading.Lock()
 
 
 def ledger_path() -> Path:
+    if os.environ.get("ALERTS_LEDGER_PATH"):   # test isolation / one-off reads
+        return Path(os.environ["ALERTS_LEDGER_PATH"])
     from src.utils.paths import runtime_logs_dir
     return Path(runtime_logs_dir()) / LEDGER_NAME
 
@@ -77,10 +83,10 @@ def priority_for(kind: str) -> str:
 
 def build_row(kind: str, channel: str, body: str, *, priority: Optional[str] = None,
               dedup_key: Optional[str] = None, delivered: str = "unknown",
-              ts: Optional[str] = None) -> Dict[str, Any]:
+              ts: Optional[str] = None, extra: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
     kind = str(kind or "unclassified")
     body = str(body or "")
-    return {
+    row = {
         "ts": ts or datetime.now(timezone.utc).isoformat(),
         "kind": kind,
         "channel": str(channel or "unknown"),
@@ -89,17 +95,23 @@ def build_row(kind: str, channel: str, body: str, *, priority: Optional[str] = N
         "body": body[:BODY_MAX],
         "delivered": delivered if delivered in DELIVERED_VALUES else "unknown",
     }
+    # Flat scalar extras (e.g. the TELEGRAM-TRIM reason / account / package_id);
+    # never shadowing a core field.
+    for k, v in (extra or {}).items():
+        if str(k) not in row and (v is None or isinstance(v, (str, int, float, bool))):
+            row[str(k)] = v
+    return row
 
 
 def append(kind: str, channel: str, body: str, *, priority: Optional[str] = None,
            dedup_key: Optional[str] = None, delivered: str = "unknown",
-           path: Optional[Path] = None) -> bool:
+           path: Optional[Path] = None, extra: Optional[Dict[str, Any]] = None) -> bool:
     """Append one row. Best-effort: returns False and logs on any failure."""
     if str(kind or "") in SKIP_KINDS:
         return False
     try:
         row = build_row(kind, channel, body, priority=priority, dedup_key=dedup_key,
-                        delivered=delivered)
+                        delivered=delivered, extra=extra)
         p = path or ledger_path()
         p.parent.mkdir(parents=True, exist_ok=True)
         with _LOCK:
@@ -219,6 +231,8 @@ def wakes_manager(row: Dict[str, Any]) -> bool:
     """The wake rule: ``channel == system`` (non-routine kinds) or ``priority ==
     high``. The trades channel never wakes the manager."""
     ch, kind, prio = row.get("channel"), str(row.get("kind")), row.get("priority")
+    if row.get("delivered") == "suppressed_by_policy":   # TELEGRAM-TRIM: recorded, not an alert
+        return False
     if ch == "trades":
         return False
     if prio == "high":

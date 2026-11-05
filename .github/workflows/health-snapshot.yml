@@ -38,8 +38,8 @@ name: Health Snapshot
 
 on:
   schedule:
-    # Every 6 hours, on the hour. Operator wants the periodic status
-    # ping but graded HONESTLY — see the "Compute status + notify"
+    # Every 6 hours, on the hour. The snapshot still runs every 6h; since
+    # TELEGRAM-TRIM (operator 2026-11-04) it pings only on watch/concern, graded HONESTLY — see the "Compute status + notify"
     # step below for the deterministic ok/watch/concern classifier.
     # No more synthetic WARNING from a skipped Layer-1 LLM call.
     - cron: '0 */6 * * *'
@@ -305,9 +305,14 @@ jobs:
         # status check — not a "review required" alert. Skip for the
         # issue-driven path because the issue comment-back is the
         # delivery channel there.
+        # TELEGRAM-TRIM (operator 2026-11-04, config/telegram_policy.yaml): the
+        # 6-hourly "all OK" status is a RECURRING post and no longer pings; a
+        # watch / concern level is an event and still does. The run summary and
+        # artifact keep every level.
         if: |
           always()
           && steps.status.outputs.level != ''
+          && steps.status.outputs.level != 'ok'
           && (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch')
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.CLAUDE_TELEGRAM_BOT_TOKEN }}
