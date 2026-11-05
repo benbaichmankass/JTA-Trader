@@ -1,0 +1,149 @@
+# Hand-authored 2026-11-05 by lane TRADEIFY-OWN-LEG (Tier 1), dispatched by Manager Session 2026-11-05 (session_01AFoLuN7HERxg65eHjtmMYE).
+# Operator, popup ~07:33Z 2026-11-05, verbatim: "What if we try building a trade specific ml variation so that it's its own separate unit that's
+# trained specifically on like 35 the data sources and then that will be like a separate thing from the other prop accounts".
+# Gates this adds or changes: NONE. The DISTINCTNESS rule below is an evaluation standard on a research result, not a runtime gate and not a roster
+# change; a runtime cross-leg guard would be a gate and needs the operator's explicit permission (CLAUDE.md "No new gates").
+# Registered BEFORE any run and before the driver exists: nothing has been trained, scored or looked at for this question.
+id: RQ-20261105-fd68-01
+title: 'Tradeify-only ML leg: can a pooled ETH/SOL/XRP ML entry model, trained on its own declared feature families, beat the declared baselines NET OF
+  Tradeify''s full cost stack, clear the V3 prop EV/survival gate under Tradeify''s DD limits, AND stay distinct (measured overlap ceiling) from every other prop leg?'
+status: queued
+cadence: once
+theme: new_strategy_prop
+priority: 1
+kind: experiment
+roadmap:
+- L-PROP
+- L-ML-LIVE
+practice_precedent: 'T3 (net of the full cost stack) + M-principles on purged walk-forward with one held-out read; prop gate = scripts/research/prop_gate.py
+  RULE-P5-GATE-BRK-PER-LEG-V3 (edge clause); docs/research/tradeify-portfolio-feasibility-2026-09-30.md; default regime-robustness clause = backtesting SKILL.'
+question: 'tradeify_1 (Tradeify 247 1-Step $10k, DXtrade) carries trend_donchian_eth_prop, the SAME leg also on breakout_2 and velotrade_1. Tradeify''s
+  guidelines (https://intercom.help/tradeify/en/articles/10468318-guidelines-for-traders, "Bots/Algorithmic Trading") say, verbatim: "While you may use the bot on
+  your personal accounts, using it across multiple firms is against Tradeify''s policy. The bot should be solely for your own use within Tradeify."; "We scan to
+  ensure there are no similar orders on other accounts."; "You must be able to prove that you are the sole owner of the bot or strategy ... not being shared with
+  other traders or firms."; hedging across accounts is also prohibited. PR #23154 (operator-approved, Tier 3) removes the leg from all three, leaving tradeify_1
+  empty. Operator proposal (verbatim above): a Tradeify-specific ML variant, its own unit, trained on its own data sources, separate from the other prop accounts.
+  Does such a leg (i) have measured net-of-cost edge, (ii) survive Tradeify''s 6% static / 3% daily limits, and (iii) generate orders that are measurably NOT
+  similar to any other prop leg''s?'
+why_this_matters: 'It is the only route that puts a leg on tradeify_1 without the multi-firm exposure. The existing general entry model already FAILED this
+  gate on Tradeify (comms/prop_survival/ml_entry.json, RQ-20261102-5e1a-01: EV -$83.70 median, p_breach_eval 0.682, edge mean +0.017 R with 95% CI [-0.106, +0.140],
+  n 381, ETH+SOL) so this unit is NOT a re-test of that model: it differs in (a) training target = net R of a Tradeify-cost bracket, (b) a pooled ETH/SOL/XRP population,
+  (c) a declared feature-family set per arm, (d) the distinctness requirement. A FAIL keeps tradeify_1 empty (the operator''s call) and the family open.'
+instrument_universe:
+  basis: 'config/prop_platforms.yaml tradeify_1.executor.enabled_venue_symbols = [ETHUSD, SOLUSD, XRPUSD] with lots measured (lot_units 1, lot_step 0.01, min_lots 0.01);
+    ruleset/routing config/prop_rulesets/tradeify_247_1step.yaml + tradeify_routing.yaml (symbol_map ETHUSDT->ETHUSD, SOLUSDT->SOLUSD, XRPUSDT->XRPUSD; the routing file
+    still marks the dxtrade names UNCONFIRMED, the ticket opener was approved for all 3 on 2026-10-03). Leverage caps BTC/ETH 5:1, altcoins 2:1 (UNCONFIRMED per ruleset).'
+  tradeable_now: [ETHUSDT, SOLUSDT, XRPUSDT]
+  listed_not_routable: 'Firm page: "100+ cryptocurrency pairs including BTC, ETH, SOL, DOGE, XRP"; terminal also lists SILVER/USD, XYZ100/USD, SP500/USD, USOIL/USD, UKOIL/USD, PAXG/USD
+    (docs/research/tradeify-platforms-2026-10-15.md 1, a LOWER BOUND, not the catalogue). None has routing, lots or spread measured, and the synthetics'' swap/commission is
+    unmeasured. Excluded from this unit; adding one needs its own measurement row. BTC has no routing entry either and is excluded (data-only context allowed as a feature).'
+  population_rule: 'Pooled ML over the whole tradeable_now set (an account configures strategies, never symbols; per-symbol results are reported, never gate). The same
+    pooled population is the one the gate is read on.'
+data_sources:
+  status: 'CANDIDATES from the repo; history depth/point-in-time coverage per family is UNVERIFIED and is the first thing the driver audits (arm unavailable => arm
+    not run and reported, never silently dropped).'
+  candidates:
+  - 'F0 price/volume only: ml/datasets/families/market_features.py, volatility_estimators.py, forecast_features.py (candles; lake um_perp 1m klines per config/data_universe.yaml)'
+  - 'F1 derivatives positioning: ml/datasets/funding_oi_features.py, orderflow_features.py (funding, OI, long/short ratio, taker flow; lake "metrics" + funding streams)'
+  - 'F2 cross-asset + macro: ml/datasets/cross_asset_features.py, macro_features.py (config/macro_econ_series.yaml, macro_events.yaml, macro_valuation.yaml; comms/macro/*)'
+  - 'F3 text/embedding: ml/datasets/embedding_features.py, corpus_embedding_features.py (news, config/news_feeds.yaml) - arm runs only if point-in-time history exists'
+  inventory_population: 'docs/reference/signal-catalog.yaml (static inventory 2026-10-08, 335 inputs): ml/ml_feature 105; regime_macro macro_series 54, news 31, event_calendar 20,
+    regime_input 32, valuation 10, cross_asset 6, crowding 1; strategy derived_indicator 35. Stale by design (dated); the driver re-reads the manifests, not this list.'
+  the_35: 'NOT ASSUMED. No list of "35 data sources" was found in the repo (searched signal-catalog, ml/configs, config/*, docs/reference). The only 35 in the catalog is strategy
+    derived_indicator = 35 (a count of indicators, not sources). Open operator question Q1 on checklist row TRADEIFY-OWN-LEG; arms F0-F3 are the proxy until it is answered.'
+label_and_horizon:
+  bar: 1h (matches the incumbent Tradeify legs, so costs and holding times are comparable; 1h bar >> the firm''s 20 s minimum hold)
+  entry: 'model scores each closed 1h bar per symbol; entry at the NEXT bar open when score >= tau; one position per symbol; no simultaneous opposite-side position in the same symbol
+    (the firm''s no-hedging rule), long and short both allowed.'
+  label: 'y = 1 iff the bracket trade opened at the next bar open (stop 1.5 x ATR14, take-profit at the registered target below, max hold 48 bars = 2 days) realises net R >= +0.5
+    after the Tradeify cost stack. A second head regresses the favourable excursion (MFE in R) and sets the take-profit at its q60 clipped to [1.5R, 4.0R] (TP doctrine: a real
+    predictive TP, never tp_r 50 / rest-at-cap; scripts/ci/check_tp_doctrine.py is re-run on the driver).'
+  horizon_bars: 48
+baselines:
+  cost_stack: 'Tradeify declared: commission 4.0 bps/side (0.04% per trade, strictest = per fill), swap 3.3 bps/night, plus slippage 3.0 bps/side (the stack of the Tradeify feasibility
+    memo), read through src/research/run_costs.prop_declared_costs and config/prop_rulesets/tradeify_247_1step.yaml. Every R below is NET of it. Tradeify firm costs are
+    UNCONFIRMED (ruleset header), stated.'
+  B0: 'flat (net R 0): the leg must beat doing nothing, i.e. EV > 0 on its own.'
+  B1: 'class prior / all-bars control: the SAME bracket opened on EVERY eligible bar of the same population, same cost stack (zero-edge null), and a matched random-selection control
+    (2000 draws, seed 20261105, same trade count k per symbol).'
+  B2: 'the incumbent trend_donchian_eth_prop on ETHUSDT over the identical held-out span, same cost stack (the leg PR #23154 removes).'
+  B3: 'the existing general ml_entry (served ENTRY v1 + extend-only TP) on the same ETH/SOL span: net edge +0.017 R, V3 FAIL (RQ-20261102-5e1a-01), reproduced as a reference, not re-tuned.'
+arms:
+  denominator: 'At most 12 arms, declared now: feature sets {F0, F0+F1, F0+F1+F2, F0+F1+F2+F3} x tau {0.55, 0.60, 0.65}. Selection uses DISCOVERY only; the held-out span is read ONCE for the
+    single selected arm. All 12 are counted and reported (multiple-testing denominator 12).'
+  models: 'LightGBM, unchanged default hyperparameters set once in the driver (no tuning loop); ml_bakeoff.py is the harness family for any comparison against a second learner, not part of this rule.'
+split:
+  discovery: 2022-01-01 .. 2025-09-30, purged expanding walk-forward by calendar quarter, embargo = max hold (48 bars) + 7 d
+  held_out: 2025-10-01 .. 2026-09-30 (the same span as the RQ-20261102-5e1a-01 ml_entry gate, so B3 is comparable); read once
+power:
+  expected_n: 150
+  min_detectable_effect: 0.203
+  effect_units: sd
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: 'ESTIMATED, not measured: (1.645 + 0.8416) / sqrt(150) = 0.203 sd of per-trade net R, one-sided. Basis for n: the general ml_entry produced 381 ETH+SOL held-out trades in this span
+    (MEASURED, RQ-20261102-5e1a-01); a thresholded leg on 3 symbols is expected to trade less often than the unfiltered model; the driver''s first act records the realised held-out n.
+    n < 150 => INDETERMINATE (cannot answer), never FAIL.'
+  feasibility:
+    source: none
+    accrual_basis: Replays history on a pinned window; nothing accrues.
+decision_rule:
+  id: RULE-RQ20261105fd6801-TRADEIFY-OWN-LEG
+  statistic: 'Held-out span, the single arm selected on discovery (highest summed walk-forward net R among arms with >= 2/3 of quarterly folds net-positive and >= 100 discovery trades), scored by the
+    driver with the Tradeify cost stack and graded with scripts/research/prop_gate.py V3 (prop_ev_sim path mode, 5 seeds x 1000 lives, configured risk_pct 0.5%, daily_dd_switch 0.8,
+    ruleset tradeify_247_1step) on the held-out ledger. DISTINCTNESS is computed on the held-out span AND the full out-of-sample walk-forward ledger against EVERY other prop leg ledger:
+    the legs on any prop roster in config/accounts.yaml at run time, plus trend_donchian_eth_prop, trend_donchian_sol_prop, eth_pullback_prop_2h and the B3 ml_entry ledger even if unrostered;
+    the bybit legs are reported as a diagnostic, not graded.'
+  rule: 'INDETERMINATE iff held-out n < 150, or the held-out ledger is missing, or a self-check fails (cost reproduction within 1e-3 R; walk-forward purge assertion). Otherwise PASS iff ALL hold,
+    thresholds fixed now: (E1) net R per trade >= +0.10 AND the trade-block bootstrap 95% CI lower bound > 0 (the V3 edge clause); (E2) net R beats B0, B1 (all-bars and matched-random p95) and B2
+    on the identical span; (E3) regime clause: net positive in >= 3 of the 4 out-of-sample calendar years 2023..2026, no single year > 50% of total net P&L, long-side and short-side net both >= 0,
+    per-year table reported, >= 2 non-overlapping sub-periods each net-positive; (E4) PROP GATE: V3 PASS on the firm arm AND the current-stack arm = EV net USD > 0 on all 5 seeds, p_breach within
+    the Tradeify ceiling (0.75, as recorded in comms/prop_survival/ml_entry.json per_firm.tradeify_1), edge CI lower bound > 0, and the zero-edge-null EV reported; (D1) SAME-BAR OVERLAP: <= 10% of the
+    new leg''s entries have any other prop leg enter the same symbol in the same direction within +/- 1 bar; (D2) POSITION CORRELATION: |Pearson rho| <= 0.30 between the new leg''s hourly signed
+    position (+1/0/-1, per symbol, pooled) and each other prop leg''s, over the ledger span; (D3) DAILY P&L CORRELATION: |rho| <= 0.30 against each other prop leg; (D4) HEDGE OVERLAP: <= 5% of the new
+    leg''s in-position hours coincide with an OPPOSITE-direction position of any other prop leg in the same symbol (the firm prohibits cross-account hedging; reported with the hour counts). FAIL otherwise.
+    A distinctness-only miss with E1-E4 passing is reported as FAIL_DISTINCT (edge real, leg not separable) and is a design input, not a pass. Thresholds are not changed after any result.
+    PASS -> a held Tier-3 proposal to the operator via the manager (roster-add of the leg to tradeify_1 only, with comms/prop_survival/<leg>.json, a Stage-1 soak of 1-2 clean trades per OPERATING-PLAN 2,
+    never self-merged). FAIL -> honest negative into the lever map; under research-ops D it is "first test failed -> variants queued", never "dead".'
+  what_it_does_not_do: 'Trains and promotes nothing, edits no config, touches no roster (accounts.yaml is not changed), places no order. Not evidence of live edge (an offline read at the declared
+    power). Does not decide whether a distinct model satisfies Tradeify''s "sole owner / no similar orders" policy: that is a compliance judgement for the operator (Q3), and the firm''s costs are
+    UNCONFIRMED. Per-symbol results never gate. Not a re-test of ml_entry.'
+  registered_before_run: true
+  registered_at: '2026-11-05'
+ml_consumer:
+  consumer: src/units/strategies (new Tradeify-only entry leg; not yet built) via the served-model path
+  decision: whether to open a long/short position on ETHUSD/SOLUSD/XRPUSD on tradeify_1 when the model score clears tau (a new leg on tradeify_1, Tier-3, held)
+  legs:
+  - tradeify_own_ml_1h
+  book: money
+compute: cpu_long
+value:
+  bucket: ai_trader
+  usd_at_stake_per_month: 150
+  confidence: 0.15
+  basis: 'stand-in, not a P&L measurement: tradeify_1 EV per account life was +$58..+$180 for the ETH(+SOL) Donchian book at 0.5% risk (memo and RQ-20261005-902), and the general ml_entry
+    was -$83.70; low confidence because the nearest ML precedent failed this gate.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 6.0
+  est_minutes: 180
+  why_runner: 'ESTIMATED: LightGBM on 3 symbols x 4 years of 1h bars plus a 12-arm walk-forward; reads the keyless public lake/candles. Re-estimate at first run; Kaggle CPU if the audit shows a larger feature table.'
+  basis: 'ESTIMATED, no run yet.'
+blocked_on:
+- kind: driver
+  ref: TRADEIFY-OWN-LEG-DRIVER
+  what: 'The instrument does not exist: no script builds the pooled ETH/SOL/XRP feature table with the F0-F3 arms, trains the walk-forward, emits a ledger of the ml_entry gate shape
+    ({symbol, direction, entry_time, exit_time, entry, sl, exit_reason, gross_r, mfe_r}), runs prop_gate.py V3, and computes D1-D4 against the other prop ledgers. Existing pieces to reuse, not fork:
+    scripts/research/prop_gate.py, ml_variant_prop_gate.py, ml_bakeoff.py, ml/datasets/*, src/research/run_costs.py.'
+  clears_when: 'scripts/research/tradeify_ml_leg.py (name proposed) exists with a self-test that reproduces the B3 ml_entry reference (+0.017 R, n 381) and the B2 incumbent within 1e-3 R, AND a data-coverage
+    audit has been written for F0-F3. Then git mv this file to research/queue/, set run.command (research-script-run.yml, --out {out_dir}), remove blocked_on, status: queued.'
+related:
+- TRADEIFY-OWN-LEG
+- TRADEIFY-OWN-LEG-DRIVER
+- RQ-20261102-5e1a-01
+- RQ-20261005-902
+- docs/research/tradeify-portfolio-feasibility-2026-09-30.md
+- docs/research/tradeify-platforms-2026-10-15.md
+- comms/prop_survival/ml_entry.json
