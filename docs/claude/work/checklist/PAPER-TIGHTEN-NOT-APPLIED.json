@@ -2,7 +2,7 @@
   "id": "PAPER-TIGHTEN-NOT-APPLIED",
   "title": "Paper tighten_sl never applied under MD-LTR-PAPER-AUTO: dispatcher refused judgement tightens evidence_not_committed",
   "phase": null,
-  "state": "in_flight",
+  "state": "landed_unproven",
   "owner": "session_01AFoLuKUaYvmypJzRG9EC7v",
   "lane": "PAPER-TIGHTEN-NOT-APPLIED",
   "model": null,
@@ -13,13 +13,22 @@
     23113
   ],
   "blocked_on": [],
-  "note": "MEASURED (VM rows_watch.jsonl, last 300 lines, complete): 4/4 tighten_sl rows on pkg-e079380f0c104dea (bybit_1) got auto_mandate MD-LTR-PAPER-AUTO, then the dispatcher refused them mandate_precondition:evidence_not_committed; the apply never ran. The packet fallback was trade-actions only. Verdict (b): a dispatcher bug, not ADVICE_ONLY precedence. Fix PR #23113 (landing hold, Tier 2); its tests fail on the old code. Closes on: merged + deployed + a bybit_1 judgement tighten_sl dispatched in rows_watch.jsonl with a venue readback in applied.jsonl.",
+  "note": "2026-11-05T04:49Z #23113 MERGED (green sha 82003003c2b8). The VM runs the dispatcher from the git-sync checkout (~5 min), so deploy = ict-git-sync. NOT yet observed. Closing observation: the next bybit_1 (or alpaca_paper) judgement tighten_sl row reads verdict dispatched (not evidence_not_committed) in runtime_logs/live_review/rows_watch.jsonl, and its applied.jsonl entry shows a venue readback at the new stop.",
   "due_by": "2026-11-07",
   "roadmap": [
     "unmapped"
   ],
   "roadmap_unmapped_reason": "order-path bug fix under an existing mandate; no milestone",
-  "updated_at": "2026-11-05T04:02:46Z",
+  "updated_at": "2026-11-05T04:57:28Z",
   "updated_by": "session_01AFoLuKUaYvmypJzRG9EC7v",
+  "observation": {
+    "what": "the next bybit_1/alpaca_paper judgement tighten_sl row after #23113 (5dbf48053) is deployed reads verdict dispatched (not evidence_not_committed) and its apply reads the new stop back from the venue",
+    "how_to_check": "diag log_file?name=live_review_rows_watch&grep=tighten_sl (verdict, auto_mandate MD-LTR-PAPER-AUTO) plus the review_id entry in runtime_logs/live_review/applied.jsonl (accounts_applied[].executor.venue_after == level); deploy = diag version git_sha_on_disk at or after 5dbf48053",
+    "due_by": "2026-11-05T07:00:00Z"
+  },
+  "writeback": {
+    "roadmap": "none: an order-path bug fix under the existing MD-LTR-PAPER-AUTO mandate; no milestone line changes",
+    "arch": "none: no contract change; live_review_dispatch.py now accepts the committed packet as evidence for a judgement tighten, the same rule as for a trade action"
+  },
   "_seq": 936
 }
