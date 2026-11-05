@@ -1,0 +1,48 @@
+{
+  "unit": "RQ-20261105-030",
+  "run_id": "42107971577",
+  "commit_sha": "d96668b4db6a9316a62f415065828d8a56a38178",
+  "run_url": "https://github.com/benbaichmankass/JTA-Trader/actions/runs/42107971577",
+  "timeout_minutes": 120,
+  "commands": [
+    {
+      "index": 0,
+      "argv": [
+        "python3",
+        "scripts/research/exit_lever_ablation.py",
+        "--leg",
+        "ict_scalp_eth_15m",
+        "--arm",
+        "A=",
+        "--arm",
+        "displacement_atr_mult_lo=displacement_atr_mult=0.975",
+        "--arm",
+        "displacement_atr_mult_hi=displacement_atr_mult=1.625",
+        "--arm",
+        "min_displacement_body_to_range_lo=min_displacement_body_to_range=0.4125",
+        "--arm",
+        "min_displacement_body_to_range_hi=min_displacement_body_to_range=0.6875",
+        "--days",
+        "1830",
+        "--grade",
+        "sweep",
+        "--baseline",
+        "A",
+        "--delta-r",
+        "4.0",
+        "--folds",
+        "4",
+        "--fold-majority",
+        "3",
+        "--n-floor",
+        "39",
+        "--out",
+        "comms/research/RQ-20261105-030/42107971577"
+      ],
+      "log": "comms/research/RQ-20261105-030/42107971577/logs/cmd-0.log",
+      "exit_code": 0,
+      "seconds": 975.0
+    }
+  ],
+  "all_ok": true
+}

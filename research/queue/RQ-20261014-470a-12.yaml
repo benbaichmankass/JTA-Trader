@@ -1,6 +1,6 @@
 id: RQ-20261014-470a-12
 title: 'M22 pairs pairs_sol_eth at configured params on an honest R scale (entry-bar hedge ratio): net of the full cost stack, does it clear? (one unit per pair; siblings re-scoped from this unit)'
-status: queued
+status: done
 cadence: once
 theme: live_strategy
 priority: 1
@@ -86,3 +86,16 @@ unblocked:
   reason: 'PAIRS-R-SCALE is done (2026-11-01): backtest_pairs.py freezes beta at entry (R unit = stop_z x std of the fixed-beta spread) and pairs_configured_stage0.py exists with --pair/--fetch; the unit
     was one-per-pair in its clears_when (--pair <each>), the script takes one pair, so the unit is split into one per configured Bybit pair. Rule, statistic and power are UNCHANGED from the 2026-10-14 registration.'
 last_dispatched_at: '2026-11-05T16:35:08+00:00'
+grading:
+  attested: RULE-RQ20261014470a12-PAIRS-RSCALE
+  auto: true
+  decision_rule_id: RULE-RQ20261014470a12-PAIRS-RSCALE
+  evidence:
+  - research/results/RQ-20261014-470a-12/42066092535.jsonl
+  graded_at: '2026-11-05'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail
