@@ -239,15 +239,14 @@ BASELINE_2026_10_06: dict[str, frozenset[str]] = {
     # always there; this line now names it.
     # 2026-10-29 (Tier-3, operator): trend_donchian_sol_prop pulled from breakout_2/tradeify_1/velotrade_1
     # (V2 prop gate, PR #21204), so its three debt lines are removed with the roster.
-    "breakout_2/trend_donchian_eth_prop": ER,
-    "tradeify_1/trend_donchian_eth_prop": ER,
+    # 2026-11-05 (Tier-3, operator, row PROP-PULL-ETHPROP): trend_donchian_eth_prop pulled from the same three
+    # prop rosters (RQ-20261031-422a-01 FAIL), so its three debt lines are removed with the roster too.
     # velotrade_1 was rostered by #16705 (VELOTRADE-GOLIVE, Tier-3 HELD) on
     # 2026-10-06, hours before this guard existed, so its two routings are
     # day-one debt of the same class as tradeify_1's -- not a roster change
     # made against the doctrine. This guard named them itself on its first CI
     # run against main at 233c9c28 (PR #16739), which is the positive control
     # for the NEW-routing branch.
-    "velotrade_1/trend_donchian_eth_prop": ER,   # R -> ER 2026-10-15, TP-REACH-FLOOR (above)
     # ── mirror (paper_role: portfolio) ──────────────────────────────────────
     "bybit_portfolio/ada_pullback_2h": R,
     "bybit_portfolio/trend_donchian_eth_4h": E,  # 2026-10-18 tp_revision declared (TIER3-PACKETS-1018); entry_tp still the 50 R sentinel
