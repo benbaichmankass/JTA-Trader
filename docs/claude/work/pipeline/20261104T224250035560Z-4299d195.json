@@ -1,0 +1,16 @@
+{
+  "due_when": {
+    "check_every_days": 2,
+    "clears_when": "the rerun grep over a window of at least 24h returns 0 'Error fetching OHLCV' lines, or each remaining line is attributed to a cause with a fix or a killed-with-reason decision",
+    "kind": "observation"
+  },
+  "id": "PI-20261104-GEVRW4ZM-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "audit",
+    "ref": "lane POST-DEPLOY-OBS-20261104 (session_01AFoLuMsKLXWPomGevRw4ZM), journal read after deploy d8a34e41b",
+    "rerun": "scripts/ops/diag_fetch.sh 'journalctl?unit=ict-trader-live&since=2026-11-04T21:44:00Z&grep=Error%20fetching%20OHLCV&lines=400'"
+  },
+  "state": "queued",
+  "what": "MEASURED: 'Error fetching OHLCV: bybit retCode 10006 Too many visits. Exceeded the API Rate Limit' on the live OHLCV fetch at 2026-11-04T22:00:20Z and 22:30:13Z (the :00/:30 tick boundaries), 2 matches over 10919 journal lines since 21:44Z. Which symbols were hit and whether the tick retried are UNVERIFIED. Find which fetch burst trips the limit, whether the candle is skipped or retried (a skipped candle is a missed decision input), and add backoff/batching if so. Tier-2 if it changes src/exchange."
+}
