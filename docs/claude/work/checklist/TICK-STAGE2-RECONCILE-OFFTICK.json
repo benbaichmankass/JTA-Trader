@@ -11,13 +11,13 @@
   "tier": 2,
   "prs": [],
   "blocked_on": [],
-  "note": "[from TICK-DURATION-115S, docs/research/tick-duration-115s-profile-2026-11-04.md section 6] MEASURED 2026-11-04 tick_cost (37 ticks): order_monitor reconciliation half 28.4 s per tick on the main loop. A plain move off-thread is UNSAFE: the reverse reconciler's default ORPHAN_POSITION_POLICY=adopt acts on first sight, and package->trade row takes up to 7.6 s (audit F8, n=40), so a concurrent pass could adopt a duplicate of a fill the main thread has not journaled. Design: one journal_sync lock held by Coordinator.multi_account_execute (place+journal) and by each reconciliation pass (preserves today's invariant); entries wait <= one pass only when a pass is in flight. Needs a replay/equivalence test over recorded ticks. Sweep cadence must stay bounded (60 s), never stopped (Prime Directive). DETECTOR: tick_cost order_monitor ~0 on-loop and tick mean < 40 s over >= 20 ticks.",
+  "note": "[from TICK-DURATION-115S, docs/research/tick-duration-115s-profile-2026-11-04.md section 6] MEASURED 2026-11-04 tick_cost (37 ticks): order_monitor reconciliation half 28.4 s per tick on the main loop. A plain move off-thread is UNSAFE: the reverse reconciler's default ORPHAN_POSITION_POLICY=adopt acts on first sight, and package->trade row takes up to 7.6 s (audit F8, n=40), so a concurrent pass could adopt a duplicate of a fill the main thread has not journaled. Design: one journal_sync lock held by Coordinator.multi_account_execute (place+journal) and by each reconciliation pass (preserves today's invariant); entries wait <= one pass only when a pass is in flight. Needs a replay/equivalence test over recorded ticks. Sweep cadence must stay bounded (60 s), never stopped (Prime Directive). DETECTOR: tick_cost order_monitor ~0 on-loop and tick mean < 40 s over >= 20 ticks. [input from TICK-DURATION-115S stage-1 observation 2026-11-05] After the faster loop (cycle 159 s -> 59 s) one sqlite \"database is locked\" burst appeared 02:20:41-02:21:04Z: _sweep_package_close_reason_from_trade, _sweep_unlinked_packages, _sweep_stuck_linked_packages failed once each, then venue_protection_snapshot.record_read (timeout=5.0). All contained, retried next pass. Baseline: 0 in a complete journalctl scan 2026-11-04 21:44-23:22Z (21,226 lines). Cause unestablished. Before adding a third DB-writing thread, measure lock frequency over a longer window and identify the lock holder; the journal_sync lock design should also bound sqlite contention.",
   "due_by": "2026-11-12",
   "roadmap": [
     "L-OPS"
   ],
   "priority_rank": 5,
-  "updated_at": "2026-11-05T00:30:56Z",
+  "updated_at": "2026-11-05T02:30:02Z",
   "updated_by": "session_01AFoLuM4gBmcaHHv8iooKDb",
   "_seq": 919
 }
