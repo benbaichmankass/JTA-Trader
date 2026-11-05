@@ -1,0 +1,119 @@
+# Hand-authored 2026-11-05 by lane PROP-BASELINE-AND-ML (Tier 1), Manager Session 2026-11-05b. Programme node P5-MLPROP-ENTRY-ETHSOL. Gates this adds or changes: NONE. Registered BEFORE any run.
+id: RQ-20261105-d256-01
+title: 'P5-MLPROP-ENTRY-ETHSOL: prop-specific ETH/SOL ML entry (firm cost stack in the label) graded on a BACKWARD time-disjoint held-out span (2020-07..2021-12), the only ETH/SOL span this family never tested on'
+status: queued
+cadence: once
+theme: new_strategy_prop
+priority: 1
+kind: experiment
+roadmap:
+- L-PROP
+- L-ML-LIVE
+practice_precedent: T3 (net of the full cost stack) + M-principles purged walk-forward with one held-out read; prop gate scripts/research/prop_gate.py RULE-P5-GATE-BRK-PER-LEG-V3 via ml_variant_prop_gate.py, unchanged.
+question: 'Does the prop-specific ETH/SOL entry model (scripts/research/prop_ml_leg.py, profile bv: firm cost stack inside the label, two traded symbols) have net-of-cost edge on a span it has never been tested on, and does that ledger clear V3 on breakout_2 and/or velotrade_1? Operator 2026-11-05 ~18:55Z (popup, relayed by Manager Session 2026-11-05b): directions "ML as a filter (Rec.), New data sources (Rec.), Prop-specific model"; "never wait for a future month" (manager dispatch).'
+why_this_matters: 'Every forward span of this family is spent: 2025-10-01..2026-09-30 was read by ml_entry (RQ-20261102-5e1a-01) and by RQ-20261105-fd68-05; Tradeify''s by -03; 2026-10-01+ is about 5 weeks (row ML-PROP-ITERATE, 2026-11-05 ~18:50Z stop decision). The 2020-07-01..2021-12-21 span was never a TEST or SELECTION set for this family; it was TRAINING data for earlier models (ml_entry v1 and fd68 trained from 2020-07). A model trained only on 2022-01-01+ and read once on the earlier span is time-disjoint. It is the one held-out read possible today without waiting.'
+instrument_universe:
+  basis: 'config/prop_platforms.yaml enabled_venue_symbols: breakout_2 [SOLUSD, ETHUSD], velotrade_1 [ETHUSD, SOLUSD]'
+  tradeable_now: [ETHUSDT, SOLUSDT]
+  population_rule: Pooled ML over both symbols (an account configures strategies, never symbols).
+data_sources:
+  status: 'Binance Vision um 1h klines (fetched from 2020-07), resampled to 8h by the driver; reachable from the lane container (HTTP 200, 2026-11-05).'
+  candidates:
+  - 'F0 price/volume only (the driver''s E.FEATURES plus cross-symbol context computed per bar). F1 (funding/OI/long-short metrics) is NOT an arm: Binance daily metrics begin late 2021, so F1 has no point-in-time history over most of the held-out span. Registered here, before the run.'
+label_and_horizon:
+  bar: 8h (--bar-hours 8); horizon 6 bars = 48 h, unchanged from RQ-20261105-fd68-05
+  entry: as RQ-20261105-fd68-05 (score each closed 8h bar per symbol; enter next bar open when score >= tau; one position per symbol; no hedging)
+  label: as RQ-20261105-fd68-05 (net R >= +0.5 after the bv profile cost stack; q60 MFE TP head clipped to [1.5R, 4.0R])
+  horizon_bars: 6
+baselines:
+  cost_stack: 'bv profile: commission 4 bps/side, slippage 3 bps/side, swap 5 bps/night prorated (the stricter of Breakout''s and Velotrade''s declared stacks per term).'
+  B0: flat (net R 0).
+  B1: all-bars control and matched random-selection control (2000 draws, seed 20261105) on the identical held-out span.
+  B2: 'trend_donchian_eth_prop over the identical span: NO rows (the ledger starts 2023), reported as n=0, not graded.'
+arms:
+  denominator: '5 registered arms: feature set {F0} x tau {0.35, 0.40, 0.45, 0.50, 0.55}. All graded arms are counted and reported.'
+  models: LightGBM, the driver's fixed hyperparameters (no tuning loop).
+split:
+  discovery: '2022-01-01 .. 2026-09-30 (rows before 2022-01-01 never enter discovery training or folds; --discovery-start), purged expanding walk-forward by calendar quarter from 2022-01-01, a fold scored only once its training set holds >= 5000 rows (the driver''s existing floor, so the first scored fold is later than 2022).'
+  held_out: '2020-07-01 .. 2021-12-21 (backward), read ONCE by ONE model fit on every discovery row. Embargo between the span end and 2022-01-01 = 10 days >= 7 d + (6 + 1) x 8 h (asserted by the driver). Caveat registered now: a backward read tests stationarity in the other direction (a model of 2022-26 applied to 2020-21); crypto in 2020-21 was a different regime, so a FAIL here is weaker evidence against the model than a forward FAIL, and a PASS still needs the forward check before any money.'
+power:
+  expected_n: 180
+  min_detectable_effect: 0.185
+  effect_units: sd
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: 'ESTIMATED, not measured: (1.645 + 0.8416) / sqrt(180) = 0.185 sd. Basis for n: RQ-20261105-fd68-05 (8h, bv, F0+F1 tau 0.45) produced n=116 held-out trades in 12 months (MEASURED); this span is about 17.7 months for ETH and 15.5 for SOL (SOLUSDT perp from 2020-09). n < 150 => INDETERMINATE, never FAIL (the driver floor, unchanged).'
+  feasibility:
+    source: none
+    accrual_basis: Replays history on a pinned window; nothing accrues.
+decision_rule:
+  id: RULE-RQ20261105d25601-BACKWARD-HELDOUT
+  statistic: 'The single arm selected on discovery (highest summed walk-forward net R among arms with >= 100 discovery trades, >= 2/3 of folds with trades net-positive, and discovery sum net R > 0), scored once on the backward held-out span, graded by the driver''s E1-E4 exactly as RQ-20261105-fd68-05 (E4 = ml_variant_prop_gate.py V3 on breakout_2 and velotrade_1, both cost arms).'
+  rule: 'INDETERMINATE iff held-out n < 150, the ledger is missing, or a self-check fails. FAIL iff no arm is eligible on discovery, or any of E1-E4 fails. PASS iff E1 (mean >= +0.10 R and block-bootstrap CI lower bound > 0) AND E2 (beats B0, B1 all-bars and the random p95) AND E3 (driver regime clause over the OOS ledger) AND E4 (V3 PASS on both arms for >= 1 account). A PASS is NOT a roster add: it authorises ONE forward-window unit for the frozen arm (bars after 2026-10-01) and, under the operator baseline exception of 2026-11-05, the manager may propose the leg as a minimum-size baseline variant. Thresholds are not changed after any result.'
+  what_it_does_not_do: Trains and promotes nothing, edits no config or roster, places no order.
+  registered_before_run: true
+  registered_at: '2026-11-05'
+ml_consumer:
+  not_applicable: 'No consumer leg exists yet; it would reach breakout_2/velotrade_1 only by a held Tier-3 roster PR after a PASS plus the forward check.'
+compute: cpu_long
+value:
+  bucket: ai_trader
+  usd_at_stake_per_month: 100
+  confidence: 0.1
+  basis: 'stand-in, not a P&L measurement: three live prop accounts; the family has shown no edge on three forward reads.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 6.0
+  est_minutes: 60
+  why_runner: 'Run in the lane container (data.binance.vision reachable; lightgbm + scikit-learn installed); the same command runs on research-script-run.yml if re-dispatched.'
+  basis: ESTIMATED from RQ-20261105-fd68-05 (8h runs are the smallest table of the series).
+run:
+  workflow: research-script-run.yml
+  command:
+  - python3
+  - scripts/research/prop_ml_leg.py
+  - run
+  - --profile
+  - bv
+  - --bar-hours
+  - '8'
+  - --taus
+  - 0.35,0.4,0.45,0.5,0.55
+  - --arms
+  - F0
+  - --require-positive-sum
+  - --heldout-span
+  - 2020-07-01:2021-12-21
+  - --discovery-start
+  - '2022-01-01'
+  - --cache
+  - /tmp/prop_ml_cache
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 330
+  inputs:
+    research_unit: RQ-20261105-d256-01
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- ML-PROP-ITERATE
+- RQ-20261105-fd68-05
+- RQ-20261102-5e1a-01
+- docs/research/ml-prop-iterate-2026-11-02/PROP-ML-DESIGN.md
+iteration:
+  subject: bv_shared_ml_leg
+  subject_kind: ml_model
+  from_result: RQ-20261105-fd68-05
+  verdict_read: indeterminate
+  attempt: 4
+  due_by: '2026-11-07'
+  diagnosis: 'fd68-05 (8h, bv): INDETERMINATE n=116 < 150, held-out mean -0.122 R; every forward span is spent. The remaining lever under "never wait for a future month" is the held-out SPAN, not the model: a backward, time-disjoint span the family never tested on.'
+  search: 'Lever family: held-out span (backward); feature set cut to F0 because F1 has no point-in-time history on that span; tau grid widened to 0.55; everything else as fd68-05.'
+  levers:
+  - heldout_span_backward
+  - feature_family_cut
+  map_entries: []

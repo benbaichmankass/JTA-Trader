@@ -1,0 +1,90 @@
+# Hand-authored 2026-11-05 by lane PROP-BASELINE-AND-ML (Tier 1), Manager Session 2026-11-05b. Gates this adds or changes: NONE. Registered BEFORE any run.
+id: RQ-20261105-d256-02
+title: 'ML as a FILTER on the prop baseline legs: does a walk-forward meta-label model over trend_donchian_{eth,sol}_4h''s OWN entries keep a subset with more net-of-cost edge, and does the kept ledger clear V3 on any prop firm?'
+status: queued
+cadence: once
+theme: new_strategy_prop
+priority: 1
+kind: experiment
+roadmap:
+- L-PROP
+- L-ML-LIVE
+practice_precedent: 'T3 + M-principles; meta-labelling (a secondary model decides take/skip on a primary signal, docs/reference/trading-and-model-practice-principles.md); purged walk-forward; prop gate RULE-P5-GATE-BRK-PER-LEG-V3 via ml_variant_prop_gate.py, unchanged.'
+question: 'Operator 2026-11-05 ~18:55Z (popup, relayed by Manager Session 2026-11-05b), verbatim direction: "ML as a filter (Rec.)". The baseline legs proposed for the prop rosters are trend_donchian_eth_4h and trend_donchian_sol_4h (V2 3y PASS on all 3 firms; V3: sol PASS, eth FAIL_EDGE; both negative on the trailing 365d). Can a model that sees only what is known at entry skip their losing trades well enough that the kept ledger clears V3?'
+why_this_matters: 'If it passes, the baseline legs gain a filter that is graded against the prop gate rather than the operator''s exception. If it fails, the filter lever is closed for these legs with a recorded reason.'
+instrument_universe:
+  basis: 'the baseline legs'' own symbols: ETHUSDT (trend_donchian_eth_4h), SOLUSDT (trend_donchian_sol_4h)'
+  tradeable_now: [ETHUSDT, SOLUSDT]
+  population_rule: 'One filter model pooled over both legs'' trades (symbol is a feature); per-symbol results reported, never gating.'
+data_sources:
+  status: 'IN HAND, committed: docs/research/prop-replacement-2026-10-30/ledgers/eth4h_3y.jsonl (n=132) and sol4h_3y.jsonl (n=115), the gap-fixed Stage-0 ledgers (exit_lever_ablation --grade stage0, fee 8 / slip 3 / funding 5 bps per 24h), 2023-10-13..2026-10-11.'
+  candidates:
+  - 'Per-trade, at entry only: side, stop distance % of entry, leg confidence, entry hour (sin/cos), symbol, the leg''s own trailing mean net R over its last 3 CLOSED trades, log1p(days since its last closed exit). NO market-wide or cross-sectional feature: a market-wide feature identifies the date (PI-20261105-GEXSLEAK-0001).'
+label_and_horizon:
+  bar: 4h (the legs' own bars; the filter acts per signal)
+  entry: the leg's own entry; the filter only keeps or skips it
+  label: 'y = 1 iff the trade''s net_r (the ledger''s current-stack net R) > 0'
+  horizon_bars: 0
+baselines:
+  cost_stack: 'Ledger net_r = current stack (fee 8 / slip 3 / funding 5 bps per 24h); the V3 gate re-prices with each firm''s own two arms.'
+  B0: flat (net R 0).
+  B1: 'take every walk-forward-scored trade of the same legs over the same span (the unfiltered baseline).'
+arms:
+  denominator: '1 registered arm: logistic regression (C=1.0, standardised), keep iff p >= the training base rate. No grid.'
+  models: sklearn LogisticRegression, fixed.
+split:
+  discovery: 'none: one arm, nothing selected.'
+  walk_forward: 'expanding, refit at each calendar-quarter start on trades whose exit_time < that start (a trade still open never trains); a quarter is scored only when >= 40 training trades exist.'
+  held_out: '2025-10-11 .. 2026-10-11 (the trailing 365d slice), scored by the same walk-forward and reported separately. Provenance: that slice was read for the UNFILTERED legs by PROP-REPLACEMENT (2026-10-30, net negative, n 51 / 34); it was never read by any filter, and this unit makes no choice that could read it.'
+power:
+  expected_n: 100
+  min_detectable_effect: 0.249
+  effect_units: sd
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: 'ESTIMATED: ~200 walk-forward-scored trades (247 minus the burn-in before 40 closed trades), about half kept => n ~ 100; (1.645 + 0.8416) / sqrt(100) = 0.249 sd. Per-trade sd of net R for these legs is about 1.93 R (MEASURED from the V3 regrade se 0.18 at n=115), so V3 needs a kept mean above about 0.38 R; the unfiltered means are +0.28 (eth) and +0.36 (sol). Kept n < 88 => INDETERMINATE.'
+  feasibility:
+    source: none
+    accrual_basis: Replays committed ledgers; nothing accrues.
+decision_rule:
+  id: RULE-RQ20261105d25602-META-FILTER
+  statistic: 'Kept walk-forward-OOS ledger (all scored quarters) graded by ml_variant_prop_gate.py (V3, 5 seeds x 1000 lives, firm and current-stack arms, breakout_2 / tradeify_1 / velotrade_1); lift = kept mean minus all-scored mean net R; held-out direction = kept vs all on 2025-10-11..2026-10-11.'
+  rule: 'INDETERMINATE iff kept OOS n < 88 or the gate cannot grade. PASS iff ALL: V3 PASS on both arms for >= 1 firm; lift > 0 over all scored trades; on the held-out slice the kept mean net R > 0 AND > the all-trades mean. Otherwise FAIL. A PASS authorises a held Tier-3 PR adding the filter to the baseline legs on the passing firms only; a FAIL closes the filter lever for these legs on these features, with the reason in the lever map. Thresholds are not changed after any result.'
+  what_it_does_not_do: Edits no config or roster, places no order, trains nothing that serves live.
+  registered_before_run: true
+  registered_at: '2026-11-05'
+ml_consumer:
+  not_applicable: 'The consumer would be the baseline legs on the prop rosters, which are not rostered at registration (the baseline PR is held). A filter reaches them only by a held Tier-3 PR after a PASS.'
+compute: cpu_short
+value:
+  bucket: ai_trader
+  usd_at_stake_per_month: 100
+  confidence: 0.1
+  basis: 'stand-in, not a P&L measurement.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 1.0
+  est_minutes: 10
+  why_runner: 'Committed ledgers only; run in the lane container (same command runs on research-script-run.yml).'
+  basis: ESTIMATED.
+run:
+  workflow: research-script-run.yml
+  command:
+  - python3
+  - scripts/research/donchian_meta_filter.py
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 60
+  inputs:
+    research_unit: RQ-20261105-d256-02
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- ML-PROP-ITERATE
+- comms/prop_survival/trend_donchian_eth_4h.json
+- comms/prop_survival/trend_donchian_sol_4h.json
+- docs/research/prop-replacement-2026-10-30/RESULT.md

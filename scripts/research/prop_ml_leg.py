@@ -46,6 +46,8 @@ Y_MIN_NET_R = 0.5                      # registered label threshold
 TP_Q, TP_LO, TP_HI = 0.60, 1.5, 4.0    # registered TP head: q60 of MFE-in-R, clipped
 HOLDOUT_START, HOLDOUT_END = "2025-10-01", "2026-09-30"
 DEV_START_FOLDS = "2022-01-01"
+DISC_END = None                        # discovery folds end here; None = HOLDOUT_START (forward design). --heldout-span with a span BEFORE --discovery-start sets it (backward design)
+DISC_FLOOR_TS = None                   # --discovery-start: rows before it never enter discovery training or folds (keeps a backward held-out span sealed)
 TAUS = (0.55, 0.60, 0.65)
 N_HELD_FLOOR, N_DISC_FLOOR = 150, 100
 SEED = 20261105
@@ -338,9 +340,10 @@ def run_policy(test: pd.DataFrame, pred: pd.DataFrame, tau: float, rp: Replay) -
 
 
 def fold_bounds(smoke: bool) -> list[tuple[pd.Timestamp, pd.Timestamp]]:
-    edges = list(pd.date_range(DEV_START_FOLDS, HOLDOUT_START, freq="QS", tz="UTC"))
-    if edges[-1] != pd.Timestamp(HOLDOUT_START, tz="UTC"):
-        edges.append(pd.Timestamp(HOLDOUT_START, tz="UTC"))
+    end = DISC_END or HOLDOUT_START
+    edges = list(pd.date_range(DEV_START_FOLDS, end, freq="QS", tz="UTC"))
+    if edges[-1] != pd.Timestamp(end, tz="UTC"):
+        edges.append(pd.Timestamp(end, tz="UTC"))
     if smoke:
         edges = [e for e in edges if e <= pd.Timestamp("2023-01-01", tz="UTC")]
     return list(itertools.pairwise(edges))
@@ -464,16 +467,32 @@ def load_refs(extra: list[str]) -> dict[str, list[dict]]:
 
 # ----------------------------------------------------------------------------------------------- run
 def run(a) -> int:
-    global HOLDOUT_START, HOLDOUT_END, N_HELD_FLOOR, H, BAR_H, TAUS
+    global HOLDOUT_START, HOLDOUT_END, N_HELD_FLOOR, H, BAR_H, TAUS, DEV_START_FOLDS, DISC_END, DISC_FLOOR_TS
     BAR_H = int(a.bar_hours); H = 48 // BAR_H
     if a.taus:
         TAUS = tuple(float(x) for x in a.taus.split(","))
     if a.rehearsal:     # exercises the held-out/finish path on a DEV window (2023-07..2023-12); the real held-out span is never loaded
         HOLDOUT_START, HOLDOUT_END, N_HELD_FLOOR = "2023-07-01", "2023-12-31", 5
+    backward = False
+    if a.heldout_span:      # RQ-20261105-d256-01: a time-disjoint held-out span; BEFORE --discovery-start = backward design
+        HOLDOUT_START, HOLDOUT_END = a.heldout_span.split(":")
+        if a.discovery_start:
+            DEV_START_FOLDS = a.discovery_start
+            DISC_FLOOR_TS = pd.Timestamp(a.discovery_start, tz="UTC")
+            if pd.Timestamp(HOLDOUT_END, tz="UTC") < DISC_FLOOR_TS:
+                backward = True
+                DISC_END = a.discovery_end or "2026-10-01"
+                gap_h = (DISC_FLOOR_TS - pd.Timestamp(HOLDOUT_END, tz="UTC") - pd.Timedelta(days=1)).total_seconds() / 3600
+                need_h = 7 * 24 + (48 // int(a.bar_hours) + 1) * int(a.bar_hours)
+                if gap_h < need_h:
+                    raise SystemExit(f"backward held-out needs an embargo of {need_h} h between its end and --discovery-start; got {gap_h:.0f} h")
     prof = PROFILES[a.profile]; out = Path(a.out); out.mkdir(parents=True, exist_ok=True)
     cache = Path(a.cache); cache.mkdir(parents=True, exist_ok=True)
     t0 = time.time()
     tab, fam, cov = build_table(cache, prof, a.smoke, a.rehearsal)
+    full_tab = tab
+    if DISC_FLOOR_TS is not None:     # discovery never sees rows before --discovery-start (the sealed backward span)
+        tab = tab[tab.ts >= DISC_FLOOR_TS].reset_index(drop=True)
     (out / "coverage.json").write_text(json.dumps(cov, indent=1))
     cost = make_cost(prof); rp = Replay(cache, prof["symbols"] + CONTEXT_SYMBOLS, cost)
     folds = fold_bounds(a.smoke)
@@ -521,8 +540,12 @@ def run(a) -> int:
                     "forward_pending": True})
         return finish(out, res, prof, None, None)
     cols = arm_cols(fam, name); hs = pd.Timestamp(HOLDOUT_START, tz="UTC")
-    held = tab[(tab.ts >= hs) & (tab.ts < pd.Timestamp(HOLDOUT_END, tz="UTC") + pd.Timedelta(days=1))]
-    p = fit_predict(purged_train(tab, hs), held, cols)         # ONE fit, ONE read of the sealed span
+    held = full_tab[(full_tab.ts >= hs) & (full_tab.ts < pd.Timestamp(HOLDOUT_END, tz="UTC") + pd.Timedelta(days=1))]
+    if backward:   # ONE fit on every discovery row (all strictly after the span + embargo, asserted at start), ONE read of the sealed span
+        res["heldout_design"] = {"kind": "backward", "train_from": str(DISC_FLOOR_TS.date()), "train_to": DISC_END, "span": [HOLDOUT_START, HOLDOUT_END]}
+        p = fit_predict(tab, held, cols)
+    else:
+        p = fit_predict(purged_train(tab, hs), held, cols)         # ONE fit, ONE read of the sealed span
     hl = run_policy(held, p, tau, rp)
     dev = sel["_led"].drop(columns=["fold"])
     res["heldout"] = {"n": len(hl), "mean_net_r": float(hl["net_r"].mean()) if len(hl) else None}
@@ -643,6 +666,9 @@ def main(argv=None) -> int:
     sub = ap.add_subparsers(dest="cmd")
     r = sub.add_parser("run"); r.add_argument("--profile", choices=sorted(PROFILES), required=True); r.add_argument("--out", required=True)
     r.add_argument("--cache", default="/tmp/prop_ml_cache"); r.add_argument("--smoke", action="store_true"); r.add_argument("--rehearsal", action="store_true"); r.add_argument("--bar-hours", type=int, default=1, choices=[1, 2, 4, 8]); r.add_argument("--taus", default=""); r.add_argument("--require-positive-sum", action="store_true"); r.add_argument("--arms", default=""); r.add_argument("--no-heldout", action="store_true"); r.add_argument("--ref-ledger", nargs="*", default=[])
+    r.add_argument("--heldout-span", default="", help="START:END (ISO dates); default the registered 2025-10-01:2026-09-30")
+    r.add_argument("--discovery-start", default="", help="rows before it are excluded from discovery; with a held-out span ending before it = backward design")
+    r.add_argument("--discovery-end", default="", help="backward design only: last discovery fold edge (default 2026-10-01)")
     d = sub.add_parser("distinct"); d.add_argument("--ledger", required=True); d.add_argument("--span-start", required=True); d.add_argument("--span-end", required=True)
     d.add_argument("--refs", nargs="*", default=[])
     a = ap.parse_args(argv)
