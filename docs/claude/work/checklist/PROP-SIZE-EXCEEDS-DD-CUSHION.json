@@ -1,0 +1,23 @@
+{
+  "id": "PROP-SIZE-EXCEEDS-DD-CUSHION",
+  "title": "Phone-executed prop entries (breakout_2) submit the ticket's nominal size with no dd-floor cushion check",
+  "phase": null,
+  "state": "queued",
+  "owner": "manager",
+  "lane": null,
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 3,
+  "prs": [],
+  "blocked_on": [],
+  "note": "MEASURED 2026-11-05 (lane session_01AFoLuKeQu3QVQ3hxYKt2vn, public /api/bot/prop reads plus code at origin/main). Instance: ticket prop-manual-8468ab1f682f (breakout_2, trend_donchian_eth_prop ETH long, 11-04 15:00Z). The ticket text said 'DO NOT PLACE AT THE SUGGESTED SIZE (risk $17.50 vs $11.94 remaining)'. The phone live-submitted 0.29 ETH, entry 2379.36, SL 2319.40: risk at stop 0.29 x 59.96 = $17.39. Balance 4861.94, static floor 4850, so a stop-out ends at ~4844.5 and permanently disables the account. CAUSE (code, not a guess): (1) the ticket's qty is the nominal suggested size. prop_risk_gate at emit runs in PROP_TICKET_RISK_GATE_MODE annotate (the module default): it adds the caveat text and leaves size unchanged. The ticket's risk_usd stayed 17.5, so enforce did not cap it. The live VM env value was not read. (2) The phone path src/prop/phone_executor.py (claim_next -> verify_readback/check_readback -> redeem_go_token) never calls prop_risk_gate.grade_ticket_risk or prop_executor.evaluate_guards. check_readback only verifies the form against ticket.qty, and even refuses a qty a full step or more below it. So neither the phone nor a human following the form could downsize. By contrast, the VM executor path (prop_executor.evaluate_guards, ~L544) grades the cushion in ENFORCE 'whatever the global default' and treats exceeds_cushion as a breach. The phone path is the one entry path without it. PROPOSED FIX (Tier 3, operator): before issuing a LIVE go-token (verify_readback/redeem_go_token, or at claim_next), run the same grade_ticket_risk the VM executor runs against the latest account_status snapshot. exceeds_cushion refuses; cushion_unknown counts as could-not-look. Alternatively, size the ticket to the cushion at emit for phone accounts. Interim: with $11.94 to the floor, ANY normal-size breakout_2 ticket can end the account. PR #23154 (pull trend_donchian_eth_prop from the prop rosters) stops this leg only. Closes when a phone-account ticket graded exceeds_cushion is observed refused before a go-token.",
+  "due_by": "2026-11-06",
+  "roadmap": [
+    "M39"
+  ],
+  "priority_rank": 1,
+  "updated_at": "2026-11-05T08:49:54Z",
+  "updated_by": "session_01AFoLuKeQu3QVQ3hxYKt2vn",
+  "_seq": 942
+}
