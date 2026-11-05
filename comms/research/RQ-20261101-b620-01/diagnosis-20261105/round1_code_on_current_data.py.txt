@@ -1,0 +1,15 @@
+import sys,json,pandas as pd
+from pathlib import Path
+sys.path.insert(0,'/home/user/JTA-Trader/scripts/research');sys.path.insert(0,'/home/user/JTA-Trader')
+import ml_decision_entry as E, ml_entry_recipe as R
+ce=Path('/tmp/claude-0/diag/E');syms=E.universe()
+tab=E.build_table(ce,syms);tab=tab[tab.ts<pd.Timestamp(E.HOLDOUT_START,tz='UTC')].reset_index(drop=True)
+print('table rows',len(tab),flush=True)
+out=Path('/tmp/claude-0/diag/r1run');res={}
+for sd in (7,11,13):
+    r=R.run_cell(tab,'R0','T0','S0',sd,out,4)
+    f=r['walk_forward']['folds'];n=sum(x['tau_0.1']['n'] for x in f);s=sum(x['tau_0.1']['sum_net_r'] for x in f)
+    res[sd]=(n,s/n);print(sd,res[sd],flush=True)
+m=[v[1] for v in res.values()]
+json.dump({'rows':len(tab),'per_seed':res,'mean':sum(m)/3,'range':max(m)-min(m)},open('/tmp/claude-0/diag/r1code.json','w'),indent=1)
+print('DONE mean',sum(m)/3,'range',max(m)-min(m))
