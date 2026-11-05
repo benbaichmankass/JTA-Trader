@@ -1,0 +1,119 @@
+{
+ "schema_version": 1,
+ "review_id": "LR-20261105T0252Z-pkg-976b459f5c954df0",
+ "reviewed_at": "2026-11-05T02:58:00Z",
+ "order_package_id": "pkg-976b459f5c954df0",
+ "trade_id": null,
+ "leg": "mhg_pullback_1d",
+ "accounts": [
+  "ib_paper"
+ ],
+ "trigger": {
+  "event": "giveback",
+  "level": 1.0,
+  "l0_snapshot_at": null
+ },
+ "info_cutoff_at": "2026-11-05T02:52:11Z",
+ "state": {
+  "atr_now_over_entry": 0.8584,
+  "bars_held": 34,
+  "giveback_r": 0.5408,
+  "open_r": 0.5076,
+  "peak_provenance": "estimated",
+  "peak_r": 1.0484,
+  "regime_cell_entry": null,
+  "regime_cell_now": null,
+  "sl": 6.75394643,
+  "tp": 5.9641695
+ },
+ "features_at_review": {
+  "atr_now_over_entry": 0.8584,
+  "bars_since_peak": 0,
+  "giveback_r": 0.5408,
+  "open_r": 0.5076,
+  "peak_r": 1.0484,
+  "r_to_stop": 0.9127,
+  "r_to_target": 1.4667
+ },
+ "mechanics": {
+  "evidence": "package sl 6.75394643 / tp 5.9641695 agree with every readable account",
+  "verdict": "match"
+ },
+ "options": [
+  {
+   "action": "hold",
+   "level": null,
+   "n": 0,
+   "mean_r": null,
+   "sd_r": null,
+   "worst_r": null,
+   "net": true
+  }
+ ],
+ "outcome_table_source": "comms/live_review/tables/LR-20261105T0252Z-pkg-976b459f5c954df0.json",
+ "recommendation": {
+  "action": "hold",
+  "level": null,
+  "level_atr": null,
+  "ev_delta_r": null,
+  "worst_case_delta_r": null,
+  "basis": "judgement",
+  "confidence": "anecdote",
+  "evidence_source": "judgement",
+  "judgement_confidence": 0.55,
+  "reason": "Prev forecast graded HIT: target 6.371 touched (1d low 6.2715), invalidation 6.70 not breached (high 6.474). Fresh bar closed 6.429 off the low (long lower wick), giving back 0.54R of 1.05R est peak; weekly ADX 50 still trending down, daily chop ADX 15.6. Stop 6.754 is 0.91R away, nearest swing high 6.67-6.73, so a tighten buys little before noise; no table for tighten (no_candles). Hold; not a close-on-adverse."
+ },
+ "judge_prior": null,
+ "applied": false,
+ "apply_policy": {
+  "bound_r": 0.25,
+  "within_bound": null,
+  "tighten_r": null
+ },
+ "shadow_policy": {
+  "bound_r": 0.5,
+  "within_bound": null,
+  "would_apply": null,
+  "tighten_r": null
+ },
+ "context_flags": [
+  "thin: hold cell n=0 (corpus 10, 0 comparable)",
+  "tighten cells could_not_look (no_candles) / invalid_level; any tighten is flattered by stop-fill bias",
+  "correlated: 4 other open shorts (MGC, IAUM, ADAUSDT, SOLUSDT) incl. gold-complex beta",
+  "missing_inputs: regime.vol_now, regime.cell_entry, context.news"
+ ],
+ "account_reads": [
+  {
+   "account_id": "ib_paper",
+   "account_class": "paper",
+   "read": "no_action",
+   "evidence": "ib_orders: SL 6.754 / TP 5.964, position True, matched by oca_group; no apply path for interactive_brokers (live_review_apply.py ACTION_PATHS / tighten dispatch: none)"
+  }
+ ],
+ "disposition": {
+  "route": "none",
+  "mandate": null,
+  "action_issue": null,
+  "applied_at": null,
+  "verified_readback": null
+ },
+ "model": "sonnet-tier (repo lane)",
+ "session": "session_01AFoLuLMxifnK2i3wVGtKo4",
+ "prompt_sha": null,
+ "skill_sha": "ce31519c30f9287eb2f2970ac8460bb763a5e744",
+ "packet_sha": "b17f82500277e30aa6e7836b955eb54b1c5a2f52fb476295bcb9561f57f6197c",
+ "forecast": {
+  "thesis": "Weekly downtrend (ADX 50) intact; retest of 6.2715 low after bounce off it.",
+  "direction": "with_trade",
+  "target_px": 6.2715,
+  "p_target": 0.45,
+  "invalidation_px": 6.73,
+  "horizon_bars": 3,
+  "timeframe": "1d",
+  "evidence": [
+   "chart.since_entry low 6.2715",
+   "context_v3.htf: ADX 50",
+   "chart.swings: high 6.7295"
+  ]
+ }
+}
