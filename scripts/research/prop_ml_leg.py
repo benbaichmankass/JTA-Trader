@@ -214,7 +214,7 @@ def make_cost(p: dict):
     return cost
 
 
-def build_table(cache: Path, profile: dict, smoke: bool) -> tuple[pd.DataFrame, dict, dict]:
+def build_table(cache: Path, profile: dict, smoke: bool, rehearsal: bool = False) -> tuple[pd.DataFrame, dict, dict]:
     trade_syms, ctx = profile["symbols"], CONTEXT_SYMBOLS
     allsyms = trade_syms + ctx
     E.fetch(cache, allsyms)
@@ -249,6 +249,8 @@ def build_table(cache: Path, profile: dict, smoke: bool) -> tuple[pd.DataFrame, 
     tab = tab.dropna(subset=["net_long", "net_short", "ret_168", "vol_ratio"]).reset_index(drop=True)
     if smoke:
         tab = tab[tab.ts < pd.Timestamp("2023-01-01", tz="UTC")].reset_index(drop=True)
+    if rehearsal:
+        tab = tab[tab.ts < pd.Timestamp("2024-01-01", tz="UTC")].reset_index(drop=True)
     f0cols = list(E.FEATURES)
     f1cols = [c for c in tab.columns if c in ("fund", "fund_ma3d", "fund_z", "oi_chg24", "oi_z", "ls_top_cnt", "ls_top_pos", "ls_all", "taker_ratio", "taker_ratio_ma24")]
     f2cols = [c for c in tab.columns if c.startswith("m_")]
@@ -451,10 +453,13 @@ def load_refs(extra: list[str]) -> dict[str, list[dict]]:
 
 # ----------------------------------------------------------------------------------------------- run
 def run(a) -> int:
+    global HOLDOUT_START, HOLDOUT_END, N_HELD_FLOOR
+    if a.rehearsal:     # exercises the held-out/finish path on a DEV window (2023-07..2023-12); the real held-out span is never loaded
+        HOLDOUT_START, HOLDOUT_END, N_HELD_FLOOR = "2023-07-01", "2023-12-31", 5
     prof = PROFILES[a.profile]; out = Path(a.out); out.mkdir(parents=True, exist_ok=True)
     cache = Path(a.cache); cache.mkdir(parents=True, exist_ok=True)
     t0 = time.time()
-    tab, fam, cov = build_table(cache, prof, a.smoke)
+    tab, fam, cov = build_table(cache, prof, a.smoke, a.rehearsal)
     (out / "coverage.json").write_text(json.dumps(cov, indent=1))
     cost = make_cost(prof); rp = Replay(cache, prof["symbols"] + CONTEXT_SYMBOLS, cost)
     folds = fold_bounds(a.smoke)
@@ -481,7 +486,7 @@ def run(a) -> int:
                                  "eligible": bool(len(led) >= N_DISC_FLOOR and usable > 0 and posf >= math.ceil(2 * usable / 3)), "_led": led}
     table = [{k: v for k, v in g.items() if k != "_led"} for g in grid.values()]
     elig = [g for g in grid.values() if g["eligible"]]
-    res = {"schema": SCHEMA, "profile": a.profile, "smoke": bool(a.smoke), "arms_run": arms, "arms_unavailable": unavailable,
+    res = {"schema": SCHEMA, "profile": a.profile, "smoke": bool(a.smoke), "rehearsal": bool(a.rehearsal), "arms_run": arms, "arms_unavailable": unavailable,
            "arm_denominator_registered": len(FEATURE_SETS) * len(TAUS), "arms_graded": len(grid), "discovery_table": table,
            "folds": len(folds), "data_rows": len(tab), "elapsed_s": round(time.time() - t0)}
     if a.smoke:
@@ -615,7 +620,7 @@ def main(argv=None) -> int:
     ap.add_argument("--self-test", action="store_true")
     sub = ap.add_subparsers(dest="cmd")
     r = sub.add_parser("run"); r.add_argument("--profile", choices=sorted(PROFILES), required=True); r.add_argument("--out", required=True)
-    r.add_argument("--cache", default="/tmp/prop_ml_cache"); r.add_argument("--smoke", action="store_true"); r.add_argument("--ref-ledger", nargs="*", default=[])
+    r.add_argument("--cache", default="/tmp/prop_ml_cache"); r.add_argument("--smoke", action="store_true"); r.add_argument("--rehearsal", action="store_true"); r.add_argument("--ref-ledger", nargs="*", default=[])
     d = sub.add_parser("distinct"); d.add_argument("--ledger", required=True); d.add_argument("--span-start", required=True); d.add_argument("--span-end", required=True)
     d.add_argument("--refs", nargs="*", default=[])
     a = ap.parse_args(argv)
