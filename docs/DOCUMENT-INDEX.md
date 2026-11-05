@@ -638,6 +638,7 @@ real top-level `docs/*.md` and fails if the population builder cannot see it.
 | `docs/reference/pr-event-wake-policy.md` | lookup | unknown | — | never | `dir:reference-is-lookup / not-assessed` | — |
 | `docs/reference/runtime-notes.md` | lookup | unknown | — | never | `dir:reference-is-lookup / not-assessed` | — |
 | `docs/reference/session-capabilities.md` | lookup | unknown | — | never | `dir:reference-is-lookup / not-assessed` | — |
+| `docs/reference/console-connector-tools.md` | lookup | unknown | — | never | `dir:reference-is-lookup / not-assessed` | Tool names and response schemas of the read-only JTA console connector (workplan, ml_roadmap, performance, system_health, data_query, inbox options) and which need the Google sign-in. |
 | `docs/reference/signal-catalog-review.md` | lookup | unknown | — | never | `dir:reference-is-lookup / not-assessed` | — |
 | `docs/reference/trading-and-model-practice-principles.md` | lookup | unknown | — | never | `dir:reference-is-lookup / not-assessed` | — |
 | `docs/reference/verifying-what-is-trading.md` | lookup | unknown | — | never | `dir:reference-is-lookup / not-assessed` | — |
@@ -1083,6 +1084,7 @@ real top-level `docs/*.md` and fails if the population builder cannot see it.
 | `docs/research/prop-unblock-sequence-2026-09-12.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
 | `docs/research/e33-arbitration-scope-starves-real-money-2026-09-22.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
 | `docs/research/e46-qqq-arm-inert-once-the-tp-is-modelled-2026-09-22.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
+| `docs/research/hosting-cost-plan-2026-11-05.md` | plan | unknown | — | never | `name:plan-is-a-forward-commitment / not-assessed` | — |
 | `docs/research/ml-volgate-wf-2026-10-29/README.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
 | `docs/research/pullback-2h-direction-walkforward-2026-07-29.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
 | `docs/research/pullback-frac-cross-leg-2026-08-24.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |

@@ -39,6 +39,12 @@ METHOD
   exit; the banked part pays fee + slippage + funding to that bar). ``--move-tp X`` replaces the TP with a
   limit at +X R on the profit side of the market (X must be above ``open_r``); filled at X if a later bar
   reaches it before the recorded exit (SL-first on the recorded exit bar when that exit was a stop).
+* POOLED legs (ml_entry; row ML-ENTRY-LTR-OUTCOME-TABLE, 2026-11-05): a corpus whose rows span several symbols is
+  priced against EACH ROW'S OWN SYMBOL's candles (``candles`` may be a ``{symbol: frame}`` map; one CSV for every row
+  would replay ADA trades on SOL prices). The pool is the leg's whole Stage-0 population, R-normalised, because the
+  model is pooled; ``--symbol`` restricts it to one symbol and the cell's ``n`` says what that costs.
+* ``--close`` prices CLOSE NOW: the whole position banked at ``open_r`` on the review bar, paying fee + slippage +
+  funding to that bar (``partial_close`` with fraction 1.0, named ``close``).
 * ``--corpus`` overrides the Stage-0 evidence record's ``source_run`` (e.g. the full-history harness
   run behind a research unit), so a leg whose committed record is a 12-month run can be priced on its
   full history.
@@ -133,7 +139,13 @@ def load_trades(leg: str, repo: Path = REPO,
     src = rec.get("source_run")
     if not src:
         raise FileNotFoundError(f"{rec_path}: no source_run")
+    src = str(src).split(" (", 1)[0].strip()      # records may annotate the path: "<file> (run <url>)"
     rows = [json.loads(ln) for ln in (repo / src).read_text().splitlines() if ln.strip()]
+    if rows and "direction" not in rows[0]:
+        # A graded RESULT row (one line per run), not per-trade rows: the KeyError 'direction' this used to raise
+        # (row ML-ENTRY-LTR-OUTCOME-TABLE). Say what is missing instead.
+        raise FileNotFoundError(f"{src}: not a per-trade corpus (no 'direction'); commit "
+                                f"{LTR_CORPUS_DIR}/{leg}__trades.jsonl (scripts/research/build_ltr_corpus.py) and use --corpus auto")
     return rows, src
 
 
@@ -460,23 +472,36 @@ def tighten_vs_hold(hold: List[float], tight: List[float], hold_cell: Dict[str, 
 
 # --------------------------------------------------------------------------- the table
 
-def build_table(trades: List[Dict[str, Any]], candles: Optional[pd.DataFrame], *, side: Optional[str],
+def _candles_for(candles: Any, t: Dict[str, Any]) -> Optional[pd.DataFrame]:
+    """The frame a trade replays on: the one frame given, or the trade's own symbol's frame from a map."""
+    if isinstance(candles, dict):
+        return candles.get(str(t.get("symbol")))
+    return candles
+
+
+def build_table(trades: List[Dict[str, Any]], candles: Any, *, side: Optional[str],
                 open_r: float, peak_r: float, bars_held: Optional[int], atr_stop_mult: float,
                 tighten: List[str], n_floor: int = N_FLOOR, bars_slack: Optional[float] = None,
                 stop_fill_slip_r: float = 0.0, auto_bound: float = AUTO_BOUND_R,
                 shadow_bound: float = SHADOW_BOUND_R, dist_stop_atr: Optional[float] = None,
                 dist_target_atr: Optional[float] = None, condition: str = "peak",
                 partial: Optional[List[float]] = None,
-                move_tp: Optional[List[float]] = None,
-                stop_r: Optional[float] = None) -> Dict[str, Any]:
+                move_tp: Optional[List[float]] = None, close: bool = False,
+                symbol: Optional[str] = None, stop_r: Optional[float] = None) -> Dict[str, Any]:
+    """``candles``: one frame (single-symbol leg) or ``{symbol: frame}`` (pooled leg); None = could not look."""
     atr_over_r = 1.0 / atr_stop_mult
     pop = {"corpus_trades": len(trades), "side_filter": side, "side_excluded": 0, "no_candles": 0,
            "never_reached_peak": 0, "beyond_bars_slack": 0, "comparable": 0,
-           "mfe_replay_mismatch": 0, "no_pullback_after_peak": 0}
+           "mfe_replay_mismatch": 0, "no_pullback_after_peak": 0,
+           "symbol_filter": symbol, "symbol_excluded": 0,
+           "symbols": sorted({str(t.get("symbol")) for t in trades})}
     rows: List[Tuple[Dict[str, Any], Optional[Dict[str, Any]], Optional[int]]] = []
     for t in trades:
         if side and t["direction"] != side:
             pop["side_excluded"] += 1
+            continue
+        if symbol and str(t.get("symbol")) != symbol:
+            pop["symbol_excluded"] += 1
             continue
         if float(t["mfe_r"]) < peak_r:
             pop["never_reached_peak"] += 1
@@ -484,7 +509,8 @@ def build_table(trades: List[Dict[str, Any]], candles: Optional[pd.DataFrame], *
         if candles is None:
             rows.append((t, None, None))
             continue
-        path = _paths(t, candles)
+        frame = _candles_for(candles, t)
+        path = _paths(t, frame) if frame is not None else None
         if path is None:
             pop["no_candles"] += 1
             continue
@@ -538,10 +564,11 @@ def build_table(trades: List[Dict[str, Any]], candles: Optional[pd.DataFrame], *
         cell = cell_stats(tight, peak_r, n_floor)
         out["options"].append({**base, **cell, **tighten_vs_hold(hold, tight, hold_cell, cell,
                                                                   auto_bound, shadow_bound)})
-    for kind, specs, fn in (("partial_close", partial or [], lambda t, p, j0, v: partial_net_r(t, p, j0, v, open_r)),
+    for kind, specs, fn in (("close", [1.0] if close else [], lambda t, p, j0, v: partial_net_r(t, p, j0, v, open_r)),
+                            ("partial_close", partial or [], lambda t, p, j0, v: partial_net_r(t, p, j0, v, open_r)),
                             ("move_tp", move_tp or [], lambda t, p, j0, v: move_tp_net_r(t, p, j0, v))):
         for v in specs:
-            base = {"action": kind, "spec": f"{kind}:{v}"}
+            base = {"action": kind, "spec": "close" if kind == "close" else f"{kind}:{v}"}
             if kind == "move_tp" and v <= open_r:
                 out["options"].append({**base, **cell_stats([], peak_r, n_floor), "n": len(rows),
                                        "state": "invalid_level", "ev_cost_r": None, "ev_cost_se_r": None,
@@ -568,7 +595,7 @@ def render_text(res: Dict[str, Any]) -> str:
         f"state: side={s['side']} open_r={s['open_r']} peak_r={s['peak_r']} bars_held={s['bars_held']}",
         f"population: corpus {p['corpus_trades']} -> comparable {p['comparable']} "
         f"(never_reached_peak {p['never_reached_peak']}, no_pullback {p.get('no_pullback_after_peak', 0)}, no_candles {p['no_candles']}, "
-        f"side_excluded {p['side_excluded']}, mfe_replay_mismatch {p['mfe_replay_mismatch']})",
+        f"side_excluded {p['side_excluded']}, symbol_excluded {p.get('symbol_excluded', 0)}, mfe_replay_mismatch {p['mfe_replay_mismatch']})",
         f"{'action':<12}{'n':>4} {'state':<15}{'mean':>6}{'sd':>6}{'worst':>7}{'p05':>6}"
         f"{'gvbk>½':>7}{'EVcost':>7}{'worst+':>7}  <=0.25 <=0.5",
     ]
@@ -606,6 +633,8 @@ def main(argv: Optional[List[str]] = None) -> int:
     ap.add_argument("--condition", choices=("peak", "pullback"), default="peak")
     ap.add_argument("--partial", type=float, action="append", help="fraction in (0,1) banked at --open-r; repeatable")
     ap.add_argument("--move-tp", type=float, action="append", help="new TP in R (> --open-r); repeatable")
+    ap.add_argument("--close", action="store_true", help="also price CLOSE NOW (everything banked at --open-r)")
+    ap.add_argument("--symbol", help="pooled corpus: restrict to this symbol's trades (default = the whole pool)")
     ap.add_argument("--n-floor", type=int, default=N_FLOOR)
     ap.add_argument("--stop-fill-slip-r", type=float, default=0.0)
     ap.add_argument("--auto-bound-r", type=float, default=AUTO_BOUND_R)
@@ -613,17 +642,30 @@ def main(argv: Optional[List[str]] = None) -> int:
     ap.add_argument("--json", action="store_true")
     a = ap.parse_args(argv)
     trades, src = load_trades(a.leg, corpus=a.corpus)
-    cpath = a.candles
+    cpath: Any = a.candles
+    syms = sorted({str(t.get("symbol")) for t in trades if t.get("symbol")})
+    if a.symbol:
+        syms = [s for s in syms if s == a.symbol]
     if cpath is None and trades:
-        sym = trades[0].get("symbol")
         tf = json.loads((REPO / "comms" / "strategy_evidence" / f"{a.leg}.json").read_text()).get("timeframe")
+        tf = str(tf).split()[0] if tf else None     # "1h (decision at every 4th closed bar)" -> "1h"
         # the widest-span search belongs to the full-history corpus; a leg that fell back to its evidence
         # source_run keeps the candle selection that run was built with
         full = a.corpus == "auto" and str(src).startswith(LTR_CORPUS_DIR)
-        cpath = find_candles(sym, tf, widest_span=full) if sym and tf else None
-        if cpath is None and sym and tf:
-            cpath = venue_candles(sym, tf, trades)
-    candles = load_candles(cpath) if cpath else None
+
+        def _one(sym: str) -> Optional[str]:
+            hit = find_candles(sym, tf, widest_span=full) if sym and tf else None
+            if hit is None and sym and tf:
+                hit = venue_candles(sym, tf, [t for t in trades if t.get("symbol") == sym])
+            return hit
+        if len(syms) > 1:     # pooled leg: every row replays on its own symbol's bars
+            cpath = {s: p for s in syms if (p := _one(s))}
+        elif syms:
+            cpath = _one(syms[0])
+    if isinstance(cpath, dict):
+        candles: Any = {s: load_candles(p) for s, p in cpath.items()} or None
+    else:
+        candles = load_candles(cpath) if cpath else None
     res = build_table(trades, candles, side=a.side, open_r=a.open_r, peak_r=a.peak_r,
                       bars_held=a.bars_held, atr_stop_mult=a.atr_stop_mult,
                       tighten=a.tighten or default_tighten(a.open_r, a.stop_r), n_floor=a.n_floor,
@@ -631,8 +673,11 @@ def main(argv: Optional[List[str]] = None) -> int:
                       bars_slack=a.bars_slack, stop_fill_slip_r=a.stop_fill_slip_r,
                       auto_bound=a.auto_bound_r, shadow_bound=a.shadow_bound_r,
                       dist_stop_atr=a.dist_stop_atr, dist_target_atr=a.dist_target_atr, condition=a.condition,
-                      partial=a.partial, move_tp=a.move_tp)
+                      partial=a.partial, move_tp=a.move_tp, close=a.close, symbol=a.symbol)
     res["leg"], res["corpus"], res["candles"] = a.leg, src, cpath
+    man = REPO / LTR_CORPUS_DIR / f"{a.leg}__corpus.json"
+    if str(src).startswith(LTR_CORPUS_DIR) and man.is_file():
+        res["corpus_note"] = json.loads(man.read_text()).get("note")   # what this corpus does NOT model, stated
     print(json.dumps(res, indent=2) if a.json else render_text(res))
     return 0
 

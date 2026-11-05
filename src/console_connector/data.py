@@ -45,6 +45,23 @@ def _age_hours(stamp: Any, now: datetime) -> float | None:
     return round((now - dt).total_seconds() / 3600.0, 1)
 
 
+def _options(src: Any) -> list[str] | None:
+    """Choice labels the source row/item carries (``options`` or ``choices``), else None (rendered as a dash)."""
+    if not isinstance(src, dict):
+        return None
+    for key in ("options", "choices"):
+        raw = src.get(key)
+        if isinstance(raw, list) and raw:
+            out = []
+            for o in raw:
+                lab = o.get("label") if isinstance(o, dict) else o
+                if isinstance(lab, str) and lab.strip():
+                    out.append(lab.strip())
+            if out:
+                return out
+    return None
+
+
 def git_provenance(repo: Path) -> dict[str, Any]:
     """The commit the checkout is at, so the console can show how fresh the register is."""
     try:
@@ -149,7 +166,8 @@ def inbox(repo: Path, limit: int = 25, today: date | None = None) -> dict[str, A
                 if isinstance(e, dict) and e.get("kind") == "operator_decision":
                     edges.append({"source": "checklist", "id": r.get("id"), "title": r.get("title"),
                                   "state": r.get("state"), "ref": e.get("ref"), "what": e.get("what"),
-                                  "due_by": r.get("due_by"), "age_hours": _age_hours(r.get("updated_at"), now)})
+                                  "due_by": r.get("due_by"), "age_hours": _age_hours(r.get("updated_at"), now),
+                                  "options": _options(e) or _options(r)})
         out["sections"]["decisions_checklist"] = {"read_state": "read", "population": {"rows_scanned": len(rows)},
                                                   "count": len(edges), "items": edges[:limit]}
     except Exception as exc:  # noqa: BLE001  # allow-silent: could_not_look with the error
@@ -171,7 +189,8 @@ def inbox(repo: Path, limit: int = 25, today: date | None = None) -> dict[str, A
                 due = None
             asks.append({"source": "pipeline", "id": item.get("id"), "title": item.get("what"),
                          "state": item.get("state"), "routed_to": item.get("routed_to"),
-                         "clears_when": due_when.get("clears_when"), "due": due})
+                         "clears_when": due_when.get("clears_when"), "due": due,
+                         "options": _options(item)})
         asks.sort(key=lambda a: (a["due"] is not True, str(a["id"])))
         out["sections"]["asks_pipeline"] = {
             "read_state": "read" if res.healthy else "stale",

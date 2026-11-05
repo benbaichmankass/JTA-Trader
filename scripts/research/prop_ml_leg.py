@@ -38,14 +38,14 @@ import ml_decision_entry as E  # klines fetch, features_symbol, bracket_outcome 
 import prop_gate as G  # V3 edge clause + ACCT/SIM
 
 SCHEMA = "prop_ml_leg/1"
-H = 48                                 # max hold, bars (registered)
+H = 48                                 # max hold, bars (registered at 1h bars; --bar-hours N sets H = 48 // N so the real horizon stays 48 h)
+BAR_H = 1                              # decision bar length in hours (--bar-hours; units RQ-20261105-fd68-01/-02 are 1; the 4h units set 4)
 SL_ATR = 1.5                           # registered stop
 REF_TP_R = 3.0                         # label bracket's reference TP, in R (driver detail fixed BEFORE any run; see unit ``amendments``)
 Y_MIN_NET_R = 0.5                      # registered label threshold
 TP_Q, TP_LO, TP_HI = 0.60, 1.5, 4.0    # registered TP head: q60 of MFE-in-R, clipped
 HOLDOUT_START, HOLDOUT_END = "2025-10-01", "2026-09-30"
 DEV_START_FOLDS = "2022-01-01"
-EMBARGO_H = 7 * 24 + H + 1
 TAUS = (0.55, 0.60, 0.65)
 N_HELD_FLOOR, N_DISC_FLOOR = 150, 100
 SEED = 20261105
@@ -145,10 +145,20 @@ def fetch_macro(cache: Path) -> pd.DataFrame:
     return m
 
 
+# ----------------------------------------------------------------------------------------------- bars
+def load_kl(cache: Path, sym: str) -> pd.DataFrame:
+    """The cached 1h klines, resampled to BAR_H-hour bars (open time = bar start; empty bars dropped) when BAR_H > 1."""
+    d = pd.read_pickle(cache / f"{sym}.pkl").reset_index(drop=True)
+    if BAR_H == 1:
+        return d
+    r = d.set_index("ts").resample(f"{BAR_H}h").agg({"open": "first", "high": "max", "low": "min", "close": "last", "volume": "sum"}).dropna()
+    return r.reset_index()
+
+
 # ----------------------------------------------------------------------------------------------- features
 def f1_features(kl: pd.DataFrame, fund: pd.DataFrame, met: pd.DataFrame) -> pd.DataFrame:
     """Derivatives positioning, as-of the bar CLOSE (bar t covers [t, t+1h); inputs stamped <= t+1h). NaN where the source has no history."""
-    close_ts = kl["ts"] + pd.Timedelta(hours=1)
+    close_ts = kl["ts"] + pd.Timedelta(hours=BAR_H)
     out = pd.DataFrame({"ts": kl["ts"]})
     if len(fund):
         f = fund.set_index("ts")["last_funding_rate"].astype(float)
@@ -173,7 +183,7 @@ def f1_features(kl: pd.DataFrame, fund: pd.DataFrame, met: pd.DataFrame) -> pd.D
 def f2_features(ts: pd.Series, macro: pd.DataFrame) -> pd.DataFrame:
     """Daily market series; the value dated d is usable from d+1 00:00 UTC (one-day lag => point-in-time safe)."""
     avail = macro.copy(); avail.index = avail.index + pd.Timedelta(days=1)
-    close_ts = ts + pd.Timedelta(hours=1)
+    close_ts = ts + pd.Timedelta(hours=BAR_H)
     out = pd.DataFrame({"ts": ts})
     for c in avail.columns:
         s = avail[c].reindex(avail.index.union(close_ts)).ffill().reindex(close_ts).to_numpy()
@@ -192,7 +202,7 @@ def label_symbol(df: pd.DataFrame, cost) -> pd.DataFrame:
     ts = df["ts"]; N = len(df)
     t_ns = ts.to_numpy().astype("datetime64[ns]").astype("int64")
     cand = np.where(~np.isnan(atr))[0]; cand = cand[cand + H < N]
-    cand = cand[(t_ns[cand + H] - t_ns[cand]) == H * 3_600_000_000_000]
+    cand = cand[(t_ns[cand + H] - t_ns[cand]) == H * BAR_H * 3_600_000_000_000]
     win = cand[:, None] + np.arange(1, H + 1)[None, :]
     Ob, Hh, Lb, Cb = o[win], h[win], lo[win], c[win]
     entry = Ob[:, 0]; a = atr[cand]; risk = SL_ATR * a
@@ -200,7 +210,7 @@ def label_symbol(df: pd.DataFrame, cost) -> pd.DataFrame:
     for name, side in (("long", 1), ("short", -1)):
         px, j, _ = E.bracket_outcome(Ob, Hh, Lb, Cb, entry, a, side, sl_atr=SL_ATR, tp_atr=REF_TP_R * SL_ATR)
         gross = side * (px - entry) / risk
-        out[f"net_{name}"] = gross - cost(entry, px, risk, j)
+        out[f"net_{name}"] = gross - cost(entry, px, risk, j * BAR_H)
         out[f"y_{name}"] = (out[f"net_{name}"] >= Y_MIN_NET_R).astype(int)
         fav = (Hh.max(1) - entry) if side > 0 else (entry - Lb.min(1))
         out[f"mfe_{name}"] = np.maximum(fav / risk, 0.0)
@@ -224,7 +234,7 @@ def build_table(cache: Path, profile: dict, smoke: bool, rehearsal: bool = False
     cost = make_cost(profile)
     feats, rows, cov = {}, [], {}
     for s in allsyms:
-        kl = pd.read_pickle(cache / f"{s}.pkl").reset_index(drop=True)
+        kl = load_kl(cache, s)
         f0 = E.features_symbol(kl)
         f1 = f1_features(kl, fund.get(s, pd.DataFrame()), met.get(s, pd.DataFrame()))
         f2 = f2_features(kl["ts"], macro) if len(macro) else pd.DataFrame({"ts": kl["ts"]})
@@ -290,7 +300,7 @@ class Replay:
         self.cost = cost
         self.bars = {}
         for s in symbols:
-            d = pd.read_pickle(cache / f"{s}.pkl").reset_index(drop=True)
+            d = load_kl(cache, s)
             self.bars[s] = (d["ts"], *(d[k].to_numpy(float) for k in ("open", "high", "low", "close")))
 
     def trade(self, sym: str, i: int, side: int, atr: float, tp_r: float) -> dict:
@@ -303,10 +313,10 @@ class Replay:
         gross = side * (px - e) / risk
         fav = (Hh[0, :j].max() - e) if side > 0 else (e - Lb[0, :j].min())
         return {"symbol": sym, "direction": "long" if side > 0 else "short", "entry_time": str(ts.iloc[i + 1]),
-                "exit_time": str(ts.iloc[i + j] + pd.Timedelta(hours=1)), "entry": e, "sl": e - side * risk,
+                "exit_time": str(ts.iloc[i + j] + pd.Timedelta(hours=BAR_H)), "entry": e, "sl": e - side * risk,
                 "exit_reason": {0: "time", 1: "sl", 2: "take_profit"}[int(reason[0])], "gross_r": round(gross, 6),
                 "mfe_r": round(max(fav / risk, gross), 6),
-                "net_r": round(float(gross - self.cost(e, px, risk, j)), 6), "tp_r": round(float(tp_r), 4), "hold_bars": j}
+                "net_r": round(float(gross - self.cost(e, px, risk, j * BAR_H)), 6), "tp_r": round(float(tp_r), 4), "hold_bars": j}
 
 
 def run_policy(test: pd.DataFrame, pred: pd.DataFrame, tau: float, rp: Replay) -> pd.DataFrame:
@@ -337,7 +347,7 @@ def fold_bounds(smoke: bool) -> list[tuple[pd.Timestamp, pd.Timestamp]]:
 
 
 def purged_train(tab: pd.DataFrame, start: pd.Timestamp) -> pd.DataFrame:
-    return tab[tab.ts + pd.Timedelta(hours=EMBARGO_H) <= start]
+    return tab[tab.ts + pd.Timedelta(hours=7 * 24 + (H + 1) * BAR_H) <= start]   # 7 d + the label horizon + one bar
 
 
 # ----------------------------------------------------------------------------------------------- stats
@@ -454,7 +464,10 @@ def load_refs(extra: list[str]) -> dict[str, list[dict]]:
 
 # ----------------------------------------------------------------------------------------------- run
 def run(a) -> int:
-    global HOLDOUT_START, HOLDOUT_END, N_HELD_FLOOR
+    global HOLDOUT_START, HOLDOUT_END, N_HELD_FLOOR, H, BAR_H, TAUS
+    BAR_H = int(a.bar_hours); H = 48 // BAR_H
+    if a.taus:
+        TAUS = tuple(float(x) for x in a.taus.split(","))
     if a.rehearsal:     # exercises the held-out/finish path on a DEV window (2023-07..2023-12); the real held-out span is never loaded
         HOLDOUT_START, HOLDOUT_END, N_HELD_FLOOR = "2023-07-01", "2023-12-31", 5
     prof = PROFILES[a.profile]; out = Path(a.out); out.mkdir(parents=True, exist_ok=True)
@@ -487,7 +500,7 @@ def run(a) -> int:
                                  "eligible": bool(len(led) >= N_DISC_FLOOR and usable > 0 and posf >= math.ceil(2 * usable / 3)), "_led": led}
     table = [{k: v for k, v in g.items() if k != "_led"} for g in grid.values()]
     elig = [g for g in grid.values() if g["eligible"]]
-    res = {"schema": SCHEMA, "profile": a.profile, "smoke": bool(a.smoke), "rehearsal": bool(a.rehearsal), "arms_run": arms, "arms_unavailable": unavailable,
+    res = {"schema": SCHEMA, "profile": a.profile, "smoke": bool(a.smoke), "rehearsal": bool(a.rehearsal), "bar_hours": BAR_H, "taus": list(TAUS), "horizon_bars": H, "arms_run": arms, "arms_unavailable": unavailable,
            "arm_denominator_registered": len(FEATURE_SETS) * len(TAUS), "arms_graded": len(grid), "discovery_table": table,
            "folds": len(folds), "data_rows": len(tab), "elapsed_s": round(time.time() - t0)}
     if a.smoke:
@@ -621,7 +634,7 @@ def main(argv=None) -> int:
     ap.add_argument("--self-test", action="store_true")
     sub = ap.add_subparsers(dest="cmd")
     r = sub.add_parser("run"); r.add_argument("--profile", choices=sorted(PROFILES), required=True); r.add_argument("--out", required=True)
-    r.add_argument("--cache", default="/tmp/prop_ml_cache"); r.add_argument("--smoke", action="store_true"); r.add_argument("--rehearsal", action="store_true"); r.add_argument("--ref-ledger", nargs="*", default=[])
+    r.add_argument("--cache", default="/tmp/prop_ml_cache"); r.add_argument("--smoke", action="store_true"); r.add_argument("--rehearsal", action="store_true"); r.add_argument("--bar-hours", type=int, default=1, choices=[1, 2, 4]); r.add_argument("--taus", default=""); r.add_argument("--ref-ledger", nargs="*", default=[])
     d = sub.add_parser("distinct"); d.add_argument("--ledger", required=True); d.add_argument("--span-start", required=True); d.add_argument("--span-end", required=True)
     d.add_argument("--refs", nargs="*", default=[])
     a = ap.parse_args(argv)
