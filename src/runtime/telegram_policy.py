@@ -15,8 +15,8 @@ B. **One trades-channel ping per ORDER-PACKAGE event**, classed from
    paths (journal observer + execute/order_monitor enqueue) and N accounts
    collapse to one ping by a cross-process ``(package, event)`` claim.
 C. **Nothing is lost.** Every suppressed message is appended to
-   ``runtime_logs/telegram_suppressed.jsonl`` with ``delivered:
-   suppressed_by_policy`` (diag ``log_file?name=telegram_suppressed``).
+   THE alert ledger (``src/runtime/alerts_ledger``) with ``delivered:
+   suppressed_by_policy`` (``GET /api/bot/alerts``, diag ``log_file?name=alerts_ledger``).
 
 Fail-OPEN everywhere: an unreadable policy, accounts file or claim store SENDS.
 On a notification path a broken filter must announce itself as a duplicate,
@@ -323,40 +323,31 @@ def rejection_ledger_only(account: Optional[str], *, accounts: Optional[Mapping]
     return rule == "ledger_only" and account_class(account, accounts) == TESTING_PAPER
 
 
-# ── C. the suppressed ledger ───────────────────────────────────────────────
+# ── C. the suppressed ledger = the alert ledger ────────────────────────────
+# A suppressed message is recorded in THE alert ledger (src/runtime/alerts_ledger,
+# ALERT-LEDGER-TO-MANAGER) with delivered="suppressed_by_policy" — one event log,
+# served at GET /api/bot/alerts and diag log_file?name=alerts_ledger.
 
 def suppressed_log_path() -> Path:
-    if os.environ.get("TELEGRAM_SUPPRESSED_LOG"):
-        return Path(os.environ["TELEGRAM_SUPPRESSED_LOG"])
-    from src.utils.paths import runtime_logs_dir
+    from src.runtime import alerts_ledger
 
-    return runtime_logs_dir() / "telegram_suppressed.jsonl"
-
-
-_KEEP = 2000
+    return alerts_ledger.ledger_path()
 
 
 def record_suppressed(kind: str, text: str, *, reason: str, path: Optional[Path] = None,
-                      **fields: Any) -> None:
-    """Append one ``delivered: suppressed_by_policy`` row. Best-effort, bounded."""
+                      channel: Optional[str] = None, **fields: Any) -> bool:
+    """Append one ``delivered: suppressed_by_policy`` row to the alert ledger.
+    Best-effort (the ledger's own contract): never raises."""
     try:
-        p = path or suppressed_log_path()
-        p.parent.mkdir(parents=True, exist_ok=True)
-        row = {"ts": datetime.now(timezone.utc).isoformat(), "kind": str(kind),
-               "delivered": SUPPRESSED, "reason": str(reason),
-               "body": str(text or "")[:1024]}
-        for k, v in fields.items():
-            if k not in row and (v is None or isinstance(v, (str, int, float, bool))):
-                row[k] = v
-        with p.open("a", encoding="utf-8") as fh:
-            fh.write(json.dumps(row, ensure_ascii=False) + "\n")
-        if p.stat().st_size > 4 * 1024 * 1024:
-            lines = p.read_text(encoding="utf-8").splitlines(keepends=True)
-            tmp = p.with_suffix(".jsonl.tmp")
-            tmp.write_text("".join(lines[-_KEEP:]), encoding="utf-8")
-            os.replace(tmp, p)
+        from src.runtime import alerts_ledger
+        from src.runtime.telegram_channels import channel_for
+
+        ch = channel or channel_for(kind)
+        return alerts_ledger.append(kind, ch, text, delivered=SUPPRESSED, path=path,
+                                    extra={"reason": str(reason), **fields})
     except Exception as exc:  # noqa: BLE001
         logger.warning("telegram_policy: suppressed-ledger append failed: %s", exc)
+        return False
 
 
 __all__ = [

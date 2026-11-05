@@ -277,7 +277,7 @@ def test_trim_policy_records_a_quiet_digest_instead_of_sending(monkeypatch, tmp_
     assert rec["outcome"] == "suppressed_by_policy" and rec["lastSentHour"]
     assert mod._attention_calls == ["sent"], "state advances: nothing is owed to Telegram"
     import os
-    rows = [json.loads(x) for x in open(os.environ["TELEGRAM_SUPPRESSED_LOG"]).read().splitlines()]
+    rows = [json.loads(x) for x in open(os.environ["ALERTS_LEDGER_PATH"]).read().splitlines()]
     assert rows[-1]["kind"] == "manager_update"
 
 

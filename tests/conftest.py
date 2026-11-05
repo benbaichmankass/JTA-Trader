@@ -484,13 +484,14 @@ def _isolate_telegram_settings(tmp_path):
         os.environ["TELEGRAM_SETTINGS_PATH"] = prior
 
 
-# TELEGRAM-TRIM: the package-event claim store and the suppressed ledger are ON
+# TELEGRAM-TRIM: the package-event claim store and the alert ledger (where suppressed
+# messages are recorded) are ON
 # DISK (cross-process dedupe), so each test gets its own — a claim left by one
 # test would silently dedupe the next test's ping. Same plain-os.environ rule.
 @pytest.fixture(autouse=True)
 def _isolate_telegram_policy(tmp_path):
     keys = {"TELEGRAM_POLICY_CLAIMS_DIR": str(tmp_path / "telegram_policy_claims"),
-            "TELEGRAM_SUPPRESSED_LOG": str(tmp_path / "telegram_suppressed.jsonl")}
+            "ALERTS_LEDGER_PATH": str(tmp_path / "alerts_ledger.jsonl")}
     prior = {k: os.environ.get(k) for k in keys}
     os.environ.update(keys)
     yield

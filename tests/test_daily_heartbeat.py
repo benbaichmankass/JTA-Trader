@@ -255,6 +255,6 @@ def test_main_records_instead_of_sending_under_the_trim_policy(tmp_path, monkeyp
         rc = hb.main()
     assert rc == 0
     send.assert_not_called()
-    rows = [json.loads(x) for x in open(os.environ["TELEGRAM_SUPPRESSED_LOG"]).read().splitlines()]
+    rows = [json.loads(x) for x in open(os.environ["ALERTS_LEDGER_PATH"]).read().splitlines()]
     assert rows[-1]["kind"] == "daily_heartbeat" and rows[-1]["delivered"] == "suppressed_by_policy"
     assert "Daily heartbeat" in rows[-1]["body"]

@@ -3,8 +3,8 @@
 # tests/test_telegram_policy.py.
 #
 # Gates this adds or changes: NONE on trading. It decides which messages reach TELEGRAM; every
-# suppressed message is still RECORDED (runtime_logs/telegram_suppressed.jsonl, read via
-# /api/diag/log_file?name=telegram_suppressed), so the UI and the manager still see it. It is the
+# suppressed message is still RECORDED in the alert ledger (src/runtime/alerts_ledger, delivered:
+# suppressed_by_policy; GET /api/bot/alerts, diag /api/diag/alerts), so the UI and the manager still see it. It is the
 # default behaviour, not a default-off flag.
 #
 # OPERATOR, 2026-11-04 ~23:40Z, verbatim (relayed by Manager Session 2026-11-04b):

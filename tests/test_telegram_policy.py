@@ -230,6 +230,9 @@ def test_execution_failure_on_testing_paper_is_ledger_only(monkeypatch, tmp_path
     assert not (tmp_path / "pp").exists() or not list((tmp_path / "pp").iterdir())
     row = json.loads((tmp_path / "oa.jsonl").read_text().splitlines()[-1])
     assert row["route"] == "ledger_only" and row["account"] == "test_paper"
+    led = json.loads(tp.suppressed_log_path().read_text().splitlines()[-1])
+    assert led["kind"] == "execution_alert" and led["delivered"] == "suppressed_by_policy"
+    assert led["reason"] == "rejection_testing_paper_ledger_only" and led["account"] == "test_paper"
     assert ed.enqueue_execution_failure(account="rm", strategy="s", symbol="X",
                                         side="buy", qty=1, reason="venue said no") is not None
 
@@ -275,3 +278,22 @@ def test_dry_run_report_covers_every_sender_and_marks_recurring_off():
             assert any(r.startswith(f"{path} | {k} |") for r in table), (path, k)
     assert all("OFF" in r for r in table if r.split(" | ")[1] in tp.load_policy()["recurring_off"])
     assert not any("OFF" in r for r in table if r.split(" | ")[1] in telegram_channels.UNMUTABLE)
+
+
+def test_suppressed_rows_land_in_the_alert_ledger_and_never_wake_the_manager():
+    """ALERT-LEDGER-TO-MANAGER fold: one event log, delivered=suppressed_by_policy."""
+    from src.runtime import alerts_ledger
+
+    assert tp.record_suppressed("system_health", "hourly health", reason="recurring_off")
+    tp.record_suppressed("trade-open", "x", reason="testing_paper_suppressed", account="a",
+                         package_id="p", priority_hint=None)
+    res = alerts_ledger.read()
+    rows = res["rows"]
+    assert {r["delivered"] for r in rows} == {"suppressed_by_policy"}
+    assert {r["channel"] for r in rows} == {"system", "trades"}
+    assert rows[-1]["account"] == "a" and rows[-1]["package_id"] == "p"
+    assert not any(alerts_ledger.wakes_manager(r) for r in rows)
+    # a high-priority kind suppressed still does not wake
+    assert not alerts_ledger.wakes_manager(alerts_ledger.build_row(
+        "alert", "system", "x", delivered="suppressed_by_policy"))
+    assert alerts_ledger.wakes_manager(alerts_ledger.build_row("alert", "system", "x", delivered="telegram_ok"))

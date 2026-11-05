@@ -591,7 +591,7 @@ the **VM computes due and pushes it**, and **silence is itself an alarm**. Full 
 
 **What runs without you.** `ict-work-digest.timer` (hourly) is THE digest carrier, no second digest timer ever. ⚠️ **Since 2026-11-04
 (TELEGRAM-TRIM, `config/telegram_policy.yaml`) the full digest no longer goes to Telegram**: it is recorded (receipt `suppressed_by_policy`,
-`digest_log.jsonl`, `runtime_logs/telegram_suppressed.jsonl`) and only a NEW actionable item (❓ ask, 🧪 soak transition, alarm) is sent, as one
+`digest_log.jsonl`, the alert ledger with `delivered: suppressed_by_policy`) and only a NEW actionable item (❓ ask, 🧪 soak transition, alarm) is sent, as one
 short message. The digest content, unchanged:
 🆕 new since last (new `ask_operator`, a soak moving to `passed`/`mechanical_fail`, an expected-signal alarm breaching/clearing) → once a
 day after 06:00Z the ranked summary (top 8, `ask_operator` first) → otherwise one "🟢 No new actionable items" line → "what changed". No

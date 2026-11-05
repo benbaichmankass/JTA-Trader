@@ -287,6 +287,13 @@ def enqueue_execution_failure(
         _append_operator_alert("execution_failure", priority, body,
                                extra={"account": account, "route": "ledger_only" if ledger_only else "telegram"})
         if ledger_only:
+            try:
+                from src.runtime.telegram_policy import record_suppressed
+
+                record_suppressed("execution_alert", body, reason="rejection_testing_paper_ledger_only",
+                                  channel="system", account=account, strategy=strategy, symbol=symbol)
+            except Exception:  # noqa: BLE001 — the operator_alerts row above is already written
+                pass
             return None
         payload = {"priority": priority, "body": body}
         PENDING_PINGS_DIR.mkdir(parents=True, exist_ok=True)
