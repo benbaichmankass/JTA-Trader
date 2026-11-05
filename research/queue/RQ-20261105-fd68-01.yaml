@@ -127,14 +127,40 @@ routing:
   est_minutes: 180
   why_runner: 'ESTIMATED: LightGBM on 3 symbols x 4 years of 1h bars plus a 12-arm walk-forward; reads the keyless public lake/candles. Re-estimate at first run; Kaggle CPU if the audit shows a larger feature table.'
   basis: 'ESTIMATED, no run yet.'
-blocked_on:
-- kind: driver
-  ref: TRADEIFY-OWN-LEG-DRIVER
-  what: 'The instrument does not exist: no script builds the pooled ETH/SOL/XRP feature table with the F0-F3 arms, trains the walk-forward, emits a ledger of the ml_entry gate shape
-    ({symbol, direction, entry_time, exit_time, entry, sl, exit_reason, gross_r, mfe_r}), runs prop_gate.py V3, and computes D1-D4 against the other prop ledgers. Existing pieces to reuse, not fork:
-    scripts/research/prop_gate.py, ml_variant_prop_gate.py, ml_bakeoff.py, ml/datasets/*, src/research/run_costs.py.'
-  clears_when: 'scripts/research/tradeify_ml_leg.py (name proposed) exists with a self-test that reproduces the B3 ml_entry reference (+0.017 R, n 381) and the B2 incumbent within 1e-3 R, AND a data-coverage
-    audit has been written for F0-F3. Then git mv this file to research/queue/, set run.command (research-script-run.yml, --out {out_dir}), remove blocked_on, status: queued.'
+run:
+  workflow: research-script-run.yml
+  command:
+  - python3
+  - scripts/research/prop_ml_leg.py
+  - run
+  - --profile
+  - tradeify
+  - --cache
+  - /tmp/prop_ml_cache
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 330
+  inputs:
+    research_unit: RQ-20261105-fd68-01
+  note: 'Runner, not Kaggle: the driver reads Binance Vision (klines, funding, daily metrics) and FRED over the internet, which a Kaggle kernel does not have. Needs lightgbm and scikit-learn (research-script-run.yml installs both). Driver: scripts/research/prop_ml_leg.py (checklist TRADEIFY-OWN-LEG-DRIVER); `--self-test` reproduces B3 (+0.01704 R, n 381) and B2 (n 165, net -0.2512) and unit-tests D1-D4. No Anthropic API.'
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+amendments:
+- at: '2026-11-05'
+  before_any_run: true
+  by: lane TRADEIFY-OWN-LEG (driver build). Nothing was trained on, or scored against, the held-out span before this amendment; the driver was only exercised with `--smoke` on dev data <= 2022-12-31 and its `--self-test`.
+  operator: 'Popup ~09:21Z 2026-11-05 (relayed by the manager), verbatim: "Ignore it, use every source" (about the "35"); "Go live when tests pass". No written question to Tradeify first.'
+  text:
+  - 'A1 SOURCES: "use every source" => every family the driver can read point-in-time is an arm input: F0 price/volume, F1 funding + open interest + long/short + taker flow (Binance Vision), F2 market macro (FRED VIXCLS, DGS10, DTWEXBGS, SP500, lagged one day). F3 text/embedding has no point-in-time history source in the driver: its arm is reported UNAVAILABLE, not run, not dropped silently (registered denominator 12, graded 9).'
+  - 'A2 DRIVER DETAILS FIXED BEFORE THE RUN (the unit left them open): decision every closed 1h bar; label bracket = stop 1.5 x ATR14, reference take-profit 3.0 R, max hold 48 bars, y = 1 iff net R >= +0.5 under the unit stack; the TP head is a LightGBM quantile (alpha 0.60) regression of MFE-in-R clipped to [1.5, 4.0] R and sets the TRADED bracket; a LightGBM classifier per side; hyper-parameters are the LGB dict in the driver, set once, never tuned; tau grid {0.55, 0.60, 0.65}; walk-forward test folds = calendar quarters 2022-01-01..2025-09-30, train purged by 7 d + 49 h.'
+  - 'A3 COSTS: E1 and the label use the unit stack (commission 4 bps/side, slippage 3 bps/side, swap 3.3 bps per night prorated). E4 uses the gate''s own arms (`ven`, `cur`) unchanged, whose slippage is 3 bps round trip; the unit stack is stricter, so E1 is the harder test.'
+  - 'A4 E2 READ AS: model mean net R per trade > 0 AND > the all-bars reference-bracket mean AND > the 95th percentile of 2000 matched-random draws (same trade count per symbol, random side and bar, reference bracket, seed 20261105) AND > the incumbent trend_donchian_eth_prop mean net R per trade on the same held-out span.'
+  - 'A5 E3 READ AS: years 2023..2026 on the walk-forward OOS + held-out ledger of the selected arm; >= 3 of 4 years net-positive, total > 0, no year > 50% of total, long and short net each >= 0, and both halves of the OOS span net-positive.'
+  - 'A6 DISTINCTNESS: D1-D4 graded on the held-out span AND on 2023-01-01..2026-09-30, against the committed ledgers of trend_donchian_eth_prop, trend_donchian_sol_prop, eth_pullback_prop_2h and ml_entry (ETH+SOL) where the overlap is >= 30 days. The Breakout/Velotrade shared model''s held-out ledger is added as a reference by `prop_ml_leg.py distinct` once that unit has run; a Tradeify PASS is PROVISIONAL until D1-D4 also hold against it (operator: Tradeify''s model must stay distinct from the Breakout/Velotrade model). A reference with < 30 days of overlap is `insufficient_overlap`, never a pass.'
+  - 'A7 LEVERAGE: the gate ledger is keyed `tradeify_own_sol_cap2`, so the 2:1 altcoin cap applies to every row (conservative for ETH).'
+  - 'A8 No threshold of the registered rule is changed by this amendment.'
 related:
 - TRADEIFY-OWN-LEG
 - TRADEIFY-OWN-LEG-DRIVER

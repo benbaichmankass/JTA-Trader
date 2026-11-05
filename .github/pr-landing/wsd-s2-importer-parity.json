@@ -1,0 +1,12 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "hold_reason": "tier_2_3_needs_approval",
+  "hold_text": "Tier 2 (design § 6 S2: a VM timer that writes the new store). Adds ict-work-store-import.service/.timer (every 5 min, Nice 19, data-dir drop-in): a one-way files -> work_store.db import plus a parity report served by GET /api/bot/work/parity; adds ?source=db to /api/bot/work/checklist (default unchanged). The manager merges; ict-git-sync deploys.",
+  "why": "WSD-S2-IMPORTER-PARITY: starts the design's 2-day shadow-parity clock. Additive: no reader flips (S4), no file is written, the default /work/checklist payload is byte-identical, nothing on the trade path. Dry run on main 4dc63b2e2: 1,348 rows + 2,649 items imported, 8,579 migrate events, 0 differing, Appendix A equal over both sources, chain ok. Revert: git revert (the store keeps the imported items; nothing reads them as truth).",
+  "recorded_decision": {
+    "kind": "standing_authorization",
+    "ref": "REGISTER-CONSOLIDATION: operator popup 2026-11-04 ~23:37Z D1-D9 'Approve all 7 (Recommended)' (docs/plans/WORK-STORE-DESIGN-2026-11.md § 8); 2026-09-27 data-backed standing authorization",
+    "evidence": "docs/plans/WORK-STORE-DESIGN-2026-11.md"
+  }
+}

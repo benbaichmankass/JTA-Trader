@@ -1,0 +1,12 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "hold_reason": "tier_2_3_needs_approval",
+  "hold_text": "Tier 2: changes a trader restart path (sync_vm_secrets.sh now restarts ict-trader-live only when a key it reads changed, and writes a restart-cause intent). Manager Session 2026-11-05a asked for this fix at 09:47Z; the manager merges.",
+  "why": "Root cause of the 09:30:46Z 'cause: unknown' trader restart and the 62.2 s exit-eval gap breach: the WORK_STORE_TOKEN rotation sync restarted the trader although only the web API reads that key. Also classifies the sync-vm-secrets ping (was URGENT UNKNOWN ACTION). Revert: git revert.",
+  "recorded_decision": {
+    "kind": "standing_authorization",
+    "ref": "WSD-S1-PROXY-AUTH-COLLISION 2026-09-27 data-backed standing authorization; Manager Session 2026-11-05a request 09:47Z (ops-flags #17895)",
+    "evidence": "docs/plans/WORK-STORE-DESIGN-2026-11.md"
+  }
+}

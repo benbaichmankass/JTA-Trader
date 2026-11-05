@@ -69,8 +69,14 @@ WRITABLE_FIELDS = (
     "parent_id", "title", "state", "owner", "lane", "model", "tier", "roadmap",
     "roadmap_unmapped_reason", "due_rule", "origin", "next_action", "priority_rank",
     "severity", "ceiling_usd", "spend_usd", "prs", "blocked_on", "summary", "terminal_reason",
+    "extra",
 )
-_JSON_FIELDS = ("roadmap", "due_rule", "origin", "prs", "blocked_on")
+#: ``extra`` (S2, WSD-S2-IMPORTER-PARITY): the source record's fields the merged model has no
+#: column for (a row's ``note``, ``observation``, ``writeback``, ``phase``; a pipeline item's
+#: ``routed_to``, ``redate``, ...), kept VERBATIM so the importer is lossless and S4 can serve
+#: ``/work/checklist`` in its unchanged shape from the store. Keys starting ``_`` are the
+#: importer's own bookkeeping (``src/runtime/work_store_import.py``), never source fields.
+_JSON_FIELDS = ("roadmap", "due_rule", "origin", "prs", "blocked_on", "extra")
 _COMPUTED = ("due_at", "version", "created_at", "updated_at", "updated_by")
 
 # data-wiring: items + events are the NEW register approved by the operator (D1,
@@ -99,6 +105,7 @@ CREATE TABLE IF NOT EXISTS items (
   prs             TEXT, blocked_on TEXT,
   summary         TEXT,
   terminal_reason TEXT,
+  extra           TEXT,
   created_at TEXT NOT NULL, updated_at TEXT NOT NULL, updated_by TEXT NOT NULL,
   version         INTEGER NOT NULL
 );
@@ -231,6 +238,8 @@ def _validate(item: dict, prior: dict | None, today: date | None) -> list[str]:
     for k in ("prs", "blocked_on"):
         if item.get(k) is not None and not isinstance(item[k], list):
             raise WorkStoreValidationError(f"{k}: must be a list")
+    if item.get("extra") is not None and not isinstance(item["extra"], dict):
+        raise WorkStoreValidationError("extra: must be an object")
 
     filled: list[str] = []
     if item["kind"] == "build":
@@ -337,6 +346,10 @@ class WorkStore:
         with self._connect() as conn:
             conn.execute("PRAGMA journal_mode=WAL")
             conn.executescript(SCHEMA)
+            # S2 added ``extra``; a store created by S1 (live since 2026-11-05) lacks it.
+            cols = {r["name"] for r in conn.execute("PRAGMA table_info(items)")}
+            if "extra" not in cols:
+                conn.execute("ALTER TABLE items ADD COLUMN extra TEXT")
 
     @contextmanager
     def _connect(self) -> Iterator[sqlite3.Connection]:
@@ -527,6 +540,96 @@ class WorkStore:
             raise WorkStoreValidationError("close: a stated reason is required (an item never closes by going quiet)")
         return self._update(item_id, {"state": state, "terminal_reason": reason.strip()}, op="close",
                             by=by, op_id=op_id, expected_version=expected_version, today=today)
+
+    # ── the S2 importer's write path (files -> store, one-way, during the shadow) ──
+    def migrate(self, entries: list[dict], *, by: str, chunk: int = 250) -> dict:
+        """Upsert items imported from the canonical files, each change as ``migrate`` events.
+
+        ``entries``: ``{"item": <full item incl. id + kind>, "events": [{"op_id", "patch"}],
+        "reconcile_op_id": str}``. For each entry, in ONE transaction per ``chunk``:
+
+        * source events whose ``op_id`` is already in the chain are skipped (idempotent);
+        * if the item equals the stored one (kind + writable fields) and no new event was
+          appended, nothing is written;
+        * otherwise the item is inserted / updated (version + 1, ``due_at`` recomputed) and,
+          when no source event carried the change, one ``reconcile`` event records it.
+
+        This path deliberately does NOT run the G1 filing refusals: the design's rule is "no
+        bulk drop -- every open item arrives open" (§ 4), and 504 open rows are undated today.
+        What G1 would have refused is recorded on the event (``filing_problems``) instead, so
+        the D2 drain can read it. Schema constraints still apply; one bad entry is rolled back
+        alone (SAVEPOINT) and reported, never aborting the run.
+        """
+        self._need_by(by)
+        out = {"created": 0, "updated": 0, "unchanged": 0, "events": 0, "errors": []}
+        for start in range(0, len(entries), chunk):
+            with self._tx() as conn:
+                known = None
+                for e in entries[start:start + chunk]:
+                    item = dict(e["item"])
+                    conn.execute("SAVEPOINT m")
+                    try:
+                        if known is None:
+                            known = {r[0] for r in conn.execute(
+                                "SELECT op_id FROM events WHERE op_id LIKE 'import:%'")}
+                        res, n_ev = self._migrate_one(conn, item, e, by, known)
+                        out[res] += 1
+                        out["events"] += n_ev
+                        conn.execute("RELEASE m")
+                    except (sqlite3.IntegrityError, WorkStoreError, ValueError, TypeError) as exc:
+                        conn.execute("ROLLBACK TO m")
+                        conn.execute("RELEASE m")
+                        out["errors"].append({"id": item.get("id"), "error": f"{type(exc).__name__}: {exc}"})
+        return out
+
+    def _migrate_one(self, conn, item: dict, e: dict, by: str, known: set) -> tuple[str, int]:
+        if item.get("kind") not in KINDS:
+            raise WorkStoreValidationError(f"kind: {item.get('kind')!r}")
+        if item.get("state") not in ITEM_STATES:
+            raise WorkStoreValidationError(f"state: {item.get('state')!r}")
+        prior = self._get(conn, item["id"])
+        if prior is not None and prior.get("kind") != item["kind"]:
+            raise ConflictError(f"item {item['id']!r} exists as kind {prior.get('kind')!r}")
+        new_events = [ev for ev in e.get("events") or [] if ev["op_id"] not in known]
+        full = {k: item.get(k) for k in WRITABLE_FIELDS}
+        full.update(id=item["id"], kind=item["kind"])
+        if not full.get("owner"):
+            full["owner"] = "manager"
+        if full.get("roadmap") is None:
+            full["roadmap"] = []
+        if full.get("due_rule") is None:
+            full["due_rule"] = {}
+        if not isinstance(full.get("title"), str) or not full["title"].strip():
+            full["title"] = item["id"]
+        if full.get("parent_id") and self._get(conn, full["parent_id"]) is None:
+            full["parent_id"] = None  # the importer only links parents it has imported
+        same = prior is not None and all(prior.get(k) == full.get(k) for k in WRITABLE_FIELDS)
+        if same and not new_events:
+            return "unchanged", 0
+        at = _now()
+        full.update(due_at=compute_due_at(full, now=at),
+                    version=(prior["version"] + 1) if prior else 1,
+                    created_at=prior["created_at"] if prior else at,
+                    updated_at=at, updated_by=by)
+        self._write_item(conn, full, insert=prior is None)
+        for ev in new_events:
+            self._append_event(conn, item_id=item["id"], at=at, by=by, op="migrate",
+                               patch=ev["patch"], op_id=ev["op_id"])
+            known.add(ev["op_id"])
+        if not new_events:
+            changed = {k: full[k] for k in WRITABLE_FIELDS if prior is None or full.get(k) != prior.get(k)}
+            op_id = e.get("reconcile_op_id") or f"import:reconcile:{item['id']}:v{full['version']}"
+            if op_id in known:
+                op_id = f"{op_id}:v{full['version']}"
+            self._append_event(conn, item_id=item["id"], at=at, by=by, op="migrate",
+                               patch={"reconcile": changed}, op_id=op_id)
+            known.add(op_id)
+        return ("updated" if prior is not None else "created"), (len(new_events) or 1)
+
+    def chain_head(self) -> dict:
+        with self._connect() as conn:
+            r = conn.execute("SELECT seq, hash FROM events ORDER BY seq DESC LIMIT 1").fetchone()
+            return {"seq": r["seq"], "hash": r["hash"]} if r else {"seq": 0, "hash": GENESIS_HASH}
 
     # ── reads ──
     def get(self, item_id: str) -> dict | None:
