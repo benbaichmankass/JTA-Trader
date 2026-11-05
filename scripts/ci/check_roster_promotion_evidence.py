@@ -798,6 +798,16 @@ def self_test() -> int:
               dict((c, o) for c, o, _ in clause_verdicts(approx, "alpaca_live", "iaum_pullback_1d"))["C5"],
               _had)
 
+        # P9: OPERATOR WAIVER (operator 2026-11-05 ~21:05Z "Both now, waive both") is SLOT-keyed too:
+        #     the named prop slot passes C5 with an "OPERATOR WAIVER" message; the same leg on an
+        #     unnamed account still FAILS C5.
+        c5 = dict((c, (o, m)) for c, o, m in clause_verdicts(approx, "breakout_2", "trend_donchian_sol_4h"))["C5"]
+        check("P9 waived slot passes C5", c5[0], True)
+        check("P9 ...and says OPERATOR WAIVER", "OPERATOR WAIVER" in c5[1], True)
+        check("P9b waived leg on an unnamed account fails C5",
+              dict((c, o) for c, o, _ in clause_verdicts(approx, "bybit_2", "trend_donchian_sol_4h"))["C5"],
+              False)
+
         # P7: the pairs sleeve — one `account_id:` line.
         pairs_base = yaml.safe_dump({"account_id": "paper_acct",
                                      "pairs": [{"name": "p1", "execution": "live"}]})
