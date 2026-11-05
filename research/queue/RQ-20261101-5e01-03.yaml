@@ -1,7 +1,7 @@
 id: RQ-20261101-5e01-03
 title: 'Structure-based SL+TP (causal swing / FVG, ratcheting) vs the declared exit on xrp_pullback_2h (bybit_2 + bybit_portfolio): does it beat the current
   exit net of the full cost stack, held-out?'
-status: queued
+status: done
 cadence: once
 theme: live_strategy
 priority: 1
@@ -129,17 +129,17 @@ related:
 rearmed_at: '2026-11-03T04:50:00+00:00'
 last_dispatched_at: '2026-11-03T10:56:29+00:00'
 grading:
-  owner: PI-20261105-WDWYHZCN-0001
-  owner_reason: 'producer_failed (cmd_exit) on the newest row, 3 identical re-fires; failure mode and fix path named in PI-20261105-WDWYHZCN-0001 (RESEARCH-OPS-20261105-1449 triage)'
   attested: RULE-STRUCTURE-EXITS-V1
   auto: true
   decision_rule_id: RULE-STRUCTURE-EXITS-V1
   evidence:
   - research/results/RQ-20261101-5e01-03/41563160880.jsonl
   - research/results/RQ-20261101-5e01-03/41623583495.jsonl
+  - research/results/RQ-20261101-5e01-03/42084918045.jsonl
   graded_at: '2026-11-05'
   grader: scripts/research/queue_grade.py
-  needs_review: true
-  reason: 'read_state not unanimously measured: [''producer_failed'']'
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 2 row(s), all measured, all fail (2 earlier producer_failed / re-graded wiring_only row(s) superseded)
   rows: 2
-  verdict: null
+  verdict: fail
