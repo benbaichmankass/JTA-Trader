@@ -7,6 +7,11 @@
   },
   "id": "PI-20261105-BBTN6WTC-0001",
   "next_action": "check_observation",
+  "observation": {
+    "due_by": "2026-11-12",
+    "how_to_check": "scripts/ops/diag_fetch.sh 'journal?table=trades&limit=300': a closed row with notes.closed_by=netting_own_leg_fill, exit_reason sl/tp, exit_price_source exchange_fill and no pre_label_exit_reason; and no new netting_attributed close whose own leg Filled",
+    "what": "first bybit_1 close written by the netting reconciler's own-leg path after deploy 01fe0bcc5"
+  },
   "origin": {
     "kind": "session",
     "ref": "lane LTR-MECH-PROP-MIRROR-BRACKET (session_01AFoLuKwii49zWcbBtn6WTC), live-review row LR-20261105T1228Z-pkg-3245fc73e2f64536",
