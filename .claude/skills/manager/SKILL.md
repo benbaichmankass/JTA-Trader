@@ -30,7 +30,7 @@ is a cap on throughput. The job is to AUTOMATE the decision, not to ration it.
 > session will read for how to ingest a new task, process it, queue it up, prioritize it correctly"*).
 
 **Every manager runs these six steps, in order, at session start and at every check-in** — the
-"Manager lane check-in" routine, a lane's wake, the twice-daily review. A check-in prompt needs to say
+"Manager lane check-in" routine, a lane's wake, the daily review. A check-in prompt needs to say
 only *"run the operating loop (manager SKILL.md § The operating loop)"*. The ranked plan lives in the
 register, never in a session's head or a trigger prompt: a new manager inherits it with `checklist.py queue`.
 
@@ -525,7 +525,7 @@ current ids via `list_triggers`):
 | Mon 06:07 | weekly audit (`trig_017awLRNy4rmdL57NHKXehet`) | one Opus lane: CORE + rotating deep pass (ISO week mod 4), per `.claude/skills/weekly-audit/SKILL.md` |
 | Wed 19:29 (per the manager's 2026-10-28 dispatch; trigger time not re-read by that lane) | research programme review (`trig_01GuB9kH3CM4WJCJUgAb1s8Q`) | one Opus lane runs `.claude/skills/programme-review/SKILL.md` (CHECKS packet + per-programme, per-track ANALYSIS) and updates the research map and programme plans (`docs/research/programmes/`, `research/programmes/`); the queue is fed ONLY from these; one HELD PR (programme trees are landing machinery) |
 
-Unchanged: research-ops 4×/day, daily reviews 05:52Z/17:52Z, lane check-ins. **Retired (operator 2026-10-14):** the Monday research-planning
+Unchanged: research-ops 4×/day, the daily review ONCE a day at 05:52Z (operator 2026-11-04: "we switched the twice daily to once daily leave it like that"), lane check-ins. **Retired (operator 2026-10-14):** the Monday research-planning
 session and `ROADMAP-PASS-<week>` rows; file the roadmap outcome on `WEEKLY-PLANNING`.
 
 ## Standing authorizations — the ladder is fully automated
@@ -598,7 +598,7 @@ persists `runtime_logs/work_reports/<report_id>.json` (`WR-YYYYMMDD-HHMMZ`), ser
 cannot receive Telegram: every sent block is in `digest_log.jsonl`, served at `?since=<ISO>`. ⚠️ **The carrier's own death is not
 self-detected**: a stale `generatedAt` or empty `digestLog` is the first incident.
 
-### The daily review — TWICE a day, 05:52Z and 17:52Z, fired by a routine
+### The daily review — ONCE a day, 05:52Z, fired by a routine (operator, 2026-11-04: "we switched the twice daily to once daily leave it like that")
 
 The review routine IS the periodic check; its prompt names `GET /api/bot/work/report?since=<last_review.reviewed_at>`. Each run:
 1. **Fetch and check before trusting**: `present: false`, a `generatedAt` not today's ≈05:30Z, non-empty `erroredSections`, or an empty
@@ -609,7 +609,7 @@ The review routine IS the periodic check; its prompt names `GET /api/bot/work/re
 3. **Work every item: dispatch** (`state: routed`, `routed_to: <session>`, a checklist row for a build), **close** (`done`/`killed` with a
    `terminal_reason`) or **decide** (§ "Before any operator popup"). A `routed` item still due means its lane has not delivered.
 4. **Every silence alarm gets a fix lane the same day**; anything due at a known time gets a `send_later` wake.
-4b. **The backlog drain — MANDATORY, once a day (the 05:52Z run) (operator, 2026-11-01, binding).** *"The manager owns everything, including the
+4b. **The backlog drain — MANDATORY, once a day (the daily run) (operator, 2026-11-01, binding).** *"The manager owns everything, including the
    backlog ... check it once a day and open a lane that fixes the things that need to get fixed ... It's not like an open-ended optional."*
    The manager owns ALL checklist rows and pipeline items and **does not assign owners to sessions** (a row's `owner` is `manager`; `lane` is
    only who is working it now). Run `python3 scripts/ops/checklist_daily_measure.py`: rows by state, overdue, `landed_unproven` observations due,
@@ -689,8 +689,8 @@ ask_operator section, each with options and a recommendation. Exception only for
 ### Day one for a NEW manager
 
 1. Title yourself, read per § "Start of session". 2. **`list_triggers`** (routines bound to a session die with it): recreate/rebind both
-**"Manager lane check-in"** (`17 */3 * * *`, prompt "run the operating loop (manager SKILL.md § The operating loop)") and the **twice-daily
-review** (05:52Z, 17:52Z; prompt names `GET /api/bot/work/report?since=…` and § "The daily review") to YOUR session. 3. Tell every live lane
+**"Manager lane check-in"** (`17 */3 * * *`, prompt "run the operating loop (manager SKILL.md § The operating loop)") and the **daily
+review** (once a day, 05:52Z; prompt names `GET /api/bot/work/report?since=…` and § "The daily review") to YOUR session. 3. Tell every live lane
 your session id by its own trigger. 4. `curl -sS 'https://ict-bot.duckdns.org/api/bot/work/report?since=<yesterday>'`; if absent/stale check
 `/api/diag/services` for the two timers — fixing that comes first. 5. Run the review; clear `ask_operator` items first by classification,
 not forwarding; record `last_review`, push, then answer.

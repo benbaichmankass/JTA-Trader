@@ -307,7 +307,7 @@ The consolidated programme is `docs/plans/ML-PROGRAMME-2026-10-28.md`: its § 4.
 
    Cite its path in the response JSON's `sources` and in the ping.
 
-Between runs (no lane): the manager's twice-daily read runs `ml_plan_status.py` (without `--plumbing`). research-ops sets the plan
+Between runs (no lane): the manager's daily read runs `ml_plan_status.py` (without `--plumbing`). research-ops sets the plan
 item's state when it grades a plan-ref result.
 
 ## Limits
