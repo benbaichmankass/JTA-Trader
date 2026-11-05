@@ -127,7 +127,8 @@ def make_shards(src: Path, files: list[dict], out: Path, tag: str) -> list[dict]
             for c in cur:
                 tf.add(src / c["path"], arcname=c["path"])
         shards.append({"path": name, "bytes": (out / name).stat().st_size, "sha256": sha256_file(out / name),
-                       "n_partitions": len(cur), "members": [c["path"] for c in cur]})
+                       "n_partitions": len(cur), "member_bytes": sum(c.get("got") or c["bytes"] for c in cur),
+                       "members": [c["path"] for c in cur]})
         cur, cur_bytes, n = [], 0, n + 1
 
     for c in sorted(files, key=lambda e: e["path"]):
@@ -229,27 +230,40 @@ def cmd_verify(a) -> int:
         return 1
     base = mans[0].parent
     man = json.loads(mans[0].read_text())
-    t0, nbytes, bad = time.time(), 0, []
+    t0, nbytes, bad, mode = time.time(), 0, [], {"tar": 0, "extracted": 0}
     for f in man["files"]:
         p = base / f["path"]
-        if not p.is_file() or p.stat().st_size != f["bytes"] or sha256_file(p) != f["sha256"]:
-            bad.append(f["path"])
+        if p.is_file():  # shard kept as a tar
+            mode["tar"] += 1
+            if p.stat().st_size != f["bytes"] or sha256_file(p) != f["sha256"]:
+                bad.append(f["path"])
+            else:
+                nbytes += f["bytes"]
+        elif (base / p.stem).is_dir():  # Kaggle auto-unpacked the tar into a folder named after it (observed 2026-11-05)
+            mode["extracted"] += 1
+            n, tot = 0, 0
+            for q in (base / p.stem).rglob("*"):
+                if q.is_file():
+                    n += 1
+                    tot += len(q.read_bytes())  # a full read, as a trainer would
+            if n != f.get("n_partitions") or tot != f.get("member_bytes"):
+                bad.append(f"{f['path']}: extracted {n} files/{tot} B, manifest {f.get('n_partitions')}/{f.get('member_bytes')}")
+            else:
+                nbytes += tot
         else:
-            nbytes += f["bytes"]
+            bad.append(f["path"] + ": missing")
     dt = max(time.time() - t0, 1e-6)
     # read one parquet out of a shard the way a trainer would
     extracted = None
     try:
-        shard = next(base.glob("crypto-um_perp-1m-*.tar"))
         t1 = time.time()
-        with tarfile.open(shard) as tf:
-            m = next(x for x in tf.getmembers() if x.name.endswith(".parquet"))
-            data = tf.extractfile(m).read()
-        extracted = {"member": m.name, "bytes": len(data), "seconds": round(time.time() - t1, 3)}
+        pq = next(base.rglob("*.parquet"))
+        data = pq.read_bytes()
+        extracted = {"member": pq.relative_to(base).as_posix(), "bytes": len(data), "seconds": round(time.time() - t1, 3)}
     except Exception as e:
         extracted = {"error": str(e)[:200]}
     res = {"ok": not bad, "files": len(man["files"]), "bad": bad, "hashed_bytes": nbytes,
-           "hash_seconds": round(dt, 2), "hash_MBps": round(nbytes / 1e6 / dt, 1), "one_member_read": extracted,
+           "layout": mode, "hash_seconds": round(dt, 2), "hash_MBps": round(nbytes / 1e6 / dt, 1), "one_member_read": extracted,
            "dir": str(base)}
     print(json.dumps(res))
     if a.record:
