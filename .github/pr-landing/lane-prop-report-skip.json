@@ -1,0 +1,11 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "hold_reason": "tier_2_3_needs_approval",
+  "hold_text": "Adds a Tier-2 system-action, prop-report-skip, that writes one journal record. The operator approved building it via a system action (popup 2026-11-05 ~09:40Z); the manager merges it under that approval.",
+  "why": "BREAKOUT-UNRECORDED-1101: breakout_2 ETH long prop-manual-8468ab1f682f read placed for ~18 h on an unconfirmed phone submit whose limit never filled; the operator cancelled it at the venue. No sanctioned path recorded a never-filled ticket: prop-report-close writes a close, and prop-ticket-expire refuses phone accounts. prop-report-skip sends ONE {kind: fill, status: skipped} report through prop_report.ingest_report. Dry-run by default; apply needs confirm: <ticket_id>; it refuses any ticket that is a position or not placed/emitted. Tests: tests/ops/test_prop_report_skip.py (refusals plus a positive control against the real ingest_report) and the system-actions workflow suite. No order path, sizing, risk or config change.",
+  "recorded_decision": {
+    "kind": "operator_decision",
+    "ref": "BREAKOUT-UNRECORDED-1101: operator popup 2026-11-05 ~09:40Z, verbatim \"Approve, via a system action (Recommended)\", relayed by manager session_01AFoLuN7HERxg65eHjtmMYE"
+  }
+}

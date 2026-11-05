@@ -372,6 +372,11 @@ jobs:
                 description: 'Triggers infra-runner-smoke — smoke job ON the jta-infra runner; arms vars.INFRA_RUNS_ON on green. Owner-opened issues only.',
               },
               {
+                name: 'trainer-console-ingress',
+                color: '0e8a16',
+                description: 'Triggers trainer-console-ingress: opens 80/443 to the console connector on the trainer VM (OCI security list + host firewall + Caddy). Row UI-CONSOLE-V1.',
+              },
+              {
                 name: 'trainer-vm-diag-request',
                 color: '5319e7',
                 description: 'Triggers trainer-vm-diag workflow — full-visibility SSH command runner on the trainer VM (autonomous Claude). QUICK read-only pulls (parallel-safe).',

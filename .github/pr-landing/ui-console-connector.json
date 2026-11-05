@@ -1,0 +1,11 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "hold_reason": "tier_2_3_needs_approval",
+  "hold_text": "New read-only service code for the trainer VM (C1). Merging changes nothing at runtime; the trainer unit that runs it is started by a separate diag dispatch after merge. Operator-approved under U1+U2+U5 and U4, and the 2026-11-05 ~06:00Z pull-forward quote, relayed by Manager Session 2026-11-04b.",
+  "why": "src/console_connector: MCP JSON-RPC over streamable HTTP with read-only tools hello, work_rows, inbox and work_items. Each payload carries as_of, read_state and population. It reads only PUBLIC repo files (checklist rows, pipeline items) on the trainer checkout, through one shared TTL cache (G2), and serves no journal, P&L, balance or alert data until sign-in (G1) is live. No order path, strategy, risk or config change. Tests: tests/console_connector (9).",
+  "recorded_decision": {
+    "kind": "operator_decision",
+    "ref": "UI-CONSOLE-CONNECTOR"
+  }
+}
