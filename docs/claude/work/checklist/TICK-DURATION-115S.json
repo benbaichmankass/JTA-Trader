@@ -19,7 +19,16 @@
     "L-OPS"
   ],
   "priority_rank": 4,
-  "updated_at": "2026-11-05T02:30:02Z",
+  "updated_at": "2026-11-05T02:42:41Z",
   "updated_by": "session_01AFoLuM4gBmcaHHv8iooKDb",
+  "observation": {
+    "what": "trader tick_cost mean_ms < 30000 over >= 20 ticks of one process, after TICK-STAGE2-RECONCILE-OFFTICK and TICK-STAGE3-REGIME-SCORING land (stage 1 observed 2026-11-05: 48.5 s mean, 59.2 s cycle, 23 ticks)",
+    "how_to_check": "scripts/ops/diag_fetch.sh tick_cost: read mean_ms and ticks_measured; cycle = (generated_at - process_started_utc) / ticks_measured",
+    "due_by": "2026-11-12"
+  },
+  "writeback": {
+    "roadmap": "none: L-OPS has no tick-latency milestone line; this row and the two stage rows carry it",
+    "arch": "none: no pipeline stage, contract or data path changed; the loop still runs the same hooks in the same order, only the post-tick sleep changed"
+  },
   "_seq": 909
 }
