@@ -1,0 +1,71 @@
+# Work-store outbox drainer (WSD-S3-CLI-OUTBOX; docs/plans/WORK-STORE-DESIGN-2026-11.md § 2.3).
+#
+# The fallback write path for a session that cannot reach ict-bot.duckdns.org: `scripts/ops/work.py
+# --via outbox` renders the op as a comment for the ONE issue titled "work-store outbox"; this job
+# applies it to POST /api/bot/work/items* with WORK_STORE_TOKEN, idempotent by op_id. No PR, no repo
+# write, no required checks.
+#
+# Trust: only comments whose author_association is OWNER / MEMBER / COLLABORATOR are applied (the
+# outbox must not become an anonymous write path, design G2); the drainer re-checks it per comment.
+#
+# Cadence: on the comment itself (immediate), plus an hourly backstop for a comment that arrived
+# while the VM was down (the design said "every 5 min"; an event trigger is faster and a 5-min cron
+# would add ~288 runs/day for an outbox that is normally empty).
+name: work-store-outbox
+
+on:
+  issue_comment:
+    types: [created]
+  schedule:
+    - cron: "41 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: work-store-outbox
+  cancel-in-progress: false
+
+jobs:
+  drain:
+    if: >-
+      github.event_name != 'issue_comment' ||
+      (github.event.issue.title == 'work-store outbox' &&
+       contains(github.event.comment.body, '<!-- work-store-op v1 -->') &&
+       contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.comment.author_association))
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: scripts/ops/work.py
+          sparse-checkout-cone-mode: false
+      - name: Find the outbox issue
+        id: issue
+        env:
+          GH_TOKEN: ${{ github.token }}
+          EVENT_ISSUE: ${{ github.event.issue.number }}
+        run: |
+          if [ -n "$EVENT_ISSUE" ]; then n="$EVENT_ISSUE"; else
+            n=$(gh issue list --repo "$GITHUB_REPOSITORY" --state open --search 'in:title "work-store outbox"' \
+                  --json number,title --jq '[.[] | select(.title == "work-store outbox")][0].number // empty')
+          fi
+          if [ -z "$n" ]; then echo "no open issue titled 'work-store outbox': nothing to drain"; fi
+          echo "number=$n" >> "$GITHUB_OUTPUT"
+      - name: Drain
+        if: steps.issue.outputs.number != ''
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          WORK_STORE_TOKEN: ${{ secrets.WORK_STORE_TOKEN }}
+        run: |
+          if [ -z "$WORK_STORE_TOKEN" ]; then echo "::error::WORK_STORE_TOKEN secret is not set"; exit 1; fi
+          python3 scripts/ops/work.py --issue "${{ steps.issue.outputs.number }}" drain | tee drain.json
+          python3 - <<'EOF'
+          import json, sys
+          d = json.load(open("drain.json"))
+          print(f"applied {len(d['applied'])}, refused {len(d['refused'])}, unreached {len(d.get('unreached', []))}, "
+                f"already done {d['already_done']}, untrusted skipped {d['skipped_untrusted']}")
+          sys.exit(1 if d.get("unreached") else 0)
+          EOF

@@ -1,0 +1,155 @@
+name: trainer-console-ingress
+
+# Opens public HTTPS to the console connector on the trainer VM (row UI-CONSOLE-V1).
+#
+# Operator decision 2026-11-05 ~09:55Z, verbatim popup option, relayed by Manager Session 2026-11-05a:
+#   "Open 443 + Google OAuth (Recommended)"
+# (option ii of the stable-hostname question; the named Cloudflare tunnel was not chosen).
+#
+# Three steps, each idempotent:
+#   1. OCI: add ingress TCP 80 + 443 from 0.0.0.0/0 to the trainer subnet's security list
+#      (scripts/ops/oci_console_ingress.py; nothing is ever removed).
+#   2. Host: iptables ACCEPT for 80/443 ahead of the REJECT rule, persisted; install Caddy;
+#      Caddyfile from deploy/trainer/Caddyfile.console (only the connector's paths, else 404).
+#   3. Verify from the runner: https://158-178-209-121.sslip.io/healthz answers 200.
+#
+# Gates this adds or changes: none on trading, deploys, merges or pipelines. It exposes the
+# connector's paths only; the connector itself enforces sign-in (G1, design § "Gates").
+#
+# Revert: delete the two "jta-console" rules from the security list; on the trainer
+#   sudo systemctl disable --now caddy; sudo iptables -D INPUT -p tcp --dport 443 -j ACCEPT;
+#   sudo iptables -D INPUT -p tcp --dport 80 -j ACCEPT; sudo netfilter-persistent save
+#
+# Triggers: workflow_dispatch, or an issue labelled `trainer-console-ingress` opened by the
+# repo owner or github-actions[bot] (body optional; `mode: plan` runs step 1 as a plan only).
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "apply | plan"
+        required: true
+        default: "apply"
+  issues:
+    types: [opened]
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: trainer-console-ingress
+  cancel-in-progress: false
+
+jobs:
+  ingress:
+    if: |
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'issues' &&
+       (github.event.issue.user.login == github.repository_owner ||
+        github.event.issue.user.login == 'github-actions[bot]') &&
+       contains(github.event.issue.labels.*.name, 'trainer-console-ingress'))
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Resolve mode
+        id: mode
+        env:
+          INPUT_MODE: ${{ inputs.mode || '' }}
+          ISSUE_BODY: ${{ github.event.issue.body || '' }}
+        run: |
+          set -euo pipefail
+          mode="${INPUT_MODE:-apply}"
+          if printf '%s' "$ISSUE_BODY" | grep -qE '^mode:[[:space:]]*plan'; then mode=plan; fi
+          case "$mode" in apply|plan) ;; *) echo "::error::mode must be apply or plan"; exit 1;; esac
+          echo "mode=$mode" >> "$GITHUB_OUTPUT"
+
+      - name: 1. OCI security list (80 + 443)
+        env:
+          OCI_CLI_USER: ${{ secrets.OCI_CLI_USER }}
+          OCI_CLI_KEY_CONTENT: ${{ secrets.OCI_CLI_KEY_CONTENT }}
+          OCI_CLI_FINGERPRINT: ${{ secrets.OCI_CLI_FINGERPRINT }}
+          OCI_CLI_TENANCY: ${{ secrets.OCI_CLI_TENANCY }}
+          OCI_CLI_REGION: ${{ secrets.OCI_CLI_REGION }}
+          OCI_COMPARTMENT_OCID: ${{ secrets.OCI_COMPARTMENT_OCID }}
+          TRAINER_IP: ${{ secrets.TRAINER_VM_IP }}
+          MODE: ${{ steps.mode.outputs.mode }}
+        run: |
+          set -euo pipefail
+          pip install --quiet oci
+          extra=""; [ "$MODE" = "apply" ] && extra="--apply"
+          python3 scripts/ops/oci_console_ingress.py --ip "$TRAINER_IP" $extra | tee /tmp/oci.txt
+
+      - name: Set up SSH key
+        if: steps.mode.outputs.mode == 'apply'
+        env:
+          VM_SSH_KEY: ${{ secrets.VM_SSH_KEY }}
+          TRAINER_IP: ${{ secrets.TRAINER_VM_IP }}
+        run: |
+          set -euo pipefail
+          [ -n "${VM_SSH_KEY}" ] || { echo "::error::VM_SSH_KEY secret is unset."; exit 1; }
+          mkdir -p ~/.ssh && chmod 700 ~/.ssh
+          printf '%s\n' "${VM_SSH_KEY}" > ~/.ssh/trainer_key && chmod 600 ~/.ssh/trainer_key
+          ssh-keyscan -t ed25519,ecdsa,rsa "${TRAINER_IP}" >> ~/.ssh/known_hosts 2>/dev/null || true
+
+      - name: 2. Host firewall + Caddy
+        if: steps.mode.outputs.mode == 'apply'
+        env:
+          TRAINER_IP: ${{ secrets.TRAINER_VM_IP }}
+        run: |
+          set -euo pipefail
+          scp -i ~/.ssh/trainer_key deploy/trainer/Caddyfile.console "ubuntu@${TRAINER_IP}:/tmp/Caddyfile.console"
+          ssh -i ~/.ssh/trainer_key "ubuntu@${TRAINER_IP}" 'bash -s' <<'REMOTE' | tee /tmp/host.txt
+          set -euo pipefail
+          for p in 80 443; do
+            sudo iptables -C INPUT -p tcp -m state --state NEW -m tcp --dport $p -j ACCEPT 2>/dev/null \
+              || sudo iptables -I INPUT 5 -p tcp -m state --state NEW -m tcp --dport $p -j ACCEPT
+          done
+          if ! command -v netfilter-persistent >/dev/null; then
+            sudo DEBIAN_FRONTEND=noninteractive apt-get install -y -q iptables-persistent >/dev/null
+          fi
+          sudo netfilter-persistent save >/dev/null
+          if ! command -v caddy >/dev/null; then
+            sudo apt-get install -y -q debian-keyring debian-archive-keyring apt-transport-https curl >/dev/null
+            curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/gpg.key' | sudo gpg --batch --yes --dearmor -o /usr/share/keyrings/caddy-stable-archive-keyring.gpg
+            curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/debian.deb.txt' | sudo tee /etc/apt/sources.list.d/caddy-stable.list >/dev/null
+            sudo apt-get update -q >/dev/null && sudo apt-get install -y -q caddy >/dev/null
+          fi
+          caddy version
+          sudo install -m 0644 /tmp/Caddyfile.console /etc/caddy/Caddyfile
+          caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile 2>&1 | tail -1
+          sudo systemctl enable --now caddy >/dev/null && sudo systemctl reload-or-restart caddy
+          sudo iptables -S INPUT | grep -E 'dport (80|443)'
+          systemctl is-active caddy
+          REMOTE
+
+      - name: 3. Verify public HTTPS
+        if: steps.mode.outputs.mode == 'apply'
+        run: |
+          set -uo pipefail
+          for i in $(seq 1 24); do
+            code=$(curl -s -m 10 -o /tmp/h.json -w '%{http_code}' https://158-178-209-121.sslip.io/healthz || true)
+            [ "$code" = "200" ] && break
+            sleep 10
+          done
+          echo "healthz http=$code"; cat /tmp/h.json 2>/dev/null; echo
+          curl -s -m 10 -o /dev/null -w 'other path http=%{http_code} (expect 404)\n' https://158-178-209-121.sslip.io/ || true
+          [ "$code" = "200" ] || { echo "::error::public HTTPS did not answer 200"; exit 1; }
+
+      - name: Report on the issue
+        if: always() && github.event_name == 'issues'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const rd = p => { try { return fs.readFileSync(p, 'utf8').slice(-3000); } catch (e) { return '(none)'; } };
+            const body = `**trainer-console-ingress** ${{ job.status }}\nRun: ${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}\n\n` +
+              "OCI:\n```\n" + rd('/tmp/oci.txt') + "\n```\nHost:\n```\n" + rd('/tmp/host.txt') + "\n```";
+            await github.rest.issues.createComment({owner: context.repo.owner, repo: context.repo.repo, issue_number: context.issue.number, body});
+            await github.rest.issues.update({owner: context.repo.owner, repo: context.repo.repo, issue_number: context.issue.number, state: 'closed'});
