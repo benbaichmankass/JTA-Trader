@@ -335,7 +335,7 @@ def _synthetic_bars(seed: int = 0, n_days: int = 700) -> dict[str, pd.DataFrame]
     days = pd.bdate_range("2021-01-04", periods=n_days, tz="America/New_York")
     out = {}
     for s in ["SPY", "QQQ", "IWM", "TLT", "VIXY"] + [f"E{i}" for i in range(8)]:
-        ts, px = [], 100.0
+        px = 100.0
         rows = []
         for d in days:
             for hh in range(9, 16):
