@@ -69,7 +69,8 @@ register, never in a session's head or a trigger prompt: a new manager inherits 
 shouldn't need to push you like this either - this is what we have a weekly workplan for, to make sure that the manager always knows what to
 do next … as long as we have headroom, lanes should be running."* (a) Compute the target from a fresh meter: `spend_meter.py --capacity
 --live-open N` prints *"KEEP N LANES RUNNING"* — a target, not a cap. (b) If running build lanes < target, dispatch the next rows now in
-`checklist.py queue` order, without waiting for the operator. (c) Ask the operator only when the plan has run out or the call is a genuine
+`checklist.py queue` order, without waiting for the operator, `week_lane: surge` rows first until the throttle-down switch
+(§ "Surge, then throttle"), throttle rows after it. (c) Ask the operator only when the plan has run out or the call is a genuine
 preference — never for permission to use headroom. A capacity call made earlier (even by the operator) is **re-evaluated against a fresh
 reading at each check-in, not carried forward** (2026-10-26: a morning "1 lane" call stood for hours while weekly usage ran 47% → 50%). The
 live-review reserve is MEASURED and capped by § 6.4; it is not a reason to sit at one lane. Weekly audit C12 measures utilisation.
@@ -512,6 +513,31 @@ mandatory in the planning routine's prompt and come BEFORE part (B) 1:
    the standing routines' cost. Overflow goes to (b) by priority, never into (a) "if there is time".
 4. **Close.** The PR that closes planning records each disposition (checklist rows / units / pipeline records) and the follow-through table on
    `WEEKLY-PLANNING`; next Thursday's step 0 grades it.
+
+### Surge, then throttle: every workplan item is one or the other (operator, 2026-11-05, binding)
+
+> **Gates this adds or changes: none.** It decides the ORDER and PACE work is dispatched in, never whether anything runs or trades.
+
+Operator, verbatim excerpt: *"we push them even against unsustainable usage rates at the beginning, and then we slow down and pace
+ourselves based on the usage that we have left to keep the rest of the week making sure that the systems stay running and that we progress
+with work that we have capacity for ... I just want to make sure that for the weekly work plan, we know what stuff is surge stuff and what
+stuff is if we get to it at the throttle down stage."*
+
+1. **Tag in planning.** Step 4 (workplan) tags every (a) item `week_lane: surge` or `week_lane: throttle` on its checklist row
+   (`checklist.py set <ID> week_lane=surge`), agreed with the operator like the rest of the workplan. The workplan Artifact lists the two
+   sets separately, surge first.
+2. **What is surge:** real money (a leg, a fix or a bug on a real-money or prop book), anything that moves a strategy or ML model toward
+   live trading, the week's big ML milestones, and the week's big strategic milestones (e.g. a redesign). **What is throttle:** important
+   work that is not top of the line: development infrastructure that cannot go live this week (e.g. the options data infra), the less
+   urgent parts of a UI upgrade, cleanups and guard pruning. When unsure, ask in planning; never let a row stay untagged.
+3. **The surge** runs from planning: dispatch surge rows first, as wide as the work allows, and do NOT throttle them to the even weekly
+   pace. Throttle rows wait unless a surge row is blocked and capacity would otherwise sit idle.
+4. **The throttle-down** starts when the surge rows are landed or blocked, or when the capacity reading says the rest of the week's usage
+   is needed to keep the systems running (the standing routines, live review, the daily review and incident response come first). From
+   then on, REFILL dispatches throttle rows, paced to `spend_meter.py --capacity`. Record the switch on `WEEKLY-PLANNING` with the reading
+   it was made on, and tell the operator in one line.
+5. **Mid-week arrivals** are tagged when they are filed: a new real-money bug or an operator directive about live trading is surge even
+   after the switch, and is dispatched at once.
 
 Row `WEEKLY-PLANNING`; trigger `trig_01Pm8AMPiigZX9ndobeyT6dE`, Wed **08:20Z** (first run 2026-10-14). **It is a dialogue, not a report**
 (operator, verbatim: *"it's a dialogue between both of us to work together on building our understanding, and then based on that, the work
