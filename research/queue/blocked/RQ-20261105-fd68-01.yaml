@@ -112,11 +112,7 @@ decision_rule:
   registered_before_run: true
   registered_at: '2026-11-05'
 ml_consumer:
-  consumer: src/units/strategies (new Tradeify-only entry leg; not yet built) via the served-model path
-  decision: whether to open a long/short position on ETHUSD/SOLUSD/XRPUSD on tradeify_1 when the model score clears tau (a new leg on tradeify_1, Tier-3, held)
-  legs:
-  - tradeify_own_ml_1h
-  book: money
+  not_applicable: 'The consumer leg does not exist yet, so it cannot be on a mode: live roster: it is built by checklist row TRADEIFY-OWN-LEG-DRIVER (tooling) and would be added to tradeify_1 only by a held Tier-3 roster PR after a PASS. Decision it would change: whether tradeify_1 runs any leg (it is empty after PR #23154). Not a false keyword hit; the guard has no pending-leg state.'
 compute: cpu_long
 value:
   bucket: ai_trader
