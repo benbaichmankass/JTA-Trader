@@ -36,7 +36,7 @@ import pandas as pd
 
 REPO = Path(__file__).resolve().parents[2]
 sys.path[:0] = [str(REPO), str(REPO / "scripts" / "research")]
-import ml_decision_entry as E
+import ml_decision_entry as E  # noqa: E402
 
 SCHEMA = "ml_decision_manage/1"
 BASE_SL, BASE_TP = 2.0, 4.0
@@ -220,9 +220,14 @@ def gather(trades: pd.DataFrame, df_by_sym: dict, atr_by: pd.DataFrame) -> Paths
         t_ns = df["ts"].to_numpy().astype("datetime64[ns]").astype("int64")
         i = g["i"].to_numpy()
         win = i[:, None] + np.arange(1, H + 1)[None, :]
-        parts["o"].append(o[win]); parts["h"].append(h[win]); parts["l"].append(lo[win]); parts["c"].append(c[win])
-        parts["t0"].append(t_ns[i + 1] / 1e9); parts["topen"].append(t_ns[win] / 1e9)
-        parts["atr"].append(atr_by.loc[g.index].to_numpy()); parts["side"].append(g["side"].to_numpy())
+        parts["o"].append(o[win])
+        parts["h"].append(h[win])
+        parts["l"].append(lo[win])
+        parts["c"].append(c[win])
+        parts["t0"].append(t_ns[i + 1] / 1e9)
+        parts["topen"].append(t_ns[win] / 1e9)
+        parts["atr"].append(atr_by.loc[g.index].to_numpy())
+        parts["side"].append(g["side"].to_numpy())
         order.append(g.index.to_numpy())
     cat = {k: np.concatenate(v) for k, v in parts.items()}
     return Paths(cat["o"], cat["h"], cat["l"], cat["c"], cat["atr"], cat["side"], cat["t0"], cat["topen"]), np.concatenate(order)
