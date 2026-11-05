@@ -447,8 +447,8 @@ STATUS_EXPLICIT: Dict[str, Tuple[str, str, str]] = {
     "docs/research/tick-duration-115s-profile-2026-11-04.md": (
         "live",
         "read:TICK-DURATION-115S-lane-authored-and-measured-it-2026-11-04",
-        "TICK-DURATION-115S profile + staged plan; goes historical once the deployed "
-        "tick is observed on /api/diag/tick_cost",
+        "TICK-DURATION-115S profile + staged plan + observed stage 1; goes historical once the "
+        "tick detector (< 30 s) clears on /api/diag/tick_cost",
     ),
     "docs/research/pairs-stocktake-2026-10-07.md": (
         "live",

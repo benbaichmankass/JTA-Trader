@@ -135,3 +135,34 @@ After deploy, `GET /api/diag/tick_cost` over ≥ 20 ticks of one process:
 handful per config edit, `config.yaml_cache_hit` n in the hundreds per tick;
 tick `mean_ms` ≈ 60–70 s; cycle = (snapshot `generated_at` − `process_started_utc`)
 / `ticks_measured` ≈ 70 s (was 159 s).
+
+## 8. Observed after deploy (MEASURED, 2026-11-05)
+
+Merged as #23029 (`74b059c25`); trader running `3f61e8d32`, which contains it.
+`/api/diag/tick_cost` at 02:26:47Z, **one process started 02:04:06Z, 23 ticks**:
+
+| quantity | before (37 ticks, 2026-11-04) | after (23 ticks) |
+|---|---|---|
+| tick mean / max | 100.8 s / 128.4 s | **48.5 s / 82.6 s** |
+| cycle (snapshot − process start) / ticks | 159 s | **59.2 s** |
+| `run_one_tick` | 68.8 s | 20.9 s |
+| `pipeline.signal_build` per call / per tick | 2.035 s / 46.8 s | **0.246 s / 5.66 s** |
+| `pipeline.regime_bar_scoring` per tick | 12.0 s | 9.6 s |
+| `order_monitor` per tick | 28.4 s | 26.2 s |
+| `config.yaml_parse` / `config.yaml_cache_hit` | — | 2 / 6,591 (+459 off-loop) |
+
+Better than § 2's inference (tick ~66 s, cycle ~71 s): the monitor and regime
+paths also gained. `journalctl` since 02:04Z (complete scan, 11,823 lines): 0
+`Tick failed`; the post-tick sleeps read 9–16 s, i.e. ticks start on the minute
+grid. Heartbeat age 37 s at 02:28Z. Protective sweeps ran every tick, so their
+cadence is now ~59 s.
+
+**Detector not met** (48.5 s vs < 30 s). What remains is `order_monitor`
+(26.2 s; row `TICK-STAGE2-RECONCILE-OFFTICK`) and `regime_bar_scoring` (9.6 s;
+row `TICK-STAGE3-REGIME-SCORING`).
+
+**New, contained, cause not established:** one sqlite `database is locked`
+burst, 02:20:41–02:21:04Z. Three monitor sweeps and one `venue_protection_snapshot`
+write each failed once and were retried on the next pass. A complete scan of
+2026-11-04 21:44–23:22Z (21,226 lines) had none. Recorded on
+`TICK-STAGE2-RECONCILE-OFFTICK`, whose design adds a DB-writing thread.
