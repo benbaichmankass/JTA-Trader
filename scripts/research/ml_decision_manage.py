@@ -492,11 +492,19 @@ def arm_rule(a, tab, df_by, dev_tr, ho_tr) -> dict:
     if s["n"] < MIN_TRADES or s["n_symbols"] < MIN_SYMBOLS:
         v, why = "indeterminate", f"held-out trades={s['n']} / symbols={s['n_symbols']} below floor"
     elif s["delta_vs_hold"] > 0 and ci[0] > 0:
-        v, why = "pass", f"delta vs hold-to-bracket {s['delta_vs_hold']:+.4f} R/trade, CI95 [{ci[0]:+.4f}, {ci[1]:+.4f}] > 0 at n={s['n']} (param {chosen})"
+        v, why = "pass", f"delta vs hold-to-bracket {s['delta_vs_hold']:+.4f} R/trade, {_ci_tag(claim)} [{ci[0]:+.4f}, {ci[1]:+.4f}] > 0 at n={s['n']} (param {chosen})"
     else:
-        v, why = "fail", f"delta vs hold-to-bracket {s['delta_vs_hold']:+.4f} R/trade, CI95 [{ci[0]:+.4f}, {ci[1]:+.4f}] does not clear 0 at n={s['n']} (param {chosen})"
+        v, why = "fail", f"delta vs hold-to-bracket {s['delta_vs_hold']:+.4f} R/trade, {_ci_tag(claim)} [{ci[0]:+.4f}, {ci[1]:+.4f}] does not clear 0 at n={s['n']} (param {chosen})"
     res.update(verdict=v, why=why)
     return res
+
+
+def _ci_tag(claim: dict | None) -> str:
+    """The interval's real level: CI95 on a first read; the deflated level of the ledger bar on a re-read (HOLDOUT-DEFLATED-REUSE)."""
+    b = (claim or {}).get("bar")
+    if not b or int(b.get("n_tries", 1)) <= 1:
+        return "CI95"
+    return f"CI{100 * b['ci_level']:.2f} (deflated, read {b['n_tries']})"
 
 
 def claim_read(a, model_id: str, symbols: list[str] | None = None, start: str | None = None) -> dict | None:
@@ -634,7 +642,7 @@ def arm_model(a, tab, df_by, dev_tr, ho_tr) -> dict:
     else:
         ok = s["delta_vs_hold"] > 0 and ci[0] > 0
         v = "pass" if ok else "fail"
-        why = f"delta vs hold-to-bracket {s['delta_vs_hold']:+.4f} R/trade, CI95 [{ci[0]:+.4f}, {ci[1]:+.4f}] at n={s['n']} (margin {margin})"
+        why = f"delta vs hold-to-bracket {s['delta_vs_hold']:+.4f} R/trade, {_ci_tag(claim)} [{ci[0]:+.4f}, {ci[1]:+.4f}] at n={s['n']} (margin {margin})"
     res.update(verdict=v, why=why)
     return res
 
@@ -727,9 +735,9 @@ def run_xs(a, tau) -> dict:
     if s["n_acted"] < MIN_TRADES or per_sym.size < XS_MIN_SYMBOLS:
         v, why = "indeterminate", f"acted trades={s['n_acted']} (floor {MIN_TRADES}) / non-pool symbols with trades={per_sym.size} (floor {XS_MIN_SYMBOLS})"
     elif s["delta_vs_hold"] > 0 and ci[0] > 0 and (e1 or 0) > 0 and (e2 or 0) > 0:
-        v, why = "pass", f"non-pool delta vs hold {s['delta_vs_hold']:+.5f} R/trade, CI95 [{ci[0]:+.5f}, {ci[1]:+.5f}], era deltas {e1:+.5f} / {e2:+.5f} > 0, acted {s['n_acted']} of {s['n']}"
+        v, why = "pass", f"non-pool delta vs hold {s['delta_vs_hold']:+.5f} R/trade, {_ci_tag(claim)} [{ci[0]:+.5f}, {ci[1]:+.5f}], era deltas {e1:+.5f} / {e2:+.5f} > 0, acted {s['n_acted']} of {s['n']}"
     else:
-        v, why = "fail", f"non-pool delta vs hold {s['delta_vs_hold']:+.5f}, CI95 [{ci[0]:+.5f}, {ci[1]:+.5f}], era deltas {e1} / {e2}: does not clear the rule (acted {s['n_acted']} of {s['n']})"
+        v, why = "fail", f"non-pool delta vs hold {s['delta_vs_hold']:+.5f}, {_ci_tag(claim)} [{ci[0]:+.5f}, {ci[1]:+.5f}], era deltas {e1} / {e2}: does not clear the rule (acted {s['n_acted']} of {s['n']})"
     res.update(verdict=v, why=why)
     return res
 
