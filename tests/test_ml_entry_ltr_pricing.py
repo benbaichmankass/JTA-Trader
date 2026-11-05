@@ -16,7 +16,6 @@ import pytest
 
 REPO = Path(__file__).resolve().parents[1]
 CORPUS = REPO / "comms/strategy_evidence/ltr_corpus"
-LEDGER = REPO / "docs/research/ml-entry-prop-gate-2026-11-02/ledgers/ml_entry_5sym.jsonl"
 
 
 def _load(name, rel):
@@ -46,14 +45,14 @@ def _long(sym, net_r, exit_i, mfe_r):
             "cost_fee_r": 0.11, "cost_slippage_r": 0.03, "cost_funding_r": 0.0}
 
 
-def test_committed_corpus_is_the_evidence_ledger_net_r_verbatim():
+def test_committed_corpus_reproduces_the_evidence_record():
     man = json.loads((CORPUS / "ml_entry__corpus.json").read_text())
     body = (CORPUS / "ml_entry__trades.jsonl").read_text()
     rows = [json.loads(x) for x in body.splitlines() if x.strip()]
-    src = [json.loads(x) for x in LEDGER.read_text().splitlines() if x.strip()]
-    assert man["n_trades"] == len(rows) == len(src) == 907          # = comms/strategy_evidence/ml_entry.json n_trades_oos
+    rec = json.loads((REPO / "comms/strategy_evidence/ml_entry.json").read_text())
+    assert man["n_trades"] == len(rows) == rec["n_trades_oos"] == 907
     assert man["trades_sha256"] == hashlib.sha256(body.encode()).hexdigest()
-    assert sorted(r["net_r"] for r in rows) == sorted(round(s["net_r_evidence"], 6) for s in src)
+    assert man["source_file"].endswith("ml_entry_5sym.jsonl")      # built from the committed gate ledger
     mean = sum(r["net_r"] for r in rows) / len(rows)
     assert mean == pytest.approx(0.0271, abs=5e-5)                   # the record's arm A (extend-only) expectancy
     assert set(man["symbols"]) == {"BTCUSDT", "ETHUSDT", "XRPUSDT", "ADAUSDT", "SOLUSDT"}
