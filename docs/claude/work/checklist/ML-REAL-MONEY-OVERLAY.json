@@ -2,7 +2,7 @@
   "id": "ML-REAL-MONEY-OVERLAY",
   "title": "A conservative ML overlay ON THE REAL-MONEY LEGS this week: meta-label take/reduce model trained on the real-money legs' OWN Stage-0 trade corpora (cost-net labels from the exit actually traded), CPCV-validated, graded NON-INFERIOR vs take-all and vs a same-rate random reduce, reductive only, shadow-scored on bybit_2 by Fri, Tier-3 packet Sat",
   "phase": null,
-  "state": "in_flight",
+  "state": "landed_unproven",
   "owner": "manager",
   "lane": null,
   "model": "claude-opus-5-5",
@@ -15,10 +15,10 @@
     21213
   ],
   "blocked_on": [],
-  "note": "DEPLOYED: runtime-config git_sha 7955bba7c (contains d2a4ae11), verdict CURRENT, 12:16:39Z. The canary is live on the 4 TD legs. Not yet observed: the first overlay_reduce on a low-scored TD entry (filled, not rejected for min lot). OPERATOR DECISION 2026-10-30T07:43Z (popup to Manager Session 2026-10-30b, verbatim answer: \"Annotate both out (Recommended)\") on PI-20261030-XME2GXW7-0001: remove trend_donchian_eth_4h and trend_donchian_sol_prop from config/overlay_policy.yaml (back to annotate) until those legs decide on the closed bar. Basis: MEASURED -329 bps entry-vs-decision-bar gap on eth_4h pkg-a04b68a15ea14d19 (relay #21439); closed-bar legs xrp_4h/eth_prop read 0.0 bps. No order affected so far (every multiplier x1.0). Prior lane session_01AFoLuKnxrXwUfkxME2GXW7 archived (spend $70.40 vs $20 ceiling, over). Fresh Opus lane OVERLAY-ANNOTATE-ETH4H-SOLPROP dispatched for the config edit. Lane session_01AFoLuHzCDeSzPNXYsdjYjc (Opus, fresh, ceiling $6) dispatched 07:44Z for the annotate-out config edit. 2026-10-30T09:25Z lane OVERLAY-ANNOTATE-ETH4H-SOLPROP: sub-item PI-20261030-XME2GXW7-0001 option (a) DONE AS FAR AS IT CAN BE OBSERVED. MERGED: PR #21553 as 6f6b13f948 (09:01Z), manager merge. DEPLOYED: relay #21570 at 09:14:36Z shows the VM tree and ict-trader-live both running 45e3f5b26, which contains 6f6b13f948 (git merge-base --is-ancestor). config/overlay_policy.yaml at that sha reads eth_4h + sol_prop mode annotate and xrp_4h + eth_prop mode reduce, and overlay_policy_mode() on that file returns the same. No restart was needed: the loader re-reads the YAML on every call. OBSERVED, NOT YET AT DECISION LEVEL: no eth_4h or sol_prop package has been scored since the deploy. The overlay_shadow tail ends with the eth_4h package at 01:34Z, and the 09:13Z journal shows both legs evaluated with no breakout. Also, every scored package so far had p_win > tau (x1.0), so the policy has not yet been exercised on a cut. PI-20261030-XME2GXW7-0001 stays open on that one-shot check. Row state unchanged; the canary stays open. 2026-11-04 BACKLOG-DRAIN-20261104: lane session_01AFoLuHzCDeSzPNXYsdjYjc is ARCHIVED; #21573 (cb6fb2500) is on main and the row's own note says deployed; the decision-level canary observation (a scored eth_4h/sol_prop package that exercises a cut) is still open under PI-20261030-XME2GXW7-0001. Lane nulled; state left in_flight pending manager's choice of landed_unproven (no observation field to key it on).",
+  "note": "DEPLOYED: runtime-config git_sha 7955bba7c (contains d2a4ae11), verdict CURRENT, 12:16:39Z. The canary is live on the 4 TD legs. Not yet observed: the first overlay_reduce on a low-scored TD entry (filled, not rejected for min lot). OPERATOR DECISION 2026-10-30T07:43Z (popup to Manager Session 2026-10-30b, verbatim answer: \"Annotate both out (Recommended)\") on PI-20261030-XME2GXW7-0001: remove trend_donchian_eth_4h and trend_donchian_sol_prop from config/overlay_policy.yaml (back to annotate) until those legs decide on the closed bar. Basis: MEASURED -329 bps entry-vs-decision-bar gap on eth_4h pkg-a04b68a15ea14d19 (relay #21439); closed-bar legs xrp_4h/eth_prop read 0.0 bps. No order affected so far (every multiplier x1.0). Prior lane session_01AFoLuKnxrXwUfkxME2GXW7 archived (spend $70.40 vs $20 ceiling, over). Fresh Opus lane OVERLAY-ANNOTATE-ETH4H-SOLPROP dispatched for the config edit. Lane session_01AFoLuHzCDeSzPNXYsdjYjc (Opus, fresh, ceiling $6) dispatched 07:44Z for the annotate-out config edit. 2026-10-30T09:25Z lane OVERLAY-ANNOTATE-ETH4H-SOLPROP: sub-item PI-20261030-XME2GXW7-0001 option (a) DONE AS FAR AS IT CAN BE OBSERVED. MERGED: PR #21553 as 6f6b13f948 (09:01Z), manager merge. DEPLOYED: relay #21570 at 09:14:36Z shows the VM tree and ict-trader-live both running 45e3f5b26, which contains 6f6b13f948 (git merge-base --is-ancestor). config/overlay_policy.yaml at that sha reads eth_4h + sol_prop mode annotate and xrp_4h + eth_prop mode reduce, and overlay_policy_mode() on that file returns the same. No restart was needed: the loader re-reads the YAML on every call. OBSERVED, NOT YET AT DECISION LEVEL: no eth_4h or sol_prop package has been scored since the deploy. The overlay_shadow tail ends with the eth_4h package at 01:34Z, and the 09:13Z journal shows both legs evaluated with no breakout. Also, every scored package so far had p_win > tau (x1.0), so the policy has not yet been exercised on a cut. PI-20261030-XME2GXW7-0001 stays open on that one-shot check. Row state unchanged; the canary stays open. 2026-11-04 BACKLOG-DRAIN-20261104: lane session_01AFoLuHzCDeSzPNXYsdjYjc is ARCHIVED; #21573 (cb6fb2500) is on main and the row's own note says deployed; the decision-level canary observation (a scored eth_4h/sol_prop package that exercises a cut) is still open under PI-20261030-XME2GXW7-0001. Lane nulled; state left in_flight pending manager's choice of landed_unproven (no observation field to key it on). 2026-11-05 10:02Z Manager Session 2026-11-05a (decision on lane ML-WEEK-1105 report 1): state -> landed_unproven. MERGED + DEPLOYED (relay #21570, 45e3f5b26); NOT YET OBSERVED at decision level. Observation that closes it: PI-20261030-XME2GXW7-0001 (a scored eth_4h or sol_prop package exercising a cut).",
   "priority_rank": 1,
-  "updated_at": "2026-11-04T18:59:24Z",
-  "updated_by": "session_01AFoLuM1JYKXSjfqdp6rzT1",
+  "updated_at": "2026-11-05T10:06:08Z",
+  "updated_by": "session_01AFoLuMQQLPmdu6fdmexxA9",
   "roadmap": [
     "L-ML-LIVE"
   ],
@@ -33,5 +33,10 @@
     }
   ],
   "due_by": "2026-11-06",
+  "observation": {
+    "what": "a scored trend_donchian_eth_4h or trend_donchian_sol_prop package that exercises a cut (overlay_reduce on a low-scored entry, filled, not rejected for min lot)",
+    "how_to_check": "PI-20261030-XME2GXW7-0001; overlay_shadow tail via the diag relay",
+    "due_by": "2026-11-12"
+  },
   "_seq": 786
 }
