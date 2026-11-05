@@ -2132,8 +2132,8 @@ jobs:
             # GATEWAY-DISK-CLEANUP (operator popup 2026-11-05 "A+B+C now, rehearse D"). Dry-run unless
             # apply: true; research-clean apply also needs confirm: <list_sha256 from its dry run>.
             case "${ACTION_TARGET:-}" in
-              journald|research-clean|prune-packed|rehearse-sideclone|sideclone-remove) ;;
-              *) echo "::error::gateway-disk-cleanup requires 'target: journald|research-clean|prune-packed|rehearse-sideclone|sideclone-remove' (got '${ACTION_TARGET:-}')."; exit 1 ;;
+              journald|research-clean|prune-packed|rehearse-sideclone|sideclone-remove|swap-status|swap-sideclone|swap-revert|old-remove) ;;
+              *) echo "::error::gateway-disk-cleanup requires 'target: journald|research-clean|prune-packed|rehearse-sideclone|sideclone-remove|swap-status|swap-sideclone|swap-revert|old-remove' (got '${ACTION_TARGET:-}')."; exit 1 ;;
             esac
             case "${ACTION_APPLY:-}" in
               ""|true|false|True|False) ;;
