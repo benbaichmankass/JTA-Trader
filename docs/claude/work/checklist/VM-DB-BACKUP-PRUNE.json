@@ -2,7 +2,7 @@
   "id": "VM-DB-BACKUP-PRUNE",
   "title": "Delete the OLDER 2026-10-17 trade_journal.db backup (bak-own-fill-exits-20261017T072240Z, ~2 GB) on the trader VM; keep the newer (T072615Z) as the rollback copy",
   "phase": null,
-  "state": "queued",
+  "state": "done",
   "owner": "manager",
   "lane": null,
   "model": "claude-sonnet-5-5",
@@ -11,12 +11,13 @@
   "tier": 2,
   "prs": [],
   "blocked_on": [],
-  "note": "OPERATOR DECISION 2026-10-29 ~05:25Z by popup: \"Keep newest, delete older (Recommended)\". MEASURED #21107: / 78% (11G free); backups /data/bot-data/trade_journal.db.bak-own-fill-exits-20261017T072240Z (1997.4 MB) and ...T072615Z (1997.5 MB). No system-action on the allowlist deletes a DB backup (docs/claude/system-actions.md read 05:26Z); cap-vm-logs never touches databases. Build: either a narrow allowlisted action that deletes exactly one named backup path matching trade_journal.db.bak-* (refuses the live DB, -wal, -shm, and anything outside /data/bot-data), dry-run default, or fold it into CAP-VM-LOGS-ROOT-FIX. Then dry-run, apply, and re-run disk-usage-report. Filed by Manager Session 2026-10-29b.",
+  "note": "OPERATOR DECISION 2026-10-29 ~05:25Z by popup: \"Keep newest, delete older (Recommended)\". MEASURED #21107: / 78% (11G free); backups /data/bot-data/trade_journal.db.bak-own-fill-exits-20261017T072240Z (1997.4 MB) and ...T072615Z (1997.5 MB). No system-action on the allowlist deletes a DB backup (docs/claude/system-actions.md read 05:26Z); cap-vm-logs never touches databases. Build: either a narrow allowlisted action that deletes exactly one named backup path matching trade_journal.db.bak-* (refuses the live DB, -wal, -shm, and anything outside /data/bot-data), dry-run default, or fold it into CAP-VM-LOGS-ROOT-FIX. Then dry-run, apply, and re-run disk-usage-report. Filed by Manager Session 2026-10-29b. [lane OPERATOR-ANSWERS-0505B, session_01AFoLuJT8TkysBjWHmKTqyJ, 2026-11-05] CLOSED BY OBSERVATION: neither 2026-10-17 backup exists. T072240Z was already absent by 2026-11-02 (#22512 listing showed only T072615Z); T072615Z was deleted 2026-11-03 by #22522 (operator-approved one-off, row VM-DISK-GROWTH-20261102). Today #23172 dry-run 'backups found: 0' and #23179 disk-usage-report '(no journal backups found)'. The narrow action this row asked for exists (prune-db-backups file:+confirm:, #22483).",
   "priority_rank": 3,
-  "updated_at": "2026-11-02T07:33:58Z",
-  "updated_by": "session_01AFoLuL5qrtXsc8bv7JrN4Z",
+  "updated_at": "2026-11-05T07:49:11Z",
+  "updated_by": "session_01AFoLuJT8TkysBjWHmKTqyJ",
   "roadmap": [
     "L-OPS"
   ],
+  "due_by": "2026-11-06",
   "_seq": 781
 }
