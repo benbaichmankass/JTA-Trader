@@ -132,7 +132,7 @@ def workplan(repo: Path, limit: int = 40, today: date | None = None) -> dict:
     state_counts: dict[str, int] = {}
     for r in slim:
         state_counts[str(r["state"])] = state_counts.get(str(r["state"]), 0) + 1
-    srt = lambda rows, k: sorted(rows, key=k)[:limit]  # noqa: E731
+    srt = lambda rows, k: sorted(rows, key=k)[:limit]
     return _env(repo, "read",
                 {"rows_scanned": len(items), "live_rows": len(live), "limit_per_list": limit,
                  "window": {"from": today.isoformat(), "to": week_end},
@@ -230,8 +230,8 @@ def _legs(by_window: dict[str, dict]) -> dict:
     out: dict[str, dict] = {}
     for w, book in by_window.items():
         if book is None:
-            for leg in out:
-                out[leg][w] = None
+            for per_window in out.values():
+                per_window[w] = None
             continue
         for s in book.get("perStrategy") or []:
             leg = out.setdefault(s["name"], {x: None for x in by_window})
@@ -376,7 +376,7 @@ def system_health(repo: Path) -> dict:
     sections["lanes_and_spend"] = {**lane_state, "usage": usage_block(repo)}
     states = {s["read_state"] for s in sections.values()}
     rs = "read" if states == {"read"} else ("could_not_look" if states == {"could_not_look"} else "partial")
-    return _env(repo, rs, {k: ("n/a" if "population" not in s else s["population"]) for k, s in sections.items()},
+    return _env(repo, rs, {k: s.get("population", "n/a") for k, s in sections.items()},
                 {"source": [f"{LIVE_BASE}/api/diag/*", "psutil (trainer)", "checklist"], "measure": "MEASURED",
                  "captured_at": D._iso(now)}, sections=sections)
 
@@ -386,7 +386,7 @@ def system_health(repo: Path) -> dict:
 #: EXACT names (``input_tokens`` is a count and must stay).
 SECRET_COLUMNS = re.compile(
     r"^(token|secret|password|passwd|passphrase|api_?key|api_?secret|private_?key|auth_?token|access_?token|"
-    r"refresh_?token|bearer|credential|credentials|signature|webhook(_url)?)$", re.I)
+    r"refresh_?token|bearer|credential|credentials|signature|webhook(_url)?)$", re.IGNORECASE)
 FILTER_COLUMNS = {"account": ("account_id", "account", "account_name"),
                   "leg": ("strategy_name", "strategy", "leg"),
                   "symbol": ("symbol",)}
@@ -397,7 +397,9 @@ _ISO_PREFIX = re.compile(r"^\d{4}-\d{2}-\d{2}([T ][0-9:.+\-Zz]*)?$")
 
 
 def _explorer():
-    from src.web.api.routers import db_explorer as ex  # the ONE allowlist (default-deny, column redaction)
+    from src.web.api.routers import (
+        db_explorer as ex,  # the ONE allowlist (default-deny, column redaction)
+    )
     return ex
 
 

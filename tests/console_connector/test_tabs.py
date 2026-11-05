@@ -194,27 +194,33 @@ def dbs(tmp_path, monkeypatch):
     j = tmp_path / "trade_journal.db"
     c = sqlite3.connect(j)
     c.execute("CREATE TABLE trades (id INTEGER PRIMARY KEY, symbol TEXT, strategy_name TEXT, account_id TEXT, "
-              "pnl REAL, closed_at TEXT, api_key TEXT)")
-    c.executemany("INSERT INTO trades VALUES (?,?,?,?,?,?,?)",
+              "pnl REAL, closed_at TEXT)")
+    c.executemany("INSERT INTO trades VALUES (?,?,?,?,?,?)",
                   [(i, "BTCUSDT" if i % 2 else "ETHUSDT", "leg_a", "bybit_2" if i < 600 else "bybit_1", i * 0.1,
-                    f"2026-10-{1 + i % 28:02d}T00:00:00", "SECRET") for i in range(1, 701)])
+                    f"2026-10-{1 + i % 28:02d}T00:00:00") for i in range(1, 701)])
     c.execute("CREATE TABLE device_tokens (id INTEGER PRIMARY KEY, token TEXT)")
     c.execute("INSERT INTO device_tokens VALUES (1, 'fcm-raw')")
     c.execute("CREATE TABLE not_listed (id INTEGER PRIMARY KEY, v TEXT)")
-    c.execute("CREATE TABLE insights_usage (id INTEGER PRIMARY KEY, input_tokens INTEGER, token TEXT)")
-    c.execute("INSERT INTO insights_usage VALUES (1, 7, 'x')")
+    c.execute("CREATE TABLE insights_usage (id INTEGER PRIMARY KEY, input_tokens INTEGER)")
+    c.execute("INSERT INTO insights_usage VALUES (1, 7)")
+    # stand-in for a future allowlisted table that carries a credential column (named so the schema guard
+    # does not mistake it for a production table)
+    c.execute("CREATE TABLE zz_scratch (id INTEGER PRIMARY KEY, api_key TEXT, Token TEXT, note TEXT)")
+    c.execute("INSERT INTO zz_scratch VALUES (1, 'SECRET', 'SECRET2', 'ok')")
     c.commit(); c.close()
     monkeypatch.setenv("TRADE_JOURNAL_DB", str(j))
     monkeypatch.setenv("TRAINER_STORE_DB", str(tmp_path / "absent.db"))
     monkeypatch.setenv("CONSOLE_CONNECTOR_AUTH", "google")
+    from src.web.api.routers import db_explorer as ex
+    monkeypatch.setattr(ex, "_TABLE_ALLOWLIST", ex._TABLE_ALLOWLIST | {"zz_scratch"})
     return j
 
 
 def test_catalog_lists_only_allowlist_and_no_secret_columns(dbs):
     out = _call("data_query")
     tables = {c["table"]: c["columns"] for c in out["catalog"]}
-    assert set(tables) == {"trades", "insights_usage"}  # device_tokens, not_listed invisible
-    assert "api_key" not in tables["trades"] and "token" not in tables["insights_usage"]
+    assert set(tables) == {"trades", "insights_usage", "zz_scratch"}  # device_tokens, not_listed invisible
+    assert tables["zz_scratch"] == ["id", "note"]  # api_key / Token dropped by the deny-by-name pattern
     assert "input_tokens" in tables["insights_usage"]  # a COUNT is not a secret
     assert out["read_state"] == "partial" and "trainer_store" in out["unavailable_dbs"]
 
@@ -227,8 +233,10 @@ def test_non_allowlisted_table_refused(dbs, t):
 
 
 def test_rows_never_contain_secret_column(dbs):
-    out = _call("data_query", {"table": "trades", "limit": 3})
-    assert out["rows"] and all("api_key" not in r for r in out["rows"])
+    out = _call("data_query", {"table": "zz_scratch"})
+    assert out["rows"] == [{"id": 1, "note": "ok"}]
+    # and it is not filterable/orderable either, so it cannot be probed through the filter
+    assert "api_key" not in out["columns"] and _call("data_query", {"table": "zz_scratch", "time_column": "api_key"})["rows"]
 
 
 def test_provenance_states_snapshot_age(dbs):
