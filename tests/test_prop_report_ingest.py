@@ -72,7 +72,7 @@ def test_journal_ticket_and_fill_roundtrip(isolated_db: Path) -> None:
     assert len(fills) == 1 and fills[0]["pnl"] == 108.75
 
 
-def test_outbound_tickets_project_over_order_packages(isolated_db: Path) -> None:
+def test_outbound_tickets_project_over_order_packages(isolated_db: Path, monkeypatch) -> None:
     """Regression for the wiring bug: a prop ticket lives in order_packages
     (the canonical store). The 'tickets sent' view must surface it even when
     the prop_tickets sidecar has NO matching row (e.g. emitted before the
@@ -102,6 +102,10 @@ def test_outbound_tickets_project_over_order_packages(isolated_db: Path) -> None
         "symbol": "BTCUSDT", "direction": "long",
         "entry": 75000.0, "sl": 74000.0, "tp": 78000.0, "status": "orphaned",
     })
+    # 2026-11-05 (PROP-PULL-ETHPROP): no leg is on a live prop roster any more, so the account scope
+    # is pinned here (the scope resolver itself is _prop_scope; this test is about the projection).
+    monkeypatch.setattr(prop_journal, "_prop_scope",
+                        lambda account_id=None: {"trend_donchian_eth_prop"} if account_id == "breakout_2" else set())
     rows = prop_journal.list_outbound_tickets(account_id="breakout_2")
     by_id = {r["order_package_id"]: r for r in rows}
     assert "pkg-test-eth" in by_id, "canonical order_package must appear with no sidecar"
