@@ -1,0 +1,32 @@
+{
+  "id": "ML-ENTRY-WATCHDOG-EXIT",
+  "title": "Alpaca broker-side SL/TP fills closed by the stuck-strategy watchdog keep exit_reason=stuck_strategy_watchdog (ml_entry SLV 6920 soak fault); target-naked pages on a flat book (SCHA 6877)",
+  "phase": "build",
+  "state": "in_flight",
+  "owner": "manager",
+  "lane": "ML-ENTRY-WATCHDOG-EXIT",
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 2,
+  "prs": [],
+  "blocked_on": [],
+  "note": "ROOT CAUSE (MEASURED, diag_fetch alpaca_order_history + journalctl 2026-11-05): alpaca_paper ml_entry SLV short 10 (trade 6920, pkg-b51697fe35294b95). Its bracket TP leg was canceled 16:48:23.101Z and its stop leg filled 16:48:25.795Z @47.643, against package SL 47.6443: a genuine broker-side STOP-OUT, and Alpaca is flat. The bot sent no close order. Alpaca rows carry no sl_order_id/tp_order_id, and the forward reconciler cannot read Alpaca orders: clients.account_order_status returns None for any non-bybit exchange, stamped reconciler_last=order_read_failed. So the close can only be seen by a FLAT DETECTOR. At 16:49:22 the snapshot reconciler armed its 2-read confirm, and at 16:49:28 the watchdog's unmatched branch (package > 30 min) finalised it first, with exit_reason=stuck_strategy_watchdog. The price sweep then priced it off the venue fill (exit_price_source=exchange_fill, MEASURED), but the label stayed frozen: _sweep_local_pnl_for_unpriced relabels only ''/reconciler_filled, _sweep_pending_pnl_from_bybit only exchange_flat_reconciled, and the order-identity sweep needs leg ids Alpaca rows lack. 6920 IS priced (exit 47.643, pnl -10.28); 'unpriced' in the 17:00Z snapshot is not true of the row now. FIX (PR on branch claude/ml-entry-watchdog-exit, Tier 2 journal-label): (1) both price sweeps treat stuck_strategy_watchdog as a flat detector, like exchange_flat_reconciled: relabel sl/tp off a MEASURED exit price only (10 bps tolerance, prior kept in pre_label_exit_reason), refuse with a stamp on ESTIMATED; (2) backfill_exit_labels.py mirrors it (and adds the reason to its order-identity set, matching the live _BRACKET_ORDER_RELABEL_REASONS) so history is relabelled via system-action backfill-exit-labels; (3) Alpaca naked sweep grades target_flat (logged, not paged) when its own positions read shows the symbol flat. That was SCHA 6877: TP canceled 17:01:17.155Z, stop filled 17:01:18.485Z @32.36, then CRITICAL alpaca_target_naked in the ~17:01:55Z sweep. #23384 (deployed 16:51) cannot see it, because a FILLED stop leaves the open-order legs. SAME PATH ARMED: every Alpaca/IB bracket row older than the 30-min watchdog floor (alpaca_paper/alpaca_live/alpaca_portfolio ml_entry SPY/QQQ/TQQQ/IAUM/SLV included); no exit or threshold logic changed. HISTORY (last 1500 trades, ids 5431-6930): 11 watchdog-labelled closes. MEASURED-price ones at their SL: 6920, bybit_1 6167, 5516. 5836 is MEASURED and mid-bracket (stays). 6 are candle-priced and get refused. (c) The 16:58Z EXIT-EVAL 74.3s breach was a DB-lock burst (16:56:49-16:57:29), not the restart; appended to PI-20261105-F2QX97PI-0001. Entry-price drift (6920 journal 46.615 vs fill 46.69, pnl -10.28 vs venue -9.53) appended to PI-20261105-ETXSFXE6-0001.",
+  "due_by": "2026-11-07",
+  "roadmap": [
+    "L-ML-LIVE"
+  ],
+  "updated_at": "2026-11-05T17:48:35Z",
+  "updated_by": "session_01AFoLuKgQxMfz6TdWAMfhgF",
+  "week_lane": "surge",
+  "writeback": {
+    "roadmap": "L-ML-LIVE: Alpaca broker-side SL/TP fills found by a flat detector are labelled sl/tp, so the ml_entry Stage-1 soak can grade them clean",
+    "arch": "ARCHITECTURE-CANONICAL close-reason vocabulary: stuck_strategy_watchdog is a flat-detector label, refined off a MEASURED price"
+  },
+  "observation": {
+    "what": "after deploy + backfill-exit-labels apply: trade 6920 reads exit_reason=sl with notes.pre_backfill_exit_reason=stuck_strategy_watchdog; the next Alpaca watchdog-finalised bracket close reads sl/tp within one sweep; soak_state for stage1-alpaca_paper-ml_entry stops faulting exit_journaled on 6920; no alpaca_target_naked page on a symbol the venue holds flat",
+    "how_to_check": "scripts/ops/diag_fetch.sh journal?table=trades&limit=60 (row 6920 + any new stuck_strategy_watchdog rows); journalctl grep target_flat%7Ctarget_naked",
+    "due_by": "2026-11-07"
+  },
+  "_seq": 955
+}

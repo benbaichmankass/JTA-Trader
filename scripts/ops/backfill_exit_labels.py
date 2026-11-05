@@ -79,12 +79,21 @@ GENERIC_REASONS = ("", "reconciler_filled")
 SNAPSHOT_FLAT_REASON = "exchange_flat_reconciled"
 SNAPSHOT_FLAT_TOLERANCE_BPS = 10.0
 
+# ML-ENTRY-WATCHDOG-EXIT (2026-11-05): the stuck-strategy watchdog is a FLAT
+# DETECTOR too -- its label records that it noticed a flat position, not why
+# the position ended. Same rule as the snapshot reconciler's reason: MEASURED
+# price only, same tolerance. Mirror of order_monitor._FLAT_DETECTOR_REASONS.
+# MEASURED: alpaca_paper SLV 6920 exit 47.643 (its own stop leg's fill) vs
+# package SL 47.6443; bybit_1 6167 / 5516 exchange_fill at their SL.
+WATCHDOG_REASON = "stuck_strategy_watchdog"
+FLAT_DETECTOR_REASONS = (SNAPSHOT_FLAT_REASON, WATCHDOG_REASON)
+
 # Rule 0, applied before any price comparison: venue ORDER IDENTITY. A fill in
 # the exchange-fills store on the trade's own sl_order_id / tp_order_id makes
 # the exit that leg, MEASURED. Same rule and same reasons as the live sweep
 # (order_monitor._sweep_exit_label_from_bracket_order).
 ORDER_ID_RELABEL_REASONS = ("", "reconciler_filled", "netting_attributed",
-                            SNAPSHOT_FLAT_REASON)
+                            SNAPSHOT_FLAT_REASON, WATCHDOG_REASON)
 ORDER_ID_LABEL_SOURCE = "venue_bracket_order"
 _RELABEL_PH = ",".join("?" for _ in ORDER_ID_RELABEL_REASONS)
 
@@ -282,7 +291,7 @@ def plan(conn: sqlite3.Connection,
         # Guard 2 — only a row still carrying the GENERIC reason, or the
         # snapshot reconciler's "went flat" reason (MEASURED price only, below).
         reason = str(r["exit_reason"] or "").strip()
-        is_flat = reason == SNAPSHOT_FLAT_REASON
+        is_flat = reason in FLAT_DETECTOR_REASONS
         if reason not in GENERIC_REASONS and not is_flat:
             stats["skip_has_real_reason"] += 1
             continue
