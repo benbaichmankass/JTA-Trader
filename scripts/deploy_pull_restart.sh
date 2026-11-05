@@ -402,6 +402,40 @@ fi
 #     which are per-invocation CLIs that src/ never imports.
 # Re-run the grep before adding an import-time cache of any comms/macro file.
 #
+# DEPLOY-RESTART-ON-DATA-MIRRORS (2026-11-04, Tier 2, operator pre-approval
+# "Pre-approve (Recommended)"; finding in docs/plans/WORK-STORE-DESIGN-2026-11.md
+# § 5 / Appendix B): all 21 trader restarts on 11-04 followed a bot DATA merge
+# (desk mirror, live-review mirror, forecast-grade, ...), none a human code
+# merge. Fifteen bot-written comms/ data trees joined the safe set:
+#   comms/{desk,live_review,live_parity,cloud,prop_survival,claude_judgments,
+#   reviews,ops,ci,ml-plan,news_alpha,strategy_reviews,reports,data_lake}/
+#   and the one file comms/claude_strategy_scores.jsonl (anchored with $).
+# IMPORT-TIME PROOF (AST scan of src/, scripts/{ops,ml,prop}/, scripts/*.py,
+# ml/, bin/ for every string naming these trees, plus an `open` audit hook
+# while importing src.main, src.web.api.main and the three src.bot entry
+# points with the scripts.ops modules the web-api imports in-process):
+#   - No module opens any of them at import (audit hook: 0 opens; positive
+#     control caught a planted comms/ read). No reference sits in a function
+#     with an lru_cache/cache decorator or one that writes a `global`.
+#   - Readers in long-running units, all per call / per request:
+#     comms/live_review/reviews.jsonl -- live_review_due.read_reviews() opens
+#       it per call; live_review_rows.py reads `git show <ref>:` per call.
+#     comms/desk/* -- desk_packet_wake / desk_event_trigger fetch it from the
+#       desk/decisions BRANCH via the GitHub contents API per call (not the
+#       tree); desk_scan_packet.PACKETS_DIR is a write target.
+#     comms/claude_strategy_scores.jsonl -- order_packages._load_claude_scores()
+#       per request; insights data_sources._read_strategy_scores() per call
+#       (ict-insights-generator is a oneshot).
+#     comms/live_parity/latest.json -- render_daily_brief._live_parity_line()
+#       per brief render.
+#     comms/strategy_reviews/, comms/reports/ -- their web-api routers resolve
+#       the dir and read it per request.
+#   - The rest have no reader in any long-running unit (only per-invocation
+#     scripts/ops CLIs, scripts/ci guards, scripts/research, ml/ on the trainer).
+# comms/ outside these trees stays runtime, e.g. comms/ml_universe/ (trader
+# input with an mtime-keyed cache), broker_truth_ledger.json, gpu_spend_ledger.
+# Re-run the scan before adding an import-time read or cache of any of them.
+#
 # tools/phone-executor/ and tools/phone-probe/ joined the safe set on 2026-10-15
 # (TRADER-RESTART-GATE, manager finding): they are Android app sources, built
 # into an APK by .github/workflows/phone-executor-apk.yml on a GitHub runner and
@@ -443,14 +477,14 @@ if [ "${DEPLOY_FORCE_RESTART:-0}" != "1" ]; then
     if [ -n "${CHANGED_FILES}" ]; then
         # Strip the known-safe non-runtime paths; anything left needs a restart.
         RUNTIME_CHANGES="$(printf '%s\n' "${CHANGED_FILES}" \
-            | grep -vE '^(docs/|tests/|\.claude/|\.github/|[^/]+\.md$|research/|runtime_logs/|scripts/research/|scripts/ci/|comms/research/|comms/strategy_evidence/|comms/macro/|tools/phone-executor/|tools/phone-probe/)' || true)"
+            | grep -vE '^(docs/|tests/|\.claude/|\.github/|[^/]+\.md$|research/|runtime_logs/|scripts/research/|scripts/ci/|comms/research/|comms/strategy_evidence/|comms/macro/|comms/(desk|live_review|live_parity|cloud|prop_survival|claude_judgments|reviews|ops|ci|ml-plan|news_alpha|strategy_reviews|reports|data_lake)/|comms/claude_strategy_scores\.jsonl$|tools/phone-executor/|tools/phone-probe/)' || true)"
         # Add back the scripts/research modules the web-api imports in-process
         # (the EXCEPTION above). Without this the brief serves stale code.
         IN_PROCESS_CHANGES="$(printf '%s\n' "${CHANGED_FILES}" \
             | grep -E '^scripts/research/(dispatch_queue|e35_bracket_geometry_sweep|m20_fleet_exit_sweep|m20_wf_effective|queue_grade|queue_replenish|queue_throughput|research_queue)\.py$' || true)"
         RUNTIME_CHANGES="${RUNTIME_CHANGES}${IN_PROCESS_CHANGES}"
         if [ -z "${RUNTIME_CHANGES}" ]; then
-            echo ">>> Non-runtime commit (${RUNTIME_BASE:0:7} -> ${POST_SYNC_HEAD:0:7}): only non-runtime paths changed (docs/tests/.claude/.github/top-level-md/research/runtime_logs/scripts/{research,ci}/comms/{research,strategy_evidence,macro}/tools/{phone-executor,phone-probe})"
+            echo ">>> Non-runtime commit (${RUNTIME_BASE:0:7} -> ${POST_SYNC_HEAD:0:7}): only non-runtime paths changed (docs/tests/.claude/.github/top-level-md/research/runtime_logs/scripts/{research,ci}/comms/{research,strategy_evidence,macro,desk,live_review,live_parity,cloud,prop_survival,claude_judgments,reviews,ops,ci,ml-plan,news_alpha,strategy_reviews,reports,data_lake}/comms/claude_strategy_scores.jsonl/tools/{phone-executor,phone-probe})"
             echo ">>> Code synced + pings sent; skipping dependency install, unit refresh, and service restart (BL-20260529-002)."
             printf '%s\n' "${CHANGED_FILES}" | sed 's/^/>>>   changed: /'
             # The running processes' RUNTIME code already matches POST (only

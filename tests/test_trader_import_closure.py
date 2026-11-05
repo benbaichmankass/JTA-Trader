@@ -123,7 +123,8 @@ def test_unparsable_file_marks_the_closure_incomplete(tmp_path):
     ("docs/x.md", None),
     ("src/main.py", "in_closure"),
     ("config/accounts.yaml", "non_py_runtime"),
-    ("comms/live_parity/x.json", "non_py_runtime"),
+    ("comms/ml_universe/x.json", "non_py_runtime"),
+    ("comms/live_parity/x.json", None),
     ("ml/x.py", "py_outside_src_scripts"),
     ("tests/test_x.py", None),
 ])

@@ -56,7 +56,10 @@ def test_diag_classifier_matches_the_deploy_on_the_edge_paths():
     assert _is_runtime_path("tools/gemini_delegate.ipynb")  # only the two app trees
     assert not _is_runtime_path("scripts/research/regime_matrix.py")
     assert _is_runtime_path("scripts/research/queue_throughput.py")
-    assert _is_runtime_path("comms/claude_strategy_scores.jsonl")
+    assert not _is_runtime_path("comms/claude_strategy_scores.jsonl")  # read per request
+    assert not _is_runtime_path("comms/desk/role_grade.json")
+    assert _is_runtime_path("comms/claude_strategy_scores.jsonl.bak")
+    assert _is_runtime_path("comms/ml_universe/ml_entry.json")  # trader input
     assert not _is_runtime_path("")
 
 
