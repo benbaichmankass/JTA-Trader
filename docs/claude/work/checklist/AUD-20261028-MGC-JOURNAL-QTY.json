@@ -12,10 +12,10 @@
   "prs": [],
   "blocked_on": [],
   "note": "WEEKLY-AUDIT-2026-10-28 C1. MEASURED 19:00Z: /api/diag/exchange_positions ib_paper MGC short 12; /api/bot/positions?include_paper=true and journal row 6673 say 14; resting STP+LMT are 12 (IB-MGC-NAKED-REARM sized them to broker qty and left the journal at 14). system_invariants.py: INV-PROTECT-STOP 'NAKED by 2', INV-PROTECT-TARGET, INV-JOURNAL-EXCHANGE all FAIL on this one row. Venue position IS fully protected (12/12); the journal overstates by 2, so P&L and R on close will be wrong by 14/12. Paper only. Proposed fix (Tier 2, DB writeback): set trades.position_size=12 on row 6673 with the old value in notes, via the system-actions allowlist; or root-cause where the 2 contracts went (partial fill/close not journaled). Detector: INV-JOURNAL-EXCHANGE (exists). check: python3 scripts/ops/system_invariants.py --payloads <dir> -> 0 FAIL on ib_paper/MGC. next_action: ask_operator. [DEEP-AUDIT-20261104 L0] call HIT, action STALLED and WORSE: INV-JOURNAL-EXCHANGE FAIL ib_paper/MGC journal 14 vs venue 11 (was 12); protect group oca-protect-t6673 now 11 STP + 11 LMT. Venue qty fell 1 lot with no journal change -- a partial exit unjournaled. Tier 2 writeback still waits on ask_operator.",
-  "updated_at": "2026-11-04T22:27:14Z",
-  "updated_by": "PLANNING-CLOSE-20261104",
+  "updated_at": "2026-11-04T18:47:03Z",
+  "updated_by": "session_01AFoLuJHHNrJpWUPrhHXtjo",
   "roadmap": [
-    "M39"
+    "L-OPS"
   ],
   "due_by": "2026-11-06",
   "_seq": 755
