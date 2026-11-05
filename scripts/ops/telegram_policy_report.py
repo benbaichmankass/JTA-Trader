@@ -11,6 +11,7 @@ The window is the 24 h ending at the newest timestamp in the input; the report
 states the population it measured over, and whether the window is fully covered
 (a capped pull that does not reach back 24 h is said, never read as a full day).
 """
+# wiring: manual-only - a dry-run / post-deploy proof tool the TELEGRAM-TRIM lane and the manager run by hand over diag pulls; it sends nothing
 from __future__ import annotations
 
 import argparse
