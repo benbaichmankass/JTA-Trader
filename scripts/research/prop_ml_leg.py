@@ -478,6 +478,9 @@ def run(a) -> int:
     cost = make_cost(prof); rp = Replay(cache, prof["symbols"] + CONTEXT_SYMBOLS, cost)
     folds = fold_bounds(a.smoke)
     arms = [n for n in FEATURE_SETS if not (n.endswith("F3") or "F3" in FEATURE_SETS[n])]
+    if a.arms:
+        want = [x.strip() for x in a.arms.split(",")]
+        arms = [n for n in arms if n in want]
     unavailable = [n for n in FEATURE_SETS if n not in arms]
     grid = {}
     for name in arms:
@@ -497,21 +500,26 @@ def run(a) -> int:
             usable = len(fn); posf = int((fn > 0).sum())
             grid[(name, tau)] = {"arm": name, "tau": tau, "n": len(led), "sum_net_r": round(float(led["net_r"].sum()), 3) if len(led) else 0.0,
                                  "folds_with_trades": usable, "folds_positive": posf,
-                                 "eligible": bool(len(led) >= N_DISC_FLOOR and usable > 0 and posf >= math.ceil(2 * usable / 3)), "_led": led}
+                                 "eligible": bool(len(led) >= N_DISC_FLOOR and usable > 0 and posf >= math.ceil(2 * usable / 3)
+                                                  and (not a.require_positive_sum or (len(led) and float(led["net_r"].sum()) > 0))), "_led": led}
     table = [{k: v for k, v in g.items() if k != "_led"} for g in grid.values()]
     elig = [g for g in grid.values() if g["eligible"]]
     res = {"schema": SCHEMA, "profile": a.profile, "smoke": bool(a.smoke), "rehearsal": bool(a.rehearsal), "bar_hours": BAR_H, "taus": list(TAUS), "horizon_bars": H, "arms_run": arms, "arms_unavailable": unavailable,
-           "arm_denominator_registered": len(FEATURE_SETS) * len(TAUS), "arms_graded": len(grid), "discovery_table": table,
+           "require_positive_sum": bool(a.require_positive_sum), "arm_denominator_registered": len(arms) * len(TAUS), "arms_graded": len(grid), "discovery_table": table,
            "folds": len(folds), "data_rows": len(tab), "elapsed_s": round(time.time() - t0)}
     if a.smoke:
         res.update({"verdict": "smoke", "read_state": "smoke_no_holdout"})
         (out / "result.json").write_text(json.dumps(res, indent=1)); print(json.dumps({k: res[k] for k in ("verdict", "arms_graded", "data_rows")}))
         print(pd.DataFrame(table).to_string()); return 0
     if not elig:
-        res.update({"verdict": "FAIL", "read_state": "measured", "reason": "no arm x tau eligible on discovery (>= 100 trades and >= 2/3 of folds net-positive)"})
+        res.update({"verdict": "FAIL", "read_state": "measured", "reason": "no arm x tau eligible on discovery (>= 100 trades and >= 2/3 of folds net-positive" + (" and discovery sum > 0)" if a.require_positive_sum else ")")})
         return finish(out, res, prof, None, None)
     sel = max(elig, key=lambda g: g["sum_net_r"]); name, tau = sel["arm"], sel["tau"]
     res["selected"] = {"arm": name, "tau": tau, "discovery_sum_net_r": sel["sum_net_r"], "discovery_n": sel["n"]}
+    if a.no_heldout:    # forward design: the held-out span is spent for this lane, so the selection is FROZEN here and graded later on bars that did not exist yet
+        res.update({"verdict": "INDETERMINATE", "read_state": "measured", "reason": "forward_pending: an arm is eligible on discovery; the held-out span was NOT read (--no-heldout); grade it on the forward window",
+                    "forward_pending": True})
+        return finish(out, res, prof, None, None)
     cols = arm_cols(fam, name); hs = pd.Timestamp(HOLDOUT_START, tz="UTC")
     held = tab[(tab.ts >= hs) & (tab.ts < pd.Timestamp(HOLDOUT_END, tz="UTC") + pd.Timedelta(days=1))]
     p = fit_predict(purged_train(tab, hs), held, cols)         # ONE fit, ONE read of the sealed span
@@ -523,13 +531,13 @@ def run(a) -> int:
 
 def finish(out: Path, res: dict, prof: dict, hl, dev, held=None, extra_refs=()) -> int:
     if hl is None:
-        return _write(out, res, "fail")
+        return _write(out, res, "indeterminate" if res.get("forward_pending") else "fail")
     rows = hl.to_dict("records")
     (out / "ledger_heldout.jsonl").write_text("\n".join(json.dumps(r) for r in rows) + "\n")
     (out / "ledger_dev_oos.jsonl").write_text("\n".join(json.dumps(r) for r in dev.to_dict("records")) + "\n")
     n = len(hl)
     if n < N_HELD_FLOOR:
-        res.update({"verdict": "INDETERMINATE", "read_state": "n_below_floor", "n_heldout": n, "floor": N_HELD_FLOOR})
+        res.update({"verdict": "INDETERMINATE", "read_state": "measured", "reason": "n_below_floor", "n_heldout": n, "floor": N_HELD_FLOOR})
         return _write(out, res, "indeterminate")
     net = hl["net_r"].to_numpy()
     bs = boot_ci(list(net))
@@ -634,7 +642,7 @@ def main(argv=None) -> int:
     ap.add_argument("--self-test", action="store_true")
     sub = ap.add_subparsers(dest="cmd")
     r = sub.add_parser("run"); r.add_argument("--profile", choices=sorted(PROFILES), required=True); r.add_argument("--out", required=True)
-    r.add_argument("--cache", default="/tmp/prop_ml_cache"); r.add_argument("--smoke", action="store_true"); r.add_argument("--rehearsal", action="store_true"); r.add_argument("--bar-hours", type=int, default=1, choices=[1, 2, 4]); r.add_argument("--taus", default=""); r.add_argument("--ref-ledger", nargs="*", default=[])
+    r.add_argument("--cache", default="/tmp/prop_ml_cache"); r.add_argument("--smoke", action="store_true"); r.add_argument("--rehearsal", action="store_true"); r.add_argument("--bar-hours", type=int, default=1, choices=[1, 2, 4, 8]); r.add_argument("--taus", default=""); r.add_argument("--require-positive-sum", action="store_true"); r.add_argument("--arms", default=""); r.add_argument("--no-heldout", action="store_true"); r.add_argument("--ref-ledger", nargs="*", default=[])
     d = sub.add_parser("distinct"); d.add_argument("--ledger", required=True); d.add_argument("--span-start", required=True); d.add_argument("--span-end", required=True)
     d.add_argument("--refs", nargs="*", default=[])
     a = ap.parse_args(argv)
