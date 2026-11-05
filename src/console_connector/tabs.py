@@ -217,6 +217,75 @@ LEG_FIELDS = ("trades", "wins", "winRate", "totalPnl", "totalPnlMeasured", "tota
 BOOKS = (("real_money", None), ("paper", "paper"), ("paper_portfolio", "paperPortfolio"))
 
 
+def system_catalog(repo: Path, signals_limit: int = 400) -> dict:
+    """The System tab: strategy legs (status, books, venue, symbol), ML models and the signal catalog.
+
+    A projection over committed files only (config/strategies.yaml, config/accounts.yaml,
+    scripts/ops/strategy_status.py, docs/reference/signal-catalog.yaml); nothing live is read, so a
+    leg's status is the roster's status at the register commit, not a venue read. ML ``target_stage`` is the
+    manifest's target, not the live registry stage (that is `performance` -> ml_models).
+    """
+    import yaml
+    sections: dict[str, Any] = {}
+    # (a) strategy legs
+    try:
+        ss = _load_script(repo, "scripts/ops/strategy_status.py", "_cc_strategy_status")
+        accounts, strategies = ss.load(repo)
+        table = ss.table(repo)
+        legs = []
+        for leg, row in table.items():
+            cfg = strategies.get(leg) or {}
+            books = row["books"]
+            legs.append({
+                "leg": leg, "status": row["status"], "books": books,
+                "venues": sorted({str((accounts.get(b) or {}).get("exchange")) for b in books
+                                  if (accounts.get(b) or {}).get("exchange")}),
+                "book_classes": {b: (accounts.get(b) or {}).get("account_class") for b in books},
+                "symbols": [str(s) for s in (cfg.get("symbols") or [])],
+                "timeframe": cfg.get("timeframe"), "execution": cfg.get("execution"),
+                "model": cfg.get("model"),
+            })
+        counts: dict[str, int] = {}
+        for r in legs:
+            counts[r["status"]] = counts.get(r["status"], 0) + 1
+        sections["legs"] = {"read_state": "read", "population": {"legs": len(legs), "by_status": counts},
+                            "items": legs}
+    except Exception as exc:  # noqa: BLE001 - a failed source says so; it is never an empty list
+        sections["legs"] = {"read_state": "could_not_look", "population": {"legs": None}, "reason": _err(exc)}
+    # (b) ML models + signals from the catalog artifact (row SIGNAL-CATALOG)
+    cat_path = repo / "docs/reference/signal-catalog.yaml"
+    try:
+        cat = yaml.safe_load(cat_path.read_text(encoding="utf-8")) or {}
+        models = [{"model_id": m.get("model_id"), "family": m.get("model_family"),
+                   "target_stage": m.get("target_deployment_stage"),
+                   "dataset": (m.get("dataset") or {}).get("family"),
+                   "symbol_scope": (m.get("dataset") or {}).get("symbol_scope"),
+                   "timeframe": (m.get("dataset") or {}).get("timeframe"),
+                   "n_features": len(m.get("features") or [])} for m in (cat.get("ml_models") or [])]
+        sections["ml_models"] = {"read_state": "read", "population": {"models": len(models),
+                                 "stage_source": "manifest target_deployment_stage, not the live registry"},
+                                 "items": models}
+        inputs = cat.get("inputs") or []
+        items = [{"id": i.get("id"), "name": i.get("name"), "family": i.get("family"), "kind": i.get("kind"),
+                  "timeframe": i.get("timeframe"), "used_by": list(i.get("used_by") or [])[:6],
+                  "health": (i.get("health") or {}).get("state"),
+                  "definition": _trim(i.get("definition"), 160)} for i in inputs[:signals_limit]]
+        sections["signals"] = {"read_state": "read", "population": {
+            "inputs": len(inputs), "returned": len(items), "truncated": len(inputs) > len(items),
+            "by_family_kind": (cat.get("population") or {}).get("by_family_kind"),
+            "generated": cat.get("generated"), "health_note": "health.state says whether a metric EXISTS; "
+            "'unmeasured' is a could-not-look, never healthy"}, "items": items}
+    except Exception as exc:  # noqa: BLE001
+        for k in ("ml_models", "signals"):
+            sections[k] = {"read_state": "could_not_look", "population": {}, "reason": _err(exc)}
+    states = {s["read_state"] for s in sections.values()}
+    rs = "read" if states == {"read"} else ("could_not_look" if states == {"could_not_look"} else "partial")
+    return _env(repo, rs, {"sections": len(sections)},
+                {"source": ["config/strategies.yaml", "config/accounts.yaml", "scripts/ops/strategy_status.py",
+                            "docs/reference/signal-catalog.yaml"], "measure": "MEASURED"},
+                sections=sections)
+
+
 def _load_script(repo: Path, rel: str, name: str):
     spec = importlib.util.spec_from_file_location(name, repo / rel)
     mod = importlib.util.module_from_spec(spec)  # type: ignore[arg-type]

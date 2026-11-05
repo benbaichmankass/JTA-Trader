@@ -1,0 +1,7 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "hold_reason": "tier_2_3_needs_approval",
+  "hold_text": "Connector code plus a restart of the console connector unit on the trainer VM (Tier 2: new read-only tool system_catalog, public, committed files only). Manager dispatch (UI-CONSOLE-ITEM-FEEDBACK, 2026-11-05 ~15:20Z, operator's thread b190676d): 'propose ONE new read-only connector tool (e.g. system_catalog) as a Tier-2 PR (connector code + restart; landing hold)'. Manager lands it and restarts the connector.",
+  "why": "The console System tab needs the strategy / ML / signal catalogs from the connector so it stops showing a build-time snapshot. Reads config/strategies.yaml, config/accounts.yaml, scripts/ops/strategy_status.py and docs/reference/signal-catalog.yaml only; no write, no live read, no gate."
+}
