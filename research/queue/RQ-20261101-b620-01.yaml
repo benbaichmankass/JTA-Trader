@@ -2,7 +2,7 @@
 id: RQ-20261101-b620-01
 title: 'ENTRY timeframe lever, precondition: does the new timeframe harness, run at 1h, REPRODUCE the round-1 v1 base (R0, seeds 7/11/13, tau 0.10, dev folds, pooled frozen 60: seed-mean +0.0089, n about
   72k)? It is the baseline every other timeframe unit is judged against. Dev folds only'
-status: done
+status: queued
 cadence: once
 theme: ml_health
 priority: 1
@@ -99,9 +99,9 @@ programme_node:
   programme: P2
   node: P2-ENTRY-LEVERS
   goal: G4
-rearmed_at: '2026-11-02T22:30:00+00:00'
-last_dispatched_at: '2026-11-03T01:57:27+00:00'   # re-armed 2026-11-02 (RESEARCH-FLOW): ran to completion on real data but ml_entry_v2_run wrote no verdict.json (producer_failed, ungraded); the timeframe verdict writer is now in write_verdict. Rule and window unchanged.
-grading:
+rearmed_at: '2026-11-05T16:00:00+00:00'
+last_dispatched_at: null   # re-armed 2026-11-05 (lane ML-FS-RECIPE, manager decision ~15:41Z): the 2026-11-03 FAIL was a harness fault (no frozen-bar mask, float32), fixed in ml_entry_timeframe.py; RULE-20261101-b620-01 and its window are UNCHANGED. Prior grading kept below as grading_before_rearm.
+grading_before_rearm:
   attested: RULE-20261101-b620-01
   auto: true
   decision_rule_id: RULE-20261101-b620-01

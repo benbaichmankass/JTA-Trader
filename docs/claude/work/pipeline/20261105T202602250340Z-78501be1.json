@@ -1,0 +1,19 @@
+{
+  "due_by": "2026-11-12",
+  "due_when": {
+    "check_every_days": 3,
+    "clears_when": "each of mhg_pullback_1d, ml_entry_v2, ief_pullback_1d, slv_pullback_1d has a graded reverse-test row (pass/fail) or a recorded operator decision",
+    "kind": "event"
+  },
+  "id": "PI-20261105-RBWVTUT3-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "STRUCTURE-EXITS-DEFAULT lane (session_01AFoLuMEZ1PH62KRBwVTUT3)",
+    "rerun": "python3 -c \"import yaml;s=yaml.safe_load(open('config/strategies.yaml'));s=s.get('strategies',s);print(sorted(k for k,v in s.items() if isinstance(v,dict) and v.get('structure_exit')))\"; ls research/results | grep 5e05"
+  },
+  "owner": "manager",
+  "roadmap": "L-AM-STANDARD",
+  "state": "queued",
+  "what": "STRUCTURE-EXITS-DEFAULT gap: 3 legs DECLARE structure_exit with no reverse-test measurement (RULE-STRUCTURE-EXITS-REVERSE-V1): mhg_pullback_1d (dukascopy REFUSES MHG, scripts/ops/dukascopy_instruments.py:99; research-script-run.yml installs no yfinance, so exit_lever_ablation cannot fetch it on the runner), ml_entry_v2 (no ML harness arm for -structure_exit; the ML runner is scripts/research ml_structure_bracket / 5e04 form), ief_pullback_1d + slv_pullback_1d INDETERMINATE n37/n38 < 39 (5e05-15/16). Sibling evidence: the prior exit beat structure on 9 of 17 measured declaring legs (PR #23485). DO: author a reverse unit for ml_entry_v2 on the 5e04-01 harness; give mhg a data lane (yfinance on the runner or a pooled metals population); for ief/slv a pooled 1d-ETF population, never a wait for accrual."
+}

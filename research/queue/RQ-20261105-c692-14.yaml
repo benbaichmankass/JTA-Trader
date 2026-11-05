@@ -2,7 +2,7 @@
 id: RQ-20261105-c692-14
 title: 'ML SL revision v1 (c692-11), CONFIRMING READ (cross-sectional): does the c692-11 frozen config (BE/TRAIL heads, margin 0.15) beat hold-to-bracket
   on 100 perps outside the training pool?'
-status: queued
+status: done
 cadence: once
 theme: ml_health
 priority: 1
@@ -120,3 +120,17 @@ ml_consumer:
   legs:
   - xrp_pullback_2h
   book: money
+last_dispatched_at: '2026-11-05T19:08:48+00:00'
+grading:
+  attested: RULE-RQ20261105-c692-14-MLSL
+  auto: true
+  decision_rule_id: RULE-RQ20261105-c692-14-MLSL
+  evidence:
+  - research/results/RQ-20261105-c692-14/42082025662.jsonl
+  graded_at: '2026-11-05'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 2 row(s), all measured, all fail
+  rows: 2
+  verdict: fail

@@ -78,6 +78,10 @@ DECLARED_LIGHT = {
     "scripts/research/donchian_meta_filter.py":
         "PROP-BASELINE-AND-ML meta-label filter (unit RQ-20261105-d256-02): a scikit-learn logistic regression on ~250 committed ledger rows, seconds of CPU "
         "in a lane container or a GitHub runner, never needs_vm_data, never routed to the trainer.",
+    "scripts/research/ml_entry_equity.py":
+        "ML-ENTRY-EQUITY-NATIVE equity-native ENTRY model (units RQ-20261105-e9a1-01 dev, RQ-20261105-e9a1-02 confirm): fits ~15 LightGBM regressors on ~0.3M rows built "
+        "from read-only Alpaca ETF bars (research-script-run.yml, 4 vCPU, 16 GB; needs the internet and the paper data key, so compute cpu_long, github_runner), never "
+        "needs_vm_data, never routed to the trainer.",
     "scripts/research/prop_ml_leg.py":
         "TRADEIFY-OWN-LEG-DRIVER prop ML entry leg (units RQ-20261105-fd68-01, -fd68-02): fits LightGBM on public Binance Vision klines/funding/metrics and FRED "
         "on a GitHub runner (research-script-run.yml, 4 vCPU, 16 GB, 6 h; the units need internet, so compute cpu_long with why_runner), never needs_vm_data, "

@@ -2,23 +2,34 @@
   "id": "BYBIT2-FUNDING-SETTLEMENT-READ",
   "title": "REAL MONEY: bybit_2 funding settlement absent for ~24h, and no diag route reads per-settlement funding to confirm or refute it",
   "phase": null,
-  "state": "queued",
+  "state": "in_flight",
   "owner": "manager",
-  "lane": null,
-  "model": null,
+  "lane": "session_01AFoLuHyEByrMEjkr2vWtVM",
+  "model": "sonnet",
   "ceiling_usd": null,
   "spend_usd": null,
   "tier": 1,
-  "prs": [],
+  "prs": [
+    23446
+  ],
   "blocked_on": [],
-  "note": "Reported by the outgoing manager handoff (docs/claude/work/handoffs/2026-11-04-01AFoLuH-to-new.md, PR #23007): no funding settlement for bybit_2 in 24h. NOT re-measured live by this lane (no diag read of it exists -- that is the finding). Verified in code on main 8f000b7: funding lands in two stores -- (1) exchange_funding (src/runtime/exchange_fills_store.py:90, pulled by scripts/pull_exchange_funding.py, read ONLY by the offline broker-truth cost sweep; NO /api/diag route), (2) bybit_transaction_log (pulled hourly by scripts/ops/pull_bybit_transaction_log.py), exposed by /api/diag bybit_wallet_truth (src/web/api/routers/diag.py:3631) but only as an aggregate funding_usd per window, no per-settlement timestamps, so a 24h gap cannot be seen. DONE WHEN: (1) a Tier-1 read-only diag route returns the last N funding rows per account (funding_time, funding_usd, symbol) with the store's last-pulled-at and a read_state (measured / no_rows_in_window / not_pulled / unreadable, never 0); (2) bybit_2 is read through it and the 24h absence is confirmed (puller down vs venue settled nothing: Bybit settles every 8h, so >=3 settlements are expected per open perp per 24h) or refuted; (3) if puller down, restart/fix it (Tier 2 only for a service change). Rerun: diag route above, account bybit_2.",
+  "note": "Reported by the outgoing manager handoff (docs/claude/work/handoffs/2026-11-04-01AFoLuH-to-new.md, PR #23007): no funding settlement for bybit_2 in 24h. NOT re-measured live by this lane (no diag read of it exists -- that is the finding). Verified in code on main 8f000b7: funding lands in two stores -- (1) exchange_funding (src/runtime/exchange_fills_store.py:90, pulled by scripts/pull_exchange_funding.py, read ONLY by the offline broker-truth cost sweep; NO /api/diag route), (2) bybit_transaction_log (pulled hourly by scripts/ops/pull_bybit_transaction_log.py), exposed by /api/diag bybit_wallet_truth (src/web/api/routers/diag.py:3631) but only as an aggregate funding_usd per window, no per-settlement timestamps, so a 24h gap cannot be seen. DONE WHEN: (1) a Tier-1 read-only diag route returns the last N funding rows per account (funding_time, funding_usd, symbol) with the store's last-pulled-at and a read_state (measured / no_rows_in_window / not_pulled / unreadable, never 0); (2) bybit_2 is read through it and the 24h absence is confirmed (puller down vs venue settled nothing: Bybit settles every 8h, so >=3 settlements are expected per open perp per 24h) or refuted; (3) if puller down, restart/fix it (Tier 2 only for a service change). Rerun: diag route above, account bybit_2. 2026-11-05 lane: (1) route /api/diag/funding_settlements in PR #23446 (held for manager merge). (2) PARTIAL: existing bybit_wallet_truth?account_id=bybit_2&days=3&by_day=true (read 18:29Z) shows SETTLEMENT funding_usd on 11-03 (-0.0083), 11-04 (-0.0218), 11-05 (-0.0147) => 24h absence REFUTED at day granularity (puller delivering); per-settlement timestamps + last_pulled_at unproven until #23446 deploys. Close by: after deploy read funding_settlements?account_id=bybit_2 and check settlements_last_24h>=1 and newest_settlement_age_h<=8. (3) no puller fix needed on this evidence; ict-trader-live/web-api active. 2026-11-05 ~20:00Z post-deploy read of /api/diag/funding_settlements?account_id=bybit_2 (route live; #23446 merged 87ec1261). MEASURED: settlements 11-04 16:00Z (SOL, ETH), 11-05 00:00Z and 08:00Z (ETH); 2 in last 24h; newest age 12.0h. Original claim (nothing settled in 24h) REFUTED. Literal <=8h criterion FAILS: no 16:00Z settlement though txn-log rows exist to 16:20Z => venue booked none, consistent with no open bybit_2 perp at 16:00Z, NOT verified. FINDINGS: (a) route last_pulled_at is MAX(inserted_at)=last NEW row, not last puller run, so a quiet account looks stale; fix = read puller run time. (b) exchange_funding (daily puller) newest row 11-03 08:00Z, last insert 11-03 08:27, while txn log has later SETTLEMENTs: that store lags ~2 days (feeds offline cost sweep funding attribution); timer active, cause not found. NEXT: bybit_2 open positions at 2026-11-05T16:00Z; diagnose exchange_funding lag via ict-exchange-funding-pull journal. [2026-11-05 22:57Z manager] Dispatched lane BYBIT2-FUNDING-LAG (session_01AFoLuHyEByrMEjkr2vWtVM, Sonnet, surge): root-cause and fix the ~2-day exchange_funding lag (b), fix the route last_pulled_at semantics (a), and answer whether bybit_2 had open perps at 16:00Z.",
   "due_by": "2026-11-05",
   "roadmap": [
     "L-DATA"
   ],
   "priority_rank": 1,
-  "updated_at": "2026-11-05T14:06:41Z",
+  "updated_at": "2026-11-05T22:57:54Z",
   "updated_by": "session_01AFoLuLmhUKeUzHC6CHz2uP",
   "week_lane": "surge",
+  "observation": {
+    "what": "bybit_2 per-settlement funding visible: settlements_last_24h>=1 and newest_settlement_age_h<=8",
+    "how_to_check": "GET /api/diag/funding_settlements?account_id=bybit_2 after #23446 deploys",
+    "due_by": "2026-11-06"
+  },
+  "writeback": {
+    "roadmap": "none: diag read route only, no milestone line changes",
+    "arch": "none: Tier-1 read route documented in docs/api-tier-policy.md"
+  },
   "_seq": 920
 }

@@ -354,7 +354,7 @@ def purged_train(tab: pd.DataFrame, start: pd.Timestamp) -> pd.DataFrame:
 
 
 # ----------------------------------------------------------------------------------------------- stats
-def boot_ci(x: list[float], block: int = 5) -> dict:
+def boot_ci(x: list[float], block: int = 5, bar: dict | None = None) -> dict:
     x = np.asarray(x, float); n = len(x)
     if n < 2 * block:
         return {"n": n, "mean": float(x.mean()) if n else None, "ci_lo": None, "read_state": "n_too_small"}
@@ -362,7 +362,9 @@ def boot_ci(x: list[float], block: int = 5) -> dict:
     nb = math.ceil(n / block)
     starts = rng.integers(0, n - block + 1, size=(BOOT_DRAWS, nb))
     means = np.array([np.concatenate([x[s:s + block] for s in row])[:n].mean() for row in starts])
-    return {"n": n, "mean": float(x.mean()), "ci_lo": float(np.percentile(means, 2.5)), "ci_hi": float(np.percentile(means, 97.5)), "read_state": "ok"}
+    p = (bar or {}).get("ci_lo_percentile", 2.5)   # deflated on a re-read of the held-out span (holdout ledger; HOLDOUT-DEFLATED-REUSE)
+    return {"n": n, "mean": float(x.mean()), "ci_lo": float(np.percentile(means, p)), "ci_hi": float(np.percentile(means, 100 - p)),
+            "ci_lo_percentile": p, "read_state": "ok"}
 
 
 def regime_clause(oos: pd.DataFrame) -> dict:
@@ -540,19 +542,34 @@ def run(a) -> int:
                     "forward_pending": True})
         return finish(out, res, prof, None, None)
     cols = arm_cols(fam, name); hs = pd.Timestamp(HOLDOUT_START, tz="UTC")
+    res["holdout_claim"] = claim = None if a.rehearsal else _claim(a, prof, f"{name}-tau{tau}")   # recorded BEFORE any held-out outcome
     held = full_tab[(full_tab.ts >= hs) & (full_tab.ts < pd.Timestamp(HOLDOUT_END, tz="UTC") + pd.Timedelta(days=1))]
     if backward:   # ONE fit on every discovery row (all strictly after the span + embargo, asserted at start), ONE read of the sealed span
         res["heldout_design"] = {"kind": "backward", "train_from": str(DISC_FLOOR_TS.date()), "train_to": DISC_END, "span": [HOLDOUT_START, HOLDOUT_END]}
         p = fit_predict(tab, held, cols)
     else:
-        p = fit_predict(purged_train(tab, hs), held, cols)         # ONE fit, ONE read of the sealed span
+        p = fit_predict(purged_train(tab, hs), held, cols)         # one fit; a re-read of the span is graded on the ledger's deflated bar
     hl = run_policy(held, p, tau, rp)
     dev = sel["_led"].drop(columns=["fold"])
     res["heldout"] = {"n": len(hl), "mean_net_r": float(hl["net_r"].mean()) if len(hl) else None}
-    return finish(out, res, prof, hl, dev, held=held, extra_refs=a.ref_ledger)
+    return finish(out, res, prof, hl, dev, held=held, extra_refs=a.ref_ledger, bar=(claim or {}).get("bar"))
 
 
-def finish(out: Path, res: dict, prof: dict, hl, dev, held=None, extra_refs=()) -> int:
+def _claim(a, prof: dict, arm: str) -> dict:
+    """Record the held-out read (family PROPML-<profile>) in a COPY of the holdout ledger inside the out dir (the runner does not
+    commit the repo ledger; the lane appends the line). Re-reads are allowed and graded stricter (HOLDOUT-DEFLATED-REUSE)."""
+    import shutil
+
+    import holdout_lock as HL
+    led = Path(a.out) / "holdout_reads.jsonl"
+    if not led.exists() and HL.LEDGER.exists():
+        shutil.copy(HL.LEDGER, led)
+    return HL.claim_read(f"PROPML-{a.profile}-{BAR_H}h-{arm}", HOLDOUT_START, HOLDOUT_END, getattr(a, "unit", None) or Path(a.out).name,
+                         "prop_ml_leg.py run", led, symbols=list(prof["symbols"]), family=f"PROPML-{a.profile}",
+                         train_end=str((pd.Timestamp(HOLDOUT_START) - pd.Timedelta(days=1)).date()))
+
+
+def finish(out: Path, res: dict, prof: dict, hl, dev, held=None, extra_refs=(), bar: dict | None = None) -> int:
     if hl is None:
         return _write(out, res, "indeterminate" if res.get("forward_pending") else "fail")
     rows = hl.to_dict("records")
@@ -563,7 +580,7 @@ def finish(out: Path, res: dict, prof: dict, hl, dev, held=None, extra_refs=()) 
         res.update({"verdict": "INDETERMINATE", "read_state": "measured", "reason": "n_below_floor", "n_heldout": n, "floor": N_HELD_FLOOR})
         return _write(out, res, "indeterminate")
     net = hl["net_r"].to_numpy()
-    bs = boot_ci(list(net))
+    bs = boot_ci(list(net), bar=bar)
     e1 = bool(net.mean() >= 0.10 and bs.get("ci_lo") is not None and bs["ci_lo"] > 0)
     # baselines on the identical held-out span
     b1 = {s: float(np.r_[held.loc[held.symbol == s, "net_long"].to_numpy(), held.loc[held.symbol == s, "net_short"].to_numpy()].mean()) for s in prof["symbols"]}
@@ -592,7 +609,8 @@ def finish(out: Path, res: dict, prof: dict, hl, dev, held=None, extra_refs=()) 
     # E4: V3 prop gate on the held-out ledger (scripts/research/ml_variant_prop_gate.py, unchanged)
     gate_dir = out / "prop_gate"
     cmd = [sys.executable, str(REPO / "scripts/research/ml_variant_prop_gate.py"), "--variant", f"{res['profile']}-ml-leg", "--ledger", str(out / "ledger_heldout.jsonl"),
-           "--out-dir", str(gate_dir), "--symbols", ",".join(prof["symbols"]), "--leg-key", prof["leg_key"], "--jobs", "4"]
+           "--out-dir", str(gate_dir), "--symbols", ",".join(prof["symbols"]), "--leg-key", prof["leg_key"], "--jobs", "4"] + \
+          (["--edge-z", str(bar["ci_z"])] if bar else [])
     subprocess.run(cmd, check=True, cwd=str(REPO), stdout=subprocess.DEVNULL)
     gate = json.loads((gate_dir / "result.json").read_text())
     e4_by = {acct: {arm: gate["firms"][acct][arm]["v3_verdict"] for arm in ("ven", "cur")} for acct in prof["accounts"]} if gate.get("read_state") == "graded" else None

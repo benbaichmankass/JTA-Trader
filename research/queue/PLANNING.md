@@ -137,6 +137,16 @@ none of the real-money legs (checklist row `ML-PIPELINE-DESIGN`).
 - Generated units take it from the template (`ml_consumer:`, passed through by `queue_replenish.py`) or the programme
   node's `unit:` body.
 
+## 1d. A holdout is never "spent" (operator 2026-11-05, HOLDOUT-DEFLATED-REUSE)
+
+Operator, verbatim: *"We can't just, like, give up on a certain line of research because we've already trained a model on all
+the data that we have. That's ridiculous."* Popup: *"Adopt (Rec.)"*. A unit can re-test a family on a holdout that has already
+been read. It registers the read through `scripts/research/holdout_lock.py` and states the `n_tries` it will be read at. Its rule
+is then graded on the deflated bar the ledger returns (`python3 scripts/research/holdout_lock.py next-bar --family <F> --start ..
+--end ..`). A unit may also name a later holdout window, but every window must start after the training data ends. Never block,
+re-point or park a unit because its window "was read"; that rule is retired. The full rule is in
+`docs/reference/trading-and-model-practice-principles.md` M13. *Gates this adds or changes:* none; this removes the one-read block.
+
 ## 2. Weights
 - `research/THEMES.yaml` is the only place weights live. They are a share of fire slots, not an order.
 - Set at the operator's direction (2026-09-30: regime 5, live_strategy 4, ml_health 3, new_strategy_prop 2,
