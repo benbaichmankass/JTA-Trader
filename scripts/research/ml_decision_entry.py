@@ -189,8 +189,9 @@ def _cost_r(entry, exit_px, risk, t_entry_s, t_exit_s):
     return fee, slip, fund
 
 
-def label_symbol(df: pd.DataFrame) -> pd.DataFrame:
-    """Decision rows for one symbol: every DECISION_EVERY_H-th bar whose close is the decision time."""
+def label_symbol(df: pd.DataFrame, recost_inputs: bool = False) -> pd.DataFrame:
+    """Decision rows for one symbol: every DECISION_EVERY_H-th bar whose close is the decision time. ``recost_inputs``
+    (universe-costed only) adds per_r_* / nwin_*; off by default so every other caller's frame is byte-identical."""
     o, h, lo, c = (df[k].to_numpy(float) for k in ("open", "high", "low", "close"))
     pc = np.r_[np.nan, c[:-1]]
     tr = np.nanmax(np.vstack([h - lo, np.abs(h - pc), np.abs(lo - pc)]), axis=0)
@@ -224,7 +225,9 @@ def label_symbol(df: pd.DataFrame) -> pd.DataFrame:
         out[f"cost_{name}"] = fee + slip + fund
         out[f"reason_{name}"] = reason
         out[f"bars_{name}"] = j
-        # re-costing inputs for universe-costed (a24c-01): price-per-R and funding windows crossed; nothing above reads them
+        if not recost_inputs:
+            continue
+        # re-costing inputs for universe-costed (a24c-01): price-per-R and funding windows crossed
         out[f"per_r_{name}"] = ((np.abs(entry) + np.abs(px)) / 2.0) / risk
         from src.runtime.execution_costs import FUNDING_WINDOW_HOURS
         w = FUNDING_WINDOW_HOURS * 3600.0
@@ -266,7 +269,8 @@ FEATURES = ["ret_1", "ret_4", "ret_12", "ret_24", "ret_72", "ret_168", "vol24", 
             "xs_rank_ret24", "btc_ret24", "btc_vol24", "breadth_up24", "rel_vol"]
 
 
-def build_table(cache: Path, symbols: list[str], xs_symbols: list[str] | None = None) -> pd.DataFrame:
+def build_table(cache: Path, symbols: list[str], xs_symbols: list[str] | None = None,
+                recost_inputs: bool = False) -> pd.DataFrame:
     """``xs_symbols`` None: cross-sectional context over ``symbols`` (the c692-01 recipe, unchanged). Given: context is
     computed against that fixed REFERENCE set for every row, so a row's inputs do not depend on which other symbols are
     in the table (the c692-04 training-universe arms)."""
@@ -275,7 +279,7 @@ def build_table(cache: Path, symbols: list[str], xs_symbols: list[str] | None = 
         df = pd.read_pickle(cache / f"{sym}.pkl").reset_index(drop=True)
         f = features_symbol(df)
         feats[sym] = f
-        lab = label_symbol(df)
+        lab = label_symbol(df, recost_inputs=recost_inputs)
         lab = lab.join(f.drop(columns=["ts"]), on="i")
         lab["symbol"] = sym
         rows.append(lab)
@@ -828,7 +832,7 @@ def universe_costed(args) -> int:
     listed = {k for k, v in specs.items() if v and v.get("status") == "Trading" and v.get("contractType") == "LinearPerpetual"}
     cands = [s for s in ref if s in listed]
     fetch(cache, ref, end=args.fwd_end)
-    tab = build_table(cache, ref, xs_symbols=ref)
+    tab = build_table(cache, ref, xs_symbols=ref, recost_inputs=True)
     # costs per symbol-month
     snap_day = args.snapshot_day
     costs, dropped = {}, {}
