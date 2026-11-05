@@ -1,0 +1,17 @@
+# Console connector ingress on the trainer VM (row UI-CONSOLE-V1; operator decision 2026-11-05
+# "Open 443 + Google OAuth (Recommended)"). Caddy obtains the certificate itself (ACME on :80).
+# Only the connector's paths are proxied; anything else is 404.
+{
+	admin off
+}
+
+158-178-209-121.sslip.io {
+	encode gzip
+	@connector path /mcp /mcp/* /healthz /authorize /authorize/* /token /register /.well-known/*
+	handle @connector {
+		reverse_proxy 127.0.0.1:8765
+	}
+	handle {
+		respond 404
+	}
+}
