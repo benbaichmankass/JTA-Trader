@@ -1,0 +1,112 @@
+# Hand-authored 2026-11-05 by lane ML-WEEK-1105 (Tier 1) from docs/plans/ML-ROADMAP-MECE-2026-11.md section 8 P5 / section 10
+# proposed id RQ-20261105-mece-02 in that section; (row ML-ROADMAP-MECE, milestone L-ML-MECE, slot D6 bracket at entry). Decision rule registered BEFORE any run and before any
+# read of its forward window. Gates: none (a measurement; a PASS feeds a Tier-3 bracket proposal, it changes nothing itself).
+id: RQ-20261105-af07-01
+title: 'Pointer v0 (D6 bracket at entry): does the served TP-revision model (Labrador-1b), scored ONCE at bar 0 of each frozen Foxhound-1
+  entry to set the entry TP from its grid, raise forward mean net R per trade vs the fixed 3 ATR (1.5R) TP on the same trades?'
+status: blocked
+cadence: once
+theme: ml_health
+priority: 2
+programme: P2
+parent: RQ-20261101-383f-01
+lifecycle_slot: D6
+roadmap:
+- L-ML-MECE
+kind: experiment
+practice_precedent: 'T1, M6 (docs/reference/trading-and-model-practice-principles.md): an intervention judged against the fixed bracket on the
+  same trades, net of the full cost stack, a sealed forward window read once (HOLDOUT-LOCK / ML-BAR-ONE-READ); Zinkevich "Rules of ML" rule 1
+  (reuse a launched model before building a new one), docs/plans/ML-ROADMAP-MECE-2026-11.md section 9.1 row 13.'
+question: 'Population: every trade the FROZEN served ENTRY model (ml/served/ml_decision_entry_v1, tau 0.10) takes on the c692-01 60-perp
+  reference universe under the c692-01 mechanics (decision every 4th 1h bar close, entry next bar open, SL 2 x ATR14, 24 h time stop, one
+  position per symbol). Arm P: at bar 0 (the decision bar, before entry) the served TP-revision model of RQ-20261101-383f-01 (Labrador-1b,
+  unchanged, no refit) scores the TP grid {1.0, 1.5, 2.0, 2.5, 3.0, 4.0, 5.0, 6.0} x ATR14 and the entry TP is set to its argmax expected net R
+  level; the TP is then never moved. Arm F: the fixed 3 x ATR14 TP (what ml_entry trades today). Same trades, same SL, same bars, ties from 1m
+  for both arms. NOTE stated before the run: Labrador-1b was trained on check-ins at 4..20 bars held, so bar 0 is outside its training
+  check-ins; this unit is the cheap reuse test the roadmap asks for, and a FAIL closes only this reuse, not slot D6.'
+why_this_matters: 'Slot D6 (bracket at entry) has no model at any stage (ML-ROADMAP-MECE section 2). The TP doctrine (docs/ARCHITECTURE-CANONICAL.md
+  "TP doctrine") wants a predictive TP at entry; ml_entry enters with a fixed 1.5R TP. If an already-served model sets a better entry TP, D6 gets
+  its first evidence without a new model.'
+power:
+  expected_n: 900
+  min_detectable_effect: 0.03
+  effect_units: R per trade
+  sd: 0.45
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: 'INFERRED: frozen v1 took 894 forward decisions in 2026-10 on 49 symbols (comms/research/RQ-20261101-b609-01/local-20261101T2000Z/result.json
+    v1_reference); per-trade delta sd assumed ~0.45 R (a whole-trade TP choice moves more than 383f-01''s per-check-in moves, sd ~0.3).'
+  feasibility:
+    source: none
+    accrual_basis: 'Replays public history; the forward window 2026-11 accrues by calendar (Binance Vision daily 1h zips through 2026-11-30, earliest
+      read 2026-12-01).'
+decision_rule:
+  id: RULE-RQ20261105-af07-01-POINTER-V0
+  registered_at: '2026-11-05'
+  registered_before_run: true
+  statistic: 'Forward mean over the frozen v1 trades of (net R under arm P minus net R under arm F), cost stack src/runtime/execution_costs.py
+    (fee 11.0 bps round trip, slippage 3.0 bps, funding 1.0 bps per 8h window), plus arm P mean net R, n trades, n symbols, the share of
+    trades where arm P chose a level other than 3.0, and the trial count from scripts/research/trial_ledger.py with a deflated-Sharpe line.'
+  rule: 'INDETERMINATE IF forward trades < 300 OR distinct symbols < 10 OR trades where arm P chose a level other than 3.0 < 30, OR the window
+    cannot be claimed in scripts/research/holdout_lock.py (model id POINTER-v0-labrador1b-bar0). PASS IF mean delta (P minus F) >= 0 AND arm P
+    mean net R >= 0 (point estimates; the operator bar 2026-11-01 "Point estimate >= 0"). FAIL otherwise. Thresholds never change after any result.'
+  heldout_window: 'FORWARD: decisions 2026-11-01T00:00Z .. 2026-11-29T23:00Z whose 24 h ends by 2026-11-30T23:59Z. 2026-10 is NOT used: frozen
+    v1 already read it (holdout ledger ENTRY-v1-frozen-ref-b609, 2026-11-01T20:12Z) and Labrador-1b read it (383f-01).'
+  what_it_does_not_do: No sizing, no config change, no order, no refit, no TP move after entry.
+  min_n: 300 forward trades on >= 10 symbols, >= 30 with a non-3.0 entry TP
+compute: cpu_long
+value:
+  bucket: ai_trader
+  usd_at_stake_per_month: 300
+  confidence: 0.15
+  basis: 'stand-in: first D6 evidence for the only real-money ML entry leg; not a P&L measurement.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 8.0
+  est_minutes: 60
+  why_runner: Keyless public Binance Vision klines; scoring of two frozen served artifacts on CPU; no refit.
+  basis: 'INFERRED from 383f-01 routing (same data, scoring only).'
+run:
+  workflow: research-script-run.yml
+  command:
+  - python3
+  - scripts/research/ml_entry_tp_revision.py
+  - pointer-v0
+  - --cache
+  - /tmp/ml_decision_klines
+  - --unit
+  - '{unit}'
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 180
+  inputs:
+    research_unit: RQ-20261105-af07-01
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- ML-ROADMAP-MECE
+- ML-ENTRY-TP-REVISION
+- RQ-20261101-383f-01
+what_it_does_not_do: Registers, serves or promotes nothing; changes no config; places no order; sizes nothing.
+blocked_on:
+- kind: harness
+  ref: scripts/research/ml_entry_tp_revision.py
+  what: 'a pointer-v0 subcommand: score the served TP-revision artifact at bar 0 of each frozen-v1 trade, set the entry TP to the argmax grid
+    level, simulate both arms on the same bars with 1m ties, claim POINTER-v0-labrador1b-bar0 in holdout_lock before any outcome is read'
+  clears_when: 'the subcommand lands on main with a self-test (a planted trade whose bar-0 argmax is 3.0 gives delta exactly 0; a planted
+    window already claimed returns INDETERMINATE); the lane git-mvs this file to research/queue/ with status queued, rule unchanged'
+- kind: data
+  ref: Binance Vision daily 1h klines 2026-11-01..2026-11-30
+  what: the forward window
+  clears_when: data.binance.vision lists BTCUSDT-1h-2026-11-30.zip (daily) or BTCUSDT-1h-2026-11.zip (monthly); earliest 2026-12-01
+ml_consumer:
+  consumer: ML-ROADMAP-MECE
+  decision: 'whether ml_entry''s entry TP on bybit_2 + bybit_portfolio is set by the served TP-revision model at entry instead of the fixed 3 ATR
+    (a Tier-3 bracket PR citing this record); a FAIL closes the bar-0 reuse and leaves D6 to a purpose-built Pointer model'
+  legs:
+  - ml_entry
+  book: money
