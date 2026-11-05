@@ -718,6 +718,7 @@ def _apply_partial_close(
             account=trade.get("account_id"),
             strategy=trade.get("strategy_name") or trade.get("setup_type"),
             changes=changes,
+            package_id=pkg_id,
         )
     except Exception as exc:  # noqa: BLE001
         logger.warning(
@@ -797,6 +798,7 @@ def _full_close_trade_and_package(
             exit_price=exit_price if exit_price is not None else row.get("exit_price"),
             pnl=row.get("pnl"),
             reason=reason,
+            package_id=row.get("order_package_id") or pkg_id,
         )
     except Exception as exc:  # noqa: BLE001
         logger.warning(
@@ -1887,6 +1889,7 @@ def _apply_update(db, open_pkg: dict, verdict: Dict[str, Any],
             strategy=matched_trade.get("strategy_name")
             or matched_trade.get("setup_type"),
             changes=changes,
+            package_id=pkg_id,
         )
     except Exception as exc:  # noqa: BLE001
         logger.warning(
@@ -5635,6 +5638,9 @@ def _close_unattributable_orphan(db, row, summary: Dict[str, int]) -> None:
             exit_price=None,
             pnl=None,
             reason="exit_coverage_no_strategy",
+            # An orphan close is an ALERT, not lifecycle noise: high priority
+            # bypasses the TELEGRAM-TRIM trades filter on every account.
+            priority="high",
         )
     except Exception:  # noqa: BLE001
         pass

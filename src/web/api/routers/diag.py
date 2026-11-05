@@ -1047,6 +1047,13 @@ _LOG_FILES: dict[str, Path] = {
     # backoff (here: the exponential one shipped in #10666) is actually working
     # -- which is precisely the desensitised-alarm question CLAUDE.md calls a P1.
     "operator_alerts": runtime_logs_dir() / "operator_alerts.jsonl",
+    # TELEGRAM-TRIM (operator 2026-11-04): every message the one Telegram policy
+    # (config/telegram_policy.yaml) kept OFF Telegram — recurring posts and
+    # testing-paper / duplicate trade pings — one row each, `delivered:
+    # suppressed_by_policy`. Allowlisted in the same commit as its writer
+    # (src/runtime/telegram_policy.record_suppressed) so "suppressed" and
+    # "never fired" stay distinguishable.
+    "telegram_suppressed": runtime_logs_dir() / "telegram_suppressed.jsonl",
     # STANDING CLOSE WEDGES -- the set of close failures established as
     # unclearable by any bot-side lever, which are DOWNGRADED out of the paging
     # channel and carried in the rolled-up digest instead (operator decision

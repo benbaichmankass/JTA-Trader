@@ -1344,7 +1344,8 @@ class Database:
         try:
             cur = conn.execute(
                 "SELECT symbol, direction, pnl, pnl_percent, exit_reason, "
-                "strategy_name, account_id, is_backtest, is_demo, account_class "
+                "strategy_name, account_id, is_backtest, is_demo, account_class, "
+                "order_package_id "
                 "FROM trades WHERE id = ?",
                 (trade_id,),
             )
@@ -1372,6 +1373,7 @@ class Database:
                 "account": row["account_id"],
                 "account_class": row["account_class"],
                 "is_paper": _row_is_paper(row),
+                "order_package_id": row["order_package_id"],
             },
         )
 
@@ -1397,7 +1399,8 @@ class Database:
             cur = conn.execute(
                 "SELECT symbol, direction, position_size, entry_price, "
                 "stop_loss, take_profit_1, "
-                "strategy_name, account_id, is_backtest, is_demo, account_class "
+                "strategy_name, account_id, is_backtest, is_demo, account_class, "
+                "order_package_id "
                 "FROM trades WHERE id = ?",
                 (trade_id,),
             )
@@ -1421,6 +1424,7 @@ class Database:
                 "account": row["account_id"],
                 "account_class": row["account_class"],
                 "is_paper": _row_is_paper(row),
+                "order_package_id": row["order_package_id"],
             },
         )
 
@@ -1451,7 +1455,8 @@ class Database:
             cur = conn.execute(
                 "SELECT symbol, direction, position_size, entry_price, "
                 "stop_loss, take_profit_1, status, "
-                "strategy_name, account_id, is_backtest, is_demo, account_class "
+                "strategy_name, account_id, is_backtest, is_demo, account_class, "
+                "order_package_id "
                 "FROM trades WHERE id = ?",
                 (trade_id,),
             )
@@ -1477,6 +1482,7 @@ class Database:
                 "account": row["account_id"],
                 "account_class": row["account_class"],
                 "is_paper": _row_is_paper(row),
+                "order_package_id": row["order_package_id"],
             },
         )
 

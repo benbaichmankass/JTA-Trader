@@ -589,7 +589,10 @@ Design of record: [`docs/plans/work-system-2026-10-04.md`](../../../docs/plans/w
 due, 151 unrouted, 25 `ask_operator` items never delivered, 36 of 45 soak legs with no definition of done, a 737 KB brief nobody read. Now
 the **VM computes due and pushes it**, and **silence is itself an alarm**. Full detail of both timers: pre-diet.
 
-**What runs without you.** `ict-work-digest.timer` (hourly) is THE Telegram carrier, ONE message per hour, no second digest timer ever:
+**What runs without you.** `ict-work-digest.timer` (hourly) is THE digest carrier, no second digest timer ever. ⚠️ **Since 2026-11-04
+(TELEGRAM-TRIM, `config/telegram_policy.yaml`) the full digest no longer goes to Telegram**: it is recorded (receipt `suppressed_by_policy`,
+`digest_log.jsonl`, `runtime_logs/telegram_suppressed.jsonl`) and only a NEW actionable item (❓ ask, 🧪 soak transition, alarm) is sent, as one
+short message. The digest content, unchanged:
 🆕 new since last (new `ask_operator`, a soak moving to `passed`/`mechanical_fail`, an expected-signal alarm breaching/clearing) → once a
 day after 06:00Z the ranked summary (top 8, `ask_operator` first) → otherwise one "🟢 No new actionable items" line → "what changed". No
 edge set is seeded silently (one count line per set at deploy). `ict-work-report.timer` (05:30Z) runs `scripts/ops/work_report.py`, which
@@ -632,7 +635,10 @@ The review routine IS the periodic check; its prompt names `GET /api/bot/work/re
 operator joins. Every run: **reads the scratch pad** (Google Doc "JTA Trader — Ideas inbox", formerly "Metis — Ideas inbox"; match EITHER title, the operator renames the doc, via the Drive connector), copies each new item
 verbatim into `docs/claude/work/IDEAS.md` and triages it that run into a checklist row, a `research/queue` unit, or `killed` with a reason;
 **publishes a short work-plan status** (what moved/is running, where work was left off, decisions waiting, scratch-pad items and homes,
-next step on the standing priorities); **sends it to @claude_ict_comms_bot** with `send-ping` plus one "review ready" reminder.
+next step on the standing priorities) **in-session and on the UI (Workflow page), NOT to Telegram** — the twice-daily summary is a
+recurring post and the operator turned recurring Telegram posts off (2026-11-04, TELEGRAM-TRIM: *"I'd rather be focused on being able to
+check on the UI when I want to check and not have to like sift through messages"*; supersedes the 10-21 `send-ping` of the summary).
+`send-ping` is still used for a decision the operator must take or a red flag — an event, not the summary.
 
 ### Manager ↔ lane: PUSH plus POLL (operator directive 2026-10-04, binding)
 

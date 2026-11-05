@@ -1141,11 +1141,18 @@ decides whether to intervene.
    is never touched. The next signal is evaluated fresh on the next
    tick.
 
-4. **Every rejection is its own Telegram ping.** Per-trade: account,
+4. **Every rejection on a real-money, prop or portfolio-mirror account is its own Telegram ping;
+   every TESTING-PAPER rejection is its own LEDGER row.** Per-trade: account,
    symbol, side, qty, reason, exchange error if any. Not aggregate.
-   The operator sees each refusal as it happens so they can intervene
+   The operator sees each money-account refusal as it happens so they can intervene
    fast. "Account paused" summary messages are the wrong shape — they
-   hide rate-of-trouble information.
+   hide rate-of-trouble information. **Amended 2026-11-04** (operator, verbatim, checklist row
+   `TELEGRAM-TRIM`): *"for the trader bot, so basically I want to trim it down so that the only pings I get
+   there are for live trades, because the Bybit one, like the, or in general the testing paper, I don't need
+   to get updated on every trade there. It's not really important."* A testing-paper rejection (account
+   class `paper` without `paper_role: portfolio`) is still recorded, one row per refusal, in
+   `runtime_logs/operator_alerts.jsonl` with `route: ledger_only` (diag `log_file?name=operator_alerts`),
+   so the rate stays measurable; it is not pinged. Policy: `config/telegram_policy.yaml`.
 
 5. **Boot always starts the trader live (per YAML).** No
    "refuse-to-start until ack." No "raise on mismatch." Whatever

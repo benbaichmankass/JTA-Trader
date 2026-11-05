@@ -11,6 +11,8 @@ never reported as a quiet hour.
 """
 from __future__ import annotations
 
+import pytest
+
 import importlib.util
 import json
 import sys
@@ -19,6 +21,16 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 DEPLOY = ROOT / "deploy"
 
+
+
+@pytest.fixture(autouse=True)
+def _send_everything_policy(tmp_path, monkeypatch):
+    """These tests pin the SEND mechanics, so they run under an empty Telegram
+    policy (== send everything). The TELEGRAM-TRIM suppression of this recurring
+    post is pinned by its own tests below / in tests/test_telegram_policy.py."""
+    p = tmp_path / "telegram_policy_empty.yaml"
+    p.write_text("{}\n")
+    monkeypatch.setenv("TELEGRAM_POLICY_PATH", str(p))
 
 def _load(monkeypatch, tmp_path):
     spec = importlib.util.spec_from_file_location(
@@ -249,3 +261,45 @@ def test_a_failed_send_does_not_commit_attention_state(monkeypatch, tmp_path):
     assert mod.run(force=True) == 1
     assert mod._attention_calls == ["enqueue_failed"]
     assert not (tmp_path / "research_digest_cursor.json").exists()
+
+
+# --- TELEGRAM-TRIM (operator 2026-11-04): the digest is recurring ------------
+
+def test_trim_policy_records_a_quiet_digest_instead_of_sending(monkeypatch, tmp_path):
+    monkeypatch.delenv("TELEGRAM_POLICY_PATH", raising=False)
+    mod = _load(monkeypatch, tmp_path)
+    sent = []
+    sys.modules["send_ping"] = type(sys)("send_ping")
+    sys.modules["send_ping"].enqueue = lambda body, **k: sent.append(body) or Path("q")
+    assert mod.run() == 0
+    assert sent == [], "a digest with nothing new is a recurring post: recorded, not sent"
+    rec = json.loads(mod.RECEIPT.read_text())
+    assert rec["outcome"] == "suppressed_by_policy" and rec["lastSentHour"]
+    assert mod._attention_calls == ["sent"], "state advances: nothing is owed to Telegram"
+    import os
+    rows = [json.loads(x) for x in open(os.environ["TELEGRAM_SUPPRESSED_LOG"]).read().splitlines()]
+    assert rows[-1]["kind"] == "manager_update"
+
+
+def test_trim_policy_still_sends_new_actionable_items_only(monkeypatch, tmp_path):
+    monkeypatch.delenv("TELEGRAM_POLICY_PATH", raising=False)
+    mod = _load(monkeypatch, tmp_path)
+
+    class _AW:
+        @staticmethod
+        def commit(prep, outcome):
+            mod._attention_calls.append(outcome)
+
+    msgs = ["❓ 1 new decision(s) for you (ask_operator):\n• X: pick <a> or b",
+            "📋 daily ranked summary", "🔎 1 research unit(s) newly need a read"]
+    monkeypatch.setattr(mod, "_attention_prepare", lambda dry_run: (
+        _AW, {"block": "x", "priority": "high", "msgs": msgs}))
+    sent = []
+    sys.modules["send_ping"] = type(sys)("send_ping")
+    sys.modules["send_ping"].enqueue = lambda body, **k: sent.append((body, k)) or Path("q")
+    assert mod.run() == 0
+    assert len(sent) == 1
+    body, kw = sent[0]
+    assert "new decision(s) for you" in body and "&lt;a&gt;" in body
+    assert "daily ranked summary" not in body and "research unit" not in body
+    assert kw["target"] == "manager" and kw["priority"] == "high"
