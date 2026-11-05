@@ -370,7 +370,7 @@ jobs:
     needs: [gate, trial]
     if: ${{ !cancelled() && (needs.trial.result == 'success' || needs.gate.outputs.trialverify == 'true') }}
     runs-on: ubuntu-latest
-    timeout-minutes: 90
+    timeout-minutes: 120
     steps:
       - uses: actions/checkout@v4
         with:
@@ -395,18 +395,20 @@ jobs:
           )
           echo "::add-mask::$USERNAME"
           scrub() { sed "s|$USERNAME|<user>|g"; }
-          OK=0
-          for attempt in 1 2 3 4 5 6; do
+          # Kaggle builds a complete download archive per version; DownloadDataset answers 404 until it exists (the kernel mount
+          # does not need it). Measured 2026-11-05: 0.9 GB took minutes, 10 GB was still 404 ~30 min after `ready`. Poll up to 80 min.
+          OK=0; W0=$(date +%s)
+          for attempt in $(seq 1 160); do
             rm -rf /tmp/dl && mkdir -p /tmp/dl
             T0=$(date +%s)
             if kaggle datasets download -d "$USERNAME/metis-market-lake" -p /tmp/dl --unzip > /tmp/dl.log 2>&1; then OK=1; break; fi
-            echo "download attempt ${attempt} failed:"; grep -v "it/s\|B/s" /tmp/dl.log | scrub | tail -15
-            sleep 40
+            [ $((attempt % 10)) = 1 ] && { echo "download attempt ${attempt} (+$(( $(date +%s) - W0 ))s) failed:"; grep -v "it/s\|B/s" /tmp/dl.log | scrub | tail -4; }
+            sleep 30
           done
-          [ "$OK" = "1" ] || { echo "::error::download failed after 6 attempts"; exit 1; }
+          [ "$OK" = "1" ] || { echo "::error::archive never became downloadable in 80 min"; exit 1; }
           T1=$(date +%s)
           BYTES=$(du -sb /tmp/dl | cut -f1)
-          echo "{\"download_seconds\": $((T1-T0)), \"bytes\": $BYTES, \"MBps\": $(python3 -c "print(round($BYTES/1e6/max($T1-$T0,1),1))")}" | tee trial-runner-download.json
+          echo "{\"wait_for_archive_seconds\": $((T0-W0)), \"download_seconds\": $((T1-T0)), \"bytes\": $BYTES, \"MBps\": $(python3 -c "print(round($BYTES/1e6/max($T1-$T0,1),1))")}" | tee trial-runner-download.json
           python3 scripts/data_lake/kaggle_pilot.py verify --root /tmp/dl --expect-min-files 50 --record trial-runner-verify.json
           { echo '### trial: runner download'; cat trial-runner-download.json; echo; cat trial-runner-verify.json; } >> "$GITHUB_STEP_SUMMARY"
       - uses: actions/upload-artifact@v4

@@ -128,7 +128,8 @@ def make_shards(src: Path, files: list[dict], out: Path, tag: str) -> list[dict]
                 tf.add(src / c["path"], arcname=c["path"])
         shards.append({"path": name, "bytes": (out / name).stat().st_size, "sha256": sha256_file(out / name),
                        "n_partitions": len(cur), "member_bytes": sum(c.get("got") or c["bytes"] for c in cur),
-                       "members": [c["path"] for c in cur]})
+                       "members": [{"path": c["path"], "bytes": c.get("got") or c["bytes"],
+                                    "sha256": sha256_file(src / c["path"])} for c in cur]})
         cur, cur_bytes, n = [], 0, n + 1
 
     for c in sorted(files, key=lambda e: e["path"]):
@@ -142,7 +143,7 @@ def make_shards(src: Path, files: list[dict], out: Path, tag: str) -> list[dict]
 
 def write_dataset_files(out: Path, username: str, shards: list[dict], note: str) -> None:
     man = {"schema": "metis-market-lake-pilot/v1", "generated_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
-           "note": note, "prefix": PREFIX, "files": [{k: v for k, v in s.items() if k != "members"} for s in shards],
+           "note": note, "prefix": PREFIX, "files": shards,
            "n_partitions": sum(s["n_partitions"] for s in shards)}
     (out / "MANIFEST.json").write_text(json.dumps(man, indent=1))
     (out / "dataset-metadata.json").write_text(json.dumps({
@@ -243,7 +244,7 @@ def cmd_extra(a) -> int:
         src = Path(a.out + "-work")
     shards = make_shards(src, chosen, out, "extra")
     man = json.loads((out / "MANIFEST.json").read_text())
-    man["files"] += [{k: v for k, v in s.items() if k != "members"} for s in shards]
+    man["files"] += shards
     man["note"] = "pilot v2: + extra shard(s)"
     man["generated_at"] = datetime.now(timezone.utc).isoformat(timespec="seconds")
     (out / "MANIFEST.json").write_text(json.dumps(man, indent=1))
@@ -272,6 +273,7 @@ def cmd_verify(a) -> int:
     base = mans[0].parent
     man = json.loads(mans[0].read_text())
     t0, nbytes, bad, mode = time.time(), 0, [], {"tar": 0, "extracted": 0}
+    level = {"member": 0, "count_and_bytes": 0}
     for f in man["files"]:
         p = base / f["path"]
         if p.is_file():  # shard kept as a tar
@@ -283,10 +285,21 @@ def cmd_verify(a) -> int:
         elif (base / p.stem).is_dir():  # Kaggle auto-unpacked the tar into a folder named after it (observed 2026-11-05)
             mode["extracted"] += 1
             n, tot = 0, 0
-            for q in (base / p.stem).rglob("*"):
-                if q.is_file():
-                    n += 1
-                    tot += len(q.read_bytes())  # a full read, as a trainer would
+            if f.get("members"):  # per-member SHA-256 (checksum level "member")
+                level["member"] += 1
+                for m in f["members"]:
+                    q = base / p.stem / m["path"]
+                    if q.is_file() and q.stat().st_size == m["bytes"] and sha256_file(q) == m["sha256"]:
+                        n += 1
+                        tot += m["bytes"]
+                    else:
+                        bad.append(f"{f['path']}: {m['path']} missing or checksum mismatch")
+            else:  # legacy manifest: file count + exact byte total only
+                level["count_and_bytes"] += 1
+                for q in (base / p.stem).rglob("*"):
+                    if q.is_file():
+                        n += 1
+                        tot += len(q.read_bytes())
             if n != f.get("n_partitions") or tot != f.get("member_bytes"):
                 bad.append(f"{f['path']}: extracted {n} files/{tot} B, manifest {f.get('n_partitions')}/{f.get('member_bytes')}")
             else:
@@ -306,7 +319,7 @@ def cmd_verify(a) -> int:
     if a.expect_min_files and len(man["files"]) < a.expect_min_files:
         bad.append(f"stale or wrong dataset version: manifest lists {len(man['files'])} shards, expected at least {a.expect_min_files}")
     res = {"ok": not bad, "files": len(man["files"]), "note": man.get("note"), "bad": bad, "hashed_bytes": nbytes,
-           "layout": mode, "hash_seconds": round(dt, 2), "hash_MBps": round(nbytes / 1e6 / dt, 1), "one_member_read": extracted,
+           "layout": mode, "checksum_level": level, "hash_seconds": round(dt, 2), "hash_MBps": round(nbytes / 1e6 / dt, 1), "one_member_read": extracted,
            "dir": str(base)}
     print(json.dumps(res))
     if a.record:
