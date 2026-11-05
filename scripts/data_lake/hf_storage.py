@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# ruff: noqa: BLE001  (measurement is best-effort: each failure is recorded in the output, never hidden, never halts)
 # wiring: .github/workflows/hf-lake-storage.yml (HF_TOKEN from Actions secrets, never printed)
 """Measure and squash the PRIVATE HF lake dataset so it stays under the free private-storage cap.
 
@@ -19,14 +20,14 @@ import argparse
 import json
 import os
 import sys
+from collections.abc import Sequence
 from datetime import datetime, timezone
-from typing import Dict, Optional, Sequence
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from hf_publish import _api, _repo_from_config, PLAN_PRIVATE_BYTES  # noqa: E402
+from hf_publish import PLAN_PRIVATE_BYTES, _api, _repo_from_config
 
 
-def current_revision_bytes(api, repo: str) -> Dict:
+def current_revision_bytes(api, repo: str) -> dict:
     """Bytes of the files at HEAD (LFS size where present). A directory walk; population = every file in the tree."""
     n, total, top = 0, 0, {}
     for it in api.list_repo_tree(repo, repo_type="dataset", recursive=True, expand=True):
@@ -40,7 +41,7 @@ def current_revision_bytes(api, repo: str) -> Dict:
     return {"files": n, "bytes": total, "top_level": dict(sorted(top.items(), key=lambda kv: -kv[1])[:12])}
 
 
-def account_storage(api, who: Dict) -> Dict:
+def account_storage(api, who: dict) -> dict:
     user = who.get("name")
     out, total, errs = [], 0, 0
     for kind, lister, info in (("model", api.list_models, api.model_info), ("dataset", api.list_datasets, api.dataset_info),
@@ -60,7 +61,7 @@ def account_storage(api, who: Dict) -> Dict:
     return {"user": user, "private_used_bytes": total, "repos": out, "measure_errors": errs}
 
 
-def measure(api, repo: str) -> Dict:
+def measure(api, repo: str) -> dict:
     who = api.whoami()
     plan = "pro" if who.get("isPro") else "free"
     rec = {"at": datetime.now(timezone.utc).isoformat(timespec="seconds"), "plan": plan,
@@ -86,9 +87,9 @@ def measure(api, repo: str) -> Dict:
     return rec
 
 
-def verify_manifest(api, repo: str) -> Dict:
-    import urllib.request
+def verify_manifest(api, repo: str) -> dict:
     import urllib.error
+    import urllib.request
     url = f"https://huggingface.co/datasets/{repo}/resolve/main/MANIFEST.json"
     req = urllib.request.Request(url, headers={"Authorization": f"Bearer {api.token}"}, method="HEAD")
     try:
@@ -143,7 +144,7 @@ def cmd_squash(a) -> int:
     return 0 if ver.get("http_status") == 200 else 2
 
 
-def main(argv: Optional[Sequence[str]] = None) -> int:
+def main(argv: Sequence[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("cmd", choices=["measure", "squash"])
     ap.add_argument("--repo", default=_repo_from_config())
