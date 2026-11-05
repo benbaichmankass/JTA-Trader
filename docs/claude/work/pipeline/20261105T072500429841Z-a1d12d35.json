@@ -1,0 +1,16 @@
+{
+  "due_when": {
+    "check_every_days": 1,
+    "clears_when": "the daily live-replay-parity run reports 0 of this class for this leg, with the cause root-caused, or killed with a stated reason",
+    "kind": "observation"
+  },
+  "id": "PI-20261105-LRP-434A250C",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "audit",
+    "ref": "live-replay-parity:trend_donchian_1h:missed_signal",
+    "rerun": "python3 scripts/ops/live_replay_parity.py --base-url <tunnel to the live web-api> --days 7  (or label an issue `live-replay-parity`; the workflow .github/workflows/live-replay-parity.yml runs it daily and commits comms/live_parity/latest.json)"
+  },
+  "state": "queued",
+  "what": "Live-vs-replay parity: leg `trend_donchian_1h` — missed_signal ×28 (paper roster) in window 2026-10-29T06:45:00+00:00..2026-11-05T06:45:00+00:00. MEASURED by scripts/ops/live_replay_parity.py; artifact comms/live_parity/2026-11-05.json. Examples: [{\"class\": \"missed_signal\", \"bar\": \"2026-11-01T05:00:00+00:00\", \"t\": \"2026-11-01T05:55:39+00:00\", \"live\": {\"side\": \"none\", \"adx\": 12.6298, \"close\": 77850.0, \"reason\": \"Strategy 'trend_donchian_1h': no breakout on the latest bar (close=77850.0 within channel [77309.1, 77854.3]) \\u2014 non-actionable.\"}, \"replay\": {\"sides\": [\"long\"], \"adx_range\": [12.0768, 12.2123], \"candidates\": [\"2026-11-01T05:45:00+00:00\"], \"diag_adx\": {\"final_bar_200\": 12.2123, \"closed_only_199\": 11.4931, \"closed_only_200\": 11.4933, \"next_bar_200\": 13.4722}, \"fine_candle\": {\"time\": 1793511900, \"low\": 77751.5, \"high\": 77867.4}}}, {\"class\": \"missed_signal\", \"bar\": \"2026-11-01T05:00:00+00:00\", \"t\": \"2026-11-01T05:57:58+00:00\", \"live\": {\"side\": \"none\", \"adx\": 12.6298, \"close\": 77850.0, \"reason\": \"Strategy 'trend_donchian_1h': no breakout on the latest bar (close=77850.0 within channel [77309.1, 77854.3]) \\u2014 non-actiona"
+}

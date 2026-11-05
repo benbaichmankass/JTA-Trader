@@ -117,6 +117,18 @@ When `desk_handoff.read_state` is `could_not_look` (the record or the chain coul
 
 A packet with no `desk_handoff` gets no `handoff` key.
 
+## 2d. Packet defects: say what is wrong with the packet (PACKET-HEALTH, 2026-11-05)
+
+> **Operator, 2026-11-05 ~08:25Z (verbatim):** *"we need to make sure the lanes know how to report when something is wrong with the review packet, like missing live data"*. Precedent failure: `LR-20261105T0700Z-pkg-b76b0655d305485e` (ETH, bybit_1), every tighten option unpriced (atr levels `no_candles`, r levels `invalid_level`); the lane recorded `hold` and reported nothing about the missing candle data.
+
+The packet carries a computed `packet_health` (`status` `ok` / `degraded` / `could_not_look`; `defects[]` each with `field`, `reason`, `count`, `denominator`), and the wake comment prints it as `PACKET HEALTH …`. You do not compute it and you do not judge whether it is "bad enough". Every report you send ends with ONE line:
+
+- `PACKET DEFECTS: <field> — <reason> — <count>/<denominator>; …` (one entry per defect, copied from `packet_health.defects`), or
+- `PACKET DEFECTS: none` when `packet_health.status` is `ok` (say it explicitly, an omitted line is a failed report), or
+- `PACKET DEFECTS: packet_health absent (older generator)` when the block is missing. That is never `none`.
+
+On a non-`ok` packet, the row repeats the defects: `packet_defects: [{"field", "reason", "count", "denominator"}, …]` (copied), or a `context_flags` entry `packet_defect: <field> <reason> <count>/<denominator>` per defect. The validator refuses a row reviewed from 2026-11-05T12:00Z whose non-`ok` packet defects are not named. **The call is still made**: a defect never replaces the judgement and is not `flag_mechanics` (SKILL.md Step 1, "A failed read is not a broken trade"). A `no_candles` / `all_options_unpriced` packet just means the table is not evidence; decide from `context_v3` and say so in `context_flags`. You cannot edit the checklist; the manager files each reported defect on its owning row (`LTR-GRADER-COVERAGE` for pricing, `LTR-PACKET-READ-REACH` for venue reads).
+
 ## 3. The output: ONE row, exactly this shape
 
 - `review_id` = `packet.review_id`; `packet_sha` = the block's `packet_sha`; `outcome_table_source` = `table_path` (or `null` with no table).
@@ -240,6 +252,7 @@ A packet with no `desk_handoff` gets no `handoff` key.
  "session": "session_EXAMPLE",
  "prompt_sha": null,
  "skill_sha": null,
+ "packet_defects": [],
  "packet_sha": "0000000000000000000000000000000000000000000000000000000000000000",
  "forecast": {
   "thesis": "2h lower high at 0.2042 held twice and the 4h trend is still down; the bounce is a retest, so price resumes lower toward the 0.1874 target before the stop",
@@ -304,6 +317,7 @@ A packet with no `desk_handoff` gets no `handoff` key.
       "prompt_sha": {"type": ["string", "null"]},
       "skill_sha": {"type": ["string", "null"]},
       "packet_sha": {"_comment": "LTR-3 / manager 2026-10-25: sha256 of the canonical JSON (sort_keys, compact) of the decision packet the reviewer judged, stored at comms/live_review/packets/<review_id>.json, so each decision joins to exactly what was seen. Optional until the packet generator (scripts/ops/live_review_packet.py) exists.", "type": ["string", "null"], "pattern": "^[0-9a-f]{64}$"},
+      "packet_defects": {"_comment": "PACKET-HEALTH (operator 2026-11-05 ~08:25Z): the defects of the decision packet the reviewer was shown, copied from the committed packet's computed packet_health.defects (field, reason, count, denominator). An empty array says the reviewer looked and the packet was clean. Required (non-empty here, or a context_flags entry 'packet_defect: <field> ...' naming each defect) on rows reviewed from PACKET_DEFECTS_RULE_FROM whose committed packet_health.status is not ok (scripts/ci/check_live_review_records.py::packet_defect_problems). Never blocks a judgement.", "type": ["array", "null"], "items": {"type": "object", "additionalProperties": false, "required": ["field", "reason"], "properties": {"field": {"type": "string", "minLength": 1}, "reason": {"type": "string", "minLength": 1}, "count": {"type": ["integer", "null"], "minimum": 0}, "denominator": {"type": ["integer", "null"], "minimum": 0}}}},
       "handoff": {"_comment": "DESK-HANDOFF-PROTOCOL (operator 2026-10-30 ~22:30Z: the desk max-hold cap lifts only with a hand-off protocol): on a desk-opened package (a packet carrying desk_handoff) every review CONFIRMs, REVISEs (with a reason) or EXITs the position against the opening desk record and the newest view, and links prior_decision_id to the packet's desk_handoff.prior_decision_id (the newest live-review row on the package, else the opening desk decision_id): one chain per position. Required when the committed packet carries desk_handoff (scripts/ci/check_live_review_records.py::handoff_problems); absent otherwise. read_state could_not_look = the packet's hand-off read failed: prior_decision_id may be null, the review still judges, the position keeps its venue SL/TP.", "type": ["object", "null"], "additionalProperties": false, "required": ["prior_decision_id", "verdict", "reason", "read_state"], "properties": {"prior_decision_id": {"type": ["string", "null"], "pattern": "^(DD|LR)-[0-9]{8}T[0-9]{4}Z-.+$"}, "verdict": {"type": "string", "enum": ["confirm", "revise", "exit"]}, "reason": {"type": ["string", "null"]}, "read_state": {"type": "string", "enum": ["read", "could_not_look"]}}},
       "forecast": {"_comment": "DESK-AM-REFOCUS (2026-10-30, docs/research/desk-am-refocus-diagnosis-2026-10-30.md section 2): the reviewer's own falsifiable view of THIS trade, written before the outcome. direction is relative to the trade (with_trade = price moves in the position's favour). Graded by RULE-DESK-AM-JUDGEMENT-V1 (direction hit, Brier of p_target, the action vs HOLD net of cost) and joined into ml claude_judgments as fc_* columns. Required on judged rows reviewed from FORECAST_RULE_FROM (scripts/ci/check_live_review_records.py); absent or null on a mechanics / could_not_look / record_only row. Prices only, never a size.", "type": ["object", "null"], "additionalProperties": false, "required": ["thesis", "direction", "target_px", "p_target", "invalidation_px", "horizon_bars", "timeframe"], "properties": {"thesis": {"type": "string", "minLength": 1}, "direction": {"type": "string", "enum": ["with_trade", "against_trade", "flat"]}, "target_px": {"type": "number"}, "p_target": {"type": "number", "minimum": 0, "maximum": 1}, "invalidation_px": {"type": "number"}, "horizon_bars": {"type": "integer", "minimum": 1}, "timeframe": {"type": "string", "enum": ["5m", "15m", "30m", "1h", "2h", "4h", "1d"]}, "evidence": {"type": "array", "items": {"type": "string"}}}}
     }
@@ -353,6 +367,6 @@ Never `git clone`, never `push_files`, **never write `reviews.jsonl`**, and **ne
 
 **Equivalent with raw Git Data API access** (only if your session has it): GET `refs/heads/live-review/rows` → tip T. Create ONE blob and a tree based on T's tree that ADDS only `comms/live_review/rows/<review_id>.json` (never a changed `reviews.jsonl`, never a packet or table), a commit with parent T, then PATCH `refs/heads/live-review/rows` with `sha=<new commit>` and **`force=false`**. A moved ref is refused (422 non-fast-forward) → restart from the GET, up to 5 tries, then `could_not_write`.
 
-5. **Report** to the manager in one message: `review_id`, the commit sha of the row-file write, the number of tries, action / basis / route, and the priced options you used (n, mean, worst). Or `could_not_write` and why.
+5. **Report** to the manager in one message: `review_id`, the commit sha of the row-file write, the number of tries, action / basis / route, the priced options you used (n, mean, worst), and the **`PACKET DEFECTS:` line (§ 2d, required)**. Or `could_not_write` and why.
 
 The VM watcher applies a `recommended` row from the branch tip by itself, exactly once per `review_id`. Its receipt (`/api/diag/log_file?name=live_review_rows_watch`) records the verdict and `venue_after`. The packet and table were committed by the wake poster before you were started (step 1 checks it), so they exist at every tip that carries the row. The mirror (`live-review-rows-mirror.yml`) copies the row onto `main`'s `reviews.jsonl` as one line.

@@ -80,3 +80,24 @@ def test_cli_from_file_prints_and_does_not_post(tmp_path):
     f = tmp_path / "d.json"
     f.write_text(json.dumps(due(pkg())))
     assert lrw.main(["--from-file", str(f)]) == 0
+
+
+def test_wake_comment_prints_packet_health_even_for_an_omitted_packet():
+    """PACKET-HEALTH (2026-11-05): the manager sees a defective packet without trusting the reviewer."""
+    w = lrw
+    bad = {"packet_health": {"status": "degraded", "defects": [
+        {"field": "priced_options.candles", "reason": "candles_missing", "count": 3, "denominator": 5}]}}
+    assert w.health_line("pkg-1", bad) == "PACKET HEALTH `pkg-1`: degraded (candles_missing @ priced_options.candles 3/5)"
+    assert "no defects" in w.health_line("pkg-1", {"packet_health": {"status": "ok", "defects": []}})
+    assert "could_not_look" in w.health_line("pkg-1", {})   # no block is never "ok"
+
+
+def test_render_carries_the_health_line_for_a_built_bundle():
+    entry = {"order_package_id": "pkg-1", "leg": "l", "symbol": "S", "accounts": ["a"], "event": "mechanics", "level": 1,
+             "why": "w", "due_at": "t"}
+    p = {"kind": "wake", "entries": [entry]}
+    bundles = {"pkg-1": {"state": "built", "packet_sha": "0" * 64, "table_path": None, "table": None,
+                         "packet": {"review_id": "LR-x", "packet_health": {"status": "degraded", "defects": [
+                             {"field": "mechanics", "reason": "venue_read_unreachable", "count": 1, "denominator": 1}]}}}}
+    body = lrw.render(p, NOW, "run", bundles)
+    assert "PACKET HEALTH `pkg-1`: degraded (venue_read_unreachable @ mechanics 1/1)" in body

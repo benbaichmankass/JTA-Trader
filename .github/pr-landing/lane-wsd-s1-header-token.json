@@ -1,0 +1,12 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "hold_reason": "tier_2_3_needs_approval",
+  "hold_text": "Tier 2 change to the S1 write gate (work_items accepts X-Work-Store-Token; Bearer kept as a deprecated fallback). Manager decision 2026-11-05T06:44Z: build option A; the manager merges and deploys.",
+  "why": "Fixes WSD-S1-PROXY-AUTH-COLLISION: the env-proxy network secret for ict-bot.duckdns.org overwrote Authorization, so diag Transport A 401'd. Additive: the Bearer path is unchanged, so nothing that works today stops working. Revert: git revert.",
+  "recorded_decision": {
+    "kind": "standing_authorization",
+    "ref": "WSD-S1-STORE-API 2026-09-27 data-backed standing authorization; manager decision 2026-11-05T06:44Z option A (WSD-S1-PROXY-AUTH-COLLISION)",
+    "evidence": "docs/plans/WORK-STORE-DESIGN-2026-11.md"
+  }
+}

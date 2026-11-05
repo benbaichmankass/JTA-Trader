@@ -63,6 +63,7 @@ import re
 import subprocess
 import sys
 import tempfile
+import time
 import urllib.error
 import urllib.request
 from datetime import datetime, timedelta, timezone
@@ -97,7 +98,12 @@ RESEARCH_WORKFLOW_RE = re.compile(
 #: queue itself. MEASURED 2026-09-24: the bare regex matched 22 workflow files
 #: and these three were the false positives.
 NOT_RESEARCH_WORKFLOWS = frozenset({
-    "diag-relay-sweep.yml", "stale-automation-sweep.yml", "research-queue-dispatch.yml"})
+    "diag-relay-sweep.yml", "stale-automation-sweep.yml", "research-queue-dispatch.yml",
+    # Data producer, not research: lands comms/news_alpha/gdelt_panel/ on main via
+    # commit-to-main (monthly file overwritten, so a run id never appears there);
+    # the workflow declares no-durable-result. Measured 2026-11-05: 3 false
+    # positives on question C from its 7-day artifacts.
+    "news-gdelt-panel.yml"})
 
 
 def is_research_workflow(name: str) -> bool:
@@ -117,17 +123,36 @@ def _git(*args: str, root: Path = REPO) -> tuple[int, str]:
     return p.returncode, p.stdout
 
 
+#: Transient server-side statuses worth a retry. MEASURED 2026-11-05: the repo-wide
+#: `actions/artifacts` listing answered 500 on page 1 or 3 of ~21 on every scheduled
+#: run 2026-11-02..05 yet answered all 21 pages when read by hand minutes later -- an
+#: intermittent upstream fault, not a size limit, so one un-retried GET made
+#: question C unreadable on every run.
+RETRY_STATUSES = frozenset({429, 500, 502, 503, 504})
+API_TRIES = 4
+API_BACKOFF_S = (2, 4, 8)
+
+
 def _api(path: str, repo: str) -> Any:
     url = path if path.startswith("http") else f"https://api.github.com/repos/{repo}/{path}"
     req = urllib.request.Request(url, headers={"Accept": "application/vnd.github+json"})
     tok = os.environ.get("GH_TOKEN") or os.environ.get("GITHUB_TOKEN")
     if tok:
         req.add_header("Authorization", f"Bearer {tok}")
-    try:
-        with urllib.request.urlopen(req, timeout=60) as r:
-            return json.load(r)
-    except (urllib.error.URLError, OSError, ValueError) as exc:
-        raise CouldNotRead(f"GET {url}: {exc}") from exc
+    last: Optional[BaseException] = None
+    for attempt in range(API_TRIES):
+        try:
+            with urllib.request.urlopen(req, timeout=60) as r:
+                return json.load(r)
+        except urllib.error.HTTPError as exc:
+            last = exc
+            if exc.code not in RETRY_STATUSES:
+                break
+        except (urllib.error.URLError, OSError, ValueError) as exc:
+            last = exc
+        if attempt < API_TRIES - 1:
+            time.sleep(API_BACKOFF_S[min(attempt, len(API_BACKOFF_S) - 1)])
+    raise CouldNotRead(f"GET {url}: {last}") from last
 
 
 def _paged(path: str, repo: str, key: Optional[str], limit: int = 1000) -> list:
@@ -269,12 +294,48 @@ def q_unlanded(repo: str, now: datetime, lookback_days: int, ref: str) -> dict:
             "findings": lost + pending}
 
 
-def q_expiring(repo: str, now: datetime, expiry_hours: float, ref: str) -> dict:
+def research_workflow_files(root: Path = REPO) -> list[str]:
+    """Every workflow file whose name marks it research, plus every result producer."""
+    wf = root / ".github/workflows"
+    named = {p.name for p in wf.glob("*.y*ml") if is_research_workflow(p.name)}
+    return sorted(named | set(result_workflows(root)))
+
+
+def _artifacts_per_run(repo: str, now: datetime, window_days: int) -> list:
+    """Fallback read of question C: list artifacts RUN BY RUN for the research
+    workflows, for runs created inside `window_days`. Each artifact gets the
+    run's workflow file attached as `_wf` (so no second lookup is needed)."""
+    since = now - timedelta(days=window_days)
+    out: list = []
+    for wf in research_workflow_files():
+        runs = _paged(f"actions/workflows/{wf}/runs?created=%3E%3D{since:%Y-%m-%d}",
+                      repo, "workflow_runs", limit=1000)
+        for run in runs:
+            body = _api(f"actions/runs/{run['id']}/artifacts?per_page=100", repo)
+            for a in body.get("artifacts", []):
+                a.setdefault("workflow_run", {"id": run["id"]})
+                a["_wf"] = wf
+                out.append(a)
+    return out
+
+
+def q_expiring(repo: str, now: datetime, expiry_hours: float, ref: str,
+               fallback_days: int = 30) -> dict:
+    via = "bulk"
+    try:
+        arts = _paged("actions/artifacts", repo, "artifacts", limit=5000)
+    except CouldNotRead as bulk_exc:
+        # The bulk listing is the cheap read; when it stays down after retries the
+        # per-run path is the same question over a NARROWER population. If that
+        # also fails this raises, and the question stays could_not_read.
+        arts = _artifacts_per_run(repo, now, fallback_days)
+        via = (f"per-run FALLBACK (bulk listing failed: {str(bulk_exc)[:160]}); covers "
+               f"research-workflow runs created in the last {fallback_days}d only, so an "
+               f"artifact kept longer than that from an older run is NOT examined")
     # Artifacts inside the window FIRST, then one run lookup per UNIQUE run id.
     # Listing every research workflow's runs instead was measured 2026-09-24 at
     # 13,293 runs in 100 days (issue-triggered workflows start a run for every
     # issue in the repo) -- far slower than looking up the few runs that matter.
-    arts = _paged("actions/artifacts", repo, "artifacts", limit=5000)
     live = [a for a in arts if not a.get("expired") and a.get("expires_at")]
     horizon = now + timedelta(hours=expiry_hours)
     near = [a for a in live if _parse_ts(a["expires_at"]) <= horizon
@@ -283,6 +344,9 @@ def q_expiring(repo: str, now: datetime, expiry_hours: float, ref: str) -> dict:
     for a in near:
         rid = str(a["workflow_run"]["id"])
         if rid not in run_wf:
+            if a.get("_wf"):
+                run_wf[rid] = a["_wf"]
+                continue
             run = _api(f"actions/runs/{rid}", repo)
             run_wf[rid] = Path(str(run.get("path", ""))).name or str(run.get("name", ""))
     research = [a for a in near if is_research_workflow(run_wf[str(a["workflow_run"]["id"])])]
@@ -296,7 +360,8 @@ def q_expiring(repo: str, now: datetime, expiry_hours: float, ref: str) -> dict:
                 "expires_at": a["expires_at"]}
                for a in research if str(a["workflow_run"]["id"]) not in mentioned]
     return {"state": FINDINGS if orphans else CLEAN,
-            "population": (f"{len(arts)} artifact(s) listed, {len(live)} unexpired, "
+            "read_via": via,
+            "population": (f"[{via}] {len(arts)} artifact(s) listed, {len(live)} unexpired, "
                            f"{len(near)} expire within {expiry_hours}h across "
                            f"{len(run_wf)} run(s); {len(research)} of those from research "
                            f"workflows ({', '.join(sorted({run_wf[r] for r in rids})) or 'none'}); "

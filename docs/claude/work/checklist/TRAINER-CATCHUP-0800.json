@@ -13,9 +13,9 @@
     18062
   ],
   "blocked_on": [],
-  "note": "[2026-10-14 weekly planning] OPERATOR-APPROVED 2026-10-14 (Tier-2, timer change on ict-trainer-vm; approval recorded here, relayed by the manager session_01G16FfyYSmDPQuuW55BuTmK). Ship through the vm-ops / system-actions route (timer OnCalendar edit + daemon-reload), then verify the post-state through trainer-vm-diag. Revert: set OnCalendar back to 05:00Z. Reasoning from planning: the catch-up competes with the trainer research window (scripts/research/research_compute.yaml trainer.queue.windows_utc 03:00-05:00) and the 05:52Z review reads a half-finished cycle. [2026-10-14T18:09Z manager session_01VduHYzdaXe27wTDBLSu8ao] Dispatched: Sonnet (build lane, no order path), fresh (spec is on the row), ceiling $8. [lane 2026-10-14] PR #18062 (hold) opened: timer 05:00Z->08:00Z. Window check: 08:00Z is inside the 07:00-24:00Z idle window, clear of 03:00-05:00Z; ict-trainer.timer is daily 00:00+1h jitter; catch-up is flock+checkpoint guarded; no window change. Merged: pending. Deployed: pending. Observed: first 08:00Z run, due_by 2026-10-16. [lane 2026-10-14T20:35Z] MERGED 20:30Z (#18062, 5ab3ac12). DEPLOYED 20:31Z via trainer-vm-diag issue #18093 (git pull, install unit, daemon-reload, restart): systemctl list-timers shows NEXT Thu 2026-10-15 08:00:00 UTC; unit OnCalendar before=05:00Z after=08:00Z. NOT YET OBSERVED: first 08:00Z run (the restart itself triggered one Persistent=true run at 20:31:30Z, checked in follow-up issue).",
-  "updated_at": "2026-10-24T06:01:14Z",
-  "updated_by": "session_01TcTW6muiYDAQFZz2qdhTEW",
+  "note": "[2026-10-14 weekly planning] OPERATOR-APPROVED 2026-10-14 (Tier-2, timer change on ict-trainer-vm; approval recorded here, relayed by the manager session_01G16FfyYSmDPQuuW55BuTmK). Ship through the vm-ops / system-actions route (timer OnCalendar edit + daemon-reload), then verify the post-state through trainer-vm-diag. Revert: set OnCalendar back to 05:00Z. Reasoning from planning: the catch-up competes with the trainer research window (scripts/research/research_compute.yaml trainer.queue.windows_utc 03:00-05:00) and the 05:52Z review reads a half-finished cycle. [2026-10-14T18:09Z manager session_01VduHYzdaXe27wTDBLSu8ao] Dispatched: Sonnet (build lane, no order path), fresh (spec is on the row), ceiling $8. [lane 2026-10-14] PR #18062 (hold) opened: timer 05:00Z->08:00Z. Window check: 08:00Z is inside the 07:00-24:00Z idle window, clear of 03:00-05:00Z; ict-trainer.timer is daily 00:00+1h jitter; catch-up is flock+checkpoint guarded; no window change. Merged: pending. Deployed: pending. Observed: first 08:00Z run, due_by 2026-10-16. [lane 2026-10-14T20:35Z] MERGED 20:30Z (#18062, 5ab3ac12). DEPLOYED 20:31Z via trainer-vm-diag issue #18093 (git pull, install unit, daemon-reload, restart): systemctl list-timers shows NEXT Thu 2026-10-15 08:00:00 UTC; unit OnCalendar before=05:00Z after=08:00Z. NOT YET OBSERVED: first 08:00Z run (the restart itself triggered one Persistent=true run at 20:31:30Z, checked in follow-up issue). [2026-11-05 BACKLOG-DRAIN-20261105] HALF OBSERVED. MEASURED trainer-vm-diag 2026-11-05T06:16Z: ict-trainer-catchup.timer OnCalendar=*-*-* 08:00:00 UTC, last trigger Wed 2026-11-04 08:00:01Z (22h ago), next 08:00Z today. Not read: the service's exit status/journal for that run. Condition: journalctl -u ict-trainer-catchup.service --since 2026-11-05 07:55 shows Result=success after today's 08:00Z run.",
+  "updated_at": "2026-11-05T06:22:42Z",
+  "updated_by": "session_01AFoLuLoMgjGPiy3UA2Ua8P",
   "roadmap": [
     "M25",
     "L-OPS"
@@ -35,5 +35,6 @@
     "roadmap": "none: ops timer move, no milestone line changes",
     "arch": "none: ARCHITECTURE-CANONICAL only holds a dated history entry quoting 05:00Z; no standing section describes the catch-up time"
   },
+  "due_by": "2026-11-06",
   "_seq": 479
 }

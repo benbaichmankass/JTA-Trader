@@ -186,7 +186,9 @@ def test_routed_to_breakout_2_and_breakout_1_retired():
     assert _accounts()["breakout_1"]["strategies"] == []
     a = _accounts()["breakout_2"]
     # 2026-10-29 (Tier-3, operator): sol_prop pulled from breakout_2 (V2 prop gate); the variant stays defined.
-    assert "trend_donchian_eth_prop" in a["strategies"]
+    # 2026-11-05 (Tier-3, operator 'Pull from prop (Recommended)', row PROP-PULL-ETHPROP): trend_donchian_eth_prop pulled (RQ-20261031-422a-01 FAIL); roster is an explicit []. REVERT: re-add eth_prop here.
+    assert a["strategies"] == []
+    assert "trend_donchian_eth_prop" not in a["strategies"]
     assert "trend_donchian_sol_prop" not in a["strategies"]
 
 

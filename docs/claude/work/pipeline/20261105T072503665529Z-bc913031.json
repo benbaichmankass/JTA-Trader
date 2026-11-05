@@ -1,0 +1,16 @@
+{
+  "due_when": {
+    "check_every_days": 1,
+    "clears_when": "the daily live-replay-parity run reports 0 of this class for this leg, with the cause root-caused, or killed with a stated reason",
+    "kind": "observation"
+  },
+  "id": "PI-20261105-LRP-E3A780C2",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "audit",
+    "ref": "live-replay-parity:trend_donchian_sol_4h:live_only_signal",
+    "rerun": "python3 scripts/ops/live_replay_parity.py --base-url <tunnel to the live web-api> --days 7  (or label an issue `live-replay-parity`; the workflow .github/workflows/live-replay-parity.yml runs it daily and commits comms/live_parity/latest.json)"
+  },
+  "state": "queued",
+  "what": "Live-vs-replay parity: leg `trend_donchian_sol_4h` — live_only_signal ×12 (paper roster) in window 2026-10-29T06:45:00+00:00..2026-11-05T06:45:00+00:00. MEASURED by scripts/ops/live_replay_parity.py; artifact comms/live_parity/2026-11-05.json. Examples: [{\"class\": \"live_only_signal\", \"bar\": \"2026-10-30T00:00:00+00:00\", \"t\": \"2026-10-30T00:25:38+00:00\", \"live\": {\"side\": \"short\", \"adx\": 19.6317, \"close\": 93.61, \"reason\": null}, \"replay\": {\"sides\": [\"none\"], \"adx_range\": [18.643, 19.4347], \"candidates\": [\"2026-10-30T00:15:00+00:00\"], \"diag_adx\": {\"final_bar_200\": 19.4347, \"closed_only_199\": 17.7602, \"closed_only_200\": 17.7603, \"next_bar_200\": 20.1517}, \"fine_candle\": {\"time\": 1793319300, \"low\": 92.24, \"high\": 95.55}}}, {\"class\": \"live_only_signal\", \"bar\": \"2026-10-30T00:00:00+00:00\", \"t\": \"2026-10-30T00:28:07+00:00\", \"live\": {\"side\": \"short\", \"adx\": 19.6317, \"close\": 93.61, \"reason\": null}, \"replay\": {\"sides\": [\"none\"], \"adx_range\": [18.643, 19.4347], \"candidates\": [\"2026-10-30T00:15:00+00:00\"], \"diag_adx\": {\"final_bar_200\": 19.4347, \"closed_only_199\": 17.7602, \"closed_only_200\": 17.7603, \"next_bar_200\": 20.1517}, \"fine_candle\": {\"time\": 1"
+}
