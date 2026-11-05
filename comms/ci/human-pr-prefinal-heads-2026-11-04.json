@@ -1,0 +1,40 @@
+{
+ "generated_at": "2026-11-05T00:30Z",
+ "row": "COMPUTE-ALLOCATION-DESIGN",
+ "provenance": "MEASURED (Actions API: runs by branch, jobs, job logs)",
+ "population": "the 57 human PRs of comms/ci/human-pr-latency-decomposition-2026-11-04.json; every head other than the final one that has a pull_request run of pytest-collect, pytest-run or Guards created inside the PR's lifetime; 0 read failures",
+ "classes": {
+  "RED": "a required check concluded failure/timed_out",
+  "GREEN": "all required checks succeeded, then another push",
+  "SUPERSEDED_BEFORE_GREEN": "required checks cancelled/incomplete because a newer push arrived"
+ },
+ "pre_final_heads": 59,
+ "by_class": {
+  "SUPERSEDED_BEFORE_GREEN": 24,
+  "RED": 20,
+  "GREEN": 15
+ },
+ "prs_with_no_pre_final_head": 25,
+ "prs_with_a_red_head": 15,
+ "red_heads_failed_check": {
+  "Guards": 19,
+  "pytest-run": 1
+ },
+ "failed_guard_jobs_read": 19,
+ "guards_failing_per_job": {
+  "operator-owed-guard": 11,
+  "ruff-lint": 2,
+  "silent-empty-guard": 2,
+  "stated-population-guard": 1,
+  "push-back-trigger": 1,
+  "action-input-wiring": 1,
+  "trader-import-closure": 1,
+  "research-tooling-selftests": 1,
+  "pr-landing-guard": 1,
+  "roadmap-map-guard": 1,
+  "claim-basis-guard": 1,
+  "soak-contract-guard": 1,
+  "research-queue-ml-consumer-guard": 1
+ },
+ "finding": "operator-owed-guard failed 11 of the 19 failed Guards jobs. It is registered in scripts/ci/run_guards.py with when=None, and it grades REPOSITORY STATE (age of operator-owed pipeline rows), not the PR diff. So it turned unrelated PRs red: on a 11-04 run the trigger was PI-20261102-PTDVAI3R-0001 past its 2-day limit. It passes on origin/main at 2026-11-05T00:25Z."
+}
