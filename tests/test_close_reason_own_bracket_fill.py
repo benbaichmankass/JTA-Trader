@@ -145,3 +145,68 @@ def test_reconciler_open_trades_select_carries_the_bracket_order_ids():
                side_effect=_by_id({SL_FILLED["order_id"]: SL_FILLED})):
         got = om._own_bracket_fill_from_venue({"account_id": "bybit_1", "exchange": "bybit"}, row)
     assert got and got["leg"] == "sl" and got["avg_price"] == 1.2476
+
+
+# RECONCILER-CLOSEDPNL-OWN-LEG (2026-11-05, bybit_2 trade 6881): a broker
+# closed-pnl record WAS found but the price classifier could not place it, so
+# the row kept `reconciler_filled` although its own SL had filled.
+_REC = {"avg_exit_price": 1.2476, "closed_at": "1793535409544",
+        "closed_pnl": -790.5, "qty": 74160.0, "fees": 1.2}
+
+
+def _close_with_record(row, statuses, *, classified=None):
+    db = _FakeDB()
+    with patch("src.units.accounts.clients.account_closed_pnl_for_trade",
+               return_value=dict(_REC)), \
+         patch("src.units.accounts.clients.account_order_status",
+               side_effect=_by_id(statuses)), \
+         patch.object(om, "_classify_broker_exit", return_value=classified), \
+         patch.object(om, "_cascade_close_linked_package") as casc, \
+         patch.object(om, "_cancel_closed_row_protection"), \
+         patch("src.units.accounts.clients.account_exec_type_for_close",
+               return_value=None):
+        reason, _ = om._close_trade_from_order_status(
+            db, row, {"avg_price": 1.2582, "exec_time": "1793528442001"},
+            cfg={"account_id": "bybit_2", "exchange": "bybit"},
+        )
+    return reason, db.updates[int(row["id"])], casc
+
+
+def test_closed_pnl_record_unclassified_takes_the_label_from_the_own_leg():
+    reason, upd, casc = _close_with_record(_row(), {
+        SL_FILLED["order_id"]: SL_FILLED, TP_DEACTIVATED["order_id"]: TP_DEACTIVATED})
+    assert reason == "sl" and upd["exit_reason"] == "sl"
+    assert upd["exit_price"] == 1.2476, "the broker closed-pnl price stands"
+    notes = json.loads(upd["notes"])
+    assert notes["exit_reason_source"] == "venue_bracket_order"
+    assert notes["exit_price_source"] != "exchange_fill"
+    assert casc.call_args.kwargs["close_reason"] == "sl"
+
+
+def test_closed_pnl_record_classified_never_asks_the_venue():
+    calls = []
+
+    def _st(cfg, oid):
+        calls.append(oid)
+        return SL_FILLED
+    db = _FakeDB()
+    with patch("src.units.accounts.clients.account_closed_pnl_for_trade",
+               return_value=dict(_REC)), \
+         patch("src.units.accounts.clients.account_order_status", side_effect=_st), \
+         patch.object(om, "_classify_broker_exit", return_value="tp"), \
+         patch.object(om, "_cascade_close_linked_package"), \
+         patch.object(om, "_cancel_closed_row_protection"), \
+         patch("src.units.accounts.clients.account_exec_type_for_close",
+               return_value=None):
+        reason, _ = om._close_trade_from_order_status(
+            db, _row(), {"avg_price": 1.2582, "exec_time": "1"},
+            cfg={"account_id": "bybit_2", "exchange": "bybit"})
+    assert reason == "tp" and calls == []
+    notes = json.loads(db.updates[6817]["notes"])
+    assert notes["exit_reason_source"] == "price_vs_pkg_bracket"
+
+
+def test_closed_pnl_record_unclassified_and_no_own_fill_stays_generic():
+    reason, upd, _ = _close_with_record(_row(), {})
+    assert reason == "reconciler_filled"
+    assert json.loads(upd["notes"])["exit_reason_source"] == "unresolved"
