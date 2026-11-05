@@ -67,3 +67,29 @@ The docs say nothing on whether old dataset versions count toward the 200 GB (th
 > "... you will not contribute any Content or User Submission or otherwise use the Services ... in a manner that ... Copies or stores any significant portion of the Content" (here "Content" is Kaggle's own materials and other users' submissions, not our upload).
 
 **Open question for the operator, not decided here:** (1) whether training a trading system counts as "personal, non-commercial" use (we already use Kaggle for training today, so this is pre-existing exposure, not new); (2) the lake's Binance data has no open licence, and the AUP bars uploading data that violates others' rights, so a *private* Kaggle copy carries the same redistribution question the private HF copy does.
+
+## Pilot results (Kaggle 1 GB pilot, MEASURED 2026-11-05, PR #23333 runs 42055574691 and 42060325476)
+
+Operator decision 2026-11-05 ~14:51Z, verbatim: "Kaggle 1 GB pilot first (Rec.)". Existing Kaggle account, private dataset `metis-market-lake`. Nothing deleted from HF.
+Population: **90 frozen crypto 1m partitions, 6 symbols (BTC ETH SOL BNB XRP DOGE), 866,860,151 B**, 4 tar shards of ~245 MB. Not the 1 GB asked for: see (0).
+
+| # | Question | Measured |
+|---|---|---|
+| 0 | Source | **HF refused the read** (the account is at its cap, `hf_hub_download` failed on the first HEAD), so the stage rebuilt the 6 symbols from data.binance.vision with the lake's own builder. Listing the HF tree still works; only file reads are blocked. The 6 symbols hold only 867 MB frozen, so v1 is 0.87 GB. |
+| a1 | Top-level file limit | The docs say 50. **120 tiny top-level files were accepted by the API and the dataset reached `ready`** (separate probe dataset `metis-market-lake-filecount-probe`, left in place, private, 120 x 18 B). The limit did not bite on upload. |
+| a2 | How archives behave | **Kaggle auto-unpacks `.tar` shards into a folder per shard** (`crypto-um_perp-1m-000/crypto/um_perp/1m/<SYM>/<period>.parquet`). Readers see plain parquet files; no extraction step. Top-level entries stay at 5. |
+| a3 | Sharding for ~75-90 GB | Frozen partitions in this sample average 9.6 MB (yearly files dominate for old months); the HF lake overall averages ~1.9 MB per file (100.3 GB / 51,972). At 250 MB per shard, 80 GB = ~320 shards = 320 folders at top level, which is **over the documented 50**. Not tested above 120 top-level entries, nor above 90 files inside shards. A 10 GB / ~5k-file step is needed before 80 GB. |
+| a4 | Upload speed | v1 (867 MB) upload + processing to `ready`: **102 s** (~8.5 MB/s end to end). A second version with identical content became `ready` in 17 s. Linear extrapolation for 80 GB: ~2.6 h. Not measured at that size. |
+| b | Do old versions count against the 200 GB? | **Not measurable from a runner.** The Kaggle client has no storage-quota call (`quota_view` is GPU/TPU only) and `dataset_list` returns no size for a just-created dataset. The existing 4 private datasets total 173,162,995 B in their current versions (their old versions: 23, 2, 138 and 15 versions). `metis-market-lake` now holds 3 versions of the same 867 MB. **One number settles it: the operator reads private-dataset usage on the Kaggle Account tab.** About 1.0 GB means old versions do not count; about 3.5 GB or more means they do (and a 90 GB dataset must be versioned once, never re-uploaded). |
+| c1 | Read on a GitHub runner via the Kaggle API | `kaggle datasets download --unzip`: **867 MB in 12 s and 14 s (72 and 62 MB/s)**; all 4 shards re-read, 90 files, byte counts equal the manifest. |
+| c2 | Read in a Kaggle CPU kernel (internet off, no GPU quota) | Mounted at `/kaggle/input/datasets/<user>/metis-market-lake`; all 4 shards verified, **867 MB read in 7.1 s (122 MB/s)**; one 18 MB parquet in 6 ms; kernel queued-to-complete ~30 s. |
+| d | ToS / docs | See "Kaggle: current official text" above. No clause bans storage use; two items for the operator (non-commercial wording; third-party data rights). |
+
+### Go / no-go for moving the frozen crypto 1m history
+
+**Technical: GO, in steps. Not yet operator-ready.** The route works end to end (upload, runner read, kernel read, byte-exact). Three things stand between this and 80 GB:
+1. **(b) unknown.** One Account-tab number (above). If old versions count, the design is a single upload of the frozen set and no re-versioning.
+2. **Scale untested.** Run a 10 GB / ~5k-file step first (top-level entry count, `ready` time, kernel mount time).
+3. **HF stays full.** Reads and writes on HF are blocked at the cap. Copying to Kaggle frees nothing there by itself: the daily lake refresh writes to HF and keeps failing until space is freed on HF. Freeing it means deleting the frozen crypto from HF after the Kaggle copy is verified, which is the operator-approved step still to be taken ("delete nothing from HF" held for this pilot) and changes the loader to read frozen months from the Kaggle mount and the recent tail from HF.
+
+**Operator-level exposure (not a lane decision):** Kaggle terms say personal, non-commercial use; and Binance data has no open licence (same exposure as the private HF copy).
