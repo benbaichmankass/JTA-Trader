@@ -16,7 +16,16 @@
   "roadmap": [
     "L-OPS"
   ],
-  "updated_at": "2026-11-05T15:00:58Z",
+  "updated_at": "2026-11-05T15:06:55Z",
   "updated_by": "lane-UI-CONSOLE-V1",
+  "observation": {
+    "what": "After a trainer reboot (or kill -9 of the connector), https://158-178-209-121.sslip.io/healthz returns 200 with auth google within 60 s and claude.ai still lists 9 tools for JTA Trader without reconnecting",
+    "how_to_check": "curl healthz; manager lists claude.ai tools; systemctl show jta-console-connector -p ActiveEnterTimestamp",
+    "due_by": "2026-11-09"
+  },
+  "writeback": {
+    "roadmap": "none: operational unit for an existing connector, no milestone line",
+    "arch": "none: trainer deploy unit only; documented in deploy/trainer/jta-console-connector.service header"
+  },
   "_seq": 946
 }
