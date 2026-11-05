@@ -1,0 +1,101 @@
+# Authored 2026-11-05 by lane RESEARCH-NO-WAIT (Tier 1), dispatched by Manager Session 2026-11-05b. Operator 2026-11-05 ~17:08Z, verbatim: "Why does it need to wait for November? That's not the workflow - we iterate in the data we have till we find what works, we don't wait for new months of data". Gates this adds or changes: NONE. Registered BEFORE any run.
+id: RQ-20261105-23ca-03
+title: 'ADX-max AX50 SYMBOL-HOLDOUT confirmation: trend_donchian_eth_4h config-exact twin on DOGEUSDT (a symbol RQ-20261027-3e41-04 never ran), history 2020-07-01..2026-10-26: does AX50
+  beat the declared config by >= 1.0 R net of the full cost stack, >= 3 of 4 folds, no worse drawdown?'
+cadence: once
+kind: experiment
+theme: regime
+priority: 2
+roadmap:
+- L-REGIME
+programme: P2
+question: 'Supersedes RQ-20261028-4dd3-01 (a monthly re-read of ~0 forward trades: baseline n=0 on its first run). RQ-20261027-3e41-04 read PASS (a LEAD) for AX50 on trend_donchian_eth_4h:
+  dR +11.07 R, 4 of 4 folds. Its own history is exhausted, so the confirming read moves to an IN-HAND untouched window: the same config on DOGEUSDT, 2020-07-01..2026-10-26, same statistic,
+  same bar, same arms. Symbol holdout: the same lever, config-exact, on a symbol the original sweep never ran; CORRELATED evidence with the source cell (one crypto market), reported
+  as a symbol holdout and never as an independent window. Not a Tier-3 case; no config change is proposed from it.'
+why_this_matters: 'Operator 2026-11-05 ~17:08Z: research iterates on in-hand data, the confirming read uses an untouched in-hand holdout, never a future month. 4dd3-01 would have needed
+  about a year of calendar time to reach n(B) >= 39 on ETH alone. MULTIPLE-TESTING DENOMINATOR unchanged from 4dd3-01: AX50 was 1 pass of 3 legs x 2 arms = 6 cells in the 3e41 sweep
+  (xrp AX50 dR -0.69 R and sol AX50 dR -0.45 R failed); three symbol twins are registered here (BNBUSDT, LINKUSDT, DOGEUSDT), each its own unit, read once, all three reported.'
+power:
+  expected_n: 39
+  min_detectable_effect: 0.45
+  effect_units: sd
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: Needs the repo E35 floor of 39 baseline trades. The ETH config produced ~270 trades over ~6.8 years (ESTIMATE from 3e41-04 by_outcome sum 275); a twin over 2020-07..2026-10
+    is expected near 200+ baseline trades (ESTIMATE, not measured); n(B) < 39 grades INDETERMINATE, never FAIL.
+  feasibility:
+    source: none
+    accrual_basis: Replays fetched history over a pinned window; nothing accrues.
+decision_rule:
+  id: RULE-RQ2026110523CA03-ADX_MAX_SYMBOL_HOLDOUT
+  registered_at: '2026-11-05'
+  registered_before_run: true
+  statistic: 'Per arm, from the harness''s own --json summary (argv built by regime_debt_matrix.build_harness_cmd plus the arm''s tokens; full cost stack, never a zero default): total_trades,
+    net_total_r, max_drawdown_r, plus net_r per fold over 4 equal calendar spans (same boundaries every arm). Arms: B = leg as declared; AX50 = --adx-max=50 (AX40 dropped: it failed
+    on 3e41-04). Per candidate C: dR = net_r(C) - net_r(B); dDD = maxDD(C) - maxDD(B); fold_wins = folds in which C out-earns B.'
+  rule: 'INDETERMINATE IF n(B) < 39 on the symbol-holdout window (underpowered: no verdict; never FAIL on thin n). Otherwise AX50 CONFIRMS iff dR >= 1.0 R AND dDD <= 0 AND fold_wins
+    >= 3 of 4 (same bar as RQ-20261027-3e41-04). CONFIRM -> a Tier-3 PROPOSAL note on the owning checklist row for the manager, never a config edit. FAIL IF not confirmed with n(B) >=
+    39: the AX50 lead is closed on this configuration and the lever family stays open. The bar, fold majority, 39 floor and arm values are not changed after any result.'
+  min_n: '39'
+  what_it_does_not_do: 'Does not mine values, edit config, place an order or touch a roster; a backtest of one lever on one symbol twin is not edge and not a P&L claim. Symbol holdout:
+    the same lever, config-exact, on a symbol the original sweep never ran; CORRELATED evidence with the source cell (one crypto market), reported as a symbol holdout and never as an
+    independent window. Not a Tier-3 case; no config change is proposed from it.'
+compute: cpu_light
+value:
+  bucket: own_losses
+  usd_at_stake_per_month: 200
+  confidence: 0.15
+  basis: 'stand-in: same stand-in as 3e41-04; an estimate, not a measurement. Symbol twin of 4dd3-01.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 2.0
+  est_minutes: 25
+  why_runner: Fetches keyless public candles for a pinned window; reads no trainer data.
+  basis: One keyless candle fetch of the window and one harness pass per arm; same shape as RQ-20261022-326f-05 and RQ-20261023-a1f3-11 (estimate, not measured).
+run:
+  command:
+  - python3
+  - scripts/research/exit_lever_ablation.py
+  - --leg
+  - trend_donchian_eth_4h
+  - --symbol
+  - DOGEUSDT
+  - --arm
+  - B=
+  - --arm
+  - AX50=--adx-max=50
+  - --days
+  - '7300'
+  - --start
+  - '2020-07-01'
+  - --end
+  - 2026-10-26 23:59
+  - --grade
+  - sweep
+  - --baseline
+  - B
+  - --delta-r
+  - '1.0'
+  - --fold-majority
+  - '3'
+  - --n-floor
+  - '39'
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 90
+  inputs:
+    research_unit: RQ-20261105-23ca-03
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- RQ-20261027-3e41-04
+- RQ-20261027-3e41-05
+- RQ-20261027-3e41-06
+- RQ-20261028-4dd3-01
+- RESEARCH-NO-WAIT
+status: queued

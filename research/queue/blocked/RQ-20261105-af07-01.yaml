@@ -99,10 +99,11 @@ blocked_on:
     level, simulate both arms on the same bars with 1m ties, claim POINTER-v0-labrador1b-bar0 in holdout_lock before any outcome is read'
   clears_when: 'the subcommand lands on main with a self-test (a planted trade whose bar-0 argmax is 3.0 gives delta exactly 0; a planted
     window already claimed returns INDETERMINATE); the lane git-mvs this file to research/queue/ with status queued, rule unchanged'
-- kind: data
-  ref: Binance Vision daily 1h klines 2026-11-01..2026-11-30
-  what: the forward window
-  clears_when: data.binance.vision lists BTCUSDT-1h-2026-11-30.zip (daily) or BTCUSDT-1h-2026-11.zip (monthly); earliest 2026-12-01
+- kind: harness
+  ref: scripts/research/ml_entry_tp_revision.py pointer-v0 --window symbol-holdout
+  what: pointer-v0 reads window S (frozen-v1 entries on symbols outside manifest bp2)
+  clears_when: lands with the unit's planted-trade self-test
+  owner: lane ML-DECISION-MODELS (or the unit's owning ML lane)
 ml_consumer:
   consumer: ML-ROADMAP-MECE
   decision: 'whether ml_entry''s entry TP on bybit_2 + bybit_portfolio is set by the served TP-revision model at entry instead of the fixed 3 ATR
@@ -110,3 +111,11 @@ ml_consumer:
   legs:
   - ml_entry
   book: money
+amendments:
+- at: '2026-11-05'
+  before_any_run: true
+  by: lane RESEARCH-NO-WAIT
+  text:
+  - 'RESEARCH-NO-WAIT (lane of Manager Session 2026-11-05b). Operator 2026-11-05 ~17:08Z, verbatim: "Why does it need to wait for November? That''s not the workflow - we iterate in the data we have till we find what works, we don''t wait for new months of data". Window registered BEFORE any run; no outcome inside it was read by this lane; the rule text and every threshold are NOT edited.'
+  - 'WINDOW CHANGE: the read registered on the "forward window" / "fresh window" (2026-11) is REPLACED by the in-hand window below. S = symbol holdout: the 20 lexicographically first Binance USDT-M perps NOT in manifest bp2-f4271084b120 that have >= 3 years of 1h bars, over 2022-01-01..2026-10-31; list frozen by the driver and written to the result before any outcome is read; claimed through holdout_lock.py with an explicit symbols list (a disjoint symbol claim: correlated with the 60-perp windows, reported as such).'
+  - 'The data/accrual blocker is removed: nothing here waits for a month to elapse. What remains is the driver option that reads this window (named in blocked_on, owner lane ML-DECISION-MODELS / the unit''s own lane).'
