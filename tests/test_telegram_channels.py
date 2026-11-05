@@ -132,7 +132,7 @@ def _capture(monkeypatch, fail_tokens=()):
     sent = []
 
     def fake(text, *, parse_mode=None, mirror_to_fcm=True, bot_token=None,
-             chat_id=None, reply_markup=None):
+             chat_id=None, reply_markup=None, **_ledger):
         if bot_token in fail_tokens:
             raise RuntimeError("boom")
         sent.append((bot_token, chat_id, text))
