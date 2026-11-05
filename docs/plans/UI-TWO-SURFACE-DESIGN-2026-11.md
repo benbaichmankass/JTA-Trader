@@ -225,17 +225,35 @@ health snapshot (one 30 s task)     ─┘      (rowid / byte offset), builds fr
 
 ### 4.3 Market data never touches the VM
 
-- **Chart:** keep **`lightweight-charts`** (already the SPA's only dependency, made by TradingView, Apache-2.0) and feed it **from the
-  provider in the browser**:
-  - **Crypto (Bybit):** the public kline/ticker WebSocket, which needs no key. This covers every `*USDT` symbol on the books.
-  - **Equities and futures:** there is no keyless browser feed. IB data cannot be served to a browser, and Alpaca's stream needs a key.
-    The options are in **U3**. Until that is decided, these symbols show the **TradingView Advanced Chart widget** (its own feed, an
-    iframe the SPA may embed, since only the artifact CSP blocks iframes) next to a markers list built from our pushed events, with no
-    overlay on the widget.
+- **Chart: one full charting library for EVERY symbol** (operator U3, 2026-11-05 ~00:36Z: *"Full library, but in phases so that we get
+  crypto live fast"*). It is **TradingView Lightweight Charts** (`lightweight-charts`, Apache-2.0). It is already the SPA's only runtime
+  dependency, and `components/LiveChart.svelte` already draws on it. Our own markers and price lines show signals, orders, fills and
+  SL/TP brackets, from the pushed events. The end state is no longer "widget plus markers list". The chart is fed **from the provider in
+  the browser**, in three phases:
+
+  | Phase | Symbols | Browser-reachable feed | Cost (secondary sources, 2026-11-05: **UNVERIFIED**, re-check on the vendor page before buying) | Key in the browser? |
+  |---|---|---|---|---|
+  | **T3a, crypto (first, fast)** | every `*USDT` leg (Bybit) | Bybit **public** v5 WebSocket (`kline.*`, `tickers.*`) | **$0** | **No.** The public stream needs no key. |
+  | **T3b, equities and ETFs** | Alpaca and IB stock/ETF legs | **Alpaca Market Data WebSocket**: the IEX feed on the free Basic plan, or full SIP on **Algo Trader Plus, about $99/month** | $0 (IEX) or about $99/mo (SIP) | **Yes**, because the stream authenticates with a key pair. Mitigation: a **dedicated, otherwise-empty Alpaca paper account** whose key is used only for data. A leaked key can reach only that empty paper book. The operator originates it. |
+  | **T3c, futures** | IB futures legs (MES, MNQ, …) | **Massive (formerly Polygon) futures WebSocket**: about **$999/month per exchange plan** (CME, CBOT, NYMEX and COMEX are each separate) | about $999/mo per exchange | Yes. Same exposure as T3b. Massive has no empty-account mitigation, so the key would sit in the SPA bundle's runtime. |
+
+  - **Futures alternative, recommended for when T3c is reached:** **Databento** CME real-time. It is usage-based plus pass-through CME
+    license fees: roughly $16–33/month for a narrow ES/CL set in its 2023 launch pricing, so it is likely higher now. **UNVERIFIED.**
+    Databento has **no browser WebSocket**, so it needs a thin **relay on the trainer VM** (one upstream connection, fanned out to the
+    browser). That costs far less than Massive, keeps the key server-side, and still keeps ticks off the **trader** VM, which is the point
+    of the 12:37Z requirement. The futures phase is a spend decision, put to the operator with fresh quotes when T3c starts.
+  - **Why Lightweight Charts plus Bybit WS beats the widget for phase 1:** it is **faster**, not just better at the end.
+    - The library is already installed and already renders candles and markers in `LiveChart.svelte`.
+    - Bybit's public stream needs no key, no account and no relay.
+    - Phase 1 swaps the candle source from `/ws/market` to the Bybit socket and binds markers to the stream. That is one component's data
+      source.
+    - The widget would add an iframe that cannot carry our markers, which is a dead end that T3b and T3c would replace anyway.
+  - **Until each phase lands,** that phase's symbols keep today's chart: `lightweight-charts` on the `/ws/market` candles. Nothing goes dark
+    while the phases roll out. `/ws/market` candles are retired only for the symbols a phase has moved, and fully after T3c.
 - **uPnL is computed in the browser** from the position's entry and size and the provider's last price. The VM stops pushing a price
   every second. For instruments with no browser feed, the position frame carries the broker mark that `order_monitor` already records,
   at the tick's cadence.
-- **`/ws/market` candles are retired** once the chart moves. That removes the 2 s and 8 s broker candle fetches per connected client,
+- **`/ws/market` candles are retired** phase by phase, as each class of symbols moves. That removes the 2 s and 8 s broker candle fetches per connected client,
   and the IB pacing risk that `market_ws.py` documents.
 - **What still goes through our stack:** signals, packages, orders, fills, bracket changes, alerts and health. These are only the
   system's own events, which matches the 12:37Z requirement.
@@ -255,7 +273,9 @@ of its DB write. It cannot make the write itself happen sooner.
 |---|---|---|---|---|
 | **T1** | Broadcaster + `GET /api/bot/stream` (SSE), with journal and health frames | 2 (web API service) | — (journal frames); ALERT-LEDGER steps 1–2 (alert frames) | Two browsers open: the VM's DB read count per second is the same with 1 and with 2 clients, and a synthetic `send_route_test_ping` reaches both within 2 s |
 | **T2** | SPA subscribes to the stream; 15 s and 30 s polls deleted | 1 (dashboard repo) | T1 | Caddy log: 0 `/api/bot/positions` requests from the SPA between loads over 1 h with a tab open |
-| **T3** | Chart on the browser-direct Bybit feed with event overlays; U3 path for non-crypto; `/ws/market` candles retired | 1 (SPA) + 2 (API removal) | T1, U3 | `/ws/market` connection count 0 for a day; VM broker-candle fetches attributable to the UI = 0 |
+| **T3a** | **Crypto chart live, first:** Lightweight Charts on the Bybit public WS, with signal, order, fill and bracket markers; `/ws/market` stops fetching candles for `*USDT` | 1 (SPA) + 2 (candle-loop change) | prices: none; live markers: T1 (until T1, markers come from a REST snapshot on load) | A crypto leg's chart ticks with the API's `/ws/market` candle fetches for `*USDT` at 0; a fill on that leg appears as a marker within 2 s of its journal row (once T1 is live) |
+| **T3b** | Equities and ETFs on the Alpaca Market Data WS (IEX free, or SIP about $99/mo), with a dedicated empty paper-account data key that the operator originates | 1 (SPA) + operator key | T3a; the operator's key | An equity leg's chart updates intraday from the Alpaca stream; the key in use belongs to an account with no positions and no funds |
+| **T3c** | Futures: Databento through a trainer-VM relay (recommended) or the Massive futures WS (about $999/mo per exchange); `/ws/market` candle loop retired entirely | 2 (relay) + an operator spend decision | T3b; fresh vendor quotes | `/ws/market` connections 0 for a day; VM broker-candle fetches attributable to the UI = 0 |
 | **T4** | Health cards (`UI-OVERVIEW-HEALTH-CARDS`) as pushed frames | 1–2 | T1; WORK-STORE S4 for the work-queue card | Each card shows `read_state` and population; killing a source shows `could_not_look`, not 0 |
 | **C1** | JTA MCP connector on the trainer VM: tools from § 2.3 (non-work tools first), cache budget, OAuth allowlist (G1), DNS + Caddy | 2 (new service + ingress on the trainer VM) | U1, U2; trainer ingress check | `claude.ai` lists the connector; `journal_trades` returns rows matching `/trades/closed` for the same window; live-VM request rate from the connector ≤ the G2 arithmetic over 1 h |
 | **C2** | Console artifact v1: Journal, Data, ML, Strategies & ladder, Research, Reports | 1 | C1 (or (b) snapshots as a stopgap) | Operator opens it; every card shows `as_of`; a recorded check that a page-driven `mcp` read used no Claude plan usage |
@@ -267,12 +287,15 @@ of its DB write. It cannot make the write itself happen sooner.
 T-steps and C-steps are independent and can run in parallel. **C3 is the only step that waits on the work store.** The rest work against
 routes that exist today, plus the alert ledger.
 
-### 5.2 Rows (filed by this PR, queued; dates assume approval by 11-06)
+### 5.2 Rows (filed by this PR, queued; the operator approved the design 2026-11-05 ~00:36Z)
 
 | Row | Steps | Tier | due_by | Roadmap |
 |---|---|---|---|---|
-| `UI-LIVE-STACK-REDESIGN` (existing) | this design → `landed_unproven` on merge; closes when the operator has decided U1–U5 | 1 | 2026-11-10 | unmapped (as filed) |
-| `UI-TRADING-PUSH` (new) | T1, T2, T3 | 2 | 2026-11-18 | L-OPS |
+| `UI-LIVE-STACK-REDESIGN` (existing) | this design → `landed_unproven` on merge; the operator decided U1–U6 on 2026-11-05 ~00:36Z; closes when this PR merges | 1 | 2026-11-10 | unmapped (as filed) |
+| `UI-TRADING-PUSH` (new) | T1, T2 (the stream and the polls deleted) | 2 | 2026-11-18 | L-OPS |
+| `UI-CHART-CRYPTO-LIVE` (new) | T3a | 1–2 | 2026-11-12 | L-OPS |
+| `UI-CHART-EQUITIES-FEED` (new) | T3b | 1 | 2026-11-25 | L-OPS |
+| `UI-CHART-FUTURES-FEED` (new) | T3c | 2 | 2026-12-09 | L-OPS |
 | `UI-OVERVIEW-HEALTH-CARDS` (existing) | T4 | 1–2 | 2026-11-10 (as filed) | unmapped (as filed) |
 | `UI-CONSOLE-CONNECTOR` (new) | C1 | 2 | 2026-11-13 | L-OPS |
 | `UI-CONSOLE-ARTIFACT` (new) | C2, C3, C4, C5 | 1 | 2026-11-20 | L-OPS |
@@ -288,13 +311,24 @@ Work, Roadmap, Runbooks, Reports, Insights, Performance, Strategies, Models, GPU
 
 ---
 
-## 6. Decisions for the operator (one popup)
+## 6. Decisions for the operator (one popup): ANSWERED 2026-11-05 ~00:36Z
+
+The operator's answers, verbatim, relayed by Manager Session 2026-11-04b (session_01AFoLuN7HERxg65eHjtmMYE):
+
+| # | Answer, verbatim | Effect |
+|---|---|---|
+| U1, U2, U5 | *"Approve U1+U2+U5 (Recommended)"* | A read-only JTA connector, on the trainer VM, with email sign-in (G1). **The operator approved G1 and G2 as disclosed.** |
+| U3 | *"Full library, but in phases so that we get crypto live fast"* | **Changes my recommendation.** Lightweight Charts with our own markers for every symbol, in phases T3a (crypto), T3b (equities) and T3c (futures). The widget is dropped as the end state (§ 4.3). |
+| U4 | *"Yes, after a probe (Recommended)"* | N3 is built at C4 once a probe shows `fire_trigger` works from the page |
+| U6 | *"Retire after 7 days (Recommended)"* | R1 as written |
+
+The questions as they were put:
 
 | # | Decision | Recommendation | Why |
 |---|---|---|---|
 | **U1** | The console's data path: a **read-only JTA MCP connector** that the artifact calls with your claude.ai sign-in, versus Claude-written snapshots in the artifact's store | **Connector (Recommended)** | Fresh to under 90 s, no plan usage per refresh, and load on the trader VM is capped. Snapshots are hours stale and spend plan usage on every refresh. |
 | **U2** | Where the connector runs | **Trainer VM (Recommended)**; fallback: a low-priority process on the live VM if the trainer can't take inbound HTTPS | It keeps console reads off the trader's box (F10). ML and research data are local there after D7. |
-| **U3** | Live chart for equities and futures (crypto uses Bybit's keyless browser feed either way) | **TradingView widget plus a markers list for now; revisit a browser-side feed key later (Recommended)**. Alternative: an Alpaca market-data key in the browser, with overlays. | No keyless browser feed exists for IB or Alpaca symbols. A key in the browser is readable by anyone who opens the SPA. |
+| **U3** | Live chart for equities and futures (crypto uses Bybit's keyless browser feed either way) | **TradingView widget plus a markers list for now; revisit a browser-side feed key later (Recommended)**. Alternative: an Alpaca market-data key in the browser, with overlays. *(Superseded by the operator's answer above.)* | No keyless browser feed exists for IB or Alpaca symbols. A key in the browser is readable by anyone who opens the SPA. |
 | **U4** | Notes: also wake the manager immediately through a `fire_trigger` button (N3), on top of the durable inbox and comments | **Yes, after a probe confirms it works from the page (Recommended)** | Without it, a note waits for the next manager start or a watching session. |
 | **U5** | Connector access: an `ALLOWED_EMAIL` sign-in (G1) or authless | **Sign-in (Recommended)** | The page can be shared by link, and the data is P&L and balances. |
 | **U6** | Retire the 17 console pages from the SPA once the console has run for 7 days | **Yes (Recommended)** | Two surfaces with the same pages drift apart. The trading dashboard becomes what you described: "mostly about the live data feed". |
@@ -314,6 +348,8 @@ Work, Roadmap, Runbooks, Reports, Insights, Performance, Strategies, Models, GPU
 - **Console reads the trader VM through the connector.** The budget (G2) caps it at about 56 requests/min. That is a cap, not zero. If the
   tick work (TICK-DURATION-115S) shows API reads matter, raise the TTLs. Moving the work store itself would reopen WORK-STORE D1, so it is
   not proposed.
+- **Vendor prices in § 4.3 come from secondary sources** and are UNVERIFIED. T3b and T3c re-check them on the vendor's own page
+  before any purchase.
 - **Unverified items**, each closed by the step named: trainer VM inbound 443 (C1); whether `mcp` calls from a page spend plan usage (C2);
   `fire_trigger` from a page (C4); the VM's current `SITE_AUTH_ENFORCE` value (C1 reads it before choosing the stream's auth).
 - **Two auth stacks.** The SPA keeps its passkey and device sessions. The connector uses OAuth to claude.ai. Both allowlist the same
