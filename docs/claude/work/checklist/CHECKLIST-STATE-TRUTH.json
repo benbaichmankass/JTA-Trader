@@ -17,11 +17,20 @@
     "L-OPS"
   ],
   "priority_rank": 3,
-  "updated_at": "2026-11-05T09:21:50Z",
+  "updated_at": "2026-11-05T09:32:30Z",
   "updated_by": "session_01AFoLuMS3KAfkdSSB4xiqmg",
   "observe": {
     "when": "2026-11-12",
     "how": "python3 scripts/ops/stale_in_flight.py prints staleInFlight=0 (denominator printed); then WSD-S5-STATE-VIEWS serves it on /api/bot/work/snapshot"
+  },
+  "observation": {
+    "what": "State unproven since landing; closes on the observation named in how_to_check",
+    "how_to_check": "python3 scripts/ops/stale_in_flight.py prints staleInFlight=0 (denominator printed); then WSD-S5-STATE-VIEWS serves it on /api/bot/work/snapshot",
+    "due_by": "2026-11-12"
+  },
+  "writeback": {
+    "roadmap": "none: register state correction by the CHECKLIST-STATE-TRUTH sweep; no milestone changed",
+    "arch": "none: no component changed"
   },
   "_seq": 908
 }

@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# wiring: manual-only - an on-demand read-only view run by sessions (CHECKLIST-STATE-TRUTH); WSD-S5-STATE-VIEWS will import stale_in_flight() into /api/bot/work/snapshot
 """staleInFlight: how many ``in_flight`` checklist rows have not been touched for > N hours.
 
 CHECKLIST-STATE-TRUTH detector (docs/claude/work/checklist/CHECKLIST-STATE-TRUTH.json): the Work
@@ -60,7 +61,9 @@ def stale_in_flight(rows, now=None, hours=DEFAULT_HOURS):
 
 def _self_test() -> int:
     now = datetime(2026, 11, 5, 12, 0, tzinfo=timezone.utc)
-    mk = lambda i, st, ts: {"id": i, "state": st, "updated_at": ts}
+    def mk(i, st, ts):
+        return {"id": i, "state": st, "updated_at": ts}
+
     rows = [mk("fresh", "in_flight", "2026-11-05T00:00:00Z"), mk("old", "in_flight", "2026-11-01T00:00:00Z"),
             mk("edge", "in_flight", "2026-11-03T12:00:00Z"), mk("bad", "in_flight", "garbage"),
             mk("doneold", "done", "2026-10-01T00:00:00Z")]
@@ -81,7 +84,7 @@ def main(argv=None) -> int:
     if a.self_test:
         return _self_test()
     try:
-        from src.runtime import checklist_store as ck  # noqa: PLC0415
+        from src.runtime import checklist_store as ck
         doc = ck.load()
         rows = [r for r in (doc.get("items") or []) if isinstance(r, dict)]
         if not rows:

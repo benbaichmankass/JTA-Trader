@@ -15,7 +15,7 @@
   "blocked_on": [],
   "note": "Filed by lane RESEARCH-ITERATE 2026-11-01 (root cause in OPERATING-PLAN \u00a7 2: 4 of 6 templates emit one configuration per unit; 42% of 1,580 units in 30 d were structured designs). queue_replenish.py already stamps design/levers_declared by default (#22164); this row changes what the templates emit. Template edits hold (landing machinery). Gates this adds: none. PAUSED 2026-11-01 15:40Z (usage hold). PR #22188 (draft, head a7d5ef6b2, base claude/research-loop-canonical) built + pushed; only check 'watch' was in_progress, no red, no green SHA seen. Local guard reds fixed (capability index, inert params). Not run on a runner: new roster-walkforward / leg-corpus commands. Gaps: PI-20261101-MJFESSM5-0001/-0002/-0003. Resume: confirm CI green on head, retarget to main after #22164. 2026-11-05 CHECKLIST-STATE-TRUTH sweep: PR #22188 MERGED 2026-11-02T09:09Z (the row said paused, awaiting CI); no live lane.",
   "priority_rank": 3,
-  "updated_at": "2026-11-05T09:20:56Z",
+  "updated_at": "2026-11-05T09:32:31Z",
   "updated_by": "session_01AFoLuMS3KAfkdSSB4xiqmg",
   "roadmap": [
     "L-PROGRAMMES"
@@ -30,6 +30,15 @@
   "observe": {
     "when": "2026-11-12",
     "how": "python3 scripts/research/research_ops_checks.py --kind programme_review --since 7d: structured-design share of newly minted units (PR measured 158/158 on generated samples)"
+  },
+  "observation": {
+    "what": "State unproven since landing; closes on the observation named in how_to_check",
+    "how_to_check": "python3 scripts/research/research_ops_checks.py --kind programme_review --since 7d: structured-design share of newly minted units (PR measured 158/158 on generated samples)",
+    "due_by": "2026-11-12"
+  },
+  "writeback": {
+    "roadmap": "none: register state correction by the CHECKLIST-STATE-TRUTH sweep; no milestone changed",
+    "arch": "none: no component changed"
   },
   "_seq": 877
 }
