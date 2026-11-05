@@ -108,7 +108,8 @@ def _fetch_month(sym: str, month: str) -> pd.DataFrame | None:
     raise RuntimeError(f"fetch failed {url}")
 
 
-def fetch(cache: Path, symbols: list[str]) -> dict:
+def fetch(cache: Path, symbols: list[str], end: str = END) -> dict:
+    """``end`` other than END is used only by universe-costed, which passes its own cache directory."""
     cache.mkdir(parents=True, exist_ok=True)
     report = {}
 
@@ -118,7 +119,7 @@ def fetch(cache: Path, symbols: list[str]) -> dict:
             df = pd.read_pickle(p)
             return sym, {"rows": len(df), "cached": True}
         frames, missing = [], []
-        for m in _months(START, END):
+        for m in _months(START, end):
             d = _fetch_month(sym, m)
             if d is None:
                 missing.append(m)
@@ -130,7 +131,7 @@ def fetch(cache: Path, symbols: list[str]) -> dict:
         for c in ("open", "high", "low", "close", "volume"):
             df[c] = df[c].astype(float)
         df["ts"] = pd.to_datetime(df["open_time"].astype("int64"), unit="ms", utc=True)
-        df = df[(df.ts >= pd.Timestamp(START, tz="UTC")) & (df.ts < pd.Timestamp(END, tz="UTC") + pd.Timedelta(days=1))]
+        df = df[(df.ts >= pd.Timestamp(START, tz="UTC")) & (df.ts < pd.Timestamp(end, tz="UTC") + pd.Timedelta(days=1))]
         df = df[["ts", "open", "high", "low", "close", "volume"]].reset_index(drop=True)
         df.to_pickle(p)
         return sym, {"rows": len(df), "missing_months": missing}
@@ -188,8 +189,9 @@ def _cost_r(entry, exit_px, risk, t_entry_s, t_exit_s):
     return fee, slip, fund
 
 
-def label_symbol(df: pd.DataFrame) -> pd.DataFrame:
-    """Decision rows for one symbol: every DECISION_EVERY_H-th bar whose close is the decision time."""
+def label_symbol(df: pd.DataFrame, recost_inputs: bool = False) -> pd.DataFrame:
+    """Decision rows for one symbol: every DECISION_EVERY_H-th bar whose close is the decision time. ``recost_inputs``
+    (universe-costed only) adds per_r_* / nwin_*; off by default so every other caller's frame is byte-identical."""
     o, h, lo, c = (df[k].to_numpy(float) for k in ("open", "high", "low", "close"))
     pc = np.r_[np.nan, c[:-1]]
     tr = np.nanmax(np.vstack([h - lo, np.abs(h - pc), np.abs(lo - pc)]), axis=0)
@@ -223,6 +225,13 @@ def label_symbol(df: pd.DataFrame) -> pd.DataFrame:
         out[f"cost_{name}"] = fee + slip + fund
         out[f"reason_{name}"] = reason
         out[f"bars_{name}"] = j
+        if not recost_inputs:
+            continue
+        # re-costing inputs for universe-costed (a24c-01): price-per-R and funding windows crossed
+        out[f"per_r_{name}"] = ((np.abs(entry) + np.abs(px)) / 2.0) / risk
+        from src.runtime.execution_costs import FUNDING_WINDOW_HOURS
+        w = FUNDING_WINDOW_HOURS * 3600.0
+        out[f"nwin_{name}"] = np.floor(t_exit_s / w) - np.floor(t_entry_s / w)
     return pd.DataFrame(out)
 
 
@@ -260,7 +269,8 @@ FEATURES = ["ret_1", "ret_4", "ret_12", "ret_24", "ret_72", "ret_168", "vol24", 
             "xs_rank_ret24", "btc_ret24", "btc_vol24", "breadth_up24", "rel_vol"]
 
 
-def build_table(cache: Path, symbols: list[str], xs_symbols: list[str] | None = None) -> pd.DataFrame:
+def build_table(cache: Path, symbols: list[str], xs_symbols: list[str] | None = None,
+                recost_inputs: bool = False) -> pd.DataFrame:
     """``xs_symbols`` None: cross-sectional context over ``symbols`` (the c692-01 recipe, unchanged). Given: context is
     computed against that fixed REFERENCE set for every row, so a row's inputs do not depend on which other symbols are
     in the table (the c692-04 training-universe arms)."""
@@ -269,7 +279,7 @@ def build_table(cache: Path, symbols: list[str], xs_symbols: list[str] | None = 
         df = pd.read_pickle(cache / f"{sym}.pkl").reset_index(drop=True)
         f = features_symbol(df)
         feats[sym] = f
-        lab = label_symbol(df)
+        lab = label_symbol(df, recost_inputs=recost_inputs)
         lab = lab.join(f.drop(columns=["ts"]), on="i")
         lab["symbol"] = sym
         rows.append(lab)
@@ -681,6 +691,285 @@ def traded_subset(args) -> int:
     return 0
 
 
+# ----------------------------------------------------------------------------------------------- a24c-01 universe-costed
+# RQ-20261101-a24c-01 (decision_rule RULE-RQ20261101-a24c-01-ENTRY-UNIVERSE-COSTED). Every constant below is copied from
+# the unit as registered; none is a tuning knob.
+UC_C_GRID = [10.0, 15.0, 20.0, 30.0, 50.0, float("inf")]
+UC_DEV_MIN_N = 1000
+UC_FWD_MIN_N = 300
+UC_MIN_SYMBOLS = 10
+UC_MAX_MISSING_COST = 0.10
+UC_Q_USD = 5000.0
+UC_N_TRIALS = 12                      # 6 C values x 2 arms
+UC_FUND_BPS = 1.0
+UC_FROZEN_FAMILY = "ENTRY-v1"         # any ledger claim whose model_id starts with this read the SAME frozen artifact
+_DAILY = "https://data.binance.vision/data/futures/um/daily/klines"
+
+
+def corwin_schultz_bps(h: np.ndarray, lo: np.ndarray) -> np.ndarray:
+    """Corwin & Schultz (2012) two-bar high-low spread estimate, in bps, for each bar pair (t-1, t); negative -> 0."""
+    h1, l1, h2, l2 = h[:-1], lo[:-1], h[1:], lo[1:]
+    with np.errstate(divide="ignore", invalid="ignore"):
+        beta = np.log(h1 / l1) ** 2 + np.log(h2 / l2) ** 2
+        gamma = np.log(np.maximum(h1, h2) / np.minimum(l1, l2)) ** 2
+        k = 3.0 - 2.0 * np.sqrt(2.0)
+        alpha = (np.sqrt(2.0 * beta) - np.sqrt(beta)) / k - np.sqrt(gamma / k)
+        s = 2.0 * (np.exp(alpha) - 1.0) / (1.0 + np.exp(alpha))
+    return np.r_[np.nan, np.clip(s, 0.0, None) * 1e4]
+
+
+def cost_table(df: pd.DataFrame, tick: float, turnover_ratio: float, q_usd: float = UC_Q_USD,
+               quoted_spread_bps: float | None = None) -> pd.DataFrame:
+    """Per calendar month: spread_bps (CS monthly median, floored at one tick at the month's median price),
+    sigma_daily, adv_bybit (Binance median daily quote volume x Bybit/Binance turnover ratio), impact_bps round trip
+    = 2 x 1e4 x sigma_daily x sqrt(Q / adv_bybit)."""
+    d = df.copy()
+    d["cs"] = corwin_schultz_bps(d["high"].to_numpy(float), d["low"].to_numpy(float))
+    d["month"] = d["ts"].dt.strftime("%Y-%m")
+    d["day"] = d["ts"].dt.floor("D")
+    daily = d.groupby("day").agg(close=("close", "last"), qv=("volume", lambda v: float((v * d.loc[v.index, "close"]).sum())))
+    daily["lr"] = np.log(daily.close).diff()
+    daily["month"] = daily.index.strftime("%Y-%m")
+    out = []
+    for m, g in d.groupby("month"):
+        dg = daily[daily.month == m]
+        px = float(g.close.median())
+        tick_bps = 1e4 * tick / px if px > 0 else np.nan
+        # re-registration 2026-11-05 (manager decision on lane ML-WEEK-1105 report 1): the venue's QUOTED spread floored at one
+        # tick replaces the Corwin-Schultz estimate, which reads intrabar volatility as spread on 1h crypto bars
+        # (comms/research/RQ-20261101-a24c-01/local-20261105/RESULT.md). CS is kept, reported, never used for cost.
+        base = float(np.nanmedian(g.cs)) if quoted_spread_bps is None else float(quoted_spread_bps)
+        spread = max(base, tick_bps)
+        sig = float(dg.lr.std())
+        adv = float(dg.qv.median()) * turnover_ratio
+        imp = 2.0 * 1e4 * sig * np.sqrt(q_usd / adv) if adv > 0 and np.isfinite(sig) else np.nan
+        out.append({"month": m, "spread_bps": spread, "cs_bps_reported": float(np.nanmedian(g.cs)), "tick_bps": tick_bps, "sigma_daily": sig, "adv_bybit": adv,
+                    "impact_bps": imp})
+    return pd.DataFrame(out)
+
+
+def recost(tab: pd.DataFrame, costs: dict[str, pd.DataFrame], impact_mult: float = 1.0) -> pd.DataFrame:
+    """Replace the flat slippage with each row's symbol-month spread + impact; fee and funding as c692-01. Adds
+    ``rt_bps_{side}`` (fee + spread + impact + funding) and ``cost_ok``. ``impact_mult`` = sqrt(Q'/Q) for sensitivity."""
+    t = tab.copy()
+    t["month"] = t["ts"].dt.strftime("%Y-%m")
+    c = pd.concat([v.assign(symbol=k) for k, v in costs.items()], ignore_index=True)[["symbol", "month", "spread_bps", "impact_bps"]]
+    t = t.merge(c, on=["symbol", "month"], how="left")
+    t["cost_ok"] = t.spread_bps.notna() & t.impact_bps.notna()
+    var_bps = t.spread_bps + t.impact_bps * impact_mult
+    for side in ("long", "short"):
+        bps = FEE_BPS + var_bps + UC_FUND_BPS * t[f"nwin_{side}"]
+        t[f"rt_bps_{side}"] = bps
+        t[f"cost_{side}"] = t[f"per_r_{side}"] * bps / 1e4
+        t[f"net_{side}"] = t[f"gross_{side}"] - t[f"cost_{side}"]
+    return t
+
+
+def choose_c(dev_scored: pd.DataFrame, taken: pd.DataFrame) -> dict:
+    """The registered liquidity rule on the DEV folds only: symbol IN iff its dev median round-trip bps <= C; C =
+    argmax pooled dev mean net R per decision (re-costed) with dev n >= UC_DEV_MIN_N; tie -> larger C."""
+    med = dev_scored.groupby("symbol").apply(lambda g: float(np.nanmedian(np.r_[g.rt_bps_long, g.rt_bps_short])),
+                                             include_groups=False)
+    by_c = {}
+    for C in UC_C_GRID:
+        u = sorted(med[med <= C].index)
+        tk = taken[taken.symbol.isin(u)]
+        by_c[str(C)] = {"n": len(tk), "n_symbols": len(u), "mean_net_r": float(tk.net_r.mean()) if len(tk) else None,
+                        "universe": u}
+    elig = [C for C in UC_C_GRID if by_c[str(C)]["n"] >= UC_DEV_MIN_N and by_c[str(C)]["mean_net_r"] is not None]
+    c_star = max(elig, key=lambda C: (by_c[str(C)]["mean_net_r"], C)) if elig else None
+    return {"dev_median_rt_bps": {k: round(v, 2) for k, v in med.items()}, "by_c": by_c, "c_star": c_star}
+
+
+def prior_reads(start: str, end: str, ledger: Path | None = None) -> list[dict]:
+    import holdout_lock
+    rows = holdout_lock._rows(ledger or holdout_lock.LEDGER)
+    return [r for r in rows if r["model_id"].startswith(UC_FROZEN_FAMILY) and holdout_lock._overlap(r["start"], r["end"], start, end)]
+
+
+def uc_verdict(c_star, fwd: dict | None, gate: dict | None, missing_share: float | None, prior: list) -> tuple[str, str]:
+    if prior:
+        return "indeterminate", (f"forward window cannot be claimed: frozen {UC_FROZEN_FAMILY} already read it "
+                                 f"({', '.join(r['model_id'] + ' @ ' + r['read_at'] for r in prior)})")
+    if c_star is None:
+        return "indeterminate", f"no C reaches dev n >= {UC_DEV_MIN_N}"
+    n, ns = fwd["n"], fwd.get("n_symbols", 0)
+    if n < UC_FWD_MIN_N or fwd["universe_size"] < UC_MIN_SYMBOLS:
+        return "indeterminate", f"forward n={n} (floor {UC_FWD_MIN_N}) / |U(C)|={fwd['universe_size']} (floor {UC_MIN_SYMBOLS})"
+    if missing_share is not None and missing_share > UC_MAX_MISSING_COST:
+        return "indeterminate", f"cost model missing for {missing_share:.1%} of U(C) decisions (> {UC_MAX_MISSING_COST:.0%})"
+    a_ok = fwd["mean_net_r"] >= 0
+    b_ok = bool(gate and gate.get("passed"))
+    why = f"arm A forward mean net R {fwd['mean_net_r']:+.4f} at n={n}, {ns} symbols; arm B cost_gate {gate.get('reason') if gate else None}"
+    return ("pass" if a_ok and b_ok else "fail"), why
+
+
+def _binance_day_quote_volume(sym: str, day: str) -> float | None:
+    import requests
+    r = requests.get(f"{_DAILY}/{sym}/1d/{sym}-1d-{day}.zip", timeout=60)
+    if r.status_code == 404:
+        return None
+    r.raise_for_status()
+    zf = zipfile.ZipFile(io.BytesIO(r.content))
+    raw = zf.read(zf.namelist()[0]).decode().strip().split("\n")
+    row = raw[-1].split(",")
+    return float(row[7])
+
+
+def _frozen_models(served: Path):
+    import lightgbm as lgb
+    meta = json.loads(served.read_text())
+    bt = meta["booster_txt"]
+    bt = bt if isinstance(bt, dict) else json.loads(bt)
+    return meta, {k: lgb.Booster(model_str=v) for k, v in bt.items()}
+
+
+def universe_costed(args) -> int:
+    cache, out = Path(args.cache) / f"thru-{args.fwd_end}", Path(args.out)
+    out.mkdir(parents=True, exist_ok=True)
+    t0 = time.time()
+    specs = json.loads(Path(args.bybit_specs).read_text())
+    meta, models = _frozen_models(Path(args.served))
+    tau, feats = float(meta["tau"]), meta["features"]
+    feats = feats if isinstance(feats, list) else json.loads(feats.replace("'", '"'))
+    ref = meta["xs_reference"]
+    ref = ref if isinstance(ref, list) else json.loads(ref.replace("'", '"'))
+    listed = {k for k, v in specs.items() if v and v.get("status") == "Trading" and v.get("contractType") == "LinearPerpetual"}
+    cands = [s for s in ref if s in listed]
+    fetch(cache, ref, end=args.fwd_end)
+    tab = build_table(cache, ref, xs_symbols=ref, recost_inputs=True)
+    # costs per symbol-month
+    snap_day = args.snapshot_day
+    costs, dropped = {}, {}
+    for sym in cands:
+        qv = _binance_day_quote_volume(sym, snap_day)
+        tv = float(specs[sym].get("turnover24h") or 0)
+        if not qv or not tv:
+            dropped[sym] = "no Bybit/Binance turnover ratio"
+            continue
+        df = pd.read_pickle(cache / f"{sym}.pkl")
+        q = None
+        if args.spread_source == "quoted":
+            q = specs[sym].get("spread_bps")
+            if q is None:
+                dropped[sym] = "no quoted spread in the snapshot"
+                continue
+        costs[sym] = cost_table(df, float(specs[sym]["tickSize"]), tv / qv, quoted_spread_bps=q)
+    tab = tab[tab.symbol.isin(list(costs))].reset_index(drop=True)
+    sc = recost(tab, costs)
+    hs, fs = pd.Timestamp(HOLDOUT_START, tz="UTC"), pd.Timestamp(args.fwd_start, tz="UTC")
+    print(f"rows={len(sc)} cands={len(cands)} costed={len(costs)} dropped={len(dropped)} t={time.time()-t0:.0f}s", flush=True)
+    # dev folds: the c692-01 recipe refit per fold (dev only, never >= HOLDOUT_START), the frozen tau, re-costed net
+    dev = sc[sc.ts < hs]
+    bounds = [pd.Timestamp(x, tz="UTC") for x in DEV_FOLDS] + [hs]
+    full_dev = tab[tab.ts < hs]
+    taken_dev = []
+    for a, b in itertools.pairwise(bounds):
+        test = dev[(dev.ts >= a) & (dev.ts < b - pd.Timedelta(hours=HORIZON_H + 1))]
+        pl, ps = fit_predict(purge_train(full_dev, a), test)
+        taken_dev.append(policy(test, pl, ps, tau))
+    taken_dev = pd.concat(taken_dev, ignore_index=True)
+    rule = choose_c(dev, taken_dev)
+    c_star = rule["c_star"]
+    prior = prior_reads(args.fwd_start, args.fwd_end, Path(args.ledger) if args.ledger else None)
+    res = {"schema": "ml_decision_entry_universe_costed/1", "unit": args.unit, "tau": tau, "c_star": c_star,
+           "liquidity_rule": rule, "candidates": cands, "dropped": dropped, "prior_reads_frozen": prior,
+           "q_usd": UC_Q_USD, "snapshot_day": snap_day, "git_sha": _git_sha()}
+    fwd, gate, missing, claim = None, None, None, None
+    if not prior and c_star is not None:
+        import holdout_lock
+        claim = holdout_lock.claim_read(args.model_id, args.fwd_start, args.fwd_end, args.unit, args.reader,
+                                        Path(args.ledger) if args.ledger else holdout_lock.LEDGER)
+        U = rule["by_c"][str(c_star)]["universe"]
+        fw = sc[(sc.ts >= fs) & (sc.ts < pd.Timestamp(args.fwd_end, tz="UTC") + pd.Timedelta(days=1)) & sc.symbol.isin(U)]
+        # provenance: predict — Booster.predict is the regressed net R of that side, not a probability
+        pl, ps = models["long"].predict(fw[feats]), models["short"].predict(fw[feats])
+        tk = policy(fw, pl, ps, tau)
+        fwd = {**summarize(tk), "universe_size": len(U), "universe": U}
+        missing = float((~fw.cost_ok).mean()) if len(fw) else None
+        # arm B: every opportunity row, better side by prediction, taken iff pred > tau
+        side_long = pl >= ps
+        net = np.where(side_long, fw.net_long, fw.net_short)
+        taken_flag = np.maximum(pl, ps) > tau
+        from ml.promotion.cost_gate import evaluate_cost_gate
+        g = evaluate_cost_gate(list(zip(taken_flag.tolist(), net.astype(float).tolist())),
+                               eval_cost_bases={"net_of_cost": len(fw)}, value_column="net_r", threshold=tau,
+                               enforced=False, n_trials=UC_N_TRIALS)
+        gate = g.to_dict()
+        # reported, never gating
+        flat = fw.copy()
+        for side in ("long", "short"):
+            flat[f"net_{side}"] = flat[f"gross_{side}"] - flat[f"per_r_{side}"] * (FEE_BPS + 3.0 + UC_FUND_BPS * flat[f"nwin_{side}"]) / 1e4
+        res["reported"] = {
+            "flat_3bps": summarize(policy(flat, pl, ps, tau))["mean_net_r"],
+            "bybit2_symbols": summarize(tk[tk.symbol.isin(traded_symbols())]),
+            "per_symbol": {k: {"n": len(v), "mean_net_r": float(v.net_r.mean())} for k, v in tk.groupby("symbol")},
+            "impact_sensitivity": {}}
+        for mult_name, q in (("q_x0.25", 0.25), ("q_x4", 4.0)):
+            s2 = recost(tab[tab.symbol.isin(U)], costs, impact_mult=float(np.sqrt(q)))
+            s2 = s2[(s2.ts >= fs) & (s2.ts < pd.Timestamp(args.fwd_end, tz="UTC") + pd.Timedelta(days=1))]
+            # provenance: predict — Booster.predict is the regressed net R of that side, not a probability
+            pl2, ps2 = models["long"].predict(s2[feats]), models["short"].predict(s2[feats])
+            res["reported"]["impact_sensitivity"][mult_name] = summarize(policy(s2, pl2, ps2, tau))["mean_net_r"]
+    v, why = uc_verdict(c_star, fwd, gate, missing, prior)
+    res.update({"verdict": v, "why": why, "forward": fwd, "arm_b_cost_gate": gate, "cost_missing_share": missing,
+                "holdout_claim": claim, "elapsed_s": round(time.time() - t0)})
+    (out / "summary.json").write_text(json.dumps(res, indent=1, default=str) + "\n")
+    vj = {"verdict": v, "read_state": "measured", "n": (fwd or {}).get("n"), "note": why,
+          "population": (f"frozen ml_decision_entry_v1 (tau {tau}) decisions {args.fwd_start}..{args.fwd_end} on U(C*={c_star}) of the "
+                         f"Bybit-listed c692-01 reference symbols, each re-costed fee {FEE_BPS} + Corwin-Schultz spread + sqrt impact "
+                         f"(Q {UC_Q_USD:.0f} USD) + funding {UC_FUND_BPS} bps/8h"),
+          "measurement": {k: res[k] for k in ("c_star", "forward", "arm_b_cost_gate", "prior_reads_frozen", "cost_missing_share",
+                                              "holdout_claim") if k in res} | {"dev_by_c": {k: {kk: vv for kk, vv in x.items() if kk != "universe"}
+                                                                                     for k, x in rule["by_c"].items()}}}
+    (out / "verdict.json").write_text(json.dumps(vj, indent=1, default=str) + "\n")
+    print(json.dumps({"verdict": v, "why": why, "c_star": c_star}), flush=True)
+    return 0
+
+
+def _self_test_universe_costed() -> None:
+    import tempfile
+    rng = np.random.default_rng(1)
+    ts = pd.date_range("2024-01-01", periods=24 * 62, freq="h", tz="UTC")
+    c = 100 * np.exp(np.cumsum(rng.normal(0, 0.01, len(ts))))
+    liquid = pd.DataFrame({"ts": ts, "open": c, "high": c * 1.002, "low": c * 0.998, "close": c, "volume": 1e6})
+    thin = liquid.assign(high=c * 1.03, low=c * 0.97, volume=10.0)
+    ct_l = cost_table(liquid, 0.0001, 1.0)
+    ct_t = cost_table(thin, 0.0001, 0.1)
+    assert (ct_t.spread_bps > ct_l.spread_bps).all() and (ct_t.impact_bps > 50 * ct_l.impact_bps).all(), (ct_l, ct_t)
+    # a one-tick floor: a price-1 symbol with a 0.01 tick cannot quote tighter than 100 bps
+    flat = liquid.assign(high=liquid.close, low=liquid.close, close=1.0)
+    assert abs(cost_table(flat, 0.01, 1.0).spread_bps.iloc[0] - 100.0) < 1e-9
+    # quoted source: a 0.01 bps quote on a wide-bar symbol is used as quoted (not the CS estimate), and still floored at one tick
+    qt = cost_table(thin, 1e-7, 1.0, quoted_spread_bps=0.01)
+    assert (qt.spread_bps == 0.01).all() and (qt.cs_bps_reported > 1.0).all(), qt
+    assert abs(cost_table(flat, 0.01, 1.0, quoted_spread_bps=0.01).spread_bps.iloc[0] - 100.0) < 1e-9
+    # the dev rule excludes the planted illiquid symbol at any finite C it fails, and takes the larger C on a tie
+    dev = pd.DataFrame({"symbol": ["L"] * 4 + ["T"] * 4, "rt_bps_long": [14] * 4 + [400] * 4, "rt_bps_short": [14] * 4 + [400] * 4})
+    taken = pd.DataFrame({"symbol": ["L"] * 1200 + ["T"] * 1200, "net_r": [0.05] * 1200 + [-0.3] * 1200})
+    r = choose_c(dev, taken)
+    assert r["c_star"] == 50.0 and r["by_c"]["50.0"]["universe"] == ["L"], r["by_c"]
+    # recost: a 0-spread 0-impact month equals fee + funding only
+    tab = pd.DataFrame({"symbol": ["L"], "ts": [ts[0]], "gross_long": [1.0], "gross_short": [-1.0], "per_r_long": [10.0],
+                        "per_r_short": [10.0], "nwin_long": [3.0], "nwin_short": [3.0]})
+    rc = recost(tab, {"L": pd.DataFrame({"month": ["2024-01"], "spread_bps": [0.0], "impact_bps": [0.0]})})
+    assert abs(rc.net_long.iloc[0] - (1.0 - 10.0 * (FEE_BPS + 3.0) / 1e4)) < 1e-12
+    # the window clause: a prior frozen-v1 read makes the verdict indeterminate whatever the numbers
+    with tempfile.TemporaryDirectory() as d:
+        led = Path(d) / "reads.jsonl"
+        led.write_text(json.dumps({"model_id": "ENTRY-v1-frozen-ref-x", "start": "2026-10-01", "end": "2026-10-31",
+                                   "read_at": "t", "reader": "r", "unit": "u"}) + "\n")
+        pr = prior_reads("2026-10-01", "2026-10-31", led)
+        assert len(pr) == 1 and not prior_reads("2026-11-01", "2026-11-30", led)
+        v, _ = uc_verdict(50.0, {"n": 999, "n_symbols": 40, "universe_size": 40, "mean_net_r": 1.0}, {"passed": True}, 0.0, pr)
+        assert v == "indeterminate"
+    v, _ = uc_verdict(50.0, {"n": 999, "n_symbols": 40, "universe_size": 40, "mean_net_r": 0.01}, {"passed": True}, 0.0, [])
+    assert v == "pass"
+    v, _ = uc_verdict(50.0, {"n": 999, "n_symbols": 40, "universe_size": 40, "mean_net_r": 0.01}, {"passed": False, "reason": "x"}, 0.0, [])
+    assert v == "fail"
+    print("universe-costed self-test ok")
+
+
 # ----------------------------------------------------------------------------------------------- self-test
 def _self_test() -> None:
     H = 4
@@ -727,16 +1016,27 @@ def _self_test() -> None:
     assert list(tk.net_r) == [1.0, -1.0], tk  # the i=4 bar is blocked by the open position from i=0
     t = traded_symbols()
     assert t and all(x.endswith("USDT") for x in t), t
+    _self_test_universe_costed()
     print("self-test ok")
 
 
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser()
-    ap.add_argument("cmd", nargs="?", default="run", choices=["run", "universe-arms", "traded-subset"])
+    ap.add_argument("cmd", nargs="?", default="run", choices=["run", "universe-arms", "traded-subset", "universe-costed"])
     ap.add_argument("--cache", default="/tmp/ml_decision_klines")
     ap.add_argument("--out", default="/tmp/ml_decision_entry_out")
     ap.add_argument("--unit", default="")
     ap.add_argument("--entry-summary", default="")
+    ap.add_argument("--bybit-specs", default="comms/research/ML-ENTRY-UNIVERSE/local-20261101T1830Z/bybit_specs_20261101.json")
+    ap.add_argument("--spread-source", choices=["quoted", "cs"], default="quoted",
+                    help="quoted = the Bybit snapshot spread floored at one tick (a24c-01 as re-registered 2026-11-05); cs = Corwin-Schultz")
+    ap.add_argument("--snapshot-day", default="2026-11-01", help="UTC day of the Bybit snapshot; Binance 1d quote volume of that day")
+    ap.add_argument("--served", default=str(REPO / "ml/served/ml_decision_entry_v1/model.json"))
+    ap.add_argument("--fwd-start", default="2026-10-01")
+    ap.add_argument("--fwd-end", default="2026-10-31")
+    ap.add_argument("--model-id", default="ENTRY-v1-universe-costed")
+    ap.add_argument("--reader", default="research-script-run")
+    ap.add_argument("--ledger", default="")
     ap.add_argument("--self-test", action="store_true")
     a = ap.parse_args(argv)
     if a.self_test:
@@ -744,6 +1044,8 @@ def main(argv=None) -> int:
         return 0
     if a.cmd == "traded-subset":
         return traded_subset(a)
+    if a.cmd == "universe-costed":
+        return universe_costed(a)
     return universe_arms(a) if a.cmd == "universe-arms" else run(a)
 
 
