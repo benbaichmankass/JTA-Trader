@@ -2,7 +2,7 @@
   "id": "UI-CONSOLE-CONNECTOR-PERSIST",
   "title": "Make the trainer console connector + tunnel survive a reboot (persistent systemd units)",
   "phase": null,
-  "state": "in_flight",
+  "state": "landed_unproven",
   "owner": "manager",
   "lane": "UI-CONSOLE-CONNECTOR-PERSIST",
   "model": null,
@@ -11,12 +11,21 @@
   "tier": 2,
   "prs": [],
   "blocked_on": [],
-  "note": "Found by lane UI-CONSOLE-V1 2026-11-05: jta-console-connector (127.0.0.1:8765) and jta-mcp-tunnel run as TRANSIENT systemd-run units on ict-trainer-vm (#23224/#23254), so a trainer reboot or OOM kill takes the console's data path down with no restart. Caddy (systemd-enabled, #23262) does survive. Fix: commit deploy/trainer/jta-console-connector.service (Restart=always, Nice=10, MemoryMax=400M, EnvironmentFile for CONSOLE_CONNECTOR_AUTH/BASE_URL/GOOGLE_OAUTH_CLIENT_ID/ALLOWED_EMAIL) and install+enable it via a trainer workflow; retire jta-mcp-tunnel once 'JTA Trader' (sslip.io) replaces 'JTA Console Probe'. Closing observation: after 'sudo systemctl restart' of the trainer (or kill -9 of the process), https://158-178-209-121.sslip.io/healthz returns 200 within 60 s without manual action.  2026-11-05 14:10Z lane: FINDINGS (trainer diag #23338): running process started 12:21Z, before #23296 (checkout already at 9d1c9ccb) => 4 tools; env had no DIAG_READ_TOKEN and no TRADE_JOURNAL_DB; /etc/ict-trader absent; token store runtime_logs/console_connector_oauth.json is file-backed (0600, atomic write, written 13:04Z), not under /run, so it survives restart. Repo-root trade_journal.db on trainer is stale (Oct 25); the synced snapshot dest is data/trade_journal.db. Unit deploy/trainer/jta-console-connector.service + workflow trainer-console-connector-install (landing hold).",
+  "note": "Found by lane UI-CONSOLE-V1 2026-11-05: jta-console-connector (127.0.0.1:8765) and jta-mcp-tunnel run as TRANSIENT systemd-run units on ict-trainer-vm (#23224/#23254), so a trainer reboot or OOM kill takes the console's data path down with no restart. Caddy (systemd-enabled, #23262) does survive. Fix: commit deploy/trainer/jta-console-connector.service (Restart=always, Nice=10, MemoryMax=400M, EnvironmentFile for CONSOLE_CONNECTOR_AUTH/BASE_URL/GOOGLE_OAUTH_CLIENT_ID/ALLOWED_EMAIL) and install+enable it via a trainer workflow; retire jta-mcp-tunnel once 'JTA Trader' (sslip.io) replaces 'JTA Console Probe'. Closing observation: after 'sudo systemctl restart' of the trainer (or kill -9 of the process), https://158-178-209-121.sslip.io/healthz returns 200 within 60 s without manual action.  2026-11-05 14:10Z lane: FINDINGS (trainer diag #23338): running process started 12:21Z, before #23296 (checkout already at 9d1c9ccb) => 4 tools; env had no DIAG_READ_TOKEN and no TRADE_JOURNAL_DB; /etc/ict-trader absent; token store runtime_logs/console_connector_oauth.json is file-backed (0600, atomic write, written 13:04Z), not under /run, so it survives restart. Repo-root trade_journal.db on trainer is stale (Oct 25); the synced snapshot dest is data/trade_journal.db. Unit deploy/trainer/jta-console-connector.service + workflow trainer-console-connector-install (landing hold).  2026-11-05 15:00Z DEPLOYED+OBSERVED (install #23355 run 42049882740; diag #23359): jta-console-connector is now /etc/systemd/system unit, enabled+active, MainPID 3877372 since 14:57:59Z (one restart). healthz auth=google; unauth /mcp 401; token store before/after identical (clients 2, access 1, refresh 1, mtime 14:08), so no reconnect needed. Env names now include DIAG_READ_TOKEN, TRADE_JOURNAL_DB (data/trade_journal.db, 2.47 GB, 08:02), CONSOLE_CONNECTOR_STATE. In-process tools/list = 9 (hello work_rows inbox workplan ml_roadmap performance system_health data_query work_items). system_health read_state partial (services section read; several sections n/a), data_query catalog read_state partial (15 tables) -- my probe SQL was not a valid shape, not a connector fault; not investigated. jta-mcp-tunnel stopped (0 jta-mcp-* units loaded); transient tunnel units do not survive reboot so it stays retired. NOT observed: claude.ai tool list (manager), an actual reboot.",
   "due_by": "2026-11-09",
   "roadmap": [
     "L-OPS"
   ],
-  "updated_at": "2026-11-05T14:02:37Z",
+  "updated_at": "2026-11-05T15:06:55Z",
   "updated_by": "lane-UI-CONSOLE-V1",
+  "observation": {
+    "what": "After a trainer reboot (or kill -9 of the connector), https://158-178-209-121.sslip.io/healthz returns 200 with auth google within 60 s and claude.ai still lists 9 tools for JTA Trader without reconnecting",
+    "how_to_check": "curl healthz; manager lists claude.ai tools; systemctl show jta-console-connector -p ActiveEnterTimestamp",
+    "due_by": "2026-11-09"
+  },
+  "writeback": {
+    "roadmap": "none: operational unit for an existing connector, no milestone line",
+    "arch": "none: trainer deploy unit only; documented in deploy/trainer/jta-console-connector.service header"
+  },
   "_seq": 946
 }
