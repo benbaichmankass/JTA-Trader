@@ -69,8 +69,8 @@ register, never in a session's head or a trigger prompt: a new manager inherits 
 shouldn't need to push you like this either - this is what we have a weekly workplan for, to make sure that the manager always knows what to
 do next … as long as we have headroom, lanes should be running."* (a) Compute the target from a fresh meter: `spend_meter.py --capacity
 --live-open N` prints *"KEEP N LANES RUNNING"* — a target, not a cap. (b) If running build lanes < target, dispatch the next rows now in
-`checklist.py queue` order, without waiting for the operator, `week_lane: surge` rows first until the throttle-down switch
-(§ "Surge, then throttle"), throttle rows after it. (c) Ask the operator only when the plan has run out or the call is a genuine
+`checklist.py queue` order, without waiting for the operator, due `standing` work first, then `week_lane: surge` rows until the
+throttle-down switch (§ "Surge, then throttle"), throttle rows after it; through the surge one ML-research lane stays reserved (§ "Surge, then throttle" item 5). (c) Ask the operator only when the plan has run out or the call is a genuine
 preference — never for permission to use headroom. A capacity call made earlier (even by the operator) is **re-evaluated against a fresh
 reading at each check-in, not carried forward** (2026-10-26: a morning "1 lane" call stood for hours while weekly usage ran 47% → 50%). The
 live-review reserve is MEASURED and capped by § 6.4; it is not a reason to sit at one lane. Weekly audit C12 measures utilisation.
@@ -523,9 +523,9 @@ ourselves based on the usage that we have left to keep the rest of the week maki
 with work that we have capacity for ... I just want to make sure that for the weekly work plan, we know what stuff is surge stuff and what
 stuff is if we get to it at the throttle down stage."*
 
-1. **Tag in planning.** Step 4 (workplan) tags every (a) item `week_lane: surge` or `week_lane: throttle` on its checklist row
-   (`checklist.py set <ID> week_lane=surge`), agreed with the operator like the rest of the workplan. The workplan Artifact lists the two
-   sets separately, surge first.
+1. **Tag in planning.** Step 4 (workplan) tags every (a) item `week_lane: surge`, `week_lane: throttle` or `week_lane: standing` on its checklist row
+   (`checklist.py set <ID> week_lane=surge`), agreed with the operator like the rest of the workplan. The workplan Artifact lists the
+   sets separately: standing, surge, throttle.
 2. **What is surge:** real money (a leg, a fix or a bug on a real-money or prop book), anything that moves a strategy or ML model toward
    live trading, the week's big ML milestones, and the week's big strategic milestones (e.g. a redesign). **What is throttle:** important
    work that is not top of the line: development infrastructure that cannot go live this week (e.g. the options data infra), the less
@@ -536,7 +536,19 @@ stuff is if we get to it at the throttle down stage."*
    is needed to keep the systems running (the standing routines, live review, the daily review and incident response come first). From
    then on, REFILL dispatches throttle rows, paced to `spend_meter.py --capacity`. Record the switch on `WEEKLY-PLANNING` with the reading
    it was made on, and tell the operator in one line.
-5. **Mid-week arrivals** are tagged when they are filed: a new real-money bug or an operator directive about live trading is surge even
+5. **Always on, surge or not (operator, 2026-11-05, second message, verbatim excerpt: *"even during the surge, I want to have one lane
+   dedicated to the ML research ... making sure that that work plan is continuing to get taken care of even during the surge"*; *"we
+   don't need to have like a backlog drain going, but we do need to make sure that we're not missing like the regular checkups ... those
+   are sort of like the strategic items that should always have some resources allocated to them"*):**
+   - **One ML-research lane through the surge.** It does not have to run constantly, but the ML research workplan (the throttle-tagged
+     ML research rows, in queue order) must keep moving: at every check-in during the surge, if no ML-research lane is running and an
+     ML research row is runnable, dispatch one. It is reserved: it is not counted against surge dispatch or displaced by it.
+   - **The regular checkups are `standing` (`week_lane: standing`) and never pause for the surge**: the daily review, the weekly reviews,
+     research-ops, live review and desk wakes, health and pipeline checks, incident response. They are dispatched before surge work when
+     they are due. During the surge the backlog DRAIN may be deferred to the throttle-down (record the deferral on `WEEKLY-PLANNING`); the
+     daily review's measurement of the backlog still runs. After the surge, standing work keeps first priority, then throttle rows.
+6. **Prop-account MLs are surge** (operator, 2026-11-05: prop MLs belong with the real-money surge items).
+7. **Mid-week arrivals** are tagged when they are filed: a new real-money bug or an operator directive about live trading is surge even
    after the switch, and is dispatched at once.
 
 Row `WEEKLY-PLANNING`; trigger `trig_01Pm8AMPiigZX9ndobeyT6dE`, Wed **08:20Z** (first run 2026-10-14). **It is a dialogue, not a report**
