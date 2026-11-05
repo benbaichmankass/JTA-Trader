@@ -80,6 +80,17 @@ case "${action}" in
             priority="high"
         fi
         ;;
+    sync-vm-secrets)
+        # Was unclassified until 2026-11-05: every sync pinged "🚨 URGENT ... UNKNOWN
+        # ACTION" (09:30:40Z and 09:34:45Z), drowning a real failure in noise.
+        # Tier 2: it rewrites the VM .env and restarts the units that read it.
+        tier=2
+        case "${exit_code}" in
+            0) result="ok"; priority="normal" ;;
+            2) result="FAILED — input validation (a required secret missing?)"; priority="urgent" ;;
+            *) result="FAILED (exit ${exit_code})"; priority="urgent" ;;
+        esac
+        ;;
     restart-bot-service)
         tier=2
         case "${exit_code}" in

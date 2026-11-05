@@ -1,0 +1,17 @@
+{
+  "due_when": {
+    "check_every_days": 1,
+    "due_date": "2026-12-01",
+    "kind": "date"
+  },
+  "id": "PI-20261105-FDMEXXA9-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "lane ML-WEEK-1105 (session_01AFoLuMQQLPmdu6fdmexxA9), Manager Session 2026-11-05a decision 10:02Z",
+    "rerun": "curl -sI https://data.binance.vision/data/futures/um/monthly/klines/BTCUSDT/1h/BTCUSDT-1h-2026-11.zip | head -1; sed -n '/^re_registration_2026_11_05:/,/^compute:/p' research/queue/blocked/RQ-20261101-a24c-01.yaml"
+  },
+  "roadmap": "L-ML-LIVE",
+  "state": "queued",
+  "what": "READ RQ-20261101-a24c-01 on its re-registered forward window (2026-11-01..30, quoted spread floored at one tick + sqrt impact; re-registered 2026-11-05 by Manager Session 2026-11-05a on lane ML-WEEK-1105 evidence comms/research/RQ-20261101-a24c-01/local-20261105/RESULT.md). On or after 2026-12-01: confirm BTCUSDT-1h-2026-11.zip is listed (positive control), git-mv research/queue/blocked/RQ-20261101-a24c-01.yaml to research/queue/ status queued (rule unchanged), let the runner read it ONCE. A PASS is the evidence for a Tier-3 PR widening ml_entry on bybit_2 + bybit_portfolio to U(C); a FAIL keeps the 5 coins. Feeds rows ML-UNIVERSE-RULE / ML-ENTRY-ALL-ACCOUNTS."
+}
