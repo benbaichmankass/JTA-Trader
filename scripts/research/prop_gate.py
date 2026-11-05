@@ -61,14 +61,15 @@ def lev_cap(acct: str, leg: str) -> int:
 
 
 # ---------------------------------------------------------------- v3 edge clause
-def edge_ci(net_r: list[float]) -> dict[str, Any]:
+def edge_ci(net_r: list[float], z: float = Z95) -> dict[str, Any]:
+    """``z`` = the holdout ledger's deflated bar (holdout_lock bar_for(N)["ci_z"]) on the N-th read of a window; 1.96 on the 1st."""
     n = len(net_r)
     if n < 2:
         return {"n": n, "mean_r": None, "ci_lo": None, "ci_hi": None, "read_state": "n<2"}
     m = st.fmean(net_r)
     se = st.stdev(net_r) / math.sqrt(n)
-    return {"n": n, "mean_r": round(m, 5), "se_r": round(se, 5), "ci_lo": round(m - Z95 * se, 5),
-            "ci_hi": round(m + Z95 * se, 5), "read_state": "ok"}
+    return {"n": n, "mean_r": round(m, 5), "se_r": round(se, 5), "ci_lo": round(m - z * se, 5),
+            "ci_hi": round(m + z * se, 5), "z": round(z, 4), "read_state": "ok"}
 
 
 def ledger_net_r(rows: list[dict[str, Any]], acct: str, arm: str) -> list[float]:

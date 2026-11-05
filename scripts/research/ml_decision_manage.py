@@ -45,15 +45,23 @@ CHECKINS = [4, 8, 12, 16, 20]
 ACTIONS = ["HOLD", "CLOSE", "BE", "TRAIL", "TPX"]
 LEARNED = ["CLOSE", "BE", "TRAIL", "TPX"]
 SL_ONLY = ["BE", "TRAIL"]                       # the ML-SL-revision arm (d): SL tighten actions only
+SL2 = ["BE", "BE1", "TRAIL", "TRAIL15"]      # variant mlsl2: BE needs close > entry; BE1 needs a close >= +1R; TRAIL 1.0 ATR; TRAIL15 1.5 ATR
+MARGIN_GRID2 = [0.15, 0.20, 0.25, 0.30, 0.40]   # variant mlsl2: the grid extended PAST the 0.15 edge of the first read
+TRAIL_DIST = {"TRAIL": 1.0, "TRAIL15": 1.5}
+DEV_FOLDS_POSITIVE_MIN = 4                      # of the 6 MANAGE dev folds, for the dev-stage pass
 MARGIN_GRID = [0.0, 0.02, 0.05, 0.10, 0.15]    # predicted delta net R an action must exceed; chosen on dev only
 BE_R = 1.0                                      # arm (a): break-even after a bar close >= +1R
 TRAIL_ACT_R = 1.0                               # arm (b): trail activates after a bar close >= +1R
 TRAIL_GRID = [1.0, 1.5, 2.0]                    # arm (b): trail distance in ATR, chosen on dev
 DECAY_GRID = [0.5, 1.0, 1.5]                    # arm (c): SL distance in ATR reached at 24 h, chosen on dev
 MIN_TRADES, MIN_SYMBOLS = 300, 10
+XS_MIN_SYMBOLS = 30
 DEV_MIN_TRADES = 1000
 MANAGE_FOLDS = E.DEV_FOLDS[2:]                  # ENTRY OOS dev trades exist from 2022-01; MANAGE needs one fold of history
 BOOT = 2000
+XS_N = 100                                       # stage xs: the first XS_N non-pool perps in select_universe (listing-age) order
+XS_FROZEN = {"mlsl2": {"actions": SL2, "margin": 0.40}, "mlsl": {"actions": SL_ONLY, "margin": 0.15}}   # configs frozen by c692-12 / c692-11
+XS_ERAS = [("pre2022", None, "2022-01-01"), ("2022-01..2025-09", "2022-01-01", "2025-10-01"), ("2025-10+", "2025-10-01", None)]
 PEEKED_SYMBOLS = ["ADAUSDT", "BCHUSDT", "BTCUSDT", "ETCUSDT", "ETHUSDT", "LINKUSDT", "LTCUSDT", "TRXUSDT", "XLMUSDT"]   # seen in the 2026-11-05 smoke (DESIGN 4a)
 
 
@@ -137,20 +145,21 @@ def action_hook(k: int, action: str, mask: np.ndarray, avail_out: np.ndarray | N
                 st["close"] = st["close"] | m
             elif action == "TPX":
                 st["tp"] = np.where(m, st["tp"] + P.atr, st["tp"])
-            elif action == "BE":
-                ok = m & (c > P.e) & (P.e > st["sl"])
+            elif action in ("BE", "BE1"):
+                gate = (c > P.e) if action == "BE" else (c >= P.e + BE_R * P.risk)
+                ok = m & gate & (P.e > st["sl"])
                 st["sl"] = np.where(ok, P.e, st["sl"])
                 if avail_out is not None:
                     avail_out[:] = ok
-            elif action == "TRAIL":
-                lvl = P.h[:, max(0, j - 3):j + 1].max(axis=1) - P.atr
+            elif action in TRAIL_DIST:
+                lvl = P.h[:, max(0, j - 3):j + 1].max(axis=1) - TRAIL_DIST[action] * P.atr
                 ok = m & (lvl < c) & (lvl > st["sl"])
                 st["sl"] = np.where(ok, lvl, st["sl"])
                 trail_on[:] = ok
                 if avail_out is not None:
                     avail_out[:] = ok
-        if action == "TRAIL" and b >= k:
-            lvl = st["runmax"] - P.atr
+        if action in TRAIL_DIST and b >= k:
+            lvl = st["runmax"] - TRAIL_DIST[action] * P.atr
             tight = trail_on & al & (lvl > st["sl"])
             st["sl"] = np.where(tight, lvl, st["sl"])
     return hook
@@ -235,17 +244,17 @@ def gather(trades: pd.DataFrame, df_by_sym: dict, atr_by: pd.DataFrame) -> Paths
 
 
 # ------------------------------------------------------------------------------------------------ labels and features
-def label_actions(P: Paths) -> dict:
+def label_actions(P: Paths, acts: list[str] | None = None) -> dict:
     """HOLD outcome plus, for each check-in k and action a, the paired delta net R and availability."""
     base = simulate(P)
     lab = {"base": base, "delta": {}, "avail": {}}
     everyone = np.ones(P.n, bool)
     for k in CHECKINS:
-        for a in LEARNED:
+        for a in (acts or LEARNED):
             av = np.zeros(P.n, bool)
             r = simulate(P, action_hook(k, a, everyone, av))
             alive = base["bars"] > k
-            ok = alive & (av if a in ("BE", "TRAIL") else True)
+            ok = alive & (av if a in ("BE", "BE1", "TRAIL", "TRAIL15") else True)
             lab["delta"][(k, a)] = np.where(ok, r["net"] - base["net"], np.nan)
             lab["avail"][(k, a)] = ok
     return lab
@@ -254,7 +263,7 @@ def label_actions(P: Paths) -> dict:
 STATE_COLS = ["open_r", "bars_held", "mfe_r", "mae_r", "dist_sl_atr", "dist_tp_atr", "side_n", "ret_since_entry_atr"]
 
 
-def checkin_table(trades: pd.DataFrame, P: Paths, lab: dict, tab: pd.DataFrame) -> pd.DataFrame:
+def checkin_table(trades: pd.DataFrame, P: Paths, lab: dict, tab: pd.DataFrame, acts: list[str] | None = None) -> pd.DataFrame:
     """One row per (trade, check-in) with the trade still alive: market features at the check-in bar (the tab row of the same
     symbol at index i+k, all <= that bar's close) + trade state + the paired deltas."""
     base = lab["base"]
@@ -281,7 +290,7 @@ def checkin_table(trades: pd.DataFrame, P: Paths, lab: dict, tab: pd.DataFrame) 
         d["k"] = k
         d["ts"] = tr["ts"].to_numpy()
         d["symbol"] = tr["symbol"].to_numpy()
-        for a in LEARNED:
+        for a in (acts or LEARNED):
             d[f"d_{a}"] = lab["delta"][(k, a)][alive]
             d[f"av_{a}"] = lab["avail"][(k, a)][alive]
         rows.append(d)
@@ -320,7 +329,7 @@ def realised(rows: pd.DataFrame, trades_n: int, P: Paths, base: dict, action_by_
     ignored), and re-simulate the whole path. Returns the managed net R per trade."""
     acts = action_by_row[action_by_row != "HOLD"]
     first = rows.loc[acts.index].assign(act=acts).sort_values("k").drop_duplicates("trade")
-    n_act = {a: 0 for a in LEARNED}
+    n_act = {a: 0 for a in set(action_by_row) - {"HOLD"}}
     acted = np.zeros(trades_n, bool)
     managed = base["net"].copy()
     gross, bars, mfe = base["gross"].copy(), base["bars"].copy(), base["mfe"].copy()
@@ -330,7 +339,7 @@ def realised(rows: pd.DataFrame, trades_n: int, P: Paths, base: dict, action_by_
         r = simulate(P, action_hook(int(k), a, mask))
         managed[mask] = r["net"][mask]
         gross[mask], bars[mask], mfe[mask] = r["gross"][mask], r["bars"][mask], r["mfe"][mask]
-        n_act[a] += int(mask.sum())
+        n_act[a] = n_act.get(a, 0) + int(mask.sum())
         acted |= mask
     return {"net": managed, "gross": gross, "bars": bars, "mfe": mfe, "n_actions": n_act, "acted": acted}
 
@@ -343,11 +352,14 @@ def stats(net, base_net, symbols) -> dict:
             "n_symbols": len(set(symbols)), "share_changed": float(np.mean(np.abs(d) > 1e-12))}
 
 
-def paired_boot(d: np.ndarray, seed: int = E.SEED) -> list:
+def paired_boot(d: np.ndarray, seed: int = E.SEED, bar: dict | None = None) -> list:
+    """Percentile bootstrap CI of the paired mean delta. ``bar`` = the holdout ledger's deflated bar for this read: the 1st read of
+    the family on the window is the CI95 used before 2026-11-05; the N-th read widens it (Sidak; HOLDOUT-DEFLATED-REUSE)."""
+    import holdout_lock as HL
     rng = np.random.default_rng(seed)
     n = len(d)
     ms = [float(d[rng.integers(0, n, n)].mean()) for _ in range(BOOT)]
-    return [float(np.percentile(ms, 2.5)), float(np.percentile(ms, 97.5))]
+    return HL.boot_ci(ms, bar)
 
 
 def peek_report(d: np.ndarray, symbols) -> dict:
@@ -416,6 +428,17 @@ def run(a) -> int:
         raise RuntimeError("ENTRY summary has no tau_star")
     out = Path(a.out)
     out.mkdir(parents=True, exist_ok=True)
+    if a.stage == "xs":
+        res = run_xs(a, tau)
+        res.update({"schema": SCHEMA, "unit": a.unit, "arm": a.arm, "stage": "xs", "entry_tau": tau, "git_sha": E._git_sha(), "elapsed_s": round(time.time() - t0)})
+        v, why = res.pop("verdict"), res.pop("why")
+        (out / "summary.json").write_text(json.dumps({**res, "verdict": v, "why": why}, indent=1, default=str) + "\n")
+        vj = {"verdict": v, "read_state": "measured", "n": res["heldout"]["n"], "measurement": res, "note": why,
+              "population": (f"{a.arm} frozen config, cross-sectional read on perps OUTSIDE the 60-perp training pool ({len(res['xs']['nonpool_symbols'])} symbols), "
+                             f"whole available history, ENTRY tau {tau}, static {BASE_SL}/{BASE_TP} ATR 24h, full cost stack, paired vs hold-to-bracket")}
+        (out / "verdict.json").write_text(json.dumps(vj, indent=1, default=str) + "\n")
+        print(json.dumps({"verdict": v, "why": why}), flush=True)
+        return 0
     tab, df_by, dev_tr, ho_tr = build_world(a, tau)
     dev_tr = dev_tr.sort_values(["symbol", "i"], kind="stable").reset_index(drop=True)   # Paths order == trades order
     ho_tr = ho_tr.sort_values(["symbol", "i"], kind="stable").reset_index(drop=True)
@@ -425,7 +448,7 @@ def run(a) -> int:
                 "elapsed_s": round(time.time() - t0)})
     v, why = res.pop("verdict"), res.pop("why")
     (out / "summary.json").write_text(json.dumps({**res, "verdict": v, "why": why}, indent=1, default=str) + "\n")
-    vj = {"verdict": v, "read_state": "measured", "n": res["heldout"]["n"] if res.get("heldout") else 0, "measurement": res,
+    vj = {"verdict": v, "read_state": "measured", "n": res["heldout"]["n"] if res.get("heldout") else res.get("dev", {}).get("n_trades", 0), "measurement": res,
           "note": why, "population": (f"{a.arm}: frozen ENTRY (tau {tau}) trades, static {BASE_SL}/{BASE_TP} ATR bracket, 24h, held-out "
                                       f"{E.HOLDOUT_START}..{E.END}, 60-perp bp2-f4271084b120, full cost stack, paired vs hold-to-bracket")}
     (out / "verdict.json").write_text(json.dumps(vj, indent=1, default=str) + "\n")
@@ -460,7 +483,7 @@ def arm_rule(a, tab, df_by, dev_tr, ho_tr) -> dict:
     sy = ho_tr.loc[h_idx, "symbol"].to_numpy()
     ts = ho_tr.loc[h_idx, "ts"].to_numpy()
     s = stats(r["net"], hb["net"], sy)
-    ci = paired_boot(d)
+    ci = paired_boot(d, bar=(claim or {}).get("bar"))
     res["heldout"] = {**s, "hold": stats(hb["net"], hb["net"], sy), "delta_ci95": ci, "giveback_r": giveback(r), "giveback_r_hold": giveback(hb),
                       "peek": peek_report(d, sy), "by_month_delta": month_split(ts, d), "reason_counts": {str(k): int(v) for k, v in pd.Series(r["reason"]).value_counts().items()}}
     res["variants_read_on_window"] = (claim or {}).get("variants_on_window")
@@ -474,9 +497,11 @@ def arm_rule(a, tab, df_by, dev_tr, ho_tr) -> dict:
     return res
 
 
-def claim_read(a, model_id: str) -> dict | None:
-    """Claim the sealed window ONCE per model (holdout_lock). The runner does not commit the repo ledger, so the claim is made
-    against a COPY inside the out dir (which lands with the result); the lane appends that line to comms/research/holdout_reads.jsonl."""
+def claim_read(a, model_id: str, symbols: list[str] | None = None, start: str | None = None) -> dict | None:
+    """Record the held-out read in the holdout ledger (family MANAGE) and get its deflated bar; a re-read is allowed and graded
+    stricter, a window overlapping training is refused (HOLDOUT-DEFLATED-REUSE). The runner does not commit the repo ledger, so the
+    claim is made against a COPY inside the out dir (which lands with the result); the lane appends that line to
+    comms/research/holdout_reads.jsonl."""
     if a.smoke:
         return None
     import shutil
@@ -485,19 +510,23 @@ def claim_read(a, model_id: str) -> dict | None:
     led = Path(a.out) / "holdout_reads.jsonl"
     if not led.exists() and HL.LEDGER.exists():
         shutil.copy(HL.LEDGER, led)
-    return HL.claim_read(model_id=f"MANAGE-{model_id}", start=E.HOLDOUT_START, end=E.END, unit=a.unit, reader=a.reader, ledger=led)
+    train_end = str((pd.Timestamp(E.HOLDOUT_START) - pd.Timedelta(days=1)).date())   # ENTRY + heads fit on rows before HOLDOUT_START
+    return HL.claim_read(model_id=f"MANAGE-{model_id}", start=start or E.HOLDOUT_START, end=E.END, unit=a.unit, reader=a.reader, ledger=led,
+                         symbols=symbols, train_end=train_end)
 
 
 def arm_model(a, tab, df_by, dev_tr, ho_tr) -> dict:
-    actions = LEARNED if a.arm == "manage" else SL_ONLY
+    actions = {"manage": LEARNED, "mlsl": SL_ONLY, "mlsl2": SL2}[a.arm]
+    grid = MARGIN_GRID2 if a.arm == "mlsl2" else MARGIN_GRID
     dP, _ = gather(dev_tr, df_by, atr_series(tab, dev_tr))
-    dlab = label_actions(dP)
-    dev_rows = checkin_table(dev_tr, dP, dlab, tab)
+    dlab = label_actions(dP, actions)
+    dev_rows = checkin_table(dev_tr, dP, dlab, tab, actions)
     # dev walk-forward for the margin: expanding folds over MANAGE_FOLDS, trade-level purge by exit time
     dev_tr = dev_tr.reset_index(drop=True)
     bounds = [pd.Timestamp(x, tz="UTC") for x in MANAGE_FOLDS] + [pd.Timestamp(E.HOLDOUT_START, tz="UTC")]
-    fold_net = {m: [] for m in MARGIN_GRID}
-    n_by_margin = {m: 0 for m in MARGIN_GRID}
+    fold_net = {m: [] for m in grid}
+    fold_means = {m: [] for m in grid}
+    n_by_margin = {m: 0 for m in grid}
     for lo, hi in itertools.pairwise(bounds):
         cut = lo - pd.Timedelta(days=E.EMBARGO_DAYS) - pd.Timedelta(hours=H + 1)
         tr_rows = dev_rows[dev_rows.ts < cut]
@@ -507,20 +536,35 @@ def arm_model(a, tab, df_by, dev_tr, ho_tr) -> dict:
         heads = fit_heads(tr_rows, actions)
         pred = predict_heads(heads, te_rows)
         te_trades = np.unique(te_rows["trade"])
-        for m in MARGIN_GRID:
+        for m in grid:
             act = choose(pred, m)
             r = realised(te_rows, len(dev_tr), dP, simulate(dP), act)
             d = (r["net"] - simulate(dP)["net"])[te_trades]
             fold_net[m].append(d)
+            fold_means[m].append(float(d.mean()))
             n_by_margin[m] += int((act != "HOLD").sum())
         print(f"MANAGE dev fold {lo.date()} done", flush=True)
     dev_delta = {m: float(np.mean(np.concatenate(v))) if v else None for m, v in fold_net.items()}
-    elig = [m for m in MARGIN_GRID if dev_delta[m] is not None and n_by_margin[m] >= 1]
+    elig = [m for m in grid if dev_delta[m] is not None and n_by_margin[m] >= 1]
     margin = max(elig, key=lambda m: (dev_delta[m], m)) if elig else None
     res = {"dev": {"delta_by_margin": {str(m): (None if v is None else round(v, 5)) for m, v in dev_delta.items()},
                    "actions_by_margin": n_by_margin, "chosen_margin": margin}, "heldout": None}
     if margin is None or dev_delta[margin] <= 0:
         res.update(verdict="fail", why=f"dev walk-forward delta vs hold <= 0 at every margin (best {margin}: {dev_delta.get(margin)}): not read on the held-out (registered)")
+        return res
+    if a.arm == "mlsl2":      # DEV STAGE ONLY: never touches the held-out or any forward window; freezes the config for the single forward read
+        dall = np.concatenate(fold_net[margin])
+        ci = paired_boot(dall)
+        pos = int(sum(1 for x in fold_means[margin] if x > 0))
+        res["dev"].update(delta_ci95=ci, fold_means=[round(x, 5) for x in fold_means[margin]], folds_positive=pos, n_trades=int(len(dall)),
+                          at_grid_edge=bool(margin == max(grid)),
+                          frozen_config={"actions": actions, "margin": margin, "base": f"{BASE_SL}/{BASE_TP} ATR, 24h", "tau": None})
+        ok = dev_delta[margin] > 0 and ci[0] > 0 and pos >= DEV_FOLDS_POSITIVE_MIN
+        res["variants_read_on_window"] = 0
+        res.update(verdict="pass" if ok else "fail",
+                   why=(f"DEV STAGE: delta vs hold {dev_delta[margin]:+.5f} R/trade, CI95 [{ci[0]:+.5f}, {ci[1]:+.5f}], folds positive {pos}/{len(fold_means[margin])}, "
+                        f"margin {margin}{' (AT THE GRID EDGE)' if margin == max(grid) else ''}; frozen for the forward read" if ok else
+                        f"DEV STAGE: delta {dev_delta[margin]:+.5f}, CI95 [{ci[0]:+.5f}, {ci[1]:+.5f}], folds positive {pos}: does not clear the dev rule"))
         return res
     claim = claim_read(a, a.arm)
     heads = fit_heads(dev_rows[dev_rows.ts < pd.Timestamp(E.HOLDOUT_START, tz="UTC") - pd.Timedelta(days=E.EMBARGO_DAYS) - pd.Timedelta(hours=H + 1)], actions)
@@ -538,7 +582,7 @@ def arm_model(a, tab, df_by, dev_tr, ho_tr) -> dict:
     n_act = int(r["acted"].sum())
     s["n_actions"] = r["n_actions"]
     s["mean_delta_per_nonhold_action"] = float(d[r["acted"]].mean()) if n_act else None
-    ci = paired_boot(d)
+    ci = paired_boot(d, bar=(claim or {}).get("bar"))
     # controls: matched random (same count and type of actions at random valid check-ins of the SAME trades) and best static action
     rng = np.random.default_rng(E.SEED)
     draws = []
@@ -568,7 +612,12 @@ def arm_model(a, tab, df_by, dev_tr, ho_tr) -> dict:
     if s["n"] < MIN_TRADES or s["n_symbols"] < MIN_SYMBOLS:
         v, why = "indeterminate", f"held-out trades={s['n']} / symbols={s['n_symbols']} below floor"
     elif a.arm == "manage":
-        ok = s["mean_net_r"] >= 0 and (s["mean_delta_per_nonhold_action"] is None or s["mean_delta_per_nonhold_action"] >= 0)
+        import holdout_lock as HL  # point bars, deflated on a re-read of the MANAGE family on this window (HOLDOUT-DEFLATED-REUSE)
+        bar = (claim or {}).get("bar")
+        se_net = float(np.std(r["net"], ddof=1) / np.sqrt(len(r["net"]))) if len(r["net"]) > 1 else None
+        se_act = float(np.std(d[r["acted"]], ddof=1) / np.sqrt(n_act)) if n_act > 1 else None
+        ok = HL.point_ok(s["mean_net_r"], se_net, bar) and (s["mean_delta_per_nonhold_action"] is None
+                                                             or HL.point_ok(s["mean_delta_per_nonhold_action"], se_act, bar))
         v = "pass" if ok else "fail"
         why = (f"managed mean net R/trade {s['mean_net_r']:+.4f}, delta/non-HOLD action {s['mean_delta_per_nonhold_action']}, delta vs hold "
                f"{s['delta_vs_hold']:+.4f} CI95 {ci} at n={s['n']}; proposal_eligible={res['proposal_eligible']}")
@@ -576,6 +625,101 @@ def arm_model(a, tab, df_by, dev_tr, ho_tr) -> dict:
         ok = s["delta_vs_hold"] > 0 and ci[0] > 0
         v = "pass" if ok else "fail"
         why = f"delta vs hold-to-bracket {s['delta_vs_hold']:+.4f} R/trade, CI95 [{ci[0]:+.4f}, {ci[1]:+.4f}] at n={s['n']} (margin {margin})"
+    res.update(verdict=v, why=why)
+    return res
+
+
+
+# ------------------------------------------------------------------------------------------------ stage xs
+def era_split(ts, d, acted) -> dict:
+    t = pd.to_datetime(pd.Series(ts), utc=True)
+    out = {}
+    for name, lo, hi in XS_ERAS:
+        m = np.ones(len(t), bool)
+        if lo:
+            m &= (t >= pd.Timestamp(lo, tz="UTC")).to_numpy()
+        if hi:
+            m &= (t < pd.Timestamp(hi, tz="UTC")).to_numpy()
+        out[name] = {"n": int(m.sum()), "n_acted": int((m & acted).sum()), "delta": float(d[m].mean()) if m.any() else None}
+    return out
+
+
+def run_xs(a, tau) -> dict:
+    """CROSS-SECTIONAL confirming read of a frozen config: trades on perps OUTSIDE the 60-perp pool (never in any training set of any
+    variant), over their whole available history. ENTRY = the pool-trained final fit; MANAGE heads = the pool dev trades <= 2025-09 as
+    frozen by c692-12 / c692-11; margin and actions are NOT re-selected."""
+    cfg = XS_FROZEN[a.arm]
+    acts, margin = cfg["actions"], cfg["margin"]
+    pool = E.universe()
+    cache = Path(a.cache)
+    if a.smoke:
+        sm = sorted(set(pool[:9]) | {"BTCUSDT"})
+        nonpool = sm[-3:]
+    else:
+        pset = set(pool)
+        nonpool = [s_ for s_ in E.wide_universe() if s_ not in pset][:XS_N]
+        E.fetch(cache, nonpool, end=E.END)
+    tab, df_by, dev_tr, _ = build_world(a, tau)
+    dev_tr = dev_tr.sort_values(["symbol", "i"], kind="stable").reset_index(drop=True)
+    hs = pd.Timestamp(E.HOLDOUT_START, tz="UTC")
+    dP, _ = gather(dev_tr, df_by, atr_series(tab, dev_tr))
+    dev_rows = checkin_table(dev_tr, dP, label_actions(dP, acts), tab, acts)
+    heads = fit_heads(dev_rows[dev_rows.ts < hs - pd.Timedelta(days=E.EMBARGO_DAYS) - pd.Timedelta(hours=H + 1)], acts)
+    print(f"xs: heads fit on {len(dev_rows)} dev check-in rows; non-pool symbols={len(nonpool)} t+", flush=True)
+    base_syms = sorted(set(pool[:9]) | {"BTCUSDT"}) if a.smoke else pool
+    tab_all = E.build_table(cache, list(base_syms) + [s_ for s_ in nonpool if s_ not in base_syms], xs_symbols=base_syms)
+    np_tab = tab_all[tab_all.symbol.isin(nonpool)].reset_index(drop=True)
+    pl, ps = E.fit_predict(E.purge_train(tab[tab.ts < hs], hs), np_tab)
+    df_np = {s_: pd.read_pickle(cache / f"{s_}.pkl").reset_index(drop=True) for s_ in nonpool}
+    np_tr = entry_trades(np_tab, pl, ps, tau, df_np).sort_values(["symbol", "i"], kind="stable").reset_index(drop=True)
+    res = {"xs": {"nonpool_symbols": nonpool, "n_nonpool_requested": len(nonpool), "pool_symbols": len(pool), "config": {"actions": acts, "margin": margin}}, "heldout": None}
+    import holdout_lock as HL
+    try:   # rule 4 (HOLDOUT-DEFLATED-REUSE, PI-20261105-GEXSLEAK-0001): other symbols over the TRAINING dates is not a holdout
+        claim = claim_read(a, f"{a.arm}-xs-{margin}", symbols=nonpool, start=str(np_tr.ts.min().date()) if len(np_tr) else E.START)
+    except HL.WindowOverlapsTraining as exc:
+        res.update(verdict="indeterminate", why=f"refused before any outcome was read: {exc}; a symbol holdout must also start after "
+                   f"the training end ({E.HOLDOUT_START}), so re-point the xs stage at the post-training era")
+        return res
+    P, _ = gather(np_tr, df_np, atr_series(np_tab, np_tr))
+    lab = label_actions(P, acts)
+    base = lab["base"]
+    rows = checkin_table(np_tr, P, lab, np_tab, acts)
+    act = choose(predict_heads(heads, rows), margin)
+    r = realised(rows, len(np_tr), P, base, act)
+    d = r["net"] - base["net"]
+    sy = np_tr["symbol"].to_numpy()
+    s = stats(r["net"], base["net"], sy)
+    s["n_acted"] = int(r["acted"].sum())
+    s["acted_share"] = float(r["acted"].mean())
+    s["n_actions"] = r["n_actions"]
+    s["mean_delta_per_acted_trade"] = float(d[r["acted"]].mean()) if r["acted"].any() else None
+    ci = paired_boot(d, bar=(claim or {}).get("bar"))
+    per_sym = pd.Series(d).groupby(sy).mean()
+    top = per_sym.abs().idxmax() if len(per_sym) else None
+    ex = sy != top
+    rng = np.random.default_rng(E.SEED)
+    types = act[act != "HOLD"].tolist()
+    valid_idx = {a_: rows.index[rows[f"av_{a_}"]].to_numpy() for a_ in acts}
+    draws = []
+    for _ in range(40):
+        fake = pd.Series("HOLD", index=rows.index)
+        for a_ in set(types):
+            pick = rng.choice(valid_idx[a_], size=min(types.count(a_), len(valid_idx[a_])), replace=False)
+            fake.loc[pick] = a_
+        draws.append(float(np.mean(realised(rows, len(np_tr), P, base, fake)["net"] - base["net"])))
+    eras = era_split(np_tr["ts"].to_numpy(), d, r["acted"])
+    res["heldout"] = {**s, "hold": stats(base["net"], base["net"], sy), "delta_ci95": ci, "giveback_r": giveback(r), "giveback_r_hold": giveback(base),
+                      "eras": eras, "share_symbols_positive": float((per_sym > 0).mean()), "n_symbols_with_trades": int(per_sym.size),
+                      "top_abs_symbol": top, "delta_ex_top_symbol": float(d[ex].mean()) if ex.any() else None,
+                      "matched_random_delta": {"draws": 40, "mean": float(np.mean(draws)), "p95": float(np.percentile(draws, 95))}}
+    res["variants_read_on_window"] = (claim or {}).get("variants_on_window")
+    e1, e2 = eras["2022-01..2025-09"]["delta"], eras["2025-10+"]["delta"]
+    if s["n_acted"] < MIN_TRADES or per_sym.size < XS_MIN_SYMBOLS:
+        v, why = "indeterminate", f"acted trades={s['n_acted']} (floor {MIN_TRADES}) / non-pool symbols with trades={per_sym.size} (floor {XS_MIN_SYMBOLS})"
+    elif s["delta_vs_hold"] > 0 and ci[0] > 0 and (e1 or 0) > 0 and (e2 or 0) > 0:
+        v, why = "pass", f"non-pool delta vs hold {s['delta_vs_hold']:+.5f} R/trade, CI95 [{ci[0]:+.5f}, {ci[1]:+.5f}], era deltas {e1:+.5f} / {e2:+.5f} > 0, acted {s['n_acted']} of {s['n']}"
+    else:
+        v, why = "fail", f"non-pool delta vs hold {s['delta_vs_hold']:+.5f}, CI95 [{ci[0]:+.5f}, {ci[1]:+.5f}], era deltas {e1} / {e2}: does not clear the rule (acted {s['n_acted']} of {s['n']})"
     res.update(verdict=v, why=why)
     return res
 
@@ -619,6 +763,11 @@ def _self_test() -> None:
     av = np.zeros(P.n, bool)
     simulate(P, action_hook(8, "BE", ev, av))
     assert (av <= (P.c[:, 7] > P.e)).all()
+    # 4b. BE1 only where the bar-k close is >= +1R; TRAIL15 never trails closer than TRAIL (1.5 ATR behind vs 1.0)
+    av1 = np.zeros(P.n, bool)
+    simulate(P, action_hook(8, "BE1", ev, av1))
+    assert (av1 <= (P.c[:, 7] >= P.e + BE_R * P.risk)).all()
+    assert (av1 <= av).all()
     # 5. a rule with an inert parameter is a no-op (time-decay whose final distance equals the base stop)
     assert np.allclose(simulate(P, rule_hook("timedecay", BASE_SL))["net"], base["net"])
     # 6. a BE stop never loses more than the hold stop on a trade it touches (SL moved up only)
@@ -633,12 +782,13 @@ def _self_test() -> None:
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("cmd", nargs="?", default="run", choices=["run"])
-    ap.add_argument("--arm", default="manage", choices=["manage", "be", "trail", "timedecay", "mlsl"])
+    ap.add_argument("--arm", default="manage", choices=["manage", "be", "trail", "timedecay", "mlsl", "mlsl2"])
     ap.add_argument("--entry-summary", default=str(REPO / "comms/research/RQ-20261101-c692-01/local-20261101T0835Z/summary.json"))
     ap.add_argument("--cache", default="/tmp/ml_decision_klines")
     ap.add_argument("--out", default="/tmp/ml_decision_manage_out")
     ap.add_argument("--unit", default="")
     ap.add_argument("--reader", default="research-script-run")
+    ap.add_argument("--stage", default="main", choices=["main", "xs"], help="xs = the cross-sectional confirming read of a frozen config")
     ap.add_argument("--smoke", action="store_true", help="dev-only plumbing check on 10 symbols; never touches the sealed window")
     ap.add_argument("--self-test", action="store_true")
     a = ap.parse_args(argv)

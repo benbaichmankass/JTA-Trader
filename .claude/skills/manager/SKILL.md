@@ -57,9 +57,14 @@ register, never in a session's head or a trigger prompt: a new manager inherits 
 4. **LAND.** List every open PR. Each green one that waits on the manager (`landing: hold`, a refused
    self-land, a research hold PR) is landed now (Tier 1/2), or put to the operator on its recorded approval
    path (Tier 3). A green PR waiting on the manager is the manager's failure.
-5. **CLOSE.** `list_sessions(mine=true)` → `lane_reconcile.py`; run § "Archive protocol" on every
-   finished lane it lists — only this project's, after checking it owns no open PR — then
-   `checklist.py archive-lane <ROW>`.
+5. **CLOSE — a FULL sweep of the account, not just your own children** (operator, 2026-11-05, binding: *"We also need to make sure that
+   we're not forgetting to archive old lanes. That does not seem to be passing through to all the managers correctly. We need to make sure
+   that it's happening."*). Page `list_sessions` to the end (every page until `has_more` is false; save each page to a file), run
+   `python3 scripts/ops/lane_reconcile.py --sweep --sessions <page files...>`, and archive every ARCHIVE candidate it prints, whoever
+   spawned it: earlier managers' lanes, desk wakes and single-package live reviews included (MEASURED 2026-11-05: 35 finished-but-unarchived
+   sessions, back to 11-01, left by 5 earlier managers, because each manager archived only its own children). The KEEP list carries a
+   reason for each lane left open; only this project's sessions, never the LEFT ALONE block, after checking the lane owns no open PR
+   (`--pr-state` takes a `{session: open|merged|closed}` file for `review_ready` lanes). Then `checklist.py archive-lane <ROW>`.
    A `landed_unproven` row whose closing observation can be produced on demand and cheaply is triggered now, not left for the next
    schedule (canonical § "Validate early when it is cheap").
    **Console threads (operator, 2026-11-05, via UI-CONSOLE-V1):** at every check-in, `ArtifactComments` `action: "read"` each console
@@ -69,7 +74,8 @@ register, never in a session's head or a trigger prompt: a new manager inherits 
 shouldn't need to push you like this either - this is what we have a weekly workplan for, to make sure that the manager always knows what to
 do next … as long as we have headroom, lanes should be running."* (a) Compute the target from a fresh meter: `spend_meter.py --capacity
 --live-open N` prints *"KEEP N LANES RUNNING"* — a target, not a cap. (b) If running build lanes < target, dispatch the next rows now in
-`checklist.py queue` order, without waiting for the operator. (c) Ask the operator only when the plan has run out or the call is a genuine
+`checklist.py queue` order, without waiting for the operator, due `standing` work first, then `week_lane: surge` rows until the
+throttle-down switch (§ "Surge, then throttle"), throttle rows after it; through the surge one ML-research lane stays reserved (§ "Surge, then throttle" item 5). (c) Ask the operator only when the plan has run out or the call is a genuine
 preference — never for permission to use headroom. A capacity call made earlier (even by the operator) is **re-evaluated against a fresh
 reading at each check-in, not carried forward** (2026-10-26: a morning "1 lane" call stood for hours while weekly usage ran 47% → 50%). The
 live-review reserve is MEASURED and capped by § 6.4; it is not a reason to sit at one lane. Weekly audit C12 measures utilisation.
@@ -167,6 +173,9 @@ each **one marker, one lane, never spawn twice for the same id**; a `could_not_*
      skill and the handoff doc in full; from the canonical doc read only: RULE ONE; Permission Tiers + Data-backed Tier-2/3 decisions; Prime
      Directive; "Lanes answer to the manager" + "Reading is never gated".
    - **A dispatched lane** reads those same four sections (not the whole doc) plus any section its dispatch names (§ "Required dispatch block").
+2a. **Run the full sweep before dispatching anything** (operator, 2026-11-05, binding; quote in § "The operating loop" step 5): page
+    `list_sessions` to the end, run `lane_reconcile.py --sweep`, and archive every candidate, including the outgoing manager's finished lanes.
+    A handover that skips this orphans them.
 2b. **Subscribe to the ops-flags PR** (§ "Standing alert subscriptions").
 2c. **Re-watch the console artifact(s)** listed on row `UI-CONSOLE-V1` (`console_artifact_url`, `probe_artifact_url`): `ArtifactComments`
     `action: "watch"` with each `url`, then read open threads (`action: "read"`) so nothing sent during the handoff is lost (operator,
@@ -513,6 +522,43 @@ mandatory in the planning routine's prompt and come BEFORE part (B) 1:
 4. **Close.** The PR that closes planning records each disposition (checklist rows / units / pipeline records) and the follow-through table on
    `WEEKLY-PLANNING`; next Thursday's step 0 grades it.
 
+### Surge, then throttle: every workplan item is one or the other (operator, 2026-11-05, binding)
+
+> **Gates this adds or changes: none.** It decides the ORDER and PACE work is dispatched in, never whether anything runs or trades.
+
+Operator, verbatim excerpt: *"we push them even against unsustainable usage rates at the beginning, and then we slow down and pace
+ourselves based on the usage that we have left to keep the rest of the week making sure that the systems stay running and that we progress
+with work that we have capacity for ... I just want to make sure that for the weekly work plan, we know what stuff is surge stuff and what
+stuff is if we get to it at the throttle down stage."*
+
+1. **Tag in planning.** Step 4 (workplan) tags every (a) item `week_lane: surge`, `week_lane: throttle` or `week_lane: standing` on its checklist row
+   (`checklist.py set <ID> week_lane=surge`), agreed with the operator like the rest of the workplan. The workplan Artifact lists the
+   sets separately: standing, surge, throttle.
+2. **What is surge:** real money (a leg, a fix or a bug on a real-money or prop book), anything that moves a strategy or ML model toward
+   live trading, the week's big ML milestones, and the week's big strategic milestones (e.g. a redesign). **What is throttle:** important
+   work that is not top of the line: development infrastructure that cannot go live this week (e.g. the options data infra), the less
+   urgent parts of a UI upgrade, cleanups and guard pruning. When unsure, ask in planning; never let a row stay untagged.
+3. **The surge** runs from planning: dispatch surge rows first, as wide as the work allows, and do NOT throttle them to the even weekly
+   pace. Throttle rows wait unless a surge row is blocked and capacity would otherwise sit idle.
+4. **The throttle-down** starts when the surge rows are landed or blocked, or when the capacity reading says the rest of the week's usage
+   is needed to keep the systems running (the standing routines, live review, the daily review and incident response come first). From
+   then on, REFILL dispatches throttle rows, paced to `spend_meter.py --capacity`. Record the switch on `WEEKLY-PLANNING` with the reading
+   it was made on, and tell the operator in one line.
+5. **Always on, surge or not (operator, 2026-11-05, second message, verbatim excerpt: *"even during the surge, I want to have one lane
+   dedicated to the ML research ... making sure that that work plan is continuing to get taken care of even during the surge"*; *"we
+   don't need to have like a backlog drain going, but we do need to make sure that we're not missing like the regular checkups ... those
+   are sort of like the strategic items that should always have some resources allocated to them"*):**
+   - **One ML-research lane through the surge.** It does not have to run constantly, but the ML research workplan (the throttle-tagged
+     ML research rows, in queue order) must keep moving: at every check-in during the surge, if no ML-research lane is running and an
+     ML research row is runnable, dispatch one. It is reserved: it is not counted against surge dispatch or displaced by it.
+   - **The regular checkups are `standing` (`week_lane: standing`) and never pause for the surge**: the daily review, the weekly reviews,
+     research-ops, live review and desk wakes, health and pipeline checks, incident response. They are dispatched before surge work when
+     they are due. During the surge the backlog DRAIN may be deferred to the throttle-down (record the deferral on `WEEKLY-PLANNING`); the
+     daily review's measurement of the backlog still runs. After the surge, standing work keeps first priority, then throttle rows.
+6. **Prop-account MLs are surge** (operator, 2026-11-05: prop MLs belong with the real-money surge items).
+7. **Mid-week arrivals** are tagged when they are filed: a new real-money bug or an operator directive about live trading is surge even
+   after the switch, and is dispatched at once.
+
 Row `WEEKLY-PLANNING`; trigger `trig_01Pm8AMPiigZX9ndobeyT6dE`, Wed **08:20Z** (first run 2026-10-14). **It is a dialogue, not a report**
 (operator, verbatim: *"it's a dialogue between both of us to work together on building our understanding, and then based on that, the work
 priorities"*): never publish a finished plan for sign-off; priorities are never finalised without the operator (re-ping if absent).
@@ -792,6 +838,10 @@ run of § "The operating loop" and the first turn after every compaction starts 
 `external_metadata.context_usage.used_tokens`; past ~650k, plan the handover for the next boundary and say so in the loop's operator line.
 **Never mid-incident, never with a merge or deploy half-done.**
 
+0. **ARCHIVE FIRST** (operator, 2026-11-05, binding: *"We also need to make sure that we're not forgetting to archive old lanes. That does not
+   seem to be passing through to all the managers correctly."*). Before PREPARE, the outgoing manager runs the full sweep (§ "The operating
+   loop" step 5) and archives **every finished lane it owns**; the handoff doc lists each lane left open **with a reason** (the sweep's KEEP
+   list). The incoming manager re-runs the sweep as its first act (§ "Start of session" 2a), so a miss here is caught within one hand-off.
 1. **PREPARE.** Write `docs/claude/work/handoffs/<YYYY-MM-DD>-<old-short>-to-new.md` (old-short = first 8 chars of the old id): live lanes
    (id, row, doing, owes); PRs needing the manager; operator asks in exact wording; every trigger/`send_later` targeting the old session (id,
    name); watched artifacts/PRs; capacity state; operator directives not yet in rows (put them in rows first); the new manager's first actions;

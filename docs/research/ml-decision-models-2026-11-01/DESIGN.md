@@ -55,6 +55,13 @@ across symbols.
 
 ## 1c. One model, one read (operator, 2026-11-01 ~08:48Z, audit ML-BAR-ONE-READ)
 
+> **Superseded 2026-11-05 (operator, HOLDOUT-DEFLATED-REUSE; principles M13).** The held-out window is NOT spent after one
+> read. A re-read is allowed: the holdout ledger records it, and it is graded on a deflated bar (Šidák CI, or the
+> Bailey–López de Prado point hurdle). As of 2026-11-05 the ledger holds 2 ENTRY reads on 2025-10..2026-09, 1 BRACKETS and
+> 4 MANAGE (incl. the c692-13/-14 xs claims), so the next ENTRY read is read 3 (z 2.39, t ≥ 0.85) and the next MANAGE read is
+> read 5 (z 2.57, t ≥ 1.19). A holdout overlapping training is refused.
+> The text below is the 2026-11-01 rule, kept as history.
+
 Verbatim popup answer: *"Yes, one model, one read (Rec.)"*. The point-estimate ≥ 0 bar is unchanged; it applies to ONE
 pre-registered model per question, the held-out window (2025-10-01..2026-09-30) is read ONCE, and the number of variants
 tried is reported beside every result. **ENTRY variants read on that window so far: 1** (c692-01; c692-06 re-scores the
@@ -179,7 +186,7 @@ no action touches a trade that already exited, CLOSE/BE/TRAIL availability, no-o
   distance falls linearly from 2 ATR to f ATR at 24 h, f in {0.5, 1.0, 1.5} chosen on dev.
 - **Windows.** Dev = ENTRY walk-forward OOS trades 2022-01-01..2025-09-30 (MANAGE folds 2023-01..2025-07, purge + 7-day embargo). Held-out
   2025-10-01..2026-09-30, claimed once per model with `holdout_lock` (`variants_on_window` reported). **That window is not fresh for ENTRY-family
-  models**; 2026-10 is spent for frozen ENTRY v1 and is not used; a forward confirm on 2026-11+ (when n >= 300 accrues) is registered as a pipeline row
+  models** (superseded 2026-11-05: a re-read is allowed on a deflated bar, § 1c note / principles M13); 2026-10 is spent for frozen ENTRY v1 and is not used; a forward confirm on 2026-11+ (when n >= 300 accrues) is registered as a pipeline row
   and is RECOMMENDED evidence, not a gate (no new gates without the operator's permission).
 - **Rules.** -03: unchanged (PASS iff managed mean net R per trade >= 0 AND mean delta per non-HOLD action >= 0; `proposal_eligible` additionally needs the
   paired CI95 lower bound of delta vs hold > 0). -08..-11: not read if the dev delta <= 0; INDETERMINATE below 300 trades / 10 symbols; PASS iff held-out
@@ -188,6 +195,8 @@ no action touches a trade that already exited, CLOSE/BE/TRAIL availability, no-o
 - **Not authored:** structure-based SL (arm e) is an entry-time bracket choice, already under 5e04-01 / 5e01-09..11; the interaction with extend-only TP is
   tested after single-arm winners.
 - **Disclosure.** a plumbing smoke of this harness (--arm manage, 9 symbols: ADAUSDT, BCHUSDT, BTCUSDT, ETCUSDT, ETHUSDT, LINKUSDT, LTCUSDT, TRXUSDT, XLMUSDT; pseudo held-out starting 2024-10-01) mistakenly included the sealed 2025-10-01..2026-09-30 window in its data, because E.fetch's default `end` is bound at import. What was printed to the lane: the tail of the smoke's manage-arm summary for those 9 symbols over 2024-10..2026-09 (by-month delta vs hold, giveback, the matched-random and single-static-action deltas, the action mix); the headline delta, CI and n were truncated from view and not read. The smoke's model was trained on rows before 2024-10-01, not the registered final fit. NOTHING (rule, margin, parameter, grid, action set) was chosen from it. The bug is fixed and guarded (smoke refuses data >= 2025-10-01). Every arm's verdict records peeked_symbols and the held-out delta ex those 9 symbols, so a reader can weigh it.
+
+- **Re-scope (operator override, 2026-11-05 ~17:08Z, verbatim: "Why does it need to wait for November? That's not the workflow - we iterate in the data we have till we find what works, we don't wait for new months of data").** The single confirming read of a frozen config is NOT the 2026-11 month. `--stage xs` reads the first 100 USDT-M perps OUTSIDE the 60-perp training pool over their whole history (`RQ-20261105-c692-13` for the c692-12 config, `-14` for the c692-11 config), claimed once each via `holdout_lock` with the symbol list; ENTRY = the pool-trained final fit, MANAGE heads = the pool dev trades, margin and actions frozen. It is a cross-sectional holdout (dates overlap training), so it is correlated evidence by regime and is reported by era. PASS needs pooled delta > 0, CI95 lower > 0 and delta > 0 in the 2022-01..2025-09 and 2025-10+ eras. November data is extra monitoring, never a gate.
 
 ## 5. If none passes — the levers, in order
 

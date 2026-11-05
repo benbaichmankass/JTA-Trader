@@ -94,13 +94,6 @@ ml_consumer:
   - ada_pullback_2h
   - trend_donchian_sol_prop
   book: money
-blocked_on:
-- kind: rule
-  ref: DESIGN.md section 1c (operator 2026-11-01 ~08:48Z "Yes, one model, one read (Rec.)")
-  what: the arms are new ENTRY variants; the 2025-10..2026-09 held-out window was already read once by c692-01, so the arms must be scored on
-    a FRESH forward window (bars after 2026-09-30) with its own registered length before they run
-  clears_when: forward data after 2026-09-30 covers >= 300 traded-symbol decisions; the rule is re-registered on that window in a new commit before
-    any run, then this file moves to research/queue/
 blocked_review:
   by: RESEARCH-OPS-20261101-0940
   disposition: kept
@@ -108,3 +101,18 @@ blocked_review:
   note: 'kept: filed today or released only by the manager (E57) or an observation threshold; owner named
     in blocked_on'
   reviewed: '2026-11-01'
+amendments:
+- at: '2026-11-05'
+  before_any_run: true
+  by: lane RESEARCH-NO-WAIT
+  text:
+  - 'RESEARCH-NO-WAIT (lane of Manager Session 2026-11-05b). Operator 2026-11-05 ~17:08Z, verbatim: "Why does it need to wait for November? That''s not the workflow - we iterate in the data we have till we find what works, we don''t wait for new months of data". Window registered BEFORE any run; no outcome inside it was read by this lane; the rule text and every threshold are NOT edited.'
+  - 'WINDOW CHANGE: the read registered on the "forward window" / "fresh window" (2026-11) is REPLACED by the in-hand window below. P = pre-dev history 2020-07-01..2021-12-31 (Binance Vision USDT-M 1h, symbols of manifest bp2-f4271084b120 with bars in P, count reported). Verified unclaimed: comms/research/holdout_reads.jsonl on main holds claims only on 2025-10-01..2026-09-30 and 2026-10-01..2026-10-31. The model is fit on rows from 2022-01-01 only (purged + embargoed across 2021-12-31), so no P row is in a fit; claim via holdout_lock.py (start 2020-07-01, end 2021-12-31).'
+  - 'The data/accrual blocker is removed: nothing here waits for a month to elapse. What remains is the driver option that reads this window (named in blocked_on, owner lane ML-DECISION-MODELS / the unit''s own lane).'
+
+blocked_on:
+- kind: harness
+  ref: scripts/research/ml_decision_entry.py universe-arms --window pre-dev
+  what: the driver reads window P (pre-dev) instead of the 2026-10+ forward window; refit on rows >= 2022-01-01 only; HOLDOUT-LOCK claim
+  clears_when: lands with a self-test that no row >= 2022-01-01 is scored and a second claim of P is refused
+  owner: lane ML-DECISION-MODELS (or the unit's owning ML lane)

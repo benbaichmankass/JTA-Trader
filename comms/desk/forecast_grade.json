@@ -58,7 +58,7 @@
     "expired": 7,
     "invalidation_first": 2,
     "no_data": 0,
-    "pending": 0,
+    "pending": 1,
     "target_first": 2,
     "tie_unresolved": 0
    },
@@ -66,7 +66,7 @@
     "n": 11,
     "rate": 0.5455
    },
-   "n": 11,
+   "n": 12,
    "n_graded": 11,
    "n_packages": 0,
    "n_scored_with_p": 11,
@@ -79,15 +79,15 @@
      "n": 45
     },
     "invalidation_first": {
-     "brier": 0.1577,
-     "n": 26
+     "brier": 0.1602,
+     "n": 45
     },
     "target_first": {
-     "brier": 0.2852,
-     "n": 15
+     "brier": 0.2915,
+     "n": 23
     }
    },
-   "brier_overall": 0.192,
+   "brier_overall": 0.1951,
    "brier_ref_constant_0_5": 0.25,
    "calibration_bins": [
     {
@@ -98,25 +98,25 @@
      "target_first_rate": 0.0
     },
     {
-     "mean_p": 0.3381,
-     "n": 21,
+     "mean_p": 0.3379,
+     "n": 28,
      "p_hi": 0.4,
      "p_lo": 0.2,
-     "target_first_rate": 0.0476
+     "target_first_rate": 0.0357
     },
     {
-     "mean_p": 0.4569,
-     "n": 62,
+     "mean_p": 0.4515,
+     "n": 81,
      "p_hi": 0.6,
      "p_lo": 0.4,
-     "target_first_rate": 0.2258
+     "target_first_rate": 0.2716
     },
     {
-     "mean_p": null,
-     "n": 0,
+     "mean_p": 0.6,
+     "n": 1,
      "p_hi": 0.8,
      "p_lo": 0.6,
-     "target_first_rate": null
+     "target_first_rate": 0.0
     },
     {
      "mean_p": null,
@@ -128,148 +128,141 @@
    ],
    "classes": {
     "expired": 45,
-    "invalidation_first": 26,
+    "invalidation_first": 45,
     "no_data": 8,
-    "pending": 16,
-    "target_first": 15,
+    "pending": 14,
+    "target_first": 23,
     "tie_unresolved": 0
    },
    "direction_hit_rate": {
-    "n": 76,
-    "rate": 0.3553
+    "n": 103,
+    "rate": 0.3398
    },
-   "n": 110,
-   "n_graded": 86,
-   "n_packages": 36,
-   "n_scored_with_p": 86,
+   "n": 135,
+   "n_graded": 113,
+   "n_packages": 52,
+   "n_scored_with_p": 113,
    "unresolved_ties": 0
   }
  },
- "computed_at": "2026-11-05T14:19:40Z",
+ "computed_at": "2026-11-05T19:41:28Z",
  "inventory": {
   "desk_entry": {
-   "no_trade_without_forecast": 158,
-   "records": 169,
-   "with_forecast": 11
+   "no_trade_without_forecast": 159,
+   "records": 171,
+   "with_forecast": 12
   },
   "live_review": {
-   "records": 448,
-   "with_forecast": 110
+   "records": 491,
+   "with_forecast": 135
   },
   "ml_prediction_logs": "none found carrying target/invalidation/horizon (grep invalidation_px|target_px over *.py, *.jsonl, *.yaml outside docs/tests: only the review, desk and ML-family readers)"
  },
  "pending": [
   {
-   "fid": "LR-20261103T0021Z-pkg-32a5162bbbdd4ef6",
-   "horizon_end": "2026-11-08T00:32:00Z",
+   "fid": "LR-20261105T1523Z-pkg-9663649fad564d71",
+   "horizon_end": "2026-11-15T15:30:00Z",
+   "source": "live_review",
+   "symbol": "GDX",
+   "time_remaining_s": 848911
+  },
+  {
+   "fid": "LR-20261105T1613Z-pkg-019abe89429249c9",
+   "horizon_end": "2026-11-06T04:30:00Z",
+   "source": "live_review",
+   "symbol": "BTCUSDT",
+   "time_remaining_s": 31711
+  },
+  {
+   "fid": "LR-20261105T1614Z-pkg-0479f95323814a3e",
+   "horizon_end": "2026-11-06T04:30:00Z",
+   "source": "live_review",
+   "symbol": "ETHUSDT",
+   "time_remaining_s": 31711
+  },
+  {
+   "fid": "LR-20261105T1615Z-pkg-58b6ef451e684836",
+   "horizon_end": "2026-11-06T00:30:00Z",
    "source": "live_review",
    "symbol": "SPY",
-   "time_remaining_s": 209539
+   "time_remaining_s": 17311
   },
   {
-   "fid": "LR-20261104T1507Z-pkg-430a556efc974643",
-   "horizon_end": "2026-11-05T15:20:00Z",
+   "fid": "LR-20261105T1616Z-pkg-e3969c6df86648c1",
+   "horizon_end": "2026-11-06T00:30:00Z",
    "source": "live_review",
-   "symbol": "ETHUSDT",
-   "time_remaining_s": 3619
+   "symbol": "TQQQ",
+   "time_remaining_s": 17311
   },
   {
-   "fid": "LR-20261104T1808Z-pkg-32a5162bbbdd4ef6",
-   "horizon_end": "2026-11-08T18:11:39Z",
+   "fid": "LR-20261105T1616Z-pkg-e63bc31f316048a3",
+   "horizon_end": "2026-11-06T00:30:00Z",
    "source": "live_review",
-   "symbol": "SPY",
-   "time_remaining_s": 273118
+   "symbol": "BTCUSDT",
+   "time_remaining_s": 17311
   },
   {
-   "fid": "LR-20261104T1808Z-pkg-430a556efc974643",
-   "horizon_end": "2026-11-05T18:11:39Z",
-   "source": "live_review",
-   "symbol": "ETHUSDT",
-   "time_remaining_s": 13918
-  },
-  {
-   "fid": "LR-20261104T1808Z-pkg-64d4fa5ab0c34305",
-   "horizon_end": "2026-11-07T18:11:39Z",
+   "fid": "LR-20261105T1617Z-pkg-e9a6d4f9e1fa4a07",
+   "horizon_end": "2026-11-06T00:30:00Z",
    "source": "live_review",
    "symbol": "IAUM",
-   "time_remaining_s": 186718
+   "time_remaining_s": 17311
   },
   {
-   "fid": "LR-20261104T1808Z-pkg-bba44210885c4180",
-   "horizon_end": "2026-11-05T18:11:39Z",
+   "fid": "LR-20261105T1617Z-pkg-f61a64e0db9a495b",
+   "horizon_end": "2026-11-06T00:30:00Z",
    "source": "live_review",
-   "symbol": "ADAUSDT",
-   "time_remaining_s": 13918
+   "symbol": "QQQ",
+   "time_remaining_s": 17311
   },
   {
-   "fid": "LR-20261104T1808Z-pkg-c4f2c4ddf0cb4c64",
-   "horizon_end": "2026-11-07T18:11:39Z",
+   "fid": "LR-20261105T1625Z-pkg-019abe89429249c9",
+   "horizon_end": "2026-11-05T22:36:00Z",
    "source": "live_review",
-   "symbol": "SCHA",
-   "time_remaining_s": 186718
+   "symbol": "BTCUSDT",
+   "time_remaining_s": 10471
   },
   {
-   "fid": "LR-20261104T1808Z-pkg-f76bb92289d143e5",
-   "horizon_end": "2026-11-05T18:11:39Z",
+   "fid": "LR-20261105T1627Z-pkg-f76bb92289d143e5",
+   "horizon_end": "2026-11-06T16:36:00Z",
    "source": "live_review",
    "symbol": "SOLUSDT",
-   "time_remaining_s": 13918
+   "time_remaining_s": 75271
   },
   {
-   "fid": "LR-20261105T0021Z-pkg-64d4fa5ab0c34305",
-   "horizon_end": "2026-11-08T00:30:00Z",
+   "fid": "LR-20261105T1633Z-pkg-bf12adaa61b043f7",
+   "horizon_end": "2026-11-06T16:40:00Z",
+   "source": "live_review",
+   "symbol": "XRPUSDT",
+   "time_remaining_s": 75511
+  },
+  {
+   "fid": "LR-20261105T1651Z-pkg-dc63bb3b4bbf4723",
+   "horizon_end": "2026-11-10T16:58:00Z",
+   "source": "live_review",
+   "symbol": "TLT",
+   "time_remaining_s": 422191
+  },
+  {
+   "fid": "LR-20261105T1658Z-pkg-e9a6d4f9e1fa4a07",
+   "horizon_end": "2026-11-05T23:02:00Z",
    "source": "live_review",
    "symbol": "IAUM",
-   "time_remaining_s": 209419
+   "time_remaining_s": 12031
   },
   {
-   "fid": "LR-20261105T0928Z-pkg-f76bb92289d143e5",
-   "horizon_end": "2026-11-06T09:40:00Z",
+   "fid": "LR-20261105T1702Z-pkg-0710342763bf4d18",
+   "horizon_end": "2026-11-06T05:08:00Z",
    "source": "live_review",
-   "symbol": "SOLUSDT",
-   "time_remaining_s": 69619
+   "symbol": "BTCUSDT",
+   "time_remaining_s": 33991
   },
   {
-   "fid": "LR-20261105T1235Z-pkg-f76bb92289d143e5",
-   "horizon_end": "2026-11-06T12:50:00Z",
-   "source": "live_review",
-   "symbol": "SOLUSDT",
-   "time_remaining_s": 81019
-  },
-  {
-   "fid": "LR-20261105T1301Z-pkg-35ae29519bfe4beb",
-   "horizon_end": "2026-11-05T19:08:00Z",
-   "source": "live_review",
-   "symbol": "ETHUSDT",
-   "time_remaining_s": 17299
-  },
-  {
-   "fid": "LR-20261104T2002Z-pkg-430a556efc974643",
-   "horizon_end": "2026-11-05T20:08:00Z",
-   "source": "live_review",
-   "symbol": "ETHUSDT",
-   "time_remaining_s": 20899
-  },
-  {
-   "fid": "LR-20261105T1401Z-pkg-b76b0655d305485e",
-   "horizon_end": "2026-11-05T18:14:00Z",
-   "source": "live_review",
-   "symbol": "ETHUSDT",
-   "time_remaining_s": 14059
-  },
-  {
-   "fid": "LR-20261105T1407Z-pkg-449997e302444df5",
-   "horizon_end": "2026-11-06T02:14:00Z",
-   "source": "live_review",
-   "symbol": "ETHUSDT",
-   "time_remaining_s": 42859
-  },
-  {
-   "fid": "LR-20261105T1407Z-pkg-ec322a643ca54b86",
-   "horizon_end": "2026-11-06T02:14:00Z",
-   "source": "live_review",
-   "symbol": "ETHUSDT",
-   "time_remaining_s": 42859
+   "fid": "DD-20261105T1626Z-scan-1h-1",
+   "horizon_end": "2026-11-07T16:29:12Z",
+   "source": "desk_entry",
+   "symbol": "XRPUSDT",
+   "time_remaining_s": 161263
   }
  ],
  "pooled": {
@@ -279,15 +272,15 @@
     "n": 52
    },
    "invalidation_first": {
-    "brier": 0.1554,
-    "n": 28
+    "brier": 0.1587,
+    "n": 47
    },
    "target_first": {
-    "brier": 0.2906,
-    "n": 17
+    "brier": 0.2947,
+    "n": 25
    }
   },
-  "brier_overall": 0.1884,
+  "brier_overall": 0.192,
   "brier_ref_constant_0_5": 0.25,
   "calibration_bins": [
    {
@@ -298,25 +291,25 @@
     "target_first_rate": 0.0
    },
    {
-    "mean_p": 0.3344,
-    "n": 27,
+    "mean_p": 0.335,
+    "n": 34,
     "p_hi": 0.4,
     "p_lo": 0.2,
-    "target_first_rate": 0.037
+    "target_first_rate": 0.0294
    },
    {
-    "mean_p": 0.4534,
-    "n": 67,
+    "mean_p": 0.4491,
+    "n": 86,
     "p_hi": 0.6,
     "p_lo": 0.4,
-    "target_first_rate": 0.2388
+    "target_first_rate": 0.2791
    },
    {
-    "mean_p": null,
-    "n": 0,
+    "mean_p": 0.6,
+    "n": 1,
     "p_hi": 0.8,
     "p_lo": 0.6,
-    "target_first_rate": null
+    "target_first_rate": 0.0
    },
    {
     "mean_p": null,
@@ -328,35 +321,35 @@
   ],
   "classes": {
    "expired": 52,
-   "invalidation_first": 28,
+   "invalidation_first": 47,
    "no_data": 8,
-   "pending": 16,
-   "target_first": 17,
+   "pending": 15,
+   "target_first": 25,
    "tie_unresolved": 0
   },
   "direction_hit_rate": {
-   "n": 87,
-   "rate": 0.3793
+   "n": 114,
+   "rate": 0.3596
   },
-  "n": 121,
-  "n_graded": 97,
-  "n_packages": 36,
-  "n_scored_with_p": 97,
+  "n": 147,
+  "n_graded": 124,
+  "n_packages": 52,
+  "n_scored_with_p": 124,
   "unresolved_ties": 0
  },
- "population": "121 forecasts: live_review=110, desk_entry=11 (every record carrying target+invalidation+horizon+probability)",
+ "population": "147 forecasts: live_review=135, desk_entry=12 (every record carrying target+invalidation+horizon+probability)",
  "read_state": {
   "candles": "live /api/bot/candles (tf + 1m)",
   "desk": {
-   "branch": 169,
-   "main_decisions": 168,
-   "union": 169
+   "branch": 171,
+   "main_decisions": 171,
+   "union": 171
   },
   "ledger": "comms/desk/forecast_ledger.jsonl",
   "live_review": {
-   "main_reviews": 426,
-   "rows_branch": 200,
-   "union": 448
+   "main_reviews": 471,
+   "rows_branch": 225,
+   "union": 491
   },
   "null_means": "could-not-look (no_data / tie_unresolved), never 0",
   "packages_read": 1000

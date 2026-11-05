@@ -7910,6 +7910,24 @@ _SNAPSHOT_FLAT_REASON = "exchange_flat_reconciled"
 #: ``order_packages.sl``/``tp`` per row.
 _SNAPSHOT_FLAT_LABEL_TOLERANCE_BPS = 10.0
 
+#: Close reasons written by a FLAT DETECTOR — a path that found the venue
+#: position already gone and recorded that it noticed, not why the position
+#: ended. On Alpaca and IB the bracket rests AT THE BROKER, so a stop or target
+#: that fills there is only ever seen by one of these detectors. Both price
+#: sweeps refine them to ``sl``/``tp`` off a MEASURED exit price only, with
+#: ``_SNAPSHOT_FLAT_LABEL_TOLERANCE_BPS``, and keep the detector in
+#: ``pre_label_exit_reason``.
+#:
+#: ``stuck_strategy_watchdog`` joined 2026-11-05 (ML-ENTRY-WATCHDOG-EXIT):
+#: alpaca_paper ml_entry SLV trade 6920 was stopped out AT THE BROKER (stop
+#: leg filled 16:48:25.795Z @47.643 vs package SL 47.6443, Alpaca order
+#: history), the watchdog's unmatched branch finalised it 63 s later, and the
+#: local sweep priced it off that MEASURED fill but left the label frozen,
+#: because it relabelled only ``''``/``reconciler_filled``. Alpaca rows carry
+#: no ``sl_order_id``/``tp_order_id``, so the order-identity sweep
+#: (``_sweep_exit_label_from_bracket_order``) can never reach them either.
+_FLAT_DETECTOR_REASONS = (_SNAPSHOT_FLAT_REASON, "stuck_strategy_watchdog")
+
 
 def _classify_broker_exit(
     db, row: Dict[str, Any], exit_price: Any, *, is_reduce_leg: bool = False,
@@ -8339,6 +8357,21 @@ def _close_trade_from_order_status(
         resolved_reason = _classify_broker_exit(
             db, row, avg_exit_price, is_reduce_leg=is_reduce_leg,
         )
+        reason_source = "price_vs_pkg_bracket" if resolved_reason else "unresolved"
+        if not resolved_reason:
+            # RECONCILER-CLOSEDPNL-OWN-LEG (2026-11-05, bybit_2 trade 6881): the
+            # price classifier could not place the venue exit against the
+            # bracket, so the row kept the generic `reconciler_filled` while its
+            # own SL/TP order had filled (its bybit_portfolio mirror 6882, closed
+            # in the same second through the no-record branch below, read `sl`).
+            # Ask the venue which of THIS row's legs filled, by order id — the
+            # same once-per-finalisation read that branch makes. Only the LABEL
+            # is taken from it; the broker closed-pnl price and pnl stand.
+            _own = _own_bracket_fill_from_venue(
+                cfg, row, is_reduce_leg=is_reduce_leg)
+            if _own is not None:
+                resolved_reason = _own["leg"]
+                reason_source = BRACKET_ORDER_LABEL_SOURCE
         final_exit_reason = resolved_reason or "reconciler_filled"
         notes.update({
             "closed_at": closed_at,
@@ -8354,8 +8387,7 @@ def _close_trade_from_order_status(
             _broker_pnl_note_key(closed_pnl_rec):
                 closed_pnl_rec.get("closed_pnl"),
             "finalised_by": "reconciler",
-            "exit_reason_source":
-                ("price_vs_pkg_bracket" if resolved_reason else "unresolved"),
+            "exit_reason_source": reason_source,
         })
         updates: Dict[str, Any] = {
             "status": "closed",
@@ -10281,15 +10313,91 @@ def _has_standing_wedge(account_id: str, symbol: str, direction: Any) -> bool:
         return False
 
 
+def _row_in_flat_confirm(trade_id: Any) -> bool:
+    """Is *trade_id* armed in any 2-observation flat/close confirm right now?
+
+    A row in one of these dicts has ALREADY been read flat at the venue once
+    and is waiting for the confirming read that closes it. ALPACA-TP-CANCEL-
+    AT-OPEN (2026-11-05, IAUM trade 6655): the naked sweep ran between the arm
+    (14:31:50Z) and the close (14:32:33Z), refused to re-arm the flat row —
+    correctly — and paged CRITICAL for a position the venue stop had already
+    closed. In-process state, same as the dicts it reads; an unkeyable id or a
+    restart reads ``False`` (the page stays CRITICAL — never hide by default).
+    """
+    try:
+        tid = int(trade_id)
+    except (TypeError, ValueError):
+        return False
+    return any(tid in d for d in (
+        _PENDING_CLOSE_CONFIRM,
+        _PENDING_SNAPSHOT_DISAPPEAR_CONFIRM,
+        _PENDING_ORPHAN_DISAPPEAR_CONFIRM,
+        _PENDING_WATCHDOG_FLAT_CONFIRM,
+        _PENDING_ORPHAN_NOSTRAT_CLOSE,
+    ))
+
+
+#: How long after a bracket/OCO stop leg is RELEASED (its target sibling
+#: cancelled by Alpaca because the stop triggered) a missing target grades
+#: ``target_exiting`` instead of paging ``target_naked``. Measured releases
+#: filled in < 1 s on alpaca_live and in 55 s on alpaca_paper (IAUM 6655,
+#: 2026-11-05); 600 s is ten times the slowest. Past it, a still-working stop
+#: is not a normal exit and pages as before.
+_ALPACA_TARGET_EXITING_GRACE_S = 600.0
+
+
+def _iso_age_seconds(ts: Any, now: datetime) -> float | None:
+    """Seconds from ISO-8601 *ts* to *now*; ``None`` when absent/unparseable.
+
+    Alpaca stamps carry nanoseconds (``...:08.292148123Z``) which
+    ``fromisoformat`` rejects before 3.11, so the fraction is cut to 6 digits.
+    """
+    if not ts:
+        return None
+    raw = str(ts).strip().replace("Z", "+00:00")
+    try:
+        if "." in raw:
+            head, tail = raw.split(".", 1)
+            frac = "".join(ch for ch in tail if ch.isdigit())
+            tz = tail[len(frac):]
+            raw = f"{head}.{frac[:6]}{tz}"
+        dt = datetime.fromisoformat(raw)
+    except (TypeError, ValueError):
+        return None
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=timezone.utc)
+    return (now - dt).total_seconds()
+
+
 def _page_rearm_refusal(kind: str, account_id: str, symbol: str,
-                        trade_id: Any, reason: str, *, verb: str = "refused") -> None:
+                        trade_id: Any, reason: str, *, verb: str = "refused",
+                        info_only: bool = False) -> None:
     """Log every refusal; page CRITICAL (per symbol+kind cooldown).
 
     *verb* names what happened when it was not a refusal — the escalated
     re-arm POSTS the stop, so it pages as ``escalated`` (K1XNYYAQ-0002 (3)).
+
+    *info_only* (manager decision 2026-11-05, ALPACA-TP-CANCEL-AT-OPEN (a)):
+    the refusal still happens and is still logged and reported, at INFO, and
+    does NOT consume the CRITICAL cooldown — so a real refusal minutes later
+    still pages. Used only for a ``flat`` refusal on a row already in a
+    flat-confirm (a benign ordering race, not a naked position).
     """
     logger.warning("_alpaca_rearm_preflight: %s/%s trade_id=%s %s (%s): %s",
                    account_id, symbol, trade_id, verb.upper(), kind, reason)
+    if info_only:
+        try:
+            from src.runtime.outcomes import Level, report
+
+            report("alpaca_rearm_refused", "detected", level=Level.INFO,
+                   reason=f"{account_id}/{symbol} trade {trade_id}: re-arm {verb} "
+                          f"({kind}) — {reason}",
+                   account_id=account_id, symbol=symbol, trade_id=trade_id,
+                   kind=kind, flat_confirm_pending=True)
+        except Exception:
+            logger.exception("_page_rearm_refusal: info report failed for %s/%s",
+                             account_id, symbol)
+        return
     if not _cooldown_admits("alpaca_rearm_refused", f"{account_id}|{symbol}|{kind}",
                             _ALPACA_REARM_REFUSAL_PAGE_COOLDOWN_S):
         return
@@ -10483,9 +10591,13 @@ def _alpaca_rearm_preflight(client, account_id: str, symbol: str, row,
         pass
     if q.get("state") == "flat":
         _clear_protection_unreadable(account_id, symbol, "preflight")
+        _in_confirm = _row_in_flat_confirm(row["id"])
         _page_rearm_refusal("flat", account_id, symbol, row["id"],
                             "no venue position — the row's shares are gone; a "
-                            "re-arm would open exposure, not protect it")
+                            "re-arm would open exposure, not protect it"
+                            + (" (row already pending its flat-confirm close)"
+                               if _in_confirm else ""),
+                            info_only=_in_confirm)
         return "flat", {}
     if last is None and bid is None and ask is None:
         _note_protection_unreadable(account_id, symbol, row["id"], channel="preflight")
@@ -10792,6 +10904,17 @@ def _check_broker_naked_equity_positions(db) -> Dict[str, int]:
         # position can be fully stop-covered and hold no take-profit at all
         # (BL-20260816-COVERAGE-IS-ONE-SIDED). Alerted, never re-armed.
         "target_naked": 0,
+        # Target missing BECAUSE the bracket/OCO stop triggered (Alpaca cancels
+        # the take-profit, then works the stop): the book is exiting, not
+        # target-naked. Logged, not paged, for _ALPACA_TARGET_EXITING_GRACE_S
+        # after the release; past that it grades target_naked again
+        # (ALPACA-TP-CANCEL-AT-OPEN, 2026-11-05).
+        "target_exiting": 0,
+        # Target missing on a row whose symbol the venue holds FLAT in this
+        # sweep's positions read: the stop already filled and the row waits for
+        # its flat-detector close (ML-ENTRY-WATCHDOG-EXIT, 2026-11-05). Logged,
+        # not paged.
+        "target_flat": 0,
         # ── QUANTITY coverage (BL-20260908-ALPACA-COVERAGE-IS-SIDES-NOT-QUANTITY).
         # Declared here, not created on first use: a sweep that found no
         # partial coverage must report 0 rather than omit the key, or "we
@@ -11096,7 +11219,51 @@ def _check_broker_naked_equity_positions(db) -> Dict[str, int]:
                     elif _size > 0:
                         summary["covered"] += 1
 
-            if state.get("target") is False and row["take_profit_1"] not in (None, 0):
+            _released_age = _iso_age_seconds(state.get("stop_released_at"), now)
+            if (state.get("target") is False
+                    and row["take_profit_1"] not in (None, 0)
+                    and _released_age is not None
+                    and _released_age <= _ALPACA_TARGET_EXITING_GRACE_S):
+                # EXITING, not naked (ALPACA-TP-CANCEL-AT-OPEN): the target is
+                # gone because the stop triggered and Alpaca cancelled its OCO
+                # sibling; the stop is being worked. Bounded: a stop still
+                # working after the grace grades target_naked and pages.
+                summary["target_exiting"] += 1
+                logger.info(
+                    "_check_broker_naked_equity_positions: %s/%s trade_id=%s "
+                    "target leg gone because the stop leg was RELEASED at %s "
+                    "(%.0fs ago; Alpaca OCO cancels the target when the stop "
+                    "triggers) — graded target_exiting, not target_naked",
+                    account_id, symbol, row["id"],
+                    state.get("stop_released_at"), _released_age,
+                )
+            elif (state.get("target") is False
+                    and row["take_profit_1"] not in (None, 0)
+                    and isinstance(_cov, dict)
+                    and _cov.get("source") == "flat"):
+                # FLAT, not naked (ML-ENTRY-WATCHDOG-EXIT, 2026-11-05). This
+                # sweep's own positions read shows NO venue position on the
+                # symbol, and Alpaca nets per symbol, so no row on it can be
+                # target-naked: its stop has already FILLED and the row is
+                # waiting for a flat detector to close it. #23384's
+                # target_exiting grade cannot see this, because a FILLED stop
+                # has left the open-order legs and `stop_released_at` reads
+                # None. MEASURED alpaca_paper SCHA trade 6877: TP canceled
+                # 17:01:17.155Z, stop filled 17:01:18.485Z @32.36, then this
+                # branch paged CRITICAL `alpaca_target_naked` (position 873.0)
+                # in the ~17:01:55Z sweep, on a book the venue already held flat.
+                # Logged, never paged. The stop side below still runs its
+                # fresh-read pre-flight, which refuses a flat row.
+                summary["target_flat"] += 1
+                logger.info(
+                    "_check_broker_naked_equity_positions: %s/%s trade_id=%s "
+                    "declared TP has no resting target but the venue holds NO "
+                    "position on the symbol (this sweep's positions read) — "
+                    "graded target_flat (stop already filled; row pending its "
+                    "flat-detector close), not target_naked",
+                    account_id, symbol, row["id"],
+                )
+            elif state.get("target") is False and row["take_profit_1"] not in (None, 0):
                 # TARGET-naked while the journal DECLARES a take-profit. Alert,
                 # do NOT re-arm: a missing stop is a safety gap worth closing
                 # blind, but a target is decision-time geometry a repair must
@@ -14643,8 +14810,10 @@ def _sweep_pending_pnl_from_bybit(db) -> Dict[str, int]:
                     )
                     if _resolved:
                         _reclassified = _resolved
-                elif _current_reason == _SNAPSHOT_FLAT_REASON:
+                elif _current_reason in _FLAT_DETECTOR_REASONS:
                     # EXIT-CLUSTER (2026-09-29, PI-20260924-BOFCWBO7-0001).
+                    # Widened to every flat detector 2026-11-05
+                    # (ML-ENTRY-WATCHDOG-EXIT; see _FLAT_DETECTOR_REASONS).
                     # The position-snapshot reconciler (Alpaca / IB / OANDA)
                     # writes this reason when the venue reports the symbol
                     # flat. On Alpaca and IB the bracket rests AT THE BROKER, so
@@ -14674,7 +14843,7 @@ def _sweep_pending_pnl_from_bybit(db) -> Dict[str, int]:
                             _reclassified = _resolved
                             # Keep how the close was DETECTED; the label now
                             # says why the position ended.
-                            notes["pre_label_exit_reason"] = _SNAPSHOT_FLAT_REASON
+                            notes["pre_label_exit_reason"] = _current_reason
                     else:
                         notes["exit_reason_source"] = (
                             _prov.EXIT_LABEL_REFUSED_UNMEASURED
@@ -15272,6 +15441,39 @@ def _sweep_local_pnl_for_unpriced(db) -> Dict[str, int]:
                     else:
                         # We looked and DECLINED. Distinct from both "resolved"
                         # and "never ran".
+                        notes["exit_reason_source"] = (
+                            _prov.EXIT_LABEL_REFUSED_UNMEASURED
+                        )
+                        notes["exit_reason_price_basis"] = _basis
+                elif _cur_reason in _FLAT_DETECTOR_REASONS:
+                    # ML-ENTRY-WATCHDOG-EXIT (2026-11-05). A flat detector's
+                    # label says the close was NOTICED, not why it happened.
+                    # MEASURED only: an ESTIMATED price here is the candle at
+                    # DETECTION time, which can sit minutes after the real exit,
+                    # and comparing it to the bracket would mint a label out of
+                    # later price action. Same rule and tolerance as the Bybit
+                    # sweep's branch for these reasons. The basis is read off the
+                    # row's stamp (set just above, never weakened by a
+                    # `recorded_exit_price` pass), so a price an earlier sweep
+                    # took from the venue fill still grades MEASURED here.
+                    _basis = _prov.classify(
+                        notes.get("exit_price_source") or exit_source,
+                        "exit_price_source",
+                    )
+                    if _basis == _prov.MEASURED:
+                        _resolved = _classify_broker_exit(
+                            db, row, exit_price, is_reduce_leg=False,
+                            tolerance_bps=_SNAPSHOT_FLAT_LABEL_TOLERANCE_BPS,
+                        )
+                        notes["exit_reason_source"] = (
+                            _EXIT_LABEL_SOURCE_BY_BASIS[_basis]
+                            if _resolved else "unresolved"
+                        )
+                        if _resolved:
+                            updates_exit_reason = _resolved
+                            notes["exit_reason_price_basis"] = _basis
+                            notes["pre_label_exit_reason"] = _cur_reason
+                    else:
                         notes["exit_reason_source"] = (
                             _prov.EXIT_LABEL_REFUSED_UNMEASURED
                         )

@@ -1,0 +1,22 @@
+{
+  "based_on": "20261102T212745457891Z-d5dbab8f.json",
+  "due_when": {
+    "check_every_days": 7,
+    "clears_when": "operator decides on signing the OPRA agreement and past capture runs are checked",
+    "kind": "event",
+    "last_checked": "2026-11-05"
+  },
+  "id": "PI-20261102-PTDVAI3R-0003",
+  "next_action": "ask_operator",
+  "origin": {
+    "kind": "session",
+    "ref": "issue #22458 / PR #22449",
+    "rerun": "file an options-snapshot-request issue with 'mode: probe'; list options-snapshot-capture.yml schedule runs before 2026-11-02 and read their Install deps / capture logs"
+  },
+  "redate": {
+    "observation": "Operator popup 2026-11-05 ~18:17Z, verbatim: 'Later (Rec.)' -- OPRA signing deferred until options work resumes (options are backseat this week per ML-LIVE-FIRST). Re-ask at the 11-12 weekly planning; the past-capture pyyaml check still owed.",
+    "observed_at": "2026-11-05"
+  },
+  "state": "queued",
+  "what": "Options: Alpaca OPRA agreement not signed (opra feed + all historical option bars 403); and not checked whether past nightly options captures failed for the same missing pyyaml fixed in #22449 (#22348 empty probe assumed same cause)."
+}

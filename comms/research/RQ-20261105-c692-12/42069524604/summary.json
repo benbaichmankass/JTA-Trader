@@ -1,0 +1,55 @@
+{
+ "dev": {
+  "delta_by_margin": {
+   "0.15": -0.00309,
+   "0.2": -0.00189,
+   "0.25": 0.00067,
+   "0.3": 0.0021,
+   "0.4": 0.0029
+  },
+  "actions_by_margin": {
+   "0.15": 12275,
+   "0.2": 6792,
+   "0.25": 3575,
+   "0.3": 1894,
+   "0.4": 522
+  },
+  "chosen_margin": 0.4,
+  "delta_ci95": [
+   0.0018128000739808016,
+   0.003992043768274699
+  ],
+  "fold_means": [
+   0.00227,
+   0.00402,
+   0.0043,
+   0.00389,
+   0.00122,
+   0.0
+  ],
+  "folds_positive": 5,
+  "n_trades": 37713,
+  "at_grid_edge": true,
+  "frozen_config": {
+   "actions": [
+    "BE",
+    "BE1",
+    "TRAIL",
+    "TRAIL15"
+   ],
+   "margin": 0.4,
+   "base": "2.0/4.0 ATR, 24h",
+   "tau": null
+  }
+ },
+ "heldout": null,
+ "variants_read_on_window": 0,
+ "schema": "ml_decision_manage/1",
+ "unit": "RQ-20261105-c692-12",
+ "arm": "mlsl2",
+ "entry_tau": 0.1,
+ "git_sha": "da1529e665a738214de17a038d28ade7d61e8247",
+ "elapsed_s": 310,
+ "verdict": "pass",
+ "why": "DEV STAGE: delta vs hold +0.00290 R/trade, CI95 [+0.00181, +0.00399], folds positive 5/6, margin 0.4 (AT THE GRID EDGE); frozen for the forward read"
+}

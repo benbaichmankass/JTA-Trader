@@ -242,10 +242,41 @@ def test_single_row_whose_stop_filled_is_never_rearmed_on_a_flat_position(world)
     c.close()
     v = _Venue(qty=0.0, price=735.0)                  # 5928's stop filled; flat
     _use(mp, v)
+    # The ordering race measured on alpaca_paper IAUM 6655 (2026-11-05): the
+    # venue stop filled, the reconciler armed its 2-read flat-confirm, and the
+    # naked sweep ran before the confirming read closed the row.
+    from datetime import datetime, timezone
+    om._PENDING_CLOSE_CONFIRM[5928] = datetime.now(timezone.utc)
+    try:
+        s = om._check_broker_naked_equity_positions(db)
+    finally:
+        om._PENDING_CLOSE_CONFIRM.pop(5928, None)
+    # The REFUSAL stands: nothing is posted on a flat position.
+    assert v.posts() == []
+    assert s.get("rearm_refused_flat") == 1
+    flat = [k for _a, k in pages if k.get("kind") == "flat"]
+    assert flat, "the refusal is still reported"
+    # ...but at INFO, not CRITICAL (manager decision 2026-11-05 (a)).
+    from src.runtime.outcomes import Level
+    assert all(k.get("level") == Level.INFO for k in flat)
+    assert all(k.get("flat_confirm_pending") is True for k in flat)
+
+
+def test_flat_refusal_outside_a_flat_confirm_still_pages_critical(world):
+    """Control for the downgrade: a flat refusal on a row NOT pending a
+    flat-confirm is unexplained (nothing has seen the close yet), so it keeps
+    the CRITICAL page."""
+    db, pages, mp = world
+    _close_row(db, 6024)
+    v = _Venue(qty=0.0, price=735.0)
+    _use(mp, v)
+    assert 5928 not in om._PENDING_CLOSE_CONFIRM
     s = om._check_broker_naked_equity_positions(db)
     assert v.posts() == []
     assert s.get("rearm_refused_flat") == 1
-    assert any(k.get("kind") == "flat" for _a, k in pages)
+    from src.runtime.outcomes import Level
+    flat = [k for _a, k in pages if k.get("kind") == "flat"]
+    assert flat and all(k.get("level") == Level.CRITICAL for k in flat)
 
 
 def _close_row(db, tid):
@@ -879,3 +910,125 @@ def test_reconciliation_tick_logs_the_equity_sweep_on_every_tick():
     j = body.index("_log_equity_sweep_summary(broker_naked_summary)")
     k = body.index("if any(v for k, v in broker_naked_summary.items()")
     assert i < j < k
+
+
+# ── ALPACA-TP-CANCEL-AT-OPEN (2026-11-05): target gone because the stop fired ──
+#
+# MEASURED (diag alpaca_order_history): alpaca_paper IAUM 6655 take-profit
+# b3dee712 (gtc) canceled 14:30:08.292Z, its stop sibling 659384a4 submitted
+# 14:30:25Z and filled 14:31:20Z at 41.14 — IAUM opened 41.04 through the 40.60
+# buy-stop. Same order on alpaca_live 2026-09-28 (SLV, IAUM) in < 1 s. The
+# 14:31:04Z sweep paged target_naked for a book that was exiting through its stop.
+
+def _released_stop(age_s, *, status="accepted", order_class="oco"):
+    from datetime import datetime, timedelta, timezone
+    ts = (datetime.now(timezone.utc) - timedelta(seconds=age_s)).strftime(
+        "%Y-%m-%dT%H:%M:%S.%f") + "123Z"           # Alpaca's nanosecond stamp
+    return {"id": "rel-stop", "symbol": "QQQ", "order_class": order_class,
+            "type": "stop", "side": "sell", "qty": "56", "stop_price": "716.8",
+            "status": status, "submitted_at": ts,
+            "parent_id": "gone-target" if order_class else None, "legs": None}
+
+
+def test_protection_state_reports_a_released_bracket_stop():
+    v = _Venue(qty=56.0)
+    v.resting = [_released_stop(30)]
+    st = v.protection_state("QQQ")
+    assert st["stop"] is True and st["target"] is False
+    assert st["stop_released_at"] is not None
+
+
+def test_protection_state_held_or_plain_stop_is_not_released():
+    v = _Venue(qty=56.0)
+    v.resting = [_released_stop(30, status="held")]
+    assert v.protection_state("QQQ")["stop_released_at"] is None
+    v.resting = [_released_stop(30, order_class="")]   # a plain stop rests 'new'
+    assert v.protection_state("QQQ")["stop_released_at"] is None
+
+
+def _target_alerts(mp):
+    calls = []
+    mp.setattr(om, "_emit_target_naked_alert", lambda **kw: calls.append(kw))
+    return calls
+
+
+def test_target_gone_because_stop_fired_grades_exiting_not_naked(world):
+    db, _pages, mp = world
+    _close_row(db, 5928)
+    v = _Venue(qty=56.0, price=735.0)
+    v.resting = [_released_stop(30)]
+    _use(mp, v)
+    alerts = _target_alerts(mp)
+    s = om._check_broker_naked_equity_positions(db)
+    assert s["target_exiting"] == 1
+    assert s["target_naked"] == 0 and alerts == []
+    assert v.posts() == []
+
+
+def test_a_stop_released_past_the_grace_pages_target_naked_again(world):
+    db, _pages, mp = world
+    _close_row(db, 5928)
+    v = _Venue(qty=56.0, price=735.0)
+    v.resting = [_released_stop(om._ALPACA_TARGET_EXITING_GRACE_S + 60)]
+    _use(mp, v)
+    alerts = _target_alerts(mp)
+    s = om._check_broker_naked_equity_positions(db)
+    assert s["target_exiting"] == 0
+    assert s["target_naked"] == 1 and len(alerts) == 1
+
+
+def test_a_held_stop_with_no_target_still_pages_target_naked(world):
+    """Negative control: a stop still HELD with its target gone means the
+    target was removed by something else — that is the alert's job."""
+    db, _pages, mp = world
+    _close_row(db, 5928)
+    v = _Venue(qty=56.0, price=735.0)
+    v.resting = [_released_stop(30, status="held")]
+    _use(mp, v)
+    alerts = _target_alerts(mp)
+    s = om._check_broker_naked_equity_positions(db)
+    assert s["target_naked"] == 1 and s["target_exiting"] == 0 and len(alerts) == 1
+
+
+def test_iso_age_seconds_reads_alpaca_nanosecond_stamps():
+    from datetime import datetime, timezone
+    now = datetime(2026, 11, 5, 14, 31, 4, tzinfo=timezone.utc)
+    assert abs(om._iso_age_seconds("2026-11-05T14:30:25.123456789Z", now) - 38.876544) < 1e-3
+    assert om._iso_age_seconds(None, now) is None
+    assert om._iso_age_seconds("not-a-time", now) is None
+
+
+# ── ML-ENTRY-WATCHDOG-EXIT (2026-11-05): target gone because the stop FILLED ──
+#
+# MEASURED (diag alpaca_order_history, alpaca_paper SCHA trade 6877): TP leg
+# 6aaddc28 canceled 17:01:17.155Z, stop filled 17:01:18.485Z @32.36 (873 sh),
+# then the ~17:01:55Z sweep paged CRITICAL alpaca_target_naked "position 873.0
+# has 0.0 of take-profit coverage" on a symbol the venue already held flat.
+# A FILLED stop has left the open-order legs, so #23384's stop_released_at
+# reads None and target_exiting cannot catch it.
+
+def test_target_gone_on_a_flat_venue_grades_target_flat_not_naked(world):
+    db, _pages, mp = world
+    _close_row(db, 5928)
+    v = _Venue(qty=0.0, price=735.0)      # stop filled: no position, no legs
+    v.resting = []
+    _use(mp, v)
+    alerts = _target_alerts(mp)
+    s = om._check_broker_naked_equity_positions(db)
+    assert s["target_flat"] == 1
+    assert s["target_naked"] == 0 and alerts == []
+    assert v.posts() == []                # the flat pre-flight still refuses
+
+
+def test_target_gone_with_a_live_position_still_pages_target_naked(world):
+    """Positive control: same row, venue still HOLDS the shares and no target
+    rests — that is a real target-naked book and must page."""
+    db, _pages, mp = world
+    _close_row(db, 5928)
+    v = _Venue(qty=56.0, price=735.0)
+    v.resting = [_released_stop(30, status="held")]
+    _use(mp, v)
+    alerts = _target_alerts(mp)
+    s = om._check_broker_naked_equity_positions(db)
+    assert s["target_flat"] == 0
+    assert s["target_naked"] == 1 and len(alerts) == 1

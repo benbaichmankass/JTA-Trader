@@ -27,7 +27,7 @@ LOG = Path(os.environ.get("CONSOLE_CONNECTOR_LOG") or REPO / "runtime_logs" / "c
 PROTOCOL_DEFAULT = "2025-06-18"
 CACHE = data.TTLCache()
 TTL_S = {"work_rows": 30.0, "inbox": 30.0, "work_items": 30.0, "workplan": 60.0, "ml_roadmap": 120.0,
-         "performance": 300.0, "system_health": 60.0, "data_query": 30.0}
+         "performance": 300.0, "system_health": 60.0, "data_query": 30.0, "system_catalog": 300.0}
 #: Tools that serve P&L, journal rows or live-VM state: registered ONLY when CONSOLE_CONNECTOR_AUTH=google
 #: (the sign-in is on), so they never serve over the authless tunnel. workplan and ml_roadmap carry only
 #: public-register data (repo files) and are always available.
@@ -47,11 +47,14 @@ TOOLS: list[dict[str, Any]] = [
      "annotations": _RO},
     {"name": "work_rows", "title": "Work rows",
      "description": "Checklist rows for the console Work tab, in sections due (overdue), in_flight, blocked "
-                    "and queued (with a due date). Each response has as_of, read_state, population and the "
+                    "queued (with a due date) and open_other (queued without a due date, landed_unproven); each row carries week_lane, roadmap and writeback. Each response has as_of, read_state, population and the "
                     "git commit the register was read at.",
      "inputSchema": {"type": "object", "properties": {
-         "view": {"type": "string", "enum": ["all", "due", "in_flight", "blocked", "queued"], "default": "all"},
-         "limit": {"type": "integer", "minimum": 1, "maximum": 200, "default": 25}}},
+         "view": {"type": "string", "enum": ["all", "due", "in_flight", "blocked", "queued", "open_other"], "default": "all"},
+         "limit": {"type": "integer", "minimum": 1, "maximum": 200, "default": 25},
+         "offset": {"type": "integer", "minimum": 0, "default": 0,
+                    "description": "rows to skip in every returned section; population.next_offset[section] "
+                                   "is the offset of the next page, null when that section is complete"}}},
      "annotations": _RO},
     {"name": "inbox", "title": "Inbox",
      "description": "The console Inbox: decisions waiting on the operator (checklist operator_decision edges, "
@@ -69,6 +72,12 @@ TOOLS: list[dict[str, Any]] = [
                     "(ml_plan_status) and live ML-* checklist rows with state, next and due.",
      "inputSchema": {"type": "object", "properties": {
          "limit": {"type": "integer", "minimum": 1, "maximum": 200, "default": 60}}}, "annotations": _RO},
+    {"name": "system_catalog", "title": "System catalog",
+     "description": "Strategy legs (status testing/production/inactive, books, venue, symbol), ML models with "
+                    "manifest target stage, and the signal catalog inputs, all read from committed config at "
+                    "the register commit. Nothing live.",
+     "inputSchema": {"type": "object", "properties": {
+         "signals_limit": {"type": "integer", "minimum": 1, "maximum": 500, "default": 400}}}, "annotations": _RO},
     {"name": "performance", "title": "Performance",
      "description": "SIGN-IN ONLY. Per leg and book: trades, realized R and net P&L over 7d/30d/all with n and "
                     "pnl provenance; live-vs-backtest band; ML shadow/advisory metrics per model.",
@@ -113,7 +122,9 @@ def call_tool(name: str, args: dict[str, Any]) -> dict[str, Any]:
     if name == "work_rows":
         view = str(args.get("view") or "all")
         limit = _clamp(args.get("limit"), 1, 200, 25)
-        return CACHE.get(f"work_rows:{view}:{limit}", TTL_S["work_rows"], lambda: data.work_rows(REPO, view, limit))
+        offset = _clamp(args.get("offset"), 0, 100000, 0)
+        return CACHE.get(f"work_rows:{view}:{limit}:{offset}", TTL_S["work_rows"],
+                         lambda: data.work_rows(REPO, view, limit, offset=offset))
     if name == "inbox":
         limit = _clamp(args.get("limit"), 1, 200, 25)
         return CACHE.get(f"inbox:{limit}", TTL_S["inbox"], lambda: data.inbox(REPO, limit))
@@ -131,6 +142,9 @@ def call_tool(name: str, args: dict[str, Any]) -> dict[str, Any]:
     if name == "ml_roadmap":
         limit = _clamp(args.get("limit"), 1, 200, 60)
         return CACHE.get(f"ml_roadmap:{limit}", TTL_S[name], lambda: tabs.ml_roadmap(REPO, limit))
+    if name == "system_catalog":
+        lim = _clamp(args.get("signals_limit"), 1, 500, 400)
+        return CACHE.get(f"system_catalog:{lim}", TTL_S[name], lambda: tabs.system_catalog(REPO, lim))
     if name == "performance":
         return CACHE.get("performance", TTL_S[name], lambda: tabs.performance(REPO))
     if name == "system_health":
