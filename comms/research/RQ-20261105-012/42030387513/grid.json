@@ -1,0 +1,1114 @@
+{
+  "tool": "scripts/research/prop_ev_grid.py",
+  "sim": "scripts/research/prop_ev_sim.py",
+  "mode": "path",
+  "common": [
+    "--ruleset",
+    "config/prop_rulesets/breakout_turbo_1step.yaml",
+    "--costs",
+    "breakout",
+    "--funded-start",
+    "fresh",
+    "--swap-model",
+    "prorated"
+  ],
+  "arms": {
+    "A": [
+      "--sizing",
+      "balance",
+      "--risk-pct",
+      "0.010"
+    ],
+    "C-bal005": [
+      "--sizing",
+      "balance",
+      "--risk-pct",
+      "0.005"
+    ],
+    "C-bal015": [
+      "--sizing",
+      "balance",
+      "--risk-pct",
+      "0.015"
+    ],
+    "C-room033": [
+      "--sizing",
+      "room",
+      "--risk-pct",
+      "0.015",
+      "--room-frac",
+      "0.33"
+    ],
+    "C-room050": [
+      "--sizing",
+      "room",
+      "--risk-pct",
+      "0.015",
+      "--room-frac",
+      "0.50"
+    ]
+  },
+  "seeds": [
+    1,
+    2,
+    3,
+    4,
+    5
+  ],
+  "grade": "arms_pass_bar",
+  "overall": "all",
+  "legs": {
+    "tqqq_trend_long_1d": {
+      "trades_file": "comms/strategy_evidence/runs/2026-10-23-promo/tqqq_trend_long_1d__trades.jsonl",
+      "resolved_by": "evidence record comms/strategy_evidence/tqqq_trend_long_1d.json -> cost_stack.source",
+      "n_trades": 118
+    }
+  },
+  "cells": [
+    {
+      "leg": "tqqq_trend_long_1d",
+      "arm": "A",
+      "seed": 1,
+      "exit_code": 0,
+      "seconds": 273.1,
+      "argv": [
+        "scripts/research/prop_ev_sim.py",
+        "--trades",
+        "tqqq_trend_long_1d=comms/strategy_evidence/runs/2026-10-23-promo/tqqq_trend_long_1d__trades.jsonl",
+        "--ruleset",
+        "config/prop_rulesets/breakout_turbo_1step.yaml",
+        "--costs",
+        "breakout",
+        "--funded-start",
+        "fresh",
+        "--swap-model",
+        "prorated",
+        "--sizing",
+        "balance",
+        "--risk-pct",
+        "0.010",
+        "--seed",
+        "1",
+        "--out",
+        "/home/runner/work/JTA-Trader/JTA-Trader/comms/research/RQ-20261105-012/42030387513/sims/tqqq_trend_long_1d__A__seed1.json"
+      ],
+      "out": "comms/research/RQ-20261105-012/42030387513/sims/tqqq_trend_long_1d__A__seed1.json",
+      "stats": {
+        "ev": -19.15,
+        "ev_se": 0.16,
+        "p_net_positive": 0.01,
+        "p_alive_at_horizon": 0.786,
+        "p_pass_by_days": {
+          "30": 0.0,
+          "90": 0.0,
+          "180": 0.0
+        },
+        "rule_v2_verdict": "fail"
+      }
+    },
+    {
+      "leg": "tqqq_trend_long_1d",
+      "arm": "A",
+      "seed": 2,
+      "exit_code": 0,
+      "seconds": 270.1,
+      "argv": [
+        "scripts/research/prop_ev_sim.py",
+        "--trades",
+        "tqqq_trend_long_1d=comms/strategy_evidence/runs/2026-10-23-promo/tqqq_trend_long_1d__trades.jsonl",
+        "--ruleset",
+        "config/prop_rulesets/breakout_turbo_1step.yaml",
+        "--costs",
+        "breakout",
+        "--funded-start",
+        "fresh",
+        "--swap-model",
+        "prorated",
+        "--sizing",
+        "balance",
+        "--risk-pct",
+        "0.010",
+        "--seed",
+        "2",
+        "--out",
+        "/home/runner/work/JTA-Trader/JTA-Trader/comms/research/RQ-20261105-012/42030387513/sims/tqqq_trend_long_1d__A__seed2.json"
+      ],
+      "out": "comms/research/RQ-20261105-012/42030387513/sims/tqqq_trend_long_1d__A__seed2.json",
+      "stats": {
+        "ev": -19.16,
+        "ev_se": 0.15,
+        "p_net_positive": 0.0103,
+        "p_alive_at_horizon": 0.7943,
+        "p_pass_by_days": {
+          "30": 0.0,
+          "90": 0.0,
+          "180": 0.0
+        },
+        "rule_v2_verdict": "fail"
+      }
+    },
+    {
+      "leg": "tqqq_trend_long_1d",
+      "arm": "A",
+      "seed": 3,
+      "exit_code": 0,
+      "seconds": 258.2,
+      "argv": [
+        "scripts/research/prop_ev_sim.py",
+        "--trades",
+        "tqqq_trend_long_1d=comms/strategy_evidence/runs/2026-10-23-promo/tqqq_trend_long_1d__trades.jsonl",
+        "--ruleset",
+        "config/prop_rulesets/breakout_turbo_1step.yaml",
+        "--costs",
+        "breakout",
+        "--funded-start",
+        "fresh",
+        "--swap-model",
+        "prorated",
+        "--sizing",
+        "balance",
+        "--risk-pct",
+        "0.010",
+        "--seed",
+        "3",
+        "--out",
+        "/home/runner/work/JTA-Trader/JTA-Trader/comms/research/RQ-20261105-012/42030387513/sims/tqqq_trend_long_1d__A__seed3.json"
+      ],
+      "out": "comms/research/RQ-20261105-012/42030387513/sims/tqqq_trend_long_1d__A__seed3.json",
+      "stats": {
+        "ev": -19.1,
+        "ev_se": 0.16,
+        "p_net_positive": 0.0103,
+        "p_alive_at_horizon": 0.7923,
+        "p_pass_by_days": {
+          "30": 0.0,
+          "90": 0.0,
+          "180": 0.0
+        },
+        "rule_v2_verdict": "fail"
+      }
+    },
+    {
+      "leg": "tqqq_trend_long_1d",
+      "arm": "A",
+      "seed": 4,
+      "exit_code": 0,
+      "seconds": 248.8,
+      "argv": [
+        "scripts/research/prop_ev_sim.py",
+        "--trades",
+        "tqqq_trend_long_1d=comms/strategy_evidence/runs/2026-10-23-promo/tqqq_trend_long_1d__trades.jsonl",
+        "--ruleset",
+        "config/prop_rulesets/breakout_turbo_1step.yaml",
+        "--costs",
+        "breakout",
+        "--funded-start",
+        "fresh",
+        "--swap-model",
+        "prorated",
+        "--sizing",
+        "balance",
+        "--risk-pct",
+        "0.010",
+        "--seed",
+        "4",
+        "--out",
+        "/home/runner/work/JTA-Trader/JTA-Trader/comms/research/RQ-20261105-012/42030387513/sims/tqqq_trend_long_1d__A__seed4.json"
+      ],
+      "out": "comms/research/RQ-20261105-012/42030387513/sims/tqqq_trend_long_1d__A__seed4.json",
+      "stats": {
+        "ev": -19.16,
+        "ev_se": 0.15,
+        "p_net_positive": 0.0103,
+        "p_alive_at_horizon": 0.7823,
+        "p_pass_by_days": {
+          "30": 0.0,
+          "90": 0.0,
+          "180": 0.0
+        },
+        "rule_v2_verdict": "fail"
+      }
+    },
+    {
+      "leg": "tqqq_trend_long_1d",
+      "arm": "A",
+      "seed": 5,
+      "exit_code": 0,
+      "seconds": 263.0,
+      "argv": [
+        "scripts/research/prop_ev_sim.py",
+        "--trades",
+        "tqqq_trend_long_1d=comms/strategy_evidence/runs/2026-10-23-promo/tqqq_trend_long_1d__trades.jsonl",
+        "--ruleset",
+        "config/prop_rulesets/breakout_turbo_1step.yaml",
+        "--costs",
+        "breakout",
+        "--funded-start",
+        "fresh",
+        "--swap-model",
+        "prorated",
+        "--sizing",
+        "balance",
+        "--risk-pct",
+        "0.010",
+        "--seed",
+        "5",
+        "--out",
+        "/home/runner/work/JTA-Trader/JTA-Trader/comms/research/RQ-20261105-012/42030387513/sims/tqqq_trend_long_1d__A__seed5.json"
+      ],
+      "out": "comms/research/RQ-20261105-012/42030387513/sims/tqqq_trend_long_1d__A__seed5.json",
+      "stats": {
+        "ev": -18.77,
+        "ev_se": 0.18,
+        "p_net_positive": 0.0143,
+        "p_alive_at_horizon": 0.7887,
+        "p_pass_by_days": {
+          "30": 0.0,
+          "90": 0.0,
+          "180": 0.0
+        },
+        "rule_v2_verdict": "fail"
+      }
+    },
+    {
+      "leg": "tqqq_trend_long_1d",
+      "arm": "C-bal005",
+      "seed": 1,
+      "exit_code": 0,
+      "seconds": 290.9,
+      "argv": [
+        "scripts/research/prop_ev_sim.py",
+        "--trades",
+        "tqqq_trend_long_1d=comms/strategy_evidence/runs/2026-10-23-promo/tqqq_trend_long_1d__trades.jsonl",
+        "--ruleset",
+        "config/prop_rulesets/breakout_turbo_1step.yaml",
+        "--costs",
+        "breakout",
+        "--funded-start",
+        "fresh",
+        "--swap-model",
+        "prorated",
+        "--sizing",
+        "balance",
+        "--risk-pct",
+        "0.005",
+        "--seed",
+        "1",
+        "--out",
+        "/home/runner/work/JTA-Trader/JTA-Trader/comms/research/RQ-20261105-012/42030387513/sims/tqqq_trend_long_1d__C-bal005__seed1.json"
+      ],
+      "out": "comms/research/RQ-20261105-012/42030387513/sims/tqqq_trend_long_1d__C-bal005__seed1.json",
+      "stats": {
+        "ev": -20.0,
+        "ev_se": 0.0,
+        "p_net_positive": 0.0,
+        "p_alive_at_horizon": 0.9722,
+        "p_pass_by_days": {
+          "30": 0.0,
+          "90": 0.0,
+          "180": 0.0
+        },
+        "rule_v2_verdict": "fail"
+      }
+    },
+    {
+      "leg": "tqqq_trend_long_1d",
+      "arm": "C-bal005",
+      "seed": 2,
+      "exit_code": 0,
+      "seconds": 287.2,
+      "argv": [
+        "scripts/research/prop_ev_sim.py",
+        "--trades",
+        "tqqq_trend_long_1d=comms/strategy_evidence/runs/2026-10-23-promo/tqqq_trend_long_1d__trades.jsonl",
+        "--ruleset",
+        "config/prop_rulesets/breakout_turbo_1step.yaml",
+        "--costs",
+        "breakout",
+        "--funded-start",
+        "fresh",
+        "--swap-model",
+        "prorated",
+        "--sizing",
+        "balance",
+        "--risk-pct",
+        "0.005",
+        "--seed",
+        "2",
+        "--out",
+        "/home/runner/work/JTA-Trader/JTA-Trader/comms/research/RQ-20261105-012/42030387513/sims/tqqq_trend_long_1d__C-bal005__seed2.json"
+      ],
+      "out": "comms/research/RQ-20261105-012/42030387513/sims/tqqq_trend_long_1d__C-bal005__seed2.json",
+      "stats": {
+        "ev": -20.0,
+        "ev_se": 0.0,
+        "p_net_positive": 0.0,
+        "p_alive_at_horizon": 0.9752,
+        "p_pass_by_days": {
+          "30": 0.0,
+          "90": 0.0,
+          "180": 0.0
+        },
+        "rule_v2_verdict": "fail"
+      }
+    },
+    {
+      "leg": "tqqq_trend_long_1d",
+      "arm": "C-bal005",
+      "seed": 3,
+      "exit_code": 0,
+      "seconds": 287.0,
+      "argv": [
+        "scripts/research/prop_ev_sim.py",
+        "--trades",
+        "tqqq_trend_long_1d=comms/strategy_evidence/runs/2026-10-23-promo/tqqq_trend_long_1d__trades.jsonl",
+        "--ruleset",
+        "config/prop_rulesets/breakout_turbo_1step.yaml",
+        "--costs",
+        "breakout",
+        "--funded-start",
+        "fresh",
+        "--swap-model",
+        "prorated",
+        "--sizing",
+        "balance",
+        "--risk-pct",
+        "0.005",
+        "--seed",
+        "3",
+        "--out",
+        "/home/runner/work/JTA-Trader/JTA-Trader/comms/research/RQ-20261105-012/42030387513/sims/tqqq_trend_long_1d__C-bal005__seed3.json"
+      ],
+      "out": "comms/research/RQ-20261105-012/42030387513/sims/tqqq_trend_long_1d__C-bal005__seed3.json",
+      "stats": {
+        "ev": -20.0,
+        "ev_se": 0.0,
+        "p_net_positive": 0.0,
+        "p_alive_at_horizon": 0.9778,
+        "p_pass_by_days": {
+          "30": 0.0,
+          "90": 0.0,
+          "180": 0.0
+        },
+        "rule_v2_verdict": "fail"
+      }
+    },
+    {
+      "leg": "tqqq_trend_long_1d",
+      "arm": "C-bal005",
+      "seed": 4,
+      "exit_code": 0,
+      "seconds": 283.9,
+      "argv": [
+        "scripts/research/prop_ev_sim.py",
+        "--trades",
+        "tqqq_trend_long_1d=comms/strategy_evidence/runs/2026-10-23-promo/tqqq_trend_long_1d__trades.jsonl",
+        "--ruleset",
+        "config/prop_rulesets/breakout_turbo_1step.yaml",
+        "--costs",
+        "breakout",
+        "--funded-start",
+        "fresh",
+        "--swap-model",
+        "prorated",
+        "--sizing",
+        "balance",
+        "--risk-pct",
+        "0.005",
+        "--seed",
+        "4",
+        "--out",
+        "/home/runner/work/JTA-Trader/JTA-Trader/comms/research/RQ-20261105-012/42030387513/sims/tqqq_trend_long_1d__C-bal005__seed4.json"
+      ],
+      "out": "comms/research/RQ-20261105-012/42030387513/sims/tqqq_trend_long_1d__C-bal005__seed4.json",
+      "stats": {
+        "ev": -20.0,
+        "ev_se": 0.0,
+        "p_net_positive": 0.0,
+        "p_alive_at_horizon": 0.9765,
+        "p_pass_by_days": {
+          "30": 0.0,
+          "90": 0.0,
+          "180": 0.0
+        },
+        "rule_v2_verdict": "fail"
+      }
+    },
+    {
+      "leg": "tqqq_trend_long_1d",
+      "arm": "C-bal005",
+      "seed": 5,
+      "exit_code": 0,
+      "seconds": 281.3,
+      "argv": [
+        "scripts/research/prop_ev_sim.py",
+        "--trades",
+        "tqqq_trend_long_1d=comms/strategy_evidence/runs/2026-10-23-promo/tqqq_trend_long_1d__trades.jsonl",
+        "--ruleset",
+        "config/prop_rulesets/breakout_turbo_1step.yaml",
+        "--costs",
+        "breakout",
+        "--funded-start",
+        "fresh",
+        "--swap-model",
+        "prorated",
+        "--sizing",
+        "balance",
+        "--risk-pct",
+        "0.005",
+        "--seed",
+        "5",
+        "--out",
+        "/home/runner/work/JTA-Trader/JTA-Trader/comms/research/RQ-20261105-012/42030387513/sims/tqqq_trend_long_1d__C-bal005__seed5.json"
+      ],
+      "out": "comms/research/RQ-20261105-012/42030387513/sims/tqqq_trend_long_1d__C-bal005__seed5.json",
+      "stats": {
+        "ev": -20.0,
+        "ev_se": 0.0,
+        "p_net_positive": 0.0,
+        "p_alive_at_horizon": 0.9752,
+        "p_pass_by_days": {
+          "30": 0.0,
+          "90": 0.0,
+          "180": 0.0
+        },
+        "rule_v2_verdict": "fail"
+      }
+    },
+    {
+      "leg": "tqqq_trend_long_1d",
+      "arm": "C-bal015",
+      "seed": 1,
+      "exit_code": 0,
+      "seconds": 210.9,
+      "argv": [
+        "scripts/research/prop_ev_sim.py",
+        "--trades",
+        "tqqq_trend_long_1d=comms/strategy_evidence/runs/2026-10-23-promo/tqqq_trend_long_1d__trades.jsonl",
+        "--ruleset",
+        "config/prop_rulesets/breakout_turbo_1step.yaml",
+        "--costs",
+        "breakout",
+        "--funded-start",
+        "fresh",
+        "--swap-model",
+        "prorated",
+        "--sizing",
+        "balance",
+        "--risk-pct",
+        "0.015",
+        "--seed",
+        "1",
+        "--out",
+        "/home/runner/work/JTA-Trader/JTA-Trader/comms/research/RQ-20261105-012/42030387513/sims/tqqq_trend_long_1d__C-bal015__seed1.json"
+      ],
+      "out": "comms/research/RQ-20261105-012/42030387513/sims/tqqq_trend_long_1d__C-bal015__seed1.json",
+      "stats": {
+        "ev": -9.33,
+        "ev_se": 0.68,
+        "p_net_positive": 0.0823,
+        "p_alive_at_horizon": 0.5825,
+        "p_pass_by_days": {
+          "30": 0.0,
+          "90": 0.0,
+          "180": 0.0015
+        },
+        "rule_v2_verdict": "indeterminate"
+      }
+    },
+    {
+      "leg": "tqqq_trend_long_1d",
+      "arm": "C-bal015",
+      "seed": 2,
+      "exit_code": 0,
+      "seconds": 209.4,
+      "argv": [
+        "scripts/research/prop_ev_sim.py",
+        "--trades",
+        "tqqq_trend_long_1d=comms/strategy_evidence/runs/2026-10-23-promo/tqqq_trend_long_1d__trades.jsonl",
+        "--ruleset",
+        "config/prop_rulesets/breakout_turbo_1step.yaml",
+        "--costs",
+        "breakout",
+        "--funded-start",
+        "fresh",
+        "--swap-model",
+        "prorated",
+        "--sizing",
+        "balance",
+        "--risk-pct",
+        "0.015",
+        "--seed",
+        "2",
+        "--out",
+        "/home/runner/work/JTA-Trader/JTA-Trader/comms/research/RQ-20261105-012/42030387513/sims/tqqq_trend_long_1d__C-bal015__seed2.json"
+      ],
+      "out": "comms/research/RQ-20261105-012/42030387513/sims/tqqq_trend_long_1d__C-bal015__seed2.json",
+      "stats": {
+        "ev": -9.08,
+        "ev_se": 0.69,
+        "p_net_positive": 0.0862,
+        "p_alive_at_horizon": 0.598,
+        "p_pass_by_days": {
+          "30": 0.0,
+          "90": 0.0,
+          "180": 0.0008
+        },
+        "rule_v2_verdict": "indeterminate"
+      }
+    },
+    {
+      "leg": "tqqq_trend_long_1d",
+      "arm": "C-bal015",
+      "seed": 3,
+      "exit_code": 0,
+      "seconds": 242.8,
+      "argv": [
+        "scripts/research/prop_ev_sim.py",
+        "--trades",
+        "tqqq_trend_long_1d=comms/strategy_evidence/runs/2026-10-23-promo/tqqq_trend_long_1d__trades.jsonl",
+        "--ruleset",
+        "config/prop_rulesets/breakout_turbo_1step.yaml",
+        "--costs",
+        "breakout",
+        "--funded-start",
+        "fresh",
+        "--swap-model",
+        "prorated",
+        "--sizing",
+        "balance",
+        "--risk-pct",
+        "0.015",
+        "--seed",
+        "3",
+        "--out",
+        "/home/runner/work/JTA-Trader/JTA-Trader/comms/research/RQ-20261105-012/42030387513/sims/tqqq_trend_long_1d__C-bal015__seed3.json"
+      ],
+      "out": "comms/research/RQ-20261105-012/42030387513/sims/tqqq_trend_long_1d__C-bal015__seed3.json",
+      "stats": {
+        "ev": -9.35,
+        "ev_se": 0.67,
+        "p_net_positive": 0.0848,
+        "p_alive_at_horizon": 0.5817,
+        "p_pass_by_days": {
+          "30": 0.0,
+          "90": 0.0,
+          "180": 0.0015
+        },
+        "rule_v2_verdict": "indeterminate"
+      }
+    },
+    {
+      "leg": "tqqq_trend_long_1d",
+      "arm": "C-bal015",
+      "seed": 4,
+      "exit_code": 0,
+      "seconds": 220.8,
+      "argv": [
+        "scripts/research/prop_ev_sim.py",
+        "--trades",
+        "tqqq_trend_long_1d=comms/strategy_evidence/runs/2026-10-23-promo/tqqq_trend_long_1d__trades.jsonl",
+        "--ruleset",
+        "config/prop_rulesets/breakout_turbo_1step.yaml",
+        "--costs",
+        "breakout",
+        "--funded-start",
+        "fresh",
+        "--swap-model",
+        "prorated",
+        "--sizing",
+        "balance",
+        "--risk-pct",
+        "0.015",
+        "--seed",
+        "4",
+        "--out",
+        "/home/runner/work/JTA-Trader/JTA-Trader/comms/research/RQ-20261105-012/42030387513/sims/tqqq_trend_long_1d__C-bal015__seed4.json"
+      ],
+      "out": "comms/research/RQ-20261105-012/42030387513/sims/tqqq_trend_long_1d__C-bal015__seed4.json",
+      "stats": {
+        "ev": -9.78,
+        "ev_se": 0.65,
+        "p_net_positive": 0.0848,
+        "p_alive_at_horizon": 0.591,
+        "p_pass_by_days": {
+          "30": 0.0,
+          "90": 0.0,
+          "180": 0.0005
+        },
+        "rule_v2_verdict": "indeterminate"
+      }
+    },
+    {
+      "leg": "tqqq_trend_long_1d",
+      "arm": "C-bal015",
+      "seed": 5,
+      "exit_code": 0,
+      "seconds": 232.0,
+      "argv": [
+        "scripts/research/prop_ev_sim.py",
+        "--trades",
+        "tqqq_trend_long_1d=comms/strategy_evidence/runs/2026-10-23-promo/tqqq_trend_long_1d__trades.jsonl",
+        "--ruleset",
+        "config/prop_rulesets/breakout_turbo_1step.yaml",
+        "--costs",
+        "breakout",
+        "--funded-start",
+        "fresh",
+        "--swap-model",
+        "prorated",
+        "--sizing",
+        "balance",
+        "--risk-pct",
+        "0.015",
+        "--seed",
+        "5",
+        "--out",
+        "/home/runner/work/JTA-Trader/JTA-Trader/comms/research/RQ-20261105-012/42030387513/sims/tqqq_trend_long_1d__C-bal015__seed5.json"
+      ],
+      "out": "comms/research/RQ-20261105-012/42030387513/sims/tqqq_trend_long_1d__C-bal015__seed5.json",
+      "stats": {
+        "ev": -9.3,
+        "ev_se": 0.68,
+        "p_net_positive": 0.0815,
+        "p_alive_at_horizon": 0.6025,
+        "p_pass_by_days": {
+          "30": 0.0,
+          "90": 0.0,
+          "180": 0.0015
+        },
+        "rule_v2_verdict": "indeterminate"
+      }
+    },
+    {
+      "leg": "tqqq_trend_long_1d",
+      "arm": "C-room033",
+      "seed": 1,
+      "exit_code": 0,
+      "seconds": 370.0,
+      "argv": [
+        "scripts/research/prop_ev_sim.py",
+        "--trades",
+        "tqqq_trend_long_1d=comms/strategy_evidence/runs/2026-10-23-promo/tqqq_trend_long_1d__trades.jsonl",
+        "--ruleset",
+        "config/prop_rulesets/breakout_turbo_1step.yaml",
+        "--costs",
+        "breakout",
+        "--funded-start",
+        "fresh",
+        "--swap-model",
+        "prorated",
+        "--sizing",
+        "room",
+        "--risk-pct",
+        "0.015",
+        "--room-frac",
+        "0.33",
+        "--seed",
+        "1",
+        "--out",
+        "/home/runner/work/JTA-Trader/JTA-Trader/comms/research/RQ-20261105-012/42030387513/sims/tqqq_trend_long_1d__C-room033__seed1.json"
+      ],
+      "out": "comms/research/RQ-20261105-012/42030387513/sims/tqqq_trend_long_1d__C-room033__seed1.json",
+      "stats": {
+        "ev": -19.22,
+        "ev_se": 0.14,
+        "p_net_positive": 0.0103,
+        "p_alive_at_horizon": 1.0,
+        "p_pass_by_days": {
+          "30": 0.0,
+          "90": 0.0,
+          "180": 0.0
+        },
+        "rule_v2_verdict": "fail"
+      }
+    },
+    {
+      "leg": "tqqq_trend_long_1d",
+      "arm": "C-room033",
+      "seed": 2,
+      "exit_code": 0,
+      "seconds": 379.6,
+      "argv": [
+        "scripts/research/prop_ev_sim.py",
+        "--trades",
+        "tqqq_trend_long_1d=comms/strategy_evidence/runs/2026-10-23-promo/tqqq_trend_long_1d__trades.jsonl",
+        "--ruleset",
+        "config/prop_rulesets/breakout_turbo_1step.yaml",
+        "--costs",
+        "breakout",
+        "--funded-start",
+        "fresh",
+        "--swap-model",
+        "prorated",
+        "--sizing",
+        "room",
+        "--risk-pct",
+        "0.015",
+        "--room-frac",
+        "0.33",
+        "--seed",
+        "2",
+        "--out",
+        "/home/runner/work/JTA-Trader/JTA-Trader/comms/research/RQ-20261105-012/42030387513/sims/tqqq_trend_long_1d__C-room033__seed2.json"
+      ],
+      "out": "comms/research/RQ-20261105-012/42030387513/sims/tqqq_trend_long_1d__C-room033__seed2.json",
+      "stats": {
+        "ev": -19.33,
+        "ev_se": 0.13,
+        "p_net_positive": 0.0085,
+        "p_alive_at_horizon": 1.0,
+        "p_pass_by_days": {
+          "30": 0.0,
+          "90": 0.0,
+          "180": 0.0
+        },
+        "rule_v2_verdict": "fail"
+      }
+    },
+    {
+      "leg": "tqqq_trend_long_1d",
+      "arm": "C-room033",
+      "seed": 3,
+      "exit_code": 0,
+      "seconds": 290.6,
+      "argv": [
+        "scripts/research/prop_ev_sim.py",
+        "--trades",
+        "tqqq_trend_long_1d=comms/strategy_evidence/runs/2026-10-23-promo/tqqq_trend_long_1d__trades.jsonl",
+        "--ruleset",
+        "config/prop_rulesets/breakout_turbo_1step.yaml",
+        "--costs",
+        "breakout",
+        "--funded-start",
+        "fresh",
+        "--swap-model",
+        "prorated",
+        "--sizing",
+        "room",
+        "--risk-pct",
+        "0.015",
+        "--room-frac",
+        "0.33",
+        "--seed",
+        "3",
+        "--out",
+        "/home/runner/work/JTA-Trader/JTA-Trader/comms/research/RQ-20261105-012/42030387513/sims/tqqq_trend_long_1d__C-room033__seed3.json"
+      ],
+      "out": "comms/research/RQ-20261105-012/42030387513/sims/tqqq_trend_long_1d__C-room033__seed3.json",
+      "stats": {
+        "ev": -19.49,
+        "ev_se": 0.12,
+        "p_net_positive": 0.0055,
+        "p_alive_at_horizon": 1.0,
+        "p_pass_by_days": {
+          "30": 0.0,
+          "90": 0.0,
+          "180": 0.0
+        },
+        "rule_v2_verdict": "fail"
+      }
+    },
+    {
+      "leg": "tqqq_trend_long_1d",
+      "arm": "C-room033",
+      "seed": 4,
+      "exit_code": 0,
+      "seconds": 294.1,
+      "argv": [
+        "scripts/research/prop_ev_sim.py",
+        "--trades",
+        "tqqq_trend_long_1d=comms/strategy_evidence/runs/2026-10-23-promo/tqqq_trend_long_1d__trades.jsonl",
+        "--ruleset",
+        "config/prop_rulesets/breakout_turbo_1step.yaml",
+        "--costs",
+        "breakout",
+        "--funded-start",
+        "fresh",
+        "--swap-model",
+        "prorated",
+        "--sizing",
+        "room",
+        "--risk-pct",
+        "0.015",
+        "--room-frac",
+        "0.33",
+        "--seed",
+        "4",
+        "--out",
+        "/home/runner/work/JTA-Trader/JTA-Trader/comms/research/RQ-20261105-012/42030387513/sims/tqqq_trend_long_1d__C-room033__seed4.json"
+      ],
+      "out": "comms/research/RQ-20261105-012/42030387513/sims/tqqq_trend_long_1d__C-room033__seed4.json",
+      "stats": {
+        "ev": -19.43,
+        "ev_se": 0.12,
+        "p_net_positive": 0.0075,
+        "p_alive_at_horizon": 1.0,
+        "p_pass_by_days": {
+          "30": 0.0,
+          "90": 0.0,
+          "180": 0.0
+        },
+        "rule_v2_verdict": "fail"
+      }
+    },
+    {
+      "leg": "tqqq_trend_long_1d",
+      "arm": "C-room033",
+      "seed": 5,
+      "exit_code": 0,
+      "seconds": 301.5,
+      "argv": [
+        "scripts/research/prop_ev_sim.py",
+        "--trades",
+        "tqqq_trend_long_1d=comms/strategy_evidence/runs/2026-10-23-promo/tqqq_trend_long_1d__trades.jsonl",
+        "--ruleset",
+        "config/prop_rulesets/breakout_turbo_1step.yaml",
+        "--costs",
+        "breakout",
+        "--funded-start",
+        "fresh",
+        "--swap-model",
+        "prorated",
+        "--sizing",
+        "room",
+        "--risk-pct",
+        "0.015",
+        "--room-frac",
+        "0.33",
+        "--seed",
+        "5",
+        "--out",
+        "/home/runner/work/JTA-Trader/JTA-Trader/comms/research/RQ-20261105-012/42030387513/sims/tqqq_trend_long_1d__C-room033__seed5.json"
+      ],
+      "out": "comms/research/RQ-20261105-012/42030387513/sims/tqqq_trend_long_1d__C-room033__seed5.json",
+      "stats": {
+        "ev": -19.36,
+        "ev_se": 0.11,
+        "p_net_positive": 0.01,
+        "p_alive_at_horizon": 1.0,
+        "p_pass_by_days": {
+          "30": 0.0,
+          "90": 0.0,
+          "180": 0.0
+        },
+        "rule_v2_verdict": "fail"
+      }
+    },
+    {
+      "leg": "tqqq_trend_long_1d",
+      "arm": "C-room050",
+      "seed": 1,
+      "exit_code": 0,
+      "seconds": 306.3,
+      "argv": [
+        "scripts/research/prop_ev_sim.py",
+        "--trades",
+        "tqqq_trend_long_1d=comms/strategy_evidence/runs/2026-10-23-promo/tqqq_trend_long_1d__trades.jsonl",
+        "--ruleset",
+        "config/prop_rulesets/breakout_turbo_1step.yaml",
+        "--costs",
+        "breakout",
+        "--funded-start",
+        "fresh",
+        "--swap-model",
+        "prorated",
+        "--sizing",
+        "room",
+        "--risk-pct",
+        "0.015",
+        "--room-frac",
+        "0.50",
+        "--seed",
+        "1",
+        "--out",
+        "/home/runner/work/JTA-Trader/JTA-Trader/comms/research/RQ-20261105-012/42030387513/sims/tqqq_trend_long_1d__C-room050__seed1.json"
+      ],
+      "out": "comms/research/RQ-20261105-012/42030387513/sims/tqqq_trend_long_1d__C-room050__seed1.json",
+      "stats": {
+        "ev": -11.71,
+        "ev_se": 0.57,
+        "p_net_positive": 0.0685,
+        "p_alive_at_horizon": 1.0,
+        "p_pass_by_days": {
+          "30": 0.0,
+          "90": 0.0,
+          "180": 0.0013
+        },
+        "rule_v2_verdict": "fail"
+      }
+    },
+    {
+      "leg": "tqqq_trend_long_1d",
+      "arm": "C-room050",
+      "seed": 2,
+      "exit_code": 0,
+      "seconds": 363.5,
+      "argv": [
+        "scripts/research/prop_ev_sim.py",
+        "--trades",
+        "tqqq_trend_long_1d=comms/strategy_evidence/runs/2026-10-23-promo/tqqq_trend_long_1d__trades.jsonl",
+        "--ruleset",
+        "config/prop_rulesets/breakout_turbo_1step.yaml",
+        "--costs",
+        "breakout",
+        "--funded-start",
+        "fresh",
+        "--swap-model",
+        "prorated",
+        "--sizing",
+        "room",
+        "--risk-pct",
+        "0.015",
+        "--room-frac",
+        "0.50",
+        "--seed",
+        "2",
+        "--out",
+        "/home/runner/work/JTA-Trader/JTA-Trader/comms/research/RQ-20261105-012/42030387513/sims/tqqq_trend_long_1d__C-room050__seed2.json"
+      ],
+      "out": "comms/research/RQ-20261105-012/42030387513/sims/tqqq_trend_long_1d__C-room050__seed2.json",
+      "stats": {
+        "ev": -12.01,
+        "ev_se": 0.59,
+        "p_net_positive": 0.0648,
+        "p_alive_at_horizon": 1.0,
+        "p_pass_by_days": {
+          "30": 0.0,
+          "90": 0.0,
+          "180": 0.0008
+        },
+        "rule_v2_verdict": "fail"
+      }
+    },
+    {
+      "leg": "tqqq_trend_long_1d",
+      "arm": "C-room050",
+      "seed": 3,
+      "exit_code": 0,
+      "seconds": 337.7,
+      "argv": [
+        "scripts/research/prop_ev_sim.py",
+        "--trades",
+        "tqqq_trend_long_1d=comms/strategy_evidence/runs/2026-10-23-promo/tqqq_trend_long_1d__trades.jsonl",
+        "--ruleset",
+        "config/prop_rulesets/breakout_turbo_1step.yaml",
+        "--costs",
+        "breakout",
+        "--funded-start",
+        "fresh",
+        "--swap-model",
+        "prorated",
+        "--sizing",
+        "room",
+        "--risk-pct",
+        "0.015",
+        "--room-frac",
+        "0.50",
+        "--seed",
+        "3",
+        "--out",
+        "/home/runner/work/JTA-Trader/JTA-Trader/comms/research/RQ-20261105-012/42030387513/sims/tqqq_trend_long_1d__C-room050__seed3.json"
+      ],
+      "out": "comms/research/RQ-20261105-012/42030387513/sims/tqqq_trend_long_1d__C-room050__seed3.json",
+      "stats": {
+        "ev": -11.6,
+        "ev_se": 0.58,
+        "p_net_positive": 0.0693,
+        "p_alive_at_horizon": 1.0,
+        "p_pass_by_days": {
+          "30": 0.0,
+          "90": 0.0,
+          "180": 0.001
+        },
+        "rule_v2_verdict": "indeterminate"
+      }
+    },
+    {
+      "leg": "tqqq_trend_long_1d",
+      "arm": "C-room050",
+      "seed": 4,
+      "exit_code": 0,
+      "seconds": 254.1,
+      "argv": [
+        "scripts/research/prop_ev_sim.py",
+        "--trades",
+        "tqqq_trend_long_1d=comms/strategy_evidence/runs/2026-10-23-promo/tqqq_trend_long_1d__trades.jsonl",
+        "--ruleset",
+        "config/prop_rulesets/breakout_turbo_1step.yaml",
+        "--costs",
+        "breakout",
+        "--funded-start",
+        "fresh",
+        "--swap-model",
+        "prorated",
+        "--sizing",
+        "room",
+        "--risk-pct",
+        "0.015",
+        "--room-frac",
+        "0.50",
+        "--seed",
+        "4",
+        "--out",
+        "/home/runner/work/JTA-Trader/JTA-Trader/comms/research/RQ-20261105-012/42030387513/sims/tqqq_trend_long_1d__C-room050__seed4.json"
+      ],
+      "out": "comms/research/RQ-20261105-012/42030387513/sims/tqqq_trend_long_1d__C-room050__seed4.json",
+      "stats": {
+        "ev": -11.91,
+        "ev_se": 0.57,
+        "p_net_positive": 0.068,
+        "p_alive_at_horizon": 1.0,
+        "p_pass_by_days": {
+          "30": 0.0,
+          "90": 0.0,
+          "180": 0.0005
+        },
+        "rule_v2_verdict": "indeterminate"
+      }
+    },
+    {
+      "leg": "tqqq_trend_long_1d",
+      "arm": "C-room050",
+      "seed": 5,
+      "exit_code": 0,
+      "seconds": 214.7,
+      "argv": [
+        "scripts/research/prop_ev_sim.py",
+        "--trades",
+        "tqqq_trend_long_1d=comms/strategy_evidence/runs/2026-10-23-promo/tqqq_trend_long_1d__trades.jsonl",
+        "--ruleset",
+        "config/prop_rulesets/breakout_turbo_1step.yaml",
+        "--costs",
+        "breakout",
+        "--funded-start",
+        "fresh",
+        "--swap-model",
+        "prorated",
+        "--sizing",
+        "room",
+        "--risk-pct",
+        "0.015",
+        "--room-frac",
+        "0.50",
+        "--seed",
+        "5",
+        "--out",
+        "/home/runner/work/JTA-Trader/JTA-Trader/comms/research/RQ-20261105-012/42030387513/sims/tqqq_trend_long_1d__C-room050__seed5.json"
+      ],
+      "out": "comms/research/RQ-20261105-012/42030387513/sims/tqqq_trend_long_1d__C-room050__seed5.json",
+      "stats": {
+        "ev": -10.98,
+        "ev_se": 0.6,
+        "p_net_positive": 0.0752,
+        "p_alive_at_horizon": 1.0,
+        "p_pass_by_days": {
+          "30": 0.0,
+          "90": 0.0,
+          "180": 0.0008
+        },
+        "rule_v2_verdict": "indeterminate"
+      }
+    }
+  ]
+}

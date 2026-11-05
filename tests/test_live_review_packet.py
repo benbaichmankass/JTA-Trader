@@ -686,3 +686,103 @@ def test_a_packet_that_saw_nothing_is_could_not_look():
     g = L
     h = g.packet_health(_pk(None, mechanics={"verdict": "could_not_look", "evidence": "x"}))
     assert h["status"] == "could_not_look"
+
+
+# --- LTR-MECH-PROP-MIRROR-BRACKET (2026-11-05) ------------------------------------------------------------------
+# LR-20261105T1228Z-pkg-3245fc73e2f64536 read "mismatch: this package's own SL/TP leg is not resting" for
+# trend_donchian_eth_prop on bybit_1. Venue order history: its own SL leg b372d2f8 (trigger 2408.18, qty 14.12)
+# rested from 2026-11-04T15:00:31Z and FILLED at 2026-11-05T12:27:21Z; Bybit OCO-cancelled its TP. The L0 snapshot
+# was 12:27:45Z. The bracket was intact and fired; the packet had no way to see that.
+
+ETHP, ETHD, ETHE = "pkg-3245fc73e2f64536", "pkg-b76b0655d305485e", "pkg-e3a1aff66ea74ecc"
+
+
+def _eth_snap(history=None, prop_status="open", tel_open=False):
+    acct = {"accounts": [{"account_id": "bybit_1", "read_state": "orders_read", "result": {
+        "positions": [{"symbol": "ETHUSDT", "side": "Buy", "size": 10.42, "position_idx": 1}],
+        "orders": [
+            {"symbol": "ETHUSDT", "side": "Sell", "order_id": "ecc0e4a1", "stop_order_type": "PartialStopLoss", "trigger_price": 2384.63},
+            {"symbol": "ETHUSDT", "side": "Sell", "order_id": "c93a1351", "stop_order_type": "PartialTakeProfit", "trigger_price": 2509.58},
+            {"symbol": "ETHUSDT", "side": "Sell", "order_id": "a2e7b2aa", "stop_order_type": "PartialStopLoss", "trigger_price": 2367.11},
+            {"symbol": "ETHUSDT", "side": "Sell", "order_id": "31fdf2d8", "stop_order_type": "PartialTakeProfit", "trigger_price": 2677.03}]}}]}
+    reads = {"bybit_orders": acct}
+    if tel_open:
+        reads["telemetry"] = {"rows": [{"order_package_id": ETHP, "account_id": "bybit_1", "lifecycle": "open"}]}
+    if history is not None:
+        reads[L._bybit_history_key("bybit_1", "ETHUSDT")] = history
+    s = _snap(**reads)
+    for pid, st, sl, tp, tid, q, sl_id, tp_id in (
+            (ETHP, prop_status, "2408.177", "2614.91664", 6886, 14.12, "b372d2f8", "51f83d61"),
+            (ETHD, "open", "2367.11035714", "2677.03212", 6888, 0.11, "a2e7b2aa", "31fdf2d8"),
+            (ETHE, "open", "2384.6282142857144", "2509.5835714285718", 6890, 10.31, "ecc0e4a1", "c93a1351")):
+        s.packages[pid] = {"order_package_id": pid, "strategy_name": "x", "symbol": "ETHUSDT", "direction": "long",
+                           "entry": "2400", "sl": sl, "tp": tp, "status": "open", "meta": "{}"}
+        s.trades.append({"id": tid, "order_package_id": pid, "account_id": "bybit_1", "status": st,
+                         "symbol": "ETHUSDT", "position_size": q, "account_class": "paper",
+                         "created_at": "2026-11-04T15:00:32+00:00",
+                         "exit_reason": "netting_attributed" if st == "closed" else None,
+                         "closed_at": "2026-11-05T12:27:38+00:00" if st == "closed" else None,
+                         "sl_order_id": sl_id, "tp_order_id": tp_id})
+    return s
+
+
+def _hist(sl_status, tp_status, sl_cancel="UNKNOWN", tp_cancel="CancelByOCOTpCanceledBySlTriggered"):
+    return {"read_state": "order_history_read", "result": {"records": [
+        {"order_id": "b372d2f8", "order_status": sl_status, "cancel_type": sl_cancel, "trigger_price": "2408.18",
+         "avg_price": "2408.02" if sl_status == "Filled" else "", "updated_time": "1793881641052"},
+        {"order_id": "51f83d61", "order_status": tp_status, "cancel_type": tp_cancel, "trigger_price": "2614.92",
+         "avg_price": "", "updated_time": "1793881641052"}]}}
+
+
+def _cfg():
+    return {"bybit_1": {"exchange": "bybit", "account_class": "paper"}}
+
+
+def test_eth_prop_fired_sl_is_not_a_lost_bracket():
+    m = _build(ETHP, _eth_snap(_hist("Filled", "Deactivated")), cfg=_cfg())["mechanics"]
+    assert m["verdict"] == "match", m
+    assert "own SL leg b372d2f8 FILLED at the venue at 2026-11-05T12:27:21Z" in m["evidence"]
+    assert "CancelByOCOTpCanceledBySlTriggered" in m["evidence"]
+    assert "NETTED across 3 open packages" in m["evidence"]
+
+
+def test_eth_prop_cancelled_own_legs_on_an_open_trade_are_a_mismatch():
+    m = _build(ETHP, _eth_snap(_hist("Deactivated", "Deactivated", "CancelByUser", "CancelByUser")),
+               cfg=_cfg())["mechanics"]
+    assert m["verdict"] == "mismatch", m
+    assert "own SL leg b372d2f8 is Deactivated (CancelByUser)" in m["evidence"]
+    assert "removed at the venue, not consumed" in m["evidence"]
+
+
+def test_eth_prop_without_history_keeps_the_mismatch_and_names_netting():
+    m = _build(ETHP, _eth_snap(None), cfg=_cfg())["mechanics"]
+    assert m["verdict"] == "mismatch", m
+    assert "NETTED across 3 open packages" in m["evidence"]
+
+
+def test_sibling_with_its_own_resting_legs_still_matches_on_the_netted_book():
+    m = _build(ETHD, _eth_snap(None), cfg=_cfg())["mechanics"]
+    assert m["verdict"] == "match", m
+    assert "NETTED" in m["evidence"]
+
+
+def test_telemetry_open_does_not_override_a_closed_journal_row():
+    s = _eth_snap(None, prop_status="closed", tel_open=True)
+    s.packages[ETHP]["status"] = "open"  # the package cascade lags too
+    m = _build(ETHP, s, cfg=_cfg())["mechanics"]
+    assert m["verdict"] == "match", m
+    assert "journal trade 6886 is closed (netting_attributed" in m["evidence"]
+
+
+def test_collect_reads_history_only_where_an_own_leg_is_not_resting():
+    s = _eth_snap(None)
+    calls = []
+
+    def diag(path):
+        calls.append(path)
+        return _hist("Filled", "Deactivated")
+    L._read_consumed_bybit_legs(s, {ETHP, ETHD, ETHE}, diag)
+    assert len(calls) == 1 and calls[0].startswith("bybit_raw_order_history?account_id=bybit_1&symbol=ETHUSDT")
+    calls.clear()
+    L._read_consumed_bybit_legs(s, {ETHD, ETHE}, diag)
+    assert calls == []
