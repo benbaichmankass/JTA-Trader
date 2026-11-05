@@ -123,3 +123,27 @@ def test_work_rows_serves_week_lane_roadmap_writeback_and_undated_rows(monkeypat
     assert b["roadmap"] == "none: planning lane"
     assert "E" not in {r["id"] for r in allrows}                   # done rows are not live
     assert data.work_rows(tmp_path, "open_other", 50)["sections"].keys() == {"open_other"}
+
+
+def test_work_rows_offset_pages_a_section_to_completion(monkeypatch, tmp_path):
+    rows = [{"id": f"R{i:03d}", "title": "t", "state": "queued"} for i in range(7)]  # 7 undated queued -> open_other
+    monkeypatch.setattr(data, "_load_checklist", lambda repo: {"items": rows})
+    seen, off, guard = [], 0, 0
+    while off is not None and guard < 10:
+        out = data.work_rows(tmp_path, "open_other", 3, offset=off)
+        pop = out["population"]
+        seen += [r["id"] for r in out["sections"]["open_other"]]
+        assert pop["counts"]["open_other"] == 7 and pop["offset"] == off   # total is stable across pages
+        off = pop["next_offset"]["open_other"]
+        guard += 1
+    assert seen == [f"R{i:03d}" for i in range(7)] and guard == 3          # 3 + 3 + 1, last page next_offset None
+    last = data.work_rows(tmp_path, "open_other", 3, offset=6)["population"]
+    assert last["truncated"]["open_other"] is False and last["next_offset"]["open_other"] is None
+
+
+def test_work_rows_offset_is_served_and_part_of_the_cache_key():
+    a = _call("work_rows", {"view": "open_other", "limit": 1, "offset": 0})["result"]["structuredContent"]
+    b = _call("work_rows", {"view": "open_other", "limit": 1, "offset": 1})["result"]["structuredContent"]
+    assert a["population"]["offset"] == 0 and b["population"]["offset"] == 1
+    if a["sections"]["open_other"] and b["sections"]["open_other"]:
+        assert a["sections"]["open_other"][0]["id"] != b["sections"]["open_other"][0]["id"]

@@ -1,0 +1,7 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "why": "ALPACA-TP-CANCEL-AT-OPEN. Alert grading only, no order is placed, moved or cancelled: (1) the Alpaca naked sweep grades a missing take-profit as target_exiting (logged, not paged) for 600 s after Alpaca releases the bracket/OCO stop leg (Alpaca cancels the TP sibling when the stop triggers; measured alpaca_live 2026-09-28 SLV/IAUM and alpaca_paper IAUM 6655 2026-11-05); past 600 s it pages target_naked as before. protection_state gains an additive stop_released_at key that no re-arm decision reads. (2) Manager decision 2026-11-05 (a): the alpaca_rearm_refused (flat) page is reported at INFO while the row is already pending a flat-confirm close; the refusal itself is unchanged and a flat refusal outside a confirm still pages CRITICAL. src/** is TIER2_PATHS, so this lands on the manager's merge.",
+  "hold_reason": "tier_2_3_needs_approval",
+  "hold_text": "src/** is a Tier-2 path; the manager merges on its own (operator-delegated) authority after reviewing the alert-only change."
+}

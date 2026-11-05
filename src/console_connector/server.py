@@ -51,7 +51,10 @@ TOOLS: list[dict[str, Any]] = [
                     "git commit the register was read at.",
      "inputSchema": {"type": "object", "properties": {
          "view": {"type": "string", "enum": ["all", "due", "in_flight", "blocked", "queued", "open_other"], "default": "all"},
-         "limit": {"type": "integer", "minimum": 1, "maximum": 200, "default": 25}}},
+         "limit": {"type": "integer", "minimum": 1, "maximum": 200, "default": 25},
+         "offset": {"type": "integer", "minimum": 0, "default": 0,
+                    "description": "rows to skip in every returned section; population.next_offset[section] "
+                                   "is the offset of the next page, null when that section is complete"}}},
      "annotations": _RO},
     {"name": "inbox", "title": "Inbox",
      "description": "The console Inbox: decisions waiting on the operator (checklist operator_decision edges, "
@@ -119,7 +122,9 @@ def call_tool(name: str, args: dict[str, Any]) -> dict[str, Any]:
     if name == "work_rows":
         view = str(args.get("view") or "all")
         limit = _clamp(args.get("limit"), 1, 200, 25)
-        return CACHE.get(f"work_rows:{view}:{limit}", TTL_S["work_rows"], lambda: data.work_rows(REPO, view, limit))
+        offset = _clamp(args.get("offset"), 0, 100000, 0)
+        return CACHE.get(f"work_rows:{view}:{limit}:{offset}", TTL_S["work_rows"],
+                         lambda: data.work_rows(REPO, view, limit, offset=offset))
     if name == "inbox":
         limit = _clamp(args.get("limit"), 1, 200, 25)
         return CACHE.get(f"inbox:{limit}", TTL_S["inbox"], lambda: data.inbox(REPO, limit))

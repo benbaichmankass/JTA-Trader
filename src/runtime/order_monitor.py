@@ -10295,15 +10295,91 @@ def _has_standing_wedge(account_id: str, symbol: str, direction: Any) -> bool:
         return False
 
 
+def _row_in_flat_confirm(trade_id: Any) -> bool:
+    """Is *trade_id* armed in any 2-observation flat/close confirm right now?
+
+    A row in one of these dicts has ALREADY been read flat at the venue once
+    and is waiting for the confirming read that closes it. ALPACA-TP-CANCEL-
+    AT-OPEN (2026-11-05, IAUM trade 6655): the naked sweep ran between the arm
+    (14:31:50Z) and the close (14:32:33Z), refused to re-arm the flat row —
+    correctly — and paged CRITICAL for a position the venue stop had already
+    closed. In-process state, same as the dicts it reads; an unkeyable id or a
+    restart reads ``False`` (the page stays CRITICAL — never hide by default).
+    """
+    try:
+        tid = int(trade_id)
+    except (TypeError, ValueError):
+        return False
+    return any(tid in d for d in (
+        _PENDING_CLOSE_CONFIRM,
+        _PENDING_SNAPSHOT_DISAPPEAR_CONFIRM,
+        _PENDING_ORPHAN_DISAPPEAR_CONFIRM,
+        _PENDING_WATCHDOG_FLAT_CONFIRM,
+        _PENDING_ORPHAN_NOSTRAT_CLOSE,
+    ))
+
+
+#: How long after a bracket/OCO stop leg is RELEASED (its target sibling
+#: cancelled by Alpaca because the stop triggered) a missing target grades
+#: ``target_exiting`` instead of paging ``target_naked``. Measured releases
+#: filled in < 1 s on alpaca_live and in 55 s on alpaca_paper (IAUM 6655,
+#: 2026-11-05); 600 s is ten times the slowest. Past it, a still-working stop
+#: is not a normal exit and pages as before.
+_ALPACA_TARGET_EXITING_GRACE_S = 600.0
+
+
+def _iso_age_seconds(ts: Any, now: datetime) -> float | None:
+    """Seconds from ISO-8601 *ts* to *now*; ``None`` when absent/unparseable.
+
+    Alpaca stamps carry nanoseconds (``...:08.292148123Z``) which
+    ``fromisoformat`` rejects before 3.11, so the fraction is cut to 6 digits.
+    """
+    if not ts:
+        return None
+    raw = str(ts).strip().replace("Z", "+00:00")
+    try:
+        if "." in raw:
+            head, tail = raw.split(".", 1)
+            frac = "".join(ch for ch in tail if ch.isdigit())
+            tz = tail[len(frac):]
+            raw = f"{head}.{frac[:6]}{tz}"
+        dt = datetime.fromisoformat(raw)
+    except (TypeError, ValueError):
+        return None
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=timezone.utc)
+    return (now - dt).total_seconds()
+
+
 def _page_rearm_refusal(kind: str, account_id: str, symbol: str,
-                        trade_id: Any, reason: str, *, verb: str = "refused") -> None:
+                        trade_id: Any, reason: str, *, verb: str = "refused",
+                        info_only: bool = False) -> None:
     """Log every refusal; page CRITICAL (per symbol+kind cooldown).
 
     *verb* names what happened when it was not a refusal — the escalated
     re-arm POSTS the stop, so it pages as ``escalated`` (K1XNYYAQ-0002 (3)).
+
+    *info_only* (manager decision 2026-11-05, ALPACA-TP-CANCEL-AT-OPEN (a)):
+    the refusal still happens and is still logged and reported, at INFO, and
+    does NOT consume the CRITICAL cooldown — so a real refusal minutes later
+    still pages. Used only for a ``flat`` refusal on a row already in a
+    flat-confirm (a benign ordering race, not a naked position).
     """
     logger.warning("_alpaca_rearm_preflight: %s/%s trade_id=%s %s (%s): %s",
                    account_id, symbol, trade_id, verb.upper(), kind, reason)
+    if info_only:
+        try:
+            from src.runtime.outcomes import Level, report
+
+            report("alpaca_rearm_refused", "detected", level=Level.INFO,
+                   reason=f"{account_id}/{symbol} trade {trade_id}: re-arm {verb} "
+                          f"({kind}) — {reason}",
+                   account_id=account_id, symbol=symbol, trade_id=trade_id,
+                   kind=kind, flat_confirm_pending=True)
+        except Exception:
+            logger.exception("_page_rearm_refusal: info report failed for %s/%s",
+                             account_id, symbol)
+        return
     if not _cooldown_admits("alpaca_rearm_refused", f"{account_id}|{symbol}|{kind}",
                             _ALPACA_REARM_REFUSAL_PAGE_COOLDOWN_S):
         return
@@ -10497,9 +10573,13 @@ def _alpaca_rearm_preflight(client, account_id: str, symbol: str, row,
         pass
     if q.get("state") == "flat":
         _clear_protection_unreadable(account_id, symbol, "preflight")
+        _in_confirm = _row_in_flat_confirm(row["id"])
         _page_rearm_refusal("flat", account_id, symbol, row["id"],
                             "no venue position — the row's shares are gone; a "
-                            "re-arm would open exposure, not protect it")
+                            "re-arm would open exposure, not protect it"
+                            + (" (row already pending its flat-confirm close)"
+                               if _in_confirm else ""),
+                            info_only=_in_confirm)
         return "flat", {}
     if last is None and bid is None and ask is None:
         _note_protection_unreadable(account_id, symbol, row["id"], channel="preflight")
@@ -10806,6 +10886,12 @@ def _check_broker_naked_equity_positions(db) -> Dict[str, int]:
         # position can be fully stop-covered and hold no take-profit at all
         # (BL-20260816-COVERAGE-IS-ONE-SIDED). Alerted, never re-armed.
         "target_naked": 0,
+        # Target missing BECAUSE the bracket/OCO stop triggered (Alpaca cancels
+        # the take-profit, then works the stop): the book is exiting, not
+        # target-naked. Logged, not paged, for _ALPACA_TARGET_EXITING_GRACE_S
+        # after the release; past that it grades target_naked again
+        # (ALPACA-TP-CANCEL-AT-OPEN, 2026-11-05).
+        "target_exiting": 0,
         # ── QUANTITY coverage (BL-20260908-ALPACA-COVERAGE-IS-SIDES-NOT-QUANTITY).
         # Declared here, not created on first use: a sweep that found no
         # partial coverage must report 0 rather than omit the key, or "we
@@ -11110,7 +11196,25 @@ def _check_broker_naked_equity_positions(db) -> Dict[str, int]:
                     elif _size > 0:
                         summary["covered"] += 1
 
-            if state.get("target") is False and row["take_profit_1"] not in (None, 0):
+            _released_age = _iso_age_seconds(state.get("stop_released_at"), now)
+            if (state.get("target") is False
+                    and row["take_profit_1"] not in (None, 0)
+                    and _released_age is not None
+                    and _released_age <= _ALPACA_TARGET_EXITING_GRACE_S):
+                # EXITING, not naked (ALPACA-TP-CANCEL-AT-OPEN): the target is
+                # gone because the stop triggered and Alpaca cancelled its OCO
+                # sibling; the stop is being worked. Bounded: a stop still
+                # working after the grace grades target_naked and pages.
+                summary["target_exiting"] += 1
+                logger.info(
+                    "_check_broker_naked_equity_positions: %s/%s trade_id=%s "
+                    "target leg gone because the stop leg was RELEASED at %s "
+                    "(%.0fs ago; Alpaca OCO cancels the target when the stop "
+                    "triggers) — graded target_exiting, not target_naked",
+                    account_id, symbol, row["id"],
+                    state.get("stop_released_at"), _released_age,
+                )
+            elif state.get("target") is False and row["take_profit_1"] not in (None, 0):
                 # TARGET-naked while the journal DECLARES a take-profit. Alert,
                 # do NOT re-arm: a missing stop is a safety gap worth closing
                 # blind, but a target is decision-time geometry a repair must

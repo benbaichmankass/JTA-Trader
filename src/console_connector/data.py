@@ -113,7 +113,8 @@ def _slim(row: dict, today: date, now: datetime) -> dict:
     return out
 
 
-def work_rows(repo: Path, view: str = "all", limit: int = 25, today: date | None = None) -> dict[str, Any]:
+def work_rows(repo: Path, view: str = "all", limit: int = 25, today: date | None = None,
+              offset: int = 0) -> dict[str, Any]:
     """Checklist rows for the Work tab: due (overdue, live), in_flight, blocked, queued (with a due date) and
     open_other (queued without a due date, landed_unproven). Rows carry week_lane, roadmap and writeback."""
     now = _now()
@@ -145,12 +146,16 @@ def work_rows(repo: Path, view: str = "all", limit: int = 25, today: date | None
             return {**base, "read_state": "read", "error": f"unknown view {view!r}; use all|"
                     + "|".join(sections), "population": {"rows_scanned": len(items)}, "sections": {}}
         sections = {view: sections[view]}
+    offset = max(0, int(offset or 0))
     counts = {k: len(v) for k, v in sections.items()}
-    truncated = {k: len(v) > limit for k, v in sections.items()}
+    truncated = {k: len(v) > offset + limit for k, v in sections.items()}
+    # next_offset per section: where the next page starts, or None when the section is complete
+    next_offset = {k: (offset + limit if len(v) > offset + limit else None) for k, v in sections.items()}
     return {**base, "read_state": "read",
             "population": {"rows_scanned": len(items), "live_rows": len(live), "limit_per_section": limit,
-                           "counts": counts, "truncated": truncated},
-            "sections": {k: v[:limit] for k, v in sections.items()}}
+                           "offset": offset, "counts": counts, "truncated": truncated,
+                           "next_offset": next_offset},
+            "sections": {k: v[offset:offset + limit] for k, v in sections.items()}}
 
 
 def inbox(repo: Path, limit: int = 25, today: date | None = None) -> dict[str, Any]:

@@ -1,0 +1,7 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "hold_reason": "operator_asked_to_hold",
+  "hold_text": "Logging only, no behaviour change: one INFO line per symbol per ml_entry closed-bar decision (symbol, bars available, outcome = evaluated / no_signal / no_decision_bar / refused: <reason>) in ml_entry_signal_builder, so the #23298 check (13/13 evaluated, none insufficient_bars) can be read from the journal. Manager instruction 2026-11-05 ~16:24Z; manager merges as a data-backed observability fix and git-sync redeploys the trader. Revert: git revert.",
+  "why": "The journal logged only 'returned no actionable signal', so a refusal for insufficient_bars could not be told from no signal; row ML-ENTRY-SERVE-FIXES stays landed_unproven until the next ETF decision after this ships."
+}
