@@ -1083,6 +1083,7 @@ real top-level `docs/*.md` and fails if the population builder cannot see it.
 | `docs/research/prop-unblock-sequence-2026-09-12.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
 | `docs/research/e33-arbitration-scope-starves-real-money-2026-09-22.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
 | `docs/research/e46-qqq-arm-inert-once-the-tp-is-modelled-2026-09-22.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
+| `docs/research/hosting-cost-plan-2026-11-05.md` | plan | unknown | — | never | `name:plan-is-a-forward-commitment / not-assessed` | — |
 | `docs/research/ml-volgate-wf-2026-10-29/README.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
 | `docs/research/pullback-2h-direction-walkforward-2026-07-29.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
 | `docs/research/pullback-frac-cross-leg-2026-08-24.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
