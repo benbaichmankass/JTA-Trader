@@ -68,9 +68,10 @@ def test_the_moved_set_is_what_was_approved():
                      for j in (yaml.safe_load(p.read_text()).get("jobs") or {}).values())}
     assert users == {
         "system-actions.yml", "vm-diag-snapshot.yml", "trainer-vm-diag.yml", "diag-relay-sweep.yml",
-        "research-queue-dispatch.yml", "research-script-run-kaggle-cpu.yml", "research-script-run-kaggle.yml",
         "infra-runner-smoke.yml",
     }
+    # B13 (COMPUTE-ALLOCATION): the 3 research workflows left the ops pool; research never reads vars.INFRA_RUNS_ON.
+    assert not [u for u in users if u.startswith("research-")]
 
 
 def test_ci_stays_hosted():
