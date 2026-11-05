@@ -3,7 +3,7 @@ id: RQ-20261101-78fc-45
 title: 'ITERATION 1 of ict_scalp_sol_5m (fail): On ict_scalp_sol_5m over 2024-10-05..2026-10-04 23:59, does any of H4 (--htf-rule=4h), SLB (--atr-sl-buffer-mult=0.6),
   LIM (--entry-mode=limit) beat the declared leg (A) net of the full cost stack, by >= 0.02 R x n(A), in >= 4 of 6 calendar folds, with maxDD
   <'
-status: queued
+status: done
 cadence: once
 theme: live_strategy
 priority: 2
@@ -127,3 +127,14 @@ related:
 - comms/strategy_evidence/ict_scalp_sol_5m.json
 what_it_does_not_do: Edits no config, roster or rule; places no order; a PASS is an input to the next iteration, not a promotion.
 last_dispatched_at: '2026-11-05T04:52:09+00:00'
+grading:
+  attested: RULE-RQ-20261101-78fc-45
+  auto: true
+  decision_rule_id: RULE-RQ-20261101-78fc-45
+  evidence:
+  - research/results/RQ-20261101-78fc-45/41970545506.jsonl
+  graded_at: '2026-11-05'
+  grader: scripts/research/queue_grade.py
+  reason: 1 row(s), all measured, all pass
+  rows: 1
+  verdict: pass
