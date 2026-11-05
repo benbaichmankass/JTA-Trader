@@ -182,9 +182,20 @@ jobs:
           PY
           )
           echo "::add-mask::$USERNAME"
+          scrub() { sed "s|$USERNAME|<user>|g"; }
           mkdir -p /tmp/dl
-          T0=$(date +%s)
-          kaggle datasets download -d "$USERNAME/metis-market-lake" -p /tmp/dl --unzip 2>&1 | sed "s|$USERNAME|<user>|g" | grep -v "it/s\|B/s" | tail -3
+          # A fresh dataset version can be briefly undownloadable on the API while it is processed (observed 2026-11-05: the
+          # runner download exited 1 within 2 s while the kernel mount of the same version worked). Retry; print the FULL output.
+          OK=0
+          for attempt in 1 2 3 4 5 6; do
+            rm -rf /tmp/dl && mkdir -p /tmp/dl
+            T0=$(date +%s)
+            if kaggle datasets download -d "$USERNAME/metis-market-lake" -p /tmp/dl --unzip > /tmp/dl.log 2>&1; then OK=1; break; fi
+            echo "download attempt ${attempt} failed:"; grep -v "it/s\|B/s" /tmp/dl.log | scrub | tail -15
+            sleep 40
+          done
+          grep -v "it/s\|B/s" /tmp/dl.log | scrub | tail -4
+          [ "$OK" = "1" ] || { echo "::error::download failed after 6 attempts"; exit 1; }
           T1=$(date +%s)
           BYTES=$(du -sb /tmp/dl | cut -f1)
           echo "{\"download_seconds\": $((T1-T0)), \"bytes\": $BYTES, \"MBps\": $(python3 -c "print(round($BYTES/1e6/max($T1-$T0,1),1))")}" | tee verify-runner-download.json
