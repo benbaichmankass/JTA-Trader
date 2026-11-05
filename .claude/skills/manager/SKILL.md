@@ -62,6 +62,9 @@ register, never in a session's head or a trigger prompt: a new manager inherits 
    `checklist.py archive-lane <ROW>`.
    A `landed_unproven` row whose closing observation can be produced on demand and cheaply is triggered now, not left for the next
    schedule (canonical § "Validate early when it is cheap").
+   **Console threads (operator, 2026-11-05, via UI-CONSOLE-V1):** at every check-in, `ArtifactComments` `action: "read"` each console
+   artifact listed on row `UI-CONSOLE-V1` (`console_artifact_url`, `probe_artifact_url`) and answer or file every open thread, so a missed
+   comment wake is caught within one check-in. Comments on the console go to the manager, never to a lane.
 **REFILL (operator, 2026-10-26, binding) — runs at every check-in AND every lane close, after step 5.** Operator, verbatim excerpt: *"I
 shouldn't need to push you like this either - this is what we have a weekly workplan for, to make sure that the manager always knows what to
 do next … as long as we have headroom, lanes should be running."* (a) Compute the target from a fresh meter: `spend_meter.py --capacity
@@ -161,6 +164,10 @@ each **one marker, one lane, never spawn twice for the same id**; a `could_not_*
      Directive; "Lanes answer to the manager" + "Reading is never gated".
    - **A dispatched lane** reads those same four sections (not the whole doc) plus any section its dispatch names (§ "Required dispatch block").
 2b. **Subscribe to the ops-flags PR** (§ "Standing alert subscriptions").
+2c. **Re-watch the console artifact(s)** listed on row `UI-CONSOLE-V1` (`console_artifact_url`, `probe_artifact_url`): `ArtifactComments`
+    `action: "watch"` with each `url`, then read open threads (`action: "read"`) so nothing sent during the handoff is lost (operator,
+    2026-11-05, via UI-CONSOLE-V1). A watch ends with its session, so this runs at every rotation, beside the trigger rewiring and the #17895
+    re-subscribe.
 3. Take over every live lane: `get_session` it, then send it a trigger naming
    you as its manager (the reply channel is described under § "Every spawn
    carries provenance" below).
