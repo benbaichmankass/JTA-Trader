@@ -33,7 +33,7 @@ decision_rule:
   rule: 'Descriptive: no pass bar and no promotion consumes this unit. read_state measured means the grid ran and a selection exists (or states none qualified). The selected (config, tau, OOF mean) is what the confirming unit RQ-20261105-e9a1-02 is registered with; a selection with OOF mean <= 0 means the confirming read is NOT run on that model (dev consistency is part of the confirming rule).'
   what_it_does_not_do: 'Reads no date after 2025-06-30 (dev_stage filters ts <= train_end before any use; self-tested). No sizing, no config change, no order.'
   min_n: 300 OOF trades for a selection
-compute: cpu_light
+compute: cpu_long
 value:
   bucket: ai_trader
   usd_at_stake_per_month: 60
