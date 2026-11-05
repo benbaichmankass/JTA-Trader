@@ -1,6 +1,6 @@
 # Hosting cost plan — can the whole system run on one service for $10–15/month?
 
-> **Doc status:** `live` · category `research` · last verified `2026-11-05` · row `HOSTING-COST-PLAN` · lane dispatched by Manager Session 2026-11-05b · Tier 1 (research only: nothing provisioned, nothing changed).
+> **Doc status:** `unknown` · category `plan` · last verified `never` · registered in [`docs/DOCUMENT-INDEX.md`](../DOCUMENT-INDEX.md) · **nobody has verified this document's status — do not act on it as current** · row `HOSTING-COST-PLAN` · Tier 1, research only (nothing provisioned, nothing changed).
 > **Gates this adds or changes:** none.
 
 **Operator question (2026-11-05, verbatim):** *"how much would it cost to have the whole thing hosted on oracle or a different unified server? If we can streamline the whole thing into one central service for under 10-15 usd a month, that would be worth considering"*.
