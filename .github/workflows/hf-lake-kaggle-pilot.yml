@@ -14,7 +14,7 @@ name: hf-lake-kaggle-pilot
 # Runs on pull_request (same-repo) for changes to the pilot itself, so the measurement happens before merge; no schedule, no issue trigger.
 # GATE: GitHub evaluates `paths` against the WHOLE PR diff, so every push to the PR would re-run the uploads. The heavy jobs therefore
 # run only when the PR head commit message carries a token: `[kaggle-pilot]` (the 0.9 GB pilot) or `[kaggle-trial]` (the 10 GB
-# trial, operator 2026-11-05 ~16:59Z, "10 GB trial (Rec.)": ~10 GB of cold lake data into the same private dataset, read-back +
+# trial, `[kaggle-trial-verify]` re-runs only the two read-backs, operator 2026-11-05 ~16:59Z, "10 GB trial (Rec.)": ~10 GB of cold lake data into the same private dataset, read-back +
 # checksum verification; no deletion anywhere, no new accounts, nothing in the Models space).
 
 on:
@@ -42,6 +42,7 @@ jobs:
     outputs:
       pilot: ${{ steps.g.outputs.pilot }}
       trial: ${{ steps.g.outputs.trial }}
+      trialverify: ${{ steps.g.outputs.trialverify }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -53,6 +54,7 @@ jobs:
           echo "head commit message: $(echo "$msg" | head -1)"
           case "$msg" in *"[kaggle-pilot]"*) echo "pilot=true" >> "$GITHUB_OUTPUT";; *) echo "pilot=false" >> "$GITHUB_OUTPUT";; esac
           case "$msg" in *"[kaggle-trial]"*) echo "trial=true" >> "$GITHUB_OUTPUT";; *) echo "trial=false" >> "$GITHUB_OUTPUT";; esac
+          case "$msg" in *"[kaggle-trial-verify]"*) echo "trialverify=true" >> "$GITHUB_OUTPUT";; *) echo "trialverify=false" >> "$GITHUB_OUTPUT";; esac
 
   pilot:
     needs: gate
@@ -337,11 +339,17 @@ jobs:
           else
             kaggle datasets create -p /tmp/stage -r skip 2>&1 | scrub | grep -v "it/s\|B/s" | tail -6 || true
           fi
+          # `datasets status` reports the PREVIOUS version as ready while the new one is still registering (observed 2026-11-05:
+          # both read-backs verified the old 4-shard version). The new version is ready only when the served MANIFEST.json is ours.
+          WANT=$(python3 -c "import json;print(json.load(open('/tmp/stage/MANIFEST.json'))['note'])")
           READY=0
-          for i in $(seq 1 240); do
-            st=$(kaggle datasets status "$DS" 2>&1 | scrub | tail -1); echo "dataset: $st"
-            case "$st" in *[Rr]eady*|*READY*) READY=1; break;; esac
-            sleep 20
+          for i in $(seq 1 180); do
+            rm -rf /tmp/mf && mkdir -p /tmp/mf
+            kaggle datasets download -d "$DS" -f MANIFEST.json -p /tmp/mf --unzip > /dev/null 2>&1 || true
+            GOT=$(python3 -c "import json;print(json.load(open('/tmp/mf/MANIFEST.json')).get('note',''))" 2>/dev/null || echo "")
+            echo "served manifest note: ${GOT}"
+            if [ "$GOT" = "$WANT" ]; then READY=1; break; fi
+            sleep 30
           done
           T1=$(date +%s); echo "{\"upload_to_ready_seconds\": $((T1-T0)), \"ready\": $READY}" | tee /tmp/trial-timing.json
           kaggle datasets files "$DS" 2>&1 | scrub | head -8
@@ -359,8 +367,8 @@ jobs:
           retention-days: 30
 
   trial-verify-runner:
-    needs: trial
-    if: ${{ !cancelled() && needs.trial.result == 'success' }}
+    needs: [gate, trial]
+    if: ${{ !cancelled() && (needs.trial.result == 'success' || needs.gate.outputs.trialverify == 'true') }}
     runs-on: ubuntu-latest
     timeout-minutes: 90
     steps:
@@ -399,7 +407,7 @@ jobs:
           T1=$(date +%s)
           BYTES=$(du -sb /tmp/dl | cut -f1)
           echo "{\"download_seconds\": $((T1-T0)), \"bytes\": $BYTES, \"MBps\": $(python3 -c "print(round($BYTES/1e6/max($T1-$T0,1),1))")}" | tee trial-runner-download.json
-          python3 scripts/data_lake/kaggle_pilot.py verify --root /tmp/dl --record trial-runner-verify.json
+          python3 scripts/data_lake/kaggle_pilot.py verify --root /tmp/dl --expect-min-files 50 --record trial-runner-verify.json
           { echo '### trial: runner download'; cat trial-runner-download.json; echo; cat trial-runner-verify.json; } >> "$GITHUB_STEP_SUMMARY"
       - uses: actions/upload-artifact@v4
         if: always()
@@ -411,8 +419,8 @@ jobs:
           retention-days: 30
 
   trial-verify-kaggle:
-    needs: trial
-    if: ${{ !cancelled() && needs.trial.result == 'success' }}
+    needs: [gate, trial]
+    if: ${{ !cancelled() && (needs.trial.result == 'success' || needs.gate.outputs.trialverify == 'true') }}
     runs-on: ubuntu-latest
     timeout-minutes: 90
     steps:
@@ -460,7 +468,7 @@ jobs:
           cat kout/result.json | tee trial-kaggle-verify.json
           echo "{\"kernel_push_to_complete_seconds\": $((T1-T0))}" | tee trial-kaggle-timing.json
           { echo '### trial: kaggle kernel read'; cat trial-kaggle-verify.json; echo; cat trial-kaggle-timing.json; } >> "$GITHUB_STEP_SUMMARY"
-          python3 -c "import json,sys; r=json.load(open('trial-kaggle-verify.json')); sys.exit(0 if r.get('ok') else 1)"
+          python3 -c "import json,sys; r=json.load(open('trial-kaggle-verify.json')); sys.exit(0 if (r.get('ok') and r.get('files',0) >= 50) else 1)"
       - uses: actions/upload-artifact@v4
         if: always()
         with:

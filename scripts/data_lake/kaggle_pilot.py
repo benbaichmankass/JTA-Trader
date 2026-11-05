@@ -303,7 +303,9 @@ def cmd_verify(a) -> int:
         extracted = {"member": pq.relative_to(base).as_posix(), "bytes": len(data), "seconds": round(time.time() - t1, 3)}
     except Exception as e:
         extracted = {"error": str(e)[:200]}
-    res = {"ok": not bad, "files": len(man["files"]), "bad": bad, "hashed_bytes": nbytes,
+    if a.expect_min_files and len(man["files"]) < a.expect_min_files:
+        bad.append(f"stale or wrong dataset version: manifest lists {len(man['files'])} shards, expected at least {a.expect_min_files}")
+    res = {"ok": not bad, "files": len(man["files"]), "note": man.get("note"), "bad": bad, "hashed_bytes": nbytes,
            "layout": mode, "hash_seconds": round(dt, 2), "hash_MBps": round(nbytes / 1e6 / dt, 1), "one_member_read": extracted,
            "dir": str(base)}
     print(json.dumps(res))
@@ -323,6 +325,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     ap.add_argument("--prev-chosen", default="")
     ap.add_argument("--n", type=int, default=120)
     ap.add_argument("--batch", type=int, default=4)
+    ap.add_argument("--expect-min-files", type=int, default=0)
     ap.add_argument("--skip-symbols", default="")
     ap.add_argument("--root", default="")
     ap.add_argument("--record", default="")
