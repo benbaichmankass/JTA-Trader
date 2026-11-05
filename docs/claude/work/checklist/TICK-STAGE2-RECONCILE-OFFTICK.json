@@ -19,12 +19,16 @@
     "L-OPS"
   ],
   "priority_rank": 5,
-  "updated_at": "2026-11-05T10:16:49Z",
+  "updated_at": "2026-11-05T10:29:51Z",
   "updated_by": "session_01AFoLuLzq1snbogF2qX97Pi",
   "observation": {
     "what": "no EXIT-EVAL INTERVAL BREACHED alert over 24 h of normal ticking after #23200 (merged c9cd6fa33a 2026-11-05T10:14:37Z), and exit_interval_soak over_requirement rows = 0 over that window",
     "how_to_check": "GET /api/bot/alerts (grep EXIT-EVAL INTERVAL BREACHED) over 2026-11-05T10:30Z..2026-11-06T10:30Z; log_file?name=exit_interval_soak&grep=2026-11-0 counted for over_requirement true; tick_cost mean_ms < 30000 over >= 20 ticks of one process",
     "due_by": "2026-11-06T10:30Z"
+  },
+  "writeback": {
+    "roadmap": "none: L-OPS milestone is not closed by stage 2; TICK-DURATION-115S and TICK-STAGE3-REGIME-SCORING carry the open detectors",
+    "arch": "docs/ARCHITECTURE-CANONICAL.md change log row 2026-11-05 TICK-STAGE2-RECONCILE-OFFTICK (supersedes the 2026-08-12 reconcilers-stay-on-the-tick sentence)"
   },
   "_seq": 919
 }
