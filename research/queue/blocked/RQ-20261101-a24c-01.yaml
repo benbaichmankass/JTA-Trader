@@ -80,6 +80,21 @@ operator_2026_11_04: 'GROUP-LEVEL universe (operator popup ~19:33Z, verbatim "Gr
   population minus the cost/liquidity filter fixed on the dev folds) to ml_entry''s traded set on the Bybit accounts, written as the population
   record comms/ml_universe/ml_entry.json (src/config/ml_universe.py); per-symbol results are REPORTED only. Until it reports, bybit_2 /
   bybit_portfolio keep the 5 coins of the c692-06 pooled PASS. Added 2026-11-04 by lane ML-ENTRY-ALL-ACCOUNTS.'
+re_registration_2026_11_05:
+  registered_at: '2026-11-05'
+  registered_before_run: true
+  authority: 'Manager Session 2026-11-05a (session_01AFoLuJnejB97CXXc8yn9oA), decision on lane ML-WEEK-1105 report 1, 10:02Z, data-settled
+    under CLAUDE-RULES-CANONICAL "Data-backed Tier-2/3 decisions" (no graded run of this unit has happened, so this is registration BEFORE the run)'
+  evidence: comms/research/RQ-20261101-a24c-01/local-20261105/RESULT.md
+  supersedes: 'decision_rule.statistic window 2026-10-01..2026-10-31 and question (1) spread_bps (Corwin-Schultz). Everything else in
+    decision_rule (C grid, dev rule, arms A and B, floors, Q, n_trials) is UNCHANGED.'
+  spread_bps: 'the Bybit QUOTED spread per symbol from the committed snapshot bybit_specs_20261101.json (spread_bps), floored at one tick
+    of the symbol''s tickSize at each month''s median price; held constant across months (one snapshot: its error vs the true monthly spread
+    is unmeasured and stated, not hidden). A symbol with no quoted spread is dropped and counted. Corwin-Schultz is reported per month
+    (cs_bps_reported), never charged. Reason (MEASURED 2026-11-05): CS on 1h klines read BTC 13.2 bps dev median vs 0.01 quoted, ETH 18.6 vs 0.04.'
+  forward_window: '2026-11-01..2026-11-30 (decisions whose 24 h ends by 2026-11-30T23:59Z); read on or after 2026-12-01 when Binance Vision
+    publishes the November zips. Reason: frozen v1 already read 2026-10 (holdout ledger ENTRY-v1-frozen-ref-b609, 2026-11-01T20:12:13Z).'
+  harness: scripts/research/ml_decision_entry.py universe-costed --spread-source quoted --fwd-start 2026-11-01 --fwd-end 2026-11-30
 compute: cpu_long
 value:
   bucket: ai_trader
@@ -100,6 +115,12 @@ run:
   - python3
   - scripts/research/ml_decision_entry.py
   - universe-costed
+  - --spread-source
+  - quoted
+  - --fwd-start
+  - '2026-11-01'
+  - --fwd-end
+  - '2026-11-30'
   - --bybit-specs
   - comms/research/ML-ENTRY-UNIVERSE/local-20261101T1830Z/bybit_specs_20261101.json
   - --cache
@@ -124,14 +145,6 @@ related:
 - comms/research/ML-ENTRY-UNIVERSE/local-20261101T1830Z/summary.json
 what_it_does_not_do: Registers, serves or promotes nothing; changes no config; places no order; sizes nothing.
 blocked_on:
-- kind: decision
-  ref: manager (lane ML-WEEK-1105 report 2026-11-05)
-  what: 'TWO re-registrations before any graded run, MEASURED 2026-11-05 (comms/research/RQ-20261101-a24c-01/local-20261105/RESULT.md):
-    (1) the registered Corwin-Schultz spread from 1h klines overstates liquid symbols 100-1000x (BTC dev median 13.2 bps vs 0.01
-    quoted), so every C is negative on dev for a reason unrelated to the model; (2) the registered forward window 2026-10 was
-    already read by frozen v1 (ENTRY-v1-frozen-ref-b609, 2026-11-01T20:12Z), so the rule returns INDETERMINATE on it'
-  clears_when: the manager records a venue-matched spread model and a fresh forward window (earliest 2026-11, read >= 2026-12-01) in this
-    file before any run, and the lane git-mvs it to research/queue/ status queued
 - kind: harness
   ref: scripts/research/ml_decision_entry.py
   what: 'the universe-costed subcommand: Corwin-Schultz spread + square-root impact cost model per symbol-month, the dev-fold liquidity rule over
@@ -141,6 +154,11 @@ blocked_on:
     floors the estimate); the lane git-mvs this file to research/queue/ with status queued, rule unchanged'
   cleared: '2026-11-05 lane ML-WEEK-1105: universe-costed landed with its self-test; dry run INDETERMINATE (window clause)'
 - kind: data
+  ref: Binance Vision monthly klines 2026-11 (re-registered window)
+  what: the forward window's monthly zip for every U(C) symbol
+  clears_when: data.binance.vision lists BTCUSDT-1h-2026-11.zip (positive control) and every candidate; earliest 2026-12-01; then the
+    lane git-mvs this file to research/queue/ status queued (pipeline item tracks the date)
+- kind: data_superseded
   ref: Binance Vision monthly klines 2026-10
   what: the forward window's monthly zip for every U(C) symbol
   clears_when: data.binance.vision lists {SYMBOL}-1h-2026-10.zip for BTCUSDT (positive control) and every candidate

@@ -714,7 +714,8 @@ def corwin_schultz_bps(h: np.ndarray, lo: np.ndarray) -> np.ndarray:
     return np.r_[np.nan, np.clip(s, 0.0, None) * 1e4]
 
 
-def cost_table(df: pd.DataFrame, tick: float, turnover_ratio: float, q_usd: float = UC_Q_USD) -> pd.DataFrame:
+def cost_table(df: pd.DataFrame, tick: float, turnover_ratio: float, q_usd: float = UC_Q_USD,
+               quoted_spread_bps: float | None = None) -> pd.DataFrame:
     """Per calendar month: spread_bps (CS monthly median, floored at one tick at the month's median price),
     sigma_daily, adv_bybit (Binance median daily quote volume x Bybit/Binance turnover ratio), impact_bps round trip
     = 2 x 1e4 x sigma_daily x sqrt(Q / adv_bybit)."""
@@ -730,11 +731,15 @@ def cost_table(df: pd.DataFrame, tick: float, turnover_ratio: float, q_usd: floa
         dg = daily[daily.month == m]
         px = float(g.close.median())
         tick_bps = 1e4 * tick / px if px > 0 else np.nan
-        spread = max(float(np.nanmedian(g.cs)), tick_bps)
+        # re-registration 2026-11-05 (manager decision on lane ML-WEEK-1105 report 1): the venue's QUOTED spread floored at one
+        # tick replaces the Corwin-Schultz estimate, which reads intrabar volatility as spread on 1h crypto bars
+        # (comms/research/RQ-20261101-a24c-01/local-20261105/RESULT.md). CS is kept, reported, never used for cost.
+        base = float(np.nanmedian(g.cs)) if quoted_spread_bps is None else float(quoted_spread_bps)
+        spread = max(base, tick_bps)
         sig = float(dg.lr.std())
         adv = float(dg.qv.median()) * turnover_ratio
         imp = 2.0 * 1e4 * sig * np.sqrt(q_usd / adv) if adv > 0 and np.isfinite(sig) else np.nan
-        out.append({"month": m, "spread_bps": spread, "tick_bps": tick_bps, "sigma_daily": sig, "adv_bybit": adv,
+        out.append({"month": m, "spread_bps": spread, "cs_bps_reported": float(np.nanmedian(g.cs)), "tick_bps": tick_bps, "sigma_daily": sig, "adv_bybit": adv,
                     "impact_bps": imp})
     return pd.DataFrame(out)
 
@@ -839,7 +844,13 @@ def universe_costed(args) -> int:
             dropped[sym] = "no Bybit/Binance turnover ratio"
             continue
         df = pd.read_pickle(cache / f"{sym}.pkl")
-        costs[sym] = cost_table(df, float(specs[sym]["tickSize"]), tv / qv)
+        q = None
+        if args.spread_source == "quoted":
+            q = specs[sym].get("spread_bps")
+            if q is None:
+                dropped[sym] = "no quoted spread in the snapshot"
+                continue
+        costs[sym] = cost_table(df, float(specs[sym]["tickSize"]), tv / qv, quoted_spread_bps=q)
     tab = tab[tab.symbol.isin(list(costs))].reset_index(drop=True)
     sc = recost(tab, costs)
     hs, fs = pd.Timestamp(HOLDOUT_START, tz="UTC"), pd.Timestamp(args.fwd_start, tz="UTC")
@@ -925,6 +936,10 @@ def _self_test_universe_costed() -> None:
     # a one-tick floor: a price-1 symbol with a 0.01 tick cannot quote tighter than 100 bps
     flat = liquid.assign(high=liquid.close, low=liquid.close, close=1.0)
     assert abs(cost_table(flat, 0.01, 1.0).spread_bps.iloc[0] - 100.0) < 1e-9
+    # quoted source: a 0.01 bps quote on a wide-bar symbol is used as quoted (not the CS estimate), and still floored at one tick
+    qt = cost_table(thin, 1e-7, 1.0, quoted_spread_bps=0.01)
+    assert (qt.spread_bps == 0.01).all() and (qt.cs_bps_reported > 1.0).all(), qt
+    assert abs(cost_table(flat, 0.01, 1.0, quoted_spread_bps=0.01).spread_bps.iloc[0] - 100.0) < 1e-9
     # the dev rule excludes the planted illiquid symbol at any finite C it fails, and takes the larger C on a tie
     dev = pd.DataFrame({"symbol": ["L"] * 4 + ["T"] * 4, "rt_bps_long": [14] * 4 + [400] * 4, "rt_bps_short": [14] * 4 + [400] * 4})
     taken = pd.DataFrame({"symbol": ["L"] * 1200 + ["T"] * 1200, "net_r": [0.05] * 1200 + [-0.3] * 1200})
@@ -1009,6 +1024,8 @@ def main(argv=None) -> int:
     ap.add_argument("--unit", default="")
     ap.add_argument("--entry-summary", default="")
     ap.add_argument("--bybit-specs", default="comms/research/ML-ENTRY-UNIVERSE/local-20261101T1830Z/bybit_specs_20261101.json")
+    ap.add_argument("--spread-source", choices=["quoted", "cs"], default="quoted",
+                    help="quoted = the Bybit snapshot spread floored at one tick (a24c-01 as re-registered 2026-11-05); cs = Corwin-Schultz")
     ap.add_argument("--snapshot-day", default="2026-11-01", help="UTC day of the Bybit snapshot; Binance 1d quote volume of that day")
     ap.add_argument("--served", default=str(REPO / "ml/served/ml_decision_entry_v1/model.json"))
     ap.add_argument("--fwd-start", default="2026-10-01")
