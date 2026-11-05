@@ -1,0 +1,5 @@
+{
+  "tier": 1,
+  "landing": "self",
+  "why": "Tier 1 per design § 6 S3 (docs/plans/WORK-STORE-DESIGN-2026-11.md): tooling only -- scripts/ops/work.py (a stdlib HTTPS client over the S1 API, which already enforces G1/G2/G3) and .github/workflows/work-store-outbox.yml (drains trusted OWNER/MEMBER/COLLABORATOR outbox comments into that same API, idempotent by op_id). No src/, config/, deploy unit or order path; checklist.py/pipeline.py are NOT re-pointed (that is the freeze, after S2's 2-day parity). Revert: git revert."
+}

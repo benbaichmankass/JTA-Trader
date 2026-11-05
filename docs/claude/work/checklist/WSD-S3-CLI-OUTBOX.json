@@ -2,9 +2,9 @@
   "id": "WSD-S3-CLI-OUTBOX",
   "title": "WORK-STORE S3: scripts/ops/work.py CLI (add/set/note/close/observe/reopen/queue); checklist.py and pipeline.py become shims over it; issue-outbox fallback workflow",
   "phase": null,
-  "state": "queued",
+  "state": "in_flight",
   "owner": "manager",
-  "lane": null,
+  "lane": "session_01AFoLuLxKwXrxDXYuPZvffX",
   "model": "claude-sonnet-5-5",
   "ceiling_usd": 8,
   "spend_usd": null,
@@ -17,12 +17,12 @@
       "what": "needs WSD-S1-STORE-API landed"
     }
   ],
-  "note": "docs/plans/WORK-STORE-DESIGN-2026-11.md \u00a72.3, \u00a76 S3. Needs the D3 token provisioned (see WSD-S1-STORE-API). CLOSES WHEN: a write from a cloud session lands through the direct path AND through the outbox path, each with its op_id once.",
+  "note": "docs/plans/WORK-STORE-DESIGN-2026-11.md \u00a72.3, \u00a76 S3. Needs the D3 token provisioned (see WSD-S1-STORE-API). CLOSES WHEN: a write from a cloud session lands through the direct path AND through the outbox path, each with its op_id once.  2026-11-05 lane session_01AFoLuLxKwXrxDXYuPZvffX: built scripts/ops/work.py (get/history/list/add/set/note/close/reopen/observe/drain; op_id on every write; If-Match from the item + one automatic re-read on 409; --via auto|direct|outbox, auto falls back only when the store is NOT REACHED (network error, 502/504), never on a 4xx/503 refusal) and .github/workflows/work-store-outbox.yml (issue_comment on the issue titled 'work-store outbox' + hourly backstop; applies only OWNER/MEMBER/COLLABORATOR comments; rocket = applied). DIRECT PATH OBSERVED 2026-11-05T09:47Z from this cloud session (proxy-injected auth): create WSD-S3-SYNTH-20261105T094731 -> event seq 16, op_id replay -> replayed:true, note -> v2, chain ok (17 events). Deviation from the design text, stated: the drain is event-driven + hourly instead of a 5-min cron (immediate, and ~288 fewer runs/day). NOT in S3: checklist.py/pipeline.py stay file writers until the freeze (design \u00a7 4 step 2), because re-pointing them now would end the S2 shadow. Remaining to close: the outbox path, once the workflow is on main (issue_comment runs from the default branch): open the issue 'work-store outbox', post a close op for WSD-S3-SYNTH-20261105T094731, see it applied once.",
   "due_by": "2026-11-11",
   "roadmap": [
     "L-OPS"
   ],
-  "updated_at": "2026-11-04T23:37:23Z",
-  "updated_by": "session_01AFoLuKFYUoKzs5TXjGfEdh",
+  "updated_at": "2026-11-05T09:48:01Z",
+  "updated_by": "session_01AFoLuLxKwXrxDXYuPZvffX",
   "_seq": 922
 }
