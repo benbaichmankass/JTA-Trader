@@ -1,9 +1,12 @@
 # Hand-authored 2026-11-01 by lane ML-DECISION-MODELS (Tier 1), dispatched by Manager Session 2026-11-01a (session_01AFoLuJ1apgy8sfngu4WyNH).
+# 2026-11-05 lane ML-MANAGE-HARNESS: harness built (scripts/research/ml_decision_manage.py, self-tested), unit unblocked. The decision_rule block is
+# UNCHANGED from 2026-11-01. REGISTRATION ADDENDUM (written before any run of this unit; DESIGN.md section 4a): base trades, window, controls,
+# the proposal_eligible report. Gates this adds or changes: none.
 # Decision rule registered BEFORE any run (spec docs/research/ml-decision-models-2026-11-01/DESIGN.md). Gates: none.
 id: RQ-20261101-c692-03
 title: 'MANAGE decision model: does ONE pooled LightGBM model choosing HOLD / CLOSE / SL-to-breakeven / trail 1 ATR / TP +1 ATR at each 4h check-in
   keep held-out mean net R per trade >= 0 AND mean delta net R per non-HOLD action >= 0 vs hold-to-bracket?'
-status: blocked
+status: queued
 cadence: once
 theme: ml_health
 priority: 1
@@ -47,10 +50,10 @@ run:
   workflow: research-script-run.yml
   command:
   - python3
-  - scripts/research/ml_decision_entry.py
+  - scripts/research/ml_decision_manage.py
   - run
-  - --model
-  - '03'
+  - --arm
+  - manage
   - --cache
   - /tmp/ml_decision_klines
   - --unit
@@ -69,20 +72,22 @@ related:
 - RQ-20261101-c692-01
 - docs/research/ml-decision-models-2026-11-01/DESIGN.md
 what_it_does_not_do: Registers, serves or promotes nothing; changes no config; places no order; sizes nothing.
-blocked_on:
-- kind: harness
-  ref: scripts/research/ml_decision_entry.py
-  what: 'a `--model 03` (MANAGE) path in ml_decision_entry.py: per-check-in action labels and the managed scoring'
-  clears_when: the subcommand lands on main with a self-test; the lane git-mvs this file to research/queue/ with status queued (rule unchanged)
+registration_addendum_2026_11_05:
+  base_trades: frozen ENTRY (c692-01 recipe; tau read from its summary) opens a trade at the next bar open; static 2.0/4.0 ATR bracket (the dev-chosen static cell of c692-02), 24h time stop; one position per symbol, set defined by HOLD, so every comparison is PAIRED trade-for-trade.
+  check_ins: bar closes 4,8,12,16,20 after the entry bar while the trade is alive; actions HOLD / CLOSE (next open) / BE (SL to entry, only if close > entry) / TRAIL (4-bar extreme - 1 ATR, ratchets, only if tightening and below close) / TPX (TP +1 ATR). A tightening at or above the close is UNAVAILABLE.
+  window: dev = ENTRY walk-forward OOS trades 2022-01-01..2025-09-30 (MANAGE walk-forward folds 2023-01..2025-07, margin chosen on dev only, grid 0/0.02/0.05/0.10/0.15). Held-out = 2025-10-01..2026-09-30, first MANAGE read, claimed once via holdout_lock (model_id MANAGE-manage). The window is NOT fresh for ENTRY-family models (>= 3 prior variants; the claim reports variants_on_window). 2026-10 is spent for frozen ENTRY v1 and is NOT used. A forward confirm on 2026-11+ is registered separately (pipeline row) and is required before any Tier-3 live change.
+  proposal_eligible: reported, not the verdict. = verdict PASS AND delta vs hold-to-bracket > 0 with the trade-grouped paired bootstrap CI95 lower bound > 0. Only an eligible PASS becomes a Tier-3 proposal (a PASS whose managed policy only equals hold is not a case to change anything).
+  not_read_rule: if the dev walk-forward delta vs hold is <= 0 at every margin, the held-out is NOT read and the verdict is fail (dev).
+  disclosure: a plumbing smoke on 2026-11-05 (9 symbols, pseudo held-out starting 2024-10-01) mistakenly included the sealed window in its data because E.fetch's default end is bound at import; its manage-arm summary was printed. No parameter, rule or margin was chosen from it; the bug is fixed and guarded (smoke refuses data >= 2025-10-01). Recorded so the reader can weigh the held-out accordingly.
 power:
-  expected_n: 3000
-  min_detectable_effect: 0.06
+  expected_n: 11000
+  min_detectable_effect: 0.02
   effect_units: metric
-  sd: 1.0
+  sd: 0.5
   design: one_sample
   alpha: 0.05
   power: 0.8
-  basis: Same held-out capacity as c692-01 (INFERRED ~3,000 decisions); the run records the observed n and sd.
+  basis: 'INFERRED: ~11,000 held-out ENTRY trades (c692-01 n=11,240); sd 0.5 R is the guessed paired-delta sd (an action changes a minority of trades); MDE = 2.8*sd/sqrt(n) ~ 0.013, rounded up to 0.02. The run records the observed n and sd.'
   feasibility:
     source: none
     accrual_basis: Replays public history; nothing accrues. The run records the observed n and sd.
@@ -110,10 +115,3 @@ ml_consumer:
   - ada_pullback_2h
   - trend_donchian_sol_prop
   book: money
-blocked_review:
-  by: RESEARCH-OPS-20261101-0940
-  disposition: kept
-  due_by: '2026-11-15'
-  note: 'kept: filed today or released only by the manager (E57) or an observation threshold; owner named
-    in blocked_on'
-  reviewed: '2026-11-01'
