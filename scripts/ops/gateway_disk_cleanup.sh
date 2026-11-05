@@ -1,0 +1,207 @@
+#!/usr/bin/env bash
+# system-action wrapper (Tier 2): free disk on the IB GATEWAY VM. Runs ON the gateway
+# (the workflow ProxyJumps through the trader, same as gateway-disk-report).
+#
+# GATEWAY-DISK-CLEANUP (operator popup ~05:35Z 2026-11-05, verbatim "A+B+C now, rehearse D
+# (Recommended)"; findings PI-20261104-GWDISK-0001 / #23101). Root fs 45G at 94%; the
+# /home/ubuntu/ict-trading-bot checkout is 33G (.git 23G, 8.86G untracked research caches).
+# The checkout is LIVE (ict-git-sync, ict-ib-gateway-watchdog, ict-ib-gateway-reset run from
+# it): nothing here removes, moves or renames it, restarts the ib-gateway container, or
+# touches IB settings/credentials.
+#
+# target (required), every one DRY-RUN unless apply: true:
+#   journald           - write /etc/systemd/journald.conf.d/90-ict-gateway-cap.conf
+#                        (SystemMaxUse=500M), journalctl --vacuum-size=500M, restart
+#                        systemd-journald (journald only; no other unit).
+#   research-clean     - `git clean -ndx -- comms/research`: prints every path, whether it
+#                        holds a tracked file, its size, the total and the sha256 of the list.
+#                        apply additionally needs confirm: <that sha256>, so the real clean
+#                        removes EXACTLY the list that was reviewed (exit 3 if it changed).
+#                        Refuses any path outside comms/research/ or holding a tracked file.
+#   prune-packed       - `git prune-packed` (loose objects that are ALREADY in a pack only).
+#   rehearse-sideclone - D rehearsal, NO swap: a depth-1 sparse side-clone at
+#                        ${SIDE_DIR}, the git-sync (VM-SPARSE-SYNC) block of
+#                        scripts/deploy_pull_restart.sh run against it, and
+#                        check_ib_gateway.py --dry-run from it. Live dir untouched.
+#   sideclone-remove   - delete the rehearsal side-clone (never the live dir).
+# Env: ACTION_TARGET, ACTION_APPLY, ACTION_CONFIRM.
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=scripts/ops/_lib.sh
+source "${SCRIPT_DIR}/_lib.sh"
+
+TARGET="${ACTION_TARGET:-}"
+APPLY="${ACTION_APPLY:-false}"
+case "${APPLY}" in True) APPLY=true ;; False|"") APPLY=false ;; esac
+CONFIRM="${ACTION_CONFIRM:-}"
+LIVE="/home/ubuntu/ict-trading-bot"
+SIDE_DIR="/home/ubuntu/ict-trading-bot.sideclone-rehearsal"
+G=(git -c safe.directory="${LIVE}" -C "${LIVE}")
+first() { awk -v n="$1" 'NR<=n'; }
+
+# Gateway only: the trader VM has no /etc/ict-vm-role marker (deploy_pull_restart.sh).
+ROLE=""
+[ -r /etc/ict-vm-role ] && ROLE="$(tr -d '[:space:]' < /etc/ict-vm-role 2>/dev/null || true)"
+if [ "${ROLE}" != "gateway" ]; then
+    echo "ERROR: /etc/ict-vm-role is '${ROLE}', not 'gateway' -- this action runs on the IB gateway VM only."
+    exit 2
+fi
+if ! sudo -n true 2>/dev/null; then
+    echo "ERROR: passwordless sudo is not available on this host."; exit 4
+fi
+
+df_line() { df -B1 --output=used,avail,pcent / | awk 'NR==2{printf "used=%.2fG avail=%.2fG use=%s\n",$1/1073741824,$2/1073741824,$3}'; }
+avail_b() { df -B1 --output=avail / | awk 'NR==2{print $1}'; }
+
+# A sync tick running `git reset --hard` while we clean or prune is avoidable: wait it out
+# (bounded; we never stop or disable the timer -- no halting).
+wait_git_sync_idle() {
+    local i
+    for i in $(seq 1 48); do
+        if [ "$(systemctl is-active ict-git-sync.service 2>/dev/null || true)" != "activating" ] \
+           && [ "$(systemctl is-active ict-git-sync.service 2>/dev/null || true)" != "active" ]; then
+            echo "ict-git-sync.service idle (check ${i})"; return 0
+        fi
+        sleep 5
+    done
+    echo "WARNING: ict-git-sync.service still running after 240s; proceeding (the step is safe against a concurrent fetch)."
+}
+
+echo "===== gateway-disk-cleanup target=${TARGET} apply=${APPLY} $(date -u +%Y-%m-%dT%H:%M:%SZ) ====="
+B0="$(avail_b)"
+echo ">>> before: $(df_line)"
+
+case "${TARGET}" in
+journald)
+    CONF_DIR=/etc/systemd/journald.conf.d
+    CONF=${CONF_DIR}/90-ict-gateway-cap.conf
+    CONF_BODY=$'[Journal]\nSystemMaxUse=500M\n'
+    sudo -n journalctl --disk-usage 2>&1 || echo "could_not_look: journalctl --disk-usage"
+    echo "existing drop-ins:"; ls -la "${CONF_DIR}" 2>&1 || echo "(none: ${CONF_DIR} absent)"
+    echo "planned: write ${CONF} =>"; printf '%s' "${CONF_BODY}"
+    echo "planned: journalctl --vacuum-size=500M ; systemctl restart systemd-journald"
+    if [ "${APPLY}" != "true" ]; then echo "DRY-RUN: nothing changed. Re-dispatch with apply: true."; exit 0; fi
+    sudo -n mkdir -p "${CONF_DIR}"
+    printf '%s' "${CONF_BODY}" | sudo -n tee "${CONF}" >/dev/null
+    sudo -n journalctl --vacuum-size=500M 2>&1 | tail -n 3
+    sudo -n systemctl restart systemd-journald
+    sleep 2
+    echo "systemd-journald: $(systemctl is-active systemd-journald 2>&1 || true)"
+    echo "persisted: $(sudo -n cat "${CONF}" | tr '\n' ' ')"
+    sudo -n journalctl --disk-usage 2>&1 || true
+    ;;
+research-clean)
+    wait_git_sync_idle
+    LIST="$("${G[@]}" clean -ndx -- comms/research | sed -n 's/^Would remove //p')"
+    N="$(printf '%s' "${LIST}" | grep -c . || true)"
+    SHA="$(printf '%s\n' "${LIST}" | sha256sum | awk '{print $1}')"
+    echo "paths: ${N}"
+    BAD=0; TOTAL=0
+    echo "size_bytes	tracked_files	shape	path"
+    while IFS= read -r p; do
+        [ -n "${p}" ] || continue
+        case "${p}" in comms/research/*) ;; *) echo "REFUSE: outside comms/research: ${p}"; BAD=1; continue ;; esac
+        case "${p}" in *..*) echo "REFUSE: '..' in path: ${p}"; BAD=1; continue ;; esac
+        tr_n="$("${G[@]}" ls-files -- "${p}" | grep -c . || true)"
+        [ "${tr_n}" = "0" ] || BAD=1
+        sz="$(du -sb -- "${LIVE}/${p}" 2>/dev/null | awk '{print $1}')"; sz="${sz:-0}"
+        TOTAL=$((TOTAL + sz))
+        shape="other"; case "${p}" in comms/research/RQ-*) shape="RQ-unit" ;; esac
+        printf '%s\t%s\t%s\t%s\n' "${sz}" "${tr_n}" "${shape}" "${p}"
+    done <<< "${LIST}"
+    awk -v t="${TOTAL}" 'BEGIN{printf "total: %.2fG (%d bytes)\n", t/1073741824, t}'
+    echo "list_sha256: ${SHA}"
+    if [ "${BAD}" != "0" ]; then echo "REFUSED: a path is outside comms/research or holds a tracked file. Nothing removed."; exit 3; fi
+    if [ "${APPLY}" != "true" ]; then echo "DRY-RUN: nothing removed. Re-dispatch with apply: true and confirm: ${SHA}"; exit 0; fi
+    if [ "${CONFIRM}" != "${SHA}" ]; then
+        echo "REFUSED: confirm '${CONFIRM}' != list_sha256 ${SHA} (the list changed or was not reviewed). Nothing removed."; exit 3
+    fi
+    while IFS= read -r p; do
+        [ -n "${p}" ] || continue
+        "${G[@]}" clean -fdx -q -- "${p}"
+    done <<< "${LIST}"
+    LEFT="$("${G[@]}" clean -ndx -- comms/research | grep -c . || true)"
+    echo "removed ${N} paths; still untracked under comms/research: ${LEFT}"
+    echo "tracked files missing from disk after clean (must be 0): $("${G[@]}" ls-files -d -- comms/research | grep -c . || true)"
+    ;;
+prune-packed)
+    wait_git_sync_idle
+    "${G[@]}" count-objects -vH 2>/dev/null
+    PLAN="$(cd "${LIVE}" && "${G[@]}" prune-packed -n 2>/dev/null | sed -n 's/^rm -f //p')"
+    PN="$(printf '%s' "${PLAN}" | grep -c . || true)"
+    PB="$(cd "${LIVE}" && printf '%s\n' "${PLAN}" | awk 'NF' | xargs -r -d '\n' stat -c %s 2>/dev/null | awk '{s+=$1} END{print s+0}')"
+    awk -v n="${PN}" -v b="${PB}" 'BEGIN{printf "prune-packed would remove: %d loose objects, %.2fG (each already in a pack)\n", n, b/1073741824}'
+    if [ "${APPLY}" != "true" ]; then echo "DRY-RUN: nothing removed. Re-dispatch with apply: true."; exit 0; fi
+    timeout 1800 "${G[@]}" prune-packed
+    "${G[@]}" count-objects -vH 2>/dev/null
+    echo "post-check, every tree of HEAD readable: $(timeout 600 "${G[@]}" ls-tree -r HEAD >/dev/null 2>&1 && echo ok || echo FAILED)"
+    echo "post-check, worktree clean vs HEAD: $("${G[@]}" status --porcelain --untracked-files=no | grep -c . || true) modified entries"
+    ;;
+rehearse-sideclone)
+    if [ "${APPLY}" != "true" ]; then
+        echo "planned: depth-1, blob:limit=5m, sparse (deploy/vm-sparse-checkout) clone at ${SIDE_DIR};"
+        echo "         VM-SPARSE-SYNC block of scripts/deploy_pull_restart.sh run there twice;"
+        echo "         check_ib_gateway.py --dry-run from it. Live dir untouched. Needs >= 6G free."
+        echo "DRY-RUN: nothing created. Re-dispatch with apply: true."; exit 0
+    fi
+    if [ "$(avail_b)" -lt $((6 * 1073741824)) ]; then echo "REFUSED: under 6G free."; exit 3; fi
+    [ -e "${SIDE_DIR}" ] && { echo "REFUSED: ${SIDE_DIR} exists; run target: sideclone-remove first."; exit 3; }
+    URL="$("${G[@]}" remote get-url origin)"
+    echo "origin: ${URL%%@*}..." | sed -E 's#https://[^/]*@#https://<cred>@#'
+    t0=$(date +%s)
+    git clone --depth 1 --single-branch --branch main --no-checkout \
+        --filter=blob:limit=5m "${URL}" "${SIDE_DIR}" 2>&1 | tail -n 3
+    S=(git -c safe.directory="${SIDE_DIR}" -C "${SIDE_DIR}")
+    "${S[@]}" config core.sparseCheckout true
+    "${S[@]}" config core.sparseCheckoutCone false
+    "${S[@]}" show origin/main:deploy/vm-sparse-checkout | tee "${SIDE_DIR}/.git/info/sparse-checkout" >/dev/null
+    "${S[@]}" checkout -q main 2>&1 | tail -n 3
+    echo "clone+checkout: $(( $(date +%s) - t0 ))s; shallow=$("${S[@]}" rev-parse --is-shallow-repository); HEAD=$("${S[@]}" log -1 --format='%h %cI')"
+    echo "live HEAD: $("${G[@]}" log -1 --format='%h %cI')"
+    echo "side .git: $(du -sh "${SIDE_DIR}/.git" | awk '{print $1}')  side worktree: $(du -sh --exclude=.git "${SIDE_DIR}" | awk '{print $1}')"
+    # The git-sync path, verbatim from the side clone's own copy of deploy_pull_restart.sh.
+    BLOCK="$(sed -n '/>>> VM-SPARSE-SYNC begin/,/<<< VM-SPARSE-SYNC end/p' "${SIDE_DIR}/scripts/deploy_pull_restart.sh")"
+    [ -n "${BLOCK}" ] || { echo "ERROR: VM-SPARSE-SYNC block not found"; exit 5; }
+    for tick in 1 2; do
+        echo "--- sync tick ${tick} (VM-SPARSE-SYNC block, cwd=${SIDE_DIR}) ---"
+        PRE="$("${S[@]}" rev-parse HEAD)"; t0=$(date +%s)
+        if (cd "${SIDE_DIR}" && bash -c "set -euo pipefail; ${BLOCK}" 2>&1 | tail -n 6); then rc=0; else rc=$?; fi
+        POST="$("${S[@]}" rev-parse HEAD)"
+        echo "tick ${tick}: rc=${rc} $(( $(date +%s) - t0 ))s ${PRE:0:9} -> ${POST:0:9}; shallow=$("${S[@]}" rev-parse --is-shallow-repository); commits_held=$("${S[@]}" rev-list --count HEAD)"
+        echo "tick ${tick}: gateway branch would: $([ "${PRE}" = "${POST}" ] && echo 'no-op (HEAD unchanged)' || echo 'install_systemd_units.sh + restart gateway timers (NOT run in rehearsal)')"
+        echo "tick ${tick}: status: $("${S[@]}" status --porcelain | grep -c . || true) dirty entries; diff --name-only PRE..POST ok: $("${S[@]}" diff --name-only "${PRE}" "${POST}" >/dev/null 2>&1 && echo yes || echo NO)"
+        [ "${tick}" = 1 ] && sleep 330
+    done
+    echo "--- check_ib_gateway.py --dry-run from the side clone ---"
+    mkdir -p /tmp/gwdisk-rehearsal && cp -f "${LIVE}/runtime_logs/ib_gateway_watchdog_state.json" /tmp/gwdisk-rehearsal/state.json 2>/dev/null || echo "(no live watchdog state file to copy)"
+    if (cd "${SIDE_DIR}" && timeout 180 /usr/bin/python3 -u scripts/check_ib_gateway.py --probe-account ib_paper \
+          --probe-script scripts/ops/ib_gateway_local_probe.py --state /tmp/gwdisk-rehearsal/state.json \
+          --restart-after 2 --max-restarts 3 --cooldown-min 20 --max-backoff-min 60 --dry-run 2>&1 | tail -n 15); then
+        echo "check_ib_gateway.py --dry-run: rc=0"
+    else
+        echo "check_ib_gateway.py --dry-run: rc=$?"
+    fi
+    echo "side .git after ticks: $(du -sh "${SIDE_DIR}/.git" | awk '{print $1}')"
+    echo "who would need repointing (unit files naming the live path; none changed):"
+    grep -l "${LIVE}" /etc/systemd/system/*.service /etc/systemd/system/*.timer 2>/dev/null | first 40 || true
+    echo "untracked state in the live dir a swap must carry over:"
+    for f in .env runtime_logs runtime_flags data logs; do
+        [ -e "${LIVE}/${f}" ] && echo "  ${f}: $(du -sh "${LIVE}/${f}" 2>/dev/null | awk '{print $1}') tracked=$("${G[@]}" ls-files -- "${f}" | grep -c . || true)"
+    done
+    echo "live dir NOT touched; NO swap performed."
+    ;;
+sideclone-remove)
+    [ -d "${SIDE_DIR}" ] || { echo "absent: ${SIDE_DIR}"; exit 0; }
+    echo "planned: rm -rf ${SIDE_DIR} ($(du -sh "${SIDE_DIR}" | awk '{print $1}'))"
+    if [ "${APPLY}" != "true" ]; then echo "DRY-RUN: nothing removed."; exit 0; fi
+    [ "${SIDE_DIR}" != "${LIVE}" ] || exit 9
+    sudo -n rm -rf --one-file-system -- "${SIDE_DIR}"
+    ;;
+*) echo "ERROR: target must be journald|research-clean|prune-packed|rehearse-sideclone|sideclone-remove (got '${TARGET}')"; exit 2 ;;
+esac
+
+B1="$(avail_b)"
+echo ">>> after: $(df_line)"
+awk -v a="${B0}" -v b="${B1}" 'BEGIN{printf ">>> freed: %.2fG\n", (b-a)/1073741824}'
+record_audit "gateway-disk-cleanup" "ok" "{\"target\": \"${TARGET}\", \"apply\": \"${APPLY}\"}" >/dev/null 2>&1 || true
