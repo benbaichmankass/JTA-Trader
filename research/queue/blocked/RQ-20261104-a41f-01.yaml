@@ -93,7 +93,11 @@ run:
   - --side-rule
   - restricted
   - --session-gate
-  timeout_minutes: 60
+  - --bars
+  - alpaca
+  - --population
+  - alpaca-liquidity
+  timeout_minutes: 180
   inputs:
     research_unit: RQ-20261104-a41f-01
 ml_consumer:
@@ -121,14 +125,10 @@ population: 'POOLED, fixed before the run and independent of any accounts symbol
   and an ETF (Alpaca asset list read at run time, recorded with its sha256), whose median daily dollar volume over the DEV window 2019-01-01..2020-12-31
   (daily bars) is >= 50,000,000 USD. The dev window is used ONLY for this filter and is never scored. Filtered-out symbols are counted and listed.
   Reported, never gating: the same pooled statistic on the 13 ETFs alpaca_paper trades today.'
-blocked_on:
-- kind: data
-  ref: Alpaca market data (asset list, 1h + daily bars)
-  what: research-script-run.yml carries no ALPACA secrets (market-data-lake.yml does); Yahoo 1h reaches only ~730 days
-  clears_when: a research runner (or a committed market-data-lake export) returns the Alpaca asset list and SPY 1h RTH bars back to 2021-01-01
-    and daily bars back to 2019-01-01, positive control logged
-- kind: harness
-  ref: scripts/research/ml_entry_alpaca_score.py
-  what: --population alpaca-liquidity (the pre-registered pool), --bars alpaca, --window, and the comms/ml_universe/ml_entry.json population-record
-    writer (shared with RQ-20261101-a24c-01)
-  clears_when: 'self-test: a planted illiquid ETF is excluded by the dev-window filter, and a PASS record round-trips through src/config/ml_universe.load'
+etf_rule_registration: 'Registered 2026-11-05 BEFORE ANY RUN (the unit has never run). Alpaca assets carry no ETF flag, so the ETF rule is a STATED RULE
+  frozen in scripts/research/ml_entry_alpaca_score.py::POOL_RULE (ETF iff nasdaqtrader nasdaqtraded.txt has Test Issue N and ETF Y for the exact symbol;
+  no name matching, no manual list; pool = active+tradable+us_equity ETFs with dev-window median daily dollar volume >= 50M). The sha256 of POOL_RULE
+  (canonical JSON, sorted keys) is below; tests/test_ml_entry_alpaca_pool.py::test_pool_rule_is_frozen pins it. The run additionally records the sha256
+  of the nasdaqtraded.txt it read and of the asset list. Bars: Alpaca 1Hour hour-aligned (09:00 ET bar holds 09:30-10:00), declared in the record.
+  Data access: read-only allowlisted client, paper key, 429 back-off (operator 2026-11-05 ~10:05Z). decision_rule above is UNCHANGED.'
+etf_rule_sha256: e9702661d1a596a0f7e84e632c0ca8b5c2743a728f02147477c003644a0858e2
