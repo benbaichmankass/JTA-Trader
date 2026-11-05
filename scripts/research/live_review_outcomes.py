@@ -240,7 +240,7 @@ def venue_candles(symbol: str, timeframe: str, trades: List[Dict[str, Any]], cac
         out.to_csv(tmp, index=False)
         tmp.replace(path)
         return str(path)
-    except Exception as exc:  # noqa: BLE001 - pricing must degrade to no_candles, never crash the review
+    except Exception as exc:  # noqa: BLE001  # allow-silent: logged to stderr and the caller records reason=no_candles (a named read-state, not a 0); a venue outage must not crash the review
         print(f"venue_candles({symbol},{timeframe}) failed: {type(exc).__name__}: {str(exc)[:160]}", file=sys.stderr)
         return None
 
