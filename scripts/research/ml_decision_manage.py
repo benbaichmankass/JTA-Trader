@@ -25,6 +25,7 @@ Net R is per unit of the ORIGINAL stop distance (sizing stays the RiskManager's)
 from __future__ import annotations
 
 import argparse
+import itertools
 import json
 import sys
 import time
@@ -35,7 +36,7 @@ import pandas as pd
 
 REPO = Path(__file__).resolve().parents[2]
 sys.path[:0] = [str(REPO), str(REPO / "scripts" / "research")]
-import ml_decision_entry as E  # noqa: E402
+import ml_decision_entry as E
 
 SCHEMA = "ml_decision_manage/1"
 BASE_SL, BASE_TP = 2.0, 4.0
@@ -331,9 +332,9 @@ def realised(rows: pd.DataFrame, trades_n: int, P: Paths, base: dict, action_by_
 # ------------------------------------------------------------------------------------------------ stats
 def stats(net, base_net, symbols) -> dict:
     d = net - base_net
-    return {"n": int(len(net)), "mean_net_r": float(np.mean(net)), "delta_vs_hold": float(np.mean(d)),
+    return {"n": len(net), "mean_net_r": float(np.mean(net)), "delta_vs_hold": float(np.mean(d)),
             "win_rate": float(np.mean(net > 0)), "p05_net_r": float(np.percentile(net, 5)), "min_net_r": float(np.min(net)),
-            "n_symbols": int(len(set(symbols))), "share_changed": float(np.mean(np.abs(d) > 1e-12))}
+            "n_symbols": len(set(symbols)), "share_changed": float(np.mean(np.abs(d) > 1e-12))}
 
 
 def paired_boot(d: np.ndarray, seed: int = E.SEED) -> list:
@@ -368,7 +369,7 @@ def build_world(a, tau):
     # dev ENTRY OOS predictions: the c692-01 walk-forward folds (identical recipe), then the held-out final fit
     bounds = [pd.Timestamp(x, tz="UTC") for x in E.DEV_FOLDS] + [hs]
     dev_tr = []
-    for lo, hi in zip(bounds[:-1], bounds[1:]):
+    for lo, hi in itertools.pairwise(bounds):
         test = dev[(dev.ts >= lo) & (dev.ts < hi - pd.Timedelta(hours=H + 1))]
         pl, ps = E.fit_predict(E.purge_train(dev, lo), test)
         tr = entry_trades(test.reset_index(drop=True), pl, ps, tau, df_by)
@@ -425,7 +426,7 @@ def _sim_rule(arm, param, P):
 
 def arm_rule(a, tab, df_by, dev_tr, ho_tr) -> dict:
     grid = {"be": [BE_R], "trail": TRAIL_GRID, "timedecay": DECAY_GRID}[a.arm]
-    dP, d_idx = gather(dev_tr, df_by, atr_series(tab, dev_tr))
+    dP, _ = gather(dev_tr, df_by, atr_series(tab, dev_tr))
     dev_base = simulate(dP)
     dev_rows = {}
     for g in grid:
@@ -433,7 +434,7 @@ def arm_rule(a, tab, df_by, dev_tr, ho_tr) -> dict:
         dev_rows[g] = float(np.mean(r["net"] - dev_base["net"]))
     chosen = max(grid, key=lambda g: (dev_rows[g], g))
     dev_delta = dev_rows[chosen]
-    res = {"dev": {"trades": int(len(dev_tr)), "delta_by_param": {str(k): round(v, 5) for k, v in dev_rows.items()},
+    res = {"dev": {"trades": len(dev_tr), "delta_by_param": {str(k): round(v, 5) for k, v in dev_rows.items()},
                    "chosen_param": chosen, "chosen_dev_delta": dev_delta}, "heldout": None}
     if dev_delta <= 0:
         res.update(verdict="fail", why=f"dev delta {dev_delta:+.5f} <= 0 for the dev-chosen parameter {chosen}: not read on the held-out (registered)")
@@ -483,8 +484,8 @@ def arm_model(a, tab, df_by, dev_tr, ho_tr) -> dict:
     dev_tr = dev_tr.reset_index(drop=True)
     bounds = [pd.Timestamp(x, tz="UTC") for x in MANAGE_FOLDS] + [pd.Timestamp(E.HOLDOUT_START, tz="UTC")]
     fold_net = {m: [] for m in MARGIN_GRID}
-    fold_base, n_by_margin = [], {m: 0 for m in MARGIN_GRID}
-    for lo, hi in zip(bounds[:-1], bounds[1:]):
+    n_by_margin = {m: 0 for m in MARGIN_GRID}
+    for lo, hi in itertools.pairwise(bounds):
         cut = lo - pd.Timedelta(days=E.EMBARGO_DAYS) - pd.Timedelta(hours=H + 1)
         tr_rows = dev_rows[dev_rows.ts < cut]
         te_rows = dev_rows[(dev_rows.ts >= lo) & (dev_rows.ts < hi - pd.Timedelta(hours=H + 1))]

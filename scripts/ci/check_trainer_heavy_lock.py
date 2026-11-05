@@ -96,6 +96,9 @@ DECLARED_LIGHT = {
     "scripts/research/ml_decision_brackets.py":
         "ML-DECISION-MODELS BRACKETS harness: same data and route as ml_decision_entry.py (unit RQ-20261101-c692-02, "
         "compute cpu_long, github_runner); never routed to the trainer.",
+    "scripts/research/ml_decision_manage.py":
+        "ML-DECISION-MODELS MANAGE / dynamic-SL harness: same data and route as ml_decision_entry.py (units RQ-20261101-c692-03 and "
+        "RQ-20261105-c692-08..11, compute cpu_long, github_runner); never needs_vm_data, never routed to the trainer.",
     "scripts/research/ml_entry_tp_revision.py":
         "ML-ENTRY-TP-REVISION moving-TP harness: same data and route as ml_decision_entry.py (units RQ-20261101-383f-01/"
         "-03, compute cpu_long, github_runner); fits LightGBM in a lane container or a runner, never routed to the trainer.",
