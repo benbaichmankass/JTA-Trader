@@ -24,7 +24,7 @@
   "roadmap": [
     "L-OPS"
   ],
-  "updated_at": "2026-11-05T11:50:21Z",
+  "updated_at": "2026-11-05T12:07:42Z",
   "updated_by": "session_01AFoLuLxKwXrxDXYuPZvffX",
   "observe": {
     "when": "2026-11-07",
@@ -33,6 +33,11 @@
   "writeback": {
     "roadmap": "none: S2 is a shadow (the store is not canonical until S4); the L-OPS line is updated at WSD-S4-READERS-FLIP",
     "arch": "none: nothing reads work_store.db as truth yet; ARCHITECTURE-CANONICAL gets the store at WSD-S4-READERS-FLIP"
+  },
+  "observation": {
+    "what": "the 48h shadow parity window is clean: every 5-min import+parity run since 2026-11-05T11:42:20Z clean (0 differing / missing / db-only rows and items, Appendix A equal over both sources, chain ok) and the runs cover the window",
+    "how_to_check": "GET /api/bot/work/parity?hours=48 -> window.window_covered true, window.unclean_runs 0, window.window_clean true, and latest.appendix_a.equal true",
+    "due_by": "2026-11-07"
   },
   "_seq": 921
 }
