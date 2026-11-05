@@ -1,0 +1,11 @@
+Fetching MGC D candles 2020-06-19 -> 2026-11-05 (source=dukascopy) …
+  dukascopy: MGC -> INSTRUMENT_FX_METALS_XAU_USD (relation=proxy: spot vs future: no roll, different carry (contango/backwardation))
+INFO:DUKASCRIPT:current timestamp :2026-11-04T00:00:00
+Wrote 1984 rows (2020-06-19 -> 2026-11-04) to /tmp/exit_lever_ablation_vwbfi840/mgc_pullback_1d__data.csv
+[A] /opt/hostedtoolcache/Python/3.11.18/x64/bin/python3 /home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_pullback.py --trend-lookback 40 --pullback-lookback 15 --pullback-frac 0.618 --data <data> --symbol MGC --resample 1d --atr-period 14 --atr-stop-mult 1.5 --trail-mult 4.0 --min-confidence 0.0 --fee-bps-roundtrip 7.5 --emit-trades comms/research/RQ-20261105-5e05-13/42096146073/arms/A__trades.jsonl --json comms/research/RQ-20261105-5e05-13/42096146073/arms/A__bt.json --structure-exit pivot=5 --tp-cap-pct 0.099 --tp-r 6.0 --start 2021-07-01 --end 2026-10-15 23:59
+[N0] /opt/hostedtoolcache/Python/3.11.18/x64/bin/python3 /home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_pullback.py --trend-lookback 40 --pullback-lookback 15 --pullback-frac 0.618 --data <data> --symbol MGC --resample 1d --atr-period 14 --atr-stop-mult 1.5 --trail-mult 4.0 --min-confidence 0.0 --fee-bps-roundtrip 7.5 --emit-trades comms/research/RQ-20261105-5e05-13/42096146073/arms/N0__trades.jsonl --json comms/research/RQ-20261105-5e05-13/42096146073/arms/N0__bt.json --tp-cap-pct 0.099 --tp-r 6.0 --start 2021-07-01 --end 2026-10-15 23:59
+{
+ "verdict": "fail",
+ "label": "incumbent_stands",
+ "why": "no candidate clears net R / fold / drawdown: the incumbent exit stands"
+}
