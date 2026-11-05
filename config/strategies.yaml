@@ -144,8 +144,7 @@ strategies:
                               # src/runtime/pipeline.py. Revisit upward
                               # only after live proof (operator-approved).
     timeframe: "1h"          # RE-TUNED 2h → 1h 2026-06-01 (Tier-3, operator-
-    # STRUCTURE-EXITS-DEFAULT (Tier 3, manager 2026-11-03 on the operator rule "the new default until we prove something else works better"): pivot 5 = middle arm of the measured S3/S5/S8 grid. Revert: delete this line.
-    structure_exit: "pivot=5"
+    # STRUCTURE-EXITS-DEFAULT OFF (Tier 3, 2026-11-05): structure_exit "pivot=5" removed; RQ-20261105-5e05-01 PASS (RULE-STRUCTURE-EXITS-REVERSE-V1: the prior exit beat the structure default net of the full cost stack). Revert: re-add structure_exit: "pivot=5".
                              # approved). SUPERSEDES the 2026-05-24 S9 1h → 2h
                              # migration: the overnight 2026-06-01 research
                              # (357 backtests, 3-fold robust) found 1h /
@@ -1053,8 +1052,7 @@ strategies:
                              # Now live on bybit_1 (demo) AND bybit_2 (real money)
                              # as of 2026-06-02 (Tier-3, operator-approved).
     timeframe: "2h"          # served as Bybit 120m via CCXT.
-    # STRUCTURE-EXITS-DEFAULT (Tier 3, manager 2026-11-03 on the operator rule "the new default until we prove something else works better"): pivot 5 = middle arm of the measured S3/S5/S8 grid. Revert: delete this line.
-    structure_exit: "pivot=5"
+    # STRUCTURE-EXITS-DEFAULT OFF (Tier 3, 2026-11-05): structure_exit "pivot=5" removed; RQ-20261105-5e05-02 PASS (RULE-STRUCTURE-EXITS-REVERSE-V1: the prior exit beat the structure default net of the full cost stack). Revert: re-add structure_exit: "pivot=5".
     symbols:
       - BTCUSDT              # the only validated symbol (SUPPORTED_SYMBOLS gate).
     # Strategy params — the validated walk-forward config (trend_lookback 40 /
@@ -1116,8 +1114,7 @@ strategies:
                              # config/slice_allocation.yaml. That duplication is the cost of the retired-A/B's reinstatement; read the
                              # two legs' slices as one signal when grading.
     timeframe: "1h"          # the faster-TF variant (live trend_donchian is 2h).
-    # STRUCTURE-EXITS-DEFAULT (Tier 3, manager 2026-11-03 on the operator rule "the new default until we prove something else works better"): pivot 5 = middle arm of the measured S3/S5/S8 grid. Revert: delete this line.
-    structure_exit: "pivot=5"
+    # STRUCTURE-EXITS-DEFAULT OFF (Tier 3, 2026-11-05): structure_exit "pivot=5" removed; RQ-20261105-5e05-03 PASS (RULE-STRUCTURE-EXITS-REVERSE-V1: the prior exit beat the structure default net of the full cost stack). Revert: re-add structure_exit: "pivot=5".
     symbols:
       - BTCUSDT              # the only validated symbol (SUPPORTED_SYMBOLS gate).
     # Strategy params — the validated walk-forward config (donchian 20 /
@@ -1162,8 +1159,7 @@ strategies:
                              # prop tickets for supervised manual placement).
                              # validated per-trade sizing (config/accounts.yaml).
     timeframe: "1h"          # the validated trend_donchian config (1h).
-    # STRUCTURE-EXITS-DEFAULT (Tier 3, manager 2026-11-03 on the operator rule "the new default until we prove something else works better"): pivot 5 = middle arm of the measured S3/S5/S8 grid. Revert: delete this line.
-    structure_exit: "pivot=5"
+    # STRUCTURE-EXITS-DEFAULT OFF (Tier 3, 2026-11-05): structure_exit "pivot=5" removed; RQ-20261105-5e05-04 PASS (RULE-STRUCTURE-EXITS-REVERSE-V1: the prior exit beat the structure default net of the full cost stack). Revert: re-add structure_exit: "pivot=5".
     long_only: true          # suppress shorts — SOL's edge holds long-only (A/B).
     symbols:
       - SOLUSDT
@@ -1230,8 +1226,7 @@ strategies:
     execution: live          # promoted from shadow 2026-06-17 (operator-approved,
                              # PB-20260616-004); supervised prop-ticket ping.
     timeframe: "1h"
-    # STRUCTURE-EXITS-DEFAULT (Tier 3, manager 2026-11-03 on the operator rule "the new default until we prove something else works better"): pivot 5 = middle arm of the measured S3/S5/S8 grid. Revert: delete this line.
-    structure_exit: "pivot=5"
+    # STRUCTURE-EXITS-DEFAULT OFF (Tier 3, 2026-11-05): structure_exit "pivot=5" removed; RQ-20261105-5e05-05 PASS (RULE-STRUCTURE-EXITS-REVERSE-V1: the prior exit beat the structure default net of the full cost stack). Revert: re-add structure_exit: "pivot=5".
     symbols:
       - ETHUSDT
     donchian: 20
@@ -2749,8 +2744,7 @@ strategies:
     enabled: true
     execution: live
     timeframe: "1d"
-    # STRUCTURE-EXITS-DEFAULT (Tier 3, manager 2026-11-03 on the operator rule "the new default until we prove something else works better"): pivot 5 = middle arm of the measured S3/S5/S8 grid. Revert: delete this line.
-    structure_exit: "pivot=5"
+    # STRUCTURE-EXITS-DEFAULT OFF (Tier 3, 2026-11-05): structure_exit "pivot=5" removed; RQ-20261105-5e05-17 PASS (RULE-STRUCTURE-EXITS-REVERSE-V1: the prior exit beat the structure default net of the full cost stack). Revert: re-add structure_exit: "pivot=5".
     symbols:
       - GDX
     trend_lookback: 40
@@ -2973,8 +2967,7 @@ strategies:
                             # real-money strategies, so the strategy-level bump is the right
                             # lever. ROLLBACK: restore risk_pct: 0.3.
     timeframe: "2h"          # served as Bybit 120m via CCXT.
-    # STRUCTURE-EXITS-DEFAULT (Tier 3, manager 2026-11-03 on the operator rule "the new default until we prove something else works better"): pivot 5 = middle arm of the measured S3/S5/S8 grid. Revert: delete this line.
-    structure_exit: "pivot=5"
+    # STRUCTURE-EXITS-DEFAULT OFF (Tier 3, 2026-11-05): structure_exit "pivot=5" removed; RQ-20261105-5e05-09 PASS (RULE-STRUCTURE-EXITS-REVERSE-V1: the prior exit beat the structure default net of the full cost stack). Revert: re-add structure_exit: "pivot=5".
     symbols:
       - ETHUSDT              # Bybit USDT linear perp. NOT BTCUSDT.
     # Params — the live BTC htf_pullback_trend_2h values (== harness
@@ -3048,8 +3041,7 @@ strategies:
     # accruing. Revert to live only after a retune whose cells were RE-RUN (not re-read)
     # clears this leg's OWN base.
     timeframe: "2h"           # served as Bybit 120m via CCXT (candle source).
-    # STRUCTURE-EXITS-DEFAULT (Tier 3, manager 2026-11-03 on the operator rule "the new default until we prove something else works better"): pivot 5 = middle arm of the measured S3/S5/S8 grid. Revert: delete this line.
-    structure_exit: "pivot=5"
+    # STRUCTURE-EXITS-DEFAULT OFF (Tier 3, 2026-11-05): structure_exit "pivot=5" removed; RQ-20261105-5e05-10 PASS (RULE-STRUCTURE-EXITS-REVERSE-V1: the prior exit beat the structure default net of the full cost stack). Revert: re-add structure_exit: "pivot=5".
     symbols:
       - ETHUSDT               # Bybit USDT linear perp candles; ticketed on Breakout.
     # Params — eth_pullback_2h's live base, with the SWAP-ROBUST exits.
@@ -3273,8 +3265,7 @@ strategies:
                              # stands undischarged. Re-promoting it needs the recency question
                              # answered, not another pooled sum.
     timeframe: "2h"
-    # STRUCTURE-EXITS-DEFAULT (Tier 3, manager 2026-11-03 on the operator rule "the new default until we prove something else works better"): pivot 5 = middle arm of the measured S3/S5/S8 grid. Revert: delete this line.
-    structure_exit: "pivot=5"
+    # STRUCTURE-EXITS-DEFAULT OFF (Tier 3, 2026-11-05): structure_exit "pivot=5" removed; RQ-20261105-5e05-12 PASS (RULE-STRUCTURE-EXITS-REVERSE-V1: the prior exit beat the structure default net of the full cost stack). Revert: re-add structure_exit: "pivot=5".
     symbols:
       - AVAXUSDT
     trend_lookback: 40

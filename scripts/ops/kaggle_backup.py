@@ -19,10 +19,12 @@ of truth); retention deletes nothing without the operator's OK.
 from __future__ import annotations
 
 import argparse
+import gzip
 import hashlib
 import json
 import re
 import shutil
+import sqlite3
 import sys
 import tarfile
 from collections.abc import Sequence
@@ -197,6 +199,93 @@ def cmd_verify(a) -> int:
     return 0 if res["ok"] else 1
 
 
+def scan_file(path: Path, chunk: int = 8 << 20, overlap: int = 4096) -> list[dict]:
+    """Scan a binary file (a SQLite DB) for credential shapes. NEVER returns or prints the matched text: only the pattern index and
+    the byte offset, so a hit cannot leak the secret into a log."""
+    pats = [(i, re.compile(p.pattern.encode(), p.flags & ~re.UNICODE)) for i, p in enumerate(SECRET_PATTERNS)]
+    hits, off, tail = [], 0, b""
+    with open(path, "rb") as fh:
+        while True:
+            buf = fh.read(chunk)
+            if not buf:
+                break
+            data = tail + buf
+            base = off - len(tail)
+            for i, rx in pats:
+                m = rx.search(data)
+                if m:
+                    hits.append({"pattern": i, "offset": base + m.start()})
+            tail = data[-overlap:]
+            off += len(buf)
+            if len(hits) >= 20:
+                break
+    return hits
+
+
+def cmd_db_stage(a) -> int:
+    """Runner side of a trainer DB snapshot: verify the transfer, re-open the DB, scan for credentials, stage ONE dataset directory."""
+    meta = json.loads(Path(a.meta).read_text())
+    gz = Path(a.gz)
+    res: dict = {"ok": False}
+    if sha256_file(gz) != meta["gz_sha256"]:
+        print(json.dumps({"ok": False, "why": "gz sha256 differs after transfer"}))
+        return 2
+    raw = Path(str(gz) + ".raw")
+    h = hashlib.sha256()
+    with gzip.open(gz, "rb") as fi, open(raw, "wb") as fo:
+        for chunk in iter(lambda: fi.read(1 << 20), b""):
+            h.update(chunk)
+            fo.write(chunk)
+    if h.hexdigest() != meta["raw_sha256"]:
+        raw.unlink()
+        print(json.dumps({"ok": False, "why": "raw sha256 differs after gunzip"}))
+        return 2
+    con = sqlite3.connect(f"file:{raw}?mode=ro", uri=True)
+    integrity = con.execute("pragma integrity_check").fetchone()[0]
+    counts = {n: con.execute(f'select count(*) from "{n}"').fetchone()[0] for n in meta["tables"]}
+    con.close()
+    hits = scan_file(raw)
+    raw.unlink()
+    if integrity != "ok" or counts != meta["tables"]:
+        print(json.dumps({"ok": False, "why": "integrity or table counts differ", "integrity": integrity}))
+        return 3
+    if hits:
+        print(json.dumps({"refused": True, "credential_findings": hits[:20]}))
+        print("::error::credential-like bytes in the database snapshot: backup REFUSED (nothing uploaded)")
+        return 3
+    out = Path(a.out)
+    shutil.rmtree(out, ignore_errors=True)
+    out.mkdir(parents=True)
+    # `.dat`: an extension Kaggle does not unpack (it unpacks .gz/.tar/.zip and would store the 2.5 GB raw file)
+    name = f"{a.stem}.sqlite.gz.dat"
+    shutil.copy2(gz, out / name)
+    slug = f"{a.slug_prefix}-{a.date}"
+    man = {"schema": "kaggle-backup/v1", "kind": "trade_journal", "snapshot_date": a.date, "slug": slug,
+           "generated_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+           "source": {"path": meta["src"], "bytes": meta["src_bytes"], "mtime": meta["src_mtime"], "read_mode": meta["read_mode"],
+                      "note": "the trainer's nightly replica of the live journal, NOT the live file"},
+           "file": name, "gz_bytes": meta["gz_bytes"], "gz_sha256": meta["gz_sha256"], "raw_bytes": meta["raw_bytes"],
+           "raw_sha256": meta["raw_sha256"], "integrity": integrity, "tables": counts,
+           "credential_scan": {"patterns": len(SECRET_PATTERNS), "hits": 0},
+           "note": f"trade journal snapshot {a.date}"}
+    (out / "MANIFEST.json").write_text(json.dumps(man, indent=1))
+    (out / "dataset-metadata.json").write_text(json.dumps({"title": slug, "id": f"{a.username}/{slug}",
+                                                           "licenses": [{"name": "other"}]}, indent=1))
+    res = {"ok": True, "slug": slug, "gz_bytes": meta["gz_bytes"], "raw_bytes": meta["raw_bytes"], "integrity": integrity,
+           "tables": len(counts), "rows": sum(counts.values())}
+    print(json.dumps(res))
+    return 0
+
+
+def cmd_db_check(a) -> int:
+    """Runner-side check of a file downloaded back from Kaggle against the staged manifest."""
+    man = json.loads(Path(a.manifest).read_text())
+    got = sha256_file(Path(a.file))
+    ok = got == man["gz_sha256"]
+    print(json.dumps({"ok": ok, "gz_sha256_matches": ok, "bytes": Path(a.file).stat().st_size, "expected_bytes": man["gz_bytes"]}))
+    return 0 if ok else 1
+
+
 FLAG_AFTER = 2  # consecutive failed backup RUNS (each already retried) before the one red flag
 
 
@@ -241,6 +330,22 @@ def cmd_stamp(a) -> int:
     due = (not ok) and a.flag and st["consecutive_failures"] >= FLAG_AFTER and not st["flagged_at"]
     if due and _raise_flag(a.kind, st):
         st["flagged_at"] = now
+    snap = details.get("snapshot")
+    if snap:
+        # one private dataset per snapshot; retention = keep the newest N, NEVER auto-delete (deletion beyond N asks the operator first)
+        prev_snaps = list((old.get("details") or {}).get("snapshots") or [])
+        snaps = [x for x in prev_snaps if x.get("slug") != snap.get("slug")] + [snap]
+        snaps = sorted(snaps, key=lambda x: x.get("date", ""))
+        keep = int(a.keep_last or 8)
+        st["details"]["snapshots"] = snaps
+        st["details"]["keep_last"] = keep
+        st["details"]["beyond_retention"] = [x["slug"] for x in snaps[:-keep]] if len(snaps) > keep else []
+        st["details"]["beyond_retention_note"] = f"these are OLDER than the newest {keep}; nothing deletes them: the operator must approve"
+    if not snap:
+        # a stamp without a new snapshot (a failed attempt, or another mode) must not erase the snapshot list
+        for k in ("snapshots", "keep_last", "beyond_retention", "beyond_retention_note"):
+            if k in (old.get("details") or {}):
+                st["details"].setdefault(k, old["details"][k])
     kinds[a.kind] = st
     out = {"schema": "kaggle-backup-stamp/v1", "generated_at": now, "kinds": kinds,
            "note": "read-state: a kind absent here has never run; ok=false with a recent last_ok_at is a failed ATTEMPT, not lost data"}
@@ -252,7 +357,7 @@ def cmd_stamp(a) -> int:
 
 def main(argv: Sequence[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("cmd", choices=["stage", "scan", "verify", "stamp"])
+    ap.add_argument("cmd", choices=["stage", "scan", "verify", "stamp", "db-stage", "db-check"])
     ap.add_argument("--kind", default="models")
     ap.add_argument("--out", default="stage")
     ap.add_argument("--served", default="ml/served")
@@ -265,8 +370,18 @@ def main(argv: Sequence[str] | None = None) -> int:
     ap.add_argument("--previous", default="")
     ap.add_argument("--run-id", default="")
     ap.add_argument("--flag", action="store_true")
+    ap.add_argument("--keep-last", type=int, default=8)
+    ap.add_argument("--gz", default="")
+    ap.add_argument("--meta", default="")
+    ap.add_argument("--stem", default="trade_journal")
+    ap.add_argument("--date", default="")
+    ap.add_argument("--slug-prefix", default="metis-trade-journal")
+    ap.add_argument("--username", default="")
+    ap.add_argument("--manifest", default="")
+    ap.add_argument("--file", default="")
     a = ap.parse_args(argv)
-    return {"stage": cmd_stage, "scan": cmd_scan, "verify": cmd_verify, "stamp": cmd_stamp}[a.cmd](a)
+    return {"stage": cmd_stage, "scan": cmd_scan, "verify": cmd_verify, "stamp": cmd_stamp,
+            "db-stage": cmd_db_stage, "db-check": cmd_db_check}[a.cmd](a)
 
 
 if __name__ == "__main__":
