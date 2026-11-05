@@ -330,7 +330,7 @@ class MainActivity : Activity() {
     private fun shareFingerprint() {
         val fp = Store.fingerprint(this)
         startActivity(Intent.createChooser(Intent(Intent.ACTION_SEND).setType("text/plain")
-            .putExtra(Intent.EXTRA_TEXT, "Metis executor device fingerprint (not a secret): $fp"), "Share device ID"))
+            .putExtra(Intent.EXTRA_TEXT, "JTA executor device fingerprint (not a secret): $fp"), "Share device ID"))
     }
 
     private fun setupDialog() {

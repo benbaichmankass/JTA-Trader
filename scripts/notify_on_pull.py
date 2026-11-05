@@ -687,6 +687,21 @@ def _digest_suppressed(event: str) -> bool:
         return False
 
 
+def _merge_suppressed() -> bool:
+    """TELEGRAM-TRIM (operator 2026-11-05, config/telegram_policy.yaml): the rolled-up
+    "N PRs merged to main" ping (kind ``pr_merged``) is off — recorded in the alert
+    ledger as ``suppressed_by_policy``, not sent. Fails OPEN (sends) when the policy
+    cannot be read."""
+    try:
+        sys.path.insert(0, str(REPO_ROOT))
+        from src.runtime import telegram_policy
+
+        return telegram_policy.recurring_off("pr_merged")
+    except Exception as exc:  # noqa: BLE001 — a broken policy sends
+        logger.warning("merge-ping: telegram policy unreadable (%s) — sending", exc)
+        return False
+
+
 def _drain_pending_pings(
     path: Path, delivered: Optional[set[str]] = None,
 ) -> List[Tuple[str, str, str]]:
@@ -895,8 +910,9 @@ def collect_pings(
         pings.append((pri, body, None))
     for pri, body in _training_workflow_pings(pre_sha, post_sha):
         pings.append((pri, body, None))
+    merge_off = _merge_suppressed()
     for pri, body in _merge_pings(pre_sha, post_sha):
-        pings.append((pri, body, None))
+        pings.append((SUPPRESSED_PRIORITY if merge_off else pri, body, None))
     delivered = _load_delivered_hashes(DELIVERED_HASHES)
     for pri, body, h in _drain_pending_pings(PENDING_PINGS, delivered):
         pings.append((pri, body, h))
@@ -980,13 +996,15 @@ def main(argv: Optional[Iterable[str]] = None) -> int:
             try:
                 from src.runtime import telegram_policy
 
-                telegram_policy.record_suppressed("manager_update", body, reason="recurring_off",
+                kind = "pr_merged" if body.startswith("🔀") else "manager_update"
+                telegram_policy.record_suppressed(kind, body, reason="recurring_off",
                                                   channel="manager", source="pending-pings.jsonl")
             except Exception as exc:  # noqa: BLE001 — recording is best-effort
                 logger.warning("pending-pings: suppressed-ledger record failed: %s", exc)
             if line_hash is not None:
                 _record_delivered_hash(DELIVERED_HASHES, line_hash)
-            logger.info("pending-pings: work digest suppressed by telegram_policy (recorded, not sent)")
+            logger.info("pending-pings: %s suppressed by telegram_policy (recorded, not sent)",
+                        "merge ping" if body.startswith("🔀") else "work digest")
             continue
         sent += 1
         try:
