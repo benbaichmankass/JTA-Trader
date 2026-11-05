@@ -1,6 +1,6 @@
 # Free storage options for the 100 GB market data lake (2026-11-05)
 
-> **Doc status:** `live` · category `research` · last verified `2026-11-05` · row `HF-LAKE-STORAGE-403` · lane `HF-LAKE-SQUASH`
+> **Doc status:** `live` · category `evidence` · last verified `2026-11-05` · row `HF-LAKE-STORAGE-403` · lane `HF-LAKE-SQUASH`
 > Gates this adds or changes: none. Nothing was created, moved or deleted; the operator chooses from the table.
 
 **Question** (operator, 2026-11-05): *"Can we find other free resources of data storage to tap into?"* Free only, the operator pays for nothing.
