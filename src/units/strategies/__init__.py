@@ -36,10 +36,13 @@ def load_strategy_config(
     FileNotFoundError
         When *config_path* does not exist.
     """
-    import yaml
+    # TICK-DURATION-115S: the file is still read on every call (an edit is seen
+    # on the next call, as before); only the parse of byte-identical text is
+    # memoized, and every caller gets its own deep copy. See
+    # src/utils/yaml_parse_cache.py for the measurement and the equivalence.
+    from src.utils.yaml_parse_cache import safe_load_path
 
-    with open(config_path, "r", encoding="utf-8") as fh:
-        raw = yaml.safe_load(fh) or {}
+    raw = safe_load_path(config_path) or {}
 
     return dict(raw.get("strategies") or {})
 
