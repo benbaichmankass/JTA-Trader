@@ -1,0 +1,89 @@
+"""Console connector: MCP envelope, read-only tool surface, collapsed states, shared cache budget."""
+from __future__ import annotations
+
+import json
+
+from src.console_connector import data, server
+
+
+def _call(name, args=None, mid=1):
+    return server.handle({"jsonrpc": "2.0", "id": mid, "method": "tools/call",
+                          "params": {"name": name, "arguments": args or {}}})
+
+
+def test_initialize_echoes_protocol_and_declares_tools():
+    r = server.handle({"jsonrpc": "2.0", "id": 1, "method": "initialize",
+                       "params": {"protocolVersion": "2025-03-26"}})
+    assert r["result"]["protocolVersion"] == "2025-03-26"
+    assert "tools" in r["result"]["capabilities"]
+
+
+def test_notification_has_no_response():
+    assert server.handle({"jsonrpc": "2.0", "method": "notifications/initialized"}) is None
+
+
+def test_every_tool_is_declared_read_only():
+    tools = server.handle({"jsonrpc": "2.0", "id": 1, "method": "tools/list"})["result"]["tools"]
+    assert {t["name"] for t in tools} == {"hello", "work_rows", "inbox", "work_items"}
+    for t in tools:
+        assert t["annotations"]["readOnlyHint"] is True
+        assert t["annotations"]["destructiveHint"] is False
+
+
+def test_unknown_tool_and_method_are_errors_not_empty_results():
+    assert _call("drop_table")["error"]["code"] == -32602
+    assert server.handle({"jsonrpc": "2.0", "id": 9, "method": "resources/list"})["error"]["code"] == -32601
+
+
+def test_work_rows_reads_the_real_register_with_population():
+    out = _call("work_rows", {"limit": 2})["result"]["structuredContent"]
+    assert out["read_state"] == "read"
+    pop = out["population"]
+    assert pop["rows_scanned"] > 0 and pop["live_rows"] <= pop["rows_scanned"]
+    assert set(out["sections"]) == {"due", "in_flight", "blocked", "queued"}
+    for name, rows in out["sections"].items():
+        assert len(rows) <= 2
+        assert pop["truncated"][name] == (pop["counts"][name] > 2)
+        for r in rows:
+            assert r["state"] in data.LIVE_STATES
+
+
+def test_work_rows_unreadable_register_is_could_not_look(tmp_path, monkeypatch):
+    def boom(repo):
+        raise OSError("checklist unreadable")
+    monkeypatch.setattr(data, "_load_checklist", boom)
+    out = data.work_rows(tmp_path)
+    assert out["read_state"] == "could_not_look"
+    assert out["population"]["rows_scanned"] is None
+    assert out["sections"] == {}
+
+
+def test_inbox_unserved_sections_say_could_not_look_never_zero():
+    out = _call("inbox", {"limit": 1})["result"]["structuredContent"]
+    alerts = out["sections"]["alerts"]
+    assert alerts["read_state"] == "could_not_look" and alerts["count"] is None
+    assert out["sections"]["decisions_checklist"]["read_state"] == "read"
+    wi = _call("work_items")["result"]["structuredContent"]
+    assert wi["read_state"] == "could_not_look" and wi["count"] is None
+
+
+def test_shared_cache_builds_each_key_once_per_ttl():
+    t = [0.0]
+    c = data.TTLCache(clock=lambda: t[0])
+    n = {"builds": 0}
+
+    def build():
+        n["builds"] += 1
+        return n["builds"]
+    assert c.get("k", 30, build) == 1
+    t[0] = 10
+    assert c.get("k", 30, build) == 1  # 100 viewers inside one TTL cost one build
+    t[0] = 31
+    assert c.get("k", 30, build) == 2
+    assert n["builds"] == 2
+
+
+def test_tool_result_is_json_text_and_structured():
+    r = _call("hello", {"name": "t"})["result"]
+    assert json.loads(r["content"][0]["text"]) == r["structuredContent"]
+    assert r["structuredContent"]["hello"] == "hello, t"
