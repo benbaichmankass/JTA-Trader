@@ -1,0 +1,119 @@
+# Hand-authored 2026-11-05 by lane ML-MANAGE-HARNESS (Tier 1 research tooling; held unit), dispatched by Manager Session 2026-11-05a.
+# Decision rule registered BEFORE any run. Gates this adds or changes: none (a research rule, not a runtime switch).
+id: RQ-20261105-c692-11
+title: 'Dynamic SL, one factor (mlsl): ML SL revision: the MANAGE heads restricted to {HOLD, BE, TRAIL} at the 4h check-ins -- does it beat the
+  fixed 2-ATR stop (hold-to-bracket) on frozen-ENTRY trades, net of the full cost stack, held-out?'
+status: queued
+cadence: once
+theme: ml_health
+priority: 1
+roadmap:
+- L-ML-LIVE
+kind: experiment
+practice_precedent: 'T1, M6 (docs/reference/trading-and-model-practice-principles.md): purged + embargoed walk-forward with a sealed held-out
+  window; triple-barrier first-passage labels (Lopez de Prado 2018, ch. 3); docs/research/ml-decision-models-2026-11-01/DESIGN.md.'
+question: 'Row ML-ENTRY-DYNAMIC-SL arm: ML SL revision (arm d): pooled LightGBM delta-net-R heads for BE and TRAIL only; tighten only if the best
+  predicted delta exceeds a margin chosen on dev. One factor against the fixed 2.0-ATR SL with the static 2/4 ATR bracket, on the SAME frozen-ENTRY
+  trades (paired, trade-for-trade), dev folds choose the parameter, held-out 2025-10-01..2026-09-30 read once. Net R per original stop distance,
+  fee+slippage+funding. Spec DESIGN.md section 4a. Look-before-retest: 5e04-01 (structure SL pivot 5 + moving TP, ENTRY trades, 2025-10..2026-10)
+  and 5e01-09/10/11 (blocked) are entry-time structure stops, a different factor; no break-even/trail/time-decay/ML-revision arm had a unit before
+  this one.'
+why_this_matters: 'Operator 2026-11-01 ~23:00Z (row ML-ENTRY-DYNAMIC-SL): "we also need to test dynamic sl features for the ml". Active management,
+  SL side. A live change is Tier 3.'
+decision_rule:
+  id: RULE-RQ20261105-c692-11-DYNSL
+  registered_at: '2026-11-05'
+  registered_before_run: true
+  statistic: 'Held-out paired mean delta net R per trade vs hold-to-bracket (arm minus fixed 2-ATR SL, same trades, same cost stack), trade-grouped
+    paired bootstrap CI95 (2000 draws); also reported: win rate, p05 and min net R (tail), giveback (mean MFE R minus exit gross R), by-month
+    delta, exit-reason counts, matched random / best static where the arm is a learned head.'
+  rule: 'NOT READ (verdict fail, dev) IF the dev-chosen parameter''s pooled dev delta net R per trade vs hold-to-bracket <= 0: no held-out outcome
+    is read. INDETERMINATE IF held-out trades < 300 OR distinct symbols < 10. PASS IF held-out mean paired delta > 0 AND the CI95 lower bound
+    > 0. FAIL otherwise. A FAIL closes this parameterization and cadence, not the family. Thresholds are not changed after any result.'
+  what_it_does_not_do: No sizing, no config change, no order. A PASS is a Tier-3 PROPOSAL to the operator with the exact change, not a change.
+  min_n: 300 held-out trades on >= 10 symbols
+compute: cpu_long
+value:
+  bucket: ai_trader
+  usd_at_stake_per_month: 800
+  confidence: 0.2
+  basis: 'stand-in: operator priority (row ML-ENTRY-DYNAMIC-SL); not a P&L measurement.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 6.0
+  est_minutes: 45
+  why_runner: Keyless public Binance Vision klines; GBDT on CPU; no trainer data.
+  basis: 'INFERRED: ~4,500 monthly zips (~40 KB each), ~0.8M decision rows x 20 features, 9 LightGBM pairs of fits, a 200-draw random baseline
+    in pure Python.'
+run:
+  workflow: research-script-run.yml
+  command:
+  - python3
+  - scripts/research/ml_decision_manage.py
+  - run
+  - --arm
+  - mlsl
+  - --cache
+  - /tmp/ml_decision_klines
+  - --unit
+  - '{unit}'
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 240
+  inputs:
+    research_unit: RQ-20261105-c692-11
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- ML-ENTRY-DYNAMIC-SL
+- RQ-20261101-c692-03
+- RQ-20261101-c692-01
+- docs/research/ml-decision-models-2026-11-01/DESIGN.md
+what_it_does_not_do: Registers, serves or promotes nothing; changes no config; places no order; sizes nothing.
+registration_addendum_2026_11_05:
+  parameter: margin chosen on dev, grid 0/0.02/0.05/0.10/0.15
+  base_trades: 'identical to RQ-20261101-c692-03''s addendum: frozen ENTRY trades, static 2.0/4.0 ATR bracket, 24h; rule arms evaluated at every
+    bar close (price-triggered, applied from the next bar), learned arm at the 4h check-ins'
+  window: dev = ENTRY walk-forward OOS trades 2022-01-01..2025-09-30; held-out 2025-10-01..2026-09-30 claimed once per model via holdout_lock
+    (variants_on_window reported; the window is not fresh for ENTRY-family models). 2026-10 spent for frozen ENTRY v1 and not used. Forward confirm
+    on 2026-11+ filed separately (PI-20261105-EHARNESS-0001) as RECOMMENDED evidence to gather, not a gate.
+  stricter_than_the_entry_bar: The operator's point-estimate >= 0 bar (popup 2026-11-01) is for ONE decision model that must not lose money. An
+    improvement over a free baseline (keep the fixed stop) is vacuous at >= 0 (an arm that never fires has delta 0), so this rule needs delta
+    > 0 with CI95 lower > 0. A research decision rule, not a runtime gate. The operator may relax it BEFORE the run.
+  not_covered: 'time-decay is arm (c); structure-based SL (arm e) is not authored here: it is an entry-time bracket choice already under 5e04-01
+    / 5e01-09..11; the interaction with extend-only TP is tested after single-arm winners.'
+  disclosure: 'see the RQ-20261101-c692-03 addendum (verbatim): a 2026-11-05 smoke printed part of the sealed-window MANAGE summary for ADAUSDT, BCHUSDT, BTCUSDT, ETCUSDT, ETHUSDT, LINKUSDT, LTCUSDT, TRXUSDT, XLMUSDT; nothing was chosen from it. This arm''s verdict carries heldout.peek (peeked_symbols and the delta ex those 9) because the arm trades them.'
+power:
+  expected_n: 11000
+  min_detectable_effect: 0.02
+  effect_units: metric
+  sd: 0.5
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: 'INFERRED: ~11,000 held-out ENTRY trades; sd 0.5 R guessed for the paired delta; MDE = 2.8*sd/sqrt(n) ~ 0.013 rounded up to 0.02. The
+    run records observed n and sd.'
+  feasibility:
+    source: none
+    accrual_basis: Replays public history; nothing accrues. The run records the observed n and sd.
+intervention_controls:
+  hold_to_bracket: true
+  matched_random:
+    draws: 200
+  best_static:
+    grid:
+    - be_at_1r
+    - trail_1atr
+    - tp_plus_1atr
+    - close_at_12h
+    excludes_test_folds: true
+  bootstrap_group: trade
+ml_consumer:
+  consumer: ML-ENTRY-LIVE-ADAPTER
+  decision: whether the ml_entry leg's open positions get a tightened stop (break-even / trail / ML revision) on bybit_2 + bybit_portfolio
+  legs:
+  - xrp_pullback_2h
+  book: money

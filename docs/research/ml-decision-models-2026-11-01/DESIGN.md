@@ -144,7 +144,7 @@ trading."*
   FAIL otherwise.` Reported: Δ vs the reference 2/3 bracket on the same decisions, the best single static cell chosen
   on dev only, and a random cell (200 draws).
 
-## 4. MANAGE — `RQ-20261101-c692-03` (blocked: harness subcommand to build)
+## 4. MANAGE — `RQ-20261101-c692-03` (harness built 2026-11-05: `scripts/research/ml_decision_manage.py run --arm manage`; see 4a)
 
 - **Check-in cadence:** every 4 h while a position is open (the ENTRY decision cadence).
 - **Decision set:** {HOLD, CLOSE now (next bar open), SL → breakeven, SL → trail 1 ATR behind the 4-h extreme, TP → +1
@@ -158,6 +158,36 @@ trading."*
   (grid excludes held-out), bootstrap grouped by trade.
 - **Rule:** `INDETERMINATE if heldout trades<300 OR n_symbols<10; PASS if heldout mean net R per trade (managed) >= 0
   AND mean Δ net R per non-HOLD action >= 0; FAIL otherwise.`
+
+## 4a. MANAGE harness and the dynamic-SL arms (registered 2026-11-05, lane ML-MANAGE-HARNESS, before any run)
+
+Gates this adds or changes: none. Harness: `scripts/research/ml_decision_manage.py` (`--self-test`: HOLD path == `ml_decision_entry.bracket_outcome`,
+no action touches a trade that already exited, CLOSE/BE/TRAIL availability, no-op rule). Units: `RQ-20261101-c692-03` (MANAGE head, rule unchanged),
+`RQ-20261105-c692-08` break-even at +1R, `-09` ATR trail, `-10` time-decay SL, `-11` ML SL revision (MANAGE heads restricted to BE/TRAIL).
+
+- **Base trades (same for every arm, so every comparison is paired).** Frozen ENTRY (c692-01 recipe, tau read from its summary) opens at the next
+  bar open; static **2.0 / 4.0 ATR** bracket (the dev-chosen static cell of c692-02, which equalled the learned cell), 24 h time stop, one position per
+  symbol. The trade set is defined by HOLD; an early exit never frees a symbol for a re-entry. Net R is per unit of the original stop distance,
+  fee 11 bps + slippage + funding per 8 h window (`ml_decision_entry._cost_r`).
+- **Check-ins and actions (MANAGE, -11).** Closes of bars 4, 8, 12, 16, 20 after the entry bar while alive. HOLD, CLOSE (next open), BE (SL to entry,
+  only if close > entry), TRAIL (SL to the 4-bar extreme minus 1 ATR, ratchets each bar, only if tightening and below the close), TPX (TP +1 ATR,
+  extend-only). A tightening at or above the close is unavailable, never an implicit close. Label = paired delta net R vs HOLD; one LightGBM head per
+  action on market features at the check-in bar plus trade state; act iff the best predicted delta exceeds a margin chosen on the dev walk-forward.
+  A trade is managed once (its first acting check-in).
+- **Rule arms (-08/-09/-10).** Price-triggered, evaluated at every bar close and applied from the next bar (-10 at the 4 h check-ins). BE: SL to entry once a
+  close >= +1R (no parameter). Trail: activates at +1R, SL ratchets to running high minus d ATR, d in {1.0, 1.5, 2.0} chosen on dev. Time-decay: SL
+  distance falls linearly from 2 ATR to f ATR at 24 h, f in {0.5, 1.0, 1.5} chosen on dev.
+- **Windows.** Dev = ENTRY walk-forward OOS trades 2022-01-01..2025-09-30 (MANAGE folds 2023-01..2025-07, purge + 7-day embargo). Held-out
+  2025-10-01..2026-09-30, claimed once per model with `holdout_lock` (`variants_on_window` reported). **That window is not fresh for ENTRY-family
+  models**; 2026-10 is spent for frozen ENTRY v1 and is not used; a forward confirm on 2026-11+ (when n >= 300 accrues) is registered as a pipeline row
+  and is RECOMMENDED evidence, not a gate (no new gates without the operator's permission).
+- **Rules.** -03: unchanged (PASS iff managed mean net R per trade >= 0 AND mean delta per non-HOLD action >= 0; `proposal_eligible` additionally needs the
+  paired CI95 lower bound of delta vs hold > 0). -08..-11: not read if the dev delta <= 0; INDETERMINATE below 300 trades / 10 symbols; PASS iff held-out
+  paired delta vs hold-to-bracket > 0 and CI95 lower > 0. Deliberately stricter than the ENTRY bar: against a free baseline, delta >= 0 is satisfied by an arm
+  that never fires. A research rule, not a runtime gate; the operator may relax it before the run.
+- **Not authored:** structure-based SL (arm e) is an entry-time bracket choice, already under 5e04-01 / 5e01-09..11; the interaction with extend-only TP is
+  tested after single-arm winners.
+- **Disclosure.** a plumbing smoke of this harness (--arm manage, 9 symbols: ADAUSDT, BCHUSDT, BTCUSDT, ETCUSDT, ETHUSDT, LINKUSDT, LTCUSDT, TRXUSDT, XLMUSDT; pseudo held-out starting 2024-10-01) mistakenly included the sealed 2025-10-01..2026-09-30 window in its data, because E.fetch's default `end` is bound at import. What was printed to the lane: the tail of the smoke's manage-arm summary for those 9 symbols over 2024-10..2026-09 (by-month delta vs hold, giveback, the matched-random and single-static-action deltas, the action mix); the headline delta, CI and n were truncated from view and not read. The smoke's model was trained on rows before 2024-10-01, not the registered final fit. NOTHING (rule, margin, parameter, grid, action set) was chosen from it. The bug is fixed and guarded (smoke refuses data >= 2025-10-01). Every arm's verdict records peeked_symbols and the held-out delta ex those 9 symbols, so a reader can weigh it.
 
 ## 5. If none passes — the levers, in order
 
