@@ -24,6 +24,7 @@ import json
 import re
 import shutil
 import sys
+import tarfile
 from collections.abc import Sequence
 from datetime import datetime, timezone
 from pathlib import Path
@@ -81,6 +82,23 @@ def write_manifest(root: Path, kind: str, note: str = "") -> dict:
     return man
 
 
+def _pack(d: Path, kind: str, out: Path) -> None:
+    """Replace directory `d` with `<kind>.tar` + MANIFEST.json (members carry bytes + sha256)."""
+    members = [{"path": p.relative_to(d).as_posix(), "bytes": p.stat().st_size, "sha256": sha256_file(p)}
+               for p in sorted(d.rglob("*")) if p.is_file()]
+    arch = out / f"{kind}.tar"
+    with tarfile.open(arch, "w") as tf:
+        for m in members:
+            tf.add(d / m["path"], arcname=m["path"])
+    shutil.rmtree(d)
+    d.mkdir()
+    shutil.move(str(arch), str(d / f"{kind}.tar"))
+    man = {"schema": "kaggle-backup/v1", "kind": kind, "archive": f"{kind}.tar",
+           "generated_at": datetime.now(timezone.utc).isoformat(timespec="seconds"), "n_files": len(members),
+           "bytes": sum(m["bytes"] for m in members), "files": members}
+    (d / "MANIFEST.json").write_text(json.dumps(man, indent=1))
+
+
 def cmd_stage(a) -> int:
     out = Path(a.out)
     shutil.rmtree(out, ignore_errors=True)
@@ -110,9 +128,12 @@ def cmd_stage(a) -> int:
         shutil.rmtree(out, ignore_errors=True)  # a refused backup leaves nothing staged
         print("::error::credential-like content in the staging tree: backup REFUSED (nothing uploaded)")
         return 3
-    for sub, kind in ((served, "served"), (reg, "registry-store")):
-        if sub.is_dir():
-            write_manifest(sub, kind)
+    # Both instances ship as ONE tar + MANIFEST.json (per-member SHA-256). Why: Kaggle Models refuse more than 50 files
+    # ("The file count exceeds the maximum of 50", observed 2026-11-05 with 106 registry files) and `-r skip` ignores sub-directories
+    # (ml/served is three model folders).
+    for d, kind in ((served, "served"), (reg, "registry-store")):
+        if d.is_dir():
+            _pack(d, kind, out)
     print(json.dumps({"staged": True, "served_files": n_served, "registry_files": n_reg,
                       "bytes": sum(p.stat().st_size for p in out.rglob("*") if p.is_file())}))
     return 0
@@ -124,16 +145,42 @@ def cmd_scan(a) -> int:
     return 3 if found else 0
 
 
+def _member_ok(path: Path, f: dict) -> bool:
+    return path.is_file() and path.stat().st_size == f["bytes"] and sha256_file(path) == f["sha256"]
+
+
 def cmd_verify(a) -> int:
+    """Re-hash every file named in every MANIFEST.json under --root. A manifest with an "archive" is checked either from the
+    tar (if Kaggle left it as a tar) or from the folder Kaggle unpacked it into (observed for dataset tars)."""
+    import tempfile
     root = Path(a.root)
     bad, ok, n = [], 0, 0
     for man_p in sorted(root.rglob("MANIFEST.json")):
         man = json.loads(man_p.read_text())
         base = man_p.parent
+        arch = man.get("archive")
+        if arch:
+            tmp = None
+            tar_p = next(iter(sorted(base.rglob(arch))), None) if base.is_dir() else None
+            if tar_p and tar_p.is_file():
+                tmp = Path(tempfile.mkdtemp())
+                with tarfile.open(tar_p) as tf:
+                    tf.extractall(tmp, filter="data")
+                src = tmp
+            else:
+                src = base / Path(arch).stem
+            for f in man.get("files", []):
+                n += 1
+                if _member_ok(src / f["path"], f):
+                    ok += 1
+                else:
+                    bad.append(f"{base.relative_to(root).as_posix()}/{arch}:{f['path']}")
+            if tmp:
+                shutil.rmtree(tmp, ignore_errors=True)
+            continue
         for f in man.get("files", []):
             n += 1
-            p = base / f["path"]
-            if p.is_file() and p.stat().st_size == f["bytes"] and sha256_file(p) == f["sha256"]:
+            if _member_ok(base / f["path"], f):
                 ok += 1
             else:
                 bad.append((base / f["path"]).relative_to(root).as_posix())

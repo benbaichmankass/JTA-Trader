@@ -24,8 +24,20 @@ for mp in mans:
     base = os.path.dirname(mp)
     with open(mp) as mf:
         man = json.load(mf)
+    arch = man.get("archive")
+    src = base
+    if arch:
+        tars = glob.glob(os.path.join(base, "**", arch), recursive=True)
+        if tars:
+            import tarfile
+            import tempfile
+            src = tempfile.mkdtemp()
+            with tarfile.open(tars[0]) as tf:
+                tf.extractall(src)
+        else:
+            src = os.path.join(base, os.path.splitext(arch)[0])
     for f in man.get("files", []):
-        p = os.path.join(base, f["path"])
+        p = os.path.join(src, f["path"])
         if not os.path.isfile(p):
             bad.append(p + ": missing")
             continue
