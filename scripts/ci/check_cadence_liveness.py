@@ -461,6 +461,7 @@ CADENCE_REGISTRY: dict[str, dict] = {
     "ict-trainer-git-sync.timer": {"receipt": None, "why": "VM-side; diag relay is the surface"},
     "ict-web-api-watchdog.timer": {"receipt": None, "why": "VM-side; diag relay is the surface"},
     "ict-work-digest.timer": {"receipt": None, "why": "VM-side; diag relay is the surface"},
+    "ict-work-store-import.timer": {"receipt": None, "why": "VM-side (WSD-S2); its receipt is runtime_logs/work_store_parity.jsonl on the live VM, served by GET /api/bot/work/parity (window.runs vs expected_runs)"},
     # PHONE-EXEC-OBSERVABLE-1018 (2026-10-18): the daily 7-day purge of phone step captures. Its run is visible
     # on the VM only: the one JSON line it prints to its journal (/api/diag/journalctl?unit=ict-phone-capture-purge)
     # and the capture store's own .last_purge marker; the same purge also runs on every capture POST.

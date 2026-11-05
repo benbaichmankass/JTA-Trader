@@ -1025,8 +1025,12 @@ _SESSIONS_NOTE = (
 )
 
 
-def _checklist_payload() -> dict[str, Any]:
-    """Build the checklist envelope. Best-effort: never raises to the caller."""
+def _checklist_payload(items_override: list[dict] | None = None) -> dict[str, Any]:
+    """Build the checklist envelope. Best-effort: never raises to the caller.
+
+    ``items_override`` (WSD-S2 shadow parity only): serve these raw rows instead of the
+    file's -- the work store's projection -- inside the SAME envelope, so the two payloads
+    can be compared item for item. ``None`` (every normal caller) changes nothing."""
     repo = Path(repo_root())
     read = manager_status.read_json_file(repo / manager_status.CHECKLIST_RELPATH)
     tree = manager_status.read_tree_provenance(repo_dir=repo)
@@ -1091,6 +1095,8 @@ def _checklist_payload() -> dict[str, Any]:
              if isinstance(raw_items, list) else [])
     dropped = ((len(raw_items) - len(items))
                if isinstance(raw_items, list) else 0)
+    if items_override is not None:
+        items, dropped = items_override, 0
 
     vocabulary = manager_status._declared_vocabulary(read.data)
     sessions = manager_status.read_json_file(
@@ -1161,14 +1167,45 @@ def _checklist_summary(rows: list[dict[str, Any]], dropped: int) -> dict[str, An
     }
 
 
+def _checklist_payload_from_store() -> dict[str, Any]:
+    """``?source=db``: the same envelope with every row projected from ``work_store.db``.
+
+    WSD-S2 shadow parity (docs/plans/WORK-STORE-DESIGN-2026-11.md § 4 step 1). The files stay
+    canonical; this exists so the db-served payload can be compared with the file-served one.
+    Rows are the importer's lossless projection (``work_store_import.to_row``), in the
+    checklist's own order (``_seq``, then id)."""
+    from src.runtime import work_store as ws
+    from src.runtime import work_store_import as wi
+    from src.utils.paths import work_store_db_path
+    store = ws.WorkStore(work_store_db_path())
+    rows = [wi.to_row(i) for i in store.list_items(kind="build", limit=10 ** 7)
+            if (i.get("extra") or {}).get("_source") == "checklist"]
+    rows.sort(key=lambda r: (r.get("_seq", 1 << 60), r["id"]))
+    rows = [{k: v for k, v in r.items() if k != "_seq"} for r in rows]  # as checklist_store.load serves them
+    payload = _checklist_payload(items_override=rows)
+    payload["source"] = "db"
+    payload["canonical"] = False
+    return payload
+
+
 @router.get("/checklist")
-def get_work_checklist() -> dict[str, Any]:
+def get_work_checklist(source: str = "files") -> dict[str, Any]:
     """The manager checklist, graded — the live Workflow page's data source.
 
     Read-only, file-backed, no DB, no secrets, no write surface. Best-effort:
     an unreadable checklist degrades to ``present: false`` WITH its read state,
     never a 5xx and never an empty list that reads as "no work".
+
+    ``?source=db`` (WSD-S2 shadow parity) serves the work store's projection in the same
+    envelope, uncached, marked ``source: db, canonical: false``. The default is unchanged.
     """
+    if source == "db":
+        try:
+            return _checklist_payload_from_store()
+        except Exception as exc:  # allow-silent: not silent — logged with a stack and surfaced as present:false + readState could_not_look; never an empty list that reads as no work
+            logger.warning("work: checklist source=db read failed: %s", exc, exc_info=True)
+            return {"present": False, "readState": "could_not_look", "source": "db",
+                    "reason": f"work store read failed: {exc}", "items": None}
     global _checklist_cache
     now = time.monotonic()
     cached = _checklist_cache
