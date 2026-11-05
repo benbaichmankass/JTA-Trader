@@ -83,4 +83,25 @@ echo "-- ubuntu crontab:"; ${SUDO} crontab -u ubuntu -l 2>&1 | grep -v '^#' | fi
 echo "-- active timers:"; systemctl list-timers --all --no-pager 2>&1 | first 20
 echo "-- ib-gateway mounts:"; ${SUDO} docker inspect ib-gateway --format '{{range .Mounts}}{{.Source}} -> {{.Destination}}{{"\n"}}{{end}}' 2>&1 | first 10
 echo "-- processes with cwd or files under the checkout:"; timeout 60 ${SUDO} lsof +D "${RB}" 2>/dev/null | awk 'NR>1{print $1}' | sort | uniq -c | first 10 || echo "none_or_lsof_missing"
+echo; echo "===== checkout .git forensics (GWDISK-0001 round 2; stderr warnings suppressed) ====="
+RB=/home/ubuntu/ict-trading-bot
+if [ -d "${RB}" ]; then
+  G="git -c safe.directory=${RB} -C ${RB}"
+  echo "-- count-objects -vH:"; ${SUDO} ${G} count-objects -vH 2>/dev/null | first 12
+  echo "-- pack files (pack-*.pack): count, total, size buckets:"
+  ${SUDO} find "${RB}/.git/objects/pack" -maxdepth 1 -type f -name 'pack-*.pack' -printf '%s\n' 2>/dev/null | awk '{n++;s+=$1; if($1<10485760)a++; else if($1<52428800)b++; else c++} END{printf "%d packs, %.1fG total; <10M:%d 10-50M:%d >=50M:%d\n",n,s/1073741824,a,b,c}'
+  echo "-- garbage tmp_pack_* / .tmp-* files: count and total size:"
+  ${SUDO} find "${RB}/.git/objects/pack" -maxdepth 1 -type f \( -name 'tmp_pack_*' -o -name '.tmp-*' \) -printf '%s\n' 2>/dev/null | awk '{n++;s+=$1} END{printf "%d files, %.2fG\n",n,s/1073741824}'
+  echo "-- loose objects (outside pack/ and info/): count and total size:"
+  ${SUDO} find "${RB}/.git/objects" -mindepth 2 -type f ! -path '*/pack/*' ! -path '*/info/*' -printf '%s\n' 2>/dev/null | awk '{n++;s+=$1} END{printf "%d loose, %.2fG\n",n,s/1073741824}'
+  echo "-- .git top-level du:"; timeout 100 ${SUDO} du -sh "${RB}/.git"/* 2>/dev/null | sort -rh | first 12
+  echo "-- gc.log present?:"; ${SUDO} ls -la --time-style=+%Y-%m-%dT%H:%M "${RB}/.git/gc.log" 2>&1 | first 2; ${SUDO} head -c 400 "${RB}/.git/gc.log" 2>/dev/null || true
+  echo "-- gc / fetch / sparse config (names+values):"
+  ${SUDO} ${G} config --get-regexp '^(gc|fetch|core\.(sparse|bare|preload)|pack|maintenance|extensions)' 2>/dev/null | first 20 || true
+  echo "-- sparse-checkout list (first 25):"; ${SUDO} ${G} sparse-checkout list 2>&1 | first 25
+  echo "-- excluded-shape files present under comms/research:"
+  timeout 100 ${SUDO} find "${RB}/comms/research" -xdev -type f \( -name '*.pkl' -o -name '*.npz' -o -name '*.parquet' -o -name '*.csv' -o -name '*.gz' -o -name '*.zip' -o -name '*.joblib' \) -printf '%s\n' 2>/dev/null | awk '{n++;s+=$1} END{printf "%d files, %.2fG\n",n,s/1073741824}'
+  timeout 100 ${SUDO} du -xh --max-depth=2 "${RB}/comms/research" 2>/dev/null | sort -rh | first 12
+  echo "-- ict-git-sync now / last journal lines:"; systemctl is-active ict-git-sync.service 2>&1 || true; ${SUDO} journalctl -u ict-git-sync.service -n 12 --no-pager 2>/dev/null | cut -c1-200
+fi
 } 2>&1 | mask
