@@ -1,7 +1,7 @@
 {
- "bar": "2026-11-05T16:25:00Z",
- "bar_close": "2026-11-05T16:30:00Z",
- "built_at": "2026-11-05T16:33:54Z",
+ "bar": "2026-11-05T16:30:00Z",
+ "bar_close": "2026-11-05T16:35:00Z",
+ "built_at": "2026-11-05T16:35:54Z",
  "closed": false,
  "order_package_id": "pkg-bf12adaa61b043f7",
  "packet": {
@@ -94,7 +94,28 @@
     "ts": "2026-11-05T16:33:08.863216+00:00",
     "veto": false
    },
-   "previous_review": null,
+   "previous_review": {
+    "action": "hold",
+    "forecast": {
+     "direction": "with_trade",
+     "evidence": [
+      "desk_handoff.opening: entry 1.2446, stop 1.2711, tp 1.1916, p_target 0.38",
+      "chart.swings/htf: 4h lows 1.2408/1.2341",
+      "chart.bars: last 1h bar 1.2801 -> 1.2446, low 1.2375",
+      "book: 7 correlated shorts adverse"
+     ],
+     "horizon_bars": 24,
+     "invalidation_px": 1.265,
+     "p_target": 0.3,
+     "target_px": 1.1916,
+     "thesis": "XRP sold into the 4h support 1.2408/1.2341; a bounce toward 1.255-1.265 is as likely as continuation. A 1h close above 1.265 would invalidate it; otherwise price extends toward the 1.1916 2R target.",
+     "timeframe": "1h"
+    },
+    "reason": "Hold (CONFIRM the desk's opening thesis). Desk leg claude_desk, XRPUSDT short on bybit_1 (paper), entered 1.2446 at 16:29Z, the close of a 1h bar that fell 1.2801 to 1.2446 (low 1.2375), stop 1.2711 (2.0 ATR, 1h ATR 0.01324), TP 1.1916 (2R). No priced table exists (the desk has no Stage-0 evidence record), and open_r is null (no telemetry row), so the live mark is unknown and I do not state a P&L\u2026",
+    "review_id": "LR-20261105T1633Z-pkg-bf12adaa61b043f7",
+    "reviewed_at": "2026-11-05T16:40:00Z",
+    "route": null
+   },
    "symbol": "XRPUSDT"
   },
   "context_v3": {
@@ -103,25 +124,25 @@
      "MGC",
      "short",
      "mgc_pullback_1d",
-     0.638
+     0.573
     ],
     [
      "BTCUSDT",
      "short",
      "ml_entry",
-     -0.628
+     -0.63
     ],
     [
      "ETHUSDT",
      "short",
      "trend_donchian_eth",
-     -0.44
+     -0.39
     ],
     [
      "SPY",
      "short",
      "ml_entry",
-     -0.394
+     -0.212
     ],
     [
      "GLD",
@@ -139,7 +160,7 @@
      "MHG",
      "short",
      "mhg_pullback_1d",
-     0.957
+     0.904
     ],
     [
      "SLV",
@@ -157,7 +178,7 @@
      "TLT",
      "long",
      "tlt_pullback_1d",
-     0.444
+     0.433
     ],
     [
      "TQQQ",
@@ -169,25 +190,25 @@
      "BTCUSDT",
      "short",
      "trend_donchian_1h",
-     -0.486
+     -0.488
     ],
     [
      "IAUM",
      "short",
      "ml_entry",
-     -0.554
+     -0.484
     ],
     [
      "QQQ",
      "short",
      "ml_entry",
-     -0.552
+     -0.463
     ],
     [
      "SOLUSDT",
      "short",
      "trend_donchian_sol_4h",
-     1.89
+     1.88
     ]
    ],
    "book_note": "[symbol, direction, leg, open_r (null = not measured)] per OTHER open package, either side",
@@ -508,8 +529,24 @@
    "basis": null
   },
   "desk_handoff": {
-   "chain_length": 0,
-   "chain_tail": [],
+   "chain_length": 1,
+   "chain_tail": [
+    {
+     "action": "hold",
+     "forecast": {
+      "direction": "with_trade",
+      "horizon_bars": 24,
+      "invalidation_px": 1.265,
+      "p_target": 0.3,
+      "target_px": 1.1916,
+      "timeframe": "1h"
+     },
+     "reason": "Hold (CONFIRM the desk's opening thesis). Desk leg claude_desk, XRPUSDT short on bybit_1 (paper), entered 1.2446 at 16:29Z, the close of a 1h bar that fell 1.2801 to 1.2446 (low 1.2375), stop 1.2711 (2.0 ATR, 1h ATR 0.01324), TP 1.1916 (2R). No priced table exists (the desk has no Stage-0 evidence record), and open_r is null (no telemetry row), so the live mark is unknown and I do not state a P&L. Structure: the entry sits on the 4h swing lows 1.2408/1.2341, so the short sold into support; the breakdown continues only if those lows give way. The 16:25Z bounce across the correlated book (7 shorts at -0.4 to -0.75R) makes a retrace toward 1.265 plausible, and the desk's own early-exit line (a 1h close above 1.265) is tighter than the venue stop 1.2711 and is not enforced by the bracket. Nothing since the 16:29Z decision (4 minutes) changes the thesis, so confirm. I put the 2R target at p 0.30, below the desk's 0.38, because the entry is on 4h support and the rest of the book is being bounced. Closing now would pay round-trip cost with no evidence the thesis failed; the brackets are the protection.",
+     "review_id": "LR-20261105T1633Z-pkg-bf12adaa61b043f7",
+     "reviewed_at": "2026-11-05T16:40:00Z",
+     "verdict": "confirm"
+    }
+   ],
    "instruction": "CONFIRM, REVISE (with a reason) or EXIT this position against the opening thesis and the newest view in the chain; copy prior_decision_id into handoff.prior_decision_id.",
    "missing": [],
    "opening": {
@@ -538,7 +575,7 @@
     "timeframe": "1h",
     "tp": 1.1916
    },
-   "prior_decision_id": "DD-20261105T1626Z-scan-1h-1",
+   "prior_decision_id": "LR-20261105T1633Z-pkg-bf12adaa61b043f7",
    "protocol": "DESK-HANDOFF-PROTOCOL",
    "read_state": "read"
   },
@@ -552,10 +589,10 @@
    "r_to_target": null
   },
   "generator": {
-   "head": "c3568ba880",
+   "head": "b0e916e238",
    "state": "current"
   },
-  "info_cutoff_at": "2026-11-05T16:34:10Z",
+  "info_cutoff_at": "2026-11-05T16:36:13Z",
   "leg": "claude_desk",
   "mechanics": {
    "evidence": "package sl 1.2711 / tp 1.1916 agree with every readable account",
@@ -619,25 +656,18 @@
    "cell_now": null,
    "trend_now": "trending"
   },
-  "review_id": "LR-20261105T1633Z-pkg-bf12adaa61b043f7",
+  "review_id": "LR-20261105T1635Z-pkg-bf12adaa61b043f7",
   "short_hold": {
-   "atr": 0.008392857142857186,
-   "bar": "2026-11-05T16:25:00Z",
-   "bar_close": "2026-11-05T16:30:00Z",
+   "atr": 0.00772857142857145,
+   "bar": "2026-11-05T16:30:00Z",
+   "bar_close": "2026-11-05T16:35:00Z",
    "entry": 1.2446,
-   "mark": 1.2545,
-   "minutes_held": 0.7,
-   "open_r_at_mark": -0.3736,
+   "mark": 1.2538,
+   "minutes_held": 2.7,
+   "open_r_at_mark": -0.3472,
    "r_unit": "entry_to_current_sl",
    "read_state": "read",
    "recent_bars": [
-    {
-     "close": 1.2602,
-     "high": 1.2625,
-     "low": 1.2526,
-     "open": 1.255,
-     "t": "2026-11-05T15:30:00Z"
-    },
     {
      "close": 1.2586,
      "high": 1.2634,
@@ -714,6 +744,13 @@
      "low": 1.2531,
      "open": 1.2581,
      "t": "2026-11-05T16:25:00Z"
+    },
+    {
+     "close": 1.2538,
+     "high": 1.255,
+     "low": 1.2496,
+     "open": 1.2545,
+     "t": "2026-11-05T16:30:00Z"
     }
    ],
    "risk_per_unit": null,
@@ -732,25 +769,18 @@
    "tp": 1.1916
   }
  },
- "packet_sha": "62e2beba769d65b063f789a924650ea052de5f41eb237c757f484b1f796c0786",
+ "packet_sha": "0fbc68ea3ae74f13e2b6e09db96ca2578b2c207fbfe22bc7259c4f3a9a67ed95",
  "short_hold": {
-  "atr": 0.008392857142857186,
-  "bar": "2026-11-05T16:25:00Z",
-  "bar_close": "2026-11-05T16:30:00Z",
+  "atr": 0.00772857142857145,
+  "bar": "2026-11-05T16:30:00Z",
+  "bar_close": "2026-11-05T16:35:00Z",
   "entry": 1.2446,
-  "mark": 1.2545,
-  "minutes_held": 0.7,
-  "open_r_at_mark": -0.3736,
+  "mark": 1.2538,
+  "minutes_held": 2.7,
+  "open_r_at_mark": -0.3472,
   "r_unit": "entry_to_current_sl",
   "read_state": "read",
   "recent_bars": [
-   {
-    "close": 1.2602,
-    "high": 1.2625,
-    "low": 1.2526,
-    "open": 1.255,
-    "t": "2026-11-05T15:30:00Z"
-   },
    {
     "close": 1.2586,
     "high": 1.2634,
@@ -827,6 +857,13 @@
     "low": 1.2531,
     "open": 1.2581,
     "t": "2026-11-05T16:25:00Z"
+   },
+   {
+    "close": 1.2538,
+    "high": 1.255,
+    "low": 1.2496,
+    "open": 1.2545,
+    "t": "2026-11-05T16:30:00Z"
    }
   ],
   "risk_per_unit": null,
