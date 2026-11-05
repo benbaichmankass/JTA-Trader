@@ -426,7 +426,7 @@ def run(a) -> int:
     out = Path(a.out)
     out.mkdir(parents=True, exist_ok=True)
     if a.stage == "xs":
-        res = run_xs(a, tau, out)
+        res = run_xs(a, tau)
         res.update({"schema": SCHEMA, "unit": a.unit, "arm": a.arm, "stage": "xs", "entry_tau": tau, "git_sha": E._git_sha(), "elapsed_s": round(time.time() - t0)})
         v, why = res.pop("verdict"), res.pop("why")
         (out / "summary.json").write_text(json.dumps({**res, "verdict": v, "why": why}, indent=1, default=str) + "\n")
@@ -632,7 +632,7 @@ def era_split(ts, d, acted) -> dict:
     return out
 
 
-def run_xs(a, tau, out: Path) -> dict:
+def run_xs(a, tau) -> dict:
     """CROSS-SECTIONAL confirming read of a frozen config: trades on perps OUTSIDE the 60-perp pool (never in any training set of any
     variant), over their whole available history. ENTRY = the pool-trained final fit; MANAGE heads = the pool dev trades <= 2025-09 as
     frozen by c692-12 / c692-11; margin and actions are NOT re-selected."""
