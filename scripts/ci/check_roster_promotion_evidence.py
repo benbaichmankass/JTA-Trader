@@ -187,12 +187,12 @@ FAITHFUL = "faithful"
 #: (bybit_2/xrp_pullback_2h's record already reads `faithful` on main). Remove an entry when the
 #: leg's record is regenerated `fidelity: faithful`. Do not add one without a
 #: faithful re-measure that cleared the leg's original Stage-0 rule.
-FIDELITY_BASELINE: Dict[Tuple[str, str], str] = {
-    # alpaca_live — omitted trail_decay_stall_bars / trail_decay_tight_mult.
-    # RQ-20261011-6707-01 faithful arm, record window, full cost stack: ief +2.33R
-    # (n=8), slv +2.48R (n=11), iaum +9.85R (n=8) — all clear RULE-D1.
-    ("alpaca_live", "iaum_pullback_1d"): "RQ-20261011-6707-01",
-}
+#: 2026-11-05 (lane TP-REALMONEY-UNITS, the tp_extend declare PR): the last entry,
+#: ("alpaca_live", "iaum_pullback_1d") -> RQ-20261011-6707-01, was removed because
+#: comms/strategy_evidence/iaum_pullback_1d.json was regenerated `fidelity: faithful`
+#: (build_strategy_evidence.py, trailing 365 d, trail-decay + tp_extend both forwarded).
+#: The baseline is now EMPTY: every risk-bearing slot's record is faithful.
+FIDELITY_BASELINE: Dict[Tuple[str, str], str] = {}
 
 
 # --------------------------------------------------------------------------
@@ -760,13 +760,25 @@ def self_test() -> int:
               [ok for _, ok, _ in clause_verdicts(stale)], [True, True, True, True, True])
         # P8: C5 baseline is SLOT-keyed — a baselined leg added to ANOTHER
         #     risk-bearing account is not covered by the baseline.
+        #     The real baseline is empty since 2026-11-05, so the slot is PLANTED for the
+        #     duration of these two checks and removed again (fail closed either way).
         approx = {**good, "fidelity": "approximate"}
-        check("P8 baselined leg on a non-baselined account fails C5",
-              dict((c, o) for c, o, _ in clause_verdicts(approx, "bybit_2", "iaum_pullback_1d"))["C5"],
-              False)
-        check("P8b baselined slot passes C5",
+        _planted = ("alpaca_live", "iaum_pullback_1d")
+        _had = _planted in FIDELITY_BASELINE
+        FIDELITY_BASELINE.setdefault(_planted, "RQ-SELFTEST-PLANTED")
+        try:
+            check("P8 baselined leg on a non-baselined account fails C5",
+                  dict((c, o) for c, o, _ in clause_verdicts(approx, "bybit_2", "iaum_pullback_1d"))["C5"],
+                  False)
+            check("P8b baselined slot passes C5",
+                  dict((c, o) for c, o, _ in clause_verdicts(approx, "alpaca_live", "iaum_pullback_1d"))["C5"],
+                  True)
+        finally:
+            if not _had:
+                FIDELITY_BASELINE.pop(_planted, None)
+        check("P8c with the plant removed, the same slot FAILS C5 (the real baseline is empty)",
               dict((c, o) for c, o, _ in clause_verdicts(approx, "alpaca_live", "iaum_pullback_1d"))["C5"],
-              True)
+              _had)
 
         # P7: the pairs sleeve — one `account_id:` line.
         pairs_base = yaml.safe_dump({"account_id": "paper_acct",

@@ -1,0 +1,175 @@
+# Hand-authored 2026-11-04 by lane EXIT-HEAD-ETH-REGISTER (Tier 1), dispatched by Manager Session 2026-11-04b
+# (session_01AFoLuN7HERxg65eHjtmMYE). Operator, planning popup 2026-11-04 ~22:10-22:25Z, verbatim: "Register + gate now".
+# Decision rule registered BEFORE the exit head was trained or scored on this window (the baseline arm + E0 build
+# were run first as plumbing only: they reproduce RQ-20261104-c6f1-04's B arm and read no head outcome).
+id: RQ-20261104-e4a1-01
+title: 'Exit head, real money, HELD-OUT: does an E1/E1.5 ML exit head, selected on the earlier span of trend_donchian_eth_4h''s
+  history, beat the leg''s CURRENT declared exit on a later span selection never saw, net of the full cost stack?'
+status: done
+cadence: once
+roadmap:
+- L-ATM
+- M20
+theme: live_strategy
+priority: 1
+kind: experiment
+practice_precedent: 'T1 (a matched random-intervention control) + T3 (net of the full cost stack) + M-principles on purged
+  walk-forward; binding sources .claude/skills/exit-refinement/SKILL.md P3/P4, docs/research/M20-exit-head-PROGRAM.md E1/E1.5,
+  docs/ARCHITECTURE-CANONICAL.md § Active management clause 4; holdout design = PROMOTION-BAR-HOLDOUT-1016 / RQ-20261104-c6f1-04.'
+question: 'trend_donchian_eth_4h trades real money on bybit_2 (+ the bybit_portfolio mirror). Its declared exit, READ FROM
+  config/strategies.yaml on main 8f000b7f4 (not from the dispatch line, which said trail 5x / 4R TP and is stale): atr_stop_mult
+  1.5, trail_mult 6.0, trail_decay_stall_bars 10 / trail_decay_tight_mult 1.8, tp_revision donchian_measured_move width_mult
+  0.5, entry tp_r 50.0 (sentinel at the 9.9% venue cap). Every exit-head verdict on this leg (coverage matrix exit_head_ml:
+  2026-07-12 AUC ~0.55; 2026-07-13 peak-retarget AUC 0.65-0.76; 2026-08-14 live-parity AUC 0.6285, beats_hard 9/16 -> honest_negative)
+  was measured against the OLD bracket (stop 2.0-2.5, trail 5.0, no decay, no measured-move), on the stock trainer whose head arm
+  is GROSS and whose gate reads the best tau in hindsight. Against the exit the leg runs NOW, selected causally and charged its
+  costs, does a learned exit head add net R on a span it never saw?'
+why_this_matters: 'The operator (2026-11-04) asked for the exit-head question on this real-money leg to be registered and gated.
+  RQ-20261104-c6f1-04 (PR #22999) found that on this leg the declared measured-move revision supersedes any finite entry
+  target before it binds (T3/T4/T5 tie B exactly on discovery, n 202, 67.43 R): the TP side of the bracket is already doing
+  the work, so the remaining exit question is WHEN to leave, which is what a head answers. This unit reuses c6f1-04''s exact
+  baseline arm and held-out boundary, so its B held-out figure (13.966 R, n 76) is the same object, and it does not re-test the
+  entry target (a7c3-04 stays the record for RM-AM-ETH4H-ENTRYTP; c6f1-04''s ungraded T4 15.92 vs 13.97 stays ungraded here).'
+power:
+  expected_n: 76
+  min_detectable_effect: 0.32
+  effect_units: sd
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: 'Held-out n 76 (c6f1-04 B arm, MEASURED; reproduced by this lane locally 2026-11-04, 278 trades / 76 held-out /
+    13.966 R). (1.96 + 0.8416) / sqrt(76) = 0.32 sd paired effect detectable at 80%. The fleet''s measured head effect is
+    delta ~0.105 sd typical (docs/research/M20-E1-block-size-derivation-2026-08-13.md), so this read is UNDERPOWERED for a
+    typical head: a FAIL is weak evidence against the head, and a PASS must also clear the random control (clause 6). Discovery:
+    ~190 resolvable trades -> 50-trade walk-forward blocks (the trainer''s derived default, never tuned) -> 2-3 usable folds.'
+  feasibility:
+    source: none
+    accrual_basis: Replays history on freshly fetched public candles for a pinned window; nothing accrues.
+decision_rule:
+  id: RULE-RQ20261104e4a101-EXITHEAD-HOLDOUT
+  statistic: 'scripts/research/exit_head_holdout.py --leg trend_donchian_eth_4h, window 2020-07-01 .. 2026-11-03 23:59. (a)
+    BASELINE B = the leg as declared, run by exit_lever_ablation.py (config-exact argv builder: forwards trail-decay and
+    tp_revision) with the SAME invocation as RQ-20261104-c6f1-04, net of the cost stack the harness resolves per venue
+    (recorded: fee 11.0 + slippage 3.0 bps rt + funding 1.0 bps/8h). (b) E0 per-bar rows from B''s emitted trades
+    (scripts/ml/build_exit_head_dataset.py, base features, label holding_pays = future_r_delta >= +0.25R). (c) BOUNDARY
+    2025-04-03 15:00:00+00:00, fixed by the harness from B''s ENTRY TIMES (c6f1-04 plan); the driver asserts the harness
+    reproduces it, else indeterminate. DISCOVERY = trades whose entry AND exit precede it; HELD-OUT = trades entered on/after it.
+    (d) ARMS, fixed now: 19 head arms = unconditional tau in {0.10,0.15,0.20,0.25,0.30,0.40,0.50} + E1.5 shapes {below_half_r,
+    pre_mfe1, age8, age8_below_half_r} x tau {0.10,0.15,0.20} (train_exit_head.py predicates, imported); hard comparators
+    stale_8_0 and giveback_1_1. An arm exits at the close of the first in-trade bar its predicate fires on; a trade it never
+    fires on (or one with no in-trade bar) keeps B''s net R. (e) COST: every truncated trade is charged
+    execution_costs.roundtrip_cost_r on B''s recorded stack from entry to that bar''s close, plus one slippage side for the
+    discretionary exit; self-check: the same model must reproduce every emitted B cost within 1e-3 R, else indeterminate.
+    (f) DISCOVERY WALK-FORWARD: train_exit_head.fold_blocks (trades mode, 50-trade blocks, first block is seed); each test
+    fold''s LightGBM model (train_model, unchanged hyperparameters) is fit only on discovery rows whose trade''s LAST bar is
+    >= 7 days (EMBARGO_S) before the fold start. (g) HELD-OUT: one model fit on all discovery rows purged 7 days before the
+    boundary; every arm is replayed once on the held-out trades. (h) CONTROL: 2000 draws (seed 20261104) truncating the same
+    number k of held-out trades the selected arm truncated, each at a uniform random in-trade bar, priced identically.
+    Reported, not graded: per-fold and held-out AUC, R giveback mean/p95, net R per position-day, every arm''s held-out row.'
+  rule: 'INDETERMINATE iff the boundary or cost self-check fails, fewer than 2 usable discovery folds, or the selected arm never
+    fires on the held-out span. ELIGIBLE (discovery) iff a head arm''s summed walk-forward net R > B''s on the same trades AND
+    its fold net R >= B''s in >= ceil(2/3 x usable folds) folds AND it truncates >= 1 trade AND the mean discovery OOS AUC >
+    0.55 (program E1 gate). SELECTED = the eligible arm with the highest summed walk-forward net R; none eligible -> B is selected
+    -> FAIL. PASS iff ALL on the held-out span, read once: (1) the selected arm is a head arm; (2) n >= 25; (3) its net R >=
+    B''s held-out net R; (4) its net R >= the better of stale_8_0 / giveback_1_1 held-out net R; (5) its max DD <= 1.35 x B''s;
+    (6) its net R > the 95th percentile of the matched random-truncation control. FAIL otherwise. Thresholds are not changed
+    after any result. PASS -> ONE Tier-3 proposal to the operator via the manager (never self-merged, NO config edit in this
+    unit''s PR): E2 first (publish the head artifact to the trainer mirror + observe-only shadow scoring on this leg, Tier-2,
+    feature-parity diff), then the E3 declare exit_head_model / exit_head_threshold / exit_head_action on trend_donchian_eth_4h
+    (bybit_2 + bybit_portfolio in one revertible PR; rollback = delete the lines), evidence = this unit''s verdict.json, and the
+    proposal states that Active management clause 4 still governs a full-close action class (a per-trade screen; the book
+    simulation BOOK-SIM-REAL-SIZER does not exist yet). FAIL -> honest negative recorded in the coverage matrix and lever map;
+    under research-ops § D it is ''first test failed -> variants queued'', never ''dead''.'
+  what_it_does_not_do: 'Edits no config, places no order, publishes no model artifact. The leg''s ENTRY and bracket params were
+    chosen on windows that overlap both spans; the held-out span is independent of the head and tau selection made here, not of
+    the leg''s construction. A one-leg per-trade-R read, not the book simulation. Trains on harness trades only (no live-journal
+    validation set, because bybit_2 closes on this leg are too few to carry the E1 sign-agreement check; stated, not hidden).'
+  registered_before_run: true
+  registered_at: '2026-11-04'
+ml_consumer:
+  consumer: src/runtime/exit_head_shadow.py
+  decision: close (or tighten to breakeven) an open trend_donchian_eth_4h position before its declared exit when the head fires (exit_head_model / exit_head_threshold / exit_head_action on the leg, Tier-3)
+  legs:
+  - trend_donchian_eth_4h
+  book: money
+compute: cpu_light
+value:
+  bucket: own_losses
+  usd_at_stake_per_month: 300
+  confidence: 0.2
+  basis: 'stand-in: exit quality of a real-money leg (milestone: active management on every real-money leg); prior heads on
+    this leg were honest negatives, hence the low confidence. Not a P&L measurement.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 2.0
+  est_minutes: 20
+  why_runner: Fetches keyless public candles for a pinned window; LightGBM on ~3.6k rows; reads no trainer data.
+  basis: 'Runner. One baseline harness pass (+ the c6f1 T4 arm for the reproduction check), an E0 build, and ~4 small LightGBM
+    fits; measured locally 2026-11-04 at minutes for the plumbing half.'
+run:
+  workflow: research-script-run.yml
+  command:
+  - python3
+  - scripts/research/exit_head_holdout.py
+  - --leg
+  - trend_donchian_eth_4h
+  - --days
+  - '2350'
+  - --start
+  - '2020-07-01'
+  - --end
+  - 2026-11-03 23:59
+  - --boundary
+  - '2025-04-03 15:00:00+00:00'
+  - --tf
+  - 4h
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 90
+  inputs:
+    research_unit: RQ-20261104-e4a1-01
+  note: Needs lightgbm on the runner (research-script-run.yml installs lightgbm 4.6.0). The driver is manual-only tooling for this unit.
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- EXIT-HEAD-ETH-REGISTER
+- RQ-20261104-c6f1-04
+- RQ-20261028-a7c3-04
+- docs/research/M20-exit-head-PROGRAM.md
+- docs/research/exit-refinement-coverage.json
+grading:
+  auto: false
+  verdict: fail
+  decision_rule_id: RULE-RQ20261104e4a101-EXITHEAD-HOLDOUT
+  graded_at: '2026-11-04'
+  grader: lane EXIT-HEAD-ETH-REGISTER (the driver applies the registered clauses as code; read back by the lane)
+  reason: age8_below_half_r_tau_0.2 selected on discovery; held-out clauses 1-5 hold, clause 6 fails (15.45 R does not beat the
+    random-truncation control's p95 29.14 R; it is below the control median 19.34 R)
+  selected: age8_below_half_r_tau_0.2
+  boundary: '2025-04-03 15:00:00+00:00'
+  evidence:
+  - research/results/RQ-20261104-e4a1-01/local-20261104b.jsonl
+  - comms/research/RQ-20261104-e4a1-01/local-20261104b/verdict.json
+  ran: 'locally via scripts/research/script_run.py --run --run-id local-20261104b (laptop-class, lightgbm 4.7.0 vs the runner''s
+    pinned 4.6.0), 2026-11-04 ~23:30Z, after the rule was committed (e99e5a736, 23:25Z). An earlier attempt (run id
+    local-20261104) crashed BEFORE any model was fit (scikit-learn missing locally) and was deleted; it read no outcome.'
+  observation: 'MEASURED (verdict.json): reproduction exact vs c6f1-04 (discovery B n 202 / 67.4308 R; held-out B n 76 /
+    13.966 R; boundary identical); cost self-check max gap 1.3e-05 R over 278 trades. Discovery: 2 usable 50-trade folds
+    (42 trailing trades in no fold), mean OOS AUC 0.5727 (folds 0.596 / 0.550); 3 of 19 head arms eligible, all
+    age8_below_half_r; selected tau 0.2 at walk-forward 45.44 vs B 41.88 R. Held-out (n 76, read once): selected 15.45 R,
+    maxDD 16.96 vs B 13.97 R / 21.14; stale_8_0 14.26 R; giveback_1_1 15.23 R; held-out AUC 0.602; k = 23 trades truncated.
+    Control (2000 draws, k 23): median 19.34 R, p95 29.14 R. Reported, not graded: the best held-out arm was age8_tau_0.1 at
+    20.05 R (never selected). WHY the control is so strong (post-hoc diagnostic, ungraded, same data): a bar close before
+    the exit always sits above the then-current stop, so truncating a LOSER at a random earlier close gains ~+0.8 R
+    (discovery 121 losers +0.868; held-out 50 losers +0.799) and truncating a WINNER costs ~-1.2 R (71 winners -1.293; 21
+    -1.177). Random truncation therefore pays in proportion to the loser share: +0.07 R/cut on discovery, +0.21 R/cut on the
+    loser-heavy held-out span. The head gained +0.064 R per cut there, below that base rate: it did not pick its cuts better
+    than chance.'
+  next: 'Honest negative for this configuration (first test failed -> variants queued, research-ops § D): the read is
+    underpowered for a typical head effect (MDE 0.32 sd vs ~0.105 typical), so the variant is a POOLED donchian-4h family head
+    (eth/sol/xrp/ada/avax trades, each at its declared exit) graded per leg against this same control; filed on
+    docs/claude/work/PIPELINE.jsonl. No Tier-3 proposal (no PASS). The coverage matrix exit_head_ml cell stays
+    honest_negative with this ref appended.'

@@ -50,7 +50,8 @@ def violations_for(with_: dict) -> list[str]:
 
 def test_every_infra_checkout_is_sparse_and_blobless():
     found = list(_infra_checkouts())
-    assert len(found) >= 6, f"probe found too few infra checkouts ({len(found)}): the denominator is wrong"
+    # was 6 until B13 moved 3 research workflows to hosted
+    assert len(found) >= 4, f"probe found too few infra checkouts ({len(found)}): the denominator is wrong"
     bad = [f"{wf}:{job}: {v}" for wf, job, w in found for v in violations_for(w)]
     assert not bad, "\n".join(bad)
 

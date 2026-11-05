@@ -112,11 +112,21 @@ def _send_telegram(kind: str, payload: dict[str, Any]) -> None:
         # TELEGRAM-CHANNELS (2026-10-11): trade lifecycle -> the TRADES channel
         # via the one routing table (falls back to SYSTEM if TRADES cannot
         # deliver, so a trade event is never dropped by the move).
-        from src.runtime import telegram_channels
+        from src.runtime import telegram_channels, telegram_policy
 
+        text = format_trade_event_message(kind, payload)
+        # TELEGRAM-TRIM (operator 2026-11-04): ONE ping per order-package event;
+        # testing paper recorded only. The typed FCM push above is unchanged.
+        d = telegram_policy.should_send_trade(
+            kind, text, account=payload.get("account"), strategy=payload.get("strategy"),
+            symbol=payload.get("symbol"), package_id=payload.get("order_package_id"))
+        if not d.send:
+            return
+        if d.note:
+            text = f"{text} · {d.note}"
         telegram_channels.send(
             kind,
-            format_trade_event_message(kind, payload),
+            text,
             parse_mode=None,
             # We already fired the typed FCM push below — disable the
             # generic ``telegram`` mirror so the phone isn't double-notified.

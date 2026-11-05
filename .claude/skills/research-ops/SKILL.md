@@ -157,7 +157,8 @@ The shared pattern's ANALYSIS prompts (compete hypotheses with *noise* always on
 surprises, premortem, neutral framing) apply to every step above: `docs/reference/llm-analyst-skill-design.md` § 3.
 
 **3. ACT** — steps C–E mechanics: author what step 2.4–2.5 decided as iteration units (the loop's block), then follow-ups the packet shows as `needs_authoring`,
-triage `needs_review`, unlock / retire. A follow-up re-handed-off twice is authored by this pass or retired with a reason.
+triage `needs_review`, unlock / retire.
+   **Daily triage duty (operator, 2026-11-04 weekly planning, popup verbatim: "research-ops owns it, daily (Recommended)"; Gates this adds or changes: none):** every day, triage the `needs_review` items and give every unowned one an owner or a disposition (authored, retired with a reason, or filed on the checklist/pipeline). A follow-up re-handed-off twice is authored by this pass or retired with a reason.
 
 **4. RECORD** — step F's record gains the shared pattern's four top-level blocks (the old fields stay), shape as in
 `docs/reference/llm-analyst-skill-design.md` § 4 and `comms/schema/performance_review_response.template.json`:

@@ -85,6 +85,20 @@ def _stamp(update: str, now) -> None:
         logger.warning("send_hourly_now: could not stamp %s", update)
 
 
+def _not_sent(update: str) -> str:
+    """``suppressed_by_policy`` when TELEGRAM-TRIM turned *update* off (the
+    message was recorded by ``telegram_channels.send``; the cadence slot is
+    stamped so the hourly data sweep, which also writes the balance snapshot,
+    keeps running hourly), else ``not_sent``."""
+    try:
+        from src.runtime import telegram_policy
+        if telegram_policy.recurring_off(update):
+            return "suppressed_by_policy"
+    except Exception:  # noqa: BLE001
+        pass
+    return "not_sent"
+
+
 def send_periodic_updates(now) -> dict:
     """Send whichever of SYSTEM health / TRADES snapshot is due. Returns
     ``{update: outcome}``. One data sweep serves both."""
@@ -112,8 +126,8 @@ def send_periodic_updates(now) -> dict:
             from src.runtime.outcomes import send_scheduled
             send_scheduled(text)
             ok = True
-        out["system_health"] = "sent" if ok else "not_sent"
-        if ok:
+        out["system_health"] = "sent" if ok else _not_sent("system_health")
+        if ok or out["system_health"] == "suppressed_by_policy":
             _stamp("system_health", now)
     if due["trades_snapshot"][0]:
         from src.runtime import trades_snapshot
@@ -126,8 +140,8 @@ def send_periodic_updates(now) -> dict:
         except Exception as exc:  # noqa: BLE001
             logger.warning("trades snapshot send failed: %s", exc)
             ok = False
-        out["trades_snapshot"] = "sent" if ok else "not_sent"
-        if ok:
+        out["trades_snapshot"] = "sent" if ok else _not_sent("trades_snapshot")
+        if ok or out["trades_snapshot"] == "suppressed_by_policy":
             _stamp("trades_snapshot", now)
     return out
 

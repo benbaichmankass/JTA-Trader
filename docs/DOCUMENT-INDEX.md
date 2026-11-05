@@ -621,6 +621,7 @@ real top-level `docs/*.md` and fails if the population builder cannot see it.
 | `docs/plans/soak-decisions-2026-10-04.md` | unknown | unknown | — | never | `not-assessed / not-assessed` | — |
 | `docs/plans/soak-verdicts-2026-10-04.md` | unknown | unknown | — | never | `not-assessed / not-assessed` | — |
 | `docs/plans/ui-upgrade-1-auth-and-keys-design.md` | architecture | unknown | — | never | `name:design-declares-a-contract / not-assessed` | — |
+| `docs/plans/UI-TWO-SURFACE-DESIGN-2026-11.md` | plan | unknown | — | never | `name:plan-is-a-forward-commitment / not-assessed` | UI-TWO-SURFACE-DESIGN: trading dashboard (SPA, SSE push, browser-direct chart feed, health cards) vs management console (Claude artifact fed by a read-only JTA MCP connector on the trainer VM); SPA page inventory; notes/comments/sample paths; build order T1-T4/C1-C5/R1; operator decisions U1-U6. Design only. |
 | `docs/plans/work-system-2026-10-04.md` | plan | unknown | — | never | `name:plan-is-a-forward-commitment / not-assessed` | — |
 | `docs/plans/WORK-STORE-DESIGN-2026-11.md` | plan | unknown | — | never | `name:plan-is-a-forward-commitment / not-assessed` | WORK-STORE-DESIGN: one register (items+events SQLite on the VM behind the API) replacing checklist+pipeline files; bot-output ledgers off the repo; measured repo-flow inventory; deploy path (keep ict-git-sync); migration dry-run; build order; operator decisions D1-D9. Design only. |
 | `docs/proposals/sizer-margin-base-2026-10-28.md` | unknown | unknown | — | never | `not-assessed / not-assessed` | — |
@@ -1061,6 +1062,7 @@ real top-level `docs/*.md` and fails if the population builder cannot see it.
 | `docs/research/research-ops-benchmark-2026-10-16.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | Research loop benchmarked against published research-ops practice (quant multiple testing, MLOps tracking, pre-registration, stage-gate, SRE): gap table, filed rows and operator decisions (lane RESEARCH-OPS-BENCHMARK-1016). |
 | `docs/research/strategy-status-model-2026-10-28.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
 | `docs/research/structure-exits-default-scope-2026-11-01.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
+| `docs/research/tick-duration-115s-profile-2026-11-04.md` | evidence | live | — | 2026-11-04 | `dir:research-is-measurement / read:TICK-DURATION-115S-lane-authored-and-measured-it-2026-11-04` | TICK-DURATION-115S profile + staged plan; goes historical once the deployed tick is observed on /api/diag/tick_cost |
 | `docs/research/tp-doctrine-w43-proposals-2026-10-22.md` | evidence | unknown | — | 2026-10-22 | `dir:research-is-measurement / not-assessed` | — |
 | `docs/research/trail-ratchet-audit-2026-10-31/RESULT.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
 | `docs/research/trainer-workload-2026-10-13.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
@@ -1157,6 +1159,7 @@ real top-level `docs/*.md` and fails if the population builder cannot see it.
 | `docs/reviews/2026-10-22-weekly-planning-preread.md` | unknown | unknown | — | never | `not-assessed / not-assessed` | — |
 | `docs/reviews/2026-10-28-health-review.md` | evidence | unknown | — | never | `name:audit-measures / not-assessed` | — |
 | `docs/reviews/2026-11-04-health-review.md` | evidence | unknown | — | never | `name:audit-measures / not-assessed` | — |
+| `docs/reviews/2026-11-04-weekly-planning-preread.md` | evidence | unknown | — | never | `not-assessed / not-assessed` | — |
 | `docs/reviews/2026-10-28-weekly-walkthrough.md` | unknown | unknown | — | never | `not-assessed / not-assessed` | — |
 | `docs/reviews/2026-10-29-followthrough-triage.md` | unknown | unknown | — | never | `not-assessed / not-assessed` | — |
 | `docs/reviews/2026-10-29-system-conformance-audit.md` | evidence | unknown | — | never | `name:audit-measures / not-assessed` | — |

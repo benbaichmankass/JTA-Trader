@@ -5,7 +5,7 @@ id: RQ-20261104-002
 title: 'ITERATION 2 of spy_pullback_1h (365d record FAIL, but positive on the 8-year window in iteration
   1): does the leg AS DECLARED, selected on 2018-06..the holdout boundary, stay net-positive once on the
   held-back latest 25% (dukascopy 1h, full cost stack)?'
-status: queued
+status: done
 cadence: once
 roadmap:
 - L-PROGRAMMES
@@ -154,4 +154,16 @@ generated:
   key: programme:P3-ITER2-spy-pullback-1h-holdout
   params:
     node: P3-ITER2-spy-pullback-1h-holdout
-last_dispatched_at: null
+last_dispatched_at: '2026-11-04T23:47:33+00:00'
+grading:
+  auto: true
+  decision_rule_id: RULE-P3-ITER2-spy-pullback-1h-holdout
+  evidence:
+  - research/results/RQ-20261104-002/41936602860.jsonl
+  graded_at: '2026-11-05'
+  grader: scripts/research/queue_grade.py
+  note: 'deterministic harness: FAIL closes this cell with no same-window replay; it does not retire the
+    family (family-retirement protocol, #18557)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail

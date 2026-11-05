@@ -2,22 +2,33 @@
   "id": "TICK-DURATION-115S",
   "title": "Trader tick takes ~115 s (signal build 49%, order_monitor 28%): 1h closed-bar signals land 17-226 s after the close, 5m scalps are evaluated at most every ~2 min",
   "phase": null,
-  "state": "queued",
-  "owner": "manager",
-  "lane": null,
-  "model": null,
-  "ceiling_usd": null,
+  "state": "landed_unproven",
+  "owner": "TICK-DURATION-115S",
+  "lane": "",
+  "model": "opus",
+  "ceiling_usd": 15,
   "spend_usd": null,
   "tier": 2,
-  "prs": [],
+  "prs": [
+    23029
+  ],
   "blocked_on": [],
-  "note": "[SYSTEM-AUDIT-INTEGRATION F8, docs/audits/2026-11-04-system-integration.md] MEASURED GET /api/diag/tick_cost 2026-11-04T18:22Z over 13 ticks since process start 17:45:06Z: mean 115.0 s, max 139.2 s (18:01:53Z); run_one_tick mean 79.3 s; pipeline.signal_build 299 calls mean 2.45 s = 49.0% of total; order_monitor mean 31.9 s per tick = 27.8%; monitor.check_broker_naked_equity_positions 8.0 s, reconcile_open_trades 6.8 s, reconcile_orphan_exchange_positions 6.3 s per tick. order_packages created_at minus 1h bar close for closed-bar 1h legs (n=8, journal tail 2026-11-04): +17..+226 s. Package -> trade row is fast (n=40, median 2.5 s, max 7.6 s). TASK: profile signal_build (2.45 s per call: per-symbol fetch.1h mean 720 ms, fetchvenue.alpaca 421 ms) and move order_monitor's broker sweeps off the signal loop (it already has an off-loop hook set); target: a 5m bar evaluated within 30 s of close. Order-path runtime change: Tier 2, not fixed in the audit lane. DETECTOR: tick_cost mean_ms < 30000 over >= 20 ticks.",
+  "note": "[SYSTEM-AUDIT-INTEGRATION F8, docs/audits/2026-11-04-system-integration.md] MEASURED GET /api/diag/tick_cost 2026-11-04T18:22Z over 13 ticks since process start 17:45:06Z: mean 115.0 s, max 139.2 s (18:01:53Z); run_one_tick mean 79.3 s; pipeline.signal_build 299 calls mean 2.45 s = 49.0% of total; order_monitor mean 31.9 s per tick = 27.8%; monitor.check_broker_naked_equity_positions 8.0 s, reconcile_open_trades 6.8 s, reconcile_orphan_exchange_positions 6.3 s per tick. order_packages created_at minus 1h bar close for closed-bar 1h legs (n=8, journal tail 2026-11-04): +17..+226 s. Package -> trade row is fast (n=40, median 2.5 s, max 7.6 s). TASK: profile signal_build (2.45 s per call: per-symbol fetch.1h mean 720 ms, fetchvenue.alpaca 421 ms) and move order_monitor's broker sweeps off the signal loop (it already has an off-loop hook set); target: a 5m bar evaluated within 30 s of close. Order-path runtime change: Tier 2, not fixed in the audit lane. DETECTOR: tick_cost mean_ms < 30000 over >= 20 ticks. [lane 2026-11-04 profile] MEASURED tick_cost 23:22Z, 37 ticks: tick 100.8 s, CYCLE 159 s (loop slept a flat 60 s after each tick). signal_build 23 calls/tick x 2.04 s, of which fetch 0.22 s; local cProfile: 90% was ~14 re-parses of strategies.yaml per symbol (16.7 s -> 1.76 s with cache). Stage 1 (this PR): content-keyed YAML parse cache + boundary-aligned tick pacing; INFERRED tick ~66 s, cycle ~71 s. Stage 2: reconciliation half off-tick behind a journal_sync lock with entry dispatch (orphan adopt race). Stage 3: regime_bar_scoring 12 s/tick. Record: docs/research/tick-duration-115s-profile-2026-11-04.md. [operator via Manager Session 2026-11-04b, popup ~23:35Z, verbatim: \"Wait for me (Recommended)\"] Order-path change: NOT merged or deployed overnight; PR lands landing: hold for the operator morning review. OPERATOR 2026-11-04 ~23:35Z (popup, relayed by Manager Session 2026-11-04b), verbatim: \"Wait for me (Recommended)\". [carried from main during merge] [operator via Manager Session 2026-11-04b, popup 2026-11-05 ~00:28Z, verbatim: \"Merge + deploy when green (Recommended)\"] for PR #23029 (stage 1); supersedes the 23:35Z hold. Stages 2-3 filed as rows TICK-STAGE2-RECONCILE-OFFTICK and TICK-STAGE3-REGIME-SCORING. [STAGE 1 OBSERVED, MEASURED 2026-11-05T02:26:47Z] #23029 merged 74b059c25; trader running 3f61e8d32 (74b059c is an ancestor). /api/diag/tick_cost, ONE process started 02:04:06Z, 23 ticks: tick mean 48.5 s / max 82.6 s (was 100.8 s / 128.4 s, 37 ticks 2026-11-04); CYCLE (generated_at-process_start)/ticks = 59.2 s (was 159 s); run_one_tick 20.9 s (was 68.8 s); pipeline.signal_build 529 calls x 0.246 s = 5.66 s per tick (was 2.035 s per call = 46.8 s per tick); config.yaml_parse n=2, config.yaml_cache_hit n=6591 on-loop + 459 off-loop; order_monitor 26.2 s; regime_bar_scoring 9.6 s per tick. journalctl since 02:04 (complete, 11,823 lines): 0 Tick failed, 25 Sleeping lines at 9-16 s (boundary-aligned). Heartbeat age 37 s at 02:28Z. Protective sweeps ran every tick: cadence 59 s (was 159 s). DETECTOR NOT MET (48.5 s vs < 30 s): the rest is order_monitor 26.2 s (row TICK-STAGE2-RECONCILE-OFFTICK) and regime_bar_scoring 9.6 s (row TICK-STAGE3-REGIME-SCORING). CLOSES WHEN: tick_cost mean_ms < 30000 over >= 20 ticks of one process after stages 2-3 land. NEW, contained: one sqlite \"database is locked\" burst 02:20:41-02:21:04Z (3 monitor sweeps + venue_protection_snapshot write, each retried next pass; journalctl 2026-11-04 21:44-23:22Z complete scan 21,226 lines had 0) -- cause NOT established (could be the faster cadence or another writer); noted on TICK-STAGE2.",
   "due_by": "2026-11-10",
   "roadmap": [
-    "L-OPS"
+    "L-ALERT-INTEGRATION"
   ],
   "priority_rank": 4,
-  "updated_at": "2026-11-04T18:30:20Z",
-  "updated_by": "session_01AFoLuLCbQTSU5jK9dbmcvU",
+  "updated_at": "2026-11-05T02:50:28Z",
+  "updated_by": "session_01AFoLuM4gBmcaHHv8iooKDb",
+  "observation": {
+    "what": "trader tick_cost mean_ms < 30000 over >= 20 ticks of one process, after TICK-STAGE2-RECONCILE-OFFTICK and TICK-STAGE3-REGIME-SCORING land (stage 1 observed 2026-11-05: 48.5 s mean, 59.2 s cycle, 23 ticks)",
+    "how_to_check": "scripts/ops/diag_fetch.sh tick_cost: read mean_ms and ticks_measured; cycle = (generated_at - process_started_utc) / ticks_measured",
+    "due_by": "2026-11-12"
+  },
+  "writeback": {
+    "roadmap": "none: milestone L-ALERT-INTEGRATION (manager re-map 2026-11-05T01:41Z) is not closed by stage 1; this row and the two stage rows carry the open detector",
+    "arch": "none: no pipeline stage, contract or data path changed; the loop still runs the same hooks in the same order, only the post-tick sleep changed"
+  },
   "_seq": 909
 }

@@ -4,7 +4,7 @@
 id: RQ-20261104-001
 title: 'ITERATION 2 of mgc_trend_1h (iteration 1 no_discovery on a 2024-06 data start): on the dukascopy
   XAU/USD 1h proxy over 2018-06..2026-10, does the leg AS DECLARED confirm on a held-back latest 25%?'
-status: queued
+status: done
 cadence: once
 roadmap:
 - L-PROGRAMMES
@@ -149,4 +149,16 @@ generated:
   key: programme:P3-ITER2-mgc-trend-1h-dukascopy-holdout
   params:
     node: P3-ITER2-mgc-trend-1h-dukascopy-holdout
-last_dispatched_at: null
+last_dispatched_at: '2026-11-04T23:47:33+00:00'
+grading:
+  auto: true
+  decision_rule_id: RULE-P3-ITER2-mgc-trend-1h-dukascopy-holdout
+  evidence:
+  - research/results/RQ-20261104-001/41936596970.jsonl
+  graded_at: '2026-11-05'
+  grader: scripts/research/queue_grade.py
+  note: 'deterministic harness: FAIL closes this cell with no same-window replay; it does not retire the
+    family (family-retirement protocol, #18557)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail

@@ -274,7 +274,27 @@ def enqueue_execution_failure(
             f"Symbol: {symbol} | Side: {side} | Qty: {qty if qty is not None else '?'}\n"
             f"Reason: {reason}"
         )[:1024]
-        _append_operator_alert("execution_failure", priority, body)
+        # Prime Directive rule 4, amended 2026-11-04 (TELEGRAM-TRIM): a
+        # TESTING-PAPER rejection is recorded here (route ledger_only) but not
+        # pinged; real-money, prop and portfolio-mirror rejections still ping.
+        ledger_only = False
+        try:
+            from src.runtime.telegram_policy import rejection_ledger_only
+
+            ledger_only = rejection_ledger_only(account)
+        except Exception:  # noqa: BLE001 — a broken policy pings
+            ledger_only = False
+        _append_operator_alert("execution_failure", priority, body,
+                               extra={"account": account, "route": "ledger_only" if ledger_only else "telegram"})
+        if ledger_only:
+            try:
+                from src.runtime.telegram_policy import record_suppressed
+
+                record_suppressed("execution_alert", body, reason="rejection_testing_paper_ledger_only",
+                                  channel="system", account=account, strategy=strategy, symbol=symbol)
+            except Exception:  # noqa: BLE001 — the operator_alerts row above is already written
+                pass
+            return None
         payload = {"priority": priority, "body": body}
         PENDING_PINGS_DIR.mkdir(parents=True, exist_ok=True)
         name = f"{int(uuid.uuid4().int % 10**12):012d}-execfail.json"
@@ -1337,8 +1357,27 @@ def _channel_for(kind: str) -> str:
         return "system"
 
 
-def _enqueue_html_ping(body_html: str, *, kind: str, priority: str) -> Optional[Path]:
-    """Atomically enqueue a self-titled HTML ping to the trader inbox."""
+def _enqueue_html_ping(body_html: str, *, kind: str, priority: str,
+                       policy: Optional[dict] = None) -> Optional[Path]:
+    """Atomically enqueue a self-titled HTML ping to the trader inbox.
+
+    ``policy`` (TELEGRAM-TRIM, operator 2026-11-04): the trade event's
+    ``account`` / ``strategy`` / ``symbol`` / ``package_id``. When given, the
+    one Telegram policy (``src/runtime/telegram_policy.py``) decides: one ping
+    per order-package event, testing paper recorded only (never enqueued)."""
+    if policy is not None:
+        try:
+            import html as _html
+
+            from src.runtime import telegram_policy
+
+            d = telegram_policy.should_send_trade(kind, body_html, priority=priority, **policy)
+            if not d.send:
+                return None
+            if d.note:
+                body_html = f"{body_html}\n<i>{_html.escape(d.note)}</i>"
+        except Exception as exc:  # noqa: BLE001 — a broken policy sends
+            logger.warning("execution_diagnostics: telegram policy failed (%s) — sending", exc)
     try:
         payload = {"priority": priority, "body": body_html, "parse_mode": "HTML",
                    "kind": kind, "channel": _channel_for(kind)}
@@ -1369,6 +1408,7 @@ def enqueue_trade_open(
     order_id: Optional[str] = None,
     demo: bool = False,
     priority: str = "normal",
+    package_id: Optional[str] = None,
 ) -> Optional[Path]:
     """``🟢 TRADE OPENED — <symbol> <SIDE>`` + collapsible details.
 
@@ -1394,7 +1434,8 @@ def enqueue_trade_open(
                 ("Order id", order_id),
             ]))],
         )
-        return _enqueue_html_ping(body, kind="trade-open", priority=priority)
+        return _enqueue_html_ping(body, kind="trade-open", priority=priority, policy={
+            "account": account, "strategy": strategy, "symbol": symbol, "package_id": package_id})
     except Exception as exc:  # noqa: BLE001
         logger.warning(
             "execution_diagnostics: trade-open ping build failed "
@@ -1410,6 +1451,7 @@ def enqueue_trade_update(
     account: Optional[str] = None,
     strategy: Optional[str] = None,
     priority: str = "normal",
+    package_id: Optional[str] = None,
 ) -> Optional[Path]:
     """``✏️ TRADE UPDATED — <symbol>`` + collapsible "what changed" details."""
     try:
@@ -1424,7 +1466,8 @@ def enqueue_trade_update(
                 + f"\n\nChanged:\n{change_lines}"
             ))],
         )
-        return _enqueue_html_ping(body, kind="trade-update", priority=priority)
+        return _enqueue_html_ping(body, kind="trade-update", priority=priority, policy={
+            "account": account, "strategy": strategy, "symbol": symbol, "package_id": package_id})
     except Exception as exc:  # noqa: BLE001
         logger.warning(
             "execution_diagnostics: trade-update ping build failed "
@@ -1445,6 +1488,7 @@ def enqueue_trade_close(
     duration: Optional[str] = None,
     reason: Optional[str] = None,
     priority: str = "normal",
+    package_id: Optional[str] = None,
 ) -> Optional[Path]:
     """``🔴 TRADE CLOSED — <symbol> ±$X`` (✅ win / ❌ loss) + details."""
     try:
@@ -1470,7 +1514,8 @@ def enqueue_trade_close(
                 ("Reason", reason),
             ]))],
         )
-        return _enqueue_html_ping(body, kind="trade-close", priority=priority)
+        return _enqueue_html_ping(body, kind="trade-close", priority=priority, policy={
+            "account": account, "strategy": strategy, "symbol": symbol, "package_id": package_id})
     except Exception as exc:  # noqa: BLE001
         logger.warning(
             "execution_diagnostics: trade-close ping build failed "

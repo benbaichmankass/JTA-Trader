@@ -2568,6 +2568,8 @@ def get_journalctl(
 _NON_RUNTIME_PATHS_RE = re.compile(
     r"^(docs/|tests/|\.claude/|\.github/|[^/]+\.md$|research/|runtime_logs/"
     r"|scripts/research/|scripts/ci/|comms/research/|comms/strategy_evidence/|comms/macro/"
+    r"|comms/(desk|live_review|live_parity|cloud|prop_survival|claude_judgments|reviews|ops|ci|ml-plan|news_alpha|strategy_reviews|reports|data_lake)/"
+    r"|comms/claude_strategy_scores\.jsonl$"
     r"|tools/phone-executor/|tools/phone-probe/)"
 )
 # ...except these scripts/research modules, which the web-api's brief imports
@@ -2729,6 +2731,21 @@ def get_version(request: Request) -> dict[str, Any]:
         "deployed_sha_by_unit": _deployed_sha_by_unit(),
         "captured_at": datetime.now(timezone.utc).isoformat(),
     }
+
+
+@router.get("/alerts")
+def get_alerts_ledger(
+    request: Request,
+    since: str | None = None,
+    kind: str | None = None,
+    channel: str | None = None,
+    limit: int = 500,
+) -> dict[str, Any]:
+    """Mirror of ``GET /api/bot/alerts`` (the alert ledger, ALERT-LEDGER-TO-MANAGER)
+    for ``diag_fetch.sh``. ``read_state`` first: ``could_not_look`` is never 0 alerts."""
+    _require_diag_token(request)
+    from src.web.api.routers.alerts import read_ledger
+    return read_ledger(since, kind, channel, limit)
 
 
 @router.get("/log_file")

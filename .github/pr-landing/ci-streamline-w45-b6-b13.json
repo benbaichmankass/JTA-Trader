@@ -1,0 +1,5 @@
+{
+  "tier": 1,
+  "landing": "self",
+  "why": "Tier-1 CI/research-tooling only (COMPUTE-ALLOCATION B6 + B13). B6: research-queue-dispatch's land job no longer holds a runner in commit-to-main verify-merged (its 255-min budget drops to 25); arrival is verified next cycle by dispatch_queue.py stamp adoption, collect_runner_results.py re-collection and a reaper for stale batch/stamp PRs, pinned in tests/test_commit_to_main_callers.py::DEFERRED_VERIFY. B13: the 3 research workflows leave vars.INFRA_RUNS_ON for ubuntu-latest; research_compute.yaml limits.infra_workflows is the one owner (diag-relay-sweep added); a NON-BLOCKING single-owner report is added to run_guards (allow_fail). No required check is skipped or narrowed; no src/, config/ gate, deploy, order path, strategy, risk or mandate file is changed."
+}

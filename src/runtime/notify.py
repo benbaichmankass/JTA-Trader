@@ -19,6 +19,75 @@ def send_telegram_direct(
     bot_token: Optional[str] = None,
     chat_id: Optional[str] = None,
     reply_markup: Optional[dict] = None,
+    kind: Optional[str] = None,
+    channel: Optional[str] = None,
+    priority: Optional[str] = None,
+    dedup_key: Optional[str] = None,
+) -> bool:
+    """Send via Telegram and record the outcome in the alert ledger.
+
+    ``kind`` / ``channel`` / ``priority`` / ``dedup_key`` are optional LEDGER
+    labels (``telegram_channels.send`` passes them); an unlabelled caller is
+    recorded as ``kind="unclassified"``. The ledger append is a best-effort
+    side-write (``src.runtime.alerts_ledger``): it never changes what is sent,
+    what is returned or what is raised. See ``_send_telegram_direct`` for the
+    transport contract.
+    """
+    delivered = "raised"
+    try:
+        result = _send_telegram_direct(
+            message, parse_mode=parse_mode, mirror_to_fcm=mirror_to_fcm,
+            bot_token=bot_token, chat_id=chat_id, reply_markup=reply_markup)
+        delivered = "telegram_ok" if result else "skipped_no_creds"
+        return result
+    finally:
+        _ledger_record(message, delivered, bot_token=bot_token, kind=kind,
+                       channel=channel, priority=priority, dedup_key=dedup_key)
+
+
+def _ledger_record(message: str, delivered: str, *, bot_token: Optional[str],
+                   kind: Optional[str], channel: Optional[str],
+                   priority: Optional[str], dedup_key: Optional[str]) -> None:
+    """Best-effort ledger append; every failure is swallowed (logged)."""
+    try:
+        from src.runtime import alerts_ledger
+
+        k = kind or "unclassified"
+        if k in alerts_ledger.SKIP_KINDS:
+            return
+        ch = channel or _channel_for_token(bot_token)
+        alerts_ledger.append(k, ch, message, priority=priority, dedup_key=dedup_key,
+                             delivered=delivered)
+    except Exception as exc:  # noqa: BLE001  # allow-silent: ledger is a best-effort side-write; the send must proceed unchanged
+        logger.warning("notify: alert-ledger record failed (send unaffected): %s", exc)
+
+
+def _channel_for_token(bot_token: Optional[str]) -> str:
+    """Channel an unlabelled send landed on, from the bot token alone
+    (never logged): the default bot is SYSTEM, the prop/trades and claude/manager
+    tokens are matched against their resolved routes; anything else is ``unknown``."""
+    if not bot_token or bot_token == os.environ.get("TELEGRAM_BOT_TOKEN"):
+        return "system"
+    try:
+        from src.bot import telegram_routes as tr
+
+        if bot_token == tr.prop_route().token:
+            return "trades"
+        if bot_token == tr.claude_route().token:
+            return "manager"
+    except Exception:  # noqa: BLE001  # allow-silent: label inference only
+        pass
+    return "unknown"
+
+
+def _send_telegram_direct(
+    message: str,
+    *,
+    parse_mode: Optional[str] = "HTML",
+    mirror_to_fcm: bool = True,
+    bot_token: Optional[str] = None,
+    chat_id: Optional[str] = None,
+    reply_markup: Optional[dict] = None,
 ) -> bool:
     """
     Stdlib-only direct POST to Telegram's sendMessage API.

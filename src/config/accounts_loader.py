@@ -77,15 +77,18 @@ def load_accounts_dict(
     if not yaml_path.exists():
         return {}
     try:
-        import yaml
+        import yaml  # noqa: F401 -- availability probe; the parse is in yaml_parse_cache
     except ImportError:
         logger.warning("load_accounts_dict: PyYAML not installed")
         if errors is not None:
             errors.append({"path": str(yaml_path), "error": "PyYAML not installed"})
         return {}
     try:
+        # TICK-DURATION-115S: parse memoized by the exact text (deep copy per
+        # caller); the file is still read every call. src/utils/yaml_parse_cache.py.
+        from src.utils.yaml_parse_cache import safe_load_text
         with yaml_path.open(encoding="utf-8") as fh:
-            data = yaml.safe_load(fh) or {}
+            data = safe_load_text(fh.read()) or {}
     except Exception as exc:  # noqa: BLE001
         logger.warning(
             "load_accounts_dict: parse failed for %s: %s",

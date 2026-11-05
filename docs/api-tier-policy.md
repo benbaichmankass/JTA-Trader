@@ -19,7 +19,7 @@
 > checks it in CI (diff-scoped, in the `guards` job); `--all` is the standing
 > audit and `--list` prints measured coverage.
 >
-> **Coverage, computed rather than counted: 163 of 163 routes documented (100%).**
+> **Coverage, computed rather than counted: 166 of 166 routes documented (100%).**
 > *Population — every `@router.<verb>("...")` under `src/web/api/routers/`
 > joined to its `APIRouter(prefix=...)`. Verified against the live FastAPI
 > route table (`app.routes`): the enumerator finds exactly those 96 with no
@@ -145,6 +145,8 @@ the same staleness this paragraph was already written to complain about.
 | `GET /api/bot/ml/db_pulls` | `routers/training_center.py` | Live→trainer DB sync history, same mirror. |
 | `GET /api/bot/ml/runs/{model_id}/{run_id}` | `routers/training_center.py` | Per-run metrics. Both ids are path-validated before the artifact read. |
 | `GET /api/bot/news/recent` | `routers/news.py` | M9 news-layer shadow-soak tail (per-signal decision / adjustment / veto + the top source articles read). `present:false` until the layer is active. |
+| `GET /api/bot/alerts` | `routers/alerts.py` | The alert ledger (`runtime_logs/alerts_ledger.jsonl`, an EVENT LOG on the VM, ALERT-LEDGER-TO-MANAGER): `?since=&kind=&channel=&limit=`. **`read_state` first** (`read \| absent \| could_not_look`) — a ledger that cannot be read is `could_not_look`, never 0 alerts; carries counts by kind, newest `ts` and the population (lines scanned, truncated). Mirrored at `GET /api/diag/alerts` (`DIAG_READ_TOKEN`). |
+| `POST /api/bot/alerts` | `routers/alerts.py` | **Tier-2 write, fail-closed `DASHBOARD_API_TOKEN` bearer** (the `exec-js-signature` pattern; 503 when unset, 401 otherwise). Shell / workflow senders that curl Telegram directly record what they sent (`scripts/ops/post_alert.sh`); the sender ignores a failed POST, so this route never gates a send. |
 | `GET /api/bot/notifications` | `routers/notifications.py` | The can't-miss banner feed both apps render on Overview (trainer down, account down, operator warnings, unreconciled orphans, trades opened). **Connection-free and best-effort** — any source failure omits that banner kind rather than 5xx-ing. |
 | `GET /api/bot/order-packages` | `routers/order_packages.py` | Decision-level view (one row per order package) + the per-model ML scores and Claude grade recorded at signal time. Backtest + paper rows filtered by default. |
 | `GET /api/bot/pairs/soak` | `routers/pairs.py` | M22 D2 market-neutral pairs-sleeve soak (per-bar spread/z decision + placement/close outcome, incl. the `half_open` leg state). Observe-only. |
@@ -179,6 +181,7 @@ the same staleness this paragraph was already written to complain about.
 | `GET /api/bot/work/items/{item_id}` | `routers/work_items.py` | **Added 2026-11-05 (WSD-S1-STORE-API).** One item; `ETag` = its `version` (the value to send as `If-Match`). 404 on unknown id. Open read. |
 | `GET /api/bot/work/items/{item_id}/events` | `routers/work_items.py` | **Added 2026-11-05 (WSD-S1-STORE-API).** The item's append-only events plus `chain` = the whole-log sha256 hash-chain verification (`ok`, `events`, `head`, or `broken_at` + `why`). Open read. |
 | `GET /api/bot/shadow/predictions` | `routers/shadow.py` | Tail of `runtime_logs/shadow_predictions.jsonl` (S-AI-WS8-PART-2), newest-first. |
+| `GET /api/diag/alerts` | `routers/diag.py` | Tier 2.5 mirror of `GET /api/bot/alerts` (the alert ledger) so `diag_fetch.sh` can read it; `_require_diag_token` / `DIAG_READ_TOKEN`. |
 | `GET /api/bot/shadow/stats` | `routers/shadow.py` | Per-`(model_id, stage)` aggregates over the same log. Mirrored at Tier 2.5 as `/api/diag/shadow_stats` because the diag relay can only reach `/api/diag/*`. |
 | `GET /api/bot/shadow/drift` | `routers/shadow.py` | Window-over-window score-distribution drift (KS + PSI) over the same log (S-AI-WS8-PART-3). |
 | `GET /api/bot/signals` | `routers/dashboard.py` | Recent ICT detections from `signal_audit.jsonl`, each with the drawable zones the strategy already logged. The log is tailed BACKWARDS from the end (UI-UPGRADE-1, 2026-10-11) — it used to `readlines()` the whole ever-growing file to keep 50 lines (measured 3.1–3.5 s per request). |

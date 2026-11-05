@@ -3,7 +3,7 @@
 id: RQ-20261104-7fdb-01
 title: 'TP-DOCTRINE ITERATION, qqq_pullback_1h: does a REAL take-profit (tp_r 2/3/4/6, trail kept), selected on the earliest ~75% of
   2018-06..2026-10, stay net-positive net of the full cost stack on the held-back latest span?'
-status: queued
+status: done
 cadence: once
 theme: live_strategy
 priority: 1
@@ -138,3 +138,17 @@ related:
 - comms/strategy_evidence/qqq_pullback_1h.json
 - scripts/ci/check_tp_doctrine.py
 what_it_does_not_do: Edits no config, roster or rule; places no order; a PASS is an input to a Tier-3 proposal, not a promotion.
+last_dispatched_at: '2026-11-04T23:47:28+00:00'
+grading:
+  attested: RULE-RQ-20261104-7fdb-01
+  auto: true
+  decision_rule_id: RULE-RQ-20261104-7fdb-01
+  evidence:
+  - research/results/RQ-20261104-7fdb-01/41929987140.jsonl
+  graded_at: '2026-11-05'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail

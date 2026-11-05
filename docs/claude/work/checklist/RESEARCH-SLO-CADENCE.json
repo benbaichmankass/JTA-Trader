@@ -3,7 +3,7 @@
   "title": "research_ops_age_h SLO (scripts/research/research_slo.yaml, threshold 8h, written for 4x/day) breaches daily under the operator's pacing cadence of research-ops 1x/day: make the threshold follow the configured cadence (cadence + one missed cycle), not a constant",
   "phase": null,
   "state": "queued",
-  "owner": "manager",
+  "owner": "manager (lane dispatched 11-04/05)",
   "lane": null,
   "model": "claude-sonnet-5-5",
   "ceiling_usd": 2,
@@ -11,12 +11,13 @@
   "tier": 1,
   "prs": [],
   "blocked_on": [],
-  "note": "Origin: research-slo comment 6497678707 on #17895, 2026-10-29T13:14Z: research_ops_age_h 9.82 vs <= 8 [breach]; blocked_over_age and undispositioned_24h recovered (after #21259). Cause: operator 2026-10-29 rule 'research-ops 1x/day and daily authoring 1x/day while pacing' vs the yaml's 'the pass runs 4x/day'. Expected breach, not a pipeline failure; research never paused. Small Sonnet task, ceiling $2.",
+  "note": "Origin: research-slo comment 6497678707 on #17895, 2026-10-29T13:14Z: research_ops_age_h 9.82 vs <= 8 [breach]; blocked_over_age and undispositioned_24h recovered (after #21259). Cause: operator 2026-10-29 rule 'research-ops 1x/day and daily authoring 1x/day while pacing' vs the yaml's 'the pass runs 4x/day'. Expected breach, not a pipeline failure; research never paused. Small Sonnet task, ceiling $2. [2026-11-04 weekly-planning close, lane PLANNING-CLOSE-20261104] Operator, 2026-11-04 ~22:10-22:25Z popup (carry-overs scheduled THIS week), verbatim: \"TP-DOCTRINE,REVIEW-FOLLOWTHROUGH,Research SLOs\". Research SLO row; due_by in 2026-11-05..11-11, owner \"manager (lane dispatched 11-04/05)\". SURVIVOR DEFINITION, operator popup 2026-11-04, verbatim: \"Registered-rule PASS on held-out data (Recommended)\". scripts/research/research_slo.yaml updated to this definition (Gates this adds or changes: none). GAP, stated not hidden: the measurement code (scripts/research/research_slo.py survivors_per_month/trials_per_survivor) still counts the trial ledger's stage0_pass_surviving_dsr_and_bhy_haircut, which is a Stage-0 DSR/BHY count, not a held-out registered-rule PASS; until the code or ledger counts held-out PASSes the SLO number is a proxy and must be read as such.",
   "priority_rank": 8,
-  "updated_at": "2026-11-02T07:33:59Z",
-  "updated_by": "session_01AFoLuL5qrtXsc8bv7JrN4Z",
+  "updated_at": "2026-11-04T22:27:59Z",
+  "updated_by": "PLANNING-CLOSE-20261104",
   "roadmap": [
     "L-OPS"
   ],
+  "due_by": "2026-11-08",
   "_seq": 818
 }

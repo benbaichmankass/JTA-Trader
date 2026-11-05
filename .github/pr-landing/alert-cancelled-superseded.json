@@ -1,0 +1,5 @@
+{
+  "tier": 1,
+  "landing": "self",
+  "why": "Tier-1 alert-routing fix (manager follow-up to CI-STREAMLINE-W45). REDUCES friction, adds no gate. claude-run-failure-alert counted a job as 'started' when started_at was set, but a PENDING job replaced by a newer run is reported cancelled with started_at == created_at and zero steps (MEASURED on work-digest runs 41945562741/41945796003/41945814707), so its superseded-by-concurrency suppression missed them and paged 4x HIGH false alerts. 'Started' now means the job has steps; a timeout or manual cancel mid-run still has steps and still alerts, and a cancel with no newer run still alerts. No required check, order path or config changed."
+}

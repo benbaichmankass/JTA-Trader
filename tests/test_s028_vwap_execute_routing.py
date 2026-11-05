@@ -202,6 +202,18 @@ class TestOrderPackageReachesExecutePkg:
 
 
 class TestExecutionFailureDiagnosticPing:
+
+    @pytest.fixture(autouse=True)
+    def _send_everything_policy(self, tmp_path, monkeypatch):
+        """These tests pin the coordinator -> enqueue MECHANICS on a failure, on the
+        fixture's bybit_1. Under the committed TELEGRAM-TRIM policy a bybit_1
+        (testing-paper) rejection is ledger-only (Prime Directive rule 4 as amended
+        2026-11-04) — pinned in tests/test_telegram_policy.py — so the mechanics run
+        under an empty policy (== send everything)."""
+        p = tmp_path / "telegram_policy_empty.yaml"
+        p.write_text("{}\n")
+        monkeypatch.setenv("TELEGRAM_POLICY_PATH", str(p))
+
     def test_ping_enqueued_when_execute_pkg_raises(
         self, coord, accounts_yaml, tmp_path, monkeypatch,
     ):

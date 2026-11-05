@@ -270,7 +270,10 @@ def _run_superseded(tmp_path, jobs, runs, conclusion="cancelled"):
 NEWER = {"workflow_runs": [{"id": 6, "created_at": "2026-10-04T10:05:00Z"}]}
 ALONE = {"workflow_runs": [{"id": 5, "created_at": "2026-10-04T10:00:00Z"}]}
 NO_JOB = {"jobs": []}
-STARTED = {"jobs": [{"started_at": "2026-10-04T10:00:05Z"}]}
+# a job that really ran has steps (even "Set up job"); started_at alone does not make a job started
+STARTED = {"jobs": [{"started_at": "2026-10-04T10:00:05Z", "steps": [{"name": "Set up job", "conclusion": "success"}]}]}
+# a pending job replaced by a newer run: started_at == created_at, no steps (MEASURED, work-digest 2026-11-05)
+REPLACED_PENDING = {"jobs": [{"started_at": "2026-10-04T10:00:00Z", "steps": []}]}
 
 
 def test_pending_run_replaced_by_newer_is_superseded(tmp_path):
@@ -279,6 +282,15 @@ def test_pending_run_replaced_by_newer_is_superseded(tmp_path):
 
 def test_cancelled_run_that_started_work_still_alerts(tmp_path):
     assert _run_superseded(tmp_path, STARTED, NEWER) == "state=genuine"
+
+
+def test_replaced_pending_job_with_started_at_but_no_steps_is_superseded(tmp_path):
+    """The end-to-end shape of the 2026-11-05 false alerts: pending gate replaced by a newer push."""
+    assert _run_superseded(tmp_path, REPLACED_PENDING, NEWER) == "state=superseded"
+
+
+def test_replaced_pending_job_with_no_newer_run_still_alerts(tmp_path):
+    assert _run_superseded(tmp_path, REPLACED_PENDING, ALONE) == "state=genuine"
 
 
 def test_cancelled_run_with_no_newer_run_still_alerts(tmp_path):
@@ -296,3 +308,42 @@ def test_failure_conclusion_is_never_suppressed(tmp_path):
 def test_ping_step_is_gated_on_superseded():
     text = WORKFLOW.read_text(encoding="utf-8")
     assert "steps.superseded.outputs.state != 'superseded'" in text
+
+
+# ── a replaced PENDING job is superseded, not "started" (2026-11-05, work-digest false HIGH alerts) ──
+
+def _started_jq() -> str:
+    """The shipping filter that counts jobs that really started, extracted from the workflow (never copied)."""
+    text = WORKFLOW.read_text(encoding="utf-8")
+    m = re.search(r"started=\"\$\(printf '%s' \"\$\{jobs\}\" \| jq '(\[\.jobs\[\] \| select\(\.started_at.*?length)'\)\"", text, re.S)
+    assert m, "could not locate the 'started jobs' jq filter in the workflow"
+    return m.group(1)
+
+
+def _started(payload: dict) -> int:
+    jq = shutil.which("jq")
+    if jq is None:
+        pytest.skip("jq not installed")
+    out = subprocess.run([jq, _started_jq()], input=json.dumps(payload), capture_output=True, text=True, check=True)
+    return int(out.stdout.strip())
+
+
+def test_replaced_pending_job_with_started_at_but_no_steps_is_not_started():
+    """MEASURED on work-digest run 41945562741: gate `cancelled`, started_at == created_at, steps == []; digest `skipped`."""
+    t = "2026-11-05T01:01:10Z"
+    run = {"jobs": [{"name": "gate", "conclusion": "cancelled", "started_at": t, "steps": []},
+                    {"name": "digest", "conclusion": "skipped", "started_at": t, "steps": []}]}
+    assert _started(run) == 0
+
+
+def test_positive_control_a_job_that_ran_steps_before_cancel_is_started():
+    """A timeout or manual cancel mid-run has steps, so it still counts as started and still alerts."""
+    t = "2026-11-05T01:01:10Z"
+    run = {"jobs": [{"name": "gate", "conclusion": "cancelled", "started_at": t,
+                     "steps": [{"name": "Set up job", "conclusion": "success"},
+                               {"name": "Checkout main", "conclusion": "cancelled"}]}]}
+    assert _started(run) == 1
+
+
+def test_a_job_with_no_started_at_is_not_started():
+    assert _started({"jobs": [{"name": "x", "conclusion": "skipped", "started_at": None, "steps": []}]}) == 0
