@@ -18,7 +18,16 @@
   "roadmap": [
     "L-OPS"
   ],
-  "updated_at": "2026-11-05T01:28:36Z",
+  "updated_at": "2026-11-05T01:43:01Z",
   "updated_by": "session_01AFoLuLkAx8fkSZKc4C5X1h",
+  "observation": {
+    "what": "ict-trader-live restarts only after code/config merges: no restart within 7 min of a merge whose every runtime-candidate path is in the widened non-runtime set (comms/{desk,live_review,live_parity,cloud,prop_survival,claude_judgments,reviews,ops,ci,ml-plan,news_alpha,strategy_reviews,reports,data_lake}/, comms/claude_strategy_scores.jsonl)",
+    "how_to_check": "vm-diag journalctl for ict-trader-live over 24 h after the #23043 deploy: list every Started ICT Trader Live time; match each to main merges 0-7 min before it (git log --first-parent --format=%ct --name-only); every match must include a path outside NON_RUNTIME_PATHS_RE. Also /api/diag/version restart_pending false on a data-only head. Expected residual: config/economic_calendar.yaml bot writes still restart.",
+    "due_by": "2026-11-07"
+  },
+  "writeback": {
+    "roadmap": "none: deploy-path restart classifier fix; no milestone status changes (L-OPS context only)",
+    "arch": "none: no architecture contract changed; the non-runtime path set is documented in scripts/deploy_pull_restart.sh header comment"
+  },
   "_seq": 919
 }
