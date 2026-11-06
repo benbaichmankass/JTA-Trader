@@ -2,7 +2,7 @@
   "id": "ML-READ-1025",
   "title": "Read the forecaster bake-off (9da8-01), TabICL/TabPFN and GRU-variant results; read Timestral-209M licence and add it as an arm if usable",
   "phase": null,
-  "state": "landed_unproven",
+  "state": "done",
   "owner": "manager",
   "lane": null,
   "model": "claude-sonnet-5-5",
@@ -11,21 +11,22 @@
   "tier": 1,
   "prs": [],
   "blocked_on": [],
-  "note": "2026-10-25 lane read done: record comms/ml-plan/20261025T0000Z-ML-READ-1025.json. 9da8-01 machine FAIL but underpowered for the floor (accruing, no override; measured fold sd needs ~17 folds) and PASS rejected on BTC; TabICL/TabPFN/GRU units all INDETERMINATE; GRU delta vs fair baseline positive in 17/18 configs but fold sd 0.03 makes +0.010 unresolvable (ML-F29 needs_authoring). Timestral-209M licence = Modified MIT, rights lapse above USD 20M monthly revenue; research clear, new unit RQ-20261025-7ee1-01 (blocked on loader, row FRONTIER-LEVER-TSFM-TIMESTRAL). PREFERENCE QUESTION FOR MANAGER (not decided): does the serving entity stay at or under USD 20M global monthly revenue, with trading P&L not counted as revenue? Needed only before live serving. [mgr] #19998 merged 8b7708b8; lane archived, final $1.63 vs $8. Timestral live-serving revenue question goes to the operator at the 05:52Z review. ANSWERED (standing, do NOT re-ask): the PREFERENCE QUESTION above (Timestral-209M serving entity <= USD 20M/month revenue, trading P&L not revenue) was answered by the operator 2026-10-25 ~06:02Z: \"Yes, under $20M/mo\" (recorded on FRONTIER-LEVER-TSFM-TIMESTRAL). Re-asked in error 2026-10-25 ~12:50Z by session_01SrYqLY4Ui9RKns12r2zthj; operator reply verbatim: \"I already said yes, make sure it's recorded correctly so that I don't have to keep answering this\". The manager_question in comms/ml-plan/20261025T0000Z-ML-READ-1025.json is therefore CLOSED.",
+  "note": "2026-10-25 lane read done: record comms/ml-plan/20261025T0000Z-ML-READ-1025.json. 9da8-01 machine FAIL but underpowered for the floor (accruing, no override; measured fold sd needs ~17 folds) and PASS rejected on BTC; TabICL/TabPFN/GRU units all INDETERMINATE; GRU delta vs fair baseline positive in 17/18 configs but fold sd 0.03 makes +0.010 unresolvable (ML-F29 needs_authoring). Timestral-209M licence = Modified MIT, rights lapse above USD 20M monthly revenue; research clear, new unit RQ-20261025-7ee1-01 (blocked on loader, row FRONTIER-LEVER-TSFM-TIMESTRAL). PREFERENCE QUESTION FOR MANAGER (not decided): does the serving entity stay at or under USD 20M global monthly revenue, with trading P&L not counted as revenue? Needed only before live serving. [mgr] #19998 merged 8b7708b8; lane archived, final $1.63 vs $8. Timestral live-serving revenue question goes to the operator at the 05:52Z review. ANSWERED (standing, do NOT re-ask): the PREFERENCE QUESTION above (Timestral-209M serving entity <= USD 20M/month revenue, trading P&L not revenue) was answered by the operator 2026-10-25 ~06:02Z: \"Yes, under $20M/mo\" (recorded on FRONTIER-LEVER-TSFM-TIMESTRAL). Re-asked in error 2026-10-25 ~12:50Z by session_01SrYqLY4Ui9RKns12r2zthj; operator reply verbatim: \"I already said yes, make sure it's recorded correctly so that I don't have to keep answering this\". The manager_question in comms/ml-plan/20261025T0000Z-ML-READ-1025.json is therefore CLOSED. 2026-11-06 BACKLOG-DRAIN-20261106: DONE. OBSERVED #19998 merged (8b7708b80); ml_plan_status.py shows ML-F28 blocked (RQ-20261025-7ee1-01) and ML-F29 open/queued with no CLOSED-OPEN flag.",
   "priority_rank": 11,
-  "updated_at": "2026-10-25T13:10:07Z",
-  "updated_by": "session_01SrYqLY4Ui9RKns12r2zthj",
+  "updated_at": "2026-11-06T06:45:05Z",
+  "updated_by": "lane-BACKLOG-DRAIN-20261106",
   "roadmap": [
     "M25"
   ],
   "writeback": {
-    "roadmap": "none: lane read of results; no milestone line changed",
-    "arch": "none: no architecture section changed (ML plan items and a blocked unit only)"
+    "roadmap": "none: research/ops observation closed, no milestone status change",
+    "arch": "none: no contract changed"
   },
   "observation": {
     "what": "PR #19998 merged to main and ml_plan_status.py shows ML-F28 blocked and ML-F29 queued with no CLOSED-OPEN flag",
     "how_to_check": "python3 scripts/ops/ml_plan_status.py | grep -E \"ML-F2[289]\"",
     "due_by": "2026-11-01"
   },
+  "due_by": "2026-11-09",
   "_seq": 605
 }
