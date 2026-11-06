@@ -1,0 +1,7 @@
+{
+  "tier": 1,
+  "landing": "hold",
+  "why": "CI/tooling only. Moves the dispatcher-receipt 'last fired' source from queue_throughput.throughput() (#23828) into queue_grade.health(), so research-queue-health H2 reads it too. H2 reported 'last unit stamp 15.9 h ago' because unit stamps reach main only via stamp PRs (four stuck on a stale b620 test) while the dispatcher fired normally. Thresholds unchanged. The newest utilization record on main (run 42229041118) already reads measured on all six backends.",
+  "hold_reason": "changes_landing_machinery",
+  "hold_text": "scripts/research/queue_grade.py is on the landing-machinery list (guard R12). Tier 1, small: health() now also reads last_dispatched_at from the dispatcher receipt. Manager merges."
+}

@@ -960,6 +960,16 @@ def verify(root: Path, base: str) -> List[str]:
     return problems
 
 
+RECEIPT = Path("docs/claude/work/research-queue-dispatch-receipt.json")
+
+
+def receipt_last_dispatch(root: Path) -> Optional[datetime]:
+    try:
+        return _parse_ts(json.loads((root / RECEIPT).read_text(encoding="utf-8")).get("last_dispatched_at"))
+    except (OSError, ValueError, AttributeError):
+        return None
+
+
 def health(root: Path, *, now: Optional[datetime] = None) -> Dict[str, Any]:
     """Runnable count (= what the dispatcher would fire within the next cycle,
     see `queue_replenish.runnable`), the looser `queued` count beside it, and
@@ -970,6 +980,11 @@ def health(root: Path, *, now: Optional[datetime] = None) -> Dict[str, Any]:
     queued = sorted(uid for uid, u in units.items() if dispatchable(u))
     stamps = [t for u in units.values() if (t := _parse_ts(u.get("last_dispatched_at")))]
     last = max(stamps) if stamps else None
+    # The dispatcher's own receipt is a second 'last fired' source (RQ-THROUGHPUT-FALSE-RED): unit stamps land
+    # on main only via stamp PRs, which lag or get stuck while the dispatcher fires normally.
+    rt = receipt_last_dispatch(root)
+    if rt and (last is None or rt > last):
+        last = rt
     review = sorted(uid for uid, u in units.items() if isinstance(u.get("grading"), dict) and u["grading"].get("needs_review"))
     return {"runnable": len(runnable(units, now=now)), "queued": len(queued), "units": len(units), "unreadable": bad,
             "last_dispatched_at": last.isoformat() if last else None,
