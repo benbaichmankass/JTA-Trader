@@ -32,11 +32,28 @@ decision. A leg that survives stays. You get the list before it merges."* Source
 | trend_donchian_xrp_4h | bybit_2 + bybit_portfolio | 46 | 185 | 52 | 0.062 | 0.85 | 1.000 | 0 | **FAIL → bybit_1** |
 | ada_pullback_2h | bybit_2 + bybit_portfolio | 61 | 276 | 41 | 0.375 | 1.92 | 1.000 | 0 | **FAIL → bybit_1** |
 | trend_donchian_sol_prop | bybit_2 + bybit_portfolio | 395 | 163 | 36 | 0.355 | 1.80 | 1.000 | 0 | **FAIL → bybit_1** |
-| ml_entry | bybit_2 + bybit_portfolio | 907 | 1 | 1 | 0.839 | 0.98 | 0.328 | +0.037 | **FAIL → bybit_1** (DSR) |
+| ml_entry | bybit_2 + bybit_portfolio | 907 | 1 | 1 | 0.839 | 0.98 | 0.328 | +0.037 | **FAIL (DSR) — KEPT by operator exception** (below) |
 | iaum_pullback_1d | alpaca_live | 8 | 62 | 35 | 0.394 | 2.02 | 1.000 | 0 | **FAIL → alpaca_paper** (already there) |
 | gld_pullback_1d | alpaca_portfolio (mirror of iaum) | 8 | 85 | 49 | 0.337 | 2.02 | 1.000 | 0 | **FAIL → ib_paper** (already there) |
 
 Machine-readable: `comms/research/PROD-LEGS-DSR-DECISION/per_leg.json`. No leg survives.
+
+## Operator exception: `ml_entry` stays on bybit_2 + bybit_portfolio (DECIDED)
+
+```yaml
+operator_exception:
+  kind: baseline
+  leg: ml_entry
+  accounts: [bybit_2, bybit_portfolio]
+  decided_by: operator
+  decided_at: 2026-11-06T00:50Z   # popup, relayed by Manager Session 2026-11-05b
+  quote: "Move all but ml_entry (Rec.)"
+  option_text: "Move the 6 chart-pattern legs and IAUM, and keep ml_entry live on bybit_2 and its mirror as the measured ML baseline. It's the only leg with a positive edge after the haircut (+0.037 R, n=907), and it matches your ML-live priority. It's recorded as your exception, like the prop baseline."
+  measured: {dsr: 0.839, dsr_bar: 0.95, family_n: 1, bhy_haircut_expectancy_r: 0.037, n: 907}
+  re_read_when: ml_entry's own live monitor (src/runtime/ml_entry_live_monitor) or its retrain grade says so
+```
+
+The true grade stays FAIL. The exception keeps the leg live on these two accounts. It does not rewrite the verdict.
 
 ### `ml_entry`: how it was measured
 
@@ -60,13 +77,14 @@ amended or cancelled. None of the other seven legs has an open position on these
 
 ## What changes
 
-`config/accounts.yaml`: `bybit_2` and `bybit_portfolio` become `[]`. So do `alpaca_live` and `alpaca_portfolio`. The six crypto
-legs are added to `bybit_1`. `config/strategies.yaml::ml_entry.account_symbols` gains `bybit_1` (the same 5 crypto symbols). Without
-it, a scoped leg trades nothing on an account its map does not name. `scripts/ci/check_strategy_status.py`: its two
-`DUAL_BOOK_EXCEPTIONS` entries (iaum_pullback_1d, ml_entry) go stale and are dropped, because the guard refuses stale entries. This
-narrows the guard. It adds nothing to it. Accounts stay `mode: live`. No mode flip.
+`config/accounts.yaml`: `bybit_2` and `bybit_portfolio` become `[ml_entry]`. `alpaca_live` and `alpaca_portfolio` become `[]`.
+The five chart-pattern crypto legs are added to `bybit_1`. `scripts/ci/check_strategy_status.py`: the stale `DUAL_BOOK_EXCEPTIONS`
+entry for iaum_pullback_1d is dropped, because the guard refuses stale entries. ml_entry's entry stays. `scripts/ci/check_tp_doctrine.py`:
+the moved legs' existing TP debt is relocated from 8 bybit_2/bybit_portfolio lines to 4 bybit_1 lines (net −4). Accounts stay
+`mode: live`. No mode flip.
 
-**Inferred, and to be decided:** after this lands no leg trades real money (0 production legs). This matches the audit's finding
-that 0 of 28 Stage-0 passes survive the bar. It is a book-level outcome the operator should see stated.
+After this lands, `ml_entry` is the only real-money leg, on bybit_2 + bybit_portfolio, by the operator exception above.
+alpaca_live and alpaca_portfolio are `[]` (mode stays live). The operator's second decision ~00:52Z ("ml_entry at min size (Rec.)",
+ml_entry on alpaca_live + mirror) is NOT in this change. It waits on the manager's answers about symbols and sizing (row note).
 
 Revert: `git revert` of the PR.

@@ -1457,11 +1457,6 @@ strategies:
     # one read (RQ-20261101-bdc2-01, -0.308 R/decision long-only, n=128). ROLLBACK: drop alpaca_paper here, the ETFs
     # from symbols:, and ml_entry from alpaca_paper's roster.
     account_symbols:
-      # 2026-11-06 PROD-LEGS-DSR-DECISION (Tier-3; operator popup "Re-measure, then move (Rec.)"): ml_entry fails
-      # DSR > 0.95 (0.839 even at family N = 1; docs/research/prod-legs-dsr-2026-11-06.md), so it left bybit_2 +
-      # bybit_portfolio for the bybit_1 demo floor: bybit_1 gets the SAME 5 crypto symbols. The bybit_2 /
-      # bybit_portfolio entries stay (inert while unrostered; the map only narrows) so a rollback is the roster line alone.
-      bybit_1: [BTCUSDT, ETHUSDT, XRPUSDT, ADAUSDT, SOLUSDT]
       bybit_2: [BTCUSDT, ETHUSDT, XRPUSDT, ADAUSDT, SOLUSDT]
       bybit_portfolio: [BTCUSDT, ETHUSDT, XRPUSDT, ADAUSDT, SOLUSDT]
       alpaca_paper: [SPY, QQQ, IWM, TLT, IEF, SLV, USO, GDX, TQQQ, QLD, SPYM, IAUM, SCHA]

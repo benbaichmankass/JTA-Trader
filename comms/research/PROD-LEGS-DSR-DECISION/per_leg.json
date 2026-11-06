@@ -18,7 +18,8 @@
    "bhy_exp": 0.0,
    "exp": 0.1237,
    "survives": false,
-   "source": "comms/strategy_evidence/runs/2026-11-05/xrp_pullback_2h__trades.jsonl"
+   "source": "comms/strategy_evidence/runs/2026-11-05/xrp_pullback_2h__trades.jsonl",
+   "outcome": "moved to demo floor"
   },
   {
    "leg": "trend_donchian_eth_4h",
@@ -34,7 +35,8 @@
    "bhy_exp": 0.0,
    "exp": 0.3307,
    "survives": false,
-   "source": "comms/strategy_evidence/runs/2026-10-28/trend_donchian_eth_4h__trades.jsonl"
+   "source": "comms/strategy_evidence/runs/2026-10-28/trend_donchian_eth_4h__trades.jsonl",
+   "outcome": "moved to demo floor"
   },
   {
    "leg": "trend_donchian_xrp_4h",
@@ -50,7 +52,8 @@
    "bhy_exp": 0.0,
    "exp": 0.1677,
    "survives": false,
-   "source": "comms/strategy_evidence/runs/2026-10-28/trend_donchian_xrp_4h__trades.jsonl"
+   "source": "comms/strategy_evidence/runs/2026-10-28/trend_donchian_xrp_4h__trades.jsonl",
+   "outcome": "moved to demo floor"
   },
   {
    "leg": "ada_pullback_2h",
@@ -66,7 +69,8 @@
    "bhy_exp": 0.0,
    "exp": 0.5157,
    "survives": false,
-   "source": "comms/strategy_evidence/runs/2026-10-28/ada_pullback_2h__trades.jsonl"
+   "source": "comms/strategy_evidence/runs/2026-10-28/ada_pullback_2h__trades.jsonl",
+   "outcome": "moved to demo floor"
   },
   {
    "leg": "trend_donchian_sol_prop",
@@ -82,7 +86,8 @@
    "bhy_exp": 0.0,
    "exp": 0.1216,
    "survives": false,
-   "source": "comms/strategy_evidence/runs/2026-10-28/trend_donchian_sol_prop__trades.jsonl"
+   "source": "comms/strategy_evidence/runs/2026-10-28/trend_donchian_sol_prop__trades.jsonl",
+   "outcome": "moved to demo floor"
   },
   {
    "leg": "iaum_pullback_1d",
@@ -98,7 +103,8 @@
    "bhy_exp": 0.0,
    "exp": 1.3345,
    "survives": false,
-   "source": "comms/strategy_evidence/runs/2026-11-05/iaum_pullback_1d__trades.jsonl"
+   "source": "comms/strategy_evidence/runs/2026-11-05/iaum_pullback_1d__trades.jsonl",
+   "outcome": "moved to demo floor"
   },
   {
    "leg": "gld_pullback_1d",
@@ -114,7 +120,8 @@
    "bhy_exp": 0.0,
    "exp": 1.3138,
    "survives": false,
-   "source": "comms/strategy_evidence/runs/2026-11-05/gld_pullback_1d__trades.jsonl"
+   "source": "comms/strategy_evidence/runs/2026-11-05/gld_pullback_1d__trades.jsonl",
+   "outcome": "moved to demo floor"
   },
   {
    "leg": "ml_entry",
@@ -163,7 +170,19 @@
      "bhy_exp": 0.0,
      "survives": false
     }
-   }
+   },
+   "operator_exception": {
+    "kind": "baseline",
+    "accounts": [
+     "bybit_2",
+     "bybit_portfolio"
+    ],
+    "decided_by": "operator",
+    "decided_at": "2026-11-06T00:50Z",
+    "quote": "Move all but ml_entry (Rec.)",
+    "re_read_when": "ml_entry's own live monitor or retrain grade says so"
+   },
+   "outcome": "kept (operator exception); true grade FAIL"
   }
  ]
 }

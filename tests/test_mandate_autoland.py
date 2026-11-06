@@ -54,24 +54,26 @@ BOT_ENV = {"GIT_AUTHOR_NAME": autoland.BOT_LOGIN, "GIT_AUTHOR_EMAIL": autoland.B
 RUN_ID = "9090909090"
 BRANCH = f"automation/r4-demotion-{RUN_ID}"
 SLUG = BRANCH.replace("/", "-")
-#: Since 2026-11-06 (PROD-LEGS-DSR-DECISION, operator "Re-measure, then move (Rec.)") the real bybit_2 /
-#: bybit_portfolio rosters are EMPTY: no leg trades real money, so the producer has nothing real to demote.
-#: The fixture then re-stages this pre-decision pair roster into its COPY of the real accounts.yaml (every
-#: other byte is the real file's) so the route is still exercised end to end. The real file is never edited.
+#: Since 2026-11-06 (PROD-LEGS-DSR-DECISION, operator "Re-measure, then move (Rec.)" + "Move all but ml_entry (Rec.)")
+#: the real bybit_2 / bybit_portfolio rosters carry only ml_entry, which has no T3 Stage-0 p10 for this producer to
+#: grade, so LEG is no longer live. The fixture then re-stages this pre-decision pair roster into its COPY of the real
+#: accounts.yaml (every other byte is the real file's) so the route is still exercised end to end. The real file is
+#: never edited.
 PRE_DECISION_PAIR = ("xrp_pullback_2h, trend_donchian_eth_4h, trend_donchian_xrp_4h, ada_pullback_2h, "
                      "trend_donchian_sol_prop, ml_entry")
 
 
 def _restage_pair(text: str) -> str:
-    """Put PRE_DECISION_PAIR back on LIVE_ACCOUNT and MIRROR_ACCOUNT when the real roster is empty."""
+    """Put PRE_DECISION_PAIR back on LIVE_ACCOUNT and MIRROR_ACCOUNT (their one flow-form roster line)."""
     lines = text.splitlines(keepends=True)
     acct = None
     for i, ln in enumerate(lines):
         m = gate._ACCT_RE.match(ln.rstrip("\n"))
         if m:
             acct = m.group(1)
-        elif acct in (LIVE_ACCOUNT, MIRROR_ACCOUNT) and ln.startswith("    strategies: []"):
-            lines[i] = ln.replace("strategies: []", f"strategies: [{PRE_DECISION_PAIR}]", 1)
+        elif acct in (LIVE_ACCOUNT, MIRROR_ACCOUNT) and ln.startswith("    strategies: ["):
+            head, _, _rest = ln.partition("]")
+            lines[i] = f"    strategies: [{PRE_DECISION_PAIR}]" + _rest
     return "".join(lines)
 
 
