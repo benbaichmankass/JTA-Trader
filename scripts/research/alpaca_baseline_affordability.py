@@ -185,12 +185,15 @@ def run(a) -> int:
             "one_share_rule": f"close <= equity AND {ATR_STOP_MULT} x ATR14(1h RTH) <= {ROUND_UP_MULT} x budget",
             "upper_bound_note": "at full confidence; RiskManager._confidence_scalar can only lower the budget, so fewer may size",
             "affordability": afford, "pull_load": load, "elapsed_s": round(time.time() - t0)}
+    # `n` is required at the top level by script_run --derive-record (run 42145318852 measured both passes but was recorded
+    # producer_failed: "verdict.json malformed: n must be present"). n = the population measured.
     v = {"schema_version": 1, "research_unit": a.unit, "read_state": "measured" if complete else "producer_failed",
-         "verdict": "pass" if complete else "not_applicable",
+         "verdict": "pass" if complete else "not_applicable", "n": len(syms) if complete else None,
          "note": (f"affordable {afford['n_affordable']}/{len(syms)} at equity ${a.equity} (as of {a.equity_as_of}); "
                   f"pull {load['n_symbols']} syms in {load['wall_seconds']}s, 429s={load['n_429']}, p95 {load['latency_s']['p95']}s"),
          "decision_rule": {"id": RULE_ID, "rule": "PASS IF both passes complete (a measurement; no edge claim)."},
-         "population": {"description": f"RQ-20261104-a41f-01 pooled ETF population (sha256 {sha[:12]})", "n": len(syms)},
+         "population": f"RQ-20261104-a41f-01 pooled ETF population, {len(syms)} symbols (pool file sha256 {sha[:12]}); "
+                       f"alpaca_live equity ${a.equity} as of {a.equity_as_of}",
          "measurement": meas, "generated_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())}
     (out / "verdict.json").write_text(json.dumps(v, indent=1, default=str) + "\n")
     (out / "measurement.json").write_text(json.dumps(meas, indent=1, default=str) + "\n")
