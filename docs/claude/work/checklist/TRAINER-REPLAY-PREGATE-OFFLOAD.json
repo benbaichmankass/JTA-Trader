@@ -1,6 +1,6 @@
 {
   "id": "TRAINER-REPLAY-PREGATE-OFFLOAD",
-  "title": "Move replay-pregate-nightly's fleet scoring off the trainer onto a GitHub runner (scp inputs, score on the runner)",
+  "title": "Attribute and move off the trainer the ~20 CPU-min daily SSH session that ends ~05:54Z",
   "phase": null,
   "state": "queued",
   "owner": "manager",
@@ -11,14 +11,14 @@
   "tier": 1,
   "prs": [],
   "blocked_on": [],
-  "note": "From FREE-CAPACITY-PLAN (a), lane session_01AFoLuLpeKyaLTmVTigniMw. MEASURED (trainer-vm-diag #23583): the SSH session ending ~05:54Z daily consumes 19-21 CPU-min (10-31, 11-01, 11-02, 11-03, 11-04, 11-05) = replay-pregate-nightly.yml (cron 04:00, runs late) launching scripts/ml/replay_pregate_fleet.py DETACHED on the trainer. Inputs: ModelRegistry (shadow-stage regime heads, ml/registry-store), market_features shards under datasets-out, candles. BUILD: in the workflow, tar the shadow-stage model dirs + the shards those heads name over the existing SSH route, run the driver on the runner (4 vCPU/16 GB), keep report/commit steps unchanged. Done when: one nightly run lands latest.json from the runner and the 05:xx session-scope CPU line on the trainer is under 3 min. Rerun of the measurement: trainer-vm-diag journalctl -g 'session-[0-9]+.scope: Consumed'.",
+  "note": "From FREE-CAPACITY-PLAN (a), lane session_01AFoLuLpeKyaLTmVTigniMw. MEASURED (trainer-vm-diag #23583, journal session-N.scope Consumed lines): one SSH session a day ending 05:50-06:07Z consumes 19-26 CPU-min (10-31 21 min, 11-01 20, 11-02 20, 11-03 19, 11-04 20, 11-05 20); SSH sessions total 3.54 CPU-h in 6.75 d (15% of trainer CPU). ATTRIBUTION: UNVERIFIED. It is NOT replay-pregate-nightly (its scheduled runs start 11:40-12:03Z, runs 41441616392..42023008263) and NOT kaggle-backups (no scheduled runs). Candidates, unverified: market-data-lake.yml (cron 03:41Z, rsyncs data/options_history from the trainer) or another early-UTC trainer-SSH workflow running late. STEP 1: trainer-vm-diag at ~05:40Z: ps -eo pid,etimes,pcpu,args --sort=-pcpu | head, plus journalctl _COMM=sshd around 05:30Z, to name the command. STEP 2: move that work to the runner side (do the compute on the GitHub runner, copy only inputs), or make it incremental. Done when: the daily session-scope CPU line on the trainer is under 3 min.",
   "due_by": "2026-11-10",
   "roadmap": [
     "unmapped"
   ],
   "roadmap_unmapped_reason": "infra-capacity(FREE-CAPACITY-PLAN)",
   "priority_rank": 9,
-  "updated_at": "2026-11-06T01:27:43Z",
+  "updated_at": "2026-11-06T01:29:48Z",
   "updated_by": "session_01AFoLuLpeKyaLTmVTigniMw",
   "_seq": 959
 }
