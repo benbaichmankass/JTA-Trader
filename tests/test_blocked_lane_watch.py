@@ -18,7 +18,6 @@ import sys
 from pathlib import Path
 
 import pytest
-import yaml
 
 REPO = Path(__file__).resolve().parents[1]
 MODULE = REPO / "scripts" / "ops" / "blocked_lane_watch.py"
