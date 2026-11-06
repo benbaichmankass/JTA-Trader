@@ -356,7 +356,9 @@ BASELINE_2026_10_06: dict[str, frozenset[str]] = {
     # trail; on breakout_2/tradeify_1 the prop ticket path has no TP-revision plumbing (path=absent), on
     # velotrade_1 it is plumbed. Same exit recipe as bybit_2/eth_4h (E) and bybit_1/sol_4h (ER). Record: ML-PROP-ITERATE.
     "breakout_2/trend_donchian_eth_4h": ER,
+    "breakout_2/trend_donchian_sol_4h": ER,
     "tradeify_1/trend_donchian_eth_4h": ER,
+    "tradeify_1/trend_donchian_sol_4h": ER,
     "velotrade_1/trend_donchian_eth_4h": E,
     "velotrade_1/trend_donchian_sol_4h": ER,
 }

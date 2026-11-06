@@ -47,3 +47,9 @@ Current-stack costs (commission 11 / slippage 3 bps rt, swap 0.03 %/day), dd swi
 4. **At live min size, every book on every account has negative EV per life.** The firms' targets are rarely reached within the horizon at
    $10 per leg; tradeify_1 never passes. This is consistent with the operator's framing of these accounts as a measured baseline, where a
    breach is acceptable.
+
+## Decision (supersedes the ~19:40Z pull)
+
+Operator ~20:18Z, after this simulation was shown, verbatim: *"Keep sol_4h on all prop books (Recommended)"*. The option read: "Reverse the pull: it
+improves every book's pass odds and EV; it stays on probation in the iteration loop." trend_donchian_sol_4h stays on breakout_2, tradeify_1 and velotrade_1,
+on probation (iteration unit RQ-20261106-031). The ~19:40Z "Pull sol_4h, keep eth_4h" decision is superseded, and reading item 3 above no longer applies.
