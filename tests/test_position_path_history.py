@@ -171,3 +171,111 @@ def test_read_history_absent_table_is_not_empty(tmp_path):
     sqlite3.connect(p).close()
     env = pph.read_history(db_path=p)
     assert env["present"] is False and env["error"]
+
+
+# --- MECH-FOLLOWUPS-1105: one write transaction per exit-evaluation pass ----------------------------------------
+
+
+def _rec_count(db):
+    with sqlite3.connect(db) as c:
+        return (c.execute("SELECT COUNT(*) FROM position_telemetry").fetchone()[0],
+                c.execute("SELECT COUNT(*) FROM position_path_history").fetchone()[0])
+
+
+def _connect_spy(monkeypatch):
+    opened = []
+    real = sqlite3.connect
+
+    def spy(database, *a, **k):
+        if not str(database).startswith("file:"):
+            opened.append(str(database))
+        return real(database, *a, **k)
+    monkeypatch.setattr(pt.sqlite3, "connect", spy)
+    return opened
+
+
+def test_a_pass_batch_writes_every_package_in_one_connection(db, monkeypatch):
+    full = _candles(60)
+    opened = _connect_spy(monkeypatch)
+    with pt.exit_pass_batch():
+        for pkg in ("pkg-A", "pkg-B", "pkg-C"):
+            _pass(db, full, pkg=pkg)
+        assert opened == []                          # nothing opened (no lock) while the pass is running
+    assert len(opened) == 1                          # ONE connection for 3 packages x 2 writes
+    assert _rec_count(db) == (3, 3)
+
+
+def test_without_a_batch_each_write_still_commits_at_once(db, monkeypatch):
+    full = _candles(60)
+    opened = _connect_spy(monkeypatch)
+    _pass(db, full, pkg="pkg-A")
+    assert len(opened) == 2 and _rec_count(db) == (1, 1)     # the old behaviour: telemetry + history, unchanged
+
+
+def test_batch_result_equals_the_unbatched_result(db, tmp_path):
+    full = _candles(60)
+    other = str(tmp_path / "other.db")
+    Database(other)
+    for pkg in ("pkg-A", "pkg-B"):
+        _pass(other, full, pkg=pkg)
+    with pt.exit_pass_batch():
+        for pkg in ("pkg-A", "pkg-B"):
+            _pass(db, full, pkg=pkg)
+
+    def dump(p):
+        with sqlite3.connect(p) as c:
+            c.row_factory = sqlite3.Row
+            drop = ("updated_at", "written_at")
+            return sorted({k: v for k, v in dict(r).items() if k not in drop}.items()
+                          for r in c.execute("SELECT * FROM position_telemetry ORDER BY order_package_id"))
+    assert dump(db) == dump(other)
+    assert [r["bar_ts"] for r in _rows(db)] == [r["bar_ts"] for r in _rows(other)]
+
+
+def test_a_package_stamped_final_in_the_pass_gets_no_history_row(db):
+    full = _candles(60)
+    _pass(db, full, pkg="pkg-A")                     # row exists
+    with pt.exit_pass_batch():
+        _pass(db, full, pkg="pkg-A")
+        with sqlite3.connect(db) as c:               # the close path stamps final mid-pass, immediately
+            c.execute("UPDATE position_telemetry SET terminal_state='final' WHERE order_package_id='pkg-A'")
+    with sqlite3.connect(db) as c:
+        n_hist = c.execute("SELECT COUNT(*) FROM position_path_history WHERE order_package_id='pkg-A'").fetchone()[0]
+        state = c.execute("SELECT terminal_state FROM position_telemetry WHERE order_package_id='pkg-A'").fetchone()[0]
+    assert state == "final"                          # the deferred upsert did not clobber the stamp
+    assert n_hist == 1                               # only the pre-stamp history row; the queued one was skipped
+
+
+def test_a_failed_flush_is_contained_and_the_next_pass_rewrites(db, monkeypatch):
+    full = _candles(60)
+    real = pt._flush_ops
+    monkeypatch.setattr(pt, "_flush_ops", lambda ops: (_ for _ in ()).throw(RuntimeError("boom")))
+    with pt.exit_pass_batch():                       # must not raise
+        _pass(db, full, pkg="pkg-A")
+    assert _rec_count(db) == (0, 0)
+    monkeypatch.setattr(pt, "_flush_ops", real)
+    with pt.exit_pass_batch():
+        _pass(db, full, pkg="pkg-A")
+    assert _rec_count(db) == (1, 1)
+
+
+def test_the_batch_flushes_even_when_the_pass_raises_and_nests(db):
+    full = _candles(60)
+    with pytest.raises(RuntimeError):
+        with pt.exit_pass_batch():
+            with pt.exit_pass_batch():
+                _pass(db, full, pkg="pkg-A")
+            assert _rec_count(db) == (0, 0)          # the inner exit did not flush
+            raise RuntimeError("pass blew up")
+    assert _rec_count(db) == (1, 1)                  # but the outer finally did
+
+
+def test_one_timing_line_per_non_empty_pass(db, caplog):
+    full = _candles(60)
+    with caplog.at_level("INFO", logger=pt.logger.name):
+        with pt.exit_pass_batch():
+            pass                                     # an empty pass logs nothing
+        with pt.exit_pass_batch():
+            _pass(db, full, pkg="pkg-A")
+    lines = [r.getMessage() for r in caplog.records if "exit pass batch" in r.getMessage()]
+    assert len(lines) == 1 and "queued=2 written=2 failed=0" in lines[0] and "connect+commit=" in lines[0]
