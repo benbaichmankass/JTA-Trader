@@ -140,7 +140,7 @@ def sweep(db_path: str, fills_db: str, *, apply: bool, with_funding: bool = Fals
             "fills_scanned": len(fills),
             "funding_scanned": len(funding),
             "clean": 0, "ambiguous": 0, "entry_only": 0, "no_match": 0,
-            "non_usd_skipped": 0, "written": 0, "already_broker": 0, "funding_topped_up": 0,
+            "non_usd_skipped": 0, "written": 0, "already_broker": 0, "funding_topped_up": 0, "funding_corrected": 0, "funding_sign_flipped": 0,
             "total_broker_fee_usd": 0.0, "total_funding_usd": 0.0,
         }
         for tid, c in costs.items():
@@ -158,14 +158,27 @@ def sweep(db_path: str, fills_db: str, *, apply: bool, with_funding: bool = Fals
                 continue
             if str(cost_source_by_id.get(tid) or "").lower() == "broker":
                 summary["already_broker"] += 1
-                if trade_by_id[int(tid)].get("funding_paid_usd") is None:
-                    fv = _funding_for(tid)
-                    if fv is not None:
-                        summary["funding_topped_up"] += 1
-                        if apply:
-                            conn.execute(
-                                "UPDATE trades SET funding_paid_usd=? WHERE id=? "
-                                "AND funding_paid_usd IS NULL", (fv, int(tid)))
+                stored = trade_by_id[int(tid)].get("funding_paid_usd")
+                fv = _funding_for(tid)
+                if fv is None:
+                    continue
+                if stored is None:
+                    summary["funding_topped_up"] += 1
+                    if apply:
+                        conn.execute(
+                            "UPDATE trades SET funding_paid_usd=? WHERE id=? "
+                            "AND funding_paid_usd IS NULL", (fv, int(tid)))
+                elif abs(float(stored) - fv) > 1e-9:
+                    # --with-funding RECOMPUTES a stored value that disagrees with the
+                    # (sign-fixed) store: the values written while exchange_funding was
+                    # sign-inverted are corrected here, and sign flips are counted.
+                    summary["funding_corrected"] += 1
+                    if abs(float(stored) + fv) <= 1e-9 and fv != 0:
+                        summary["funding_sign_flipped"] += 1
+                    if apply:
+                        conn.execute(
+                            "UPDATE trades SET funding_paid_usd=? WHERE id=?",
+                            (fv, int(tid)))
                 continue
             summary["clean"] += 1
             fee_taker = round(float(c.fee_taker_usd), 8)
@@ -224,6 +237,7 @@ def main() -> int:
     print(f"  non-USD fees skipped: {s['non_usd_skipped']}")
     print(f"  already broker-truth (skipped): {s['already_broker']}")
     print(f"  funding topped up on existing broker rows: {s['funding_topped_up']}")
+    print(f"  funding corrected on existing broker rows: {s['funding_corrected']}  (sign flipped: {s['funding_sign_flipped']})")
     print(f"  would-write broker-truth fees: {s['written']}  (fees ${s['total_broker_fee_usd']:.4f} · funding ${s['total_funding_usd']:.4f})")
     if not args.apply and s["written"]:
         print("  re-run with --apply to write.")
