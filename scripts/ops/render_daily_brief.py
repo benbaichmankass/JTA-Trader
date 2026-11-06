@@ -552,7 +552,7 @@ def _soak_lines(b: dict) -> list[str]:
     # `unknown`. `awaiting_first_trade` / `in_progress` are quiet counts — a soak
     # with no signal yet is waiting, not failing, and has no deadline. 48 full
     # rows took the brief past its 16 KB cap on 2026-10-04.
-    quiet_states = ("awaiting_first_trade", "in_progress")
+    quiet_states = ("awaiting_first_trade", "in_progress", "pending")
     loud = [r for r in sk["rows"] if r.get("state") not in quiet_states]
     order = {"mechanical_fail": 0, "unknown": 1, "passed": 2}
     for r in sorted(loud, key=lambda r: (order.get(str(r.get("state")), 9), str(r.get("id")))):

@@ -205,7 +205,7 @@ def open_ask_operator(items: list[dict]) -> list[dict]:
 # committed file SOAK-WATCH owns; STATE is COMPUTED LIVE on the VM by
 # ``scripts/ops/soak_state.py::soak_states()`` (contracts + journal DB). The brief,
 # the report and this pass all call it. Never a session-written state field.
-SOAK_STATES = ("passed", "in_progress", "awaiting_first_trade", "mechanical_fail", "unknown")
+SOAK_STATES = ("passed", "in_progress", "awaiting_first_trade", "mechanical_fail", "pending", "unknown")
 
 
 def read_soak_states() -> tuple[str, list[dict]]:

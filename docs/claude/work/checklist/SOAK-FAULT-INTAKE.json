@@ -1,0 +1,23 @@
+{
+  "id": "SOAK-FAULT-INTAKE",
+  "title": "Per-trade mechanics faults land as pipeline items (mechanics_fault_intake.py); grader pending state for not-yet-costed closes",
+  "phase": null,
+  "state": "queued",
+  "owner": "manager",
+  "lane": null,
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [],
+  "blocked_on": [],
+  "note": "Reshaped 2026-11-06 ~19:00Z per operator scope update (soak vocabulary retiring): intake is now scripts/ops/mechanics_fault_intake.py (per-trade, keyed mechanics-fault:<trade_id>, 'mechanics monitoring'); no new soak-named file/field/ping. Grader fixes in scripts/ops/soak_state.py stay (they fix per-trade mechanics checks). SOAK-SURFACE FINDINGS FOR SOAK-VOCAB-RETIRE (that row was not on origin/main when written, so recorded here; append there when it lands): (a) soak_state.STATES gained 'pending' (my addition; rename/fold when the vocabulary retires) and is also listed in attention_watch.SOAK_STATES and render_daily_brief quiet_states; (b) scripts/ops/soak_state.py::grade_trade/evaluate/CLEAN_EXITS (now incl. strategy_close) is the per-trade mechanics grader and should survive the retirement under a mechanics name; (c) attention_watch (b2) block pings 'soak(s) changed state' on passed/mechanical_fail transitions, the Telegram source of the operator's pings; (d) config/mandates.yaml bar.soak_states [passed, mechanical_fail] and snapshot_soak_state_for_mandate.py consume the states; (e) tests/test_soak_state_pending.py is named for soak_state only because it tests that module. OPEN: schedule mechanics_fault_intake.py --apply (manager's call). Local journal not live, so it printed 'could not look' (rc 3), not zero. 2026-11-06 ~19:10Z: SCHEDULED per manager. mechanics_fault_intake.py --live --apply runs as a step of the existing hourly counterfactual-grade-closed workflow (no new workflow), landing docs/claude/work/pipeline in that job's one commit-to-main PR. Live dry run 19:0xZ read 39 closed trades, 1 fault (6926). Also made max_hold a clean exit reason (it flagged 5 healthy 15:00Z closes: 6918/6919/6923/6927/6928). Order packages are not read in --live, so the package-side match is skipped.",
+  "due_by": "2026-11-13",
+  "roadmap": [
+    "unmapped"
+  ],
+  "roadmap_unmapped_reason": "ops tooling for the soak ping; no roadmap milestone",
+  "updated_at": "2026-11-06T18:57:34Z",
+  "updated_by": "lane:SOAK-PING-FOLLOWUP",
+  "_seq": 970
+}
