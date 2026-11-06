@@ -18,7 +18,7 @@ from src.runtime import work_store as ws
 from src.runtime import work_store_import as wi
 from tests.test_work_store_import import REC, ROWS, _write
 
-REAL_REPO = Path(__file__).resolve().parents[1]
+REPO = Path(__file__).resolve().parents[1]
 
 
 def _freeze(repo: Path, on: bool = True) -> None:
@@ -211,6 +211,26 @@ def test_brief_section0_is_due_now(env):
 
 def test_the_repo_is_frozen_and_routes_to_the_store():
     """The committed freeze: the real header carries the key, so readers on the VM read the store."""
-    assert wr.frozen(REAL_REPO)
-    head = json.loads((REAL_REPO / cs.STORE / cs.HEADER).read_text())
+    assert wr.frozen(REPO)
+    head = json.loads((REPO / cs.STORE / cs.HEADER).read_text())
     assert "work.py" in head[wr.FROZEN_KEY]["write_with"]
+
+
+def test_a_monkeypatched_store_global_is_never_canonical(env, tmp_path, monkeypatch):
+    """Regression (CI 2026-11-06): pipeline.STORE patched to a tmp dir made that dir 'canonical'
+    (REPO / <absolute> == <absolute>), so a test's append reached the live API."""
+    repo, _ = env
+    _freeze(repo)
+    tmp_store = tmp_path / "pl"
+    monkeypatch.setattr(pl, "STORE", tmp_store)
+    assert not wr.is_canonical(tmp_store, tmp_store)
+    assert not wr.is_canonical(tmp_store, wr.PIPELINE_STORE)
+    pl.append(dict(REC[0], id="PI-TMP"), tmp_store, intent="new")
+    assert "PI-TMP" in pl.read_files(tmp_store).items  # written to the tmp FILES, not any store
+
+
+def test_tests_never_reach_the_live_api(monkeypatch, tmp_path):
+    monkeypatch.setenv("WORK_STORE_DB", str(tmp_path / "absent.db"))
+    monkeypatch.delenv("WORK_STORE_URL", raising=False)
+    with pytest.raises(wr.WorkWriteError, match="live work-store API"):
+        wr.get_row("ANY")

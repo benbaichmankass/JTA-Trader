@@ -188,13 +188,13 @@ def _rows_for_read(base: Path) -> list[dict]:
     """WSD-S4: after the freeze, the canonical rows come from work_store.db wherever that file
     exists (the live VM); elsewhere the files are the export. A failed store read raises."""
     from src.runtime import work_read
-    ws = work_read._store_for_read(REPO, STORE, base)
+    ws = work_read._store_for_read(REPO, work_read.CHECKLIST_STORE, base)
     return work_read.checklist_rows(ws) if ws is not None else _read_rows(base)
 
 
 def _frozen_canonical(base: Path) -> bool:
     from src.runtime import work_read
-    return work_read.is_canonical(base, STORE) and work_read.frozen(REPO)
+    return work_read.is_canonical(base, work_read.CHECKLIST_STORE) and work_read.frozen(REPO)
 
 
 def load(repo: Path = REPO, store: Path = STORE) -> dict:

@@ -1178,8 +1178,8 @@ def _served_from_store(repo: Path) -> bool:
     """Is the canonical checklist read from work_store.db here (frozen + the DB file present)?"""
     from src.runtime import checklist_store, work_read
     try:
-        return (work_read.frozen(repo) and work_read.is_canonical(repo / checklist_store.STORE,
-                                                                   checklist_store.STORE)
+        return (work_read.frozen(repo) and work_read.is_canonical(repo / work_read.CHECKLIST_STORE,
+                                                                   work_read.CHECKLIST_STORE)
                 and work_read.local_store() is not None)
     except Exception:  # noqa: BLE001  # allow-silent: a provenance label only; the rows' own read reports its failure
         return False

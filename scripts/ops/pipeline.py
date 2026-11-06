@@ -489,7 +489,7 @@ def read_log(store: Path = STORE) -> LoadResult:
     # WSD-S4: after the freeze the canonical store is READ from work_store.db wherever that file
     # exists (the live VM); elsewhere these files are the export. A failed store read raises.
     from src.runtime import work_read as _wr
-    _ws = _wr._store_for_read(_wr.REPO, STORE, store)
+    _ws = _wr._store_for_read(_wr.REPO, _wr.PIPELINE_STORE, store)
     if _ws is not None:
         return _wr.pipeline_result(_ws)
     return read_files(store)
@@ -546,7 +546,7 @@ def version_of(item_id: str, store: Path = STORE) -> str | None:
     this token back as `append(..., based_on=token)`; see `append()`.
     WSD-S4: after the freeze the canonical store's token is ``work_store:v<version>``, read live."""
     from src.runtime import work_read as _wr
-    if _wr.is_canonical(store, STORE) and _wr.frozen(_wr.REPO):
+    if _wr.is_canonical(store, _wr.PIPELINE_STORE) and _wr.frozen(_wr.REPO):
         return _wr.observation_version(item_id)
     return read_log(store).sources.get(item_id)
 
@@ -607,7 +607,7 @@ def append(item: dict, store: Path = STORE, *, intent: str,
     # WSD-S4: after the freeze the canonical store's writes go to work_store.db; the prior state
     # and its version token are read LIVE from the store, never from the frozen export files.
     from src.runtime import work_read as _wr
-    frozen_canon = _wr.is_canonical(store, STORE) and _wr.frozen(_wr.REPO)
+    frozen_canon = _wr.is_canonical(store, _wr.PIPELINE_STORE) and _wr.frozen(_wr.REPO)
     if frozen_canon:
         prior = _wr.get_observation(item["id"])
     else:

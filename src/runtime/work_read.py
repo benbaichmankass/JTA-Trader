@@ -47,7 +47,13 @@ class WorkWriteError(ValueError):
 
 
 def is_canonical(path: Path | str, rel: Path) -> bool:
-    """Is ``path`` the repo's own register location (not a test fixture / archive copy)?"""
+    """Is ``path`` the repo's own register location (not a test fixture / archive copy)?
+
+    ``rel`` must be one of this module's fixed RELATIVE constants -- never a caller's
+    monkeypatchable ``STORE`` global: ``REPO / <absolute tmp path>`` is that tmp path, which would
+    make a test's temp store "canonical" and send its writes to the live API."""
+    if Path(rel).is_absolute() or Path(rel) not in (CHECKLIST_STORE, PIPELINE_STORE):
+        return False
     try:
         p = Path(path)
         p = p if p.is_absolute() else (Path.cwd() / p)
@@ -125,6 +131,12 @@ def due_now_split(store) -> tuple[list[str], list[str]]:
 
 
 def _work_cli():
+    # Backstop: a test must never read or write the LIVE register (the 2026-11-06 CI run showed a
+    # monkeypatched store reaching the production API). Tests use a local WORK_STORE_DB, or point
+    # WORK_STORE_URL at a fake explicitly.
+    if os.environ.get("PYTEST_CURRENT_TEST") and not os.environ.get("WORK_STORE_URL"):
+        raise WorkWriteError("refusing to reach the live work-store API from a test "
+                             "(set WORK_STORE_DB to a local store, or WORK_STORE_URL to a fake)")
     root = str(REPO / "scripts" / "ops")
     if root not in sys.path:
         sys.path.insert(0, root)
