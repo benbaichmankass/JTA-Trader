@@ -4,7 +4,27 @@
 
 **Gates this adds or changes:** none new. This writes down, as a rule fixed before the run, the bar a real-money ENTRY artifact change already has to clear (the c692-01 registered rule, the `holdout_lock` deflation, the full cost stack). It decides what may be CHANGED, not what RUNS, and it is landed as a held PR; nothing swaps without a human merge.
 
-## The rule
+## AMENDMENT 1 (2026-11-06 ~16:58Z, OPERATOR DECISION, relayed by Manager Session 2026-11-06a): replacing a LIVE model needs only "at least as good"
+
+Operator, verbatim: **"New rule for replacing an already-live model: the retrained version goes live if, on the same post-training window and net of all costs, it does at least as well as the live one. The edge bar stays for brand-new strategies."** Popup answer: **"Graded retrain now (Recommended)"**. The operator's reasoning, in chat: *"the whole point of retraining is to improve it, so if the retraining improved the outcome, then shouldn't we be using the retrain?"*
+
+Honest provenance: this amendment is made AFTER the first grading read (run 42250040398, verdict `insufficient_n` under the first registration, candidate n 281). It is the operator's rule, not a session's, and it is committed BEFORE the first read's verdict is recomputed under it. It changes the PASS test only; it does NOT change the data, the window, the recipe, the cost stack or the sample-size floor.
+
+### The rule as amended (supersedes "The rule" below it, kept for the record)
+
+Same candidate, same window, same scoring of both artifacts on the SAME rows with the registered policy and the full cost stack (fee 11.0 bps round trip, slippage 3.0 bps, funding 1.0 bps per 8 h; the fee-only harnesses stay excluded).
+
+A REPLACEMENT of an already-served artifact PASSES iff **all** hold on that window:
+
+1. **Sample floor, applied to BOTH models.** n taken decisions >= 300 on >= 10 distinct symbols for the candidate AND for the served artifact. The floor is unchanged (`N_FLOOR` 300, `SYMBOL_FLOOR` 10) and is NOT waived by this amendment.
+2. **At least as good.** Candidate mean net R per taken decision >= the served artifact's on the same window.
+
+Reported as information, no longer gating a replacement: the absolute deflated point bar (`holdout_lock`), the deflated CI lower bound, and the difference's standard error. The read is still CLAIMED in the holdout ledger before scoring. A BRAND-NEW strategy, leg or recipe (nothing served to replace) keeps the registered edge bar (point bar deflated by the ledger) and is not covered by this amendment.
+
+Otherwise: below the floor on either model -> `insufficient_n` (served model kept, one flag); candidate worse than served -> `fail` (served model kept, one flag). A PASS opens a DRAFT promotion PR with a landing hold; a human merges.
+
+### Superseded text: the first registration of "The rule" (kept verbatim for the record)
+
 
 A candidate is the artifact the registered recipe (`scripts/research/ml_decision_entry.py`, c692-01: same 20 features, `LGB_PARAMS`, tau carried from the served artifact, SL 2 / TP 3 ATR, 24 h horizon) produces when refit **as of** a date S, with training rows purged and embargoed exactly as `ml_decision_entry.purge_train` does (rows before S minus 7 days minus 25 h). It is graded on the window `[S, run_date - 1]`, which starts after its training data by construction.
 
@@ -21,7 +41,7 @@ Otherwise:
 - either test fails: verdict `fail`. The served model is kept and one flag is raised.
 - A PASS opens a DRAFT PR that adds a NEW versioned artifact directory and repoints the one served-model pointer. The old directory stays for a one-line revert. Nothing merges itself.
 
-The served model's own weak evidence (DSR 0.839 < 0.95 at N=1) is NOT a reason to lower this bar.
+(Superseded by Amendment 1: a replacement no longer has to clear the absolute bar; the manager's earlier line that the served model's weak evidence is no reason to lower it was overtaken by the operator's decision.)
 
 ## What this rule does not say, on purpose
 
