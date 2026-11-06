@@ -341,6 +341,25 @@ def _f_or_none(v: Any) -> Optional[float]:
     return f if f == f else None
 
 
+#: Share-hold states that mean the BROKER is wedged (not a transient race): only these may climb to rung 3.
+_LADDER_WEDGE_STATES = frozenset({"cancel_accepted_ineffective", "broker_cancel_wedged"})
+
+
+def _flag_live_ladder_exhausted(sym: str, hold_state: str, residual: Optional[list], target: Dict[str, Any]) -> None:
+    """ONE red flag (fingerprinted by exchange+op in outcomes.report) when a LIVE position's close ladder is
+    exhausted: close-all is never automated on real money. Names the stuck order ids and the failed step."""
+    try:
+        from src.runtime.api_reporting import report_api_failure
+        ids = [str(o.get("id")) for o in (residual or []) if o.get("id")]
+        report_api_failure(
+            exchange="alpaca", op="close_ladder_exhausted_live", account_id=f"live:{sym}",
+            error=(f"{sym}: close ladder exhausted on a LIVE account ({hold_state}); stuck orders {ids}; failed at "
+                   f"oco target exit {target.get('state')}: {target.get('detail')}. Close-all is not automated on "
+                   "real money: see docs/runbooks/alpaca-wedged-oco.md"))
+    except Exception:  # noqa: BLE001 -- the close failure itself is still returned and logged
+        logger.exception("alpaca close ladder: live red flag failed for %s", sym)
+
+
 class CancelOutcome(NamedTuple):
     """What actually happened when we asked Alpaca to cancel a symbol's orders.
 
@@ -1577,6 +1596,22 @@ class AlpacaClient:
         return {"retCode": 2, "retMsg": (
             "extended-hours limit close working — not yet filled, exit deferred")}
 
+    def _account_reset_close_all(self, sym: str) -> Dict[str, Any]:
+        """RUNG 3, PAPER ONLY: Alpaca's documented account-wide liquidation, ``DELETE /v2/positions?cancel_orders=true``
+        ("If true is specified, cancel all open orders before liquidating all positions",
+        docs.alpaca.markets/reference/deleteallopenpositions-1). Refuses outright on a live account. Returns
+        ``{"state": "reset"|"refused"|"not_paper", "closed_symbols": [...], "detail": ...}``; the caller's flat-confirm
+        gate still decides whether *sym* actually left. Every OTHER trade this closes is journaled ``account_reset`` by
+        ``execute.close_open_position`` so nothing is orphaned; strategies re-enter on their own signals."""
+        if self.env != "paper":
+            return {"state": "not_paper", "detail": "close-all is never automated on a live account"}
+        before = self.positions()
+        env = self._request("DELETE", "/v2/positions?cancel_orders=true")
+        if env.get("retCode") not in (0, None, 207):
+            return {"state": "refused", "detail": str(env.get("retMsg"))}
+        closed = sorted({str(p.get("symbol")) for p in (before or []) if p.get("symbol")} | {sym})
+        return {"state": "reset", "closed_symbols": closed}
+
     # Statuses Alpaca documents as NOT replaceable: "Order cannot be replaced when the status is accepted,
     # pending_new, pending_cancel or pending_replace." (docs.alpaca.markets/reference/patchorderbyorderid-1)
     _NOT_REPLACEABLE = frozenset({"accepted", "pending_new", "pending_cancel", "pending_replace"})
@@ -1941,6 +1976,28 @@ class AlpacaClient:
                     hold_state, hold_detail = classify_share_hold(
                         residual, last_cancel,
                     )
+                    # RUNG 3 (operator ~18:55Z 2026-11-06, verbatim in docs/runbooks/alpaca-wedged-oco.md: "We can
+                    # close all the positions on that account if needed to reset ... it can't depend on me"):
+                    # only when the broker itself shows a WEDGE (never on a transient insufficient-qty).
+                    ladder = ""
+                    if hold_state in _LADDER_WEDGE_STATES:
+                        if self.env == "paper":
+                            reset = self._account_reset_close_all(sym)
+                            if reset.get("state") == "reset":
+                                logger.warning(
+                                    "alpaca close %s: rungs 1-2 failed on a broker wedge (%s); PAPER account reset "
+                                    "via DELETE /v2/positions?cancel_orders=true closed %s",
+                                    sym, hold_state, reset.get("closed_symbols"))
+                                env = {"retCode": 0, "result": {
+                                    "id": "account_reset", "scope": "account_reset",
+                                    "closed_symbols": reset.get("closed_symbols") or []}}
+                                break  # → post-DELETE flatten-confirm gate validates it
+                            ladder = f" [account reset {reset.get('state')}: {reset.get('detail')}]"
+                        else:
+                            ladder = (" [close ladder exhausted on a LIVE account: close-all is NOT automated on "
+                                      f"real money; stuck orders {[o.get('id') for o in (residual or [])]}; "
+                                      f"failed at: oco target exit {target.get('state')}]")
+                            _flag_live_ladder_exhausted(sym, hold_state, residual, target)
                     logger.warning(
                         "alpaca close %s still insufficient-qty after ~%.1fs "
                         "(want_qty=%s); share_hold=%s (%s); residual open "
@@ -1961,6 +2018,7 @@ class AlpacaClient:
                             f"{env.get('retMsg')} "
                             f"{format_share_hold_marker(hold_state, hold_detail)}"
                             f" [oco target exit {target.get('state')}: {target.get('detail')}]"
+                            f"{ladder}"
                         ),
                     }
                 return env
@@ -2004,8 +2062,10 @@ class AlpacaClient:
 
         result = env.get("result") or {}
         out_result = {"orderId": str(result.get("id") or "")}
-        if result.get("scope"):        # e.g. "oco_target_reprice": say HOW the venue closed it
+        if result.get("scope"):        # e.g. "oco_target_reprice" / "account_reset": say HOW the venue closed it
             out_result["scope"] = result["scope"]
+        if result.get("closed_symbols") is not None:
+            out_result["closed_symbols"] = result["closed_symbols"]
         return {"retCode": 0, "result": out_result}
 
     def _open_orders_for_symbol(

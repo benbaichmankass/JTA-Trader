@@ -10,6 +10,7 @@ still flattens: close() exits THROUGH the resting OCO. The fake broker behaves t
 """
 from __future__ import annotations
 
+import json
 from typing import Any, Dict, List
 
 import pytest
@@ -84,7 +85,7 @@ class Broker:
         return {"retCode": 0, "result": {"id": oid + "-new"}}
 
 
-def _client(monkeypatch, b: Broker, *, side="long", px=372.40):
+def _client(monkeypatch, b: Broker, *, side="long", px=372.40, rung3=False):
     monkeypatch.setenv("ALPACA_CANCEL_SETTLE_S", "0")
     monkeypatch.setenv("ALPACA_FLATTEN_RETRY_S", "0")
     monkeypatch.setenv("ALPACA_CLOSE_CONFIRM_S", "0.05")
@@ -92,6 +93,8 @@ def _client(monkeypatch, b: Broker, *, side="long", px=372.40):
     monkeypatch.setattr("src.units.accounts.alpaca_client.time.sleep", lambda *_a, **_k: None)
     monkeypatch.setattr("src.runtime.market_hours.us_equity_session", lambda *_a, **_k: "rth")
     cli = AlpacaClient(api_key="k", api_secret="s")
+    if not rung3:                                                 # the rung-2 tests: no account reset
+        monkeypatch.setattr("src.units.accounts.alpaca_client._LADDER_WEDGE_STATES", frozenset())
     monkeypatch.setattr(cli, "_resolve_close_scope", lambda sym, q: type("S", (), {
         "envelope": None, "partial": False, "qty": q, "live_qty": b.qty})())
     monkeypatch.setattr(cli, "_cancel_open_orders_detailed",
@@ -222,3 +225,113 @@ def test_no_safe_target_means_nothing_is_sent(monkeypatch, extra, why):
 def test_pair_rule_helper():
     assert oco_pair_valid("sell", 368.68, 354.40) and not oco_pair_valid("sell", 368.68, 416.09)
     assert oco_pair_valid("buy", 313.10, 325.50) and not oco_pair_valid("buy", 313.10, 300.00)
+
+
+# ── RUNG 3 (operator ~18:55Z: "We can close all the positions on that account if needed to reset ... it can't
+#    depend on me"): PAPER resets the account; LIVE never closes-all and raises ONE red flag ──────────────────
+def _ladder_client(monkeypatch, *, env="paper", wedge=True):
+    b = Broker(allow_stop_patch=False)                            # rung 2 cannot complete
+    cli = _client(monkeypatch, b, rung3=True)
+    cli.env = env
+    calls = {"close_all": 0, "flags": []}
+    if not wedge:                                                 # a transient hold: nothing rests at all
+        monkeypatch.setattr(cli, "_open_orders_for_symbol", lambda *_a, **_k: [])
+        monkeypatch.setattr(cli, "_cancel_open_orders_detailed", lambda *_a: CancelOutcome("orders_read", 0, 0, []))
+    inner = cli._request
+
+    def req(method, path, json_body=None):
+        if method == "DELETE" and path == "/v2/positions?cancel_orders=true":
+            calls["close_all"] += 1
+            b.flat = True
+            return {"retCode": 207, "result": [{"symbol": "GLD", "status": 200}, {"symbol": "SPY", "status": 200}]}
+        return inner(method, path, json_body)
+
+    monkeypatch.setattr(cli, "_request", req)
+    monkeypatch.setattr(cli, "positions", lambda: [] if b.flat else [{"symbol": "GLD", "qty": "39"},
+                                                                    {"symbol": "SPY", "qty": "51"}])
+    monkeypatch.setattr("src.runtime.api_reporting.report_api_failure",
+                        lambda **kw: calls["flags"].append(kw))
+    return cli, b, calls
+
+
+def test_rung3_paper_resets_the_account_on_a_broker_wedge(monkeypatch):
+    cli, b, calls = _ladder_client(monkeypatch, env="paper")
+    out = cli.close("GLD")
+    assert calls["close_all"] == 1 and calls["flags"] == []
+    assert out["retCode"] == 0 and out["result"]["scope"] == "account_reset"
+    assert set(out["result"]["closed_symbols"]) == {"GLD", "SPY"}
+
+
+def test_rung3_never_fires_on_a_transient_hold(monkeypatch):
+    cli, _b, calls = _ladder_client(monkeypatch, env="paper", wedge=False)
+    out = cli.close("GLD")
+    assert calls["close_all"] == 0 and out["retCode"] != 0
+
+
+def test_rung3_live_never_closes_all_and_raises_one_red_flag(monkeypatch):
+    cli, _b, calls = _ladder_client(monkeypatch, env="live")
+    out = cli.close("GLD")
+    assert calls["close_all"] == 0 and out["retCode"] != 0
+    assert "close ladder exhausted on a LIVE account" in out["retMsg"] and "2e843e04" in out["retMsg"]
+    (flag,) = calls["flags"]
+    assert flag["op"] == "close_ladder_exhausted_live" and "891ddff0" in flag["error"]
+
+
+def test_account_reset_method_refuses_on_live():
+    cli = AlpacaClient(api_key="k", api_secret="s", env="live")
+    assert cli._account_reset_close_all("GLD")["state"] == "not_paper"
+
+
+# ── the journal after a reset: every other open trade closed `account_reset`, nothing orphaned ───────────────
+class _JDB:
+    def __init__(self, trades):
+        self.trades = {t["id"]: dict(t) for t in trades}
+        self.pkgs: dict = {}
+
+    def get_trades(self, filters=None):
+        f = filters or {}
+        return [dict(t) for t in self.trades.values() if all(t.get(k) == v for k, v in f.items())]
+
+    def update_trade(self, tid, up):
+        self.trades[tid].update(up)
+
+    def update_order_package(self, pid, up):
+        self.pkgs.setdefault(pid, {}).update(up)
+
+
+def test_journal_account_reset_closes_the_others_and_their_packages():
+    from src.units.accounts.execute import journal_account_reset
+    db = _JDB([
+        {"id": 5209, "account_id": "alpaca_paper", "status": "open", "order_package_id": "pkg-gld", "notes": "{}"},
+        {"id": 6918, "account_id": "alpaca_paper", "status": "open", "order_package_id": "pkg-spy", "notes": "{}"},
+        {"id": 6919, "account_id": "alpaca_paper", "status": "open", "order_package_id": "pkg-qqq", "notes": None},
+        {"id": 7000, "account_id": "bybit_1", "status": "open", "order_package_id": "pkg-btc", "notes": "{}"},
+    ])
+    out = journal_account_reset({"account_id": "alpaca_paper", "account_class": "paper"}, keep_trade_id=5209, db=db)
+    assert sorted(out["closed_trades"]) == [6918, 6919] and out["error"] is None
+    assert db.trades[5209]["status"] == "open"                    # its own caller journals it
+    assert db.trades[7000]["status"] == "open"                    # another account is never touched
+    assert db.trades[6918]["exit_reason"] == "account_reset"
+    assert json.loads(db.trades[6918]["notes"])["closed_by"] == "alpaca_account_reset"
+    assert set(out["closed_packages"]) == {"pkg-spy", "pkg-qqq"}
+    assert db.pkgs["pkg-spy"] == {"status": "closed", "close_reason": "account_reset"}
+
+
+def test_journal_account_reset_refuses_real_money():
+    from src.units.accounts.execute import journal_account_reset
+    db = _JDB([{"id": 1, "account_id": "alpaca_live", "status": "open", "notes": "{}"}])
+    out = journal_account_reset({"account_id": "alpaca_live", "account_class": "real_money"}, db=db)
+    assert out["closed_trades"] == [] and db.trades[1]["status"] == "open" and "refused" in out["error"]
+
+
+def test_close_open_position_runs_the_journal_sweep_on_an_account_reset(monkeypatch):
+    from src.units.accounts import execute as ex
+    seen = {}
+    monkeypatch.setattr(ex, "journal_account_reset",
+                        lambda cfg, keep_trade_id=None: seen.update(cfg=cfg, keep=keep_trade_id) or {"closed_trades": [1]})
+    cli = AlpacaClient(api_key="k", api_secret="s")
+    monkeypatch.setattr(cli, "close", lambda sym, qty=None: {"retCode": 0, "result": {
+        "orderId": "account_reset", "scope": "account_reset", "closed_symbols": ["GLD", "SPY"]}})
+    out = ex.close_open_position(cli, {"exchange": "alpaca", "account_id": "alpaca_paper"},
+                                 symbol="GLD", side="long", qty=39, trade_id=5209)
+    assert out["ok"] and out["account_reset"] == {"closed_trades": [1]} and seen["keep"] == 5209
