@@ -23,8 +23,6 @@ from __future__ import annotations
 import os
 from typing import Any
 
-import yaml
-
 from src.utils.paths import repo_root as _repo_root
 
 _REPO_ROOT = _repo_root()
@@ -80,7 +78,9 @@ def _load_yaml_with_digest(path: str = _YAML_PATH) -> tuple[dict[str, Any], str]
     from src.runtime.loaded_config import digest_text
     with open(path, "r", encoding="utf-8") as fh:
         text = fh.read()
-    return (yaml.safe_load(text) or {}), digest_text(text)
+    # TICK-DURATION-115S: parse memoized by this exact text (deep copy per call).
+    from src.utils.yaml_parse_cache import safe_load_text
+    return (safe_load_text(text) or {}), digest_text(text)
 
 
 def _load_yaml(path: str = _YAML_PATH) -> dict[str, Any]:

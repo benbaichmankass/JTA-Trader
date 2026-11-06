@@ -30,7 +30,7 @@ is a cap on throughput. The job is to AUTOMATE the decision, not to ration it.
 > session will read for how to ingest a new task, process it, queue it up, prioritize it correctly"*).
 
 **Every manager runs these six steps, in order, at session start and at every check-in** — the
-"Manager lane check-in" routine, a lane's wake, the twice-daily review. A check-in prompt needs to say
+"Manager lane check-in" routine, a lane's wake, the daily review. A check-in prompt needs to say
 only *"run the operating loop (manager SKILL.md § The operating loop)"*. The ranked plan lives in the
 register, never in a session's head or a trigger prompt: a new manager inherits it with `checklist.py queue`.
 
@@ -57,16 +57,25 @@ register, never in a session's head or a trigger prompt: a new manager inherits 
 4. **LAND.** List every open PR. Each green one that waits on the manager (`landing: hold`, a refused
    self-land, a research hold PR) is landed now (Tier 1/2), or put to the operator on its recorded approval
    path (Tier 3). A green PR waiting on the manager is the manager's failure.
-5. **CLOSE.** `list_sessions(mine=true)` → `lane_reconcile.py`; run § "Archive protocol" on every
-   finished lane it lists — only this project's, after checking it owns no open PR — then
-   `checklist.py archive-lane <ROW>`.
+5. **CLOSE — a FULL sweep of the account, not just your own children** (operator, 2026-11-05, binding: *"We also need to make sure that
+   we're not forgetting to archive old lanes. That does not seem to be passing through to all the managers correctly. We need to make sure
+   that it's happening."*). Page `list_sessions` to the end (every page until `has_more` is false; save each page to a file), run
+   `python3 scripts/ops/lane_reconcile.py --sweep --sessions <page files...>`, and archive every ARCHIVE candidate it prints, whoever
+   spawned it: earlier managers' lanes, desk wakes and single-package live reviews included (MEASURED 2026-11-05: 35 finished-but-unarchived
+   sessions, back to 11-01, left by 5 earlier managers, because each manager archived only its own children). The KEEP list carries a
+   reason for each lane left open; only this project's sessions, never the LEFT ALONE block, after checking the lane owns no open PR
+   (`--pr-state` takes a `{session: open|merged|closed}` file for `review_ready` lanes). Then `checklist.py archive-lane <ROW>`.
    A `landed_unproven` row whose closing observation can be produced on demand and cheaply is triggered now, not left for the next
    schedule (canonical § "Validate early when it is cheap").
+   **Console threads (operator, 2026-11-05, via UI-CONSOLE-V1):** at every check-in, `ArtifactComments` `action: "read"` each console
+   artifact listed on row `UI-CONSOLE-V1` (`console_artifact_url`, `probe_artifact_url`) and answer or file every open thread, so a missed
+   comment wake is caught within one check-in. Comments on the console go to the manager, never to a lane.
 **REFILL (operator, 2026-10-26, binding) — runs at every check-in AND every lane close, after step 5.** Operator, verbatim excerpt: *"I
 shouldn't need to push you like this either - this is what we have a weekly workplan for, to make sure that the manager always knows what to
 do next … as long as we have headroom, lanes should be running."* (a) Compute the target from a fresh meter: `spend_meter.py --capacity
 --live-open N` prints *"KEEP N LANES RUNNING"* — a target, not a cap. (b) If running build lanes < target, dispatch the next rows now in
-`checklist.py queue` order, without waiting for the operator. (c) Ask the operator only when the plan has run out or the call is a genuine
+`checklist.py queue` order, without waiting for the operator, due `standing` work first, then `week_lane: surge` rows until the
+throttle-down switch (§ "Surge, then throttle"), throttle rows after it; through the surge one ML-research lane stays reserved (§ "Surge, then throttle" item 5). (c) Ask the operator only when the plan has run out or the call is a genuine
 preference — never for permission to use headroom. A capacity call made earlier (even by the operator) is **re-evaluated against a fresh
 reading at each check-in, not carried forward** (2026-10-26: a morning "1 lane" call stood for hours while weekly usage ran 47% → 50%). The
 live-review reserve is MEASURED and capped by § 6.4; it is not a reason to sit at one lane. Weekly audit C12 measures utilisation.
@@ -116,6 +125,10 @@ each **one marker, one lane, never spawn twice for the same id**; a `could_not_*
   fallback with the `live-trade-review` skill. **Never create a session with no `source_url`** (403 on every write, MEASURED DESK-6). Do not
   file `live-review-apply` for a `tighten_sl`; the VM rows watcher applies it. The wake poster commits the packet + table to
   `live-review/rows` byte-exact BEFORE posting (entry `evidence_state` `committed`/`exists`, LTR-PACKET-ECHO); the reviewer writes only its
+  row. **Every reviewer dispatch prompt says: "end your report with a `PACKET DEFECTS:` line (REVIEWER-BRIEF § 2d): each defect as field — reason —
+  n/denominator, or `none`"** (PACKET-HEALTH, operator 2026-11-05). The wake comment prints `PACKET HEALTH <pkg>: …` from the packet's computed
+  `packet_health`; a `degraded` / `could_not_look` line with a report that says `none` is a failed report, so re-ask once. **You file each reported
+  defect once** on its one owner (`LTR-GRADER-COVERAGE` pricing, `LTR-PACKET-READ-REACH` venue reads; else a PIPELINE item), never a duplicate and never a new
   row. Never commit a packet or table yourself from the comment text. `packet_state` `could_not_commit` / `evidence_conflict` → no reviewer;
   an incident (the VM receipt `ltr_wake_post_receipt` and the poller run name the http code). An `ltr-mirror-refused` comment (a row the
   mirror refused on `packet_sha` or a missing cited file) is an incident: repair the branch file from the generator's bytes, never by hand.
@@ -160,7 +173,14 @@ each **one marker, one lane, never spawn twice for the same id**; a `could_not_*
      skill and the handoff doc in full; from the canonical doc read only: RULE ONE; Permission Tiers + Data-backed Tier-2/3 decisions; Prime
      Directive; "Lanes answer to the manager" + "Reading is never gated".
    - **A dispatched lane** reads those same four sections (not the whole doc) plus any section its dispatch names (§ "Required dispatch block").
+2a. **Run the full sweep before dispatching anything** (operator, 2026-11-05, binding; quote in § "The operating loop" step 5): page
+    `list_sessions` to the end, run `lane_reconcile.py --sweep`, and archive every candidate, including the outgoing manager's finished lanes.
+    A handover that skips this orphans them.
 2b. **Subscribe to the ops-flags PR** (§ "Standing alert subscriptions").
+2c. **Re-watch the console artifact(s)** listed on row `UI-CONSOLE-V1` (`console_artifact_url`, `probe_artifact_url`): `ArtifactComments`
+    `action: "watch"` with each `url`, then read open threads (`action: "read"`) so nothing sent during the handoff is lost (operator,
+    2026-11-05, via UI-CONSOLE-V1). A watch ends with its session, so this runs at every rotation, beside the trigger rewiring and the #17895
+    re-subscribe.
 3. Take over every live lane: `get_session` it, then send it a trigger naming
    you as its manager (the reply channel is described under § "Every spawn
    carries provenance" below).
@@ -502,6 +522,43 @@ mandatory in the planning routine's prompt and come BEFORE part (B) 1:
 4. **Close.** The PR that closes planning records each disposition (checklist rows / units / pipeline records) and the follow-through table on
    `WEEKLY-PLANNING`; next Thursday's step 0 grades it.
 
+### Surge, then throttle: every workplan item is one or the other (operator, 2026-11-05, binding)
+
+> **Gates this adds or changes: none.** It decides the ORDER and PACE work is dispatched in, never whether anything runs or trades.
+
+Operator, verbatim excerpt: *"we push them even against unsustainable usage rates at the beginning, and then we slow down and pace
+ourselves based on the usage that we have left to keep the rest of the week making sure that the systems stay running and that we progress
+with work that we have capacity for ... I just want to make sure that for the weekly work plan, we know what stuff is surge stuff and what
+stuff is if we get to it at the throttle down stage."*
+
+1. **Tag in planning.** Step 4 (workplan) tags every (a) item `week_lane: surge`, `week_lane: throttle` or `week_lane: standing` on its checklist row
+   (`checklist.py set <ID> week_lane=surge`), agreed with the operator like the rest of the workplan. The workplan Artifact lists the
+   sets separately: standing, surge, throttle.
+2. **What is surge:** real money (a leg, a fix or a bug on a real-money or prop book), anything that moves a strategy or ML model toward
+   live trading, the week's big ML milestones, and the week's big strategic milestones (e.g. a redesign). **What is throttle:** important
+   work that is not top of the line: development infrastructure that cannot go live this week (e.g. the options data infra), the less
+   urgent parts of a UI upgrade, cleanups and guard pruning. When unsure, ask in planning; never let a row stay untagged.
+3. **The surge** runs from planning: dispatch surge rows first, as wide as the work allows, and do NOT throttle them to the even weekly
+   pace. Throttle rows wait unless a surge row is blocked and capacity would otherwise sit idle.
+4. **The throttle-down** starts when the surge rows are landed or blocked, or when the capacity reading says the rest of the week's usage
+   is needed to keep the systems running (the standing routines, live review, the daily review and incident response come first). From
+   then on, REFILL dispatches throttle rows, paced to `spend_meter.py --capacity`. Record the switch on `WEEKLY-PLANNING` with the reading
+   it was made on, and tell the operator in one line.
+5. **Always on, surge or not (operator, 2026-11-05, second message, verbatim excerpt: *"even during the surge, I want to have one lane
+   dedicated to the ML research ... making sure that that work plan is continuing to get taken care of even during the surge"*; *"we
+   don't need to have like a backlog drain going, but we do need to make sure that we're not missing like the regular checkups ... those
+   are sort of like the strategic items that should always have some resources allocated to them"*):**
+   - **One ML-research lane through the surge.** It does not have to run constantly, but the ML research workplan (the throttle-tagged
+     ML research rows, in queue order) must keep moving: at every check-in during the surge, if no ML-research lane is running and an
+     ML research row is runnable, dispatch one. It is reserved: it is not counted against surge dispatch or displaced by it.
+   - **The regular checkups are `standing` (`week_lane: standing`) and never pause for the surge**: the daily review, the weekly reviews,
+     research-ops, live review and desk wakes, health and pipeline checks, incident response. They are dispatched before surge work when
+     they are due. During the surge the backlog DRAIN may be deferred to the throttle-down (record the deferral on `WEEKLY-PLANNING`); the
+     daily review's measurement of the backlog still runs. After the surge, standing work keeps first priority, then throttle rows.
+6. **Prop-account MLs are surge** (operator, 2026-11-05: prop MLs belong with the real-money surge items).
+7. **Mid-week arrivals** are tagged when they are filed: a new real-money bug or an operator directive about live trading is surge even
+   after the switch, and is dispatched at once.
+
 Row `WEEKLY-PLANNING`; trigger `trig_01Pm8AMPiigZX9ndobeyT6dE`, Wed **08:20Z** (first run 2026-10-14). **It is a dialogue, not a report**
 (operator, verbatim: *"it's a dialogue between both of us to work together on building our understanding, and then based on that, the work
 priorities"*): never publish a finished plan for sign-off; priorities are never finalised without the operator (re-ping if absent).
@@ -525,7 +582,7 @@ current ids via `list_triggers`):
 | Mon 06:07 | weekly audit (`trig_017awLRNy4rmdL57NHKXehet`) | one Opus lane: CORE + rotating deep pass (ISO week mod 4), per `.claude/skills/weekly-audit/SKILL.md` |
 | Wed 19:29 (per the manager's 2026-10-28 dispatch; trigger time not re-read by that lane) | research programme review (`trig_01GuB9kH3CM4WJCJUgAb1s8Q`) | one Opus lane runs `.claude/skills/programme-review/SKILL.md` (CHECKS packet + per-programme, per-track ANALYSIS) and updates the research map and programme plans (`docs/research/programmes/`, `research/programmes/`); the queue is fed ONLY from these; one HELD PR (programme trees are landing machinery) |
 
-Unchanged: research-ops 4×/day, daily reviews 05:52Z/17:52Z, lane check-ins. **Retired (operator 2026-10-14):** the Monday research-planning
+Unchanged: research-ops 4×/day, the daily review ONCE a day at 05:52Z (operator 2026-11-04: "we switched the twice daily to once daily leave it like that"), lane check-ins. **Retired (operator 2026-10-14):** the Monday research-planning
 session and `ROADMAP-PASS-<week>` rows; file the roadmap outcome on `WEEKLY-PLANNING`.
 
 ## Standing authorizations — the ladder is fully automated
@@ -589,7 +646,10 @@ Design of record: [`docs/plans/work-system-2026-10-04.md`](../../../docs/plans/w
 due, 151 unrouted, 25 `ask_operator` items never delivered, 36 of 45 soak legs with no definition of done, a 737 KB brief nobody read. Now
 the **VM computes due and pushes it**, and **silence is itself an alarm**. Full detail of both timers: pre-diet.
 
-**What runs without you.** `ict-work-digest.timer` (hourly) is THE Telegram carrier, ONE message per hour, no second digest timer ever:
+**What runs without you.** `ict-work-digest.timer` (hourly) is THE digest carrier, no second digest timer ever. ⚠️ **Since 2026-11-04
+(TELEGRAM-TRIM, `config/telegram_policy.yaml`) the full digest no longer goes to Telegram**: it is recorded (receipt `suppressed_by_policy`,
+`digest_log.jsonl`, the alert ledger with `delivered: suppressed_by_policy`) and only a NEW actionable item (❓ ask, 🧪 soak transition, alarm) is sent, as one
+short message. The digest content, unchanged:
 🆕 new since last (new `ask_operator`, a soak moving to `passed`/`mechanical_fail`, an expected-signal alarm breaching/clearing) → once a
 day after 06:00Z the ranked summary (top 8, `ask_operator` first) → otherwise one "🟢 No new actionable items" line → "what changed". No
 edge set is seeded silently (one count line per set at deploy). `ict-work-report.timer` (05:30Z) runs `scripts/ops/work_report.py`, which
@@ -598,7 +658,7 @@ persists `runtime_logs/work_reports/<report_id>.json` (`WR-YYYYMMDD-HHMMZ`), ser
 cannot receive Telegram: every sent block is in `digest_log.jsonl`, served at `?since=<ISO>`. ⚠️ **The carrier's own death is not
 self-detected**: a stale `generatedAt` or empty `digestLog` is the first incident.
 
-### The daily review — TWICE a day, 05:52Z and 17:52Z, fired by a routine
+### The daily review — ONCE a day, 05:52Z, fired by a routine (operator, 2026-11-04: "we switched the twice daily to once daily leave it like that")
 
 The review routine IS the periodic check; its prompt names `GET /api/bot/work/report?since=<last_review.reviewed_at>`. Each run:
 1. **Fetch and check before trusting**: `present: false`, a `generatedAt` not today's ≈05:30Z, non-empty `erroredSections`, or an empty
@@ -609,7 +669,7 @@ The review routine IS the periodic check; its prompt names `GET /api/bot/work/re
 3. **Work every item: dispatch** (`state: routed`, `routed_to: <session>`, a checklist row for a build), **close** (`done`/`killed` with a
    `terminal_reason`) or **decide** (§ "Before any operator popup"). A `routed` item still due means its lane has not delivered.
 4. **Every silence alarm gets a fix lane the same day**; anything due at a known time gets a `send_later` wake.
-4b. **The backlog drain — MANDATORY, once a day (the 05:52Z run) (operator, 2026-11-01, binding).** *"The manager owns everything, including the
+4b. **The backlog drain — MANDATORY, once a day (the daily run) (operator, 2026-11-01, binding).** *"The manager owns everything, including the
    backlog ... check it once a day and open a lane that fixes the things that need to get fixed ... It's not like an open-ended optional."*
    The manager owns ALL checklist rows and pipeline items and **does not assign owners to sessions** (a row's `owner` is `manager`; `lane` is
    only who is working it now). Run `python3 scripts/ops/checklist_daily_measure.py`: rows by state, overdue, `landed_unproven` observations due,
@@ -632,7 +692,10 @@ The review routine IS the periodic check; its prompt names `GET /api/bot/work/re
 operator joins. Every run: **reads the scratch pad** (Google Doc "JTA Trader — Ideas inbox", formerly "Metis — Ideas inbox"; match EITHER title, the operator renames the doc, via the Drive connector), copies each new item
 verbatim into `docs/claude/work/IDEAS.md` and triages it that run into a checklist row, a `research/queue` unit, or `killed` with a reason;
 **publishes a short work-plan status** (what moved/is running, where work was left off, decisions waiting, scratch-pad items and homes,
-next step on the standing priorities); **sends it to @claude_ict_comms_bot** with `send-ping` plus one "review ready" reminder.
+next step on the standing priorities) **in-session and on the UI (Workflow page), NOT to Telegram** — the twice-daily summary is a
+recurring post and the operator turned recurring Telegram posts off (2026-11-04, TELEGRAM-TRIM: *"I'd rather be focused on being able to
+check on the UI when I want to check and not have to like sift through messages"*; supersedes the 10-21 `send-ping` of the summary).
+`send-ping` is still used for a decision the operator must take or a red flag — an event, not the summary.
 
 ### Manager ↔ lane: PUSH plus POLL (operator directive 2026-10-04, binding)
 
@@ -689,8 +752,8 @@ ask_operator section, each with options and a recommendation. Exception only for
 ### Day one for a NEW manager
 
 1. Title yourself, read per § "Start of session". 2. **`list_triggers`** (routines bound to a session die with it): recreate/rebind both
-**"Manager lane check-in"** (`17 */3 * * *`, prompt "run the operating loop (manager SKILL.md § The operating loop)") and the **twice-daily
-review** (05:52Z, 17:52Z; prompt names `GET /api/bot/work/report?since=…` and § "The daily review") to YOUR session. 3. Tell every live lane
+**"Manager lane check-in"** (`17 */3 * * *`, prompt "run the operating loop (manager SKILL.md § The operating loop)") and the **daily
+review** (once a day, 05:52Z; prompt names `GET /api/bot/work/report?since=…` and § "The daily review") to YOUR session. 3. Tell every live lane
 your session id by its own trigger. 4. `curl -sS 'https://ict-bot.duckdns.org/api/bot/work/report?since=<yesterday>'`; if absent/stale check
 `/api/diag/services` for the two timers — fixing that comes first. 5. Run the review; clear `ask_operator` items first by classification,
 not forwarding; record `last_review`, push, then answer.
@@ -775,6 +838,10 @@ run of § "The operating loop" and the first turn after every compaction starts 
 `external_metadata.context_usage.used_tokens`; past ~650k, plan the handover for the next boundary and say so in the loop's operator line.
 **Never mid-incident, never with a merge or deploy half-done.**
 
+0. **ARCHIVE FIRST** (operator, 2026-11-05, binding: *"We also need to make sure that we're not forgetting to archive old lanes. That does not
+   seem to be passing through to all the managers correctly."*). Before PREPARE, the outgoing manager runs the full sweep (§ "The operating
+   loop" step 5) and archives **every finished lane it owns**; the handoff doc lists each lane left open **with a reason** (the sweep's KEEP
+   list). The incoming manager re-runs the sweep as its first act (§ "Start of session" 2a), so a miss here is caught within one hand-off.
 1. **PREPARE.** Write `docs/claude/work/handoffs/<YYYY-MM-DD>-<old-short>-to-new.md` (old-short = first 8 chars of the old id): live lanes
    (id, row, doing, owes); PRs needing the manager; operator asks in exact wording; every trigger/`send_later` targeting the old session (id,
    name); watched artifacts/PRs; capacity state; operator directives not yet in rows (put them in rows first); the new manager's first actions;

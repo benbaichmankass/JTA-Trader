@@ -1,9 +1,11 @@
 from __future__ import annotations
 
 import logging
+import math
 import os
 import threading
 import time
+from typing import Optional
 
 from dotenv import load_dotenv
 
@@ -321,6 +323,61 @@ def _truthy(value) -> bool:
     return str(value or "").strip().lower() in {"1", "true", "yes", "on"}
 
 
+# ---------------------------------------------------------------- tick pacing
+# TICK-DURATION-115S (2026-11-04). The loop used to sleep a FULL
+# TICK_INTERVAL_SECONDS after every tick, whatever the tick cost. With the tick
+# at 100.8 s mean (/api/diag/tick_cost, 37 ticks from 21:44:14Z) the measured
+# cycle was 159 s (37 ticks over 5,891 s), not the 60 s the operator's
+# 2026-05-08 "re-evaluate every minute" directive and this knob's name imply,
+# and tick starts drifted to an arbitrary phase against bar closes.
+#
+# Now the sleep runs to the next wall-clock multiple of the interval, plus a
+# small offset so the venue has published the bar that just closed. With the
+# default 60 s interval every 5th boundary IS a 5m close (and every 60th a 1h
+# close), so a tick starts ~TICK_ALIGN_OFFSET_SECONDS after each of them. A tick
+# that overran its boundary is followed by the next one after only
+# TICK_MIN_SLEEP_SECONDS: waiting for the following boundary would add up to a
+# whole interval of latency to a tick that is already late. The floor keeps the
+# loop yielding (heartbeat, web API on the same VM) when ticks run long.
+#
+# Nothing here decides a trade. Cadence only: the same tick runs, earlier.
+def _env_float(name: str, default: float, floor: float) -> float:
+    try:
+        v = float(os.environ.get(name, "") or default)
+    except (TypeError, ValueError):
+        return default
+    return v if v >= floor else default
+
+
+def tick_sleep_seconds(
+    now_epoch: float,
+    tick_started_epoch: float,
+    interval: float,
+    offset: Optional[float] = None,
+    min_sleep: Optional[float] = None,
+) -> float:
+    """Seconds to sleep after a tick that started at ``tick_started_epoch``.
+
+    The target is the first grid point ``k*interval + offset`` strictly after
+    the tick's start. If ``now`` is already past it (the tick overran), sleep
+    only ``min_sleep``. Pure function of its inputs; never negative.
+    """
+    if offset is None:
+        offset = _env_float("TICK_ALIGN_OFFSET_SECONDS", 2.0, 0.0)
+    if min_sleep is None:
+        min_sleep = _env_float("TICK_MIN_SLEEP_SECONDS", 5.0, 0.0)
+    if interval <= 0:
+        return max(0.0, min_sleep)
+    offset = offset % interval
+    # +0.5 s: a sleep that woke a hair early (monotonic vs wall clock) must
+    # count as AT its boundary, or the next target would be that same boundary
+    # and alignment would be lost for a cycle.
+    k = math.floor((tick_started_epoch + 0.5 - offset) / interval) + 1
+    target = k * interval + offset
+    remaining = target - now_epoch
+    return remaining if remaining > min_sleep else max(0.0, min_sleep)
+
+
 def exit_loop_interval_seconds() -> float:
     """Cadence between exit-evaluation passes.
 
@@ -442,9 +499,98 @@ def _exit_loop(settings: dict) -> None:
         elapsed_ms = (time.monotonic() - started) * 1000.0
         record_pass(elapsed_ms, extra_fields=_ib_breaker_report(fetcher))
         write_state_file()
+        if _EXIT_LOOP_SHUTDOWN.is_set():
+            # The pass that just finished is the FINAL one: SIGTERM arrived during
+            # it or during the sleep below (which it cut short). Its soak row is
+            # this process's last, so the restart gap starts at the stop, not at
+            # the end of a pass up to one interval earlier.
+            _EXIT_LOOP_FINAL_PASS_DONE.set()
+            return
         slack = exit_loop_interval_seconds() - (elapsed_ms / 1000.0)
-        if slack > 0:
-            time.sleep(slack)
+        _exit_loop_sleep(slack)
+
+
+#: Set by the SIGTERM handler; the exit loop runs one final pass and returns.
+_EXIT_LOOP_SHUTDOWN = threading.Event()
+#: Set by the exit loop once that final pass is recorded.
+_EXIT_LOOP_FINAL_PASS_DONE = threading.Event()
+#: The running exit-loop thread (None until started), for the SIGTERM handler.
+_EXIT_LOOP_THREAD: Optional[threading.Thread] = None
+#: Upper bound on how long SIGTERM waits for the final pass. A steady pass is
+#: ~1 s; this outlasts a cold or IB-congested pass without approaching systemd's
+#: 90 s TimeoutStopSec, after which SIGKILL would land mid-pass instead.
+EXIT_LOOP_FINAL_PASS_WAIT_S = 20.0
+
+
+def _exit_loop_sleep(slack: float) -> None:
+    """Sleep up to *slack* seconds in <=1 s steps, returning early on shutdown.
+
+    Steps are counted, not timed against monotonic(), so a test that stubs
+    ``time.sleep`` finishes instantly instead of spinning on the real clock.
+    """
+    remaining = slack
+    while remaining > 0 and not _EXIT_LOOP_SHUTDOWN.is_set():
+        step = min(1.0, remaining)
+        time.sleep(step)
+        remaining -= step
+
+
+def final_pass_on_sigterm_armed() -> bool:
+    """Run a final exit pass on SIGTERM? ARMED BY DEFAULT.
+
+    ``EXIT_LOOP_FINAL_PASS_DISABLED`` truthy is the rollback (one env flip plus a
+    restart): no handler is installed and SIGTERM kills the process at once, as
+    before 2026-11-05. A default-OFF kill-switch over an ON capability, the same
+    shape as ``EXIT_LOOP_DECOUPLE_DISABLED``; it gates nothing that trades.
+    """
+    return not _truthy(os.environ.get("EXIT_LOOP_FINAL_PASS_DISABLED"))  # allow-silent: default-OFF rollback kill-switch over an ON capability (no SIGTERM final pass); gates no trade
+
+
+def _on_sigterm(signum, frame) -> None:  # noqa: ARG001 - signal handler signature
+    """SIGTERM: let the exit loop finish ONE final pass (bounded), then die by
+    SIGTERM exactly as before, so systemd records the same exit (status=15/TERM)
+    and ``restart_cause`` classifies the stop unchanged.
+
+    RESTART-GAP-EXIT-FIRST (2026-11-05): 26.2 s of the 64.1 s 10:58Z restart gap
+    was the old process's exit loop asleep between passes when it was stopped.
+    The final pass closes that idle stretch. It is an ordinary pass (fresh
+    journal read, fresh candles), so it can act exactly as any pass can.
+
+    Never raises, and always ends in the re-raised SIGTERM: whatever goes wrong
+    here, the process still stops.
+    """
+    try:
+        _EXIT_LOOP_SHUTDOWN.set()
+        t = _EXIT_LOOP_THREAD
+        if t is not None and t.is_alive():
+            started = time.monotonic()
+            done = _EXIT_LOOP_FINAL_PASS_DONE.wait(EXIT_LOOP_FINAL_PASS_WAIT_S)
+            logger.info(
+                "SIGTERM: final exit pass %s after %.1fs",
+                "recorded" if done else "NOT finished (bound reached)",
+                time.monotonic() - started,
+            )
+    except BaseException:  # noqa: BLE001 - must reach the re-raise below
+        pass
+    finally:
+        import signal as _signal
+        _signal.signal(_signal.SIGTERM, _signal.SIG_DFL)
+        os.kill(os.getpid(), _signal.SIGTERM)
+
+
+def _install_final_pass_on_sigterm() -> bool:
+    """Install :func:`_on_sigterm` from the main thread. Never raises."""
+    if not final_pass_on_sigterm_armed():
+        logger.warning("EXIT_LOOP_FINAL_PASS_DISABLED set: SIGTERM stops the "
+                       "trader without a final exit pass (pre-2026-11-05)")
+        return False
+    try:
+        import signal as _signal
+        _signal.signal(_signal.SIGTERM, _on_sigterm)
+        return True
+    except Exception:  # noqa: BLE001 - e.g. not the main thread
+        logger.exception("exit_loop: could not install the SIGTERM final pass")
+        return False
 
 
 def _start_exit_loop(settings: dict) -> None:
@@ -455,12 +601,14 @@ def _start_exit_loop(settings: dict) -> None:
     tick's check does not alert on that state by design, but the diag surface shows
     zero passes — so the failure is legible rather than mistaken for health.
     """
+    global _EXIT_LOOP_THREAD
     try:
         t = threading.Thread(
             target=_exit_loop, args=(settings,),
             name="exit-evaluation-loop", daemon=True,
         )
         t.start()
+        _EXIT_LOOP_THREAD = t
     except Exception:  # noqa: BLE001
         logger.exception("exit_loop: FAILED TO START — exits ride nothing now")
 
@@ -966,6 +1114,64 @@ def main() -> None:
     except Exception as exc:  # noqa: BLE001
         logger.warning("WAL enable skipped: %s", exc)
 
+    loop = str(os.environ.get("LOOP", "true")).strip().lower() not in {"false", "0", "no"}
+    decoupled = not _truthy(os.environ.get("EXIT_LOOP_DECOUPLE_DISABLED"))  # allow-silent: moved line, unchanged 2026-08-12 operator-approved rollback kill-switch
+
+    # ------------------------------------------------------------------ exit loop
+    # EXIT-FIRST BOOT (RESTART-GAP-EXIT-FIRST, Tier 2, 2026-11-05). The exit loop
+    # starts HERE, before the restart-report join, the strategy_versions
+    # snapshot, leverage and the adapter/telegram build. MEASURED (10:58Z restart,
+    # gap 64.1s vs the 60s requirement): boot reached the old start point 23.5s
+    # after the process began, ~22.4s of it init the exit loop does not use.
+    #
+    # What the first pass needs, and why each is ready at this point:
+    #   * env + accounts: load_dotenv() and validate_startup() ran above; every
+    #     pass re-reads config/accounts.yaml + strategies.yaml itself.
+    #   * the journal: opened lazily per pass (order_monitor._resolve_db), WAL on.
+    #   * broker clients: built per pass from accounts.yaml + env
+    #     (_build_account_client, _build_monitor_ohlcv_fetcher). The pass never
+    #     uses exchange_client / telegram_client below, and leverage only sizes
+    #     NEW entries -- a close or bracket move does not depend on it.
+    # Nothing it reads is cached from an earlier step, so it cannot act on stale
+    # or missing state: it ACTS from the first pass, as it did when it started
+    # 23.5s later. A broker that is not reachable yet gives candles=None and the
+    # monitor short-circuits for that package -- the existing per-pass retry.
+    #
+    # IB contention with the restart report: none on the pinned queue. The
+    # report reads IB through ib_read_client_for (clientId 9000+pid, its own
+    # IBClient and _usage_lock); the pinned _IB_FETCH_EXECUTOR serves only
+    # IBMarketData.get_ohlcv (clientId exec+1). Both reach the same Gateway.
+    #
+    # Known side effect: the restart report reconciles journal vs broker while
+    # this loop may already be closing a trade, so a close landing mid-report can
+    # show as one ghost/untracked line in that ping. The next tick's reconcile is
+    # unaffected. Accepted: the alternative is open trades unmanaged for ~22s.
+    #
+    # THE DECOUPLE (Tier-2, operator-approved 2026-08-12; evidence
+    # docs/research/M20-exit-monitor-decouple-evidence-2026-08-10.md § 4d).
+    #
+    # Exit evaluation used to ride this tick, so a live trade waited a mean 104s /
+    # peak 125s between evaluations against the operator's 60s ask. Measurement
+    # (n=7, all 14 monitor children summing to 99.6% of the parent) split the
+    # monitor into two comparable halves: the exit loop at 24.3s mean / 28.2s max,
+    # and 24.8s of reconcilers that answer "has the journal caught up with the
+    # broker?" rather than "should this trade exit now?". Only the first half is
+    # what the 60s ask is about, so only the first half moves.
+    #
+    # Whole-monitor on a thread would clear 60s by 3.20s (5.3%, on a max over seven
+    # ticks). This half alone clears it by 31.78s (53%).
+    #
+    # ROLLBACK IS ONE ENV FLIP, NO REDEPLOY: EXIT_LOOP_DECOUPLE_DISABLED truthy →
+    # no thread starts and the tick calls run_monitor_tick (both halves inline,
+    # byte-for-byte today's behaviour). Default-OFF kill-switch over an ON
+    # capability, the REGIME_ROUTER_DISABLED shape — NOT a default-off *_ENABLED
+    # gate in front of a required capability (Prime Directive).
+    if loop and decoupled:
+        _start_exit_loop(settings)
+        logger.info("exit-evaluation loop DECOUPLED onto its own thread "
+                    "(started before boot init)")
+        _install_final_pass_on_sigterm()
+
     # Operator directive 2026-05-03 — dry/live mode is no longer in env.
     # Per-account ``mode: live | dry_run`` in config/accounts.yaml is the
     # only toggle (see RiskManager.dry_run). Startup logs only report
@@ -1017,7 +1223,6 @@ def main() -> None:
     exchange_client = _build_exchange_adapter(settings)
     telegram_client = _build_telegram_client()
 
-    loop = str(os.environ.get("LOOP", "true")).strip().lower() not in {"false", "0", "no"}
     # 2026-05-08 operator directive: re-evaluate every minute, on
     # 5-min candles. Strategies are unchanged — they still operate on
     # 5-min bars — but a 1-min tick gives up to 4 min faster reaction
@@ -1031,34 +1236,36 @@ def main() -> None:
         run_one_tick(settings, exchange_client, telegram_client)
         return
 
-    # ------------------------------------------------------------------ exit loop
-    # THE DECOUPLE (Tier-2, operator-approved 2026-08-12; evidence
-    # docs/research/M20-exit-monitor-decouple-evidence-2026-08-10.md § 4d).
-    #
-    # Exit evaluation used to ride this tick, so a live trade waited a mean 104s /
-    # peak 125s between evaluations against the operator's 60s ask. Measurement
-    # (n=7, all 14 monitor children summing to 99.6% of the parent) split the
-    # monitor into two comparable halves: the exit loop at 24.3s mean / 28.2s max,
-    # and 24.8s of reconcilers that answer "has the journal caught up with the
-    # broker?" rather than "should this trade exit now?". Only the first half is
-    # what the 60s ask is about, so only the first half moves.
-    #
-    # Whole-monitor on a thread would clear 60s by 3.20s (5.3%, on a max over seven
-    # ticks). This half alone clears it by 31.78s (53%).
-    #
-    # ROLLBACK IS ONE ENV FLIP, NO REDEPLOY: EXIT_LOOP_DECOUPLE_DISABLED truthy →
-    # no thread starts and the tick calls run_monitor_tick (both halves inline,
-    # byte-for-byte today's behaviour). Default-OFF kill-switch over an ON
-    # capability, the REGIME_ROUTER_DISABLED shape — NOT a default-off *_ENABLED
-    # gate in front of a required capability (Prime Directive).
-    decoupled = not _truthy(os.environ.get("EXIT_LOOP_DECOUPLE_DISABLED"))
-    if decoupled:
-        _start_exit_loop(settings)
-        logger.info("exit-evaluation loop DECOUPLED onto its own thread")
-    else:
+    # The exit loop was started right after WAL (EXIT-FIRST BOOT above).
+    if not decoupled:
         logger.warning(
             "EXIT_LOOP_DECOUPLE_DISABLED set — exit evaluation rides the main "
             "tick (pre-2026-08-12 behaviour); the 60s ask is NOT met in this mode"
+        )
+
+    # ------------------------------------------------------ reconciliation loop
+    # TICK-STAGE2-RECONCILE-OFFTICK (Tier 2, 2026-11-05). The reconciliation half
+    # (23.6 s mean per tick, MEASURED tick_cost 78 ticks 2026-11-05) runs on its
+    # own 60 s cadence, serialized with entry dispatch by journal_sync (see
+    # src/runtime/journal_sync.py for why that lock is load-bearing). Only when
+    # the exit half is decoupled too: with EXIT_LOOP_DECOUPLE_DISABLED the old
+    # run_monitor_tick path is kept whole. Rollback: RECONCILE_OFFTICK_DISABLED.
+    from src.runtime import reconcile_loop as _reconcile_loop
+
+    def _reconcile_pass():
+        from src.runtime.order_monitor import run_reconciliation_tick
+        run_reconciliation_tick(
+            ohlcv_fetcher=_build_monitor_ohlcv_fetcher(settings),
+        )
+
+    reconcile_offtick = decoupled and _reconcile_loop.offtick_enabled()
+    if reconcile_offtick:
+        _reconcile_loop.start(_reconcile_pass)
+        logger.info("reconciliation loop moved OFF the tick onto its own thread")
+    elif decoupled:
+        logger.warning(
+            "RECONCILE_OFFTICK_DISABLED set: reconciliation rides the main tick "
+            "(pre-2026-11-05 behaviour)"
         )
 
     logger.info("Starting continuous loop. TICK_INTERVAL_SECONDS=%s", interval)
@@ -1066,6 +1273,7 @@ def main() -> None:
     last_tick_status = "starting"
     while True:
         tick_count += 1
+        tick_started_epoch = time.time()
         # Refresh the heartbeat at tick-START, before any work. The IBKR
         # restart-loop incident (2026-06-05) showed why "write only after
         # a successful tick" can starve liveness: a slow tick (e.g. a
@@ -1122,17 +1330,18 @@ def main() -> None:
             # verdicts to the DB unit. Best-effort; never raises.
             with _tick_hook("order_monitor"):
                 try:
-                    if decoupled:
+                    if reconcile_offtick:
+                        # Off the tick: restart a dead thread and raise ONE
+                        # latched flag if passes keep failing or go stale.
+                        _reconcile_loop.ensure_running(_reconcile_pass)
+                    elif decoupled:
                         # The exit half runs on its own loop; this tick keeps the
                         # reconcilers/sweeps, whose latency governs how fast the
                         # JOURNAL catches up with the broker (a real requirement,
                         # a different one from exit-evaluation latency).
-                        from src.runtime.order_monitor import (
-                            run_reconciliation_tick,
-                        )
-                        run_reconciliation_tick(
-                            ohlcv_fetcher=_build_monitor_ohlcv_fetcher(settings),
-                        )
+                        from src.runtime.journal_sync import journal_sync
+                        with journal_sync("reconciliation_inline"):
+                            _reconcile_pass()
                     else:
                         from src.runtime.order_monitor import run_monitor_tick
                         run_monitor_tick(
@@ -1180,7 +1389,12 @@ def main() -> None:
             # is authored; best-effort (never raises into the loop).
             try:
                 from src.units.strategies.pairs_executor import run_pairs_tick
-                run_pairs_tick(settings)
+                # Places + journals its two legs: same journal_sync as entry
+                # dispatch, so a reconciliation pass never adopts a leg that
+                # is placed but not yet journaled.
+                from src.runtime.journal_sync import journal_sync
+                with journal_sync("pairs_tick"):
+                    run_pairs_tick(settings)
             except Exception:  # noqa: BLE001
                 logger.exception("pairs_tick failed")
 
@@ -1375,6 +1589,16 @@ def main() -> None:
             except Exception:  # noqa: BLE001
                 logger.exception("losing_streak_check tick failed")
 
+            # ML ENTRY live monitor (row ML-ENTRY-LIVE-MONITOR): the pre-registered demotion SIGNAL for the live
+            # ENTRY model, per account, every 50 closes once n >= 100. REPORT-ONLY (operator 2026-11-04): one ping
+            # + a brief line; it halts, demotes and sizes nothing. Reads the journal already written, no broker call;
+            # internally cadence-gated (hourly); best-effort.
+            try:
+                from src.runtime.ml_entry_live_monitor import run_ml_entry_live_monitor
+                run_ml_entry_live_monitor()
+            except Exception:  # noqa: BLE001
+                logger.exception("ml_entry_live_monitor tick failed")
+
             # The gap that is invisible to every JOURNAL-keyed detector, because
             # it produces no journal row at all: an account the per-symbol
             # arbitration keeps electing and then discarding. 2026-09-11:
@@ -1521,11 +1745,14 @@ def main() -> None:
         )
         if heartbeat_interval <= 0:
             heartbeat_interval = 60
+        # TICK-DURATION-115S: sleep to the next interval boundary (+offset), not
+        # a flat `interval` after the tick; see tick_sleep_seconds.
+        sleep_s = tick_sleep_seconds(time.time(), tick_started_epoch, float(interval))
         logger.info(
-            "Sleeping %s seconds until next tick (heartbeat every %s s).",
-            interval, heartbeat_interval,
+            "Sleeping %.1f seconds until next tick (interval %s s, heartbeat every %s s).",
+            sleep_s, interval, heartbeat_interval,
         )
-        end_time = time.monotonic() + interval
+        end_time = time.monotonic() + sleep_s
         while True:
             remaining = end_time - time.monotonic()
             if remaining <= 0:

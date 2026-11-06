@@ -296,3 +296,67 @@ def test_the_action_wrapper_runs_the_dispatcher():
     text = open("scripts/ops/live_review_apply_action.sh").read()
     assert "scripts/ops/live_review_dispatch.py" in text
     assert 'ARGS+=(--apply)' in text and "ACTION_REVIEW_ID:?" in text
+
+
+# ------------------------------------------------------------------ PAPER-TIGHTEN-NOT-APPLIED (2026-11-05)
+# A short-hold judgement row carries no outcome table; its evidence is its own decision packet. The packet
+# fallback used to be trade-actions only, so pkg-e079380f0c104dea's four tighten_sl rows on bybit_1 were refused
+# evidence_not_committed under MD-LTR-PAPER-AUTO while the same package's judgement close applied.
+
+PACKET = f"comms/live_review/packets/{RID}.json"
+_REAL_ADVICE_ONLY = rows_lib.ADVICE_ONLY_ACTIONS   # read at import, before the autouse fixture empties it
+
+
+def _short_hold(action: str) -> Dict[str, Any]:
+    r = _judged(TABLE_ROW)
+    r["outcome_table_source"] = None
+    r["accounts"] = ["bybit_1"]
+    r["recommendation"]["action"] = action
+    if action == "close":
+        r["recommendation"]["level"] = None
+    return r
+
+
+@pytest.mark.parametrize("action", ["tighten_sl", "close"])   # close = the positive control that always applied
+def test_a_judgement_row_without_a_table_is_applied_on_its_packet(world, action):
+    _set_row(world, _short_hold(action))
+    world["files"].pop(TABLE)
+    world["files"][PACKET] = json.dumps({"review_id": RID})
+    res = d.dispatch(RID, apply=True)
+    assert res["verdict"] == "dispatched", res
+    pairs = dict(zip(world["calls"][0][::2], world["calls"][0][1::2]))
+    assert pairs["--evidence"] == PACKET and pairs["--basis"] == "judgement"
+
+
+def test_a_judgement_tighten_whose_packet_is_not_committed_is_still_refused(world):
+    _set_row(world, _short_hold("tighten_sl"))
+    world["files"].pop(TABLE)
+    res = d.dispatch(RID, apply=True)
+    assert "evidence_not_committed" in res["detail"] and world["calls"] == []
+
+
+def test_a_table_tighten_never_falls_back_to_the_packet(world):
+    row = copy.deepcopy(TABLE_ROW)
+    row["outcome_table_source"] = None
+    _set_row(world, row)
+    world["files"][PACKET] = json.dumps({"review_id": RID})
+    res = d.dispatch(RID, apply=True)
+    assert "evidence_not_committed" in res["detail"] and world["calls"] == []
+    assert d.evidence_path(row) is None
+
+
+def test_the_real_paper_mandate_lifts_advice_only_and_the_tighten_reaches_the_apply(world, monkeypatch):
+    """End to end on the REAL config/mandates.yaml and the REAL advice-only tuple: a bybit_1 judgement tighten
+    is scoped by MD-LTR-PAPER-AUTO, dispatched (not advice_only, not evidence_not_committed) and handed to the
+    apply under that mandate."""
+    monkeypatch.setattr(rows_lib, "ADVICE_ONLY_ACTIONS", _REAL_ADVICE_ONLY)
+    assert "tighten_sl" in rows_lib.ADVICE_ONLY_ACTIONS
+    row = _short_hold("tighten_sl")
+    row["order_package_id"] = "pkg-e079380f0c104dea"
+    _set_row(world, row)
+    world["files"].pop(TABLE)
+    world["files"][PACKET] = json.dumps({"review_id": RID})
+    res = d.dispatch(RID, apply=True)
+    assert res.get("auto_mandate") == "MD-LTR-PAPER-AUTO" and res["verdict"] == "dispatched", res
+    pairs = dict(zip(world["calls"][0][::2], world["calls"][0][1::2]))
+    assert pairs["--mandate"] == "MD-LTR-PAPER-AUTO" and pairs["--evidence"] == PACKET

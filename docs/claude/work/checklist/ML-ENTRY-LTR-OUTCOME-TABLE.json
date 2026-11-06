@@ -2,21 +2,33 @@
   "id": "ML-ENTRY-LTR-OUTCOME-TABLE",
   "title": "ml_entry live reviews are judgement-only: give live_review_outcomes.py a Stage-0 trades table for ml_entry (priced options for real-money bybit_2 packages)",
   "phase": null,
-  "state": "queued",
+  "state": "landed_unproven",
   "owner": "manager",
-  "lane": null,
+  "lane": "ML-ENTRY-SERVE-FIXES",
   "model": null,
   "ceiling_usd": null,
   "spend_usd": null,
   "tier": 1,
-  "prs": [],
+  "prs": [
+    23290
+  ],
   "blocked_on": [],
-  "note": "[2026-11-03 00:27Z manager] Filed from LTR 00:18Z batch report: both real-money ml_entry packages (pkg-c569fc01 ADA, pkg-609dc042 SOL on bybit_2) were held on judgement 0.55 with priced_options null because ml_entry has no Stage-0 trades table (first seen on ML-ENTRY-RISK-META: live_review_outcomes.py:351 KeyError 'direction'). Done = live_review_outcomes.py prices hold/tighten/close for an open ml_entry package from an ml_entry Stage-0 ledger (ledger_ethsol from #22409 or the bdc2/b62x ledgers), with stated n, plus a test.",
+  "note": "[2026-11-03 00:27Z manager] Filed from LTR 00:18Z batch report: both real-money ml_entry packages (pkg-c569fc01 ADA, pkg-609dc042 SOL on bybit_2) were held on judgement 0.55 with priced_options null because ml_entry has no Stage-0 trades table (first seen on ML-ENTRY-RISK-META: live_review_outcomes.py:351 KeyError 'direction'). Done = live_review_outcomes.py prices hold/tighten/close for an open ml_entry package from an ml_entry Stage-0 ledger (ledger_ethsol from #22409 or the bdc2/b62x ledgers), with stated n, plus a test. [2026-11-05 12:55Z lane ML-ENTRY-SERVE-FIXES session_01AFoLuK7HeWiq4wwSKqN47K] PR #23290 (Tier 1 self-land): live_review_outcomes.py prices hold/tighten/close for an open ml_entry package from comms/strategy_evidence/ltr_corpus/ml_entry__trades.jsonl (n=907, 5 bybit_2 symbols, 2025-10-01..2026-09-30, mean +0.0271 R = record arm A extend-only; structure SL not modelled, stated as corpus_note). Pooled corpus replays each row on its own symbol's candles; packet derives atr_stop_mult = risk_per_unit/atr14. Example MEASURED: short open 0.4R peak 0.8R -> 350 comparable; hold +0.70, atr:1.0 +0.72, close +0.32. Test tests/test_ml_entry_ltr_pricing.py. Done-observation: the next LTR packet for an open ml_entry package carries priced_state=priced. landed_unproven: #23290 merged (salvaged from stale PR #23336, which conflicted with main).",
   "due_by": "2026-11-04",
   "roadmap": [
     "L-ML-LIVE"
   ],
-  "updated_at": "2026-11-03T00:27:22Z",
-  "updated_by": "session_01AFoLuJ1apgy8sfngu4WyNH",
+  "updated_at": "2026-11-05T15:32:53Z",
+  "updated_by": "session_01AFoLuLmhUKeUzHC6CHz2uP",
+  "week_lane": "surge",
+  "writeback": {
+    "roadmap": "none: review tooling for an existing L-ML-LIVE leg, no milestone status change",
+    "arch": "none: read path only, no contract changed"
+  },
+  "observation": {
+    "what": "the next live-review packet for an open ml_entry package carries priced_state=priced (outcome table used, #23290)",
+    "how_to_check": "read the newest LR-* packet for an ml_entry package on live-review/rows: priced_options.priced_state",
+    "due_by": "2026-11-09"
+  },
   "_seq": 897
 }

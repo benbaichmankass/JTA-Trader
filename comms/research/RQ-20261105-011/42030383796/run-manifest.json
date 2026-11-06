@@ -1,0 +1,46 @@
+{
+  "unit": "RQ-20261105-011",
+  "run_id": "42030383796",
+  "commit_sha": "33b8d354e07c268a071eee40dd71cd3ca4e9368d",
+  "run_url": "https://github.com/benbaichmankass/JTA-Trader/actions/runs/42030383796",
+  "timeout_minutes": 150,
+  "commands": [
+    {
+      "index": 0,
+      "argv": [
+        "python3",
+        "scripts/research/prop_ev_grid.py",
+        "--leg",
+        "ict_scalp_xrp_5m",
+        "--arm",
+        "A=--sizing balance --risk-pct 0.010",
+        "--arm",
+        "C-bal005=--sizing balance --risk-pct 0.005",
+        "--arm",
+        "C-bal015=--sizing balance --risk-pct 0.015",
+        "--arm",
+        "C-room033=--sizing room --risk-pct 0.015 --room-frac 0.33",
+        "--arm",
+        "C-room050=--sizing room --risk-pct 0.015 --room-frac 0.50",
+        "--common",
+        "--ruleset config/prop_rulesets/breakout_turbo_1step.yaml --costs breakout --funded-start fresh --swap-model dxtrade",
+        "--seeds",
+        "1,2,3,4,5",
+        "--grade",
+        "arms_pass_bar",
+        "--p-floor",
+        "0.70",
+        "--n-floor",
+        "88",
+        "--out",
+        "comms/research/RQ-20261105-011/42030383796",
+        "--jobs",
+        "4"
+      ],
+      "log": "comms/research/RQ-20261105-011/42030383796/logs/cmd-0.log",
+      "exit_code": 0,
+      "seconds": 1188.2
+    }
+  ],
+  "all_ok": true
+}

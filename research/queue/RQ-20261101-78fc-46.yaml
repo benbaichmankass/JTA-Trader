@@ -115,7 +115,7 @@ run:
   - '39'
   - --out
   - '{out_dir}'
-  timeout_minutes: 360
+  timeout_minutes: 330   # was 360: script_run preflight refuses > 330 (MAX_TIMEOUT_MIN), so the unit could never dispatch
   inputs:
     research_unit: RQ-20261101-78fc-46
 lands:
@@ -126,3 +126,19 @@ related:
 - RESEARCH-ITERATE
 - comms/strategy_evidence/ict_scalp_xrp_5m.json
 what_it_does_not_do: Edits no config, roster or rule; places no order; a PASS is an input to the next iteration, not a promotion.
+last_dispatched_at: '2026-11-05T06:05:01+00:00'
+grading:
+  attested: RULE-RQ-20261101-78fc-46
+  auto: true
+  decision_rule_id: RULE-RQ-20261101-78fc-46
+  evidence:
+  - research/results/RQ-20261101-78fc-46/41978216057.jsonl
+  graded_at: '2026-11-05'
+  grader: scripts/research/queue_grade.py
+  needs_review: true
+  owner: PI-20261105-WDWYHZCN-0001
+  owner_reason: producer_failed (cmd_exit) on the newest row, 3 identical re-fires; failure mode and fix
+    path named in PI-20261105-WDWYHZCN-0001 (RESEARCH-OPS-20261105-1449 triage)
+  reason: 'read_state not unanimously measured: [''producer_failed'']'
+  rows: 1
+  verdict: null

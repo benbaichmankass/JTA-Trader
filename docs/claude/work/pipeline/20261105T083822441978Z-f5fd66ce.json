@@ -1,0 +1,16 @@
+{
+  "due_when": {
+    "check_every_days": 2,
+    "clears_when": "the writer that holds trade_journal.db's write lock for >3 s during a burst is named from a measurement, and either fixed (no burst over a 48 h complete journalctl scan) or killed with a stated reason",
+    "kind": "observation"
+  },
+  "id": "PI-20261105-F2QX97PI-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "audit",
+    "ref": "TICK-STAGE2-RECONCILE-OFFTICK lane 2026-11-05",
+    "rerun": "scripts/ops/diag_fetch.sh 'journalctl?unit=ict-trader-live&since=<24h ago>&lines=200&grep=database%20is%20locked' (or the vm-diag-request relay with that path); count lines and bursts"
+  },
+  "state": "queued",
+  "what": "Identify the holder of the trade_journal.db write lock behind the recurring 'database is locked' bursts on the live trader. MEASURED 2026-11-05 (journalctl via diag relay #23192/#23193, 2026-11-04T00:00Z to 2026-11-05T08:12Z): 59 lines in ~16 bursts of 10 s to 2 min; 55 are signal_audit_logger dual-write failures (a waiter, 3 s busy timeout), 4 are the 02:20Z order_monitor burst. The 08:00:30-08:01:12Z burst stretched an exit pass to 42.0 s and breached EXIT-EVAL INTERVAL (71.2 s). PR for TICK-STAGE2-RECONCILE-OFFTICK bounds the exit thread's exposure (0.25 s telemetry write timeout), but the holder is not known: the relay cannot see sqlite lock owners. Ruled out: ml_decision_shadow (no journal write), db_integrity (mode=ro). Next step: instrument write-transaction hold time in src.units.db.database.Database and the long-lived writers (thread + caller name when a commit follows >1 s after BEGIN), or sample /proc/<pid>/fd + journalctl at a burst via a system-action."
+}

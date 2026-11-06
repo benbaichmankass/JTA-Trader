@@ -1,0 +1,16 @@
+{
+  "due_when": {
+    "check_every_days": 7,
+    "due_date": "2026-11-11",
+    "kind": "date"
+  },
+  "id": "PI-20261104-YUTXA21Z-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "lane AUD-PROP-VENUE-POSITIONS-TRADEIFY-VELOTRADE 2026-11-04, PR #22982",
+    "rerun": "curl -sS 'https://ict-bot.duckdns.org/api/bot/prop/status?account_id=velotrade_1' | python3 -c \"import json,sys;d=json.load(sys.stdin);r=d['status']['raw'];r=json.loads(r) if isinstance(r,str) else r;print(r.get('source'),r.get('unrealized'))\""
+  },
+  "state": "queued",
+  "what": "velotrade_1 (DXtrade API adapter) posts unrealized=null in every prop_executor account_status (journal 16:03-17:08Z 2026-11-04, incl. while fill 220 was open); the overview falls back to an ESTIMATED mark. Fill AccountSnapshot.unrealized from the portfolio read (or sum the positions' upnl) in src/prop/platform/dxtrade_api.py read_account. Found by lane AUD-PROP-VENUE-POSITIONS-TRADEIFY-VELOTRADE (PR #22982)."
+}

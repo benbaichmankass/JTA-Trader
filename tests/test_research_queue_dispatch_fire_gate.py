@@ -128,9 +128,13 @@ def test_the_dispatch_stamp_is_verified_to_actually_merge():
     Measured the day this cron was armed: 5 stranded `automation/*` branches on
     origin, the oldest 10 weeks.
     """
+    from tests.test_commit_to_main_callers import _deferred_ok
     land = _stamp_step(_land())
-    assert str(land.get("with", {}).get("verify-merged", "")).lower() == "true", (
-        "the stamp must be verified to MERGE, not merely to have opened a PR — "
+    # B6 (GH-CAPACITY-LAND-VERIFY-OFF-RUNNER): verified NEXT cycle, not in-run. dispatch_queue.py adopts a stranded stamp
+    # (stranded_stamp_adoptions) and the dispatcher reaps one older than 6 h, pinned by DEFERRED_VERIFY.
+    in_run = str(land.get("with", {}).get("verify-merged", "")).lower() == "true"
+    assert in_run or _deferred_ok(WF.name, land), (
+        "the stamp must be verified to MERGE (in-run, or next cycle via the pinned DEFERRED_VERIFY rule) — "
         "an unverified stamp makes the armed cron re-fire forever"
     )
 
@@ -140,6 +144,10 @@ def test_the_job_budget_outlasts_the_merge_wait():
     import yaml as _yaml
     wf = _yaml.safe_load(WF.read_text())
     budget = wf["jobs"]["land"]["timeout-minutes"]
+    waits = sum(1 for s in wf["jobs"]["land"]["steps"] if s.get("uses") == "./.github/actions/commit-to-main"
+                and str(s["with"].get("verify-merged", "")).lower() == "true")
+    if not waits:
+        return   # B6: every landing is deferred to the next cycle, so the job waits on no merge at all
     action = _yaml.safe_load(
         (WF.parents[2] / ".github/actions/commit-to-main/action.yml").read_text())
     wait = int(action["inputs"]["verify-timeout-minutes"]["default"])
@@ -188,9 +196,9 @@ def test_the_land_job_still_has_all_three_landings_with_their_verification():
         "automation/research-queue-stamp",
     ]
     verified = {s["with"]["branch-prefix"]: str(s["with"]["verify-merged"]).lower() == "true" for s in c2m}
-    assert verified["automation/research-results-batch"] and verified["automation/research-queue-stamp"]
-    receipt = c2m[1]
-    assert verified["automation/research-queue-receipt"] or _deferred_ok(WF.name, receipt)
+    # B6: results and stamps join the receipt as deferred landings, each pinned in DEFERRED_VERIFY
+    for step in c2m:
+        assert verified[step["with"]["branch-prefix"]] or _deferred_ok(WF.name, step), step["with"]["branch-prefix"]
 
 
 def test_a_receipt_pr_in_flight_skips_the_next_receipt_landing():

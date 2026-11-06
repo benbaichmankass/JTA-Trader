@@ -1,0 +1,5 @@
+{
+  "tier": 1,
+  "landing": "self",
+  "why": "Tier-1 workflow bugfix (manager follow-up to CI-STREAMLINE-W45): reset-protocol-backup derived RESET_DATE from today's UTC date, so a cron run delayed past midnight (Thu) posted a false RED-FLAG for the next week's reset. It now resolves to the most recent Wednesday <= now via scripts/ops/last_wednesday.sh; the manual reset_date override is kept. Comments and one ping only; no gate, config, order path or required check changed."
+}

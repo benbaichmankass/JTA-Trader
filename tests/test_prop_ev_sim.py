@@ -97,7 +97,7 @@ sys.path.insert(0, str(REPO / "scripts" / "research"))
 
 def test_book_resolver_matches_current_config():
     paths, prov = sim.resolve_book("breakout_2")
-    assert set(paths) == {"trend_donchian_eth_prop"}  # sol_prop pulled 2026-10-29 (Tier-3)
+    assert set(paths) == {"trend_donchian_eth_4h", "trend_donchian_sol_4h"}  # 2026-11-05 operator min-size baseline (eth_prop/sol_prop pulled earlier)
     for leg, p in prov.items():
         assert (REPO / p["trades_file"]).exists(), leg
     # the resolver REPORTS drift; the CLI refuses on it. Pin that the field exists and is boolean.
@@ -106,7 +106,7 @@ def test_book_resolver_matches_current_config():
 
 def test_retired_breakout_1_book_name_still_resolves_to_breakout_2():
     paths, _ = sim.resolve_book("breakout_1")
-    assert set(paths) == {"trend_donchian_eth_prop"}  # sol_prop pulled 2026-10-29 (Tier-3)
+    assert set(paths) == set(sim.resolve_book("breakout_2")[0]) == {"trend_donchian_eth_4h", "trend_donchian_sol_4h"}  # 2026-11-05 baseline
 
 
 def test_stale_book_is_refused(monkeypatch):

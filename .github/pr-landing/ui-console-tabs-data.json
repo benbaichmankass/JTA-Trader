@@ -1,0 +1,11 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "hold_reason": "tier_2_3_needs_approval",
+  "hold_text": "New read-only data paths on a public connector endpoint (journal, P&L and live-VM state), gated on CONSOLE_CONNECTOR_AUTH=google. Operator-dispatched 2026-11-05 ~11:11Z via Manager Session 2026-11-05a (verbatim request on row UI-CONSOLE-TABS-DATA). Merging changes nothing at runtime until the connector unit is restarted by UI-CONSOLE-V1.",
+  "why": "src/console_connector/tabs.py adds tools workplan and ml_roadmap (public repo registers) and performance, system_health and data_query (sign-in only; absent from tools/list and refused with read_state auth_required unless CONSOLE_CONNECTOR_AUTH=google). data_query reuses the db_explorer table allowlist and column redaction, bound parameters, rows <= 500, no free SQL. inbox items gain options[]. No order path, strategy, risk or config change. Tests: tests/console_connector (40).",
+  "recorded_decision": {
+    "kind": "operator_decision",
+    "ref": "UI-CONSOLE-TABS-DATA"
+  }
+}

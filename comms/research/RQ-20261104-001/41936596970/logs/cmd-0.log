@@ -1,0 +1,11 @@
+Fetching MGC 60 candles 2018-05-30 -> 2026-11-04 (source=dukascopy) …
+  dukascopy: MGC -> INSTRUMENT_FX_METALS_XAU_USD (relation=proxy: spot vs future: no roll, different carry (contango/backwardation))
+INFO:DUKASCRIPT:current timestamp :2023-06-26T20:00:00
+INFO:DUKASCRIPT:current timestamp :2026-11-04T21:00:00
+Wrote 49894 rows (2018-05-30 -> 2026-11-04) to /tmp/exit_lever_ablation_hk_zd1hr/mgc_trend_1h__data.csv
+[A] /opt/hostedtoolcache/Python/3.11.17/x64/bin/python3 /home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_trend.py --donchian 20 --data <data> --symbol MGC --resample 1h --atr-period 14 --atr-stop-mult 2.5 --trail-mult 4.0 --min-confidence 0.0 --fee-bps-roundtrip 7.5 --emit-trades comms/research/RQ-20261104-001/41936596970/arms/A__trades.jsonl --json comms/research/RQ-20261104-001/41936596970/arms/A__bt.json --confirm-bars 1 --tp-cap-pct 0.099 --tp-r 50.0 --start 2018-06-01 --end 2026-10-26 23:59
+{
+ "verdict": "fail",
+ "label": "no_discovery",
+ "why": "no arm is eligible on the discovery span (n floor, net R > 0, fold majority): nothing to confirm"
+}

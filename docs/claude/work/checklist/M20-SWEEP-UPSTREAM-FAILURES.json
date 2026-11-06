@@ -1,0 +1,23 @@
+{
+  "id": "M20-SWEEP-UPSTREAM-FAILURES",
+  "title": "m20-exit-lever-sweep fails upstream of the result job: HoldoutLeak on thin legs + unclassified legs in plan",
+  "phase": "now",
+  "state": "queued",
+  "owner": "unassigned",
+  "lane": "RESEARCH-LOSS",
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [],
+  "blocked_on": [],
+  "note": "Exact errors. (1) m20_holdout.HoldoutLeak: 'discovery window ends at 2025-07-01, past the last discovery day 2023-01-31 (holdout starts 2023-02-01)' -- run 41763381661 mes_trend_long_1d; same for 41068790597 iaum_pullback_1d (cap 2024-04-24) and 40095366642 trend_donchian_xrp_adx25 (cap 2024-07-02). Cause: m20_fleet_exit_sweep.py logs 'split: FELL BACK to 2025-07-01 (leg_too_thin)' then run_cell(end=leg_split) hits the holdout window guard at m20_holdout.py:108 -- the fallback split ignores the holdout cap. (2) plan step: '::error::legs with no family/harness: [turtle_soup]' (41195608647), [fade_breakout_4h] (40994427469); 41187215930 and 40978648245 also fail at plan, cause NOT read. Result job then fails 'no verdicts.json under sweep_out' by design. No artifact holds a result, so nothing to re-land; fix = re-dispatch after the code fix.",
+  "due_by": "2026-11-12",
+  "roadmap": [
+    "unmapped"
+  ],
+  "roadmap_unmapped_reason": "research tooling defect",
+  "updated_at": "2026-11-05T07:19:00Z",
+  "updated_by": "lane",
+  "_seq": 940
+}

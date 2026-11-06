@@ -372,6 +372,16 @@ jobs:
                 description: 'Triggers infra-runner-smoke — smoke job ON the jta-infra runner; arms vars.INFRA_RUNS_ON on green. Owner-opened issues only.',
               },
               {
+                name: 'trainer-console-ingress',
+                color: '0e8a16',
+                description: 'Triggers trainer-console-ingress: opens 80/443 to the console connector on the trainer VM (OCI security list + host firewall + Caddy). Row UI-CONSOLE-V1.',
+              },
+              {
+                name: 'trainer-console-connector-install',
+                color: '0e8a16',
+                description: 'Triggers trainer-console-connector-install: installs the persistent jta-console-connector unit on the trainer VM and retires the quick tunnel. Row UI-CONSOLE-CONNECTOR-PERSIST.',
+              },
+              {
                 name: 'trainer-vm-diag-request',
                 color: '5319e7',
                 description: 'Triggers trainer-vm-diag workflow — full-visibility SSH command runner on the trainer VM (autonomous Claude). QUICK read-only pulls (parallel-safe).',
@@ -395,6 +405,16 @@ jobs:
                 name: 'market-data-lake-request',
                 color: '5319e7',
                 description: 'Triggers market-data-lake — builds/refreshes the private HF market data lake (Binance Vision crypto, FRED, futures, ETF store); body may carry scope: all|crypto|other.',
+              },
+              {
+                name: 'kaggle-backup-request',
+                color: '5319e7',
+                description: 'Triggers kaggle-backups — private Kaggle backup of the model registry-store + ml/served (mode: models) or a read-only database size probe (mode: dbsize).',
+              },
+              {
+                name: 'hf-lake-storage-request',
+                color: '5319e7',
+                description: 'Triggers hf-lake-storage — measure / squash-history of the private HF market data lake (mode: measure|squash in the body).',
               },
               {
                 name: 'trainer-capture-watch-now',

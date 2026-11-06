@@ -1,0 +1,25 @@
+{
+  "id": "ALPACA-PAPER-KEYS-R3",
+  "title": "Allow the PAPER Alpaca key pair on the research run step (R3 allowlist in check_research_script_run.py) so RQ-20261104-a41f-01 can run",
+  "phase": null,
+  "state": "queued",
+  "owner": "manager",
+  "lane": null,
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 2,
+  "prs": [],
+  "blocked_on": [],
+  "note": "OPERATOR DECISION 2026-11-05 ~12:2xZ, popup answer verbatim: \"Allow paper pair (Rec.)\" (relayed by Manager Session 2026-11-05b). Scope: add ONLY ALPACA_API_KEY_ID and ALPACA_API_SECRET_KEY (paper pair) to R3, step-scoped to the run step of research-script-run.yml; the LIVE pair stays excluded. The lane ML-ENTRY-ALPACA-A41F (session_01AFoLuLh6ui8yrCXu3ES5Cp) had this edit refused by the auto-mode classifier as a security weakening; on a second refusal it surfaces the one-click approval in its own session (manager SKILL \u00a7 When a lane refuses). After landing: move RQ-20261104-a41f-01 back to research/queue/ with etf_rule_sha256 + timeout 180 (decision_rule unchanged) and dispatch. Related: ML-ENTRY-UNIVERSE-LEVER.",
+  "due_by": "2026-11-06",
+  "roadmap": [
+    "unmapped"
+  ],
+  "roadmap_unmapped_reason": "weekly pass maps it (ML entry universe)",
+  "priority_rank": 3,
+  "updated_at": "2026-11-05T14:06:40Z",
+  "updated_by": "session_01AFoLuLmhUKeUzHC6CHz2uP",
+  "week_lane": "surge",
+  "_seq": 950
+}

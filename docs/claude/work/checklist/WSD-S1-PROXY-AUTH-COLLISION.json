@@ -1,0 +1,37 @@
+{
+  "id": "WSD-S1-PROXY-AUTH-COLLISION",
+  "title": "Env-proxy WORK_STORE_TOKEN overwrites Authorization on every ict-bot.duckdns.org request from the ICT env -> diag Transport A (diag_fetch.sh) 401s",
+  "phase": null,
+  "state": "done",
+  "owner": "manager",
+  "lane": "session_01AFoLuJFu3NEJt21ZKxx7N1",
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 2,
+  "prs": [
+    23167,
+    23184,
+    23241,
+    23273
+  ],
+  "blocked_on": [],
+  "note": "Found 2026-11-05T06:43Z by lane WSD-S1-STORE-API (session_01AFoLuJFu3NEJt21ZKxx7N1), caused by its own D3 step: request_credential saved a Bearer network secret for ict-bot.duckdns.org on env ICT; the proxy now REPLACES Authorization on every request to that host, so scripts/ops/diag_fetch.sh 'version' returns answered_401 (MEASURED 06:43Z). Unaffected: the issue relay (Transport B), runner-side callers, browser SPA. Same collision for any other bearer a session sends to this host (DASHBOARD_API_TOKEN routes). Options sent to the manager: (A, recommended) work_items accepts X-Work-Store-Token (Bearer kept as fallback) + operator re-saves the network secret with header_name X-Work-Store-Token, no prefix (one form; same value, or rotate); (B) diag router accepts DIAG_READ_TOKEN in X-Diag-Token and diag_fetch.sh sends it (no operator act, widens diag gate, trap stays); (C) interim: operator deletes the network secret (Transport A back, session writes 401 until A). CLOSES WHEN: diag_fetch.sh 'version' exits 0 from an ICT-env session AND a session write to /api/bot/work/items still returns 201. 2026-11-05T06:44Z manager decision: build option A (work_items accepts X-Work-Store-Token, Bearer kept as a deprecation fallback; hold PR, recorded_decision standing_authorization). Until the operator re-saves the secret with the new header, diag reads from the ICT env go through Transport B (the issue relay). 2026-11-05T12:23Z DONE, observed by the lane. (1) diag_fetch.sh 'version' from this ICT-env session -> exit 0 at 12:23:16Z (Transport A restored). (2) Discriminator: a request carrying ONLY X-Diag-Token -> 200; ONLY Authorization: Bearer -> 401 missing_token. So the env proxy STRIPS Authorization to ict-bot.duckdns.org (not 'rewrites'), and the new #23273 code is serving. (3) VM checkout git_sha 36c15c71 contains #23273's merge f23a96654. Oddity, not blocking: /version's deployed_sha_by_unit['ict-web-api'] still read 398512c0 (pre-#23273) with restart_pending false, although the behaviour proves the new code is live; that marker may lag a git-sync restart. (4) Work-store writes via X-Work-Store-Token -> 201 after the operator's rotation; GH secret == network-secret value (re-sync #23218 then 201). Gate from outside the proxy (trainer VM #23216): wrong header, wrong bearer, no auth -> 401. (5) Fixed along the way: #23184 (a terminal build without roadmap was a 500, now filled; observed 201 at 08:44Z) and #23241 (sync-vm-secrets restarted the trader for web-only keys; merged 10:58Z; live observation filed as PI-20261105-1ZKXX7N1-0001). Lane hygiene: this lane's 8 probe/test items in the store (WSD-S1-SYNTH-*, -NOAUTH, -FALLBACK-*, -TERMINAL-PROBE-*, -ROTATED-PROBE-*, -RESYNC-PROBE-*, WSD-X, WSD-W) are all closed (done/dropped) with stated reasons; chain ok at 12:25Z over 8,624 events (the S2 importer has since loaded ~4,000 items).",
+  "due_by": "2026-11-05",
+  "roadmap": [
+    "L-OPS"
+  ],
+  "priority_rank": 1,
+  "updated_at": "2026-11-05T12:24:37Z",
+  "updated_by": "session_01AFoLuJFu3NEJt21ZKxx7N1",
+  "observation": {
+    "what": "diag_fetch.sh version answers 200 from a session in the ICT env, AND a session write to POST /api/bot/work/items via X-Work-Store-Token still returns 201",
+    "how_to_check": "after option A is deployed and the operator re-saves the network secret with header_name X-Work-Store-Token (no prefix): run scripts/ops/diag_fetch.sh version (exit 0) and POST /api/bot/work/items from an ICT-env session",
+    "due_by": "2026-11-06"
+  },
+  "writeback": {
+    "roadmap": "none: an ops-credential fix with no milestone line; the store reaches L-OPS at WSD-S4-READERS-FLIP",
+    "arch": "none: same API surface; docs/api-tier-policy.md records the X-Work-Store-Token and X-Diag-Token carriers"
+  },
+  "_seq": 938
+}

@@ -187,11 +187,25 @@ FAITHFUL = "faithful"
 #: (bybit_2/xrp_pullback_2h's record already reads `faithful` on main). Remove an entry when the
 #: leg's record is regenerated `fidelity: faithful`. Do not add one without a
 #: faithful re-measure that cleared the leg's original Stage-0 rule.
-FIDELITY_BASELINE: Dict[Tuple[str, str], str] = {
-    # alpaca_live — omitted trail_decay_stall_bars / trail_decay_tight_mult.
-    # RQ-20261011-6707-01 faithful arm, record window, full cost stack: ief +2.33R
-    # (n=8), slv +2.48R (n=11), iaum +9.85R (n=8) — all clear RULE-D1.
-    ("alpaca_live", "iaum_pullback_1d"): "RQ-20261011-6707-01",
+#: 2026-11-05 (lane TP-REALMONEY-UNITS, the tp_extend declare PR): the last entry,
+#: ("alpaca_live", "iaum_pullback_1d") -> RQ-20261011-6707-01, was removed because
+#: comms/strategy_evidence/iaum_pullback_1d.json was regenerated `fidelity: faithful`
+#: (build_strategy_evidence.py, trailing 365 d, trail-decay + tp_extend both forwarded).
+#: The baseline is now EMPTY: every risk-bearing slot's record is faithful.
+FIDELITY_BASELINE: Dict[Tuple[str, str], str] = {}
+
+#: C5 OPERATOR WAIVER -- (account, leg) slots the operator admitted on an
+#: `approximate` record BY NAME, with the verbatim decision. Distinct from the
+#: baseline above (that one cites a faithful re-measure; this one does not have
+#: one). Remove an entry when the leg's record is regenerated `fidelity: faithful`.
+#: 2026-11-05 prop BASELINE, operator popup ~21:05Z verbatim: "Both now, waive both"
+#: (option text: "Add both legs today: 6 take-profit exception lines, plus extend
+#: your baseline exception to sol_4h's approximate evidence."). Record: ML-PROP-ITERATE.
+#: The faithful re-measure (structure_exit modelled) is owed on that row.
+FIDELITY_OPERATOR_WAIVER: Dict[Tuple[str, str], str] = {
+    ("breakout_2", "trend_donchian_sol_4h"): "operator 2026-11-05 ~21:05Z 'Both now, waive both' (prop baseline)",
+    ("tradeify_1", "trend_donchian_sol_4h"): "operator 2026-11-05 ~21:05Z 'Both now, waive both' (prop baseline)",
+    ("velotrade_1", "trend_donchian_sol_4h"): "operator 2026-11-05 ~21:05Z 'Both now, waive both' (prop baseline)",
 }
 
 
@@ -454,6 +468,10 @@ def clause_verdicts(record: Optional[Dict[str, Any]], account: Optional[str] = N
     elif baseline_unit and fidelity == "approximate":
         out.append(("C5", True, f"fidelity=approximate, BASELINED for {account}/{leg} — "
                                 f"faithful re-measure {baseline_unit} cleared Stage 0"))
+    elif (account and leg and fidelity == "approximate"
+          and FIDELITY_OPERATOR_WAIVER.get((account, leg))):
+        out.append(("C5", True, f"fidelity=approximate, OPERATOR WAIVER for {account}/{leg} — "
+                                f"{FIDELITY_OPERATOR_WAIVER[(account, leg)]}; faithful re-measure owed"))
     else:
         out.append(("C5", False,
                     f"fidelity={fidelity!r} (not {FAITHFUL!r}), omitted_levers="
@@ -760,13 +778,35 @@ def self_test() -> int:
               [ok for _, ok, _ in clause_verdicts(stale)], [True, True, True, True, True])
         # P8: C5 baseline is SLOT-keyed — a baselined leg added to ANOTHER
         #     risk-bearing account is not covered by the baseline.
+        #     The real baseline is empty since 2026-11-05, so the slot is PLANTED for the
+        #     duration of these two checks and removed again (fail closed either way).
         approx = {**good, "fidelity": "approximate"}
-        check("P8 baselined leg on a non-baselined account fails C5",
-              dict((c, o) for c, o, _ in clause_verdicts(approx, "bybit_2", "iaum_pullback_1d"))["C5"],
-              False)
-        check("P8b baselined slot passes C5",
+        _planted = ("alpaca_live", "iaum_pullback_1d")
+        _had = _planted in FIDELITY_BASELINE
+        FIDELITY_BASELINE.setdefault(_planted, "RQ-SELFTEST-PLANTED")
+        try:
+            check("P8 baselined leg on a non-baselined account fails C5",
+                  dict((c, o) for c, o, _ in clause_verdicts(approx, "bybit_2", "iaum_pullback_1d"))["C5"],
+                  False)
+            check("P8b baselined slot passes C5",
+                  dict((c, o) for c, o, _ in clause_verdicts(approx, "alpaca_live", "iaum_pullback_1d"))["C5"],
+                  True)
+        finally:
+            if not _had:
+                FIDELITY_BASELINE.pop(_planted, None)
+        check("P8c with the plant removed, the same slot FAILS C5 (the real baseline is empty)",
               dict((c, o) for c, o, _ in clause_verdicts(approx, "alpaca_live", "iaum_pullback_1d"))["C5"],
-              True)
+              _had)
+
+        # P9: OPERATOR WAIVER (operator 2026-11-05 ~21:05Z "Both now, waive both") is SLOT-keyed too:
+        #     the named prop slot passes C5 with an "OPERATOR WAIVER" message; the same leg on an
+        #     unnamed account still FAILS C5.
+        c5 = dict((c, (o, m)) for c, o, m in clause_verdicts(approx, "breakout_2", "trend_donchian_sol_4h"))["C5"]
+        check("P9 waived slot passes C5", c5[0], True)
+        check("P9 ...and says OPERATOR WAIVER", "OPERATOR WAIVER" in c5[1], True)
+        check("P9b waived leg on an unnamed account fails C5",
+              dict((c, o) for c, o, _ in clause_verdicts(approx, "bybit_2", "trend_donchian_sol_4h"))["C5"],
+              False)
 
         # P7: the pairs sleeve — one `account_id:` line.
         pairs_base = yaml.safe_dump({"account_id": "paper_acct",

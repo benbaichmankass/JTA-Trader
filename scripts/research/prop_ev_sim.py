@@ -1061,7 +1061,9 @@ def grade_v2(results: Dict[str, Any]) -> Tuple[str, str]:
 # ---------------------------------------------------------------------------
 # breakout_1 retired 2026-10-07 (empty roster); breakout_2 is the live Breakout book.
 # sol_prop pulled from breakout_2 2026-10-29 (Tier-3, V2 prop gate); re-add it here with the roster.
-BOOKS = {"breakout_2": ("trend_donchian_eth_prop",)}
+# eth_prop pulled from breakout_2 2026-11-05 (Tier-3, operator, row PROP-PULL-ETHPROP; RQ-20261031-422a-01 FAIL):
+# 2026-11-05 ~21:05Z (Tier-3, operator "Baseline at min size (Rec.)"): the min-size BASELINE book, eth_4h + sol_4h.
+BOOKS = {"breakout_2": ("trend_donchian_eth_4h", "trend_donchian_sol_4h")}
 # `--book breakout_1` is still named by queued research units (RQ-20260928-015). The legs'
 # evidence records are per-leg, not per-account, so the retired book scores identically on
 # breakout_2's roster; the alias keeps those units runnable.

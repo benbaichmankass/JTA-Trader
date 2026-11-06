@@ -322,6 +322,15 @@ STATUS_EXPLICIT: Dict[str, Tuple[str, str, str]] = {
     # audit and measured per-class depth of the HF market data lake; its numbers are measurements from that lane's
     # runs (archive size census, real-data pipeline run) and tests/test_data_lake.py pins the code it describes.
     # Goes `history` if the lake moves off Hugging Face.
+    # Written 2026-11-04 by lane PROJECT-PITCH-DECK (session_01AFoLuLr3fpRCuMnfGbGGoK), which wrote it: the
+    # generated markdown source + speaker notes of the pitch deck. Every number is computed by
+    # docs/pitch/build_deck.py from config/ and comms/strategy_evidence/ at build time. Goes `history` when
+    # the deck is rebuilt for a new audience or the build stops being re-run.
+    "docs/pitch/jta-trader-pitch-deck.md": (
+        "live",
+        "read:PITCH-DECK-lane-authored-it-2026-11-04-generated-from-files",
+        "JTA Trader pitch deck: markdown source and speaker notes (generated)",
+    ),
     "docs/data/market-data-lake.md": (
         "live",
         "read:MARKET-DATA-LAKE-lane-authored-it-2026-11-01-measured",
@@ -432,6 +441,15 @@ STATUS_EXPLICIT: Dict[str, Tuple[str, str, str]] = {
     # ⚠️ It goes `historical` once RQ-20261007-005..008 land measured records:
     # its verdict table's "no Stage-0 evidence" column is then a statement
     # about the past, and the live answer lives in those records.
+    # Written 2026-11-04 by the TICK-DURATION-115S lane, the session that took
+    # every measurement in it (tick_cost diag read, local cProfile, 192-build
+    # equivalence run). Goes historical once the deploy is observed on tick_cost.
+    "docs/research/tick-duration-115s-profile-2026-11-04.md": (
+        "live",
+        "read:TICK-DURATION-115S-lane-authored-and-measured-it-2026-11-04",
+        "TICK-DURATION-115S profile + staged plan + observed stage 1; goes historical once the "
+        "tick detector (< 30 s) clears on /api/diag/tick_cost",
+    ),
     "docs/research/pairs-stocktake-2026-10-07.md": (
         "live",
         "read:PAIRS-STOCKTAKE-lane-authored-and-measured-it-2026-10-07",

@@ -237,3 +237,47 @@ def test_wrapper_passes_the_canonical_fills_store_to_both_runs():
     assert 'FILLS_DB="$(fills_store_path)"' in src
     runs = [ln for ln in src.splitlines() if 'python3 "${PY_SCRIPT}" --db' in ln]
     assert len(runs) == 2 and all('--fills-db "${FILLS_DB}"' in ln for ln in runs)
+
+
+# ── ML-ENTRY-WATCHDOG-EXIT (2026-11-05): the watchdog is a flat detector ─────
+
+def test_watchdog_close_is_relabelled_off_a_measured_price_only(tmp_path):
+    """alpaca_paper SLV 6920 shape: short 10, package SL 47.6443, the venue's
+    own stop fill 47.643 (exchange_fill, MEASURED) -> sl, reversibly. The same
+    reason on a detection-time candle (ESTIMATED) is REFUSED and stamped."""
+    mod = _load_module()
+    db = make_canonical_db(tmp_path / "j.db")
+    insert_order_package(db, order_package_id="pkg-b51697fe35294b95", symbol="SLV",
+                         direction="short", sl=47.644285714285715, tp=45.07107142857143)
+
+    def t(**kw):
+        base = {"status": "closed", "is_backtest": 0, "symbol": "SLV", "direction": "short",
+                "timestamp": "2026-11-05T16:03:17Z", "entry_price": 46.615,
+                "position_size": 10.0, "exit_reason": "stuck_strategy_watchdog",
+                "order_package_id": "pkg-b51697fe35294b95", "account_id": "alpaca_paper"}
+        base.update(kw)
+        return insert_trade(db, **base)
+
+    measured = t(exit_price=47.643, notes=json.dumps({
+        "closed_by": "stuck_strategy_watchdog", "exit_price_source": "exchange_fill"}))
+    estimated = t(exit_price=47.70, notes=json.dumps({
+        "closed_by": "stuck_strategy_watchdog", "exit_price_source": "candle_at_close"}))
+    by_id, _stats = _plan_by_id(mod, db)
+    assert by_id[measured]["new_reason"] == "sl"
+    assert by_id[measured]["old_reason"] == "stuck_strategy_watchdog"
+    assert by_id[estimated]["action"] == "refuse"
+
+    conn = sqlite3.connect(str(db))
+    try:
+        planned, _ = mod.plan(conn)
+        mod.apply(conn, planned)
+        reason, raw = conn.execute("SELECT exit_reason, notes FROM trades WHERE id = ?",
+                                   (measured,)).fetchone()
+        assert reason == "sl"
+        assert json.loads(raw)["pre_backfill_exit_reason"] == "stuck_strategy_watchdog"
+        reason, raw = conn.execute("SELECT exit_reason, notes FROM trades WHERE id = ?",
+                                   (estimated,)).fetchone()
+        assert reason == "stuck_strategy_watchdog"
+        assert json.loads(raw)["exit_reason_source"] == "refused_unmeasured_price"
+    finally:
+        conn.close()

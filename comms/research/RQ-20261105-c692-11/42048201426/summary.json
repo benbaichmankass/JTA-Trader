@@ -1,0 +1,143 @@
+{
+ "dev": {
+  "delta_by_margin": {
+   "0.0": -0.02174,
+   "0.02": -0.01919,
+   "0.05": -0.01114,
+   "0.1": -0.00472,
+   "0.15": 0.00023
+  },
+  "actions_by_margin": {
+   "0.0": 47594,
+   "0.02": 39650,
+   "0.05": 29495,
+   "0.1": 16986,
+   "0.15": 9557
+  },
+  "chosen_margin": 0.15
+ },
+ "heldout": {
+  "n": 10641,
+  "mean_net_r": 0.020603450514156144,
+  "delta_vs_hold": 0.006191592361763192,
+  "win_rate": 0.4290010337374307,
+  "p05_net_r": -1.0984718450479274,
+  "min_net_r": -1.3976611976048026,
+  "n_symbols": 53,
+  "share_changed": 0.10609905084108637,
+  "n_actions": {
+   "CLOSE": 0,
+   "BE": 399,
+   "TRAIL": 916,
+   "TPX": 0
+  },
+  "mean_delta_per_nonhold_action": 0.05010245956009288,
+  "hold": {
+   "n": 10641,
+   "mean_net_r": 0.014411858152392952,
+   "delta_vs_hold": 0.0,
+   "win_rate": 0.43285405507001223,
+   "p05_net_r": -1.1002162162162124,
+   "min_net_r": -1.3976611976048026,
+   "n_symbols": 53,
+   "share_changed": 0.0
+  },
+  "delta_ci95": [
+   0.0001343117506478958,
+   0.012517381397906396
+  ],
+  "giveback_r": 0.9929735836303781,
+  "giveback_r_hold": 1.0357851113649352,
+  "peek": {
+   "peeked_symbols": [
+    "ADAUSDT",
+    "BCHUSDT",
+    "BTCUSDT",
+    "ETCUSDT",
+    "ETHUSDT",
+    "LINKUSDT",
+    "LTCUSDT",
+    "TRXUSDT",
+    "XLMUSDT"
+   ],
+   "n_ex_peeked": 9125,
+   "delta_vs_hold_ex_peeked": 0.007488774192711985
+  },
+  "by_month_delta": {
+   "2025-10": {
+    "n": 1145,
+    "delta": 0.0456
+   },
+   "2025-11": {
+    "n": 941,
+    "delta": -0.0087
+   },
+   "2025-12": {
+    "n": 839,
+    "delta": 0.0113
+   },
+   "2026-01": {
+    "n": 1085,
+    "delta": -0.0341
+   },
+   "2026-02": {
+    "n": 990,
+    "delta": -0.0358
+   },
+   "2026-03": {
+    "n": 853,
+    "delta": 0.0569
+   },
+   "2026-04": {
+    "n": 717,
+    "delta": 0.0228
+   },
+   "2026-05": {
+    "n": 746,
+    "delta": 0.0209
+   },
+   "2026-06": {
+    "n": 1056,
+    "delta": 0.0102
+   },
+   "2026-07": {
+    "n": 664,
+    "delta": 0.0173
+   },
+   "2026-08": {
+    "n": 838,
+    "delta": -0.0155
+   },
+   "2026-09": {
+    "n": 767,
+    "delta": -0.0064
+   }
+  },
+  "matched_random_delta": {
+   "draws": 200,
+   "mean": -0.0023669305272621156,
+   "p95": 0.0015378701297494987
+  },
+  "static_single_action_delta_reported": {
+   "CLOSE_at_8h": -0.021812034620194858,
+   "BE_at_8h": -0.0069876426035284855,
+   "TRAIL_at_8h": -0.010930579407761676,
+   "TPX_at_8h": 0.003255206921193796
+  },
+  "action_mix_checkins": {
+   "HOLD": 30261,
+   "TRAIL": 1363,
+   "BE": 599
+  }
+ },
+ "variants_read_on_window": 4,
+ "proposal_eligible": true,
+ "schema": "ml_decision_manage/1",
+ "unit": "RQ-20261105-c692-11",
+ "arm": "mlsl",
+ "entry_tau": 0.1,
+ "git_sha": "37754ab9b4d856cfa01d23aaf6859e1f99b1f89d",
+ "elapsed_s": 414,
+ "verdict": "pass",
+ "why": "delta vs hold-to-bracket +0.0062 R/trade, CI95 [+0.0001, +0.0125] at n=10641 (margin 0.15)"
+}

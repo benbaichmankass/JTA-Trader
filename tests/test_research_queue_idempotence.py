@@ -511,7 +511,8 @@ def test_adoption_skips_a_commented_rearm_in_a_cycle(tmp_path, monkeypatch):
 def test_the_stamp_land_step_closes_a_stuck_pr_instead_of_blocking():
     wf = (REPO / ".github/workflows/research-queue-dispatch.yml").read_text()
     act = (REPO / ".github/actions/commit-to-main/action.yml").read_text()
-    assert 'close-on-fail: "true"' in wf
+    # B6: the in-run close-on-fail wait is gone; the dispatcher's own reaper step closes a stale stamp/batch PR next cycle.
+    assert "Close stale landing PRs" in wf and "automation/research-queue-stamp" in wf and "gh pr close" in wf
     assert act.count("close_pr_on_fail") >= 3 and "gh pr close" in act
 
 

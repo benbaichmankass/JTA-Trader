@@ -1,0 +1,24 @@
+{
+  "id": "ML-LIVE-FIRST",
+  "title": "Priority (operator 2026-11-05): get an ML live on data we already have within 1-2 days; options infra and dev-only work take a backseat this week",
+  "phase": null,
+  "state": "in_flight",
+  "owner": "manager",
+  "lane": null,
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [],
+  "blocked_on": [],
+  "note": "OPERATOR DIRECTIVE 2026-11-05 ~13:57Z, verbatim: \"Okay, we should keep pushing the alpaca data infra, but I want to see if we can get like ML live on the data that we do. Like, if the problem is specifically options or whatever, and we have enough, you know, like from a certain basket of stocks or ETFs or indexes or whatever, if we have a group that we can train an ML on and get it live, like, say, this week or even in the next day or two, then I want to focus on that first. And then circle back to the options infra. Like, it's just taking a lot of resources for something that we're not going to be able to go live with in the meantime, and I want to focus more resources towards things that will actually impact live trading, and things that are more for development and later on. Like, those are also important, but they should take a backseat, especially a week like this where we're like burning through usage very quickly.\"\nMEASURED from config/accounts.yaml on main at 13:58Z:\n- ml_entry is on bybit_2 (real money) and bybit_portfolio;\n- ml_entry is on alpaca_paper (the testing floor);\n- ml_entry_v2 is on bybit_1;\n- alpaca_live has 1 strategy and NO ML; alpaca_portfolio has 1.\nFASTEST PATH TO A NEW LIVE ML: RQ-20261104-a41f-01, the frozen ml-decision-entry-v1 (no retrain), pooled over a pre-registered liquid US ETF population, Alpaca 1h RTH bars, full cost stack, rule mean net R >= 0 at n >= 30. It is the Stage-0 record for adding ml_entry to alpaca_live + alpaca_portfolio (one held Tier-3 PR; data-backed per canonical \u00a7 Data-backed Tier-2/3). It runs once #23322 merges (estimate ~20 min).\nAlso on the path: ML-ENTRY-ALPACA-BAR-PARITY (#23298), whose fix lets alpaca_paper ml_entry evaluate all ETFs; observed at the 16:00Z decision.\nBACKSEAT this week (no new dispatch unless it unblocks live trading): options capture and infra (OPRA-INDICATIVE-FEED), the market data lake build-out (ML-DATA-WIRING, MARKET-DATA-LAKE beyond the cheap squash), hosting work (FREE-CAPACITY-PLAN (b)/(c)), and console tab polish beyond v11.",
+  "due_by": "2026-11-07",
+  "roadmap": [
+    "L-ML-LIVE"
+  ],
+  "priority_rank": 1,
+  "updated_at": "2026-11-05T14:17:36Z",
+  "updated_by": "session_01AFoLuLmhUKeUzHC6CHz2uP",
+  "week_lane": "surge",
+  "_seq": 953
+}

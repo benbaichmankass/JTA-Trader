@@ -11,12 +11,12 @@
   "tier": 2,
   "prs": [],
   "blocked_on": [],
-  "note": "disk-usage-report #22476 (20:59Z): new .git pack 1.35 GB written 18:57Z by ict-git-sync despite the sparse/filter fix (PI-20261102-ARSESYNC-0002; git 2.34 has no repack --filter, so re-clone as partial); signal_audit.jsonl 1.5 GB live with no writer cap; position_read_state_soak.jsonl 343 MB; trade_journal.db 2.4 GB; old backup .bak-own-fill-exits-20261017 2.0 GB (prune keep>=1 keeps it, so deleting needs an operator OK); journald 4.0 GB + syslog.1 724 MB (cap-vm-logs journald needs a one-time operator sudoers line).",
-  "due_by": "2026-11-04",
+  "note": "disk-usage-report #22476 (20:59Z): new .git pack 1.35 GB written 18:57Z by ict-git-sync despite the sparse/filter fix (PI-20261102-ARSESYNC-0002; git 2.34 has no repack --filter, so re-clone as partial); signal_audit.jsonl 1.5 GB live with no writer cap; position_read_state_soak.jsonl 343 MB; trade_journal.db 2.4 GB; old backup .bak-own-fill-exits-20261017 2.0 GB (prune keep>=1 keeps it, so deleting needs an operator OK); journald 4.0 GB + syslog.1 724 MB (cap-vm-logs journald needs a one-time operator sudoers line). [2026-11-05 BACKLOG-DRAIN-20261105] MEASURED live /api/diag/status vm_health.disk=62.5 (%) on 2026-11-05T06:00Z vs 71% at 11-02 21:15Z after the resize to 52G and journald cap: no regrowth. Still open: signal_audit.jsonl (1.5 GB, no writer cap), the .git pack re-clone (PI-20261102-ARSESYNC-0002) and the 2.0 GB .bak-own-fill-exits-20261017 (needs operator OK to delete). Condition to close: a second reading 24h later <= 65% and a capped signal_audit writer or its row. [lane OPERATOR-ANSWERS-0505B, session_01AFoLuJT8TkysBjWHmKTqyJ, 2026-11-05] Oct-17 backup item: operator popup ~06:25Z 2026-11-05 'Delete it (Recommended)' (relayed by Manager Session 2026-11-04b). FOUND ALREADY DELETED, nothing to do: system-action #22522 (run 41557347298, 2026-11-03 ~01:05Z, prune-db-backups one-off file:) printed 'deleted /data/bot-data/trade_journal.db.bak-own-fill-exits-20261017T072615Z' (2.0G); df BEFORE 35G/52G 68% (17G avail) -> AFTER 33G/52G 64% (19G avail). (The earlier #22512 attempt planned 0 deletions \u2014 the file: passthrough was not yet wired; #22522 was the retry.) VERIFIED TODAY (read-only): #23172 prune-db-backups dry-run 07:1xZ: 'backups found: 0'; #23179 disk-usage-report: '(no journal backups found)', no .bak-own-fill-exits path among files > 200 MB, df 33G/52G 63% (20G avail). Repo references to the basename are history notes (rollback copy of the 2026-10-17 bybit_2 6549/6528 re-pricing, observed correct) and test fixtures only. No new system-action was needed or added. Remaining growth items on this row (git pack 1.35 GB, signal_audit.jsonl, syslog.1 724 MB) are unchanged by this.",
+  "due_by": "2026-11-06",
   "roadmap": [
     "L-OPS"
   ],
-  "updated_at": "2026-11-02T21:23:52Z",
-  "updated_by": "session_01AFoLuJ1apgy8sfngu4WyNH",
+  "updated_at": "2026-11-05T07:49:11Z",
+  "updated_by": "session_01AFoLuJT8TkysBjWHmKTqyJ",
   "_seq": 896
 }

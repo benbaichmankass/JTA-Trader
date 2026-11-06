@@ -13,13 +13,15 @@
 slos:
   # ── YIELD SLOs (RESEARCH-SLO-YIELD, operator 2026-11-01 ~08:50Z, popup verbatim: "Replace with yield SLOs (Rec.)") ──
   # The only two SLOs that alert on the research programme's OUTPUT. Source: the weekly trial ledger
-  # (scripts/research/trial_ledger.py -> comms/research/*/*/trial_ledger.json). A "survivor" is a Stage-0 PASS with
-  # DSR > 0.95 AND BHY-haircut expectancy > 0 (the ledger's own definition); a "trial" is a config tried (sum of
-  # legs.*.n_configs). Measured 2026-11-01: 0 survivors in all 3 ledgers (10-16, 10-23, 10-30), trials 1462 -> 2179 -> 2832.
+  # (scripts/research/trial_ledger.py -> comms/research/*/*/trial_ledger.json). A "survivor" is a REGISTERED-RULE PASS ON HELD-OUT DATA
+  # (operator, 2026-11-04 weekly planning, popup verbatim: "Registered-rule PASS on held-out data (Recommended)"; Gates this adds
+  # or changes: none). MEASUREMENT GAP: research_slo.py still reads the ledger's stage0_pass_surviving_dsr_and_bhy_haircut (Stage-0 PASS
+  # AND DSR > 0.95 AND BHY-haircut expectancy > 0), a proxy for that definition until the ledger counts held-out registered-rule PASSes;
+  # read the number as the proxy. A "trial" is a config tried (sum of legs.*.n_configs). Measured 2026-11-01: 0 survivors in all 3 ledgers (10-16, 10-23, 10-30), trials 1462 -> 2179 -> 2832.
   # Thresholds are placeholders for the operator to set at planning: survivors_per_month >= 1 is "at least one
   # leg a month clears the multiple-testing haircut"; trials_per_survivor <= 500 is "a hit rate no worse than 1 in 500".
   survivors_per_month:
-    what: "survivors (ledger: Stage-0 pass AND DSR>0.95 AND BHY haircut>0) gained per 30 d = (newest ledger - oldest ledger within the last 45 d) x 30 / span_days; needs >= 14 d of ledger history, else could_not_look"
+    what: "survivors (defined: registered-rule PASS on held-out data, operator 2026-11-04; MEASURED today by the ledger proxy Stage-0 pass AND DSR>0.95 AND BHY haircut>0) gained per 30 d = (newest ledger - oldest ledger within the last 45 d) x 30 / span_days; needs >= 14 d of ledger history, else could_not_look"
     op: min
     threshold: 1
   trials_per_survivor:

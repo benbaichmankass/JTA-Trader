@@ -1,19 +1,49 @@
 {
-  "generated_at": "2026-11-04T19:57:58Z",
-  "overall": "could_not_read",
+  "generated_at": "2026-11-05T20:08:46Z",
+  "overall": "findings",
   "produced_by": {
-    "run_id": "41901377662",
+    "run_id": "42100319054",
     "workflow": "research-loss-detector"
   },
   "questions": {
     "A_stuck_research_prs": {
       "findings": [],
-      "population": "17 open PRs; 1 automation/*; 0 carry research; 1 automation/* carry none (not graded here)",
+      "population": "20 open PRs; 7 automation/*; 5 carry research; 2 automation/* carry none (not graded here)",
       "state": "clean",
       "threshold_hours": 6.0
     },
     "B_unlanded_result_runs": {
       "findings": [
+        {
+          "conclusion": "failure",
+          "created_at": "2026-11-05T06:55:24Z",
+          "result_job": [
+            "failure"
+          ],
+          "run_id": "41983651204",
+          "run_url": "https://github.com/benbaichmankass/JTA-Trader/actions/runs/41983651204",
+          "workflow": "m20-exit-lever-sweep.yml"
+        },
+        {
+          "conclusion": "failure",
+          "created_at": "2026-11-05T06:06:44Z",
+          "result_job": [
+            "failure"
+          ],
+          "run_id": "41978235919",
+          "run_url": "https://github.com/benbaichmankass/JTA-Trader/actions/runs/41978235919",
+          "workflow": "m20-exit-lever-sweep.yml"
+        },
+        {
+          "conclusion": "failure",
+          "created_at": "2026-11-05T04:53:20Z",
+          "result_job": [
+            "failure"
+          ],
+          "run_id": "41970551893",
+          "run_url": "https://github.com/benbaichmankass/JTA-Trader/actions/runs/41970551893",
+          "workflow": "m20-exit-lever-sweep.yml"
+        },
         {
           "conclusion": "failure",
           "created_at": "2026-11-04T02:51:03Z",
@@ -88,6 +118,36 @@
       "lost": [
         {
           "conclusion": "failure",
+          "created_at": "2026-11-05T06:55:24Z",
+          "result_job": [
+            "failure"
+          ],
+          "run_id": "41983651204",
+          "run_url": "https://github.com/benbaichmankass/JTA-Trader/actions/runs/41983651204",
+          "workflow": "m20-exit-lever-sweep.yml"
+        },
+        {
+          "conclusion": "failure",
+          "created_at": "2026-11-05T06:06:44Z",
+          "result_job": [
+            "failure"
+          ],
+          "run_id": "41978235919",
+          "run_url": "https://github.com/benbaichmankass/JTA-Trader/actions/runs/41978235919",
+          "workflow": "m20-exit-lever-sweep.yml"
+        },
+        {
+          "conclusion": "failure",
+          "created_at": "2026-11-05T04:53:20Z",
+          "result_job": [
+            "failure"
+          ],
+          "run_id": "41970551893",
+          "run_url": "https://github.com/benbaichmankass/JTA-Trader/actions/runs/41970551893",
+          "workflow": "m20-exit-lever-sweep.yml"
+        },
+        {
+          "conclusion": "failure",
           "created_at": "2026-11-04T02:51:03Z",
           "result_job": [
             "failure"
@@ -158,13 +218,14 @@
         }
       ],
       "pending_merge": [],
-      "population": "89 completed run(s) of 7 workflow(s) calling ./.github/actions/research-result since 2026-10-21 (dukascopy-span-probe.yml, ict-scalp-exit-sweep.yml, m20-exit-lever-sweep.yml, research-exit-head-build.yml, research-exit-head-replay-trainer.yml, research-harness-dispatch.yml, soak-book-grade-weekly.yml); 928 produced no result by design (skipped); 2228 result file(s) on origin/main",
+      "population": "97 completed run(s) of 7 workflow(s) calling ./.github/actions/research-result since 2026-10-22 (dukascopy-span-probe.yml, ict-scalp-exit-sweep.yml, m20-exit-lever-sweep.yml, research-exit-head-build.yml, research-exit-head-replay-trainer.yml, research-harness-dispatch.yml, soak-book-grade-weekly.yml); 1114 produced no result by design (skipped); 2333 result file(s) on origin/main",
       "state": "findings"
     },
     "C_expiring_unlanded_artifacts": {
-      "error": "GET https://api.github.com/repos/benbaichmankass/JTA-Trader/actions/artifacts?per_page=100&page=1: HTTP Error 500: Internal Server Error",
-      "findings": null,
-      "state": "could_not_read"
+      "findings": [],
+      "population": "[bulk] 1956 artifact(s) listed, 1956 unexpired, 495 expire within 72.0h across 481 run(s); 0 of those from research workflows (none); a landed copy = run id named on origin/main in research/results, a commit message, or a file under research/**, docs/research/**, runtime_logs/replay_pregate/**",
+      "read_via": "bulk",
+      "state": "clean"
     }
   },
   "ref": "origin/main",

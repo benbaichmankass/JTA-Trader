@@ -1,0 +1,24 @@
+{
+  "id": "ML-ENTRY-EQUITY-NATIVE",
+  "title": "Equity-native ENTRY model trained on the 173-ETF Alpaca liquidity pool (no BTC / crypto-breadth features), dev walk-forward then one confirming read on a time-disjoint window",
+  "phase": null,
+  "state": "in_flight",
+  "owner": "session_01AFoLuLh6ui8yrCXu3ES5Cp",
+  "lane": "ML-ENTRY-ALL-ACCOUNTS",
+  "model": "sonnet",
+  "ceiling_usd": 20,
+  "spend_usd": null,
+  "tier": 3,
+  "prs": [],
+  "blocked_on": [],
+  "note": "2026-11-05 ~21:0xZ. OPERATOR popup ~20:50Z verbatim: 'Equity-native model (Rec.)', after the frozen crypto ENTRY v1 FAILED on this pool (RQ-20261104-a41f-01, run 42091158467: pooled mean net R -0.0708, n 1099, gross +0.011 vs cost 0.082). PLAN: dev unit RQ-20261105-e9a1-01 (walk-forward <= 2025-06-30, grid A/B/C x tau, 12 draws, descriptive); confirming unit RQ-20261105-e9a1-02 registered AFTER dev and BEFORE its run (train_end 2025-06-30, window 2025-07-15..last complete month, family ENTRY-EQ, deflated bar holdout_lock.bar_for(N), conjunction with dev OOF mean > 0). Declared: the confirming window overlaps data seen by OTHER models (bdc2-01 11 ETFs 2025-02..09 served v1; a41f v1 2025-10..2026-10) but no config/tau is tuned on it. DONE WHEN: dev result reported, then one confirming read recorded in comms/research/holdout_reads.jsonl; on PASS comms/ml_universe + a held Tier-3 roster PR for alpaca_live/alpaca_portfolio.",
+  "due_by": "2026-11-07",
+  "roadmap": [
+    "L-ML-LIVE"
+  ],
+  "priority_rank": 1,
+  "updated_at": "2026-11-05T21:01:17Z",
+  "updated_by": "session_01AFoLuLh6ui8yrCXu3ES5Cp",
+  "week_lane": "surge",
+  "_seq": 957
+}

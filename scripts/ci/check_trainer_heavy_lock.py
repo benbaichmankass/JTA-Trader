@@ -75,6 +75,14 @@ HEAVY_ENTRYPOINTS = [
 # `.fit(`/`lgb.train(` it belongs above, and the reason recorded here is what
 # makes that reviewable.
 DECLARED_LIGHT = {
+    "scripts/research/ml_entry_equity.py":
+        "ML-ENTRY-EQUITY-NATIVE equity-native ENTRY model (units RQ-20261105-e9a1-01 dev, RQ-20261105-e9a1-02 confirm): fits ~15 LightGBM regressors on ~0.3M rows built "
+        "from read-only Alpaca ETF bars (research-script-run.yml, 4 vCPU, 16 GB; needs the internet and the paper data key, so compute cpu_long, github_runner), never "
+        "needs_vm_data, never routed to the trainer.",
+    "scripts/research/prop_ml_leg.py":
+        "TRADEIFY-OWN-LEG-DRIVER prop ML entry leg (units RQ-20261105-fd68-01, -fd68-02): fits LightGBM on public Binance Vision klines/funding/metrics and FRED "
+        "on a GitHub runner (research-script-run.yml, 4 vCPU, 16 GB, 6 h; the units need internet, so compute cpu_long with why_runner), never needs_vm_data, "
+        "never routed to the trainer.",
     "scripts/research/ml_entry_levers.py":
         "ML-LEVER-HARNESS ENTRY one-factor lever tests (units RQ-20261101-b601-01, -b602-01, -b604-01, -a508-01): fits LightGBM on the public Binance Vision "
         "klines table in a lane container or a GitHub runner (compute cpu_long, github_runner), never needs_vm_data, never routed to the trainer.",
@@ -96,6 +104,9 @@ DECLARED_LIGHT = {
     "scripts/research/ml_decision_brackets.py":
         "ML-DECISION-MODELS BRACKETS harness: same data and route as ml_decision_entry.py (unit RQ-20261101-c692-02, "
         "compute cpu_long, github_runner); never routed to the trainer.",
+    "scripts/research/ml_decision_manage.py":
+        "ML-DECISION-MODELS MANAGE / dynamic-SL harness: same data and route as ml_decision_entry.py (units RQ-20261101-c692-03 and "
+        "RQ-20261105-c692-08..11, compute cpu_long, github_runner); never needs_vm_data, never routed to the trainer.",
     "scripts/research/ml_entry_tp_revision.py":
         "ML-ENTRY-TP-REVISION moving-TP harness: same data and route as ml_decision_entry.py (units RQ-20261101-383f-01/"
         "-03, compute cpu_long, github_runner); fits LightGBM in a lane container or a runner, never routed to the trainer.",

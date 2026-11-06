@@ -854,12 +854,12 @@ bind:
    [`OPERATING-PLAN` § 2 "The soak is MECHANICAL"](plans/OPERATING-PLAN-2026-09-21.md).
    This extends § "A soak must carry its own alarm". It does not replace it: the
    alarm says *when to look*, and the contract says *what ends the wait*.
-4. **The manager reviews a persisted report, on a schedule, twice a day.**
+4. **The manager reviews a persisted report, on a schedule, once a day.**
    - `ict-work-report.timer` (05:30 UTC) writes `WR-YYYYMMDD-HHMMZ`, served at
      `GET /api/bot/work/report`.
    - `?since=` adds every hourly digest block that was sent. A session cannot
      read Telegram, so this is how the manager sees what went out.
-   - Routines at 05:52Z and 17:52Z fire the review. The manager gets no push;
+   - A routine at 05:52Z fires the review (once a day; operator, 2026-11-04: "we switched the twice daily to once daily leave it like that"). The manager gets no push;
      the routine is the check.
    - A missing, stale or errored report is itself an alarm.
 5. **Lanes PUSH, and the manager POLLS.**
@@ -1141,11 +1141,21 @@ decides whether to intervene.
    is never touched. The next signal is evaluated fresh on the next
    tick.
 
-4. **Every rejection is its own Telegram ping.** Per-trade: account,
+4. **Every rejection on a real-money, prop or portfolio-mirror account is its own Telegram ping;
+   every TESTING-PAPER rejection is its own LEDGER row.** Per-trade: account,
    symbol, side, qty, reason, exchange error if any. Not aggregate.
-   The operator sees each refusal as it happens so they can intervene
+   The operator sees each money-account refusal as it happens so they can intervene
    fast. "Account paused" summary messages are the wrong shape — they
-   hide rate-of-trouble information.
+   hide rate-of-trouble information. **Amended 2026-11-04** (operator, verbatim, checklist row
+   `TELEGRAM-TRIM`): *"for the trader bot, so basically I want to trim it down so that the only pings I get
+   there are for live trades, because the Bybit one, like the, or in general the testing paper, I don't need
+   to get updated on every trade there. It's not really important."* A testing-paper rejection (account
+   class `paper` without `paper_role: portfolio`) is still recorded, one row per refusal, in
+   `runtime_logs/operator_alerts.jsonl` with `route: ledger_only` (diag `log_file?name=operator_alerts`),
+   so the rate stays measurable; it is not pinged. Confirmed by the operator, popup 2026-11-05 ~00:28Z,
+   verbatim *"Both right (Recommended)"*, to the two calls: prop accounts (`account_class: prop`) count as LIVE
+   (their trade and rejection pings stay); rejection pings stay for real-money and prop accounts, testing-paper
+   rejections go to the ledger/UI only. Policy: `config/telegram_policy.yaml`.
 
 5. **Boot always starts the trader live (per YAML).** No
    "refuse-to-start until ack." No "raise on mismatch." Whatever

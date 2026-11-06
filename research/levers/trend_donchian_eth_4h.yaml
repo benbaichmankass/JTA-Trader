@@ -3604,3 +3604,23 @@ levers:
       best_delta_r_per_trade: 0.02
       fold_stability: 1.0
       reading: no response at the tested values
+units:
+- RQ-20261104-e4a1-01
+levers_tested:
+- family: exit head (ML early-exit, E1/E1.5)
+  varied: 19 head arms (tau grid + below_half_r/pre_mfe1/age8/age8_below_half_r shapes) vs the declared exit, selected on discovery, read once
+    held-out
+  response:
+    selected: age8_below_half_r_tau_0.2
+    held_out_n: 76
+    held_out_net_r: 15.4484
+    baseline_held_out_net_r: 13.966
+    control_p95_net_r: 29.1403
+    control_median_net_r: 19.3368
+    discovery_mean_auc: 0.5727
+    verdict: fail
+  shape: 'fail: selected age8_below_half_r tau 0.2 beat B (15.45 vs 13.97 R, n 76) but not the matched random-truncation control (p95 29.14, median
+    19.34)'
+  tested_at_power: false
+  unit: RQ-20261104-e4a1-01
+  lever_family: exit

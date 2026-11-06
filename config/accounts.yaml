@@ -2112,8 +2112,21 @@ accounts:
       min_active_days: 0
     backtest_ruleset: prop_rulesets/breakout_turbo_1step.yaml
     account_size_usd: 5000
-    strategies:                        # breakout_1's legs, each kept only if its Turbo fit did not FAIL
-      - trend_donchian_eth_prop        # Turbo fit RQ-20261005-851 / -853: NULL (ev > 0 every seed), kept
+    strategies:                        # OPERATOR BASELINE 2026-11-05 ~18:55Z (Tier-3, popup "Baseline at min size (Rec.)", relayed by
+                                       # Manager Session 2026-11-05b; row ML-PROP-ITERATE): a MEASURED BASELINE at minimum size, not a
+                                       # prop-gate pass. Exception recorded in comms/prop_survival/<leg>.json `operator_exception`.
+                                       # Size: sizing.flat.per_leg_risk_usd 10 in the ruleset. REVERT: `strategies: []`.
+      - trend_donchian_eth_4h          # v2 3y PASS all 3 firms; V3 FAIL_EDGE (CI lo -0.068 R); 365d n=51 negative
+      - trend_donchian_sol_4h          # v2+V3 3y PASS all 3 firms (CI lo +0.011 R); 365d n=34 negative (CONTESTED)
+      # was `strategies: []` 2026-11-05 (PROP-PULL-ETHPROP).
+      # breakout_1's legs, each kept only if its Turbo fit did not FAIL
+      # PULLED 2026-11-05 (Tier-3, OPERATOR-APPROVED; popup ~06:25Z verbatim "Pull from prop (Recommended)", relayed by
+      # Manager Session 2026-11-04b, row PROP-PULL-ETHPROP): trend_donchian_eth_prop. Evidence: RQ-20261031-422a-01
+      # (rule RULE-RQ-20261031-422a-01-WIDENED-EDGE, registered 2026-10-31T09:30Z) FAIL -- pooled n=8507 / 69 month
+      # clusters, mean +0.0049 R, ci_lo -0.0320 <= 0 net of fee 8 + slip 3 + funding 5 bps
+      # (comms/research/RQ-20261031-422a-01/41195603857/verdict.json). The leg stays a TESTING leg on its bybit_1 demo
+      # floor. Account flat at the pull (prop status 2026-11-05 ~06:30Z: positions []). REVERT: re-add
+      # `- trend_donchian_eth_prop` here (a re-add must clear prop-roster-gate-guard).
       # REMOVED 2026-10-29 (Tier-3, operator: "1, but we also need to send it for refinement/improvment"): trend_donchian_sol_prop. Evidence: comms/prop_survival/v2/trend_donchian_sol_prop.v2.json (PR #21204). REVERT: re-add `- trend_donchian_sol_prop` here.
     symbols: [ETHUSDT, SOLUSDT]
     risk:
@@ -2129,9 +2142,15 @@ accounts:
       risk_pct: 0.0035                 # was 0.005: FLAT $25/ticket (0.5% x $5k): the flat arm chosen by the rule registered in
                                        # RQ-20261005-853/814 before the run (ETH -> $25; SOL -> $50 not applied: risk is per account,
                                        # per-leg sizing PI-20261005-YUVCGTMJ-0006); ruleset sizing.flat.max_risk_usd matches.
-      # breach_guards: NOT set -> `enforce` (the default) for the prop ticket risk gate
-      # (src/prop/prop_risk_gate.py). The RiskManager DAILY_LOSS_CAP / INTRADAY_DRAWDOWN
-      # refusals it once also softened were folded into daily_dd_switch below (2026-10-09).
+      breach_guards: report            # Tier-3, OPERATOR 2026-11-05 ~10:59Z (popup, relayed by Manager Session
+                                       # 2026-11-05a), verbatim: "Merge, breakout_2 on report (Rec.)"; context, operator
+                                       # this week: "don't worry about account breach, it's a small test account and we'll
+                                       # just buy another one". Row PROP-SIZE-EXCEEDS-DD-CUSHION. Effect: the phone LIVE
+                                       # verify's exceeds_cushion PINGS and the submit proceeds; the ticket caveat renders
+                                       # its report form. HARD refusals stay in every mode (cushion_unknown, risk not
+                                       # computable from the form). The RiskManager DAILY_LOSS_CAP / INTRADAY_DRAWDOWN
+                                       # refusals it once also softened were folded into daily_dd_switch below (2026-10-09).
+                                       # REVERT: delete this line (default `enforce` refuses an over-cushion submit).
       daily_dd_switch:                 # The ONE automatic daily off (operator 2026-10-09, rule 7
         armed: true                    # exception). ARMED 2026-10-09 (operator: "We'll arm all of them"). Limit =
                                        # 0.8 x the firm's daily limit (backtest_ruleset), at the firm's
@@ -2174,10 +2193,23 @@ accounts:
       min_active_days: 0               # no minimum trading days.
     backtest_ruleset: prop_rulesets/tradeify_247_1step.yaml
     account_size_usd: 10000
-    strategies:                        # the memo's B3 book (§ 3.1): one leg per
+    strategies:                        # OPERATOR BASELINE 2026-11-05 ~18:55Z (Tier-3, popup "Baseline at min size (Rec.)", relayed by
+                                       # Manager Session 2026-11-05b; row ML-PROP-ITERATE): a MEASURED BASELINE at minimum size, not a
+                                       # prop-gate pass. Exception recorded in comms/prop_survival/<leg>.json `operator_exception`.
+                                       # Size: sizing.flat.per_leg_risk_usd 10 in the ruleset. REVERT: `strategies: []`.
+      - trend_donchian_eth_4h          # v2 3y PASS all 3 firms; V3 FAIL_EDGE (CI lo -0.068 R); 365d n=51 negative
+      - trend_donchian_sol_4h          # v2+V3 3y PASS all 3 firms (CI lo +0.011 R); 365d n=34 negative (CONTESTED)
+      # was `strategies: []` 2026-11-05 (PROP-PULL-ETHPROP).
+      # the memo's B3 book (§ 3.1): one leg per
                                        # symbol, so the no-hedging rule cannot be
                                        # tripped by two of our own legs.
-      - trend_donchian_eth_prop        # ETH 1h (n=169, net R +13.03 after Tradeify costs)
+      # PULLED 2026-11-05 (Tier-3, OPERATOR-APPROVED; popup ~06:25Z verbatim "Pull from prop (Recommended)", relayed by
+      # Manager Session 2026-11-04b, row PROP-PULL-ETHPROP): trend_donchian_eth_prop. Evidence: RQ-20261031-422a-01
+      # (rule RULE-RQ-20261031-422a-01-WIDENED-EDGE, registered 2026-10-31T09:30Z) FAIL -- pooled n=8507 / 69 month
+      # clusters, mean +0.0049 R, ci_lo -0.0320 <= 0 net of fee 8 + slip 3 + funding 5 bps
+      # (comms/research/RQ-20261031-422a-01/41195603857/verdict.json). The leg stays a TESTING leg on its bybit_1 demo
+      # floor. Account flat at the pull (prop status 2026-11-05 ~06:30Z: positions []). REVERT: re-add
+      # `- trend_donchian_eth_prop` here (a re-add must clear prop-roster-gate-guard).
       # REMOVED 2026-10-29 (Tier-3, operator: "1, but we also need to send it for refinement/improvment"): trend_donchian_sol_prop. Evidence: comms/prop_survival/v2/trend_donchian_sol_prop.v2.json (PR #21204). REVERT: re-add `- trend_donchian_sol_prop` here.
                                        # of the ETH+SOL book (Tier-3, data-backed under the
                                        # operator's standing authorization of 2026-09-27; decided
@@ -2277,12 +2309,25 @@ accounts:
       min_active_days: 5               # 5 QUALIFYING days (each >= +0.8% of the initial balance, realised, 00:30-00:30 UTC).
     backtest_ruleset: prop_rulesets/velotrade_classic_1step.yaml
     account_size_usd: 5000
-    strategies:                        # VELOTRADE-GOLIVE roster (Tier-3, HELD). Lane VELOTRADE-FIT: unit RQ-20261006-062,
+    strategies:                        # OPERATOR BASELINE 2026-11-05 ~18:55Z (Tier-3, popup "Baseline at min size (Rec.)", relayed by
+                                       # Manager Session 2026-11-05b; row ML-PROP-ITERATE): a MEASURED BASELINE at minimum size, not a
+                                       # prop-gate pass. Exception recorded in comms/prop_survival/<leg>.json `operator_exception`.
+                                       # Size: sizing.flat.per_leg_risk_usd 10 in the ruleset. REVERT: `strategies: []`.
+      - trend_donchian_eth_4h          # v2 3y PASS all 3 firms; V3 FAIL_EDGE (CI lo -0.068 R); 365d n=51 negative
+      - trend_donchian_sol_4h          # v2+V3 3y PASS all 3 firms (CI lo +0.011 R); 365d n=34 negative (CONTESTED)
+      # was `strategies: []` 2026-11-05 (PROP-PULL-ETHPROP).
+      # VELOTRADE-GOLIVE roster (Tier-3, HELD). Lane VELOTRADE-FIT: unit RQ-20261006-062,
                                        # rule RULE-RQ1006-VELOTRADE-FIT (registered before grading, commit 3769f2b1f):
                                        # GO_LIVE on all 5 seeds at risk_pct 0.005 -- P(daily-loss breach)/life 0.000,
                                        # worst realised day -$78 vs the $160 line, max entry gap 6.6d, EV/life +$167..+$188.
                                        # Operator 2026-10-06 06:40Z: risk-qualified legs go live; 5-qualifying-days tuned after.
-      - trend_donchian_eth_prop        # evidence: comms/strategy_evidence/trend_donchian_eth_prop.json
+      # PULLED 2026-11-05 (Tier-3, OPERATOR-APPROVED; popup ~06:25Z verbatim "Pull from prop (Recommended)", relayed by
+      # Manager Session 2026-11-04b, row PROP-PULL-ETHPROP): trend_donchian_eth_prop. Evidence: RQ-20261031-422a-01
+      # (rule RULE-RQ-20261031-422a-01-WIDENED-EDGE, registered 2026-10-31T09:30Z) FAIL -- pooled n=8507 / 69 month
+      # clusters, mean +0.0049 R, ci_lo -0.0320 <= 0 net of fee 8 + slip 3 + funding 5 bps
+      # (comms/research/RQ-20261031-422a-01/41195603857/verdict.json). The leg stays a TESTING leg on its bybit_1 demo
+      # floor. Account flat at the pull (prop status 2026-11-05 ~06:30Z: positions []). REVERT: re-add
+      # `- trend_donchian_eth_prop` here (a re-add must clear prop-roster-gate-guard).
       # REMOVED 2026-10-29 (Tier-3, operator: "1, but we also need to send it for refinement/improvment"): trend_donchian_sol_prop. Evidence: comms/prop_survival/v2/trend_donchian_sol_prop.v2.json (PR #21204). REVERT: re-add `- trend_donchian_sol_prop` here.
     symbols: [ETHUSDT, SOLUSDT]
     risk:

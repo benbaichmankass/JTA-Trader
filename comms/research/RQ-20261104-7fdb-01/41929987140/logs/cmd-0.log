@@ -1,0 +1,13 @@
+Fetching QQQ 60 candles 2018-06-19 -> 2026-11-04 (source=dukascopy) …
+  dukascopy: QQQ -> INSTRUMENT_ETF_CFD_US_QQQ_US_USD (relation=same_ticker_cfd: same underlying, CFD)
+INFO:DUKASCRIPT:current timestamp :2026-11-04T20:00:00
+Wrote 14653 rows (2018-06-19 -> 2026-11-04) to /tmp/exit_lever_ablation_xfgazjl0/qqq_pullback_1h__data.csv
+[T2] /opt/hostedtoolcache/Python/3.11.18/x64/bin/python3 /home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_pullback.py --trend-lookback 60 --pullback-lookback 12 --pullback-frac 0.618 --data <data> --symbol QQQ --resample 1h --atr-period 14 --atr-stop-mult 2.5 --trail-mult 5.0 --min-confidence 0.0 --fee-bps-roundtrip 0.0 --emit-trades comms/research/RQ-20261104-7fdb-01/41929987140/arms/T2__trades.jsonl --json comms/research/RQ-20261104-7fdb-01/41929987140/arms/T2__bt.json --tp-cap-pct 0.099 --tp-r 2.0 --start 2018-06-01 --end 2026-10-15 23:59
+[T3] /opt/hostedtoolcache/Python/3.11.18/x64/bin/python3 /home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_pullback.py --trend-lookback 60 --pullback-lookback 12 --pullback-frac 0.618 --data <data> --symbol QQQ --resample 1h --atr-period 14 --atr-stop-mult 2.5 --trail-mult 5.0 --min-confidence 0.0 --fee-bps-roundtrip 0.0 --emit-trades comms/research/RQ-20261104-7fdb-01/41929987140/arms/T3__trades.jsonl --json comms/research/RQ-20261104-7fdb-01/41929987140/arms/T3__bt.json --tp-cap-pct 0.099 --tp-r 3.0 --start 2018-06-01 --end 2026-10-15 23:59
+[T4] /opt/hostedtoolcache/Python/3.11.18/x64/bin/python3 /home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_pullback.py --trend-lookback 60 --pullback-lookback 12 --pullback-frac 0.618 --data <data> --symbol QQQ --resample 1h --atr-period 14 --atr-stop-mult 2.5 --trail-mult 5.0 --min-confidence 0.0 --fee-bps-roundtrip 0.0 --emit-trades comms/research/RQ-20261104-7fdb-01/41929987140/arms/T4__trades.jsonl --json comms/research/RQ-20261104-7fdb-01/41929987140/arms/T4__bt.json --tp-cap-pct 0.099 --tp-r 4.0 --start 2018-06-01 --end 2026-10-15 23:59
+[T6] /opt/hostedtoolcache/Python/3.11.18/x64/bin/python3 /home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_pullback.py --trend-lookback 60 --pullback-lookback 12 --pullback-frac 0.618 --data <data> --symbol QQQ --resample 1h --atr-period 14 --atr-stop-mult 2.5 --trail-mult 5.0 --min-confidence 0.0 --fee-bps-roundtrip 0.0 --emit-trades comms/research/RQ-20261104-7fdb-01/41929987140/arms/T6__trades.jsonl --json comms/research/RQ-20261104-7fdb-01/41929987140/arms/T6__bt.json --tp-cap-pct 0.099 --tp-r 6.0 --start 2018-06-01 --end 2026-10-15 23:59
+{
+ "verdict": "fail",
+ "label": "not_replicated",
+ "why": "T3 reads net_r=-2.3215 over n=87 held-back trades: the configuration does not replicate (closes the configuration, never the family)"
+}

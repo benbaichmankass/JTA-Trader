@@ -1,0 +1,25 @@
+{
+  "id": "KAGGLE-CPU-IDLE-20261105",
+  "title": "Research backend kaggle_cpu idle ~287 min with 1 runnable unit; dispatcher self-heal did not fix it (watchdog 11:38Z)",
+  "phase": null,
+  "state": "queued",
+  "owner": "manager",
+  "lane": null,
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [],
+  "blocked_on": [],
+  "note": "Source: research watchdog escalation on ops-flags #17895 at 11:38Z, relayed by the outgoing manager: backend:kaggle_cpu idle 287 min with 1 runnable (dispatch tried), run https://github.com/benbaichmankass/JTA-Trader/actions/runs/42019691517. Same escalation: queue runnable 10 < floor 25; under STOP-GENERATED-AUTHORING (2026-11-01) the floor is a diagnostic only, not an authoring trigger. Prior art: Kaggle CPU auth fix #22550, rows KAGGLE-CPU-ROUTE / KAGGLE-CPU-7B6F27-STUCK. TASK: read the dispatcher run log, find why the one runnable unit does not place on kaggle_cpu (auth, quota, routing, or unit state), fix in tier, observe one dispatcher-fired kaggle_cpu run. Done when: a dispatched kaggle_cpu run lands a result, or the unit is re-routed or retired with a reason.",
+  "due_by": "2026-11-06",
+  "roadmap": [
+    "M25",
+    "L-OPS"
+  ],
+  "priority_rank": 3,
+  "updated_at": "2026-11-05T14:06:42Z",
+  "updated_by": "session_01AFoLuLmhUKeUzHC6CHz2uP",
+  "week_lane": "throttle",
+  "_seq": 947
+}

@@ -301,3 +301,32 @@ class TestPrArgv:
         g = next(x for x in rg.GUARDS if x["name"] == "candle-fixture-variance-guard")
         step = [s for s in g["steps"] if isinstance(s, dict)][0]
         assert "--pr-diff" in step["pr_argv"] and "--pr-diff" not in step["argv"]
+
+
+class TestRepoStateGuardsAreDiffScopedOnPrs:
+    """COMPUTE-ALLOCATION (manager, 2026-11-05): a guard that grades repository STATE (row age, receipt age) must not
+    red an unrelated PR, and must still run on the scheduled backstop / push so the red reaches the manager."""
+
+    NAMES = ("operator-owed-guard", "research-queue-dispatch-liveness")
+
+    def _real(self, name):
+        g = next(g for g in rg.GUARDS if g["name"] == name)
+        # a stand-in command so the test never reads real repo state: only the SCOPING is under test
+        steps = [dict(s, argv=FAIL) if isinstance(s, dict) else s for s in g["steps"]]
+        return dict(g, steps=[s for s in steps if isinstance(s, dict)])
+
+    def test_unrelated_pr_diff_skips_the_state_check(self):
+        for n in self.NAMES:
+            assert rg.run_guard(self._real(n), CTX, ["src/units/x.py"]) is None, n
+
+    def test_pr_touching_the_subject_still_runs_it(self):
+        subj = {"operator-owed-guard": "docs/claude/work/PIPELINE.jsonl",
+                "research-queue-dispatch-liveness": "docs/claude/work/research-queue-dispatch-receipt.json"}
+        for n in self.NAMES:
+            assert rg.run_guard(self._real(n), CTX, [subj[n]]) is not None, n
+
+    def test_scheduled_and_push_runs_always_run_it(self):
+        for n in self.NAMES:
+            for ev in ("schedule", "push", "workflow_dispatch"):
+                ctx = dict(CTX, event_name=ev)
+                assert rg.run_guard(self._real(n), ctx, [], no_diff_scope=True) is not None, (n, ev)

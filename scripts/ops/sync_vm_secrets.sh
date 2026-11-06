@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # sync_vm_secrets.sh — propagate Actions-secret values to the live VM's .env
-# and restart the trader/web-api so the new values are in process env.
+# and restart the units that read them (the trader only when a key it reads
+# changed; see WEB_API_ONLY_KEYS) so the new values are in process env.
 #
 # Called by .github/workflows/sync-vm-secrets.yml via SSH. Replaces the
 # per-account rotate_account_keys.sh.
@@ -176,7 +177,43 @@ done
 
 echo ">>> Sync verified — ${total} secret(s) processed, .env changed=${changed}"
 
-# ── Restart services (only when .env changed) ────────────────────────────────
+# ── Restart services (only when .env changed, and only the units that read it) ──
+#
+# WEB_API_ONLY_KEYS: secrets that ONLY ict-web-api reads. A sync whose changed keys
+# all sit in this list restarts the web API alone and leaves the trader running.
+# Found 2026-11-05: the WORK_STORE_TOKEN rotation (read only by
+# src/web/api/routers/work_items.py) restarted ict-trader-live at 09:30:46Z with
+# "cause: unknown", and the next tick breached the 60 s exit-eval restart gap.
+# Adding a key here is a reviewed one-line edit: check that no trader-side code reads
+# it first (grep src/ outside src/web/).
+WEB_API_ONLY_KEYS="WORK_STORE_TOKEN"
+
+# Echo the NAMES (never values) of the given keys whose line differs between
+# backup ($1) and env file ($2).
+_changed_names() {
+  local backup="$1" envf="$2" out="" n
+  shift 2
+  for n in "$@"; do
+    if [ "$(grep -m1 "^${n}=" "${backup}" || true)" != "$(grep -m1 "^${n}=" "${envf}" || true)" ]; then
+      out="${out} ${n}"
+    fi
+  done
+  echo "${out# }"
+}
+
+# Echo "web-api" when every changed name is web-api-only, else "trader+web-api".
+# An empty change list is "trader+web-api" (the safe default: never under-restart).
+_restart_scope() {
+  local n
+  [ -z "$*" ] && { echo "trader+web-api"; return; }
+  for n in "$@"; do
+    case " ${WEB_API_ONLY_KEYS} " in
+      *" ${n} "*) ;;
+      *) echo "trader+web-api"; return ;;
+    esac
+  done
+  echo "web-api"
+}
 
 if [ "${changed}" -eq 0 ]; then
   echo ">>> Skipping restart — .env unchanged."
@@ -184,16 +221,31 @@ if [ "${changed}" -eq 0 ]; then
   exit 0
 fi
 
-echo ">>> Restarting ict-trader-live ..."
-clear_trader_stop_marker "sync-vm-secrets"  # an explicit restart releases the stop_bot.sh git-sync hold
-sudo systemctl restart ict-trader-live
-sleep 3
-if ! systemctl is-active --quiet ict-trader-live; then
-  echo "ERROR: ict-trader-live failed to start after secret sync." >&2
-  systemctl status ict-trader-live --no-pager -l >&2 || true
-  exit 1
+# shellcheck disable=SC2086
+changed_names="$(_changed_names "${BACKUP}" "${ENV_FILE}" ${SYNC_REQUIRED} ${SYNC_OPTIONAL})"
+# shellcheck disable=SC2086
+scope="$(_restart_scope ${changed_names})"
+echo ">>> Changed keys: ${changed_names:-(could not attribute)} -> restart scope: ${scope}"
+
+if [ "${scope}" = "trader+web-api" ]; then
+  # TELEGRAM-RESTART-MSG: name WHY the trader restarted (src/runtime/restart_cause.py
+  # reads + consumes this). Key NAMES only, never values. Best-effort.
+  printf '{"cause": "manual", "by": "sync-vm-secrets (changed: %s)", "at": %s}\n' \
+      "${changed_names:-unattributed}" "$(date +%s)" \
+      > "${REPO_DIR}/runtime_logs/trader_restart_intent.json" 2>&- || true
+  echo ">>> Restarting ict-trader-live ..."
+  clear_trader_stop_marker "sync-vm-secrets"  # an explicit restart releases the stop_bot.sh git-sync hold
+  sudo systemctl restart ict-trader-live
+  sleep 3
+  if ! systemctl is-active --quiet ict-trader-live; then
+    echo "ERROR: ict-trader-live failed to start after secret sync." >&2
+    systemctl status ict-trader-live --no-pager -l >&2 || true
+    exit 1
+  fi
+  echo ">>> ict-trader-live: $(systemctl is-active ict-trader-live)"
+else
+  echo ">>> ict-trader-live: NOT restarted (only web-api-only keys changed)"
 fi
-echo ">>> ict-trader-live: $(systemctl is-active ict-trader-live)"
 
 echo ">>> Restarting ict-web-api ..."
 sudo systemctl restart ict-web-api

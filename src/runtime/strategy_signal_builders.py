@@ -6514,6 +6514,18 @@ def _ml_entry_reference_frames(symbols: list, bar_open_iso: str, exchange: Any, 
     return frames
 
 
+def _ml_entry_decision_line(symbol: str, bars: Any, reason: Any = None, side: Any = None) -> str:
+    """The one INFO line per symbol per ml_entry closed-bar decision (observability only, no behaviour): symbol, bars available,
+    outcome = evaluated (a package) | no_signal (below_tau) | no_decision_bar | refused: <reason>. Row ML-ENTRY-SERVE-FIXES: the
+    journal used to say only 'returned no actionable signal', so 'refused insufficient_bars' could not be told from 'no signal'."""
+    if reason is None:
+        outcome = f"evaluated side={side}"
+    else:
+        r = str(reason)
+        outcome = "no_signal" if r.startswith("below_tau") else "no_decision_bar" if r == "not_a_decision_bar" else f"refused: {r}"
+    return f"ml_entry_decision symbol={symbol} bars={bars} outcome={outcome}"
+
+
 def ml_entry_signal_builder(settings: dict) -> Dict[str, Any]:
     """ml_entry: one pooled model decides LONG / SHORT / NOTHING per traded symbol at every 4th closed 1h bar.
 
@@ -6522,6 +6534,7 @@ def ml_entry_signal_builder(settings: dict) -> Dict[str, Any]:
     from src.units.strategies import load_strategy_config
     from src.units.strategies.ml_entry import NAME, load_model, order_package
     from src.runtime.market_data import fetch_candles
+    from src.config.symbol_sets import leg_symbols
 
     try:
         strategies_cfg = load_strategy_config()
@@ -6530,7 +6543,8 @@ def ml_entry_signal_builder(settings: dict) -> Dict[str, Any]:
     vcfg = dict(strategies_cfg.get(NAME, {}) or {})
     vcfg.setdefault("decision_bar", "closed")
     symbol = str(settings.get("SYMBOL", settings.get("symbol", "")) or "")
-    syms = [str(s) for s in (vcfg.get("symbols") or [])]
+    # The leg's union, after its per-symbol pass record (src/config/ml_universe.py); no record = symbols: verbatim.
+    syms = [str(s) for s in leg_symbols(vcfg, None, leg=NAME)]
     if not bool(vcfg.get("enabled", False)) or (syms and symbol not in syms):
         return _with_signal_package(NAME, {"symbol": symbol, "side": "none",
                                            "meta": {"strategy_name": NAME, "reason": "disabled_or_out_of_scope"}})
@@ -6564,7 +6578,7 @@ def ml_entry_signal_builder(settings: dict) -> Dict[str, Any]:
         # Per-account profile (row ML-ENTRY-ALL-ACCOUNTS, src/runtime/ml_entry_profile.py): reference source, anchor,
         # sides, session and cost basis from strategies.yaml::ml_entry.account_profiles; none declared = defaults.
         from src.runtime import ml_entry_profile as _PR
-        prof = _PR.resolve(vcfg, symbol)
+        prof = _PR.resolve(vcfg, symbol, NAME)
         cfg["_profile"] = prof
         if venue != "bybit" and prof["declared"]:
             cfg["_candle_venue"] = venue  # the moving-TP check-in reads the own frame from this venue (else Bybit)
@@ -6573,6 +6587,7 @@ def ml_entry_signal_builder(settings: dict) -> Dict[str, Any]:
         pkg = order_package(cfg, candles_df=df, reference_frames=refs, model=model)
     except ValueError as exc:
         _record_closed_decision(key, frame, timeframe, vcfg, _now)
+        logger.info(_ml_entry_decision_line(symbol, len(df), reason=exc))
         try:
             log_signal({"event": f"{NAME}_eval", "strategy": NAME, "symbol": symbol, "timeframe": timeframe,
                         "side": "none", "reason": str(exc)})
@@ -6582,6 +6597,7 @@ def ml_entry_signal_builder(settings: dict) -> Dict[str, Any]:
                                            "meta": {"strategy_name": NAME, "reason": str(exc)}})
     _record_closed_decision(key, frame, timeframe, vcfg, _now)
     side = "buy" if pkg["direction"] == "long" else "sell"
+    logger.info(_ml_entry_decision_line(symbol, len(df), side=pkg["direction"]))
     try:
         log_signal({"event": f"{NAME}_eval", "strategy": NAME, "symbol": symbol, "timeframe": timeframe,
                     "side": side, "entry": pkg["entry"], "stop_loss": pkg["sl"], "take_profit": pkg["tp"],

@@ -1,0 +1,91 @@
+{
+  "leg": "ml_entry",
+  "purpose": "full-history per-trade corpus for the live-trade-review outcome table (scripts/research/live_review_outcomes.py --corpus auto); NOT a promotion-evidence record (the Stage-0 gate reads comms/strategy_evidence/ml_entry.json)",
+  "produced_by": "committed Stage-0 per-trade ledger docs/research/ml-entry-prop-gate-2026-11-02/ledgers/ml_entry_5sym.jsonl (pooled leg; net_r = the harness's net_r_evidence, cost legs split from it by build_ltr_corpus.from_ledger)",
+  "builder": "scripts/research/build_ltr_corpus.py (mode ledger)",
+  "source_file": "docs/research/ml-entry-prop-gate-2026-11-02/ledgers/ml_entry_5sym.jsonl",
+  "decision_bar": "closed",
+  "data_start": "2025-10-01 04:00:00+00:00",
+  "data_end": "2026-09-29 14:00:00+00:00",
+  "n_trades": 907,
+  "net_total_r": 24.6069,
+  "fee_bps_roundtrip": 11.0,
+  "slippage_bps_roundtrip": 3.0,
+  "funding_bps_per_window": 1.0,
+  "params": {
+    "timeframe": "1h",
+    "structure_exit": "pivot=5;sl_only",
+    "decision_bar": "closed",
+    "symbols": [
+      "BTCUSDT",
+      "ETHUSDT",
+      "XRPUSDT",
+      "ADAUSDT",
+      "SOLUSDT",
+      "SPY",
+      "QQQ",
+      "IWM",
+      "TLT",
+      "IEF",
+      "SLV",
+      "USO",
+      "GDX",
+      "TQQQ",
+      "QLD",
+      "SPYM",
+      "IAUM",
+      "SCHA"
+    ],
+    "account_symbols": {
+      "bybit_2": [
+        "BTCUSDT",
+        "ETHUSDT",
+        "XRPUSDT",
+        "ADAUSDT",
+        "SOLUSDT"
+      ],
+      "bybit_portfolio": [
+        "BTCUSDT",
+        "ETHUSDT",
+        "XRPUSDT",
+        "ADAUSDT",
+        "SOLUSDT"
+      ],
+      "alpaca_paper": [
+        "SPY",
+        "QQQ",
+        "IWM",
+        "TLT",
+        "IEF",
+        "SLV",
+        "USO",
+        "GDX",
+        "TQQQ",
+        "QLD",
+        "SPYM",
+        "IAUM",
+        "SCHA"
+      ]
+    },
+    "atr_period": 14,
+    "atr_stop_mult": 2.0,
+    "tp_r": 1.5,
+    "tp_revision": {
+      "rule": "ml_first_passage",
+      "extend_only": true
+    },
+    "min_reference_symbols": 40
+  },
+  "config_fingerprint": "sha256:97d57efa98282fb4d3f27cccee731e39",
+  "trades_sha256": "a5a1ade8b20c4d234101b7b7f4087c002852998c4ff32dd215129aaa815cf2a2",
+  "staleness": "regenerate when the leg's declared params or decision_bar change (config_fingerprint no longer matches comms/strategy_evidence/ml_entry.json) or when the cost stack moves",
+  "symbols": [
+    "ADAUSDT",
+    "BTCUSDT",
+    "ETHUSDT",
+    "SOLUSDT",
+    "XRPUSDT"
+  ],
+  "candles": "per symbol: live_review_outcomes.find_candles(<symbol>, '1h', widest_span=True), else venue_candles",
+  "note": "ml_entry pooled Stage-0 held-out ledger (2025-10-01..2026-09-30, the 5 bybit_2 symbols; c692-06 population, extend-only TP arm = arm A of RQ-20261103-5e04-01, which reproduces the record's 0.0271). The committed record's current arm F adds the structure SL (pivot=5, mean 0.0371 over the same 907 decisions); this corpus does NOT model that SL, so HOLD here is the extend-only exit. Row ML-ENTRY-LTR-OUTCOME-TABLE."
+}

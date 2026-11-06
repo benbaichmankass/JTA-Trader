@@ -217,12 +217,9 @@ ER: frozenset[str] = frozenset({DIM_ENTRY, DIM_REVISION})
 E: frozenset[str] = frozenset({DIM_ENTRY})  # entry_tp only: a tp_revision rule is declared and plumbed
 BASELINE_2026_10_06: dict[str, frozenset[str]] = {
     # ── real_money ──────────────────────────────────────────────────────────
-    "alpaca_portfolio/gld_pullback_1d": R,  # 2026-11-01 mirror superset (operator): the underlying of alpaca_live/iaum_pullback_1d, same params, same debt, not new: tp_r 3.5 declared, tp_revision still undeclared
-    "alpaca_live/iaum_pullback_1d": R,  # 2026-10-22 tp_r 3.5 declared (OPERATOR-DECISIONS-1022); tp_revision still undeclared
     "bybit_2/ada_pullback_2h": R,
     "bybit_2/trend_donchian_eth_4h": E,  # 2026-10-18 tp_revision declared (TIER3-PACKETS-1018); entry_tp still the 50 R sentinel
     "bybit_2/trend_donchian_xrp_4h": R,
-    "bybit_2/xrp_pullback_2h": R,
     # 2026-10-15 PROMOTE-PROP-LEGS (Tier-3, operator pre-authorized): trend_donchian_sol_prop is
     # promoted with the SAME exit recipe it runs on the prop books (declared 6 R target, TP-REACH-FLOOR
     # fail), so it inherits the breakout_2 / bybit_1 debt line verbatim. A visible, deliberate line on a
@@ -242,20 +239,18 @@ BASELINE_2026_10_06: dict[str, frozenset[str]] = {
     # always there; this line now names it.
     # 2026-10-29 (Tier-3, operator): trend_donchian_sol_prop pulled from breakout_2/tradeify_1/velotrade_1
     # (V2 prop gate, PR #21204), so its three debt lines are removed with the roster.
-    "breakout_2/trend_donchian_eth_prop": ER,
-    "tradeify_1/trend_donchian_eth_prop": ER,
+    # 2026-11-05 (Tier-3, operator, row PROP-PULL-ETHPROP): trend_donchian_eth_prop pulled from the same three
+    # prop rosters (RQ-20261031-422a-01 FAIL), so its three debt lines are removed with the roster too.
     # velotrade_1 was rostered by #16705 (VELOTRADE-GOLIVE, Tier-3 HELD) on
     # 2026-10-06, hours before this guard existed, so its two routings are
     # day-one debt of the same class as tradeify_1's -- not a roster change
     # made against the doctrine. This guard named them itself on its first CI
     # run against main at 233c9c28 (PR #16739), which is the positive control
     # for the NEW-routing branch.
-    "velotrade_1/trend_donchian_eth_prop": ER,   # R -> ER 2026-10-15, TP-REACH-FLOOR (above)
     # ── mirror (paper_role: portfolio) ──────────────────────────────────────
     "bybit_portfolio/ada_pullback_2h": R,
     "bybit_portfolio/trend_donchian_eth_4h": E,  # 2026-10-18 tp_revision declared (TIER3-PACKETS-1018); entry_tp still the 50 R sentinel
     "bybit_portfolio/trend_donchian_xrp_4h": R,
-    "bybit_portfolio/xrp_pullback_2h": R,
     "bybit_portfolio/trend_donchian_sol_prop": ER,   # mirrors bybit_2 (PROMOTE-PROP-LEGS, above)
     # ── paper ───────────────────────────────────────────────────────────────
     "alpaca_options_paper/gdx_pullback_1d": R,  # 2026-10-22 tp_r 3.5 declared (OPERATOR-DECISIONS-1022); tp_revision still undeclared
@@ -276,7 +271,6 @@ BASELINE_2026_10_06: dict[str, frozenset[str]] = {
     # 2026-10-15 PROP-GATE-PARITY: the two prop legs enter the Stage-1 soak on bybit_1 with the
     # SAME exit recipe they run on the prop books (declared 6 R target, TP-REACH-FLOOR fail), so
     # they inherit the breakout_2 debt lines above verbatim. A visible, deliberate line.
-    "alpaca_paper/iaum_pullback_1d": R,  # 2026-10-22 tp_r 3.5 declared (OPERATOR-DECISIONS-1022); tp_revision still undeclared
     "bybit_1/trend_donchian_1h": ER,
     "bybit_1/trend_donchian_eth_prop": ER,
     # 2026-10-22 OPERATOR-DECISIONS-1022: the incumbent leaves bybit_1 for its soak alias (same tp_r 3,
@@ -332,7 +326,6 @@ BASELINE_2026_10_06: dict[str, frozenset[str]] = {
     # live_review_apply move_tp, and this scan reads neither. Both lines leave together when it does.
     "alpaca_paper/claude_desk": ER,
     "ib_paper/claude_desk": ER,
-    "ib_paper/gld_pullback_1d": R,  # moved from alpaca_paper 2026-10-25 (GLD-SOAK-REPLACE); same debt, not new: tp_r 3.5 declared (OPERATOR-DECISIONS-1022), tp_revision still undeclared
     "ib_paper/ict_scalp_mgc_15m": R,
     "ib_paper/iwm_trend_long_1d": R,
     "ib_paper/mes_trend_long_1d": ER,
@@ -342,6 +335,18 @@ BASELINE_2026_10_06: dict[str, frozenset[str]] = {
     "ib_paper/qqq_trend_long_1d": R,
     "ib_paper/spy_trend_long_1d": R,
     "ib_paper/tlt_pullback_1d": R,  # 2026-10-22 tp_r 3.5 declared (OPERATOR-DECISIONS-1022); tp_revision still undeclared
+    # ── prop BASELINE (operator 2026-11-05) ─────────────────────────────────
+    # Operator popups, verbatim: ~18:55Z "Baseline at min size (Rec.)"; ~20:50Z "Proceed, I'll approve (Rec.)";
+    # ~21:05Z "Both now, waive both" (option text: "Add both legs today: 6 take-profit exception lines, plus
+    # extend your baseline exception to sol_4h's approximate evidence."). The ETH/SOL 4h trend legs exit by
+    # trail; on breakout_2/tradeify_1 the prop ticket path has no TP-revision plumbing (path=absent), on
+    # velotrade_1 it is plumbed. Same exit recipe as bybit_2/eth_4h (E) and bybit_1/sol_4h (ER). Record: ML-PROP-ITERATE.
+    "breakout_2/trend_donchian_eth_4h": ER,
+    "breakout_2/trend_donchian_sol_4h": ER,
+    "tradeify_1/trend_donchian_eth_4h": ER,
+    "tradeify_1/trend_donchian_sol_4h": ER,
+    "velotrade_1/trend_donchian_eth_4h": E,
+    "velotrade_1/trend_donchian_sol_4h": ER,
 }
 
 

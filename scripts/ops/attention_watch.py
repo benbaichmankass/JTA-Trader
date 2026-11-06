@@ -1174,6 +1174,198 @@ def run(dry_run: bool = False, digest_now: bool = False) -> int:
 
 
 # ── self-test ────────────────────────────────────────────────────────────────
+# ── ALERT-LEDGER-TO-MANAGER: the alert_watch pass (design: docs/audits/2026-11-04-system-integration.md) ──
+# Runs on the VM every 5 min inside ict-work-digest (work_digest_now.main), BEFORE the hourly digest's own
+# _cadence_gate. Reads the alert ledger (src/runtime/alerts_ledger.py) and posts ONE compact comment
+# (<= ALERT_COMMENT_MAX chars) per burst on the ops-flags PR the manager subscribes to. It then compacts old,
+# oversized LTR wake comments. Never a gate: every failure is a receipt state and the digest still runs.
+ALERT_PR = 17895
+ALERT_COMMENT_MAX = 1500
+ALERT_KIND_COOLDOWN_MIN = 30     # at most one comment per kind per 30 min (a held kind keeps its rows and rides the next one)
+ALERT_FIRST_LOOKBACK_MIN = 15    # first run ever: look back this far, never replay the ledger's whole history
+ALERT_LINES_MAX = 6
+ALERT_STATE = REPO_ROOT / "runtime_logs" / "alert_watch_state.json"
+ALERT_RECEIPT = REPO_ROOT / "runtime_logs" / "alert_watch_receipt.json"
+ALERT_API_BASE = "https://ict-bot.duckdns.org"
+LTR_COMPACT_MIN_AGE_H = 6        # a wake older than this has had its lane dispatched; the packet stays on live-review/rows
+LTR_COMPACT_MAX_EDITS = 5
+LTR_COMPACT_MARK = "<!-- ltr-compact -->"
+RAW_REPO = "benbaichmankass/JTA-Trader"
+
+
+def _iso(dt: datetime) -> str:
+    return dt.astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+
+def _row_dt(r: dict) -> datetime | None:
+    try:
+        dt = datetime.fromisoformat(str(r.get("ts")).replace("Z", "+00:00"))
+    except (ValueError, TypeError):
+        return None
+    return dt if dt.tzinfo else dt.replace(tzinfo=timezone.utc)
+
+
+def plan_alert_comment(rows: list[dict], state: dict, now: datetime) -> tuple[str | None, dict, dict]:
+    """Pure. ``(comment body | None, new_state, summary)``.
+
+    A row is pending for its kind when it is newer than that kind's cursor. Wake rule:
+    ``alerts_ledger.wakes_manager``. A kind that posted inside ALERT_KIND_COOLDOWN_MIN is HELD (its rows stay
+    pending and ride the next comment, with their count). Rows sharing a ``dedup_key`` collapse to one line.
+    All kinds eligible in this pass go in ONE comment."""
+    from src.runtime import alerts_ledger  # noqa: PLC0415
+    kinds = dict(state.get("kinds") or {})
+    floor = now - timedelta(minutes=ALERT_FIRST_LOOKBACK_MIN)
+    pending: dict[str, list[tuple[datetime, dict]]] = {}
+    for r in rows:
+        dt = _row_dt(r)
+        if dt is None or not alerts_ledger.wakes_manager(r):
+            continue
+        k = str(r.get("kind"))
+        cur = kinds.get(k, {}).get("cursor")
+        cur_dt = _row_dt({"ts": cur}) if cur else floor
+        if dt > (cur_dt or floor):
+            pending.setdefault(k, []).append((dt, r))
+    held, eligible = [], {}
+    for k, items in pending.items():
+        last = _row_dt({"ts": kinds.get(k, {}).get("last_posted_at")}) if kinds.get(k, {}).get("last_posted_at") else None
+        if last and (now - last) < timedelta(minutes=ALERT_KIND_COOLDOWN_MIN):
+            held.append(k)
+        else:
+            eligible[k] = items
+    summary = {"pending_kinds": sorted(pending), "held_kinds": sorted(held), "posted_kinds": sorted(eligible)}
+    if not eligible:
+        return None, state, summary
+    allrows = sorted((x for items in eligible.values() for x in items), key=lambda t: t[0])
+    first, last_dt = allrows[0][0], allrows[-1][0]
+    by_key: dict[str, list[tuple[datetime, dict]]] = {}
+    for dt, r in allrows:
+        by_key.setdefault(str(r.get("dedup_key") or r.get("kind")), []).append((dt, r))
+    head = (f"ALERT ×{len(allrows)} " + " · ".join(f"{k}×{len(v)}" for k, v in sorted(eligible.items()))
+            + f" · {first.strftime('%H:%M')}–{last_dt.strftime('%H:%M')}Z")
+    lines = []
+    for items in sorted(by_key.values(), key=lambda v: v[0][0])[:ALERT_LINES_MAX]:
+        r = items[-1][1]
+        first_line = next((ln.strip() for ln in str(r.get("body") or "").splitlines() if ln.strip()), "")
+        lines.append(f"- `{r.get('kind')}` {r.get('channel')}/{r.get('priority')} "
+                     f"{'×' + str(len(items)) + ' ' if len(items) > 1 else ''}{_short(first_line, 110)}"
+                     f" ({r.get('delivered')})")
+    more = len(by_key) - ALERT_LINES_MAX
+    if more > 0:
+        lines.append(f"- … +{more} more distinct")
+    link = f"{ALERT_API_BASE}/api/bot/alerts?since={_iso(first - timedelta(seconds=1))}"
+    marker = "<!-- alert-watch " + json.dumps({"at": _iso(now), "kinds": sorted(eligible), "n": len(allrows)},
+                                              separators=(",", ":")) + " -->"
+    body = "\n".join([head, *lines, f"→ {link}", marker])
+    if len(body) > ALERT_COMMENT_MAX:   # drop detail lines, never the head, link or marker
+        while len(body) > ALERT_COMMENT_MAX and lines:
+            lines.pop()
+            body = "\n".join([head, *lines, f"→ {link}", marker])
+        body = body[:ALERT_COMMENT_MAX]
+    new = {"kinds": {**kinds}}
+    for k, items in eligible.items():
+        new["kinds"][k] = {"cursor": max(dt for dt, _ in items).isoformat(), "last_posted_at": _iso(now)}
+    return body, new, summary
+
+
+def _alert_github() -> tuple[Any, Any, Any]:
+    """(auth header, http fn, API base, repo) from the live-review VM poster; auth None = no credential."""
+    from src.runtime import live_review_wake_post as w  # noqa: PLC0415
+    return w.read_auth_header(), w._http, w.API
+
+
+def compact_ltr_body(body: str) -> str | None:
+    """Pure. The compact form of an LTR wake comment: every ``<details>`` packet block becomes a one-line link to the
+    committed table on live-review/rows; the hidden ``<!-- ltr-wake {...} -->`` marker (the poller's dedupe state) is kept
+    byte-for-byte. None when there is nothing to compact."""
+    import re  # noqa: PLC0415
+    if LTR_COMPACT_MARK in body or "<!-- ltr-wake " not in body or "<details>" not in body:
+        return None
+
+    def link(m: "re.Match[str]") -> str:
+        tp = re.search(r'"table_path":"([^"]+)"', m.group(0))
+        pk = re.search(r"<!-- ltr-packet (\S+) -->", m.group(0))
+        where = (f"https://github.com/{RAW_REPO}/blob/live-review/rows/{tp.group(1)}" if tp else
+                 f"https://github.com/{RAW_REPO}/tree/live-review/rows/comms/live_review")
+        return f"📎 packet `{pk.group(1) if pk else '?'}` (compacted, on live-review/rows): {where}"
+
+    out = re.sub(r"<details>.*?</details>", link, body, flags=re.S)
+    return None if out == body else out.rstrip() + "\n\n" + LTR_COMPACT_MARK
+
+
+def compact_ltr_comments(auth: str, http: Any, api: str, now: datetime) -> dict:
+    """PATCH old oversized LTR wake comments to the compact form (bounded per pass). Never raises."""
+    out = {"scanned": 0, "compacted": 0, "failed": 0}
+    since = _iso(now - timedelta(days=3))
+    code, data = http("GET", f"{api}/repos/{RAW_REPO}/issues/{ALERT_PR}/comments?per_page=100&since={since}", None, auth)
+    if code != 200 or not isinstance(data, list):
+        return {**out, "read_state": "could_not_look", "http_code": code}
+    for c in data:
+        out["scanned"] += 1
+        if out["compacted"] + out["failed"] >= LTR_COMPACT_MAX_EDITS:
+            break
+        body = str(c.get("body") or "")
+        try:
+            created = datetime.fromisoformat(str(c.get("created_at")).replace("Z", "+00:00"))
+        except (ValueError, TypeError):
+            continue
+        if len(body) <= ALERT_COMMENT_MAX or (now - created) < timedelta(hours=LTR_COMPACT_MIN_AGE_H):
+            continue
+        new = compact_ltr_body(body)
+        if new is None:
+            continue
+        code, _ = http("PATCH", f"{api}/repos/{RAW_REPO}/issues/comments/{c.get('id')}",
+                       json.dumps({"body": new}).encode(), auth)
+        out["compacted" if code == 200 else "failed"] += 1
+    return {**out, "read_state": "read"}
+
+
+def alert_watch(now: datetime | None = None, *, dry_run: bool = False, rows_override: dict | None = None,
+                github: Any = None) -> dict:
+    """One pass. Writes ``runtime_logs/alert_watch_receipt.json``; returns the receipt. NEVER raises, never gates."""
+    now = now or _now()
+    rec: dict = {"at": _iso(now), "state": "nothing_new"}
+    try:
+        from src.runtime import alerts_ledger  # noqa: PLC0415
+        led = rows_override if rows_override is not None else alerts_ledger.read(f"{ALERT_FIRST_LOOKBACK_MIN + 60}m", limit=2000)
+        rec["ledger_read_state"] = led.get("read_state")
+        if led.get("read_state") == "could_not_look":
+            rec.update(state="could_not_look", reason=led.get("reason"))   # NOT "no alerts"
+        elif led.get("read_state") == "absent":
+            rec.update(state="ledger_absent")
+        else:
+            state = _read_json(ALERT_STATE)
+            body, new_state, summary = plan_alert_comment(led.get("rows") or [], state, now)
+            rec.update(summary)
+            if body is not None:
+                auth, http, api = github or _alert_github()
+                if dry_run:
+                    rec.update(state="dry_run", body=body)
+                elif not auth:
+                    rec.update(state="no_credential", reason="no GitHub extraheader on this host — comment not posted; rows stay pending")
+                else:
+                    code, _ = http("POST", f"{api}/repos/{RAW_REPO}/issues/{ALERT_PR}/comments",
+                                   json.dumps({"body": body}).encode(), auth)
+                    if code == 201:
+                        _write_json(ALERT_STATE, new_state)    # cursor advances ONLY after a confirmed post
+                        rec.update(state="posted", http_code=code, chars=len(body))
+                    else:
+                        rec.update(state="could_not_post", http_code=code)
+            elif summary["held_kinds"]:
+                rec.update(state="held_cooldown")
+        if not dry_run:
+            auth, http, api = github or _alert_github()
+            if auth:
+                rec["ltr_compact"] = compact_ltr_comments(auth, http, api, now)
+    except Exception as exc:  # noqa: BLE001 — the alert pass must never fail the digest unit
+        rec.update(state="error", reason=f"{type(exc).__name__}: {exc}")
+    try:
+        _write_json(ALERT_RECEIPT, rec)
+    except Exception:  # noqa: BLE001
+        pass
+    print(f"alert-watch: {rec['state']}" + (f" ({rec.get('reason')})" if rec.get("reason") else ""))
+    return rec
+
+
 def _self_test() -> int:
     ok = True
 
@@ -1318,9 +1510,13 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--dry-run", action="store_true")
     ap.add_argument("--digest-now", action="store_true")
     ap.add_argument("--self-test", action="store_true")
+    ap.add_argument("--alerts-only", action="store_true", help="run only the alert_watch pass")
     a = ap.parse_args(argv)
     if a.self_test:
         return _self_test()
+    if a.alerts_only:
+        alert_watch(dry_run=a.dry_run)
+        return 0
     return run(dry_run=a.dry_run, digest_now=a.digest_now)
 
 

@@ -1,0 +1,17 @@
+{
+  "due_when": {
+    "check_every_days": 7,
+    "clears_when": "a lane records the hold-to-bracket mean net R of the non-pool trades by era (pre-2022 / 2022-01..2025-09 / 2025-10+) from comms/research/RQ-20261105-c692-13/<run>/measurement.json and confirms or refutes the date-identification explanation (a refit of ENTRY without btc_ret24, btc_vol24, breadth_up24, hour, dow should collapse the +0.51 hold mean)",
+    "kind": "observation"
+  },
+  "id": "PI-20261105-GEXSLEAK-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "lane ML-MANAGE-HARNESS, Manager Session 2026-11-05b",
+    "rerun": "python3 -c \"import json;m=json.load(open('comms/research/RQ-20261105-c692-13/42082018974/measurement.json'));print(m['heldout']['hold']['mean_net_r'],m['heldout']['eras'])\""
+  },
+  "roadmap": "L-ML-LIVE",
+  "state": "queued",
+  "what": "A CROSS-SECTIONAL holdout whose DATES overlap the training dates is NOT a clean read of ENTRY: on the 100 non-pool perps (RQ-20261105-c692-13/-14, runs 42082018974/42082025662) the hold-to-bracket arm of the frozen-ENTRY trades shows a mean net R of +0.513 per trade (win rate ~62%) vs +0.014 on the 53 pool symbols' 2025-10..2026-09 held-out (win ~43%). That is not edge: ENTRY features include market-wide columns (btc_ret24, btc_vol24, breadth_up24, hour, dow) that identify the date, so a model fitted on the pool's outcomes on the same dates effectively knows the regime. The MANAGE paired deltas are less exposed (both arms see the same trades) but their trades are the in-regime selection. Any future cross-sectional ML confirm must be DISJOINT IN TIME (symbols outside the pool AND dates after the training cutoff, e.g. non-pool symbols over 2025-10+ only, where the c692-13/-14 era deltas were -0.0003 / +0.0002 on 161 / 2,094 acted trades: no signal) or must refit ENTRY without the market-wide date-identifying columns. Also check whether any other ENTRY-family non-pool read (c692-04 universe arms) carries the same inflation."
+}

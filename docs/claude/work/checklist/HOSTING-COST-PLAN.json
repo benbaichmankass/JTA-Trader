@@ -1,0 +1,26 @@
+{
+  "id": "HOSTING-COST-PLAN",
+  "title": "HOSTING-COST-PLAN: can the system be unified on one host for $10-15/mo? Recommendation: NO; keep 3 OCI VMs, fix ceilings for $6.50-$15.50/mo",
+  "phase": "research",
+  "state": "done",
+  "owner": "manager",
+  "lane": null,
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [],
+  "blocked_on": [],
+  "note": "2026-11-05 lane HOSTING-COST-PLAN: docs/research/hosting-cost-plan-2026-11-05.md. RECOMMEND: no unification (all 3 hosts CPU p95 ~100%; gateway must stay isolated; live trader stays). Steps: (1) resize in free pool gateway 6->3GB, trainer 6->9GB $0; (2) lake: wait for HF-LAKE-SQUASH size, <~90GB stay free else HF PRO $9; (3) trainer +1 OCPU $6.50. Total $6.50-$15.50/mo (E). GPU not binding (Kaggle <=2h/wk of 30). Today bill probably $0: Oracle price list free 3000 OCPU-h/18000 GB-h vs Always Free page 1500/9000 (would be ~$27) - U until billing console read. Operator decision: approve $6.50 overage and, if needed, HF PRO $9. Also flagged: gateway disk 100% on 2026-11-02, 94% now. Closes when operator decides. CLOSED 2026-11-05 ~14:35Z by Manager Session 2026-11-05b on the operator decision (chat, verbatim excerpt: \"I don't pay anything right now for that ... we just need to find other free\"): paid options ($6.50/mo OCI OCPU, $9/mo HF PRO) DECLINED. Free-only follow-through lives on FREE-CAPACITY-PLAN (week_lane throttle).",
+  "due_by": "2026-11-07",
+  "roadmap": [
+    "M14"
+  ],
+  "updated_at": "2026-11-05T14:48:23Z",
+  "updated_by": "session_01AFoLuLmhUKeUzHC6CHz2uP",
+  "writeback": {
+    "roadmap": "none: an operator decision / research record, no milestone line changed",
+    "arch": "none: no architecture change"
+  },
+  "_seq": 951
+}

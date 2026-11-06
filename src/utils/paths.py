@@ -371,6 +371,37 @@ def trainer_store_db_path() -> str:
     return str(Path(repo_root()) / _TRAINER_STORE_DB_BASENAME)
 
 
+_ENV_WORK_STORE_DB = "WORK_STORE_DB"
+_WORK_STORE_DB_BASENAME = "work_store.db"
+
+
+def work_store_db_path() -> str:
+    """Return the canonical absolute path to the work-store DB (WSD-S1-STORE-API).
+
+    The ONE register (items + hash-chained events, docs/plans/WORK-STORE-DESIGN-2026-11.md
+    § 2) lives in its OWN SQLite file beside the trade journal, never inside it, so a
+    register write can never lock ``trade_journal.db``.
+
+    Resolution:
+      1. ``WORK_STORE_DB`` env -- exact path.
+      2. ``$DATA_DIR/work_store.db`` -- the umbrella data root.
+      3. beside ``trade_journal_db_path()`` -- so a service that pins only
+         ``TRADE_JOURNAL_DB`` (the systemd drop-in) still lands on ``/data/bot-data``,
+         never in the git working tree that ict-git-sync manages.
+    Always absolute.
+    """
+    env = os.environ.get(_ENV_WORK_STORE_DB)
+    if env:
+        return str(Path(env).expanduser())
+    umbrella = os.environ.get(_ENV_UMBRELLA)
+    if umbrella:
+        umbrella_root = Path(umbrella).expanduser()
+        if not umbrella_root.is_absolute():
+            umbrella_root = Path(repo_root()) / umbrella_root
+        return str(umbrella_root / _WORK_STORE_DB_BASENAME)
+    return str(Path(trade_journal_db_path()).parent / _WORK_STORE_DB_BASENAME)
+
+
 def describe_roots() -> dict[str, str]:
     """Return a debug map of the resolved roots and their env source.
 

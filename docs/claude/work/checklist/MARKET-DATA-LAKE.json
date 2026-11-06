@@ -2,9 +2,9 @@
   "id": "MARKET-DATA-LAKE",
   "title": "MARKET-DATA-LAKE: pooled-ML market data lake on HF/Kaggle (all Binance UM perps + major spot, all US ETFs + liquid stocks PIT, futures/FX/macro free sources), versioned private HF dataset + manifest + streaming loader",
   "phase": "build",
-  "state": "in_flight",
+  "state": "queued",
   "owner": "manager",
-  "lane": "MARKET-DATA-LAKE",
+  "lane": null,
   "model": null,
   "ceiling_usd": 60,
   "spend_usd": null,
@@ -15,13 +15,19 @@
     22197
   ],
   "blocked_on": [],
-  "note": "[2026-11-01 15:38Z PAUSED for usage hold (manager/operator)] STOPPED AT: #22148 merged (62f93718): lake pipeline live; HF_TOKEN measured fineGrained repo.write, write test ok; private storage 0/100 GB. First backfill run 41320352867 (issue #22192) queued as an automation, row counts NOT yet read. Daily refresh 03:41Z registered in schedule_keeper (health record not yet observed). Fallbacks PR #22197 (traded bookDepth/mark/index, 1m order-flow from every trade, raw aggTrades tail on Kaggle) OPEN, held, not merged; do not start it until the hold lifts. RESUME: read MANIFEST.json/DEPTH.md/health/latest.json from hf://datasets/bentzbk/jta-market-lake + issue #22192 comment, report measured rows per path, then land #22197. 2026-11-02T05:17Z FOUND (manager): run 41387243057 reports 27 feeds/series failing for >=3 consecutive runs, all rows=0 expected_rows=0. Names show the cause class: Binance perps with non-ASCII symbols (e.g. \u54c8\u57fa\u7c73USDT, \u5e01\u5b89\u4eba\u751fUSDT, \u6211\u8e0f\u9a6c\u6765\u4e86USDT, \u725b\u6765USDT, \u9f99\u867eUSDT) and delisted symbols (MATICUSDT, TRBUSDT) across funding / 1m / metrics_5m. Likely the archive is absent or the URL is not percent-encoded for non-ASCII names. Fix on resume: percent-encode symbol paths, and exclude symbols with no archive (recorded as no_data, not failing) so the red flag means something. Not training-critical: the ML universes are ASCII majors.",
-  "updated_at": "2026-11-02T05:18:16Z",
-  "updated_by": "session_01AFoLuJ1apgy8sfngu4WyNH",
+  "note": "[2026-11-01 15:38Z PAUSED for usage hold (manager/operator)] STOPPED AT: #22148 merged (62f93718): lake pipeline live; HF_TOKEN measured fineGrained repo.write, write test ok; private storage 0/100 GB. First backfill run 41320352867 (issue #22192) queued as an automation, row counts NOT yet read. Daily refresh 03:41Z registered in schedule_keeper (health record not yet observed). Fallbacks PR #22197 (traded bookDepth/mark/index, 1m order-flow from every trade, raw aggTrades tail on Kaggle) OPEN, held, not merged; do not start it until the hold lifts. RESUME: read MANIFEST.json/DEPTH.md/health/latest.json from hf://datasets/bentzbk/jta-market-lake + issue #22192 comment, report measured rows per path, then land #22197. 2026-11-02T05:17Z FOUND (manager): run 41387243057 reports 27 feeds/series failing for >=3 consecutive runs, all rows=0 expected_rows=0. Names show the cause class: Binance perps with non-ASCII symbols (e.g. \u54c8\u57fa\u7c73USDT, \u5e01\u5b89\u4eba\u751fUSDT, \u6211\u8e0f\u9a6c\u6765\u4e86USDT, \u725b\u6765USDT, \u9f99\u867eUSDT) and delisted symbols (MATICUSDT, TRBUSDT) across funding / 1m / metrics_5m. Likely the archive is absent or the URL is not percent-encoded for non-ASCII names. Fix on resume: percent-encode symbol paths, and exclude symbols with no archive (recorded as no_data, not failing) so the red flag means something. Not training-critical: the ML universes are ASCII majors. 2026-11-05 CHECKLIST-STATE-TRUTH sweep: PRs #22142, #22148, #22197 all MERGED (2026-11-01/02); no live lane. Work remaining per the row's own RESUME: percent-encode non-ASCII symbol paths and mark no-archive symbols no_data (27 feeds failing, 2026-11-02 run 41387243057), read MANIFEST row counts.",
+  "updated_at": "2026-11-05T09:20:52Z",
+  "updated_by": "session_01AFoLuMS3KAfkdSSB4xiqmg",
   "due_by": "2026-11-05",
   "roadmap": [
     "L-DATA",
     "M14"
+  ],
+  "lane_history": [
+    {
+      "lane": "MARKET-DATA-LAKE",
+      "archived_at": "2026-11-05T09:20:52Z"
+    }
   ],
   "_seq": 877
 }

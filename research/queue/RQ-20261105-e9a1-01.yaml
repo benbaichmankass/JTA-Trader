@@ -1,0 +1,79 @@
+# Hand-authored 2026-11-05 by lane ML-ENTRY-ALL-ACCOUNTS / ML-ENTRY-EQUITY-NATIVE (Tier 1), dispatched by Manager Session 2026-11-05b.
+# DEV stage of the equity-native ENTRY model. Descriptive: iteration on the training-period walk-forward is unlimited and not claimed
+# (principles M13, #23461). The CONFIRMING read is a separate unit (RQ-20261105-e9a1-02) registered AFTER this result and BEFORE its run.
+id: RQ-20261105-e9a1-01
+title: 'ENTRY-EQUITY-NATIVE dev: purged walk-forward of a NEW LightGBM long-side net-R model trained on the 173-ETF Alpaca liquidity pool with equity-native features (no BTC / crypto-breadth), dates <= 2025-06-30 only'
+status: queued
+cadence: once
+theme: ml_health
+priority: 1
+roadmap:
+- L-ML-LIVE
+kind: experiment
+practice_precedent: 'M13 (docs/reference/trading-and-model-practice-principles.md): unlimited iteration on the training-period walk-forward; the confirming window is loaded by NO code path of this unit.'
+question: 'Operator popup 2026-11-05 ~20:50Z, verbatim: "Equity-native model (Rec.)", after the frozen crypto ENTRY v1 FAILED on this pool (RQ-20261104-a41f-01: pooled mean net R -0.0708 at n 1099; gross +0.011 R vs cost 0.082 R). Does a model trained on the equity ETF population itself, with own price/volume/volatility features, cross-sectional ranks and breadth across the pool, and market context from SPY/QQQ/IWM/TLT/VIXY, show a positive out-of-fold net R (restricted long, session-gated, SL 2 / TP 3 ATR14 / 24-bar stop, fee 0 + slippage 5 bps PROVISIONAL + regulatory 0.5 bps) on the purged expanding walk-forward folds 2023-01-01 .. 2025-06-30? Grid fixed before the run: configs A (all features), B (no market-context proxies), C (A with stronger regularisation) x tau {0.05, 0.10, 0.15, 0.20} = 12 selection draws; selection = max pooled OOF mean net R subject to >= 300 OOF trades.'
+why_this_matters: 'ML on Alpaca is the week''s top goal (ML-LIVE-FIRST). v1 has no equity edge; this is the per-category ML the operator deferred, built on equity-native features. Its confirming read is a time-disjoint window after the training end plus embargo.'
+power:
+  expected_n: 1000
+  min_detectable_effect: 0.1
+  effect_units: metric
+  sd: 1.0
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: 'DESCRIPTIVE dev stage (no pass bar). INFERRED: the v1 read took 1099 restricted-long trades over 13 months on this pool; the walk-forward OOF window is ~30 months, so several thousand OOF decisions per config/tau before the tau filter. Selection needs >= 300.'
+  feasibility:
+    source: none
+    accrual_basis: Replays Alpaca 1h RTH history 2021-01-01 .. 2025-06-30; nothing accrues.
+decision_rule:
+  id: RULE-RQ20261105-e9a1-01-ENTRY-EQUITY-DEV
+  registered_at: '2026-11-05'
+  registered_before_run: true
+  statistic: 'scripts/research/ml_entry_equity.py dev: per (config, tau) pooled OOF restricted-long mean net R, n, n_symbols, by fold, over the purged expanding walk-forward folds starting 2023-01-01, 2023-07-01, 2024-01-01, 2024-07-01, 2025-01-01 (the last tests to 2025-06-30); training rows end PURGE_DAYS=10 before each fold; selected = max pooled OOF mean net R subject to n >= 300.'
+  rule: 'Descriptive: no pass bar and no promotion consumes this unit. read_state measured means the grid ran and a selection exists (or states none qualified). The selected (config, tau, OOF mean) is what the confirming unit RQ-20261105-e9a1-02 is registered with; a selection with OOF mean <= 0 means the confirming read is NOT run on that model (dev consistency is part of the confirming rule).'
+  what_it_does_not_do: 'Reads no date after 2025-06-30 (dev_stage filters ts <= train_end before any use; self-tested). No sizing, no config change, no order.'
+  min_n: 300 OOF trades for a selection
+compute: cpu_long
+value:
+  bucket: ai_trader
+  usd_at_stake_per_month: 60
+  confidence: 0.2
+  basis: 'stand-in: the operator goal (an ML decision maker live on the Alpaca book); not a P&L measurement.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 6.0
+  est_minutes: 60
+  why_runner: Alpaca market data (read-only, paper key) + LightGBM fits; 4 vCPU / 16 GB runner.
+  basis: INFERRED - a41f-01 re-run took 25 min for 173 ETFs of 1h bars; 15 LightGBM fits on ~0.3M rows add ~15-30 min.
+run:
+  workflow: research-script-run.yml
+  command:
+  - python3
+  - scripts/research/ml_entry_equity.py
+  - dev
+  - --cache
+  - /tmp/ml_entry_equity
+  - --out
+  - '{out_dir}'
+  - --unit
+  - '{unit}'
+  - --where
+  - research-script-run
+  timeout_minutes: 180
+  inputs:
+    research_unit: RQ-20261105-e9a1-01
+ml_consumer:
+  consumer: ML-ENTRY-EQUITY-NATIVE
+  decision: which (config, tau) the confirming unit RQ-20261105-e9a1-02 is registered with, or that no equity-native config clears dev and the line stops
+  legs:
+  - iaum_pullback_1d
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- ML-ENTRY-EQUITY-NATIVE
+- ML-ENTRY-ALL-ACCOUNTS
+- RQ-20261104-a41f-01
+population: 'The registered POOL_RULE of scripts/research/ml_entry_alpaca_score.py, UNCHANGED (sha256 e9702661d1a596a0f7e84e632c0ca8b5c2743a728f02147477c003644a0858e2): active, tradable, us_equity ETFs (nasdaqtraded ETF=Y) with median daily dollar volume >= 50M USD over 2019-01-01..2020-12-31. The module refuses to run if the rule hash differs.'

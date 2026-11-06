@@ -128,6 +128,8 @@ limits:
   # RESEARCH-FLOW 2026-11-02 (manager 21:25Z): research may fire while at most 1 infra run is queued and defers at 2 or more
   # (was: defer at 1, which deferred every fire on cycle 41521258380). --max-repo-queued still bounds the whole pool.
   infra_yield_at: 2
+  # THE ONE OWNER of "which workflows are money-path ops" (B13). Any workflow reading vars.INFRA_RUNS_ON must be here
+  # (runner-admin infra-runner-* aside); no research-* workflow may read it. Report: scripts/ci/check_infra_workflows_single_owner.py
   infra_workflows:
     - system-actions
     - system-actions-cancel-guard
@@ -157,6 +159,7 @@ limits:
     - vm-net-fix
     - vm-resize-live
     - vm-web-api-recover
+    - diag-relay-sweep   # reads vars.INFRA_RUNS_ON (B13: the pool readers are a subset of this list)
 
 # Value ranking. score = usd_per_month * confidence * bucket_boost * hand_written_boost * age_boost / cost
 #   usd_per_month  unit.value.usd_at_stake_per_month, else priority_usd[declared priority]

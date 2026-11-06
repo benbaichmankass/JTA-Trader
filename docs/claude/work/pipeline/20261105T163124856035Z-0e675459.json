@@ -1,0 +1,16 @@
+{
+  "due_when": {
+    "check_every_days": 7,
+    "clears_when": "an account-wide alpaca_order_history read over a window returns every order that per-symbol reads over the same window return (set equality on order_id), or reports truncated/could_not_look",
+    "kind": "event"
+  },
+  "id": "PI-20261105-ETXSFXE6-0002",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "lane ALPACA-TP-CANCEL-AT-OPEN (session_01AFoLuKf2MYKToYetxsfXE6), row IAUM-6655-NAKED-FLAT",
+    "rerun": "scripts/ops/diag_fetch.sh 'alpaca_order_history?account_id=alpaca_paper&after=2026-10-01T00:00:00Z&limit=500' vs the union of 'alpaca_order_history?account_id=alpaca_paper&after=2026-10-01T00:00:00Z&symbols=<S>&limit=500' over every traded symbol; diff the order_id sets"
+  },
+  "state": "queued",
+  "what": "diag /api/diag/alpaca_order_history UNDER-COUNTS an account-wide read and still says truncated=false. MEASURED 2026-11-05 ~16:20Z: account_id=alpaca_paper&after=2026-08-01T00:00:00Z&limit=500 (no symbols) returned 164 orders, read_state orders_read, truncated false, yet it OMITTED orders created today that a symbols= read returns: SLV bracket 2a24c543 (14:31Z), SPY OCO 63719ae2 (created 11-02), SPY bracket 67db6f6d (16:02Z). The returned created_at range ran 2026-07-15..2026-11-05T16:19Z, so the gap is inside the window, not past its end. Likely cause (unverified): account_alpaca_order_history sends one /v2/orders?status=all&nested=true&direction=asc&limit=N request with no paging and marks truncated only from len(orders) >= limit, while Alpaca's page cut can come before that (e.g. nested legs counted, or an 'after' semantics mismatch). Consequence: every account-wide population read (incident reviews, health checks) silently drops orders, so a count of 0 can mean 'not looked'. Fix (Tier 2, read path in src/units/accounts/clients.py): page by until/after on submitted_at until a short page, mark truncated whenever paging stops early, and add a test that plants a venue returning a short page with a gap. Workaround until then: read per symbol."
+}

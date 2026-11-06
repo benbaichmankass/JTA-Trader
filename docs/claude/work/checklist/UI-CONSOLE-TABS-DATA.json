@@ -1,0 +1,23 @@
+{
+  "id": "UI-CONSOLE-TABS-DATA",
+  "title": "Read-only connector tools behind five console tabs (workplan, ml_roadmap, performance, system_health, data_query) + inbox options[]",
+  "phase": null,
+  "state": "in_flight",
+  "owner": "manager",
+  "lane": "UI-CONSOLE-TABS-DATA",
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 2,
+  "prs": [],
+  "blocked_on": [],
+  "note": "Operator 2026-11-05 ~11:11Z verbatim: \"We also need to add some tabs to the console: 1. Weekly workplan tracker 2. ML Roadmap tracker 3. Performance tracker for MLs and live strategies 4. Systems/resource health and allocation 5. Data viewer - trade journal and other databases\". Tools in src/console_connector/tabs.py; doc docs/reference/console-connector-tools.md. performance/system_health/data_query register only when CONSOLE_CONNECTOR_AUTH=google. Tier 2 landing hold. Closing: unit restarted after merge (manager asks UI-CONSOLE-V1), each tool returns read_state read from the console, data_query reads the live journal (OPEN: trade_journal.db is on the live VM, not the trainer). OPERATOR APPROVED PR #23377 2026-11-05 ~15:46Z (popup, relayed by manager), verbatim: 'Yes, merge + install (Rec.)'. Scope of #23377: work_rows rows carry week_lane/roadmap/writeback; new work_rows section open_other (queued without due_by, landed_unproven); new public read-only tool system_catalog; tests + doc. Next: manager merges when CI is green, then the one-restart install (trainer-console-connector-install), then verify (healthz auth=google, unauth /mcp 401, unit active, token store intact, tools/list=10 incl. system_catalog, work_rows rows carry week_lane). Console Overview/System switch to the served fields on republish. Merged/deployed/observed are recorded separately when each is established. LANE UI-CONSOLE-ITEM-FEEDBACK close-out 2026-11-05 ~18:00Z. MERGED: #23377 df3d650b (work_rows week_lane/roadmap/writeback + open_other, system_catalog) and #23410 6ba50c56 (work_rows offset + next_offset). DEPLOYED: connector restarted twice for #23377 (16:38:28Z loaded OLD code: the trainer checkout syncs on ict-trainer-git-sync.timer, about every 15 min, not 5; second restart 16:52:18Z loaded it) and once for #23410 (17:54:26Z, checkout 743e5e73b6 contained 6ba50c56). OBSERVED (in-process diag on the trainer, unit's venv python, issues #23406 and #23435): tools/list = 10 incl. system_catalog; work_rows rows (442) all carry week_lane; open_other pages 200 + 192 = 392 = total, complete; healthz auth=google, unauth /mcp 401, token store unchanged. Manager also confirmed week_lane via OAuth at 16:45Z. NOT OBSERVED: the console rendering it in a real viewer. TO CLOSE (observe): open https://claude.ai/artifact/YU4ZwddDFB1AD2xWV2oE3g (v15, #overview) signed in once and check the Roadmap card reads 392 open_other rows without 'some sections truncated' and the System tab badge says 'live tool' (not 'snapshot'); the diag/view-* doc for that open shows list:JTA Trader connected with 10 tools. Page versions: v5 per-item feedback, v6 dual-server, v7 shells, v11 live tabs, v12 Overview, v13 System, v14 narrow-first, v15 open_other paging. Known page limits: the System tab keeps an embedded snapshot (commit 8c4d210) as fallback; Overview 'Mark done' writes sibling doc inbox/done-<id> item_kind done_mark (drain: treat as done, not feedback).",
+  "due_by": "2026-11-07",
+  "roadmap": [
+    "L-OPS"
+  ],
+  "updated_at": "2026-11-05T17:57:56Z",
+  "updated_by": "session_01AFoLuKPFatiYC8ciYMxABr",
+  "week_lane": "surge",
+  "_seq": 945
+}

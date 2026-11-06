@@ -62,7 +62,18 @@ def test_the_runner_lands_nothing_itself_and_holds_no_pat():
     assert list(wf["jobs"]) == ["run"], list(wf["jobs"])
     jobs_text = yaml.safe_dump(wf["jobs"])   # the jobs, not the header prose
     assert "BRANCH_PROTECTION_TOKEN" not in jobs_text and "commit-to-main" not in jobs_text
-    assert "secrets." not in jobs_text
+    # The ONE exception (operator 2026-11-05, popup "Allow paper pair (Rec.)", row ALPACA-PAPER-KEYS-R3):
+    # the PAPER Alpaca key pair, on the unit's run step only. No other secret, no other step, never the LIVE pair.
+    steps_all = wf["jobs"]["run"]["steps"]
+    for s in steps_all:
+        env = s.get("env") or {}
+        secret_vals = {k: v for k, v in env.items() if "secrets." in str(v)}
+        if s.get("id") == "run":
+            assert set(secret_vals) <= {"ALPACA_API_KEY_ID", "ALPACA_API_SECRET_KEY"}, secret_vals
+        else:
+            assert not secret_vals, (s.get("name"), secret_vals)
+        assert "secrets." not in yaml.safe_dump({k: v for k, v in s.items() if k != "env"})
+    assert "LIVE" not in "".join(str(v) for s in steps_all for v in (s.get("env") or {}).values() if "secrets." in str(v))
     steps = wf["jobs"]["run"]["steps"]
     derive = [s for s in steps if "record-inputs.json" in str(s.get("run", ""))]
     assert derive and "--derive-record" in derive[0]["run"] and "--power-state" in derive[0]["run"]
@@ -89,11 +100,13 @@ def test_the_dispatcher_lands_the_batch_once_per_cycle_and_asserts_it():
     lsteps = wf["jobs"]["land"]["steps"]
     lnames = [s.get("name", "") for s in lsteps]
     i_batch = next(i for i, n in enumerate(lnames) if n.startswith("Land the batch"))
-    i_assert = next(i for i, n in enumerate(lnames) if n.startswith("Assert every batched"))
-    assert i_batch < i_assert
+    # B6: the same-cycle per-record assertion is gone; the NEXT cycle's collect_runner_results.py re-collects any run whose
+    # record is not on main (pinned in DEFERRED_VERIFY), and the stale-batch reaper clears a batch PR that did not merge.
+    assert not [n for n in lnames if n.startswith("Assert every batched")]
+    assert any(n.startswith("Close stale landing PRs") for n in lnames)
     batch = lsteps[i_batch]
     assert batch["uses"] == "./.github/actions/commit-to-main"
-    assert str(batch["with"]["verify-merged"]).lower() == "true"
+    assert str(batch["with"]["verify-merged"]).lower() == "false"
     assert batch["with"]["paths"] == "comms/research research/results"
     assert "needs.dispatch.outputs.collect_count" in batch["if"]
 

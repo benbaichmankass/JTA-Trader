@@ -273,12 +273,12 @@ def summ(tk: pd.DataFrame) -> dict:
             "bootstrap_ci95_reported_not_gating": [float(np.percentile(bs, 2.5)), float(np.percentile(bs, 97.5))]}
 
 
-def verdict(m: dict) -> tuple[str, str]:
+def verdict(m: dict, label: str = "alpaca_live") -> tuple[str, str]:
     if m["n"] < N_FLOOR:
-        return "indeterminate", f"alpaca_live long-only held-out n={m['n']} < {N_FLOOR}"
+        return "indeterminate", f"{label} long-only held-out n={m['n']} < {N_FLOOR}"
     if m["mean_net_r"] >= 0:
-        return "pass", f"alpaca_live long-only held-out mean net R per decision {m['mean_net_r']:+.4f} >= 0 at n={m['n']}"
-    return "fail", f"alpaca_live long-only held-out mean net R per decision {m['mean_net_r']:+.4f} < 0 at n={m['n']}"
+        return "pass", f"{label} long-only held-out mean net R per decision {m['mean_net_r']:+.4f} >= 0 at n={m['n']}"
+    return "fail", f"{label} long-only held-out mean net R per decision {m['mean_net_r']:+.4f} < 0 at n={m['n']}"
 
 
 def session_ok(close_ts: pd.Series, hold_h: int = H) -> np.ndarray:
@@ -376,6 +376,298 @@ def run(a) -> int:
     return 0
 
 
+# ---------------------------------------------------------------------------------------------------------------------------
+# RQ-20261104-a41f-01: the POOLED Alpaca ETF population on Alpaca 1h RTH bars (--bars alpaca --population alpaca-liquidity).
+# Registered BEFORE any run; the ETF rule and the pool rule are FROZEN in POOL_RULE and hashed (POOL_RULE_SHA256, recorded in the unit).
+# ---------------------------------------------------------------------------------------------------------------------------
+NASDAQTRADED_URL = "https://www.nasdaqtrader.com/dynamic/SymDir/nasdaqtraded.txt"
+POOL_RULE = {
+    "asset": "Alpaca /v2/assets with status=active, tradable=true, class=us_equity (read at run time, sha256 of the sorted symbol list recorded)",
+    "etf": ("Alpaca assets carry NO ETF flag. A symbol is an ETF iff nasdaqtrader nasdaqtraded.txt (read at run time, sha256 of the file "
+            "recorded) has Test Issue == 'N' and ETF == 'Y' for that exact symbol; a symbol absent from that file is NOT an ETF. "
+            "No name matching, no manual list."),
+    "liquidity": "median over daily bars 2019-01-01..2020-12-31 of close*volume (Alpaca 1Day, adjustment=split, feed=sip) >= 50000000 USD",
+    "no_dev_bars": "an asset with no daily bar in the dev window is excluded (counted and listed)",
+    "dev_window": ["2019-01-01", "2020-12-31"], "min_median_dollar_volume": 50_000_000.0,
+    "bars_1h": "Alpaca 1Hour, adjustment=split, feed=sip, from 2021-01-01; RTH = bar open 09:00..15:00 America/New_York (hour-aligned; the 09:00 bar holds 09:30-10:00 trades)",
+}
+POOL_RULE_SHA256 = hashlib.sha256(json.dumps(POOL_RULE, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
+POOL_START = "2021-01-01"
+DEV_START, DEV_END = "2019-01-01", "2020-12-31"
+MIN_MEDIAN_DV = POOL_RULE["min_median_dollar_volume"]
+
+
+def etf_symbols(text: str) -> set[str]:
+    """The frozen ETF rule: nasdaqtraded.txt rows with Test Issue == N and ETF == Y."""
+    rows = [ln.split("|") for ln in text.splitlines() if ln and not ln.startswith("File Creation Time")]
+    df = pd.DataFrame(rows[1:], columns=rows[0])
+    df = df[(df["Test Issue"] == "N") & (df["ETF"] == "Y")]
+    return set(df["Symbol"].astype(str))
+
+
+def filter_pool(assets: list[dict], etfs: set[str], dev_daily: dict[str, pd.DataFrame]) -> tuple[list[str], dict]:
+    """Apply POOL_RULE. ``assets``: Alpaca asset dicts; ``dev_daily``: symbol -> daily frame (close, volume) over the dev window."""
+    act = sorted({a["symbol"] for a in assets if a.get("status") == "active" and a.get("tradable")
+                  and a.get("class", "us_equity") == "us_equity"})
+    cand = [s for s in act if s in etfs]
+    pool, excl = [], {}
+    for s in cand:
+        d = dev_daily.get(s)
+        if d is None or len(d) == 0:
+            excl[s] = {"reason": "no_dev_bars", "median_dollar_volume": None, "n_bars": 0}
+            continue
+        med = float((d["close"].astype(float) * d["volume"].astype(float)).median())
+        if med >= MIN_MEDIAN_DV:
+            pool.append(s)
+        else:
+            excl[s] = {"reason": "illiquid", "median_dollar_volume": round(med, 2), "n_bars": int(len(d))}
+    rep = {"n_assets_active_tradable": len(act), "n_etf_candidates": len(cand), "n_pool": len(pool),
+           "n_excluded_no_dev_bars": sum(1 for e in excl.values() if e["reason"] == "no_dev_bars"),
+           "n_excluded_illiquid": sum(1 for e in excl.values() if e["reason"] == "illiquid"),
+           "assets_sha256": hashlib.sha256("\n".join(act).encode()).hexdigest(), "excluded": excl}
+    return sorted(pool), rep
+
+
+def alpaca_bars_df(rows: list[dict]) -> pd.DataFrame:
+    df = pd.DataFrame(rows).rename(columns={"t": "ts", "o": "open", "h": "high", "l": "low", "c": "close", "v": "volume"})
+    df["ts"] = pd.to_datetime(df["ts"], utc=True)
+    return df[["ts", "open", "high", "low", "close", "volume"]].dropna(subset=["open", "high", "low", "close"]) \
+        .drop_duplicates("ts").sort_values("ts").reset_index(drop=True)
+
+
+def rth_hourly(df: pd.DataFrame) -> pd.DataFrame:
+    """Alpaca 1Hour bars are hour-aligned (open 09:00 ET holds 09:30-10:00). RTH = open in [09:00, 16:00) ET; close_ts = open + 1h
+    capped at the 16:00 ET close. Pre/post-market bars are dropped."""
+    et = df.ts.dt.tz_convert("America/New_York")
+    m = et.dt.hour * 60 + et.dt.minute
+    keep = ((m >= 540) & (m < 960)).to_numpy()
+    df, et = df[keep].reset_index(drop=True), et[keep].reset_index(drop=True)
+    df = df[(df.open > 0) & (df.close > 0)].reset_index(drop=True)
+    et = df.ts.dt.tz_convert("America/New_York")
+    session_close = (et.dt.normalize() + pd.Timedelta(hours=16)).dt.tz_convert("UTC")
+    df["close_ts"] = pd.concat([df.ts + pd.Timedelta(hours=1), session_close], axis=1).min(axis=1)
+    df["volume"] = df["volume"].fillna(0).astype(float)
+    return df
+
+
+def fetch_alpaca_1h(client, syms: list[str], cache: Path, end: str, workers: int = 4, start: str = POOL_START) -> dict[str, pd.DataFrame]:
+    """One request series PER SYMBOL (a multi-symbol request took ~63 calls/symbol in run 42047465240 against ~3 needed, and the
+    run died at the 180-min timeout with 160/176 symbols fetched), ``workers`` threads on the client's ONE shared pacing clock, so
+    the call rate stays under the data limit however many threads run. Execution-only change: same endpoint, window and rule."""
+    import concurrent.futures as cf
+    out, need = {}, []
+    for s in syms:
+        p = cache / f"alp1h_{s}_{start}_{end}.pkl"
+        if p.exists():
+            out[s] = pd.read_pickle(p)
+        else:
+            need.append(s)
+    cache.mkdir(parents=True, exist_ok=True)
+
+    def one(s):
+        c0 = client.calls
+        got = client.bars([s], "1Hour", f"{start}T00:00:00Z", f"{end}T00:00:00Z")
+        df = rth_hourly(alpaca_bars_df(got[s])) if got.get(s) else None
+        if df is not None:
+            df.to_pickle(cache / f"alp1h_{s}_{start}_{end}.pkl")
+        return s, df, len(got.get(s) or []), client.calls - c0
+
+    done = 0
+    with cf.ThreadPoolExecutor(workers) as ex:
+        for s, df, nraw, ncalls in ex.map(one, need):
+            done += 1
+            if df is not None:
+                out[s] = df
+            print(f"[alpaca] 1h {done}/{len(need)} {s} raw_bars={nraw} rth_bars={0 if df is None else len(df)} ~calls={ncalls} "
+                  f"total_calls={client.calls} 429s={client.n_429} t={time.strftime('%H:%M:%S')}", flush=True)
+    return out
+
+
+def pool_population_record(unit: str, rule_id: str, verdict_: str, result: str, pool: list[str]) -> dict:
+    return {"unit": unit, "rule_id": rule_id, "verdict": verdict_, "result": result,
+            "symbols": {s: {"venues": ["alpaca"]} for s in pool}}
+
+
+def check_window_disjoint(meta: dict, holdout_start: str) -> dict:
+    """Date-leak guard (PI-20261105-GEXSLEAK-0001): the model's market-wide features (btc_ret24, btc_vol24, breadth_up24, hour, dow)
+    effectively identify the DATE, so the scored window must start after the model's training end plus an embargo of 2 x the label
+    horizon. Raises if not; returns the dates for the record."""
+    te = pd.Timestamp(meta["train_end_exclusive"])
+    emb = pd.Timedelta(hours=2 * int(meta["bracket"]["horizon_h"]))
+    hs = pd.Timestamp(holdout_start, tz="UTC")
+    if hs < te + emb:
+        raise RuntimeError(f"scored window starts {hs} < model train_end_exclusive {te} + embargo {emb}: overlaps the training calendar; "
+                           f"a read on it is not admissible evidence")
+    return {"train_end_exclusive": str(te), "embargo_h": emb / pd.Timedelta(hours=1), "scored_from": str(hs),
+            "gap_days": round((hs - te) / pd.Timedelta(days=1), 2)}
+
+
+def run_pool(a) -> int:
+    global HOLDOUT_START, HOLDOUT_END, FETCH_START
+    import requests
+    from alpaca_readonly import AlpacaReadOnly
+    from src.config import ml_universe
+    from src.runtime.execution_costs import resolve_cost_policy, resolve_fee_bps_roundtrip
+    t0 = time.time()
+    if a.bars != "alpaca":
+        raise SystemExit("--population alpaca-liquidity requires --bars alpaca")
+    end_day = a.holdout_end or (pd.Timestamp.now(tz="UTC").normalize().replace(day=1) - pd.Timedelta(days=1)).strftime("%Y-%m-%d")
+    # WINDOW AMENDMENT 2026-11-05 (date-leak, PI-20261105-GEXSLEAK-0001): the served model trained on rows < 2025-09-22 19:00Z, so the
+    # SCORED window is the model's sealed holdout (default --holdout-start 2025-10-01 = train_end + >= 9d embargo > the 24-bar label
+    # horizon) .. the last complete month; --fetch-start (default 2025-05-01) only supplies feature history. The POOL rule is untouched.
+    HOLDOUT_START, HOLDOUT_END, FETCH_START = a.holdout_start, end_day, a.fetch_start
+    cache, out = Path(a.cache), Path(a.out)
+    out.mkdir(parents=True, exist_ok=True)
+    cache.mkdir(parents=True, exist_ok=True)
+    mpath = Path(a.model)
+    sha = hashlib.sha256(mpath.read_bytes()).hexdigest()
+    model = load_model(mpath)
+    meta = model["meta"]
+    tau, feats = float(meta["tau"]), list(meta["features"])
+    disjoint = check_window_disjoint(meta, HOLDOUT_START)
+    print(f"[window] {disjoint}", flush=True)
+    slip, fund = resolve_cost_policy("SPY")
+    fee = resolve_fee_bps_roundtrip("SPY")
+    client = AlpacaReadOnly.from_env()
+    # 1. the pool (frozen rule)
+    nq = requests.get(NASDAQTRADED_URL, timeout=60, headers={"User-Agent": "jta-trader-research"}).text
+    etfs = etf_symbols(nq)
+    assets = client.assets()
+    cand = sorted({x["symbol"] for x in assets if x.get("status") == "active" and x.get("tradable")
+                   and x.get("class", "us_equity") == "us_equity"} & etfs)
+    dev = {}
+    for i in range(0, len(cand), 100):
+        got = client.bars(cand[i:i + 100], "1Day", f"{DEV_START}T00:00:00Z", "2021-01-01T00:00:00Z")
+        dev.update({s: alpaca_bars_df(bl) for s, bl in got.items() if bl})
+        print(f"[alpaca] dev daily {min(i + 100, len(cand))}/{len(cand)} calls={client.calls}", flush=True)
+    pool, prep = filter_pool(assets, etfs, dev)
+    prep.update({"etf_file_sha256": hashlib.sha256(nq.encode()).hexdigest(), "n_etf_in_file": len(etfs),
+                 "pool_rule_sha256": POOL_RULE_SHA256, "key_kind": client.key_kind})
+    if not pool:
+        raise RuntimeError(f"empty pool: {json.dumps({k: v for k, v in prep.items() if k != 'excluded'})}")
+    # 2. the positive control (SPY back to 2021-01-01) and the 1h bars
+    paper13 = [s for s in _account_symbols("alpaca_paper")]
+    want = sorted(set(pool) | set(paper13) | {"SPY"})
+    bars = fetch_alpaca_1h(client, want, cache, (pd.Timestamp(end_day) + pd.Timedelta(days=1)).strftime("%Y-%m-%d"), start=FETCH_START)
+    spy = bars.get("SPY")
+    control = {"symbol": "SPY", "rows": 0 if spy is None else int(len(spy)),
+               "first": None if spy is None else str(spy.ts.min()), "last": None if spy is None else str(spy.ts.max())}
+    if spy is None or spy.ts.min() > pd.Timestamp(FETCH_START, tz="UTC") + pd.Timedelta(days=10) or len(spy) < 1000:
+        (out / "verdict.json").write_text(json.dumps({"read_state": "producer_failed", "verdict": None, "n": None,
+                                                      "note": "positive control failed", "control": control, "pool": prep}, default=str))
+        raise RuntimeError(f"positive control failed: {control}")
+    print(f"[control] {control}", flush=True)
+    # 3. features/rows, window, gate, decisions
+    print(f"[phase] alpaca 1h done t={time.strftime('%H:%M:%S')}; fetching {len(meta['xs_reference'])} perp references", flush=True)
+    perps = fetch_perps(cache, list(meta["xs_reference"]))
+    R, V = perp_context(perps)
+    print(f"[phase] perps done ({len(perps)} loaded) t={time.strftime('%H:%M:%S')}; building rows", flush=True)
+    frames, fetch_rep = [], {}
+    for s in want:
+        if s not in bars:
+            fetch_rep[s] = {"rows": 0, "error": "no 1h bars"}
+            continue
+        fetch_rep[s] = {"rows": int(len(bars[s])), "first": str(bars[s].ts.min()), "last": str(bars[s].ts.max())}
+        frames.append(equity_rows(s, bars[s], R, V, slip, fee))
+    tab = pd.concat(frames, ignore_index=True)
+    tab["ts"] = pd.to_datetime(tab.ts, utc=True)
+    hs, he = pd.Timestamp(HOLDOUT_START, tz="UTC"), pd.Timestamp(HOLDOUT_END, tz="UTC") + pd.Timedelta(days=1)
+    test = tab[(tab.ts >= hs) & (tab.ts < he)].replace([np.inf, -np.inf], np.nan).dropna(subset=feats + ["net_long"])
+    n_before_gate = int(len(test))
+    if a.session_gate:
+        test = test[session_ok(test.ts)]
+    pl, ps = model["long"].predict(test[feats]), model["short"].predict(test[feats])  # provenance: predict -- Booster.predict is the regressed net R of that side (the served model), not a probability
+    inp = test.symbol.isin(pool).to_numpy()
+    tk = take(test[inp], pl[inp], ps[inp], tau, long_only=True, side_rule=a.side_rule)
+    m = summ(tk)
+    v, why = verdict(m, label=f"alpaca-liquidity pool of {len(pool)} ETFs")
+    by_year = {str(k): {"n": int(len(g)), "mean_net_r": round(float(g.net_r.mean()), 4)}
+               for k, g in tk.assign(y=pd.to_datetime(tk.ts, utc=True).dt.year).groupby("y")}
+    tk_new = tk[pd.to_datetime(tk.ts, utc=True) >= pd.Timestamp("2025-10-01", tz="UTC")]
+    pp = test.symbol.isin(paper13).to_numpy()
+    tk_p = take(test[pp], pl[pp], ps[pp], tau, long_only=True, side_rule=a.side_rule)
+    result_rel = f"comms/research/{a.unit}/<run_id>/{a.unit}.json"
+    rec = pool_population_record(a.unit, a.rule_id, v, result_rel, pool)
+    ml_universe.write_population("ml_entry", rec, base=out / "ml_universe", seed_from=ml_universe.RECORD_DIR)
+    row = {
+        "schema_version": 1, "research_unit": a.unit, "read_state": "measured", "verdict": v, "note": why,
+        "generated_at": pd.Timestamp.now(tz="UTC").strftime("%Y-%m-%dT%H:%M:%SZ"),
+        "decision_rule": {"id": a.rule_id, "registered_at": a.registered_at, "registered_before_run": True},
+        "population": {"n": m["n"], "description": f"frozen ml-decision-entry-v1 (tau {tau}) restricted-LONG decisions, pooled over "
+                       f"{len(pool)} liquid Alpaca ETFs, Alpaca 1h RTH bars {HOLDOUT_START}..{HOLDOUT_END}, net of fee {fee} + "
+                       f"slippage {slip} + regulatory {REGULATORY_BPS} bps round trip, funding {fund}"},
+        "variants_read_on_this_heldout": a.variants_read, "multiple_comparison_note": (a.mc_note or None),
+        "bracket": "fixed ATR 2/3 (hourly ATR14)",
+        "measurement": {"schema": SCHEMA, "model_sha256": sha, "tau": tau, "pooled_long_only": m,
+                        "reported_by_year": by_year, "reported_2025_10_01_onward": summ(tk_new),
+                        "reported_alpaca_paper_symbols_pooled": summ(tk_p), "alpaca_paper_symbols": paper13,
+                        "side_rule": a.side_rule, "session_gate": bool(a.session_gate),
+                        "decision_rows_before_session_gate": n_before_gate, "decision_rows": int(len(test)),
+                        "pool": prep, "pool_symbols": pool, "positive_control": control, "window_disjoint_from_training": disjoint, "fetch": fetch_rep,
+                        "perp_reference_loaded": len(perps), "median_n_reference": float(test.n_reference.median()),
+                        "alpaca_calls": client.calls, "alpaca_429s": client.n_429,
+                        "costs": {"fee_bps": fee, "slippage_bps": slip, "regulatory_bps": REGULATORY_BPS, "funding_bps": fund},
+                        "bar_alignment_note": "Alpaca 1Hour bars are hour-aligned (09:00 ET bar holds 09:30-10:00); decision clock UTC close hour % 4 == 0 applied to those closes"},
+        "ml_universe_record": rec if v == "pass" else {**rec, "symbols": "omitted (non-pass adds nothing)"},
+        "produced_by": {"tool": "python3 scripts/research/ml_entry_alpaca_score.py", "where": a.where,
+                        "runtime_s": round(time.time() - t0, 1)},
+    }
+    p = out / f"{a.unit}.json"
+    p.write_text(json.dumps(row, indent=1, default=str))
+    (out / "verdict.json").write_text(json.dumps({**row, "n": m["n"]}, indent=1, default=str) + "\n")
+    print(f"VERDICT {v}: {why}\nwrote {p}", flush=True)
+    return 0
+
+
+def window_self_test() -> None:
+    m = {"train_end_exclusive": "2025-09-22 19:00:00+00:00", "bracket": {"horizon_h": 24}}
+    g = check_window_disjoint(m, "2025-10-01")
+    assert g["gap_days"] > 8 and g["embargo_h"] == 48.0, g
+    for bad in ("2021-01-01", "2025-09-22", "2025-09-24"):
+        try:
+            check_window_disjoint(m, bad)
+        except RuntimeError:
+            continue
+        raise AssertionError(f"overlapping window {bad} must be refused")
+
+
+def pool_self_test() -> None:
+    """RQ-20261104-a41f-01 self-test: a planted illiquid ETF is excluded by the dev-window filter; a PASS record round-trips through
+    src/config/ml_universe.load; the ETF rule and the Alpaca RTH alignment behave; no network."""
+    import tempfile
+    from src.config import ml_universe as MU
+    txt = ("Nasdaq Traded|Symbol|Security Name|Listing Exchange|Market Category|ETF|Round Lot Size|Test Issue|Financial Status|"
+           "CQS Symbol|NASDAQ Symbol|NextShares\n"
+           "Y|LIQD|Liquid ETF|P| |Y|100|N| |LIQD|LIQD|N\nY|ILLQ|Illiquid ETF|P| |Y|100|N| |ILLQ|ILLQ|N\n"
+           "Y|AAPL|Apple|Q|Q|N|100|N|N|AAPL|AAPL|N\nY|TSTX|Test ETF|P| |Y|100|Y| |TSTX|TSTX|N\n"
+           "Y|NEWE|New ETF|P| |Y|100|N| |NEWE|NEWE|N\nY|INAC|Inactive ETF|P| |Y|100|N| |INAC|INAC|N\n"
+           "File Creation Time: 1105202600:00|||||||||||\n")
+    etfs = etf_symbols(txt)
+    assert etfs == {"LIQD", "ILLQ", "NEWE", "INAC"}, etfs        # AAPL not an ETF; TSTX is a test issue
+    ix = pd.date_range("2019-01-02", periods=100, freq="B")
+    d = lambda px, vol: pd.DataFrame({"ts": ix, "close": px, "volume": vol})   # noqa: E731
+    assets = [{"symbol": x, "status": "active", "tradable": True, "class": "us_equity"} for x in ("LIQD", "ILLQ", "AAPL", "NEWE")]
+    assets.append({"symbol": "INAC", "status": "inactive", "tradable": False, "class": "us_equity"})
+    pool, rep = filter_pool(assets, etfs, {"LIQD": d(100.0, 1_000_000.0), "ILLQ": d(100.0, 100_000.0), "AAPL": d(100.0, 9e9)})
+    assert pool == ["LIQD"], pool                                  # ILLQ (10M median) planted illiquid; NEWE no dev bars; AAPL not ETF
+    assert rep["excluded"]["ILLQ"]["reason"] == "illiquid" and rep["excluded"]["NEWE"]["reason"] == "no_dev_bars", rep
+    assert "INAC" not in rep["excluded"] and "AAPL" not in rep["excluded"], rep
+    with tempfile.TemporaryDirectory() as td:
+        base = Path(td)
+        rec = pool_population_record("RQ-X", "RULE-X", "pass", "comms/research/RQ-X/1/RQ-X.json", pool)
+        MU.write_population("ml_entry", rec, base=base)
+        loaded = MU.load("ml_entry", base=base)
+        assert loaded and loaded[0]["verdict"] == "pass" and MU.passed_symbols(loaded, "alpaca") == ["LIQD"], loaded
+        assert MU.apply(["SPY"], loaded, "alpaca") == ["SPY", "LIQD"] and MU.apply(["SPY"], loaded, "bybit") == ["SPY"]
+        MU.write_population("ml_entry", {**rec, "verdict": "fail"}, base=base)          # same unit replaces, never duplicates
+        assert len(MU.load("ml_entry", base=base)) == 1 and MU.passed_symbols(MU.load("ml_entry", base=base)) == []
+    ts = pd.to_datetime(["2025-11-03 13:00", "2025-11-03 14:00", "2025-11-03 20:00", "2025-11-03 21:00"], utc=True)   # EST: 08,09,15,16 ET
+    raw = pd.DataFrame({"ts": ts, "open": 1.0, "high": 1.0, "low": 1.0, "close": 1.0, "volume": 1.0})
+    r = rth_hourly(raw)
+    assert r.ts.dt.hour.tolist() == [14, 20], r                      # 08:00 ET (pre) and 16:00 ET (post) dropped
+    assert r.close_ts.dt.hour.tolist() == [15, 21], r               # 15:00 UTC = 10:00 ET; 21:00 UTC = the 16:00 ET close
+
+
 def self_test() -> int:
     # decision clock: UTC close hours divisible by 4 only
     ts = pd.to_datetime(["2025-11-03 14:30", "2025-11-03 15:30", "2025-11-03 20:30"], utc=True)
@@ -397,6 +689,8 @@ def self_test() -> int:
     assert verdict({"n": 29, "mean_net_r": 1.0})[0] == "indeterminate"
     assert verdict({"n": 30, "mean_net_r": 0.0})[0] == "pass"
     assert verdict({"n": 30, "mean_net_r": -0.01})[0] == "fail"
+    pool_self_test()
+    window_self_test()
     print("self-test ok")
     return 0
 
@@ -421,13 +715,25 @@ def main(argv=None) -> int:
                    help="served (bdc2-01): SHORT -> nothing; restricted: argmax over LONG only (live side_filter: long profile)")
     r.add_argument("--session-gate", action="store_true",
                    help="decide only when us_equity is open at the close and at close + 24h (live session: us_equity)")
+    r.add_argument("--bars", choices=("yahoo", "alpaca"), default="yahoo",
+                   help="yahoo (bdc2-01, default); alpaca: read-only Alpaca data API (scripts/research/alpaca_readonly.py allowlist)")
+    r.add_argument("--population", choices=("account", "alpaca-liquidity"), default="account",
+                   help="account (default): alpaca_live + alpaca_portfolio symbols; alpaca-liquidity: the pre-registered pooled ETF pool (POOL_RULE)")
     r.add_argument("--holdout-start", default=HOLDOUT_START)
     r.add_argument("--holdout-end", default=HOLDOUT_END)
     r.add_argument("--fetch-start", default=FETCH_START)
     a = ap.parse_args(argv)
     if a.self_test:
         return self_test()
-    return run(a) if a.cmd == "run" else 2
+    if a.cmd != "run":
+        return 2
+    if a.population == "alpaca-liquidity":
+        if a.holdout_end == HOLDOUT_END:
+            a.holdout_end = None        # default: the last complete month before the run
+        return run_pool(a)
+    if a.bars != "yahoo":
+        raise SystemExit("--bars alpaca is only wired for --population alpaca-liquidity")
+    return run(a)
 
 
 if __name__ == "__main__":

@@ -1,0 +1,11 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "hold_reason": "tier_2_3_needs_approval",
+  "hold_text": "Adds one Tier-2 system-action, gateway-disk-cleanup (scripts/ops/gateway_disk_cleanup.sh), that runs only on the IB gateway VM (refuses unless /etc/ict-vm-role is gateway). Every target is a dry run unless apply: true; research-clean apply also needs confirm: <list_sha256 of the reviewed dry run>. It never removes or moves the live checkout, never restarts the ib-gateway container, and touches no order path, strategy, account or risk file. Merging changes nothing on a VM; each step runs only when its own system-action issue is opened. Approved by the operator under popup ~05:35Z 2026-11-05 (\"A+B+C now, rehearse D (Recommended)\"), relayed by Manager Session 2026-11-04b. Revert: git revert of the merge commit.",
+  "why": "PI-20261104-GWDISK-0001: gateway root fs 45G at 94% (2.9G free, MEASURED #23095 03:10Z), growing ~0.58G/day. No allowlisted action could cap journald on the gateway, clean the untracked research caches or prune packed loose objects.",
+  "recorded_decision": {
+    "kind": "operator_decision",
+    "ref": "GATEWAY-DISK-CLEANUP PI-20261104-GWDISK-0001"
+  }
+}

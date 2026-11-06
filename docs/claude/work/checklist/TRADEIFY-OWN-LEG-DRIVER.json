@@ -1,0 +1,23 @@
+{
+  "id": "TRADEIFY-OWN-LEG-DRIVER",
+  "title": "Build scripts/research/tradeify_ml_leg.py: pooled ETH/SOL/XRP feature table (F0-F3), walk-forward, ledger, prop_gate V3, D1-D4 distinctness",
+  "phase": "build",
+  "state": "in_flight",
+  "owner": "lane TRADEIFY-OWN-LEG (unassigned build)",
+  "lane": null,
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [],
+  "blocked_on": [],
+  "note": "Clears blocked unit RQ-20261105-fd68-01 (research/queue/blocked/). Reuse scripts/research/prop_gate.py, ml_variant_prop_gate.py, ml_bakeoff.py, ml/datasets/*, src/research/run_costs.py. Clears when: the driver's self-test reproduces (a) the B3 ml_entry reference, net edge +0.017 R per trade over n=381 held-out ETH+SOL trades, window 2025-10-01 to 2026-09-30, source comms/prop_survival/ml_entry.json (RQ-20261102-5e1a-01), and (b) the B2 incumbent trend_donchian_eth_prop over the same window, each within 0.001 R per trade, and a point-in-time data-coverage audit for feature families F0-F3 is written. Tier 1 (research tooling); no training run in this row's scope until the unit is unblocked. [2026-11-05 driver built] scripts/research/prop_ml_leg.py; --self-test OK (B3 n=381 mean 0.01704; B2 n=165 net -0.2512; D1-D4 constructed ledgers); --smoke OK on dev data <= 2022-12-31 (63065 rows, 9 arms graded, held-out never read). Units RQ-20261105-fd68-01 (Tradeify, all-accounts D graded) and RQ-20261105-fd68-02 (Breakout/Velotrade) queued with pre-run amendments. NOT dispatched: the dispatcher reads the unit from main, so the PR must merge first. Not closed until a unit has run and the driver's output is read.",
+  "due_by": "2026-11-19",
+  "roadmap": [
+    "L-PROP"
+  ],
+  "updated_at": "2026-11-05T14:06:41Z",
+  "updated_by": "session_01AFoLuLmhUKeUzHC6CHz2uP",
+  "week_lane": "surge",
+  "_seq": 941
+}

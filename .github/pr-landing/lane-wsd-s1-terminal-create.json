@@ -1,0 +1,12 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "hold_reason": "tier_2_3_needs_approval",
+  "hold_text": "Tier 2 bug fix to the S1 store validator on the live API: a done/dropped build created without roadmap was a 500 (measured 2026-11-05T07:43Z); now filled like any other build, and any store constraint maps to 422.",
+  "why": "Fixes a live 500 on POST /api/bot/work/items. Fills (never refuses), so G1 tightens nothing. Revert: git revert.",
+  "recorded_decision": {
+    "kind": "standing_authorization",
+    "ref": "WSD-S1-STORE-API 2026-09-27 data-backed standing authorization; live 500 measured 2026-11-05T07:43Z (the evidence is the failing request reproduced in tests/test_work_store.py)",
+    "evidence": "docs/plans/WORK-STORE-DESIGN-2026-11.md"
+  }
+}

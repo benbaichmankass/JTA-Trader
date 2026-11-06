@@ -1,0 +1,7 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "hold_reason": "tier_2_3_needs_approval",
+  "hold_text": "Lane NETTING-RECONCILER-CLOSE-REASON follow-up (Manager Session 2026-11-05b). Tier 2: changes the LABEL the per-order reconciler writes when a broker closed-pnl record exists but the price classifier cannot place it (src/runtime/order_monitor.py _close_trade_from_order_status), on every Bybit account including real-money bybit_2. Adds one read-only /v5/order/history lookup per such finalisation. Price, pnl and closed_at are unchanged; nothing places, amends or cancels an order. The manager asks the operator for one OK, merges, lets git-sync restart the trader and verifies the next such close reads sl/tp on its first write.",
+  "why": "bybit_2 trade 6881 closed reconciler_filled at 15:01:54Z while its own SL had filled (its mirror 6882 read sl in the same second). The closed-pnl branch never consulted the row's own legs. Adds no gate."
+}

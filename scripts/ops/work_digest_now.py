@@ -202,6 +202,37 @@ def run(dry_run: bool = False, force: bool = False) -> int:
 
     from send_ping import enqueue  # noqa: PLC0415
 
+    # TELEGRAM-TRIM (operator 2026-11-04, config/telegram_policy.yaml): the hourly
+    # digest is a RECURRING post and no longer goes to Telegram. Its NEW
+    # actionable attention items (operator decisions, soak transitions, silence
+    # alarms) are events and still go, as one short message, only when one is new.
+    # The full digest stays on the receipt + digest log + the UI.
+    policy_off = False
+    try:
+        from src.runtime import telegram_policy  # noqa: PLC0415
+        policy_off = telegram_policy.recurring_off("manager_update")
+    except Exception as exc:  # noqa: BLE001 — a broken policy sends the digest
+        print(f"work-digest-now: telegram policy unreadable ({exc}) — sending the digest")
+    if policy_off:
+        events = telegram_policy.digest_event_lines(prep.get("msgs") or [])
+        if not events:
+            telegram_policy.record_suppressed("manager_update", message, reason="recurring_off",
+                                              channel="manager")
+            _write_receipt(outcome="suppressed_by_policy", hour=hour, lastSentHour=hour, base=base,
+                           windowBasis=basis, digestState=digest.get("digestState"),
+                           attention="committed" if aw else "failed")
+            if aw:
+                aw.commit(prep, "sent")   # state advances: nothing new is owed to Telegram
+            _commit_cursors(rsnap, wsnap)
+            _mark_sent()
+            print("work-digest-now: recurring digest suppressed by telegram_policy (recorded); "
+                  "no new actionable items")
+            return 0 if aw else 1
+        message = f"🆕 {hour}Z — new since last check ({len(events)}):\n\n" + "\n\n".join(events)
+        message += "\n\nFull digest: the Workflow page (GET /api/bot/work/report)."
+        import html as _html  # noqa: PLC0415
+        message = _html.escape(message)
+
     try:
         # TELEGRAM-CHANNELS: the MANAGER channel (the Claude bot), sent as
         # Telegram HTML so its sections collapse.
@@ -223,15 +254,21 @@ def run(dry_run: bool = False, force: bool = False) -> int:
                    queued=str(path), attention="committed" if aw else "failed")
     if aw:
         aw.commit(prep, "sent")
+    _commit_cursors(rsnap, wsnap)
+    _mark_sent()
+    print(f"work-digest-now: queued {path} — the bot drains within ~5s")
+    return 0 if aw else 1
+
+
+def _commit_cursors(rsnap, wsnap) -> None:
+    """Advance the research + work section cursors (after a send, or after a
+    TELEGRAM-TRIM suppression that recorded the digest)."""
     if rsnap is not None:
         from scripts.ops import research_digest  # noqa: PLC0415
         research_digest.commit(rsnap, path=RESEARCH_CURSOR)
     if wsnap is not None:
         from scripts.ops import work_section  # noqa: PLC0415
         work_section.commit(wsnap, path=WORK_CURSOR)
-    _mark_sent()
-    print(f"work-digest-now: queued {path} — the bot drains within ~5s")
-    return 0 if aw else 1
 
 
 #: TELEGRAM-CHANNELS (2026-10-11): the research-queue section's cursor. Module
@@ -426,6 +463,13 @@ def main(argv: list[str] | None = None) -> int:
     a = ap.parse_args(argv)
     if a.self_test:
         return _self_test()
+    # ALERT-LEDGER-TO-MANAGER: the unit fires every 5 min; the alert pass runs on EVERY firing, the hourly
+    # digest below keeps its own hour latch + _cadence_gate. The alert pass never raises and never gates the digest.
+    try:
+        from scripts.ops import attention_watch  # noqa: PLC0415
+        attention_watch.alert_watch(dry_run=a.dry_run)
+    except Exception as exc:  # noqa: BLE001
+        print(f"work-digest-now: alert_watch failed (digest unaffected): {exc}")
     return run(dry_run=a.dry_run, force=a.force)
 
 

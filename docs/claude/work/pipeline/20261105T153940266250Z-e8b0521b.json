@@ -1,0 +1,16 @@
+{
+  "due_when": {
+    "check_every_days": 7,
+    "clears_when": "Alpaca rows opened after a fix carry entry_price == venue parent filled_avg_price (within 1 cent), or the measurement shows 6655 is a one-off",
+    "kind": "event"
+  },
+  "id": "PI-20261105-ETXSFXE6-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "lane ALPACA-TP-CANCEL-AT-OPEN (session_01AFoLuKf2MYKToYetxsfXE6), row IAUM-6655-NAKED-FLAT",
+    "rerun": "scripts/ops/diag_fetch.sh 'alpaca_order_history?account_id=alpaca_paper&after=2026-08-01T00:00:00Z&limit=500' (parent filled_avg_price) joined to 'journal?table=trades&limit=1000' on notes.trade_id == parent order_id; count |entry_price - filled_avg_price| > 0.01"
+  },
+  "state": "queued",
+  "what": "Alpaca journal entry_price is not the venue entry fill, so local-compute pnl inherits the drift. alpaca_paper IAUM trade 6655 (iaum_pullback_1d SHORT 137): journal entry_price 41.455; venue bracket parent 2ae76634 filled 2026-10-16T13:33:20Z avg 41.426861 (diag alpaca_order_history). After the fill resolver priced the exit at the venue fill 41.14 (exchange_fill, observed 15:39Z), pnl reads 43.155 = (41.455-41.14)*137; on venue fills it is 39.30 (+3.85 USD, +9.8% overstated; n=1 trade, 6655 only, measured so far). Question: is entry_price the signal/decision price for every Alpaca market-bracket entry (systematic, biases every Alpaca pnl and the soak's realized-cost read) or a one-off? Measure over all Alpaca rows with a resolvable parent fill; if systematic, the entry writer (_capture_fill_details or equivalent) should record the venue avg fill (MEASURED) with the decision price kept in notes. Order-path-adjacent writer change -> Tier 2."
+}

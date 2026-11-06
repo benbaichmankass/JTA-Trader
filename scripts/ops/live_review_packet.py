@@ -148,7 +148,74 @@ def collect(wanted: Optional[List[str]] = None, *, max_pages: int = 3, diag: Cal
         have = {t.get("order_package_id") for t in s.trades}
         if open_ids <= have or len(rows) < 1000:
             break
+    _read_consumed_bybit_legs(s, open_ids, diag)
     return s
+
+
+def _bybit_history_key(account: str, symbol: str) -> str:
+    return f"bybit_history:{account}:{symbol}"
+
+
+def _read_consumed_bybit_legs(s: Snapshot, open_ids: set, diag: Callable[[str], Any]) -> None:
+    """Read the venue order history for every Bybit (account, symbol) where a wanted package's OWN leg id is not
+    resting (LTR-MECH-PROP-MIRROR-BRACKET, 2026-11-05).
+
+    A package whose own SL/TP leg ids are missing from the open-orders read is either a bracket that FIRED (the
+    package closed at the venue and the journal close lags the read by seconds) or one that was CANCELLED while the
+    position stayed open. Those are opposite findings; the open-orders read alone cannot tell them apart, so
+    LR-20261105T1228Z-pkg-3245fc73e2f64536 called a stop that had filled 24 s before the read a lost bracket.
+    One history read per (account, symbol), only when needed."""
+    doc = s.get("bybit_orders") or {}
+    resting: Dict[str, set] = {}
+    for a in doc.get("accounts", []):
+        resting[a.get("account_id")] = {str(o.get("order_id")) for o in (a.get("result") or {}).get("orders", [])
+                                        if o.get("order_id")}
+    windows: Dict[Tuple[str, str], int] = {}
+    for t in s.trades:
+        aid, sym = t.get("account_id"), t.get("symbol")
+        if t.get("order_package_id") not in open_ids or aid not in resting or not sym:
+            continue
+        ids = [str(i) for i in (t.get("sl_order_id"), t.get("tp_order_id")) if i]
+        if not ids or all(i in resting[aid] for i in ids):
+            continue
+        try:
+            start = datetime.fromisoformat(str(t.get("created_at") or t.get("timestamp")).replace("Z", "+00:00"))
+            start_ms = int(start.timestamp() * 1000) - 60_000
+        except ValueError:
+            start_ms = int((datetime.now(timezone.utc) - timedelta(days=7)).timestamp() * 1000)
+        k = (aid, sym)
+        windows[k] = min(windows.get(k, start_ms), start_ms)
+    end_ms = int(datetime.now(timezone.utc).timestamp() * 1000) + 60_000
+    for (aid, sym), start_ms in windows.items():
+        name = _bybit_history_key(aid, sym)
+        try:
+            s.reads[name] = diag(f"bybit_raw_order_history?account_id={aid}&symbol={sym}"
+                                 f"&start_ms={start_ms}&end_ms={end_ms}")
+            s.read_at[name] = _now_iso()
+        except Exception as exc:  # allow-silent: recorded in errors; the mechanics evidence says it was not read
+            s.errors[name] = str(exc)[:200]
+
+
+def _own_leg_fates(s: Snapshot, account: str, symbol: str, leg_ids: Dict[str, Optional[str]]) -> Optional[Dict[str, dict]]:
+    """``{"sl"|"tp": {order_id, status, cancel_type, avg_price, updated}}`` for this package's own Bybit legs from
+    the venue order history, or None when the history was not read. A leg absent from the history is omitted."""
+    doc = s.get(_bybit_history_key(account, symbol))
+    if not isinstance(doc, dict) or doc.get("read_state") != "order_history_read":
+        return None
+    recs = {str(r.get("order_id")): r for r in ((doc.get("result") or {}).get("records") or [])}
+    out: Dict[str, dict] = {}
+    for kind, oid in leg_ids.items():
+        r = recs.get(str(oid)) if oid else None
+        if r is None:
+            continue
+        upd = r.get("updated_time")
+        try:
+            when = datetime.fromtimestamp(int(upd) / 1000, timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+        except (TypeError, ValueError):
+            when = None
+        out[kind] = {"order_id": str(oid), "status": r.get("order_status"), "cancel_type": r.get("cancel_type"),
+                     "avg_price": _f(r.get("avg_price")), "trigger_price": _f(r.get("trigger_price")), "at": when}
+    return out
 
 
 def generator_state() -> dict:
@@ -763,6 +830,48 @@ def _mechanics(s: Snapshot, view: dict, accts: List[dict], sl: Optional[float], 
                                    qty=_f(tr.get("position_size")), siblings=len(sibs))
             tr = a.get("trade")
             trade_open = (tr or {}).get("status") == "open" or (a.get("telemetry") or {}).get("lifecycle") == "open"
+            # the journal is the record of whether THIS account's trade is open; position_telemetry lags a close
+            # (LR-20261105T1228Z: telemetry still "open" 7 s after the journal closed the row)
+            jrows = [t for t in view["trades"] if t.get("account_id") == aid]
+            if trade_open and (tr or {}).get("status") != "open" and jrows \
+                    and not any(t.get("status") == "open" for t in jrows):
+                closed = jrows[0]
+                ev.append(f"{aid}: journal trade {closed.get('id')} is {closed.get('status')} "
+                          f"({closed.get('exit_reason')} at {closed.get('closed_at')}); position_telemetry still "
+                          f"reads open (lags the close), not read as an open trade")
+                tr = closed
+                trade_open = False
+            if ex == "bybit" and sibs:
+                ev.append(f"{aid}: {symbol} is NETTED across {len(sibs) + 1} open packages on this account (per side) "
+                          f"(this one + {', '.join(sibs)}); each package's own qty-scoped Partial SL/TP legs are "
+                          f"matched by order id, never by level alone")
+            fates = (_own_leg_fates(s, aid, symbol, {"sl": (tr or {}).get("sl_order_id"),
+                                                    "tp": (tr or {}).get("tp_order_id")})
+                     if ex == "bybit" and v.get("state") == "read" else None)
+            fired = {k: f for k, f in (fates or {}).items() if f.get("status") == "Filled"}
+            if trade_open and fired:
+                # the package's own bracket FIRED at the venue: protected throughout, closed at its own level; the
+                # journal close lags the read. Not a lost bracket and not an open position to review.
+                k, f = next(iter(fired.items()))
+                other = (fates or {}).get("tp" if k == "sl" else "sl") or {}
+                ev.append(f"{aid}: this package's own {k.upper()} leg {f['order_id']} FILLED at the venue at "
+                          f"{f['at']} (trigger {f['trigger_price']}, avg {f['avg_price']})"
+                          + (f"; its {('tp' if k == 'sl' else 'sl').upper()} leg {other.get('status')} "
+                             f"({other.get('cancel_type')})" if other else "")
+                          + "; the bracket closed the package at the venue, the journal close lags this read")
+                trade_open = False
+                v = dict(v, position=bool(sibs) and v.get("position"))
+            elif trade_open and fates:
+                for k, f in fates.items():
+                    if f.get("status") not in ("New", "Untriggered", "Active"):
+                        ev.append(f"{aid}: this package's own {k.upper()} leg {f['order_id']} is {f.get('status')} "
+                                  f"({f.get('cancel_type')}) at {f['at']} while its trade is open: the package's "
+                                  f"bracket was removed at the venue, not consumed")
+            elif trade_open and ex == "bybit" and v.get("state") == "read" and v.get("ambiguous"):
+                hist_err = s.errors.get(_bybit_history_key(aid, symbol))
+                if hist_err:
+                    ev.append(f"{aid}: venue order history not read ({hist_err}); a missing own leg cannot be told "
+                              f"apart from a fired one")
             if v["state"] != "read":
                 looked_fail += 1
                 item["evidence"] = v["why"]
@@ -846,9 +955,13 @@ def _price(leg: str, side: str, tel: dict, atr_mult: Optional[float], review_id:
            "--open-r", str(tel["open_r"]), "--peak-r", str(tel["peak_r"]), "--atr-stop-mult", str(atr_mult), "--json",
            # the leg's committed full-history corpus (comms/strategy_evidence/ltr_corpus/) when it has one, else
            # the evidence record's source_run; the packet records which one priced it (corpus_source)
-           "--corpus", "auto"]
+           "--corpus", "auto",
+           # CLOSE NOW priced beside hold / tighten (row ML-ENTRY-LTR-OUTCOME-TABLE: "prices hold/tighten/close")
+           "--close"]
     if tel.get("bars_held") is not None:
         cmd += ["--bars-held", str(int(tel["bars_held"]))]
+    if tel.get("stop_r") is not None:       # the CURRENT stop in R: r-levels are generated relative to it
+        cmd += ["--stop-r", str(tel["stop_r"])]
     out = subprocess.run(cmd, capture_output=True, text=True, cwd=REPO, timeout=300)
     if out.returncode != 0:
         return None, f"live_review_outcomes failed: {out.stderr.strip()[-200:]}"
@@ -868,6 +981,16 @@ def _price(leg: str, side: str, tel: dict, atr_mult: Optional[float], review_id:
 
 
 EVIDENCE_MISSING = "evidence_missing"
+
+
+def atr_stop_mult_of(meta: dict) -> Optional[float]:
+    """1R in entry-ATR units: the declared ``atr_stop_mult``, else ``risk_per_unit / atr14`` (ml_entry packages carry
+    those two and no atr_stop_mult; its SL is 2 x ATR14, row ML-ENTRY-LTR-OUTCOME-TABLE). None when neither is there."""
+    m = _f(meta.get("atr_stop_mult"))
+    if m is not None and m > 0:
+        return m
+    rpu, atr = _f(meta.get("risk_per_unit")), _f(meta.get("atr14") or meta.get("atr"))
+    return round(rpu / atr, 6) if rpu and atr and rpu > 0 and atr > 0 else None
 
 
 def priced_state(priced: Optional[dict], why: Optional[str], asked: bool) -> str:
@@ -1006,8 +1129,10 @@ def build_packet(pkg: str, s: Snapshot, now: datetime, *, write_tables: bool = F
     review_id = f"LR-{now.strftime('%Y%m%dT%H%MZ')}-{pkg}"
     priced = why = None
     if price and direction:
-        priced, why = _price(leg, direction, {"open_r": open_r, "peak_r": peak_r, "bars_held": bars_held},
-                             _f(meta.get("atr_stop_mult")), review_id, write_tables, tables_out)
+        r_to_stop = tv("r_to_stop", "rToStop")
+        stop_r = (open_r - r_to_stop) if (open_r is not None and r_to_stop is not None) else None
+        priced, why = _price(leg, direction, {"open_r": open_r, "peak_r": peak_r, "bars_held": bars_held, "stop_r": stop_r},
+                             atr_stop_mult_of(meta), review_id, write_tables, tables_out)
         if why:
             miss("priced_options", why)
     cost = {"basis": "evidence-record net_r per trade (fee + slippage + funding, execution_costs.resolve_cost_policy)"} if priced else {"basis": None}
@@ -1078,7 +1203,65 @@ def build_packet(pkg: str, s: Snapshot, now: datetime, *, write_tables: bool = F
                   "peak_provenance": provenance, "peak_r": peak_r, "regime_cell_entry": cell_entry, "regime_cell_now": None,
                   "sl": sl, "tp": tp},
     }
+    packet["packet_health"] = packet_health(packet)  # computed last, from the finished packet
     return packet
+
+
+# ----------------------------------------------------------------------------- packet health
+# PACKET-HEALTH (operator 2026-11-05 ~08:25Z, "we need to make sure the lanes know how to report when something is wrong
+# with the review packet, like missing live data"). Precedent failure: LR-20261105T0700Z-pkg-b76b0655d305485e priced every
+# tighten option as unpriced (atr levels no_candles, r levels invalid_level) and the lane never said so. The block is
+# COMPUTED from the finished packet, never typed by a reviewer; a count that reads 0 may mean "we could not look", so every
+# defect carries its numerator AND its denominator.
+
+#: Chart blocks whose absence means the discretionary read has no market data to look at.
+HEALTH_CONTEXT_BLOCKS = ("chart", "htf", "live_vs_backtest")
+_COULD_NOT_READ = re.compile(r"(\d+) account\(s\) could not be read")
+
+
+def _defect(field_: str, reason: str, count: Optional[int], denominator: Optional[int]) -> dict:
+    return {"field": field_, "reason": reason, "count": count, "denominator": denominator}
+
+
+def packet_health(packet: dict) -> dict:
+    """``{"status": ok | degraded | could_not_look, "defects": [{field, reason, count, denominator}]}``.
+
+    ``degraded`` = at least one defect; ``could_not_look`` = the packet carries no usable read of the trade itself
+    (every account's venue read failed, or neither open_r nor a chart could be read). Never a gate: the call is still made."""
+    defects: List[dict] = []
+    po = packet.get("priced_options")
+    state = packet.get("priced_options_state")
+    if po is None:
+        if state != "not_priced":
+            defects.append(_defect("priced_options", str(state or "could_not_price"), 1, 1))
+    else:
+        opts = [o for o in po.get("options") or [] if o.get("action") != "hold"]
+        unpriced = [o for o in opts if o.get("mean_r") is None]
+        reasons = sorted({str(o.get("reason") or o.get("state") or "unpriced") for o in unpriced})
+        if opts and len(unpriced) == len(opts):
+            defects.append(_defect("priced_options.options", "all_options_unpriced:" + "+".join(reasons),
+                                   len(unpriced), len(opts)))
+        no_candles = [o for o in opts if o.get("reason") == "no_candles"]
+        if no_candles:
+            defects.append(_defect("priced_options.candles", "candles_missing", len(no_candles), len(opts)))
+    gen = (packet.get("generator") or {}).get("state")
+    if gen in ("stale_vs_origin_main", "could_not_look"):
+        defects.append(_defect("generator", "generator_stale" if gen == "stale_vs_origin_main" else "generator_unverified", 1, 1))
+    bounds = packet.get("account_bounds") or []
+    mech = packet.get("mechanics") or {}
+    m = _COULD_NOT_READ.search(str(mech.get("evidence") or ""))
+    unread = int(m.group(1)) if m else (len(bounds) if mech.get("verdict") == "could_not_look" else 0)
+    if unread:
+        defects.append(_defect("mechanics", "venue_read_unreachable", unread, len(bounds) or unread))
+    ctx = packet.get("context_v3") or {}
+    for k in HEALTH_CONTEXT_BLOCKS:
+        if ctx.get(k) is None:
+            defects.append(_defect(f"context_v3.{k}", f"context_null:{k}", 1, 1))
+    st = packet.get("state") or {}
+    if st.get("open_r") is None:
+        defects.append(_defect("state.open_r", "context_null:state.open_r", 1, 1))
+    blind = (bool(unread) and unread >= (len(bounds) or unread)) or (st.get("open_r") is None and ctx.get("chart") is None)
+    return {"status": "could_not_look" if blind else ("degraded" if defects else "ok"), "defects": defects}
 
 
 # ----------------------------------------------------------------------------- CLI

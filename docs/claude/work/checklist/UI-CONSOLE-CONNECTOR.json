@@ -1,0 +1,23 @@
+{
+  "id": "UI-CONSOLE-CONNECTOR",
+  "title": "Read-only JTA MCP connector for the management console (trainer VM, OAuth ALLOWED_EMAIL, shared cache with fixed upstream fetch budget)",
+  "phase": null,
+  "state": "in_flight",
+  "owner": "manager",
+  "lane": "UI-CONSOLE-V1",
+  "model": null,
+  "ceiling_usd": 25,
+  "spend_usd": null,
+  "tier": 2,
+  "prs": [],
+  "blocked_on": [],
+  "note": "Step C1 of docs/plans/UI-TWO-SURFACE-DESIGN-2026-11.md \u00a7 2/\u00a7 5. Discloses gates G1 (sign-in allowlist) and G2 (fetch budget). Depends: operator U1, U2, U5; trainer VM inbound HTTPS check (UNVERIFIED). Every tool is a GET via DASHBOARD_API_TOKEN (GET/HEAD-only service credential). Closing: connector listed in claude.ai; journal_trades matches /trades/closed for the same window; live-VM request rate within the G2 arithmetic over 1 h. Operator 2026-11-05 ~06:00Z, verbatim, relayed by Manager Session 2026-11-04b (session_01AFoLuN7HERxg65eHjtmMYE): \"Yeah, why don't we push that forward? I'll get you the token in the next couple of hours.\" Console V1 pulled forward from 11-20; lane UI-CONSOLE-V1. due_by 11-13 -> 11-07. 2026-11-05 06:00Z PROBE staged: trainer VM host iptables REJECTs all inbound but 22 and no caddy (#23135), so the probe uses an outbound-only Cloudflare quick tunnel (no ingress change): hello-world MCP (authless, no data) on trainer 127.0.0.1:8765 as transient units jta-mcp-probe + jta-mcp-tunnel (#23136), public self-test 200 in 138 ms. Probe page https://claude.ai/artifact/9rodWzoqc6xq6z1UP8WUBm awaits the operator adding custom connector 'JTA Console Probe'. 2026-11-05 09:50Z C1 v0.1 DEPLOYED (from branch, PR #23223 held): unit jta-console-connector on trainer 127.0.0.1:8765 replaced jta-mcp-probe (#23224, #23230; first deploy 422'd on POST /mcp -- FastAPI Request annotation, fixed 044c3ae5 + HTTP test). OBSERVED via the quick tunnel: tools hello/work_rows/inbox/work_items; work_rows 200 1.4 s (counts due 85 / in_flight 41 / blocked 22 / queued 101, register @2172467d); inbox 200 5.0 s cold (pipeline 2649 files), 30 s TTL cache. Public repo registers only; alerts could_not_look until G1. Console v2 (https://claude.ai/artifact/YU4ZwddDFB1AD2xWV2oE3g) reads it via watchTool, 30 s. NOT observed: any call from claude.ai (operator has not connected the connector). Open: stable hostname + sign-in (G1) decision. OPERATOR APPROVAL 2026-11-05 ~14:20Z (popup, verbatim answer \"Yes, merge + install (Rec.)\"): merge PR #23345 (Tier 2, trainer systemd unit jta-console-connector.service + trainer-console-connector-install workflow) once CI is green, then run the install (one connector restart) and verify 9 tools.",
+  "due_by": "2026-11-07",
+  "roadmap": [
+    "L-OPS"
+  ],
+  "updated_at": "2026-11-05T14:25:05Z",
+  "updated_by": "session_01AFoLuLmhUKeUzHC6CHz2uP",
+  "week_lane": "surge",
+  "_seq": 920
+}

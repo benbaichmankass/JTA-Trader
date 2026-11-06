@@ -47,7 +47,7 @@ concurrency:
 
 jobs:
   run:
-    runs-on: ${{ fromJSON(vars.INFRA_RUNS_ON || '"ubuntu-latest"') }}  # GH-CAPACITY-INFRA-RUNNER: self-hosted jta-infra when vars.INFRA_RUNS_ON is armed, else hosted
+    runs-on: ubuntu-latest  # B13 (COMPUTE-ALLOCATION): research never lands on the ops pool; not vars.INFRA_RUNS_ON
     timeout-minutes: 360
     env:
       KAGGLE_API_TOKEN: ${{ secrets.KAGGLE_API_TOKEN }}

@@ -12,7 +12,19 @@ import asyncio
 import json
 from unittest.mock import AsyncMock, MagicMock
 
+import pytest
+
 from src.runtime import execution_diagnostics as ed
+
+
+@pytest.fixture(autouse=True)
+def _send_everything_policy(tmp_path, monkeypatch):
+    """These tests pin the ping SHAPE, so they run under an empty Telegram policy
+    (== send everything). Which accounts' pings are sent is pinned by
+    tests/test_telegram_policy.py (TELEGRAM-TRIM)."""
+    p = tmp_path / "telegram_policy_empty.yaml"
+    p.write_text("{}\n")
+    monkeypatch.setenv("TELEGRAM_POLICY_PATH", str(p))
 
 
 def _read_payload(path):

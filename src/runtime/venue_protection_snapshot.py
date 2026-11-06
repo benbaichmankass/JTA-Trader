@@ -229,7 +229,7 @@ def record_read(*, account_id: Any, trade_id: Any, symbol: Any = None, direction
         with ctx:
             from src.utils.paths import trade_journal_db_path
             path = db_path or str(trade_journal_db_path())
-            with sqlite3.connect(path, timeout=5.0) as conn:
+            with sqlite3.connect(path, timeout=_write_busy_timeout(5.0)) as conn:
                 pkg, sl, tp = _package_for_trade(conn, trade_id)
                 row = build_snapshot_row(
                     order_package_id=order_package_id or pkg, account_id=account_id,
@@ -282,3 +282,14 @@ def read_snapshots(db_path: Optional[str] = None, *, order_package_id: Optional[
         return env
     env.update({"present": True, "count": len(rows), "rows": rows})
     return env
+
+
+def _write_busy_timeout(default: float) -> float:
+    """5 s everywhere, but the short bound on the exit-evaluation thread
+    (src/runtime/journal_sync.py; TICK-STAGE2-RECONCILE-OFFTICK): a best-effort
+    telemetry write must not hold an exit pass past the 60 s requirement."""
+    try:
+        from src.runtime.journal_sync import write_busy_timeout
+        return write_busy_timeout(default)
+    except Exception:  # noqa: BLE001
+        return default

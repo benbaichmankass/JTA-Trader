@@ -1,0 +1,7 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "hold_reason": "tier_2_3_needs_approval",
+  "hold_text": "Connector code plus ONE restart of the console connector unit on the trainer VM (Tier 2). Manager dispatch (UI-CONSOLE-ITEM-FEEDBACK, 2026-11-05 ~15:25Z): fix the console connector gaps in ONE PR so the connector restarts once: (a) work_rows rows carry week_lane, roadmap, writeback; (b) work_rows gains an open_other section (queued without due_by, landed_unproven) so the Overview Roadmap card is complete; (c) new read-only tool system_catalog (strategy legs, ML models, signal catalog; committed files only). Landing hold: manager gets the operator's OK, merges, then runs the trainer-console-connector-install restart.",
+  "why": "The console Overview needs week_lane and all open rows from work_rows, and the System tab needs system_catalog; all three are read-only projections over committed files, no write, no live read, no gate."
+}

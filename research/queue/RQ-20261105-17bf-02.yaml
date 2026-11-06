@@ -1,0 +1,94 @@
+id: RQ-20261105-17bf-02
+title: 'trend_donchian_sol widened-evidence edge: net-of-cost edge (95% CI lower bound > 0?) on SOL long history plus config-exact twins on other liquid USDT perps, cluster-bootstrap CI (the test PI-20261028-FFTW4JNY-0002
+  lacked)'
+status: done
+cadence: once
+kind: experiment
+theme: new_strategy_prop
+priority: 2
+roadmap:
+- L-LADDER
+question: 'Does trend_donchian_sol (testing, bybit_1 only; re-parsed from config/accounts.yaml 2026-11-05) have a positive net-of-cost per-trade edge with 95% CI lower bound above 0 when evidence is widened?
+  RQ-20261028-dda7-04 passed a single 1095d window (n=183, +17.70R OOS, 4/6 folds) but its 365d re-measure was negative (window dependence), and the identical single-window pass on trend_donchian_eth_prop
+  FAILED when widened (RQ-20261031-422a-01: pooled n=8507, ci_lo -0.032). Same arms and driver as 422a (scripts/research/widened_edge_pool.py --leg trend_donchian_sol; own-long, own-common, 8 config-exact
+  twins incl. ETHUSDT in place of SOLUSDT), prop stack arm P is the driver''s fixed stack. NOTE: the leg is not prop-rostered, so the P stack is conservative vs bybit costs; stated, not tuned. Operator
+  2026-11-05 on PI-20261028-FFTW4JNY-0002: "this looks like if it neds me, ti should be a popup" -> classified data-missing, not a preference.'
+why_this_matters: Settles the Stage-2 eligibility proposal for trend_donchian_sol on population evidence instead of one window; no operator decision is needed before it runs.
+power:
+  expected_n: 3000
+  min_detectable_effect: 0.1
+  effect_units: R
+  sd: 1.2
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: 'Per-trade net-R sd is about 1.2 (eth_prop 3y: SE 0.055 at n=517). Detecting a +0.1 R mean at 95%/80% needs about (2.8*1.2/0.1)^2 = ~1100 independent trades; the pooled sample is expected to be
+    a few thousand trades over 9 symbols x ~5.7 y but month-clustered, so the effective n is lower - the cluster bootstrap reports it. If the pooled lower bound is <= 0 at n < 400 the unit is INCONCLUSIVE,
+    not FAIL.'
+  feasibility:
+    source: none
+    accrual_basis: Re-measure of public price history (Binance Vision) at the prop cost stack; nothing accrues.
+decision_rule:
+  id: RULE-RQ-20261105-17bf-02-WIDENED-EDGE
+  registered_at: '2026-11-05T12:00:00Z'
+  registered_before_run: true
+  statistic: 'From scripts/research/widened_edge_pool.py verdict.json: pooled = OWN-COMMON + all twin symbols that ran, net R per trade at arm P; pooled mean and the 2.5th percentile of a calendar-month
+    cluster bootstrap of the mean (2000 draws, seed 1) = pooled.ci_lo; own_long.mean_r = the ETH 2020-2026 mean net R (iid CI reported beside it); per-symbol means reported, never selected among (no best-of-N).
+    A twin that could not run is recorded as could_not_run and left out of the pool, stated in the result.'
+  rule: PASS IF pooled.ci_lo > 0 AND own_long.mean_r > 0 -> the manager files the Gate-2 (Stage-2) eligibility case for trend_donchian_sol on the widened ledger (this unit changes no roster). FAIL IF pooled.ci_lo
+    <= 0 AND pooled n >= 400 -> the PI proposal is killed and the leg stays testing; closes this configuration on this window and cost stack, not the trend family. INCONCLUSIVE otherwise, stating the n
+    that would settle it.
+  what_it_does_not_do: Changes no roster, params, risk, sizing or config. Is not a promotion case. Does not use live-book P&L. Does not grade EV per account life (prop_ev_sim); that follows a PASS. Twins
+    are config-exact copies, not tuned per symbol; per-symbol results are descriptive.
+  min_n: '400'
+compute: cpu_long
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 2.0
+  est_minutes: 80
+  basis: Ten harness runs (own-long, own-common, 8 twins), each a ~2000 d public candle fetch and one backtest; RQ-20261015-1bf3-05 took about 45 min for one ~1100 d run, so about 80 min with fetches in
+    parallel with nothing else.
+value:
+  bucket: information
+  usd_at_stake_per_month: 300
+  confidence: 0.4
+  basis: settles one Stage-2 eligibility proposal; stand-in figure, no balances stated
+run:
+  workflow: research-script-run.yml
+  timeout_minutes: 150
+  command:
+  - python3
+  - scripts/research/widened_edge_pool.py
+  - --leg
+  - trend_donchian_sol
+  - --symbols
+  - BTCUSDT,ETHUSDT,BNBUSDT,XRPUSDT,DOGEUSDT,LINKUSDT,AVAXUSDT,ADAUSDT
+  - --out
+  - '{out_dir}'
+  inputs:
+    research_unit: RQ-20261105-17bf-02
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+practice_precedent: R1 and T1 of docs/reference/trading-and-model-practice-principles.md (judge an edge ex a single window; track every configuration tried); config-exact twins as a family-level pooled
+  estimate, never best-of-N
+related:
+- research/queue/RQ-20261031-422a-01.yaml
+- scripts/research/widened_edge_pool.py
+- docs/research/wf-recost-dda7-2026-10-28/RQ-20261028-dda7-04/
+last_dispatched_at: '2026-11-05T12:47:56+00:00'
+grading:
+  attested: RULE-RQ-20261105-17bf-02-WIDENED-EDGE
+  auto: true
+  decision_rule_id: RULE-RQ-20261105-17bf-02-WIDENED-EDGE
+  evidence:
+  - research/results/RQ-20261105-17bf-02/42030376866.jsonl
+  graded_at: '2026-11-05'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail

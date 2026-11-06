@@ -29,7 +29,9 @@ run-name: research-script-run ${{ inputs.research_unit }}   # REFILL 2026-11-03:
 #
 # SECRETS. This workflow holds nothing beyond the ambient GITHUB_TOKEN and
 # checks out with persist-credentials: false — the unit's script cannot reach
-# a PAT. NO PAT IS USED HERE AT ALL: the run only UPLOADS its outputs (plus
+# a PAT. ONE EXCEPTION (operator 2026-11-05, "Allow paper pair (Rec.)", row
+# ALPACA-PAPER-KEYS-R3): the PAPER Alpaca key pair is passed to the "Run the
+# unit's command(s)" step only, for read-only market data; the live pair never is. NO PAT IS USED HERE AT ALL: the run only UPLOADS its outputs (plus
 # `record-inputs.json`, the E5 record's inputs derived from what it wrote) as
 # an artifact.
 #
@@ -145,6 +147,10 @@ jobs:
         continue-on-error: true
         env:
           UNIT: ${{ inputs.research_unit }}
+          # PAPER Alpaca pair only, this step only (operator 2026-11-05, popup verbatim "Allow paper pair (Rec.)",
+          # row ALPACA-PAPER-KEYS-R3): read-only bars for RQ-20261104-a41f-01. The LIVE pair is never given here.
+          ALPACA_API_KEY_ID: ${{ secrets.ALPACA_API_KEY_ID }}
+          ALPACA_API_SECRET_KEY: ${{ secrets.ALPACA_API_SECRET_KEY }}
         run: |
           set -euo pipefail
           python3 scripts/research/script_run.py --unit "${UNIT}" --run-id "${GITHUB_RUN_ID}" --run

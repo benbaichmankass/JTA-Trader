@@ -5,7 +5,7 @@ id: RQ-20261104-005
 title: 'ITERATION 2 of trend_donchian_1h (stage0 FAIL at power: n 1333, -88.2 R, 0 of 6 folds): does a
   slower Donchian (40 / 55), an ADX >= 25 gate, or removing the pivot-5 structure exit beat the leg as
   declared on BTC 1h over 2020-07..2026-10?'
-status: queued
+status: done
 cadence: once
 roadmap:
 - L-PROGRAMMES
@@ -164,4 +164,14 @@ generated:
   key: programme:P3-ITER2-trend-donchian-1h
   params:
     node: P3-ITER2-trend-donchian-1h
-last_dispatched_at: null
+last_dispatched_at: '2026-11-05T01:54:14+00:00'
+grading:
+  auto: true
+  decision_rule_id: RULE-P3-ITER2-trend-donchian-1h
+  evidence:
+  - research/results/RQ-20261104-005/41951809830.jsonl
+  graded_at: '2026-11-05'
+  grader: scripts/research/queue_grade.py
+  reason: 1 row(s), all measured, all pass
+  rows: 1
+  verdict: pass

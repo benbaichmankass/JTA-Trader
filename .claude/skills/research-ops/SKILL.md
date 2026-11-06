@@ -35,7 +35,8 @@ python3 scripts/research/research_disposition.py --unread-only
 3. **CHOOSE THE NEXT TEST FROM THE MAP, never at random.** For each subject whose result you read, and each ORPHAN: the next
    unit cites the attribution finding, the map entries it builds on (`iteration.map_entries`), the lever it measures next and why
    (expected information or value). Desk methods: one-factor sweeps and ablations against a baseline control first, response
-   surfaces where interactions are suspected, every arm counted, walk-forward and regime splits, ONE holdout read for a survivor.
+   surfaces where interactions are suspected, every arm counted, walk-forward and regime splits, a holdout read for a survivor (re-reads
+   allowed, each recorded and graded on a stricter, deflated bar: principles M13).
    A pass result → its holdout → promotion proposal (Tier 3). An OVERDUE iteration: fix its route, re-date it with the reason,
    or replace it.
 4. **PASSING AND LIVE SUBJECTS KEEP BEING MAPPED.** A production leg's levers are re-measured on new data on a standing cadence;
@@ -67,7 +68,13 @@ which trades, regimes and months lost; gross vs net; entry vs exit vs filter; n 
 `python3 scripts/research/iteration_orphans.py --levers` and map the diagnosis onto the subject's lever map — the families the
 diagnosis implicates first, then the families never tested (`.`). (3) Author as many arms as the diagnosis supports — a sweep,
 an ablation or a grid, across one family or several — each registered before the run, the arm denominator stated, the
-survivor read once on a holdout. One unit per lever family is a fine shape; one variant per pass is not a rule. (4) A flat
+survivor read on a holdout. One unit per lever family is a fine shape; one variant per pass is not a rule. **A read holdout
+is not spent** (operator 2026-11-05, verbatim: *"We can't just, like, give up on a certain line of research because we've already
+trained a model on all the data that we have. That's ridiculous."*; principles M13). Retrain and tweak on the training-period slices
+without limit. Re-test on the same holdout as often as the diagnosis supports. `holdout_lock.claim_read(..., train_end=...)` records
+each read and returns the deflated bar (`bar["ci_z"]` for CI bars, `bar["point_t_min"]` for point bars) that the grader applies.
+`holdout_lock.py families` prints `n_tries` per family and window. The only refusal is a window overlapping training. A unit that
+stops because "the window is spent" is a mis-stop: re-open it under M13. (4) A flat
 result moves the next pass to untested families; a near-miss narrows the grid. Retirement only when the map is exhausted
 (lever-exhaustion family review; never an attempt count). A lever TRANSFER or a template re-run is not an iteration unless a
 diagnosis of this subject chose it. A PASS that is still a discovery iterates to ONE
@@ -84,6 +91,12 @@ iterations advanced (a subject whose iteration result was read and whose next st
 proposal or retirement record — was written this pass), survivors (a subject whose confirmation PASSED), and overdue. **Nothing is
 authored to meet a queue count** (STOP-GENERATED-AUTHORING, operator 2026-11-01 popup *"Stop floor-driven units (Rec.)"*, #22107):
 the runnable count is a diagnostic, not a target.
+
+## RESEARCH ITERATES ON IN-HAND DATA — never wait for a future month (operator 2026-11-05, binding; lane RESEARCH-NO-WAIT)
+
+> **Operator, 2026-11-05 ~17:08Z (verbatim):** *"Why does it need to wait for November? That's not the workflow - we iterate in the data we have till we find what works, we don't wait for new months of data"*
+
+No unit waits for a future month, a "forward window", a zip landing or trades accruing to a sample size. The confirming read of a discovery uses an **untouched in-hand holdout, registered before the run**, taken in this order: (1) **pre-dev history** earlier than the dev folds (the model is fit on later rows only); (2) a **symbol holdout** (symbols never in the training or selection population, claimed in `holdout_lock.py` with a symbols list; correlated evidence, said so); (3) **another venue's history**; (4) a **longer lookback**. The rule and its thresholds stay fixed; only the window moves — an `amendments:` entry (`before_any_run: true`) on a unit that has not run, or a superseding unit plus `retired_reason` on one that has. Only live execution mechanics and cost (fills, slippage, funding, broker-sourced costs, live-vs-backtest divergence) are read on live/paper accrual, and those are monitoring, never a gate. **Gates this adds or changes: none** (no guard unless the operator approves one). Audit: `git grep -l -i -E "forward[- ](window|read)|fresh (forward )?window|not_before|accrual" -- research/queue/` on live units, and classify each hit A (in-hand window exists: re-register) / B (live mechanics: monitoring) / C (false positive).
 
 ## What this is, and what it is not
 
@@ -157,7 +170,8 @@ The shared pattern's ANALYSIS prompts (compete hypotheses with *noise* always on
 surprises, premortem, neutral framing) apply to every step above: `docs/reference/llm-analyst-skill-design.md` § 3.
 
 **3. ACT** — steps C–E mechanics: author what step 2.4–2.5 decided as iteration units (the loop's block), then follow-ups the packet shows as `needs_authoring`,
-triage `needs_review`, unlock / retire. A follow-up re-handed-off twice is authored by this pass or retired with a reason.
+triage `needs_review`, unlock / retire.
+   **Daily triage duty (operator, 2026-11-04 weekly planning, popup verbatim: "research-ops owns it, daily (Recommended)"; Gates this adds or changes: none):** every day, triage the `needs_review` items and give every unowned one an owner or a disposition (authored, retired with a reason, or filed on the checklist/pipeline). A follow-up re-handed-off twice is authored by this pass or retired with a reason.
 
 **4. RECORD** — step F's record gains the shared pattern's four top-level blocks (the old fields stay), shape as in
 `docs/reference/llm-analyst-skill-design.md` § 4 and `comms/schema/performance_review_response.template.json`:
@@ -455,8 +469,8 @@ apply the rule **verbatim** — never a rule written after seeing the number:
   checklist row for the manager**. Never a config edit, never a claim a leg is promoted.
   **A PASS read on one window is a discovery, not a confirmation** (RESEARCH-OPS-BENCHMARK-1016,
   `docs/research/research-ops-benchmark-2026-10-16.md` § 2; P3 already works this way): before it feeds a
-  Tier-3 proposal, its follow-up is ONE confirmation unit on a disjoint or most-recent window the PASS did not
-  see, registered with the same statistic and bar. Name in the note how many cells or configurations the
+  Tier-3 proposal, its follow-up is ONE confirmation unit on a disjoint IN-HAND window the PASS did not
+  see (pre-dev history, a symbol holdout, another venue, a longer lookback: § "RESEARCH ITERATES ON IN-HAND DATA"; never a future month), registered with the same statistic and bar. Name in the note how many cells or configurations the
   PASS was chosen from: that count is the multiple-testing denominator (row `RESEARCH-TRIAL-LEDGER`).
 - **fail →** the rule's disposition, then the **fail-is-not-dead** read (operator, 2026-10-22: *"we don't
   just drop an idea because we ran one test and it didn't pass… we need to study them, do open source

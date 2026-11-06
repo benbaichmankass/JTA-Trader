@@ -175,6 +175,20 @@ class Cadence(NamedTuple):
 #: healthy-looking watch forever". That is the new-table-wiring lesson: a guard
 #: cheaper to lie to than to satisfy is worse than no guard.
 CADENCE_REGISTRY: dict[str, dict] = {
+    # ── WSD-S3-CLI-OUTBOX (2026-11-05): the work-store outbox drainer; its writes go to the VM's work_store.db, not git.
+    "work-store-outbox.yml": {
+        "receipt": None,
+        "why": "applies outbox comments to POST /api/bot/work/items* (work_store.db on the live VM, not in git) and marks each "
+               "applied comment with a rocket reaction, so no repo receipt exists; the hourly run is a backstop to the "
+               "issue_comment trigger, an unreached store exits 1, and a failed run is observed by claude-run-failure-alert",
+    },
+    # ── ML-ENTRY-RETRAIN-CADENCE (2026-11-04): weekly candidate retrain; the artifact is a run artifact, not in git.
+    "ml-entry-retrain.yml": {
+        "receipt": None,
+        "why": "uploads the candidate model + freshness.json as a 90-day Actions artifact, not in git, so no repo receipt exists; a failed "
+               "run turns red and is observed by claude-run-failure-alert, and the served model's own data-through age is graded on the "
+               "trader tick (src/runtime/ml_entry_live_monitor.py served_model_freshness)",
+    },
     # ── GH-CAPACITY-INFRA-RUNNER (2026-11-03): a routing check, writes nothing to git.
     "infra-runner-health.yml": {
         "receipt": None,
@@ -258,6 +272,11 @@ CADENCE_REGISTRY: dict[str, dict] = {
         "why": "writes main only when desk/decisions carries a decision_id main lacks or a proposal's horizon has passed, so a quiet "
                "mirror leaves no receipt by design; a stopped mirror is observed by claude-run-failure-alert and by a branch "
                "decision_id missing from main's comms/desk/decisions.jsonl",
+    },
+    "kaggle-backups.yml": {
+        "receipt": "comms/backups/kaggle_latest.json",
+        "why": "every scheduled run rewrites the per-kind freshness stamp (ok, last_ok_at, consecutive_failures) and lands it through "
+               "commit-to-main; the last commit touching it IS the receipt (KAGGLE-BACKUPS, 2026-11-05)",
     },
     "research-slo.yml": {
         "receipt": "comms/research/health",
@@ -454,6 +473,7 @@ CADENCE_REGISTRY: dict[str, dict] = {
     "ict-trainer-git-sync.timer": {"receipt": None, "why": "VM-side; diag relay is the surface"},
     "ict-web-api-watchdog.timer": {"receipt": None, "why": "VM-side; diag relay is the surface"},
     "ict-work-digest.timer": {"receipt": None, "why": "VM-side; diag relay is the surface"},
+    "ict-work-store-import.timer": {"receipt": None, "why": "VM-side (WSD-S2); its receipt is runtime_logs/work_store_parity.jsonl on the live VM, served by GET /api/bot/work/parity (window.runs vs expected_runs)"},
     # PHONE-EXEC-OBSERVABLE-1018 (2026-10-18): the daily 7-day purge of phone step captures. Its run is visible
     # on the VM only: the one JSON line it prints to its journal (/api/diag/journalctl?unit=ict-phone-capture-purge)
     # and the capture store's own .last_purge marker; the same purge also runs on every capture POST.

@@ -1,0 +1,7 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "hold_reason": "tier_2_3_needs_approval",
+  "hold_text": "Tier-2 by path: src/prop/prop_executor.py (the live DXtrade prop executor for tradeify_1 / velotrade_1) and scripts/prop/breakout_login_check.py (the ict-prop-feed tick). Dispatched by the manager (Manager Session 2026-11-04a) as lane AUD-PROP-VENUE-POSITIONS-TRADEIFY-VELOTRADE, which requires a HELD PR; the manager merges. What changes: ONLY the account_status report body. Both writers already read the venue Positions every cycle; the report now also carries that read as positions_state + positions (bot symbol, direction, qty in units), the shape phone_executor already posts. No read, click, order, cancel, amend, guard or sizing path changes; no new gate. Revert: git revert of the merge commit.",
+  "why": "AUD-PROP-VENUE-POSITIONS-TRADEIFY-VELOTRADE: tradeify_1 / velotrade_1 status carried no positions field, so INV-PROP-POSITIONS and the live-review packet could only report could-not-read for 2 of 3 prop accounts."
+}

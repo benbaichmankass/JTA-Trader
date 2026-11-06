@@ -2,7 +2,7 @@
   "id": "TRIGGER-FIRST-REVIEWS",
   "title": "Trigger-first live reviews (permanent): scheduled review slots never fire for a package whose market is closed, and fire only when something is new since the last review (a new closed bar of the leg or a price move beyond a threshold); event triggers remain the primary path; same rule for the desk scan wake",
   "phase": null,
-  "state": "landed_unproven",
+  "state": "done",
   "owner": "manager",
   "lane": "session_01AFoLuMayLRYRMLq9QJKt9W",
   "model": "claude-sonnet-5-5",
@@ -13,10 +13,10 @@
     21883
   ],
   "blocked_on": [],
-  "note": "[Manager Session 2026-10-31a, ~10:45Z] OPERATOR DECISION 2026-10-31, verbatim excerpt: 'Maybe in general, that should be the workflow, like, have more trigger-based events and not waste capacity on regular reviews if there's nothing new really to review.' Popup answer verbatim: 'Yes, build it (Recommended)'. Target: live before Mon 2026-11-02 13:30Z when the weekend switch (WEEKEND-TRIGGER-ONLY) is restored, so the restore brings back the new rule, not the fixed 4h slot. Locus: src/runtime/live_review_due.py judgement_cadence_event (+ daily_floor) and scripts/ops/desk_wake_marker.py.  [lane TRIGGER-FIRST-REVIEWS, 2026-10-31] PR #21883 (Tier 2, landing hold; replaces #21881, rebuilt on a fresh branch). NOT yet merged or deployed. CLOSING OBSERVATION: after the Mon 2026-11-02 13:30Z weekend-switch restore, the first weekday slot where the live-review due check lists a closed-market or nothing-new package in skipped_slots with its reason (skipped_closed_market / skipped_nothing_new) while a package that moved >= 0.5 ATR is reviewed; and a desk bar with receipt state skipped_nothing_new. Default 0.5 ATR ESTIMATED on 113 pairs / 34 packages (rows 2026-10-25..31).",
+  "note": "[Manager Session 2026-10-31a, ~10:45Z] OPERATOR DECISION 2026-10-31, verbatim excerpt: 'Maybe in general, that should be the workflow, like, have more trigger-based events and not waste capacity on regular reviews if there's nothing new really to review.' Popup answer verbatim: 'Yes, build it (Recommended)'. Target: live before Mon 2026-11-02 13:30Z when the weekend switch (WEEKEND-TRIGGER-ONLY) is restored, so the restore brings back the new rule, not the fixed 4h slot. Locus: src/runtime/live_review_due.py judgement_cadence_event (+ daily_floor) and scripts/ops/desk_wake_marker.py.  [lane TRIGGER-FIRST-REVIEWS, 2026-10-31] PR #21883 (Tier 2, landing hold; replaces #21881, rebuilt on a fresh branch). NOT yet merged or deployed. CLOSING OBSERVATION: after the Mon 2026-11-02 13:30Z weekend-switch restore, the first weekday slot where the live-review due check lists a closed-market or nothing-new package in skipped_slots with its reason (skipped_closed_market / skipped_nothing_new) while a package that moved >= 0.5 ATR is reviewed; and a desk bar with receipt state skipped_nothing_new. Default 0.5 ATR ESTIMATED on 113 pairs / 34 packages (rows 2026-10-25..31). [2026-11-05 BACKLOG-DRAIN-20261105] DONE: MEASURED comms/live_review/reviews.jsonl 415 rows: trigger.event judgement_cadence = 31 rows on 2026-10-31 (00:30-08:12Z) and 0 rows since 11-01 while event rows continue (11-04 22 rows, 11-05 26 so far); desk scan receipt on main-live /api/diag/log_file?name=desk_wake_post_receipt state skipped_by_cadence; /api/diag/live_review_due serves skipped_slots (0 at 06:00Z, a quiet slot). NOT literally observed: a skipped_closed_market / skipped_nothing_new listing; the behaviour (no scheduled slot reviews) is. NOTE the config still carries the weekend values: see WEEKEND-TRIGGER-ONLY.",
   "priority_rank": 1,
-  "updated_at": "2026-10-31T11:52:11Z",
-  "updated_by": "session_01AFoLuMayLRYRMLq9QJKt9W",
+  "updated_at": "2026-11-05T06:09:37Z",
+  "updated_by": "session_01AFoLuLoMgjGPiy3UA2Ua8P",
   "roadmap": [
     "L-DESK",
     "L-ATM"

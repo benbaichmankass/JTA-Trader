@@ -1,0 +1,36 @@
+{
+  "row": "ML-ENTRY-ALPACA-BAR-PARITY",
+  "lane": "ML-ENTRY-SERVE-FIXES (session_01AFoLuK7HeWiq4wwSKqN47K)",
+  "generated_at": "2026-11-05T12:00:00Z",
+  "sources": {
+    "relay_1": "https://github.com/benbaichmankass/JTA-Trader/issues/23280 (run 42018369837)",
+    "relay_2": "https://github.com/benbaichmankass/JTA-Trader/issues/23285 (run 42020585965)"
+  },
+  "bar_shortfall": {
+    "kind": "MEASURED",
+    "population": "ml_entry_eval audit rows, alpaca_paper ETFs, decision bars 2026-11-02 16:00Z (13 symbols), SPY 2026-11-03..04 16:00Z+20:00Z (4 decisions), GDX 2026-11-04 16:00Z",
+    "requested_limit": 400,
+    "min_bars": 337,
+    "refused_2026_11_02_1600Z": {"SPY": 223, "QQQ": 221, "IWM": 215, "TLT": 243, "SLV": 267, "TQQQ": 238, "GDX": 203},
+    "persistence": "SPY insufficient_bars:223 at all four decisions 2026-11-03/04 16:00Z and 20:00Z; GDX 203 on 2026-11-02 and 2026-11-04",
+    "reading": "INFERRED: the count is constant per symbol while the frame's end moves 4 bars between 16:00Z and 20:00Z, so it is a per-symbol CAP on the response, not the calendar lookback (start = now - 110 days, which would move the count). Alpaca answering a page short of limit with a next_page_token, which get_ohlcv never followed, fits; the connector now follows the token. NOT verified against the venue from this lane (no Alpaca key here); the deploy observation settles it, and the new INFO line 'alpaca: <SYM> 1Hour n/400 bars after k page(s), next_page_token=...' says which way."
+  },
+  "decision_clock": {
+    "kind": "MEASURED (live) / code (research)",
+    "live": "ml_entry ETF evals logged only 15:01Z..21:04Z (13 SPY rows 2026-11-03..04); decisions at bar closes 16:00Z and 20:00Z (clock-hour IEX bars, is_decision_bar: close hour % 4 == 0). No eval at 00/04/08/12Z.",
+    "research": "RQ-20261101-bdc2-01 (scripts/research/ml_entry_alpaca_score.py): Yahoo RTH bars 09:30-16:00 ET; decision at a close whose floor(UTC hour) % 4 == 0 -> 16:30Z and 20:30Z in EST (UTC-5), 16:30Z and 20:00Z in EDT.",
+    "difference": "EST (today): live decides 30 min EARLIER than research at both slots (16:00Z = 11:00 ET vs 11:30 ET; 20:00Z = 15:00 ET vs 15:30 ET). The live 16:00Z decision bar is 15:00-16:00Z = 10:00-11:00 ET; the scored bar is 10:30-11:30 ET."
+  },
+  "feature_basis": {
+    "kind": "code",
+    "difference": "Every bar-counted feature (ret_1..ret_168, vol24, vol_ratio, range_pos_24/168, vol_z, rsi14, atr_pct, rel_vol) counts IEX clock-hour bars INCLUDING pre/post-market bars on the live path (alpaca_connector requests no session filter) vs 7 RTH bars per session in research. A 168-bar window therefore spans fewer sessions live than in research, and extended-hours IEX bars are thin (low volume, wide ranges), shifting vol / ATR / rel_vol. hour/dow features read the bar time: clock hour live vs :30 research.",
+    "per_feature_gap": null,
+    "per_feature_gap_read_state": "not_measured: needs 30 sessions of Alpaca IEX 1h bars beside Yahoo RTH bars; this lane has no Alpaca data key. Owned by lane ML-ENTRY-ALPACA-A41F's read-only Alpaca bar reader (operator 2026-11-05 ~10:05Z) once landed; filed as a pipeline item."
+  },
+  "bug2_refusals": {
+    "kind": "MEASURED",
+    "source": "operator_alerts.jsonl (relay_1, read_state complete, 551 lines scanned)",
+    "USO": "2026-11-02T16:02:30Z alpaca_paper: 'Alpaca rejected order for USO: only day orders are allowed for hard-to-borrow asset \"USO\"' (qty 320 SELL). Our short bracket is GTC; the venue takes only DAY for HTB shorts. Order-path fix (Tier 3 merge) filed as a pipeline item, not changed here.",
+    "IAUM": "2026-11-02T16:03:24Z alpaca_paper: refused 'ml_entry_symbol_held:net_qty=-137.0' -- the exclusive-hold rule (claude_desk.EXCLUSIVE_HOLD_LEGS, ml_entry joined 2026-11-01, operator 'Paper now, v2 for live (Rec.)'): ml_entry enters only a FLAT symbol and the account already held -137 IAUM. BY DESIGN; no change."
+  }
+}

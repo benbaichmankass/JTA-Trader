@@ -1,0 +1,23 @@
+{
+  "id": "TICK-STAGE3-REGIME-SCORING",
+  "title": "TICK stage 3: profile and cut pipeline.regime_bar_scoring (12 s per trader tick) using the config.yaml_* counters shipped in PR #23029",
+  "phase": null,
+  "state": "queued",
+  "owner": "manager",
+  "lane": null,
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 2,
+  "prs": [],
+  "blocked_on": [],
+  "note": "[from TICK-DURATION-115S, profile doc section 6] MEASURED 2026-11-04 tick_cost: 851 calls x 0.522 s = 12.0 s per tick; nested fetches only ~1.2 s per tick, so ~10.8 s is model compute/loading. Could not be profiled locally (no model registry in the container): profile on the VM or trainer first. It is labelled observe-only but publishes the in-process cache ml_vol_verdict reads, so moving it off-loop is a decision-path question; prove regime verdicts unchanged. DETECTOR: pipeline.regime_bar_scoring mean < 0.1 s or moved off-loop with verdict equivalence shown.",
+  "due_by": "2026-11-12",
+  "roadmap": [
+    "L-OPS"
+  ],
+  "priority_rank": 6,
+  "updated_at": "2026-11-05T00:30:57Z",
+  "updated_by": "session_01AFoLuM4gBmcaHHv8iooKDb",
+  "_seq": 920
+}

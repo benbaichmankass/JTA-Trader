@@ -1,0 +1,22 @@
+{
+  "id": "UI-TRADING-PUSH",
+  "title": "Trading dashboard push: one SSE broadcaster (/api/bot/stream) from the alert ledger + journal cursors; SPA 15 s/30 s polls deleted (steps T1-T2; the chart phases are UI-CHART-*)",
+  "phase": null,
+  "state": "queued",
+  "owner": "manager",
+  "lane": null,
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 2,
+  "prs": [],
+  "blocked_on": [],
+  "note": "Steps T1-T3 of docs/plans/UI-TWO-SURFACE-DESIGN-2026-11.md \u00a7 5. Depends: ALERT-LEDGER-TO-MANAGER steps 1-2 for alert frames; operator decision U3 for the non-crypto chart. Gates: none. Closing: DB reads/s identical with 1 and 2 clients; 0 SPA /positions polls over 1 h; /ws/market connections 0 for a day. Waits on operator approval of the design (U1-U6). [2026-11-05] Re-scoped after operator U3 (\"Full library, but in phases so that we get crypto live fast\"): this row is T1+T2 only. The chart phases moved to UI-CHART-CRYPTO-LIVE (T3a, 11-12), UI-CHART-EQUITIES-FEED (T3b, 11-25) and UI-CHART-FUTURES-FEED (T3c, 12-09). Design approved 2026-11-05 ~00:36Z.",
+  "due_by": "2026-11-18",
+  "roadmap": [
+    "L-OPS"
+  ],
+  "updated_at": "2026-11-05T00:39:47Z",
+  "updated_by": "lane-UI-TWO-SURFACE-DESIGN",
+  "_seq": 919
+}

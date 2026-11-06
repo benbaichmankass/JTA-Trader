@@ -3,13 +3,11 @@
   "strategy": "htf_pullback_trend_2h",
   "symbol": "BTCUSDT",
   "timeframe": "2h",
-  "config_fingerprint": "sha256:44ee7b8b0d63fd841be2957ca5ad8670",
+  "config_fingerprint": "sha256:9bbee55ee66baad226ef2cd11835ccf8",
   "basis": "harness_timefolds",
   "coverage_state": "measured",
   "fidelity": "approximate",
-  "omitted_levers": [
-    "structure_exit"
-  ],
+  "omitted_levers": [],
   "net_r_oos": -19.6825,
   "expectancy_r_oos": -0.2187,
   "n_trades_oos": 90,
@@ -106,5 +104,5 @@
       "folds_positive": 1
     }
   ],
-  "fidelity_basis": "2026-11-03 STRUCTURE-EXITS-ENABLE (PR #22626): the leg now declares structure_exit 'pivot=5' (live structure SL+TP replacing the chandelier). This record was measured WITHOUT it, so structure_exit is listed in omitted_levers and fidelity is downgraded faithful -> approximate. No measured field was changed; config_fingerprint refreshed to the current config so the record is tied to it as an APPROXIMATE measurement. Re-measure: PI-20261103-MB3OAWAX-0002."
+  "fidelity_basis": "2026-11-03 STRUCTURE-EXITS-ENABLE (PR #22626): the leg now declares structure_exit 'pivot=5' (live structure SL+TP replacing the chandelier). This record was measured WITHOUT it, so structure_exit is listed in omitted_levers and fidelity is downgraded faithful -> approximate. No measured field was changed; config_fingerprint refreshed to the current config so the record is tied to it as an APPROXIMATE measurement. Re-measure: PI-20261103-MB3OAWAX-0002. | 2026-11-05 STRUCTURE-EXITS-DEFAULT OFF (PR #23485): structure_exit removed from the leg on RQ-20261105-5e05-02 PASS (RULE-STRUCTURE-EXITS-REVERSE-V1; the prior exit beat the structure default). The leg again trades the exit this record measured, so structure_exit is no longer an omitted lever; no measured field changed; config_fingerprint refreshed to the current config."
 }

@@ -388,6 +388,11 @@ _CANONICAL_UNITS: tuple[str, ...] = (
     # with the deploy/ units so check_diag_unit_allowlist.py stays green.
     "ict-research-results-gate.service",
     "ict-research-results-gate.timer",
+    # 2026-11-05 (WSD-S2-IMPORTER-PARITY): the work-store shadow importer + parity, every
+    # 5 min. Queryable so a session can confirm the 2-day parity clock is actually running
+    # (journal + unit state); its report is GET /api/bot/work/parity.
+    "ict-work-store-import.service",
+    "ict-work-store-import.timer",
 )
 
 _ADVISORY_LOG = runtime_logs_dir() / "advisory_decisions.jsonl"
@@ -1229,6 +1234,10 @@ _LOG_FILES: dict[str, Path] = {
         runtime_logs_dir() / "losing_streak_alert_state.json",
     "losing_streak_observed_state":
         runtime_logs_dir() / "losing_streak_observed_state.json",
+    # ML-ENTRY-LIVE-MONITOR: last observation per account (n, mean, SE, flags at the latest 50-close checkpoint) +
+    # __last_check__, so "never fired" and "cannot run" stay distinguishable. Report-only detector.
+    "ml_entry_live_monitor_state":
+        runtime_logs_dir() / "ml_entry_live_monitor_state.json",
     # MI-303. The latch that rate-limits the DECISION-CHANNEL page. Allowlisted
     # in the SAME commit that shipped the writer, for the reason the
     # `exit_loop_health` #8778 lesson records: a latch that suppresses an
@@ -1382,6 +1391,10 @@ _ISO_TIMESTAMP_RE = re.compile(
 )
 
 
+#: The dedicated header the diag token may travel in (Authorization: Bearer still works).
+DIAG_TOKEN_HEADER = "X-Diag-Token"
+
+
 def _diag_token() -> str | None:
     tok = os.environ.get("DIAG_READ_TOKEN", "").strip()
     return tok or None
@@ -1394,6 +1407,19 @@ def _require_diag_token(request: Request) -> None:
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail={"error": "diag_disabled"},
         )
+    # X-Diag-Token (WSD-S1-PROXY-AUTH-COLLISION, 2026-11-05): the same token in its own
+    # header. A cloud environment that holds ANY network secret for this host alters
+    # the session's Authorization header (measured: 401 from a fresh ICT-env session
+    # whose DIAG_READ_TOKEN fingerprint matched the VM's), so sessions send it here.
+    # When present it alone decides, so the two carriers can never disagree silently.
+    header_tok = request.headers.get(DIAG_TOKEN_HEADER)
+    if header_tok is not None:
+        if not header_tok.strip() or not hmac.compare_digest(header_tok.strip(), expected):
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail={"error": "invalid_token"},
+            )
+        return
     auth = request.headers.get("Authorization", "")
     if not auth.startswith("Bearer "):
         raise HTTPException(
@@ -2564,7 +2590,9 @@ def get_journalctl(
 _NON_RUNTIME_PATHS_RE = re.compile(
     r"^(docs/|tests/|\.claude/|\.github/|[^/]+\.md$|research/|runtime_logs/"
     r"|scripts/research/|scripts/ci/|comms/research/|comms/strategy_evidence/|comms/macro/"
-    r"|tools/phone-executor/|tools/phone-probe/)"
+    r"|comms/(desk|live_review|live_parity|cloud|prop_survival|claude_judgments|reviews|ops|ci|ml-plan|news_alpha|strategy_reviews|reports|data_lake)/"
+    r"|comms/claude_strategy_scores\.jsonl$"
+    r"|tools/phone-executor/|tools/phone-probe/|deploy/trainer/)"
 )
 # ...except these scripts/research modules, which the web-api's brief imports
 # in-process (OA-16(d), PI-20261004-GCFA5DOR-0010). They stay runtime. Mirrors
@@ -2725,6 +2753,21 @@ def get_version(request: Request) -> dict[str, Any]:
         "deployed_sha_by_unit": _deployed_sha_by_unit(),
         "captured_at": datetime.now(timezone.utc).isoformat(),
     }
+
+
+@router.get("/alerts")
+def get_alerts_ledger(
+    request: Request,
+    since: str | None = None,
+    kind: str | None = None,
+    channel: str | None = None,
+    limit: int = 500,
+) -> dict[str, Any]:
+    """Mirror of ``GET /api/bot/alerts`` (the alert ledger, ALERT-LEDGER-TO-MANAGER)
+    for ``diag_fetch.sh``. ``read_state`` first: ``could_not_look`` is never 0 alerts."""
+    _require_diag_token(request)
+    from src.web.api.routers.alerts import read_ledger
+    return read_ledger(since, kind, channel, limit)
 
 
 @router.get("/log_file")
@@ -3730,6 +3773,106 @@ def get_bybit_wallet_truth(
         "count": len(out),
         "accounts": out,
     }
+
+
+@router.get("/funding_settlements")
+def get_funding_settlements(
+    request: Request,
+    account_id: str | None = None,
+    limit: int = 30,
+) -> dict[str, Any]:
+    """Last ``limit`` per-settlement funding rows per Bybit account, with each
+    store's last-pulled-at and a ``read_state`` (BYBIT2-FUNDING-SETTLEMENT-READ).
+
+    Projects over the EXISTING venue-truth store (no new table): primary source
+    ``bybit_transaction_log`` rows of type SETTLEMENT (hourly puller), cross-read
+    against ``exchange_funding`` (daily puller). ``read_state`` is one of
+    ``measured`` | ``no_rows_in_window`` | ``not_pulled`` | ``unreadable`` --
+    a count/sum is ``None`` unless measured, never ``0``. ``last_pulled_at`` is the
+    store's newest ``inserted_at`` for the account (``None`` = never pulled).
+
+    Pure read (read-only SQLite open); no socket, no order path. Tier 1.
+    """
+    _require_diag_token(request)
+    import sqlite3 as _sqlite3
+
+    limit = max(1, min(int(limit), 200))
+    out: list[dict[str, Any]] = []
+    try:
+        from src.runtime.exchange_accounts import live_bybit_fill_accounts
+        from src.runtime.exchange_fills_store import get_fills_db_path
+
+        db = get_fills_db_path()
+        accounts = [
+            a for a in live_bybit_fill_accounts()
+            if account_id is None or a.account_id == account_id
+        ]
+        for acct in accounts:
+            aid = acct.account_id
+            row: dict[str, Any] = {"account_id": aid}
+            try:
+                conn = _sqlite3.connect(f"file:{db}?mode=ro", uri=True)
+                conn.row_factory = _sqlite3.Row
+                try:
+                    pulled = conn.execute(
+                        "SELECT MAX(inserted_at) m, COUNT(*) n FROM bybit_transaction_log "
+                        "WHERE account_id=?", (aid,)).fetchone()
+                    rows = conn.execute(
+                        "SELECT txn_time, txn_time_ms, funding, change_usd, symbol "
+                        "FROM bybit_transaction_log WHERE account_id=? AND "
+                        "UPPER(txn_type)='SETTLEMENT' ORDER BY txn_time_ms DESC LIMIT ?",
+                        (aid, limit)).fetchall()
+                    fpulled = conn.execute(
+                        "SELECT MAX(inserted_at) m, COUNT(*) n, MAX(funding_time) t "
+                        "FROM exchange_funding WHERE account_id=?", (aid,)).fetchone()
+                    frows = conn.execute(
+                        "SELECT funding_time, funding_usd, symbol FROM exchange_funding "
+                        "WHERE account_id=? ORDER BY datetime(funding_time) DESC LIMIT ?",
+                        (aid, limit)).fetchall()
+                finally:
+                    conn.close()
+            except Exception as exc:  # noqa: BLE001  # allow-silent: converted to the declared `unreadable` state carrying its reason; one account must not blind the others
+                row.update(read_state="unreadable", reason=f"{type(exc).__name__}: {exc}",
+                           last_pulled_at=None, settlements=None)
+                out.append(row)
+                continue
+            import time as _t
+            now_ms = int(_t.time() * 1000)
+            settlements = [
+                {"funding_time": r["txn_time"], "txn_time_ms": r["txn_time_ms"],
+                 "funding_usd": r["funding"] if r["funding"] is not None else r["change_usd"],
+                 "symbol": r["symbol"]} for r in rows]
+            if not pulled["n"]:
+                state = "not_pulled"
+            elif not settlements:
+                state = "no_rows_in_window"
+            else:
+                state = "measured"
+            newest = settlements[0]["txn_time_ms"] if settlements else None
+            row.update(
+                read_state=state,
+                last_pulled_at=pulled["m"],
+                newest_settlement_age_h=(
+                    round((now_ms - newest) / 3_600_000, 2) if newest else None),
+                settlements_last_24h=(
+                    sum(1 for s in settlements
+                        if s["txn_time_ms"] and now_ms - s["txn_time_ms"] <= 86_400_000)
+                    if state == "measured" else None),
+                settlements=settlements if state == "measured" else None,
+                exchange_funding={
+                    "read_state": ("not_pulled" if not fpulled["n"] else "measured"),
+                    "last_pulled_at": fpulled["m"],
+                    "newest_funding_time": fpulled["t"],
+                    "rows": [dict(r) for r in frows] if fpulled["n"] else None,
+                },
+            )
+            out.append(row)
+    except Exception as exc:  # noqa: BLE001  # allow-silent: returns `error` + `count: None`, never an empty list read as 'no accounts'
+        return {"captured_at": datetime.now(timezone.utc).isoformat(),
+                "error": f"{type(exc).__name__}: {exc}", "accounts": [], "count": None}
+    return {"captured_at": datetime.now(timezone.utc).isoformat(),
+            "requested_account_id": account_id, "limit": limit,
+            "count": len(out), "accounts": out}
 
 
 @router.get("/exposure")

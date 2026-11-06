@@ -1,9 +1,9 @@
-# Hand-authored 2026-11-04 by lane ML-ENTRY-ALL-ACCOUNTS (Tier 1), dispatched by Manager Session 2026-11-04a
-# (session_01AFoLuHgZaSYnm9avjeZE33). Decision rule registered BEFORE any run and pushed before the run. Gates: none.
+# Hand-authored 2026-11-04 by lane ML-ENTRY-ALL-ACCOUNTS (Tier 1), dispatched by Manager Session 2026-11-04a (session_01AFoLuHgZaSYnm9avjeZE33).
+# RE-REGISTERED 2026-11-04 ~19:45Z BEFORE ANY RUN, GROUP-LEVEL (see re_registered). Gates: none.
 id: RQ-20261104-a41f-01
-title: 'ENTRY on alpaca_live under its per-account PROFILE: does the frozen ml-decision-entry-v1 (tau 0.10, no re-fit) with the profile the
-  one ml_entry implementation now reads from config (side_filter long as a RESTRICTED argmax, session us_equity, Bybit-perp references,
-  BTCUSDT anchor, Alpaca cost stack) reach held-out mean net R per decision >= 0 on the never-read window 2025-02-10..2025-09-21?'
+title: 'ENTRY on Alpaca, GROUP-LEVEL: does the frozen ml-decision-entry-v1 (tau 0.10, no re-fit), under the profile the one ml_entry reads from
+  config (restricted long argmax, session us_equity, Bybit-perp references, BTCUSDT anchor, Alpaca cost stack), reach POOLED mean net R per decision
+  >= 0 on a pre-registered Alpaca ETF population (liquidity rule fixed on a dev window)?'
 status: queued
 cadence: once
 theme: ml_health
@@ -15,64 +15,51 @@ practice_precedent: 'T1, M6 (docs/reference/trading-and-model-practice-principle
   for this population; RQ-20261101-bdc2-01 (same model, same symbols, the served side rule, the c692 window) is the precedent and is NOT re-read.'
 question: 'Operator 2026-11-01, verbatim (row ML-ENTRY-ALL-ACCOUNTS): "the supra-symbol mls are for all symbols on all accounts". The one ml_entry
   implementation now takes a per-account profile from config/strategies.yaml::ml_entry.account_profiles (src/runtime/ml_entry_profile.py). This
-  unit is the Stage-0 record the alpaca_live roster add needs (roster-promotion-evidence-guard C1-C5) for the profile it would declare:
-  {side_filter: long, session: us_equity, reference: {venue: bybit, universe: artifact}, anchor: BTCUSDT, cost_basis: {fee_bps_rt: 0.0,
-  slippage_bps_rt: 5.0, funding_bps_per_8h: 0.0}} (no artifact_bps_rt: tau is NOT re-based). Load ml/served/ml_decision_entry_v1/model.json
-  as served (sha256 recorded). For every symbol of config/accounts.yaml alpaca_live symbols: (re-parsed at run time) build Yahoo 1h REGULAR-session
-  bars from 2024-11-18 (Yahoo''s ~730-day 1h reach) with the harness''s features; cross-sectional / BTC features against the model''s 60-perp
-  xs_reference (Binance Vision 1h) as of the equity bar''s close. Decide at RTH bar closes with UTC hour % 4 == 0 (the model clock) that ALSO pass
-  the live session gate (us_equity open at the close and at close + 24h); LONG when p_long > tau (the restricted argmax: p_short is never
-  compared); entry next RTH open; first passage SL 2 ATR14 / TP 3 ATR14 / 24-bar time stop; one position per symbol. Net of fee 0.0 + slippage
-  5.0 bps (PROVISIONAL) + regulatory 0.5 bps round trip, funding 0. Score 2025-02-10..2025-09-21 ONCE.'
-universe_rule: 'Operator 2026-11-04 ~19:06Z (relayed by Manager Session 2026-11-04a), verbatim: "There''s no per symbol configuration. There''s
-  only per strategy configuration. ... the MLs trade whatever ... they''re set to trade. They don''t have their roster is internal to the ML, and
-  it''s based on what tests have passed versus which ones have not." So this unit is a TEST WHOSE PASS ADDS SYMBOLS to ml_entry''s passed set:
-  a PASS adds every symbol of the scored population (the alpaca_live symbols re-parsed at run time are the CANDIDATE POOL being tested, not a
-  trade list) to the set ml_entry trades wherever the account''s venue can trade it; per-symbol n and mean net R are reported beside it, never
-  gating (a per-symbol rule would have to be registered as its own unit). A FAIL or INDETERMINATE adds nothing. Registered before the run;
-  this field was added 2026-11-04 ~19:10Z before any run.'
+  unit is the Stage-0 record the alpaca_live roster add needs (roster-promotion-evidence-guard C1-C5) for the profile it would declare: {side_filter:
+  long, session: us_equity, reference: {venue: bybit, universe: artifact}, anchor: BTCUSDT, cost_basis: {fee_bps_rt: 0.0, slippage_bps_rt: 5.0,
+  funding_bps_per_8h: 0.0}} (no artifact_bps_rt: tau is NOT re-based). Load ml/served/ml_decision_entry_v1/model.json as served (sha256 recorded).
+  For every symbol of config/accounts.yaml alpaca_live symbols: (re-parsed at run time) build Yahoo 1h REGULAR-session bars from 2024-11-18 (Yahoo''s
+  ~730-day 1h reach) with the harness''s features; cross-sectional / BTC features against the model''s 60-perp xs_reference (Binance Vision 1h)
+  as of the equity bar''s close. Decide at RTH bar closes with UTC hour % 4 == 0 (the model clock) that ALSO pass the live session gate (us_equity
+  open at the close and at close + 24h); LONG when p_long > tau (the restricted argmax: p_short is never compared); entry next RTH open; first
+  passage SL 2 ATR14 / TP 3 ATR14 / 24-bar time stop; one position per symbol. Net of fee 0.0 + slippage 5.0 bps (PROVISIONAL) + regulatory 0.5
+  bps round trip, funding 0. Score 2025-02-10..2025-09-21 ONCE.'
 why_this_matters: 'The operator target (row ML-ENTRY-ALL-ACCOUNTS 2026-11-03 ~10:50Z, verbatim: "If we can get that going Wednesday night, then
   maybe we can get it trading by Thursday evening or Friday") is ml_entry on alpaca_live. The code that makes it a CONFIG change is the held Tier-3
   PR of this lane; the roster add needs THIS record. The prior read is a FAIL and is context, not a gate: RQ-20261101-bdc2-01 read -0.308 R per
   decision (n=128) for the SERVED side rule (a SHORT argmax -> nothing) with decisions at the session close. This unit tests the two execution
   rules the profile changes (restricted long argmax; session gate) on a window bdc2-01 never read.'
 power:
-  expected_n: 75
-  min_detectable_effect: 0.33
+  expected_n: 300
+  min_detectable_effect: 0.16
   effect_units: metric
   sd: 1.0
   design: one_sample
   alpha: 0.05
   power: 0.8
-  basis: 'INFERRED from bdc2-01 (MEASURED there: 128 long takes / 12 months / 11 symbols under the served rule): 7.4 months x ~10.7 / month,
-    x ~0.75 (the session gate drops the 20:00 UTC close in DST months and Friday decisions) x ~1.3 (the restricted argmax adds longs a larger
-    p_short used to veto) = ~75. sd ~1 R. The operator bar is a point estimate; the floor 30 only keeps a sign readable; the CI is reported.'
+  basis: 'INFERRED from bdc2-01 (MEASURED 128 long takes / 12 months / 11 ETFs under the served rule, ~1 per ETF-month): a pool of ~30-80 liquid
+    ETFs x ~5.7 years x ~1 take per ETF-month x ~1.0 (session gate -25 percent, restricted argmax +30 percent) = several hundred to a few thousand
+    pooled decisions; 300 is the conservative floor stated before the run. sd ~1 R.'
   feasibility:
     source: none
-    accrual_basis: Replays public history; nothing accrues. Yahoo 1h reaches ~730 days back; the window plus ~52 sessions of feature warm-up
-      fit inside it as of 2026-11-04 (fetch start 2024-11-18).
+    accrual_basis: Replays Alpaca 1h RTH history 2021-01-01 onward (Yahoo 1h reaches only ~730 days); nothing accrues.
 decision_rule:
-  id: RULE-RQ20261104-a41f-01-ENTRY-ALPACA-PROFILE
+  id: RULE-RQ20261104-a41f-01-ENTRY-ALPACA-POOLED
   registered_at: '2026-11-04'
   registered_before_run: true
-  statistic: 'scripts/research/ml_entry_alpaca_score.py run --side-rule restricted --session-gate, verdict(): held-out mean net R per TAKEN LONG
-    decision on the alpaca_live symbols, n, per symbol. Reported, never gating: bootstrap CI95; by month; both sides on the alpaca_portfolio
-    symbols (the mirror, same gate); always-long under identical mechanics; decision rows before / after the session gate.'
-  rule: 'INDETERMINATE IF held-out n < 30. PASS IF held-out mean net R per decision >= 0 (point estimate, the operator bar). FAIL otherwise.
-    PASS -> the evidence record comms/strategy_evidence/ml_entry.json gains an alpaca_live scope (fidelity stated; see what_it_does_not_do) and
-    ONE held Tier-3 PR adds the profile above to ml_entry.account_profiles.alpaca_live (+ alpaca_portfolio, both sides) and ml_entry to both
-    rosters; new order mechanics prove themselves on ONE small trade. FAIL or INDETERMINATE -> no alpaca_live roster add on v1; the
-    consolidation route of bdc2-01 (ONE ENTRY v2 fit on all symbols of all accounts) stands, and the equity feature-distribution question below
-    is answered there. Thresholds are not changed after any result.'
-  what_it_does_not_do: 'No re-fit, no tau choice, no sizing, no config change, no order. CALENDAR OVERLAP, declared: the window is inside v1''s
-    TRAINING calendar (train_end_exclusive 2025-09-22 19:00Z) for the CRYPTO rows; the ETFs were never in training (symbol held-out) but the
-    cross-sectional reference features are in-sample, which can flatter the read; bdc2-01''s window is the clean one and it FAILED. FIDELITY,
-    declared: the live leg also declares structure_exit "pivot=5;sl_only" and the ml_first_passage TP revision; this harness models the fixed
-    2/3 ATR bracket only, so the record reads fidelity approximate and C5 does not clear on it alone -- a PASS must be followed by a faithful
-    arm (both levers simulated) or an operator call on C5 before the roster add. Yahoo bars are a proxy for Alpaca fills; 5.0 bps is a placeholder.
-    THE EQUITY DISTRIBUTION QUESTION (row ML-ENTRY-ALL-ACCOUNTS item 6): ret_168 / vol168 / vol_z / range_pos_168 count BARS (168 RTH bars ~ 24
-    sessions, not 7 days) and hour / dow sit in a 6.5-hour session -- the read measures the frozen model AS-IS on that shift; it does not fix it.'
-  min_n: 30 held-out LONG decisions on the alpaca_live symbols
+  statistic: 'scripts/research/ml_entry_alpaca_score.py run --side-rule restricted --session-gate: POOLED held-out mean net R per taken LONG decision
+    over the population, n, n_symbols. Window 2021-01-01..the last complete month before the run (Alpaca 1h RTH bars), net of fee 0.0 + slippage
+    5.0 bps (PROVISIONAL) + regulatory 0.5 bps round trip, funding 0. Decisions at RTH closes with UTC hour % 4 == 0 that pass the live session
+    gate; LONG when p_long > tau; entry next RTH open; SL 2 / TP 3 ATR14 / 24-bar time stop; one position per symbol. Reported, never gating:
+    per-symbol n and mean; bootstrap CI95; by year; the 2025-10-01-onward slice (clean of v1s training calendar); the 13 alpaca_paper ETFs pooled.'
+  rule: 'INDETERMINATE IF pooled n < 30. PASS IF pooled mean net R per decision >= 0 (point estimate, the operator bar). FAIL otherwise. A PASS
+    writes the population record comms/ml_universe/ml_entry.json (src/config/ml_universe.py): the population symbols join ml_entrys traded set
+    wherever the accounts venue lists them (alpaca). A FAIL or INDETERMINATE adds nothing. Thresholds never change after any result.'
+  what_it_does_not_do: 'No re-fit, no tau choice, no sizing, no config change, no order. CALENDAR OVERLAP, declared: crypto reference rows before
+    2025-09-22 are inside v1s training calendar; the ETFs were never trained on. FIDELITY, declared: the live leg declares structure_exit "pivot=5;sl_only"
+    and the ml_first_passage TP revision; this harness models the fixed 2/3 ATR bracket, so the record reads fidelity approximate and roster-promotion-evidence-guard
+    C5 does not clear on it alone. THE EQUITY DISTRIBUTION QUESTION (row item 6) is measured AS-IS.'
+  min_n: 30 pooled decisions
 compute: cpu_light
 value:
   bucket: ai_trader
@@ -86,7 +73,7 @@ routing:
   peak_memory_gb: 2.0
   est_minutes: 20
   why_runner: Keyless public Yahoo 1h + Binance Vision 1h; inference only.
-  basis: 'INFERRED from bdc2-01 (MEASURED ~15 min for 12 months); the fetch is 2024-11-18..2025-09-30.'
+  basis: INFERRED from bdc2-01 (MEASURED ~15 min for 12 months); the fetch is 2024-11-18..2025-09-30.
 run:
   workflow: research-script-run.yml
   command:
@@ -106,27 +93,17 @@ run:
   - --side-rule
   - restricted
   - --session-gate
-  - --fetch-start
-  - '2024-11-18'
-  - --holdout-start
-  - '2025-02-10'
-  - --holdout-end
-  - '2025-09-21'
-  - --rule-id
-  - RULE-RQ20261104-a41f-01-ENTRY-ALPACA-PROFILE
-  - --registered-at
-  - '2026-11-04'
-  - --variants-read
-  - '1'
-  - --mc-note
-  - 'first read of 2025-02-10 to 2025-09-21 for this population; bdc2-01 (served rule, c692 window) read once before, not re-read'
-  timeout_minutes: 60
+  - --bars
+  - alpaca
+  - --population
+  - alpaca-liquidity
+  timeout_minutes: 300
   inputs:
     research_unit: RQ-20261104-a41f-01
 ml_consumer:
   consumer: ML-ENTRY-ALL-ACCOUNTS
-  decision: 'whether ml_entry.account_profiles.alpaca_live (the profile in question) and ml_entry on the alpaca_live / alpaca_portfolio rosters
-    are proposed as ONE held Tier-3 PR on the one ml_entry implementation'
+  decision: whether ml_entry.account_profiles.alpaca_live (the profile in question) and ml_entry on the alpaca_live / alpaca_portfolio rosters
+    are proposed as ONE held Tier-3 PR on the one ml_entry implementation
   legs:
   - iaum_pullback_1d
 lands:
@@ -138,3 +115,39 @@ related:
 - ALPACA-LIVE-ACTIVITY-ML
 - RQ-20261101-bdc2-01
 - RQ-20261101-c692-01
+re_registered: '2026-11-04 ~19:45Z by lane ML-ENTRY-ALL-ACCOUNTS BEFORE ANY RUN (the unit has never run; no result exists), on the operator popup
+  ~19:33Z, verbatim "Group-level (Recommended)", which REPLACES "Per-symbol passes" / "Per-symbol tests" (~19:08Z) and "Shrunk >= 0, n >= 100"
+  (~19:18Z); context ~19:25Z verbatim: "Maybe it shouldnt be gated at a per symbol basis, but rather it should be kept more general ... I didnt
+  mean to make the rules stricter than they had and the ML had been designed for." The ~19:30Z per-symbol draft (never pushed to main, never run)
+  is withdrawn; the pass rule is the ORIGINAL pooled rule of this unit (mean net R per decision >= 0 at n >= 30), the population is now a pre-registered
+  pool instead of the alpaca_live pull list.'
+population: 'POOLED, fixed before the run and independent of any accounts symbols: every Alpaca asset that is status=active, tradable, class=us_equity
+  and an ETF (Alpaca asset list read at run time, recorded with its sha256), whose median daily dollar volume over the DEV window 2019-01-01..2020-12-31
+  (daily bars) is >= 50,000,000 USD. The dev window is used ONLY for this filter and is never scored. Filtered-out symbols are counted and listed.
+  Reported, never gating: the same pooled statistic on the 13 ETFs alpaca_paper trades today.'
+etf_rule_registration: 'Registered 2026-11-05 BEFORE ANY RUN (the unit has never run). Alpaca assets carry no ETF flag, so the ETF rule is a STATED RULE
+  frozen in scripts/research/ml_entry_alpaca_score.py::POOL_RULE (ETF iff nasdaqtrader nasdaqtraded.txt has Test Issue N and ETF Y for the exact symbol;
+  no name matching, no manual list; pool = active+tradable+us_equity ETFs with dev-window median daily dollar volume >= 50M). The sha256 of POOL_RULE
+  (canonical JSON, sorted keys) is below; tests/test_ml_entry_alpaca_pool.py::test_pool_rule_is_frozen pins it. The run additionally records the sha256
+  of the nasdaqtraded.txt it read and of the asset list. Bars: Alpaca 1Hour hour-aligned (09:00 ET bar holds 09:30-10:00), declared in the record.
+  Data access: read-only allowlisted client, paper key, 429 back-off (operator 2026-11-05 ~10:05Z). decision_rule above is UNCHANGED.'
+etf_rule_sha256: e9702661d1a596a0f7e84e632c0ca8b5c2743a728f02147477c003644a0858e2
+last_dispatched_at: '2026-11-04T23:47:30+00:00'
+execution_amendment: 'EXECUTION-ONLY amendment 2026-11-05 ~18:0xZ by lane ML-ENTRY-ALL-ACCOUNTS, recorded BEFORE the re-run, on the manager instruction (Manager Session 2026-11-05b, 17:52Z).
+  Run 42047465240 (14:42:57Z) hit the 180-min unit timeout during the Alpaca 1h fetch (160/176 symbols, 10,042 calls = ~63 per symbol against ~3
+  needed; the multi-symbol request paged far below its limit); it never reached the perp fetch, scoring or a verdict, so NO window or holdout was
+  read and nothing was graded. Changes: 1h bars are requested per symbol (one request series each) on 4 threads sharing ONE pacing clock
+  (<= 2.5 calls/s, under the 200/min data limit); phase and per-symbol progress lines; timeout_minutes 180 -> 300. UNCHANGED: decision_rule, population
+  rule (POOL_RULE sha256 above), model, tau, window 2021-01-01..last complete month, costs, bracket, side rule, session gate. If this run also times
+  out, the fallback is symbol-sharded runs with trade-level pooling (not an average of shard results).'
+window_amendment: 'WINDOW AMENDMENT 2026-11-05 ~18:4xZ by lane ML-ENTRY-ALL-ACCOUNTS, recorded BEFORE the re-run, on the manager instruction (Manager Session
+  2026-11-05b 18:34Z, PI-20261105-GEXSLEAK-0001). The served model ml/served/ml_decision_entry_v1/model.json carries train_end_exclusive 2025-09-22 19:00:00+00:00
+  and was fit on crypto rows from the harness START 2020-07-01, so the registered scored window 2021-01-01..last complete month OVERLAPPED the training
+  calendar for ~4.7 of ~5.8 years; ENTRY market-wide features (btc_ret24, btc_vol24, breadth_up24, hour, dow) effectively identify the DATE, so a pooled read
+  on those dates is inflated (non-pool HOLD baseline +0.513 R/trade on training-overlapping dates vs +0.014 time-held-out) and a PASS on them is NOT admissible.
+  The scored window SHRINKS to the model sealed holdout 2025-10-01 .. the last complete month (2026-10-31): 8.2 days after train_end_exclusive, embargo
+  required = 2 x horizon_h = 48 h (the script now REFUSES any start earlier: check_window_disjoint, self-tested; the dates are written into the record).
+  Bars are fetched from 2025-05-01 only to supply feature history. UNCHANGED: decision_rule (rule text, PASS >= 0 at n >= 30, INDETERMINATE n < 30), the
+  population rule and POOL_RULE sha256 (dev window 2019-2020 liquidity filter), model, tau, costs, bracket, side rule, session gate. POWER: ~13 months x
+  ~176 ETFs; bdc2-01 measured 128 long takes / 12 months / 11 ETFs under the served rule (~1 per ETF-month), so the pooled n is expected in the low
+  thousands (>= expected_n 300, MDE 0.16 R at n 300 with sd 1 R); the n floor of 30 is the rule, and the record states n. The 2021-2025 dates are NOT scored.'

@@ -1,0 +1,51 @@
+# ============================================
+# JTA CONSOLE CONNECTOR (trainer VM) — persistent unit (row UI-CONSOLE-CONNECTOR-PERSIST)
+#
+# Replaces the transient systemd-run unit of the same name (#23224). Serves the read-only MCP
+# connector on 127.0.0.1:8765; Caddy (deploy/trainer/Caddyfile.console) fronts it at
+# https://158-178-209-121.sslip.io. TRAINER VM ONLY (deploy/trainer/ is not globbed by the
+# live-VM installer).
+#
+# Gates this adds or changes: none. Restart=always is process supervision, not a trading gate.
+#
+# Environment:
+#   * non-secret values are set here;
+#   * /etc/jta-console/connector.env (0640 root:ubuntu, written by workflow
+#     trainer-console-connector-install from repo secrets, NEVER committed) carries
+#     DIAG_READ_TOKEN (and the Google client id / allowed email, which are not secrets).
+#   * OAuth token store: CONSOLE_CONNECTOR_STATE, file-backed at a fixed path (atomic write,
+#     0600), so a restart or reboot does not require reconnecting claude.ai.
+#   * TRADE_JOURNAL_DB: the trainer's synced journal snapshot (scripts/ops/sync_trainer_data.sh
+#     DEST = $REPO/data/trade_journal.db), not the stale repo-root copy.
+#
+# Install: workflow trainer-console-connector-install (issue label of the same name).
+# Revert:  sudo systemctl disable --now jta-console-connector; sudo rm /etc/systemd/system/jta-console-connector.service
+# ============================================
+
+[Unit]
+Description=JTA console MCP connector (read-only, Google sign-in)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=ubuntu
+WorkingDirectory=/home/ubuntu/ict-trading-bot
+Environment=PYTHONPATH=/home/ubuntu/ict-trading-bot
+Environment=CONSOLE_CONNECTOR_REPO=/home/ubuntu/ict-trading-bot
+Environment=CONSOLE_CONNECTOR_LOG=/home/ubuntu/console-probe/console_connector.jsonl
+Environment=CONSOLE_CONNECTOR_AUTH=google
+Environment=CONSOLE_CONNECTOR_BASE_URL=https://158-178-209-121.sslip.io
+Environment=CONSOLE_CONNECTOR_STATE=/home/ubuntu/ict-trading-bot/runtime_logs/console_connector_oauth.json
+Environment=TRADE_JOURNAL_DB=/home/ubuntu/ict-trading-bot/data/trade_journal.db
+EnvironmentFile=/etc/jta-console/connector.env
+ExecStart=/home/ubuntu/ict-trading-bot/.venv/bin/python -m src.console_connector.server
+Restart=always
+RestartSec=5
+Nice=10
+MemoryMax=400M
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

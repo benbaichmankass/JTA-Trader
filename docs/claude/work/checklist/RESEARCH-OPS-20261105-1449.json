@@ -1,0 +1,31 @@
+{
+  "id": "RESEARCH-OPS-20261105-1449",
+  "title": "Research-ops pass 14:49Z: blocked audit; results; lever maps",
+  "phase": "research",
+  "state": "landed_unproven",
+  "owner": "lane RESEARCH-OPS-20261105-1449",
+  "lane": "RESEARCH-OPS-20261105-1449",
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [],
+  "blocked_on": [],
+  "note": "Pass 14:49Z. Pipeline flowing (fired_24h 81, runnable 20 vs floor 65 = diagnostic). blocked_over_age 19: unblocked RQ-20261014-470a-12 (PAIRS-R-SCALE done; split into 4 per-pair units 470a-12 + RQ-20261105-7d6c-01..03), 18 kept with owner row + next_check 2026-11-12, none retired (every lever still open). Triage: 52 unowned needs_review -> 0 (50 producer_failed in 4 modes -> PI-20261105-WDWYHZCN-0001; 2 PASS M20 orphans -> PI-...-0002). Prior call: producer_failed share 0.092 (hit on rule) but 20 units still 'no verdict.json'. Not run: 15 unread e35 rows, orphan iteration units (31 strategy_leg + 5 ltr_class, filed). Record comms/research/ops/20261105T1520Z.json.",
+  "due_by": "2026-11-07",
+  "roadmap": [
+    "L-PROGRAMMES"
+  ],
+  "updated_at": "2026-11-05T14:59:57Z",
+  "updated_by": "session_01AFoLuL33gYmMaHWdWyhzcn",
+  "_seq": 954,
+  "observation": {
+    "what": "the 4 pairs units (470a-12, 7d6c-01..03) land measured verdicts; the 20 no_verdict producer_failed units are fixed or regraded",
+    "how_to_check": "ls research/results/RQ-20261014-470a-12 research/results/RQ-20261105-7d6c-0*; python3 scripts/research/result_disposition_check.py --list",
+    "due_by": "2026-11-08T00:00Z"
+  },
+  "writeback": {
+    "roadmap": "none: research-ops pass",
+    "arch": "none"
+  }
+}

@@ -1,0 +1,7 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "hold_reason": "tier_2_3_needs_approval",
+  "why": "ALERT-LEDGER-TO-MANAGER steps 1-3: best-effort alert ledger at the send chokepoint (runtime_logs/alerts_ledger.jsonl), GET/POST /api/bot/alerts + /api/diag/alerts, alert_watch pass in attention_watch.py, ict-work-digest.timer hourly -> *:0/5. Adds no gate: ledger write failures are swallowed, the digest keeps its own cadence gate. No order path, config or trading logic.",
+  "hold_text": "Tier-2: runtime + timer change. The manager merges, deploys ict-web-api / ict-trader-live / ict-work-digest.timer, then runs the closing check (send_route_test_ping.py ping appears in /api/bot/alerts with delivered set AND reaches #17895 as one comment within 10 min)."
+}

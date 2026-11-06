@@ -1,0 +1,8 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "hold_reason": "tier_2_3_needs_approval",
+  "hold_text": "Tier-2 notification routing (TELEGRAM-TRIM): pr_merged added to telegram_policy recurring_off. Operator popup ~05:35Z 2026-11-05, verbatim: \"Turn them off (Recommended)\". Held for the manager to merge. Also carries one pipeline record (PI-20261102-PTDVAI3R-0005 -> check_observation after operator answered \"Accept the pace (Recommended)\").",
+  "recorded_decision": {"kind": "operator_decision", "ref": "TELEGRAM-TRIM"},
+  "why": "Stops the rolled-up 'N PRs merged to main' pings (recorded as suppressed_by_policy in the alert ledger, not sent) and clears the operator-owed row that blocks gateway PR #23101. No trading behaviour touched. Revert: delete pr_merged from recurring_off."
+}

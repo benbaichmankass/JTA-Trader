@@ -1,0 +1,37 @@
+Fetching AVAXUSDT 5 candles 2024-10-06 -> 2026-11-05 (source=binance_vision) …
+  vision monthly 2024-10: 8928 bars (7488 kept)
+  vision monthly 2024-11: 8640 bars (16128 kept)
+  vision monthly 2024-12: 8928 bars (25056 kept)
+  vision monthly 2025-01: 8928 bars (33984 kept)
+  vision monthly 2025-02: 8064 bars (42048 kept)
+  vision monthly 2025-03: 8928 bars (50976 kept)
+  vision monthly 2025-04: 8640 bars (59616 kept)
+  vision monthly 2025-05: 8928 bars (68544 kept)
+  vision monthly 2025-06: 8640 bars (77184 kept)
+  vision monthly 2025-07: 8928 bars (86112 kept)
+  vision monthly 2025-08: 8928 bars (95040 kept)
+  vision monthly 2025-09: 8640 bars (103680 kept)
+  vision monthly 2025-10: 8928 bars (112608 kept)
+  vision monthly 2025-11: 8640 bars (121248 kept)
+  vision monthly 2025-12: 8928 bars (130176 kept)
+  vision monthly 2026-01: 8928 bars (139104 kept)
+  vision monthly 2026-02: 8064 bars (147168 kept)
+  vision monthly 2026-03: 8928 bars (156096 kept)
+  vision monthly 2026-04: 8640 bars (164736 kept)
+  vision monthly 2026-05: 8928 bars (173664 kept)
+  vision monthly 2026-06: 8640 bars (182304 kept)
+  vision monthly 2026-07: 8928 bars (191232 kept)
+  vision monthly 2026-08: 8928 bars (200160 kept)
+  vision monthly 2026-09: 8640 bars (208800 kept)
+  vision monthly 2026-10: 8640 bars (217440 kept)
+  vision daily 2026-11: 218304 bars kept so far
+Wrote 218304 rows (2024-10-06 -> 2026-11-03) to /tmp/exit_lever_ablation_ovdpjqfh/ict_scalp_avax_5m__data.csv
+[A] /opt/hostedtoolcache/Python/3.11.18/x64/bin/python3 /home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_ict_scalp.py --data <data> --symbol AVAXUSDT --timeframe 5m --strategy-name ict_scalp_avax_5m --fee-bps-roundtrip 11.0 --emit-trades comms/research/RQ-20261101-78fc-47/41978219906/arms/A__trades.jsonl --json comms/research/RQ-20261101-78fc-47/41978219906/arms/A__bt.json --htf-rule 1h --htf-ema-period 20 --sim-breakeven --start 2024-10-05 --end 2026-10-04 23:59
+[H4] /opt/hostedtoolcache/Python/3.11.18/x64/bin/python3 /home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_ict_scalp.py --data <data> --symbol AVAXUSDT --timeframe 5m --strategy-name ict_scalp_avax_5m --fee-bps-roundtrip 11.0 --emit-trades comms/research/RQ-20261101-78fc-47/41978219906/arms/H4__trades.jsonl --json comms/research/RQ-20261101-78fc-47/41978219906/arms/H4__bt.json --htf-rule 4h --htf-ema-period 20 --sim-breakeven --start 2024-10-05 --end 2026-10-04 23:59
+[SLB] /opt/hostedtoolcache/Python/3.11.18/x64/bin/python3 /home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_ict_scalp.py --data <data> --symbol AVAXUSDT --timeframe 5m --strategy-name ict_scalp_avax_5m --fee-bps-roundtrip 11.0 --emit-trades comms/research/RQ-20261101-78fc-47/41978219906/arms/SLB__trades.jsonl --json comms/research/RQ-20261101-78fc-47/41978219906/arms/SLB__bt.json --htf-rule 1h --htf-ema-period 20 --sim-breakeven --atr-sl-buffer-mult 1.0 --start 2024-10-05 --end 2026-10-04 23:59
+[LIM] /opt/hostedtoolcache/Python/3.11.18/x64/bin/python3 /home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_ict_scalp.py --data <data> --symbol AVAXUSDT --timeframe 5m --strategy-name ict_scalp_avax_5m --fee-bps-roundtrip 11.0 --emit-trades comms/research/RQ-20261101-78fc-47/41978219906/arms/LIM__trades.jsonl --json comms/research/RQ-20261101-78fc-47/41978219906/arms/LIM__bt.json --htf-rule 1h --htf-ema-period 20 --sim-breakeven --entry-mode limit --start 2024-10-05 --end 2026-10-04 23:59
+{
+ "verdict": "pass",
+ "label": "candidate_replaces_incumbent",
+ "why": "LIM beats the incumbent A (net R -40.6294 vs -55.595) in >= 4/6 folds within the drawdown tolerance: a data-backed Tier-3 PROPOSAL (config is not edited here)"
+}

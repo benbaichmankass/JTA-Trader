@@ -2,7 +2,7 @@
   "id": "PROP-EXIT-READ",
   "title": "breakout_1 executor records a venue SL/TP exit as 'closed_on_terminal' with no exit price, P&L or TP/SL reason ('exit read from the terminal history is not built')",
   "phase": "W8",
-  "state": "queued",
+  "state": "landed_unproven",
   "owner": "build lane",
   "lane": "session_01RZaDZHQNxS61WpDu6FR2PG",
   "model": "claude-opus-5-5",
@@ -13,13 +13,22 @@
     15649
   ],
   "blocked_on": [],
-  "note": "[2026-10-03T16:20Z manager session_01MM8o5js6TcDFeNAPBY4Ntv] #15649 MERGED by manager (d883f64f). Merged onto main d883f64f-parent and tested locally: 492 of 492 prop tests passed. Go-live review: only clicks the exact-text Trade History VIEW tab (existing _show_tab, never a button) and restores Orders; a failed read keeps today's report; close detection (absent>=2) unchanged; id columns dropped. NOT yet deployed/observed. Closing observation: the next automated breakout_1 close lands in prop_fills with exit_price/pnl/reason and exit_source set. || 2026-10-02 19:03Z: lane session_01RZaDZHQNxS61WpDu6FR2PG dispatched (Opus, $30, HELD Tier-2 PR). | 2026-10-02 ~19:05Z (manager session_01MM8o5js6TcDFeNAPBY4Ntv): filed when the first automated breakout_1 trade opened (prop-manual-d27fbb0b2b25). MEASURED on origin/main 2ef65c6b6: src/prop/prop_executor.py::_reconcile_journal reports a position absent for 2 reads as status closed with reason 'closed_on_terminal (executor reconcile; exit read from the terminal history is not built)', with no exit_price, pnl or TP/SL reason; dxtrade.py knows the 'Trade History' tab but reads it only in dump-tables. So this trade's close, and every automated breakout_1 close after it, lands ungraded and with a close reason that is not TP/SL. Deliverable: a read-only Trade History reader and the executor close report carrying exit price, realised P&L and tp/sl/manual reason, as a HELD Tier-2 PR. Tracked by PI-20261002-APBY4NTV-0002. [2026-10-09 UNPROVEN-SWEEP lane] breakout_1 retired; shared prop_executor reconcile path still applies to tradeify_1. [2026-10-11 UNPROVEN-SWEEP-2 session_01N1MY4x6EWjqf5LMJ5KSFio] FAILED for the REST path: same velotrade_1 close reads closed_on_terminal with null exit price/pnl (PI-20261011-MJ5KSFIO-0001). tradeify_1/breakout_2 have no close yet to test. Re-scoped to queued.",
+  "note": "[2026-10-03T16:20Z manager session_01MM8o5js6TcDFeNAPBY4Ntv] #15649 MERGED by manager (d883f64f). Merged onto main d883f64f-parent and tested locally: 492 of 492 prop tests passed. Go-live review: only clicks the exact-text Trade History VIEW tab (existing _show_tab, never a button) and restores Orders; a failed read keeps today's report; close detection (absent>=2) unchanged; id columns dropped. NOT yet deployed/observed. Closing observation: the next automated breakout_1 close lands in prop_fills with exit_price/pnl/reason and exit_source set. || 2026-10-02 19:03Z: lane session_01RZaDZHQNxS61WpDu6FR2PG dispatched (Opus, $30, HELD Tier-2 PR). | 2026-10-02 ~19:05Z (manager session_01MM8o5js6TcDFeNAPBY4Ntv): filed when the first automated breakout_1 trade opened (prop-manual-d27fbb0b2b25). MEASURED on origin/main 2ef65c6b6: src/prop/prop_executor.py::_reconcile_journal reports a position absent for 2 reads as status closed with reason 'closed_on_terminal (executor reconcile; exit read from the terminal history is not built)', with no exit_price, pnl or TP/SL reason; dxtrade.py knows the 'Trade History' tab but reads it only in dump-tables. So this trade's close, and every automated breakout_1 close after it, lands ungraded and with a close reason that is not TP/SL. Deliverable: a read-only Trade History reader and the executor close report carrying exit price, realised P&L and tp/sl/manual reason, as a HELD Tier-2 PR. Tracked by PI-20261002-APBY4NTV-0002. [2026-10-09 UNPROVEN-SWEEP lane] breakout_1 retired; shared prop_executor reconcile path still applies to tradeify_1. [2026-10-11 UNPROVEN-SWEEP-2 session_01N1MY4x6EWjqf5LMJ5KSFio] FAILED for the REST path: same velotrade_1 close reads closed_on_terminal with null exit price/pnl (PI-20261011-MJ5KSFIO-0001). tradeify_1/breakout_2 have no close yet to test. Re-scoped to queued. [2026-11-05 BACKLOG-DRAIN-20261105] REOPENED BUG, NOT DONE. MEASURED live /api/bot/prop/fills?account_id=breakout_2 (43 rows): 10 of 10 closed rows between 2026-10-16 and 2026-11-02 carry reason closed_unpriced with exit_price=null pnl=null (ids 135,154,167,174,175,184,192,200,208,214); only 3 closes ever carry an exit_price and those were operator-keyed (118,125,164). The Trade History reader merged 2026-10-03 (#15649) is not producing priced closes. Phone app 1b.311, status.raw.closed_orders_state=not_reported. Owner of the fix is BREAKOUT-UNRECORDED-1101 / PI-20261101-YHTYFLA8-0001; the next action is the new APK install (physical, operator) -- surfaced as a decision in the manager report. Condition to close: the next breakout_2 close lands exit_price+pnl non-null. [2026-11-05 BACKLOG-DRAIN-20261105] CORRECTION: of the 3 priced closes, 118 and 125 are operator-keyed, 164 is an INFERRED/ESTIMATED candle-based exit (not a terminal read); none is a reader result. [2026-11-05 BACKLOG-DRAIN-20261105, manager 06:52Z relay] OPERATOR INSTALLED the new phone-executor APK 2026-11-05 ~06:51Z (operator in chat): JTA Executor build from run 41981950976, sha d2340972, with the breakout_2 closed_unpriced read fix. State -> landed_unproven (merged+installed, NOT observed). Read at 06:51:24Z via /api/bot/prop/status: phone_heartbeat.at 06:48:37Z (before the install), app_version 1b.311/311, exec_js 2026-11-01.1, bg_runs 3 (was 53 earlier, so the app restarted), restarts_24h 3, closed_orders_state not_reported, status.reported_at 06:44:03Z. The heartbeat does not yet show the new build; re-read after 06:51Z. Closes when the next breakout_2 close records a priced exit (exit_price+pnl non-null).",
   "observation": {
     "what": "A prop executor close carries exit price, realised P&L and a tp/sl/manual reason (not closed_on_terminal with nulls)",
     "how_to_check": "PI-20261002-APBY4NTV-0002; prop_fills rows for tradeify_1/breakout_2 after the Trade History reader merges",
     "due_by": "2026-10-23T00:00Z"
   },
-  "updated_at": "2026-10-11T04:42:47Z",
-  "updated_by": "session_01N1MY4x6EWjqf5LMJ5KSFio",
+  "updated_at": "2026-11-05T06:53:23Z",
+  "updated_by": "session_01AFoLuLoMgjGPiy3UA2Ua8P",
+  "due_by": "2026-11-06",
+  "roadmap": [
+    "unmapped"
+  ],
+  "roadmap_unmapped_reason": "not set at filing -- manager to map to a milestone at the next weekly pass",
+  "observe": {
+    "when": "2026-11-06",
+    "how": "curl -sS https://ict-bot.duckdns.org/api/bot/prop/status?account_id=breakout_2: phone_heartbeat.at after 2026-11-05T06:51Z and state.app_version newer than 1b.311; then the next breakout_2 close in /api/bot/prop/fills?account_id=breakout_2 carries a non-null exit_price and pnl, not reason closed_unpriced"
+  },
   "_seq": 266
 }

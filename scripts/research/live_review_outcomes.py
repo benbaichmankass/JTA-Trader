@@ -39,6 +39,12 @@ METHOD
   exit; the banked part pays fee + slippage + funding to that bar). ``--move-tp X`` replaces the TP with a
   limit at +X R on the profit side of the market (X must be above ``open_r``); filled at X if a later bar
   reaches it before the recorded exit (SL-first on the recorded exit bar when that exit was a stop).
+* POOLED legs (ml_entry; row ML-ENTRY-LTR-OUTCOME-TABLE, 2026-11-05): a corpus whose rows span several symbols is
+  priced against EACH ROW'S OWN SYMBOL's candles (``candles`` may be a ``{symbol: frame}`` map; one CSV for every row
+  would replay ADA trades on SOL prices). The pool is the leg's whole Stage-0 population, R-normalised, because the
+  model is pooled; ``--symbol`` restricts it to one symbol and the cell's ``n`` says what that costs.
+* ``--close`` prices CLOSE NOW: the whole position banked at ``open_r`` on the review bar, paying fee + slippage +
+  funding to that bar (``partial_close`` with fraction 1.0, named ``close``).
 * ``--corpus`` overrides the Stage-0 evidence record's ``source_run`` (e.g. the full-history harness
   run behind a research unit), so a leg whose committed record is a 12-month run can be priced on its
   full history.
@@ -59,6 +65,7 @@ import glob
 import json
 import math
 import statistics
+from datetime import datetime, timezone
 import sys
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
@@ -83,6 +90,25 @@ AUTO_BOUND_R = 0.25      # design Q1 auto-apply bound (proposed)
 SHADOW_BOUND_R = 0.5     # design shadow bound (proposed)
 MFE_TOL_R = 0.05         # replayed-vs-recorded MFE agreement used by the fidelity check
 DEFAULT_TIGHTEN = ("atr:1.0", "atr:1.5", "atr:2.0", "r:1.0", "r:2.0")
+ATR_TIGHTEN = ("atr:1.0", "atr:1.5", "atr:2.0")
+
+
+def default_tighten(open_r: float, stop_r: Optional[float] = None) -> List[str]:
+    """Tighten specs worth pricing from THIS state (LTR-GRADER-COVERAGE, 2026-11-05).
+
+    The old fixed grid offered r:1.0 / r:2.0 whatever the trade's state, so a trade at +0.02R got two stops above
+    the market (``invalid_level``: 307 of 520 options in a week). An R-stop is only a tighten when it sits above the
+    CURRENT stop and below the current price: breakeven (r:0), half the open profit, and the old whole-R rungs where
+    they fit. The ATR trails are state-relative by construction and always offered."""
+    lo = stop_r if stop_r is not None else -math.inf
+    cands = [0.0, round(open_r * 0.5, 2), 1.0, 2.0]
+    seen: List[float] = []
+    for c in cands:
+        if lo < c < open_r and c not in seen:
+            seen.append(c)
+    return list(ATR_TIGHTEN) + [f"r:{c:g}" for c in sorted(seen)]
+
+
 BIASES = (
     "stop fills at the stop price (a gap fills at the open): flatters every tighten, so the real "
     "cost of tightening is, if anything, larger",
@@ -113,7 +139,13 @@ def load_trades(leg: str, repo: Path = REPO,
     src = rec.get("source_run")
     if not src:
         raise FileNotFoundError(f"{rec_path}: no source_run")
+    src = str(src).split(" (", 1)[0].strip()      # records may annotate the path: "<file> (run <url>)"
     rows = [json.loads(ln) for ln in (repo / src).read_text().splitlines() if ln.strip()]
+    if rows and "direction" not in rows[0]:
+        # A graded RESULT row (one line per run), not per-trade rows: the KeyError 'direction' this used to raise
+        # (row ML-ENTRY-LTR-OUTCOME-TABLE). Say what is missing instead.
+        raise FileNotFoundError(f"{src}: not a per-trade corpus (no 'direction'); commit "
+                                f"{LTR_CORPUS_DIR}/{leg}__trades.jsonl (scripts/research/build_ltr_corpus.py) and use --corpus auto")
     return rows, src
 
 
@@ -155,6 +187,10 @@ def find_candles(symbol: str, timeframe: str, repo: Path = REPO, widest_span: bo
 
     ``widest_span`` also reads the ``data/<SYM>_<tf>.csv`` files (full-history pulls the filename-days
     pattern does not match) and ranks every candidate by the days it actually covers."""
+    return _find_candles_research(symbol, timeframe, repo, widest_span)
+
+
+def _find_candles_research(symbol: str, timeframe: str, repo: Path, widest_span: bool) -> Optional[str]:
     # provenance: cpath — the chosen file is printed on every run as res["candles"]; widest span wins
     hits = glob.glob(str(repo / "comms" / "research" / "*" / "*" / "candles" / f"{symbol}_{timeframe}_*d.csv"))
     if widest_span:
@@ -175,6 +211,108 @@ def find_candles(symbol: str, timeframe: str, repo: Path = REPO, widest_span: bo
         except ValueError:
             return 0
     return max(hits, key=lambda p: (days(p), p)) if hits else None
+
+
+#: On-demand venue bars (LTR-GRADER-COVERAGE, 2026-11-05). ``deploy/vm-sparse-checkout`` removes the research candle
+#: files from the live VM, so ``find_candles`` returns None there. Nothing on the VM holds multi-year bars (the trader
+#: keeps only an in-memory cache of the last N), so the pricer fetches the span its corpus needs from Bybit's public
+#: klines (the venue the trainer's history was pulled from) ONCE into ``<data_dir>/ltr_candles/`` - outside the repo.
+VENUE_CACHE_SUBDIR = "ltr_candles"
+_TF_CODE = {"5m": "5", "15m": "15", "1h": "60", "2h": "120", "4h": "240", "1d": "D"}
+
+
+def _venue_cache_dir(cache_dir: Optional[Path] = None) -> Path:
+    if cache_dir is not None:
+        return Path(cache_dir)
+    from src.utils.paths import data_dir
+    return Path(data_dir()) / VENUE_CACHE_SUBDIR
+
+
+def _default_fetch(symbol: str, code: str, start_ms: int, end_ms: int) -> List[Dict[str, Any]]:
+    sys.path.insert(0, str(REPO / "scripts" / "ops"))
+    import fetch_backtest_candles as fbc  # noqa: E402
+    if symbol.endswith("USDT"):
+        return fbc.fetch_klines(symbol, code, start_ms, end_ms)
+    return _fetch_non_crypto(fbc, symbol, code, start_ms, end_ms)
+
+
+def _fetch_non_crypto(fbc: Any, symbol: str, code: str, start_ms: int, end_ms: int) -> List[Dict[str, Any]]:
+    """Equity/ETF/futures bars. Yahoo FIRST: it is the source the Stage-0 corpora for these legs were built on
+    (``--non-crypto-source yfinance``; regular-session 1h bars), so the replay sees the bars the corpus saw. Alpaca's
+    market-data API (the trader's own venue keys) is the fallback for equities when Yahoo is unavailable - it serves no
+    futures, and its 1h bars include extended hours, so a fallback table is flagged on stderr. Nothing is fabricated: no
+    rows -> [] -> the caller reports no_candles."""
+    try:
+        rows = fbc.fetch_klines_yfinance(symbol, code, start_ms, end_ms)
+        if rows:
+            return rows
+    except Exception as exc:  # noqa: BLE001  # allow-silent: logged; falls through to the Alpaca fallback, then no_candles
+        print(f"yfinance {symbol} {code} failed: {type(exc).__name__}: {str(exc)[:120]}", file=sys.stderr)
+    tf = {"60": "1h", "D": "1d"}.get(code)
+    if tf is None:
+        return []
+    try:
+        import fetch_etf_history as feh  # noqa: E402
+        get = feh.make_getter()
+        feed = feh.pick_feed(get, "sip")
+        df = feh.fetch_bars(get, symbol, tf, datetime.fromtimestamp(start_ms / 1000, tz=timezone.utc),
+                            datetime.fromtimestamp(end_ms / 1000, tz=timezone.utc), feed)
+    except (Exception, SystemExit) as exc:  # noqa: BLE001  # allow-silent: logged; no_candles is the named read-state
+        print(f"alpaca {symbol} {tf} failed: {type(exc).__name__}: {str(exc)[:120]}", file=sys.stderr)
+        return []
+    if df.empty:
+        return []
+    print(f"WARNING {symbol} {tf}: bars from Alpaca ({feed}), not the corpus' Yahoo source", file=sys.stderr)
+    return [{"timestamp": r.timestamp.to_pydatetime(), "open": float(r.open), "high": float(r.high),
+             "low": float(r.low), "close": float(r.close), "volume": float(r.volume)} for r in df.itertuples()]
+
+
+def venue_candles(symbol: str, timeframe: str, trades: List[Dict[str, Any]], cache_dir: Optional[Path] = None,
+                  fetch=None) -> Optional[str]:
+    """Path of a cached CSV of ``symbol`` bars covering the corpus span, fetching what is missing; None when it cannot.
+
+    Crypto perps from Bybit; equities/ETFs/futures from Yahoo (Alpaca fallback). Covers [first corpus entry, last corpus exit]; an existing cache that already covers
+    that is used as is, so after the first call there is no network. Any failure returns None (the caller then reports
+    ``no_candles``, as before) - this never raises into the pricing path."""
+    code = _TF_CODE.get(timeframe)
+    if not code or not trades:
+        return None
+    try:
+        fetch = fetch or _default_fetch
+        step = pd.Timedelta(milliseconds=_tf_ms(timeframe))
+        need0 = min(pd.Timestamp(t["entry_time"]) for t in trades)
+        need1 = max(pd.Timestamp(t["exit_time"]) for t in trades)
+        need0 = need0.tz_localize("UTC") if need0.tzinfo is None else need0.tz_convert("UTC")
+        need1 = need1.tz_localize("UTC") if need1.tzinfo is None else need1.tz_convert("UTC")
+        d = _venue_cache_dir(cache_dir)
+        d.mkdir(parents=True, exist_ok=True)
+        path = d / f"{symbol}_{timeframe}.csv"
+        have = pd.DataFrame(columns=["timestamp", "open", "high", "low", "close", "volume"])
+        if path.is_file():
+            have = pd.read_csv(path)
+            have["timestamp"] = pd.to_datetime(have["timestamp"], utc=True)
+        lo = have["timestamp"].min() if len(have) else None
+        hi = have["timestamp"].max() if len(have) else None
+        if lo is not None and lo <= need0 + step and hi >= need1 - step:
+            return str(path)
+        rows = fetch(symbol, code, int(need0.timestamp() * 1000), int((need1 + step).timestamp() * 1000))
+        if not rows:
+            return None
+        new = pd.DataFrame(rows)
+        new["timestamp"] = pd.to_datetime(new["timestamp"], utc=True)
+        out = pd.concat([have, new[have.columns]]).drop_duplicates("timestamp").sort_values("timestamp")
+        tmp = path.with_suffix(".csv.tmp")
+        out.to_csv(tmp, index=False)
+        tmp.replace(path)
+        return str(path)
+    except Exception as exc:  # noqa: BLE001  # allow-silent: logged to stderr and the caller records reason=no_candles (a named read-state, not a 0); a venue outage must not crash the review
+        print(f"venue_candles({symbol},{timeframe}) failed: {type(exc).__name__}: {str(exc)[:160]}", file=sys.stderr)
+        return None
+
+
+def _tf_ms(timeframe: str) -> int:
+    n, unit = int(timeframe[:-1]), timeframe[-1]
+    return n * {"m": 60_000, "h": 3_600_000, "d": 86_400_000}[unit]
 
 
 def parse_tighten(spec: str) -> Tuple[str, float]:
@@ -334,22 +472,36 @@ def tighten_vs_hold(hold: List[float], tight: List[float], hold_cell: Dict[str, 
 
 # --------------------------------------------------------------------------- the table
 
-def build_table(trades: List[Dict[str, Any]], candles: Optional[pd.DataFrame], *, side: Optional[str],
+def _candles_for(candles: Any, t: Dict[str, Any]) -> Optional[pd.DataFrame]:
+    """The frame a trade replays on: the one frame given, or the trade's own symbol's frame from a map."""
+    if isinstance(candles, dict):
+        return candles.get(str(t.get("symbol")))
+    return candles
+
+
+def build_table(trades: List[Dict[str, Any]], candles: Any, *, side: Optional[str],
                 open_r: float, peak_r: float, bars_held: Optional[int], atr_stop_mult: float,
                 tighten: List[str], n_floor: int = N_FLOOR, bars_slack: Optional[float] = None,
                 stop_fill_slip_r: float = 0.0, auto_bound: float = AUTO_BOUND_R,
                 shadow_bound: float = SHADOW_BOUND_R, dist_stop_atr: Optional[float] = None,
                 dist_target_atr: Optional[float] = None, condition: str = "peak",
                 partial: Optional[List[float]] = None,
-                move_tp: Optional[List[float]] = None) -> Dict[str, Any]:
+                move_tp: Optional[List[float]] = None, close: bool = False,
+                symbol: Optional[str] = None, stop_r: Optional[float] = None) -> Dict[str, Any]:
+    """``candles``: one frame (single-symbol leg) or ``{symbol: frame}`` (pooled leg); None = could not look."""
     atr_over_r = 1.0 / atr_stop_mult
     pop = {"corpus_trades": len(trades), "side_filter": side, "side_excluded": 0, "no_candles": 0,
            "never_reached_peak": 0, "beyond_bars_slack": 0, "comparable": 0,
-           "mfe_replay_mismatch": 0, "no_pullback_after_peak": 0}
+           "mfe_replay_mismatch": 0, "no_pullback_after_peak": 0,
+           "symbol_filter": symbol, "symbol_excluded": 0,
+           "symbols": sorted({str(t.get("symbol")) for t in trades})}
     rows: List[Tuple[Dict[str, Any], Optional[Dict[str, Any]], Optional[int]]] = []
     for t in trades:
         if side and t["direction"] != side:
             pop["side_excluded"] += 1
+            continue
+        if symbol and str(t.get("symbol")) != symbol:
+            pop["symbol_excluded"] += 1
             continue
         if float(t["mfe_r"]) < peak_r:
             pop["never_reached_peak"] += 1
@@ -357,7 +509,8 @@ def build_table(trades: List[Dict[str, Any]], candles: Optional[pd.DataFrame], *
         if candles is None:
             rows.append((t, None, None))
             continue
-        path = _paths(t, candles)
+        frame = _candles_for(candles, t)
+        path = _paths(t, frame) if frame is not None else None
         if path is None:
             pop["no_candles"] += 1
             continue
@@ -390,8 +543,11 @@ def build_table(trades: List[Dict[str, Any]], candles: Optional[pd.DataFrame], *
         kind, val = parse_tighten(spec)
         lvl_r = val if kind == "r" else peak_r - val * atr_over_r
         base = {"action": "tighten", "spec": spec, "stop_at_r_now": round(lvl_r, 4)}
-        if lvl_r >= open_r:
+        if lvl_r >= open_r or (stop_r is not None and lvl_r <= stop_r):
+            # not a tighten: a stop at/above the price is no stop, one at/below the current stop is a loosen
             out["options"].append({**base, "n": len(rows), "state": "invalid_level",
+                                   "reason": ("stop_level_not_below_price" if lvl_r >= open_r
+                                              else "stop_level_not_above_current_stop"),
                                    "mean_r": None, "sd_r": None, "worst_r": None, "p05_r": None,
                                    "p_giveback_gt_half": None, "ev_cost_r": None,
                                    "ev_cost_se_r": None, "worst_case_gain_r": None,
@@ -408,10 +564,11 @@ def build_table(trades: List[Dict[str, Any]], candles: Optional[pd.DataFrame], *
         cell = cell_stats(tight, peak_r, n_floor)
         out["options"].append({**base, **cell, **tighten_vs_hold(hold, tight, hold_cell, cell,
                                                                   auto_bound, shadow_bound)})
-    for kind, specs, fn in (("partial_close", partial or [], lambda t, p, j0, v: partial_net_r(t, p, j0, v, open_r)),
+    for kind, specs, fn in (("close", [1.0] if close else [], lambda t, p, j0, v: partial_net_r(t, p, j0, v, open_r)),
+                            ("partial_close", partial or [], lambda t, p, j0, v: partial_net_r(t, p, j0, v, open_r)),
                             ("move_tp", move_tp or [], lambda t, p, j0, v: move_tp_net_r(t, p, j0, v))):
         for v in specs:
-            base = {"action": kind, "spec": f"{kind}:{v}"}
+            base = {"action": kind, "spec": "close" if kind == "close" else f"{kind}:{v}"}
             if kind == "move_tp" and v <= open_r:
                 out["options"].append({**base, **cell_stats([], peak_r, n_floor), "n": len(rows),
                                        "state": "invalid_level", "ev_cost_r": None, "ev_cost_se_r": None,
@@ -438,7 +595,7 @@ def render_text(res: Dict[str, Any]) -> str:
         f"state: side={s['side']} open_r={s['open_r']} peak_r={s['peak_r']} bars_held={s['bars_held']}",
         f"population: corpus {p['corpus_trades']} -> comparable {p['comparable']} "
         f"(never_reached_peak {p['never_reached_peak']}, no_pullback {p.get('no_pullback_after_peak', 0)}, no_candles {p['no_candles']}, "
-        f"side_excluded {p['side_excluded']}, mfe_replay_mismatch {p['mfe_replay_mismatch']})",
+        f"side_excluded {p['side_excluded']}, symbol_excluded {p.get('symbol_excluded', 0)}, mfe_replay_mismatch {p['mfe_replay_mismatch']})",
         f"{'action':<12}{'n':>4} {'state':<15}{'mean':>6}{'sd':>6}{'worst':>7}{'p05':>6}"
         f"{'gvbk>½':>7}{'EVcost':>7}{'worst+':>7}  <=0.25 <=0.5",
     ]
@@ -464,6 +621,8 @@ def main(argv: Optional[List[str]] = None) -> int:
     ap.add_argument("--bars-held", type=int)
     ap.add_argument("--bars-slack", type=float, help="review bar must be <= bars_held*(1+slack)")
     ap.add_argument("--atr-stop-mult", type=float, required=True, help="1R = this x entry ATR (the leg's atr_stop_mult)")
+    ap.add_argument("--stop-r", type=float, help="the CURRENT stop in R (open_r - r_to_stop); default tighten levels are "
+                    "generated relative to it and to --open-r")
     ap.add_argument("--dist-stop-atr", type=float)
     ap.add_argument("--dist-target-atr", type=float)
     ap.add_argument("--candles", help="candle CSV; default = widest committed file for the symbol/timeframe")
@@ -474,6 +633,8 @@ def main(argv: Optional[List[str]] = None) -> int:
     ap.add_argument("--condition", choices=("peak", "pullback"), default="peak")
     ap.add_argument("--partial", type=float, action="append", help="fraction in (0,1) banked at --open-r; repeatable")
     ap.add_argument("--move-tp", type=float, action="append", help="new TP in R (> --open-r); repeatable")
+    ap.add_argument("--close", action="store_true", help="also price CLOSE NOW (everything banked at --open-r)")
+    ap.add_argument("--symbol", help="pooled corpus: restrict to this symbol's trades (default = the whole pool)")
     ap.add_argument("--n-floor", type=int, default=N_FLOOR)
     ap.add_argument("--stop-fill-slip-r", type=float, default=0.0)
     ap.add_argument("--auto-bound-r", type=float, default=AUTO_BOUND_R)
@@ -481,23 +642,42 @@ def main(argv: Optional[List[str]] = None) -> int:
     ap.add_argument("--json", action="store_true")
     a = ap.parse_args(argv)
     trades, src = load_trades(a.leg, corpus=a.corpus)
-    cpath = a.candles
+    cpath: Any = a.candles
+    syms = sorted({str(t.get("symbol")) for t in trades if t.get("symbol")})
+    if a.symbol:
+        syms = [s for s in syms if s == a.symbol]
     if cpath is None and trades:
-        sym = trades[0].get("symbol")
         tf = json.loads((REPO / "comms" / "strategy_evidence" / f"{a.leg}.json").read_text()).get("timeframe")
+        tf = str(tf).split()[0] if tf else None     # "1h (decision at every 4th closed bar)" -> "1h"
         # the widest-span search belongs to the full-history corpus; a leg that fell back to its evidence
         # source_run keeps the candle selection that run was built with
         full = a.corpus == "auto" and str(src).startswith(LTR_CORPUS_DIR)
-        cpath = find_candles(sym, tf, widest_span=full) if sym and tf else None
-    candles = load_candles(cpath) if cpath else None
+
+        def _one(sym: str) -> Optional[str]:
+            hit = find_candles(sym, tf, widest_span=full) if sym and tf else None
+            if hit is None and sym and tf:
+                hit = venue_candles(sym, tf, [t for t in trades if t.get("symbol") == sym])
+            return hit
+        if len(syms) > 1:     # pooled leg: every row replays on its own symbol's bars
+            cpath = {s: p for s in syms if (p := _one(s))}
+        elif syms:
+            cpath = _one(syms[0])
+    if isinstance(cpath, dict):
+        candles: Any = {s: load_candles(p) for s, p in cpath.items()} or None
+    else:
+        candles = load_candles(cpath) if cpath else None
     res = build_table(trades, candles, side=a.side, open_r=a.open_r, peak_r=a.peak_r,
                       bars_held=a.bars_held, atr_stop_mult=a.atr_stop_mult,
-                      tighten=a.tighten or list(DEFAULT_TIGHTEN), n_floor=a.n_floor,
+                      tighten=a.tighten or default_tighten(a.open_r, a.stop_r), n_floor=a.n_floor,
+                      stop_r=a.stop_r,
                       bars_slack=a.bars_slack, stop_fill_slip_r=a.stop_fill_slip_r,
                       auto_bound=a.auto_bound_r, shadow_bound=a.shadow_bound_r,
                       dist_stop_atr=a.dist_stop_atr, dist_target_atr=a.dist_target_atr, condition=a.condition,
-                      partial=a.partial, move_tp=a.move_tp)
+                      partial=a.partial, move_tp=a.move_tp, close=a.close, symbol=a.symbol)
     res["leg"], res["corpus"], res["candles"] = a.leg, src, cpath
+    man = REPO / LTR_CORPUS_DIR / f"{a.leg}__corpus.json"
+    if str(src).startswith(LTR_CORPUS_DIR) and man.is_file():
+        res["corpus_note"] = json.loads(man.read_text()).get("note")   # what this corpus does NOT model, stated
     print(json.dumps(res, indent=2) if a.json else render_text(res))
     return 0
 

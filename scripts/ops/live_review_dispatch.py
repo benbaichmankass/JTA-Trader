@@ -271,6 +271,30 @@ def find_row(text: Optional[str], review_id: str,
     return found, "ok"
 
 
+def _is_judgement(rec: Dict[str, Any]) -> bool:
+    return rec.get("basis") == "judgement" or rec.get("evidence_source") == "judgement"
+
+
+def evidence_path(row: Dict[str, Any]) -> Optional[str]:
+    """The committed evidence a row is applied on: its outcome table, else -- for a JUDGEMENT row of any
+    dispatchable class, tighten_sl included -- its own decision packet ``comms/live_review/packets/<id>.json``.
+
+    PAPER-TIGHTEN-NOT-APPLIED (2026-11-05): the packet fallback was trade-actions only, so a judgement
+    tighten_sl with no outcome table (every short-hold row) was refused ``evidence_not_committed`` before the
+    apply ran, while the same package's judgement ``close`` applied. MEASURED on the VM rows_watch.jsonl
+    (last 300 lines): 4/4 tighten_sl rows under MD-LTR-PAPER-AUTO refused this way, 0 applied. MD-TRADE-DESK
+    asks a judgement row for a confidence and a reason, never a table; a TABLE row still needs its table."""
+    rec = row.get("recommendation") or {}
+    ev = row.get("outcome_table_source")
+    if ev:
+        return ev
+    act = rec.get("action")
+    if row.get("packet_sha") and row.get("review_id") and (
+            act in TRADE_ACTIONS or (act == "tighten_sl" and _is_judgement(rec))):
+        return f"comms/live_review/packets/{row.get('review_id')}.json"
+    return None
+
+
 def check_row(row: Dict[str, Any], evidence_text: Optional[str]) -> Tuple[Optional[Dict[str, Any]], Optional[str]]:
     """(plan, refusal). ``plan`` holds the apply arguments; ``refusal`` names the
     first mandate clause the row fails. Pure: ``evidence_text`` is the committed
@@ -292,7 +316,7 @@ def check_row(row: Dict[str, Any], evidence_text: Optional[str]) -> Tuple[Option
     route = (row.get("disposition") or {}).get("route")
     if route not in DISPATCHABLE_ROUTES:
         return None, f"route_{route or 'unstated'}"
-    evidence = row.get("outcome_table_source")
+    evidence = evidence_path(row)
     if not evidence or evidence_text is None:
         return None, "evidence_not_committed"
     plan: Dict[str, Any] = {"package": pkg, "new_sl": level, "review_id": row.get("review_id"),
@@ -494,9 +518,7 @@ def dispatch(review_id: str, *, apply: bool, state: Optional[Dict[str, Any]] = N
                                              f"(exit {prev.get('exit')}); a new review row is a new decision",
                    exit=EXIT_REFUSED)
         return out
-    evidence = row.get("outcome_table_source")
-    if not evidence and (row.get("recommendation") or {}).get("action") in TRADE_ACTIONS and row.get("packet_sha"):
-        evidence = f"comms/live_review/packets/{review_id}.json"
+    evidence = evidence_path(row)
     ev_text = _committed_text(evidence, at) if evidence else None
     plan, refusal = check_row(row, ev_text)
     if plan is not None and auto_id:

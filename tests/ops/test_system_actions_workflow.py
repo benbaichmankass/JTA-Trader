@@ -59,6 +59,8 @@ EXPECTED_ACTIONS = {
     "gateway-logs": "gateway_logs.sh",
     # Read-only restart forensics for the ib-gateway container + its watchdog/reset timers.
     "gateway-forensics": "gateway_forensics.sh",
+    "gateway-disk-report": "gateway_disk_report.sh",
+    "gateway-disk-cleanup": "gateway_disk_cleanup.sh",
     "inspect-closed-pnl": "inspect_closed_pnl_action.sh",
     "bybit-account-audit": "bybit_account_audit_action.sh",
     # Read-only broker-truth audit of Bybit protective-bracket COVERAGE
@@ -303,6 +305,9 @@ EXPECTED_ACTIONS = {
     # default; apply gated + DB backup; every other case refused.
     "prop-ticket-reissue": "prop_ticket_reissue_action.sh",
     "prop-report-close": "prop_report_close_action.sh",
+    # 2026-11-05 — BREAKOUT-UNRECORDED-1101: journal ONE never-filled prop ticket
+    # as `skipped` via ingest_report. DRY-RUN by default; apply needs confirm: <ticket_id>.
+    "prop-report-skip": "prop_report_skip_action.sh",
     # 2026-08-20 — prop-journal hygiene for fills admitted with NO direction
     # (BL-20260820-PROP-FILL-DIRECTION-ADMISSION-GAP). _position_key needs
     # (account, symbol, direction) but ingest_report only validates the first
@@ -432,6 +437,7 @@ TIER_2_ACTIONS = {
     "mark-reconciler-incomplete",
     "mark-operator-flattened",
     "cap-vm-logs",
+    "gateway-disk-cleanup",
     "set-journal-trade-qty",
     "rebuild-pnl-from-bybit",
     "backfill-shadow-predictions",
@@ -485,6 +491,7 @@ TIER_2_ACTIONS = {
     "prop-ticket-expire",
     "prop-ticket-reissue",
     "prop-report-close",
+    "prop-report-skip",
     "repair-prop-fill-direction",
     "breakout-login-check",
     "breakout-terminal-probe",

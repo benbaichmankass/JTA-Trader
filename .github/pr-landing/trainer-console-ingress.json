@@ -1,0 +1,11 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "hold_reason": "tier_2_3_needs_approval",
+  "hold_text": "Opens public 80/443 on the trainer VM (OCI security list, host iptables, Caddy). Merging only adds the workflow; it runs when dispatched after merge. Operator decision 2026-11-05 ~09:55Z, verbatim popup option: \"Open 443 + Google OAuth (Recommended)\". The manager lands it.",
+  "why": "Stable HTTPS hostname (158-178-209-121.sslip.io) for the console connector, so claude.ai OAuth sign-in (G1) has a fixed redirect origin and the connector URL survives restarts. Only the connector's paths are proxied; anything else returns 404. Touches no order path, live VM, strategy, risk or config. Tests: tests/ops/test_oci_console_ingress.py (3).",
+  "recorded_decision": {
+    "kind": "operator_decision",
+    "ref": "UI-CONSOLE-V1 operator 2026-11-05 ~09:55Z popup: \"Open 443 + Google OAuth (Recommended)\""
+  }
+}

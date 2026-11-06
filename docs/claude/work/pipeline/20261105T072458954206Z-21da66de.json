@@ -1,0 +1,16 @@
+{
+  "due_when": {
+    "check_every_days": 1,
+    "clears_when": "the daily live-replay-parity run reports 0 of this class for this leg, with the cause root-caused, or killed with a stated reason",
+    "kind": "observation"
+  },
+  "id": "PI-20261105-LRP-1BBF7C44",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "audit",
+    "ref": "live-replay-parity:eth_pullback_2h:candle_mismatch",
+    "rerun": "python3 scripts/ops/live_replay_parity.py --base-url <tunnel to the live web-api> --days 7  (or label an issue `live-replay-parity`; the workflow .github/workflows/live-replay-parity.yml runs it daily and commits comms/live_parity/latest.json)"
+  },
+  "state": "queued",
+  "what": "Live-vs-replay parity: leg `eth_pullback_2h` — candle_mismatch ×146 (paper roster) in window 2026-10-29T06:45:00+00:00..2026-11-05T06:45:00+00:00. MEASURED by scripts/ops/live_replay_parity.py; artifact comms/live_parity/2026-11-05.json. Examples: [{\"class\": \"candle_mismatch\", \"bar\": \"2026-10-29T10:00:00+00:00\", \"t\": \"2026-10-29T10:01:29+00:00\", \"live\": {\"side\": \"none\", \"adx\": 15.5127, \"close\": 2322.6, \"reason\": \"Strategy 'eth_pullback_2h': no trend-pullback-confirmation setup on the latest bar (non-actionable).\"}, \"replay\": {\"sides\": [\"none\"], \"adx_range\": [14.5353, 15.3774], \"candidates\": [\"2026-10-29T10:00:00+00:00\", \"2026-10-29T09:45:00+00:00\"], \"diag_adx\": {\"final_bar_200\": 14.3649, \"closed_only_199\": 15.3777, \"closed_only_200\": 15.3774, \"next_bar_200\": 13.6175}, \"fine_candle\": {\"time\": 1793268000, \"low\": 2317.02, \"high\": 2320.75}}}, {\"class\": \"candle_mismatch\", \"bar\": \"2026-10-29T10:00:00+00:00\", \"t\": \"2026-10-29T10:38:42+00:00\", \"live\": {\"side\": \"none\", \"adx\": 14.6564, \"close\": 2325.59, \"reason\": \"Strategy 'eth_pullback_2h': no trend-pullback-confirmation setup on the latest bar (non-actionable).\"}, \"replay\": {\"sides\": [\"no"
+}

@@ -2,7 +2,7 @@
   "id": "SOAK-LIVE-REVIEW-CLOSE-NEUTRAL",
   "title": "Soak grading: live_review_close is a neutral exit",
   "phase": "soak",
-  "state": "landed_unproven",
+  "state": "done",
   "owner": "claude",
   "lane": null,
   "model": null,
@@ -13,9 +13,9 @@
     20846
   ],
   "blocked_on": [],
-  "note": "observation: after deploy the soak report shows SOAK-stage1-bybit_1-ict_scalp_eth_15m no longer mechanical_fail on trade 6741 (WR-20261028-0555Z). paper_record_classifier.py not changed: it grades PnL gradeability for performance review (unknown exit -> C reconstruct), not soak state. \nMerged in #20846 (live_review_close in soak_state.NEUTRAL_EXITS). Not yet deployed/observed.\nNEXT: after deploy, read the soak report; confirm SOAK-stage1-bybit_1-ict_scalp_eth_15m is no longer mechanical_fail on trade 6741, then set state=done.",
-  "updated_at": "2026-10-28T09:56:44Z",
-  "updated_by": "session_01AFoLuNBVzEhnMW2cVHbkEC",
+  "note": "observation: after deploy the soak report shows SOAK-stage1-bybit_1-ict_scalp_eth_15m no longer mechanical_fail on trade 6741 (WR-20261028-0555Z). paper_record_classifier.py not changed: it grades PnL gradeability for performance review (unknown exit -> C reconstruct), not soak state. \nMerged in #20846 (live_review_close in soak_state.NEUTRAL_EXITS). Not yet deployed/observed.\nNEXT: after deploy, read the soak report; confirm SOAK-stage1-bybit_1-ict_scalp_eth_15m is no longer mechanical_fail on trade 6741, then set state=done. [2026-11-05 BACKLOG-DRAIN-20261105] DONE: MEASURED work report WR-20261105-0530Z (soak_state.py computed live): SOAK-stage1-bybit_1-ict_scalp_eth_15m = passed, 1/1 clean (trade 6859), no longer mechanical_fail on 6741. Separate, already owned by the paper-mechanics lane: 6 alpaca_paper soaks are mechanical_fail (naked_rearm bracket repair x3: iaum_pullback_1d/qld_trend_long_1d/slv_pullback_1d; exchange_flat_reconciled exits x3: iwm/qqq/scha).",
+  "updated_at": "2026-11-05T06:22:37Z",
+  "updated_by": "session_01AFoLuLoMgjGPiy3UA2Ua8P",
   "roadmap": [
     "L-LADDER"
   ],

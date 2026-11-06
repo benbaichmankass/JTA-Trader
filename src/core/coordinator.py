@@ -230,7 +230,7 @@ def _leg_account_scope(strategy: Optional[str]) -> Optional[Dict[str, List[str]]
             for name, scfg in (load_strategy_config() or {}).items():
                 sc = scfg.get(ACCOUNT_SYMBOLS_KEY) if isinstance(scfg, dict) else None
                 if isinstance(sc, dict):
-                    scopes[str(name)] = {str(a): leg_symbols(scfg, str(a)) for a in sc}
+                    scopes[str(name)] = {str(a): leg_symbols(scfg, str(a), leg=str(name)) for a in sc}
             _LEG_SCOPE_CACHE = (mtime, scopes)
     except Exception as exc:  # noqa: BLE001
         logger.warning("[coordinator] leg account scope unreadable for %s: %s", strategy, exc)
@@ -287,6 +287,31 @@ def _log_dispatch_drop(
 # ---------------------------------------------------------------------------
 # Coordinator
 # ---------------------------------------------------------------------------
+
+
+def _journal_synced(fn):
+    """Hold the journal_sync lock across one entry dispatch (place + journal).
+
+    TICK-STAGE2-RECONCILE-OFFTICK: reconciliation now runs on its own thread,
+    and the reverse reconciler adopts an unjournaled venue position on first
+    sight. Holding this lock across place + journal keeps a reconciliation pass
+    from ever seeing a fill this dispatch has not journaled yet, the invariant
+    the single-threaded loop gave for free. Re-entrant (the typed path calls
+    this one). If the lock module cannot be imported, the dispatch runs anyway:
+    an import error must never stop an entry.
+    """
+    import functools
+
+    @functools.wraps(fn)
+    def _wrapped(*args, **kwargs):
+        try:
+            from src.runtime.journal_sync import journal_sync
+        except Exception:  # noqa: BLE001
+            return fn(*args, **kwargs)
+        with journal_sync("entry_dispatch"):
+            return fn(*args, **kwargs)
+
+    return _wrapped
 
 
 class Coordinator:
@@ -927,6 +952,7 @@ class Coordinator:
             out.append(entry)
         return out
 
+    @_journal_synced
     def multi_account_execute(
         self,
         pkg: OrderPackage,

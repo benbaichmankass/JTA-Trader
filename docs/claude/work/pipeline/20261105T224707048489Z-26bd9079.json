@@ -1,0 +1,16 @@
+{
+  "due_when": {
+    "check_every_days": 7,
+    "clears_when": "a multi-job workflow run (e.g. work-digest) whose early job ran and whose later PENDING job was cancelled by a newer queued run no longer pages '[RUN cancelled]'; the fix ships with a test fixture of run 42119815453's jobs shape",
+    "kind": "event"
+  },
+  "id": "PI-20261105-C6CHZ2UP-0002",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "Manager Session 2026-11-05b (session_01AFoLuLmhUKeUzHC6CHz2uP); ops-flags #17895 alert comment 6671508212 (22:41Z, '[RUN cancelled] work-digest', system/high)",
+    "rerun": "gh api repos/<repo>/actions/runs/42119815453/jobs --jq '.jobs[]|[.name,.conclusion,(.steps|length)]'; sed -n 480,515p .github/workflows/claude-run-failure-alert.yml"
+  },
+  "state": "queued",
+  "what": "FALSE HIGH ALERT (MEASURED 2026-11-05). claude-run-failure-alert.yml step 'Was the cancelled run merely superseded' counts started jobs across ALL jobs of the run (jq select(.started_at != null and steps>0)). work-digest run 42119815453 had gate=success (8 steps) and digest=cancelled (0 steps, a PENDING job replaced by a newer queued run under concurrency group work-digest), so started=1 -> 'genuine' -> a red Telegram/ops-flags page for designed queue replacement. EXACT FIX (Tier 1, CI): count only the CANCELLED jobs that had steps, i.e. started = [.jobs[] | select(.conclusion==\"cancelled\") | select(((.steps // []) | length) > 0)] | length; a timeout or manual cancel of a running job still has steps and still pages. Needs a lane (manager-scope-guard refuses manager commits to CI logic). Cheap, Sonnet."
+}
