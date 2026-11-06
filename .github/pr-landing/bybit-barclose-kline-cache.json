@@ -1,0 +1,7 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "hold_reason": "tier_2_3_needs_approval",
+  "hold_text": "Tier-2 entry-path data fetch (src/runtime/strategy_signal_builders.py::_ml_entry_reference_frames). A short reference set is no longer cached as final for the decision bar: missing symbols are refetched on the next call (each at most 5x per bar), and the loop stops at once while the shared Bybit 10006 cooldown (#23580) runs. No sleep, no pacing, cooldown semantics unchanged. MEASURED 2026-11-06 04:00:07Z: one 10006 after ~6 of 60 reference fetches; the 6-frame set was cached and ml_entry refused all 5 symbols at 04:00:07 and 04:02:04-13Z (reference_symbols:5<40 / 6<40), losing the real-money 4-hourly decision. PI-20261106-5A1BGFHC-0003. Manager 2026-11-05b merges. Revert: git revert.",
+  "why": "ml_entry lost a whole decision bar to one rate-limit hit: a partial reference set was cached for the bar. Retry the missing symbols instead."
+}

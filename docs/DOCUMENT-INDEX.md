@@ -60,6 +60,7 @@ was read as an *instruction*.
 
 | category | rows | meaning |
 |---|---|---|
+| `docs/archive/2026-11-06-skills-prune/manager-SKILL.md.pre-prune` | unknown | unknown | — | never | `not-assessed / not-assessed` | — |
 | `instruction` | 44 | A session must OBEY it. Binding. |
 | `architecture` | 91 | A declared contract about how the system is built; read as truth about the system. |
 | `plan` | 64 | A forward commitment -- what we intend to do next. NEVER obeyed as instruction. |
@@ -606,6 +607,7 @@ real top-level `docs/*.md` and fails if the population builder cannot see it.
 | `docs/plans/ML-ROADMAP-MECE-2026-11.md` | plan | unknown | — | never | `name:plan-is-a-forward-commitment / not-assessed` | MECE map of ML model families onto the ten trade-lifecycle decisions (D1-D10): per-slot question/baseline/label/harness, position aggregator (Mastiff) design, research dependency graph, compute demand, ranked proposals for Thursday planning. Propose-only. |
 | `docs/plans/WATCHDOG-CONSOLIDATION-DESIGN-2026-11-06.md` | plan | unknown | — | never | `not-assessed / not-assessed` | — |
 | `docs/plans/counterfactual-everywhere-DESIGN-2026-10-29.md` | plan | unknown | — | never | `name:plan-is-a-forward-commitment / not-assessed` | — |
+| `docs/plans/manager-runbooks.md` | instruction | live | — | 2026-11-06 | `name:policy-prescribes / not-assessed` | — |
 | `docs/plans/ml-live-promotion-plan-2026-10-29.md` | plan | unknown | — | never | `name:plan-is-a-forward-commitment / not-assessed` | Short path to put 3-5 ML models into live decision loops by 2026-11-02 on existing consumers: pre-registered gates, day-by-day build steps, Tier map, 8 MODEL infra rows. |
 | `docs/plans/ml-pipeline-design-2026-10-29.md` | architecture | unknown | — | never | `name:design-declares-a-contract / not-assessed` | The ML assembly line from the money roster backward: six stations (dataset, CPCV, gate, shadow, canary, CUSUM/retrain) with owner, cadence and own quality metric; measured gap per station; ranked build rows; ML intake rule. |
 | `docs/plans/KAGGLE-TRAINING-PIPELINE-DESIGN-2026-10-13.md` | architecture | unknown | — | never | `name:design-declares-a-contract / not-assessed` | — |
@@ -630,6 +632,7 @@ real top-level `docs/*.md` and fails if the population builder cannot see it.
 | `docs/plans/soak-verdicts-2026-10-04.md` | unknown | unknown | — | never | `not-assessed / not-assessed` | — |
 | `docs/plans/ui-upgrade-1-auth-and-keys-design.md` | architecture | unknown | — | never | `name:design-declares-a-contract / not-assessed` | — |
 | `docs/plans/UI-TWO-SURFACE-DESIGN-2026-11.md` | plan | unknown | — | never | `name:plan-is-a-forward-commitment / not-assessed` | UI-TWO-SURFACE-DESIGN: trading dashboard (SPA, SSE push, browser-direct chart feed, health cards) vs management console (Claude artifact fed by a read-only JTA MCP connector on the trainer VM); SPA page inventory; notes/comments/sample paths; build order T1-T4/C1-C5/R1; operator decisions U1-U6. Design only. |
+| `docs/plans/weekly-planning-protocol.md` | instruction | live | — | 2026-11-06 | `name:policy-prescribes / not-assessed` | — |
 | `docs/plans/work-system-2026-10-04.md` | plan | unknown | — | never | `name:plan-is-a-forward-commitment / not-assessed` | — |
 | `docs/plans/WORK-STORE-DESIGN-2026-11.md` | plan | unknown | — | never | `name:plan-is-a-forward-commitment / not-assessed` | WORK-STORE-DESIGN: one register (items+events SQLite on the VM behind the API) replacing checklist+pipeline files; bot-output ledgers off the repo; measured repo-flow inventory; deploy path (keep ict-git-sync); migration dry-run; build order; operator decisions D1-D9. Design only. |
 | `docs/proposals/sizer-margin-base-2026-10-28.md` | unknown | unknown | — | never | `not-assessed / not-assessed` | — |
@@ -814,6 +817,7 @@ real top-level `docs/*.md` and fails if the population builder cannot see it.
 | `docs/research/alpaca-close-blast-radius-mechanism-2026-09-08.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
 | `docs/research/alpaca-inverse-etf-route-2026-09-10.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
 | `docs/research/alpaca-live-activity-2026-11-01.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
+| `docs/research/ml-entry-eq-serve-spec-2026-11-06.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
 | `docs/research/prod-legs-dsr-2026-11-06.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
 | `docs/research/alpaca-promotion-inventory-2026-11-01.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
 | `docs/research/alpaca-live-refusal-verdict-2026-09-07.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |

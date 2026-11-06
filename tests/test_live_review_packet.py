@@ -814,6 +814,21 @@ def test_ada_venue_stop_at_the_legs_applied_floor_is_a_match_not_a_mismatch():
     assert "venue SL" not in p["mechanics"]["evidence"]
 
 
+def test_a_synthetic_prop_ticket_row_is_not_an_account(monkeypatch):
+    """/api/bot/prop/tickets returns order_package-sourced rows with null ticket_id/account_id; they are not accounts
+    (pkg-f76bb92289d143e5 showed a phantom account with a blank exchange: venue_read_unreachable 1/2)."""
+    pkg = "pkg-synth"
+    s = L.Snapshot()
+    s.packages[pkg] = {"order_package_id": pkg, "status": "open", "direction": "short"}
+    s.trades = [{"id": 1, "order_package_id": pkg, "account_id": "bybit_1", "status": "open"}]
+    s.reads["prop_tickets"] = {"tickets": [
+        {"order_package_id": pkg, "ticket_id": None, "account_id": None, "status": "open", "source": "order_package"},
+        {"order_package_id": pkg, "ticket_id": "T9", "account_id": "tradeify_1", "status": "filled", "source": "ticket"}]}
+    accts = L._accounts_for(L._package_view(s, pkg), {"bybit_1": {"exchange": "bybit", "account_class": "paper"}})
+    assert [a["account_id"] for a in accts] == ["bybit_1", "tradeify_1"]       # the real ticket stays; no None entry
+    assert all(a["account_id"] for a in accts)
+
+
 def test_price_returns_a_named_state_when_the_outcomes_stdout_is_not_json(monkeypatch):
     """LR wake 2026-11-06T01:56Z: an exit-0 outcomes run with non-JSON stdout raised out of the builder (could_not_build)."""
     monkeypatch.setattr(L, "LTR_CORPUS_DIR", L.LTR_CORPUS_DIR)
