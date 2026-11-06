@@ -1,7 +1,7 @@
 {
- "bar": "2026-11-06T02:50:00Z",
- "bar_close": "2026-11-06T02:55:00Z",
- "built_at": "2026-11-06T02:55:50Z",
+ "bar": "2026-11-06T02:55:00Z",
+ "bar_close": "2026-11-06T03:00:00Z",
+ "built_at": "2026-11-06T03:01:22Z",
  "closed": false,
  "order_package_id": "pkg-eebfa0550d9248e0",
  "packet": {
@@ -112,9 +112,9 @@
    "previous_review": {
     "action": "hold",
     "forecast": null,
-    "reason": "5m closed 8.336, above the 8.30-8.32 cap that held for ~1h (-0.23R); first real push against us. Still 0.114 (~3.9 atr_5m) under invalidation 8.45 and the 8.442 1h swing high, SL 8.512 intact. Thesis not yet broken, so hold; a 5m close above ~8.38 or approach to 8.44 would warrant tighten/close.",
-    "review_id": "LR-20261106T0250Z-pkg-eebfa0550d9248e0",
-    "reviewed_at": "2026-11-06T02:51:29Z",
+    "reason": "Push to 8.341 was rejected: 5m opened 8.336, closed 8.315 (-0.14R), back inside the 8.30-8.32 band. Failed breakout supports the short; invalidation 8.45 and SL 8.512 untouched. Hold.",
+    "review_id": "LR-20261106T0255Z-pkg-eebfa0550d9248e0",
+    "reviewed_at": "2026-11-06T02:56:32Z",
     "route": null
    },
    "symbol": "AVAXUSDT"
@@ -125,19 +125,19 @@
      "MGC",
      "short",
      "mgc_pullback_1d",
-     1.0
+     1.02
     ],
     [
      "BTCUSDT",
      "short",
      "ml_entry",
-     -0.169
+     -0.146
     ],
     [
      "ETHUSDT",
      "short",
      "trend_donchian_eth",
-     0.14
+     0.152
     ],
     [
      "SPY",
@@ -149,7 +149,7 @@
      "ADAUSDT",
      "short",
      "ml_entry_v2",
-     -0.694
+     -0.635
     ],
     [
      "GLD",
@@ -161,7 +161,7 @@
      "SOLUSDT",
      "short",
      "ml_entry_v2",
-     -0.158
+     -0.0903
     ],
     [
      "GDX",
@@ -173,7 +173,7 @@
      "MHG",
      "short",
      "mhg_pullback_1d",
-     1.04
+     1.06
     ],
     [
      "XRPUSDT",
@@ -197,7 +197,7 @@
      "BTCUSDT",
      "short",
      "trend_donchian_1h",
-     -0.119
+     -0.0998
     ],
     [
      "IAUM",
@@ -215,21 +215,14 @@
      "SOLUSDT",
      "short",
      "trend_donchian_sol_4h",
-     2.1
+     2.13
     ]
    ],
    "book_note": "[symbol, direction, leg, open_r (null = not measured)] per OTHER open package, either side",
    "chart": {
-    "atr": 0.151857,
+    "atr": 0.148214,
     "bars_note": "[epoch_s, open, high, low, close], closed bars only, oldest first",
     "bars_ohlc": [
-     [
-      1793872800,
-      8.763,
-      8.785,
-      8.753,
-      8.753
-     ],
      [
       1793876400,
       8.753,
@@ -334,42 +327,49 @@
       8.319,
       8.24,
       8.284
+     ],
+     [
+      1793930400,
+      8.284,
+      8.341,
+      8.259,
+      8.307
      ]
     ],
-    "last_close": 8.284,
+    "last_close": 8.307,
     "since_entry": null,
     "swings": {
      "highs": [
       {
-       "bars_ago": 6,
-       "dist_atr": 1.04,
+       "bars_ago": 7,
+       "dist_atr": 0.91,
        "px": 8.442
       },
       {
-       "bars_ago": 17,
-       "dist_atr": 3.42,
+       "bars_ago": 18,
+       "dist_atr": 3.35,
        "px": 8.804
       },
       {
-       "bars_ago": 22,
-       "dist_atr": 3.75,
+       "bars_ago": 23,
+       "dist_atr": 3.69,
        "px": 8.854
       }
      ],
      "lows": [
       {
-       "bars_ago": 2,
-       "dist_atr": -1.4,
+       "bars_ago": 3,
+       "dist_atr": -1.59,
        "px": 8.072
       },
       {
-       "bars_ago": 10,
-       "dist_atr": -1.05,
+       "bars_ago": 11,
+       "dist_atr": -1.23,
        "px": 8.124
       },
       {
-       "bars_ago": 19,
-       "dist_atr": 2.83,
+       "bars_ago": 20,
+       "dist_atr": 2.74,
        "px": 8.713
       }
      ]
@@ -537,16 +537,8 @@
    "basis": null
   },
   "desk_handoff": {
-   "chain_length": 9,
+   "chain_length": 10,
    "chain_tail": [
-    {
-     "action": "hold",
-     "forecast": null,
-     "reason": "Lower highs again (8.322, 8.315, 8.300) with close 8.287, essentially at entry (-0.01R); sellers still capping the 8.30 area, far from invalidation 8.45 and SL 8.512. Thesis intact, no progress to lock, no break to exit on.",
-     "review_id": "LR-20261106T0235Z-pkg-eebfa0550d9248e0",
-     "reviewed_at": "2026-11-06T02:36:07Z",
-     "verdict": "confirm"
-    },
     {
      "action": "hold",
      "forecast": null,
@@ -569,6 +561,14 @@
      "reason": "5m closed 8.336, above the 8.30-8.32 cap that held for ~1h (-0.23R); first real push against us. Still 0.114 (~3.9 atr_5m) under invalidation 8.45 and the 8.442 1h swing high, SL 8.512 intact. Thesis not yet broken, so hold; a 5m close above ~8.38 or approach to 8.44 would warrant tighten/close.",
      "review_id": "LR-20261106T0250Z-pkg-eebfa0550d9248e0",
      "reviewed_at": "2026-11-06T02:51:29Z",
+     "verdict": "confirm"
+    },
+    {
+     "action": "hold",
+     "forecast": null,
+     "reason": "Push to 8.341 was rejected: 5m opened 8.336, closed 8.315 (-0.14R), back inside the 8.30-8.32 band. Failed breakout supports the short; invalidation 8.45 and SL 8.512 untouched. Hold.",
+     "review_id": "LR-20261106T0255Z-pkg-eebfa0550d9248e0",
+     "reviewed_at": "2026-11-06T02:56:32Z",
      "verdict": "confirm"
     }
    ],
@@ -600,7 +600,7 @@
     "timeframe": "1h",
     "tp": 7.83
    },
-   "prior_decision_id": "LR-20261106T0250Z-pkg-eebfa0550d9248e0",
+   "prior_decision_id": "LR-20261106T0255Z-pkg-eebfa0550d9248e0",
    "protocol": "DESK-HANDOFF-PROTOCOL",
    "read_state": "read"
   },
@@ -617,7 +617,7 @@
    "head": "a8c10f02cf",
    "state": "current"
   },
-  "info_cutoff_at": "2026-11-06T02:56:06Z",
+  "info_cutoff_at": "2026-11-06T03:01:38Z",
   "leg": "claude_desk",
   "mechanics": {
    "evidence": "package sl 8.512 / tp 7.83 agree with every readable account",
@@ -675,31 +675,24 @@
   "priced_options": null,
   "priced_options_state": "evidence_missing",
   "regime": {
-   "adx_now": 33.4184,
+   "adx_now": 33.5424,
    "atr_now_over_entry": null,
    "cell_entry": null,
    "cell_now": null,
    "trend_now": "trending"
   },
-  "review_id": "LR-20261106T0255Z-pkg-eebfa0550d9248e0",
+  "review_id": "LR-20261106T0301Z-pkg-eebfa0550d9248e0",
   "short_hold": {
-   "atr": 0.029142857142857106,
-   "bar": "2026-11-06T02:50:00Z",
-   "bar_close": "2026-11-06T02:55:00Z",
+   "atr": 0.028857142857142852,
+   "bar": "2026-11-06T02:55:00Z",
+   "bar_close": "2026-11-06T03:00:00Z",
    "entry": 8.284,
-   "mark": 8.315,
-   "minutes_held": 48.6,
-   "open_r_at_mark": -0.136,
+   "mark": 8.307,
+   "minutes_held": 54.1,
+   "open_r_at_mark": -0.1009,
    "r_unit": "entry_to_current_sl",
    "read_state": "read",
    "recent_bars": [
-    {
-     "close": 8.284,
-     "high": 8.3,
-     "low": 8.27,
-     "open": 8.283,
-     "t": "2026-11-06T01:55:00Z"
-    },
     {
      "close": 8.278,
      "high": 8.299,
@@ -776,6 +769,13 @@
      "low": 8.313,
      "open": 8.336,
      "t": "2026-11-06T02:50:00Z"
+    },
+    {
+     "close": 8.307,
+     "high": 8.322,
+     "low": 8.307,
+     "open": 8.315,
+     "t": "2026-11-06T02:55:00Z"
     }
    ],
    "risk_per_unit": null,
@@ -794,25 +794,18 @@
    "tp": 7.83
   }
  },
- "packet_sha": "dbd9531733794745309bf66b42128d07be39b034fece3f157d8930608be8f389",
+ "packet_sha": "0418fecae7e073f6c0bcf8231045e962d31cc096a551a4305f62902ef949c7c0",
  "short_hold": {
-  "atr": 0.029142857142857106,
-  "bar": "2026-11-06T02:50:00Z",
-  "bar_close": "2026-11-06T02:55:00Z",
+  "atr": 0.028857142857142852,
+  "bar": "2026-11-06T02:55:00Z",
+  "bar_close": "2026-11-06T03:00:00Z",
   "entry": 8.284,
-  "mark": 8.315,
-  "minutes_held": 48.6,
-  "open_r_at_mark": -0.136,
+  "mark": 8.307,
+  "minutes_held": 54.1,
+  "open_r_at_mark": -0.1009,
   "r_unit": "entry_to_current_sl",
   "read_state": "read",
   "recent_bars": [
-   {
-    "close": 8.284,
-    "high": 8.3,
-    "low": 8.27,
-    "open": 8.283,
-    "t": "2026-11-06T01:55:00Z"
-   },
    {
     "close": 8.278,
     "high": 8.299,
@@ -889,6 +882,13 @@
     "low": 8.313,
     "open": 8.336,
     "t": "2026-11-06T02:50:00Z"
+   },
+   {
+    "close": 8.307,
+    "high": 8.322,
+    "low": 8.307,
+    "open": 8.315,
+    "t": "2026-11-06T02:55:00Z"
    }
   ],
   "risk_per_unit": null,
