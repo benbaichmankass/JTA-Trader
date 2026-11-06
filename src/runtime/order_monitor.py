@@ -1845,7 +1845,17 @@ def _apply_update(db, open_pkg: dict, verdict: Dict[str, Any],
         return
 
     try:
-        db.update_order_package(pkg_id, updates)
+        pkg_write = dict(updates)
+        if "sl" in updates:
+            # LTR-MECH-PROP-MIRROR-BRACKET: a package stop never moves without naming its mover.
+            try:
+                from src.runtime import sl_mover
+                _m = sl_mover.mover_from_verdict(verdict, open_pkg.get("strategy_name"))
+                pkg_write["meta"] = sl_mover.stamp_sl_move(
+                    open_pkg.get("meta"), open_pkg.get("sl"), updates["sl"], _m["source"], _m["detail"])
+            except Exception:  # noqa: BLE001 — attribution never blocks the confirmed stop write
+                logger.warning("order_monitor: sl mover stamp failed for pkg=%s", pkg_id, exc_info=True)
+        db.update_order_package(pkg_id, pkg_write)
         summary.updated_count += 1
     except Exception as exc:  # noqa: BLE001
         logger.warning(

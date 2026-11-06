@@ -431,7 +431,14 @@ def amend(account_id: str, *, new_sl: float, reason: str,
 
     target_ok = str(leg_states[0]["trade_id"]) in {str(c) for c in confirmed}
     if target_ok and pkg_needs:
-        db.update_order_package(pkg_id, {"sl": new_sl})
+        pkg_write: dict[str, Any] = {"sl": new_sl}
+        try:  # LTR-MECH-PROP-MIRROR-BRACKET: a package stop never moves without naming its mover
+            from src.runtime import sl_mover
+            pkg_write["meta"] = sl_mover.stamp_sl_move(
+                (pkg or {}).get("meta"), pkg_sl, new_sl, "amend_position_sl", str(reason))
+        except Exception:  # noqa: BLE001 -- attribution never blocks the verified stop write
+            pass
+        db.update_order_package(pkg_id, pkg_write)
     out["after"] = {"package": {"order_package_id": pkg_id,
                                 "sl": new_sl if target_ok else pkg_sl},
                     "legs": after_legs}
