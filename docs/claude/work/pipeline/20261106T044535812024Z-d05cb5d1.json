@@ -1,0 +1,21 @@
+{
+  "due_when": {
+    "check_every_days": 2,
+    "clears_when": "the first m20-exit-lever-sweep.yml run after 2026-11-06T04:43Z that reaches its corpus job: the job prints 'stored-duplicates-collapsed: 7' and exits 0, AND a commit to docs/research/m20-sweep-corpus.jsonl follows. If it fails for another reason, root-cause that; also read the corpus job of 2-3 of the other unlanded runs to see whether they share the duplicate-key cause.",
+    "kind": "observation"
+  },
+  "id": "PI-20261106-QSEQAVLT-0003",
+  "next_action": "check_observation",
+  "observation": {
+    "due_by": "2026-11-09",
+    "how_to_check": "gh api 'repos/benbaichmankass/JTA-Trader/actions/workflows/m20-exit-lever-sweep.yml/runs?per_page=10' --jq '.workflow_runs[]|[.id,.created_at,.conclusion]'; read the newest run's corpus job log for 'stored-duplicates-collapsed'; git log -3 -- docs/research/m20-sweep-corpus.jsonl",
+    "what": "The first m20-exit-lever-sweep.yml run after 2026-11-06T04:43Z that reaches its corpus job: stored-duplicates-collapsed: 7, exit 0, and a commit to docs/research/m20-sweep-corpus.jsonl."
+  },
+  "origin": {
+    "kind": "audit",
+    "ref": "MECH-FOLLOWUPS-1105 lane 2026-11-06 (#23646)",
+    "rerun": "gh api 'repos/benbaichmankass/JTA-Trader/actions/workflows/m20-exit-lever-sweep.yml/runs?per_page=10' --jq '.workflow_runs[]|[.id,.created_at,.conclusion]' ; then read the newest run's corpus job log for 'stored-duplicates-collapsed'"
+  },
+  "state": "queued",
+  "what": "OBSERVATION: m20 corpus merge fix (#23646, merged 2026-11-06T04:43Z). Basis: n=1 failed corpus job read (run 42140687327, job 127661673760: 'merge produced 7 duplicate measurement key(s)'); committed corpus had 1493 rows incl. 7 stored squeeze_breakout_4h @ 2023-09-06 duplicates (runs 2026-08-17 and 2026-10-04). The other 9 unlanded runs from the 20:08Z loss detector were NOT read, so they are not shown to share this cause. Landed = merged, not observed. Manager 2026-11-06: do not dispatch a sweep; the next scheduled run is the observation."
+}
