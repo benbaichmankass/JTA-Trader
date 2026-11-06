@@ -501,12 +501,13 @@ def _exit_loop(settings: dict) -> None:
 
     while True:
         started = time.monotonic()
+        _pass_summaries = None
         fetcher = _build_monitor_ohlcv_fetcher(settings)
         try:
             # MECH-FOLLOWUPS-1105: this pass's telemetry/history writes are queued and flushed in ONE transaction when
             # the pass ends (never under a broker call; the flush is contained and the next pass rewrites).
             with _exit_pass_telemetry_batch():
-                run_exit_evaluation_tick(ohlcv_fetcher=fetcher)
+                _pass_summaries = run_exit_evaluation_tick(ohlcv_fetcher=fetcher)
         except Exception:  # noqa: BLE001
             logger.exception("exit_loop: pass failed")
         elapsed_ms = (time.monotonic() - started) * 1000.0
@@ -520,6 +521,8 @@ def _exit_loop(settings: dict) -> None:
             _EXIT_LOOP_FINAL_PASS_DONE.set()
             return
         slack = exit_loop_interval_seconds() - (elapsed_ms / 1000.0)
+        if isinstance(_pass_summaries, dict) and _pass_summaries.get("__closes_deferred__"):
+            slack = 0.0  # closes were handed to the next pass: start it now
         _exit_loop_sleep(slack)
 
 
