@@ -1,9 +1,10 @@
-"""ada_pullback_2h VH95 (vol_skip_above_pctl 0.95) Tier-3 packet pins.
+"""ada_pullback_2h config pins: the HOLDOUT-CONFIRMED configuration (C7) and its Stage-2 placement.
 
-The declared value must reach the live unit's resolved params (an unknown key
-passes through order_package silently, so reading the config alone proves
-nothing). Since 2026-11-06 (PROD-LEGS-DSR-DECISION) the leg is a TESTING leg on bybit_1, off the Stage-2 pair.
-Evidence: research/results/RQ-20261018-002/ (rule RULE-RQ2026101665ff06-REGIME-VOLHOT-CONFIRM).
+History: VH95 (vol_skip_above_pctl 0.95) was declared 2026-10-18 (RQ-20261018-002). 2026-11-06 (Tier-3, operator popups
+"Yes, rebuild and promote (Recommended)" + "Holdout governs; promote", via Manager 2026-11-06a) the key is REMOVED: the leg
+runs the configuration its holdout confirmed (RQ-20261016-077e-04 C7; comms/strategy_evidence/ada_pullback_2h.json) and is
+back on bybit_2 + bybit_portfolio (DSR probation, not a gate). The resolved params are read through the live unit (an unknown
+key passes through order_package silently, so reading the config alone proves nothing).
 """
 from __future__ import annotations
 
@@ -21,11 +22,11 @@ def _ada_block():
     return cfg["strategies"]["ada_pullback_2h"]
 
 
-def test_declared_vh95_reaches_live_params_and_keeps_the_tested_arm():
+def test_holdout_confirmed_c7_reaches_live_params():
     block = _ada_block()
+    assert "vol_skip_above_pctl" not in block      # C7 did not carry VH95 (removed 2026-11-06)
     params = hp._resolve_params(block)
-    assert params["vol_skip_above_pctl"] == 0.95
-    # The tested arm B differed from VH95 ONLY in this key (RQ-20261018-002 arm params).
+    assert not params.get("vol_skip_above_pctl")   # the unit default (off), not 0.95
     assert params["vol_skip_below_pctl"] == 0.1
     assert params["vol_pctl_window"] == 200
     assert params["adx_min"] == 28.0
@@ -33,12 +34,12 @@ def test_declared_vh95_reaches_live_params_and_keeps_the_tested_arm():
     assert params["pullback_frac"] == 0.618
 
 
-def test_leg_moved_off_the_stage_2_pair_onto_the_demo_floor():
-    # 2026-11-06 PROD-LEGS-DSR-DECISION (operator popup "Re-measure, then move (Rec.)"): ada_pullback_2h failed the trial
-    # ledger's DSR > 0.95 AND BHY-haircut > 0 bar (docs/research/prod-legs-dsr-2026-11-06.md), so it left BOTH halves of the
-    # Stage-2 pair together and trades as a TESTING leg on bybit_1. Pinned so a half-move (live without mirror) fails here.
+def test_leg_on_both_halves_of_the_stage_2_pair_and_off_general_paper():
+    # 2026-11-06 HOLDOUT-GOVERNS (operator option 3 "Holdout governs; promote"; supersedes the same day's PROD-LEGS-DSR-DECISION
+    # removal): ada_pullback_2h is on BOTH halves of the Stage-2 pair together and off bybit_1 (production is not on general
+    # paper). Pinned so a half-move (live without mirror) fails here.
     accts = yaml.safe_load((ROOT / "config" / "accounts.yaml").read_text())
     accts = accts.get("accounts", accts)
-    assert "ada_pullback_2h" not in accts["bybit_2"]["strategies"]
-    assert "ada_pullback_2h" not in accts["bybit_portfolio"]["strategies"]
-    assert "ada_pullback_2h" in accts["bybit_1"]["strategies"]
+    assert "ada_pullback_2h" in accts["bybit_2"]["strategies"]
+    assert "ada_pullback_2h" in accts["bybit_portfolio"]["strategies"]
+    assert "ada_pullback_2h" not in accts["bybit_1"]["strategies"]

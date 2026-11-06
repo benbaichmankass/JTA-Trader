@@ -3,47 +3,47 @@
   "strategy": "trend_donchian_xrp_4h",
   "symbol": "XRPUSDT",
   "timeframe": "4h",
-  "config_fingerprint": "sha256:02970f3827937b68671b116a7f027ab4",
+  "config_fingerprint": "sha256:446b3a58b530a33d7c5a2a96b91fe491",
   "basis": "harness_timefolds",
   "coverage_state": "measured",
   "fidelity": "faithful",
   "omitted_levers": [],
-  "net_r_oos": 7.712,
-  "expectancy_r_oos": 0.1677,
+  "net_r_oos": 3.4812,
+  "expectancy_r_oos": 0.0757,
   "n_trades_oos": 46,
   "folds": 4,
   "fold_detail": [
     {
       "fold": 1,
       "trades": 11,
-      "net_r": 1.6847,
-      "expectancy_r": 0.1532,
-      "start": "2022-11-08 16:00:00+00:00",
-      "end": "2023-09-11 04:00:00+00:00"
+      "net_r": 2.4691,
+      "expectancy_r": 0.2245,
+      "start": "2022-11-20 20:00:00+00:00",
+      "end": "2023-10-09 08:00:00+00:00"
     },
     {
       "fold": 2,
       "trades": 11,
-      "net_r": -0.2282,
-      "expectancy_r": -0.0207,
-      "start": "2023-10-09 08:00:00+00:00",
-      "end": "2024-12-20 08:00:00+00:00"
+      "net_r": -4.2582,
+      "expectancy_r": -0.3871,
+      "start": "2023-12-18 08:00:00+00:00",
+      "end": "2025-01-27 04:00:00+00:00"
     },
     {
       "fold": 3,
       "trades": 11,
-      "net_r": 2.6204,
-      "expectancy_r": 0.2382,
-      "start": "2025-01-27 04:00:00+00:00",
-      "end": "2025-12-15 12:00:00+00:00"
+      "net_r": 3.55,
+      "expectancy_r": 0.3227,
+      "start": "2025-02-24 20:00:00+00:00",
+      "end": "2025-12-31 16:00:00+00:00"
     },
     {
       "fold": 4,
       "trades": 13,
-      "net_r": 3.6351,
-      "expectancy_r": 0.2796,
-      "start": "2025-12-31 16:00:00+00:00",
-      "end": "2026-10-08 12:00:00+00:00"
+      "net_r": 1.7203,
+      "expectancy_r": 0.1323,
+      "start": "2026-01-18 20:00:00+00:00",
+      "end": "2026-10-29 20:00:00+00:00"
     }
   ],
   "folds_positive": 3,
@@ -52,13 +52,13 @@
   "path_stats": {
     "series_location": "source_run (the per-trade rows, in order, with net_r)",
     "n": 46,
-    "max_drawdown_r": 4.626,
-    "max_drawdown_at_trade": 27,
-    "final_equity_r": 7.712,
-    "max_equity_r": 10.0908,
-    "worst_trade_r": -1.0838,
-    "best_trade_r": 2.9363,
-    "worst_day_r": -1.0838,
+    "max_drawdown_r": 6.5943,
+    "max_drawdown_at_trade": 26,
+    "final_equity_r": 3.4812,
+    "max_equity_r": 8.1591,
+    "worst_trade_r": -1.1114,
+    "best_trade_r": 2.9444,
+    "worst_day_r": -1.1114,
     "worst_day_date": "2026-07-29",
     "trades_without_exit_time": 0,
     "ordering": "by entry_time ascending; pooled ACROSS folds, so this is the full-window path, not a per-fold one",
@@ -69,9 +69,9 @@
     "slippage": 3.0,
     "funding": 1.0,
     "unit": "bps_roundtrip (funding: bps per funding window)",
-    "source": "comms/strategy_evidence/runs/2026-10-28/trend_donchian_xrp_4h__bt.json"
+    "source": "comms/strategy_evidence/runs/2026-11-06/trend_donchian_xrp_4h__bt.json"
   },
-  "net_r_oos_fee_only": 8.6037,
+  "net_r_oos_fee_only": 4.5467,
   "decision_rule": {
     "id": "RULE-D1-STAGE0-NET-OF-FULL-COST",
     "rule": "Stage 0 requires net_r_oos -- pooled net_total_r from the harness's out-of-sample time-folds, net of the FULL cost stack (fee + slippage + funding) -- to be > 0. Restates the existing promotion-ladder Stage-0 bar as a checkable predicate over this record's own fields; does not itself authorize or perform any roster change.",
@@ -79,29 +79,65 @@
     "verdict": "pass"
   },
   "param_selection_provenance": "not_established",
-  "generated_at": "2026-10-28T18:49:16.177679+00:00",
+  "generated_at": "2026-11-06T19:24:49.480177+00:00",
   "generated_by": "scripts/ops/build_strategy_evidence.py",
-  "source_run": "comms/strategy_evidence/runs/2026-10-28/trend_donchian_xrp_4h__trades.jsonl",
+  "source_run": "comms/strategy_evidence/runs/2026-11-06/trend_donchian_xrp_4h__trades.jsonl",
   "error": null,
   "harness": "trend",
+  "reproduce": {
+    "window_days": 1460,
+    "window_days_source": "committed_record",
+    "folds": 4,
+    "data_start": "2022-11-07 00:00:00+00:00",
+    "data_end": "2026-11-05 20:00:00+00:00",
+    "git_sha": "1e6347dc9186b50797c45ca1a74b0f7fc4da8a3a",
+    "argv": [
+      "python3",
+      "scripts/ops/build_strategy_evidence.py",
+      "--strategy",
+      "trend_donchian_xrp_4h",
+      "--days",
+      "1460",
+      "--folds",
+      "4",
+      "--window-start",
+      "2022-11-07 00:00:00+00:00",
+      "--window-end",
+      "2026-11-05 20:00:00+00:00"
+    ]
+  },
   "venue_bracket_arm": null,
-  "rebaseline_history": [
-    {
-      "superseded_at": "2026-10-28",
-      "reason": "COST-STACK-RECOST-SWEEP: Bybit-linear fee 7.5 -> 11.0 bps round-trip",
-      "net_r_oos": 8.1437,
-      "expectancy_r_oos": 0.177,
-      "n_trades_oos": 46,
-      "fee_bps_roundtrip": 7.5,
-      "window_days": 1460,
-      "window": [
-        "2022-11-08 16:00:00+00:00",
-        "2026-10-08 12:00:00+00:00"
-      ],
-      "generated_at": "2026-10-12T08:52:22.940867+00:00",
-      "source_run": "comms/strategy_evidence/runs/2026-10-12-1460d/trend_donchian_xrp_4h__trades.jsonl",
-      "decision_rule_verdict": "pass",
-      "folds_positive": 3
-    }
-  ]
+  "holdout_confirmation": {
+    "verdict": "confirmed",
+    "research_unit": "RQ-20261016-077e-03",
+    "decision_rule": {
+      "id": "RULE-RQ-20261016-077e-03",
+      "registered_before_run": true
+    },
+    "selected_label": "A",
+    "selected_config_fingerprint": "sha256:446b3a58b530a33d7c5a2a96b91fe491",
+    "selected_from": 9,
+    "evaluations_on_holdout": 1,
+    "discovery": {
+      "start": "2020-07-01 00:00:00+00:00",
+      "end": "2024-12-18 13:54:28.400001+00:00"
+    },
+    "holdout": {
+      "start": "2024-12-18 13:54:29.400001+00:00",
+      "end": "2026-10-15 23:59:00+00:00",
+      "share": 0.29,
+      "short_at_cap": false
+    },
+    "n_holdout": 25,
+    "net_r_holdout": 3.5055,
+    "expectancy_r_holdout": 0.1402,
+    "cost_stack": {
+      "fees": 11.0,
+      "slippage": 3.0,
+      "funding": 1.0,
+      "unit": "bps_roundtrip (funding: bps per funding window)"
+    },
+    "source_run": "comms/research/RQ-20261016-077e-03/repro-20261106/verdict.json",
+    "provenance": "Reproduction 2026-11-06 (lane SOAK-BACKLOG-REVIEW, operator popup 'Yes, rebuild and promote (Recommended)' via Manager 2026-11-06a) of RQ-20261016-077e-03's pre-registered holdout protocol, unchanged (same arms, window, boundary rule, selection rule), after the leg was set to the configuration that unit CONFIRMED (research/results/RQ-20261016-077e-03/38936625298.jsonl). Differences: the full cost stack is today's (Bybit fee 11.0 bps rt after the 2026-10-28 recost, vs 7.5 at the original run), and arm A now IS the confirmed configuration, so selection picked A. The held-back span is the one the original unit read once; this re-grade at a higher cost is not a new selection."
+  }
 }

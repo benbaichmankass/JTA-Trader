@@ -275,10 +275,16 @@ BASELINE_2026_10_06: dict[str, frozenset[str]] = {
     # 2026-11-06 PROD-LEGS-DSR-DECISION (Tier-3, operator popup "Re-measure, then move (Rec.)"): these four legs left
     # bybit_2 + bybit_portfolio for the bybit_1 demo floor (each fails DSR > 0.95 AND BHY-haircut > 0). Their debt is
     # RELOCATED, not added: the same dimensions on the same legs, 8 real-money/mirror lines -> 4 demo lines (net -4).
-    "bybit_1/ada_pullback_2h": R,
+    # 2026-11-06 HOLDOUT-GOVERNS RE-PROMOTION (Tier-3, operator option 3 "Holdout governs; promote", via Manager 2026-11-06a):
+    # ada_pullback_2h, trend_donchian_xrp_4h and trend_donchian_sol_prop return to bybit_2 + bybit_portfolio. Their debt is
+    # RELOCATED back, not added: the same dimensions on the same legs (3 demo lines -> 6 real-money/mirror lines, as before 11-06).
+    "bybit_2/ada_pullback_2h": R,
+    "bybit_portfolio/ada_pullback_2h": R,
+    "bybit_2/trend_donchian_xrp_4h": R,
+    "bybit_portfolio/trend_donchian_xrp_4h": R,
+    "bybit_2/trend_donchian_sol_prop": ER,
+    "bybit_portfolio/trend_donchian_sol_prop": ER,
     "bybit_1/trend_donchian_eth_4h": E,  # 2026-10-18 tp_revision declared (TIER3-PACKETS-1018); entry_tp still the 50 R sentinel
-    "bybit_1/trend_donchian_xrp_4h": R,
-    "bybit_1/trend_donchian_sol_prop": ER,
     "bybit_1/trend_donchian_1h": ER,
     "bybit_1/trend_donchian_eth_prop": ER,
     # 2026-10-22 OPERATOR-DECISIONS-1022: the incumbent leaves bybit_1 for its soak alias (same tp_r 3,

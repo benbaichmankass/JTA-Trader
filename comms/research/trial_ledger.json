@@ -5,17 +5,17 @@
    "N_used": 41,
    "coverage_state": "measured",
    "dsr": {
-    "dsr": 0.375451,
-    "kurtosis": 1.545627,
-    "n": 61,
-    "psr_n1": 0.980914,
-    "series_mean_r": 0.515703,
-    "skew": 0.657435,
-    "sr0": 0.283918,
-    "sr_per_trade": 0.246214,
+    "dsr": 0.25428,
+    "kurtosis": 1.681053,
+    "n": 67,
+    "psr_n1": 0.956848,
+    "series_mean_r": 0.404312,
+    "skew": 0.767626,
+    "sr0": 0.270705,
+    "sr_per_trade": 0.195396,
     "state": "computed"
    },
-   "expectancy_r_oos": 0.5157,
+   "expectancy_r_oos": 0.4043,
    "family": "pullback",
    "fidelity": "faithful",
    "haircut": {
@@ -35,18 +35,18 @@
      "p_adj": 1.0,
      "t_adj": 0.0
     },
-    "p_single": 0.05448082927608633,
+    "p_single": 0.10973533824450055,
     "state": "computed",
-    "t_stat": 1.922994
+    "t_stat": 1.599384
    },
    "leg": "ada_pullback_2h",
    "n_configs": 276,
-   "n_trades_oos": 61,
-   "net_r_oos": 31.4579,
+   "n_trades_oos": 67,
+   "net_r_oos": 27.0889,
    "param_selection_provenance": "not_established",
-   "real_money": true,
+   "real_money": false,
    "series_cross_check": "ok",
-   "source_run": "comms/strategy_evidence/runs/2026-10-28/ada_pullback_2h__trades.jsonl",
+   "source_run": "comms/strategy_evidence/runs/2026-11-06/ada_pullback_2h__trades.jsonl",
    "stage0_rule": "RULE-D1-STAGE0-NET-OF-FULL-COST",
    "stage0_verdict": "pass",
    "state": "computed",
@@ -639,7 +639,7 @@
    "n_trades_oos": 8,
    "net_r_oos": 10.6758,
    "param_selection_provenance": "not_established",
-   "real_money": true,
+   "real_money": false,
    "series_cross_check": "ok",
    "source_run": "comms/strategy_evidence/runs/2026-11-05/iaum_pullback_1d__trades.jsonl",
    "stage0_rule": "RULE-D1-STAGE0-NET-OF-FULL-COST",
@@ -843,17 +843,17 @@
    "why": "coverage_state='harness_failed'; source_run absent -- no per-trade series, no deflated statistic (we could not look; NOT a fail)"
   },
   "ict_scalp_sol_15m": {
-   "N_basis": "partial: 2 return-correlation clusters over 9 configs with a series + 4 without a series counted at face value (upper bound)",
-   "N_used": 6,
+   "N_basis": "partial: 3 return-correlation clusters over 14 configs with a series + 4 without a series counted at face value (upper bound)",
+   "N_used": 7,
    "coverage_state": "measured",
    "dsr": {
-    "dsr": 0.003479,
+    "dsr": 0.002698,
     "kurtosis": 1.93223,
     "n": 87,
     "psr_n1": 0.074304,
     "series_mean_r": -0.143632,
     "skew": 0.422717,
-    "sr0": 0.140198,
+    "sr0": 0.14954,
     "sr_per_trade": -0.161445,
     "state": "computed"
    },
@@ -868,13 +868,13 @@
     },
     "bonferroni": {
      "haircut_expectancy_r": -0.1436,
-     "p_adj": 0.7926193624299733,
+     "p_adj": 0.9247225895016356,
      "t_adj": null
     },
     "convention": "record treated as the most significant of its N (only N is known); Holm's first step then equals Bonferroni",
     "holm": {
      "haircut_expectancy_r": -0.1436,
-     "p_adj": 0.7926193624299733,
+     "p_adj": 0.9247225895016356,
      "t_adj": null
     },
     "p_single": 0.13210322707166222,
@@ -882,7 +882,7 @@
     "t_stat": -1.50586
    },
    "leg": "ict_scalp_sol_15m",
-   "n_configs": 13,
+   "n_configs": 18,
    "n_trades_oos": 87,
    "net_r_oos": -12.496,
    "param_selection_provenance": "not_established",
@@ -900,17 +900,17 @@
    }
   },
   "ict_scalp_sol_5m": {
-   "N_basis": "partial: 2 return-correlation clusters over 5 configs with a series + 4 without a series counted at face value (upper bound)",
-   "N_used": 6,
+   "N_basis": "partial: 2 return-correlation clusters over 5 configs with a series + 9 without a series counted at face value (upper bound)",
+   "N_used": 11,
    "coverage_state": "measured",
    "dsr": {
-    "dsr": 9.3e-05,
+    "dsr": 2.5e-05,
     "kurtosis": 1.809739,
     "n": 181,
     "psr_n1": 0.006775,
     "series_mean_r": -0.173952,
     "skew": 0.221651,
-    "sr0": 0.096907,
+    "sr0": 0.120912,
     "sr_per_trade": -0.18848,
     "state": "computed"
    },
@@ -920,18 +920,18 @@
    "haircut": {
     "bhy": {
      "haircut_expectancy_r": -0.174,
-     "p_adj": 0.16495129884978443,
+     "p_adj": 0.3727523533639538,
      "t_adj": null
     },
     "bonferroni": {
      "haircut_expectancy_r": -0.174,
-     "p_adj": 0.06732706075501405,
+     "p_adj": 0.12343294471752575,
      "t_adj": null
     },
     "convention": "record treated as the most significant of its N (only N is known); Holm's first step then equals Bonferroni",
     "holm": {
      "haircut_expectancy_r": -0.174,
-     "p_adj": 0.06732706075501405,
+     "p_adj": 0.12343294471752575,
      "t_adj": null
     },
     "p_single": 0.011221176792502341,
@@ -939,7 +939,7 @@
     "t_stat": -2.535735
    },
    "leg": "ict_scalp_sol_5m",
-   "n_configs": 9,
+   "n_configs": 14,
    "n_trades_oos": 181,
    "net_r_oos": -31.4854,
    "param_selection_provenance": "not_established",
@@ -957,17 +957,17 @@
    }
   },
   "ict_scalp_xrp_15m": {
-   "N_basis": "partial: 2 return-correlation clusters over 13 configs with a series + 5 without a series counted at face value (upper bound)",
-   "N_used": 7,
+   "N_basis": "partial: 3 return-correlation clusters over 18 configs with a series + 5 without a series counted at face value (upper bound)",
+   "N_used": 8,
    "coverage_state": "measured",
    "dsr": {
-    "dsr": 0.041539,
+    "dsr": 0.03554,
     "kurtosis": 1.805422,
     "n": 74,
     "psr_n1": 0.361908,
     "series_mean_r": -0.037926,
     "skew": 0.237829,
-    "sr0": 0.16231,
+    "sr0": 0.170765,
     "sr_per_trade": -0.041569,
     "state": "computed"
    },
@@ -996,7 +996,7 @@
     "t_stat": -0.357591
    },
    "leg": "ict_scalp_xrp_15m",
-   "n_configs": 18,
+   "n_configs": 23,
    "n_trades_oos": 74,
    "net_r_oos": -2.8065,
    "param_selection_provenance": "not_established",
@@ -1014,17 +1014,17 @@
    }
   },
   "ict_scalp_xrp_5m": {
-   "N_basis": "partial: 1 return-correlation clusters over 9 configs with a series + 4 without a series counted at face value (upper bound)",
-   "N_used": 5,
+   "N_basis": "partial: 2 return-correlation clusters over 14 configs with a series + 4 without a series counted at face value (upper bound)",
+   "N_used": 6,
    "coverage_state": "measured",
    "dsr": {
-    "dsr": 6.5e-05,
+    "dsr": 4.2e-05,
     "kurtosis": 2.371923,
     "n": 163,
     "psr_n1": 0.004042,
     "series_mean_r": -0.201712,
     "skew": 0.0567,
-    "sr0": 0.093699,
+    "sr0": 0.102149,
     "sr_per_trade": -0.210899,
     "state": "computed"
    },
@@ -1034,18 +1034,18 @@
    "haircut": {
     "bhy": {
      "haircut_expectancy_r": -0.2017,
-     "p_adj": 0.08094540629928366,
+     "p_adj": 0.10422459614009956,
      "t_adj": null
     },
     "bonferroni": {
      "haircut_expectancy_r": -0.2017,
-     "p_adj": 0.03545054290479577,
+     "p_adj": 0.04254065148575492,
      "t_adj": null
     },
     "convention": "record treated as the most significant of its N (only N is known); Holm's first step then equals Bonferroni",
     "holm": {
      "haircut_expectancy_r": -0.2017,
-     "p_adj": 0.03545054290479577,
+     "p_adj": 0.04254065148575492,
      "t_adj": null
     },
     "p_single": 0.0070901085809591535,
@@ -1053,7 +1053,7 @@
     "t_stat": -2.692582
    },
    "leg": "ict_scalp_xrp_5m",
-   "n_configs": 13,
+   "n_configs": 18,
    "n_trades_oos": 163,
    "net_r_oos": -32.879,
    "param_selection_provenance": "not_established",
@@ -1071,7 +1071,7 @@
    }
   },
   "ief_pullback_1d": {
-   "N_basis": "partial: 16 return-correlation clusters over 42 configs with a series + 42 without a series counted at face value (upper bound)",
+   "N_basis": "partial: 16 return-correlation clusters over 47 configs with a series + 42 without a series counted at face value (upper bound)",
    "N_used": 58,
    "coverage_state": "measured",
    "dsr": {
@@ -1110,7 +1110,7 @@
     "t_stat": 0.241077
    },
    "leg": "ief_pullback_1d",
-   "n_configs": 84,
+   "n_configs": 89,
    "n_trades_oos": 6,
    "net_r_oos": 1.0316,
    "param_selection_provenance": "not_established",
@@ -1128,17 +1128,17 @@
    }
   },
   "iwm_trend_long_1d": {
-   "N_basis": "partial: 3 return-correlation clusters over 9 configs with a series + 24 without a series counted at face value (upper bound)",
-   "N_used": 27,
+   "N_basis": "partial: 4 return-correlation clusters over 12 configs with a series + 24 without a series counted at face value (upper bound)",
+   "N_used": 28,
    "coverage_state": "measured",
    "dsr": {
-    "dsr": 0.041883,
+    "dsr": 0.040417,
     "kurtosis": 2.30967,
     "n": 8,
     "psr_n1": 0.688457,
     "series_mean_r": 0.263388,
     "skew": 1.025798,
-    "sr0": 0.767117,
+    "sr0": 0.772861,
     "sr_per_trade": 0.169775,
     "state": "computed"
    },
@@ -1167,7 +1167,7 @@
     "t_stat": 0.480197
    },
    "leg": "iwm_trend_long_1d",
-   "n_configs": 33,
+   "n_configs": 36,
    "n_trades_oos": 8,
    "net_r_oos": 2.1071,
    "param_selection_provenance": "not_established",
@@ -1185,17 +1185,17 @@
    }
   },
   "mes_trend_long_1d": {
-   "N_basis": "partial: 2 return-correlation clusters over 2 configs with a series + 16 without a series counted at face value (upper bound)",
-   "N_used": 18,
+   "N_basis": "partial: 3 return-correlation clusters over 5 configs with a series + 16 without a series counted at face value (upper bound)",
+   "N_used": 19,
    "coverage_state": "measured",
    "dsr": {
-    "dsr": 0.026152,
+    "dsr": 0.024861,
     "kurtosis": 3.209904,
     "n": 5,
     "psr_n1": 0.392602,
     "series_mean_r": -0.20024,
     "skew": 1.469141,
-    "sr0": 0.926937,
+    "sr0": 0.939008,
     "sr_per_trade": -0.15145,
     "state": "computed"
    },
@@ -1224,7 +1224,7 @@
     "t_stat": -0.338653
    },
    "leg": "mes_trend_long_1d",
-   "n_configs": 18,
+   "n_configs": 21,
    "n_trades_oos": 5,
    "net_r_oos": -1.0012,
    "param_selection_provenance": "not_established",
@@ -1242,17 +1242,17 @@
    }
   },
   "mgc_pullback_1d": {
-   "N_basis": "partial: 4 return-correlation clusters over 4 configs with a series + 26 without a series counted at face value (upper bound)",
-   "N_used": 30,
+   "N_basis": "partial: 5 return-correlation clusters over 7 configs with a series + 26 without a series counted at face value (upper bound)",
+   "N_used": 31,
    "coverage_state": "measured",
    "dsr": {
-    "dsr": 0.087714,
+    "dsr": 0.085477,
     "kurtosis": 1.667225,
     "n": 8,
     "psr_n1": 0.795409,
     "series_mean_r": 0.484062,
     "skew": 0.371963,
-    "sr0": 0.783669,
+    "sr0": 0.788765,
     "sr_per_trade": 0.296651,
     "state": "computed"
    },
@@ -1281,7 +1281,7 @@
     "t_stat": 0.839055
    },
    "leg": "mgc_pullback_1d",
-   "n_configs": 30,
+   "n_configs": 33,
    "n_trades_oos": 8,
    "net_r_oos": 3.8725,
    "param_selection_provenance": "not_established",
@@ -1299,7 +1299,7 @@
    }
   },
   "mgc_trend_1h": {
-   "N_basis": "partial: 2 return-correlation clusters over 3 configs with a series + 14 without a series counted at face value (upper bound)",
+   "N_basis": "partial: 2 return-correlation clusters over 6 configs with a series + 14 without a series counted at face value (upper bound)",
    "N_used": 16,
    "coverage_state": "measured",
    "dsr": {
@@ -1338,7 +1338,7 @@
     "t_stat": 1.241699
    },
    "leg": "mgc_trend_1h",
-   "n_configs": 17,
+   "n_configs": 20,
    "n_trades_oos": 118,
    "net_r_oos": 25.612,
    "param_selection_provenance": "not_established",
@@ -1356,17 +1356,17 @@
    }
   },
   "mhg_pullback_1d": {
-   "N_basis": "partial: 2 return-correlation clusters over 2 configs with a series + 32 without a series counted at face value (upper bound)",
-   "N_used": 34,
+   "N_basis": "partial: 3 return-correlation clusters over 5 configs with a series + 32 without a series counted at face value (upper bound)",
+   "N_used": 35,
    "coverage_state": "measured",
    "dsr": {
-    "dsr": 0.0514,
+    "dsr": 0.050056,
     "kurtosis": 2.070609,
     "n": 10,
     "psr_n1": 0.76008,
     "series_mean_r": 0.40986,
     "skew": 0.871635,
-    "sr0": 0.708168,
+    "sr0": 0.712069,
     "sr_per_trade": 0.214014,
     "state": "computed"
    },
@@ -1395,7 +1395,7 @@
     "t_stat": 0.676773
    },
    "leg": "mhg_pullback_1d",
-   "n_configs": 34,
+   "n_configs": 37,
    "n_trades_oos": 10,
    "net_r_oos": 4.0986,
    "param_selection_provenance": "not_established",
@@ -1432,17 +1432,17 @@
    "why": "coverage_state='measured'; source_run not readable -- no per-trade series, no deflated statistic (we could not look; NOT a fail)"
   },
   "qld_trend_long_1d": {
-   "N_basis": "partial: 2 return-correlation clusters over 2 configs with a series + 32 without a series counted at face value (upper bound)",
-   "N_used": 34,
+   "N_basis": "partial: 3 return-correlation clusters over 5 configs with a series + 32 without a series counted at face value (upper bound)",
+   "N_used": 35,
    "coverage_state": "measured",
    "dsr": {
-    "dsr": 0.103933,
+    "dsr": 0.101867,
     "kurtosis": 1.332544,
     "n": 9,
     "psr_n1": 0.797751,
     "series_mean_r": 0.3316,
     "skew": -0.07629,
-    "sr0": 0.751126,
+    "sr0": 0.755263,
     "sr_per_trade": 0.299154,
     "state": "computed"
    },
@@ -1471,7 +1471,7 @@
     "t_stat": 0.897462
    },
    "leg": "qld_trend_long_1d",
-   "n_configs": 34,
+   "n_configs": 37,
    "n_trades_oos": 9,
    "net_r_oos": 2.9844,
    "param_selection_provenance": "not_established",
@@ -1546,17 +1546,17 @@
    }
   },
   "qqq_trend_long_1d": {
-   "N_basis": "partial: 3 return-correlation clusters over 8 configs with a series + 20 without a series counted at face value (upper bound)",
-   "N_used": 23,
+   "N_basis": "partial: 4 return-correlation clusters over 11 configs with a series + 20 without a series counted at face value (upper bound)",
+   "N_used": 24,
    "coverage_state": "measured",
    "dsr": {
-    "dsr": 0.137811,
+    "dsr": 0.133541,
     "kurtosis": 1.327633,
     "n": 8,
     "psr_n1": 0.845603,
     "series_mean_r": 0.662138,
     "skew": 0.403966,
-    "sr0": 0.74139,
+    "sr0": 0.748284,
     "sr_per_trade": 0.357954,
     "state": "computed"
    },
@@ -1585,7 +1585,7 @@
     "t_stat": 1.012447
    },
    "leg": "qqq_trend_long_1d",
-   "n_configs": 28,
+   "n_configs": 31,
    "n_trades_oos": 8,
    "net_r_oos": 5.2971,
    "param_selection_provenance": "not_established",
@@ -1603,17 +1603,17 @@
    }
   },
   "scha_trend_long_1d": {
-   "N_basis": "partial: 5 return-correlation clusters over 11 configs with a series + 36 without a series counted at face value (upper bound)",
-   "N_used": 41,
+   "N_basis": "partial: 7 return-correlation clusters over 14 configs with a series + 36 without a series counted at face value (upper bound)",
+   "N_used": 43,
    "coverage_state": "measured",
    "dsr": {
-    "dsr": 0.040177,
+    "dsr": 0.03857,
     "kurtosis": 1.302766,
     "n": 78,
     "psr_n1": 0.682148,
     "series_mean_r": 0.059541,
     "skew": 0.39162,
-    "sr0": 0.250624,
+    "sr0": 0.252755,
     "sr_per_trade": 0.053423,
     "state": "computed"
    },
@@ -1642,7 +1642,7 @@
     "t_stat": 0.471818
    },
    "leg": "scha_trend_long_1d",
-   "n_configs": 47,
+   "n_configs": 50,
    "n_trades_oos": 78,
    "net_r_oos": 4.6442,
    "param_selection_provenance": "not_established",
@@ -1660,17 +1660,17 @@
    }
   },
   "slv_pullback_1d": {
-   "N_basis": "partial: 13 return-correlation clusters over 60 configs with a series + 31 without a series counted at face value (upper bound)",
-   "N_used": 44,
+   "N_basis": "partial: 15 return-correlation clusters over 63 configs with a series + 31 without a series counted at face value (upper bound)",
+   "N_used": 46,
    "coverage_state": "measured",
    "dsr": {
-    "dsr": 0.045072,
+    "dsr": 0.043384,
     "kurtosis": 1.773658,
     "n": 10,
     "psr_n1": 0.736301,
     "series_mean_r": 0.30026,
     "skew": 0.455077,
-    "sr0": 0.742297,
+    "sr0": 0.748057,
     "sr_per_trade": 0.201631,
     "state": "computed"
    },
@@ -1699,7 +1699,7 @@
     "t_stat": 0.637612
    },
    "leg": "slv_pullback_1d",
-   "n_configs": 91,
+   "n_configs": 94,
    "n_trades_oos": 10,
    "net_r_oos": 3.0026,
    "param_selection_provenance": "not_established",
@@ -1717,7 +1717,7 @@
    }
   },
   "slv_trend_1h": {
-   "N_basis": "partial: 2 return-correlation clusters over 7 configs with a series + 28 without a series counted at face value (upper bound)",
+   "N_basis": "partial: 2 return-correlation clusters over 12 configs with a series + 28 without a series counted at face value (upper bound)",
    "N_used": 30,
    "coverage_state": "measured",
    "dsr": {
@@ -1756,7 +1756,7 @@
     "t_stat": 2.255566
    },
    "leg": "slv_trend_1h",
-   "n_configs": 35,
+   "n_configs": 40,
    "n_trades_oos": 68,
    "net_r_oos": 53.1431,
    "param_selection_provenance": "not_established",
@@ -1774,7 +1774,7 @@
    }
   },
   "sol_pullback_2h": {
-   "N_basis": "partial: 7 return-correlation clusters over 90 configs with a series + 30 without a series counted at face value (upper bound)",
+   "N_basis": "partial: 7 return-correlation clusters over 93 configs with a series + 30 without a series counted at face value (upper bound)",
    "N_used": 37,
    "coverage_state": "measured",
    "dsr": {
@@ -1813,7 +1813,7 @@
     "t_stat": 1.033932
    },
    "leg": "sol_pullback_2h",
-   "n_configs": 120,
+   "n_configs": 123,
    "n_trades_oos": 17,
    "net_r_oos": 6.9287,
    "param_selection_provenance": "not_established",
@@ -1831,14 +1831,14 @@
    }
   },
   "splg_trend_long_1d": {
-   "N_basis": "partial: 2 return-correlation clusters over 6 configs with a series + 25 without a series counted at face value (upper bound)",
-   "N_used": 27,
+   "N_basis": "partial: 4 return-correlation clusters over 9 configs with a series + 25 without a series counted at face value (upper bound)",
+   "N_used": 29,
    "coverage_state": "harness_failed",
    "expectancy_r_oos": null,
    "family": "trend",
    "fidelity": null,
    "leg": "splg_trend_long_1d",
-   "n_configs": 31,
+   "n_configs": 34,
    "n_trades_oos": null,
    "net_r_oos": null,
    "param_selection_provenance": "not_established",
@@ -1907,7 +1907,7 @@
    }
   },
   "spy_trend_long_1d": {
-   "N_basis": "partial: 3 return-correlation clusters over 14 configs with a series + 32 without a series counted at face value (upper bound)",
+   "N_basis": "partial: 3 return-correlation clusters over 17 configs with a series + 32 without a series counted at face value (upper bound)",
    "N_used": 35,
    "coverage_state": "measured",
    "dsr": {
@@ -1946,7 +1946,7 @@
     "t_stat": 0.484873
    },
    "leg": "spy_trend_long_1d",
-   "n_configs": 46,
+   "n_configs": 49,
    "n_trades_oos": 11,
    "net_r_oos": 2.3816,
    "param_selection_provenance": "not_established",
@@ -2139,17 +2139,17 @@
    "N_used": 28,
    "coverage_state": "measured",
    "dsr": {
-    "dsr": 0.60126,
-    "kurtosis": 1.287079,
-    "n": 118,
-    "psr_n1": 0.988572,
-    "series_mean_r": 0.222738,
-    "skew": -0.104315,
-    "sr0": 0.189042,
-    "sr_per_trade": 0.213066,
+    "dsr": 0.538886,
+    "kurtosis": 1.199187,
+    "n": 120,
+    "psr_n1": 0.982469,
+    "series_mean_r": 0.20635,
+    "skew": -0.167844,
+    "sr0": 0.187446,
+    "sr_per_trade": 0.196551,
     "state": "computed"
    },
-   "expectancy_r_oos": 0.2227,
+   "expectancy_r_oos": 0.2064,
    "family": "trend",
    "fidelity": "faithful",
    "haircut": {
@@ -2159,28 +2159,28 @@
      "t_adj": 0.0
     },
     "bonferroni": {
-     "haircut_expectancy_r": 0.053535,
-     "p_adj": 0.5779511826460624,
-     "t_adj": 0.55638
+     "haircut_expectancy_r": 0.014875,
+     "p_adj": 0.8766900191907911,
+     "t_adj": 0.155167
     },
     "convention": "record treated as the most significant of its N (only N is known); Holm's first step then equals Bonferroni",
     "holm": {
-     "haircut_expectancy_r": 0.053535,
-     "p_adj": 0.5779511826460624,
-     "t_adj": 0.55638
+     "haircut_expectancy_r": 0.014875,
+     "p_adj": 0.8766900191907911,
+     "t_adj": 0.155167
     },
-    "p_single": 0.0206411136659308,
+    "p_single": 0.03131035782824254,
     "state": "computed",
-    "t_stat": 2.314485
+    "t_stat": 2.153106
    },
    "leg": "tqqq_trend_long_1d",
    "n_configs": 36,
-   "n_trades_oos": 118,
-   "net_r_oos": 26.2831,
+   "n_trades_oos": 120,
+   "net_r_oos": 24.762,
    "param_selection_provenance": "not_established",
-   "real_money": false,
+   "real_money": true,
    "series_cross_check": "ok",
-   "source_run": "comms/strategy_evidence/runs/2026-10-23-promo/tqqq_trend_long_1d__trades.jsonl",
+   "source_run": "comms/strategy_evidence/runs/2026-11-06/tqqq_trend_long_1d__trades.jsonl",
    "stage0_rule": "RULE-D1-STAGE0-NET-OF-FULL-COST",
    "stage0_verdict": "pass",
    "state": "computed",
@@ -2363,17 +2363,17 @@
    }
   },
   "trend_donchian_avax_4h": {
-   "N_basis": "partial: 4 return-correlation clusters over 75 configs with a series + 29 without a series counted at face value (upper bound)",
-   "N_used": 33,
+   "N_basis": "partial: 6 return-correlation clusters over 81 configs with a series + 29 without a series counted at face value (upper bound)",
+   "N_used": 35,
    "coverage_state": "measured",
    "dsr": {
-    "dsr": 0.002267,
+    "dsr": 0.002122,
     "kurtosis": 4.176574,
     "n": 47,
     "psr_n1": 0.166797,
     "series_mean_r": -0.234519,
     "skew": 1.575387,
-    "sr0": 0.311457,
+    "sr0": 0.314967,
     "sr_per_trade": -0.160916,
     "state": "computed"
    },
@@ -2402,7 +2402,7 @@
     "t_stat": -1.103186
    },
    "leg": "trend_donchian_avax_4h",
-   "n_configs": 104,
+   "n_configs": 110,
    "n_trades_oos": 47,
    "net_r_oos": -11.0224,
    "param_selection_provenance": "not_established",
@@ -2477,17 +2477,17 @@
    }
   },
   "trend_donchian_eth_4h": {
-   "N_basis": "partial: 17 return-correlation clusters over 164 configs with a series + 30 without a series counted at face value (upper bound)",
-   "N_used": 47,
+   "N_basis": "partial: 18 return-correlation clusters over 166 configs with a series + 30 without a series counted at face value (upper bound)",
+   "N_used": 48,
    "coverage_state": "measured",
    "dsr": {
-    "dsr": 0.289308,
+    "dsr": 0.286162,
     "kurtosis": 5.136605,
     "n": 135,
     "psr_n1": 0.977413,
     "series_mean_r": 0.330656,
     "skew": 1.633582,
-    "sr0": 0.194586,
+    "sr0": 0.195288,
     "sr_per_trade": 0.152344,
     "state": "computed"
    },
@@ -2516,11 +2516,11 @@
     "t_stat": 1.770072
    },
    "leg": "trend_donchian_eth_4h",
-   "n_configs": 194,
+   "n_configs": 196,
    "n_trades_oos": 135,
    "net_r_oos": 44.6385,
    "param_selection_provenance": "not_established",
-   "real_money": true,
+   "real_money": false,
    "series_cross_check": "ok",
    "source_run": "comms/strategy_evidence/runs/2026-10-28/trend_donchian_eth_4h__trades.jsonl",
    "stage0_rule": "RULE-D1-STAGE0-NET-OF-FULL-COST",
@@ -2709,17 +2709,17 @@
    "N_used": 36,
    "coverage_state": "measured",
    "dsr": {
-    "dsr": 0.355275,
-    "kurtosis": 3.758575,
-    "n": 395,
-    "psr_n1": 0.971263,
-    "series_mean_r": 0.121601,
-    "skew": 1.229487,
-    "sr0": 0.108191,
-    "sr_per_trade": 0.090509,
+    "dsr": 0.339969,
+    "kurtosis": 3.214359,
+    "n": 380,
+    "psr_n1": 0.968002,
+    "series_mean_r": 0.137819,
+    "skew": 1.167677,
+    "sr0": 0.110311,
+    "sr_per_trade": 0.090217,
     "state": "computed"
    },
-   "expectancy_r_oos": 0.1216,
+   "expectancy_r_oos": 0.1378,
    "family": "trend",
    "fidelity": "faithful",
    "haircut": {
@@ -2739,18 +2739,18 @@
      "p_adj": 1.0,
      "t_adj": 0.0
     },
-    "p_single": 0.07204403486904098,
+    "p_single": 0.07863645695182386,
     "state": "computed",
-    "t_stat": 1.79884
+    "t_stat": 1.758653
    },
    "leg": "trend_donchian_sol_prop",
    "n_configs": 163,
-   "n_trades_oos": 395,
-   "net_r_oos": 48.0322,
+   "n_trades_oos": 380,
+   "net_r_oos": 52.3713,
    "param_selection_provenance": "not_established",
-   "real_money": true,
+   "real_money": false,
    "series_cross_check": "ok",
-   "source_run": "comms/strategy_evidence/runs/2026-10-28/trend_donchian_sol_prop__trades.jsonl",
+   "source_run": "comms/strategy_evidence/runs/2026-11-06/trend_donchian_sol_prop__trades.jsonl",
    "stage0_rule": "RULE-D1-STAGE0-NET-OF-FULL-COST",
    "stage0_verdict": "pass",
    "state": "computed",
@@ -2766,17 +2766,17 @@
    "N_used": 52,
    "coverage_state": "measured",
    "dsr": {
-    "dsr": 0.061771,
-    "kurtosis": 2.562126,
+    "dsr": 0.022689,
+    "kurtosis": 2.695252,
     "n": 46,
-    "psr_n1": 0.814869,
-    "series_mean_r": 0.167652,
-    "skew": 0.966993,
+    "psr_n1": 0.639714,
+    "series_mean_r": 0.075678,
+    "skew": 1.111656,
     "sr0": 0.341566,
-    "sr_per_trade": 0.125628,
+    "sr_per_trade": 0.051795,
     "state": "computed"
    },
-   "expectancy_r_oos": 0.1677,
+   "expectancy_r_oos": 0.0757,
    "family": "trend",
    "fidelity": "faithful",
    "haircut": {
@@ -2796,18 +2796,18 @@
      "p_adj": 1.0,
      "t_adj": 0.0
     },
-    "p_single": 0.3941847818796944,
+    "p_single": 0.7253680973453716,
     "state": "computed",
-    "t_stat": 0.852053
+    "t_stat": 0.351294
    },
    "leg": "trend_donchian_xrp_4h",
    "n_configs": 185,
    "n_trades_oos": 46,
-   "net_r_oos": 7.712,
+   "net_r_oos": 3.4812,
    "param_selection_provenance": "not_established",
-   "real_money": true,
+   "real_money": false,
    "series_cross_check": "ok",
-   "source_run": "comms/strategy_evidence/runs/2026-10-28/trend_donchian_xrp_4h__trades.jsonl",
+   "source_run": "comms/strategy_evidence/runs/2026-11-06/trend_donchian_xrp_4h__trades.jsonl",
    "stage0_rule": "RULE-D1-STAGE0-NET-OF-FULL-COST",
    "stage0_verdict": "pass",
    "state": "computed",
@@ -2995,7 +2995,7 @@
    "n_trades_oos": 53,
    "net_r_oos": 6.5558,
    "param_selection_provenance": "not_established",
-   "real_money": true,
+   "real_money": false,
    "series_cross_check": "ok",
    "source_run": "comms/strategy_evidence/runs/2026-11-05/xrp_pullback_2h__trades.jsonl",
    "stage0_rule": "RULE-D1-STAGE0-NET-OF-FULL-COST",
@@ -3026,9 +3026,9 @@
    "n_configs": 9
   },
   "ict_scalp": {
-   "effective_n": 53,
+   "effective_n": 61,
    "legs": 8,
-   "n_configs": 95
+   "n_configs": 115
   },
   "ml_entry_tp_revision evidence-extend-only --structure-sl pivot=5 (on ml_decision_entry)": {
    "effective_n": 1,
@@ -3041,9 +3041,9 @@
    "n_configs": 0
   },
   "pullback": {
-   "effective_n": 711,
+   "effective_n": 715,
    "legs": 22,
-   "n_configs": 1637
+   "n_configs": 1654
   },
   "squeeze": {
    "effective_n": 18,
@@ -3051,9 +3051,9 @@
    "n_configs": 18
   },
   "trend": {
-   "effective_n": 709,
+   "effective_n": 720,
    "legs": 32,
-   "n_configs": 1626
+   "n_configs": 1663
   },
   "turtle_soup": {
    "effective_n": 1,
@@ -3066,15 +3066,15 @@
    "n_configs": 0
   }
  },
- "generated_at": "2026-11-06T00:24:02+00:00",
+ "generated_at": "2026-11-06T19:42:10+00:00",
  "generated_by": "scripts/research/trial_ledger.py",
  "inputs": {
   "e5": {
-   "config_entries": 2253,
-   "files": 2456,
+   "config_entries": 2333,
+   "files": 2517,
    "glob": "research/results/*/*.jsonl",
-   "measured_rows": 2683,
-   "rows": 2919
+   "measured_rows": 2743,
+   "rows": 2989
   },
   "evidence": {
    "dir": "comms/strategy_evidence",
@@ -3089,8 +3089,8 @@
   },
   "queue": {
    "glob": "research/queue/RQ-*.yaml",
-   "graded_units": 1702,
-   "units": 1915
+   "graded_units": 1703,
+   "units": 1961
   }
  },
  "key": "leg::family",
@@ -3108,7 +3108,7 @@
     "m20": 28
    },
    "n_configs_with_series": 248,
-   "real_money": true,
+   "real_money": false,
    "tried": {
     "e5_configs_by_unit": {
      "RQ-20261013-407c-02": 4,
@@ -3193,7 +3193,7 @@
       "verdict": null
      },
      {
-      "graded_at": "2026-11-05",
+      "graded_at": "2026-11-06",
       "status": "queued",
       "title": "M20 exit-lever sweep: ada_pullback_2h (generated, monthly)",
       "unit": "RQ-20260928-019",
@@ -3340,7 +3340,7 @@
       "verdict": "fail"
      },
      {
-      "graded_at": "2026-11-05",
+      "graded_at": "2026-11-06",
       "status": "queued",
       "title": "ada_pullback_2h live-vs-backtest divergence (stage A): does BELOW_BACKTEST persist on bybit_2 realMoney as n grows? (-7.04R over 15, 4.7th pct on 2026-10-15)",
       "unit": "RQ-20261015-8bbc-02",
@@ -3823,7 +3823,7 @@
       "verdict": "fail"
      },
      {
-      "graded_at": "2026-11-05",
+      "graded_at": "2026-11-06",
       "status": "queued",
       "title": "TRANSFER of cold-vol entry skip VL20/VL30 (VL20/VL30) to ada_pullback_2h: does any arm beat the declared leg net of cost over the leg's declared window?",
       "unit": "RQ-20261031-7b6f-27",
@@ -3851,7 +3851,7 @@
       "verdict": "fail"
      },
      {
-      "graded_at": "2026-11-05",
+      "graded_at": "2026-11-06",
       "status": "queued",
       "title": "CONFIRMATION of a4e7-03 on a DISJOINT earlier window: ada_pullback_2h at the prop stack, V3 on breakout_2 / tradeify_1 / velotrade_1, 2020-10-01..2023-10-12",
       "unit": "RQ-20261101-e5b1-10",
@@ -3865,11 +3865,18 @@
       "verdict": "fail"
      },
      {
-      "graded_at": "2026-11-05",
+      "graded_at": "2026-11-06",
       "status": "queued",
       "title": "Walk-forward lever sweep of ada_pullback_2h: next lever exit (generated, weekly)",
       "unit": "RQ-20261105-007",
       "verdict": "fail"
+     },
+     {
+      "graded_at": null,
+      "status": "queued",
+      "title": "HOLDOUT RE-RUN at the CURRENT config (soak-backlog review 2026-11-06): does ada_pullback_2h's configuration, SELECTED on the earliest ~75% of its history, hold ",
+      "unit": "RQ-20261106-5b7a-01",
+      "verdict": null
      }
     ]
    }
@@ -3993,7 +4000,7 @@
       "verdict": "pass"
      },
      {
-      "graded_at": "2026-11-05",
+      "graded_at": "2026-11-06",
       "status": "queued",
       "title": "Path-state trail gate (avax_pullback_2h (paper roster)): does a trail that tightens to 2.5 x ATR once peak_r >= 1.5 AND the path-state gate holds beat the decla",
       "unit": "RQ-20261025-3947-05",
@@ -4049,7 +4056,7 @@
       "verdict": "fail"
      },
      {
-      "graded_at": "2026-11-05",
+      "graded_at": "2026-11-06",
       "status": "queued",
       "title": "M20 exit-lever sweep: avax_pullback_2h (generated, monthly)",
       "unit": "RQ-20261029-013",
@@ -4105,7 +4112,7 @@
       "verdict": "fail"
      },
      {
-      "graded_at": "2026-11-05",
+      "graded_at": "2026-11-06",
       "status": "queued",
       "title": "TRANSFER of top-vol entry skip VH80/VH90 (VH80/VH90) to avax_pullback_2h: does any arm beat the declared leg net of cost over the leg's declared window?",
       "unit": "RQ-20261031-7b6f-13",
@@ -4133,7 +4140,7 @@
       "verdict": "pass"
      },
      {
-      "graded_at": "2026-11-05",
+      "graded_at": "2026-11-06",
       "status": "queued",
       "title": "Walk-forward lever sweep of avax_pullback_2h: next lever entry (generated, weekly)",
       "unit": "RQ-20261105-008",
@@ -4507,7 +4514,7 @@
       "verdict": "fail"
      },
      {
-      "graded_at": "2026-11-05",
+      "graded_at": "2026-11-06",
       "status": "queued",
       "title": "A time-based exit (close after 60 or 120 bars) on eth_pullback_2h: does TO1 or TO2 beat the declared leg net of cost over 2020-07-01..2026-10-15?",
       "unit": "RQ-20261031-3ef3-10",
@@ -4549,14 +4556,14 @@
       "verdict": "fail"
      },
      {
-      "graded_at": "2026-11-05",
+      "graded_at": "2026-11-06",
       "status": "queued",
       "title": "TRANSFER of the top-volatility skip (VH95/VH85) lever to eth_pullback_2h: does it beat the declared leg net of cost over 2020-07-01..2026-10-15 (41cc-30 PASS on",
       "unit": "RQ-20261031-c6fc-07",
       "verdict": null
      },
      {
-      "graded_at": "2026-11-05",
+      "graded_at": "2026-11-06",
       "status": "queued",
       "title": "ITERATION 1 of eth_pullback_2h (fail): On eth_pullback_2h over 2020-07-01..2026-10-15 23:59, does any of AD30 (adx_min=30), AD35 (adx_min=35), PF62 (pullback_fr",
       "unit": "RQ-20261101-78fc-34",
@@ -4570,7 +4577,7 @@
       "verdict": "fail"
      },
      {
-      "graded_at": "2026-11-05",
+      "graded_at": "2026-11-06",
       "status": "queued",
       "title": "Walk-forward lever sweep of eth_pullback_2h: next lever exit (generated, weekly)",
       "unit": "RQ-20261105-019",
@@ -4723,7 +4730,7 @@
       "verdict": "fail"
      },
      {
-      "graded_at": "2026-11-05",
+      "graded_at": "2026-11-06",
       "status": "queued",
       "title": "M20 exit-lever sweep: eth_pullback_prop_2h (generated, monthly)",
       "unit": "RQ-20261029-015",
@@ -4842,14 +4849,14 @@
       "verdict": "fail"
      },
      {
-      "graded_at": "2026-11-05",
+      "graded_at": "2026-11-06",
       "status": "queued",
       "title": "ITERATION 1 of eth_pullback_prop_2h (fail): On eth_pullback_prop_2h over 2020-07-01..2026-10-15 23:59, does any of AD30 (adx_min=30), AD35 (adx_min=35), PF62 (p",
       "unit": "RQ-20261101-78fc-20",
       "verdict": null
      },
      {
-      "graded_at": "2026-11-05",
+      "graded_at": "2026-11-06",
       "status": "queued",
       "title": "Walk-forward lever sweep of eth_pullback_prop_2h: next lever entry (generated, weekly)",
       "unit": "RQ-20261105-020",
@@ -4868,6 +4875,13 @@
       "title": "Reverse structure-exit test on eth_pullback_prop_2h (declares structure_exit pivot=5): does the prior exit beat the structure default, net of the full cost stac",
       "unit": "RQ-20261105-5e05-10",
       "verdict": "pass"
+     },
+     {
+      "graded_at": null,
+      "status": "queued",
+      "title": "Walk-forward lever sweep of eth_pullback_prop_2h: next lever exit (generated, weekly)",
+      "unit": "RQ-20261106-019",
+      "verdict": null
      }
     ]
    }
@@ -4927,14 +4941,14 @@
       "verdict": "fail"
      },
      {
-      "graded_at": "2026-11-05",
+      "graded_at": "2026-11-06",
       "status": "queued",
       "title": "ITERATION 1 of fade_breakout_4h (fail): On fade_breakout_4h over 2020-07-01..2026-10-15 23:59, does any of AX15 (adx_max=15), PM25 (pierce_min=0.25), TO24 (time",
       "unit": "RQ-20261101-78fc-52",
       "verdict": null
      },
      {
-      "graded_at": "2026-11-05",
+      "graded_at": "2026-11-06",
       "status": "queued",
       "title": "Walk-forward lever sweep of fade_breakout_4h: next lever entry (generated, weekly)",
       "unit": "RQ-20261105-021",
@@ -5009,21 +5023,21 @@
       "verdict": "fail"
      },
      {
-      "graded_at": "2026-11-05",
+      "graded_at": "2026-11-06",
       "status": "queued",
       "title": "M20 exit-lever sweep: fvg_range_15m (generated, monthly)",
       "unit": "RQ-20261030-009",
       "verdict": "no_action_warranted"
      },
      {
-      "graded_at": "2026-11-05",
+      "graded_at": "2026-11-06",
       "status": "queued",
       "title": "ITERATION 1 of fvg_range_15m (fail): On fvg_range_15m over 2024-10-05..2026-10-04 23:59, does any of MT5 (min_touches=5), AX15 (adx_max=15), MW25 (min_width_pct",
       "unit": "RQ-20261101-78fc-53",
       "verdict": null
      },
      {
-      "graded_at": "2026-11-05",
+      "graded_at": "2026-11-06",
       "status": "queued",
       "title": "Walk-forward lever sweep of fvg_range_15m: next lever entry (generated, weekly)",
       "unit": "RQ-20261105-022",
@@ -5082,7 +5096,7 @@
       "verdict": "pass"
      },
      {
-      "graded_at": "2026-11-05",
+      "graded_at": "2026-11-06",
       "status": "queued",
       "title": "M20 exit-lever sweep: gdx_pullback_1d (generated, monthly)",
       "unit": "RQ-20260928-021",
@@ -5187,7 +5201,7 @@
       "verdict": "pass"
      },
      {
-      "graded_at": "2026-11-05",
+      "graded_at": "2026-11-06",
       "status": "queued",
       "title": "Walk-forward lever sweep of gdx_pullback_1d: next lever entry (generated, weekly)",
       "unit": "RQ-20261105-023",
@@ -5249,7 +5263,7 @@
     },
     "queue_units": [
      {
-      "graded_at": "2026-11-05",
+      "graded_at": "2026-11-06",
       "status": "queued",
       "title": "M20 exit-lever sweep: gld_pullback_1d (generated, monthly)",
       "unit": "RQ-20260928-022",
@@ -5382,7 +5396,7 @@
       "verdict": "pass"
      },
      {
-      "graded_at": "2026-11-05",
+      "graded_at": "2026-11-06",
       "status": "queued",
       "title": "Walk-forward lever sweep of gld_pullback_1d: next lever exit (generated, weekly)",
       "unit": "RQ-20261105-024",
@@ -5551,7 +5565,7 @@
       "verdict": "fail"
      },
      {
-      "graded_at": "2026-11-05",
+      "graded_at": "2026-11-06",
       "status": "queued",
       "title": "M20 exit-lever sweep: htf_pullback_trend_2h (generated, monthly)",
       "unit": "RQ-20261030-013",
@@ -5579,7 +5593,7 @@
       "verdict": "fail"
      },
      {
-      "graded_at": "2026-11-05",
+      "graded_at": "2026-11-06",
       "status": "queued",
       "title": "Walk-forward lever sweep of htf_pullback_trend_2h: next lever exit (generated, weekly)",
       "unit": "RQ-20261105-026",
@@ -5591,6 +5605,13 @@
       "title": "Reverse structure-exit test on htf_pullback_trend_2h (declares structure_exit pivot=5): does the prior exit beat the structure default, net of the full cost sta",
       "unit": "RQ-20261105-5e05-02",
       "verdict": "pass"
+     },
+     {
+      "graded_at": null,
+      "status": "queued",
+      "title": "Walk-forward lever sweep of htf_pullback_trend_2h: next lever entry (generated, weekly)",
+      "unit": "RQ-20261106-020",
+      "verdict": null
      }
     ]
    }
@@ -5608,7 +5629,7 @@
     "m20": 18
    },
    "n_configs_with_series": 44,
-   "real_money": true,
+   "real_money": false,
    "tried": {
     "e5_configs_by_unit": {
      "RQ-20261016-077e-08": 9,
@@ -5719,7 +5740,7 @@
       "verdict": "pass"
      },
      {
-      "graded_at": "2026-11-05",
+      "graded_at": "2026-11-06",
       "status": "queued",
       "title": "Walk-forward lever sweep of iaum_pullback_1d: next lever entry (generated, weekly)",
       "unit": "RQ-20261105-027",
@@ -5857,14 +5878,14 @@
       "verdict": "fail"
      },
      {
-      "graded_at": "2026-11-05",
+      "graded_at": "2026-11-06",
       "status": "queued",
       "title": "M20 exit-lever sweep: ict_scalp_5m (generated, monthly)",
       "unit": "RQ-20261030-016",
       "verdict": "no_action_warranted"
      },
      {
-      "graded_at": "2026-11-05",
+      "graded_at": "2026-11-06",
       "status": "queued",
       "title": "ITERATION 1 of ict_scalp_5m (fail): On ict_scalp_5m over 2024-10-05..2026-10-04 23:59, does any of H4 (--htf-rule=4h), SLB (--atr-sl-buffer-mult=0.6), LIM (--en",
       "unit": "RQ-20261101-78fc-44",
@@ -5878,11 +5899,11 @@
       "verdict": "fail"
      },
      {
-      "graded_at": null,
+      "graded_at": "2026-11-06",
       "status": "queued",
       "title": "Walk-forward lever sweep of ict_scalp_5m: next lever entry (generated, weekly)",
       "unit": "RQ-20261105-028",
-      "verdict": null
+      "verdict": "fail"
      }
     ]
    }
@@ -5992,7 +6013,7 @@
       "verdict": "fail"
      },
      {
-      "graded_at": "2026-11-05",
+      "graded_at": "2026-11-06",
       "status": "queued",
       "title": "M20 exit-lever sweep: ict_scalp_avax_5m (generated, monthly)",
       "unit": "RQ-20261030-019",
@@ -6034,11 +6055,11 @@
       "verdict": "fail"
      },
      {
-      "graded_at": null,
+      "graded_at": "2026-11-06",
       "status": "queued",
       "title": "Walk-forward lever sweep of ict_scalp_avax_5m: next lever entry (generated, weekly)",
       "unit": "RQ-20261105-029",
-      "verdict": null
+      "verdict": "fail"
      }
     ]
    }
@@ -6149,7 +6170,7 @@
       "verdict": "fail"
      },
      {
-      "graded_at": "2026-11-05",
+      "graded_at": "2026-11-06",
       "status": "queued",
       "title": "Walk-forward re-run of mgc_pullback_1d's harness on fresh data (generated, weekly)",
       "unit": "RQ-20261004-661",
@@ -6279,7 +6300,7 @@
       "verdict": "fail"
      },
      {
-      "graded_at": "2026-11-05",
+      "graded_at": "2026-11-06",
       "status": "queued",
       "title": "Walk-forward lever sweep of ict_scalp_eth_15m: next lever entry (generated, weekly)",
       "unit": "RQ-20261105-030",
@@ -6332,23 +6353,24 @@
    }
   },
   "ict_scalp_sol_15m::ict_scalp": {
-   "effective_n": 6,
-   "effective_n_basis": "partial: 2 return-correlation clusters over 9 configs with a series + 4 without a series counted at face value (upper bound)",
+   "effective_n": 7,
+   "effective_n_basis": "partial: 3 return-correlation clusters over 14 configs with a series + 4 without a series counted at face value (upper bound)",
    "family": "ict_scalp",
    "leg": "ict_scalp_sol_15m",
-   "n_clusters": 2,
-   "n_configs": 13,
+   "n_clusters": 3,
+   "n_configs": 18,
    "n_configs_by_source": {
-    "e5": 8,
+    "e5": 13,
     "evidence": 1,
     "m20": 4
    },
-   "n_configs_with_series": 9,
+   "n_configs_with_series": 14,
    "real_money": false,
    "tried": {
     "e5_configs_by_unit": {
      "RQ-20261013-407c-09": 4,
-     "RQ-20261101-78fc-50": 4
+     "RQ-20261101-78fc-50": 4,
+     "RQ-20261105-032": 5
     },
     "evidence_records": [
      "ict_scalp_sol_15m"
@@ -6573,14 +6595,14 @@
    }
   },
   "ict_scalp_sol_5m::ict_scalp": {
-   "effective_n": 6,
-   "effective_n_basis": "partial: 2 return-correlation clusters over 5 configs with a series + 4 without a series counted at face value (upper bound)",
+   "effective_n": 11,
+   "effective_n_basis": "partial: 2 return-correlation clusters over 5 configs with a series + 9 without a series counted at face value (upper bound)",
    "family": "ict_scalp",
    "leg": "ict_scalp_sol_5m",
    "n_clusters": 2,
-   "n_configs": 9,
+   "n_configs": 14,
    "n_configs_by_source": {
-    "e5": 4,
+    "e5": 9,
     "evidence": 1,
     "m20": 4
    },
@@ -6588,7 +6610,8 @@
    "real_money": false,
    "tried": {
     "e5_configs_by_unit": {
-     "RQ-20261101-78fc-45": 4
+     "RQ-20261101-78fc-45": 4,
+     "RQ-20261105-033": 5
     },
     "evidence_records": [
      "ict_scalp_sol_5m"
@@ -6669,7 +6692,7 @@
       "verdict": "indeterminate"
      },
      {
-      "graded_at": "2026-11-05",
+      "graded_at": "2026-11-06",
       "status": "queued",
       "title": "M20 exit-lever sweep: ict_scalp_sol_5m (generated, monthly)",
       "unit": "RQ-20261030-022",
@@ -6735,25 +6758,26 @@
    }
   },
   "ict_scalp_xrp_15m::ict_scalp": {
-   "effective_n": 7,
-   "effective_n_basis": "partial: 2 return-correlation clusters over 13 configs with a series + 5 without a series counted at face value (upper bound)",
+   "effective_n": 8,
+   "effective_n_basis": "partial: 3 return-correlation clusters over 18 configs with a series + 5 without a series counted at face value (upper bound)",
    "family": "ict_scalp",
    "leg": "ict_scalp_xrp_15m",
-   "n_clusters": 2,
-   "n_configs": 18,
+   "n_clusters": 3,
+   "n_configs": 23,
    "n_configs_by_source": {
-    "e5": 13,
+    "e5": 18,
     "evidence": 1,
     "m20": 4
    },
-   "n_configs_with_series": 13,
+   "n_configs_with_series": 18,
    "real_money": false,
    "tried": {
     "e5_configs_by_unit": {
      "RQ-20261013-407c-07": 8,
      "RQ-20261013-407c-18": 4,
      "RQ-20261027-8a01-02": 1,
-     "RQ-20261101-78fc-49": 4
+     "RQ-20261101-78fc-49": 4,
+     "RQ-20261105-034": 5
     },
     "evidence_records": [
      "ict_scalp_xrp_15m"
@@ -6820,7 +6844,7 @@
       "verdict": "no_action_warranted"
      },
      {
-      "graded_at": "2026-11-05",
+      "graded_at": "2026-11-06",
       "status": "queued",
       "title": "Walk-forward re-run of ief_pullback_1d's harness on fresh data (generated, weekly)",
       "unit": "RQ-20261004-660",
@@ -6977,23 +7001,24 @@
    }
   },
   "ict_scalp_xrp_5m::ict_scalp": {
-   "effective_n": 5,
-   "effective_n_basis": "partial: 1 return-correlation clusters over 9 configs with a series + 4 without a series counted at face value (upper bound)",
+   "effective_n": 6,
+   "effective_n_basis": "partial: 2 return-correlation clusters over 14 configs with a series + 4 without a series counted at face value (upper bound)",
    "family": "ict_scalp",
    "leg": "ict_scalp_xrp_5m",
-   "n_clusters": 1,
-   "n_configs": 13,
+   "n_clusters": 2,
+   "n_configs": 18,
    "n_configs_by_source": {
-    "e5": 8,
+    "e5": 13,
     "evidence": 1,
     "m20": 4
    },
-   "n_configs_with_series": 9,
+   "n_configs_with_series": 14,
    "real_money": false,
    "tried": {
     "e5_configs_by_unit": {
      "RQ-20261013-407c-06": 8,
-     "RQ-20261013-407c-08": 8
+     "RQ-20261013-407c-08": 8,
+     "RQ-20261105-035": 5
     },
     "evidence_records": [
      "ict_scalp_xrp_5m"
@@ -7123,7 +7148,7 @@
       "verdict": null
      },
      {
-      "graded_at": "2026-11-05",
+      "graded_at": "2026-11-06",
       "status": "queued",
       "title": "ITERATION 1 of ict_scalp_xrp_5m (fail): On ict_scalp_xrp_5m over 2024-10-05..2026-10-04 23:59, does any of H4 (--htf-rule=4h), SLB (--atr-sl-buffer-mult=0.6), L",
       "unit": "RQ-20261101-78fc-46",
@@ -7148,17 +7173,17 @@
   },
   "ief_pullback_1d::pullback": {
    "effective_n": 58,
-   "effective_n_basis": "partial: 16 return-correlation clusters over 42 configs with a series + 42 without a series counted at face value (upper bound)",
+   "effective_n_basis": "partial: 16 return-correlation clusters over 47 configs with a series + 42 without a series counted at face value (upper bound)",
    "family": "pullback",
    "leg": "ief_pullback_1d",
    "n_clusters": 16,
-   "n_configs": 84,
+   "n_configs": 89,
    "n_configs_by_source": {
-    "e5": 41,
+    "e5": 46,
     "evidence": 1,
     "m20": 42
    },
-   "n_configs_with_series": 42,
+   "n_configs_with_series": 47,
    "real_money": false,
    "tried": {
     "e5_configs_by_unit": {
@@ -7174,6 +7199,7 @@
      "RQ-20261019-025": 3,
      "RQ-20261020-005": 3,
      "RQ-20261027-003": 1,
+     "RQ-20261105-036": 5,
      "RQ-20261105-5e05-15": 2
     },
     "evidence_records": [
@@ -7189,7 +7215,7 @@
     },
     "queue_units": [
      {
-      "graded_at": "2026-11-05",
+      "graded_at": "2026-11-06",
       "status": "queued",
       "title": "M20 exit-lever sweep: ief_pullback_1d (generated, monthly)",
       "unit": "RQ-20261003-004",
@@ -7322,25 +7348,26 @@
    }
   },
   "iwm_trend_long_1d::trend": {
-   "effective_n": 27,
-   "effective_n_basis": "partial: 3 return-correlation clusters over 9 configs with a series + 24 without a series counted at face value (upper bound)",
+   "effective_n": 28,
+   "effective_n_basis": "partial: 4 return-correlation clusters over 12 configs with a series + 24 without a series counted at face value (upper bound)",
    "family": "trend",
    "leg": "iwm_trend_long_1d",
-   "n_clusters": 3,
-   "n_configs": 33,
+   "n_clusters": 4,
+   "n_configs": 36,
    "n_configs_by_source": {
-    "e5": 8,
+    "e5": 11,
     "evidence": 1,
     "m20": 24
    },
-   "n_configs_with_series": 9,
+   "n_configs_with_series": 12,
    "real_money": false,
    "tried": {
     "e5_configs_by_unit": {
      "RQ-20261016-c56e-22": 1,
      "RQ-20261028-2a2e-13": 3,
      "RQ-20261031-d5dd-06": 3,
-     "RQ-20261101-78fc-36": 1
+     "RQ-20261101-78fc-36": 1,
+     "RQ-20261105-037": 3
     },
     "evidence_records": [
      "iwm_trend_long_1d"
@@ -7354,7 +7381,7 @@
     },
     "queue_units": [
      {
-      "graded_at": "2026-11-05",
+      "graded_at": "2026-11-06",
       "status": "queued",
       "title": "M20 exit-lever sweep: iwm_trend_long_1d (generated, monthly)",
       "unit": "RQ-20261003-007",
@@ -7401,27 +7428,35 @@
       "title": "Walk-forward lever sweep of iwm_trend_long_1d: next lever entry (generated, weekly)",
       "unit": "RQ-20261105-037",
       "verdict": null
+     },
+     {
+      "graded_at": null,
+      "status": "queued",
+      "title": "Walk-forward lever sweep of iwm_trend_long_1d: next lever exit (generated, weekly)",
+      "unit": "RQ-20261106-021",
+      "verdict": null
      }
     ]
    }
   },
   "mes_trend_long_1d::trend": {
-   "effective_n": 18,
-   "effective_n_basis": "partial: 2 return-correlation clusters over 2 configs with a series + 16 without a series counted at face value (upper bound)",
+   "effective_n": 19,
+   "effective_n_basis": "partial: 3 return-correlation clusters over 5 configs with a series + 16 without a series counted at face value (upper bound)",
    "family": "trend",
    "leg": "mes_trend_long_1d",
-   "n_clusters": 2,
-   "n_configs": 18,
+   "n_clusters": 3,
+   "n_configs": 21,
    "n_configs_by_source": {
-    "e5": 1,
+    "e5": 4,
     "evidence": 1,
     "m20": 16
    },
-   "n_configs_with_series": 2,
+   "n_configs_with_series": 5,
    "real_money": false,
    "tried": {
     "e5_configs_by_unit": {
-     "RQ-20261101-78fc-57": 1
+     "RQ-20261101-78fc-57": 1,
+     "RQ-20261106-001": 3
     },
     "evidence_records": [
      "mes_trend_long_1d"
@@ -7482,28 +7517,43 @@
       "title": "ITERATION 1 of mes_trend_long_1d (fail): Measured at power on 2018-06-01..2026-10-15 23:59, does mes_trend_long_1d as declared clear Stage 0 net of the full cos",
       "unit": "RQ-20261101-78fc-57",
       "verdict": "pass"
+     },
+     {
+      "graded_at": null,
+      "status": "queued",
+      "title": "Walk-forward lever sweep of mes_trend_long_1d: next lever entry (generated, weekly)",
+      "unit": "RQ-20261106-001",
+      "verdict": null
+     },
+     {
+      "graded_at": null,
+      "status": "queued",
+      "title": "Walk-forward lever sweep of mes_trend_long_1d: next lever exit (generated, weekly)",
+      "unit": "RQ-20261106-022",
+      "verdict": null
      }
     ]
    }
   },
   "mgc_pullback_1d::pullback": {
-   "effective_n": 30,
-   "effective_n_basis": "partial: 4 return-correlation clusters over 4 configs with a series + 26 without a series counted at face value (upper bound)",
+   "effective_n": 31,
+   "effective_n_basis": "partial: 5 return-correlation clusters over 7 configs with a series + 26 without a series counted at face value (upper bound)",
    "family": "pullback",
    "leg": "mgc_pullback_1d",
-   "n_clusters": 4,
-   "n_configs": 30,
+   "n_clusters": 5,
+   "n_configs": 33,
    "n_configs_by_source": {
-    "e5": 3,
+    "e5": 6,
     "evidence": 1,
     "m20": 26
    },
-   "n_configs_with_series": 4,
+   "n_configs_with_series": 7,
    "real_money": false,
    "tried": {
     "e5_configs_by_unit": {
      "RQ-20261101-78fc-38": 1,
-     "RQ-20261105-5e05-13": 2
+     "RQ-20261105-5e05-13": 2,
+     "RQ-20261106-002": 3
     },
     "evidence_records": [
      "mgc_pullback_1d"
@@ -7517,7 +7567,7 @@
     },
     "queue_units": [
      {
-      "graded_at": "2026-11-05",
+      "graded_at": "2026-11-06",
       "status": "queued",
       "title": "M20 exit-lever sweep: mgc_pullback_1d (generated, monthly)",
       "unit": "RQ-20261004-656",
@@ -7550,28 +7600,43 @@
       "title": "Reverse structure-exit test on mgc_pullback_1d (declares structure_exit pivot=5): does the prior exit beat the structure default, net of the full cost stack?",
       "unit": "RQ-20261105-5e05-13",
       "verdict": "fail"
+     },
+     {
+      "graded_at": null,
+      "status": "queued",
+      "title": "Walk-forward lever sweep of mgc_pullback_1d: next lever entry (generated, weekly)",
+      "unit": "RQ-20261106-002",
+      "verdict": null
+     },
+     {
+      "graded_at": null,
+      "status": "queued",
+      "title": "Walk-forward lever sweep of mgc_pullback_1d: next lever exit (generated, weekly)",
+      "unit": "RQ-20261106-023",
+      "verdict": null
      }
     ]
    }
   },
   "mgc_trend_1h::trend": {
    "effective_n": 16,
-   "effective_n_basis": "partial: 2 return-correlation clusters over 3 configs with a series + 14 without a series counted at face value (upper bound)",
+   "effective_n_basis": "partial: 2 return-correlation clusters over 6 configs with a series + 14 without a series counted at face value (upper bound)",
    "family": "trend",
    "leg": "mgc_trend_1h",
    "n_clusters": 2,
-   "n_configs": 17,
+   "n_configs": 20,
    "n_configs_by_source": {
-    "e5": 2,
+    "e5": 5,
     "evidence": 1,
     "m20": 14
    },
-   "n_configs_with_series": 3,
+   "n_configs_with_series": 6,
    "real_money": false,
    "tried": {
     "e5_configs_by_unit": {
      "RQ-20261101-78fc-26": 1,
-     "RQ-20261104-001": 1
+     "RQ-20261104-001": 1,
+     "RQ-20261106-004": 3
     },
     "evidence_records": [
      "mgc_trend_1h"
@@ -7585,7 +7650,7 @@
     },
     "queue_units": [
      {
-      "graded_at": "2026-11-05",
+      "graded_at": "2026-11-06",
       "status": "queued",
       "title": "M20 exit-lever sweep: mgc_trend_1h (generated, monthly)",
       "unit": "RQ-20261030-027",
@@ -7604,27 +7669,35 @@
       "title": "ITERATION 2 of mgc_trend_1h (iteration 1 no_discovery on a 2024-06 data start): on the dukascopy XAU/USD 1h proxy over 2018-06..2026-10, does the leg AS DECLARE",
       "unit": "RQ-20261104-001",
       "verdict": "fail"
+     },
+     {
+      "graded_at": null,
+      "status": "queued",
+      "title": "Walk-forward lever sweep of mgc_trend_1h: next lever entry (generated, weekly)",
+      "unit": "RQ-20261106-004",
+      "verdict": null
      }
     ]
    }
   },
   "mhg_pullback_1d::pullback": {
-   "effective_n": 34,
-   "effective_n_basis": "partial: 2 return-correlation clusters over 2 configs with a series + 32 without a series counted at face value (upper bound)",
+   "effective_n": 35,
+   "effective_n_basis": "partial: 3 return-correlation clusters over 5 configs with a series + 32 without a series counted at face value (upper bound)",
    "family": "pullback",
    "leg": "mhg_pullback_1d",
-   "n_clusters": 2,
-   "n_configs": 34,
+   "n_clusters": 3,
+   "n_configs": 37,
    "n_configs_by_source": {
-    "e5": 1,
+    "e5": 4,
     "evidence": 1,
     "m20": 32
    },
-   "n_configs_with_series": 2,
+   "n_configs_with_series": 5,
    "real_money": false,
    "tried": {
     "e5_configs_by_unit": {
-     "RQ-20261101-78fc-39": 1
+     "RQ-20261101-78fc-39": 1,
+     "RQ-20261106-005": 3
     },
     "evidence_records": [
      "mhg_pullback_1d"
@@ -7638,7 +7711,7 @@
     },
     "queue_units": [
      {
-      "graded_at": "2026-11-05",
+      "graded_at": "2026-11-06",
       "status": "queued",
       "title": "M20 exit-lever sweep: mhg_pullback_1d (generated, monthly)",
       "unit": "RQ-20261004-657",
@@ -7664,6 +7737,13 @@
       "title": "ITERATION 1 of mhg_pullback_1d (indeterminate): Measured at power on 2018-06-01..2026-10-15 23:59, does mhg_pullback_1d as declared clear Stage 0 net of the ful",
       "unit": "RQ-20261101-78fc-39",
       "verdict": "fail"
+     },
+     {
+      "graded_at": null,
+      "status": "queued",
+      "title": "Walk-forward lever sweep of mhg_pullback_1d: next lever entry (generated, weekly)",
+      "unit": "RQ-20261106-005",
+      "verdict": null
      }
     ]
    }
@@ -8362,22 +8442,23 @@
    }
   },
   "qld_trend_long_1d::trend": {
-   "effective_n": 34,
-   "effective_n_basis": "partial: 2 return-correlation clusters over 2 configs with a series + 32 without a series counted at face value (upper bound)",
+   "effective_n": 35,
+   "effective_n_basis": "partial: 3 return-correlation clusters over 5 configs with a series + 32 without a series counted at face value (upper bound)",
    "family": "trend",
    "leg": "qld_trend_long_1d",
-   "n_clusters": 2,
-   "n_configs": 34,
+   "n_clusters": 3,
+   "n_configs": 37,
    "n_configs_by_source": {
-    "e5": 1,
+    "e5": 4,
     "evidence": 1,
     "m20": 32
    },
-   "n_configs_with_series": 2,
+   "n_configs_with_series": 5,
    "real_money": false,
    "tried": {
     "e5_configs_by_unit": {
-     "RQ-20261016-c56e-23": 1
+     "RQ-20261016-c56e-23": 1,
+     "RQ-20261106-006": 3
     },
     "evidence_records": [
      "qld_trend_long_1d"
@@ -8455,11 +8536,22 @@
       "verdict": "pass"
      },
      {
-      "graded_at": "2026-11-05",
+      "graded_at": "2026-11-06",
       "status": "queued",
       "title": "ITERATION 1 of qld_trend_long_1d (indeterminate): Measured at power on 2018-06-01..2026-10-15 23:59, does qld_trend_long_1d as declared clear Stage 0 net of the",
       "unit": "RQ-20261101-78fc-37",
       "verdict": null
+     },
+     {
+      "graded_at": null,
+      "status": "queued",
+      "title": "Walk-forward lever sweep of qld_trend_long_1d: next lever entry (generated, weekly)",
+      "unit": "RQ-20261106-006",
+      "verdict": null
+     },
+     {
+      "status": "not_in_queue_dir",
+      "unit": "_unattributed"
      }
     ]
    }
@@ -8565,25 +8657,26 @@
    }
   },
   "qqq_trend_long_1d::trend": {
-   "effective_n": 23,
-   "effective_n_basis": "partial: 3 return-correlation clusters over 8 configs with a series + 20 without a series counted at face value (upper bound)",
+   "effective_n": 24,
+   "effective_n_basis": "partial: 4 return-correlation clusters over 11 configs with a series + 20 without a series counted at face value (upper bound)",
    "family": "trend",
    "leg": "qqq_trend_long_1d",
-   "n_clusters": 3,
-   "n_configs": 28,
+   "n_clusters": 4,
+   "n_configs": 31,
    "n_configs_by_source": {
-    "e5": 7,
+    "e5": 10,
     "evidence": 1,
     "m20": 20
    },
-   "n_configs_with_series": 8,
+   "n_configs_with_series": 11,
    "real_money": false,
    "tried": {
     "e5_configs_by_unit": {
      "RQ-20261016-019": 2,
      "RQ-20261016-c56e-20": 1,
      "RQ-20261031-d5dd-02": 3,
-     "RQ-20261101-78fc-23": 1
+     "RQ-20261101-78fc-23": 1,
+     "RQ-20261106-007": 3
     },
     "evidence_records": [
      "qqq_trend_long_1d"
@@ -8604,7 +8697,7 @@
       "verdict": null
      },
      {
-      "graded_at": "2026-11-05",
+      "graded_at": "2026-11-06",
       "status": "queued",
       "title": "M20 exit-lever sweep: qqq_trend_long_1d (generated, monthly)",
       "unit": "RQ-20261005-009",
@@ -8658,30 +8751,38 @@
       "title": "ITERATION 1 of qqq_trend_long_1d (indeterminate): Measured at power on 2018-06-01..2026-10-15 23:59, does qqq_trend_long_1d as declared clear Stage 0 net of the",
       "unit": "RQ-20261101-78fc-23",
       "verdict": "pass"
+     },
+     {
+      "graded_at": null,
+      "status": "queued",
+      "title": "Walk-forward lever sweep of qqq_trend_long_1d: next lever entry (generated, weekly)",
+      "unit": "RQ-20261106-007",
+      "verdict": null
      }
     ]
    }
   },
   "scha_trend_long_1d::trend": {
-   "effective_n": 41,
-   "effective_n_basis": "partial: 5 return-correlation clusters over 11 configs with a series + 36 without a series counted at face value (upper bound)",
+   "effective_n": 43,
+   "effective_n_basis": "partial: 7 return-correlation clusters over 14 configs with a series + 36 without a series counted at face value (upper bound)",
    "family": "trend",
    "leg": "scha_trend_long_1d",
-   "n_clusters": 5,
-   "n_configs": 47,
+   "n_clusters": 7,
+   "n_configs": 50,
    "n_configs_by_source": {
-    "e5": 10,
+    "e5": 13,
     "evidence": 1,
     "m20": 36
    },
-   "n_configs_with_series": 11,
+   "n_configs_with_series": 14,
    "real_money": false,
    "tried": {
     "e5_configs_by_unit": {
      "RQ-20261016-c56e-26": 1,
      "RQ-20261028-2a2e-14": 3,
      "RQ-20261101-78fc-17": 1,
-     "RQ-20261103-5a03-01": 5
+     "RQ-20261103-5a03-01": 5,
+     "RQ-20261106-008": 3
     },
     "evidence_records": [
      "scha_trend_long_1d"
@@ -8703,7 +8804,7 @@
       "verdict": null
      },
      {
-      "graded_at": "2026-11-05",
+      "graded_at": "2026-11-06",
       "status": "queued",
       "title": "M20 exit-lever sweep: scha_trend_long_1d (generated, monthly)",
       "unit": "RQ-20261005-014",
@@ -8750,6 +8851,13 @@
       "title": "HOLDOUT RE-RUN, soak book: does scha_trend_long_1d's configuration, SELECTED on the earliest ~75% of its history, hold up net of the full cost stack when tested",
       "unit": "RQ-20261103-5a03-01",
       "verdict": "fail"
+     },
+     {
+      "graded_at": null,
+      "status": "queued",
+      "title": "Walk-forward lever sweep of scha_trend_long_1d: next lever entry (generated, weekly)",
+      "unit": "RQ-20261106-008",
+      "verdict": null
      }
     ]
    }
@@ -8787,18 +8895,18 @@
    }
   },
   "slv_pullback_1d::pullback": {
-   "effective_n": 44,
-   "effective_n_basis": "partial: 13 return-correlation clusters over 60 configs with a series + 31 without a series counted at face value (upper bound)",
+   "effective_n": 46,
+   "effective_n_basis": "partial: 15 return-correlation clusters over 63 configs with a series + 31 without a series counted at face value (upper bound)",
    "family": "pullback",
    "leg": "slv_pullback_1d",
-   "n_clusters": 13,
-   "n_configs": 91,
+   "n_clusters": 15,
+   "n_configs": 94,
    "n_configs_by_source": {
-    "e5": 59,
+    "e5": 62,
     "evidence": 1,
     "m20": 31
    },
-   "n_configs_with_series": 60,
+   "n_configs_with_series": 63,
    "real_money": false,
    "tried": {
     "e5_configs_by_unit": {
@@ -8821,7 +8929,8 @@
      "RQ-20261023-9ffb-03": 3,
      "RQ-20261027-004": 1,
      "RQ-20261101-78fc-22": 1,
-     "RQ-20261105-5e05-16": 2
+     "RQ-20261105-5e05-16": 2,
+     "RQ-20261106-009": 3
     },
     "evidence_records": [
      "slv_pullback_1d"
@@ -8842,7 +8951,7 @@
       "verdict": null
      },
      {
-      "graded_at": "2026-11-05",
+      "graded_at": "2026-11-06",
       "status": "queued",
       "title": "M20 exit-lever sweep: slv_pullback_1d (generated, monthly)",
       "unit": "RQ-20261005-015",
@@ -9008,6 +9117,13 @@
       "title": "Reverse structure-exit test on slv_pullback_1d (declares structure_exit pivot=5): does the prior exit beat the structure default, net of the full cost stack?",
       "unit": "RQ-20261105-5e05-16",
       "verdict": "indeterminate"
+     },
+     {
+      "graded_at": null,
+      "status": "queued",
+      "title": "Walk-forward lever sweep of slv_pullback_1d: next lever entry (generated, weekly)",
+      "unit": "RQ-20261106-009",
+      "verdict": null
      }
     ]
    }
@@ -9039,22 +9155,23 @@
   },
   "slv_trend_1h::trend": {
    "effective_n": 30,
-   "effective_n_basis": "partial: 2 return-correlation clusters over 7 configs with a series + 28 without a series counted at face value (upper bound)",
+   "effective_n_basis": "partial: 2 return-correlation clusters over 12 configs with a series + 28 without a series counted at face value (upper bound)",
    "family": "trend",
    "leg": "slv_trend_1h",
    "n_clusters": 2,
-   "n_configs": 35,
+   "n_configs": 40,
    "n_configs_by_source": {
-    "e5": 6,
+    "e5": 11,
     "evidence": 1,
     "m20": 28
    },
-   "n_configs_with_series": 7,
+   "n_configs_with_series": 12,
    "real_money": false,
    "tried": {
     "e5_configs_by_unit": {
      "RQ-20261101-78fc-18": 1,
-     "RQ-20261103-5a03-02": 5
+     "RQ-20261103-5a03-02": 5,
+     "RQ-20261106-010": 5
     },
     "evidence_records": [
      "slv_trend_1h"
@@ -9068,7 +9185,7 @@
     },
     "queue_units": [
      {
-      "graded_at": "2026-11-05",
+      "graded_at": "2026-11-06",
       "status": "queued",
       "title": "M20 exit-lever sweep: slv_trend_1h (generated, monthly)",
       "unit": "RQ-20261030-028",
@@ -9094,23 +9211,30 @@
       "title": "TP-DOCTRINE + CLEAN-HOLDOUT ITERATION, slv_trend_1h: does a REAL take-profit (tp_r 2/3/4/6), selected on 2018-06..2026-08-30, stay net-positive net of the full ",
       "unit": "RQ-20261104-7fdb-02",
       "verdict": null
+     },
+     {
+      "graded_at": null,
+      "status": "queued",
+      "title": "Walk-forward lever sweep of slv_trend_1h: next lever exit (generated, weekly)",
+      "unit": "RQ-20261106-010",
+      "verdict": null
      }
     ]
    }
   },
   "sol_pullback_2h::pullback": {
    "effective_n": 37,
-   "effective_n_basis": "partial: 7 return-correlation clusters over 90 configs with a series + 30 without a series counted at face value (upper bound)",
+   "effective_n_basis": "partial: 7 return-correlation clusters over 93 configs with a series + 30 without a series counted at face value (upper bound)",
    "family": "pullback",
    "leg": "sol_pullback_2h",
    "n_clusters": 7,
-   "n_configs": 120,
+   "n_configs": 123,
    "n_configs_by_source": {
-    "e5": 89,
+    "e5": 92,
     "evidence": 1,
     "m20": 30
    },
-   "n_configs_with_series": 90,
+   "n_configs_with_series": 93,
    "real_money": false,
    "tried": {
     "e5_configs_by_unit": {
@@ -9140,7 +9264,8 @@
      "RQ-20261031-7b6f-16": 6,
      "RQ-20261031-7b6f-30": 3,
      "RQ-20261101-78fc-40": 1,
-     "RQ-20261105-5e05-11": 2
+     "RQ-20261105-5e05-11": 2,
+     "RQ-20261106-011": 3
     },
     "evidence_records": [
      "sol_pullback_2h"
@@ -9378,7 +9503,7 @@
       "verdict": "fail"
      },
      {
-      "graded_at": "2026-11-05",
+      "graded_at": "2026-11-06",
       "status": "queued",
       "title": "M20 exit-lever sweep: sol_pullback_2h (generated, monthly)",
       "unit": "RQ-20261030-034",
@@ -9453,29 +9578,37 @@
       "title": "Reverse structure-exit test on sol_pullback_2h (declares structure_exit pivot=5): does the prior exit beat the structure default, net of the full cost stack?",
       "unit": "RQ-20261105-5e05-11",
       "verdict": "fail"
+     },
+     {
+      "graded_at": null,
+      "status": "queued",
+      "title": "Walk-forward lever sweep of sol_pullback_2h: next lever entry (generated, weekly)",
+      "unit": "RQ-20261106-011",
+      "verdict": null
      }
     ]
    }
   },
   "splg_trend_long_1d::trend": {
-   "effective_n": 27,
-   "effective_n_basis": "partial: 2 return-correlation clusters over 6 configs with a series + 25 without a series counted at face value (upper bound)",
+   "effective_n": 29,
+   "effective_n_basis": "partial: 4 return-correlation clusters over 9 configs with a series + 25 without a series counted at face value (upper bound)",
    "family": "trend",
    "leg": "splg_trend_long_1d",
-   "n_clusters": 2,
-   "n_configs": 31,
+   "n_clusters": 4,
+   "n_configs": 34,
    "n_configs_by_source": {
-    "e5": 6,
+    "e5": 9,
     "evidence": 1,
     "m20": 24
    },
-   "n_configs_with_series": 6,
+   "n_configs_with_series": 9,
    "real_money": false,
    "tried": {
     "e5_configs_by_unit": {
      "RQ-20261016-020": 2,
      "RQ-20261031-d5dd-03": 3,
-     "RQ-20261101-78fc-42": 1
+     "RQ-20261101-78fc-42": 1,
+     "RQ-20261106-012": 3
     },
     "evidence_records": [
      "splg_trend_long_1d"
@@ -9489,7 +9622,7 @@
     },
     "queue_units": [
      {
-      "graded_at": "2026-11-05",
+      "graded_at": "2026-11-06",
       "status": "queued",
       "title": "M20 exit-lever sweep: splg_trend_long_1d (generated, monthly)",
       "unit": "RQ-20261005-813",
@@ -9529,6 +9662,13 @@
       "title": "ITERATION 1 of splg_trend_long_1d (indeterminate): Measured at power on 2018-06-01..2026-10-15 23:59, does splg_trend_long_1d as declared clear Stage 0 net of t",
       "unit": "RQ-20261101-78fc-42",
       "verdict": "pass"
+     },
+     {
+      "graded_at": null,
+      "status": "queued",
+      "title": "Walk-forward lever sweep of splg_trend_long_1d: next lever entry (generated, weekly)",
+      "unit": "RQ-20261106-012",
+      "verdict": null
      }
     ]
    }
@@ -9635,17 +9775,17 @@
   },
   "spy_trend_long_1d::trend": {
    "effective_n": 35,
-   "effective_n_basis": "partial: 3 return-correlation clusters over 14 configs with a series + 32 without a series counted at face value (upper bound)",
+   "effective_n_basis": "partial: 3 return-correlation clusters over 17 configs with a series + 32 without a series counted at face value (upper bound)",
    "family": "trend",
    "leg": "spy_trend_long_1d",
    "n_clusters": 3,
-   "n_configs": 46,
+   "n_configs": 49,
    "n_configs_by_source": {
-    "e5": 13,
+    "e5": 16,
     "evidence": 1,
     "m20": 32
    },
-   "n_configs_with_series": 14,
+   "n_configs_with_series": 17,
    "real_money": false,
    "tried": {
     "e5_configs_by_unit": {
@@ -9654,7 +9794,8 @@
      "RQ-20261028-2a2e-12": 3,
      "RQ-20261031-d5dd-01": 3,
      "RQ-20261031-d5dd-05": 3,
-     "RQ-20261101-78fc-24": 1
+     "RQ-20261101-78fc-24": 1,
+     "RQ-20261106-013": 3
     },
     "evidence_records": [
      "spy_trend_long_1d"
@@ -9683,7 +9824,7 @@
       "verdict": null
      },
      {
-      "graded_at": "2026-11-05",
+      "graded_at": "2026-11-06",
       "status": "queued",
       "title": "M20 exit-lever sweep: spy_trend_long_1d (generated, monthly)",
       "unit": "RQ-20261005-814",
@@ -9751,6 +9892,13 @@
       "title": "ITERATION 1 of spy_trend_long_1d (indeterminate): Measured at power on 2018-06-01..2026-10-15 23:59, does spy_trend_long_1d as declared clear Stage 0 net of the",
       "unit": "RQ-20261101-78fc-24",
       "verdict": "pass"
+     },
+     {
+      "graded_at": null,
+      "status": "queued",
+      "title": "Walk-forward lever sweep of spy_trend_long_1d: next lever entry (generated, weekly)",
+      "unit": "RQ-20261106-013",
+      "verdict": null
      }
     ]
    }
@@ -9844,17 +9992,24 @@
       "verdict": "fail"
      },
      {
-      "graded_at": "2026-11-05",
+      "graded_at": "2026-11-06",
       "status": "queued",
       "title": "M20 exit-lever sweep: squeeze_breakout_4h (generated, monthly)",
       "unit": "RQ-20261030-035",
       "verdict": "no_action_warranted"
      },
      {
-      "graded_at": "2026-11-05",
+      "graded_at": "2026-11-06",
       "status": "queued",
       "title": "ITERATION 1 of squeeze_breakout_4h (fail): On squeeze_breakout_4h over 2020-07-01..2026-10-15 23:59, does any of KC15 (kc_mult=1.5), CD6 (cooldown_bars=6), SL35",
       "unit": "RQ-20261101-78fc-54",
+      "verdict": null
+     },
+     {
+      "graded_at": null,
+      "status": "queued",
+      "title": "Walk-forward lever sweep of squeeze_breakout_4h: next lever entry (generated, weekly)",
+      "unit": "RQ-20261106-014",
       "verdict": null
      }
     ]
@@ -9970,7 +10125,7 @@
       "verdict": "pass"
      },
      {
-      "graded_at": "2026-11-05",
+      "graded_at": "2026-11-06",
       "status": "queued",
       "title": "M20 exit-lever sweep: tlt_pullback_1d (generated, monthly)",
       "unit": "RQ-20261005-815",
@@ -10080,6 +10235,13 @@
       "title": "Reverse structure-exit test on tlt_pullback_1d (declares structure_exit pivot=5): does the prior exit beat the structure default, net of the full cost stack?",
       "unit": "RQ-20261105-5e05-14",
       "verdict": "fail"
+     },
+     {
+      "graded_at": null,
+      "status": "queued",
+      "title": "Walk-forward lever sweep of tlt_pullback_1d: next lever exit (generated, weekly)",
+      "unit": "RQ-20261106-015",
+      "verdict": null
      }
     ]
    }
@@ -10158,7 +10320,7 @@
     "m20": 26
    },
    "n_configs_with_series": 10,
-   "real_money": false,
+   "real_money": true,
    "tried": {
     "e5_configs_by_unit": {
      "RQ-20261016-c56e-25": 1,
@@ -10184,7 +10346,7 @@
       "verdict": null
      },
      {
-      "graded_at": "2026-11-05",
+      "graded_at": "2026-11-06",
       "status": "queued",
       "title": "M20 exit-lever sweep: tqqq_trend_long_1d (generated, monthly)",
       "unit": "RQ-20261006-001",
@@ -10254,7 +10416,7 @@
       "verdict": "pass"
      },
      {
-      "graded_at": "2026-11-05",
+      "graded_at": "2026-11-06",
       "status": "queued",
       "title": "ITERATION 1 of tqqq_trend_long_1d (pass_unconfirmed): Does tqqq_trend_long_1d as declared, selected on 2018-06-01..(holdout boundary), stay net-positive once on",
       "unit": "RQ-20261101-78fc-16",
@@ -10273,6 +10435,13 @@
       "title": "Breakout prop fit: tqqq_trend_long_1d across the sizing arms under RULE-B6 V2 (generated)",
       "unit": "RQ-20261105-012",
       "verdict": "fail"
+     },
+     {
+      "graded_at": null,
+      "status": "queued",
+      "title": "Walk-forward lever sweep of tqqq_trend_long_1d: next lever entry (generated, weekly)",
+      "unit": "RQ-20261106-016",
+      "verdict": null
      }
     ]
    }
@@ -10451,7 +10620,7 @@
       "verdict": "fail"
      },
      {
-      "graded_at": "2026-11-05",
+      "graded_at": "2026-11-06",
       "status": "queued",
       "title": "M20 exit-lever sweep: trend_donchian (generated, monthly)",
       "unit": "RQ-20261030-040",
@@ -10470,6 +10639,13 @@
       "title": "Reverse structure-exit test on trend_donchian (declares structure_exit pivot=5): does the prior exit beat the structure default, net of the full cost stack?",
       "unit": "RQ-20261105-5e05-01",
       "verdict": "pass"
+     },
+     {
+      "graded_at": null,
+      "status": "queued",
+      "title": "Walk-forward lever sweep of trend_donchian: next lever entry (generated, weekly)",
+      "unit": "RQ-20261106-017",
+      "verdict": null
      }
     ]
    }
@@ -10532,7 +10708,7 @@
       "verdict": "fail"
      },
      {
-      "graded_at": "2026-11-05",
+      "graded_at": "2026-11-06",
       "status": "queued",
       "title": "M20 exit-lever sweep: trend_donchian_1h (generated, monthly)",
       "unit": "RQ-20261030-041",
@@ -10579,6 +10755,13 @@
       "title": "Reverse structure-exit test on trend_donchian_1h (declares structure_exit pivot=5): does the prior exit beat the structure default, net of the full cost stack?",
       "unit": "RQ-20261105-5e05-03",
       "verdict": "pass"
+     },
+     {
+      "graded_at": null,
+      "status": "queued",
+      "title": "Walk-forward lever sweep of trend_donchian_1h: next lever exit (generated, weekly)",
+      "unit": "RQ-20261106-024",
+      "verdict": null
      }
     ]
    }
@@ -10852,14 +11035,14 @@
       "verdict": "fail"
      },
      {
-      "graded_at": "2026-11-05",
+      "graded_at": "2026-11-06",
       "status": "queued",
       "title": "M20 exit-lever sweep: trend_donchian_ada_4h (generated, monthly)",
       "unit": "RQ-20261031-004",
       "verdict": "pass"
      },
      {
-      "graded_at": "2026-11-05",
+      "graded_at": "2026-11-06",
       "status": "queued",
       "title": "A top-volatility skip (skip entries above the trailing vol percentile) on trend_donchian_ada_4h: does VH95 or VH90 beat the declared leg net of cost over 2020-0",
       "unit": "RQ-20261031-3ef3-09",
@@ -10899,23 +11082,30 @@
       "title": "Reverse structure-exit test on trend_donchian_ada_4h (declares structure_exit pivot=5): does the prior exit beat the structure default, net of the full cost sta",
       "unit": "RQ-20261105-5e05-07",
       "verdict": "fail"
+     },
+     {
+      "graded_at": null,
+      "status": "queued",
+      "title": "Walk-forward lever sweep of trend_donchian_ada_4h: next lever exit (generated, weekly)",
+      "unit": "RQ-20261106-025",
+      "verdict": null
      }
     ]
    }
   },
   "trend_donchian_avax_4h::trend": {
-   "effective_n": 33,
-   "effective_n_basis": "partial: 4 return-correlation clusters over 75 configs with a series + 29 without a series counted at face value (upper bound)",
+   "effective_n": 35,
+   "effective_n_basis": "partial: 6 return-correlation clusters over 81 configs with a series + 29 without a series counted at face value (upper bound)",
    "family": "trend",
    "leg": "trend_donchian_avax_4h",
-   "n_clusters": 4,
-   "n_configs": 104,
+   "n_clusters": 6,
+   "n_configs": 110,
    "n_configs_by_source": {
-    "e5": 74,
+    "e5": 80,
     "evidence": 1,
     "m20": 29
    },
-   "n_configs_with_series": 75,
+   "n_configs_with_series": 81,
    "real_money": false,
    "tried": {
     "e5_configs_by_unit": {
@@ -10941,6 +11131,8 @@
      "RQ-20261030-41cc-21": 3,
      "RQ-20261031-7b6f-19": 3,
      "RQ-20261101-78fc-32": 4,
+     "RQ-20261105-23ca-04": 6,
+     "RQ-20261105-23ca-05": 6,
      "RQ-20261105-5e05-08": 2
     },
     "evidence_records": [
@@ -11172,7 +11364,7 @@
       "verdict": "fail"
      },
      {
-      "graded_at": "2026-11-05",
+      "graded_at": "2026-11-06",
       "status": "queued",
       "title": "M20 exit-lever sweep: trend_donchian_avax_4h (generated, monthly)",
       "unit": "RQ-20261031-005",
@@ -11219,6 +11411,13 @@
       "title": "Reverse structure-exit test on trend_donchian_avax_4h (declares structure_exit pivot=5): does the prior exit beat the structure default, net of the full cost st",
       "unit": "RQ-20261105-5e05-08",
       "verdict": "fail"
+     },
+     {
+      "graded_at": null,
+      "status": "queued",
+      "title": "Walk-forward lever sweep of trend_donchian_avax_4h: next lever entry (generated, weekly)",
+      "unit": "RQ-20261106-026",
+      "verdict": null
      }
     ]
    }
@@ -11387,7 +11586,7 @@
       "verdict": "indeterminate"
      },
      {
-      "graded_at": "2026-11-05",
+      "graded_at": "2026-11-06",
       "status": "queued",
       "title": "M20 exit-lever sweep: trend_donchian_eth (generated, monthly)",
       "unit": "RQ-20261031-006",
@@ -11420,24 +11619,31 @@
       "title": "Reverse structure-exit test on trend_donchian_eth (declares structure_exit pivot=5): does the prior exit beat the structure default, net of the full cost stack?",
       "unit": "RQ-20261105-5e05-05",
       "verdict": "pass"
+     },
+     {
+      "graded_at": null,
+      "status": "queued",
+      "title": "Walk-forward lever sweep of trend_donchian_eth: next lever entry (generated, weekly)",
+      "unit": "RQ-20261106-027",
+      "verdict": null
      }
     ]
    }
   },
   "trend_donchian_eth_4h::trend": {
-   "effective_n": 47,
-   "effective_n_basis": "partial: 17 return-correlation clusters over 164 configs with a series + 30 without a series counted at face value (upper bound)",
+   "effective_n": 48,
+   "effective_n_basis": "partial: 18 return-correlation clusters over 166 configs with a series + 30 without a series counted at face value (upper bound)",
    "family": "trend",
    "leg": "trend_donchian_eth_4h",
-   "n_clusters": 17,
-   "n_configs": 194,
+   "n_clusters": 18,
+   "n_configs": 196,
    "n_configs_by_source": {
-    "e5": 165,
+    "e5": 167,
     "evidence": 1,
     "m20": 28
    },
-   "n_configs_with_series": 164,
-   "real_money": true,
+   "n_configs_with_series": 166,
+   "real_money": false,
    "tried": {
     "e5_configs_by_unit": {
      "RQ-20261013-407c-12": 4,
@@ -11487,7 +11693,8 @@
      "RQ-20261101-e5b1-16": 3,
      "RQ-20261104-c6f1-04": 4,
      "RQ-20261105-23ca-01": 2,
-     "RQ-20261105-23ca-02": 2
+     "RQ-20261105-23ca-02": 2,
+     "RQ-20261105-23ca-03": 2
     },
     "evidence_records": [
      "trend_donchian_eth_4h"
@@ -11529,7 +11736,7 @@
       "verdict": "indeterminate"
      },
      {
-      "graded_at": "2026-11-05",
+      "graded_at": "2026-11-06",
       "status": "queued",
       "title": "M20 exit-lever sweep: trend_donchian_eth_4h (generated, monthly)",
       "unit": "RQ-20261006-003",
@@ -12131,24 +12338,38 @@
       "verdict": "indeterminate"
      },
      {
-      "graded_at": null,
-      "status": "queued",
+      "graded_at": "2026-11-06",
+      "status": "done",
       "title": "ADX-max AX50 SYMBOL-HOLDOUT confirmation: trend_donchian_eth_4h config-exact twin on BNBUSDT (a symbol RQ-20261027-3e41-04 never ran), history 2020-07-01..2026-",
       "unit": "RQ-20261105-23ca-01",
-      "verdict": null
+      "verdict": "pass"
      },
      {
-      "graded_at": null,
-      "status": "queued",
+      "graded_at": "2026-11-06",
+      "status": "done",
       "title": "ADX-max AX50 SYMBOL-HOLDOUT confirmation: trend_donchian_eth_4h config-exact twin on LINKUSDT (a symbol RQ-20261027-3e41-04 never ran), history 2020-07-01..2026",
       "unit": "RQ-20261105-23ca-02",
+      "verdict": "fail"
+     },
+     {
+      "graded_at": "2026-11-06",
+      "status": "done",
+      "title": "ADX-max AX50 SYMBOL-HOLDOUT confirmation: trend_donchian_eth_4h config-exact twin on DOGEUSDT (a symbol RQ-20261027-3e41-04 never ran), history 2020-07-01..2026",
+      "unit": "RQ-20261105-23ca-03",
+      "verdict": "fail"
+     },
+     {
+      "graded_at": null,
+      "status": "queued",
+      "title": "Walk-forward lever sweep of trend_donchian_eth_4h: next lever exit (generated, weekly)",
+      "unit": "RQ-20261106-028",
       "verdict": null
      },
      {
       "graded_at": null,
       "status": "queued",
-      "title": "ADX-max AX50 SYMBOL-HOLDOUT confirmation: trend_donchian_eth_4h config-exact twin on DOGEUSDT (a symbol RQ-20261027-3e41-04 never ran), history 2020-07-01..2026",
-      "unit": "RQ-20261105-23ca-03",
+      "title": "HOLDOUT RE-RUN at the CURRENT config (soak-backlog review 2026-11-06): does trend_donchian_eth_4h's configuration, SELECTED on the earliest ~75% of its history,",
+      "unit": "RQ-20261106-5b7a-02",
       "verdict": null
      }
     ]
@@ -12279,7 +12500,7 @@
       "verdict": "indeterminate"
      },
      {
-      "graded_at": "2026-11-05",
+      "graded_at": "2026-11-06",
       "status": "queued",
       "title": "M20 exit-lever sweep: mgc_pullback_1d (generated, monthly)",
       "unit": "RQ-20261004-656",
@@ -12434,7 +12655,7 @@
       "verdict": "pass"
      },
      {
-      "graded_at": "2026-11-05",
+      "graded_at": "2026-11-06",
       "status": "queued",
       "title": "M20 exit-lever sweep: trend_donchian_eth_prop (generated, monthly)",
       "unit": "RQ-20261009-002",
@@ -13104,6 +13325,13 @@
       "title": "Breakout prop fit: trend_donchian_eth_prop across the sizing arms under RULE-B6 V2 (generated)",
       "unit": "RQ-20261105-016",
       "verdict": "indeterminate"
+     },
+     {
+      "graded_at": null,
+      "status": "queued",
+      "title": "Walk-forward lever sweep of trend_donchian_eth_prop: next lever exit (generated, weekly)",
+      "unit": "RQ-20261106-029",
+      "verdict": null
      }
     ]
    }
@@ -13274,7 +13502,7 @@
       "verdict": "pass"
      },
      {
-      "graded_at": "2026-11-05",
+      "graded_at": "2026-11-06",
       "status": "queued",
       "title": "M20 exit-lever sweep: trend_donchian_sol (generated, monthly)",
       "unit": "RQ-20261031-007",
@@ -13295,7 +13523,7 @@
       "verdict": "pass"
      },
      {
-      "graded_at": "2026-11-05",
+      "graded_at": "2026-11-06",
       "status": "queued",
       "title": "ITERATION 1 of trend_donchian_sol (fail): On trend_donchian_sol over 2020-07-01..2026-10-15 23:59, does any of AD25 (adx_min=25), DC40 (donchian=40), DC55 (donc",
       "unit": "RQ-20261101-78fc-30",
@@ -13314,6 +13542,13 @@
       "title": "Reverse structure-exit test on trend_donchian_sol (declares structure_exit pivot=5): does the prior exit beat the structure default, net of the full cost stack?",
       "unit": "RQ-20261105-5e05-04",
       "verdict": "pass"
+     },
+     {
+      "graded_at": null,
+      "status": "queued",
+      "title": "Walk-forward lever sweep of trend_donchian_sol: next lever entry (generated, weekly)",
+      "unit": "RQ-20261106-030",
+      "verdict": null
      }
     ]
    }
@@ -13710,7 +13945,7 @@
       "verdict": "indeterminate"
      },
      {
-      "graded_at": "2026-11-05",
+      "graded_at": "2026-11-06",
       "status": "queued",
       "title": "M20 exit-lever sweep: trend_donchian_sol_4h (generated, monthly)",
       "unit": "RQ-20261031-015",
@@ -13785,6 +14020,13 @@
       "title": "FAITHFUL Stage-0 re-measure of trend_donchian_sol_4h WITH its structure_exit \"pivot=5\" modelled: does it still clear RULE-D1 net of the full cost stack?",
       "unit": "RQ-20261105-d256-03",
       "verdict": null
+     },
+     {
+      "graded_at": null,
+      "status": "queued",
+      "title": "Walk-forward lever sweep of trend_donchian_sol_4h: next lever entry (generated, weekly)",
+      "unit": "RQ-20261106-031",
+      "verdict": null
      }
     ]
    }
@@ -13802,7 +14044,7 @@
     "m20": 28
    },
    "n_configs_with_series": 135,
-   "real_money": true,
+   "real_money": false,
    "tried": {
     "e5_configs_by_unit": {
      "RQ-20261015-1bf3-06": 1,
@@ -13907,7 +14149,7 @@
       "verdict": null
      },
      {
-      "graded_at": "2026-11-05",
+      "graded_at": "2026-11-06",
       "status": "queued",
       "title": "M20 exit-lever sweep: mhg_pullback_1d (generated, monthly)",
       "unit": "RQ-20261004-657",
@@ -13991,7 +14233,7 @@
       "verdict": "pass"
      },
      {
-      "graded_at": "2026-11-05",
+      "graded_at": "2026-11-06",
       "status": "queued",
       "title": "M20 exit-lever sweep: trend_donchian_sol_prop (generated, monthly)",
       "unit": "RQ-20261009-004",
@@ -14465,6 +14707,13 @@
       "title": "Breakout prop fit: trend_donchian_sol_prop across the sizing arms under RULE-B6 V2 (generated)",
       "unit": "RQ-20261105-018",
       "verdict": "indeterminate"
+     },
+     {
+      "graded_at": null,
+      "status": "queued",
+      "title": "Walk-forward lever sweep of trend_donchian_sol_prop: next lever entry (generated, weekly)",
+      "unit": "RQ-20261106-032",
+      "verdict": null
      }
     ]
    }
@@ -14482,7 +14731,7 @@
     "m20": 45
    },
    "n_configs_with_series": 140,
-   "real_money": true,
+   "real_money": false,
    "tried": {
     "e5_configs_by_unit": {
      "RQ-20261014-470a-06": 8,
@@ -14620,7 +14869,7 @@
       "verdict": "no_action_warranted"
      },
      {
-      "graded_at": "2026-11-05",
+      "graded_at": "2026-11-06",
       "status": "queued",
       "title": "M20 exit-lever sweep: trend_donchian_xrp_4h (generated, monthly)",
       "unit": "RQ-20261009-005",
@@ -15033,7 +15282,7 @@
       "verdict": "fail"
      },
      {
-      "graded_at": "2026-11-05",
+      "graded_at": "2026-11-06",
       "status": "queued",
       "title": "CONFIRMATION of a4e7-01 on a DISJOINT earlier window: trend_donchian_xrp_4h at the prop stack, V3 on breakout_2 / tradeify_1 / velotrade_1, 2020-10-01..2023-10-",
       "unit": "RQ-20261101-e5b1-08",
@@ -15045,6 +15294,13 @@
       "title": "TP doctrine, real money, HELD-OUT: does a predictive take-profit (M05, M10, M15) selected on the earlier span of trend_donchian_xrp_4h's history beat its curren",
       "unit": "RQ-20261104-c6f1-03",
       "verdict": "fail"
+     },
+     {
+      "graded_at": null,
+      "status": "queued",
+      "title": "Walk-forward lever sweep of trend_donchian_xrp_4h: next lever entry (generated, weekly)",
+      "unit": "RQ-20261106-033",
+      "verdict": null
      },
      {
       "status": "not_in_queue_dir",
@@ -15081,6 +15337,20 @@
       "title": "ITERATION 1 of trend_donchian_xrp_adx25 (pass_unconfirmed): Does trend_donchian_xrp_adx25 as declared, selected on 2020-07-01..(holdout boundary), stay net-posi",
       "unit": "RQ-20261101-78fc-28",
       "verdict": "pass"
+     },
+     {
+      "graded_at": null,
+      "status": "queued",
+      "title": "Walk-forward lever sweep of trend_donchian_xrp_adx25: next lever entry (generated, weekly)",
+      "unit": "RQ-20261106-034",
+      "verdict": null
+     },
+     {
+      "graded_at": null,
+      "status": "queued",
+      "title": "HOLDOUT RE-RUN at the CURRENT config (soak-backlog review 2026-11-06): does trend_donchian_xrp_adx25's configuration, SELECTED on the earliest ~75% of its histo",
+      "unit": "RQ-20261106-5b7a-03",
+      "verdict": null
      }
     ]
    }
@@ -15182,7 +15452,7 @@
       "verdict": "fail"
      },
      {
-      "graded_at": "2026-11-05",
+      "graded_at": "2026-11-06",
       "status": "queued",
       "title": "M20 exit-lever sweep: uso_trend_1h (generated, monthly)",
       "unit": "RQ-20261031-019",
@@ -15194,6 +15464,13 @@
       "title": "ITERATION 1 of uso_trend_1h (pass_unconfirmed): Does uso_trend_1h as declared, selected on 2018-06-01..(holdout boundary), stay net-positive once on the held-ba",
       "unit": "RQ-20261101-78fc-19",
       "verdict": "pass"
+     },
+     {
+      "graded_at": null,
+      "status": "queued",
+      "title": "Walk-forward lever sweep of uso_trend_1h: next lever entry (generated, weekly)",
+      "unit": "RQ-20261106-035",
+      "verdict": null
      }
     ]
    }
@@ -15211,7 +15488,7 @@
     "m20": 28
    },
    "n_configs_with_series": 193,
-   "real_money": true,
+   "real_money": false,
    "tried": {
     "e5_configs_by_unit": {
      "RQ-20261007-021": 6,
@@ -15376,7 +15653,7 @@
       "verdict": "indeterminate"
      },
      {
-      "graded_at": "2026-11-05",
+      "graded_at": "2026-11-06",
       "status": "queued",
       "title": "M20 exit-lever sweep: xrp_pullback_2h (generated, monthly)",
       "unit": "RQ-20261010-005",
@@ -15467,7 +15744,7 @@
       "verdict": "fail"
      },
      {
-      "graded_at": "2026-11-05",
+      "graded_at": "2026-11-06",
       "status": "queued",
       "title": "xrp_pullback_2h live-vs-backtest divergence (stage A): does BELOW_BACKTEST persist on bybit_2 realMoney as n grows? (-8.84R over 16, 3.4th pct on 2026-10-15)",
       "unit": "RQ-20261015-8bbc-01",
@@ -15887,7 +16164,7 @@
       "verdict": "fail"
      },
      {
-      "graded_at": "2026-11-05",
+      "graded_at": "2026-11-06",
       "status": "queued",
       "title": "CONFIRMATION of a4e7-02 on a DISJOINT earlier window: xrp_pullback_2h at the prop stack, V3 on breakout_2 / tradeify_1 / velotrade_1, 2020-10-01..2023-10-12",
       "unit": "RQ-20261101-e5b1-09",
@@ -15899,6 +16176,13 @@
       "title": "TP doctrine, real money, HELD-OUT: does a predictive take-profit (X31, X305, X251) selected on the earlier span of xrp_pullback_2h's history beat its current ex",
       "unit": "RQ-20261104-c6f1-02",
       "verdict": "pass"
+     },
+     {
+      "graded_at": null,
+      "status": "queued",
+      "title": "Walk-forward lever sweep of xrp_pullback_2h: next lever exit (generated, weekly)",
+      "unit": "RQ-20261106-036",
+      "verdict": null
      }
     ]
    }
@@ -15922,41 +16206,14 @@
  "summary": {
   "evidence_records": 57,
   "real_money_legs": [
-   "xrp_pullback_2h",
-   "trend_donchian_eth_4h",
-   "trend_donchian_xrp_4h",
-   "ada_pullback_2h",
-   "trend_donchian_sol_prop",
    "ml_entry",
-   "iaum_pullback_1d"
+   "tqqq_trend_long_1d"
   ],
   "stage0_pass": 29,
   "stage0_pass_bonferroni_haircut_gt_0": 3,
   "stage0_pass_clearing_0_95_at_n1": 10,
   "stage0_pass_surviving_dsr_and_bhy_haircut": 0,
   "stage0_pass_table": [
-   {
-    "N_used": 41,
-    "dsr": 0.375451,
-    "haircut_bhy_expectancy_r": 0.0,
-    "n_configs": 276,
-    "net_r_oos": 31.4579,
-    "psr_n1": 0.980914,
-    "real_money": true,
-    "record": "ada_pullback_2h",
-    "survives": false
-   },
-   {
-    "N_used": 35,
-    "dsr": 0.393656,
-    "haircut_bhy_expectancy_r": 0.0,
-    "n_configs": 62,
-    "net_r_oos": 10.6758,
-    "psr_n1": 0.982311,
-    "real_money": true,
-    "record": "iaum_pullback_1d",
-    "survives": false
-   },
    {
     "N_used": 1,
     "dsr": null,
@@ -15969,47 +16226,25 @@
     "survives": null
    },
    {
-    "N_used": 47,
-    "dsr": 0.289308,
+    "N_used": 28,
+    "dsr": 0.538886,
     "haircut_bhy_expectancy_r": 0.0,
-    "n_configs": 194,
-    "net_r_oos": 44.6385,
-    "psr_n1": 0.977413,
+    "n_configs": 36,
+    "net_r_oos": 24.762,
+    "psr_n1": 0.982469,
     "real_money": true,
-    "record": "trend_donchian_eth_4h",
+    "record": "tqqq_trend_long_1d",
     "survives": false
    },
    {
-    "N_used": 36,
-    "dsr": 0.355275,
+    "N_used": 41,
+    "dsr": 0.25428,
     "haircut_bhy_expectancy_r": 0.0,
-    "n_configs": 163,
-    "net_r_oos": 48.0322,
-    "psr_n1": 0.971263,
-    "real_money": true,
-    "record": "trend_donchian_sol_prop",
-    "survives": false
-   },
-   {
-    "N_used": 52,
-    "dsr": 0.061771,
-    "haircut_bhy_expectancy_r": 0.0,
-    "n_configs": 185,
-    "net_r_oos": 7.712,
-    "psr_n1": 0.814869,
-    "real_money": true,
-    "record": "trend_donchian_xrp_4h",
-    "survives": false
-   },
-   {
-    "N_used": 40,
-    "dsr": 0.045502,
-    "haircut_bhy_expectancy_r": 0.0,
-    "n_configs": 221,
-    "net_r_oos": 6.5558,
-    "psr_n1": 0.717292,
-    "real_money": true,
-    "record": "xrp_pullback_2h",
+    "n_configs": 276,
+    "net_r_oos": 27.0889,
+    "psr_n1": 0.956848,
+    "real_money": false,
+    "record": "ada_pullback_2h",
     "survives": false
    },
    {
@@ -16046,10 +16281,21 @@
     "survives": false
    },
    {
+    "N_used": 35,
+    "dsr": 0.393656,
+    "haircut_bhy_expectancy_r": 0.0,
+    "n_configs": 62,
+    "net_r_oos": 10.6758,
+    "psr_n1": 0.982311,
+    "real_money": false,
+    "record": "iaum_pullback_1d",
+    "survives": false
+   },
+   {
     "N_used": 58,
     "dsr": 0.012075,
     "haircut_bhy_expectancy_r": 0.0,
-    "n_configs": 84,
+    "n_configs": 89,
     "net_r_oos": 1.0316,
     "psr_n1": 0.59285,
     "real_money": false,
@@ -16057,10 +16303,10 @@
     "survives": false
    },
    {
-    "N_used": 27,
-    "dsr": 0.041883,
+    "N_used": 28,
+    "dsr": 0.040417,
     "haircut_bhy_expectancy_r": 0.0,
-    "n_configs": 33,
+    "n_configs": 36,
     "net_r_oos": 2.1071,
     "psr_n1": 0.688457,
     "real_money": false,
@@ -16068,10 +16314,10 @@
     "survives": false
    },
    {
-    "N_used": 30,
-    "dsr": 0.087714,
+    "N_used": 31,
+    "dsr": 0.085477,
     "haircut_bhy_expectancy_r": 0.0,
-    "n_configs": 30,
+    "n_configs": 33,
     "net_r_oos": 3.8725,
     "psr_n1": 0.795409,
     "real_money": false,
@@ -16082,7 +16328,7 @@
     "N_used": 16,
     "dsr": 0.2641,
     "haircut_bhy_expectancy_r": 0.0,
-    "n_configs": 17,
+    "n_configs": 20,
     "net_r_oos": 25.612,
     "psr_n1": 0.916622,
     "real_money": false,
@@ -16090,10 +16336,10 @@
     "survives": false
    },
    {
-    "N_used": 34,
-    "dsr": 0.0514,
+    "N_used": 35,
+    "dsr": 0.050056,
     "haircut_bhy_expectancy_r": 0.0,
-    "n_configs": 34,
+    "n_configs": 37,
     "net_r_oos": 4.0986,
     "psr_n1": 0.76008,
     "real_money": false,
@@ -16101,10 +16347,10 @@
     "survives": false
    },
    {
-    "N_used": 34,
-    "dsr": 0.103933,
+    "N_used": 35,
+    "dsr": 0.101867,
     "haircut_bhy_expectancy_r": 0.0,
-    "n_configs": 34,
+    "n_configs": 37,
     "net_r_oos": 2.9844,
     "psr_n1": 0.797751,
     "real_money": false,
@@ -16123,10 +16369,10 @@
     "survives": false
    },
    {
-    "N_used": 23,
-    "dsr": 0.137811,
+    "N_used": 24,
+    "dsr": 0.133541,
     "haircut_bhy_expectancy_r": 0.0,
-    "n_configs": 28,
+    "n_configs": 31,
     "net_r_oos": 5.2971,
     "psr_n1": 0.845603,
     "real_money": false,
@@ -16134,10 +16380,10 @@
     "survives": false
    },
    {
-    "N_used": 41,
-    "dsr": 0.040177,
+    "N_used": 43,
+    "dsr": 0.03857,
     "haircut_bhy_expectancy_r": 0.0,
-    "n_configs": 47,
+    "n_configs": 50,
     "net_r_oos": 4.6442,
     "psr_n1": 0.682148,
     "real_money": false,
@@ -16145,10 +16391,10 @@
     "survives": false
    },
    {
-    "N_used": 44,
-    "dsr": 0.045072,
+    "N_used": 46,
+    "dsr": 0.043384,
     "haircut_bhy_expectancy_r": 0.0,
-    "n_configs": 91,
+    "n_configs": 94,
     "net_r_oos": 3.0026,
     "psr_n1": 0.736301,
     "real_money": false,
@@ -16159,7 +16405,7 @@
     "N_used": 30,
     "dsr": 0.58084,
     "haircut_bhy_expectancy_r": 0.0,
-    "n_configs": 35,
+    "n_configs": 40,
     "net_r_oos": 53.1431,
     "psr_n1": 0.997109,
     "real_money": false,
@@ -16170,7 +16416,7 @@
     "N_used": 37,
     "dsr": 0.108933,
     "haircut_bhy_expectancy_r": 0.0,
-    "n_configs": 120,
+    "n_configs": 123,
     "net_r_oos": 6.9287,
     "psr_n1": 0.857627,
     "real_money": false,
@@ -16181,7 +16427,7 @@
     "N_used": 35,
     "dsr": 0.043355,
     "haircut_bhy_expectancy_r": 0.0,
-    "n_configs": 46,
+    "n_configs": 49,
     "net_r_oos": 2.3816,
     "psr_n1": 0.681933,
     "real_money": false,
@@ -16200,17 +16446,6 @@
     "survives": false
    },
    {
-    "N_used": 28,
-    "dsr": 0.60126,
-    "haircut_bhy_expectancy_r": 0.0,
-    "n_configs": 36,
-    "net_r_oos": 26.2831,
-    "psr_n1": 0.988572,
-    "real_money": false,
-    "record": "tqqq_trend_long_1d",
-    "survives": false
-   },
-   {
     "N_used": 36,
     "dsr": 0.031181,
     "haircut_bhy_expectancy_r": 0.0,
@@ -16222,6 +16457,17 @@
     "survives": false
    },
    {
+    "N_used": 48,
+    "dsr": 0.286162,
+    "haircut_bhy_expectancy_r": 0.0,
+    "n_configs": 196,
+    "net_r_oos": 44.6385,
+    "psr_n1": 0.977413,
+    "real_money": false,
+    "record": "trend_donchian_eth_4h",
+    "survives": false
+   },
+   {
     "N_used": 35,
     "dsr": 0.347809,
     "haircut_bhy_expectancy_r": 0.0,
@@ -16230,6 +16476,28 @@
     "psr_n1": 0.973515,
     "real_money": false,
     "record": "trend_donchian_sol_4h",
+    "survives": false
+   },
+   {
+    "N_used": 36,
+    "dsr": 0.339969,
+    "haircut_bhy_expectancy_r": 0.0,
+    "n_configs": 163,
+    "net_r_oos": 52.3713,
+    "psr_n1": 0.968002,
+    "real_money": false,
+    "record": "trend_donchian_sol_prop",
+    "survives": false
+   },
+   {
+    "N_used": 52,
+    "dsr": 0.022689,
+    "haircut_bhy_expectancy_r": 0.0,
+    "n_configs": 185,
+    "net_r_oos": 3.4812,
+    "psr_n1": 0.639714,
+    "real_money": false,
+    "record": "trend_donchian_xrp_4h",
     "survives": false
    },
    {
@@ -16252,6 +16520,17 @@
     "psr_n1": 0.985802,
     "real_money": false,
     "record": "uso_trend_1h",
+    "survives": false
+   },
+   {
+    "N_used": 40,
+    "dsr": 0.045502,
+    "haircut_bhy_expectancy_r": 0.0,
+    "n_configs": 221,
+    "net_r_oos": 6.5558,
+    "psr_n1": 0.717292,
+    "real_money": false,
+    "record": "xrp_pullback_2h",
     "survives": false
    }
   ],

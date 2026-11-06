@@ -111,7 +111,9 @@ def test_prop_is_its_own_class_not_folded_into_real_money_or_paper(monkeypatch) 
     # reads `real_money` -- never `prop`, which would understate it. (eth_prop was the prop anchor until 2026-11-05; see above.)
     # MOVED AGAIN 2026-11-06 (PROD-LEGS-DSR-DECISION, operator "Re-measure, then move (Rec.)"): sol_prop failed DSR > 0.95
     # AND BHY-haircut > 0 and left bybit_2 + bybit_portfolio for bybit_1 (testing), so its highest route is now `paper`.
-    assert ROLLUP._leg_funding("trend_donchian_sol_prop", routing) == "paper"
+    # BACK 2026-11-06 ~19:35Z (operator option 3 "Holdout governs; promote"; supersedes the DSR move above): sol_prop is on
+    # bybit_2 + bybit_portfolio again (holdout-confirmed config, DSR probation), so its highest route is `real_money`.
+    assert ROLLUP._leg_funding("trend_donchian_sol_prop", routing) == "real_money"
     # Since 2026-10-05 (SOAK-GATE1, Stage-0 FAIL) bybit_1 no longer declares it,
     # so it reads `unresolved`; it must still never read `prop` again.
     assert ROLLUP._leg_funding("eth_pullback_prop_2h", routing) != "prop", (

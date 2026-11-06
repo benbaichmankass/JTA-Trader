@@ -114,6 +114,7 @@ caveats for each pull are in § "Reference" below.
 | **C10** | **Research pipeline**: queue health, unread results, dispositions | the latest `comms/research/ops/` record (research-ops runs 4×/day) + `python3 scripts/research/research_disposition.py --unread-only` | `superseded_unread` is not a finding; `corpus_unreadable` is `could_not_look` |
 | **C11** | **Books and benchmarks**: paper-book tracker append, real-money allocation benchmark, prop trade quality | `scripts/ops/paper_book_tracker.py`, § Real-money allocation benchmark, `scripts/prop/trade_quality_review.py` | as each section states |
 | **C12** | **Backlog gate**: every open performance/research pipeline item re-checked | § Draining the backlog | `count_untriaged` MUST be 0 |
+| **C13** | **DSR probation** (standing metric, never a gate): every production leg with DSR ≤ 0.95 and its live iteration unit | `python3 scripts/research/dsr_probation.py` (DSR from `comms/research/trial_ledger.json`; refresh with `scripts/research/trial_ledger.py`) | a probation leg with `NO LIVE UNIT` is an iteration orphan (author one); a `not_in_ledger` / `not_computed` leg is `could_not_look`, never "passing". DSR is review-only: it never proposes a demotion by itself |
 
 A check that needs a tool that does not exist is listed with `could_not_look: no instrument` and the
 row that builds it. Do not hand-roll a cruder substitute (`docs/research/RESEARCH-CAPABILITY-INDEX.md`

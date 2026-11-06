@@ -6,6 +6,24 @@
 # this guard must remain "route the work to a session", because that is the
 # behaviour wanted.
 exceptions:
+  - id: MGR-20261106-OPPLAN-HOLDOUT-RULE
+    status: active
+    expires: "2026-11-08"
+    paths:
+      - "docs/plans/OPERATING-PLAN-2026-09-21.md"
+      - "comms/mandate_evidence/account_snapshot/bybit_2.json"
+      - "docs/claude/work/manager-scope-exception.yaml"
+    reason: >-
+      OPERATOR DECISION, 2026-11-06 ~19:35Z, manager session
+      session_01AFoLuJk1UWVx895RmLTidH, popup verbatim "3, but we need to use
+      DSR as a metric ongoing performance review and iteration - non-dsr
+      passing legs can trade live, but are sort of on probation ...". The lane
+      that built PR #23935 (session_01AFoLuLc1pJxsUwY7JeXuWW) was refused by
+      the auto-mode classifier on writing this binding rule, so the manager,
+      who received the answer directly, writes exactly the OPERATING-PLAN
+      section 2 rule text and the bybit_2 affordability snapshot (needs the
+      manager's diag token; no balance committed). Written in an operator
+      auto-off window. It covers nothing else.
   - id: MGR-20261106-HOOK-BOARDPOST-SP500
     status: active
     expires: "2026-11-08"

@@ -113,6 +113,17 @@ in-trade form is `RULE-AM-RISK-ADJUSTED-V1`. Point at it; never restate it.
             declared window.
 ```
 
+### The HOLDOUT governs real money; DSR is a probation metric (operator, 2026-11-06, binding)
+
+Operator, 2026-11-06 ~19:35Z (Manager Session 2026-11-06a, popup "Holdout governs; promote" after the holdout vs DSR trade-off was explained), verbatim: *"3, but we need to use DSR as a metric ongoing performance review and iteration - non-dsr passing legs can trade live, but are sort of on probation with the goal of iterating u til we have a DSR proof version of the strategy/ml. The legs demotes today should stay in the iterative loop so we can rebase them, but don't need to pass DSR to go back on the roster"*.
+
+1. **The bar for real money is the holdout pass**: the chosen configuration clears its registered rule on held-out data, net of the full cost stack, in a committed evidence record (fee-only harnesses stay excluded).
+2. **DSR (deflated Sharpe) is reported, never refused on**: `mandate_resolver` shows it on every S1->S2 decision and no guard or resolver clause gates promotion on it.
+3. **A live leg with DSR below 0.95 is on PROBATION**: it keeps a live iteration unit whose goal is a DSR-proof version, and the performance review (C13) and ML review (C10) list every probation leg with its unit (`scripts/research/dsr_probation.py`).
+4. **This supersedes PROD-LEGS-DSR-DECISION (2026-11-06 ~00:30Z) as a demotion rule**: a leg is not removed from real money for failing DSR alone; demotion stays on the mirror's net-of-cost window and the live monitors.
+
+Gates this adds or changes: removes DSR as a promotion gate (operator decision above); adds none.
+
 ### Three strategy statuses: testing, production, inactive (operator, 2026-10-28, binding; merged 97dde7e5 #21038)
 
 <!-- STRATEGY-STATUS-CANONICAL: the ONE statement of the status model. Other docs point here. -->

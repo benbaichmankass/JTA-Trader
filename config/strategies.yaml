@@ -1313,7 +1313,7 @@ strategies:
     donchian: 20
     atr_period: 14
     atr_stop_mult: 2.5
-    trail_mult: 3.5          # swap-robust (vs live 5.0) — shorter holds, less swap drag.
+    trail_mult: 4.5          # Tier-3 2026-11-06 (operator popup "Yes, rebuild and promote (Recommended)", via Manager 2026-11-06a): holdout-CONFIRMED arm C5 of RQ-20261016-077e-05 (n_h 96, +5.28 R). Was 3.5 (swap-robust). ROLLBACK: 3.5
     tp_r: 6.0               # ⚠️ NOT a "6R cap". The OPERATIVE target is
                             # min(cap_r, 6.0), where cap_r = 0.099*entry/risk --
                             # the _TP_SENTINEL_CAP_PCT clamp in trend_donchian.py
@@ -1643,8 +1643,8 @@ strategies:
       - XRPUSDT
     donchian: 20
     atr_period: 14
-    atr_stop_mult: 2  # M20 e35 re-check 2026-08-29: cell tp3_sm2 (path_b_wf_pass, wf 5/6, d_net_r +5.2067); was 2.5
-    trail_mult: 5.0
+    atr_stop_mult: 1.5  # Tier-3 2026-11-06 (operator popup "Yes, rebuild and promote (Recommended)", via Manager 2026-11-06a): holdout-CONFIRMED arm C1 of RQ-20261016-077e-03 (n_h 25, +4.13 R); evidence comms/strategy_evidence/trend_donchian_xrp_4h.json. Was 2 (M20 e35 cell tp3_sm2). ROLLBACK: 2
+    trail_mult: 4.0  # Tier-3 2026-11-06, holdout C1 (see atr_stop_mult). ROLLBACK: 5.0
     stale_exit_bars: 8
     stale_exit_below_r: 0.0
     tp_r: 3  # M20 e35 re-check 2026-08-29: cell tp3_sm2 (path_b_wf_pass, wf 5/6, d_net_r +5.2067); was 50.0
@@ -3263,7 +3263,7 @@ strategies:
     #   net of fee 7.5 + slippage 3 bps rt + funding 1 bps/8h: B (leg as declared) n=134 +38.04 R maxDD 9.17 vs
     #   VH95 n=122 +40.19 R maxDD 8.52 (dR +2.16, dDD -0.65, folds 3/4). Record: research/results/RQ-20261018-002/.
     #   ROLLBACK: delete this line.
-    vol_skip_above_pctl: 0.95
+    # vol_skip_above_pctl: 0.95  REMOVED Tier-3 2026-11-06 (operator popup "Yes, rebuild and promote (Recommended)", via Manager 2026-11-06a): back to the holdout-CONFIRMED arm C7 of RQ-20261016-077e-04 (n_h 97, +24.08 R), which did not carry it. ROLLBACK: restore this key.
     adx_min: 28             # ADX>=28 regime gate (Tier-3, operator-approved 2026-07-20; raised from 25). Per-year OOS walk-forward: 28 wins 2024/25/26, ties 2023, ~flat 2022; lowers maxDD 4/5 yrs, halves the worst year (2025 net -7.6->-2.2, dd 13.1->7.2). Filters ADA marginal-trend fakeouts (ADX just-over-25 entries that fail). XRP stays 25 (grid showed raising it degrades). ROLLBACK: set back to 25.
     # shadow_model_ids OMITTED (symbol-aware auto-wire). Observe-only.
 
