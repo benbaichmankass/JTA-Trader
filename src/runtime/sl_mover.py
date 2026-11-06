@@ -13,7 +13,7 @@ from __future__ import annotations
 
 import json
 from datetime import datetime, timezone
-from typing import Any, Dict, Optional
+from typing import Any
 
 #: Cap on ``meta.sl_moves`` so a trailing package cannot grow its meta without bound.
 MAX_SL_MOVES = 20
@@ -23,7 +23,7 @@ SRC_STRATEGY = "strategy_monitor"
 SRC_LIVE_REVIEW = "live_review_apply"
 
 
-def mover_from_verdict(verdict: Any, strategy: Optional[str] = None) -> Dict[str, Any]:
+def mover_from_verdict(verdict: Any, strategy: str | None = None) -> dict[str, Any]:
     """``{"source", "detail"}`` naming what proposed a monitor verdict's stop.
 
     A verdict carrying ``structure_move`` came from the structure exit (its ``reason`` and level are
@@ -42,7 +42,7 @@ def mover_from_verdict(verdict: Any, strategy: Optional[str] = None) -> Dict[str
     return {"source": SRC_STRATEGY, "detail": str(v.get("reason") or v.get("sl_reason") or strategy or "unspecified")}
 
 
-def _meta_dict(meta: Any) -> Dict[str, Any]:
+def _meta_dict(meta: Any) -> dict[str, Any]:
     if isinstance(meta, dict):
         return dict(meta)
     if isinstance(meta, str) and meta.strip():
@@ -55,7 +55,7 @@ def _meta_dict(meta: Any) -> Dict[str, Any]:
 
 
 def stamp_sl_move(meta: Any, old_sl: Any, new_sl: Any, source: str, detail: str = "",
-                  now: Optional[datetime] = None) -> Dict[str, Any]:
+                  now: datetime | None = None) -> dict[str, Any]:
     """The package ``meta`` with this stop move recorded (``last_sl_move`` + capped ``sl_moves``).
 
     ``last_sl_move.ts`` is also what the venue-divergence detector uses to know the package stop moved
@@ -71,7 +71,7 @@ def stamp_sl_move(meta: Any, old_sl: Any, new_sl: Any, source: str, detail: str 
     return out
 
 
-def last_sl_move_ts(meta: Any) -> Optional[datetime]:
+def last_sl_move_ts(meta: Any) -> datetime | None:
     """UTC time of the newest recorded stop move, or ``None`` (no record: not "never moved")."""
     rec = _meta_dict(meta).get("last_sl_move")
     if not isinstance(rec, dict):

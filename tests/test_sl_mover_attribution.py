@@ -84,6 +84,7 @@ def test_read_venue_context_carries_the_stamped_move_time(tmp_path):
 def test_order_monitor_modify_stamps_the_mover_on_the_package_write(monkeypatch):
     """The 2026-11-06 ADA/SOL shape: a structure_exit swing_ratchet verdict. The package row's meta must name it."""
     from unittest.mock import MagicMock
+
     from src.runtime import order_monitor as om
     monkeypatch.setattr(om, "_send_modify_to_exchange", lambda leg, **kw: {"ok": True, "exchange_response": {}})
     monkeypatch.setattr(om, "_package_open_legs", lambda db, pkg: ([{"id": 6937, "account_id": "bybit_1",
