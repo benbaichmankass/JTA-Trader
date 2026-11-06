@@ -1,0 +1,595 @@
+{
+  "leg": "ict_scalp_sol_5m",
+  "label": "no_reachable_lever_beats_removed",
+  "grade": {
+    "verdict": "fail",
+    "label": "no_reachable_lever_beats_removed",
+    "baseline": "A",
+    "candidates": {
+      "displacement_atr_mult_lo": {
+        "delta_net_r": 0.0,
+        "delta_max_drawdown_r": 0.0,
+        "fold_wins": 0,
+        "passes": false
+      },
+      "displacement_atr_mult_hi": {
+        "delta_net_r": 0.0,
+        "delta_max_drawdown_r": 0.0,
+        "fold_wins": 0,
+        "passes": false
+      },
+      "min_displacement_body_to_range_lo": {
+        "delta_net_r": 0.0,
+        "delta_max_drawdown_r": 0.0,
+        "fold_wins": 0,
+        "passes": false
+      },
+      "min_displacement_body_to_range_hi": {
+        "delta_net_r": 0.0,
+        "delta_max_drawdown_r": 0.0,
+        "fold_wins": 0,
+        "passes": false
+      }
+    },
+    "delta_r_bar": 4.0,
+    "fold_majority": 3,
+    "n_floor": 39,
+    "control": null,
+    "why": "no candidate clears the bar: honest negative for the lever settings tested on these legs and this window -- removing those config lines is a Tier-3 proposal (not done here); it closes these CONFIGURATIONS, not the lever family (family retirement needs a review record, scripts/research/family_retirement_policy.yaml)"
+  },
+  "arms": {
+    "A": {
+      "reach_ge_6r": 0.0033,
+      "n": 916,
+      "net_r": -124.933,
+      "net_r_fee_only": -91.3111,
+      "max_drawdown_r": 129.1129,
+      "by_outcome": {
+        "sl_hit": 296,
+        "timeout": 395,
+        "tp_hit": 191,
+        "be_stop": 34
+      },
+      "mean_bars_held": 17.376,
+      "net_r_per_capital_day": -2.2607,
+      "cost_stack": {
+        "fee_bps_roundtrip": 11.0,
+        "slippage_bps_roundtrip": 3.0,
+        "funding_bps_per_window": 1.0
+      },
+      "params": null,
+      "data_start": "2021-11-02 00:00:00+00:00",
+      "data_end": "2026-11-05 23:55:00+00:00",
+      "folds": [
+        {
+          "fold": 1,
+          "start": "2021-11-02 00:00:00+00:00",
+          "end": "2023-02-02 11:58:45+00:00",
+          "trades": 226,
+          "net_r": -30.1356
+        },
+        {
+          "fold": 2,
+          "start": "2023-02-02 11:58:45+00:00",
+          "end": "2024-05-04 23:57:30+00:00",
+          "trades": 203,
+          "net_r": -35.3952
+        },
+        {
+          "fold": 3,
+          "start": "2024-05-04 23:57:30+00:00",
+          "end": "2025-08-05 11:56:15+00:00",
+          "trades": 251,
+          "net_r": -12.1267
+        },
+        {
+          "fold": 4,
+          "start": "2025-08-05 11:56:15+00:00",
+          "end": "2026-11-05 23:55:00+00:00",
+          "trades": 236,
+          "net_r": -47.2749
+        }
+      ],
+      "argv": [
+        "/opt/hostedtoolcache/Python/3.11.18/x64/bin/python3",
+        "/home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_ict_scalp.py",
+        "--data",
+        "<data>",
+        "--symbol",
+        "SOLUSDT",
+        "--timeframe",
+        "5m",
+        "--strategy-name",
+        "ict_scalp_sol_5m",
+        "--fee-bps-roundtrip",
+        "11.0",
+        "--emit-trades",
+        "comms/research/RQ-20261105-033/42191296025/arms/A__trades.jsonl",
+        "--json",
+        "comms/research/RQ-20261105-033/42191296025/arms/A__bt.json",
+        "--htf-rule",
+        "1h",
+        "--htf-ema-period",
+        "20",
+        "--sim-breakeven"
+      ]
+    },
+    "displacement_atr_mult_lo": {
+      "reach_ge_6r": 0.0033,
+      "n": 916,
+      "net_r": -124.933,
+      "net_r_fee_only": -91.3111,
+      "max_drawdown_r": 129.1129,
+      "by_outcome": {
+        "sl_hit": 296,
+        "timeout": 395,
+        "tp_hit": 191,
+        "be_stop": 34
+      },
+      "mean_bars_held": 17.376,
+      "net_r_per_capital_day": -2.2607,
+      "cost_stack": {
+        "fee_bps_roundtrip": 11.0,
+        "slippage_bps_roundtrip": 3.0,
+        "funding_bps_per_window": 1.0
+      },
+      "params": null,
+      "data_start": "2021-11-02 00:00:00+00:00",
+      "data_end": "2026-11-05 23:55:00+00:00",
+      "folds": [
+        {
+          "fold": 1,
+          "start": "2021-11-02 00:00:00+00:00",
+          "end": "2023-02-02 11:58:45+00:00",
+          "trades": 226,
+          "net_r": -30.1356
+        },
+        {
+          "fold": 2,
+          "start": "2023-02-02 11:58:45+00:00",
+          "end": "2024-05-04 23:57:30+00:00",
+          "trades": 203,
+          "net_r": -35.3952
+        },
+        {
+          "fold": 3,
+          "start": "2024-05-04 23:57:30+00:00",
+          "end": "2025-08-05 11:56:15+00:00",
+          "trades": 251,
+          "net_r": -12.1267
+        },
+        {
+          "fold": 4,
+          "start": "2025-08-05 11:56:15+00:00",
+          "end": "2026-11-05 23:55:00+00:00",
+          "trades": 236,
+          "net_r": -47.2749
+        }
+      ],
+      "argv": [
+        "/opt/hostedtoolcache/Python/3.11.18/x64/bin/python3",
+        "/home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_ict_scalp.py",
+        "--data",
+        "<data>",
+        "--symbol",
+        "SOLUSDT",
+        "--timeframe",
+        "5m",
+        "--strategy-name",
+        "ict_scalp_sol_5m",
+        "--fee-bps-roundtrip",
+        "11.0",
+        "--emit-trades",
+        "comms/research/RQ-20261105-033/42191296025/arms/displacement_atr_mult_lo__trades.jsonl",
+        "--json",
+        "comms/research/RQ-20261105-033/42191296025/arms/displacement_atr_mult_lo__bt.json",
+        "--htf-rule",
+        "1h",
+        "--htf-ema-period",
+        "20",
+        "--sim-breakeven"
+      ]
+    },
+    "displacement_atr_mult_hi": {
+      "reach_ge_6r": 0.0033,
+      "n": 916,
+      "net_r": -124.933,
+      "net_r_fee_only": -91.3111,
+      "max_drawdown_r": 129.1129,
+      "by_outcome": {
+        "sl_hit": 296,
+        "timeout": 395,
+        "tp_hit": 191,
+        "be_stop": 34
+      },
+      "mean_bars_held": 17.376,
+      "net_r_per_capital_day": -2.2607,
+      "cost_stack": {
+        "fee_bps_roundtrip": 11.0,
+        "slippage_bps_roundtrip": 3.0,
+        "funding_bps_per_window": 1.0
+      },
+      "params": null,
+      "data_start": "2021-11-02 00:00:00+00:00",
+      "data_end": "2026-11-05 23:55:00+00:00",
+      "folds": [
+        {
+          "fold": 1,
+          "start": "2021-11-02 00:00:00+00:00",
+          "end": "2023-02-02 11:58:45+00:00",
+          "trades": 226,
+          "net_r": -30.1356
+        },
+        {
+          "fold": 2,
+          "start": "2023-02-02 11:58:45+00:00",
+          "end": "2024-05-04 23:57:30+00:00",
+          "trades": 203,
+          "net_r": -35.3952
+        },
+        {
+          "fold": 3,
+          "start": "2024-05-04 23:57:30+00:00",
+          "end": "2025-08-05 11:56:15+00:00",
+          "trades": 251,
+          "net_r": -12.1267
+        },
+        {
+          "fold": 4,
+          "start": "2025-08-05 11:56:15+00:00",
+          "end": "2026-11-05 23:55:00+00:00",
+          "trades": 236,
+          "net_r": -47.2749
+        }
+      ],
+      "argv": [
+        "/opt/hostedtoolcache/Python/3.11.18/x64/bin/python3",
+        "/home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_ict_scalp.py",
+        "--data",
+        "<data>",
+        "--symbol",
+        "SOLUSDT",
+        "--timeframe",
+        "5m",
+        "--strategy-name",
+        "ict_scalp_sol_5m",
+        "--fee-bps-roundtrip",
+        "11.0",
+        "--emit-trades",
+        "comms/research/RQ-20261105-033/42191296025/arms/displacement_atr_mult_hi__trades.jsonl",
+        "--json",
+        "comms/research/RQ-20261105-033/42191296025/arms/displacement_atr_mult_hi__bt.json",
+        "--htf-rule",
+        "1h",
+        "--htf-ema-period",
+        "20",
+        "--sim-breakeven"
+      ]
+    },
+    "min_displacement_body_to_range_lo": {
+      "reach_ge_6r": 0.0033,
+      "n": 916,
+      "net_r": -124.933,
+      "net_r_fee_only": -91.3111,
+      "max_drawdown_r": 129.1129,
+      "by_outcome": {
+        "sl_hit": 296,
+        "timeout": 395,
+        "tp_hit": 191,
+        "be_stop": 34
+      },
+      "mean_bars_held": 17.376,
+      "net_r_per_capital_day": -2.2607,
+      "cost_stack": {
+        "fee_bps_roundtrip": 11.0,
+        "slippage_bps_roundtrip": 3.0,
+        "funding_bps_per_window": 1.0
+      },
+      "params": null,
+      "data_start": "2021-11-02 00:00:00+00:00",
+      "data_end": "2026-11-05 23:55:00+00:00",
+      "folds": [
+        {
+          "fold": 1,
+          "start": "2021-11-02 00:00:00+00:00",
+          "end": "2023-02-02 11:58:45+00:00",
+          "trades": 226,
+          "net_r": -30.1356
+        },
+        {
+          "fold": 2,
+          "start": "2023-02-02 11:58:45+00:00",
+          "end": "2024-05-04 23:57:30+00:00",
+          "trades": 203,
+          "net_r": -35.3952
+        },
+        {
+          "fold": 3,
+          "start": "2024-05-04 23:57:30+00:00",
+          "end": "2025-08-05 11:56:15+00:00",
+          "trades": 251,
+          "net_r": -12.1267
+        },
+        {
+          "fold": 4,
+          "start": "2025-08-05 11:56:15+00:00",
+          "end": "2026-11-05 23:55:00+00:00",
+          "trades": 236,
+          "net_r": -47.2749
+        }
+      ],
+      "argv": [
+        "/opt/hostedtoolcache/Python/3.11.18/x64/bin/python3",
+        "/home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_ict_scalp.py",
+        "--data",
+        "<data>",
+        "--symbol",
+        "SOLUSDT",
+        "--timeframe",
+        "5m",
+        "--strategy-name",
+        "ict_scalp_sol_5m",
+        "--fee-bps-roundtrip",
+        "11.0",
+        "--emit-trades",
+        "comms/research/RQ-20261105-033/42191296025/arms/min_displacement_body_to_range_lo__trades.jsonl",
+        "--json",
+        "comms/research/RQ-20261105-033/42191296025/arms/min_displacement_body_to_range_lo__bt.json",
+        "--htf-rule",
+        "1h",
+        "--htf-ema-period",
+        "20",
+        "--sim-breakeven"
+      ]
+    },
+    "min_displacement_body_to_range_hi": {
+      "reach_ge_6r": 0.0033,
+      "n": 916,
+      "net_r": -124.933,
+      "net_r_fee_only": -91.3111,
+      "max_drawdown_r": 129.1129,
+      "by_outcome": {
+        "sl_hit": 296,
+        "timeout": 395,
+        "tp_hit": 191,
+        "be_stop": 34
+      },
+      "mean_bars_held": 17.376,
+      "net_r_per_capital_day": -2.2607,
+      "cost_stack": {
+        "fee_bps_roundtrip": 11.0,
+        "slippage_bps_roundtrip": 3.0,
+        "funding_bps_per_window": 1.0
+      },
+      "params": null,
+      "data_start": "2021-11-02 00:00:00+00:00",
+      "data_end": "2026-11-05 23:55:00+00:00",
+      "folds": [
+        {
+          "fold": 1,
+          "start": "2021-11-02 00:00:00+00:00",
+          "end": "2023-02-02 11:58:45+00:00",
+          "trades": 226,
+          "net_r": -30.1356
+        },
+        {
+          "fold": 2,
+          "start": "2023-02-02 11:58:45+00:00",
+          "end": "2024-05-04 23:57:30+00:00",
+          "trades": 203,
+          "net_r": -35.3952
+        },
+        {
+          "fold": 3,
+          "start": "2024-05-04 23:57:30+00:00",
+          "end": "2025-08-05 11:56:15+00:00",
+          "trades": 251,
+          "net_r": -12.1267
+        },
+        {
+          "fold": 4,
+          "start": "2025-08-05 11:56:15+00:00",
+          "end": "2026-11-05 23:55:00+00:00",
+          "trades": 236,
+          "net_r": -47.2749
+        }
+      ],
+      "argv": [
+        "/opt/hostedtoolcache/Python/3.11.18/x64/bin/python3",
+        "/home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_ict_scalp.py",
+        "--data",
+        "<data>",
+        "--symbol",
+        "SOLUSDT",
+        "--timeframe",
+        "5m",
+        "--strategy-name",
+        "ict_scalp_sol_5m",
+        "--fee-bps-roundtrip",
+        "11.0",
+        "--emit-trades",
+        "comms/research/RQ-20261105-033/42191296025/arms/min_displacement_body_to_range_hi__trades.jsonl",
+        "--json",
+        "comms/research/RQ-20261105-033/42191296025/arms/min_displacement_body_to_range_hi__bt.json",
+        "--htf-rule",
+        "1h",
+        "--htf-ema-period",
+        "20",
+        "--sim-breakeven"
+      ]
+    }
+  },
+  "window": {
+    "start": null,
+    "end": null,
+    "fetch_days": 1830,
+    "feed": {
+      "source": "binance",
+      "ticker": "SOLUSDT",
+      "interval": "5",
+      "resample": "5m"
+    },
+    "fold_edges": [
+      "2021-11-02 00:00:00+00:00",
+      "2023-02-02 11:58:45+00:00",
+      "2024-05-04 23:57:30+00:00",
+      "2025-08-05 11:56:15+00:00",
+      "2026-11-05 23:55:00+00:00"
+    ]
+  },
+  "argv": {
+    "A": {
+      "argv": [
+        "/opt/hostedtoolcache/Python/3.11.18/x64/bin/python3",
+        "/home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_ict_scalp.py",
+        "--data",
+        "<data>",
+        "--symbol",
+        "SOLUSDT",
+        "--timeframe",
+        "5m",
+        "--strategy-name",
+        "ict_scalp_sol_5m",
+        "--fee-bps-roundtrip",
+        "11.0",
+        "--emit-trades",
+        "comms/research/RQ-20261105-033/42191296025/arms/A__trades.jsonl",
+        "--json",
+        "comms/research/RQ-20261105-033/42191296025/arms/A__bt.json",
+        "--htf-rule",
+        "1h",
+        "--htf-ema-period",
+        "20",
+        "--sim-breakeven"
+      ],
+      "cfg_set": {},
+      "cfg_unset": [],
+      "extra_flags": [],
+      "omitted_levers_per_builder": []
+    },
+    "displacement_atr_mult_lo": {
+      "argv": [
+        "/opt/hostedtoolcache/Python/3.11.18/x64/bin/python3",
+        "/home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_ict_scalp.py",
+        "--data",
+        "<data>",
+        "--symbol",
+        "SOLUSDT",
+        "--timeframe",
+        "5m",
+        "--strategy-name",
+        "ict_scalp_sol_5m",
+        "--fee-bps-roundtrip",
+        "11.0",
+        "--emit-trades",
+        "comms/research/RQ-20261105-033/42191296025/arms/displacement_atr_mult_lo__trades.jsonl",
+        "--json",
+        "comms/research/RQ-20261105-033/42191296025/arms/displacement_atr_mult_lo__bt.json",
+        "--htf-rule",
+        "1h",
+        "--htf-ema-period",
+        "20",
+        "--sim-breakeven"
+      ],
+      "cfg_set": {
+        "displacement_atr_mult": 0.975
+      },
+      "cfg_unset": [],
+      "extra_flags": [],
+      "omitted_levers_per_builder": []
+    },
+    "displacement_atr_mult_hi": {
+      "argv": [
+        "/opt/hostedtoolcache/Python/3.11.18/x64/bin/python3",
+        "/home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_ict_scalp.py",
+        "--data",
+        "<data>",
+        "--symbol",
+        "SOLUSDT",
+        "--timeframe",
+        "5m",
+        "--strategy-name",
+        "ict_scalp_sol_5m",
+        "--fee-bps-roundtrip",
+        "11.0",
+        "--emit-trades",
+        "comms/research/RQ-20261105-033/42191296025/arms/displacement_atr_mult_hi__trades.jsonl",
+        "--json",
+        "comms/research/RQ-20261105-033/42191296025/arms/displacement_atr_mult_hi__bt.json",
+        "--htf-rule",
+        "1h",
+        "--htf-ema-period",
+        "20",
+        "--sim-breakeven"
+      ],
+      "cfg_set": {
+        "displacement_atr_mult": 1.625
+      },
+      "cfg_unset": [],
+      "extra_flags": [],
+      "omitted_levers_per_builder": []
+    },
+    "min_displacement_body_to_range_lo": {
+      "argv": [
+        "/opt/hostedtoolcache/Python/3.11.18/x64/bin/python3",
+        "/home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_ict_scalp.py",
+        "--data",
+        "<data>",
+        "--symbol",
+        "SOLUSDT",
+        "--timeframe",
+        "5m",
+        "--strategy-name",
+        "ict_scalp_sol_5m",
+        "--fee-bps-roundtrip",
+        "11.0",
+        "--emit-trades",
+        "comms/research/RQ-20261105-033/42191296025/arms/min_displacement_body_to_range_lo__trades.jsonl",
+        "--json",
+        "comms/research/RQ-20261105-033/42191296025/arms/min_displacement_body_to_range_lo__bt.json",
+        "--htf-rule",
+        "1h",
+        "--htf-ema-period",
+        "20",
+        "--sim-breakeven"
+      ],
+      "cfg_set": {
+        "min_displacement_body_to_range": 0.4125
+      },
+      "cfg_unset": [],
+      "extra_flags": [],
+      "omitted_levers_per_builder": []
+    },
+    "min_displacement_body_to_range_hi": {
+      "argv": [
+        "/opt/hostedtoolcache/Python/3.11.18/x64/bin/python3",
+        "/home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_ict_scalp.py",
+        "--data",
+        "<data>",
+        "--symbol",
+        "SOLUSDT",
+        "--timeframe",
+        "5m",
+        "--strategy-name",
+        "ict_scalp_sol_5m",
+        "--fee-bps-roundtrip",
+        "11.0",
+        "--emit-trades",
+        "comms/research/RQ-20261105-033/42191296025/arms/min_displacement_body_to_range_hi__trades.jsonl",
+        "--json",
+        "comms/research/RQ-20261105-033/42191296025/arms/min_displacement_body_to_range_hi__bt.json",
+        "--htf-rule",
+        "1h",
+        "--htf-ema-period",
+        "20",
+        "--sim-breakeven"
+      ],
+      "cfg_set": {
+        "min_displacement_body_to_range": 0.6875
+      },
+      "cfg_unset": [],
+      "extra_flags": [],
+      "omitted_levers_per_builder": []
+    }
+  }
+}

@@ -469,7 +469,13 @@ def _self_test() -> int:
         assert json.loads((q / CACHE_MANIFEST).read_text())["artifact"] == "art-1"
         lst = q / "list.txt"
         lst.write_text("verdict.json\nm.jsonl\n")
-        assert check_staged_list(lst, q) == 0 and check_staged_list(lst, q, limit=4) == 1
+        import contextlib
+        import io
+        assert check_staged_list(lst, q) == 0
+        _err = io.StringIO()   # the PLANTED refusal must not print a real ::error:: annotation into the dispatch log
+        with contextlib.redirect_stderr(_err):
+            assert check_staged_list(lst, q, limit=4) == 1
+        assert "REFUSED" in _err.getvalue()
     with tempfile.TemporaryDirectory() as td:
         root = Path(td)
         (root / "scripts/research").mkdir(parents=True)

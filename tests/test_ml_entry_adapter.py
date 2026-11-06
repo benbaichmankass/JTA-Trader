@@ -216,7 +216,10 @@ def test_reference_perps_come_from_bybit_public_data_on_an_alpaca_account(monkey
     B._ml_entry_reference_frames(["BTCUSDT", "ETHUSDT"], "2026-01-30T15:00:00+00:00", alpaca_client, venue="alpaca")
     assert len(calls) == n                                                          # cached per (venue, bar)
     bybit_client = object()
+    n = len(calls)
     B._ml_entry_reference_frames(["BTCUSDT"], "2026-01-30T15:00:00+00:00", bybit_client, venue="bybit")
+    assert len(calls) == n                                  # already fetched this bar from Bybit: shared, no call
+    B._ml_entry_reference_frames(["SOLUSDT"], "2026-01-30T15:00:00+00:00", bybit_client, venue="bybit")
     assert calls[-1][1] is bybit_client                                             # a Bybit account reuses its client
     B._ML_ENTRY_REF_CACHE.clear()
 

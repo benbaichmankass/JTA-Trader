@@ -469,6 +469,16 @@ def ib_breaker_armed() -> bool:
     return not _truthy(os.environ.get("EXIT_LOOP_IB_BREAKER_DISABLED"))
 
 
+def _exit_pass_telemetry_batch():
+    """Context for one exit-evaluation pass: see ``position_telemetry.exit_pass_batch``. Never raises."""
+    try:
+        from src.runtime.position_telemetry import exit_pass_batch
+        return exit_pass_batch()
+    except Exception:  # noqa: BLE001 — observe-only; fall back to per-write commits
+        from contextlib import nullcontext
+        return nullcontext()
+
+
 def _exit_loop(settings: dict) -> None:
     """Evaluate every open package's exit on our own cadence, forever.
 
@@ -493,7 +503,10 @@ def _exit_loop(settings: dict) -> None:
         started = time.monotonic()
         fetcher = _build_monitor_ohlcv_fetcher(settings)
         try:
-            run_exit_evaluation_tick(ohlcv_fetcher=fetcher)
+            # MECH-FOLLOWUPS-1105: this pass's telemetry/history writes are queued and flushed in ONE transaction when
+            # the pass ends (never under a broker call; the flush is contained and the next pass rewrites).
+            with _exit_pass_telemetry_batch():
+                run_exit_evaluation_tick(ohlcv_fetcher=fetcher)
         except Exception:  # noqa: BLE001
             logger.exception("exit_loop: pass failed")
         elapsed_ms = (time.monotonic() - started) * 1000.0
@@ -1598,6 +1611,15 @@ def main() -> None:
                 run_ml_entry_live_monitor()
             except Exception:  # noqa: BLE001
                 logger.exception("ml_entry_live_monitor tick failed")
+
+            # ML ENTRY equity-native pool-snapshot refresher (row ML-ENTRY-EQUITY-NATIVE): starts ONE daemon thread (idempotent, returns at
+            # once). The 173-symbol bar pass runs ON THAT THREAD, paced through the Alpaca connector's non-blocking cooldown; this tick,
+            # the signal builder and the exit-evaluation path make no pool request.
+            try:
+                from src.runtime.ml_entry_eq_refresher import ensure_started as _eq_refresher_start
+                _eq_refresher_start()
+            except Exception:  # noqa: BLE001
+                logger.exception("ml_entry_eq refresher start failed")
 
             # The gap that is invisible to every JOURNAL-keyed detector, because
             # it produces no journal row at all: an account the per-symbol

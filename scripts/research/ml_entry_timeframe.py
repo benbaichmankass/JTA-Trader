@@ -39,6 +39,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 import ml_decision_entry as E
 import ml_entry_levers as L
 import ml_variant_ledger as MVL
+import runner_fingerprint as RF
 
 REPO = Path(__file__).resolve().parents[2]
 SEEDS = (7, 11, 13)
@@ -461,7 +462,7 @@ def run_unit(unit: str, out: Path, cache: Path, n_jobs: int, smoke: bool) -> dic
     base_wf, arm_wf = wfs[("1h", "bar")], wfs[(tf, scaling)]
     res = {"unit": unit, "schema": "ml_entry_timeframe/1", "read_state": "read", "timeframe": tf, "scaling": scaling, "smoke": smoke,
            "spec": pop[(tf, scaling)], "tau": TAU, "gate": {"max_cost_r": GATE_MAX_COST_R, "k_cost_x_atr": gate_k()}, "rows": rows,
-           "dev_only": "no month after 2025-09 is downloaded", "mask_frozen_bars": True, "data_pin": pins,
+           "dev_only": "no month after 2025-09 is downloaded", "mask_frozen_bars": True, "data_pin": pins, "runner": RF.fingerprint(),
            "folds": arm_wf["folds"], "baseline_1h_folds": base_wf["folds"]}
     for var in ("ungated", "gated"):
         b, a = arm_stats(base_wf, var), arm_stats(arm_wf, var)
@@ -561,7 +562,7 @@ def run_baseline(unit: str, out: Path, cache: Path, n_jobs: int, smoke: bool) ->
            "dev_only": "no month after 2025-09 is downloaded",
            "rows": {f"{tf}/{scaling}": {"decision_rows": len(tab), "symbols": int(tab.symbol.nunique()), "bars_fetched": int(sum(x["rows"] for x in fr)),
                                         "missing_months": int(sum(x.get("missing_months", 0) for x in fr))}},
-           "data_pin": pin, "ensemble_draws": draw_stats, "single_seeds_7_11_13": single_stats, "reference_round1": REF_ROUND1,
+           "data_pin": pin, "runner": RF.fingerprint(), "ensemble_draws": draw_stats, "single_seeds_7_11_13": single_stats, "reference_round1": REF_ROUND1,
            "baseline": {"mean": v["baseline_mean"], "across_draw_range": v["across_draw_range"], "repro_tol": v["repro_tol"],
                         "manifest_sha256": pin["manifest_sha256"]},
            "rule": v, "verdict": v["verdict"], "seconds_total": round(time.time() - started, 1)}

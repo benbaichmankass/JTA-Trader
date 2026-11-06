@@ -601,13 +601,13 @@ class AlpacaClient:
         window, that is surfaced as a real failure (``retCode != 0``) so the
         caller refuses the trade instead of journaling a phantom position.
         Still-pending or already-``filled`` at the deadline is reported as
-        success unchanged. Deliberately does NOT attempt to capture/backfill
-        the broker's real fill price into the journal — that is a separate,
-        larger design question ``_submit_order``'s shared str-only return
-        contract (identical across bybit/IB/alpaca/oanda) doesn't
-        accommodate without a broader refactor, and
-        ``RECONCILER_SNAPSHOT_MIN_FILL_AGE_S`` already exists as the
-        downstream grace period for a genuinely-slow-but-good fill.
+        success unchanged. When the poll sees a FULL fill, the result also
+        carries the venue's ``avgPrice`` / ``filledQty``; ``_submit_order``
+        hands that to the journal as the entry price (ALPACA-LIVE-MECHANICS,
+        2026-11-06). A fill not seen inside the window leaves them absent
+        and the journal keeps the package price, as before;
+        ``RECONCILER_SNAPSHOT_MIN_FILL_AGE_S`` stays the downstream grace
+        period for a genuinely-slow-but-good fill.
         """
         self._require_creds("place")
         side = str(order.get("side", "")).strip().lower()
@@ -680,6 +680,7 @@ class AlpacaClient:
         order_id = str(result.get("id") or "")
 
         confirm_s = _env_float("ALPACA_PLACE_CONFIRM_S", 3.0)
+        fill: Dict[str, Any] = {}
         if confirm_s > 0 and order_id:
             deadline = time.monotonic() + confirm_s
             while True:
@@ -698,6 +699,25 @@ class AlpacaClient:
                             ),
                         }
                     if st == "filled":
+                        # ALPACA-LIVE-MECHANICS (2026-11-06): keep the venue's
+                        # own fill so the journal books the price the broker
+                        # filled at, not the package's signal price. MEASURED
+                        # before this: 9 of 10 alpaca_paper brackets filled
+                        # 11-02..11-05 journaled an entry != filled_avg_price
+                        # (e.g. SCHA 33.68 vs 33.7471 x 873 sh), and the one
+                        # real-money IAUM fill (09-23) journaled 43.48 vs
+                        # 42.9086, so its local-compute P&L read -4.41 for a
+                        # true -3.27. Only a FULL fill with a positive average
+                        # is reported; anything else leaves ``fill`` empty and
+                        # the caller keeps the package price (prior behaviour).
+                        res = status_env.get("result") or {}
+                        try:
+                            avg = float(res.get("filled_avg_price"))
+                            fq = float(res.get("filled_qty"))
+                        except (TypeError, ValueError):
+                            avg = fq = 0.0
+                        if avg > 0 and fq >= qty:
+                            fill = {"avgPrice": avg, "filledQty": fq}
                         break
                 # An unreadable status mid-poll is NOT treated as terminal —
                 # keep polling until the deadline rather than guessing.
@@ -705,7 +725,7 @@ class AlpacaClient:
                     break
                 time.sleep(0.25)
 
-        return {"retCode": 0, "result": {"orderId": order_id}}
+        return {"retCode": 0, "result": {"orderId": order_id, **fill}}
 
     # ------------------------------------------------------------ account
     def balance(self) -> Optional[float]:

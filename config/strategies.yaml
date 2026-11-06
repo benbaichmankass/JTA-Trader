@@ -1493,6 +1493,33 @@ strategies:
     min_reference_symbols: 40
     shadow_model_ids: []
 
+  # ML ENTRY EQUITY-NATIVE as a TESTING leg (row ML-ENTRY-EQUITY-NATIVE, Tier 2 held for the manager; operator popup ~20:50Z 2026-11-05 "Equity-native model (Rec.)"
+  # and the manager's ruling 2026-11-06: distinct leg key, alpaca_paper ONLY, real money is the operator's call). Config B (15 own + 6 pool features, no crypto /
+  # market-proxy feature), restricted LONG at tau 0.20, SL 2 / TP 3 ATR14, 24 h time stop. Evidence: confirming read RQ-20261105-e9a1-02 (n 858, net +0.0392 R,
+  # iid t 0.9, month-clustered t 0.3): this leg proves MECHANICS (a 1-2 trade soak); the edge is decided OFFLINE. symbols: = the model's pool (173 liquid ETFs,
+  # pool rule sha256 e9702661d1a596a0...), limited to what alpaca_paper can trade. Scored from the pool snapshot written by the refresher thread
+  # (src/runtime/ml_entry_eq_refresher.py); NO tick-time fetch. ROLLBACK: enabled: false (or delete ml_entry_eq from alpaca_paper's roster).
+  ml_entry_eq:
+    model: ml-entry-eq-v1
+    signal_prefixes: [ml_entry_eq]
+    enabled: true
+    execution: live
+    timeframe: "1h"
+    decision_bar: closed
+    session: auto
+    max_snapshot_age_h: 4.0
+    # ROLLOUT STAGE 1 (mechanics soak): ONLY the pool ETFs alpaca_paper ALREADY ticks (10 of the 173). Every symbol in a roster-implied set gets its own
+    # full _run_symbol_tick pass (src/main.py::run_one_tick), so rostering all 173 adds 173 pipeline passes per tick -- UNMEASURED, and exactly the
+    # fan-out #23619 warned about. The pool FEATURES still use all 173 (the refresher snapshots the whole pool), so each scored symbol is model-faithful.
+    # STAGE 2 = this list -> the model's whole pool (comms/ml_universe/ml_entry_eq.json / ml/candidates/ml_entry_eq_v1/model.json::pool_symbols), a
+    # one-line change AFTER the tick duration with 10+ symbols is measured. Doctrine: an ML trades its whole tested population; this is a staged
+    # rollout for tick cost, not a narrowing of the test.
+    symbols: [SPY, QQQ, IWM, TLT, IEF, SLV, USO, GDX, TQQQ, QLD]   # GLD excluded: the operator-kept zombie OCO there (PI-20261025-ALQWWPXT-0001), as ml_entry
+    atr_period: 14
+    atr_stop_mult: 2.0
+    tp_r: 1.5
+    shadow_model_ids: []
+
   trend_donchian_eth_4h:
     model: null
     signal_prefixes: [trend_donchian_eth_4h, donchian_eth_4h]

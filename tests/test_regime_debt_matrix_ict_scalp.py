@@ -174,8 +174,9 @@ def test_every_enabled_leg_now_routes_except_turtle_soup():
     # a pooled ML decision model with no harness-family params; its Stage 0 is the ML replay
     # (scripts/research/ml_decision_entry.py, RQ-20261101-c692-01 / -06), not this matrix.
     # 56 -> 57 on 2026-11-01: ml_entry_v2 (bybit_1 testing leg), unrouted for the same reason as ml_entry.
-    assert len(legs) == 57
-    assert unrouted == ["claude_desk", "e4_oi_shock_1h", "ml_entry", "ml_entry_v2", "turtle_soup"]
+    # 57 -> 58 on 2026-11-06: ml_entry_eq (ML-ENTRY-ALL-ACCOUNTS, #23715), unrouted for the same reason as ml_entry.
+    assert len(legs) == 58
+    assert unrouted == ["claude_desk", "e4_oi_shock_1h", "ml_entry", "ml_entry_eq", "ml_entry_v2", "turtle_soup"]
 
 
 # --------------------------------------------------------------------------

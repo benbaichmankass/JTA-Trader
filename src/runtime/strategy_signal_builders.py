@@ -6435,6 +6435,16 @@ def e4_oi_shock_1h_signal_builder(settings: dict) -> Dict[str, Any]:
 
 # ── ml_entry — the pooled ML ENTRY decision model (row ML-ENTRY-LIVE-ADAPTER, Tier 3) ──────────────────────
 _ML_ENTRY_REF_CACHE: Dict[str, Any] = {}
+#: Frames already fetched this decision bar, per (reference venue, bar, symbol, limit), shared ACROSS slots. Measured
+#: 2026-11-06 08:01:41/46Z: two slots (ml_entry's profile universe and ml_entry_v2's xs_reference) each fetched the
+#: same 52 symbols -- ~52 duplicate venue calls inside the bar-close burst. Cleared with the slots on a new bar.
+_ML_ENTRY_REF_FRAMES: Dict[tuple, Any] = {}
+
+
+class _RefFrames(dict):
+    """The reference frames (a plain dict to every reader) plus ``retry_pending``: symbols still owed a fetch this
+    bar. A short set with ``retry_pending > 0`` is TRANSIENT (a 10006 cooldown cut the loop), not a refusal."""
+    retry_pending = 0
 
 
 def _ml_entry_candle_symbol(symbol: str, exchange: Any = None, venue: str = "bybit") -> str:
@@ -6498,10 +6508,12 @@ def _ml_entry_reference_frames(symbols: list, bar_open_iso: str, exchange: Any, 
     # _ML_ENTRY_REF_MAX_TRIES times per bar (a genuinely unlisted symbol cannot cost a call on every tick).
     slot = _ML_ENTRY_REF_CACHE.get(key)
     if slot is not None and not slot["missing"]:
-        return slot["frames"]
+        return _ref_result(slot)
     if any(k[2] != bar_open_iso for k in _ML_ENTRY_REF_CACHE) or (slot is None and len(_ML_ENTRY_REF_CACHE) >= 8):
         _ML_ENTRY_REF_CACHE.clear()  # a new decision bar: older slots can never be asked for again
         slot = None
+    if not _ML_ENTRY_REF_CACHE or any(k[1] != bar_open_iso for k in _ML_ENTRY_REF_FRAMES):
+        _ML_ENTRY_REF_FRAMES.clear()  # the shared store lives exactly as long as the bar's slots
     if slot is None:
         slot = {"frames": {}, "missing": [str(x) for x in symbols], "tries": {}}
         _ML_ENTRY_REF_CACHE[key] = slot
@@ -6513,6 +6525,10 @@ def _ml_entry_reference_frames(symbols: list, bar_open_iso: str, exchange: Any, 
     for s in slot["missing"]:
         if slot["tries"].get(s, 0) >= _ML_ENTRY_REF_MAX_TRIES:
             continue                                     # given up for this bar; counted short by the caller
+        shared = _ML_ENTRY_REF_FRAMES.get((ref_venue, bar_open_iso, s, int(limit)))
+        if shared is not None:
+            frames[s] = shared                           # another slot already fetched it this bar: no venue call
+            continue
         if ref_venue == "bybit" and _bybit_cooldown_active():
             # While the shared Bybit cooldown runs, get_ohlcv returns None without a call -- iterating on would
             # only burn this symbol's tries. Stop; the next call resumes here.
@@ -6534,6 +6550,7 @@ def _ml_entry_reference_frames(symbols: list, bar_open_iso: str, exchange: Any, 
             fr = _ml_entry_frame(drop_forming_bar(df, "1h"))
             if len(fr):
                 frames[s] = fr
+                _ML_ENTRY_REF_FRAMES[(ref_venue, bar_open_iso, s, int(limit))] = fr
             else:
                 still_missing.append(s)
         except Exception:  # noqa: BLE001 -- one missing reference symbol never blocks the decision
@@ -6542,10 +6559,30 @@ def _ml_entry_reference_frames(symbols: list, bar_open_iso: str, exchange: Any, 
     slot["missing"] = [s for s in still_missing if slot["tries"].get(s, 0) < _ML_ENTRY_REF_MAX_TRIES]
     if fetched_now or cooldown_stop:
         # One line per build / top-up: the observation for PI-20261106-5A1BGFHC-0003 reads these.
+        gave_up = sorted(x for x, n in slot["tries"].items() if n >= _ML_ENTRY_REF_MAX_TRIES and x not in frames)
         logger.info("ml_entry_refs bar=%s ref_venue=%s venue=%s have=%d/%d fetched_now=%d retry_pending=%d "
-                    "cooldown_stop=%s", bar_open_iso, ref_venue, key[1], len(frames), len(symbols), fetched_now,
-                    len(slot["missing"]), cooldown_stop)
-    return frames
+                    "cooldown_stop=%s gave_up=%s", bar_open_iso, ref_venue, key[1], len(frames), len(symbols),
+                    fetched_now, len(slot["missing"]), cooldown_stop, ",".join(gave_up) or "-")
+    return _ref_result(slot)
+
+
+def _ref_result(slot: Dict[str, Any]) -> "_RefFrames":
+    out = _RefFrames(slot["frames"])
+    out.retry_pending = len(slot["missing"])
+    return out
+
+
+def _ml_entry_refs_pending(refs: Any, cfg: Dict[str, Any]) -> bool:
+    """True when the reference set is short of ``min_reference_symbols`` ONLY because fetches are still owed this bar
+    (a 10006 cooldown cut the loop). The caller then returns WITHOUT recording the closed decision, so the next tick
+    decides the same bar. Measured 2026-11-06 08:00:06Z: ETHUSDT decided inside a cooldown with 0/60 references,
+    was refused ``feature_row_unformable`` and the refusal consumed its bar, while BTC/SOL/XRP/ADA decided a tick later
+    at 52/60. Bounded: once every owed symbol is fetched or out of tries, retry_pending is 0 and a short set is a real
+    refusal again."""
+    try:
+        return int(getattr(refs, "retry_pending", 0) or 0) > 0 and len(refs) < int(cfg.get("min_reference_symbols") or 40)
+    except (TypeError, ValueError):
+        return False
 
 
 #: Per decision bar, how many times one reference symbol is fetched before it is left short for that bar.
@@ -6559,6 +6596,14 @@ def _bybit_cooldown_active() -> bool:
         return _cooldown_remaining() > 0.0
     except Exception:  # noqa: BLE001
         return False
+
+
+def _ml_entry_pending(name: str, symbol: str, refs: Any) -> Dict[str, Any]:
+    """The no-decision-yet result: the closed decision is NOT recorded, so the next tick decides this bar."""
+    reason = f"reference_set_pending:{len(refs)}+{int(getattr(refs, 'retry_pending', 0) or 0)}_owed"
+    logger.info("%s_decision symbol=%s outcome=pending (%s) -- bar not consumed, next tick retries", name, symbol, reason)
+    return _with_signal_package(name, {"symbol": symbol, "side": "none",
+                                       "meta": {"strategy_name": name, "reason": reason}})
 
 
 def _ml_entry_decision_line(symbol: str, bars: Any, reason: Any = None, side: Any = None) -> str:
@@ -6631,6 +6676,8 @@ def ml_entry_signal_builder(settings: dict) -> Dict[str, Any]:
             cfg["_candle_venue"] = venue  # the moving-TP check-in reads the own frame from this venue (else Bybit)
         refs = _ml_entry_reference_frames(_PR.reference_universe(prof, model["meta"]), df["ts"].iloc[-1].isoformat(),
                                           exchange, venue=venue, reference_venue=prof["reference_venue"])
+        if _ml_entry_refs_pending(refs, cfg):
+            return _ml_entry_pending(NAME, symbol, refs)
         pkg = order_package(cfg, candles_df=df, reference_frames=refs, model=model)
     except ValueError as exc:
         _record_closed_decision(key, frame, timeframe, vcfg, _now)
@@ -6705,6 +6752,8 @@ def ml_entry_v2_signal_builder(settings: dict) -> Dict[str, Any]:
         if not is_decision_bar(df["ts"].iloc[-1], int(model["meta"]["bracket"]["decision_every_h"])):
             raise ValueError("not_a_decision_bar")  # before the reference fetch: 60 venue calls only every 4th bar
         refs = _ml_entry_reference_frames(list(model["meta"]["xs_reference"]), df["ts"].iloc[-1].isoformat(), exchange)
+        if _ml_entry_refs_pending(refs, cfg):
+            return _ml_entry_pending(NAME, symbol, refs)
         pkg = order_package(cfg, candles_df=df, reference_frames=refs, model=model)
     except ValueError as exc:
         _record_closed_decision(key, frame, timeframe, vcfg, _now)
@@ -6727,4 +6776,58 @@ def ml_entry_v2_signal_builder(settings: dict) -> Dict[str, Any]:
            "stop_loss": pkg["sl"], "take_profit": pkg["tp"], "pattern": NAME,
            "meta": {**pkg["meta"], "strategy_name": NAME, "confidence": pkg["confidence"],
                     "direction": pkg["direction"], "timeframe": timeframe}}
+    return _with_signal_package(NAME, sig)
+
+
+# ── ml_entry_eq — the EQUITY-NATIVE entry model, alpaca_paper testing leg (row ML-ENTRY-EQUITY-NATIVE, Tier 2) ──
+_ML_ENTRY_EQ_DECIDED: set = set()
+
+
+def ml_entry_eq_signal_builder(settings: dict) -> Dict[str, Any]:
+    """ml_entry_eq: restricted LONG per pool ETF at each decision close, scored from the POOL SNAPSHOT only.
+
+    NO network and no candle fetch on this tick: the 173-symbol pass is the refresher thread's job (src/runtime/ml_entry_eq_refresher.py, MEASURED
+    #23619: an unpaced pass = 104 x 429). A stale / incomplete / missing snapshot is a named per-trade refusal, never a halt. One decision per
+    (symbol, snapshot bar_close): an in-process memo, so a repeated tick on the same bar cannot re-emit the same package."""
+    import pandas as pd
+    from src.units.strategies import load_strategy_config
+    from src.units.strategies import ml_entry_eq as L
+    from src.runtime import ml_entry_eq_features as EF
+    from src.runtime.ml_entry_eq_refresher import snapshot_path
+
+    NAME = L.NAME
+
+    def _none(reason: str, symbol: str) -> Dict[str, Any]:
+        return _with_signal_package(NAME, {"symbol": symbol, "side": "none", "meta": {"strategy_name": NAME, "reason": reason}})
+
+    try:
+        vcfg = dict(load_strategy_config().get(NAME, {}) or {})
+    except Exception:  # noqa: BLE001
+        vcfg = {}
+    symbol = str(settings.get("SYMBOL", settings.get("symbol", "")) or "")
+    if not bool(vcfg.get("enabled", False)):
+        return _none("disabled_or_out_of_scope", symbol)
+    snap, why = EF.read_snapshot(snapshot_path(), pd.Timestamp.now(tz="UTC"), max_age_h=float(vcfg.get("max_snapshot_age_h", 4.0)))
+    if snap is None:
+        return _none(why or EF.REFUSE_MISSING, symbol)
+    memo = (symbol, snap["bar_close"])
+    if memo in _ML_ENTRY_EQ_DECIDED:
+        return _none("already_decided_this_bar", symbol)
+    try:
+        pkg = L.order_package({"symbol": symbol, **vcfg}, snap)
+    except ValueError as exc:
+        if str(exc) != "not_a_decision_bar":
+            _ML_ENTRY_EQ_DECIDED.add(memo)
+        if len(_ML_ENTRY_EQ_DECIDED) > 4096:
+            _ML_ENTRY_EQ_DECIDED.clear()
+        return _none(str(exc), symbol)
+    _ML_ENTRY_EQ_DECIDED.add(memo)
+    try:
+        log_signal({"event": f"{NAME}_eval", "strategy": NAME, "symbol": symbol, "timeframe": "1h", "side": "buy", "entry": pkg["entry"],
+                    "stop_loss": pkg["sl"], "take_profit": pkg["tp"], "pred_net_r": pkg["meta"]["pred_net_r"]})
+    except Exception:  # noqa: BLE001
+        logger.exception("%s: audit emit failed", NAME)
+    sig = {"symbol": symbol, "side": "buy", "price": pkg["entry"], "entry_price": pkg["entry"], "stop_loss": pkg["sl"],
+           "take_profit": pkg["tp"], "pattern": NAME,
+           "meta": {**pkg["meta"], "strategy_name": NAME, "confidence": pkg["confidence"], "direction": "long", "timeframe": "1h"}}
     return _with_signal_package(NAME, sig)
