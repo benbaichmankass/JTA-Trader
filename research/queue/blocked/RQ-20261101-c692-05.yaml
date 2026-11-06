@@ -92,10 +92,11 @@ blocked_on:
   what: the decision-model label store (1m tie resolution + manifest) and the run-v2 path
   clears_when: both land on main with self-tests (planted tie resolved TP-first on 1m); the lane git-mvs this file to research/queue/ with status
     queued (rule unchanged)
-- kind: rule
-  ref: DESIGN.md section 1c
-  what: 'ENTRY v2 is a second ENTRY variant: it must be scored on a fresh forward held-out window (after 2026-09-30), not the window c692-01 read'
-  clears_when: its rule is re-registered on the forward window before any run
+- kind: harness
+  ref: scripts/research/ml_decision_entry.py run-v2 --window pre-dev
+  what: the run-v2 path scores window P (pre-dev), refit on rows >= 2022-01-01 only
+  clears_when: lands with a self-test that a planted post-2021 row is never scored
+  owner: lane ML-DECISION-MODELS (or the unit's owning ML lane)
 ml_consumer:
   consumer: ML-ENTRY-LIVE-ADAPTER
   decision: 'whether the new ml_entry leg (held PR #22079) opens LONG / SHORT positions on bybit_2 + bybit_portfolio on BTC/ETH/XRP/ADA/SOL beside
@@ -114,3 +115,11 @@ blocked_review:
   note: 'kept: filed today or released only by the manager (E57) or an observation threshold; owner named
     in blocked_on'
   reviewed: '2026-11-01'
+amendments:
+- at: '2026-11-05'
+  before_any_run: true
+  by: lane RESEARCH-NO-WAIT
+  text:
+  - 'RESEARCH-NO-WAIT (lane of Manager Session 2026-11-05b). Operator 2026-11-05 ~17:08Z, verbatim: "Why does it need to wait for November? That''s not the workflow - we iterate in the data we have till we find what works, we don''t wait for new months of data". Window registered BEFORE any run; no outcome inside it was read by this lane; the rule text and every threshold are NOT edited.'
+  - 'WINDOW CHANGE: the read registered on the "forward window" / "fresh window" (2026-11) is REPLACED by the in-hand window below. P = pre-dev history 2020-07-01..2021-12-31 (Binance Vision USDT-M 1h, symbols of manifest bp2-f4271084b120 with bars in P, count reported). Verified unclaimed: comms/research/holdout_reads.jsonl on main holds claims only on 2025-10-01..2026-09-30 and 2026-10-01..2026-10-31. The model is fit on rows from 2022-01-01 only (purged + embargoed across 2021-12-31), so no P row is in a fit; claim via holdout_lock.py (start 2020-07-01, end 2021-12-31).'
+  - 'The data/accrual blocker is removed: nothing here waits for a month to elapse. What remains is the driver option that reads this window (named in blocked_on, owner lane ML-DECISION-MODELS / the unit''s own lane).'

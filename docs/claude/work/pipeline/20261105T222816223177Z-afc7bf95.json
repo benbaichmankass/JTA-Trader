@@ -1,0 +1,16 @@
+{
+  "due_when": {
+    "check_every_days": 7,
+    "clears_when": "a fresh cloud lane session runs scripts' prepush (guards + pytest + ruff) green WITHOUT manual pip installs or PATH edits, i.e. the pinned ruff (<0.16) and repo requirements are on PATH first in the session environment (setup script or a repo-side bootstrap the prepush calls)",
+    "kind": "event"
+  },
+  "id": "PI-20261105-C6CHZ2UP-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "Manager Session 2026-11-05b (session_01AFoLuLmhUKeUzHC6CHz2uP), reported by lane ML-FS-RECIPE (session_01AFoLuL5SYTWKXeuE1pfqzX) at 22:24Z while opening #23516",
+    "rerun": "in a fresh cloud session at the repo root: which ruff; ruff --version; grep -n ruff requirements*.txt pyproject.toml; run the repo prepush and read whether ruff/fastapi/import-linter failures are environmental"
+  },
+  "state": "queued",
+  "what": "Cloud lane sandboxes ship ruff 0.16.9 first on PATH, shadowing the repo pin (<0.16, 0.15.12), and lack the repo requirements (fastapi, import-linter). Prepush therefore fails or lies until the lane installs requirements and puts the pinned ruff first (MEASURED by lane ML-FS-RECIPE 2026-11-05: after that, guards 79/0/0 and 5,372 tests passed). Each lane re-discovers this and burns a turn; some earlier 'prepush failures' were environmental. Fix: make prepush self-bootstrap the pinned toolchain (or an environment setup script), Tier 1."
+}

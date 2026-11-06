@@ -375,6 +375,7 @@ def summarize(taken: pd.DataFrame) -> dict:
     if taken.empty:
         return {"n": 0, "mean_net_r": None}
     s = {"n": len(taken), "mean_net_r": float(taken.net_r.mean()), "sum_net_r": float(taken.net_r.sum()),
+         "se_net_r": float(taken.net_r.std(ddof=1) / np.sqrt(len(taken))) if len(taken) > 1 else None,
          "mean_gross_r": float(taken.gross_r.mean()) if "gross_r" in taken else None,
          "mean_cost_r": float(taken.cost_r.mean()) if "cost_r" in taken else None,
          "n_symbols": int(taken.symbol.nunique())}
@@ -466,14 +467,19 @@ def holdout(tab: pd.DataFrame, tau: float, features: list[str] | None = None, st
     return res
 
 
-def verdict(h: dict) -> tuple[str, str]:
+def verdict(h: dict, bar: dict | None = None) -> tuple[str, str]:
+    """``bar`` is the holdout ledger's deflated bar for this read (holdout_lock.claim_read(...)["bar"]). On the family's 1st read
+    it is today's bar (mean >= 0); on the N-th read the mean must clear point_t_min standard errors (HOLDOUT-DEFLATED-REUSE)."""
+    import holdout_lock as HL
+    bar = bar or HL.bar_for(1)
     m = h["model"]
     n, mean, ns = m["n"], m["mean_net_r"], m.get("n_symbols", 0)
     if n < N_FLOOR or ns < SYMBOL_FLOOR:
         return "indeterminate", f"held-out n={n} (floor {N_FLOOR}) / symbols={ns} (floor {SYMBOL_FLOOR})"
-    if mean >= 0:
-        return "pass", f"held-out mean net R per decision {mean:+.4f} >= 0 at n={n}, {ns} symbols"
-    return "fail", f"held-out mean net R per decision {mean:+.4f} < 0 at n={n}, {ns} symbols"
+    hurdle = f"{bar['point_t_min']:.2f} SE (read {bar['n_tries']} of the family on this window)"
+    if HL.point_ok(mean, m.get("se_net_r"), bar):
+        return "pass", f"held-out mean net R per decision {mean:+.4f} >= {hurdle} at n={n}, {ns} symbols"
+    return "fail", f"held-out mean net R per decision {mean:+.4f} < {hurdle} at n={n}, {ns} symbols"
 
 
 def _git_sha() -> str:
@@ -501,9 +507,14 @@ def run(args) -> int:
         res = {"walk_forward": wf, "holdout": None}
         v, why = "indeterminate", f"no tau reached dev n >= {TAU_MIN_DEV_N}"
     else:
+        import holdout_lock as HL  # record the read BEFORE any held-out outcome is touched; a re-read is graded on a deflated bar
+        claim = HL.claim_read(args.model_id if args.model_id != "ENTRY-v1-universe-costed" else f"ENTRY-v1-{args.unit or 'run'}",
+                              HOLDOUT_START, END, args.unit or "unregistered-run", args.reader,
+                              Path(args.ledger) if args.ledger else HL.LEDGER,
+                              train_end=str((pd.Timestamp(HOLDOUT_START) - pd.Timedelta(days=1)).date()))
         h = holdout(tab, wf["tau_star"])
-        v, why = verdict(h)
-        res = {"walk_forward": wf, "holdout": h}
+        v, why = verdict(h, claim["bar"])
+        res = {"walk_forward": wf, "holdout": h, "holdout_claim": claim}
     summary = {"schema": SCHEMA, "unit": args.unit, "verdict": v, "why": why, "git_sha": _git_sha(),
                "data_fingerprint": data_fp, "config": {k: globals()[k] for k in (
                    "START", "END", "HOLDOUT_START", "DECISION_EVERY_H", "HORIZON_H", "SL_ATR", "TP_ATR", "ATR_N",
@@ -787,10 +798,12 @@ def prior_reads(start: str, end: str, ledger: Path | None = None) -> list[dict]:
     return [r for r in rows if r["model_id"].startswith(UC_FROZEN_FAMILY) and holdout_lock._overlap(r["start"], r["end"], start, end)]
 
 
-def uc_verdict(c_star, fwd: dict | None, gate: dict | None, missing_share: float | None, prior: list) -> tuple[str, str]:
-    if prior:
-        return "indeterminate", (f"forward window cannot be claimed: frozen {UC_FROZEN_FAMILY} already read it "
-                                 f"({', '.join(r['model_id'] + ' @ ' + r['read_at'] for r in prior)})")
+def uc_verdict(c_star, fwd: dict | None, gate: dict | None, missing_share: float | None, prior: list,
+               bar: dict | None = None) -> tuple[str, str]:
+    """``prior`` reads of the frozen family no longer block the read (HOLDOUT-DEFLATED-REUSE, operator 2026-11-05): they raise the
+    bar, which arrives as ``bar`` from the holdout ledger claim."""
+    import holdout_lock as HL
+    bar = bar or HL.bar_for(len(prior) + 1)
     if c_star is None:
         return "indeterminate", f"no C reaches dev n >= {UC_DEV_MIN_N}"
     n, ns = fwd["n"], fwd.get("n_symbols", 0)
@@ -798,9 +811,10 @@ def uc_verdict(c_star, fwd: dict | None, gate: dict | None, missing_share: float
         return "indeterminate", f"forward n={n} (floor {UC_FWD_MIN_N}) / |U(C)|={fwd['universe_size']} (floor {UC_MIN_SYMBOLS})"
     if missing_share is not None and missing_share > UC_MAX_MISSING_COST:
         return "indeterminate", f"cost model missing for {missing_share:.1%} of U(C) decisions (> {UC_MAX_MISSING_COST:.0%})"
-    a_ok = fwd["mean_net_r"] >= 0
+    a_ok = HL.point_ok(fwd["mean_net_r"], fwd.get("se_net_r"), bar)
     b_ok = bool(gate and gate.get("passed"))
-    why = f"arm A forward mean net R {fwd['mean_net_r']:+.4f} at n={n}, {ns} symbols; arm B cost_gate {gate.get('reason') if gate else None}"
+    why = (f"arm A forward mean net R {fwd['mean_net_r']:+.4f} at n={n}, {ns} symbols vs a {bar['point_t_min']:.2f}-SE hurdle (read "
+           f"{bar['n_tries']} of the family on this window); arm B cost_gate {gate.get('reason') if gate else None}")
     return ("pass" if a_ok and b_ok else "fail"), why
 
 
@@ -876,10 +890,11 @@ def universe_costed(args) -> int:
            "liquidity_rule": rule, "candidates": cands, "dropped": dropped, "prior_reads_frozen": prior,
            "q_usd": UC_Q_USD, "snapshot_day": snap_day, "git_sha": _git_sha()}
     fwd, gate, missing, claim = None, None, None, None
-    if not prior and c_star is not None:
+    if c_star is not None:      # a prior read of the family raises the bar (claim["bar"]); it no longer blocks the read
         import holdout_lock
         claim = holdout_lock.claim_read(args.model_id, args.fwd_start, args.fwd_end, args.unit, args.reader,
-                                        Path(args.ledger) if args.ledger else holdout_lock.LEDGER)
+                                        Path(args.ledger) if args.ledger else holdout_lock.LEDGER,
+                                        train_end=str((hs - pd.Timedelta(days=1)).date()))   # family ENTRY
         U = rule["by_c"][str(c_star)]["universe"]
         fw = sc[(sc.ts >= fs) & (sc.ts < pd.Timestamp(args.fwd_end, tz="UTC") + pd.Timedelta(days=1)) & sc.symbol.isin(U)]
         # provenance: predict — Booster.predict is the regressed net R of that side, not a probability
@@ -911,7 +926,7 @@ def universe_costed(args) -> int:
             # provenance: predict — Booster.predict is the regressed net R of that side, not a probability
             pl2, ps2 = models["long"].predict(s2[feats]), models["short"].predict(s2[feats])
             res["reported"]["impact_sensitivity"][mult_name] = summarize(policy(s2, pl2, ps2, tau))["mean_net_r"]
-    v, why = uc_verdict(c_star, fwd, gate, missing, prior)
+    v, why = uc_verdict(c_star, fwd, gate, missing, prior, (claim or {}).get("bar"))
     res.update({"verdict": v, "why": why, "forward": fwd, "arm_b_cost_gate": gate, "cost_missing_share": missing,
                 "holdout_claim": claim, "elapsed_s": round(time.time() - t0)})
     (out / "summary.json").write_text(json.dumps(res, indent=1, default=str) + "\n")
@@ -961,8 +976,12 @@ def _self_test_universe_costed() -> None:
                                    "read_at": "t", "reader": "r", "unit": "u"}) + "\n")
         pr = prior_reads("2026-10-01", "2026-10-31", led)
         assert len(pr) == 1 and not prior_reads("2026-11-01", "2026-11-30", led)
-        v, _ = uc_verdict(50.0, {"n": 999, "n_symbols": 40, "universe_size": 40, "mean_net_r": 1.0}, {"passed": True}, 0.0, pr)
-        assert v == "indeterminate"
+        # a prior read no longer blocks (HOLDOUT-DEFLATED-REUSE): it raises the bar. mean 0.01 at se 0.05 clears read 1 (>= 0) but
+        # not read 2 (needs >= 0.52 se, t here 0.2); mean 0.01 at se 0.005 (t = 2) clears both
+        fw = {"n": 999, "n_symbols": 40, "universe_size": 40, "mean_net_r": 0.01, "se_net_r": 0.05}
+        assert uc_verdict(50.0, fw, {"passed": True}, 0.0, pr)[0] == "fail"
+        assert uc_verdict(50.0, fw, {"passed": True}, 0.0, [])[0] == "pass"
+        assert uc_verdict(50.0, {**fw, "se_net_r": 0.005}, {"passed": True}, 0.0, pr)[0] == "pass"
     v, _ = uc_verdict(50.0, {"n": 999, "n_symbols": 40, "universe_size": 40, "mean_net_r": 0.01}, {"passed": True}, 0.0, [])
     assert v == "pass"
     v, _ = uc_verdict(50.0, {"n": 999, "n_symbols": 40, "universe_size": 40, "mean_net_r": 0.01}, {"passed": False, "reason": "x"}, 0.0, [])

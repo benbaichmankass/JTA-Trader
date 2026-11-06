@@ -88,3 +88,15 @@ def test_paper_key_preferred_over_live(monkeypatch):
     monkeypatch.delenv("ALPACA_API_KEY_ID_LIVE")
     with pytest.raises(RuntimeError):
         AR.AlpacaReadOnly.from_env()
+
+
+def test_threads_share_one_pacing_clock():
+    import threading
+    sl = []
+    c = AR.AlpacaReadOnly("K", "S", session=_S([_R(200, {"bars": {}}) for _ in range(8)]), sleep=sl.append, min_interval=0.5)
+    ts = [threading.Thread(target=lambda: c.get("data.alpaca.markets", "/v2/stocks/bars", {})) for _ in range(8)]
+    [t.start() for t in ts]
+    [t.join() for t in ts]
+    assert c.calls == 8
+    # slots are handed out 0.5s apart on ONE clock: the 8 waits are spread over >= 7 * 0.5s, never 8 simultaneous calls
+    assert max(sl) >= 3.0 and len(sl) >= 7, sl

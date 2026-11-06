@@ -3,7 +3,7 @@
 id: RQ-20261105-c692-10
 title: 'Dynamic SL, one factor (timedecay): time-decay SL tightening at the 4h check-ins, distance at 24h {0.5,1.0,1.5} ATR chosen on dev -- does
   it beat the fixed 2-ATR stop (hold-to-bracket) on frozen-ENTRY trades, net of the full cost stack, held-out?'
-status: queued
+status: done
 cadence: once
 theme: ml_health
 priority: 1
@@ -114,3 +114,16 @@ intervention_controls:
 ml_consumer:
   not_applicable: a rule-based exit lever tested on ML ENTRY trades; no learner is fit, the consumer is the exit of the ml_entry leg
 last_dispatched_at: '2026-11-05T14:59:45+00:00'
+grading:
+  attested: RULE-RQ20261105-c692-10-DYNSL
+  auto: true
+  decision_rule_id: RULE-RQ20261105-c692-10-DYNSL
+  evidence:
+  - research/results/RQ-20261105-c692-10/42048196043.jsonl
+  graded_at: '2026-11-05'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail

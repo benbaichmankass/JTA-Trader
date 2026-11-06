@@ -96,10 +96,11 @@ blocked_on:
   ref: '#22097'
   what: ML-FEATURE-INFRA's feature store (family F6) and HOLDOUT-LOCK (scripts/research/holdout_lock.py)
   clears_when: '#22097 is merged on main'
-- kind: accrual
-  ref: forward window 2026-11-02..2026-11-30
-  what: the window must elapse and its last labels close
-  clears_when: 2026-12-01; this file is then git-mv'd to research/queue/ with status queued (rule unchanged)
+- kind: harness
+  ref: scripts/research/ml_decision_entry.py all-accounts --symbol-holdout-mod 5
+  what: all-accounts trains without symbols with sha1 % 5 == 0 and scores them once (HOLDOUT-LOCK symbols claim)
+  clears_when: lands with a self-test that no held-out symbol row is in a fit
+  owner: lane ML-DECISION-MODELS (or the unit's owning ML lane)
 ml_consumer:
   consumer: ML-ENTRY-LIVE-ADAPTER
   decision: 'whether ONE ml_entry model (replacing v1) is rostered on bybit_2 + bybit_portfolio and, through its own held Tier-3 PR, on alpaca_live
@@ -122,3 +123,11 @@ related:
 - RQ-20261101-fs02-01
 - ML-DATA-XASSET-1H
 - HOLDOUT-LOCK
+amendments:
+- at: '2026-11-05'
+  before_any_run: true
+  by: lane RESEARCH-NO-WAIT
+  text:
+  - 'RESEARCH-NO-WAIT (lane of Manager Session 2026-11-05b). Operator 2026-11-05 ~17:08Z, verbatim: "Why does it need to wait for November? That''s not the workflow - we iterate in the data we have till we find what works, we don''t wait for new months of data". Window registered BEFORE any run; no outcome inside it was read by this lane; the rule text and every threshold are NOT edited.'
+  - 'WINDOW CHANGE: the read on the "fresh forward window 2026-11-02..2026-11-30" is REPLACED by SYMBOL-HOLDOUT-20, in hand today: every symbol (perp or ETF) with sha1(symbol) % 5 == 0 is removed from training and its decisions are scored ONCE over all its in-hand dates through 2026-10-31 (HOLDOUT-LOCK claim with that frozen symbol list). The pooled model trains on the other ~80% of symbols, rows through 2026-10-31 (purged + embargoed). REPORTED beside it, not gating: the 60-perp subset on P = 2020-07-01..2021-12-31 (a separate model id fit on rows >= 2022-01-01).'
+  - Rule text, tau grid, dev-n >= 1000 rule, min_n (300 decisions, >= 10 distinct symbols) are unchanged. The accrual blocker is removed; the harness blocker stays and now names the option.

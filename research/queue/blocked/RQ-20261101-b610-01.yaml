@@ -107,8 +107,18 @@ programme_node:
   programme: P2
   node: P2-ENTRY-LEVERS
   goal: G4
+amendments:
+- at: '2026-11-05'
+  before_any_run: true
+  by: lane RESEARCH-NO-WAIT
+  text:
+  - 'RESEARCH-NO-WAIT (lane of Manager Session 2026-11-05b). Operator 2026-11-05 ~17:08Z, verbatim: "Why does it need to wait for November? That''s not the workflow - we iterate in the data we have till we find what works, we don''t wait for new months of data". Window registered BEFORE any run; no outcome inside it was read by this lane; the rule text and every threshold are NOT edited.'
+  - 'WINDOW CHANGE: the read registered on the "forward window" / "fresh window" (2026-11) is REPLACED by the in-hand window below. S = symbol holdout: the 20 lexicographically first Binance USDT-M perps NOT in manifest bp2-f4271084b120 that have >= 3 years of 1h bars, over 2022-01-01..2026-10-31; list frozen by the driver and written to the result before any outcome is read; claimed through holdout_lock.py with an explicit symbols list (a disjoint symbol claim: correlated with the 60-perp windows, reported as such).'
+  - 'The data/accrual blocker is removed: nothing here waits for a month to elapse. What remains is the driver option that reads this window (named in blocked_on, owner lane ML-DECISION-MODELS / the unit''s own lane).'
+
 blocked_on:
-- kind: date
-  what: the label-free candidate counter reaches 1,100 since 2026-11-01 (or 2026-12-31) and the fwd-read harness lands
-  clears_when: '`python3 scripts/research/ml_entry_levers.py fwd-read --count-only` prints candidates >= 1100, or the date is 2026-12-31; the lane then runs the read once locally and commits the lock lines
-    with the result'
+- kind: harness
+  ref: scripts/research/ml_entry_v2_run.py levers --window symbol-holdout
+  what: the levers/fwd-read path reads window S instead of waiting for 1,100 label-free candidates since 2026-11-01
+  clears_when: lands with a self-test that the count-closed window is not used
+  owner: lane ML-DECISION-MODELS (or the unit's owning ML lane)

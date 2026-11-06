@@ -182,7 +182,7 @@ Premortem each one (pattern § 3.9). Next week's Layer 0 re-runs the check as wr
 - one row per registered model as the body of the review;
 - a metric restated with no "so what";
 - "no change this week" with no C3/C4 numbers behind it;
-- "needs more soak/data" without a power calculation or a filed accrual row;
+- "needs more soak/data" without a power calculation or a filed accrual row, or any read that waits for a future month instead of an untouched in-hand holdout (research-ops § "RESEARCH ITERATES ON IN-HAND DATA", operator 2026-11-05);
 - a promotion argument about a head that changes nothing;
 - a comparison on different rows or costs reported as a result;
 - a missing check footnoted instead of chased;

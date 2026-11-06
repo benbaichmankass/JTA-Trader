@@ -450,29 +450,56 @@ def rth_hourly(df: pd.DataFrame) -> pd.DataFrame:
     return df
 
 
-def fetch_alpaca_1h(client, syms: list[str], cache: Path, end: str) -> dict[str, pd.DataFrame]:
+def fetch_alpaca_1h(client, syms: list[str], cache: Path, end: str, workers: int = 4, start: str = POOL_START) -> dict[str, pd.DataFrame]:
+    """One request series PER SYMBOL (a multi-symbol request took ~63 calls/symbol in run 42047465240 against ~3 needed, and the
+    run died at the 180-min timeout with 160/176 symbols fetched), ``workers`` threads on the client's ONE shared pacing clock, so
+    the call rate stays under the data limit however many threads run. Execution-only change: same endpoint, window and rule."""
+    import concurrent.futures as cf
     out, need = {}, []
     for s in syms:
-        p = cache / f"alp1h_{s}_{POOL_START}_{end}.pkl"
+        p = cache / f"alp1h_{s}_{start}_{end}.pkl"
         if p.exists():
             out[s] = pd.read_pickle(p)
         else:
             need.append(s)
     cache.mkdir(parents=True, exist_ok=True)
-    for i in range(0, len(need), 20):
-        b = need[i:i + 20]
-        got = client.bars(b, "1Hour", f"{POOL_START}T00:00:00Z", f"{end}T00:00:00Z")
-        for s in b:
-            if got.get(s):
-                out[s] = rth_hourly(alpaca_bars_df(got[s]))
-                out[s].to_pickle(cache / f"alp1h_{s}_{POOL_START}_{end}.pkl")
-        print(f"[alpaca] 1h {min(i + 20, len(need))}/{len(need)} symbols, calls={client.calls} 429s={client.n_429}", flush=True)
+
+    def one(s):
+        c0 = client.calls
+        got = client.bars([s], "1Hour", f"{start}T00:00:00Z", f"{end}T00:00:00Z")
+        df = rth_hourly(alpaca_bars_df(got[s])) if got.get(s) else None
+        if df is not None:
+            df.to_pickle(cache / f"alp1h_{s}_{start}_{end}.pkl")
+        return s, df, len(got.get(s) or []), client.calls - c0
+
+    done = 0
+    with cf.ThreadPoolExecutor(workers) as ex:
+        for s, df, nraw, ncalls in ex.map(one, need):
+            done += 1
+            if df is not None:
+                out[s] = df
+            print(f"[alpaca] 1h {done}/{len(need)} {s} raw_bars={nraw} rth_bars={0 if df is None else len(df)} ~calls={ncalls} "
+                  f"total_calls={client.calls} 429s={client.n_429} t={time.strftime('%H:%M:%S')}", flush=True)
     return out
 
 
 def pool_population_record(unit: str, rule_id: str, verdict_: str, result: str, pool: list[str]) -> dict:
     return {"unit": unit, "rule_id": rule_id, "verdict": verdict_, "result": result,
             "symbols": {s: {"venues": ["alpaca"]} for s in pool}}
+
+
+def check_window_disjoint(meta: dict, holdout_start: str) -> dict:
+    """Date-leak guard (PI-20261105-GEXSLEAK-0001): the model's market-wide features (btc_ret24, btc_vol24, breadth_up24, hour, dow)
+    effectively identify the DATE, so the scored window must start after the model's training end plus an embargo of 2 x the label
+    horizon. Raises if not; returns the dates for the record."""
+    te = pd.Timestamp(meta["train_end_exclusive"])
+    emb = pd.Timedelta(hours=2 * int(meta["bracket"]["horizon_h"]))
+    hs = pd.Timestamp(holdout_start, tz="UTC")
+    if hs < te + emb:
+        raise RuntimeError(f"scored window starts {hs} < model train_end_exclusive {te} + embargo {emb}: overlaps the training calendar; "
+                           f"a read on it is not admissible evidence")
+    return {"train_end_exclusive": str(te), "embargo_h": emb / pd.Timedelta(hours=1), "scored_from": str(hs),
+            "gap_days": round((hs - te) / pd.Timedelta(days=1), 2)}
 
 
 def run_pool(a) -> int:
@@ -485,7 +512,10 @@ def run_pool(a) -> int:
     if a.bars != "alpaca":
         raise SystemExit("--population alpaca-liquidity requires --bars alpaca")
     end_day = a.holdout_end or (pd.Timestamp.now(tz="UTC").normalize().replace(day=1) - pd.Timedelta(days=1)).strftime("%Y-%m-%d")
-    HOLDOUT_START, HOLDOUT_END, FETCH_START = a.holdout_start if a.holdout_start != "2025-10-01" else POOL_START, end_day, POOL_START
+    # WINDOW AMENDMENT 2026-11-05 (date-leak, PI-20261105-GEXSLEAK-0001): the served model trained on rows < 2025-09-22 19:00Z, so the
+    # SCORED window is the model's sealed holdout (default --holdout-start 2025-10-01 = train_end + >= 9d embargo > the 24-bar label
+    # horizon) .. the last complete month; --fetch-start (default 2025-05-01) only supplies feature history. The POOL rule is untouched.
+    HOLDOUT_START, HOLDOUT_END, FETCH_START = a.holdout_start, end_day, a.fetch_start
     cache, out = Path(a.cache), Path(a.out)
     out.mkdir(parents=True, exist_ok=True)
     cache.mkdir(parents=True, exist_ok=True)
@@ -494,6 +524,8 @@ def run_pool(a) -> int:
     model = load_model(mpath)
     meta = model["meta"]
     tau, feats = float(meta["tau"]), list(meta["features"])
+    disjoint = check_window_disjoint(meta, HOLDOUT_START)
+    print(f"[window] {disjoint}", flush=True)
     slip, fund = resolve_cost_policy("SPY")
     fee = resolve_fee_bps_roundtrip("SPY")
     client = AlpacaReadOnly.from_env()
@@ -516,18 +548,20 @@ def run_pool(a) -> int:
     # 2. the positive control (SPY back to 2021-01-01) and the 1h bars
     paper13 = [s for s in _account_symbols("alpaca_paper")]
     want = sorted(set(pool) | set(paper13) | {"SPY"})
-    bars = fetch_alpaca_1h(client, want, cache, (pd.Timestamp(end_day) + pd.Timedelta(days=1)).strftime("%Y-%m-%d"))
+    bars = fetch_alpaca_1h(client, want, cache, (pd.Timestamp(end_day) + pd.Timedelta(days=1)).strftime("%Y-%m-%d"), start=FETCH_START)
     spy = bars.get("SPY")
     control = {"symbol": "SPY", "rows": 0 if spy is None else int(len(spy)),
                "first": None if spy is None else str(spy.ts.min()), "last": None if spy is None else str(spy.ts.max())}
-    if spy is None or spy.ts.min() > pd.Timestamp("2021-01-08", tz="UTC") or len(spy) < 5000:
+    if spy is None or spy.ts.min() > pd.Timestamp(FETCH_START, tz="UTC") + pd.Timedelta(days=10) or len(spy) < 1000:
         (out / "verdict.json").write_text(json.dumps({"read_state": "producer_failed", "verdict": None, "n": None,
                                                       "note": "positive control failed", "control": control, "pool": prep}, default=str))
         raise RuntimeError(f"positive control failed: {control}")
     print(f"[control] {control}", flush=True)
     # 3. features/rows, window, gate, decisions
+    print(f"[phase] alpaca 1h done t={time.strftime('%H:%M:%S')}; fetching {len(meta['xs_reference'])} perp references", flush=True)
     perps = fetch_perps(cache, list(meta["xs_reference"]))
     R, V = perp_context(perps)
+    print(f"[phase] perps done ({len(perps)} loaded) t={time.strftime('%H:%M:%S')}; building rows", flush=True)
     frames, fetch_rep = [], {}
     for s in want:
         if s not in bars:
@@ -569,7 +603,7 @@ def run_pool(a) -> int:
                         "reported_alpaca_paper_symbols_pooled": summ(tk_p), "alpaca_paper_symbols": paper13,
                         "side_rule": a.side_rule, "session_gate": bool(a.session_gate),
                         "decision_rows_before_session_gate": n_before_gate, "decision_rows": int(len(test)),
-                        "pool": prep, "pool_symbols": pool, "positive_control": control, "fetch": fetch_rep,
+                        "pool": prep, "pool_symbols": pool, "positive_control": control, "window_disjoint_from_training": disjoint, "fetch": fetch_rep,
                         "perp_reference_loaded": len(perps), "median_n_reference": float(test.n_reference.median()),
                         "alpaca_calls": client.calls, "alpaca_429s": client.n_429,
                         "costs": {"fee_bps": fee, "slippage_bps": slip, "regulatory_bps": REGULATORY_BPS, "funding_bps": fund},
@@ -583,6 +617,18 @@ def run_pool(a) -> int:
     (out / "verdict.json").write_text(json.dumps({**row, "n": m["n"]}, indent=1, default=str) + "\n")
     print(f"VERDICT {v}: {why}\nwrote {p}", flush=True)
     return 0
+
+
+def window_self_test() -> None:
+    m = {"train_end_exclusive": "2025-09-22 19:00:00+00:00", "bracket": {"horizon_h": 24}}
+    g = check_window_disjoint(m, "2025-10-01")
+    assert g["gap_days"] > 8 and g["embargo_h"] == 48.0, g
+    for bad in ("2021-01-01", "2025-09-22", "2025-09-24"):
+        try:
+            check_window_disjoint(m, bad)
+        except RuntimeError:
+            continue
+        raise AssertionError(f"overlapping window {bad} must be refused")
 
 
 def pool_self_test() -> None:
@@ -644,6 +690,7 @@ def self_test() -> int:
     assert verdict({"n": 30, "mean_net_r": 0.0})[0] == "pass"
     assert verdict({"n": 30, "mean_net_r": -0.01})[0] == "fail"
     pool_self_test()
+    window_self_test()
     print("self-test ok")
     return 0
 

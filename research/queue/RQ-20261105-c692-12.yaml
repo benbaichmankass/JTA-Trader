@@ -2,7 +2,7 @@
 id: RQ-20261105-c692-12
 title: 'ML SL revision v2, DEV STAGE: do BE / BE1 / TRAIL / TRAIL15 heads with the margin grid extended past 0.15 add net R over hold-to-bracket
   on the dev walk-forward (pooled, paired, positive in >= 4 of 6 folds, CI95 lower > 0)?'
-status: queued
+status: done
 cadence: once
 theme: ml_health
 priority: 1
@@ -117,3 +117,14 @@ ml_consumer:
   - xrp_pullback_2h
   book: money
 last_dispatched_at: '2026-11-05T17:06:29+00:00'
+grading:
+  attested: RULE-RQ20261105c69212-MLSL2
+  auto: true
+  decision_rule_id: RULE-RQ20261105c69212-MLSL2
+  evidence:
+  - research/results/RQ-20261105-c692-12/42069524604.jsonl
+  graded_at: '2026-11-05'
+  grader: scripts/research/queue_grade.py
+  reason: 1 row(s), all measured, all pass
+  rows: 1
+  verdict: pass
