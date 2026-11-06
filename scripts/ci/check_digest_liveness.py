@@ -156,6 +156,7 @@ from digest_carrier import (  # noqa: E402
 FRESH, STALE, NEVER_RAN, UNREADABLE = "fresh", "stale", "never_ran", "unreadable"
 #: The digest is past the window on MAIN, but a FRESHER receipt is sitting on an
 #: open PR — the carrier is working and the merge queue is backed up. PASSES.
+COULD_NOT_LOOK = "could_not_look"
 STALE_UNMERGED = "stale_unmerged"
 #: The digest is past the window and we COULD NOT LOOK for a fresher receipt.
 #: FAILS, identically to `stale`, so a failed lookup can never disarm the guard.
@@ -428,10 +429,13 @@ def main(argv=None) -> int:
     verdict = grade(receipt, read_state, now, a.window_hours)
     if verdict["state"] in (STALE, UNREADABLE) and ledger_state == "could_not_look":
         # The file is stale BECAUSE receipts no longer land in git, and we could not look at the
-        # ledger: that is "we could not look", not "the digest stopped". Loud PASS (no new gate).
-        print("::warning::check_digest_liveness: alert ledger unreachable and the committed receipt "
-              f"is {verdict['state']} — not graded as a stopped digest. Re-run when the API is reachable.")
-        print(render({**verdict, "ok": True}))
+        # ledger. That is an explicit could_not_look read-state — NOT ok, NOT a pass, and NOT a
+        # claim the digest stopped. Exit stays 0 only so an unreachable VM adds no NEW CI failure
+        # mode (the guard is not graded either way); the output says so in as many words.
+        print("::warning::check_digest_liveness: COULD_NOT_LOOK — alert ledger unreachable and the "
+              f"committed receipt is {verdict['state']}. The digest was NOT graded (neither ok nor stopped).")
+        print(f"digest-liveness: COULD_NOT_LOOK state={COULD_NOT_LOOK} (file receipt: {verdict['state']}, "
+              f"ledger: unreachable) — not graded; re-run when the API is reachable")
         return 0
 
     # ⚠️ THE LOOKUP IS SECOND, AND ONLY ON THE FAILING PATH. Grading first and

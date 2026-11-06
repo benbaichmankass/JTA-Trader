@@ -119,3 +119,13 @@ def test_gate_prefers_newer_ledger_receipt_and_reports_unreachable(tmp_path, mon
     monkeypatch.setattr(digest_due, "read_ledger_receipt", lambda *a, **k: (None, "could_not_look"))
     rec, st, ls = digest_due.read_best_receipt(f)
     assert rec["window_head"] == "old" and ls == "could_not_look"
+
+
+def test_liveness_reports_could_not_look_not_ok(tmp_path, monkeypatch, capsys):
+    import check_digest_liveness as g
+    f = tmp_path / "r.json"
+    f.write_text(json.dumps(digest_due.build_receipt(datetime.now(timezone.utc) - timedelta(hours=9), "a", "old")))
+    monkeypatch.setattr(g, "read_best_receipt", lambda *a, **k: (json.loads(f.read_text()), "read", "could_not_look"))
+    assert g.main(["--receipt", str(f)]) == 0          # prior exit behaviour kept: no new failure mode
+    out = capsys.readouterr().out
+    assert "COULD_NOT_LOOK" in out and "digest-liveness: OK" not in out
