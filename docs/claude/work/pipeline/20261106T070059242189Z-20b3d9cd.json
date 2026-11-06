@@ -1,0 +1,16 @@
+{
+  "due_when": {
+    "check_every_days": 3,
+    "clears_when": "at least 3 runner runs carrying 'runner.class_id' have landed and the class_id values are compared with the A/B outcome of their 1h baseline: either class_id separates A from B (hypothesis confirmed: pin or record the class in each reproduction rule) or it does not (hypothesis refuted: name the next candidate, e.g. thread count or build) -- and the equity export's fit-A sha rule is checked against the result",
+    "kind": "observation"
+  },
+  "id": "PI-20261106-UE1PFQZX-0001",
+  "next_action": "check_observation",
+  "origin": {
+    "kind": "research",
+    "ref": "ML-TIMEFRAME b620-b626 re-runs 2026-11-06 (lane ML-FS-RECIPE); manager 06:56Z asked for this item",
+    "rerun": "for f in comms/research/RQ-2026*/*/*/run-manifest.json; do python3 -c \"import json,sys;d=json.load(open(sys.argv[1]));print(sys.argv[1],(d.get('runner') or {}).get('class_id'))\" \"$f\"; done  # then compare each class_id with that run's in-unit 1h base n list in <unit>_result.json (class A n 71950/71886/72063, class B 71917/71882/72071)"
+  },
+  "state": "queued",
+  "what": "EXACT-REPRODUCTION TESTS MUST PIN OR RECORD THE RUNNER CLASS. MEASURED 2026-11-06 (timeframe units b620..b626, one data pin, identical fold sizes): the in-unit 1h baseline took exactly TWO outcomes across five runner runs, each reproduced exactly (so deterministic, not noise). Class A = round 1 exactly, n 71,950/71,886/72,063 and seed-mean +0.0089486 (runs 42130510691 b620, 42162879141 b626). Class B = n 71,917/71,882/72,071 and +0.007953 (runs 42157944198 b625, 42165663948 b622, 42167537521 b624; three runs, identical values). The cause is a runner or library-build dependence of the LightGBM fit; a CPU-class dependence is the hypothesis, UNVERIFIED because the run manifests recorded nothing about the runner. Any rule of the form 'reproduces within tol of X' or 'ship fit A only if its sha matches' (the equity export RQ-20261106-e9a1-03 does exactly this) is therefore runner dependent. DONE in this lane: scripts/research/runner_fingerprint.py, recorded as run-manifest.json 'runner' (shared by every research-script-run unit) and in the timeframe results (cpu model and SIMD flags, cores, OS image, python and numpy/lightgbm/pandas/scipy/sklearn versions, BLAS, and a short class_id hash). OPEN: (1) after the first runs that carry it, test the hypothesis: does class_id separate class A runs from class B runs? (2) per reproduction rule decide: pin the class (require the same class_id) or compare within a class; (3) audit existing exact-reproduction and sha-match rules for this dependence."
+}
