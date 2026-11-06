@@ -1,0 +1,30 @@
+{
+  "id": "WSD-S6E-OPS-RECORDS",
+  "title": "WORK-STORE S6e: ops records off the repo \u2014 manager handoff docs, merge-slot claims (.github/merge-slots), landing intents (.github/pr-landing, pr-automerge-requests) become work-store notes/fields; docs-only PRs take the data-only CI fast path",
+  "phase": null,
+  "state": "queued",
+  "owner": "manager",
+  "lane": null,
+  "model": "claude-sonnet-5-5",
+  "ceiling_usd": 8,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [],
+  "blocked_on": [
+    {
+      "kind": "work_item",
+      "ref": "WSD-S4-READERS-FLIP",
+      "what": "needs WSD-S4-READERS-FLIP landed"
+    }
+  ],
+  "note": "Operator 2026-11-06 ~21:35Z, verbatim: \"Let's try and push that - if better infra will save usage, then it's worth priortizing to optimize capacity for the rest of the week\". Manager 2026-11-06b: work-store rows that cut CI/commit load rank first this week (week_lane surge). GAPS in docs/plans/WORK-STORE-DESIGN-2026-11.md \u00a73 (MEASURED 2026-11-06): (1) handoff docs are not listed; #23942 (handoff, doc only) ran full guards+pytest and failed guards. (2) merge-slot/landing files are not listed; on 11-06 ~21:23Z three green PRs (#23935, #23946, #23916) each lacked the claim file, and committing it restarted required CI (~45+ min each). (3) docs-only PRs run the full suite; CI-STREAMLINE B4's data-only fast path does not cover them. Gates this adds: none (any CI path change that would add a check needs the operator first). Builds AFTER WSD-S4 freezes the register files. CLOSES WHEN: a manager rotation and a lane merge complete with 0 commits to .github/merge-slots, .github/pr-landing or docs/claude/work/handoffs, and a docs-only PR finishes CI on the fast path.",
+  "due_by": "2026-11-07",
+  "roadmap": [
+    "L-OPS"
+  ],
+  "priority_rank": 2,
+  "updated_at": "2026-11-06T21:34:10Z",
+  "updated_by": "session_01AFoLuKHs8XCUREKLokpyy5",
+  "week_lane": "surge",
+  "_seq": 971
+}

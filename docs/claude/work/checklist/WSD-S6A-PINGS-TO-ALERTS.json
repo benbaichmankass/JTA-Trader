@@ -2,32 +2,23 @@
   "id": "WSD-S6A-PINGS-TO-ALERTS",
   "title": "WORK-STORE S6a: GitHub producers stop committing docs/claude/pending-pings.jsonl and POST to /api/bot/alerts instead (the repo stops being a ping queue)",
   "phase": null,
-  "state": "queued",
+  "state": "in_flight",
   "owner": "manager",
-  "lane": null,
+  "lane": "session_01AFoLuLuQ5MKe9bApRHmAAA",
   "model": "claude-sonnet-5-5",
   "ceiling_usd": 6,
   "spend_usd": null,
   "tier": 2,
   "prs": [],
-  "blocked_on": [
-    {
-      "kind": "work_item",
-      "ref": "WSD-S1-STORE-API",
-      "what": "needs WSD-S1-STORE-API landed"
-    },
-    {
-      "kind": "work_item",
-      "ref": "ALERT-LEDGER-TO-MANAGER",
-      "what": "needs ALERT-LEDGER-TO-MANAGER landed"
-    }
-  ],
-  "note": "docs/plans/WORK-STORE-DESIGN-2026-11.md \u00a73, \u00a76 S6. CI SAVING CHECK: 'chore(ops): queue the daily work digest' commits on main go from 137/wk (10-28..11-04) to 0; work-digest producer job-h (103/wk est.) loses its commit-to-main verify-merged wait. Re-run with the doc \u00a71 census.",
+  "blocked_on": [],
+  "note": "docs/plans/WORK-STORE-DESIGN-2026-11.md \u00a73, \u00a76 S6. CI SAVING CHECK: 'chore(ops): queue the daily work digest' commits on main go from 137/wk (10-28..11-04) to 0; work-digest producer job-h (103/wk est.) loses its commit-to-main verify-merged wait. Re-run with the doc \u00a71 census. Operator 2026-11-06 ~21:35Z, verbatim: \"Let's try and push that - if better infra will save usage, then it's worth priortizing to optimize capacity for the rest of the week\". Manager 2026-11-06b: work-store rows that cut CI/commit load rank first this week (week_lane surge). Unblocked: WSD-S1 done and ALERT-LEDGER-TO-MANAGER landed (steps 1-3 merged+deployed). Dispatch now. Dispatched 2026-11-06T21:34Z: fresh Sonnet lane session_01AFoLuLuQ5MKe9bApRHmAAA, ceiling $6.",
   "due_by": "2026-11-14",
   "roadmap": [
     "L-OPS"
   ],
-  "updated_at": "2026-11-04T23:37:24Z",
-  "updated_by": "session_01AFoLuKFYUoKzs5TXjGfEdh",
+  "updated_at": "2026-11-06T21:34:55Z",
+  "updated_by": "session_01AFoLuKHs8XCUREKLokpyy5",
+  "priority_rank": 1,
+  "week_lane": "surge",
   "_seq": 925
 }

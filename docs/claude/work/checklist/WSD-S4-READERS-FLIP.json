@@ -2,9 +2,9 @@
   "id": "WSD-S4-READERS-FLIP",
   "title": "WORK-STORE S4: freeze file writes and flip readers to work.db (/work/* routes, attention_watch, work_digest_now, work_report, blocker_watch, brief section 0 = due_now); repoint guards (checklist-readers, checklist-store, pipeline, roadmap-map, soak-*, operator-owed, ...)",
   "phase": null,
-  "state": "queued",
+  "state": "in_flight",
   "owner": "manager",
-  "lane": null,
+  "lane": "session_01AFoLuKRfwDfF3esJNvcS31",
   "model": "claude-opus-5-5",
   "ceiling_usd": 12,
   "spend_usd": null,
@@ -22,12 +22,14 @@
       "what": "needs WSD-S3-CLI-OUTBOX landed"
     }
   ],
-  "note": "docs/plans/WORK-STORE-DESIGN-2026-11.md \u00a74 steps 2-4, \u00a77 guard table. Reverts with git revert until the freeze; after it via work.py export --to-files. CLOSES WHEN: the SPA's /work/checklist shape is unchanged, the brief's section-0 count equals due_now, and 0 commits touch docs/claude/work/checklist|pipeline for 2 days. CI SAVING CHECK: re-run the doc \u00a71 census over 7 days; register-only commits (288 checklist + 122 pipeline touches/wk on 10-28..11-04) go to 0.",
+  "note": "docs/plans/WORK-STORE-DESIGN-2026-11.md \u00a74 steps 2-4, \u00a77 guard table. Reverts with git revert until the freeze; after it via work.py export --to-files. CLOSES WHEN: the SPA's /work/checklist shape is unchanged, the brief's section-0 count equals due_now, and 0 commits touch docs/claude/work/checklist|pipeline for 2 days. CI SAVING CHECK: re-run the doc \u00a71 census over 7 days; register-only commits (288 checklist + 122 pipeline touches/wk on 10-28..11-04) go to 0. Operator 2026-11-06 ~21:35Z, verbatim: \"Let's try and push that - if better infra will save usage, then it's worth priortizing to optimize capacity for the rest of the week\". Manager 2026-11-06b: work-store rows that cut CI/commit load rank first this week (week_lane surge). Dispatch now to BUILD the held PR; merge only after WSD-S2 48h shadow parity closes (~2026-11-07T11:45Z). Dispatched 2026-11-06T21:34Z: fresh Opus lane session_01AFoLuKRfwDfF3esJNvcS31, ceiling $12 (order-path-adjacent register flip; fresh because all context is on disk).",
   "due_by": "2026-11-13",
   "roadmap": [
     "L-OPS"
   ],
-  "updated_at": "2026-11-04T23:37:23Z",
-  "updated_by": "session_01AFoLuKFYUoKzs5TXjGfEdh",
+  "updated_at": "2026-11-06T21:34:55Z",
+  "updated_by": "session_01AFoLuKHs8XCUREKLokpyy5",
+  "priority_rank": 1,
+  "week_lane": "surge",
   "_seq": 923
 }
