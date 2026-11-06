@@ -127,6 +127,48 @@ def read_receipt(path: Path = RECEIPT) -> Tuple[Optional[Dict[str, Any]], str]:
     return (data, "read") if isinstance(data, dict) else (None, "unreadable")
 
 
+#: WSD-S6A: the receipt now lives in the VM alert ledger (kind ``work_digest_receipt``), not in git.
+LEDGER_URL = os.environ.get("BOT_API_BASE", "https://ict-bot.duckdns.org").rstrip("/") + \
+    "/api/bot/alerts?kind=work_digest_receipt&limit=5"
+
+
+def read_ledger_receipt(url: str = "", timeout: float = 15.0) -> Tuple[Optional[Dict[str, Any]], str]:
+    """(newest receipt, read_state) from the alert ledger. read_state is ``read`` |
+    ``absent`` (ledger read, no receipt row yet) | ``could_not_look`` — never folded together."""
+    import urllib.request  # noqa: PLC0415 — keep module import free
+    try:
+        with urllib.request.urlopen(url or LEDGER_URL, timeout=timeout) as r:  # noqa: S310
+            doc = json.loads(r.read().decode("utf-8"))
+    except Exception:  # noqa: BLE001 — a failed look is reported as such, not as "absent"
+        return None, "could_not_look"
+    if not isinstance(doc, dict) or doc.get("read_state") != "read":
+        return None, "could_not_look"
+    best: Optional[Dict[str, Any]] = None
+    for row in doc.get("rows") or []:
+        try:
+            rec = json.loads(row.get("body") or "")
+        except (ValueError, AttributeError):
+            continue
+        if isinstance(rec, dict) and _parse_ts(rec.get("generated_at")) and (
+                best is None or _parse_ts(rec["generated_at"]) > _parse_ts(best["generated_at"])):
+            best = rec
+    return (best, "read") if best else (None, "absent")
+
+
+def read_best_receipt(path: Path = RECEIPT, remote: bool = True
+                      ) -> Tuple[Optional[Dict[str, Any]], str, str]:
+    """(receipt, read_state, ledger_state): the NEWER of the committed file (legacy fallback
+    path) and the ledger row. ``ledger_state`` says whether the ledger was looked at."""
+    f_rec, f_state = read_receipt(path)
+    if not remote:
+        return f_rec, f_state, "skipped"
+    l_rec, l_state = read_ledger_receipt()
+    if l_rec is not None and (f_rec is None or _parse_ts(l_rec["generated_at"])
+                              >= (_parse_ts(f_rec.get("generated_at")) or datetime.min.replace(tzinfo=timezone.utc))):
+        return l_rec, "read", l_state
+    return f_rec, f_state, l_state
+
+
 def grade(receipt: Optional[Dict[str, Any]], read_state: str, now: datetime,
           interval_minutes: int = DEFAULT_INTERVAL_MINUTES) -> Dict[str, Any]:
     """Pure decision, so the policy is arguable in tests rather than in YAML."""
@@ -281,6 +323,10 @@ def main(argv=None) -> int:
                     help="append due=true|false and state=... to $GITHUB_OUTPUT")
     ap.add_argument("--exit-code", action="store_true",
                     help="exit 0 when due, 1 when not (shell predicate use)")
+    ap.add_argument("--no-ledger", action="store_true",
+                    help="read only the committed file (tests, offline)")
+    ap.add_argument("--print-window-head", action="store_true",
+                    help="print the newest receipt's window_head (ledger or file) and exit")
     ap.add_argument("--record", action="store_true",
                     help="WRITE the receipt (call only after the digest is rendered)")
     ap.add_argument("--base", default="", help="--record: the window base ref")
@@ -312,8 +358,13 @@ def main(argv=None) -> int:
         print(f"digest-due: receipt written {path} generated_at={rec['generated_at']}")
         return 0
 
-    receipt, read_state = read_receipt(path)
+    receipt, read_state, ledger_state = read_best_receipt(path, remote=not a.no_ledger)
+    if a.print_window_head:
+        print((receipt or {}).get("window_head", "") or "")
+        return 0
     verdict = grade(receipt, read_state, now, a.interval_minutes)
+    if ledger_state == "could_not_look":
+        print("digest-due: ledger could not be read — graded on the committed file only")
     print(render(verdict))
 
     out = os.environ.get("GITHUB_OUTPUT")

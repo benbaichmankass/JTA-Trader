@@ -142,7 +142,7 @@ from typing import Any, Dict, Optional
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "ops"))
 
-from digest_due import RECEIPT, _parse_ts, read_receipt  # noqa: E402
+from digest_due import RECEIPT, _parse_ts, read_best_receipt  # noqa: E402
 
 # ⚠️ THE CARRIER VOCABULARY IS IMPORTED, NOT REDEFINED. `collapsed-state-guard`
 #    requires a consumer OUTSIDE the producing module, and a second copy of
@@ -156,6 +156,7 @@ from digest_carrier import (  # noqa: E402
 FRESH, STALE, NEVER_RAN, UNREADABLE = "fresh", "stale", "never_ran", "unreadable"
 #: The digest is past the window on MAIN, but a FRESHER receipt is sitting on an
 #: open PR — the carrier is working and the merge queue is backed up. PASSES.
+COULD_NOT_LOOK = "could_not_look"
 STALE_UNMERGED = "stale_unmerged"
 #: The digest is past the window and we COULD NOT LOOK for a fresher receipt.
 #: FAILS, identically to `stale`, so a failed lookup can never disarm the guard.
@@ -408,6 +409,8 @@ def main(argv=None) -> int:
     ap.add_argument("--window-hours", type=float, default=DEFAULT_WINDOW_HOURS)
     ap.add_argument("--receipt", default=str(RECEIPT))
     ap.add_argument("--self-test", action="store_true")
+    ap.add_argument("--no-ledger", action="store_true",
+                    help="read only the committed receipt file (tests, offline)")
     ap.add_argument("--no-carrier-lookup", action="store_true",
                     help="never look for a fresher receipt on an open PR; grade "
                          "exactly as this guard did before 2026-09-12")
@@ -419,9 +422,21 @@ def main(argv=None) -> int:
     if a.self_test:
         return _self_test()
 
-    receipt, read_state = read_receipt(Path(a.receipt))
+    # WSD-S6A: the receipt is a ledger row on the VM now; the committed file is only the legacy
+    # fallback. Newer of the two wins.
+    receipt, read_state, ledger_state = read_best_receipt(Path(a.receipt), remote=not a.no_ledger)
     now = datetime.now(timezone.utc)
     verdict = grade(receipt, read_state, now, a.window_hours)
+    if verdict["state"] in (STALE, UNREADABLE) and ledger_state == "could_not_look":
+        # The file is stale BECAUSE receipts no longer land in git, and we could not look at the
+        # ledger. That is an explicit could_not_look read-state — NOT ok, NOT a pass, and NOT a
+        # claim the digest stopped. Exit stays 0 only so an unreachable VM adds no NEW CI failure
+        # mode (the guard is not graded either way); the output says so in as many words.
+        print("::warning::check_digest_liveness: COULD_NOT_LOOK — alert ledger unreachable and the "
+              f"committed receipt is {verdict['state']}. The digest was NOT graded (neither ok nor stopped).")
+        print(f"digest-liveness: COULD_NOT_LOOK state={COULD_NOT_LOOK} (file receipt: {verdict['state']}, "
+              f"ledger: unreachable) — not graded; re-run when the API is reachable")
+        return 0
 
     # ⚠️ THE LOOKUP IS SECOND, AND ONLY ON THE FAILING PATH. Grading first and
     #    re-grading only when the answer is `stale` is what keeps a healthy PR

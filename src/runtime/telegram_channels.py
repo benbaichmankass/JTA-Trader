@@ -191,6 +191,7 @@ SENDERS: Final[dict[str, tuple[str, ...]]] = {
     ".github/workflows/system-actions.yml": ("system_action",),
     # MANAGER (git-pull fan-out of committed session pings / merges)
     "scripts/notify_on_pull.py": ("pr_merged", "claude_ping"),
+    "src/runtime/ping_ingest.py": ("manager_update", "claude_ping"),  # WSD-S6A: POST /api/bot/alerts route=ping
     "scripts/ops/attention_watch.py": ("manager_update",),
     "scripts/ops/phone_hb_alert.py": ("alert",),   # PHONE-KEEPALIVE: stale phone heartbeat, target=system
     # MANAGER
