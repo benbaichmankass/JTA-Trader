@@ -18,6 +18,8 @@ name: kaggle-cold-lake-copy
 #
 # GATES THIS ADDS OR CHANGES: none. Data path only: no order path, no config the trader reads, no execution flag. (The commit-message
 # tokens `[kaggle-copy-plan]` / `[kaggle-copy-go]` only select which step runs on this PR; they gate no pipeline.)
+# `[kaggle-copy-verify]` re-runs ONLY the verify matrix against the already-uploaded parts (no rebuild, no upload); optional
+# `[kaggle-copy-parts:p000,p003]` limits it to those parts. Read-only against Kaggle.
 
 on:
   pull_request:
@@ -44,6 +46,8 @@ jobs:
     outputs:
       plan: ${{ steps.g.outputs.plan }}
       go: ${{ steps.g.outputs.go }}
+      verify: ${{ steps.g.outputs.verify }}
+      parts: ${{ steps.g.outputs.parts }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -53,10 +57,13 @@ jobs:
         run: |
           msg="$(git log -1 --format=%B HEAD^2 2>/dev/null || git log -1 --format=%B HEAD)"
           echo "head commit: $(echo "$msg" | head -1)"
-          go=false; plan=false
+          go=false; plan=false; verify=false
           case "$msg" in *"[kaggle-copy-go]"*) go=true; plan=true;; esac
           case "$msg" in *"[kaggle-copy-plan]"*) plan=true;; esac
+          case "$msg" in *"[kaggle-copy-verify]"*) verify=true; plan=true;; esac
+          parts=$(printf '%s' "$msg" | grep -o '\[kaggle-copy-parts:[^]]*\]' | head -1 | sed 's/^\[kaggle-copy-parts://; s/\]$//' || true)
           echo "plan=$plan" >> "$GITHUB_OUTPUT"; echo "go=$go" >> "$GITHUB_OUTPUT"
+          echo "verify=$verify" >> "$GITHUB_OUTPUT"; echo "parts=$parts" >> "$GITHUB_OUTPUT"
 
   plan:
     needs: gate
@@ -79,10 +86,15 @@ jobs:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
         run: python3 scripts/data_lake/kaggle_pilot.py plan --out plan.json --part-gb 22 | tee plan.txt
       - id: m
+        env:
+          ONLY_PARTS: ${{ needs.gate.outputs.parts }}
         run: |
           python3 - <<'PY' >> "$GITHUB_OUTPUT"
-          import json
+          import json, os
           p = json.load(open("plan.json"))
+          only = [x for x in os.environ.get("ONLY_PARTS", "").split(",") if x]
+          if only:
+              p["parts"] = [x for x in p["parts"] if x["part"] in only]
           total = p["frozen_total_bytes"] / 1e9
           # fail closed: the Kaggle private quota is 214.75 GB, with 2.9 GB + the 10 GB trial already used and old versions possibly counting
           assert total <= 150, f"frozen total {total:.1f} GB does not fit the Kaggle private quota with headroom"
@@ -180,7 +192,7 @@ jobs:
 
   verify:
     needs: [gate, plan, copy]
-    if: ${{ !cancelled() && needs.gate.outputs.go == 'true' && needs.copy.result != 'skipped' }}
+    if: ${{ !cancelled() && ((needs.gate.outputs.go == 'true' && needs.copy.result != 'skipped') || needs.gate.outputs.verify == 'true') }}
     runs-on: ubuntu-latest
     timeout-minutes: 120
     strategy:
@@ -234,27 +246,43 @@ jobs:
           # runner-side sample: 12 random members downloaded as single files and re-hashed against the manifest
           rm -rf /tmp/mf && mkdir -p /tmp/mf
           kaggle datasets download -d "$USERNAME/$SLUG" -f MANIFEST.json -p /tmp/mf --unzip > /dev/null 2>&1
+          # how Kaggle names the files in this dataset (diagnostic, scrubbed)
+          timeout 120 kaggle datasets files "$USERNAME/$SLUG" 2>&1 | scrub | head -8 | cut -c1-200
           python3 - "$USERNAME/$SLUG" <<'PY' | tee /tmp/sample.json
-          import hashlib, json, os, random, subprocess, sys
+          import hashlib, json, os, random, shutil, subprocess, sys
           ds = sys.argv[1]
+          user = ds.split("/")[0]
           man = json.load(open("/tmp/mf/MANIFEST.json"))
           mem = [(f["path"][:-4], m) for f in man["files"] for m in f.get("members", [])]
           random.seed(7)
           pick = random.sample(mem, min(12, len(mem)))
-          ok, bad = 0, []
+          ok, bad, diag = 0, [], []
+          d = "/tmp/smp"
+          def find(rel):
+              # the CLI may save under the basename, under the relative path, or in a subfolder: look for all of them
+              for c in (os.path.join(d, rel), os.path.join(d, os.path.basename(rel))):
+                  if os.path.isfile(c):
+                      return c
+              for root, _, files in os.walk(d):
+                  if os.path.basename(rel) in files:
+                      return os.path.join(root, os.path.basename(rel))
+              return None
           for shard, m in pick:
               rel = f"{shard}/{m['path']}"
-              d = "/tmp/smp"
-              os.makedirs(d, exist_ok=True)
+              shutil.rmtree(d, ignore_errors=True)
+              os.makedirs(d)
               r = subprocess.run(["kaggle", "datasets", "download", "-d", ds, "-f", rel, "-p", d, "--unzip"], capture_output=True, text=True)
-              fp = os.path.join(d, os.path.basename(rel))
-              if os.path.isfile(fp) and hashlib.sha256(open(fp, "rb").read()).hexdigest() == m["sha256"]:
+              fp = find(rel)
+              good = bool(fp) and hashlib.sha256(open(fp, "rb").read()).hexdigest() == m["sha256"]
+              if good:
                   ok += 1
               else:
                   bad.append(rel)
-              if os.path.isfile(fp):
-                  os.remove(fp)
-          print(json.dumps({"sampled": len(pick), "ok": ok, "bad": bad[:5], "n_members": len(mem)}))
+                  if len(diag) < 3:
+                      diag.append({"rel": rel, "rc": r.returncode, "found": bool(fp), "size": os.path.getsize(fp) if fp else None,
+                                   "want_bytes": m.get("bytes"), "tool_output": (r.stdout + r.stderr).replace(user, "<user>")[-300:],
+                                   "dir": sorted(os.listdir(d))[:5]})
+          print(json.dumps({"sampled": len(pick), "ok": ok, "bad": bad[:5], "n_members": len(mem), "diag": diag}))
           PY
           python3 - <<'PY'
           import json, sys
