@@ -1,7 +1,7 @@
 id: RQ-20261101-5e01-02
 title: 'Structure-based SL+TP (causal swing / FVG, ratcheting) vs the declared exit on ada_pullback_2h (bybit_2 + bybit_portfolio): does it beat the current
   exit net of the full cost stack, held-out?'
-status: queued
+status: done
 cadence: once
 theme: live_strategy
 priority: 1
@@ -62,6 +62,7 @@ value:
   bucket: own_losses
   basis: 'stand-in estimate: governs the default exit of a leg that trades real money; not a measurement.'
 routing:
+  needs_internet: 'STRUCTURE-EXITS-DEFAULT 2026-11-05: pinned to github_runner. Every kaggle_cpu run of this unit was producer_failed: the kernel did not serve the candle feed from the mounted dataset (IsADirectoryError, or no serve attempt at all = dataset not mounted) and then could not reach data.binance.vision (no internet). Re-run on research-script-run.yml 2026-11-05 ~18:30Z.'
   needs_trainer_resident_data: false
   needs_gpu: false
   peak_memory_gb: 4.0
@@ -128,8 +129,6 @@ related:
 rearmed_at: '2026-11-03T04:50:00+00:00'
 last_dispatched_at: '2026-11-03T09:39:49+00:00'
 grading:
-  owner: PI-20261105-WDWYHZCN-0001
-  owner_reason: 'producer_failed (cmd_exit) on the newest row, 3 identical re-fires; failure mode and fix path named in PI-20261105-WDWYHZCN-0001 (RESEARCH-OPS-20261105-1449 triage)'
   attested: RULE-STRUCTURE-EXITS-V1
   auto: true
   decision_rule_id: RULE-STRUCTURE-EXITS-V1
@@ -137,9 +136,11 @@ grading:
   - research/results/RQ-20261101-5e01-02/41556500136.jsonl
   - research/results/RQ-20261101-5e01-02/41573383643.jsonl
   - research/results/RQ-20261101-5e01-02/41594205917.jsonl
+  - research/results/RQ-20261101-5e01-02/42084912491.jsonl
   graded_at: '2026-11-05'
   grader: scripts/research/queue_grade.py
-  needs_review: true
-  reason: 'read_state not unanimously measured: [''producer_failed'']'
-  rows: 3
-  verdict: null
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 2 row(s), all measured, all fail (3 earlier producer_failed / re-graded wiring_only row(s) superseded)
+  rows: 2
+  verdict: fail

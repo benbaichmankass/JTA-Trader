@@ -41,7 +41,7 @@ def test_tradeify_goes_live_with_the_eth_sol_roster_at_half_percent():
     # 2026-10-29 (Tier-3, operator): trend_donchian_sol_prop pulled from tradeify_1 (V2 prop gate EV < 0,
     # comms/prop_survival/v2/). `symbols:` keeps SOLUSDT (additive pull list, not a gate). REVERT: re-add sol_prop here.
     # 2026-11-05 (Tier-3, operator 'Pull from prop (Recommended)', row PROP-PULL-ETHPROP): trend_donchian_eth_prop pulled (RQ-20261031-422a-01 FAIL); roster is an explicit []. REVERT: re-add eth_prop here.
-    assert t["strategies"] == []
+    assert t["strategies"] == ["trend_donchian_eth_4h", "trend_donchian_sol_4h"]  # 2026-11-05 ~21:05Z (Tier-3, operator "Baseline at min size (Rec.)" + "Both now, waive both"): min-size BASELINE roster. REVERT: [].
     assert t["symbols"] == ["ETHUSDT", "SOLUSDT"]
     assert t["risk"]["risk_pct"] == 0.005
     assert t["risk"]["max_dd_pct"] == 0.06 and t["risk"]["daily_loss_pct"] == 0.03
@@ -79,7 +79,8 @@ def test_ruleset_is_tradeify_and_unconfirmed():
     assert rs.limits.drawdown_type == "static"
     assert raw["unconfirmed"] is True
     assert raw["limits"]["daily_loss_reset_utc"] == "22:00"
-    assert raw["sizing"] == {"mode": "flat", "flat": {"max_risk_usd": 50}}
+    assert raw["sizing"] == {"mode": "flat", "flat": {"max_risk_usd": 50, "per_leg_risk_usd": {
+        "trend_donchian_eth_4h": 10, "trend_donchian_sol_4h": 10}}}  # 2026-11-05 min-size baseline (operator)
     assert raw["routing"] == "prop_rulesets/tradeify_routing.yaml"
 
 

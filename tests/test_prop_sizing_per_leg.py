@@ -110,7 +110,9 @@ def test_per_leg_journal_row_records_the_override(tmp_path, monkeypatch):
     assert em[0]["meta"]["sizing"]["per_leg_risk_usd"] == 50.0
 
 
-def test_shipped_config_declares_no_per_leg_override_yet():
-    """The $25/$50 breakout_2 split is a HELD Tier-3 proposal (see PR body)."""
+def test_shipped_config_declares_only_the_baseline_min_size_override():
+    """The $25/$50 breakout_2 split stays a HELD proposal; the only shipped override is the operator's
+    min-size BASELINE (2026-11-05 "Baseline at min size (Rec.)"): $10 per ticket on the two baseline legs."""
     cfg = prop_sizing.load_sizing_config(_TURBO)
-    assert cfg.per_leg_risk_usd == {} and cfg.flat_max_risk_usd == 25.0
+    assert cfg.per_leg_risk_usd == {"trend_donchian_eth_4h": 10.0, "trend_donchian_sol_4h": 10.0}
+    assert cfg.flat_max_risk_usd == 25.0
