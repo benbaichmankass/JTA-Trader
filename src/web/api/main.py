@@ -24,6 +24,7 @@ from src.web.api.routers import dashboard as dashboard_router
 from src.web.api.routers import db_explorer as db_explorer_router
 from src.web.api.routers import devices as devices_router
 from src.web.api.routers import diag as diag_router
+from src.web.api.routers import research_runs as research_runs_router
 from src.web.api.routers import exit_interval as exit_interval_router
 from src.web.api.routers import exit_ladder as exit_ladder_router
 from src.web.api.routers import exposure as exposure_router
@@ -110,6 +111,7 @@ app.include_router(backtests_router.router)
 app.include_router(pnl_exchange_router.router)
 app.include_router(pnl_broker_truth_router.router)
 app.include_router(diag_router.router)
+app.include_router(research_runs_router.router)
 app.include_router(shadow_router.router)
 app.include_router(health_snapshots_router.router)
 app.include_router(trade_scores_router.router)

@@ -69,3 +69,19 @@ def test_research_runs_view_states_read_state(tmp_path):
     v = ts.research_runs_view(mirror_root=mirror, db_path=str(tmp_path / "t.db"), unit="RQ-20301231-001")
     assert v["read_state"] == "read" and v["total"] == 1 and v["by_source"] == {"runner": 1}
     assert v["rows"][0]["sources"] == ["runner:research-queue-dispatch:9"] and v["ingested_at"]
+
+
+def test_research_runs_route_is_registered_and_token_gated():
+    from fastapi import FastAPI
+    from fastapi.testclient import TestClient
+
+    from src.web.api.routers import research_runs as rr
+
+    main_src = (REPO / "src" / "web" / "api" / "main.py").read_text()
+    assert "app.include_router(research_runs_router.router)" in main_src
+    app = FastAPI()
+    app.include_router(rr.router)
+    r = TestClient(app).get("/api/diag/research_runs")
+    assert r.status_code in (401, 403, 503), r.status_code
+    r = TestClient(app).get("/api/diag/research_runs?kind=bogus")
+    assert r.status_code in (400, 401, 403, 503), r.status_code
