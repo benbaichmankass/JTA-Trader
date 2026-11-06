@@ -1172,6 +1172,9 @@ def _add_risk(leg: str, frm: str, to: str, account: str, exchange: str,
     if bar.get("holdout_required"):
         _holdout(leg, frm, to, record, bar, m, root, ctx)
 
+    # ── DSR: REPORTED, NEVER A REFUSAL (operator 2026-11-06 ~19:35Z, option 3 "Holdout governs; promote") ──
+    ctx["evidence"]["dsr_probation"] = dsr_probation(leg, root)
+
     # ── Stage-1 cost fidelity (S1 -> S2 only) ───────────────────────────────
     if (frm, to) == ("S1", "S2"):
         _cost_fidelity(leg, venue, record, m, root, ctx)
@@ -1233,6 +1236,42 @@ HOLDOUT_PASS = "confirmed"
 HOLDOUT_FAIL = ("not_replicated", "no_discovery")
 HOLDOUT_THIN = ("underpowered", "insufficient_discovery")
 QUEUE_DIR_REL = "research/queue"
+
+
+TRIAL_LEDGER_REL = "comms/research/trial_ledger.json"
+DSR_PROBATION_BAR = 0.95
+
+
+def dsr_probation(leg: str, root: Path = REPO) -> Dict[str, Any]:
+    """The leg's deflated-Sharpe reading, REPORTED and NEVER a refusal.
+
+    OPERATOR, 2026-11-06 ~19:35Z (popup option 3 "Holdout governs; promote", relayed by Manager Session
+    2026-11-06a), verbatim: "3, but we need to use DSR as a metric ongoing performance review and iteration -
+    non-dsr passing legs can trade live, but are sort of on probation with the goal of iterating u til we have a
+    DSR proof version of the strategy/ml. The legs demotes today should stay in the iterative loop so we can rebase
+    them, but don't need to pass DSR to go back on the roster". So the HOLDOUT pass (R-HOLDOUT) is the real-money
+    bar; DSR > 0.95 is a standing review metric (OPERATING-PLAN § 2 "DSR is a probation metric"). This function
+    only reads ``comms/research/trial_ledger.json``; nothing in this module may raise on its result.
+    """
+    doc = _json(root / TRIAL_LEDGER_REL)
+    out: Dict[str, Any] = {"bar": DSR_PROBATION_BAR, "ledger": TRIAL_LEDGER_REL, "gates": False,
+                           "dsr": None, "probation": None, "read_state": "no_ledger"}
+    if not isinstance(doc, dict):
+        return out
+    out["ledger_generated_at"] = doc.get("generated_at")
+    ev = (doc.get("evidence") or {}).get(leg)
+    if not isinstance(ev, dict):
+        out["read_state"] = "leg_not_in_ledger"
+        return out
+    d = (ev.get("dsr") or {}).get("dsr")
+    out.update({"dsr": d, "n": ev.get("n_trades_oos"), "N_used": ev.get("N_used"),
+                "bhy_haircut_expectancy_r": ((ev.get("haircut") or {}).get("bhy") or {}).get("haircut_expectancy_r")})
+    if isinstance(d, (int, float)) and not isinstance(d, bool):
+        out["read_state"] = "measured"
+        out["probation"] = d <= DSR_PROBATION_BAR
+    else:
+        out["read_state"] = "not_computed"
+    return out
 
 
 def holdout_unit_for(leg: str, root: Path) -> Optional[str]:
