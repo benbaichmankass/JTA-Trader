@@ -6,6 +6,11 @@
   },
   "id": "PI-20261106-Y7JEXUWW-0006",
   "next_action": "check_observation",
+  "observation": {
+    "due_by": "2026-11-20",
+    "how_to_check": "curl -s https://ict-bot.duckdns.org/api/bot/config (the 3 legs on bybit_2 + bybit_portfolio), then the diag journal relay for account bybit_2 / bybit_portfolio filtered to the 3 strategies (vm-diag-request '[diag-request] journal?account_id=bybit_2&limit=100')",
+    "what": "per leg (trend_donchian_xrp_4h, ada_pullback_2h, trend_donchian_sol_prop): the first live trade on bybit_2 and its bybit_portfolio twin is mechanically clean (right size/side, real SL+TP resting at the venue, exit journaled with reason+price, fill and fees recorded); deploy confirmed first"
+  },
   "origin": {
     "kind": "session",
     "ref": "lane SOAK-BACKLOG-REVIEW (Manager Sessions 2026-11-06a/b), PR #23935",
