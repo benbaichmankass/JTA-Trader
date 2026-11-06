@@ -31,10 +31,12 @@ decision_rule:
   id: RULE-RQ20261106-e9a1-03-ENTRY-EQ-EXPORT
   registered_at: '2026-11-06'
   registered_before_run: true
-  statistic: 'scripts/research/ml_entry_equity.py export --config B --tau 0.2 --expect-sha af4835e29fe83c86: booster_sha256 of the refit (rows < 2025-06-30 minus
-    10 days, config B, seed fixed), sha_match, train_rows, model_json_bytes.'
-  rule: 'Descriptive: no pass bar. read_state measured with sha_match true means the artifact IS the model the confirming read scored. sha_match false means the artifact
-    is NOT that model and must not be served until explained; the unit never edits the confirming result.'
+  statistic: 'scripts/research/ml_entry_equity.py export --config B --tau 0.2 --expect-sha af4835e29fe83c86: booster_sha256 of fit A and of pinned fit B, sha_match,
+    shipped, a_vs_b_delta, train_rows, model_json_bytes.'
+  rule: 'Descriptive: no pass bar. The refit is done twice on the same rows: A = the confirm stage''s exact params, B = the same params pinned deterministic (LightGBM
+    can differ run to run on identical data, lane ML-FS-RECIPE 2026-11-06). SHIPPED = A when its booster sha256 matches the confirm run''s af4835e29fe83c86 (then
+    it IS the graded model), else B. The record carries sha_match, the A-vs-B prediction delta on 20000 training-tail rows (max/mean abs, rank correlation, decision
+    agreement at tau) and the params. A sha mismatch is reported with that delta, not treated as a failure; the unit never edits the confirming result.'
   what_it_does_not_do: Reads no date after 2025-06-30 (data fetched to 2025-06-30 only). No scoring, no config change, no order, no roster change.
   min_n: n/a (artifact export)
 compute: cpu_long

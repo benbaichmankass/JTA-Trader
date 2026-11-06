@@ -11,8 +11,10 @@ t 0.3: a mechanics soak, not an edge claim; real money is the operator's call.
 ## 1. The artifact (built, `ml_entry_equity.py export`, unit RQ-20261106-e9a1-03)
 `model.json` (schema `ml_entry_eq_model/1`): features (config B, 21 = 15 own + 6 cross-sectional), tau 0.20, long side, bracket (SL 2 / TP 3 ATR14,
 24 bars, decision every 4 h), costs, `pool_symbols` (173), `pool_rule_sha256`, `booster_sha256`, `booster_txt.long`; plus `parity_fixture.json`
-(60 training-tail feature vectors with the harness predictions). The export reproduces the confirm run's booster (sha256 `af4835e29fe83c86…`) or
-says it does not.
+(60 training-tail feature vectors with the harness predictions). The export refits twice on the same rows: A (the confirm stage's exact params) and B (same params pinned deterministic: single thread, row-wise, fixed seeds;
+LightGBM can differ run to run on identical data). It ships A when A's sha256 equals the confirm run's `af4835e29fe83c86…` (A IS the graded model), else B,
+and records sha_match plus the A-vs-B prediction delta on 20000 training-tail rows (max/mean abs, rank correlation, decision agreement at tau). Either
+way the served model is the COMMITTED booster, so serve parity is exact; the delta only measures how far it sits from the booster that was graded.
 
 ## 2. What the live builder must compute (all of it already defined in `scripts/research/ml_entry_equity.py`)
 Per ETF at a decision close, on its own regular-session 1h bar sequence (Alpaca 1Hour, hour-aligned, RTH = open 09:00..15:00 ET): the 15 own features
