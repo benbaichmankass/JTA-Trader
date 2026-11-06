@@ -258,6 +258,40 @@ def confirm_stage(tab: pd.DataFrame, config: str, tau: float, dev_oof_mean: floa
             "window": {"train_end": train_end, "start": start, "end": end, "embargo_days": EMBARGO_DAYS}}
 
 
+def export_stage(tab: pd.DataFrame, config: str, tau: float, pool: list[str], expect_sha: str, out: Path, train_end: str = TRAIN_END,
+                 configs: dict = CONFIGS, n_fixture: int = 60) -> dict:
+    """EXPORT (row ML-ENTRY-EQUITY-NATIVE, manager 2026-11-06): the SAME deterministic refit the confirm stage scored (rows < train_end - purge,
+    config, seed), written as a servable model.json. Reads NO date after train_end. ``expect_sha`` is the confirm run's booster sha256 prefix:
+    a mismatch is recorded loudly (sha_match false) and never silently accepted. Also writes parity_fixture.json: feature vectors from the
+    TRAINING tail with the harness predictions, so a serve-side implementation can prove it scores identically."""
+    cfg = configs[config]
+    feats = cfg["features"]
+    te = pd.Timestamp(train_end, tz="UTC") + pd.Timedelta(days=1)
+    tr = purge(tab[tab.ts < te], te).dropna(subset=feats + ["net_long"])
+    m = _lgb(cfg["params"]).fit(tr[feats], tr["net_long"])
+    text = m.booster_.model_to_string()
+    sha = hashlib.sha256(text.encode()).hexdigest()
+    match = bool(expect_sha) and sha.startswith(expect_sha)
+    model_id = f"ENTRY-EQ-v1-{config}-tau{tau}"
+    art = {"model_id": model_id, "schema": "ml_entry_eq_model/1", "features": feats, "tau": float(tau), "side": "long",
+           "train_end_exclusive": str(te), "train_rows": int(len(tr)), "booster_sha256": sha,
+           "bracket": {"sl_atr": 2.0, "tp_atr": 3.0, "atr_n": 14, "horizon_bars": H, "decision_every_h": 4, "bar": "alpaca 1Hour RTH, hour-aligned"},
+           "costs": {"fee_bps": 0.0, "slippage_bps": 5.0, "regulatory_bps": S.REGULATORY_BPS, "slippage_status": "PROVISIONAL"},
+           "pool_rule_sha256": S.POOL_RULE_SHA256, "pool_symbols": list(pool), "proxies": PROXIES,
+           "lgb_params": {**BASE_PARAMS, **cfg["params"]},
+           "evidence": ["RQ-20261105-e9a1-01 (dev walk-forward, run 42119511272)", "RQ-20261105-e9a1-02 (confirming read, run 42143223941: n 858, net +0.0392 R)"],
+           "booster_txt": {"long": text}}
+    out.mkdir(parents=True, exist_ok=True)
+    (out / "model.json").write_text(json.dumps(art))
+    tail = tr.sort_values("ts").tail(20000).sample(n_fixture, random_state=7)
+    fx = {"model_id": model_id, "features": feats,
+          "rows": [{"symbol": r.symbol, "ts": str(r.ts), **{f: float(getattr(r, f)) for f in feats}, "pred": float(p)}
+                   for r, p in zip(tail.itertuples(index=False), m.predict(tail[feats]))]}
+    (out / "parity_fixture.json").write_text(json.dumps(fx))
+    return {"model_id": model_id, "booster_sha256": sha, "expect_sha": expect_sha, "sha_match": match, "train_rows": int(len(tr)),
+            "n_features": len(feats), "model_json_bytes": (out / "model.json").stat().st_size, "n_fixture_rows": n_fixture}
+
+
 # ------------------------------------------------------------------------------------------------ runner glue
 def _pool_and_bars(a, end_day: str):
     """The registered pool (POOL_RULE) + 1h RTH bars for pool and proxies. Read-only allowlisted Alpaca client."""
@@ -310,7 +344,7 @@ def main_run(a) -> int:
     out.mkdir(parents=True, exist_ok=True)
     slip, _fund = resolve_cost_policy("SPY")
     fee = resolve_fee_bps_roundtrip("SPY")
-    end_day = TRAIN_END if a.cmd == "dev" else (pd.Timestamp.now(tz="UTC").normalize().replace(day=1) - pd.Timedelta(days=1)).strftime("%Y-%m-%d")
+    end_day = TRAIN_END if a.cmd in ("dev", "export") else (pd.Timestamp.now(tz="UTC").normalize().replace(day=1) - pd.Timedelta(days=1)).strftime("%Y-%m-%d")
     pool, prep, bars, client = _pool_and_bars(a, end_day)
     tab = build_table(bars, pool, slip, fee)
     print(f"[table] {len(tab)} decision rows, {tab.symbol.nunique()} symbols t={time.strftime('%H:%M:%S')}", flush=True)
@@ -321,6 +355,14 @@ def main_run(a) -> int:
                   "configs": {k: {"features": v["features"], "params": v["params"]} for k, v in CONFIGS.items()},
                   "alpaca_calls": client.calls, "runtime_s": round(time.time() - t0, 1)})
         row = dev_row(d, a.unit, a.where)
+    elif a.cmd == "export":
+        e = export_stage(tab, a.config, float(a.tau), pool, a.expect_sha, out)
+        row = {"schema_version": 1, "research_unit": a.unit, "read_state": "measured", "verdict": "not_applicable",
+               "population": f"EXPORT of {e['model_id']}: refit on rows < {TRAIN_END} over the {len(pool)}-ETF pool; no outcome after train_end read",
+               "note": (f"export {e['model_id']} booster sha256 {e['booster_sha256'][:16]} "
+                        f"{'MATCHES' if e['sha_match'] else 'DOES NOT MATCH'} the confirm run's {a.expect_sha}"),
+               "generated_at": pd.Timestamp.now(tz="UTC").strftime("%Y-%m-%dT%H:%M:%SZ"), "measurement": {**e, "pool": {k: v for k, v in prep.items() if k != "excluded"}},
+               "n": e["train_rows"], "produced_by": {"tool": "python3 scripts/research/ml_entry_equity.py export", "where": a.where}}
     else:
         c = confirm_stage(tab, a.config, float(a.tau), float(a.dev_oof_mean), a.unit, out / "ledger", end=end_day,
                           symbols=pool)
@@ -392,6 +434,17 @@ def self_test() -> int:
         r2 = confirm_stage(tab, "A", 0.0, 0.01, "RQ-T", Path(td), train_end="2023-04-30", start="2023-05-20", end="2023-08-31",
                            configs=small, symbols=pool)
         assert r2["bar"]["n_tries"] == 2 and r2["bar"]["point_t_min"] > 0, r2["bar"]      # a re-read is graded against the deflated bar
+    with tempfile.TemporaryDirectory() as td:
+        ex = export_stage(tab, "A", 0.0, pool, "", Path(td), train_end="2023-04-30", configs=small, n_fixture=10)
+        art = json.loads((Path(td) / "model.json").read_text())
+        assert art["features"] == small["A"]["features"] and art["booster_sha256"] == ex["booster_sha256"] and "booster_txt" in art
+        ex2 = export_stage(tab, "A", 0.0, pool, ex["booster_sha256"][:16], Path(td) / "b", train_end="2023-04-30", configs=small, n_fixture=10)
+        assert ex2["sha_match"] and ex2["booster_sha256"] == ex["booster_sha256"], "the refit must be deterministic"
+        import lightgbm as lgb
+        fx = json.loads((Path(td) / "parity_fixture.json").read_text())
+        bst = lgb.Booster(model_str=art["booster_txt"]["long"])
+        got = bst.predict(pd.DataFrame([{f: r[f] for f in art["features"]} for r in fx["rows"]]))
+        assert np.allclose(got, [r["pred"] for r in fx["rows"]]), "loaded booster must reproduce the fixture predictions"
     # no dev row may sit in the confirming window and vice versa (the dev stage only ever sees <= TRAIN_END)
     te = pd.Timestamp("2023-04-30", tz="UTC") + pd.Timedelta(days=1)
     assert (tab[tab.ts < te].ts.max() < te) and (tab[tab.ts >= pd.Timestamp("2023-05-20", tz="UTC")].ts.min() >= pd.Timestamp("2023-05-20", tz="UTC"))
@@ -403,22 +456,25 @@ def main(argv=None) -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--self-test", action="store_true")
     sub = ap.add_subparsers(dest="cmd")
-    for name in ("dev", "confirm"):
+    for name in ("dev", "confirm", "export"):
         p = sub.add_parser(name)
         p.add_argument("--cache", required=True)
         p.add_argument("--out", required=True)
         p.add_argument("--unit", required=True)
         p.add_argument("--where", default="local")
-        if name == "confirm":
+        if name in ("confirm", "export"):
             p.add_argument("--config", required=True, choices=sorted(CONFIGS))
             p.add_argument("--tau", required=True)
+        if name == "export":
+            p.add_argument("--expect-sha", required=True, help="booster sha256 (prefix ok) of the confirm run to reproduce")
+        if name == "confirm":
             p.add_argument("--dev-oof-mean", required=True)
             p.add_argument("--rule-id", required=True)
             p.add_argument("--registered-at", required=True)
     a = ap.parse_args(argv)
     if a.self_test:
         return self_test()
-    return main_run(a) if a.cmd in ("dev", "confirm") else 2
+    return main_run(a) if a.cmd in ("dev", "confirm", "export") else 2
 
 
 if __name__ == "__main__":
