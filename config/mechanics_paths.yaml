@@ -12,6 +12,13 @@ legs:
   # alpaca_portfolio. Proven by passed soaks on alpaca_paper (tlt_pullback_1d, tqqq_trend_long_1d, ief_pullback_1d,
   # slv_trend_1h: docs/claude/work/SOAKS.json) and by 3 filled real-money brackets on alpaca_live (09-17, 09-18, 09-23,
   # all closed by the venue stop leg; broker order history read 2026-11-01). Config/params only per leg: delta none.
+  # 2026-11-06 (lane ALPACA-LIVE-MECHANICS): the path's journaling now books the venue's full-fill average as
+  # entry_price (AlpacaClient.place confirm poll -> _submit_order -> _log_trade_to_journal; notes.entry_price_source).
+  # Placement, bracket legs and sizing are unchanged. That read is new code: its ONE clean trade is the first Alpaca
+  # fill after deploy whose journal entry_price equals the broker's filled_avg_price. Re-read 2026-11-06 from
+  # /api/diag/alpaca_order_history: since the GTC-leg fix (PI-20260926-HJPL5ABP-0001), 10 alpaca_paper brackets
+  # (11-02..11-05) filled with both legs resting gtc and every close a venue leg fill. A GTC bracket has not run on
+  # alpaca_live yet (its last fill, 09-23, predates the fix).
   iaum_pullback_1d:
     path: alpaca_equity_bracket_v1
     exchange: alpaca
