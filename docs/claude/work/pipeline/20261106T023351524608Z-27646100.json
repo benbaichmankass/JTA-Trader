@@ -1,0 +1,16 @@
+{
+  "due_when": {
+    "check_every_days": 7,
+    "clears_when": "src/exchange/alpaca_connector.py AlpacaMarketData backs off and retries on HTTP 429 (Retry-After / exponential, bounded) instead of returning None, verified by a test and by a re-run of RQ-20261106-d5a1-01 pass 2 showing n_symbols_empty == n_no_bars; or killed with a stated reason (e.g. no Alpaca roster will exceed the data limit)",
+    "kind": "observation"
+  },
+  "id": "PI-20261106-5A1BGFHC-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "audit",
+    "ref": "lane PROD-LEGS-DSR-DECISION 2026-11-06, research-script-run 42145318852 (RQ-20261106-d5a1-01, artifact 13471993354)",
+    "rerun": "python3 scripts/research/alpaca_baseline_affordability.py run --equity <alpaca_live equity> --equity-as-of <as-of> --out <dir>  (via research-script-run.yml on RQ-20261106-d5a1-01; read measurement.pull_load)"
+  },
+  "state": "queued",
+  "what": "The LIVE Alpaca 1h fetch has NO 429 backoff. MEASURED 2026-11-06T02:29-02:31Z (RQ-20261106-d5a1-01 pass 2, run 42145318852, paper key pair, iex feed): one sequential unpaced pass of AlpacaMarketData.get_ohlcv(symbol, '1h', limit=400) over the 173 a41f ETFs took 62.9 s, made 217 HTTP calls, 104 returned 429, and 82 of 173 symbols came back with NO bars (pass 1, paced, found only 2 symbols without bars, so ~80 empties are 429 losses). Root cause: _bars_paged re-raises a first-page HTTPError and get_ohlcv's except returns None, so a rate-limited symbol is silently skipped for that tick. Not urgent at today's Alpaca roster size (alpaca_paper ~14 ETFs + ml_entry's 13), but any widening (the operator's ml_entry baseline on alpaca_live over the a41f population) would lose roughly half its symbols every tick, and the shared paper key means a burst also starves alpaca_paper's own fetch. Fix: bounded backoff on 429/5xx in _bars_paged (Retry-After, else 2**attempt capped), plus pacing across the tick's Alpaca symbols, mirroring scripts/research/alpaca_readonly.py. Tier 2 (order-path data fetch)."
+}
