@@ -2171,8 +2171,8 @@ accounts:
                                        # Manager Session 2026-11-05b; row ML-PROP-ITERATE): a MEASURED BASELINE at minimum size, not a
                                        # prop-gate pass. Exception recorded in comms/prop_survival/<leg>.json `operator_exception`.
                                        # Size: sizing.flat.per_leg_risk_usd 10 in the ruleset. REVERT: `strategies: []`.
-      - trend_donchian_eth_4h          # v2 3y PASS all 3 firms; V3 FAIL_EDGE (CI lo -0.068 R); 365d n=51 negative
-      - trend_donchian_sol_4h          # v2+V3 3y PASS all 3 firms (CI lo +0.011 R); 365d n=34 negative (CONTESTED)
+      - trend_donchian_eth_4h          # 2026-11-06 PROBATION (operator "Pull sol_4h, keep eth_4h (Recommended)"): stays under the 11-05 baseline exception; V3 re-test FAIL_EDGE (n=136 trades 2023-11-05..2026-11-05, edge +0.212 R CI [-0.127,+0.551]; docs/research/prop-retest-2026-11-06/RESULT.md); iteration unit RQ-20261106-028.
+      # trend_donchian_sol_4h REMOVED 2026-11-06 (Tier-3, operator via Manager 2026-11-06a, verbatim "Pull sol_4h, keep eth_4h (Recommended)"): V3 re-test FAIL (n=103 trades 2023-11-05..2026-11-05; docs/research/prop-retest-2026-11-06/RESULT.md). It keeps trading on bybit_1. Open positions keep their brackets. This account has no minimum-trading-days rule. REVERT: re-add `- trend_donchian_sol_4h` here.
       # was `strategies: []` 2026-11-05 (PROP-PULL-ETHPROP).
       # breakout_1's legs, each kept only if its Turbo fit did not FAIL
       # PULLED 2026-11-05 (Tier-3, OPERATOR-APPROVED; popup ~06:25Z verbatim "Pull from prop (Recommended)", relayed by
@@ -2252,8 +2252,8 @@ accounts:
                                        # Manager Session 2026-11-05b; row ML-PROP-ITERATE): a MEASURED BASELINE at minimum size, not a
                                        # prop-gate pass. Exception recorded in comms/prop_survival/<leg>.json `operator_exception`.
                                        # Size: sizing.flat.per_leg_risk_usd 10 in the ruleset. REVERT: `strategies: []`.
-      - trend_donchian_eth_4h          # v2 3y PASS all 3 firms; V3 FAIL_EDGE (CI lo -0.068 R); 365d n=51 negative
-      - trend_donchian_sol_4h          # v2+V3 3y PASS all 3 firms (CI lo +0.011 R); 365d n=34 negative (CONTESTED)
+      - trend_donchian_eth_4h          # 2026-11-06 PROBATION (operator "Pull sol_4h, keep eth_4h (Recommended)"): stays under the 11-05 baseline exception; V3 re-test FAIL_EDGE (n=136 trades 2023-11-05..2026-11-05, edge +0.212 R CI [-0.127,+0.551]; docs/research/prop-retest-2026-11-06/RESULT.md); iteration unit RQ-20261106-028.
+      # trend_donchian_sol_4h REMOVED 2026-11-06 (Tier-3, operator via Manager 2026-11-06a, verbatim "Pull sol_4h, keep eth_4h (Recommended)"): V3 re-test FAIL (n=103 trades 2023-11-05..2026-11-05; docs/research/prop-retest-2026-11-06/RESULT.md). It keeps trading on bybit_1. Open positions keep their brackets. This account has no minimum-trading-days rule. REVERT: re-add `- trend_donchian_sol_4h` here.
       # was `strategies: []` 2026-11-05 (PROP-PULL-ETHPROP).
       # the memo's B3 book (§ 3.1): one leg per
                                        # symbol, so the no-hedging rule cannot be
@@ -2368,8 +2368,8 @@ accounts:
                                        # Manager Session 2026-11-05b; row ML-PROP-ITERATE): a MEASURED BASELINE at minimum size, not a
                                        # prop-gate pass. Exception recorded in comms/prop_survival/<leg>.json `operator_exception`.
                                        # Size: sizing.flat.per_leg_risk_usd 10 in the ruleset. REVERT: `strategies: []`.
-      - trend_donchian_eth_4h          # v2 3y PASS all 3 firms; V3 FAIL_EDGE (CI lo -0.068 R); 365d n=51 negative
-      - trend_donchian_sol_4h          # v2+V3 3y PASS all 3 firms (CI lo +0.011 R); 365d n=34 negative (CONTESTED)
+      - trend_donchian_eth_4h          # 2026-11-06 PROBATION (operator "Pull sol_4h, keep eth_4h (Recommended)"): stays under the 11-05 baseline exception; V3 re-test FAIL_EDGE (n=136 trades 2023-11-05..2026-11-05, edge +0.212 R CI [-0.127,+0.551]; docs/research/prop-retest-2026-11-06/RESULT.md); iteration unit RQ-20261106-028.
+      - trend_donchian_sol_4h          # KEPT 2026-11-06 on velotrade_1 ONLY (manager rule: keep if removing it lowers EV or p(pass) here; operator caveat on min trading days). Book sim at live $10/leg, 5 seeds x 1000 lives, 3y ledger 2023-11-05..2026-11-05: eth+sol p(pass eval) 0.138 vs eth alone 0.076, EV/life -$52.68 vs -$53.92 (docs/research/prop-retest-2026-11-06/velotrade_book/summary_min10.json). Not the qualifying-day rule (p target-reached-not-passed ~0): sol adds trades toward the +10% target.
       # was `strategies: []` 2026-11-05 (PROP-PULL-ETHPROP).
       # VELOTRADE-GOLIVE roster (Tier-3, HELD). Lane VELOTRADE-FIT: unit RQ-20261006-062,
                                        # rule RULE-RQ1006-VELOTRADE-FIT (registered before grading, commit 3769f2b1f):

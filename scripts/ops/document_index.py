@@ -466,6 +466,11 @@ STATUS_EXPLICIT: Dict[str, Tuple[str, str, str]] = {
         "Soak-backlog review: 56 testing legs vs their Stage-0 records (0 pass); feeds SOAK-VOCAB-RETIRE; "
         "goes historical once the 6 holdout-blocked legs are decided",
     ),
+    "docs/research/prop-retest-2026-11-06/velotrade_book/RESULT.md": (
+        "live",
+        "read:SOAK-BACKLOG-REVIEW-lane-measured-it-2026-11-06",
+        "sol_4h prop book sim: keep on velotrade_1 (p(pass) 0.138 vs 0.076 at $10/leg); goes historical on the manager's merge",
+    ),
     "docs/research/tick-duration-115s-profile-2026-11-04.md": (
         "live",
         "read:TICK-DURATION-115S-lane-authored-and-measured-it-2026-11-04",

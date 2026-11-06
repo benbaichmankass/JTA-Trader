@@ -57,7 +57,10 @@ def test_variants_present_with_tightened_exits():
         assert b["timeframe"] == "1h"
         # The eth_pullback_prop_2h SWAP-ROBUST recipe: tighter trail + a real
         # 6R cap (vs the live 50.0 sentinel / 5.0 trail the un-tightened cells use).
-        assert b["trail_mult"] == 3.5
+        # 2026-11-06 (Tier-3, operator "Yes, rebuild and promote" + "Holdout governs; promote"): sol_prop runs its
+        # HOLDOUT-CONFIRMED trail 4.5 (RQ-20261016-077e-05 C5; comms/strategy_evidence/trend_donchian_sol_prop.json),
+        # a deliberate, evidence-backed departure from the Phase-0 recipe. eth_prop keeps the recipe.
+        assert b["trail_mult"] == (4.5 if name == "trend_donchian_sol_prop" else 3.5)
         assert b["tp_r"] == 6.0
         # Same entry params as the un-tightened siblings (only exits differ).
         assert (b["donchian"], b["atr_period"], b["atr_stop_mult"]) == (20, 14, 2.5)
@@ -74,7 +77,8 @@ def test_exit_recipe_matches_validated_prop_sibling():
     s = _strategies()
     bar = s["eth_pullback_prop_2h"]
     for name in _VARIANTS:
-        assert s[name]["trail_mult"] == bar["trail_mult"]
+        if name != "trend_donchian_sol_prop":  # 2026-11-06: holdout-confirmed trail 4.5 (see test above); tp_r still matches
+            assert s[name]["trail_mult"] == bar["trail_mult"]
         assert s[name]["tp_r"] == bar["tp_r"]
 
 
@@ -187,7 +191,7 @@ def test_routed_to_breakout_2_and_breakout_1_retired():
     a = _accounts()["breakout_2"]
     # 2026-10-29 (Tier-3, operator): sol_prop pulled from breakout_2 (V2 prop gate); the variant stays defined.
     # 2026-11-05 (Tier-3, operator 'Pull from prop (Recommended)', row PROP-PULL-ETHPROP): trend_donchian_eth_prop pulled (RQ-20261031-422a-01 FAIL); roster is an explicit []. REVERT: re-add eth_prop here.
-    assert a["strategies"] == ["trend_donchian_eth_4h", "trend_donchian_sol_4h"]  # 2026-11-05 ~21:05Z (Tier-3, operator "Baseline at min size (Rec.)" + "Both now, waive both"): min-size BASELINE roster. REVERT: [].
+    assert a["strategies"] == ["trend_donchian_eth_4h"]  # 2026-11-05 ~21:05Z baseline roster (operator "Baseline at min size (Rec.)"); 2026-11-06 (Tier-3, operator "Pull sol_4h, keep eth_4h (Recommended)"): sol_4h pulled (V3 re-test FAIL, docs/research/prop-retest-2026-11-06/RESULT.md). REVERT: re-add trend_donchian_sol_4h.
     assert "trend_donchian_eth_prop" not in a["strategies"]
     assert "trend_donchian_sol_prop" not in a["strategies"]
 

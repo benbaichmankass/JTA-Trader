@@ -41,7 +41,7 @@ def test_tradeify_goes_live_with_the_eth_sol_roster_at_half_percent():
     # 2026-10-29 (Tier-3, operator): trend_donchian_sol_prop pulled from tradeify_1 (V2 prop gate EV < 0,
     # comms/prop_survival/v2/). `symbols:` keeps SOLUSDT (additive pull list, not a gate). REVERT: re-add sol_prop here.
     # 2026-11-05 (Tier-3, operator 'Pull from prop (Recommended)', row PROP-PULL-ETHPROP): trend_donchian_eth_prop pulled (RQ-20261031-422a-01 FAIL); roster is an explicit []. REVERT: re-add eth_prop here.
-    assert t["strategies"] == ["trend_donchian_eth_4h", "trend_donchian_sol_4h"]  # 2026-11-05 ~21:05Z (Tier-3, operator "Baseline at min size (Rec.)" + "Both now, waive both"): min-size BASELINE roster. REVERT: [].
+    assert t["strategies"] == ["trend_donchian_eth_4h"]  # 2026-11-05 ~21:05Z baseline roster (operator "Baseline at min size (Rec.)"); 2026-11-06 (Tier-3, operator "Pull sol_4h, keep eth_4h (Recommended)"): sol_4h pulled (V3 re-test FAIL, docs/research/prop-retest-2026-11-06/RESULT.md). REVERT: re-add trend_donchian_sol_4h.
     assert t["symbols"] == ["ETHUSDT", "SOLUSDT"]
     assert t["risk"]["risk_pct"] == 0.005
     assert t["risk"]["max_dd_pct"] == 0.06 and t["risk"]["daily_loss_pct"] == 0.03
