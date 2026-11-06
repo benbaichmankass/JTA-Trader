@@ -1402,7 +1402,13 @@ accounts:
     # tests/test_paper_portfolio_accounts.py::_SANCTIONED_DIVERGENCE. The venue login is margin with shorting
     # enabled (MEASURED 2026-11-01 broker_account_status: ACTIVE, shorting_enabled true, multiplier 4, flat).
     # ROLLBACK: add `side_filter: long` back (Tier 3).
-    strategies: []                     # 2026-11-06 PROD-LEGS-DSR-DECISION (Tier-3; OPERATOR popup ~00:30Z verbatim "Re-measure, then move (Rec.)" -- "Any leg that fails moves to the demo floor (paper)"): gld_pullback_1d REMOVED with alpaca_live's iaum_pullback_1d
+    strategies: [tqqq_trend_long_1d]   # 2026-11-06 ALPACA-LIVE-MECHANICS (Tier-3; OPERATOR popup ~11:10Z, relayed by Manager Session 2026-11-06a, verbatim "Probe with tqqq_trend_long (Recommended)"):
+                                       # MECHANICS-ONLY EXCEPTION (kind=mechanics), NOT an edge bet and NOT a promotion (no committed DSR/trial-ledger record for tqqq_trend_long_1d; PROD-LEGS-DSR-DECISION did not measure it). Mirror of alpaca_live (superset rule: alpaca_portfolio carries every alpaca_live leg).
+                                       # Purpose: ONE real-money GTC-bracket trade on alpaca_live (entry booked at the venue fill once #23777 lands, bracket at
+                                       # the broker, venue exit, correct close reason, graded). REMOVE after that ONE trade closes and is graded: set this back
+                                       # to `strategies: []` here AND on the other Alpaca real/mirror account, and drop tqqq_trend_long_1d from
+                                       # scripts/ci/check_strategy_status.py DUAL_BOOK_EXCEPTIONS. Row ALPACA-LIVE-MECHANICS. Prior state below:
+                                       # WAS: `strategies: []` -- 2026-11-06 PROD-LEGS-DSR-DECISION (Tier-3; OPERATOR popup ~00:30Z verbatim "Re-measure, then move (Rec.)" -- "Any leg that fails moves to the demo floor (paper)"): gld_pullback_1d REMOVED with alpaca_live's iaum_pullback_1d
                                        # (both fail DSR > 0.95 AND BHY-haircut > 0; docs/research/prod-legs-dsr-2026-11-06.md). gld_pullback_1d
                                        # keeps trading on ib_paper (testing). ROLLBACK: `strategies: [gld_pullback_1d]` (with alpaca_live's line).
                                        # Prior state: [gld_pullback_1d] = alpaca_live [iaum_pullback_1d] with the proxy replaced by its
@@ -1438,7 +1444,7 @@ accounts:
       # What ends is their record at the PORTFOLIO risk basis (risk_pct 0.02 vs
       # alpaca_paper's 0.015) and their presence in /api/bot/performance's
       # paperPortfolio block.
-    symbols: [SPY, QQQ, GLD, IWM, TLT, IEF, SLV, USO, GDX]  # alpaca_live.symbols minus the SPYM/IAUM proxies.
+    symbols: [SPY, QQQ, GLD, IWM, TLT, IEF, SLV, USO, GDX, TQQQ]  # alpaca_live.symbols minus the SPYM/IAUM proxies. (TQQQ: 2026-11-06 probe, pull list only)
     risk:
       max_dd_pct: 0.10                 # = alpaca_live's caps (operator, 2026-08-25:
       daily_loss_pct: 0.10             # "10% max drawdown" / "daily to 10% as well").
@@ -1521,7 +1527,13 @@ accounts:
     alpaca_env: live                   # selects api.alpaca.markets (vs paper).
     api_key_env: ALPACA_API_KEY_ID_LIVE        # this account's OWN key pair, so
     api_secret_env: ALPACA_API_SECRET_KEY_LIVE # paper + live run concurrently.
-    strategies: []                     # 2026-11-06 PROD-LEGS-DSR-DECISION (Tier-3; OPERATOR popup ~00:30Z verbatim "Re-measure, then move (Rec.)" -- "Any leg that fails moves to the demo floor (paper)"): EMPTY AGAIN -- iaum_pullback_1d REMOVED (fails DSR > 0.95 AND
+    strategies: [tqqq_trend_long_1d]   # 2026-11-06 ALPACA-LIVE-MECHANICS (Tier-3; OPERATOR popup ~11:10Z, relayed by Manager Session 2026-11-06a, verbatim "Probe with tqqq_trend_long (Recommended)"):
+                                       # MECHANICS-ONLY EXCEPTION (kind=mechanics), NOT an edge bet and NOT a promotion (no committed DSR/trial-ledger record for tqqq_trend_long_1d; PROD-LEGS-DSR-DECISION did not measure it). Long-only via side_filter; existing risk_pct sizing; no new knob.
+                                       # Purpose: ONE real-money GTC-bracket trade on alpaca_live (entry booked at the venue fill once #23777 lands, bracket at
+                                       # the broker, venue exit, correct close reason, graded). REMOVE after that ONE trade closes and is graded: set this back
+                                       # to `strategies: []` here AND on the other Alpaca real/mirror account, and drop tqqq_trend_long_1d from
+                                       # scripts/ci/check_strategy_status.py DUAL_BOOK_EXCEPTIONS. Row ALPACA-LIVE-MECHANICS. Prior state below:
+                                       # WAS: `strategies: []` -- 2026-11-06 PROD-LEGS-DSR-DECISION (Tier-3; OPERATOR popup ~00:30Z verbatim "Re-measure, then move (Rec.)" -- "Any leg that fails moves to the demo floor (paper)"): EMPTY AGAIN -- iaum_pullback_1d REMOVED (fails DSR > 0.95 AND
                                        # BHY-haircut > 0; docs/research/prod-legs-dsr-2026-11-06.md); it keeps trading on alpaca_paper (testing).
                                        # ROLLBACK: replace `[]` with a block list holding `- iaum_pullback_1d` (and gld_pullback_1d on alpaca_portfolio).
                                        # History below kept as the record. ⚠️ Was: NO LONGER EMPTY as of 2026-08-31 — this account now
@@ -1761,7 +1773,7 @@ accounts:
       # ROLLBACK (Option A only): delete the four entries above, leaving
       # `[tlt_pullback_1h]`. That is the entire gate — there is no mode flip in
       # front of it, and no deploy step beyond ict-git-sync pulling the change.
-    symbols: [SPY, QQQ, GLD, IWM, TLT, IEF, SLV, USO, GDX, SPYM, IAUM]   # instrument identity
+    symbols: [SPY, QQQ, GLD, IWM, TLT, IEF, SLV, USO, GDX, SPYM, IAUM, TQQQ]   # instrument identity (TQQQ: 2026-11-06 ALPACA-LIVE-MECHANICS probe, pull list only)
                                        # (mirrors alpaca_paper; sub-$100 proxies SPYM/IAUM
                                        # added 2026-07-07 for the promotion).
     risk:

@@ -63,6 +63,12 @@ DUAL_BOOK_EXCEPTIONS: Dict[str, str] = {
     # different symbol set: strategies.yaml::ml_entry.account_symbols), with no real-money ML on Alpaca until a model
     # passes. Not a duplicate trade: the two books never share a symbol. Row ALPACA-LIVE-ACTIVITY-ML.
     "ml_entry": "alpaca_paper",
+    # TEMPORARY, 2026-11-06 (row ALPACA-LIVE-MECHANICS): operator popup ~11:10Z, relayed by Manager Session 2026-11-06a,
+    # verbatim "Probe with tqqq_trend_long (Recommended)": tqqq_trend_long_1d rides alpaca_live (+ its alpaca_portfolio
+    # mirror) for ONE mechanics-only real-money trade, while staying a TESTING leg on alpaca_paper (the probe is not a
+    # promotion, so it does not move off the demo floor). DROP this entry together with the two roster lines once that
+    # one trade closes and is graded (R-STALE-EXCEPTION then reminds whoever forgets).
+    "tqqq_trend_long_1d": "alpaca_paper",
 }
 
 
@@ -107,8 +113,11 @@ def self_test() -> int:
     # The synthetic tree below uses iaum_pullback_1d as its NAMED dual-book exception (the shape the real store
     # carried until 2026-11-06). The real entry left with PROD-LEGS-DSR-DECISION, so the fixture installs its own
     # for the run and restores the real table after -- every control is unchanged.
+    # The fixture gets its OWN table (2026-11-06, ALPACA-LIVE-MECHANICS): adding to the real one made every new real
+    # entry leak into the synthetic tree as a false R-STALE-EXCEPTION.
     saved = dict(DUAL_BOOK_EXCEPTIONS)
-    DUAL_BOOK_EXCEPTIONS.setdefault("iaum_pullback_1d", "alpaca_paper")
+    DUAL_BOOK_EXCEPTIONS.clear()
+    DUAL_BOOK_EXCEPTIONS.update({"iaum_pullback_1d": "alpaca_paper", "ml_entry": "alpaca_paper"})
     try:
         return _self_test_body()
     finally:

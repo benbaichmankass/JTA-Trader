@@ -1,0 +1,33 @@
+{
+  "id": "ALPACA-LIVE-MECHANICS",
+  "title": "alpaca_live real-money mechanics: root-cause why its last 6 orders (10-16..10-21) were all status=rejected and why it has 0 entries since 11-01; prove the order path with ONE small end-to-end trade, independent of any ML",
+  "phase": null,
+  "state": "landed_unproven",
+  "owner": "lane",
+  "lane": "session_01AFoLuMHf3S6p6a31nk3okj",
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 3,
+  "prs": [
+    23777
+  ],
+  "blocked_on": [],
+  "note": "Operator 2026-11-06 ~11:00Z: \"that's like a real money bug if we're not trading correctly in Alpaca live money ... regardless of whether or not the ML passes\". || [2026-11-06 ~11:05Z lane] CAUSE, MEASURED (/api/diag/journal trades limit 300/1000; /api/diag/alpaca_order_history alpaca_live after 2026-09-01, alpaca_paper after 2026-11-02): the 6 alpaca_live + 3 alpaca_portfolio 'rejected' rows are dry_run_no_order_placed, notes.dry_cause=side_filter:long (SHORT signals on the long-only account; nothing sent). Broker: 0 rejected since 09-01; 3 filled brackets (SLV 09-17, TLT 09-18, IAUM 09-23), each exited by its venue stop leg. 0 entries since 11-01 = the [iaum_pullback_1d] roster had no long signal; empty roster since 11-06 is deliberate (#23584). REAL BUG: the journal booked the package price, not the venue fill (9/10 alpaca_paper fills 11-02..11-05; IAUM 6097 43.48 vs 42.9086, P&L -4.41 vs true -3.27) -> fixed in #23777 (held; manager merges). Filed ALPACA-CLOSE-BROKER-TRUTH (closes are reconciler-inferred). || [2026-11-06 ~11:20Z lane] OPERATOR popup ~11:10Z (relayed by Manager Session 2026-11-06a), verbatim \"Probe with tqqq_trend_long (Recommended)\": tqqq_trend_long_1d rostered on alpaca_live + alpaca_portfolio as a mechanics-only exception (kind=mechanics), kept on alpaca_paper (DUAL_BOOK_EXCEPTIONS), with its existing sentinel TP (tp_r 50.0) named as visible real-money TP-doctrine debt (BASELINE lines). CLOSING OBSERVATION: the first tqqq_trend_long_1d alpaca_live fill has (1) entry_price == the broker's filled_avg_price with notes.entry_price_source=alpaca_order_status (needs #23777 deployed first), (2) both bracket legs resting gtc at the broker (/api/diag/alpaca_open_orders), (3) a venue leg exit, (4) the matching close reason, (5) a grade row. REMOVAL STEP after that one trade is graded: alpaca_live + alpaca_portfolio back to strategies: [], drop tqqq_trend_long_1d from check_strategy_status.py DUAL_BOOK_EXCEPTIONS and both check_tp_doctrine.py baseline lines; then mark config/mechanics_paths.yaml alpaca_equity_bracket_v1 proven on real money.",
+  "due_by": "2026-11-07",
+  "roadmap": [
+    "L-ML-LIVE"
+  ],
+  "updated_at": "2026-11-06T11:23:20Z",
+  "updated_by": "session_01AFoLuMHf3S6p6a31nk3okj",
+  "observation": {
+    "what": "first tqqq_trend_long_1d alpaca_live fill: entry_price == broker filled_avg_price (notes.entry_price_source=alpaca_order_status, needs #23777 deployed), both bracket legs resting gtc at the broker, a venue leg exit, the matching close reason, a grade row",
+    "how_to_check": "/api/diag/journal?table=trades (alpaca_live, strategy tqqq_trend_long_1d) vs /api/diag/alpaca_order_history?account_id=alpaca_live and /api/diag/alpaca_open_orders?account_id=alpaca_live; grade in comms/claude_strategy_scores.jsonl",
+    "due_by": "2026-12-04"
+  },
+  "writeback": {
+    "roadmap": "none: mechanics probe, no milestone line changes until the trade is graded",
+    "arch": "none: no architecture change; the entry-fill read is documented in #23777 and config/mechanics_paths.yaml"
+  },
+  "_seq": 964
+}

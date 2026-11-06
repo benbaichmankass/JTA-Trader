@@ -226,6 +226,14 @@ BASELINE_2026_10_06: dict[str, frozenset[str]] = {
     # ML-ENTRY-TP-REVISION (operator ~22:45Z "Merge as-is now"); v2's exit = a moving-TP unit scored on v2's own trades
     # (the ml_first_passage model was scored on v1's 3 ATR trades), then remove this line.
     "bybit_1/ml_entry_v2": R,
+    # 2026-11-06 ALPACA-LIVE-MECHANICS (Tier-3, operator popup ~11:10Z, relayed by Manager Session 2026-11-06a,
+    # verbatim "Probe with tqqq_trend_long (Recommended)"): tqqq_trend_long_1d rides alpaca_live + its mirror for ONE
+    # mechanics-only trade. It carries its existing sentinel target (tp_r 50.0, tp_intent unexamined:
+    # never_swept_no_free_lane_candle_feed), so the same ER debt it already carries on alpaca_paper is named here on
+    # REAL MONEY, visibly and on purpose: the probe tests the order path, not the exit. The exit it will take is the
+    # venue stop/trail leg. DROP both lines with the roster lines when that one trade closes and is graded.
+    "alpaca_live/tqqq_trend_long_1d": ER,
+    "alpaca_portfolio/tqqq_trend_long_1d": ER,
     # ── prop ────────────────────────────────────────────────────────────────
     # breakout_1 legs removed 2026-10-07 (account retired, roster cleared).
     # R -> ER on 2026-10-15 (TP-REACH-FLOOR, operator-approved 2026-10-14): the
