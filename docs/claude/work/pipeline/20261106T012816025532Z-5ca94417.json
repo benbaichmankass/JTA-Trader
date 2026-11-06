@@ -7,6 +7,11 @@
   },
   "id": "PI-20261106-VTIGNIMW-0001",
   "next_action": "check_observation",
+  "observation": {
+    "due_by": "2026-11-08",
+    "how_to_check": "(1) trainer-vm-diag: journalctl -u ict-trainer-catchup --since today | grep Consumed; grep datasets_skipped_cycle_complete runtime_logs/training_cycle.jsonl | tail -2. (2) python3 -c \"import json;[print(r['date'],r['cpu_p95']) for r in map(json.loads,open('comms/cloud/compute_util_ledger.jsonl')) if r['host']=='trainer'][-3:]\"",
+    "what": "the 08:00Z catch-up skips the dataset rebuild (datasets_skipped_cycle_complete, CPU under 10 min) and the trainer cpu_p95 for 2026-11-07 is recorded"
+  },
   "origin": {
     "kind": "session",
     "ref": "FREE-CAPACITY-PLAN (a), lane session_01AFoLuLpeKyaLTmVTigniMw, 2026-11-06; trainer-vm-diag #23568/#23583/#23591",
