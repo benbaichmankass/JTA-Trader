@@ -1,0 +1,7 @@
+{
+  "tier": 1,
+  "landing": "hold",
+  "hold_reason": "unvouchable_paths",
+  "hold_text": "scripts/session_handoff/close_session.py is outside TIER1_SURFACE, so check_pr_landing R5 refuses to let it self-land. The change is 15 lines: `--dispatch` ran `gh workflow run continue-work.yml`, but continue-work was deleted 2026-11-06 (WORKFLOW-PRUNE P1, 0 runs in 90 d), so the flag now fails with HTTP 404. `_dispatch` now prints a retirement notice and returns; the unused shutil import and WORKFLOW_FILE_NAME are dropped; one test asserts it never shells out.",
+  "why": "Remove the last live code path that dispatches a deleted workflow. Pipeline PI-20261106-01AFOLUJ-0009."
+}
