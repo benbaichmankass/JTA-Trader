@@ -1562,6 +1562,65 @@ class AlpacaClient:
         return {"retCode": 2, "retMsg": (
             "extended-hours limit close working — not yet filled, exit deferred")}
 
+    # Statuses Alpaca documents as NOT replaceable: "Order cannot be replaced when the status is accepted,
+    # pending_new, pending_cancel or pending_replace." (docs.alpaca.markets/reference/patchorderbyorderid-1)
+    _NOT_REPLACEABLE = frozenset({"accepted", "pending_new", "pending_cancel", "pending_replace"})
+
+    def _exit_via_resting_target(self, sym: str, residual: Optional[list]) -> Dict[str, Any]:
+        """Close a whole position THROUGH its own resting OCO/bracket take-profit when a cancel cannot free
+        the shares (ALPACA-LIVE-MECHANICS, 2026-11-06; operator popup ~16:50Z "Lane fixes the close path").
+
+        WHY. The alpaca_paper GLD 39-share position has been unflattenable since 2026-08-27: Alpaca ACCEPTS
+        our cancel of its OCO (2xx) and the legs never move (take-profit 2e843e04 ``new``, stop 891ddff0
+        ``held``, read 2026-11-06 16:5xZ via /api/diag/alpaca_open_orders), so every flatten fails "insufficient
+        qty available for order (requested: 39, available: 0)". The old last resort,
+        ``DELETE /v2/positions/{sym}?cancel_orders=true``, is not a documented parameter of the single-position
+        close (docs.alpaca.markets/reference/deleteopenposition-1 lists only ``qty`` and ``percentage``;
+        ``cancel_orders`` exists only on the close-ALL endpoint), so it was a plain retry.
+
+        WHAT. Alpaca documents that an OCO's legs are replaceable: "Like bracket orders, order replacement is
+        supported to update limit_price and stop_price" (docs.alpaca.markets/docs/orders-at-alpaca, OCO
+        Orders), and that once one leg fills "the other is canceled". So the order that already holds the
+        shares can BE the exit: PATCH the take-profit's ``limit_price`` to a marketable level and let the
+        venue's own OCO cancel the stop. No cancel is needed and no second order is placed.
+
+        ONLY WHEN SAFE, else ``{"state": "no_candidate"}`` and nothing is sent: exactly ONE resting limit
+        order on the closing side, in an ``oco``/``bracket`` class, whose qty equals the WHOLE live position
+        (so it can never close more or less than this whole-symbol close intends), in a replaceable status.
+        Returns ``{"state": "repriced"|"refused"|"no_candidate"|"no_position", ...}``; the caller's flat-confirm
+        gate is still what decides the close happened.
+        """
+        if not residual:
+            return {"state": "no_candidate", "detail": "no resting order read"}
+        pos = self.position_quote(sym)
+        if pos.get("state") != "open" or not pos.get("qty") or not pos.get("current_price"):
+            return {"state": "no_position", "detail": f"position read {pos.get('state')}"}
+        qty, px = abs(float(pos["qty"])), float(pos["current_price"])
+        close_side = "sell" if str(pos.get("side") or "").lower() == "long" else "buy"
+        cands = []
+        for o in residual:
+            try:
+                oqty = abs(float(o.get("qty") or 0))
+            except (TypeError, ValueError):
+                continue
+            if (str(o.get("type") or o.get("order_type") or "").lower() == "limit"
+                    and str(o.get("side") or "").lower() == close_side
+                    and str(o.get("order_class") or "").lower() in ("oco", "bracket")
+                    and str(o.get("status") or "").lower() not in self._NOT_REPLACEABLE
+                    and abs(oqty - qty) < 1e-9 and o.get("id")):
+                cands.append(o)
+        if len(cands) != 1:
+            return {"state": "no_candidate",
+                    "detail": f"{len(cands)} replaceable {close_side} OCO/bracket target(s) for the whole {qty:g}"}
+        buf = _env_float("ALPACA_TARGET_REPRICE_BUFFER_BPS", 100.0) / 10000.0
+        limit_px = px * (1 - buf) if close_side == "sell" else px * (1 + buf)
+        oid = str(cands[0]["id"])
+        env = self._request("PATCH", f"/v2/orders/{oid}", {"limit_price": f"{limit_px:.2f}"})
+        if env.get("retCode") != 0:
+            return {"state": "refused", "order_id": oid, "detail": str(env.get("retMsg"))}
+        return {"state": "repriced", "order_id": oid, "limit_price": round(limit_px, 2),
+                "new_order_id": str((env.get("result") or {}).get("id") or "")}
+
     def close(
         self, symbol: str, qty: Optional[float] = None,
     ) -> Dict[str, Any]:
@@ -1749,22 +1808,11 @@ class AlpacaClient:
             held = "insufficient qty" in msg or "available: 0" in msg
             if not held or flatten_s <= 0 or time.monotonic() >= flatten_deadline:
                 if held:
-                    # LAST-RESORT ESCALATION (BL-20260716-ALPACA-QQQ-WEDGED-
-                    # PENDING-CANCEL): the per-order cancels above couldn't free
-                    # the shares — the classic cause is a resting order stuck in
-                    # `pending_cancel` (Alpaca's OWN cancel never completes, so a
-                    # re-issued app-level cancel is a no-op and every tick's
-                    # flatten keeps hitting available:0 and re-alerting). Ask
-                    # Alpaca to cancel ALL of the symbol's open orders as part of
-                    # the liquidation itself, via `?cancel_orders=true` — the
-                    # exchange's own atomic cancel-then-flatten, the strongest
-                    # programmatic lever left before an operator paper-console
-                    # reset. Unconditional (no default-off gate) since it only
-                    # fires here, on the give-up path where we'd otherwise return
-                    # an error anyway. Best-effort: if it too can't break a
-                    # truly-wedged pending_cancel, fall through to the self-
-                    # diagnosing residual log + the confirm gate below still
-                    # refuses to report a close the broker didn't actually make.
+                    # LAST-RESORT ESCALATION 1 (BL-20260716-ALPACA-QQQ-WEDGED-PENDING-CANCEL), kept as it was.
+                    # ⚠️ `cancel_orders` is NOT a documented parameter of the single-position close
+                    # (docs.alpaca.markets/reference/deleteopenposition-1: only `qty` / `percentage`; it exists on
+                    # the close-ALL endpoint), and on the GLD hold it failed with the same error. It is kept
+                    # because it is harmless and was never measured to hurt; escalation 2 below is the fix.
                     forced = self._request(
                         "DELETE", f"/v2/positions/{sym}?cancel_orders=true")
                     if forced.get("retCode") == 404:
@@ -1772,17 +1820,32 @@ class AlpacaClient:
                     if forced.get("retCode") == 0:
                         env = forced
                         break  # → post-DELETE flatten-confirm gate validates it
+                    # LAST-RESORT ESCALATION 2, DOCUMENTED (ALPACA-LIVE-MECHANICS 2026-11-06, operator popup
+                    # ~16:50Z "Lane fixes the close path"): exit THROUGH the resting OCO take-profit that holds
+                    # the shares, by repricing it marketable (PATCH is documented for OCO legs); the venue's own
+                    # OCO then cancels the stop. See `_exit_via_resting_target`. The confirm gate below still
+                    # refuses to report a close the broker did not make.
+                    residual = self._open_orders_for_symbol(sym)
+                    target = self._exit_via_resting_target(sym, residual)
+                    if target.get("state") == "repriced":
+                        logger.warning(
+                            "alpaca close %s: cancel could not free the shares; exiting through the resting "
+                            "OCO target %s repriced to %s", sym, target.get("order_id"), target.get("limit_price"))
+                        env = {"retCode": 0, "result": {"id": target.get("new_order_id") or target.get("order_id"),
+                                                        "scope": "oco_target_reprice"}}
+                        break  # → post-DELETE flatten-confirm gate validates it
+                    forced = dict(forced, retMsg=f"{forced.get('retMsg')}; oco target exit "
+                                                 f"{target.get('state')}: {target.get('detail')}")
                     # Give-up path: surface WHAT is holding the shares so the
                     # "won't flatten" failure is diagnosable from the logs.
-                    residual = self._open_orders_for_symbol(sym)
                     hold_state, hold_detail = classify_share_hold(
                         residual, last_cancel,
                     )
                     logger.warning(
                         "alpaca close %s still insufficient-qty after ~%.1fs "
                         "(want_qty=%s); share_hold=%s (%s); residual open "
-                        "orders=%s; %s (cancel_orders=true escalation also "
-                        "failed: %s)",
+                        "orders=%s; %s (cancel_orders=true and OCO-target exit "
+                        "escalations also failed: %s)",
                         sym, flatten_s, want_qty, hold_state, hold_detail,
                         residual, last_cancel.describe(), forced.get("retMsg"),
                     )
@@ -1797,6 +1860,7 @@ class AlpacaClient:
                         "retMsg": (
                             f"{env.get('retMsg')} "
                             f"{format_share_hold_marker(hold_state, hold_detail)}"
+                            f" [oco target exit {target.get('state')}: {target.get('detail')}]"
                         ),
                     }
                 return env
@@ -1839,7 +1903,10 @@ class AlpacaClient:
                 }
 
         result = env.get("result") or {}
-        return {"retCode": 0, "result": {"orderId": str(result.get("id") or "")}}
+        out_result = {"orderId": str(result.get("id") or "")}
+        if result.get("scope"):        # e.g. "oco_target_reprice": say HOW the venue closed it
+            out_result["scope"] = result["scope"]
+        return {"retCode": 0, "result": out_result}
 
     def _open_orders_for_symbol(
         self, symbol: str, since: Any = None,
