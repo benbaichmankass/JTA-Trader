@@ -1,0 +1,7 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "hold_reason": "tier_2_3_needs_approval",
+  "why": "WSD-S6D-RESEARCH-RESULTS (design D7, operator-approved 2026-11-04 'Approve all 7'; dispatched by Manager Session 2026-11-05b, operator popup 2026-11-06 ~00:30Z 'start it now'). SHADOW phase: a research results store on the trainer VM (scripts/research/research_store.py: research_runs + sha256 payloads), a keyless bundle step in research-queue-dispatch and research-queue-grade, a research-store job that ships the bundle over ssh (the only job holding VM_SSH_KEY, no unit code), a daily report-only parity in research-store-admin, the 2-min trainer mirror publishing research_runs.jsonl, and trainer_store.db projecting it on the live VM. Git stays the truth until parity holds; no reader is flipped; no order path, no config, no strategy.",
+  "hold_text": "Tier-2 (new store + workflow writer + src/units/db change deployed by ict-git-sync). Data-backed under canonical § 'Data-backed Tier-2/3 decisions': the lane merges once CI is green, then verifies a real unit's events in the trainer store and in the live trainer_store.db mirror and reports merged/deployed/observed + revert (git revert of this PR; the trainer store is additive and can be deleted)."
+}

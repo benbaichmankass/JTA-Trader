@@ -54,3 +54,18 @@ def test_trainer_store_research_runs_absent_mirror_file_is_empty(tmp_path):
 def test_db_explorer_allowlists_research_runs():
     src = (REPO / "src" / "web" / "api" / "routers" / "db_explorer.py").read_text()
     assert '"research_runs"' in src
+
+
+def test_research_runs_view_states_read_state(tmp_path):
+    mirror = tmp_path / "trainer_mirror"
+    mirror.mkdir()
+    v = ts.research_runs_view(mirror_root=mirror, db_path=str(tmp_path / "t.db"))
+    assert v["read_state"] == "no_mirror_file" and v["total"] is None and v["mirror_file_mtime"] is None
+    (mirror / "research").mkdir()
+    (mirror / "research" / "research_runs.jsonl").write_text(json.dumps(
+        {"event_id": "a" * 64, "unit_id": "RQ-20301231-001", "kind": "dispatch", "run_key": "t", "at": "t",
+         "first_source": "runner:research-queue-dispatch:9", "sources": ["runner:research-queue-dispatch:9"],
+         "recorded_at": "2030-12-31T00:00:00Z"}) + "\n")
+    v = ts.research_runs_view(mirror_root=mirror, db_path=str(tmp_path / "t.db"), unit="RQ-20301231-001")
+    assert v["read_state"] == "read" and v["total"] == 1 and v["by_source"] == {"runner": 1}
+    assert v["rows"][0]["sources"] == ["runner:research-queue-dispatch:9"] and v["ingested_at"]

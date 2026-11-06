@@ -2462,6 +2462,24 @@ def get_db_info(request: Request) -> dict[str, Any]:
     return _db_info_payload()
 
 
+@router.get("/research_runs")
+def get_research_runs(request: Request, unit: str | None = None, kind: str | None = None,
+                      limit: int = 50) -> dict[str, Any]:
+    """WSD-S6D-RESEARCH-RESULTS: the trainer's research results store as mirrored into
+    ``trainer_store.db`` (``research_runs``): dispatch stamps, result records and grades, newest
+    first, with the freshness of the mirror file and the ingest. Read-only (a stale sidecar is
+    rebuilt from the mirror, exactly as a Data Explorer read does). Tier 1.
+    """
+    _require_diag_token(request)
+    from src.units.db.trainer_store import research_runs_view
+
+    if unit is not None and not re.fullmatch(r"RQ-[0-9A-Za-z-]{3,40}", unit):
+        raise HTTPException(status_code=400, detail="unit must look like RQ-YYYYMMDD-...")
+    if kind is not None and kind not in ("dispatch", "result", "grade"):
+        raise HTTPException(status_code=400, detail="kind must be dispatch | result | grade")
+    return research_runs_view(unit=unit, kind=kind, limit=limit)
+
+
 @router.get("/status")
 def get_status(request: Request) -> dict[str, Any]:
     _require_diag_token(request)

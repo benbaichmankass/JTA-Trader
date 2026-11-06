@@ -376,6 +376,67 @@ def build_if_stale(*, mirror_root: Optional[Path] = None,
         return False
 
 
+def research_runs_view(*, unit: Optional[str] = None, kind: Optional[str] = None, limit: int = 50,
+                       mirror_root: Optional[Path] = None, db_path: Optional[str] = None) -> Dict[str, Any]:
+    """Read ``research_runs`` from trainer_store.db (WSD-S6D), refreshing it from the mirror first.
+
+    Always states its read state: ``no_mirror_file`` (the trainer has not published one yet),
+    ``could_not_look`` (the DB could not be read), or ``read``. ``mirror_file_mtime`` and
+    ``ingested_at`` give the freshness of each hop; null when unknown, never 0.
+    """
+    mirror = mirror_root or _mirror_root()
+    path = db_path or trainer_store_db_path()
+    mf = mirror / "research" / "research_runs.jsonl"
+    out: Dict[str, Any] = {"read_state": None, "mirror_file": str(mf), "mirror_file_mtime": None,
+                           "ingested_at": None, "total": None, "by_kind": None, "by_source": None,
+                           "last_recorded_at": None, "rows": []}
+    if mf.exists():
+        from datetime import datetime, timezone
+        out["mirror_file_mtime"] = datetime.fromtimestamp(mf.stat().st_mtime, timezone.utc).isoformat()
+    else:
+        out["read_state"] = "no_mirror_file"
+        return out
+    build_if_stale(mirror_root=mirror, db_path=path)
+    try:
+        conn = sqlite3.connect(f"file:{path}?mode=ro", uri=True, timeout=5)
+    except sqlite3.Error as exc:
+        out["read_state"] = "could_not_look"
+        out["error"] = str(exc)
+        return out
+    try:
+        meta = dict(conn.execute("SELECT key, value FROM _ingest_meta").fetchall())
+        out["ingested_at"] = meta.get("ingested_at")
+        out["total"] = conn.execute("SELECT COUNT(*) FROM research_runs").fetchone()[0]
+        out["by_kind"] = dict(conn.execute("SELECT kind, COUNT(*) FROM research_runs GROUP BY kind").fetchall())
+        out["by_source"] = dict(conn.execute(
+            "SELECT CASE WHEN first_source LIKE 'runner:%' THEN 'runner' ELSE first_source END, COUNT(*) "
+            "FROM research_runs GROUP BY 1").fetchall())
+        out["last_recorded_at"] = conn.execute("SELECT MAX(recorded_at) FROM research_runs").fetchone()[0]
+        where, args = [], []
+        if unit:
+            where.append("unit_id = ?")
+            args.append(unit)
+        if kind:
+            where.append("kind = ?")
+            args.append(kind)
+        sql = ("SELECT event_id, unit_id, kind, run_key, at, verdict, read_state, n, decision_rule_id, workflow, "
+               "payload_sha256, first_source, sources, recorded_at FROM research_runs"
+               + (" WHERE " + " AND ".join(where) if where else "") + " ORDER BY recorded_at DESC, event_id LIMIT ?")
+        cols = ("event_id", "unit_id", "kind", "run_key", "at", "verdict", "read_state", "n", "decision_rule_id",
+                "workflow", "payload_sha256", "first_source", "sources", "recorded_at")
+        for r in conn.execute(sql, (*args, max(1, min(int(limit), 500)))):
+            d = dict(zip(cols, r))
+            d["sources"] = json.loads(d["sources"]) if d["sources"] else []
+            out["rows"].append(d)
+        out["read_state"] = "read"
+    except sqlite3.Error as exc:
+        out["read_state"] = "could_not_look"
+        out["error"] = str(exc)
+    finally:
+        conn.close()
+    return out
+
+
 def _main(argv: List[str]) -> int:
     counts = ingest_trainer_store()
     print(json.dumps(counts, indent=2, default=str))
