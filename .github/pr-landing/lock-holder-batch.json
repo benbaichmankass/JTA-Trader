@@ -1,0 +1,7 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "hold_reason": "tier_2_3_needs_approval",
+  "why": "Held for the manager's merge (manager 2026-11-06 06:12Z: 'build a Tier-2 PR, held for my merge, that batches all venue_protection_snapshot writes of one reconciliation sweep into ONE connection/transaction'). db_lock_diag fired at 05:24:23Z and 06:11:12Z and the only in-process thread inside a trade_journal.db write at the failure instant (06:11) was reconciliation-loop in venue_protection_snapshot.record_read, which took the journal write lock once per venue read. Inside venue_protection_snapshot.batch() a read is built (read-only lookup) and queued; the outermost exit writes all rows in ONE connection and ONE transaction and logs queued/written/connect+commit ms once per sweep. The three broker-naked sweeps in run_reconciliation_tick run inside it. The table stays in trade_journal.db; outside batch() behaviour is unchanged. Observe-only table: nothing reads it back to place or amend an order.",
+  "hold_text": "landing: hold - Tier-2 runtime change on the reconciliation thread's journal writes; the manager merges, deploy via git-sync + auto-restart, then 0 'database is locked' over 6h of journal or db_lock_diag naming a different holder. Revert: git revert this PR (restores per-read commits); no schema or data change to undo."
+}

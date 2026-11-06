@@ -404,3 +404,103 @@ def test_absent_snapshot_table_is_could_not_look_not_an_empty_set(tmp_path):
         c.execute("DROP TABLE venue_protection_snapshot")
     ctx = lrd.read_venue_context(["pkg-1"], path)
     assert ctx["pkg-1"] == {"state": "could_not_look", "reason": "venue_snapshot_table_absent"}
+
+
+# --- MECH-FOLLOWUPS-1105: one write transaction per reconciliation sweep ---------------------------------------
+
+
+def _three_packages(db):
+    for i, (pkg, acct) in enumerate((("pkg-b1", "bybit_1"), ("pkg-b2", "bybit_2"), ("pkg-b3", "bybit_1")), start=1):
+        _package(db, pkg, sl=95.0, tp=110.0, symbol=f"S{i}USDT", account=acct, trade_id=i)
+
+
+def _commits(monkeypatch):
+    """Count sqlite connect() calls that open the file for WRITE (not the mode=ro lookup)."""
+    opened = []
+    real = sqlite3.connect
+
+    def spy(database, *a, **k):
+        if not str(database).startswith("file:"):
+            opened.append(str(database))
+        return real(database, *a, **k)
+    monkeypatch.setattr(vps.sqlite3, "connect", spy)
+    return opened
+
+
+def test_batch_writes_all_reads_of_a_sweep_on_one_connection_and_one_commit(db, monkeypatch):
+    _three_packages(db)
+    opened = _commits(monkeypatch)
+    with vps.batch():
+        for tid in (1, 2, 3):
+            assert vps.record_read(account_id="x", trade_id=tid, venue="bybit", stop_prices=[94.0],
+                                   db_path=db, now=NOW) is True
+        assert opened == []                          # no write-capable connection opened while the sweep reads
+    assert len(opened) == 1                          # ONE connection for the whole sweep
+    rows = _rows(db)                                 # (read AFTER the count: _rows() itself connects)
+    assert sorted(r["order_package_id"] for r in rows) == ["pkg-b1", "pkg-b2", "pkg-b3"]
+    assert all(r["read_state"] == "measured" and r["venue_sl"] == 94.0 for r in rows)
+
+
+def test_without_batch_each_read_still_writes_at_once(db, monkeypatch):
+    _three_packages(db)
+    opened = _commits(monkeypatch)
+    for tid in (1, 2, 3):
+        vps.record_read(account_id="x", trade_id=tid, stop_prices=[94.0], db_path=db, now=NOW)
+    assert len(opened) == 3 and len(_rows(db)) == 3     # the old behaviour, unchanged outside a batch
+
+
+def test_batch_last_read_of_a_package_account_wins_and_reads_are_counted_once(db):
+    _three_packages(db)
+    with vps.batch():
+        vps.record_read(account_id="bybit_1", trade_id=1, stop_prices=[94.0], db_path=db, now=NOW)
+        vps.record_read(account_id="bybit_1", trade_id=1, stop_prices=[93.0], db_path=db, now=NOW)
+    (r,) = [r for r in _rows(db) if r["order_package_id"] == "pkg-b1"]
+    assert r["venue_sl"] == 93.0
+
+
+def test_batch_nests_and_only_the_outermost_writes(db, monkeypatch):
+    _three_packages(db)
+    opened = _commits(monkeypatch)
+    with vps.batch():
+        with vps.batch():
+            vps.record_read(account_id="x", trade_id=1, stop_prices=[94.0], db_path=db, now=NOW)
+        assert opened == []                          # the inner exit wrote nothing
+    assert len(opened) == 1
+    assert len(_rows(db)) == 1
+
+
+def test_batch_never_raises_into_the_sweep_and_the_next_batch_works(db, monkeypatch):
+    _three_packages(db)
+    real = vps._flush
+    monkeypatch.setattr(vps, "_flush", lambda *a, **k: (_ for _ in ()).throw(RuntimeError("boom")))
+    with vps.batch():                                # must not raise
+        vps.record_read(account_id="x", trade_id=1, stop_prices=[94.0], db_path=db, now=NOW)
+    assert _rows(db) == []
+    monkeypatch.setattr(vps, "_flush", real)
+    with vps.batch():
+        vps.record_read(account_id="x", trade_id=1, stop_prices=[94.0], db_path=db, now=NOW)
+    assert len(_rows(db)) == 1
+
+
+def test_batch_logs_one_line_with_queued_written_and_commit_time(db, caplog):
+    _three_packages(db)
+    with caplog.at_level("INFO", logger=vps.logger.name):
+        with vps.batch():
+            for tid in (1, 2, 3):
+                vps.record_read(account_id="x", trade_id=tid, stop_prices=[94.0], db_path=db, now=NOW)
+    lines = [r.getMessage() for r in caplog.records if "sweep batch" in r.getMessage()]
+    assert len(lines) == 1 and "queued=3 written=3" in lines[0] and "connect+commit=" in lines[0]
+
+
+def test_the_lock_is_not_held_while_the_sweep_is_between_reads(db):
+    """The point of the change: a queued read holds NO write lock, so another writer gets in mid-sweep."""
+    _three_packages(db)
+    with vps.batch():
+        vps.record_read(account_id="x", trade_id=1, stop_prices=[94.0], db_path=db, now=NOW)
+        other = sqlite3.connect(db, timeout=0.2)
+        try:
+            other.execute("UPDATE trades SET stop_loss = 94.5 WHERE id = 1")   # would raise 'database is locked'
+            other.commit()
+        finally:
+            other.close()
+    assert len(_rows(db)) == 1
