@@ -66,6 +66,43 @@ MANDATE_ID = "MD-LIVE-TIGHTEN-SL"
 
 CONFIG_PATH = Path(__file__).resolve().parents[2] / "config" / "live_trade_review.yaml"
 
+# ── DEFERRED, NOT REFUSED (ALPACA-LIVE-MECHANICS, 2026-11-06) ────────────────────────────────────────────
+# A venue that cannot act NOW but will at its next session (Alpaca: us_equity closed -> AlpacaClient.close
+# returns retCode 2 "exit deferred to next session (protective bracket left armed)") is DEFERRED. Before
+# this, the apply mapped it to `refused` (exit 2) and every intake marked the item seen after one try, so a
+# night-time close recommendation was silently dropped: pkg-58b6ef451e684836 (ml_entry SPY, alpaca_paper),
+# dispatched 03:27Z under MD-LTR-PAPER-AUTO, exit 2, never retried, row left `recommended` with no applier.
+# Now: executor result `deferred`, apply exit EXIT_DEFERRED, and each intake keeps the item pending and
+# re-dispatches it every DEFERRED_RETRY_S until the venue answers (applied, or refused because the trade is
+# already gone), up to DEFERRED_MAX_S (a long weekend + a holiday) after it was first seen. Not a gate.
+X_DEFERRED = "deferred"
+EXIT_DEFERRED = 4
+DEFERRED_RETRY_S = 900
+DEFERRED_MAX_S = 4 * 86400
+
+
+def deferred_step(pending_entry: Optional[Mapping[str, Any]], first_seen: Any, now: Any) -> str:
+    """What an intake does with an item whose last apply exited EXIT_DEFERRED: ``wait`` (not due yet),
+    ``retry`` (due) or ``expired`` (deferred longer than DEFERRED_MAX_S since first seen). Pure."""
+    if (now - first_seen).total_seconds() >= DEFERRED_MAX_S:
+        return "expired"
+    nxt = (pending_entry or {}).get("next_try_at")
+    if nxt:
+        from datetime import datetime
+        try:
+            if now < datetime.fromisoformat(str(nxt)):
+                return "wait"
+        except ValueError:
+            pass
+    return "retry"
+
+
+def deferred_pending(first_seen: Any, now: Any, attempts: int, detail: Any = None) -> Dict[str, Any]:
+    """The pending entry an intake stores for a deferred item (next try DEFERRED_RETRY_S from now)."""
+    from datetime import timedelta
+    return {"first_seen_at": first_seen.isoformat(), "attempts": int(attempts), "deferred": True,
+            "next_try_at": (now + timedelta(seconds=DEFERRED_RETRY_S)).isoformat(), "detail": detail}
+
 # Refusal reasons. Stable strings: tests, the dry-run CLI and the review row's
 # ``account_reads.evidence`` all carry them.
 R_NOT_TIGHTEN = "intent_not_tighten_sl"

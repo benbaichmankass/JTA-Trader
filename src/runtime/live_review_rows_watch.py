@@ -45,7 +45,10 @@ is to restore the file on the branch). No halting: the loop keeps polling.
 First start: every review_id already on the branch is SEEDED as seen and never
 dispatched, so a restart cannot replay old decisions. A dispatch that could not
 look (exit 3) is retried on later passes for ``RETRY_WINDOW_S``; past that the
-decision is stale and is logged ``expired``. There is no halting.
+decision is stale and is logged ``expired``. A dispatch the VENUE deferred (exit 4,
+``live_review_intent.EXIT_DEFERRED``: e.g. an Alpaca close while us_equity is closed) stays
+pending and is re-dispatched every ``DEFERRED_RETRY_S`` until the venue answers, up to
+``DEFERRED_MAX_S``; then it is ``expired`` with one alert. There is no halting.
 
 Receipts (diag ``log_file`` names):
 * ``live_review_rows_watch`` -> ``runtime_logs/live_review/rows_watch.jsonl``:
@@ -88,6 +91,7 @@ from pathlib import Path
 from typing import Any, Callable, Dict, Optional, Tuple
 
 from src.runtime import directed_actions
+from src.runtime import live_review_intent as lri
 from src.runtime import live_review_rows as rows_lib
 from src.runtime import ltr_auto_mandate
 
@@ -279,6 +283,8 @@ def run_pass(git: Git = _git, dispatch: Callable[[str, str], Dict[str, Any]] = _
     for row in new:
         rid = row["review_id"]
         first = _ts((pending.get(rid) or {}).get("first_seen_at")) or seen_at
+        if (pending.get(rid) or {}).get("deferred") and lri.deferred_step(pending[rid], first, seen_at) == "wait":
+            continue                                    # a venue-deferred close: not due again yet
         rec: Dict[str, Any] = {"review_id": rid, "order_package_id": row.get("order_package_id"),
                                "ref": tip, "reviewed_at": row.get("reviewed_at"),
                                "seen_at": first.isoformat()}
@@ -306,6 +312,18 @@ def run_pass(git: Git = _git, dispatch: Callable[[str, str], Dict[str, Any]] = _
                                             accounts=list(row.get("accounts") or [])))
                 entry = _applied_entry(d / "applied.jsonl", rid)
                 _proof(lambda fp: fp.record_writeback(row, entry, at=_ts((entry or {}).get("at")) or done))
+            if res.get("exit") == lri.EXIT_DEFERRED:
+                # The venue deferred (ALPACA-LIVE-MECHANICS 2026-11-06: us_equity closed). Keep the row and
+                # re-dispatch it every DEFERRED_RETRY_S until the venue answers; never mark it seen on a deferral.
+                if lri.deferred_step(pending.get(rid), first, done) != "expired":
+                    att = int((pending.get(rid) or {}).get("attempts") or 0) + 1
+                    pending[rid] = lri.deferred_pending(first, done, att, res.get("detail"))
+                    if att == 1 or att % 10 == 0:
+                        _append(log_path, dict(rec, deferred=True, attempts=att))
+                    continue
+                rec["verdict"] = "expired"
+                alert(f"⚠️ live-review {rid} ({row.get('order_package_id')}): the venue deferred this action for "
+                      f"{lri.DEFERRED_MAX_S // 3600} h; expired without applying ({res.get('detail')})")
             if res.get("exit") == 3:
                 if (done - first).total_seconds() < RETRY_WINDOW_S:
                     att = int((pending.get(rid) or {}).get("attempts") or 0) + 1
