@@ -167,16 +167,6 @@ else
   emit "$(printf '{"ts":"%s","status":"sync_warn","detail":"sync_trainer_data.sh returned non-zero; training will use cached data"}' "$(iso_now)")"
 fi
 
-# --- Dataset build (best-effort) -------------------------------------------
-# Rebuild all families from the freshly synced feedstock.  A build failure
-# is also non-fatal — the training loop will fail on whichever manifest
-# can't find its dataset, and that manifest will be skipped (see below).
-if DATASETS_ROOT="$DATASETS_ROOT" bash scripts/ops/build_trainer_datasets.sh; then
-  emit "$(printf '{"ts":"%s","status":"datasets_ok"}' "$(iso_now)")"
-else
-  emit "$(printf '{"ts":"%s","status":"datasets_warn","detail":"build_trainer_datasets.sh returned non-zero; some datasets may be stale"}' "$(iso_now)")"
-fi
-
 # --- Manifest list ---------------------------------------------------------
 if [ -z "${TRAINING_MANIFESTS:-}" ]; then
   # Default: every YAML under ml/configs/. Sorted for deterministic order.
@@ -209,6 +199,57 @@ if [ "${#TRAINING_MANIFEST_LIST[@]}" -eq 0 ]; then
   exit 2
 fi
 
+# --- Skip the rebuild when today's cycle is already complete (FREE-CAPACITY-PLAN a, 2026-11-06) ---
+# The 08:00Z catch-up (ict-trainer-catchup.timer) exists to RESUME manifests the
+# primary run did not finish. MEASURED on the trainer (trainer-vm-diag #23583,
+# runtime_logs/training_cycle.jsonl, 7 catch-ups 2026-10-30..11-05): every one
+# found `already_done 73, to_run 0`, yet each first rebuilt every dataset family
+# (18-43 min wall, 42-57 min CPU per run on the 1-OCPU box) and then trained
+# nothing. Nothing consumes that rebuild before the next primary cycle rebuilds
+# again (promotion-readiness 04:00Z, the Kaggle export 06:40Z and the replay
+# pre-gate all read the primary build). So when today's progress file already
+# marks EVERY manifest in the list done/skipped, the dataset build is skipped.
+# A catch-up with real work to resume still rebuilds exactly as before, and
+# TRAINING_CYCLE_FORCE_RESTART still forces the full path. Revert: delete this block.
+CYCLE_DATE="$(date -u +%Y-%m-%d)"
+PROGRESS_FILE="$REPO_ROOT/runtime_logs/trainer/cycle_progress_${CYCLE_DATE}.json"
+SKIP_DATASET_BUILD=0
+case "$(printf '%s' "${TRAINING_CYCLE_FORCE_RESTART:-}" | tr '[:upper:]' '[:lower:]')" in
+  1|true|yes|on) ;;
+  *)
+    if [ -f "$PROGRESS_FILE" ] && python - "$PROGRESS_FILE" "$CYCLE_DATE" "${TRAINING_MANIFEST_LIST[@]}" <<'PRECHECK_PY'
+import json, sys
+path, cycle_date = sys.argv[1:3]
+manifests = sys.argv[3:]
+try:
+    state = json.load(open(path, encoding="utf-8"))
+except Exception:
+    sys.exit(1)
+rows = state.get("manifests") if state.get("date") == cycle_date else None
+if not isinstance(rows, dict) or not manifests:
+    sys.exit(1)
+ok = all(isinstance(rows.get(m), dict) and rows[m].get("status") in ("done", "skipped")
+         and rows[m].get("reason") != "quarantined_oom" for m in manifests)
+sys.exit(0 if ok else 1)
+PRECHECK_PY
+    then
+      SKIP_DATASET_BUILD=1
+    fi
+    ;;
+esac
+
+# --- Dataset build (best-effort) -------------------------------------------
+# Rebuild all families from the freshly synced feedstock.  A build failure
+# is also non-fatal — the training loop will fail on whichever manifest
+# can't find its dataset, and that manifest will be skipped (see below).
+if [ "$SKIP_DATASET_BUILD" = "1" ]; then
+  emit "$(printf '{"ts":"%s","status":"datasets_skipped_cycle_complete","detail":"every manifest already done/skipped today; dataset rebuild skipped (nothing to train)"}' "$(iso_now)")"
+elif DATASETS_ROOT="$DATASETS_ROOT" bash scripts/ops/build_trainer_datasets.sh; then
+  emit "$(printf '{"ts":"%s","status":"datasets_ok"}' "$(iso_now)")"
+else
+  emit "$(printf '{"ts":"%s","status":"datasets_warn","detail":"build_trainer_datasets.sh returned non-zero; some datasets may be stale"}' "$(iso_now)")"
+fi
+
 emit "$(printf '{"ts":"%s","status":"cycle_start","manifest_count":%d,"head":"%s"}' "$(iso_now)" "${#TRAINING_MANIFEST_LIST[@]}" "$HEAD_SHA")"
 
 # --- Checkpoint / resume ----------------------------------------------------
@@ -220,8 +261,6 @@ emit "$(printf '{"ts":"%s","status":"cycle_start","manifest_count":%d,"head":"%s
 # manifests still needing a run this cycle (any status other than
 # done/skipped — a prior failure IS retried, since it's cheap and the cause
 # may have been transient).
-CYCLE_DATE="$(date -u +%Y-%m-%d)"
-PROGRESS_FILE="$REPO_ROOT/runtime_logs/trainer/cycle_progress_${CYCLE_DATE}.json"
 mapfile -t TO_RUN_LIST < <(
   python - "$PROGRESS_FILE" "$CYCLE_DATE" "$HEAD_SHA" "${TRAINING_CYCLE_FORCE_RESTART:-}" "${TRAINING_MANIFEST_LIST[@]}" <<'PY'
 import json, sys
