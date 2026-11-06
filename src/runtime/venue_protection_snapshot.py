@@ -53,7 +53,9 @@ from __future__ import annotations
 import logging
 import math
 import sqlite3
+import threading
 import time
+from contextlib import contextmanager
 from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, Iterable, List, Optional, Tuple
 
@@ -209,6 +211,106 @@ def _package_for_trade(conn: sqlite3.Connection, trade_id: Any) -> Tuple[Optiona
     return str(r[0]), _f(r[1]), _f(r[2])
 
 
+# --- one write transaction per reconciliation sweep (MECH-FOLLOWUPS-1105, manager 2026-11-06) -------------------
+#
+# MEASURED 2026-11-06 (db_lock_diag, two 'database is locked' bursts, 05:24:23Z and 06:11:12Z): the only in-process
+# thread inside a trade_journal.db write at the instant the waiter failed was `reconciliation-loop` in
+# `venue_protection_snapshot.record_read` (once at the UPSERT, once at the connect/commit). `record_read` used to open a
+# connection, take the write lock and commit PER venue read, i.e. once per (package, account) per sweep, so one sweep took
+# the journal's single write lock many times. Inside `batch()` a read is only BUILT (a read-only package lookup, no write
+# lock) and queued; the outermost exit writes every queued row in ONE connection / ONE transaction. The lock is therefore
+# held for one short executemany, never across a broker call between two reads. Outside `batch()` nothing changes.
+
+_batch_state = threading.local()
+
+
+class _Batch:
+    __slots__ = ("rows", "ro", "path")
+
+    def __init__(self) -> None:
+        self.rows: List[Dict[str, Any]] = []
+        self.ro: Optional[sqlite3.Connection] = None
+        self.path: Optional[str] = None
+
+
+def _flush(rows: List[Dict[str, Any]], path: str) -> Tuple[int, float]:
+    """Write *rows* in ONE connection and ONE transaction. Returns ``(rows_written, ms_connect_to_commit)``.
+    Never raises (a failure is contained, logged once, and the next sweep re-reads and retries)."""
+    if not rows:
+        return 0, 0.0
+    t0 = time.monotonic()
+    try:
+        with sqlite3.connect(path, timeout=_write_busy_timeout(5.0)) as conn:
+            conn.executemany(_UPSERT, rows)
+            mono = time.monotonic()
+            if mono - _last_prune.get(path, -_PRUNE_EVERY_S - 1) >= _PRUNE_EVERY_S:
+                _last_prune[path] = mono
+                prune(conn)
+        return len(rows), (time.monotonic() - t0) * 1000.0
+    except Exception:  # noqa: BLE001 — never raise into the sweep; next sweep retries
+        _warn_once("write", "venue_protection_snapshot: write failed "
+                            "(contained; trading unaffected; retried next sweep)")
+        return 0, (time.monotonic() - t0) * 1000.0
+
+
+@contextmanager
+def batch(db_path: Optional[str] = None):
+    """Collect every :func:`record_read` of this thread inside the block and write them in one transaction at exit.
+
+    Nests (only the outermost writes). Never raises into the caller. Logs ONE line per batch with the number of reads
+    queued, rows written and the connect+commit time, so the lock time of this writer is MEASURED, not inferred.
+    """
+    if getattr(_batch_state, "b", None) is not None:
+        yield
+        return
+    b = _Batch()
+    _batch_state.b = b
+    try:
+        yield
+    finally:
+        _batch_state.b = None
+        try:
+            if b.ro is not None:
+                b.ro.close()
+        except Exception:  # noqa: BLE001
+            pass
+        try:
+            if b.rows:
+                from src.utils.paths import trade_journal_db_path
+                path = db_path or b.path or str(trade_journal_db_path())
+                # Last read of a (package, account) wins, as it did when each read upserted in turn.
+                latest: Dict[Tuple[str, str], Dict[str, Any]] = {}
+                for r in b.rows:
+                    latest[(r["order_package_id"], r["account_id"])] = r
+                n, ms = _flush(list(latest.values()), path)
+                logger.info("venue_protection_snapshot: sweep batch queued=%d written=%d connect+commit=%.1f ms "
+                            "(thread=%s)", len(b.rows), n, ms, threading.current_thread().name)
+        except Exception:  # noqa: BLE001
+            _warn_once("batch", "venue_protection_snapshot: batch flush failed")
+
+
+def _record_read_batched(b: _Batch, *, account_id: Any, trade_id: Any, symbol: Any, direction: Any, venue: Any,
+                         stop_prices: Any, target_prices: Any, position_size: Any, unreadable: Optional[str],
+                         order_package_id: Any, db_path: Optional[str], now: Optional[datetime]) -> bool:
+    from src.utils.paths import trade_journal_db_path
+    path = db_path or str(trade_journal_db_path())
+    if b.path is None:
+        b.path = path
+    if b.ro is None:
+        b.ro = sqlite3.connect(f"file:{path}?mode=ro", uri=True, timeout=1.0)
+    pkg, sl, tp = _package_for_trade(b.ro, trade_id)
+    row = build_snapshot_row(
+        order_package_id=order_package_id or pkg, account_id=account_id,
+        symbol=symbol, direction=direction, trade_id=trade_id, venue=venue,
+        stop_prices=stop_prices, target_prices=target_prices,
+        position_size=position_size, ref_sl=sl, ref_tp=tp,
+        unreadable=unreadable, now=now)
+    if row is None:
+        return False
+    b.rows.append(row)
+    return True
+
+
 def record_read(*, account_id: Any, trade_id: Any, symbol: Any = None, direction: Any = None,
                 venue: Any = None, stop_prices: Optional[Iterable[Any]] = None,
                 target_prices: Optional[Iterable[Any]] = None, position_size: Any = None,
@@ -227,6 +329,12 @@ def record_read(*, account_id: Any, trade_id: Any, symbol: Any = None, direction
         ctx = nullcontext()
     try:
         with ctx:
+            b = getattr(_batch_state, "b", None)
+            if b is not None:
+                return _record_read_batched(
+                    b, account_id=account_id, trade_id=trade_id, symbol=symbol, direction=direction, venue=venue,
+                    stop_prices=stop_prices, target_prices=target_prices, position_size=position_size,
+                    unreadable=unreadable, order_package_id=order_package_id, db_path=db_path, now=now)
             from src.utils.paths import trade_journal_db_path
             path = db_path or str(trade_journal_db_path())
             with sqlite3.connect(path, timeout=_write_busy_timeout(5.0)) as conn:
