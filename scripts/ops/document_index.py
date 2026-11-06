@@ -331,6 +331,20 @@ STATUS_EXPLICIT: Dict[str, Tuple[str, str, str]] = {
         "read:PITCH-DECK-lane-authored-it-2026-11-04-generated-from-files",
         "JTA Trader pitch deck: markdown source and speaker notes (generated)",
     ),
+    # Written 2026-11-06 by lane SKILLS-PRUNE-AUDIT (session_01AFoLuJ9pAP4XsNfnS2VntA), which moved them
+    # VERBATIM out of .claude/skills/manager/SKILL.md (operator answer 2026-11-06, relayed by the manager).
+    # The manager skill points at both and a reviewer diffed the move. Go `history` if the manager skill
+    # re-absorbs them or the weekly planning moves to a config-driven protocol.
+    "docs/plans/manager-runbooks.md": (
+        "live",
+        "read:SKILLS-PRUNE-lane-moved-it-verbatim-from-manager-SKILL-2026-11-06",
+        "manager step-by-step recipes (wake markers, checklist edit, work system, reset, handover, hibernate)",
+    ),
+    "docs/plans/weekly-planning-protocol.md": (
+        "live",
+        "read:SKILLS-PRUNE-lane-moved-it-verbatim-from-manager-SKILL-2026-11-06",
+        "weekly planning dialogue, follow-through, surge/throttle, cycle table, roadmap weekly pass",
+    ),
     "docs/data/market-data-lake.md": (
         "live",
         "read:MARKET-DATA-LAKE-lane-authored-it-2026-11-01-measured",
