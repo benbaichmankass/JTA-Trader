@@ -86,6 +86,13 @@ strategy_modules:
     # monitor() records M31 peak-R telemetry (exit_levers.since_entry + position_telemetry), observe-only.
     candle_columns: [open, high, low, close, volume]
     runtime_imports: [src.runtime.exit_levers, src.runtime.ml_decision_features, src.runtime.position_telemetry]
+  ml_entry_eq:
+    file: src/units/strategies/ml_entry_eq.py
+    # ML-ENTRY-EQUITY-NATIVE (2026-11-06): the equity-native ENTRY model (TESTING leg, alpaca_paper only). Reads NO candles on the tick: its input is the pool
+    # snapshot (data/ml_entry_eq/pool_snapshot.json) written by the refresher thread src.runtime.ml_entry_eq_refresher; scores
+    # ml/candidates/ml_entry_eq_v1/model.json (LightGBM). Health: unmeasured until the first live decision. monitor() is the 24 h time stop only.
+    candle_columns: [open, high, low, close, volume]
+    runtime_imports: [src.runtime.ml_entry_eq_features, src.runtime.ml_entry_profile]
   claude_desk:
     file: src/units/strategies/claude_desk.py
     # DESK-17 (2026-10-26): reads NO candles. Its only input is the accepted-proposal queue

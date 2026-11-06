@@ -58,6 +58,7 @@ models:
   mes-regime-15m-baseline-v1: {name: "Mutt-Regime-1d", stage: shadow, asset: MES, timeframe: "15m"}
   ml-decision-entry-v1: {name: "Foxhound-1", stage: live-served, asset: multi, timeframe: "1h", note: "served artifact ml/served/ml_decision_entry_v1; strategies.yaml ml_entry (not a registry row)"}
   ml-decision-entry-v2: {name: "Foxhound-2", stage: live-served, asset: multi, timeframe: "1h", note: "served artifact ml/served/ml_decision_entry_v2; strategies.yaml ml_entry_v2, bybit_1 demo only"}
+  ml-entry-eq-v1: {name: "Foxhound-3", stage: live-served, asset: ETF (173-pool), timeframe: "1h", note: "candidate artifact ml/candidates/ml_entry_eq_v1; strategies.yaml ml_entry_eq, alpaca_paper only; mechanics soak, edge unproven (t 0.9 iid / 0.3 clustered)"}
   ml-entry-tp-revision-v1: {name: "Labrador-1b", stage: live-served, asset: multi, timeframe: "1h", note: "served artifact ml/served/ml_entry_tp_revision_v1; re-predicts the TP of ml_entry (in-trade). Operator named exit-policy-v1 Labrador-1; this is a sibling head of the same job"}
   exit-policy-v1: {name: "Labrador-1", stage: designated, asset: multi, timeframe: "-", note: "operator-designated name (2026-11-03); registry stage is candidate / not registered, so no stage-gated claim"}
   execution-quality-baseline-v0: {name: "Mutt-Execution-1a", stage: shadow, asset: multi, timeframe: "-", note: "baseline for the Whippet job"}

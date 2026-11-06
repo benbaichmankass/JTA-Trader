@@ -1,0 +1,7 @@
+{
+  "tier": 3,
+  "landing": "hold",
+  "hold_reason": "tier_2_3_needs_approval",
+  "hold_text": "Lane ALPACA-LIVE-MECHANICS dispatch: 'PR with landing: hold; the manager merges after green CI'. The diff touches src/units/accounts/execute.py (a named Tier-3 path) on the real-money order path, so the manager takes the merge.",
+  "why": "Order-path journaling: AlpacaClient.place's existing confirm poll returns the venue's full-fill average and the journal books it as entry_price (package price kept in notes.package_entry). Measured: 9/10 alpaca_paper fills 11-02..11-05 and the one alpaca_live fill (09-23) journaled the package price, not the fill. Placement, bracket legs, sizing and strategy logic are unchanged."
+}

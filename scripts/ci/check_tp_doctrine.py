@@ -226,6 +226,8 @@ BASELINE_2026_10_06: dict[str, frozenset[str]] = {
     # ML-ENTRY-TP-REVISION (operator ~22:45Z "Merge as-is now"); v2's exit = a moving-TP unit scored on v2's own trades
     # (the ml_first_passage model was scored on v1's 3 ATR trades), then remove this line.
     "bybit_1/ml_entry_v2": R,
+    # 2026-11-06 ML-ENTRY-EQUITY-NATIVE (Tier-2 held): alpaca_paper testing leg; finite 1.5 R target it was SCORED with (TP 3 ATR / SL 2 ATR), no revision producer.
+    "alpaca_paper/ml_entry_eq": R,
     # ── prop ────────────────────────────────────────────────────────────────
     # breakout_1 legs removed 2026-10-07 (account retired, roster cleared).
     # R -> ER on 2026-10-15 (TP-REACH-FLOOR, operator-approved 2026-10-14): the

@@ -1,0 +1,7 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "hold_reason": "tier_2_3_needs_approval",
+  "why": "Held for the manager's merge (manager 2026-11-06 07:11Z: 'GO, build it held. Batch the position_telemetry and position_path_history writes of ONE exit-evaluation pass into one connection/transaction, flushed at the END of the pass'). db_lock_diag caught the exit-evaluation thread inside position_telemetry.record_position_telemetry > position_path_history.write_history in 2 of 3 'database is locked' bursts (05:24:23Z, 06:54:08Z); each package made two writes per pass, each with its own connect+commit. src/main.py wraps run_exit_evaluation_tick in position_telemetry.exit_pass_batch(): writes are queued (no lock, no connection) and flushed once in finally after the pass, in queue order, with one INFO timing line. Tables stay in trade_journal.db; outside the batch behaviour is unchanged.",
+  "hold_text": "landing: hold - Tier-2 change on the exit-evaluation thread's journal writes; the manager merges (rule: on any 'database is locked' after 07:03:45Z or exit-eval max interval >45 s at the 13:10Z read), deploy via git-sync + auto-restart. Revert: git revert this PR (restores per-write commits); no schema or data change to undo."
+}
