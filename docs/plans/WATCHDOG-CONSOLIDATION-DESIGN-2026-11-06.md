@@ -25,9 +25,15 @@ The prune proposed folding ~13 freshness/liveness watchdogs into one list-driven
 3. **Cadences differ** (`*/2 h`, `*/6 h`, daily, weekday, hourly): one cron would have to dispatch per-watcher, which rebuilds the separate workflows inside one file.
 4. **Alert paths differ** (red step, direct Telegram, `send-ping`, `post_alert.sh`), each tied to a different token/secret set. A merged job needs all of them.
 
-## 4. What is genuinely duplicated, and what to build instead
+## 4. What is genuinely duplicated, and what to build instead (CORRECTED 2026-11-06 after reading the callers)
 
-Class A's five workflows repeat the same ~15-line scaffold: *fetch the route with `diag_fetch.sh`, tolerate a failed fetch as `{}` read-state, run the render script, keep the exit code through `tee`, write the step summary, fail red on non-zero.* (`mirror-orphan-watch` even carries a comment about the `tee` exit-code trap it hit.) That is one composite action: **`.github/actions/diag-feed-watch`**, inputs `route`, `script`, `args`, `summary`; the workflow keeps its own name, cron, concurrency group and failure-alert entry. Same file count, ~60-75 fewer duplicated lines, one place for the `tee`-exit-code and "could not look is not clean" rules. This matches the manager's disposition for P3 (extract scaffolding, keep every entry point byte-identical).
+> **Correction.** The first version of this section claimed the five class-A workflows repeat one ~15-line scaffold (`diag_fetch.sh` -> render -> exit code through `tee` -> summary -> red) and proposed a composite action `diag-feed-watch`. **That was read from shapes, not outputs, and it is wrong.** Reading the callers after #23594 and #23600 merged:
+>
+> - `oi-feed-freshness` and `broker-truth-freshness` are a grade step plus a `github-script` **status-issue upsert**; `mirror-orphan-watch` is two bash steps and files no issue; the shell differs in each (extra `curl` reads, a `pip install`, different exit handling). There is no common shell scaffold.
+> - The one real duplicate is the status-issue upsert (find the open issue by label, create or update it, comment only when the fingerprint changes). It appears, with different text, in `oi-feed-freshness`, `broker-truth-freshness`, `account-broker-reconcile` and `broker-bracket-reconcile`: four callers, **two of them on the never-touch money-path list**, so two in scope at ~25 lines each.
+> - **Decision (Manager 2026-11-05b, 2026-11-06 04:03Z): build nothing.** Not `diag-feed-watch`, and not a `status-issue-upsert` action either: two callers x ~25 lines does not justify a new abstraction. Pipeline `PI-20261106-01AFOLUJ-0007` is closed as measured / not worth building.
+>
+> Evidence, including the 49-workflow "Require VM host secrets" scaffold (10+ distinct bodies, never-touch files included) and the 2-of-5 `research-script-run` sparse block: [`docs/audits/2026-11-06-workflow-prune.md`](../audits/2026-11-06-workflow-prune.md), section "Composite actions: measured before building".
 
 ## 5. The part that does pay: the B2 landing wait
 
@@ -36,6 +42,6 @@ The 54 job-h/wk is not a watchdog-design problem; it is `commit-to-main` holding
 ## 6. Recommendation and what stays open
 
 - **Do not build `freshness-watch`.**
-- **Build `diag-feed-watch` (composite action)** for the five class-A workflows, in the same PR family as the other composite actions, **after #23594 and #23600 merge**. Acceptance: for each of the five, a run's outputs (step summary text, exit code, alert behaviour) are identical before and after on a recorded input; `check_cron_failure_watch`, `check_cadence_liveness` and `check_workflow_catalog` unchanged.
+- ~~Build `diag-feed-watch`~~ **Withdrawn** (see the correction in section 4): the scaffold it would extract is not there, and the one real duplicate (status-issue upsert) is not worth an abstraction.
 - **B2 cost waits for WORK-STORE S6C.** Re-measure the three after S6C lands.
-- Not verified here: whether the five class-A scripts' exit-code contracts are identical (they read as the same, but I diffed shapes, not outputs); the acceptance test above is how to find out.
+- *Checked since the first version:* the five class-A watchers do **not** share an exit-code or shell contract; section 4 has the output-level finding.

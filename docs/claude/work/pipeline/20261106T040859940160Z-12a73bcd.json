@@ -1,0 +1,18 @@
+{
+  "based_on": "20261106T005916167273Z-adae0092.json",
+  "due_when": {
+    "check_every_days": 3,
+    "clears_when": "its 7-d failure rate is under 5% or a stated cause is recorded",
+    "kind": "event",
+    "last_checked": "2026-11-06"
+  },
+  "id": "PI-20261106-01AFOLUJ-0002",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "lane WORKFLOW-PRUNE (Manager Session 2026-11-05b), session_01AFoLuJ6sZjv24MuhwLtDtDwuuz",
+    "rerun": "gh api 'repos/benbaichmankass/JTA-Trader/actions/workflows/branch-protection-sync.yml/runs?per_page=20&status=failure' --jq '.total_count'"
+  },
+  "state": "queued",
+  "what": "branch-protection-sync is RED on ~45% of runs (724 of 1,610 in 7 d, 2026-11-06); failing step 'PUT branch protection on main'. Root cause unread (header says a missing BRANCH_PROTECTION_TOKEN fails it red on purpose). Also runs on every push though it only needs its own file. [UPDATE 2026-11-06: ROOT CAUSE FOUND = intermittent GitHub HTTP 500 on the protection PUT (run 42137307836: token present, 'PUT protection returned HTTP 500'), NOT the token; no operator action needed. FIX MERGED in #23600 (082c4ed37): 5xx retry x4, push trigger scoped to its own file, daily cron 23 5 * * *. LANDED_UNPROVEN: the effect is not yet observed. The observation that closes this: the workflow's failure count over the 7 days after merge is under 5% of its runs (rerun below), and its first cron run (2026-11-07 05:23Z) concludes success.]"
+}

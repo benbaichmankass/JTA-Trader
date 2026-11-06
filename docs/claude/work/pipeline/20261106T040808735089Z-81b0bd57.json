@@ -1,0 +1,19 @@
+{
+  "based_on": "20261106T040217337376Z-b015bb93.json",
+  "due_when": {
+    "check_every_days": 1,
+    "clears_when": "PRs #23594 and #23600 are merged, then the three composite actions are landed or closed with a reason",
+    "kind": "event",
+    "last_checked": "2026-11-06"
+  },
+  "id": "PI-20261106-01AFOLUJ-0007",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "lane WORKFLOW-PRUNE (Manager Session 2026-11-05b), session_01AFoLuJ6sZjv24MuhwLtDtDwuuz",
+    "rerun": "for n in 23594 23600; do gh api repos/benbaichmankass/JTA-Trader/pulls/$n --jq '.merged'; done  # both true = unblocked"
+  },
+  "state": "done",
+  "terminal_reason": "Closed as measured / not worth building (Manager 2026-11-05b, 2026-11-06 04:03Z). Callers read after #23594/#23600/#23603 merged: (1) diag-feed-watch: the scaffold the M8 design claimed is not there; the one real duplicate, a status-issue upsert, has 4 callers (2 money-path never-touch) at ~25 lines each, and the manager declined a status-issue-upsert abstraction too; (2) research-script-run sparse block: 2 of 5 files, ~12 lines; (3) 'Require VM host secrets' step: 49 workflows, >=10 distinct bodies, never-touch files included. Nothing built. Design doc section 4 corrected in the audit PR #23588. Evidence: docs/audits/2026-11-06-workflow-prune.md, 'Composite actions: measured before building'.",
+  "what": "WORKFLOW-PRUNE composite actions (Manager 2026-11-05b disposition of P3): extract shared scaffolding, keeping every entry point, label contract and output byte-identical. (1) diag-feed-watch for oi-feed-freshness, broker-truth-freshness, mirror-orphan-watch, alpaca-settlement-soak-watch, macro-producer-liveness (design: docs/plans/WATCHDOG-CONSOLIDATION-DESIGN-2026-11-06.md, acceptance = outputs identical on a recorded input); (2) the sparse-checkout/install block shared by the research-script-run family; (3) the 'Require VM host secrets / Dedup / post result' scaffold shared by the label relays. Tier 1 self-land, ONLY AFTER PRs #23594 and #23600 have merged so it never stacks on unmerged deletions. [UPDATE 2026-11-06 ~04:10Z, blockers cleared (#23594, #23600, #23603 merged): measured the callers first, see audit section 'Composite actions: measured before building'. (1) diag-feed-watch: the scaffold claimed in the M8 design doc is not there; the real duplicate is a status-issue-upsert JS block in 4 workflows, 2 of them money-path (never-touch). (2) research-script-run sparse block: only 2 of 5 files, ~12 lines each. (3) 'Require VM host secrets' step: 49 workflows, >=10 distinct bodies, includes never-touch files. NOTHING BUILT. Recommendation: close as not worth building; at most status-issue-upsert for oi-feed-freshness + broker-truth-freshness. Awaiting the manager's call.]"
+}

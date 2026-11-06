@@ -1,0 +1,19 @@
+{
+  "based_on": "20261106T013129913340Z-9cbe8d43.json",
+  "due_when": {
+    "check_every_days": 3,
+    "clears_when": "operator answers the re-decision; then the approved subset is one PR per group",
+    "kind": "event",
+    "last_checked": "2026-11-06"
+  },
+  "id": "PI-20261106-01AFOLUJ-0004",
+  "next_action": "ask_operator",
+  "origin": {
+    "kind": "session",
+    "ref": "lane WORKFLOW-PRUNE (Manager Session 2026-11-05b), session_01AFoLuJ6sZjv24MuhwLtDtDwuuz",
+    "rerun": "grep -n 'P3 merge feasibility' docs/audits/2026-11-06-workflow-prune.md"
+  },
+  "state": "done",
+  "terminal_reason": "Decided by Manager 2026-11-05b (2026-11-06 01:32Z), on the diff-level evidence in audit section 7: do NOT merge M1/M2/M7 nor terminate/reset (live-VM action ~once per 90 d, risk outweighs one file); DO extract the shared scaffolding (sparse-checkout/install block; 'Require VM host secrets / Dedup / post result') as composite actions keeping every entry point, label contract and output byte-identical; Tier 1 self-land, AFTER #23594 and #23600 merge. Order: M8 watchdog design (PI-...-0005) first, then the composite actions.",
+  "what": "WORKFLOW-PRUNE P3 re-decision: the approved merge groups are mostly NOT the same job (docs/audits/2026-11-06-workflow-prune.md section 7). Operator to confirm: do not merge M1/M2/M7; extract shared steps as composite actions instead; terminate/reset pair optional."
+}

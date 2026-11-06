@@ -1,0 +1,17 @@
+{
+  "due_when": {
+    "check_every_days": 3,
+    "clears_when": "its 7-d failure rate is under 5% or a stated cause is recorded",
+    "kind": "event",
+    "last_checked": "2026-11-06"
+  },
+  "id": "PI-20261106-01AFOLUJ-0002",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "lane WORKFLOW-PRUNE (Manager Session 2026-11-05b), session_01AFoLuJ6sZjv24MuhwLtDtDwuuz",
+    "rerun": "gh api 'repos/benbaichmankass/JTA-Trader/actions/workflows/branch-protection-sync.yml/runs?per_page=20&status=failure' --jq '.total_count'"
+  },
+  "state": "queued",
+  "what": "branch-protection-sync is RED on ~45% of runs (724 of 1,610 in 7 d, 2026-11-06); failing step 'PUT branch protection on main'. Root cause unread (header says a missing BRANCH_PROTECTION_TOKEN fails it red on purpose). Also runs on every push though it only needs its own file."
+}
