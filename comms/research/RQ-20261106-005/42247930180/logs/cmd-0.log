@@ -1,0 +1,17 @@
+/opt/hostedtoolcache/Python/3.11.18/x64/lib/python3.11/site-packages/yfinance/utils.py:568: Pandas4Warning: The inplace keyword in DataFrame.sort_index is deprecated and will be removed in a future version (PDEP-8).
+See https://pandas.pydata.org/docs/dev/whatsnew/v3.1.0.html#deprecation-inplace for more details.
+  quotes.sort_index(inplace=True)
+/opt/hostedtoolcache/Python/3.11.18/x64/lib/python3.11/site-packages/yfinance/multi.py:220: Pandas4Warning: The inplace keyword in DataFrame.rename is deprecated and will be removed in a future version (PDEP-8).
+See https://pandas.pydata.org/docs/dev/whatsnew/v3.1.0.html#deprecation-inplace for more details.
+  data.rename(columns=ctx.isins, inplace=True)
+/opt/hostedtoolcache/Python/3.11.18/x64/lib/python3.11/site-packages/yfinance/multi.py:224: Pandas4Warning: The inplace keyword in DataFrame.sort_index is deprecated and will be removed in a future version (PDEP-8).
+See https://pandas.pydata.org/docs/dev/whatsnew/v3.1.0.html#deprecation-inplace for more details.
+  data.sort_index(level=0, axis=1, inplace=True)
+[A] /opt/hostedtoolcache/Python/3.11.18/x64/bin/python3 /home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_pullback.py --trend-lookback 40 --pullback-lookback 15 --pullback-frac 0.5 --data <data> --symbol MHG --resample 1d --atr-period 14 --atr-stop-mult 2.0 --trail-mult 3.0 --min-confidence 0.0 --fee-bps-roundtrip 7.5 --emit-trades comms/research/RQ-20261106-005/42247930180/arms/A__trades.jsonl --json comms/research/RQ-20261106-005/42247930180/arms/A__bt.json --trail-decay-stall-bars 10 --trail-decay-tight-mult 1.5 --structure-exit pivot=5 --tp-cap-pct 0.099 --tp-r 50.0
+[pullback_frac_lo] /opt/hostedtoolcache/Python/3.11.18/x64/bin/python3 /home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_pullback.py --trend-lookback 40 --pullback-lookback 15 --pullback-frac 0.375 --data <data> --symbol MHG --resample 1d --atr-period 14 --atr-stop-mult 2.0 --trail-mult 3.0 --min-confidence 0.0 --fee-bps-roundtrip 7.5 --emit-trades comms/research/RQ-20261106-005/42247930180/arms/pullback_frac_lo__trades.jsonl --json comms/research/RQ-20261106-005/42247930180/arms/pullback_frac_lo__bt.json --trail-decay-stall-bars 10 --trail-decay-tight-mult 1.5 --structure-exit pivot=5 --tp-cap-pct 0.099 --tp-r 50.0
+[pullback_frac_hi] /opt/hostedtoolcache/Python/3.11.18/x64/bin/python3 /home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_pullback.py --trend-lookback 40 --pullback-lookback 15 --pullback-frac 0.625 --data <data> --symbol MHG --resample 1d --atr-period 14 --atr-stop-mult 2.0 --trail-mult 3.0 --min-confidence 0.0 --fee-bps-roundtrip 7.5 --emit-trades comms/research/RQ-20261106-005/42247930180/arms/pullback_frac_hi__trades.jsonl --json comms/research/RQ-20261106-005/42247930180/arms/pullback_frac_hi__bt.json --trail-decay-stall-bars 10 --trail-decay-tight-mult 1.5 --structure-exit pivot=5 --tp-cap-pct 0.099 --tp-r 50.0
+{
+ "verdict": "pass",
+ "label": "reachable_lever_beats_removed",
+ "why": "pullback_frac_lo beats the removed-lever baseline by 7.7274 R with no worse drawdown and >= 3/4 fold wins: a Tier-3 proposal to declare it (not done here)"
+}

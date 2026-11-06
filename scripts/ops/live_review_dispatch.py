@@ -114,6 +114,7 @@ _REPO_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__f
 if _REPO_ROOT not in sys.path:
     sys.path.insert(0, _REPO_ROOT)
 
+from src.runtime import live_review_intent as lri  # noqa: E402
 from src.runtime import live_review_rows as rows_lib  # noqa: E402
 from src.runtime import ltr_auto_mandate  # noqa: E402
 
@@ -539,7 +540,10 @@ def dispatch(review_id: str, *, apply: bool, state: Optional[Dict[str, Any]] = N
     print(f">>> live-review-apply: {review_id} -> {APPLY_SCRIPT} {' '.join(argv)}")
     rc = _run_apply(argv)
     entry = _applied_entry(review_id, started) if apply else None
-    sent = bool(entry and entry.get("applied")) or rc == EXIT_FAILED
+    # A venue-DEFERRED apply (exit 4, live_review_intent.EXIT_DEFERRED) stays retryable even if another account
+    # applied: the deferred leg still owes its action, and every leg that DID act refuses a repeat by its own
+    # duplicate_review_id guard (its journaled review_id), so a re-dispatch cannot act twice (ALPACA-LIVE-MECHANICS).
+    sent = (bool(entry and entry.get("applied")) or rc == EXIT_FAILED) and rc != lri.EXIT_DEFERRED
     out.update(verdict="dispatched", apply_exit=rc, exit=rc, accounts=summarize(entry),
                writeback=entry)
     if apply:

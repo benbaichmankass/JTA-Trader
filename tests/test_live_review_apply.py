@@ -480,7 +480,7 @@ def test_a_clip_on_one_account_never_reaches_another_accounts_leg(wired, monkeyp
 def test_when_every_trade_leg_agrees_the_shared_package_stop_moves(wired):
     db = _ApplyDB([_trade(1, "bybit_2"), _trade(2, "bybit_portfolio")], PKG)
     res = _run(db, wired)
-    assert res["package_sl_moved"] is True and db.package_writes == [{"pkg": "P", "sl": 0.2100}]
+    assert res["package_sl_moved"] is True and _sans_meta(db.package_writes) == [{"pkg": "P", "sl": 0.2100}] and db.package_writes[0]["meta"]["last_sl_move"]["source"] == "live_review_apply"
 
 
 def test_account_types_route_to_their_own_executors(wired):
@@ -784,3 +784,8 @@ def test_committed_mandate_carries_the_judgement_amendment():
     assert "Claude's judgement applies (Recommended)" in m["amendment_source"]
     assert m["amended_at"] == "2026-10-26"
     assert "widen a stop" in m["never"] and "act on a read that could not look" in m["never"]
+
+
+def _sans_meta(writes):
+    """package writes without the mover-attribution meta (LTR-MECH-PROP-MIRROR-BRACKET)."""
+    return [{k: v for k, v in w.items() if k != "meta"} for w in writes]

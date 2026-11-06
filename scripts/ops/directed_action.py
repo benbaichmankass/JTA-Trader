@@ -58,6 +58,7 @@ if _REPO_ROOT not in sys.path:
     sys.path.insert(0, _REPO_ROOT)
 
 from src.runtime import directed_actions as da  # noqa: E402
+from src.runtime import live_review_intent as lri  # noqa: E402
 
 EXIT_OK, EXIT_FAILED, EXIT_REFUSED, EXIT_UNREADABLE = 0, 1, 2, 3
 Git = Callable[..., Tuple[int, str]]
@@ -215,6 +216,9 @@ def vm_pass(ref: str, *, git: Git = _git, apply_fn: Callable[[Dict[str, Any]], D
         except ValueError:
             record = None
         first = da._ts((pending.get(rid) or {}).get("first_seen_at")) or seen_at
+        if (pending.get(rid) or {}).get("deferred") and lri.deferred_step(pending[rid], first, seen_at) == "wait":
+            worst = max(worst, EXIT_UNREADABLE)         # a venue-deferred action, not due again yet
+            continue
         if first_ever and isinstance(record, dict) and da.is_stale(record, seen_at):
             seen[rid] = {"verdict": "seeded", "at": seen_at.isoformat()}
             continue
@@ -233,12 +237,23 @@ def vm_pass(ref: str, *, git: Git = _git, apply_fn: Callable[[Dict[str, Any]], D
         else:
             res = apply_fn(record)
             done = now_fn()
+            if res.get("exit") == lri.EXIT_DEFERRED and lri.deferred_step(pending.get(rid), first, done) != "expired":
+                # The venue deferred (ALPACA-LIVE-MECHANICS 2026-11-06: us_equity closed): keep it pending and
+                # re-apply every DEFERRED_RETRY_S; never mark a deferral handled.
+                att = int((pending.get(rid) or {}).get("attempts") or 0) + 1
+                pending[rid] = lri.deferred_pending(first, done, att, res.get("detail"))
+                worst = max(worst, EXIT_UNREADABLE)
+                if att == 1 and not (isinstance(record, dict) and record.get("dry_run") is True):
+                    ping(record, dict(res, detail=f"deferred to the venue's next session: {res.get('detail')}"),
+                         "deferred")
+                continue
             if res.get("exit") == EXIT_UNREADABLE and (done - first).total_seconds() < da.RETRY_WINDOW_S:
                 att = int((pending.get(rid) or {}).get("attempts") or 0) + 1
                 pending[rid] = {"first_seen_at": first.isoformat(), "attempts": att, "detail": res.get("detail")}
                 worst = EXIT_UNREADABLE
                 continue
-            verdict = "expired" if res.get("exit") == EXIT_UNREADABLE else verdict_of(record, res)
+            verdict = ("expired" if res.get("exit") in (EXIT_UNREADABLE, lri.EXIT_DEFERRED)
+                       else verdict_of(record, res))
             rec.update(verdict=verdict, exit=res.get("exit"), detail=res.get("detail"),
                        resolved_action=res.get("resolved_action"), accounts=res.get("accounts"),
                        package_sl_moved=res.get("package_sl_moved"), flags=res.get("flags"),

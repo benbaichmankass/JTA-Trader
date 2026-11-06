@@ -4,7 +4,10 @@ subject: trend_donchian_sol_4h
 kind: strategy_leg
 status: testing
 books:
+- breakout_2
 - bybit_1
+- tradeify_1
+- velotrade_1
 baseline:
   record: comms/strategy_evidence/trend_donchian_sol_4h.json
   net_r: 36.8572
@@ -2311,6 +2314,27 @@ levers:
       best_delta_r_per_trade: 0.004
       fold_stability: 0.583
       reading: 'smooth, fold-stable gain: potential -- confirm on a holdout'
+    structure_exit:
+      tests:
+      - value: 'off'
+        baseline_value: pivot=5
+        arm: N0
+        unit: RQ-20261105-5e05-06
+        window: 2020-07-01..2026-10-15
+        n: 267
+        net_r: 66.3386
+        baseline_n: 216
+        baseline_net_r: 23.5618
+        delta_net_r: 42.7768
+        folds_ge_baseline: 4/6
+        max_drawdown_r: 13.029
+        verdict: fail
+        joint_change: false
+      shape: single_point
+      points: 1
+      best_delta_r_per_trade: 0.198
+      fold_stability: 0.667
+      reading: 'one-point or fold-unstable gain: overfit until a holdout says otherwise'
   session:
     skip_hours:
       tests:

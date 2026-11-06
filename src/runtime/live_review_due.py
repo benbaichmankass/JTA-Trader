@@ -707,6 +707,17 @@ def venue_events(row: Dict[str, Any], ctx: Optional[Dict[str, Any]], cfg: Dict[s
         if v_sl is None:
             miss(f"{acct}: measured row carries no venue_sl")
             continue
+        # LTR-MECH-PROP-MIRROR-BRACKET (2026-11-06, ADAUSDT pkg-78342b61): the package stop moved at 08:01:45Z and a
+        # venue read just after it still showed the OLD stop (venue 0.1875 vs package 0.186646; the next read, 08:02:27Z,
+        # showed 0.1866) -- a read-after-write race, and ref_sl already equalled the NEW package stop so the "moved
+        # since the read" guard below could not see it. A read taken before the package stop's last move plus
+        # `venue_sl_settle_seconds` is not evidence about the venue now: say so and wait for the next read.
+        settle = _f(mc.get("venue_sl_settle_seconds"))
+        moved_at = venue.get("pkg_sl_changed_at")
+        if settle and moved_at is not None and read_at < moved_at + timedelta(seconds=settle):
+            miss(f"{acct}: venue read {read_at.isoformat()} is within {settle:g}s of the package stop's last move "
+                 f"({moved_at.isoformat()}); waiting for a later read")
+            continue
         if ref is not None and abs(pkg_sl - ref) > tol:
             miss(f"{acct}: package sl moved since the venue read ({ref:g} -> {pkg_sl:g})")
             continue
@@ -1306,8 +1317,13 @@ def read_venue_context(pkgs: List[str], db_path: Optional[str] = None) -> Dict[s
             meta_atr = _f(m.get("atr")) if isinstance(m, dict) else None
         except (ValueError, TypeError):
             meta_atr = None  # allow-silent: an unreadable meta is "no entry ATR", reported as such downstream
+        # LTR-MECH-PROP-MIRROR-BRACKET: when the package stop last moved -- the stamped mover record only. A package
+        # that moved before stamping existed has none (None = no settle window), never updated_at: any unrelated
+        # package write bumps that, so it is not evidence about the stop.
+        from src.runtime.sl_mover import last_sl_move_ts
+        moved_at = last_sl_move_ts(lv["meta"])
         out[p] = {"state": "read", "snapshots": snaps.get(p, []), "pkg_sl": _f(lv["sl"]),
-                  "pkg_tp": _f(lv["tp"]), "meta_atr": meta_atr}
+                  "pkg_tp": _f(lv["tp"]), "meta_atr": meta_atr, "pkg_sl_changed_at": moved_at}
     return out
 
 

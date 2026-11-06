@@ -388,6 +388,10 @@ def market_state(pkg: Dict[str, Any], strategies: Dict[str, Any]) -> Dict[str, A
 #: sent, retried next cycle; ``refused`` = the executor declined (no change).
 X_APPLIED, X_APPLY_FAILED, X_COULD_NOT_LOOK, X_REFUSED = (
     "applied", "apply_failed", "could_not_look", "refused")
+#: ``deferred`` = the venue will act at its next session, nothing was sent or journaled; the intake retries
+#: (ALPACA-LIVE-MECHANICS 2026-11-06, live_review_intent.X_DEFERRED). Exit EXIT_DEFERRED when nothing was sent.
+X_DEFERRED = lri.X_DEFERRED
+EXIT_DEFERRED = lri.EXIT_DEFERRED
 
 
 def _exec_bybit(db, leg: Dict[str, Any], pkg: Dict[str, Any], level: float,
@@ -851,6 +855,11 @@ def _exec_alpaca_close(db, leg: Dict[str, Any], pkg: Dict[str, Any], intent: lri
     cfg = _accounts().get(aid) or {}
     sent = om._send_close_to_exchange(t)
     if not (sent or {}).get("ok"):
+        if str(((sent or {}).get("exchange_response") or {}).get("retCode")) == "2":
+            # The venue DEFERRED (us_equity closed / extended-hours limit still working): the protective
+            # bracket stays armed and nothing is journaled, so the intake re-dispatches this same review_id
+            # next session (live_review_intent.X_DEFERRED). Never `refused`: that dropped the close for good.
+            return {"result": X_DEFERRED, "detail": f"venue deferred: {(sent or {}).get('error')}", "send": sent}
         return {"result": X_REFUSED, "detail": f"venue refused: {(sent or {}).get('error')}", "send": sent}
     pos = account_open_positions({**cfg, "account_id": aid})
     if pos is None:
@@ -1149,6 +1158,9 @@ def run(intent: lri.LiveReviewIntent, *, apply: bool = False, db=None,
                 elif result == X_REFUSED:
                     alert_once(aid, money, "noop", f"not applied: {rec['executor'].get('detail')}")
                     out["exit"] = max(out["exit"], EXIT_REFUSED)
+                elif result == X_DEFERRED:
+                    rec["read"] = "deferred"
+                    out["deferred"] = True
         out["accounts"].append(rec)
 
     # The shared package stop: moved only when EVERY trade leg applied the SAME
@@ -1161,10 +1173,23 @@ def run(intent: lri.LiveReviewIntent, *, apply: bool = False, db=None,
             and auto_accounts is None):
         lvl = levels.pop()
         if lri.is_tighter(intent.direction, lvl, _f(pkg.get("sl")) or lvl):
-            db.update_order_package(pkg["order_package_id"], {"sl": lvl})
+            pkg_write: Dict[str, Any] = {"sl": lvl}
+            try:  # LTR-MECH-PROP-MIRROR-BRACKET: a package stop never moves without naming its mover
+                from src.runtime import sl_mover
+                pkg_write["meta"] = sl_mover.stamp_sl_move(
+                    pkg.get("meta"), pkg.get("sl"), lvl, sl_mover.SRC_LIVE_REVIEW,
+                    f"{intent.review_id}:{intent.action}")
+            except Exception:  # noqa: BLE001 -- attribution never blocks the applied stop
+                pass
+            db.update_order_package(pkg["order_package_id"], pkg_write)
             out["package_sl_moved"] = True
 
     applied_any = any(a.get("executed") for a in out["accounts"])
+    deferred_any = any((a.get("executor") or {}).get("result") == X_DEFERRED for a in out["accounts"])
+    if deferred_any and out["exit"] in (EXIT_OK, EXIT_REFUSED):
+        # Nothing was sent anywhere (no apply_failed), and at least one account will act next session: the
+        # caller must keep this item and re-dispatch it. could_not_look (3) already retries on its own.
+        out["exit"] = EXIT_DEFERRED
     if auto is not None and apply:
         if auto_applied:
             _ping_action(pkg, auto_applied, intent)
@@ -1185,7 +1210,10 @@ def run(intent: lri.LiveReviewIntent, *, apply: bool = False, db=None,
         "action": intent.action,
         "accounts_applied": [{"account_id": a["account_id"], "level": a.get("level"), "qty": a.get("qty"),
                               "executor": a.get("executor")} for a in out["accounts"] if a.get("executed")],
-        "disposition": {"route": "auto_applied" if applied_any else "recommended",
+        "disposition": {"route": "auto_applied" if applied_any else ("deferred" if deferred_any else "recommended"),
+                        "deferred_reason": (next(((a.get("executor") or {}).get("detail") for a in out["accounts"]
+                                                  if (a.get("executor") or {}).get("result") == X_DEFERRED), None)
+                                            if deferred_any else None),
                         "mandate": intent.mandate if applied_any else None, "action_issue": None,
                         "applied_at": datetime.now(timezone.utc).isoformat() if applied_any else None,
                         "verified_readback": (all((a.get("executor") or {}).get("result") == X_APPLIED

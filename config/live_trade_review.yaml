@@ -88,6 +88,11 @@ due:
       # stopped refreshing is not evidence about the venue now).
       venue_sl_tolerance_atr: 0.25
       venue_snapshot_max_age_minutes: 60
+      # LTR-MECH-PROP-MIRROR-BRACKET (2026-11-06): a venue read taken within this many seconds of the package
+      # stop's last move (order_packages.meta.last_sl_move.ts, else updated_at) is could_not_look, not a divergence:
+      # read-after-write race (ADAUSDT pkg-78342b61 read the old stop 0.1875 after the amend to 0.186646; the next
+      # read showed 0.1866). The sweep reads each package about once a minute, so 150 s costs at most two reads.
+      venue_sl_settle_seconds: 150
     # -- pre-screen triggers (LTR-PRACTICE-REDESIGN, 2026-10-28) ----------------
     # Operator Tier-2 OK 2026-10-28 ~07:36Z popup: "Turn wake-ups on today".
     # Basis: docs/research/practice-review-trade-mgmt-and-ai-2026-10-28.md § E.2

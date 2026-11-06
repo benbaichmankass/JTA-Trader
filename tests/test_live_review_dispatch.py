@@ -360,3 +360,15 @@ def test_the_real_paper_mandate_lifts_advice_only_and_the_tighten_reaches_the_ap
     assert res.get("auto_mandate") == "MD-LTR-PAPER-AUTO" and res["verdict"] == "dispatched", res
     pairs = dict(zip(world["calls"][0][::2], world["calls"][0][1::2]))
     assert pairs["--mandate"] == "MD-LTR-PAPER-AUTO" and pairs["--evidence"] == PACKET
+
+
+def test_a_venue_deferred_apply_is_retryable_even_when_another_account_applied(world):
+    """ALPACA-LIVE-MECHANICS 2026-11-06: exit 4 (EXIT_DEFERRED) never marks the review_id sent; each leg that did
+    act refuses a repeat by its own duplicate_review_id guard inside the apply."""
+    from src.runtime import live_review_intent as lri
+    world["writeback"] = APPLIED_WB
+    world["rc"] = lri.EXIT_DEFERRED
+    assert d.dispatch(RID, apply=True)["exit"] == lri.EXIT_DEFERRED
+    world["rc"] = 0
+    assert d.dispatch(RID, apply=True)["exit"] == 0
+    assert len(world["calls"]) == 2

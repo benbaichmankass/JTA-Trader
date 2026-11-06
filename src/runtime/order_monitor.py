@@ -1845,7 +1845,17 @@ def _apply_update(db, open_pkg: dict, verdict: Dict[str, Any],
         return
 
     try:
-        db.update_order_package(pkg_id, updates)
+        pkg_write = dict(updates)
+        if "sl" in updates:
+            # LTR-MECH-PROP-MIRROR-BRACKET: a package stop never moves without naming its mover.
+            try:
+                from src.runtime import sl_mover
+                _m = sl_mover.mover_from_verdict(verdict, open_pkg.get("strategy_name"))
+                pkg_write["meta"] = sl_mover.stamp_sl_move(
+                    open_pkg.get("meta"), open_pkg.get("sl"), updates["sl"], _m["source"], _m["detail"])
+            except Exception:  # noqa: BLE001 — attribution never blocks the confirmed stop write
+                logger.warning("order_monitor: sl mover stamp failed for pkg=%s", pkg_id, exc_info=True)
+        db.update_order_package(pkg_id, pkg_write)
         summary.updated_count += 1
     except Exception as exc:  # noqa: BLE001
         logger.warning(
@@ -16691,6 +16701,28 @@ def _phase(name: str):
         return contextlib.nullcontext()
 
 
+#: Close reasons that are TIME-based: nothing about price makes them urgent, so
+#: a pass that has already spent its close budget may hand them to the next pass.
+#: Protective reasons (sl_cross, tp, stale_stop, ...) are NEVER in this set.
+DEFERRABLE_CLOSE_REASONS = frozenset({"max_hold"})
+
+
+def exit_pass_close_budget_seconds() -> float:
+    """Seconds of broker-close time one exit pass may spend before it stops
+    STARTING further deferrable closes (JOURNAL-LOCK-RESIDUAL, 2026-11-06).
+
+    Measured 15:00-15:01Z: five max_hold closes ran serially on the exit thread,
+    each 7-17 s of Alpaca settle/flatten/confirm waits -> pass 52.7 s, interval
+    82.0 s. Evaluation of every package is untouched; only the DISPATCH of a
+    time-based close is moved to the next pass, which starts immediately.
+    ``<= 0`` disables (every close runs in the pass that decided it, as before).
+    """
+    try:
+        return float(os.environ.get("EXIT_PASS_CLOSE_BUDGET_S", "10"))  # allow-silent: tuning knob, not a gate
+    except (TypeError, ValueError):
+        return 10.0
+
+
 def run_exit_evaluation_tick(
     *,
     db_path: Optional[str] = None,
@@ -16736,6 +16768,11 @@ def run_exit_evaluation_tick(
     # exit levers reach monitor() for already-open packages; an explicit
     # strategy_cfg (tests) still wins.
     cfg_map = strategy_cfg if strategy_cfg is not None else _load_live_strategy_cfgs()
+
+    _close_budget_s = exit_pass_close_budget_seconds()
+    _close_spent_s = 0.0
+    _closes_run = 0
+    _closes_deferred = 0
 
     with _phase("strategy_monitor_loop"):
         for strategy_name in exit_population(strategies, db):
@@ -16834,7 +16871,28 @@ def run_exit_evaluation_tick(
                     "order_monitor: %s pkg=%s symbol=%s candles=%s verdict=%s",
                     strategy_name, pkg_id_log, symbol_log, candle_count, verdict,
                 )
+                _is_close = (isinstance(verdict, dict)
+                             and verdict.get("action") == "close")
+                if (_is_close and _close_budget_s > 0 and _closes_run > 0
+                        and _close_spent_s >= _close_budget_s
+                        and verdict.get("reason") in DEFERRABLE_CLOSE_REASONS
+                        and verdict.get("close_qty_pct") in (None, 1, 1.0)):
+                    _closes_deferred += 1
+                    summary.no_change_count += 1
+                    logger.info(
+                        "order_monitor: close DEFERRED to the next pass pkg=%s "
+                        "symbol=%s reason=%s — this pass already spent %.1fs "
+                        "(budget %.1fs) in broker closes; evaluation is "
+                        "unaffected and the next pass starts at once",
+                        pkg_id_log, symbol_log, verdict.get("reason"),
+                        _close_spent_s, _close_budget_s,
+                    )
+                    continue
+                _t_close = time.monotonic()
                 _apply_update(db, normalised, verdict, summary)
+                if _is_close:
+                    _close_spent_s += time.monotonic() - _t_close
+                    _closes_run += 1
 
             summaries[strategy_name] = summary.to_dict()
             # Per-strategy summary: log on every tick that had at least one
@@ -16851,6 +16909,9 @@ def run_exit_evaluation_tick(
                     summary.no_change_count, summary.error_count,
                 )
 
+    if _closes_deferred:
+        summaries["__closes_deferred__"] = {"deferred": _closes_deferred,
+                                            "close_spent_s": round(_close_spent_s, 1)}
     return summaries
 
 

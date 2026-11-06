@@ -35,17 +35,6 @@ from scripts.research.queue_replenish import existing_units
 DEFAULT_IDLE_HOURS = 12.0
 
 
-RECEIPT = Path("docs/claude/work/research-queue-dispatch-receipt.json")
-
-
-def _receipt_last_dispatch(root: Path) -> Optional[datetime]:
-    try:
-        d = json.loads((root / RECEIPT).read_text(encoding="utf-8"))
-        return _parse_ts(d.get("last_dispatched_at"))
-    except (OSError, ValueError, AttributeError):
-        return None
-
-
 def throughput(root: Path, *, now: Optional[datetime] = None,
                idle_hours: float = DEFAULT_IDLE_HOURS) -> Dict[str, Any]:
     now = now or datetime.now(timezone.utc)
@@ -63,21 +52,12 @@ def throughput(root: Path, *, now: Optional[datetime] = None,
                 landed += bool(t and t >= since)
         except (OSError, ValueError):
             unreadable += 1
-    # The dispatcher's own receipt (written by research-queue-dispatch on every run) is a second
-    # 'last fired' source: unit stamps land on main only via a stamp PR, so they lag or drop while the
-    # dispatcher is firing normally (RQ-THROUGHPUT-FALSE-RED, 2026-11-06: stamps 12 h stale, fires 3/run).
-    last_iso = h["last_dispatched_at"]
-    rt = _receipt_last_dispatch(root)
-    cur = _parse_ts(last_iso)
-    if rt and (cur is None or rt > cur):
-        last_iso = rt.isoformat()
-    last_t = _parse_ts(last_iso)
-    hrs = round((now - last_t).total_seconds() / 3600, 1) if last_t else None
+    hrs = h["hours_since_last_dispatch"]
     return {"as_of": now.isoformat(), "runnable": h["runnable"], "queued": h["queued"], "units": h["units"],
             "fired_24h": sum(1 for t in stamps if t >= since),
             "fired_7d": sum(1 for t in stamps if t >= now - timedelta(days=7)),
             "results_landed_24h": landed, "result_files_unreadable": unreadable,
-            "last_dispatched_at": last_iso, "hours_since_last_dispatch": hrs,
+            "last_dispatched_at": h["last_dispatched_at"], "hours_since_last_dispatch": hrs,
             "idle_threshold_hours": idle_hours,
             "idle_alarm": bool(h["runnable"] > 0 and (hrs is None or hrs > idle_hours))}
 
