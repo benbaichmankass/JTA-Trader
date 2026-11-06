@@ -33,7 +33,10 @@ _lock = threading.Lock()
 _last_report = 0.0
 
 #: A frame in any of these suggests the thread is writing, committing or waiting on the journal.
-_DB_MARKERS = ("sqlite3", "database.py", "prop_journal", "journal", "signal_audit_logger")
+_DB_MARKERS = ("sqlite3", "database.py", "prop_journal", "journal", "signal_audit_logger",
+               # MEASURED 2026-11-06: the holder candidate sat in these writers and was tagged `other` because none of
+               # the markers above matched their file names (they open their own sqlite3 connection per write).
+               "venue_protection_snapshot", "position_path_history", "position_telemetry")
 #: A frame in any of these suggests the thread is blocked on the network (a write held across a broker call).
 _NET_MARKERS = ("socket.py", "ssl.py", "http/client.py", "urllib3", "requests", "ib_insync", "ibapi", "httpx", "ccxt", "alpaca")
 
