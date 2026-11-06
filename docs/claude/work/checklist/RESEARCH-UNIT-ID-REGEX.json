@@ -11,9 +11,9 @@
   "tier": 1,
   "prs": [],
   "blocked_on": [],
-  "note": "MEASURED 2026-11-01 (lane ML-RECIPE): script_run._ID_RE = RQ-\\d{8}-(?:\\d{3}|[0-9a-f]{4}-\\d{2}); 'fs05' contains 's', not hex, so script_run --check refuses all four fs units ('is not RQ-YYYYMMDD-NNN'). The same pattern is enforced in dispatch_queue.py, research_result.py, research_queue.py, collect_runner_results.py, next_rq_id.py and kernel_main.py. Options: (a) widen the hex class to [0-9a-z] in all seven (loosens, adds no gate); (b) rename the four units to hex ids and fix references. Local runs by lane ML-RECIPE are unaffected meanwhile. Needs a decision on (a) vs (b).  ALSO: fs05-01/fs06-01 declare timeout_minutes 600 but script_run caps at 330 ([10, 330]); fix both (or split the units) when repairing the ids. [2026-11-05 lane ML-FS-RECIPE] POPULATION (MEASURED over find research/queue -name 'RQ-*.y*ml': 1984 files = 1861 active + 123 blocked/): 7 fail the id regex, ALL in blocked/ (fs01-01, fs02-01, fs05-01, fs06-01, and e18g-01/-02/-03 owned by DESK-18G); 0 of 1861 active units fail it, so no live unit is invisible to research-queue-dispatch. Timeout > 330: 4 units, all in blocked/ (fs01-01, fs05-01, fs06-01 at 600; fe57-02 at 360); 0 active. The four fs units are already graded locally (comms/research/RQ-20261101-fs0{1,5,6}-01 records; fs02-01 not checked), so widening the hex class would only let a graded unit re-fire as a duplicate ~10 h job: not done. Renaming a graded unit would orphan its record path: not done. Residual live defect = the three e18g units (needs DESK-18G rename to hex, per their blocked_on). Prevention: next_rq_id.py already issues hex ids; hand-authored ids are the only source, and a guard for that is a new gate (needs operator permission).",
-  "updated_at": "2026-11-05T14:38:22Z",
-  "updated_by": "session_01AFoLuLmhUKeUzHC6CHz2uP",
+  "note": "MEASURED 2026-11-01 (lane ML-RECIPE): script_run._ID_RE = RQ-\\d{8}-(?:\\d{3}|[0-9a-f]{4}-\\d{2}); 'fs05' contains 's', not hex, so script_run --check refuses all four fs units ('is not RQ-YYYYMMDD-NNN'). The same pattern is enforced in dispatch_queue.py, research_result.py, research_queue.py, collect_runner_results.py, next_rq_id.py and kernel_main.py. Options: (a) widen the hex class to [0-9a-z] in all seven (loosens, adds no gate); (b) rename the four units to hex ids and fix references. Local runs by lane ML-RECIPE are unaffected meanwhile. Needs a decision on (a) vs (b).  ALSO: fs05-01/fs06-01 declare timeout_minutes 600 but script_run caps at 330 ([10, 330]); fix both (or split the units) when repairing the ids. [2026-11-05 lane ML-FS-RECIPE] POPULATION (MEASURED over find research/queue -name 'RQ-*.y*ml': 1984 files = 1861 active + 123 blocked/): 7 fail the id regex, ALL in blocked/ (fs01-01, fs02-01, fs05-01, fs06-01, and e18g-01/-02/-03 owned by DESK-18G); 0 of 1861 active units fail it, so no live unit is invisible to research-queue-dispatch. Timeout > 330: 4 units, all in blocked/ (fs01-01, fs05-01, fs06-01 at 600; fe57-02 at 360); 0 active. The four fs units are already graded locally (comms/research/RQ-20261101-fs0{1,5,6}-01 records; fs02-01 not checked), so widening the hex class would only let a graded unit re-fire as a duplicate ~10 h job: not done. Renaming a graded unit would orphan its record path: not done. Residual live defect = the three e18g units (needs DESK-18G rename to hex, per their blocked_on). Prevention: next_rq_id.py already issues hex ids; hand-authored ids are the only source, and a guard for that is a new gate (needs operator permission). 2026-11-06 BACKLOG-DRAIN-20261106: RE-DATED to 2026-11-09. Residual: three e18g units need rename to hex ids (DESK-18G); widening regex deliberately not done.",
+  "updated_at": "2026-11-06T06:00:04Z",
+  "updated_by": "lane-BACKLOG-DRAIN-20261106",
   "roadmap": [
     "L-ML-LIVE"
   ],
@@ -22,6 +22,6 @@
     "how_to_check": "python3 scripts/research/script_run.py --check --unit RQ-20261101-fs05-01 --queue-dir research/queue/blocked",
     "due_by": "2026-11-05"
   },
-  "due_by": "2026-11-05",
+  "due_by": "2026-11-09",
   "_seq": 885
 }
