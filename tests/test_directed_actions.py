@@ -387,3 +387,20 @@ def test_push_record_adds_exactly_one_file_on_a_real_repo(tmp_path, monkeypatch)
     assert names == sorted([da.record_path(r1["id"]), da.record_path(r2["id"])])
     ok, why = cli.push_record(r1, git=git, tries=1)
     assert not ok and "create-only" in why
+
+
+def test_a_venue_deferred_directed_action_is_kept_pinged_once_and_retried(tmp_path):
+    """ALPACA-LIVE-MECHANICS 2026-11-06: exit 4 (EXIT_DEFERRED, e.g. an Alpaca close while us_equity is closed) keeps
+    the record pending, pings the operator once, and re-applies it every DEFERRED_RETRY_S until the venue answers."""
+    from src.runtime import live_review_intent as lri
+    r = _record()
+    deferred = lambda rec: {"exit": lri.EXIT_DEFERRED, "detail": "venue deferred", "accounts": []}  # noqa: E731
+    st, calls, pings, receipts = _pass(tmp_path, _files(r), apply_fn=deferred)
+    assert calls == [r["id"]] and receipts == [] and pings == [(r["id"], "deferred")] and st["pending"] == [r["id"]]
+    st, calls, pings, _ = _pass(tmp_path, _files(r), apply_fn=deferred, now=NOW + timedelta(minutes=5))
+    assert calls == [] and pings == [] and st["exit"] == 3            # not due yet, still pending
+    st, calls, pings, _ = _pass(tmp_path, _files(r), apply_fn=deferred,
+                                now=NOW + timedelta(seconds=lri.DEFERRED_RETRY_S + 1))
+    assert calls == [r["id"]] and pings == []                          # retried, no second deferral ping
+    st, calls, pings, receipts = _pass(tmp_path, _files(r), now=NOW + timedelta(hours=6))
+    assert calls == [r["id"]] and receipts[0]["verdict"] == "applied" and st["pending"] == []

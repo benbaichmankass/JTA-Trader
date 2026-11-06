@@ -72,6 +72,7 @@ sys.path.insert(0, str(ROOT / "scripts" / "ci"))
 
 import check_desk_records as cdr  # noqa: E402
 
+from src.runtime import live_review_intent as lri  # noqa: E402
 from src.runtime import live_review_rows as rows_lib  # noqa: E402
 
 DECISIONS_PATH = "comms/desk/decisions.jsonl"
@@ -377,6 +378,9 @@ def run_pass(ref: str, *, apply: bool = True, git: Git = _git,
             continue
         handled.add(did)
         first = _ts((pending.get(did) or {}).get("first_seen_at")) or seen_at
+        if apply and (pending.get(did) or {}).get("deferred") and lri.deferred_step(pending[did], first, seen_at) == "wait":
+            worst = max(worst, 3)                       # a venue-deferred action, not due again yet
+            continue
         rec: Dict[str, Any] = {"decision_id": did, "role": row.get("role"), "action": row.get("action"),
                                "order_package_id": row.get("order_package_id"), "intent_id": row.get("intent_id"),
                                "ref": ref, "judged_at": row.get("judged_at"), "seen_at": first.isoformat()}
@@ -415,6 +419,19 @@ def run_pass(ref: str, *, apply: bool = True, git: Git = _git,
                            done_at=done.isoformat(), seen_to_done_s=round((done - first).total_seconds(), 1))
                 if judged:
                     rec["judged_to_done_s"] = round((done - judged).total_seconds(), 1)
+                if res.get("exit") == lri.EXIT_DEFERRED:
+                    # The venue deferred (ALPACA-LIVE-MECHANICS 2026-11-06: us_equity closed): keep the decision
+                    # pending and re-dispatch every DEFERRED_RETRY_S; never mark a deferral seen.
+                    if lri.deferred_step(pending.get(did), first, done) != "expired":
+                        att = int((pending.get(did) or {}).get("attempts") or 0) + 1
+                        pending[did] = lri.deferred_pending(first, done, att, res.get("detail"))
+                        worst = max(worst, 3)
+                        if att == 1 or att % 10 == 0:
+                            _append(log_path, dict(rec, verdict="deferred", attempts=att))
+                        continue
+                    rec["verdict"] = "expired"
+                    flag_fn(f"{did} was deferred by the venue for {lri.DEFERRED_MAX_S // 3600} h "
+                            f"({rec.get('detail')}); expired")
         if verdict == "accepted":
             if apply:
                 _append(accepted_path, {"at": seen_at.isoformat(), "decision_id": did, "intent_id": row.get("intent_id"),

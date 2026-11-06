@@ -387,3 +387,22 @@ def test_a_paper_only_trade_action_is_dispatched_and_its_refusal_is_not_pinged()
     plan, refusal = lrd.check_row(paper, None)
     assert refusal is None and plan["action"] == "partial_close"
     assert lrd.is_money_row(paper) is False          # a paper refusal goes in the brief, not a ping
+
+
+def test_a_venue_deferred_close_exits_deferred_and_records_the_disposition(wired, monkeypatch):  # noqa: F811
+    """ALPACA-LIVE-MECHANICS 2026-11-06: an Alpaca close while us_equity is closed is DEFERRED (exit 4, route
+    `deferred`), never `refused` -- so the intake re-dispatches it instead of dropping it."""
+    monkeypatch.setattr(lra, "_exec_trade_action", lambda db, leg, pkg, cls, v, intent: (
+        {"result": lra.X_DEFERRED, "detail": "venue deferred: us_equity market closed"}
+        if cls == "alpaca" else {"result": lra.X_APPLIED}))
+    monkeypatch.setattr(lra, "_fresh_entry", lambda aid, cfg, pkg, intent, stop, tp: (True, "ok", 100.0))
+    wired["tickets"] = []
+    res = _run(tla._ApplyDB([_tr(2, "alpaca_live")], tla.PKG), wired, _ti("close"))
+    assert res["exit"] == lri.EXIT_DEFERRED
+    assert _by(res)["alpaca_live"]["read"] == "deferred" and not _by(res)["alpaca_live"]["executed"]
+    disp = res["writeback"]["disposition"]
+    assert disp["route"] == "deferred" and "market closed" in disp["deferred_reason"] and disp["applied_at"] is None
+    # an account that applied while another deferred: the applied leg is recorded, the exit still says retry
+    res = _run(tla._ApplyDB([_tr(1, "bybit_2"), _tr(2, "alpaca_live")], tla.PKG), wired, _ti("close"))
+    assert _by(res)["bybit_2"]["executed"] and res["exit"] == lri.EXIT_DEFERRED
+    assert res["writeback"]["disposition"]["route"] == "auto_applied" or res["writeback"]["applied"]
