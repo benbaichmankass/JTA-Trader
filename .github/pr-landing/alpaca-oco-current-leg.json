@@ -1,0 +1,7 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "hold_reason": "tier_2_3_needs_approval",
+  "hold_text": "Manager Session 2026-11-06a: 'Fix with tests (replaced-leg resolution; skip-to-TP when the stop is already valid). Land a HELD PR and wake me with the green head.' It changes AlpacaClient.close on the order path (alpaca_live too), so the manager merges and deploys.",
+  "why": "Live 18:50Z/18:52Z GLD closes after #23905: the stop replace worked (891ddff0 -> c928eda6 @354.4) but the target replace did not take, and the retry targeted the REPLACED leg. Now only current legs are selected (resting status, not superseded via `replaces`), the target alone moves when the current stop is already valid, and after a stop move the target waits until the new stop reads settled."
+}
