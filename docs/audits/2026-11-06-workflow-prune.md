@@ -1,6 +1,6 @@
 # Workflow prune, 2026-11-06 (lane WORKFLOW-PRUNE)
 
-> **Doc status:** `proposal` · lane of Manager Session 2026-11-05b · measured 2026-11-06 · operator direction 2026-11-06 ~00:52Z, verbatim: *"Yes, let's continue the sweep"*, to the standard *"make sure that what left is designed optimally and efficiently and not redundant or repetitive"*.
+> **Doc status:** `unknown` · category `evidence` · last verified `never` · registered in [`docs/DOCUMENT-INDEX.md`](../DOCUMENT-INDEX.md) · a **proposal** (nothing here is applied until the operator approves; the four approvals are recorded on PRs #23594 and #23600) · lane of Manager Session 2026-11-05b · measured 2026-11-06 · operator direction 2026-11-06 ~00:52Z, verbatim: *"Yes, let's continue the sweep"*, to the standard *"make sure that what left is designed optimally and efficiently and not redundant or repetitive"*.
 
 **Gates this adds or changes: none.** Every row below is a proposal. **Nothing is deleted, merged or edited until the operator approves.** The only files this PR adds are this doc, the inventory script and its JSON.
 
