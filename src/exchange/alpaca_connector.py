@@ -18,6 +18,9 @@ from __future__ import annotations
 
 import logging
 import os
+import threading
+import time
+from collections import Counter
 from datetime import datetime, timedelta, timezone
 
 import pandas as pd
@@ -53,6 +56,64 @@ _LOOKBACK_BUFFER_DAYS = 10
 _PAGE_LIMIT_MAX = 10000
 _MAX_PAGES = 10
 
+# ── 429 / 5xx handling (PI-20261106-5A1BGFHC-0001; MEASURED RQ-20261106-d5a1-01 run 42145318852: one unpaced 173-symbol
+# 1h pass made 217 calls, 104 returned 429 and 82 symbols came back EMPTY, because a first-page HTTPError was re-raised and
+# get_ohlcv returned None -- a rate limit read as "no data").
+#
+# NON-BLOCKING, the pattern of #23580 (bybit_connector.RATE_LIMIT_COOLDOWN_S): this connector is called from BOTH the trading
+# tick and the exit-evaluation thread (src/main.py::_build_monitor_ohlcv_fetcher -> connector_for_symbol routes every open
+# Alpaca package's symbol here), so it must NEVER sleep in line -- an in-line backoff or a shared pacing queue would put Alpaca
+# waits on the exit pass, the same class as the bybit sleep(15) that left a trade 115 s unevaluated. Instead:
+#   * a 429 / 5xx starts ONE process-wide cooldown (Retry-After honoured, else _DEFAULT_COOLDOWN_S; capped at _MAX_COOLDOWN_S)
+#     -- process-wide because the data limit is per key, not per instance;
+#   * while it runs every Alpaca bars call returns at once with the NAMED read state ``rate_limited`` (no venue call, no sleep);
+#   * a fetch never ends in a bare None that reads as "the venue had no bars": the state is recorded, counted and logged.
+_DEFAULT_COOLDOWN_S = 10.0
+_MAX_COOLDOWN_S = 60.0
+_RETRY_STATUSES = frozenset({429, 500, 502, 503, 504})
+READ_STATES = ("ok", "empty", "rate_limited", "could_not_look")
+
+# Injectable for tests (never patched in production).
+_now = time.monotonic
+
+_STATE_LOCK = threading.Lock()
+_cooldown = {"until": 0.0}
+READ_STATE_COUNTS: Counter = Counter()
+
+
+class AlpacaRateLimited(RuntimeError):
+    """The data endpoint answered 429/5xx, or a cooldown from an earlier one is still running (no call was made)."""
+
+
+def _cooldown_remaining() -> float:
+    with _STATE_LOCK:
+        return max(0.0, _cooldown["until"] - _now())
+
+
+def _start_cooldown(seconds: float) -> bool:
+    """Extend the shared cooldown; True only for the call that STARTED it (it logs the one line)."""
+    now = _now()
+    with _STATE_LOCK:
+        started = _cooldown["until"] <= now
+        _cooldown["until"] = max(_cooldown["until"], now + seconds)
+    return started
+
+
+def _retry_after_s(resp) -> float:
+    try:
+        ra = float(resp.headers.get("Retry-After"))
+        if ra >= 0:
+            return min(ra, _MAX_COOLDOWN_S)
+    except (TypeError, ValueError, AttributeError):
+        pass
+    return _DEFAULT_COOLDOWN_S
+
+
+def read_state_counts() -> dict:
+    """Cumulative per-state fetch counts since process start (observability; never a gate)."""
+    with _STATE_LOCK:
+        return dict(READ_STATE_COUNTS)
+
 
 def _lookback_start(timeframe_key: str, limit: int) -> str:
     """RFC-3339 ``start`` reaching back far enough to cover *limit* bars.
@@ -82,6 +143,35 @@ class AlpacaMarketData:
             "ALPACA_DATA_URL", "https://data.alpaca.markets")).rstrip("/")
         self.feed = feed or os.environ.get("ALPACA_DATA_FEED", "iex")
         self.timeout = timeout
+        # symbol -> the named read state of its LAST get_ohlcv (one of READ_STATES). None from get_ohlcv is ambiguous by
+        # contract; this says which None it was.
+        self.last_read_state: dict = {}
+
+    def _record(self, symbol: str, state: str) -> None:
+        self.last_read_state[symbol] = state
+        with _STATE_LOCK:
+            READ_STATE_COUNTS[state] += 1
+
+    def _get(self, url: str, params: dict):
+        """One GET, never a sleep. Raises AlpacaRateLimited while a cooldown runs (no call made) or when this call answers
+        429/5xx (which starts the cooldown); otherwise returns the response for raise_for_status to judge."""
+        left = _cooldown_remaining()
+        if left > 0.0:
+            raise AlpacaRateLimited(f"cooldown {left:.1f}s left (no call made)")
+        resp = requests.get(
+            url, params=params,
+            headers={"APCA-API-KEY-ID": self.api_key, "APCA-API-SECRET-KEY": self.api_secret},
+            timeout=self.timeout,
+        )
+        status = getattr(resp, "status_code", 200)   # raise_for_status still judges the answer
+        if status in _RETRY_STATUSES:
+            secs = _retry_after_s(resp)
+            if _start_cooldown(secs):
+                logger.warning("alpaca: HTTP %s on %s (thread=%s) -- Alpaca bars calls return read_state=rate_limited for "
+                               "%.0f s (no in-line sleep)", status, url.rsplit("/", 2)[-2], threading.current_thread().name,
+                               secs)
+            raise AlpacaRateLimited(f"HTTP {status}; cooldown {secs:.0f}s")
+        return resp
 
     def get_ohlcv(self, symbol: str, timeframe: str = "5m", limit: int = 100):
         """Return the most recent *limit* bars as a canonical DataFrame.
@@ -98,6 +188,7 @@ class AlpacaMarketData:
         try:
             bars = self._bars_paged(symbol, tf, tf_key, int(limit))
             if not bars:
+                self._record(symbol, "empty")
                 logger.warning(
                     "alpaca: empty bars for %s %s (limit=%s feed=%s) — "
                     "returning None", symbol, timeframe, limit, self.feed,
@@ -117,14 +208,21 @@ class AlpacaMarketData:
                 ]
             )
             df["timestamp"] = pd.to_datetime(df["timestamp"], utc=True, errors="coerce")
+            self._record(symbol, "ok")
             return (
                 df.dropna(subset=["timestamp"])
                 .drop_duplicates("timestamp", keep="last")   # a page boundary must never double a bar
                 .sort_values("timestamp")
                 .reset_index(drop=True)
             )
+        except AlpacaRateLimited as exc:
+            self._record(symbol, "rate_limited")
+            logger.warning("alpaca: read_state=rate_limited %s %s (%s) — NOT 'no bars'; returning None",
+                           symbol, timeframe, exc)
+            return None
         except Exception as exc:  # noqa: BLE001
-            logger.warning("alpaca: get_ohlcv failed for %s %s (%s)", symbol, timeframe, exc)
+            self._record(symbol, "could_not_look")
+            logger.warning("alpaca: read_state=could_not_look get_ohlcv failed for %s %s (%s)", symbol, timeframe, exc)
             return None
 
     def _bars_paged(self, symbol: str, tf: str, tf_key: str, limit: int) -> list:
@@ -152,20 +250,12 @@ class AlpacaMarketData:
             if token:
                 params["page_token"] = token
             try:
-                resp = requests.get(
-                    f"{self.base_url}/v2/stocks/{symbol}/bars",
-                    params=params,
-                    headers={
-                        "APCA-API-KEY-ID": self.api_key,
-                        "APCA-API-SECRET-KEY": self.api_secret,
-                    },
-                    timeout=self.timeout,
-                )
+                resp = self._get(f"{self.base_url}/v2/stocks/{symbol}/bars", params)
                 resp.raise_for_status()
                 body = resp.json() or {}
             except Exception as exc:  # noqa: BLE001
                 if page == 0:
-                    raise
+                    raise   # AlpacaRateLimited propagates as itself -> read_state=rate_limited in get_ohlcv
                 logger.warning("alpaca: page %d of %s %s failed (%s) — keeping %d bars already read",
                                page + 1, symbol, tf, exc, len(out))
                 break
