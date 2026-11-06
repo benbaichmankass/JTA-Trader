@@ -92,6 +92,7 @@ def _fit(tab, asof: date):
 
 
 def _score(models, test, tau):
+    # provenance: predict — LGBMRegressor / Booster .predict is the regressed net R of that side (the quantity policy() thresholds at tau), not a probability
     pl, ps = models["long"].predict(test[E.FEATURES]), models["short"].predict(test[E.FEATURES])
     return E.policy(test, pl, ps, tau)
 

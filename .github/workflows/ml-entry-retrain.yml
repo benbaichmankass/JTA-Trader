@@ -85,7 +85,7 @@ jobs:
           PY
           mkdir -p "comms/research/ml_entry_grade/${RUN_ID}"; cp out/grade_evidence.json "comms/research/ml_entry_grade/${RUN_ID}/"
           mkdir -p .github/pr-landing
-          printf '{"tier":3,"landing":"hold","why":"HELD: ml-entry-retrain run %s graded a candidate PASS under RULE-ENTRY-PROMOTE-20261106 and proposes repointing the served ENTRY model (real money: bybit_2, bybit_portfolio). A human merges; revert is a one-line pointer edit."}\n' "$RUN_ID" > ".github/pr-landing/${SLUG}.json"
+          printf '{"tier":3,"landing":"hold","hold_reason":"tier_2_3_needs_approval","hold_text":"Real-money ENTRY model replacement (bybit_2, bybit_portfolio): a human merges after reading the grade evidence.","why":"HELD: ml-entry-retrain run %s graded a candidate PASS under RULE-ENTRY-PROMOTE-20261106 and proposes repointing the served ENTRY model (real money: bybit_2, bybit_portfolio). A human merges; revert is a one-line pointer edit."}\n' "$RUN_ID" > ".github/pr-landing/${SLUG}.json"
           python3 scripts/ops/claim_merge_slot.py --branch-claim --branch "$BR" --held-by "workflow:ml-entry-retrain:${RUN_ID}" --purpose "held ENTRY model promotion" || true
           git add -A ml/served comms/research .github/pr-landing .github/merge-slots
           git commit -qm "ML entry: graded candidate PASS -> ml/served/${D} + repoint (HELD, run ${RUN_ID})"
