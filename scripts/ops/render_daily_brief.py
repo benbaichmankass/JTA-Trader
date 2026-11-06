@@ -221,7 +221,16 @@ def ranked_items(res: Any, today: date) -> list[dict]:
     """Every due pipeline item in brief order (money-path → ask_operator →
     unrouted → oldest). Public so other renderers (the Telegram digest) rank
     identically to §0 instead of forking the order."""
-    return sorted(pipeline.due(list(res.items.values()), today), key=_rank_key)
+    return sorted(_due_rows(res, today), key=_rank_key)
+
+
+def _due_rows(res: Any, today: date) -> list[dict]:
+    """WSD-S4: §0 IS the store's ``due_now`` view when the result came from work_store.db
+    (``res.due_now`` set); from the export files it is ``pipeline.due``, as before."""
+    ids = getattr(res, "due_now", None)
+    if ids is None:
+        return pipeline.due(list(res.items.values()), today)
+    return [res.items[i] for i in ids if i in res.items]
 
 
 _BUCKETS = ("never-checked", "lapsed", "date-passed", "no-cadence")
@@ -232,8 +241,13 @@ def section0_lines(res: Any, today: date) -> list[str]:
     Reuses `pipeline.due` / `due_bucket` / `unrouted_alarm`: due-ness is never
     re-derived here. Full list: `python3 scripts/ops/pipeline.py --due --all`."""
     items = list(res.items.values())
-    rows = pipeline.due(items, today)
+    rows = _due_rows(res, today)
+    builds = getattr(res, "due_now_builds", None)
     L = ["## §0 — WHAT CAME DUE", ""]
+    if builds is not None:
+        L += [f"> Read from the work store's `due_now` view: **{len(rows) + len(builds)} due** = "
+              f"{len(rows)} observation(s) below + {len(builds)} overdue build row(s) "
+              "(`work.py list --due --kind build`).", ""]
     if not res.healthy:
         L += [f"> ⚠️ **{len(res.unreadable)} RECORD(S) COULD NOT BE PARSED** — counts "
               "below are a floor, not a total.", ""]

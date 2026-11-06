@@ -140,6 +140,9 @@ jobs:
         # record this run just wrote, plus one pipeline item per soak whose
         # due-ness is its graded state (scripts/ops/pipeline.py::is_due). Both
         # land in the SAME commit as the grade (extra-paths below).
+        # WSD-S4: after the freeze the pipeline items go to the work store's API instead.
+        env:
+          WORK_STORE_TOKEN: ${{ secrets.WORK_STORE_TOKEN }}
         run: |
           set -euo pipefail
           python3 scripts/ops/soak_report.py --write --sync-pipeline \

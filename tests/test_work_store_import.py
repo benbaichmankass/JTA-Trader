@@ -254,5 +254,6 @@ def test_api_parity_route_and_checklist_source_db(tmp_path, monkeypatch):
     wi.run_import(REPO, store)
     files = c.get("/api/bot/work/checklist").json()
     db = c.get("/api/bot/work/checklist?source=db").json()
-    assert "source" not in files and db["source"] == "db" and db["canonical"] is False
+    # WSD-S4: the repo is frozen, so the store-served payload is the canonical one
+    assert "source" not in files and db["source"] == "db" and db["canonical"] is True
     assert [i["id"] for i in db["items"]] == [i["id"] for i in files["items"]]

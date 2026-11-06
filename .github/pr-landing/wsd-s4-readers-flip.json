@@ -1,0 +1,7 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "hold_reason": "tier_2_3_needs_approval",
+  "hold_text": "WSD-S4: freezes the checklist/pipeline files and flips every register reader to work_store.db (checklist_store + pipeline.read_log are the one loader; /work/checklist shape proven unchanged by tests/test_work_store_readers_flip.py). Held: the manager merges + deploys after S2's 48h parity window closes (~2026-11-07T11:45Z) and parity is still exact. Revert: git revert before any post-freeze write; after one, `work.py export --to-files --unfreeze` then revert.",
+  "why": "Register-only commits (288 checklist + 122 pipeline touches/wk) go to 0, and the Workflow page reads the live register (operator 2026-11-06 ~21:35Z: capacity)."
+}

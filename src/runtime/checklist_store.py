@@ -184,6 +184,19 @@ def _read_rows(store: Path) -> list[dict]:
     return rows
 
 
+def _rows_for_read(base: Path) -> list[dict]:
+    """WSD-S4: after the freeze, the canonical rows come from work_store.db wherever that file
+    exists (the live VM); elsewhere the files are the export. A failed store read raises."""
+    from src.runtime import work_read
+    ws = work_read._store_for_read(REPO, STORE, base)
+    return work_read.checklist_rows(ws) if ws is not None else _read_rows(base)
+
+
+def _frozen_canonical(base: Path) -> bool:
+    from src.runtime import work_read
+    return work_read.is_canonical(base, STORE) and work_read.frozen(REPO)
+
+
 def load(repo: Path = REPO, store: Path = STORE) -> dict:
     """The checklist in exactly today's served shape. Raises ChecklistError /
     OSError / ValueError when unreadable -- callers must not read that as empty."""
@@ -229,7 +242,7 @@ def load_path(path):
 
 def _load_dir(base: Path) -> dict:
     header = json.loads((base / HEADER).read_text(encoding="utf-8"))
-    rows = [{k: v for k, v in r.items() if k != SEQ} for r in _read_rows(base)]
+    rows = [{k: v for k, v in r.items() if k != SEQ} for r in _rows_for_read(base)]
     return {k: (rows if k == "items" else v) for k, v in header.items()}
 
 
@@ -278,8 +291,13 @@ def render(repo: Path = REPO, store: Path = STORE) -> str:
 
 
 def read_row(row_id: str, repo: Path = REPO, store: Path = STORE) -> dict | None:
-    """One row as stored (``_seq`` stripped), or None if there is no such row."""
+    """One row as stored (``_seq`` stripped), or None if there is no such row.
+    WSD-S4: after the freeze, read LIVE from the work store (a write must never be based on
+    the frozen export)."""
     path = _row_path(repo / store, row_id)
+    if _frozen_canonical(repo / store):
+        from src.runtime import work_read
+        return work_read.get_row(row_id)
     if not path.is_file():
         return None
     return {k: v for k, v in json.loads(path.read_text(encoding="utf-8")).items() if k != SEQ}
@@ -300,6 +318,12 @@ def write_row(row: dict, repo: Path = REPO, store: Path = STORE) -> Path:
     base = repo / store
     path = _row_path(base, row.get("id"))
     row = dict(row)
+    if _frozen_canonical(base):
+        # WSD-S4 FREEZE: the row goes to work_store.db (in-process on the VM, else the API via
+        # scripts/ops/work.py); the file -- now the export -- is not written.
+        from src.runtime import work_read
+        work_read.put_row(row)
+        return path
     if path.exists():
         row[SEQ] = json.loads(path.read_text(encoding="utf-8")).get(SEQ, row.get(SEQ, 0))
     elif SEQ not in row:

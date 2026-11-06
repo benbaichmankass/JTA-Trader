@@ -13,6 +13,7 @@ A thin HTTPS client over ``/api/bot/work/items`` on the live VM. Stdlib only.
     work.py reopen <id> [--state queued]            # set state, clear terminal_reason
     work.py observe <id> "what was seen"            # observation: due_rule.last_checked = today, then a note
     work.py drain --issue N                         # (runner) apply the outbox issue's pending ops
+    work.py export --to-files [--root DIR] [--db PATH] [--unfreeze]   # the ROLLBACK path (WSD-S4)
 
 Every write carries an ``op_id`` (``--op-id`` or a fresh uuid) -- a retried write is a no-op on the
 server -- and, after create, ``If-Match: <version>`` read from the item; a 409 (someone wrote in
@@ -31,9 +32,17 @@ TRANSPORT (``--via``):
     never re-routed: it is the answer.
 The CLI always prints which path carried the write (``"via": ...``).
 
-NOT YET: ``checklist.py`` / ``pipeline.py`` keep writing the files. They become shims over this CLI
-at the FREEZE (design § 4 step 2), after the S2 shadow parity has been clean for two days -- doing
-it now would end the shadow it is measured against.
+THE FREEZE (WSD-S4, design § 4 steps 2-3): once ``docs/claude/work/checklist/_header.json`` carries
+``frozen_into_work_store``, ``checklist.py`` and ``pipeline.py`` write THROUGH this module
+(``src/runtime/work_read.py``: ``checklist_store.write_row`` / ``pipeline.append`` -> create/set here),
+and the row / record files become the EXPORT.
+
+EXPORT (``export --to-files``) is the rollback path and the CI export (design § 7, D5): it rewrites
+every checklist row file whose content differs from the store's projection and appends ONE pipeline
+record per observation whose folded file state differs -- after it, ``checklist_store.load`` and
+``pipeline.read_files`` over the files equal the store. ``--db`` reads a local ``work_store.db`` (the
+VM); without it the items are paged from ``GET /api/bot/work/items``. ``--unfreeze`` also removes the
+freeze key, so the files are canonical again: export --unfreeze, commit, then revert S4.
 """
 from __future__ import annotations
 
@@ -47,6 +56,10 @@ import urllib.parse
 import urllib.request
 import uuid
 from datetime import datetime, timezone
+
+_REPO = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+if _REPO not in sys.path:  # export imports the store's projection (src.runtime.*)
+    sys.path.insert(1, _REPO)
 
 DEFAULT_BASE = "https://ict-bot.duckdns.org"
 API = "/api/bot/work/items"
@@ -265,6 +278,66 @@ def _reply(api: str, issue: int, c: dict, text: str) -> None:
         {"body": f"Re {c.get('html_url')}: {text}\n\n---\n_work-store outbox drainer_"})
 
 
+# ── export: the rollback path (WSD-S4) ──────────────────────────────────────────────────
+
+
+def _all_items(db: str | None) -> list[dict]:
+    if db:
+        from src.runtime.work_store import WorkStore
+        return WorkStore(db).list_items(limit=10 ** 7)
+    out, offset, page = [], 0, 1000
+    while True:
+        st, p, _ = http("GET", f"{API}?{urllib.parse.urlencode({'limit': page, 'offset': offset})}")
+        batch = _ok(st, p, "list")["items"]
+        out += batch
+        if len(batch) < page:
+            break
+        offset += page
+    if len({i["id"] for i in out}) != len(out):
+        raise WorkError("the store changed while paging (duplicate ids); re-run, or use --db on the VM")
+    return out
+
+
+def export_to_files(root, items: list[dict], *, unfreeze: bool = False) -> dict:
+    """Write the store's items into the file layout under ``root``; only what differs is written."""
+    from pathlib import Path
+    from scripts.ops import pipeline as pl
+    from src.runtime import checklist_store as cs
+    from src.runtime import work_read
+    from src.runtime import work_store_import as wi
+    root = Path(root)
+    cdir, pdir = root / cs.STORE, root / pl.STORE
+    cdir.mkdir(parents=True, exist_ok=True)
+    out = {"rows_written": 0, "rows_unchanged": 0, "records_written": 0, "records_unchanged": 0}
+    have = pl.read_files(pdir).items if pdir.exists() else {}
+    stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S%f")
+    for it in sorted(items, key=lambda i: i["id"]):
+        if it["kind"] == "build":
+            row = wi.to_row(it)
+            path = cdir / f"{row['id']}.json"
+            if path.is_file() and json.loads(path.read_text(encoding="utf-8")) == row:
+                out["rows_unchanged"] += 1
+                continue
+            path.write_text(json.dumps(row, indent=2) + "\n", encoding="utf-8")
+            out["rows_written"] += 1
+        else:
+            rec = wi.to_pipeline_item(it)
+            if have.get(rec["id"]) == rec:
+                out["records_unchanged"] += 1
+                continue
+            pdir.mkdir(parents=True, exist_ok=True)
+            name = f"{stamp}Z-export-{rec['id']}{pl.RECORD_SUFFIX}"
+            (pdir / name).write_text(json.dumps(rec, ensure_ascii=False, sort_keys=True, indent=2) + "\n",
+                                     encoding="utf-8")
+            out["records_written"] += 1
+    if unfreeze:
+        hp = cdir / cs.HEADER
+        head = json.loads(hp.read_text(encoding="utf-8"))
+        out["unfrozen"] = head.pop(work_read.FROZEN_KEY, None) is not None
+        hp.write_text(json.dumps(head, indent=2) + "\n", encoding="utf-8")
+    return out
+
+
 # ── CLI ─────────────────────────────────────────────────────────────────────────────────
 
 
@@ -336,6 +409,11 @@ def main(argv: list[str] | None = None) -> int:
     po.add_argument("id")
     po.add_argument("text")
     sub.add_parser("drain")
+    pe = sub.add_parser("export")
+    pe.add_argument("--to-files", action="store_true", required=True)
+    pe.add_argument("--root", default=None, help="repo root to write into (default: this repo)")
+    pe.add_argument("--db", default=None, help="a local work_store.db (the VM); default: page the API")
+    pe.add_argument("--unfreeze", action="store_true", help="also remove the freeze key (rollback)")
     for sp in (pa, ps, pn, pc, pr, po):
         sp.add_argument("--by")
         sp.add_argument("--op-id")
@@ -354,6 +432,9 @@ def main(argv: list[str] | None = None) -> int:
                 q["due"] = "true"
             st, p, _ = http("GET", f"{API}?{urllib.parse.urlencode(q)}")
             out = _ok(st, p, "list")
+        elif a.cmd == "export":
+            root = a.root or str(_REPO)
+            out = export_to_files(root, _all_items(a.db), unfreeze=a.unfreeze)
         elif a.cmd == "drain":
             if not a.issue:
                 raise WorkError("drain needs --issue (or WORK_STORE_OUTBOX_ISSUE)")

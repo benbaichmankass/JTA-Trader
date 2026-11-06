@@ -172,6 +172,8 @@ jobs:
         id: run
         env:
           DIAG_READ_TOKEN: ${{ secrets.DIAG_READ_TOKEN }}
+          # WSD-S4: pipeline.append writes through the work store's API after the freeze.
+          WORK_STORE_TOKEN: ${{ secrets.WORK_STORE_TOKEN }}
           REF: ${{ steps.inp.outputs.ref }}
         run: |
           # `+e`: the runner's default shell is `bash -e`, and the script exits
