@@ -1,0 +1,24 @@
+{
+  "id": "RQ-NEW-UNIT-SELF-LAND",
+  "title": "New research queue units self-land (Tier 1): check_pr_landing R5 admits a research/queue/*.yaml file ADDED in the PR (absent at merge-base, carrying a decision rule); edits to an existing unit's rule and deletions still hold",
+  "phase": null,
+  "state": "queued",
+  "owner": "manager",
+  "lane": null,
+  "model": "claude-sonnet-5-5",
+  "ceiling_usd": 4,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [],
+  "blocked_on": [],
+  "note": "Operator 2026-11-06 ~23:05Z, verbatim: \"there's no reason merging research units should require me\". Trigger: #23973 (ML-ENTRY-EQ-STRUCTURE-RETEST registering RQ-20261106-98e3-01) had to hold for a manager merge, which the auto-mode classifier refuses overnight. The guard's reason (STAMP_ONLY_SURFACE comment: a pre-registered rule must not be rewritten and self-landed with a run) does not apply to a NEW unit: merging it is the registration, its git timestamp the evidence. Gates this adds: none (removes a hold). Lane brief written 23:05Z; dispatch waits for the manager to be back in auto mode (create_session permission_mode auto needs it). CLOSES WHEN: a lane PR that adds a new unit self-lands with no manager merge.",
+  "due_by": "2026-11-07",
+  "roadmap": [
+    "L-OPS"
+  ],
+  "priority_rank": 1,
+  "updated_at": "2026-11-06T23:05:38Z",
+  "updated_by": "session_01AFoLuKHs8XCUREKLokpyy5",
+  "week_lane": "surge",
+  "_seq": 973
+}
