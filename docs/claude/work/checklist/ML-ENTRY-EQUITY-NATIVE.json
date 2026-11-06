@@ -11,13 +11,13 @@
   "tier": 3,
   "prs": [],
   "blocked_on": [],
-  "note": "2026-11-06 ~01:0xZ DEV RESULT (run 42119511272, 58 min, 12 draws, 377067 decision rows / 170 symbols, pool 173): selected config B (no market proxies) tau 0.20: pooled OOF mean net R +0.1067 at n=3896 (gross 0.1650, cost 0.0583, 163 symbols, se 0.0202). Grid: A (all feats) -0.009..+0.009 (n 7k-16k); B +0.057 (tau .05, n 12001) .. +0.107 (tau .20, n 3896) monotone in tau; C +0.012..+0.052. The run's record landed producer_failed ONLY because my dev verdict.json said 'descriptive' (not an allowed verdict) - fixed (not_applicable + population); by_fold also collapsed to one fold (pandas time-unit bug in _fold_of) - fixed. Confirm unit RQ-20261105-e9a1-02 registered BEFORE its run (B|0.2, window 2025-07-15..last complete month, ENTRY-EQ ledger, deflated bar).",
+  "note": "2026-11-06 ~05:1xZ CONFIRM RESULT (run 42143223941, 74 min, window 2025-07-15..2026-10-31, train_end 2025-06-30, config B tau 0.20, booster sha256 af4835e29fe83c86..., ledger ENTRY-EQ n_tries 1): PASS per the pre-registered rule: n=858 trades / 147 symbols, mean net R +0.0392 (gross +0.0899, cost 0.0507), iid se 0.0423 (t 0.9), month-clustered se 0.143 (t 0.3), bar t_min 0 => mean >= 0 met; dev OOF +0.1067 > 0 met. HONEST READ: the point estimate clears the operator bar but is statistically indistinguishable from zero; dev +0.107 shrank to +0.039 out of time; sign flips by month (2026-03 n=300, 35% of trades, -0.24; 2025-10 +1.29; 2025-11 -0.41). Fixed 2/3 ATR bracket, not the live structure_exit. comms/ml_universe NOT written: its leg key ml_entry is the served crypto v1 model, so a record would hand v1 (FAILED here) the 173 ETFs; needs the equity model served first. Ledger rows appended in a Tier-1 PR.",
   "due_by": "2026-11-07",
   "roadmap": [
     "L-ML-LIVE"
   ],
   "priority_rank": 1,
-  "updated_at": "2026-11-06T00:52:09Z",
+  "updated_at": "2026-11-06T05:04:04Z",
   "updated_by": "session_01AFoLuLh6ui8yrCXu3ES5Cp",
   "week_lane": "surge",
   "_seq": 957
