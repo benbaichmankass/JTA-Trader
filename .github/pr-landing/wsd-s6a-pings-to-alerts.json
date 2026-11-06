@@ -1,0 +1,7 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "hold_reason": "tier_2_3_needs_approval",
+  "why": "WSD-S6A: the work-digest producer POSTs its ping + receipt to /api/bot/alerts instead of committing pending-pings.jsonl / WORK-DIGEST.json to main. Touches the ict-web-api route (src/web/api/routers/alerts.py, src/runtime/ping_ingest.py), so the VM service must restart. Adds no gate: failure falls back to the legacy commit path.",
+  "hold_text": "Tier-2: ict-web-api deploy needed BEFORE the first POST can succeed (until then post_ping falls back to the commit path, so nothing is lost). Manager merges, deploys ict-web-api, then runs the post-merge checks in the PR body."
+}

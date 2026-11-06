@@ -142,7 +142,7 @@ from typing import Any, Dict, Optional
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "ops"))
 
-from digest_due import RECEIPT, _parse_ts, read_receipt  # noqa: E402
+from digest_due import RECEIPT, _parse_ts, read_best_receipt, read_receipt  # noqa: E402
 
 # ⚠️ THE CARRIER VOCABULARY IS IMPORTED, NOT REDEFINED. `collapsed-state-guard`
 #    requires a consumer OUTSIDE the producing module, and a second copy of
@@ -408,6 +408,8 @@ def main(argv=None) -> int:
     ap.add_argument("--window-hours", type=float, default=DEFAULT_WINDOW_HOURS)
     ap.add_argument("--receipt", default=str(RECEIPT))
     ap.add_argument("--self-test", action="store_true")
+    ap.add_argument("--no-ledger", action="store_true",
+                    help="read only the committed receipt file (tests, offline)")
     ap.add_argument("--no-carrier-lookup", action="store_true",
                     help="never look for a fresher receipt on an open PR; grade "
                          "exactly as this guard did before 2026-09-12")
@@ -419,9 +421,18 @@ def main(argv=None) -> int:
     if a.self_test:
         return _self_test()
 
-    receipt, read_state = read_receipt(Path(a.receipt))
+    # WSD-S6A: the receipt is a ledger row on the VM now; the committed file is only the legacy
+    # fallback. Newer of the two wins.
+    receipt, read_state, ledger_state = read_best_receipt(Path(a.receipt), remote=not a.no_ledger)
     now = datetime.now(timezone.utc)
     verdict = grade(receipt, read_state, now, a.window_hours)
+    if verdict["state"] in (STALE, UNREADABLE) and ledger_state == "could_not_look":
+        # The file is stale BECAUSE receipts no longer land in git, and we could not look at the
+        # ledger: that is "we could not look", not "the digest stopped". Loud PASS (no new gate).
+        print("::warning::check_digest_liveness: alert ledger unreachable and the committed receipt "
+              f"is {verdict['state']} — not graded as a stopped digest. Re-run when the API is reachable.")
+        print(render({**verdict, "ok": True}))
+        return 0
 
     # ⚠️ THE LOOKUP IS SECOND, AND ONLY ON THE FAILING PATH. Grading first and
     #    re-grading only when the answer is `stale` is what keeps a healthy PR

@@ -46,6 +46,15 @@ async def post_alert(request: Request,
         doc = await request.json()
     except (ValueError, TypeError) as exc:
         raise HTTPException(status_code=400, detail="body must be JSON") from exc
+    if isinstance(doc, dict) and doc.get("route") == "ping":
+        # WSD-S6A: a GitHub producer's pending-pings row, delivered exactly as the drain would.
+        from src.runtime import ping_ingest
+        try:
+            return await asyncio.to_thread(ping_ingest.ingest, doc.get("entry"), doc.get("receipt"))
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+        except Exception as exc:  # noqa: BLE001 — surfaced as 503 so the producer retries
+            raise HTTPException(status_code=503, detail=f"ping ingest failed: {exc}") from exc
     if not isinstance(doc, dict) or not str(doc.get("body") or "").strip():
         raise HTTPException(status_code=400, detail="body is required")
     kind = str(doc.get("kind") or "").strip()

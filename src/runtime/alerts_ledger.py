@@ -57,7 +57,7 @@ HIGH_KINDS = frozenset({"alert", "execution_alert", "prop_alert", "red_flag"})
 #: (channel==system) skips them so the manager is not woken every hour.
 ROUTINE_KINDS = frozenset({
     "hourly_report", "system_health", "daily_heartbeat", "pipeline_result",
-    "news_veto", "deploy", "trades_snapshot",
+    "news_veto", "deploy", "trades_snapshot", "work_digest_receipt",
 })
 
 _LOCK = threading.Lock()

@@ -214,13 +214,8 @@ jobs:
           # recent one -- a fixed `1 hour ago` would drop the other two on the
           # floor, which is the same silent-omission failure as a missed ping.
           BASE=""
-          PREV="$(python3 -c "
-          import json,sys
-          try:
-              print(json.load(open('docs/claude/work/WORK-DIGEST.json')).get('window_head','') or '')
-          except Exception:
-              print('')
-          ")"
+          # WSD-S6A: the receipt is a ledger row now (file = legacy fallback); newest wins.
+          PREV="$(python3 scripts/ops/digest_due.py --print-window-head 2>/dev/null | tail -1 || true)"
           if [ -n "$PREV" ] && git cat-file -e "${PREV}^{commit}" 2>/dev/null \
              && git merge-base --is-ancestor "$PREV" main 2>/dev/null; then
             BASE="$PREV"
@@ -411,8 +406,17 @@ jobs:
             --trigger "${{ github.event_name }}" \
             --run-url "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
 
-      - name: Land the digest on main (auto-merge PR)
+      # WSD-S6A: the repo is no longer a ping queue. POST the row + receipt to the VM (retry with
+      # diagnosis); only if that FAILS does the legacy commit-to-main step below run, so nothing is dropped.
+      - name: Deliver via POST /api/bot/alerts
+        id: deliver
         if: steps.recheck.outputs.due == 'true'
+        env:
+          DASHBOARD_API_TOKEN: ${{ secrets.DASHBOARD_API_TOKEN }}
+        run: python3 scripts/ops/post_ping.py
+
+      - name: Land the digest on main (auto-merge PR) — FALLBACK when the POST failed
+        if: steps.recheck.outputs.due == 'true' && steps.deliver.outputs.delivered != 'true'
         uses: ./.github/actions/commit-to-main
         with:
           token: ${{ secrets.BRANCH_PROTECTION_TOKEN }}
