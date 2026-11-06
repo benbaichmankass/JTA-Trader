@@ -1,0 +1,16 @@
+{
+  "due_when": {
+    "check_every_days": 7,
+    "clears_when": "python3 scripts/research/iteration_orphans.py shows qqq/spy/tlt_pullback_1h covered, or they are re-homed / retired by record",
+    "kind": "observation"
+  },
+  "id": "PI-20261106-Y7JEXUWW-0002",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "audit",
+    "ref": "lane SOAK-BACKLOG-REVIEW (Manager Session 2026-11-06a), docs/research/soak-backlog-review-2026-11-06.md",
+    "rerun": "python3 scripts/research/iteration_orphans.py | grep pullback_1h"
+  },
+  "state": "queued",
+  "what": "ITERATION GAP for UNHOMED testing legs: qqq_pullback_1h, spy_pullback_1h, tlt_pullback_1h are testing subjects in scripts/research/iteration_orphans.py (still orphan after this lane's replenish) but scripts/research/queue_replenish.py's roster-walkforward family expands only ROSTERED legs, so they can never get a generated iteration unit. Fix: re-home them (row ALPACA-SLICES-REHOME-1H), or let the walk-forward family include the testing legs named in check_strategy_status.UNHOMED, or retire them by record."
+}

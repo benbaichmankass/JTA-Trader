@@ -458,6 +458,14 @@ STATUS_EXPLICIT: Dict[str, Tuple[str, str, str]] = {
     # Written 2026-11-04 by the TICK-DURATION-115S lane, the session that took
     # every measurement in it (tick_cost diag read, local cProfile, 192-build
     # equivalence run). Goes historical once the deploy is observed on tick_cost.
+    # Written 2026-11-06 by the SOAK-BACKLOG-REVIEW lane, the session that ran every resolver
+    # read and holdout lookup in it. Goes historical once the 6 holdout-blocked legs are decided.
+    "docs/research/soak-backlog-review-2026-11-06.md": (
+        "live",
+        "read:SOAK-BACKLOG-REVIEW-lane-measured-it-2026-11-06",
+        "Soak-backlog review: 56 testing legs vs their Stage-0 records (0 pass); feeds SOAK-VOCAB-RETIRE; "
+        "goes historical once the 6 holdout-blocked legs are decided",
+    ),
     "docs/research/tick-duration-115s-profile-2026-11-04.md": (
         "live",
         "read:TICK-DURATION-115S-lane-authored-and-measured-it-2026-11-04",

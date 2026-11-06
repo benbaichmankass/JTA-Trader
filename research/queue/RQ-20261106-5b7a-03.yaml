@@ -1,0 +1,161 @@
+id: RQ-20261106-5b7a-03
+title: 'HOLDOUT RE-RUN at the CURRENT config (soak-backlog review 2026-11-06): does trend_donchian_xrp_adx25''s configuration, SELECTED on the
+  earliest ~75% of its history, hold up net of the full cost stack when tested ONCE on the held-back latest ~25%?'
+status: queued
+cadence: once
+roadmap:
+- L-LADDER
+theme: live_strategy
+priority: 1
+kind: experiment
+question: trend_donchian_xrp_adx25 is a TESTING leg on bybit_1 whose committed Stage-0 record passes B1, n >= 30, expectancy > 0 and a fold majority;
+  MD-PROMOTE-S1-S2 -> bybit_2 stops ONLY at R-HOLDOUT. No holdout re-run has ever been registered for this leg. Its Stage-0 record (n=46, +9.72R,
+  3/4 folds, faithful, RULE-D1-STAGE0-NET-OF-FULL-COST pass) stops MD-PROMOTE-S1-S2 only at R-HOLDOUT (no holdout_confirmation). Select among
+  the pre-registered configurations (the leg AS CONFIGURED TODAY plus its grid neighbours) on the earliest span only, then read the ONE selected
+  configuration once on the latest span.
+why_this_matters: 'OPERATOR DIRECTION 2026-11-06 ~18:55Z (relayed by Manager Session 2026-11-06a): legs that pass backtesting go to live money;
+  this is the one missing Stage-0 read between this leg and real money (docs/research/soak-backlog-review-2026-11-06.md). Holdout bar: operator
+  decision 2026-10-16 PROMOTION-BAR-MULTIPLICITY ("Require holdout").'
+power:
+  expected_n: 25
+  min_detectable_effect: 0.57
+  effect_units: sd
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: ESTIMATE of held-back trades entered 2026-10-23..2028-08-20 (667 days) at 0.0375/day, the held-back entry rate MEASURED on the earlier
+    unit RQ-20261016-077e-03. Floor 25. not_before is set so the span can reach the floor; below it the unit grades INDETERMINATE/underpowered,
+    never FAIL, and is re-dispatched with a later --end (boundary recomputed to stay strictly after 2026-10-22), never with a boundary moved earlier.
+  feasibility:
+    source: none
+    accrual_basis: The clean span accrues in calendar time; on/after not_before the run replays public candles; nothing else accrues.
+decision_rule:
+  id: RULE-RQ-20261106-5b7a-03
+  statistic: 'scripts/research/exit_lever_ablation.py --grade holdout on trend_donchian_xrp_adx25, window 2020-07-01 .. 2028-08-20 23:59, every
+    arm ONE continuous harness pass (argv via regime_debt_matrix.build_harness_cmd, the evidence builder''s own), net of the full cost stack the
+    harness resolves for Bybit perps (fee + slippage + funding); per-trade net_r from --emit-trades. Arms: A = the leg AS CONFIGURED in config/strategies.yaml
+    at dispatch; the C-arms are the run.command --arm entries (the grid neighbours of the 2026-10-16 unit, minus the one equal to A on the swept
+    parameters). BOUNDARY, fixed before any outcome: --holdout-frac 0.2244 with --holdout-max-frac 0.2244 (no growth), placing it at ~2026-10-23
+    -- strictly after the leg''s last parameter choice on 2026-10-22 (f8a9b6fd7 (trail_adx_* alias keys, #19479)). DISCOVERY = trades whose entry
+    AND exit precede the boundary; 4 equal calendar folds of discovery. HOLDOUT = the selected arm''s trades entered on/after the boundary.'
+  rule: 'BOUNDARY CHECK FIRST: if verdict.json plan.boundary is on or before 2026-10-22T23:59:59Z, the run is INDETERMINATE/boundary_in_param_window
+    and is re-run with --holdout-frac recomputed -- never graded. SELECTION (discovery only): an arm is eligible iff discovery n >= 25 AND discovery
+    net R > 0 AND >= 3 of 4 discovery folds net-positive; the eligible arm with the highest discovery net R is selected (a tie goes to A). HOLDOUT
+    (read once): INDETERMINATE/insufficient_discovery IF every arm holds < 25 discovery trades; FAIL/no_discovery IF no arm is eligible otherwise;
+    INDETERMINATE/underpowered IF the selected arm holds < 25 held-back trades; PASS/confirmed IF held-back net R > 0; FAIL/not_replicated otherwise.
+    ON PASS with A selected: write the verdict''s holdout_confirmation block (source_run -> the committed verdict.json) into comms/strategy_evidence/trend_donchian_xrp_adx25.json,
+    then the promotion PR (bybit_2 + bybit_portfolio, off bybit_1). ON PASS with another arm selected: evidence for a Tier-3 config proposal,
+    never an edit here. ON FAIL: the leg stays testing and goes back to diagnosis (never demoted on it). Thresholds are not changed after any
+    result.'
+  what_it_does_not_do: Edits no config, roster or record; places no order. The discovery span contains the parameter-selection data by design;
+    only the held-back span is clean. The 2026-10-16 unit's held-back span (2025-03..2026-10) was already read once and every later parameter
+    choice could see it, so it is NOT re-used as a holdout here.
+  registered_before_run: true
+  registered_at: '2026-11-06'
+compute: cpu_light
+value:
+  bucket: own_losses
+  usd_at_stake_per_month: 400
+  confidence: 0.35
+  basis: 'stand-in: a testing leg one holdout read from bybit_2 + bybit_portfolio; not a P&L measurement.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 2.0
+  est_minutes: 40
+  why_runner: Fetches keyless public candles (Binance Vision / dukascopy) for a pinned window; Kaggle CPU runs with the internet off and metis-market-data
+    carries no 2h/4h/1d candles for these legs; reads no trainer data.
+  basis: 'Runner. One exit_lever_ablation.py invocation: one candle fetch + 9 harness passes. MEASURED 2026-10-16 (RQ-20261016-008 power.basis):
+    2 arms on xrp_pullback_2h over 2020-07..2026-10 took 74 s incl. the fetch; 9 arms carry headroom.'
+run:
+  command:
+  - python3
+  - scripts/research/exit_lever_ablation.py
+  - --leg
+  - trend_donchian_xrp_adx25
+  - --arm
+  - A=
+  - --arm
+  - C1=atr_stop_mult=1.5;trail_mult=4.0
+  - --arm
+  - C2=atr_stop_mult=1.5;trail_mult=5.0
+  - --arm
+  - C3=atr_stop_mult=1.5;trail_mult=6.0
+  - --arm
+  - C4=atr_stop_mult=2;trail_mult=4.0
+  - --arm
+  - C5=atr_stop_mult=2;trail_mult=6.0
+  - --arm
+  - C6=atr_stop_mult=2.5;trail_mult=4.0
+  - --arm
+  - C7=atr_stop_mult=2.5;trail_mult=5.0
+  - --arm
+  - C8=atr_stop_mult=2.5;trail_mult=6.0
+  - --days
+  - '2992'
+  - --start
+  - '2020-07-01'
+  - --end
+  - 2028-08-20 23:59
+  - --grade
+  - holdout
+  - --baseline
+  - A
+  - --delta-r
+  - '0'
+  - --folds
+  - '4'
+  - --fold-majority
+  - '3'
+  - --n-floor
+  - '25'
+  - --holdout-frac
+  - '0.2244'
+  - --holdout-min-trades
+  - '25'
+  - --holdout-max-frac
+  - '0.2244'
+  - --research-unit
+  - RQ-20261106-5b7a-03
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 120
+  inputs:
+    research_unit: RQ-20261106-5b7a-03
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+  note: research/results/RQ-20261106-5b7a-03/<run_id>.jsonl via the batch collector; verdict.json (with measurement.holdout_confirmation) + arms
+    under comms/research/RQ-20261106-5b7a-03/<run_id>/.
+holdout_rerun:
+  leg: trend_donchian_xrp_adx25
+  decision: PROMOTION-BAR-MULTIPLICITY (operator, 2026-10-16, "Require holdout")
+  reads_into: comms/strategy_evidence/trend_donchian_xrp_adx25.json::holdout_confirmation
+  resolver_clause: R-HOLDOUT
+related:
+- PROMOTION-BAR-MULTIPLICITY
+- MD-PROMOTE-S0-S1
+- MD-PROMOTE-S1-S2
+- scripts/ops/mandate_resolver.py
+- scripts/research/exit_lever_ablation.py
+- comms/research/trial_ledger.json
+- comms/strategy_evidence/trend_donchian_xrp_adx25.json
+- 'RESEARCH-CONFIRM-FRESH-WINDOW (m20 holdout, PR #18614)'
+- RQ-20261016-077e-03
+- docs/research/soak-backlog-review-2026-11-06.md
+- SOAK-VOCAB-RETIRE
+iteration:
+  subject: trend_donchian_xrp_adx25
+  subject_kind: strategy_leg
+  from_result: comms/strategy_evidence/trend_donchian_xrp_adx25.json
+  verdict_read: pass_unconfirmed
+  diagnosis: No holdout re-run has ever been registered for this leg. Its Stage-0 record (n=46, +9.72R, 3/4 folds, faithful, RULE-D1-STAGE0-NET-OF-FULL-COST
+    pass) stops MD-PROMOTE-S1-S2 only at R-HOLDOUT (no holdout_confirmation). The record clears every Stage-0 clause except the holdout, so the
+    one open question is whether the CURRENT configuration holds on a held-back span.
+  hypothesis: the leg as configured today is the configuration selected on the discovery span and stays net-positive on the held-back span
+  attempt: 1
+  due_by: '2028-08-27'
+not_before: '2028-08-21T00:00:00Z'
+practice_precedent: 'T4, R5, M10 (docs/reference/trading-and-model-practice-principles.md): variants registered before the run, counted, confirmed
+  once on a span strictly after every parameter choice (RQ-20261104-7fdb-02 pattern).'
