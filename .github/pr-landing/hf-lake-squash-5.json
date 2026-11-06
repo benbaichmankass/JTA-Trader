@@ -2,6 +2,6 @@
   "tier": 1,
   "landing": "hold",
   "hold_reason": "awaiting_evidence",
-  "hold_text": "Adds a verify-only mode to kaggle-cold-lake-copy.yml ([kaggle-copy-verify], optional [kaggle-copy-parts:...]) and makes the runner-side sample print why a single-file download fails. Held until the PR-triggered verify run for one part ([kaggle-copy-verify] [kaggle-copy-parts:p000]) shows the cause; the manager merges after that. Read-only against Kaggle, nothing uploaded, nothing deleted. No src/, config/ or VM change.",
+  "hold_text": "Adds a verify-only mode to kaggle-cold-lake-copy.yml ([kaggle-copy-verify], optional [kaggle-copy-parts:...]) and makes the runner-side sample print why a single-file download fails. MEASURED: the PR-triggered verify run for p000 passed, kernel 441/441 members hashed and the runner sample 12/12 (the same 12 members failed 0/12 in the original step), so the original failure was where the sample step looked for the downloaded file, not the data. Held until the same fixed step has passed on p001..p010; the manager merges after that. Read-only against Kaggle, nothing uploaded, nothing deleted. No src/, config/ or VM change.",
   "why": "Row HF-LAKE-STORAGE-403: the full copy's 11 parts uploaded, the Kaggle kernel re-hashed every member (member-level SHA-256) but the runner-side 12-file sample failed 12/12 on p000..p004, which only ever used single-file download for top-level files, never for a path inside an unpacked shard folder."
 }

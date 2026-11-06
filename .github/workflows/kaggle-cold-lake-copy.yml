@@ -259,7 +259,9 @@ jobs:
           ok, bad, diag = 0, [], []
           d = "/tmp/smp"
           def find(rel):
-              # the CLI may save under the basename, under the relative path, or in a subfolder: look for all of them
+              # MEASURED 2026-11-06 (PR #23613, p000): the same 12 members that failed 0/12 when only <dir>/<basename> was checked pass 12/12
+              # with this lookup, so the first version of this step lost the downloaded file, the data was fine. The CLI may save under the
+              # basename, under the relative path, or in a subfolder: look for all of them
               for c in (os.path.join(d, rel), os.path.join(d, os.path.basename(rel))):
                   if os.path.isfile(c):
                       return c
