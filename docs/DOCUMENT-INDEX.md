@@ -230,7 +230,8 @@ real top-level `docs/*.md` and fails if the population builder cannot see it.
 | `.claude/skills/programme-review/SKILL.md` | instruction | live | — | 2026-10-28 | `dir:skills-are-binding-workflows / harness:skill-is-loaded-and-invocable` | — |
 | `.claude/skills/research-ops/SKILL.md` | instruction | live | — | 2026-10-28 | `dir:skills-are-binding-workflows / harness:skill-is-loaded-and-invocable` | — |
 | `.claude/skills/sprint-format/SKILL.md` | instruction | live | — | 2026-09-07 | `dir:skills-are-binding-workflows / harness:skill-is-loaded-and-invocable` | — |
-| `.claude/skills/system-report/SKILL.md` | instruction | live | — | 2026-09-07 | `dir:skills-are-binding-workflows / harness:skill-is-loaded-and-invocable` | — |
+| `docs/archive/2026-11-06-skills-prune/system-report/SKILL.md` | instruction | unknown | — | never | `not-assessed / not-assessed` | — |
+| `docs/archive/2026-11-06-skills-prune/research-ops-what-changed-2026-10-16.md` | unknown | unknown | — | never | `not-assessed / not-assessed` | — |
 | `.claude/skills/trading-desk/AMENDMENTS.md` | instruction | unknown | — | never | `dir:skills-are-binding-workflows / not-assessed` | — |
 | `.claude/skills/trading-desk/DESK-BRIEF.md` | instruction | live | — | 2026-10-27 | `dir:skills-are-binding-workflows / harness:skill-is-loaded-and-invocable` | — |
 | `.claude/skills/trading-desk/SHORT-HOLD-BRIEF.md` | instruction | live | — | 2026-10-27 | `dir:skills-are-binding-workflows / harness:skill-is-loaded-and-invocable` | — |
