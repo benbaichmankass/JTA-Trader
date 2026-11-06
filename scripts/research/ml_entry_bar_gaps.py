@@ -82,6 +82,23 @@ def run(a) -> int:
         report.setdefault("daily_covers", []).append(
             {"symbol": sym, "gap": [after, before], "missing_hours": len(miss), "daily_archive_has": int(sum(1 for m in miss if m in got))})
     report["daily_file_checks"] = checks
+    # is Binance's keyless REST klines endpoint reachable from this runner (a possible BACKFILL source for the hole)? probe only, no data is used
+    import requests
+    rest = []
+    if windows:
+        (after, before), _ = sorted(windows.items(), key=lambda kv: -len(kv[1]))[0]
+        t0 = int((pd.Timestamp(after) + pd.Timedelta(hours=1)).timestamp() * 1000)
+        for host in ("fapi.binance.com", "fapi1.binance.com", "fapi2.binance.com", "fapi3.binance.com"):
+            try:
+                r = requests.get(f"https://{host}/fapi/v1/klines", params={"symbol": "BTCUSDT", "interval": "1h", "startTime": t0, "limit": 24},
+                                 timeout=30)
+                rows = r.json() if r.status_code == 200 else None
+                rest.append({"host": host, "http": r.status_code, "rows": len(rows) if isinstance(rows, list) else None,
+                             "first_open": str(pd.to_datetime(rows[0][0], unit="ms", utc=True)) if rows else None,
+                             "body": None if r.status_code == 200 else r.text[:120]})
+            except Exception as exc:  # noqa: BLE001  # allow-silent: the probe's own failure is the recorded result
+                rest.append({"host": host, "error": f"{type(exc).__name__}: {exc}"[:160]})
+    report["rest_klines_probe"] = rest
     monthly = R._fetch_zip(f"{E._BASE}/BTCUSDT/1h/BTCUSDT-1h-{p['last_complete_month']}.zip")
     if monthly is not None:
         mt = pd.to_datetime(pd.to_numeric(monthly["open_time"], errors="coerce").dropna().astype("int64"), unit="ms", utc=True)
@@ -90,7 +107,7 @@ def run(a) -> int:
     else:
         report["monthly_btc"] = {"month": p["last_complete_month"], "state": "404 absent"}
     (out / "gaps_report.json").write_text(json.dumps(report, indent=1, default=str) + "\n")
-    print(json.dumps({k: report[k] for k in ("n_symbols_with_gaps", "gap_windows", "daily_covers", "monthly_btc")}, indent=1, default=str)[:6000],
+    print(json.dumps({k: report[k] for k in ("n_symbols_with_gaps", "gap_windows", "daily_covers", "monthly_btc", "rest_klines_probe")}, indent=1, default=str)[:6000],
           flush=True)
     return 0
 
