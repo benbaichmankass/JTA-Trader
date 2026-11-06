@@ -1,0 +1,16 @@
+{
+  "due_when": {
+    "check_every_days": 7,
+    "clears_when": "the next ml_entry model artifact's xs_reference contains only symbols that return Bybit linear 1h klines (ml_entry_refs shows have=N/N, gave_up=-), or a measured serve-parity check shows 52/60 does not move the decision distribution; or killed with a stated reason",
+    "kind": "observation"
+  },
+  "id": "PI-20261106-5A1BGFHC-0004",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "audit",
+    "ref": "lane PROD-LEGS-DSR-DECISION, 12:00Z 2026-11-06 ml_entry bar read after #23736",
+    "rerun": "DIAG_FETCH_MAX_TIME=60 scripts/ops/diag_fetch.sh 'journalctl?unit=ict-trader-live.service&since=<decision bar>&grep=ml_entry_refs&lines=50'  (read gave_up=)"
+  },
+  "state": "queued",
+  "what": "ml_entry's reference universe (model meta xs_reference, 60 Bybit USDT perps) carries 8 symbols that never return 1h klines: BALUSDT, BLZUSDT, DEFIUSDT, FLMUSDT, FTMUSDT, ICXUSDT, MKRUSDT, OMGUSDT (named by the ml_entry_refs gave_up= line, 2026-11-06 12:02:07Z, after 5 tries each, not during the cooldown). Every live decision therefore runs on 52/60 references (n_reference=52 >= min 40, so it decides). The cross-sectional features were trained over the full universe, so the live feature distribution may differ from training: a serve-parity question for the next retrain (drop the 8 from xs_reference, or substitute successors, e.g. FTM->S, MKR->SKY), plus ~40 wasted venue calls per decision bar (8 symbols x 5 tries) inside the bar-close burst. Tier 3 for the model artifact; Tier 1 to measure the parity gap first."
+}

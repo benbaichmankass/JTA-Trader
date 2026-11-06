@@ -1320,7 +1320,23 @@ def _submit_order(client: Any, order: dict, account_cfg: dict,
         }) or {}
         ret_code = resp.get("retCode")
         if ret_code in (0, "0", None):
-            order_id = (resp.get("result") or {}).get("orderId")
+            result = resp.get("result") or {}
+            order_id = result.get("orderId")
+            # ALPACA-LIVE-MECHANICS (2026-11-06): the venue's own full-fill
+            # average, read by AlpacaClient.place's confirm poll. Carried on
+            # the executor's order dict (not ``observed``, which holds only
+            # what we SENT) so _log_trade_to_journal books the broker fill as
+            # the entry price. Absent when the fill was not seen in the window.
+            try:
+                _avg = float(result.get("avgPrice"))
+            except (TypeError, ValueError):
+                _avg = 0.0
+            if _avg > 0:
+                order["venue_fill"] = {
+                    "avg_price": _avg,
+                    "filled_qty": result.get("filledQty"),
+                    "source": "alpaca_order_status",
+                }
             return str(order_id or uuid.uuid4().hex)
         reason = str(resp.get("retMsg") or f"retCode={ret_code}")
         raise RuntimeError(
@@ -2633,11 +2649,27 @@ def _log_trade_to_journal(
                     reduce_qty, exc,
                 )
                 # Fall through to the legacy insert below (old behaviour).
+        # ALPACA-LIVE-MECHANICS (2026-11-06): book the venue's measured fill
+        # as the entry when the placement read one back (Alpaca today); keep
+        # the package price in notes so the signal-vs-fill slippage stays
+        # readable. Every other path journals float(pkg.entry), unchanged.
+        _entry_price = float(pkg.entry)
+        _vf = order.get("venue_fill") if status == "open" and not is_dry else None
+        if isinstance(_vf, dict):
+            try:
+                _vf_avg = float(_vf.get("avg_price"))
+            except (TypeError, ValueError):
+                _vf_avg = 0.0
+            if _vf_avg > 0:
+                _entry_price = _vf_avg
+                notes_payload["entry_price_source"] = str(
+                    _vf.get("source") or "venue_fill")
+                notes_payload["package_entry"] = float(pkg.entry)
         trade_row_id = db.insert_trade({
             "timestamp": datetime.now(timezone.utc).isoformat(),
             "symbol": pkg.symbol,
             "direction": pkg.direction,
-            "entry_price": float(pkg.entry),
+            "entry_price": _entry_price,
             "stop_loss": float(pkg.sl),
             "take_profit_1": float(pkg.tp),
             "position_size": float(order.get("qty") or 0.0),

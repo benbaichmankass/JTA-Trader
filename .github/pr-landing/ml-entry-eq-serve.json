@@ -1,0 +1,7 @@
+{
+  "tier": 1,
+  "landing": "hold",
+  "hold_reason": "operator_asked_to_hold",
+  "hold_text": "ML-ENTRY-EQUITY-NATIVE serve foundation (Manager Session 2026-11-05b decision 3): src/runtime/ml_entry_eq_features.py = the serving copy of the equity-native config-B features (15 own via the existing ml_decision_features.features_symbol + 6 pool features across the 173 ETFs) plus the pool SNAPSHOT build/write/read (local file only; stale / incomplete / missing = named refusal, never a raise or halt). tests/test_ml_entry_eq_features.py pins parity with the research harness on a golden frame, the named refusals, no imputation of short history, and that order_monitor never touches the pool code. NOT WIRED: no leg, roster, signal builder or config change; nothing imports it yet. The Tier-2 wiring (ml_entry_eq leg on alpaca_paper) follows once the export artifact exists. Revert: git revert.",
+  "why": "Pin serve parity before any live wiring, as the spec requires."
+}

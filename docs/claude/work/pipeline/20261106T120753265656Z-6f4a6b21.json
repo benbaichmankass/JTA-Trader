@@ -1,0 +1,16 @@
+{
+  "due_when": {
+    "check_every_days": 2,
+    "clears_when": "an in-session hour shows ml_entry_decision lines (no_signal/evaluated) for the ETF symbols, not stale_skipped; or these symbols are removed from every ml_entry roster/universe (then killed with that reason)",
+    "kind": "observation"
+  },
+  "id": "PI-20261106-5A1BGFHC-0005",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "audit",
+    "ref": "lane PROD-LEGS-DSR-DECISION, 12:00Z 2026-11-06 journal read (pid 2835657 also stale-skipped at 11:06Z)",
+    "rerun": "DIAG_FETCH_MAX_TIME=60 scripts/ops/diag_fetch.sh 'journalctl?unit=ict-trader-live.service&since=<14:00Z>&grep=ml_entry|SPY|skipped as stale&lines=200'"
+  },
+  "state": "queued",
+  "what": "ml_entry on the 13 ETF symbols (SPY, QQQ, IWM, TLT, IEF, SLV, USO, GDX, TQQQ, QLD, SPYM, IAUM, SCHA) is recorded stale_skipped on EVERY hourly bar: the journal shows 'closed bar opened 2026-11-06T10:00Z / 11:00Z skipped as stale — closed ~375-383s ago, beyond the 360s catch-up bound; no tick reached it in time (tick gap; last evaluation 11:06:12Z / 12:06:12Z)'. The leg first reaches each bar ~6m15s after close, just past the 1h bound of max(3600/16, 360) = 360 s, so an equity ml_entry decision is never taken. Unverified cause: the per-symbol tick ordering or the Alpaca (IEX) bar arriving late, so the frame's last closed bar is one behind at the first in-window tick (12:00:14Z read the 10:00Z bar as the latest). Out-of-hours bars may be moot (US closed at 11-12Z); the in-session bars are the test. Whether any account still rosters ml_entry on these symbols is for the manager (the operator removed it from alpaca_paper 2026-11-06)."
+}

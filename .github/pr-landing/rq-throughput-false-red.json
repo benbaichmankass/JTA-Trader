@@ -1,0 +1,5 @@
+{
+  "tier": 1,
+  "landing": "self",
+  "why": "CI/tooling only. schedule-keeper's research-queue-throughput alarm read unit stamps (landed on main via a lagging stamp PR, newest 2026-11-05T23:01Z) as 'last fired' while the dispatcher fired normally; it now also reads last_dispatched_at from the dispatcher's own receipt (written each run from its dispatched=N summary). The 12 h threshold is unchanged. The '4 cap' REFUSED error in the dispatch log was collect_runner_results.py --self-test's planted limit=4 refusal printing a real ::error:: annotation; it is now captured. No order path, strategy, risk or runtime change."
+}
