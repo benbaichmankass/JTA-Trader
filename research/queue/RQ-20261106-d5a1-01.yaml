@@ -1,0 +1,101 @@
+# Hand-authored 2026-11-06 by lane PROD-LEGS-DSR-DECISION (Tier 1), dispatched by Manager Session 2026-11-05b
+# (session_01AFoLuLmhUKeUzHC6CHz2uP), on its ~01:23Z instruction, verbatim: "take (iii) ... author and fire the price/ATR + pull-load
+# measurement unit now: last close + ATR14 1h per a41f symbol, the affordable count under the 1-share rule at $194.52, and a timed
+# 173-symbol 1h pull with its 429 count, run off the live trader (research unit or a read-only system-action; never the live tick path)".
+# Gates: none.
+id: RQ-20261106-d5a1-01
+title: 'Alpaca ml_entry baseline: how many of the a41f 173 ETFs does the 1-share minimum reach at alpaca_live equity $194.52, and can the
+  live Alpaca 1h fetch pull all 173 in one tick without 429s?'
+status: queued
+cadence: once
+kind: deterministic
+theme: ml_health
+priority: 1
+roadmap:
+- L-ML-LIVE
+why_not_inferential: A measurement of prices, ATR and fetch latency on the current market; it produces counts and timings, not a test
+  statistic, and grades on completeness.
+practice_precedent: 'none: affordability under a whole-share cash book and a data-path load check are plumbing measurements; no external
+  practice source was reviewed for them'
+question: 'Under src/units/accounts/risk.py''s whole-unit sizing on alpaca_live (risk_pct from config/accounts.yaml, equity $194.52 MEASURED
+  2026-11-06T01:00:13Z, round-up to 1 share only when 2 x ATR14 <= 1.5 x budget, one share must fit the cash), how many of the
+  RQ-20261104-a41f-01 pooled 173 ETFs size to >= 1 share, and how long does a sequential unpaced 173-symbol
+  AlpacaMarketData.get_ohlcv(symbol, "1h", limit=400) pass take, with how many HTTP 429s?'
+why_this_matters: 'The operator chose ml_entry on alpaca_live at min size, trading the a41f population ("ml_entry at min size (Rec.)";
+  "We can''t leave it idle, we need at least a baseline ml trading there"). The manager re-puts the wiring question to the operator in
+  the morning (a41f''s verdict is FAIL). These two numbers decide whether a 173-symbol roster is affordable and safe for the live tick
+  loop, which is shared with every account on the trader, before any real-money roster add.'
+power:
+  expected_n: 173
+  min_detectable_effect: 1.0
+  effect_units: sd
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: 'Deterministic measurement (kind: deterministic, why_not_inferential above); the power block is present because the queue schema
+    requires one. n is the a41f population, fixed by that unit''s pre-registered liquidity rule.'
+  feasibility:
+    source: none
+    accrual_basis: Alpaca 1h bars are read on demand; nothing accrues.
+decision_rule:
+  id: RULE-RQ20261106-d5a1-01-ALPACA-BASELINE-MEASURE
+  registered_at: '2026-11-06'
+  registered_before_run: true
+  statistic: 'scripts/research/alpaca_baseline_affordability.py run: (1) per symbol last RTH 1h close + Wilder ATR14 (paced read-only
+    client, ~30 days of 1h SIP bars, a41f rth_hourly rule); n_affordable / refused-cash / refused-stop-risk / no-bars at full confidence
+    (an UPPER BOUND: the confidence scalar only lowers the budget); (2) one sequential unpaced pass of the live fetch class over the 173,
+    wall seconds, per-symbol latency p50/p95/max, HTTP status counts (429s), symbols with/without bars.'
+  rule: PASS IF both passes complete (at least one symbol has bars and the load pass made HTTP calls). producer_failed otherwise; never
+    a kill. No threshold, no edge claim, no config change.
+  what_it_does_not_do: 'No order, no roster or config change, no live tick path. ⚠️ SHARED KEY, declared: the runner holds the shared PAPER
+    key pair that alpaca_paper''s live fetch also uses, so pass (2) shares that key''s data rate limit for its duration (minutes). That is
+    the load a 173-symbol roster would add. alpaca_live''s own LIVE key is never given to the runner.'
+compute: cpu_light
+value:
+  bucket: ai_trader
+  usd_at_stake_per_month: 60
+  confidence: 0.3
+  basis: 'stand-in: decides the wiring of the operator''s Alpaca ML baseline; not a P&L measurement.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 1.0
+  est_minutes: 10
+  why_runner: The research runner holds the paper Alpaca data pair; inference-free.
+  basis: 'INFERRED: pass 1 is ~173 paced calls at 0.4 s (~1.5 min); pass 2 is 173 symbols x 1-2 pages.'
+run:
+  workflow: research-script-run.yml
+  command:
+  - python3
+  - scripts/research/alpaca_baseline_affordability.py
+  - run
+  - --equity
+  - '194.52'
+  - --equity-as-of
+  - '2026-11-06T01:00:13Z'
+  - --unit
+  - '{unit}'
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 60
+  inputs:
+    research_unit: RQ-20261106-d5a1-01
+ml_consumer:
+  consumer: ML-ENTRY-ALL-ACCOUNTS
+  decision: how ml_entry is wired onto the alpaca_live / alpaca_portfolio rosters as the operator's min-size baseline (which symbols are
+    affordable at a 1-share minimum, and whether the live fetch can carry a 173-symbol roster), re-put to the operator by the manager
+  legs:
+  - ml_entry
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+origin: new_hypothesis
+origin_reason: 'manager instruction 2026-11-06 ~01:23Z (option iii): measure before the operator re-decides the Alpaca baseline wiring'
+design: structured
+levers_declared:
+- universe
+related:
+- PROD-LEGS-DSR-DECISION
+- RQ-20261104-a41f-01
+- ML-ENTRY-ALL-ACCOUNTS
