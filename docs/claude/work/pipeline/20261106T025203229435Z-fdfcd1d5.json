@@ -1,0 +1,19 @@
+{
+  "based_on": "20261106T013130113376Z-ed6e2bc7.json",
+  "due_when": {
+    "check_every_days": 3,
+    "clears_when": "a design doc exists naming the shared shape, each watcher's read and alert contract, and the failure-alert/cadence entries it keeps",
+    "kind": "event",
+    "last_checked": "2026-11-06"
+  },
+  "id": "PI-20261106-01AFOLUJ-0005",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "lane WORKFLOW-PRUNE (Manager Session 2026-11-05b), session_01AFoLuJ6sZjv24MuhwLtDtDwuuz",
+    "rerun": "ls docs/plans | grep -i watchdog"
+  },
+  "state": "done",
+  "terminal_reason": "Design delivered and merged: PR #23603, docs/plans/WATCHDOG-CONSOLIDATION-DESIGN-2026-11-06.md. Finding: 54 of ~58.9 job-h/wk across the 13 watchers is three commit-to-main landing waits (WSD S6C removes them); a single list-driven watcher would save ~5 job-h/wk and drop per-workflow failure isolation, so it is NOT built. The scaffolding extraction it recommends (composite action diag-feed-watch) is tracked in PI-20261106-01AFOLUJ-0007.",
+  "what": "WORKFLOW-PRUNE M8 design: ~13 freshness/liveness watchdogs (research-loss-detector, research-watchdog, grading-freshness-alert, oi-feed-freshness, broker-truth-freshness, macro-producer-liveness, trainer-capture-watch, dashboard-edge-watch, stale-automation-sweep, mirror-orphan-watch, main-tree-watch, alpaca-settlement-soak-watch, research-slo) -> one list-driven watcher. Manager asked for the design before any merge; not started."
+}

@@ -1,0 +1,17 @@
+{
+  "due_when": {
+    "check_every_days": 1,
+    "clears_when": "PRs #23594 and #23600 are merged, then the three composite actions are landed or closed with a reason",
+    "kind": "event",
+    "last_checked": "2026-11-06"
+  },
+  "id": "PI-20261106-01AFOLUJ-0007",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "lane WORKFLOW-PRUNE (Manager Session 2026-11-05b), session_01AFoLuJ6sZjv24MuhwLtDtDwuuz",
+    "rerun": "for n in 23594 23600; do gh api repos/benbaichmankass/JTA-Trader/pulls/$n --jq '.merged'; done  # both true = unblocked"
+  },
+  "state": "queued",
+  "what": "WORKFLOW-PRUNE composite actions (Manager 2026-11-05b disposition of P3): extract shared scaffolding, keeping every entry point, label contract and output byte-identical. (1) diag-feed-watch for oi-feed-freshness, broker-truth-freshness, mirror-orphan-watch, alpaca-settlement-soak-watch, macro-producer-liveness (design: docs/plans/WATCHDOG-CONSOLIDATION-DESIGN-2026-11-06.md, acceptance = outputs identical on a recorded input); (2) the sparse-checkout/install block shared by the research-script-run family; (3) the 'Require VM host secrets / Dedup / post result' scaffold shared by the label relays. Tier 1 self-land, ONLY AFTER PRs #23594 and #23600 have merged so it never stacks on unmerged deletions."
+}
