@@ -93,13 +93,13 @@ def recompute(a) -> int:
     ev = json.loads(p.read_text())
     cand, served, bar = ev["candidate"]["result"], ev["served"]["result"], ev["bar"]
     verdict, why = rule_verdict(cand, served, bar)
-    out = {"rule_id": RULE_ID, "rule_amendment": "Amendment 1 (operator 2026-11-06 ~16:58Z)", "rule_doc_sha256": _sha(RULE_DOC),
+    out = {"rule_id": RULE_ID, "rule_amendment": "Amendment 1 (operator 2026-11-06 ~16:58Z) + Amendment 2 (replacement floor n>=100 per side, manager relay)", "rule_doc_sha256": _sha(RULE_DOC),
            "recomputed_from": str(p), "source_run_verdict": ev.get("verdict"), "window": ev["plan"],
            "candidate": {k: cand.get(k) for k in ("n", "n_symbols", "mean_net_r", "se_net_r")},
            "served": {k: served.get(k) for k in ("n", "n_symbols", "mean_net_r", "se_net_r")},
            "diff_cand_minus_served": (cand["mean_net_r"] - served["mean_net_r"]) if cand.get("mean_net_r") is not None and served.get("mean_net_r") is not None else None,
            "verdict": verdict, "why": why}
-    (p.parent / "verdict_amended.json").write_text(json.dumps(out, indent=1, default=str) + "\n")
+    (p.parent / f"verdict_amended{a.tag}.json").write_text(json.dumps(out, indent=1, default=str) + "\n")
     print(json.dumps({k: out[k] for k in ("verdict", "why", "diff_cand_minus_served")}, indent=1, default=str), flush=True)
     return 0 if verdict == "pass" else 1
 
@@ -250,6 +250,7 @@ def main(argv=None) -> int:
     ap.add_argument("--run-date", default="")
     ap.add_argument("--window-days", type=int, default=WINDOW_DAYS)
     ap.add_argument("--evidence", default="")
+    ap.add_argument("--tag", default="", help="recompute: suffix of the output file (verdict_amended<tag>.json) so an earlier recompute is never overwritten")
     ap.add_argument("--candidate-json", default="")
     ap.add_argument("--ledger", default="")
     ap.add_argument("--self-test", action="store_true")
