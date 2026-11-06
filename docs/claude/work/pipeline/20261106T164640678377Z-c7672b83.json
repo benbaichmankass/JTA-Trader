@@ -1,0 +1,22 @@
+{
+  "due_when": {
+    "check_every_days": 7,
+    "clears_when": "a mode=gaps run shows gap_windows empty for dates on or after 2026-10-28 (Binance published the missing archive) OR the 2026-11-12+ weekly grade run reports window n >= 300 with the hole outside its window; or killed with a stated reason",
+    "kind": "observation",
+    "last_checked": "2026-11-06"
+  },
+  "id": "PI-20261106-QH1QSHD8-0001",
+  "next_action": "check_observation",
+  "observation": {
+    "due_by": "2026-11-12",
+    "how_to_check": "workflow_dispatch .github/workflows/ml-entry-retrain.yml with mode=gaps run_date=<today UTC>: gaps_report.json gap_windows / monthly_btc.internal_gaps; then read comms/research/ml_entry_grade/<run_id>/grade_evidence.json candidate.result.n from the 2026-11-12+ weekly run",
+    "what": "the 2026-10-28 hole in Binance Vision klines is still present (all 60 symbols) or has been published, and the first grade run whose 14-day window clears it reports n >= 300"
+  },
+  "origin": {
+    "kind": "audit",
+    "ref": "lane ML-ENTRY (session_01AFoLuLLWASue7DQh1qShd8) root cause of the 2-day train_end gap, flag 4 from Manager Session 2026-11-06a; evidence in comms/research/ml_entry_grade/42250040398/grade_evidence.json (diagnostics) and PR #23859",
+    "rerun": "workflow_dispatch of .github/workflows/ml-entry-retrain.yml with inputs mode=gaps run_date=<today UTC>; read gaps_report.json (gap_windows, daily_covers, monthly_btc.internal_gaps, rest_klines_probe)"
+  },
+  "state": "queued",
+  "what": "UPSTREAM HOLE in Binance Vision public klines: ALL 60 symbols of the frozen ENTRY universe lack the 24 hourly bars of 2026-10-28 (00:00-23:00 UTC). MEASURED 2026-11-06 (ml-entry-retrain mode=gaps, runs 42253232250 and 42254532292): BTCUSDT's own monthly 2026-10 archive has 720 bars (744 expected) with an internal gap 10-27 23:00 -> 10-29 00:00, and the DAILY file for 2026-10-28 is 404. Not our fetch. A decision row needs 24 contiguous forward bars (ml_decision_entry.label_symbol), so the hole removes the decision rows of 10-27 and 10-28 for every symbol; that is why the retrain candidate's train_end was 10-26 23:00Z, not the 10-28 23:00Z plan bound, and it costs the grader about 2 of 14 days of window n (candidate n 281 vs the 300 floor; ~328 expected without the hole is an ESTIMATE, not measured). No free backfill: fapi.binance.com returns 451 (restricted location) from GitHub runners and fapi1-3 return empty 202. The label code correctly DROPS the spanning decisions rather than faking bars; nothing to fix in the pull. Self-healing: training catches up once the plan bound passes 10-29 (the 2026-11-08 run), and a 14-day grading window clears the hole for run dates from 2026-11-12."
+}
