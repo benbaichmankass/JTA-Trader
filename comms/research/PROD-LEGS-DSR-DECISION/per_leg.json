@@ -1,0 +1,169 @@
+{
+ "generated_at": "2026-11-06",
+ "row": "PROD-LEGS-DSR-DECISION",
+ "ledger": "comms/research/trial_ledger.json (scripts/research/trial_ledger.py, generated 2026-11-06T00:24:02+00:00)",
+ "rule": "survives = DSR > 0.95 AND BHY-haircut net expectancy > 0 (trial_ledger.py SURVIVAL)",
+ "legs": [
+  {
+   "leg": "xrp_pullback_2h",
+   "account": "bybit_2 + bybit_portfolio",
+   "family": "pullback",
+   "n": 53,
+   "n_configs": 221,
+   "N": 40,
+   "dsr": 0.045502,
+   "psr_n1": 0.717292,
+   "t": 0.560982,
+   "bhy_p": 1.0,
+   "bhy_exp": 0.0,
+   "exp": 0.1237,
+   "survives": false,
+   "source": "comms/strategy_evidence/runs/2026-11-05/xrp_pullback_2h__trades.jsonl"
+  },
+  {
+   "leg": "trend_donchian_eth_4h",
+   "account": "bybit_2 + bybit_portfolio",
+   "family": "trend",
+   "n": 135,
+   "n_configs": 194,
+   "N": 47,
+   "dsr": 0.289308,
+   "psr_n1": 0.977413,
+   "t": 1.770072,
+   "bhy_p": 1.0,
+   "bhy_exp": 0.0,
+   "exp": 0.3307,
+   "survives": false,
+   "source": "comms/strategy_evidence/runs/2026-10-28/trend_donchian_eth_4h__trades.jsonl"
+  },
+  {
+   "leg": "trend_donchian_xrp_4h",
+   "account": "bybit_2 + bybit_portfolio",
+   "family": "trend",
+   "n": 46,
+   "n_configs": 185,
+   "N": 52,
+   "dsr": 0.061771,
+   "psr_n1": 0.814869,
+   "t": 0.852053,
+   "bhy_p": 1.0,
+   "bhy_exp": 0.0,
+   "exp": 0.1677,
+   "survives": false,
+   "source": "comms/strategy_evidence/runs/2026-10-28/trend_donchian_xrp_4h__trades.jsonl"
+  },
+  {
+   "leg": "ada_pullback_2h",
+   "account": "bybit_2 + bybit_portfolio",
+   "family": "pullback",
+   "n": 61,
+   "n_configs": 276,
+   "N": 41,
+   "dsr": 0.375451,
+   "psr_n1": 0.980914,
+   "t": 1.922994,
+   "bhy_p": 1.0,
+   "bhy_exp": 0.0,
+   "exp": 0.5157,
+   "survives": false,
+   "source": "comms/strategy_evidence/runs/2026-10-28/ada_pullback_2h__trades.jsonl"
+  },
+  {
+   "leg": "trend_donchian_sol_prop",
+   "account": "bybit_2 + bybit_portfolio",
+   "family": "trend",
+   "n": 395,
+   "n_configs": 163,
+   "N": 36,
+   "dsr": 0.355275,
+   "psr_n1": 0.971263,
+   "t": 1.79884,
+   "bhy_p": 1.0,
+   "bhy_exp": 0.0,
+   "exp": 0.1216,
+   "survives": false,
+   "source": "comms/strategy_evidence/runs/2026-10-28/trend_donchian_sol_prop__trades.jsonl"
+  },
+  {
+   "leg": "iaum_pullback_1d",
+   "account": "alpaca_live",
+   "family": "pullback",
+   "n": 8,
+   "n_configs": 62,
+   "N": 35,
+   "dsr": 0.393656,
+   "psr_n1": 0.982311,
+   "t": 2.024139,
+   "bhy_p": 1.0,
+   "bhy_exp": 0.0,
+   "exp": 1.3345,
+   "survives": false,
+   "source": "comms/strategy_evidence/runs/2026-11-05/iaum_pullback_1d__trades.jsonl"
+  },
+  {
+   "leg": "gld_pullback_1d",
+   "account": "alpaca_portfolio (iaum mirror)",
+   "family": "pullback",
+   "n": 8,
+   "n_configs": 85,
+   "N": 49,
+   "dsr": 0.33705,
+   "psr_n1": 0.981528,
+   "t": 2.018365,
+   "bhy_p": 1.0,
+   "bhy_exp": 0.0,
+   "exp": 1.3138,
+   "survives": false,
+   "source": "comms/strategy_evidence/runs/2026-11-05/gld_pullback_1d__trades.jsonl"
+  },
+  {
+   "leg": "ml_entry",
+   "account": "bybit_2 + bybit_portfolio",
+   "family": "ml_entry (ledger: own family, n_configs 1)",
+   "n": 907,
+   "n_configs": 1,
+   "N": 1,
+   "dsr": 0.839334,
+   "psr_n1": 0.839334,
+   "t": 0.978355,
+   "bhy_p": 0.327898615149282,
+   "bhy_exp": 0.037132,
+   "exp": 0.03713201932489741,
+   "survives": false,
+   "source": "comms/research/PROD-LEGS-DSR-DECISION/ml_entry_armF_trades.jsonl",
+   "sd": null,
+   "n_sensitivity": {
+    "1": {
+     "dsr": 0.839334,
+     "bhy_p": 0.327898615149282,
+     "bhy_exp": 0.037132,
+     "survives": false
+    },
+    "2": {
+     "dsr": 0.678883,
+     "bhy_p": 0.9836958454478459,
+     "bhy_exp": 0.000776,
+     "survives": false
+    },
+    "3": {
+     "dsr": 0.550447,
+     "bhy_p": 1.0,
+     "bhy_exp": 0.0,
+     "survives": false
+    },
+    "5": {
+     "dsr": 0.413779,
+     "bhy_p": 1.0,
+     "bhy_exp": 0.0,
+     "survives": false
+    },
+    "11": {
+     "dsr": 0.256701,
+     "bhy_p": 1.0,
+     "bhy_exp": 0.0,
+     "survives": false
+    }
+   }
+  }
+ ]
+}

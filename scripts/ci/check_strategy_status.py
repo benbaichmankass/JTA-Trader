@@ -58,11 +58,8 @@ UNHOMED: Dict[str, str] = {
 DUAL_BOOK_EXCEPTIONS: Dict[str, str] = {
     # iaum_pullback_1d entry DROPPED 2026-11-06 (PROD-LEGS-DSR-DECISION, operator "Re-measure, then move (Rec.)"): it left
     # alpaca_live (fails DSR > 0.95 AND BHY-haircut > 0), so it is testing-only on alpaca_paper and the exception is stale.
-    # Operator 2026-11-01 ~11:47Z (popup, relayed by Manager Session 2026-11-01a), verbatim "Paper now, v2 for live
-    # (Rec.)": the ONE ml_entry model trades real money on bybit_2 (crypto) AND paper on alpaca_paper (ETFs, a
-    # different symbol set: strategies.yaml::ml_entry.account_symbols), with no real-money ML on Alpaca until a model
-    # passes. Not a duplicate trade: the two books never share a symbol. Row ALPACA-LIVE-ACTIVITY-ML.
-    "ml_entry": "alpaca_paper",
+    # ml_entry entry DROPPED 2026-11-06 (PROD-LEGS-DSR-DECISION): it left bybit_2 (fails DSR > 0.95), so it is testing-only
+    # (bybit_1 crypto + alpaca_paper ETFs) and no longer dual-booked. Prior grant: operator 2026-11-01 "Paper now, v2 for live (Rec.)".
 }
 
 
