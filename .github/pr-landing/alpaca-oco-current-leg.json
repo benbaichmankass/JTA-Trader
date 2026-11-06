@@ -1,0 +1,7 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "hold_reason": "tier_2_3_needs_approval",
+  "hold_text": "Manager Session 2026-11-06a relaying the operator (~18:55Z): 'Land it as a HELD PR (Tier 2) with tests for every rung, and wake me with the green head.' It changes AlpacaClient.close and execute.close_open_position on the order path (alpaca_live too), so the manager merges and deploys.",
+  "why": "Self-healing Alpaca close ladder for a wedged OCO: rung 2 uses only the CURRENT legs (skip to the take-profit when the stop is valid; else stop first, wait to settle, then target); rung 3 on PAPER = documented close-all + journal_account_reset (other trades/packages closed 'account_reset'), only on a broker-wedge classification; on LIVE = one red flag, never close-all. Runbook docs/runbooks/alpaca-wedged-oco.md."
+}

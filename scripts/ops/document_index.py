@@ -304,6 +304,14 @@ STATUSES = {
 # Bulk-adding entries here to drain the `unknown` column would reproduce the
 # defect. One row per document actually read, or leave it `unknown`.
 STATUS_EXPLICIT: Dict[str, Tuple[str, str, str]] = {
+    # Written 2026-11-06 by lane ALPACA-LIVE-MECHANICS, the same session that read Alpaca's docs for it and
+    # built the ladder it describes (PRs #23885, #23905, #23918), against live broker reads of the GLD wedge
+    # (/api/diag/alpaca_open_orders) and the manager's live re-run results. Linked from row PAPER-MECHANICS-20261104.
+    "docs/runbooks/alpaca-wedged-oco.md": (
+        "live",
+        "read:ALPACA-LIVE-MECHANICS-lane-authored-it-2026-11-06-against-live-broker-reads",
+        "the self-healing Alpaca close ladder for a wedged OCO (paper reset / live red flag)",
+    ),
     # Written 2026-10-26 by lane DESK-5/DESK-6 (session_0158TMJbRQdBS9Wcr5nY8N6S), which wrote it: a
     # skill companion, not a SKILL.md. Its embedded schema and worked example are pinned by
     # tests/test_trading_desk_brief.py (schema equality, desk-records-guard findings()), and a real
