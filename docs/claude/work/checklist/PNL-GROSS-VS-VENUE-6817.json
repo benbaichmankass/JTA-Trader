@@ -11,10 +11,10 @@
   "tier": 3,
   "prs": [],
   "blocked_on": [],
-  "note": "Links to COST-BROKER-SOURCED. Trade 6817 (bybit_1 XRPUSDT long, 74160 qty): journal pnl -786.096 (pnl_source local_compute = (1.2476-1.2582)*74160, no fees) vs Bybit closed_pnl -888.3026 (venue figure, includes fees; journal fee_taker_usd estimate 102.64 + 786.10 = 888.74 vs 888.30). Questions: (1) is journal pnl meant to be gross with fees held separately in fee_*_usd, or net; (2) should every close take venue closed_pnl where the venue serves a trustworthy one (demo closed-pnl is deliberately untrusted, BL-20260608-DEMOPNL, so for bybit_1 the gap is by design); (3) which figure do graders and promotion records read. Measure over closed bybit rows: sum(pnl) vs sum(venue closed_pnl) per account before deciding.",
-  "updated_at": "2026-11-01T12:46:04Z",
-  "updated_by": "session_01AFoLuKWSvsaNCfXBikWHbF",
-  "due_by": "2026-11-03",
+  "note": "Links to COST-BROKER-SOURCED. Trade 6817 (bybit_1 XRPUSDT long, 74160 qty): journal pnl -786.096 (pnl_source local_compute = (1.2476-1.2582)*74160, no fees) vs Bybit closed_pnl -888.3026 (venue figure, includes fees; journal fee_taker_usd estimate 102.64 + 786.10 = 888.74 vs 888.30). Questions: (1) is journal pnl meant to be gross with fees held separately in fee_*_usd, or net; (2) should every close take venue closed_pnl where the venue serves a trustworthy one (demo closed-pnl is deliberately untrusted, BL-20260608-DEMOPNL, so for bybit_1 the gap is by design); (3) which figure do graders and promotion records read. Measure over closed bybit rows: sum(pnl) vs sum(venue closed_pnl) per account before deciding. 2026-11-06 BACKLOG-DRAIN-20261106: RE-DATED to 2026-11-13. Tier 3 question. The journal diag surface exposes no venue closed_pnl column (checked 1000 newest trades), so sum(pnl) vs closed_pnl cannot be measured from it; cost_source=broker now on most closed rows (bybit_1 296 broker/151 estimate of 458 closed in newest 1000). Needs a lane with the closed-pnl store; relates to COST-BROKER-SOURCED.",
+  "updated_at": "2026-11-06T06:00:00Z",
+  "updated_by": "lane-BACKLOG-DRAIN-20261106",
+  "due_by": "2026-11-13",
   "roadmap": [
     "L-OPS"
   ],
