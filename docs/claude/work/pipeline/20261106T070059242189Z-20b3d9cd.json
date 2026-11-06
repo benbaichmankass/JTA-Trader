@@ -6,6 +6,11 @@
   },
   "id": "PI-20261106-UE1PFQZX-0001",
   "next_action": "check_observation",
+  "observation": {
+    "due_by": "2026-11-13",
+    "how_to_check": "for f in comms/research/RQ-2026*/*/*/run-manifest.json; do python3 -c \"import json,sys;d=json.load(open(sys.argv[1]));print(sys.argv[1],(d.get('runner') or {}).get('class_id'))\" \"$f\"; done  # then compare each class_id with that run's in-unit 1h base n list in <unit>_result.json (class A n 71950/71886/72063, class B 71917/71882/72071)",
+    "what": "runner.class_id recorded in run manifests of >=3 new research runs and compared with the 1h-baseline A/B outcome"
+  },
   "origin": {
     "kind": "research",
     "ref": "ML-TIMEFRAME b620-b626 re-runs 2026-11-06 (lane ML-FS-RECIPE); manager 06:56Z asked for this item",
