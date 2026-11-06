@@ -29,7 +29,6 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
-import subprocess
 import sys
 from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
@@ -39,7 +38,7 @@ sys.path.insert(0, str(REPO))
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import ml_decision_entry as E  # noqa: E402
 import holdout_lock as HL  # noqa: E402
-from src.runtime.ml_entry_served import served_artifact, SERVED_ROOT  # noqa: E402
+from src.runtime.ml_entry_served import served_artifact  # noqa: E402
 
 RULE_ID = "RULE-ENTRY-PROMOTE-20261106"
 RULE_DOC = REPO / "docs/research/ml-entry-promotion-rule-2026-11-06.md"
@@ -106,7 +105,6 @@ def _score(models, test, tau):
 
 
 def run(a) -> int:
-    import numpy as np
     import pandas as pd
     out = Path(a.out)
     out.mkdir(parents=True, exist_ok=True)
