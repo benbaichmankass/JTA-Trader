@@ -1192,7 +1192,7 @@ real top-level `docs/*.md` and fails if the population builder cannot see it.
 | `docs/runbooks/devnull-guard.md` | lookup | unknown | — | never | `dir:runbooks-are-procedures-to-consult / not-assessed` | — |
 | `docs/runbooks/gpu-burst.md` | lookup | unknown | — | never | `dir:runbooks-are-procedures-to-consult / not-assessed` | — |
 | `docs/runbooks/health-check.md` | lookup | unknown | — | never | `dir:runbooks-are-procedures-to-consult / not-assessed` | — |
-| `docs/runbooks/alpaca-wedged-oco.md` | instruction | live | — | 2026-11-06 | `dir:runbooks-are-procedures-to-consult / not-assessed` | — |
+| `docs/runbooks/alpaca-wedged-oco.md` | instruction | live | — | 2026-11-06 | `read:ALPACA-LIVE-MECHANICS-lane-authored-it-2026-11-06-against-live-broker-reads` | the self-healing Alpaca close ladder for a wedged OCO (paper reset / live red flag) |
 | `docs/runbooks/jta-trader-rename.md` | instruction | live | — | 2026-10-28 | `dir:runbooks-are-procedures-to-consult / not-assessed` | — |
 | `docs/runbooks/hourly-snapshot.md` | lookup | unknown | — | never | `dir:runbooks-are-procedures-to-consult / not-assessed` | — |
 | `docs/runbooks/ib-integration.md` | lookup | unknown | — | never | `dir:runbooks-are-procedures-to-consult / not-assessed` | — |
