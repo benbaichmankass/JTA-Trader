@@ -84,7 +84,11 @@ jobs:
         id: run
         if: "!(github.event_name == 'workflow_dispatch' && inputs.test_alert == true)"
         run: |
+          # GitHub runs `run:` under `bash -e`; `set -uo pipefail` below does NOT clear -e, so a watchdog rc 1 (clean
+          # escalation) killed the step at the pipeline, before the rc line (MEASURED: 5 scheduled runs, 2026-11-06).
+          # `set +e` lets the rc be read: rc 1 ends green, rc >= 2 ends red via the last line.
           set -uo pipefail
+          set +e
           LIVE=""
           if [ "${{ github.event_name }}" = "schedule" ] || [ "${{ inputs.live }}" = "true" ]; then LIVE="--live"; fi
           python3 scripts/research/research_watchdog.py ${LIVE} --rows-out /tmp/rows.jsonl | tee /tmp/watchdog.txt

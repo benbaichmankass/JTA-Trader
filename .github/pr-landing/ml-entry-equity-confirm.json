@@ -1,0 +1,7 @@
+{
+  "tier": 1,
+  "landing": "hold",
+  "hold_reason": "unvouchable_paths",
+  "hold_text": "ML-ENTRY-EQUITY-NATIVE stage 3: registers the CONFIRMING unit RQ-20261105-e9a1-02 (config B, tau 0.20 from the dev stage run 42119511272: pooled OOF +0.1067 at n 3896) with its rule and power BEFORE its run, and fixes two harness bugs found in the dev run: the dev verdict.json used 'descriptive' (not an allowed verdict, so the record landed producer_failed) and by_fold collapsed into one fold (pandas time-unit comparison in _fold_of). Test now validates dev/confirm rows against script_run.VERDICTS/READ_STATES. No runtime, order or config path touched. R5 cannot vouch for research/queue/, so the manager merges. Revert: git revert.",
+  "why": "ML-LIVE-FIRST: get the equity-native model to its one confirming read."
+}

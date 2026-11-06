@@ -24,3 +24,15 @@ def test_no_crypto_feature_and_registered_grid():
 def test_pool_rule_is_the_registered_one():
     import ml_entry_alpaca_score as S
     assert S.POOL_RULE_SHA256 == "e9702661d1a596a0f7e84e632c0ca8b5c2743a728f02147477c003644a0858e2"
+
+
+def test_dev_and_confirm_rows_satisfy_the_runner_verdict_contract():
+    import script_run as SR
+    d = {"selected": {"key": "B|0.2", "mean_net_r": 0.1, "n": 900}, "n_selection_draws": 12, "n_pool": 173, "train_end": "2025-06-30"}
+    row = Q.dev_row(d, "RQ-X", "research-script-run")
+    assert row["verdict"] in SR.VERDICTS and row["read_state"] in SR.READ_STATES, row
+    assert isinstance(row["population"], str) and row["population"].strip() and "n" in row
+    row2 = Q.dev_row({**d, "selected": None}, "RQ-X", "research-script-run")
+    assert row2["verdict"] in SR.VERDICTS and row2["n"] is None
+    for v in ("pass", "fail", "indeterminate"):          # the confirm stage's three verdicts
+        assert v in SR.VERDICTS

@@ -477,6 +477,9 @@ jobs:
       # started_at == created_at and ZERO steps, so the old test counted it as started and paged 4x HIGH "[RUN
       # cancelled] work-digest" at 01:06-01:07Z for a gate that GH-QUEUE-DEDUPE designs to be replaced. A job that
       # really ran has at least one step (even "Set up job"), so a timeout or manual cancel still qualifies as genuine.
+      # ⚠️ ONLY CANCELLED JOBS COUNT (2026-11-05, PI-20261105-C6CHZ2UP-0002, runs 42128445496 / 42129556621 / 42130088597):
+      # a work-digest run whose gate job SUCCEEDED and whose digest job was PENDING-cancelled (0 steps) was counted via the
+      # succeeded gate's steps and paged system/high. A job cancelled while running (timeout, by hand) still has steps.
       - name: Was the cancelled run merely superseded by a newer one?
         id: superseded
         env:
@@ -501,7 +504,7 @@ jobs:
             echo "::warning::could not read run/jobs — alerting anyway."
             exit 0
           fi
-          started="$(printf '%s' "${jobs}" | jq '[.jobs[] | select(.started_at != null and ((.steps // []) | length) > 0)] | length')"
+          started="$(printf '%s' "${jobs}" | jq '[.jobs[] | select(.conclusion=="cancelled") | select(((.steps // []) | length) > 0)] | length')"
           n_newer="$(printf '%s' "${newer}" | jq --arg c "${CREATED}" --argjson id "${RUN_ID}" \
             '[.workflow_runs[] | select(.id != $id) | select(.created_at > $c)] | length')"
           if [ "${started:-1}" -eq 0 ] && [ "${n_newer:-0}" -gt 0 ]; then
