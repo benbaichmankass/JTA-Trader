@@ -115,17 +115,19 @@ def test_bounds_flags():
 
 
 def test_committed_ada_corpus_stage0_trades_are_found_and_replay():
-    """Real committed records: the leg's 61 Stage-0 trades + committed 2h candles (no network)."""
+    """Real committed records: the leg's 67 Stage-0 trades + committed 2h candles (no network)."""
     trades, src = lro.load_trades("ada_pullback_2h")
-    assert len(trades) == 61 and src.endswith("ada_pullback_2h__trades.jsonl")
+    # 61 -> 67 on 2026-11-06: the record was rebuilt at the holdout-confirmed config C7 (source_run runs/2026-11-06/, n=67).
+    assert len(trades) == 67 and src.endswith("ada_pullback_2h__trades.jsonl")
     cpath = lro.find_candles("ADAUSDT", "2h")
     assert cpath, "committed ADAUSDT 2h candles"
     res = lro.build_table(trades, lro.load_candles(cpath), side=None, open_r=3.44, peak_r=3.4,
                           bars_held=17, atr_stop_mult=1.5, tighten=["atr:1.5"])
     # comparable follows the newest committed Stage-0 run (load_trades), which #20966 re-costed at 11.0 bps
     # on 2026-10-28 (same 61 trades, one more reaches peak_r under the new costs): 7 -> 8.
-    assert res["population"]["comparable"] == 8 and res["population"]["mfe_replay_mismatch"] == 0
-    assert res["read_state"] == "insufficient_n"             # n=8 < 20: never a number from 8 trades
+    # 2026-11-06: the corpus is the rebuilt C7 record (67 trades, 2025-11-06..2026-11-05): 7 comparable rows.
+    assert res["population"]["comparable"] == 7 and res["population"]["mfe_replay_mismatch"] == 0
+    assert res["read_state"] == "insufficient_n"             # n=7 < 20: never a number from 7 trades
     assert all(o["mean_r"] is None for o in res["options"])
     floor5 = lro.build_table(trades, lro.load_candles(cpath), side=None, open_r=3.44, peak_r=3.4,
                              bars_held=17, atr_stop_mult=1.5, tighten=["atr:1.5"], n_floor=5)
