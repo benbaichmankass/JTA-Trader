@@ -1,0 +1,19 @@
+/opt/hostedtoolcache/Python/3.11.18/x64/lib/python3.11/site-packages/yfinance/utils.py:568: Pandas4Warning: The inplace keyword in DataFrame.sort_index is deprecated and will be removed in a future version (PDEP-8).
+See https://pandas.pydata.org/docs/dev/whatsnew/v3.1.0.html#deprecation-inplace for more details.
+  quotes.sort_index(inplace=True)
+/opt/hostedtoolcache/Python/3.11.18/x64/lib/python3.11/site-packages/yfinance/multi.py:220: Pandas4Warning: The inplace keyword in DataFrame.rename is deprecated and will be removed in a future version (PDEP-8).
+See https://pandas.pydata.org/docs/dev/whatsnew/v3.1.0.html#deprecation-inplace for more details.
+  data.rename(columns=ctx.isins, inplace=True)
+/opt/hostedtoolcache/Python/3.11.18/x64/lib/python3.11/site-packages/yfinance/multi.py:224: Pandas4Warning: The inplace keyword in DataFrame.sort_index is deprecated and will be removed in a future version (PDEP-8).
+See https://pandas.pydata.org/docs/dev/whatsnew/v3.1.0.html#deprecation-inplace for more details.
+  data.sort_index(level=0, axis=1, inplace=True)
+[A] /opt/hostedtoolcache/Python/3.11.18/x64/bin/python3 /home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_trend.py --donchian 30 --data <data> --symbol MES --resample 1d --atr-period 14 --atr-stop-mult 2.5 --trail-mult 3.0 --min-confidence 0.0 --fee-bps-roundtrip 7.5 --emit-trades comms/research/RQ-20261106-022/42300910370/arms/A__trades.jsonl --json comms/research/RQ-20261106-022/42300910370/arms/A__bt.json --long-only --tp-cap-pct 0.099 --tp-r 50.0
+[atr_stop_mult_lo] /opt/hostedtoolcache/Python/3.11.18/x64/bin/python3 /home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_trend.py --donchian 30 --data <data> --symbol MES --resample 1d --atr-period 14 --atr-stop-mult 1.875 --trail-mult 3.0 --min-confidence 0.0 --fee-bps-roundtrip 7.5 --emit-trades comms/research/RQ-20261106-022/42300910370/arms/atr_stop_mult_lo__trades.jsonl --json comms/research/RQ-20261106-022/42300910370/arms/atr_stop_mult_lo__bt.json --long-only --tp-cap-pct 0.099 --tp-r 50.0
+[atr_stop_mult_hi] /opt/hostedtoolcache/Python/3.11.18/x64/bin/python3 /home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_trend.py --donchian 30 --data <data> --symbol MES --resample 1d --atr-period 14 --atr-stop-mult 3.125 --trail-mult 3.0 --min-confidence 0.0 --fee-bps-roundtrip 7.5 --emit-trades comms/research/RQ-20261106-022/42300910370/arms/atr_stop_mult_hi__trades.jsonl --json comms/research/RQ-20261106-022/42300910370/arms/atr_stop_mult_hi__bt.json --long-only --tp-cap-pct 0.099 --tp-r 50.0
+[tp_r_lo] /opt/hostedtoolcache/Python/3.11.18/x64/bin/python3 /home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_trend.py --donchian 30 --data <data> --symbol MES --resample 1d --atr-period 14 --atr-stop-mult 2.5 --trail-mult 3.0 --min-confidence 0.0 --fee-bps-roundtrip 7.5 --emit-trades comms/research/RQ-20261106-022/42300910370/arms/tp_r_lo__trades.jsonl --json comms/research/RQ-20261106-022/42300910370/arms/tp_r_lo__bt.json --long-only --tp-cap-pct 0.099 --tp-r 37.5
+[tp_r_hi] /opt/hostedtoolcache/Python/3.11.18/x64/bin/python3 /home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_trend.py --donchian 30 --data <data> --symbol MES --resample 1d --atr-period 14 --atr-stop-mult 2.5 --trail-mult 3.0 --min-confidence 0.0 --fee-bps-roundtrip 7.5 --emit-trades comms/research/RQ-20261106-022/42300910370/arms/tp_r_hi__trades.jsonl --json comms/research/RQ-20261106-022/42300910370/arms/tp_r_hi__bt.json --long-only --tp-cap-pct 0.099 --tp-r 62.5
+{
+ "verdict": "indeterminate",
+ "label": "underpowered",
+ "why": "baseline n=24 < n_floor 39"
+}
