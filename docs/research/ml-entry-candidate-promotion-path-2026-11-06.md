@@ -1,6 +1,6 @@
 # ML entry: candidate → served artifact — trace and proposed path (2026-11-06)
 
-> **Doc status:** `proposal` · category `research` · HELD for the manager/operator (Tier 2 serving path, Tier 3 model replacement) · rows `ML-ENTRY-RETRAIN-CADENCE`, `ML-ENTRY-LIVE-MONITOR`
+> **Doc status:** `unknown` · category `evidence` · last verified `never` · registered in [`docs/DOCUMENT-INDEX.md`](../DOCUMENT-INDEX.md) · HELD for the manager/operator (Tier 2 serving path, Tier 3 model replacement) · rows `ML-ENTRY-RETRAIN-CADENCE`, `ML-ENTRY-LIVE-MONITOR`
 
 **Gates this adds or changes:** none new. This automates the evidence rule that already governs a real-money model change (a committed record, a named harness, stated n, net of the full cost stack, a rule registered before the run, `holdout_lock` deflation). It does not add a switch; it reads the same evidence a human would. Landing it is still the operator's call.
 

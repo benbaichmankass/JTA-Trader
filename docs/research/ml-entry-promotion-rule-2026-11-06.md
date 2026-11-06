@@ -1,6 +1,6 @@
 # RULE-ENTRY-PROMOTE-20261106: when a retrained ENTRY candidate may replace the served artifact
 
-> **Doc status:** `proposal` · category `research` · REGISTERED 2026-11-06, BEFORE the first grading run (this file's commit precedes every commit that contains grader code or an evidence record; `git log` is the proof) · rows `ML-ENTRY-RETRAIN-CADENCE`, `ML-ENTRY-LIVE-MONITOR` · decisions by Manager Session 2026-11-06a (conventional defaults)
+> **Doc status:** `unknown` · category `evidence` · last verified `never` · registered in [`docs/DOCUMENT-INDEX.md`](../DOCUMENT-INDEX.md) · REGISTERED 2026-11-06, BEFORE the first grading run (this file's commit precedes every commit that contains grader code or an evidence record; `git log` is the proof) · rows `ML-ENTRY-RETRAIN-CADENCE`, `ML-ENTRY-LIVE-MONITOR` · decisions by Manager Session 2026-11-06a (conventional defaults)
 
 **Gates this adds or changes:** none new. This writes down, as a rule fixed before the run, the bar a real-money ENTRY artifact change already has to clear (the c692-01 registered rule, the `holdout_lock` deflation, the full cost stack). It decides what may be CHANGED, not what RUNS, and it is landed as a held PR; nothing swaps without a human merge.
 
