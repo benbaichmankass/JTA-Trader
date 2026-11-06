@@ -15,11 +15,13 @@ touches ``ml/served``; the workflow turns a PASS into a DRAFT PR and a human mer
      any window outcome is scored, which fixes the deflated bar.
   3. Candidate and served score the SAME rows with the registered policy; net R is ``ml_decision_entry.label_symbol`` (the full cost
      stack: fee 11 bps, slippage 3 bps, funding 1 bps per 8 h window).
-  4. PASS iff n >= 300 on >= 10 symbols AND candidate mean net R clears the deflated point bar AND candidate mean >= served mean.
-     Under the floor -> ``insufficient_n``; otherwise ``fail``. The deflated CI lower bound is REPORTED, not gating (the registered
-     c692-01 rule is a point bar).
+  4. AMENDMENT 1 (operator 2026-11-06 ~16:58Z, "the retrained version goes live if ... it does at least as well as the live one"):
+     a REPLACEMENT passes iff BOTH models have n >= 300 on >= 10 symbols AND candidate mean net R >= served mean net R. Under the
+     floor on either model -> ``insufficient_n``; candidate worse -> ``fail``. The absolute deflated bar and the CI are reported,
+     not gating.
 
   python3 scripts/research/ml_entry_candidate_grade.py run --cache DIR --out DIR [--run-date YYYY-MM-DD] [--candidate-json F]
+  python3 scripts/research/ml_entry_candidate_grade.py recompute --evidence comms/research/ml_entry_grade/<run>/grade_evidence.json
   python3 scripts/research/ml_entry_candidate_grade.py --self-test
 
 Exit 0 on pass, 1 on fail / insufficient_n / error (the run is then the ONE red flag; the served model keeps trading).
@@ -64,25 +66,40 @@ def hourly_gaps(ts) -> list:
 
 
 def rule_verdict(cand: dict, served: dict, bar: dict) -> tuple[str, list[str]]:
-    """The registered rule on two ``summarize`` dicts and the claimed bar. Pure, so the self-test can drive every branch."""
-    n, ns, mean = cand.get("n", 0), cand.get("n_symbols", 0), cand.get("mean_net_r")
-    if n < E.N_FLOOR or ns < E.SYMBOL_FLOOR:
-        return "insufficient_n", [f"candidate n={n} (floor {E.N_FLOOR}) / symbols={ns} (floor {E.SYMBOL_FLOOR})"]
-    why, ok = [], True
-    if HL.point_ok(mean, cand.get("se_net_r"), bar):
-        why.append(f"clears the deflated point bar: mean {mean:+.4f} at read {bar['n_tries']} (point_t_min {bar['point_t_min']})")
-    else:
-        ok = False
-        why.append(f"below the deflated point bar: mean {mean:+.4f} < {bar['point_t_min']} x se {cand.get('se_net_r')} (read {bar['n_tries']})")
-    sm = served.get("mean_net_r")
-    if sm is None:
-        why.append("served artifact took no decisions on this window: non-inferiority not binding")
-    elif mean >= sm:
-        why.append(f"not worse than served: {mean:+.4f} >= {sm:+.4f} (served n={served.get('n')})")
-    else:
-        ok = False
-        why.append(f"worse than served: {mean:+.4f} < {sm:+.4f} (served n={served.get('n')})")
-    return ("pass" if ok else "fail"), why
+    """RULE-ENTRY-PROMOTE-20261106 AS AMENDED (Amendment 1, operator 2026-11-06 ~16:58Z): a REPLACEMENT of an already-served model
+    passes iff BOTH models clear the sample floor on the same window AND candidate mean net R >= served mean net R. The absolute
+    deflated bar (``bar``) and the CI are information only. Pure, so the self-test can drive every branch."""
+    why = []
+    for name, d in (("candidate", cand), ("served", served)):
+        n, ns = d.get("n", 0), d.get("n_symbols", 0)
+        if n < E.N_FLOOR or ns < E.SYMBOL_FLOOR:
+            why.append(f"{name} n={n} (floor {E.N_FLOOR}) / symbols={ns} (floor {E.SYMBOL_FLOOR})")
+    if why:
+        return "insufficient_n", why
+    mean, sm = cand.get("mean_net_r"), served.get("mean_net_r")
+    info = ("absolute deflated bar, information only: " + ("clears" if HL.point_ok(mean, cand.get("se_net_r"), bar) else "does not clear")
+            + f" (mean {mean:+.4f}, se {cand.get('se_net_r')}, read {bar['n_tries']}, point_t_min {bar['point_t_min']})")
+    if mean >= sm:
+        return "pass", [f"at least as good as served: {mean:+.4f} >= {sm:+.4f} (candidate n={cand['n']}, served n={served['n']})", info]
+    return "fail", [f"worse than served: {mean:+.4f} < {sm:+.4f} (candidate n={cand['n']}, served n={served['n']})", info]
+
+
+def recompute(a) -> int:
+    """Re-apply the CURRENT rule to a committed evidence record. No fetch, no fit, no ledger read: it only re-reads numbers already
+    measured, and writes verdict_amended.json beside the record."""
+    p = Path(a.evidence)
+    ev = json.loads(p.read_text())
+    cand, served, bar = ev["candidate"]["result"], ev["served"]["result"], ev["bar"]
+    verdict, why = rule_verdict(cand, served, bar)
+    out = {"rule_id": RULE_ID, "rule_amendment": "Amendment 1 (operator 2026-11-06 ~16:58Z)", "rule_doc_sha256": _sha(RULE_DOC),
+           "recomputed_from": str(p), "source_run_verdict": ev.get("verdict"), "window": ev["plan"],
+           "candidate": {k: cand.get(k) for k in ("n", "n_symbols", "mean_net_r", "se_net_r")},
+           "served": {k: served.get(k) for k in ("n", "n_symbols", "mean_net_r", "se_net_r")},
+           "diff_cand_minus_served": (cand["mean_net_r"] - served["mean_net_r"]) if cand.get("mean_net_r") is not None and served.get("mean_net_r") is not None else None,
+           "verdict": verdict, "why": why}
+    (p.parent / "verdict_amended.json").write_text(json.dumps(out, indent=1, default=str) + "\n")
+    print(json.dumps({k: out[k] for k in ("verdict", "why", "diff_cand_minus_served")}, indent=1, default=str), flush=True)
+    return 0 if verdict == "pass" else 1
 
 
 def _sha(path: Path) -> str:
@@ -200,15 +217,19 @@ def _self_test() -> None:
     assert p["asof"] == "2026-10-25" and p["window_end"] == "2026-11-07", p
     b1, b5 = HL.bar_for(1), HL.bar_for(5)
     good = {"n": 400, "n_symbols": 30, "mean_net_r": 0.05, "se_net_r": 0.04}
-    served_ok = {"n": 380, "mean_net_r": 0.01}
+    served_ok = {"n": 380, "n_symbols": 30, "mean_net_r": 0.01}
     assert rule_verdict(good, served_ok, b1)[0] == "pass"
-    assert rule_verdict({**good, "n": 299}, served_ok, b1)[0] == "insufficient_n"
+    assert rule_verdict({**good, "n": 299}, served_ok, b1)[0] == "insufficient_n"          # floor on the candidate
     assert rule_verdict({**good, "n_symbols": 9}, served_ok, b1)[0] == "insufficient_n"
-    assert rule_verdict({**good, "mean_net_r": -0.01}, served_ok, b1)[0] == "fail"
-    assert rule_verdict(good, {"n": 380, "mean_net_r": 0.06}, b1)[0] == "fail"          # worse than served
-    assert rule_verdict(good, served_ok, b5)[0] == "pass"                              # 0.05 >= 1.19 x 0.04 = 0.0476
-    assert rule_verdict({**good, "se_net_r": 0.05}, served_ok, b5)[0] == "fail"        # 0.05 < 1.19 x 0.05 at the 5th read
-    assert rule_verdict(good, {"n": 0, "mean_net_r": None}, b1)[0] == "pass"
+    assert rule_verdict(good, {**served_ok, "n": 299}, b1)[0] == "insufficient_n"          # floor on the SERVED model too
+    assert rule_verdict({**good, "mean_net_r": 0.0}, served_ok, b1)[0] == "fail"           # worse than served
+    assert rule_verdict({**good, "mean_net_r": 0.01}, served_ok, b1)[0] == "pass"          # equal counts as at least as good
+    # Amendment 1: the absolute deflated bar is information only for a replacement
+    assert rule_verdict({**good, "mean_net_r": 0.0018, "se_net_r": 0.065}, {**served_ok, "mean_net_r": -0.09}, b5)[0] == "pass"
+    assert any("information only" in w for w in rule_verdict(good, served_ok, b5)[1])
+    # the first read (run 42250040398) under the amended rule: candidate n 281 is under the floor -> insufficient_n, not a pass
+    assert rule_verdict({"n": 281, "n_symbols": 48, "mean_net_r": 0.0018, "se_net_r": 0.065},
+                        {"n": 342, "n_symbols": 49, "mean_net_r": -0.0918, "se_net_r": 0.059}, HL.bar_for(4))[0] == "insufficient_n"
     import pandas as pd
     t = pd.Series(pd.date_range("2026-10-27", periods=6, freq="h", tz="UTC")).drop([2, 3])
     assert hourly_gaps(t) == [{"after": "2026-10-27 01:00:00+00:00", "before": "2026-10-27 04:00:00+00:00"}], hourly_gaps(t)
@@ -218,11 +239,12 @@ def _self_test() -> None:
 
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser()
-    ap.add_argument("cmd", nargs="?", default="run", choices=["run"])
+    ap.add_argument("cmd", nargs="?", default="run", choices=["run", "recompute"])
     ap.add_argument("--cache", default="/tmp/ml_entry_klines")
     ap.add_argument("--out", default="/tmp/ml_entry_grade_out")
     ap.add_argument("--run-date", default="")
     ap.add_argument("--window-days", type=int, default=WINDOW_DAYS)
+    ap.add_argument("--evidence", default="")
     ap.add_argument("--candidate-json", default="")
     ap.add_argument("--ledger", default="")
     ap.add_argument("--self-test", action="store_true")
@@ -230,7 +252,7 @@ def main(argv=None) -> int:
     if a.self_test:
         _self_test()
         return 0
-    return run(a)
+    return recompute(a) if a.cmd == "recompute" else run(a)
 
 
 if __name__ == "__main__":
