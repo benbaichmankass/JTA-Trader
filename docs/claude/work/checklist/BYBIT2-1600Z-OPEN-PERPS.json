@@ -1,0 +1,22 @@
+{
+  "id": "BYBIT2-1600Z-OPEN-PERPS",
+  "title": "Were any bybit_2 perps open at 2026-11-05T16:00Z? (decides whether 'no 16:00Z settlement' is right)",
+  "phase": null,
+  "state": "queued",
+  "owner": "manager",
+  "lane": null,
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [],
+  "blocked_on": [],
+  "note": "Open question from BYBIT2-FUNDING-SETTLEMENT-READ. Txn log has rows to 16:20Z but no 16:00Z SETTLEMENT for bybit_2. Check trade_journal trades for account bybit_2 with opened_at <= 16:00Z < closed_at (diag journal?table=trades) and positions at that time. If one was open on a rostered symbol and no settlement booked, the venue read is wrong; if none was open, closed as correct.",
+  "due_by": "2026-11-07",
+  "roadmap": [
+    "L-DATA"
+  ],
+  "updated_at": "2026-11-06T00:32:16Z",
+  "updated_by": "lane-bybit2-funding",
+  "_seq": 960
+}
