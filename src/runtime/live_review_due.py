@@ -710,11 +710,20 @@ def venue_events(row: Dict[str, Any], ctx: Optional[Dict[str, Any]], cfg: Dict[s
         if ref is not None and abs(pkg_sl - ref) > tol:
             miss(f"{acct}: package sl moved since the venue read ({ref:g} -> {pkg_sl:g})")
             continue
-        gap = abs(v_sl - pkg_sl)
+        # MECH-FOLLOWUPS-1105: an account-scoped live-review apply (MD-LTR-PAPER-AUTO) leaves the shared package sl
+        # untouched BY DESIGN, so the venue legitimately rests at the leg's applied floor. Grade against that floor
+        # when it is TIGHTER than the package stop, or the gate re-fires every bar on a stop the mandate placed
+        # (pkg-f76bb92289d143e5: floor 94.5 vs package 97.9364).
+        exp_sl, how = pkg_sl, "package sl"
+        floor = _f(sn.get("leg_floor"))
+        side = str((row or {}).get("direction") or "").lower()
+        if floor is not None and ((side == "short" and floor < pkg_sl) or (side == "long" and floor > pkg_sl)):
+            exp_sl, how = floor, "leg applied floor"
+        gap = abs(v_sl - exp_sl)
         if gap > tol:
             if sig_out is not None:
-                sig_out += [v_sl, pkg_sl]
-            bad.append(f"{acct} venue stop {v_sl:g} vs package sl {pkg_sl:g} "
+                sig_out += [v_sl, exp_sl]
+            bad.append(f"{acct} venue stop {v_sl:g} vs {how} {exp_sl:g} "
                        f"(gap {gap:.6g} > {tol_atr:g} x ATR {atr:.6g} [{atr_src}])")
     if bad:
         out.append(("mechanics", "venue_sl_diverges", "; ".join(bad)))
@@ -1257,15 +1266,26 @@ def read_venue_context(pkgs: List[str], db_path: Optional[str] = None) -> Dict[s
         tids = sorted({str(sn.get("trade_id")) for rows in snaps.values() for sn in rows
                        if sn.get("trade_id") not in (None, "")})
         status: Dict[str, Any] = {}
+        floors: Dict[str, Any] = {}
         if tids:
             try:
                 status = {str(r[0]): r[1] for r in conn.execute(
                     f"SELECT id, status FROM trades WHERE id IN ({','.join('?' * len(tids))})", tids)}
             except sqlite3.Error:
                 status = {}  # allow-silent: an unread status is "trade_status unknown", graded as before
+            try:
+                # The stop THIS leg legitimately rests at after an account-scoped live-review apply: the shared
+                # order_packages.sl is never moved by such an apply (mandate never-list), so the leg's
+                # notes.sl_floor is the record (MECH-FOLLOWUPS-1105; same rule as live_review_packet._leg_applied_sl).
+                from src.runtime.live_review_intent import sl_floor_from
+                floors = {str(r[0]): sl_floor_from(r[1]) for r in conn.execute(
+                    f"SELECT id, notes FROM trades WHERE id IN ({','.join('?' * len(tids))})", tids)}
+            except Exception:  # noqa: BLE001  # allow-silent: no floor read = graded against the package sl as before
+                floors = {}
         for rows in snaps.values():
             for sn in rows:
                 sn["trade_status"] = status.get(str(sn.get("trade_id")))
+                sn["leg_floor"] = floors.get(str(sn.get("trade_id")))
         try:
             levels = {str(r["order_package_id"]): r for r in conn.execute(
                 f"SELECT order_package_id, sl, tp, meta FROM order_packages WHERE order_package_id IN ({marks})", pkgs)}

@@ -575,3 +575,62 @@ def test_compute_due_records_the_closed_market_event_skip():
     tue = datetime(2026, 11, 3, 15, 10, tzinfo=timezone.utc)                   # same state, market open: due
     res = lrd.compute_due([dict(r, updated_at=tue.isoformat())], reviewed, CFG, tue, market={"pkg-uso": _fri_hist()})
     assert "r_milestone" in [e["event"] for d in res["due"] for e in d["events"]]
+
+
+# --- MECH-FOLLOWUPS-1105: the gate grades the venue against the leg's applied floor, not only the package sl -------
+
+def _floor_ctx(venue_sl, pkg_sl, leg_floor):
+    c = _gld_ctx(venue_sl=venue_sl, pkg_sl=pkg_sl)
+    c["pkg-gld"]["venue"]["snapshots"][0]["leg_floor"] = leg_floor
+    return c
+
+
+def test_a_venue_stop_at_the_legs_applied_floor_is_not_a_divergence_for_a_long():
+    # package sl 414.54 never moved (account-scoped apply); the leg tightened to 416.09 and the venue rests there
+    assert _mech_due([], _floor_ctx(416.09, 414.53875, 416.09)) == []
+
+
+def test_a_venue_stop_that_is_not_the_floor_still_fires():
+    assert _mech_due([], _floor_ctx(417.5, 414.53875, 416.09)) == [("mechanics", "venue_sl_diverges")]
+
+
+def test_a_floor_looser_than_the_package_stop_is_ignored():
+    # long: a floor BELOW the package sl is looser, so it cannot explain a venue stop above the package sl
+    assert _mech_due([], _floor_ctx(416.09, 414.53875, 413.0)) == [("mechanics", "venue_sl_diverges")]
+
+
+def test_no_floor_behaves_exactly_as_before():
+    assert _mech_due([], _floor_ctx(416.09, 414.53875, None)) == [("mechanics", "venue_sl_diverges")]
+
+
+def test_a_short_leg_uses_the_lower_stop_as_tighter():
+    r = row(order_package_id="pkg-s", strategy="trend_donchian_sol_4h", account_id="bybit_1", symbol="SOLUSDT",
+            direction="short", telemetry_absent=True)
+    ctx = {"pkg-s": {"venue": {"state": "read", "pkg_sl": 97.9364, "pkg_tp": None, "meta_atr": 1.2,
+                               "snapshots": [{"account_id": "bybit_1", "read_state": "measured", "venue_sl": 94.5,
+                                              "ref_sl": 97.9364, "read_at": NOW.isoformat(), "leg_floor": 94.5}]},
+                     "history": []}}
+    def due(c):
+        res = lrd.compute_due([r], [], CFG, NOW, market=c)
+        return [(e["event"], e["level"]) for d in res["due"] for e in d["events"] if e["event"] == "mechanics"]
+    assert due(ctx) == []
+    ctx["pkg-s"]["venue"]["snapshots"][0]["leg_floor"] = 99.0       # a HIGHER stop is looser for a short: ignored
+    assert due(ctx) == [("mechanics", "venue_sl_diverges")]
+
+
+def test_read_venue_context_carries_the_snapshot_trades_applied_floor(tmp_path):
+    import json
+    import sqlite3
+    db = tmp_path / "j.db"
+    c = sqlite3.connect(db)
+    c.execute("CREATE TABLE venue_protection_snapshot (order_package_id TEXT, trade_id TEXT, account_id TEXT, read_state TEXT)")
+    c.execute("CREATE TABLE trades (id INTEGER, status TEXT, notes TEXT)")
+    c.execute("CREATE TABLE order_packages (order_package_id TEXT, sl REAL, tp REAL, meta TEXT)")
+    c.execute("INSERT INTO venue_protection_snapshot VALUES ('pkg-s','7','bybit_1','measured')")
+    c.execute("INSERT INTO trades VALUES (7,'open',?)", (json.dumps({"sl_floor": {"level": 94.5}}),))
+    c.execute("INSERT INTO order_packages VALUES ('pkg-s',97.9364,87.0,'{}')")
+    c.commit()
+    c.close()
+    out = lrd.read_venue_context(["pkg-s"], db_path=str(db))
+    sn = out["pkg-s"]["snapshots"][0]
+    assert sn["trade_status"] == "open" and sn["leg_floor"] == 94.5
