@@ -1,0 +1,18 @@
+{
+  "based_on": "20261106T013130335430Z-2babe94b.json",
+  "due_when": {
+    "check_every_days": 3,
+    "clears_when": "each of (a)-(e) is done or closed with a reason",
+    "kind": "event",
+    "last_checked": "2026-11-06"
+  },
+  "id": "PI-20261106-01AFOLUJ-0006",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "lane WORKFLOW-PRUNE (Manager Session 2026-11-05b), session_01AFoLuJ6sZjv24MuhwLtDtDwuuz",
+    "rerun": "python3 scripts/ops/workflow_prune_inventory.py --out /tmp/wp.json"
+  },
+  "state": "queued",
+  "what": "WORKFLOW-PRUNE follow-ups not done: (a) board-post.yml deletion needs its own human-merged PR (LANDING_MACHINERY, R12); (b) scripts only the 48 deleted workflows called are orphaned (session_reaper.py, render_due_list.py, constraint_readout.py, ...); (c) research-queue-chain redesign (8 min slot-holding sleep); (d) repo-inventory ~2,450 runs/wk with a cron-only YAML, trigger unfound; (e) re-measure job-h/wk 7 days after PRs #23594 and #23600 merge. [UPDATE 2026-11-06: item (d) is RESOLVED: repo-inventory's PR/push triggers were removed ~2026-11-03 (API: 0 PR/push runs since 11-04, 2 schedule runs); the 2,450 runs/wk were the pre-change days in the 7-day window. Lesson kept open under (e): every 7-day figure in the audit is overstated for workflows whose trigger changed in-window.]"
+}
