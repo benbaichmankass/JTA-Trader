@@ -50,7 +50,8 @@ def main() -> int:
     try:
         t_o, t_m = float(os.environ["TARGET_OCPUS"]), float(os.environ["TARGET_MEMORY_GBS"])
     except (KeyError, ValueError) as e:
-        emit("error", phase="input", message=str(e)); return 2
+        emit("error", phase="input", message=str(e))
+        return 2
     mode = os.environ.get("MODE", "plan").strip().lower()
     cfg = {"user": os.environ["OCI_CLI_USER"], "key_content": os.environ["OCI_CLI_KEY_CONTENT"],
            "fingerprint": os.environ["OCI_CLI_FINGERPRINT"], "tenancy": os.environ["OCI_CLI_TENANCY"],
@@ -65,17 +66,24 @@ def main() -> int:
     ok, why, tot_o, tot_m = check_budget(rows, name, t_o, t_m)
     emit("budget", ok=ok, reason=why, post_total_ocpus=tot_o, post_total_memory_gb=tot_m)
     if not ok:
-        emit("result", status="refused"); return 3
+        emit("result", status="refused")
+        return 3
     cur = next(r for r in rows if r["display_name"] == name)
     if cur["memory_gb"] == t_m:
-        emit("result", status="noop", memory_gb=t_m); return 0
+        emit("result", status="noop", memory_gb=t_m)
+        return 0
     if mode != "execute":
-        emit("result", status="plan", name=name, before_gb=cur["memory_gb"], target_gb=t_m); return 0
+        emit("result", status="plan", name=name, before_gb=cur["memory_gb"], target_gb=t_m)
+        return 0
     if os.environ.get("CONFIRM", "") != "yes":
-        emit("result", status="refused", reason="CONFIRM must be 'yes'"); return 3
+        emit("result", status="refused", reason="CONFIRM must be 'yes'")
+        return 3
     iid = cur["ocid"]
-    wait = lambda st: oci.wait_until(compute, compute.get_instance(iid), "lifecycle_state", st,
-                                     max_wait_seconds=420, max_interval_seconds=10)
+
+    def wait(st: str) -> None:
+        oci.wait_until(compute, compute.get_instance(iid), "lifecycle_state", st,
+                       max_wait_seconds=420, max_interval_seconds=10)
+
     try:
         if cur["state"] != "STOPPED":
             compute.instance_action(iid, "SOFTSTOP")
@@ -84,9 +92,13 @@ def main() -> int:
     except Exception as e:  # noqa: BLE001
         emit("error", phase="stop", message=f"{type(e).__name__}: {e}")
         try:
-            compute.instance_action(iid, "STOP"); wait("STOPPED"); emit("stopped", hard=True)
+            compute.instance_action(iid, "STOP")
+            wait("STOPPED")
+            emit("stopped", hard=True)
         except Exception as e2:  # noqa: BLE001
-            emit("error", phase="stop_hard", message=str(e2)); emit("result", status="failed_stop"); return 4
+            emit("error", phase="stop_hard", message=str(e2))
+            emit("result", status="failed_stop")
+            return 4
     try:
         compute.update_instance(iid, oci.core.models.UpdateInstanceDetails(
             shape_config=oci.core.models.UpdateInstanceShapeConfigDetails(ocpus=t_o, memory_in_gbs=t_m)))
@@ -94,15 +106,21 @@ def main() -> int:
     except Exception as e:  # noqa: BLE001
         emit("error", phase="update", message=f"{type(e).__name__}: {e}")
         try:
-            compute.instance_action(iid, "START"); wait("RUNNING"); emit("recovered_old_shape")
+            compute.instance_action(iid, "START")
+            wait("RUNNING")
+            emit("recovered_old_shape")
         except Exception as e2:  # noqa: BLE001
             emit("error", phase="recover", message=str(e2))
-        emit("result", status="failed_update"); return 5
+        emit("result", status="failed_update")
+        return 5
     try:
-        compute.instance_action(iid, "START"); wait("RUNNING"); emit("started")
+        compute.instance_action(iid, "START")
+        wait("RUNNING")
+        emit("started")
     except Exception as e:  # noqa: BLE001
         emit("error", phase="start", message=f"{type(e).__name__}: {e}")
-        emit("result", status="failed_start"); return 6
+        emit("result", status="failed_start")
+        return 6
     fin = compute.get_instance(iid).data
     emit("result", status="ok", name=name, ocpus=fin.shape_config.ocpus,
          memory_gb=fin.shape_config.memory_in_gbs, state=fin.lifecycle_state)
