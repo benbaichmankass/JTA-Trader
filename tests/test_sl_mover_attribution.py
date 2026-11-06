@@ -75,7 +75,8 @@ def test_read_venue_context_carries_the_stamped_move_time(tmp_path):
     c.execute("INSERT INTO order_packages VALUES ('p1', 0.186646, 0.167, ?)",
               (json.dumps(meta),))
     c.execute("INSERT INTO order_packages VALUES ('p2', 1.0, 2.0, NULL)")
-    c.commit(); c.close()
+    c.commit()
+    c.close()
     out = lrd.read_venue_context(["p1", "p2"], db_path=str(db))
     assert out["p1"]["pkg_sl_changed_at"] == MOVED
     assert out["p2"]["pkg_sl_changed_at"] is None            # no record: no settle window, never updated_at
