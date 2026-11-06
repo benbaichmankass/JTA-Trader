@@ -509,9 +509,10 @@ def render_lines(sb: dict | None) -> list[str]:
     c = sb["cost"]
     if c and c.get("read_state") == "read":
         m, e, u = (c["buckets"][k] for k in (prov.MEASURED, prov.ESTIMATED, prov.UNVERIFIED))
+        ms = _DASH if c["measured_share"] is None else "{:.1f}%".format(c["measured_share"] * 100)
         L += ["", f"**Cost per trade** ({c['population']}; n={c['n']}): MEASURED {fmt_num(m['per_trade_usd'], 3)} $/trade (n={m['n']}) · "
               f"ESTIMATED {fmt_num(e['per_trade_usd'], 3)} $/trade (n={e['n']}) · UNVERIFIED/uncosted n={u['n']}. "
-              f"Measured share {_DASH if c['measured_share'] is None else f'{c['measured_share'] * 100:.1f}%'}; "
+              f"Measured share {ms}; "
               "estimated is not folded into measured."]
     else:
         L += ["", f"**Cost per trade** {_DASH} (no priced real-money closes read)."]
