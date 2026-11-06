@@ -1,0 +1,118 @@
+# Hand-authored 2026-11-05 by a dispatched lane of Manager Session 2026-11-05b (row ML-DECISION-MODELS), under the operator's
+# holdout-reuse rule ("Adopt (Rec.)" ~19:05Z 2026-11-05; scripts/research/holdout_lock.py, #23461). Decision rule registered
+# BEFORE any run. Gates this adds or changes: none.
+id: RQ-20261105-c692-15
+title: 'Held-out RE-READ of the c692-12 frozen ML SL revision v2 config (BE/BE1/TRAIL/TRAIL15, margin 0.40) on 2025-10..2026-09 under
+  the deflated MANAGE bar (5th read, z 2.57): does it add net R over hold-to-bracket?'
+status: queued
+cadence: once
+theme: ml_health
+priority: 1
+roadmap:
+- L-ML-LIVE
+kind: experiment
+practice_precedent: 'M13 (docs/reference/trading-and-model-practice-principles.md): a re-read of a held-out window is graded against a
+  Sidak-deflated bar for the N-th read of the family; T1, M6: purged + embargoed walk-forward; DESIGN.md 4a.'
+question: 'RQ-20261105-c692-12 PASSED its dev stage (delta +0.0029 R/trade, CI95 [+0.0018,+0.0040], 5/6 folds, margin 0.40) and froze its
+  config for ONE read on a window it had not touched. That read was queued on a forward window ONLY because the held-out year had been
+  read (c692-12 addendum single_read). Under HOLDOUT-DEFLATED-REUSE the held-out year may be re-read with the deflated bar. This unit is that
+  one read, with the config frozen by c692-12 (XS_FROZEN["mlsl2"]) and the held-out rule c692-12 inherits from c692-11 (it is "ONE
+  pre-registered variant of RQ-20261105-c692-11"). The cross-sectional confirm c692-13 (-0.0034, CI upper < 0) is the GEXSLEAK class
+  (PI-20261105-GEXSLEAK-0001: read over training dates) and is not this window.'
+why_this_matters: 'Operator 2026-11-01 ~23:00Z (row ML-ENTRY-DYNAMIC-SL): "we also need to test dynamic sl features for the ml". A live
+  change is Tier 3; a PASS here is a proposal, not a change.'
+decision_rule:
+  id: RULE-RQ20261105c69215-MLSL2-HO
+  registered_at: '2026-11-05'
+  registered_before_run: true
+  statistic: 'Held-out (2025-10-01..2026-09-30, 60-perp bp2-f4271084b120 pool, frozen ENTRY tau, static 2/4 ATR, 24h) paired mean delta
+    net R per trade vs hold-to-bracket, full cost stack, trade-grouped paired bootstrap interval at the DEFLATED level the holdout ledger
+    returns for this read (claim_read, family MANAGE; expected 5th read: one-sided alpha 0.00505, CI level 98.99%, z 2.57); also
+    reported: managed and hold mean net R, n, symbols, acted trades, matched random, single static actions, by-month delta, peek ex the 9
+    peeked symbols, and whether the recomputed dev walk-forward still picks margin 0.40.'
+  rule: 'Config is FROZEN (actions BE/BE1/TRAIL/TRAIL15, margin 0.40) and never re-chosen. The read is claimed in the holdout ledger before
+    any held-out outcome is computed; check_window_disjoint must pass (train_end 2025-09-30 < start 2025-10-01). INDETERMINATE IF held-out
+    trades < 300 OR distinct symbols < 10. PASS IF held-out mean paired delta > 0 AND the lower bound of the deflated interval (the ledger
+    bar for this read) > 0. FAIL otherwise. Thresholds are not changed after any result. A recomputed dev walk-forward that FAILS (delta <= 0
+    at every margin) reads nothing (registered harness behaviour) and is reported as non-reproduction.'
+  what_it_does_not_do: No sizing, no config change, no order, no serving adapter. A PASS is a Tier-3 PROPOSAL on row ML-DECISION-MODELS for
+    the operator, not a promotion.
+  min_n: 300 held-out trades on >= 10 symbols
+compute: cpu_long
+value:
+  bucket: ai_trader
+  usd_at_stake_per_month: 800
+  confidence: 0.15
+  basis: 'stand-in: operator priority (row ML-ENTRY-DYNAMIC-SL); not a P&L measurement.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 6.0
+  est_minutes: 60
+  why_runner: Keyless public Binance Vision klines; GBDT on CPU; no trainer data.
+  basis: 'MEASURED: c692-11 (same harness, held-out path) took 414 s; c692-12 dev stage ran on the same runner class.'
+run:
+  workflow: research-script-run.yml
+  command:
+  - python3
+  - scripts/research/ml_decision_manage.py
+  - run
+  - --arm
+  - mlsl2
+  - --stage
+  - heldout
+  - --cache
+  - /tmp/ml_decision_klines
+  - --unit
+  - '{unit}'
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 240
+  inputs:
+    research_unit: RQ-20261105-c692-15
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+power:
+  expected_n: 10641
+  min_detectable_effect: 0.011
+  effect_units: metric
+  sd: 0.33
+  design: one_sample
+  alpha: 0.01
+  power: 0.8
+  basis: 'MEASURED from c692-11 on the same 10,641 held-out trades: SE of the paired delta 0.00316 (CI95 half-width / 1.96), so sd ~0.33.
+    alpha 0.01 two-sided (z 2.576) is the calculator level nearest the deflated bar (z 2.57; the rule uses the ledger bar, not this field).
+    MDE at z 2.58 + 0.84 = 3.42 x 0.00316 ~ 0.011 for an all-trades delta; c692-12 acts on far fewer trades (522 of 37,713 on dev), so the
+    held-out delta will be small and this read may well be underpowered: reported, not a reason to change the bar.'
+  feasibility:
+    source: none
+    accrual_basis: Replays public history; nothing accrues.
+related:
+- RQ-20261105-c692-12
+- RQ-20261105-c692-11
+- RQ-20261105-c692-13
+- ML-DECISION-MODELS
+- ML-ENTRY-DYNAMIC-SL
+- PI-20261105-GEXSLEAK-0001
+- docs/research/ml-decision-models-2026-11-01/DESIGN.md
+what_it_does_not_do: Registers, serves or promotes nothing; changes no config; places no order; sizes nothing.
+intervention_controls:
+  hold_to_bracket: true
+  matched_random:
+    draws: 200
+  best_static:
+    grid:
+    - BE_at_8h
+    - BE1_at_8h
+    - TRAIL_at_8h
+    - TRAIL15_at_8h
+    excludes_test_folds: true
+  bootstrap_group: trade
+ml_consumer:
+  consumer: ML-ENTRY-LIVE-ADAPTER
+  decision: whether the ml_entry leg's open positions get an ML-revised stop (BE/BE1/TRAIL/TRAIL15) on bybit_2 + bybit_portfolio
+  legs:
+  - xrp_pullback_2h
+  book: money

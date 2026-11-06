@@ -352,11 +352,14 @@ def stats(net, base_net, symbols) -> dict:
             "n_symbols": len(set(symbols)), "share_changed": float(np.mean(np.abs(d) > 1e-12))}
 
 
-def paired_boot(d: np.ndarray, seed: int = E.SEED) -> list:
+def paired_boot(d: np.ndarray, seed: int = E.SEED, bar: dict | None = None) -> list:
+    """Percentile bootstrap CI of the paired mean delta. ``bar`` = the holdout ledger's deflated bar for this read: the 1st read of
+    the family on the window is the CI95 used before 2026-11-05; the N-th read widens it (Sidak; HOLDOUT-DEFLATED-REUSE)."""
+    import holdout_lock as HL
     rng = np.random.default_rng(seed)
     n = len(d)
     ms = [float(d[rng.integers(0, n, n)].mean()) for _ in range(BOOT)]
-    return [float(np.percentile(ms, 2.5)), float(np.percentile(ms, 97.5))]
+    return HL.boot_ci(ms, bar)
 
 
 def peek_report(d: np.ndarray, symbols) -> dict:
@@ -436,12 +439,14 @@ def run(a) -> int:
         (out / "verdict.json").write_text(json.dumps(vj, indent=1, default=str) + "\n")
         print(json.dumps({"verdict": v, "why": why}), flush=True)
         return 0
+    if a.stage == "heldout" and a.arm != "mlsl2":
+        raise SystemExit("--stage heldout is only for the frozen mlsl2 config (c692-12); the other arms read the held-out in --stage main")
     tab, df_by, dev_tr, ho_tr = build_world(a, tau)
     dev_tr = dev_tr.sort_values(["symbol", "i"], kind="stable").reset_index(drop=True)   # Paths order == trades order
     ho_tr = ho_tr.sort_values(["symbol", "i"], kind="stable").reset_index(drop=True)
     print(f"dev trades={len(dev_tr)} heldout trades={len(ho_tr)} tau={tau} t={time.time()-t0:.0f}s", flush=True)
     res = (arm_rule if a.arm in ("be", "trail", "timedecay") else arm_model)(a, tab, df_by, dev_tr, ho_tr)
-    res.update({"schema": SCHEMA, "unit": a.unit, "arm": a.arm, "entry_tau": tau, "git_sha": E._git_sha(),
+    res.update({"schema": SCHEMA, "unit": a.unit, "arm": a.arm, "stage": a.stage, "entry_tau": tau, "git_sha": E._git_sha(),
                 "elapsed_s": round(time.time() - t0)})
     v, why = res.pop("verdict"), res.pop("why")
     (out / "summary.json").write_text(json.dumps({**res, "verdict": v, "why": why}, indent=1, default=str) + "\n")
@@ -480,23 +485,33 @@ def arm_rule(a, tab, df_by, dev_tr, ho_tr) -> dict:
     sy = ho_tr.loc[h_idx, "symbol"].to_numpy()
     ts = ho_tr.loc[h_idx, "ts"].to_numpy()
     s = stats(r["net"], hb["net"], sy)
-    ci = paired_boot(d)
+    ci = paired_boot(d, bar=(claim or {}).get("bar"))
     res["heldout"] = {**s, "hold": stats(hb["net"], hb["net"], sy), "delta_ci95": ci, "giveback_r": giveback(r), "giveback_r_hold": giveback(hb),
                       "peek": peek_report(d, sy), "by_month_delta": month_split(ts, d), "reason_counts": {str(k): int(v) for k, v in pd.Series(r["reason"]).value_counts().items()}}
     res["variants_read_on_window"] = (claim or {}).get("variants_on_window")
     if s["n"] < MIN_TRADES or s["n_symbols"] < MIN_SYMBOLS:
         v, why = "indeterminate", f"held-out trades={s['n']} / symbols={s['n_symbols']} below floor"
     elif s["delta_vs_hold"] > 0 and ci[0] > 0:
-        v, why = "pass", f"delta vs hold-to-bracket {s['delta_vs_hold']:+.4f} R/trade, CI95 [{ci[0]:+.4f}, {ci[1]:+.4f}] > 0 at n={s['n']} (param {chosen})"
+        v, why = "pass", f"delta vs hold-to-bracket {s['delta_vs_hold']:+.4f} R/trade, {_ci_tag(claim)} [{ci[0]:+.4f}, {ci[1]:+.4f}] > 0 at n={s['n']} (param {chosen})"
     else:
-        v, why = "fail", f"delta vs hold-to-bracket {s['delta_vs_hold']:+.4f} R/trade, CI95 [{ci[0]:+.4f}, {ci[1]:+.4f}] does not clear 0 at n={s['n']} (param {chosen})"
+        v, why = "fail", f"delta vs hold-to-bracket {s['delta_vs_hold']:+.4f} R/trade, {_ci_tag(claim)} [{ci[0]:+.4f}, {ci[1]:+.4f}] does not clear 0 at n={s['n']} (param {chosen})"
     res.update(verdict=v, why=why)
     return res
 
 
+def _ci_tag(claim: dict | None) -> str:
+    """The interval's real level: CI95 on a first read; the deflated level of the ledger bar on a re-read (HOLDOUT-DEFLATED-REUSE)."""
+    b = (claim or {}).get("bar")
+    if not b or int(b.get("n_tries", 1)) <= 1:
+        return "CI95"
+    return f"CI{100 * b['ci_level']:.2f} (deflated, read {b['n_tries']})"
+
+
 def claim_read(a, model_id: str, symbols: list[str] | None = None, start: str | None = None) -> dict | None:
-    """Claim the sealed window ONCE per model (holdout_lock). The runner does not commit the repo ledger, so the claim is made
-    against a COPY inside the out dir (which lands with the result); the lane appends that line to comms/research/holdout_reads.jsonl."""
+    """Record the held-out read in the holdout ledger (family MANAGE) and get its deflated bar; a re-read is allowed and graded
+    stricter, a window overlapping training is refused (HOLDOUT-DEFLATED-REUSE). The runner does not commit the repo ledger, so the
+    claim is made against a COPY inside the out dir (which lands with the result); the lane appends that line to
+    comms/research/holdout_reads.jsonl."""
     if a.smoke:
         return None
     import shutil
@@ -505,7 +520,9 @@ def claim_read(a, model_id: str, symbols: list[str] | None = None, start: str | 
     led = Path(a.out) / "holdout_reads.jsonl"
     if not led.exists() and HL.LEDGER.exists():
         shutil.copy(HL.LEDGER, led)
-    return HL.claim_read(model_id=f"MANAGE-{model_id}", start=start or E.HOLDOUT_START, end=E.END, unit=a.unit, reader=a.reader, ledger=led, symbols=symbols)
+    train_end = str((pd.Timestamp(E.HOLDOUT_START) - pd.Timedelta(days=1)).date())   # ENTRY + heads fit on rows before HOLDOUT_START
+    return HL.claim_read(model_id=f"MANAGE-{model_id}", start=start or E.HOLDOUT_START, end=E.END, unit=a.unit, reader=a.reader, ledger=led,
+                         symbols=symbols, train_end=train_end)
 
 
 def arm_model(a, tab, df_by, dev_tr, ho_tr) -> dict:
@@ -545,7 +562,14 @@ def arm_model(a, tab, df_by, dev_tr, ho_tr) -> dict:
     if margin is None or dev_delta[margin] <= 0:
         res.update(verdict="fail", why=f"dev walk-forward delta vs hold <= 0 at every margin (best {margin}: {dev_delta.get(margin)}): not read on the held-out (registered)")
         return res
-    if a.arm == "mlsl2":      # DEV STAGE ONLY: never touches the held-out or any forward window; freezes the config for the single forward read
+    if a.arm == "mlsl2" and a.stage == "heldout":
+        # HOLDOUT-DEFLATED-REUSE re-read (operator 'Adopt (Rec.)' ~19:05Z 2026-11-05): c692-12's config is FROZEN (XS_FROZEN), never
+        # re-chosen here; the dev walk-forward above is recomputed only to record whether it still picks the frozen margin.
+        res["dev"]["frozen_margin_used"] = XS_FROZEN["mlsl2"]["margin"]
+        res["dev"]["dev_chosen_matches_frozen"] = bool(margin == XS_FROZEN["mlsl2"]["margin"])
+        margin = XS_FROZEN["mlsl2"]["margin"]
+        actions = XS_FROZEN["mlsl2"]["actions"]
+    elif a.arm == "mlsl2":      # DEV STAGE ONLY: never touches the held-out or any forward window; freezes the config for the single forward read
         dall = np.concatenate(fold_net[margin])
         ci = paired_boot(dall)
         pos = int(sum(1 for x in fold_means[margin] if x > 0))
@@ -563,8 +587,9 @@ def arm_model(a, tab, df_by, dev_tr, ho_tr) -> dict:
     heads = fit_heads(dev_rows[dev_rows.ts < pd.Timestamp(E.HOLDOUT_START, tz="UTC") - pd.Timedelta(days=E.EMBARGO_DAYS) - pd.Timedelta(hours=H + 1)], actions)
     ho_tr = ho_tr.reset_index(drop=True)
     hP, _ = gather(ho_tr, df_by, atr_series(tab, ho_tr))
-    hlab = label_actions(hP)
-    hrows = checkin_table(ho_tr, hP, hlab, tab)
+    ho_acts = LEARNED + [x for x in actions if x not in LEARNED]   # == LEARNED for manage/mlsl (unchanged); adds BE1/TRAIL15 for mlsl2
+    hlab = label_actions(hP, ho_acts)
+    hrows = checkin_table(ho_tr, hP, hlab, tab, ho_acts)
     pred = predict_heads(heads, hrows)
     act = choose(pred, margin)
     hb = hlab["base"]
@@ -575,12 +600,12 @@ def arm_model(a, tab, df_by, dev_tr, ho_tr) -> dict:
     n_act = int(r["acted"].sum())
     s["n_actions"] = r["n_actions"]
     s["mean_delta_per_nonhold_action"] = float(d[r["acted"]].mean()) if n_act else None
-    ci = paired_boot(d)
+    ci = paired_boot(d, bar=(claim or {}).get("bar"))
     # controls: matched random (same count and type of actions at random valid check-ins of the SAME trades) and best static action
     rng = np.random.default_rng(E.SEED)
     draws = []
     types = [x for x in act[act != "HOLD"].tolist()]
-    valid_idx = {a_: hrows.index[hrows[f"av_{a_}"]].to_numpy() for a_ in LEARNED}
+    valid_idx = {a_: hrows.index[hrows[f"av_{a_}"]].to_numpy() for a_ in ho_acts}
     for _ in range(200):
         fake = pd.Series("HOLD", index=hrows.index)
         for a_ in set(types):
@@ -590,7 +615,7 @@ def arm_model(a, tab, df_by, dev_tr, ho_tr) -> dict:
         rr = realised(hrows, len(ho_tr), hP, hb, fake)
         draws.append(float(np.mean(rr["net"] - hb["net"])))
     static = {}
-    for a_ in LEARNED:
+    for a_ in ho_acts:
         fk = pd.Series("HOLD", index=hrows.index)
         first = hrows[hrows[f"av_{a_}"] & (hrows.k == 8)]
         fk.loc[first.index] = a_
@@ -605,14 +630,19 @@ def arm_model(a, tab, df_by, dev_tr, ho_tr) -> dict:
     if s["n"] < MIN_TRADES or s["n_symbols"] < MIN_SYMBOLS:
         v, why = "indeterminate", f"held-out trades={s['n']} / symbols={s['n_symbols']} below floor"
     elif a.arm == "manage":
-        ok = s["mean_net_r"] >= 0 and (s["mean_delta_per_nonhold_action"] is None or s["mean_delta_per_nonhold_action"] >= 0)
+        import holdout_lock as HL  # point bars, deflated on a re-read of the MANAGE family on this window (HOLDOUT-DEFLATED-REUSE)
+        bar = (claim or {}).get("bar")
+        se_net = float(np.std(r["net"], ddof=1) / np.sqrt(len(r["net"]))) if len(r["net"]) > 1 else None
+        se_act = float(np.std(d[r["acted"]], ddof=1) / np.sqrt(n_act)) if n_act > 1 else None
+        ok = HL.point_ok(s["mean_net_r"], se_net, bar) and (s["mean_delta_per_nonhold_action"] is None
+                                                             or HL.point_ok(s["mean_delta_per_nonhold_action"], se_act, bar))
         v = "pass" if ok else "fail"
         why = (f"managed mean net R/trade {s['mean_net_r']:+.4f}, delta/non-HOLD action {s['mean_delta_per_nonhold_action']}, delta vs hold "
                f"{s['delta_vs_hold']:+.4f} CI95 {ci} at n={s['n']}; proposal_eligible={res['proposal_eligible']}")
     else:
         ok = s["delta_vs_hold"] > 0 and ci[0] > 0
         v = "pass" if ok else "fail"
-        why = f"delta vs hold-to-bracket {s['delta_vs_hold']:+.4f} R/trade, CI95 [{ci[0]:+.4f}, {ci[1]:+.4f}] at n={s['n']} (margin {margin})"
+        why = f"delta vs hold-to-bracket {s['delta_vs_hold']:+.4f} R/trade, {_ci_tag(claim)} [{ci[0]:+.4f}, {ci[1]:+.4f}] at n={s['n']} (margin {margin})"
     res.update(verdict=v, why=why)
     return res
 
@@ -661,7 +691,13 @@ def run_xs(a, tau) -> dict:
     df_np = {s_: pd.read_pickle(cache / f"{s_}.pkl").reset_index(drop=True) for s_ in nonpool}
     np_tr = entry_trades(np_tab, pl, ps, tau, df_np).sort_values(["symbol", "i"], kind="stable").reset_index(drop=True)
     res = {"xs": {"nonpool_symbols": nonpool, "n_nonpool_requested": len(nonpool), "pool_symbols": len(pool), "config": {"actions": acts, "margin": margin}}, "heldout": None}
-    claim = claim_read(a, f"{a.arm}-xs-{margin}", symbols=nonpool, start=str(np_tr.ts.min().date()) if len(np_tr) else E.START)
+    import holdout_lock as HL
+    try:   # rule 4 (HOLDOUT-DEFLATED-REUSE, PI-20261105-GEXSLEAK-0001): other symbols over the TRAINING dates is not a holdout
+        claim = claim_read(a, f"{a.arm}-xs-{margin}", symbols=nonpool, start=str(np_tr.ts.min().date()) if len(np_tr) else E.START)
+    except HL.WindowOverlapsTraining as exc:
+        res.update(verdict="indeterminate", why=f"refused before any outcome was read: {exc}; a symbol holdout must also start after "
+                   f"the training end ({E.HOLDOUT_START}), so re-point the xs stage at the post-training era")
+        return res
     P, _ = gather(np_tr, df_np, atr_series(np_tab, np_tr))
     lab = label_actions(P, acts)
     base = lab["base"]
@@ -675,7 +711,7 @@ def run_xs(a, tau) -> dict:
     s["acted_share"] = float(r["acted"].mean())
     s["n_actions"] = r["n_actions"]
     s["mean_delta_per_acted_trade"] = float(d[r["acted"]].mean()) if r["acted"].any() else None
-    ci = paired_boot(d)
+    ci = paired_boot(d, bar=(claim or {}).get("bar"))
     per_sym = pd.Series(d).groupby(sy).mean()
     top = per_sym.abs().idxmax() if len(per_sym) else None
     ex = sy != top
@@ -699,9 +735,9 @@ def run_xs(a, tau) -> dict:
     if s["n_acted"] < MIN_TRADES or per_sym.size < XS_MIN_SYMBOLS:
         v, why = "indeterminate", f"acted trades={s['n_acted']} (floor {MIN_TRADES}) / non-pool symbols with trades={per_sym.size} (floor {XS_MIN_SYMBOLS})"
     elif s["delta_vs_hold"] > 0 and ci[0] > 0 and (e1 or 0) > 0 and (e2 or 0) > 0:
-        v, why = "pass", f"non-pool delta vs hold {s['delta_vs_hold']:+.5f} R/trade, CI95 [{ci[0]:+.5f}, {ci[1]:+.5f}], era deltas {e1:+.5f} / {e2:+.5f} > 0, acted {s['n_acted']} of {s['n']}"
+        v, why = "pass", f"non-pool delta vs hold {s['delta_vs_hold']:+.5f} R/trade, {_ci_tag(claim)} [{ci[0]:+.5f}, {ci[1]:+.5f}], era deltas {e1:+.5f} / {e2:+.5f} > 0, acted {s['n_acted']} of {s['n']}"
     else:
-        v, why = "fail", f"non-pool delta vs hold {s['delta_vs_hold']:+.5f}, CI95 [{ci[0]:+.5f}, {ci[1]:+.5f}], era deltas {e1} / {e2}: does not clear the rule (acted {s['n_acted']} of {s['n']})"
+        v, why = "fail", f"non-pool delta vs hold {s['delta_vs_hold']:+.5f}, {_ci_tag(claim)} [{ci[0]:+.5f}, {ci[1]:+.5f}], era deltas {e1} / {e2}: does not clear the rule (acted {s['n_acted']} of {s['n']})"
     res.update(verdict=v, why=why)
     return res
 
@@ -770,7 +806,9 @@ def main(argv=None) -> int:
     ap.add_argument("--out", default="/tmp/ml_decision_manage_out")
     ap.add_argument("--unit", default="")
     ap.add_argument("--reader", default="research-script-run")
-    ap.add_argument("--stage", default="main", choices=["main", "xs"], help="xs = the cross-sectional confirming read of a frozen config")
+    ap.add_argument("--stage", default="main", choices=["main", "xs", "heldout"],
+                    help="xs = the cross-sectional confirming read of a frozen config; heldout = the mlsl2 frozen config read on the held-out year "
+                         "under the deflated re-read bar (HOLDOUT-DEFLATED-REUSE)")
     ap.add_argument("--smoke", action="store_true", help="dev-only plumbing check on 10 symbols; never touches the sealed window")
     ap.add_argument("--self-test", action="store_true")
     a = ap.parse_args(argv)

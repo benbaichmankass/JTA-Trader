@@ -2112,7 +2112,13 @@ accounts:
       min_active_days: 0
     backtest_ruleset: prop_rulesets/breakout_turbo_1step.yaml
     account_size_usd: 5000
-    strategies: []                     # EMPTY since 2026-11-05 (PROP-PULL-ETHPROP): `[]` blocks all; never leave the key bare (bare = None = legacy fall-through).
+    strategies:                        # OPERATOR BASELINE 2026-11-05 ~18:55Z (Tier-3, popup "Baseline at min size (Rec.)", relayed by
+                                       # Manager Session 2026-11-05b; row ML-PROP-ITERATE): a MEASURED BASELINE at minimum size, not a
+                                       # prop-gate pass. Exception recorded in comms/prop_survival/<leg>.json `operator_exception`.
+                                       # Size: sizing.flat.per_leg_risk_usd 10 in the ruleset. REVERT: `strategies: []`.
+      - trend_donchian_eth_4h          # v2 3y PASS all 3 firms; V3 FAIL_EDGE (CI lo -0.068 R); 365d n=51 negative
+      - trend_donchian_sol_4h          # v2+V3 3y PASS all 3 firms (CI lo +0.011 R); 365d n=34 negative (CONTESTED)
+      # was `strategies: []` 2026-11-05 (PROP-PULL-ETHPROP).
       # breakout_1's legs, each kept only if its Turbo fit did not FAIL
       # PULLED 2026-11-05 (Tier-3, OPERATOR-APPROVED; popup ~06:25Z verbatim "Pull from prop (Recommended)", relayed by
       # Manager Session 2026-11-04b, row PROP-PULL-ETHPROP): trend_donchian_eth_prop. Evidence: RQ-20261031-422a-01
@@ -2187,7 +2193,13 @@ accounts:
       min_active_days: 0               # no minimum trading days.
     backtest_ruleset: prop_rulesets/tradeify_247_1step.yaml
     account_size_usd: 10000
-    strategies: []                     # EMPTY since 2026-11-05 (PROP-PULL-ETHPROP): `[]` blocks all; never leave the key bare (bare = None = legacy fall-through).
+    strategies:                        # OPERATOR BASELINE 2026-11-05 ~18:55Z (Tier-3, popup "Baseline at min size (Rec.)", relayed by
+                                       # Manager Session 2026-11-05b; row ML-PROP-ITERATE): a MEASURED BASELINE at minimum size, not a
+                                       # prop-gate pass. Exception recorded in comms/prop_survival/<leg>.json `operator_exception`.
+                                       # Size: sizing.flat.per_leg_risk_usd 10 in the ruleset. REVERT: `strategies: []`.
+      - trend_donchian_eth_4h          # v2 3y PASS all 3 firms; V3 FAIL_EDGE (CI lo -0.068 R); 365d n=51 negative
+      - trend_donchian_sol_4h          # v2+V3 3y PASS all 3 firms (CI lo +0.011 R); 365d n=34 negative (CONTESTED)
+      # was `strategies: []` 2026-11-05 (PROP-PULL-ETHPROP).
       # the memo's B3 book (§ 3.1): one leg per
                                        # symbol, so the no-hedging rule cannot be
                                        # tripped by two of our own legs.
@@ -2297,7 +2309,13 @@ accounts:
       min_active_days: 5               # 5 QUALIFYING days (each >= +0.8% of the initial balance, realised, 00:30-00:30 UTC).
     backtest_ruleset: prop_rulesets/velotrade_classic_1step.yaml
     account_size_usd: 5000
-    strategies: []                     # EMPTY since 2026-11-05 (PROP-PULL-ETHPROP): `[]` blocks all; never leave the key bare (bare = None = legacy fall-through).
+    strategies:                        # OPERATOR BASELINE 2026-11-05 ~18:55Z (Tier-3, popup "Baseline at min size (Rec.)", relayed by
+                                       # Manager Session 2026-11-05b; row ML-PROP-ITERATE): a MEASURED BASELINE at minimum size, not a
+                                       # prop-gate pass. Exception recorded in comms/prop_survival/<leg>.json `operator_exception`.
+                                       # Size: sizing.flat.per_leg_risk_usd 10 in the ruleset. REVERT: `strategies: []`.
+      - trend_donchian_eth_4h          # v2 3y PASS all 3 firms; V3 FAIL_EDGE (CI lo -0.068 R); 365d n=51 negative
+      - trend_donchian_sol_4h          # v2+V3 3y PASS all 3 firms (CI lo +0.011 R); 365d n=34 negative (CONTESTED)
+      # was `strategies: []` 2026-11-05 (PROP-PULL-ETHPROP).
       # VELOTRADE-GOLIVE roster (Tier-3, HELD). Lane VELOTRADE-FIT: unit RQ-20261006-062,
                                        # rule RULE-RQ1006-VELOTRADE-FIT (registered before grading, commit 3769f2b1f):
                                        # GO_LIVE on all 5 seeds at risk_pct 0.005 -- P(daily-loss breach)/life 0.000,

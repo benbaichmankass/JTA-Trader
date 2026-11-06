@@ -77,6 +77,11 @@ def main() -> int:
     ap.add_argument("--symbols", default=",".join(SYMS), help="comma list of ledger symbols graded (default ETHUSDT,SOLUSDT)")
     ap.add_argument("--leg-key", default="ml_entry", help="leg name prop_ev_sim keys lev-cap / cost on (default ml_entry; a Donchian arm passes its strategy key)")
     ap.add_argument("--write-record", action="store_true", help="write comms/prop_survival/<variant>.json (verdict as graded)")
+    ap.add_argument("--family", default=None, help="holdout-ledger family (e.g. ENTRY); with --window-start/--window-end/--train-end the "
+                    "read is recorded in comms/research/holdout_reads.jsonl and the edge CI uses that read's deflated z")
+    ap.add_argument("--window-start"), ap.add_argument("--window-end"), ap.add_argument("--train-end", default="")
+    ap.add_argument("--reader", default="research-script-run")
+    ap.add_argument("--edge-z", type=float, default=None, help="the caller already recorded the read: use its deflated z (no second claim)")
     a = ap.parse_args()
     out = Path(a.out_dir)
     out.mkdir(parents=True, exist_ok=True)
@@ -97,6 +102,12 @@ def main() -> int:
         (out / "result.json").write_text(json.dumps(res, indent=1))
         print(json.dumps(res))
         return 0
+    claim = None
+    if a.window_start and a.window_end:   # HOLDOUT-DEFLATED-REUSE: record the read; a re-read of the window is graded on a deflated z
+        import holdout_lock as HL
+        claim = HL.claim_read(f"{a.family or 'ENTRY'}-prop-{a.variant}", a.window_start, a.window_end, a.from_unit or a.variant,
+                              a.reader, HL.LEDGER, symbols=list(syms), train_end=a.train_end, family=a.family)
+    z = claim["bar"]["ci_z"] if claim else (a.edge_z or G.Z95)
     for r in rows:
         r["leg"] = r["strategy"] = a.leg_key      # prop_ev_sim lev-cap / cost keys on the leg name
     stage = out / "ledger_ethsol.jsonl"
@@ -105,11 +116,12 @@ def main() -> int:
     agg = G.aggregate_v2(str(out) + "/")
     res = {"rule": G.RULE_V3, "variant": a.variant, "from_unit": a.from_unit, "ledger": str(led), "n": len(rows),
            "read_state": "graded", "prior_ml_records_on_this_window": len(glob.glob(str(REPO / "comms/prop_survival/ml_*.json"))),
+           "holdout_claim": claim, "edge_ci_z": z,
            "window": "served-model held-out or dev-OOS as the variant's own ledger states; see its unit", "firms": {}}
     for acct in G.SIM:
         for arm in ("ven", "cur"):
             r = next(x for x in agg if x["account"] == acct and x["arm"] == arm)
-            edge = G.edge_ci(G.ledger_net_r(rows, acct, arm))
+            edge = G.edge_ci(G.ledger_net_r(rows, acct, arm), z=z)
             null = G.null_cell(rows, leg, acct, arm, out / "null_cells" / f"null_{acct}_{arm}.json", out / "null_work")
             res["firms"].setdefault(acct, {})[arm] = {"v2": r, "edge": edge, "null": null, "v3_verdict": G.grade_v3(r["verdict"], edge)}
     res["verdict_by_firm"] = {acct: arms["ven"]["v3_verdict"] for acct, arms in res["firms"].items()}

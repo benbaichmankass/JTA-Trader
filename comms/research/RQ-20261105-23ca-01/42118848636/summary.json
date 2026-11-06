@@ -1,0 +1,258 @@
+{
+  "leg": "trend_donchian_eth_4h",
+  "grade": {
+    "verdict": "pass",
+    "label": "reachable_lever_beats_removed",
+    "best": "AX50",
+    "baseline": "B",
+    "candidates": {
+      "AX50": {
+        "delta_net_r": 4.3841,
+        "delta_max_drawdown_r": -0.8372,
+        "fold_wins": 4,
+        "passes": true
+      }
+    },
+    "delta_r_bar": 1.0,
+    "fold_majority": 3,
+    "n_floor": 39,
+    "control": null,
+    "why": "AX50 beats the removed-lever baseline by 4.3841 R with no worse drawdown and >= 3/4 fold wins: a Tier-3 proposal to declare it (not done here)"
+  },
+  "arms": {
+    "B": {
+      "reach_ge_6r": 0.0344,
+      "n": 291,
+      "net_r": 30.2155,
+      "net_r_fee_only": 41.0045,
+      "max_drawdown_r": 44.0669,
+      "by_outcome": {
+        "trail_stop": 92,
+        "stop": 165,
+        "take_profit": 34
+      },
+      "mean_bars_held": 11.107,
+      "net_r_per_capital_day": 0.0561,
+      "cost_stack": {
+        "fee_bps_roundtrip": 11.0,
+        "slippage_bps_roundtrip": 3.0,
+        "funding_bps_per_window": 1.0
+      },
+      "params": {
+        "donchian": 20,
+        "atr_stop_mult": 1.5,
+        "trail_mult": 6.0,
+        "min_confidence": 0.6,
+        "trail_decay_arm_r": 0.0,
+        "trail_decay_stall_bars": 10,
+        "trail_decay_tight_mult": 1.8,
+        "tp_revision": "donchian_measured_move",
+        "tp_revision_width_mult": 0.5,
+        "tp_revisions_applied": 2941,
+        "tp_revisions_clamped": 1035
+      },
+      "data_start": "2020-07-01 00:00:00+00:00",
+      "data_end": "2026-10-26 20:00:00+00:00",
+      "folds": [
+        {
+          "fold": 1,
+          "start": "2020-07-01 00:00:00+00:00",
+          "end": "2022-01-29 05:59:45+00:00",
+          "trades": 73,
+          "net_r": 36.2228
+        },
+        {
+          "fold": 2,
+          "start": "2022-01-29 05:59:45+00:00",
+          "end": "2023-08-29 11:59:30+00:00",
+          "trades": 63,
+          "net_r": 0.0926
+        },
+        {
+          "fold": 3,
+          "start": "2023-08-29 11:59:30+00:00",
+          "end": "2025-03-28 17:59:15+00:00",
+          "trades": 76,
+          "net_r": 18.549
+        },
+        {
+          "fold": 4,
+          "start": "2025-03-28 17:59:15+00:00",
+          "end": "2026-10-26 23:59:00+00:00",
+          "trades": 79,
+          "net_r": -24.6486
+        }
+      ],
+      "argv": [
+        "/opt/hostedtoolcache/Python/3.11.17/x64/bin/python3",
+        "/home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_trend.py",
+        "--donchian",
+        "20",
+        "--data",
+        "<data>",
+        "--symbol",
+        "BNBUSDT",
+        "--resample",
+        "4h",
+        "--atr-period",
+        "14",
+        "--atr-stop-mult",
+        "1.5",
+        "--trail-mult",
+        "6.0",
+        "--min-confidence",
+        "0.6",
+        "--fee-bps-roundtrip",
+        "11.0",
+        "--emit-trades",
+        "comms/research/RQ-20261105-23ca-01/42118848636/arms/B__trades.jsonl",
+        "--json",
+        "comms/research/RQ-20261105-23ca-01/42118848636/arms/B__bt.json",
+        "--trail-decay-stall-bars",
+        "10",
+        "--trail-decay-tight-mult",
+        "1.8",
+        "--tp-cap-pct",
+        "0.099",
+        "--tp-r",
+        "50.0",
+        "--tp-revision",
+        "donchian_measured_move",
+        "--tp-revision-width-mult",
+        "0.5",
+        "--start",
+        "2020-07-01",
+        "--end",
+        "2026-10-26 23:59"
+      ]
+    },
+    "AX50": {
+      "reach_ge_6r": 0.0356,
+      "n": 281,
+      "net_r": 34.5996,
+      "net_r_fee_only": 45.2653,
+      "max_drawdown_r": 43.2297,
+      "by_outcome": {
+        "trail_stop": 91,
+        "stop": 158,
+        "take_profit": 32
+      },
+      "mean_bars_held": 11.349,
+      "net_r_per_capital_day": 0.0651,
+      "cost_stack": {
+        "fee_bps_roundtrip": 11.0,
+        "slippage_bps_roundtrip": 3.0,
+        "funding_bps_per_window": 1.0
+      },
+      "params": {
+        "donchian": 20,
+        "atr_stop_mult": 1.5,
+        "trail_mult": 6.0,
+        "min_confidence": 0.6,
+        "adx_max": 50.0,
+        "adx_period": 14,
+        "trail_decay_arm_r": 0.0,
+        "trail_decay_stall_bars": 10,
+        "trail_decay_tight_mult": 1.8,
+        "tp_revision": "donchian_measured_move",
+        "tp_revision_width_mult": 0.5,
+        "tp_revisions_applied": 2908,
+        "tp_revisions_clamped": 1013
+      },
+      "data_start": "2020-07-01 00:00:00+00:00",
+      "data_end": "2026-10-26 20:00:00+00:00",
+      "folds": [
+        {
+          "fold": 1,
+          "start": "2020-07-01 00:00:00+00:00",
+          "end": "2022-01-29 05:59:45+00:00",
+          "trades": 68,
+          "net_r": 36.5788
+        },
+        {
+          "fold": 2,
+          "start": "2022-01-29 05:59:45+00:00",
+          "end": "2023-08-29 11:59:30+00:00",
+          "trades": 61,
+          "net_r": 2.2309
+        },
+        {
+          "fold": 3,
+          "start": "2023-08-29 11:59:30+00:00",
+          "end": "2025-03-28 17:59:15+00:00",
+          "trades": 75,
+          "net_r": 19.6017
+        },
+        {
+          "fold": 4,
+          "start": "2025-03-28 17:59:15+00:00",
+          "end": "2026-10-26 23:59:00+00:00",
+          "trades": 77,
+          "net_r": -23.8114
+        }
+      ],
+      "argv": [
+        "/opt/hostedtoolcache/Python/3.11.17/x64/bin/python3",
+        "/home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_trend.py",
+        "--donchian",
+        "20",
+        "--data",
+        "<data>",
+        "--symbol",
+        "BNBUSDT",
+        "--resample",
+        "4h",
+        "--atr-period",
+        "14",
+        "--atr-stop-mult",
+        "1.5",
+        "--trail-mult",
+        "6.0",
+        "--min-confidence",
+        "0.6",
+        "--fee-bps-roundtrip",
+        "11.0",
+        "--emit-trades",
+        "comms/research/RQ-20261105-23ca-01/42118848636/arms/AX50__trades.jsonl",
+        "--json",
+        "comms/research/RQ-20261105-23ca-01/42118848636/arms/AX50__bt.json",
+        "--trail-decay-stall-bars",
+        "10",
+        "--trail-decay-tight-mult",
+        "1.8",
+        "--tp-cap-pct",
+        "0.099",
+        "--tp-r",
+        "50.0",
+        "--tp-revision",
+        "donchian_measured_move",
+        "--tp-revision-width-mult",
+        "0.5",
+        "--adx-max",
+        "50",
+        "--start",
+        "2020-07-01",
+        "--end",
+        "2026-10-26 23:59"
+      ]
+    }
+  },
+  "window": {
+    "start": "2020-07-01",
+    "end": "2026-10-26 23:59",
+    "fetch_days": 7300,
+    "feed": {
+      "source": "binance",
+      "ticker": "BNBUSDT",
+      "interval": "240",
+      "resample": "4h"
+    },
+    "fold_edges": [
+      "2020-07-01 00:00:00+00:00",
+      "2022-01-29 05:59:45+00:00",
+      "2023-08-29 11:59:30+00:00",
+      "2025-03-28 17:59:15+00:00",
+      "2026-10-26 23:59:00+00:00"
+    ]
+  }
+}

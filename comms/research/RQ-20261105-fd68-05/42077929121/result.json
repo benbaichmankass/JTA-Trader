@@ -1,0 +1,117 @@
+{
+ "schema": "prop_ml_leg/1",
+ "profile": "bv",
+ "smoke": false,
+ "rehearsal": false,
+ "bar_hours": 8,
+ "taus": [
+  0.35,
+  0.4,
+  0.45,
+  0.5
+ ],
+ "horizon_bars": 6,
+ "arms_run": [
+  "F0",
+  "F0+F1"
+ ],
+ "arms_unavailable": [
+  "F0+F1+F2",
+  "F0+F1+F2+F3"
+ ],
+ "require_positive_sum": true,
+ "arm_denominator_registered": 8,
+ "arms_graded": 8,
+ "discovery_table": [
+  {
+   "arm": "F0",
+   "tau": 0.35,
+   "n": 643,
+   "sum_net_r": -12.955,
+   "folds_with_trades": 10,
+   "folds_positive": 2,
+   "eligible": false
+  },
+  {
+   "arm": "F0",
+   "tau": 0.4,
+   "n": 469,
+   "sum_net_r": -15.812,
+   "folds_with_trades": 10,
+   "folds_positive": 4,
+   "eligible": false
+  },
+  {
+   "arm": "F0",
+   "tau": 0.45,
+   "n": 317,
+   "sum_net_r": -16.318,
+   "folds_with_trades": 10,
+   "folds_positive": 4,
+   "eligible": false
+  },
+  {
+   "arm": "F0",
+   "tau": 0.5,
+   "n": 195,
+   "sum_net_r": -7.22,
+   "folds_with_trades": 10,
+   "folds_positive": 4,
+   "eligible": false
+  },
+  {
+   "arm": "F0+F1",
+   "tau": 0.35,
+   "n": 608,
+   "sum_net_r": -31.569,
+   "folds_with_trades": 10,
+   "folds_positive": 3,
+   "eligible": false
+  },
+  {
+   "arm": "F0+F1",
+   "tau": 0.4,
+   "n": 442,
+   "sum_net_r": -2.844,
+   "folds_with_trades": 10,
+   "folds_positive": 6,
+   "eligible": false
+  },
+  {
+   "arm": "F0+F1",
+   "tau": 0.45,
+   "n": 290,
+   "sum_net_r": 7.604,
+   "folds_with_trades": 10,
+   "folds_positive": 7,
+   "eligible": true
+  },
+  {
+   "arm": "F0+F1",
+   "tau": 0.5,
+   "n": 164,
+   "sum_net_r": -8.28,
+   "folds_with_trades": 10,
+   "folds_positive": 6,
+   "eligible": false
+  }
+ ],
+ "folds": 15,
+ "data_rows": 13098,
+ "elapsed_s": 195,
+ "selected": {
+  "arm": "F0+F1",
+  "tau": 0.45,
+  "discovery_sum_net_r": 7.604,
+  "discovery_n": 290
+ },
+ "heldout": {
+  "n": 116,
+  "mean_net_r": -0.12173106896551728
+ },
+ "verdict": "INDETERMINATE",
+ "read_state": "measured",
+ "reason": "n_below_floor",
+ "n_heldout": 116,
+ "floor": 150
+}

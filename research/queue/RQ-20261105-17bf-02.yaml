@@ -1,7 +1,7 @@
 id: RQ-20261105-17bf-02
 title: 'trend_donchian_sol widened-evidence edge: net-of-cost edge (95% CI lower bound > 0?) on SOL long history plus config-exact twins on other liquid USDT perps, cluster-bootstrap CI (the test PI-20261028-FFTW4JNY-0002
   lacked)'
-status: queued
+status: done
 cadence: once
 kind: experiment
 theme: new_strategy_prop
@@ -79,3 +79,16 @@ related:
 - scripts/research/widened_edge_pool.py
 - docs/research/wf-recost-dda7-2026-10-28/RQ-20261028-dda7-04/
 last_dispatched_at: '2026-11-05T12:47:56+00:00'
+grading:
+  attested: RULE-RQ-20261105-17bf-02-WIDENED-EDGE
+  auto: true
+  decision_rule_id: RULE-RQ-20261105-17bf-02-WIDENED-EDGE
+  evidence:
+  - research/results/RQ-20261105-17bf-02/42030376866.jsonl
+  graded_at: '2026-11-05'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail

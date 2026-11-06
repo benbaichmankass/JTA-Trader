@@ -1,0 +1,316 @@
+name: kaggle-cold-lake-copy
+
+# FULL COPY of the FROZEN (closed-month, immutable) crypto history of the HF lake to PRIVATE Kaggle datasets (row HF-LAKE-STORAGE-403, lane
+# HF-LAKE-SQUASH). Operator decision 2026-11-05 ~18:40Z, verbatim: "Go, full copy (Rec.)". Preceded by the 1 GB pilot ("Kaggle 1 GB pilot
+# first (Rec.)") and the 10 GB trial ("10 GB trial (Rec.)"), both verified.
+#
+# NOTHING IS DELETED ANYWHERE. HF deletion was NOT approved and needs a separate operator OK. COPY only; existing Kaggle account only.
+# HF file READS are refused at the storage cap, so the data is REBUILT from data.binance.vision with the lake's own builder
+# (scripts/data_lake/binance_vision_lake.py); the HF tree LISTING (still allowed) is the plan and the completeness yardstick.
+#
+# FLOW  plan (HF listing -> frozen bytes per market/label, sliced by symbol into parts <= part_gb; fails closed if the total would not fit
+#       the Kaggle private quota) -> copy (matrix, one part per runner: rebuild, shard with a SHA-256 PER MEMBER, upload as its own
+#       private dataset metis-market-lake-pNNN, wait until the served MANIFEST is the new one) -> verify (matrix: a CPU Kaggle kernel
+#       with internet off re-hashes EVERY member against the manifest; a runner downloads a random sample of members and re-hashes them)
+#       -> index (INDEX.json: parts, datasets, plan id, bytes, verification results).
+#
+# no-durable-result: data copy job, computes no research verdict; its durable outputs are the private Kaggle datasets and the INDEX.json artifact
+#
+# GATES THIS ADDS OR CHANGES: none. Data path only: no order path, no config the trader reads, no execution flag. (The commit-message
+# tokens `[kaggle-copy-plan]` / `[kaggle-copy-go]` only select which step runs on this PR; they gate no pipeline.)
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/kaggle-cold-lake-copy.yml"
+      - "scripts/data_lake/kaggle_pilot.py"
+      - "scripts/data_lake/kaggle_pilot_kernel/**"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: kaggle-cold-lake-copy-${{ github.head_ref }}
+  cancel-in-progress: false
+
+env:
+  KAGGLE_API_TOKEN: ${{ secrets.KAGGLE_API_TOKEN }}
+
+jobs:
+  gate:
+    if: github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      plan: ${{ steps.g.outputs.plan }}
+      go: ${{ steps.g.outputs.go }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+          persist-credentials: false
+      - id: g
+        run: |
+          msg="$(git log -1 --format=%B HEAD^2 2>/dev/null || git log -1 --format=%B HEAD)"
+          echo "head commit: $(echo "$msg" | head -1)"
+          go=false; plan=false
+          case "$msg" in *"[kaggle-copy-go]"*) go=true; plan=true;; esac
+          case "$msg" in *"[kaggle-copy-plan]"*) plan=true;; esac
+          echo "plan=$plan" >> "$GITHUB_OUTPUT"; echo "go=$go" >> "$GITHUB_OUTPUT"
+
+  plan:
+    needs: gate
+    if: needs.gate.outputs.plan == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    outputs:
+      matrix: ${{ steps.m.outputs.matrix }}
+      total_gb: ${{ steps.m.outputs.total_gb }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: python -m pip install --quiet huggingface_hub pandas pyarrow pyyaml requests
+      - name: Plan from the HF tree LISTING (read-only; file reads are not needed)
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+        run: python3 scripts/data_lake/kaggle_pilot.py plan --out plan.json --part-gb 22 | tee plan.txt
+      - id: m
+        run: |
+          python3 - <<'PY' >> "$GITHUB_OUTPUT"
+          import json
+          p = json.load(open("plan.json"))
+          total = p["frozen_total_bytes"] / 1e9
+          # fail closed: the Kaggle private quota is 214.75 GB, with 2.9 GB + the 10 GB trial already used and old versions possibly counting
+          assert total <= 150, f"frozen total {total:.1f} GB does not fit the Kaggle private quota with headroom"
+          print("matrix=" + json.dumps({"include": [{"part": x["part"]} for x in p["parts"]]}))
+          print(f"total_gb={total:.1f}")
+          PY
+          { echo '### cold lake plan'; head -c 6000 plan.txt; } >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: kaggle-cold-lake-plan
+          path: |
+            plan.json
+            plan.txt
+          retention-days: 30
+
+  copy:
+    needs: [gate, plan]
+    if: needs.gate.outputs.go == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 330
+    strategy:
+      fail-fast: false
+      max-parallel: 4
+      matrix: ${{ fromJSON(needs.plan.outputs.matrix) }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Free runner disk (a part is up to ~22 GB staged)
+        run: |
+          sudo rm -rf /usr/share/dotnet /opt/ghc /usr/local/lib/android /opt/hostedtoolcache/CodeQL 2>/dev/null || true
+          df -h / | tail -1
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: python -m pip install --quiet "kaggle>=2.0" six pandas pyarrow pyyaml requests
+      - uses: actions/download-artifact@v4
+        with:
+          name: kaggle-cold-lake-plan
+      - name: Build this part (rebuild from data.binance.vision, frozen partitions only, SHA-256 per member)
+        id: build
+        run: |
+          set -uo pipefail
+          echo "::add-mask::${KAGGLE_API_TOKEN}"
+          USERNAME=$(python - <<'PY'
+          from kaggle.api.kaggle_api_extended import KaggleApi
+          a = KaggleApi(); a.authenticate()
+          print(a.config_values.get("username", ""))
+          PY
+          )
+          [ -n "$USERNAME" ] || { echo "::error::token did not resolve to a Kaggle user"; exit 1; }
+          echo "::add-mask::$USERNAME"; echo "$USERNAME" > /tmp/kuser
+          python3 -u scripts/data_lake/kaggle_pilot.py copy-part --plan plan.json --part "${{ matrix.part }}" --out /tmp/stage --username "$USERNAME" --batch 4 2>&1 | grep -v "^\[lake\]" | tee /tmp/build.log
+          tail -1 /tmp/build.log > /tmp/report.json
+          du -sh /tmp/stage; df -h / | tail -1
+      - name: Upload as ONE version of this part's private dataset, wait until the served manifest is ours
+        run: |
+          set -uo pipefail
+          echo "::add-mask::${KAGGLE_API_TOKEN}"
+          USERNAME=$(cat /tmp/kuser); echo "::add-mask::$USERNAME"
+          scrub() { sed "s|$USERNAME|<user>|g"; }
+          SLUG=metis-market-lake-${{ matrix.part }}
+          DS="$USERNAME/$SLUG"
+          WANT=$(python3 -c "import json;print(json.load(open('/tmp/stage/MANIFEST.json'))['note'])")
+          # idempotent: a re-run never uploads a part that already carries this plan's manifest (old versions may count against the quota)
+          rm -rf /tmp/mf && mkdir -p /tmp/mf
+          kaggle datasets download -d "$DS" -f MANIFEST.json -p /tmp/mf --unzip > /dev/null 2>&1 || true
+          GOT=$(python3 -c "import json;print(json.load(open('/tmp/mf/MANIFEST.json')).get('note',''))" 2>/dev/null || echo "")
+          if [ "$GOT" = "$WANT" ]; then echo "already uploaded for this plan: skipping"; echo '{"skipped_existing": true}' > /tmp/upload.json; exit 0; fi
+          T0=$(date +%s)
+          if kaggle datasets status "$DS" >/dev/null 2>&1; then
+            kaggle datasets version -p /tmp/stage -r skip -m "cold lake ${{ matrix.part }} run ${GITHUB_RUN_ID}" 2>&1 | scrub | grep -v "it/s\|B/s" | tail -5 || true
+          else
+            kaggle datasets create -p /tmp/stage -r skip 2>&1 | scrub | grep -v "it/s\|B/s" | tail -5 || true
+          fi
+          READY=0
+          for i in $(seq 1 200); do
+            rm -rf /tmp/mf && mkdir -p /tmp/mf
+            kaggle datasets download -d "$DS" -f MANIFEST.json -p /tmp/mf --unzip > /dev/null 2>&1 || true
+            GOT=$(python3 -c "import json;print(json.load(open('/tmp/mf/MANIFEST.json')).get('note',''))" 2>/dev/null || echo "")
+            if [ "$GOT" = "$WANT" ]; then READY=1; break; fi
+            sleep 30
+          done
+          T1=$(date +%s); echo "{\"upload_to_served_seconds\": $((T1-T0)), \"ready\": $READY}" | tee /tmp/upload.json
+          [ "$READY" = "1" ] || { echo "::error::new version never became the served one"; exit 1; }
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: kaggle-cold-lake-copy-${{ matrix.part }}
+          path: |
+            /tmp/report.json
+            /tmp/upload.json
+            /tmp/build.log
+          retention-days: 30
+
+  verify:
+    needs: [gate, plan, copy]
+    if: ${{ !cancelled() && needs.gate.outputs.go == 'true' && needs.copy.result != 'skipped' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    strategy:
+      fail-fast: false
+      max-parallel: 2
+      matrix: ${{ fromJSON(needs.plan.outputs.matrix) }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: python -m pip install --quiet "kaggle>=2.0" six
+      - name: Kaggle CPU kernel (internet off) re-hashes EVERY member against the manifest; the runner re-hashes a random sample
+        run: |
+          set -uo pipefail
+          echo "::add-mask::${KAGGLE_API_TOKEN}"
+          USERNAME=$(python - <<'PY'
+          from kaggle.api.kaggle_api_extended import KaggleApi
+          a = KaggleApi(); a.authenticate()
+          print(a.config_values.get("username", ""))
+          PY
+          )
+          echo "::add-mask::$USERNAME"
+          scrub() { sed "s|$USERNAME|<user>|g"; }
+          SLUG=metis-market-lake-${{ matrix.part }}
+          mkdir -p /tmp/k && cp scripts/data_lake/kaggle_pilot_kernel/kernel_read.py /tmp/k/
+          python3 - "$USERNAME" "$SLUG" <<'PY'
+          import json, sys
+          u, slug = sys.argv[1:3]
+          json.dump({"id": f"{u}/{slug}-read", "title": f"{slug}-read", "code_file": "kernel_read.py", "language": "python",
+                     "kernel_type": "script", "is_private": "true", "enable_gpu": "false", "enable_tpu": "false", "enable_internet": "false",
+                     "dataset_sources": [f"{u}/{slug}"], "competition_sources": [], "kernel_sources": [], "model_sources": []},
+                    open("/tmp/k/kernel-metadata.json", "w"), indent=1)
+          PY
+          T0=$(date +%s)
+          timeout 300 kaggle kernels push -p /tmp/k 2>&1 | scrub | tee /tmp/push.txt
+          grep -qi "error\|fail" /tmp/push.txt && { echo "::error::kernel push failed"; exit 1; }
+          deadline=$(( $(date +%s) + 7000 ))
+          while :; do
+            s=$(timeout 90 kaggle kernels status "$USERNAME/${SLUG}-read" 2>&1 | scrub); echo "$(date -u +%H:%M:%S) $s" | tail -1
+            case "$s" in *COMPLETE*|*ERROR*|*CANCEL*) break;; esac
+            [ "$(date +%s)" -gt "$deadline" ] && { echo "::error::kernel timed out"; exit 1; }
+            sleep 45
+          done
+          T1=$(date +%s)
+          mkdir -p kout && timeout 300 kaggle kernels output "$USERNAME/${SLUG}-read" -p kout 2>&1 | scrub | tail -2
+          cp kout/result.json /tmp/kernel.json; echo "{\"kernel_seconds\": $((T1-T0))}" > /tmp/kernel-timing.json
+          cut -c1-600 /tmp/kernel.json
+          # runner-side sample: 12 random members downloaded as single files and re-hashed against the manifest
+          rm -rf /tmp/mf && mkdir -p /tmp/mf
+          kaggle datasets download -d "$USERNAME/$SLUG" -f MANIFEST.json -p /tmp/mf --unzip > /dev/null 2>&1
+          python3 - "$USERNAME/$SLUG" <<'PY' | tee /tmp/sample.json
+          import hashlib, json, os, random, subprocess, sys
+          ds = sys.argv[1]
+          man = json.load(open("/tmp/mf/MANIFEST.json"))
+          mem = [(f["path"][:-4], m) for f in man["files"] for m in f.get("members", [])]
+          random.seed(7)
+          pick = random.sample(mem, min(12, len(mem)))
+          ok, bad = 0, []
+          for shard, m in pick:
+              rel = f"{shard}/{m['path']}"
+              d = "/tmp/smp"
+              os.makedirs(d, exist_ok=True)
+              r = subprocess.run(["kaggle", "datasets", "download", "-d", ds, "-f", rel, "-p", d, "--unzip"], capture_output=True, text=True)
+              fp = os.path.join(d, os.path.basename(rel))
+              if os.path.isfile(fp) and hashlib.sha256(open(fp, "rb").read()).hexdigest() == m["sha256"]:
+                  ok += 1
+              else:
+                  bad.append(rel)
+              if os.path.isfile(fp):
+                  os.remove(fp)
+          print(json.dumps({"sampled": len(pick), "ok": ok, "bad": bad[:5], "n_members": len(mem)}))
+          PY
+          python3 - <<'PY'
+          import json, sys
+          k = json.load(open("/tmp/kernel.json")); s = json.load(open("/tmp/sample.json"))
+          sys.exit(0 if (k.get("ok") and k.get("checksum_level", {}).get("member", 0) > 0 and s["ok"] == s["sampled"]) else 1)
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: kaggle-cold-lake-verify-${{ matrix.part }}
+          path: |
+            /tmp/kernel.json
+            /tmp/kernel-timing.json
+            /tmp/sample.json
+          retention-days: 30
+
+  index:
+    needs: [gate, plan, copy, verify]
+    if: ${{ !cancelled() && needs.gate.outputs.go == 'true' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: kaggle-cold-lake-*
+          path: art
+      - name: INDEX.json (parts, datasets, plan id, bytes, verification) and a one-screen summary
+        run: |
+          python3 - <<'PY'
+          import glob, json, os
+          plan = json.load(open(glob.glob("art/kaggle-cold-lake-plan/plan.json")[0]))
+          rows, tot_b, tot_p = [], 0, 0
+          for p in plan["parts"]:
+              pid = p["part"]
+              def load(pat):
+                  fs = glob.glob(f"art/kaggle-cold-lake-{pat}-{pid}/**/*.json", recursive=True)
+                  return {os.path.basename(f): json.load(open(f)) for f in fs}
+              c, v = load("copy"), load("verify")
+              rep = c.get("report.json", {}); ker = v.get("kernel.json", {}); smp = v.get("sample.json", {})
+              rows.append({"part": pid, "dataset": p["slug"], "market": p["market"], "stream": p["stream"], "symbols": len(p["symbols"]),
+                           "expected_partitions": p["expected_partitions"], "built_partitions": rep.get("built_partitions"),
+                           "complete": rep.get("built_partitions") == p["expected_partitions"], "built_bytes": rep.get("built_bytes"),
+                           "kernel_ok": ker.get("ok"), "kernel_checksum_level": ker.get("checksum_level"), "sample": smp})
+              tot_b += rep.get("built_bytes") or 0
+              tot_p += rep.get("built_partitions") or 0
+          idx = {"schema": "kaggle-cold-lake-index/v1", "plan_id": plan["plan_id"], "frozen_expected_bytes": plan["frozen_total_bytes"],
+                 "frozen_expected_partitions": plan["frozen_total_files"], "built_bytes": tot_b, "built_partitions": tot_p,
+                 "all_complete": all(r["complete"] for r in rows), "all_verified": all(r["kernel_ok"] for r in rows), "parts": rows}
+          json.dump(idx, open("INDEX.json", "w"), indent=1)
+          print(json.dumps({k: v for k, v in idx.items() if k != "parts"}, indent=1))
+          for r in rows:
+              print(r["part"], r["dataset"], r["market"], r["stream"], "partitions", r["built_partitions"], "/", r["expected_partitions"], "kernel_ok", r["kernel_ok"], "sample", r["sample"].get("ok"), "/", r["sample"].get("sampled"))
+          PY
+          { echo '### kaggle cold lake index'; python3 -c "import json;d=json.load(open('INDEX.json'));print({k:v for k,v in d.items() if k!='parts'})"; } >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: kaggle-cold-lake-INDEX
+          path: INDEX.json
+          retention-days: 90

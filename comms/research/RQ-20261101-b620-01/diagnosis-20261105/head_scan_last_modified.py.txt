@@ -1,0 +1,20 @@
+import sys,json,requests,concurrent.futures as cf,pandas as pd
+sys.path.insert(0,'/home/user/JTA-Trader/scripts/research');sys.path.insert(0,'/home/user/JTA-Trader')
+import ml_decision_entry as E, ml_entry_timeframe as T
+syms=E.universe();mos=T.months("2020-07")
+mos=[m for m in mos if m<="2025-09"]
+S=requests.Session()
+def head(a):
+    s,m=a;u=f"{E._BASE}/{s}/1h/{s}-1h-{m}.zip"
+    for _ in range(3):
+        try:
+            r=S.head(u,timeout=30);return (s,m,r.status_code,r.headers.get('Last-Modified'),r.headers.get('Content-Length'))
+        except Exception: pass
+    return (s,m,None,None,None)
+with cf.ThreadPoolExecutor(16) as ex: res=list(ex.map(head,[(s,m) for s in syms for m in mos]))
+df=pd.DataFrame(res,columns=['sym','month','status','lm','len']);df.to_csv('/tmp/claude-0/diag/headscan.csv',index=False)
+ok=df[df.status==200].copy();ok['lm']=pd.to_datetime(ok.lm,utc=True)
+print('files',len(df),'200:',len(ok),'404:',int((df.status==404).sum()),'other/None:',int((~df.status.isin([200,404])).sum()))
+print('last-modified min',ok.lm.min(),'max',ok.lm.max())
+for cutoff in ['2026-10-01','2026-11-01T18:30Z']:
+    c=pd.Timestamp(cutoff,tz='UTC');x=ok[ok.lm>c];print('modified after',cutoff,':',len(x));print(x.sort_values('lm').tail(8)[['sym','month','lm']].to_string())

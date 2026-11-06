@@ -1,0 +1,17 @@
+{
+  "due_when": {
+    "check_every_days": 14,
+    "clears_when": "the manager's check-in writes the sweep count to a file the brief reads, or the operator says the manager-side line is enough",
+    "kind": "event",
+    "last_checked": "2026-11-05"
+  },
+  "id": "PI-20261105-OWGNYFKU-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "LANE-ARCHIVE-HYGIENE session_01AFoLuJ42QuaJvtowgnyfKu",
+    "rerun": "python3 scripts/ops/lane_reconcile.py --sweep --sessions <all list_sessions pages>; grep 'finished lanes unarchived' in its output"
+  },
+  "state": "queued",
+  "what": "Observability: an attention/brief line 'N finished lanes unarchived (oldest age)'. NO cheap read path exists: session state lives only behind the Claude Code Remote MCP list_sessions tool, which neither the VM nor the brief renderer can call. lane_reconcile.py --sweep already prints that exact line for the manager; wiring it into GET /api/bot/work/brief needs the manager to write the sweep result somewhere the brief reads (e.g. a committed comms/ snapshot). Deferred, not built (LANE-ARCHIVE-HYGIENE)."
+}

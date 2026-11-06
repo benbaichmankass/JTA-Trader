@@ -73,8 +73,8 @@ The previous run's units are this run's first input. For each entry in the newes
    - `not_run` — queued ≥ 7 days with no stamp. Find out why (`unroutable`, session-bound
      `run.workflow`, theme starvation, `blocked`) and fix it or file the fix. A unit that
      can never fire is the `PI-20261006-LCEVL8D5-0002` debt — don't add to it.
-   - `underpowered` / `accruing` — a READ whose answer is "cannot answer yet"; leave it
-     queued and state what accrual would change that. Not a verdict (research queue README § power).
+   - `underpowered` / `accruing` — a READ whose answer is "cannot answer yet"; re-register it on an untouched
+     in-hand window (research-ops § "RESEARCH ITERATES ON IN-HAND DATA", operator 2026-11-05); waiting for accrual is only for live execution mechanics, which are monitoring. Not a verdict (research queue README § power).
    - `killed` — only with a stated reason.
 3. **Pipeline items** the previous run filed: apply the same disposition test
    (`scripts/ops/pipeline.py --due`); re-run each `origin.rerun`; `done`/`killed` with a

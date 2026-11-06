@@ -138,13 +138,19 @@ def has_prop_live_soak(leg: str, soaks: Sequence[Dict[str, Any]]) -> Optional[st
     return None
 
 
-def record_problems(rec: Optional[Dict[str, Any]], leg: str) -> List[str]:
+def record_problems(rec: Optional[Dict[str, Any]], leg: str, account: Optional[str] = None) -> List[str]:
     """Why ``comms/prop_survival/<leg>.json`` is not a prop survival-gate record. Empty = admissible.
 
     Fail closed: every field is required; a PR body is not a record.
       leg, harness (str), ruleset (str — the firm ruleset graded under), ev_net_usd (number),
       p_breach (number in [0,1]), n_trades (int >= 1), and decision_rule{id, registered_at,
       verdict == "pass"} — the rule registered BEFORE the run, passing.
+
+    OPERATOR BASELINE EXEMPTION (operator 2026-11-05, "Baseline at min size (Rec.)", reconfirmed ~20:50Z
+    "Proceed, I'll approve (Rec.)"; record PR #23460): a NON-pass verdict is admissible ONLY when the record
+    carries ``operator_exception`` with ``kind == "baseline"`` AND ``account`` is listed in its ``accounts``.
+    Every other field stays required, and the verdict stays the TRUE grade (never rewritten to "pass").
+    An exemption, not a gate: it only ever turns a refusal into an admission, for the named accounts.
     """
     if rec is None:
         return [f"no committed record at {SURVIVAL_DIR_REL}/{leg}.json"]
@@ -169,9 +175,19 @@ def record_problems(rec: Optional[Dict[str, Any]], leg: str) -> List[str]:
     else:
         if not str(dr.get("id") or "").strip() or not str(dr.get("registered_at") or "").strip():
             p.append("decision_rule needs `id` and `registered_at`")
-        if dr.get("verdict") != "pass":
-            p.append(f"decision_rule.verdict is {dr.get('verdict')!r}, not 'pass'")
+        if dr.get("verdict") != "pass" and not baseline_exempt(rec, account):
+            p.append(f"decision_rule.verdict is {dr.get('verdict')!r}, not 'pass'"
+                     + (f" (no operator_exception kind 'baseline' naming {account})" if account else ""))
     return p
+
+
+def baseline_exempt(rec: Dict[str, Any], account: Optional[str]) -> bool:
+    """True iff the record carries the operator's BASELINE exception and it names ``account``."""
+    ex = rec.get("operator_exception")
+    if not account or not isinstance(ex, dict) or ex.get("kind") != "baseline":
+        return False
+    accts = ex.get("accounts")
+    return isinstance(accts, list) and account in accts
 
 
 def load_record(leg: str, survival_dir: Path) -> Optional[Dict[str, Any]]:
@@ -205,7 +221,7 @@ def grade(found: Sequence[Dict[str, str]], head_accounts: Optional[str], soaks: 
             miss.append(f"no Stage-1 soak: {leg} is on neither {'/'.join(STAGE1_ACCOUNTS)} roster "
                         f"nor carries a SOAK-stage1-<acct>-{leg} contract (or a `prop_live` source) "
                         f"in {SOAKS_REL}")
-        miss += [f"prop survival gate: {m}" for m in record_problems(load_record(leg, survival_dir), leg)]
+        miss += [f"prop survival gate: {m}" for m in record_problems(load_record(leg, survival_dir), leg, acct)]
         if miss:
             lapsed = " (grandfather LAPSED " + GRANDFATHERED[leg]["due"] + ")" if leg in GRANDFATHERED else ""
             out.append(f"{acct}/{leg} [{f['why']}]{lapsed}\n      - " + "\n      - ".join(miss))
@@ -292,6 +308,26 @@ def self_test() -> int:
         (d / "x.json").write_text(json.dumps(dict(good, decision_rule={"id": "R", "registered_at": "z",
                                                                        "verdict": "fail"})))
         check("verdict fail -> refused", len(grade(prop_adds(base, h), h, c, d, today)), 1)
+        # operator BASELINE exemption: non-pass verdict admissible only for a listed account
+        ex = {"kind": "baseline", "decided_by": "operator", "accounts": ["p1"], "quote": "q"}
+        (d / "x.json").write_text(json.dumps(dict(good, decision_rule={"id": "R", "registered_at": "z",
+                                                                       "verdict": "fail_edge"}, operator_exception=ex)))
+        check("baseline exception naming the account -> admitted", grade(prop_adds(base, h), h, c, d, today), [])
+        (d / "x.json").write_text(json.dumps(dict(good, decision_rule={"id": "R", "registered_at": "z",
+                                                                       "verdict": "fail_edge"},
+                                                  operator_exception=dict(ex, accounts=["other"]))))
+        check("baseline exception NOT naming the account -> refused", len(grade(prop_adds(base, h), h, c, d, today)), 1)
+        (d / "x.json").write_text(json.dumps(dict(good, decision_rule={"id": "R", "registered_at": "z",
+                                                                       "verdict": "fail_edge"},
+                                                  operator_exception=dict(ex, kind="other"))))
+        check("exception of the wrong kind -> refused", len(grade(prop_adds(base, h), h, c, d, today)), 1)
+        (d / "x.json").write_text(json.dumps(dict(good, decision_rule={"id": "R", "registered_at": "z",
+                                                                       "verdict": "fail_edge"})))
+        check("no exception block -> refused", len(grade(prop_adds(base, h), h, c, d, today)), 1)
+        bad = dict(good, decision_rule={"id": "R", "registered_at": "z", "verdict": "fail_edge"}, operator_exception=ex)
+        bad.pop("p_breach")
+        (d / "x.json").write_text(json.dumps(bad))
+        check("exception does not waive other fields", len(grade(prop_adds(base, h), h, c, d, today)), 1)
         # demotion is free
         check("removal -> nothing", prop_adds(acc(["old", "x"], []), acc(["old"], [])), [])
         # class flip into prop arms every leg

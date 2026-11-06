@@ -1,0 +1,38 @@
+{
+  "unit": "RQ-20261104-a41f-01",
+  "run_id": "42091158467",
+  "commit_sha": "7146442547389a61f8dca644d9008c3fcc36b104",
+  "run_url": "https://github.com/benbaichmankass/JTA-Trader/actions/runs/42091158467",
+  "timeout_minutes": 300,
+  "commands": [
+    {
+      "index": 0,
+      "argv": [
+        "python3",
+        "scripts/research/ml_entry_alpaca_score.py",
+        "run",
+        "--model",
+        "ml/served/ml_decision_entry_v1/model.json",
+        "--cache",
+        "/tmp/ml_entry_alpaca_a41f",
+        "--unit",
+        "RQ-20261104-a41f-01",
+        "--out",
+        "comms/research/RQ-20261104-a41f-01/42091158467",
+        "--where",
+        "research-script-run",
+        "--side-rule",
+        "restricted",
+        "--session-gate",
+        "--bars",
+        "alpaca",
+        "--population",
+        "alpaca-liquidity"
+      ],
+      "log": "comms/research/RQ-20261104-a41f-01/42091158467/logs/cmd-0.log",
+      "exit_code": 0,
+      "seconds": 1532.3
+    }
+  ],
+  "all_ok": true
+}

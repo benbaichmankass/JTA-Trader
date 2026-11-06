@@ -273,6 +273,11 @@ CADENCE_REGISTRY: dict[str, dict] = {
                "mirror leaves no receipt by design; a stopped mirror is observed by claude-run-failure-alert and by a branch "
                "decision_id missing from main's comms/desk/decisions.jsonl",
     },
+    "kaggle-backups.yml": {
+        "receipt": "comms/backups/kaggle_latest.json",
+        "why": "every scheduled run rewrites the per-kind freshness stamp (ok, last_ok_at, consecutive_failures) and lands it through "
+               "commit-to-main; the last commit touching it IS the receipt (KAGGLE-BACKUPS, 2026-11-05)",
+    },
     "research-slo.yml": {
         "receipt": "comms/research/health",
         "why": "every run writes the dated SLO status file and lands it through commit-to-main; the last commit "
