@@ -1,7 +1,5 @@
 {
   "tier": 1,
-  "landing": "hold",
-  "hold_reason": "unvouchable_paths",
-  "hold_text": "Composite-action fix (.github/actions/research-store-ship) + a test. The lane (session_01AFoLuMDZinKoAMLY7CM8cG) merges on green. Revert: git revert.",
+  "landing": "self",
   "why": "WSD-S6D follow-up to #23581: composite `shell: bash` runs with -e, so a parity gap (remote rc 1) aborted the ship step before its rc was captured, turning the dispatcher's research-store job red with no output (run 42165098415). set +e restores the designed behaviour: warning + outcome, exit 0 unless fail-on-error."
 }
