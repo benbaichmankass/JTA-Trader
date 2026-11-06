@@ -381,3 +381,18 @@ def test_queue_facts_due_now_never_exceeds_the_horizon_count():
     assert f is not None
     for be, n in f["by_backend_due_now"].items():
         assert n <= f["by_backend"].get(be, 0)
+
+
+def test_pr_merge_state_rereads_github_lazy_unknown():
+    """WSD-S6D (manager 2026-11-06 07:01Z): GitHub answers `unknown` on the first read while it computes
+    mergeability; one read of it was reported as could_not_look. Re-read before giving up."""
+    answers = iter([{"mergeable_state": "unknown"}, {"mergeable_state": "unknown"}, {"mergeable_state": "dirty"}])
+    p = w.GhProbe("o/r")
+    p._api = lambda path, key=None: next(answers)
+    slept = []
+    assert p.pr_merge_state(1, sleep=slept.append) == "dirty" and len(slept) == 2
+    p._api = lambda path, key=None: {"mergeable_state": "unknown"}
+    assert p.pr_merge_state(2, attempts=3, sleep=lambda s: None) is None  # still unknown -> could not look
+    p._api = lambda path, key=None: None
+    calls = []
+    assert p.pr_merge_state(3, sleep=calls.append) is None and calls == []  # API failure -> None at once

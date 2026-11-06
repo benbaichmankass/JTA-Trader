@@ -379,11 +379,25 @@ class GhProbe:
     def open_prs(self) -> Optional[list]:
         return self._api(f"repos/{self.repo}/pulls?state=open&per_page=100")
 
-    def pr_merge_state(self, number: int) -> Optional[str]:
-        """GitHub's `mergeable_state` ('dirty' = conflicting); None = could not look. The list endpoint omits it."""
-        d = self._api(f"repos/{self.repo}/pulls/{number}")
-        st = d.get("mergeable_state") if isinstance(d, dict) else None
-        return None if st in (None, "unknown") else st
+    def pr_merge_state(self, number: int, *, attempts: int = 4, wait_s: float = 3.0,
+                       sleep: Callable[[float], None] = time.sleep) -> Optional[str]:
+        """GitHub's `mergeable_state` ('dirty' = conflicting); None = could not look. The list endpoint omits it.
+
+        GitHub computes mergeability LAZILY: the first GET of a PR nobody has opened recently answers `unknown` and
+        starts the computation, and a re-read seconds later answers the real state. Reading `unknown` once and
+        reporting could_not_look made the 06:59Z 2026-11-06 escalation (WSD-S6D, manager): a session re-reading the
+        same PRs a minute later got blocked/dirty for every one. So `unknown` is re-read up to `attempts` times
+        before it becomes None; an API failure is None at once (that is genuinely could-not-look)."""
+        for i in range(max(1, attempts)):
+            d = self._api(f"repos/{self.repo}/pulls/{number}")
+            if not isinstance(d, dict):
+                return None
+            st = d.get("mergeable_state")
+            if st not in (None, "unknown"):
+                return st
+            if i < attempts - 1:
+                sleep(wait_s)
+        return None
 
     def collector_status(self, window_hours: float, now: datetime) -> Optional[dict]:
         from scripts.research import collect_runner_results as crr

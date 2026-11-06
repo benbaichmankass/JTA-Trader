@@ -646,7 +646,13 @@ jobs:
       # PR") forever. Close any open batch PR older than 90 min (a healthy one merges in ~15-60 min); the next collect
       # re-collects its runs. A stamp PR is closed only after 6 h: dispatch_queue.py adopts the stamp of one older than
       # STRANDED_STAMP_HOURS (3 h) into its own fresh landing first, so the old PR is inert by then. Fails open.
-      - name: Close stale landing PRs (batch results older than 90 min, stamps older than 6 h)
+      # RECEIPTS ARE LATEST-WINS (WSD-S6D, manager 2026-11-06 07:01Z): a receipt PR rewrites ONE whole file and carries
+      # nothing else, so every receipt PR older than the newest open one is superseded the moment the newer one exists.
+      # Before this, only batches and stamps were closed: #23575 (00:35Z) and #23636 (03:36Z) sat DIRTY against each
+      # other and #23677 for hours and tripped the watchdog's conflicted_automation alarm. Stamp PRs keep the 6 h rule:
+      # a newer stamp PR does NOT always re-carry every older stamp (b621-01, 2026-11-06), so closing one early could
+      # drop the open-PR dedupe a re-armed unit relies on.
+      - name: Close stale landing PRs (batch results older than 90 min, stamps older than 6 h, every receipt but the newest)
         continue-on-error: true
         env:
           GH_TOKEN: ${{ secrets.BRANCH_PROTECTION_TOKEN }}
@@ -656,6 +662,13 @@ jobs:
                 --jq '.[] | select(((.head.ref | startswith("automation/research-results-batch")) and ((now - (.created_at | fromdateiso8601)) > 5400)) or ((.head.ref | startswith("automation/research-queue-stamp")) and ((now - (.created_at | fromdateiso8601)) > 21600))) | .number'); do
             echo "closing stale landing PR #${n}"
             gh pr close "${n}" --repo "${GITHUB_REPOSITORY}" --comment "Closed by the research dispatcher (B6): this landing did not merge in time. The next cycle re-collects its runs / adopts its stamps." || true
+          done
+          receipts="$(gh api "repos/${GITHUB_REPOSITORY}/pulls?state=open&per_page=100" --paginate \
+                --jq '.[] | select(.head.ref | startswith("automation/research-queue-receipt")) | "\(.created_at) \(.number)"' | sort)"
+          newest="$(printf '%s\n' "${receipts}" | tail -n 1 | awk '{print $2}')"
+          for n in $(printf '%s\n' "${receipts}" | head -n -1 | awk '{print $2}'); do
+            echo "closing superseded receipt PR #${n} (newest open receipt is #${newest})"
+            gh pr close "${n}" --repo "${GITHUB_REPOSITORY}" --comment "Closed by the research dispatcher: superseded. The dispatch receipt is one whole file and latest-wins; #${newest} carries the newer receipt." || true
           done
 
       # The receipt json is ONE file that every run rewrites, so two receipt PRs
