@@ -72,7 +72,7 @@ def _restage_pair(text: str) -> str:
         if m:
             acct = m.group(1)
         elif acct in (LIVE_ACCOUNT, MIRROR_ACCOUNT) and ln.startswith("    strategies: ["):
-            head, _, _rest = ln.partition("]")
+            _, _, _rest = ln.partition("]")
             lines[i] = f"    strategies: [{PRE_DECISION_PAIR}]" + _rest
     return "".join(lines)
 

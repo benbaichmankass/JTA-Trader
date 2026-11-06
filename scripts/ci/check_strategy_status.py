@@ -104,6 +104,19 @@ def findings(accounts: Dict[str, Any], strategies: Dict[str, Any]) -> List[str]:
 
 
 def self_test() -> int:
+    # The synthetic tree below uses iaum_pullback_1d as its NAMED dual-book exception (the shape the real store
+    # carried until 2026-11-06). The real entry left with PROD-LEGS-DSR-DECISION, so the fixture installs its own
+    # for the run and restores the real table after -- every control is unchanged.
+    saved = dict(DUAL_BOOK_EXCEPTIONS)
+    DUAL_BOOK_EXCEPTIONS.setdefault("iaum_pullback_1d", "alpaca_paper")
+    try:
+        return _self_test_body()
+    finally:
+        DUAL_BOOK_EXCEPTIONS.clear()
+        DUAL_BOOK_EXCEPTIONS.update(saved)
+
+
+def _self_test_body() -> int:
     ok = True
 
     def ck(name: str, cond: bool) -> None:

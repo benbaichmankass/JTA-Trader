@@ -1,6 +1,6 @@
 # Real-money legs on the trial ledger's DSR + BHY bar (2026-11-06)
 
-> **Doc status:** `live` · category `evidence` · last verified `2026-11-06` · registered in [`docs/DOCUMENT-INDEX.md`](../DOCUMENT-INDEX.md) · lane `PROD-LEGS-DSR-DECISION` (row `docs/claude/work/checklist/PROD-LEGS-DSR-DECISION.json`, roadmap `L-LADDER`)
+> **Doc status:** `unknown` · category `evidence` · last verified `never` · registered in [`docs/DOCUMENT-INDEX.md`](../DOCUMENT-INDEX.md) · lane `PROD-LEGS-DSR-DECISION` (row `docs/claude/work/checklist/PROD-LEGS-DSR-DECISION.json`, roadmap `L-LADDER`)
 
 Gates this adds or changes: none. It applies the operator's decision below to the rosters. No bar, guard or mandate changes.
 
