@@ -2,7 +2,7 @@
 id: RQ-20261101-b625-01
 title: 'ENTRY timeframe lever, 4h bars with bar-count scaling: does the pooled ENTRY pipeline (v1 recipe, 60 perps, dev folds) keep an edge net of the full cost stack at 4h, does it beat the 1h baseline,
   and which features keep their role? (bar-count scaling: the SAME numbers of BARS as the 1h recipe (windows 1/4/12/24/72/168 bars, ATR 14, label horizon 24 bars, decide every 4th bar)) Dev folds only'
-status: queued
+status: done
 cadence: once
 theme: ml_health
 priority: 1
@@ -122,4 +122,22 @@ grading_before_rearm:
     confirmatory re-run)'
   reason: 2 row(s), all measured, all fail (3 earlier producer_failed / re-graded wiring_only row(s) superseded)
   rows: 2
+  verdict: fail
+grading:
+  attested: RULE-20261101-b625-01
+  auto: true
+  decision_rule_id: RULE-20261101-b625-01
+  evidence:
+  - research/results/RQ-20261101-b625-01/41393277552.jsonl
+  - research/results/RQ-20261101-b625-01/41397563698.jsonl
+  - research/results/RQ-20261101-b625-01/41403727842.jsonl
+  - research/results/RQ-20261101-b625-01/41541514796.jsonl
+  - research/results/RQ-20261101-b625-01/41563147434.jsonl
+  - research/results/RQ-20261101-b625-01/42157944198.jsonl
+  graded_at: '2026-11-06'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 3 row(s), all measured, all fail (3 earlier producer_failed / re-graded wiring_only row(s) superseded)
+  rows: 3
   verdict: fail

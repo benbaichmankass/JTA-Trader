@@ -4,7 +4,7 @@
 id: RQ-20261105-c692-15
 title: 'Held-out RE-READ of the c692-12 frozen ML SL revision v2 config (BE/BE1/TRAIL/TRAIL15, margin 0.40) on 2025-10..2026-09 under
   the deflated MANAGE bar (5th read, z 2.57): does it add net R over hold-to-bracket?'
-status: queued
+status: done
 cadence: once
 theme: ml_health
 priority: 1
@@ -117,3 +117,16 @@ ml_consumer:
   - xrp_pullback_2h
   book: money
 last_dispatched_at: '2026-11-06T00:03:45+00:00'
+grading:
+  attested: RULE-RQ20261105c69215-MLSL2-HO
+  auto: true
+  decision_rule_id: RULE-RQ20261105c69215-MLSL2-HO
+  evidence:
+  - research/results/RQ-20261105-c692-15/42126677450.jsonl
+  graded_at: '2026-11-06'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 2 row(s), all measured, all fail
+  rows: 2
+  verdict: fail
