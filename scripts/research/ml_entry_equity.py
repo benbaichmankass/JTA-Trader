@@ -282,7 +282,7 @@ def export_stage(tab: pd.DataFrame, config: str, tau: float, pool: list[str], ex
     shipped, model, text, sha, params = ("A_confirm_params", ma, text_a, sha_a, {**BASE_PARAMS, **cfg["params"]}) if match else \
         ("B_pinned_deterministic", mb, text_b, sha_b, {**BASE_PARAMS, **cfg["params"], **PINNED})
     samp = tr.sort_values("ts").tail(20000)
-    pa, pb = ma.predict(samp[feats]), mb.predict(samp[feats])
+    pa, pb = ma.predict(samp[feats]), mb.predict(samp[feats])  # provenance: predict -- LGBMRegressor.predict is the regressed LONG net R, not a probability
     delta = {"n_rows": int(len(samp)), "max_abs": float(np.max(np.abs(pa - pb))), "mean_abs": float(np.mean(np.abs(pa - pb))),
              "spearman": float(pd.Series(pa).corr(pd.Series(pb), method="spearman")),
              "decision_agreement_at_tau": float(np.mean((pa > tau) == (pb > tau))), "taken_a": int((pa > tau).sum()), "taken_b": int((pb > tau).sum()),
