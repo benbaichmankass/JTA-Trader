@@ -16,8 +16,8 @@ touches ``ml/served``; the workflow turns a PASS into a DRAFT PR and a human mer
   3. Candidate and served score the SAME rows with the registered policy; net R is ``ml_decision_entry.label_symbol`` (the full cost
      stack: fee 11 bps, slippage 3 bps, funding 1 bps per 8 h window).
   4. AMENDMENT 1 (operator 2026-11-06 ~16:58Z, "the retrained version goes live if ... it does at least as well as the live one"):
-     a REPLACEMENT passes iff BOTH models have n >= 300 on >= 10 symbols AND candidate mean net R >= served mean net R. Under the
-     floor on either model -> ``insufficient_n``; candidate worse -> ``fail``. The absolute deflated bar and the CI are reported,
+     a REPLACEMENT passes iff BOTH models have n >= 100 per side (Amendment 2; 300 stays for the absolute read) on >= 10 symbols AND
+     candidate mean net R >= served mean net R. Under the floor on either model -> ``insufficient_n``; candidate worse -> ``fail``. The absolute deflated bar and the CI are reported,
      not gating.
 
   python3 scripts/research/ml_entry_candidate_grade.py run --cache DIR --out DIR [--run-date YYYY-MM-DD] [--candidate-json F]
@@ -46,6 +46,7 @@ RULE_ID = "RULE-ENTRY-PROMOTE-20261106"
 RULE_DOC = REPO / "docs/research/ml-entry-promotion-rule-2026-11-06.md"
 WINDOW_DAYS = 14
 FAMILY = "ENTRY"
+REPLACEMENT_N_FLOOR = 100   # AMENDMENT 2: per side, for a replacement verdict; E.N_FLOOR (300) stays for the absolute / edge read
 
 
 def plan(run_date: date, window_days: int = WINDOW_DAYS) -> dict:
@@ -66,14 +67,15 @@ def hourly_gaps(ts) -> list:
 
 
 def rule_verdict(cand: dict, served: dict, bar: dict) -> tuple[str, list[str]]:
-    """RULE-ENTRY-PROMOTE-20261106 AS AMENDED (Amendment 1, operator 2026-11-06 ~16:58Z): a REPLACEMENT of an already-served model
-    passes iff BOTH models clear the sample floor on the same window AND candidate mean net R >= served mean net R. The absolute
+    """RULE-ENTRY-PROMOTE-20261106 AS AMENDED (Amendment 1, operator 2026-11-06 ~16:58Z; Amendment 2, floor n>=100 per side): a
+    REPLACEMENT of an already-served model passes iff BOTH models clear the replacement floor on the same window AND candidate
+    mean net R >= served mean net R. The absolute
     deflated bar (``bar``) and the CI are information only. Pure, so the self-test can drive every branch."""
     why = []
     for name, d in (("candidate", cand), ("served", served)):
         n, ns = d.get("n", 0), d.get("n_symbols", 0)
-        if n < E.N_FLOOR or ns < E.SYMBOL_FLOOR:
-            why.append(f"{name} n={n} (floor {E.N_FLOOR}) / symbols={ns} (floor {E.SYMBOL_FLOOR})")
+        if n < REPLACEMENT_N_FLOOR or ns < E.SYMBOL_FLOOR:
+            why.append(f"{name} n={n} (replacement floor {REPLACEMENT_N_FLOOR}) / symbols={ns} (floor {E.SYMBOL_FLOOR})")
     if why:
         return "insufficient_n", why
     mean, sm = cand.get("mean_net_r"), served.get("mean_net_r")
@@ -187,9 +189,9 @@ def run(a) -> int:
         ev["candidate"]["result"], ev["served"]["result"] = cand, served
         verdict, why = rule_verdict(cand, served, bar)
         ev.update(verdict=verdict, why=why, read_state="measured")
-        if verdict == "pass":
+        if True:   # the graded boosters are ALWAYS kept (a refit is not bit-reproducible, so what is promoted must be what was scored)
             tag = run_date.strftime("%Y%m%d")
-            d = out / "promote" / f"ml_decision_entry_v1r{tag}"
+            d = out / ("promote" if verdict == "pass" else "graded") / f"ml_decision_entry_v1r{tag}"
             d.mkdir(parents=True, exist_ok=True)
             art = {k: v for k, v in served_meta.items() if k not in ("booster_txt", "evidence", "provenance", "pooled_heldout_mean_net_r")}
             art.update({"model_id": f"ml-decision-entry-v1r{tag}", "candidate": False, "train_rows": int(len(train)),
@@ -197,10 +199,11 @@ def run(a) -> int:
                         "recipe_sha": hashlib.sha256(json.dumps({"f": E.FEATURES, "l": E.LGB_PARAMS}, sort_keys=True).encode()).hexdigest()[:16],
                         "evidence": [f"{RULE_ID} grade run (see grade_evidence.json beside this PR)"],
                         "provenance": f"RUNNER-BUILT refit as of {p['asof']} by scripts/research/ml_entry_candidate_grade.py; graded on "
-                                      f"{start}..{end}: n {cand['n']}, mean net R {cand['mean_net_r']:+.4f} vs served {served.get('mean_net_r')}",
+                                      f"{start}..{end}: n {cand.get('n')}, mean net R {cand.get('mean_net_r')} vs served {served.get('mean_net_r')}",
                         "booster_txt": {s: models[s].booster_.model_to_string() for s in ("long", "short")}})
             (d / "model.json").write_text(json.dumps(art, indent=1, default=str) + "\n")
-            ev["promote_dir"] = d.name
+            ev["promote_dir" if verdict == "pass" else "graded_dir"] = d.name
+            ev["graded_model_sha256"] = _sha(d / "model.json")
         (out / "grade_evidence.json").write_text(json.dumps(ev, indent=1, default=str) + "\n")
         print(f"{RULE_ID}: {verdict} | window {start}..{end} | candidate n={cand.get('n')} mean={cand.get('mean_net_r')} | "
               f"served n={served.get('n')} mean={served.get('mean_net_r')} | read {bar['n_tries']} | " + "; ".join(why), flush=True)
@@ -219,17 +222,19 @@ def _self_test() -> None:
     good = {"n": 400, "n_symbols": 30, "mean_net_r": 0.05, "se_net_r": 0.04}
     served_ok = {"n": 380, "n_symbols": 30, "mean_net_r": 0.01}
     assert rule_verdict(good, served_ok, b1)[0] == "pass"
-    assert rule_verdict({**good, "n": 299}, served_ok, b1)[0] == "insufficient_n"          # floor on the candidate
+    assert rule_verdict({**good, "n": 99}, served_ok, b1)[0] == "insufficient_n"           # floor on the candidate (replacement floor 100)
+    assert rule_verdict({**good, "n": 100}, served_ok, b1)[0] == "pass"                    # AMENDMENT 2: 100 clears, 300 is not required
     assert rule_verdict({**good, "n_symbols": 9}, served_ok, b1)[0] == "insufficient_n"
-    assert rule_verdict(good, {**served_ok, "n": 299}, b1)[0] == "insufficient_n"          # floor on the SERVED model too
+    assert rule_verdict(good, {**served_ok, "n": 99}, b1)[0] == "insufficient_n"           # floor on the SERVED model too
     assert rule_verdict({**good, "mean_net_r": 0.0}, served_ok, b1)[0] == "fail"           # worse than served
     assert rule_verdict({**good, "mean_net_r": 0.01}, served_ok, b1)[0] == "pass"          # equal counts as at least as good
     # Amendment 1: the absolute deflated bar is information only for a replacement
     assert rule_verdict({**good, "mean_net_r": 0.0018, "se_net_r": 0.065}, {**served_ok, "mean_net_r": -0.09}, b5)[0] == "pass"
     assert any("information only" in w for w in rule_verdict(good, served_ok, b5)[1])
-    # the first read (run 42250040398) under the amended rule: candidate n 281 is under the floor -> insufficient_n, not a pass
-    assert rule_verdict({"n": 281, "n_symbols": 48, "mean_net_r": 0.0018, "se_net_r": 0.065},
-                        {"n": 342, "n_symbols": 49, "mean_net_r": -0.0918, "se_net_r": 0.059}, HL.bar_for(4))[0] == "insufficient_n"
+    # the first read (run 42250040398): insufficient_n under the 300 floor of Amendment 1, a PASS on the numbers under Amendment 2
+    first = ({"n": 281, "n_symbols": 48, "mean_net_r": 0.0018, "se_net_r": 0.065}, {"n": 342, "n_symbols": 49, "mean_net_r": -0.0918, "se_net_r": 0.059})
+    assert rule_verdict(*first, HL.bar_for(4))[0] == "pass"
+    assert rule_verdict({**first[0], "n": 99}, first[1], HL.bar_for(4))[0] == "insufficient_n"
     import pandas as pd
     t = pd.Series(pd.date_range("2026-10-27", periods=6, freq="h", tz="UTC")).drop([2, 3])
     assert hourly_gaps(t) == [{"after": "2026-10-27 01:00:00+00:00", "before": "2026-10-27 04:00:00+00:00"}], hourly_gaps(t)
