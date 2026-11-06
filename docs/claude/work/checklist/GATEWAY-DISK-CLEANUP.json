@@ -11,14 +11,14 @@
   "tier": 2,
   "prs": "#23138",
   "blocked_on": [],
-  "note": "OPERATOR popup ~05:35Z 2026-11-05, verbatim: \"A+B+C now, rehearse D (Recommended)\" (relayed by Manager Session 2026-11-04b session_01AFoLuN7HERxg65eHjtmMYE). Findings PI-20261104-GWDISK-0001 / PR #23101. Basis: 1 of 1 df read of the gateway root fs (gateway-disk-report #23095 at 2026-11-05T03:10Z): 45G, 94%, 2.9G free; growth slope from the ledger daily samples window 2026-10-13..2026-11-04. A journald vacuum+cap 500M; B git clean comms/research after dry run; C git prune-packed; D rehearsal only, swap plan to manager. Ceiling $8. New Tier-2 system-action gateway-disk-cleanup (PR #23138). DONE 2026-11-05 (MEASURED, gateway root fs 45G, 1 df read per step): A #23155 freed 3.52G (80%->72%); B #23157 dry run 37 paths / 9,515,465,452 bytes, apply #23158 freed 8.50G (72%->53%); C #23162 freed 0.00G (an out-of-lane gc had already pruned ~6.5G between 2026-11-05T03:10Z and 06:52Z); D #23171 rehearsal ok (depth-1 sparse clone .git 293M + 2.2G worktree, 2 sync ticks rc=0, check_ib_gateway --dry-run healthy), no swap; side-clone kept (58%, 19.00G free at 07:18Z). Swap decision + E follow on PI-20261104-GWDISK-0001 (check_observation, due 2026-11-06).",
+  "note": "OPERATOR popup ~05:35Z 2026-11-05, verbatim: \"A+B+C now, rehearse D (Recommended)\" (relayed by Manager Session 2026-11-04b session_01AFoLuN7HERxg65eHjtmMYE). Findings PI-20261104-GWDISK-0001 / PR #23101. Basis: 1 of 1 df read of the gateway root fs (gateway-disk-report #23095 at 2026-11-05T03:10Z): 45G, 94%, 2.9G free; growth slope from the ledger daily samples window 2026-10-13..2026-11-04. A journald vacuum+cap 500M; B git clean comms/research after dry run; C git prune-packed; D rehearsal only, swap plan to manager. Ceiling $8. New Tier-2 system-action gateway-disk-cleanup (PR #23138). DONE 2026-11-05 (MEASURED, gateway root fs 45G, 1 df read per step): A #23155 freed 3.52G (80%->72%); B #23157 dry run 37 paths / 9,515,465,452 bytes, apply #23158 freed 8.50G (72%->53%); C #23162 freed 0.00G (an out-of-lane gc had already pruned ~6.5G between 2026-11-05T03:10Z and 06:52Z); D #23171 rehearsal ok (depth-1 sparse clone .git 293M + 2.2G worktree, 2 sync ticks rc=0, check_ib_gateway --dry-run healthy), no swap; side-clone kept (58%, 19.00G free at 07:18Z). Swap decision + E follow on PI-20261104-GWDISK-0001 (check_observation, due 2026-11-06).  || SWAP DONE 2026-11-06 (operator popup ~00:09Z verbatim 'Do the swap'): swap-sideclone #23572 01:47Z (live now depth-1 sparse, .git 305M); verify #23626 04:03Z (git-sync/watchdog exit 0 on new checkout, check_ib_gateway healthy=True); old-remove #23642 04:20Z, df 59% -> 19% (36.60G free), freed 18.16G. PI-20261104-GWDISK-0001 closed done. Merged!=deployed!=observed: all three observed on the gateway VM. Open (not this row): docker log cap at next recreate.",
   "due_by": "2026-11-07",
   "roadmap": [
     "unmapped"
   ],
   "roadmap_unmapped_reason": "infra disk hygiene on the IB gateway VM; no milestone",
-  "updated_at": "2026-11-05T07:30:19Z",
-  "updated_by": "session_01AFoLuKEvHHsY3TiJBsYh41",
+  "updated_at": "2026-11-06T04:22:56Z",
+  "updated_by": "session_01AFoLuNHmhTLMs8cmsb7GjY",
   "writeback": {
     "roadmap": "none: infra disk hygiene on the IB gateway VM, row is roadmap-unmapped",
     "arch": "none: adds one ops system-action; no architecture contract changed"
