@@ -1,3 +1,4 @@
+# wiring: manual-only - serving foundation for the ml_entry_eq leg; imported by the leg's signal builder and the pool-snapshot refresher in the follow-up Tier-2 PR (spec docs/research/ml-entry-eq-serve-spec-2026-11-06.md); until then it is exercised by tests/test_ml_entry_eq_features.py only
 """Serving features for the EQUITY-NATIVE ENTRY model ``ml_entry_eq`` (row ML-ENTRY-EQUITY-NATIVE; Tier 1 pure module, no I/O except the snapshot file).
 
 The SERVING copy of ``scripts/research/ml_entry_equity.build_table`` for config B (15 own-symbol features + 6 pool features; NO market-proxy and NO crypto
