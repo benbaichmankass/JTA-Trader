@@ -230,7 +230,8 @@ real top-level `docs/*.md` and fails if the population builder cannot see it.
 | `.claude/skills/programme-review/SKILL.md` | instruction | live | — | 2026-10-28 | `dir:skills-are-binding-workflows / harness:skill-is-loaded-and-invocable` | — |
 | `.claude/skills/research-ops/SKILL.md` | instruction | live | — | 2026-10-28 | `dir:skills-are-binding-workflows / harness:skill-is-loaded-and-invocable` | — |
 | `.claude/skills/sprint-format/SKILL.md` | instruction | live | — | 2026-09-07 | `dir:skills-are-binding-workflows / harness:skill-is-loaded-and-invocable` | — |
-| `.claude/skills/system-report/SKILL.md` | instruction | live | — | 2026-09-07 | `dir:skills-are-binding-workflows / harness:skill-is-loaded-and-invocable` | — |
+| `docs/archive/2026-11-06-skills-prune/system-report/SKILL.md` | instruction | unknown | — | never | `not-assessed / not-assessed` | — |
+| `docs/archive/2026-11-06-skills-prune/research-ops-what-changed-2026-10-16.md` | unknown | unknown | — | never | `not-assessed / not-assessed` | — |
 | `.claude/skills/trading-desk/AMENDMENTS.md` | instruction | unknown | — | never | `dir:skills-are-binding-workflows / not-assessed` | — |
 | `.claude/skills/trading-desk/DESK-BRIEF.md` | instruction | live | — | 2026-10-27 | `dir:skills-are-binding-workflows / harness:skill-is-loaded-and-invocable` | — |
 | `.claude/skills/trading-desk/SHORT-HOLD-BRIEF.md` | instruction | live | — | 2026-10-27 | `dir:skills-are-binding-workflows / harness:skill-is-loaded-and-invocable` | — |
@@ -320,6 +321,7 @@ real top-level `docs/*.md` and fails if the population builder cannot see it.
 | `docs/audits/2026-11-01-from-scratch/AUDIT.md` | evidence | unknown | — | never | `dir:audits-are-measurement / not-assessed` | — |
 | `docs/audits/2026-11-04-per-symbol-config-inventory.md` | evidence | unknown | — | never | `dir:audits-are-measurement / not-assessed` | — |
 | `docs/audits/2026-11-04-system-integration.md` | evidence | unknown | — | never | `dir:audits-are-measurement / not-assessed` | — |
+| `docs/audits/2026-11-06-guard-prune.md` | evidence | unknown | — | never | `dir:audits-are-measurement / not-assessed` | — |
 | `docs/audits/M1-comms-audit-2026-05-07-fresh.md` | evidence | unknown | — | never | `dir:audits-are-measurement / not-assessed` | — |
 | `docs/audits/M1-comms-audit-followups-fresh.md` | evidence | unknown | — | never | `dir:audits-are-measurement / not-assessed` | — |
 | `docs/audits/amend-parity-2026-10-25.md` | evidence | unknown | — | never | `dir:audits-are-measurement / not-assessed` | — |
@@ -600,6 +602,7 @@ real top-level `docs/*.md` and fails if the population builder cannot see it.
 | `docs/plans/ENGINEERING-PLAN-2026-09-21.md` | plan | unknown | — | never | `name:plan-is-a-forward-commitment / not-assessed` | — |
 | `docs/plans/ML-PROGRAMME-2026-10-28.md` | plan | unknown | — | never | `name:plan-is-a-forward-commitment / not-assessed` | ONE consolidated ML programme: models that manage trades, TM-BENCH, 8 tracks, proposed infra rows, learning ledger. |
 | `docs/plans/ML-ROADMAP-MECE-2026-11.md` | plan | unknown | — | never | `name:plan-is-a-forward-commitment / not-assessed` | MECE map of ML model families onto the ten trade-lifecycle decisions (D1-D10): per-slot question/baseline/label/harness, position aggregator (Mastiff) design, research dependency graph, compute demand, ranked proposals for Thursday planning. Propose-only. |
+| `docs/plans/WATCHDOG-CONSOLIDATION-DESIGN-2026-11-06.md` | plan | unknown | — | never | `not-assessed / not-assessed` | — |
 | `docs/plans/counterfactual-everywhere-DESIGN-2026-10-29.md` | plan | unknown | — | never | `name:plan-is-a-forward-commitment / not-assessed` | — |
 | `docs/plans/ml-live-promotion-plan-2026-10-29.md` | plan | unknown | — | never | `name:plan-is-a-forward-commitment / not-assessed` | Short path to put 3-5 ML models into live decision loops by 2026-11-02 on existing consumers: pre-registered gates, day-by-day build steps, Tier map, 8 MODEL infra rows. |
 | `docs/plans/ml-pipeline-design-2026-10-29.md` | architecture | unknown | — | never | `name:design-declares-a-contract / not-assessed` | The ML assembly line from the money roster backward: six stations (dataset, CPCV, gate, shadow, canary, CUSUM/retrain) with owner, cadence and own quality metric; measured gap per station; ranked build rows; ML intake rule. |

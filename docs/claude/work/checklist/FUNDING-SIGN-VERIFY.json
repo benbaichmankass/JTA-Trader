@@ -1,0 +1,22 @@
+{
+  "id": "FUNDING-SIGN-VERIFY",
+  "title": "exchange_funding funding_usd sign is opposite to bybit_transaction_log; verify the cost sweep's funding_paid_usd direction",
+  "phase": null,
+  "state": "queued",
+  "owner": "manager",
+  "lane": null,
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [],
+  "blocked_on": [],
+  "note": "Found 2026-11-06 by BYBIT2-FUNDING-SETTLEMENT-READ: store XRP 2026-11-03 08:00 bybit_2 = +0.00601633, bybit_transaction_log = -0.00601633 (negative = paid). Compare a settlement against the venue, then read scripts/ops/backfill_broker_truth_costs.py to see which sign the sweep assumes. A flip of the stored or consumed sign is Tier 2, data-backed. Rerun: /api/diag/funding_settlements?account_id=bybit_2 (settlements vs exchange_funding.rows). 2026-11-06 VERIFIED: 7 bybit_2 settlements across 2 symbols (XRP 11-03 08:00, 11-03 00:00, 10-31 00:00, 10-30 16:00, 10-30 08:00, 10-27 00:00; ETH 10-31 16:00): stored funding_usd = exactly minus the bybit_transaction_log SETTLEMENT funding (same magnitude, opposite sign); the 11-03 day sum of log rows (-0.0083) matches wallet_truth by_day. Readers (broker_cost_attribution funding_paid=-sum; live_review_due paid=funding_usd<0) all expect NEGATIVE=paid, so the STORE was inverted and funding_paid_usd would have been inverted. Fix in #23570: puller negates ccxt amount; one-shot idempotent migration flips legacy bare-id rows and namespaces their ids. Legacy composite-fallback ids (contain ':') are not migrated; none expected. Observe after deploy: funding_settlements?account_id=bybit_2 exchange_funding.rows vs settlements, equal sign.",
+  "due_by": "2026-11-08",
+  "roadmap": [
+    "L-DATA"
+  ],
+  "updated_at": "2026-11-06T00:33:34Z",
+  "updated_by": "lane-bybit2-funding",
+  "_seq": 959
+}

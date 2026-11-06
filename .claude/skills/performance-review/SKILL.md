@@ -54,6 +54,23 @@ mechanics findings there, do not let them crowd out performance); models (`/ml-r
 the merge slot with `scripts/ops/claim_merge_slot.py --branch-claim --branch <branch> --held-by
 <session-id>` before landing (`.claude/skills/manager/SKILL.md`).
 
+## Scoreboard first — before Layer 0 (operator audit C6, 2026-11-01; row `PROMPTS-PNL-FIRST`)
+
+**This review opens with money, not with its own activity.** Before grading any prior call, pull the scoreboard and put it at the top of
+the brief as `## S. Scoreboard`:
+
+- **Source.** The scoreboard route built by row `SCOREBOARD-PNL-FIRST` (reference its route in the brief once that row lands; until then
+  the numbers come from the public `/api/bot/performance` and the journal paging API, the sources `docs/audits/2026-11-01-from-scratch/AUDIT.md`
+  § 1 used). **Net $ and % per book** (real money, mirror, paper), each with its population, window and read-state; a missing number
+  renders as "—", never `0`.
+- **The question.** For every leg that this review's headline touches: *"would a sceptical quant believe this leg has edge?"* Answer it
+  from the leg's offline evidence record, net of the full cost stack (the promotion ladder: edge is decided offline), not from this
+  week's live P&L or from how many of our own calls came true. State the answer in a line, with the evidence it rests on or "no record".
+- **Call-hit grading is housekeeping, not a headline.** Layer 0 still runs (it is how a call that did not happen is caught), but its
+  counts, hit rate and Brier go in ONE footer line of `## 0`, **never in the title sentence, never above the scoreboard, and never as
+  a measure of the system's health**. A high hit rate on our own calls says nothing about whether the book makes money.
+- This adds **no gate**: nothing is refused for lacking it. It orders what the brief says first.
+
 ## Layer 0 — grade the previous review's calls (always first)
 
 **Follow-through first (2026-10-28):** run `python3 scripts/ops/review_followthrough.py --source performance-review --window-days 7` and record its cohort and backlog line before grading calls; an open item older than 14 d with no owner is a call to schedule or kill, not to re-file.
@@ -181,7 +198,8 @@ Two files, one PR. The markdown is for the operator; the JSON is for the next re
 
 ```
 # Performance review <date> — <one-sentence answer: what most affects money now>
-## 0. Prior calls      — table: call · p · check re-run · result (hit/miss/unresolved/void) · action happened?
+## S. Scoreboard       — net $/% per book, with population; the sceptical-quant line per headline leg (above)
+## 0. Prior calls      — table: call · p · check re-run · result (hit/miss/unresolved/void) · action happened? One footer line carries the counts/Brier; none of it is a headline.
 ## 1. CHECKS           — C1–C12 tables; populations and windows; could_not_look listed. Numbers only.
 ## 2. ANALYSIS         — per material question: hypotheses · test run · result · survivor · p · money at stake
 ##    Surprises        — what did not fit, and what you did about it

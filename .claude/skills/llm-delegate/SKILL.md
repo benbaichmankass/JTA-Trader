@@ -210,7 +210,6 @@ bugs" is the kind of unprovenanced claim this repo exists to stamp out.
 
 ## Composes with
 
-- **`delegate-work`** — the three in-house modes (parallel tool calls, background
-  Agent fan-out, operator-spawned sub-sessions). This is the cheapest fourth mode,
+- **In-house modes** (parallel tool calls, background Agent fan-out, manager-dispatched lanes per `manager` SKILL; the `delegate-work` skill is retired). This is the cheapest extra mode,
   and the only one that leaves your infrastructure.
 - **`git-actions`** — dispatch mechanics when `run_workflow` is unavailable.
