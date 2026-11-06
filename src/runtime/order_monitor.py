@@ -12339,6 +12339,17 @@ def _bybit_sl_leg_trigger(leg: dict):
     return None
 
 
+def _venue_snapshot_batch():
+    """One write transaction for every venue snapshot a broker sweep queues (MECH-FOLLOWUPS-1105): see
+    ``venue_protection_snapshot.batch``. Never raises; falls back to a no-op context so a sweep is unaffected."""
+    try:
+        from src.runtime import venue_protection_snapshot as _vps
+        return _vps.batch()
+    except Exception:  # noqa: BLE001 — observe-only
+        from contextlib import nullcontext
+        return nullcontext()
+
+
 def _snapshot_venue_read(row, account_id: str, venue: str, *,
                          cov: Optional[Dict[str, Any]] = None,
                          unreadable: Optional[str] = None) -> None:
@@ -17128,7 +17139,7 @@ def run_reconciliation_tick(
     # cancelled at the RTH close, so it is broker-naked yet invisible to the
     # DB-driven check above. This re-arms a GTC OCO for any such position.
     try:
-        with _phase("check_broker_naked_equity_positions"):
+        with _phase("check_broker_naked_equity_positions"), _venue_snapshot_batch():
             broker_naked_summary = _check_broker_naked_equity_positions(db)
         # ONE line per sweep with EVERY outcome counter, zeros included — the
         # only place these are observable. The `summaries` dict below is
@@ -17157,7 +17168,7 @@ def run_reconciliation_tick(
     # (IB_BROKER_NAKED_CHECK_SECONDS, default 300s) so the account-wide IB order
     # read is never a per-tick cost (BL-20260609 pacing class).
     try:
-        with _phase("check_broker_naked_ib_positions"):
+        with _phase("check_broker_naked_ib_positions"), _venue_snapshot_batch():
             ib_naked_summary = _check_broker_naked_ib_positions(db)
         if ib_naked_summary.get("broker_naked") or ib_naked_summary.get("errors"):
             summaries["__broker_naked_ib__"] = ib_naked_summary
@@ -17177,7 +17188,7 @@ def run_reconciliation_tick(
     # does. The real-money bybit_2 XRPUSDT no-bracket incident (2026-07-29)
     # disproved the earlier "Bybit atomic at entry, can't go naked" assumption.
     try:
-        with _phase("check_broker_naked_bybit_positions"):
+        with _phase("check_broker_naked_bybit_positions"), _venue_snapshot_batch():
             bybit_naked_summary = _check_broker_naked_bybit_positions(db)
         if _bybit_naked_summary_reportable(bybit_naked_summary):
             summaries["__broker_naked_bybit__"] = bybit_naked_summary

@@ -11,14 +11,14 @@
   "tier": 1,
   "prs": [],
   "blocked_on": [],
-  "note": "From FREE-CAPACITY-PLAN (a), lane session_01AFoLuLpeKyaLTmVTigniMw. MEASURED (trainer-vm-diag #23583, journal session-N.scope Consumed lines): one SSH session a day ending 05:50-06:07Z consumes 19-26 CPU-min (10-31 21 min, 11-01 20, 11-02 20, 11-03 19, 11-04 20, 11-05 20); SSH sessions total 3.54 CPU-h in 6.75 d (15% of trainer CPU). ATTRIBUTION: UNVERIFIED. It is NOT replay-pregate-nightly (its scheduled runs start 11:40-12:03Z, runs 41441616392..42023008263) and NOT kaggle-backups (no scheduled runs). Candidates, unverified: market-data-lake.yml (cron 03:41Z, rsyncs data/options_history from the trainer) or another early-UTC trainer-SSH workflow running late. STEP 1: trainer-vm-diag at ~05:40Z: ps -eo pid,etimes,pcpu,args --sort=-pcpu | head, plus journalctl _COMM=sshd around 05:30Z, to name the command. STEP 2: move that work to the runner side (do the compute on the GitHub runner, copy only inputs), or make it incremental. Done when: the daily session-scope CPU line on the trainer is under 3 min. Basis: n=6 daily sessions (10-31..11-05); 15% = 3.54 of 23.55 trainer CPU-h over 6.75 d.",
+  "note": "From FREE-CAPACITY-PLAN (a), lane session_01AFoLuLpeKyaLTmVTigniMw. MEASURED (trainer-vm-diag #23583, journal session-N.scope Consumed lines): one SSH session a day ending 05:50-06:07Z consumes 19-26 CPU-min (10-31 21 min, 11-01 20, 11-02 20, 11-03 19, 11-04 20, 11-05 20); SSH sessions total 3.54 CPU-h in 6.75 d (15% of trainer CPU). ATTRIBUTION: UNVERIFIED. It is NOT replay-pregate-nightly (its scheduled runs start 11:40-12:03Z, runs 41441616392..42023008263) and NOT kaggle-backups (no scheduled runs). Candidates, unverified: market-data-lake.yml (cron 03:41Z, rsyncs data/options_history from the trainer) or another early-UTC trainer-SSH workflow running late. STEP 1: trainer-vm-diag at ~05:40Z: ps -eo pid,etimes,pcpu,args --sort=-pcpu | head, plus journalctl _COMM=sshd around 05:30Z, to name the command. STEP 2: move that work to the runner side (do the compute on the GitHub runner, copy only inputs), or make it incremental. Done when: the daily session-scope CPU line on the trainer is under 3 min. Basis: n=6 daily sessions (10-31..11-05); 15% = 3.54 of 23.55 trainer CPU-h over 6.75 d. 2026-11-06T06:50Z ATTRIBUTED (trainer-vm-diag #23687, run 42172847671; MEASURED): the ~20 CPU-min trainer load was replay-pregate-nightly run 42163870722. Its pregate job launched the fleet pre-gate detached on the trainer at 04:46:51Z and polled by ssh every ~31 s from 134.138.42.34 (GitHub-hosted runner, user ubuntu) until 06:07:50Z; trainer session-15136.scope deactivated 06:07:24Z having consumed 19min 45.5s CPU (user-1001.slice 21min 3s); results fetched 06:07:46-50Z, report landed 06:20Z. Not a VM timer, not the live VM. Population: trainer journal 05:30-06:15Z session scopes + sshd + Consumed lines. Next: move the pre-gate off the trainer or out of the 04:40-06:10Z window that overlaps trainer jobs.",
   "due_by": "2026-11-10",
   "roadmap": [
     "unmapped"
   ],
   "roadmap_unmapped_reason": "infra-capacity(FREE-CAPACITY-PLAN)",
   "priority_rank": 9,
-  "updated_at": "2026-11-06T01:29:48Z",
-  "updated_by": "session_01AFoLuLpeKyaLTmVTigniMw",
+  "updated_at": "2026-11-06T06:48:00Z",
+  "updated_by": "session_01AFoLuLmhUKeUzHC6CHz2uP",
   "_seq": 959
 }

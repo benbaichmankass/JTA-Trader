@@ -340,9 +340,10 @@ def _pool_and_bars(a, end_day: str):
 
 def dev_row(d: dict, unit: str, where: str) -> dict:
     """The dev record in the runner's verdict.json contract (script_run.VERDICTS / READ_STATES): a descriptive stage carries
-    verdict 'not_applicable' (run 42119511272 wrote 'descriptive', was rejected as malformed and landed as producer_failed)."""
+    verdict 'indeterminate' (run 42119511272 wrote 'descriptive' -> malformed; run 42166322024 wrote 'not_applicable' with read_state measured ->
+    research_result.validate REFUSES that pair: not_applicable is reserved for states where nothing was measured)."""
     sel = d["selected"]
-    return {"schema_version": 1, "research_unit": unit, "read_state": "measured", "verdict": "not_applicable",
+    return {"schema_version": 1, "research_unit": unit, "read_state": "measured", "verdict": "indeterminate",
             "population": (f"DEV stage: purged walk-forward OOF restricted-long decisions on the {d.get('n_pool')}-ETF Alpaca liquidity pool, "
                            f"dates <= {d.get('train_end')}, {d['n_selection_draws']} (config, tau) draws"),
             "note": ("DEV stage (walk-forward <= %s; no confirming window loaded). Selected %s: OOF mean net R %s at n=%s"
@@ -373,7 +374,7 @@ def main_run(a) -> int:
         row = dev_row(d, a.unit, a.where)
     elif a.cmd == "export":
         e = export_stage(tab, a.config, float(a.tau), pool, a.expect_sha, out)
-        row = {"schema_version": 1, "research_unit": a.unit, "read_state": "measured", "verdict": "not_applicable",
+        row = {"schema_version": 1, "research_unit": a.unit, "read_state": "measured", "verdict": "indeterminate",
                "population": f"EXPORT of {e['model_id']}: refit on rows < {TRAIN_END} over the {len(pool)}-ETF pool; no outcome after train_end read",
                "note": (f"export {e['model_id']}: confirm-params refit sha256 {e['booster_sha256_a'][:16]} "
                         f"{'MATCHES' if e['sha_match'] else 'DOES NOT MATCH'} the confirm run's {a.expect_sha}; shipped {e['shipped']}; "
