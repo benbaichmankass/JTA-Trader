@@ -3758,6 +3758,7 @@ def journal_account_reset(account_cfg: dict, *, keep_trade_id: Any = None, db: A
             from src.utils.paths import trade_journal_db_path
             db = Database(db_path=trade_journal_db_path())
         from datetime import datetime, timezone
+        from src.utils.json_notes import dump_capped
         now = datetime.now(timezone.utc).isoformat()
         rows = [t for t in (db.get_trades(filters={"account_id": aid, "status": "open"}) or [])
                 if not t.get("is_backtest") and str(t.get("id")) != str(keep_trade_id)]
@@ -3773,7 +3774,7 @@ def journal_account_reset(account_cfg: dict, *, keep_trade_id: Any = None, db: A
                           "closed_reason": "close ladder rung 3: paper account reset after a wedged OCO "
                                            "(docs/runbooks/alpaca-wedged-oco.md)"})
             db.update_trade(t["id"], {"status": "closed", "exit_reason": "account_reset", "closed_at": now,
-                                      "notes": json.dumps(notes)[:2000]})
+                                      "notes": dump_capped(notes, 2000)})
             out["closed_trades"].append(t["id"])
             if t.get("order_package_id"):
                 pkgs.add(t["order_package_id"])
