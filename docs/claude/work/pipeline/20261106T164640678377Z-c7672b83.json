@@ -7,6 +7,11 @@
   },
   "id": "PI-20261106-QH1QSHD8-0001",
   "next_action": "check_observation",
+  "observation": {
+    "due_by": "2026-11-12",
+    "how_to_check": "workflow_dispatch .github/workflows/ml-entry-retrain.yml with mode=gaps run_date=<today UTC>: gaps_report.json gap_windows / monthly_btc.internal_gaps; then read comms/research/ml_entry_grade/<run_id>/grade_evidence.json candidate.result.n from the 2026-11-12+ weekly run",
+    "what": "the 2026-10-28 hole in Binance Vision klines is still present (all 60 symbols) or has been published, and the first grade run whose 14-day window clears it reports n >= 300"
+  },
   "origin": {
     "kind": "audit",
     "ref": "lane ML-ENTRY (session_01AFoLuLLWASue7DQh1qShd8) root cause of the 2-day train_end gap, flag 4 from Manager Session 2026-11-06a; evidence in comms/research/ml_entry_grade/42250040398/grade_evidence.json (diagnostics) and PR #23859",
