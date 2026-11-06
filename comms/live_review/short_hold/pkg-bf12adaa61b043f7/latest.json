@@ -1,7 +1,7 @@
 {
- "bar": "2026-11-05T23:55:00Z",
- "bar_close": "2026-11-06T00:00:00Z",
- "built_at": "2026-11-06T00:03:05Z",
+ "bar": "2026-11-06T00:00:00Z",
+ "bar_close": "2026-11-06T00:05:00Z",
+ "built_at": "2026-11-06T00:06:04Z",
  "closed": false,
  "order_package_id": "pkg-bf12adaa61b043f7",
  "packet": {
@@ -107,9 +107,9 @@
    "previous_review": {
     "action": "flag_mechanics",
     "forecast": null,
-    "reason": "Standing mismatch: bybit_1 venue SL 1.2466 != package SL 1.2711, unchanged since the 18:01Z flag (2h on). 1.2466 is neither the package stop nor the desk's own recommended tighten 1.2430 (LR-20261105T1755Z, route recommended, action_issue null, applied_at null on the row). Not a deliberate recorded apply: I found no apply record (see flags), and the journal package still carries 1.2711. The venue\u2026",
-    "review_id": "LR-20261105T2002Z-pkg-bf12adaa61b043f7",
-    "reviewed_at": "2026-11-05T20:36:00Z",
+    "reason": "Packet still reads mismatch (bybit_1 venue SL 1.2466 vs package SL 1.2711; TP 1.1916 matches), so I record it and do not judge the exit, as instructed (PR #23497 not merged). The manager's correction stands and I withdraw my earlier 'write-back gap' framing: under MD-LTR-PAPER-AUTO the shared package stop is never moved, only the scoped account's venue legs, so a venue SL below the package SL aft\u2026",
+    "review_id": "LR-20261106T0002Z-pkg-bf12adaa61b043f7",
+    "reviewed_at": "2026-11-06T00:10:00Z",
     "route": null
    },
    "symbol": "XRPUSDT"
@@ -120,19 +120,19 @@
      "MGC",
      "short",
      "mgc_pullback_1d",
-     0.77
+     0.816
     ],
     [
      "BTCUSDT",
      "short",
      "ml_entry",
-     -0.0272
+     -0.184
     ],
     [
      "ETHUSDT",
      "short",
      "trend_donchian_eth",
-     0.24
+     0.149
     ],
     [
      "SPY",
@@ -168,7 +168,7 @@
      "MHG",
      "short",
      "mhg_pullback_1d",
-     1.16
+     1.17
     ],
     [
      "TLT",
@@ -186,7 +186,7 @@
      "BTCUSDT",
      "short",
      "trend_donchian_1h",
-     -0.005
+     -0.131
     ],
     [
      "IAUM",
@@ -204,7 +204,7 @@
      "SOLUSDT",
      "short",
      "trend_donchian_sol_4h",
-     2.5
+     2.35
     ]
    ],
    "book_note": "[symbol, direction, leg, open_r (null = not measured)] per OTHER open package, either side",
@@ -531,16 +531,8 @@
    "basis": null
   },
   "desk_handoff": {
-   "chain_length": 20,
+   "chain_length": 21,
    "chain_tail": [
-    {
-     "action": "hold",
-     "forecast": null,
-     "reason": "Mark 1.2377 (+0.26R), unchanged; bar 1.2357-1.2398 is inside the prior range, ATR 0.0045. Still pinned on 1.2341-1.2375 support with lower highs; no break, invalidation 1.265 far, brackets unchanged. Hold.",
-     "review_id": "LR-20261105T1750Z-pkg-bf12adaa61b043f7",
-     "reviewed_at": "2026-11-05T17:51:15Z",
-     "verdict": "confirm"
-    },
     {
      "action": "tighten_sl",
      "forecast": null,
@@ -563,6 +555,14 @@
      "reason": "Mechanics mismatch only; thesis and plan not re-judged on a broken trade (opening short 1.2446, target 1.1916, invalidation 1.265 stand).",
      "review_id": "LR-20261105T2002Z-pkg-bf12adaa61b043f7",
      "reviewed_at": "2026-11-05T20:36:00Z",
+     "verdict": "confirm"
+    },
+    {
+     "action": "flag_mechanics",
+     "forecast": null,
+     "reason": "Mechanics mismatch only (by-design venue vs package SL, packet comparison fix pending); thesis and plan not re-judged on a mismatched package.",
+     "review_id": "LR-20261106T0002Z-pkg-bf12adaa61b043f7",
+     "reviewed_at": "2026-11-06T00:10:00Z",
      "verdict": "confirm"
     }
    ],
@@ -594,7 +594,7 @@
     "timeframe": "1h",
     "tp": 1.1916
    },
-   "prior_decision_id": "LR-20261105T2002Z-pkg-bf12adaa61b043f7",
+   "prior_decision_id": "LR-20261106T0002Z-pkg-bf12adaa61b043f7",
    "protocol": "DESK-HANDOFF-PROTOCOL",
    "read_state": "read"
   },
@@ -611,7 +611,7 @@
    "head": "cac1a6f5b7",
    "state": "current"
   },
-  "info_cutoff_at": "2026-11-06T00:03:57Z",
+  "info_cutoff_at": "2026-11-06T00:06:23Z",
   "leg": "claude_desk",
   "mechanics": {
    "evidence": "bybit_1: venue SL 1.2466 != package SL 1.2711",
@@ -671,25 +671,18 @@
    "cell_now": null,
    "trend_now": "trending"
   },
-  "review_id": "LR-20261106T0003Z-pkg-bf12adaa61b043f7",
+  "review_id": "LR-20261106T0006Z-pkg-bf12adaa61b043f7",
   "short_hold": {
-   "atr": 0.005035714285714302,
-   "bar": "2026-11-05T23:55:00Z",
-   "bar_close": "2026-11-06T00:00:00Z",
+   "atr": 0.005364285714285726,
+   "bar": "2026-11-06T00:00:00Z",
+   "bar_close": "2026-11-06T00:05:00Z",
    "entry": 1.2446,
-   "mark": 1.2065,
-   "minutes_held": 449.9,
-   "open_r_at_mark": 1.4377,
+   "mark": 1.2128,
+   "minutes_held": 452.9,
+   "open_r_at_mark": 1.2,
    "r_unit": "entry_to_current_sl",
    "read_state": "read",
    "recent_bars": [
-    {
-     "close": 1.2132,
-     "high": 1.2193,
-     "low": 1.2118,
-     "open": 1.2165,
-     "t": "2026-11-05T23:00:00Z"
-    },
     {
      "close": 1.2072,
      "high": 1.2137,
@@ -766,6 +759,13 @@
      "low": 1.206,
      "open": 1.2065,
      "t": "2026-11-05T23:55:00Z"
+    },
+    {
+     "close": 1.2128,
+     "high": 1.2146,
+     "low": 1.2064,
+     "open": 1.2065,
+     "t": "2026-11-06T00:00:00Z"
     }
    ],
    "risk_per_unit": null,
@@ -784,25 +784,18 @@
    "tp": 1.1916
   }
  },
- "packet_sha": "51ad2eaffb7ea0adfa71a4a9207d5159e500b0f98c3229229cb918da2e4e93b1",
+ "packet_sha": "36af3e64fd93be1444a1987b657951ec7ddee5e82c6e8ad5553be1025e79a9f5",
  "short_hold": {
-  "atr": 0.005035714285714302,
-  "bar": "2026-11-05T23:55:00Z",
-  "bar_close": "2026-11-06T00:00:00Z",
+  "atr": 0.005364285714285726,
+  "bar": "2026-11-06T00:00:00Z",
+  "bar_close": "2026-11-06T00:05:00Z",
   "entry": 1.2446,
-  "mark": 1.2065,
-  "minutes_held": 449.9,
-  "open_r_at_mark": 1.4377,
+  "mark": 1.2128,
+  "minutes_held": 452.9,
+  "open_r_at_mark": 1.2,
   "r_unit": "entry_to_current_sl",
   "read_state": "read",
   "recent_bars": [
-   {
-    "close": 1.2132,
-    "high": 1.2193,
-    "low": 1.2118,
-    "open": 1.2165,
-    "t": "2026-11-05T23:00:00Z"
-   },
    {
     "close": 1.2072,
     "high": 1.2137,
@@ -879,6 +872,13 @@
     "low": 1.206,
     "open": 1.2065,
     "t": "2026-11-05T23:55:00Z"
+   },
+   {
+    "close": 1.2128,
+    "high": 1.2146,
+    "low": 1.2064,
+    "open": 1.2065,
+    "t": "2026-11-06T00:00:00Z"
    }
   ],
   "risk_per_unit": null,
