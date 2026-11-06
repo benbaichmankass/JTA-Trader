@@ -1,0 +1,17 @@
+{
+  "due_when": {
+    "check_every_days": 3,
+    "clears_when": "a run of it executes its job, or a record says why skipping is intended",
+    "kind": "event",
+    "last_checked": "2026-11-06"
+  },
+  "id": "PI-20261106-01AFOLUJ-0003",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "lane WORKFLOW-PRUNE (Manager Session 2026-11-05b), session_01AFoLuJ6sZjv24MuhwLtDtDwuuz",
+    "rerun": "gh api 'repos/benbaichmankass/JTA-Trader/actions/workflows/sp500-membership-refresh.yml/runs?per_page=5&status=success' --jq '.total_count'"
+  },
+  "state": "queued",
+  "what": "sp500-membership-refresh (scheduled data pull) had 183 runs in 7 d and 0 executed (all skipped) in 90 d: the pull may never run. Data pull, so untouched by the prune."
+}

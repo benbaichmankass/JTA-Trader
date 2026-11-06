@@ -1,0 +1,17 @@
+{
+  "due_when": {
+    "check_every_days": 3,
+    "clears_when": "operator answers P1-P4 and the approved subset is landed as its own PR(s)",
+    "kind": "event",
+    "last_checked": "2026-11-06"
+  },
+  "id": "PI-20261106-01AFOLUJ-0001",
+  "next_action": "ask_operator",
+  "origin": {
+    "kind": "session",
+    "ref": "lane WORKFLOW-PRUNE (Manager Session 2026-11-05b), session_01AFoLuJ6sZjv24MuhwLtDtDwuuz",
+    "rerun": "python3 scripts/ops/workflow_prune_inventory.py --out /tmp/wp.json  # compare against the doc's table"
+  },
+  "state": "queued",
+  "what": "Workflow prune decisions P1-P4 (PR #23588, docs/audits/2026-11-06-workflow-prune.md): delete 21 dead + 28 skip-only relays (+21 optional), merge ~8 groups, simplify 8; mirrors retire with WORK-STORE S7. Nothing is changed until the operator answers."
+}
