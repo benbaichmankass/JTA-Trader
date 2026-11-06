@@ -6,6 +6,26 @@
 # this guard must remain "route the work to a session", because that is the
 # behaviour wanted.
 exceptions:
+  - id: MGR-20261106-HOOK-BOARDPOST-SP500
+    status: active
+    expires: "2026-11-08"
+    paths:
+      - ".claude/settings.json"
+      - ".github/workflows/board-post.yml"
+      - ".github/workflows/sp500-membership-refresh.yml"
+      - "docs/github-actions-workflows.md"
+      - "docs/claude/work/manager-scope-exception.yaml"
+    reason: >-
+      OPERATOR DIRECTION, 2026-11-06 ~16:55Z, manager session
+      session_01AFoLuJk1UWVx895RmLTidH, in auto-off mode. Asked whether to route
+      the board-post.yml deletion and the SessionStart hook shrink to a lane,
+      the operator answered verbatim "Why can't you do it yourself of of auto
+      mode?" and "Let's do it,.but again, this is something you should be able
+      to do off auto mode"; sp500-membership-refresh popup verbatim "Make it
+      monthly". The manager authors exactly these three changes (PR #23880:
+      hook text shrunk to pointers with every other hook and permission
+      unchanged, the retired board-post.yml and its catalog row removed, the
+      sp500 cron made monthly). It covers nothing else.
   - id: MGR-20261101-KEEPER-VM-FLOOR
     status: active
     expires: "2026-11-03"
