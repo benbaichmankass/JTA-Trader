@@ -130,8 +130,13 @@ STATISTICAL_EXIT = re.compile(
 #: Bracket / strategy exits (src/analysis/paper_record_classifier.py
 #: _CLEAN_EXIT_REASONS, plus ``giveback_stop`` — the M20 giveback lever, the same
 #: kind of in-strategy exit as ``stale_stop``).
+#: ``strategy_close`` = the leg's OWN close (trail_cross.CLOSE_REASON, operator 2026-10-29 "moving the
+#: stop past price means we should close it"; also the desk leg's exits). It was missing, so every such
+#: close read ``exit_journaled`` fault until a later clean trade "healed" it (claude_desk 6938, 2026-11-06).
+#: ``max_hold`` = the leg's own time-stop (ml_entry, claude_desk): deliberate, journaled by the strategy;
+#: a max_hold close with exit price/pnl NULL is a cost-write gap (pending, then a fault), not a bad reason.
 CLEAN_EXITS = frozenset({"sl", "tp", "sl_cross", "tp_cross", "exit_head", "stale_stop",
-                         "giveback_stop"})
+                         "giveback_stop", "strategy_close", "max_hold"})
 #: Not a trade decision of the leg: graded neither way. ``live_review_close`` is
 #: the live trade review closing the package (scripts/ops/live_review_apply.py
 #: LIVE_REVIEW_CLOSE), a decision taken over the leg, like ``manual``.
@@ -151,7 +156,16 @@ STAMPING_ACCOUNTS_PREFIX = ("bybit",)
 #: "awaiting_first_trade". MEASURED 2026-10-04: a pytest-left trade_journal.db at
 #: the repo root graded 32 of 48 soaks dead until this gate existed.
 JOURNAL_FRESH_DAYS = 3
-STATES = ("passed", "in_progress", "awaiting_first_trade", "mechanical_fail", "unknown")
+STATES = ("passed", "in_progress", "awaiting_first_trade", "mechanical_fail", "pending", "unknown")
+
+#: A CLOSED trade's exit price / pnl / fees are written AFTER the close row by the
+#: broker-truth cost sweep (hourly) — MEASURED 2026-11-06: trades 6936/6944/6950/6956/6938
+#: each read ``fill_and_fees`` (+ ``exit_journaled`` for the price-less 6938) as a fault
+#: in the hour after the close and clean one sweep later, which flooded the operator with
+#: mechanical_fail -> passed pings. Inside this window a close whose ONLY problems are
+#: not-yet-written costs reads PENDING (could not look), never a fault. Past it, the
+#: same gap is a real fault again (the sweep is hourly; 3 h = three missed sweeps).
+COST_WRITE_GRACE_HOURS = 3.0
 DISPOSITION_VERDICTS = ("PASS", "FAIL", "REFUSE", "KILLED", "NEEDS_DATA")
 REQUIRED = ("id", "leg", "account", "kind", "verifies", "metric", "n_needed", "checklist",
             "started", "pass_rule", "fail_rule", "monitoring", "design")
@@ -318,9 +332,28 @@ def at_entry_bracket(t: Dict[str, Any], package: Optional[Dict[str, Any]]) -> tu
     return entry, sl, tp
 
 
-def grade_trade(t: Dict[str, Any], package: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+def _within_grace(t: Dict[str, Any], now: Optional[datetime]) -> bool:
+    """True when ``now`` is given and the trade closed less than COST_WRITE_GRACE_HOURS ago.
+    An unparseable / missing closed_at is NOT inside the window (a real fault stays a fault)."""
+    if now is None or not t.get("closed_at"):
+        return False
+    try:
+        c = datetime.fromisoformat(str(t["closed_at"]).replace("Z", "+00:00"))
+    except ValueError:
+        return False
+    if c.tzinfo is None:
+        c = c.replace(tzinfo=timezone.utc)
+    age_h = (now - c).total_seconds() / 3600.0
+    return 0 <= age_h < COST_WRITE_GRACE_HOURS
+
+
+def grade_trade(t: Dict[str, Any], package: Optional[Dict[str, Any]] = None,
+                now: Optional[datetime] = None) -> Dict[str, Any]:
     """Pure: one CLOSED journal ``trades`` row -> ``{clean, fault, items}``.
-    ``clean`` is None for a NEUTRAL row (not a trade decision of the leg)."""
+    ``clean`` is None for a NEUTRAL row (not a trade decision of the leg).
+    ``pending`` is True (and ``clean`` False, ``fault`` None) when the ONLY problems are
+    exit price / pnl / fees not yet written on a clean-reason close inside
+    COST_WRITE_GRACE_HOURS of ``now`` (pass ``now``; None = no grace, the old behaviour)."""
     reason = t.get("exit_reason")
     items: Dict[str, str] = {}
     if reason in NEUTRAL_EXITS or t.get("reconcile_status") == "superseded":
@@ -369,12 +402,22 @@ def grade_trade(t: Dict[str, Any], package: Optional[Dict[str, Any]] = None) -> 
         items["fill_and_fees"] = f"ok (cost_source={t.get('cost_source')})"
     else:
         items["fill_and_fees"] = "fault: pnl or fee not recorded"
+    # A close still waiting on the broker-truth cost sweep is PENDING, not a fault: only when the
+    # reason is a clean one and every fault is one of the two cost-write items.
+    cost_items = ("exit_journaled", "fill_and_fees")
+    fault_keys = [k for k, v in items.items() if v.startswith("fault")]
+    pending = bool(fault_keys) and all(k in cost_items for k in fault_keys) \
+        and reason in CLEAN_EXITS and bool(t.get("closed_at")) and _within_grace(t, now)
+    if pending:
+        for k in fault_keys:
+            items[k] = "pending: " + items[k][7:] + " (cost sweep not yet run)"
+        fault_keys = []
     faults = [f"{k}: {v[7:]}" for k, v in items.items() if v.startswith("fault")]
     # DESK-12-SANDBOX: a leg whose stop a desk / LTR / operator amend moved has an exit that is no
     # longer the leg's own. It is graded and shown, but evaluate() never counts it as a clean trade.
     tch = touch_record.touches(t)
-    return {"id": t.get("id"), "clean": not faults, "fault": "; ".join(faults) or None, "items": items,
-            "touched": bool(tch), "touches": tch}
+    return {"id": t.get("id"), "clean": (not faults) and not pending, "fault": "; ".join(faults) or None,
+            "items": items, "touched": bool(tch), "touches": tch, "pending": pending}
 
 
 def grade_shadow_package(p: Dict[str, Any], rows: Iterable[Dict[str, Any]]) -> Dict[str, Any]:
@@ -477,13 +520,20 @@ def evaluate(graded: List[Dict[str, Any]], n_needed: int) -> Dict[str, Any]:
         return {"state": "awaiting_first_trade", "clean": [], "fault": None, "touched": tid,
                 "progress": f"0/{n_needed} clean",
                 "reason": "no graded trade yet — waiting, not failing" + suffix}
-    last_fault = max((i for i, x in enumerate(g) if not x["clean"]), default=-1)
-    run = g[last_fault + 1:]
+    # PENDING (costs not yet written) is neither clean nor a fault. It must not read as a pass and
+    # must not let an OLDER clean trade stand in for the newest one: while the newest graded trade is
+    # pending the soak reads "pending" (could not look); it resolves to clean/fault on the next sweep.
+    if g[-1].get("pending"):
+        return {"state": "pending", "clean": [], "fault": None, "touched": tid,
+                "progress": f"0/{n_needed} clean (newest trade {g[-1]['id']} awaiting costs)",
+                "reason": f"newest trade {g[-1]['id']} closed, costs not yet written — could not look yet" + suffix}
+    last_fault = max((i for i, x in enumerate(g) if not x["clean"] and not x.get("pending")), default=-1)
+    run = [x for x in g[last_fault + 1:] if x["clean"]]
     if last_fault == len(g) - 1:
         return {"state": "mechanical_fail", "clean": [], "fault": g[-1]["fault"], "fault_id": g[-1]["id"],
                 "touched": tid, "progress": f"0/{n_needed} clean since fault",
                 "reason": f"latest graded trade {g[-1]['id']} faulted: {g[-1]['fault']} — fix, then re-soak" + suffix}
-    ids = [x["id"] for x in run[:n_needed]]
+    ids = [x["id"] for x in run[-n_needed:]]  # the LATEST n clean trades, never the oldest
     if len(run) >= n_needed:
         return {"state": "passed", "clean": ids, "fault": None, "touched": tid,
                 "progress": f"{n_needed}/{n_needed} clean",
@@ -525,7 +575,7 @@ def graded_for(conn: sqlite3.Connection, c: Dict[str, Any]) -> List[Dict[str, An
                        (c["account"], c["leg"], c["started"])):
             pk = _rows(conn, "SELECT * FROM order_packages WHERE order_package_id=?",
                        (t.get("order_package_id"),)) if t.get("order_package_id") else []
-            out.append((str(t.get("closed_at")), grade_trade(t, pk[0] if pk else None)))
+            out.append((str(t.get("closed_at")), grade_trade(t, pk[0] if pk else None, now=datetime.now(timezone.utc))))
         if any((s or {}).get("kind") == "prop_live" for s in c.get("sources") or []) \
                 and _has_table(conn, "prop_tickets") and _has_table(conn, "prop_fills"):
             from src.prop.exec_test_trades import exclude_exec_test

@@ -46,15 +46,29 @@ jobs:
             || { echo "::warning::counterfactual_grader failed; nothing lands this hour"; exit 0; }
           if [ -n "$(git status --porcelain comms/research/counterfactual_grades)" ]; then echo "changed=1" >> "$GITHUB_OUTPUT"; else echo "changed=0" >> "$GITHUB_OUTPUT"; fi
 
+      # MECHANICS-FAULT-INTAKE (manager 2026-11-06): the hourly tick that already reads the closed book also files each
+      # per-trade mechanics fault (reconciler close, costs missing past the 3h window, missing bracket) as ONE pipeline
+      # item (scripts/ops/mechanics_fault_intake.py). Mechanics monitoring only: files, blocks nothing, adds no gate.
+      # A read failure is a warning (could not look), never a stop.
+      - name: File per-trade mechanics faults as pipeline items
+        id: mech
+        continue-on-error: true
+        env:
+          DIAG_READ_TOKEN: ${{ secrets.DIAG_READ_TOKEN }}
+        run: |
+          python3 scripts/ops/mechanics_fault_intake.py --live --apply --session-ref ci-mechanics-intake \
+            || echo "::warning::mechanics_fault_intake could not run this hour"
+          if [ -n "$(git status --porcelain docs/claude/work/pipeline)" ]; then echo "changed=1" >> "$GITHUB_OUTPUT"; else echo "changed=0" >> "$GITHUB_OUTPUT"; fi
+
       - name: Land on main (one self-landing PR)
-        if: steps.grade.outputs.changed == '1'
+        if: steps.grade.outputs.changed == '1' || steps.mech.outputs.changed == '1'
         uses: ./.github/actions/commit-to-main
         with:
           token: ${{ secrets.BRANCH_PROTECTION_TOKEN }}
-          paths: comms/research/counterfactual_grades
+          paths: comms/research/counterfactual_grades docs/claude/work/pipeline
           # records are idempotent by file name: on a stale-branch conflict adopt main's copy
-          refresh-command: git fetch -q origin main && git checkout FETCH_HEAD -- comms/research/counterfactual_grades || true
+          refresh-command: git fetch -q origin main && git checkout FETCH_HEAD -- comms/research/counterfactual_grades docs/claude/work/pipeline || true
           message: "counterfactual-grades: grade newly closed order packages"
           pr-title: "counterfactual-grades: grade newly closed order packages"
-          pr-body: "Automated (auto-merge): one graded counterfactual record per newly closed order package. scripts/research/counterfactual_grader.py."
+          pr-body: "Automated (auto-merge): one graded counterfactual record per newly closed order package (scripts/research/counterfactual_grader.py), plus one pipeline item per faulted closed trade (scripts/ops/mechanics_fault_intake.py)."
           verify-merged: "true"
