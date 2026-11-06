@@ -460,6 +460,11 @@ STATUS_EXPLICIT: Dict[str, Tuple[str, str, str]] = {
     # equivalence run). Goes historical once the deploy is observed on tick_cost.
     # Written 2026-11-06 by the SOAK-BACKLOG-REVIEW lane, the session that ran every resolver
     # read and holdout lookup in it. Goes historical once the 6 holdout-blocked legs are decided.
+    "docs/research/prop-retest-2026-11-06/RESULT.md": (
+        "live",
+        "read:SOAK-BACKLOG-REVIEW-lane-measured-it-2026-11-06",
+        "Prop V3 re-test of trend_donchian_eth_4h (FAIL_EDGE) and trend_donchian_sol_4h (FAIL); goes historical on the operator's keep/pull decision",
+    ),
     "docs/research/soak-backlog-review-2026-11-06.md": (
         "live",
         "read:SOAK-BACKLOG-REVIEW-lane-measured-it-2026-11-06",

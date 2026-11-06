@@ -16,16 +16,38 @@
     "365d": "INDETERMINATE (n=51, edge -0.156 R, CI95 [-0.625, +0.312]); net negative trailing year"
   },
   "accounts": {
-    "breakout_2": {"ruleset": "breakout_turbo_1step", "ev_net_usd_median": 64.55, "ev_net_usd_worst": 57.91, "p_breach": 0.464, "ceiling": 0.889},
-    "tradeify_1": {"ruleset": "tradeify_247_1step", "ev_net_usd_median": 193.42, "ev_net_usd_worst": 185.94, "p_breach": 0.282, "ceiling": 0.75},
-    "velotrade_1": {"ruleset": "velotrade_classic_1step", "ev_net_usd_median": 129.36, "ev_net_usd_worst": 124.44, "p_breach": 0.207, "ceiling": 0.73}
+    "breakout_2": {
+      "ruleset": "breakout_turbo_1step",
+      "ev_net_usd_median": 64.55,
+      "ev_net_usd_worst": 57.91,
+      "p_breach": 0.464,
+      "ceiling": 0.889
+    },
+    "tradeify_1": {
+      "ruleset": "tradeify_247_1step",
+      "ev_net_usd_median": 193.42,
+      "ev_net_usd_worst": 185.94,
+      "p_breach": 0.282,
+      "ceiling": 0.75
+    },
+    "velotrade_1": {
+      "ruleset": "velotrade_classic_1step",
+      "ev_net_usd_median": 129.36,
+      "ev_net_usd_worst": 124.44,
+      "p_breach": 0.207,
+      "ceiling": 0.73
+    }
   },
   "operator_exception": {
     "kind": "baseline",
     "decided_by": "operator",
     "decided_at": "2026-11-05T18:55Z",
     "relayed_by": "session_01AFoLuLmhUKeUzHC6CHz2uP (Manager Session 2026-11-05b)",
-    "accounts": ["breakout_2", "tradeify_1", "velotrade_1"],
+    "accounts": [
+      "breakout_2",
+      "tradeify_1",
+      "velotrade_1"
+    ],
     "quote": "Baseline at min size (Rec.)",
     "option_text": "Put the best-scoring legs on the prop accounts at the smallest size the firm allows, explicitly as a measured baseline: the ETH/SOL trend legs, plus the ML variants as they're built. Recorded as your exception to the prop gate, with the drawdown switch armed. You said earlier a breach on these small test accounts is acceptable.",
     "context_quote": "We are really can't have the prop account sitting idle. We need to have stuff we need to get going so we have a baseline against which to improve",
@@ -33,5 +55,20 @@
     "record": "PR #23460 (decisions on ML-PROP-ITERATE)"
   },
   "source": "docs/research/prop-replacement-2026-10-30 (summary) + docs/research/prop-gate-edge-regrade-2026-10-31/table.txt; supersedes the V1 record (RULE-P5-GATE-BRK-PER-LEG, 2026-10-16, verdict pass, EV 95.07 / p 0.63)",
-  "note": "Truthful grade under the current rule; admitted to the prop rosters ONLY via operator_exception (baseline). Gate record only: a roster add is Tier-3."
+  "note": "Truthful grade under the current rule; admitted to the prop rosters ONLY via operator_exception (baseline). Gate record only: a roster add is Tier-3.",
+  "retest_2026_11_06": {
+    "decision_rule": "RULE-P5-GATE-BRK-PER-LEG-V3",
+    "verdict": "fail_edge",
+    "n_trades_3y": 136,
+    "edge_mean_r": 0.212,
+    "edge_ci95": [
+      -0.127,
+      0.551
+    ],
+    "window": "2023-11-05 .. 2026-11-05 20:00",
+    "record": "docs/research/prop-retest-2026-11-06/summary_v3.json",
+    "doc": "docs/research/prop-retest-2026-11-06/RESULT.md",
+    "by": "lane SOAK-BACKLOG-REVIEW, Manager Session 2026-11-06a (operator popup \"Keep both for now\": stay rostered while re-tested)",
+    "note": "operator_exception above still governs roster membership; this block reports the fresh grade only"
+  }
 }

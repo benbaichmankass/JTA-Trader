@@ -1,0 +1,18 @@
+{
+  "based_on": "20261106T191507925832Z-37ca90d1.json",
+  "due_when": {
+    "check_every_days": 2,
+    "clears_when": "the manager records a keep-with-reason or a removal PR for both legs on the prop rosters",
+    "kind": "event"
+  },
+  "id": "PI-20261106-Y7JEXUWW-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "audit",
+    "ref": "lane SOAK-BACKLOG-REVIEW (Manager Session 2026-11-06a), docs/research/soak-backlog-review-2026-11-06.md",
+    "rerun": "cat comms/prop_survival/trend_donchian_eth_4h.json comms/prop_survival/trend_donchian_sol_4h.json; python3 scripts/ops/mandate_resolver.py --leg trend_donchian_sol_4h --from S1 --to S2 --account bybit_2 --json"
+  },
+  "state": "done",
+  "terminal_reason": "CORRECTED + RESOLVED 2026-11-06: the \"standing violation\" framing was wrong -- both legs carry a recorded operator_exception (comms/prop_survival/<leg>.json, 2026-11-05 \"Baseline at min size (Rec.)\", reconfirmed ~20:50Z), and the operator re-decided 2026-11-06 ~19:22Z \"Keep both for now\". Fresh re-test (docs/research/prop-retest-2026-11-06/RESULT.md): eth_4h V3 FAIL_EDGE (n 136, edge +0.212 R CI [-0.127,+0.551]); sol_4h V3 FAIL (V2 fail, EV = -eval fee; n 103, edge +0.067 R CI [-0.086,+0.219]). Handed to the manager for the operator.",
+  "what": "PROP SUPERSET VIOLATION (standing): trend_donchian_eth_4h and trend_donchian_sol_4h sit on LIVE prop rosters (breakout_2, tradeify_1, velotrade_1) but (a) RULE-P5-GATE-BRK-PER-LEG-V3 reads eth_4h fail_edge and sol_4h contested (comms/prop_survival/<leg>.json), and (b) neither clears the real-money Stage-0 bar (eth_4h: no holdout of its CURRENT config -- tp_revision/trail_decay added 2026-10-18 after RQ-20261016-077e-02; sol_4h: fidelity approximate, structure_exit omitted, no holdout). Prop legs clear a SUPERSET (CLAUDE.md; prop-roster-gate-guard), but the guard only checks diffs so it cannot see a standing violation. Tier 3 decision for the manager: keep (with a recorded reason) or remove from the prop rosters. Whether the guard should also assert the standing roster would be a new check (operator permission needed under 'No new gates')."
+}
