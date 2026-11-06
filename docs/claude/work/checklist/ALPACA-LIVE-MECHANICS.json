@@ -1,0 +1,25 @@
+{
+  "id": "ALPACA-LIVE-MECHANICS",
+  "title": "alpaca_live real-money mechanics: why no trades/rejections; prove the order path with ONE small end-to-end trade, independent of any ML",
+  "phase": null,
+  "state": "in_flight",
+  "owner": "manager",
+  "lane": "session_01AFoLuMHf3S6p6a31nk3okj",
+  "model": "claude-opus-5-5",
+  "ceiling_usd": 12,
+  "spend_usd": null,
+  "tier": 2,
+  "prs": [],
+  "blocked_on": [],
+  "note": "Operator 2026-11-06 ~11:00Z (verbatim excerpts): \"If there are like problems with the mechanics of the Alpaca Live account, then those need to be resolved regardless of anything else\" / \"the answer isn't the paper soak, the answer is more testing ... we do need to send that ML back to train on the structured exits.\" / \"that's like a real money bug if we're not trading correctly in Alpaca live money.\" 11:07Z FINDINGS: the 6 'rejected' rows were dry_run side_filter:long (shorts on a long-only account), 0 broker rejections since 09-01; empty roster deliberate (#23584). Real bug: journal booked package price not broker fill (9/10 alpaca_paper fills, IAUM 6097) -> #23777 MERGED 667695f8 + deployed (trader 667695f8e). Filed ALPACA-CLOSE-BROKER-TRUTH. Operator popups: 'Probe with tqqq_trend_long (Recommended)'; 'Give tqqq a real TP first'. Probe PR #23784 (tp sweep RQ-20261106-7850-02 INDETERMINATE -> 1.5R is an operator-declare).",
+  "due_by": "2026-11-07",
+  "roadmap": [
+    "L-ML-LIVE"
+  ],
+  "priority_rank": 1,
+  "roadmap_unmapped_reason": "not set at filing -- manager to map to a milestone at the next weekly pass",
+  "updated_at": "2026-11-06T12:31:16Z",
+  "updated_by": "session_01AFoLuJk1UWVx895RmLTidH",
+  "week_lane": "surge",
+  "_seq": 966
+}
