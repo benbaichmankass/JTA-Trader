@@ -29,7 +29,11 @@ Design:
 
 Tables (all in trainer_store.db):
   training_cycle, dataset_builds, db_pulls, model_registry,
-  experiment_runs, backtest_sweeps, plus a private ``_ingest_meta``.
+  experiment_runs, backtest_sweeps, research_runs, plus a private ``_ingest_meta``.
+
+``research_runs`` (WSD-S6D-RESEARCH-RESULTS, design D7) mirrors the trainer's research
+results store (``scripts/research/research_store.py``): one row per dispatch stamp,
+result record and grade, with the payload sha256 (the bytes stay on the trainer).
 """
 from __future__ import annotations
 
@@ -53,6 +57,7 @@ TRAINER_STORE_TABLES = (
     "model_registry",
     "experiment_runs",
     "backtest_sweeps",
+    "research_runs",
 )
 
 
@@ -235,6 +240,39 @@ def _build_backtest_sweeps(conn: sqlite3.Connection, mirror: Path) -> int:
     return len(rows)
 
 
+def _build_research_runs(conn: sqlite3.Connection, mirror: Path) -> int:
+    conn.execute("DROP TABLE IF EXISTS research_runs")
+    # data-wiring: projection of the trainer's research results store (scripts/research/research_store.py,
+    #   research_store.db on the trainer VM = the canonical copy, D7), mirrored as
+    #   trainer_mirror/research/research_runs.jsonl by publish_trainer_mirror.sh; rebuilt in full each ingest.
+    conn.execute(
+        "CREATE TABLE research_runs ("
+        "event_id TEXT PRIMARY KEY, unit_id TEXT, kind TEXT, run_key TEXT, at TEXT, "
+        "verdict TEXT, read_state TEXT, n INTEGER, decision_rule_id TEXT, workflow TEXT, "
+        "payload_sha256 TEXT, first_source TEXT, sources TEXT, recorded_at TEXT, data TEXT)"
+    )
+    rows = []
+    for r in _iter_jsonl(mirror / "research" / "research_runs.jsonl"):
+        if not r.get("event_id"):
+            continue
+        n = r.get("n")
+        rows.append((
+            r.get("event_id"), r.get("unit_id"), r.get("kind"), r.get("run_key"), r.get("at"),
+            r.get("verdict"), r.get("read_state"), n if isinstance(n, int) else None,
+            r.get("decision_rule_id"), r.get("workflow"), r.get("payload_sha256"),
+            r.get("first_source"), json.dumps(r.get("sources") or []), r.get("recorded_at"),
+            json.dumps(r, default=str),
+        ))
+    conn.executemany(
+        "INSERT OR REPLACE INTO research_runs (event_id, unit_id, kind, run_key, at, verdict, read_state, n, "
+        "decision_rule_id, workflow, payload_sha256, first_source, sources, recorded_at, data) "
+        "VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+        rows,
+    )
+    conn.execute("CREATE INDEX ix_research_runs_unit ON research_runs(unit_id, kind)")
+    return len(rows)
+
+
 def _read_json_text(path: Path) -> Optional[str]:
     """Return the file's text if it parses as JSON, else None."""
     if not path.exists():
@@ -254,6 +292,7 @@ _BUILDERS = (
     _build_model_registry,
     _build_experiment_runs,
     _build_backtest_sweeps,
+    _build_research_runs,
 )
 
 

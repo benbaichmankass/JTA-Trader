@@ -525,7 +525,7 @@ SSH_OPTS="-i ${VM_SSH_KEY} -o StrictHostKeyChecking=no -o ConnectTimeout=15 -o B
 # `models/` is read by the WS7 shadow factory; `trainer/` +
 # `experiments-runs/` are read by the dashboard router.
 ssh ${SSH_OPTS} "${LIVE_VM_USER}@${LIVE_VM_IP}" \
-  "mkdir -p '${LIVE_VM_MIRROR_PATH}/trainer' '${LIVE_VM_MIRROR_PATH}/experiments-runs' '${LIVE_VM_MIRROR_PATH}/models' '${LIVE_VM_MIRROR_PATH}/calibration' '${LIVE_VM_MIRROR_PATH}/forecasts' '${LIVE_VM_MIRROR_PATH}/exit_head' '${LIVE_VM_MIRROR_PATH}/promotion_readiness'" \
+  "mkdir -p '${LIVE_VM_MIRROR_PATH}/trainer' '${LIVE_VM_MIRROR_PATH}/experiments-runs' '${LIVE_VM_MIRROR_PATH}/models' '${LIVE_VM_MIRROR_PATH}/calibration' '${LIVE_VM_MIRROR_PATH}/forecasts' '${LIVE_VM_MIRROR_PATH}/exit_head' '${LIVE_VM_MIRROR_PATH}/promotion_readiness' '${LIVE_VM_MIRROR_PATH}/research'" \
   || { emit "$(printf '{"ts":"%s","status":"mkdir_failed"}' "$(iso_now)")"; exit 1; }
 
 push_one() {
@@ -544,6 +544,20 @@ push_one "$TRAINING_LOG_PATH"                                  "training_cycle.j
 push_one "$REGISTRY_ROOT/registry.jsonl"                       "registry.jsonl"              || overall_rc=1
 push_one "$REPO_ROOT/runtime_logs/trainer/dataset_builds.jsonl" "trainer/dataset_builds.jsonl" || overall_rc=1
 push_one "$REPO_ROOT/runtime_logs/trainer/db_pulls.jsonl"      "trainer/db_pulls.jsonl"       || overall_rc=1
+
+# Research results store (WSD-S6D-RESEARCH-RESULTS, design D7): export the slim research_runs JSONL from the
+# trainer's store (scripts/research/research_store.py; no payload bytes) and mirror it to <mirror>/research/,
+# where src/units/db/trainer_store.py ingests it into trainer_store.db. export-mirror rewrites the file only
+# when a row changed, so the live mirror signature moves only then. A missing store/script is a no-op; an
+# export failure is logged and the rest of the publish still runs (no pipeline halts).
+RESEARCH_MIRROR_FILE="${RESEARCH_MIRROR_FILE:-$REPO_ROOT/runtime_logs/trainer_mirror/research/research_runs.jsonl}"
+RS_PY="$REPO_ROOT/.venv/bin/python3"; [ -x "$RS_PY" ] || RS_PY=python3
+if [ -f "$REPO_ROOT/scripts/research/research_store.py" ]; then
+  if ! rs_out="$(cd "$REPO_ROOT" && "$RS_PY" scripts/research/research_store.py export-mirror --out "$RESEARCH_MIRROR_FILE" 2>&1)"; then
+    emit "$(printf '{"ts":"%s","status":"research_export_failed","detail":%s}' "$(iso_now)" "$(printf '%s' "$rs_out" | tail -c 300 | python3 -c 'import json,sys; print(json.dumps(sys.stdin.read()))')")"
+  fi
+fi
+push_one "$RESEARCH_MIRROR_FILE"                               "research/research_runs.jsonl" || overall_rc=1
 
 # Confidence calibrators + reliability report (unified-confidence § 4a/4b).
 # push_one no-ops if the file is absent (a cycle where fit_calibrators.sh hasn't
