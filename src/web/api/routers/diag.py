@@ -103,6 +103,9 @@ _JOURNAL_TABLES: dict[str, _JournalTable] = {
     # a session read the analyst's history + spend via journal?table=...
     # and confirm the generator is writing. Read-only, no secrets.
     "insights_history": _JournalTable("id", "id", True),
+    # 2026-11-06 (SCOREBOARD-PNL-FIRST): hourly broker-read account balances (account_id, balance, api_ok, ts) -- the
+    # start-of-window equity the scoreboard's % is computed on. Append-only by id; no credential or PII column.
+    "balance_snapshots": _JournalTable("id", "id", True),
     "insights_usage": _JournalTable("id", "id", True),
 }
 

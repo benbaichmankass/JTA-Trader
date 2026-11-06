@@ -16,8 +16,9 @@ Rules this module keeps (CLAUDE.md RULE ONE / "Numbers carry provenance"):
 * **The population is the AUDIT's.** Closed rows with a non-null ``pnl`` in ``trades``; the closed rows WITHOUT a
   price are counted beside it (``closed_unpriced``), not dropped silently. Books split by ``account_class`` plus the
   Stage-2 mirror accounts (``*_portfolio``). Reproduces AUDIT § 1a at its 2026-11-01 ~08:20Z cutoff (``--as-of``).
-* **% needs a capital basis.** Only prop accounts declare one (``account_size_usd``). Every other book has none in the
-  repo, so its % is ``None`` with ``pct_state: no_capital_basis`` — a dash, not a guess.
+* **% = net $ / broker equity at the window start** (operator 2026-11-06, "Broker equity at start (Rec.)") for real money,
+  mirror and paper, read from ``balance_snapshots`` (hourly broker reads); prop keeps ``account_size_usd``. No readable
+  start equity → ``pct: None`` + ``pct_state`` (``no_start_equity`` / ``partial``), never 0.
 
 Sources: ``db`` (the VM's ``trade_journal.db``, read-only), ``diag`` (the public read-only diag relay, for sessions
 off the VM) or ``file`` (a JSON list of trade rows). Usage::
@@ -102,6 +103,71 @@ def fmt_num(v: float | None, nd: int = 2) -> str:
     return _DASH if v is None else f"{v:.{nd}f}"
 
 
+# ── start-of-window broker equity (the % basis) ───────────────────────────
+#
+# OPERATOR 2026-11-06 ~00:50Z (popup, verbatim): "Broker equity at start (Rec.)". % = net $ / broker-read account equity at
+# the START of the window, so it follows deposits and withdrawals. Source: `balance_snapshots` (hourly, broker read,
+# `api_ok`). Prop keeps `account_size_usd`. Where no start equity can be read the % is None with a read-state, never 0.
+EQUITY_TOLERANCE = timedelta(hours=48)  # a snapshot older than this before the window start is not "equity at start"
+
+
+def _snap_index(snapshots: list[dict] | None) -> dict[str, list[tuple[datetime, float]]]:
+    idx: dict[str, list[tuple[datetime, float]]] = {}
+    for r in snapshots or []:
+        ts, bal = _parse_ts(r.get("ts")), _num(r.get("balance"))
+        if ts is None or bal is None or not r.get("api_ok", 1) or bal <= 0:
+            continue  # a failed read (api_ok=0 / NULL balance) is a gap, not an equity of 0
+        idx.setdefault(str(r.get("account_id")), []).append((ts, bal))
+    for v in idx.values():
+        v.sort()
+    return idx
+
+
+def start_equity(idx: dict[str, list[tuple[datetime, float]]], account: str, start: datetime | None) -> tuple[float | None, datetime | None]:
+    """Equity of *account* at *start* (``None`` = inception → its first snapshot). Returns ``(equity, snapshot_ts)``."""
+    pts = idx.get(account) or []
+    if not pts:
+        return None, None
+    if start is None:
+        return pts[0][1], pts[0][0]
+    prior = [p for p in pts if p[0] <= start]
+    if not prior or start - prior[-1][0] > EQUITY_TOLERANCE:
+        return None, None
+    return prior[-1][1], prior[-1][0]
+
+
+def pct_for_window(rows: list[dict], idx: dict, start: datetime | None, until: datetime) -> dict[str, Any]:
+    """Σ net / Σ start equity over the accounts of *rows* that have a readable start equity.
+
+    Each account's numerator only counts trades closed at/after ITS start snapshot, so numerator and denominator cover the
+    same period (inception starts at an account's first snapshot, which can be later than its first trade)."""
+    accts = sorted({str(r.get("account_id")) for r in rows})
+    net = eq = 0.0
+    used: list[str] = []
+    missing: list[str] = []
+    n_used = 0
+    for a in accts:
+        e, snap_ts = start_equity(idx, a, start)
+        if e is None:
+            missing.append(a)
+            continue
+        win_start = snap_ts if start is None else start
+        sub = [r for r in rows if str(r.get("account_id")) == a and (_row_ts(r) or until) >= win_start]
+        net += sum(float(r["pnl"]) for r in sub)
+        n_used += len(sub)
+        eq += e
+        used.append(f"{a}@{snap_ts:%Y-%m-%d}")
+    if not accts:
+        return {"pct": None, "pct_state": "empty", "pct_basis": "no priced closes in the window"}
+    if not used:
+        return {"pct": None, "pct_state": "no_start_equity",
+                "pct_basis": f"no readable broker equity at window start for {','.join(missing)}"}
+    return {"pct": round(100.0 * net / eq, 2), "pct_state": "partial" if missing else "read",
+            "pct_basis": (f"net of {n_used} trades / Σ broker equity at start ({','.join(used)}; "
+                          "balance_snapshots, broker read, MEASURED)" + (f"; NO start equity for {','.join(missing)}" if missing else "")),
+            "pct_start_equity_usd": round(eq, 2)}
+
+
 # ── aggregation ────────────────────────────────────────────────────────────
 
 def aggregate(rows: list[dict], population: str) -> dict[str, Any]:
@@ -137,11 +203,12 @@ def _window(rows: list[dict], since: datetime | None, until: datetime) -> list[d
     return out
 
 
-def trade_books(rows: Iterable[dict], now: datetime) -> dict[str, Any]:
+def trade_books(rows: Iterable[dict], now: datetime, snapshots: list[dict] | None = None) -> dict[str, Any]:
     """Real-money / mirror / paper from the ``trades`` journal (prop is added separately)."""
     rows = [r for r in rows if not r.get("is_backtest")]
     closed = [r for r in rows if r.get("status") == "closed"]
     since30 = now - timedelta(days=TRAILING_DAYS)
+    idx = _snap_index(snapshots)
     out: dict[str, Any] = {}
     for book in ("real_money", "mirror", "paper"):
         b_closed = [r for r in closed if book_of(r) == book]
@@ -153,9 +220,10 @@ def trade_books(rows: Iterable[dict], now: datetime) -> dict[str, Any]:
         out[book] = {
             "book": book, "label": BOOK_LABEL[book],
             "closed_unpriced": unpriced,
-            "capital_basis_usd": None, "pct_state": "no_capital_basis",
-            "inception": {**aggregate(inc, pop_base + " (inception→now)"), "pct": None},
-            "trailing_30d": {**aggregate(t30, pop_base + f" and closed in the last {TRAILING_DAYS} d"), "pct": None},
+            "capital_basis": "broker equity at window start (balance_snapshots)",
+            "inception": {**aggregate(inc, pop_base + " (inception→now)"), **pct_for_window(inc, idx, None, now)},
+            "trailing_30d": {**aggregate(t30, pop_base + f" and closed in the last {TRAILING_DAYS} d"),
+                             **pct_for_window(t30, idx, since30, now)},
         }
     return out
 
@@ -283,13 +351,15 @@ def trials_block(root: Path) -> dict[str, Any]:
 # ── assembly ───────────────────────────────────────────────────────────────
 
 def compute(rows: list[dict], *, now: datetime, overview: dict | None = None, fills: dict | None = None,
-            sizes: dict[str, float] | None = None, root: Path | None = None, source: str = "rows") -> dict[str, Any]:
+            sizes: dict[str, float] | None = None, root: Path | None = None, source: str = "rows",
+            snapshots: list[dict] | None = None) -> dict[str, Any]:
     root = root or REPO_ROOT
-    books = trade_books(rows, now)
+    books = trade_books(rows, now, snapshots)
     books["prop"] = prop_book(overview, fills, sizes or {}, now)
     return {
         "schemaVersion": SCHEMA_VERSION, "asOf": now.replace(microsecond=0).isoformat(), "source": source,
         "readState": "read", "rowsRead": len(rows),
+        "snapshotsRead": None if snapshots is None else len(snapshots),
         "books": {b: books[b] for b in BOOKS},
         "cost": cost_block(rows, now),
         "trials": trials_block(root),
@@ -318,6 +388,32 @@ def rows_from_db(path: str) -> list[dict]:
         return [dict(r) for r in con.execute("SELECT * FROM trades")]
     finally:
         con.close()
+
+
+def snapshots_from_db(path: str) -> list[dict] | None:
+    try:
+        con = sqlite3.connect(f"file:{path}?mode=ro", uri=True, timeout=10)
+        con.row_factory = sqlite3.Row
+        try:
+            return [dict(r) for r in con.execute("SELECT account_id, balance, api_ok, ts FROM balance_snapshots")]
+        finally:
+            con.close()
+    except sqlite3.Error:
+        return None  # unreadable → every % renders a dash + no_start_equity, never 0
+
+
+def snapshots_from_diag() -> list[dict] | None:
+    try:
+        rows: list[dict] = []
+        off = 0
+        while True:
+            d = _diag(f"journal?table=balance_snapshots&limit=1000&offset={off}&envelope=1")
+            rows += d["rows"]
+            if not d.get("has_more"):
+                return rows
+            off += 1000
+    except Exception:  # noqa: BLE001  # allow-silent: None = could not look; pct renders a dash with state no_start_equity
+        return None
 
 
 def _diag(path: str) -> Any:
@@ -359,17 +455,20 @@ def prop_from_vm() -> tuple[dict | None, dict | None]:
 def build(*, root: Path | None = None, now: datetime | None = None, source: str = "db", rows_file: str | None = None) -> dict[str, Any]:
     root = Path(root or REPO_ROOT)
     now = now or datetime.now(timezone.utc)
+    snaps: list[dict] | None = None
     try:
         if source == "file":
             rows = json.loads(Path(rows_file or "").read_text())
         elif source == "diag":
             rows = rows_from_diag()
+            snaps = snapshots_from_diag()
         else:
             from src.utils.paths import trade_journal_db_path  # noqa: PLC0415
             db = trade_journal_db_path()
             if not Path(db).exists():
                 return unreadable(f"no trade journal at {db} (not on the live VM) — we did not look; this is not zero", now)
             rows = rows_from_db(db)
+            snaps = snapshots_from_db(db)
     except Exception as exc:  # noqa: BLE001 — unreadable is a state, not a crash
         return unreadable(f"trades unreadable: {exc!r}", now)
     if source == "db":
@@ -383,7 +482,7 @@ def build(*, root: Path | None = None, now: datetime | None = None, source: str 
         sizes = prop_sizes(root)
     except Exception:  # noqa: BLE001  # allow-silent: no sizes → prop renders unreadable
         sizes = {}
-    return compute(rows, now=now, overview=ov, fills=fl, sizes=sizes, root=root, source=source)
+    return compute(rows, now=now, overview=ov, fills=fl, sizes=sizes, root=root, source=source, snapshots=snaps)
 
 
 # ── rendering (brief §1) ───────────────────────────────────────────────────
@@ -405,8 +504,8 @@ def render_lines(sb: dict | None) -> list[str]:
                  f"| {fmt_num(i['profit_factor'])} | {fmt_money(t['net_usd'])} | {fmt_pct(t.get('pct'))} "
                  f"| {t['n'] if t['n'] is not None else _DASH} | {fmt_num(t['profit_factor'])} "
                  f"| {_DASH if share is None else f'{share * 100:.0f}%'} |")
-    L += ["", "Paper and mirror dollars are paper notional, not money. % is shown only where a capital basis is declared "
-          "(prop `account_size_usd`); real-money/paper/mirror % has no basis in the repo."]
+    L += ["", "Paper and mirror dollars are paper notional, not money. % = net / broker equity at window start "
+          "(`balance_snapshots`; prop: declared `account_size_usd`); `—` where no start equity could be read."]
     c = sb["cost"]
     if c and c.get("read_state") == "read":
         m, e, u = (c["buckets"][k] for k in (prov.MEASURED, prov.ESTIMATED, prov.UNVERIFIED))

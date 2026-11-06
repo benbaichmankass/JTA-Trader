@@ -40,10 +40,45 @@ def test_empty_book_is_empty_not_zero():
     assert a["read_state"] == "empty" and a["net_usd"] is None and a["profit_factor"] is None
 
 
-def test_no_capital_basis_is_a_dash_not_a_percentage():
-    books = sb.trade_books(ROWS, NOW)
-    assert books["real_money"]["inception"]["pct"] is None and books["real_money"]["pct_state"] == "no_capital_basis"
+def _snap(acct, bal, ts, ok=1):
+    return {"account_id": acct, "balance": bal, "api_ok": ok, "ts": ts}
+
+
+def test_no_snapshots_is_a_dash_with_state_not_zero():
+    books = sb.trade_books(ROWS, NOW, None)
+    i = books["real_money"]["inception"]
+    assert i["pct"] is None and i["pct_state"] == "no_start_equity"
     assert sb.fmt_pct(None) == "—" and sb.fmt_money(None) == "—"
+
+
+def test_pct_is_net_over_broker_equity_at_start():
+    snaps = [_snap("bybit_2", 1000.0, "2026-07-01T00:00:00+00:00"),
+             _snap("bybit_2", 900.0, "2026-10-02T00:00:00+00:00"),   # start of the 30 d window (NOW-30d = 10-02 08:20)
+             _snap("bybit_2", 5000.0, "2026-10-30T00:00:00+00:00")]  # a later deposit must NOT move the start basis
+    r = sb.trade_books(ROWS, NOW, snaps)["real_money"]
+    # inception: first snapshot 07-01 -> trades closed >= 07-01: rows 1,2 (row 3 is 08-01 too) => net -25 / 1000
+    assert r["inception"]["pct"] == -2.5 and r["inception"]["pct_state"] == "read"
+    # 30 d: equity at 10-02 is 900; trades in window: rows 1,2 => -20 / 900
+    assert r["trailing_30d"]["pct"] == -2.22
+
+
+def test_failed_broker_read_is_a_gap_not_zero_equity():
+    snaps = [_snap("bybit_2", None, "2026-07-01T00:00:00+00:00", ok=0), _snap("bybit_2", 0.0, "2026-07-02T00:00:00+00:00")]
+    assert sb.trade_books(ROWS, NOW, snaps)["real_money"]["inception"]["pct_state"] == "no_start_equity"
+
+
+def test_stale_start_snapshot_is_refused():
+    snaps = [_snap("bybit_2", 1000.0, "2026-09-01T00:00:00+00:00")]  # 30+ days before the window start: beyond tolerance
+    r = sb.trade_books(ROWS, NOW, snaps)["real_money"]
+    assert r["trailing_30d"]["pct"] is None and r["trailing_30d"]["pct_state"] == "no_start_equity"
+    assert r["inception"]["pct"] is not None  # inception uses the first snapshot
+
+
+def test_partial_when_one_account_lacks_equity():
+    rows = ROWS + [_t(20, "alpaca_live", "real_money", -4.0)]
+    snaps = [_snap("bybit_2", 1000.0, "2026-07-01T00:00:00+00:00")]
+    i = sb.trade_books(rows, NOW, snaps)["real_money"]["inception"]
+    assert i["pct_state"] == "partial" and "alpaca_live" in i["pct_basis"]
 
 
 def test_cost_never_folds_estimated_into_measured():
