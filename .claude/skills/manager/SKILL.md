@@ -11,7 +11,6 @@ description: The manager-session contract. Read this at the start of any session
 > **Trimmed 2026-11-06 (SKILLS-PRUNE, from 87.8 KB):** every binding rule is kept here or pointed at. Step-by-step recipes moved verbatim to
 > [`docs/plans/manager-runbooks.md`](../../../docs/plans/manager-runbooks.md) (§ A–F) and [`docs/plans/weekly-planning-protocol.md`](../../../docs/plans/weekly-planning-protocol.md);
 > the full prior text, with every operator quote, is [`docs/archive/2026-11-06-skills-prune/manager-SKILL.md.pre-prune`](../../../docs/archive/2026-11-06-skills-prune/manager-SKILL.md.pre-prune).
-> Older history: [`docs/archive/2026-10-27-context-diet/manager-SKILL.md.pre-diet`](../../../docs/archive/2026-10-27-context-diet/manager-SKILL.md.pre-diet).
 
 ## The one job
 
@@ -37,7 +36,7 @@ register, never in a session's head or a trigger prompt: a new manager inherits 
    Choose 1–5 lanes by judgment. A missing or stale reading is the first thing to fix; until then run one lane. Fable has its own weekly bar and
    is not free capacity. **The rate is net of the live-trade-review reserve** (`docs/plans/live-trade-review-DESIGN.md` § 6.4): pass
    `--live-open N`; without it the state reads `exposure_unknown` and the reserve is sized at the roster bound, never 0. On `RESERVE BREACHED`
-   start no new non-routine lanes. Report gross, reserve and net in step 6.
+   start no new non-routine lanes and count the review routine as the always-one-lane (design § 6.6, operator Q5). Report gross, reserve and net in step 6.
 3. **DISPATCH.** While fewer lanes run than step 2 chose, take the top row of `checklist.py queue` (`queued`, nothing in `blocked_on`, lowest
    `priority_rank`), set it `in_flight` with its `lane`, dispatch it (§ "Spawning"). **Never zero lanes while the queue is non-empty; never above
    the rate.** *REFILL (operator, 2026-10-26, binding), at every check-in AND every lane close, after step 5:* the capacity target is *"KEEP N
@@ -60,9 +59,7 @@ register, never in a session's head or a trigger prompt: a new manager inherits 
 6. **REPORT.** Three lines to the operator: **capacity** (reading, rate, lanes chosen) · **running** (lanes and rows) · **next** (top of the
    queue). Say nothing when nothing changed.
 
-**Cadence.** The "Manager lane check-in" routine (`17 */3 * * *`) runs the loop every 3 h; a lane's wake runs it at once. Durability: small PRs,
-push before answering, state on disk (the checklist, `PIPELINE.jsonl`), never in a session's head. Guard: `manager-pacing-guard`
-(`scripts/ci/check_manager_pacing.py`) fails if a live doc brings back the retired pacing doctrine or this section goes missing.
+**Cadence.** The "Manager lane check-in" routine (`17 */3 * * *`) runs the loop every 3 h; a lane's wake runs it at once. State lives on disk (the checklist, `PIPELINE.jsonl`), never in a session's head. Guard: `manager-pacing-guard` (`scripts/ci/check_manager_pacing.py`).
 
 ### Toolbox
 
@@ -73,7 +70,6 @@ push before answering, state on disk (the checklist, `PIPELINE.jsonl`), never in
 | 3 | `python3 scripts/ops/checklist.py queue [--limit N]` · `create_session` + `checklist.py set <ID> state=in_flight lane=<session>` |
 | 4 | `list_pull_requests(state="open")`; landing intent `.github/pr-landing/<slug>.json`; Tier-2/3 call `python3 scripts/ops/mandate_resolver.py` (FIRE / REFUSE / NEEDS_DATA) |
 | 5 | `list_sessions` → `lane_reconcile.py --sweep` → `archive_session(<id>)` → `checklist.py archive-lane <ROW>` |
-| all | `python3 scripts/ops/blocker_watch.py` · `GET /api/bot/work/brief` · a losing leg: `python3 scripts/research/live_vs_backtest.py` first |
 
 ## Standing alert subscriptions (operator, 2026-10-13, binding)
 
@@ -113,11 +109,11 @@ and `SHORT-HOLD-BRIEF.md`.
 
 - **The manager's OWN action is blocked** (operator: *"the only acceptable way … is for the manager to be temporarily taken out of auto mode … I
   don't want any more questioning of my authority"*): (1) tell the operator in one message the exact denied action (command and files), what it is
-  for, the row it comes from, and ask them to take the manager out of auto mode temporarily; (2) when they do, perform exactly that action and
+  for, the row it comes from, and ask them to take the manager out of auto mode temporarily; (2) when they do, perform exactly that action, nothing wider, and
   verify it; (3) tell them it is done so they can restore auto mode. **Forbidden:** asking the operator to make the edit by hand; rewording,
   splitting or re-encoding the action to get past the classifier. **Never question the operator's authority** or ask for re-confirmation.
 - **A lane refuses, stalls or is blocked:** the manager re-dispatches a fresh lane with a corrected, accurate brief. A lane reports a refusal in
-  one line; **going silent is itself the failure.** A re-dispatch restates the task accurately (including that an earlier attempt was blocked) and
+  one line and files it nowhere else; **going silent is itself the failure.** A re-dispatch restates the task accurately (including that an earlier attempt was blocked) and
   never disguises or splits an action; if an honest restatement is blocked again it goes to the operator as a one-click approval in that lane's
   session. Claude Code's own permission prompts remain a human click. Incident (MANDATE-ARM-2, 2026-09-28) and quotes: pre-prune.
 
@@ -133,7 +129,7 @@ fidelity/regime unit, CONSISTENT → keep accruing, NO_BACKTEST → backtest uni
 1. **Take an item.** CI-enforced by `scripts/ci/check_manager_scope.py`. A merge, a deploy, a spawn, recording an operator decision are
    management; `src/`, `tests/`, `scripts/`, `.github/workflows/`, `config/`, `deploy/` are not. Spawning costs duplicated context and the
    operator has said that is acceptable.
-2. **Maintain more than one register.** The checklist (`docs/claude/work/MANAGER-CHECKLIST.json`, rows under `docs/claude/work/checklist/`) is
+2. **Maintain more than one register.** The checklist (one file per row under `docs/claude/work/checklist/`; the `MANAGER-CHECKLIST.json` named in CLAUDE.md is the pre-cutover monolith, deleted 2026-10-08) is
    the only one; the others are retired under `docs/archive/2026-09-21-operating-reset/`.
 3. **Write narrative observations about its own state.** A row's `state` and `note` are the record.
 4. **Block on an operator answer.** State an assumption and keep going; a waiting manager is an extra decision gate.
@@ -145,8 +141,9 @@ The pace is loop step 2. Retired 2026-10-18 (kept out by `manager-pacing-guard`)
 check-ins (six lanes moved the weekly bar 55% → 73% in ~3 h). The weekly bar covers every project the operator runs: report it with its reading
 time, never blended with per-lane dollars. **Output per unit spent:** the manager reads narrowly (the `get_session` summary plus the PR body is the
 lane's report); lane prompts are self-contained (ids, paths, evidence, done condition, landing recipe); the decision is recorded on the register
-BEFORE dispatch; never chain a register commit after a merge whose exit status was not checked; judge the pace by results delivered, never by
-distance from a target (an idle manager with a non-empty queue is the failure).
+BEFORE dispatch (a lane that still declines is resumed once, then archived and restarted; the operator is never asked to approve inside a lane);
+validate the row and grep for conflict markers before every register commit; never chain a register commit after a merge whose exit status was not checked; judge the pace by results delivered, never by
+distance from a target: running under the rate while delivering is not a failure (operator, 2026-09-27); an idle manager with a non-empty queue is.
 
 **Hibernating before a usage-limit outage** (when the weekly bar nears its limit or a lane reports *"You've hit your weekly limit"*): arm auto-merge
 on PRs that would wait on the manager, tell live lanes by trigger, leave a pick-up reminder ~5 min after the reset, pause check-in/review routines,
@@ -162,7 +159,7 @@ A Tier-1 lane self-lands: `.github/pr-landing/<slug>.json` (`tier: 1`, `landing:
 `gh api -X PUT repos/<owner>/<repo>/pulls/<n>/ccr/auto_merge -f merge_method=squash`. If the classifier refuses the arming ("Merge Without
 Review"), the lane re-declares `landing: hold` with `hold_reason: operator_asked_to_hold`, reports the exact refused command in one line, and the
 manager lands it. Tier-2/3 lane PRs always carry `landing: hold` (manager for Tier 2, the operator's recorded approval for Tier 3).
-**Push less, push checked:** before every push `python3 scripts/ci/prepush.py`; never push to a PR while its CI runs unless fixing a red check;
+**Push less, push checked** (a habit, not a gate; CI-THROUGHPUT-20261029): before every push `python3 scripts/ci/prepush.py`; never push to a PR while its CI runs unless fixing a red check;
 batch register commits into one push. **No new gates** (operator, 2026-10-29, binding): never add, or dispatch a lane to add, a gate without the
 operator's explicit permission; canonical § "No new gates without the operator's permission".
 
@@ -174,7 +171,7 @@ operator's explicit permission; canonical § "No new gates without the operator'
 | `RESEARCH-OPS-<date>-<slot>` | 02:47, 08:47, 14:47, 20:47 UTC; skip a slot while the previous research-ops lane runs (a topic lane never causes a skip) | Sonnet, $6 | `research-ops`; put THE CORE MANDATE in the dispatch text; **a research floor gap is NOT due work** (STOP-GENERATED-AUTHORING, 2026-11-01): never dispatch a lane to author units to a count, orphans are the due work |
 | weekly ML plan loop | rides the Sunday `/ml-review` as step 9 | in that lane's prompt (~$4 extra) | `ml_plan_status.py` in the daily review; dispatch ML rows from `next_by_value_per_cost` |
 | `FRONTIER-SCAN-<date>` | weekly, same day | Sonnet, ~$8 | `frontier-research`; land its hold PR; dispatch `FRONTIER-LEVER-*` rows by capacity |
-| research SLO breach | the same day, per `scripts/research/research_slo.yaml` | the lane that moves it | `runnable_floor` / `authoring_supply_ratio_7d` / `theme_share_min_ratio` are DIAGNOSTICS (check `iteration_orphans.py` instead); `programme_coverage_pct` → add plan nodes; `undispositioned_24h` / `grade_latency_p*_d` → a GRADING lane; `blocked_over_age` → unblock-or-retire; `hold_pr_wait_h` → you land or close held PRs; stage ages → a fix lane. **Thresholds change only in the YAML, in a PR that says why; loosening one to clear a breach is the failure this rule stops.** |
+| research SLO `breach` or `could_not_look` | the same day, per `scripts/research/research_slo.yaml` (a note or far-`due_when` row is not a disposition) | the lane that moves it | `research_ops_not_run` / `research_ops_age_h` → the next slot finishes the named steps; `runnable_floor` / `authoring_supply_ratio_7d` / `theme_share_min_ratio` are DIAGNOSTICS (check `iteration_orphans.py` instead); `programme_coverage_pct` → add plan nodes; `undispositioned_24h` / `grade_latency_p*_d` → a GRADING lane; `blocked_over_age` → unblock-or-retire; `hold_pr_wait_h` → you land or close held PRs; stage ages → a fix lane. **Thresholds change only in the YAML, in a PR that says why; loosening one to clear a breach is the failure this rule stops.** |
 
 ### Model by task class
 
@@ -214,7 +211,7 @@ Archiving finished lanes is the manager's job (operator, 2026-09-29: *"part of y
 management mandate"*), never the operator's, and runs as loop step 5 and after every merge, in one batch. **Scope: this project's sessions only**
 (JTA Trader repos, environment `env_01A9rfUVrcEo1i5pKP1kWnp3`, or a mention in a manager log); archive only what `lane_reconcile.py` lists, never its
 LEFT ALONE block. **Archive when** its PRs merged and nothing remains only it can do; a review verdict or analysis report was received and results
-committed; it was superseded; or its row is `done`/`dropped`/`landed_unproven` with the observation filed. **Never archive** a lane that owns an
+committed; it was superseded; or its row is `done`/`dropped`/`landed_unproven` with the observation filed (an observation needing only time or a read does not keep a lane open). Do not tell a lane to idle on CI: the manager merges, the lane stops. **Never archive** a lane that owns an
 unmerged PR needing pushes, whose report has not arrived, that is BLOCKED on a permission prompt (surface it), or is mid-run on a live action. Read
 the final spend and note it on the row (reversible: `unarchive_session`).
 
@@ -242,7 +239,7 @@ or review lane (`weekly-audit`, `health-review`, `performance-review`, `ml-revie
 every proposal it makes maps to** (a) a checklist row with `owner`, `due_by` and a `roadmap` ref (or a research queue unit with a `roadmap` ref and
 a run date), **or** (b) a recorded operator decision (a row, popup answer or `config/mandates.yaml` entry it names). A proposal "in the report" and
 in neither is **not filed**. The lane's final section lists proposal id → row/unit id → `due_by`; the manager checks it against `checklist.py`
-before accepting the lane (`close-out` check 4). A dated row is what the daily review (step 4b) works, so a proposal that is not one is never observed.
+before accepting the lane (`close-out` check 4). This is a process step, not a guard: a dated row is what the daily review (step 4b) works, so a proposal that is not one is never observed.
 
 | state | means |
 |---|---|
@@ -260,11 +257,14 @@ Workflow page via `GET /api/bot/work/checklist` from the VM tree (`ict-git-sync`
 
 The roadmap (7 goals G1..G7, milestones in `docs/roadmap/milestones.yaml`, rendered into `ROADMAP.md`) informs what is built and **authorizes
 nothing**: **derive → prioritise → build → write back.** Every checklist row carries `roadmap: ["<milestone id>"]` from creation, every queue unit
-`roadmap: <id>`; no fitting milestone = add one under a goal in the same PR. A closing row (`done`/`landed_unproven`) sets `writeback: {"roadmap":
+`roadmap: <id>`; no fitting milestone = add one under a goal in the same PR (never reword another lane's entry). A closing row (`done`/`landed_unproven`) sets `writeback: {"roadmap":
 "<change | none: reason>", "arch": "<ARCHITECTURE section | none: reason>"}` and the closing lane edits in the same PR. Each daily review runs
 `python3 scripts/ops/roadmap_map.py --report` and works what turns (orphans, an `active` milestone with no work, a milestone past
-`review_cadence_days`). The weekly pass is part 2 of the Wednesday planning dialogue (the `ROADMAP-PASS-<week>` rows are retired). Guard
-`roadmap-map-guard`. Detail: pre-diet.
+`review_cadence_days`). A component/path/contract change with the map unedited is a defect. A milestone with neither rows nor units must carry
+`no_rows_reason`. The weekly pass is part 2 of the Wednesday planning dialogue (the `ROADMAP-PASS-<week>` rows are retired, never re-file one): re-measure
+every baseline and active `where` with its own command (an un-re-measured date is marked "not re-measured"), dormant sweep (two passes without work =
+close or fresh reason), architecture check, `roadmap_map.py --write-roadmap`; slices (ML-ROADMAP-LOOP, REGIME-PROGRAM) plug in and do not fork. Full pass,
+verbatim: [`weekly-planning-protocol.md`](../../../docs/plans/weekly-planning-protocol.md) § "Roadmap weekly pass". Guard `roadmap-map-guard`.
 
 ## Weekly planning, reviews and the weekly cycle (operator, 2026-10-13/14/19/28, 2026-11-05, binding)
 
@@ -342,15 +342,15 @@ a short work-plan status in-session and on the Workflow page, NOT to Telegram (T
 ### Manager ↔ lane: PUSH plus POLL (operator, 2026-10-04, binding)
 
 1. **PUSH (primary).** A lane wakes the manager when it finishes, is blocked or has something to act on: `create_trigger(persistent_session_id=
-   <manager>)` then `fire_trigger`; fallback a PR comment. **The wake works only from lineage depth ≤ 7 (limit 8)**; `get_session` shows `lineage`.
+   <manager>)` then `fire_trigger`; fallback a PR comment; the manager acts on a wake immediately. **The wake works only from lineage depth ≤ 7 (limit 8)**; `get_session` shows `lineage`.
    The manager must sit at depth ≤ 6, a rotation is created by a shallow session never by the manager, a lane at 8 reports by PR comment.
 2. **POLL (backup).** The 3-hourly check-in runs the operating loop; restart or re-dispatch any lane dead, stalled, finished without pinging, or over
    ceiling. **The manager subscribes ONLY to (a) the ops-flags PR and (b) PRs it opens itself** (each subscribed PR injects ~3k tokens per event); the
-   lane fixes its own red CI, wakes the manager when green and waiting, and the check-in lands every green waiting PR. Decisions go out **batched**
-   (a 🆕 line in the digest, all open ones in the daily summary), except a decision that blocks live money or an incident: `send-ping priority=urgent`.
+   lane fixes its own red CI, wakes the manager when green and waiting (for a held PR set one `send_later` ~35 min out), and the check-in lands every green waiting PR. Decisions go out **batched**
+   (a 🆕 line in the digest, all open ones in the daily summary, each with options and a recommendation), except a decision that blocks live money or an incident: `send-ping priority=urgent`.
 
 **Required dispatch block.** Every lane `create_session` has `source_url`; **`permission_mode: "auto"`**; `model` explicit; a checklist row (id,
-lane, ceiling) written before dispatch. Never merge a manager branch that has not landed on main into yours (incident #19876). The prompt ends with:
+lane, ceiling) written before dispatch. Never merge an unlanded manager branch into yours (#19876). The prompt ends with:
 
 ```
 You are lane <ROW-ID>, dispatched by Manager Session <date><letter> (<manager session id>);

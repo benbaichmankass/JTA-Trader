@@ -1,6 +1,6 @@
 # Weekly planning protocol (moved verbatim from the manager skill, 2026-11-06)
 
-> **Doc status:** `unknown` · category `instruction` · last verified `never` · registered in [`docs/DOCUMENT-INDEX.md`](../DOCUMENT-INDEX.md)
+> **Doc status:** `live` · category `instruction` · last verified `2026-11-06` · registered in [`docs/DOCUMENT-INDEX.md`](../DOCUMENT-INDEX.md)
 
 > Moved VERBATIM from `.claude/skills/manager/SKILL.md` § "Weekly planning (Wednesday) and the weekly cycle" (SKILLS-PRUNE, operator answer 2026-11-06: *"YES: halve manager SKILL.md … moving the planning/surge text verbatim"*). Still binding; the manager skill keeps a summary and points here. The planning routine's prompt names this file.
 >
@@ -23,7 +23,7 @@ is the pre-2026-10-19 timing where they disagree. Mirrored in `OPERATING-PLAN-20
 Operator: *"a clear pipeline for any follow-up tasks or insights or new ideas that come out of those reviews to actually be turned into work
 tasks that we will definitely get to."* MEASURED 2026-10-28: filing works and getting to it does not (505 of 1,011 open pipeline items due;
 838 killed vs 495 done). Basis: postmortem action-item tracking and retro carry-over practice
-([`docs/reviews/2026-10-29-followthrough-triage.md`](../../../docs/reviews/2026-10-29-followthrough-triage.md) § 1). These steps are
+([`docs/reviews/2026-10-29-followthrough-triage.md`](../../docs/reviews/2026-10-29-followthrough-triage.md) § 1). These steps are
 mandatory in the planning routine's prompt and come BEFORE part (B) 1:
 
 0. **First agenda item: the numbers.** Run `python3 scripts/ops/review_followthrough.py --window-days 7` and put its table (with its
@@ -112,3 +112,26 @@ current ids via `list_triggers`):
 
 Unchanged: research-ops 4×/day, the daily review ONCE a day at 05:52Z (operator 2026-11-04: "we switched the twice daily to once daily leave it like that"), lane check-ins. **Retired (operator 2026-10-14):** the Monday research-planning
 session and `ROADMAP-PASS-<week>` rows; file the roadmap outcome on `WEEKLY-PLANNING`.
+
+---
+
+## Roadmap weekly pass and cadence (moved verbatim from the manager skill § "The roadmap loop", 2026-11-06)
+
+**Cadence.** (1) *Per merge:* the write-back above; reviews close their rows with a `writeback` naming the milestones moved. (2) *Every daily
+review:* run the report and work its findings that turn (orphans get a milestone; an `active` milestone with no work gets rows or goes
+`dormant` with a reason; a milestone past `review_cadence_days` makes the weekly pass due). (3) *Weekly pass* — since 2026-10-14 part 2 of
+the Wednesday planning dialogue (the `ROADMAP-PASS-<week>` rows are retired; never re-file one). In order: re-measure every baseline and
+active `where` with its own command (an un-re-measured date is marked "not re-measured"); read the week's outcomes and rewrite
+`where`/`next`, set `reviewed`; derive rows/units for every `next` and operator ask; prioritise by goal (live-money defect under G3 first,
+then G1/G2 evidence) and compare `research/THEMES.yaml` weights with where open units sit (a high-weight theme with no runnable units is a
+finding); dormant sweep (two passes without work = close or fresh reason); architecture check; `roadmap_map.py --write-roadmap` and commit.
+(4) *Slices plug in, they do not fork* (ML-ROADMAP-LOOP, REGIME-PROGRAM edit their own milestones inside the same pass). Detail: pre-diet.
+
+**Also from that section (verbatim):**
+- **The link is a field.** Every checklist row carries `roadmap: ["<milestone id>"]` from creation; every queue unit `roadmap: <id>`. No
+  fitting milestone = a roadmap gap: add one under a goal in the same PR (never reword another lane's entry).
+- **Closing a row** (`done`/`landed_unproven`) sets `writeback: {"roadmap": "<milestone change | none: reason>", "arch": "<ARCHITECTURE
+  section changed | none: reason>"}`; the closing lane edits in the same PR. A component/path/contract change with the map unedited is a defect.
+- `python3 scripts/ops/roadmap_map.py --report` lists live/closed rows and open units per milestone plus orphans. A milestone with neither
+  must carry `no_rows_reason`. Guard `roadmap-map-guard` fails dangling refs, empty milestones without a reason, a stale `ROADMAP.md` block,
+  a non-heading `architecture:` ref, and (on the diff only) new rows/units without a ref or a closing row without `writeback`.

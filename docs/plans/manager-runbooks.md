@@ -1,6 +1,6 @@
 # Manager runbooks (moved verbatim from the manager skill, 2026-11-06)
 
-> **Doc status:** `unknown` · category `instruction` · last verified `never` · registered in [`docs/DOCUMENT-INDEX.md`](../DOCUMENT-INDEX.md)
+> **Doc status:** `live` · category `instruction` · last verified `2026-11-06` · registered in [`docs/DOCUMENT-INDEX.md`](../DOCUMENT-INDEX.md)
 
 > Moved VERBATIM from `.claude/skills/manager/SKILL.md` (SKILLS-PRUNE, operator answer 2026-11-06). The manager skill keeps the binding rules and points here for the step-by-step recipe. Read the section for the kind of event you are acting on BEFORE you act on it.
 >
@@ -11,7 +11,7 @@
 ## Standing alert subscriptions (operator, 2026-10-13, binding)
 
 Full recipes (the exact `create_session` arguments, marker fields and receipts for every wake kind below): pre-diet § "Standing alert
-subscriptions" in [`docs/archive/2026-10-27-context-diet/manager-SKILL.md.pre-diet`](../../../docs/archive/2026-10-27-context-diet/manager-SKILL.md.pre-diet).
+subscriptions" in [`docs/archive/2026-10-27-context-diet/manager-SKILL.md.pre-diet`](../../docs/archive/2026-10-27-context-diet/manager-SKILL.md.pre-diet).
 Read the recipe for the kind of marker you are acting on **before** you dispatch from it.
 
 **Every manager session, at start AND after any handover, calls `subscribe_pr_activity` on the ops-flags PR** (title "ops-flags (do not
@@ -82,7 +82,7 @@ or changes: **none.**
 
 ## The work system — due work must reach someone who acts (operator, 2026-10-04, binding)
 
-Design of record: [`docs/plans/work-system-2026-10-04.md`](../../../docs/plans/work-system-2026-10-04.md) (row **WORK-SYSTEM**); operator:
+Design of record: [`docs/plans/work-system-2026-10-04.md`](../../docs/plans/work-system-2026-10-04.md) (row **WORK-SYSTEM**); operator:
 *"that's not a band-aid, that's a structural fix … make sure it's canonized correctly in the manager skill."* MEASURED 2026-10-04: 366 items
 due, 151 unrouted, 25 `ask_operator` items never delivered, 36 of 45 soak legs with no definition of done, a 737 KB brief nobody read. Now
 the **VM computes due and pushes it**, and **silence is itself an alarm**. Full detail of both timers: pre-diet.
@@ -121,7 +121,7 @@ The review routine IS the periodic check; its prompt names `GET /api/bot/work/re
    that lands a change as `landed_unproven` writes the runnable `observe: {when, how}` on its row; lanes archive as normal and are not kept open.
 
 4c. **Orphan drain — the research loop, daily (operator 2026-11-01, binding).** Run `python3 scripts/research/iteration_orphans.py`.
-   The rule: [`docs/plans/OPERATING-PLAN-2026-09-21.md`](../../../docs/plans/OPERATING-PLAN-2026-09-21.md) § 2 "What does not pass goes back into research — THE research workflow". Report the orphan count per kind as a NUMBER every review (target 0), and from `--levers` the subjects whose lever map has untested families with no live unit. Every
+   The rule: [`docs/plans/OPERATING-PLAN-2026-09-21.md`](../../docs/plans/OPERATING-PLAN-2026-09-21.md) § 2 "What does not pass goes back into research — THE research workflow". Report the orphan count per kind as a NUMBER every review (target 0), and from `--levers` the subjects whose lever map has untested families with no live unit. Every
    `ORPHAN` (a testing leg, a non-live ML model or a live-review class with no live iteration unit) and every `overdue` iteration gets
    ONE disposition this run: the next research-ops slot is told to author it first (name the subjects in its prompt), a topic lane is
    dispatched for it, or the family-review path is opened (`research/family_reviews/`). Put the counts per kind in the brief's
@@ -152,7 +152,7 @@ any work that was left undone, if we ran out of usage automatically, like we kno
 least a backup trigger from the VM ... even if I'm not necessarily available right after a reset ... kick things off after the reset as soon
 as possible."* The strategy review stays WEEKLY with a 30-day lookback every week (`perf-review-prep`, `lookback_days: 30`).
 
-**One source:** [`config/reset_protocol.yaml`](../../../config/reset_protocol.yaml) (`jobs` with cadence / order / offset / model / ceiling /
+**One source:** [`config/reset_protocol.yaml`](../../config/reset_protocol.yaml) (`jobs` with cadence / order / offset / model / ceiling /
 skill / dedupe tag, and one-shot `after_reset` items). **Machinery:** `scripts/ops/reset_protocol.py` (`--plan <reset-ts>`, `--receipt`,
 `--sweep`, `--self-test`). **Receipt store:** `comms/ops/reset_receipts.jsonl`, append-only, committed by the manager to `main` (no DB, no
 second source of truth). **Triggers:** primary = a Claude routine Wed **18:05Z** (resolves the current manager by title; it forwards, never
