@@ -73,14 +73,6 @@ on:
       # W6-OPS-R (2026-09-27): the keeper that dispatches r4-demotion-gate and
       # the other critical validators near their slot, and pages on silence.
       - schedule-keeper
-      # The manager-side queue watcher. ⚠️ ITS SILENCE IS INDISTINGUISHABLE FROM
-      # A QUIET QUEUE unless something watches the run itself -- which is the
-      # whole failure class it exists for. It also FAILS DELIBERATELY when an
-      # escalation is due, so this entry is not only the death alarm, it is the
-      # escalation channel: a backed-up PR queue reaches the operator through a
-      # failed run here rather than through the manager, who is the bottleneck
-      # being reported on.
-      - pr-queue-watch
       # The stale-automation sweeper. ⚠️ ITS SILENCE IS INDISTINGUISHABLE FROM
       # A QUEUE WITH NOTHING STRANDED, which is the exact failure class it
       # exists for: the 47 stranded PRs of 2026-09-09 accumulated silently
@@ -99,48 +91,7 @@ on:
       # this entry is both the death alarm and the second escalation channel --
       # a Telegram outage does not silence the finding.
       - trainer-capture-watch
-      # A cron whose run DIES notifies nobody otherwise, and this repo has a live
-      # instance of that class open (probes.yml / due-list.yml, zero schedule runs
-      # since landing). Watching it is the cheap half.
-      # Phase B's daily digest. A dead run here is invisible twice over: the
-      # digest sends nothing itself (it queues to pending-pings.jsonl for the
-      # VM to drain), so a failed run and a quiet day look identical to the
-      # operator.
-      # The reaper is the only thing recording what a killed session left behind.
-      # A dead reaper run is invisible in the worst way: its ledger simply stops
-      # advancing, and a stale ledger reads exactly like a quiet week.
-      # (manual-dispatch only since 2026-10-04; no push/cron trigger — see its header)
-      - session-reaper
       - work-digest
-      # The coordination board's proof that it is ALIVE. This entry is the
-      # sharpest instance of the whole pattern above, not another example of it:
-      # board-heartbeat FAILS DELIBERATELY when the board is write-blocked or at
-      # its rotate_at threshold, so a failed run here IS the finding — the board
-      # has stopped accepting claims — and not merely the death alarm for a
-      # watcher.
-      #
-      # ⚠️ AND ITS OWN SILENCE IS THE FAILURE IT WATCHES FOR. Every other
-      # consumer treats "no heartbeat in 18h" as proof the board is dead, so a
-      # heartbeat workflow that quietly stops running makes every session read
-      # DEAD on a perfectly healthy board — and one that dies mid-run while the
-      # board really is capped makes them read nothing at all. That is exactly
-      # how #6927 went ~20h unnoticed at GitHub's 2500-comment cap on
-      # 2026-09-07: reads kept succeeding, so absence carried no information and
-      # nothing anywhere failed loudly.
-      - board-heartbeat
-      # Provisioning the next board. Not cron'd, so `cron-failure-watch` does
-      # not require this entry — it is here because the failure is worse than a
-      # missed schedule. A half-completed rotation can leave a NEW board created
-      # and the pointer still naming the old one, i.e. a live board nothing
-      # points at, which is the state the pointer exists to make impossible.
-      - board-rotate
-      - work-decision-commit
-      # A1's readout, on the cadence the operating model always declared it
-      # had. A dead run here is invisible in the worst possible way: the
-      # CLAUDE.md session brief keeps rendering the LAST good readout with its
-      # own date attached, so a stalled cron looks exactly like a quiet work
-      # store to every session that reads it.
-      - constraint-readout
       # JC-SA-01 (2026-09-29): the daily grader. A dead run here is what
       # left the graded hop silent 21 days.
       - grade-closed-trades
@@ -148,15 +99,12 @@ on:
       # LIVE-PARITY (2026-10-03): daily live-vs-replay parity check.
       - live-replay-parity
       - strategy-review-packets
-      - sunset-pass
       - trainer-vm-diag
       - vm-diag-snapshot
       - system-actions
       - vm-web-api-recover
       - prop-report
       - research-exit-head-build
-      - research-panel-build
-      - research-symbol-p0-build
       # ── CRON'D WORKFLOWS (added 2026-08-13, full-system audit) ──────────
       #
       # A scheduled run that dies is the SAME failure class this listener was
@@ -298,22 +246,10 @@ on:
       #    completes) — the same silent-watchdog gap `macro-producer-liveness`
       #    is listed here to close.
       - dashboard-edge-watch
-      # ── added 2026-08-31 in the same PR that created it. `due-list` renders
-      #    the one surface that answers "what is due right now?", so a silent
-      #    failure of it makes every OTHER register invisible at once — the
-      #    worst single cron to leave unwatched.
-      - due-list
       # `probes` is the mechanism that watches the monitoring rows. A silent
       # failure of it means every row it covers is quietly unwatched WHILE the
       # last-known results file still reads as current — the worst shape.
       - probes
-      # ── added 2026-09-02 in the same PR that created it. `error-feed-digest`
-      #    is the only thing reading the trader's error feed on a cadence, and
-      #    its failure mode is the one this repo keeps paying for: a digest
-      #    that stopped being produced renders as a feed that went quiet. The
-      #    due-list raises a stale digest as a loud row, but only if a stale
-      #    digest is what lands — a run that DIES lands nothing at all.
-      - error-feed-digest
       # ── added 2026-09-17 in the same PR that created it. `main-tree-watch`
       #    is the ONLY cadence-driven grading of the DEFAULT BRANCH, and it
       #    exists because the repo's post-merge check skips auto-merged PRs
