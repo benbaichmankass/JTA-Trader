@@ -18,6 +18,17 @@ Honest provenance, so the record cannot be misread: Amendment 1 (commit `172c15e
 
 Amended rule for a REPLACEMENT: PASS iff **both** models have n >= **100** taken decisions (and >= 10 distinct symbols, unchanged: today 48 and 49) on the same post-train window AND candidate mean net R >= served mean net R. The n >= 300 floor still applies to the ABSOLUTE read, to the deflated bar reported as information, and to any BRAND-NEW strategy, leg or recipe. Below 100 on either side -> `insufficient_n`.
 
+## AMENDMENT 3 (2026-11-06 ~17:02Z, OPERATOR DECISIONS, relayed by Manager Session 2026-11-06a): the replacement floor of 100 is the operator's own answer, and the freshness limit moves to 35 days
+
+Both popups were asked with the numbers shown and with the after-the-fact nature of the change stated explicitly (manager's statement). Verbatim answers:
+
+1. **"Floor 100 per side, swap now (Recommended)"**. The option text was: *"For REPLACING a live model only, the minimum is 100 decisions per model on the same window (281/342 clears it). The edge bar for brand-new strategies keeps 300. The swap PR opens now and I merge it this window."*
+2. **"Raise to 35 days (Recommended)"**: the live monitor's served-model freshness limit goes from 22 d to 35 d. It stays report-only (`src/runtime/ml_entry_live_monitor.py::FRESH_MAX_AGE_DAYS`).
+
+Honest provenance: both answers were given AFTER the first read showed candidate n 281 / served n 342. They are the operator's rule changes, made with those numbers visible; this record does not claim a floor fixed before the data was read. This answer replaces Amendment 2's attribution ("the number 100 is the manager's formulation") with the operator's own selection of it. Nothing else in the rule changes: replacement = both models n >= 100 per side (and >= 10 symbols) on the same post-train window AND candidate mean net R >= served mean net R, net of the full cost stack; n >= 300 stays for the absolute read and for any brand-new strategy; the deflated bar and CI are information only.
+
+Records of the first read, kept side by side and never overwritten: `verdict_amended.json` (Amendment 1, floor 300: `insufficient_n`) and `verdict_amended_2.json` (floor 100: PASS on the numbers of run 42250040398, whose boosters were not saved; see the regrade record for the artifact that was actually scored and is promoted).
+
 ### The rule as amended (supersedes "The rule" below it, kept for the record)
 
 Same candidate, same window, same scoring of both artifacts on the SAME rows with the registered policy and the full cost stack (fee 11.0 bps round trip, slippage 3.0 bps, funding 1.0 bps per 8 h; the fee-only harnesses stay excluded).
