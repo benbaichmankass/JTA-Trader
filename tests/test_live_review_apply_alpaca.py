@@ -86,7 +86,7 @@ def test_alpaca_intent_applies_and_reads_back(venue):
     (tid, fields), = db.updates
     assert tid == 11 and fields["stop_loss"] == 102.0
     assert json.loads(fields["notes"])["sl_floor"]["source"] == lri.PROVENANCE
-    assert res["package_sl_moved"] is True and db.package_writes == [{"pkg": "PA", "sl": 102.0}]
+    assert res["package_sl_moved"] is True and _sans_meta(db.package_writes) == [{"pkg": "PA", "sl": 102.0}] and db.package_writes[0]["meta"]["last_sl_move"]["source"] == "live_review_apply"
     assert venue["pings"] == [("alpaca_live", 102.0)] and venue["alerts"] == []
     assert res["exit"] == lra.EXIT_OK
 
@@ -109,3 +109,8 @@ def test_alpaca_looser_intent_never_reaches_the_venue(venue):
     res = _run(db)
     (acct,) = res["accounts"]
     assert acct["verdict"] == "refuse" and venue["client"].patches == [] and db.updates == []
+
+
+def _sans_meta(writes):
+    """package writes without the mover-attribution meta (LTR-MECH-PROP-MIRROR-BRACKET)."""
+    return [{k: v for k, v in w.items() if k != "meta"} for w in writes]

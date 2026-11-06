@@ -1161,7 +1161,15 @@ def run(intent: lri.LiveReviewIntent, *, apply: bool = False, db=None,
             and auto_accounts is None):
         lvl = levels.pop()
         if lri.is_tighter(intent.direction, lvl, _f(pkg.get("sl")) or lvl):
-            db.update_order_package(pkg["order_package_id"], {"sl": lvl})
+            pkg_write: Dict[str, Any] = {"sl": lvl}
+            try:  # LTR-MECH-PROP-MIRROR-BRACKET: a package stop never moves without naming its mover
+                from src.runtime import sl_mover
+                pkg_write["meta"] = sl_mover.stamp_sl_move(
+                    pkg.get("meta"), pkg.get("sl"), lvl, sl_mover.SRC_LIVE_REVIEW,
+                    f"{intent.review_id}:{intent.action}")
+            except Exception:  # noqa: BLE001 -- attribution never blocks the applied stop
+                pass
+            db.update_order_package(pkg["order_package_id"], pkg_write)
             out["package_sl_moved"] = True
 
     applied_any = any(a.get("executed") for a in out["accounts"])
