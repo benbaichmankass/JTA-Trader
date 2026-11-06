@@ -8,11 +8,11 @@ name: sp500-membership-refresh
 # GATES THIS ADDS OR CHANGES: none. A data-pull list refresh; no order path, no config/*.yaml gate, no execution flag.
 #
 # Lands via commit-to-main (a PAT-authored auto-merge PR, so the required checks run) with verify-merged. A refresh that changes
-# nothing opens no PR. Runs 03:41Z on the 2nd of Jan/Apr/Jul/Oct, or on dispatch / a labelled issue `sp500-membership-now`.
+# nothing opens no PR. Runs 03:41Z on the 2nd of every month (operator 2026-11-06, popup "Make it monthly"), or on dispatch / a labelled issue `sp500-membership-now`.
 
 on:
   schedule:
-    - cron: "41 3 2 1,4,7,10 *"
+    - cron: "41 3 2 * *"
   workflow_dispatch:
   issues:
     types: [opened]
