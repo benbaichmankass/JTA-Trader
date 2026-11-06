@@ -80,10 +80,12 @@ _META_KEYS = (_LAST_CHECK_KEY, _FRESHNESS_KEY)
 
 # --- served-model freshness (row ML-ENTRY-RETRAIN-CADENCE) ---------------------------------------------------------
 #: A weekly retrain trains on data through (run day - 7d embargo - 25h purge) ~ 8.0 days old when fit, so the freshest
-#: artifact is ~8 days "old" on day 0 and ~15 days old a week later, when the next candidate lands. 22 days = one
-#: whole missed weekly cycle beyond that. Over it the served model is graded STALE and ONE flag is raised per
+#: artifact is ~8 days "old" on day 0 and ~15 days old a week later, when the next candidate lands. The first limit was 22
+#: days (one whole missed weekly cycle beyond that). OPERATOR 2026-11-06 ~17:02Z (popup, verbatim): "Raise to 35 days (Recommended)":
+#: a GRADED candidate is a refit as of (run day - 14 d) with the 7d+25h embargo, so it is ~22-23 days old the day it can be promoted,
+#: and 22 would label every promoted model stale at once. Over the limit the served model is graded STALE and ONE flag is raised per
 #: FRESHNESS_COOLDOWN_S. A report, never a gate: the served model keeps trading.
-FRESH_MAX_AGE_DAYS = 22
+FRESH_MAX_AGE_DAYS = 35
 FRESHNESS_COOLDOWN_S = 7 * 24 * 3600.0
 FRESHNESS_KIND = "ml_entry_model_stale"
 SERVED_ARTIFACT_REL = "ml/served/ml_decision_entry_v1/model.json"
