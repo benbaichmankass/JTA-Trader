@@ -87,8 +87,8 @@ def _pool() -> tuple[List[str], str]:
 
 
 def _risk_pct() -> float:
-    import yaml
-    acct = yaml.safe_load((REPO / "config" / "accounts.yaml").read_text())["accounts"][ACCOUNT]
+    from src.config.accounts_loader import load_accounts_dict
+    acct = (load_accounts_dict() or {})[ACCOUNT]
     return float(acct["risk"]["risk_pct"])
 
 

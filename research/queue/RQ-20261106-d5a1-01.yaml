@@ -80,6 +80,12 @@ run:
   timeout_minutes: 60
   inputs:
     research_unit: RQ-20261106-d5a1-01
+ml_consumer:
+  consumer: ML-ENTRY-ALL-ACCOUNTS
+  decision: how ml_entry is wired onto the alpaca_live / alpaca_portfolio rosters as the operator's min-size baseline (which symbols are
+    affordable at a 1-share minimum, and whether the live fetch can carry a 173-symbol roster), re-put to the operator by the manager
+  legs:
+  - ml_entry
 lands:
   store: research/results/
   assert_field: read_state
