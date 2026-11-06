@@ -1,0 +1,24 @@
+{
+  "id": "BRANCH-PROT-PUT-500",
+  "title": "branch-protection-sync: PUT /branches/main/protection returns HTTP 500 on every attempt (token IS present)",
+  "phase": null,
+  "state": "queued",
+  "owner": "manager",
+  "lane": null,
+  "model": "claude-sonnet-5-5",
+  "ceiling_usd": 4,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [],
+  "blocked_on": [],
+  "note": "MEASURED 2026-11-06 09:20Z (manager 1106a): the handoff's 'BRANCH_PROTECTION_TOKEN missing since 03:26Z' is WRONG. Run 42156560375 (push 082c4ed37 = #23600 WORKFLOW-PRUNE P4, 03:26Z) logs '::notice::BRANCH_PROTECTION_TOKEN is set', then 'PUT protection returned HTTP 500' on 4/4 retries -> exit 1. Same 500 as run 42137307836 cited in the workflow header (724 red of 1,610 push runs/wk before P4). No schedule-event run listed yet for the new 05:23Z cron (could_not_look on why; check next 05:23Z). Operator 2026-11-06 popup: re-create the PAT only 'if really needed' and find what happened -> not needed. Fix: capture the 500 response body + request payload, test whether a field in the protection spec (e.g. a required-check context or restrictions block) makes GitHub 500; a persistent 500 on one payload is a payload problem, not a transient. Gates this adds: none.",
+  "due_by": "2026-11-07",
+  "roadmap": [
+    "unmapped"
+  ],
+  "priority_rank": 3,
+  "roadmap_unmapped_reason": "not set at filing -- manager to map to a milestone at the next weekly pass",
+  "updated_at": "2026-11-06T09:17:13Z",
+  "updated_by": "session_01AFoLuJk1UWVx895RmLTidH",
+  "_seq": 963
+}
