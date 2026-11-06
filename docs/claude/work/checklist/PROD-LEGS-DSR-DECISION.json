@@ -9,14 +9,14 @@
   "ceiling_usd": null,
   "spend_usd": null,
   "tier": 3,
-  "prs": [],
+  "prs": 23584,
   "blocked_on": [],
-  "note": "OPERATOR DECISION 2026-11-06 ~00:30Z, popup answer verbatim: \"Re-measure, then move (Rec.)\". It answered: \"A lane re-runs the trial ledger's DSR/BHY correction on today's real-money roster. Any leg that fails moves to the demo floor (paper), recorded as your decision. A leg that survives stays. You get the list before it merges.\" Source: docs/audits/2026-11-01-from-scratch/AUDIT.md section 1c + section 8 (PROD-LEGS-DSR-DECISION). Dispatched by Manager Session 2026-11-05b (session_01AFoLuLmhUKeUzHC6CHz2uP). Scope: bybit_2 + alpaca_live (prop out of scope) and their mirrors bybit_portfolio / alpaca_portfolio. Deliverable: ONE Tier-3 PR on landing hold; per-leg list to the manager before any merge.",
+  "note": "OPERATOR DECISION 2026-11-06 ~00:30Z, popup answer verbatim: \"Re-measure, then move (Rec.)\". It answered: \"A lane re-runs the trial ledger's DSR/BHY correction on today's real-money roster. Any leg that fails moves to the demo floor (paper), recorded as your decision. A leg that survives stays. You get the list before it merges.\" Source: docs/audits/2026-11-01-from-scratch/AUDIT.md section 1c + section 8 (PROD-LEGS-DSR-DECISION). Dispatched by Manager Session 2026-11-05b (session_01AFoLuLmhUKeUzHC6CHz2uP). Scope: bybit_2 + alpaca_live (prop out of scope) and their mirrors bybit_portfolio / alpaca_portfolio. Deliverable: ONE Tier-3 PR on landing hold; per-leg list to the manager before any merge. 2026-11-06 ~01:30Z MEASURED (trial_ledger.py re-run 2026-11-06T00:24Z; survival = DSR>0.95 AND BHY-haircut>0; same family-N rules as the 10-30 ledger): ALL 7 real-money legs FAIL, plus the alpaca mirror leg. xrp_pullback_2h n53 N40 DSR0.046; trend_donchian_eth_4h n135 N47 0.289; trend_donchian_xrp_4h n46 N52 0.062; ada_pullback_2h n61 N41 0.375; trend_donchian_sol_prop n395 N36 0.355; ml_entry n907 N1 0.839 (BHY-haircut +0.037, fails on DSR; the ledger had no series, so the lane re-ran the harness and reproduced the record exactly); iaum_pullback_1d n8 N35 0.394; gld_pullback_1d (mirror) n8 N49 0.337. All BHY-haircuts are 0 except ml_entry. HELD Tier-3 PR #23584 moves them all to the demo floor; afterwards 0 legs trade real money. Open positions left to their brackets: ml_entry BTCUSDT short on bybit_2 (0.002) and bybit_portfolio (0.694). Evidence: docs/research/prod-legs-dsr-2026-11-06.md. Per-leg list sent to the manager; NOT merged; the operator sees the list first. Follow-up: an E5 record without a per-trade series reads no_series in the ledger (ml_entry), so evidence-extend-only should emit trades.",
   "due_by": "2026-11-08",
   "roadmap": [
     "L-LADDER"
   ],
-  "updated_at": "2026-11-06T00:26:45Z",
+  "updated_at": "2026-11-06T00:45:46Z",
   "updated_by": "session_01AFoLuMJsTnw3XQ5A1BGFHC",
   "_seq": 959
 }
