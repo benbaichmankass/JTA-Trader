@@ -13,7 +13,7 @@
   - On PAPER: close-all plus an account_reset journal sweep, as the last rung.
   - On LIVE: never close-all; raise one red flag.
 - **Replacing a live ML model** passes when the candidate does at least as well as the served model on the same window, net of costs, with ≥100 decisions on each side. The edge bar stays for new strategies. The freshness limit is 35 d.
-- **Prop:** pull trend_donchian_sol_4h from the prop books; keep trend_donchian_eth_4h at min size on probation. The operator's caveat: velotrade has 5 minimum qualifying days, so sol_4h stays on velotrade_1 only if the simulator shows removing it hurts.
+- **Prop:** ~20:18Z the operator REVERSED the ~19:40Z pull, verbatim "Keep sol_4h on all prop books (Recommended)". The book sim showed sol_4h raises each prop book's pass odds (breakout_2 11.4% -> 20.0%). trend_donchian_sol_4h and trend_donchian_eth_4h stay on breakout_2, tradeify_1 and velotrade_1, both on probation. Every prop book is negative EV per attempt at live $10/leg size (a measured baseline).
 - **Book concentration** goes to the performance review's portfolio track (note on PERFORMANCE-REVIEW).
 - **Standing rules:**
   - free resources only; nothing spends Anthropic API credits; never raise the usage-credits toggle;
