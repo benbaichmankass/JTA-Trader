@@ -159,3 +159,22 @@ def test_handoff_outside_repo_rejected_for_commit(tmp_path: Path):
             ]
         )
     assert "inside the repo" in str(excinfo.value)
+
+
+def test_dispatch_no_longer_calls_the_deleted_continue_work_workflow(monkeypatch, capsys):
+    """WORKFLOW-PRUNE P1 deleted `continue-work` (0 runs in 90 d). `--dispatch` must not run `gh workflow run continue-work.yml`
+    (HTTP 404); it says so and returns."""
+    import importlib.util
+    from pathlib import Path
+
+    path = Path(__file__).resolve().parents[1] / "scripts" / "session_handoff" / "close_session.py"
+    spec = importlib.util.spec_from_file_location("_close_session_dispatch", path)
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+
+    def _boom(*a, **k):
+        raise AssertionError("_dispatch must not shell out")
+
+    monkeypatch.setattr(mod, "_run", _boom)
+    mod._dispatch("S-1", "docs/handoff.json", "claude/x")
+    assert "deleted" in capsys.readouterr().out
