@@ -1057,6 +1057,54 @@ def inv_prop_stop_journaled(ctx) -> Result:
     return Result(FAIL if viol else PASS, "open prop fills", len(openf), viol)
 
 
+def inv_flatten_intent_labelled(ctx) -> Result:
+    """A CLOSED journal row that carries ``notes.operator_flatten_intent`` must
+    carry ``exit_reason='operator_flatten_reconciled'``.
+
+    The flatten scripts leave the row to the reconciler, which stamps
+    ``reconciler_filled``; the conversion is a separate step
+    (``mark-operator-flattened --from-intent``). 2026-11-04 audit: trades 6844
+    and 6845 sat mislabelled because nobody ran it. REPORT-ONLY (operator
+    2026-11-04 ~22:41Z: "Run it + auto-detect"): a FAIL here is read by audits
+    and the health review; it blocks nothing and runs in no CI job but the
+    self-test.
+
+    Population: closed non-backtest rows of the ``journal_trades`` payload (the
+    route's newest-1000 window) carrying the intent flag. ``notes`` may be a
+    JSON string (as the route serves it) or a dict.
+    """
+    pop = "closed non-backtest journal rows carrying operator_flatten_intent"
+    tr = ctx.get("journal_trades")
+    if tr is None:
+        return Result(NOT_MEASURED, pop, 0, detail="journal_trades payload absent")
+    rows = tr if isinstance(tr, list) else (tr or {}).get("rows") or []
+    graded, viol = 0, []
+    for r in rows:
+        if not isinstance(r, dict) or str(r.get("status") or "").lower() != "closed":
+            continue
+        try:
+            if int(r.get("is_backtest") or 0) != 0:
+                continue
+        except (TypeError, ValueError):
+            continue
+        notes = r.get("notes")
+        if isinstance(notes, str):
+            try:
+                notes = json.loads(notes)
+            except ValueError:
+                notes = None
+        if not isinstance(notes, dict) or not notes.get("operator_flatten_intent"):
+            continue
+        graded += 1
+        if r.get("exit_reason") != "operator_flatten_reconciled":
+            viol.append(f"trade {r.get('id')} {r.get('account_id')}/{r.get('symbol')}: "
+                        f"exit_reason={r.get('exit_reason')!r} despite flatten intent")
+    if graded == 0:
+        return Result(NOT_MEASURED, pop, 0,
+                      detail=f"no closed intent rows in the {len(rows)}-row window — nothing gradeable")
+    return Result(FAIL if viol else PASS, pop, graded, viol)
+
+
 INVARIANTS: List[Dict[str, Any]] = [
     {"id": "INV-PROTECT-STOP", "blast": "money-at-risk",
      "q": "Does every open IB position have a resting stop covering its size?",
@@ -1088,6 +1136,9 @@ INVARIANTS: List[Dict[str, Any]] = [
     {"id": "INV-PACKAGE-LEG-REACHABLE", "blast": "money-at-risk",
      "q": "Is every standing open leg still selectable by the exit loop?",
      "fn": inv_package_legs_reachable},
+    {"id": "INV-FLATTEN-INTENT-LABELLED", "blast": "accounting",
+     "q": "Does every closed row with operator-flatten intent carry operator_flatten_reconciled?",
+     "fn": inv_flatten_intent_labelled},
     {"id": "INV-BLIND-COUNT-NULL", "blast": "observability",
      "q": "Does a blind read report count=null rather than 0?",
      "fn": inv_count_null_when_blind},
@@ -1351,6 +1402,25 @@ def _self_test() -> int:
     # (c) ABSENT input must be not_measured, NEVER pass
     for inv in INVARIANTS:
         expect(f"{inv['id']} says not_measured on absent input", inv["id"], absent, NOT_MEASURED)
+
+    # (b2) INV-FLATTEN-INTENT-LABELLED: mislabelled FAILS, labelled PASSES,
+    #      an open row / backtest row / unflagged row is outside the population.
+    def _fl(**kw):
+        row = {"id": 1, "account_id": "bybit_2", "symbol": "SOLUSDT", "status": "closed",
+               "is_backtest": 0, "exit_reason": "reconciler_filled",
+               "notes": json.dumps({"operator_flatten_intent": True})}
+        row.update(kw)
+        return {"journal_trades": [row]}
+    expect("flatten-intent FAILS a reconciler_filled close", "INV-FLATTEN-INTENT-LABELLED",
+           _fl(), FAIL)
+    expect("flatten-intent passes a converted close", "INV-FLATTEN-INTENT-LABELLED",
+           _fl(exit_reason="operator_flatten_reconciled"), PASS)
+    expect("flatten-intent ignores an open row", "INV-FLATTEN-INTENT-LABELLED",
+           _fl(status="open"), NOT_MEASURED)
+    expect("flatten-intent ignores a backtest row", "INV-FLATTEN-INTENT-LABELLED",
+           _fl(is_backtest=1), NOT_MEASURED)
+    expect("flatten-intent ignores an unflagged close", "INV-FLATTEN-INTENT-LABELLED",
+           _fl(notes="{}"), NOT_MEASURED)
 
     # (c2) REGRESSION CONTROL — the false positive this suite produced on its
     #      own first live run. An IB future whose order rows carry a

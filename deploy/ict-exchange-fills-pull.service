@@ -103,6 +103,10 @@ ExecStart=/home/ubuntu/ict-trading-bot/.venv/bin/python -u scripts/ops/pull_bybi
 # (visible via scripts/ops/status_check.sh's failed-unit gate) but the wallet
 # ledger above has already run by the time this could fail.
 ExecStart=/home/ubuntu/ict-trading-bot/.venv/bin/python -u scripts/pull_exchange_fills.py --all-bybit-accounts --days 7
+# COST-BROKER-SOURCED (2026-11-06): LAST ExecStart, so nothing above can be skipped by it.
+# Upgrades newly closed trades from the fixed-model cost estimate to cost_source='broker'
+# from the fills just pulled (clean round trips only; idempotent; never touches pnl/orders).
+ExecStart=/home/ubuntu/ict-trading-bot/.venv/bin/python -u scripts/ops/backfill_broker_truth_costs.py --apply
 StandardOutput=journal
 StandardError=journal
 

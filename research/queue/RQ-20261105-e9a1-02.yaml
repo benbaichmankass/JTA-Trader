@@ -1,0 +1,89 @@
+# Hand-authored 2026-11-06 by lane ML-ENTRY-ALL-ACCOUNTS / ML-ENTRY-EQUITY-NATIVE (Tier 1), dispatched by Manager Session 2026-11-05b.
+# CONFIRMING read of the equity-native ENTRY model. Registered AFTER the dev stage (RQ-20261105-e9a1-01, run 42119511272) and BEFORE this unit has run;
+# no outcome of the confirming window has been read by any code path of this model.
+id: RQ-20261105-e9a1-02
+title: 'ENTRY-EQUITY-NATIVE confirm: does the equity-native model (config B, tau 0.20, fixed by the dev stage), refit on dates <= 2025-06-30, reach pooled mean net R per decision >= the deflated bar on the 173-ETF Alpaca pool over the time-disjoint window 2025-07-15 .. last complete month?'
+status: queued
+cadence: once
+theme: ml_health
+priority: 1
+roadmap:
+- L-ML-LIVE
+kind: experiment
+practice_precedent: 'T1, M6, M13 (docs/reference/trading-and-model-practice-principles.md): the config and tau come from the dev walk-forward (unlimited iteration, not claimed); ONE confirming read on dates after the training end plus embargo; the read is claimed in comms/research/holdout_reads.jsonl (family ENTRY-EQ) and graded against holdout_lock.bar_for(N).'
+question: 'Operator popup 2026-11-05 ~20:50Z, verbatim: "Equity-native model (Rec.)". The frozen crypto ENTRY v1 failed on this pool (RQ-20261104-a41f-01: -0.0708 R at n 1099). The dev stage (RQ-20261105-e9a1-01, research-script-run 42119511272, purged expanding walk-forward 2023-01-01..2025-06-30, 12 draws) selected config B (own + cross-sectional features, no market-context proxies) at tau 0.20 with pooled OOF mean net R +0.1067 at n=3896 (gross 0.1650, cost 0.0583, 163 symbols; se 0.0202 iid). Refit that exact config on all rows <= 2025-06-30 (purge 10 d) and score decisions in 2025-07-15 .. last complete month once: restricted long when the regressed net R > 0.20, session-gated, entry next RTH open, SL 2 / TP 3 ATR14 / 24-bar stop, one position per symbol, net of fee 0 + slippage 5 bps (PROVISIONAL) + regulatory 0.5 bps round trip.'
+why_this_matters: 'ML on Alpaca is the week''s top goal. A PASS here is the Stage-0 evidence the Tier-3 roster PR for alpaca_live / alpaca_portfolio needs; a FAIL stops the equity-native line on this configuration.'
+power:
+  expected_n: 2000
+  min_detectable_effect: 0.06
+  effect_units: metric
+  sd: 1.0
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: 'INFERRED from the dev stage: 3896 OOF trades over 30 months (~1560/yr) at this config/tau, so ~2000 trades over the ~15.5-month window; sd ~1 R gives se ~0.022 and an MDE of ~0.06 R at 80% power. The floor n >= 30 is the rule; the record states the actual n.'
+  feasibility:
+    source: none
+    accrual_basis: Replays Alpaca 1h RTH history 2021-01-01 .. last complete month; nothing accrues.
+decision_rule:
+  id: RULE-RQ20261105-e9a1-02-ENTRY-EQUITY-CONFIRM
+  registered_at: '2026-11-06'
+  registered_before_run: true
+  statistic: 'scripts/research/ml_entry_equity.py confirm --config B --tau 0.2: pooled restricted-long mean net R per decision, n, n_symbols, se (iid), month-clustered se (reported), by month, by symbol (top 10), over decisions whose close is in 2025-07-15 .. the last complete month before the run, model refit on rows < 2025-07-01 minus 10 days (train_end 2025-06-30). The read is claimed in the holdout ledger as family ENTRY-EQ and graded against bar = holdout_lock.bar_for(N) with N = the number of prior ENTRY-EQ reads on an overlapping window and symbol set plus one.'
+  rule: 'INDETERMINATE IF pooled n < 30. PASS IF (a) pooled mean net R >= bar.point_t_min * se (N = 1: mean net R >= 0, the operator bar; a re-read raises it) AND (b) the dev pooled OOF mean net R of the selected config/tau, +0.1067, is > 0 (true as registered). FAIL otherwise. A PASS writes nothing by itself: comms/ml_universe/ml_entry.json and a held Tier-3 roster PR (alpaca_live + alpaca_portfolio, with the fixed 2/3 ATR bracket vs the live structure_exit fidelity caveat) follow only on a PASS. Thresholds never change after any result.'
+  what_it_does_not_do: 'No re-selection of config or tau, no sizing, no config change, no order. The window is read once; a re-read is allowed only at the deflated bar and is recorded. DECLARED: the window overlaps dates other models have seen on this population (bdc2-01: 11 ETFs 2025-02..09 under served v1; a41f v1: 2025-10..2026-10); nothing in this model was tuned on it. FIDELITY: the harness models the fixed 2/3 ATR bracket, not the live structure_exit, so roster-promotion-evidence-guard C5 does not clear on it alone.'
+  min_n: 30 pooled decisions
+compute: cpu_long
+value:
+  bucket: ai_trader
+  usd_at_stake_per_month: 60
+  confidence: 0.25
+  basis: 'stand-in: the operator goal (an ML decision maker live on the Alpaca book); not a P&L measurement.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 6.0
+  est_minutes: 80
+  why_runner: Alpaca market data (read-only, paper key) + one LightGBM fit; 4 vCPU / 16 GB runner.
+  basis: 'MEASURED: the dev run took 58 min (fetch + table 55 min, 15 fits 1 min) for data to 2025-06-30; the confirm fetches ~21% more bars and fits once.'
+run:
+  workflow: research-script-run.yml
+  command:
+  - python3
+  - scripts/research/ml_entry_equity.py
+  - confirm
+  - --cache
+  - /tmp/ml_entry_equity
+  - --out
+  - '{out_dir}'
+  - --unit
+  - '{unit}'
+  - --where
+  - research-script-run
+  - --config
+  - B
+  - --tau
+  - '0.2'
+  - --dev-oof-mean
+  - '0.10670394285506653'
+  - --rule-id
+  - RULE-RQ20261105-e9a1-02-ENTRY-EQUITY-CONFIRM
+  - --registered-at
+  - '2026-11-06'
+  timeout_minutes: 240
+  inputs:
+    research_unit: RQ-20261105-e9a1-02
+ml_consumer:
+  consumer: ML-ENTRY-EQUITY-NATIVE
+  decision: whether ml_entry (equity-native model) is proposed as ONE held Tier-3 PR onto alpaca_live + alpaca_portfolio with its account profile
+  legs:
+  - iaum_pullback_1d
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- ML-ENTRY-EQUITY-NATIVE
+- RQ-20261105-e9a1-01
+- RQ-20261104-a41f-01
+population: 'The registered POOL_RULE of scripts/research/ml_entry_alpaca_score.py, UNCHANGED (sha256 e9702661d1a596a0f7e84e632c0ca8b5c2743a728f02147477c003644a0858e2): active, tradable, us_equity ETFs (nasdaqtraded ETF=Y) with median daily dollar volume >= 50M USD over 2019-01-01..2020-12-31. The module refuses to run if the rule hash differs.'

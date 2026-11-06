@@ -590,7 +590,11 @@ def exit_plan_block(p: Optional[dict], meta: dict, entry: Optional[float], sl: O
     return {"entry": _sig(entry), "sl_now": _sig(sl), "tp_now": _sig(tp),
             "sl_initial": _sig(meta.get("sl_initial") or meta.get("initial_sl")),
             "declared": {k: meta[k] for k in EXIT_META_KEYS if k in meta},
-            "exit_plan_state": eps or None}
+            "exit_plan_state": eps or None,
+            # exit_plan_state is journaled ONCE at entry (coordinator) and nothing updates it: after a BE ratchet,
+            # trail or live-review tighten its stop is the ENTRY stop (ict_scalp_sol_5m pkg-1114b329: stop 90.3367 vs
+            # package sl 89.2959, MECH-FOLLOWUPS-1105). sl_now / the account reads are the live levels.
+            "exit_plan_state_note": "entry-time snapshot, not updated when the stop moves; trust sl_now"}
 
 
 def live_vs_backtest_block(s: "Snapshot", leg: str) -> Optional[dict]:
@@ -723,6 +727,25 @@ def prop_apply_paths(account_id: str) -> Optional[List[str]]:
     except Exception:  # allow-silent: the caller records could_not_look
         return None
     return sorted(set(lra.ACTION_PATHS.get(cls, ())) | ({"tighten"} if cls in TIGHTEN_CLASSES else set()))
+
+
+def _leg_applied_sl(tr: Optional[dict], direction: str, pkg_sl: Optional[float]) -> Tuple[Optional[float], Optional[str]]:
+    """The SL this account's OWN leg legitimately rests at when a live-review apply tightened only this leg.
+
+    An account-scoped apply (MD-LTR-PAPER-AUTO) never moves the shared ``order_packages.sl`` (the mandate's
+    ``never:`` list), so after one the package SL is stale BY DESIGN and the leg's ``notes.sl_floor`` is the record
+    of the level the venue should hold. Comparing the venue to the package SL alone flagged
+    LR-20261105T1801Z-pkg-bf12adaa61b043f7 a mismatch (venue 1.2466 = the applied floor, package 1.2711) and routed
+    it ``operator_ask`` (MECH-FOLLOWUPS-1105 a). Returns ``(level, note)``; ``(pkg_sl, None)`` when the leg carries
+    no tighter applied floor."""
+    from src.runtime import live_review_intent as lri
+
+    floor = lri.sl_floor_from((tr or {}).get("notes"))
+    if floor is None or pkg_sl is None or direction not in ("long", "short"):
+        return pkg_sl, None
+    if not lri.is_tighter(direction, floor, pkg_sl):
+        return pkg_sl, None
+    return floor, f"leg applied floor {floor:g} (live-review apply; package SL {pkg_sl:g} not moved by design)"
 
 
 def _compare_levels(aid: str, symbol: str, exchange: str, sl: Optional[float], tp: Optional[float],
@@ -880,7 +903,10 @@ def _mechanics(s: Snapshot, view: dict, accts: List[dict], sl: Optional[float], 
                     bad += 1
                     ev.append(f"{aid}: journal open but no {symbol} position/protection at the venue")
                 elif trade_open:
-                    bad_i, ev_i, compared = _compare_levels(aid, symbol, ex or "", sl, tp, v)
+                    acct_sl, floor_note = _leg_applied_sl(tr, direction, sl)
+                    if floor_note:
+                        ev.append(f"{aid}: {floor_note}")
+                    bad_i, ev_i, compared = _compare_levels(aid, symbol, ex or "", acct_sl, tp, v)
                     bad += bad_i
                     ev.extend(ev_i)
                     if not compared:

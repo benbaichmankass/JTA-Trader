@@ -271,9 +271,22 @@ NEWER = {"workflow_runs": [{"id": 6, "created_at": "2026-10-04T10:05:00Z"}]}
 ALONE = {"workflow_runs": [{"id": 5, "created_at": "2026-10-04T10:00:00Z"}]}
 NO_JOB = {"jobs": []}
 # a job that really ran has steps (even "Set up job"); started_at alone does not make a job started
-STARTED = {"jobs": [{"started_at": "2026-10-04T10:00:05Z", "steps": [{"name": "Set up job", "conclusion": "success"}]}]}
+STARTED = {"jobs": [{"conclusion": "cancelled", "started_at": "2026-10-04T10:00:05Z", "steps": [{"name": "Set up job", "conclusion": "success"}]}]}
 # a pending job replaced by a newer run: started_at == created_at, no steps (MEASURED, work-digest 2026-11-05)
-REPLACED_PENDING = {"jobs": [{"started_at": "2026-10-04T10:00:00Z", "steps": []}]}
+REPLACED_PENDING = {"jobs": [{"conclusion": "cancelled", "started_at": "2026-10-04T10:00:00Z", "steps": []}]}
+# PI-20261105-C6CHZ2UP-0002: gate succeeded (8 steps) + digest PENDING-cancelled (0 steps) -> superseded;
+# the same gate beside a job cancelled while running (timeout/by hand, has steps) -> genuine.
+GATE_OK = {"conclusion": "success", "started_at": "2026-11-05T23:36:00Z", "steps": [{"name": f"s{i}"} for i in range(8)]}
+DIGEST_PENDING = {"conclusion": "cancelled", "started_at": "2026-11-05T23:36:30Z", "steps": []}
+DIGEST_RUNNING = {"conclusion": "cancelled", "started_at": "2026-11-05T23:36:30Z", "steps": [{"name": f"s{i}"} for i in range(10)]}
+
+
+def test_succeeded_job_plus_pending_cancelled_job_is_superseded(tmp_path):
+    assert _run_superseded(tmp_path, {"jobs": [GATE_OK, DIGEST_PENDING]}, NEWER) == "state=superseded"
+
+
+def test_succeeded_job_plus_job_cancelled_while_running_still_alerts(tmp_path):
+    assert _run_superseded(tmp_path, {"jobs": [GATE_OK, DIGEST_RUNNING]}, NEWER) == "state=genuine"
 
 
 def test_pending_run_replaced_by_newer_is_superseded(tmp_path):
@@ -315,7 +328,7 @@ def test_ping_step_is_gated_on_superseded():
 def _started_jq() -> str:
     """The shipping filter that counts jobs that really started, extracted from the workflow (never copied)."""
     text = WORKFLOW.read_text(encoding="utf-8")
-    m = re.search(r"started=\"\$\(printf '%s' \"\$\{jobs\}\" \| jq '(\[\.jobs\[\] \| select\(\.started_at.*?length)'\)\"", text, re.S)
+    m = re.search(r"started=\"\$\(printf '%s' \"\$\{jobs\}\" \| jq '(\[\.jobs\[\] \| select\(\.conclusion.*?length)'\)\"", text, re.S)
     assert m, "could not locate the 'started jobs' jq filter in the workflow"
     return m.group(1)
 
@@ -347,3 +360,4 @@ def test_positive_control_a_job_that_ran_steps_before_cancel_is_started():
 
 def test_a_job_with_no_started_at_is_not_started():
     assert _started({"jobs": [{"name": "x", "conclusion": "skipped", "started_at": None, "steps": []}]}) == 0
+
