@@ -1,0 +1,124 @@
+{
+ "schema_version": 1,
+ "review_id": "LR-20261106T0322Z-pkg-78342b614f6040f6",
+ "reviewed_at": "2026-11-06T03:42:00Z",
+ "order_package_id": "pkg-78342b614f6040f6",
+ "trade_id": null,
+ "leg": "ml_entry_v2",
+ "accounts": [
+  "bybit_1"
+ ],
+ "trigger": {
+  "event": "adverse_r",
+  "level": -0.5,
+  "l0_snapshot_at": null
+ },
+ "info_cutoff_at": "2026-11-06T03:22:27Z",
+ "state": {
+  "atr_now_over_entry": null,
+  "bars_held": 5,
+  "giveback_r": 1.0633,
+  "open_r": -0.5907,
+  "peak_provenance": "estimated",
+  "peak_r": 0.4726,
+  "regime_cell_entry": null,
+  "regime_cell_now": null,
+  "sl": 0.18747142857142857,
+  "tp": 0.16715714285714284
+ },
+ "features_at_review": {
+  "atr_now_over_entry": null,
+  "bars_since_peak": 4,
+  "giveback_r": 1.0633,
+  "open_r": -0.5907,
+  "peak_r": 0.4726,
+  "r_to_stop": 0.4093,
+  "r_to_target": 2.5907
+ },
+ "mechanics": {
+  "evidence": "package sl 0.18747142857142857 / tp 0.16715714285714284 agree with every readable account",
+  "verdict": "match"
+ },
+ "options": [],
+ "outcome_table_source": null,
+ "recommendation": {
+  "action": "hold",
+  "level": null,
+  "level_atr": null,
+  "ev_delta_r": null,
+  "worst_case_delta_r": null,
+  "basis": "judgement",
+  "confidence": "anecdote",
+  "evidence_source": "judgement",
+  "judgement_confidence": 0.45,
+  "size_fraction": null,
+  "size_multiplier": null,
+  "reason": "Hold. Short from 0.1807, -0.59R at about 0.1847 after a +0.47R peak; the bounce off the 0.1775 flush low has made four higher highs to 0.1858, one tick over the 0.1857 swing high that my last forecast named as invalidation (the 1h closes stayed at or under 0.1854, so no close above it). Stop 0.18747 is 0.41R (about 0.75 ATR) away and behind that structure, and 4h ADX 28.7 is still a downtrend. Closing here saves at most 0.41R if the stop is hit, but from this state close and hold are roughly equal in a random walk, so only an edge decides it, and the ML entry plus the 4h trend are the only edge available; I do not pay the exit for no evidence. No Stage-0 record for ml_entry_v2, so no table. If a 1h close prints above 0.1857 the thesis is down and the next review should lean to close. Not close-on-adverse by default (LTR-TRIGGER-CLOSE-S0)."
+ },
+ "judge_prior": null,
+ "applied": false,
+ "apply_policy": {
+  "bound_r": 0.25,
+  "within_bound": null,
+  "tighten_r": null
+ },
+ "shadow_policy": {
+  "bound_r": 0.5,
+  "within_bound": null,
+  "would_apply": null,
+  "tighten_r": null
+ },
+ "context_flags": [
+  "packet_defect: priced_options evidence_missing 1/1 (no committed Stage-0 record for ml_entry_v2)",
+  "judgement: no table; basis judgement, confidence 0.45",
+  "trigger: adverse_r -0.5R crossed (open_r -0.59, r_to_stop 0.41)",
+  "regime: 4h ADX 28.7 trending, 1h ADX 34.5; atr_now_over_entry null (missing_inputs)",
+  "invalidation: the 0.1857 swing high from the prior forecast was exceeded intrabar (high 0.1858) but not on a 1h close",
+  "correlated: ADA is one crypto-beta bet with BTC/ETH/SOL/XRP/AVAX shorts; 14 of 16 packages short",
+  "live_vs_backtest: NO_BACKTEST",
+  "paper package (bybit_1) under MD-LTR-PAPER-AUTO: hold, nothing to apply"
+ ],
+ "account_reads": [
+  {
+   "account_id": "bybit_1",
+   "account_class": "paper",
+   "read": "no_action",
+   "evidence": "nothing to apply; bybit_orders: SL 0.1875 / TP 0.1672, position True, matched by order_id; apply paths close, move_tp, reduce, tighten, widen_sl"
+  }
+ ],
+ "disposition": {
+  "route": "none",
+  "mandate": null,
+  "action_issue": null,
+  "applied_at": null,
+  "verified_readback": null
+ },
+ "model": "sonnet-tier (live-review lane)",
+ "session": "session_01AFoLuKBzufAJ4zXeQsL6En",
+ "prompt_sha": null,
+ "skill_sha": "fcbbce42e2b614d237ea6b999a77be43412f6ed8",
+ "packet_defects": [
+  {
+   "count": 1,
+   "denominator": 1,
+   "field": "priced_options",
+   "reason": "evidence_missing"
+  }
+ ],
+ "packet_sha": "495d4bc5626e927af88169dc38ec7ce8c1692163009195851c784fdb8c701a20",
+ "forecast": {
+  "thesis": "The bounce is a counter-trend retrace inside a 4h downtrend; I expect it to stall under 0.1858 and a 1h low at or under 0.1806 within six bars.",
+  "direction": "with_trade",
+  "target_px": 0.1806,
+  "p_target": 0.45,
+  "invalidation_px": 0.1875,
+  "horizon_bars": 6,
+  "timeframe": "1h",
+  "evidence": [
+   "state open_r -0.5907 peak 0.4726 giveback 1.0633",
+   "chart.swings high 0.1857 (touched 0.1858), lows 0.1802/0.1775",
+   "htf 4h ADX 28.7 trending",
+   "exit_plan stop 0.18747 (0.41R), TP 0.16716 (2R)"
+  ]
+ }
+}

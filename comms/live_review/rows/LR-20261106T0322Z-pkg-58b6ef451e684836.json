@@ -1,0 +1,135 @@
+{
+ "schema_version": 1,
+ "review_id": "LR-20261106T0322Z-pkg-58b6ef451e684836",
+ "reviewed_at": "2026-11-06T03:42:00Z",
+ "order_package_id": "pkg-58b6ef451e684836",
+ "trade_id": null,
+ "leg": "ml_entry",
+ "accounts": [
+  "alpaca_paper"
+ ],
+ "trigger": {
+  "event": "r_milestone",
+  "level": 1.0,
+  "l0_snapshot_at": null
+ },
+ "info_cutoff_at": "2026-11-06T03:22:44Z",
+ "state": {
+  "atr_now_over_entry": null,
+  "bars_held": 7,
+  "giveback_r": 0.0,
+  "open_r": 1.1858,
+  "peak_provenance": "estimated",
+  "peak_r": 1.1858,
+  "regime_cell_entry": null,
+  "regime_cell_now": null,
+  "sl": 751.5157142857142,
+  "tp": 727.5014285714285
+ },
+ "features_at_review": {
+  "atr_now_over_entry": null,
+  "bars_since_peak": 0,
+  "giveback_r": 0.0,
+  "open_r": 1.1858,
+  "peak_r": 1.1858,
+  "r_to_stop": 2.1858,
+  "r_to_target": 0.3142
+ },
+ "mechanics": {
+  "evidence": "package sl 751.5157142857142 / tp 727.5014285714285 agree with every readable account",
+  "verdict": "match"
+ },
+ "options": [
+  {
+   "action": "hold",
+   "level": null,
+   "n": 266,
+   "mean_r": 1.018,
+   "sd_r": 1.2045,
+   "worst_r": -1.1844,
+   "net": true
+  },
+  {
+   "action": "close",
+   "level": null,
+   "n": 266,
+   "mean_r": 1.0981,
+   "sd_r": 0.0353,
+   "worst_r": 0.9154,
+   "net": true
+  }
+ ],
+ "outcome_table_source": "comms/live_review/tables/LR-20261106T0322Z-pkg-58b6ef451e684836.json",
+ "recommendation": {
+  "action": "close",
+  "level": null,
+  "level_atr": null,
+  "ev_delta_r": 0.0801,
+  "worst_case_delta_r": 2.0998,
+  "basis": "ev_positive",
+  "confidence": "suggestive",
+  "evidence_source": "table",
+  "judgement_confidence": 0.55,
+  "size_fraction": null,
+  "size_multiplier": null,
+  "reason": "Close. Short from 741.91, +1.19R at about 730.5, peak = now (est.), the last 1h bar closing on its low, TP 727.5 only 0.31R away. The leg's own table at this state (ml_entry shorts, n=266, net of cost): hold +1.018R (sd 1.20, p05 -1.12, worst -1.18, 32% give back more than half), close +1.098R (worst +0.915): every alternative priced beats hold in the mean and the tail, and the difference is +0.08R (SE 0.074, about 1.1 SE, so the mean gain is NOT significant; the tail gain of +2.1R at the worst case is the reason). Hold's upside is capped at +0.31R to the resting TP, while the downside is a full give-back into a flush-and-bounce tape. It also cuts one of 14 shorts in a book that is about 88% short. Reversal of this call: price printing a fresh 1h low before the order fills only forfeits at most 0.31R."
+ },
+ "judge_prior": null,
+ "applied": false,
+ "apply_policy": {
+  "bound_r": 0.25,
+  "within_bound": null,
+  "tighten_r": null
+ },
+ "shadow_policy": {
+  "bound_r": 0.5,
+  "within_bound": null,
+  "would_apply": null,
+  "tighten_r": null
+ },
+ "context_flags": [
+  "table: ml_entry LTR corpus n=266 shorts, hold +1.018R vs close +1.098R (diff +0.08R, SE 0.074, not significant); worst -1.184R vs +0.915R",
+  "bias: close is the current mark less exit cost (sd 0.035): its advantage is variance, not a forecast",
+  "packet_health: ok (no defects); atr_now_over_entry null (missing_inputs: meta.atr not recorded)",
+  "trigger: r_milestone +1R and near_target (0.31R to target)",
+  "regime: 1h ADX 38.3 trending, 4h ADX 23.5",
+  "correlated: 14 of 16 open packages short; SPY with TQQQ/QQQ/GDX/IAUM is one equity-risk-off bet",
+  "live_vs_backtest: NO_BACKTEST (ml_entry evidence source_run not a committed file); real-money book 4 closed, live +1.35R",
+  "paper package (alpaca_paper) under MD-LTR-PAPER-AUTO: close would apply on the alpaca_paper leg only"
+ ],
+ "account_reads": [
+  {
+   "account_id": "alpaca_paper",
+   "account_class": "paper",
+   "read": "would_apply",
+   "evidence": "alpaca_orders: SL 751.52 / TP 727.5, position True, matched by sl:order_id,tp:qty; apply paths close, move_tp, tighten; would_apply = an executor reaches this leg, NOT that its RiskManager approved (LTR-6 gap)"
+  }
+ ],
+ "disposition": {
+  "route": "recommended",
+  "mandate": null,
+  "action_issue": null,
+  "applied_at": null,
+  "verified_readback": null
+ },
+ "model": "sonnet-tier (live-review lane)",
+ "session": "session_01AFoLuKBzufAJ4zXeQsL6En",
+ "prompt_sha": null,
+ "skill_sha": "fcbbce42e2b614d237ea6b999a77be43412f6ed8",
+ "packet_sha": "06c8d53687f5f591337c082faa9fb6453d954fdf4081930198a2c9f6e30ac163",
+ "forecast": {
+  "thesis": "If held, the 1h flush extends and trades the 727.5 TP within six bars, but the 0.31R left is smaller than the give-back risk; I rate holding to TP at 55% and a reclaim of 736.96 at 30%.",
+  "direction": "with_trade",
+  "target_px": 727.5,
+  "p_target": 0.55,
+  "invalidation_px": 736.96,
+  "horizon_bars": 6,
+  "timeframe": "1h",
+  "evidence": [
+   "chart.since_entry low 730.52 (last 1h close on the low)",
+   "priced_options hold n=266 +1.018R vs close +1.098R",
+   "state open_r 1.1858 peak 1.1858 giveback 0",
+   "exit_plan TP 727.5 (0.31R), stop 751.5 (2.19R)"
+  ]
+ }
+}

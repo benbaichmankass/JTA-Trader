@@ -1,0 +1,131 @@
+{
+ "schema_version": 1,
+ "review_id": "LR-20261106T0321Z-pkg-976b459f5c954df0",
+ "reviewed_at": "2026-11-06T03:42:00Z",
+ "order_package_id": "pkg-976b459f5c954df0",
+ "trade_id": null,
+ "leg": "mhg_pullback_1d",
+ "accounts": [
+  "ib_paper"
+ ],
+ "trigger": {
+  "event": "r_milestone",
+  "level": 1.0,
+  "l0_snapshot_at": null
+ },
+ "info_cutoff_at": "2026-11-06T03:21:30Z",
+ "state": {
+  "atr_now_over_entry": 0.9344,
+  "bars_held": 35,
+  "giveback_r": 0.1612,
+  "open_r": 1.1388,
+  "peak_provenance": "estimated",
+  "peak_r": 1.3,
+  "regime_cell_entry": null,
+  "regime_cell_now": null,
+  "sl": 6.68589286,
+  "tp": 5.9641695
+ },
+ "features_at_review": {
+  "atr_now_over_entry": 0.9344,
+  "bars_since_peak": 0,
+  "giveback_r": 0.1612,
+  "open_r": 1.1388,
+  "peak_r": 1.3,
+  "r_to_stop": 1.3388,
+  "r_to_target": 0.8355
+ },
+ "mechanics": {
+  "evidence": "package sl 6.68589286 / tp 5.9641695 agree with every readable account",
+  "verdict": "match"
+ },
+ "options": [],
+ "outcome_table_source": "comms/live_review/tables/LR-20261106T0321Z-pkg-976b459f5c954df0.json",
+ "recommendation": {
+  "action": "hold",
+  "level": null,
+  "level_atr": null,
+  "ev_delta_r": null,
+  "worst_case_delta_r": null,
+  "basis": "judgement",
+  "confidence": "anecdote",
+  "evidence_source": "judgement",
+  "judgement_confidence": 0.55,
+  "size_fraction": null,
+  "size_multiplier": null,
+  "reason": "Hold. Short from 6.6195, now +1.14R (peak est. 1.30R, giveback only 0.16R) and the 1d bar that just closed (6.27, low 6.188) made a new since-entry low and broke the 6.2715 low the last review targeted (that forecast graded HIT). Weekly ADX 50 downtrend; daily ADX 17.5 chop, so no trend-following reason to exit. Stop 6.686 is 1.34R (about 3 daily ATR) away behind the 6.73 swing high; TP 5.964 is 0.84R away and predictive, so HOLD already expresses the view. All 7 priced options are unpriced (no_candles), so there is no table; judgement basis. Concentration (14 of 16 shorts) noted, but this is a metals/copper leg, not crypto beta, and a close here would bank 1.1R of a trade that is 0.84R from TP."
+ },
+ "judge_prior": null,
+ "applied": false,
+ "apply_policy": {
+  "bound_r": 0.25,
+  "within_bound": null,
+  "tighten_r": null
+ },
+ "shadow_policy": {
+  "bound_r": 0.5,
+  "within_bound": null,
+  "would_apply": null,
+  "tighten_r": null
+ },
+ "context_flags": [
+  "packet_defect: priced_options.options all_options_unpriced:no_candles 7/7",
+  "packet_defect: priced_options.candles candles_missing 7/7",
+  "judgement: hold cell n=0 (corpus 10 trades, n_floor 20); basis judgement, confidence 0.55",
+  "trigger: r_milestone +1R and daily_floor (last review 24.4h ago)",
+  "regime: weekly ADX 50.2 trending, daily ADX 17.5 chop; atr_now_over_entry 0.93; entry cell unknown (missing_inputs)",
+  "correlated: 14 of 16 open packages short; MHG is copper, loosely tied to the MGC/GDX metals shorts and the risk-off crypto/equity beta",
+  "live_vs_backtest: NO_LIVE_TRADES (backtest expectancy +0.41R, n=10)",
+  "paper package (ib_paper): hold, nothing to apply"
+ ],
+ "account_reads": [
+  {
+   "account_id": "ib_paper",
+   "account_class": "paper",
+   "read": "no_action",
+   "evidence": "nothing to apply; ib_orders: SL 6.686 / TP 5.964, position True, matched by oca_group; no apply path for interactive_brokers"
+  }
+ ],
+ "disposition": {
+  "route": "none",
+  "mandate": null,
+  "action_issue": null,
+  "applied_at": null,
+  "verified_readback": null
+ },
+ "model": "sonnet-tier (live-review lane)",
+ "session": "session_01AFoLuKBzufAJ4zXeQsL6En",
+ "prompt_sha": null,
+ "skill_sha": "fcbbce42e2b614d237ea6b999a77be43412f6ed8",
+ "packet_defects": [
+  {
+   "count": 7,
+   "denominator": 7,
+   "field": "priced_options.options",
+   "reason": "all_options_unpriced:no_candles"
+  },
+  {
+   "count": 7,
+   "denominator": 7,
+   "field": "priced_options.candles",
+   "reason": "candles_missing"
+  }
+ ],
+ "packet_sha": "afc6ece88638c9281f04eac939c6583baa3f6c0a18943ceac86d50534bf8c42b",
+ "forecast": {
+  "thesis": "Weekly downtrend (ADX 50) is extending: after the 6.2715 low broke, I expect a daily close at or under 6.19 within three bars before any reclaim of the 6.47 bounce high.",
+  "direction": "with_trade",
+  "target_px": 6.19,
+  "p_target": 0.55,
+  "invalidation_px": 6.47,
+  "horizon_bars": 3,
+  "timeframe": "1d",
+  "evidence": [
+   "chart.since_entry low 6.188 (last closed bar)",
+   "chart.swings highs 6.7295/6.6495 well above",
+   "htf ADX 50.2 trending",
+   "state open_r 1.1388 peak 1.3 giveback 0.1612",
+   "exit_plan stop 6.686, TP 5.964 (0.84R)"
+  ]
+ }
+}

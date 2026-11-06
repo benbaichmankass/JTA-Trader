@@ -1,0 +1,133 @@
+{
+ "schema_version": 1,
+ "review_id": "LR-20261106T0322Z-pkg-f76bb92289d143e5",
+ "reviewed_at": "2026-11-06T03:42:00Z",
+ "order_package_id": "pkg-f76bb92289d143e5",
+ "trade_id": null,
+ "leg": "trend_donchian_sol_4h",
+ "accounts": [
+  "bybit_1"
+ ],
+ "trigger": {
+  "event": "r_milestone",
+  "level": 2.0,
+  "l0_snapshot_at": null
+ },
+ "info_cutoff_at": "2026-11-06T03:22:09Z",
+ "state": {
+  "atr_now_over_entry": 1.3333,
+  "bars_held": 43,
+  "giveback_r": 0.6085,
+  "open_r": 2.2586,
+  "peak_provenance": "estimated",
+  "peak_r": 2.867,
+  "regime_cell_entry": null,
+  "regime_cell_now": null,
+  "sl": 97.93642857,
+  "tp": 87.01858
+ },
+ "features_at_review": {
+  "atr_now_over_entry": 1.3333,
+  "bars_since_peak": 0,
+  "giveback_r": 0.6085,
+  "open_r": 2.2586,
+  "peak_r": 2.867,
+  "r_to_stop": 2.7249,
+  "r_to_target": 1.0284
+ },
+ "mechanics": {
+  "evidence": "bybit_1: SOLUSDT is NETTED across 2 open packages on this account (per side) (this one + pkg-81365629b21a4fc1); each package's own qty-scoped Partial SL/TP legs are matched by order id, never by level alone; bybit_1: leg applied floor 94.5 (live-review apply; package SL 97.9364 not moved by design); 1 account(s) could not be read",
+  "verdict": "match"
+ },
+ "options": [],
+ "outcome_table_source": "comms/live_review/tables/LR-20261106T0322Z-pkg-f76bb92289d143e5.json",
+ "recommendation": {
+  "action": "hold",
+  "level": null,
+  "level_atr": null,
+  "ev_delta_r": null,
+  "worst_case_delta_r": null,
+  "basis": "judgement",
+  "confidence": "anecdote",
+  "evidence_source": "judgement",
+  "judgement_confidence": 0.6,
+  "size_fraction": null,
+  "size_multiplier": null,
+  "reason": "Hold. Short from 96.58, +2.26R (peak est. 2.87R, giveback 0.61R). The last 4h bars printed new lows (88.24) in a 4h/1d downtrend (ADX 27/34); TP 87.02 is 1.03R away and predictive; the leg's venue stop is 94.5 (applied earlier under MD-LTR-PAPER-AUTO, about 2 ATR above the 93.91 swing high), so the trade already locks about 0.7R and holding risks a bounded giveback. The mechanics event (venue 94.5 vs package 97.94) is the known by-design divergence: the packet now reads the leg-applied floor and returns match (evidence names bybit_1 leg applied floor 94.5). Hold cell n=5 (corpus 116 trades), so judgement. Concentration noted: two SOL shorts are netted on bybit_1 and 14 of 16 packages are short; the venue floor, not a size cut, is the control here."
+ },
+ "judge_prior": null,
+ "applied": false,
+ "apply_policy": {
+  "bound_r": 0.25,
+  "within_bound": null,
+  "tighten_r": null
+ },
+ "shadow_policy": {
+  "bound_r": 0.5,
+  "within_bound": null,
+  "would_apply": null,
+  "tighten_r": null
+ },
+ "context_flags": [
+  "packet_defect: priced_options.options all_options_unpriced:insufficient_n 8/8",
+  "packet_defect: mechanics venue_read_unreachable 1/2 (an unnamed second account entry: exchange blank)",
+  "judgement: hold cell n=5 (corpus 116 trades, n_floor 20); basis judgement, confidence 0.60",
+  "mechanics: bybit_1 venue SL 94.5 vs package SL 97.9364 is the by-design MD-LTR-PAPER-AUTO leg floor; the packet reads it (match with evidence); the due gate's mechanics/venue_sl_diverges event still fires on package-vs-venue (gap 3.44 > 0.25 ATR), so #23497 fixed the packet but NOT the due gate",
+  "trigger: r_milestone +2R and mechanics venue_sl_diverges",
+  "regime: 4h ADX 27.5 trending, 1d ADX 34.1; atr_now_over_entry 1.33 (below the 1.5 overlay)",
+  "correlated: SOL is netted across 2 open packages on bybit_1; 14 of 16 packages short; one crypto-beta bet with BTC/ETH/ADA/XRP/AVAX",
+  "funding: null (could not look; Bybit funding geo-blocked, no diag route)",
+  "live_vs_backtest: NO_LIVE_TRADES (backtest expectancy +0.32R, n=116)",
+  "paper package (bybit_1) under MD-LTR-PAPER-AUTO: hold, nothing to apply"
+ ],
+ "account_reads": [
+  {
+   "account_id": "bybit_1",
+   "account_class": "paper",
+   "read": "no_action",
+   "evidence": "nothing to apply; bybit_orders: SL 94.5 (leg-applied floor) / TP 87.02, position True, matched by order_id, 1 sibling package on SOLUSDT; apply paths close, move_tp, reduce, tighten, widen_sl"
+  }
+ ],
+ "disposition": {
+  "route": "none",
+  "mandate": null,
+  "action_issue": null,
+  "applied_at": null,
+  "verified_readback": null
+ },
+ "model": "sonnet-tier (live-review lane)",
+ "session": "session_01AFoLuKBzufAJ4zXeQsL6En",
+ "prompt_sha": null,
+ "skill_sha": "fcbbce42e2b614d237ea6b999a77be43412f6ed8",
+ "packet_defects": [
+  {
+   "count": 8,
+   "denominator": 8,
+   "field": "priced_options.options",
+   "reason": "all_options_unpriced:insufficient_n"
+  },
+  {
+   "count": 1,
+   "denominator": 2,
+   "field": "mechanics",
+   "reason": "venue_read_unreachable"
+  }
+ ],
+ "packet_sha": "466dbb49036edbf73e991c052914441657b1b36daf88d90284b86cbba6c76aaf",
+ "forecast": {
+  "thesis": "The 4h downtrend is extending off the 98.13 high; I expect the 87.02 TP to trade within six 4h bars before price reclaims the 92.5 area.",
+  "direction": "with_trade",
+  "target_px": 87.02,
+  "p_target": 0.5,
+  "invalidation_px": 92.5,
+  "horizon_bars": 6,
+  "timeframe": "4h",
+  "evidence": [
+   "chart.since_entry low 88.24 (last 4h bar)",
+   "chart.swings highs 93.91/98.13, lows 89.81/90.78 broken",
+   "htf 1d ADX 34.1 trending",
+   "state open_r 2.2586 peak 2.867 giveback 0.6085",
+   "venue SL 94.5 leg floor, TP 87.02 (1.03R)"
+  ]
+ }
+}

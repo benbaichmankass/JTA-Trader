@@ -1,0 +1,130 @@
+{
+ "schema_version": 1,
+ "review_id": "LR-20261106T0321Z-pkg-011a7bf85ee54a6f",
+ "reviewed_at": "2026-11-06T03:42:00Z",
+ "order_package_id": "pkg-011a7bf85ee54a6f",
+ "trade_id": null,
+ "leg": "mgc_pullback_1d",
+ "accounts": [
+  "ib_paper"
+ ],
+ "trigger": {
+  "event": "judgement_cadence",
+  "level": "2026-11-06T00:00:00+00:00",
+  "l0_snapshot_at": null
+ },
+ "info_cutoff_at": "2026-11-06T03:21:49Z",
+ "state": {
+  "atr_now_over_entry": 1.1873,
+  "bars_held": 14,
+  "giveback_r": 1.7441,
+  "open_r": 1.1178,
+  "peak_provenance": "estimated",
+  "peak_r": 2.8619,
+  "regime_cell_entry": null,
+  "regime_cell_now": null,
+  "sl": 4160.32857143,
+  "tp": 3766.9909
+ },
+ "features_at_review": {
+  "atr_now_over_entry": 1.1873,
+  "bars_since_peak": 4,
+  "giveback_r": 1.7441,
+  "open_r": 1.1178,
+  "peak_r": 2.8619,
+  "r_to_stop": 0.9226,
+  "r_to_target": 2.8098
+ },
+ "mechanics": {
+  "evidence": "package sl 4160.32857143 / tp 3766.9909 agree with every readable account",
+  "verdict": "match"
+ },
+ "options": [],
+ "outcome_table_source": "comms/live_review/tables/LR-20261106T0321Z-pkg-011a7bf85ee54a6f.json",
+ "recommendation": {
+  "action": "hold",
+  "level": null,
+  "level_atr": null,
+  "ev_delta_r": null,
+  "worst_case_delta_r": null,
+  "basis": "judgement",
+  "confidence": "anecdote",
+  "evidence_source": "judgement",
+  "judgement_confidence": 0.5,
+  "size_fraction": null,
+  "size_multiplier": null,
+  "reason": "Hold. Short from 4180.9, +1.12R now after a 2.86R estimated peak (giveback 1.74R). The last closed 1d bar (4113.5, high 4156) bounced into the 4097-4220 supply and the live mark (about 4064, from open_r 1.12) has already rejected from it, so price is back under the 4097 swing high. Stop 4160.3 is 0.92R (about 1.2 ATR) away and locks about +0.19R; TP 3767 is 2.8R away; weekly ADX 35 downtrend. Closing banks 1.12R but gives up the trend leg the pullback strategy is built to hold; at this distance to the stop a hold is roughly an even bet on the mark and keeps the left tail bounded at +0.19R. No table (n=0, corpus 8 trades): judgement basis. Packet rebuild check: the 01:56Z could_not_build (JSONDecodeError, MECH #23609) did NOT reproduce, the packet built now with mechanics match."
+ },
+ "judge_prior": null,
+ "applied": false,
+ "apply_policy": {
+  "bound_r": 0.25,
+  "within_bound": null,
+  "tighten_r": null
+ },
+ "shadow_policy": {
+  "bound_r": 0.5,
+  "within_bound": null,
+  "would_apply": null,
+  "tighten_r": null
+ },
+ "context_flags": [
+  "packet_defect: priced_options.options all_options_unpriced:no_candles+stop_level_not_below_price 6/6",
+  "packet_defect: priced_options.candles candles_missing 3/6",
+  "judgement: hold cell n=0 (corpus 8 trades, n_floor 20); basis judgement, confidence 0.50",
+  "trigger: judgement_cadence 00:00Z; packet rebuilt cleanly (earlier 01:56Z packet could_not_build / JSONDecodeError not reproduced)",
+  "regime: weekly ADX 34.9 trending; atr_now_over_entry 1.19; entry cell unknown (regime transitional, vol unknown)",
+  "correlated: 14 of 16 open packages short; metals shorts MGC + GDX + IAUM add to the risk-off/dollar-up bet",
+  "live_vs_backtest: NO_LIVE_TRADES (backtest expectancy +0.48R, n=8)",
+  "paper package (ib_paper): hold, nothing to apply"
+ ],
+ "account_reads": [
+  {
+   "account_id": "ib_paper",
+   "account_class": "paper",
+   "read": "no_action",
+   "evidence": "nothing to apply; ib_orders: SL 4160.3 / TP 3767.0, position True, matched by oca_group; no apply path for interactive_brokers"
+  }
+ ],
+ "disposition": {
+  "route": "none",
+  "mandate": null,
+  "action_issue": null,
+  "applied_at": null,
+  "verified_readback": null
+ },
+ "model": "sonnet-tier (live-review lane)",
+ "session": "session_01AFoLuKBzufAJ4zXeQsL6En",
+ "prompt_sha": null,
+ "skill_sha": "fcbbce42e2b614d237ea6b999a77be43412f6ed8",
+ "packet_defects": [
+  {
+   "count": 6,
+   "denominator": 6,
+   "field": "priced_options.options",
+   "reason": "all_options_unpriced:no_candles+stop_level_not_below_price"
+  },
+  {
+   "count": 3,
+   "denominator": 6,
+   "field": "priced_options.candles",
+   "reason": "candles_missing"
+  }
+ ],
+ "packet_sha": "5f49f586c1a6bb8461cc658a8dd7dfc4a2f3e3c9dd737226e7f13e111943b5f8",
+ "forecast": {
+  "thesis": "The 1d bounce failed at the 4097-4220 supply; in a weekly downtrend (ADX 35) I expect a daily close below the 3989 swing low within five bars before price trades 4160.",
+  "direction": "with_trade",
+  "target_px": 3989.0,
+  "p_target": 0.4,
+  "invalidation_px": 4160.3,
+  "horizon_bars": 5,
+  "timeframe": "1d",
+  "evidence": [
+   "chart.swings highs 4097/4220 overhead",
+   "htf 1w ADX 34.9 trending",
+   "state open_r 1.1178 peak 2.8619 giveback 1.7441",
+   "exit_plan stop 4160.33 locks about +0.19R, TP 3767 (2.8R)"
+  ]
+ }
+}
