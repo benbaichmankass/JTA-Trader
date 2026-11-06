@@ -6,6 +6,11 @@
   },
   "id": "PI-20261106-5A1BGFHC-0002",
   "next_action": "check_observation",
+  "observation": {
+    "due_by": "2026-12-06",
+    "how_to_check": "DIAG_FETCH_MAX_TIME=60 scripts/ops/diag_fetch.sh 'journalctl?unit=ict-trader-live.service&since=<last check>&grep=read_state=rate_limited|AlpacaRateLimited&lines=200'",
+    "what": "the first live Alpaca 429 on ict-trader-live logs read_state=rate_limited (not 'no bars'), starts a cooldown with no sleep, and the symbol reads ok on a later tick"
+  },
   "origin": {
     "kind": "deploy",
     "ref": "#23619 adde4030e; d5a1 re-run 42165645683 (0 x 429)",
