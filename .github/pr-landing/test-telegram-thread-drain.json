@@ -1,0 +1,5 @@
+{
+  "tier": 1,
+  "landing": "self",
+  "why": "Tier-1, tests only (manager 2026-11-06 'fix the test's real defect; never skip or xfail it'): tests/test_trade_events_dispatch.py gains an autouse fixture that joins the 'trade-event-telegram' threads a test started before its monkeypatches are undone. Root cause (reproduced): test_notify_publishes_inline starts an off-thread Telegram send and returns; the thread outlives the test and calls the NEXT test's stub, so test_telegram_send_fires_unconditionally saw ['called','called']. Passes alone, fails deterministically after test_notify_publishes_inline. TELEGRAM-TRIM #23051 put a policy read on that thread and widened the window. No src/, config/ or order path."
+}
