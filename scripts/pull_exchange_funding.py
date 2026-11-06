@@ -20,7 +20,11 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from src.runtime.bybit_ccxt import build_bybit_client  # noqa: E402
 from src.runtime.exchange_accounts import live_bybit_fill_accounts  # noqa: E402
-from src.runtime.exchange_fills_store import upsert_funding  # noqa: E402
+from src.runtime.exchange_fills_store import (  # noqa: E402
+    describe_funding_id_collisions,
+    record_funding_run,
+    upsert_funding,
+)
 from src.runtime.exchange_funding_puller import fetch_funding_window  # noqa: E402
 
 logger = logging.getLogger("pull_exchange_funding")
@@ -92,6 +96,14 @@ def _pull_one_account(
         symbols=symbols,
     )
     inserted = upsert_funding(rows, path=funding_path)
+    if inserted < len(rows):
+        # Fewer new rows than fetched: say WHY (duplicate ids in the batch, or
+        # a venue id already stored under another account/time).
+        try:
+            logger.info("pull_exchange_funding: account=%s insert-shortfall %s",
+                        account_id, describe_funding_id_collisions(rows, path=funding_path))
+        except Exception as exc:  # noqa: BLE001  # allow-silent: diagnostic only
+            logger.warning("pull_exchange_funding: shortfall probe failed: %s", exc)
     logger.info(
         "pull_exchange_funding: account=%s demo=%s days=%d symbols=%s candidates=%d inserted=%d store=%s",
         account_id, demo, days,
@@ -157,6 +169,15 @@ def main(argv: list[str]) -> int:
             len(skipped), f" {skipped}" if skipped else "",
             len(accounts), total_inserted,
         )
+        try:
+            from datetime import datetime, timezone
+            record_funding_run(
+                funding_path.parent if funding_path else None,
+                {"run_at": datetime.now(timezone.utc).isoformat(), "ok": ok,
+                 "failed": failed, "skipped": skipped, "total_inserted": total_inserted},
+            )
+        except Exception as exc:  # noqa: BLE001  # allow-silent: marker only
+            logger.warning("pull_exchange_funding: could not write run marker: %s", exc)
         # Outcomes, not attempts — see the sibling note in pull_exchange_fills.py.
         if failed:
             return 1
