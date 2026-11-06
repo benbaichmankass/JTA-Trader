@@ -444,9 +444,9 @@ mcp__github__create_or_update_file
 Or just touch `.github/workflows/bootstrap-labels.yml` in a PR to main.
 
 **Current label set:** `vm-diag-request`, `vm-web-api-recover`,
-`system-action`, `vm-cloud-fix-request`, `vm-net-diag-request`,
+`system-action`, `vm-net-diag-request`,
 `vm-net-fix-request`, `health-snapshot-trigger`, `cf-worker-deploy`,
-`provision-training-vm`, `doc-audit-now`, `doc-drift`,
+`doc-audit-now`, `doc-drift`,
 `vwap-backtest-trigger`, `trainer-vm-diag-request`.
 
 ---
@@ -977,13 +977,6 @@ mcp__github__issue_write
   labels: ["system-action"]
 ```
 
-**Re-triggering trainer bootstrap (push sentinel):**
-```
-mcp__github__get_file_contents + mcp__github__create_or_update_file
-  path: .github/triggers/deploy-trainer-bootstrap
-  branch: main
-```
-
 **Running a VWAP backtest (trainer VM, autonomous):**
 ```
 mcp__github__issue_write
@@ -1032,12 +1025,11 @@ download + paste the artifact content.
 | Secret | Scope | Used by |
 |---|---|---|
 | `VM_SSH_KEY` | repo | All VM SSH workflows (live VM and trainer VM) |
-| `VM_SSH_PRIVATE_KEY` | env `production-oci` | `oci-storage` mutating job only (env scope carries the approval gate) |
 | `DIAG_READ_TOKEN` | repo | `vm-diag-snapshot`, post-action verification in `system-actions` |
 | `BRANCH_PROTECTION_TOKEN` | repo | `branch-protection-sync` and ~40 other workflows (classic PAT, `repo` scope — operator-stated 2026-09-29, not measured; one token by operator decision, JC-SA-05) |
-| `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID` | repo | `dry-run-guard`, `env-gate-guard`, `silent-empty-guard`, `training-run` |
-| `OCI_CLI_USER`, `OCI_CLI_FINGERPRINT`, `OCI_CLI_TENANCY`, `OCI_CLI_REGION`, `OCI_CLI_KEY_CONTENT` | repo | `vm-cloud-fix`, `oci-storage`, `provision-training-vm`, `provision-training-vm-auto-retry` |
-| `HF_TOKEN` | repo | `hf-cron`, `training-run` |
+| `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID` | repo | `dry-run-guard`, `env-gate-guard`, `silent-empty-guard` |
+| `OCI_CLI_USER`, `OCI_CLI_FINGERPRINT`, `OCI_CLI_TENANCY`, `OCI_CLI_REGION`, `OCI_CLI_KEY_CONTENT` | repo | (none: every consumer, `vm-cloud-fix`, `oci-storage`, `provision-training-vm`, `provision-training-vm-auto-retry`, was deleted 2026-11-06; check whether the secret is still needed) |
+| `HF_TOKEN` | repo | (none: `hf-cron` and `training-run` were deleted 2026-11-06; check whether the secret is still needed) |
 
 ## Optional repo variables
 
