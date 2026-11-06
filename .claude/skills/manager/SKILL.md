@@ -498,6 +498,7 @@ tasks that we will definitely get to."* MEASURED 2026-10-28: filing works and ge
 ([`docs/reviews/2026-10-29-followthrough-triage.md`](../../../docs/reviews/2026-10-29-followthrough-triage.md) § 1). These steps are
 mandatory in the planning routine's prompt and come BEFORE part (B) 1:
 
+0a. **Before the numbers, the scoreboard** (net $/% per book + the sceptical-quant line for each leg up for decision; § "The daily brief"). Planning that starts from activity counts optimises activity.
 0. **First agenda item: the numbers.** Run `python3 scripts/ops/review_followthrough.py --window-days 7` and put its table (with its
    population line) at the top of the Artifact. Each review's Layer 0 runs the same script with `--source <review>` first, so a review starts
    by grading its own prior follow-ups.
@@ -623,6 +624,13 @@ A "preference" that is bucket 1 or 2 in disguise is the #13698 failure. Re-run t
 ## The daily brief
 
 Rendered and **pushed before** the sync. Six sections, fixed order.
+
+⚠️ **The scoreboard opens the brief** (operator audit C6, 2026-11-01; row `PROMPTS-PNL-FIRST`): a short header ABOVE section 0 — net $ and %
+per book (real money, mirror, paper), each with population, window and read-state, from the route row `SCOREBOARD-PNL-FIRST` builds
+(cite its route here once it lands; until then `/api/bot/performance`), plus one line answering *"would a sceptical quant believe this
+leg has edge?"* for every leg the brief asks the operator to decide on. It is a header, not a seventh section, and not a gate: nothing is
+refused for lacking it. Activity counts (lanes run, calls graded, rows closed, call-hit rate or Brier) never lead the brief and are not
+reported as a measure of how the system is doing; they stay where they are, below the money.
 
 | # | Section | Contents |
 |---|---|---|

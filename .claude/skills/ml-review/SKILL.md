@@ -40,6 +40,23 @@ already measured with a locator (e.g. `ML-COVERAGE-AUDIT`, `ML-PROGRAMME-PLAN`).
 
 **Model names:** models at shadow or above carry a display alias (breed per job) in `docs/reference/model_names.yaml`; use it in review lines (`scripts/ops/model_names.py labelled(id)`) and add any model promoted this week to that file.
 
+## Scoreboard first — before Layer 0 (operator audit C6, 2026-11-01; row `PROMPTS-PNL-FIRST`)
+
+**This review opens with money, not with its own activity.** Before grading any prior call, pull the scoreboard and put it at the top of
+the brief as `## S. Scoreboard`:
+
+- **Source.** The scoreboard route built by row `SCOREBOARD-PNL-FIRST` (reference its route in the brief once that row lands; until then
+  the numbers come from the public `/api/bot/performance` and the journal paging API, the sources `docs/audits/2026-11-01-from-scratch/AUDIT.md`
+  § 1 used). **Net $ and % per book** (real money, mirror, paper), each with its population, window and read-state; a missing number
+  renders as "—", never `0`.
+- **The question.** For every leg that this review's headline touches: *"would a sceptical quant believe this leg has edge?"* Answer it
+  from the leg's offline evidence record, net of the full cost stack (the promotion ladder: edge is decided offline), not from this
+  week's live P&L or from how many of our own calls came true. State the answer in a line, with the evidence it rests on or "no record".
+- **Call-hit grading is housekeeping, not a headline.** Layer 0 still runs (it is how a call that did not happen is caught), but its
+  counts, hit rate and Brier go in ONE footer line of `## 0`, **never in the title sentence, never above the scoreboard, and never as
+  a measure of the system's health**. A high hit rate on our own calls says nothing about whether the book makes money.
+- This adds **no gate**: nothing is refused for lacking it. It orders what the brief says first.
+
 ## Layer 0 — PRIOR CALLS (always first)
 
 **Follow-through first (2026-10-28):** run `python3 scripts/ops/review_followthrough.py --source ml-review --window-days 7` and record its cohort and backlog line before grading calls; an open item older than 14 d with no owner is a call to schedule or kill, not to re-file.
@@ -210,7 +227,8 @@ Gates this adds: none (a reporting line; it blocks nothing).
 
 **1. The brief.** Markdown in the pattern's § 4 order, headed `MODEL track — /ml-review <date> — <the one sentence that most
 affects money/risk now>`:
-- `0 Prior calls`
+- `S Scoreboard`: net $/% per book (above); for each model, the sceptical-quant line is about the DECISION it changes, net of cost
+- `0 Prior calls` (counts/Brier as one footer line, never a headline)
 - `1 CHECKS`: C1–C9 tables, each with population + windows, could-not-look listed
 - `2 ANALYSIS`
 - `3 Decisions`
