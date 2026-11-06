@@ -66,3 +66,9 @@ def test_rate_limited_and_ignores_other_errors():
 def test_never_raises(monkeypatch):
     monkeypatch.setattr(D, "describe_threads", lambda: (_ for _ in ()).throw(RuntimeError("boom")))
     assert D.log_lock_context("a", sqlite3.OperationalError("database is locked"), now=5.0) is False
+
+
+def test_the_snapshot_and_history_writers_are_tagged_db_not_other():
+    """MEASURED 2026-11-06: the holder candidate sat in venue_protection_snapshot.record_read and was tagged `other`."""
+    for marker in ("venue_protection_snapshot", "position_path_history", "position_telemetry"):
+        assert marker in D._DB_MARKERS
