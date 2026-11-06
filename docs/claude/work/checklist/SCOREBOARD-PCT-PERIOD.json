@@ -1,0 +1,23 @@
+{
+  "id": "SCOREBOARD-PCT-PERIOD",
+  "title": "Scoreboard: the % column covers a shorter period than the net $ and n beside it (snapshot era vs inception)",
+  "phase": null,
+  "state": "queued",
+  "owner": "manager",
+  "lane": null,
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [],
+  "blocked_on": [],
+  "note": "Found verifying SCOREBOARD-PNL-FIRST live 2026-11-06. Brief section 1 shows real money inception net -$130.87 / n 502 beside -40.87%, but that % is -$102.85 over the 143 trades since balance_snapshots begins (bybit_2 2026-06-17, alpaca_live 2026-06-28) divided by about $251 start equity; the pct_basis field says so, the table does not. Same shape for paper (1,607 of 1,709 trades) and mirror. Fix in scripts/ops/scoreboard.py: return pct_net_usd and pct_n beside pct and render them (or label the column 'since first snapshot'), plus a test. The 30 d window is already consistent. Gates this adds: none.",
+  "due_by": "2026-11-08",
+  "roadmap": [
+    "L-OPS"
+  ],
+  "priority_rank": 3,
+  "updated_at": "2026-11-06T03:29:38Z",
+  "updated_by": "session_01AFoLuN9onRwqVks6dU9Nkr",
+  "_seq": 962
+}
