@@ -1,0 +1,6 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "hold_reason": "tier_2_3_needs_approval",
+  "why": "Held for the manager's merge (manager 2026-11-06 03:19Z: 'If the fix is Tier 2 ... prepare it held'). This is a DIAGNOSTIC, not a fix: src/utils/db_lock_diag.py logs every in-process thread's stack when a waiter fails with 'database is locked' (rate-limited 1 per 20 s, never raises, no DB or lock touched), called from three existing except handlers (signal_audit_logger dual-write, order_monitor._sweep_stuck_linked_packages, _sweep_package_close_reason_from_trade). It touches runtime error handlers on the trader path, hence Tier 2. Purpose: name the holder of the trade_journal.db write lock behind 3 EXIT-EVAL INTERVAL breaches (PI-20261105-F2QX97PI-0001 / PI-20261106-QSEQAVLT-0001). Also appends the 02:35 evidence to the pipeline item."
+}

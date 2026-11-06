@@ -50,6 +50,12 @@ def _dual_write_to_db(payload: Dict[str, Any]) -> None:
         db.insert_signal(payload)
     except Exception as exc:  # noqa: BLE001
         logger.warning("signal_audit_logger: SQL dual-write failed: %s", exc)
+        try:
+            from src.utils.db_lock_diag import log_lock_context
+
+            log_lock_context("signal_audit_logger.dual_write", exc)
+        except Exception:  # noqa: BLE001 -- diagnostics only
+            pass
 
 
 def log_signal(event: Dict[str, Any]) -> None:
