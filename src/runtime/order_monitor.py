@@ -6599,6 +6599,12 @@ def _sweep_stuck_linked_packages(db) -> int:
         return affected
     except Exception as exc:  # noqa: BLE001
         logger.warning("_sweep_stuck_linked_packages: failed: %s", exc)
+        try:
+            from src.utils.db_lock_diag import log_lock_context
+
+            log_lock_context("order_monitor._sweep_stuck_linked_packages", exc)
+        except Exception:  # noqa: BLE001 -- diagnostics only
+            pass
         return 0
 
 
@@ -15886,6 +15892,12 @@ def _sweep_package_close_reason_from_trade(db) -> Dict[str, int]:
         logger.warning(
             "_sweep_package_close_reason_from_trade: failed: %s", exc)
         summary["errors"] += 1
+        try:
+            from src.utils.db_lock_diag import log_lock_context
+
+            log_lock_context("order_monitor._sweep_package_close_reason_from_trade", exc)
+        except Exception:  # noqa: BLE001 -- diagnostics only
+            pass
     if summary["relabelled"]:
         logger.info("_sweep_package_close_reason_from_trade: %s", summary)
     return summary
