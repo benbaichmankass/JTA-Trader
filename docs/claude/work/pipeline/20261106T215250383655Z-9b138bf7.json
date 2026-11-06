@@ -1,0 +1,16 @@
+{
+  "due_when": {
+    "check_every_days": 2,
+    "clears_when": "each of the three legs has >= 1 clean closed trade on bybit_2 with its bybit_portfolio twin (or a mechanical fault is filed and fixed/reverted)",
+    "kind": "observation"
+  },
+  "id": "PI-20261106-Y7JEXUWW-0006",
+  "next_action": "check_observation",
+  "origin": {
+    "kind": "session",
+    "ref": "lane SOAK-BACKLOG-REVIEW (Manager Sessions 2026-11-06a/b), PR #23935",
+    "rerun": "scripts/ops/diag_fetch.sh 'journal?account_id=bybit_2&limit=50' ; curl -s https://ict-bot.duckdns.org/api/bot/config | python3 -c \"import json,sys;c=json.load(sys.stdin);print(c)\" | head"
+  },
+  "state": "queued",
+  "what": "VERIFICATION WATCH (landed_unproven) for PR #23935 (merged 2026-11-06): trend_donchian_xrp_4h, ada_pullback_2h and trend_donchian_sol_prop now trade on bybit_2 + bybit_portfolio on their holdout-confirmed configs (xrp_4h atr 1.5/trail 4.0; sol_prop trail 4.5; ada without vol_skip_above_pctl). Observe, per leg, the first 1-2 live trades on bybit_2 AND the matching bybit_portfolio trade: signal fires, order placed with the right size and side, a real SL and TP rest at the venue, the exit journals with a reason and price, fill and fees recorded. Also confirm the deploy (ict-git-sync pulled the merge; /api/bot/config shows the three legs on bybit_2). A mechanical fault -> fix or revert per the accounts.yaml revert lines. Not an edge test (OPERATING-PLAN § 2); DSR probation is tracked by scripts/research/dsr_probation.py."
+}
