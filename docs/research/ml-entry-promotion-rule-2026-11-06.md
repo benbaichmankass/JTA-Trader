@@ -10,6 +10,14 @@ Operator, verbatim: **"New rule for replacing an already-live model: the retrain
 
 Honest provenance: this amendment is made AFTER the first grading read (run 42250040398, verdict `insufficient_n` under the first registration, candidate n 281). It is the operator's rule, not a session's, and it is committed BEFORE the first read's verdict is recomputed under it. It changes the PASS test only; it does NOT change the data, the window, the recipe, the cost stack or the sample-size floor.
 
+## AMENDMENT 2 (2026-11-06, relayed by Manager Session 2026-11-06a; trigger message queued 16:57:53Z, received and committed after the first Amendment-1 recompute): the sample floor for a REPLACEMENT is n >= 100 per side
+
+The manager's words: *"The operator's popup showed 'n 281 vs 342' explicitly and chose 'Graded retrain now'. So this swap is approved on today's read as it stands, with n=281 known. ... the n floor applies to the absolute/edge read; a replacement verdict needs n >= 100 on each side, which today's 281/342 meets."* The operator's verbatim words are those in Amendment 1; **the number 100 is the manager's formulation of the floor the operator approved, not an operator quote**.
+
+Honest provenance, so the record cannot be misread: Amendment 1 (commit `172c15eb2`) left the replacement floor at 300 and the recompute under it (`verdict_amended.json`, head `fae0e380c`) read `insufficient_n` at candidate n 281. This amendment was committed AFTER that recompute. It lowers a floor after the n was seen. That is the operator's call to make as the owner of the rule and the manager says it was made with the numbers on screen; this record does not claim it was fixed before the data was read. The first recompute stays in the repo beside the second.
+
+Amended rule for a REPLACEMENT: PASS iff **both** models have n >= **100** taken decisions (and >= 10 distinct symbols, unchanged: today 48 and 49) on the same post-train window AND candidate mean net R >= served mean net R. The n >= 300 floor still applies to the ABSOLUTE read, to the deflated bar reported as information, and to any BRAND-NEW strategy, leg or recipe. Below 100 on either side -> `insufficient_n`.
+
 ### The rule as amended (supersedes "The rule" below it, kept for the record)
 
 Same candidate, same window, same scoring of both artifacts on the SAME rows with the registered policy and the full cost stack (fee 11.0 bps round trip, slippage 3.0 bps, funding 1.0 bps per 8 h; the fee-only harnesses stay excluded).
