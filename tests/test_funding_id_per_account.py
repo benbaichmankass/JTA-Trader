@@ -27,3 +27,22 @@ def test_legacy_bare_id_row_not_duplicated(tmp_path):
     legacy["funding_id"] = "abc"
     assert upsert_funding([legacy], path=db) == 1
     assert upsert_funding([_ccxt_funding_to_row(_entry(), "bybit_2")], path=db) == 0
+
+
+def test_store_sign_negative_is_paid():
+    # ccxt Bybit amount is positive when paid; the store convention is negative = paid.
+    assert _ccxt_funding_to_row(_entry(), "bybit_2")["funding_usd"] == -0.01
+
+
+def test_legacy_rows_migrated_once(tmp_path):
+    from src.runtime.exchange_fills_store import init_db
+    db = tmp_path / "f.sqlite"
+    init_db(db)
+    c = sqlite3.connect(db)
+    c.execute("INSERT INTO exchange_funding (funding_id, account_id, symbol, funding_usd, funding_time) "
+              "VALUES ('abc','bybit_2','ETH/USDT:USDT',0.01,'2026-11-05T08:00:00+00:00')")
+    c.commit(); c.close()
+    upsert_funding([], path=db)
+    upsert_funding([], path=db)  # second call must not flip again
+    row = sqlite3.connect(db).execute("select funding_id, funding_usd from exchange_funding").fetchone()
+    assert row == ("bybit_2:abc", -0.01)

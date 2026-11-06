@@ -235,6 +235,14 @@ def upsert_funding(
     inserted = 0
     conn = sqlite3.connect(str(p))
     try:
+        # One-shot, idempotent legacy migration (2026-11-06): rows written before
+        # the per-account id + sign fix carry a BARE venue id (no ':') and the
+        # inverted sign. Namespacing the id both fixes the key and marks the row
+        # migrated, so this matches nothing on any later call.
+        conn.execute(
+            "UPDATE OR IGNORE exchange_funding SET funding_usd = -funding_usd, "
+            "funding_id = account_id || ':' || funding_id "
+            "WHERE instr(funding_id, ':') = 0")
         for raw in rows:
             fid = raw.get("funding_id")
             if not fid:
