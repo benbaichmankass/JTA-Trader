@@ -265,3 +265,18 @@ Per the dispatch: deploy/git-sync, `system-actions` (+ its cancel guard), tradin
 | `vm-web-api-recover` | issue-label,dispatch | 2,698 | 216 (216) | 0.0 | 0 | issue/vm | 11 (settings.json) | **KEEP** | never-touch: serving path |
 | `vwap-backtest` | issue-label,dispatch | 2,698 | 216 (216) | 0.0 | 0 | issue/vm | 2 (candle-refresh-code.json) | **KEEP** | active; no overlap found at this read depth |
 | `work-store-outbox` | issue_comment,cron,dispatch | 116 | 116 (111) | 0.0 | 0 | issue | 3 (wsd-s3-cli-outbox.json) | **KEEP** | never-touch: WORK-STORE |
+
+## 7. P3 merge feasibility, read after the approval (2026-11-06 ~01:40Z)
+
+The operator approved P3 ("Merge as proposed") on my claim that each group does *the same job*. Reading the members at diff level before writing any merge, **that claim holds for almost none of the groups**. Nothing was merged. The evidence, so the call can be re-made on facts:
+
+| group | members | what the diff shows | verdict |
+|---|---|---|---|
+| M1 research-script-run ×5 | `research-script-run{,-data,-kaggle,-kaggle-cpu,-trainer}` (1,069 lines) | five **different executors**: GitHub runner, Kaggle CPU, Kaggle GPU, trainer-VM over ssh, data runner. They differ in env and secrets, installs, sparse-checkout, concurrency group, and `run-name`/`dispatch_queue.fired` handling; two of them diffed share well under half their lines | not the same job. A `target` input means one ~1,000-line workflow of conditional steps on the research loop's hot path |
+| M2 branch pruners ×3 | `delete-merged-branches` (bash sweep of every merged-PR branch), `prune-landed-branches` (github-script over a manifest), `prune-merged-claude-branch` (one branch, `force` + audited `reason`) | three different jobs with different inputs and different safety rules; each **executed <=2 times in 90 d** | not the same job; merging ref-deleting code buys one fewer file for a regression risk |
+| M7 external alerts ×2 | `external-comment-alert`, `external-issue-alert` | two **security tripwires** on different events (`issue_comment` vs `issues`) with different logic (minimize the comment vs flag the issue); neither has fired in 90 d | different controls; merging touches an intrusion alarm for no saving |
+| M6 terminate/reset | `terminate-instance` vs `reset-instance` | **~30 differing lines of ~150**: genuinely near-identical | mergeable, but both act on live VMs (terminate/reset) and run ~once per 90 d; the saving is one file |
+| M5 runner/console ×5, M6 rest, M4 diag/fix | not diffed to the line | each is a label-dispatched relay with its own ssh/OCI body (`diff` of install vs console-install: 143 differing lines) | same pattern: shared *shape*, different *body* |
+| M8 ~13 watchdogs | needs the design pass the manager asked for first | not started | design first (filed in the pipeline) |
+
+**Recommendation (to re-decide):** do not merge M1, M2 or M7. Where the real duplication is shared *steps* (the sparse-checkout/install block in the five research runners, the "Require VM host secrets / Dedup / post result" scaffold in the label relays), extract a composite action and keep each entry point, which keeps label and `workflow_dispatch` contracts byte-identical. M6's terminate/reset pair is the only clean merge and is not worth a live-VM-action change on its own. M3 (the mirrors) stays with WORK-STORE S7 as decided.
