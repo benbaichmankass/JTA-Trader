@@ -784,3 +784,24 @@ levers:
       best_delta_r_per_trade: -0.201
       fold_stability: 0.0
       reading: every tested value is worse than the baseline
+    structure_exit:
+      tests:
+      - value: 'off'
+        baseline_value: pivot=5
+        arm: N0
+        unit: RQ-20261105-5e05-14
+        window: 2021-07-01..2026-10-15
+        n: 30
+        net_r: 4.5949
+        baseline_n: 40
+        baseline_net_r: 6.0883
+        delta_net_r: -1.4934
+        folds_ge_baseline: 2/6
+        max_drawdown_r: 5.4337
+        verdict: fail
+        joint_change: false
+      shape: single_point
+      points: 1
+      best_delta_r_per_trade: -0.0373
+      fold_stability: 0.333
+      reading: every tested value is worse than the baseline

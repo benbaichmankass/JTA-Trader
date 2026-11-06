@@ -1,0 +1,280 @@
+{
+ "run": "RESEARCH-OPS-20261106-1449",
+ "finished_at": "2026-11-06T15:20:00Z",
+ "by": "session_01AFoLuJk1UWVx895RmLTidH (dispatched lane)",
+ "floor": 47,
+ "floor_basis": "computed_floor(fired_24h 59)",
+ "authoring_queue_depth": 4,
+ "needs_review_triaged": 0,
+ "needs_review_left": 77,
+ "throughput": {
+  "runnable_before": 10,
+  "runnable_after": 10,
+  "queued": 235,
+  "fired_24h": 59,
+  "results_landed_24h": 138,
+  "hours_since_last_dispatch": 15.8,
+  "idle_alarm": true
+ },
+ "mechanism": {
+  "dispatch_receipt": "fresh (0.92h)",
+  "collector": "ok (138 results landed 24h)",
+  "stranded_stamp_prs": [],
+  "incident": "H2 last unit stamp 15.9h > 12h with 10 runnable (3 would_dispatch in the dry run); the dispatcher workflow itself ran hourly, run 893 in progress, 887/888/890-892 success, 4 workflow_run-event runs failed 02:31-07:37Z; utilization read 'could not look' for every backend and Kaggle quota unread. Not diagnosed to root cause this pass; handed to the manager.",
+  "watchdog": "newest row 2026-11-06T06:59Z escalated conflicted_automation could_not_look (7 of 10 PRs unreadable), no later resolved row"
+ },
+ "checks": {
+  "packet_as_of": "2026-11-06T14:50Z",
+  "since": "newest record finished_at",
+  "runnable_by_track": {
+   "TRADING": 6,
+   "MODEL": 1,
+   "INFRA": 3
+  },
+  "graded_by_window": {
+   "all_units_with_rows": {
+    "pass": 23,
+    "fail": 29,
+    "indeterminate": 6,
+    "ungraded": 34
+   }
+  },
+  "fails_without_next": null,
+  "followups": "see packet",
+  "needs_review": 77,
+  "could_not_look": [
+   "utilization backends (all '?')",
+   "kaggle quota"
+  ]
+ },
+ "results_read": {
+  "pass": 0,
+  "fail": 4,
+  "indeterminate": 0,
+  "units": [
+   "RQ-20261014-470a-12",
+   "RQ-20261105-7d6c-01",
+   "RQ-20261105-7d6c-02",
+   "RQ-20261105-7d6c-03"
+  ],
+  "note": "Rows opened for these four only (the prior record's call 2). Newest-window FAIL clusters and PASS rows were NOT opened this pass (budget): batches in the packet are ae17 5/6 pass, 5e05 9 pass 6 fail 2 indet of 17, 23ca 1/3, c692 1/3, 5e01 0/3, 7d6c 0/3."
+ },
+ "unlocked": [],
+ "retired": [
+  {
+   "unit": "RQ-20260930-901",
+   "reason": "blocked_over_age audit: blocker lever filed on its owning row; retired as a CONFIGURATION, family stays open"
+  },
+  {
+   "unit": "RQ-20261007-018",
+   "reason": "blocked_over_age audit: blocker lever filed on its owning row; retired as a CONFIGURATION, family stays open"
+  },
+  {
+   "unit": "RQ-20261007-019",
+   "reason": "blocked_over_age audit: blocker lever filed on its owning row; retired as a CONFIGURATION, family stays open"
+  },
+  {
+   "unit": "RQ-20261008-901",
+   "reason": "blocked_over_age audit: blocker lever filed on its owning row; retired as a CONFIGURATION, family stays open"
+  },
+  {
+   "unit": "RQ-20261011-17f4-01",
+   "reason": "blocked_over_age audit: blocker lever filed on its owning row; retired as a CONFIGURATION, family stays open"
+  },
+  {
+   "unit": "RQ-20261011-17f4-03",
+   "reason": "blocked_over_age audit: blocker lever filed on its owning row; retired as a CONFIGURATION, family stays open"
+  },
+  {
+   "unit": "RQ-20261011-9da8-02",
+   "reason": "blocked_over_age audit: blocker lever filed on its owning row; retired as a CONFIGURATION, family stays open"
+  },
+  {
+   "unit": "RQ-20261011-9da8-03",
+   "reason": "blocked_over_age audit: blocker lever filed on its owning row; retired as a CONFIGURATION, family stays open"
+  },
+  {
+   "unit": "RQ-20261011-9da8-04",
+   "reason": "blocked_over_age audit: blocker lever filed on its owning row; retired as a CONFIGURATION, family stays open"
+  },
+  {
+   "unit": "RQ-20261011-9da8-07",
+   "reason": "blocked_over_age audit: blocker lever filed on its owning row; retired as a CONFIGURATION, family stays open"
+  },
+  {
+   "unit": "RQ-20261013-1414-09",
+   "reason": "blocked_over_age audit: blocker lever filed on its owning row; retired as a CONFIGURATION, family stays open"
+  },
+  {
+   "unit": "RQ-20261014-9807-05",
+   "reason": "blocked_over_age audit: blocker lever filed on its owning row; retired as a CONFIGURATION, family stays open"
+  },
+  {
+   "unit": "RQ-20261014-9d20-04",
+   "reason": "blocked_over_age audit: blocker lever filed on its owning row; retired as a CONFIGURATION, family stays open"
+  },
+  {
+   "unit": "RQ-20261014-da7a-03",
+   "reason": "blocked_over_age audit: blocker lever filed on its owning row; retired as a CONFIGURATION, family stays open"
+  },
+  {
+   "unit": "RQ-20261014-f516-11",
+   "reason": "blocked_over_age audit: blocker lever filed on its owning row; retired as a CONFIGURATION, family stays open"
+  },
+  {
+   "unit": "RQ-20261015-1631-03",
+   "reason": "blocked_over_age audit: blocker lever filed on its owning row; retired as a CONFIGURATION, family stays open"
+  },
+  {
+   "unit": "RQ-20261015-1631-04",
+   "reason": "blocked_over_age audit: blocker lever filed on its owning row; retired as a CONFIGURATION, family stays open"
+  },
+  {
+   "unit": "RQ-20261015-1bf3-01",
+   "reason": "blocked_over_age audit: blocker lever filed on its owning row; retired as a CONFIGURATION, family stays open"
+  },
+  {
+   "unit": "RQ-20261012-5bd1-14",
+   "reason": "moot: U02 RQ-20261012-5bd1-02 graded FAIL (p 0.82), its blocked_on can never clear"
+  }
+ ],
+ "blocked_audit": {
+  "blocked_over_age_before": 22,
+  "blocked_over_age_after": 3,
+  "threshold": 10,
+  "retired": 19,
+  "kept_blocked": [
+   "RQ-20261009-900",
+   "RQ-20261009-901",
+   "RQ-20261014-9807-04"
+  ],
+  "kept_reason": "unblocked in substance, driver missing (verdict wrapper / derived cells), filed once",
+  "filed": "PI-20261106-5RMLTIDH-0002",
+  "population": "research/queue/blocked/*.yaml status blocked and id date older than 21 d (122 files, 81 blocked, 41 already retired)",
+  "limits": "age is the RQ id date (no blocked_at); no SLO threshold changed; other-lane unit ids not checked against in-flight lanes beyond the checklist rows named in blocked_on"
+ },
+ "levers_filed": [
+  {
+   "lever": "verdict wrapper over ml2_bracket_train_eval + derived cells for 9807-04",
+   "ref": "PI-20261106-5RMLTIDH-0002"
+  }
+ ],
+ "units_authored": [],
+ "followups_filed": [
+  "PI-20261106-5RMLTIDH-0002"
+ ],
+ "authoring": {
+  "queue_depth": 4,
+  "nodes_drafted": 0,
+  "skipped_on_purpose": true,
+  "reason": "budget ($5 ceiling, weekly usage pacing); iteration orphans and plan nodes handed off by name"
+ },
+ "prior_calls_scorecard": [
+  {
+   "call": "the 20 'no verdict.json' units regrade to measured or are fixed by PI-20261105-WDWYHZCN-0001",
+   "p": 0.35,
+   "check_rerun": "python3 scripts/research/result_disposition_check.py --list",
+   "outcome": "unresolved",
+   "action_happened": true,
+   "note": "the list now shows 4 ungraded + 4 needs_review_unowned names and no producer_failed lines; the 20-unit denominator was not re-counted, resolves_when 2026-11-08"
+  },
+  {
+   "call": "RQ-20261014-470a-12 and 7d6c-01..03 land measured verdicts",
+   "p": 0.7,
+   "check_rerun": "ls research/results/RQ-20261014-470a-12 research/results/RQ-20261105-7d6c-0*",
+   "outcome": "hit",
+   "action_happened": true,
+   "note": "all four read_state measured; all four verdict fail. They landed but they are four fails, not four passes."
+  }
+ ],
+ "iteration": {
+  "results_attributed": {
+   "count": 0,
+   "of": 4
+  },
+  "map_entries_added": 0,
+  "next_tests_from_map": 0,
+  "lever_map_backfill": "ran; rewrote 28 research/levers files (derived, committed in this PR)",
+  "lever_coverage": {
+   "strategy_leg": "covered 33 of 64",
+   "ml_model": "covered 7 of 9, overdue 2",
+   "ltr_class": "covered 2 of 7"
+  },
+  "orphans_before": {
+   "strategy_leg": 31,
+   "ml_model": 0,
+   "ltr_class": 5
+  },
+  "orphans_after": {
+   "strategy_leg": 31,
+   "ml_model": 0,
+   "ltr_class": 5
+  },
+  "advanced": 0,
+  "survivors": [],
+  "overdue": [
+   "2 ml_model subjects overdue (names in iteration_orphans.py output)"
+  ],
+  "not_done": "THE CORE MANDATE's attribution and next-test authoring did NOT run this pass: 36 orphans untouched. The pass spent its budget on the blocked audit."
+ },
+ "analysis": {
+  "rows_opened": [
+   "RQ-20261012-5bd1-02",
+   "RQ-20261014-736c-01",
+   "RQ-20261014-9807-01",
+   "RQ-20261014-470a-12",
+   "RQ-20261105-7d6c-01..03 (verdict/read_state only)"
+  ],
+  "trading": {
+   "meaning": [],
+   "fail_diagnoses": [],
+   "next_tests": []
+  },
+  "model": {
+   "meaning": [
+    "U02 news-alpha vol cell (5bd1-02): t -0.22, p 0.82, n_eff 11,348, no lead: its dependent 5bd1-14 (variance-ratio arm) had nothing to build on, so retiring it loses no live question."
+   ],
+   "fail_diagnoses": [],
+   "next_tests": []
+  },
+  "cross_track": [],
+  "surprises": [
+   "9807-01 and 736c-01 are PASS and measured, yet three units blocked on them (900, 901, 9807-04) sat blocked for 23-28 days: the gap was the missing driver, not the prerequisite."
+  ]
+ },
+ "calls": [
+  {
+   "call": "after the next 3 dispatch cycles the dispatcher stamps >= 1 unit (last_dispatched_at moves past 2026-11-05T23:01Z)",
+   "p": 0.8,
+   "check": {
+    "command": "python3 scripts/ci/check_research_queue_health.py | head -3",
+    "rule": "H2 absent",
+    "resolves_when": "2026-11-07"
+   }
+  },
+  {
+   "call": "research-slo blocked_over_age <= 10 on the next run after this PR merges",
+   "p": 0.9,
+   "check": {
+    "command": "python3 scripts/research/research_slo.py",
+    "rule": "blocked_over_age value 3 (the SLO counts status blocked in the queue dict)",
+    "resolves_when": "2026-11-07"
+   }
+  }
+ ],
+ "not_run": [
+  "analysis of the newest PASS/FAIL clusters (D) and iteration authoring (E)"
+ ],
+ "limits": [
+  "pytest not run beyond the guards",
+  "utilization backends and Kaggle quota read could-not-look",
+  "no unit authored"
+ ],
+ "handoff": [
+  "INCIDENT for the manager: H2 dispatch idle 15.9 h with 10 runnable, receipt fresh, utilization 'could not look' on all backends; root cause not found",
+  "36 orphans (31 legs, 5 ltr classes) and 2 overdue ML subjects need iteration units: next research-ops pass or a PROGRAMME-REVIEW lane",
+  "needs_review 77 (owners: PI-20261030-20261030-0001 x18, PI-20261105-WDWYHZCN-0001 x46); UNOWNED 4: RQ-20261031-7b6f-27, RQ-20261105-021, -022, -fd68-03",
+  "PI-20261106-5RMLTIDH-0002 (3 units that need a driver)",
+  "watchdog escalated conflicted_automation could_not_look at 06:59Z with no resolved row"
+ ]
+}

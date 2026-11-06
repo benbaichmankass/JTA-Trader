@@ -1,0 +1,31 @@
+{
+  "id": "RESEARCH-OPS-20261106-1449",
+  "title": "research-ops pass 2026-11-06 14:49Z",
+  "phase": null,
+  "state": "landed_unproven",
+  "owner": "lane RESEARCH-OPS-20261106-1449",
+  "lane": null,
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [],
+  "blocked_on": [],
+  "note": "Dispatched by manager session_01AFoLuJGPZ5ZY85FQofMfd2, ceiling $5. Blocked-over-age audit 22 -> 3 (19 retired, 3 filed PI-20261106-5RMLTIDH-0002); dispatcher idle alarm handed to manager; 36 orphans NOT iterated this pass. Record comms/research/ops/20261106T1520Z.json.",
+  "due_by": "2026-11-08",
+  "roadmap": [
+    "L-PROGRAMMES"
+  ],
+  "updated_at": "2026-11-06T14:58:14Z",
+  "updated_by": "session_01AFoLuJGPZ5ZY85FQofMfd2",
+  "observation": {
+    "what": "research-slo blocked_over_age <= 10 and dispatcher stamps a unit again (H2 clears)",
+    "how_to_check": "python3 scripts/research/research_slo.py; python3 scripts/ci/check_research_queue_health.py | head -3",
+    "due": "2026-11-08"
+  },
+  "writeback": {
+    "roadmap": "none: research-ops pass",
+    "arch": "none"
+  },
+  "_seq": 969
+}

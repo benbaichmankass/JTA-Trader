@@ -584,6 +584,27 @@ levers:
       fold_stability: 0.75
       reading: no response at the tested values
   other:
+    structure_exit:
+      tests:
+      - value: 'off'
+        baseline_value: pivot=5
+        arm: N0
+        unit: RQ-20261105-5e05-04
+        window: 2020-07-01..2026-10-15
+        n: 380
+        net_r: 63.1812
+        baseline_n: 386
+        baseline_net_r: 28.1895
+        delta_net_r: 34.9917
+        folds_ge_baseline: 6/6
+        max_drawdown_r: 11.2235
+        verdict: pass
+        joint_change: false
+      shape: single_point
+      points: 1
+      best_delta_r_per_trade: 0.0907
+      fold_stability: 1.0
+      reading: 'one-point or fold-unstable gain: overfit until a holdout says otherwise'
     direction_filter:
       tests:
       - value: di

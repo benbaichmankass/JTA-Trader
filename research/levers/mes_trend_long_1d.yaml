@@ -56,7 +56,7 @@ attribution:
       net_r: -1.001
       gross_r: -0.796
 manifest:
-  entry: untested
+  entry: tested
   exit: untested
   filter: untested
   regime_gating: untested
@@ -65,4 +65,40 @@ manifest:
   direction: untested
   session: untested
   sizing_vs_cost: untested
-levers: {}
+levers:
+  entry:
+    donchian:
+      tests:
+      - value: '38'
+        baseline_value: '30'
+        arm: donchian_hi
+        unit: RQ-20261106-001
+        window: 2020-11-02..2026-11-06
+        n: 23
+        net_r: 4.0402
+        baseline_n: 24
+        baseline_net_r: 6.0244
+        delta_net_r: -1.9842
+        folds_ge_baseline: 1/4
+        max_drawdown_r: 4.1411
+        verdict: indeterminate
+        joint_change: false
+      - value: '22'
+        baseline_value: '30'
+        arm: donchian_lo
+        unit: RQ-20261106-001
+        window: 2020-11-02..2026-11-06
+        n: 26
+        net_r: 6.0394
+        baseline_n: 24
+        baseline_net_r: 6.0244
+        delta_net_r: 0.015
+        folds_ge_baseline: 3/4
+        max_drawdown_r: 3.9477
+        verdict: indeterminate
+        joint_change: false
+      shape: monotone
+      points: 2
+      best_delta_r_per_trade: 0.0006
+      fold_stability: 0.5
+      reading: 'smooth, fold-stable gain: potential -- confirm on a holdout'

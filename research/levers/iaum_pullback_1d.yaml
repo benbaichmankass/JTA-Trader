@@ -4,7 +4,6 @@ subject: iaum_pullback_1d
 kind: strategy_leg
 status: production
 books:
-- alpaca_live
 - alpaca_paper
 baseline:
   record: comms/strategy_evidence/iaum_pullback_1d.json
@@ -166,10 +165,38 @@ levers:
         max_drawdown_r: 6.3372
         verdict: indeterminate
         joint_change: true
-      shape: monotone
-      points: 6
+      - value: '0.7725'
+        baseline_value: '0.618'
+        arm: pullback_frac_hi
+        unit: RQ-20261105-027
+        window: 2021-07-01..2026-11-05
+        n: 53
+        net_r: 21.9528
+        baseline_n: 39
+        baseline_net_r: 22.9372
+        delta_net_r: -0.9844
+        folds_ge_baseline: 2/4
+        max_drawdown_r: 6.5065
+        verdict: fail
+        joint_change: false
+      - value: '0.4635'
+        baseline_value: '0.618'
+        arm: pullback_frac_lo
+        unit: RQ-20261105-027
+        window: 2021-07-01..2026-11-05
+        n: 30
+        net_r: 11.3041
+        baseline_n: 39
+        baseline_net_r: 22.9372
+        delta_net_r: -11.6331
+        folds_ge_baseline: 1/4
+        max_drawdown_r: 3.8682
+        verdict: fail
+        joint_change: false
+      shape: noisy
+      points: 8
       best_delta_r_per_trade: 0.0876
-      fold_stability: 0.208
+      fold_stability: 0.25
       reading: 'one-point or fold-unstable gain: overfit until a holdout says otherwise'
   exit:
     timeout_bars:
