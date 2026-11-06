@@ -56,7 +56,8 @@ UNHOMED: Dict[str, str] = {
 #: alpaca_paper as exception (Recommended)"): the alpaca mirror excludes the affordability proxy, so it keeps a
 #: paper record beside real money until it has a mirror. Leg -> the general paper account it may stay on.
 DUAL_BOOK_EXCEPTIONS: Dict[str, str] = {
-    "iaum_pullback_1d": "alpaca_paper",
+    # iaum_pullback_1d entry DROPPED 2026-11-06 (PROD-LEGS-DSR-DECISION, operator "Re-measure, then move (Rec.)"): it left
+    # alpaca_live (fails DSR > 0.95 AND BHY-haircut > 0), so it is testing-only on alpaca_paper and the exception is stale.
     # Operator 2026-11-01 ~11:47Z (popup, relayed by Manager Session 2026-11-01a), verbatim "Paper now, v2 for live
     # (Rec.)": the ONE ml_entry model trades real money on bybit_2 (crypto) AND paper on alpaca_paper (ETFs, a
     # different symbol set: strategies.yaml::ml_entry.account_symbols), with no real-money ML on Alpaca until a model
@@ -103,6 +104,19 @@ def findings(accounts: Dict[str, Any], strategies: Dict[str, Any]) -> List[str]:
 
 
 def self_test() -> int:
+    # The synthetic tree below uses iaum_pullback_1d as its NAMED dual-book exception (the shape the real store
+    # carried until 2026-11-06). The real entry left with PROD-LEGS-DSR-DECISION, so the fixture installs its own
+    # for the run and restores the real table after -- every control is unchanged.
+    saved = dict(DUAL_BOOK_EXCEPTIONS)
+    DUAL_BOOK_EXCEPTIONS.setdefault("iaum_pullback_1d", "alpaca_paper")
+    try:
+        return _self_test_body()
+    finally:
+        DUAL_BOOK_EXCEPTIONS.clear()
+        DUAL_BOOK_EXCEPTIONS.update(saved)
+
+
+def _self_test_body() -> int:
     ok = True
 
     def ck(name: str, cond: bool) -> None:
