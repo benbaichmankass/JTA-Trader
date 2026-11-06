@@ -1,0 +1,16 @@
+{
+  "due_when": {
+    "check_every_days": 2,
+    "clears_when": "each of the EXIT-EVAL INTERVAL events NOT explained by a Bybit 10006 sleep (16:58, 21:47, 09:51 on 2026-11-05) is attributed from a measurement to a named cause (a lock holder, a slow call, a restart) and either fixed or killed with a stated reason, and a 48 h scan shows no INTERVAL breach outside the :00-:03 boundary",
+    "kind": "observation"
+  },
+  "id": "PI-20261106-QSEQAVLT-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "audit",
+    "ref": "MECH-FOLLOWUPS-1105 lane 2026-11-06 (manager 00:13Z: file the second mechanism, do not chase now)",
+    "rerun": "scripts/ops/diag_fetch.sh 'alerts?limit=400' (rows whose text names EXIT-EVAL INTERVAL), then for each event time T: diag_fetch 'journalctl?unit=ict-trader-live&lines=500&since=T-5m&until=T+3m&grep=locked%7CRate%20limit%7Cpkg-' and compare the gap between consecutive order_monitor pass lines against the Bybit 'Rate limit hit' and 'database is locked' lines in the same window"
+  },
+  "state": "queued",
+  "what": "SECOND exit-eval mechanism, not chased. Basis: n=6 EXIT-EVAL INTERVAL alerts on 2026-11-05 (08:02:59, 09:51:48 breaches; 16:58:00 breach 74.3 s; 20:01:56 and 21:47:46 near misses; 00:02:38 on 11-06 breach 115.3 s) from the last 400 rows of alerts_ledger.jsonl, against 64 'Rate limit hit' journal lines (616,832 lines scanned, 2026-11-05T00:00Z to 2026-11-06T00:07Z). MEASURED: 00:02 and 20:01 line up with Bybit retCode 10006 sleep bursts (fixed by the non-blocking cooldown PR, claude/bybit-ohlcv-cooldown). NOT explained by it: 16:58 (a 'database is locked' burst 16:56:49-16:57:29, 7 distinct writers) and 21:47 (locked lines 21:47:09-21:47:25, signal_audit_logger x3 and _sweep_package_close_reason_from_trade; 1 rate-limit hit at 21:45); 08:02 has both; 09:51 matches neither (rate-limit hits at 09:00 and 09:30 only) and was NOT examined. The lock HOLDER is still unknown, see PI-20261105-F2QX97PI-0001 which owns that. This item owns the question 'after the 10006 sleep is removed, which events remain and why'. Suggested owner: the TICK-STAGE2-RECONCILE-OFFTICK lane. First step: run the rerun above for 09:51:48 and read the gap and the lines in that window."
+}
