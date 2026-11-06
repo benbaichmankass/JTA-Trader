@@ -173,6 +173,17 @@ jobs:
           # A shallow clone would silently produce an EMPTY digest —
           # indistinguishable from a quiet hour, the failure this file is about.
           fetch-depth: 0
+          # WORKFLOW-PRUNE P4 (2026-11-06): the gate is "a few seconds of work" but its full checkout took 93-131 s
+          # of a ~1,100 runs/wk job (MEASURED, 4 recent runs). It needs history (COMMITS, which a blobless clone keeps) and
+          # four files: the gate script, its two imports, and the last digest's receipt. Verified: digest_due.py --self-test
+          # and --emit-github-output give the same verdict on this sparse tree. The digest job below keeps the full tree.
+          filter: blob:none
+          sparse-checkout: |
+            /scripts/ops/digest_due.py
+            /scripts/ci/check_digest_liveness.py
+            /scripts/ci/_dirty_tree.py
+            /docs/claude/work/WORK-DIGEST.json
+          sparse-checkout-cone-mode: false
 
       - name: Self-test the gate before trusting its verdict
         run: python3 scripts/ops/digest_due.py --self-test
