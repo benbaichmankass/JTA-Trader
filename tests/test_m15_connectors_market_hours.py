@@ -21,29 +21,27 @@ from src.runtime.market_hours import asset_class_for_exchange, is_market_open
 
 
 class _FakeClock:
-    """Monotonic clock + sleep for the Alpaca pacing/backoff (no real sleeping in tests)."""
+    """Monotonic clock for the Alpaca rate-limit cooldown."""
 
     def __init__(self):
         self.t = 1000.0
-        self.slept = []
 
     def now(self):
         return self.t
 
-    def sleep(self, s):
-        self.slept.append(s)
-        self.t += s
-
 
 @pytest.fixture(autouse=True)
 def _alpaca_fake_clock(monkeypatch):
+    """Fake clock + a fresh cooldown per test, and ANY sleep in the connector fails the test (it must never block)."""
     import src.exchange.alpaca_connector as ac
     clk = _FakeClock()
     monkeypatch.setattr(ac, "_now", clk.now)
-    monkeypatch.setattr(ac, "_sleep", clk.sleep)
-    monkeypatch.setitem(ac._pace, "next", 0.0)
-    monkeypatch.setitem(ac._budget, "window_start", 0.0)
-    monkeypatch.setitem(ac._budget, "spent", 0.0)
+    monkeypatch.setitem(ac._cooldown, "until", 0.0)
+
+    def _no_sleep(*a, **k):
+        raise AssertionError("alpaca_connector slept in line -- it is called from the exit-evaluation thread")
+
+    monkeypatch.setattr(ac.time, "sleep", _no_sleep)
     return clk
 
 
@@ -255,11 +253,10 @@ def test_alpaca_later_page_failure_keeps_first_page(monkeypatch):
             return _Resp({}, status=429)
         return _Resp({"bars": _hourly(100), "next_page_token": "p2"})
 
-    import src.exchange.alpaca_connector as ac
     monkeypatch.setattr("src.exchange.alpaca_connector.requests.get", fake_get)
     df = AlpacaMarketData(api_key="k", api_secret="s").get_ohlcv("SPY", "1h", limit=400)
-    # page 2 is retried up to the cap (PI-20261106-5A1BGFHC-0001), then the first page is kept
-    assert len(df) == 100 and len(calls) == 2 + ac._MAX_RETRIES
+    # no in-line retry (PI-20261106-5A1BGFHC-0001, non-blocking): page 2's 429 starts the cooldown, page 1 is kept
+    assert len(df) == 100 and len(calls) == 2
 
 
 def test_alpaca_page_loop_is_bounded(monkeypatch):
@@ -275,75 +272,60 @@ def test_alpaca_page_loop_is_bounded(monkeypatch):
     assert len(calls) == ac._MAX_PAGES
 
 
-# ── PI-20261106-5A1BGFHC-0001: bounded 429 backoff, pacing, and a NAMED read state (never a silent None) ──────────────
+# ── PI-20261106-5A1BGFHC-0001: non-blocking 429 cooldown + a NAMED read state (never a silent None, never a sleep) ─────
 
-def test_alpaca_429_then_200_succeeds_and_honours_retry_after(monkeypatch, _alpaca_fake_clock):
-    import src.exchange.alpaca_connector as ac
-    seq = [_Resp({}, status=429, headers={"Retry-After": "1.5"}), _Resp({"bars": _hourly(10)})]
-    calls = []
-
-    def fake_get(url, params=None, **kwargs):
-        calls.append(params)
-        return seq[min(len(calls) - 1, len(seq) - 1)]
-
-    monkeypatch.setattr("src.exchange.alpaca_connector.requests.get", fake_get)
-    md = AlpacaMarketData(api_key="k", api_secret="s")
-    df = md.get_ohlcv("SPY", "1h", limit=10)
-    assert df is not None and len(df) == 10 and len(calls) == 2
-    assert md.last_read_state["SPY"] == "ok"
-    assert 1.5 in _alpaca_fake_clock.slept                      # Retry-After honoured
-    assert ac.read_state_counts().get("ok", 0) >= 1
-
-
-def test_alpaca_persistent_429_hits_the_cap_and_returns_a_named_state(monkeypatch, _alpaca_fake_clock):
+def test_alpaca_429_starts_a_cooldown_and_returns_rate_limited_without_sleeping(monkeypatch, _alpaca_fake_clock):
     import src.exchange.alpaca_connector as ac
     calls = []
 
     def fake_get(url, params=None, **kwargs):
         calls.append(params)
-        return _Resp({}, status=429)                           # no Retry-After -> exponential
+        return _Resp({}, status=429, headers={"Retry-After": "7"})
 
     monkeypatch.setattr("src.exchange.alpaca_connector.requests.get", fake_get)
     md = AlpacaMarketData(api_key="k", api_secret="s")
     before = ac.read_state_counts().get("rate_limited", 0)
     assert md.get_ohlcv("SPY", "1h", limit=10) is None
-    assert md.last_read_state["SPY"] == "rate_limited"         # NOT "empty": a rate limit is not "no bars"
-    assert len(calls) == 1 + ac._MAX_RETRIES
+    assert md.last_read_state["SPY"] == "rate_limited"          # NOT "empty": a rate limit is not "no bars"
+    assert len(calls) == 1                                      # one call, no in-line retry
+    assert ac._cooldown_remaining() == pytest.approx(7.0)       # Retry-After honoured
     assert ac.read_state_counts()["rate_limited"] == before + 1
-    backoff = sum(s for s in _alpaca_fake_clock.slept if s > ac._MIN_INTERVAL_S + 1e-9)
-    assert backoff <= ac._MAX_BACKOFF_S_PER_FETCH + 1e-9
 
 
-def test_alpaca_backoff_is_bounded_per_window_across_symbols(monkeypatch, _alpaca_fake_clock):
-    """Sustained throttling over many symbols costs the tick at most the rolling budget, then fails fast."""
+def test_alpaca_cooldown_short_circuits_every_symbol_then_recovers(monkeypatch, _alpaca_fake_clock):
     import src.exchange.alpaca_connector as ac
-    monkeypatch.setattr("src.exchange.alpaca_connector.requests.get",
-                        lambda *a, **k: _Resp({}, status=429, headers={"Retry-After": "10"}))
-    md = AlpacaMarketData(api_key="k", api_secret="s")
-    t0 = _alpaca_fake_clock.t
-    syms = [f"S{i}" for i in range(40)]
-    for s in syms:
-        assert md.get_ohlcv(s, "1h", limit=10) is None
-    assert all(md.last_read_state[s] == "rate_limited" for s in syms)
-    elapsed = _alpaca_fake_clock.t - t0
-    pacing = ac._MIN_INTERVAL_S * len(syms) * (1 + ac._MAX_RETRIES)
-    assert elapsed <= ac._BACKOFF_BUDGET_S + pacing + 1e-6, elapsed
-
-
-def test_alpaca_pacing_spaces_calls(monkeypatch, _alpaca_fake_clock):
-    import src.exchange.alpaca_connector as ac
-    stamps = []
+    calls = []
+    answer = {"r": _Resp({}, status=429)}                        # no Retry-After -> the default cooldown
 
     def fake_get(url, params=None, **kwargs):
-        stamps.append(_alpaca_fake_clock.t)
-        return _Resp({"bars": _hourly(5)})
+        calls.append(url)
+        return answer["r"]
 
     monkeypatch.setattr("src.exchange.alpaca_connector.requests.get", fake_get)
     md = AlpacaMarketData(api_key="k", api_secret="s")
-    for s in ("A", "B", "C"):
-        md.get_ohlcv(s, "1h", limit=5)
-    gaps = [b - a for a, b in zip(stamps, stamps[1:])]
-    assert all(g >= ac._MIN_INTERVAL_S - 1e-9 for g in gaps), gaps
+    assert md.get_ohlcv("SPY", "1h", limit=10) is None
+    answer["r"] = _Resp({"bars": _hourly(10)})
+    for s in ("QQQ", "TLT", "GLD"):                              # inside the cooldown: no venue call at all
+        assert md.get_ohlcv(s, "1h", limit=10) is None
+        assert md.last_read_state[s] == "rate_limited"
+    assert len(calls) == 1
+    _alpaca_fake_clock.t += ac._DEFAULT_COOLDOWN_S + 0.01        # cooldown over
+    df = md.get_ohlcv("QQQ", "1h", limit=10)
+    assert df is not None and len(df) == 10 and md.last_read_state["QQQ"] == "ok" and len(calls) == 2
+
+
+def test_alpaca_retry_after_is_capped(monkeypatch, _alpaca_fake_clock):
+    import src.exchange.alpaca_connector as ac
+    monkeypatch.setattr("src.exchange.alpaca_connector.requests.get",
+                        lambda *a, **k: _Resp({}, status=429, headers={"Retry-After": "3600"}))
+    AlpacaMarketData(api_key="k", api_secret="s").get_ohlcv("SPY", "1h", limit=10)
+    assert ac._cooldown_remaining() == pytest.approx(ac._MAX_COOLDOWN_S)
+
+
+def test_alpaca_5xx_also_cools_down(monkeypatch, _alpaca_fake_clock):
+    monkeypatch.setattr("src.exchange.alpaca_connector.requests.get", lambda *a, **k: _Resp({}, status=503))
+    md = AlpacaMarketData(api_key="k", api_secret="s")
+    assert md.get_ohlcv("SPY", "1h", limit=10) is None and md.last_read_state["SPY"] == "rate_limited"
 
 
 def test_alpaca_non_retryable_error_is_could_not_look(monkeypatch):

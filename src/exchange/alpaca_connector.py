@@ -58,70 +58,60 @@ _MAX_PAGES = 10
 
 # ── 429 / 5xx handling (PI-20261106-5A1BGFHC-0001; MEASURED RQ-20261106-d5a1-01 run 42145318852: one unpaced 173-symbol
 # 1h pass made 217 calls, 104 returned 429 and 82 symbols came back EMPTY, because a first-page HTTPError was re-raised and
-# get_ohlcv returned None -- a rate limit read as "no data"). Three bounds, so the shared tick can never stall on Alpaca:
-#   * PACING: one module-level clock, >= _MIN_INTERVAL_S between Alpaca data calls (200/min data limit = 0.3 s), shared by
-#     every instance and thread (the same idea as scripts/research/alpaca_readonly.py's shared pacing clock).
-#   * PER-FETCH CAP: at most _MAX_RETRIES retries and _MAX_BACKOFF_S_PER_FETCH seconds of backoff per symbol fetch.
-#   * ROLLING BUDGET: at most _BACKOFF_BUDGET_S seconds of backoff sleep per _BACKOFF_WINDOW_S across ALL symbols; once spent,
-#     a 429 fails fast. So sustained throttling costs the tick at most ~_BACKOFF_BUDGET_S a minute, never one symbol x N.
-# A fetch that still fails ends in a NAMED read state (rate_limited / could_not_look), logged and counted, never a bare None
-# that reads as "the venue had no bars".
-_MIN_INTERVAL_S = 0.3
-_MAX_RETRIES = 3
-_MAX_BACKOFF_S_PER_FETCH = 5.0
-_BACKOFF_BUDGET_S = 15.0
-_BACKOFF_WINDOW_S = 60.0
+# get_ohlcv returned None -- a rate limit read as "no data").
+#
+# NON-BLOCKING, the pattern of #23580 (bybit_connector.RATE_LIMIT_COOLDOWN_S): this connector is called from BOTH the trading
+# tick and the exit-evaluation thread (src/main.py::_build_monitor_ohlcv_fetcher -> connector_for_symbol routes every open
+# Alpaca package's symbol here), so it must NEVER sleep in line -- an in-line backoff or a shared pacing queue would put Alpaca
+# waits on the exit pass, the same class as the bybit sleep(15) that left a trade 115 s unevaluated. Instead:
+#   * a 429 / 5xx starts ONE process-wide cooldown (Retry-After honoured, else _DEFAULT_COOLDOWN_S; capped at _MAX_COOLDOWN_S)
+#     -- process-wide because the data limit is per key, not per instance;
+#   * while it runs every Alpaca bars call returns at once with the NAMED read state ``rate_limited`` (no venue call, no sleep);
+#   * a fetch never ends in a bare None that reads as "the venue had no bars": the state is recorded, counted and logged.
+_DEFAULT_COOLDOWN_S = 10.0
+_MAX_COOLDOWN_S = 60.0
 _RETRY_STATUSES = frozenset({429, 500, 502, 503, 504})
 READ_STATES = ("ok", "empty", "rate_limited", "could_not_look")
 
 # Injectable for tests (never patched in production).
-_sleep = time.sleep
 _now = time.monotonic
 
-_PACE_LOCK = threading.Lock()
-_pace = {"next": 0.0}
-_budget = {"window_start": 0.0, "spent": 0.0}
+_STATE_LOCK = threading.Lock()
+_cooldown = {"until": 0.0}
 READ_STATE_COUNTS: Counter = Counter()
 
 
 class AlpacaRateLimited(RuntimeError):
-    """A data call still answered 429/5xx after the per-fetch cap (or the rolling budget was spent)."""
+    """The data endpoint answered 429/5xx, or a cooldown from an earlier one is still running (no call was made)."""
 
 
-def _pace_wait() -> None:
-    """Block until this caller's slot on the shared clock (>= _MIN_INTERVAL_S apart)."""
-    with _PACE_LOCK:
-        now = _now()
-        slot = max(now, _pace["next"])
-        _pace["next"] = slot + _MIN_INTERVAL_S
-    if slot > now:
-        _sleep(slot - now)
+def _cooldown_remaining() -> float:
+    with _STATE_LOCK:
+        return max(0.0, _cooldown["until"] - _now())
 
 
-def _take_backoff(want_s: float) -> float:
-    """Grant up to ``want_s`` seconds of backoff from the rolling budget; 0.0 when it is spent."""
-    with _PACE_LOCK:
-        now = _now()
-        if now - _budget["window_start"] >= _BACKOFF_WINDOW_S:
-            _budget["window_start"], _budget["spent"] = now, 0.0
-        grant = max(0.0, min(want_s, _BACKOFF_BUDGET_S - _budget["spent"]))
-        _budget["spent"] += grant
-        return grant
+def _start_cooldown(seconds: float) -> bool:
+    """Extend the shared cooldown; True only for the call that STARTED it (it logs the one line)."""
+    now = _now()
+    with _STATE_LOCK:
+        started = _cooldown["until"] <= now
+        _cooldown["until"] = max(_cooldown["until"], now + seconds)
+    return started
 
 
-def _retry_after_s(resp, attempt: int) -> float:
+def _retry_after_s(resp) -> float:
     try:
         ra = float(resp.headers.get("Retry-After"))
         if ra >= 0:
-            return ra
+            return min(ra, _MAX_COOLDOWN_S)
     except (TypeError, ValueError, AttributeError):
         pass
-    return 0.5 * (2 ** attempt)
+    return _DEFAULT_COOLDOWN_S
 
 
 def read_state_counts() -> dict:
     """Cumulative per-state fetch counts since process start (observability; never a gate)."""
-    with _PACE_LOCK:
+    with _STATE_LOCK:
         return dict(READ_STATE_COUNTS)
 
 
@@ -159,32 +149,29 @@ class AlpacaMarketData:
 
     def _record(self, symbol: str, state: str) -> None:
         self.last_read_state[symbol] = state
-        with _PACE_LOCK:
+        with _STATE_LOCK:
             READ_STATE_COUNTS[state] += 1
 
     def _get(self, url: str, params: dict):
-        """One paced GET with bounded backoff on 429/5xx. Returns the response; raises AlpacaRateLimited when still
-        throttled after the cap, or the transport error."""
-        waited = 0.0
-        for attempt in range(_MAX_RETRIES + 1):
-            _pace_wait()
-            resp = requests.get(
-                url, params=params,
-                headers={"APCA-API-KEY-ID": self.api_key, "APCA-API-SECRET-KEY": self.api_secret},
-                timeout=self.timeout,
-            )
-            status = getattr(resp, "status_code", 200)   # raise_for_status still judges the answer
-            if status not in _RETRY_STATUSES:
-                return resp
-            if attempt == _MAX_RETRIES:
-                break
-            want = min(_retry_after_s(resp, attempt), _MAX_BACKOFF_S_PER_FETCH - waited)
-            grant = _take_backoff(want) if want > 0 else 0.0
-            if grant <= 0:
-                break
-            _sleep(grant)
-            waited += grant
-        raise AlpacaRateLimited(f"HTTP {status} after {attempt + 1} attempt(s), {waited:.1f}s backoff")
+        """One GET, never a sleep. Raises AlpacaRateLimited while a cooldown runs (no call made) or when this call answers
+        429/5xx (which starts the cooldown); otherwise returns the response for raise_for_status to judge."""
+        left = _cooldown_remaining()
+        if left > 0.0:
+            raise AlpacaRateLimited(f"cooldown {left:.1f}s left (no call made)")
+        resp = requests.get(
+            url, params=params,
+            headers={"APCA-API-KEY-ID": self.api_key, "APCA-API-SECRET-KEY": self.api_secret},
+            timeout=self.timeout,
+        )
+        status = getattr(resp, "status_code", 200)   # raise_for_status still judges the answer
+        if status in _RETRY_STATUSES:
+            secs = _retry_after_s(resp)
+            if _start_cooldown(secs):
+                logger.warning("alpaca: HTTP %s on %s (thread=%s) -- Alpaca bars calls return read_state=rate_limited for "
+                               "%.0f s (no in-line sleep)", status, url.rsplit("/", 2)[-2], threading.current_thread().name,
+                               secs)
+            raise AlpacaRateLimited(f"HTTP {status}; cooldown {secs:.0f}s")
+        return resp
 
     def get_ohlcv(self, symbol: str, timeframe: str = "5m", limit: int = 100):
         """Return the most recent *limit* bars as a canonical DataFrame.

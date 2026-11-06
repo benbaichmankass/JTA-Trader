@@ -2,6 +2,6 @@
   "tier": 2,
   "landing": "hold",
   "hold_reason": "tier_2_3_needs_approval",
-  "hold_text": "Tier-2 order-path data fetch (src/exchange/alpaca_connector.py): bounded 429/5xx backoff honouring Retry-After, shared pacing, a rolling backoff budget, and a NAMED read state instead of a silent None (PI-20261106-5A1BGFHC-0001). Data-backed: RQ-20261106-d5a1-01 run 42145318852 measured 104/217 calls 429 and 82/173 symbols empty on the live fetch. Manager 2026-11-05b merges on green and notifies the operator. Revert: git revert.",
-  "why": "A rate-limited Alpaca fetch was silently skipped (read as no bars). Retry within a bound; when it still fails, say rate_limited."
+  "hold_text": "Tier-2 order-path data fetch (src/exchange/alpaca_connector.py): NON-BLOCKING 429/5xx cooldown (the #23580 pattern; Retry-After honoured, capped 60 s), no in-line sleep and no pacing (the connector runs on the exit-evaluation thread), and a NAMED read state instead of a silent None (PI-20261106-5A1BGFHC-0001). Data-backed: RQ-20261106-d5a1-01 run 42145318852 measured 104/217 calls 429 and 82/173 symbols empty. Manager 2026-11-05b merges on green. Revert: git revert.",
+  "why": "A rate-limited Alpaca fetch was silently skipped (read as no bars). Cool down without blocking; say rate_limited."
 }
