@@ -6,7 +6,7 @@
 id: RQ-20261106-d5a1-01
 title: 'Alpaca ml_entry baseline: how many of the a41f 173 ETFs does the 1-share minimum reach at alpaca_live equity $194.52, and can the
   live Alpaca 1h fetch pull all 173 in one tick without 429s?'
-status: queued
+status: done
 cadence: once
 kind: deterministic
 theme: ml_health
@@ -100,3 +100,15 @@ related:
 - RQ-20261104-a41f-01
 - ML-ENTRY-ALL-ACCOUNTS
 last_dispatched_at: '2026-11-06T06:38:23+00:00'
+grading:
+  attested: RULE-RQ20261106-d5a1-01-ALPACA-BASELINE-MEASURE
+  auto: true
+  decision_rule_id: RULE-RQ20261106-d5a1-01-ALPACA-BASELINE-MEASURE
+  evidence:
+  - research/results/RQ-20261106-d5a1-01/42145318852.jsonl
+  - research/results/RQ-20261106-d5a1-01/42165645683.jsonl
+  graded_at: '2026-11-06'
+  grader: scripts/research/queue_grade.py
+  reason: 2 row(s), all measured, all pass (1 earlier producer_failed / re-graded wiring_only row(s) superseded)
+  rows: 2
+  verdict: pass

@@ -3,7 +3,7 @@ id: RQ-20261101-b624-01
 title: 'ENTRY timeframe lever, 5m bars with clock-count scaling: does the pooled ENTRY pipeline (v1 recipe, 60 perps, dev folds) keep an edge net of the full cost stack at 5m, does it beat the 1h baseline,
   and which features keep their role? (clock-time scaling: the SAME CLOCK time as the 1h recipe (every window, the ATR length, the 24 h label horizon and the 4 h decision cadence converted from hours to
   bars, rounded, floor 1)) Dev folds only'
-status: queued
+status: done
 cadence: once
 theme: ml_health
 priority: 1
@@ -125,4 +125,24 @@ grading_before_rearm:
   reason: 2 row(s), all measured, all indeterminate (3 earlier producer_failed / re-graded wiring_only
     row(s) superseded)
   rows: 2
+  verdict: indeterminate
+grading:
+  attested: RULE-20261101-b624-01
+  auto: true
+  awaiting: more_data
+  decision_rule_id: RULE-20261101-b624-01
+  evidence:
+  - research/results/RQ-20261101-b624-01/41410389909.jsonl
+  - research/results/RQ-20261101-b624-01/41418751430.jsonl
+  - research/results/RQ-20261101-b624-01/41423031787.jsonl
+  - research/results/RQ-20261101-b624-01/41541526027.jsonl
+  - research/results/RQ-20261101-b624-01/41563155009.jsonl
+  - research/results/RQ-20261101-b624-01/42167537521.jsonl
+  graded_at: '2026-11-06'
+  grader: scripts/research/queue_grade.py
+  note: 'indeterminate is the pre-registered under-powered/null outcome: complete, but NOT a pass and
+    NOT a kill'
+  reason: 3 row(s), all measured, all indeterminate (3 earlier producer_failed / re-graded wiring_only
+    row(s) superseded)
+  rows: 3
   verdict: indeterminate

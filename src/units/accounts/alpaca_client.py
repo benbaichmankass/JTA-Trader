@@ -341,6 +341,25 @@ def _f_or_none(v: Any) -> Optional[float]:
     return f if f == f else None
 
 
+#: Share-hold states that mean the BROKER is wedged (not a transient race): only these may climb to rung 3.
+_LADDER_WEDGE_STATES = frozenset({"cancel_accepted_ineffective", "broker_cancel_wedged"})
+
+
+def _flag_live_ladder_exhausted(sym: str, hold_state: str, residual: Optional[list], target: Dict[str, Any]) -> None:
+    """ONE red flag (fingerprinted by exchange+op in outcomes.report) when a LIVE position's close ladder is
+    exhausted: close-all is never automated on real money. Names the stuck order ids and the failed step."""
+    try:
+        from src.runtime.api_reporting import report_api_failure
+        ids = [str(o.get("id")) for o in (residual or []) if o.get("id")]
+        report_api_failure(
+            exchange="alpaca", op="close_ladder_exhausted_live", account_id=f"live:{sym}",
+            error=(f"{sym}: close ladder exhausted on a LIVE account ({hold_state}); stuck orders {ids}; failed at "
+                   f"oco target exit {target.get('state')}: {target.get('detail')}. Close-all is not automated on "
+                   "real money: see docs/runbooks/alpaca-wedged-oco.md"))
+    except Exception:  # noqa: BLE001 -- the close failure itself is still returned and logged
+        logger.exception("alpaca close ladder: live red flag failed for %s", sym)
+
+
 class CancelOutcome(NamedTuple):
     """What actually happened when we asked Alpaca to cancel a symbol's orders.
 
@@ -1577,6 +1596,22 @@ class AlpacaClient:
         return {"retCode": 2, "retMsg": (
             "extended-hours limit close working — not yet filled, exit deferred")}
 
+    def _account_reset_close_all(self, sym: str) -> Dict[str, Any]:
+        """RUNG 3, PAPER ONLY: Alpaca's documented account-wide liquidation, ``DELETE /v2/positions?cancel_orders=true``
+        ("If true is specified, cancel all open orders before liquidating all positions",
+        docs.alpaca.markets/reference/deleteallopenpositions-1). Refuses outright on a live account. Returns
+        ``{"state": "reset"|"refused"|"not_paper", "closed_symbols": [...], "detail": ...}``; the caller's flat-confirm
+        gate still decides whether *sym* actually left. Every OTHER trade this closes is journaled ``account_reset`` by
+        ``execute.close_open_position`` so nothing is orphaned; strategies re-enter on their own signals."""
+        if self.env != "paper":
+            return {"state": "not_paper", "detail": "close-all is never automated on a live account"}
+        before = self.positions()
+        env = self._request("DELETE", "/v2/positions?cancel_orders=true")
+        if env.get("retCode") not in (0, None, 207):
+            return {"state": "refused", "detail": str(env.get("retMsg"))}
+        closed = sorted({str(p.get("symbol")) for p in (before or []) if p.get("symbol")} | {sym})
+        return {"state": "reset", "closed_symbols": closed}
+
     # Statuses Alpaca documents as NOT replaceable: "Order cannot be replaced when the status is accepted,
     # pending_new, pending_cancel or pending_replace." (docs.alpaca.markets/reference/patchorderbyorderid-1)
     _NOT_REPLACEABLE = frozenset({"accepted", "pending_new", "pending_cancel", "pending_replace"})
@@ -1599,12 +1634,11 @@ class AlpacaClient:
         shares can BE the exit: reprice the take-profit marketable and let the venue's own OCO cancel the stop.
         No cancel is needed and no second order is placed.
 
-        THE PAIR, NOT THE LEG (live 2026-11-06 17:40Z, after #23885): repricing the take-profit alone was
-        refused, "take_profit.limit_price must be > stop_loss.stop_price" -- Alpaca validates the OCO as a pair
-        on every replace. So: (1) ONE PATCH on the parent carrying limit_price AND stop_price (both documented
-        OCO replace fields); if refused, (2) the stop first (mark -/+ ALPACA_STOP_REPRICE_BUFFER_BPS, away from
-        the mark), re-read the pair (a replace may renumber), then the target. :func:`oco_pair_valid` is checked
-        for the pair as it will stand after EVERY step, so no replace Alpaca would refuse on the pair rule is sent.
+        THE PAIR, NOT THE LEG (live 2026-11-06): Alpaca validates the OCO as a PAIR on every replace, refuses
+        stop_price on the limit parent, and issues a NEW leg id per replace. So only the CURRENT legs are used; if
+        the current stop already sits on the valid side of the marketable target, only the target moves; otherwise
+        the stop moves first, a re-read must show it settled, then the target moves. :func:`oco_pair_valid` is
+        checked for the pair as it will stand after EVERY step.
 
         ONLY WHEN SAFE, else ``{"state": "no_candidate"}`` and nothing is sent: exactly ONE resting limit
         order on the closing side, in an ``oco``/``bracket`` class, whose qty equals the WHOLE live position
@@ -1622,10 +1656,16 @@ class AlpacaClient:
         tp, stop, why = self._select_oco_pair(residual, close_side, qty)
         if tp is None:
             return {"state": "no_candidate", "detail": why}
-        # ── THE PAIR, NOT THE LEG (live 2026-11-06 17:40Z, GLD re-close after #23885) ──────────────────
-        # Repricing only the take-profit was refused: "take_profit.limit_price must be > stop_loss.stop_price".
-        # Alpaca validates an OCO as a PAIR on every replace, so the stop has to move out of the way too, and
-        # the invariant (long: TP limit > SL stop; short: TP limit < SL stop) must hold after EVERY step.
+        # ── THE PAIR, NOT THE LEG (live 2026-11-06, GLD re-closes after #23885 / #23905) ─────────────────
+        # 17:40Z: repricing only the take-profit was refused, "take_profit.limit_price must be >
+        # stop_loss.stop_price" -- Alpaca validates an OCO as a PAIR on every replace. 18:50Z: replacing the
+        # held stop WORKED (891ddff0 -> c928eda6, stop 354.4) but the target replace sent right after did not
+        # take (it validated against a stop still being replaced), and 18:52Z the next attempt re-targeted
+        # the REPLACED stop ("order is not open") after a parent PATCH carrying stop_price was refused
+        # ("limit orders must not have stop_price"). So: (1) only the CURRENT legs count (_select_oco_pair);
+        # (2) if the current stop already sits on the valid side of the marketable target, move ONLY the
+        # target; (3) else move the stop first, WAIT until a re-read shows it settled, then move the target.
+        # oco_pair_valid() is checked for the pair as it will stand after every step.
         tp_buf = _env_float("ALPACA_TARGET_REPRICE_BUFFER_BPS", 100.0) / 10000.0
         sl_buf = _env_float("ALPACA_STOP_REPRICE_BUFFER_BPS", 500.0) / 10000.0
         sell = close_side == "sell"
@@ -1633,45 +1673,60 @@ class AlpacaClient:
         stop_px = round(px * (1 - sl_buf) if sell else px * (1 + sl_buf), 2)
         if not oco_pair_valid(close_side, limit_px, stop_px):
             return {"state": "no_candidate", "detail": f"buffers give an invalid pair tp={limit_px} sl={stop_px}"}
-        oid = str(tp["id"])
-        attempts: List[str] = []
-        # Attempt 1: ONE replace of the parent carrying both documented fields (limit_price + stop_price).
+        how = "target_only"
         if stop is not None:
-            env = self._request("PATCH", f"/v2/orders/{oid}",
-                                {"limit_price": f"{limit_px:.2f}", "stop_price": f"{stop_px:.2f}"})
-            if env.get("retCode") == 0:
-                return {"state": "repriced", "order_id": oid, "limit_price": limit_px, "stop_price": stop_px,
-                        "how": "pair_in_one_patch", "new_order_id": str((env.get("result") or {}).get("id") or "")}
-            attempts.append(f"pair patch refused: {env.get('retMsg')}")
-            # Attempt 2: the stop FIRST (away from the mark), then the target. Each step is checked against
-            # the pair as it will stand AFTER that step, so no replace Alpaca would refuse is ever sent.
-            cur_tp = _f_or_none(tp.get("limit_price"))
-            if cur_tp is None or not oco_pair_valid(close_side, cur_tp, stop_px):
-                return {"state": "refused", "order_id": oid,
-                        "detail": "; ".join(attempts + [f"stop-first would break the pair (tp={cur_tp} sl={stop_px})"])}
-            senv = self._request("PATCH", f"/v2/orders/{stop['id']}", {"stop_price": f"{stop_px:.2f}"})
-            if senv.get("retCode") != 0:
-                return {"state": "refused", "order_id": str(stop["id"]),
-                        "detail": "; ".join(attempts + [f"stop replace refused: {senv.get('retMsg')}"])}
-            # A replace can issue a NEW order id: re-read the pair before touching the target.
-            tp2, _stop2, why2 = self._select_oco_pair(self._open_orders_for_symbol(sym), close_side, qty)
-            if tp2 is None:
-                return {"state": "refused", "order_id": oid,
-                        "detail": "; ".join(attempts + [f"stop moved to {stop_px}; target re-read failed: {why2}"])}
-            oid = str(tp2["id"])
+            cur_sl = _f_or_none(stop.get("stop_price"))
+            if cur_sl is not None and oco_pair_valid(close_side, limit_px, cur_sl):
+                how = "target_with_valid_stop"          # the stop is already out of the way: target only
+            else:
+                if str(stop.get("status") or "").lower() == "pending_replace":
+                    return {"state": "refused", "order_id": str(stop["id"]),
+                            "detail": "stop replace still in flight (pending_replace); next attempt retries"}
+                cur_tp = _f_or_none(tp.get("limit_price"))
+                if cur_tp is None or not oco_pair_valid(close_side, cur_tp, stop_px):
+                    return {"state": "refused", "order_id": str(tp["id"]),
+                            "detail": f"stop-first would break the pair (tp={cur_tp} sl={stop_px})"}
+                senv = self._request("PATCH", f"/v2/orders/{stop['id']}", {"stop_price": f"{stop_px:.2f}"})
+                if senv.get("retCode") != 0:
+                    return {"state": "refused", "order_id": str(stop["id"]),
+                            "detail": f"stop replace refused: {senv.get('retMsg')}"}
+                # A replace issues a NEW leg and is asynchronous: wait until the CURRENT stop reads at the new
+                # price and is no longer pending, so the target replace is validated against it.
+                settle_s = _env_float("ALPACA_OCO_SETTLE_S", 4.0)
+                deadline = time.monotonic() + max(0.0, settle_s)
+                settled = None
+                while True:
+                    tp2, st2, why2 = self._select_oco_pair(self._open_orders_for_symbol(sym), close_side, qty)
+                    sl2 = _f_or_none((st2 or {}).get("stop_price"))
+                    if (tp2 is not None and st2 is not None and sl2 is not None and abs(sl2 - stop_px) < 0.005
+                            and str(st2.get("status") or "").lower() != "pending_replace"):
+                        settled = (tp2, st2)
+                        break
+                    if time.monotonic() >= deadline:
+                        break
+                    time.sleep(0.4)
+                if settled is None:
+                    return {"state": "refused", "order_id": str(stop["id"]),
+                            "detail": f"stop moved to {stop_px} but not seen settled within {settle_s:g}s; "
+                                      "the next attempt moves the target only"}
+                tp = settled[0]
+                how = "stop_then_target"
+        oid = str(tp["id"])
         env = self._request("PATCH", f"/v2/orders/{oid}", {"limit_price": f"{limit_px:.2f}"})
         if env.get("retCode") != 0:
-            return {"state": "refused", "order_id": oid,
-                    "detail": "; ".join(attempts + [f"target replace refused: {env.get('retMsg')}"])}
+            return {"state": "refused", "order_id": oid, "detail": f"target replace refused: {env.get('retMsg')}"}
         return {"state": "repriced", "order_id": oid, "limit_price": limit_px,
-                "stop_price": stop_px if stop is not None else None,
-                "how": "stop_then_target" if stop is not None else "target_only",
+                "stop_price": stop_px if how == "stop_then_target" else None, "how": how,
                 "new_order_id": str((env.get("result") or {}).get("id") or "")}
 
     def _select_oco_pair(self, residual: Optional[list], close_side: str, qty: float):
-        """(take_profit, stop_or_None, why). The take-profit is the ONE resting limit order on *close_side* in an
-        oco/bracket class covering the whole *qty* in a replaceable status; the stop is its sibling stop leg
-        (parent_id == the take-profit's id, or the one closing-side oco stop covering *qty*)."""
+        """(take_profit, stop_or_None, why) -- the CURRENT legs only.
+
+        The open-orders read appends every nested leg whatever its status, so a stop Alpaca has REPLACED is still
+        listed beside its replacement (live 18:52Z: 891ddff0 replaced by c928eda6). Only legs in a resting status
+        count, and a leg that another leg's ``replaces`` names is superseded and dropped. The take-profit is the ONE
+        resting limit order on *close_side* in an oco/bracket class covering the whole *qty* in a replaceable
+        status; the stop is its sibling stop leg."""
         if not residual:
             return None, None, "no resting order read"
 
@@ -1684,8 +1739,11 @@ class AlpacaClient:
         def _kind(o):
             return str(o.get("type") or o.get("order_type") or "").lower()
 
+        superseded = {str(o.get("replaces")) for o in residual if o.get("replaces")}
         legs = [o for o in residual if str(o.get("side") or "").lower() == close_side
                 and str(o.get("order_class") or "").lower() in ("oco", "bracket")
+                and str(o.get("status") or "").lower() in _RESTING_LEG_STATUSES
+                and str(o.get("id") or "") not in superseded
                 and abs(_qty(o) - qty) < 1e-9 and o.get("id")]
         tps = [o for o in legs if _kind(o) == "limit"
                and str(o.get("status") or "").lower() not in self._NOT_REPLACEABLE]
@@ -1695,7 +1753,7 @@ class AlpacaClient:
         stops = [o for o in legs if _kind(o) in ("stop", "stop_limit")
                  and (str(o.get("parent_id") or "") == str(tp["id"]) or not o.get("parent_id"))]
         if len(stops) > 1:
-            return None, None, f"{len(stops)} candidate stop legs: ambiguous"
+            return None, None, f"{len(stops)} current stop legs: ambiguous"
         return tp, (stops[0] if stops else None), None
 
     def close(
@@ -1918,6 +1976,28 @@ class AlpacaClient:
                     hold_state, hold_detail = classify_share_hold(
                         residual, last_cancel,
                     )
+                    # RUNG 3 (operator ~18:55Z 2026-11-06, verbatim in docs/runbooks/alpaca-wedged-oco.md: "We can
+                    # close all the positions on that account if needed to reset ... it can't depend on me"):
+                    # only when the broker itself shows a WEDGE (never on a transient insufficient-qty).
+                    ladder = ""
+                    if hold_state in _LADDER_WEDGE_STATES:
+                        if self.env == "paper":
+                            reset = self._account_reset_close_all(sym)
+                            if reset.get("state") == "reset":
+                                logger.warning(
+                                    "alpaca close %s: rungs 1-2 failed on a broker wedge (%s); PAPER account reset "
+                                    "via DELETE /v2/positions?cancel_orders=true closed %s",
+                                    sym, hold_state, reset.get("closed_symbols"))
+                                env = {"retCode": 0, "result": {
+                                    "id": "account_reset", "scope": "account_reset",
+                                    "closed_symbols": reset.get("closed_symbols") or []}}
+                                break  # → post-DELETE flatten-confirm gate validates it
+                            ladder = f" [account reset {reset.get('state')}: {reset.get('detail')}]"
+                        else:
+                            ladder = (" [close ladder exhausted on a LIVE account: close-all is NOT automated on "
+                                      f"real money; stuck orders {[o.get('id') for o in (residual or [])]}; "
+                                      f"failed at: oco target exit {target.get('state')}]")
+                            _flag_live_ladder_exhausted(sym, hold_state, residual, target)
                     logger.warning(
                         "alpaca close %s still insufficient-qty after ~%.1fs "
                         "(want_qty=%s); share_hold=%s (%s); residual open "
@@ -1938,6 +2018,7 @@ class AlpacaClient:
                             f"{env.get('retMsg')} "
                             f"{format_share_hold_marker(hold_state, hold_detail)}"
                             f" [oco target exit {target.get('state')}: {target.get('detail')}]"
+                            f"{ladder}"
                         ),
                     }
                 return env
@@ -1981,8 +2062,10 @@ class AlpacaClient:
 
         result = env.get("result") or {}
         out_result = {"orderId": str(result.get("id") or "")}
-        if result.get("scope"):        # e.g. "oco_target_reprice": say HOW the venue closed it
+        if result.get("scope"):        # e.g. "oco_target_reprice" / "account_reset": say HOW the venue closed it
             out_result["scope"] = result["scope"]
+        if result.get("closed_symbols") is not None:
+            out_result["closed_symbols"] = result["closed_symbols"]
         return {"retCode": 0, "result": out_result}
 
     def _open_orders_for_symbol(

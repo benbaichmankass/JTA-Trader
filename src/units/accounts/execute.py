@@ -19,10 +19,11 @@ The dry/live toggle is the per-account ``mode: live | dry_run`` field in
 """
 from __future__ import annotations
 
+import json
 import logging
 import os
 import uuid
-from typing import Any, Optional, Tuple
+from typing import Any, Dict, Optional, Tuple
 
 from src.core.coordinator import OrderPackage, is_paused
 from src.runtime import bybit_position_mode
@@ -3738,6 +3739,57 @@ def _bybit_own_legs_resting(
     return any(str(o.get("orderId") or "") in own for o in rows)
 
 
+def journal_account_reset(account_cfg: dict, *, keep_trade_id: Any = None, db: Any = None) -> dict:
+    """After the Alpaca close ladder's rung 3 reset a PAPER account (``DELETE /v2/positions?cancel_orders=true``),
+    close every OTHER open journal trade on that account with ``exit_reason='account_reset'`` and close each order
+    package left with no open trade, so nothing is orphaned (docs/runbooks/alpaca-wedged-oco.md). The trade whose
+    close triggered the reset (*keep_trade_id*) is journaled by its own caller with its own reason. Exit prices are
+    left for the broker-fill / local-PnL sweeps (marked ``pending_broker_fill``); strategies re-enter on their own
+    signals and nothing is re-opened by hand. Never runs for a real-money account. Best-effort: returns
+    ``{"closed_trades": [...], "closed_packages": [...], "error": str|None}`` and never raises."""
+    out: Dict[str, Any] = {"closed_trades": [], "closed_packages": [], "error": None}
+    try:
+        if str(account_cfg.get("account_class") or "").lower() == "real_money":
+            out["error"] = "refused: real_money account"
+            return out
+        aid = account_cfg.get("account_id")
+        if db is None:
+            from src.units.db.database import Database
+            from src.utils.paths import trade_journal_db_path
+            db = Database(db_path=trade_journal_db_path())
+        from datetime import datetime, timezone
+        from src.utils.json_notes import dump_capped
+        now = datetime.now(timezone.utc).isoformat()
+        rows = [t for t in (db.get_trades(filters={"account_id": aid, "status": "open"}) or [])
+                if not t.get("is_backtest") and str(t.get("id")) != str(keep_trade_id)]
+        pkgs = set()
+        for t in rows:
+            notes: Dict[str, Any] = {}
+            try:
+                notes = json.loads(t.get("notes") or "{}") or {}
+            except (TypeError, ValueError):
+                notes = {}
+            notes.update({"closed_by": "alpaca_account_reset", "closed_at": now,
+                          "exit_price_source": "pending_broker_fill",
+                          "closed_reason": "close ladder rung 3: paper account reset after a wedged OCO "
+                                           "(docs/runbooks/alpaca-wedged-oco.md)"})
+            db.update_trade(t["id"], {"status": "closed", "exit_reason": "account_reset", "closed_at": now,
+                                      "notes": dump_capped(notes, 2000)})
+            out["closed_trades"].append(t["id"])
+            if t.get("order_package_id"):
+                pkgs.add(t["order_package_id"])
+        for pid in sorted(pkgs):
+            still = [x for x in (db.get_trades(filters={"order_package_id": pid, "status": "open"}) or [])
+                     if not x.get("is_backtest") and str(x.get("id")) != str(keep_trade_id)]
+            if not still:
+                db.update_order_package(pid, {"status": "closed", "close_reason": "account_reset"})
+                out["closed_packages"].append(pid)
+    except Exception as exc:  # noqa: BLE001 -- the venue reset already happened; report, never raise
+        logger.exception("journal_account_reset failed for %s", account_cfg.get("account_id"))
+        out["error"] = f"{type(exc).__name__}: {exc}"
+    return out
+
+
 def close_open_position(
     exchange_client: Any,
     account_cfg: dict,
@@ -4046,14 +4098,20 @@ def close_open_position(
                     did = (f"WHOLE-SYMBOL flatten — the venue closed the "
                            f"entire {symbol} position, not just this trade's "
                            f"{qty}")
+                if result.get("scope") == "account_reset":
+                    did = (f"PAPER ACCOUNT RESET (close ladder rung 3) — every position on the account was "
+                           f"liquidated: {result.get('closed_symbols')}")
                 logger.info(
                     "close_open_position: account=%s symbol=%s side=%s "
                     "requested_qty=%s → alpaca %s (orderId=%s)",
                     account_cfg.get("account_id"), symbol, close_side, qty,
                     did, order_id,
                 )
-                return {"ok": True, "exchange_response": resp,
-                        "exchange_order_id": order_id, "error": None}
+                out = {"ok": True, "exchange_response": resp,
+                       "exchange_order_id": order_id, "error": None}
+                if result.get("scope") == "account_reset":
+                    out["account_reset"] = journal_account_reset(account_cfg, keep_trade_id=trade_id)
+                return out
             err = str(resp.get("retMsg") or f"retCode={ret_code}")
             return {"ok": False, "exchange_response": resp,
                     "exchange_order_id": None, "error": err}

@@ -586,9 +586,12 @@ def test_client_close_insufficient_qty_gives_up_and_logs_residual(monkeypatch, c
             # qty_available never recovers — the shares stay held.
             return {"retCode": 0, "result": {"qty": "16", "qty_available": "0"}}
         # Both the plain flatten AND the cancel_orders=true escalation fail —
-        # the truly-wedged pending_cancel case that only an operator paper reset
-        # can clear (BL-20260716-ALPACA-QQQ-WEDGED-PENDING-CANCEL).
-        if method == "DELETE" and path.startswith("/v2/positions/QQQ"):
+        # the truly-wedged pending_cancel case (BL-20260716-ALPACA-QQQ-WEDGED-
+        # PENDING-CANCEL). The close ladder's rung-3 paper reset (close-all,
+        # `DELETE /v2/positions?cancel_orders=true`, ALPACA-LIVE-MECHANICS
+        # 2026-11-06) is made to fail here too, so this still pins the
+        # every-rung-failed give-up path.
+        if method == "DELETE" and path.startswith("/v2/positions"):
             return {"retCode": 422, "retMsg": (
                 "insufficient qty available for order (requested: 16, available: 0)"
             )}
