@@ -1,0 +1,7 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "hold_reason": "tier_2_3_needs_approval",
+  "hold_text": "Tier-2 infra action (new OCI-API resize workflow). The operator approved the resize itself by popup 2026-11-06 ~00:35Z, verbatim 'Next CME daily break'; this PR adds the guarded tool that performs it. Held for the manager to merge before the Fri 11-06 22:00Z window.",
+  "why": "Adds .github/workflows/oci-resize-a1.yml, scripts/ops/oci_resize_a1.py, tests and doc rows (system-actions.md, github-actions-workflows.md). Not on the order path; no trader VM access; refuses OCPU changes and any post-change total above 4 OCPU / 24 GB."
+}

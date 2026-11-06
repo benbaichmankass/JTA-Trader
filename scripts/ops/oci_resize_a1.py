@@ -81,26 +81,26 @@ def main() -> int:
             compute.instance_action(iid, "SOFTSTOP")
             wait("STOPPED")
         emit("stopped")
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         emit("error", phase="stop", message=f"{type(e).__name__}: {e}")
         try:
             compute.instance_action(iid, "STOP"); wait("STOPPED"); emit("stopped", hard=True)
-        except Exception as e2:
+        except Exception as e2:  # noqa: BLE001
             emit("error", phase="stop_hard", message=str(e2)); emit("result", status="failed_stop"); return 4
     try:
         compute.update_instance(iid, oci.core.models.UpdateInstanceDetails(
             shape_config=oci.core.models.UpdateInstanceShapeConfigDetails(ocpus=t_o, memory_in_gbs=t_m)))
         emit("updated", memory_gb=t_m)
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         emit("error", phase="update", message=f"{type(e).__name__}: {e}")
         try:
             compute.instance_action(iid, "START"); wait("RUNNING"); emit("recovered_old_shape")
-        except Exception as e2:
+        except Exception as e2:  # noqa: BLE001
             emit("error", phase="recover", message=str(e2))
         emit("result", status="failed_update"); return 5
     try:
         compute.instance_action(iid, "START"); wait("RUNNING"); emit("started")
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         emit("error", phase="start", message=f"{type(e).__name__}: {e}")
         emit("result", status="failed_start"); return 6
     fin = compute.get_instance(iid).data

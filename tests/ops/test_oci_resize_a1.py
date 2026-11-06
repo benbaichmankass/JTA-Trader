@@ -19,7 +19,7 @@ def test_trainer_grow_first_refused_over_cap():
 def test_trainer_grow_after_shrink_ok():
     rows = [dict(r) for r in ROWS]
     rows[2]["memory_gb"] = 3.0
-    ok, _, o, m = check_budget(rows, "ict-trainer-vm", 1.0, 9.0)
+    ok, _, _o, m = check_budget(rows, "ict-trainer-vm", 1.0, 9.0)
     assert ok and m == 24
 
 
