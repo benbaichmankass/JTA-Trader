@@ -227,7 +227,12 @@ accounts:
                                        # pick-one. bybit_1 first; bybit_2 + bybit_portfolio
                                        # together after 1-2 clean multi-slice trades here
                                        # (mirror equality test). ROLLBACK: delete this line.
-    strategies: [trend_donchian_1h, trend_donchian_xrp_adx25, trend_donchian_eth_prop, claude_desk, ict_scalp_eth_15m, ict_scalp_xrp_15m, avax_pullback_2h, eth_pullback_2h, eth_pullback_prop_2h, sol_pullback_2h, fade_breakout_4h, fvg_range_15m, htf_pullback_trend_2h, ict_scalp_5m, ict_scalp_avax_5m, ict_scalp_sol_5m, ict_scalp_sol_15m, ict_scalp_xrp_5m, squeeze_breakout_4h, trend_donchian, trend_donchian_ada_4h, trend_donchian_avax_4h, trend_donchian_eth, trend_donchian_sol, trend_donchian_sol_4h, turtle_soup, e4_oi_shock_1h, ml_entry_v2]
+    strategies: [xrp_pullback_2h, trend_donchian_eth_4h, trend_donchian_xrp_4h, ada_pullback_2h, trend_donchian_sol_prop, trend_donchian_1h, trend_donchian_xrp_adx25, trend_donchian_eth_prop, claude_desk, ict_scalp_eth_15m, ict_scalp_xrp_15m, avax_pullback_2h, eth_pullback_2h, eth_pullback_prop_2h, sol_pullback_2h, fade_breakout_4h, fvg_range_15m, htf_pullback_trend_2h, ict_scalp_5m, ict_scalp_avax_5m, ict_scalp_sol_5m, ict_scalp_sol_15m, ict_scalp_xrp_5m, squeeze_breakout_4h, trend_donchian, trend_donchian_ada_4h, trend_donchian_avax_4h, trend_donchian_eth, trend_donchian_sol, trend_donchian_sol_4h, turtle_soup, e4_oi_shock_1h, ml_entry_v2]
+                                        # 2026-11-06 PROD-LEGS-DSR-DECISION (Tier-3; OPERATOR popup ~00:30Z verbatim "Re-measure, then move (Rec.)" -- "Any leg that fails moves to the demo floor (paper)"):
+                                        # the five bybit_2 + bybit_portfolio legs (xrp_pullback_2h, trend_donchian_eth_4h, trend_donchian_xrp_4h, ada_pullback_2h, trend_donchian_sol_prop) RE-ENTER this demo floor as TESTING legs:
+                                        # every one FAILS the trial ledger's survival bar (DSR > 0.95 AND BHY-haircut expectancy > 0) on its
+                                        # committed Stage-0 record (scripts/research/trial_ledger.py, re-run 2026-11-06; per-leg table in
+                                        # docs/research/prod-legs-dsr-2026-11-06.md). ROLLBACK: drop the five names from the front of this list.
                                         # 2026-10-30 E4-DEMO-LEG (Tier-3, OPERATOR-APPROVED for bybit_1 DEMO only: popup
                                         # verbatim "Prop sim + bybit_1 demo (Recommended)", Manager Session 2026-10-30c):
                                         # e4_oi_shock_1h -- the frozen E4 OI-shock continuation rule. Its Stage 0 (absolute)
@@ -473,7 +478,11 @@ accounts:
                                        # symbol's risk. Follows bybit_1 (live since 2026-10-18). MUST match
                                        # bybit_portfolio (test_mirror_carries_the_same_position_model_as_live).
                                        # ROLLBACK: delete this line here AND on bybit_portfolio.
-    strategies: [xrp_pullback_2h, trend_donchian_eth_4h, trend_donchian_xrp_4h, ada_pullback_2h, trend_donchian_sol_prop, ml_entry]
+    strategies: [ml_entry]
+                                       # 2026-11-06 PROD-LEGS-DSR-DECISION (Tier-3; OPERATOR popup ~00:30Z verbatim "Re-measure, then move (Rec.)" -- "Any leg that fails moves to the demo floor (paper)"): REMOVED xrp_pullback_2h, trend_donchian_eth_4h, trend_donchian_xrp_4h, ada_pullback_2h, trend_donchian_sol_prop -- each fails DSR > 0.95 AND BHY-haircut > 0
+                                       # (docs/research/prod-legs-dsr-2026-11-06.md). They trade on bybit_1 (testing). Open positions run to their brackets.
+                                       # bybit_2 and bybit_portfolio change identically (ordered mirror equality).
+                                       # ROLLBACK: restore `strategies: [xrp_pullback_2h, trend_donchian_eth_4h, trend_donchian_xrp_4h, ada_pullback_2h, trend_donchian_sol_prop, ml_entry]` here AND on the other account.
                                        # ── PROMOTE-PROP-LEGS, 2026-10-15 (Tier-3, operator PRE-AUTHORIZED).
                                        # ONE LEG ADDED, identically and in the same order on
                                        # bybit_2 AND bybit_portfolio: trend_donchian_sol_prop.
@@ -868,7 +877,11 @@ accounts:
                                        # bybit_2); set-leverage fires at boot.
     position_model: slices             # mirrors bybit_2 (operator 2026-11-01 "Slices on bybit_2 (Rec.)");
                                        # mirror equality. ROLLBACK: with bybit_2's line.
-    strategies: [xrp_pullback_2h, trend_donchian_eth_4h, trend_donchian_xrp_4h, ada_pullback_2h, trend_donchian_sol_prop, ml_entry]
+    strategies: [ml_entry]
+                                       # 2026-11-06 PROD-LEGS-DSR-DECISION (Tier-3; OPERATOR popup ~00:30Z verbatim "Re-measure, then move (Rec.)" -- "Any leg that fails moves to the demo floor (paper)"): REMOVED xrp_pullback_2h, trend_donchian_eth_4h, trend_donchian_xrp_4h, ada_pullback_2h, trend_donchian_sol_prop -- each fails DSR > 0.95 AND BHY-haircut > 0
+                                       # (docs/research/prod-legs-dsr-2026-11-06.md). They trade on bybit_1 (testing). Open positions run to their brackets.
+                                       # bybit_2 and bybit_portfolio change identically (ordered mirror equality).
+                                       # ROLLBACK: restore `strategies: [xrp_pullback_2h, trend_donchian_eth_4h, trend_donchian_xrp_4h, ada_pullback_2h, trend_donchian_sol_prop, ml_entry]` here AND on the other account.
                                        # ── PROMOTE-PROP-LEGS, 2026-10-15 — FOLLOWS bybit_2's addition
                                        # of trend_donchian_sol_prop IDENTICALLY (ordered mirror
                                        # equality, test_bybit_portfolio_mirrors_bybit_2_exactly).
@@ -1382,7 +1395,10 @@ accounts:
     # tests/test_paper_portfolio_accounts.py::_SANCTIONED_DIVERGENCE. The venue login is margin with shorting
     # enabled (MEASURED 2026-11-01 broker_account_status: ACTIVE, shorting_enabled true, multiplier 4, flat).
     # ROLLBACK: add `side_filter: long` back (Tier 3).
-    strategies: [gld_pullback_1d]      # = alpaca_live [iaum_pullback_1d] with the proxy replaced by its
+    strategies: []                     # 2026-11-06 PROD-LEGS-DSR-DECISION (Tier-3; OPERATOR popup ~00:30Z verbatim "Re-measure, then move (Rec.)" -- "Any leg that fails moves to the demo floor (paper)"): gld_pullback_1d REMOVED with alpaca_live's iaum_pullback_1d
+                                       # (both fail DSR > 0.95 AND BHY-haircut > 0; docs/research/prod-legs-dsr-2026-11-06.md). gld_pullback_1d
+                                       # keeps trading on ib_paper (testing). ROLLBACK: `strategies: [gld_pullback_1d]` (with alpaca_live's line).
+                                       # Prior state: [gld_pullback_1d] = alpaca_live [iaum_pullback_1d] with the proxy replaced by its
                                        # underlying (operator 2026-11-01). Identical params to iaum_pullback_1d
                                        # except symbol (MEASURED: config/strategies.yaml diff). Both sides.
       # ⚠️ EXPLICIT `[]`, NOT A BARE `strategies:` — a key with only comments under it parses as
@@ -1498,7 +1514,10 @@ accounts:
     alpaca_env: live                   # selects api.alpaca.markets (vs paper).
     api_key_env: ALPACA_API_KEY_ID_LIVE        # this account's OWN key pair, so
     api_secret_env: ALPACA_API_SECRET_KEY_LIVE # paper + live run concurrently.
-    strategies:                        # ⚠️ NO LONGER EMPTY as of 2026-08-31 — this account now
+    strategies: []                     # 2026-11-06 PROD-LEGS-DSR-DECISION (Tier-3; OPERATOR popup ~00:30Z verbatim "Re-measure, then move (Rec.)" -- "Any leg that fails moves to the demo floor (paper)"): EMPTY AGAIN -- iaum_pullback_1d REMOVED (fails DSR > 0.95 AND
+                                       # BHY-haircut > 0; docs/research/prod-legs-dsr-2026-11-06.md); it keeps trading on alpaca_paper (testing).
+                                       # ROLLBACK: replace `[]` with a block list holding `- iaum_pullback_1d` (and gld_pullback_1d on alpaca_portfolio).
+                                       # History below kept as the record. ⚠️ Was: NO LONGER EMPTY as of 2026-08-31 — this account now
                                        # ROUTES REAL MONEY. Tier-3, operator-approved in
                                        # conversation 2026-08-31 ("get this taken care of so we can
                                        # actually have something routed to the real money"), on the
@@ -1681,7 +1700,7 @@ accounts:
       # RQ-20261016-c56e-17, RQ-20261023-9ffb-01, -02, -03 (tune-before-demote done); the live demotion
       # signal is unreachable at ~4 trades/yr. It keeps trading on alpaca_paper so the record continues.
       # REVERT = add `- slv_pullback_1d` back here and on alpaca_portfolio (Tier 3).
-      - iaum_pullback_1d     # IAUM 1d pullback — the declared GOLD AFFORDABILITY
+      # (removed 2026-11-06, PROD-LEGS-DSR-DECISION) - iaum_pullback_1d     # IAUM 1d pullback — the declared GOLD AFFORDABILITY
                              # PROXY. 79/79 (2 sh, $3.30-3.58).
                              # ⚠️ IT IS DELIBERATELY EXEMPT FROM THE
                              # alpaca_portfolio MIRROR — it is in
