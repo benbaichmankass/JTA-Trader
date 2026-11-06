@@ -1,0 +1,25 @@
+{
+  "id": "ML-ENTRY-EQ-STRUCTURE-RETEST",
+  "title": "Re-test ml_entry_eq with the LIVE structure-based exit (not the fixed 2/3 ATR bracket of the 05:1xZ confirm run) as the evidence for the alpaca_live real-money decision",
+  "phase": null,
+  "state": "queued",
+  "owner": "manager",
+  "lane": null,
+  "model": "claude-sonnet-5-5",
+  "ceiling_usd": 10,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [],
+  "blocked_on": [],
+  "note": "Operator 2026-11-06 ~11:00Z (verbatim excerpts): \"If there are like problems with the mechanics of the Alpaca Live account, then those need to be resolved regardless of anything else ... the ML shouldn't need to soak on a paper account just to prove the mechanics ... that should be ... its own separate path, and should be working regardless of whether the ML is good or not.\" / \"the answer isn't the paper soak, the answer is more testing ... we do need to send that ML back to train on the structured exits. We should prioritize that because that's live money.\" / \"on the Alpaca account, this can come ahead of like the prop accounts ... that's like a real money bug if we're not trading correctly in Alpaca live money.\" Basis: confirm run 42143223941 PASSED the registered rule (n=858/147 symbols, mean net R +0.0392, gross +0.0899, cost 0.0507; month-clustered t 0.3; dev +0.107) but used a fixed 2/3 ATR bracket, not the structure_exit live trades use (STRUCTURE-EXITS-DEFAULT has the harness arm). A real-money call is not made on a backtest whose exits differ from live. Pre-register the rule BEFORE the run, net of the full cost stack, time-disjoint window, same booster; the result (not a paper soak) is what the alpaca_live real-money decision rests on.",
+  "due_by": "2026-11-07",
+  "roadmap": [
+    "L-ML-LIVE"
+  ],
+  "priority_rank": 1,
+  "roadmap_unmapped_reason": "not set at filing -- manager to map to a milestone at the next weekly pass",
+  "updated_at": "2026-11-06T10:40:32Z",
+  "updated_by": "session_01AFoLuJk1UWVx895RmLTidH",
+  "week_lane": "surge",
+  "_seq": 965
+}

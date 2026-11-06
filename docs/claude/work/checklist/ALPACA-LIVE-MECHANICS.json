@@ -1,0 +1,25 @@
+{
+  "id": "ALPACA-LIVE-MECHANICS",
+  "title": "alpaca_live real-money mechanics: root-cause why its last 6 orders (10-16..10-21) were all status=rejected and why it has 0 entries since 11-01; prove the order path with ONE small end-to-end trade, independent of any ML",
+  "phase": null,
+  "state": "queued",
+  "owner": "manager",
+  "lane": null,
+  "model": "claude-opus-5-5",
+  "ceiling_usd": 12,
+  "spend_usd": null,
+  "tier": 2,
+  "prs": [],
+  "blocked_on": [],
+  "note": "Operator 2026-11-06 ~11:00Z (verbatim excerpts): \"If there are like problems with the mechanics of the Alpaca Live account, then those need to be resolved regardless of anything else ... the ML shouldn't need to soak on a paper account just to prove the mechanics ... that should be ... its own separate path, and should be working regardless of whether the ML is good or not.\" / \"the answer isn't the paper soak, the answer is more testing ... we do need to send that ML back to train on the structured exits. We should prioritize that because that's live money.\" / \"on the Alpaca account, this can come ahead of like the prop accounts ... that's like a real money bug if we're not trading correctly in Alpaca live money.\" MEASURED (ALPACA-LIVE-ACTIVITY-ML note): /api/diag/journal trades limit=300: alpaca_live 0 entries since 2026-11-01, last 6 rows 10-16..10-21 all status=rejected; alpaca_portfolio last 3 rejected; config/accounts.yaml alpaca_live strategies=[] at 10:50Z. Done when: rejection cause named and fixed, one small end-to-end trade (entry, bracket at broker, managed exit, correct close reason, graded) observed on alpaca_live, and the path registered in config/mechanics_paths.yaml per OPERATING-PLAN s2 (new mechanics -> ONE small trade). Live-money bug: ranks ahead of prop ML and other ML milestones.",
+  "due_by": "2026-11-07",
+  "roadmap": [
+    "L-ML-LIVE"
+  ],
+  "priority_rank": 1,
+  "roadmap_unmapped_reason": "not set at filing -- manager to map to a milestone at the next weekly pass",
+  "updated_at": "2026-11-06T10:40:32Z",
+  "updated_by": "session_01AFoLuJk1UWVx895RmLTidH",
+  "week_lane": "surge",
+  "_seq": 964
+}
