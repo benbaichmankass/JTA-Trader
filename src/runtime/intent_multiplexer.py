@@ -107,6 +107,7 @@ from src.runtime.strategy_signal_builders import (
     trend_donchian_eth_4h_signal_builder,
     ml_entry_signal_builder,
     ml_entry_v2_signal_builder,
+    ml_entry_eq_signal_builder,
     trend_donchian_sol_4h_signal_builder,
     trend_donchian_xrp_4h_signal_builder,
     trend_donchian_xrp_adx25_signal_builder,
@@ -317,6 +318,8 @@ def _default_intent_builders() -> Dict[str, IntentBuilder]:
         "ml_entry": ml_entry_signal_builder,
         # ML ENTRY v2 candidate: bybit_1 demo testing leg (evidence RQ-20261101-b608-01 dev stack; W1 read FAIL b609-01).
         "ml_entry_v2": ml_entry_v2_signal_builder,
+        # ML ENTRY equity-native testing leg (alpaca_paper only; evidence RQ-20261105-e9a1-02): scored from the pool snapshot, no tick-time fetch.
+        "ml_entry_eq": ml_entry_eq_signal_builder,
         "trend_donchian_sol_4h": trend_donchian_sol_4h_signal_builder,
         "trend_donchian_xrp_4h": trend_donchian_xrp_4h_signal_builder,
         "trend_donchian_xrp_adx25": trend_donchian_xrp_adx25_signal_builder,

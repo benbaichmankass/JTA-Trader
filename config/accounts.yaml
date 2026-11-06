@@ -1331,6 +1331,10 @@ accounts:
       # on strategies.yaml::ml_entry.account_symbols.alpaca_paper. NOT on alpaca_live / alpaca_portfolio (no real-money
       # ML on Alpaca until a model passes). ROLLBACK: delete this line.
       - ml_entry
+      # 2026-11-06 ML ENTRY equity-native (row ML-ENTRY-EQUITY-NATIVE, Tier 2 held for the manager; ruling: alpaca_paper ONLY, the Stage-1 floor). Its traded
+      # set is strategies.yaml::ml_entry_eq.symbols (the model's 173-ETF pool). NOT on alpaca_live / alpaca_portfolio: real money is the operator's call.
+      # ROLLBACK: delete this line.
+      - ml_entry_eq
     symbols: [SPY, QQQ, GLD, IWM, TLT, IEF, SLV, USO, GDX, TQQQ, QLD, SPYM, IAUM, SCHA]   # instrument identity (Phase-0 +
                                        # ETF-breadth daily 2026-06-20 + intraday
                                        # ETF pilot 2026-06-20 § 0e adds SLV +

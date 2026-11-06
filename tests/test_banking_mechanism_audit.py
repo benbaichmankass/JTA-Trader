@@ -55,7 +55,8 @@ def test_population_is_enabled_and_live(mod):
     # 55 -> 56 on 2026-11-01: ml_entry joins the enabled+live population (ML-ENTRY-LIVE-ADAPTER, #22079, Tier-3 held;
     # bybit_2 + bybit_portfolio). Its unit carries record_position_telemetry, so it is not structurally invisible.
     # 56 -> 57 on 2026-11-01: ml_entry_v2 (bybit_1 demo TESTING leg; carries record_position_telemetry through the shared module).
-    assert len(legs) == 57, f"population drifted from the 2026-11-01 denominator: {len(legs)}"
+    # 57 -> 58 on 2026-11-06: ml_entry_eq joins the enabled+live population (ML-ENTRY-ALL-ACCOUNTS, #23715; alpaca_paper).
+    assert len(legs) == 58, f"population drifted from the 2026-11-06 denominator: {len(legs)}"
     for name, cfg in legs.items():
         assert cfg.get("enabled") is True, name
         assert str(cfg.get("execution", "live")).lower() == "live", name
@@ -212,9 +213,11 @@ def test_telemetry_hook_set_is_derived_not_trusted(mod):
     # 2 -> 3 on 2026-10-27 (PR #20585): claude_desk went shadow -> live on the bybit_1 demo and its unit does not carry
     # record_position_telemetry either. Pinned as the measured state, not as acceptable: pipeline item
     # PI-20261027-P6NRDB4X-0002 hooks it (a desk trade's peak-R path is a training input).
-    assert sorted(gap["legs_structurally_invisible"]) == ["claude_desk", "fade_breakout_4h", "fvg_range_15m"], \
+    # 3 -> 4 on 2026-11-06: ml_entry_eq (#23715; monitor = time stop only, no record_position_telemetry). Pinned as the
+    # measured state, not as acceptable.
+    assert sorted(gap["legs_structurally_invisible"]) == ["claude_desk", "fade_breakout_4h", "fvg_range_15m", "ml_entry_eq"], \
         gap["legs_structurally_invisible"]
-    assert gap["n_invisible"] == 3
+    assert gap["n_invisible"] == 4
 
 
 def test_counterfactual_never_claims_to_be_net(mod):

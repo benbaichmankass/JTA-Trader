@@ -233,6 +233,8 @@ BASELINE_2026_10_06: dict[str, frozenset[str]] = {
     # lines with the roster lines when that one trade closes and is graded.
     "alpaca_live/tqqq_trend_long_1d": R,
     "alpaca_portfolio/tqqq_trend_long_1d": R,
+    # 2026-11-06 ML-ENTRY-EQUITY-NATIVE (Tier-2 held): alpaca_paper testing leg; finite 1.5 R target it was SCORED with (TP 3 ATR / SL 2 ATR), no revision producer.
+    "alpaca_paper/ml_entry_eq": R,
     # ── prop ────────────────────────────────────────────────────────────────
     # breakout_1 legs removed 2026-10-07 (account retired, roster cleared).
     # R -> ER on 2026-10-15 (TP-REACH-FLOOR, operator-approved 2026-10-14): the

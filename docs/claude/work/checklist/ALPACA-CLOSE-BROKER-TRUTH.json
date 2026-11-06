@@ -1,0 +1,22 @@
+{
+  "id": "ALPACA-CLOSE-BROKER-TRUTH",
+  "title": "Alpaca closes are journal-closed by the position-snapshot reconciler / stuck watchdog with an INFERRED exit reason; read the filled bracket leg (broker_order_id, nested=true) to close with the broker's own reason, price and time",
+  "phase": null,
+  "state": "queued",
+  "owner": "manager",
+  "lane": null,
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 2,
+  "prs": [],
+  "blocked_on": [],
+  "note": "Filed by lane ALPACA-LIVE-MECHANICS 2026-11-06. MEASURED (/api/diag/journal trades limit=300 + /api/diag/alpaca_order_history, alpaca_paper after 2026-11-02 and alpaca_live after 2026-09-01): every Alpaca close in the window (4 alpaca_paper closes 6840 QLD tp, 6877 SCHA sl, 6908 SLV sl, 6920 SLV sl, plus alpaca_live 6097 IAUM sl on 09-28) was written by position_snapshot_reconciler or stuck_strategy_watchdog ('integration has no per-order status reader (non-Bybit)', src/runtime/order_monitor.py ~4806). The sl/tp label matched the leg that filled at the broker in each case, but it came from exit_reason_source=price_vs_pkg_bracket, and pnl from local_compute. The broker read already exists (src/units/accounts/clients.py account_alpaca_order_history, nested legs with filled_avg_price/filled_at). Fix: when an Alpaca row's position is flat, read its parent order by broker_order_id, take the filled leg as exit reason/price/time (exit_reason_source broker_leg_fill), and fall back to the current inference only if the read fails. Re-entry test: the next Alpaca close has closed_by naming the broker leg read and exit_price == the leg's filled_avg_price. Pairs with the entry-fill fix in the ALPACA-LIVE-MECHANICS PR.",
+  "due_by": "2026-11-13",
+  "roadmap": [
+    "L-ML-LIVE"
+  ],
+  "updated_at": "2026-11-06T10:54:32Z",
+  "updated_by": "session_01AFoLuMHf3S6p6a31nk3okj",
+  "_seq": 964
+}

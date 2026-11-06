@@ -6777,3 +6777,57 @@ def ml_entry_v2_signal_builder(settings: dict) -> Dict[str, Any]:
            "meta": {**pkg["meta"], "strategy_name": NAME, "confidence": pkg["confidence"],
                     "direction": pkg["direction"], "timeframe": timeframe}}
     return _with_signal_package(NAME, sig)
+
+
+# ── ml_entry_eq — the EQUITY-NATIVE entry model, alpaca_paper testing leg (row ML-ENTRY-EQUITY-NATIVE, Tier 2) ──
+_ML_ENTRY_EQ_DECIDED: set = set()
+
+
+def ml_entry_eq_signal_builder(settings: dict) -> Dict[str, Any]:
+    """ml_entry_eq: restricted LONG per pool ETF at each decision close, scored from the POOL SNAPSHOT only.
+
+    NO network and no candle fetch on this tick: the 173-symbol pass is the refresher thread's job (src/runtime/ml_entry_eq_refresher.py, MEASURED
+    #23619: an unpaced pass = 104 x 429). A stale / incomplete / missing snapshot is a named per-trade refusal, never a halt. One decision per
+    (symbol, snapshot bar_close): an in-process memo, so a repeated tick on the same bar cannot re-emit the same package."""
+    import pandas as pd
+    from src.units.strategies import load_strategy_config
+    from src.units.strategies import ml_entry_eq as L
+    from src.runtime import ml_entry_eq_features as EF
+    from src.runtime.ml_entry_eq_refresher import snapshot_path
+
+    NAME = L.NAME
+
+    def _none(reason: str, symbol: str) -> Dict[str, Any]:
+        return _with_signal_package(NAME, {"symbol": symbol, "side": "none", "meta": {"strategy_name": NAME, "reason": reason}})
+
+    try:
+        vcfg = dict(load_strategy_config().get(NAME, {}) or {})
+    except Exception:  # noqa: BLE001
+        vcfg = {}
+    symbol = str(settings.get("SYMBOL", settings.get("symbol", "")) or "")
+    if not bool(vcfg.get("enabled", False)):
+        return _none("disabled_or_out_of_scope", symbol)
+    snap, why = EF.read_snapshot(snapshot_path(), pd.Timestamp.now(tz="UTC"), max_age_h=float(vcfg.get("max_snapshot_age_h", 4.0)))
+    if snap is None:
+        return _none(why or EF.REFUSE_MISSING, symbol)
+    memo = (symbol, snap["bar_close"])
+    if memo in _ML_ENTRY_EQ_DECIDED:
+        return _none("already_decided_this_bar", symbol)
+    try:
+        pkg = L.order_package({"symbol": symbol, **vcfg}, snap)
+    except ValueError as exc:
+        if str(exc) != "not_a_decision_bar":
+            _ML_ENTRY_EQ_DECIDED.add(memo)
+        if len(_ML_ENTRY_EQ_DECIDED) > 4096:
+            _ML_ENTRY_EQ_DECIDED.clear()
+        return _none(str(exc), symbol)
+    _ML_ENTRY_EQ_DECIDED.add(memo)
+    try:
+        log_signal({"event": f"{NAME}_eval", "strategy": NAME, "symbol": symbol, "timeframe": "1h", "side": "buy", "entry": pkg["entry"],
+                    "stop_loss": pkg["sl"], "take_profit": pkg["tp"], "pred_net_r": pkg["meta"]["pred_net_r"]})
+    except Exception:  # noqa: BLE001
+        logger.exception("%s: audit emit failed", NAME)
+    sig = {"symbol": symbol, "side": "buy", "price": pkg["entry"], "entry_price": pkg["entry"], "stop_loss": pkg["sl"],
+           "take_profit": pkg["tp"], "pattern": NAME,
+           "meta": {**pkg["meta"], "strategy_name": NAME, "confidence": pkg["confidence"], "direction": "long", "timeframe": "1h"}}
+    return _with_signal_package(NAME, sig)

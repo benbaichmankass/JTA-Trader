@@ -41,7 +41,10 @@ OLD_FALLBACK = 10
 #: ``ml_entry``: put on alpaca_paper's ETFs 2026-11-01 (operator "Paper now, v2 for
 #: live (Rec.)", row ALPACA-LIVE-ACTIVITY-ML); priority 0, so it ties the ETF legs and
 #: still loses SLV to ``slv_pullback_1d`` (1).
-LATER_LEGS = ("ml_entry",)
+#: ``ml_entry_eq``: put on alpaca_paper's 10 pool ETFs 2026-11-06 (ML-ENTRY-ALL-ACCOUNTS, #23715); priority 0, so
+#: it ties the ETF legs and still loses SLV to ``slv_pullback_1d`` (1); the same-symbol split is recorded in
+#: comms/same_symbol_allocation/.
+LATER_LEGS = ("ml_entry", "ml_entry_eq")
 
 
 def _old_priority(name: str) -> int:
