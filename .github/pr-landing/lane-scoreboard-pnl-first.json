@@ -2,5 +2,6 @@
   "tier": 1,
   "landing": "hold",
   "hold_reason": "unvouchable_paths",
-  "why": "SCOREBOARD-PNL-FIRST is a Tier-1 read path (scripts/ops/scoreboard.py, GET /api/bot/work/scoreboard, brief section 1; reads the trades journal read-only, writes nothing, gates nothing, adds no gate). It is held only because the guard cannot vouch for src/web/api/routers/work.py (Tier-2 by name, R5); the manager reads and lands it."
+  "why": "SCOREBOARD-PNL-FIRST is a Tier-1 read path (scripts/ops/scoreboard.py, GET /api/bot/work/scoreboard, brief section 1; reads the trades journal read-only, writes nothing, gates nothing, adds no gate). It is held only because the guard cannot vouch for src/web/api/routers/work.py (Tier-2 by name, R5); the manager reads and lands it.",
+  "hold_text": "Tier-1 read path held only because src/web/api/routers/work.py is outside TIER1_SURFACE (R5/R14); manager reads and lands it."
 }
