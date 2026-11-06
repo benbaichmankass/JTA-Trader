@@ -1,4 +1,4 @@
-id: RQ-20261106-003
+id: RQ-20261106-7850-01
 title: 'tqqq_trend_long_1d real money probe: does the 1d trend_long ETF family carry a predictive take-profit
   (pooled tp_prediction_derive, longest yfinance window) to replace the 50R sentinel before the alpaca_live
   mechanics probe?'
@@ -10,6 +10,7 @@ roadmap:
 theme: live_strategy
 priority: 1
 kind: experiment
+practice_precedent: 'docs/research/programmes/01-ACTIVE-TRADE-MANAGEMENT.md (RQ-20261016-014: same instrument, constants and rule shape; set iaum_pullback_1d tp_r 3.5)'
 question: 'Operator 2026-11-06 ~11:40Z (popup, relayed by Manager Session 2026-11-06a), verbatim "Give tqqq a
   real TP first": tqqq_trend_long_1d rides alpaca_live for ONE mechanics trade (row ALPACA-LIVE-MECHANICS,
   PR #23784) and must carry a real predictive TP, not the 50R sentinel. The single-leg run is INDETERMINATE
@@ -75,7 +76,7 @@ run:
   - '{out_dir}'
   timeout_minutes: 60
   inputs:
-    research_unit: RQ-20261106-003
+    research_unit: RQ-20261106-7850-01
 lands:
   store: research/results/
   assert_field: read_state
