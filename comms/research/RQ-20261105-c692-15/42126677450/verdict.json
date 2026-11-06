@@ -1,0 +1,153 @@
+{
+ "verdict": "fail",
+ "read_state": "measured",
+ "n": 10641,
+ "measurement": {
+  "dev": {
+   "delta_by_margin": {
+    "0.15": -0.00292,
+    "0.2": -0.00187,
+    "0.25": 0.00169,
+    "0.3": 0.00272,
+    "0.4": 0.00364
+   },
+   "actions_by_margin": {
+    "0.15": 12251,
+    "0.2": 6813,
+    "0.25": 3560,
+    "0.3": 1897,
+    "0.4": 541
+   },
+   "chosen_margin": 0.4,
+   "frozen_margin_used": 0.4,
+   "dev_chosen_matches_frozen": true
+  },
+  "heldout": {
+   "n": 10641,
+   "mean_net_r": 0.014899765430176584,
+   "delta_vs_hold": 0.00048790727778362877,
+   "win_rate": 0.4321962221595715,
+   "p05_net_r": -1.1001548387096727,
+   "min_net_r": -1.3976611976048026,
+   "n_symbols": 53,
+   "share_changed": 0.0067662813645334085,
+   "n_actions": {
+    "TRAIL": 57,
+    "TRAIL15": 7,
+    "BE": 27
+   },
+   "mean_delta_per_nonhold_action": 0.057052981790061456,
+   "hold": {
+    "n": 10641,
+    "mean_net_r": 0.014411858152392952,
+    "delta_vs_hold": 0.0,
+    "win_rate": 0.43285405507001223,
+    "p05_net_r": -1.1002162162162124,
+    "min_net_r": -1.3976611976048026,
+    "n_symbols": 53,
+    "share_changed": 0.0
+   },
+   "delta_ci95": [
+    -0.0007188924092800957,
+    0.0017667433124178595
+   ],
+   "giveback_r": 1.0347052888182093,
+   "giveback_r_hold": 1.0357851113649352,
+   "peek": {
+    "peeked_symbols": [
+     "ADAUSDT",
+     "BCHUSDT",
+     "BTCUSDT",
+     "ETCUSDT",
+     "ETHUSDT",
+     "LINKUSDT",
+     "LTCUSDT",
+     "TRXUSDT",
+     "XLMUSDT"
+    ],
+    "n_ex_peeked": 9125,
+    "delta_vs_hold_ex_peeked": 0.0007433019555195458
+   },
+   "by_month_delta": {
+    "2025-10": {
+     "n": 1145,
+     "delta": -0.0027
+    },
+    "2025-11": {
+     "n": 941,
+     "delta": 0.0009
+    },
+    "2025-12": {
+     "n": 839,
+     "delta": 0.0
+    },
+    "2026-01": {
+     "n": 1085,
+     "delta": 0.0008
+    },
+    "2026-02": {
+     "n": 990,
+     "delta": -0.0013
+    },
+    "2026-03": {
+     "n": 853,
+     "delta": 0.0059
+    },
+    "2026-04": {
+     "n": 717,
+     "delta": 0.0
+    },
+    "2026-05": {
+     "n": 746,
+     "delta": 0.0
+    },
+    "2026-06": {
+     "n": 1056,
+     "delta": 0.0026
+    },
+    "2026-07": {
+     "n": 664,
+     "delta": 0.0
+    },
+    "2026-08": {
+     "n": 838,
+     "delta": 0.0
+    },
+    "2026-09": {
+     "n": 767,
+     "delta": 0.0
+    }
+   },
+   "matched_random_delta": {
+    "draws": 200,
+    "mean": -0.0002460350100981909,
+    "p95": 0.0012842400099416832
+   },
+   "static_single_action_delta_reported": {
+    "CLOSE_at_8h": -0.021812034620194858,
+    "BE_at_8h": -0.0069876426035284855,
+    "TRAIL_at_8h": -0.010930579407761676,
+    "TPX_at_8h": 0.003255206921193796,
+    "BE1_at_8h": -0.00016267597382477414,
+    "TRAIL15_at_8h": -0.01312466148150547
+   },
+   "action_mix_checkins": {
+    "HOLD": 32069,
+    "TRAIL": 120,
+    "BE": 27,
+    "TRAIL15": 7
+   }
+  },
+  "variants_read_on_window": 11,
+  "proposal_eligible": false,
+  "schema": "ml_decision_manage/1",
+  "unit": "RQ-20261105-c692-15",
+  "arm": "mlsl2",
+  "stage": "heldout",
+  "entry_tau": 0.1,
+  "git_sha": "a2115ecdbdb4292b185b39b6f91678f986520d53",
+  "elapsed_s": 405
+ },
+ "note": "delta vs hold-to-bracket +0.0005 R/trade, CI95 [-0.0007, +0.0018] at n=10641 (margin 0.4)",
+ "population": "mlsl2: frozen ENTRY (tau 0.1) trades, static 2.0/4.0 ATR bracket, 24h, held-out 2025-10-01..2026-09-30, 60-perp bp2-f4271084b120, full cost stack, paired vs hold-to-bracket"
+}

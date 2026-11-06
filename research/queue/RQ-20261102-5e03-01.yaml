@@ -115,9 +115,14 @@ related:
 - src/runtime/structure_levels.py
 - STRUCTURE-EXITS-DEFAULT
 last_dispatched_at: '2026-11-03T07:58:50+00:00'
+amendments:
+- at: '2026-11-05'
+  before_any_run: false
+  by: lane RESEARCH-NO-WAIT
+  text:
+  - 'RESEARCH-NO-WAIT (lane of Manager Session 2026-11-05b). Operator 2026-11-05 ~17:08Z, verbatim: "Why does it need to wait for November? That''s not the workflow - we iterate in the data we have till we find what works, we don''t wait for new months of data". Window registered BEFORE any run; no outcome inside it was read by this lane; the rule text and every threshold are NOT edited.'
+  - 'Its promotion-confirmation window is no longer "the forward window 2026-11-02..2026-11-30 of RQ-20261101-5b6b-01": 5b6b-01 is re-registered on SYMBOL-HOLDOUT-20, in hand today (see that unit). This unit''s own result and rule are unchanged.'
 grading:
-  owner: PI-20261105-WDWYHZCN-0001
-  owner_reason: 'producer_failed (no_verdict) on the newest row, 3 identical re-fires; failure mode and fix path named in PI-20261105-WDWYHZCN-0001 (RESEARCH-OPS-20261105-1449 triage)'
   attested: RULE-RQ20261102-5E03-01-ENTRY-STRUCTURE-ON-ALPACA
   auto: true
   decision_rule_id: RULE-RQ20261102-5E03-01-ENTRY-STRUCTURE-ON-ALPACA
@@ -126,13 +131,9 @@ grading:
   graded_at: '2026-11-05'
   grader: scripts/research/queue_grade.py
   needs_review: true
+  owner: PI-20261105-WDWYHZCN-0001
+  owner_reason: producer_failed (no_verdict) on the newest row, 3 identical re-fires; failure mode and
+    fix path named in PI-20261105-WDWYHZCN-0001 (RESEARCH-OPS-20261105-1449 triage)
   reason: 'read_state not unanimously measured: [''producer_failed'']'
   rows: 1
   verdict: null
-amendments:
-- at: '2026-11-05'
-  before_any_run: false
-  by: lane RESEARCH-NO-WAIT
-  text:
-  - 'RESEARCH-NO-WAIT (lane of Manager Session 2026-11-05b). Operator 2026-11-05 ~17:08Z, verbatim: "Why does it need to wait for November? That''s not the workflow - we iterate in the data we have till we find what works, we don''t wait for new months of data". Window registered BEFORE any run; no outcome inside it was read by this lane; the rule text and every threshold are NOT edited.'
-  - 'Its promotion-confirmation window is no longer "the forward window 2026-11-02..2026-11-30 of RQ-20261101-5b6b-01": 5b6b-01 is re-registered on SYMBOL-HOLDOUT-20, in hand today (see that unit). This unit''s own result and rule are unchanged.'
