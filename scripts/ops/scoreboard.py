@@ -127,7 +127,7 @@ def aggregate(rows: list[dict], population: str) -> dict[str, Any]:
     }
 
 
-def _window(rows: list[dict], label: str, since: datetime | None, until: datetime) -> list[dict]:
+def _window(rows: list[dict], since: datetime | None, until: datetime) -> list[dict]:
     out = []
     for r in rows:
         ts = _row_ts(r)
@@ -148,8 +148,8 @@ def trade_books(rows: Iterable[dict], now: datetime) -> dict[str, Any]:
         priced = [r for r in b_closed if _num(r.get("pnl")) is not None]
         unpriced = len(b_closed) - len(priced)
         pop_base = f"{book} accounts, trades journal, status=closed AND pnl NOT NULL, is_backtest=0, closed by {now:%Y-%m-%dT%H:%MZ}"
-        inc = _window(priced, "inception", None, now)
-        t30 = _window(priced, "trailing", since30, now)
+        inc = _window(priced, None, now)
+        t30 = _window(priced, since30, now)
         out[book] = {
             "book": book, "label": BOOK_LABEL[book],
             "closed_unpriced": unpriced,
@@ -305,9 +305,8 @@ def unreadable(reason: str, now: datetime | None = None) -> dict[str, Any]:
 # ── loaders ────────────────────────────────────────────────────────────────
 
 def prop_sizes(root: Path | None = None) -> dict[str, float]:
-    import yaml  # noqa: PLC0415
-    doc = yaml.safe_load((Path(root or REPO_ROOT) / "config/accounts.yaml").read_text()) or {}
-    accts = doc.get("accounts") or doc
+    from src.config.accounts_loader import load_accounts_dict  # noqa: PLC0415
+    accts = load_accounts_dict(Path(root or REPO_ROOT) / "config/accounts.yaml")
     return {k: float(v["account_size_usd"]) for k, v in accts.items()
             if isinstance(v, dict) and v.get("account_class") == "prop" and v.get("account_size_usd")}
 
