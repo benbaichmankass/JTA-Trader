@@ -321,3 +321,48 @@ def test_system_catalog_missing_source_is_could_not_look_not_empty(tmp_path):
     assert out["read_state"] == "could_not_look"
     for sec in out["sections"].values():
         assert sec["read_state"] == "could_not_look" and "items" not in sec and sec["reason"]
+
+
+# ── closed-this-week + week_lane totals (CONSOLE-WORKPLAN-SYNC) ───────────
+def _row(i, state, lane, updated):
+    return {"id": i, "title": i, "state": state, "week_lane": lane, "updated_at": updated}
+
+
+def test_week_start_is_latest_wednesday_1800z():
+    from datetime import datetime, timezone
+    thu = datetime(2026, 11, 5, 9, 0, tzinfo=timezone.utc)   # Thursday
+    assert data._iso(data.week_start(thu)) == "2026-11-04T18:00:00Z"
+    wed_early = datetime(2026, 11, 4, 12, 0, tzinfo=timezone.utc)
+    assert data._iso(data.week_start(wed_early)) == "2026-10-28T18:00:00Z"
+    fri = datetime(2026, 11, 6, 23, 0, tzinfo=timezone.utc)
+    assert data._iso(data.week_start(fri)) == "2026-11-04T18:00:00Z"
+
+
+def test_closed_this_week_counts_and_window(monkeypatch):
+    from datetime import date, datetime, timezone
+    now = datetime(2026, 11, 6, 23, 0, tzinfo=timezone.utc)
+    items = [_row("a", "done", "surge", "2026-11-05T01:00:00Z"),
+             _row("b", "landed_unproven", "surge", "2026-11-06T01:00:00Z"),
+             _row("c", "done", "surge", "2026-11-03T01:00:00Z"),      # before the reset: excluded
+             _row("d", "dropped", "throttle", "2026-11-05T01:00:00Z"),
+             _row("e", "in_flight", "throttle", "2026-11-06T01:00:00Z"),
+             _row("f", "done", "throttle", None)]                      # no stamp: excluded, never guessed
+    out = data.closed_this_week(items, now, date(2026, 11, 6))
+    assert out["read_state"] == "read" and out["population"]["closed_rows"] == 3
+    assert out["counts_by_week_lane"] == {"surge": {"done": 1, "landed_unproven": 1}, "throttle": {"dropped": 1}}
+    tot = data.week_lane_totals(items)
+    assert tot["surge"]["total"] == 3 and tot["throttle"]["by_state"]["in_flight"] == 1
+
+
+def test_work_rows_and_workplan_add_fields_keep_old_shape():
+    wr = data.work_rows(REPO)
+    assert {"due", "in_flight", "blocked", "queued", "open_other"} <= set(wr["sections"])
+    assert wr["closed_this_week"]["read_state"] == "read" and "week_lane_totals" in wr
+    wp = tabs.workplan(REPO, 5)
+    assert "closed_this_week" in wp and "week_lane_totals" in wp and "weekly_planning" in wp
+    # totals equal a direct register count
+    direct = {}
+    for r in data._load_checklist(REPO)["items"]:
+        if r.get("week_lane"):
+            direct[r["week_lane"]] = direct.get(r["week_lane"], 0) + 1
+    assert {k: v["total"] for k, v in wr["week_lane_totals"].items()} == direct

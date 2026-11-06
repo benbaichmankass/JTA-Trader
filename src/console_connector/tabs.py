@@ -148,7 +148,9 @@ def workplan(repo: Path, limit: int = 40, today: date | None = None) -> dict:
                 overdue=srt(overdue, lambda r: (r["due_by"] or "", r["id"])),
                 due_this_week=srt(due_week, lambda r: (r["due_by"] or "", r["id"])),
                 priority=srt(prio, lambda r: (r.get("priority_rank") or 9999, r["id"])),
-                usage=usage_block(repo))
+                usage=usage_block(repo),
+                closed_this_week=D.closed_this_week(items, now, today),
+                week_lane_totals=D.week_lane_totals(items))
 
 
 # ───────────────────────────── 2. ml_roadmap ─────────────────────────────
