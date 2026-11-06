@@ -453,6 +453,14 @@ def prop_from_vm() -> tuple[dict | None, dict | None]:
 
 
 def build(*, root: Path | None = None, now: datetime | None = None, source: str = "db", rows_file: str | None = None) -> dict[str, Any]:
+    """Assemble the scoreboard. stdout is diverted to stderr for the duration: importing the prop/DB modules prints
+    '✓ Database tables created/verified', which would corrupt a caller's `--json` stdout (render_daily_brief --json)."""
+    import contextlib  # noqa: PLC0415
+    with contextlib.redirect_stdout(sys.stderr):
+        return _build(root=root, now=now, source=source, rows_file=rows_file)
+
+
+def _build(*, root: Path | None, now: datetime | None, source: str, rows_file: str | None) -> dict[str, Any]:
     root = Path(root or REPO_ROOT)
     now = now or datetime.now(timezone.utc)
     snaps: list[dict] | None = None
