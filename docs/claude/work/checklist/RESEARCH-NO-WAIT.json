@@ -2,22 +2,28 @@
   "id": "RESEARCH-NO-WAIT",
   "title": "RESEARCH-NO-WAIT: no research unit waits for a future month; confirming reads use an untouched in-hand holdout (operator 2026-11-05 ~17:08Z)",
   "phase": null,
-  "state": "in_flight",
+  "state": "queued",
   "owner": "manager",
-  "lane": "session_01AFoLuJZrmuw9fU8ityMM62",
+  "lane": null,
   "model": null,
   "ceiling_usd": null,
   "spend_usd": null,
   "tier": 1,
   "prs": [],
   "blocked_on": [],
-  "note": "Lane of Manager Session 2026-11-05b. Operator verbatim: 'Why does it need to wait for November? That's not the workflow - we iterate in the data we have till we find what works, we don't wait for new months of data'. Sweep of live research/queue units (queued + blocked): classified A (in-hand window exists: re-registered), B (live mechanics: monitoring), C (false positive). Re-registered: c692-04/-05, 78fc-01, 383f-02, a24c-01, af07-01, b610-01, 5b6b-01, fd68-06, 20260930-901, 20260831-002; superseded 4dd3-01 by 23ca-01..03; b37d-01 plateau twins 23ca-04/-05. Rule added to research-ops SKILL. OPEN levers (named in each unit's blocked_on): driver --window options owned by ML lanes; prop_ml_leg --predev-read (TRADEIFY-OWN-LEG-DRIVER); strict-DD single-cell grade for 20260930-901. Excluded by dispatch: c692-13, c692-11 re-score (ML-MANAGE-HARNESS). Guard only if the operator approves. [2026-11-05 ~18:25Z, THROTTLE note from the manager, no more units re-registered this session] QUEUED FOLLOW-UP for the next planning session (A-class or A-adjacent, NOT yet re-registered): (1) the ENTRY v2 feature-selection chain RQ-20261101-fs01-01 / fs05-01 / fs06-01 / d507-01 still say they feed 'the single pre-registered forward read' - re-point to window P or S (fs02-01's own window, Oct 2026, is already in hand: classed C, blocked only on harness). (2) RQ-20261105-c692-13 and the c692-11 re-score: owned by ML-MANAGE-HARNESS, excluded this session; c692-13 is a pure Nov-2026 forward read and is A once that lane takes it. (3) Shadow-log units 17f4-03 / 9da8-02,-03,-04,-07 read a live-recorded log (~15 retained day-blocks): decide whether offline candle replay can stand in (A) or it is monitoring (B). (4) 5bd1-02..-08 news-feature units wait on a NEWS-HIST-REPLAY corpus that is a build, not future data (C). (5) The drivers' --window options named in each blocked_on (ml_decision_entry.py, ml_entry_tp_revision.py, ml_entry_v2.py, ml_entry_v2_run.py, prop_ml_leg.py --predev-read, a strict-DD single-cell grade for 20260930-901) are the gating builds. B (monitoring, left as is): 8bbc-01/-02, f516-11, e72b-02. PR #23420 (hold; CI green at 0cc65c90).",
+  "note": "Lane of Manager Session 2026-11-05b. Operator verbatim: 'Why does it need to wait for November? That's not the workflow - we iterate in the data we have till we find what works, we don't wait for new months of data'. Sweep of live research/queue units (queued + blocked): classified A (in-hand window exists: re-registered), B (live mechanics: monitoring), C (false positive). Re-registered: c692-04/-05, 78fc-01, 383f-02, a24c-01, af07-01, b610-01, 5b6b-01, fd68-06, 20260930-901, 20260831-002; superseded 4dd3-01 by 23ca-01..03; b37d-01 plateau twins 23ca-04/-05. Rule added to research-ops SKILL. OPEN levers (named in each unit's blocked_on): driver --window options owned by ML lanes; prop_ml_leg --predev-read (TRADEIFY-OWN-LEG-DRIVER); strict-DD single-cell grade for 20260930-901. Excluded by dispatch: c692-13, c692-11 re-score (ML-MANAGE-HARNESS). Guard only if the operator approves. [2026-11-05 ~18:25Z, THROTTLE note from the manager, no more units re-registered this session] QUEUED FOLLOW-UP for the next planning session (A-class or A-adjacent, NOT yet re-registered): (1) the ENTRY v2 feature-selection chain RQ-20261101-fs01-01 / fs05-01 / fs06-01 / d507-01 still say they feed 'the single pre-registered forward read' - re-point to window P or S (fs02-01's own window, Oct 2026, is already in hand: classed C, blocked only on harness). (2) RQ-20261105-c692-13 and the c692-11 re-score: owned by ML-MANAGE-HARNESS, excluded this session; c692-13 is a pure Nov-2026 forward read and is A once that lane takes it. (3) Shadow-log units 17f4-03 / 9da8-02,-03,-04,-07 read a live-recorded log (~15 retained day-blocks): decide whether offline candle replay can stand in (A) or it is monitoring (B). (4) 5bd1-02..-08 news-feature units wait on a NEWS-HIST-REPLAY corpus that is a build, not future data (C). (5) The drivers' --window options named in each blocked_on (ml_decision_entry.py, ml_entry_tp_revision.py, ml_entry_v2.py, ml_entry_v2_run.py, prop_ml_leg.py --predev-read, a strict-DD single-cell grade for 20260930-901) are the gating builds. B (monitoring, left as is): 8bbc-01/-02, f516-11, e72b-02. PR #23420 (hold; CI green at 0cc65c90). Manager 2026-11-06b ~23:00Z STATE SWEEP (operator: the console must show the real workplan): in_flight -> queued: no live session works it (lane field 'session_01AFoLuJZrmuw9fU8ityMM62' is archived, idle or not a session id); back in the queue for re-dispatch. Any branch/PR the old lane left was NOT re-checked here.",
   "due_by": "2026-11-07",
   "roadmap": [
     "L-PROGRAMMES"
   ],
-  "updated_at": "2026-11-05T18:22:00Z",
-  "updated_by": "session_01AFoLuJZrmuw9fU8ityMM62",
+  "updated_at": "2026-11-06T22:59:03Z",
+  "updated_by": "session_01AFoLuKHs8XCUREKLokpyy5",
   "week_lane": "standing",
+  "lane_history": [
+    {
+      "lane": "session_01AFoLuJZrmuw9fU8ityMM62",
+      "archived_at": "2026-11-06T22:59:03Z"
+    }
+  ],
   "_seq": 955
 }

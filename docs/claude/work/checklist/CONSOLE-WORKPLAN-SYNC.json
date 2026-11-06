@@ -1,0 +1,24 @@
+{
+  "id": "CONSOLE-WORKPLAN-SYNC",
+  "title": "Console = the shared workplan: the work_rows/workplan connector tools return rows CLOSED this week (done, dropped, landed_unproven) with counts, so the This-week card reads done/total truthfully; read from work.db after WSD-S4; republish the console",
+  "phase": null,
+  "state": "in_flight",
+  "owner": "manager",
+  "lane": "session_01AFoLuJSDtXyr3WFETW7Zmk",
+  "model": "claude-sonnet-5-5",
+  "ceiling_usd": 8,
+  "spend_usd": null,
+  "tier": 2,
+  "prs": [],
+  "blocked_on": [],
+  "note": "Operator 2026-11-06 ~23:00Z, verbatim: \"Yes, it looks like it's generally not synced - the whole point is gor me and you go be looking at the same workplan so that we can keep track of what we're doing and coordinate work effectively\". MEASURED 22:56Z: work_rows returns only open sections (due/in_flight/blocked/queued/open_other), so the console's This-week card read 0/57 while main held 68 week_lane rows (7 done, 6 landed_unproven). Manager ran a state sweep the same turn (26 stale in_flight rows corrected). Code: src/console_connector/{data,server}.py (trainer VM, jta-console-connector.service). Gates this adds: none. CLOSES WHEN: the console This-week card matches a direct register count (done + landed_unproven + open = total) on the live connector, read through the operator's sign-in.",
+  "due_by": "2026-11-07",
+  "roadmap": [
+    "L-OPS"
+  ],
+  "priority_rank": 1,
+  "updated_at": "2026-11-06T22:59:53Z",
+  "updated_by": "session_01AFoLuKHs8XCUREKLokpyy5",
+  "week_lane": "surge",
+  "_seq": 972
+}

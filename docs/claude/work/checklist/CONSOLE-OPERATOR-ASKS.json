@@ -2,7 +2,7 @@
   "id": "CONSOLE-OPERATOR-ASKS",
   "title": "Console 'Needs from you' panel: every operator action/decision lives on the console with instructions and input fields; manager seeds asks/<id> and drains inbox operator_input answers every check-in",
   "phase": null,
-  "state": "in_flight",
+  "state": "queued",
   "owner": "manager",
   "lane": null,
   "model": null,
@@ -11,15 +11,15 @@
   "tier": 1,
   "prs": [],
   "blocked_on": [],
-  "note": "OPERATOR DIRECTIVE 2026-11-05 ~13:00Z, verbatim: \"And make sure the instructions, whatever you need from me, are on the dashboard so that I can get to them when I have time. And whatever needs inputs are needed from me, if possible, should also be, there should be like fields there with instructions of what the inputs are, what inputs are needed, so that I can give you exactly what's needed there when I have a moment.\" BUILT by Manager Session 2026-11-05b: console v10 (artifact YU4ZwddDFB1AD2xWV2oE3g, version id 1793883547-1a2c) renders db collection asks/<id> {title, why, steps[], fields[{key,label,type text|textarea|select|checkbox,options,placeholder,help}], status open|done, priority, row} at the top of every tab; answers write inbox/<id> with item_kind operator_input, item_id, inputs{}. Access rule asks: read view, write admin (verified: view-level read OK, interact-level write refused). Seeded 2 asks: connector-jta-trader (row UI-CONSOLE-V1), hf-storage-bentzbk (row HF-LAKE-STORAGE-403). STANDING DUTY for every manager: (1) any new ask of the operator becomes an asks/<id> doc (ArtifactData set) in the same turn it is raised, with exact steps and the fields needed; (2) at every check-in, ArtifactData query inbox where item_kind == operator_input, act on each answer, set the inbox doc status filed and the ask status done. UI-CONSOLE-ITEM-FEEDBACK must carry the panel into v11. Done when: v11 carries it and one operator answer has been drained end to end. Moved surge->throttle by operator popup 2026-11-05 ~18:30Z (surge plan triage; cap ~60-65% weekly).",
+  "note": "OPERATOR DIRECTIVE 2026-11-05 ~13:00Z, verbatim: \"And make sure the instructions, whatever you need from me, are on the dashboard so that I can get to them when I have time. And whatever needs inputs are needed from me, if possible, should also be, there should be like fields there with instructions of what the inputs are, what inputs are needed, so that I can give you exactly what's needed there when I have a moment.\" BUILT by Manager Session 2026-11-05b: console v10 (artifact YU4ZwddDFB1AD2xWV2oE3g, version id 1793883547-1a2c) renders db collection asks/<id> {title, why, steps[], fields[{key,label,type text|textarea|select|checkbox,options,placeholder,help}], status open|done, priority, row} at the top of every tab; answers write inbox/<id> with item_kind operator_input, item_id, inputs{}. Access rule asks: read view, write admin (verified: view-level read OK, interact-level write refused). Seeded 2 asks: connector-jta-trader (row UI-CONSOLE-V1), hf-storage-bentzbk (row HF-LAKE-STORAGE-403). STANDING DUTY for every manager: (1) any new ask of the operator becomes an asks/<id> doc (ArtifactData set) in the same turn it is raised, with exact steps and the fields needed; (2) at every check-in, ArtifactData query inbox where item_kind == operator_input, act on each answer, set the inbox doc status filed and the ask status done. UI-CONSOLE-ITEM-FEEDBACK must carry the panel into v11. Done when: v11 carries it and one operator answer has been drained end to end. Moved surge->throttle by operator popup 2026-11-05 ~18:30Z (surge plan triage; cap ~60-65% weekly). Manager 2026-11-06b ~23:00Z STATE SWEEP (operator: the console must show the real workplan): in_flight -> queued: no live session works it (lane field 'None' is archived, idle or not a session id); back in the queue for re-dispatch. Any branch/PR the old lane left was NOT re-checked here.",
   "due_by": "2026-11-07",
   "roadmap": [
     "unmapped"
   ],
   "roadmap_unmapped_reason": "weekly pass maps it (console redesign)",
   "priority_rank": 2,
-  "updated_at": "2026-11-05T18:26:25Z",
-  "updated_by": "session_01AFoLuLmhUKeUzHC6CHz2uP",
+  "updated_at": "2026-11-06T22:59:00Z",
+  "updated_by": "session_01AFoLuKHs8XCUREKLokpyy5",
   "week_lane": "throttle",
   "_seq": 951
 }

@@ -2,22 +2,28 @@
   "id": "CHECKLIST-OWNER-DUE",
   "title": "Checklist rows can no longer be filed without an owner, a due_by and a roadmap ref; overdue shows at the top of the brief; audit lanes done only when every proposal is a dated, owned, roadmap-mapped row; backfill of the open rows proposed for review",
   "phase": null,
-  "state": "in_flight",
+  "state": "landed_unproven",
   "owner": "manager",
-  "lane": "session_01AFoLuL5qrtXsc8bv7JrN4Z",
+  "lane": null,
   "model": "claude-sonnet-5-5",
   "ceiling_usd": 30,
   "spend_usd": null,
   "tier": 1,
   "prs": [],
   "blocked_on": [],
-  "note": "OPERATOR 2026-11-01 (via Manager Session 2026-11-01a): items are still filed without an owner or a date; the manager owns every task and a row gets a date at filing; audits must end in a work plan. Build: checklist.py add refuses no due_by / no roadmap; CI guard on changed rows; overdue at top of brief (held, web-api read path); audit-outcome contract in skills; backfill PROPOSAL only (held for manager). OPERATOR DECISION 2026-11-01 (relayed by Manager Session 2026-11-01a, popup answer verbatim): 'No cap, metric only' on capping work in progress by overdue count. So: NO WIP cap, NO block on starting work. The daily in/out flow metric and the 3-day 'inflow > outflow' decisions-for-you line are the whole mechanism. 2026-11-03 BACKLOG-DRAIN: re-dated 11-05. Not closable: checklist.py now fills owner/due_by/roadmap rather than refusing (by the 11-01 process-not-gates edit), overdue list is on the work report (seen), but the held web-api brief read path and audit-outcome skill contract are not verified here. Owner manager to confirm what remains or close. [salvaged from #22570 by BACKLOG-DRAIN-20261104; evidence re-verified 2026-11-04] 2026-11-06 BACKLOG-DRAIN-20261106: RE-DATED to 2026-11-09. In flight with no confirmed lane; remaining items (held web-api brief read path, audit-outcome skill contract) unverified.",
-  "updated_at": "2026-11-06T06:00:02Z",
-  "updated_by": "lane-BACKLOG-DRAIN-20261106",
+  "note": "OPERATOR 2026-11-01 (via Manager Session 2026-11-01a): items are still filed without an owner or a date; the manager owns every task and a row gets a date at filing; audits must end in a work plan. Build: checklist.py add refuses no due_by / no roadmap; CI guard on changed rows; overdue at top of brief (held, web-api read path); audit-outcome contract in skills; backfill PROPOSAL only (held for manager). OPERATOR DECISION 2026-11-01 (relayed by Manager Session 2026-11-01a, popup answer verbatim): 'No cap, metric only' on capping work in progress by overdue count. So: NO WIP cap, NO block on starting work. The daily in/out flow metric and the 3-day 'inflow > outflow' decisions-for-you line are the whole mechanism. 2026-11-03 BACKLOG-DRAIN: re-dated 11-05. Not closable: checklist.py now fills owner/due_by/roadmap rather than refusing (by the 11-01 process-not-gates edit), overdue list is on the work report (seen), but the held web-api brief read path and audit-outcome skill contract are not verified here. Owner manager to confirm what remains or close. [salvaged from #22570 by BACKLOG-DRAIN-20261104; evidence re-verified 2026-11-04] 2026-11-06 BACKLOG-DRAIN-20261106: RE-DATED to 2026-11-09. In flight with no confirmed lane; remaining items (held web-api brief read path, audit-outcome skill contract) unverified. Manager 2026-11-06b ~23:00Z STATE SWEEP (operator: the console must show the real workplan): in_flight -> landed_unproven: its lane (session_01AFoLuL5qrtXsc8bv7JrN4Z) is ARCHIVED and its PR(s) #22105/#22110/#22112 MERGED (per the lane's own summary); the post-deploy observation on this row is still owed.",
+  "updated_at": "2026-11-06T22:59:00Z",
+  "updated_by": "session_01AFoLuKHs8XCUREKLokpyy5",
   "due_by": "2026-11-09",
   "roadmap": [
     "L-OPS"
   ],
   "week_lane": "throttle",
+  "lane_history": [
+    {
+      "lane": "session_01AFoLuL5qrtXsc8bv7JrN4Z",
+      "archived_at": "2026-11-06T22:59:00Z"
+    }
+  ],
   "_seq": 876
 }
