@@ -231,7 +231,8 @@ def served_model_freshness(now: Optional[datetime] = None, artifact_path: Option
     (the last bar its fit saw), field not prose."""
     from pathlib import Path
     now = now or datetime.now(timezone.utc)
-    path = Path(artifact_path) if artifact_path else Path(__file__).resolve().parents[2] / SERVED_ARTIFACT_REL
+    from src.runtime.ml_entry_served import served_artifact
+    path = Path(artifact_path) if artifact_path else served_artifact()   # the ONE served pointer
     try:
         art = json.loads(path.read_text(encoding="utf-8"))
         raw = str(art["train_end_exclusive"])

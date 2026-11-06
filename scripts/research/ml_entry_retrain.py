@@ -28,9 +28,11 @@ from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+sys.path.insert(0, str(REPO))
 import ml_decision_entry as E  # noqa: E402
+from src.runtime.ml_entry_served import served_artifact  # noqa: E402
 
-SERVED = REPO / "ml/served/ml_decision_entry_v1/model.json"
+SERVED = served_artifact()   # the ONE served pointer (ml/served/ENTRY_SERVED.json); v1 until a graded candidate is promoted
 DAILY = "https://data.binance.vision/data/futures/um/daily/klines"
 
 

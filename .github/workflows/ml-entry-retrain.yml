@@ -8,14 +8,17 @@ run-name: ml-entry-retrain ${{ github.event_name }} ${{ inputs.run_date || '' }}
 # previous UTC day minus the registered embargo (scripts/research/ml_entry_retrain.py) and uploads the CANDIDATE artifact
 # + freshness.json (feature list, sha256, data-through date) as the run artifact (kept 90 days).
 #
-# IT NEVER SWAPS THE SERVED MODEL: nothing here writes ml/served/ or any config. Serving a new artifact on real money is
-# the operator's call (promotion ladder). NO HALTING: a failed retrain leaves the previous artifact serving, writes
+# IT NEVER SWAPS THE SERVED MODEL ON ITS OWN: the grade step (scripts/research/ml_entry_candidate_grade.py, rule
+# RULE-ENTRY-PROMOTE-20261106, docs/research/ml-entry-promotion-rule-2026-11-06.md) scores the as-of-(today-14d) refit against the
+# served artifact on the same post-train window, net of the full cost stack. PASS -> a DRAFT PR (landing hold) that adds a NEW
+# versioned artifact directory and repoints the ONE served pointer ml/served/ENTRY_SERVED.json; a human merges it. FAIL or
+# insufficient_n -> the old artifact keeps serving and the run goes red (claude-run-failure-alert = the ONE flag). NO HALTING: a failed retrain leaves the previous artifact serving, writes
 # retrain_status.json, and the red Actions run is the ONE red flag; the next Sunday tries again (no retry loop, no gate).
 # The trader-side freshness line (src/runtime/ml_entry_live_monitor.py) grades the SERVED artifact's data-through date.
 #
 # no-durable-result: weekly CANDIDATE artifact (model + freshness.json) with no verdict or measurement; serving it is the operator's call and the candidate has had no held-out read
 # Keyless: public Binance Vision archives only, no secrets, no VM, persist-credentials: false.
-# Gates this adds or changes: none.
+# Gates this adds or changes: none (it automates the evidence rule a real-money model change already needs; a human still merges).
 
 on:
   schedule:
@@ -27,7 +30,8 @@ on:
         default: ""
 
 permissions:
-  contents: read
+  contents: write        # ONLY the PASS step pushes a bot branch; nothing here writes main or ml/served on main
+  pull-requests: write   # ONLY the PASS step opens a DRAFT PR
 
 concurrency:
   group: ml-entry-retrain
@@ -56,6 +60,38 @@ jobs:
         run: |
           set -euo pipefail
           python3 scripts/research/ml_entry_retrain.py run --out out --cache /tmp/ml_entry_klines ${RUN_DATE:+--run-date "$RUN_DATE"}
+      - name: Grade the candidate against the served artifact (registered rule RULE-ENTRY-PROMOTE-20261106)
+        env:
+          RUN_DATE: ${{ inputs.run_date }}
+        run: |
+          set -euo pipefail
+          python3 scripts/research/ml_entry_candidate_grade.py --self-test
+          python3 scripts/research/ml_entry_candidate_grade.py run --cache /tmp/ml_entry_klines --out out --candidate-json out/candidate_model.json ${RUN_DATE:+--run-date "$RUN_DATE"}
+      - name: PASS -> open a DRAFT promotion PR (landing hold; main only, never merges)
+        if: success() && github.ref == 'refs/heads/main' && hashFiles('out/promote/*/model.json') != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RUN_ID: ${{ github.run_id }}
+        run: |
+          set -euo pipefail
+          D=$(ls out/promote | head -1); TAG=${D#ml_decision_entry_v1r}; SLUG="ml-entry-promote-${TAG}-${RUN_ID}"; BR="bot/${SLUG}"
+          git config user.name "github-actions[bot]"; git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git remote set-url origin "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+          git checkout -b "$BR"
+          cp -r "out/promote/$D" "ml/served/$D"
+          python3 - "$D" "$RUN_ID" <<'PY'
+          import json, sys
+          json.dump({"artifact_dir": sys.argv[1], "note": "The ONE served-ENTRY-model pointer (src/runtime/ml_entry_served.py). Repointed by ml-entry-retrain run " + sys.argv[2] + " after RULE-ENTRY-PROMOTE-20261106 PASSED. Revert = set artifact_dir back to ml_decision_entry_v1."}, open("ml/served/ENTRY_SERVED.json", "w"), indent=2)
+          PY
+          mkdir -p "comms/research/ml_entry_grade/${RUN_ID}"; cp out/grade_evidence.json "comms/research/ml_entry_grade/${RUN_ID}/"
+          mkdir -p .github/pr-landing
+          printf '{"tier":3,"landing":"hold","why":"HELD: ml-entry-retrain run %s graded a candidate PASS under RULE-ENTRY-PROMOTE-20261106 and proposes repointing the served ENTRY model (real money: bybit_2, bybit_portfolio). A human merges; revert is a one-line pointer edit."}\n' "$RUN_ID" > ".github/pr-landing/${SLUG}.json"
+          python3 scripts/ops/claim_merge_slot.py --branch-claim --branch "$BR" --held-by "workflow:ml-entry-retrain:${RUN_ID}" --purpose "held ENTRY model promotion" || true
+          git add -A ml/served comms/research .github/pr-landing .github/merge-slots
+          git commit -qm "ML entry: graded candidate PASS -> ml/served/${D} + repoint (HELD, run ${RUN_ID})"
+          git push -q origin "$BR"
+          gh pr create --draft --base main --head "$BR" --title "ML entry: PROMOTE graded candidate ${D} (HELD, run ${RUN_ID})" \
+            --body "ml-entry-retrain run ${RUN_ID} graded a candidate PASS under RULE-ENTRY-PROMOTE-20261106 (docs/research/ml-entry-promotion-rule-2026-11-06.md). Evidence: comms/research/ml_entry_grade/${RUN_ID}/grade_evidence.json. Adds ml/served/${D} and repoints ml/served/ENTRY_SERVED.json; the old directory stays (revert = one-line pointer edit). Gates this adds or changes: none. HELD: a human merges. NOTE: this PR is pushed with GITHUB_TOKEN, so CI does not start until someone pushes an ordinary commit to the branch."
       - name: Upload the candidate (also on failure, retrain_status.json says why)
         if: always()
         uses: actions/upload-artifact@v4
@@ -73,5 +109,6 @@ jobs:
             echo '```'
             cat out/freshness.json 2>/dev/null | head -40 || true
             cat out/retrain_status.json 2>/dev/null || echo "(no retrain_status.json)"
+            python3 -c "import json;d=json.load(open('out/grade_evidence.json'));print(json.dumps({k:d.get(k) for k in ('rule_id','verdict','why','plan','holdout_claim','today_candidate','refit_reproduces_retrain_candidate')},indent=1,default=str))" 2>/dev/null || echo "(no grade_evidence.json)"
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
