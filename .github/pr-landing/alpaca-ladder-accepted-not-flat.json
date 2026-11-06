@@ -1,0 +1,7 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "hold_reason": "tier_2_3_needs_approval",
+  "hold_text": "Manager Session 2026-11-06a: 'FIX in a new HELD PR with tests ... Wake me with the green head. I merge, deploy and re-run.' It changes AlpacaClient.close on the order path (alpaca_live too), so the manager merges and deploys.",
+  "why": "Live 20:11Z/20:13Z GLD closes after #23918: the flatten was ACCEPTED but never filled (the TP 2e843e04 held all 39 sh, the stop c928eda6 had been cancelled) and the ladder never ran. Accepted-but-not-flat with a current resting closing-side order holding the whole position now escalates in the same call: rung 2 TP reprice, then rung 3 (paper close-all + account_reset sweep; live one red flag naming the missing stop)."
+}
