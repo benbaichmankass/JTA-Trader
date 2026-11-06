@@ -205,9 +205,10 @@ fi
 # runtime_logs/training_cycle.jsonl, 7 catch-ups 2026-10-30..11-05): every one
 # found `already_done 73, to_run 0`, yet each first rebuilt every dataset family
 # (18-43 min wall, 42-57 min CPU per run on the 1-OCPU box) and then trained
-# nothing. Nothing consumes that rebuild before the next primary cycle rebuilds
-# again (promotion-readiness 04:00Z, the Kaggle export 06:40Z and the replay
-# pre-gate all read the primary build). So when today's progress file already
+# nothing. Promotion-readiness (04:00Z) and the Kaggle export (06:40Z) read the
+# primary build anyway. The one later reader is replay-pregate-nightly (scheduled
+# runs start ~11:40-12:00Z, a research parity check): it now scores against the
+# primary 00:xxZ build, ~8 h older, instead of the catch-up's. So when today's progress file already
 # marks EVERY manifest in the list done/skipped, the dataset build is skipped.
 # A catch-up with real work to resume still rebuilds exactly as before, and
 # TRAINING_CYCLE_FORCE_RESTART still forces the full path. Revert: delete this block.
