@@ -1,0 +1,16 @@
+{
+  "due_when": {
+    "check_every_days": 7,
+    "clears_when": "journalctl on ict-trader-live shows a line containing 'read_state=rate_limited' from src.exchange.alpaca_connector, followed by an ok read of the same symbol after the cooldown; or killed if 60 days pass with no Alpaca 429 (nothing to observe)",
+    "kind": "event"
+  },
+  "id": "PI-20261106-5A1BGFHC-0002",
+  "next_action": "check_observation",
+  "origin": {
+    "kind": "deploy",
+    "ref": "#23619 adde4030e; d5a1 re-run 42165645683 (0 x 429)",
+    "rerun": "DIAG_FETCH_MAX_TIME=60 scripts/ops/diag_fetch.sh 'journalctl?unit=ict-trader-live.service&since=<last check>&grep=read_state=rate_limited|AlpacaRateLimited&lines=200'"
+  },
+  "state": "queued",
+  "what": "Residual of PI-20261106-5A1BGFHC-0001: the #23619 Alpaca cooldown branch is unit-tested but has NOT been exercised live (re-run 42165645683 saw 0 x 429). Observe the first live Alpaca 429 on ict-trader-live: it must log read_state=rate_limited (and 'NOT no bars'), start a cooldown without sleeping, and the symbol must recover on the next tick after the cooldown."
+}
