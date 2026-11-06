@@ -258,38 +258,54 @@ def confirm_stage(tab: pd.DataFrame, config: str, tau: float, dev_oof_mean: floa
             "window": {"train_end": train_end, "start": start, "end": end, "embargo_days": EMBARGO_DAYS}}
 
 
+PINNED = {"deterministic": True, "force_row_wise": True, "n_jobs": 1, "bagging_seed": 20261105, "feature_fraction_seed": 20261105,
+          "data_random_seed": 20261105}   # LightGBM thread/hardware nondeterminism pin (lane ML-FS-RECIPE heads-up 2026-11-06)
+
+
 def export_stage(tab: pd.DataFrame, config: str, tau: float, pool: list[str], expect_sha: str, out: Path, train_end: str = TRAIN_END,
                  configs: dict = CONFIGS, n_fixture: int = 60) -> dict:
-    """EXPORT (row ML-ENTRY-EQUITY-NATIVE, manager 2026-11-06): the SAME deterministic refit the confirm stage scored (rows < train_end - purge,
-    config, seed), written as a servable model.json. Reads NO date after train_end. ``expect_sha`` is the confirm run's booster sha256 prefix:
-    a mismatch is recorded loudly (sha_match false) and never silently accepted. Also writes parity_fixture.json: feature vectors from the
-    TRAINING tail with the harness predictions, so a serve-side implementation can prove it scores identically."""
+    """EXPORT (row ML-ENTRY-EQUITY-NATIVE, manager 2026-11-06): refit the confirmed config and write a servable model.json. Reads NO date after
+    train_end. Two fits on the SAME rows: A = exactly the confirm stage's params (n_jobs 4, no determinism pins) -> its booster sha256 is compared
+    with ``expect_sha``; B = the same params PINNED deterministic (single thread, row-wise, all seeds fixed). LightGBM can differ run to run on
+    identical data (lane ML-FS-RECIPE measured it), so sha_match for A may be false for that reason alone. SHIPPED = A when its sha matches (it IS the
+    graded model), else B (reproducible from here on), and either way the record carries sha_match, the A-vs-B prediction delta on training-tail rows
+    (max/mean abs, rank correlation, decision agreement at tau) and the params. Also writes parity_fixture.json for the serve-side parity test."""
     cfg = configs[config]
     feats = cfg["features"]
     te = pd.Timestamp(train_end, tz="UTC") + pd.Timedelta(days=1)
     tr = purge(tab[tab.ts < te], te).dropna(subset=feats + ["net_long"])
-    m = _lgb(cfg["params"]).fit(tr[feats], tr["net_long"])
-    text = m.booster_.model_to_string()
-    sha = hashlib.sha256(text.encode()).hexdigest()
-    match = bool(expect_sha) and sha.startswith(expect_sha)
+    ma = _lgb(cfg["params"]).fit(tr[feats], tr["net_long"])
+    mb = _lgb({**cfg["params"], **PINNED}).fit(tr[feats], tr["net_long"])
+    text_a, text_b = ma.booster_.model_to_string(), mb.booster_.model_to_string()
+    sha_a, sha_b = hashlib.sha256(text_a.encode()).hexdigest(), hashlib.sha256(text_b.encode()).hexdigest()
+    match = bool(expect_sha) and sha_a.startswith(expect_sha)
+    shipped, model, text, sha, params = ("A_confirm_params", ma, text_a, sha_a, {**BASE_PARAMS, **cfg["params"]}) if match else \
+        ("B_pinned_deterministic", mb, text_b, sha_b, {**BASE_PARAMS, **cfg["params"], **PINNED})
+    samp = tr.sort_values("ts").tail(20000)
+    pa, pb = ma.predict(samp[feats]), mb.predict(samp[feats])
+    delta = {"n_rows": int(len(samp)), "max_abs": float(np.max(np.abs(pa - pb))), "mean_abs": float(np.mean(np.abs(pa - pb))),
+             "spearman": float(pd.Series(pa).corr(pd.Series(pb), method="spearman")),
+             "decision_agreement_at_tau": float(np.mean((pa > tau) == (pb > tau))), "taken_a": int((pa > tau).sum()), "taken_b": int((pb > tau).sum()),
+             "sha_a_equals_sha_b": sha_a == sha_b}
     model_id = f"ENTRY-EQ-v1-{config}-tau{tau}"
     art = {"model_id": model_id, "schema": "ml_entry_eq_model/1", "features": feats, "tau": float(tau), "side": "long",
-           "train_end_exclusive": str(te), "train_rows": int(len(tr)), "booster_sha256": sha,
+           "train_end_exclusive": str(te), "train_rows": int(len(tr)), "booster_sha256": sha, "shipped": shipped,
            "bracket": {"sl_atr": 2.0, "tp_atr": 3.0, "atr_n": 14, "horizon_bars": H, "decision_every_h": 4, "bar": "alpaca 1Hour RTH, hour-aligned"},
            "costs": {"fee_bps": 0.0, "slippage_bps": 5.0, "regulatory_bps": S.REGULATORY_BPS, "slippage_status": "PROVISIONAL"},
-           "pool_rule_sha256": S.POOL_RULE_SHA256, "pool_symbols": list(pool), "proxies": PROXIES,
-           "lgb_params": {**BASE_PARAMS, **cfg["params"]},
+           "pool_rule_sha256": S.POOL_RULE_SHA256, "pool_symbols": list(pool), "proxies": PROXIES, "lgb_params": params,
+           "confirm_booster_sha256_expected": expect_sha, "sha_match_confirm": match, "a_vs_b_delta": delta,
            "evidence": ["RQ-20261105-e9a1-01 (dev walk-forward, run 42119511272)", "RQ-20261105-e9a1-02 (confirming read, run 42143223941: n 858, net +0.0392 R)"],
            "booster_txt": {"long": text}}
     out.mkdir(parents=True, exist_ok=True)
     (out / "model.json").write_text(json.dumps(art))
     tail = tr.sort_values("ts").tail(20000).sample(n_fixture, random_state=7)
-    fx = {"model_id": model_id, "features": feats,
+    fx = {"model_id": model_id, "shipped": shipped, "features": feats,
           "rows": [{"symbol": r.symbol, "ts": str(r.ts), **{f: float(getattr(r, f)) for f in feats}, "pred": float(p)}
-                   for r, p in zip(tail.itertuples(index=False), m.predict(tail[feats]))]}
+                   for r, p in zip(tail.itertuples(index=False), model.predict(tail[feats]))]}
     (out / "parity_fixture.json").write_text(json.dumps(fx))
-    return {"model_id": model_id, "booster_sha256": sha, "expect_sha": expect_sha, "sha_match": match, "train_rows": int(len(tr)),
-            "n_features": len(feats), "model_json_bytes": (out / "model.json").stat().st_size, "n_fixture_rows": n_fixture}
+    return {"model_id": model_id, "booster_sha256": sha, "booster_sha256_a": sha_a, "booster_sha256_b": sha_b, "shipped": shipped,
+            "expect_sha": expect_sha, "sha_match": match, "a_vs_b_delta": delta, "train_rows": int(len(tr)), "n_features": len(feats),
+            "model_json_bytes": (out / "model.json").stat().st_size, "n_fixture_rows": n_fixture, "pinned_params": PINNED}
 
 
 # ------------------------------------------------------------------------------------------------ runner glue
@@ -359,8 +375,10 @@ def main_run(a) -> int:
         e = export_stage(tab, a.config, float(a.tau), pool, a.expect_sha, out)
         row = {"schema_version": 1, "research_unit": a.unit, "read_state": "measured", "verdict": "not_applicable",
                "population": f"EXPORT of {e['model_id']}: refit on rows < {TRAIN_END} over the {len(pool)}-ETF pool; no outcome after train_end read",
-               "note": (f"export {e['model_id']} booster sha256 {e['booster_sha256'][:16]} "
-                        f"{'MATCHES' if e['sha_match'] else 'DOES NOT MATCH'} the confirm run's {a.expect_sha}"),
+               "note": (f"export {e['model_id']}: confirm-params refit sha256 {e['booster_sha256_a'][:16]} "
+                        f"{'MATCHES' if e['sha_match'] else 'DOES NOT MATCH'} the confirm run's {a.expect_sha}; shipped {e['shipped']}; "
+                        f"A-vs-B on {e['a_vs_b_delta']['n_rows']} training-tail rows: max|d|={e['a_vs_b_delta']['max_abs']:.4f} "
+                        f"spearman={e['a_vs_b_delta']['spearman']:.5f} decision agreement={e['a_vs_b_delta']['decision_agreement_at_tau']:.4f}"),
                "generated_at": pd.Timestamp.now(tz="UTC").strftime("%Y-%m-%dT%H:%M:%SZ"), "measurement": {**e, "pool": {k: v for k, v in prep.items() if k != "excluded"}},
                "n": e["train_rows"], "produced_by": {"tool": "python3 scripts/research/ml_entry_equity.py export", "where": a.where}}
     else:
@@ -437,9 +455,12 @@ def self_test() -> int:
     with tempfile.TemporaryDirectory() as td:
         ex = export_stage(tab, "A", 0.0, pool, "", Path(td), train_end="2023-04-30", configs=small, n_fixture=10)
         art = json.loads((Path(td) / "model.json").read_text())
-        assert art["features"] == small["A"]["features"] and art["booster_sha256"] == ex["booster_sha256"] and "booster_txt" in art
-        ex2 = export_stage(tab, "A", 0.0, pool, ex["booster_sha256"][:16], Path(td) / "b", train_end="2023-04-30", configs=small, n_fixture=10)
-        assert ex2["sha_match"] and ex2["booster_sha256"] == ex["booster_sha256"], "the refit must be deterministic"
+        assert art["features"] == small["A"]["features"] and "booster_txt" in art and art["shipped"] == "B_pinned_deterministic"
+        ex2 = export_stage(tab, "A", 0.0, pool, "", Path(td) / "b", train_end="2023-04-30", configs=small, n_fixture=10)
+        assert ex2["booster_sha256_b"] == ex["booster_sha256_b"], "the PINNED refit must be reproducible run to run"
+        assert set(ex["a_vs_b_delta"]) >= {"max_abs", "mean_abs", "spearman", "decision_agreement_at_tau"}
+        ex3 = export_stage(tab, "A", 0.0, pool, ex["booster_sha256_a"][:16], Path(td) / "c", train_end="2023-04-30", configs=small, n_fixture=10)
+        assert ex3["sha_match"] and ex3["shipped"] == "A_confirm_params"       # a matching confirm hash ships the graded model itself
         import lightgbm as lgb
         fx = json.loads((Path(td) / "parity_fixture.json").read_text())
         bst = lgb.Booster(model_str=art["booster_txt"]["long"])
