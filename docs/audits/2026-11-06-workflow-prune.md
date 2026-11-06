@@ -280,3 +280,10 @@ The operator approved P3 ("Merge as proposed") on my claim that each group does 
 | M8 ~13 watchdogs | needs the design pass the manager asked for first | not started | design first (filed in the pipeline) |
 
 **Recommendation (to re-decide):** do not merge M1, M2 or M7. Where the real duplication is shared *steps* (the sparse-checkout/install block in the five research runners, the "Require VM host secrets / Dedup / post result" scaffold in the label relays), extract a composite action and keep each entry point, which keeps label and `workflow_dispatch` contracts byte-identical. M6's terminate/reset pair is the only clean merge and is not worth a live-VM-action change on its own. M3 (the mirrors) stays with WORK-STORE S7 as decided.
+
+### Disposition of P3 (Manager 2026-11-05b, 2026-11-06 01:32Z; pipeline PI-20261106-01AFOLUJ-0004, closed)
+
+1. **Do not merge M1, M2 or M7, and do not merge terminate/reset** (it acts on live VMs about once per 90 d, so the risk outweighs one file).
+2. **Do extract the shared scaffolding as composite actions** (the sparse-checkout/install block; "Require VM host secrets / Dedup / post result"). Every entry point, label contract and output stays byte-identical. Tier 1, self-land, **after #23594 and #23600 merge**, so it never stacks on unmerged deletions.
+3. **Order:** the M8 watchdog design doc (PI-20261106-01AFOLUJ-0005) first, then the composite actions.
+4. `board-post.yml` is left for the operator.
