@@ -1,7 +1,7 @@
 {
  "bar": "2026-11-06T00:05:00Z",
  "bar_close": "2026-11-06T00:10:00Z",
- "built_at": "2026-11-06T00:10:05Z",
+ "built_at": "2026-11-06T00:11:29Z",
  "closed": false,
  "order_package_id": "pkg-084d03f3a4694542",
  "packet": {
@@ -109,7 +109,29 @@
     "ts": "2026-11-06T00:09:11.466039+00:00",
     "veto": false
    },
-   "previous_review": null,
+   "previous_review": {
+    "action": "hold",
+    "forecast": {
+     "direction": "with_trade",
+     "evidence": [
+      "chart.bars: last 1h low 8.072 close 8.168, prior closes 8.222/8.266/8.348 stepping down",
+      "chart.swings: lows 8.124 and 4h 8.276/8.28 broken, highs 8.442",
+      "chart.htf: 4h chop ADX 18.8; regime 1h ADX 32.5 trending",
+      "exit_plan: stop 8.378, TP 7.747 (2.0R); desk exit line 1h close above 8.30",
+      "desk_handoff: opening DD-20261106T0003Z-scan-1h-1 p_target 0.32 target 7.747"
+     ],
+     "horizon_bars": 8,
+     "invalidation_px": 8.3,
+     "p_target": 0.5,
+     "target_px": 8.072,
+     "thesis": "AVAX broke the 8.124 low and the 4h lows 8.276/8.28 on a 1h flush to 8.072; I expect continuation to retest 8.072 and press through on the 1h trend, with the 4h in chop making the follow-through uncertain, and a 1h close above 8.30 ends the idea.",
+     "timeframe": "1h"
+    },
+    "reason": "Hold (desk CONFIRM). First review of a desk-opened short at 8.168, the close of the 23:00Z hourly bar that printed 8.072 and broke the 8.124 swing low and the 4h lows 8.276/8.28. Packet mechanics match (venue SL 8.378 / TP 7.747 equal the package), so this is a normal judged call, not the XRP venue-vs-package case. open_r is null (no telemetry row), so I do not state how far the trade has moved; \u2026",
+    "review_id": "LR-20261106T0010Z-pkg-084d03f3a4694542",
+    "reviewed_at": "2026-11-06T00:20:00Z",
+    "route": null
+   },
    "symbol": "AVAXUSDT"
   },
   "context_v3": {
@@ -529,8 +551,24 @@
    "basis": null
   },
   "desk_handoff": {
-   "chain_length": 0,
-   "chain_tail": [],
+   "chain_length": 1,
+   "chain_tail": [
+    {
+     "action": "hold",
+     "forecast": {
+      "direction": "with_trade",
+      "horizon_bars": 8,
+      "invalidation_px": 8.3,
+      "p_target": 0.5,
+      "target_px": 8.072,
+      "timeframe": "1h"
+     },
+     "reason": "Hold (desk CONFIRM). First review of a desk-opened short at 8.168, the close of the 23:00Z hourly bar that printed 8.072 and broke the 8.124 swing low and the 4h lows 8.276/8.28. Packet mechanics match (venue SL 8.378 / TP 7.747 equal the package), so this is a normal judged call, not the XRP venue-vs-package case. open_r is null (no telemetry row), so I do not state how far the trade has moved; the latest closed bar equals the entry. Bracket: stop 8.378 sits 1.0R above entry and under the 8.442 swing high, TP 7.747 is 2.0R; the desk's own early-exit line is a 1h close above 8.30, which is inside the stop and is the level that would end the idea. 1h is trending (ADX 32.5) but 4h is chop (ADX 18.8), so the thesis rests on the 1h; that is why confidence is only 0.50. No priced table (no Stage-0 record for claude_desk), nothing measured favours a bracket move or an exit, and HOLD already expresses the desk's plan.",
+     "review_id": "LR-20261106T0010Z-pkg-084d03f3a4694542",
+     "reviewed_at": "2026-11-06T00:20:00Z",
+     "verdict": "confirm"
+    }
+   ],
    "instruction": "CONFIRM, REVISE (with a reason) or EXIT this position against the opening thesis and the newest view in the chain; copy prior_decision_id into handoff.prior_decision_id.",
    "missing": [],
    "opening": {
@@ -559,7 +597,7 @@
     "timeframe": "1h",
     "tp": 7.747
    },
-   "prior_decision_id": "DD-20261106T0003Z-scan-1h-1",
+   "prior_decision_id": "LR-20261106T0010Z-pkg-084d03f3a4694542",
    "protocol": "DESK-HANDOFF-PROTOCOL",
    "read_state": "read"
   },
@@ -576,7 +614,7 @@
    "head": "400bc11f00",
    "state": "current"
   },
-  "info_cutoff_at": "2026-11-06T00:10:20Z",
+  "info_cutoff_at": "2026-11-06T00:11:43Z",
   "leg": "claude_desk",
   "mechanics": {
    "evidence": "package sl 8.378 / tp 7.747 agree with every readable account",
@@ -640,14 +678,14 @@
    "cell_now": null,
    "trend_now": "trending"
   },
-  "review_id": "LR-20261106T0010Z-pkg-084d03f3a4694542",
+  "review_id": "LR-20261106T0011Z-pkg-084d03f3a4694542",
   "short_hold": {
    "atr": 0.04357142857142815,
    "bar": "2026-11-06T00:05:00Z",
    "bar_close": "2026-11-06T00:10:00Z",
    "entry": 8.168,
    "mark": 8.199,
-   "minutes_held": 0.8,
+   "minutes_held": 2.2,
    "open_r_at_mark": -0.1476,
    "r_unit": "entry_to_current_sl",
    "read_state": "read",
@@ -753,14 +791,14 @@
    "tp": 7.747
   }
  },
- "packet_sha": "9e9a794ec3f370456ad297f8bbbf93485b2ad1a4b54488d1ac8bf0f6ad20f7a9",
+ "packet_sha": "b26dcf4b78aabba70472ea99de85ceeb54eda8e16ad79dd9ce30c7a6ade6ec0a",
  "short_hold": {
   "atr": 0.04357142857142815,
   "bar": "2026-11-06T00:05:00Z",
   "bar_close": "2026-11-06T00:10:00Z",
   "entry": 8.168,
   "mark": 8.199,
-  "minutes_held": 0.8,
+  "minutes_held": 2.2,
   "open_r_at_mark": -0.1476,
   "r_unit": "entry_to_current_sl",
   "read_state": "read",
