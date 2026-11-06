@@ -243,7 +243,8 @@ def test_real_yaml_loads():
     # the frozen E4 open-interest-shock continuation rule (PR #21720 held-out PASS).
     # 58 -> 59 on 2026-11-01 ML-ENTRY-LIVE-ADAPTER (#22079, Tier-3 held): ml_entry, the ML ENTRY decision model leg (bybit_2 + bybit_portfolio).
     # 59 -> 60 on 2026-11-01: ml_entry_v2, the ENTRY v2 candidate as a bybit_1 demo TESTING leg (Tier-3 held; W1 read FAILED, mechanics only).
-    assert len(strategies) == 60
+    # 60 -> 61 on 2026-11-06: ml_entry_eq, the equity-native ENTRY model as an alpaca_paper TESTING leg (Tier-2 held).
+    assert len(strategies) == 61
 
 
 def test_real_yaml_has_required_strategies():
@@ -295,6 +296,7 @@ def test_real_yaml_has_required_strategies():
         # ML-ENTRY-LIVE-ADAPTER (2026-11-01, Tier-3 held PR #22079): the ML ENTRY decision model leg.
         "ml_entry",
         "ml_entry_v2",  # 2026-11-01 ENTRY v2 testing leg (bybit_1 demo only)
+        "ml_entry_eq",  # 2026-11-06 equity-native ENTRY testing leg (alpaca_paper only)
         # E4-DEMO-LEG (2026-10-30, Tier-3): the E4 OI-shock leg, execution: live, bybit_1 demo only.
         "e4_oi_shock_1h",
     }

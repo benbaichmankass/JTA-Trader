@@ -1612,6 +1612,15 @@ def main() -> None:
             except Exception:  # noqa: BLE001
                 logger.exception("ml_entry_live_monitor tick failed")
 
+            # ML ENTRY equity-native pool-snapshot refresher (row ML-ENTRY-EQUITY-NATIVE): starts ONE daemon thread (idempotent, returns at
+            # once). The 173-symbol bar pass runs ON THAT THREAD, paced through the Alpaca connector's non-blocking cooldown; this tick,
+            # the signal builder and the exit-evaluation path make no pool request.
+            try:
+                from src.runtime.ml_entry_eq_refresher import ensure_started as _eq_refresher_start
+                _eq_refresher_start()
+            except Exception:  # noqa: BLE001
+                logger.exception("ml_entry_eq refresher start failed")
+
             # The gap that is invisible to every JOURNAL-keyed detector, because
             # it produces no journal row at all: an account the per-symbol
             # arbitration keeps electing and then discarding. 2026-09-11:
