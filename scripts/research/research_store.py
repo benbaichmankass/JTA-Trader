@@ -448,8 +448,11 @@ def parity(root: Path, repo: Path, since: str) -> dict[str, Any]:
     """Every git-derived event NEWER than `since` must have a runner-sourced row in the store.
 
     'Newer' is the event's own `at` (dispatch stamp / result generated_at / graded_at date) -- a field the
-    file states, so the denominator is printed, never inferred. A grade's at is a DATE, so a grade dated the
-    `since` day is included (conservative). An event with no `at` is counted separately as `undated`, not
+    file states, so the denominator is printed, never inferred. A grade's at is a DATE only, so whether a grade
+    dated the `since` day is before or after `since` cannot be known: it is counted in `date_only_on_since_day`
+    (stated, never folded into either bucket) and only grades dated STRICTLY AFTER that day are in the
+    denominator. (Observed 2026-11-06: since=05:00Z put 164 grades written before the dual-write existed into
+    the denominator.) An event with no `at` is counted separately as `undated`, not
     folded into either bucket.
     """
     path = db_path(root)
@@ -462,7 +465,7 @@ def parity(root: Path, repo: Path, since: str) -> dict[str, Any]:
     finally:
         conn.close()
     day = since[:10]
-    out = {"read_state": "measured", "since": since, "denominator": 0, "matched": 0, "undated": 0,
+    out = {"read_state": "measured", "since": since, "denominator": 0, "matched": 0, "undated": 0, "date_only_on_since_day": 0,
            "missing": [], "differs": [], "by_kind": {k: {"denominator": 0, "matched": 0} for k in KINDS}}
     for u in all_units(repo):
         evs, _ = unit_events(repo, u)
@@ -472,7 +475,10 @@ def parity(root: Path, repo: Path, since: str) -> dict[str, Any]:
                 out["undated"] += 1
                 continue
             at_s = str(at)
-            older = at_s[:10] < day if len(at_s) == 10 else at_s[:19] < since[:19]
+            if len(at_s) == 10 and at_s == day:
+                out["date_only_on_since_day"] += 1
+                continue
+            older = at_s < day if len(at_s) == 10 else at_s[:19] < since[:19]
             if older:
                 continue
             out["denominator"] += 1
@@ -616,6 +622,9 @@ def _self_test() -> int:
             ingest_bundle(store, fh)
         p = parity(store, repo, "2030-01-01T00:00:00Z")
         assert p["ok"] and p["by_kind"]["grade"]["matched"] == 1, p
+        # a date-only grade dated the since day is neither counted nor dropped silently
+        pd = parity(store, repo, "2030-01-03T12:00:00Z")
+        assert pd["by_kind"]["grade"]["denominator"] == 0 and pd["date_only_on_since_day"] == 1, pd
         # window: an older since excludes nothing, a later since excludes everything
         assert parity(store, repo, "2031-01-01T00:00:00Z")["denominator"] == 0
         # a tampered payload is refused

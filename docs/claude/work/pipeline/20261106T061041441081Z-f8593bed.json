@@ -1,0 +1,15 @@
+{
+  "due_when": {
+    "due_date": "2026-11-07",
+    "kind": "date"
+  },
+  "id": "PI-20261106-LY7CM8CG-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "audit",
+    "ref": "lane WSD-S6D (session_01AFoLuMDZinKoAMLY7CM8cG), row WSD-S6D-RESEARCH-RESULTS; first reading run 42171755444",
+    "rerun": "dispatch research-store-admin.yml with mode=parity since=2026-11-06T06:00:00Z (needs #23683 on main); read missing[] grouped by kind + unit; GET /api/diag/research_runs for the live mirror"
+  },
+  "state": "queued",
+  "what": "WSD-S6D shadow observation: the research results store (trainer research_store.db, live /api/diag/research_runs) must hold a RUNNER-sourced row for every stamp/result/grade that lands on main from the dual-written workflows (research-queue-dispatch, research-queue-grade). First clean reading is only possible on events landed after the dual-write (#23581 merged 2026-11-06T04:49Z). Expected residue that is NOT a dual-write failure: units landed by the 7 research-result action callers and session-authored grades/results (not yet dual-written; wiring them is the next build step on row WSD-S6D-RESEARCH-RESULTS). Two clean days of parity (residue explained) gate the reader flip."
+}
