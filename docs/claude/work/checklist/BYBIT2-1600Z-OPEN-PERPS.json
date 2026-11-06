@@ -2,7 +2,7 @@
   "id": "BYBIT2-1600Z-OPEN-PERPS",
   "title": "Were any bybit_2 perps open at 2026-11-05T16:00Z? (decides whether 'no 16:00Z settlement' is right)",
   "phase": null,
-  "state": "queued",
+  "state": "done",
   "owner": "manager",
   "lane": null,
   "model": null,
@@ -11,12 +11,12 @@
   "tier": 1,
   "prs": [],
   "blocked_on": [],
-  "note": "Open question from BYBIT2-FUNDING-SETTLEMENT-READ. Txn log has rows to 16:20Z but no 16:00Z SETTLEMENT for bybit_2. Check trade_journal trades for account bybit_2 with opened_at <= 16:00Z < closed_at (diag journal?table=trades) and positions at that time. If one was open on a rostered symbol and no settlement booked, the venue read is wrong; if none was open, closed as correct.",
+  "note": "Open question from BYBIT2-FUNDING-SETTLEMENT-READ. Txn log has rows to 16:20Z but no 16:00Z SETTLEMENT for bybit_2. Check trade_journal trades for account bybit_2 with opened_at <= 16:00Z < closed_at (diag journal?table=trades) and positions at that time. If one was open on a rostered symbol and no settlement booked, the venue read is wrong; if none was open, closed as correct. 2026-11-06 ANSWERED: no bybit_2 perp was open at 2026-11-05T16:00Z. Population: diag journal?table=trades limit=200 (all accounts, 2026-10-25..2026-11-06T00:09Z), 13 bybit_2 rows, none backtest. ETHUSDT id 6881 closed 2026-11-05T15:01:54Z (so ETH settled at 08:00Z, matching the venue); SOLUSDT id 6884 closed 2026-11-04T19:51Z; BTCUSDT id 6927 opened 16:04:42Z, AFTER the settlement. So 'no 16:00Z settlement' is correct. Caveat: journal-based; a position that never reached the journal would not show, and no venue position-history read was made.",
   "due_by": "2026-11-07",
   "roadmap": [
     "L-DATA"
   ],
-  "updated_at": "2026-11-06T00:32:16Z",
+  "updated_at": "2026-11-06T00:33:57Z",
   "updated_by": "lane-bybit2-funding",
   "_seq": 960
 }
