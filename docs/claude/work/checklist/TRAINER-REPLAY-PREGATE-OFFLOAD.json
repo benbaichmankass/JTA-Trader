@@ -1,0 +1,24 @@
+{
+  "id": "TRAINER-REPLAY-PREGATE-OFFLOAD",
+  "title": "Move replay-pregate-nightly's fleet scoring off the trainer onto a GitHub runner (scp inputs, score on the runner)",
+  "phase": null,
+  "state": "queued",
+  "owner": "manager",
+  "lane": null,
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [],
+  "blocked_on": [],
+  "note": "From FREE-CAPACITY-PLAN (a), lane session_01AFoLuLpeKyaLTmVTigniMw. MEASURED (trainer-vm-diag #23583): the SSH session ending ~05:54Z daily consumes 19-21 CPU-min (10-31, 11-01, 11-02, 11-03, 11-04, 11-05) = replay-pregate-nightly.yml (cron 04:00, runs late) launching scripts/ml/replay_pregate_fleet.py DETACHED on the trainer. Inputs: ModelRegistry (shadow-stage regime heads, ml/registry-store), market_features shards under datasets-out, candles. BUILD: in the workflow, tar the shadow-stage model dirs + the shards those heads name over the existing SSH route, run the driver on the runner (4 vCPU/16 GB), keep report/commit steps unchanged. Done when: one nightly run lands latest.json from the runner and the 05:xx session-scope CPU line on the trainer is under 3 min. Rerun of the measurement: trainer-vm-diag journalctl -g 'session-[0-9]+.scope: Consumed'.",
+  "due_by": "2026-11-10",
+  "roadmap": [
+    "unmapped"
+  ],
+  "roadmap_unmapped_reason": "infra-capacity(FREE-CAPACITY-PLAN)",
+  "priority_rank": 9,
+  "updated_at": "2026-11-06T01:27:43Z",
+  "updated_by": "session_01AFoLuLpeKyaLTmVTigniMw",
+  "_seq": 959
+}

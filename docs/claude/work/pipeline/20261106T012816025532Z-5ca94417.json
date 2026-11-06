@@ -1,0 +1,17 @@
+{
+  "due_when": {
+    "check_every_days": 1,
+    "clears_when": "the 08:00Z catch-up shows datasets_skipped_cycle_complete with a CPU line under 10 min AND a complete-day trainer cpu_p95 for 2026-11-07 is in the ledger; then record the after-number on FREE-CAPACITY-PLAN",
+    "due_date": "2026-11-08",
+    "kind": "observation"
+  },
+  "id": "PI-20261106-VTIGNIMW-0001",
+  "next_action": "check_observation",
+  "origin": {
+    "kind": "session",
+    "ref": "FREE-CAPACITY-PLAN (a), lane session_01AFoLuLpeKyaLTmVTigniMw, 2026-11-06; trainer-vm-diag #23568/#23583/#23591",
+    "rerun": "(1) trainer-vm-diag: journalctl -u ict-trainer-catchup --since today | grep Consumed; grep datasets_skipped_cycle_complete runtime_logs/training_cycle.jsonl | tail -2. (2) python3 -c \"import json;[print(r['date'],r['cpu_p95']) for r in map(json.loads,open('comms/cloud/compute_util_ledger.jsonl')) if r['host']=='trainer'][-3:]\""
+  },
+  "state": "queued",
+  "what": "Verify FREE-CAPACITY-PLAN (a) on the trainer: (1) the 2026-11-06 08:00Z catch-up emits datasets_skipped_cycle_complete and consumes a few CPU-min instead of 42-57 (needs PR #23590 merged + git-synced first); (2) trainer OCI CpuUtilization daily p95 for 2026-11-07 vs the before-number 100.0% (every day 2026-10-05..11-05, n=32, comms/cloud/compute_util_ledger.jsonl). EXPECTED: (2) stays near 100% after #23590 alone, because ~106 pinned CPU-min/day remain against the ~72 that p95<80% allows; the rest is on rows TRAINER-REPLAY-PREGATE-OFFLOAD, TRAINER-MARKET-RAW-INCREMENTAL, TRAINER-NIGHTLY-TRAIN-OFFLOAD, PROMOTION-READINESS-CPU-GROWTH. Caveat: the 11-06 22:00Z resize reboot (trainer 6->9 GB) is inside the window."
+}
