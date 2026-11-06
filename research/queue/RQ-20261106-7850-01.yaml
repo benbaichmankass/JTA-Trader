@@ -1,0 +1,94 @@
+id: RQ-20261106-7850-01
+title: 'tqqq_trend_long_1d real money probe: does the 1d trend_long ETF family carry a predictive take-profit
+  (pooled tp_prediction_derive, longest yfinance window) to replace the 50R sentinel before the alpaca_live
+  mechanics probe?'
+status: done
+cadence: once
+roadmap:
+- L-ATM
+- M20
+theme: live_strategy
+priority: 1
+kind: experiment
+practice_precedent: 'docs/research/programmes/01-ACTIVE-TRADE-MANAGEMENT.md (RQ-20261016-014: same instrument, constants and rule shape; set iaum_pullback_1d tp_r 3.5)'
+question: 'Operator 2026-11-06 ~11:40Z (popup, relayed by Manager Session 2026-11-06a), verbatim "Give tqqq a
+  real TP first": tqqq_trend_long_1d rides alpaca_live for ONE mechanics trade (row ALPACA-LIVE-MECHANICS,
+  PR #23784) and must carry a real predictive TP, not the 50R sentinel. The single-leg run is INDETERMINATE
+  (MEASURED 2026-11-06 lane sandbox: tqqq alone, 1830 d yfinance, 13 trades, n_oos 6 < 39). Same instrument
+  and constants as RQ-20261016-014 (the alpaca 1d pullback family that produced iaum''s 3.5R), pooled over
+  the trend_long_1d family that shares tqqq''s unit (trend_donchian, 1d, donchian 30, trail 4.0): does the
+  pooled K* predict and hold its edge vs the current bracket?'
+why_this_matters: 'The probe is the first real-money GTC bracket on alpaca_live; the TP doctrine forbids a
+  fictional target there. Per-leg n cannot reach the floor, so pooling the family over the longest window is
+  the only powered test.'
+power:
+  expected_n: 150
+  min_detectable_effect: 0.45
+  effect_units: sd
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: 'Floor 39 OOS trades. ESTIMATE: tqqq alone gave 13 trades on 1830 d; 7 legs x 3650 d scales to ~150-180
+    trades -> ~60-70 OOS (IS 60% per leg). SPYM/SCHA histories may be shorter on yfinance; the record states the
+    real n.'
+  feasibility:
+    source: none
+    accrual_basis: yfinance daily ETF candles; nothing accrues.
+decision_rule:
+  id: RULE-TQQQ-PROBE-TREND1D-PREDICTIVE-TP
+  statistic: 'Exactly RQ-20261016-014''s statistic (tp_prediction_derive.py --pool, constants unchanged: K grid
+    1-8R, IS 60% chronological per leg, reach floor 0.10, calibration tolerance 0.10, non-inferiority margin 0.05
+    R/trade, bootstrap 2000 seed 20261015, K* must rest below the median IS venue cap) over legs
+    tqqq_trend_long_1d,qld_trend_long_1d,splg_trend_long_1d,qqq_trend_long_1d,spy_trend_long_1d,iwm_trend_long_1d,scha_trend_long_1d
+    and a 3650-day window; net of the harness''s full cost stack (equity fee + slippage via execution_costs).'
+  rule: 'INDETERMINATE IF n_oos < 39 OR no K eligible. FAIL IF reach_OOS(K*) < 0.10 OR calibration gap > 0.10
+    OR CI upper < -0.05 R/trade -> no fixed target predicts this family; the operator is told the probe has no
+    data-backed TP. PASS IF reach_OOS(K*) >= 0.10 AND gap <= 0.10 AND CI lower >= -0.05 -> K* is the family''s
+    predictive TP and goes on tqqq_trend_long_1d in PR #23784 (Tier 3, held for the manager).'
+  what_it_does_not_do: Touches no config by itself. Pooling assumes the seven legs' R-distributions are comparable
+    (same unit, same 1d timeframe, stop multiples 1.5-3.0); per-leg rows are reported, not graded. A PASS is a
+    screen; tp_revision (the second doctrine dimension) is a separate question.
+  registered_before_run: true
+  registered_at: '2026-11-06'
+compute: cpu_light
+value:
+  bucket: own_losses
+  usd_at_stake_per_month: 50
+  confidence: 0.3
+  basis: 'stand-in: one small real-money mechanics trade; not a P&L measurement.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 2.0
+  est_minutes: 20
+  why_runner: Keyless public daily candles (yfinance) for a pinned window; reads no trainer data.
+  basis: Lane sandbox run, same shape as RQ-20261016-014.
+run:
+  command:
+  - python3
+  - scripts/research/tp_prediction_derive.py
+  - --legs
+  - tqqq_trend_long_1d,qld_trend_long_1d,splg_trend_long_1d,qqq_trend_long_1d,spy_trend_long_1d,iwm_trend_long_1d,scha_trend_long_1d
+  - --days
+  - '3650'
+  - --pool
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 60
+  inputs:
+    research_unit: RQ-20261106-7850-01
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- RQ-20261016-014
+- scripts/research/tp_prediction_derive.py
+- docs/claude/work/checklist/ALPACA-LIVE-MECHANICS.json
+grading:
+  verdict: not_applicable
+  graded_at: '2026-11-06'
+  reason: 'the instrument refused the pool before reading any outcome: "pooled legs declare different tp_r [1.5, 2.0,
+    3.0, 50.0]; the paired base is undefined". Superseded by RQ-20261106-7850-02 (the three identical-param sentinel legs).'
+  evidence:
+  - research/results/RQ-20261106-7850-01/local-20261106.jsonl
