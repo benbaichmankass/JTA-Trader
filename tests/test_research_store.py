@@ -85,3 +85,33 @@ def test_research_runs_route_is_registered_and_token_gated():
     assert r.status_code in (401, 403, 503), r.status_code
     r = TestClient(app).get("/api/diag/research_runs?kind=bogus")
     assert r.status_code in (400, 401, 403, 503), r.status_code
+
+
+def test_ship_action_never_aborts_on_remote_rc(tmp_path):
+    """Composite `shell: bash` runs with -e: a non-zero ssh (a parity gap is rc 1) must be CAPTURED and
+    turned into a warning + outcome, not abort the step (observed red on run 42165098415, 2026-11-06)."""
+    import os
+    import stat
+
+    import yaml
+
+    action = yaml.safe_load((REPO / ".github/actions/research-store-ship/action.yml").read_text())
+    script = tmp_path / "ship.sh"
+    script.write_text(action["runs"]["steps"][0]["run"])
+    stub = tmp_path / "bin"
+    stub.mkdir()
+    ssh = stub / "ssh"
+    ssh.write_text('#!/bin/bash\necho "{\\"ok\\": false}"\nexit 1\n')
+    ssh.chmod(ssh.stat().st_mode | stat.S_IEXEC)
+    out, summ = tmp_path / "out", tmp_path / "summ"
+    base = {**os.environ, "PATH": f"{stub}:{os.environ['PATH']}", "GITHUB_OUTPUT": str(out),
+            "GITHUB_STEP_SUMMARY": str(summ), "BUNDLE": "", "SINCE": "2026-11-05T05:10:49Z",
+            "KEY": "k", "IP": "1.2.3.4", "TUSER": "u"}
+    r = subprocess.run(["bash", "-e", str(script)], env={**base, "MODE": "parity", "FAIL": "false"},
+                       capture_output=True, text=True, check=False)
+    assert r.returncode == 0, r.stdout + r.stderr
+    assert "outcome=parity_gap" in out.read_text()
+    out.write_text("")
+    r = subprocess.run(["bash", "-e", str(script)], env={**base, "MODE": "backfill", "FAIL": "true"},
+                       capture_output=True, text=True, check=False)
+    assert r.returncode == 1 and "outcome=failed" in out.read_text()
