@@ -98,11 +98,14 @@ def test_cooldown_stops_the_loop_without_a_venue_call_or_a_burned_try(monkeypatc
     assert v.asked == SYMS[2:] and set(done) == set(SYMS)
 
 
-def test_a_never_returning_symbol_is_tried_at_most_max_tries_per_bar(monkeypatch):
+def test_a_never_returning_symbol_is_tried_at_most_max_tries_per_bar(monkeypatch, caplog):
     v = _install(monkeypatch)
     v.down = {"LINKUSDT"}
-    for _ in range(B._ML_ENTRY_REF_MAX_TRIES + 3):
-        got = B._ml_entry_reference_frames(SYMS, BAR, None, venue="bybit")
+    with caplog.at_level(logging.INFO, logger=B.logger.name):
+        for _ in range(B._ML_ENTRY_REF_MAX_TRIES + 3):
+            got = B._ml_entry_reference_frames(SYMS, BAR, None, venue="bybit")
+    last = [r.getMessage() for r in caplog.records if r.getMessage().startswith("ml_entry_refs ")][-1]
+    assert last.endswith("gave_up=LINKUSDT")                 # the given-up symbols are NAMED (manager 08:16Z ask)
     assert v.asked.count("LINKUSDT") == B._ML_ENTRY_REF_MAX_TRIES
     assert set(got) == set(SYMS) - {"LINKUSDT"}
     assert all(v.asked.count(s) == 1 for s in SYMS if s != "LINKUSDT")

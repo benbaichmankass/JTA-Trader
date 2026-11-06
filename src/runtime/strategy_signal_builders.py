@@ -6559,9 +6559,10 @@ def _ml_entry_reference_frames(symbols: list, bar_open_iso: str, exchange: Any, 
     slot["missing"] = [s for s in still_missing if slot["tries"].get(s, 0) < _ML_ENTRY_REF_MAX_TRIES]
     if fetched_now or cooldown_stop:
         # One line per build / top-up: the observation for PI-20261106-5A1BGFHC-0003 reads these.
+        gave_up = sorted(x for x, n in slot["tries"].items() if n >= _ML_ENTRY_REF_MAX_TRIES and x not in frames)
         logger.info("ml_entry_refs bar=%s ref_venue=%s venue=%s have=%d/%d fetched_now=%d retry_pending=%d "
-                    "cooldown_stop=%s", bar_open_iso, ref_venue, key[1], len(frames), len(symbols), fetched_now,
-                    len(slot["missing"]), cooldown_stop)
+                    "cooldown_stop=%s gave_up=%s", bar_open_iso, ref_venue, key[1], len(frames), len(symbols),
+                    fetched_now, len(slot["missing"]), cooldown_stop, ",".join(gave_up) or "-")
     return _ref_result(slot)
 
 
