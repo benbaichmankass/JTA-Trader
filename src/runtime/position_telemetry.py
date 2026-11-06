@@ -51,6 +51,9 @@ import json
 import logging
 import math
 import sqlite3
+import threading
+import time
+from contextlib import contextmanager
 from datetime import datetime, timezone
 from typing import Any, Dict, Optional
 
@@ -374,6 +377,14 @@ def window_covers_trade(window: Any, meta: Dict[str, Any]) -> bool:
         return False
 
 
+def _apply_record(conn: sqlite3.Connection, record: Dict[str, Any]) -> None:
+    """The body of one telemetry upsert, on an OPEN connection (inside its transaction)."""
+    record = dict(record)
+    record["account_id"] = _resolve_account_id(conn, record)
+    record.setdefault("peak_authoritative", 0)
+    conn.execute(_UPSERT, record)
+
+
 def write_record(record: Dict[str, Any], db_path: Optional[str] = None) -> bool:
     """Best-effort upsert. Returns whether the row landed; never raises.
 
@@ -384,21 +395,104 @@ def write_record(record: Dict[str, Any], db_path: Optional[str] = None) -> bool:
     NULL overwrite one. Exception: a pass whose window holds the whole trade
     (``peak_authoritative``) writes its own peak — the repair for pre-entry
     peaks recorded before SINCE-ENTRY-WINDOW-FIX.
+
+    Inside :func:`exit_pass_batch` the record is QUEUED and written with the pass's other telemetry in one
+    transaction at the end of the pass; the return value then means "queued".
     """
     if not record:
         return False
     try:
         from src.utils.paths import trade_journal_db_path
         path = db_path or str(trade_journal_db_path())
+        if queue_op("record", record, path):
+            return True
         with sqlite3.connect(path, timeout=_write_busy_timeout(5.0)) as conn:
-            record = dict(record)
-            record["account_id"] = _resolve_account_id(conn, record)
-            record.setdefault("peak_authoritative", 0)
-            conn.execute(_UPSERT, record)
+            _apply_record(conn, record)
         return True
     except Exception:  # noqa: BLE001 — never raise into the monitor
         logger.debug("position_telemetry: write failed", exc_info=True)
         return False
+
+
+# --- one write transaction per exit-evaluation pass (MECH-FOLLOWUPS-1105, manager 2026-11-06) -------------------
+#
+# MEASURED 2026-11-06 (db_lock_diag, bursts at 05:24:23Z and 06:54:08Z): the exit-evaluation thread was inside
+# `position_telemetry.record_position_telemetry` > `position_path_history.write_history` at the instant the waiter failed.
+# Each package of each pass made TWO writes (this upsert and the history twin), each with its own connect + commit, so one
+# pass took the journal's single write lock 2 x N times. Inside `exit_pass_batch()` both are only QUEUED (no lock, no
+# connection); the outermost exit writes the whole pass in ONE connection / ONE transaction, in the order they were queued,
+# AFTER the pass's decisions and broker calls are done. The lock is therefore never held across a broker/network call and
+# no exit decision waits on it. A failed flush is contained; the next pass rewrites the same (package, bar) rows.
+# Nothing inside a pass reads these tables back (readers are the web API, the diag routes and the live-review due thread).
+
+_batch_state = threading.local()
+
+
+def queue_op(kind: str, payload: Dict[str, Any], path: str) -> bool:
+    """Queue one write on the current thread's open batch. Returns False when no batch is open (write immediately)."""
+    ops = getattr(_batch_state, "ops", None)
+    if ops is None:
+        return False
+    ops.append((kind, payload, path))
+    return True
+
+
+def _flush_ops(ops: list) -> tuple:
+    """Write *ops* in order, one connection and one transaction per database path.
+    Returns ``(written, failed, ms)``. Never raises; one failed op never loses the others."""
+    from src.runtime import position_path_history as pph
+    t0 = time.monotonic()
+    written = failed = 0
+    by_path: Dict[str, list] = {}
+    for kind, payload, path in ops:
+        by_path.setdefault(path, []).append((kind, payload))
+    for path, items in by_path.items():
+        try:
+            with sqlite3.connect(path, timeout=_write_busy_timeout(5.0)) as conn:
+                for kind, payload in items:
+                    try:
+                        if kind == "record":
+                            _apply_record(conn, payload)
+                            written += 1
+                        elif pph._apply_history(conn, path, payload):
+                            written += 1
+                    except Exception:  # noqa: BLE001 — one bad row must not lose the pass
+                        failed += 1
+                        logger.debug("position_telemetry: batched %s write failed", kind, exc_info=True)
+        except Exception:  # noqa: BLE001 — connect/commit failure: the next pass rewrites
+            failed += len(items)
+            logger.debug("position_telemetry: batch flush failed", exc_info=True)
+    return written, failed, (time.monotonic() - t0) * 1000.0
+
+
+@contextmanager
+def exit_pass_batch():
+    """Queue every telemetry/history write of this thread inside the block; write them in one transaction at exit.
+
+    Nest-safe (only the outermost flushes). Never raises into the caller, flushes in ``finally`` so a pass that raised
+    still persists what it measured, and logs ONE line per non-empty pass: queued / written / failed / connect+commit ms.
+    """
+    if getattr(_batch_state, "ops", None) is not None:
+        yield
+        return
+    ops: list = []
+    _batch_state.ops = ops
+    try:
+        yield
+    finally:
+        _batch_state.ops = None
+        try:
+            if ops:
+                written, failed, ms = _flush_ops(ops)
+                logger.info("position_telemetry: exit pass batch queued=%d written=%d failed=%d connect+commit=%.1f ms "
+                            "(thread=%s)", len(ops), written, failed, ms, threading.current_thread().name)
+                try:
+                    from src.runtime.tick_cost import record_hook
+                    record_hook("monitor.telemetry_flush", ms)
+                except Exception:  # noqa: BLE001 — measurement never breaks the caller
+                    pass
+        except Exception:  # noqa: BLE001
+            logger.debug("position_telemetry: exit pass batch exit failed", exc_info=True)
 
 
 def _advisor_fields(kwargs: Dict[str, Any], candles_df: Any) -> Optional[Dict[str, Any]]:

@@ -262,3 +262,15 @@ def test_final_pass_rollback_installs_no_handler(monkeypatch):
     monkeypatch.delenv("EXIT_LOOP_FINAL_PASS_DISABLED")
     assert main._install_final_pass_on_sigterm() is True
     assert installed == [signal.SIGTERM]
+
+
+def test_the_exit_pass_runs_inside_the_telemetry_batch():
+    """MECH-FOLLOWUPS-1105: the pass's telemetry/history writes are flushed once at its end, not per write."""
+    import inspect
+    src = inspect.getsource(main._exit_loop)
+    assert "with _exit_pass_telemetry_batch():" in src and "run_exit_evaluation_tick(" in src
+    assert src.index("with _exit_pass_telemetry_batch():") < src.index("run_exit_evaluation_tick(")
+    from src.runtime import position_telemetry as pt
+    with main._exit_pass_telemetry_batch():
+        assert pt.queue_op("record", {}, "x.db") is True     # a batch is open for the pass
+    assert pt.queue_op("record", {}, "x.db") is False        # and closed after it
