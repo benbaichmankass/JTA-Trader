@@ -21,7 +21,7 @@ from typing import Any, Dict, Mapping, Optional, Tuple
 import numpy as np
 import pandas as pd
 
-from src.runtime.ml_decision_features import features_symbol
+from src.runtime.ml_decision_features import atr_last, features_symbol
 
 SCHEMA = "ml_entry_eq_snapshot/1"
 OWN = ["ret_1", "ret_4", "ret_12", "ret_24", "ret_72", "ret_168", "vol24", "vol_ratio", "atr_pct", "range_pos_24",
@@ -43,6 +43,31 @@ def rth_close_ts(ts: pd.Series) -> pd.Series:
     return pd.concat([t + pd.Timedelta(hours=1), session_close], axis=1).min(axis=1)
 
 
+def rth_filter(df: pd.DataFrame) -> pd.DataFrame:
+    """Regular-session bars of an Alpaca 1Hour frame (cols ts/open/high/low/close/volume, ts = UTC bar OPEN): open in [09:00, 16:00) ET, positive
+    prices, as ``rth_hourly`` in scripts/research/ml_entry_alpaca_score.py (pre/post-market bars dropped)."""
+    et = pd.to_datetime(df["ts"], utc=True).dt.tz_convert("America/New_York")
+    m = et.dt.hour * 60 + et.dt.minute
+    out = df[((m >= 540) & (m < 960)).to_numpy()].reset_index(drop=True)
+    out = out[(out["open"] > 0) & (out["close"] > 0)].reset_index(drop=True)
+    out["volume"] = out["volume"].fillna(0).astype(float)
+    return out
+
+
+def is_decision_close(close_ts: pd.Timestamp) -> bool:
+    """The harness takes a decision at every RTH bar whose close hour (UTC) is a multiple of 4."""
+    return int(pd.Timestamp(close_ts).hour) % 4 == 0
+
+
+def latest_decision_close(df: pd.DataFrame, now: pd.Timestamp) -> Optional[pd.Timestamp]:
+    """The latest decision close <= ``now`` among the RTH bars of ``df`` (None when there is none)."""
+    if df is None or len(df) == 0:
+        return None
+    c = rth_close_ts(df["ts"])
+    c = c[(c <= pd.Timestamp(now)) & (c.dt.hour % 4 == 0)]
+    return None if c.empty else pd.Timestamp(c.max())
+
+
 def own_last_row(df: pd.DataFrame) -> Optional[Dict[str, float]]:
     """The 15 own features (+ the raw 24/168-bar returns the pool ranks need) at the LAST bar of ``df`` (closed RTH 1h bars: ts open, open, high, low,
     close, volume), or None when the history is shorter than ``MIN_BARS``."""
@@ -58,6 +83,8 @@ def own_last_row(df: pd.DataFrame) -> Optional[Dict[str, float]]:
     row = {k: float(last[k]) for k in OWN}
     row["ret24_raw"] = float(np.log(c.iloc[-1]) - np.log(c.iloc[-25]))
     row["ret168_raw"] = float(np.log(c.iloc[-1]) - np.log(c.iloc[-169]))
+    row["atr14"] = float(atr_last(df))          # the bracket's ATR (simple mean of true range, as the harness labels it)
+    row["close"] = float(c.iloc[-1])
     row["_close_ts"] = close_ts.iloc[-1]
     return row
 
@@ -91,7 +118,7 @@ def build_snapshot(bars_by_symbol: Mapping[str, pd.DataFrame], pool_size: int, b
     bc = pd.Timestamp(bar_close) if bar_close is not None else closes.mode().iloc[0]
     rows = {s: r for s, r in rows.items() if closes[s] == bc}
     pf = pool_features(rows)
-    syms = {s: {**{k: rows[s][k] for k in OWN}, **pf[s]} for s in rows}
+    syms = {s: {**{k: rows[s][k] for k in OWN}, **pf[s], "atr14": rows[s]["atr14"], "close": rows[s]["close"]} for s in rows}
     return {"schema": SCHEMA, "bar_close": pd.Timestamp(bc).isoformat(), "pool_size": int(pool_size), "covered": len(syms), "symbols": syms}
 
 

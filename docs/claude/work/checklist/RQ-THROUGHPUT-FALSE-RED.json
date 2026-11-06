@@ -1,0 +1,24 @@
+{
+  "id": "RQ-THROUGHPUT-FALSE-RED",
+  "title": "schedule-keeper research-queue-throughput check reports 'nothing fired for 12.2 h' while research-queue-dispatch dispatched 3 units at 10:53Z (run 42205775498): false red, alerts system/high every run",
+  "phase": null,
+  "state": "queued",
+  "owner": "manager",
+  "lane": null,
+  "model": "claude-sonnet-5-5",
+  "ceiling_usd": 3,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [],
+  "blocked_on": [],
+  "note": "MEASURED 11:15Z (manager 1106a): schedule-keeper runs 42207667010/42207780821/42208373424 fail on '##[error]research-queue-throughput: 13 runnable unit(s) but nothing fired for 12.2 h'; dispatch run 42205775498 log: 'dispatched=3 \u00b7 not_due=1919', last_dispatched_at 2026-11-06T10:53:12Z. The check reads a stale/wrong 'last fired' source. Fix the source, not the threshold. Also in that dispatch log: '##[error]research batch REFUSED: staged 10 bytes > 4 cap' (verdict.json 5 B, m.jsonl 5 B): a size cap of 4 BYTES refuses every batch: unit mismatch, may block results landing; root-cause in the same lane.",
+  "due_by": "2026-11-07",
+  "roadmap": [
+    "unmapped"
+  ],
+  "priority_rank": 3,
+  "roadmap_unmapped_reason": "not set at filing -- manager to map to a milestone at the next weekly pass",
+  "updated_at": "2026-11-06T11:14:43Z",
+  "updated_by": "session_01AFoLuJk1UWVx895RmLTidH",
+  "_seq": 964
+}
