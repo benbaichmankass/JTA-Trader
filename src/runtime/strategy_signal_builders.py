@@ -6489,11 +6489,37 @@ def _ml_entry_reference_frames(symbols: list, bar_open_iso: str, exchange: Any, 
     from src.runtime.market_data import fetch_candles
     ref_venue = str(reference_venue or "bybit").lower()
     key = (ref_venue, str(venue or "bybit").lower(), bar_open_iso, tuple(str(x) for x in symbols))
-    if key in _ML_ENTRY_REF_CACHE:
-        return _ML_ENTRY_REF_CACHE[key]
+    # A SHORT SET IS NOT CACHED AS FINAL (manager 2026-11-05b, PI-20261106-5A1BGFHC-0003). Measured 2026-11-06
+    # 04:00:07Z: one Bybit retCode 10006 after ~6 reference fetches started the shared 15 s cooldown, the rest of
+    # this loop got None, and the 6-frame set was cached for the whole decision bar -- so the 04:02Z retry read
+    # the same short set and ml_entry refused ALL FIVE symbols (reference_symbols:5<40 / 6<40) on the one
+    # real-money leg; the next decision bar is 4 h later. Now the slot keeps what it has and remembers what is
+    # missing; a later call (the next tick, same decision bar) fetches only the missing symbols, each at most
+    # _ML_ENTRY_REF_MAX_TRIES times per bar (a genuinely unlisted symbol cannot cost a call on every tick).
+    slot = _ML_ENTRY_REF_CACHE.get(key)
+    if slot is not None and not slot["missing"]:
+        return slot["frames"]
+    if any(k[2] != bar_open_iso for k in _ML_ENTRY_REF_CACHE) or (slot is None and len(_ML_ENTRY_REF_CACHE) >= 8):
+        _ML_ENTRY_REF_CACHE.clear()  # a new decision bar: older slots can never be asked for again
+        slot = None
+    if slot is None:
+        slot = {"frames": {}, "missing": [str(x) for x in symbols], "tries": {}}
+        _ML_ENTRY_REF_CACHE[key] = slot
     reuse_client = key[1] == ref_venue
-    frames: Dict[str, Any] = {}
-    for s in symbols:
+    frames: Dict[str, Any] = slot["frames"]
+    still_missing: list = []
+    fetched_now = 0
+    cooldown_stop = False
+    for s in slot["missing"]:
+        if slot["tries"].get(s, 0) >= _ML_ENTRY_REF_MAX_TRIES:
+            continue                                     # given up for this bar; counted short by the caller
+        if ref_venue == "bybit" and _bybit_cooldown_active():
+            # While the shared Bybit cooldown runs, get_ohlcv returns None without a call -- iterating on would
+            # only burn this symbol's tries. Stop; the next call resumes here.
+            cooldown_stop = True
+            still_missing.append(s)
+            continue
+        slot["tries"][s] = slot["tries"].get(s, 0) + 1
         try:
             if reuse_client:
                 df = fetch_candles(_ml_entry_candle_symbol(s, exchange, ref_venue), "1h", exchange_client=exchange,
@@ -6501,17 +6527,38 @@ def _ml_entry_reference_frames(symbols: list, bar_open_iso: str, exchange: Any, 
             else:
                 df = fetch_candles(_ml_entry_candle_symbol(s, None, ref_venue), "1h", settings={"EXCHANGE": ref_venue},
                                    limit=limit, bypass_cache=True)
+            fetched_now += 1
             if df is None or len(df) == 0:
+                still_missing.append(s)
                 continue
             fr = _ml_entry_frame(drop_forming_bar(df, "1h"))
             if len(fr):
                 frames[s] = fr
+            else:
+                still_missing.append(s)
         except Exception:  # noqa: BLE001 -- one missing reference symbol never blocks the decision
             logger.debug("ml_entry: reference fetch failed for %s", s, exc_info=True)
-    if any(k[2] != bar_open_iso for k in _ML_ENTRY_REF_CACHE) or len(_ML_ENTRY_REF_CACHE) >= 8:
-        _ML_ENTRY_REF_CACHE.clear()  # a new decision bar: older slots can never be asked for again
-    _ML_ENTRY_REF_CACHE[key] = frames
+            still_missing.append(s)
+    slot["missing"] = [s for s in still_missing if slot["tries"].get(s, 0) < _ML_ENTRY_REF_MAX_TRIES]
+    if fetched_now or cooldown_stop:
+        # One line per build / top-up: the observation for PI-20261106-5A1BGFHC-0003 reads these.
+        logger.info("ml_entry_refs bar=%s ref_venue=%s venue=%s have=%d/%d fetched_now=%d retry_pending=%d "
+                    "cooldown_stop=%s", bar_open_iso, ref_venue, key[1], len(frames), len(symbols), fetched_now,
+                    len(slot["missing"]), cooldown_stop)
     return frames
+
+
+#: Per decision bar, how many times one reference symbol is fetched before it is left short for that bar.
+_ML_ENTRY_REF_MAX_TRIES = 5
+
+
+def _bybit_cooldown_active() -> bool:
+    """True while the shared Bybit retCode-10006 cooldown (bybit_connector, #23580) is running. Never raises."""
+    try:
+        from src.exchange.bybit_connector import _cooldown_remaining
+        return _cooldown_remaining() > 0.0
+    except Exception:  # noqa: BLE001
+        return False
 
 
 def _ml_entry_decision_line(symbol: str, bars: Any, reason: Any = None, side: Any = None) -> str:
