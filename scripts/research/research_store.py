@@ -58,9 +58,10 @@ import subprocess
 import sys
 import tarfile
 import tempfile
+from collections.abc import Iterable
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Dict, Iterable, List, Optional, Set, Tuple
+from typing import Any
 
 QUEUE = Path("research/queue")
 RESULTS = Path("research/results")
@@ -86,7 +87,7 @@ def store_root() -> Path:
     return Path(os.environ.get("RESEARCH_STORE_ROOT") or DEFAULT_ROOT)
 
 
-def db_path(root: Optional[Path] = None) -> Path:
+def db_path(root: Path | None = None) -> Path:
     return (root or store_root()) / "research_store.db"
 
 
@@ -136,7 +137,7 @@ def _yaml():
     return yaml
 
 
-def _ts(v: Any) -> Optional[str]:
+def _ts(v: Any) -> str | None:
     if v is None:
         return None
     if isinstance(v, datetime):
@@ -148,7 +149,7 @@ def _canon(obj: Any) -> str:
     return json.dumps(obj, sort_keys=True, default=str, separators=(",", ":"))
 
 
-def _read_rows(path: Path) -> List[Dict[str, Any]]:
+def _read_rows(path: Path) -> list[dict[str, Any]]:
     rows = []
     for line in path.read_text(encoding="utf-8", errors="replace").splitlines():
         line = line.strip()
@@ -178,7 +179,7 @@ def _tar_dir(d: Path) -> bytes:
     return buf.getvalue()
 
 
-def result_event(root: Path, unit: str, f: Path, *, with_payload: bool) -> Tuple[Dict[str, Any], Dict[str, bytes]]:
+def result_event(root: Path, unit: str, f: Path, *, with_payload: bool) -> tuple[dict[str, Any], dict[str, bytes]]:
     raw = f.read_bytes()
     rows = _read_rows(f)
     verdicts = {r.get("verdict") for r in rows}
@@ -193,17 +194,16 @@ def result_event(root: Path, unit: str, f: Path, *, with_payload: bool) -> Tuple
     summary["rows"] = len(rows)
     summary["verdicts"] = sorted(str(v) for v in verdicts)
     summary["population"] = pop.get("description") if isinstance(pop.get("description"), str) else None
-    payloads: Dict[str, bytes] = {}
+    payloads: dict[str, bytes] = {}
     sha = _sha(raw)
     if with_payload:
         payloads[sha] = raw
     run_dir = root / COMMS / unit / f.stem
     run_dir_sha = None
-    if run_dir.is_dir():
-        if with_payload:
-            blob = _tar_dir(run_dir)
-            run_dir_sha = _sha(blob)
-            payloads[run_dir_sha] = blob
+    if run_dir.is_dir() and with_payload:
+        blob = _tar_dir(run_dir)
+        run_dir_sha = _sha(blob)
+        payloads[run_dir_sha] = blob
     n = pop.get("n")
     ev = {
         "kind": "result", "unit_id": unit, "run_key": f.stem,
@@ -219,10 +219,10 @@ def result_event(root: Path, unit: str, f: Path, *, with_payload: bool) -> Tuple
     return ev, payloads
 
 
-def spec_events(unit: str, text: Optional[str]) -> List[Dict[str, Any]]:
+def spec_events(unit: str, text: str | None) -> list[dict[str, Any]]:
     """The dispatch + grade events one version of a unit spec states. Pure function of the text."""
-    evs: List[Dict[str, Any]] = []
-    doc: Dict[str, Any] = {}
+    evs: list[dict[str, Any]] = []
+    doc: dict[str, Any] = {}
     if text:
         try:
             loaded = _yaml().safe_load(text)
@@ -253,9 +253,9 @@ def spec_events(unit: str, text: Optional[str]) -> List[Dict[str, Any]]:
     return evs
 
 
-def unit_events(root: Path, unit: str, *, with_payload: bool = False) -> Tuple[List[Dict[str, Any]], Dict[str, bytes]]:
+def unit_events(root: Path, unit: str, *, with_payload: bool = False) -> tuple[list[dict[str, Any]], dict[str, bytes]]:
     """Every event the checkout's files show for one unit (backfill + parity). Pure read."""
-    payloads: Dict[str, bytes] = {}
+    payloads: dict[str, bytes] = {}
     spec = root / QUEUE / f"{unit}.yaml"
     evs = spec_events(unit, spec.read_text(encoding="utf-8") if spec.exists() else None)
     rdir = root / RESULTS / unit
@@ -268,14 +268,14 @@ def unit_events(root: Path, unit: str, *, with_payload: bool = False) -> Tuple[L
     return evs, payloads
 
 
-def all_units(root: Path) -> List[str]:
+def all_units(root: Path) -> list[str]:
     ids = {p.stem for p in (root / QUEUE).glob("RQ-*.yaml")}
     if (root / RESULTS).is_dir():
         ids |= {p.name for p in (root / RESULTS).iterdir() if p.is_dir() and p.name.startswith("RQ-")}
     return sorted(ids)
 
 
-def changed_paths(root: Path) -> List[str]:
+def changed_paths(root: Path) -> list[str]:
     """Paths under the research trees the working tree changed vs HEAD (tracked edits + untracked files)."""
     out = subprocess.run(["git", "status", "--porcelain", "--untracked-files=all", "--", str(QUEUE), str(RESULTS),
                           str(COMMS)], cwd=root, capture_output=True, text=True, check=True).stdout
@@ -288,8 +288,8 @@ def changed_paths(root: Path) -> List[str]:
     return paths
 
 
-def changed_units(root: Path) -> List[str]:
-    units: Set[str] = set()
+def changed_units(root: Path) -> list[str]:
+    units: set[str] = set()
     for p in changed_paths(root):
         parts = Path(p).parts
         if len(parts) >= 3 and parts[:2] == ("research", "queue") and parts[2].endswith(".yaml"):
@@ -299,12 +299,12 @@ def changed_units(root: Path) -> List[str]:
     return sorted(u for u in units if u.startswith("RQ-"))
 
 
-def _head_text(root: Path, rel: str) -> Optional[str]:
-    r = subprocess.run(["git", "show", f"HEAD:{rel}"], cwd=root, capture_output=True, text=True)
+def _head_text(root: Path, rel: str) -> str | None:
+    r = subprocess.run(["git", "show", f"HEAD:{rel}"], cwd=root, capture_output=True, text=True, check=False)
     return r.stdout if r.returncode == 0 else None
 
 
-def runner_events(root: Path) -> Tuple[List[Dict[str, Any]], Dict[str, bytes], List[str]]:
+def runner_events(root: Path) -> tuple[list[dict[str, Any]], dict[str, bytes], list[str]]:
     """ONLY the events this working tree adds vs HEAD -- what this runner wrote, nothing it merely re-read.
 
     * a changed spec contributes the dispatch/grade events its new text states that HEAD's text did not;
@@ -312,9 +312,9 @@ def runner_events(root: Path) -> Tuple[List[Dict[str, Any]], Dict[str, bytes], L
       bytes and the run dir (tar) as payloads.
     A runner claiming an event it did not write would make parity read true without the dual-write working.
     """
-    evs: List[Dict[str, Any]] = []
-    payloads: Dict[str, bytes] = {}
-    units: Set[str] = set()
+    evs: list[dict[str, Any]] = []
+    payloads: dict[str, bytes] = {}
+    units: set[str] = set()
     for p in changed_paths(root):
         parts = Path(p).parts
         if len(parts) == 3 and parts[:2] == ("research", "queue") and parts[2].startswith("RQ-") and parts[2].endswith(".yaml"):
@@ -338,7 +338,7 @@ def runner_events(root: Path) -> Tuple[List[Dict[str, Any]], Dict[str, bytes], L
 
 # --------------------------------------------------------------------------- bundle (runner) / ingest (trainer)
 
-def make_bundle(root: Path, source: str, out: Path) -> Dict[str, Any]:
+def make_bundle(root: Path, source: str, out: Path) -> dict[str, Any]:
     """A tar with events.jsonl + payloads/<sha>; built on the runner from the files it just wrote."""
     evs, payloads, units = runner_events(root)
     meta = {"source": source, "built_at": _now(), "units": units, "events": len(evs), "payloads": len(payloads)}
@@ -370,7 +370,7 @@ def _store_payload(root: Path, conn: sqlite3.Connection, sha: str, data: bytes, 
     return cur.rowcount > 0
 
 
-def ingest_events(conn: sqlite3.Connection, evs: Iterable[Dict[str, Any]], source: str) -> Dict[str, int]:
+def ingest_events(conn: sqlite3.Connection, evs: Iterable[dict[str, Any]], source: str) -> dict[str, int]:
     c = {"events": 0, "new": 0, "new_source": 0}
     now = _now()
     for e in evs:
@@ -394,7 +394,7 @@ def ingest_events(conn: sqlite3.Connection, evs: Iterable[Dict[str, Any]], sourc
     return c
 
 
-def ingest_bundle(root: Path, fileobj) -> Dict[str, Any]:
+def ingest_bundle(root: Path, fileobj) -> dict[str, Any]:
     with tarfile.open(fileobj=fileobj, mode="r:gz") as tf:
         members = {m.name: m for m in tf.getmembers() if m.isfile()}
         meta = json.loads(tf.extractfile(members["meta.json"]).read())
@@ -423,7 +423,7 @@ def ingest_bundle(root: Path, fileobj) -> Dict[str, Any]:
     return {"source": source, "units": len(meta.get("units") or []), "payloads_new": stored, **c}
 
 
-def backfill(root: Path, repo: Path) -> Dict[str, Any]:
+def backfill(root: Path, repo: Path) -> dict[str, Any]:
     """Load the full history from a checkout of main (source git_backfill). Payloads are not copied:
     the checkout still holds them in shadow, and the bundle path stores every new one."""
     conn = connect(db_path(root))
@@ -444,7 +444,7 @@ def backfill(root: Path, repo: Path) -> Dict[str, Any]:
 
 # --------------------------------------------------------------------------- parity / export / stats
 
-def parity(root: Path, repo: Path, since: str) -> Dict[str, Any]:
+def parity(root: Path, repo: Path, since: str) -> dict[str, Any]:
     """Every git-derived event NEWER than `since` must have a runner-sourced row in the store.
 
     'Newer' is the event's own `at` (dispatch stamp / result generated_at / graded_at date) -- a field the
@@ -494,7 +494,7 @@ def parity(root: Path, repo: Path, since: str) -> Dict[str, Any]:
     return out
 
 
-def export_mirror(root: Path, out: Path) -> Dict[str, Any]:
+def export_mirror(root: Path, out: Path) -> dict[str, Any]:
     """Slim JSONL for the live VM (no payload bytes), written atomically; untouched when unchanged so the
     mirror's mtime signature (trainer_store._source_signature) only moves when a row did."""
     path = db_path(root)
@@ -503,7 +503,7 @@ def export_mirror(root: Path, out: Path) -> Dict[str, Any]:
     conn = sqlite3.connect(f"file:{path}?mode=ro", uri=True, timeout=10)
     conn.row_factory = sqlite3.Row
     try:
-        srcs: Dict[str, List[str]] = {}
+        srcs: dict[str, list[str]] = {}
         for eid, s in conn.execute("SELECT event_id, source FROM research_run_sources ORDER BY source"):
             srcs.setdefault(eid, []).append(s)
         lines = []
@@ -524,7 +524,7 @@ def export_mirror(root: Path, out: Path) -> Dict[str, Any]:
     return {"rows": len(lines), "changed": True, "path": str(out)}
 
 
-def stats(root: Path) -> Dict[str, Any]:
+def stats(root: Path) -> dict[str, Any]:
     path = db_path(root)
     if not path.exists():
         return {"read_state": "could_not_look", "reason": f"no store at {path}"}
@@ -570,7 +570,7 @@ def _self_test() -> int:
         evs, pay = unit_events(repo, "RQ-20300101-001", with_payload=True)
         kinds = sorted(e["kind"] for e in evs)
         assert kinds == ["dispatch", "result"], kinds
-        res = [e for e in evs if e["kind"] == "result"][0]
+        res = next(e for e in evs if e["kind"] == "result")
         assert res["verdict"] == "pass" and res["n"] == 40 and res["decision_rule_id"] == "RULE-X"
         assert "measurement" not in res["summary"], "the measurement body belongs in the payload, not the row"
         assert res["payload_sha256"] in pay and res["run_dir_sha256"] in pay
@@ -654,10 +654,10 @@ def _self_test() -> int:
     return 0
 
 
-def main(argv: Optional[List[str]] = None) -> int:
+def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     ap.add_argument("--self-test", action="store_true")
-    ap.add_argument("--store", default=None, help="store root (default $RESEARCH_STORE_ROOT or %s)" % DEFAULT_ROOT)
+    ap.add_argument("--store", default=None, help=f"store root (default $RESEARCH_STORE_ROOT or {DEFAULT_ROOT})")
     sub = ap.add_subparsers(dest="cmd")
     b = sub.add_parser("bundle", help="runner: build a tar of the changed units' events + payloads")
     b.add_argument("--repo", default=".")

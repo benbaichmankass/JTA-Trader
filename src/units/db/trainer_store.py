@@ -399,7 +399,7 @@ def research_runs_view(*, unit: Optional[str] = None, kind: Optional[str] = None
     build_if_stale(mirror_root=mirror, db_path=path)
     try:
         conn = sqlite3.connect(f"file:{path}?mode=ro", uri=True, timeout=5)
-    except sqlite3.Error as exc:
+    except sqlite3.Error as exc:  # allow-silent: not silent -- surfaced as read_state could_not_look + error
         out["read_state"] = "could_not_look"
         out["error"] = str(exc)
         return out
@@ -429,7 +429,7 @@ def research_runs_view(*, unit: Optional[str] = None, kind: Optional[str] = None
             d["sources"] = json.loads(d["sources"]) if d["sources"] else []
             out["rows"].append(d)
         out["read_state"] = "read"
-    except sqlite3.Error as exc:
+    except sqlite3.Error as exc:  # allow-silent: not silent -- surfaced as read_state could_not_look + error
         out["read_state"] = "could_not_look"
         out["error"] = str(exc)
     finally:

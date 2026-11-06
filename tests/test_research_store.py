@@ -15,7 +15,7 @@ SCRIPT = REPO / "scripts" / "research" / "research_store.py"
 
 
 def test_research_store_self_test():
-    r = subprocess.run([sys.executable, str(SCRIPT), "--self-test"], capture_output=True, text=True)
+    r = subprocess.run([sys.executable, str(SCRIPT), "--self-test"], capture_output=True, text=True, check=False)
     assert r.returncode == 0, r.stdout + r.stderr
     assert "self-test: OK" in r.stdout
 
