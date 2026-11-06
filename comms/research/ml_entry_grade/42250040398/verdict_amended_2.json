@@ -1,0 +1,32 @@
+{
+ "rule_id": "RULE-ENTRY-PROMOTE-20261106",
+ "rule_amendment": "Amendment 1 (operator 2026-11-06 ~16:58Z) + Amendment 2 (replacement floor n>=100 per side, manager relay)",
+ "rule_doc_sha256": "b72e4da02e4161d113d99e68e8b819df08a94d1cd698cb17585687b98eb6b389",
+ "recomputed_from": "comms/research/ml_entry_grade/42250040398/grade_evidence.json",
+ "source_run_verdict": "insufficient_n",
+ "window": {
+  "run_date": "2026-11-06",
+  "asof": "2026-10-23",
+  "window_start": "2026-10-23",
+  "window_end": "2026-11-05",
+  "window_days": 14
+ },
+ "candidate": {
+  "n": 281,
+  "n_symbols": 48,
+  "mean_net_r": 0.0017708760446843174,
+  "se_net_r": 0.06494211982914758
+ },
+ "served": {
+  "n": 342,
+  "n_symbols": 49,
+  "mean_net_r": -0.09176721778164411,
+  "se_net_r": 0.05898978785563818
+ },
+ "diff_cand_minus_served": 0.09353809382632843,
+ "verdict": "pass",
+ "why": [
+  "at least as good as served: +0.0018 >= -0.0918 (candidate n=281, served n=342)",
+  "absolute deflated bar, information only: does not clear (mean +0.0018, se 0.06494211982914758, read 4, point_t_min 1.0521)"
+ ]
+}

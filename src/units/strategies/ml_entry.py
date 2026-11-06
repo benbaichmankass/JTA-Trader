@@ -27,11 +27,12 @@ from typing import Any, Dict, Mapping, Optional
 import pandas as pd
 
 import src.runtime.ml_decision_features as F
+from src.runtime.ml_entry_served import served_artifact
 
 logger = logging.getLogger(__name__)
 
 NAME = "ml_entry"
-ARTIFACT = Path(__file__).resolve().parents[3] / "ml" / "served" / "ml_decision_entry_v1" / "model.json"
+ARTIFACT = Path(__file__).resolve().parents[3] / "ml" / "served" / "ml_decision_entry_v1" / "model.json"  # the ORIGINAL v1; the served one is the pointer's (served_artifact())
 #: The RiskManager maps ``confidence`` to a size scalar only when an account sets ``confidence_sizing`` (default
 #: ``off`` -> 1.0; bybit_2 / bybit_portfolio set none, MEASURED 2026-11-01). 1.0 is the full account basis under every
 #: mode, i.e. the RiskManager's default risk: this model never sizes (operator 2026-11-01 "No position sizing").
@@ -39,9 +40,11 @@ NEUTRAL_CONFIDENCE = 1.0
 _CACHE: Dict[str, Any] = {}
 
 
-def load_model(path: Path = ARTIFACT) -> Dict[str, Any]:
-    """``{"meta": ..., "long": Booster, "short": Booster}``, cached by mtime. Raises when the artifact is unreadable."""
+def load_model(path: Optional[Path] = None) -> Dict[str, Any]:
+    """``{"meta": ..., "long": Booster, "short": Booster}``, cached by mtime. Raises when the artifact is unreadable.
+    ``path`` None = the artifact the ONE served pointer names (``ml/served/ENTRY_SERVED.json``)."""
     import lightgbm as lgb
+    path = Path(path) if path else served_artifact()
     st = path.stat()
     hit = _CACHE.get(str(path))
     if hit and hit[0] == st.st_mtime:

@@ -1,0 +1,24 @@
+{
+  "id": "SOAK-VOCAB-RETIRE",
+  "title": "Retire the soak stage and vocabulary: rewire the system to testing / production / inactive (not just a rules edit)",
+  "phase": null,
+  "state": "queued",
+  "owner": "manager",
+  "lane": null,
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 2,
+  "prs": [],
+  "blocked_on": [],
+  "note": "OPERATOR 2026-11-06 ~18:50Z, verbatim: 'I want to make sure that this isn't just like an updated set of rules, but that the system is rewired to reflect that workflow. If it's a big project, then we can push it until the reset ... the soaking pretty much doesn't exist anymore ... anything that's in paper testing is something that's been created but hasn't proven an edge yet, or we haven't decided to put it on live money yet, or it's been demoted after having gone live. But like, it's not for soaking, it's for creating live data ... we need to basically remove that from the vocabulary ... It's testing. If it proves an edge, it goes to live money and paper portfolio. If it doesn't prove a live edge, or if it had a live edge and then lost it, then it goes back to the paper testing ... There's no like soak step in the promotion scale anymore.' Also binding from earlier today: paper is not a gate; the first 1-2 live trades of a new strategy or ML are a verification watch, not a test; mechanics is a separate account path. SIZE (manager, measured 18:52Z, grep -li soak): 449 files (src 107, scripts 148, config 25, .github 181, .claude 13); guards scripts/ci/check_soak_contracts.py and check_soak_registered.py; soak_state/soak_book_grade/soak_alarm scripts; SOAK-stage1-* ids; hourly 'soak(s) changed state' pings; soak_state.mechanics_proven; config/mechanics_paths.yaml. Big, so scheduled AFTER the Wed 11-11 reset per the operator. PLAN: (1) inventory every soak surface as runtime, guard, config, ping, doc or skill, and give each a disposition: rename to testing/production/inactive, keep as a mechanics/first-trade-verification monitor under a new name, or delete; (2) rewire status derivation (scripts/ops/strategy_status.py) and the promotion path so nothing waits on a soak result; (3) per-trade mechanics checks keep running as monitoring (they find real bugs, e.g. reconciler closes), named as such, never as a promotion step; (4) remove soak from OPERATING-PLAN, canonical docs, skills and CLAUDE.md, and retire the soak guards; (5) migrate SOAK-* ids and rows. No new gates. Done = grep -li soak over src/scripts/config/.github/.claude returns only archived history, and the promotion path has no soak state.",
+  "due_by": "2026-11-14",
+  "roadmap": [
+    "unmapped"
+  ],
+  "roadmap_unmapped_reason": "operator process change 2026-11-06; cross-cutting rewire, not one milestone",
+  "priority_rank": 3,
+  "updated_at": "2026-11-06T18:52:18Z",
+  "updated_by": "session_01AFoLuJk1UWVx895RmLTidH",
+  "_seq": 970
+}

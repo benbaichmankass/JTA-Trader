@@ -1,0 +1,7 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "hold_reason": "tier_2_3_needs_approval",
+  "hold_text": "Manager Session 2026-11-06a dispatch (operator popup ~16:50Z 'Lane fixes the close path'): 'Land it as a HELD PR (Tier 2, order path)'. It changes AlpacaClient.close, the order path for alpaca_live too, so the manager merges and deploys.",
+  "why": "When a cancel cannot free a position's shares (the alpaca_paper GLD hold: OCO accepted-cancel-ineffective since 2026-08-27), close() now exits THROUGH the resting OCO take-profit by repricing it marketable (PATCH, documented for OCO legs); the venue's OCO cancels the stop. Only for one closing-side OCO/bracket limit covering the whole position in a replaceable status; the flat-confirm gate still decides."
+}

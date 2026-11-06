@@ -1,0 +1,7 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "hold_reason": "tier_2_3_needs_approval",
+  "hold_text": "Manager Session 2026-11-06a: 'Fix it in a new HELD PR (Tier 2) with tests that pin the TP > SL invariant at every step, for longs and shorts. When it's green, wake me.' It changes AlpacaClient.close on the order path (alpaca_live too), so the manager merges and deploys.",
+  "why": "Live 17:40Z GLD re-close after #23885 was refused: 'take_profit.limit_price must be > stop_loss.stop_price'. Alpaca validates the OCO as a pair, so the exit now moves both legs: one PATCH carrying limit_price + stop_price, else the stop first (away from the mark) then the target, with the pair rule checked before every step."
+}
