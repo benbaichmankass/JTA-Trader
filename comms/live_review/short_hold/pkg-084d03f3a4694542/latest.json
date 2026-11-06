@@ -1,7 +1,7 @@
 {
- "bar": "2026-11-06T00:15:00Z",
- "bar_close": "2026-11-06T00:20:00Z",
- "built_at": "2026-11-06T00:20:28Z",
+ "bar": "2026-11-06T00:20:00Z",
+ "bar_close": "2026-11-06T00:25:00Z",
+ "built_at": "2026-11-06T00:25:19Z",
  "closed": false,
  "order_package_id": "pkg-084d03f3a4694542",
  "packet": {
@@ -111,25 +111,10 @@
    },
    "previous_review": {
     "action": "hold",
-    "forecast": {
-     "direction": "with_trade",
-     "evidence": [
-      "chart.bars: last 1h low 8.072 close 8.168, prior closes 8.222/8.266/8.348 stepping down",
-      "chart.swings: lows 8.124 and 4h 8.276/8.28 broken, highs 8.442",
-      "chart.htf: 4h chop ADX 18.8; regime 1h ADX 32.5 trending",
-      "exit_plan: stop 8.378, TP 7.747 (2.0R); desk exit line 1h close above 8.30",
-      "desk_handoff: opening DD-20261106T0003Z-scan-1h-1 p_target 0.32 target 7.747"
-     ],
-     "horizon_bars": 8,
-     "invalidation_px": 8.3,
-     "p_target": 0.5,
-     "target_px": 8.072,
-     "thesis": "AVAX broke the 8.124 low and the 4h lows 8.276/8.28 on a 1h flush to 8.072; I expect continuation to retest 8.072 and press through on the 1h trend, with the 4h in chop making the follow-through uncertain, and a 1h close above 8.30 ends the idea.",
-     "timeframe": "1h"
-    },
-    "reason": "Hold (desk CONFIRM). First review of a desk-opened short at 8.168, the close of the 23:00Z hourly bar that printed 8.072 and broke the 8.124 swing low and the 4h lows 8.276/8.28. Packet mechanics match (venue SL 8.378 / TP 7.747 equal the package), so this is a normal judged call, not the XRP venue-vs-package case. open_r is null (no telemetry row), so I do not state how far the trade has moved; \u2026",
-    "review_id": "LR-20261106T0010Z-pkg-084d03f3a4694542",
-    "reviewed_at": "2026-11-06T00:20:00Z",
+    "forecast": null,
+    "reason": "Mark 8.237 is -0.33R: three 5m bars with rising lows (8.188, 8.189, 8.204) and the 00:15 close at 8.237 is the highest of the hold, so the short is not working yet. It is still 0.063 under the 8.30 1h invalidation and the stop is ~3.5 ATR(5m) away; tightening now would sit inside noise, and the 1h thesis only fails on a close above 8.30. Watch next bars closely.",
+    "review_id": "LR-20261106T0020Z-pkg-084d03f3a4694542",
+    "reviewed_at": "2026-11-06T00:21:11Z",
     "route": null
    },
    "symbol": "AVAXUSDT"
@@ -140,19 +125,19 @@
      "MGC",
      "short",
      "mgc_pullback_1d",
-     0.641
+     0.71
     ],
     [
      "BTCUSDT",
      "short",
      "ml_entry",
-     -0.134
+     -0.088
     ],
     [
      "ETHUSDT",
      "short",
      "trend_donchian_eth",
-     0.194
+     0.189
     ],
     [
      "SPY",
@@ -164,7 +149,7 @@
      "ADAUSDT",
      "short",
      "ml_entry_v2",
-     -0.251
+     -0.295
     ],
     [
      "GLD",
@@ -176,7 +161,7 @@
      "SOLUSDT",
      "short",
      "ml_entry_v2",
-     0.0565
+     0.0978
     ],
     [
      "GDX",
@@ -188,7 +173,7 @@
      "MHG",
      "short",
      "mhg_pullback_1d",
-     1.15
+     1.17
     ],
     [
      "XRPUSDT",
@@ -212,7 +197,7 @@
      "BTCUSDT",
      "short",
      "trend_donchian_1h",
-     -0.0906
+     -0.0536
     ],
     [
      "IAUM",
@@ -230,7 +215,7 @@
      "SOLUSDT",
      "short",
      "trend_donchian_sol_4h",
-     2.33
+     2.29
     ]
    ],
    "book_note": "[symbol, direction, leg, open_r (null = not measured)] per OTHER open package, either side",
@@ -551,7 +536,7 @@
    "basis": null
   },
   "desk_handoff": {
-   "chain_length": 2,
+   "chain_length": 3,
    "chain_tail": [
     {
      "action": "hold",
@@ -574,6 +559,14 @@
      "reason": "Hold (desk CONFIRM). First review of a desk-opened short at 8.168, the close of the 23:00Z hourly bar that printed 8.072 and broke the 8.124 swing low and the 4h lows 8.276/8.28. Packet mechanics match (venue SL 8.378 / TP 7.747 equal the package), so this is a normal judged call, not the XRP venue-vs-package case. open_r is null (no telemetry row), so I do not state how far the trade has moved; the latest closed bar equals the entry. Bracket: stop 8.378 sits 1.0R above entry and under the 8.442 swing high, TP 7.747 is 2.0R; the desk's own early-exit line is a 1h close above 8.30, which is inside the stop and is the level that would end the idea. 1h is trending (ADX 32.5) but 4h is chop (ADX 18.8), so the thesis rests on the 1h; that is why confidence is only 0.50. No priced table (no Stage-0 record for claude_desk), nothing measured favours a bracket move or an exit, and HOLD already expresses the desk's plan.",
      "review_id": "LR-20261106T0010Z-pkg-084d03f3a4694542",
      "reviewed_at": "2026-11-06T00:20:00Z",
+     "verdict": "confirm"
+    },
+    {
+     "action": "hold",
+     "forecast": null,
+     "reason": "Mark 8.237 is -0.33R: three 5m bars with rising lows (8.188, 8.189, 8.204) and the 00:15 close at 8.237 is the highest of the hold, so the short is not working yet. It is still 0.063 under the 8.30 1h invalidation and the stop is ~3.5 ATR(5m) away; tightening now would sit inside noise, and the 1h thesis only fails on a close above 8.30. Watch next bars closely.",
+     "review_id": "LR-20261106T0020Z-pkg-084d03f3a4694542",
+     "reviewed_at": "2026-11-06T00:21:11Z",
      "verdict": "confirm"
     }
    ],
@@ -605,7 +598,7 @@
     "timeframe": "1h",
     "tp": 7.747
    },
-   "prior_decision_id": "LR-20261106T0010Z-pkg-084d03f3a4694542",
+   "prior_decision_id": "LR-20261106T0020Z-pkg-084d03f3a4694542",
    "protocol": "DESK-HANDOFF-PROTOCOL",
    "read_state": "read"
   },
@@ -619,10 +612,10 @@
    "r_to_target": null
   },
   "generator": {
-   "head": "cf69c31ae4",
+   "head": "742930c915",
    "state": "current"
   },
-  "info_cutoff_at": "2026-11-06T00:20:44Z",
+  "info_cutoff_at": "2026-11-06T00:25:49Z",
   "leg": "claude_desk",
   "mechanics": {
    "evidence": "package sl 8.378 / tp 7.747 agree with every readable account",
@@ -686,25 +679,18 @@
    "cell_now": null,
    "trend_now": "trending"
   },
-  "review_id": "LR-20261106T0020Z-pkg-084d03f3a4694542",
+  "review_id": "LR-20261106T0025Z-pkg-084d03f3a4694542",
   "short_hold": {
-   "atr": 0.03978571428571393,
-   "bar": "2026-11-06T00:15:00Z",
-   "bar_close": "2026-11-06T00:20:00Z",
+   "atr": 0.03478571428571391,
+   "bar": "2026-11-06T00:20:00Z",
+   "bar_close": "2026-11-06T00:25:00Z",
    "entry": 8.168,
-   "mark": 8.237,
-   "minutes_held": 11.2,
-   "open_r_at_mark": -0.3286,
+   "mark": 8.242,
+   "minutes_held": 16.0,
+   "open_r_at_mark": -0.3524,
    "r_unit": "entry_to_current_sl",
    "read_state": "read",
    "recent_bars": [
-    {
-     "close": 8.159,
-     "high": 8.164,
-     "low": 8.097,
-     "open": 8.097,
-     "t": "2026-11-05T23:20:00Z"
-    },
     {
      "close": 8.154,
      "high": 8.181,
@@ -781,6 +767,13 @@
      "low": 8.204,
      "open": 8.208,
      "t": "2026-11-06T00:15:00Z"
+    },
+    {
+     "close": 8.242,
+     "high": 8.245,
+     "low": 8.229,
+     "open": 8.237,
+     "t": "2026-11-06T00:20:00Z"
     }
    ],
    "risk_per_unit": null,
@@ -799,25 +792,18 @@
    "tp": 7.747
   }
  },
- "packet_sha": "8d23910a9171b98b565df10b2645b015dbb31a4b052e1c478a51ef0ae7bfe849",
+ "packet_sha": "40b83c9a9e47225a2b39e2894710ced1e45f1eb1ff9fb78cec169a5d5e449ba9",
  "short_hold": {
-  "atr": 0.03978571428571393,
-  "bar": "2026-11-06T00:15:00Z",
-  "bar_close": "2026-11-06T00:20:00Z",
+  "atr": 0.03478571428571391,
+  "bar": "2026-11-06T00:20:00Z",
+  "bar_close": "2026-11-06T00:25:00Z",
   "entry": 8.168,
-  "mark": 8.237,
-  "minutes_held": 11.2,
-  "open_r_at_mark": -0.3286,
+  "mark": 8.242,
+  "minutes_held": 16.0,
+  "open_r_at_mark": -0.3524,
   "r_unit": "entry_to_current_sl",
   "read_state": "read",
   "recent_bars": [
-   {
-    "close": 8.159,
-    "high": 8.164,
-    "low": 8.097,
-    "open": 8.097,
-    "t": "2026-11-05T23:20:00Z"
-   },
    {
     "close": 8.154,
     "high": 8.181,
@@ -894,6 +880,13 @@
     "low": 8.204,
     "open": 8.208,
     "t": "2026-11-06T00:15:00Z"
+   },
+   {
+    "close": 8.242,
+    "high": 8.245,
+    "low": 8.229,
+    "open": 8.237,
+    "t": "2026-11-06T00:20:00Z"
    }
   ],
   "risk_per_unit": null,
