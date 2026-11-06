@@ -82,22 +82,22 @@
    "worst": -3.3
   }
  },
- "generated_at": "2026-11-06T07:21:52Z",
+ "generated_at": "2026-11-06T07:53:29Z",
  "live_review_calibration": {
   "close/all": {
-   "brier": 0.185,
-   "brier_ref": 0.16,
+   "brier": 0.1866,
+   "brier_ref": 0.1488,
    "dropped_unpriced": 0,
-   "hit_rate": 0.8,
-   "mean_confidence": 0.592,
-   "n": 10,
-   "overconfidence_gap": -0.208,
+   "hit_rate": 0.8182,
+   "mean_confidence": 0.5882,
+   "n": 11,
+   "overconfidence_gap": -0.23,
    "reliability": [
     {
      "bucket": "[0.5,0.7]",
-     "mean_confidence": 0.574,
-     "n": 9,
-     "realised_hit_rate": 0.778
+     "mean_confidence": 0.572,
+     "n": 10,
+     "realised_hit_rate": 0.8
     },
     {
      "bucket": "[0.7,0.9]",
@@ -106,23 +106,23 @@
      "realised_hit_rate": 1.0
     }
    ],
-   "skill": -0.1565,
+   "skill": -0.2546,
    "verdict": "UNDERCONFIDENT"
   },
   "close/judgement": {
-   "brier": 0.185,
-   "brier_ref": 0.16,
+   "brier": 0.1866,
+   "brier_ref": 0.1488,
    "dropped_unpriced": 0,
-   "hit_rate": 0.8,
-   "mean_confidence": 0.592,
-   "n": 10,
-   "overconfidence_gap": -0.208,
+   "hit_rate": 0.8182,
+   "mean_confidence": 0.5882,
+   "n": 11,
+   "overconfidence_gap": -0.23,
    "reliability": [
     {
      "bucket": "[0.5,0.7]",
-     "mean_confidence": 0.574,
-     "n": 9,
-     "realised_hit_rate": 0.778
+     "mean_confidence": 0.572,
+     "n": 10,
+     "realised_hit_rate": 0.8
     },
     {
      "bucket": "[0.7,0.9]",
@@ -131,7 +131,7 @@
      "realised_hit_rate": 1.0
     }
    ],
-   "skill": -0.1565,
+   "skill": -0.2546,
    "verdict": "UNDERCONFIDENT"
   },
   "hold/all": {
@@ -307,17 +307,17 @@
   },
   "close": {
    "ci95": [
-    -2.2364,
-    1.1406
+    -1.6336,
+    1.0391
    ],
    "ci95_basis": "per-package mean delta_r",
-   "hit_rate": 0.8,
-   "mean_dr": 0.0936,
-   "mean_dr_per_package": -0.5479,
-   "n": 10,
+   "hit_rate": 0.818,
+   "mean_dr": 0.1492,
+   "mean_dr_per_package": -0.2973,
+   "n": 11,
    "n_applied": 3,
-   "n_packages": 4,
-   "verdict": "HOLD_SCOPE (INDETERMINATE: n_packages=4 < 20; 10 priced calls)",
+   "n_packages": 5,
+   "verdict": "HOLD_SCOPE (INDETERMINATE: n_packages=5 < 20; 11 priced calls)",
    "worst_dr": -1.5777
   },
   "move_tp": {
@@ -448,7 +448,7 @@
   {
    "class": "propose_entry vs random entry",
    "eta_earliest": "2026-11-28",
-   "eta_note": "16 more call(s) at 0.745/day + 1.0d to price; earliest, assumes each prices",
+   "eta_note": "16 more call(s) at 0.742/day + 1.0d to price; earliest, assumes each prices",
    "n_graded": 8,
    "n_needed": 30,
    "n_not_yet_graded": 6,
@@ -458,7 +458,7 @@
     "expired_unfilled": 0,
     "pre_cutoff_or_gate_ineligible": 3
    },
-   "recorded_per_day_7d": 0.745,
+   "recorded_per_day_7d": 0.742,
    "role": "entry_generation",
    "state": "insufficient_n",
    "verdict": "INDETERMINATE (n=8 < 30)"
@@ -490,7 +490,7 @@
    ],
    "class": "tighten_sl",
    "eta_earliest": "2026-11-08",
-   "eta_note": "2 more call(s) at 2.059/day + 1.0d to price; earliest, assumes each prices",
+   "eta_note": "2 more call(s) at 2.052/day + 1.0d to price; earliest, assumes each prices",
    "mean_delta_r": 0.5982,
    "n_applied": 0,
    "n_graded": 6,
@@ -499,12 +499,12 @@
    "n_packages": 2,
    "n_recorded": 18,
    "not_yet_graded_breakdown": {
-    "hold_replay_unresolved_before_close": 2,
+    "hold_replay_unresolved_before_close": 1,
     "no_package_row": 18,
     "replay_mismatch": 10,
     "trade_open": 2
    },
-   "recorded_per_day_7d": 2.059,
+   "recorded_per_day_7d": 2.052,
    "role": "in_trade (live review)",
    "state": "insufficient_n",
    "verdict": "HOLD_SCOPE (INDETERMINATE: n_packages=2 < 20; 6 priced calls)"
@@ -540,7 +540,7 @@
    "n_packages": 1,
    "n_recorded": 1,
    "not_yet_graded_breakdown": {
-    "hold_replay_unresolved_before_close": 2,
+    "hold_replay_unresolved_before_close": 1,
     "no_package_row": 18,
     "replay_mismatch": 10,
     "trade_open": 2
@@ -552,29 +552,29 @@
   },
   {
    "ci95_delta_r": [
-    -2.2364,
-    1.1406
+    -1.6336,
+    1.0391
    ],
    "class": "close",
    "eta_earliest": "2026-11-04",
-   "eta_note": "-10 more call(s) at 3.101/day + 1.0d to price; earliest, assumes each prices",
-   "mean_delta_r": 0.0936,
+   "eta_note": "-10 more call(s) at 3.087/day + 1.0d to price; earliest, assumes each prices",
+   "mean_delta_r": 0.1492,
    "n_applied": 3,
-   "n_graded": 10,
+   "n_graded": 11,
    "n_needed": 20,
-   "n_not_yet_graded": 20,
-   "n_packages": 4,
+   "n_not_yet_graded": 19,
+   "n_packages": 5,
    "n_recorded": 30,
    "not_yet_graded_breakdown": {
-    "hold_replay_unresolved_before_close": 2,
+    "hold_replay_unresolved_before_close": 1,
     "no_package_row": 18,
     "replay_mismatch": 10,
     "trade_open": 2
    },
-   "recorded_per_day_7d": 3.101,
+   "recorded_per_day_7d": 3.087,
    "role": "in_trade (live review)",
    "state": "insufficient_n",
-   "verdict": "HOLD_SCOPE (INDETERMINATE: n_packages=4 < 20; 10 priced calls)"
+   "verdict": "HOLD_SCOPE (INDETERMINATE: n_packages=5 < 20; 11 priced calls)"
   },
   {
    "ci95_delta_r": null,
@@ -661,7 +661,7 @@
    "not_yet_graded_breakdown": {
     "trade_still_open_or_not_joined": 200
    },
-   "recorded_per_day_7d": 34.826,
+   "recorded_per_day_7d": 34.713,
    "role": "in_trade (live review)",
    "state": "graded",
    "verdict": null
