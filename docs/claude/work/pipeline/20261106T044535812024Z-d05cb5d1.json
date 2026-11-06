@@ -6,6 +6,11 @@
   },
   "id": "PI-20261106-QSEQAVLT-0003",
   "next_action": "check_observation",
+  "observation": {
+    "due_by": "2026-11-09",
+    "how_to_check": "gh api 'repos/benbaichmankass/JTA-Trader/actions/workflows/m20-exit-lever-sweep.yml/runs?per_page=10' --jq '.workflow_runs[]|[.id,.created_at,.conclusion]'; read the newest run's corpus job log for 'stored-duplicates-collapsed'; git log -3 -- docs/research/m20-sweep-corpus.jsonl",
+    "what": "The first m20-exit-lever-sweep.yml run after 2026-11-06T04:43Z that reaches its corpus job: stored-duplicates-collapsed: 7, exit 0, and a commit to docs/research/m20-sweep-corpus.jsonl."
+  },
   "origin": {
     "kind": "audit",
     "ref": "MECH-FOLLOWUPS-1105 lane 2026-11-06 (#23646)",
