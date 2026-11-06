@@ -47,6 +47,12 @@ def _ccxt_funding_to_row(entry: Mapping[str, Any], account_id: str) -> dict[str,
     if not fid:
         # Fall back to a deterministic composite key so idempotency still holds.
         fid = f"{account_id}:{entry.get('symbol')}:{funding_time}"
+    else:
+        # Bybit's funding id is the SAME on every account for one symbol+settlement
+        # (measured 2026-11-06: bybit_1/bybit_2 returned identical ids), and the
+        # store's PK is funding_id alone, so un-namespaced ids made the first
+        # account to write win and silently dropped every other account's row.
+        fid = f"{account_id}:{fid}"
     return {
         "funding_id": fid,
         "account_id": account_id,

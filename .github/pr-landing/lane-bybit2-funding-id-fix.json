@@ -1,0 +1,7 @@
+{
+  "tier": 1,
+  "landing": "hold",
+  "hold_reason": "unvouchable_paths",
+  "hold_text": "Fixes the funding puller's dedupe key (scripts run by the live VM's funding timer: src/runtime/exchange_funding_puller.py, src/runtime/exchange_fills_store.py). Venue funding ids are identical across accounts, so the first account to write won and the others were dropped; ids are now namespaced per account and a (account,symbol,time) check avoids duplicating legacy rows. No order path. R5 cannot vouch for these paths, so the manager merges. Revert: git revert this PR.",
+  "why": "BYBIT2-FUNDING-SETTLEMENT-READ root cause: exchange_funding PK collided across accounts, so bybit_2 rows were never inserted."
+}

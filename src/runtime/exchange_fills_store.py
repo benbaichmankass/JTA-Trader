@@ -239,6 +239,14 @@ def upsert_funding(
             fid = raw.get("funding_id")
             if not fid:
                 continue
+            # Legacy rows were keyed on the bare venue id (shared across accounts);
+            # the same (account, symbol, settlement) must not be stored twice.
+            if conn.execute(
+                "SELECT 1 FROM exchange_funding WHERE account_id=? AND symbol=? "
+                "AND funding_time=?",
+                (str(raw.get("account_id")), str(raw.get("symbol")),
+                 str(raw.get("funding_time")))).fetchone():
+                continue
             cur = conn.execute(
                 "INSERT OR IGNORE INTO exchange_funding "
                 "(funding_id, account_id, symbol, funding_usd, funding_time, raw) "
