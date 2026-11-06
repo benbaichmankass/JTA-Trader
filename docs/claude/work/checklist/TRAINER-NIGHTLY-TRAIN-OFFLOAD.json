@@ -1,0 +1,24 @@
+{
+  "id": "TRAINER-NIGHTLY-TRAIN-OFFLOAD",
+  "title": "Nightly market-data manifest training on Kaggle CPU kernels (submit-and-exit), VM cycle skips them; design phases 2-4",
+  "phase": null,
+  "state": "queued",
+  "owner": "manager",
+  "lane": null,
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 2,
+  "prs": [],
+  "blocked_on": [],
+  "note": "From FREE-CAPACITY-PLAN (a). MEASURED (trainer-vm-diag #23583, training_cycle.jsonl 10-30..11-05): primary cycle trains 67 manifests nightly, 31-33 min wall of training after a 18-44 min dataset phase; ict-trainer total 7.96 CPU-h in 6.75 d (34% of trainer CPU). Design: docs/plans/KAGGLE-TRAINING-PIPELINE-DESIGN-2026-10-13.md phases 2-4 (parity proven for the LightGBM class on kaggle_cpu only, KAGGLE-TRAIN-RUNNER-FIRST; HMM/RegimeClassifier/regression need their own parity unit). Return path exists: ml/offload-inbox + drain_inbox.py (single writer on the trainer). Tier 2: arming the drain for same-id registration and making the VM cycle skip offloaded manifests. The 10 OURS-data manifests stay on the trainer. Done when: N nights with the market manifests trained off-VM, registered via the drain, and the trainer's ict-trainer CPU-h/day falls by the measured share.",
+  "due_by": "2026-11-13",
+  "roadmap": [
+    "unmapped"
+  ],
+  "roadmap_unmapped_reason": "infra-capacity(FREE-CAPACITY-PLAN)",
+  "priority_rank": 9,
+  "updated_at": "2026-11-06T01:27:44Z",
+  "updated_by": "session_01AFoLuLpeKyaLTmVTigniMw",
+  "_seq": 961
+}

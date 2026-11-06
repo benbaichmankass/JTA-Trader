@@ -1,0 +1,24 @@
+{
+  "id": "TRAINER-MARKET-RAW-INCREMENTAL",
+  "title": "Trainer dataset build: append-only Bybit market_raw pull instead of a full 5-year re-pull every night",
+  "phase": null,
+  "state": "queued",
+  "owner": "manager",
+  "lane": null,
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 2,
+  "prs": [],
+  "blocked_on": [],
+  "note": "From FREE-CAPACITY-PLAN (a). MEASURED (trainer-vm-diag #23591, runtime_logs/trainer/dataset_builds.jsonl, 5 build runs 11-04..11-06): 9,503 s build wall total; market_features 5,317 s (56%), market_raw 3,375 s (36%; ~675 s per run), forecasts 676 s. ml/datasets/adapters/bybit_offvm.py has no cache: build_trainer_datasets.sh rebuilds ~14 Bybit (symbol, tf) shards from start=5y-ago with --overwrite nightly. BUILD (stays on the trainer: Bybit geoblocks GitHub runners, Kaggle kernels have no internet): fetch only from the existing shard's last ts minus an overlap, merge, rewrite; keep --overwrite semantics for the output. Must prove byte/row identity against a full pull on one shard before shipping (Tier 2, data-mutation job). Also consider whether market_features (5m BTC 1,478 s / ETH 902 / SOL 889) can be incremental. Basis: n=5 build runs (11-04..11-06); 56% and 36% = shares of 9,503 s total build wall.",
+  "due_by": "2026-11-12",
+  "roadmap": [
+    "unmapped"
+  ],
+  "roadmap_unmapped_reason": "infra-capacity(FREE-CAPACITY-PLAN)",
+  "priority_rank": 9,
+  "updated_at": "2026-11-06T01:27:43Z",
+  "updated_by": "session_01AFoLuLpeKyaLTmVTigniMw",
+  "_seq": 960
+}
