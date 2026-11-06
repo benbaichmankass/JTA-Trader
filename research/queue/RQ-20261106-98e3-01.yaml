@@ -1,0 +1,109 @@
+# Hand-authored 2026-11-06 by lane ML-ENTRY-EQ-STRUCTURE-RETEST (Tier 1), dispatched by Manager Session 2026-11-06b. Rule REGISTERED BEFORE the run; no outcome of this arm has been read.
+id: RQ-20261106-98e3-01
+title: 'ENTRY-EQ structure-exit retest: does the equity-native ENTRY model RE-TRAINED on LIVE ml_entry structure-exit labels (structure_exit pivot=5;sl_only, config
+  B, tau re-selected on the dev walk-forward) clear the DEFLATED holdout bar (N=2) on the 173-ETF pool over 2025-07-15 .. last complete month?'
+status: queued
+cadence: once
+theme: ml_health
+priority: 1
+roadmap:
+- L-ML-LIVE
+kind: experiment
+practice_precedent: 'T1, M6, M13 (docs/reference/trading-and-model-practice-principles.md); OPERATING-PLAN § 2 ''The HOLDOUT governs real money'': tau is chosen on
+  the dev walk-forward (4 draws, fixed grid), ONE confirming read on the window after train_end + embargo, claimed in the holdout ledger (family ENTRY-EQ) and graded
+  against holdout_lock.bar_for(N).'
+question: 'Operator 2026-11-06 ~11:00Z, verbatim: "we do need to send that ML back to train on the structured exits." The fixed-bracket confirm (RQ-20261105-e9a1-02,
+  run 42143223941) PASSED at n=858/147 symbols, mean net R +0.0392 (month-clustered t 0.3) but modelled SL 2 / TP 3 ATR, while live ml_entry exits with structure_exit
+  "pivot=5;sl_only" (config/strategies.yaml ml_entry). Re-label every decision row with the LONG first-passage outcome under THAT exit (stop path from src/runtime/structure_exit_live.replay
+  via ml_entry_tp_revision.structure_sl_path; walk = ml_entry_tp_revision.walk; entry stop 2 ATR14, TP fixed 3 ATR14, 24-bar stop; same costs: fee 0 + slippage 5
+  bps (PROVISIONAL) + regulatory 0.5 bps round trip), re-run the purged expanding walk-forward 2023-01-01..2025-06-30 with config B only over the same 4-tau grid
+  (selection = max pooled OOF mean net R, >= 300 OOF trades), refit on rows <= 2025-06-30 (purge 10 d) and read the confirming window ONCE.'
+why_this_matters: 'The alpaca_live real-money decision must rest on evidence for the exit it will actually run (CLAUDE.md: edge decided OFFLINE; roster-promotion-evidence-guard
+  C5 fidelity). A PASS makes a structure-exit ml_entry_eq a real-money CANDIDATE and yields the exact Tier-3 proposal; a FAIL means the +0.039 fixed-bracket read
+  does not survive the live exit.'
+power:
+  expected_n: 2000
+  min_detectable_effect: 0.06
+  effect_units: metric
+  sd: 1.0
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: 'INFERRED from the fixed-bracket confirm (n=858, iid se 0.042, clustered se 0.143) and the dev OOF (n=3896, se 0.020). The unit is NOT powered to detect
+    +0.04 R (iid MDE ~0.06 at n~2000, clustered much larger): a PASS under the registered rule is a point-estimate pass and says so; the floor n >= 30 is the rule
+    and the record states the actual n.'
+  feasibility:
+    source: none
+    accrual_basis: Replays Alpaca 1h RTH history 2021-01-01 .. last complete month; nothing accrues.
+decision_rule:
+  id: RULE-RQ20261106-98e3-01-ENTRY-EQ-STRUCTURE
+  registered_at: '2026-11-06'
+  registered_before_run: true
+  statistic: 'scripts/research/ml_entry_equity.py structure: pooled restricted-long mean net R per decision under the structure exit (pivot=5;sl_only, TP fixed 3
+    ATR), n, n_symbols, se (iid), month-clustered se (reported), by month, by symbol (top 10), over decisions closing in 2025-07-15 .. the last complete month before
+    the run; model re-trained on structure labels on rows <= 2025-06-30 (purge 10 d), tau = the dev-walk-forward selection over {0.05,0.10,0.15,0.20} (config B only;
+    4 draws; max pooled OOF mean net R subject to >= 300 OOF trades). The read is claimed in the holdout ledger as family ENTRY-EQ on the same window and symbol set
+    as the fixed-bracket confirm, so N = 2 and bar = holdout_lock.bar_for(2) (point_t_min ~0.52: mean >= 0.52 x iid se).'
+  rule: 'INDETERMINATE IF pooled n < 30. PASS IF (a) pooled confirm mean net R >= bar.point_t_min * se (N=2 deflated point bar) AND (b) the selected tau''s dev pooled
+    OOF mean net R > 0 AND (c) confirm mean net R under the structure exit >= 0. FAIL otherwise. Thresholds never change after any result. REAL-MONEY CANDIDATE (holdout
+    rule, OPERATING-PLAN § 2): a PASS on this rule is the holdout pass; it is a CANDIDATE only -- the Tier-3 proposal (ml_entry_eq with structure_exit "pivot=5;sl_only"
+    and the SL/TP of this arm, on alpaca_live + alpaca_portfolio) goes to the operator in the PR body; DSR is probation, not a bar; paper is not a gate; no config
+    is merged by this lane. A PASS does NOT claim statistical significance: the month-clustered t is reported beside it.'
+  what_it_does_not_do: 'No re-selection of config, exit spec or the tau grid; no sizing; no config change; no order. The window was already read once for the fixed-bracket
+    model (ledger N=1); this is the declared second read, graded at the deflated bar, and no further re-read of this window is registered. DECLARED: the structure
+    exit''s TP is fixed at 3 ATR (live ml_entry also runs an ml_first_passage tp_revision, which ml_entry_eq does not have); structure levels are computed on the
+    pool ETF''s own 1h RTH bar sequence (500-bar lookback), including overnight gaps.'
+  min_n: 30 pooled decisions
+compute: cpu_long
+value:
+  bucket: ai_trader
+  usd_at_stake_per_month: 60
+  confidence: 0.25
+  basis: 'stand-in: the operator goal (an ML decision maker live on the Alpaca book); not a P&L measurement.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 6.0
+  est_minutes: 120
+  why_runner: Alpaca market data (read-only, paper key) + one LightGBM fit; 4 vCPU / 16 GB runner.
+  basis: 'MEASURED: the dev/confirm runs took 58-74 min (fetch + table 55 min). ESTIMATED: the structure labels add ~2.9 ms/decision-row (synthetic bars, local) on
+    ~450k rows ~ 25 min; 4 dev folds x 1 config + 1 confirm fit ~ 5 min.'
+run:
+  workflow: research-script-run.yml
+  command:
+  - python3
+  - scripts/research/ml_entry_equity.py
+  - structure
+  - --cache
+  - /tmp/ml_entry_equity
+  - --out
+  - '{out_dir}'
+  - --unit
+  - '{unit}'
+  - --where
+  - research-script-run
+  - --rule-id
+  - RULE-RQ20261106-98e3-01-ENTRY-EQ-STRUCTURE
+  - --registered-at
+  - '2026-11-06'
+  timeout_minutes: 300
+  inputs:
+    research_unit: RQ-20261106-98e3-01
+ml_consumer:
+  consumer: ML-ENTRY-EQUITY-NATIVE
+  decision: whether ml_entry_eq with the live structure exit is proposed as ONE Tier-3 PR (alpaca_live + alpaca_portfolio) for the operator
+  legs:
+  - iaum_pullback_1d
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- ML-ENTRY-EQ-STRUCTURE-RETEST
+- ML-ENTRY-EQUITY-NATIVE
+- ML-ENTRY-ALL-ACCOUNTS
+- RQ-20261105-e9a1-02
+- RQ-20261105-e9a1-01
+population: 'The registered POOL_RULE of scripts/research/ml_entry_alpaca_score.py, UNCHANGED (sha256 e9702661d1a596a0f7e84e632c0ca8b5c2743a728f02147477c003644a0858e2):
+  active, tradable, us_equity ETFs (nasdaqtraded ETF=Y) with median daily dollar volume >= 50M USD over 2019-01-01..2020-12-31. The module refuses to run if the rule
+  hash differs.'

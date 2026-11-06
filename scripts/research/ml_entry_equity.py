@@ -73,7 +73,24 @@ def _lgb(params: dict):
     return lgb.LGBMRegressor(**{**BASE_PARAMS, **params})
 
 
-def symbol_rows(sym: str, df: pd.DataFrame, slip_bps: float, fee_bps: float) -> pd.DataFrame:
+STRUCT_SPEC = "pivot=5;sl_only"      # the LIVE ml_entry exit (config/strategies.yaml ml_entry.structure_exit), RQ-20261106-98e3-01 primary arm
+
+
+def _structure_outcomes(df: pd.DataFrame, cand: np.ndarray, entry: np.ndarray, atr: np.ndarray, spec: str):
+    """LONG first-passage under the LIVE SL-only structure exit for each decision bar: the stop path comes from
+    src/runtime/structure_exit_live.replay (via ml_entry_tp_revision.structure_sl_path), the walk is ml_entry_tp_revision.walk
+    with the TP fixed at the entry bracket (3 ATR, no revision) -- the same functions the structure arm of RQ-20261103-5e04-01 used."""
+    import ml_entry_tp_revision as R
+    o, h, lo, c = (df[k].to_numpy(float) for k in ("open", "high", "low", "close"))
+    px, jj, rs = np.empty(len(cand)), np.empty(len(cand), int), np.empty(len(cand), int)
+    for r, i in enumerate(cand):
+        path = R.structure_sl_path(h, lo, c, int(i), float(entry[r]), float(atr[r]), 1, spec)
+        sl = slice(i + 1, i + 1 + H)
+        px[r], jj[r], rs[r], _ = R.walk(o[sl], h[sl], lo[sl], c[sl], float(entry[r]), float(atr[r]), 1, None, sl_path=path)
+    return px, jj, rs
+
+
+def symbol_rows(sym: str, df: pd.DataFrame, slip_bps: float, fee_bps: float, struct: str = "") -> pd.DataFrame:
     """Decision rows for one ETF on its own RTH bar sequence: harness features + the LONG first-passage net R (as equity_rows)."""
     f = E.features_symbol(df[["ts", "open", "high", "low", "close", "volume"]])
     f["hour"] = df.close_ts.dt.hour.to_numpy()
@@ -93,6 +110,8 @@ def symbol_rows(sym: str, df: pd.DataFrame, slip_bps: float, fee_bps: float) -> 
     a = atr[cand]
     risk = 2.0 * a
     px, j, reason = E.bracket_outcome(o[win], h[win], lo[win], c[win], entry, a, 1)
+    if struct:
+        px, j, reason = _structure_outcomes(df, cand, entry, a, struct)
     gross = (px - entry) / risk
     per_r = ((np.abs(entry) + np.abs(px)) / 2.0) / risk
     cost = (fee_bps + slip_bps + S.REGULATORY_BPS) / 1e4 * per_r
@@ -125,8 +144,8 @@ def proxy_frame(bars: dict[str, pd.DataFrame]) -> pd.DataFrame:
     return ctx
 
 
-def build_table(bars: dict[str, pd.DataFrame], pool: list[str], slip: float, fee: float) -> pd.DataFrame:
-    frames = [symbol_rows(s, bars[s], slip, fee) for s in pool if s in bars and len(bars[s]) > 400]
+def build_table(bars: dict[str, pd.DataFrame], pool: list[str], slip: float, fee: float, struct: str = "") -> pd.DataFrame:
+    frames = [symbol_rows(s, bars[s], slip, fee, struct) for s in pool if s in bars and len(bars[s]) > 400]
     frames = [f for f in frames if len(f)]
     t = pd.concat(frames, ignore_index=True)
     g = t.groupby("ts")
@@ -205,7 +224,7 @@ def _fold_of(ts: pd.Series, bounds) -> np.ndarray:
 
 def confirm_stage(tab: pd.DataFrame, config: str, tau: float, dev_oof_mean: float, unit: str, ledger_dir: Path,
                   train_end: str = TRAIN_END, start: str = CONFIRM_START, end: str = "2026-10-31", symbols=None,
-                  configs: dict = CONFIGS, claim: bool = True) -> dict:
+                  configs: dict = CONFIGS, claim: bool = True, model_tag: str = "") -> dict:
     """Refit on rows <= train_end, score [start, end] ONCE, grade against the deflated bar. The read is recorded in the ledger."""
     HL.check_window_disjoint(train_end, start)
     if pd.Timestamp(start) < pd.Timestamp(train_end) + pd.Timedelta(days=EMBARGO_DAYS):
@@ -221,7 +240,7 @@ def confirm_stage(tab: pd.DataFrame, config: str, tau: float, dev_oof_mean: floa
     ledger = ledger_dir / "holdout_reads.jsonl"
     if HL.LEDGER.exists() and not ledger.exists():
         shutil.copy(HL.LEDGER, ledger)
-    model_id = f"{FAMILY}-v1-{config}-tau{tau}"
+    model_id = f"{FAMILY}-v1-{config}-tau{tau}{model_tag}"
     if claim:
         rec = HL.claim_read(model_id, start, end, unit, "lane ML-ENTRY-EQUITY-NATIVE (research-script-run)", ledger=ledger,
                             symbols=symbols, train_end=train_end, family=FAMILY)
@@ -338,6 +357,24 @@ def _pool_and_bars(a, end_day: str):
     return pool, prep, bars, client
 
 
+def structure_stage(tab: pd.DataFrame, unit: str, ledger_dir: Path, end: str, symbols, spec: str = STRUCT_SPEC,
+                    configs: dict = None, train_end: str = TRAIN_END, start: str = CONFIRM_START, folds: list = None,
+                    taus=TAUS, min_oof_n: int = MIN_OOF_N, claim: bool = True, log=print) -> dict:
+    """RQ-20261106-98e3-01: the equity ENTRY model RE-TRAINED on structure-exit labels (config B fixed), tau re-selected on the
+    dev walk-forward by the registered rule (4 draws), then ONE confirming read of the same window as the fixed-bracket confirm
+    (ledger N counts it: N=2). ``tab`` must already carry the structure-exit net_long/gross_long/cost_long."""
+    configs = configs or {"B": CONFIGS["B"]}
+    d = dev_stage(tab, folds=folds or DEV_FOLDS, train_end=train_end, taus=taus, configs=configs, min_oof_n=min_oof_n, log=log)
+    sel = d["selected"]
+    if sel is None:
+        return {"verdict": "indeterminate", "note": "dev stage selected nothing (no tau with >= %d OOF trades)" % min_oof_n, "dev": d}
+    c = confirm_stage(tab, sel["config"], float(sel["tau"]), float(sel["mean_net_r"]), unit, ledger_dir, train_end=train_end,
+                      start=start, end=end, symbols=symbols, configs=configs, claim=claim, model_tag="-STRUCT-" + spec.replace(";", "-").replace("=", ""))
+    c["dev"] = d
+    c["structure_exit"] = spec
+    return c
+
+
 def dev_row(d: dict, unit: str, where: str) -> dict:
     """The dev record in the runner's verdict.json contract (script_run.VERDICTS / READ_STATES): a descriptive stage carries
     verdict 'indeterminate' (run 42119511272 wrote 'descriptive' -> malformed; run 42166322024 wrote 'not_applicable' with read_state measured ->
@@ -363,7 +400,7 @@ def main_run(a) -> int:
     fee = resolve_fee_bps_roundtrip("SPY")
     end_day = TRAIN_END if a.cmd in ("dev", "export") else (pd.Timestamp.now(tz="UTC").normalize().replace(day=1) - pd.Timedelta(days=1)).strftime("%Y-%m-%d")
     pool, prep, bars, client = _pool_and_bars(a, end_day)
-    tab = build_table(bars, pool, slip, fee)
+    tab = build_table(bars, pool, slip, fee, struct=STRUCT_SPEC if a.cmd == "structure" else "")
     print(f"[table] {len(tab)} decision rows, {tab.symbol.nunique()} symbols t={time.strftime('%H:%M:%S')}", flush=True)
     if a.cmd == "dev":
         d = dev_stage(tab)
@@ -372,6 +409,16 @@ def main_run(a) -> int:
                   "configs": {k: {"features": v["features"], "params": v["params"]} for k, v in CONFIGS.items()},
                   "alpaca_calls": client.calls, "runtime_s": round(time.time() - t0, 1)})
         row = dev_row(d, a.unit, a.where)
+    elif a.cmd == "structure":
+        c = structure_stage(tab, a.unit, out / "ledger", end_day, pool)
+        row = {"schema_version": 1, "research_unit": a.unit, "read_state": "measured", "verdict": c["verdict"], "note": c["note"],
+               "generated_at": pd.Timestamp.now(tz="UTC").strftime("%Y-%m-%dT%H:%M:%SZ"),
+               "decision_rule": {"id": a.rule_id, "registered_at": a.registered_at, "registered_before_run": True},
+               "population": {"n": c.get("stats", {}).get("n"), "description": f"equity-native ENTRY re-trained on structure-exit labels ({STRUCT_SPEC}), restricted-LONG on the "
+                              f"{len(pool)}-ETF Alpaca liquidity pool, confirming window {CONFIRM_START}..{end_day}, net of the Alpaca cost stack"},
+               "measurement": {**c, "pool": {k: v for k, v in prep.items() if k != "excluded"}, "n_pool": len(pool),
+                               "alpaca_calls": client.calls, "runtime_s": round(time.time() - t0, 1)},
+               "n": c.get("stats", {}).get("n"), "produced_by": {"tool": "python3 scripts/research/ml_entry_equity.py structure", "where": a.where}}
     elif a.cmd == "export":
         e = export_stage(tab, a.config, float(a.tau), pool, a.expect_sha, out)
         row = {"schema_version": 1, "research_unit": a.unit, "read_state": "measured", "verdict": "indeterminate",
@@ -470,6 +517,15 @@ def self_test() -> int:
     # no dev row may sit in the confirming window and vice versa (the dev stage only ever sees <= TRAIN_END)
     te = pd.Timestamp("2023-04-30", tz="UTC") + pd.Timedelta(days=1)
     assert (tab[tab.ts < te].ts.max() < te) and (tab[tab.ts >= pd.Timestamp("2023-05-20", tz="UTC")].ts.min() >= pd.Timestamp("2023-05-20", tz="UTC"))
+    # structure-exit arm: the table builds, labels differ from the fixed bracket only through the stop path, the stage runs end to end
+    ts_tab = build_table(bars, pool, 5.0, 0.0, struct=STRUCT_SPEC)
+    assert len(ts_tab) == len(tab) and ts_tab["bars_long"].between(1, H).all(), "structure table shape / hold length"
+    assert not np.allclose(ts_tab["net_long"].to_numpy(), tab["net_long"].to_numpy()), "the structure exit must change some outcomes"
+    with tempfile.TemporaryDirectory() as td:
+        sm = {"B": {"features": OWN + XS, "params": {"n_estimators": 20, "min_child_samples": 20}}}
+        r = structure_stage(ts_tab, "RQ-T", Path(td), "2023-08-31", pool, configs=sm, train_end="2023-04-30", start="2023-05-20",
+                            folds=["2022-09-01", "2023-01-01"], taus=[0.0, 0.05], min_oof_n=1, log=lambda *_: None)
+        assert r["verdict"] in ("pass", "fail", "indeterminate") and r["structure_exit"] == STRUCT_SPEC and r["dev"]["n_selection_draws"] == 2, r
     print("self-test ok")
     return 0
 
@@ -478,7 +534,7 @@ def main(argv=None) -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--self-test", action="store_true")
     sub = ap.add_subparsers(dest="cmd")
-    for name in ("dev", "confirm", "export"):
+    for name in ("dev", "confirm", "export", "structure"):
         p = sub.add_parser(name)
         p.add_argument("--cache", required=True)
         p.add_argument("--out", required=True)
@@ -489,6 +545,9 @@ def main(argv=None) -> int:
             p.add_argument("--tau", required=True)
         if name == "export":
             p.add_argument("--expect-sha", required=True, help="booster sha256 (prefix ok) of the confirm run to reproduce")
+        if name == "structure":
+            p.add_argument("--rule-id", required=True)
+            p.add_argument("--registered-at", required=True)
         if name == "confirm":
             p.add_argument("--dev-oof-mean", required=True)
             p.add_argument("--rule-id", required=True)
@@ -496,7 +555,7 @@ def main(argv=None) -> int:
     a = ap.parse_args(argv)
     if a.self_test:
         return self_test()
-    return main_run(a) if a.cmd in ("dev", "confirm", "export") else 2
+    return main_run(a) if a.cmd in ("dev", "confirm", "export", "structure") else 2
 
 
 if __name__ == "__main__":
