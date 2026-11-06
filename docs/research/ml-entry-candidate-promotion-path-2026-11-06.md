@@ -44,6 +44,19 @@ One new script `scripts/research/ml_entry_candidate_grade.py` and one added work
 
 Window dates, n, n_symbols, mean net R and se for candidate and served (same rows), the deflated bar and `n_tries` from the ledger, exit-reason mix, ex-max-symbol mean, and by-month, all of which `ml_decision_entry.summarize` already emits. The `holdout_reads.jsonl` row is the committed record.
 
-## 5. Not built
+## 5. Built (HELD) and the first grading run
 
-This PR is the proposal only. No script, workflow permission or `ml/served` file changes are in it.
+Built in this PR, held: the rule (`ml-entry-promotion-rule-2026-11-06.md`, committed before any grader code), `scripts/research/ml_entry_candidate_grade.py`, the grade + draft-PR steps in `ml-entry-retrain.yml`, and the versioned served pointer `ml/served/ENTRY_SERVED.json` (`src/runtime/ml_entry_served.py`, read by `ml_entry`, the live monitor and the retrain script; absent or bad pointer falls back to v1 with a warning). Promoted artifacts are named `ml_decision_entry_v1r<YYYYMMDD>` because `ml_decision_entry_v2` already exists.
+
+First run, offline, run 42250040398 (evidence `comms/research/ml_entry_grade/42250040398/grade_evidence.json`): window 2026-10-23..2026-11-05, candidate refit as of 2026-10-23 (train end 2026-10-14 19:00Z).
+
+| | n | symbols | mean net R / decision | se |
+|---|---|---|---|---|
+| candidate | 281 | 48 | +0.0018 | 0.065 |
+| served v1 | 342 | 49 | -0.0918 | 0.059 |
+
+Verdict `insufficient_n` (candidate n 281 under the registered floor of 300). It would also fail the deflated bar: this was the 4th ENTRY read on an overlapping window (point_t_min 1.05, so it needs a mean of about +0.068). Today's retrain candidate has no clean window yet (0 labelled rows from its run date). Measured, not assumed: a refit does not reproduce the retrain candidate byte for byte, so the graded boosters are the ones that get promoted.
+
+Longs lose on both models (candidate -0.73 at n 69, served -0.57 at n 42); the candidate's short side is +0.24 at n 212. That is a post-hoc cut of one read, reported, not a finding.
+
+Option for the manager/operator (NOT applied, because moving the window after seeing the result would be a post-hoc rule change): a 21-day window instead of 14 would raise n but makes the graded candidate older.

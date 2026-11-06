@@ -7,9 +7,10 @@ touches ``ml/served``; the workflow turns a PASS into a DRAFT PR and a human mer
 ``docs/research/ml-entry-promotion-rule-2026-11-06.md`` (its sha256 is stamped on every record).
 
   1. The candidate is the registered recipe refit AS OF ``S = run_date - window_days`` (``ml_decision_entry.purge_train``: rows before
-     S minus 7 d minus 25 h), tau carried from the served artifact. The refit is deterministic, so this is the artifact a retrain on
-     S would have written; ``--candidate-json`` (today's retrain output) is refit as of ``run_date`` and compared byte for byte to
-     prove that.
+     S minus 7 d minus 25 h), tau carried from the served artifact. A refit is NOT bit-reproducible
+     (measured 2026-11-06, run 42250040398: ``refit_reproduces_retrain_candidate`` false), so what is graded is what is promoted: on a
+     PASS the exact boosters that were scored are the ones written to ``--out/promote``. ``--candidate-json`` (today's retrain output)
+     is refit as of ``run_date`` and compared to record whether the refit reproduces it.
   2. The window ``[S, run_date - 1]`` starts after the candidate's training data. The read is CLAIMED in the holdout ledger before
      any window outcome is scored, which fixes the deflated bar.
   3. Candidate and served score the SAME rows with the registered policy; net R is ``ml_decision_entry.label_symbol`` (the full cost
@@ -54,6 +55,13 @@ def plan(run_date: date, window_days: int = WINDOW_DAYS) -> dict:
 
 def _read_tab(cache: Path):
     return E.build_table(cache, E.universe())
+
+
+def hourly_gaps(ts) -> list:
+    """[{after, before}] for every step in an hourly bar series longer than 1 h."""
+    import pandas as pd
+    t = ts.reset_index(drop=True)
+    return [{"after": str(t[i - 1]), "before": str(t[i])} for i in (t.diff() > pd.Timedelta(hours=1))[lambda m: m].index]
 
 
 def rule_verdict(cand: dict, served: dict, bar: dict) -> tuple[str, list[str]]:
@@ -124,6 +132,12 @@ def run(a) -> int:
                                            "max": str(last_by_sym.max()), "n_symbols": int(len(last_by_sym))},
             "plan_train_end_bound_for_run_date": str(pd.Timestamp(p["run_date"], tz="UTC") - pd.Timedelta(days=E.EMBARGO_DAYS)
                                                      - pd.Timedelta(hours=E.HORIZON_H + 1))}
+        # a decision row needs 24 contiguous forward bars, so a bar hole removes the decisions before it: record the hourly gaps
+        try:
+            ev["diagnostics"]["bar_gaps_last_30d"] = {sym: hourly_gaps(pd.read_pickle(Path(a.cache) / f"{sym}.pkl")["ts"].tail(24 * 30))
+                                                      for sym in ("BTCUSDT", "ETHUSDT", "SOLUSDT")}
+        except Exception as exc:  # noqa: BLE001  # allow-silent: a diagnostic; its own failure is recorded in the evidence, never fatal
+            ev["diagnostics"]["bar_gaps_last_30d"] = f"unreadable: {type(exc).__name__}: {exc}"[:200]
         # (a) today's retrain candidate has no clean window under the registered embargo: its window would start at run_date
         today_start = pd.Timestamp(p["run_date"], tz="UTC")
         ev["today_candidate"] = {"window_start": p["run_date"], "labelled_rows_in_window": int((tab.ts >= today_start).sum()),
@@ -197,6 +211,10 @@ def _self_test() -> None:
     assert rule_verdict(good, served_ok, b5)[0] == "pass"                              # 0.05 >= 1.19 x 0.04 = 0.0476
     assert rule_verdict({**good, "se_net_r": 0.05}, served_ok, b5)[0] == "fail"        # 0.05 < 1.19 x 0.05 at the 5th read
     assert rule_verdict(good, {"n": 0, "mean_net_r": None}, b1)[0] == "pass"
+    import pandas as pd
+    t = pd.Series(pd.date_range("2026-10-27", periods=6, freq="h", tz="UTC")).drop([2, 3])
+    assert hourly_gaps(t) == [{"after": "2026-10-27 01:00:00+00:00", "before": "2026-10-27 04:00:00+00:00"}], hourly_gaps(t)
+    assert hourly_gaps(pd.Series(pd.date_range("2026-10-27", periods=4, freq="h", tz="UTC"))) == []
     print("ml_entry_candidate_grade self-test ok")
 
 
