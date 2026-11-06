@@ -61,6 +61,12 @@ jobs:
         with:
           # Only this script is needed; the grading is pure and reads no history.
           fetch-depth: 1
+          # WORKFLOW-PRUNE P4 (2026-11-06): the full checkout was ~53 s of a ~59 s run (1,165 runs/wk). The job runs one
+          # stdlib-only script; sparse + blobless gives it exactly that file.
+          filter: blob:none
+          sparse-checkout: |
+            /scripts/ci/check_armed_branch_push.py
+          sparse-checkout-cone-mode: false
 
       - name: Self-test the grading policy before trusting a live run
         # A watcher whose grading is broken must fail loudly, not report a

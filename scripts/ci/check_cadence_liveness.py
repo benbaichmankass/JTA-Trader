@@ -175,6 +175,13 @@ class Cadence(NamedTuple):
 #: healthy-looking watch forever". That is the new-table-wiring lesson: a guard
 #: cheaper to lie to than to satisfy is worse than no guard.
 CADENCE_REGISTRY: dict[str, dict] = {
+    # ── WORKFLOW-PRUNE P4 (2026-11-06): the daily drift-repair run of the branch-protection spec; it writes to GitHub, not git.
+    "branch-protection-sync.yml": {
+        "receipt": None,
+        "why": "PUTs the required-checks spec to GitHub branch protection (state lives in GitHub, not in git), so no repo receipt exists; "
+               "the run re-GETs the protection and fails red when it does not match this file, and a failed run is observed by "
+               "claude-run-failure-alert",
+    },
     # ── WSD-S3-CLI-OUTBOX (2026-11-05): the work-store outbox drainer; its writes go to the VM's work_store.db, not git.
     "work-store-outbox.yml": {
         "receipt": None,

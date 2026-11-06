@@ -39,6 +39,9 @@ on:
     workflows:
       # WSD-S3-CLI-OUTBOX (2026-11-05): the work-store outbox drainer; a failed run leaves a session's register write unapplied.
       - work-store-outbox
+      # WORKFLOW-PRUNE P4 (2026-11-06): the branch-protection spec apply. It now runs on a daily cron and on edits to its own
+      # file; a red run means main's protection may not match the file (it was red ~45% of runs on GitHub HTTP 500 before the retry).
+      - branch-protection-sync
       # ML-ENTRY-RETRAIN-CADENCE (2026-11-04): the weekly ENTRY candidate retrain; a failed run keeps the previous artifact and this is the ONE red flag.
       - ml-entry-retrain
       # ML-DATA-OFF-TRAINER (2026-10-13): the daily market-data export; its death would leave ML units on a stale dataset.
