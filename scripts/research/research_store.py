@@ -401,7 +401,7 @@ def ingest_bundle(root: Path, fileobj) -> dict[str, Any]:
         source = str(meta.get("source") or "")
         if not source.startswith("runner:"):
             raise ValueError(f"bundle source must be runner:<workflow>:<run_id>, got {source!r}")
-        evs = [json.loads(l) for l in tf.extractfile(members["events.jsonl"]).read().decode().splitlines() if l.strip()]
+        evs = [json.loads(ln) for ln in tf.extractfile(members["events.jsonl"]).read().decode().splitlines() if ln.strip()]
         conn = connect(db_path(root))
         try:
             conn.execute("BEGIN")
@@ -646,7 +646,7 @@ def _self_test() -> int:
         e1 = export_mirror(store, out)
         e2 = export_mirror(store, out)
         assert e1["changed"] and not e2["changed"] and e1["rows"] == 4, (e1, e2)  # dispatch, result, 2 grade states
-        rows = [json.loads(l) for l in out.read_text().splitlines()]
+        rows = [json.loads(ln) for ln in out.read_text().splitlines()]
         assert all(r["sources"] for r in rows) and all("payload" not in r for r in rows)
         assert stats(store)["events_by_kind"] == {"dispatch": 1, "grade": 2, "result": 1}
         assert stats(Path(td) / "nope")["read_state"] == "could_not_look"
