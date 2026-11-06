@@ -1,6 +1,6 @@
 # Manager handoff: session_01AFoLuJk1UWVx895RmLTidH (Manager Session 2026-11-06a) → new manager
 
-> **Doc status:** `live` · category `handoff` · last verified `2026-11-06` · rotation reason: manager context ~650k tokens; operator popup ~19:58Z, verbatim "Hand over after this window (Recommended)".
+> **Doc status:** `unknown` · category `handoff` · last verified `2026-11-06` · rotation reason: manager context ~650k tokens; operator popup ~19:58Z, verbatim "Hand over after this window (Recommended)".
 
 ## Operator decisions in force (verbatim, 2026-11-06)
 
