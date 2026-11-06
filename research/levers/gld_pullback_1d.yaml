@@ -4,7 +4,6 @@ subject: gld_pullback_1d
 kind: strategy_leg
 status: testing
 books:
-- alpaca_portfolio
 - ib_paper
 baseline:
   record: comms/strategy_evidence/gld_pullback_1d.json
@@ -431,6 +430,132 @@ levers:
       best_delta_r_per_trade: -0.0055
       fold_stability: 0.25
       reading: no response at the tested values
+    atr_stop_mult:
+      tests:
+      - value: '2.5'
+        baseline_value: '2.0'
+        arm: atr_stop_mult_hi
+        unit: RQ-20261105-024
+        window: 2019-07-29..2026-11-05
+        n: 55
+        net_r: 19.5554
+        baseline_n: 56
+        baseline_net_r: 24.9213
+        delta_net_r: -5.3659
+        folds_ge_baseline: 0/4
+        max_drawdown_r: 6.4782
+        verdict: pass
+        joint_change: false
+      - value: '2.5'
+        baseline_value: '2.0'
+        arm: atr_stop_mult_hi
+        unit: RQ-20261105-024
+        window: 2019-07-29..2026-11-05
+        n: 55
+        net_r: 19.5554
+        baseline_n: 56
+        baseline_net_r: 24.9213
+        delta_net_r: -5.3659
+        folds_ge_baseline: 0/4
+        max_drawdown_r: 6.4782
+        verdict: pass
+        joint_change: false
+      - value: '1.5'
+        baseline_value: '2.0'
+        arm: atr_stop_mult_lo
+        unit: RQ-20261105-024
+        window: 2019-07-29..2026-11-05
+        n: 65
+        net_r: 28.8778
+        baseline_n: 56
+        baseline_net_r: 24.9213
+        delta_net_r: 3.9565
+        folds_ge_baseline: 2/4
+        max_drawdown_r: 8.1617
+        verdict: pass
+        joint_change: false
+      - value: '1.5'
+        baseline_value: '2.0'
+        arm: atr_stop_mult_lo
+        unit: RQ-20261105-024
+        window: 2019-07-29..2026-11-05
+        n: 65
+        net_r: 28.8778
+        baseline_n: 56
+        baseline_net_r: 24.9213
+        delta_net_r: 3.9565
+        folds_ge_baseline: 2/4
+        max_drawdown_r: 8.1617
+        verdict: pass
+        joint_change: false
+      shape: monotone
+      points: 4
+      best_delta_r_per_trade: 0.0707
+      fold_stability: 0.25
+      reading: 'one-point or fold-unstable gain: overfit until a holdout says otherwise'
+    trail_decay_stall_bars:
+      tests:
+      - value: '12'
+        baseline_value: '10'
+        arm: trail_decay_stall_bars_hi
+        unit: RQ-20261105-024
+        window: 2019-07-29..2026-11-05
+        n: 55
+        net_r: 23.2302
+        baseline_n: 56
+        baseline_net_r: 24.9213
+        delta_net_r: -1.6911
+        folds_ge_baseline: 2/4
+        max_drawdown_r: 8.171
+        verdict: pass
+        joint_change: false
+      - value: '12'
+        baseline_value: '10'
+        arm: trail_decay_stall_bars_hi
+        unit: RQ-20261105-024
+        window: 2019-07-29..2026-11-05
+        n: 55
+        net_r: 23.2302
+        baseline_n: 56
+        baseline_net_r: 24.9213
+        delta_net_r: -1.6911
+        folds_ge_baseline: 2/4
+        max_drawdown_r: 8.171
+        verdict: pass
+        joint_change: false
+      - value: '8'
+        baseline_value: '10'
+        arm: trail_decay_stall_bars_lo
+        unit: RQ-20261105-024
+        window: 2019-07-29..2026-11-05
+        n: 58
+        net_r: 29.5231
+        baseline_n: 56
+        baseline_net_r: 24.9213
+        delta_net_r: 4.6018
+        folds_ge_baseline: 3/4
+        max_drawdown_r: 6.7999
+        verdict: pass
+        joint_change: false
+      - value: '8'
+        baseline_value: '10'
+        arm: trail_decay_stall_bars_lo
+        unit: RQ-20261105-024
+        window: 2019-07-29..2026-11-05
+        n: 58
+        net_r: 29.5231
+        baseline_n: 56
+        baseline_net_r: 24.9213
+        delta_net_r: 4.6018
+        folds_ge_baseline: 3/4
+        max_drawdown_r: 6.7999
+        verdict: pass
+        joint_change: false
+      shape: monotone
+      points: 4
+      best_delta_r_per_trade: 0.0822
+      fold_stability: 0.625
+      reading: 'smooth, fold-stable gain: potential -- confirm on a holdout'
     stale_exit_bars:
       tests:
       - value: '3'

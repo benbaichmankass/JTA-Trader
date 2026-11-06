@@ -516,6 +516,76 @@ levers:
       best_delta_r_per_trade: -0.0228
       fold_stability: 0.083
       reading: every tested value is worse than the baseline
+    atr_stop_mult:
+      tests:
+      - value: '3.125'
+        baseline_value: '2.5'
+        arm: atr_stop_mult_hi
+        unit: RQ-20261105-019
+        window: 2021-11-01..2026-11-04
+        n: 365
+        net_r: -17.2937
+        baseline_n: 370
+        baseline_net_r: -14.6643
+        delta_net_r: -2.6294
+        folds_ge_baseline: 1/4
+        max_drawdown_r: 25.1003
+        verdict: fail
+        joint_change: false
+      - value: '1.875'
+        baseline_value: '2.5'
+        arm: atr_stop_mult_lo
+        unit: RQ-20261105-019
+        window: 2021-11-01..2026-11-04
+        n: 373
+        net_r: -14.1459
+        baseline_n: 370
+        baseline_net_r: -14.6643
+        delta_net_r: 0.5184
+        folds_ge_baseline: 2/4
+        max_drawdown_r: 24.3987
+        verdict: fail
+        joint_change: false
+      shape: flat
+      points: 2
+      best_delta_r_per_trade: 0.0014
+      fold_stability: 0.375
+      reading: no response at the tested values
+    tp_r:
+      tests:
+      - value: '62.5'
+        baseline_value: '50.0'
+        arm: tp_r_hi
+        unit: RQ-20261105-019
+        window: 2021-11-01..2026-11-04
+        n: 370
+        net_r: -14.6643
+        baseline_n: 370
+        baseline_net_r: -14.6643
+        delta_net_r: 0.0
+        folds_ge_baseline: 4/4
+        max_drawdown_r: 22.84
+        verdict: fail
+        joint_change: false
+      - value: '37.5'
+        baseline_value: '50.0'
+        arm: tp_r_lo
+        unit: RQ-20261105-019
+        window: 2021-11-01..2026-11-04
+        n: 370
+        net_r: -14.6643
+        baseline_n: 370
+        baseline_net_r: -14.6643
+        delta_net_r: 0.0
+        folds_ge_baseline: 4/4
+        max_drawdown_r: 22.84
+        verdict: fail
+        joint_change: false
+      shape: flat
+      points: 2
+      best_delta_r_per_trade: 0.0
+      fold_stability: 1.0
+      reading: no response at the tested values
     bank_frac:
       tests:
       - value: '0.25'
@@ -1876,6 +1946,27 @@ levers:
       best_delta_r_per_trade: 0.0006
       fold_stability: 0.75
       reading: no response at the tested values
+    structure_exit:
+      tests:
+      - value: 'off'
+        baseline_value: pivot=5
+        arm: N0
+        unit: RQ-20261105-5e05-09
+        window: 2020-07-01..2026-10-15
+        n: 437
+        net_r: 26.4891
+        baseline_n: 471
+        baseline_net_r: -22.3793
+        delta_net_r: 48.8684
+        folds_ge_baseline: 6/6
+        max_drawdown_r: 13.9894
+        verdict: pass
+        joint_change: false
+      shape: single_point
+      points: 1
+      best_delta_r_per_trade: 0.1038
+      fold_stability: 1.0
+      reading: 'one-point or fold-unstable gain: overfit until a holdout says otherwise'
   session:
     skip_hours:
       tests:

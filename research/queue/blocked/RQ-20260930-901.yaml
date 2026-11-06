@@ -1,6 +1,6 @@
 id: RQ-20260930-901
 title: Fresh-holdout re-grade of ONE cell — ada_pullback_2h vol_trail vt_hot90_t2.5 (PR #14053), data after 2026-09-29 only
-status: blocked
+status: retired
 practice_precedent: 'T1 (docs/reference/trading-and-model-practice-principles.md): confirm a discovery on an untouched in-hand holdout (symbol holdout), one setting tested once, never a future month; operator 2026-11-05 RESEARCH-NO-WAIT.'
 cadence: once
 theme: live_strategy
@@ -108,3 +108,4 @@ blocked_on:
   what: a single-cell grade matching RULE-M20-ADA-VT-HOT90-T2.5-FRESH-HOLDOUT exactly (d_net_r > 0 AND d_max_dd < 0, no fold clause) on a --symbol twin
   clears_when: lands with a self-test pinning strict d_max_dd < 0; then set run.command and git mv back to research/queue/
   owner: lane RESEARCH-NO-WAIT follow-up (checklist row RESEARCH-NO-WAIT)
+retired_reason: "2026-11-06 RESEARCH-OPS-20261106-1449 blocked_over_age audit (UNBLOCK-OR-RETIRE): lever/owner still open and filed (scripts/research/exit_lever_ablation.py --grade cell); unit is not dispatchable until it lands and no driver exists, so it is configuration closed: this exact unit was not dispatchable; next test = re-author it from the lever's result, citing map_entries, when the lever lands."

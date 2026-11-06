@@ -1,0 +1,17 @@
+{
+  "due_when": {
+    "check_every_days": 3,
+    "clears_when": "RQ-20261009-900, RQ-20261009-901 and RQ-20261014-9807-04 are git mv'd to research/queue/ with a run block and have a result under research/results/, or are retired with a stated reason",
+    "kind": "observation",
+    "last_checked": "2026-11-06"
+  },
+  "id": "PI-20261106-5RMLTIDH-0002",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "audit",
+    "ref": "RESEARCH-OPS-20261106-1449 blocked_over_age audit",
+    "rerun": "python3 scripts/ops/blocker_watch.py; ls research/queue/blocked | grep -E '900|901|9807-04'"
+  },
+  "state": "queued",
+  "what": "Three blocked/ units are unblocked in substance but have no driver: RQ-20261009-900 and -901 (prerequisite RQ-20261014-736c-01 graded PASS, corpus at comms/research/RQ-20261014-736c-01/38738465656/ml2_live_leg_corpus.jsonl exists; missing: a verdict.json wrapper over scripts/research/ml2_bracket_train_eval.py --corpus <that> --outcome mfe_r --per-leg --per-stratum that applies RULE-RQ1009-900, plus run.workflow research-script-run.yml) and RQ-20261014-9807-04 (census RQ-20261014-9807-01 now graded PASS, so clause 1 of blocked_on is met; missing: derive run.inputs.cells per leg from the census rows). MEASURED 2026-11-06 research-ops pass: the verdict-wrapper names no existing script (grep of scripts/research for RULE-RQ1009-900 hits only the ml2_bracket_train_eval comment). These three stay blocked deliberately (3 of 22 over-age blocked units; the other 19 were retired as configurations, family untouched)."
+}

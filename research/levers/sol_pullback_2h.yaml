@@ -1581,6 +1581,27 @@ levers:
       fold_stability: 0.5
       reading: 'smooth, fold-stable gain: potential -- confirm on a holdout'
   other:
+    structure_exit:
+      tests:
+      - value: 'off'
+        baseline_value: pivot=5
+        arm: N0
+        unit: RQ-20261105-5e05-11
+        window: 2020-07-01..2026-10-15
+        n: 147
+        net_r: 7.1958
+        baseline_n: 159
+        baseline_net_r: -2.1959
+        delta_net_r: 9.3917
+        folds_ge_baseline: 4/6
+        max_drawdown_r: 13.8334
+        verdict: fail
+        joint_change: false
+      shape: single_point
+      points: 1
+      best_delta_r_per_trade: 0.0591
+      fold_stability: 0.667
+      reading: 'one-point or fold-unstable gain: overfit until a holdout says otherwise'
     momentum_stale_bars:
       tests:
       - value: '12'
