@@ -63,9 +63,24 @@ def test_001_jackknife_from_committed_ledger(tmp_path: Path):
     assert v["verdict"] == "pass" and "nolegrecord" in v["measurement"]["skipped"]
 
 
-def test_real_corpus_reads(tmp_path: Path):
-    """The committed corpus must produce a measured verdict for each rule (guards a schema drift)."""
-    for rule in ("002", "012", "001"):
+def test_real_corpus_reads(tmp_path: Path, monkeypatch):
+    """The committed corpus must produce a measured verdict for each rule (guards a schema drift).
+
+    Rule 001's population is the alpaca_live roster. Since 2026-11-06 (PROD-LEGS-DSR-DECISION, operator "Re-measure, then
+    move (Rec.)") that roster is EMPTY, so on the real file 001 honestly reads ``no_data`` (n 0) -- an empty population is not
+    a zero. The schema-drift check then runs 001 on the REAL corpus with the pre-decision alpaca_live leg re-staged into the
+    roster text the census reads, so the positive control never goes vacuous."""
+    for rule in ("002", "012"):
         v = m.grade(rule)
         assert v["read_state"] == "measured" and v["n"] > 0, rule
         assert v["decision_rule"]["id"] == m.RULE_IDS[rule]
+    import yaml
+    real = yaml.safe_load(m._roster_text(m.REPO))["accounts"]
+    v = m.grade("001")
+    assert v["decision_rule"]["id"] == m.RULE_IDS["001"]
+    if not (real.get("alpaca_live") or {}).get("strategies"):
+        assert v["read_state"] == "no_data" and v["n"] == 0, v
+        staged = {**real, "alpaca_live": {**real["alpaca_live"], "strategies": ["iaum_pullback_1d"]}}
+        monkeypatch.setattr(m, "_roster_text", lambda repo: yaml.safe_dump({"accounts": staged}))
+        v = m.grade("001")
+    assert v["read_state"] == "measured" and v["n"] > 0, "001"
