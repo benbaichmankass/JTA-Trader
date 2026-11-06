@@ -2144,14 +2144,21 @@ strategies:
     atr_period: 14
     atr_stop_mult: 2.5
     trail_mult: 4.0
-    tp_r: 50.0
+    # TP doctrine (Tier-3, row ALPACA-LIVE-MECHANICS; operator popup 2026-11-06 ~11:40Z, relayed by Manager Session
+    # 2026-11-06a, verbatim "Give tqqq a real TP first"): a real predictive TP replaces the 50 R sentinel before the
+    # alpaca_live mechanics probe. EVIDENCE: research/results/RQ-20261106-7850-02/local-20261106.json
+    # (tp_prediction_derive --pool over the identical-param sentinel trio tqqq/qld/splg trend_long_1d, yfinance
+    # 2010-12..2026-11, n 175 / n_oos 71, net of the harness cost stack): K* 1.5 R, OOS reach 0.507 vs IS 0.50
+    # (calibration gap 0.007), OOS delta vs the sentinel -0.0065 R/trade, CI95 [-0.107, +0.093] -> INDETERMINATE
+    # (the CI straddles the -0.05 non-inferiority margin). The rule selects no value on its own: 1.5 R is the
+    # calibrated K* put to the operator to DECLARE, exactly as iaum_pullback_1d's 3.5 R was (RQ-20261016-014,
+    # also INDETERMINATE). It rests below the median venue cap (1.65 R IS), so it is a real target, not the clamp.
+    # ROLLBACK: restore `tp_r: 50.0` + the prior `tp_intent: {mode: unexamined, ...}` block (git history).
+    tp_r: 1.5
     tp_intent:
-      mode: unexamined
-      # ⚠️ THIS IS NOT A DECISION AND MUST NOT BE READ AS ONE. These two legs are absent
-      # from BOTH e35-bracket-corpus.jsonl (41 legs) and -history.jsonl (27 legs) — their
-      # target question has never been asked. Matrix: blocked:no_free_lane_candle_feed.
-      reason: never_swept_no_free_lane_candle_feed
-      revisit_when: a_candle_substrate_exists_for_this_symbol
+      mode: r_multiple
+      basis: RQ-20261106-7850-02_pooled_kstar_1.5R
+      calibrated: true           # OOS calibration gap 0.007 (RQ-20261106-7850-02)
     min_confidence: 0.0
     shadow_model_ids: []
 

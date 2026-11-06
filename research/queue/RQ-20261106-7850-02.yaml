@@ -2,7 +2,7 @@ id: RQ-20261106-7850-02
 title: 'tqqq_trend_long_1d real money probe: does the 1d trend_long ETF family carry a predictive take-profit
   (pooled tp_prediction_derive, longest yfinance window) to replace the 50R sentinel before the alpaca_live
   mechanics probe?'
-status: queued
+status: done
 cadence: once
 roadmap:
 - L-ATM
@@ -46,7 +46,7 @@ decision_rule:
     data-backed TP. PASS IF reach_OOS(K*) >= 0.10 AND gap <= 0.10 AND CI lower >= -0.05 -> K* is the family''s
     predictive TP and goes on tqqq_trend_long_1d in PR #23784 (Tier 3, held for the manager).'
   what_it_does_not_do: Touches no config by itself. Pooling assumes the three legs' R-distributions are comparable
-    (same unit, same 1d timeframe, stop multiples 1.5-3.0); per-leg rows are reported, not graded. A PASS is a
+    (same unit, same params, same 1d timeframe); per-leg rows are reported, not graded. A PASS is a
     screen; tp_revision (the second doctrine dimension) is a separate question.
   registered_before_run: true
   registered_at: '2026-11-06'
@@ -85,3 +85,11 @@ related:
 - RQ-20261016-014
 - scripts/research/tp_prediction_derive.py
 - docs/claude/work/checklist/ALPACA-LIVE-MECHANICS.json
+grading:
+  verdict: indeterminate
+  graded_at: '2026-11-06'
+  reason: 'MEASURED: pooled tqqq/qld/splg trend_long_1d, 2010-12-19..2026-11-05, n 175 / n_oos 71; K* 1.5 R, reach_OOS 0.507,
+    calibration gap 0.007, OOS delta vs sentinel -0.0065 R/trade, CI95 [-0.107, +0.093] straddles the -0.05 margin. Not a PASS:
+    1.5 R is put to the operator to DECLARE (the RQ-20261016-014 / iaum 3.5 R precedent), in PR #23784 (Tier 3, held).'
+  evidence:
+  - research/results/RQ-20261106-7850-02/local-20261106.json
