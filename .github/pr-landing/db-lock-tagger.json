@@ -1,0 +1,7 @@
+{
+  "tier": 1,
+  "landing": "hold",
+  "why": "Tier-1 diagnostics only (manager 2026-11-06 06:12Z: 'ship the Tier-1 classifier fix'; held only because the guard cannot certify src/utils/db_lock_diag.py): db_lock_diag's thread classifier now tags frames in venue_protection_snapshot, position_path_history and position_telemetry as [db]. MEASURED 2026-11-06 05:24Z/06:11Z: the holder candidate sat in venue_protection_snapshot.record_read and was tagged 'other'. One tuple of marker strings in a log-only module that never raises and touches no DB, plus one test.",
+  "hold_reason": "unvouchable_paths",
+  "hold_text": "landing: hold - src/utils/db_lock_diag.py is outside the Tier-1 surface the guard can certify; the manager reads and merges (log-only, one marker tuple)"
+}
