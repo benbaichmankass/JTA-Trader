@@ -1,6 +1,6 @@
 # Manager handoff 2026-11-06: session_01AFoLuLmhUKeUzHC6CHz2uP (Manager Session 2026-11-05b) -> new
 
-> **Doc status:** `live` · category `handoff` · last verified `2026-11-06` · rotation reason: old manager context far past ~650k tokens; operator popup 2026-11-06 ~09:05Z "Hand over now (Recommended)".
+> **Doc status:** `unknown` · category `handoff` · last verified `2026-11-06` · rotation reason: old manager context far past ~650k tokens; operator popup 2026-11-06 ~09:05Z "Hand over now (Recommended)".
 
 ## Operator decisions in force (verbatim popup answers, 2026-11-06 ~09:05Z)
 
