@@ -1,0 +1,23 @@
+{
+  "based_on": "20261106T051947585951Z-74755bf5.json",
+  "due_when": {
+    "check_every_days": 1,
+    "clears_when": "two consecutive 4h bar-close ticks with 0 x 'retCode 10006' and 0 'no candle data' strategy raises on ict-trader-live; or killed with a stated reason",
+    "kind": "observation",
+    "last_checked": "2026-11-06"
+  },
+  "id": "PI-20261106-5A1BGFHC-0003",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "audit",
+    "ref": "lane PROD-LEGS-DSR-DECISION pipeline-alive check 2026-11-06 05:12Z (manager 2026-11-05b ask)",
+    "rerun": "DIAG_FETCH_MAX_TIME=60 scripts/ops/diag_fetch.sh 'journalctl?unit=ict-trader-live.service&since=<bar close -1m>&until=<bar close +5m>&grep=retCode 10006|no candle data&lines=500'"
+  },
+  "redate": {
+    "evidence": "diag journalctl ict-trader-live since 2026-11-06T07:59Z grep ml_entry_refs|ml_entry_decision|reference_symbols|10006|no candle data (45 lines, read_state complete)",
+    "observation": "08:00Z bar after #23671 (44c8595ad, deployed: trader_git_sha 7000de017): 3 x retCode 10006 (08:00:06 MainThread ADA 1h; 08:00:33 + 08:01:04 exit-evaluation-loop), 26 'no candle data' strategy raises (17 in 08:00). ml_entry refs: have 0/60 -> 2 -> 8 (cooldown_stop) -> 52/60 at 08:01:41; BTC/SOL/XRP/ADA decided no_signal at 08:01:47-08:02:40 with no reference_symbols refusal (the #23671 fix worked). ETHUSDT decided at 08:00:06 inside the cooldown with 0 refs -> refused feature_row_unformable and the refusal CONSUMED its bar (ledger records any ValueError). Also two slots each fetched the same 52 symbols (08:01:41/46). Follow-up PR: pending refs do not consume the bar + shared per-symbol frames. 8 of 60 refs never returned (out of 5 tries, not cooldown) -- unidentified.",
+    "observed_at": "2026-11-06"
+  },
+  "state": "queued",
+  "what": "Bybit retCode 10006 ('Too many visits') on the BAR-CLOSE tick knocks out every crypto strategy for that tick. MEASURED 2026-11-06 ict-trader-live journalctl: 04:00:07Z (thread=MainThread, LINK/USDT 1h) and 04:01:03Z (BTCUSDT 1m); the #23580 cooldown then returns None from get_ohlcv, so 45 strategy builders raised 'no candle data' in 04:00-04:29Z (ml_entry x6, ml_entry_v2 x8, e4_oi_shock_1h x10, xrp_pullback_2h/ada_pullback_2h/trend_donchian_xrp_4h x2 each, ict_scalp_* , turtle_soup, fade/squeeze_breakout_4h...), smaller rounds at 02:00, 03:00, 05:01Z. Closed-bar legs recovered ~2 min late (04:02:12Z decided the 04:00 bar, no decision lost), but 5m/15m scalps and ml_entry lose the bar-close tick outright, which is the tick that matters. Cause: the all-symbol bar-close kline burst on one key; the cooldown is correct (no in-line sleep), the burst is the defect. Fix candidates (Tier 2): stagger/serialize the bar-close fetch, share one kline cache per (symbol,tf,bar) across strategies, or prefetch just after close with a budget."
+}

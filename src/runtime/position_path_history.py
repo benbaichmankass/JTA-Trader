@@ -315,36 +315,48 @@ def prune_history(conn: sqlite3.Connection, *, now: datetime | None = None,
     return cur.rowcount or 0
 
 
+def _apply_history(conn: sqlite3.Connection, path: str, row: dict[str, Any]) -> bool:
+    """The body of one history write, on an OPEN connection (inside its transaction)."""
+    if _is_final(conn, row["order_package_id"]):
+        return False
+    if row.get("account_id") in (None, "") and row.get("trade_id"):
+        try:
+            hit = conn.execute("SELECT account_id FROM trades WHERE id = ?",
+                               (int(row["trade_id"]),)).fetchone()
+            if hit and hit[0]:
+                row = dict(row, account_id=hit[0])
+        except (sqlite3.Error, TypeError, ValueError):
+            pass  # allow-silent: enrichment only — the row still writes
+    conn.execute(_upsert_for(conn, path),
+                 {**{c: None for c in ADVISOR_COLS}, **row})
+    mono = time.monotonic()
+    if mono - _last_prune.get(path, -_PRUNE_EVERY_S - 1) >= _PRUNE_EVERY_S:
+        _last_prune[path] = mono
+        prune_history(conn)
+    return True
+
+
 def write_history(row: dict[str, Any] | None,
                   db_path: str | None = None) -> bool:
     """Best-effort upsert of one history row. Returns whether it landed.
 
     Never raises. Skips (returns False) when the package's telemetry row is
     already stamped ``final`` — no history after close.
+
+    Inside ``position_telemetry.exit_pass_batch()`` (the exit-evaluation thread's pass) the row is QUEUED and written
+    with the pass's other telemetry in ONE transaction at the end of the pass (MECH-FOLLOWUPS-1105); the return value
+    then means "queued".
     """
     if not row:
         return False
     try:
         from src.utils.paths import trade_journal_db_path
         path = db_path or str(trade_journal_db_path())
+        from src.runtime import position_telemetry as _pt
+        if _pt.queue_op("history", row, path):
+            return True
         with sqlite3.connect(path, timeout=_write_busy_timeout(5.0)) as conn:
-            if _is_final(conn, row["order_package_id"]):
-                return False
-            if row.get("account_id") in (None, "") and row.get("trade_id"):
-                try:
-                    hit = conn.execute("SELECT account_id FROM trades WHERE id = ?",
-                                       (int(row["trade_id"]),)).fetchone()
-                    if hit and hit[0]:
-                        row = dict(row, account_id=hit[0])
-                except (sqlite3.Error, TypeError, ValueError):
-                    pass  # allow-silent: enrichment only — the row still writes
-            conn.execute(_upsert_for(conn, path),
-                         {**{c: None for c in ADVISOR_COLS}, **row})
-            mono = time.monotonic()
-            if mono - _last_prune.get(path, -_PRUNE_EVERY_S - 1) >= _PRUNE_EVERY_S:
-                _last_prune[path] = mono
-                prune_history(conn)
-        return True
+            return _apply_history(conn, path, row)
     except Exception:  # noqa: BLE001 — never raise into the monitor; next pass retries
         _warn_once("write", "position_path_history: write failed "
                             "(contained; trading unaffected; retried next pass)")

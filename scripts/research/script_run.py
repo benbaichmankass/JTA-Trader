@@ -346,6 +346,21 @@ def _tail(path: Path, limit: int = LOG_TAIL_BYTES) -> None:
     path.write_bytes(b"[... truncated to the last %d bytes ...]\n" % limit + data)
 
 
+def _runner_fingerprint() -> Dict[str, Any]:
+    """The machine and library build this run executed on (scripts/research/runner_fingerprint.py), for run-manifest.json.
+
+    MEASURED 2026-11-06: one data pin gave two exactly-reproducible outcomes across runner runs, so a result is only exactly
+    comparable within one runner class. Loaded by file path (works however this script is invoked); never raises."""
+    try:
+        import importlib.util
+        spec = importlib.util.spec_from_file_location("runner_fingerprint", Path(__file__).resolve().parent / "runner_fingerprint.py")
+        mod = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(mod)  # type: ignore[union-attr]
+        return mod.fingerprint()
+    except Exception as exc:  # noqa: BLE001  # allow-silent: recording the runner must never fail a research run; the failure is recorded instead
+        return {"read_state": "could_not_look", "error": f"{type(exc).__name__}: {exc}", "class_id": None}
+
+
 def execute(p: Plan, *, repo: Path = _REPO) -> Dict[str, Any]:
     """Run the plan's commands in order; write `<out_dir>/run-manifest.json`.
     Returns the manifest. Never raises for a failing command — the failure is
@@ -390,6 +405,7 @@ def execute(p: Plan, *, repo: Path = _REPO) -> Dict[str, Any]:
                     f"{os.environ.get('GITHUB_REPOSITORY', '')}/actions/runs/"
                     f"{os.environ.get('GITHUB_RUN_ID', '')}") if os.environ.get("GITHUB_RUN_ID") else None,
         "timeout_minutes": p.timeout_minutes,
+        "runner": _runner_fingerprint(),
         "commands": rows,
         "all_ok": bool(rows) and all(r.get("exit_code") == 0 for r in rows) and len(rows) == len(p.commands),
     }

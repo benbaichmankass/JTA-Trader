@@ -229,9 +229,12 @@ def test_reference_cache_holds_one_slot_per_venue_so_alternating_symbols_do_not_
     bar = "2026-01-30T15:00:00+00:00"
     for venue in ("bybit", "alpaca", "bybit", "alpaca"):
         B._ml_entry_reference_frames(["BTCUSDT", "ETHUSDT"], bar, object(), venue=venue)
-    assert len(calls) == 4                                                 # 2 symbols x 2 venues, fetched once each
+    # One slot per venue, and since both slots read the SAME reference source (Bybit) the second slot reuses the
+    # first one's frames (_ML_ENTRY_REF_FRAMES, PI-20261106-5A1BGFHC-0003): 2 symbols fetched once each, not 2x2.
+    assert len(calls) == 2
+    assert len(B._ML_ENTRY_REF_CACHE) == 2                                 # still one slot per venue
     B._ml_entry_reference_frames(["BTCUSDT", "ETHUSDT"], "2026-01-30T19:00:00+00:00", object(), venue="bybit")
-    assert len(calls) == 6 and all(k[2] == "2026-01-30T19:00:00+00:00" for k in B._ML_ENTRY_REF_CACHE)
+    assert len(calls) == 4 and all(k[2] == "2026-01-30T19:00:00+00:00" for k in B._ML_ENTRY_REF_CACHE)
     B._ML_ENTRY_REF_CACHE.clear()
 
 

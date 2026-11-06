@@ -1,0 +1,7 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "hold_reason": "tier_2_3_needs_approval",
+  "hold_text": "Tier-2 entry-path follow-up to #23671 (src/runtime/strategy_signal_builders.py). (1) ml_entry / ml_entry_v2: a reference set short of min_reference_symbols ONLY because fetches are still owed this bar (retry_pending > 0) returns 'reference_set_pending' WITHOUT recording the closed decision, so the next tick decides the bar; once nothing is owed a short set is a recorded refusal as before. (2) Frames fetched this bar are shared across slots per (ref venue, bar, symbol, limit). MEASURED 08:00Z 2026-11-06 on 7000de017: ETHUSDT decided at 08:00:06 inside a 10006 cooldown with 0/60 refs, refused feature_row_unformable and lost its bar (bybit_2 real money); BTC/SOL/XRP/ADA decided at 52/60 a tick later. Two slots each fetched the same 52 symbols at 08:01:41/46. No sleep, no pacing, cooldown unchanged. PI-20261106-5A1BGFHC-0003. Revert: git revert.",
+  "why": "A cooldown-cut reference set still consumed ETH's real-money decision bar; and the reference loop fetched 52 symbols twice per bar."
+}

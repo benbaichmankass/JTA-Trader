@@ -469,6 +469,16 @@ def ib_breaker_armed() -> bool:
     return not _truthy(os.environ.get("EXIT_LOOP_IB_BREAKER_DISABLED"))
 
 
+def _exit_pass_telemetry_batch():
+    """Context for one exit-evaluation pass: see ``position_telemetry.exit_pass_batch``. Never raises."""
+    try:
+        from src.runtime.position_telemetry import exit_pass_batch
+        return exit_pass_batch()
+    except Exception:  # noqa: BLE001 — observe-only; fall back to per-write commits
+        from contextlib import nullcontext
+        return nullcontext()
+
+
 def _exit_loop(settings: dict) -> None:
     """Evaluate every open package's exit on our own cadence, forever.
 
@@ -493,7 +503,10 @@ def _exit_loop(settings: dict) -> None:
         started = time.monotonic()
         fetcher = _build_monitor_ohlcv_fetcher(settings)
         try:
-            run_exit_evaluation_tick(ohlcv_fetcher=fetcher)
+            # MECH-FOLLOWUPS-1105: this pass's telemetry/history writes are queued and flushed in ONE transaction when
+            # the pass ends (never under a broker call; the flush is contained and the next pass rewrites).
+            with _exit_pass_telemetry_batch():
+                run_exit_evaluation_tick(ohlcv_fetcher=fetcher)
         except Exception:  # noqa: BLE001
             logger.exception("exit_loop: pass failed")
         elapsed_ms = (time.monotonic() - started) * 1000.0
