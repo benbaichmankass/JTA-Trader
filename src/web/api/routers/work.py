@@ -2357,6 +2357,35 @@ def get_work_brief() -> dict[str, Any]:
     return {**payload, "snapshot": {"ageSeconds": round(age_s, 1), "state": state}}
 
 
+# ── /scoreboard — SCOREBOARD-PNL-FIRST: net $ and % per book, trials vs survivors, measured cost ──
+#
+# Tier 1: read-only. Reads the trade journal through a `mode=ro` connection (no write, no new table: it
+# PROJECTS over the canonical `trades` journal) plus the prop overview/fills and the committed trial ledger.
+# Deferred import for the same reason as `_brief_payload`: a bug in `scripts.ops.scoreboard` degrades this
+# route to `readState: unreadable`, never every route in this file. Gates this adds: none.
+
+_SCOREBOARD_SWR = SWRCache(name="work-scoreboard", fresh_s=60.0, stale_s=900.0)
+
+
+def _scoreboard_payload() -> dict[str, Any]:
+    from scripts.ops import scoreboard as _sb
+
+    return _sb.build(root=Path(repo_root()), source="db")
+
+
+@router.get("/scoreboard")
+def get_work_scoreboard() -> dict[str, Any]:
+    """Net $ and % per book (real money, prop, mirror, paper), inception and trailing 30 d; trials vs survivors;
+    measured vs estimated cost per trade. Every block carries its population and ``read_state``; null = dash."""
+    try:
+        payload, age_s, state = _SCOREBOARD_SWR.get("scoreboard", _scoreboard_payload)
+    except Exception as exc:  # noqa: BLE001  # allow-silent: logged with a stack and surfaced as readState=unreadable + reason, never a 5xx
+        logger.warning("work: scoreboard build failed: %s", exc, exc_info=True)
+        return {"schemaVersion": 1, "readState": "unreadable", "reason": f"scoreboard build failed: {exc}",
+                "books": None, "cost": None, "trials": None}
+    return {**payload, "snapshot": {"ageSeconds": round(age_s, 1), "state": state}}
+
+
 # ── /schedule — A9: cadenced sessions, decisions owed, monitoring coming ──
 # due, cron cadences. Appended at end-of-file deliberately: a concurrent
 # lane (E15) is editing `_decision_inbox` and the helpers it calls, and a

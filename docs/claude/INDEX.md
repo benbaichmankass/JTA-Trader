@@ -69,7 +69,6 @@ Their job is now one page: `.claude/skills/manager/SKILL.md`.
 
 **Review cadence**
 
-- `system-report` — Back-compat alias for /system-review — the master SYSTEM REVIEW session (the work is the review; the report is its deliverable).
 - `health-review` — Autonomous layer-2 review of the LIVE ICT TRADING BOT's TECHNICAL runtime health — pipeline plumbing, DB integrity, data validity, service state, alert delivery, sprint-doc drift.
 - `performance-review` — Autonomous review of the ICT trading bot's TRADING PERFORMANCE and its RESEARCH PIPELINE — per-strategy aggregate stats, per-order-package decision grading, comparison against actual closed-trade PnL, and proposed tweaks to consider.
 - `perf-followup` — The routine that runs after every /performance-review lands: TUNE underperformers, LESSONS post-mortem (strengths/weaknesses of the system), EXTRAPOLATE lessons to other legs and new strategies, PORTFOLIO research tied to net P&L. Every output is a research/queue unit or checklist/pipeline row, never a memo; Step 0 closes the loop on the previous run's units. Dispatched by the manager as one Sonnet lane per review.

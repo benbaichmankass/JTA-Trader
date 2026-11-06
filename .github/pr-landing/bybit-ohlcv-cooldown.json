@@ -1,0 +1,7 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "hold_reason": "tier_2_3_needs_approval",
+  "why": "Data-backed Tier-2 (manager 2026-11-05b, canonical 'Data-backed Tier-2/3 decisions'): BybitConnector.get_ohlcv no longer sleeps 15 s in the caller on a retCode 10006; it starts a shared cooldown and returns None at once. Measured cause of the 00:02Z 115.3 s EXIT-EVAL INTERVAL breach (11 x 10006 + sleep(15) in the gap, PI-20261105-F2QX97PI-0001). Tests prove no sleep, cooldown expiry, and that missing candles never close/amend/journal-write (every strategy monitor() returns None for no candles). No config, roster, order-placement, sizing or mandate change. Also files the second mechanism as PI-20261106-QSEQAVLT-0001.",
+  "hold_text": "landing: hold - the manager merges; the deploy goes through git-sync + restart; observe one top-of-hour bar after deploy"
+}

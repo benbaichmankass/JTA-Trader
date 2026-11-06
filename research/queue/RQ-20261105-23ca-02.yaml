@@ -98,6 +98,19 @@ related:
 - RQ-20261027-3e41-06
 - RQ-20261028-4dd3-01
 - RESEARCH-NO-WAIT
-status: queued
+status: done
 practice_precedent: 'T1 (docs/reference/trading-and-model-practice-principles.md): confirm a discovery on an untouched in-hand holdout (symbol holdout), one setting tested once, never a future month; operator 2026-11-05 RESEARCH-NO-WAIT.'
 last_dispatched_at: '2026-11-05T22:06:56+00:00'
+grading:
+  attested: RULE-RQ2026110523CA02-ADX_MAX_SYMBOL_HOLDOUT
+  auto: true
+  decision_rule_id: RULE-RQ2026110523CA02-ADX_MAX_SYMBOL_HOLDOUT
+  evidence:
+  - research/results/RQ-20261105-23ca-02/42118852792.jsonl
+  graded_at: '2026-11-06'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail

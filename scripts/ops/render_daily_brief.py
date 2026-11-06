@@ -606,7 +606,14 @@ def build(*, today: date | None = None, root: Path | None = None) -> dict[str, A
     except Exception:  # noqa: BLE001 — unreadable is a state, not a crash
         bw = None
 
+    try:  # SCOREBOARD-PNL-FIRST: unreadable is a state (renders "we could not look"), never a crash or a zero
+        from scripts.ops import scoreboard  # noqa: PLC0415
+        sb = scoreboard.build(root=root, source="db")
+    except Exception as exc:  # noqa: BLE001
+        sb = {"readState": "unreadable", "reason": f"scoreboard build failed: {exc!r}"}
+
     return {
+        "scoreboard": sb,
         "blockerWatch": bw,
         "schemaVersion": 1,
         "forDate": today.isoformat(),
@@ -657,7 +664,12 @@ def _section0(b: dict) -> list[str]:
 
 
 def _section1(b: dict) -> list[str]:
-    L = ["---", "", "## §1 — TAKEN UNDER MANDATE", ""]
+    L = ["---", "", "## §1 — SCOREBOARD, THEN TAKEN UNDER MANDATE", ""]
+    # SCOREBOARD-PNL-FIRST (2026-11-06): net P&L per book comes first in every brief. `scoreboard.render_lines`
+    # states its own population and read-state; a block that could not be read says so, it never renders 0.
+    from scripts.ops import scoreboard  # noqa: PLC0415
+    L += scoreboard.render_lines(b.get("scoreboard"))
+    L += ["### Taken under mandate", ""]
     mv = b["mandates"]
     if mv["state"] == "absent":
         L += ["**No mandate mechanism exists yet.** `config/mandates.yaml` does "

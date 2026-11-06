@@ -277,6 +277,84 @@ class TestCheckpointResume:
         assert len(completed) == 1, outputs
 
 
+class TestCatchupSkipsRebuildWhenComplete:
+    """FREE-CAPACITY-PLAN (a), 2026-11-06: a same-day run that has nothing left to
+    train must not rebuild every dataset family first (measured: 7/7 catch-ups
+    rebuilt for 42-57 CPU-min and trained 0). A run with work to resume, or a
+    forced restart, still rebuilds."""
+    MANIFESTS = ["ml/configs/manifest-a.yaml", "ml/configs/manifest-b.yaml"]
+
+    @staticmethod
+    def _count_builds(root: Path) -> None:
+        p = root / "scripts" / "ops" / "build_trainer_datasets.sh"
+        p.write_text("#!/usr/bin/env bash\necho x >> \"$REPO_ROOT/build_calls.txt\"\nexit 0\n",
+                     encoding="utf-8")
+        p.chmod(0o755)
+        # The cycle force-checks-out origin/main, so the stub must be committed + pushed.
+        for cmd in (["git", "add", "-A"], ["git", "commit", "-q", "-m", "count builds"],
+                    ["git", "push", "-q", "origin", "main"]):
+            subprocess.run(cmd, cwd=root, check=True)
+
+    @staticmethod
+    def _builds(root: Path) -> int:
+        f = root / "build_calls.txt"
+        return len(f.read_text().splitlines()) if f.exists() else 0
+
+    def _cycle(self, root: Path, extra: dict | None = None) -> subprocess.CompletedProcess:
+        return subprocess.run(["/bin/bash", "scripts/ops/run_training_cycle.sh"], cwd=root,
+                              env=_fixture_env(root, self.MANIFESTS, extra),
+                              capture_output=True, text=True, timeout=30)
+
+    def test_complete_day_skips_the_rebuild(self, tmp_path: Path):
+        _init_fixture_repo(tmp_path, self.MANIFESTS)
+        self._count_builds(tmp_path)
+        r1 = self._cycle(tmp_path)
+        assert r1.returncode == 0, r1.stdout + r1.stderr
+        assert self._builds(tmp_path) == 1
+        assert '"status":"datasets_ok"' in r1.stdout
+        r2 = self._cycle(tmp_path)
+        assert r2.returncode == 0, r2.stdout + r2.stderr
+        assert self._builds(tmp_path) == 1, "second same-day run rebuilt datasets with nothing to train"
+        assert '"status":"datasets_skipped_cycle_complete"' in r2.stdout
+        assert '"status":"cycle_already_complete"' in r2.stdout
+        assert '"status":"cycle_end"' in r2.stdout
+
+    def test_unfinished_day_still_rebuilds(self, tmp_path: Path):
+        _init_fixture_repo(tmp_path, self.MANIFESTS)
+        self._count_builds(tmp_path)
+        r1 = self._cycle(tmp_path, {"KILL_TARGET": "ml/configs/manifest-b.yaml"})
+        assert r1.returncode == 1, r1.stdout + r1.stderr
+        r2 = self._cycle(tmp_path)
+        assert r2.returncode == 0, r2.stdout + r2.stderr
+        assert self._builds(tmp_path) == 2
+        assert "datasets_skipped_cycle_complete" not in r2.stdout
+        assert '"to_run":1' in r2.stdout
+
+    def test_force_restart_still_rebuilds(self, tmp_path: Path):
+        _init_fixture_repo(tmp_path, self.MANIFESTS)
+        self._count_builds(tmp_path)
+        self._cycle(tmp_path)
+        r2 = self._cycle(tmp_path, {"TRAINING_CYCLE_FORCE_RESTART": "1"})
+        assert r2.returncode == 0, r2.stdout + r2.stderr
+        assert self._builds(tmp_path) == 2
+        assert "datasets_skipped_cycle_complete" not in r2.stdout
+
+    def test_new_manifest_since_morning_still_rebuilds(self, tmp_path: Path):
+        _init_fixture_repo(tmp_path, self.MANIFESTS)
+        self._count_builds(tmp_path)
+        self._cycle(tmp_path)
+        (tmp_path / "ml/configs/manifest-c.yaml").write_text("name: c\nmodel_id: c\n")
+        for cmd in (["git", "add", "-A"], ["git", "commit", "-q", "-m", "add c"],
+                    ["git", "push", "-q", "origin", "main"]):
+            subprocess.run(cmd, cwd=tmp_path, check=True)
+        r2 = subprocess.run(["/bin/bash", "scripts/ops/run_training_cycle.sh"], cwd=tmp_path,
+                            env=_fixture_env(tmp_path, self.MANIFESTS + ["ml/configs/manifest-c.yaml"]),
+                            capture_output=True, text=True, timeout=30)
+        assert r2.returncode == 0, r2.stdout + r2.stderr
+        assert self._builds(tmp_path) == 2
+        assert "datasets_skipped_cycle_complete" not in r2.stdout
+
+
 # ---------------------------------------------------------------------------
 # Cycle legibility (P1.5) + audit-FLAGGED enforce skip (P1.3d) — 2026-07-31
 # full-system-audit plan. The FLAGGED branch had no test; the summary

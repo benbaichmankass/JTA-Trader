@@ -76,11 +76,30 @@ def audit(monkeypatch):
 
 # ── 1. Stage-1 soak legs block only themselves ──────────────────────────────
 
-def test_paper_soak_leg_never_blocks_live(journal, audit):
+def _real_accounts_with_roster_strat_on_stage2():
+    """The REAL accounts.yaml, with ROSTER_STRAT re-staged as a production leg (bybit_2 + bybit_portfolio,
+    off bybit_1). Since 2026-11-06 (PROD-LEGS-DSR-DECISION, operator "Re-measure, then move (Rec.)") NO leg is on
+    a real-money roster, so the real file has no production leg to measure; every other account and key is the
+    real file's, read through the real loader."""
+    import copy
+    from src.config import accounts_loader as al
+    accts = copy.deepcopy(al.load_accounts_dict())
+    assert accts, "accounts.yaml unreadable -- the probe must see a positive"
+    for acct in ("bybit_2", "bybit_portfolio"):
+        legs = list(accts[acct].get("strategies") or [])
+        accts[acct]["strategies"] = legs + ([ROSTER_STRAT] if ROSTER_STRAT not in legs else [])
+    accts["bybit_1"]["strategies"] = [s for s in accts["bybit_1"].get("strategies") or [] if s != ROSTER_STRAT]
+    return accts
+
+
+def test_paper_soak_leg_never_blocks_live(journal, audit, monkeypatch):
     """The reported bug: only the Stage-1 soak account holds → the live account trades.
 
     Reported on alpaca_paper / alpaca_live; asserted on the Bybit trio against the
-    real rosters (see the ROSTER_STRAT note above)."""
+    real rosters (see the ROSTER_STRAT note above), with ROSTER_STRAT re-staged as a production leg."""
+    from src.config import accounts_loader as al
+    staged = _real_accounts_with_roster_strat_on_stage2()
+    monkeypatch.setattr(al, "load_accounts_dict", lambda *a, **k: staged)
     kw = dict(strategy=ROSTER_STRAT, symbol=ROSTER_SYM)
     _pkg(journal, "pkg-soak", **kw)
     _leg(journal, "pkg-soak", "bybit_1", **kw)
