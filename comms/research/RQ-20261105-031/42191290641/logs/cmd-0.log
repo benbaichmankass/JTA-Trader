@@ -1,0 +1,40 @@
+$GC=F: 15m data not available for startTime=1731747479 and endTime=1793955479. The requested range must be within the last 60 days.
+
+1 Failed download:
+['GC=F']: 15m data not available for startTime=1731747479 and endTime=1793955479. The requested range must be within the last 60 days.
+/opt/hostedtoolcache/Python/3.11.18/x64/lib/python3.11/site-packages/yfinance/multi.py:220: Pandas4Warning: The inplace keyword in DataFrame.rename is deprecated and will be removed in a future version (PDEP-8).
+See https://pandas.pydata.org/docs/dev/whatsnew/v3.1.0.html#deprecation-inplace for more details.
+  data.rename(columns=ctx.isins, inplace=True)
+/opt/hostedtoolcache/Python/3.11.18/x64/lib/python3.11/site-packages/yfinance/multi.py:224: Pandas4Warning: The inplace keyword in DataFrame.sort_index is deprecated and will be removed in a future version (PDEP-8).
+See https://pandas.pydata.org/docs/dev/whatsnew/v3.1.0.html#deprecation-inplace for more details.
+  data.sort_index(level=0, axis=1, inplace=True)
+/opt/hostedtoolcache/Python/3.11.18/x64/lib/python3.11/site-packages/yfinance/utils.py:568: Pandas4Warning: The inplace keyword in DataFrame.sort_index is deprecated and will be removed in a future version (PDEP-8).
+See https://pandas.pydata.org/docs/dev/whatsnew/v3.1.0.html#deprecation-inplace for more details.
+  quotes.sort_index(inplace=True)
+/opt/hostedtoolcache/Python/3.11.18/x64/lib/python3.11/site-packages/yfinance/multi.py:220: Pandas4Warning: The inplace keyword in DataFrame.rename is deprecated and will be removed in a future version (PDEP-8).
+See https://pandas.pydata.org/docs/dev/whatsnew/v3.1.0.html#deprecation-inplace for more details.
+  data.rename(columns=ctx.isins, inplace=True)
+/opt/hostedtoolcache/Python/3.11.18/x64/lib/python3.11/site-packages/yfinance/multi.py:224: Pandas4Warning: The inplace keyword in DataFrame.sort_index is deprecated and will be removed in a future version (PDEP-8).
+See https://pandas.pydata.org/docs/dev/whatsnew/v3.1.0.html#deprecation-inplace for more details.
+  data.sort_index(level=0, axis=1, inplace=True)
+/opt/hostedtoolcache/Python/3.11.18/x64/lib/python3.11/site-packages/yfinance/utils.py:568: Pandas4Warning: The inplace keyword in DataFrame.sort_index is deprecated and will be removed in a future version (PDEP-8).
+See https://pandas.pydata.org/docs/dev/whatsnew/v3.1.0.html#deprecation-inplace for more details.
+  quotes.sort_index(inplace=True)
+/opt/hostedtoolcache/Python/3.11.18/x64/lib/python3.11/site-packages/yfinance/multi.py:220: Pandas4Warning: The inplace keyword in DataFrame.rename is deprecated and will be removed in a future version (PDEP-8).
+See https://pandas.pydata.org/docs/dev/whatsnew/v3.1.0.html#deprecation-inplace for more details.
+  data.rename(columns=ctx.isins, inplace=True)
+/opt/hostedtoolcache/Python/3.11.18/x64/lib/python3.11/site-packages/yfinance/multi.py:224: Pandas4Warning: The inplace keyword in DataFrame.sort_index is deprecated and will be removed in a future version (PDEP-8).
+See https://pandas.pydata.org/docs/dev/whatsnew/v3.1.0.html#deprecation-inplace for more details.
+  data.sort_index(level=0, axis=1, inplace=True)
+Traceback (most recent call last):
+  File "/home/runner/work/JTA-Trader/JTA-Trader/scripts/research/exit_lever_ablation.py", line 1127, in <module>
+    sys.exit(main())
+             ^^^^^^
+  File "/home/runner/work/JTA-Trader/JTA-Trader/scripts/research/exit_lever_ablation.py", line 828, in main
+    feed = fetch_candles(a.leg, base, a.days, csv, non_crypto_source=a.non_crypto_source)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/work/JTA-Trader/JTA-Trader/scripts/research/exit_lever_ablation.py", line 287, in fetch_candles
+    rdm._fetch_csv(feed, days, csv)
+  File "/home/runner/work/JTA-Trader/JTA-Trader/scripts/research/regime_debt_matrix.py", line 809, in _fetch_csv
+    raise RuntimeError(_yahoo_empty_reason(feed["ticker"], yf, feed["interval"]))
+RuntimeError: yfinance returned no rows for GC=F (yfinance==1.7.0); venue_state=serving, interval_state=window_exceeds_intraday_limit -- GC=F at interval=15m returns rows over 5d and none over the requested window, so the ticker and the symbol map are FINE and the WINDOW is the problem. Yahoo serves ~60d of 5m/15m and ~730d of 60m. The remedy is a shorter --days, or a feed that serves this interval over the full history -- NOT a symbol-map change.
