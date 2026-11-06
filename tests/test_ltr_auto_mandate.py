@@ -603,6 +603,19 @@ def test_a_real_money_or_mirror_only_package_is_untouched_by_the_paper_grant(wir
     assert "auto_review_ids" not in st
 
 
+def _writes_sans_ts(writes):
+    """Package writes with the mover stamp's wall-clock ``ts`` removed (LTR-MECH-PROP-MIRROR-BRACKET), so two
+    runs of the same apply compare equal on everything else, including the stamped source/from/to."""
+    import copy
+    out = copy.deepcopy(writes)
+    for write in out:
+        meta = write.get("meta") if isinstance(write.get("meta"), dict) else {}
+        for rec in [meta.get("last_sl_move"), *(meta.get("sl_moves") or [])]:
+            if isinstance(rec, dict):
+                rec.pop("ts", None)
+    return out
+
+
 def test_real_money_and_mirror_behaviour_is_identical_with_and_without_the_paper_grant(wired, monkeypatch):  # noqa: F811
     """The same desk-mandate tighten on a bybit_2 + mirror package, with the committed file (which carries
     MD-LTR-PAPER-AUTO) and with an empty one: identical execution, pings and account reads."""
@@ -615,7 +628,7 @@ def test_real_money_and_mirror_behaviour_is_identical_with_and_without_the_paper
                       review_cfg={"apply_mode": "apply"}, granted={lri.MANDATE_ID}, write_log=False, state={},
                       mandates_doc=mdoc)
         outs.append((list(wired["exec"]), list(wired["pings"]), list(wired["alerts"]),
-                     res["writeback"]["account_reads"], res["package_sl_moved"], db.package_writes))
+                     res["writeback"]["account_reads"], res["package_sl_moved"], _writes_sans_ts(db.package_writes)))
     assert outs[0] == outs[1]
     assert outs[0][0] == [("bybit", "bybit_2", 0.21), ("bybit", "bybit_portfolio", 0.21)]
 
