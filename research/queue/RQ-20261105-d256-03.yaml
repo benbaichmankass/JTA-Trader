@@ -1,0 +1,88 @@
+# Hand-authored 2026-11-05 by lane PROP-BASELINE-AND-ML (Tier 1), Manager Session 2026-11-05b. Gates this adds or changes: NONE (it is the exit condition of an operator WAIVER). Registered BEFORE any run.
+id: RQ-20261105-d256-03
+title: 'FAITHFUL Stage-0 re-measure of trend_donchian_sol_4h WITH its structure_exit "pivot=5" modelled: does it still clear RULE-D1 net of the full cost stack?'
+status: queued
+cadence: once
+theme: live_strategy
+priority: 1
+kind: experiment
+roadmap:
+- L-PROP
+practice_precedent: 'T3 (net of the full cost stack); same tool and rule as RQ-20261011-6707-01 (scripts/research/fidelity_remeasure.py, GUARD-FIDELITY).'
+question: 'comms/strategy_evidence/trend_donchian_sol_4h.json is fidelity approximate (omitted_levers [structure_exit]). The operator WAIVED C5 for the prop baseline on 2026-11-05 ~21:05Z, popup verbatim "Both now, waive both" (FIDELITY_OPERATOR_WAIVER in scripts/ci/check_roster_promotion_evidence.py, slots breakout_2 / tradeify_1 / velotrade_1). Re-run the record''s own window through backtest_trend.py with --structure-exit pivot=5 (the leg''s live value) and grade it on the record''s own rule.'
+why_this_matters: 'Clears the waiver on evidence. PASS = the leg is faithfully measured: remove the three FIDELITY_OPERATOR_WAIVER lines (the record is regenerated faithful). FAIL = the leg as it actually trades does not clear Stage 0: a data-backed Tier-3 pull-from-prop proposal to the operator.'
+instrument_universe:
+  basis: the leg's own symbol (config/strategies.yaml trend_donchian_sol_4h)
+  tradeable_now: [SOLUSDT]
+  population_rule: Single-leg re-measure of an existing record; not a population test.
+data_sources:
+  status: 'Same feed and window as the committed record''s source run (rdm.resolve_feed; the window is fetched whole even if longer than 900 d).'
+  candidates:
+  - candles via regime_debt_matrix._fetch_csv (the record's own feed)
+label_and_horizon:
+  bar: 4h
+  entry: the leg as declared
+  label: net R per trade, full cost stack
+  horizon_bars: 0
+baselines:
+  cost_stack: the record's own harness cost stack (fee 11 / slippage 3 / funding 1, as recorded)
+  B0: flat (net R 0)
+  B1: 'the approximate arm on the same candles (INSTRUMENT CONTROL: must reproduce the committed record within 0.10 R, else could_not_measure)'
+arms:
+  denominator: '2 arms: approximate (control) and faithful (+ --structure-exit pivot=5). Only the faithful arm is graded.'
+split:
+  discovery: none (fixed params, nothing fit)
+  held_out: the record's own window, re-read; provenance stated in the result
+power:
+  expected_n: 116
+  min_detectable_effect: 0.231
+  effect_units: sd
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: 'ESTIMATED: the record''s n=116 (MEASURED); (1.645 + 0.8416) / sqrt(116) = 0.231 sd. RULE-D1 itself has no n floor; power is reported, not gated.'
+  feasibility:
+    source: none
+    accrual_basis: Replays history on the record's pinned window; nothing accrues.
+decision_rule:
+  id: RULE-RQ1011-001-FAITHFUL-STAGE0
+  statistic: 'fidelity_remeasure.py faithful arm net_r_oos over the record''s window (the SAME RULE-D1 bar the original record cleared).'
+  rule: 'PASS iff the approximate control reproduces the record (|delta| <= 0.10 R) AND the faithful arm net_r_oos > 0 net of the full cost stack. FAIL iff the control reproduces and faithful net_r_oos <= 0. INDETERMINATE (could_not_measure) iff the control does not reproduce or data is missing. PASS -> regenerate the evidence record faithful and delete the three FIDELITY_OPERATOR_WAIVER lines (Tier 1, CI). FAIL -> a pull-from-prop proposal for the operator. Thresholds are not changed after any result.'
+  what_it_does_not_do: Edits no roster, record or config; places no order.
+  registered_before_run: true
+  registered_at: '2026-11-05'
+ml_consumer:
+  not_applicable: 'Not an ML unit; a rule-based leg re-measure.'
+compute: cpu_light
+value:
+  bucket: own_losses
+  usd_at_stake_per_month: 50
+  confidence: 0.3
+  basis: 'stand-in: the waiver covers three min-size prop slots.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 1.0
+  est_minutes: 15
+  why_runner: 'Public candles; runs on research-script-run.yml.'
+  basis: ESTIMATED from RQ-20261011-6707-01.
+run:
+  workflow: research-script-run.yml
+  inputs:
+    research_unit: RQ-20261105-d256-03
+  commands:
+  - - python3
+    - scripts/research/fidelity_remeasure.py
+    - --leg
+    - trend_donchian_sol_4h
+    - --out
+    - '{out_dir}'
+  timeout_minutes: 60
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- ML-PROP-ITERATE
+- RQ-20261011-6707-01
+- comms/strategy_evidence/trend_donchian_sol_4h.json

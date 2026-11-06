@@ -78,6 +78,11 @@ blocked_on:
   what: a `brackets-forward` subcommand in scripts/research/ml_entry_v2.py scoring the learned and static brackets on one forward window (dev
     and held-out sealed)
   clears_when: lands on main with a self-test that no dev/held-out date is read; then git-mv to research/queue/ with status queued (rule unchanged)
+- kind: harness
+  ref: scripts/research/ml_entry_v2.py brackets-forward --window pre-dev
+  what: the existing brackets-forward subcommand reads window P (both models refit on rows >= 2022-01-01) instead of a forward window
+  clears_when: lands with the existing no-dev/held-out-date self-test extended to P
+  owner: lane ML-DECISION-MODELS (or the unit's owning ML lane)
 intervention_controls:
   not_applicable: an offline model evaluation; the consumer's own gate applies any action
 ml_consumer:
@@ -90,3 +95,11 @@ ml_consumer:
   - ada_pullback_2h
   - trend_donchian_sol_prop
   book: money
+amendments:
+- at: '2026-11-05'
+  before_any_run: true
+  by: lane RESEARCH-NO-WAIT
+  text:
+  - 'RESEARCH-NO-WAIT (lane of Manager Session 2026-11-05b). Operator 2026-11-05 ~17:08Z, verbatim: "Why does it need to wait for November? That''s not the workflow - we iterate in the data we have till we find what works, we don''t wait for new months of data". Window registered BEFORE any run; no outcome inside it was read by this lane; the rule text and every threshold are NOT edited.'
+  - 'WINDOW CHANGE: the read registered on the "forward window" / "fresh window" (2026-11) is REPLACED by the in-hand window below. P = pre-dev history 2020-07-01..2021-12-31 (Binance Vision USDT-M 1h, symbols of manifest bp2-f4271084b120 with bars in P, count reported). Verified unclaimed: comms/research/holdout_reads.jsonl on main holds claims only on 2025-10-01..2026-09-30 and 2026-10-01..2026-10-31. The model is fit on rows from 2022-01-01 only (purged + embargoed across 2021-12-31), so no P row is in a fit; claim via holdout_lock.py (start 2020-07-01, end 2021-12-31).'
+  - 'The data/accrual blocker is removed: nothing here waits for a month to elapse. What remains is the driver option that reads this window (named in blocked_on, owner lane ML-DECISION-MODELS / the unit''s own lane).'

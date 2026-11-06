@@ -56,7 +56,7 @@ run:
   inputs:
     research_unit: RQ-20260831-002
     only: iwm_trend_long_1d,mgc_pullback_1d,qqq_trend_long_1d,scha_trend_long_1d,spy_trend_long_1d
-    days: '1830'
+    days: '6500'
     gate_top: '2'
     singles_only: 'false'
     max_parallel: '6'
@@ -69,3 +69,11 @@ lands:
     run as a LANDING failure — a different defect from "nothing landed", and this gate
     only catches the latter.'
 last_dispatched_at: '2026-10-30T13:00:49+00:00'
+amendments:
+- at: '2026-11-05'
+  before_any_run: false
+  by: lane RESEARCH-NO-WAIT
+  text:
+  - 'RESEARCH-NO-WAIT (lane of Manager Session 2026-11-05b). Operator 2026-11-05 ~17:08Z, verbatim: "Why does it need to wait for November? That''s not the workflow - we iterate in the data we have till we find what works, we don''t wait for new months of data". Window registered BEFORE any run; no outcome inside it was read by this lane; the rule text and every threshold are NOT edited.'
+  - 'WINDOW CHANGE: the lookback is lengthened from days 1830 (~5 y; 4 to 8 OOS trades per leg) to days 6500 (~17.8 y of 1d history; Yahoo/Dukascopy daily bars exist for iwm/qqq/spy/scha/mgc over it), taking the OOS count from option (3) "wait years" to option (2)-style in-hand depth: at ~20 trades/year the same split places roughly 3.5x more OOS trades. The unit''s own text names waiting years as the last option; this takes the in-hand one. Nothing else changes; the verdict stays labelled by its measured n against the 49.06 floor.'
+  - A run dispatched 2026-10-30T13:00Z has no landed result on main; this change applies from the next dispatch.

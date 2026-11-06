@@ -1,0 +1,12 @@
+import sys,pandas as pd,numpy as np
+from pathlib import Path
+sys.path.insert(0,'/home/user/JTA-Trader/scripts/research');sys.path.insert(0,'/home/user/JTA-Trader')
+import ml_decision_entry as E
+ce=Path('/tmp/claude-0/diag/E');cm=Path('/tmp/claude-0/diag/Emask');cm.mkdir(exist_ok=True)
+syms=E.universe();cut=pd.Timestamp(E.HOLDOUT_START,tz='UTC');fz={}
+for s in syms:
+    d=pd.read_pickle(ce/f'{s}.pkl');f=(d.volume==0)&(d.high==d.low);fz[s]=int((f&(d.ts<cut)).sum())
+    d[~f].reset_index(drop=True).to_pickle(cm/f'{s}.pkl')
+print('frozen bars in dev window:',sum(fz.values()),'symbols with any:',sum(1 for v in fz.values() if v),sorted(fz.items(),key=lambda x:-x[1])[:6])
+for name,c in (('unmasked',ce),('masked',cm)):
+    t=E.build_table(c,syms);n=int((t.ts<cut).sum());print(name,'dev rows (ts<HOLDOUT_START):',n,flush=True)

@@ -1,0 +1,23 @@
+{
+  "id": "PROP-ML-NEW-DATA",
+  "title": "PROP-ML-NEW-DATA: non-price data (funding, OI, liquidations, depth, basis) for a fresh prop ML on ETH/SOL",
+  "phase": "build",
+  "state": "queued",
+  "owner": "manager",
+  "lane": null,
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [],
+  "blocked_on": [],
+  "note": "OPERATOR popup 2026-11-05 ~18:55Z, verbatim among chosen options: \"New data sources (Rec.)\" = find information price does not carry (funding rates, open interest, liquidations, order-book imbalance, basis) and build a fresh prop ML on it. Then operator chat ~19:00Z, verbatim: \"That last item should still be in the throttle, but we can wait until after the surge to start researching that.\" => THROTTLE phase, no research or runs during the surge. BRIEF for the throttle-phase lane: (1) Context: pooled price-only ENTRY model shows zero edge on ETH/SOL at 1h/4h/8h; PI-20261105-GEXSLEAK-0001: market-wide features identify the date so every test must be time-disjoint; e4_oi_shock_1h already uses OI. (2) Step 1 inventory non-price data held, with per-symbol depth. Pointers READ (not yet verified against the lake manifest; HF MANIFEST.json is private and was not read): config/data_universe.yaml + docs/data/market-data-lake.md section 3.1 claim Binance Vision perps 1m klines, fundingRate (every event), metrics (5m OI + long/short + taker ratios, 2021-12+) for 1056 perps in bentzbk/jta-market-lake, plus fallbacks premiumIndexKlines (basis proxy), bookDepth for 6 traded perps (2023-01+), aggTrades 1m order-flow bars for 6 traded perps; liquidations are NOT in that list (check Binance Vision has no liquidationSnapshot archive; Bybit/Coinglass public history is the candidate). Code pointers: scripts/data_lake/binance_vision_lake.py, scripts/ops/fetch_binance_vision_funding.py, scripts/ops/fetch_bybit_funding.py, scripts/ml/fetch_funding_oi.py, src/runtime/oi_feed.py. Verify the claims against the manifest or lake read before relying on them (RULE ONE). (3) Step 2 rank 3 feature families (candidates: funding/basis term structure, OI + long/short + taker-flow, book-depth imbalance/aggressor flow) per frontier-research skill with literature citations. (4) Step 3 author pre-registered research/queue units for the top 1-2: declared baseline to beat net of the firm cost stack, time-disjoint holdout on in-hand data, decision rule and power, registered before any run. (5) Dispatch on free runners where data exists; else file a data-pull row. Reuse the P5-MLPROP-ENTRY-ETHSOL gate (RULE-P5-GATE-BRK-PER-LEG-V3) and docs/research/ml-prop-iterate-2026-11-02/PROP-ML-DESIGN.md. Nothing researched or dispatched by the surge lane; no spend.",
+  "due_by": "2026-11-16",
+  "roadmap": [
+    "L-PROP"
+  ],
+  "updated_at": "2026-11-05T18:57:48Z",
+  "updated_by": "session_01AFoLuLmhUKeUzHC6CHz2uP",
+  "week_lane": "throttle",
+  "_seq": 955
+}

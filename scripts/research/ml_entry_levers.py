@@ -574,7 +574,8 @@ def w1_unit(dev_streams, fwd_streams, oct_dir, out, n_jobs, stack_result: Path, 
                 "result": "dry run: nothing claimed, no W1 outcome used"}
     # ---- the claim comes BEFORE any W1 outcome is touched
     mid = f"ENTRY-v2-{stack}"
-    claim = holdout_lock.claim_read(mid, W1[0], W1[1], "RQ-20261101-b609-01", reader, ledger)
+    te = str((w0 - pd.Timedelta(days=1)).date())   # the fit uses rows strictly before W1 (purged)
+    claim = holdout_lock.claim_read(mid, W1[0], W1[1], "RQ-20261101-b609-01", reader, ledger, train_end=te)
     train = E.purge_train(full[full.ts < w0], w0)
     test = full[(full.ts >= w0) & (full.ts < w1e)].reset_index(drop=True)
     params = {**R.BASE, **R.RECIPES["R2"], "random_state": E.SEED, "n_jobs": n_jobs}
@@ -590,14 +591,14 @@ def w1_unit(dev_streams, fwd_streams, oct_dir, out, n_jobs, stack_result: Path, 
     m = E.summarize(taken)
     slice5 = taken[taken.symbol.isin(TRADED)]
     # frozen v1 reference: second claim, the committed booster that is live
-    claim1 = holdout_lock.claim_read("ENTRY-v1-frozen-ref-b609", W1[0], W1[1], "RQ-20261101-b609-01-v1ref", reader, ledger)
+    claim1 = holdout_lock.claim_read("ENTRY-v1-frozen-ref-b609", W1[0], W1[1], "RQ-20261101-b609-01-v1ref", reader, ledger, train_end=te)
     art = Path(__file__).resolve().parents[2] / "comms/research/RQ-20261101-c692-06/41324826751/model"
     # provenance: Booster — regression booster file: predicts net R per decision, not a class probability
     v1p = {side: lgb.Booster(model_file=str(art / f"entry_{side}.txt")).predict(test[E.FEATURES]) for side in ("long", "short")}
     taken1 = E.policy(test, v1p["long"], v1p["short"], TAU)
     m1 = E.summarize(taken1)
     a_ok = m["n"] >= E.N_FLOOR and m["n_symbols"] >= E.SYMBOL_FLOOR
-    b_ok = m["mean_net_r"] is not None and m["mean_net_r"] >= 0
+    b_ok = holdout_lock.point_ok(m["mean_net_r"], m.get("se_net_r"), claim["bar"])   # deflated on a re-read (HOLDOUT-DEFLATED-REUSE)
     c_ok = m["mean_net_r"] is not None and m1["mean_net_r"] is not None and m["mean_net_r"] >= m1["mean_net_r"]
     verdict = "indeterminate" if not a_ok else ("pass" if (b_ok and c_ok) else "fail")
     res = {"unit": "RQ-20261101-b609-01", "read_state": "read", "verdict": verdict, "conditions": {"a_n_and_symbols": a_ok, "b_mean_ge_0": b_ok, "c_ge_v1_reference": c_ok},
@@ -651,7 +652,8 @@ def fwd_unit(artifact: Path, dev_streams: Path, fwd_streams: Path, daily_dirs: l
     if count_only:
         return {**base, "count_only": True, "result": f"label-free count: {base['candidates']} candidates ({base['candidates_per_day']}/day) vs trigger 1100"}
     mid = FWD_ID
-    claim = holdout_lock.claim_read(mid, start, end, "RQ-20261101-b610-01", reader, ledger)        # BEFORE any outcome is used
+    te = str((w0 - pd.Timedelta(days=1)).date())   # the frozen artifact was fit before the forward window opens
+    claim = holdout_lock.claim_read(mid, start, end, "RQ-20261101-b610-01", reader, ledger, train_end=te)   # BEFORE any outcome
     br = meta["bracket"]
     score = relabel_table(test, cache, float(br["sl_atr"]), float(br["tp_atr"])) if float(br["tp_atr"]) != 3.0 else test
     pl2, ps2 = pl.copy(), ps.copy()
@@ -660,13 +662,13 @@ def fwd_unit(artifact: Path, dev_streams: Path, fwd_streams: Path, daily_dirs: l
     taken = E.policy(score, pl2, ps2, float(meta["tau"]))
     m = E.summarize(taken)
     v1 = Path(__file__).resolve().parents[2] / "comms/research/RQ-20261101-c692-06/41324826751/model"
-    claim1 = holdout_lock.claim_read("ENTRY-v1-frozen-ref-fwd", start, end, "RQ-20261101-b610-01-v1ref", reader, ledger)
+    claim1 = holdout_lock.claim_read("ENTRY-v1-frozen-ref-fwd", start, end, "RQ-20261101-b610-01-v1ref", reader, ledger, train_end=te)
     # provenance: Booster — regression booster file: predicts net R per decision, not a class probability
     v1p = {side: lgb.Booster(model_file=str(v1 / f"entry_{side}.txt")).predict(test[E.FEATURES]) for side in ("long", "short")}
     taken1 = E.policy(test, v1p["long"], v1p["short"], TAU)
     m1 = E.summarize(taken1)
     a_ok = m["n"] >= E.N_FLOOR and m["n_symbols"] >= E.SYMBOL_FLOOR
-    b_ok = m["mean_net_r"] is not None and m["mean_net_r"] >= 0
+    b_ok = holdout_lock.point_ok(m["mean_net_r"], m.get("se_net_r"), claim["bar"])   # deflated on a re-read (HOLDOUT-DEFLATED-REUSE)
     c_ok = m["mean_net_r"] is not None and m1["mean_net_r"] is not None and m["mean_net_r"] >= m1["mean_net_r"]
     verdict = "indeterminate" if not a_ok else ("pass" if (b_ok and c_ok) else "fail")
     taken.to_pickle(out / "fwd_trades_v2.pkl")

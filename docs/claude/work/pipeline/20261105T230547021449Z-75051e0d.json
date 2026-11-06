@@ -1,0 +1,21 @@
+{
+  "due_when": {
+    "check_every_days": 1,
+    "clears_when": "research/results/RQ-20261105-c692-15/ holds a graded verdict on main and the claim line is in comms/research/holdout_reads.jsonl",
+    "kind": "event"
+  },
+  "id": "PI-20261105-NB6HN8F8-0001",
+  "next_action": "check_observation",
+  "observation": {
+    "due_by": "2026-11-07",
+    "how_to_check": "ls research/results/RQ-20261105-c692-15/ on main and read the verdict; grep RQ-20261105-c692-15 comms/research/holdout_reads.jsonl",
+    "what": "the RQ-20261105-c692-15 held-out re-read verdict (run 42126677450) is graded on main and its holdout claim line is in comms/research/holdout_reads.jsonl"
+  },
+  "origin": {
+    "kind": "session",
+    "ref": "lane of Manager Session 2026-11-05b, row ML-DECISION-MODELS (session_01AFoLuKCj4hF36JNB6Hn8F8)",
+    "rerun": "gh run view 42126677450 --log; python3 scripts/research/holdout_lock.py next-bar --family MANAGE --start 2025-10-01 --end 2026-09-30"
+  },
+  "state": "queued",
+  "what": "Grade RQ-20261105-c692-15 (held-out re-read of the c692-12 frozen ML SL revision v2 config under HOLDOUT-DEFLATED-REUSE, 5th MANAGE read, z 2.57). Run 42126677450 on branch claude/holdout-reread-c692-1105 (held PR #23530). When it completes: append the run's out-dir holdout_reads.jsonl claim line to comms/research/holdout_reads.jsonl, land the verdict via research-ops, put n / managed mean net R / delta / deflated CI on row ML-DECISION-MODELS; a PASS becomes a Tier-3 proposal there, not a promotion."
+}

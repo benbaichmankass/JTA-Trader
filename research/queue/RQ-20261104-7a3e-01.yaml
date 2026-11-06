@@ -29,6 +29,7 @@ value:
   bucket: own_losses
   basis: 'stand-in estimate: governs the default exit of a leg that trades real money; not a measurement.'
 routing:
+  needs_internet: 'STRUCTURE-EXITS-DEFAULT 2026-11-05: pinned to github_runner. Every kaggle_cpu run of this unit was producer_failed: the kernel did not serve the candle feed from the mounted dataset (IsADirectoryError, or no serve attempt at all = dataset not mounted) and then could not reach data.binance.vision (no internet). Re-run on research-script-run.yml 2026-11-05 ~18:30Z.'
   needs_trainer_resident_data: false
   needs_gpu: false
   peak_memory_gb: 4.0
@@ -48,7 +49,7 @@ related:
 id: RQ-20261104-7a3e-01
 title: 'Structure trail tightening multiple (the one factor; pivot 5 fixed): does loosening SW5''s tighten-to level from 1.0 to 1.5 / 2.0 / 3.0 ATR clear the registered
   +0.02 R/trade bar on trend_donchian_eth_prop, net of the full cost stack? Iteration on the 5e02-07 near-miss'
-status: queued
+status: done
 question: '5e02-07 (trend_donchian_eth_prop, n=1085, 2020-07-01..2026-10-15, full venue cost stack): SW5 (pivot 5, tighten-to 1.0 ATR) net R +26.65 vs incumbent +8.72
   = +17.93 R = +0.0165 R/trade; 4 of 4 folds at or above the incumbent (needs 4), max DD 23.4 R vs incumbent 37.5 R (cap 50.6) -- it FAILED only the registered +0.02
   R/trade bar (21.7 R at n=1085). SW3 +16.8 R and FVG +14.0 R fell short the same way; every arm beat A, so the direction is consistent. The incumbent is a trail
@@ -131,8 +132,6 @@ lands:
   min_rows: 1
 last_dispatched_at: '2026-11-05T01:54:14+00:00'
 grading:
-  owner: PI-20261105-WDWYHZCN-0001
-  owner_reason: 'producer_failed (cmd_exit) on the newest row, 3 identical re-fires; failure mode and fix path named in PI-20261105-WDWYHZCN-0001 (RESEARCH-OPS-20261105-1449 triage)'
   attested: RULE-RQ20261104-7A3E-01-TIGHT-MULT
   auto: true
   decision_rule_id: RULE-RQ20261104-7A3E-01-TIGHT-MULT
@@ -140,9 +139,11 @@ grading:
   - research/results/RQ-20261104-7a3e-01/41912001068.jsonl
   - research/results/RQ-20261104-7a3e-01/41929980235.jsonl
   - research/results/RQ-20261104-7a3e-01/41951794879.jsonl
+  - research/results/RQ-20261104-7a3e-01/42084896217.jsonl
   graded_at: '2026-11-05'
   grader: scripts/research/queue_grade.py
-  needs_review: true
-  reason: 'read_state not unanimously measured: [''producer_failed'']'
-  rows: 3
-  verdict: null
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 2 row(s), all measured, all fail (3 earlier producer_failed / re-graded wiring_only row(s) superseded)
+  rows: 2
+  verdict: fail

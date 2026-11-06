@@ -153,17 +153,11 @@ blocked_on:
   clears_when: 'the subcommand lands on main with a self-test (a planted illiquid symbol is excluded by the dev rule; a planted one-tick spread
     floors the estimate); the lane git-mvs this file to research/queue/ with status queued, rule unchanged'
   cleared: '2026-11-05 lane ML-WEEK-1105: universe-costed landed with its self-test; dry run INDETERMINATE (window clause)'
-- kind: data
-  ref: Binance Vision monthly klines 2026-11 (re-registered window)
-  what: the forward window's monthly zip for every U(C) symbol
-  clears_when: data.binance.vision lists BTCUSDT-1h-2026-11.zip (positive control) and every candidate; earliest 2026-12-01; then the
-    lane git-mvs this file to research/queue/ status queued (pipeline item tracks the date)
-- kind: data_superseded
-  ref: Binance Vision monthly klines 2026-10
-  what: the forward window's monthly zip for every U(C) symbol
-  clears_when: data.binance.vision lists {SYMBOL}-1h-2026-10.zip for BTCUSDT (positive control) and every candidate
-  cleared: '2026-11-05: BTCUSDT-1h-2026-10.zip HTTP 200; all 60 reference symbols fetched through 2026-10-31 in the dry run (but see the
-    decision blocker: this window was already read)'
+- kind: harness
+  ref: scripts/research/ml_decision_entry.py universe-costed --window symbol-holdout
+  what: universe-costed reads window S with per-symbol Corwin-Schultz spread + square-root impact
+  clears_when: lands with the unit's own planted-illiquid self-test
+  owner: lane ML-DECISION-MODELS (or the unit's owning ML lane)
 ml_consumer:
   consumer: ML-ENTRY-ALL-ACCOUNTS
   decision: 'whether ml_entry on bybit_2 + bybit_portfolio widens from BTC/ETH/XRP/ADA/SOL to the rule''s universe U(C) beside the rostered legs
@@ -176,3 +170,11 @@ ml_consumer:
   - ada_pullback_2h
   - trend_donchian_sol_prop
   book: money
+amendments:
+- at: '2026-11-05'
+  before_any_run: true
+  by: lane RESEARCH-NO-WAIT
+  text:
+  - 'RESEARCH-NO-WAIT (lane of Manager Session 2026-11-05b). Operator 2026-11-05 ~17:08Z, verbatim: "Why does it need to wait for November? That''s not the workflow - we iterate in the data we have till we find what works, we don''t wait for new months of data". Window registered BEFORE any run; no outcome inside it was read by this lane; the rule text and every threshold are NOT edited.'
+  - 'WINDOW CHANGE: the read registered on the "forward window" / "fresh window" (2026-11) is REPLACED by the in-hand window below. S = symbol holdout: the 20 lexicographically first Binance USDT-M perps NOT in manifest bp2-f4271084b120 that have >= 3 years of 1h bars, over 2022-01-01..2026-10-31; list frozen by the driver and written to the result before any outcome is read; claimed through holdout_lock.py with an explicit symbols list (a disjoint symbol claim: correlated with the 60-perp windows, reported as such).'
+  - 'The data/accrual blocker is removed: nothing here waits for a month to elapse. What remains is the driver option that reads this window (named in blocked_on, owner lane ML-DECISION-MODELS / the unit''s own lane).'
