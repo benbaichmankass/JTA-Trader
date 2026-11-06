@@ -54,6 +54,19 @@ Two documented facts make the ladder below necessary:
 | 3a. **Paper** account reset | Only when the share hold reads as a broker wedge (`cancel_accepted_ineffective` / `broker_cancel_wedged`; never on a transient hold), it sends `DELETE /v2/positions?cancel_orders=true`, Alpaca's documented close-all. `execute.journal_account_reset` then closes every **other** open journal trade on that account with `exit_reason='account_reset'` (notes `closed_by: alpaca_account_reset`, `exit_price_source: pending_broker_fill`), and closes each package left with no open trade (`close_reason='account_reset'`). | The confirm gate sees the symbol flat. Strategies re-enter on their own signals; nothing is re-opened by hand. |
 | 3b. **Live** account | Close-all is **never** automated on real money, because it would flatten unrelated real positions. The system raises **one** red flag (`outcomes.report`, op `close_ladder_exhausted_live`, deduplicated by fingerprint) naming the stuck order ids and the step that failed. The failure message carries `[close ladder exhausted on a LIVE account …]`. | A person decides. |
 
+**Two ways into the ladder.** The flatten can be *refused* ("insufficient qty"), which goes into rung 2 from the
+give-up branch. Or it can be *accepted but never fill* (live 2026-11-06 20:11Z/20:13Z). In that case the cancel
+pass had removed the stop (`c928eda6`) while the take-profit `2e843e04` still held all 39 shares. When the confirm
+gate sees the position still open **and** a current resting closing-side order holds the whole position, that is
+the same wedge: rung 2 runs at once, then rung 3, all in the same call (`AlpacaClient._escalate_not_flat`).
+Accepted-but-not-flat with nothing holding the shares is an ordinary retry.
+
+**A cancelled stop is never the end state.** On paper the ladder ends flat (rung 2 or the rung 3 reset). On live,
+or if a paper reset fails, the failure message says `POSITION HAS NO STOP`, and the live red flag is raised as
+`accepted_not_flat_stopless`. While a wedged take-profit holds every share, no new protective order can be placed:
+`place_protective` would hit the same insufficient-qty refusal. So the remedy is closing the position (paper) or a
+person (live), and the system says which.
+
 The **flat-confirm gate** decides every rung: a close is reported only when the position is gone from
 `GET /v2/positions`. Outside regular hours the close is deferred (`retCode 2`, retried next session) or goes through
 the extended-hours limit path. The ladder runs in regular hours.

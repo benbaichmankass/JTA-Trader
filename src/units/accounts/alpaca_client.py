@@ -1596,6 +1596,77 @@ class AlpacaClient:
         return {"retCode": 2, "retMsg": (
             "extended-hours limit close working — not yet filled, exit deferred")}
 
+    def _await_flat(self, sym: str, seconds: float) -> Tuple[bool, Any]:
+        """Poll ``positions()`` until *sym* is gone or *seconds* pass. A read failure is never read as flat."""
+        deadline = time.monotonic() + max(0.0, seconds)
+        last_qty: Any = None
+        while True:
+            positions = self.positions()
+            if positions is not None:
+                match = next((p for p in positions if p.get("symbol") == sym), None)
+                if match is None:
+                    return True, None
+                last_qty = match.get("qty")
+            if time.monotonic() >= deadline:
+                return False, last_qty
+            time.sleep(0.5)
+
+    def _escalate_not_flat(self, sym: str, confirm_s: float) -> Optional[Dict[str, Any]]:
+        """The ladder for an ACCEPTED flatten that left the position open. ``None`` when this is not a wedge (no
+        current resting closing-side order holds the whole position): the caller retries next tick and the
+        naked-protection sweep restores any missing stop. Otherwise, in this call: rung 2 (reprice the current
+        take-profit marketable; with the stop already gone it moves alone), then rung 3 (PAPER: documented close-all
+        + the caller's account_reset journal sweep; LIVE: one red flag, never close-all). Returns a success envelope
+        (``retCode 0`` with ``result.scope``) or ``{"retCode": 1, "marker": "[...]"}`` naming what was tried."""
+        pos = self.position_quote(sym)
+        if pos.get("state") != "open" or not pos.get("qty"):
+            return None
+        qty = abs(float(pos["qty"]))
+        close_side = "sell" if str(pos.get("side") or "").lower() == "long" else "buy"
+        residual = self._open_orders_for_symbol(sym)
+        superseded = {str(o.get("replaces")) for o in (residual or []) if o.get("replaces")}
+        holding = []
+        for o in residual or []:
+            try:
+                oqty = abs(float(o.get("qty") or 0))
+            except (TypeError, ValueError):
+                continue
+            if (str(o.get("side") or "").lower() == close_side
+                    and str(o.get("status") or "").lower() in _RESTING_LEG_STATUSES
+                    and str(o.get("id") or "") not in superseded and oqty >= qty - 1e-9):
+                holding.append(o)
+        if not holding:
+            return None
+        ids = [str(o.get("id")) for o in holding]
+        stopless = not any(str(o.get("type") or o.get("order_type") or "").lower() in ("stop", "stop_limit")
+                           for o in holding)
+        # Rung 2.
+        target = self._exit_via_resting_target(sym, residual)
+        if target.get("state") == "repriced":
+            flat, _ = self._await_flat(sym, confirm_s)
+            if flat:
+                logger.warning("alpaca close %s: accepted-not-flat wedge (%s) cleared by the OCO target reprice", sym, ids)
+                return {"retCode": 0, "result": {"id": target.get("new_order_id") or target.get("order_id"),
+                                                 "scope": "oco_target_reprice"}}
+        tried = f"oco target exit {target.get('state')}: {target.get('detail') or 'repriced, not flat'}"
+        # Rung 3.
+        if self.env == "paper":
+            reset = self._account_reset_close_all(sym)
+            if reset.get("state") == "reset":
+                flat, _ = self._await_flat(sym, confirm_s)
+                if flat:
+                    logger.warning("alpaca close %s: accepted-not-flat wedge (%s); PAPER account reset closed %s",
+                                   sym, ids, reset.get("closed_symbols"))
+                    return {"retCode": 0, "result": {"id": "account_reset", "scope": "account_reset",
+                                                     "closed_symbols": reset.get("closed_symbols") or []}}
+            return {"retCode": 1, "marker": (f" [accepted-not-flat wedge, orders {ids} hold the shares; {tried}; "
+                                             f"account reset {reset.get('state')}: {reset.get('detail') or 'not flat'}"
+                                             f"{'; POSITION HAS NO STOP' if stopless else ''}]")}
+        _flag_live_ladder_exhausted(sym, "accepted_not_flat" + ("_stopless" if stopless else ""), holding, target)
+        return {"retCode": 1, "marker": (f" [close ladder exhausted on a LIVE account: orders {ids} hold the shares; "
+                                         f"{tried}; close-all is NOT automated on real money"
+                                         f"{'; POSITION HAS NO STOP' if stopless else ''}]")}
+
     def _account_reset_close_all(self, sym: str) -> Dict[str, Any]:
         """RUNG 3, PAPER ONLY: Alpaca's documented account-wide liquidation, ``DELETE /v2/positions?cancel_orders=true``
         ("If true is specified, cancel all open orders before liquidating all positions",
@@ -2050,15 +2121,27 @@ class AlpacaClient:
                     break
                 time.sleep(0.5)
             if not flat:
-                return {
-                    "retCode": 1,
-                    "retMsg": (
-                        f"alpaca close not confirmed flat: symbol={sym} "
-                        f"last_qty={last_qty} after ~{confirm_s}s — the "
-                        "flatten was accepted but the position is still "
-                        "open; leaving DB row open to retry next tick"
-                    ),
-                }
+                # ACCEPTED-BUT-NOT-FLAT CAN BE A WEDGE (live 2026-11-06 20:11Z/20:13Z, GLD after #23918): the
+                # flatten DELETE was accepted, the position stayed at 39, our cancel pass HAD cancelled the stop
+                # (c928eda6) and the take-profit 2e843e04 still held every share. Classified retry-later, the
+                # ladder never ran and the position was left with NO stop. When a current resting closing-side
+                # order holds the whole position, escalate in THIS call (rung 2, then rung 3); otherwise retry.
+                esc = (self._escalate_not_flat(sym, confirm_s)
+                       if (env.get("result") or {}).get("scope") not in ("oco_target_reprice", "account_reset")
+                       else None)
+                if esc is not None and esc.get("retCode") == 0:
+                    env = esc
+                else:
+                    return {
+                        "retCode": 1,
+                        "retMsg": (
+                            f"alpaca close not confirmed flat: symbol={sym} "
+                            f"last_qty={last_qty} after ~{confirm_s}s — the "
+                            "flatten was accepted but the position is still "
+                            "open; leaving DB row open to retry next tick"
+                            f"{(esc or {}).get('marker', '')}"
+                        ),
+                    }
 
         result = env.get("result") or {}
         out_result = {"orderId": str(result.get("id") or "")}
