@@ -91,13 +91,16 @@ def test_post_gives_up_with_a_diagnosis_never_raises():
 def test_post_does_not_retry_auth_failures():
     n = []
     def opener(req, timeout=0):
-        n.append(1); raise urllib.error.HTTPError("u", 401, "x", {}, io.BytesIO(b"no"))
+        n.append(1)
+        raise urllib.error.HTTPError("u", 401, "x", {}, io.BytesIO(b"no"))
     assert "401" in post_ping.post({}, "t", sleep=lambda s: None, opener=opener) and len(n) == 1
 
 
 def test_main_falls_back_when_token_missing(tmp_path, monkeypatch):
-    pend = tmp_path / "p.jsonl"; pend.write_text(json.dumps(ENTRY) + "\n")
-    out = tmp_path / "out"; monkeypatch.setenv("GITHUB_OUTPUT", str(out))
+    pend = tmp_path / "p.jsonl"
+    pend.write_text(json.dumps(ENTRY) + "\n")
+    out = tmp_path / "out"
+    monkeypatch.setenv("GITHUB_OUTPUT", str(out))
     monkeypatch.delenv("DASHBOARD_API_TOKEN", raising=False)
     monkeypatch.chdir(tmp_path)
     assert post_ping.main(["--pending", str(pend), "--receipt", str(tmp_path / "none")]) == 0

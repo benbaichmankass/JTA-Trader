@@ -53,7 +53,7 @@ async def post_alert(request: Request,
             return await asyncio.to_thread(ping_ingest.ingest, doc.get("entry"), doc.get("receipt"))
         except ValueError as exc:
             raise HTTPException(status_code=400, detail=str(exc)) from exc
-        except Exception as exc:  # noqa: BLE001 — surfaced as 503 so the producer retries
+        except Exception as exc:  # noqa: BLE001  # allow-silent: not silent — surfaced as HTTP 503 so the producer retries and falls back
             raise HTTPException(status_code=503, detail=f"ping ingest failed: {exc}") from exc
     if not isinstance(doc, dict) or not str(doc.get("body") or "").strip():
         raise HTTPException(status_code=400, detail="body is required")

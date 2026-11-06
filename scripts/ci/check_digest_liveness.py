@@ -142,7 +142,7 @@ from typing import Any, Dict, Optional
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "ops"))
 
-from digest_due import RECEIPT, _parse_ts, read_best_receipt, read_receipt  # noqa: E402
+from digest_due import RECEIPT, _parse_ts, read_best_receipt  # noqa: E402
 
 # ⚠️ THE CARRIER VOCABULARY IS IMPORTED, NOT REDEFINED. `collapsed-state-guard`
 #    requires a consumer OUTSIDE the producing module, and a second copy of
