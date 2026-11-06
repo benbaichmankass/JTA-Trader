@@ -2,7 +2,7 @@
 id: RQ-20261105-23ca-04
 title: 'VOL-SKIP plateau SYMBOL-HOLDOUT: trend_donchian_avax_4h config-exact twin on LINKUSDT, history 2020-07-01..2026-10-26: do VL25 and VL35 (neighbours of vol-skip-below-pctl=0.3)
   BOTH beat the declared config (dR >= 1.0 R, >= 3 of 4 folds, no worse drawdown)?'
-status: queued
+status: done
 cadence: once
 kind: experiment
 theme: regime
@@ -106,3 +106,14 @@ related:
 - RQ-20261028-b37d-01
 - RESEARCH-NO-WAIT
 last_dispatched_at: '2026-11-06T03:38:52+00:00'
+grading:
+  attested: RULE-RQ2026110523CA04-VOLSKIP_SYMBOL_HOLDOUT
+  auto: true
+  decision_rule_id: RULE-RQ2026110523CA04-VOLSKIP_SYMBOL_HOLDOUT
+  evidence:
+  - research/results/RQ-20261105-23ca-04/42134252891.jsonl
+  graded_at: '2026-11-06'
+  grader: scripts/research/queue_grade.py
+  reason: 2 row(s), all measured, all pass
+  rows: 2
+  verdict: pass
