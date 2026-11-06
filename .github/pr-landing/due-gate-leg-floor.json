@@ -1,5 +1,7 @@
 {
   "tier": 1,
-  "landing": "self",
-  "why": "Tier-1 read-path/observability (manager 2026-11-06 03:28Z, 'root-cause each and fix it'): (1) live_review_due.venue_events grades each account's venue stop against the trade's applied sl_floor when it is tighter than order_packages.sl, instead of re-firing mechanics/venue_sl_diverges every bar on a stop MD-LTR-PAPER-AUTO placed on purpose (read_venue_context now carries each snapshot trade's sl_floor); (2) live_review_packet._package_view ignores the synthetic order_package rows /api/bot/prop/tickets returns (null ticket_id/account_id), which created a phantom account with a blank exchange (venue_read_unreachable 1/2). No order path, no config, no mandate; the gate only decides when a review is requested. Plus LTR-GRADER-COVERAGE counts."
+  "landing": "hold",
+  "why": "Read-path/observability (guard cannot certify src/runtime/live_review_due.py as Tier 1, so held) (manager 2026-11-06 03:28Z, 'root-cause each and fix it'): (1) live_review_due.venue_events grades each account's venue stop against the trade's applied sl_floor when it is tighter than order_packages.sl, instead of re-firing mechanics/venue_sl_diverges every bar on a stop MD-LTR-PAPER-AUTO placed on purpose (read_venue_context now carries each snapshot trade's sl_floor); (2) live_review_packet._package_view ignores the synthetic order_package rows /api/bot/prop/tickets returns (null ticket_id/account_id), which created a phantom account with a blank exchange (venue_read_unreachable 1/2). No order path, no config, no mandate; the gate only decides when a review is requested. Plus LTR-GRADER-COVERAGE counts.",
+  "hold_reason": "unvouchable_paths",
+  "hold_text": "landing: hold - src/runtime/live_review_due.py is outside the Tier-1 surface the guard can certify; the manager reads and merges"
 }
