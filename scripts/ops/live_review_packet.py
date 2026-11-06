@@ -651,7 +651,12 @@ def _package_view(s: Snapshot, pkg: str) -> dict:
     p = s.packages.get(pkg)
     trade_rows = [t for t in s.trades if t.get("order_package_id") == pkg]
     tel = [r for r in (s.get("telemetry") or {}).get("rows", []) if r.get("order_package_id") == pkg]
-    tickets = [t for t in (s.get("prop_tickets") or {}).get("tickets", []) if t.get("order_package_id") == pkg]
+    # /api/bot/prop/tickets also returns SYNTHETIC rows (source "order_package", ticket_id and account_id null) for
+    # packages that have no prop ticket: 8 of the 100 rows in the 2026-11-06 read. Counting one as a ticket made an
+    # account entry keyed None with a blank exchange, graded "could not read" on every non-prop package
+    # (pkg-f76bb92289d143e5: venue_read_unreachable 1/2; row LTR-PACKET-READ-REACH, MECH-FOLLOWUPS-1105).
+    tickets = [t for t in (s.get("prop_tickets") or {}).get("tickets", [])
+               if t.get("order_package_id") == pkg and t.get("account_id") and t.get("source") != "order_package"]
     return {"package": p, "trades": trade_rows, "telemetry": tel, "tickets": tickets}
 
 
