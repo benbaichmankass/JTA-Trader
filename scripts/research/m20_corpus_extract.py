@@ -768,6 +768,22 @@ def main(argv: list[str]) -> int:
                 continue
             kept.append(r)
 
+    # The SAME rule, applied to the rows ALREADY in the corpus. The loop above
+    # only retires a stored row when a FRESH row re-measures it; two STORED rows
+    # that share a key were never compared, so once a corpus held such a pair
+    # (squeeze_breakout_4h @ 2023-09-06: 7 cells measured 2026-08-17 and again
+    # 2026-10-04, both kept) the invariant below refused EVERY later merge, and
+    # every m20 sweep run after that failed at `corpus` and never landed
+    # (run 42140687327, 2026-11-06: "merge produced 7 duplicate measurement
+    # key(s)"). A re-measurement supersedes, so the LATER stored row wins (the
+    # corpus is append-ordered). Counted and printed, never silent.
+    latest: dict[tuple, int] = {}
+    for i, r in enumerate(kept):
+        latest[measurement_key(r)] = i
+    collapsed = len(kept) - len(latest)
+    if collapsed:
+        kept = [r for i, r in enumerate(kept) if latest[measurement_key(r)] == i]
+
     merged = kept + fresh
     # The invariant the merge exists to hold. Asserting it here means a future
     # edit to the key cannot silently reintroduce duplicates — the failure mode
@@ -785,7 +801,8 @@ def main(argv: list[str]) -> int:
     rated = sum(1 for r in merged
                 if r.get("kind") == "cell" and r.get("base_rate_IS") is not None)
     print(f"runs merged: {len(runs)}  new rows: {len(fresh)}  "
-          f"superseded: {superseded}  malformed-dropped: {malformed}")
+          f"superseded: {superseded}  stored-duplicates-collapsed: {collapsed}  "
+          f"malformed-dropped: {malformed}")
     print(f"corpus now: {len(merged)} rows = {cells} cells + {statuses} leg-status; "
           f"{rated}/{cells} cells carry a base rate")
     if a.dry_run:

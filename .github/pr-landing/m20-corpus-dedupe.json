@@ -1,0 +1,5 @@
+{
+  "tier": 1,
+  "landing": "self",
+  "why": "Tier-1 research tooling + test (no src/, config/, order path): scripts/research/m20_corpus_extract.py now collapses two STORED corpus rows that share a measurement_key (the later one wins, count printed as stored-duplicates-collapsed) before the duplicate-key invariant. Root cause of the m20 'corpus' job failure in run 42140687327: the committed corpus holds 7 duplicate keys (squeeze_breakout_4h @ 2023-09-06, swept 2026-08-17 and 2026-10-04) and the merge only superseded stored rows against FRESH rows, so every merge since died with 'merge produced 7 duplicate measurement key(s)' and no sweep result landed. Dry run against origin/main's corpus: 1493 -> 1487 rows, exit 0."
+}
