@@ -1,7 +1,7 @@
 {
   "tier": 2,
   "landing": "hold",
-  "hold_reason": "order_path",
+  "hold_reason": "tier_2_3_needs_approval",
   "hold_text": "Tier-2, order-path file (src/main.py, src/runtime/order_monitor.py). 15:01Z EXIT-EVAL breach (82.0 s) was five serial max_hold closes on the exit thread (pass 52.7 s), not a DB lock or 10006. After >=1 close, further max_hold closes defer to the next pass once the pass has spent EXIT_PASS_CLOSE_BUDGET_S (10 s) in closes; sl/tp/stale never deferred; evaluation untouched; a deferring pass skips its sleep. Revert: git revert, or EXIT_PASS_CLOSE_BUDGET_S=0.",
   "why": "Keep the exit re-evaluation interval under 60 s during the hourly max_hold close burst."
 }
