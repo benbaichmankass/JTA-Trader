@@ -50,8 +50,15 @@ def test_b620_rule_is_unchanged_and_rearmed_not_rewritten():
     u = yaml.safe_load((root / "research/queue/RQ-20261101-b620-01.yaml").read_text())
     r = u["decision_rule"]
     assert r["registered_at"] == "2026-11-01" and "within 0.0005" in r["rule"] and "within 1%" in r["rule"] and "+0.0089486" in r["rule"]
-    assert u["status"] == "queued" and not u.get("last_dispatched_at") and u["rearmed_at"] > "2026-11-03T02"
-    assert "grading" not in u and "grading_before_rearm" in u
+    assert u["rearmed_at"] > "2026-11-03T02" and "grading_before_rearm" in u
+    # What this protects: the re-arm is not rewritten and the rule is unchanged. It must NOT forbid a LATER
+    # dispatch: the unit was re-armed to be re-run, so a stamp (or the grading that follows it) is expected.
+    # A stamp, if present, must be a dispatch AFTER the re-arm, never a carried-over pre-rearm one.
+    stamp = u.get("last_dispatched_at")
+    if stamp:
+        assert str(stamp) >= u["rearmed_at"], (stamp, u["rearmed_at"])
+    else:
+        assert u["status"] == "queued" and "grading" not in u    # still armed, not yet re-run
 
 
 def test_the_dropped_kseed_unit_is_parked_not_dispatchable():
