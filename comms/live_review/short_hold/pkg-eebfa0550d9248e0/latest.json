@@ -1,7 +1,7 @@
 {
- "bar": "2026-11-06T11:55:00Z",
- "bar_close": "2026-11-06T12:00:00Z",
- "built_at": "2026-11-06T12:01:03Z",
+ "bar": "2026-11-06T12:00:00Z",
+ "bar_close": "2026-11-06T12:05:00Z",
+ "built_at": "2026-11-06T12:06:02Z",
  "closed": false,
  "order_package_id": "pkg-eebfa0550d9248e0",
  "packet": {
@@ -104,21 +104,22 @@
     "forecast": {
      "direction": "with_trade",
      "evidence": [
-      "mark 8.249 vs entry 8.284",
-      "chart.since_entry: high 8.342 low 8.191, ATR 0.101",
-      "chart.htf: 4h chop ADX 19.3",
-      "exit_plan: SL 8.512 TP 7.83"
+      "mark 8.383 vs entry 8.284, about -0.43R by hand",
+      "chart.bars: closes 8.33/8.347/8.383, since-entry high 8.405",
+      "chart.htf: 4h chop ADX 19.0",
+      "opening exit plan: exit early if 1h closes above 8.45",
+      "exit_plan: SL 8.512, TP 7.83"
      ],
-     "horizon_bars": 12,
+     "horizon_bars": 8,
      "invalidation_px": 8.45,
-     "p_target": 0.35,
-     "target_px": 8.072,
-     "thesis": "Continuation short under the 8.30-8.34 cap; with the 4h now choppy the move to the 8.072 swing low is less likely than at the open but still the path of least resistance while 8.45 holds.",
+     "p_target": 0.4,
+     "target_px": 8.28,
+     "thesis": "The cap at 8.30-8.34 has failed and the squeeze may extend, but the 4h is chop and 8.45 has not been taken; expect price to fall back inside the 8.28-8.34 range before a 1h close above 8.45. Low conviction.",
      "timeframe": "1h"
     },
-    "reason": "Hold. Prior forecast (04:13Z, target 8.072 p 0.40, invalidation 8.45, 12 bars) graded: still open, neither hit; the lows since entry reached only 8.191 (target not touched), the high since entry 8.342 stayed under 8.45 and no 1h close above it. Mark 8.249 vs entry 8.284 is about +0.15R (risk 0.228); open_r null in telemetry, computed by hand. Caveat: the 4h has softened to chop (ADX 19.3) and pri\u2026",
-    "review_id": "LR-20261106T0801Z-pkg-eebfa0550d9248e0",
-    "reviewed_at": "2026-11-06T08:08:00Z",
+    "reason": "Hold, thesis damaged, low conviction. Forecast (08:00Z, target 8.072 p 0.35, invalidation 8.45, 12 bars) graded: open, target not hit (low since 8.191) and 8.45 not breached (high 8.405), but the premise failed: three strong 1h bars (close 8.33, 8.347, 8.383) took out the 8.30-8.34 cap and the 8.342 and 8.324 swing highs, and the 4h is chop (ADX 19). Open about -0.43R by hand (mark 8.383, entry 8\u2026",
+    "review_id": "LR-20261106T1201Z-pkg-eebfa0550d9248e0",
+    "reviewed_at": "2026-11-06T12:08:00Z",
     "route": null
    },
    "symbol": "AVAXUSDT"
@@ -129,13 +130,13 @@
      "MGC",
      "short",
      "mgc_pullback_1d",
-     0.976
+     1.01
     ],
     [
      "BTCUSDT",
      "short",
      "ml_entry",
-     -0.0688
+     -0.0579
     ],
     [
      "ETHUSDT",
@@ -159,7 +160,7 @@
      "SOLUSDT",
      "short",
      "ml_entry_v2",
-     -0.124
+     -0.143
     ],
     [
      "GDX",
@@ -171,7 +172,7 @@
      "MHG",
      "short",
      "mhg_pullback_1d",
-     1.09
+     1.11
     ],
     [
      "TLT",
@@ -183,7 +184,7 @@
      "XRPUSDT",
      "long",
      "e4_oi_shock_1h",
-     0.528
+     0.544
     ],
     [
      "TQQQ",
@@ -195,7 +196,7 @@
      "BTCUSDT",
      "short",
      "trend_donchian_1h",
-     -0.0383
+     -0.0295
     ],
     [
      "IAUM",
@@ -213,7 +214,7 @@
      "SOLUSDT",
      "short",
      "trend_donchian_sol_4h",
-     2.14
+     2.13
     ]
    ],
    "book_note": "[symbol, direction, leg, open_r (null = not measured)] per OTHER open package, either side",
@@ -541,16 +542,8 @@
    "basis": null
   },
   "desk_handoff": {
-   "chain_length": 19,
+   "chain_length": 20,
    "chain_tail": [
-    {
-     "action": "hold",
-     "forecast": null,
-     "reason": "Close 8.313 (-0.13R), range 8.307-8.329 inside the established 8.30-8.34 band; no break. Invalidation 8.45 and SL 8.512 far, thesis intact. Hard cap ~10 min out; the 4-hourly cadence review takes the position over.",
-     "review_id": "LR-20261106T0326Z-pkg-eebfa0550d9248e0",
-     "reviewed_at": "2026-11-06T03:27:44Z",
-     "verdict": "confirm"
-    },
     {
      "action": "hold",
      "forecast": null,
@@ -588,6 +581,21 @@
      "review_id": "LR-20261106T0801Z-pkg-eebfa0550d9248e0",
      "reviewed_at": "2026-11-06T08:08:00Z",
      "verdict": "confirm"
+    },
+    {
+     "action": "hold",
+     "forecast": {
+      "direction": "with_trade",
+      "horizon_bars": 8,
+      "invalidation_px": 8.45,
+      "p_target": 0.4,
+      "target_px": 8.28,
+      "timeframe": "1h"
+     },
+     "reason": "The 8.30-8.34 cap that the thesis rested on broke (1h closes 8.33/8.347/8.383); target odds cut and the plan's 1h close above 8.45 exit is now the live line.",
+     "review_id": "LR-20261106T1201Z-pkg-eebfa0550d9248e0",
+     "reviewed_at": "2026-11-06T12:08:00Z",
+     "verdict": "revise"
     }
    ],
    "instruction": "CONFIRM, REVISE (with a reason) or EXIT this position against the opening thesis and the newest view in the chain; copy prior_decision_id into handoff.prior_decision_id.",
@@ -618,7 +626,7 @@
     "timeframe": "1h",
     "tp": 7.83
    },
-   "prior_decision_id": "LR-20261106T0801Z-pkg-eebfa0550d9248e0",
+   "prior_decision_id": "LR-20261106T1201Z-pkg-eebfa0550d9248e0",
    "protocol": "DESK-HANDOFF-PROTOCOL",
    "read_state": "read"
   },
@@ -635,7 +643,7 @@
    "head": "de30e829bb",
    "state": "current"
   },
-  "info_cutoff_at": "2026-11-06T12:01:22Z",
+  "info_cutoff_at": "2026-11-06T12:06:26Z",
   "leg": "claude_desk",
   "mechanics": {
    "evidence": "package sl 8.512 / tp 7.83 agree with every readable account",
@@ -695,25 +703,18 @@
    "cell_now": null,
    "trend_now": "trending"
   },
-  "review_id": "LR-20261106T1201Z-pkg-eebfa0550d9248e0",
+  "review_id": "LR-20261106T1206Z-pkg-eebfa0550d9248e0",
   "short_hold": {
-   "atr": 0.017142857142856904,
-   "bar": "2026-11-06T11:55:00Z",
-   "bar_close": "2026-11-06T12:00:00Z",
+   "atr": 0.01757142857142835,
+   "bar": "2026-11-06T12:00:00Z",
+   "bar_close": "2026-11-06T12:05:00Z",
    "entry": 8.284,
-   "mark": 8.383,
-   "minutes_held": 593.8,
-   "open_r_at_mark": -0.4342,
+   "mark": 8.404,
+   "minutes_held": 598.8,
+   "open_r_at_mark": -0.5263,
    "r_unit": "entry_to_current_sl",
    "read_state": "read",
    "recent_bars": [
-    {
-     "close": 8.35,
-     "high": 8.352,
-     "low": 8.335,
-     "open": 8.347,
-     "t": "2026-11-06T11:00:00Z"
-    },
     {
      "close": 8.366,
      "high": 8.378,
@@ -790,6 +791,13 @@
      "low": 8.374,
      "open": 8.39,
      "t": "2026-11-06T11:55:00Z"
+    },
+    {
+     "close": 8.404,
+     "high": 8.406,
+     "low": 8.376,
+     "open": 8.383,
+     "t": "2026-11-06T12:00:00Z"
     }
    ],
    "risk_per_unit": null,
@@ -808,25 +816,18 @@
    "tp": 7.83
   }
  },
- "packet_sha": "061f98fe90a68611ba845304cb5d87ad0877d105889acf7833f6a21658eb2753",
+ "packet_sha": "2a40bf227beff31693cf28df8a2a4da08c9b20e08a31d6ca975c5d102c62ab58",
  "short_hold": {
-  "atr": 0.017142857142856904,
-  "bar": "2026-11-06T11:55:00Z",
-  "bar_close": "2026-11-06T12:00:00Z",
+  "atr": 0.01757142857142835,
+  "bar": "2026-11-06T12:00:00Z",
+  "bar_close": "2026-11-06T12:05:00Z",
   "entry": 8.284,
-  "mark": 8.383,
-  "minutes_held": 593.8,
-  "open_r_at_mark": -0.4342,
+  "mark": 8.404,
+  "minutes_held": 598.8,
+  "open_r_at_mark": -0.5263,
   "r_unit": "entry_to_current_sl",
   "read_state": "read",
   "recent_bars": [
-   {
-    "close": 8.35,
-    "high": 8.352,
-    "low": 8.335,
-    "open": 8.347,
-    "t": "2026-11-06T11:00:00Z"
-   },
    {
     "close": 8.366,
     "high": 8.378,
@@ -903,6 +904,13 @@
     "low": 8.374,
     "open": 8.39,
     "t": "2026-11-06T11:55:00Z"
+   },
+   {
+    "close": 8.404,
+    "high": 8.406,
+    "low": 8.376,
+    "open": 8.383,
+    "t": "2026-11-06T12:00:00Z"
    }
   ],
   "risk_per_unit": null,
