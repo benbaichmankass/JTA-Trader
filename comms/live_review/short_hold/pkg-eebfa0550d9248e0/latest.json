@@ -1,7 +1,7 @@
 {
- "bar": "2026-11-06T02:10:00Z",
- "bar_close": "2026-11-06T02:15:00Z",
- "built_at": "2026-11-06T02:15:50Z",
+ "bar": "2026-11-06T02:15:00Z",
+ "bar_close": "2026-11-06T02:20:00Z",
+ "built_at": "2026-11-06T02:20:50Z",
  "closed": false,
  "order_package_id": "pkg-eebfa0550d9248e0",
  "packet": {
@@ -112,9 +112,9 @@
    "previous_review": {
     "action": "hold",
     "forecast": null,
-    "reason": "Short at 8.284, mark 8.279 (+0.02R), 3 min held; 5m range 8.259-8.285 is noise (atr_5m 0.032), well inside SL 8.512 and the desk invalidation 8.45. 1h structure and 4h chop/ADX 33 unchanged, so the continuation-short thesis stands; nothing to tighten yet (stop must sit >=1 atr_5m from mark and no progress to lock).",
-    "review_id": "LR-20261106T0210Z-pkg-eebfa0550d9248e0",
-    "reviewed_at": "2026-11-06T02:12:36Z",
+    "reason": "Mark 8.295 vs entry 8.284 (-0.05R), a 5m bounce of ~0.4 atr_1h that stayed under the 8.30 range top; far from invalidation 8.45 and SL 8.512. Thesis (1h downtrend continuation, 4h trending ADX 33) intact; no progress to lock and no structural break to exit on.",
+    "review_id": "LR-20261106T0215Z-pkg-eebfa0550d9248e0",
+    "reviewed_at": "2026-11-06T02:17:04Z",
     "route": null
    },
    "symbol": "AVAXUSDT"
@@ -131,13 +131,13 @@
      "BTCUSDT",
      "short",
      "ml_entry",
-     -0.075
+     -0.038
     ],
     [
      "ETHUSDT",
      "short",
      "trend_donchian_eth",
-     0.22
+     0.237
     ],
     [
      "SPY",
@@ -149,7 +149,7 @@
      "ADAUSDT",
      "short",
      "ml_entry_v2",
-     -0.62
+     -0.665
     ],
     [
      "GLD",
@@ -161,7 +161,7 @@
      "SOLUSDT",
      "short",
      "ml_entry_v2",
-     -0.0113
+     0.0452
     ],
     [
      "GDX",
@@ -173,7 +173,7 @@
      "MHG",
      "short",
      "mhg_pullback_1d",
-     1.06
+     1.08
     ],
     [
      "XRPUSDT",
@@ -197,7 +197,7 @@
      "BTCUSDT",
      "short",
      "trend_donchian_1h",
-     -0.0432
+     -0.0136
     ],
     [
      "IAUM",
@@ -215,7 +215,7 @@
      "SOLUSDT",
      "short",
      "trend_donchian_sol_4h",
-     2.23
+     2.28
     ]
    ],
    "book_note": "[symbol, direction, leg, open_r (null = not measured)] per OTHER open package, either side",
@@ -537,7 +537,7 @@
    "basis": null
   },
   "desk_handoff": {
-   "chain_length": 1,
+   "chain_length": 2,
    "chain_tail": [
     {
      "action": "hold",
@@ -545,6 +545,14 @@
      "reason": "Short at 8.284, mark 8.279 (+0.02R), 3 min held; 5m range 8.259-8.285 is noise (atr_5m 0.032), well inside SL 8.512 and the desk invalidation 8.45. 1h structure and 4h chop/ADX 33 unchanged, so the continuation-short thesis stands; nothing to tighten yet (stop must sit >=1 atr_5m from mark and no progress to lock).",
      "review_id": "LR-20261106T0210Z-pkg-eebfa0550d9248e0",
      "reviewed_at": "2026-11-06T02:12:36Z",
+     "verdict": "confirm"
+    },
+    {
+     "action": "hold",
+     "forecast": null,
+     "reason": "Mark 8.295 vs entry 8.284 (-0.05R), a 5m bounce of ~0.4 atr_1h that stayed under the 8.30 range top; far from invalidation 8.45 and SL 8.512. Thesis (1h downtrend continuation, 4h trending ADX 33) intact; no progress to lock and no structural break to exit on.",
+     "review_id": "LR-20261106T0215Z-pkg-eebfa0550d9248e0",
+     "reviewed_at": "2026-11-06T02:17:04Z",
      "verdict": "confirm"
     }
    ],
@@ -576,7 +584,7 @@
     "timeframe": "1h",
     "tp": 7.83
    },
-   "prior_decision_id": "LR-20261106T0210Z-pkg-eebfa0550d9248e0",
+   "prior_decision_id": "LR-20261106T0215Z-pkg-eebfa0550d9248e0",
    "protocol": "DESK-HANDOFF-PROTOCOL",
    "read_state": "read"
   },
@@ -590,10 +598,10 @@
    "r_to_target": null
   },
   "generator": {
-   "head": "40238a012e",
+   "head": "319db067a2",
    "state": "current"
   },
-  "info_cutoff_at": "2026-11-06T02:16:27Z",
+  "info_cutoff_at": "2026-11-06T02:21:09Z",
   "leg": "claude_desk",
   "mechanics": {
    "evidence": "package sl 8.512 / tp 7.83 agree with every readable account",
@@ -657,25 +665,18 @@
    "cell_now": null,
    "trend_now": "trending"
   },
-  "review_id": "LR-20261106T0215Z-pkg-eebfa0550d9248e0",
+  "review_id": "LR-20261106T0220Z-pkg-eebfa0550d9248e0",
   "short_hold": {
-   "atr": 0.03185714285714309,
-   "bar": "2026-11-06T02:10:00Z",
-   "bar_close": "2026-11-06T02:15:00Z",
+   "atr": 0.03157142857142884,
+   "bar": "2026-11-06T02:15:00Z",
+   "bar_close": "2026-11-06T02:20:00Z",
    "entry": 8.284,
    "mark": 8.295,
-   "minutes_held": 8.6,
+   "minutes_held": 13.6,
    "open_r_at_mark": -0.0482,
    "r_unit": "entry_to_current_sl",
    "read_state": "read",
    "recent_bars": [
-    {
-     "close": 8.28,
-     "high": 8.314,
-     "low": 8.273,
-     "open": 8.314,
-     "t": "2026-11-06T01:15:00Z"
-    },
     {
      "close": 8.255,
      "high": 8.292,
@@ -752,6 +753,13 @@
      "low": 8.264,
      "open": 8.279,
      "t": "2026-11-06T02:10:00Z"
+    },
+    {
+     "close": 8.295,
+     "high": 8.308,
+     "low": 8.274,
+     "open": 8.295,
+     "t": "2026-11-06T02:15:00Z"
     }
    ],
    "risk_per_unit": null,
@@ -770,25 +778,18 @@
    "tp": 7.83
   }
  },
- "packet_sha": "5e661eac92405aa2514ebae7d96eda283df160a0801d6c476ec69a2c786c2331",
+ "packet_sha": "9c4d7954687bae59d6b968b2c2b9659e482a44e3159182f7061a05660ca25d7f",
  "short_hold": {
-  "atr": 0.03185714285714309,
-  "bar": "2026-11-06T02:10:00Z",
-  "bar_close": "2026-11-06T02:15:00Z",
+  "atr": 0.03157142857142884,
+  "bar": "2026-11-06T02:15:00Z",
+  "bar_close": "2026-11-06T02:20:00Z",
   "entry": 8.284,
   "mark": 8.295,
-  "minutes_held": 8.6,
+  "minutes_held": 13.6,
   "open_r_at_mark": -0.0482,
   "r_unit": "entry_to_current_sl",
   "read_state": "read",
   "recent_bars": [
-   {
-    "close": 8.28,
-    "high": 8.314,
-    "low": 8.273,
-    "open": 8.314,
-    "t": "2026-11-06T01:15:00Z"
-   },
    {
     "close": 8.255,
     "high": 8.292,
@@ -865,6 +866,13 @@
     "low": 8.264,
     "open": 8.279,
     "t": "2026-11-06T02:10:00Z"
+   },
+   {
+    "close": 8.295,
+    "high": 8.308,
+    "low": 8.274,
+    "open": 8.295,
+    "t": "2026-11-06T02:15:00Z"
    }
   ],
   "risk_per_unit": null,
