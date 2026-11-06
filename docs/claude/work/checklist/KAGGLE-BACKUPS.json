@@ -16,11 +16,17 @@
   "roadmap": [
     "L-OPS"
   ],
-  "updated_at": "2026-11-06T08:56:58Z",
+  "updated_at": "2026-11-06T09:03:02Z",
   "updated_by": "session_01AFoLuNBcS5NT55ncec8xTw",
-  "observe": {
-    "when": "2026-11-07 06:00Z (models cron 23 4 * * * was due 2026-11-06 04:23Z and did not fire); db cron Sunday 2026-11-08 09:41Z",
-    "how": "actions list_workflow_runs kaggle-backups.yml with workflow_runs_filter {event: schedule} shows a completed run, AND git show origin/main:comms/backups/kaggle_latest.json has kinds.models (or kinds.db) with ok=true and a last_ok_at after the run; scripts/ci/check_cadence_liveness.py watches the same receipt. If no schedule run by 2026-11-07 06:00Z: dispatch one labelled run (issue label kaggle-backup-request, mode models) to produce the first real stamp and file why schedules do not fire."
+  "observe": null,
+  "observation": {
+    "what": "the first SCHEDULED run of kaggle-backups.yml (models cron 23 4 * * *, due 2026-11-06 04:23Z, did not fire by 08:33Z; db cron Sunday 2026-11-08 09:41Z) completes and stamps comms/backups/kaggle_latest.json on main",
+    "how_to_check": "actions list_workflow_runs kaggle-backups.yml with workflow_runs_filter {event: schedule} shows a completed run; and git show origin/main:comms/backups/kaggle_latest.json has kinds.models (or kinds.db) with ok=true and last_ok_at after that run; scripts/ci/check_cadence_liveness.py watches the same receipt. If no schedule run by 2026-11-07 06:00Z: dispatch one labelled run (issue label kaggle-backup-request, mode models) for the first real stamp and file why schedules do not fire",
+    "due_by": "2026-11-07"
+  },
+  "writeback": {
+    "roadmap": "none: scheduled private-Kaggle backups are an ops utility under L-OPS and no milestone line changes until the first scheduled stamp is observed",
+    "arch": "none: backup tooling is off the trade path and docs/ARCHITECTURE-CANONICAL.md has no Kaggle or backup section"
   },
   "_seq": 955
 }
