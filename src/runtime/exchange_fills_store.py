@@ -256,6 +256,57 @@ def upsert_funding(
     return inserted
 
 
+def describe_funding_id_collisions(
+    rows: Iterable[Mapping[str, Any]],
+    path: Optional[Path] = None,
+    sample: int = 3,
+) -> dict[str, Any]:
+    """Why did a pull insert fewer rows than it fetched? (BYBIT2-FUNDING-SETTLEMENT-READ)
+
+    Reports the batch's distinct ``funding_id`` count (duplicates INSIDE the
+    batch are silently ignored by INSERT OR IGNORE) and a sample of ids that
+    already exist in the store under a DIFFERENT account / time / symbol --
+    i.e. a venue id that is not unique per settlement. Read-only.
+    """
+    rows = list(rows)
+    ids = [str(r.get("funding_id")) for r in rows if r.get("funding_id")]
+    out: dict[str, Any] = {"candidates": len(rows), "distinct_ids": len(set(ids)),
+                           "foreign_collisions": []}
+    p = init_db(path)
+    conn = sqlite3.connect(str(p))
+    try:
+        for r in rows:
+            fid = r.get("funding_id")
+            if not fid:
+                continue
+            ex = conn.execute(
+                "SELECT account_id, symbol, funding_time FROM exchange_funding "
+                "WHERE funding_id=?", (str(fid),)).fetchone()
+            if ex and (ex[0], ex[2]) != (str(r.get("account_id")), str(r.get("funding_time"))):
+                out["foreign_collisions"].append({
+                    "funding_id": str(fid), "incoming": [r.get("account_id"), r.get("symbol"), r.get("funding_time")],
+                    "stored": list(ex)})
+                if len(out["foreign_collisions"]) >= sample:
+                    break
+    finally:
+        conn.close()
+    return out
+
+
+def record_funding_run(path_dir: Optional[Path], payload: Mapping[str, Any]) -> Optional[Path]:
+    """Write the puller's last-run marker (JSON) beside the fills store.
+
+    ``last_pulled_at`` in /api/diag/funding_settlements reads this, NOT
+    MAX(inserted_at) (a quiet account inserts nothing, so that reads stale).
+    """
+    d = Path(path_dir) if path_dir else get_fills_db_path().parent
+    f = d / "exchange_funding_last_run.json"
+    tmp = f.with_suffix(".tmp")
+    tmp.write_text(json.dumps(dict(payload)))
+    tmp.replace(f)
+    return f
+
+
 # ---------------------------------------------------------------------------
 # Aggregates (read-side, used by /api/bot/pnl/exchange)
 # ---------------------------------------------------------------------------
