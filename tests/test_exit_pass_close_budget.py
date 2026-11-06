@@ -6,8 +6,6 @@ Measured 15:00-15:01Z: five max_hold closes ran serially on the exit thread
 82.0 s. The fix defers the DISPATCH of further time-based closes once the pass
 has spent its close budget; evaluation of every package is unchanged.
 """
-import pytest
-
 from src.runtime import order_monitor as om
 
 
