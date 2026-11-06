@@ -1,5 +1,7 @@
 # Session handoff + continue-work routine
 
+> **2026-11-06: the `continue-work` workflow was deleted** (WORKFLOW-PRUNE P1: 0 runs in 90 days, operator decision relayed by Manager 2026-11-05b). The handoff file, validator and `close_session.py --commit --push` still work; **`close_session.py --dispatch` will fail with HTTP 404** until the held fix (a separate PR; pipeline `PI-20261106-01AFOLUJ-0009`) makes it a no-op, so do not pass `--dispatch`. Everything below that describes dispatching or re-dispatching the workflow is **historical**.
+
 > **Doc status:** `historical` · category `history` · last verified `2026-09-07` · registered in [`docs/DOCUMENT-INDEX.md`](../../docs/DOCUMENT-INDEX.md)
 
 ## What this is

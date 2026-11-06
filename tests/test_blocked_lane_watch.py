@@ -18,11 +18,9 @@ import sys
 from pathlib import Path
 
 import pytest
-import yaml
 
 REPO = Path(__file__).resolve().parents[1]
 MODULE = REPO / "scripts" / "ops" / "blocked_lane_watch.py"
-WORKFLOW = REPO / ".github" / "workflows" / "pr-queue-watch.yml"
 
 
 def _load(path: Path = MODULE, name: str = "blw"):
@@ -310,25 +308,6 @@ def _commands(step) -> str:
                       if not ln.strip().startswith("#"))
 
 
-def test_MUTATION_a_second_selftest_invocation_is_still_caught():
-    """The other direction of the comment-stripping above: sharpening the matcher
-    must not have blinded it. Plant a REAL second `--self-test` call into the
-    lanes step and assert the wiring test's own rule still rejects it."""
-    wf = yaml.safe_load(WORKFLOW.read_text())
-    steps = wf["jobs"]["watch"]["steps"]
-
-    lanes = [st for st in steps if st.get("id") == "lanes"][0]
-    assert "--self-test" not in _commands(lanes), "baseline: lanes invokes no self-test"
-
-    planted = dict(lanes, run=lanes["run"]
-                   + "\npython3 scripts/ops/blocked_lane_watch.py --self-test\n")
-    mutated = [planted if st.get("id") == "lanes" else st for st in steps]
-    hits = [st for st in mutated
-            if "--self-test" in _commands(st)
-            and "blocked_lane_watch.py" in _commands(st)]
-    assert len(hits) == 2, (
-        "the matcher must still SEE a genuine second invocation — if this reads 1, "
-        "comment-stripping blinded the check it was meant to sharpen")
 
 
 def test_an_unreadable_latch_pages_rather_than_suppressing(tmp_path):
@@ -383,73 +362,10 @@ def test_a_clears_when_invalid_for_its_kind_is_refused():
 
 
 # ── the carrier wiring ───────────────────────────────────────────────────────
-def test_the_watch_is_wired_into_a_workflow_that_demonstrably_fires():
-    """⚠️ The carrier is `pr-queue-watch.yml` rather than a new cron BECAUSE a
-    new cron nobody has seen fire is the looks-armed-is-not failure this row
-    exists to end. Measured 2026-09-11 over that workflow's last 12 receipt
-    landings: a continuous dated series 2026-09-06T20:49:05Z → 2026-09-11T05:14:26Z.
-    """
-    wf = yaml.safe_load(WORKFLOW.read_text())
-    steps = wf["jobs"]["watch"]["steps"]
-    lane = [s for s in steps if s.get("id") == "lanes"]
-    assert len(lane) == 1, "the blocked-lane step must exist exactly once"
-    assert "blocked_lane_watch.py" in lane[0]["run"]
-    # ⚠️ THE SELF-TEST IS ASSERTED IN THE SHARED SELF-TEST STEP, NOT HERE, AND
-    # THE MOVE IS THE POINT (MI-235 review lane, 2026-09-11). Inside the lanes
-    # step it was `--self-test || exit 2`, which failed the STEP — so `Land the
-    # receipt on main`, `Watch the MANAGER STATE` and `Report the verdict` were
-    # all skipped, taking down the PR-queue escalation this workflow exists for,
-    # while the step's own comment promised it never fails the job.
-    # ⚠️ MATCH INVOCATIONS, NOT MENTIONS (corrected 2026-09-11). This counted any
-    # step whose body contained the STRING `--self-test`, so a COMMENT explaining
-    # why the self-test moved registered as a second invocation and failed the
-    # assertion below. A check that grades prose as an executed command is the
-    # unprovenanced-diagnostic class this repo has a guard for; stripping comment
-    # lines can only ever REMOVE non-invocations, so it strictly sharpens the
-    # matcher rather than weakening it — a real second call is still caught, and
-    # `test_MUTATION_a_second_selftest_invocation_is_still_caught` pins that.
-    selftest_steps = [st for st in steps
-                      if "--self-test" in _commands(st)
-                      and "blocked_lane_watch.py" in _commands(st)]
-    assert len(selftest_steps) == 1, (
-        "the grading policy must be self-tested exactly once per run")
-    assert selftest_steps[0].get("id") != "lanes", (
-        "a failing self-test here must fail the JOB early, never skip the "
-        "later steps that carry the PR-queue escalation")
-    assert steps.index(selftest_steps[0]) < steps.index(lane[0]), (
-        "self-test BEFORE trusting a live run, not after")
-    assert "exit 2" not in lane[0]["run"], (
-        "the lanes step must not exit non-zero: every step after it that "
-        "lacks `if: always()` would be skipped")
-    land = [s for s in steps if "commit-to-main" in str(s.get("uses", ""))]
-    assert land and "BLOCKED-LANE-WATCH.json" in land[0]["with"]["paths"], (
-        "the receipt IS the paging latch; if it never lands, it never latches")
-    assert land[0]["with"].get("verify-merged") == "true"
 
 
-def test_the_lane_report_cannot_skip_or_mask_the_pr_queue_escalation():
-    wf = yaml.safe_load(WORKFLOW.read_text())
-    steps = wf["jobs"]["watch"]["steps"]
-    rep = [s for s in steps if s.get("name", "").startswith("Report the BLOCKED-LANE")]
-    assert len(rep) == 1
-    assert rep[0].get("if") == "always()"
-    assert "BLOCKED-LANE WAKE DUE" in rep[0]["run"] and "exit 1" in rep[0]["run"]
-    # A missing output means the step never ran -- *we did not look* -- and must
-    # not render as a clean roster.
-    assert 'did not look' in rep[0]["run"]
 
 
-def test_the_lane_step_does_not_dilute_the_pr_queue_exit_code_capture():
-    """`check_pr_queue_watch.py` asserts the token `code=$?` appears EXACTLY
-    ONCE, as a SUBSTRING test, and takes the FIRST occurrence's preceding window
-    as evidence the assessed command is not a pipeline. A second match anywhere
-    — a comment included — breaks a guard that exists because piping made the
-    escalation channel dead on arrival."""
-    assert WORKFLOW.read_text().count("code=$?") == 1
-    out = subprocess.run(
-        [sys.executable, str(REPO / "scripts" / "ci" / "check_pr_queue_watch.py"),
-         "--self-test"], capture_output=True, text=True, cwd=str(REPO))
-    assert out.returncode == 0, out.stdout + out.stderr
 
 
 # ── the shell of the sweep ───────────────────────────────────────────────────

@@ -1,0 +1,18 @@
+{
+  "due_when": {
+    "check_every_days": 1,
+    "clears_when": "a re-measure JSON exists under comms/ci/ and its per-workflow job-h/wk are compared with the 2026-11-06 baseline in a short note",
+    "due_date": "2026-11-13",
+    "kind": "date",
+    "last_checked": "2026-11-06"
+  },
+  "id": "PI-20261106-01AFOLUJ-0008",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "lane WORKFLOW-PRUNE (Manager Session 2026-11-05b), session_01AFoLuJ6sZjv24MuhwLtDtDwuuz",
+    "rerun": "python3 scripts/ops/workflow_prune_inventory.py --out comms/ci/workflow-prune-inventory-2026-11-13.json"
+  },
+  "state": "queued",
+  "what": "WORKFLOW-PRUNE 7-day re-measure. PRs #23594 (48 workflow deletions, merged 459cda5a6 2026-11-06T04:01Z) and #23600 (P4: sparse checkouts for work-digest gate / pr-landing-hold-merge-alarm / armed-branch-push-watch, branch-protection-sync retry + own-file paths + daily cron; merged 082c4ed37 2026-11-06T03:26Z) are on main. Re-run the same inventory 7 days later and compare job-h/wk and run counts per workflow against comms/ci/workflow-prune-inventory-2026-11-06.json. Expect: the three sparse-checkout jobs' per-run time to drop from ~50-130 s to a few seconds; branch-protection-sync red rate (was 724 of 1,610 runs/wk, GitHub HTTP 500 on the PUT) to fall to the 5xx-after-4-retries rate; skipped runs/wk to fall by the 48 deleted relays' share. CAVEAT: the baseline's 7-day figures are overstated for workflows whose trigger changed inside its window (repo-inventory, see audit finding 5); read the new run as the clean figure, not a delta against those."
+}

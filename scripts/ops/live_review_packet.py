@@ -996,7 +996,14 @@ def _price(leg: str, side: str, tel: dict, atr_mult: Optional[float], review_id:
     out = subprocess.run(cmd, capture_output=True, text=True, cwd=REPO, timeout=300)
     if out.returncode != 0:
         return None, f"live_review_outcomes failed: {out.stderr.strip()[-200:]}"
-    table = json.loads(out.stdout)
+    try:
+        table = json.loads(out.stdout)
+    except ValueError as exc:
+        # An exit-0 outcomes run whose stdout is not JSON used to raise out of the whole builder, so one leg's
+        # price table killed the packet (LR wake 2026-11-06T01:56Z, pkg-011a7bf85ee54a6f, "Expecting value: line 1
+        # column 2 (char 1)", could_not_build). It is a named could-not-price state now, carrying the offending text.
+        return None, (f"live_review_outcomes output is not JSON ({type(exc).__name__}: {exc}); "
+                      f"stdout starts {out.stdout[:120]!r}, stderr ends {out.stderr.strip()[-120:]!r}")
     rel = f"comms/live_review/tables/{review_id}.json"
     if write:
         TABLES_DIR.mkdir(parents=True, exist_ok=True)

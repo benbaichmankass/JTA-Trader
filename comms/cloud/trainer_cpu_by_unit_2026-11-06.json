@@ -1,0 +1,33 @@
+{
+  "schema": 1,
+  "host": "trainer (ict-trainer-vm, 1 OCPU A1, 6 GB)",
+  "row": "FREE-CAPACITY-PLAN (a)",
+  "measured_at": "2026-11-06T00:43:11Z",
+  "source": "trainer-vm-diag issue #23568, run 42136998187: systemd 'Consumed X CPU time' journal lines; /proc/stat; systemctl CPUUsageNSec",
+  "window": "2026-10-30T06:43Z .. 2026-11-06T00:43Z (6.75 d; journal retention, not a chosen 7 d)",
+  "population": "every systemd unit/scope that logged a Consumed line in the window (5,917 lines). Long-running services log only on stop, so their CPU is read from CPUUsageNSec since start instead.",
+  "read_state": "measured",
+  "cpu_h_by_unit": {
+    "ict-trainer.service": {"runs": 6, "cpu_h": 7.96},
+    "ict-trainer-catchup.service": {"runs": 7, "cpu_h": 5.74},
+    "session-N.scope (SSH sessions: diag relays, export, research-over-SSH)": {"runs": 119, "cpu_h": 3.54},
+    "ict-promotion-readiness.service": {"runs": 6, "cpu_h": 1.70},
+    "ict-trainer-forecast.service": {"runs": 648, "cpu_h": 1.45},
+    "ict-trainer-publish.service": {"runs": 4406, "cpu_h": 1.44},
+    "unified-monitoring-agent (+config_downloader)": {"runs": 489, "cpu_h": 0.86},
+    "actions.runner trainer-jta-infra-1..4 (retired by COMPUTE-ALLOCATION D2)": {"runs": 14, "cpu_h": 0.65},
+    "ict-trainer-git-sync.service": {"runs": 81, "cpu_h": 0.09},
+    "everything else": {"cpu_h": 0.12}
+  },
+  "double_count_excluded": "user-1001.slice 3.58 cpu_h is the parent of the session scopes and is not added",
+  "total_cpu_h_excluding_double_count": 23.55,
+  "cpu_h_per_day": 3.49,
+  "long_running_since_start": {
+    "ict-orderflow-capture.service": "20,957 s CPU over 66 d (0.3%)",
+    "snap.oracle-cloud-agent": "11,879 s over 66 d (0.2%)"
+  },
+  "proc_stat_since_boot_66d": {"busy_pct": 26.4, "iowait_pct": 3.1, "steal_pct": 1.5},
+  "oci_cpu_daily_p95": "100.0% on every trainer day 2026-10-05..2026-11-05 (comms/cloud/compute_util_ledger.jsonl, n=32)",
+  "reading": "Mean load is ~15-26% of one core, but the p95 of 1-minute CpuUtilization is 100% because single-threaded heavy jobs pin the one core for well over 5% of each day (72 min). p95 < 80% needs the minutes at ~100% under ~72/day. The daily cycle alone (ict-trainer + catch-up, 13.70 cpu_h = 58% of the total, ~2.0 cpu_h/day) exceeds that by itself.",
+  "changes_since_2026_10_13_profile": "ict-drift-retrain was 30.45 cpu_h/wk (63.7%); its timer was retired 2026-10-25 (DRIFT-SCAN-RETIRE) and it ran once (0.01 cpu_h) in this window. ict-promotion-readiness grew 0.06 -> 1.70 cpu_h/wk."
+}

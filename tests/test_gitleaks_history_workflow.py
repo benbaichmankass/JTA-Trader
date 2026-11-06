@@ -94,7 +94,7 @@ def _perm_view(name):
 
 
 def test_issue_commenting_workflows_have_exactly_contents_read_issues_write():
-    for name in ("reset-daily-risk-state", "test-alpaca-creds", "test-alpaca-from-vm"):
+    for name in ("reset-daily-risk-state",):
         doc, top, jobs = _perm_view(name)
         text = (WF / f"{name}.yml").read_text()
         assert top == {"contents": "read", "issues": "write"}, name

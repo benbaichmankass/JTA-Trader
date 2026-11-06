@@ -80,11 +80,6 @@ jobs:
                 description: 'Triggers prop-report — POST a prop fill/close or account-status report to /api/bot/prop/report.',
               },
               {
-                name: 'news-key-check',
-                color: '1d76db',
-                description: 'Triggers news-key-check — validate the NEWS_API_KEY secret through the bot news code (off-VM, read-only).',
-              },
-              {
                 name: 'macro-valuation-snapshot-now',
                 color: '0e8a16',
                 description: 'Triggers macro-valuation-snapshot — off-VM FRED valuation-snapshot producer (appends comms/macro/valuation_snapshots.jsonl).',
@@ -105,74 +100,14 @@ jobs:
                 description: 'Triggers econ-event-study — run the M1 economic-surprise → forward-price IC(H) event study + land its scorecard.',
               },
               {
-                name: 'sysdyn-gas-calibrate-now',
-                color: '0e8a16',
-                description: 'Triggers sysdyn-gas-calibrate — calibrate the M29 gas_storage_price_v1 seed on real weekly NG price (FRED) + emit its scorecard.',
-              },
-              {
-                name: 'cot-positioning-backfill-now',
-                color: '0e8a16',
-                description: 'Triggers cot-positioning-backfill — reconstruct historical CFTC-COT positioning snapshots + grade them with the M28 P4 + horizon-IC scans.',
-              },
-              {
-                name: 'm28-value-grade-now',
-                color: '0e8a16',
-                description: 'Triggers m28-value-grade — grade the D3 value-sleeve cross-section on a GitHub runner (FRED + yfinance/Stooq ETF closes).',
-              },
-              {
-                name: 'm31-implied-vol-grade-now',
-                color: '0e8a16',
-                description: 'Triggers m31-implied-vol-grade — grade the implied-vol input class (CBOE/FRED VIX family) on a GitHub runner.',
-              },
-              {
-                name: 'm32-credit-curve-grade-now',
-                color: '0e8a16',
-                description: 'Triggers m32-credit-curve-grade — grade the credit/rates sleeve (HY/IG OAS, curve slope, NFCI → SP500) on a GitHub runner.',
-              },
-              {
-                name: 'vix-term-backtest-now',
-                color: '0e8a16',
-                description: 'Triggers vix-term-backtest — the vix_term single-asset timing backtest (ES/NQ/YM, net of real futures cost) on a GitHub runner.',
-              },
-              {
-                name: 'm33-seasonality-grade-now',
-                color: '0e8a16',
-                description: 'Triggers m33-seasonality-grade — the calendar-seasonality family (day-of-week / day-of-month / turn-of-month → daily return) on a GitHub runner.',
-              },
-              {
-                name: 'm34-xfamily-grade-now',
-                color: '0e8a16',
-                description: 'Triggers m34-xfamily-grade — the cross-family conditioning probe (vix_term × hy_oas_pct conjunction gate → equity fwd return) on a GitHub runner.',
-              },
-              {
-                name: 'crypto-signals-backfill-now',
-                color: '0e8a16',
-                description: 'Triggers crypto-signals-backfill — reconstruct historical BTC/ETH/SOL funding/OI/basis snapshots (Bybit) + grade them with the M28 P4 + horizon-IC scans.',
-              },
-              {
                 name: 'replay-pregate-now',
                 color: '0e8a16',
                 description: 'Triggers replay-pregate-nightly — run the ML shadow pre-gate replay on demand (added 2026-07-26 full-system audit WS-B: the workflow filtered on this label but it was never bootstrapped, so the label-dispatch path was dead).',
               },
               {
-                name: 'test-alpaca-from-vm',
-                color: '0e8a16',
-                description: 'Triggers test-alpaca-from-vm — probe Alpaca credentials from the VM (added 2026-07-26 full-system audit WS-B: the workflow filtered on this label but it was never bootstrapped, so the workflow was undispatchable).',
-              },
-              {
                 name: 'cancel-queued-runs',
                 color: 'cfd3d7',
                 description: 'Triggers cancel-queued-runs — bulk-cancel stale queued Actions runs.',
-              },
-              {
-                name: 'provision-ib-gateway',
-                color: '5319e7',
-                description: 'Triggers provision-ib-gateway workflow — headless IB Gateway (IBC) install/login on the live VM for MES.',
-              },
-              {
-                name: 'provision-gateway-vm',
-                color: '5319e7',
-                description: 'Triggers provision-gateway-vm — provision the dedicated 1-OCPU Ampere IB-Gateway VM (gateway isolation, Plan B).',
               },
               {
                 name: 'terminate-instance',
@@ -282,29 +217,9 @@ jobs:
                 description: 'Issue-driven dispatch for system-actions.yml allowlist (action: <name>, reason: <text>).',
               },
               {
-                name: 'vm-cloud-fix-request',
-                color: 'b60205',
-                description: 'Triggers vm-cloud-fix workflow — Oracle Cloud Security List ingress for the dashboard API port.',
-              },
-              {
-                name: 'vm-cloud-open-ib-port',
-                color: 'b60205',
-                description: 'Triggers vm-cloud-open-ib-port — intra-subnet-only OCI SL ingress for the IB Gateway API port (never public).',
-              },
-              {
                 name: 'vm-fix-devnull',
                 color: 'b60205',
                 description: 'Triggers vm-fix-devnull — recreate a broken /dev/null char device on the live VM (rm + mknod c 1 3 + chmod 666).',
-              },
-              {
-                name: 'vm-devnull-deploy-bootstrap',
-                color: 'b60205',
-                description: 'Triggers vm-devnull-deploy-bootstrap — chmod 0666 /dev/null then run the deploy in the same fresh window to install ict-devnull-guard.timer (breaks the auto-deploy chicken-and-egg).',
-              },
-              {
-                name: 'vm-devnull-diagnose',
-                color: 'b60205',
-                description: 'Triggers vm-devnull-source-diagnose — identify what strips /dev/null perms (inspect agent logs / arm auditd watch / read captured chmod events) to kill the source (RISK-4).',
               },
               {
                 name: 'vm-ib-gateway-live-login-test',
@@ -340,11 +255,6 @@ jobs:
                 name: 'health-snapshot-trigger',
                 color: '0e8a16',
                 description: 'Triggers health-snapshot-pr workflow from a sandbox session (issue-driven dispatch).',
-              },
-              {
-                name: 'provision-training-vm',
-                color: 'd73a4a',
-                description: 'Triggers provision-training-vm workflow — Always Free Ampere A1 VM for the model training center (S-AI-WS9). Tier-3.',
               },
               {
                 name: 'doc-audit-now',
@@ -447,16 +357,6 @@ jobs:
                 description: 'Triggers gpu-burst-train workflow — M19 Tier-1 ledger-gated spot-GPU burst (dry preflight until GPU_BURST_ARMED=1).',
               },
               {
-                name: 'ict-scalp-backtest-request',
-                color: '0075ca',
-                description: 'Triggers ict-scalp-backtest workflow — self-contained pre-live gate for the ict_scalp_5m strategy.',
-              },
-              {
-                name: 'research-panel-build-request',
-                color: '0075ca',
-                description: 'Triggers research-panel-build workflow — self-contained M30 backtest-substrate panel build on a GH runner (fetch feed + build + C2 sweep + per-regime).',
-              },
-              {
                 name: 'oci-inventory',
                 color: '0075ca',
                 description: 'Triggers oci-inventory — read-only OCI compute inventory diffed against the declared topology.',
@@ -482,29 +382,9 @@ jobs:
                 description: 'Triggers research-exit-head-build workflow — self-contained M30×M20 per-bar in-trade exit-head build on a GH runner (fetch feed + dense panel + uniqueness-weighted meta-label head + net-of-fee verdict).',
               },
               {
-                name: 'research-symbol-p0-request',
-                color: '0075ca',
-                description: 'Triggers research-symbol-p0-build workflow — deep-history symbol P0 validation (Dukascopy fetch + ict_scalp k-fold under a target account economics) on a FREE GH runner. The resource-optimized home for the M27 XAU/MGC re-target work (off the scarce trainer VM).',
-              },
-              {
                 name: 'trainer-offload-train-request',
                 color: '0075ca',
                 description: 'Triggers trainer-offload-train workflow — train an OOM-prone ML manifest on a FREE 16 GB GH runner (Binance-vision fetch → market_raw(csv)+market_features → ml train → metrics artifact), off the 6 GB trainer that OOMs it. rec #3 free-runner offload.',
-              },
-              {
-                name: 'regime-debt-matrix-request',
-                color: '0075ca',
-                description: 'Triggers regime-debt-matrix workflow — run the per-(trend-regime, direction) net-R matrix for the regime-coverage debt roster on a free GH runner (Binance-vision crypto + Yahoo equities/futures). rec #5 follow-up.',
-              },
-              {
-                name: 'regime-cell-walkforward-request',
-                color: '0075ca',
-                description: 'Triggers regime-cell-walkforward workflow — walk-forward the OOS stability of ONE (regime, direction) debt-matrix cell on a free GH runner (the gate a losing cell must pass before a Tier-3 OFF-cell draft). rec #5 follow-up.',
-              },
-              {
-                name: 'regime-adx-cutpoint-sweep-request',
-                color: '0075ca',
-                description: 'Triggers regime-adx-cutpoint-sweep workflow — sweep the ADX regime-attribution cut-points (live 20/25) for ONE strategy on a free GH runner, grading whether a cell verdict is robust to the un-swept constants or flips. RESEARCH-PROGRAM R2.',
               },
               {
                 name: 'research-backtest-augment-request',
@@ -512,19 +392,9 @@ jobs:
                 description: 'Triggers research-backtest-augment workflow — run the pooled harness roster (trend_donchian@1h/squeeze_breakout_4h@4h/htf_pullback_trend_2h@2h × BTC/ETH/SOL) --emit-trades and record is_backtest=1 rows into one backtest_trades.db artifact for A1 (W1.2). Free GH runner.',
               },
               {
-                name: 'c1-conviction-ab-request',
-                color: '0075ca',
-                description: 'Triggers c1-conviction-ab workflow — full-feed budget-matched conviction-sizing A/B (baseline --risk-pct 2.0 vs --conviction-sizing, net-of-cost) on Binance-vision crypto candles, per symbol. W1.1/C1 deployable evidence. Free GH runner.',
-              },
-              {
                 name: 'gld-compat-matrix-request',
                 color: '0075ca',
                 description: 'Triggers gld-compat-matrix workflow — score gld_pullback_1h @ GLD (corrected 0-bps fee) against every account ruleset on a free GH runner; the alpaca_portfolio ROUTE verdict is the M36 Track B routing evidence gate.',
-              },
-              {
-                name: 'due-list-now',
-                color: '0e8a16',
-                description: 'Triggers due-list workflow — re-render docs/claude/DUE.{json,md} from every structured register.',
               },
               {
                 name: 'probes-now',
@@ -570,16 +440,6 @@ jobs:
               // issues API on first use, which works but leaves the declared set incomplete —
               // and this file exists so the labels workflows FILTER on are declared, not
               // discovered. Declaring them also documents what each one fires.
-              {
-                name: 'econ-calendar-backfill-now',
-                color: '0e8a16',
-                description: 'Triggers econ-calendar-backfill — reconstruct PIT release history from FRED (or `mode: probe` to only report which series ids resolve).',
-              },
-              {
-                name: 'econ-survey-backfill-now',
-                color: '0e8a16',
-                description: 'Triggers econ-calendar-survey-backfill — reconstruct the SURVEY-consensus side from FXStreet history, raising M3\'s joinable overlap.',
-              },
               {
                 name: 'flip-override-walkforward-request',
                 color: '5319e7',

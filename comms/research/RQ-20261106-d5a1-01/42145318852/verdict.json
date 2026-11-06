@@ -1,0 +1,1449 @@
+{
+ "schema_version": 1,
+ "research_unit": "RQ-20261106-d5a1-01",
+ "read_state": "measured",
+ "verdict": "pass",
+ "note": "affordable 138/173 at equity $194.52 (as of 2026-11-06T01:00:13Z); pull 173 syms in 62.93s, 429s=104, p95 1.07s",
+ "decision_rule": {
+  "id": "RULE-RQ20261106-d5a1-01-ALPACA-BASELINE-MEASURE",
+  "rule": "PASS IF both passes complete (a measurement; no edge claim)."
+ },
+ "population": {
+  "description": "RQ-20261104-a41f-01 pooled ETF population (sha256 603facb2196e)",
+  "n": 173
+ },
+ "measurement": {
+  "population": {
+   "source": "comms/research/RQ-20261104-a41f-01/42091158467/measurement.json",
+   "sha256": "603facb2196e53443dbd0f944845553a47dd8aed2dabe31b209671f0d6498272",
+   "n": 173
+  },
+  "account": "alpaca_live",
+  "equity_usd": 194.52,
+  "equity_as_of": "2026-11-06T01:00:13Z",
+  "equity_source": "GET /api/bot/accounts/balances (balance_snapshots, db)",
+  "risk_pct": 0.02,
+  "budget_usd": 3.8904,
+  "one_share_rule": "close <= equity AND 2.0 x ATR14(1h RTH) <= 1.5 x budget",
+  "upper_bound_note": "at full confidence; RiskManager._confidence_scalar can only lower the budget, so fewer may size",
+  "affordability": {
+   "per_symbol": {
+    "AAXJ": {
+     "close": 99.83,
+     "atr14_1h": 1.027271,
+     "last_bar": "2026-11-05 20:00:00+00:00",
+     "affordable": true,
+     "reason": "ok",
+     "one_share_risk_usd": 2.0545
+    },
+    "ACWI": {
+     "close": 151.97,
+     "atr14_1h": 1.049239,
+     "last_bar": "2026-11-05 20:00:00+00:00",
+     "affordable": true,
+     "reason": "ok",
+     "one_share_risk_usd": 2.0985
+    },
+    "ACWX": {
+     "close": 71.89,
+     "atr14_1h": 0.455771,
+     "last_bar": "2026-11-05 20:00:00+00:00",
+     "affordable": true,
+     "reason": "ok",
+     "one_share_risk_usd": 0.9115
+    },
+    "AGG": {
+     "close": 96.6,
+     "atr14_1h": 0.13841,
+     "last_bar": "2026-11-05 20:00:00+00:00",
+     "affordable": true,
+     "reason": "ok",
+     "one_share_risk_usd": 0.2768
+    },
+    "AMLP": {
+     "close": 50.04,
+     "atr14_1h": 0.332943,
+     "last_bar": "2026-11-05 20:00:00+00:00",
+     "affordable": true,
+     "reason": "ok",
+     "one_share_risk_usd": 0.6659
+    },
+    "ASHR": {
+     "close": 30.54,
+     "atr14_1h": 0.131891,
+     "last_bar": "2026-11-05 20:00:00+00:00",
+     "affordable": true,
+     "reason": "ok",
+     "one_share_risk_usd": 0.2638
+    },
+    "BIL": {
+     "close": 91.44,
+     "atr14_1h": 0.013159,
+     "last_bar": "2026-11-05 20:00:00+00:00",
+     "affordable": true,
+     "reason": "ok",
+     "one_share_risk_usd": 0.0263
+    },
+    "BIV": {
+     "close": 74.52,
+     "atr14_1h": 0.118051,
+     "last_bar": "2026-11-05 20:00:00+00:00",
+     "affordable": true,
+     "reason": "ok",
+     "one_share_risk_usd": 0.2361
+    },
+    "BKLN": {
+     "close": 20.43,
+     "atr14_1h": 0.03233,
+     "last_bar": "2026-11-05 20:00:00+00:00",
+     "affordable": true,
+     "reason": "ok",
+     "one_share_risk_usd": 0.0647
+    },
+    "BND": {
+     "close": 71.64,
+     "atr14_1h": 0.101233,
+     "last_bar": "2026-11-05 20:00:00+00:00",
+     "affordable": true,
+     "reason": "ok",
+     "one_share_risk_usd": 0.2025
+    },
+    "BNDX": {
+     "close": 47.54,
+     "atr14_1h": 0.053295,
+     "last_bar": "2026-11-05 20:00:00+00:00",
+     "affordable": true,
+     "reason": "ok",
+     "one_share_risk_usd": 0.1066
+    },
+    "BSV": {
+     "close": 77.04,
+     "atr14_1h": 0.06574,
+     "last_bar": "2026-11-05 20:00:00+00:00",
+     "affordable": true,
+     "reason": "ok",
+     "one_share_risk_usd": 0.1315
+    },
+    "DGRO": {
+     "close": 80.25,
+     "atr14_1h": 0.394648,
+     "last_bar": "2026-11-05 20:00:00+00:00",
+     "affordable": true,
+     "reason": "ok",
+     "one_share_risk_usd": 0.7893
+    },
+    "DIA": {
+     "close": 514.38,
+     "atr14_1h": 3.276694,
+     "last_bar": "2026-11-05 20:00:00+00:00",
+     "affordable": false,
+     "reason": "cash",
+     "one_share_risk_usd": 6.5534
+    },
+    "DUST": {
+     "close": 39.23,
+     "atr14_1h": 1.50361,
+     "last_bar": "2026-11-05 20:00:00+00:00",
+     "affordable": true,
+     "reason": "ok",
+     "one_share_risk_usd": 3.0072
+    },
+    "DVY": {
+     "close": 161.11,
+     "atr14_1h": 0.845887,
+     "last_bar": "2026-11-05 20:00:00+00:00",
+     "affordable": true,
+     "reason": "ok",
+     "one_share_risk_usd": 1.6918
+    },
+    "EEM": {
+     "close": 58.045,
+     "atr14_1h": 0.565736,
+     "last_bar": "2026-11-05 20:00:00+00:00",
+     "affordable": true,
+     "reason": "ok",
+     "one_share_risk_usd": 1.1315
+    },
+    "EFA": {
+     "close": 102.68,
+     "atr14_1h": 0.541086,
+     "last_bar": "2026-11-05 20:00:00+00:00",
+     "affordable": true,
+     "reason": "ok",
+     "one_share_risk_usd": 1.0822
+    },
+    "EFAV": {
+     "close": 96.36,
+     "atr14_1h": 0.390353,
+     "last_bar": "2026-11-05 20:00:00+00:00",
+     "affordable": true,
+     "reason": "ok",
+     "one_share_risk_usd": 0.7807
+    },
+    "EMB": {
+     "close": 92.04,
+     "atr14_1h": 0.158362,
+     "last_bar": "2026-11-05 20:00:00+00:00",
+     "affordable": true,
+     "reason": "ok",
+     "one_share_risk_usd": 0.3167
+    },
+    "EMLC": {
+     "close": 24.63,
+     "atr14_1h": 0.04505,
+     "last_bar": "2026-11-05 20:00:00+00:00",
+     "affordable": true,
+     "reason": "ok",
+     "one_share_risk_usd": 0.0901
+    },
+    "EWC": {
+     "close": 60.21,
+     "atr14_1h": 0.37736,
+     "last_bar": "2026-11-05 20:00:00+00:00",
+     "affordable": true,
+     "reason": "ok",
+     "one_share_risk_usd": 0.7547
+    },
+    "EWG": {
+     "close": 42.745,
+     "atr14_1h": 0.209279,
+     "last_bar": "2026-11-05 20:00:00+00:00",
+     "affordable": true,
+     "reason": "ok",
+     "one_share_risk_usd": 0.4186
+    },
+    "EWH": {
+     "close": 23.2,
+     "atr14_1h": 0.10441,
+     "last_bar": "2026-11-05 20:00:00+00:00",
+     "affordable": true,
+     "reason": "ok",
+     "one_share_risk_usd": 0.2088
+    },
+    "EWJ": {
+     "close": 88.31,
+     "atr14_1h": 0.671978,
+     "last_bar": "2026-11-05 20:00:00+00:00",
+     "affordable": true,
+     "reason": "ok",
+     "one_share_risk_usd": 1.344
+    },
+    "EWT": {
+     "close": 85.95,
+     "atr14_1h": 1.414547,
+     "last_bar": "2026-11-05 20:00:00+00:00",
+     "affordable": true,
+     "reason": "ok",
+     "one_share_risk_usd": 2.8291
+    },
+    "EWU": {
+     "close": 47.89,
+     "atr14_1h": 0.215831,
+     "last_bar": "2026-11-05 20:00:00+00:00",
+     "affordable": true,
+     "reason": "ok",
+     "one_share_risk_usd": 0.4317
+    },
+    "EWW": {
+     "close": 76.12,
+     "atr14_1h": 0.54809,
+     "last_bar": "2026-11-05 20:00:00+00:00",
+     "affordable": true,
+     "reason": "ok",
+     "one_share_risk_usd": 1.0962
+    },
+    "EWY": {
+     "close": 132.92,
+     "atr14_1h": 2.928579,
+     "last_bar": "2026-11-05 20:00:00+00:00",
+     "affordable": false,
+     "reason": "stop_risk_over_1.5x_budget",
+     "one_share_risk_usd": 5.8572
+    },
+    "EWZ": {
+     "close": 31.77,
+     "atr14_1h": 0.285637,
+     "last_bar": "2026-11-05 20:00:00+00:00",
+     "affordable": true,
+     "reason": "ok",
+     "one_share_risk_usd": 0.5713
+    },
+    "EZU": {
+     "close": 66.2,
+     "atr14_1h": 0.384423,
+     "last_bar": "2026-11-05 20:00:00+00:00",
+     "affordable": true,
+     "reason": "ok",
+     "one_share_risk_usd": 0.7688
+    },
+    "FAS": {
+     "close": 172.12,
+     "atr14_1h": 3.403903,
+     "last_bar": "2026-11-05 20:00:00+00:00",
+     "affordable": false,
+     "reason": "stop_risk_over_1.5x_budget",
+     "one_share_risk_usd": 6.8078
+    },
+    "FB": {
+     "close": 44.55,
+     "atr14_1h": 0.204977,
+     "last_bar": "2026-11-05 17:00:00+00:00",
+     "affordable": true,
+     "reason": "ok",
+     "one_share_risk_usd": 0.41
+    },
+    "FDN": {
+     "close": 260.36,
+     "atr14_1h": 2.806473,
+     "last_bar": "2026-11-05 20:00:00+00:00",
+     "affordable": false,
+     "reason": "cash",
+     "one_share_risk_usd": 5.6129
+    },
+    "FEZ": {
+     "close": 65.915,
+     "atr14_1h": 0.391618,
+     "last_bar": "2026-11-05 20:00:00+00:00",
+     "affordable": true,
+     "reason": "ok",
+     "one_share_risk_usd": 0.7832
+    },
+    "FLOT": {
+     "close": 50.835,
+     "atr14_1h": 0.014343,
+     "last_bar": "2026-11-05 20:00:00+00:00",
+     "affordable": true,
+     "reason": "ok",
+     "one_share_risk_usd": 0.0287
+    },
+    "FXI": {
+     "close": 34.92,
+     "atr14_1h": 0.197332,
+     "last_bar": "2026-11-05 20:00:00+00:00",
+     "affordable": true,
+     "reason": "ok",
+     "one_share_risk_usd": 0.3947
+    },
+    "GDX": {
+     "close": 85.74,
+     "atr14_1h": 1.45669,
+     "last_bar": "2026-11-05 20:00:00+00:00",
+     "affordable": true,
+     "reason": "ok",
+     "one_share_risk_usd": 2.9134
+    },
+    "GDXJ": {
+     "close": 104.8,
+     "atr14_1h": 1.905445,
+     "last_bar": "2026-11-05 20:00:00+00:00",
+     "affordable": true,
+     "reason": "ok",
+     "one_share_risk_usd": 3.8109
+    },
+    "GLD": {
+     "close": 375.58,
+     "atr14_1h": 2.359419,
+     "last_bar": "2026-11-05 20:00:00+00:00",
+     "affordable": false,
+     "reason": "cash",
+     "one_share_risk_usd": 4.7188
+    },
+    "GOVT": {
+     "close": 22.33,
+     "atr14_1h": 0.034692,
+     "last_bar": "2026-11-05 20:00:00+00:00",
+     "affordable": true,
+     "reason": "ok",
+     "one_share_risk_usd": 0.0694
+    },
+    "GUSH": {
+     "close": 37.44,
+     "atr14_1h": 1.035158,
+     "last_bar": "2026-11-05 20:00:00+00:00",
+     "affordable": true,
+     "reason": "ok",
+     "one_share_risk_usd": 2.0703
+    },
+    "HYG": {
+     "close": 77.31,
+     "atr14_1h": 0.134217,
+     "last_bar": "2026-11-05 20:00:00+00:00",
+     "affordable": true,
+     "reason": "ok",
+     "one_share_risk_usd": 0.2684
+    },
+    "IAU": {
+     "close": 77.02,
+     "atr14_1h": 0.479328,
+     "last_bar": "2026-11-05 20:00:00+00:00",
+     "affordable": true,
+     "reason": "ok",
+     "one_share_risk_usd": 0.9587
+    },
+    "IBB": {
+     "close": 210.12,
+     "atr14_1h": 2.389876,
+     "last_bar": "2026-11-05 20:00:00+00:00",
+     "affordable": false,
+     "reason": "cash",
+     "one_share_risk_usd": 4.7798
+    },
+    "IEF": {
+     "close": 91.98,
+     "atr14_1h": 0.174461,
+     "last_bar": "2026-11-05 20:00:00+00:00",
+     "affordable": true,
+     "reason": "ok",
+     "one_share_risk_usd": 0.3489
+    },
+    "IEFA": {
+     "close": 95.56,
+     "atr14_1h": 0.498461,
+     "last_bar": "2026-11-05 20:00:00+00:00",
+     "affordable": true,
+     "reason": "ok",
+     "one_share_risk_usd": 0.9969
+    },
+    "IEI": {
+     "close": 115.46,
+     "atr14_1h": 0.147978,
+     "last_bar": "2026-11-05 20:00:00+00:00",
+     "affordable": true,
+     "reason": "ok",
+     "one_share_risk_usd": 0.296
+    },
+    "IEMG": {
+     "close": 70.7,
+     "atr14_1h": 0.664973,
+     "last_bar": "2026-11-05 20:00:00+00:00",
+     "affordable": true,
+     "reason": "ok",
+     "one_share_risk_usd": 1.3299
+    },
+    "IGIB": {
+     "close": 51.35,
+     "atr14_1h": 0.076259,
+     "last_bar": "2026-11-05 20:00:00+00:00",
+     "affordable": true,
+     "reason": "ok",
+     "one_share_risk_usd": 0.1525
+    },
+    "IGSB": {
+     "close": 51.615,
+     "atr14_1h": 0.041217,
+     "last_bar": "2026-11-05 20:00:00+00:00",
+     "affordable": true,
+     "reason": "ok",
+     "one_share_risk_usd": 0.0824
+    },
+    "IGV": {
+     "close": 98.97,
+     "atr14_1h": 1.245384,
+     "last_bar": "2026-11-05 20:00:00+00:00",
+     "affordable": true,
+     "reason": "ok",
+     "one_share_risk_usd": 2.4908
+    },
+    "IJH": {
+     "close": 71.68,
+     "atr14_1h": 0.519284,
+     "last_bar": "2026-11-05 20:00:00+00:00",
+     "affordable": true,
+     "reason": "ok",
+     "one_share_risk_usd": 1.0386
+    },
+    "IJR": {
+     "close": 137.48,
+     "atr14_1h": 1.015718,
+     "last_bar": "2026-11-05 20:00:00+00:00",
+     "affordable": true,
+     "reason": "ok",
+     "one_share_risk_usd": 2.0314
+    },
+    "INDA": {
+     "close": 50.07,
+     "atr14_1h": 0.206991,
+     "last_bar": "2026-11-05 20:00:00+00:00",
+     "affordable": true,
+     "reason": "ok",
+     "one_share_risk_usd": 0.414
+    },
+    "INFO": {
+     "close": 26.75,
+     "atr14_1h": 0.163097,
+     "last_bar": "2026-11-05 20:00:00+00:00",
+     "affordable": true,
+     "reason": "ok",
+     "one_share_risk_usd": 0.3262
+    },
+    "ITB": {
+     "close": 98.65,
+     "atr14_1h": 1.117912,
+     "last_bar": "2026-11-05 20:00:00+00:00",
+     "affordable": true,
+     "reason": "ok",
+     "one_share_risk_usd": 2.2358
+    },
+    "ITOT": {
+     "close": 159.935,
+     "atr14_1h": 1.176387,
+     "last_bar": "2026-11-05 20:00:00+00:00",
+     "affordable": true,
+     "reason": "ok",
+     "one_share_risk_usd": 2.3528
+    },
+    "IVE": {
+     "close": 236.55,
+     "atr14_1h": 1.194802,
+     "last_bar": "2026-11-05 20:00:00+00:00",
+     "affordable": false,
+     "reason": "cash",
+     "one_share_risk_usd": 2.3896
+    },
+    "IVV": {
+     "close": 736.36,
+     "atr14_1h": 5.494592,
+     "last_bar": "2026-11-05 20:00:00+00:00",
+     "affordable": false,
+     "reason": "cash",
+     "one_share_risk_usd": 10.9892
+    },
+    "IVW": {
+     "close": 128.38,
+     "atr14_1h": 1.370906,
+     "last_bar": "2026-11-05 20:00:00+00:00",
+     "affordable": true,
+     "reason": "ok",
+     "one_share_risk_usd": 2.7418
+    },
+    "IWB": {
+     "close": 401.23,
+     "atr14_1h": 2.886606,
+     "last_bar": "2026-11-05 20:00:00+00:00",
+     "affordable": false,
+     "reason": "cash",
+     "one_share_risk_usd": 5.7732
+    },
+    "IWD": {
+     "close": 258.38,
+     "atr14_1h": 1.35532,
+     "last_bar": "2026-11-05 20:00:00+00:00",
+     "affordable": false,
+     "reason": "cash",
+     "one_share_risk_usd": 2.7106
+    },
+    "IWF": {
+     "close": 110.38,
+     "atr14_1h": 1.290666,
+     "last_bar": "2026-11-05 20:00:00+00:00",
+     "affordable": true,
+     "reason": "ok",
+     "one_share_risk_usd": 2.5813
+    },
+    "IWM": {
+     "close": 271.04,
+     "atr14_1h": 2.274578,
+     "last_bar": "2026-11-05 20:00:00+00:00",
+     "affordable": false,
+     "reason": "cash",
+     "one_share_risk_usd": 4.5492
+    },
+    "IWN": {
+     "close": 210.94,
+     "atr14_1h": 1.457816,
+     "last_bar": "2026-11-05 20:00:00+00:00",
+     "affordable": false,
+     "reason": "cash",
+     "one_share_risk_usd": 2.9156
+    },
+    "IWO": {
+     "close": 337.03,
+     "atr14_1h": 3.523484,
+     "last_bar": "2026-11-05 20:00:00+00:00",
+     "affordable": false,
+     "reason": "cash",
+     "one_share_risk_usd": 7.047
+    },
+    "IWR": {
+     "close": 107.69,
+     "atr14_1h": 0.707255,
+     "last_bar": "2026-11-05 20:00:00+00:00",
+     "affordable": true,
+     "reason": "ok",
+     "one_share_risk_usd": 1.4145
+    },
+    "IXUS": {
+     "close": 90.44,
+     "atr14_1h": 0.566464,
+     "last_bar": "2026-11-05 20:00:00+00:00",
+     "affordable": true,
+     "reason": "ok",
+     "one_share_risk_usd": 1.1329
+    },
+    "IYR": {
+     "close": 102.27,
+     "atr14_1h": 0.579848,
+     "last_bar": "2026-11-05 20:00:00+00:00",
+     "affordable": true,
+     "reason": "ok",
+     "one_share_risk_usd": 1.1597
+    },
+    "JDST": {
+     "close": 27.545,
+     "atr14_1h": 1.111982,
+     "last_bar": "2026-11-05 20:00:00+00:00",
+     "affordable": true,
+     "reason": "ok",
+     "one_share_risk_usd": 2.224
+    },
+    "JNK": {
+     "close": 92.78,
+     "atr14_1h": 0.158808,
+     "last_bar": "2026-11-05 20:00:00+00:00",
+     "affordable": true,
+     "reason": "ok",
+     "one_share_risk_usd": 0.3176
+    },
+    "JNUG": {
+     "close": 121.0,
+     "atr14_1h": 4.10997,
+     "last_bar": "2026-11-05 20:00:00+00:00",
+     "affordable": false,
+     "reason": "stop_risk_over_1.5x_budget",
+     "one_share_risk_usd": 8.2199
+    },
+    "JPST": {
+     "close": 50.285,
+     "atr14_1h": 0.015053,
+     "last_bar": "2026-11-05 20:00:00+00:00",
+     "affordable": true,
+     "reason": "ok",
+     "one_share_risk_usd": 0.0301
+    },
+    "KBE": {
+     "close": 66.25,
+     "atr14_1h": 0.582614,
+     "last_bar": "2026-11-05 20:00:00+00:00",
+     "affordable": true,
+     "reason": "ok",
+     "one_share_risk_usd": 1.1652
+    },
+    "KRE": {
+     "close": 72.31,
+     "atr14_1h": 0.660081,
+     "last_bar": "2026-11-05 20:00:00+00:00",
+     "affordable": true,
+     "reason": "ok",
+     "one_share_risk_usd": 1.3202
+    },
+    "KWEB": {
+     "close": 24.74,
+     "atr14_1h": 0.220623,
+     "last_bar": "2026-11-05 20:00:00+00:00",
+     "affordable": true,
+     "reason": "ok",
+     "one_share_risk_usd": 0.4412
+    },
+    "LABU": {
+     "close": 207.57,
+     "atr14_1h": 10.634474,
+     "last_bar": "2026-11-05 20:00:00+00:00",
+     "affordable": false,
+     "reason": "cash",
+     "one_share_risk_usd": 21.2689
+    },
+    "LQD": {
+     "close": 104.63,
+     "atr14_1h": 0.199024,
+     "last_bar": "2026-11-05 20:00:00+00:00",
+     "affordable": true,
+     "reason": "ok",
+     "one_share_risk_usd": 0.398
+    },
+    "MBB": {
+     "close": 92.16,
+     "atr14_1h": 0.1662,
+     "last_bar": "2026-11-05 20:00:00+00:00",
+     "affordable": true,
+     "reason": "ok",
+     "one_share_risk_usd": 0.3324
+    },
+    "MCHI": {
+     "close": 52.03,
+     "atr14_1h": 0.298808,
+     "last_bar": "2026-11-05 20:00:00+00:00",
+     "affordable": true,
+     "reason": "ok",
+     "one_share_risk_usd": 0.5976
+    },
+    "MDY": {
+     "close": 653.67,
+     "atr14_1h": 4.680214,
+     "last_bar": "2026-11-05 20:00:00+00:00",
+     "affordable": false,
+     "reason": "cash",
+     "one_share_risk_usd": 9.3604
+    },
+    "MINT": {
+     "close": 100.43,
+     "atr14_1h": 0.017304,
+     "last_bar": "2026-11-05 20:00:00+00:00",
+     "affordable": true,
+     "reason": "ok",
+     "one_share_risk_usd": 0.0346
+    },
+    "MTUM": {
+     "close": 62.585,
+     "atr14_1h": 0.9153,
+     "last_bar": "2026-11-05 20:00:00+00:00",
+     "affordable": true,
+     "reason": "ok",
+     "one_share_risk_usd": 1.8306
+    },
+    "MUB": {
+     "close": 104.82,
+     "atr14_1h": 0.158703,
+     "last_bar": "2026-11-05 20:00:00+00:00",
+     "affordable": true,
+     "reason": "ok",
+     "one_share_risk_usd": 0.3174
+    },
+    "NFX": {
+     "close": 16.9596,
+     "atr14_1h": null,
+     "last_bar": "2026-11-05 20:00:00+00:00",
+     "affordable": null,
+     "reason": "no_bars"
+    },
+    "NUGT": {
+     "close": 136.37,
+     "atr14_1h": 4.328561,
+     "last_bar": "2026-11-05 20:00:00+00:00",
+     "affordable": false,
+     "reason": "stop_risk_over_1.5x_budget",
+     "one_share_risk_usd": 8.6571
+    },
+    "OIH": {
+     "close": 347.7,
+     "atr14_1h": 5.345194,
+     "last_bar": "2026-11-05 20:00:00+00:00",
+     "affordable": false,
+     "reason": "cash",
+     "one_share_risk_usd": 10.6904
+    },
+    "PFF": {
+     "close": 28.16,
+     "atr14_1h": 0.12719,
+     "last_bar": "2026-11-05 20:00:00+00:00",
+     "affordable": true,
+     "reason": "ok",
+     "one_share_risk_usd": 0.2544
+    },
+    "PSQ": {
+     "close": 28.28,
+     "atr14_1h": 0.294473,
+     "last_bar": "2026-11-05 20:00:00+00:00",
+     "affordable": true,
+     "reason": "ok",
+     "one_share_risk_usd": 0.5889
+    },
+    "QID": {
+     "close": 16.95,
+     "atr14_1h": 0.334306,
+     "last_bar": "2026-11-05 20:00:00+00:00",
+     "affordable": true,
+     "reason": "ok",
+     "one_share_risk_usd": 0.6686
+    },
+    "QLD": {
+     "close": 72.3,
+     "atr14_1h": 1.836936,
+     "last_bar": "2026-11-05 20:00:00+00:00",
+     "affordable": true,
+     "reason": "ok",
+     "one_share_risk_usd": 3.6739
+    },
+    "QQQ": {
+     "close": 647.77,
+     "atr14_1h": 7.749928,
+     "last_bar": "2026-11-05 20:00:00+00:00",
+     "affordable": false,
+     "reason": "cash",
+     "one_share_risk_usd": 15.4999
+    },
+    "QUAL": {
+     "close": 54.79,
+     "atr14_1h": 0.323371,
+     "last_bar": "2026-11-05 20:00:00+00:00",
+     "affordable": true,
+     "reason": "ok",
+     "one_share_risk_usd": 0.6467
+    },
+    "RSP": {
+     "close": 216.87,
+     "atr14_1h": 1.291691,
+     "last_bar": "2026-11-05 20:00:00+00:00",
+     "affordable": false,
+     "reason": "cash",
+     "one_share_risk_usd": 2.5834
+    },
+    "SCHB": {
+     "close": 28.2,
+     "atr14_1h": 0.209858,
+     "last_bar": "2026-11-05 20:00:00+00:00",
+     "affordable": true,
+     "reason": "ok",
+     "one_share_risk_usd": 0.4197
+    },
+    "SCHD": {
+     "close": 35.41,
+     "atr14_1h": 0.186431,
+     "last_bar": "2026-11-05 20:00:00+00:00",
+     "affordable": true,
+     "reason": "ok",
+     "one_share_risk_usd": 0.3729
+    },
+    "SCHF": {
+     "close": 26.49,
+     "atr14_1h": 0.165061,
+     "last_bar": "2026-11-05 20:00:00+00:00",
+     "affordable": true,
+     "reason": "ok",
+     "one_share_risk_usd": 0.3301
+    },
+    "SCHX": {
+     "close": 28.83,
+     "atr14_1h": 0.21459,
+     "last_bar": "2026-11-05 20:00:00+00:00",
+     "affordable": true,
+     "reason": "ok",
+     "one_share_risk_usd": 0.4292
+    },
+    "SCZ": {
+     "close": 81.61,
+     "atr14_1h": 0.409919,
+     "last_bar": "2026-11-05 20:00:00+00:00",
+     "affordable": true,
+     "reason": "ok",
+     "one_share_risk_usd": 0.8198
+    },
+    "SDOW": {
+     "close": 25.12,
+     "atr14_1h": 0.435351,
+     "last_bar": "2026-11-05 20:00:00+00:00",
+     "affordable": true,
+     "reason": "ok",
+     "one_share_risk_usd": 0.8707
+    },
+    "SDS": {
+     "close": 59.07,
+     "atr14_1h": 0.774989,
+     "last_bar": "2026-11-05 20:00:00+00:00",
+     "affordable": true,
+     "reason": "ok",
+     "one_share_risk_usd": 1.55
+    },
+    "SDY": {
+     "close": 162.665,
+     "atr14_1h": 0.850006,
+     "last_bar": "2026-11-05 20:00:00+00:00",
+     "affordable": true,
+     "reason": "ok",
+     "one_share_risk_usd": 1.7
+    },
+    "SH": {
+     "close": 33.82,
+     "atr14_1h": 0.230344,
+     "last_bar": "2026-11-05 20:00:00+00:00",
+     "affordable": true,
+     "reason": "ok",
+     "one_share_risk_usd": 0.4607
+    },
+    "SHV": {
+     "close": 110.1,
+     "atr14_1h": 0.015933,
+     "last_bar": "2026-11-05 20:00:00+00:00",
+     "affordable": true,
+     "reason": "ok",
+     "one_share_risk_usd": 0.0319
+    },
+    "SHY": {
+     "close": 81.66,
+     "atr14_1h": 0.04802,
+     "last_bar": "2026-11-05 20:00:00+00:00",
+     "affordable": true,
+     "reason": "ok",
+     "one_share_risk_usd": 0.096
+    },
+    "SIX": {
+     "close": 25.07,
+     "atr14_1h": null,
+     "last_bar": "2026-11-05 20:00:00+00:00",
+     "affordable": null,
+     "reason": "no_bars"
+    },
+    "SJNK": {
+     "close": 24.085,
+     "atr14_1h": 0.037204,
+     "last_bar": "2026-11-05 20:00:00+00:00",
+     "affordable": true,
+     "reason": "ok",
+     "one_share_risk_usd": 0.0744
+    },
+    "SLV": {
+     "close": 46.94,
+     "atr14_1h": 0.566624,
+     "last_bar": "2026-11-05 20:00:00+00:00",
+     "affordable": true,
+     "reason": "ok",
+     "one_share_risk_usd": 1.1332
+    },
+    "SMH": {
+     "close": 445.91,
+     "atr14_1h": 10.613427,
+     "last_bar": "2026-11-05 20:00:00+00:00",
+     "affordable": false,
+     "reason": "cash",
+     "one_share_risk_usd": 21.2269
+    },
+    "SOXL": {
+     "close": 40.9,
+     "atr14_1h": 5.068909,
+     "last_bar": "2026-11-05 20:00:00+00:00",
+     "affordable": false,
+     "reason": "stop_risk_over_1.5x_budget",
+     "one_share_risk_usd": 10.1378
+    },
+    "SOXS": {
+     "close": 81.27,
+     "atr14_1h": 3.993159,
+     "last_bar": "2026-11-05 20:00:00+00:00",
+     "affordable": false,
+     "reason": "stop_risk_over_1.5x_budget",
+     "one_share_risk_usd": 7.9863
+    },
+    "SOXX": {
+     "close": 130.91,
+     "atr14_1h": 3.633998,
+     "last_bar": "2026-11-05 20:00:00+00:00",
+     "affordable": false,
+     "reason": "stop_risk_over_1.5x_budget",
+     "one_share_risk_usd": 7.268
+    },
+    "SPLV": {
+     "close": 77.6,
+     "atr14_1h": 0.403702,
+     "last_bar": "2026-11-05 20:00:00+00:00",
+     "affordable": true,
+     "reason": "ok",
+     "one_share_risk_usd": 0.8074
+    },
+    "SPXL": {
+     "close": 245.15,
+     "atr14_1h": 5.92863,
+     "last_bar": "2026-11-05 20:00:00+00:00",
+     "affordable": false,
+     "reason": "cash",
+     "one_share_risk_usd": 11.8573
+    },
+    "SPXS": {
+     "close": 27.77,
+     "atr14_1h": 0.531874,
+     "last_bar": "2026-11-05 20:00:00+00:00",
+     "affordable": true,
+     "reason": "ok",
+     "one_share_risk_usd": 1.0637
+    },
+    "SPXU": {
+     "close": 39.0,
+     "atr14_1h": 0.744537,
+     "last_bar": "2026-11-05 20:00:00+00:00",
+     "affordable": true,
+     "reason": "ok",
+     "one_share_risk_usd": 1.4891
+    },
+    "SPY": {
+     "close": 733.13,
+     "atr14_1h": 6.053144,
+     "last_bar": "2026-11-05 20:00:00+00:00",
+     "affordable": false,
+     "reason": "cash",
+     "one_share_risk_usd": 12.1063
+    },
+    "SPYG": {
+     "close": 111.18,
+     "atr14_1h": 1.195073,
+     "last_bar": "2026-11-05 20:00:00+00:00",
+     "affordable": true,
+     "reason": "ok",
+     "one_share_risk_usd": 2.3901
+    },
+    "SQQQ": {
+     "close": 49.55,
+     "atr14_1h": 1.393566,
+     "last_bar": "2026-11-05 20:00:00+00:00",
+     "affordable": true,
+     "reason": "ok",
+     "one_share_risk_usd": 2.7871
+    },
+    "SSO": {
+     "close": 63.51,
+     "atr14_1h": 0.982265,
+     "last_bar": "2026-11-05 20:00:00+00:00",
+     "affordable": true,
+     "reason": "ok",
+     "one_share_risk_usd": 1.9645
+    },
+    "SVXY": {
+     "close": 54.24,
+     "atr14_1h": 1.51992,
+     "last_bar": "2026-11-05 20:00:00+00:00",
+     "affordable": true,
+     "reason": "ok",
+     "one_share_risk_usd": 3.0398
+    },
+    "TECL": {
+     "close": 124.83,
+     "atr14_1h": 6.868562,
+     "last_bar": "2026-11-05 20:00:00+00:00",
+     "affordable": false,
+     "reason": "stop_risk_over_1.5x_budget",
+     "one_share_risk_usd": 13.7371
+    },
+    "TIP": {
+     "close": 106.25,
+     "atr14_1h": 0.151531,
+     "last_bar": "2026-11-05 20:00:00+00:00",
+     "affordable": true,
+     "reason": "ok",
+     "one_share_risk_usd": 0.3031
+    },
+    "TLT": {
+     "close": 81.93,
+     "atr14_1h": 0.264771,
+     "last_bar": "2026-11-05 20:00:00+00:00",
+     "affordable": true,
+     "reason": "ok",
+     "one_share_risk_usd": 0.5295
+    },
+    "TNA": {
+     "close": 52.3,
+     "atr14_1h": 1.423399,
+     "last_bar": "2026-11-05 20:00:00+00:00",
+     "affordable": true,
+     "reason": "ok",
+     "one_share_risk_usd": 2.8468
+    },
+    "TQQQ": {
+     "close": 50.46,
+     "atr14_1h": 2.076591,
+     "last_bar": "2026-11-05 20:00:00+00:00",
+     "affordable": true,
+     "reason": "ok",
+     "one_share_risk_usd": 4.1532
+    },
+    "TZA": {
+     "close": 50.63,
+     "atr14_1h": 1.083312,
+     "last_bar": "2026-11-05 20:00:00+00:00",
+     "affordable": true,
+     "reason": "ok",
+     "one_share_risk_usd": 2.1666
+    },
+    "UCO": {
+     "close": 53.11,
+     "atr14_1h": 1.110918,
+     "last_bar": "2026-11-05 20:00:00+00:00",
+     "affordable": true,
+     "reason": "ok",
+     "one_share_risk_usd": 2.2218
+    },
+    "UDOW": {
+     "close": 63.91,
+     "atr14_1h": 1.2779,
+     "last_bar": "2026-11-05 20:00:00+00:00",
+     "affordable": true,
+     "reason": "ok",
+     "one_share_risk_usd": 2.5558
+    },
+    "ULTI": {
+     "close": 5.235,
+     "atr14_1h": 0.015586,
+     "last_bar": "2026-11-05 20:00:00+00:00",
+     "affordable": true,
+     "reason": "ok",
+     "one_share_risk_usd": 0.0312
+    },
+    "UN": {
+     "close": 21.3501,
+     "atr14_1h": 0.575385,
+     "last_bar": "2026-11-05 20:00:00+00:00",
+     "affordable": true,
+     "reason": "ok",
+     "one_share_risk_usd": 1.1508
+    },
+    "UNG": {
+     "close": 9.26,
+     "atr14_1h": 0.106326,
+     "last_bar": "2026-11-05 20:00:00+00:00",
+     "affordable": true,
+     "reason": "ok",
+     "one_share_risk_usd": 0.2127
+    },
+    "UPRO": {
+     "close": 128.05,
+     "atr14_1h": 3.096789,
+     "last_bar": "2026-11-05 20:00:00+00:00",
+     "affordable": false,
+     "reason": "stop_risk_over_1.5x_budget",
+     "one_share_risk_usd": 6.1936
+    },
+    "USMV": {
+     "close": 101.8,
+     "atr14_1h": 0.457032,
+     "last_bar": "2026-11-05 20:00:00+00:00",
+     "affordable": true,
+     "reason": "ok",
+     "one_share_risk_usd": 0.9141
+    },
+    "USO": {
+     "close": 148.19,
+     "atr14_1h": 2.047741,
+     "last_bar": "2026-11-05 20:00:00+00:00",
+     "affordable": true,
+     "reason": "ok",
+     "one_share_risk_usd": 4.0955
+    },
+    "UVXY": {
+     "close": 23.61,
+     "atr14_1h": 1.22707,
+     "last_bar": "2026-11-05 20:00:00+00:00",
+     "affordable": true,
+     "reason": "ok",
+     "one_share_risk_usd": 2.4541
+    },
+    "VB": {
+     "close": 284.1,
+     "atr14_1h": 2.100476,
+     "last_bar": "2026-11-05 20:00:00+00:00",
+     "affordable": false,
+     "reason": "cash",
+     "one_share_risk_usd": 4.201
+    },
+    "VCIT": {
+     "close": 79.88,
+     "atr14_1h": 0.134967,
+     "last_bar": "2026-11-05 20:00:00+00:00",
+     "affordable": true,
+     "reason": "ok",
+     "one_share_risk_usd": 0.2699
+    },
+    "VCSH": {
+     "close": 77.865,
+     "atr14_1h": 0.065935,
+     "last_bar": "2026-11-05 20:00:00+00:00",
+     "affordable": true,
+     "reason": "ok",
+     "one_share_risk_usd": 0.1319
+    },
+    "VEA": {
+     "close": 68.195,
+     "atr14_1h": 0.41859,
+     "last_bar": "2026-11-05 20:00:00+00:00",
+     "affordable": true,
+     "reason": "ok",
+     "one_share_risk_usd": 0.8372
+    },
+    "VEU": {
+     "close": 79.085,
+     "atr14_1h": 0.494557,
+     "last_bar": "2026-11-05 20:00:00+00:00",
+     "affordable": true,
+     "reason": "ok",
+     "one_share_risk_usd": 0.9891
+    },
+    "VGK": {
+     "close": 88.395,
+     "atr14_1h": 0.429425,
+     "last_bar": "2026-11-05 20:00:00+00:00",
+     "affordable": true,
+     "reason": "ok",
+     "one_share_risk_usd": 0.8588
+    },
+    "VGSH": {
+     "close": 57.8899,
+     "atr14_1h": 0.033891,
+     "last_bar": "2026-11-05 20:00:00+00:00",
+     "affordable": true,
+     "reason": "ok",
+     "one_share_risk_usd": 0.0678
+    },
+    "VGT": {
+     "close": 106.98,
+     "atr14_1h": 1.522426,
+     "last_bar": "2026-11-05 20:00:00+00:00",
+     "affordable": true,
+     "reason": "ok",
+     "one_share_risk_usd": 3.0449
+    },
+    "VIG": {
+     "close": 244.32,
+     "atr14_1h": 1.291565,
+     "last_bar": "2026-11-05 20:00:00+00:00",
+     "affordable": false,
+     "reason": "cash",
+     "one_share_risk_usd": 2.5831
+    },
+    "VIXY": {
+     "close": 21.36,
+     "atr14_1h": 0.809732,
+     "last_bar": "2026-11-05 20:00:00+00:00",
+     "affordable": true,
+     "reason": "ok",
+     "one_share_risk_usd": 1.6195
+    },
+    "VNQ": {
+     "close": 96.24,
+     "atr14_1h": 0.541712,
+     "last_bar": "2026-11-05 20:00:00+00:00",
+     "affordable": true,
+     "reason": "ok",
+     "one_share_risk_usd": 1.0834
+    },
+    "VO": {
+     "close": 79.51,
+     "atr14_1h": 0.494427,
+     "last_bar": "2026-11-05 20:00:00+00:00",
+     "affordable": true,
+     "reason": "ok",
+     "one_share_risk_usd": 0.9889
+    },
+    "VOO": {
+     "close": 673.88,
+     "atr14_1h": 5.026798,
+     "last_bar": "2026-11-05 20:00:00+00:00",
+     "affordable": false,
+     "reason": "cash",
+     "one_share_risk_usd": 10.0536
+    },
+    "VT": {
+     "close": 151.365,
+     "atr14_1h": 1.026605,
+     "last_bar": "2026-11-05 20:00:00+00:00",
+     "affordable": true,
+     "reason": "ok",
+     "one_share_risk_usd": 2.0532
+    },
+    "VTI": {
+     "close": 360.56,
+     "atr14_1h": 2.679162,
+     "last_bar": "2026-11-05 20:00:00+00:00",
+     "affordable": false,
+     "reason": "cash",
+     "one_share_risk_usd": 5.3583
+    },
+    "VTV": {
+     "close": 223.84,
+     "atr14_1h": 1.184254,
+     "last_bar": "2026-11-05 20:00:00+00:00",
+     "affordable": false,
+     "reason": "cash",
+     "one_share_risk_usd": 2.3685
+    },
+    "VUG": {
+     "close": 81.43,
+     "atr14_1h": 0.874418,
+     "last_bar": "2026-11-05 20:00:00+00:00",
+     "affordable": true,
+     "reason": "ok",
+     "one_share_risk_usd": 1.7488
+    },
+    "VWO": {
+     "close": 54.24,
+     "atr14_1h": 0.368233,
+     "last_bar": "2026-11-05 20:00:00+00:00",
+     "affordable": true,
+     "reason": "ok",
+     "one_share_risk_usd": 0.7365
+    },
+    "VXUS": {
+     "close": 80.81,
+     "atr14_1h": 0.50876,
+     "last_bar": "2026-11-05 20:00:00+00:00",
+     "affordable": true,
+     "reason": "ok",
+     "one_share_risk_usd": 1.0175
+    },
+    "VYM": {
+     "close": 159.84,
+     "atr14_1h": 0.820391,
+     "last_bar": "2026-11-05 20:00:00+00:00",
+     "affordable": true,
+     "reason": "ok",
+     "one_share_risk_usd": 1.6408
+    },
+    "XBI": {
+     "close": 148.41,
+     "atr14_1h": 2.250486,
+     "last_bar": "2026-11-05 20:00:00+00:00",
+     "affordable": true,
+     "reason": "ok",
+     "one_share_risk_usd": 4.501
+    },
+    "XHB": {
+     "close": 103.83,
+     "atr14_1h": 1.140552,
+     "last_bar": "2026-11-05 20:00:00+00:00",
+     "affordable": true,
+     "reason": "ok",
+     "one_share_risk_usd": 2.2811
+    },
+    "XLB": {
+     "close": 52.35,
+     "atr14_1h": 0.439892,
+     "last_bar": "2026-11-05 20:00:00+00:00",
+     "affordable": true,
+     "reason": "ok",
+     "one_share_risk_usd": 0.8798
+    },
+    "XLC": {
+     "close": 104.38,
+     "atr14_1h": 0.910065,
+     "last_bar": "2026-11-05 20:00:00+00:00",
+     "affordable": true,
+     "reason": "ok",
+     "one_share_risk_usd": 1.8201
+    },
+    "XLE": {
+     "close": 61.68,
+     "atr14_1h": 0.695225,
+     "last_bar": "2026-11-05 20:00:00+00:00",
+     "affordable": true,
+     "reason": "ok",
+     "one_share_risk_usd": 1.3905
+    },
+    "XLF": {
+     "close": 57.53,
+     "atr14_1h": 0.388313,
+     "last_bar": "2026-11-05 20:00:00+00:00",
+     "affordable": true,
+     "reason": "ok",
+     "one_share_risk_usd": 0.7766
+    },
+    "XLI": {
+     "close": 162.44,
+     "atr14_1h": 1.363983,
+     "last_bar": "2026-11-05 20:00:00+00:00",
+     "affordable": true,
+     "reason": "ok",
+     "one_share_risk_usd": 2.728
+    },
+    "XLK": {
+     "close": 162.3,
+     "atr14_1h": 2.479022,
+     "last_bar": "2026-11-05 20:00:00+00:00",
+     "affordable": true,
+     "reason": "ok",
+     "one_share_risk_usd": 4.958
+    },
+    "XLP": {
+     "close": 91.27,
+     "atr14_1h": 0.611985,
+     "last_bar": "2026-11-05 20:00:00+00:00",
+     "affordable": true,
+     "reason": "ok",
+     "one_share_risk_usd": 1.224
+    },
+    "XLRE": {
+     "close": 44.29,
+     "atr14_1h": 0.257117,
+     "last_bar": "2026-11-05 20:00:00+00:00",
+     "affordable": true,
+     "reason": "ok",
+     "one_share_risk_usd": 0.5142
+    },
+    "XLU": {
+     "close": 43.32,
+     "atr14_1h": 0.281552,
+     "last_bar": "2026-11-05 20:00:00+00:00",
+     "affordable": true,
+     "reason": "ok",
+     "one_share_risk_usd": 0.5631
+    },
+    "XLV": {
+     "close": 184.955,
+     "atr14_1h": 1.456436,
+     "last_bar": "2026-11-05 20:00:00+00:00",
+     "affordable": true,
+     "reason": "ok",
+     "one_share_risk_usd": 2.9129
+    },
+    "XLY": {
+     "close": 117.65,
+     "atr14_1h": 1.037463,
+     "last_bar": "2026-11-05 20:00:00+00:00",
+     "affordable": true,
+     "reason": "ok",
+     "one_share_risk_usd": 2.0749
+    },
+    "XME": {
+     "close": 90.4848,
+     "atr14_1h": 1.561993,
+     "last_bar": "2026-11-05 20:00:00+00:00",
+     "affordable": true,
+     "reason": "ok",
+     "one_share_risk_usd": 3.124
+    },
+    "XOP": {
+     "close": 174.1,
+     "atr14_1h": 2.285182,
+     "last_bar": "2026-11-05 20:00:00+00:00",
+     "affordable": true,
+     "reason": "ok",
+     "one_share_risk_usd": 4.5704
+    },
+    "XRT": {
+     "close": 91.07,
+     "atr14_1h": 0.803572,
+     "last_bar": "2026-11-05 20:00:00+00:00",
+     "affordable": true,
+     "reason": "ok",
+     "one_share_risk_usd": 1.6071
+    }
+   },
+   "client_calls": 229,
+   "client_429s": 0,
+   "key_kind": "paper",
+   "n_affordable": 138,
+   "n_refused_cash": 24,
+   "n_refused_stop_risk": 9,
+   "n_no_bars": 2,
+   "window": [
+    "2026-10-07 02:08:00+00:00",
+    "2026-11-06 02:08:00+00:00"
+   ]
+  },
+  "pull_load": {
+   "fetch_class": "src.exchange.alpaca_connector.AlpacaMarketData.get_ohlcv(symbol, '1h', limit=400)",
+   "feed": "iex",
+   "order": "sequential, unpaced (one tick)",
+   "n_symbols": 173,
+   "wall_seconds": 62.93,
+   "latency_s": {
+    "p50": 0.236,
+    "p95": 1.07,
+    "max": 3.033
+   },
+   "http_status_counts": {
+    "200": 113,
+    "429": 104
+   },
+   "n_429": 104,
+   "http_calls": 217,
+   "n_symbols_with_bars": 91,
+   "n_symbols_empty": 82
+  },
+  "elapsed_s": 156
+ },
+ "generated_at": "2026-11-06T02:31:29Z"
+}

@@ -64,3 +64,17 @@ def test_funding_not_written_by_default(tmp_path):
     j, f = _mk(tmp_path, [(-0.5, "2026-11-05T08:00:00+00:00"), (0.0, "2026-11-05T16:00:00+00:00")])
     b.sweep(j, f, apply=True)
     assert _fund(j) == ("broker", None)
+
+
+def test_with_funding_recomputes_inverted_stored_value(tmp_path):
+    j, f = _mk(tmp_path, [(-0.5, "2026-11-05T08:00:00+00:00"), (0.0, "2026-11-05T16:00:00+00:00")])
+    b.sweep(j, f, apply=True)  # fees only -> broker, funding NULL
+    c = sqlite3.connect(j)
+    c.execute("UPDATE trades SET funding_paid_usd=-0.5")  # the old inverted value
+    c.commit()
+    c.close()
+    s = b.sweep(j, f, apply=True, with_funding=True)
+    assert s["funding_corrected"] == 1 and s["funding_sign_flipped"] == 1
+    assert _fund(j) == ("broker", 0.5)
+    s2 = b.sweep(j, f, apply=True, with_funding=True)
+    assert s2["funding_corrected"] == 0

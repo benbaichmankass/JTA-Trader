@@ -827,3 +827,35 @@ def test_a_synthetic_prop_ticket_row_is_not_an_account(monkeypatch):
     accts = L._accounts_for(L._package_view(s, pkg), {"bybit_1": {"exchange": "bybit", "account_class": "paper"}})
     assert [a["account_id"] for a in accts] == ["bybit_1", "tradeify_1"]       # the real ticket stays; no None entry
     assert all(a["account_id"] for a in accts)
+
+
+def test_price_returns_a_named_state_when_the_outcomes_stdout_is_not_json(monkeypatch):
+    """LR wake 2026-11-06T01:56Z: an exit-0 outcomes run with non-JSON stdout raised out of the builder (could_not_build)."""
+    monkeypatch.setattr(L, "LTR_CORPUS_DIR", L.LTR_CORPUS_DIR)
+    leg = next(f.stem for f in (REPO / "comms/strategy_evidence").glob("*.json"))
+
+    class _R:
+        returncode, stdout, stderr = 0, "[corpus] using fallback\n{}", "warn: x"
+    monkeypatch.setattr(L.subprocess, "run", lambda *a, **k: _R())
+    tel = {"open_r": 0.1, "peak_r": 0.5}
+    priced, why = L._price(leg, "long", tel, 2.0, "LR-x", False)
+    assert priced is None and "not JSON" in why and "[corpus] using fallback" in why
+
+
+def test_wake_build_bundle_keeps_the_traceback_frame_not_just_the_exception(monkeypatch):
+    import importlib.util
+    spec = importlib.util.spec_from_file_location("lrw", REPO / "scripts/ops/live_review_wake.py")
+    W = importlib.util.module_from_spec(spec)
+    sys.modules["lrw"] = W
+    spec.loader.exec_module(W)
+
+    class _R:
+        returncode = 1
+        stdout = ""
+        stderr = ("Traceback (most recent call last):\n  File \"scripts/ops/live_review_packet.py\", line 994, in _price\n"
+                  "    table = json.loads(out.stdout)\n  File \"json/decoder.py\", line 355, in raw_decode\n"
+                  "    raise JSONDecodeError\njson.decoder.JSONDecodeError: Expecting value: line 1 column 2 (char 1)")
+    monkeypatch.setattr(W.subprocess, "run", lambda *a, **k: _R())
+    out = W.build_bundle("pkg-x")
+    assert out["state"] == "could_not_build"
+    assert "live_review_packet.py" in out["reason"] and "line 994" in out["reason"] and "column 2" in out["reason"]
