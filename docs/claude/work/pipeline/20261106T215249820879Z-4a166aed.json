@@ -1,0 +1,18 @@
+{
+  "based_on": "20261106T193840769913Z-32228f96.json",
+  "due_when": {
+    "check_every_days": 1,
+    "clears_when": "the operator states which bar governs real-money promotion for these three, and the branch is either PR-ed (with a refreshed snapshot) or deleted",
+    "kind": "event"
+  },
+  "id": "PI-20261106-Y7JEXUWW-0005",
+  "next_action": "ask_operator",
+  "origin": {
+    "kind": "session",
+    "ref": "lane SOAK-BACKLOG-REVIEW, Manager Session 2026-11-06a, triggers trig_012JkazQQXXcwVRDGW1ycmwu / trig_01SL1a1AQjGgd4pqLJyB28J5",
+    "rerun": "git checkout rebuild-holdout-3legs-2026-11-06 && python3 scripts/ops/mandate_resolver.py --leg ada_pullback_2h --from S1 --to S2 --account bybit_2 --json"
+  },
+  "state": "done",
+  "terminal_reason": "RESOLVED 2026-11-06: operator option 3 \"Holdout governs; promote\" (~19:35Z); PR #23935 merged 2026-11-06 ~21:52Z (re-promotes xrp_4h, ada, sol_prop to bybit_2 + bybit_portfolio; DSR = probation). Merged != deployed != observed: the first-live-trade watch is PI-20261106-Y7JEXUWW-0006.",
+  "what": "BAR CONFLICT, real money (operator preference, not data): the operator approved 2026-11-06 ~19:22Z 'Yes, rebuild and promote' for trend_donchian_xrp_4h, trend_donchian_sol_prop and ada_pullback_2h. But the same three were removed from bybit_2 + bybit_portfolio the same day (~00:30Z, PROD-LEGS-DSR-DECISION #23584) for failing DSR > 0.95 AND BHY-haircut > 0, and the popup did not show that conflict. Branch rebuild-holdout-3legs-2026-11-06 (pushed, no PR) carries: each leg set to its holdout-confirmed config; holdout re-runs at today's cost stack, all confirmed (n_h 25 / 96 / 97); rebuilt Stage-0 records, all pass. Resolver: everything passes up to R-AFFORD NEEDS-DATA (the bybit_2 affordability snapshot must be refreshed by a session holding DIAG_READ_TOKEN). Decide: holdout bar -> PR from the branch; DSR bar -> no promotion (config change optional on bybit_1)."
+}
