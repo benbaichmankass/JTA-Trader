@@ -28,6 +28,11 @@ on:
       run_date:
         description: "UTC date to treat as 'today' (YYYY-MM-DD); empty = now. Dry runs only; never a command."
         default: ""
+      mode:
+        description: "retrain (default: retrain + grade) or gaps (Tier-1 diagnostic: where are the hourly bar holes). A choice, never a command."
+        type: choice
+        options: [retrain, gaps]
+        default: retrain
 
 permissions:
   contents: write        # ONLY the PASS step pushes a bot branch; nothing here writes main or ml/served on main
@@ -44,7 +49,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          persist-credentials: false
+          fetch-depth: 0
+          token: ${{ secrets.BRANCH_PROTECTION_TOKEN }}   # a PR opened/pushed with the default GITHUB_TOKEN never starts CI (.github/actions/commit-to-main)
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
@@ -53,14 +59,27 @@ jobs:
           python -m pip install --upgrade pip
           pip install numpy pandas pyyaml requests lightgbm==4.6.0 scikit-learn==1.7.2
       - name: Recipe self-test (the recipe still matches the served artifact)
+        if: inputs.mode != 'gaps'
         run: python3 scripts/research/ml_entry_retrain.py --self-test
       - name: Retrain the candidate
+        if: inputs.mode != 'gaps'
         env:
           RUN_DATE: ${{ inputs.run_date }}
         run: |
           set -euo pipefail
           python3 scripts/research/ml_entry_retrain.py run --out out --cache /tmp/ml_entry_klines ${RUN_DATE:+--run-date "$RUN_DATE"}
+      - name: Bar-gap diagnostic (mode=gaps only)
+        if: inputs.mode == 'gaps'
+        env:
+          RUN_DATE: ${{ inputs.run_date }}
+        run: |
+          set -euo pipefail
+          python3 scripts/research/ml_entry_bar_gaps.py --self-test
+          python3 scripts/research/ml_entry_bar_gaps.py --out out --cache /tmp/ml_entry_klines ${RUN_DATE:+--run-date "$RUN_DATE"}
       - name: Grade the candidate against the served artifact (registered rule RULE-ENTRY-PROMOTE-20261106)
+        id: grade
+        if: inputs.mode != 'gaps'
+        continue-on-error: true   # the non-pass branches below must run; the LAST step turns a non-pass into the red run (the one flag)
         env:
           RUN_DATE: ${{ inputs.run_date }}
         run: |
@@ -68,15 +87,15 @@ jobs:
           python3 scripts/research/ml_entry_candidate_grade.py --self-test
           python3 scripts/research/ml_entry_candidate_grade.py run --cache /tmp/ml_entry_klines --out out --candidate-json out/candidate_model.json ${RUN_DATE:+--run-date "$RUN_DATE"}
       - name: PASS -> open a DRAFT promotion PR (landing hold; main only, never merges)
-        if: success() && github.ref == 'refs/heads/main' && hashFiles('out/promote/*/model.json') != ''
+        if: steps.grade.outcome == 'success' && github.ref == 'refs/heads/main' && hashFiles('out/promote/*/model.json') != ''
         env:
-          GH_TOKEN: ${{ github.token }}
+          GH_TOKEN: ${{ secrets.BRANCH_PROTECTION_TOKEN }}
           RUN_ID: ${{ github.run_id }}
         run: |
           set -euo pipefail
           D=$(ls out/promote | head -1); TAG=${D#ml_decision_entry_v1r}; SLUG="ml-entry-promote-${TAG}-${RUN_ID}"; BR="bot/${SLUG}"
           git config user.name "github-actions[bot]"; git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git remote set-url origin "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+          git remote set-url origin "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"   # the PAT: the pushed branch DOES start CI
           git checkout -b "$BR"
           cp -r "out/promote/$D" "ml/served/$D"
           python3 - "$D" "$RUN_ID" <<'PY'
@@ -92,6 +111,23 @@ jobs:
           git push -q origin "$BR"
           gh pr create --draft --base main --head "$BR" --title "ML entry: PROMOTE graded candidate ${D} (HELD, run ${RUN_ID})" \
             --body "ml-entry-retrain run ${RUN_ID} graded a candidate PASS under RULE-ENTRY-PROMOTE-20261106 (docs/research/ml-entry-promotion-rule-2026-11-06.md). Evidence: comms/research/ml_entry_grade/${RUN_ID}/grade_evidence.json. Adds ml/served/${D} and repoints ml/served/ENTRY_SERVED.json; the old directory stays (revert = one-line pointer edit). Gates this adds or changes: none. HELD: a human merges. NOTE: this PR is pushed with GITHUB_TOKEN, so CI does not start until someone pushes an ordinary commit to the branch."
+      - name: Stage the non-pass evidence record (the ledger row is already appended by the grader)
+        id: stage
+        if: steps.grade.outcome == 'failure' && github.ref == 'refs/heads/main'
+        run: |
+          set -euo pipefail
+          mkdir -p "comms/research/ml_entry_grade/${{ github.run_id }}"
+          cp out/grade_evidence.json "comms/research/ml_entry_grade/${{ github.run_id }}/"
+      - name: Land the non-pass evidence + ledger read on main (one self-landing PR; a non-pass read still counts toward the deflated bar)
+        if: steps.stage.outcome == 'success'
+        uses: ./.github/actions/commit-to-main
+        with:
+          token: ${{ secrets.BRANCH_PROTECTION_TOKEN }}
+          paths: comms/research/ml_entry_grade comms/research/holdout_reads.jsonl
+          message: "ml-entry grade: non-pass evidence + holdout read (run ${{ github.run_id }})"
+          pr-title: "ml-entry grade: non-pass evidence + holdout read (run ${{ github.run_id }})"
+          pr-body: "Automated (auto-merge): grade_evidence.json and the ENTRY holdout-ledger read for a candidate that did not pass RULE-ENTRY-PROMOTE-20261106 (docs/research/ml-entry-promotion-rule-2026-11-06.md). The served model is unchanged."
+          verify-merged: "true"
       - name: Upload the candidate (also on failure, retrain_status.json says why)
         if: always()
         uses: actions/upload-artifact@v4
@@ -100,6 +136,11 @@ jobs:
           path: out
           retention-days: 90
           if-no-files-found: warn
+      - name: A non-pass grade is the ONE red flag (the served model keeps trading)
+        if: steps.grade.outcome == 'failure'
+        run: |
+          echo "::error::ml-entry grade did not PASS (insufficient_n / fail / error): the served ENTRY artifact is kept. Evidence: out/grade_evidence.json (uploaded) and, on main, the evidence PR."
+          exit 1
       - name: Summarize the freshness line
         if: always()
         run: |
