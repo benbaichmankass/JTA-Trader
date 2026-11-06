@@ -285,6 +285,20 @@ def _scalar_n(rec: Dict[str, Any]) -> Dict[str, Any]:
     return {**rec, "n": together if isinstance(together, int) and not isinstance(together, bool) else None}
 
 
+def _unpair_measured_not_applicable(rec: Dict[str, Any]) -> Dict[str, Any]:
+    """research_result.validate REFUSES read_state=measured with verdict=not_applicable (not_applicable is reserved for the states where nothing was
+    measured). A producer that writes that pair (ml_entry_equity dev/export, runs 42166322024 / 42172553293) otherwise leaves its artifact
+    un-landable: every cycle re-downloads it, the emitter refuses, and the dispatcher goes red until the artifact expires. Land it as what it is,
+    an ungraded producer_failed record naming the cause; the run's measurement.json still lands beside it."""
+    if str(rec.get("read_state")) == "measured" and str(rec.get("verdict")) == "not_applicable":
+        unit = rec.get("research_unit") or "(unit)"
+        return {**rec, "read_state": "producer_failed", "n": "null",
+                "population": f"{unit}: verdict.json paired read_state=measured with verdict=not_applicable -- NOT GRADED",
+                "note": ("producer_failed: verdict.json paired read_state=measured with verdict=not_applicable, which the result contract refuses; "
+                         "the measurement is in the run's measurement.json, ungraded. Producer note: " + str(rec.get("note") or ""))}
+    return rec
+
+
 def emit_record(root: Path, rec: Dict[str, Any], *, run: Dict[str, Any], repo_slug: str) -> Optional[str]:
     """Write the E5 record through research_result.py; returns its repo path."""
     run_id = str(run["databaseId"])
@@ -292,7 +306,7 @@ def emit_record(root: Path, rec: Dict[str, Any], *, run: Dict[str, Any], repo_sl
            "--workflow", str(run.get("_workflow_name") or WORKFLOW_NAME), "--run-id", run_id, "--run-attempt", "1",
            "--run-url", str(run.get("url") or f"https://github.com/{repo_slug}/actions/runs/{run_id}"),
            "--commit-sha", str(run.get("headSha") or "")]
-    rec = _scalar_n(rec)
+    rec = _unpair_measured_not_applicable(_scalar_n(rec))
     for k in _EMIT_FIELDS:
         cmd += [f"--{k.replace('_', '-')}", str(rec.get(k, "") if rec.get(k) is not None else "null" if k == "n" else "")]
     if root != _REPO:

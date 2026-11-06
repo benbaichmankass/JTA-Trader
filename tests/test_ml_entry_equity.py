@@ -34,5 +34,14 @@ def test_dev_and_confirm_rows_satisfy_the_runner_verdict_contract():
     assert isinstance(row["population"], str) and row["population"].strip() and "n" in row
     row2 = Q.dev_row({**d, "selected": None}, "RQ-X", "research-script-run")
     assert row2["verdict"] in SR.VERDICTS and row2["n"] is None
+    import research_result as RR       # the emitter's own admissibility rule (measured + not_applicable is refused)
+    for r in (row, row2):
+        rec = RR.build(research_unit="RQ-20261105-001", decision_rule_id="R", decision_rule_registered_at="2026-11-05", verdict=r["verdict"],
+                       read_state=r["read_state"], population_description=r["population"], n=r["n"], workflow="w", run_id="1",
+                       commit_sha="abc", tool="t", artifact_store="s", artifact_locator="l")
+        assert RR.validate(rec) == [] or r["n"] is None, RR.validate(rec)
+    assert RR.validate(RR.build(research_unit="RQ-20261105-001", decision_rule_id="R", decision_rule_registered_at="2026-11-05", verdict=row["verdict"],
+                       read_state="measured", population_description="p", n=5, workflow="w", run_id="1", commit_sha="abc", tool="t",
+                       artifact_store="s", artifact_locator="l")) == []
     for v in ("pass", "fail", "indeterminate"):          # the confirm stage's three verdicts
         assert v in SR.VERDICTS
