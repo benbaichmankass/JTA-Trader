@@ -142,9 +142,31 @@ def test_served_freshness_measures_the_artifact_field(tmp_path):
     assert M.served_model_freshness(artifact_path=tmp_path / "nope.json")["read_state"] == "unreadable"
 
 
-def test_the_repo_artifact_is_readable_and_stale_flag_pings_once(sandbox):
+def test_freshness_limit_is_35_days_report_only(tmp_path):
+    """OPERATOR 2026-11-06 ~17:02Z: 22 -> 35 days (a graded refit is ~22-23 d old when promoted). 35 is fresh, 36 is stale."""
+    import json
+    from datetime import datetime, timedelta, timezone
+    assert M.FRESH_MAX_AGE_DAYS == 35
+    p = tmp_path / "model.json"
+    now = datetime(2026, 11, 6, tzinfo=timezone.utc)
+    for age, grade in ((23, "fresh"), (35, "fresh"), (36, "stale")):
+        p.write_text(json.dumps({"model_id": "x", "train_end_exclusive": (now - timedelta(days=age)).isoformat()}))
+        f = M.served_model_freshness(now, p)
+        assert f["grade"] == grade and f["fresh_max_age_days"] == 35, (age, f)
+
+
+def test_the_repo_artifact_is_readable():
+    f = M.served_model_freshness()
+    assert f["read_state"] == "measured" and f["model_id"]      # whichever artifact ml/served/ENTRY_SERVED.json names
+
+
+def test_stale_flag_pings_once(sandbox, tmp_path, monkeypatch):
+    import json
+    p = tmp_path / "model.json"
+    p.write_text(json.dumps({"model_id": "old", "train_end_exclusive": "2025-09-22 19:00:00+00:00"}))   # stale on any date this decade
+    monkeypatch.setattr("src.runtime.ml_entry_served.served_artifact", lambda *a, **k: p)
     sent = sandbox
     M.run_ml_entry_live_monitor(rows=[], force=True)
     M.run_ml_entry_live_monitor(rows=[], force=True)
-    assert len([m for m in sent if "freshness" in m]) == 1   # 408-day-old artifact on the real path; once per cooldown
+    assert len([m for m in sent if "freshness" in m]) == 1   # once per cooldown
     assert M._load_state()["__model_freshness__"]["read_state"] == "measured"

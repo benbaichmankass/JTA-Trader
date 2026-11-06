@@ -1,0 +1,149 @@
+{
+ "rule_id": "RULE-ENTRY-PROMOTE-20261106",
+ "rule_doc_sha256": "6a7c1c1c3f4109661a6bf7221125ca8376a5b9b786151d37850a8de64536caec",
+ "plan": {
+  "run_date": "2026-11-06",
+  "asof": "2026-10-23",
+  "window_start": "2026-10-23",
+  "window_end": "2026-11-05",
+  "window_days": 14
+ },
+ "tau": 0.1,
+ "served": {
+  "path": "ml/served/ml_decision_entry_v1/model.json",
+  "model_id": "ml-decision-entry-v1",
+  "train_end_exclusive": "2025-09-22 19:00:00+00:00",
+  "result": {
+   "n": 342,
+   "mean_net_r": -0.09176721778164411,
+   "sum_net_r": -31.384388481322283,
+   "se_net_r": 0.05898978785563818,
+   "mean_gross_r": -0.01766847673290588,
+   "mean_cost_r": 0.07409874104873825,
+   "n_symbols": 49,
+   "by_side": {
+    "long": {
+     "n": 42,
+     "mean_net_r": -0.5662355055864591
+    },
+    "short": {
+     "n": 300,
+     "mean_net_r": -0.025341657488970024
+    }
+   },
+   "exit_reason_counts": {
+    "sl": 165,
+    "tp": 100,
+    "time": 77
+   },
+   "ex_max_symbol": {
+    "symbol": "ZECUSDT",
+    "n": 332,
+    "mean_net_r": -0.07308458827494287
+   },
+   "bootstrap_ci95_mean_net_r_reported_not_gating": [
+    -0.2083812362540858,
+    0.02237152962100695
+   ]
+  }
+ },
+ "cost_stack": "ml_decision_entry.label_symbol net R: fee 11.0 bps rt + slippage 3.0 bps + funding 1.0 bps/8h (src/runtime/execution_costs)",
+ "read_state": "measured",
+ "diagnostics": {
+  "table_rows": 787857,
+  "table_max_ts": "2026-11-04 23:00:00+00:00",
+  "rows_per_day_last_14": {
+   "2026-10-20": 294,
+   "2026-10-21": 294,
+   "2026-10-22": 294,
+   "2026-10-23": 294,
+   "2026-10-24": 294,
+   "2026-10-25": 294,
+   "2026-10-26": 294,
+   "2026-10-29": 294,
+   "2026-10-30": 294,
+   "2026-10-31": 294,
+   "2026-11-01": 294,
+   "2026-11-02": 294,
+   "2026-11-03": 294,
+   "2026-11-04": 294
+  },
+  "last_labelled_ts_by_symbol": {
+   "min": "2024-06-11 19:00:00+00:00",
+   "median": "2026-11-04 23:00:00+00:00",
+   "max": "2026-11-04 23:00:00+00:00",
+   "n_symbols": 60
+  },
+  "plan_train_end_bound_for_run_date": "2026-10-28 23:00:00+00:00"
+ },
+ "today_candidate": {
+  "window_start": "2026-11-06",
+  "labelled_rows_in_window": 0,
+  "verdict": "insufficient_n",
+  "candidate_json_sha256": "35aaa84c2721aed2186e1df2d4465fef21141cf6720568fb82ec7e0c0245ae26"
+ },
+ "refit_reproduces_retrain_candidate": false,
+ "candidate": {
+  "asof": "2026-10-23",
+  "train_rows": 782222,
+  "train_end_exclusive": "2026-10-14 19:00:00+00:00",
+  "result": {
+   "n": 281,
+   "mean_net_r": 0.0017708760446843174,
+   "sum_net_r": 0.4976161685562932,
+   "se_net_r": 0.06494211982914758,
+   "mean_gross_r": 0.0752274078539558,
+   "mean_cost_r": 0.07345653180927147,
+   "n_symbols": 48,
+   "by_side": {
+    "long": {
+     "n": 69,
+     "mean_net_r": -0.7319281580785312
+    },
+    "short": {
+     "n": 212,
+     "mean_net_r": 0.2405691465847875
+    }
+   },
+   "exit_reason_counts": {
+    "sl": 123,
+    "tp": 88,
+    "time": 70
+   },
+   "ex_max_symbol": {
+    "symbol": "UNIUSDT",
+    "n": 272,
+    "mean_net_r": 0.02369335542187151
+   },
+   "bootstrap_ci95_mean_net_r_reported_not_gating": [
+    -0.12912011378586552,
+    0.12064589022860478
+   ],
+   "deflated_ci_lower_reported_not_gating": -0.1602142534451585
+  }
+ },
+ "window_rows": 3234,
+ "holdout_claim": {
+  "model_id": "ENTRY-v1-cand-asof-2026-10-23",
+  "family": "ENTRY",
+  "start": "2026-10-23",
+  "end": "2026-11-05",
+  "train_end": "2026-10-14",
+  "n_tries": 4,
+  "variants_on_window": 5,
+  "read_at": "2026-11-06T16:18:05Z"
+ },
+ "bar": {
+  "n_tries": 4,
+  "alpha_one_sided": 0.006309,
+  "ci_level": 0.987381,
+  "ci_z": 2.4943,
+  "ci_lo_percentile": 0.6309,
+  "point_t_min": 1.0521,
+  "method": "Sidak-corrected CI (alpha_N = 1-(1-0.025)^(1/N), one-sided) for CI bars; Bailey-Lopez de Prado expected max of N null t-stats for point bars"
+ },
+ "verdict": "insufficient_n",
+ "why": [
+  "candidate n=281 (floor 300) / symbols=48 (floor 10)"
+ ]
+}
