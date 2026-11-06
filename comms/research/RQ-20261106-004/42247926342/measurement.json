@@ -1,0 +1,441 @@
+{
+  "leg": "mgc_trend_1h",
+  "label": "no_reachable_lever_beats_removed",
+  "grade": {
+    "verdict": "fail",
+    "label": "no_reachable_lever_beats_removed",
+    "baseline": "A",
+    "candidates": {
+      "donchian_lo": {
+        "delta_net_r": 2.6971,
+        "delta_max_drawdown_r": -5.6919,
+        "fold_wins": 2,
+        "passes": false
+      },
+      "donchian_hi": {
+        "delta_net_r": -19.8284,
+        "delta_max_drawdown_r": 6.2293,
+        "fold_wins": 1,
+        "passes": false
+      }
+    },
+    "delta_r_bar": 4.0,
+    "fold_majority": 3,
+    "n_floor": 39,
+    "control": null,
+    "why": "no candidate clears the bar: honest negative for the lever settings tested on these legs and this window -- removing those config lines is a Tier-3 proposal (not done here); it closes these CONFIGURATIONS, not the lever family (family retirement needs a review record, scripts/research/family_retirement_policy.yaml)"
+  },
+  "arms": {
+    "A": {
+      "reach_ge_6r": 0.026,
+      "n": 231,
+      "net_r": 11.0869,
+      "net_r_fee_only": 24.3554,
+      "max_drawdown_r": 20.4261,
+      "by_outcome": {
+        "stop": 76,
+        "trail_stop": 147,
+        "timeout": 4,
+        "take_profit": 4
+      },
+      "mean_bars_held": 35.996,
+      "net_r_per_capital_day": 0.032,
+      "cost_stack": {
+        "fee_bps_roundtrip": 7.5,
+        "slippage_bps_roundtrip": 5.0,
+        "funding_bps_per_window": 0.0
+      },
+      "params": {
+        "donchian": 20,
+        "atr_stop_mult": 2.5,
+        "trail_mult": 4.0,
+        "min_confidence": 0.0,
+        "confirm_bars": 1
+      },
+      "data_start": "2024-06-28 04:00:00+00:00",
+      "data_end": "2026-11-06 15:00:00+00:00",
+      "folds": [
+        {
+          "fold": 1,
+          "start": "2024-06-28 04:00:00+00:00",
+          "end": "2025-01-29 12:45:00+00:00",
+          "trades": 54,
+          "net_r": -7.9448
+        },
+        {
+          "fold": 2,
+          "start": "2025-01-29 12:45:00+00:00",
+          "end": "2025-09-01 21:30:00+00:00",
+          "trades": 52,
+          "net_r": 12.6993
+        },
+        {
+          "fold": 3,
+          "start": "2025-09-01 21:30:00+00:00",
+          "end": "2026-04-05 06:15:00+00:00",
+          "trades": 58,
+          "net_r": 18.049
+        },
+        {
+          "fold": 4,
+          "start": "2026-04-05 06:15:00+00:00",
+          "end": "2026-11-06 15:00:00+00:00",
+          "trades": 67,
+          "net_r": -11.7163
+        }
+      ],
+      "argv": [
+        "/opt/hostedtoolcache/Python/3.11.18/x64/bin/python3",
+        "/home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_trend.py",
+        "--donchian",
+        "20",
+        "--data",
+        "<data>",
+        "--symbol",
+        "MGC",
+        "--resample",
+        "1h",
+        "--atr-period",
+        "14",
+        "--atr-stop-mult",
+        "2.5",
+        "--trail-mult",
+        "4.0",
+        "--min-confidence",
+        "0.0",
+        "--fee-bps-roundtrip",
+        "7.5",
+        "--emit-trades",
+        "comms/research/RQ-20261106-004/42247926342/arms/A__trades.jsonl",
+        "--json",
+        "comms/research/RQ-20261106-004/42247926342/arms/A__bt.json",
+        "--confirm-bars",
+        "1",
+        "--tp-cap-pct",
+        "0.099",
+        "--tp-r",
+        "50.0"
+      ]
+    },
+    "donchian_lo": {
+      "reach_ge_6r": 0.0251,
+      "n": 239,
+      "net_r": 13.784,
+      "net_r_fee_only": 27.7607,
+      "max_drawdown_r": 14.7342,
+      "by_outcome": {
+        "stop": 75,
+        "trail_stop": 157,
+        "timeout": 4,
+        "take_profit": 3
+      },
+      "mean_bars_held": 36.31,
+      "net_r_per_capital_day": 0.0381,
+      "cost_stack": {
+        "fee_bps_roundtrip": 7.5,
+        "slippage_bps_roundtrip": 5.0,
+        "funding_bps_per_window": 0.0
+      },
+      "params": {
+        "donchian": 15,
+        "atr_stop_mult": 2.5,
+        "trail_mult": 4.0,
+        "min_confidence": 0.0,
+        "confirm_bars": 1
+      },
+      "data_start": "2024-06-28 04:00:00+00:00",
+      "data_end": "2026-11-06 15:00:00+00:00",
+      "folds": [
+        {
+          "fold": 1,
+          "start": "2024-06-28 04:00:00+00:00",
+          "end": "2025-01-29 12:45:00+00:00",
+          "trades": 56,
+          "net_r": -1.3219
+        },
+        {
+          "fold": 2,
+          "start": "2025-01-29 12:45:00+00:00",
+          "end": "2025-09-01 21:30:00+00:00",
+          "trades": 51,
+          "net_r": 10.4335
+        },
+        {
+          "fold": 3,
+          "start": "2025-09-01 21:30:00+00:00",
+          "end": "2026-04-05 06:15:00+00:00",
+          "trades": 64,
+          "net_r": 11.5577
+        },
+        {
+          "fold": 4,
+          "start": "2026-04-05 06:15:00+00:00",
+          "end": "2026-11-06 15:00:00+00:00",
+          "trades": 68,
+          "net_r": -6.8853
+        }
+      ],
+      "argv": [
+        "/opt/hostedtoolcache/Python/3.11.18/x64/bin/python3",
+        "/home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_trend.py",
+        "--donchian",
+        "15",
+        "--data",
+        "<data>",
+        "--symbol",
+        "MGC",
+        "--resample",
+        "1h",
+        "--atr-period",
+        "14",
+        "--atr-stop-mult",
+        "2.5",
+        "--trail-mult",
+        "4.0",
+        "--min-confidence",
+        "0.0",
+        "--fee-bps-roundtrip",
+        "7.5",
+        "--emit-trades",
+        "comms/research/RQ-20261106-004/42247926342/arms/donchian_lo__trades.jsonl",
+        "--json",
+        "comms/research/RQ-20261106-004/42247926342/arms/donchian_lo__bt.json",
+        "--confirm-bars",
+        "1",
+        "--tp-cap-pct",
+        "0.099",
+        "--tp-r",
+        "50.0"
+      ]
+    },
+    "donchian_hi": {
+      "reach_ge_6r": 0.0227,
+      "n": 220,
+      "net_r": -8.7415,
+      "net_r_fee_only": 3.7935,
+      "max_drawdown_r": 26.6554,
+      "by_outcome": {
+        "stop": 78,
+        "trail_stop": 136,
+        "timeout": 4,
+        "take_profit": 2
+      },
+      "mean_bars_held": 35.673,
+      "net_r_per_capital_day": -0.0267,
+      "cost_stack": {
+        "fee_bps_roundtrip": 7.5,
+        "slippage_bps_roundtrip": 5.0,
+        "funding_bps_per_window": 0.0
+      },
+      "params": {
+        "donchian": 25,
+        "atr_stop_mult": 2.5,
+        "trail_mult": 4.0,
+        "min_confidence": 0.0,
+        "confirm_bars": 1
+      },
+      "data_start": "2024-06-28 04:00:00+00:00",
+      "data_end": "2026-11-06 15:00:00+00:00",
+      "folds": [
+        {
+          "fold": 1,
+          "start": "2024-06-28 04:00:00+00:00",
+          "end": "2025-01-29 12:45:00+00:00",
+          "trades": 55,
+          "net_r": -17.3607
+        },
+        {
+          "fold": 2,
+          "start": "2025-01-29 12:45:00+00:00",
+          "end": "2025-09-01 21:30:00+00:00",
+          "trades": 49,
+          "net_r": 10.3237
+        },
+        {
+          "fold": 3,
+          "start": "2025-09-01 21:30:00+00:00",
+          "end": "2026-04-05 06:15:00+00:00",
+          "trades": 56,
+          "net_r": 6.9969
+        },
+        {
+          "fold": 4,
+          "start": "2026-04-05 06:15:00+00:00",
+          "end": "2026-11-06 15:00:00+00:00",
+          "trades": 60,
+          "net_r": -8.7014
+        }
+      ],
+      "argv": [
+        "/opt/hostedtoolcache/Python/3.11.18/x64/bin/python3",
+        "/home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_trend.py",
+        "--donchian",
+        "25",
+        "--data",
+        "<data>",
+        "--symbol",
+        "MGC",
+        "--resample",
+        "1h",
+        "--atr-period",
+        "14",
+        "--atr-stop-mult",
+        "2.5",
+        "--trail-mult",
+        "4.0",
+        "--min-confidence",
+        "0.0",
+        "--fee-bps-roundtrip",
+        "7.5",
+        "--emit-trades",
+        "comms/research/RQ-20261106-004/42247926342/arms/donchian_hi__trades.jsonl",
+        "--json",
+        "comms/research/RQ-20261106-004/42247926342/arms/donchian_hi__bt.json",
+        "--confirm-bars",
+        "1",
+        "--tp-cap-pct",
+        "0.099",
+        "--tp-r",
+        "50.0"
+      ]
+    }
+  },
+  "window": {
+    "start": null,
+    "end": null,
+    "fetch_days": 1830,
+    "feed": {
+      "source": "yahoo",
+      "ticker": "GC=F",
+      "interval": "60m",
+      "resample": "1h"
+    },
+    "fold_edges": [
+      "2024-06-28 04:00:00+00:00",
+      "2025-01-29 12:45:00+00:00",
+      "2025-09-01 21:30:00+00:00",
+      "2026-04-05 06:15:00+00:00",
+      "2026-11-06 15:00:00+00:00"
+    ]
+  },
+  "argv": {
+    "A": {
+      "argv": [
+        "/opt/hostedtoolcache/Python/3.11.18/x64/bin/python3",
+        "/home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_trend.py",
+        "--donchian",
+        "20",
+        "--data",
+        "<data>",
+        "--symbol",
+        "MGC",
+        "--resample",
+        "1h",
+        "--atr-period",
+        "14",
+        "--atr-stop-mult",
+        "2.5",
+        "--trail-mult",
+        "4.0",
+        "--min-confidence",
+        "0.0",
+        "--fee-bps-roundtrip",
+        "7.5",
+        "--emit-trades",
+        "comms/research/RQ-20261106-004/42247926342/arms/A__trades.jsonl",
+        "--json",
+        "comms/research/RQ-20261106-004/42247926342/arms/A__bt.json",
+        "--confirm-bars",
+        "1",
+        "--tp-cap-pct",
+        "0.099",
+        "--tp-r",
+        "50.0"
+      ],
+      "cfg_set": {},
+      "cfg_unset": [],
+      "extra_flags": [],
+      "omitted_levers_per_builder": []
+    },
+    "donchian_lo": {
+      "argv": [
+        "/opt/hostedtoolcache/Python/3.11.18/x64/bin/python3",
+        "/home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_trend.py",
+        "--donchian",
+        "15",
+        "--data",
+        "<data>",
+        "--symbol",
+        "MGC",
+        "--resample",
+        "1h",
+        "--atr-period",
+        "14",
+        "--atr-stop-mult",
+        "2.5",
+        "--trail-mult",
+        "4.0",
+        "--min-confidence",
+        "0.0",
+        "--fee-bps-roundtrip",
+        "7.5",
+        "--emit-trades",
+        "comms/research/RQ-20261106-004/42247926342/arms/donchian_lo__trades.jsonl",
+        "--json",
+        "comms/research/RQ-20261106-004/42247926342/arms/donchian_lo__bt.json",
+        "--confirm-bars",
+        "1",
+        "--tp-cap-pct",
+        "0.099",
+        "--tp-r",
+        "50.0"
+      ],
+      "cfg_set": {
+        "donchian": 15
+      },
+      "cfg_unset": [],
+      "extra_flags": [],
+      "omitted_levers_per_builder": []
+    },
+    "donchian_hi": {
+      "argv": [
+        "/opt/hostedtoolcache/Python/3.11.18/x64/bin/python3",
+        "/home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_trend.py",
+        "--donchian",
+        "25",
+        "--data",
+        "<data>",
+        "--symbol",
+        "MGC",
+        "--resample",
+        "1h",
+        "--atr-period",
+        "14",
+        "--atr-stop-mult",
+        "2.5",
+        "--trail-mult",
+        "4.0",
+        "--min-confidence",
+        "0.0",
+        "--fee-bps-roundtrip",
+        "7.5",
+        "--emit-trades",
+        "comms/research/RQ-20261106-004/42247926342/arms/donchian_hi__trades.jsonl",
+        "--json",
+        "comms/research/RQ-20261106-004/42247926342/arms/donchian_hi__bt.json",
+        "--confirm-bars",
+        "1",
+        "--tp-cap-pct",
+        "0.099",
+        "--tp-r",
+        "50.0"
+      ],
+      "cfg_set": {
+        "donchian": 25
+      },
+      "cfg_unset": [],
+      "extra_flags": [],
+      "omitted_levers_per_builder": []
+    }
+  }
+}
