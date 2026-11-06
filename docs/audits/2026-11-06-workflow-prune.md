@@ -20,8 +20,8 @@
 | DELETE | 49 | 0 | never ran, retired by the reset, or only ever skipped. Saves **run-count noise, not runner time** (job-h is ~0) |
 | DELETE? (operator call) | 21 | 0 | dormant (<=5 executions in 90 d) or a credential tool |
 | MERGE | 41 | 345.0 | of which the two mirrors are 218.0 h/wk and retire with WORK-STORE S7, not before |
-| SIMPLIFY | 8 | 296.3 | cheaper trigger or cadence; `work-digest` alone is 140.7 h/wk |
-| KEEP | 93 | 1468.9 | includes the never-touch set; `pytest-run` + `guards` are 1023.1 h/wk of it |
+| SIMPLIFY | 7 | 260.0 | cheaper trigger or cadence; `work-digest` alone is 140.7 h/wk |
+| KEEP | 94 | 1505.2 | includes the never-touch set; `pytest-run` + `guards` are 1023.1 h/wk of it |
 
 **Where the runner time goes (MEASURED, 7 d):** `pytest-run` and `guards` (required PR checks) are the largest consumers and stay. The next four are all things this prune can address: `work-digest` (push-triggered, though its header says a daily roll-up), the two mirror workflows (WORK-STORE retires them), and `research-script-run`. **Deleting the dead workflows frees almost no runner time**; the real savings are in SIMPLIFY and in S7. The DELETE class is worth doing for the reason the operator gave (not redundant, not repetitive; ~105 relays each get a skipped run on every issue event), not for cost.
 
@@ -31,7 +31,7 @@
 2. **`sp500-membership-refresh` has 183 runs/wk and 0 executed in 90 d**: a scheduled data pull that only ever skips. Either its `if:` can never be true, or the pull does not run. It is on the never-touch list (data pulls), so it is flagged, not proposed.
 3. **`schedule-keeper` is red on 218 of 1,758 runs/wk (12%).** It is built to page when a validator stops, so some red may be intended; unverified.
 4. **Issue-event fan-out.** About 105 workflows listen on `issues`. Each issue event starts a run of every one of them and ~all skip: 216 issue events/wk (430 with label events) produce the ~30,500 skipped runs/wk. A single router on `issues` that calls the relay it needs would remove that. Not proposed as a row: it changes the dispatch mechanism for every relay, including the never-touch ones, so it needs its own design and operator OK.
-5. **`repo-inventory` runs ~2,450×/wk** though its YAML has only `schedule` + `workflow_dispatch` (once a day). Something dispatches it per PR. I did not trace who.
+5. **`repo-inventory` (RESOLVED, an artifact of my 7-day window, not a live trigger).** The API shows its last `pull_request` run at 2026-11-03T23:40Z and last `push` run at 23:38Z; since 2026-11-04 it has 0 PR and 0 push runs and 2 `schedule` runs (latest 11-05T12:45Z), matching its cron-only YAML (a test pins that). The ~2,450 runs and 36.3 job-h in my 7-day window (10-30 to 11-06) are the days before the trigger was removed. **Every 7-day run and job-h figure in this doc is overstated for any workflow whose trigger changed inside that window**; the post-merge re-measure is the clean read. Proposal changed from SIMPLIFY to KEEP.
 
 ## 4. The four decisions for the operator (nothing happens until each is answered)
 
@@ -41,7 +41,7 @@
 
 **P3. Merge duplicates: 41 workflows into ~8 groups.** research-script-run ×5 → 1 with a `target` input; 3 branch pruners → 1; 9 VM/OCI lifecycle relays → 1; 5 runner/console install-smoke-health relays → 1; two external alerts → 1; ~13 freshness/liveness watchdogs → 1 list-driven watcher (needs its own design lane); the VM diag/fix overlap; and the **two mirror workflows (218.0 job-h/wk, the biggest single saving)**, which I propose to retire together with WORK-STORE S7 because their readers (`src` 6 + `scripts` 19, WORK-STORE-DESIGN § 1) still read the mirrored files until S6B lands. Merges touching relays on the never-touch list are limited to the rarely-used ones.
 
-**P4. Simplify 8 workflows (~296.3 job-h/wk now):** `work-digest` 140.7 h/wk (cadence instead of every main push), `pr-landing-hold-merge-alarm` / `armed-branch-push-watch` / `branch-mirror-heartbeat` (add the bookkeeping `paths-ignore`; the 2026-09-28 'post-merge alarm' ruling is unchanged), `branch-protection-sync` (own-file path scope + fix the red), `research-queue-chain` and `research-slo` (long hosted-slot holds), `repo-inventory`. Savings are estimates until the trigger change is measured.
+**P4. Simplify 7 workflows (~260.0 job-h/wk now; `repo-inventory` was dropped from the 8, see finding 5):** `work-digest` 140.7 h/wk (cadence instead of every main push), `pr-landing-hold-merge-alarm` / `armed-branch-push-watch` / `branch-mirror-heartbeat` (add the bookkeeping `paths-ignore`; the 2026-09-28 'post-merge alarm' ruling is unchanged), `branch-protection-sync` (own-file path scope + fix the red), `research-queue-chain` and `research-slo` (long hosted-slot holds). Savings are estimates until the trigger change is measured.
 
 ## 5. Never touched, and why
 
@@ -168,7 +168,7 @@ Per the dispatch: deploy/git-sync, `system-actions` (+ its cancel guard), tradin
 | `branch-mirror-heartbeat` | push,dispatch | 2,286 | 1,610 (0) | 2.4 | 0 | - | 2 (desk-decisions-mirror.yml) | **SIMPLIFY** | push-to-main trigger with no paths-ignore: add the bookkeeping ignore list branch-sync/work-digest already carry |
 | `branch-protection-sync` | push,dispatch | 9,406 | 1,610 (0) | 4.0 | 724 | - | 9 (branch-protection-report.yml) | **SIMPLIFY** | push-to-main trigger; scope to its own file; also RED ~45% of runs (PUT protection step fails) |
 | `pr-landing-hold-merge-alarm` | push | 7,269 | 1,610 (0) | 23.1 | 0 | issue/ping | 2 (jc-ca-04-hold-merge-alarm.js) | **SIMPLIFY** | push-to-main trigger with no paths-ignore: add the bookkeeping ignore list branch-sync/work-digest already carry |
-| `repo-inventory` | cron,dispatch | 28,169 | 2,446 (0) | 36.3 | 0 | - | 1 (check_cadence_liveness.py) | **SIMPLIFY** | advisory-only (header says it never fails a PR) yet 2,400+ runs/wk: find who dispatches it, then cut |
+| `repo-inventory` | cron,dispatch | 28,169 | 2,446 (0) | 36.3 | 0 | - | 1 (check_cadence_liveness.py) | **KEEP** | trigger already cut to daily cron + dispatch ~2026-11-03; the 7-day figure counted the earlier PR/push runs (finding 5) |
 | `research-queue-chain` | dispatch,workflow_run | 113 | 72 (0) | 36.2 | 0 | - | 1 (pipeline-health-1021-a.json) | **SIMPLIFY** | holds a hosted slot while waiting (COMPUTE-ALLOCATION B8 submit-and-exit) |
 | `research-slo` | cron,dispatch | 298 | 100 (0) | 37.4 | 10 | ping | 6 (SKILL.md) | **SIMPLIFY** | holds a hosted slot while waiting (COMPUTE-ALLOCATION B8 submit-and-exit) |
 | `work-digest` | push,dispatch | 8,198 | 1,114 (0) | 140.7 | 3 | - | 13 (mgr-heartbeat-0100-20260909.) | **SIMPLIFY** | push-triggered 1,100+/wk though its own header says a daily roll-up (operator 2026-09-01): run on a cadence, not every main push |
