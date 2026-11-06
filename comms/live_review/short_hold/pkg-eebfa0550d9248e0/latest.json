@@ -1,7 +1,7 @@
 {
- "bar": "2026-11-06T19:55:00Z",
- "bar_close": "2026-11-06T20:00:00Z",
- "built_at": "2026-11-06T20:01:31Z",
+ "bar": "2026-11-06T20:00:00Z",
+ "bar_close": "2026-11-06T20:05:00Z",
+ "built_at": "2026-11-06T20:05:53Z",
  "closed": false,
  "order_package_id": "pkg-eebfa0550d9248e0",
  "packet": {
@@ -94,22 +94,21 @@
     "forecast": {
      "direction": "with_trade",
      "evidence": [
-      "mark 8.409 vs entry 8.284, about -0.55R by hand",
-      "chart.bars: highs 8.442/8.472/8.455, closes 8.364-8.409",
-      "chart.htf: 4h chop ADX 18.2",
-      "exit plan: exit early if 1h closes above 8.45",
-      "exit_plan: SL 8.512, TP 7.83"
+      "state.open_r unavailable; by hand -0.48R (entry 8.284, mark 8.394, risk 0.228)",
+      "chart.bars: highs 8.435/8.428/8.407, closes 8.39-8.40",
+      "chart.htf: 4h chop ADX 17.55",
+      "exit_plan: SL 8.512 TP 7.83, exit on 1h close above 8.45"
      ],
      "horizon_bars": 8,
      "invalidation_px": 8.45,
-     "p_target": 0.4,
-     "target_px": 8.334,
-     "thesis": "Three rejections at 8.45-8.47 with sub-8.41 closes; expect a 1h low at or under 8.334 before a 1h close above 8.45. Low conviction after a failed cap.",
+     "p_target": 0.3,
+     "target_px": 8.3,
+     "thesis": "Fourth rejection of 8.45-8.47 inside a 4h chop; expect a 1h low at or under 8.30 before a 1h close above 8.45, low conviction after repeated misses.",
      "timeframe": "1h"
     },
-    "reason": "Hold, low conviction, on the 12:08Z plan. Forecast (12:08Z, target 8.28 p 0.40, invalidation a 1h close above 8.45, 8 bars) graded: open, not hit: the low since was 8.29 (0.01 short of 8.28) and no 1h close beyond 8.45 (closes 8.364/8.387/8.409/8.409), though the hourly highs wicked to 8.442, 8.472 and 8.455, three rejections of the 8.45-8.47 zone; 4 of 8 bars used. Open about -0.55R by hand (mar\u2026",
-    "review_id": "LR-20261106T1602Z-pkg-eebfa0550d9248e0",
-    "reviewed_at": "2026-11-06T16:15:00Z",
+    "reason": "Hold, low conviction, confirm the 16:15Z plan. Forecast (16:15Z: target 8.334 p 0.40, invalidation a 1h close above 8.45, 8 bars) graded: open, target not hit (low since 8.336, 0.002 short), and the exit line did NOT fire: the closes since were 8.39, 8.40, 8.394 (highest 1h high 8.435), so the plan's 1h-close-above-8.45 exit stands unmet; 4 of 8 bars used. Mark 8.394 vs entry 8.284 is about -0.48\u2026",
+    "review_id": "LR-20261106T2001Z-pkg-eebfa0550d9248e0",
+    "reviewed_at": "2026-11-06T20:14:00Z",
     "route": null
    },
    "symbol": "AVAXUSDT"
@@ -120,25 +119,25 @@
      "MGC",
      "short",
      "mgc_pullback_1d",
-     1.02
+     1.05
     ],
     [
      "ETHUSDT",
      "short",
      "trend_donchian_eth",
-     0.325
+     0.267
     ],
     [
      "AVAXUSDT",
      "short",
      "avax_pullback_2h",
-     0.003
+     -0.119
     ],
     [
      "SOLUSDT",
      "short",
      "sol_pullback_2h",
-     0.108
+     -0.0103
     ],
     [
      "XRPUSDT",
@@ -156,7 +155,7 @@
      "BTCUSDT",
      "short",
      "e4_oi_shock_1h",
-     -0.411
+     -0.611
     ],
     [
      "GDX",
@@ -168,13 +167,13 @@
      "MHG",
      "short",
      "mhg_pullback_1d",
-     1.08
+     1.09
     ],
     [
      "GLD",
      "short",
      "gld_pullback_1d",
-     -0.209
+     -0.221
     ],
     [
      "TLT",
@@ -186,13 +185,13 @@
      "BTCUSDT",
      "short",
      "trend_donchian_1h",
-     0.161
+     0.0753
     ],
     [
      "SOLUSDT",
      "short",
      "trend_donchian_sol_4h",
-     2.22
+     2.15
     ]
    ],
    "book_note": "[symbol, direction, leg, open_r (null = not measured)] per OTHER open package, either side",
@@ -520,23 +519,8 @@
    "basis": null
   },
   "desk_handoff": {
-   "chain_length": 21,
+   "chain_length": 22,
    "chain_tail": [
-    {
-     "action": "hold",
-     "forecast": {
-      "direction": "with_trade",
-      "horizon_bars": 12,
-      "invalidation_px": 8.45,
-      "p_target": 0.4,
-      "target_px": 8.072,
-      "timeframe": "1h"
-     },
-     "reason": "Thesis and plan stand: band still capping price, invalidation 8.45 and SL 8.512 untouched.",
-     "review_id": "LR-20261106T0402Z-pkg-eebfa0550d9248e0",
-     "reviewed_at": "2026-11-06T04:13:00Z",
-     "verdict": "confirm"
-    },
     {
      "action": "hold",
      "forecast": {
@@ -581,6 +565,21 @@
      "review_id": "LR-20261106T1602Z-pkg-eebfa0550d9248e0",
      "reviewed_at": "2026-11-06T16:15:00Z",
      "verdict": "confirm"
+    },
+    {
+     "action": "hold",
+     "forecast": {
+      "direction": "with_trade",
+      "horizon_bars": 8,
+      "invalidation_px": 8.45,
+      "p_target": 0.3,
+      "target_px": 8.3,
+      "timeframe": "1h"
+     },
+     "reason": "Plan stands: the 1h-close-above-8.45 exit has not fired (closes 8.39/8.40/8.394) and SL 8.512 is untouched.",
+     "review_id": "LR-20261106T2001Z-pkg-eebfa0550d9248e0",
+     "reviewed_at": "2026-11-06T20:14:00Z",
+     "verdict": "confirm"
     }
    ],
    "instruction": "CONFIRM, REVISE (with a reason) or EXIT this position against the opening thesis and the newest view in the chain; copy prior_decision_id into handoff.prior_decision_id.",
@@ -611,7 +610,7 @@
     "timeframe": "1h",
     "tp": 7.83
    },
-   "prior_decision_id": "LR-20261106T1602Z-pkg-eebfa0550d9248e0",
+   "prior_decision_id": "LR-20261106T2001Z-pkg-eebfa0550d9248e0",
    "protocol": "DESK-HANDOFF-PROTOCOL",
    "read_state": "read"
   },
@@ -625,10 +624,10 @@
    "r_to_target": null
   },
   "generator": {
-   "head": "d5c353e6d7",
+   "head": "6f3105f46d",
    "state": "current"
   },
-  "info_cutoff_at": "2026-11-06T20:01:51Z",
+  "info_cutoff_at": "2026-11-06T20:06:12Z",
   "leg": "claude_desk",
   "mechanics": {
    "evidence": "bybit_1: AVAXUSDT is NETTED across 2 open packages on this account (per side) (this one + pkg-2642ee23b2d449c2); each package's own qty-scoped Partial SL/TP legs are matched by order id, never by level alone",
@@ -688,25 +687,18 @@
    "cell_now": null,
    "trend_now": "transitional"
   },
-  "review_id": "LR-20261106T2001Z-pkg-eebfa0550d9248e0",
+  "review_id": "LR-20261106T2005Z-pkg-eebfa0550d9248e0",
   "short_hold": {
-   "atr": 0.016071428571428546,
-   "bar": "2026-11-06T19:55:00Z",
-   "bar_close": "2026-11-06T20:00:00Z",
+   "atr": 0.016285714285714268,
+   "bar": "2026-11-06T20:00:00Z",
+   "bar_close": "2026-11-06T20:05:00Z",
    "entry": 8.284,
-   "mark": 8.394,
-   "minutes_held": 1074.3,
-   "open_r_at_mark": -0.4825,
+   "mark": 8.407,
+   "minutes_held": 1078.7,
+   "open_r_at_mark": -0.5395,
    "r_unit": "entry_to_current_sl",
    "read_state": "read",
    "recent_bars": [
-    {
-     "close": 8.401,
-     "high": 8.405,
-     "low": 8.388,
-     "open": 8.4,
-     "t": "2026-11-06T19:00:00Z"
-    },
     {
      "close": 8.403,
      "high": 8.406,
@@ -783,6 +775,13 @@
      "low": 8.363,
      "open": 8.364,
      "t": "2026-11-06T19:55:00Z"
+    },
+    {
+     "close": 8.407,
+     "high": 8.415,
+     "low": 8.394,
+     "open": 8.394,
+     "t": "2026-11-06T20:00:00Z"
     }
    ],
    "risk_per_unit": null,
@@ -801,25 +800,18 @@
    "tp": 7.83
   }
  },
- "packet_sha": "da1a417e0239713a8923c72994cfa143d1ea931cbddece561e3cc2eed453349e",
+ "packet_sha": "5eee7f62d31d18e70423642083c672ac895258975ca3639097bdda97ea682624",
  "short_hold": {
-  "atr": 0.016071428571428546,
-  "bar": "2026-11-06T19:55:00Z",
-  "bar_close": "2026-11-06T20:00:00Z",
+  "atr": 0.016285714285714268,
+  "bar": "2026-11-06T20:00:00Z",
+  "bar_close": "2026-11-06T20:05:00Z",
   "entry": 8.284,
-  "mark": 8.394,
-  "minutes_held": 1074.3,
-  "open_r_at_mark": -0.4825,
+  "mark": 8.407,
+  "minutes_held": 1078.7,
+  "open_r_at_mark": -0.5395,
   "r_unit": "entry_to_current_sl",
   "read_state": "read",
   "recent_bars": [
-   {
-    "close": 8.401,
-    "high": 8.405,
-    "low": 8.388,
-    "open": 8.4,
-    "t": "2026-11-06T19:00:00Z"
-   },
    {
     "close": 8.403,
     "high": 8.406,
@@ -896,6 +888,13 @@
     "low": 8.363,
     "open": 8.364,
     "t": "2026-11-06T19:55:00Z"
+   },
+   {
+    "close": 8.407,
+    "high": 8.415,
+    "low": 8.394,
+    "open": 8.394,
+    "t": "2026-11-06T20:00:00Z"
    }
   ],
   "risk_per_unit": null,
