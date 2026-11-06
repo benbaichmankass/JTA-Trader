@@ -786,3 +786,29 @@ def test_collect_reads_history_only_where_an_own_leg_is_not_resting():
     calls.clear()
     L._read_consumed_bybit_legs(s, {ETHD, ETHE}, diag)
     assert calls == []
+
+def test_leg_applied_sl_uses_the_floor_only_when_it_is_tighter():
+    """MECH-FOLLOWUPS-1105 (a): an account-scoped apply leaves the package SL stale by design; the leg's
+    notes.sl_floor is the level its venue stop should hold."""
+    tr = {"notes": json.dumps({"sl_floor": {"level": 1.2466357, "source": "live_review_mandate"}})}
+    assert L._leg_applied_sl(tr, "short", 1.2711)[0] == 1.2466357
+    assert "not moved by design" in L._leg_applied_sl(tr, "short", 1.2711)[1]
+    assert L._leg_applied_sl(tr, "long", 1.2000)[0] == 1.2466357          # long: a higher floor is tighter
+    assert L._leg_applied_sl(tr, "short", 1.2400) == (1.2400, None)         # floor looser than the package: ignored
+    assert L._leg_applied_sl({"notes": "{}"}, "short", 1.2711) == (1.2711, None)
+    assert L._leg_applied_sl(None, "short", 1.2711) == (1.2711, None)
+    assert L._leg_applied_sl(tr, "short", None) == (None, None)
+
+
+@needs_gold
+def test_ada_venue_stop_at_the_legs_applied_floor_is_a_match_not_a_mismatch():
+    g = GOLD[ADA]
+    bad = _bybit(["bybit_2"])
+    bad["accounts"][0]["result"]["orders"][0]["trigger_price"] = 0.2080     # package sl 0.2109, venue 0.2080
+    s = _snap(telemetry={"rows": [_tel(g, "bybit_2")]}, bybit_orders=bad)
+    s.packages[ADA] = _pkg(g, "ADAUSDT", "short")
+    s.trades = [{"id": 1, "account_id": "bybit_2", "symbol": "ADAUSDT", "status": "open", "order_package_id": ADA,
+                 "direction": "short", "position_size": 1.0, "entry_price": 1.0, "stop_loss": 0.2080,
+                 "notes": json.dumps({"sl_floor": {"level": 0.2080, "source": "live_review_mandate"}})}]
+    p = _build(ADA, s)
+    assert "venue SL" not in p["mechanics"]["evidence"]

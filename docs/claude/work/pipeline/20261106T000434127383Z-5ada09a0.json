@@ -1,0 +1,19 @@
+{
+  "based_on": "20261105T191207009886Z-c8da5f3f.json",
+  "due_when": {
+    "check_every_days": 3,
+    "clears_when": "both records carry their V2/V3 grade (or the guard refuses V1 ids), whichever the manager/operator picks",
+    "kind": "event",
+    "last_checked": "2026-11-06"
+  },
+  "id": "PI-20261105-9S7G7UJZ-0001",
+  "next_action": "ask_operator",
+  "origin": {
+    "kind": "session",
+    "ref": "lane PROP-BASELINE-AND-ML (Manager Session 2026-11-05b), session_01AFoLuJiZu24Ggu9S7g7Ujz",
+    "rerun": "python3 -c \"import json;[print(l, json.load(open(f'comms/prop_survival/{l}.json'))['decision_rule']) for l in ('trend_donchian_eth_4h','trend_donchian_sol_4h')]\"  # a 'pass' under RULE-P5-GATE-BRK-PER-LEG (V1) = still open"
+  },
+  "state": "done",
+  "terminal_reason": "fixed by #23525 (merged 858c3be4d, 2026-11-05 23:29Z): comms/prop_survival/trend_donchian_eth_4h.json and trend_donchian_sol_4h.json now carry RULE-P5-GATE-BRK-PER-LEG-V3 verdicts fail_edge / contested (no V1 pass remains for either leg), and prop-roster-gate admits a non-pass verdict only under an operator baseline exception naming the account. Option (a) as the manager chose; no new gate added.",
+  "what": "prop-roster-gate-guard hole: comms/prop_survival/trend_donchian_eth_4h.json and trend_donchian_sol_4h.json are still V1 records (RULE-P5-GATE-BRK-PER-LEG, 2026-10-16, verdict 'pass'). check_prop_roster_gate.record_problems accepts any verdict 'pass' and does not know V2/V3 superseded V1, so a PR adding either leg to a prop roster goes GREEN with no V3 grade and no operator exception. Under V3 (docs/research/prop-gate-edge-regrade-2026-10-31) eth_4h is FAIL_EDGE; sol_4h is PASS on 3y but CONTESTED on 365d. Fix options: (a) rewrite both records to their V2/V3 grades (Tier 1, evidence); (b) have the guard require the V3 rule id (adds a gate: operator permission needed, CLAUDE.md 'No new gates')."
+}
