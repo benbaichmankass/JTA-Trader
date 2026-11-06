@@ -2153,6 +2153,8 @@ strategies:
     # (the CI straddles the -0.05 non-inferiority margin). The rule selects no value on its own: 1.5 R is the
     # calibrated K* put to the operator to DECLARE, exactly as iaum_pullback_1d's 3.5 R was (RQ-20261016-014,
     # also INDETERMINATE). It rests below the median venue cap (1.65 R IS), so it is a real target, not the clamp.
+    # OPERATOR-DECLARED 2026-11-06 ~12:42Z (popup, relayed by Manager Session 2026-11-06a), verbatim "Declare 1.5R
+    # (Recommended)". tp_revision stays named debt (R-only baseline lines); the tp_extend holdout is not required first.
     # ROLLBACK: restore `tp_r: 50.0` + the prior `tp_intent: {mode: unexamined, ...}` block (git history).
     tp_r: 1.5
     tp_intent:
