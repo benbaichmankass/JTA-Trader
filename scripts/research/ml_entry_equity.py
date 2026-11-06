@@ -77,7 +77,7 @@ def symbol_rows(sym: str, df: pd.DataFrame, slip_bps: float, fee_bps: float) -> 
     """Decision rows for one ETF on its own RTH bar sequence: harness features + the LONG first-passage net R (as equity_rows)."""
     f = E.features_symbol(df[["ts", "open", "high", "low", "close", "volume"]])
     f["hour"] = df.close_ts.dt.hour.to_numpy()
-    f["dow"] = df.close_ts.dt.dayofweek.to_numpy()
+    f["dow"] = df.close_ts.dt.day_of_week.to_numpy()
     o, h, lo, c = (df[k].to_numpy(float) for k in ("open", "high", "low", "close"))
     pc = np.r_[np.nan, c[:-1]]
     tr = np.nanmax(np.vstack([h - lo, np.abs(h - pc), np.abs(lo - pc)]), axis=0)
@@ -198,8 +198,9 @@ def dev_stage(tab: pd.DataFrame, folds: list[str] = DEV_FOLDS, train_end: str = 
 
 
 def _fold_of(ts: pd.Series, bounds) -> np.ndarray:
-    t = pd.to_datetime(ts, utc=True)
-    return np.searchsorted(np.array([b.value for b in bounds[1:-1]]), t.astype("int64").to_numpy(), side="right")
+    """Fold index per trade timestamp. Compares tz-aware timestamps directly: the dev run 42119511272 compared int64 .value (ns) against
+    the Series' own unit (us in pandas 3), put every trade in fold 0 and so published a by_fold table with one fold."""
+    return pd.DatetimeIndex(bounds[1:-1]).searchsorted(pd.to_datetime(ts, utc=True), side="right")
 
 
 def confirm_stage(tab: pd.DataFrame, config: str, tau: float, dev_oof_mean: float, unit: str, ledger_dir: Path,
@@ -287,6 +288,21 @@ def _pool_and_bars(a, end_day: str):
     return pool, prep, bars, client
 
 
+def dev_row(d: dict, unit: str, where: str) -> dict:
+    """The dev record in the runner's verdict.json contract (script_run.VERDICTS / READ_STATES): a descriptive stage carries
+    verdict 'not_applicable' (run 42119511272 wrote 'descriptive', was rejected as malformed and landed as producer_failed)."""
+    sel = d["selected"]
+    return {"schema_version": 1, "research_unit": unit, "read_state": "measured", "verdict": "not_applicable",
+            "population": (f"DEV stage: purged walk-forward OOF restricted-long decisions on the {d.get('n_pool')}-ETF Alpaca liquidity pool, "
+                           f"dates <= {d.get('train_end')}, {d['n_selection_draws']} (config, tau) draws"),
+            "note": ("DEV stage (walk-forward <= %s; no confirming window loaded). Selected %s: OOF mean net R %s at n=%s"
+                     % (TRAIN_END, None if sel is None else sel["key"], None if sel is None else sel["mean_net_r"],
+                        None if sel is None else sel["n"])),
+            "generated_at": pd.Timestamp.now(tz="UTC").strftime("%Y-%m-%dT%H:%M:%SZ"),
+            "measurement": d, "n": None if sel is None else sel["n"],
+            "produced_by": {"tool": "python3 scripts/research/ml_entry_equity.py dev", "where": where}}
+
+
 def main_run(a) -> int:
     from src.runtime.execution_costs import resolve_cost_policy, resolve_fee_bps_roundtrip
     t0 = time.time()
@@ -304,14 +320,7 @@ def main_run(a) -> int:
                   "costs": {"slippage_bps": slip, "fee_bps": fee, "regulatory_bps": S.REGULATORY_BPS},
                   "configs": {k: {"features": v["features"], "params": v["params"]} for k, v in CONFIGS.items()},
                   "alpaca_calls": client.calls, "runtime_s": round(time.time() - t0, 1)})
-        sel = d["selected"]
-        row = {"schema_version": 1, "research_unit": a.unit, "read_state": "measured", "verdict": "descriptive",
-               "note": ("DEV stage (walk-forward <= %s; no confirming window loaded). Selected %s: OOF mean net R %s at n=%s"
-                        % (TRAIN_END, None if sel is None else sel["key"], None if sel is None else sel["mean_net_r"],
-                           None if sel is None else sel["n"])),
-               "generated_at": pd.Timestamp.now(tz="UTC").strftime("%Y-%m-%dT%H:%M:%SZ"),
-               "measurement": d, "n": None if sel is None else sel["n"],
-               "produced_by": {"tool": "python3 scripts/research/ml_entry_equity.py dev", "where": a.where}}
+        row = dev_row(d, a.unit, a.where)
     else:
         c = confirm_stage(tab, a.config, float(a.tau), float(a.dev_oof_mean), a.unit, out / "ledger", end=end_day,
                           symbols=pool)
@@ -366,6 +375,7 @@ def self_test() -> int:
     d = dev_stage(tab, folds=["2022-09-01", "2023-01-01"], train_end="2023-04-30", taus=[0.0, 0.05], configs=small, min_oof_n=1,
                   log=lambda *_: None)
     assert d["n_selection_draws"] == 4 and d["selected"] is not None, d
+    assert max(len(r["by_fold"]) for r in d["grid"].values()) >= 2, "by_fold collapsed into one fold"
     assert tab[tab.ts <= "2023-04-30"].shape[0] < tab.shape[0], "synthetic calendar must extend past train_end"
     # the confirming window must be refused when it overlaps training or sits inside the embargo
     for bad in ("2023-04-30", "2023-05-05"):

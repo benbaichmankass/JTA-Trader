@@ -2,19 +2,21 @@
   "id": "COST-BROKER-SOURCED",
   "title": "Broker-reported fee and funding on every real-money trade (today 485 of 488 real rows are cost_source estimate)",
   "phase": null,
-  "state": "queued",
+  "state": "in_flight",
   "owner": "manager",
   "lane": null,
   "model": "claude-sonnet-5-5",
   "ceiling_usd": 8,
   "spend_usd": null,
   "tier": 2,
-  "prs": [],
+  "prs": [
+    23565
+  ],
   "blocked_on": [],
-  "note": "Done when >= 95% of new real rows carry cost_source broker. Tier 2 (journal writer): manager OK on the PR, then deploy and observe. Source: docs/audits/2026-11-01-from-scratch/AUDIT.md section 8 (lane SYSTEM-AUDIT-FROM-SCRATCH, PR #22072); walk-through https://claude.ai/artifact/T9ztV5nc1fUAGbdjsbZHSf. Operator 2026-11-01 ~08:45Z popup, verbatim: \"Walk through it today (Rec.)\" (Tier-1 proposals filed straight away). Gates this adds: none. [2026-11-01 manager] Operator 2026-11-01 ~11:05Z popup, verbatim: \"Fold into running lanes (Rec.)\". Sequenced after the ML milestone; dispatch decided at Thursday planning 2026-11-05 (or sooner if ML lands first).",
+  "note": "[2026-11-06 lane] PR #23565 (draft): sweep backfill_broker_truth_costs.py --apply becomes last ExecStart of both fills-pull units; funding only if store covers close. One-off sweep+dry-run coverage requested via system-action issue #23562 (no reply yet at handoff). landed_unproven until: after merge+deploy, >=95% of real closes after the deploy time show cost_source=broker (journal?table=trades, bybit_2/alpaca_live). Open risk: netted/ambiguous rows keep estimate; funding NULL until BYBIT2-FUNDING (#23446) lands pulls. [2026-11-06 lane] Per manager: exchange_funding stored sign-inverted until #23570. #23565 now writes FEES only (funding opt-in via --with-funding; units omit it). Follow-up after #23570 deploys + days:30 re-pull: add --with-funding to the units, re-run backfill-broker-truth-costs --with-funding (overwrites), verify >=3 real trades funding_paid_usd positive when paid, count inverted rows. CAUTION: system-action backfill-broker-truth-costs on main (issue #23562) still writes funding from the store.",
   "priority_rank": 2,
-  "updated_at": "2026-11-01T11:08:35Z",
-  "updated_by": "session_01AFoLuJ1apgy8sfngu4WyNH",
+  "updated_at": "2026-11-06T00:35:10Z",
+  "updated_by": "session_01AFoLuMKSgmBWC5qaX5JGK7",
   "roadmap": [
     "L-OPS"
   ],

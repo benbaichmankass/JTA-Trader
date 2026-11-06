@@ -195,6 +195,14 @@ def _cli_write(a, repo: Path) -> int:
                     raise ChecklistError(f"{kv!r}: expected key=value")
                 k, v = kv.split("=", 1)
                 fields[k] = _parse_value(v)
+            # `prs` is a LIST of PR numbers everywhere it is read (render_daily_brief iterates it). `set prs=123`
+            # used to store a bare int, and that crashed daily-brief-guard (PROD-LEGS-DSR-DECISION, 2026-11-06).
+            if "prs" in fields:
+                pv = fields["prs"]
+                pv = [pv] if isinstance(pv, int) and not isinstance(pv, bool) else pv
+                if not (isinstance(pv, list) and all(isinstance(x, int) and not isinstance(x, bool) for x in pv)):
+                    raise ChecklistError(f"prs={pv!r}: expected a PR number or a list of PR numbers")
+                fields["prs"] = pv
             path = op_set(repo, a.id, fields, by)
         elif a.cmd == "note":
             path = op_note(repo, a.id, a.text, a.append, by)

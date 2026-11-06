@@ -1,0 +1,7 @@
+{
+  "tier": 1,
+  "landing": "hold",
+  "hold_reason": "unvouchable_paths",
+  "hold_text": "Touches scripts/pull_exchange_funding.py (run by the live VM's funding timer), src/runtime/exchange_fills_store.py and the diag route; read path and logging only, no order path. R5 cannot vouch for these paths, so the manager merges. Revert: git revert this PR.",
+  "why": "BYBIT2-FUNDING-SETTLEMENT-READ: record why the funding puller inserts 0 rows, and make the route read the puller's run time."
+}

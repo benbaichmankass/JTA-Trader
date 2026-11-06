@@ -235,9 +235,25 @@ def upsert_funding(
     inserted = 0
     conn = sqlite3.connect(str(p))
     try:
+        # One-shot, idempotent legacy migration (2026-11-06): rows written before
+        # the per-account id + sign fix carry a BARE venue id (no ':') and the
+        # inverted sign. Namespacing the id both fixes the key and marks the row
+        # migrated, so this matches nothing on any later call.
+        conn.execute(
+            "UPDATE OR IGNORE exchange_funding SET funding_usd = -funding_usd, "
+            "funding_id = account_id || ':' || funding_id "
+            "WHERE instr(funding_id, ':') = 0")
         for raw in rows:
             fid = raw.get("funding_id")
             if not fid:
+                continue
+            # Legacy rows were keyed on the bare venue id (shared across accounts);
+            # the same (account, symbol, settlement) must not be stored twice.
+            if conn.execute(
+                "SELECT 1 FROM exchange_funding WHERE account_id=? AND symbol=? "
+                "AND funding_time=?",
+                (str(raw.get("account_id")), str(raw.get("symbol")),
+                 str(raw.get("funding_time")))).fetchone():
                 continue
             cur = conn.execute(
                 "INSERT OR IGNORE INTO exchange_funding "
@@ -254,6 +270,57 @@ def upsert_funding(
     finally:
         conn.close()
     return inserted
+
+
+def describe_funding_id_collisions(
+    rows: Iterable[Mapping[str, Any]],
+    path: Optional[Path] = None,
+    sample: int = 3,
+) -> dict[str, Any]:
+    """Why did a pull insert fewer rows than it fetched? (BYBIT2-FUNDING-SETTLEMENT-READ)
+
+    Reports the batch's distinct ``funding_id`` count (duplicates INSIDE the
+    batch are silently ignored by INSERT OR IGNORE) and a sample of ids that
+    already exist in the store under a DIFFERENT account / time / symbol --
+    i.e. a venue id that is not unique per settlement. Read-only.
+    """
+    rows = list(rows)
+    ids = [str(r.get("funding_id")) for r in rows if r.get("funding_id")]
+    out: dict[str, Any] = {"candidates": len(rows), "distinct_ids": len(set(ids)),
+                           "foreign_collisions": []}
+    p = init_db(path)
+    conn = sqlite3.connect(str(p))
+    try:
+        for r in rows:
+            fid = r.get("funding_id")
+            if not fid:
+                continue
+            ex = conn.execute(
+                "SELECT account_id, symbol, funding_time FROM exchange_funding "
+                "WHERE funding_id=?", (str(fid),)).fetchone()
+            if ex and (ex[0], ex[2]) != (str(r.get("account_id")), str(r.get("funding_time"))):
+                out["foreign_collisions"].append({
+                    "funding_id": str(fid), "incoming": [r.get("account_id"), r.get("symbol"), r.get("funding_time")],
+                    "stored": list(ex)})
+                if len(out["foreign_collisions"]) >= sample:
+                    break
+    finally:
+        conn.close()
+    return out
+
+
+def record_funding_run(path_dir: Optional[Path], payload: Mapping[str, Any]) -> Optional[Path]:
+    """Write the puller's last-run marker (JSON) beside the fills store.
+
+    ``last_pulled_at`` in /api/diag/funding_settlements reads this, NOT
+    MAX(inserted_at) (a quiet account inserts nothing, so that reads stale).
+    """
+    d = Path(path_dir) if path_dir else get_fills_db_path().parent
+    f = d / "exchange_funding_last_run.json"
+    tmp = f.with_suffix(".tmp")
+    tmp.write_text(json.dumps(dict(payload)))
+    tmp.replace(f)
+    return f
 
 
 # ---------------------------------------------------------------------------

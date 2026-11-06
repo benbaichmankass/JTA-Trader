@@ -52,6 +52,23 @@ the checks has failed the *too loose* way.
    `python3 scripts/research/research_slo.py --self-test`, `python3 scripts/ops/system_invariants.py --self-test`.
    A failing self-test makes its checks `could_not_look`, and the failure is a finding.
 
+## Scoreboard first — before Layer 0 (operator audit C6, 2026-11-01; row `PROMPTS-PNL-FIRST`)
+
+**This review opens with money, not with its own activity.** Before grading any prior call, pull the scoreboard and put it at the top of
+the brief as `## S. Scoreboard`:
+
+- **Source.** The scoreboard route built by row `SCOREBOARD-PNL-FIRST` (reference its route in the brief once that row lands; until then
+  the numbers come from the public `/api/bot/performance` and the journal paging API, the sources `docs/audits/2026-11-01-from-scratch/AUDIT.md`
+  § 1 used). **Net $ and % per book** (real money, mirror, paper), each with its population, window and read-state; a missing number
+  renders as "—", never `0`.
+- **The question.** For every leg that this review's headline touches: *"would a sceptical quant believe this leg has edge?"* Answer it
+  from the leg's offline evidence record, net of the full cost stack (the promotion ladder: edge is decided offline), not from this
+  week's live P&L or from how many of our own calls came true. State the answer in a line, with the evidence it rests on or "no record".
+- **Call-hit grading is housekeeping, not a headline.** Layer 0 still runs (it is how a call that did not happen is caught), but its
+  counts, hit rate and Brier go in ONE footer line of `## 0`, **never in the title sentence, never above the scoreboard, and never as
+  a measure of the system's health**. A high hit rate on our own calls says nothing about whether the book makes money.
+- This adds **no gate**: nothing is refused for lacking it. It orders what the brief says first.
+
 ## Layer 0 — PRIOR CALLS (first, before you form any view)
 
 **Follow-through first (2026-10-28):** run `python3 scripts/ops/review_followthrough.py --source health-review --window-days 7` and record its cohort and backlog line before grading calls; an open item older than 14 d with no owner is a call to schedule or kill, not to re-file. (The script lands in #20871, REVIEW-FOLLOWTHROUGH. If it is not on main, record `could_not_look: no instrument`.)
@@ -197,7 +214,8 @@ decision**; the `## 3. Decisions` ending column names that row and its `due_by`.
 2. **`docs/reviews/<YYYY-MM-DD>-health-review.md`**, **one page (≈ 60 lines), the Thursday-planning read**, in the
    shared order:
    - `# Health review <date> — <one sentence: what most affects money/risk now>`;
-   - `## 0. Prior calls`: graded, with every `stalled` named;
+   - `## S. Scoreboard`: net $/% per book, with population (above), so health is read against what the books earn;
+   - `## 0. Prior calls`: graded, with every `stalled` named; counts/Brier as one footer line, never a headline;
    - `## 1. CHECKS`: one line per H-id (status · value · population · prior), with `could_not_look` listed;
    - `## 2. ANALYSIS`: trend lines, then per question: hypotheses · test · survivor · p; then surprises;
    - `## 3. Decisions`: ranked, with tier, check and ending id;

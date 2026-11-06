@@ -52,7 +52,15 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
+      # WORKFLOW-PRUNE P4 (2026-11-06): this job reads one script and the PR declarations, but its full checkout took ~49 s of a
+      # ~56 s run, on every push to main (1,610 runs/wk). Sparse + blobless: same files, same outputs. The script is stdlib-only.
       - uses: actions/checkout@v4
+        with:
+          filter: blob:none
+          sparse-checkout: |
+            /scripts/ops/pr_landing_hold_alarm.py
+            /.github/pr-landing/
+          sparse-checkout-cone-mode: false
 
       - uses: actions/setup-python@v5
         with:

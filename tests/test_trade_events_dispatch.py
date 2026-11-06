@@ -10,12 +10,30 @@ Covers:
 """
 from __future__ import annotations
 
+import threading
 import time
 from typing import Any
 
 import pytest
 
 from src.runtime.mobile_push import trade_events
+
+
+@pytest.fixture(autouse=True)
+def _drain_telegram_threads(monkeypatch: pytest.MonkeyPatch):
+    """Join every off-thread Telegram send a test started, BEFORE the test's monkeypatches are undone.
+
+    ``notify_trade_event`` starts a daemon thread (``trade-event-telegram``) and returns. A test that does not
+    wait for it leaks the thread into the NEXT test, whose stub then counts the leaked send as its own:
+    ``test_telegram_send_fires_unconditionally`` saw ``['called', 'called']`` whenever it ran after
+    ``test_notify_publishes_inline`` (deterministic here, timing-dependent in CI). TELEGRAM-TRIM (#23051) put an
+    accounts.yaml policy read on that thread, which widened the window from ~0 to tens of milliseconds.
+    Requesting ``monkeypatch`` makes this fixture's teardown run first (reverse setup order).
+    """
+    yield
+    for t in threading.enumerate():
+        if t.name == "trade-event-telegram":
+            t.join(timeout=5.0)
 
 
 def test_format_tags_paper_and_live() -> None:

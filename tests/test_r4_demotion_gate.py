@@ -378,13 +378,41 @@ def test_remove_does_not_reach_into_the_next_account():
     assert parsed["alpaca_paper"]["strategies"] == ["paper_only_eq"]
 
 
-def test_every_real_stage2_leg_can_be_cut_exactly_from_the_real_file():
+#: Since 2026-11-06 (PROD-LEGS-DSR-DECISION, operator "Re-measure, then move (Rec.)") every real-money roster is
+#: EMPTY, so the real file carries no Stage-2 leg to cut. The probe then re-stages the pre-decision rosters into
+#: the REAL file's text (its comments and layout untouched) and cuts from that, so it still measures the real bytes.
+_PRE_DECISION_STAGE2 = {
+    "bybit_2": "xrp_pullback_2h, trend_donchian_eth_4h, trend_donchian_xrp_4h, ada_pullback_2h, trend_donchian_sol_prop, ml_entry",
+    "bybit_portfolio": "xrp_pullback_2h, trend_donchian_eth_4h, trend_donchian_xrp_4h, ada_pullback_2h, trend_donchian_sol_prop, ml_entry",
+    "alpaca_live": "iaum_pullback_1d",
+    "alpaca_portfolio": "gld_pullback_1d",
+}
+
+
+def _restage(text: str) -> str:
+    """Put the pre-decision legs back on each EMPTY Stage-2 roster of the real text (flow form)."""
+    lines = text.splitlines(keepends=True)
+    acct = None
+    for i, ln in enumerate(lines):
+        m = g._ACCT_RE.match(ln.rstrip("\n"))
+        if m:
+            acct = m.group(1)
+        elif acct in _PRE_DECISION_STAGE2 and ln.startswith("    strategies: []"):
+            lines[i] = ln.replace("strategies: []", f"strategies: [{_PRE_DECISION_STAGE2[acct]}]", 1)
+    return "".join(lines)
+
+
+def test_every_real_stage2_leg_can_be_cut_exactly_from_the_real_file(tmp_path):
     """The live accounts.yaml mixes flow and block rosters with heavy comments.
     For every leg on a real Stage-2 roster, cutting it from its account AND its
     mirror must change only those two rosters."""
     text = (REPO / "config/accounts.yaml").read_text()
+    if not g.stage2_legs(REPO):
+        text = _restage(text)
+    (tmp_path / "config").mkdir()
+    (tmp_path / "config/accounts.yaml").write_text(text)
     base = yaml.safe_load(text)["accounts"]
-    legs = g.stage2_legs(REPO)
+    legs = g.stage2_legs(tmp_path)
     assert legs, "no Stage-2 legs found -- the probe must see a positive"
     for acct, leg in legs:
         mirror = g.mr.MIRROR_OF.get(acct)

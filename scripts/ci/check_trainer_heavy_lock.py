@@ -75,6 +75,9 @@ HEAVY_ENTRYPOINTS = [
 # `.fit(`/`lgb.train(` it belongs above, and the reason recorded here is what
 # makes that reviewable.
 DECLARED_LIGHT = {
+    "scripts/research/donchian_meta_filter.py":
+        "PROP-BASELINE-AND-ML meta-label filter (unit RQ-20261105-d256-02): a scikit-learn logistic regression on ~250 committed ledger rows, seconds of CPU "
+        "in a lane container or a GitHub runner, never needs_vm_data, never routed to the trainer.",
     "scripts/research/ml_entry_equity.py":
         "ML-ENTRY-EQUITY-NATIVE equity-native ENTRY model (units RQ-20261105-e9a1-01 dev, RQ-20261105-e9a1-02 confirm): fits ~15 LightGBM regressors on ~0.3M rows built "
         "from read-only Alpaca ETF bars (research-script-run.yml, 4 vCPU, 16 GB; needs the internet and the paper data key, so compute cpu_long, github_runner), never "

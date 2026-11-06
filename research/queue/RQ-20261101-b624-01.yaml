@@ -3,7 +3,7 @@ id: RQ-20261101-b624-01
 title: 'ENTRY timeframe lever, 5m bars with clock-count scaling: does the pooled ENTRY pipeline (v1 recipe, 60 perps, dev folds) keep an edge net of the full cost stack at 5m, does it beat the 1h baseline,
   and which features keep their role? (clock-time scaling: the SAME CLOCK time as the 1h recipe (every window, the ATR length, the 24 h label horizon and the 4 h decision cadence converted from hours to
   bars, rounded, floor 1)) Dev folds only'
-status: done
+status: queued
 cadence: once
 theme: ml_health
 priority: 1
@@ -105,9 +105,9 @@ programme_node:
   programme: P2
   node: P2-ENTRY-LEVERS
   goal: G4
-rearmed_at: '2026-11-02T22:30:00+00:00'
-last_dispatched_at: '2026-11-03T01:57:27+00:00'   # re-armed 2026-11-02 (RESEARCH-FLOW): ran to completion on real data but ml_entry_v2_run wrote no verdict.json (producer_failed, ungraded); the timeframe verdict writer is now in write_verdict. Rule and window unchanged.
-grading:
+rearmed_at: '2026-11-06T00:30:00+00:00'
+last_dispatched_at: null   # re-armed 2026-11-06 (lane ML-FS-RECIPE, manager 2026-11-05): b620-01 REPRODUCED round 1 exactly on the fixed timeframe harness (frozen-bar mask, run 42130510691), so this unit is re-run on it; it ran UNMASKED before. RULE and window UNCHANGED. Prior grading kept below as grading_before_rearm.
+grading_before_rearm:
   attested: RULE-20261101-b624-01
   auto: true
   awaiting: more_data

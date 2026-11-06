@@ -103,6 +103,9 @@ _JOURNAL_TABLES: dict[str, _JournalTable] = {
     # a session read the analyst's history + spend via journal?table=...
     # and confirm the generator is writing. Read-only, no secrets.
     "insights_history": _JournalTable("id", "id", True),
+    # 2026-11-06 (SCOREBOARD-PNL-FIRST): hourly broker-read account balances (account_id, balance, api_ok, ts) -- the
+    # start-of-window equity the scoreboard's % is computed on. Append-only by id; no credential or PII column.
+    "balance_snapshots": _JournalTable("id", "id", True),
     "insights_usage": _JournalTable("id", "id", True),
 }
 
@@ -3789,7 +3792,9 @@ def get_funding_settlements(
     against ``exchange_funding`` (daily puller). ``read_state`` is one of
     ``measured`` | ``no_rows_in_window`` | ``not_pulled`` | ``unreadable`` --
     a count/sum is ``None`` unless measured, never ``0``. ``last_pulled_at`` is the
-    store's newest ``inserted_at`` for the account (``None`` = never pulled).
+    funding puller's last RUN time (marker file; ``None`` = unknown), and
+    ``newest_insert_at`` the store's newest ``inserted_at`` (a quiet account
+    inserts nothing, so that alone reads stale).
 
     Pure read (read-only SQLite open); no socket, no order path. Tier 1.
     """
@@ -3803,6 +3808,11 @@ def get_funding_settlements(
         from src.runtime.exchange_fills_store import get_fills_db_path
 
         db = get_fills_db_path()
+        try:
+            import json as _json
+            run_at = _json.loads((db.parent / "exchange_funding_last_run.json").read_text()).get("run_at")
+        except Exception:  # noqa: BLE001  # allow-silent: marker absent/unreadable -> run_at None, reported as such
+            run_at = None
         accounts = [
             a for a in live_bybit_fill_accounts()
             if account_id is None or a.account_id == account_id
@@ -3861,7 +3871,8 @@ def get_funding_settlements(
                 settlements=settlements if state == "measured" else None,
                 exchange_funding={
                     "read_state": ("not_pulled" if not fpulled["n"] else "measured"),
-                    "last_pulled_at": fpulled["m"],
+                    "last_pulled_at": run_at,
+                    "newest_insert_at": fpulled["m"],
                     "newest_funding_time": fpulled["t"],
                     "rows": [dict(r) for r in frows] if fpulled["n"] else None,
                 },

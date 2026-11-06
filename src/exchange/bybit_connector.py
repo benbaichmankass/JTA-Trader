@@ -1,5 +1,6 @@
 import logging
 import os
+import threading
 import time
 
 import ccxt
@@ -43,6 +44,33 @@ def market_symbol(symbol, market_type="linear"):
 def _read_testnet_flag() -> bool:
     raw = os.getenv("BYBIT_TESTNET", "false").strip().lower()
     return raw == "true"
+
+
+#: How long a Bybit ``retCode 10006`` (rate limit) keeps ``get_ohlcv`` returning ``None``.
+#: It replaces an in-line ``time.sleep(15)`` of the same length -- see ``BybitConnector.get_ohlcv``.
+RATE_LIMIT_COOLDOWN_S = 15.0
+
+#: Process-wide, deliberately NOT per instance: the limit is per IP / API key, so every connector
+#: instance (one per symbol, per account) hits the same wall, and a cooldown held by one instance
+#: would let the others keep hammering it.
+_RATE_LIMIT_LOCK = threading.Lock()
+_rate_limited_until = 0.0   # time.monotonic() deadline; 0.0 = not cooling down
+
+
+def _cooldown_remaining() -> float:
+    """Seconds left on the shared rate-limit cooldown (0.0 when none)."""
+    with _RATE_LIMIT_LOCK:
+        return max(0.0, _rate_limited_until - time.monotonic())
+
+
+def _start_cooldown() -> bool:
+    """Start the shared cooldown; True only for the call that STARTED it (it logs the one line)."""
+    global _rate_limited_until
+    now = time.monotonic()
+    with _RATE_LIMIT_LOCK:
+        started = _rate_limited_until <= now
+        _rate_limited_until = max(_rate_limited_until, now + RATE_LIMIT_COOLDOWN_S)
+    return started
 
 
 class BybitConnector:
@@ -94,6 +122,11 @@ class BybitConnector:
         # from that time — the historical-range read the M30 P5 exit panel needs
         # to reconstruct MFE/MAE over a closed trade's holding window. Default
         # None = the exchange's most-recent ``limit`` candles (unchanged behaviour).
+        # NON-BLOCKING RATE-LIMIT COOLDOWN (MECH-FOLLOWUPS-1105, manager 2026-11-05b). While cooling down this
+        # returns None at once instead of calling Bybit again. Every caller already treats None as "no candles
+        # this pass" (order_monitor: "monitor will short-circuit"; entry builders skip the tick).
+        if _cooldown_remaining() > 0.0:
+            return None
         try:
             # market_symbol: a bare id on this defaultType=spot client read SPOT
             # candles for perp-traded legs (PI-20261103-SPOTCANDLES-0001).
@@ -106,8 +139,15 @@ class BybitConnector:
             print(f"Error fetching OHLCV: {e}")
             msg = str(e)
             if "Rate Limit" in msg or "Too many visits" in msg or 'retCode":10006' in msg:
-                print("Rate limit hit, sleeping 15s...")
-                time.sleep(15)
+                # This used to be ``time.sleep(15)`` IN THE CALLER. The exit-evaluation pass fetches candles
+                # for every open package through here, so one 10006 stalled the pass for 15 s per hit: 11 hits
+                # at the 00:00Z bar boundary left a live trade 115.3 s without re-evaluation (requirement 60 s;
+                # PI-20261105-F2QX97PI-0001). Now: start a shared cooldown, return None, never sleep.
+                if _start_cooldown():
+                    logger.warning(
+                        "bybit get_ohlcv: rate limit (retCode 10006) hit by thread=%s symbol=%s timeframe=%s -- "
+                        "get_ohlcv returns None for %.0f s (no in-line sleep)",
+                        threading.current_thread().name, symbol, timeframe, RATE_LIMIT_COOLDOWN_S)
             return None
 
     def get_balance(self):
