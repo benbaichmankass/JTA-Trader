@@ -368,6 +368,25 @@ jobs:
           path: /tmp/payload
           retention-days: 3
 
+      # WSD-S6D-RESEARCH-RESULTS (design D7) SHADOW DUAL-WRITE: the same stamps and results this job just
+      # wrote, as research-store events + payloads (only what this working tree adds vs HEAD). Keyless: the
+      # `research-store` job below ships it to the trainer. Never fails this job (continue-on-error).
+      - name: Build the research-store bundle (shadow dual-write)
+        id: rsbundle
+        if: always()
+        continue-on-error: true
+        run: |
+          set -euo pipefail
+          python3 scripts/research/research_store.py bundle --repo . \
+            --source "runner:research-queue-dispatch:${{ github.run_id }}" --out /tmp/rs-bundle.tgz
+      - uses: actions/upload-artifact@v4
+        if: always() && steps.rsbundle.outcome == 'success'
+        continue-on-error: true
+        with:
+          name: research-store-bundle
+          path: /tmp/rs-bundle.tgz
+          retention-days: 3
+
 
       - name: Alarm if the dispatcher has gone stale
         if: always()
@@ -437,6 +456,44 @@ jobs:
         run: |
           echo "::error::dispatch_queue.py reported invalid or dispatch-failed unit(s) — see 'Grade and dispatch' above (or the job summary). The liveness receipt and any successfully-fired units' stamps still landed."
           exit 1
+
+  # WSD-S6D-RESEARCH-RESULTS shadow: ship the dispatch job's research-store bundle to the trainer. The ONLY
+  # job here holding VM_SSH_KEY, and it runs no unit code (sparse checkout of the ship action only). It never
+  # reds the run: a missed write shows up in research-store-admin's parity, not as a dispatcher failure.
+  research-store:
+    needs: dispatch
+    if: "!cancelled() && (needs.dispatch.result == 'success' || needs.dispatch.result == 'failure')"
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          sparse-checkout: .github/actions/research-store-ship
+      - uses: actions/download-artifact@v4
+        continue-on-error: true
+        with:
+          name: research-store-bundle
+          path: /tmp/rs
+      - uses: ./.github/actions/research-store-ship
+        with:
+          mode: ingest-bundle
+          bundle: /tmp/rs/rs-bundle.tgz
+          ssh-key: ${{ secrets.VM_SSH_KEY }}
+          trainer-ip: ${{ secrets.TRAINER_VM_IP }}
+          trainer-user: ${{ vars.TRAINER_VM_USER || 'ubuntu' }}
+      # The shadow-phase measurement (report-only): every stamp/result/grade on main in the last 24 h,
+      # as the trainer's checkout shows it, must have a runner-sourced row. Read it in the job summary.
+      - name: Parity reading window
+        id: since
+        run: echo "since=$(date -u -d '24 hours ago' +%Y-%m-%dT%H:%M:%SZ)" >> "$GITHUB_OUTPUT"
+      - uses: ./.github/actions/research-store-ship
+        with:
+          mode: parity
+          since: ${{ steps.since.outputs.since }}
+          ssh-key: ${{ secrets.VM_SSH_KEY }}
+          trainer-ip: ${{ secrets.TRAINER_VM_IP }}
+          trainer-user: ${{ vars.TRAINER_VM_USER || 'ubuntu' }}
 
   # The three landings, moved out of the group-holding job. Each is a
   # `commit-to-main` + `verify-merged` exactly as before (the tests that pin

@@ -1,0 +1,72 @@
+name: research-store-admin
+
+# WSD-S6D-RESEARCH-RESULTS (docs/plans/WORK-STORE-DESIGN-2026-11.md § 3, § 6 S6, § 9, D7 approved 2026-11-04).
+# The trainer-VM research results store (scripts/research/research_store.py). This workflow runs its
+# ADMIN commands on the trainer over ssh through .github/actions/research-store-ship:
+#   * stats    -- counts by kind and source, last runner write, payload bytes (read-only)
+#   * parity   -- every git event (stamp / result / grade on main, as the trainer's checkout shows it)
+#                 newer than `since` must have a RUNNER-sourced row; report-only, never a gate
+#   * backfill -- load the full git history into the store as source `git_backfill` (idempotent)
+# No schedule of its own: the hourly parity reading rides the dispatcher's `research-store` job
+# (research-queue-dispatch.yml), report-only. A gap is a ::warning:: and the summary, never a red run.
+#
+# Tier-2 tooling: writes only the trainer's research_store/ (backfill); no live VM, no order path.
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "stats | parity | backfill"
+        required: true
+        default: stats
+        type: choice
+        options: [stats, parity, backfill]
+      since:
+        description: "parity: ISO timestamp (default: 24 h ago)"
+        required: false
+        default: ""
+
+concurrency:
+  group: research-store-admin
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  admin:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          sparse-checkout: .github/actions/research-store-ship
+      - name: Resolve the run
+        id: plan
+        env:
+          MODE_IN: ${{ inputs.mode }}
+          SINCE_IN: ${{ inputs.since }}
+        run: |
+          set -euo pipefail
+          MODE="${MODE_IN:-stats}"
+          SINCE="${SINCE_IN:-}"
+          [ -n "$SINCE" ] || SINCE="$(date -u -d '24 hours ago' +%Y-%m-%dT%H:%M:%SZ)"
+          echo "mode=$MODE" >> "$GITHUB_OUTPUT"; echo "since=$SINCE" >> "$GITHUB_OUTPUT"
+      - name: stats
+        uses: ./.github/actions/research-store-ship
+        with:
+          mode: stats
+          ssh-key: ${{ secrets.VM_SSH_KEY }}
+          trainer-ip: ${{ secrets.TRAINER_VM_IP }}
+          trainer-user: ${{ vars.TRAINER_VM_USER || 'ubuntu' }}
+      - name: ${{ steps.plan.outputs.mode }}
+        if: steps.plan.outputs.mode != 'stats'
+        uses: ./.github/actions/research-store-ship
+        with:
+          mode: ${{ steps.plan.outputs.mode }}
+          since: ${{ steps.plan.outputs.since }}
+          ssh-key: ${{ secrets.VM_SSH_KEY }}
+          trainer-ip: ${{ secrets.TRAINER_VM_IP }}
+          trainer-user: ${{ vars.TRAINER_VM_USER || 'ubuntu' }}
+          fail-on-error: ${{ steps.plan.outputs.mode == 'backfill' }}

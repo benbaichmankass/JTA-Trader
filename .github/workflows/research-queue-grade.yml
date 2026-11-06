@@ -22,7 +22,9 @@ name: research-queue-grade
 # dispatch decides what is due.
 #
 # Tier-1: reads research/results + corpora, writes research/queue/RQ-*.yaml
-# only. No live path, no order path, no VM.
+# only. No live path, no order path. (WSD-S6D shadow: the `research-store` job also ships the same grades
+# to the trainer's research results store.)
+# no-durable-result: the only artifact is the research-store bundle, a minutes-long hand-off between two jobs of one run; the durable landings are commit-to-main and the trainer store itself
 
 on:
   schedule:
@@ -88,6 +90,24 @@ jobs:
           python3 scripts/research/queue_grade.py --self-test
           python3 scripts/research/queue_grade.py --write | tee /tmp/grade.txt
           echo "count=$(git status --porcelain research/queue | wc -l | tr -d ' ')" >> "$GITHUB_OUTPUT"
+      # WSD-S6D-RESEARCH-RESULTS (design D7) SHADOW DUAL-WRITE: the grades just written, as research-store
+      # events; the `research-store` job ships them to the trainer. Built BEFORE the landing so a slow
+      # commit-to-main never delays the store. Never fails this job.
+      - name: Build the research-store bundle (shadow dual-write)
+        id: rsbundle
+        if: steps.grade.outputs.count != '0'
+        continue-on-error: true
+        run: |
+          set -euo pipefail
+          python3 scripts/research/research_store.py bundle --repo . \
+            --source "runner:research-queue-grade:${{ github.run_id }}" --out /tmp/rs-bundle.tgz
+      - uses: actions/upload-artifact@v4
+        if: steps.rsbundle.outcome == 'success'
+        continue-on-error: true
+        with:
+          name: research-store-bundle
+          path: /tmp/rs-bundle.tgz
+          retention-days: 3
       - name: Land the dispositions on main
         if: steps.grade.outputs.count != '0'
         uses: ./.github/actions/commit-to-main
@@ -107,3 +127,54 @@ jobs:
         if: always()
         run: |
           { echo "### research-queue grade"; echo; echo '```'; cat /tmp/grade.txt 2>/dev/null || echo "(no output)"; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+
+  # WSD-S6D-RESEARCH-RESULTS shadow: ship the grade job's bundle to the trainer (runs IN PARALLEL with the
+  # landing, not after it: `needs: rsbundle-ready` would wait on commit-to-main). Holds VM_SSH_KEY, runs no
+  # unit code; never reds the run (parity measures misses).
+  research-store:
+    needs: dedupe
+    if: |
+      !cancelled() && needs.dedupe.outputs.skip != 'true' && (
+      github.event_name == 'schedule' ||
+      github.event_name == 'workflow_dispatch'
+      )
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      actions: read
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          sparse-checkout: .github/actions/research-store-ship
+      - name: Wait for the grade job's bundle
+        id: wait
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -uo pipefail
+          # The bundle is uploaded before the landing starts; poll this run's artifacts for it (up to 20 min).
+          for _ in $(seq 1 40); do
+            n=$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}/artifacts" --jq '[.artifacts[] | select(.name=="research-store-bundle")] | length' 2>/dev/null || echo 0)
+            if [ "${n:-0}" -ge 1 ]; then echo "found=true" >> "$GITHUB_OUTPUT"; exit 0; fi
+            state=$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}/jobs" --jq '[.jobs[] | select(.name=="grade")][0].status' 2>/dev/null || echo "")
+            if [ "$state" = "completed" ]; then break; fi
+            sleep 30
+          done
+          echo "found=false" >> "$GITHUB_OUTPUT"
+          echo "no research-store bundle in this run (nothing graded, or the build step failed)"
+      - uses: actions/download-artifact@v4
+        if: steps.wait.outputs.found == 'true'
+        continue-on-error: true
+        with:
+          name: research-store-bundle
+          path: /tmp/rs
+      - if: steps.wait.outputs.found == 'true'
+        uses: ./.github/actions/research-store-ship
+        with:
+          mode: ingest-bundle
+          bundle: /tmp/rs/rs-bundle.tgz
+          ssh-key: ${{ secrets.VM_SSH_KEY }}
+          trainer-ip: ${{ secrets.TRAINER_VM_IP }}
+          trainer-user: ${{ vars.TRAINER_VM_USER || 'ubuntu' }}

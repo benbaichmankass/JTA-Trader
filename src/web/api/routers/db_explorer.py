@@ -147,6 +147,7 @@ _TABLE_ALLOWLIST: frozenset = frozenset({
     "db_pulls",
     "experiment_runs",
     "model_registry",
+    "research_runs",  # WSD-S6D: the trainer's research results store, mirrored (no payload bytes)
     "training_cycle",
 })
 

@@ -29,7 +29,11 @@ Design:
 
 Tables (all in trainer_store.db):
   training_cycle, dataset_builds, db_pulls, model_registry,
-  experiment_runs, backtest_sweeps, plus a private ``_ingest_meta``.
+  experiment_runs, backtest_sweeps, research_runs, plus a private ``_ingest_meta``.
+
+``research_runs`` (WSD-S6D-RESEARCH-RESULTS, design D7) mirrors the trainer's research
+results store (``scripts/research/research_store.py``): one row per dispatch stamp,
+result record and grade, with the payload sha256 (the bytes stay on the trainer).
 """
 from __future__ import annotations
 
@@ -53,6 +57,7 @@ TRAINER_STORE_TABLES = (
     "model_registry",
     "experiment_runs",
     "backtest_sweeps",
+    "research_runs",
 )
 
 
@@ -235,6 +240,39 @@ def _build_backtest_sweeps(conn: sqlite3.Connection, mirror: Path) -> int:
     return len(rows)
 
 
+def _build_research_runs(conn: sqlite3.Connection, mirror: Path) -> int:
+    conn.execute("DROP TABLE IF EXISTS research_runs")
+    # data-wiring: projection of the trainer's research results store (scripts/research/research_store.py,
+    #   research_store.db on the trainer VM = the canonical copy, D7), mirrored as
+    #   trainer_mirror/research/research_runs.jsonl by publish_trainer_mirror.sh; rebuilt in full each ingest.
+    conn.execute(
+        "CREATE TABLE research_runs ("
+        "event_id TEXT PRIMARY KEY, unit_id TEXT, kind TEXT, run_key TEXT, at TEXT, "
+        "verdict TEXT, read_state TEXT, n INTEGER, decision_rule_id TEXT, workflow TEXT, "
+        "payload_sha256 TEXT, first_source TEXT, sources TEXT, recorded_at TEXT, data TEXT)"
+    )
+    rows = []
+    for r in _iter_jsonl(mirror / "research" / "research_runs.jsonl"):
+        if not r.get("event_id"):
+            continue
+        n = r.get("n")
+        rows.append((
+            r.get("event_id"), r.get("unit_id"), r.get("kind"), r.get("run_key"), r.get("at"),
+            r.get("verdict"), r.get("read_state"), n if isinstance(n, int) else None,
+            r.get("decision_rule_id"), r.get("workflow"), r.get("payload_sha256"),
+            r.get("first_source"), json.dumps(r.get("sources") or []), r.get("recorded_at"),
+            json.dumps(r, default=str),
+        ))
+    conn.executemany(
+        "INSERT OR REPLACE INTO research_runs (event_id, unit_id, kind, run_key, at, verdict, read_state, n, "
+        "decision_rule_id, workflow, payload_sha256, first_source, sources, recorded_at, data) "
+        "VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+        rows,
+    )
+    conn.execute("CREATE INDEX ix_research_runs_unit ON research_runs(unit_id, kind)")
+    return len(rows)
+
+
 def _read_json_text(path: Path) -> Optional[str]:
     """Return the file's text if it parses as JSON, else None."""
     if not path.exists():
@@ -254,6 +292,7 @@ _BUILDERS = (
     _build_model_registry,
     _build_experiment_runs,
     _build_backtest_sweeps,
+    _build_research_runs,
 )
 
 
@@ -335,6 +374,67 @@ def build_if_stale(*, mirror_root: Optional[Path] = None,
     except Exception as exc:  # noqa: BLE001  # allow-silent: best-effort freshness; the Data Explorer must not 500 on a stale build
         logger.warning("trainer_store: build_if_stale failed: %s", exc)
         return False
+
+
+def research_runs_view(*, unit: Optional[str] = None, kind: Optional[str] = None, limit: int = 50,
+                       mirror_root: Optional[Path] = None, db_path: Optional[str] = None) -> Dict[str, Any]:
+    """Read ``research_runs`` from trainer_store.db (WSD-S6D), refreshing it from the mirror first.
+
+    Always states its read state: ``no_mirror_file`` (the trainer has not published one yet),
+    ``could_not_look`` (the DB could not be read), or ``read``. ``mirror_file_mtime`` and
+    ``ingested_at`` give the freshness of each hop; null when unknown, never 0.
+    """
+    mirror = mirror_root or _mirror_root()
+    path = db_path or trainer_store_db_path()
+    mf = mirror / "research" / "research_runs.jsonl"
+    out: Dict[str, Any] = {"read_state": None, "mirror_file": str(mf), "mirror_file_mtime": None,
+                           "ingested_at": None, "total": None, "by_kind": None, "by_source": None,
+                           "last_recorded_at": None, "rows": []}
+    if mf.exists():
+        from datetime import datetime, timezone
+        out["mirror_file_mtime"] = datetime.fromtimestamp(mf.stat().st_mtime, timezone.utc).isoformat()
+    else:
+        out["read_state"] = "no_mirror_file"
+        return out
+    build_if_stale(mirror_root=mirror, db_path=path)
+    try:
+        conn = sqlite3.connect(f"file:{path}?mode=ro", uri=True, timeout=5)
+    except sqlite3.Error as exc:  # allow-silent: not silent -- surfaced as read_state could_not_look + error
+        out["read_state"] = "could_not_look"
+        out["error"] = str(exc)
+        return out
+    try:
+        meta = dict(conn.execute("SELECT key, value FROM _ingest_meta").fetchall())
+        out["ingested_at"] = meta.get("ingested_at")
+        out["total"] = conn.execute("SELECT COUNT(*) FROM research_runs").fetchone()[0]
+        out["by_kind"] = dict(conn.execute("SELECT kind, COUNT(*) FROM research_runs GROUP BY kind").fetchall())
+        out["by_source"] = dict(conn.execute(
+            "SELECT CASE WHEN first_source LIKE 'runner:%' THEN 'runner' ELSE first_source END, COUNT(*) "
+            "FROM research_runs GROUP BY 1").fetchall())
+        out["last_recorded_at"] = conn.execute("SELECT MAX(recorded_at) FROM research_runs").fetchone()[0]
+        where, args = [], []
+        if unit:
+            where.append("unit_id = ?")
+            args.append(unit)
+        if kind:
+            where.append("kind = ?")
+            args.append(kind)
+        sql = ("SELECT event_id, unit_id, kind, run_key, at, verdict, read_state, n, decision_rule_id, workflow, "
+               "payload_sha256, first_source, sources, recorded_at FROM research_runs"
+               + (" WHERE " + " AND ".join(where) if where else "") + " ORDER BY recorded_at DESC, event_id LIMIT ?")
+        cols = ("event_id", "unit_id", "kind", "run_key", "at", "verdict", "read_state", "n", "decision_rule_id",
+                "workflow", "payload_sha256", "first_source", "sources", "recorded_at")
+        for r in conn.execute(sql, (*args, max(1, min(int(limit), 500)))):
+            d = dict(zip(cols, r))
+            d["sources"] = json.loads(d["sources"]) if d["sources"] else []
+            out["rows"].append(d)
+        out["read_state"] = "read"
+    except sqlite3.Error as exc:  # allow-silent: not silent -- surfaced as read_state could_not_look + error
+        out["read_state"] = "could_not_look"
+        out["error"] = str(exc)
+    finally:
+        conn.close()
+    return out
 
 
 def _main(argv: List[str]) -> int:
