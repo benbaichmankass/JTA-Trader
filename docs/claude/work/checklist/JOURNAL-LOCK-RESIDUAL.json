@@ -11,15 +11,15 @@
   "tier": 2,
   "prs": [],
   "blocked_on": [],
-  "note": "MEASURED by MECH-FOLLOWUPS-1105 13:15Z (journal 07:03:45-13:13Z, 176,210 lines, complete): 'database is locked' 10 lines (pre-#23710) -> 1 (after); exit-eval interval max 59.48 -> 41.26 s, 0/484 over 45 s after #23710. Survivor: 10:20:58Z db_lock_diag exit-evaluation-loop in position_telemetry._flush_ops, flush took 4,983.9 ms; db_lock_diag sees only the trader process, so web-api/timers holding the lock is not excluded. journal_sync.wait mean 10.1 s (max 23.6 s, n=39) = 29.6% of tick; tick max 86.6 s 13:02:28Z. Next: name the other holder (sqlite locks from other units writing trade_journal.db) and cut journal_sync.wait. Ranked after the ML retrain/monitor row; jumps the queue if EXIT-EVAL breaches return. Related: TICK-STAGE2-RECONCILE-OFFTICK re-opened in #23812.",
+  "note": "MEASURED by MECH-FOLLOWUPS-1105 13:15Z (journal 07:03:45-13:13Z, 176,210 lines, complete): 'database is locked' 10 lines (pre-#23710) -> 1 (after); exit-eval interval max 59.48 -> 41.26 s, 0/484 over 45 s after #23710. Survivor: 10:20:58Z db_lock_diag exit-evaluation-loop in position_telemetry._flush_ops, flush took 4,983.9 ms; db_lock_diag sees only the trader process, so web-api/timers holding the lock is not excluded. journal_sync.wait mean 10.1 s (max 23.6 s, n=39) = 29.6% of tick; tick max 86.6 s 13:02:28Z. Next: name the other holder (sqlite locks from other units writing trade_journal.db) and cut journal_sync.wait. Ranked after the ML retrain/monitor row; jumps the queue if EXIT-EVAL breaches return. Related: TICK-STAGE2-RECONCILE-OFFTICK re-opened in #23812. 2026-11-06 15:01Z BREACH ROOT CAUSE (MEASURED, journalctl ict-trader-live 14:59:44-15:01:08Z, complete scan 2181 lines, 0 'database is locked', 0 db_lock_diag, 0 '10006'; exit-pass batch connect+commit 10.2 ms; exit_interval_soak: pass_ms 52718, interval_ms 81992 = 29.3 s normal sleep + 52.7 s pass): NOT the lock, NOT 10006. Five max_hold closes ran SERIALLY inline on exit-evaluation-loop (IAUM alpaca_paper 16.6 s incl 6 s unconfirmed-flat wait; bybit_2 BTC 1.1 s; TQQQ 9.6 s; SPY 7.9 s; QQQ 7.1 s; bybit_portfolio BTC 1.4 s) = ~43 of 52.7 s, from AlpacaClient.close settle(3 s)+qty_available(6 s)+confirm(6 s) waits. Hourly :00 ml_entry max_hold burst makes it recur. FIX: exit_pass_close_budget_seconds (10 s): after one close, further max_hold closes are deferred to the next pass once close time >= budget; sl/tp/stale never deferred; evaluation untouched; a deferring pass skips its sleep. journal_sync.wait (pairs_tick waited 11.6 s at 14:59:35, 11.1 s at 15:03:21) is a DIFFERENT thread and did not touch exit thread this window; that half of the row stays open.",
   "due_by": "2026-11-07",
   "roadmap": [
     "unmapped"
   ],
   "priority_rank": 3,
   "roadmap_unmapped_reason": "not set at filing -- manager to map to a milestone at the next weekly pass",
-  "updated_at": "2026-11-06T13:19:56Z",
-  "updated_by": "session_01AFoLuJk1UWVx895RmLTidH",
+  "updated_at": "2026-11-06T15:22:17Z",
+  "updated_by": "session_01AFoLuJ8cjpa9cCtmE2EM4i",
   "week_lane": "surge",
   "_seq": 968
 }

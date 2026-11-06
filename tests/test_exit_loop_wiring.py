@@ -274,3 +274,27 @@ def test_the_exit_pass_runs_inside_the_telemetry_batch():
     with main._exit_pass_telemetry_batch():
         assert pt.queue_op("record", {}, "x.db") is True     # a batch is open for the pass
     assert pt.queue_op("record", {}, "x.db") is False        # and closed after it
+
+
+def test_a_pass_that_deferred_closes_does_not_sleep(monkeypatch):
+    """JOURNAL-LOCK-RESIDUAL: closes handed to the next pass must start it at once."""
+    slept: list[float] = []
+    import src.runtime.exit_loop_health as h
+    import src.runtime.order_monitor as om
+    n = {"i": 0}
+
+    def deferring_pass(**kwargs):
+        n["i"] += 1
+        if n["i"] >= 2:
+            raise KeyboardInterrupt
+        return {"__closes_deferred__": {"deferred": 2, "close_spent_s": 16.0}}
+
+    monkeypatch.setattr(om, "run_exit_evaluation_tick", deferring_pass)
+    monkeypatch.setattr(h, "record_pass", lambda ms, **_: None)
+    monkeypatch.setattr(h, "write_state_file", lambda *a, **k: None)
+    monkeypatch.setattr(main, "_build_monitor_ohlcv_fetcher", lambda s: None)
+    monkeypatch.setattr(main.time, "sleep", lambda s: slept.append(s))
+
+    with pytest.raises(KeyboardInterrupt):
+        main._exit_loop({})
+    assert slept == []
