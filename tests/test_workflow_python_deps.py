@@ -248,7 +248,7 @@ def test_the_probe_can_find_a_positive_when_an_install_is_removed():
 def test_the_three_repaired_workflows_still_carry_their_install():
     """The measured outage, pinned by name so a revert cannot be silent."""
     have = {f"{wf}::{job}": installs for wf, job, _, installs in jobs_with_script_invocations()}
-    for key in ("due-list.yml::render", "error-feed-digest.yml::digest", "probes.yml::run"):
+    for key in ("probes.yml::run",):
         assert have.get(key) is True, (
             f"{key} runs render_due_list.py, whose closure hard-imports PyYAML. "
             "Its cron failed 4 of 4 scheduled runs without this step."

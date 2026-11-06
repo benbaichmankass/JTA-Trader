@@ -1,0 +1,5 @@
+{
+  "tier": 1,
+  "landing": "self",
+  "why": "Deletes 49 workflows that never ran in 90 d, were retired by the 2026-09-21 operating reset or E29, or only ever skipped (docs/audits/2026-11-06-workflow-prune.md, PR #23588). Operator decisions relayed by Manager 2026-11-05b: P1 'Delete all 21 (Rec.)', P2 'Delete the 28 (Rec.)'. Removes the references the guards found (catalog, failure-alert watch list, infra_workflows, label bootstrap, baseline) and the tests that only asserted the deleted workflows. None of deploy/git-sync, system-actions, diag relays, data pulls, required checks, forecast-grade, the mirrors or the pr-landing alarm is touched."
+}

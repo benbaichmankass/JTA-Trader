@@ -191,7 +191,7 @@ class TestTheWorkflowIsWiredAndWatched:
         on = d.get(True) or d.get("on")
         watched = on["workflow_run"]["workflows"]
         assert "main-tree-watch" in watched
-        assert "pr-queue-watch" in watched, "positive control: the parse works"
+        assert "schedule-keeper" in watched, "positive control: the parse works"
 
     def test_the_declared_name_matches_the_watch_list_entry(self):
         """The alert keys on the workflow's `name:`, not its filename, so a
