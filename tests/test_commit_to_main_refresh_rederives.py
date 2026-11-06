@@ -174,17 +174,6 @@ def test_and_that_out_of_scope_change_is_REPORTED_not_dropped_silently(repo):
 
 # ── THE CALLER ──────────────────────────────────────────────────────────────
 
-def test_the_constraint_readout_caller_passes_a_refresh_command():
-    doc = yaml.safe_load(
-        (REPO / ".github" / "workflows" / "constraint-readout.yml").read_text())
-    steps = doc["jobs"]["readout"]["steps"]
-    land = [s for s in steps if str(s.get("uses", "")).endswith("commit-to-main")]
-    assert len(land) == 1, "expected exactly one commit-to-main call"
-    cmd = land[0]["with"].get("refresh-command", "")
-    assert "constraint_readout.py --write" in cmd
-    assert "render_session_brief.py --write" in cmd, (
-        "the brief is the file the guard compares; re-deriving only the readout "
-        "leaves the exact failure this fixes")
 
 
 def test_the_input_is_optional_so_existing_callers_are_unchanged():

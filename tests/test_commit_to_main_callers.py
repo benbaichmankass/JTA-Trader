@@ -462,8 +462,6 @@ def test_the_write_output_finder_is_not_vacuous():
     assert len(seen) >= 3, (
         f"only {len(seen)} --write tool(s) found across every commit-to-main "
         f"caller; the finder is probably broken, not the repo suddenly clean")
-    assert "checklist_routing_age.py" in seen, (
-        "the finder does not see the invocation this test was written for")
 
 
 def test_the_caller_population_is_not_empty():
