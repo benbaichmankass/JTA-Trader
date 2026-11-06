@@ -1074,6 +1074,13 @@ def _checklist_payload(items_override: list[dict] | None = None) -> dict[str, An
         "warnings": _freshness_warnings(tree, commit),
     }
 
+    if items_override is None and _served_from_store(repo):
+        # WSD-S4: after the freeze the rows above came LIVE from work_store.db (checklist_store's
+        # one loader). The file provenance still describes the frozen EXPORT, so its staleness
+        # warnings would be false alarms about the page; same keys, honest values.
+        freshness["warnings"] = []
+        freshness["note"] = ("served live from work_store.db (WSD-S4 freeze); the commit/tree "
+                             "readings describe the frozen export files, not the rows served")
     if read.state != "read":
         # ⚠️ NOT an empty checklist. "we could not read it" and "there is no
         # work" are opposite statements and only one of them is good news.
@@ -1167,6 +1174,28 @@ def _checklist_summary(rows: list[dict[str, Any]], dropped: int) -> dict[str, An
     }
 
 
+def _served_from_store(repo: Path) -> bool:
+    """Is the canonical checklist read from work_store.db here (frozen + the DB file present)?"""
+    from src.runtime import work_read
+    try:
+        return (work_read.frozen(repo) and work_read.is_canonical(repo / work_read.CHECKLIST_STORE,
+                                                                   work_read.CHECKLIST_STORE)
+                and work_read.local_store() is not None)
+    except Exception:  # noqa: BLE001  # allow-silent: a provenance label only; the rows' own read reports its failure
+        return False
+
+
+def _checklist_payload_from_files() -> dict[str, Any]:
+    """``?source=files`` (WSD-S4): the frozen EXPORT files in the same envelope, marked non-canonical."""
+    from src.runtime import checklist_store
+    rows = [{k: v for k, v in r.items() if k != "_seq"}
+            for r in checklist_store._read_rows(Path(repo_root()) / checklist_store.STORE)]
+    payload = _checklist_payload(items_override=rows)
+    payload["source"] = "files"
+    payload["canonical"] = False
+    return payload
+
+
 def _checklist_payload_from_store() -> dict[str, Any]:
     """``?source=db``: the same envelope with every row projected from ``work_store.db``.
 
@@ -1174,31 +1203,37 @@ def _checklist_payload_from_store() -> dict[str, Any]:
     canonical; this exists so the db-served payload can be compared with the file-served one.
     Rows are the importer's lossless projection (``work_store_import.to_row``), in the
     checklist's own order (``_seq``, then id)."""
+    from src.runtime import work_read
     from src.runtime import work_store as ws
-    from src.runtime import work_store_import as wi
     from src.utils.paths import work_store_db_path
     store = ws.WorkStore(work_store_db_path())
-    rows = [wi.to_row(i) for i in store.list_items(kind="build", limit=10 ** 7)
-            if (i.get("extra") or {}).get("_source") == "checklist"]
-    rows.sort(key=lambda r: (r.get("_seq", 1 << 60), r["id"]))
-    rows = [{k: v for k, v in r.items() if k != "_seq"} for r in rows]  # as checklist_store.load serves them
+    # Every build item (S4: rows filed natively after the freeze included), in the checklist's order.
+    rows = [{k: v for k, v in r.items() if k != "_seq"} for r in work_read.checklist_rows(store)]
     payload = _checklist_payload(items_override=rows)
     payload["source"] = "db"
-    payload["canonical"] = False
+    payload["canonical"] = work_read.frozen(Path(repo_root()))
     return payload
 
 
 @router.get("/checklist")
-def get_work_checklist(source: str = "files") -> dict[str, Any]:
+def get_work_checklist(source: str = "default") -> dict[str, Any]:
     """The manager checklist, graded — the live Workflow page's data source.
 
     Read-only, file-backed, no DB, no secrets, no write surface. Best-effort:
     an unreadable checklist degrades to ``present: false`` WITH its read state,
     never a 5xx and never an empty list that reads as "no work".
 
-    ``?source=db`` (WSD-S2 shadow parity) serves the work store's projection in the same
-    envelope, uncached, marked ``source: db, canonical: false``. The default is unchanged.
+    WSD-S4: after the freeze the DEFAULT is the work store (``checklist_store``'s one loader
+    reads ``work_store.db`` on the VM), in the unchanged envelope. ``?source=db`` serves the store
+    explicitly; ``?source=files`` serves the frozen export files (non-canonical, for comparison).
     """
+    if source == "files":
+        try:
+            return _checklist_payload_from_files()
+        except Exception as exc:  # allow-silent: not silent — logged with a stack and surfaced as present:false + readState could_not_look
+            logger.warning("work: checklist source=files read failed: %s", exc, exc_info=True)
+            return {"present": False, "readState": "could_not_look", "source": "files",
+                    "reason": f"export files read failed: {exc}", "items": None}
     if source == "db":
         try:
             return _checklist_payload_from_store()

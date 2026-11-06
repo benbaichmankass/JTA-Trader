@@ -87,6 +87,9 @@ jobs:
       - name: Raise feed-gap alerts (DESK-14)
         id: gaps
         continue-on-error: true
+        env:
+          # WSD-S4: pipeline.append writes through the work store's API after the freeze.
+          WORK_STORE_TOKEN: ${{ secrets.WORK_STORE_TOKEN }}
         run: |
           python3 scripts/ops/desk_feed_gaps.py --file-pipeline | tee -a "$GITHUB_STEP_SUMMARY" \
             || echo "::warning::desk_feed_gaps failed; the mirror still lands"

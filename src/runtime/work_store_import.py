@@ -198,11 +198,13 @@ def read_sources(repo: Path) -> dict:
     """The two canonical stores, read exactly as their own loaders read them."""
     from scripts.ops import pipeline as pl
     from src.runtime import checklist_store as cs
-    cs.load(repo)  # the served loader's own checks (header present, id == filename) -- raises if unreadable
+    import json as _json
+    _json.loads((repo / cs.STORE / cs.HEADER).read_text(encoding="utf-8"))  # header present -- raises if not
     # Rows WITH their ``_seq`` (the store's ordering key, which ``load`` strips for serving): the
-    # importer keeps it so the store can serve the rows in the checklist's own order.
+    # importer keeps it so the store can serve the rows in the checklist's own order. FILES only
+    # (``_read_rows`` checks id == filename): after the S4 freeze ``load`` reads the store itself.
     rows = cs._read_rows(repo / cs.STORE)
-    res = pl.load(repo / pl.STORE)
+    res = pl.read_files(repo / pl.STORE)
     return {"rows": rows, "pipeline": res, "cs": cs, "pl": pl}
 
 
@@ -216,6 +218,15 @@ def _pipeline_record_names(repo: Path, res, pl) -> list[str]:
     return names
 
 
+def native_since_import(prior: dict | None) -> bool:
+    """WSD-S4 FREEZE: the item was last written by someone other than this importer (a session
+    through ``work.py`` / the ``checklist.py`` / ``pipeline.py`` shims, or the API). The store is
+    then the truth for it and the frozen file is stale: the importer must never write it back.
+    The importer still imports what is NOT native -- a row or record that reached the files after
+    the freeze (a stale branch merged) -- so nothing is silently lost at the cutover."""
+    return prior is not None and prior.get("updated_by") != IMPORTER
+
+
 def build_entries(repo: Path, src: dict, store: ws.WorkStore) -> list[dict]:
     """The migrate entries for every row and item (builds first, so parents exist)."""
     rows, res, pl = src["rows"], src["pipeline"], src["pl"]
@@ -225,6 +236,8 @@ def build_entries(repo: Path, src: dict, store: ws.WorkStore) -> list[dict]:
     for row in rows:
         item = from_row(row)
         prior = current.get(row["id"])
+        if native_since_import(prior):
+            continue
         imported = prior is not None and (prior.get("extra") or {}).get("_source") == "checklist"
         if not imported:
             patch: dict = {"source": "checklist", "record": row}
@@ -250,6 +263,8 @@ def build_entries(repo: Path, src: dict, store: ws.WorkStore) -> list[dict]:
         by_id[rec["id"]].append((name, rec))
     row_ids = set(R)
     for iid, rec in res.items.items():
+        if native_since_import(current.get(iid)):
+            continue
         item = from_pipeline_item(rec, row_ids, lambda r: pl.owner_of(r, R))
         evs = [{"op_id": f"import:pipeline:{name}",
                 "patch": {"source": "pipeline", "record_file": name, "record": r}}
@@ -311,7 +326,7 @@ def parity(repo: Path, store: ws.WorkStore, src: dict | None = None, today: date
             native.append(it["id"])
 
     def compare(files: dict[str, dict], dbs: dict[str, dict], proj) -> dict:
-        differing, missing = [], sorted(set(files) - set(dbs))
+        differing, missing, native_div = [], sorted(set(files) - set(dbs)), []
         projected = {}
         for iid, rec in files.items():
             it = dbs.get(iid)
@@ -320,12 +335,20 @@ def parity(repo: Path, store: ws.WorkStore, src: dict | None = None, today: date
             p = proj(it)
             projected[iid] = p
             if not _same(rec, p):
-                differing.append({"id": iid, "keys": _diff_keys(rec, p)})
-        db_only = sorted(set(dbs) - set(files))
-        return {"files": len(files), "db": len(dbs), "equal": len(files) - len(missing) - len(differing),
+                # After the S4 freeze a natively-written item is EXPECTED to differ from its frozen
+                # file: the store is the truth for it. Counted, never folded into ``differing``.
+                (native_div if native_since_import(it) else differing).append(
+                    {"id": iid, "keys": _diff_keys(rec, p)})
+        db_only = sorted(i for i in set(dbs) - set(files) if not native_since_import(dbs[i]))
+        native_new = sorted(i for i in set(dbs) - set(files) if native_since_import(dbs[i]))
+        return {"files": len(files), "db": len(dbs),
+                "equal": len(files) - len(missing) - len(differing) - len(native_div),
                 "differing_count": len(differing), "differing": differing[:max_listed],
+                "native_divergent_count": len(native_div), "native_divergent": native_div[:max_listed],
                 "missing_in_db_count": len(missing), "missing_in_db": missing[:max_listed],
-                "db_only_count": len(db_only), "db_only": db_only[:max_listed], "_projected": projected}
+                "db_only_count": len(db_only), "db_only": db_only[:max_listed],
+                "native_new_count": len(native_new), "native_new": native_new[:max_listed],
+                "_projected": projected}
 
     rows_cmp = compare({r["id"]: r for r in rows}, by_src["checklist"], to_row)
     items_cmp = compare(dict(res.items), by_src["pipeline"], to_pipeline_item)
@@ -333,13 +356,17 @@ def parity(repo: Path, store: ws.WorkStore, src: dict | None = None, today: date
     proj_items = {k: items_cmp["_projected"][k] for k in res.items if k in items_cmp["_projected"]}
     rows_cmp.pop("_projected")
     items_cmp.pop("_projected")
+    # After the S4 freeze the store legitimately moves ahead of the frozen files; the Appendix A
+    # counts then differ by exactly those native writes, so they no longer gate ``clean``.
+    frozen_native = any(c.get(k) for c in (rows_cmp, items_cmp)
+                        for k in ("native_divergent_count", "native_new_count"))
     a_files = appendix_a(rows, dict(res.items), cs, pl, today, soak)
     a_db = appendix_a(proj_rows, proj_items, cs, pl, today, soak)
     chain = store.verify_chain()
     clean = (rows_cmp["differing_count"] == 0 and rows_cmp["missing_in_db_count"] == 0
              and rows_cmp["db_only_count"] == 0 and items_cmp["differing_count"] == 0
              and items_cmp["missing_in_db_count"] == 0 and items_cmp["db_only_count"] == 0
-             and a_files == a_db and chain.get("ok") and not res.unreadable)
+             and (a_files == a_db or frozen_native) and chain.get("ok") and not res.unreadable)
     return {
         "rows": rows_cmp, "items": items_cmp,
         "appendix_a": {"files": a_files, "db": a_db, "equal": a_files == a_db},

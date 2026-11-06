@@ -160,6 +160,10 @@ from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Iterable
 
+_REPO_ROOT = Path(__file__).resolve().parents[2]
+if str(_REPO_ROOT) not in sys.path:  # so `src.runtime.work_read` (WSD-S4) resolves when run as a script
+    sys.path.insert(1, str(_REPO_ROOT))
+
 #: ⚠️ RE-POINTED 2026-09-24 (E64): a DIRECTORY, not a file -- see the module
 #: docstring's "ONE FILE PER RECORD" section for why. Every caller that reads
 #: this constant and passes it straight to `read_log()` / `append()` needs no
@@ -262,6 +266,11 @@ class LoadResult:
     #: Populated by `read_log()` as it folds, so detecting this costs no
     #: extra pass over the store.
     collisions: list[dict] = field(default_factory=list)
+    #: WSD-S4: set only when the result was read from ``work_store.db`` -- the store's ``due_now``
+    #: view, split into observation ids (this store's items) and build ids (overdue checklist
+    #: rows). ``None`` means "read from the files" (the export), never "nothing due".
+    due_now: list[str] | None = None
+    due_now_builds: list[str] | None = None
 
     @property
     def healthy(self) -> bool:
@@ -477,7 +486,19 @@ def read_log(store: Path = STORE) -> LoadResult:
     """
     if store.is_file():
         return _read_legacy_jsonl(store)
+    # WSD-S4: after the freeze the canonical store is READ from work_store.db wherever that file
+    # exists (the live VM); elsewhere these files are the export. A failed store read raises.
+    from src.runtime import work_read as _wr
+    _ws = _wr._store_for_read(_wr.REPO, _wr.PIPELINE_STORE, store)
+    if _ws is not None:
+        return _wr.pipeline_result(_ws)
+    return read_files(store)
 
+
+def read_files(store: Path = STORE) -> LoadResult:
+    """``read_log`` over the record FILES only -- the S2 importer and the export check read this."""
+    if store.is_file():
+        return _read_legacy_jsonl(store)
     res = LoadResult()
     if not store.exists():
         return res
@@ -522,7 +543,11 @@ def version_of(item_id: str, store: Path = STORE) -> str | None:
     """The VERSION TOKEN of an item's current state: the filename (or
     `"line N"` for a legacy flat file) holding its LATEST record, or None if the
     id does not exist. A writer that READS an item and later UPDATES it passes
-    this token back as `append(..., based_on=token)`; see `append()`."""
+    this token back as `append(..., based_on=token)`; see `append()`.
+    WSD-S4: after the freeze the canonical store's token is ``work_store:v<version>``, read live."""
+    from src.runtime import work_read as _wr
+    if _wr.is_canonical(store, _wr.PIPELINE_STORE) and _wr.frozen(_wr.REPO):
+        return _wr.observation_version(item_id)
     return read_log(store).sources.get(item_id)
 
 
@@ -579,7 +604,14 @@ def append(item: dict, store: Path = STORE, *, intent: str,
     if intent not in ("new", "update"):
         raise PipelineError(f"intent: must be 'new' or 'update', got {intent!r}")
 
-    prior = read_log(store).items.get(item["id"])
+    # WSD-S4: after the freeze the canonical store's writes go to work_store.db; the prior state
+    # and its version token are read LIVE from the store, never from the frozen export files.
+    from src.runtime import work_read as _wr
+    frozen_canon = _wr.is_canonical(store, _wr.PIPELINE_STORE) and _wr.frozen(_wr.REPO)
+    if frozen_canon:
+        prior = _wr.get_observation(item["id"])
+    else:
+        prior = read_log(store).items.get(item["id"])
 
     if intent == "new" and prior is not None:
         raise PipelineError(
@@ -597,7 +629,8 @@ def append(item: dict, store: Path = STORE, *, intent: str,
                 f"exists to update -- call append(..., intent='new') to file "
                 f"it for the first time."
             )
-        current = read_log(store).sources.get(item["id"])
+        current = (_wr.observation_version(item["id"]) if frozen_canon
+                   else read_log(store).sources.get(item["id"]))
         if based_on is None:
             raise PipelineError(
                 f"id {item['id']!r}: intent='update' requires based_on= the "
@@ -621,6 +654,9 @@ def append(item: dict, store: Path = STORE, *, intent: str,
                 f"PI-20260921-0002 already was."
             )
 
+    if frozen_canon:
+        _wr.put_observation(item)
+        return item
     if store.is_file():
         line = json.dumps(item, ensure_ascii=False, sort_keys=True) + "\n"
         with open(store, "a", encoding="utf-8") as fh:

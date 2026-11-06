@@ -290,6 +290,27 @@ if [ -f "${_WSIMPORT_DROPIN_SRC}" ]; then
     fi
 fi
 
+# Why ict-work-digest and ict-work-report need the work-store-db drop-in (WSD-S4-READERS-FLIP):
+#   after the S4 freeze their readers (work_digest_now -> attention_watch / blocker_watch, and
+#   work_report) read the register through checklist_store / pipeline.read_log, which read
+#   work_store_db_path(). ict-web-api and the importer resolve it to /data/bot-data/work_store.db;
+#   without this drop-in these oneshots would resolve a path where no store exists and read the
+#   frozen export files instead of the live register. Only WORK_STORE_DB is pinned (not DATA_DIR),
+#   so their runtime_logs_dir() does not move.
+_WSR_SRC="${REPO_DIR}/deploy/dropins/work-store-db.conf"
+for _WS_READER in ict-work-digest ict-work-report; do
+    _WSR_DST="${SYSTEMD_DIR}/${_WS_READER}.service.d/work-store-db.conf"
+    if [ -f "${_WSR_SRC}" ]; then
+        if [ ! -e "${_WSR_DST}" ] || ! cmp -s "${_WSR_SRC}" "${_WSR_DST}"; then
+            echo ">>> install_systemd_units: dropin work-store-db.conf → ${_WSR_DST}"
+            "${SUDO[@]}" mkdir -p "$(dirname "${_WSR_DST}")"
+            "${SUDO[@]}" cp "${_WSR_SRC}" "${_WSR_DST}"
+            "${SUDO[@]}" chmod 0644 "${_WSR_DST}"
+            changed=1
+        fi
+    fi
+done
+
 # Why ict-claude-bridge needs the data-dir drop-in:
 #   The bridge is the OWNER of the Claude update channel — it reads
 #   $DATA_DIR/runtime_logs/pending_claude_pings (via runtime_logs_dir()).
