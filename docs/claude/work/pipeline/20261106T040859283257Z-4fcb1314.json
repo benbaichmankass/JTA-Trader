@@ -1,0 +1,19 @@
+{
+  "based_on": "20261106T005915947896Z-ca634daa.json",
+  "due_when": {
+    "check_every_days": 3,
+    "clears_when": "operator answers P1-P4 and the approved subset is landed as its own PR(s)",
+    "kind": "event",
+    "last_checked": "2026-11-06"
+  },
+  "id": "PI-20261106-01AFOLUJ-0001",
+  "next_action": "ask_operator",
+  "origin": {
+    "kind": "session",
+    "ref": "lane WORKFLOW-PRUNE (Manager Session 2026-11-05b), session_01AFoLuJ6sZjv24MuhwLtDtDwuuz",
+    "rerun": "python3 scripts/ops/workflow_prune_inventory.py --out /tmp/wp.json  # compare against the doc's table"
+  },
+  "state": "done",
+  "terminal_reason": "Operator decisions P1-P4 (relayed by Manager 2026-11-05b, 2026-11-06 ~01:00Z) are all landed or dispositioned: P1+P2 = PR #23594 merged (48 of the 49 approved deleted; board-post.yml held out for the operator because check_pr_landing R12 lists it as landing machinery); P4 = PR #23600 merged (7 workflows: repo-inventory was dropped, see audit finding 5; research-slo, research-queue-chain, branch-mirror-heartbeat left with reasons); P3 = re-decided by the manager 2026-11-06 01:32Z and 04:03Z: no merges, no composite actions (PI-0004, PI-0007 closed). Remaining work is tracked in PI-0002, PI-0003, PI-0006, PI-0008 and PI-0009.",
+  "what": "Workflow prune decisions P1-P4 (PR #23588, docs/audits/2026-11-06-workflow-prune.md): delete 21 dead + 28 skip-only relays (+21 optional), merge ~8 groups, simplify 8; mirrors retire with WORK-STORE S7. Nothing is changed until the operator answers."
+}
