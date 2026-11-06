@@ -190,7 +190,7 @@ step 3). Primary routine `trig_018F2BmrzKwWTYoSYCCbroqy`; Thursday planning stay
 
 ### Close-up on low usage (the other half)
 
-At about **90% of the weekly bar**, or on any limit hit (a lane or the manager reads "usage limit"): **every running lane writes a resume
+At about **90% of the weekly bar**, or on any limit hit (a lane or the manager reads "usage limit"): **every running lane writes a resume <!-- population-ok: a threshold on the operator-read weekly usage bar (a rule parameter), not a measurement -->
 note on its checklist row** (what is done, the exact next command, branch/PR, what it owes) **and stops**; it opens no new work and starts no
 new lane. The manager then files **ONE PIPELINE item** listing all paused work, due at the next reset, so the sweep above finds it:
 
