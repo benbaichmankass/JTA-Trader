@@ -167,3 +167,12 @@ Binding rules that are **not** moved or shortened: the six loop steps; the five 
 | Re-measure the manager skill after the cut (`wc -c`) and set a size note so regrowth shows | same row, `observe` | 2026-11-13 |
 
 Not run: the CI guards against the *proposed* edits (nothing is edited). The doc itself is `unknown` status, as are the other audit docs.
+
+## 8. Erratum (added 2026-11-06 while executing the approved decisions)
+
+Three proposals above were written from section titles and sizes, not from reading the sections. Reading them while executing showed:
+- **`AMENDMENTS.md` must stay.** `scripts/ops/check_claude_grade_loop.py` fails a `live-trade-review` / `trading-desk` contract version that has no `AMENDMENTS.md` line with `n=`, and `perf-followup` tells lanes to append to it. It is a guarded log, not history. §§ 2e, 3 and 6 (decision 3) are wrong to call it archivable; the ~12.8 KB saving is withdrawn.
+- **The three `performance-review` sections are not duplicates.** "Live review (LTR-5)" is the procedure `live-trade-review` points *to*; "Underperformance → diagnose, don't demote" carries the `diagnosis` block that canonical § "Tune before demote" does not contain (grep for `reidentified_edge_R` in canonical: 0); I did not check "Fetching trade data" against `diag-data`. The ~10 KB saving is withdrawn.
+- **The research-ops "What changed 2026-10-16" section was not only a changelog:** it holds live rules (programme priority, money first, results-undispositioned). Executed as a compression that keeps those bullets.
+Corrected estimate: about −96 KB of 868 KB, not −121 KB. The `settings.json` hook shrink was refused by the auto-mode classifier (Self-Modification) and is not done.
+
