@@ -1,0 +1,16 @@
+{
+  "due_when": {
+    "check_every_days": 3,
+    "clears_when": "the manager decides each of the three (adopt -> PR with the rebuilt record; or decline with a reason)",
+    "kind": "event"
+  },
+  "id": "PI-20261106-Y7JEXUWW-0004",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "audit",
+    "ref": "lane SOAK-BACKLOG-REVIEW (Manager Session 2026-11-06a), docs/research/soak-backlog-review-2026-11-06.md",
+    "rerun": "python3 scripts/ops/mandate_resolver.py --leg trend_donchian_xrp_4h --from S1 --to S2 --account bybit_2 --json (after the record rebuild)"
+  },
+  "state": "queued",
+  "what": "TIER-3 CONFIG PROPOSALS from holdout-confirmed reads (soak-backlog review 2026-11-06 section A): trend_donchian_xrp_4h -> atr_stop_mult 1.5, trail_mult 4.0 (RQ-20261016-077e-03 C1, n_h 25, +4.13 R); trend_donchian_sol_prop -> trail_mult 4.5 (077e-05 C5, n_h 96, +5.28 R); ada_pullback_2h -> drop vol_skip_above_pctl (+decision_bar) back to the confirmed 077e-04 C7 (n_h 97, +24.08 R). In each case the confirmed config differs from live ONLY in those keys. Path: set the config, rebuild comms/strategy_evidence/<leg>.json at it (must still clear n>=30, expectancy>0, fold majority, faithful), attach the holdout block (source_run -> the committed verdict.json), then MD-PROMOTE-S1-S2 to bybit_2 + bybit_portfolio and off bybit_1. The holdout units pre-registered 'evidence for a Tier-3 config proposal, never an edit here', so this is the manager's data-backed Tier-3 call."
+}

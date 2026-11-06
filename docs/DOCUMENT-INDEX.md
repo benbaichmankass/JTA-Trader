@@ -1081,6 +1081,8 @@ real top-level `docs/*.md` and fails if the population builder cannot see it.
 | `docs/research/restart-gap-exit-first-2026-11-05.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
 | `docs/research/strategy-status-model-2026-10-28.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
 | `docs/research/structure-exits-default-scope-2026-11-01.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
+| `docs/research/prop-retest-2026-11-06/RESULT.md` | evidence | live | — | 2026-11-06 | `dir:research-is-measurement / read:SOAK-BACKLOG-REVIEW-lane-measured-it-2026-11-06` | Prop V3 re-test of trend_donchian_eth_4h (FAIL_EDGE) and trend_donchian_sol_4h (FAIL); goes historical on the operator's keep/pull decision |
+| `docs/research/soak-backlog-review-2026-11-06.md` | evidence | live | — | 2026-11-06 | `dir:research-is-measurement / read:SOAK-BACKLOG-REVIEW-lane-measured-it-2026-11-06` | Soak-backlog review: 56 testing legs vs their Stage-0 records (0 pass); feeds SOAK-VOCAB-RETIRE; goes historical once the 6 holdout-blocked legs are decided |
 | `docs/research/tick-duration-115s-profile-2026-11-04.md` | evidence | live | — | 2026-11-04 | `dir:research-is-measurement / read:TICK-DURATION-115S-lane-authored-and-measured-it-2026-11-04` | TICK-DURATION-115S profile + staged plan; goes historical once the deployed tick is observed on /api/diag/tick_cost |
 | `docs/research/tp-doctrine-w43-proposals-2026-10-22.md` | evidence | unknown | — | 2026-10-22 | `dir:research-is-measurement / not-assessed` | — |
 | `docs/research/trail-ratchet-audit-2026-10-31/RESULT.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |

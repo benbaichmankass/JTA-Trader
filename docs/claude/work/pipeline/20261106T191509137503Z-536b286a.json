@@ -1,0 +1,16 @@
+{
+  "due_when": {
+    "check_every_days": 7,
+    "clears_when": "iteration_orphans.py no longer labels ml_entry_v2 / ml_entry_eq from ml_entry.json",
+    "kind": "observation"
+  },
+  "id": "PI-20261106-Y7JEXUWW-0003",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "audit",
+    "ref": "lane SOAK-BACKLOG-REVIEW (Manager Session 2026-11-06a), docs/research/soak-backlog-review-2026-11-06.md",
+    "rerun": "python3 scripts/research/iteration_orphans.py | grep ml_entry"
+  },
+  "state": "queued",
+  "what": "iteration_orphans.leg_verdict reads the WRONG record for ml_entry_v2 and ml_entry_eq: evidence_path's stem fallback picks comms/strategy_evidence/ml_entry.json (leg.startswith('ml_entry_')), so both are labelled pass_unconfirmed. Actual reads: ml_entry_v2 W1 FAIL -0.1161 R n=320 (RQ-20261101-b609-01); ml_entry_eq indeterminate (RQ-20261105-e9a1-02 n 858, +0.0392 R, iid t 0.9). Fix: a variant leg must not inherit its parent's record (exact name or an explicit map); report no-record instead. Tier 1."
+}
