@@ -47,11 +47,22 @@ def _ccxt_funding_to_row(entry: Mapping[str, Any], account_id: str) -> dict[str,
     if not fid:
         # Fall back to a deterministic composite key so idempotency still holds.
         fid = f"{account_id}:{entry.get('symbol')}:{funding_time}"
+    else:
+        # Bybit's funding id is the SAME on every account for one symbol+settlement
+        # (measured 2026-11-06: bybit_1/bybit_2 returned identical ids), and the
+        # store's PK is funding_id alone, so un-namespaced ids made the first
+        # account to write win and silently dropped every other account's row.
+        fid = f"{account_id}:{fid}"
     return {
         "funding_id": fid,
         "account_id": account_id,
         "symbol": entry.get("symbol"),
-        "funding_usd": entry.get("amount"),
+        # Store convention (documented in upsert_funding and read by the cost sweep
+        # and live_review_due): NEGATIVE = funding paid. ccxt's Bybit `amount` is
+        # the opposite (positive = paid), measured 2026-11-06 against the venue's
+        # own transaction log on 7 bybit_2 settlements (XRP, ETH): same magnitude,
+        # opposite sign. Negate here, once.
+        "funding_usd": (-float(entry["amount"]) if entry.get("amount") is not None else None),
         "funding_time": funding_time,
         "raw": entry.get("info"),
     }
