@@ -43,6 +43,18 @@ def _self_test() -> int:
             json.dumps({"generated_at": (now - timedelta(hours=1)).isoformat()}) + "\n")
         t = throughput(r, now=now)
         assert not t["idle_alarm"] and t["fired_24h"] == 1 and t["results_landed_24h"] == 1, t
+        # RECEIPT SOURCE (RQ-THROUGHPUT-FALSE-RED): stale unit stamps + a fresh dispatcher receipt -> no alarm
+        unit(2, f"'{(now - timedelta(hours=30)).isoformat()}'")
+        assert throughput(r, now=now)["idle_alarm"] is True
+        (r / "docs/claude/work").mkdir(parents=True)
+        rc = r / "docs/claude/work/research-queue-dispatch-receipt.json"
+        rc.write_text(json.dumps({"last_dispatched_at": (now - timedelta(hours=2)).isoformat()}))
+        t = throughput(r, now=now)
+        assert not t["idle_alarm"] and t["hours_since_last_dispatch"] == 2.0, t
+        rc.write_text(json.dumps({"last_dispatched_at": (now - timedelta(hours=20)).isoformat()}))
+        assert throughput(r, now=now)["idle_alarm"] is True      # a stale receipt still alarms
+        rc.unlink()
+        unit(2, f"'{(now - timedelta(hours=3)).isoformat()}'")
         # NO RUNNABLE WORK is not an alarm (nothing to fire)
         (r / "research/queue/RQ-20300101-001.yaml").unlink()
         unit(2, f"'{(now - timedelta(hours=30)).isoformat()}'")

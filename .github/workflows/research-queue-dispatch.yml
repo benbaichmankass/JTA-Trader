@@ -322,6 +322,24 @@ jobs:
               "event_name": os.environ.get("GITHUB_EVENT_NAME", "unknown"),
               "fired": os.environ.get("FIRE", "false"),
           }
+          # RQ-THROUGHPUT-FALSE-RED: the dispatcher's OWN last-fire time. Unit stamps reach main only
+          # via a stamp PR (late/dropped), so schedule-keeper's idle alarm read them stale and went red
+          # while this job was firing. dispatched=N is the dispatcher's own summary count; carry the
+          # previous last_dispatched_at forward on a run that fired nothing.
+          import re
+          prev = {}
+          try:
+              with open("docs/claude/work/research-queue-dispatch-receipt.json", encoding="utf-8") as fh:
+                  prev = json.load(fh)
+          except (OSError, ValueError):
+              pass
+          try:
+              m = re.search(r"\bdispatched=(\d+)", open("/tmp/dispatch.txt", encoding="utf-8").read())
+              n = int(m.group(1)) if m else 0
+          except OSError:
+              n = 0
+          payload["dispatched"] = n
+          payload["last_dispatched_at"] = payload["timestamp"] if n > 0 else prev.get("last_dispatched_at")
           with open("docs/claude/work/research-queue-dispatch-receipt.json", "w", encoding="utf-8") as fh:
               json.dump(payload, fh, indent=2)
               fh.write("\n")
