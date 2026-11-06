@@ -11,9 +11,9 @@
   "tier": 1,
   "prs": [],
   "blocked_on": [],
-  "note": "[2026-10-21 PIPELINE-HEALTH-1021] ROOT CAUSE (Actions API, 2026-10-21): research-queue-dispatch's hourly cron created runs 04:56/10:14/15:18Z (3-5 h apart); schedule-keeper's own '7 * * * *' floor fired 10:04/12:27/15:12/17:40Z; the rest were keeper runs on push-to-main. A quiet main (10:42->12:14Z, 94 min, zero keeper runs) left the dispatcher idle with 20-70 units runnable = the 75-135 min gaps the watchdog self-healed 10-19 and 10-21 and the 3.5 h dispatcher_age_h breach. github_runner is 3 fires/cycle so each missed cycle starves the low-value themes (regime). FIX: .github/workflows/research-queue-chain.yml (workflow_run on dispatch completion -> wait to created+60 min -> gh workflow run unless a newer run exists). Cron + keeper unchanged as fallbacks. NOT observed yet: merged != deployed != observed.",
-  "updated_at": "2026-10-24T06:01:13Z",
-  "updated_by": "session_01TcTW6muiYDAQFZz2qdhTEW",
+  "note": "[2026-10-21 PIPELINE-HEALTH-1021] ROOT CAUSE (Actions API, 2026-10-21): research-queue-dispatch's hourly cron created runs 04:56/10:14/15:18Z (3-5 h apart); schedule-keeper's own '7 * * * *' floor fired 10:04/12:27/15:12/17:40Z; the rest were keeper runs on push-to-main. A quiet main (10:42->12:14Z, 94 min, zero keeper runs) left the dispatcher idle with 20-70 units runnable = the 75-135 min gaps the watchdog self-healed 10-19 and 10-21 and the 3.5 h dispatcher_age_h breach. github_runner is 3 fires/cycle so each missed cycle starves the low-value themes (regime). FIX: .github/workflows/research-queue-chain.yml (workflow_run on dispatch completion -> wait to created+60 min -> gh workflow run unless a newer run exists). Cron + keeper unchanged as fallbacks. NOT observed yet: merged != deployed != observed. 2026-11-06 BACKLOG-DRAIN-20261106: NOT MET (re-dated 2026-11-09). research-queue-dispatch schedule-event runs in 11-04..11-06 are 6-9 h apart (e.g. 11-05 06:54Z -> 15:32Z -> 22:04Z -> 11-06 02:31Z), far over the 70 min bound; 5 of the last 16 schedule runs failed (e.g. 11-05 15:32Z, 11-04 23:44Z). Research-slo dispatcher_age_h=1.78 ok, because keeper/dispatch runs also fire.",
+  "updated_at": "2026-11-06T06:19:40Z",
+  "updated_by": "lane-BACKLOG-DRAIN-20261106",
   "observation": {
     "what": "after merge, research-queue-dispatch runs are created <= 70 min apart across a window with no push to main, and watchdog `dispatcher` incidents stay 0 for 48 h",
     "how_to_check": "gh run list --workflow research-queue-dispatch.yml --limit 30 --json createdAt,event; comms/research/ops/watchdog_incidents.jsonl; research-slo dispatcher_age_h",
@@ -36,5 +36,6 @@
     "roadmap": "none: scheduling/queue-hygiene fix, no milestone line changes",
     "arch": "none: no architecture section changes"
   },
+  "due_by": "2026-11-09",
   "_seq": 576
 }
