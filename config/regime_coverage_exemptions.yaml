@@ -32,6 +32,14 @@ exempt:
       breadth) and its cost-per-R gate is a cost filter, not a regime cell; a regime_policy cell would trade a different policy than
       the one scored (RQ-20261101-b608-01 dev stack, b609-01 W1). A bybit_1 demo TESTING leg only. Exempt rather than coverage_debt
       because the debt ceiling only ratchets down.
+  ml_entry_eq:
+    tracking_id: ML-ENTRY-EQUITY-NATIVE
+    added: '2026-11-06'
+    reason: >-
+      The equity-native ENTRY model was scored with NO regime filter (RQ-20261105-e9a1-02 confirming read; dev RQ-20261105-e9a1-01): market regime is an
+      INPUT it reads (vol ratio, ATR/price, range position, pool breadth and ranks), not a gate around it. A regime_policy cell would trade a different
+      policy than the one scored and has no walk-forward (regime-selectivity skill: no-cosmetic-cell). An alpaca_paper TESTING leg only. Exempt rather
+      than coverage_debt because the debt ceiling only ratchets down.
   e4_oi_shock_1h:
     tracking_id: E4-DEMO-LEG
     added: '2026-10-30'
