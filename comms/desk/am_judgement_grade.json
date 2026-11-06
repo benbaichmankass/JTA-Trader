@@ -6,7 +6,7 @@
   },
   "hold": {
    "mean_d_hold": 0.0,
-   "n_rows": 92
+   "n_rows": 93
   },
   "partial_close": {
    "mean_d_hold": 0.9042,
@@ -17,15 +17,15 @@
    "n_rows": 3
   }
  },
- "computed_at": "2026-11-06T00:29:01Z",
+ "computed_at": "2026-11-06T03:03:06Z",
  "forecast": {
-  "brier": 0.2075,
+  "brier": 0.2082,
   "brier_ref_constant_0_5": 0.25,
   "hits": 34,
-  "n_scored": 116,
+  "n_scored": 118,
   "unresolved": 27
  },
- "population": "live-review rows with a forecast reviewed from 2026-10-31T00:00:00Z: 143 rows, 54 packages",
+ "population": "live-review rows with a forecast reviewed from 2026-10-31T00:00:00Z: 145 rows, 55 packages",
  "rows": [
   {
    "action": "hold",
@@ -906,7 +906,7 @@
   {
    "action": "hold",
    "d_hold": 0.0,
-   "d_mech": -0.28330754,
+   "d_mech": -0.28330753,
    "forecast_outcome": "miss",
    "order_package_id": "pkg-350f9f48e68d48ce",
    "p_target": 0.4,
@@ -1735,26 +1735,50 @@
    "action": "hold",
    "d_hold": null,
    "d_mech": null,
-   "forecast_outcome": null,
+   "forecast_outcome": "miss",
    "order_package_id": "pkg-78342b614f6040f6",
    "p_target": 0.5,
    "price_reason": "no_path_change_trade_open_or_unjoined",
    "price_state": "not_a_call",
    "review_id": "LR-20261106T0003Z-pkg-78342b614f6040f6",
    "trigger": "judgement_cadence"
+  },
+  {
+   "action": "hold",
+   "d_hold": 0.0,
+   "d_mech": 0.0,
+   "forecast_outcome": "miss",
+   "order_package_id": "pkg-084d03f3a4694542",
+   "p_target": 0.5,
+   "price_reason": "no_path_change",
+   "price_state": "not_a_call",
+   "review_id": "LR-20261106T0010Z-pkg-084d03f3a4694542",
+   "trigger": "judgement_cadence"
+  },
+  {
+   "action": "hold",
+   "d_hold": null,
+   "d_mech": null,
+   "forecast_outcome": null,
+   "order_package_id": "pkg-81365629b21a4fc1",
+   "p_target": 0.4,
+   "price_reason": "no_path_change_trade_open_or_unjoined",
+   "price_state": "not_a_call",
+   "review_id": "LR-20261106T0101Z-pkg-81365629b21a4fc1",
+   "trigger": "structure_break"
   }
  ],
  "rule": "RULE-DESK-AM-JUDGEMENT-V1",
  "verdict": {
   "ci95_d_hold": [
    0.0008,
-   0.0835
+   0.0829
   ],
-  "mean_d_hold": 0.0314,
-  "mean_d_mech": -0.0048,
+  "mean_d_hold": 0.0306,
+  "mean_d_mech": -0.0046,
   "min_packages": 30,
-  "n_packages": 39,
-  "n_packages_mech": 36,
+  "n_packages": 40,
+  "n_packages_mech": 37,
   "rule": "RULE-DESK-AM-JUDGEMENT-V1",
   "verdict": "indeterminate"
  }

@@ -56,7 +56,7 @@ def _load_trades(conn: sqlite3.Connection) -> list[dict]:
     conn.row_factory = sqlite3.Row
     rows = conn.execute(
         "SELECT id, account_id, symbol, direction, broker_order_id, cost_source, "
-        "timestamp, closed_at "
+        "funding_paid_usd, timestamp, closed_at "
         "FROM trades WHERE status='closed' AND COALESCE(is_backtest,0)=0 "
         "AND broker_order_id IS NOT NULL AND broker_order_id != ''"
     ).fetchall()
@@ -97,7 +97,18 @@ def _load_fills(fills_db: str) -> list[dict]:
         conn.close()
 
 
-def sweep(db_path: str, fills_db: str, *, apply: bool) -> dict:
+def _funding_covered(funding: list[dict]) -> dict:
+    """Latest funding_time per account: funding is only trusted for a trade whose
+    close is <= this, so a stale funding puller yields NULL, never a false $0."""
+    out: dict = {}
+    for f in funding:
+        a, t = str(f.get("account_id")), str(f.get("funding_time") or "")
+        if t and t > out.get(a, ""):
+            out[a] = t
+    return out
+
+
+def sweep(db_path: str, fills_db: str, *, apply: bool, with_funding: bool = False) -> dict:
     conn = sqlite3.connect(db_path)
     try:
         trades = _load_trades(conn)
@@ -109,13 +120,27 @@ def sweep(db_path: str, fills_db: str, *, apply: bool) -> dict:
         # Funding is attributed only to trades B2 flagged clean (sole holders).
         clean_ids = [tid for tid, c in costs.items() if c.clean]
         funding_by_id = attribute_funding_to_trades(trades, funding, clean_ids)
+        covered = _funding_covered(funding)
+        trade_by_id = {int(t["id"]): t for t in trades}
+
+        def _funding_for(tid: int):
+            t = trade_by_id[int(tid)]
+            # exchange_funding was stored sign-INVERTED until #23570 (puller negation +
+            # migration) deploys: funding is opt-in (--with-funding) until then.
+            if not with_funding or not funding or tid not in funding_by_id:
+                return None
+            cov = covered.get(str(t["account_id"]), "")
+            # normalise both sides to a comparable ISO prefix
+            if not cov or _to_iso(cov)[:19] < _to_iso(t["close_time"])[:19]:
+                return None  # funding store does not reach this close
+            return funding_by_id[tid]
 
         summary = {
             "closed_with_join_key": len(trades),
             "fills_scanned": len(fills),
             "funding_scanned": len(funding),
             "clean": 0, "ambiguous": 0, "entry_only": 0, "no_match": 0,
-            "non_usd_skipped": 0, "written": 0, "already_broker": 0,
+            "non_usd_skipped": 0, "written": 0, "already_broker": 0, "funding_topped_up": 0, "funding_corrected": 0, "funding_sign_flipped": 0,
             "total_broker_fee_usd": 0.0, "total_funding_usd": 0.0,
         }
         for tid, c in costs.items():
@@ -133,13 +158,34 @@ def sweep(db_path: str, fills_db: str, *, apply: bool) -> dict:
                 continue
             if str(cost_source_by_id.get(tid) or "").lower() == "broker":
                 summary["already_broker"] += 1
+                stored = trade_by_id[int(tid)].get("funding_paid_usd")
+                fv = _funding_for(tid)
+                if fv is None:
+                    continue
+                if stored is None:
+                    summary["funding_topped_up"] += 1
+                    if apply:
+                        conn.execute(
+                            "UPDATE trades SET funding_paid_usd=? WHERE id=? "
+                            "AND funding_paid_usd IS NULL", (fv, int(tid)))
+                elif abs(float(stored) - fv) > 1e-9:
+                    # --with-funding RECOMPUTES a stored value that disagrees with the
+                    # (sign-fixed) store: the values written while exchange_funding was
+                    # sign-inverted are corrected here, and sign flips are counted.
+                    summary["funding_corrected"] += 1
+                    if abs(float(stored) + fv) <= 1e-9 and fv != 0:
+                        summary["funding_sign_flipped"] += 1
+                    if apply:
+                        conn.execute(
+                            "UPDATE trades SET funding_paid_usd=? WHERE id=?",
+                            (fv, int(tid)))
                 continue
             summary["clean"] += 1
             fee_taker = round(float(c.fee_taker_usd), 8)
             fee_maker = round(float(c.fee_maker_usd), 8)
             # funding_paid_usd: NULL when no funding data (B1 puller hasn't run
             # / no funding events in the window) so we never write a false $0.
-            funding_val = funding_by_id.get(int(tid)) if funding else None
+            funding_val = _funding_for(int(tid))
             summary["total_broker_fee_usd"] += fee_taker + fee_maker
             if funding_val is not None:
                 summary["total_funding_usd"] += funding_val
@@ -162,6 +208,8 @@ def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--db", default=None, help="trade_journal.db path (default: canonical resolver)")
     ap.add_argument("--fills-db", default=None, help="exchange_fills.sqlite path (default: store resolver)")
+    ap.add_argument("--with-funding", action="store_true",
+                    help="also write funding_paid_usd (only after the exchange_funding sign fix #23570 is deployed + re-pulled)")
     ap.add_argument("--apply", action="store_true", help="write (default: dry-run)")
     args = ap.parse_args()
 
@@ -177,7 +225,7 @@ def main() -> int:
         print(f"fills store not found: {fills_db} — run pull-exchange-fills first", file=sys.stderr)
         return 2
 
-    s = sweep(db_path, fills_db, apply=args.apply)
+    s = sweep(db_path, fills_db, apply=args.apply, with_funding=args.with_funding)
     mode = "APPLIED" if args.apply else "DRY-RUN (no write)"
     print(f"[{mode}] db={db_path} fills={fills_db}")
     print(f"  closed trades with a broker_order_id join key: {s['closed_with_join_key']}")
@@ -188,6 +236,8 @@ def main() -> int:
     print(f"  no fill match (kept estimate): {s['no_match']}")
     print(f"  non-USD fees skipped: {s['non_usd_skipped']}")
     print(f"  already broker-truth (skipped): {s['already_broker']}")
+    print(f"  funding topped up on existing broker rows: {s['funding_topped_up']}")
+    print(f"  funding corrected on existing broker rows: {s['funding_corrected']}  (sign flipped: {s['funding_sign_flipped']})")
     print(f"  would-write broker-truth fees: {s['written']}  (fees ${s['total_broker_fee_usd']:.4f} · funding ${s['total_funding_usd']:.4f})")
     if not args.apply and s["written"]:
         print("  re-run with --apply to write.")

@@ -109,7 +109,9 @@ def test_prop_is_its_own_class_not_folded_into_real_money_or_paper(monkeypatch) 
     # MOVED 2026-10-15 (PROMOTE-PROP-LEGS, Tier-3, operator pre-authorized): trend_donchian_sol_prop
     # joined bybit_2 (real money), and a leg grades at its highest money-at-risk route, so it now
     # reads `real_money` -- never `prop`, which would understate it. (eth_prop was the prop anchor until 2026-11-05; see above.)
-    assert ROLLUP._leg_funding("trend_donchian_sol_prop", routing) == "real_money"
+    # MOVED AGAIN 2026-11-06 (PROD-LEGS-DSR-DECISION, operator "Re-measure, then move (Rec.)"): sol_prop failed DSR > 0.95
+    # AND BHY-haircut > 0 and left bybit_2 + bybit_portfolio for bybit_1 (testing), so its highest route is now `paper`.
+    assert ROLLUP._leg_funding("trend_donchian_sol_prop", routing) == "paper"
     # Since 2026-10-05 (SOAK-GATE1, Stage-0 FAIL) bybit_1 no longer declares it,
     # so it reads `unresolved`; it must still never read `prop` again.
     assert ROLLUP._leg_funding("eth_pullback_prop_2h", routing) != "prop", (
@@ -136,7 +138,14 @@ def test_routing_is_keyed_on_declared_strategies_not_on_symbols() -> None:
     `real_money` today; the leg-keyed one must not.
     """
     routing = ROLLUP._funding_by_leg()
-    assert ROLLUP._leg_funding("trend_donchian_eth_4h", routing) == "real_money"
+    # POSITIVE ANCHOR MOVED 2026-11-06 (PROD-LEGS-DSR-DECISION): ml_entry is the one leg bybit_2 still declares (operator
+    # exception "Move all but ml_entry (Rec.)"). trend_donchian_eth_4h left bybit_2 and becomes a THIRD negative control of
+    # exactly this shape: it trades ETHUSDT, which bybit_2 still trades (ml_entry), and bybit_2 no longer declares it -- it
+    # grades `prop` (breakout_2 / tradeify_1 / velotrade_1 baseline), never `real_money`.
+    assert ROLLUP._leg_funding("ml_entry", routing) == "real_money"
+    assert ROLLUP._leg_funding("trend_donchian_eth_4h", routing) != "real_money", (
+        "trend_donchian_eth_4h graded real_money -- it trades ETHUSDT, which bybit_2 trades, but since "
+        "2026-11-06 (PROD-LEGS-DSR-DECISION) bybit_2.strategies does not list it")
     # Since 2026-10-05 (MD-S1-CUT-ON-STAGE0-FAIL, #16548) eth_pullback_2h is on
     # no roster at all, so it reads `unresolved`; the regression this guards is
     # a symbol-keyed `real_money` grade, which must still never happen.
@@ -231,10 +240,11 @@ def test_a_known_real_money_leg_resolves_real_money() -> None:
     """Positive anchor — without one, every `paper` verdict below is vacuous.
 
     Anchor moved from `eth_pullback_2h` on 2026-09-22 (checklist row R2) when
-    that leg was cut from bybit_2. `trend_donchian_eth_4h` is one of the three
-    legs bybit_2 still carries.
+    that leg was cut from bybit_2, then from `trend_donchian_eth_4h` on 2026-11-06
+    (PROD-LEGS-DSR-DECISION) when it left bybit_2. `ml_entry` is the one leg bybit_2
+    still carries (operator exception, kind baseline).
     """
-    assert ROLLUP._funding_by_leg().get("trend_donchian_eth_4h") == "real_money"
+    assert ROLLUP._funding_by_leg().get("ml_entry") == "real_money"
 
 
 # --------------------------------------------------------------------------
@@ -253,7 +263,8 @@ def test_the_stale_decision_routing_split_is_not_uniform() -> None:
     # 2026-09-22 (checklist row R2) — the former is no longer on any live
     # real-money roster, so it could no longer supply the real_money side of
     # the split this test is about.
-    dec = [("trend_donchian_eth_4h", "trail_geometry", "shipped", "2026-07-12", "2026-08-10"),
+    # Moved again 2026-11-06 (PROD-LEGS-DSR-DECISION): trend_donchian_eth_4h left bybit_2; ml_entry is the real-money row.
+    dec = [("ml_entry", "trail_geometry", "shipped", "2026-07-12", "2026-08-10"),
            ("mes_trend_long_1d", "trail_geometry", "shipped", "2026-08-09", "2026-08-10"),
            ("mhg_pullback_1d", "trail_geometry", "shipped", "2026-08-09", "2026-08-10")]
     split = ROLLUP._stale_decision_funding(dec)

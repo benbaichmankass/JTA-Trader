@@ -106,22 +106,14 @@ _EMITTER_RE = re.compile(r"research_result\.py")
 #: REMOVING a name is the good direction and needs no ceremony: wire the
 #: workflow to `.github/actions/research-result`, delete the line.
 BASELINE: Dict[str, str] = {
-    "c1-conviction-ab": "2026-09-27",
     "e35-bracket-sweep": "2026-09-27",
     "flip-override-walkforward": "2026-09-27",
     "gld-compat-matrix": "2026-09-27",
-    "ict-scalp-backtest": "2026-09-27",
     "m20-capture-census": "2026-09-27",
     "prop-tp-r-gate": "2026-09-27",
     "pullback-frac-cross-leg-sweep": "2026-09-27",
     "ranking-key-ab": "2026-09-27",
-    "regime-adx-cutpoint-sweep": "2026-09-27",
-    "regime-cell-walkforward": "2026-09-27",
-    "regime-debt-matrix": "2026-09-27",
     "research-backtest-augment": "2026-09-27",
-    "research-e2-horizon-arm": "2026-09-27",
-    "research-panel-build": "2026-09-27",
-    "research-symbol-p0-build": "2026-09-27",
     "vwap-backtest": "2026-09-27",
 }
 

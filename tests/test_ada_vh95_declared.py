@@ -2,7 +2,7 @@
 
 The declared value must reach the live unit's resolved params (an unknown key
 passes through order_package silently, so reading the config alone proves
-nothing) and the bybit_2 -> bybit_portfolio mirror must still carry the leg.
+nothing). Since 2026-11-06 (PROD-LEGS-DSR-DECISION) the leg is a TESTING leg on bybit_1, off the Stage-2 pair.
 Evidence: research/results/RQ-20261018-002/ (rule RULE-RQ2026101665ff06-REGIME-VOLHOT-CONFIRM).
 """
 from __future__ import annotations
@@ -33,8 +33,12 @@ def test_declared_vh95_reaches_live_params_and_keeps_the_tested_arm():
     assert params["pullback_frac"] == 0.618
 
 
-def test_leg_still_on_both_halves_of_the_stage_2_pair():
+def test_leg_moved_off_the_stage_2_pair_onto_the_demo_floor():
+    # 2026-11-06 PROD-LEGS-DSR-DECISION (operator popup "Re-measure, then move (Rec.)"): ada_pullback_2h failed the trial
+    # ledger's DSR > 0.95 AND BHY-haircut > 0 bar (docs/research/prod-legs-dsr-2026-11-06.md), so it left BOTH halves of the
+    # Stage-2 pair together and trades as a TESTING leg on bybit_1. Pinned so a half-move (live without mirror) fails here.
     accts = yaml.safe_load((ROOT / "config" / "accounts.yaml").read_text())
     accts = accts.get("accounts", accts)
-    assert "ada_pullback_2h" in accts["bybit_2"]["strategies"]
-    assert "ada_pullback_2h" in accts["bybit_portfolio"]["strategies"]
+    assert "ada_pullback_2h" not in accts["bybit_2"]["strategies"]
+    assert "ada_pullback_2h" not in accts["bybit_portfolio"]["strategies"]
+    assert "ada_pullback_2h" in accts["bybit_1"]["strategies"]

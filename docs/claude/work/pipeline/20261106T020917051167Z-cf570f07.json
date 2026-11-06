@@ -1,0 +1,16 @@
+{
+  "due_when": {
+    "check_every_days": 3,
+    "clears_when": "the next LTR wake with packet_state could_not_build carries a traceback frame (live_review_wake keeps 6 stderr lines since #23609) that names the unguarded JSON parse, and it is fixed, or 7 days pass with no could_not_build JSONDecodeError wake over a complete scan of the ltr-wake comments (then killed with that stated denominator)",
+    "kind": "observation"
+  },
+  "id": "PI-20261106-QSEQAVLT-0002",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "audit",
+    "ref": "MECH-FOLLOWUPS-1105 lane 2026-11-06 (manager 01:57Z)",
+    "rerun": "gh api 'repos/benbaichmankass/JTA-Trader/issues/17895/comments?per_page=100' --paginate --jq '.[] | select(.body|contains(\"packet_state\\\":\\\"could_not_build\")) | [.created_at, .id]' ; for each hit read packet_reason, and run python3 scripts/ops/live_review_packet.py <pkg> --bundle locally"
+  },
+  "state": "queued",
+  "what": "Root cause OPEN: LTR wake 2026-11-06T01:56Z for pkg-011a7bf85ee54a6f (mgc_pullback_1d, ib_paper) was could_not_build with JSONDecodeError 'Expecting value: line 1 column 2 (char 1)' (ltr-wake comment 6674775683). Basis: n=1 occurrence of this error; the same package builds cleanly locally (plain and --bundle, 0 read errors), and of 80 ltr-wake comments scanned on #17895 since 2026-11-05 the only other could_not_build was 2026-11-02 TimeoutExpired (a different cause; the scan did not pick up the 01:56Z comment, so the count is indicative). The wake ran on the VM in the trader process (poster vm) 6 minutes after the 01:50Z restart, so a restart-related transient (an IB/diag read or file read returning non-JSON text) is plausible but UNPROVEN. #23609 makes the one unguarded parse in the --bundle path (live_review_outcomes stdout) a named could-not-price state and keeps the traceback frame in the wake reason, so the next occurrence is attributable. Suggested owner: the LTR-GRADER-COVERAGE lane. First step: after #23609 merges and deploys, check the next could_not_build wake's packet_reason."
+}

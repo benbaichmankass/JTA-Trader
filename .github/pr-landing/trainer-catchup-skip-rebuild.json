@@ -1,0 +1,7 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "hold_reason": "tier_2_3_needs_approval",
+  "hold_text": "Trainer runtime (ict-trainer / ict-trainer-catchup run scripts/ops/run_training_cycle.sh). Data-backed: trainer-vm-diag #23583 read runtime_logs/training_cycle.jsonl for the 7 catch-ups 2026-10-30..11-05; every one was already_done 73 / to_run 0, yet each rebuilt every dataset family first (18-43 min wall; journal: 42-57 min CPU per run). Change: when today's progress file already marks every manifest done/skipped (and no force restart), skip build_trainer_datasets.sh and emit datasets_skipped_cycle_complete. Sync, resume, publish, calibrators and cycle_end unchanged. A catch-up with work to resume rebuilds as before. Deploy: ict-trainer-git-sync pulls main within 15 min; first observable at the 2026-11-06 08:00Z catch-up. Revert: git revert.",
+  "why": "FREE-CAPACITY-PLAN (a): the largest pure-waste CPU block on the 1-OCPU trainer (~0.8 CPU-h/day of ~3.5)."
+}

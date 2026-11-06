@@ -1,0 +1,787 @@
+{
+ "account_bounds": [
+  {
+   "account_class": "paper",
+   "account_id": "bybit_1",
+   "apply_paths": [
+    "close",
+    "move_tp",
+    "reduce",
+    "tighten",
+    "widen_sl"
+   ],
+   "evidence": "bybit_orders: SL 8.378 / TP 7.747, position True, matched by order_id; apply paths close, move_tp, reduce, tighten, widen_sl; would_apply = an executor reaches this leg, NOT that its RiskManager approved (LTR-6 gap)",
+   "own_position": true,
+   "read": null,
+   "read_basis": "depends on the recommendation: no_action for hold/no_recommendation, else see read_if_amend",
+   "read_if_amend": "would_apply"
+  }
+ ],
+ "assembled_by": "generator scripts/ops/live_review_packet.py",
+ "context": {
+  "calendar": {
+   "events_next_24h": [],
+   "state": "no_event_classes_for_symbol"
+  },
+  "correlated_open_packages": [
+   {
+    "direction": "short",
+    "order_package_id": "pkg-011a7bf85ee54a6f",
+    "symbol": "MGC"
+   },
+   {
+    "direction": "short",
+    "order_package_id": "pkg-019abe89429249c9",
+    "symbol": "BTCUSDT"
+   },
+   {
+    "direction": "short",
+    "order_package_id": "pkg-0479f95323814a3e",
+    "symbol": "ETHUSDT"
+   },
+   {
+    "direction": "short",
+    "order_package_id": "pkg-58b6ef451e684836",
+    "symbol": "SPY"
+   },
+   {
+    "direction": "short",
+    "order_package_id": "pkg-78342b614f6040f6",
+    "symbol": "ADAUSDT"
+   },
+   {
+    "direction": "short",
+    "order_package_id": "pkg-81365629b21a4fc1",
+    "symbol": "SOLUSDT"
+   },
+   {
+    "direction": "short",
+    "order_package_id": "pkg-9663649fad564d71",
+    "symbol": "GDX"
+   },
+   {
+    "direction": "short",
+    "order_package_id": "pkg-976b459f5c954df0",
+    "symbol": "MHG"
+   },
+   {
+    "direction": "short",
+    "order_package_id": "pkg-bf12adaa61b043f7",
+    "symbol": "XRPUSDT"
+   },
+   {
+    "direction": "short",
+    "order_package_id": "pkg-e3969c6df86648c1",
+    "symbol": "TQQQ"
+   },
+   {
+    "direction": "short",
+    "order_package_id": "pkg-e63bc31f316048a3",
+    "symbol": "BTCUSDT"
+   },
+   {
+    "direction": "short",
+    "order_package_id": "pkg-e9a6d4f9e1fa4a07",
+    "symbol": "IAUM"
+   },
+   {
+    "direction": "short",
+    "order_package_id": "pkg-f61a64e0db9a495b",
+    "symbol": "QQQ"
+   },
+   {
+    "direction": "short",
+    "order_package_id": "pkg-f76bb92289d143e5",
+    "symbol": "SOLUSDT"
+   }
+  ],
+  "direction": "short",
+  "funding": null,
+  "news": {
+   "adjustment": -0.005376,
+   "decision": "neutral",
+   "ts": "2026-11-06T00:09:11.466039+00:00",
+   "veto": false
+  },
+  "previous_review": {
+   "action": "hold",
+   "forecast": {
+    "direction": "with_trade",
+    "evidence": [
+     "chart.bars: last 1h low 8.072 close 8.168, prior closes 8.222/8.266/8.348 stepping down",
+     "chart.swings: lows 8.124 and 4h 8.276/8.28 broken, highs 8.442",
+     "chart.htf: 4h chop ADX 18.8; regime 1h ADX 32.5 trending",
+     "exit_plan: stop 8.378, TP 7.747 (2.0R); desk exit line 1h close above 8.30",
+     "desk_handoff: opening DD-20261106T0003Z-scan-1h-1 p_target 0.32 target 7.747"
+    ],
+    "horizon_bars": 8,
+    "invalidation_px": 8.3,
+    "p_target": 0.5,
+    "target_px": 8.072,
+    "thesis": "AVAX broke the 8.124 low and the 4h lows 8.276/8.28 on a 1h flush to 8.072; I expect continuation to retest 8.072 and press through on the 1h trend, with the 4h in chop making the follow-through uncertain, and a 1h close above 8.30 ends the idea.",
+    "timeframe": "1h"
+   },
+   "reason": "Hold (desk CONFIRM). First review of a desk-opened short at 8.168, the close of the 23:00Z hourly bar that printed 8.072 and broke the 8.124 swing low and the 4h lows 8.276/8.28. Packet mechanics match (venue SL 8.378 / TP 7.747 equal the package), so this is a normal judged call, not the XRP venue-vs-package case. open_r is null (no telemetry row), so I do not state how far the trade has moved; \u2026",
+   "review_id": "LR-20261106T0010Z-pkg-084d03f3a4694542",
+   "reviewed_at": "2026-11-06T00:20:00Z",
+   "route": null
+  },
+  "symbol": "AVAXUSDT"
+ },
+ "context_v3": {
+  "book": [
+   [
+    "MGC",
+    "short",
+    "mgc_pullback_1d",
+    0.724
+   ],
+   [
+    "BTCUSDT",
+    "short",
+    "ml_entry",
+    -0.0631
+   ],
+   [
+    "ETHUSDT",
+    "short",
+    "trend_donchian_eth",
+    0.239
+   ],
+   [
+    "SPY",
+    "short",
+    "ml_entry",
+    1.19
+   ],
+   [
+    "ADAUSDT",
+    "short",
+    "ml_entry_v2",
+    -0.148
+   ],
+   [
+    "GLD",
+    "long",
+    "gld_pullback_1h",
+    null
+   ],
+   [
+    "SOLUSDT",
+    "short",
+    "ml_entry_v2",
+    0.166
+   ],
+   [
+    "GDX",
+    "short",
+    "gdx_pullback_1d",
+    -0.177
+   ],
+   [
+    "MHG",
+    "short",
+    "mhg_pullback_1d",
+    1.15
+   ],
+   [
+    "XRPUSDT",
+    "short",
+    "claude_desk",
+    null
+   ],
+   [
+    "TLT",
+    "long",
+    "tlt_pullback_1d",
+    0.381
+   ],
+   [
+    "TQQQ",
+    "short",
+    "ml_entry",
+    0.528
+   ],
+   [
+    "BTCUSDT",
+    "short",
+    "trend_donchian_1h",
+    -0.0337
+   ],
+   [
+    "IAUM",
+    "short",
+    "ml_entry",
+    -0.257
+   ],
+   [
+    "QQQ",
+    "short",
+    "ml_entry",
+    0.362
+   ],
+   [
+    "SOLUSDT",
+    "short",
+    "trend_donchian_sol_4h",
+    2.4
+   ]
+  ],
+  "book_note": "[symbol, direction, leg, open_r (null = not measured)] per OTHER open package, either side",
+  "chart": {
+   "atr": 0.140429,
+   "bars_note": "[epoch_s, open, high, low, close], closed bars only, oldest first",
+   "bars_ohlc": [
+    [
+     1793865600,
+     8.735,
+     8.804,
+     8.719,
+     8.791
+    ],
+    [
+     1793869200,
+     8.791,
+     8.793,
+     8.726,
+     8.763
+    ],
+    [
+     1793872800,
+     8.763,
+     8.785,
+     8.753,
+     8.753
+    ],
+    [
+     1793876400,
+     8.753,
+     8.777,
+     8.736,
+     8.744
+    ],
+    [
+     1793880000,
+     8.744,
+     8.745,
+     8.612,
+     8.659
+    ],
+    [
+     1793883600,
+     8.659,
+     8.703,
+     8.647,
+     8.698
+    ],
+    [
+     1793887200,
+     8.698,
+     8.717,
+     8.49,
+     8.535
+    ],
+    [
+     1793890800,
+     8.535,
+     8.535,
+     8.124,
+     8.192
+    ],
+    [
+     1793894400,
+     8.192,
+     8.385,
+     8.15,
+     8.275
+    ],
+    [
+     1793898000,
+     8.275,
+     8.281,
+     8.182,
+     8.209
+    ],
+    [
+     1793901600,
+     8.209,
+     8.313,
+     8.171,
+     8.3
+    ],
+    [
+     1793905200,
+     8.3,
+     8.442,
+     8.266,
+     8.396
+    ],
+    [
+     1793908800,
+     8.396,
+     8.438,
+     8.338,
+     8.348
+    ],
+    [
+     1793912400,
+     8.348,
+     8.348,
+     8.261,
+     8.266
+    ],
+    [
+     1793916000,
+     8.266,
+     8.268,
+     8.214,
+     8.222
+    ],
+    [
+     1793919600,
+     8.222,
+     8.245,
+     8.072,
+     8.168
+    ]
+   ],
+   "last_close": 8.168,
+   "since_entry": null,
+   "swings": {
+    "highs": [
+     {
+      "bars_ago": 4,
+      "dist_atr": 1.95,
+      "px": 8.442
+     },
+     {
+      "bars_ago": 15,
+      "dist_atr": 4.53,
+      "px": 8.804
+     },
+     {
+      "bars_ago": 20,
+      "dist_atr": 4.89,
+      "px": 8.854
+     }
+    ],
+    "lows": [
+     {
+      "bars_ago": 8,
+      "dist_atr": -0.31,
+      "px": 8.124
+     },
+     {
+      "bars_ago": 17,
+      "dist_atr": 3.88,
+      "px": 8.713
+     },
+     {
+      "bars_ago": 22,
+      "dist_atr": 3.21,
+      "px": 8.619
+     }
+    ]
+   },
+   "timeframe": "1h"
+  },
+  "exit_plan": {
+   "declared": {
+    "timeframe": "1h"
+   },
+   "entry": 8.168,
+   "exit_plan_state": {
+    "final_trailing": null,
+    "residual_qty": 0.0,
+    "stop": {
+     "price": 8.378,
+     "qty": 1.0
+    },
+    "targets": [
+     {
+      "kind": "final",
+      "price": 7.747,
+      "qty": 1.0,
+      "qty_pct": 1.0,
+      "reach_r": 2.0048
+     }
+    ],
+    "time_decay_minutes": null,
+    "trailing_stop": null
+   },
+   "sl_initial": null,
+   "sl_now": 8.378,
+   "tp_now": 7.747
+  },
+  "htf": {
+   "adx_now": 18.8,
+   "atr": 0.256929,
+   "bars_note": "[epoch_s, open, high, low, close], closed bars only, oldest first",
+   "bars_ohlc": [
+    [
+     1793808000,
+     8.944,
+     8.99,
+     8.71,
+     8.713
+    ],
+    [
+     1793822400,
+     8.713,
+     8.823,
+     8.692,
+     8.731
+    ],
+    [
+     1793836800,
+     8.731,
+     8.854,
+     8.619,
+     8.77
+    ],
+    [
+     1793851200,
+     8.77,
+     8.818,
+     8.713,
+     8.735
+    ],
+    [
+     1793865600,
+     8.735,
+     8.804,
+     8.719,
+     8.744
+    ],
+    [
+     1793880000,
+     8.744,
+     8.745,
+     8.124,
+     8.192
+    ],
+    [
+     1793894400,
+     8.192,
+     8.442,
+     8.15,
+     8.396
+    ],
+    [
+     1793908800,
+     8.396,
+     8.438,
+     8.072,
+     8.168
+    ]
+   ],
+   "last_close": 8.168,
+   "swings": {
+    "highs": [
+     {
+      "bars_ago": 8,
+      "dist_atr": 4.09,
+      "px": 9.219
+     },
+     {
+      "bars_ago": 14,
+      "dist_atr": 2.04,
+      "px": 8.691
+     },
+     {
+      "bars_ago": 28,
+      "dist_atr": 3.37,
+      "px": 9.034
+     }
+    ],
+    "lows": [
+     {
+      "bars_ago": 5,
+      "dist_atr": 1.76,
+      "px": 8.619
+     },
+     {
+      "bars_ago": 11,
+      "dist_atr": 0.42,
+      "px": 8.276
+     },
+     {
+      "bars_ago": 16,
+      "dist_atr": 0.44,
+      "px": 8.28
+     }
+    ]
+   },
+   "timeframe": "4h",
+   "trend_now": "chop"
+  },
+  "live_vs_backtest": {
+   "read_state": "read",
+   "rows": [
+    {
+     "backtest_expectancy_r": null,
+     "backtest_n": 0,
+     "book": "realMoney",
+     "closed": 0,
+     "live_r": null,
+     "r_trades": 0,
+     "verdict": "NO_BACKTEST",
+     "why": "no committed Stage-0 evidence record at comms/strategy_evidence/claude_desk.json"
+    },
+    {
+     "backtest_expectancy_r": null,
+     "backtest_n": 0,
+     "book": "mirror",
+     "closed": 0,
+     "live_r": null,
+     "r_trades": 0,
+     "verdict": "NO_BACKTEST",
+     "why": "no committed Stage-0 evidence record at comms/strategy_evidence/claude_desk.json"
+    }
+   ]
+  }
+ },
+ "cost": {
+  "basis": null
+ },
+ "desk_handoff": {
+  "chain_length": 1,
+  "chain_tail": [
+   {
+    "action": "hold",
+    "forecast": {
+     "direction": "with_trade",
+     "horizon_bars": 8,
+     "invalidation_px": 8.3,
+     "p_target": 0.5,
+     "target_px": 8.072,
+     "timeframe": "1h"
+    },
+    "reason": "Hold (desk CONFIRM). First review of a desk-opened short at 8.168, the close of the 23:00Z hourly bar that printed 8.072 and broke the 8.124 swing low and the 4h lows 8.276/8.28. Packet mechanics match (venue SL 8.378 / TP 7.747 equal the package), so this is a normal judged call, not the XRP venue-vs-package case. open_r is null (no telemetry row), so I do not state how far the trade has moved; the latest closed bar equals the entry. Bracket: stop 8.378 sits 1.0R above entry and under the 8.442 swing high, TP 7.747 is 2.0R; the desk's own early-exit line is a 1h close above 8.30, which is inside the stop and is the level that would end the idea. 1h is trending (ADX 32.5) but 4h is chop (ADX 18.8), so the thesis rests on the 1h; that is why confidence is only 0.50. No priced table (no Stage-0 record for claude_desk), nothing measured favours a bracket move or an exit, and HOLD already expresses the desk's plan.",
+    "review_id": "LR-20261106T0010Z-pkg-084d03f3a4694542",
+    "reviewed_at": "2026-11-06T00:20:00Z",
+    "verdict": "confirm"
+   }
+  ],
+  "instruction": "CONFIRM, REVISE (with a reason) or EXIT this position against the opening thesis and the newest view in the chain; copy prior_decision_id into handoff.prior_decision_id.",
+  "missing": [],
+  "opening": {
+   "decision_id": "DD-20261106T0003Z-scan-1h-1",
+   "entry": 8.168,
+   "exit_plan": "Brackets own the exit; exit early if a 1h close holds above 8.30 or HTF trend turns up before the target.",
+   "expected_r_net": 0.3,
+   "forecast": {
+    "direction": "with_trade",
+    "evidence": [
+     "proposal AVAXUSDT short on the 1h scan DP-20261106T0003Z-scan-1h"
+    ],
+    "horizon_bars": 48,
+    "invalidation_px": 8.3,
+    "p_target": 0.32,
+    "target_px": 7.747,
+    "thesis": "Trending-down AVAX with no strategy holding it; a 1h close below the 8.072 swing low should extend about 3 ATR over the next 48 bars.",
+    "timeframe": "1h"
+   },
+   "judged_at": "2026-11-06T00:06:05Z",
+   "max_hold_min": 2880,
+   "side": "short",
+   "stop": 8.378,
+   "symbol": "AVAXUSDT",
+   "thesis": "Trending-down AVAX with no strategy holding it; a 1h close below the 8.072 swing low should extend about 3 ATR over the next 48 bars.",
+   "timeframe": "1h",
+   "tp": 7.747
+  },
+  "prior_decision_id": "LR-20261106T0010Z-pkg-084d03f3a4694542",
+  "protocol": "DESK-HANDOFF-PROTOCOL",
+  "read_state": "read"
+ },
+ "features_at_review": {
+  "atr_now_over_entry": null,
+  "bars_since_peak": null,
+  "giveback_r": null,
+  "open_r": null,
+  "peak_r": null,
+  "r_to_stop": null,
+  "r_to_target": null
+ },
+ "generator": {
+  "head": "cf69c31ae4",
+  "state": "current"
+ },
+ "info_cutoff_at": "2026-11-06T00:15:42Z",
+ "leg": "claude_desk",
+ "mechanics": {
+  "evidence": "package sl 8.378 / tp 7.747 agree with every readable account",
+  "verdict": "match"
+ },
+ "missing_inputs": [
+  {
+   "field": "state.open_r",
+   "reason": "no position_telemetry row for this package (telemetry covers the donchian/pullback family) and no /api/bot/positions row"
+  },
+  {
+   "field": "regime.atr_now_over_entry",
+   "reason": "candles unavailable or meta.atr (ATR at entry) not recorded"
+  },
+  {
+   "field": "regime.vol_now",
+   "reason": "calm/volatile buckets use frozen edges held only in the VM model registry; not reachable read-only from a session"
+  },
+  {
+   "field": "regime.cell_entry",
+   "reason": "entry meta regime=None vol_regime=None: not both known"
+  },
+  {
+   "field": "priced_options",
+   "reason": "evidence_missing: no committed Stage-0 evidence record comms/strategy_evidence/claude_desk.json (build: scripts/ops/build_strategy_evidence.py --strategy <leg>)"
+  },
+  {
+   "field": "context.funding",
+   "reason": "Bybit public funding API is geo-blocked from session networks and no read-only diag route carries funding_now; needs a diag route"
+  },
+  {
+   "field": "context_v3.chart.since_entry",
+   "reason": "package open time not in the journal reads"
+  }
+ ],
+ "order_package_id": "pkg-084d03f3a4694542",
+ "packet_health": {
+  "defects": [
+   {
+    "count": 1,
+    "denominator": 1,
+    "field": "priced_options",
+    "reason": "evidence_missing"
+   },
+   {
+    "count": 1,
+    "denominator": 1,
+    "field": "state.open_r",
+    "reason": "context_null:state.open_r"
+   }
+  ],
+  "status": "degraded"
+ },
+ "packet_version": 3,
+ "priced_options": null,
+ "priced_options_state": "evidence_missing",
+ "regime": {
+  "adx_now": 32.52,
+  "atr_now_over_entry": null,
+  "cell_entry": null,
+  "cell_now": null,
+  "trend_now": "trending"
+ },
+ "review_id": "LR-20261106T0015Z-pkg-084d03f3a4694542",
+ "short_hold": {
+  "atr": 0.0411428571428568,
+  "bar": "2026-11-06T00:10:00Z",
+  "bar_close": "2026-11-06T00:15:00Z",
+  "entry": 8.168,
+  "mark": 8.208,
+  "minutes_held": 6.2,
+  "open_r_at_mark": -0.1905,
+  "r_unit": "entry_to_current_sl",
+  "read_state": "read",
+  "recent_bars": [
+   {
+    "close": 8.097,
+    "high": 8.128,
+    "low": 8.076,
+    "open": 8.091,
+    "t": "2026-11-05T23:15:00Z"
+   },
+   {
+    "close": 8.159,
+    "high": 8.164,
+    "low": 8.097,
+    "open": 8.097,
+    "t": "2026-11-05T23:20:00Z"
+   },
+   {
+    "close": 8.154,
+    "high": 8.181,
+    "low": 8.154,
+    "open": 8.159,
+    "t": "2026-11-05T23:25:00Z"
+   },
+   {
+    "close": 8.152,
+    "high": 8.174,
+    "low": 8.138,
+    "open": 8.154,
+    "t": "2026-11-05T23:30:00Z"
+   },
+   {
+    "close": 8.135,
+    "high": 8.161,
+    "low": 8.134,
+    "open": 8.152,
+    "t": "2026-11-05T23:35:00Z"
+   },
+   {
+    "close": 8.17,
+    "high": 8.17,
+    "low": 8.135,
+    "open": 8.135,
+    "t": "2026-11-05T23:40:00Z"
+   },
+   {
+    "close": 8.158,
+    "high": 8.181,
+    "low": 8.158,
+    "open": 8.17,
+    "t": "2026-11-05T23:45:00Z"
+   },
+   {
+    "close": 8.149,
+    "high": 8.165,
+    "low": 8.145,
+    "open": 8.158,
+    "t": "2026-11-05T23:50:00Z"
+   },
+   {
+    "close": 8.168,
+    "high": 8.174,
+    "low": 8.146,
+    "open": 8.149,
+    "t": "2026-11-05T23:55:00Z"
+   },
+   {
+    "close": 8.212,
+    "high": 8.228,
+    "low": 8.164,
+    "open": 8.168,
+    "t": "2026-11-06T00:00:00Z"
+   },
+   {
+    "close": 8.199,
+    "high": 8.212,
+    "low": 8.188,
+    "open": 8.212,
+    "t": "2026-11-06T00:05:00Z"
+   },
+   {
+    "close": 8.208,
+    "high": 8.217,
+    "low": 8.189,
+    "open": 8.199,
+    "t": "2026-11-06T00:10:00Z"
+   }
+  ],
+  "risk_per_unit": null,
+  "timeframe": "5m"
+ },
+ "state": {
+  "atr_now_over_entry": null,
+  "bars_held": null,
+  "giveback_r": null,
+  "open_r": null,
+  "peak_provenance": "unverified",
+  "peak_r": null,
+  "regime_cell_entry": null,
+  "regime_cell_now": null,
+  "sl": 8.378,
+  "tp": 7.747
+ }
+}

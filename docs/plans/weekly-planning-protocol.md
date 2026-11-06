@@ -26,6 +26,7 @@ tasks that we will definitely get to."* MEASURED 2026-10-28: filing works and ge
 ([`docs/reviews/2026-10-29-followthrough-triage.md`](../../docs/reviews/2026-10-29-followthrough-triage.md) § 1). These steps are
 mandatory in the planning routine's prompt and come BEFORE part (B) 1:
 
+0a. **Before the numbers, the scoreboard** (net $/% per book + the sceptical-quant line for each leg up for decision; § "The daily brief"). Planning that starts from activity counts optimises activity.
 0. **First agenda item: the numbers.** Run `python3 scripts/ops/review_followthrough.py --window-days 7` and put its table (with its
    population line) at the top of the Artifact. Each review's Layer 0 runs the same script with `--source <review>` first, so a review starts
    by grading its own prior follow-ups.

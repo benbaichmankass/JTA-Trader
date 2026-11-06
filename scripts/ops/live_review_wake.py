@@ -167,7 +167,10 @@ def build_bundle(pkg: str, timeout: int = PACKET_TIMEOUT_S) -> Dict[str, Any]:
     except (OSError, subprocess.SubprocessError) as exc:
         return {"state": "could_not_build", "reason": f"{type(exc).__name__}"}
     if r.returncode != 0:
-        return {"state": "could_not_build", "reason": f"exit {r.returncode}: {r.stderr.strip()[-160:]}"}
+        # The traceback FRAME names the culprit; the last 160 chars kept only the exception line (2026-11-06T01:56Z
+        # JSONDecodeError wake could not be attributed). Keep the last 6 lines, capped at 700 chars.
+        tail = "\n".join(r.stderr.strip().splitlines()[-6:])[-700:]
+        return {"state": "could_not_build", "reason": f"exit {r.returncode}: {tail}"}
     try:
         doc, _ = json.JSONDecoder().raw_decode(r.stdout.lstrip())
     except ValueError:

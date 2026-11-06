@@ -162,8 +162,8 @@ Then, scoped to what changed this session:
    (Use the `sprint-format` skill for the sprint-log shape. This table says
    THAT a decision must land in ROADMAP.md; for WHICH section — new
    milestone, existing phase table, Items Under Consideration, or backlog
-   only — see [`research-driver`](../research-driver/SKILL.md) Step 6's
-   landing decision tree.)
+   only — see the retired `research-driver` skill's Step 6 landing decision tree,
+   archived at `docs/archive/2026-09-21-operating-reset/skills/research-driver/SKILL.md`.)
 
 6. **Triage minor leftovers.** Anything real but too small to fix now goes
    into `docs/claude/work/PIPELINE.jsonl` via `scripts/ops/pipeline.py` (it

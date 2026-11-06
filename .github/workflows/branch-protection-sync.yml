@@ -30,6 +30,14 @@ name: branch-protection-sync
 on:
   push:
     branches: [main]
+    # WORKFLOW-PRUNE P4 (2026-11-06, operator "Simplify + fix red"): the spec lives in THIS file, so a push that does not touch
+    # it has nothing to apply. It ran on every main push (1,610/wk) and was RED on 724 of them, every red a GitHub HTTP 500 on
+    # the PUT (run 42137307836: token present, "PUT protection returned HTTP 500"). Drift repair, which the every-push run gave
+    # by accident, is kept by the daily cron below.
+    paths:
+      - ".github/workflows/branch-protection-sync.yml"
+  schedule:
+    - cron: "23 5 * * *"
   workflow_dispatch:
 
 # GH-CAPACITY-INFRA-FIRST (2026-10-15): one constant group, NOT cancel-in-progress. The job is an
@@ -256,13 +264,19 @@ jobs:
             }')
 
           curl_put=$(mktemp)
-          put_code=$(curl -sS -o "$curl_put" -w '%{http_code}' \
-            -X PUT \
-            -H "Authorization: token ${GH_TOKEN}" \
-            -H "Accept: application/vnd.github+json" \
-            -H "X-GitHub-Api-Version: 2022-11-28" \
-            -d "$BODY" \
-            "$API")
+          # RETRY ON 5xx (WORKFLOW-PRUNE P4, 2026-11-06). GitHub answers this idempotent PUT with an intermittent HTTP 500
+          # (MEASURED: interleaved with 200s on the same payload, last green 2026-11-05T23:00Z). A 4xx is a real refusal and is
+          # not retried; a PUT that still fails after 4 tries stays RED exactly as before.
+          for attempt in 1 2 3 4; do
+            put_code=$(curl -sS -o "$curl_put" -w '%{http_code}' \
+              -X PUT \
+              -H "Authorization: token ${GH_TOKEN}" \
+              -H "Accept: application/vnd.github+json" \
+              -H "X-GitHub-Api-Version: 2022-11-28" \
+              -d "$BODY" \
+              "$API")
+            case "$put_code" in 5??) echo "::warning::PUT protection returned HTTP ${put_code} (attempt ${attempt}/4); retrying"; sleep $((attempt * 5));; *) break;; esac
+          done
 
           if [ "$put_code" != "200" ]; then
             echo "::error::PUT protection returned HTTP ${put_code}:"

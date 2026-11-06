@@ -316,7 +316,7 @@ A "preference" that is bucket 1 or 2 in disguise is the #13698 failure. Re-run t
 ## The daily brief, and the work system
 
 The brief is rendered and **pushed before** the sync: six sections in fixed order (what came due · taken under mandate · decisions for you · what
-moved · what is running · spend; CLAUDE.md § "The daily sync"). ⚠️ **The sync is NOT measured in time** (do not report session length as a metric);
+moved · what is running · spend; CLAUDE.md § "The daily sync"). ⚠️ **The scoreboard opens the brief** (operator audit C6, 2026-11-01; row `PROMPTS-PNL-FIRST`): a short header ABOVE section 0 with net $ and % per book (real money, mirror, paper), each with population, window and read-state (route `SCOREBOARD-PNL-FIRST`; until it lands `/api/bot/performance`), plus one line answering *"would a sceptical quant believe this leg has edge?"* for every leg the brief asks the operator to decide on. A header, not a seventh section and not a gate. Activity counts (lanes run, calls graded, rows closed, hit rate, Brier) never lead the brief and are not reported as a measure of how the system is doing. ⚠️ **The sync is NOT measured in time** (do not report session length as a metric);
 ⚠️ **no cap on section 2**; ⚠️ **the brief must be short, ranked and true** (a size cap, a soaks slot, what it leaves out stated as a count).
 
 **The work system (operator, 2026-10-04, binding; design `docs/plans/work-system-2026-10-04.md`, row `WORK-SYSTEM`):** the VM computes due work and

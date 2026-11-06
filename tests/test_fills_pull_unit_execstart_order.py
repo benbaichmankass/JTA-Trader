@@ -83,7 +83,7 @@ def test_bybit_unit_execstart_lines_are_not_failure_suppressed():
 def test_alpaca_has_its_own_unit():
     assert _ALPACA_UNIT.is_file(), f"{_ALPACA_UNIT} missing"
     execs = _exec_starts(_ALPACA_UNIT)
-    assert len(execs) == 1
+    assert len(execs) == 2  # pull + COST-BROKER-SOURCED sweep (last)
     assert "pull_alpaca_fills.py" in execs[0]
     assert "--all-alpaca-accounts" in execs[0]
 
@@ -93,3 +93,10 @@ def test_alpaca_unit_has_its_own_timer():
     assert timer.is_file(), f"{timer} missing"
     text = timer.read_text(encoding="utf-8")
     assert "Unit=ict-alpaca-fills-pull.service" in text
+
+
+def test_both_units_end_with_broker_truth_cost_sweep():
+    """COST-BROKER-SOURCED: the sweep is the LAST ExecStart of each fills unit."""
+    for unit in (_BYBIT_UNIT, _ALPACA_UNIT):
+        execs = _exec_starts(unit)
+        assert "backfill_broker_truth_costs.py --apply" in execs[-1], unit
