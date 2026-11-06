@@ -2974,6 +2974,20 @@ def main(argv: list[str]) -> int:
             print(f"    split: {leg_split} (targeting {a.split_target_oos} OOS "
                   f"trades of {split_meta.get('split_lifetime_trades')} lifetime "
                   f"— ACHIEVED count is base_oos below, not this target)")
+        if a.holdout_frac > 0 and _HOLDOUT.active and str(leg_split)[:10] > str(_HOLDOUT.cap):
+            # The IS/OOS boundary (typically the FIXED fallback date after resolve_split fell back) lies past
+            # the last discovery day: the IS window would read the held-back span. The guard refuses it
+            # (HoldoutLeak) -- and used to do so by CRASHING the process, so the job produced no verdicts.json
+            # and the run was an unlanded failure (MECH-FOLLOWUPS-1105 b; 10 runs, e.g. 41983651204 qld_trend_long_1d,
+            # holdout from 2022-11-11, fallback split 2025-07-01). One leg's refusal is contained to that leg
+            # and stated in its record; the guard itself is unchanged.
+            print(f"    split {leg_split} is past the last discovery day {_HOLDOUT.cap} (holdout from "
+                  f"{_HOLDOUT.boundary}) -- leg not swept")
+            verdicts[leg] = {"status": "split_beyond_holdout", "split": leg_split,
+                             "split_fallback": split_meta.get("split_fallback"),
+                             "holdout": {"plan": hold_plan, "last_discovery_day": _HOLDOUT.cap}, **split_meta}
+            _HOLDOUT.end()
+            continue
         base_is = run_cell(p["harness"], p["base"], end=leg_split)
         base_oos = run_cell(p["harness"], p["base"], start=leg_split)
         log_result({"leg": leg, "cell": "base", "window": "IS", **base_is})
