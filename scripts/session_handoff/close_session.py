@@ -42,6 +42,7 @@ from __future__ import annotations
 import argparse
 import datetime as _dt
 import json
+import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -49,6 +50,7 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_HANDOFF = REPO_ROOT / "automation" / "session_handoff" / "next_session.json"
 DEFAULT_SCHEMA = REPO_ROOT / "automation" / "session_handoff" / "schema" / "handoff.schema.json"
+WORKFLOW_FILE_NAME = "continue-work.yml"
 
 VALID_REASONS = (
     "context_limit_near",
@@ -219,12 +221,40 @@ def _git_push(branch: str) -> None:
 
 
 def _dispatch(sprint_id: str, handoff_rel: str, branch: str) -> None:
-    """The `continue-work` workflow was deleted on 2026-11-06 (WORKFLOW-PRUNE P1: it had 0 runs in 90 days), so there is
-    nothing to dispatch. `--dispatch` is kept as a flag so existing callers do not break; it now says so and returns
-    (exit 0) instead of running `gh workflow run continue-work.yml`, which would fail with HTTP 404."""
+    """Trigger the continue-work workflow. Prefers `gh`; otherwise prints
+    the exact curl payload and exits gracefully."""
+    if shutil.which("gh"):
+        _run(
+            [
+                "gh",
+                "workflow",
+                "run",
+                WORKFLOW_FILE_NAME,
+                "--ref",
+                branch,
+                "-f",
+                f"sprint_id={sprint_id}",
+                "-f",
+                f"handoff_file={handoff_rel}",
+                "-f",
+                f"branch={branch}",
+            ]
+        )
+        print(">>> Dispatched continue-work via gh.")
+        return
+    payload = {
+        "event_type": "continue-work",
+        "client_payload": {
+            "sprint_id": sprint_id,
+            "handoff_file": handoff_rel,
+            "branch": branch,
+        },
+    }
     print(
-        ">>> `continue-work` was deleted 2026-11-06 (WORKFLOW-PRUNE P1); nothing was dispatched. The handoff file is\n"
-        f"    committed/pushed on `{branch}` ({handoff_rel}, sprint {sprint_id}); start the next session from it.\n"
+        ">>> `gh` not on PATH. To dispatch the workflow manually, either\n"
+        "    open the Actions tab and click 'Run workflow' on continue-work,\n"
+        "    or POST the payload below to the repository_dispatch endpoint:\n\n"
+        f"{json.dumps(payload, indent=2)}\n"
     )
 
 

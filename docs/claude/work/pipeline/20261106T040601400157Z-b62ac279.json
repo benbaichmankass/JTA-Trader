@@ -1,0 +1,17 @@
+{
+  "due_when": {
+    "check_every_days": 3,
+    "clears_when": "the held PR merges (git grep above returns nothing) or the operator closes it with a reason",
+    "kind": "event",
+    "last_checked": "2026-11-06"
+  },
+  "id": "PI-20261106-01AFOLUJ-0009",
+  "next_action": "ask_operator",
+  "origin": {
+    "kind": "session",
+    "ref": "lane WORKFLOW-PRUNE (Manager Session 2026-11-05b), session_01AFoLuJ6sZjv24MuhwLtDtDwuuz",
+    "rerun": "git grep -n 'continue-work.yml' -- scripts/session_handoff/close_session.py  # a hit = still open"
+  },
+  "state": "queued",
+  "what": "close_session.py --dispatch still runs `gh workflow run continue-work.yml` (scripts/session_handoff/close_session.py), a workflow deleted 2026-11-06 (WORKFLOW-PRUNE P1, 0 runs in 90 d): the flag now fails with HTTP 404. Found by the post-merge reference probe. The fix (make _dispatch print a retirement notice and return, drop the unused shutil import and WORKFLOW_FILE_NAME, one test) is outside the Tier-1 self-land surface (check_pr_landing R5), so it needs a human-merged PR: opened as a held PR by lane WORKFLOW-PRUNE."
+}
