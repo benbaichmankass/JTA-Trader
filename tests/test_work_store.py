@@ -379,3 +379,10 @@ def test_row_with_extra_week_lane_is_served_with_week_lane(store):
     assert [r["week_lane"] for r in rows] == ["throttle"]
     item = work_router._checklist_item(rows[0], vocabulary=("queued",), registered=None)
     assert item["fields"]["week_lane"] == "throttle"
+
+
+@pytest.mark.parametrize("lane", ["surge", "throttle", "after_reset", "standing"])
+def test_week_lane_accepts_after_reset_and_keeps_standing(store, lane):
+    it = store.create(_build(), by="t", today=TODAY)["item"]
+    out = store.set("WSD-TEST-1", {"week_lane": lane}, by="t", expected_version=it["version"], today=TODAY)["item"]
+    assert out["extra"]["week_lane"] == lane
