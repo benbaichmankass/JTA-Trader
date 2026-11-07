@@ -1,0 +1,72 @@
+name: oci-resize-a1
+
+# Tier 2. Memory-only resize of ict-trainer-vm or ict-ib-gateway inside the
+# Always-Free A1 pool (4 OCPU / 24 GB total). Never the trader. Stop -> update -> start.
+# Gates this adds or changes: none (a guarded action; operator popup 2026-11-06 "Next CME daily break").
+# Issue body: target_name / ocpus / memory_gbs / mode (plan|execute) / confirm (yes) / reason.
+
+on:
+  workflow_dispatch:
+  issues:
+    types: [opened]
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: oci-resize-a1
+  cancel-in-progress: false
+
+jobs:
+  resize:
+    if: |
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'issues' &&
+       (github.event.issue.user.login == github.repository_owner ||
+        github.event.issue.user.login == 'github-actions[bot]') &&
+       contains(github.event.issue.labels.*.name, 'oci-resize-a1'))
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install --quiet 'oci>=2.119,<3'
+      - name: Parse issue body
+        id: p
+        env:
+          BODY: ${{ github.event.issue.body }}
+        run: |
+          g(){ printf '%s' "$BODY" | awk -F: -v k="$1" '$1 ~ "^[[:space:]]*"k"[[:space:]]*$" {gsub(/[[:space:]]/,"",$2);print $2;exit}'; }
+          {
+            echo "name=$(g target_name)"; echo "ocpus=$(g ocpus)"; echo "mem=$(g memory_gbs)"
+            m="$(g mode)"; echo "mode=${m:-plan}"; echo "confirm=$(g confirm)"
+          } >> "$GITHUB_OUTPUT"
+      - name: Run
+        env:
+          OCI_CLI_USER: ${{ secrets.OCI_CLI_USER }}
+          OCI_CLI_KEY_CONTENT: ${{ secrets.OCI_CLI_KEY_CONTENT }}
+          OCI_CLI_FINGERPRINT: ${{ secrets.OCI_CLI_FINGERPRINT }}
+          OCI_CLI_TENANCY: ${{ secrets.OCI_CLI_TENANCY }}
+          OCI_CLI_REGION: ${{ secrets.OCI_CLI_REGION }}
+          OCI_COMPARTMENT_OCID: ${{ secrets.OCI_COMPARTMENT_OCID }}
+          TARGET_NAME: ${{ steps.p.outputs.name }}
+          TARGET_OCPUS: ${{ steps.p.outputs.ocpus }}
+          TARGET_MEMORY_GBS: ${{ steps.p.outputs.mem }}
+          MODE: ${{ steps.p.outputs.mode }}
+          CONFIRM: ${{ steps.p.outputs.confirm }}
+        run: |
+          set +e
+          mkdir -p /tmp/o
+          python3 scripts/ops/oci_resize_a1.py > /tmp/o/out.jsonl 2> /tmp/o/err.txt
+          echo "rc=$?" > /tmp/o/rc.txt
+      - name: Post result
+        if: always() && github.event_name == 'issues'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ISSUE: ${{ github.event.issue.number }}
+        run: |
+          { printf '## oci-resize-a1\n\n%s\n```\n' "$(cat /tmp/o/rc.txt 2>/dev/null)"; head -c 30000 /tmp/o/out.jsonl; head -c 3000 /tmp/o/err.txt; printf '\n```\n'; } > /tmp/o/c.md
+          gh issue comment "$ISSUE" --repo "$GITHUB_REPOSITORY" --body-file /tmp/o/c.md
