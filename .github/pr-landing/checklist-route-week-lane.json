@@ -1,7 +1,5 @@
 {
   "tier": 1,
-  "landing": "hold",
-  "hold_reason": "operator_asked_to_hold",
-  "hold_text": "Test-only: tests/test_work_store.py gains a regression test that a build item with extra.week_lane is served with week_lane by work_read.checklist_rows and by the route's per-row fields. No runtime change; no restart. The manager asked for hold. Revert: git revert.",
-  "why": "Regression cover for the reported 'route drops week_lane' bug, which measured as not reproducing on the live route."
+  "landing": "self",
+  "why": "Tier-1 test-only (manager 2026-11-07: 'switch its landing to self-land'): tests/test_work_store.py gains a regression test that a build item with extra.week_lane is served with week_lane by work_read.checklist_rows and by the route's per-row fields. No src/, no config/, no order path, no restart. Revert: git revert."
 }
