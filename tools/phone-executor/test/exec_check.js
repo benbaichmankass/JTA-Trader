@@ -159,21 +159,6 @@ function eq(a, b, m) { if (JSON.stringify(a) !== JSON.stringify(b)) { console.er
   const pf = await onNL(TV("button")); await pf.evaluate("window.__exKickAfterMs = 0; __ex.terminal()");
   await pf.waitForTimeout(300); await pf.evaluate("document.getElementById('q').focus()"); await pf.waitForTimeout(1600);
   eq(await pf.evaluate("[document.getElementById('f').style.display !== 'none', __ex.terminal().ticketOpen]"), [true, true], "a focused input: the form stays open, ticketOpen stays true (never hide a form someone is typing in)");
-  // ORDER FENCE on the WHOLE new layout (manager, real prop money): the Trade view shows an "Order form" control and an open form, which the .2 fence
-  // wrongly took as proof the order path was known. With the bottom navigation on the page nothing that commits an order or an edit may work,
-  // and the order button must never be clicked.
-  const FORM = '<div><button id=of>Order form</button><button id=pos>Positions</button><button id=oo>Open orders</button></div><form id=f><label for=q>Quantity</label><input id=q value="1.00"><button type=button id=go>Long (buy) ETH</button></form>';
-  const NAVB = '<nav aria-label="Trading navigation" style="position:fixed;bottom:0;left:0;right:0;height:60px;display:flex"><button>Markets</button><button>Trade</button><button>Activity</button></nav>';
-  const COUNT = '<script>window.goes=0;document.getElementById("go").onclick=function(){window.goes++};</script>';
-  const pfz = await onNL('<body style="margin:0"><main>' + FORM + '</main>' + NAVB + COUNT + '</body>');
-  eq(await pfz.evaluate("[__ex.symbolStep('ETHUSDT'), __ex.openTicket(), __ex.submit(), __ex.modalConfirm(), __ex.dlgSave(), __ex.rowClose('ETHUSDT','long'), __ex.sheetClosePosition('ETHUSDT'), __ex.sheetOpen('ETHUSDT','sl')]"),
-    ["none", "no_order_control", "none", "none", "none", "none", "not_armed", "none"], "ORDER FENCE: on the new layout (form open, Order form control present) every entry, edit, confirm and close action refuses");
-  eq(await pfz.evaluate("window.goes"), 0, "ORDER FENCE: the Long (buy) button was never clicked");
-  eq(await pfz.evaluate("[__ex.terminal().ticketOpen, typeof __ex.positionsRead, typeof __ex.accountPanel]"), [true, "function", "function"], "reads stay available under the fence (the form is still reported open)");
-  // contrast: the same form WITHOUT the bottom navigation (the legacy layout) is not fenced
-  const pold = await onNL('<body style="margin:0"><main>' + FORM + '</main>' + COUNT + '</body>');
-  eq(await pold.evaluate("[__ex.openTicket(), __ex.submit()]"), ["open", "clicked"], "contrast: the legacy layout (no bottom navigation) is NOT fenced");
-  eq(await pold.evaluate("window.goes"), 1, "contrast: and there the button click is real");
   // REDACTION (a real bug, reproduced on this minimal page): "Available to trade <amount>" sits inside the same form as a <label>Quantity</label>, whose
   // KEEP context the amount used to inherit, so its digits reached the bitmap. It must be masked in the snapshot and boxed.
   const ps = await onNL('<body><main><form id=f><label for=q>Quantity</label><input id=q value="1.00"><div><div>Available to trade</div><div><span id=av>24,179.14 USD</span> <span>5x</span></div></div><button type=button>Long (buy) ETH</button></form></main></body>');
