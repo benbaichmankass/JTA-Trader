@@ -6,7 +6,7 @@
   // PHONE-EXEC-OBSERVABLE-1018: this file is also served SIGNED by our own API and swapped in at runtime
   // (RemoteJs.kt): a newer version replaces the installed helpers on the next ensure(); the same version is
   // never injected twice. Bump on every change (CI signs the file; the app pins by version).
-  var EXEC_VERSION = "2026-11-07.2";
+  var EXEC_VERSION = "2026-11-07.3";
   if (window.__ex && window.__ex.version === EXEC_VERSION) return;
   function hostOk() { return /(^|\.)breakoutprop\.com$/.test(location.hostname || ""); }
   function vis(el) { if (!el) return false; var r = el.getBoundingClientRect(); return r.width > 0 && r.height > 0; }
@@ -1217,9 +1217,18 @@
   // Markets or Activity). Navigation only: never inside an open ticket, never more than once per 20 s.
   function kickTradeView() {
     var nb = navBtns(); if (!nb.trade || newReadSurface() || submitBtn()) return "";
+    // 2026-11-07.3: after .2 the background read answered "busy" and posted nothing on the real page, which only happens when
+    // terminal() returns null (a page-side error, or a result lost to a navigation). So the tap (a) never happens on a young
+    // page (the background engine reloads the terminal every job and the SPA renders the chips seconds after "complete":
+    // a tap in that gap is the likeliest culprit), (b) is deferred with setTimeout so terminal() has ALREADY returned when
+    // the click runs, and (c) is throttled to once per 20 s.
+    var age = (window.performance && performance.now) ? performance.now() : 1e9;
+    if (age < (typeof window.__exKickAfterMs === "number" ? window.__exKickAfterMs : 25000)) return "young";
     var now = Date.now(); if (window.__exNavAt && now - window.__exNavAt < 20000) return "wait";
-    window.__exNavAt = now; try { nb.trade.scrollIntoView({block: "nearest"}); } catch (e) { }
-    nb.trade.click(); return "clicked";
+    window.__exNavAt = now;
+    var btn = nb.trade;
+    setTimeout(function () { try { btn.scrollIntoView({block: "nearest"}); } catch (e) { } try { btn.click(); } catch (e) { } }, 0);
+    return "clicked";
   }
 
   // ---- NEW-LAYOUT STRUCTURE DUMP (PHONE-BREAKOUT-NEW-LAYOUT, 2026-11-07). The broker moved its navigation from a tab
@@ -1231,7 +1240,8 @@
   // names. The server scrubs again (letters, digits, space and _.:/()=+&%- only, 40 chars each).
   function dmask(s, n) { return String(s || "").replace(/\s+/g, " ").replace(/\d/g, "9").replace(/[^A-Za-z0-9 _.:\/()=+&%-]/g, "").trim().slice(0, n); }
   function outline(max) {
-    var out = [], seen = {}, H = window.innerHeight || 0, W = window.innerWidth || 1;
+    var out = [], seen = {}, H = 0, W = 1;
+    try { H = window.innerHeight || 0; W = window.innerWidth || 1; } catch (e) { }   // a dump must never throw: it is the evidence of a failure
     function add(k, x, extra) {
       if (out.length >= max) return;
       var r = x.getBoundingClientRect(), role = x.getAttribute("role") || "", al = x.getAttribute("aria-label") || x.getAttribute("title") || "";
@@ -1420,11 +1430,16 @@
       // NEW LAYOUT (2026-11-07): read surface = the bottom nav's Trade button plus both panel chips; when the nav is there
       // but the chips are not, tap Trade (throttled) so the next call finds them
       var legacy = ctl || !!submitBtn() || bs || probe || panels;
-      var nav = !legacy && /(^|\.)trade\.breakoutprop\.com$/.test(location.hostname) && !!navBtns().trade;
-      var newRead = nav && newReadSurface();
-      var navKick = nav && !newRead ? kickTradeView() : "";
+      var nav = false, newRead = false, navKick = "", err = "";
+      // the new-layout block can NEVER make terminal() throw (a throw reaches the app as null = "busy", silently): an error
+      // is reported in `err` and the page then simply is not ready
+      try {
+        nav = !legacy && /(^|\.)trade\.breakoutprop\.com$/.test(location.hostname) && !!navBtns().trade;
+        newRead = nav && newReadSurface();
+        navKick = nav && !newRead ? kickTradeView() : "";
+      } catch (e) { err = String(e && e.message || e).slice(0, 60); nav = false; newRead = false; }
       return {ready: legacy || newRead, panels: panels, orderControl: ctl, ticketOpen: !!submitBtn(), buySell: bs,
-        probe: probe, tabs: tb.length, inputs: inputs(document).length, newLayout: nav, newRead: newRead, navKick: navKick};
+        probe: probe, tabs: tb.length, inputs: inputs(document).length, newLayout: nav, newRead: newRead, navKick: navKick, err: err};
     },
     // Control texts on the page (buttons, tabs, role=button), first 40, digits masked: OUR OWN UI labels only, for
     // the "terminal did not load" event and the refusal dump. Never values, never account numbers.
@@ -1453,7 +1468,7 @@
       });
       // A page that is NOT a terminal we know (terminal().ready false: the 2026-11-07 new layout) also reports its
       // structure, in the same 40 slots the server keeps: the first 12 control texts, then outline() (28 lines).
-      var known = false; try { var tmk = window.__ex.terminal(); known = !!tmk.ready && !tmk.newRead; } catch (e) { }   // the new layout always reports its shape (a read miss there needs it)
+      var known = false, tmk = {}; try { tmk = window.__ex.terminal(); known = !!tmk.ready && !tmk.newRead; } catch (e) { }   // the new layout always reports its shape (a read miss there needs it)
       if (known) return out;
       var ol = outline(28);
       // SHAPE HASH (PHONE-EXECUTOR-ANOMALY): FNV-1a over the STRUCTURAL lines only (bottom band B/b, fixed bars F,
@@ -1461,7 +1476,8 @@
       // server dedups captures and raises ONE alert per hash by it.
       var h = 2166136261, sh = ol.filter(function (x) { return /^[BbFL]:/.test(x); }).join("\n");
       for (var i = 0; i < sh.length; i++) { h ^= sh.charCodeAt(i); h = (h * 16777619) >>> 0; }
-      return ["shape:" + ("00000000" + h.toString(16)).slice(-8)].concat(out.slice(0, 11), ol);
+      var td = ""; try { td = "term:r" + (tmk.ready ? 1 : 0) + " n" + (tmk.newLayout ? 1 : 0) + " v" + (tmk.newRead ? 1 : 0) + " k:" + (tmk.navKick || "-") + (tmk.err ? " e:" + tmk.err : "") + " a" + Math.round((window.performance && performance.now ? performance.now() : 0) / 1000); } catch (e) { td = "term:?"; }
+      return ["shape:" + ("00000000" + h.toString(16)).slice(-8), td.slice(0, 40)].concat(out.slice(0, 10), ol);
     },
     // The structure dump on its own (the app / a drill can ask for it): up to [n] short scrubbed lines.
     outline: function (n) { return outline(n || 40); },

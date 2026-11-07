@@ -119,11 +119,24 @@ function eq(a, b, m) { if (JSON.stringify(a) !== JSON.stringify(b)) { console.er
   eq(await pn3.evaluate("window.hits"), 0, "ORDER FENCE: no tap happened");
   const nc3 = await pn3.evaluate("__ex.controls()");
   eq([/^shape:[0-9a-f]{8}$/.test(nc3[0]), nc3.some((x) => /^B:button:Trade:/.test(x))], [true, true], "new layout: dumps still carry the shape + outline");
+  // .3 (2026-11-07): the tap NEVER happens on a young page, is DEFERRED until terminal() has returned, and is throttled.
   const pn4 = await onNL(NL(false));
-  eq(await pn4.evaluate("[__ex.terminal().ready, window.hits]"), [false, 1], "Markets/Activity view: not ready yet, ONE tap on the bottom Trade button");
+  eq(await pn4.evaluate("[__ex.terminal().ready, __ex.terminal().navKick, window.hits]"), [false, "young", 0], "Markets view on a YOUNG page: no tap (the background engine's fresh load; the chips render seconds later)");
+  await pn4.evaluate("window.__exKickAfterMs = 0");
+  eq(await pn4.evaluate("var r = __ex.terminal(); [r.ready, r.navKick, window.hits]"), [false, "clicked", 0], "old page: terminal() returns BEFORE the tap runs (a navigation can no longer swallow its result)");
+  await pn4.waitForTimeout(50);
+  eq(await pn4.evaluate("window.hits"), 1, "the deferred tap happened: ONE tap on the bottom Trade button");
   eq(await pn4.evaluate("[__ex.terminal().ready, window.hits]"), [true, 1], "the chips are there on the next call: ready, and no second tap");
   await pn4.evaluate("document.querySelectorAll('button').forEach(function(x){if(/^Open/.test(x.textContent))x.remove()})");
   eq(await pn4.evaluate("[__ex.terminal().ready, __ex.terminal().navKick, window.hits]"), [false, "wait", 1], "chips gone again inside 20 s: throttled, no second tap");
+  // an error inside the new-layout block must come back as err, never as a throw (a throw reaches the app as null = a silent "busy")
+  const pn5 = await onNL(NL(true));
+  await pn5.evaluate("Object.defineProperty(window, 'innerHeight', {get: function () { throw new Error('boom'); }})");
+  eq(await pn5.evaluate("var r; try { r = __ex.terminal(); } catch (e) { r = {threw: String(e)}; } [r.threw || '', r.ready, r.err]"), ["", false, "boom"], "terminal() never throws: the error is reported in err and the page is simply not ready");
+  const dump5 = await pn5.evaluate("__ex.controls()");
+  eq([/^shape:[0-9a-f]{8}$/.test(dump5[0]), /^term:r0 n0 v0 /.test(dump5[1]) && /e:boom/.test(dump5[1])], [true, true], "the dump carries a term: line with the error, so the next miss explains itself");
+  const dump3 = await pn3.evaluate("__ex.controls()");
+  eq([/^term:r1 n1 v1 /.test(dump3[1]), dump3.length <= 40], [true, true], "ready new layout: the dump's term: line says r1 n1 v1, and stays inside the server's 40 slots");
   await st("/en/account/A3/trade");
   eq(await p2.evaluate("__ex.terminal().ready"), false, "buy/sell words alone (no tabs, no inputs) are not the terminal");
   s1 = await st("/login");
