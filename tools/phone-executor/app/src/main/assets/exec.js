@@ -1408,7 +1408,7 @@
       var known = false; try { known = !!window.__ex.terminal().ready; } catch (e) { }
       if (known) return out;
       var ol = outline(28);
-      // SHAPE HASH (PHONE-LAYOUT-STANDING): FNV-1a over the STRUCTURAL lines only (bottom band B/b, fixed bars F,
+      // SHAPE HASH (PHONE-EXECUTOR-ANOMALY): FNV-1a over the STRUCTURAL lines only (bottom band B/b, fixed bars F,
       // landmarks L): the same layout hashes the same minute after minute, a new navigation hashes differently. The
       // server dedups captures and raises ONE alert per hash by it.
       var h = 2166136261, sh = ol.filter(function (x) { return /^[BbFL]:/.test(x); }).join("\n");
