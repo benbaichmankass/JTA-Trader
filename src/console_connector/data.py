@@ -35,6 +35,11 @@ def week_start(now: datetime) -> datetime:
     return base - timedelta(days=7) if base > now else base
 
 
+CLOSED_ROWS_CAP = 15
+CLOSED_ROW_KEYS = ("id", "title", "state", "week_lane", "owner", "lane", "due_by", "updated_at",
+                   "priority_rank", "roadmap")
+
+
 def closed_this_week(items: list[dict], now: datetime, today: date) -> dict[str, Any]:
     """Rows closed (done / dropped / landed_unproven) this planning week by updated_at, with counts per
     week_lane and state. Additive: a separate block, never folded into the open sections."""
@@ -51,10 +56,16 @@ def closed_this_week(items: list[dict], now: datetime, today: date) -> dict[str,
         lane = str(s.get("week_lane"))
         counts.setdefault(lane, {})
         counts[lane][s["state"]] = counts[lane].get(s["state"], 0) + 1
-    rows.sort(key=lambda r: (str(r.get("week_lane")), r["state"], r["id"]))
-    return {"read_state": "read", "week_start": _iso(start), "week_end": _iso(start + timedelta(days=7)),
-            "population": {"rows_scanned": len(items), "closed_rows": len(rows)},
-            "counts_by_week_lane": counts, "rows": rows}
+    rows.sort(key=lambda r: (r.get("week_lane") is None, str(r.get("week_lane")), r["state"], r["id"]))
+    total = len(rows)
+    # Size budget (console stuck on "Waiting", 2026-11-07: this block was 167 KB / 173 rows and made every work_rows
+    # reply ~170 KB): counts stay complete; rows are capped, lane rows first, and slimmed.
+    keep = [{k: r.get(k) for k in CLOSED_ROW_KEYS} for r in rows[:CLOSED_ROWS_CAP]]
+    return {"read_state": "read",
+            "week_start": _iso(start), "week_end": _iso(start + timedelta(days=7)),
+            "population": {"rows_scanned": len(items), "closed_rows": total, "rows_returned": len(keep),
+                           "rows_cap": CLOSED_ROWS_CAP, "rows_truncated": total > len(keep)},
+            "counts_by_week_lane": counts, "rows": keep}
 
 
 def week_lane_totals(items: list[dict]) -> dict[str, Any]:

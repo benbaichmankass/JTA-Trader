@@ -630,7 +630,7 @@ def research_queue(repo: Path, args: dict | None = None) -> dict:
     args = args or {}
     want_status = str(args.get("status") or "pipeline")
     want_theme = str(args.get("theme") or "all")
-    limit = max(1, min(300, int(args.get("limit") or 150)))
+    limit = max(1, min(300, int(args.get("limit") or 30)))
     offset = max(0, int(args.get("offset") or 0))
     try:
         from src.runtime import research_catalog as rc
@@ -644,13 +644,13 @@ def research_queue(repo: Path, args: dict | None = None) -> dict:
         links = u.get("links") if isinstance(u.get("links"), dict) else {}
         res = links.get("results") or []
         rows.append({
-            "id": u.get("id"), "title": _trim(u.get("title"), 160), "status": _RQ_STATUS.get(u.get("status")),
-            "raw_status": u.get("status"), "due": u.get("dueState"), "blocked_reason": _trim(u.get("blockedReason"), 160),
+            "id": u.get("id"), "title": _trim(u.get("title"), 110), "status": _RQ_STATUS.get(u.get("status")),
+            "blocked_reason": _trim(u.get("blockedReason"), 90),
             "kind": u.get("kind"), "theme": th, "theme_group": None if not th else ("ml" if str(th).startswith("ml") else "trading"),
-            "harness": du.get("harness") or du.get("workflow"), "workflow": du.get("workflow"),
+            "harness": _trim(du.get("harness") or du.get("workflow"), 60),
             "compute": _RQ_BACKEND.get(u.get("backend")), "verdict": u.get("verdict"),
             "last_run_at": u.get("lastDispatchedAt"), "result_at": u.get("latestResultAt"),
-            "result_pointer": (res[-1] if res else links.get("run")), "unit_link": links.get("unit"),
+            "result_pointer": (res[-1] if res else links.get("run")),
             "stuck": u.get("stuck"), "last_activity": u.get("lastActivity")})
     def tally(key):
         out: dict[str, int] = {}

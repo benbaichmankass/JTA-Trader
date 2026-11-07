@@ -96,3 +96,17 @@ def test_connector_research_queue_and_write_tool_gating(monkeypatch):
     assert "set_wake_toggle" not in [t["name"] for t in s.handle({"jsonrpc": "2.0", "id": 1, "method": "tools/list"})["result"]["tools"]]
     monkeypatch.setenv("CONSOLE_CONNECTOR_AUTH", "google"); monkeypatch.setenv("WAKE_TOGGLES_WRITE_TOKEN", "t")
     assert "set_wake_toggle" in [t["name"] for t in s.handle({"jsonrpc": "2.0", "id": 1, "method": "tools/list"})["result"]["tools"]]
+
+
+def test_connector_replies_stay_small_for_the_pages_calls():
+    """Console stuck on 'Waiting' (2026-11-07): closed_this_week alone was 167 KB. Every call the page makes must
+    stay under the reply budget."""
+    import json
+    from src.console_connector import server as s
+    for name, args in [("work_rows", {"view": "all", "limit": 6}), ("workplan", {"limit": 6}), ("ml_roadmap", {"limit": 15}),
+                       ("system_catalog", {"signals_limit": 10}), ("research_queue", {"status": "pipeline", "limit": 30}),
+                       ("inbox", {"limit": 25})]:
+        out = s.call_tool(name, args)
+        assert len(json.dumps(out, default=str)) <= s.REPLY_BUDGET and "oversize" not in out, name
+    wr = s.call_tool("work_rows", {"view": "in_flight", "limit": 3})["closed_this_week"]
+    assert len(wr["rows"]) <= 15 and wr["population"]["closed_rows"] >= len(wr["rows"]) and wr["counts_by_week_lane"] is not None
