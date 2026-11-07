@@ -6,7 +6,7 @@
   // PHONE-EXEC-OBSERVABLE-1018: this file is also served SIGNED by our own API and swapped in at runtime
   // (RemoteJs.kt): a newer version replaces the installed helpers on the next ensure(); the same version is
   // never injected twice. Bump on every change (CI signs the file; the app pins by version).
-  var EXEC_VERSION = "2026-11-07.3";
+  var EXEC_VERSION = "2026-11-07.4";
   if (window.__ex && window.__ex.version === EXEC_VERSION) return;
   function hostOk() { return /(^|\.)breakoutprop\.com$/.test(location.hostname || ""); }
   function vis(el) { if (!el) return false; var r = el.getBoundingClientRect(); return r.width > 0 && r.height > 0; }
@@ -1215,6 +1215,11 @@
   }
   // One throttled tap on the bottom "Trade" button when the nav is there but the trading view's chips are not (the page is on
   // Markets or Activity). Navigation only: never inside an open ticket, never more than once per 20 s.
+  // 2026-11-07.4: MEASURED by the app's own capture (anomaly-terminal_miss-20261107T185724Z, term:r0 n1 v0 k:young a23): the
+  // background engine's page opens on the MARKETS view (no Open positions chips in the document), and the 25 s age gate of
+  // .3 was longer than the whole background read window (~23 s), so the Trade tap never fired. 4 s lets the SPA hydrate
+  // and still fires well inside the window (readAccount re-asks terminal() every 2 s for 20 s).
+  var KICK_AFTER_MS = 4000;
   function kickTradeView() {
     var nb = navBtns(); if (!nb.trade || newReadSurface() || submitBtn()) return "";
     // 2026-11-07.3: after .2 the background read answered "busy" and posted nothing on the real page, which only happens when
@@ -1223,7 +1228,7 @@
     // a tap in that gap is the likeliest culprit), (b) is deferred with setTimeout so terminal() has ALREADY returned when
     // the click runs, and (c) is throttled to once per 20 s.
     var age = (window.performance && performance.now) ? performance.now() : 1e9;
-    if (age < (typeof window.__exKickAfterMs === "number" ? window.__exKickAfterMs : 25000)) return "young";
+    if (age < (typeof window.__exKickAfterMs === "number" ? window.__exKickAfterMs : KICK_AFTER_MS)) return "young";
     var now = Date.now(); if (window.__exNavAt && now - window.__exNavAt < 20000) return "wait";
     window.__exNavAt = now;
     var btn = nb.trade;
@@ -1476,7 +1481,7 @@
       // server dedups captures and raises ONE alert per hash by it.
       var h = 2166136261, sh = ol.filter(function (x) { return /^[BbFL]:/.test(x); }).join("\n");
       for (var i = 0; i < sh.length; i++) { h ^= sh.charCodeAt(i); h = (h * 16777619) >>> 0; }
-      var td = ""; try { td = "term:r" + (tmk.ready ? 1 : 0) + " n" + (tmk.newLayout ? 1 : 0) + " v" + (tmk.newRead ? 1 : 0) + " k:" + (tmk.navKick || "-") + (tmk.err ? " e:" + tmk.err : "") + " a" + Math.round((window.performance && performance.now ? performance.now() : 0) / 1000); } catch (e) { td = "term:?"; }
+      var td = ""; try { td = "term:r" + (tmk.ready ? 1 : 0) + " n" + (tmk.newLayout ? 1 : 0) + " v" + (tmk.newRead ? 1 : 0) + " k:" + (tmk.navKick || "-") + (tmk.err ? " e:" + tmk.err : "") + " a" + Math.round((window.performance && performance.now ? performance.now() : 0) / 1000) + " t" + (tmk.ticketOpen ? 1 : 0); } catch (e) { td = "term:?"; }
       return ["shape:" + ("00000000" + h.toString(16)).slice(-8), td.slice(0, 40)].concat(out.slice(0, 10), ol);
     },
     // The structure dump on its own (the app / a drill can ask for it): up to [n] short scrubbed lines.
