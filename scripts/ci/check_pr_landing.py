@@ -325,6 +325,15 @@ TIER1_SURFACE = [
     # specific contradiction, not a licence to admit `scripts/*.py` generally;
     # every other loose script at `scripts/` top level stays outside Tier-1.
     "scripts/backtest_*.py",
+    # ⚠️ ADDED 2026-11-07, operator-directed (Manager Session 2026-11-07a chat, ~19:27Z,
+    # verbatim: "You shouldn't need me to merge a change on the dashboard"). The console
+    # connector (src/console_connector/**) is the read path behind the operator's console
+    # dashboard: it runs on the trainer VM, outside the live trader's import closure. A change
+    # here is a dashboard / read-path change (Tier 1 per docs/CLAUDE-RULES-CANONICAL.md
+    # § Permission Tiers, "observability / read paths"). Any WRITE the connector exposes still
+    # reaches the system only through a Tier-2 route elsewhere (src/web/api/**, src/runtime/**),
+    # which stays outside this surface, so this admits no order-path or runtime change.
+    "src/console_connector/**",
     # ⚠️ ADDED 2026-09-24 (checklist row E57, operator-directed the same day:
     # "this is a serious gap that needs to be fully resolved - not only
     # rerunning tests whose results were lost, but ensuring we have a mechanism
