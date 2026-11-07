@@ -68,8 +68,27 @@ CONFIGS = {   # the whole grid, fixed here BEFORE any dev result: 3 configs x 4 
 REGISTERED_SELECTION = ("max pooled dev out-of-fold mean net R over (config, tau) subject to >= %d OOF trades" % MIN_OOF_N)
 
 
+class _Ensemble:
+    """Mean of several LGBMRegressors that differ only by seed (dev-stage variance reduction; no booster_ -- never exported or confirmed as is)."""
+
+    def __init__(self, models):
+        self.models = models
+
+    def fit(self, X, y):
+        for m in self.models:
+            m.fit(X, y)
+        return self
+
+    def predict(self, X):
+        return np.mean([m.predict(X) for m in self.models], axis=0)
+
+
 def _lgb(params: dict):
     import lightgbm as lgb
+    if "_ens_seeds" in params:
+        base = {k: v for k, v in params.items() if k != "_ens_seeds"}
+        return _Ensemble([lgb.LGBMRegressor(**{**BASE_PARAMS, **base, **PINNED, "random_state": int(sd), "bagging_seed": int(sd),
+                                               "feature_fraction_seed": int(sd), "data_random_seed": int(sd)}) for sd in params["_ens_seeds"]])
     return lgb.LGBMRegressor(**{**BASE_PARAMS, **params})
 
 
@@ -313,7 +332,8 @@ def export_stage(tab: pd.DataFrame, config: str, tau: float, pool: list[str], ex
            "costs": {"fee_bps": 0.0, "slippage_bps": 5.0, "regulatory_bps": S.REGULATORY_BPS, "slippage_status": "PROVISIONAL"},
            "pool_rule_sha256": S.POOL_RULE_SHA256, "pool_symbols": list(pool), "proxies": PROXIES, "lgb_params": params,
            "confirm_booster_sha256_expected": expect_sha, "sha_match_confirm": match, "a_vs_b_delta": delta,
-           "evidence": ["RQ-20261105-e9a1-01 (dev walk-forward, run 42119511272)", "RQ-20261105-e9a1-02 (confirming read, run 42143223941: n 858, net +0.0392 R)"],
+           "evidence": (["RQ-20261106-98e3-01 (structure-label dev + confirming read)"] if struct else
+                        ["RQ-20261105-e9a1-01 (dev walk-forward, run 42119511272)", "RQ-20261105-e9a1-02 (confirming read, run 42143223941: n 858, net +0.0392 R)"]),
            "booster_txt": {"long": text}}
     out.mkdir(parents=True, exist_ok=True)
     (out / "model.json").write_text(json.dumps(art))
@@ -403,8 +423,15 @@ def main_run(a) -> int:
     tab = build_table(bars, pool, slip, fee, struct=STRUCT_SPEC if (a.cmd == "structure" or getattr(a, "structure", False)) else "")
     print(f"[table] {len(tab)} decision rows, {tab.symbol.nunique()} symbols t={time.strftime('%H:%M:%S')}", flush=True)
     if a.cmd == "dev":
-        d = dev_stage(tab, taus=[float(x) for x in a.taus.split(",")] if getattr(a, "taus", "") else TAUS,
-                      configs={k: CONFIGS[k] for k in a.configs.split(",")} if getattr(a, "configs", "") else CONFIGS)
+        cfgs = {k: CONFIGS[k] for k in a.configs.split(",")} if getattr(a, "configs", "") else CONFIGS
+        if getattr(a, "seeds", ""):   # seed-variance read: each config refit under PINNED determinism and every seed in the list
+            cfgs = {f"{k}_s{sd}": {"features": v["features"], "params": {**v["params"], **PINNED, "random_state": int(sd), "bagging_seed": int(sd),
+                                                                          "feature_fraction_seed": int(sd), "data_random_seed": int(sd)}}
+                    for k, v in cfgs.items() for sd in a.seeds.split(",")}
+        if getattr(a, "ensemble_seeds", ""):   # one 5-seed-average model per config (variance-reduction read), alongside nothing else
+            cfgs = {f"{k}_ens": {"features": v["features"], "params": {**v["params"], "_ens_seeds": [int(x) for x in a.ensemble_seeds.split(",")]}}
+                    for k, v in cfgs.items()}
+        d = dev_stage(tab, taus=[float(x) for x in a.taus.split(",")] if getattr(a, "taus", "") else TAUS, configs=cfgs)
         d.update({"structure_exit": STRUCT_SPEC if getattr(a, "structure", False) else None, "train_end": TRAIN_END, "pool": {k: v for k, v in prep.items() if k != "excluded"}, "n_pool": len(pool),
                   "costs": {"slippage_bps": slip, "fee_bps": fee, "regulatory_bps": S.REGULATORY_BPS},
                   "configs": {k: {"features": v["features"], "params": v["params"]} for k, v in CONFIGS.items()},
@@ -551,6 +578,8 @@ def main(argv=None) -> int:
             p.add_argument("--structure", action="store_true", help="label with the live structure exit (pivot=5;sl_only)")
             p.add_argument("--taus", default="", help="comma list overriding the registered tau grid (dev-only iteration)")
             p.add_argument("--configs", default="", help="comma list of configs to run (default all)")
+            p.add_argument("--ensemble-seeds", dest="ensemble_seeds", default="", help="comma list of seeds: ONE model per config = the mean of pinned fits at these seeds")
+            p.add_argument("--seeds", default="", help="comma list of LightGBM seeds: refit every config under PINNED determinism per seed (variance read)")
         if name == "structure":
             p.add_argument("--rule-id", required=True)
             p.add_argument("--registered-at", required=True)

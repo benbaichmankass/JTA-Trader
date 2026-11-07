@@ -27,7 +27,7 @@ Compare: the fixed 2/3 ATR bracket model read +0.0392 (n=858), so the structure-
 
 ## 3. The proposal (Tier 3, NOT merged by this lane)
 
-**Pre-requisite found while writing this — the served model is not the graded model.** `ml_entry_eq` on `alpaca_paper` serves the fixed-bracket booster `af4835e29fe83c86` (config/strategies.yaml `ml_entry_eq`, `ml/candidates/ml_entry_eq_v1`). The PASS above is for a *re-trained* booster (`90329845d55d7dfa`). Setting `structure_exit` on the existing leg would put the live exit on a model trained for a different exit. Order of work:
+**Pre-requisite found while writing this — the served model is not the graded model.** `ml_entry_eq` on `alpaca_paper` serves a fixed-bracket booster (`ml/candidates/ml_entry_eq_v1`, sha `ceeb8698bb130b9b`, the pinned refit; the graded fixed-bracket fit was `af4835e29fe83c86`, also a different fit — corrected 2026-11-07, this line first cited the graded sha). The PASS above is for a *re-trained* booster (`90329845d55d7dfa`). Setting `structure_exit` on the existing leg would put the live exit on a model trained for a different exit. Order of work:
 
 1. **Export** (Tier 1, queued here as `RQ-20261107-98e3-02`): deterministic refit with `--structure`, expected sha `90329845d55d7dfa`, writes `model.json` + `parity_fixture.json` for the serve-parity step (`docs/research/ml-entry-eq-serve-spec-2026-11-06.md`).
 2. **Serve** the structure model as a NEW candidate id (do not overwrite `ml_entry_eq_v1`) and pass the serve-parity fixture.
@@ -43,3 +43,13 @@ Compare: the fixed 2/3 ATR bracket model read +0.0392 (n=858), so the structure-
 ## 4. Why this holds under the rules
 
 Holdout governs real money (OPERATING-PLAN § 2, 2026-11-06): the configuration chosen on dev cleared its registered rule on held-out data net of the full cost stack (committed record above); DSR is probation; paper is not a gate. Mechanics are proven for Alpaca equities by `tqqq_trend_long_1d` on `alpaca_live`; the ML leg's own mechanics are proven on `alpaca_paper`. Not claimed: statistical significance on the clustered se, or a measured affordable symbol set.
+
+## 5. Addendum 2026-11-07 — export, serve-parity and tau-extension results
+
+**Export `RQ-20261107-98e3-02` (run 42394189988).** The unpinned refit did NOT reproduce the graded booster (`a14098f9...` vs graded `90329845...`; train rows 368,752 vs 368,757). Shipped = the pinned deterministic refit, sha `16faaa1948b087ec...`, committed as `ml/candidates/ml_entry_eq_v2_struct/` (model.json + parity_fixture.json; tests `tests/test_ml_entry_eq_struct_artifact.py` pass: booster reproduces the fixture to 1e-9). Against the unpinned fit on 20,000 training-tail rows: spearman 0.961, decision agreement at tau 0.985, max |d| 0.753. **The model that would be served is therefore a close sibling of the graded one, not the graded one itself.**
+
+**Run-to-run variance (finding).** Dev unit `RQ-20261107-98e3-03` (run 42396313667), same config B / structure labels / dates, read tau 0.20 at **+0.083 (n=3191)**; the graded dev stage read **+0.1222 (n=3004)**. The two differ by 0.04 R with an unpinned LightGBM and a few rows of data drift — the same size as the effect being measured. The graded +0.2123 confirm is one unpinned fit. Scoring the shipped pinned model on the confirm window would be a third read of that window (ledger N=3) and has NOT been done.
+
+**Tau extension (rule fixed before the run: plateau / cliff / rising edge).** Dev OOF pooled mean net R: tau 0.20 +0.083 (n 3191), 0.25 +0.109 (1943), 0.30 +0.197 (1122), 0.40 +0.204 (342, only 10 trades in fold 4). Outcome by the registered rule: **RISING EDGE** (tau 0.30, n>=300, reads >= +0.15). Fold 3 reads -0.35..-0.44 at every tau. This is a hypothesis for a later N=3 confirm unit, never an adopted tau; the graded record and the proposed tau 0.20 are unchanged.
+
+**What this changes for the operator.** The PASS stands as recorded. Before real money, the evidence gap is the served pinned model: it is a different fit from the one graded, and the fit-to-fit spread is large relative to the edge.
