@@ -403,8 +403,9 @@ def main_run(a) -> int:
     tab = build_table(bars, pool, slip, fee, struct=STRUCT_SPEC if (a.cmd == "structure" or getattr(a, "structure", False)) else "")
     print(f"[table] {len(tab)} decision rows, {tab.symbol.nunique()} symbols t={time.strftime('%H:%M:%S')}", flush=True)
     if a.cmd == "dev":
-        d = dev_stage(tab)
-        d.update({"train_end": TRAIN_END, "pool": {k: v for k, v in prep.items() if k != "excluded"}, "n_pool": len(pool),
+        d = dev_stage(tab, taus=[float(x) for x in a.taus.split(",")] if getattr(a, "taus", "") else TAUS,
+                      configs={k: CONFIGS[k] for k in a.configs.split(",")} if getattr(a, "configs", "") else CONFIGS)
+        d.update({"structure_exit": STRUCT_SPEC if getattr(a, "structure", False) else None, "train_end": TRAIN_END, "pool": {k: v for k, v in prep.items() if k != "excluded"}, "n_pool": len(pool),
                   "costs": {"slippage_bps": slip, "fee_bps": fee, "regulatory_bps": S.REGULATORY_BPS},
                   "configs": {k: {"features": v["features"], "params": v["params"]} for k, v in CONFIGS.items()},
                   "alpaca_calls": client.calls, "runtime_s": round(time.time() - t0, 1)})
@@ -546,6 +547,10 @@ def main(argv=None) -> int:
         if name == "export":
             p.add_argument("--expect-sha", required=True, help="booster sha256 (prefix ok) of the confirm run to reproduce")
             p.add_argument("--structure", action="store_true", help="relabel with the live structure exit (pivot=5;sl_only) before the refit")
+        if name == "dev":
+            p.add_argument("--structure", action="store_true", help="label with the live structure exit (pivot=5;sl_only)")
+            p.add_argument("--taus", default="", help="comma list overriding the registered tau grid (dev-only iteration)")
+            p.add_argument("--configs", default="", help="comma list of configs to run (default all)")
         if name == "structure":
             p.add_argument("--rule-id", required=True)
             p.add_argument("--registered-at", required=True)
