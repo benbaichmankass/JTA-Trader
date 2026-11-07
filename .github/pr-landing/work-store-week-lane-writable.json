@@ -1,0 +1,7 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "hold_reason": "service_restart",
+  "hold_text": "WorkStore now accepts week_lane (surge|throttle|standing|null) by name on create/set and folds it into items.extra, where to_row already reads it back. Runtime library change used by the web-api route POST/PATCH /api/bot/work/items: ict-web-api.service must be restarted after merge for work.py set week_lane=... to stop returning HTTP 422. No schema change, no gate. Revert: git revert, restart ict-web-api.",
+  "why": "Console This-week card and weekly planning group rows by week_lane; it was unwritable after WSD-S4."
+}
