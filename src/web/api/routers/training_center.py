@@ -430,6 +430,25 @@ def get_db_pulls(limit: int = Query(default=50, ge=1, le=500)) -> dict[str, Any]
     }
 
 
+@router.get("/lifecycle")
+def get_lifecycle(limit: int = Query(default=100, ge=1, le=1000)) -> dict[str, Any]:
+    """Tail of `runtime_logs/trainer/lifecycle_results.jsonl` — per-model lifecycle job results.
+
+    One MEASURED record per retrain / retest / update job run by `ml.lifecycle.scheduler`
+    (zero-Claude, trainer timer). `read_state` is explicit: `absent` means the mirror has no
+    such file yet (scheduler has not run or has not been mirrored) — never read it as "no results".
+    """
+    root = _mirror_root()
+    path = root / "trainer" / "lifecycle_results.jsonl"
+    rows = _read_jsonl_tail(path, limit)
+    return {
+        **_mirror_meta(),
+        "limit": limit,
+        "read_state": "ok" if path.exists() else "absent",
+        "rows": rows,
+    }
+
+
 @router.get("/runs/{model_id}/{run_id}")
 def get_run(model_id: str, run_id: str) -> dict[str, Any]:
     """Read the metrics + manifest JSON for a single experiment run.

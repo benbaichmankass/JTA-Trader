@@ -143,6 +143,7 @@ the same staleness this paragraph was already written to complain about.
 | `GET /api/bot/ml/registry` | `routers/training_center.py` | The model registry (stage ladder `candidate → shadow → advisory`). **Read-only — promotion is Tier-3 and never happens over HTTP.** |
 | `GET /api/bot/ml/builds` | `routers/training_center.py` | Dataset-build health, same mirror. |
 | `GET /api/bot/ml/db_pulls` | `routers/training_center.py` | Live→trainer DB sync history, same mirror. |
+| `GET /api/bot/ml/lifecycle` | `routers/training_center.py` | Per-model lifecycle job results (retrain/retest/update; MEASURED; explicit `read_state`), same mirror. |
 | `GET /api/bot/ml/runs/{model_id}/{run_id}` | `routers/training_center.py` | Per-run metrics. Both ids are path-validated before the artifact read. |
 | `GET /api/bot/news/recent` | `routers/news.py` | M9 news-layer shadow-soak tail (per-signal decision / adjustment / veto + the top source articles read). `present:false` until the layer is active. |
 | `GET /api/bot/alerts` | `routers/alerts.py` | The alert ledger (`runtime_logs/alerts_ledger.jsonl`, an EVENT LOG on the VM, ALERT-LEDGER-TO-MANAGER): `?since=&kind=&channel=&limit=`. **`read_state` first** (`read \| absent \| could_not_look`) — a ledger that cannot be read is `could_not_look`, never 0 alerts; carries counts by kind, newest `ts` and the population (lines scanned, truncated). Mirrored at `GET /api/diag/alerts` (`DIAG_READ_TOKEN`). |

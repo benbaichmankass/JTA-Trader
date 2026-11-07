@@ -19,6 +19,7 @@
 #                                            from models/ each cycle)
 #     trainer/dataset_builds.jsonl         ← dashboard
 #     trainer/db_pulls.jsonl               ← dashboard
+#     trainer/lifecycle_results.jsonl      ← dashboard (per-model lifecycle job results)
 #     experiments-runs/<model_id>/<run_id>/metrics.json  ← dashboard
 #     models/<model_id>.json               ← shadow factory
 #     backtests/<UTC-date>/SUMMARY.md       ← dashboard (Backtesting tab)
@@ -544,6 +545,7 @@ push_one "$TRAINING_LOG_PATH"                                  "training_cycle.j
 push_one "$REGISTRY_ROOT/registry.jsonl"                       "registry.jsonl"              || overall_rc=1
 push_one "$REPO_ROOT/runtime_logs/trainer/dataset_builds.jsonl" "trainer/dataset_builds.jsonl" || overall_rc=1
 push_one "$REPO_ROOT/runtime_logs/trainer/db_pulls.jsonl"      "trainer/db_pulls.jsonl"       || overall_rc=1
+push_one "$REPO_ROOT/runtime_logs/trainer/lifecycle_results.jsonl" "trainer/lifecycle_results.jsonl" || overall_rc=1
 
 # Research results store (WSD-S6D-RESEARCH-RESULTS, design D7): export the slim research_runs JSONL from the
 # trainer's store (scripts/research/research_store.py; no payload bytes) and mirror it to <mirror>/research/,
