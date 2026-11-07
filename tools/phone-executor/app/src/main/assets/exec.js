@@ -6,7 +6,7 @@
   // PHONE-EXEC-OBSERVABLE-1018: this file is also served SIGNED by our own API and swapped in at runtime
   // (RemoteJs.kt): a newer version replaces the installed helpers on the next ensure(); the same version is
   // never injected twice. Bump on every change (CI signs the file; the app pins by version).
-  var EXEC_VERSION = "2026-11-01.1";
+  var EXEC_VERSION = "2026-11-07.1";
   if (window.__ex && window.__ex.version === EXEC_VERSION) return;
   function hostOk() { return /(^|\.)breakoutprop\.com$/.test(location.hostname || ""); }
   function vis(el) { if (!el) return false; var r = el.getBoundingClientRect(); return r.width > 0 && r.height > 0; }
@@ -440,11 +440,16 @@
   // (or of its wrapper, up to 3 levels, or those siblings' children) with the SAME child count. The PANEL is the
   // highest ancestor of the header that holds no tab label (Positions / Open orders / Closed orders / ...): the empty
   // state counts only INSIDE it, and a panel that reaches <body> proves nothing.
-  var TAB_LABEL = /^(open orders|positions|portfolio|closed orders|trades)(\s*\(?\s*\d+\s*\)?)?$/i;
+  var TAB_LABEL = /^(open orders|open and trigger orders|open positions|positions|portfolio|closed orders|trades)(\s*\(?\s*\d+\s*\)?)?$/i;
+  // NEW LAYOUT (2026-11-07): the panel chips read "Open positions" and "Open and trigger orders"; they stand for what
+  // the readers call "positions" and "open orders", so a chip is matched under both names (tabText below).
+  var TAB_ALIAS = {"open positions": "positions", "open and trigger orders": "open orders"};
   // BREAKOUT-UNTRACKED-1014 (2026-10-14): with a position open the chip renders its count badge GLUED to the label
   // (innerText "Positions1", "Open orders2"), so /^positions\b/ and /^positions$/ missed it and every read was
   // no_tab for 9 h while an ETH short was open. A tab chip's text is matched with its count badge dropped too.
-  function tabText(s) { var m = TAB_LABEL.exec(s); return m ? m[1] : s; }
+  // the chip text WITHOUT the new-layout alias: terminal().panels keeps recognising only the legacy chips
+  function tabTextRaw(s) { var m = TAB_LABEL.exec(s); return m ? m[1] : s; }
+  function tabText(s) { var m = TAB_LABEL.exec(s); return m ? (TAB_ALIAS[m[1].toLowerCase()] || m[1]) : s; }
   function tabMatch(rx, s) { return rx.test(s) || rx.test(tabText(s)); }
   function kids(e) { return Array.prototype.slice.call(e.children).filter(vis); }
   function gridHeaders(cols) {
@@ -1174,6 +1179,53 @@
     if (c.length) node.c = c;
     return node;
   }
+
+  // ---- NEW-LAYOUT STRUCTURE DUMP (PHONE-BREAKOUT-NEW-LAYOUT, 2026-11-07). The broker moved its navigation from a tab
+  // menu at the top to a few buttons at the BOTTOM; the old "Order form" / "Positions" / "Open orders" labels are gone
+  // and every terminal read missed. The miss event can carry only 40 short scrubbed strings, so this packs the page's
+  // SHAPE into them: viewport, the clickable things in the bottom band (the new navigation), fixed/sticky bars,
+  // landmarks, and pointer-cursor leaves that are not real buttons. Tag, role, short text, short aria-label and
+  // position percentages ONLY; digits become 9 (no balance, id or amount survives), no links, no values, no class
+  // names. The server scrubs again (letters, digits, space and _.:/()=+&%- only, 40 chars each).
+  function dmask(s, n) { return String(s || "").replace(/\s+/g, " ").replace(/\d/g, "9").replace(/[^A-Za-z0-9 _.:\/()=+&%-]/g, "").trim().slice(0, n); }
+  function outline(max) {
+    var out = [], seen = {}, H = window.innerHeight || 0, W = window.innerWidth || 1;
+    function add(k, x, extra) {
+      if (out.length >= max) return;
+      var r = x.getBoundingClientRect(), role = x.getAttribute("role") || "", al = x.getAttribute("aria-label") || x.getAttribute("title") || "";
+      var tx = x.tagName === "INPUT" ? "" : t(x);
+      var line = k + ":" + x.tagName.toLowerCase() + (role ? "/" + role : "") + ":" + dmask(tx, 14) + (al ? ":a=" + dmask(al, 12) : "") +
+        ":y" + Math.round(100 * r.top / (H || 1)) + "x" + Math.round(100 * r.left / W) + "w" + Math.round(100 * r.width / W) + (extra || "");
+      line = line.slice(0, 40); if (seen[line]) return; seen[line] = 1; out.push(line);
+    }
+    try {
+      out.push(("vp:" + W + "x" + H + " y" + Math.round(window.scrollY || 0) + " tabs" + all("[role=tab]").length + " btn" + all("button").length +
+        " in" + inputs(document).length + " svg" + all("svg").length).slice(0, 40));
+      var clickSel = "button,a,[role=button],[role=tab],[role=link],[role=menuitem],[role=option],[tabindex],input[type=button]";
+      // B: the bottom band (the new navigation), left to right
+      all(clickSel).filter(function (x) { var r = x.getBoundingClientRect(); return H && r.top >= H * 0.7 && r.height <= 140; })
+        .sort(function (a, b) { return a.getBoundingClientRect().left - b.getBoundingClientRect().left; })
+        .slice(0, 12).forEach(function (x) { add("B", x); });
+      // B2: plain div/span leaves in the bottom band (a nav built without roles)
+      all("div,span,li,p").filter(function (x) { var r = x.getBoundingClientRect(); return H && r.top >= H * 0.78 && r.height <= 120 && x.children.length === 0 && t(x).length > 0 && t(x).length <= 24; })
+        .slice(0, 6).forEach(function (x) { add("b", x); });
+      // F: fixed / sticky bars (where a bottom or top navigation lives)
+      all("div,nav,header,footer,section,aside,ul").filter(function (x) { var p = gcs(x).position; return p === "fixed" || p === "sticky"; })
+        .slice(0, 6).forEach(function (x) { add("F", x, ":k" + x.querySelectorAll(clickSel).length); });
+      // L: landmarks
+      all("nav,main,header,footer,aside,[role=navigation],[role=tablist],[role=toolbar],[role=dialog],[aria-modal=true]")
+        .slice(0, 6).forEach(function (x) { add("L", x, ":k" + x.children.length); });
+      // T: the first buttons in the top band
+      all(clickSel).filter(function (x) { var r = x.getBoundingClientRect(); return H && r.top < H * 0.2; }).slice(0, 5).forEach(function (x) { add("T", x); });
+      // P: pointer-cursor leaves that are not real buttons (a click target built from a div/span)
+      all("div,span,li,p").filter(function (x) { return x.children.length === 0 && t(x).length > 0 && t(x).length <= 22 && gcs(x).cursor === "pointer" && !x.closest(clickSel); })
+        .slice(0, 8).forEach(function (x) { add("P", x); });
+      // I: icon-only buttons (no text) and what they say about themselves
+      all("button,[role=button],a").filter(function (x) { return !t(x) && (x.getAttribute("aria-label") || x.getAttribute("title")); })
+        .slice(0, 6).forEach(function (x) { add("I", x); });
+    } catch (e) { out.push(("err:" + dmask(e && e.message, 30)).slice(0, 40)); }
+    return out.slice(0, max);
+  }
   window.__ex = {
     version: EXEC_VERSION,
     // PHONE-EXEC-OBSERVABLE-1018: the sanitized DOM snapshot (see the section above). scope "page" (default) =
@@ -1322,7 +1374,7 @@
       // "Open orders", "Positions", "Market chart", "Order book" ...; tabs=0 inputs=0, no buy/sell text).
       var ct = all("button,[role=tab],[role=button]").map(t);
       var panels = /(^|\.)trade\.breakoutprop\.com$/.test(location.hostname) &&
-        ct.some(function (x) { return /^positions$/i.test(tabText(x)); }) && ct.some(function (x) { return /^open orders$/i.test(tabText(x)); });
+        ct.some(function (x) { return /^positions$/i.test(tabTextRaw(x)); }) && ct.some(function (x) { return /^open orders$/i.test(tabTextRaw(x)); });
       return {ready: ctl || !!submitBtn() || bs || probe || panels, panels: panels, orderControl: ctl, ticketOpen: !!submitBtn(), buySell: bs,
         probe: probe, tabs: tb.length, inputs: inputs(document).length};
     },
@@ -1351,8 +1403,14 @@
       all("button,[role=tab],[role=button]").forEach(function (x) {
         var s = t(x).replace(/\d/g, "#").slice(0, 40); if (s && !seen[s] && out.length < 40) { seen[s] = 1; out.push(s); }
       });
-      return out;
+      // A page that is NOT a terminal we know (terminal().ready false: the 2026-11-07 new layout) also reports its
+      // structure, in the same 40 slots the server keeps: the first 12 control texts, then outline() (28 lines).
+      var known = false; try { known = !!window.__ex.terminal().ready; } catch (e) { }
+      if (known) return out;
+      return out.slice(0, 12).concat(outline(28));
     },
+    // The structure dump on its own (the app / a drill can ask for it): up to [n] short scrubbed lines.
+    outline: function (n) { return outline(n || 40); },
     // The account's terminal URL, derived from the CURRENT /account/<id>/ path (deterministic: the account the
     // page is already on). "" when the path is not an account path. Never reported.
     terminalHref: function () {
@@ -1540,6 +1598,7 @@
         all("button,[role=button],[role=tab],div,span,p,td,li,dt,strong,b,h1,h2,h3,h4").forEach(function (x) {
           var tx = t(x); if (tx.length > 60) return;
           var m = rx.exec(tx); if (!m) return;
+          m[1] = (m[1] || "").replace(/^[\s\u00b7\u2022|:]+/, "");   // "Portfolio \u00b7 <value> USD": drop the separator
           var v = num(m[1]);
           if (v === null && m[1] === "") {   // the element is the bare label: value in the next sibling or the parent's remainder
             var sib = x.nextElementSibling; v = sib ? num(t(sib)) : null;

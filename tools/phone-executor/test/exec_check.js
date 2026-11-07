@@ -86,6 +86,16 @@ function eq(a, b, m) { if (JSON.stringify(a) !== JSON.stringify(b)) { console.er
   await st("/en/account/A2/trade");
   eq(await p2.evaluate("[__ex.terminal().ready, __ex.terminal().probe, __ex.terminal().orderControl]"), [true, true, false], "terminal with the ticket closed is ready via the probe classifier");
   eq(await p2.evaluate("__ex.controls()"), ["Positions", "Open orders", "History"], "controls(): the page's control texts for the miss event");
+  // NEW LAYOUT (2026-11-07): bottom navigation + "Open positions" / "Open and trigger orders" chips. Not a known terminal
+  // (no claim), but the miss event now carries the page's shape, digit-masked, and the new chips answer to the old names.
+  const pn = await b.newPage(); await pn.setViewportSize({ width: 400, height: 800 });
+  await pn.setContent('<body style="margin:0"><div style="position:fixed;bottom:0;left:0;right:0;height:56px;display:flex"><button>Activity</button><button>Trade</button><button>Overview</button></div><div>Portfolio \u00b7 4,861.94 USD</div><button>Open positions</button><button>Open and trigger orders</button></body>');
+  await pn.addScriptTag({ content: src });
+  eq(await pn.evaluate("__ex.terminal().ready"), false, "new layout alone is not yet a terminal (no claim on an unknown order form)");
+  const nc = await pn.evaluate("__ex.controls()");
+  eq([nc.some((x) => /^vp:400x800/.test(x)), nc.some((x) => /^B:button:Trade:/.test(x)), nc.some((x) => /^F:div:/.test(x)), nc.some((x) => /\d{4}/.test(x))], [true, true, true, false], "new layout: miss carries viewport, bottom-nav buttons and fixed bar, no long digit run");
+  eq(await pn.evaluate("[__ex.clickTab('^positions\\\\b'), __ex.clickTab('^open orders\\\\b')]"), ["clicked", "clicked"], "new chips answer to the positions / open orders readers");
+  eq(await pn.evaluate("__ex.accountPanel().portfolio"), 4861.94, "'Portfolio . value USD' headline reads");
   await st("/en/account/A3/trade");
   eq(await p2.evaluate("__ex.terminal().ready"), false, "buy/sell words alone (no tabs, no inputs) are not the terminal");
   s1 = await st("/login");
