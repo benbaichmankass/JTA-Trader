@@ -308,7 +308,7 @@ The consolidated programme is `docs/plans/ML-PROGRAMME-2026-10-28.md`: its § 4.
    - a `research/queue/` unit with its decision rule registered **before** the run (`perf-followup` § "Filing a queue unit"), with
      power computed on the test unit; or
    - a lever row plus a unit in `research/queue/blocked/`.
-   A hand-written unit holds for a human merge (E57). A `CONCENTRATION`/`FAIL-STREAK` finding re-points capacity or opens a
+   A NEW pre-registered unit self-lands (RQ-NEW-UNIT-SELF-LAND, 2026-11-07); an edit to an existing unit holds for a human merge (E57). A `CONCENTRATION`/`FAIL-STREAK` finding re-points capacity or opens a
    family-retirement review. It never queues another variant.
 5. **Write back and re-prioritise.**
    - Update `ml-plan-items.yaml` (items only with their row or unit), the roadmap measured-state block (date + locators), and the

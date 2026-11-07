@@ -412,7 +412,8 @@ TIER1_SURFACE = [
 # `main` re-fires the same unit every run, burning a runner (and a GPU-routed
 # unit bills the spend ledger). Refusing the stamp PR was not a safe default.
 #
-# A NEW or DELETED queue file is never a stamp and stays unvouched.
+# A DELETED queue file is never a stamp and stays unvouched. A NEW one is judged as a
+# REGISTRATION by `new_unit_registration_violation` (RQ-NEW-UNIT-SELF-LAND, 2026-11-07).
 STAMP_ONLY_SURFACE = {
     "research/queue/*.yaml": ("last_dispatched_at",),
 }
@@ -436,7 +437,7 @@ def stamp_only_violation(root: Path, base: str, path: str) -> Optional[str]:
     if rc != 0 or not mb:
         return "merge-base unreadable, so the diff could not be graded"
     if _git(root, "cat-file", "-e", f"{mb}:{path}")[0] != 0:
-        return "file is NEW on this branch -- a new queue unit is a registration, not a stamp"
+        return new_unit_registration_violation(root, mb, path)
     if _git(root, "cat-file", "-e", f"HEAD:{path}")[0] != 0:
         return "file is DELETED on this branch"
     rc, out = _git(root, "diff", "-U0", "--no-color", mb, "HEAD", "--", path)
@@ -475,6 +476,46 @@ def stamp_only_violation(root: Path, base: str, path: str) -> Optional[str]:
                     f"a pre-registered decision rule may not self-land")
     if changed == 0:
         return "no line-level change found (mode/rename only?) -- not a stamp"
+    return None
+
+
+# RQ-NEW-UNIT-SELF-LAND, 2026-11-07 (operator, verbatim: "there's no reason merging research units
+# should require me"; popup "You do the edit now"). A NEW queue unit is a REGISTRATION, not a rewrite:
+# nothing it pre-registers can have been fitted to a result, because no result exists for it yet. So a
+# new unit self-lands when, and only when, the file proves it is a pre-run registration:
+#   - it is a direct child of research/queue/ (never research/queue/blocked/** or deeper);
+#   - it parses as a mapping whose `id` equals the file stem;
+#   - its decision_rule carries `registered_before_run: true`;
+#   - it has never been dispatched (`last_dispatched_at` absent or null);
+#   - NO result exists for its id at HEAD or at the merge-base (research/results/<id>/, comms/research/<id>/).
+# Editing an EXISTING unit (a rule rewrite, a hand grade) is unchanged: only the dispatch stamp self-lands,
+# and E58 still governs the two producers. Gates this adds or changes: removes a hold; adds none.
+def new_unit_registration_violation(root: Path, mb: str, path: str) -> Optional[str]:
+    """None when NEW file `path` is a pre-run unit registration; otherwise a one-line reason."""
+    parts = path.split("/")
+    if len(parts) != 3 or parts[:2] != ["research", "queue"] or not parts[2].endswith(".yaml"):
+        return "file is NEW and not a direct research/queue/*.yaml unit -- not a registration this guard vouches"
+    rc, text = _git(root, "show", f"HEAD:{path}")
+    if rc != 0:
+        return "new unit unreadable at HEAD"
+    try:
+        import yaml  # local: the rest of this guard must run without PyYAML
+        doc = yaml.safe_load(text)
+    except Exception as exc:  # noqa: BLE001 -- any parse failure is a refusal, never a pass
+        return f"new unit does not parse ({type(exc).__name__}) -- not vouched"
+    stem = parts[2][: -len(".yaml")]
+    if not isinstance(doc, dict) or str(doc.get("id")) != stem:
+        return f"new unit's id does not equal its file stem {stem!r} -- not vouched"
+    rule = doc.get("decision_rule")
+    if not isinstance(rule, dict) or rule.get("registered_before_run") is not True:
+        return "new unit lacks decision_rule.registered_before_run: true -- a rule must be registered before the run"
+    if doc.get("last_dispatched_at") not in (None, "", "null"):
+        return "new unit already carries last_dispatched_at -- it is not a pre-run registration"
+    for ref in ("HEAD", mb):
+        for d in (f"research/results/{stem}", f"comms/research/{stem}"):
+            rc, out = _git(root, "ls-tree", "--name-only", ref, f"{d}/")
+            if rc == 0 and out.strip():
+                return f"a result for {stem} already exists at {ref[:12]} ({d}/) -- a rule written after a result is not pre-registered"
     return None
 
 

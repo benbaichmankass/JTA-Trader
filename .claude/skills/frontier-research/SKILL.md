@@ -191,7 +191,7 @@ cost stack** (a feature-lift gate says so explicitly and routes any live use thr
 net-of-cost walk-forward — feature lift is not edge); `what_it_does_not_do`. If the instrument does not
 exist: a checklist **lever row** (`scripts/ops/checklist.py add FRONTIER-LEVER-<X>`) with the
 observation that closes it + the unit in `research/queue/blocked/` with `blocked_on`/`clears_when`. A
-new hand-written unit lands in a hold PR (E57). Add the plan item to `docs/plans/ml-plan-items.yaml`
+new pre-registered unit self-lands (RQ-NEW-UNIT-SELF-LAND, 2026-11-07); an edit to an existing unit holds (E57). Add the plan item to `docs/plans/ml-plan-items.yaml`
 **with `family:`**; run `python3 scripts/ops/ml_plan_status.py --diversity` and
 `ml_plan_status.py` before pushing.
 
