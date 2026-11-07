@@ -1,0 +1,7 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "hold_reason": "tier_2_3_needs_approval",
+  "hold_text": "CONSOLE-WAKE-TOGGLES (operator 2026-11-07, intent approved): wake-notification switches in VM runtime state (runtime_state/wake_toggles.json) with GET/POST /api/bot/wake-toggles; the VM posters (desk_event_trigger, short_hold_wake, live_review_wake_post, attention_watch alert_watch) and the Actions posters (desk_wake_marker, live_review_wake) read it live; off = comment withheld, packet/evidence still landed, suppressed_by_wake_toggle receipt. Touches the live trader's import closure (live_review_wake_post, short_hold_wake, desk_event_trigger) so merging restarts ict-trader-live: merge in an auto-off window. Also adds connector tools research_queue + wake_toggles (read) and an optional write tool set_wake_toggle gated on sign-in + WAKE_TOGGLES_WRITE_TOKEN (needs the operator/Tier-2 to provision on the trainer VM). After merge: set connector env, deploy API + trader, verify GET /api/bot/wake-toggles.",
+  "why": "no order path, config, accounts.yaml or strategies.yaml change; decides only whether a session is woken. Gates this adds or changes: none."
+}

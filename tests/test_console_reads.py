@@ -23,7 +23,7 @@ def test_get_route_reads_state(tmp_path, monkeypatch):
     c = TestClient(app)
     g = c.get("/api/bot/wake-toggles").json()
     assert g["read_state"] == "defaults" and len(g["rows"]) == 8
-    assert c.post("/api/bot/wake-toggles", json={"key": "desk_wake", "on": True}).status_code == 405  # read-only here
+    assert c.post("/api/bot/wake-toggles", json={"key": "desk_wake", "on": True}).status_code in (401, 503)  # write route needs the bearer (Tier 2 PR B)
 
 
 def test_research_queue_tool():

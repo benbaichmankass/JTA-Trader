@@ -1338,7 +1338,14 @@ def alert_watch(now: datetime | None = None, *, dry_run: bool = False, rows_over
             rec.update(summary)
             if body is not None:
                 auth, http, api = github or _alert_github()
-                if dry_run:
+                from src.runtime import wake_toggles as _wt  # noqa: PLC0415  console wake switch (unreadable => post)
+                if not dry_run and not _wt.is_on("alert_watch"):
+                    # The ledger (data path) is untouched; only the comment is withheld. The cursor advances so a later
+                    # flip ON does not release a stale flood.
+                    _write_json(ALERT_STATE, new_state)
+                    _wt.log_suppressed("alert_watch", "alerts", rows=summary.get("rows"))
+                    rec.update(state="suppressed_by_wake_toggle")
+                elif dry_run:
                     rec.update(state="dry_run", body=body)
                 elif not auth:
                     rec.update(state="no_credential", reason="no GitHub extraheader on this host — comment not posted; rows stay pending")

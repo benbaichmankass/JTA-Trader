@@ -79,6 +79,9 @@ _wake_mod: Any = None
 #: Last markers read from the PR, so a due-but-already-posted event costs no
 #: GitHub call on every pass. Refreshed whenever the plan against it is non-empty.
 _cached_markers: List[dict] = []
+#: Synthetic markers for entries the console wake switches suppressed: keeps plan() from re-flagging (and the VM
+#: from rebuilding packets for) the same event every pass. In-process only; a restart re-evaluates once.
+_suppressed_markers: List[dict] = []
 #: LTR-PACKET-ECHO: after a failed evidence commit, no packet build/commit from here until this monotonic time.
 EVIDENCE_BACKOFF_S = 600
 _evidence_backoff_until = float("-inf")
@@ -245,7 +248,7 @@ def run_once(due_fn: Optional[Callable[[], Any]] = None,
         rec["state"] = "nothing_due"
         write_receipt(rec, receipt)
         return rec
-    if wake.plan(doc, _cached_markers, cfg, computed_at)["kind"] != "wake":
+    if wake.plan(doc, _cached_markers + _suppressed_markers, cfg, computed_at)["kind"] != "wake":
         rec["state"] = "already_posted"
         write_receipt(rec, receipt)
         return rec
@@ -263,7 +266,7 @@ def run_once(due_fn: Optional[Callable[[], Any]] = None,
         return rec
     _cached_markers = markers
     _first_proof_wake(markers)
-    p = wake.plan(doc, markers, cfg, computed_at)
+    p = wake.plan(doc, markers + _suppressed_markers, cfg, computed_at)
     if p["kind"] != "wake":
         rec["state"] = "already_posted"
         write_receipt(rec, receipt)
@@ -288,6 +291,16 @@ def run_once(due_fn: Optional[Callable[[], Any]] = None,
         codes = [st.get("http_code") for st in ev.values() if st.get("state") == "could_not_commit"]
         rec.update(state="could_not_post", http_code=codes[0] if codes else None,
                    reason="evidence_commit_failed: left to the Actions poller")
+        write_receipt(rec, receipt)
+        return rec
+    # Console wake switches: packets/evidence above are landed regardless; only the comment is withheld.
+    dropped = wake.apply_toggles(p, bundles)
+    if dropped:
+        _suppressed_markers.append({"kind": "ltr-wake", "posted_at": computed_at.isoformat(), "entries": dropped})
+        del _suppressed_markers[:-200]
+        rec["suppressed_by_wake_toggle"] = [f"{e['order_package_id']}|{e['event']}|{e['level']}" for e in dropped]
+    if not p["entries"]:
+        rec["state"] = "suppressed_by_wake_toggle"
         write_receipt(rec, receipt)
         return rec
     rec["packet_states"] = {e["order_package_id"]: e.get("packet_state") for e in p["entries"]}

@@ -84,3 +84,17 @@ def test_workflow_posts_the_wake_after_the_commit_and_reports_failures():
     assert all(st.get("if") == "steps.gate.outputs.skip != 'true'" for st in steps[ids.index("gate") + 1:-1])
     assert wf["permissions"]["pull-requests"] == "write" and wf["permissions"]["issues"] == "write"
     assert (wf.get("on") or wf.get(True))["schedule"], "the schedule stays: the packet job is the only trigger"
+
+
+import pytest as _pytest_wt  # noqa: E402
+
+
+@_pytest_wt.fixture(autouse=True)
+def _wake_switches_all_on(tmp_path, monkeypatch):
+    """These tests exercise posting; the console switches default some types OFF (src/runtime/wake_toggles.py)."""
+    from src.runtime import wake_toggles as _wt
+    monkeypatch.setenv("RUNTIME_STATE_DIR", str(tmp_path / "_wt_state"))
+    monkeypatch.setenv("RUNTIME_LOGS_DIR", str(tmp_path / "_wt_logs"))
+    monkeypatch.delenv("WAKE_TOGGLES_REMOTE", raising=False)
+    for _k in _wt.TOGGLES:
+        _wt.set_toggle(_k, True, "test")

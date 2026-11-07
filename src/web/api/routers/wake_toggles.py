@@ -1,19 +1,22 @@
-"""Wake-notification switches: the read side (console + posters on GitHub runners).
+"""Wake-notification toggles (console switches).
 
-``GET /api/bot/wake-toggles``  unauthenticated read (Tier 1, like the other read routes): ``read_state`` first
-(``read | defaults | could_not_look``; ``defaults`` = nobody has flipped anything yet), per-switch ``on``,
-``changed_at`` / ``changed_by``, recent flips. Read-only: this router writes nothing. The write route and the posters
-that obey the switches ship separately (Tier 2). Logic: ``src/runtime/wake_toggles.py``.
+``GET  /api/bot/wake-toggles``  unauthenticated read (Tier 1, same as the other read routes): the posters on
+GitHub runners and the console read it. ``read_state`` first; ``defaults`` = nobody has flipped anything yet.
+``POST /api/bot/wake-toggles``  ``{key, on, by?}`` behind the fail-closed ``DASHBOARD_API_TOKEN`` bearer (the
+``/api/bot/alerts`` / prop-report pattern; CORS allows POST + Authorization for the browser-direct clients).
+Every flip is logged with who/when/old/new (``runtime_state/wake_toggles_flips.jsonl``).
 
-Gates this adds or changes: none.
+Gates this adds or changes: none -- decides only whether a session is woken. Logic: ``src/runtime/wake_toggles.py``.
 """
 from __future__ import annotations
 
+import asyncio
 from typing import Any
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Header, HTTPException, Request
 
 from src.runtime import wake_toggles as wt
+from src.web.api.routers.prop import _require_write_token
 
 router = APIRouter(prefix="/api/bot", tags=["wake-toggles"])
 
@@ -31,4 +34,21 @@ def payload() -> dict[str, Any]:
 
 @router.get("/wake-toggles")
 def get_wake_toggles() -> dict[str, Any]:
+    return payload()
+
+
+@router.post("/wake-toggles")
+async def post_wake_toggle(request: Request, authorization: str | None = Header(default=None)) -> dict[str, Any]:
+    _require_write_token(authorization)
+    try:
+        doc = await request.json()
+    except (ValueError, TypeError) as exc:
+        raise HTTPException(status_code=400, detail="body must be JSON") from exc
+    if not isinstance(doc, dict) or doc.get("key") not in wt.TOGGLES or not isinstance(doc.get("on"), bool):
+        raise HTTPException(status_code=400, detail=f"body needs key in {sorted(wt.TOGGLES)} and boolean on")
+    by = str(doc.get("by") or "console")[:80]
+    try:
+        await asyncio.to_thread(wt.set_toggle, doc["key"], doc["on"], by)
+    except OSError as exc:
+        raise HTTPException(status_code=503, detail=f"state not writable: {type(exc).__name__}") from exc
     return payload()
