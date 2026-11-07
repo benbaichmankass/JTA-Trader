@@ -230,7 +230,8 @@ def test_dry_test_request_serves_exactly_one_dry_ticket(monkeypatch):
     assert pe.claim_next(_dev()) is None  # same request id is never served twice
 
 
-def test_login_retry_is_logged_quietly_and_the_red_flag_pings(_iso):
+def test_login_retry_is_logged_quietly_and_the_red_flag_pings(_iso, monkeypatch):
+    monkeypatch.setattr(pe, "account_status_age_hours", lambda a: 0.1)   # fresh status: the anomaly alert is not under test here
     """PHONE-AUTOLOGIN: no latch, retries forever -- each retry is logged in phone_events but not pinged; the ONE
     login_failed red flag (after 3 in a row) and the recovery login_ok are pinged."""
     n = len(_iso)
@@ -274,7 +275,8 @@ def test_account_status_age_hours(_iso):
     assert age is not None and 0.0 <= age < 0.1
 
 
-def test_terminal_miss_keeps_latest_controls_scrubbed_and_does_not_ping(_iso):
+def test_terminal_miss_keeps_latest_controls_scrubbed_and_does_not_ping(_iso, monkeypatch):
+    monkeypatch.setattr(pe, "account_status_age_hours", lambda a: 0.1)   # fresh status: the anomaly alert is not under test here
     n = len(_iso)
     assert pe.last_diag("breakout_2") is None
     pe.record_event(_dev(), {"event": "terminal_miss", "reason": "tabs=0 inputs=1 probe=false",
@@ -628,7 +630,8 @@ def test_loop_restarted_is_an_accepted_event_kind(_iso):
     assert pe.recent_events("breakout_2")[-1]["kind"] == "loop_restarted"
 
 
-def test_background_ticket_fields_and_fallback_event(_iso):
+def test_background_ticket_fields_and_fallback_event(_iso, monkeypatch):
+    monkeypatch.setattr(pe, "account_status_age_hours", lambda a: 0.1)   # fresh status: the anomaly alert is not under test here
     """PHONE-FGS-EXEC: the background-ticket heartbeat fields are kept, the fallback event is accepted and pinged, and
     the engine tag on a reason survives the scrub."""
     pe.record_event(_dev(), {"event": "heartbeat", "reason": "background: no ticket waiting",
@@ -740,3 +743,33 @@ def test_repo_config_puts_breakout_2_on_report_so_an_over_cushion_live_verify_pi
 def test_breakout_2_on_report_still_refuses_an_unknown_cushion(tmp_path, monkeypatch, _iso):
     _live(tmp_path, monkeypatch, cushion="cushion_unknown")
     assert _verify(_claimed())["ok"] is False
+
+
+# PHONE-EXECUTOR-ANOMALY: a failed expectation is recorded as expected-vs-seen, deduplicated by a signature of step + what
+# was seen, and alerts ONCE (typed phone_executor_anomaly, a symptom never a cause) when account_status is stale.
+def test_anomaly_dedup_signature_and_one_alert(monkeypatch):
+    calls: list = []
+    send = lambda m, **k: calls.append((m, k)) or True  # noqa: E731
+    ctl = lambda h: ["shape:" + h, "Trade", "B:button:Trade:y93x15w13"]  # noqa: E731
+    assert pe.record_anomaly("breakout_2", "heartbeat", "ok", {}, send=send) is None      # not an expectation failure
+    sig = pe.record_anomaly("breakout_2", "terminal_miss", "tabs=4 inputs=0 probe=false", {"controls": ctl("deadbeef")}, send=send)
+    assert sig and len(calls) == 1 and calls[0][1]["kind"] == "phone_executor_anomaly" and calls[0][1]["priority"] == "high"
+    assert "terminal_load" in calls[0][0] and "phone-executor-anomaly" in calls[0][0] and "Cause NOT assumed" in calls[0][0]
+    assert pe.record_anomaly("breakout_2", "terminal_miss", "tabs=4 inputs=0 probe=false", {"controls": ctl("deadbeef")}, send=send) == sig
+    other = pe.record_anomaly("breakout_2", "positions_miss", "no_tab d7 c0 t1", {"headers": ["Trade"], "controls": ["Markets"]}, send=send)
+    assert other != sig and len(calls) == 1                                               # a second symptom inside 6 h: recorded, held
+    doc = pe.last_anomalies("breakout_2")
+    rec = doc["anomalies"][sig]
+    assert rec["count"] == 2 and rec["alerted_at"] and rec["step"] == "terminal_load" and rec["expected"] and rec["seen"]["controls"]
+    assert set(rec["context"]) >= {"events", "app_version", "exec_js", "exec_src"}
+    assert doc["anomalies"][other]["step"] == "positions" and doc["current"] == other
+
+
+def test_anomaly_steps_and_quiet_while_status_fresh(monkeypatch):
+    calls: list = []
+    monkeypatch.setattr(pe, "account_status_age_hours", lambda a: 0.2)
+    pe.record_anomaly("breakout_2", "positions_miss", "closed_no_tab d5", {}, send=lambda m, **k: calls.append(m) or True)
+    assert calls == [] and next(iter(pe.last_anomalies("breakout_2")["anomalies"].values()))["step"] == "closed"
+    monkeypatch.setattr(pe, "account_status_age_hours", lambda a: 3.0)                    # now stale: the SAME signature alerts
+    pe.record_anomaly("breakout_2", "positions_miss", "closed_no_tab d9", {}, send=lambda m, **k: calls.append(m) or True)
+    assert len(calls) == 1                                                                # digits masked: same signature

@@ -120,7 +120,8 @@ def test_structurally_bad_positions_refuse_the_report(bad):
         _status(bad)
 
 
-def test_positions_miss_event_is_quiet_scrubbed_and_kept(env):
+def test_positions_miss_event_is_quiet_scrubbed_and_kept(env, monkeypatch):
+    monkeypatch.setattr(pe, "account_status_age_hours", lambda a: 0.1)   # fresh status: the stale-status anomaly alert is not under test here
     pe.record_event(_dev(), {"event": "positions_miss", "reason": "no_table",
                              "headers": ["Symbol", "Size ####"], "controls": ["Positions", "https://x.y/z"]})
     d = pe.last_positions_diag("breakout_2")

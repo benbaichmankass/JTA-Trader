@@ -358,6 +358,11 @@ STATUS_EXPLICIT: Dict[str, Tuple[str, str, str]] = {
         "read:MARKET-DATA-LAKE-lane-authored-it-2026-11-01-measured",
         "pooled-ML market data lake on HF: audit, layout, per-class depth, feed automation",
     ),
+    "docs/runbooks/phone-executor-anomaly.md": (
+        "live",
+        "read:PHONE-BREAKOUT-NEW-LAYOUT-lane-authored-it-2026-11-07-from-operator-decision",
+        "Phone executor anomaly: capture, diagnose-first causes, exec.js-only vs APK ship path, verification",
+    ),
     "docs/runbooks/jta-trader-rename.md": (
         "live",
         "read:RENAME-lane-authored-it-2026-10-28-from-operator-decision",

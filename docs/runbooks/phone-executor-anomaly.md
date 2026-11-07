@@ -1,0 +1,61 @@
+# Phone executor — anomaly: diagnose first, then fix
+
+> **Doc status:** `live` · category `instruction` · last verified `2026-11-07` · registered in [`docs/DOCUMENT-INDEX.md`](../DOCUMENT-INDEX.md)
+
+**Gates this adds or changes:** none. This is a diagnosis-and-fix procedure; nothing halts, nothing new blocks a trade (the app keeps retrying).
+
+The mechanism names a **symptom, never a cause** (operator, 2026-11-07). It serves any executor bug: a UI change is only one possible cause. First worked example: § 7 (breakout_2, 2026-11-06/07).
+
+## 1. The trigger
+
+The phone reports every failed expectation as an event: `terminal_miss`, `positions_miss` (state prefixes `closed_` / `amend_` / `sheet_` / `open_` for the other views), `refusal`, `mismatch`, `error`, `login_failed`, `bg_ticket_fallback`, `loop_restarted`. The server (`src/prop/phone_executor.py::record_anomaly`) records each as **expected vs seen** and deduplicates by a **signature** = step + what was seen (the page shape hash `shape:<8 hex>` that `exec.js controls()` sends on an unknown page; otherwise the digit-masked state + headers).
+
+When a **new signature** appears and the last `account_status` is older than `ANOMALY_STALE_H` (2 h, or never posted), the VM raises **ONE** alert: kind `phone_executor_anomaly`, channel `system`, priority `high`, `dedup_key phone_executor_anomaly:<account>:<signature>`; at most one per account per 6 h. It is in `GET /api/bot/alerts?kind=phone_executor_anomaly` and reaches the manager via the ops-flags PR (`alerts_ledger.wakes_manager`). Manager: dispatch a Sonnet diagnose-and-fix lane pointed here and at the capture.
+
+## 2. The capture (public, digit-masked, no PII)
+
+`GET https://ict-bot.duckdns.org/api/bot/prop/status?account_id=<id>` -> `phone_anomalies.anomalies.<signature>`:
+`step`, `kind`, **`expected`** (what the app looked for), **`seen`** (`reason`, `controls`, `headers`, `cells`: the sanitised structure it found instead), `context` (the last 10 phone events, `app_version`, `exec_js`, `exec_src`, `last_state`), `count`, `first_seen`, `last_seen`, `alerted_at`. Also: `phone_diag` / `phone_positions_diag` (latest dumps), `phone_events`, `phone_heartbeat.state`, `phone_captures_last` (+ `GET /api/diag/phone_capture*`, when the step-capture POST works; open at 2026-11-07: heartbeat `capture_err post:* 400`).
+
+Structure-dump line codes (`controls` after the `shape:` line): `vp` viewport and counts · `B` clickable in the bottom 30 % (left to right) · `b` plain bottom-band leaf · `F` fixed/sticky bar (`:kN` clickables inside) · `L` landmark · `T` top-band buttons · `P` pointer-cursor leaf that is not a button · `I` icon-only button (aria-label/title). Each: `tag/role:text:a=aria:y<top%>x<left%>w<width%>`.
+
+## 3. DIAGNOSE FIRST — competing causes, tested against the capture
+
+Write the list into the checklist row before touching code, and say which the evidence supports and which it rules out:
+
+| Cause | What the capture would show | How to test |
+|---|---|---|
+| UI / layout change at the broker | `seen` has a new shape: different nav / labels; the old markers absent; page otherwise healthy and logged in | compare `controls` with the labels in `exec.js` (`terminal()`, `TAB_LABEL`, `ORDER_RE`) |
+| Login / 2FA / session expiry | `last_state` login/other, password or "check your e-mail" words, `login_failed` events | `phone_events` timeline, heartbeat `relogin_*` counters |
+| Broker popup / maintenance / challenge | a dialog or "maintenance" / "just a moment" text, `L:` dialog landmark, challenge state | `seen` text, `phone_events` |
+| Our own regression | the miss began right after an exec.js or APK version change; the old shape still matches the old markers | `context.exec_js` / `app_version` vs the first miss time; `git log` on exec.js / Kotlin |
+| Network / VM | events missing, heartbeat gaps, not a miss; `phone_heartbeat.at` old | `GET /api/diag/*` health, heartbeat timeline |
+| App crash / OS kill | `app_started` with `activity_missing`, `loop_restarted`, `restarts_24h` rising | heartbeat state |
+
+Only then fix. **A layout adaptation is one possible fix among several, not the default.** If the capture cannot discriminate the causes, the fix is to **extend the capture** (`exec.js outline()`, or the event payload) and wait one more cycle, not to guess.
+
+## 4. Fixing
+
+`exec.js` levers: `terminal()` (what is a ready terminal; keep it strict so no ticket is claimed on an order form that cannot be found), `TAB_LABEL` / `TAB_ALIAS` / `tabText()`, `clickTab`, `tabChips`, `ORDER_RE` / `openTicket`, `accountPanel`, `outline()`. Test: `node tools/phone-executor/test/exec_check.js` (add a case with the captured shape) and `exec_fixtures_check.js`; server: `tests/test_phone_executor.py`. Bump `var EXEC_VERSION`. Tier 2 (prop order path): landing hold, merge-slot claim, wake the manager with the green head sha. **Never place, amend or cancel an order to test.**
+
+## 5. Ship path
+
+- **`exec.js` only (the normal case):** merge to `main` -> `phone-exec-js-sign` signs it -> the phone fetches and verifies it (every 30 min, or on restart) -> heartbeat `exec_js` shows the new version, `exec_src: remote`. No APK.
+- **APK + operator install** only when Kotlin must change (call sites in `MainActivity.kt`, `FLAG_SECURE` handling, `Api.kt` payloads, a native masked screenshot). Build with workflow `phone-executor-apk`; the operator installs it (physical): open the APK artifact on the phone, install over the app, reopen once so it logs in. State exactly that in the report.
+
+## 6. Verification
+
+1. A **fresh** `account_status` (`status_freshness` not `stale`, `reported_at` newer than the merge) with `positions_state` read.
+2. Heartbeat `exec_js` = the new version; the signature's `count` stops rising.
+3. The **first live ticket after that is the mechanics check** (one small trade, OPERATING-PLAN § 2). The lane does not place it.
+4. Write the outcome on the checklist row (`scripts/ops/work.py note`): the causes considered, the one confirmed, and whether the capture was enough (if not, what was added to it).
+
+## 7. Worked example — breakout_2, 2026-11-06/07
+
+Symptom: `terminal_miss "tabs=4 inputs=0 probe=false"` every minute from 2026-11-06T04:42Z; `account_status` stale 28 h. Capture (`phone_diag` 08:44Z): controls `Trade, Portfolio . USD, Turbo Eval, ETH x, Market chart, Order book, Depth chart, Favorites, Markets, Activity, Open and trigger orders, Open positions, Position P&L, One-click trading …` and none of the old `Order form` / `Positions` / `Open orders`. Causes: login ruled out (heartbeat `last: logged_in`, the page shows the trading UI); regression ruled out for the start time (exec_js `2026-11-01.1` read fine until 11-06); maintenance popup ruled out (no dialog landmark); **UI change supported** (operator confirmed: navigation moved to the bottom). Fix: `exec.js 2026-11-07.1` (structure dump + `Open positions` / `Open and trigger orders` chip aliases), then the bottom-navigation path from the captured shape. PR #24033; row `PHONE-POSITIONS-READ-CONTEXT`.
+
+## 8. Known limits
+
+- No native masked screenshot yet (needs an APK): the sanitised structure is the evidence today. `FLAG_SECURE` is on until a tick reads `logged_in` (`MainActivity.setSecure`), so operator screenshots can also fail on that.
+- Expectation failures the page script cannot see (a Kotlin exception) arrive only as `error` events with a short reason.
+- `ready` stays strict by design: after an unrecognised page the app reads nothing until a lane adapts it, which is what the alert is for.

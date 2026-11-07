@@ -660,6 +660,7 @@ def record_event(device: PhoneDevice, body: Dict[str, Any], *, send=None) -> Dic
         f" — {reason}" if reason else "")
     logger.info("phone_executor event %s %s %s", device.account_id, kind, ticket)
     _append_event(device.account_id, kind, reason, ticket)
+    record_anomaly(device.account_id, kind, reason, body, send=send)
     if kind == "terminal_miss":
         _write_diag(device.account_id, reason, body.get("controls"))
     if kind == "heartbeat":
@@ -905,6 +906,108 @@ def last_heartbeat(account_id: str) -> Optional[Dict[str, Any]]:
         return None
 
 
+# PHONE-EXECUTOR-ANOMALY (operator 2026-11-07: "the mechanism must serve ANY executor bug, the fixing lane diagnoses the
+# cause from evidence"): every failed expectation the app reports (terminal miss, positions/closed/amend/sheet miss, refusal,
+# mismatch, error, login failure, fallback, restart) is recorded as WHAT THE APP EXPECTED versus WHAT IT SAW -- the step, the
+# expectation, the scrubbed structure it found instead, the last events, app + exec.js versions -- deduplicated by a
+# SIGNATURE of step + what was seen. When a NEW signature appears and account_status is stale past ANOMALY_STALE_H, ONE
+# alert (kind phone_executor_anomaly, channel system, high priority: the ledger wake rule puts it on the ops-flags PR)
+# names the account, step, signature and where the capture is read. It names a symptom, never a cause. Never halts
+# anything: the app keeps retrying. Runbook: docs/runbooks/phone-executor-anomaly.md.
+ANOMALY_STALE_H = 2.0
+_ANOMALY_MAX = 16
+_ANOMALY_EVENTS = {"terminal_miss", "positions_miss", "refusal", "mismatch", "error", "login_failed", "bg_ticket_fallback", "loop_restarted"}
+_SHAPE_RE = re.compile(r"^shape:([0-9a-f]{8})$")
+_EXPECTED = {
+    "terminal_load": "a trading terminal: an Order / Order form control, Buy+Sell tabs, Positions+Open orders panels, or the buy+sell probe",
+    "positions": "the Positions chip, then a table whose headers map to side / entry / mark",
+    "closed": "the Closed orders chip, then a table with Type or Status columns",
+    "open": "the Open orders chip, then a table with Type and Status columns",
+    "amend": "the position row and its Edit TP/SL dialog with the stop field",
+    "sheet": "the position sheet with side, stop and take-profit rows",
+    "refusal": "an order form with every field present and a read-back equal to the ticket",
+    "mismatch": "the page read-back equals the ticket",
+    "error": "the step completes without an exception",
+    "login_failed": "the login page accepts the stored email and the mailed number",
+    "bg_ticket_fallback": "the background engine completes a ticket",
+    "loop_restarted": "the foreground tick loop keeps ticking",
+}
+
+
+def _anomalies_path(account_id: str) -> Path:
+    return _diag_path(account_id).with_name(f"prop_phone_anomalies_{re.sub(r'[^a-z0-9_]', '', account_id)}.json")
+
+
+def last_anomalies(account_id: str) -> Optional[Dict[str, Any]]:
+    """The distinct anomalies the phone reported (keyed by signature), or None when none was ever recorded."""
+    try:
+        return json.loads(_anomalies_path(account_id).read_text())
+    except (OSError, ValueError):
+        return None
+
+
+def _anomaly_step(kind: str, reason: str) -> str:
+    if kind == "terminal_miss":
+        return "terminal_load"
+    if kind == "positions_miss":   # reason is "<state> ..." with a closed_ / amend_ / sheet_ / open_ prefix for the other views
+        m = re.match(r"^(closed|amend|sheet|open)_", reason)
+        return m.group(1) if m else "positions"
+    return kind
+
+
+def record_anomaly(account_id: str, kind: str, reason: str, body: Dict[str, Any], *, send=None,
+                   stale_h: Optional[float] = None) -> Optional[str]:
+    """Record one failed expectation (deduplicated by signature); alert ONCE per signature when status is stale.
+    Returns the signature, or None when the event is not an expectation failure. Never raises."""
+    try:
+        if kind not in _ANOMALY_EVENTS:
+            return None
+        def lst(v: Any) -> list:
+            return [x for x in (_scrub(c, 40).strip() for c in (v if isinstance(v, list) else [])[:_DIAG_MAX]) if x]
+        step = _anomaly_step(kind, reason)
+        controls, headers, cells = lst(body.get("controls")), lst(body.get("headers")), [_mask_cell(c) for c in lst(body.get("cells"))]
+        shape = next((m.group(1) for m in (_SHAPE_RE.match(c) for c in controls) if m), None)
+        # signature = step + what was seen: the page shape when the app sent one, else the masked state + headers
+        seen_key = f"shape:{shape}" if shape else "|".join([re.sub(r"\d", "d", reason)[:60]] + headers[:12])
+        sig = hashlib.sha1(f"{step}|{seen_key}".encode()).hexdigest()[:8]
+        doc = last_anomalies(account_id) or {}
+        recs = doc.get("anomalies") if isinstance(doc.get("anomalies"), dict) else {}
+        now = _now().isoformat()
+        hb = (last_heartbeat(account_id) or {}).get("state") or {}
+        rec = recs.get(sig) or {"first_seen": now, "count": 0, "alerted_at": None}
+        rec.update({
+            "last_seen": now, "count": int(rec.get("count") or 0) + 1, "step": step, "kind": kind,
+            "expected": _EXPECTED.get(step, "the step's own check passes"),
+            "seen": {"reason": _scrub(reason, 160), "controls": controls, "headers": headers, "cells": cells},
+            "context": {"events": [dict(e) for e in (recent_events(account_id) or [])[-10:]],
+                        "app_version": _scrub(hb.get("app_version"), 24), "exec_js": _scrub(hb.get("exec_js"), 24),
+                        "exec_src": _scrub(hb.get("exec_src"), 12), "last_state": _scrub(hb.get("last"), 24)}})
+        age = account_status_age_hours(account_id)
+        limit = ANOMALY_STALE_H if stale_h is None else stale_h
+        # an anomaly stream must not become an alert stream: ONE alert per account per 6 h at most
+        recent = any((o.get("alerted_at") or "") > (_now() - timedelta(hours=6)).isoformat() for o in recs.values())
+        if not rec.get("alerted_at") and not recent and (age is None or age >= limit):
+            sent = _ping(
+                f"\U0001f4f1 phone {account_id}: executor anomaly at step '{step}' (signature {sig}): expected "
+                f"{rec['expected']}; the app reported {_scrub(reason, 80)!r} and account_status has been "
+                f"{'absent' if age is None else f'{age:.1f} h'} stale. Evidence (expected vs seen, last events, versions): "
+                f"GET /api/bot/prop/status?account_id={account_id} -> phone_anomalies. Cause NOT assumed: a fix lane "
+                f"diagnoses first, per docs/runbooks/phone-executor-anomaly.md. The app keeps retrying; nothing halted. "
+                f"One alert per signature.", send, kind="phone_executor_anomaly",
+                dedup_key=f"phone_executor_anomaly:{account_id}:{sig}")
+            if sent:
+                rec["alerted_at"] = now
+        recs[sig] = rec
+        if len(recs) > _ANOMALY_MAX:
+            for k in sorted(recs, key=lambda x: recs[x].get("last_seen") or "")[:len(recs) - _ANOMALY_MAX]:
+                del recs[k]
+        _anomalies_path(account_id).write_text(json.dumps({"at": now, "current": sig, "anomalies": recs}))
+        return sig
+    except Exception:  # noqa: BLE001  # allow-silent: logged; diagnostics must never fail the event
+        logger.warning("phone_executor: anomaly record failed", exc_info=True)
+        return None
+
+
 def last_diag(account_id: str) -> Optional[Dict[str, Any]]:
     """The latest terminal_miss diagnostic for the account, or None when none was ever posted."""
     try:
@@ -1034,11 +1137,16 @@ def _token_sha(token: str) -> str:
     return hashlib.sha256(("go:" + str(token)).encode("utf-8")).hexdigest()
 
 
-def _ping(msg: str, send=None) -> bool:
+def _ping(msg: str, send=None, *, kind: Optional[str] = None, dedup_key: Optional[str] = None) -> bool:
     try:
         if send is None:
             from src.runtime.notify import send_telegram_direct
             send = send_telegram_direct
+        if kind:   # a typed ledger row (channel system, high priority) so the alert reaches the manager's wake rule
+            try:
+                return bool(send(msg, parse_mode=None, kind=kind, channel="system", priority="high", dedup_key=dedup_key))
+            except TypeError:   # a test double / older sender without ledger labels
+                return bool(send(msg, parse_mode=None))
         return bool(send(msg, parse_mode=None))
     except Exception:  # noqa: BLE001  # allow-silent: logged; the refusal itself is the safety property
         logger.warning("phone_executor: go-token ping failed", exc_info=True)
