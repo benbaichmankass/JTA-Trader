@@ -1,0 +1,95 @@
+# Hand-authored 2026-11-07 by lane ML-ENTRY-EQ-STRUCTURE-RETEST (Tier 1). Dev-only; rule registered before the run.
+id: RQ-20261107-98e3-03
+title: 'ENTRY-EQ structure-label DEV tau extension: does the pooled dev OOF mean net R of the structure-trained config B keep rising above tau 0.20 (the grid edge
+  of RQ-20261106-98e3-01), at tau 0.25 / 0.30 / 0.40?'
+status: queued
+cadence: once
+theme: ml_health
+priority: 1
+roadmap:
+- L-ML-LIVE
+kind: experiment
+practice_precedent: 'M13 (docs/reference/trading-and-model-practice-principles.md): unlimited iteration on the training-period walk-forward; the confirming window
+  is loaded by NO code path of this unit.'
+question: The graded structure model selected tau 0.20, the TOP of its registered grid {0.05,0.10,0.15,0.20}, with dev OOF mean rising monotonically (+0.054, +0.084,
+  +0.112, +0.122) and 5 dev folds of +0.20/+0.25/-0.05/-0.22/+0.33. Dev-only walk-forward on dates <= 2025-06-30 with the structure-exit labels (pivot=5;sl_only),
+  config B, taus 0.20/0.25/0.30/0.40; reports pooled OOF mean net R, n, per-fold means and n_symbols per tau. NO confirming window is loaded by any code path of this
+  unit.
+why_this_matters: 'Tells whether the selected tau sits on a plateau or a cliff before real money. A better tau at dev is only a hypothesis: it would need its own
+  confirming read at ledger N=3 and its own Tier-3 proposal; it never changes the graded +0.2123 record.'
+power:
+  expected_n: 1000
+  min_detectable_effect: 0.1
+  effect_units: metric
+  sd: 1.0
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: 'DESCRIPTIVE dev stage (no pass bar). INFERRED: the v1 read took 1099 restricted-long trades over 13 months on this pool; the walk-forward OOF window is
+    ~30 months, so several thousand OOF decisions per config/tau before the tau filter. Selection needs >= 300.'
+  feasibility:
+    source: none
+    accrual_basis: Replays Alpaca 1h RTH history 2021-01-01 .. 2025-06-30; nothing accrues.
+decision_rule:
+  id: RULE-RQ20261107-98e3-03-TAU-EXT
+  registered_at: '2026-11-07'
+  registered_before_run: true
+  statistic: 'scripts/research/ml_entry_equity.py dev --structure --configs B --taus 0.2,0.25,0.3,0.4: per-tau pooled purged walk-forward OOF restricted-long mean
+    net R, n, n_symbols, by_fold, on rows <= 2025-06-30.'
+  rule: 'Descriptive: no pass bar and no promotion consumes this unit. read_state measured means the 4-tau grid ran. Reading rule fixed now: tau 0.20 is a PLATEAU
+    if every tau in {0.25, 0.30} with n >= 300 reads within 0.03 R of 0.20''s +0.1222 or lower; a CLIFF if tau 0.25 reads below +0.06; a RISING edge if some tau with
+    n >= 300 reads >= +0.15 (a hypothesis for a later N=3 confirm unit, never an adopted tau). Thresholds never change after any result.'
+  what_it_does_not_do: No confirming window; no change to the graded record, tau, config or any roster. Shares the dev window with RQ-20261106-98e3-01 (4 more draws
+    on the same dev data, declared).
+  min_n: 300 OOF decisions per tau for the reading rule
+compute: cpu_long
+value:
+  bucket: ai_trader
+  usd_at_stake_per_month: 60
+  confidence: 0.2
+  basis: 'stand-in: the operator goal (an ML decision maker live on the Alpaca book); not a P&L measurement.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 6.0
+  est_minutes: 100
+  why_runner: Alpaca market data (read-only, paper key) + LightGBM fits; 4 vCPU / 16 GB runner.
+  basis: INFERRED - a41f-01 re-run took 25 min for 173 ETFs of 1h bars; 15 LightGBM fits on ~0.3M rows add ~15-30 min.
+run:
+  workflow: research-script-run.yml
+  command:
+  - python3
+  - scripts/research/ml_entry_equity.py
+  - dev
+  - --cache
+  - /tmp/ml_entry_equity
+  - --out
+  - '{out_dir}'
+  - --unit
+  - '{unit}'
+  - --where
+  - research-script-run
+  - --structure
+  - --configs
+  - B
+  - --taus
+  - 0.2,0.25,0.3,0.4
+  timeout_minutes: 180
+  inputs:
+    research_unit: RQ-20261107-98e3-03
+ml_consumer:
+  consumer: ML-ENTRY-EQUITY-NATIVE
+  decision: whether a later N=3 confirm unit for a higher tau is worth registering for the structure-trained ml_entry_eq
+  legs:
+  - iaum_pullback_1d
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- ML-ENTRY-EQ-STRUCTURE-RETEST
+- RQ-20261106-98e3-01
+- RQ-20261107-98e3-02
+population: 'The registered POOL_RULE of scripts/research/ml_entry_alpaca_score.py, UNCHANGED (sha256 e9702661d1a596a0f7e84e632c0ca8b5c2743a728f02147477c003644a0858e2):
+  active, tradable, us_equity ETFs (nasdaqtraded ETF=Y) with median daily dollar volume >= 50M USD over 2019-01-01..2020-12-31. The module refuses to run if the rule
+  hash differs.'
