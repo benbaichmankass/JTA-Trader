@@ -1,0 +1,1531 @@
+{
+ "schema_version": 2,
+ "order_package_id": "pkg-c569fc01db464fb2",
+ "strategy": "ml_entry",
+ "symbol": "ADAUSDT",
+ "side": "short",
+ "graded_at": "2026-11-07T13:17:30Z",
+ "biases": [
+  "stop fills at its price (+ half round-trip slippage); a gap fills at the open",
+  "a touch is not a fill: stop / TP need price to trade THROUGH the level (calibrated on one stop fill, n=1)",
+  "intrabar order unknown: stop checked before TP; rule triggers and trails take effect from the next bar",
+  "path stitched from the finest candles served (1m ~16h, 5m ~3.5d, 15m ~10d); older parts use coarser bars",
+  "entry is the actual fill, shared by every arm; R unit = INITIAL risk (exit_plan.stop)",
+  "an unresolved arm is marked at the last close and costed as closed there (resolved=false)",
+  "post-exit bars end at t_close + horizon (leg max-hold, else a per-timeframe default); an arm open there is unresolved and never in a verdict",
+  "post-exit excursions start at the first bar opening after the close; the bar containing the exit is excluded",
+  "funding = policy default x windows held (ESTIMATED); account % = current equity less actual P&L (ESTIMATED)",
+  "alt-bracket arms hold the risk budget constant (wider stop => smaller size); margin and lot size not modelled"
+ ],
+ "status": "graded",
+ "reason": null,
+ "bracket": {
+  "entry_pkg": 0.1907,
+  "stop0": 0.19364285714285714,
+  "stop0_source": "exit_plan.stop|risk_per_unit",
+  "tp": 0.18187143,
+  "tp_r": 3.0,
+  "r_dist": 0.002942857142857136,
+  "atr": null,
+  "trail_mult": null
+ },
+ "legs": [
+  {
+   "account_id": "bybit_2",
+   "trade_id": 6830,
+   "account_class": "real_money",
+   "qty": 996.0,
+   "entry_fill": 0.1907,
+   "exit_price": 0.1867,
+   "exit_reason": "max_hold",
+   "risk_usd": 2.931086,
+   "pnl_usd_journal": 3.73617594,
+   "pnl_usd_venue": 3.73617594,
+   "closed_at": "2026-11-03T08:04:06.107402+00:00",
+   "provenance": "MEASURED",
+   "equity_pre_usd": 189.46
+  },
+  {
+   "account_id": "bybit_portfolio",
+   "trade_id": 6831,
+   "account_class": "paper",
+   "qty": 300608.0,
+   "entry_fill": 0.1907,
+   "exit_price": 0.1867,
+   "exit_reason": "max_hold",
+   "risk_usd": 884.6464,
+   "pnl_usd_journal": 1202.432,
+   "pnl_usd_venue": 1127.63492124,
+   "closed_at": "2026-11-03T08:04:20.374087+00:00",
+   "provenance": "MEASURED",
+   "equity_pre_usd": 57173.6
+  }
+ ],
+ "path": {
+  "bars": 1653,
+  "bars_by_tf": {
+   "1m": 685,
+   "5m": 800,
+   "15m": 168
+  },
+  "first_bar": "2026-11-02T08:00:00Z",
+  "last_bar": "2026-11-07T08:05:00Z",
+  "t_entry": "2026-11-02T08:04:02Z",
+  "t_close": "2026-11-03T08:04:20Z"
+ },
+ "actions": [
+  {
+   "kind": "set_stop",
+   "level": 0.19364286,
+   "source": "path_history_sl_change",
+   "time_provenance": "ESTIMATED(bar_bounded)",
+   "ts": "2026-11-02T10:00:00Z"
+  }
+ ],
+ "arms": [
+  {
+   "arm_id": "actual",
+   "family": "actual",
+   "label": "ACTUAL (journal / venue closed-pnl)",
+   "params": {},
+   "resolved": true,
+   "exit": {
+    "ts": "2026-11-03T08:04:06.107402+00:00",
+    "px": 0.1867,
+    "reason": "max_hold"
+   },
+   "gross_r": null,
+   "cost_r": null,
+   "net_r": 1.2747,
+   "per_account": {
+    "bybit_2": {
+     "pnl_usd": 3.7362,
+     "pct_of_account": 1.972,
+     "account_class": "real_money"
+    },
+    "bybit_portfolio": {
+     "pnl_usd": 1127.6349,
+     "pct_of_account": 1.9723,
+     "account_class": "paper"
+    }
+   },
+   "provenance": "MEASURED",
+   "note": "venue closed_pnl is booked net of the OPEN fee only; the simulated arms use the full recorded round trip",
+   "delta_vs_replayed_actual_r": 2.3992,
+   "delta_vs_actual_r": 0.0
+  },
+  {
+   "arm_id": "replayed_actual",
+   "family": "baseline",
+   "label": "Actual management replayed (like-for-like baseline)",
+   "params": {
+    "actions": 1
+   },
+   "resolved": true,
+   "exit": {
+    "ts": "2026-11-04T14:40:00Z",
+    "px": 0.19364286,
+    "reason": "stop",
+    "fills": [
+     {
+      "frac": 1.0,
+      "px": 0.19364286,
+      "reason": "stop"
+     }
+    ]
+   },
+   "gross_r": -1.0,
+   "cost_r": {
+    "fee": 0.0705,
+    "slip": 0.0097,
+    "funding": 0.0442
+   },
+   "net_r": -1.1245,
+   "per_account": {
+    "bybit_2": {
+     "pnl_usd": -3.2959,
+     "pct_of_account": -1.7396,
+     "account_class": "real_money"
+    },
+    "bybit_portfolio": {
+     "pnl_usd": -994.7669,
+     "pct_of_account": -1.7399,
+     "account_class": "paper"
+    }
+   },
+   "provenance": "ESTIMATED",
+   "delta_vs_replayed_actual_r": 0.0,
+   "delta_vs_actual_r": -2.3992,
+   "delta_vs_replayed_actual_usd": {
+    "bybit_2": 0.0,
+    "bybit_portfolio": 0.0
+   }
+  },
+  {
+   "arm_id": "original_brackets",
+   "family": "entry_brackets",
+   "label": "Original SL/TP, no in-trade action (own trail only)",
+   "params": {},
+   "resolved": true,
+   "exit": {
+    "ts": "2026-11-04T14:40:00Z",
+    "px": 0.19364286,
+    "reason": "stop",
+    "fills": [
+     {
+      "frac": 1.0,
+      "px": 0.19364286,
+      "reason": "stop"
+     }
+    ]
+   },
+   "gross_r": -1.0,
+   "cost_r": {
+    "fee": 0.0705,
+    "slip": 0.0097,
+    "funding": 0.0442
+   },
+   "net_r": -1.1245,
+   "per_account": {
+    "bybit_2": {
+     "pnl_usd": -3.2959,
+     "pct_of_account": -1.7396,
+     "account_class": "real_money"
+    },
+    "bybit_portfolio": {
+     "pnl_usd": -994.7669,
+     "pct_of_account": -1.7399,
+     "account_class": "paper"
+    }
+   },
+   "provenance": "ESTIMATED",
+   "delta_vs_replayed_actual_r": 0.0,
+   "delta_vs_actual_r": -2.3992,
+   "delta_vs_replayed_actual_usd": {
+    "bybit_2": 0.0,
+    "bybit_portfolio": 0.0
+   }
+  },
+  {
+   "arm_id": "alt_sl0.75x_tp2R",
+   "family": "alt_brackets",
+   "label": "SL 0.75x original distance, TP 2R",
+   "params": {
+    "sl_mult": 0.75,
+    "tp_r": 2.0
+   },
+   "resolved": true,
+   "exit": {
+    "ts": "2026-11-02T19:30:00Z",
+    "px": 0.18628571,
+    "reason": "tp",
+    "fills": [
+     {
+      "frac": 1.0,
+      "px": 0.18628571,
+      "reason": "tp"
+     }
+    ]
+   },
+   "gross_r": 2.0,
+   "cost_r": {
+    "fee": 0.094,
+    "slip": 0.0,
+    "funding": 0.0123
+   },
+   "net_r": 1.8936,
+   "per_account": {
+    "bybit_2": {
+     "pnl_usd": 5.5503,
+     "pct_of_account": 2.9295,
+     "account_class": "real_money"
+    },
+    "bybit_portfolio": {
+     "pnl_usd": 1675.1735,
+     "pct_of_account": 2.93,
+     "account_class": "paper"
+    }
+   },
+   "provenance": "ESTIMATED",
+   "delta_vs_replayed_actual_r": 3.0181,
+   "delta_vs_actual_r": 0.6189,
+   "delta_vs_replayed_actual_usd": {
+    "bybit_2": 8.8462,
+    "bybit_portfolio": 2669.9404
+   }
+  },
+  {
+   "arm_id": "alt_sl0.75x_tp3R",
+   "family": "alt_brackets",
+   "label": "SL 0.75x original distance, TP 3R",
+   "params": {
+    "sl_mult": 0.75,
+    "tp_r": 3.0
+   },
+   "resolved": true,
+   "exit": {
+    "ts": "2026-11-04T03:00:00Z",
+    "px": 0.18407857,
+    "reason": "tp",
+    "fills": [
+     {
+      "frac": 1.0,
+      "px": 0.18407857,
+      "reason": "tp"
+     }
+    ]
+   },
+   "gross_r": 3.0,
+   "cost_r": {
+    "fee": 0.094,
+    "slip": 0.0,
+    "funding": 0.0464
+   },
+   "net_r": 2.8596,
+   "per_account": {
+    "bybit_2": {
+     "pnl_usd": 8.3817,
+     "pct_of_account": 4.424,
+     "account_class": "real_money"
+    },
+    "bybit_portfolio": {
+     "pnl_usd": 2529.7238,
+     "pct_of_account": 4.4246,
+     "account_class": "paper"
+    }
+   },
+   "provenance": "ESTIMATED",
+   "delta_vs_replayed_actual_r": 3.9841,
+   "delta_vs_actual_r": 1.5849,
+   "delta_vs_replayed_actual_usd": {
+    "bybit_2": 11.6776,
+    "bybit_portfolio": 3524.4907
+   }
+  },
+  {
+   "arm_id": "alt_sl0.75x_tp4R",
+   "family": "alt_brackets",
+   "label": "SL 0.75x original distance, TP 4R",
+   "params": {
+    "sl_mult": 0.75,
+    "tp_r": 4.0
+   },
+   "resolved": true,
+   "exit": {
+    "ts": "2026-11-04T14:40:00Z",
+    "px": 0.19290714,
+    "reason": "stop",
+    "fills": [
+     {
+      "frac": 1.0,
+      "px": 0.19290714,
+      "reason": "stop"
+     }
+    ]
+   },
+   "gross_r": -1.0,
+   "cost_r": {
+    "fee": 0.094,
+    "slip": 0.013,
+    "funding": 0.059
+   },
+   "net_r": -1.166,
+   "per_account": {
+    "bybit_2": {
+     "pnl_usd": -3.4176,
+     "pct_of_account": -1.8038,
+     "account_class": "real_money"
+    },
+    "bybit_portfolio": {
+     "pnl_usd": -1031.4737,
+     "pct_of_account": -1.8041,
+     "account_class": "paper"
+    }
+   },
+   "provenance": "ESTIMATED",
+   "delta_vs_replayed_actual_r": -0.0415,
+   "delta_vs_actual_r": -2.4407,
+   "delta_vs_replayed_actual_usd": {
+    "bybit_2": -0.1217,
+    "bybit_portfolio": -36.7068
+   }
+  },
+  {
+   "arm_id": "alt_sl0.75x_tp5R",
+   "family": "alt_brackets",
+   "label": "SL 0.75x original distance, TP 5R",
+   "params": {
+    "sl_mult": 0.75,
+    "tp_r": 5.0
+   },
+   "resolved": true,
+   "exit": {
+    "ts": "2026-11-04T14:40:00Z",
+    "px": 0.19290714,
+    "reason": "stop",
+    "fills": [
+     {
+      "frac": 1.0,
+      "px": 0.19290714,
+      "reason": "stop"
+     }
+    ]
+   },
+   "gross_r": -1.0,
+   "cost_r": {
+    "fee": 0.094,
+    "slip": 0.013,
+    "funding": 0.059
+   },
+   "net_r": -1.166,
+   "per_account": {
+    "bybit_2": {
+     "pnl_usd": -3.4176,
+     "pct_of_account": -1.8038,
+     "account_class": "real_money"
+    },
+    "bybit_portfolio": {
+     "pnl_usd": -1031.4737,
+     "pct_of_account": -1.8041,
+     "account_class": "paper"
+    }
+   },
+   "provenance": "ESTIMATED",
+   "delta_vs_replayed_actual_r": -0.0415,
+   "delta_vs_actual_r": -2.4407,
+   "delta_vs_replayed_actual_usd": {
+    "bybit_2": -0.1217,
+    "bybit_portfolio": -36.7068
+   }
+  },
+  {
+   "arm_id": "alt_sl0.75x_tp6R",
+   "family": "alt_brackets",
+   "label": "SL 0.75x original distance, TP 6R",
+   "params": {
+    "sl_mult": 0.75,
+    "tp_r": 6.0
+   },
+   "resolved": true,
+   "exit": {
+    "ts": "2026-11-04T14:40:00Z",
+    "px": 0.19290714,
+    "reason": "stop",
+    "fills": [
+     {
+      "frac": 1.0,
+      "px": 0.19290714,
+      "reason": "stop"
+     }
+    ]
+   },
+   "gross_r": -1.0,
+   "cost_r": {
+    "fee": 0.094,
+    "slip": 0.013,
+    "funding": 0.059
+   },
+   "net_r": -1.166,
+   "per_account": {
+    "bybit_2": {
+     "pnl_usd": -3.4176,
+     "pct_of_account": -1.8038,
+     "account_class": "real_money"
+    },
+    "bybit_portfolio": {
+     "pnl_usd": -1031.4737,
+     "pct_of_account": -1.8041,
+     "account_class": "paper"
+    }
+   },
+   "provenance": "ESTIMATED",
+   "delta_vs_replayed_actual_r": -0.0415,
+   "delta_vs_actual_r": -2.4407,
+   "delta_vs_replayed_actual_usd": {
+    "bybit_2": -0.1217,
+    "bybit_portfolio": -36.7068
+   }
+  },
+  {
+   "arm_id": "alt_sl1x_tp2R",
+   "family": "alt_brackets",
+   "label": "SL 1x original distance, TP 2R",
+   "params": {
+    "sl_mult": 1.0,
+    "tp_r": 2.0
+   },
+   "resolved": true,
+   "exit": {
+    "ts": "2026-11-04T03:00:00Z",
+    "px": 0.18481429,
+    "reason": "tp",
+    "fills": [
+     {
+      "frac": 1.0,
+      "px": 0.18481429,
+      "reason": "tp"
+     }
+    ]
+   },
+   "gross_r": 2.0,
+   "cost_r": {
+    "fee": 0.0705,
+    "slip": 0.0,
+    "funding": 0.0348
+   },
+   "net_r": 1.8947,
+   "per_account": {
+    "bybit_2": {
+     "pnl_usd": 5.5535,
+     "pct_of_account": 2.9312,
+     "account_class": "real_money"
+    },
+    "bybit_portfolio": {
+     "pnl_usd": 1676.1312,
+     "pct_of_account": 2.9317,
+     "account_class": "paper"
+    }
+   },
+   "provenance": "ESTIMATED",
+   "delta_vs_replayed_actual_r": 3.0192,
+   "delta_vs_actual_r": 0.62,
+   "delta_vs_replayed_actual_usd": {
+    "bybit_2": 8.8494,
+    "bybit_portfolio": 2670.8981
+   }
+  },
+  {
+   "arm_id": "alt_sl1x_tp4R",
+   "family": "alt_brackets",
+   "label": "SL 1x original distance, TP 4R",
+   "params": {
+    "sl_mult": 1.0,
+    "tp_r": 4.0
+   },
+   "resolved": true,
+   "exit": {
+    "ts": "2026-11-04T14:40:00Z",
+    "px": 0.19364286,
+    "reason": "stop",
+    "fills": [
+     {
+      "frac": 1.0,
+      "px": 0.19364286,
+      "reason": "stop"
+     }
+    ]
+   },
+   "gross_r": -1.0,
+   "cost_r": {
+    "fee": 0.0705,
+    "slip": 0.0097,
+    "funding": 0.0442
+   },
+   "net_r": -1.1245,
+   "per_account": {
+    "bybit_2": {
+     "pnl_usd": -3.2959,
+     "pct_of_account": -1.7396,
+     "account_class": "real_money"
+    },
+    "bybit_portfolio": {
+     "pnl_usd": -994.7669,
+     "pct_of_account": -1.7399,
+     "account_class": "paper"
+    }
+   },
+   "provenance": "ESTIMATED",
+   "delta_vs_replayed_actual_r": 0.0,
+   "delta_vs_actual_r": -2.3992,
+   "delta_vs_replayed_actual_usd": {
+    "bybit_2": 0.0,
+    "bybit_portfolio": 0.0
+   }
+  },
+  {
+   "arm_id": "alt_sl1x_tp5R",
+   "family": "alt_brackets",
+   "label": "SL 1x original distance, TP 5R",
+   "params": {
+    "sl_mult": 1.0,
+    "tp_r": 5.0
+   },
+   "resolved": true,
+   "exit": {
+    "ts": "2026-11-04T14:40:00Z",
+    "px": 0.19364286,
+    "reason": "stop",
+    "fills": [
+     {
+      "frac": 1.0,
+      "px": 0.19364286,
+      "reason": "stop"
+     }
+    ]
+   },
+   "gross_r": -1.0,
+   "cost_r": {
+    "fee": 0.0705,
+    "slip": 0.0097,
+    "funding": 0.0442
+   },
+   "net_r": -1.1245,
+   "per_account": {
+    "bybit_2": {
+     "pnl_usd": -3.2959,
+     "pct_of_account": -1.7396,
+     "account_class": "real_money"
+    },
+    "bybit_portfolio": {
+     "pnl_usd": -994.7669,
+     "pct_of_account": -1.7399,
+     "account_class": "paper"
+    }
+   },
+   "provenance": "ESTIMATED",
+   "delta_vs_replayed_actual_r": 0.0,
+   "delta_vs_actual_r": -2.3992,
+   "delta_vs_replayed_actual_usd": {
+    "bybit_2": 0.0,
+    "bybit_portfolio": 0.0
+   }
+  },
+  {
+   "arm_id": "alt_sl1x_tp6R",
+   "family": "alt_brackets",
+   "label": "SL 1x original distance, TP 6R",
+   "params": {
+    "sl_mult": 1.0,
+    "tp_r": 6.0
+   },
+   "resolved": true,
+   "exit": {
+    "ts": "2026-11-04T14:40:00Z",
+    "px": 0.19364286,
+    "reason": "stop",
+    "fills": [
+     {
+      "frac": 1.0,
+      "px": 0.19364286,
+      "reason": "stop"
+     }
+    ]
+   },
+   "gross_r": -1.0,
+   "cost_r": {
+    "fee": 0.0705,
+    "slip": 0.0097,
+    "funding": 0.0442
+   },
+   "net_r": -1.1245,
+   "per_account": {
+    "bybit_2": {
+     "pnl_usd": -3.2959,
+     "pct_of_account": -1.7396,
+     "account_class": "real_money"
+    },
+    "bybit_portfolio": {
+     "pnl_usd": -994.7669,
+     "pct_of_account": -1.7399,
+     "account_class": "paper"
+    }
+   },
+   "provenance": "ESTIMATED",
+   "delta_vs_replayed_actual_r": 0.0,
+   "delta_vs_actual_r": -2.3992,
+   "delta_vs_replayed_actual_usd": {
+    "bybit_2": 0.0,
+    "bybit_portfolio": 0.0
+   }
+  },
+  {
+   "arm_id": "alt_sl1.25x_tp2R",
+   "family": "alt_brackets",
+   "label": "SL 1.25x original distance, TP 2R",
+   "params": {
+    "sl_mult": 1.25,
+    "tp_r": 2.0
+   },
+   "resolved": true,
+   "exit": {
+    "ts": "2026-11-04T03:00:00Z",
+    "px": 0.18334286,
+    "reason": "tp",
+    "fills": [
+     {
+      "frac": 1.0,
+      "px": 0.18334286,
+      "reason": "tp"
+     }
+    ]
+   },
+   "gross_r": 2.0,
+   "cost_r": {
+    "fee": 0.0564,
+    "slip": 0.0,
+    "funding": 0.0278
+   },
+   "net_r": 1.9158,
+   "per_account": {
+    "bybit_2": {
+     "pnl_usd": 5.6152,
+     "pct_of_account": 2.9638,
+     "account_class": "real_money"
+    },
+    "bybit_portfolio": {
+     "pnl_usd": 1694.7635,
+     "pct_of_account": 2.9642,
+     "account_class": "paper"
+    }
+   },
+   "provenance": "ESTIMATED",
+   "delta_vs_replayed_actual_r": 3.0403,
+   "delta_vs_actual_r": 0.6411,
+   "delta_vs_replayed_actual_usd": {
+    "bybit_2": 8.9111,
+    "bybit_portfolio": 2689.5304
+   }
+  },
+  {
+   "arm_id": "alt_sl1.25x_tp3R",
+   "family": "alt_brackets",
+   "label": "SL 1.25x original distance, TP 3R",
+   "params": {
+    "sl_mult": 1.25,
+    "tp_r": 3.0
+   },
+   "resolved": true,
+   "exit": {
+    "ts": "2026-11-04T14:45:00Z",
+    "px": 0.19437857,
+    "reason": "stop",
+    "fills": [
+     {
+      "frac": 1.0,
+      "px": 0.19437857,
+      "reason": "stop"
+     }
+    ]
+   },
+   "gross_r": -1.0,
+   "cost_r": {
+    "fee": 0.0564,
+    "slip": 0.0078,
+    "funding": 0.0354
+   },
+   "net_r": -1.0996,
+   "per_account": {
+    "bybit_2": {
+     "pnl_usd": -3.2231,
+     "pct_of_account": -1.7012,
+     "account_class": "real_money"
+    },
+    "bybit_portfolio": {
+     "pnl_usd": -972.7906,
+     "pct_of_account": -1.7015,
+     "account_class": "paper"
+    }
+   },
+   "provenance": "ESTIMATED",
+   "delta_vs_replayed_actual_r": 0.0249,
+   "delta_vs_actual_r": -2.3743,
+   "delta_vs_replayed_actual_usd": {
+    "bybit_2": 0.0728,
+    "bybit_portfolio": 21.9763
+   }
+  },
+  {
+   "arm_id": "alt_sl1.25x_tp4R",
+   "family": "alt_brackets",
+   "label": "SL 1.25x original distance, TP 4R",
+   "params": {
+    "sl_mult": 1.25,
+    "tp_r": 4.0
+   },
+   "resolved": true,
+   "exit": {
+    "ts": "2026-11-04T14:45:00Z",
+    "px": 0.19437857,
+    "reason": "stop",
+    "fills": [
+     {
+      "frac": 1.0,
+      "px": 0.19437857,
+      "reason": "stop"
+     }
+    ]
+   },
+   "gross_r": -1.0,
+   "cost_r": {
+    "fee": 0.0564,
+    "slip": 0.0078,
+    "funding": 0.0354
+   },
+   "net_r": -1.0996,
+   "per_account": {
+    "bybit_2": {
+     "pnl_usd": -3.2231,
+     "pct_of_account": -1.7012,
+     "account_class": "real_money"
+    },
+    "bybit_portfolio": {
+     "pnl_usd": -972.7906,
+     "pct_of_account": -1.7015,
+     "account_class": "paper"
+    }
+   },
+   "provenance": "ESTIMATED",
+   "delta_vs_replayed_actual_r": 0.0249,
+   "delta_vs_actual_r": -2.3743,
+   "delta_vs_replayed_actual_usd": {
+    "bybit_2": 0.0728,
+    "bybit_portfolio": 21.9763
+   }
+  },
+  {
+   "arm_id": "alt_sl1.25x_tp5R",
+   "family": "alt_brackets",
+   "label": "SL 1.25x original distance, TP 5R",
+   "params": {
+    "sl_mult": 1.25,
+    "tp_r": 5.0
+   },
+   "resolved": true,
+   "exit": {
+    "ts": "2026-11-04T14:45:00Z",
+    "px": 0.19437857,
+    "reason": "stop",
+    "fills": [
+     {
+      "frac": 1.0,
+      "px": 0.19437857,
+      "reason": "stop"
+     }
+    ]
+   },
+   "gross_r": -1.0,
+   "cost_r": {
+    "fee": 0.0564,
+    "slip": 0.0078,
+    "funding": 0.0354
+   },
+   "net_r": -1.0996,
+   "per_account": {
+    "bybit_2": {
+     "pnl_usd": -3.2231,
+     "pct_of_account": -1.7012,
+     "account_class": "real_money"
+    },
+    "bybit_portfolio": {
+     "pnl_usd": -972.7906,
+     "pct_of_account": -1.7015,
+     "account_class": "paper"
+    }
+   },
+   "provenance": "ESTIMATED",
+   "delta_vs_replayed_actual_r": 0.0249,
+   "delta_vs_actual_r": -2.3743,
+   "delta_vs_replayed_actual_usd": {
+    "bybit_2": 0.0728,
+    "bybit_portfolio": 21.9763
+   }
+  },
+  {
+   "arm_id": "alt_sl1.25x_tp6R",
+   "family": "alt_brackets",
+   "label": "SL 1.25x original distance, TP 6R",
+   "params": {
+    "sl_mult": 1.25,
+    "tp_r": 6.0
+   },
+   "resolved": true,
+   "exit": {
+    "ts": "2026-11-04T14:45:00Z",
+    "px": 0.19437857,
+    "reason": "stop",
+    "fills": [
+     {
+      "frac": 1.0,
+      "px": 0.19437857,
+      "reason": "stop"
+     }
+    ]
+   },
+   "gross_r": -1.0,
+   "cost_r": {
+    "fee": 0.0564,
+    "slip": 0.0078,
+    "funding": 0.0354
+   },
+   "net_r": -1.0996,
+   "per_account": {
+    "bybit_2": {
+     "pnl_usd": -3.2231,
+     "pct_of_account": -1.7012,
+     "account_class": "real_money"
+    },
+    "bybit_portfolio": {
+     "pnl_usd": -972.7906,
+     "pct_of_account": -1.7015,
+     "account_class": "paper"
+    }
+   },
+   "provenance": "ESTIMATED",
+   "delta_vs_replayed_actual_r": 0.0249,
+   "delta_vs_actual_r": -2.3743,
+   "delta_vs_replayed_actual_usd": {
+    "bybit_2": 0.0728,
+    "bybit_portfolio": 21.9763
+   }
+  },
+  {
+   "arm_id": "alt_sl1.5x_tp2R",
+   "family": "alt_brackets",
+   "label": "SL 1.5x original distance, TP 2R",
+   "params": {
+    "sl_mult": 1.5,
+    "tp_r": 2.0
+   },
+   "resolved": true,
+   "exit": {
+    "ts": "2026-11-04T14:45:00Z",
+    "px": 0.19511429,
+    "reason": "stop",
+    "fills": [
+     {
+      "frac": 1.0,
+      "px": 0.19511429,
+      "reason": "stop"
+     }
+    ]
+   },
+   "gross_r": -1.0,
+   "cost_r": {
+    "fee": 0.047,
+    "slip": 0.0065,
+    "funding": 0.0295
+   },
+   "net_r": -1.083,
+   "per_account": {
+    "bybit_2": {
+     "pnl_usd": -3.1745,
+     "pct_of_account": -1.6755,
+     "account_class": "real_money"
+    },
+    "bybit_portfolio": {
+     "pnl_usd": -958.0999,
+     "pct_of_account": -1.6758,
+     "account_class": "paper"
+    }
+   },
+   "provenance": "ESTIMATED",
+   "delta_vs_replayed_actual_r": 0.0415,
+   "delta_vs_actual_r": -2.3577,
+   "delta_vs_replayed_actual_usd": {
+    "bybit_2": 0.1214,
+    "bybit_portfolio": 36.667
+   }
+  },
+  {
+   "arm_id": "alt_sl1.5x_tp3R",
+   "family": "alt_brackets",
+   "label": "SL 1.5x original distance, TP 3R",
+   "params": {
+    "sl_mult": 1.5,
+    "tp_r": 3.0
+   },
+   "resolved": true,
+   "exit": {
+    "ts": "2026-11-04T14:45:00Z",
+    "px": 0.19511429,
+    "reason": "stop",
+    "fills": [
+     {
+      "frac": 1.0,
+      "px": 0.19511429,
+      "reason": "stop"
+     }
+    ]
+   },
+   "gross_r": -1.0,
+   "cost_r": {
+    "fee": 0.047,
+    "slip": 0.0065,
+    "funding": 0.0295
+   },
+   "net_r": -1.083,
+   "per_account": {
+    "bybit_2": {
+     "pnl_usd": -3.1745,
+     "pct_of_account": -1.6755,
+     "account_class": "real_money"
+    },
+    "bybit_portfolio": {
+     "pnl_usd": -958.0999,
+     "pct_of_account": -1.6758,
+     "account_class": "paper"
+    }
+   },
+   "provenance": "ESTIMATED",
+   "delta_vs_replayed_actual_r": 0.0415,
+   "delta_vs_actual_r": -2.3577,
+   "delta_vs_replayed_actual_usd": {
+    "bybit_2": 0.1214,
+    "bybit_portfolio": 36.667
+   }
+  },
+  {
+   "arm_id": "alt_sl1.5x_tp4R",
+   "family": "alt_brackets",
+   "label": "SL 1.5x original distance, TP 4R",
+   "params": {
+    "sl_mult": 1.5,
+    "tp_r": 4.0
+   },
+   "resolved": true,
+   "exit": {
+    "ts": "2026-11-04T14:45:00Z",
+    "px": 0.19511429,
+    "reason": "stop",
+    "fills": [
+     {
+      "frac": 1.0,
+      "px": 0.19511429,
+      "reason": "stop"
+     }
+    ]
+   },
+   "gross_r": -1.0,
+   "cost_r": {
+    "fee": 0.047,
+    "slip": 0.0065,
+    "funding": 0.0295
+   },
+   "net_r": -1.083,
+   "per_account": {
+    "bybit_2": {
+     "pnl_usd": -3.1745,
+     "pct_of_account": -1.6755,
+     "account_class": "real_money"
+    },
+    "bybit_portfolio": {
+     "pnl_usd": -958.0999,
+     "pct_of_account": -1.6758,
+     "account_class": "paper"
+    }
+   },
+   "provenance": "ESTIMATED",
+   "delta_vs_replayed_actual_r": 0.0415,
+   "delta_vs_actual_r": -2.3577,
+   "delta_vs_replayed_actual_usd": {
+    "bybit_2": 0.1214,
+    "bybit_portfolio": 36.667
+   }
+  },
+  {
+   "arm_id": "alt_sl1.5x_tp5R",
+   "family": "alt_brackets",
+   "label": "SL 1.5x original distance, TP 5R",
+   "params": {
+    "sl_mult": 1.5,
+    "tp_r": 5.0
+   },
+   "resolved": true,
+   "exit": {
+    "ts": "2026-11-04T14:45:00Z",
+    "px": 0.19511429,
+    "reason": "stop",
+    "fills": [
+     {
+      "frac": 1.0,
+      "px": 0.19511429,
+      "reason": "stop"
+     }
+    ]
+   },
+   "gross_r": -1.0,
+   "cost_r": {
+    "fee": 0.047,
+    "slip": 0.0065,
+    "funding": 0.0295
+   },
+   "net_r": -1.083,
+   "per_account": {
+    "bybit_2": {
+     "pnl_usd": -3.1745,
+     "pct_of_account": -1.6755,
+     "account_class": "real_money"
+    },
+    "bybit_portfolio": {
+     "pnl_usd": -958.0999,
+     "pct_of_account": -1.6758,
+     "account_class": "paper"
+    }
+   },
+   "provenance": "ESTIMATED",
+   "delta_vs_replayed_actual_r": 0.0415,
+   "delta_vs_actual_r": -2.3577,
+   "delta_vs_replayed_actual_usd": {
+    "bybit_2": 0.1214,
+    "bybit_portfolio": 36.667
+   }
+  },
+  {
+   "arm_id": "alt_sl1.5x_tp6R",
+   "family": "alt_brackets",
+   "label": "SL 1.5x original distance, TP 6R",
+   "params": {
+    "sl_mult": 1.5,
+    "tp_r": 6.0
+   },
+   "resolved": true,
+   "exit": {
+    "ts": "2026-11-04T14:45:00Z",
+    "px": 0.19511429,
+    "reason": "stop",
+    "fills": [
+     {
+      "frac": 1.0,
+      "px": 0.19511429,
+      "reason": "stop"
+     }
+    ]
+   },
+   "gross_r": -1.0,
+   "cost_r": {
+    "fee": 0.047,
+    "slip": 0.0065,
+    "funding": 0.0295
+   },
+   "net_r": -1.083,
+   "per_account": {
+    "bybit_2": {
+     "pnl_usd": -3.1745,
+     "pct_of_account": -1.6755,
+     "account_class": "real_money"
+    },
+    "bybit_portfolio": {
+     "pnl_usd": -958.0999,
+     "pct_of_account": -1.6758,
+     "account_class": "paper"
+    }
+   },
+   "provenance": "ESTIMATED",
+   "delta_vs_replayed_actual_r": 0.0415,
+   "delta_vs_actual_r": -2.3577,
+   "delta_vs_replayed_actual_usd": {
+    "bybit_2": 0.1214,
+    "bybit_portfolio": 36.667
+   }
+  },
+  {
+   "arm_id": "less_without_action_1",
+   "family": "less_management",
+   "label": "Without action 1 (2026-11-02T10:00:00Z stop->0.19364); kept: none",
+   "params": {
+    "removed": 1,
+    "kept": 0
+   },
+   "resolved": true,
+   "exit": {
+    "ts": "2026-11-04T14:40:00Z",
+    "px": 0.19364286,
+    "reason": "stop",
+    "fills": [
+     {
+      "frac": 1.0,
+      "px": 0.19364286,
+      "reason": "stop"
+     }
+    ]
+   },
+   "gross_r": -1.0,
+   "cost_r": {
+    "fee": 0.0705,
+    "slip": 0.0097,
+    "funding": 0.0442
+   },
+   "net_r": -1.1245,
+   "per_account": {
+    "bybit_2": {
+     "pnl_usd": -3.2959,
+     "pct_of_account": -1.7396,
+     "account_class": "real_money"
+    },
+    "bybit_portfolio": {
+     "pnl_usd": -994.7669,
+     "pct_of_account": -1.7399,
+     "account_class": "paper"
+    }
+   },
+   "provenance": "ESTIMATED",
+   "delta_vs_replayed_actual_r": 0.0,
+   "delta_vs_actual_r": -2.3992,
+   "delta_vs_replayed_actual_usd": {
+    "bybit_2": 0.0,
+    "bybit_portfolio": 0.0
+   }
+  },
+  {
+   "arm_id": "more_rule_1R_to_0R",
+   "family": "more_management",
+   "label": "stop to break-even at +1R",
+   "params": {
+    "trigger_r": 1.0,
+    "level_r": 0.0
+   },
+   "resolved": true,
+   "exit": {
+    "ts": "2026-11-03T12:15:00Z",
+    "px": 0.1907,
+    "reason": "stop",
+    "fills": [
+     {
+      "frac": 1.0,
+      "px": 0.1907,
+      "reason": "stop"
+     }
+    ]
+   },
+   "gross_r": 0.0,
+   "cost_r": {
+    "fee": 0.0705,
+    "slip": 0.0097,
+    "funding": 0.0228
+   },
+   "net_r": -0.1031,
+   "per_account": {
+    "bybit_2": {
+     "pnl_usd": -0.3021,
+     "pct_of_account": -0.1595,
+     "account_class": "real_money"
+    },
+    "bybit_portfolio": {
+     "pnl_usd": -91.191,
+     "pct_of_account": -0.1595,
+     "account_class": "paper"
+    }
+   },
+   "provenance": "ESTIMATED",
+   "delta_vs_replayed_actual_r": 1.0214,
+   "delta_vs_actual_r": -1.3778,
+   "delta_vs_replayed_actual_usd": {
+    "bybit_2": 2.9938,
+    "bybit_portfolio": 903.5759
+   }
+  },
+  {
+   "arm_id": "more_rule_1.5R_to_0R",
+   "family": "more_management",
+   "label": "stop to break-even at +1.5R",
+   "params": {
+    "trigger_r": 1.5,
+    "level_r": 0.0
+   },
+   "resolved": true,
+   "exit": {
+    "ts": "2026-11-03T12:15:00Z",
+    "px": 0.1907,
+    "reason": "stop",
+    "fills": [
+     {
+      "frac": 1.0,
+      "px": 0.1907,
+      "reason": "stop"
+     }
+    ]
+   },
+   "gross_r": 0.0,
+   "cost_r": {
+    "fee": 0.0705,
+    "slip": 0.0097,
+    "funding": 0.0228
+   },
+   "net_r": -0.1031,
+   "per_account": {
+    "bybit_2": {
+     "pnl_usd": -0.3021,
+     "pct_of_account": -0.1595,
+     "account_class": "real_money"
+    },
+    "bybit_portfolio": {
+     "pnl_usd": -91.191,
+     "pct_of_account": -0.1595,
+     "account_class": "paper"
+    }
+   },
+   "provenance": "ESTIMATED",
+   "delta_vs_replayed_actual_r": 1.0214,
+   "delta_vs_actual_r": -1.3778,
+   "delta_vs_replayed_actual_usd": {
+    "bybit_2": 2.9938,
+    "bybit_portfolio": 903.5759
+   }
+  },
+  {
+   "arm_id": "more_rule_2R_to_1R",
+   "family": "more_management",
+   "label": "lock +1R at +2R",
+   "params": {
+    "trigger_r": 2.0,
+    "level_r": 1.0
+   },
+   "resolved": true,
+   "exit": {
+    "ts": "2026-11-04T04:45:00Z",
+    "px": 0.18775714,
+    "reason": "stop",
+    "fills": [
+     {
+      "frac": 1.0,
+      "px": 0.18775714,
+      "reason": "stop"
+     }
+    ]
+   },
+   "gross_r": 1.0,
+   "cost_r": {
+    "fee": 0.0705,
+    "slip": 0.0097,
+    "funding": 0.0362
+   },
+   "net_r": 0.8836,
+   "per_account": {
+    "bybit_2": {
+     "pnl_usd": 2.5898,
+     "pct_of_account": 1.3669,
+     "account_class": "real_money"
+    },
+    "bybit_portfolio": {
+     "pnl_usd": 781.6319,
+     "pct_of_account": 1.3671,
+     "account_class": "paper"
+    }
+   },
+   "provenance": "ESTIMATED",
+   "delta_vs_replayed_actual_r": 2.0081,
+   "delta_vs_actual_r": -0.3911,
+   "delta_vs_replayed_actual_usd": {
+    "bybit_2": 5.8857,
+    "bybit_portfolio": 1776.3988
+   }
+  },
+  {
+   "arm_id": "more_rule_ladder_be1_lock2",
+   "family": "more_management",
+   "label": "ladder: BE at +1R, then lock +1R at +2R",
+   "params": {},
+   "resolved": true,
+   "exit": {
+    "ts": "2026-11-03T12:15:00Z",
+    "px": 0.1907,
+    "reason": "stop",
+    "fills": [
+     {
+      "frac": 1.0,
+      "px": 0.1907,
+      "reason": "stop"
+     }
+    ]
+   },
+   "gross_r": 0.0,
+   "cost_r": {
+    "fee": 0.0705,
+    "slip": 0.0097,
+    "funding": 0.0228
+   },
+   "net_r": -0.1031,
+   "per_account": {
+    "bybit_2": {
+     "pnl_usd": -0.3021,
+     "pct_of_account": -0.1595,
+     "account_class": "real_money"
+    },
+    "bybit_portfolio": {
+     "pnl_usd": -91.191,
+     "pct_of_account": -0.1595,
+     "account_class": "paper"
+    }
+   },
+   "provenance": "ESTIMATED",
+   "delta_vs_replayed_actual_r": 1.0214,
+   "delta_vs_actual_r": -1.3778,
+   "delta_vs_replayed_actual_usd": {
+    "bybit_2": 2.9938,
+    "bybit_portfolio": 903.5759
+   }
+  }
+ ],
+ "random_control": {
+  "n": 300,
+  "class": "stop_tighten x1",
+  "mean_r": -0.8498,
+  "p10_r": -1.1245,
+  "p50_r": -1.1245,
+  "p90_r": -0.1306,
+  "p_random_ge_replayed_actual": 1.0,
+  "note": "random control uses unresolved marks where the path ends open (see resolved flags)",
+  "mode": "causal"
+ },
+ "fidelity": {
+  "replayed_exit": {
+   "ts": "2026-11-04T14:40:00Z",
+   "px": 0.19364286
+  },
+  "actual_exit": {
+   "ts": "2026-11-03T08:04:06.107402+00:00",
+   "px": 0.1867
+  },
+  "replayed_actual_net_r": -1.1245,
+  "actual_net_r": 1.2747,
+  "abs_gap_r": 2.3992
+ },
+ "post_exit": {
+  "horizon": {
+   "seconds": 345600.0,
+   "hours": 96.0,
+   "source": "default_by_timeframe",
+   "timeframe": "1h",
+   "end": "2026-11-07T08:04:20Z"
+  },
+  "horizon_reached": true,
+  "mfe_r": 3.1262,
+  "mae_r": -5.0631,
+  "tp_reach": {
+   "reached": true,
+   "bars": 526,
+   "seconds": 200739.6
+  },
+  "wider_sl_arms": [
+   {
+    "arm_id": "alt_sl1.25x_tp2R",
+    "sl_mult": 1.25,
+    "tp_r": 2.0,
+    "survived": true,
+    "resolved": true,
+    "net_r": 1.9158,
+    "marked_net_r_unresolved": null,
+    "exit_reason": "tp",
+    "delta_vs_actual_r": 0.6411,
+    "provenance": "estimated"
+   },
+   {
+    "arm_id": "alt_sl1.25x_tp3R",
+    "sl_mult": 1.25,
+    "tp_r": 3.0,
+    "survived": false,
+    "resolved": true,
+    "net_r": -1.0996,
+    "marked_net_r_unresolved": null,
+    "exit_reason": "stop",
+    "delta_vs_actual_r": -2.3743,
+    "provenance": "estimated"
+   },
+   {
+    "arm_id": "alt_sl1.25x_tp4R",
+    "sl_mult": 1.25,
+    "tp_r": 4.0,
+    "survived": false,
+    "resolved": true,
+    "net_r": -1.0996,
+    "marked_net_r_unresolved": null,
+    "exit_reason": "stop",
+    "delta_vs_actual_r": -2.3743,
+    "provenance": "estimated"
+   },
+   {
+    "arm_id": "alt_sl1.25x_tp5R",
+    "sl_mult": 1.25,
+    "tp_r": 5.0,
+    "survived": false,
+    "resolved": true,
+    "net_r": -1.0996,
+    "marked_net_r_unresolved": null,
+    "exit_reason": "stop",
+    "delta_vs_actual_r": -2.3743,
+    "provenance": "estimated"
+   },
+   {
+    "arm_id": "alt_sl1.25x_tp6R",
+    "sl_mult": 1.25,
+    "tp_r": 6.0,
+    "survived": false,
+    "resolved": true,
+    "net_r": -1.0996,
+    "marked_net_r_unresolved": null,
+    "exit_reason": "stop",
+    "delta_vs_actual_r": -2.3743,
+    "provenance": "estimated"
+   },
+   {
+    "arm_id": "alt_sl1.5x_tp2R",
+    "sl_mult": 1.5,
+    "tp_r": 2.0,
+    "survived": false,
+    "resolved": true,
+    "net_r": -1.083,
+    "marked_net_r_unresolved": null,
+    "exit_reason": "stop",
+    "delta_vs_actual_r": -2.3577,
+    "provenance": "estimated"
+   },
+   {
+    "arm_id": "alt_sl1.5x_tp3R",
+    "sl_mult": 1.5,
+    "tp_r": 3.0,
+    "survived": false,
+    "resolved": true,
+    "net_r": -1.083,
+    "marked_net_r_unresolved": null,
+    "exit_reason": "stop",
+    "delta_vs_actual_r": -2.3577,
+    "provenance": "estimated"
+   },
+   {
+    "arm_id": "alt_sl1.5x_tp4R",
+    "sl_mult": 1.5,
+    "tp_r": 4.0,
+    "survived": false,
+    "resolved": true,
+    "net_r": -1.083,
+    "marked_net_r_unresolved": null,
+    "exit_reason": "stop",
+    "delta_vs_actual_r": -2.3577,
+    "provenance": "estimated"
+   },
+   {
+    "arm_id": "alt_sl1.5x_tp5R",
+    "sl_mult": 1.5,
+    "tp_r": 5.0,
+    "survived": false,
+    "resolved": true,
+    "net_r": -1.083,
+    "marked_net_r_unresolved": null,
+    "exit_reason": "stop",
+    "delta_vs_actual_r": -2.3577,
+    "provenance": "estimated"
+   },
+   {
+    "arm_id": "alt_sl1.5x_tp6R",
+    "sl_mult": 1.5,
+    "tp_r": 6.0,
+    "survived": false,
+    "resolved": true,
+    "net_r": -1.083,
+    "marked_net_r_unresolved": null,
+    "exit_reason": "stop",
+    "delta_vs_actual_r": -2.3577,
+    "provenance": "estimated"
+   }
+  ],
+  "verdict": {
+   "verdict": "exited_early",
+   "r_diff": 1.5849,
+   "resolved": true,
+   "n_held_arms": 19,
+   "n_unresolved": 0,
+   "basis_arm": "alt_sl0.75x_tp3R",
+   "provenance": "estimated"
+  }
+ }
+}
