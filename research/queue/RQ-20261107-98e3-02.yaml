@@ -1,0 +1,95 @@
+# Hand-authored 2026-11-07 by lane ML-ENTRY-EQ-STRUCTURE-RETEST (Tier 1): export of the structure-trained model graded PASS in RQ-20261106-98e3-01.
+id: RQ-20261107-98e3-02
+title: 'ENTRY-EQ structure export: deterministic refit of the STRUCTURE-EXIT-trained config B (tau 0.20) on rows <= 2025-06-30 as a servable model.json + parity fixture;
+  booster sha256 should reproduce the graded run''s 90329845d55d7dfa'
+status: queued
+cadence: once
+theme: ml_health
+priority: 1
+roadmap:
+- L-ML-LIVE
+kind: experiment
+practice_precedent: 'M13 (docs/reference/trading-and-model-practice-principles.md): unlimited iteration on the training-period walk-forward; the confirming window
+  is loaded by NO code path of this unit.'
+question: Export of the model graded PASS in RQ-20261106-98e3-01 (run 42315121734, booster sha256 90329845d55d7dfa..., structure_exit pivot=5;sl_only). The previously
+  exported/served ml_entry_eq booster (af4835e29fe83c86) was trained on FIXED-bracket labels and is NOT the graded structure model. Does the refit reproduce the graded
+  sha, and write model.json (features, tau 0.20, structure_exit, costs, pool, booster) plus parity_fixture.json for the serve-parity step?
+why_this_matters: The Tier-3 proposal for ml_entry_eq with the live structure exit (docs/research/ml-entry-eq-structure-proposal-2026-11-07.md) must serve the graded
+  model, not the fixed-bracket one. A sha mismatch is recorded loudly, never accepted silently.
+power:
+  expected_n: 1
+  min_detectable_effect: 1.0
+  effect_units: metric
+  sd: 1.0
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: 'DESCRIPTIVE tooling unit: no statistical test; the check is an exact sha256 reproduction.'
+  feasibility:
+    source: none
+    accrual_basis: Replays Alpaca 1h RTH history 2021-01-01 .. 2025-06-30; nothing accrues.
+decision_rule:
+  id: RULE-RQ20261107-98e3-02-EXPORT
+  registered_at: '2026-11-07'
+  registered_before_run: true
+  statistic: 'scripts/research/ml_entry_equity.py export --config B --tau 0.2 --expect-sha af4835e29fe83c86: booster_sha256 of fit A and of pinned fit B, sha_match,
+    shipped, a_vs_b_delta, train_rows, model_json_bytes.'
+  rule: 'Descriptive: no pass bar. Same A/B refit protocol as RQ-20261106-e9a1-03 on structure-exit labels (--structure). SHIPPED = A when its booster sha256 starts
+    with 90329845d55d7dfa (then it IS the graded model), else B pinned deterministic; a mismatch is reported with the A-vs-B delta and does not edit the graded result.
+    No date after 2025-06-30 is read.'
+  what_it_does_not_do: Reads no date after 2025-06-30 (data fetched to 2025-06-30 only). No scoring, no config change, no order, no roster change.
+  min_n: n/a (artifact export)
+compute: cpu_long
+value:
+  bucket: ai_trader
+  usd_at_stake_per_month: 60
+  confidence: 0.2
+  basis: 'stand-in: the operator goal (an ML decision maker live on the Alpaca book); not a P&L measurement.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 6.0
+  est_minutes: 60
+  why_runner: Alpaca market data (read-only, paper key) + LightGBM fits; 4 vCPU / 16 GB runner.
+  basis: 'MEASURED: the dev run took 58 min for data to 2025-06-30; one LightGBM fit adds ~1 min.'
+run:
+  workflow: research-script-run.yml
+  command:
+  - python3
+  - scripts/research/ml_entry_equity.py
+  - export
+  - --cache
+  - /tmp/ml_entry_equity
+  - --out
+  - '{out_dir}'
+  - --unit
+  - '{unit}'
+  - --where
+  - research-script-run
+  - --config
+  - B
+  - --tau
+  - '0.2'
+  - --expect-sha
+  - 90329845d55d7dfa
+  - --structure
+  timeout_minutes: 180
+  inputs:
+    research_unit: RQ-20261107-98e3-02
+ml_consumer:
+  consumer: ML-ENTRY-EQUITY-NATIVE
+  decision: whether ml/candidates/ml_entry_eq_v1/model.json can be committed as the servable artifact of the equity-native model (sha reproduces) for the held ml_entry_eq
+    alpaca_paper PR
+  legs:
+  - iaum_pullback_1d
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- ML-ENTRY-EQ-STRUCTURE-RETEST
+- RQ-20261106-98e3-01
+- RQ-20261106-e9a1-03
+population: 'The registered POOL_RULE of scripts/research/ml_entry_alpaca_score.py, UNCHANGED (sha256 e9702661d1a596a0f7e84e632c0ca8b5c2743a728f02147477c003644a0858e2):
+  active, tradable, us_equity ETFs (nasdaqtraded ETF=Y) with median daily dollar volume >= 50M USD over 2019-01-01..2020-12-31. The module refuses to run if the rule
+  hash differs.'

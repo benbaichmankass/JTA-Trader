@@ -282,7 +282,7 @@ PINNED = {"deterministic": True, "force_row_wise": True, "n_jobs": 1, "bagging_s
 
 
 def export_stage(tab: pd.DataFrame, config: str, tau: float, pool: list[str], expect_sha: str, out: Path, train_end: str = TRAIN_END,
-                 configs: dict = CONFIGS, n_fixture: int = 60) -> dict:
+                 configs: dict = CONFIGS, n_fixture: int = 60, struct: str = "") -> dict:
     """EXPORT (row ML-ENTRY-EQUITY-NATIVE, manager 2026-11-06): refit the confirmed config and write a servable model.json. Reads NO date after
     train_end. Two fits on the SAME rows: A = exactly the confirm stage's params (n_jobs 4, no determinism pins) -> its booster sha256 is compared
     with ``expect_sha``; B = the same params PINNED deterministic (single thread, row-wise, all seeds fixed). LightGBM can differ run to run on
@@ -306,8 +306,8 @@ def export_stage(tab: pd.DataFrame, config: str, tau: float, pool: list[str], ex
              "spearman": float(pd.Series(pa).corr(pd.Series(pb), method="spearman")),
              "decision_agreement_at_tau": float(np.mean((pa > tau) == (pb > tau))), "taken_a": int((pa > tau).sum()), "taken_b": int((pb > tau).sum()),
              "sha_a_equals_sha_b": sha_a == sha_b}
-    model_id = f"ENTRY-EQ-v1-{config}-tau{tau}"
-    art = {"model_id": model_id, "schema": "ml_entry_eq_model/1", "features": feats, "tau": float(tau), "side": "long",
+    model_id = f"ENTRY-EQ-v1-{config}-tau{tau}" + ("-STRUCT-" + struct.replace(";", "-").replace("=", "") if struct else "")
+    art = {"model_id": model_id, "schema": "ml_entry_eq_model/1", "features": feats, "structure_exit": struct or None, "tau": float(tau), "side": "long",
            "train_end_exclusive": str(te), "train_rows": int(len(tr)), "booster_sha256": sha, "shipped": shipped,
            "bracket": {"sl_atr": 2.0, "tp_atr": 3.0, "atr_n": 14, "horizon_bars": H, "decision_every_h": 4, "bar": "alpaca 1Hour RTH, hour-aligned"},
            "costs": {"fee_bps": 0.0, "slippage_bps": 5.0, "regulatory_bps": S.REGULATORY_BPS, "slippage_status": "PROVISIONAL"},
@@ -400,7 +400,7 @@ def main_run(a) -> int:
     fee = resolve_fee_bps_roundtrip("SPY")
     end_day = TRAIN_END if a.cmd in ("dev", "export") else (pd.Timestamp.now(tz="UTC").normalize().replace(day=1) - pd.Timedelta(days=1)).strftime("%Y-%m-%d")
     pool, prep, bars, client = _pool_and_bars(a, end_day)
-    tab = build_table(bars, pool, slip, fee, struct=STRUCT_SPEC if a.cmd == "structure" else "")
+    tab = build_table(bars, pool, slip, fee, struct=STRUCT_SPEC if (a.cmd == "structure" or getattr(a, "structure", False)) else "")
     print(f"[table] {len(tab)} decision rows, {tab.symbol.nunique()} symbols t={time.strftime('%H:%M:%S')}", flush=True)
     if a.cmd == "dev":
         d = dev_stage(tab)
@@ -420,7 +420,7 @@ def main_run(a) -> int:
                                "alpaca_calls": client.calls, "runtime_s": round(time.time() - t0, 1)},
                "n": c.get("stats", {}).get("n"), "produced_by": {"tool": "python3 scripts/research/ml_entry_equity.py structure", "where": a.where}}
     elif a.cmd == "export":
-        e = export_stage(tab, a.config, float(a.tau), pool, a.expect_sha, out)
+        e = export_stage(tab, a.config, float(a.tau), pool, a.expect_sha, out, struct=STRUCT_SPEC if a.structure else "")
         row = {"schema_version": 1, "research_unit": a.unit, "read_state": "measured", "verdict": "indeterminate",
                "population": f"EXPORT of {e['model_id']}: refit on rows < {TRAIN_END} over the {len(pool)}-ETF pool; no outcome after train_end read",
                "note": (f"export {e['model_id']}: confirm-params refit sha256 {e['booster_sha256_a'][:16]} "
@@ -545,6 +545,7 @@ def main(argv=None) -> int:
             p.add_argument("--tau", required=True)
         if name == "export":
             p.add_argument("--expect-sha", required=True, help="booster sha256 (prefix ok) of the confirm run to reproduce")
+            p.add_argument("--structure", action="store_true", help="relabel with the live structure exit (pivot=5;sl_only) before the refit")
         if name == "structure":
             p.add_argument("--rule-id", required=True)
             p.add_argument("--registered-at", required=True)
