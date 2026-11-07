@@ -97,10 +97,23 @@ lands:
 related:
 - RQ-20261016-005
 - RQ-20261022-511e-01
-status: queued
+status: done
 practice_precedent: 'T1 (docs/reference/trading-and-model-practice-principles.md): confirm a discovery on an untouched in-hand window or symbol holdout, one setting tested once; operator
   2026-11-05 RESEARCH-NO-WAIT.'
 intervention_controls:
   not_applicable: lever sweep against the declared config on the same trades over the harness (A/B arms), not an active-management action on live check-ins; hold_to_bracket is the baseline
     arm itself
 last_dispatched_at: '2026-11-07T16:54:08+00:00'
+grading:
+  attested: RULE-RQ2026110747b618-LIVE_STRATEGY
+  auto: true
+  decision_rule_id: RULE-RQ2026110747b618-LIVE_STRATEGY
+  evidence:
+  - research/results/RQ-20261107-47b6-18/42393742162.jsonl
+  graded_at: '2026-11-07'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail
