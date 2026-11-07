@@ -588,6 +588,7 @@ real top-level `docs/*.md` and fails if the population builder cannot see it.
 | `docs/integrations/prop-accounts-architecture-DESIGN.md` | architecture | unknown | — | never | `name:design-declares-a-contract / not-assessed` | — |
 | `docs/integrations/prop-telegram-inbound-DESIGN.md` | architecture | unknown | — | never | `name:design-declares-a-contract / not-assessed` | — |
 | `docs/live-exit-monitor-cadence-DESIGN.md` | architecture | unknown | — | never | `name:design-declares-a-contract / not-assessed` | — |
+| `docs/ml/lifecycle-schedule.md` | instruction | unknown | — | never | `not-assessed / not-assessed` | — |
 | `docs/ml/market-raw-adapters.md` | unknown | unknown | — | never | `not-assessed / not-assessed` | — |
 | `docs/ml/model-registry-policy.md` | instruction | unknown | — | never | `name:policy-prescribes / not-assessed` | — |
 | `docs/ml/optimization-roadmap.md` | plan | unknown | — | never | `name:roadmap-is-a-forward-commitment / not-assessed` | — |

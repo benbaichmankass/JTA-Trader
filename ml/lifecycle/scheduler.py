@@ -182,6 +182,7 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--max-jobs", type=int, default=int(os.environ.get("LIFECYCLE_MAX_JOBS", "12")))
     ap.add_argument("--now")
     a = ap.parse_args(argv)
+    from src.utils.paths import trade_journal_db_path  # canonical resolver (canonical-db-resolver guard)
     now = _ts(a.now) if a.now else datetime.now(timezone.utc)
     p = _paths()
     plans = {k: v for k, v in P.load_all().items() if not a.only or k == a.only}
@@ -190,7 +191,7 @@ def main(argv: list[str] | None = None) -> int:
            "datasets_root": os.environ.get("DATASETS_ROOT", str(_root() / "datasets-out")),
            "experiments_root": os.environ.get("EXPERIMENTS_ROOT", str(_root() / "ml" / "experiments-runs")),
            "registry_root": os.environ.get("REGISTRY_ROOT", str(_root() / "ml" / "registry-store")),
-           "journal_db": os.environ.get("TRADE_JOURNAL_DB", str(_root() / "trade_journal.db"))}
+           "journal_db": str(trade_journal_db_path())}
     due = due_jobs(plans, state, _cycle_last_ok(p["cycle"]), now, _drift_hot(plans, state))
     summary = {"plans": len(plans), "due": len(due), "ran": 0, "ok": 0, "failed": 0,
                "skipped": 0, "red_flags": 0, "deferred_note": "jobs beyond --max-jobs real runs wait for the next pass"}

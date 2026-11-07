@@ -1,6 +1,7 @@
 # Per-model lifecycle schedule (trainer module)
 
-> **Doc status:** `live` · category `instruction` · last verified `2026-11-07`
+> **Doc status:** `unknown` · category `instruction` · last verified `never` · registered in [`docs/DOCUMENT-INDEX.md`](../../docs/DOCUMENT-INDEX.md) · **nobody has verified this document's status — do not act on it as current**
+
 > Gates this adds or changes: **none** — gates nothing on the trade path; the schedule PROPOSES, never promotes (promotion past shadow stays operator Tier-3).
 
 Operator, 2026-11-07: every model needs its own plan for when it is retrained, retested and updated, running in the trainer module so it keeps going if Claude usage runs out.
