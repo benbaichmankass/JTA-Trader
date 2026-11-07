@@ -1407,7 +1407,13 @@
       // structure, in the same 40 slots the server keeps: the first 12 control texts, then outline() (28 lines).
       var known = false; try { known = !!window.__ex.terminal().ready; } catch (e) { }
       if (known) return out;
-      return out.slice(0, 12).concat(outline(28));
+      var ol = outline(28);
+      // SHAPE HASH (PHONE-LAYOUT-STANDING): FNV-1a over the STRUCTURAL lines only (bottom band B/b, fixed bars F,
+      // landmarks L): the same layout hashes the same minute after minute, a new navigation hashes differently. The
+      // server dedups captures and raises ONE alert per hash by it.
+      var h = 2166136261, sh = ol.filter(function (x) { return /^[BbFL]:/.test(x); }).join("\n");
+      for (var i = 0; i < sh.length; i++) { h ^= sh.charCodeAt(i); h = (h * 16777619) >>> 0; }
+      return ["shape:" + ("00000000" + h.toString(16)).slice(-8)].concat(out.slice(0, 11), ol);
     },
     // The structure dump on its own (the app / a drill can ask for it): up to [n] short scrubbed lines.
     outline: function (n) { return outline(n || 40); },

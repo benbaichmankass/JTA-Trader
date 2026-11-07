@@ -662,6 +662,7 @@ def record_event(device: PhoneDevice, body: Dict[str, Any], *, send=None) -> Dic
     _append_event(device.account_id, kind, reason, ticket)
     if kind == "terminal_miss":
         _write_diag(device.account_id, reason, body.get("controls"))
+        record_layout_shape(device.account_id, body.get("controls"), send=send)
     if kind == "heartbeat":
         _write_heartbeat(device.account_id, reason, body.get("state"))
     if kind == "positions_miss":
@@ -905,6 +906,67 @@ def last_heartbeat(account_id: str) -> Optional[Dict[str, Any]]:
         return None
 
 
+# PHONE-LAYOUT-STANDING (operator 2026-11-07, "if we had had this mechanism the app could handle it itself"): a terminal
+# miss on a page shape we have not seen is captured ONCE (exec.js controls() leads with "shape:<hash>" over the page's
+# structure), deduplicated by that hash, and when the status stays stale past LAYOUT_STALE_H ONE alert
+# (kind phone_layout_changed, channel system, high priority: the ledger's wake rule puts it on the ops-flags PR) names the
+# account, the hash and where the capture is read. Never halts anything: the app keeps retrying old and new paths.
+LAYOUT_STALE_H = 2.0
+_LAYOUT_MAX = 12
+_SHAPE_RE = re.compile(r"^shape:([0-9a-f]{8})$")
+
+
+def _layouts_path(account_id: str) -> Path:
+    return _diag_path(account_id).with_name(f"prop_phone_layouts_{re.sub(r'[^a-z0-9_]', '', account_id)}.json")
+
+
+def last_layouts(account_id: str) -> Optional[Dict[str, Any]]:
+    """The distinct page shapes the phone missed on (newest first), or None when none was ever recorded."""
+    try:
+        return json.loads(_layouts_path(account_id).read_text())
+    except (OSError, ValueError):
+        return None
+
+
+def record_layout_shape(account_id: str, controls: Any, *, send=None, stale_h: Optional[float] = None) -> Optional[str]:
+    """Record one terminal_miss's page shape (deduplicated by hash); alert ONCE per hash when status is stale.
+    Returns the hash, or None when the miss carried none (an older exec.js). Never raises."""
+    try:
+        ctl = [_scrub(c, 40) for c in (controls if isinstance(controls, list) else [])][:_DIAG_MAX]
+        h = next((m.group(1) for m in (_SHAPE_RE.match(c) for c in ctl) if m), None)
+        if not h:
+            return None
+        doc = last_layouts(account_id) or {}
+        shapes = doc.get("shapes") if isinstance(doc.get("shapes"), dict) else {}
+        now = _now().isoformat()
+        rec = shapes.get(h) or {"first_seen": now, "count": 0, "alerted_at": None, "controls": [c for c in ctl if c]}
+        rec["last_seen"] = now
+        rec["count"] = int(rec.get("count") or 0) + 1
+        age = account_status_age_hours(account_id)
+        limit = LAYOUT_STALE_H if stale_h is None else stale_h
+        # stale = the last account_status is older than the threshold (None = never posted: also stale)
+        # a page whose shape keeps shifting must not become an alert stream: ONE alert per account per 6 h at most
+        recent = any((o.get("alerted_at") or "") > (_now() - timedelta(hours=6)).isoformat() for o in shapes.values())
+        if not rec.get("alerted_at") and not recent and (age is None or age >= limit):
+            sent = _ping(
+                f"\U0001f4f1 phone {account_id}: the Breakout terminal looks DIFFERENT (new page shape {h}) and "
+                f"account_status has been {'absent' if age is None else f'{age:.1f} h'} stale. The app captured the page "
+                f"structure; read it on GET /api/bot/prop/status?account_id={account_id} (phone_layouts, phone_diag). "
+                f"A fix lane follows docs/runbooks/phone-executor-layout-change.md. The app keeps retrying; nothing halted. "
+                f"One alert per shape.", send, kind="phone_layout_changed", dedup_key=f"phone_layout_changed:{account_id}:{h}")
+            if sent:
+                rec["alerted_at"] = now
+        shapes[h] = rec
+        if len(shapes) > _LAYOUT_MAX:
+            for k in sorted(shapes, key=lambda x: shapes[x].get("last_seen") or "")[:len(shapes) - _LAYOUT_MAX]:
+                del shapes[k]
+        _layouts_path(account_id).write_text(json.dumps({"at": now, "current": h, "shapes": shapes}))
+        return h
+    except Exception:  # noqa: BLE001  # allow-silent: logged; diagnostics must never fail the event
+        logger.warning("phone_executor: layout shape record failed", exc_info=True)
+        return None
+
+
 def last_diag(account_id: str) -> Optional[Dict[str, Any]]:
     """The latest terminal_miss diagnostic for the account, or None when none was ever posted."""
     try:
@@ -1034,11 +1096,16 @@ def _token_sha(token: str) -> str:
     return hashlib.sha256(("go:" + str(token)).encode("utf-8")).hexdigest()
 
 
-def _ping(msg: str, send=None) -> bool:
+def _ping(msg: str, send=None, *, kind: Optional[str] = None, dedup_key: Optional[str] = None) -> bool:
     try:
         if send is None:
             from src.runtime.notify import send_telegram_direct
             send = send_telegram_direct
+        if kind:   # a typed ledger row (channel system, high priority) so the alert reaches the manager's wake rule
+            try:
+                return bool(send(msg, parse_mode=None, kind=kind, channel="system", priority="high", dedup_key=dedup_key))
+            except TypeError:   # a test double / older sender without ledger labels
+                return bool(send(msg, parse_mode=None))
         return bool(send(msg, parse_mode=None))
     except Exception:  # noqa: BLE001  # allow-silent: logged; the refusal itself is the safety property
         logger.warning("phone_executor: go-token ping failed", exc_info=True)

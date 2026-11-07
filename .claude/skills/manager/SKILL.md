@@ -85,6 +85,7 @@ write). **Never run your own timer or scheduled watch that starts a live reviewe
 reviewer dispatch prompt ends: "end your report with a `PACKET DEFECTS:` line (REVIEWER-BRIEF § 2d)"; file each reported defect once on its owner
 (`LTR-GRADER-COVERAGE`, `LTR-PACKET-READ-REACH`, else a PIPELINE item). Desk and short-hold lanes follow `.claude/skills/trading-desk/SKILL.md` § 6b
 and `SHORT-HOLD-BRIEF.md`.
+**`phone_layout_changed` alert** (the broker changed its page; `alert-watch` comment): dispatch a Sonnet fix lane pointed at [`docs/runbooks/phone-executor-layout-change.md`](../../../docs/runbooks/phone-executor-layout-change.md) and the capture on `/api/bot/prop/status` (`phone_layouts`).
 
 ## Start of session
 

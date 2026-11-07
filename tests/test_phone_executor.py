@@ -740,3 +740,31 @@ def test_repo_config_puts_breakout_2_on_report_so_an_over_cushion_live_verify_pi
 def test_breakout_2_on_report_still_refuses_an_unknown_cushion(tmp_path, monkeypatch, _iso):
     _live(tmp_path, monkeypatch, cushion="cushion_unknown")
     assert _verify(_claimed())["ok"] is False
+
+
+# PHONE-LAYOUT-STANDING: a terminal_miss carrying "shape:<hash>" is recorded once per hash and alerts ONCE (typed
+# phone_layout_changed) when account_status is stale; a repeat of the same hash, or another hash inside 6 h, is quiet.
+def test_layout_shape_dedup_and_one_alert_per_hash(monkeypatch):
+    calls: list = []
+    send = lambda m, **k: calls.append((m, k)) or True  # noqa: E731
+    ctl = lambda h: ["shape:" + h, "Trade", "B:button:Trade:y93x15w13"]  # noqa: E731
+    assert pe.record_layout_shape("breakout_2", ["Trade"], send=send) is None          # an older exec.js: no hash, no record
+    # never posted a status -> stale -> alert
+    assert pe.record_layout_shape("breakout_2", ctl("deadbeef"), send=send) == "deadbeef"
+    assert len(calls) == 1 and calls[0][1]["kind"] == "phone_layout_changed" and calls[0][1]["priority"] == "high"
+    assert "deadbeef" in calls[0][0] and "phone-executor-layout-change" in calls[0][0]
+    pe.record_layout_shape("breakout_2", ctl("deadbeef"), send=send)                    # same shape: no second alert
+    pe.record_layout_shape("breakout_2", ctl("cafef00d"), send=send)                    # another shape inside 6 h: held
+    assert len(calls) == 1
+    doc = pe.last_layouts("breakout_2")
+    assert doc["current"] == "cafef00d" and doc["shapes"]["deadbeef"]["count"] == 2 and doc["shapes"]["deadbeef"]["alerted_at"]
+
+
+def test_layout_shape_quiet_while_status_fresh(monkeypatch):
+    calls: list = []
+    monkeypatch.setattr(pe, "account_status_age_hours", lambda a: 0.2)
+    pe.record_layout_shape("breakout_2", ["shape:0badc0de", "Trade"], send=lambda m, **k: calls.append(m) or True)
+    assert calls == [] and pe.last_layouts("breakout_2")["shapes"]["0badc0de"]["alerted_at"] is None
+    monkeypatch.setattr(pe, "account_status_age_hours", lambda a: 3.0)                  # now stale: the SAME shape alerts
+    pe.record_layout_shape("breakout_2", ["shape:0badc0de", "Trade"], send=lambda m, **k: calls.append(m) or True)
+    assert len(calls) == 1
