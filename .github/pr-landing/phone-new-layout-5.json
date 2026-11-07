@@ -1,0 +1,7 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "hold_reason": "tier_2_3_needs_approval",
+  "hold_text": "Phone-executor page script (exec.js 2026-11-07.5), the order path for the breakout_2 prop account, Tier 2. Read side: after the bottom Trade tap the Positions chip is tapped once (read-only view switch, skipped while an input has focus) so the open-by-default order form no longer makes the account read answer busy; ready also accepts the old chips drawn as plain leaves. Redaction: an 'Available to trade' amount is now masked and boxed on captures (a measured bug). No order, amend or cancel path is added or changed. NOTE for the reviewer: on the Trade view the legacy 'Order form' control exists, so the order-path fence from .2 is not active there and the old order flow can run on that form (the form it was written for; read-back verification and refusals unchanged); the fence still holds on Markets and Activity. exec.js-only, ships via phone-exec-js-sign, no APK.",
+  "why": "Evidence from the app's own captures: periodic-terminal-20261107T185725Z step 6 (the Trade view = the old layout with the order form open by default, chips Order form / Positions / Open orders). It explains the .2 silence (ticketOpen true -> busy, no miss posted) and exposed an unmasked 'Available to trade' amount on the bitmap."
+}

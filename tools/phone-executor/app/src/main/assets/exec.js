@@ -6,7 +6,7 @@
   // PHONE-EXEC-OBSERVABLE-1018: this file is also served SIGNED by our own API and swapped in at runtime
   // (RemoteJs.kt): a newer version replaces the installed helpers on the next ensure(); the same version is
   // never injected twice. Bump on every change (CI signs the file; the app pins by version).
-  var EXEC_VERSION = "2026-11-07.3";
+  var EXEC_VERSION = "2026-11-07.5";
   if (window.__ex && window.__ex.version === EXEC_VERSION) return;
   function hostOk() { return /(^|\.)breakoutprop\.com$/.test(location.hostname || ""); }
   function vis(el) { if (!el) return false; var r = el.getBoundingClientRect(); return r.width > 0 && r.height > 0; }
@@ -1002,7 +1002,7 @@
   // readers key on ("1 TP / 1 SL", "Positions 1", "ETH 5x") are kept: a masked tab blinds sheetInfo on a fixture.
   // Each masked element's rect is returned in `redact` so the app paints a box over it on the bitmap.
   var KEEP_CTX = /opening price|current price|avg\.?\s*opening|entry price|mark price|trigger|limit price|^price$|quantity|\bqty\b|total open volume|^value$|\bsize\b|stop\s*loss|take\s*profit|^tp\s*\/\s*sl$|^sl\s*\/\s*tp$|^lev|distance|\bsl\b|\btp\b|^market$/i;
-  var MASK_CTX = /balance|equity|portfolio|p\s*&\s*l|pnl|value|margin|roe|fee|funding|liq|notional|time|date|position\s*[–—-]|order id|id$/i;
+  var MASK_CTX = /balance|equity|portfolio|p\s*&\s*l|pnl|value|margin|roe|fee|funding|liq|notional|time|date|position\s*[–—-]|order id|id$|available|buying power|withdraw|collateral/i;
   var SNAP_ATTRS = ["role", "type", "name", "placeholder", "disabled", "aria-disabled", "aria-selected", "aria-expanded",
     "aria-checked", "aria-label", "aria-labelledby", "aria-controls", "aria-haspopup", "aria-modal", "title", "alt", "tabindex",
     "for", "id", "href", "data-state", "data-testid", "data-radix-collection-item", "data-orientation", "checked", "value"];
@@ -1055,8 +1055,22 @@
     return out.join(" ").replace(/\s+/g, " ").trim();
   }
   // the redaction decision for one text in one element: {text, masked}
+  // 2026-11-07.5 (REDACTION BUG, MEASURED on the app's own capture periodic-terminal-20261107T185725Z step 6): the Trade view shows
+  // "Available to trade <amount> USD 5x" and the amount was NOT masked: the value inherited the KEEP context of the form's
+  // <label>Quantity</label> (labelCtxOf looks up to 3 ancestors for ANY <label>), so its digits survived into the bitmap. A money
+  // label standing right before the value (the previous sibling of the element or of one of its 3 nearest ancestors) now masks it
+  // first, whatever else is nearby.
+  var MONEY_LABEL = /available|buying power|free margin|withdraw|collateral|net asset|account (value|size)|total value|^margin\b|\bequity\b|\bbalance\b/i;
+  function adjMoneyLabel(el) {
+    for (var a = el, k = 0; a && k < 4 && a !== document.body; a = a.parentElement, k++) {
+      var p = a.previousElementSibling, tx = p ? t(p) : "";
+      if (tx && tx.length <= 32 && /^[A-Za-z .\/&%()-]+$/.test(tx) && MONEY_LABEL.test(tx)) return true;   // a LABEL: letters only, no digits (a block holding a figure is not one)
+    }
+    return false;
+  }
   function redactText(s, el) {
     if (!s || !/\d/.test(s)) return {text: s, masked: false};
+    if (el && adjMoneyLabel(el)) return {text: maskDigits(s), masked: true};
     if (SUBTITLE_RE.test(s)) return {text: s.replace(/^(position\s*[–—-]\s*)\S+/i, "$1ID"), masked: true};
     // counts the readers key on, never money: the sheet's "1 TP / 1 SL" tab, the "Positions 1" tab, "ETH 5x"
     if (SHEET_TAB.tpsl.test(s) || /^positions\s*\d*$/i.test(s) || /^[A-Z]{2,8}\s+\d{1,3}x$/i.test(s) || /^\d{1,3}x$/i.test(s)) return {text: s, masked: false};
@@ -1203,6 +1217,12 @@
     return ct.some(function (x) { return /^open positions(\s*\(?\s*\d+\s*\)?)?$/i.test(x); }) &&
       ct.some(function (x) { return /^open (and trigger )?orders(\s*\(?\s*\d+\s*\)?)?$/i.test(x); });
   }
+  // the Trade view's own chips (Positions + Open orders, MEASURED 2026-11-07), whatever element draws them (the legacy panels check
+  // only saw button / role=tab / role=button): leaf chips whose whole text is the label, a count badge allowed
+  function oldChipsSurface() {
+    var lt = leafTabs().map(function (x) { return tabTextRaw(t(x)).toLowerCase(); });
+    return lt.indexOf("positions") >= 0 && lt.indexOf("open orders") >= 0;
+  }
   // ORDER-PATH FENCE. The order form of the new layout has NOT been measured (the dump shows no "Order form" control and no
   // Buy/Sell submit). terminal().ready is true on the new layout so the app can READ the account, and Kotlin shares that
   // flag with the ticket claim, so the symbol route (the only code that clicks around the page before the order-control
@@ -1215,6 +1235,11 @@
   }
   // One throttled tap on the bottom "Trade" button when the nav is there but the trading view's chips are not (the page is on
   // Markets or Activity). Navigation only: never inside an open ticket, never more than once per 20 s.
+  // 2026-11-07.4: MEASURED by the app's own capture (anomaly-terminal_miss-20261107T185724Z, term:r0 n1 v0 k:young a23): the
+  // background engine's page opens on the MARKETS view (no Open positions chips in the document), and the 25 s age gate of
+  // .3 was longer than the whole background read window (~23 s), so the Trade tap never fired. 4 s lets the SPA hydrate
+  // and still fires well inside the window (readAccount re-asks terminal() every 2 s for 20 s).
+  var KICK_AFTER_MS = 4000;
   function kickTradeView() {
     var nb = navBtns(); if (!nb.trade || newReadSurface() || submitBtn()) return "";
     // 2026-11-07.3: after .2 the background read answered "busy" and posted nothing on the real page, which only happens when
@@ -1223,11 +1248,24 @@
     // a tap in that gap is the likeliest culprit), (b) is deferred with setTimeout so terminal() has ALREADY returned when
     // the click runs, and (c) is throttled to once per 20 s.
     var age = (window.performance && performance.now) ? performance.now() : 1e9;
-    if (age < (typeof window.__exKickAfterMs === "number" ? window.__exKickAfterMs : 25000)) return "young";
+    if (age < (typeof window.__exKickAfterMs === "number" ? window.__exKickAfterMs : KICK_AFTER_MS)) return "young";
     var now = Date.now(); if (window.__exNavAt && now - window.__exNavAt < 20000) return "wait";
     window.__exNavAt = now;
     var btn = nb.trade;
-    setTimeout(function () { try { btn.scrollIntoView({block: "nearest"}); } catch (e) { } try { btn.click(); } catch (e) { } }, 0);
+    setTimeout(function () {
+      try { btn.scrollIntoView({block: "nearest"}); } catch (e) { } try { btn.click(); } catch (e) { }
+      // MEASURED 2026-11-07 (periodic-terminal-20261107T185725Z step 6): the Trade view is the OLD layout in one tab set,
+      // chips "Order form | Positions | Open orders", and it opens on the ORDER FORM. An open form counts as an open ticket
+      // (terminal().ticketOpen), and readAccount answers "busy" while one is open, so a read never ran. Showing the Positions view
+      // (a read-only view switch) replaces the form, so the next terminal() reads ticketOpen false and ready true. Skipped when an
+      // input is focused (someone, or a ticket flow, is typing in the form).
+      setTimeout(function () {
+        try {
+          var ae = document.activeElement;
+          if (submitBtn() && !(ae && /^(INPUT|TEXTAREA)$/.test(ae.tagName))) window.__ex.clickTab("^positions\\b");
+        } catch (e) { }
+      }, 1500);
+    }, 0);
     return "clicked";
   }
 
@@ -1435,7 +1473,7 @@
       // is reported in `err` and the page then simply is not ready
       try {
         nav = !legacy && /(^|\.)trade\.breakoutprop\.com$/.test(location.hostname) && !!navBtns().trade;
-        newRead = nav && newReadSurface();
+        newRead = nav && (newReadSurface() || oldChipsSurface());
         navKick = nav && !newRead ? kickTradeView() : "";
       } catch (e) { err = String(e && e.message || e).slice(0, 60); nav = false; newRead = false; }
       return {ready: legacy || newRead, panels: panels, orderControl: ctl, ticketOpen: !!submitBtn(), buySell: bs,
@@ -1476,7 +1514,7 @@
       // server dedups captures and raises ONE alert per hash by it.
       var h = 2166136261, sh = ol.filter(function (x) { return /^[BbFL]:/.test(x); }).join("\n");
       for (var i = 0; i < sh.length; i++) { h ^= sh.charCodeAt(i); h = (h * 16777619) >>> 0; }
-      var td = ""; try { td = "term:r" + (tmk.ready ? 1 : 0) + " n" + (tmk.newLayout ? 1 : 0) + " v" + (tmk.newRead ? 1 : 0) + " k:" + (tmk.navKick || "-") + (tmk.err ? " e:" + tmk.err : "") + " a" + Math.round((window.performance && performance.now ? performance.now() : 0) / 1000); } catch (e) { td = "term:?"; }
+      var td = ""; try { td = "term:r" + (tmk.ready ? 1 : 0) + " n" + (tmk.newLayout ? 1 : 0) + " v" + (tmk.newRead ? 1 : 0) + " k:" + (tmk.navKick || "-") + (tmk.err ? " e:" + tmk.err : "") + " a" + Math.round((window.performance && performance.now ? performance.now() : 0) / 1000) + " t" + (tmk.ticketOpen ? 1 : 0); } catch (e) { td = "term:?"; }
       return ["shape:" + ("00000000" + h.toString(16)).slice(-8), td.slice(0, 40)].concat(out.slice(0, 10), ol);
     },
     // The structure dump on its own (the app / a drill can ask for it): up to [n] short scrubbed lines.
