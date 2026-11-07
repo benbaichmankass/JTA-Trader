@@ -7,7 +7,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from scripts.ops import backfill_broker_truth_costs as b
 
 
-def _mk(tmp_path, funding_rows):
+def _mk(tmp_path, funding_rows, early=True):
     j = tmp_path / "j.db"
     f = tmp_path / "f.db"
     c = sqlite3.connect(j)
@@ -23,6 +23,8 @@ def _mk(tmp_path, funding_rows):
     c.execute("INSERT INTO exchange_fills VALUES('bybit_2','ETHUSDT','buy',1,0.1,'USDT',0,'o1','2026-11-05T00:00:01+00:00','e1')")
     c.execute("INSERT INTO exchange_fills VALUES('bybit_2','ETHUSDT','sell',1,0.1,'USDT',0,'x9','2026-11-05T10:00:00+00:00','e2')")
     c.execute("CREATE TABLE exchange_funding(account_id,symbol,funding_usd,funding_time)")
+    if early:  # an older settlement: the store reaches back before the trade opened
+        c.execute("INSERT INTO exchange_funding VALUES('bybit_2','BTCUSDT',0.1,'2026-10-01T00:00:00+00:00')")
     for r in funding_rows:
         c.execute("INSERT INTO exchange_funding VALUES('bybit_2','ETHUSDT',?,?)", r)
     c.commit()
@@ -78,3 +80,29 @@ def test_with_funding_recomputes_inverted_stored_value(tmp_path):
     assert _fund(j) == ("broker", 0.5)
     s2 = b.sweep(j, f, apply=True, with_funding=True)
     assert s2["funding_corrected"] == 0
+
+
+def test_run_marker_extends_coverage_over_a_quiet_stretch(tmp_path):
+    import json
+    # newest settlement 08:00 < close 10:00 would read uncovered; a successful run at 12:00 covers it
+    j, f = _mk(tmp_path, [(-0.5, "2026-11-05T08:00:00+00:00")])
+    (tmp_path / "exchange_funding_last_run.json").write_text(
+        json.dumps({"run_at": "2026-11-05T12:00:00+00:00", "ok": 1, "failed": [], "skipped": []}))
+    b.sweep(j, f, apply=True, with_funding=True)
+    assert _fund(j) == ("broker", 0.5)
+
+
+def test_failed_account_marker_does_not_extend_coverage(tmp_path):
+    import json
+    j, f = _mk(tmp_path, [(-0.5, "2026-11-05T08:00:00+00:00")])
+    (tmp_path / "exchange_funding_last_run.json").write_text(
+        json.dumps({"run_at": "2026-11-05T12:00:00+00:00", "ok": 0, "failed": ["bybit_2"], "skipped": []}))
+    b.sweep(j, f, apply=True, with_funding=True)
+    assert _fund(j) == ("broker", None)
+
+
+def test_trade_older_than_the_store_is_never_written_a_false_zero(tmp_path):
+    j, f = _mk(tmp_path, [(-0.5, "2026-11-05T08:00:00+00:00"), (0.0, "2026-11-05T16:00:00+00:00")], early=False)
+    # earliest settlement 11-05T08:00 is AFTER the trade opened (00:00): store does not span the window
+    b.sweep(j, f, apply=True, with_funding=True)
+    assert _fund(j) == ("broker", None)

@@ -99,4 +99,5 @@ def test_both_units_end_with_broker_truth_cost_sweep():
     """COST-BROKER-SOURCED: the sweep is the LAST ExecStart of each fills unit."""
     for unit in (_BYBIT_UNIT, _ALPACA_UNIT):
         execs = _exec_starts(unit)
-        assert "backfill_broker_truth_costs.py --apply" in execs[-1], unit
+        assert "backfill_broker_truth_costs.py" in execs[-1] and "--apply" in execs[-1], unit
+        assert "--with-funding" in execs[-1], unit  # exchange_funding sign verified 2026-11-06

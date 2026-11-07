@@ -53,7 +53,7 @@ echo
 echo "===== backfill_broker_truth_costs.py (DRY-RUN coverage report) ====="
 echo "fills store: ${FILLS_DB}"
 set +e
-python3 "${PY_SCRIPT}" --db "${DB_PATH}" --fills-db "${FILLS_DB}"
+python3 "${PY_SCRIPT}" --db "${DB_PATH}" --fills-db "${FILLS_DB}" --with-funding
 dry_code=$?
 set -e
 if [ "${dry_code}" -ne 0 ]; then
@@ -66,7 +66,7 @@ fi
 echo
 echo "===== backfill_broker_truth_costs.py --apply (COMMIT) ====="
 set +e
-python3 "${PY_SCRIPT}" --db "${DB_PATH}" --fills-db "${FILLS_DB}" --apply
+python3 "${PY_SCRIPT}" --db "${DB_PATH}" --fills-db "${FILLS_DB}" --with-funding --apply
 apply_code=$?
 set -e
 if [ "${apply_code}" -ne 0 ]; then
