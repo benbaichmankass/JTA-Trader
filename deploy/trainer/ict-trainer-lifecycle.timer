@@ -1,0 +1,10 @@
+# TIER 2 — prepared, NOT installed. Every 6h, offset from the 00:00Z cycle and 08:00Z catch-up.
+[Unit]
+Description=Run the per-model lifecycle scheduler every 6 hours
+
+[Timer]
+OnCalendar=*-*-* 03,09,15,21:20:00
+Persistent=true
+
+[Install]
+WantedBy=timers.target

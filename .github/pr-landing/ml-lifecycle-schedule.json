@@ -1,0 +1,7 @@
+{
+  "tier": 1,
+  "landing": "hold",
+  "hold_reason": "unvouchable_paths",
+  "why": "Plan files, scheduler code under ml/lifecycle, a static guard, tests and docs; nothing on the trade path. The guard cannot certify ml/** or the two deploy/trainer unit files (prepared, NOT installed; Tier-2 install waits for the operator OK), so the manager reads and merges.",
+  "hold_text": "Dispatch ML-LIFECYCLE-SCHEDULE (2026-11-07): Tier-1 plan files, scheduler, guard and docs; the diff also carries two prepared-not-installed deploy/trainer units (Tier 2), so the manager merges."
+}

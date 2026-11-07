@@ -1,0 +1,16 @@
+# TIER 2 — prepared, NOT installed (operator OK required). Per-model lifecycle scheduler; zero Anthropic usage.
+[Unit]
+Description=ICT per-model lifecycle scheduler (retrain/retest/update plans, ml/lifecycle/plans)
+After=network-online.target
+
+[Service]
+Type=oneshot
+User=ubuntu
+WorkingDirectory=/home/ubuntu/ict-trading-bot
+MemoryHigh=infinity
+MemoryMax=5G
+MemorySwapMax=0
+OOMPolicy=continue
+ExecStart=/bin/bash scripts/ops/run_lifecycle_schedule.sh
+StandardOutput=journal
+StandardError=journal

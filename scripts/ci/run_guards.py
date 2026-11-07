@@ -869,6 +869,17 @@ GUARDS: List[Dict[str, Any]] = [
         ],
     },
     {
+        # Every in-population ML model has a lifecycle plan and every plan's commands resolve
+        # (lane ML-LIFECYCLE-SCHEDULE, 2026-11-07). Static; gates nothing on the trade path.
+        "name": "lifecycle-plan-guard",
+        "when": {"globs": ["ml/**", "scripts/ci/check_lifecycle_plans.py",
+                           "scripts/ops/seed_lifecycle_plans.py"]},
+        "steps": [
+            ["python3", "scripts/ci/check_lifecycle_plans.py", "--self-test"],
+            ["python3", "scripts/ci/check_lifecycle_plans.py"],
+        ],
+    },
+    {
         # A repeated mistake must produce a PREVENTION, not another row.
         # GATE 0 item G4. Operator-approved 2026-08-26 on the test "if it's
         # affecting things that are being read or filed before they're actually
