@@ -79,7 +79,7 @@ WRITABLE_FIELDS = (
 #: Planning keys a caller may write by name; the store folds each into ``extra`` (where the
 #: importer keeps it, and where ``to_row`` reads it back as a top-level row key). Value ->
 #: allowed set; ``None`` clears the key. (WORK-STORE-WEEK-LANE-WRITABLE.)
-EXTRA_WRITABLE = {"week_lane": ("surge", "throttle", "standing")}
+EXTRA_WRITABLE = {"week_lane": ("surge", "throttle", "after_reset", "standing")}  # "standing" stays writable/readable for old rows; new work uses the first three
 _JSON_FIELDS = ("roadmap", "due_rule", "origin", "prs", "blocked_on", "extra")
 _COMPUTED = ("due_at", "version", "created_at", "updated_at", "updated_by")
 
