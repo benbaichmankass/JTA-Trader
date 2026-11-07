@@ -1,0 +1,7 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "hold_reason": "tier_2_3_needs_approval",
+  "hold_text": "Phone-executor page script (exec.js 2026-11-07.2), the order path for the breakout_2 prop account, Tier 2. Read side: terminal().ready becomes true on the new layout (bottom Trade button + both panel chips) so the app can read the account again, and taps the bottom Trade button once per 20 s when the chips are missing. Order side is FENCED: because Kotlin shares the ready flag with the ticket claim, symbolStep returns none and clicks nothing on the new layout and openTicket finds no order control, so a ticket is refused at once (fail-closed, no click, no submit) until a lane measures the real order form. No order, amend or cancel path is enabled or changed. exec.js-only, ships via phone-exec-js-sign, no APK.",
+  "why": "Evidence: the structure dump captured on the operator-installed APK 1b.339 at 14:55Z (anomaly signature eaa42405, shape a5b22a08): bottom nav Markets / Trade / Activity, chips Open positions / Open and trigger orders, no Order form. breakout_2 account_status has been stale since 2026-11-06T04:42Z."
+}

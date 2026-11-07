@@ -6,7 +6,7 @@
   // PHONE-EXEC-OBSERVABLE-1018: this file is also served SIGNED by our own API and swapped in at runtime
   // (RemoteJs.kt): a newer version replaces the installed helpers on the next ensure(); the same version is
   // never injected twice. Bump on every change (CI signs the file; the app pins by version).
-  var EXEC_VERSION = "2026-11-07.1";
+  var EXEC_VERSION = "2026-11-07.2";
   if (window.__ex && window.__ex.version === EXEC_VERSION) return;
   function hostOk() { return /(^|\.)breakoutprop\.com$/.test(location.hostname || ""); }
   function vis(el) { if (!el) return false; var r = el.getBoundingClientRect(); return r.width > 0 && r.height > 0; }
@@ -1180,6 +1180,48 @@
     return node;
   }
 
+  // ---- NEW LAYOUT NAVIGATION (PHONE-BREAKOUT-NEW-LAYOUT step 2, 2026-11-07). MEASURED on breakout_2 by the app's own
+  // structure dump (anomaly signature eaa42405, page shape a5b22a08, app 1b.339): the navigation is a <nav> (aria
+  // "Trading navigation") with THREE buttons in the bottom band, left to right Markets / Trade / Activity (y 92 %), the
+  // header holds "Trade" and the "Portfolio <value> USD" account button, <main> holds the tablist Market chart / Order
+  // book / Depth chart, and the panel chips read "Open positions" and "Open and trigger orders" (no "Order form", no
+  // "Positions", no "Open orders"). The old top tab menu is gone; the old path below stays as the fallback.
+  function navBtns() {
+    var H = window.innerHeight || 0, out = {};
+    all("button,[role=button],[role=tab],a").forEach(function (x) {
+      var r = x.getBoundingClientRect(); if (!H || r.top < H * 0.7) return;
+      var s = t(x).replace(/\d+/g, "").trim();
+      if (/^(trade|trading)$/i.test(s)) out.trade = out.trade || x;
+      else if (/^(markets?|overview)$/i.test(s)) out.markets = out.markets || x;
+      else if (/^activity$/i.test(s)) out.activity = out.activity || x;
+    });
+    return out;
+  }
+  // the READ surface of the new trading view: both panel chips on screen (a count badge may be glued to the label)
+  function newReadSurface() {
+    var ct = all("button,[role=tab],[role=button]").map(t);
+    return ct.some(function (x) { return /^open positions(\s*\(?\s*\d+\s*\)?)?$/i.test(x); }) &&
+      ct.some(function (x) { return /^open (and trigger )?orders(\s*\(?\s*\d+\s*\)?)?$/i.test(x); });
+  }
+  // ORDER-PATH FENCE. The order form of the new layout has NOT been measured (the dump shows no "Order form" control and no
+  // Buy/Sell submit). terminal().ready is true on the new layout so the app can READ the account, and Kotlin shares that
+  // flag with the ticket claim, so the symbol route (the only code that clicks around the page before the order-control
+  // check) refuses here: a ticket on this layout is refused at once with "order control not found (symbol route: none)",
+  // fail-closed, no click, no submit. A lane lifts the fence only after capturing the real order form.
+  var ORDER_PATH_VERIFIED_ON_NEW_LAYOUT = false;
+  function orderPathFenced() {
+    return !ORDER_PATH_VERIFIED_ON_NEW_LAYOUT && !!navBtns().trade && !submitBtn() &&
+      !all("button,[role=tab],[role=button]").some(function (x) { return ORDER_RE.test(t(x)); });
+  }
+  // One throttled tap on the bottom "Trade" button when the nav is there but the trading view's chips are not (the page is on
+  // Markets or Activity). Navigation only: never inside an open ticket, never more than once per 20 s.
+  function kickTradeView() {
+    var nb = navBtns(); if (!nb.trade || newReadSurface() || submitBtn()) return "";
+    var now = Date.now(); if (window.__exNavAt && now - window.__exNavAt < 20000) return "wait";
+    window.__exNavAt = now; try { nb.trade.scrollIntoView({block: "nearest"}); } catch (e) { }
+    nb.trade.click(); return "clicked";
+  }
+
   // ---- NEW-LAYOUT STRUCTURE DUMP (PHONE-BREAKOUT-NEW-LAYOUT, 2026-11-07). The broker moved its navigation from a tab
   // menu at the top to a few buttons at the BOTTOM; the old "Order form" / "Positions" / "Open orders" labels are gone
   // and every terminal read missed. The miss event can carry only 40 short scrubbed strings, so this packs the page's
@@ -1375,8 +1417,14 @@
       var ct = all("button,[role=tab],[role=button]").map(t);
       var panels = /(^|\.)trade\.breakoutprop\.com$/.test(location.hostname) &&
         ct.some(function (x) { return /^positions$/i.test(tabTextRaw(x)); }) && ct.some(function (x) { return /^open orders$/i.test(tabTextRaw(x)); });
-      return {ready: ctl || !!submitBtn() || bs || probe || panels, panels: panels, orderControl: ctl, ticketOpen: !!submitBtn(), buySell: bs,
-        probe: probe, tabs: tb.length, inputs: inputs(document).length};
+      // NEW LAYOUT (2026-11-07): read surface = the bottom nav's Trade button plus both panel chips; when the nav is there
+      // but the chips are not, tap Trade (throttled) so the next call finds them
+      var legacy = ctl || !!submitBtn() || bs || probe || panels;
+      var nav = !legacy && /(^|\.)trade\.breakoutprop\.com$/.test(location.hostname) && !!navBtns().trade;
+      var newRead = nav && newReadSurface();
+      var navKick = nav && !newRead ? kickTradeView() : "";
+      return {ready: legacy || newRead, panels: panels, orderControl: ctl, ticketOpen: !!submitBtn(), buySell: bs,
+        probe: probe, tabs: tb.length, inputs: inputs(document).length, newLayout: nav, newRead: newRead, navKick: navKick};
     },
     // Control texts on the page (buttons, tabs, role=button), first 40, digits masked: OUR OWN UI labels only, for
     // the "terminal did not load" event and the refusal dump. Never values, never account numbers.
@@ -1405,7 +1453,7 @@
       });
       // A page that is NOT a terminal we know (terminal().ready false: the 2026-11-07 new layout) also reports its
       // structure, in the same 40 slots the server keeps: the first 12 control texts, then outline() (28 lines).
-      var known = false; try { known = !!window.__ex.terminal().ready; } catch (e) { }
+      var known = false; try { var tmk = window.__ex.terminal(); known = !!tmk.ready && !tmk.newRead; } catch (e) { }   // the new layout always reports its shape (a read miss there needs it)
       if (known) return out;
       var ol = outline(28);
       // SHAPE HASH (PHONE-EXECUTOR-ANOMALY): FNV-1a over the STRUCTURAL lines only (bottom band B/b, fixed bars F,
@@ -1490,6 +1538,7 @@
     // done | clicked_symbol | typed_search | search_not_set | clicked_result | no_result | ambiguous | opened_picker | none
     symbolStep: function (sym) {
       if (!hostOk()) return "bad_host";
+      if (orderPathFenced()) return "none";   // new layout, order form not measured: click nothing (see ORDER_PATH_VERIFIED_ON_NEW_LAYOUT)
       if (!looksLikeSymbol(sym)) return "not_a_symbol";   // ETHUSD, ETH/USD, SOLUSDT ...; never a bare word like "Market"
       var n = norm(sym), b = base(sym), shown = norm(window.__ex.symbolShown());
       if (shown && (shown === n || shown === n + "T" || shown === b)) { window.__ex._mk = null; return "done"; }
