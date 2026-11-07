@@ -191,6 +191,16 @@ def test_db_pulls_returns_sync_history(client: TestClient, tmp_path: Path) -> No
     assert body["rows"][0]["status"] == "sync_done"
 
 
+def test_lifecycle_absent_is_explicit_and_rows_read_when_present(client: TestClient, tmp_path: Path) -> None:
+    mirror = _populate_mirror(tmp_path)
+    body = client.get("/api/bot/ml/lifecycle").json()
+    assert body["read_state"] == "absent" and body["rows"] == []
+    _write_jsonl(mirror / "trainer" / "lifecycle_results.jsonl",
+                 [{"plan_id": "x", "job": "retrain", "status": "ok", "provenance": "MEASURED"}])
+    body = client.get("/api/bot/ml/lifecycle").json()
+    assert body["read_state"] == "ok" and body["rows"][0]["provenance"] == "MEASURED"
+
+
 def test_runs_returns_metrics_and_manifest(client: TestClient, tmp_path: Path) -> None:
     _populate_mirror(tmp_path)
     resp = client.get("/api/bot/ml/runs/trade-outcome-winrate-v1/run_a")
