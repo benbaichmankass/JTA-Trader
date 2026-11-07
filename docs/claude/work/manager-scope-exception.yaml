@@ -6,6 +6,26 @@
 # this guard must remain "route the work to a session", because that is the
 # behaviour wanted.
 exceptions:
+  - id: MGR-20261107-RQ-NEW-UNIT-SELF-LAND
+    status: active
+    expires: "2026-11-09"
+    paths:
+      - "scripts/ci/check_pr_landing.py"
+      - "tests/test_new_unit_self_land.py"
+      - ".claude/skills/frontier-research/SKILL.md"
+      - ".claude/skills/ml-review/SKILL.md"
+      - ".claude/skills/perf-followup/SKILL.md"
+      - "docs/claude/work/manager-scope-exception.yaml"
+    reason: >-
+      OPERATOR DECISION, 2026-11-07 ~07:45Z, manager session
+      session_01AFoLuKHs8XCUREKLokpyy5, in an operator auto-off window. The lane
+      RQ-NEW-UNIT-SELF-LAND (session_01AFoLuMfzx5WQggGWZvKUqU) was refused by
+      the auto-mode classifier on editing the landing guard. Asked how to
+      unblock it, the operator answered the popup verbatim "You do the edit now
+      (Recommended)", after saying "there's no reason merging research units
+      should require me". The manager writes exactly the new-unit registration
+      rule in check_pr_landing.py, its test and the three skill lines (PR
+      #24028). It covers nothing else.
   - id: MGR-20261106-OPPLAN-HOLDOUT-RULE
     status: active
     expires: "2026-11-08"
