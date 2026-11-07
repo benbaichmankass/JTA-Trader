@@ -96,6 +96,34 @@ function eq(a, b, m) { if (JSON.stringify(a) !== JSON.stringify(b)) { console.er
   eq([nc.some((x) => /^vp:400x800/.test(x)), nc.some((x) => /^B:button:Trade:/.test(x)), nc.some((x) => /^F:div:/.test(x)), nc.some((x) => /\d{4}/.test(x))], [true, true, true, false], "new layout: miss carries viewport, bottom-nav buttons and fixed bar, no long digit run");
   eq(await pn.evaluate("[__ex.clickTab('^positions\\\\b'), __ex.clickTab('^open orders\\\\b')]"), ["clicked", "clicked"], "new chips answer to the positions / open orders readers");
   eq(await pn.evaluate("__ex.accountPanel().portfolio"), 4861.94, "'Portfolio . value USD' headline reads");
+  // NEW LAYOUT step 2 (2026-11-07), built from the captured shape a5b22a08: bottom <nav> Markets / Trade / Activity, header
+  // Trade + "Portfolio <value> USD", <main> tablist, chips "Open positions" / "Open and trigger orders". Read surface = ready;
+  // the order path is FENCED (symbolStep clicks nothing); Markets/Activity view taps Trade (throttled); the legacy path is intact.
+  const NL = (chips) => '<body style="margin:0"><header><button>Trade</button><button>Portfolio 4,861.94 USD</button></header><main><div role=tablist><button role=tab>Market chart</button><button role=tab>Order book</button><button role=tab>Depth chart</button></div>' +
+    (chips ? '<button id=op>Open positions</button><button>Open and trigger orders</button>' : '<div id=mk>Markets view</div>') +
+    '</main><nav aria-label="Trading navigation" style="position:fixed;bottom:0;left:0;right:0;height:60px;display:flex"><button id=nm>Markets</button><button id=nt>Trade</button><button id=na>Activity</button></nav>' +
+    '<script>window.hits=0;document.getElementById("nt").onclick=function(){window.hits++;document.getElementById("mk")&&(document.getElementById("mk").outerHTML="<button>Open positions</button><button>Open and trigger orders</button>")};</script></body>';
+  const pn2 = await b.newPage(); await pn2.setViewportSize({ width: 411, height: 817 });
+  await pn2.setContent(NL(true)); await pn2.addScriptTag({ content: src });
+  eq(await pn2.evaluate("[__ex.terminal().ready, __ex.terminal().newRead, __ex.terminal().newLayout]"), [false, false, false], "new layout is not ready off the trade host (no nav action either)");
+  await pn2.close();
+  const onNL = async (html) => { const pg = await b.newPage(); await pg.setViewportSize({ width: 411, height: 817 });
+    await pg.route("https://trade.breakoutprop.com/**", (route) => route.fulfill({ status: 200, contentType: "text/html", body: html }));
+    await pg.goto("https://trade.breakoutprop.com/en/account/A9/trade"); await pg.addScriptTag({ content: src }); return pg; };
+  const pn3 = await onNL(NL(true));
+  eq(await pn3.evaluate("[__ex.terminal().ready, __ex.terminal().newRead, __ex.terminal().navKick]"), [true, true, ""], "new layout with both chips: read surface, ready, no navigation");
+  eq(await pn3.evaluate("__ex.accountPanel().portfolio"), 4861.94, "new layout: Portfolio headline value reads");
+  eq(await pn3.evaluate("[__ex.clickTab('^positions\\\\b'), __ex.clickTab('^open orders\\\\b')]"), ["clicked", "clicked"], "new layout: chips answer to the positions / open orders readers");
+  eq(await pn3.evaluate("__ex.symbolStep('ETHUSDT')"), "none", "ORDER FENCE: the symbol route clicks nothing on the new layout");
+  eq(await pn3.evaluate("__ex.openTicket()"), "no_order_control", "ORDER FENCE: no order control -> the ticket is refused, nothing opened");
+  eq(await pn3.evaluate("window.hits"), 0, "ORDER FENCE: no tap happened");
+  const nc3 = await pn3.evaluate("__ex.controls()");
+  eq([/^shape:[0-9a-f]{8}$/.test(nc3[0]), nc3.some((x) => /^B:button:Trade:/.test(x))], [true, true], "new layout: dumps still carry the shape + outline");
+  const pn4 = await onNL(NL(false));
+  eq(await pn4.evaluate("[__ex.terminal().ready, window.hits]"), [false, 1], "Markets/Activity view: not ready yet, ONE tap on the bottom Trade button");
+  eq(await pn4.evaluate("[__ex.terminal().ready, window.hits]"), [true, 1], "the chips are there on the next call: ready, and no second tap");
+  await pn4.evaluate("document.querySelectorAll('button').forEach(function(x){if(/^Open/.test(x.textContent))x.remove()})");
+  eq(await pn4.evaluate("[__ex.terminal().ready, __ex.terminal().navKick, window.hits]"), [false, "wait", 1], "chips gone again inside 20 s: throttled, no second tap");
   await st("/en/account/A3/trade");
   eq(await p2.evaluate("__ex.terminal().ready"), false, "buy/sell words alone (no tabs, no inputs) are not the terminal");
   s1 = await st("/login");
