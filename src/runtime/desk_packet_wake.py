@@ -301,6 +301,12 @@ def run_once(fetch: Fetch = _get,
         if not wake:
             rec["last_skipped"] = {"packet_id": entry["packet_id"], "bar": entry["bar"], "reason": why}
             return done("skipped_nothing_new", packet_id=entry["packet_id"], commit=sha, bar=entry["bar"], reason=why)
+        # Console wake switches (operator 2026-11-07): the packet is already landed; only the comment is withheld.
+        # Unreadable switch state => post (wake_toggles.is_on never silences by doubt).
+        from src.runtime import wake_toggles as wt
+        if not wt.is_on("desk_wake"):
+            wt.log_suppressed("desk_wake", entry["packet_id"])
+            return done("suppressed_by_wake_toggle", packet_id=entry["packet_id"], commit=sha, bar=entry["bar"])
         pcode, pdata = http("POST", f"{API}/repos/{REPO}/issues/{pr}/comments",
                             json.dumps({"body": mm.render_wake(entry, now)}).encode(), auth)
         if pcode != 201:
