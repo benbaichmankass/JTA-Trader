@@ -2,7 +2,7 @@
 id: RQ-20261106-98e3-01
 title: 'ENTRY-EQ structure-exit retest: does the equity-native ENTRY model RE-TRAINED on LIVE ml_entry structure-exit labels (structure_exit pivot=5;sl_only, config
   B, tau re-selected on the dev walk-forward) clear the DEFLATED holdout bar (N=2) on the 173-ETF pool over 2025-07-15 .. last complete month?'
-status: queued
+status: done
 cadence: once
 theme: ml_health
 priority: 1
@@ -108,3 +108,14 @@ population: 'The registered POOL_RULE of scripts/research/ml_entry_alpaca_score.
   active, tradable, us_equity ETFs (nasdaqtraded ETF=Y) with median daily dollar volume >= 50M USD over 2019-01-01..2020-12-31. The module refuses to run if the rule
   hash differs.'
 last_dispatched_at: '2026-11-06T23:55:06+00:00'
+grading:
+  attested: RULE-RQ20261106-98e3-01-ENTRY-EQ-STRUCTURE
+  auto: true
+  decision_rule_id: RULE-RQ20261106-98e3-01-ENTRY-EQ-STRUCTURE
+  evidence:
+  - research/results/RQ-20261106-98e3-01/42315121734.jsonl
+  graded_at: '2026-11-07'
+  grader: scripts/research/queue_grade.py
+  reason: 1 row(s), all measured, all pass
+  rows: 1
+  verdict: pass
