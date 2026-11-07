@@ -140,6 +140,30 @@ function eq(a, b, m) { if (JSON.stringify(a) !== JSON.stringify(b)) { console.er
   eq(await pn6.evaluate("window.hits"), 1, "and the deferred tap lands once");
   const d6 = await pn6.evaluate("__ex.controls()");
   eq(/ t0$/.test(d6[1]), true, "the term: line ends with the ticket-open flag (t0 here)");
+  // .5 (2026-11-07), MEASURED on the app's own capture periodic-terminal-20261107T185725Z step 6: the bottom Trade button opens the OLD layout
+  // in one tab set, chips "Order form | Positions | Open orders", on the ORDER FORM (open by default). An open form is ticketOpen and readAccount answers
+  // busy, so after the Trade tap the Positions view is shown (read-only view switch), which replaces the form.
+  const TV = (tag) => '<body style="margin:0"><header><button>Trade</button><button>Portfolio 4,861.94 USD</button></header><main><div id=view>Markets view</div></main>' +
+    '<nav aria-label="Trading navigation" style="position:fixed;bottom:0;left:0;right:0;height:60px;display:flex"><button id=nm>Markets</button><button id=nt>Trade</button><button id=na>Activity</button></nav>' +
+    '<script>window.hits=0;document.getElementById("nt").onclick=function(){window.hits++;document.getElementById("view").innerHTML=' +
+    JSON.stringify('<div><' + tag + ' id=of>Order form</' + tag + '><' + tag + ' id=pos>Positions</' + tag + '><' + tag + ' id=oo>Open orders</' + tag + '></div>' +
+      '<form id=f><label for=q>Quantity</label><input id=q value="1.00"><div><div>Available to trade</div><div><span id=av>24,179.14 USD</span> <span>5x</span></div></div><button type=button>Long (buy) ETH</button></form>') +
+    ';var po=document.getElementById("pos"),of=document.getElementById("of"),f=document.getElementById("f");po.onclick=function(){f.style.display="none"};of.onclick=function(){f.style.display="block"}};</script></body>';
+  for (const tag of ["button", "div"]) {
+    const pt = await onNL(TV(tag)); await pt.evaluate("window.__exKickAfterMs = 0");
+    eq(await pt.evaluate("var r = __ex.terminal(); [r.ready, r.navKick]"), [false, "clicked"], `Trade view (${tag} chips): Markets first, the tap is deferred`);
+    await pt.waitForTimeout(1900);
+    eq(await pt.evaluate("var r = __ex.terminal(); [r.ready, r.ticketOpen]"), [true, false], `Trade view (${tag} chips): after the Positions switch the form is gone, ticketOpen false, ready true`);
+  }
+  // an input in focus (someone or a ticket flow is typing in the form): the Positions switch does NOT run
+  const pf = await onNL(TV("button")); await pf.evaluate("window.__exKickAfterMs = 0; __ex.terminal()");
+  await pf.waitForTimeout(300); await pf.evaluate("document.getElementById('q').focus()"); await pf.waitForTimeout(1600);
+  eq(await pf.evaluate("[document.getElementById('f').style.display !== 'none', __ex.terminal().ticketOpen]"), [true, true], "a focused input: the form stays open, ticketOpen stays true (never hide a form someone is typing in)");
+  // REDACTION (a real bug, reproduced on this minimal page): "Available to trade <amount>" sits inside the same form as a <label>Quantity</label>, whose
+  // KEEP context the amount used to inherit, so its digits reached the bitmap. It must be masked in the snapshot and boxed.
+  const ps = await onNL('<body><main><form id=f><label for=q>Quantity</label><input id=q value="1.00"><div><div>Available to trade</div><div><span id=av>24,179.14 USD</span> <span>5x</span></div></div><button type=button>Long (buy) ETH</button></form></main></body>');
+  const snA = await ps.evaluate("__ex.snapshot('page')"); const sj = JSON.stringify(snA);
+  eq([sj.includes("24,179"), sj.includes("Available to trade"), snA.redact.length > 0, /##,###\.##/.test(sj)], [false, true, true, true], "REDACTION: the Available to trade amount is masked (and boxed) while its label stays");
   // an error inside the new-layout block must come back as err, never as a throw (a throw reaches the app as null = a silent "busy")
   const pn5 = await onNL(NL(true));
   await pn5.evaluate("Object.defineProperty(window, 'innerHeight', {get: function () { throw new Error('boom'); }})");
