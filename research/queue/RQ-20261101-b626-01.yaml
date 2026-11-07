@@ -124,19 +124,8 @@ grading_before_rearm:
   rows: 2
   verdict: no_action_warranted
 grading:
-  attested: RULE-20261101-b626-01
-  auto: true
-  decision_rule_id: RULE-20261101-b626-01
-  evidence:
-  - research/results/RQ-20261101-b626-01/41393279769.jsonl
-  - research/results/RQ-20261101-b626-01/41397566085.jsonl
-  - research/results/RQ-20261101-b626-01/41403730326.jsonl
-  - research/results/RQ-20261101-b626-01/41541518445.jsonl
-  - research/results/RQ-20261101-b626-01/41563150043.jsonl
-  - research/results/RQ-20261101-b626-01/42162879141.jsonl
-  graded_at: '2026-11-07'
-  grader: scripts/research/queue_grade.py
-  needs_review: true
-  reason: 'verdicts not unanimous-mechanical: [''fail'', ''no_action_warranted'']'
-  rows: 4
-  verdict: null
+  auto: false
+  graded_at: "2026-11-07"
+  grader: "session RESEARCH-OPS-AUTHOR-20261107 (steps C/D)"
+  verdict: fail
+  note: "not_viable on the 4h arm, newest data-pinned run 42162879141 (carries mask_frozen_bars/data_pin; the 2026-11-03 viable_not_better rows came from the earlier harness without them). Configuration closed: 4h ml_entry_v2 timeframe arm at tau 0.10; family stays open; next test = the other timeframe arms and the 1h baseline comparison the rule names. I did not re-derive the fold counts; the verdict word is the driver's own."
