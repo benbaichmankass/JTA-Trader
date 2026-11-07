@@ -1,0 +1,97 @@
+# Authored 2026-11-07 by lane RESEARCH-OPS-AUTHOR-20261107 (Tier 1), dispatched by Manager Session 2026-11-06b. Registered BEFORE any run. Gates this adds or changes: NONE.
+id: RQ-20261107-47b6-15
+title: 'T3 (tp_r=3.0) on trend_donchian_eth_prop twin DOGEUSDT at the prop cost stack: arm vs declared, 2021-09-24..2026-10-26, net of the full cost stack'
+cadence: once
+kind: experiment
+theme: new_strategy_prop
+priority: 2
+roadmap:
+- L-PROP
+programme: P5
+question: 'SYMBOL TWIN of the eth_prop TP-3R read on DOGEUSDT (config-exact, prop cost stack, 2021-09-24..2026-10-26): prop Stage-0 coverage of a symbol the prop roster does not trade.
+  Correlated with the source cell; a symbol holdout, not an independent window; Stage-0 coverage only, not a roster case. Does the arm beat the declared config by the registered bar,
+  net of the full cost stack (execution_costs.resolve_cost_policy), fold-stably, with no worse drawdown?'
+why_this_matters: 'Operator 2026-11-05 (RESEARCH-NO-WAIT): iterate on in-hand data, never wait for a future month. The queue was starved (runnable 8 < floor 58, 2026-11-07); this unit
+  is drawn from the programme authoring queue / lever map. Look-before-you-re-test: prior units RQ-20261027-4ceb-03; RQ-20261021-7c2b-10 (a different arm set on new symbols). MULTIPLE-TESTING
+  DENOMINATOR: this arm is one cell of the units authored in this lane for the same lever family, each read once on its own window.'
+power:
+  expected_n: 39
+  min_detectable_effect: 0.45
+  effect_units: sd
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: 'Needs the repo E35 floor of 39 baseline trades; n(baseline) < 39 grades INDETERMINATE, never FAIL (ESTIMATE: the leg produced >= 39 trades on comparable windows in the prior
+    units cited).'
+  feasibility:
+    source: none
+    accrual_basis: Replays fetched history over a pinned window; nothing accrues.
+decision_rule:
+  id: RULE-RQ2026110747b615-NEW_STRATEGY_PROP
+  registered_at: '2026-11-07'
+  registered_before_run: true
+  statistic: 'Per arm, from the harness''s own summary (argv built by regime_debt_matrix.build_harness_cmd plus the arm''s tokens; full cost stack, never a zero default): total_trades,
+    net_total_r, max_drawdown_r and net_r per equal calendar fold (same boundaries every arm). Regime-robustness clause (default template, backtesting skill): the per-year table is read
+    in the result; an arm that passes the bar but has one calendar year above 50% of its net gain, or a net-negative long or short side, is reported as a LEAD with that caveat, never
+    as a confirmation.'
+  rule: 'INDETERMINATE IF n(A) < 39 (never FAIL on thin n). Candidate PASSES iff dR = net_r(C) - net_r(A) >= 5.0 R AND maxDD(C) <= maxDD(A) AND fold_wins >= 3 of 4 calendar folds. PASS
+    is a LEAD for a Tier-3 proposal NOTE on the owning checklist row for the manager, never a config edit. FAIL IF not passed at n >= 39: this configuration is closed on this window/leg;
+    the lever family stays open. Bar, folds and floor are not changed after any result.'
+  min_n: '39'
+  what_it_does_not_do: Does not mine values, edit config, place an order or touch a roster; a backtest of one lever on one leg/window is not edge and not a P&L claim; not a Tier-3 case.
+compute: cpu_light
+value:
+  bucket: structural
+  usd_at_stake_per_month: 150
+  confidence: 0.15
+  basis: 'stand-in: same stand-in as the cited prior units; an estimate, not a measurement.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 2.0
+  est_minutes: 25
+  why_runner: Fetches keyless public candles for a pinned window; reads no trainer data (Kaggle CPU has no internet).
+  basis: One keyless candle fetch and one harness pass per arm; same shape as RQ-20261105-23ca-02 (estimate, not measured).
+run:
+  command:
+  - python3
+  - scripts/research/exit_lever_ablation.py
+  - --leg
+  - trend_donchian_eth_prop
+  - --symbol
+  - DOGEUSDT
+  - --arm
+  - A=--fee-bps-roundtrip=7.5;--slippage-bps-roundtrip=5.0;--funding-bps-per-window=1.0
+  - --arm
+  - T3=tp_r=3.0;--fee-bps-roundtrip=7.5;--slippage-bps-roundtrip=5.0;--funding-bps-per-window=1.0
+  - --days
+  - '2330'
+  - --start
+  - '2021-09-24'
+  - --end
+  - 2026-10-26 23:00
+  - --grade
+  - sweep
+  - --baseline
+  - A
+  - --delta-r
+  - '5.0'
+  - --fold-majority
+  - '3'
+  - --n-floor
+  - '39'
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 90
+  inputs:
+    research_unit: RQ-20261107-47b6-15
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- RQ-20261027-4ceb-03
+- RQ-20261021-7c2b-10
+status: queued
+practice_precedent: 'T1 (docs/reference/trading-and-model-practice-principles.md): confirm a discovery on an untouched in-hand window or symbol holdout, one setting tested once; operator
+  2026-11-05 RESEARCH-NO-WAIT.'
