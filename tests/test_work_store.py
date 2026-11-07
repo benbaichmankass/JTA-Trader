@@ -367,3 +367,15 @@ def test_other_unknown_keys_still_refused(store):
     it = store.create(_build(), by="t", today=TODAY)["item"]
     with pytest.raises(ws.WorkStoreValidationError, match="not writable"):
         store.set("WSD-TEST-1", {"bogus": 1}, by="t", expected_version=it["version"], today=TODAY)
+
+
+def test_row_with_extra_week_lane_is_served_with_week_lane(store):
+    """A build item whose extra holds week_lane reaches the served checklist row, the loader's
+    row and the route's per-row ``fields`` (the route nests every key verbatim under ``fields``)."""
+    from src.runtime import work_read
+    from src.web.api.routers import work as work_router
+    store.create(_build(extra={"week_lane": "throttle", "note": "n"}), by="t", today=TODAY)
+    rows = work_read.checklist_rows(store)
+    assert [r["week_lane"] for r in rows] == ["throttle"]
+    item = work_router._checklist_item(rows[0], vocabulary=("queued",), registered=None)
+    assert item["fields"]["week_lane"] == "throttle"
