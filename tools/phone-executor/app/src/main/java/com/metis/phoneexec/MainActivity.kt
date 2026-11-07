@@ -113,6 +113,7 @@ class MainActivity : Activity() {
     private var lastSheetMissMs = 0L
     private var sheetOkPosted = false   // the first clean sheet read posts its shape once (opened_by, uPnL sign)
     private var lastPosMissMs = 0L
+    private var lastBgMissMs = 0L   // PHONE-BG-MISS: the background engine's last terminal_miss post
     private var lastStatus = ""
     // HOTFIX 2026-10-05 (manual login was being reset by the loop): any touch/key on the screen holds every
     // automatic navigation (reload, re-login) for USER_HOLD_MS; "Pause" holds everything until the page reads
@@ -574,6 +575,18 @@ class MainActivity : Activity() {
                     var acct = "busy"
                     for (i in 0 until 10) { acct = readAccount(p); if (acct != "busy") break; delay(2000) }
                     if (acct == "posted") lastAcctMs = System.currentTimeMillis()
+                    // PHONE-BG-MISS (2026-11-07): readAccount answers "busy" for a page it does not recognise as the terminal,
+                    // and until now the background engine said nothing about it (only the foreground posted terminal_miss),
+                    // so a broker layout change left breakout_2 silent for 28 h. Post the SAME masked structure dump the
+                    // foreground posts, at most every 30 min; the server turns a new shape + stale status into ONE alert.
+                    if (acct == "busy" && System.currentTimeMillis() - lastBgMissMs >= POS_MISS_MS) {
+                        val tm = p.obj("__ex.terminal()")
+                        if (tm != null && !tm.optBoolean("ready") && !tm.optBoolean("ticketOpen")) {
+                            lastBgMissMs = System.currentTimeMillis()
+                            val ctl = try { JSONArray(p.js("JSON.stringify(__ex.controls())")) } catch (e: Exception) { JSONArray() }
+                            api.terminalMiss("bg tabs=${tm.optInt("tabs")} inputs=${tm.optInt("inputs")} probe=${tm.optBoolean("probe")}", ctl)
+                        }
+                    }
                     bgLast = "logged_in+$acct" + (if (closed.isNotEmpty()) " form:$closed" else "")
                 }
                 "challenged" -> setStatus("background: challenge page (not solved); re-checked on the next background check")
@@ -669,6 +682,8 @@ class MainActivity : Activity() {
             .put("exec_js", ExecJs.version).put("exec_src", ExecJs.source).put("js_refresh", jsRefresh.take(30))
             .put("captures", Capture.posted).put("capture_err", Capture.lastError.take(40))
             .put("drills", drillsRun).put("drill_last", drillLast.take(40))
+            // PHONE-BG-MISS: FLAG_SECURE state (why a screenshot is blank) and minutes since the background terminal_miss
+            .put("secure", secureOn).put("bg_miss_min", if (lastBgMissMs > 0L) (now - lastBgMissMs) / 60_000 else -1L)
         // never touch the WebView while backgrounded (jsObj is bounded anyway and yields null on a timeout)
         if (resumed) jsObj("__ex.terminal()")?.let { tm ->
             for (k in listOf("ready", "probe", "panels", "orderControl", "ticketOpen", "buySell")) state.put(k, tm.optBoolean(k))

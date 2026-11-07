@@ -773,3 +773,11 @@ def test_anomaly_steps_and_quiet_while_status_fresh(monkeypatch):
     monkeypatch.setattr(pe, "account_status_age_hours", lambda a: 3.0)                    # now stale: the SAME signature alerts
     pe.record_anomaly("breakout_2", "positions_miss", "closed_no_tab d9", {}, send=lambda m, **k: calls.append(m) or True)
     assert len(calls) == 1                                                                # digits masked: same signature
+
+
+# PHONE-BG-MISS: the heartbeat keeps the FLAG_SECURE state and the minutes since the background terminal_miss.
+def test_heartbeat_keeps_secure_and_bg_miss_fields(_iso):
+    pe.record_event(_dev(), {"event": "heartbeat", "reason": "background: no ticket waiting",
+                             "state": {"secure": True, "bg_miss_min": 12, "not_allowlisted": "x"}})
+    st = pe.last_heartbeat("breakout_2")["state"]
+    assert st["secure"] is True and st["bg_miss_min"] == 12 and "not_allowlisted" not in st
