@@ -1,6 +1,4 @@
 """Console wake switches: defaults, fail-open, per-class LTR, route auth, suppression receipts."""
-import json
-import os
 import sys
 from pathlib import Path
 
@@ -37,7 +35,9 @@ def test_flip_persists_logs_who_and_unreadable_posts(tmp_path):
 
 def test_ltr_entry_per_class_and_mixed_never_half_silenced():
     st = {"toggles": wt._defaults()}
-    real = {"accounts": ["bybit_2"]}; prop = {"accounts": ["breakout_2"]}; paper = {"accounts": ["bybit_1"]}
+    real = {"accounts": ["bybit_2"]}
+    prop = {"accounts": ["breakout_2"]}
+    paper = {"accounts": ["bybit_1"]}
     mixed = {"accounts": ["bybit_1", "bybit_2"]}
     f = lambda e: wt.ltr_entry_on(e, st, CLS)  # noqa: E731
     assert f(real) and f(prop) and not f(paper) and f(mixed)
@@ -53,8 +53,10 @@ def test_label_names_only_classes_present():
 
 
 def test_apply_toggles_drops_paper_keeps_packets_logs_receipt(tmp_path, monkeypatch):
-    monkeypatch.setenv("RUNTIME_STATE_DIR", str(tmp_path / "s")); monkeypatch.setenv("RUNTIME_LOGS_DIR", str(tmp_path / "l"))
-    monkeypatch.delenv("WAKE_TOGGLES_REMOTE", raising=False); wt._logged.clear()
+    monkeypatch.setenv("RUNTIME_STATE_DIR", str(tmp_path / "s"))
+    monkeypatch.setenv("RUNTIME_LOGS_DIR", str(tmp_path / "l"))
+    monkeypatch.delenv("WAKE_TOGGLES_REMOTE", raising=False)
+    wt._logged.clear()
     sys.path.insert(0, str(ROOT / "scripts" / "ops"))
     import live_review_wake as w
     monkeypatch.setattr("src.runtime.telegram_policy.account_class", lambda a, accounts=None: CLS(a, "unknown_account"))
@@ -73,7 +75,8 @@ def test_apply_toggles_drops_paper_keeps_packets_logs_receipt(tmp_path, monkeypa
 
 def test_route_get_and_post_auth(tmp_path, monkeypatch):
     from fastapi.testclient import TestClient
-    monkeypatch.setenv("RUNTIME_STATE_DIR", str(tmp_path)); monkeypatch.setenv("DASHBOARD_API_TOKEN", "tok")
+    monkeypatch.setenv("RUNTIME_STATE_DIR", str(tmp_path))
+    monkeypatch.setenv("DASHBOARD_API_TOKEN", "tok")
     from src.web.api.main import app
     c = TestClient(app)
     g = c.get("/api/bot/wake-toggles").json()
@@ -91,10 +94,12 @@ def test_connector_research_queue_and_write_tool_gating(monkeypatch):
     r = s.call_tool("research_queue", {"status": "blocked", "theme": "all", "limit": 5})
     assert r["read_state"] in ("read", "partial") and r["population"]["units_scanned"] > 0
     assert all(x["status"] == "blocked" for x in r["rows"]) and set(r["counts"]) == {"by_status", "by_theme_group", "by_compute"}
-    monkeypatch.delenv("WAKE_TOGGLES_WRITE_TOKEN", raising=False); monkeypatch.delenv("CONSOLE_CONNECTOR_AUTH", raising=False)
+    monkeypatch.delenv("WAKE_TOGGLES_WRITE_TOKEN", raising=False)
+    monkeypatch.delenv("CONSOLE_CONNECTOR_AUTH", raising=False)
     assert not s.write_enabled() and s.call_tool("set_wake_toggle", {"key": "desk_wake", "on": True})["read_state"] == "auth_required"
     assert "set_wake_toggle" not in [t["name"] for t in s.handle({"jsonrpc": "2.0", "id": 1, "method": "tools/list"})["result"]["tools"]]
-    monkeypatch.setenv("CONSOLE_CONNECTOR_AUTH", "google"); monkeypatch.setenv("WAKE_TOGGLES_WRITE_TOKEN", "t")
+    monkeypatch.setenv("CONSOLE_CONNECTOR_AUTH", "google")
+    monkeypatch.setenv("WAKE_TOGGLES_WRITE_TOKEN", "t")
     assert "set_wake_toggle" in [t["name"] for t in s.handle({"jsonrpc": "2.0", "id": 1, "method": "tools/list"})["result"]["tools"]]
 
 
