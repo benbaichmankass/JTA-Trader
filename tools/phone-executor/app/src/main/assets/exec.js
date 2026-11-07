@@ -1230,8 +1230,10 @@
   // fail-closed, no click, no submit. A lane lifts the fence only after capturing the real order form.
   var ORDER_PATH_VERIFIED_ON_NEW_LAYOUT = false;
   function orderPathFenced() {
-    return !ORDER_PATH_VERIFIED_ON_NEW_LAYOUT && !!navBtns().trade && !submitBtn() &&
-      !all("button,[role=tab],[role=button]").some(function (x) { return ORDER_RE.test(t(x)); });
+    // 2026-11-07.5 (manager, real prop money): the fence holds on the WHOLE new layout (the bottom navigation is on the page), with no
+    // exception for an "Order form" control or an open form: the Trade view shows those, they are what the .2 version wrongly
+    // took as proof the order path was known. Nothing measured shows a ticket running end to end on this layout.
+    return !ORDER_PATH_VERIFIED_ON_NEW_LAYOUT && !!navBtns().trade;
   }
   // One throttled tap on the bottom "Trade" button when the nav is there but the trading view's chips are not (the page is on
   // Markets or Activity). Navigation only: never inside an open ticket, never more than once per 20 s.
@@ -1562,6 +1564,7 @@
       return {path_depth: tc.path_depth, trade: tc.trade, chips: tc.chips, headers: out, controls: window.__ex.controls()};
     },
     openTicket: function () {
+      if (orderPathFenced()) return "no_order_control";   // new layout: a ticket is refused before anything is typed
       if (submitBtn()) return "open";
       var b = all("button,[role=tab],[role=button]").filter(function (x) { return ORDER_RE.test(t(x)); })[0];
       if (!b) return "no_order_control"; b.click(); return "clicked";
@@ -1776,6 +1779,7 @@
       return out;
     },
     submit: function () {
+      if (orderPathFenced()) return "none";   // new layout: never press the order button
       var b = submitBtn(); if (!b) return "none";
       if (b.disabled || b.getAttribute("aria-disabled") === "true") return "disabled";
       b.click(); return "clicked";
@@ -1840,6 +1844,7 @@
     },
     // The ONE save/confirm button of the ONE dialog (never close/cancel/remove/flatten/reverse). clicked | none | ambiguous | disabled
     dlgSave: function () {
+      if (orderPathFenced()) return "none";   // new layout: no stop / take-profit edit is saved
       var b = dlgButtons("^\\s*(save|confirm|modify|apply|update|submit|ok)\\b", NOT_EDIT);
       if (!b.length) return "none"; if (b.length > 1) return "ambiguous";
       if (b[0].disabled || b[0].getAttribute("aria-disabled") === "true") return "disabled";
@@ -1877,6 +1882,7 @@
     // deny_*.
     sheetOpen: function (sym, which, mode) {
       if (!hostOk()) return "bad_host";
+      if (orderPathFenced()) return "none";   // new layout: no position sheet is opened for an amend
       if (sheetRoots().length) return "sheet_open";
       var h = sheetHit(sym, which); if (typeof h === "string") return h;
       window.__exTap = h;
@@ -2096,6 +2102,7 @@
     },
     // The modal's ONE "Confirm" button. clicked | none | ambiguous | disabled | deny_*
     modalConfirm: function () {
+      if (orderPathFenced()) return "none";   // new layout: no confirm
       var ms = modalRoot(); if (ms.length !== 1) return "none";
       var b = Array.prototype.slice.call(ms[0].root.querySelectorAll("button,[role=button]")).filter(function (x) { return vis(x) && /^confirm$/i.test(t(x)); });
       if (!b.length) return "none"; if (b.length > 1) return "ambiguous";
@@ -2140,6 +2147,7 @@
     allowClose: function (sym) { window.__exCloseArm = {sym: norm(sym || ""), at: Date.now()}; return "armed"; },
     sheetClosePosition: function (sym) {
       var arm = window.__exCloseArm; window.__exCloseArm = null;
+      if (orderPathFenced()) return "not_armed";   // new layout: no position is closed
       if (!arm || !arm.sym || arm.sym !== norm(sym || "") || Date.now() - arm.at > 15000) return "not_armed";
       var r = sheetRoot(); if (!r) return "no_sheet";
       var b = base(sym).replace(/[^A-Z0-9]/g, "");
@@ -2149,6 +2157,7 @@
       btns[0].click(); return "clicked";
     },
     rowClose: function (sym, sideRe) {
+      if (orderPathFenced()) return "none";   // new layout: no position is closed
       var n = norm(sym); var rx = new RegExp(sideRe, "i");
       var r = all("tr,[role=row]").filter(function (r) { var s = t(r); return norm(s).indexOf(n) >= 0 && rx.test(s); })[0];
       if (!r) return "none";
