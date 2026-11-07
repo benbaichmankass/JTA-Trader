@@ -1,0 +1,251 @@
+{
+  "leg": "trend_donchian_eth_prop",
+  "grade": {
+    "verdict": "fail",
+    "label": "no_reachable_lever_beats_removed",
+    "baseline": "A",
+    "candidates": {
+      "T3": {
+        "delta_net_r": 6.2571,
+        "delta_max_drawdown_r": 2.7114,
+        "fold_wins": 3,
+        "passes": false
+      }
+    },
+    "delta_r_bar": 5.0,
+    "fold_majority": 3,
+    "n_floor": 39,
+    "control": null,
+    "why": "no candidate clears the bar: honest negative for the lever settings tested on these legs and this window -- removing those config lines is a Tier-3 proposal (not done here); it closes these CONFIGURATIONS, not the lever family (family retirement needs a review record, scripts/research/family_retirement_policy.yaml)"
+  },
+  "arms": {
+    "A": {
+      "reach_ge_6r": 0.0,
+      "n": 837,
+      "net_r": -13.2582,
+      "net_r_fee_only": 7.421,
+      "max_drawdown_r": 27.6737,
+      "by_outcome": {
+        "trail_stop": 595,
+        "stop": 176,
+        "take_profit": 65,
+        "timeout": 1
+      },
+      "mean_bars_held": 12.8,
+      "net_r_per_capital_day": -0.0297,
+      "cost_stack": {
+        "fee_bps_roundtrip": 7.5,
+        "slippage_bps_roundtrip": 5.0,
+        "funding_bps_per_window": 1.0
+      },
+      "params": {
+        "donchian": 20,
+        "atr_stop_mult": 2.5,
+        "trail_mult": 3.5,
+        "min_confidence": 0.6,
+        "trail_decay_arm_r": 2.99,
+        "trail_decay_stall_bars": 10,
+        "trail_decay_tight_mult": 1.8
+      },
+      "data_start": "2021-09-24 00:00:00+00:00",
+      "data_end": "2026-10-26 23:00:00+00:00",
+      "folds": [
+        {
+          "fold": 1,
+          "start": "2021-09-24 00:00:00+00:00",
+          "end": "2023-01-01 17:45:00+00:00",
+          "trades": 195,
+          "net_r": 2.8108
+        },
+        {
+          "fold": 2,
+          "start": "2023-01-01 17:45:00+00:00",
+          "end": "2024-04-10 11:30:00+00:00",
+          "trades": 201,
+          "net_r": -14.5428
+        },
+        {
+          "fold": 3,
+          "start": "2024-04-10 11:30:00+00:00",
+          "end": "2025-07-19 05:15:00+00:00",
+          "trades": 222,
+          "net_r": 1.2341
+        },
+        {
+          "fold": 4,
+          "start": "2025-07-19 05:15:00+00:00",
+          "end": "2026-10-26 23:00:00+00:00",
+          "trades": 219,
+          "net_r": -2.7609
+        }
+      ],
+      "argv": [
+        "/opt/hostedtoolcache/Python/3.11.18/x64/bin/python3",
+        "/home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_trend.py",
+        "--donchian",
+        "20",
+        "--data",
+        "<data>",
+        "--symbol",
+        "DOGEUSDT",
+        "--resample",
+        "1h",
+        "--atr-period",
+        "14",
+        "--atr-stop-mult",
+        "2.5",
+        "--trail-mult",
+        "3.5",
+        "--min-confidence",
+        "0.6",
+        "--fee-bps-roundtrip",
+        "7.5",
+        "--emit-trades",
+        "comms/research/RQ-20261107-47b6-15/42389160423/arms/A__trades.jsonl",
+        "--json",
+        "comms/research/RQ-20261107-47b6-15/42389160423/arms/A__bt.json",
+        "--trail-decay-arm-r",
+        "2.99",
+        "--trail-decay-stall-bars",
+        "10",
+        "--trail-decay-tight-mult",
+        "1.8",
+        "--tp-cap-pct",
+        "0.099",
+        "--tp-r",
+        "6.0",
+        "--slippage-bps-roundtrip",
+        "5.0",
+        "--funding-bps-per-window",
+        "1.0",
+        "--start",
+        "2021-09-24",
+        "--end",
+        "2026-10-26 23:00"
+      ]
+    },
+    "T3": {
+      "reach_ge_6r": 0.0,
+      "n": 838,
+      "net_r": -7.0011,
+      "net_r_fee_only": 13.6373,
+      "max_drawdown_r": 30.3851,
+      "by_outcome": {
+        "trail_stop": 553,
+        "stop": 176,
+        "take_profit": 108,
+        "timeout": 1
+      },
+      "mean_bars_held": 12.705,
+      "net_r_per_capital_day": -0.0158,
+      "cost_stack": {
+        "fee_bps_roundtrip": 7.5,
+        "slippage_bps_roundtrip": 5.0,
+        "funding_bps_per_window": 1.0
+      },
+      "params": {
+        "donchian": 20,
+        "atr_stop_mult": 2.5,
+        "trail_mult": 3.5,
+        "min_confidence": 0.6,
+        "trail_decay_arm_r": 2.99,
+        "trail_decay_stall_bars": 10,
+        "trail_decay_tight_mult": 1.8
+      },
+      "data_start": "2021-09-24 00:00:00+00:00",
+      "data_end": "2026-10-26 23:00:00+00:00",
+      "folds": [
+        {
+          "fold": 1,
+          "start": "2021-09-24 00:00:00+00:00",
+          "end": "2023-01-01 17:45:00+00:00",
+          "trades": 195,
+          "net_r": 5.6118
+        },
+        {
+          "fold": 2,
+          "start": "2023-01-01 17:45:00+00:00",
+          "end": "2024-04-10 11:30:00+00:00",
+          "trades": 202,
+          "net_r": -17.2358
+        },
+        {
+          "fold": 3,
+          "start": "2024-04-10 11:30:00+00:00",
+          "end": "2025-07-19 05:15:00+00:00",
+          "trades": 222,
+          "net_r": 2.0789
+        },
+        {
+          "fold": 4,
+          "start": "2025-07-19 05:15:00+00:00",
+          "end": "2026-10-26 23:00:00+00:00",
+          "trades": 219,
+          "net_r": 2.5434
+        }
+      ],
+      "argv": [
+        "/opt/hostedtoolcache/Python/3.11.18/x64/bin/python3",
+        "/home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_trend.py",
+        "--donchian",
+        "20",
+        "--data",
+        "<data>",
+        "--symbol",
+        "DOGEUSDT",
+        "--resample",
+        "1h",
+        "--atr-period",
+        "14",
+        "--atr-stop-mult",
+        "2.5",
+        "--trail-mult",
+        "3.5",
+        "--min-confidence",
+        "0.6",
+        "--fee-bps-roundtrip",
+        "7.5",
+        "--emit-trades",
+        "comms/research/RQ-20261107-47b6-15/42389160423/arms/T3__trades.jsonl",
+        "--json",
+        "comms/research/RQ-20261107-47b6-15/42389160423/arms/T3__bt.json",
+        "--trail-decay-arm-r",
+        "2.99",
+        "--trail-decay-stall-bars",
+        "10",
+        "--trail-decay-tight-mult",
+        "1.8",
+        "--tp-cap-pct",
+        "0.099",
+        "--tp-r",
+        "3.0",
+        "--slippage-bps-roundtrip",
+        "5.0",
+        "--funding-bps-per-window",
+        "1.0",
+        "--start",
+        "2021-09-24",
+        "--end",
+        "2026-10-26 23:00"
+      ]
+    }
+  },
+  "window": {
+    "start": "2021-09-24",
+    "end": "2026-10-26 23:00",
+    "fetch_days": 2330,
+    "feed": {
+      "source": "binance",
+      "ticker": "DOGEUSDT",
+      "interval": "60",
+      "resample": "1h"
+    },
+    "fold_edges": [
+      "2021-09-24 00:00:00+00:00",
+      "2023-01-01 17:45:00+00:00",
+      "2024-04-10 11:30:00+00:00",
+      "2025-07-19 05:15:00+00:00",
+      "2026-10-26 23:00:00+00:00"
+    ]
+  }
+}

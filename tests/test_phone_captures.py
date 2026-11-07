@@ -187,3 +187,30 @@ def test_purge_cli_and_timer_unit_are_wired():
     pc.store_capture("breakout_2", _body(run_id="old-run"), now=now - timedelta(days=9))
     assert pc.main(["--purge"]) == 0
     assert pc.list_runs("breakout_2")["count"] == 0
+
+
+# PHONE-SELF-SCREENSHOTS: the flows the app really posts are all accepted. "closed" was posted by the app from the start
+# but was missing from FLOWS, so every Closed-orders miss capture answered 400 and the heartbeat carried
+# capture_err post:* 400 for days (MEASURED 2026-11-07: 17 stored runs, none of flow closed).
+@pytest.mark.parametrize("flow", ["entry", "amend", "drill", "positions", "closed", "anomaly", "periodic", "login", "probe"])
+def test_every_flow_the_app_posts_is_stored(flow):
+    r = pc.store_capture("breakout_2", _body(run_id=f"{flow}-na-20261107T120000Z", flow=flow, step="terminal_miss", seq=0))
+    assert r["ok"] is True and r["stored"] is True and r["capture"]["flow"] == flow and r["capture"]["image"]
+    got = pc.get_run("breakout_2", f"{flow}-na-20261107T120000Z")
+    assert got and got["steps"][0]["step"] == "terminal_miss"
+
+
+def test_an_unknown_flow_is_still_refused():
+    with pytest.raises(ValueError, match="flow must be one of"):
+        pc.store_capture("breakout_2", _body(run_id="bogus-na-20261107T120000Z", flow="bogus"))
+
+
+def test_the_apps_flow_names_are_all_known_to_the_server():
+    """Every CaptureRun("<flow>", ...) in the Kotlin source is a flow the server accepts (the check that would have caught
+    the 'closed' 400)."""
+    import re
+    from pathlib import Path
+    src = "".join(p.read_text() for p in Path("tools/phone-executor/app/src/main/java").rglob("*.kt"))
+    used = set(re.findall(r'CaptureRun\("([a-z]+)"', src))
+    assert used, "no CaptureRun call found: the pattern is stale"
+    assert used <= set(pc.FLOWS), f"flows the app posts but the server refuses: {sorted(used - set(pc.FLOWS))}"

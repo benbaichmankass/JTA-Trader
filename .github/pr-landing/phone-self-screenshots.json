@@ -1,0 +1,7 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "hold_reason": "tier_2_3_needs_approval",
+  "hold_text": "Phone-executor app (Kotlin, MainActivity/Capture) and the capture store (src/prop/phone_captures.py), Tier 2. Diagnostic/read only: the server half adds three flow names to an allowlist (closed, anomaly, periodic) so uploads stop answering 400; the app half takes its own off-screen WebView image whenever the page is not a credential screen, always with the redaction boxes and never without them, on a terminal miss and every 10 minutes. No claim gate, terminal().ready, order, amend or cancel path is touched. The server half alone fixes the 400 for the ALREADY installed app (flow closed); the new captures need an APK build and one operator install.",
+  "why": "Operator 2026-11-07: the app should take the screenshots itself and send them to the VM. MEASURED root cause of capture_err post:* 400: the app posts flow closed after every unclean Closed-orders read, but the server FLOWS tuple lacked it (17 stored runs, flows positions 9 / amend 5 / entry 3, none closed, newest 2026-11-05T22:17Z). The terminal-miss paths never called cap() at all, and the bitmap gate waited for lastState logged_in and a ready terminal, which an unrecognised layout never satisfies."
+}

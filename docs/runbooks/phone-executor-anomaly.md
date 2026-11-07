@@ -58,8 +58,22 @@ Symptom: `terminal_miss "tabs=4 inputs=0 probe=false"` every minute from 2026-11
 
 **Follow-up `2026-11-07.3` (same day):** after `.2` loaded, the background read still ended `bg_last logged_in+busy` and posted NO miss. By the code (`readAccount`): "busy" is `terminal()` returning null, not ready, or a ticket form open; a miss is posted only when `terminal()` answers `ready:false`; the `form:` suffix was absent. The only state that is both busy and silent is a null `terminal()` (a page-side error, or a result lost to a navigation), and `.2` was the first version to tap the bottom Trade button from inside `terminal()`. `.3`: the tap never happens on a page younger than 25 s, runs in a `setTimeout` AFTER `terminal()` has returned, and `terminal()` can no longer throw (an error comes back as `err`). The dump now carries a `term:` line (`term:r<ready> n<newLayout> v<newRead> k:<kick> [e:<err>] a<page age s>`) so the next silent failure explains itself. Whether that was the cause is NOT yet established: it is the inference from the code; the next background job on `.3` settles it.
 
+## 7b. Screenshots the app takes itself (PHONE-SELF-SCREENSHOTS, operator 2026-11-07)
+
+The app draws its OWN WebView to an off-screen bitmap (no system screenshot, nothing on screen), paints black boxes over every masked value, and POSTs it with a sanitised DOM snapshot to `POST /api/bot/prop/phone/capture` (stored on the VM only, 7-day TTL, never in git). **The only gate is "is this a credential screen"** (`Capture.credentialScreen`: off the trade host, a password / e-mail field, a code step, a challenge). `FLAG_SECURE` (system screenshots / recents) and "the terminal reads ready" do **not** gate it, and no image is taken without its redaction list (the snapshot of the same page).
+
+When it captures: **(a)** on every `terminal_miss`, foreground and background, flow `anomaly` step `terminal_miss`, once per new page shape (`shape:<hash>`) then at most every 30 min; **(b)** every 10 min while the terminal is open, flow `periodic` step `view` (one run holds 60 steps); **(c)** at each step of the existing flows (`entry`, `amend`, `drill`, `positions`, `closed`).
+
+**How a lane reads them** (diag tier; `scripts/ops/diag_fetch.sh` carries the credential):
+1. List: `bash scripts/ops/diag_fetch.sh "/api/diag/phone_captures?account_id=breakout_2&limit=20"` -> `runs[]` (`run_id`, `flow`, `steps`, `failed`, `images`, `first_at`, `app_version`). `phone_captures_last` on `/api/bot/prop/status` names the newest run.
+2. One run: `bash scripts/ops/diag_fetch.sh "/api/diag/phone_capture?account_id=breakout_2&run_id=<run_id>"` -> `steps[]` with the `image` and `dom` file names.
+3. A file: `GET /api/diag/phone_capture_file?account_id=breakout_2&run_id=<run_id>&name=<NNN-step>.jpg` (image) or `.dom.json` (the sanitised DOM tree). The image route is binary: fetch it with the same credential and open it with the Read tool.
+Never copy a capture image into git or a PR (public repo): describe what it shows.
+
+**The 400 that blocked every upload (root cause, MEASURED 2026-11-07):** the app posts flow `closed` after every unclean Closed-orders read, but the server's `FLOWS` tuple lacked it, so each one answered 400 `flow must be one of ...`; the heartbeat showed `capture_err post:* 400` (`http` is scrubbed to `*`). 17 runs were stored in total, flows `positions` 9 / `amend` 5 / `entry` 3, none `closed`, the newest 2026-11-05 22:17Z. Fixed by adding `closed`, `anomaly`, `periodic` to `FLOWS`; `tests/test_phone_captures.py::test_the_apps_flow_names_are_all_known_to_the_server` fails if the app ever posts a flow the server refuses.
+
 ## 8. Known limits
 
-- No native masked screenshot yet (needs an APK): the sanitised structure is the evidence today. `FLAG_SECURE` is on until a tick reads `logged_in` (`MainActivity.setSecure`), so operator screenshots can also fail on that.
+- Images are redacted on the device by exec.js's mask list (account ids, balances, equity, P&L): a value the masker does not know is NOT hidden, so check an image before quoting it. The operator's own system screenshots are a different path (`FLAG_SECURE`, on until a tick reads `logged_in`, `MainActivity.setSecure`); the app's own captures do not depend on it.
 - Expectation failures the page script cannot see (a Kotlin exception) arrive only as `error` events with a short reason.
 - `ready` stays strict by design: after an unrecognised page the app reads nothing until a lane adapts it, which is what the alert is for.
