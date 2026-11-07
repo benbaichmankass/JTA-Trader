@@ -214,3 +214,25 @@ def test_the_apps_flow_names_are_all_known_to_the_server():
     used = set(re.findall(r'CaptureRun\("([a-z]+)"', src))
     assert used, "no CaptureRun call found: the pattern is stale"
     assert used <= set(pc.FLOWS), f"flows the app posts but the server refuses: {sorted(used - set(pc.FLOWS))}"
+
+
+def test_purge_runs_deletes_only_named_runs_and_dry_run_default(tmp_path):
+    from src.prop import phone_captures as pc
+    a = tmp_path / "breakout_2"
+    for r in ("run-aaa", "run-bbb", "run-ccc"):
+        (a / r).mkdir(parents=True)
+        (a / r / "001-x.json").write_text("{}")
+    other = tmp_path / "other_acct" / "run-aaa"
+    other.mkdir(parents=True)
+    # dry run: nothing deleted
+    d = pc.purge_runs("breakout_2", ["run-aaa", "run-bbb", "nope-zzz"], root=tmp_path)
+    assert d["would_remove"] == ["run-aaa", "run-bbb"] and d["missing"] == ["nope-zzz"] and not d["removed"]
+    assert (a / "run-aaa").exists()
+    # apply: only the named ones go; the unnamed run and another account's same-named run stay
+    r = pc.purge_runs("breakout_2", ["run-aaa", "run-bbb", "../x", "a/b"], apply=True, root=tmp_path)
+    assert r["removed"] == ["run-aaa", "run-bbb"] and set(r["refused"]) == {"../x", "a/b"}
+    assert (a / "run-ccc").exists() and other.exists()
+    assert not (a / "run-aaa").exists()
+    import pytest
+    with pytest.raises(ValueError):
+        pc.purge_runs("../etc", ["run-ccc"], root=tmp_path)

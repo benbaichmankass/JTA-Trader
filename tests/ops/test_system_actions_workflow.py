@@ -287,6 +287,8 @@ EXPECTED_ACTIONS = {
     "backfill-intent-reduce-pnl": "backfill_intent_reduce_pnl_action.sh",
     "backfill-own-fill-exits": "backfill_own_fill_exits_action.sh",
     "prune-db-backups": "prune_db_backups.sh",
+    # 2026-11-07 — delete NAMED phone capture runs of one account (operator: purge images that showed an unmasked amount). Tier 2, dry-run default.
+    "purge-phone-captures": "purge_phone_captures_action.sh",
     # 2026-11-02 — VM-SPARSE-SYNC one-time recovery; piped over ssh stdin.
     "vm-sparse-bootstrap": "vm_sparse_bootstrap.sh",
     # 2026-07-06 — one-shot repair of the mis-linked ETH prop close
@@ -486,6 +488,7 @@ TIER_2_ACTIONS = {
     "backfill-intent-reduce-pnl",
     "backfill-own-fill-exits",
     "prune-db-backups",
+    "purge-phone-captures",
     "vm-sparse-bootstrap",
     "fix-prop-mislinked-close",
     "prop-ticket-expire",
