@@ -281,6 +281,35 @@ def purge_expired(*, ttl_days: float = TTL_DAYS, now: Optional[datetime] = None,
     return out
 
 
+def purge_runs(account_id: str, run_ids: List[str], *, apply: bool = False, root: Optional[Path] = None) -> Dict[str, Any]:
+    """Delete the NAMED capture runs of ONE account (the operator's purge, 2026-11-07: images that showed an
+    unmasked amount). Only ``<root>/<account>/<run_id>`` directories are ever touched: both ids are shape-checked
+    (no separators, no dots-only), the target must be a real directory (not a symlink) directly under the account
+    directory. ``apply=False`` lists what WOULD go. Returns ``removed`` / ``missing`` / ``refused``; the caller logs it."""
+    root = root or captures_root()
+    acct = str(account_id or "")
+    if not _ACCT_RE.match(acct):
+        raise ValueError("account_id invalid")
+    out: Dict[str, Any] = {"account_id": acct, "apply": bool(apply), "removed": [], "would_remove": [], "missing": [], "refused": []}
+    acct_dir = root / acct
+    for rid in dict.fromkeys(str(r or "").strip() for r in run_ids):
+        if not rid:
+            continue
+        if not _RUN_RE.match(rid):
+            out["refused"].append(rid)
+            continue
+        run_dir = acct_dir / rid
+        if run_dir.is_symlink() or not run_dir.is_dir() or run_dir.parent != acct_dir:
+            out["missing"].append(rid)
+            continue
+        if apply:
+            shutil.rmtree(run_dir, ignore_errors=False)
+            out["removed"].append(rid)
+        else:
+            out["would_remove"].append(rid)
+    return out
+
+
 def maybe_purge(account_id: str, *, now: Optional[datetime] = None) -> bool:
     """Run :func:`purge_expired` at most once per :data:`PURGE_EVERY_S` (a marker file beside the store)."""
     now = now or _now()
