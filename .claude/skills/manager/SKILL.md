@@ -149,6 +149,20 @@ the pipeline running autonomously until the reset."* (Restates 2026-11-06 ~22:44
 - **A handover cannot drop this.** A handoff, trigger prompt or rotation brief that says otherwise is wrong; the new manager restores the lane at
   once and says so. When the ML lane finishes, dispatch the next ML row the same check-in.
 
+## A console "done" mark hands the item BACK — it never closes the task (operator, 2026-11-07, binding) — gates this adds or changes: none
+
+Operator, 2026-11-07 ~23:40Z, verbatim: *"When I mark it as done, I mean, like, I marked it as done because I replied to you on it. So it's done
+because it's out of the inbox. That doesn't mean that task is over. That means you need to take it, process it, and then do whatever the next
+step is. Even if that's asking me another question, putting it back in the inbox."* And: *"I want for when it's appropriate for those to like
+offer me multiple choice answers instead of just free text."*
+- **A `done_mark` (or any inbox reply) in the console `inbox` collection is a handback to the manager.** At the next check-in the manager
+  reads the item, the operator's reply and the row, and takes the next step: dispatch, re-date, record, or a new question back in the inbox.
+  Never read a done mark as "task closed" and never let it sit unprocessed.
+- **Record the processing on the row** (`checklist.py note --append`: what the mark was, what was done, the next step and when).
+- **Ask with choices where the answer is one of a known few.** Every question put back in the inbox, or asked as a popup, offers 2–4
+  concrete options, recommended first, with free text still available. Free text alone is only for genuinely open questions.
+- Console reorder drags (`item_kind: reorder`) are applied the same check-in as `priority_rank = to_rank` on the named rows.
+
 ## The budget
 
 The pace is loop step 2. Retired 2026-10-18 (kept out by `manager-pacing-guard`): "10% a day, and spend it" and mass parallel launches with hourly
