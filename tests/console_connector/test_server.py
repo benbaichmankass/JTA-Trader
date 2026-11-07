@@ -24,7 +24,8 @@ def test_notification_has_no_response():
 
 def test_every_tool_is_declared_read_only():
     tools = server.handle({"jsonrpc": "2.0", "id": 1, "method": "tools/list"})["result"]["tools"]
-    assert {t["name"] for t in tools} == {"hello", "work_rows", "inbox", "work_items", "workplan", "ml_roadmap", "system_catalog"}
+    assert {t["name"] for t in tools} == {"hello", "work_rows", "inbox", "work_items", "workplan", "ml_roadmap", "system_catalog",
+                                      "research_queue", "wake_toggles"}  # set_wake_toggle only with sign-in + write token
     for t in tools:
         assert t["annotations"]["readOnlyHint"] is True
         assert t["annotations"]["destructiveHint"] is False

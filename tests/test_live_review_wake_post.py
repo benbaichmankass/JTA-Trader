@@ -330,3 +330,17 @@ def test_the_actions_poller_lands_evidence_and_marks_a_failure_loudly():
     body = wake.render(p, NOW, "run", bundles)
     assert "ltr-packet" not in body and "**could_not_commit**" in body
     assert wake.parse_markers([{"body": body}])[0]["entries"][0]["packet_state"] == "could_not_commit"
+
+
+import pytest as _pytest_wt  # noqa: E402
+
+
+@_pytest_wt.fixture(autouse=True)
+def _wake_switches_all_on(tmp_path, monkeypatch):
+    """These tests exercise posting; the console switches default some types OFF (src/runtime/wake_toggles.py)."""
+    from src.runtime import wake_toggles as _wt
+    monkeypatch.setenv("RUNTIME_STATE_DIR", str(tmp_path / "_wt_state"))
+    monkeypatch.setenv("RUNTIME_LOGS_DIR", str(tmp_path / "_wt_logs"))
+    monkeypatch.delenv("WAKE_TOGGLES_REMOTE", raising=False)
+    for _k in _wt.TOGGLES:
+        _wt.set_toggle(_k, True, "test")

@@ -137,3 +137,17 @@ def test_config_on_disk_names_claude_desk_first():
 
 def test_kick_is_a_noop_off_the_live_trader():
     assert sh.kick() is False
+
+
+import pytest as _pytest_wt  # noqa: E402
+
+
+@_pytest_wt.fixture(autouse=True)
+def _wake_switches_all_on(tmp_path, monkeypatch):
+    """These tests exercise posting; the console switches default some types OFF (src/runtime/wake_toggles.py)."""
+    from src.runtime import wake_toggles as _wt
+    monkeypatch.setenv("RUNTIME_STATE_DIR", str(tmp_path / "_wt_state"))
+    monkeypatch.setenv("RUNTIME_LOGS_DIR", str(tmp_path / "_wt_logs"))
+    monkeypatch.delenv("WAKE_TOGGLES_REMOTE", raising=False)
+    for _k in _wt.TOGGLES:
+        _wt.set_toggle(_k, True, "test")

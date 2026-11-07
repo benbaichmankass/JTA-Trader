@@ -27,7 +27,8 @@ LOG = Path(os.environ.get("CONSOLE_CONNECTOR_LOG") or REPO / "runtime_logs" / "c
 PROTOCOL_DEFAULT = "2025-06-18"
 CACHE = data.TTLCache()
 TTL_S = {"work_rows": 30.0, "inbox": 30.0, "work_items": 30.0, "workplan": 60.0, "ml_roadmap": 120.0,
-         "performance": 300.0, "system_health": 60.0, "data_query": 30.0, "system_catalog": 300.0}
+         "performance": 300.0, "system_health": 60.0, "data_query": 30.0, "system_catalog": 300.0,
+         "research_queue": 60.0, "wake_toggles": 10.0}
 #: Tools that serve P&L, journal rows or live-VM state: registered ONLY when CONSOLE_CONNECTOR_AUTH=google
 #: (the sign-in is on), so they never serve over the authless tunnel. workplan and ml_roadmap carry only
 #: public-register data (repo files) and are always available.
@@ -97,11 +98,77 @@ TOOLS: list[dict[str, Any]] = [
          "time_column": {"type": "string"}, "order": {"type": "string", "enum": ["asc", "desc"]},
          "limit": {"type": "integer", "minimum": 1, "maximum": 500, "default": 100},
          "offset": {"type": "integer", "minimum": 0}}}, "annotations": _RO},
+    {"name": "research_queue", "title": "Research queue",
+     "description": "Every research/queue unit: id, title, status (queued/running/done/blocked), kind, theme group (ml/trading), "
+                    "harness, compute (GitHub/trainer), last run and result pointer. counts cover the full population; rows are the "
+                    "filtered page (status: pipeline|queued|running|done|blocked|all; theme: all|ml|trading). Every response has as_of, read_state and population.",
+     "inputSchema": {"type": "object", "properties": {
+         "status": {"type": "string", "enum": ["pipeline", "queued", "running", "done", "blocked", "all"], "default": "pipeline"},
+         "theme": {"type": "string", "enum": ["all", "ml", "trading"], "default": "all"},
+         "limit": {"type": "integer", "minimum": 1, "maximum": 300, "default": 150},
+         "offset": {"type": "integer", "minimum": 0}}}, "annotations": _RO},
+    {"name": "wake_toggles", "title": "Wake switches",
+     "description": "Which wake notifications reach the manager session (live from the trader VM's GET /api/bot/wake-toggles).",
+     "inputSchema": {"type": "object", "properties": {}}, "annotations": _RO},
     {"name": "work_items", "title": "Work-store items",
      "description": "Work-store items (WORK-STORE S1). Reports could_not_look until that route is live.",
      "inputSchema": {"type": "object", "properties": {}}, "annotations": _RO},
 ]
-_TOOL_NAMES = {t["name"] for t in TOOLS}
+#: The ONLY write tool on this otherwise read-only connector (operator 2026-11-07: wake switches must be flippable
+#: from the console). Listed and callable only when write_enabled() (Google sign-in + a configured write token);
+#: it changes which comments wake a session, nothing else. Gates this adds or changes: none.
+WRITE_TOOL = {"name": "set_wake_toggle", "title": "Flip a wake switch",
+              "description": "Turn one wake-notification switch on or off on the trader VM (POST /api/bot/wake-toggles). Logged with who/when.",
+              "inputSchema": {"type": "object", "required": ["key", "on"], "properties": {
+                  "key": {"type": "string"}, "on": {"type": "boolean"}}},
+              "annotations": {"readOnlyHint": False, "destructiveHint": False, "idempotentHint": True, "openWorldHint": True}}
+_TOOL_NAMES = {t["name"] for t in TOOLS} | {WRITE_TOOL["name"]}
+
+
+WAKE_API = os.environ.get("WAKE_TOGGLES_API") or "https://ict-bot.duckdns.org/api/bot/wake-toggles"
+
+
+def wake_toggles_read() -> dict[str, Any]:
+    """Live read of the VM's switches (public GET). ``could_not_look`` is a state, never 'all off'."""
+    import urllib.request
+    try:
+        req = urllib.request.Request(WAKE_API, headers={"User-Agent": "jta-console-connector"})
+        with urllib.request.urlopen(req, timeout=8) as r:  # noqa: S310 fixed https URL
+            doc = json.loads(r.read())
+        doc["as_of"] = data._iso(data._now())
+        doc["write_enabled"] = write_enabled()
+        return doc
+    except Exception as exc:  # noqa: BLE001
+        return {"as_of": data._iso(data._now()), "read_state": "could_not_look", "error": type(exc).__name__,
+                "toggles": None, "rows": [], "write_enabled": write_enabled(),
+                "population": {"switches": None}, "note": "could not reach the trader VM; posters post when unreadable"}
+
+
+def write_enabled() -> bool:
+    """The ONE write tool is offered only behind the Google sign-in AND a configured write token."""
+    return auth_active() and bool(os.environ.get("WAKE_TOGGLES_WRITE_TOKEN", "").strip())
+
+
+def wake_toggle_write(args: dict[str, Any]) -> dict[str, Any]:
+    import urllib.request
+    if not write_enabled():
+        return {"as_of": data._iso(data._now()), "read_state": "auth_required", "tool": "set_wake_toggle",
+                "reason": "needs CONSOLE_CONNECTOR_AUTH=google and WAKE_TOGGLES_WRITE_TOKEN on the connector host"}
+    key, on = args.get("key"), args.get("on")
+    if not isinstance(key, str) or not isinstance(on, bool):
+        return {"as_of": data._iso(data._now()), "read_state": "bad_request", "reason": "key (string) and on (boolean) required"}
+    body = json.dumps({"key": key, "on": on, "by": "console (operator Google sign-in)"}).encode()
+    req = urllib.request.Request(WAKE_API, data=body, method="POST", headers={
+        "Authorization": "Bearer " + os.environ["WAKE_TOGGLES_WRITE_TOKEN"].strip(),
+        "Content-Type": "application/json", "User-Agent": "jta-console-connector"})
+    try:
+        with urllib.request.urlopen(req, timeout=10) as r:  # noqa: S310
+            doc = json.loads(r.read())
+        CACHE.get("wake_toggles", 0.0, lambda: doc)  # next read is fresh
+        doc["as_of"] = data._iso(data._now())
+        return doc
+    except Exception as exc:  # noqa: BLE001
+        return {"as_of": data._iso(data._now()), "read_state": "could_not_write", "error": type(exc).__name__}
 
 
 def _clamp(v: Any, lo: int, hi: int, default: int) -> int:
@@ -128,6 +195,14 @@ def call_tool(name: str, args: dict[str, Any]) -> dict[str, Any]:
     if name == "inbox":
         limit = _clamp(args.get("limit"), 1, 200, 25)
         return CACHE.get(f"inbox:{limit}", TTL_S["inbox"], lambda: data.inbox(REPO, limit))
+    if name == "research_queue":
+        a = {k: args.get(k) for k in ("status", "theme", "limit", "offset")}
+        return CACHE.get("research_queue:" + json.dumps(a, sort_keys=True, default=str), TTL_S[name],
+                         lambda: tabs.research_queue(REPO, a))
+    if name == "wake_toggles":
+        return CACHE.get("wake_toggles", TTL_S[name], lambda: wake_toggles_read())
+    if name == "set_wake_toggle":
+        return wake_toggle_write(args)
     if name == "work_items":
         return CACHE.get("work_items", TTL_S["work_items"], data.work_items)
     if name in GATED_TOOLS and not auth_active():
@@ -169,7 +244,8 @@ def handle(msg: dict[str, Any]) -> dict[str, Any] | None:
     elif method == "ping":
         result = {}
     elif method == "tools/list":
-        result = {"tools": [t for t in TOOLS if t["name"] not in GATED_TOOLS or auth_active()]}
+        result = {"tools": [t for t in TOOLS if t["name"] not in GATED_TOOLS or auth_active()]
+                  + ([WRITE_TOOL] if write_enabled() else [])}
     elif method == "tools/call":
         p = msg.get("params") or {}
         name = p.get("name")

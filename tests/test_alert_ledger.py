@@ -282,3 +282,16 @@ def test_detector_report_python_senders_that_bypass_the_chokepoint():
     assert "scripts/ops/send_route_test_ping.py" in c["bypass_ledgered"], "positive control: a known bypass must be seen"
     assert "src/runtime/hourly_report.py" in c["chokepoint"]
     assert ".github/workflows/guards.yml" in c["bypass_ledgered"]
+
+
+import pytest as _pytest_wt  # noqa: E402
+
+
+@_pytest_wt.fixture(autouse=True)
+def _wake_switches_all_on(tmp_path, monkeypatch):
+    from src.runtime import wake_toggles as _wt
+    monkeypatch.setenv("RUNTIME_STATE_DIR", str(tmp_path / "_wt_state"))
+    monkeypatch.setenv("RUNTIME_LOGS_DIR", str(tmp_path / "_wt_logs"))
+    monkeypatch.delenv("WAKE_TOGGLES_REMOTE", raising=False)
+    for _k in _wt.TOGGLES:
+        _wt.set_toggle(_k, True, "test")

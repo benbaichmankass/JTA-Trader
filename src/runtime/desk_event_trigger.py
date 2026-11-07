@@ -47,6 +47,7 @@ from typing import Any, Callable, Dict, List, Optional, Tuple
 
 from src.runtime import desk_packet_wake as dpw
 from src.runtime import live_review_wake_post as ltr_post
+from src.runtime import wake_toggles
 
 logger = logging.getLogger(__name__)
 
@@ -398,6 +399,10 @@ def run_once(*, cfg: Optional[Dict[str, Any]] = None, now_fn: Callable[[], datet
     except Exception as exc:  # noqa: BLE001
         label("could_not_post", packet_id=ptr["packet_id"], reason=type(exc).__name__)
         return done("could_not_post", fired=chosen["key"], packet_id=ptr["packet_id"])
+    if not wake_toggles.is_on("desk_trigger_wake"):  # packet is landed above (data path untouched); only the comment is withheld
+        wake_toggles.log_suppressed("desk_trigger_wake", ptr["packet_id"], commit=sha)
+        label("suppressed_by_wake_toggle", packet_id=ptr["packet_id"], commit=sha)
+        return done("suppressed_by_wake_toggle", fired=chosen["key"], packet_id=ptr["packet_id"], commit=sha)
     entry = {"packet_id": ptr["packet_id"], "packet_sha": ptr["packet_sha"], "path": ptr["path"],
              "built_at": ptr["built_at"], "commit": sha, "poster": "vm",
              "trigger": {k: chosen[k] for k in ("kind", "symbol", "bar", "detail")}}

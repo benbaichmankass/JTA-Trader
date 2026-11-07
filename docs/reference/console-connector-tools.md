@@ -96,3 +96,11 @@ Sections are now `due`, `in_flight`, `blocked`, `queued` (with a due date) and *
 ### `inbox` (changed)
 Items in `decisions_checklist` and `asks_pipeline` gain `options: string[] | null`: the source `blocked_on` edge / row / pipeline item's
 `options` (or `choices`) labels. Null when the source carries none (today none do), so render a dash.
+
+## Added 2026-11-07 (lane CONSOLE-WAKE-TOGGLES)
+
+Gates this adds or changes: **none.**
+
+- `research_queue` (read-only; `status` pipeline|queued|running|done|blocked|all, `theme` all|ml|trading, `limit`, `offset`): every `research/queue` unit via `src/runtime/research_catalog.py`; `counts` over the full population, `rows` the filtered page; nulls stay null.
+- `wake_toggles` (read-only): live GET of the trader VM's `/api/bot/wake-toggles` (the wake-notification switches); `could_not_look` when the VM is unreachable.
+- `set_wake_toggle` (**the one write tool**): listed and callable only with the Google sign-in AND `WAKE_TOGGLES_WRITE_TOKEN` (= the VM's `DASHBOARD_API_TOKEN`) set on the connector host; forwards to `POST /api/bot/wake-toggles`, logged with who/when. It changes which comments wake a session, nothing that trades.

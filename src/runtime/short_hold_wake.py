@@ -51,6 +51,7 @@ from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Tuple
 
 from src.runtime import live_review_wake_post as ltr_post
+from src.runtime import wake_toggles
 
 logger = logging.getLogger(__name__)
 
@@ -265,7 +266,12 @@ def run_once(*, journal_fn: Optional[Callable[[], Dict[str, Any]]] = None,
     rec["pr"] = pr
     branch, out = cfg["branch"], {}
 
-    def post(entry: Dict[str, Any]) -> Optional[int]:
+    sh_on = wake_toggles.is_on("short_hold")  # read live each pass; unreadable => True (post)
+
+    def post(entry: Dict[str, Any]):
+        if not sh_on:  # packet/envelope still landed; only the comment is withheld
+            wake_toggles.log_suppressed("short_hold", str(entry.get("order_package_id")), kind=entry.get("kind"))
+            return "suppressed"
         code, _ = http("POST", f"{API}/repos/{REPO}/issues/{pr}/comments",
                        json.dumps({"body": render(entry, now)}).encode(), auth)
         return None if code == 201 else code
@@ -279,7 +285,7 @@ def run_once(*, journal_fn: Optional[Callable[[], Dict[str, Any]]] = None,
     for pkg, p in open_now.items():
         s = state.setdefault(pkg, {"leg": p.get("strategy"), "symbol": p.get("symbol"), "side": p.get("direction")})
         s["accounts"] = sorted(set(s.get("accounts") or []) | set(p["accounts"]))
-        if s.get("last_bar") == bar and posted(markers, "short-hold-wake", pkg):
+        if s.get("last_bar") == bar and (posted(markers, "short-hold-wake", pkg) or s.get("suppressed_bar") == bar):
             out[pkg] = "tracking"
             continue
         row = package_fn(pkg)
@@ -304,9 +310,13 @@ def run_once(*, journal_fn: Optional[Callable[[], Dict[str, Any]]] = None,
                      "hard_cap_at": _iso(opened + timedelta(minutes=cfg["hard_cap_minutes"])),
                      "branch": branch, "commit": sha, "bar": s["last_bar"]}
             pc = post(entry)
-            out[pkg] = "wake_posted" if pc is None else f"could_not_post: http {pc}"
-            if pc is None:
-                markers.append(entry)
+            if pc == "suppressed":
+                s["suppressed_bar"] = bar
+                out[pkg] = "suppressed_by_wake_toggle"
+            else:
+                out[pkg] = "wake_posted" if pc is None else f"could_not_post: http {pc}"
+                if pc is None:
+                    markers.append(entry)
     for pkg, s in state.items():
         if pkg in open_now or s.get("closed_posted"):
             continue
@@ -323,11 +333,11 @@ def run_once(*, journal_fn: Optional[Callable[[], Dict[str, Any]]] = None,
         if not posted(markers, "short-hold-closed", pkg):
             pc = post({"kind": "short-hold-closed", "order_package_id": pkg, "close_reason": row.get("close_reason"),
                        "commit": sha})
-            if pc is not None:
+            if pc is not None and pc != "suppressed":
                 out[pkg] = f"could_not_post: http {pc}"
                 continue
         s["closed_posted"] = _iso(now)
-        out[pkg] = "closed_posted"
+        out[pkg] = "suppressed_by_wake_toggle" if (not sh_on) else "closed_posted"
     try:
         spath.parent.mkdir(parents=True, exist_ok=True)
         spath.write_text(json.dumps(state, indent=1, default=str) + "\n")

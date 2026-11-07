@@ -101,3 +101,17 @@ def test_render_carries_the_health_line_for_a_built_bundle():
                              {"field": "mechanics", "reason": "venue_read_unreachable", "count": 1, "denominator": 1}]}}}}
     body = lrw.render(p, NOW, "run", bundles)
     assert "PACKET HEALTH `pkg-1`: degraded (venue_read_unreachable @ mechanics 1/1)" in body
+
+
+import pytest as _pytest_wt  # noqa: E402
+
+
+@_pytest_wt.fixture(autouse=True)
+def _wake_switches_all_on(tmp_path, monkeypatch):
+    """These tests exercise posting; the console switches default some types OFF (src/runtime/wake_toggles.py)."""
+    from src.runtime import wake_toggles as _wt
+    monkeypatch.setenv("RUNTIME_STATE_DIR", str(tmp_path / "_wt_state"))
+    monkeypatch.setenv("RUNTIME_LOGS_DIR", str(tmp_path / "_wt_logs"))
+    monkeypatch.delenv("WAKE_TOGGLES_REMOTE", raising=False)
+    for _k in _wt.TOGGLES:
+        _wt.set_toggle(_k, True, "test")

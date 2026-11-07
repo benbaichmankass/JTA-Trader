@@ -108,12 +108,16 @@ jobs:
         # `desk-wake` marker on the ops-flags PR (token-free, deduped on the packet id); the manager,
         # subscribed to that PR, create_sessions the wake (trading-desk SKILL 6b). Every hour wakes.
         id: wake
+        env:
+          WAKE_TOGGLES_REMOTE: "1"  # console wake switch, read live over HTTP; unreadable => post
         run: |
           set -o pipefail
           python3 scripts/ops/desk_wake_marker.py post --stage /tmp/stage --commit "$(git -C /tmp/desk rev-parse HEAD)" \
             --run-url "$RUN_URL" --live | tee -a "$GITHUB_STEP_SUMMARY"
       - name: Report a failed build (no wake is posted for it)
         if: failure() && steps.wake.outcome != 'failure' && steps.gate.outputs.skip != 'true'
+        env:
+          WAKE_TOGGLES_REMOTE: "1"  # console switch "desk could_not_build"
         run: |
           STEP="Read the desk book"
           if [ "${{ steps.build.outcome }}" = "failure" ]; then STEP="Build the scan packet"; fi
