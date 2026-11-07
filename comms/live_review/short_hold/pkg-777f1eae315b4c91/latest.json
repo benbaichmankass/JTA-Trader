@@ -1,7 +1,7 @@
 {
- "bar": "2026-11-07T03:25:00Z",
- "bar_close": "2026-11-07T03:30:00Z",
- "built_at": "2026-11-07T03:31:29Z",
+ "bar": "2026-11-07T03:30:00Z",
+ "bar_close": "2026-11-07T03:35:00Z",
+ "built_at": "2026-11-07T03:35:32Z",
  "closed": false,
  "order_package_id": "pkg-777f1eae315b4c91",
  "packet": {
@@ -16,11 +16,11 @@
      "tighten",
      "widen_sl"
     ],
-    "evidence": "bybit_orders: SL 1.2047 / TP 1.1529, position True, matched by order_id; apply paths close, move_tp, reduce, tighten, widen_sl; would_apply = an executor reaches this leg, NOT that its RiskManager approved (LTR-6 gap)",
-    "own_position": true,
+    "evidence": "bybit_orders: SL None / TP None, position False, matched by order_id; apply paths close, move_tp, reduce, tighten, widen_sl; would_apply = an executor reaches this leg, NOT that its RiskManager approved (LTR-6 gap)",
+    "own_position": false,
     "read": null,
     "read_basis": "depends on the recommendation: no_action for hold/no_recommendation, else see read_if_amend",
-    "read_if_amend": "would_apply"
+    "read_if_amend": "unknown"
    }
   ],
   "assembled_by": "generator scripts/ops/live_review_packet.py",
@@ -130,31 +130,31 @@
      "ETHUSDT",
      "short",
      "eth_pullback_prop_2h",
-     -0.25
+     -0.196
     ],
     [
      "ETHUSDT",
      "short",
      "trend_donchian_eth",
-     0.0884
+     0.124
     ],
     [
      "AVAXUSDT",
      "short",
      "avax_pullback_2h",
-     0.196
+     0.261
     ],
     [
      "SOLUSDT",
      "short",
      "sol_pullback_2h",
-     0.0565
+     0.1
     ],
     [
      "ETHUSDT",
      "short",
      "eth_pullback_2h",
-     -0.25
+     -0.196
     ],
     [
      "GLD",
@@ -190,7 +190,7 @@
      "BTCUSDT",
      "short",
      "trend_donchian_1h",
-     0.0343
+     0.0638
     ],
     [
      "AVAXUSDT",
@@ -202,7 +202,7 @@
      "SOLUSDT",
      "short",
      "trend_donchian_sol_4h",
-     2.2
+     2.25
     ]
    ],
    "book_note": "[symbol, direction, leg, open_r (null = not measured)] per OTHER open package, either side",
@@ -590,13 +590,13 @@
    "r_to_target": null
   },
   "generator": {
-   "head": "47a0407e4c",
+   "head": "edce1fefbf",
    "state": "current"
   },
-  "info_cutoff_at": "2026-11-07T03:31:53Z",
+  "info_cutoff_at": "2026-11-07T03:35:44Z",
   "leg": "claude_desk",
   "mechanics": {
-   "evidence": "package sl 1.2047 / tp 1.1529 agree with every readable account",
+   "evidence": "bybit_1: this package's own TP leg 20b43ffe-8796-4288-9f75-4e8f198eea55 FILLED at the venue at 2026-11-07T03:34:38Z (trigger 1.1529, avg 1.1533); its SL leg Deactivated (CancelByTpSlTsClear); the bracket closed the package at the venue, the journal close lags this read",
    "verdict": "match"
   },
   "missing_inputs": [
@@ -653,25 +653,18 @@
    "cell_now": null,
    "trend_now": "trending"
   },
-  "review_id": "LR-20261107T0331Z-pkg-777f1eae315b4c91",
+  "review_id": "LR-20261107T0335Z-pkg-777f1eae315b4c91",
   "short_hold": {
-   "atr": 0.0042357142857143105,
-   "bar": "2026-11-07T03:25:00Z",
-   "bar_close": "2026-11-07T03:30:00Z",
+   "atr": 0.004592857142857176,
+   "bar": "2026-11-07T03:30:00Z",
+   "bar_close": "2026-11-07T03:35:00Z",
    "entry": 1.1853,
-   "mark": 1.1597,
-   "minutes_held": 500.1,
-   "open_r_at_mark": 1.3196,
+   "mark": 1.1528,
+   "minutes_held": 504.2,
+   "open_r_at_mark": 1.6753,
    "r_unit": "entry_to_current_sl",
    "read_state": "read",
    "recent_bars": [
-    {
-     "close": 1.1669,
-     "high": 1.1748,
-     "low": 1.166,
-     "open": 1.1734,
-     "t": "2026-11-07T02:30:00Z"
-    },
     {
      "close": 1.1712,
      "high": 1.1716,
@@ -748,6 +741,13 @@
      "low": 1.1595,
      "open": 1.1602,
      "t": "2026-11-07T03:25:00Z"
+    },
+    {
+     "close": 1.1528,
+     "high": 1.1605,
+     "low": 1.1522,
+     "open": 1.1597,
+     "t": "2026-11-07T03:30:00Z"
     }
    ],
    "risk_per_unit": null,
@@ -766,25 +766,18 @@
    "tp": 1.1529
   }
  },
- "packet_sha": "38c1ea7e43fed9bbaab1f106c456edb352eea3e3107d22a8dfb1740f8f63e418",
+ "packet_sha": "9524334073a7b0b0dcbced963548ff9c2349ffc37f4b6b1eaade9ffabf048716",
  "short_hold": {
-  "atr": 0.0042357142857143105,
-  "bar": "2026-11-07T03:25:00Z",
-  "bar_close": "2026-11-07T03:30:00Z",
+  "atr": 0.004592857142857176,
+  "bar": "2026-11-07T03:30:00Z",
+  "bar_close": "2026-11-07T03:35:00Z",
   "entry": 1.1853,
-  "mark": 1.1597,
-  "minutes_held": 500.1,
-  "open_r_at_mark": 1.3196,
+  "mark": 1.1528,
+  "minutes_held": 504.2,
+  "open_r_at_mark": 1.6753,
   "r_unit": "entry_to_current_sl",
   "read_state": "read",
   "recent_bars": [
-   {
-    "close": 1.1669,
-    "high": 1.1748,
-    "low": 1.166,
-    "open": 1.1734,
-    "t": "2026-11-07T02:30:00Z"
-   },
    {
     "close": 1.1712,
     "high": 1.1716,
@@ -861,6 +854,13 @@
     "low": 1.1595,
     "open": 1.1602,
     "t": "2026-11-07T03:25:00Z"
+   },
+   {
+    "close": 1.1528,
+    "high": 1.1605,
+    "low": 1.1522,
+    "open": 1.1597,
+    "t": "2026-11-07T03:30:00Z"
    }
   ],
   "risk_per_unit": null,
