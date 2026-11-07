@@ -16,13 +16,60 @@ import subprocess
 import threading
 import time
 from collections.abc import Callable
-from datetime import date, datetime, timezone
+from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
 
 ROW_FIELDS = ("id", "title", "state", "owner", "lane", "tier", "due_by", "updated_at", "updated_by", "prs",
               "priority_rank", "roadmap", "week_lane", "writeback")
 LIVE_STATES = ("in_flight", "blocked", "queued", "landed_unproven")
+
+
+CLOSED_STATES = ("done", "dropped", "landed_unproven")
+
+
+def week_start(now: datetime) -> datetime:
+    """Start of the current planning week: the latest Wednesday 18:00Z at or before ``now``."""
+    base = now.astimezone(timezone.utc).replace(hour=18, minute=0, second=0, microsecond=0)
+    base -= timedelta(days=(base.weekday() - 2) % 7)  # Wednesday == 2
+    return base - timedelta(days=7) if base > now else base
+
+
+def closed_this_week(items: list[dict], now: datetime, today: date) -> dict[str, Any]:
+    """Rows closed (done / dropped / landed_unproven) this planning week by updated_at, with counts per
+    week_lane and state. Additive: a separate block, never folded into the open sections."""
+    start = week_start(now)
+    rows, counts = [], {}
+    for r in items:
+        if r.get("state") not in CLOSED_STATES:
+            continue
+        age = _age_hours(r.get("updated_at"), now)
+        if age is None or age < 0 or (now - timedelta(hours=age)) < start - timedelta(minutes=1):
+            continue
+        s = _slim(r, today, now)
+        rows.append(s)
+        lane = str(s.get("week_lane"))
+        counts.setdefault(lane, {})
+        counts[lane][s["state"]] = counts[lane].get(s["state"], 0) + 1
+    rows.sort(key=lambda r: (str(r.get("week_lane")), r["state"], r["id"]))
+    return {"read_state": "read", "week_start": _iso(start), "week_end": _iso(start + timedelta(days=7)),
+            "population": {"rows_scanned": len(items), "closed_rows": len(rows)},
+            "counts_by_week_lane": counts, "rows": rows}
+
+
+def week_lane_totals(items: list[dict]) -> dict[str, Any]:
+    """Every week_lane row in the register (any state): total per lane and per lane x state, so the
+    console can show done / landed_unproven against the full lane total."""
+    out: dict[str, dict] = {}
+    for r in items:
+        lane = r.get("week_lane")
+        if not lane:
+            continue
+        d = out.setdefault(str(lane), {"total": 0, "by_state": {}})
+        d["total"] += 1
+        st = str(r.get("state"))
+        d["by_state"][st] = d["by_state"].get(st, 0) + 1
+    return out
 
 
 def _now() -> datetime:
@@ -155,7 +202,9 @@ def work_rows(repo: Path, view: str = "all", limit: int = 25, today: date | None
             "population": {"rows_scanned": len(items), "live_rows": len(live), "limit_per_section": limit,
                            "offset": offset, "counts": counts, "truncated": truncated,
                            "next_offset": next_offset},
-            "sections": {k: v[offset:offset + limit] for k, v in sections.items()}}
+            "sections": {k: v[offset:offset + limit] for k, v in sections.items()},
+            "closed_this_week": closed_this_week(items, now, today),
+            "week_lane_totals": week_lane_totals(items)}
 
 
 def inbox(repo: Path, limit: int = 25, today: date | None = None) -> dict[str, Any]:
