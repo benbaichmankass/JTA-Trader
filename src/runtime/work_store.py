@@ -76,6 +76,10 @@ WRITABLE_FIELDS = (
 #: ``routed_to``, ``redate``, ...), kept VERBATIM so the importer is lossless and S4 can serve
 #: ``/work/checklist`` in its unchanged shape from the store. Keys starting ``_`` are the
 #: importer's own bookkeeping (``src/runtime/work_store_import.py``), never source fields.
+#: Planning keys a caller may write by name; the store folds each into ``extra`` (where the
+#: importer keeps it, and where ``to_row`` reads it back as a top-level row key). Value ->
+#: allowed set; ``None`` clears the key. (WORK-STORE-WEEK-LANE-WRITABLE.)
+EXTRA_WRITABLE = {"week_lane": ("surge", "throttle", "standing")}
 _JSON_FIELDS = ("roadmap", "due_rule", "origin", "prs", "blocked_on", "extra")
 _COMPUTED = ("due_at", "version", "created_at", "updated_at", "updated_by")
 
@@ -422,8 +426,28 @@ class WorkStore:
         return ev
 
     @staticmethod
+    def _fold_extra_keys(fields: dict, base_extra: dict | None) -> dict:
+        """Pop EXTRA_WRITABLE keys out of ``fields`` and merge them into ``extra``."""
+        fields = dict(fields)
+        named = {k: fields.pop(k) for k in list(fields) if k in EXTRA_WRITABLE}
+        if not named:
+            return fields
+        for k, v in named.items():
+            if v is not None and v not in EXTRA_WRITABLE[k]:
+                raise WorkStoreValidationError(
+                    f"{k}: must be one of {EXTRA_WRITABLE[k]} or null, got {v!r}")
+        extra = dict(fields["extra"] if isinstance(fields.get("extra"), dict) else (base_extra or {}))
+        for k, v in named.items():
+            if v is None:
+                extra.pop(k, None)
+            else:
+                extra[k] = v
+        fields["extra"] = extra or None
+        return fields
+
+    @staticmethod
     def _check_patch_keys(fields: dict) -> None:
-        bad = sorted(k for k in fields if k not in WRITABLE_FIELDS)
+        bad = sorted(k for k in fields if k not in WRITABLE_FIELDS and k not in EXTRA_WRITABLE)
         if bad:
             computed = [k for k in bad if k in _COMPUTED]
             hint = f" ({', '.join(computed)} computed by the store, never accepted)" if computed else ""
@@ -455,6 +479,7 @@ class WorkStore:
         if not _checklist_store()._ID_OK.match(item_id):
             raise WorkStoreValidationError(f"id: {item_id!r} must match [A-Za-z0-9][A-Za-z0-9._-]*")
         self._check_patch_keys(fields)
+        fields = self._fold_extra_keys(fields, None)
         with self._tx() as conn:
             if (r := self._replayed(conn, op_id)) is not None:
                 return r
@@ -486,6 +511,7 @@ class WorkStore:
             prior = self._get(conn, item_id)
             if prior is None:
                 raise NotFoundError(f"no item {item_id!r}")
+            fields = self._fold_extra_keys(fields, prior.get("extra"))
             if expected_version is None:
                 raise WorkStoreValidationError("If-Match: the item version this write is based on is required")
             if int(expected_version) != prior["version"]:

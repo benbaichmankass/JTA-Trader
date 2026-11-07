@@ -338,3 +338,32 @@ def test_api_terminal_build_without_roadmap_is_201(client, monkeypatch):
     r = client.post("/api/bot/work/items", headers={"X-Work-Store-Token": "secret"},
                     json={"id": "WSD-T-1", "kind": "build", "title": "probe", "state": "dropped", "by": "t"})
     assert r.status_code == 201, r.text
+
+
+# ── week_lane writable (WORK-STORE-WEEK-LANE-WRITABLE) ──────────────────────────
+
+
+def test_week_lane_writable_on_create_and_set_and_flows_to_row(store):
+    from src.runtime import work_store_import as wsi
+    it = store.create(_build(week_lane="surge", extra={"note": "n"}), by="t", today=TODAY)["item"]
+    assert it["extra"] == {"note": "n", "week_lane": "surge"}
+    it = store.set("WSD-TEST-1", {"week_lane": "throttle"}, by="t", expected_version=it["version"],
+                   today=TODAY)["item"]
+    assert it["extra"] == {"note": "n", "week_lane": "throttle"}
+    assert wsi.to_row(it)["week_lane"] == "throttle"
+    it = store.set("WSD-TEST-1", {"week_lane": None}, by="t", expected_version=it["version"],
+                   today=TODAY)["item"]
+    assert it["extra"] == {"note": "n"}
+
+
+@pytest.mark.parametrize("bad", ["Surge", "", "weekly", 3])
+def test_week_lane_refuses_unknown_values(store, bad):
+    it = store.create(_build(), by="t", today=TODAY)["item"]
+    with pytest.raises(ws.WorkStoreValidationError, match="week_lane"):
+        store.set("WSD-TEST-1", {"week_lane": bad}, by="t", expected_version=it["version"], today=TODAY)
+
+
+def test_other_unknown_keys_still_refused(store):
+    it = store.create(_build(), by="t", today=TODAY)["item"]
+    with pytest.raises(ws.WorkStoreValidationError, match="not writable"):
+        store.set("WSD-TEST-1", {"bogus": 1}, by="t", expected_version=it["version"], today=TODAY)
