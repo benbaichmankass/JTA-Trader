@@ -47,7 +47,11 @@ MAX_NOTE_CHARS = 300
 MAX_STEPS_PER_RUN = 80
 MAX_RUNS_PER_ACCOUNT = 400    # oldest dropped first, inside the TTL
 MAX_ACCOUNT_BYTES = 400_000_000
-FLOWS = ("entry", "amend", "drill", "positions", "login", "probe")
+# "closed" (the Closed-orders read's miss capture) was posted by the app from the start but was never in this tuple, so EVERY
+# one answered 400 "flow must be one of ..." and the heartbeat carried capture_err post:* 400 for days (2026-11-07 root cause,
+# MEASURED: 17 stored runs, flows positions 9 / amend 5 / entry 3, zero closed). "anomaly" = a capture taken on a terminal
+# miss / failed expectation; "periodic" = the slow view capture while the terminal is open (PHONE-SELF-SCREENSHOTS).
+FLOWS = ("entry", "amend", "drill", "positions", "login", "probe", "closed", "anomaly", "periodic")
 _RUN_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{2,79}$")
 _STEP_RE = re.compile(r"^[a-z][a-z0-9_]{1,39}$")
 _ACCT_RE = re.compile(r"^[a-z0-9_]{1,40}$")

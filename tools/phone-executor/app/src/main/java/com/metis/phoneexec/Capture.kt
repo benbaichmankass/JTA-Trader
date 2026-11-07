@@ -23,7 +23,7 @@ import java.util.TimeZone
  * At each step of a flow (positions read, row find, tap, sheet open, field set, confirm / abort) the app records
  *   (a) an OFF-SCREEN bitmap of its own WebView -- the view is drawn to a Canvas; no MediaProjection, no system
  *       screenshot, nothing shown or asked on screen. Never on a credential screen (the caller passes allowBitmap
- *       only while the terminal reads logged in and FLAG_SECURE is off). The redaction rectangles exec.js returns
+ *       from [credentialScreen]; FLAG_SECURE does not block this off-screen draw and is not the gate). The redaction rectangles exec.js returns
  *       with the snapshot (account ids, balances, equity, P&L: every masked text) are painted BLACK on the device
  *       before the image is encoded -- the operator's decision is that nothing of that kind leaves the phone;
  *   (b) a sanitized DOM snapshot (exec.js __ex.snapshot: visible elements with geometry, attributes, React
@@ -55,6 +55,22 @@ object Capture {
         val t = ticket.replace("#", "-").replace(Regex("[^A-Za-z0-9._-]"), "").trim('.', '-').ifEmpty { "na" }.take(48)
         return "$f-$t-${STAMP.format(at)}".take(80)
     }
+
+    /** A page that must NEVER be captured as an image: any page off the trade host (the portal / login) and any page with a
+     *  password or e-mail field, a code / number-matching step or a challenge. This is the ONLY bitmap gate now
+     *  (PHONE-SELF-SCREENSHOTS, operator 2026-11-07): FLAG_SECURE (system screenshots / recents) and "the terminal reads ready"
+     *  no longer decide it, because the off-screen draw is not a system screenshot and an unrecognised layout is exactly
+     *  when the image is needed. Pure (CaptureTest). */
+    fun credentialScreen(host: String, pw: Boolean, email: Boolean, codeWait: Boolean, challenged: Boolean): Boolean =
+        !(host == "trade.breakoutprop.com" || host.endsWith(".trade.breakoutprop.com")) || pw || email || codeWait || challenged
+
+    /** The page-shape hash exec.js puts first in its structure dump ("shape:<8 hex>"), or "" when absent. Pure. */
+    fun shapeOf(first: String): String = if (Regex("^shape:[0-9a-f]{8}$").matches(first)) first else ""
+
+    /** An anomaly capture is due for a NEW page shape at once, and for the same shape only every [everyMs] (one new layout
+     *  = one capture, not one a minute). Pure. */
+    fun anomalyDue(shape: String, lastShape: String, now: Long, lastMs: Long, everyMs: Long): Boolean =
+        shape != lastShape || now - lastMs >= everyMs
 
     /** The server's step charset ([a-z][a-z0-9_]{1,39}). */
     fun stepName(s: String): String {
@@ -103,7 +119,9 @@ object Capture {
         var snap: JSONObject? = null
         try { p.ensure(); snap = p.obj("__ex.snapshot(${JSONObject.quote(scope)}, $MAX_NODES)") } catch (e: Exception) { lastError = "snap:" + e.javaClass.simpleName }
         if (snap != null) body.put("dom", snap)
-        if (allowBitmap) {
+        // FAIL CLOSED: the redaction boxes come from the snapshot of the SAME page. No snapshot = no redaction list = no image
+        // (an unredacted bitmap would show balances); the DOM-less step is still posted as evidence.
+        if (allowBitmap && snap != null) {
             val jpg = bitmap(p.web, snap?.optJSONArray("redact"), snap?.optDouble("vw", 0.0) ?: 0.0)
             if (jpg != null) {
                 val b64 = withContext(Dispatchers.Default) { Base64.encodeToString(jpg, Base64.NO_WRAP) }

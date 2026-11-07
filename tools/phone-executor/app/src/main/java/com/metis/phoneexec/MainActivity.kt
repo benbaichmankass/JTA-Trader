@@ -113,6 +113,8 @@ class MainActivity : Activity() {
     private var lastSheetMissMs = 0L
     private var sheetOkPosted = false   // the first clean sheet read posts its shape once (opened_by, uPnL sign)
     private var lastPosMissMs = 0L
+    private var lastAnomShape = ""; private var lastAnomCapMs = 0L
+    private var lastPeriodicCapMs = 0L; private var periodicRun: CaptureRun? = null
     private var lastBgMissMs = 0L   // PHONE-BG-MISS: the background engine's last terminal_miss post
     private var lastStatus = ""
     // HOTFIX 2026-10-05 (manual login was being reset by the loop): any touch/key on the screen holds every
@@ -169,6 +171,8 @@ class MainActivity : Activity() {
         const val HEARTBEAT_MS = 120_000L
         const val ACCT_MS = 300_000L
         const val CHIPS_WAIT_MS = 12_000L               // Positions/Closed read: wait this long for the tab chips to render
+        const val ANOM_CAP_MS = 1_800_000L        // PHONE-SELF-SCREENSHOTS: the same page shape is re-captured at most every 30 min
+        const val PERIODIC_CAP_MS = 600_000L      // ... and a view capture while the terminal is open every 10 min (~22 MB/day, inside the server's quota)
         const val POS_MISS_MS = 1_800_000L   // a Positions read that failed is reported (masked dump) at most every 30 min
         // BREAKOUT-SL-AMEND-CLICK -> PHONE-EXEC-OBSERVABLE-1018: the sheet's pencil click (and Confirm) is gated by the
         // SERVER's claim config `sheet_edit` (true once the rehearsal drill passed 3x in a row, or set by hand), never
@@ -452,7 +456,7 @@ class MainActivity : Activity() {
                     challengeRecheckMs = System.currentTimeMillis() + CHALLENGE_RECHECK_MS
                     setStatus("challenge page: reloading the terminal to re-check (no solving)"); web.loadUrl(home())
                 } else setStatus("challenge page (not solved): re-checking every 30 min. Operator: open the app and check.")
-                "logged_in" -> { loginRecovered("logged in"); onLoggedIn(s) }
+                "logged_in" -> { loginRecovered("logged in"); onLoggedIn(s); if (!claimedThisTick) periodicCap(fg, "fg tick") }
                 "login" -> relogin(fg, s, bg = false)
                 else -> if (userActive()) setStatus("not on the terminal; you are using the screen, so no reload")
                         else { setStatus("not on the terminal (${s.optString("host")}); reloading"); web.loadUrl(home()) }
@@ -585,9 +589,11 @@ class MainActivity : Activity() {
                             lastBgMissMs = System.currentTimeMillis()
                             val ctl = try { JSONArray(p.js("JSON.stringify(__ex.controls())")) } catch (e: Exception) { JSONArray() }
                             api.terminalMiss("bg tabs=${tm.optInt("tabs")} inputs=${tm.optInt("inputs")} probe=${tm.optBoolean("probe")}", ctl)
+                            anomalyCap(p, ctl, "bg_terminal_miss")
                         }
                     }
                     bgLast = "logged_in+$acct" + (if (closed.isNotEmpty()) " form:$closed" else "")
+                    periodicCap(p, "bg $acct")
                 }
                 "challenged" -> setStatus("background: challenge page (not solved); re-checked on the next background check")
                 else -> setStatus("background: engine not on the terminal (${s.optString("host")})")
@@ -832,6 +838,7 @@ class MainActivity : Activity() {
         val tm = jsObj("__ex.terminal()")
         val ctl = try { JSONArray(js("JSON.stringify(__ex.controls())")) } catch (e: Exception) { JSONArray() }
         api.terminalMiss("tabs=${tm?.optInt("tabs")} inputs=${tm?.optInt("inputs")} probe=${tm?.optBoolean("probe")}", ctl)
+        anomalyCap(cur, ctl, "terminal_miss")
         return false
     }
 
@@ -1907,9 +1914,38 @@ class MainActivity : Activity() {
     private suspend fun cap(run: CaptureRun?, p: Page, step: String, ok: Boolean?, note: String = "", scope: String = "page") {
         if (run == null) return
         try {
-            val allow = lastState == "logged_in" && !(p === fg && secureOn) && p.web.width > 0
+            // PHONE-SELF-SCREENSHOTS (operator 2026-11-07, "the app can take the screenshots itself"): the image is taken whenever the
+            // page is NOT a credential screen (off the trade host, password / e-mail field, code step, challenge). It no longer
+            // waits for lastState == logged_in or the terminal reading ready (neither holds on an unrecognised layout, which is when
+            // the image is needed) and FLAG_SECURE does not matter (the off-screen draw is not a system screenshot). The redaction
+            // boxes stay (Capture.step refuses the image when the snapshot that carries them is missing).
+            val st = try { p.obj("__ex.state()") } catch (e: Exception) { null }
+            val credential = st == null || Capture.credentialScreen(st.optString("host"), st.optBoolean("pw"), st.optBoolean("email"),
+                st.optBoolean("codeWait"), st.optBoolean("challenged"))
+            val allow = !credential && p.web.width > 0
             Capture.step(api, p, run, step, ok, note, allow, scope, appVersion())
         } catch (e: Exception) { Capture.lastError = "cap:" + e.javaClass.simpleName }
+    }
+
+    /** A capture on a terminal miss / failed expectation: ONE for a new page shape, then at most every ANOM_CAP_MS for the same
+     *  shape (flow "anomaly", step terminal_miss; read on /api/diag/phone_captures). Never throws into the flow. */
+    private suspend fun anomalyCap(p: Page, ctl: JSONArray, why: String) {
+        val shape = Capture.shapeOf(ctl.optString(0))
+        val now = System.currentTimeMillis()
+        if (!Capture.anomalyDue(shape, lastAnomShape, now, lastAnomCapMs, ANOM_CAP_MS)) return
+        lastAnomShape = shape; lastAnomCapMs = now
+        cap(CaptureRun("anomaly", "terminal_miss"), p, "terminal_miss", false, (why + " " + shape).trim())
+    }
+
+    /** The slow view capture while the terminal is open (flow "periodic", step view), every PERIODIC_CAP_MS, so a layout
+     *  change is on record before anything fails. One run holds up to 60 steps, then a new run starts. */
+    private suspend fun periodicCap(p: Page, why: String) {
+        val now = System.currentTimeMillis()
+        if (now - lastPeriodicCapMs < PERIODIC_CAP_MS) return
+        lastPeriodicCapMs = now
+        var r = periodicRun
+        if (r == null || r.seq >= 60) { r = CaptureRun("periodic", "terminal"); periodicRun = r }
+        cap(r, p, "view", null, why)
     }
 
     /** The signed remote exec.js refresh, at most every RemoteJs.REFRESH_MS, on any tick path. */
