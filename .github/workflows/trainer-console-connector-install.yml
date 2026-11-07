@@ -55,6 +55,9 @@ jobs:
         env:
           TRAINER_IP: ${{ secrets.TRAINER_VM_IP }}
           DIAG_READ_TOKEN: ${{ secrets.DIAG_READ_TOKEN }}
+          # Operator 2026-11-07 ~21:50Z, popup answer verbatim: "Copy the main token" -- the console's
+          # set_wake_toggle tool needs the VM dashboard write bearer to POST /api/bot/wake-toggles.
+          WAKE_TOGGLES_WRITE_TOKEN: ${{ secrets.DASHBOARD_API_TOKEN }}
         run: |
           set -euo pipefail
           [ -n "${DIAG_READ_TOKEN}" ] || { echo "::error::DIAG_READ_TOKEN secret is unset."; exit 1; }
@@ -63,6 +66,7 @@ jobs:
             echo "DIAG_READ_TOKEN=${DIAG_READ_TOKEN}"
             echo "GOOGLE_OAUTH_CLIENT_ID=891024226160-oo4d4g3g99ctg724u1t00ogm1j4lakig.apps.googleusercontent.com"
             echo "ALLOWED_EMAIL=ben.baichmankass@gmail.com"
+            [ -z "${WAKE_TOGGLES_WRITE_TOKEN}" ] || echo "WAKE_TOGGLES_WRITE_TOKEN=${WAKE_TOGGLES_WRITE_TOKEN}"
           } > /tmp/connector.env
           scp -i ~/.ssh/trainer_key /tmp/connector.env "ubuntu@${TRAINER_IP}:/tmp/connector.env"
           rm -f /tmp/connector.env
