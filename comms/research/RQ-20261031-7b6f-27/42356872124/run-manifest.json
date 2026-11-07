@@ -1,0 +1,85 @@
+{
+  "unit": "RQ-20261031-7b6f-27",
+  "run_id": "42356872124",
+  "commit_sha": "f3e6c4d37de16d71cf3899429798fcfe47e7c50a",
+  "run_url": null,
+  "timeout_minutes": 150,
+  "runner": {
+    "cpu_model": "Intel(R) Xeon(R) CPU @ 2.20GHz",
+    "cpu_simd": [
+      "avx",
+      "avx2",
+      "fma",
+      "sse4_2"
+    ],
+    "cores_logical": 4,
+    "cores_usable": 4,
+    "machine": "x86_64",
+    "os": "Ubuntu 24.04.5 LTS",
+    "kernel": "6.18.55+",
+    "image": {
+      "ImageOS": null,
+      "ImageVersion": null,
+      "RUNNER_OS": null,
+      "RUNNER_ARCH": null,
+      "RUNNER_ENVIRONMENT": null
+    },
+    "python": "3.13.15",
+    "libs": {
+      "lightgbm": "4.6.0",
+      "numpy": "2.1.3",
+      "pandas": "2.3.3",
+      "scipy": "1.16.3",
+      "scikit-learn": "1.6.1"
+    },
+    "blas": "blas=scipy-openblas 0.3.27; lapack=scipy-openblas 0.3.27",
+    "unread": [],
+    "class_id": "db1ff15f88db",
+    "read_state": "read"
+  },
+  "commands": [
+    {
+      "index": 0,
+      "argv": [
+        "python3",
+        "scripts/research/exit_lever_ablation.py",
+        "--leg",
+        "ada_pullback_2h",
+        "--arm",
+        "A=",
+        "--arm",
+        "VL20=--vol-skip-below-pctl=0.2",
+        "--arm",
+        "VL30=--vol-skip-below-pctl=0.3",
+        "--days",
+        "2330",
+        "--start",
+        "2020-07-01",
+        "--end",
+        "2026-10-15 23:59",
+        "--grade",
+        "replace",
+        "--baseline",
+        "A",
+        "--delta-r",
+        "0",
+        "--delta-r-per-trade",
+        "0.02",
+        "--folds",
+        "6",
+        "--fold-majority",
+        "4",
+        "--dd-tol-frac",
+        "0.35",
+        "--n-floor",
+        "39",
+        "--out",
+        "comms/research/RQ-20261031-7b6f-27/42356872124"
+      ],
+      "log": "comms/research/RQ-20261031-7b6f-27/42356872124/logs/cmd-0.log",
+      "exit_code": 1,
+      "seconds": 143.6
+    }
+  ],
+  "all_ok": false
+}
