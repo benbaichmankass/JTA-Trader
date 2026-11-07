@@ -97,15 +97,38 @@ def _load_fills(fills_db: str) -> list[dict]:
         conn.close()
 
 
-def _funding_covered(funding: list[dict]) -> dict:
-    """Latest funding_time per account: funding is only trusted for a trade whose
-    close is <= this, so a stale funding puller yields NULL, never a false $0."""
+def _funding_covered(funding: list[dict], run_marker: dict | None = None) -> dict:
+    """Per account: (first, last) funding time the store can vouch for.
+
+    ``first`` = the account's earliest settlement row (older trades have no funding data,
+    so their funding must stay as-is, never a false $0). ``last`` = the later of the newest
+    settlement and the puller's last SUCCESSFUL run (a quiet stretch with no open position
+    inserts nothing, so the newest settlement alone under-reports coverage).
+    """
     out: dict = {}
     for f in funding:
         a, t = str(f.get("account_id")), str(f.get("funding_time") or "")
-        if t and t > out.get(a, ""):
-            out[a] = t
+        if not t:
+            continue
+        lo, hi = out.get(a, (t, t))
+        out[a] = (min(lo, t), max(hi, t))
+    if run_marker and run_marker.get("run_at"):
+        bad = {str(x) for x in (run_marker.get("failed") or [])} | {
+            str(x) for x in (run_marker.get("skipped") or [])}
+        run_at = _to_iso(run_marker["run_at"])
+        for a, (lo, hi) in list(out.items()):
+            if a not in bad and run_at > hi:
+                out[a] = (lo, run_at)
     return out
+
+
+def _load_run_marker(fills_db: str) -> dict | None:
+    import json  # noqa: PLC0415
+    p = Path(fills_db).parent / "exchange_funding_last_run.json"
+    try:
+        return json.loads(p.read_text())
+    except (OSError, ValueError):
+        return None
 
 
 def sweep(db_path: str, fills_db: str, *, apply: bool, with_funding: bool = False) -> dict:
@@ -120,7 +143,7 @@ def sweep(db_path: str, fills_db: str, *, apply: bool, with_funding: bool = Fals
         # Funding is attributed only to trades B2 flagged clean (sole holders).
         clean_ids = [tid for tid, c in costs.items() if c.clean]
         funding_by_id = attribute_funding_to_trades(trades, funding, clean_ids)
-        covered = _funding_covered(funding)
+        covered = _funding_covered(funding, _load_run_marker(fills_db))
         trade_by_id = {int(t["id"]): t for t in trades}
 
         def _funding_for(tid: int):
@@ -129,10 +152,14 @@ def sweep(db_path: str, fills_db: str, *, apply: bool, with_funding: bool = Fals
             # migration) deploys: funding is opt-in (--with-funding) until then.
             if not with_funding or not funding or tid not in funding_by_id:
                 return None
-            cov = covered.get(str(t["account_id"]), "")
-            # normalise both sides to a comparable ISO prefix
-            if not cov or _to_iso(cov)[:19] < _to_iso(t["close_time"])[:19]:
-                return None  # funding store does not reach this close
+            cov = covered.get(str(t["account_id"]))
+            if not cov:
+                return None
+            lo, hi = cov
+            # the store must span the whole trade window; compare as ISO prefixes
+            if (_to_iso(hi)[:19] < _to_iso(t["close_time"])[:19]
+                    or _to_iso(lo)[:19] > _to_iso(t["open_time"])[:19]):
+                return None  # funding store does not cover this trade's window
             return funding_by_id[tid]
 
         summary = {
