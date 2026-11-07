@@ -614,3 +614,56 @@ def data_query(repo: Path, args: dict[str, Any]) -> dict:
                               "sync_trainer_data.sh snapshot, so read db_file_age_s before treating it as live"},
                 columns=cols, filters_applied=applied, order={"column": order_col, "dir": direction.lower()},
                 rows=data)
+
+
+# ---- research queue tab (operator 2026-11-07: "a tab with the research que so I can see what's in the pipeline") ----
+_RQ_STATUS = {"queued": "queued", "due": "queued", "dispatched": "running", "running": "running",
+              "result": "done", "retired": "done", "blocked": "blocked"}
+_RQ_BACKEND = {"runner": "GitHub", "trainer": "trainer", "gpu": "trainer (GPU)"}
+
+
+def research_queue(repo: Path, args: dict | None = None) -> dict:
+    """Every research/queue unit, projected by ``src.runtime.research_catalog`` (the same projection behind
+    ``/api/bot/research/catalog``): id, title, status (queued|running|done|blocked), kind, theme group (ml|trading),
+    harness, compute (GitHub|trainer), last run + result pointer. Counts are over the FULL population; ``rows`` is
+    the filtered page. Null fields stay None (the page renders a dash)."""
+    args = args or {}
+    want_status = str(args.get("status") or "pipeline")
+    want_theme = str(args.get("theme") or "all")
+    limit = max(1, min(300, int(args.get("limit") or 30)))
+    offset = max(0, int(args.get("offset") or 0))
+    try:
+        from src.runtime import research_catalog as rc
+        cat = rc.build_catalog(Path(repo))
+    except Exception as exc:  # noqa: BLE001  # allow-silent: could_not_look, never an empty queue
+        return _env(repo, "could_not_look", {"units_scanned": None}, error=_err(exc))
+    rows = []
+    for u in cat["units"]:
+        du = u.get("dataUsed") if isinstance(u.get("dataUsed"), dict) else {}
+        th = u.get("theme")
+        links = u.get("links") if isinstance(u.get("links"), dict) else {}
+        res = links.get("results") or []
+        rows.append({
+            "id": u.get("id"), "title": _trim(u.get("title"), 110), "status": _RQ_STATUS.get(u.get("status")),
+            "blocked_reason": _trim(u.get("blockedReason"), 90),
+            "kind": u.get("kind"), "theme": th, "theme_group": None if not th else ("ml" if str(th).startswith("ml") else "trading"),
+            "harness": _trim(du.get("harness") or du.get("workflow"), 60),
+            "compute": _RQ_BACKEND.get(u.get("backend")), "verdict": u.get("verdict"),
+            "last_run_at": u.get("lastDispatchedAt"), "result_at": u.get("latestResultAt"),
+            "result_pointer": (res[-1] if res else links.get("run")),
+            "stuck": u.get("stuck"), "last_activity": u.get("lastActivity")})
+    def tally(key):
+        out: dict[str, int] = {}
+        for r in rows:
+            out[str(r[key])] = out.get(str(r[key]), 0) + 1
+        return out
+    sel = [r for r in rows
+           if (want_status == "all" or (want_status == "pipeline" and r["status"] != "done") or r["status"] == want_status)
+           and (want_theme == "all" or r["theme_group"] == want_theme)]
+    sel.sort(key=lambda r: (r["last_activity"] or ""), reverse=True)
+    return _env(repo, "partial" if cat["readErrors"] else "read",
+                {"units_scanned": len(rows), "matched": len(sel), "limit": limit, "offset": offset,
+                 "filter": {"status": want_status, "theme": want_theme}, "read_errors": len(cat["readErrors"]),
+                 "note": "counts cover every unit; rows are the filtered page, newest activity first"},
+                counts={"by_status": tally("status"), "by_theme_group": tally("theme_group"), "by_compute": tally("compute")},
+                rows=sel[offset:offset + limit])

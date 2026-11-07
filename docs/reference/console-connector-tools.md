@@ -96,3 +96,11 @@ Sections are now `due`, `in_flight`, `blocked`, `queued` (with a due date) and *
 ### `inbox` (changed)
 Items in `decisions_checklist` and `asks_pipeline` gain `options: string[] | null`: the source `blocked_on` edge / row / pipeline item's
 `options` (or `choices`) labels. Null when the source carries none (today none do), so render a dash.
+
+## Added 2026-11-07 (lane CONSOLE-WAKE-TOGGLES)
+
+Gates this adds or changes: **none.**
+
+- `research_queue` (read-only; `status` pipeline|queued|running|done|blocked|all, `theme` all|ml|trading, `limit`, `offset`): every `research/queue` unit via `src/runtime/research_catalog.py`; `counts` over the full population, `rows` the filtered page; nulls stay null.
+- `wake_toggles` (read-only): live GET of the trader VM's `/api/bot/wake-toggles` (the wake-notification switches); `could_not_look` when the VM is unreachable.
+- **Reply size budget (2026-11-07, console stuck on "Waiting"):** every reply is string-clipped (140 chars), rows drop `updated_by`, `closed_this_week.rows` is capped at 15 slim rows (the counts and `population.closed_rows` stay complete; `population.rows_truncated` says so), and a reply over 40 KB carries an `oversize` flag. The page's own calls are sized to stay under it (`tests/test_console_reads.py`).
