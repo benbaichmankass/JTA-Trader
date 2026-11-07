@@ -278,8 +278,9 @@ or lever row as its `ref`), so the weekly ML plan loop (`ml-review` § "The ML p
    run genuinely needs a session (live-data pulls), declare it session-bound and pipeline
    the pickup. Say which in the record — session-bound units count as debt
    (`PI-20261006-LCEVL8D5-0002`), so prefer (a)/dispatchable.
-7. A **new** hand-written unit holds for a human to merge (E57) — that is expected; the
-   PR landing declaration says so.
+7. A **new** pre-registered unit self-lands (RQ-NEW-UNIT-SELF-LAND, 2026-11-07: no result for its id,
+   never dispatched, `decision_rule.registered_before_run: true`); an EDIT to an existing unit still holds
+   for a human merge (E57).
 
 ## The run record (the ledger)
 
@@ -355,9 +356,9 @@ All of these, or the run is a handoff:
 ## Landing
 
 Docs/research-queue/pipeline files only → Tier 1, self-land per
-`.claude/skills/manager/SKILL.md` § "How lane PRs land". New hand-written queue units hold
-for a human merge (E57); put the record, pipeline items and rows in a separate Tier-1 PR
-if that keeps them from waiting. **You change no `config/` or `src/` file** — param,
+`.claude/skills/manager/SKILL.md` § "How lane PRs land". New pre-registered queue units
+self-land (RQ-NEW-UNIT-SELF-LAND); edits to existing units hold for a human merge (E57), so put
+the record, pipeline items and rows in a separate Tier-1 PR if that keeps them from waiting. **You change no `config/` or `src/` file** — param,
 roster, risk and mode changes are Tier-3 proposals.
 
 ## Out of scope
