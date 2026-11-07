@@ -129,6 +129,17 @@ function eq(a, b, m) { if (JSON.stringify(a) !== JSON.stringify(b)) { console.er
   eq(await pn4.evaluate("[__ex.terminal().ready, window.hits]"), [true, 1], "the chips are there on the next call: ready, and no second tap");
   await pn4.evaluate("document.querySelectorAll('button').forEach(function(x){if(/^Open/.test(x.textContent))x.remove()})");
   eq(await pn4.evaluate("[__ex.terminal().ready, __ex.terminal().navKick, window.hits]"), [false, "wait", 1], "chips gone again inside 20 s: throttled, no second tap");
+  // .4 (2026-11-07): the DEFAULT gate is 4 s, measured from the app's own capture (the background page opens on the Markets view and
+  // the whole read window is ~23 s, so the .3 gate of 25 s never let the tap fire)
+  const pn6 = await onNL(NL(false));
+  await pn6.evaluate("performance.now = function () { return 3500; }");
+  eq(await pn6.evaluate("[__ex.terminal().navKick, window.hits]"), ["young", 0], "default gate: a page 3.5 s old does not tap yet");
+  await pn6.evaluate("performance.now = function () { return 4500; }");
+  eq(await pn6.evaluate("__ex.terminal().navKick"), "clicked", "default gate: a page 4.5 s old taps the bottom Trade button");
+  await pn6.waitForTimeout(50);
+  eq(await pn6.evaluate("window.hits"), 1, "and the deferred tap lands once");
+  const d6 = await pn6.evaluate("__ex.controls()");
+  eq(/ t0$/.test(d6[1]), true, "the term: line ends with the ticket-open flag (t0 here)");
   // an error inside the new-layout block must come back as err, never as a throw (a throw reaches the app as null = a silent "busy")
   const pn5 = await onNL(NL(true));
   await pn5.evaluate("Object.defineProperty(window, 'innerHeight', {get: function () { throw new Error('boom'); }})");
