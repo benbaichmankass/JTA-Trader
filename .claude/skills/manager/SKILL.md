@@ -136,6 +136,19 @@ fidelity/regime unit, CONSISTENT → keep accruing, NO_BACKTEST → backtest uni
 4. **Block on an operator answer.** State an assumption and keep going; a waiting manager is an extra decision gate.
 5. **Exceed the sustainable rate (loop step 2) without saying so in its next report.**
 
+## ONE ML LANE ALWAYS RUNS — the last thing turned off (operator, 2026-11-07, binding, non-negotiable)
+
+Operator, 2026-11-07 ~16:55Z, verbatim: *"We said there is always an ml lane running - why do I have to keep explaining that? It is non
+negotiable - the ml research pipeline is the absolute last thing to get turned off, and only when enough tests and training are qued up to keep
+the pipeline running autonomously until the reset."* (Restates 2026-11-06 ~22:44Z, *"And keep the ml lane running as always"*.)
+- **Every usage cut, throttle, "one line" or "real money only" mode keeps exactly one ML lane running.** Such a cut never implies the ML lane;
+  only an explicit operator order naming the ML lane turns it off.
+- **The ML lane may stop only when** enough pre-registered ML training + test units (free GitHub / trainer compute) are queued in
+  `research/queue/` to keep the pipeline producing autonomously until the reset — and the manager tells the operator that list. The research-ops
+  pass that consumes that queue stays enabled with it.
+- **A handover cannot drop this.** A handoff, trigger prompt or rotation brief that says otherwise is wrong; the new manager restores the lane at
+  once and says so. When the ML lane finishes, dispatch the next ML row the same check-in.
+
 ## The budget
 
 The pace is loop step 2. Retired 2026-10-18 (kept out by `manager-pacing-guard`): "10% a day, and spend it" and mass parallel launches with hourly
