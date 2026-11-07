@@ -70,13 +70,9 @@ what_it_does_not_do: Does not tune, demote or edit any roster/config; does not n
   here is not a demotion signal.
 last_dispatched_at: '2026-11-06T07:15:26+00:00'
 grading:
-  auto: true
-  decision_rule_id: RULE-RQ-20261015-8bbc-01-LVB-STAGE-A
-  evidence:
-  - research/results/RQ-20261015-8bbc-01/42179841608.jsonl
-  graded_at: '2026-11-07'
-  grader: scripts/research/queue_grade.py
+  auto: false
+  graded_at: "2026-11-07"
+  grader: "session RESEARCH-OPS-AUTHOR-20261107 (steps C/D)"
   needs_review: true
-  reason: 'read_state not unanimously measured: [''no_data'']'
-  rows: 1
-  verdict: null
+  owner: "PI-20261015-10152047-0001"
+  owner_reason: "Rule not applicable as run: the newest row says 'leg is not on a Stage-2 realMoney roster -- nothing to compare' (no_data), not a verdict and not a FAIL. The rule's own follow-up is the cause-naming work filed under PI-20261015-10152047-0001 (live-vs-backtest Stage B, programme node P3-Q1-live-bt-stage-b). The leg reached bybit_2 only with PR #23935 (2026-11-06), so a re-read needs live closes first."

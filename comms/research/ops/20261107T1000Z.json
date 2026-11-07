@@ -1,0 +1,121 @@
+{
+  "run": "RESEARCH-OPS-AUTHOR-20261107",
+  "finished_at": "2026-11-07T10:00:00Z",
+  "by": "lane RESEARCH-OPS-AUTHOR-20261107 (Manager Session 2026-11-06b)",
+  "floor": 58,
+  "floor_basis": "computed_floor(fired_24h 73)",
+  "authoring_queue_depth": 49,
+  "idle_backends": [
+    "github_runner",
+    "github_runner_data",
+    "kaggle",
+    "kaggle_cpu",
+    "trainer"
+  ],
+  "needs_review_triaged": 17,
+  "needs_review_left": null,
+  "throughput": {
+    "runnable_before": 8,
+    "queued": 2090,
+    "dispatcher": "green (run 42344917371)"
+  },
+  "mechanism": {
+    "dispatch_receipt": "ok",
+    "incident": "queue starved (supply), not a mechanism fault; separate tooling defects filed on RESEARCH-TEMPLATE-LEG-GAPS"
+  },
+  "results_read": {
+    "pass": 4,
+    "fail": 5,
+    "indeterminate": 1,
+    "owned_not_verdict": 7,
+    "units": [
+      "RQ-20260929-104",
+      "RQ-20261101-b611-01",
+      "RQ-20261101-bdc2-01",
+      "RQ-20261104-a41f-01",
+      "RQ-20261105-d256-02",
+      "RQ-20261101-c692-02",
+      "RQ-20261101-b620-01",
+      "RQ-20261101-b626-01",
+      "RQ-20261105-fd68-03",
+      "RQ-20261105-e9a1-01",
+      "RQ-20261015-8bbc-01",
+      "RQ-20261015-8bbc-02",
+      "RQ-20261031-7b6f-27",
+      "RQ-20261105-021",
+      "RQ-20261105-022",
+      "RQ-20261105-031",
+      "RQ-20261106-014"
+    ]
+  },
+  "unlocked": [],
+  "retired": [],
+  "levers_filed": [
+    {
+      "lever": "roster-walkforward template emits unrunnable legs; drivers emit non-schema verdict words",
+      "ref": "RESEARCH-TEMPLATE-LEG-GAPS"
+    }
+  ],
+  "units_authored": [
+    "RQ-20261107-47b6-01",
+    "RQ-20261107-47b6-02",
+    "RQ-20261107-47b6-03",
+    "RQ-20261107-47b6-04",
+    "RQ-20261107-47b6-05",
+    "RQ-20261107-47b6-06",
+    "RQ-20261107-47b6-07",
+    "RQ-20261107-47b6-08",
+    "RQ-20261107-47b6-09",
+    "RQ-20261107-47b6-10",
+    "RQ-20261107-47b6-11",
+    "RQ-20261107-47b6-12",
+    "RQ-20261107-47b6-13",
+    "RQ-20261107-47b6-14",
+    "RQ-20261107-47b6-15",
+    "RQ-20261107-47b6-16",
+    "RQ-20261107-47b6-17",
+    "RQ-20261107-47b6-18",
+    "RQ-20261107-47b6-19",
+    "RQ-20261107-47b6-20"
+  ],
+  "followups_filed": [
+    "RESEARCH-TEMPLATE-LEG-GAPS"
+  ],
+  "authoring": {
+    "queue_depth": 49,
+    "nodes_drafted": 5,
+    "nodes": [
+      "P2-R3.c03-pass",
+      "P2-R3.c04-pass",
+      "P1-Q7-sol-tp3-prop",
+      "P1-Q6-xrp4h-declare",
+      "P3-Q8-new-symbols"
+    ],
+    "note": "hand units (exit_lever_ablation) drawn from these nodes' asks; the programme YAML was NOT edited so the PR self-lands; authored by theme: regime 8, new_strategy_prop 7, live_strategy 5; ml_health/macro/timeframes 0 (no safe existing driver in this lane's budget)",
+    "theme_shortfall": {
+      "regime": 6,
+      "new_strategy_prop": 9,
+      "live_strategy": 5,
+      "ml_health": 7,
+      "macro": 3,
+      "timeframes": 3
+    }
+  },
+  "iteration": {
+    "results_attributed": {
+      "count": 0,
+      "of": 17
+    },
+    "note": "lever-map attribution pass not run (usage cut); dispositions applied per each unit's registered rule or owner"
+  },
+  "not_run": [
+    "lever_map.py --backfill / iteration_orphans (usage cut)",
+    "ml_health, macro, timeframes authoring",
+    "programme-yaml node write-back"
+  ],
+  "handoff": [
+    "ml_health/macro/timeframes theme supply still 0",
+    "c692-02 PASS (ml_entry bracket model, +0.0143 R/decision n=11118) is a candidate for the manager: needs its own holdout read, Tier 3 for any live change",
+    "fix RESEARCH-TEMPLATE-LEG-GAPS so weekly template units stop failing"
+  ]
+}

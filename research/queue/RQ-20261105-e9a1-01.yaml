@@ -79,15 +79,9 @@ related:
 population: 'The registered POOL_RULE of scripts/research/ml_entry_alpaca_score.py, UNCHANGED (sha256 e9702661d1a596a0f7e84e632c0ca8b5c2743a728f02147477c003644a0858e2): active, tradable, us_equity ETFs (nasdaqtraded ETF=Y) with median daily dollar volume >= 50M USD over 2019-01-01..2020-12-31. The module refuses to run if the rule hash differs.'
 last_dispatched_at: '2026-11-06T03:38:56+00:00'
 grading:
-  attested: RULE-RQ20261105-e9a1-01-ENTRY-EQUITY-DEV
-  auto: true
-  decision_rule_id: RULE-RQ20261105-e9a1-01-ENTRY-EQUITY-DEV
-  evidence:
-  - research/results/RQ-20261105-e9a1-01/42119511272.jsonl
-  - research/results/RQ-20261105-e9a1-01/42134903665.jsonl
-  graded_at: '2026-11-07'
-  grader: scripts/research/queue_grade.py
+  auto: false
+  graded_at: "2026-11-07"
+  grader: "session RESEARCH-OPS-AUTHOR-20261107 (steps C/D)"
   needs_review: true
-  reason: 'read_state not unanimously measured: [''producer_failed'']'
-  rows: 4
-  verdict: null
+  owner: "RESEARCH-TEMPLATE-LEG-GAPS"
+  owner_reason: "Descriptive DEV-stage unit (no pass bar): measured, selected B|0.2, OOF mean net R 0.1067 at n=3896. The collector marked it producer_failed only because the driver wrote verdict 'descriptive' without a population (outside the script_run schema; tooling on RESEARCH-TEMPLATE-LEG-GAPS). Its result is consumed by the confirming unit RQ-20261105-e9a1-02, which carries the rule."

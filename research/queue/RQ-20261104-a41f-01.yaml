@@ -151,3 +151,9 @@ window_amendment: 'WINDOW AMENDMENT 2026-11-05 ~18:4xZ by lane ML-ENTRY-ALL-ACCO
   population rule and POOL_RULE sha256 (dev window 2019-2020 liquidity filter), model, tau, costs, bracket, side rule, session gate. POWER: ~13 months x
   ~176 ETFs; bdc2-01 measured 128 long takes / 12 months / 11 ETFs under the served rule (~1 per ETF-month), so the pooled n is expected in the low
   thousands (>= expected_n 300, MDE 0.16 R at n 300 with sd 1 R); the n floor of 30 is the rule, and the record states n. The 2021-2025 dates are NOT scored.'
+grading:
+  auto: false
+  graded_at: "2026-11-07"
+  grader: "session RESEARCH-OPS-AUTHOR-20261107 (steps C/D)"
+  verdict: fail
+  note: "configuration closed: 173-ETF alpaca-liquidity pool, long-only, held-out mean net R per decision -0.0708 at n=1099 (rule: FAIL if < 0; newest measured row; the 2026-11-05 rows between are producer_failed timeouts); family stays open; next test = RQ-20261106-98e3-01 (structure-exit labels)."

@@ -88,3 +88,9 @@ related:
 - comms/prop_survival/trend_donchian_eth_4h.json
 - comms/prop_survival/trend_donchian_sol_4h.json
 - docs/research/prop-replacement-2026-10-30/RESULT.md
+grading:
+  auto: false
+  graded_at: "2026-11-07"
+  grader: "session RESEARCH-OPS-AUTHOR-20261107 (steps C/D)"
+  verdict: fail
+  note: "configuration closed: logistic meta-label filter over trend_donchian_{eth,sol}_4h scored trades 2024-07..2026-10 (n=193, kept 104): lift +0.008 R, bootstrap CI [-0.256, 0.263]; held-out kept mean -0.073 R (n=44) not > 0, no firm passes V3 (rule: FAIL). Family meta-labelling stays open; next test = per-leg features or a longer window."

@@ -91,3 +91,9 @@ lands:
 related:
   - 'research-harness-dispatch.yml -- the funding_carry harness''s first-ever dispatch'
 last_dispatched_at: '2026-11-01T19:25:00+00:00'   # re-armed 2026-11-01 (RESEARCH-OPS-20261101-0940, FUNDING-CARRY-HARNESS-FIX): both prior rows were producer_failed because Bybit funding is geoblocked from runners; the workflow now fetches Binance Vision funding (fetch_binance_vision_funding.py). Rule and symbol unchanged.
+grading:
+  auto: false
+  graded_at: "2026-11-07"
+  grader: "session RESEARCH-OPS-AUTHOR-20261107 (steps C/D)"
+  verdict: fail
+  note: "configuration closed: funding_carry harness on BNBUSDT perp, 2023-11-02..2026-10-31, n=207 net -19.18 R (rule: FAIL if net<=0 at n>=39; latest of 3 rows); family funding_carry stays open; next test = the rule's confirmatory re-run or a funding-conditioned variant. Stage-0 evidence only, no roster case."

@@ -119,19 +119,8 @@ grading_before_rearm:
   rows: 2
   verdict: fail
 grading:
-  attested: RULE-20261101-b620-01
-  auto: true
-  decision_rule_id: RULE-20261101-b620-01
-  evidence:
-  - research/results/RQ-20261101-b620-01/41376489228.jsonl
-  - research/results/RQ-20261101-b620-01/41379085897.jsonl
-  - research/results/RQ-20261101-b620-01/41385976044.jsonl
-  - research/results/RQ-20261101-b620-01/41541511665.jsonl
-  - research/results/RQ-20261101-b620-01/41563144629.jsonl
-  - research/results/RQ-20261101-b620-01/42130510691.jsonl
-  graded_at: '2026-11-07'
-  grader: scripts/research/queue_grade.py
-  needs_review: true
-  reason: 'verdicts not unanimous-mechanical: [''fail'', ''pass'']'
-  rows: 3
-  verdict: null
+  auto: false
+  graded_at: "2026-11-07"
+  grader: "session RESEARCH-OPS-AUTHOR-20261107 (steps C/D)"
+  verdict: pass
+  note: "REPRODUCES (newest run 42130510691, data-pinned harness: result carries mask_frozen_bars and data_pin). The 2026-11-03 does_not_reproduce rows came from the earlier harness (no data_pin / mask_frozen_bars keys in their result.json); the rule reads that as a mechanical fault fixed before any other timeframe unit is read. I did not re-derive the 0.0005 tolerance myself; the verdict word is the driver's own."
