@@ -27,7 +27,8 @@ LOG = Path(os.environ.get("CONSOLE_CONNECTOR_LOG") or REPO / "runtime_logs" / "c
 PROTOCOL_DEFAULT = "2025-06-18"
 CACHE = data.TTLCache()
 TTL_S = {"work_rows": 30.0, "inbox": 30.0, "work_items": 30.0, "workplan": 60.0, "ml_roadmap": 120.0,
-         "performance": 300.0, "system_health": 60.0, "data_query": 30.0, "system_catalog": 300.0}
+         "performance": 300.0, "system_health": 60.0, "data_query": 30.0, "system_catalog": 300.0,
+         "research_queue": 300.0, "wake_toggles": 10.0}
 #: Tools that serve P&L, journal rows or live-VM state: registered ONLY when CONSOLE_CONNECTOR_AUTH=google
 #: (the sign-in is on), so they never serve over the authless tunnel. workplan and ml_roadmap carry only
 #: public-register data (repo files) and are always available.
@@ -97,11 +98,41 @@ TOOLS: list[dict[str, Any]] = [
          "time_column": {"type": "string"}, "order": {"type": "string", "enum": ["asc", "desc"]},
          "limit": {"type": "integer", "minimum": 1, "maximum": 500, "default": 100},
          "offset": {"type": "integer", "minimum": 0}}}, "annotations": _RO},
+    {"name": "research_queue", "title": "Research queue",
+     "description": "Every research/queue unit: id, title, status (queued/running/done/blocked), kind, theme group (ml/trading), "
+                    "harness, compute (GitHub/trainer), last run and result pointer. counts cover the full population; rows are the "
+                    "filtered page (status: pipeline|queued|running|done|blocked|all; theme: all|ml|trading). Every response has as_of, read_state and population.",
+     "inputSchema": {"type": "object", "properties": {
+         "status": {"type": "string", "enum": ["pipeline", "queued", "running", "done", "blocked", "all"], "default": "pipeline"},
+         "theme": {"type": "string", "enum": ["all", "ml", "trading"], "default": "all"},
+         "limit": {"type": "integer", "minimum": 1, "maximum": 300, "default": 30},
+         "offset": {"type": "integer", "minimum": 0}}}, "annotations": _RO},
+    {"name": "wake_toggles", "title": "Wake switches",
+     "description": "Which wake notifications reach the manager session (live from the trader VM's GET /api/bot/wake-toggles).",
+     "inputSchema": {"type": "object", "properties": {}}, "annotations": _RO},
     {"name": "work_items", "title": "Work-store items",
      "description": "Work-store items (WORK-STORE S1). Reports could_not_look until that route is live.",
      "inputSchema": {"type": "object", "properties": {}}, "annotations": _RO},
 ]
 _TOOL_NAMES = {t["name"] for t in TOOLS}
+
+
+WAKE_API = os.environ.get("WAKE_TOGGLES_API") or "https://ict-bot.duckdns.org/api/bot/wake-toggles"
+
+
+def wake_toggles_read() -> dict[str, Any]:
+    """Live read of the VM's switches (public GET). ``could_not_look`` is a state, never 'all off'."""
+    import urllib.request
+    try:
+        req = urllib.request.Request(WAKE_API, headers={"User-Agent": "jta-console-connector"})
+        with urllib.request.urlopen(req, timeout=8) as r:  # noqa: S310 fixed https URL
+            doc = json.loads(r.read())
+        doc["as_of"] = data._iso(data._now())
+        return doc
+    except Exception as exc:  # noqa: BLE001
+        return {"as_of": data._iso(data._now()), "read_state": "could_not_look", "error": type(exc).__name__,
+                "toggles": None, "rows": [],
+                "population": {"switches": None}, "note": "could not reach the trader VM; posters post when unreadable"}
 
 
 def _clamp(v: Any, lo: int, hi: int, default: int) -> int:
@@ -111,7 +142,44 @@ def _clamp(v: Any, lo: int, hi: int, default: int) -> int:
         return default
 
 
+def _clip(o: Any, n: int = 140) -> Any:
+    """Long strings clipped (a note tail or title is for a glance); structure and counts untouched."""
+    if isinstance(o, str):
+        return o if len(o) <= n else o[: n - 1] + "…"
+    if isinstance(o, list):
+        return [_clip(x, n) for x in o]
+    if isinstance(o, dict):
+        return {k: _clip(v, n) for k, v in o.items()}
+    return o
+
+
+#: Budget for one tool reply (the page's call must finish inside the artifact's result-size and time limits).
+REPLY_BUDGET = 40_000
+
+
+def _lean_rows(o: Any) -> Any:
+    """Row-level diet for the register tools: drop updated_by, keep a short note tail."""
+    if isinstance(o, dict):
+        if "id" in o and "state" in o and "updated_by" in o:
+            o = {k: v for k, v in o.items() if k != "updated_by"}
+            if isinstance(o.get("note_tail"), str):
+                o["note_tail"] = o["note_tail"][-90:]
+        return {k: _lean_rows(v) for k, v in o.items()}
+    if isinstance(o, list):
+        return [_lean_rows(x) for x in o]
+    return o
+
+
 def call_tool(name: str, args: dict[str, Any]) -> dict[str, Any]:
+    out = _clip(_lean_rows(_call_tool(name, args)))
+    if isinstance(out, dict):
+        out["reply_bytes"] = len(json.dumps(out, default=str))
+        if out["reply_bytes"] > REPLY_BUDGET:
+            out["oversize"] = f"reply is {out['reply_bytes']} bytes (> {REPLY_BUDGET}); lower limit or page with offset"
+    return out
+
+
+def _call_tool(name: str, args: dict[str, Any]) -> dict[str, Any]:
     if name == "hello":
         N_CALLS["n"] += 1
         now = _dt.datetime.now(_dt.timezone.utc)
@@ -128,6 +196,12 @@ def call_tool(name: str, args: dict[str, Any]) -> dict[str, Any]:
     if name == "inbox":
         limit = _clamp(args.get("limit"), 1, 200, 25)
         return CACHE.get(f"inbox:{limit}", TTL_S["inbox"], lambda: data.inbox(REPO, limit))
+    if name == "research_queue":
+        a = {k: args.get(k) for k in ("status", "theme", "limit", "offset")}
+        return CACHE.get("research_queue:" + json.dumps(a, sort_keys=True, default=str), TTL_S[name],
+                         lambda: tabs.research_queue(REPO, a))
+    if name == "wake_toggles":
+        return CACHE.get("wake_toggles", TTL_S[name], lambda: wake_toggles_read())
     if name == "work_items":
         return CACHE.get("work_items", TTL_S["work_items"], data.work_items)
     if name in GATED_TOOLS and not auth_active():
@@ -177,7 +251,7 @@ def handle(msg: dict[str, Any]) -> dict[str, Any] | None:
             return {"jsonrpc": "2.0", "id": mid, "error": {"code": -32602, "message": f"unknown tool: {name}"}}
         try:
             out = call_tool(name, p.get("arguments") or {})
-            result = {"content": [{"type": "text", "text": json.dumps(out, default=str)}],
+            result = {"content": [{"type": "text", "text": json.dumps(out, default=str, separators=(",", ":"))}],
                       "structuredContent": out, "isError": False}
         except Exception as exc:  # noqa: BLE001  # allow-silent: returned to the caller as a tool error
             result = {"content": [{"type": "text", "text": f"tool failed: {exc}"}], "isError": True}
