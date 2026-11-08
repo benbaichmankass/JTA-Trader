@@ -27,7 +27,7 @@ import pandas as pd
 
 REPO = Path(__file__).resolve().parents[2]
 sys.path[:0] = [str(REPO), str(REPO / "scripts" / "research")]
-import ml_decision_entry as E  # noqa: E402
+import ml_decision_entry as E
 
 START, END, STEP_DAYS = "2025-10-01", "2026-09-30", 28
 LEVER_N, LEVER_DELTA = 300, 0.03
@@ -46,7 +46,7 @@ def _spearman(x, y) -> float | None:
 def _stats(t: pd.DataFrame) -> dict:
     if t is None or len(t) == 0:
         return {"n": 0, "mean_net_r": None}
-    return {"n": int(len(t)), "mean_net_r": float(t.net_r.mean()),
+    return {"n": len(t), "mean_net_r": float(t.net_r.mean()),
             "se": float(t.net_r.std(ddof=1) / math.sqrt(len(t))) if len(t) > 1 else None}
 
 
@@ -114,6 +114,7 @@ def run(a) -> int:
 
 def self_test() -> int:
     import tempfile
+
     import ml_entry_crypto_struct as C
     root = Path(tempfile.mkdtemp())
     syms = C._synthetic_cache(root)
