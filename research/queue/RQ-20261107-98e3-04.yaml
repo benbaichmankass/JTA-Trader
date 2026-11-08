@@ -1,0 +1,95 @@
+# Hand-authored 2026-11-07 by lane ML-ENTRY-EQ-STRUCTURE-RETEST (Tier 1). Dev-only; rule registered before the run.
+id: RQ-20261107-98e3-04
+title: 'ENTRY-EQ structure-label SEED VARIANCE (dev): how much does the pooled dev OOF mean net R of structure-trained config B at tau 0.20 / 0.30 move across 5 pinned
+  LightGBM seeds?'
+status: done
+cadence: once
+theme: ml_health
+priority: 1
+roadmap:
+- L-ML-LIVE
+kind: experiment
+practice_precedent: 'M13 (docs/reference/trading-and-model-practice-principles.md): unlimited iteration on the training-period walk-forward; the confirming window
+  is loaded by NO code path of this unit.'
+question: 'Run 42396313667 (RQ-20261107-98e3-03) read tau 0.20 at +0.083 (n=3191) where the graded dev stage read +0.1222 (n=3004) for the same config, labels and
+  dates: an unpinned-fit spread of ~0.04 R, the size of the edge. Dev-only (dates <= 2025-06-30, no confirming window): refit config B under PINNED determinism with
+  seeds 1..5, same 5 purged walk-forward folds, taus 0.20 and 0.30; report per-seed pooled OOF mean net R and n.'
+why_this_matters: Decides whether the graded +0.2123 and the dev selection are distinguishable from fit noise, and gives the seed spread to carry into any N=3 confirm
+  design. Descriptive; graded records unchanged.
+power:
+  expected_n: 1000
+  min_detectable_effect: 0.1
+  effect_units: metric
+  sd: 1.0
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: 'DESCRIPTIVE dev stage (no pass bar). INFERRED: the v1 read took 1099 restricted-long trades over 13 months on this pool; the walk-forward OOF window is
+    ~30 months, so several thousand OOF decisions per config/tau before the tau filter. Selection needs >= 300.'
+  feasibility:
+    source: none
+    accrual_basis: Replays Alpaca 1h RTH history 2021-01-01 .. 2025-06-30; nothing accrues.
+decision_rule:
+  id: RULE-RQ20261107-98e3-04-SEED-VAR
+  registered_at: '2026-11-07'
+  registered_before_run: true
+  statistic: 'scripts/research/ml_entry_equity.py dev --structure --configs B --seeds 1,2,3,4,5 --taus 0.2,0.3: per (seed, tau) pooled purged walk-forward OOF restricted-long
+    mean net R, n, n_symbols, by_fold, rows <= 2025-06-30.'
+  rule: 'Descriptive: no pass bar, no promotion consumes it. Reading rule fixed now: at each tau let R = max - min of the 5 per-seed pooled OOF means (n>=300 each).
+    SEED-NOISE-DOMINATED if R >= 0.04 at tau 0.20 (as large as the graded-vs-rerun gap); STABLE if R < 0.02; INTERMEDIATE otherwise. If the 5-seed MEAN at tau 0.20
+    is <= 0 the graded dev selection is a fit artifact. Thresholds never change after any result.'
+  what_it_does_not_do: No confirming window, no change to any record, tau, config or roster. Shares the dev data with 98e3-01/03 (declared).
+  min_n: 300 OOF decisions per (seed, tau)
+compute: cpu_long
+value:
+  bucket: ai_trader
+  usd_at_stake_per_month: 60
+  confidence: 0.2
+  basis: 'stand-in: the operator goal (an ML decision maker live on the Alpaca book); not a P&L measurement.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 6.0
+  est_minutes: 100
+  why_runner: Alpaca market data (read-only, paper key) + LightGBM fits; 4 vCPU / 16 GB runner.
+  basis: INFERRED - a41f-01 re-run took 25 min for 173 ETFs of 1h bars; 15 LightGBM fits on ~0.3M rows add ~15-30 min.
+run:
+  workflow: research-script-run.yml
+  command:
+  - python3
+  - scripts/research/ml_entry_equity.py
+  - dev
+  - --cache
+  - /tmp/ml_entry_equity
+  - --out
+  - '{out_dir}'
+  - --unit
+  - '{unit}'
+  - --where
+  - research-script-run
+  - --structure
+  - --configs
+  - B
+  - --seeds
+  - 1,2,3,4,5
+  - --taus
+  - 0.2,0.3
+  timeout_minutes: 180
+  inputs:
+    research_unit: RQ-20261107-98e3-04
+ml_consumer:
+  consumer: ML-ENTRY-EQUITY-NATIVE
+  decision: the seed spread to design the N=3 confirm for the structure-trained ml_entry_eq and whether the graded dev selection is a fit artifact
+  legs:
+  - iaum_pullback_1d
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- ML-ENTRY-EQ-STRUCTURE-RETEST
+- RQ-20261106-98e3-01
+- RQ-20261107-98e3-03
+population: 'The registered POOL_RULE of scripts/research/ml_entry_alpaca_score.py, UNCHANGED (sha256 e9702661d1a596a0f7e84e632c0ca8b5c2743a728f02147477c003644a0858e2):
+  active, tradable, us_equity ETFs (nasdaqtraded ETF=Y) with median daily dollar volume >= 50M USD over 2019-01-01..2020-12-31. The module refuses to run if the rule
+  hash differs.'

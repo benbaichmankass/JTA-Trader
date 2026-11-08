@@ -27,7 +27,7 @@ Compare: the fixed 2/3 ATR bracket model read +0.0392 (n=858), so the structure-
 
 ## 3. The proposal (Tier 3, NOT merged by this lane)
 
-**Pre-requisite found while writing this — the served model is not the graded model.** `ml_entry_eq` on `alpaca_paper` serves the fixed-bracket booster `af4835e29fe83c86` (config/strategies.yaml `ml_entry_eq`, `ml/candidates/ml_entry_eq_v1`). The PASS above is for a *re-trained* booster (`90329845d55d7dfa`). Setting `structure_exit` on the existing leg would put the live exit on a model trained for a different exit. Order of work:
+**Pre-requisite found while writing this — the served model is not the graded model.** `ml_entry_eq` on `alpaca_paper` serves a fixed-bracket booster (`ml/candidates/ml_entry_eq_v1`, sha `ceeb8698bb130b9b`, the pinned refit; the graded fixed-bracket fit was `af4835e29fe83c86`, also a different fit — corrected 2026-11-07, this line first cited the graded sha). The PASS above is for a *re-trained* booster (`90329845d55d7dfa`). Setting `structure_exit` on the existing leg would put the live exit on a model trained for a different exit. Order of work:
 
 1. **Export** (Tier 1, queued here as `RQ-20261107-98e3-02`): deterministic refit with `--structure`, expected sha `90329845d55d7dfa`, writes `model.json` + `parity_fixture.json` for the serve-parity step (`docs/research/ml-entry-eq-serve-spec-2026-11-06.md`).
 2. **Serve** the structure model as a NEW candidate id (do not overwrite `ml_entry_eq_v1`) and pass the serve-parity fixture.
@@ -43,3 +43,36 @@ Compare: the fixed 2/3 ATR bracket model read +0.0392 (n=858), so the structure-
 ## 4. Why this holds under the rules
 
 Holdout governs real money (OPERATING-PLAN § 2, 2026-11-06): the configuration chosen on dev cleared its registered rule on held-out data net of the full cost stack (committed record above); DSR is probation; paper is not a gate. Mechanics are proven for Alpaca equities by `tqqq_trend_long_1d` on `alpaca_live`; the ML leg's own mechanics are proven on `alpaca_paper`. Not claimed: statistical significance on the clustered se, or a measured affordable symbol set.
+
+## 5. Addendum 2026-11-07 — export, serve-parity and tau-extension results
+
+**Export `RQ-20261107-98e3-02` (run 42394189988).** The unpinned refit did NOT reproduce the graded booster (`a14098f9...` vs graded `90329845...`; train rows 368,752 vs 368,757). Shipped = the pinned deterministic refit, sha `16faaa1948b087ec...`, committed as `ml/candidates/ml_entry_eq_v2_struct/` (model.json + parity_fixture.json; tests `tests/test_ml_entry_eq_struct_artifact.py` pass: booster reproduces the fixture to 1e-9). Against the unpinned fit on 20,000 training-tail rows: spearman 0.961, decision agreement at tau 0.985, max |d| 0.753. **The model that would be served is therefore a close sibling of the graded one, not the graded one itself.**
+
+**Run-to-run variance (finding).** Dev unit `RQ-20261107-98e3-03` (run 42396313667), same config B / structure labels / dates, read tau 0.20 at **+0.083 (n=3191)**; the graded dev stage read **+0.1222 (n=3004)**. The two differ by 0.04 R with an unpinned LightGBM and a few rows of data drift — the same size as the effect being measured. The graded +0.2123 confirm is one unpinned fit. Scoring the shipped pinned model on the confirm window would be a third read of that window (ledger N=3) and has NOT been done.
+
+**Tau extension (rule fixed before the run: plateau / cliff / rising edge).** Dev OOF pooled mean net R: tau 0.20 +0.083 (n 3191), 0.25 +0.109 (1943), 0.30 +0.197 (1122), 0.40 +0.204 (342, only 10 trades in fold 4). Outcome by the registered rule: **RISING EDGE** (tau 0.30, n>=300, reads >= +0.15). Fold 3 reads -0.35..-0.44 at every tau. This is a hypothesis for a later N=3 confirm unit, never an adopted tau; the graded record and the proposed tau 0.20 are unchanged.
+
+**What this changes for the operator.** The PASS stands as recorded. Before real money, the evidence gap is the served pinned model: it is a different fit from the one graded, and the fit-to-fit spread is large relative to the edge.
+
+## 6. Addendum 2026-11-08 — seed variance (04) and 5-seed ensemble (05), registered rules applied
+
+Records: `comms/research/RQ-20261107-98e3-04/42417906259/`, `comms/research/RQ-20261107-98e3-05/42417908525/` (dev stage only; no confirming window loaded).
+
+**04, seed variance (pinned seeds 1-5, config B, structure labels).** Pooled dev OOF mean net R at tau 0.20 per seed: +0.108, +0.082, +0.063, +0.110, +0.098 (n 2990-3254 each): range **0.047**, 5-seed mean **+0.092**. At tau 0.30: +0.194, +0.129, +0.061, +0.213, +0.169: range **0.152**, mean +0.153 (n 936-1144). Registered reading: **SEED-NOISE-DOMINATED** at tau 0.20 (range >= 0.04); the 5-seed mean is above 0, so the graded dev selection is not purely a fit artifact. Higher tau is far noisier (range 0.15 at 0.30 with a third of the trades).
+
+**05, 5-seed ensemble (mean of 5 pinned fits).** Dev OOF at tau 0.20 **+0.092** (n 2879), 0.25 +0.118 (1688), 0.30 +0.190 (954); folds at 0.20: +0.131, +0.196, -0.044, -0.230, +0.295. Registered reading: **ENSEMBLE-ADMITTED** (tau-0.20 mean >= +0.083, and only 1 of 5 folds below -0.10, fold 3). Admission is only the right to run the N=3 confirm unit `RQ-20261107-98e3-06`; it adopts no tau, model or roster.
+
+**Caveats carried into 06.** (1) Fold 3 is negative at every seed, tau and the ensemble (-0.2 to -0.4). (2) 06 selects tau on dev over {0.20, 0.25, 0.30} by max pooled OOF mean, so it will pick the noisiest tau (0.30, ~950 dev trades, so ~1/3 as many confirm trades): its iid se will be ~0.08 and the N=3 point bar (t_min 0.853) ~0.07 R. (3) The +0.04 R margin floor registered in 06 understates the single-fit noise at tau 0.30 (range 0.15); the ensemble averages that noise down but the unit does not measure by how much on the confirm window.
+
+## 7. Addendum 2026-11-08 — re-queued regime/direction-head questions (07-10), Kaggle CPU route
+
+`RQ-20261107-98e3-07..10` re-ask four `ml_bakeoff` questions whose only runs (2026-11-02) ended `producer_failed` (never measured). Units with `routing.published_data` must run on `research-script-run-kaggle-cpu.yml` (a plain GitHub-runner dispatch fails with `dataset path datasets-out/... not found`, run 42432563196, not a record). Sign convention, from `build_deltas`: `deltas[group][window][LEARNER][REF]`, positive = LEARNER better than REF. Records: `comms/research/RQ-20261107-98e3-{07,08,09,10}/<run>/` (runs 42432760067, 42434161072, 42435164154, 42436008571).
+
+| Unit | Question (BTC/ETH/SOL 1h, 5-fold CV) | Result (registered rule) |
+|---|---|---|
+| 07 | regime head: does HAR-RV lift sklearn HGB? | indeterminate; plain HGB beats the class prior by 0.095-0.12 nats |
+| 08 | direction head: does HAR-RV lift default LightGBM? | **FAIL** (lgbm_har below lgbm by 0.0013/0.0029/0.0074); the class prior beats default LightGBM by 0.006-0.007 nats (CIs exclude 0) |
+| 09 | regime head, latest 25,000 bars: does the HAR-RV lift persist? | indeterminate (lgbm_har vs lgbm +0.001/+0.004/+0.008, CIs include 0); lgbm beats the prior by 0.089/0.095/0.122 |
+| 10 | direction head: does a small sklearn MLP beat the class prior? | **FAIL** (mlp vs prior -0.0004/-0.0008/-0.0373, CIs include 0) |
+
+Reading: the 1h REGIME head has clear skill over the prior (HGB and LightGBM, ~0.09-0.12 nats) and HAR-RV adds at most ~0.001-0.008 (not distinguishable from 0); the 1h DIRECTION head has no skill over the prior for LightGBM (slightly negative) or a small MLP (indistinguishable from 0). These are research bake-off recipes, not any deployed head; no served model was read or changed.

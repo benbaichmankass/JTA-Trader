@@ -68,8 +68,27 @@ CONFIGS = {   # the whole grid, fixed here BEFORE any dev result: 3 configs x 4 
 REGISTERED_SELECTION = ("max pooled dev out-of-fold mean net R over (config, tau) subject to >= %d OOF trades" % MIN_OOF_N)
 
 
+class _Ensemble:
+    """Mean of several LGBMRegressors that differ only by seed (dev-stage variance reduction; no booster_ -- never exported or confirmed as is)."""
+
+    def __init__(self, models):
+        self.models = models
+
+    def fit(self, X, y):
+        for m in self.models:
+            m.fit(X, y)
+        return self
+
+    def predict(self, X):
+        return np.mean([m.predict(X) for m in self.models], axis=0)
+
+
 def _lgb(params: dict):
     import lightgbm as lgb
+    if "_ens_seeds" in params:
+        base = {k: v for k, v in params.items() if k != "_ens_seeds"}
+        return _Ensemble([lgb.LGBMRegressor(**{**BASE_PARAMS, **base, **PINNED, "random_state": int(sd), "bagging_seed": int(sd),
+                                               "feature_fraction_seed": int(sd), "data_random_seed": int(sd)}) for sd in params["_ens_seeds"]])
     return lgb.LGBMRegressor(**{**BASE_PARAMS, **params})
 
 
@@ -224,7 +243,7 @@ def _fold_of(ts: pd.Series, bounds) -> np.ndarray:
 
 def confirm_stage(tab: pd.DataFrame, config: str, tau: float, dev_oof_mean: float, unit: str, ledger_dir: Path,
                   train_end: str = TRAIN_END, start: str = CONFIRM_START, end: str = "2026-10-31", symbols=None,
-                  configs: dict = CONFIGS, claim: bool = True, model_tag: str = "") -> dict:
+                  configs: dict = CONFIGS, claim: bool = True, model_tag: str = "", min_mean: float = 0.0) -> dict:
     """Refit on rows <= train_end, score [start, end] ONCE, grade against the deflated bar. The read is recorded in the ledger."""
     HL.check_window_disjoint(train_end, start)
     if pd.Timestamp(start) < pd.Timestamp(train_end) + pd.Timedelta(days=EMBARGO_DAYS):
@@ -234,7 +253,8 @@ def confirm_stage(tab: pd.DataFrame, config: str, tau: float, dev_oof_mean: floa
     te = pd.Timestamp(train_end, tz="UTC") + pd.Timedelta(days=1)
     tr = purge(tab[tab.ts < te], te).dropna(subset=feats + ["net_long"])
     m = _lgb(cfg["params"]).fit(tr[feats], tr["net_long"])
-    booster_sha = hashlib.sha256(m.booster_.model_to_string().encode()).hexdigest()
+    booster_sha = hashlib.sha256((("".join(x.booster_.model_to_string() for x in m.models)) if isinstance(m, _Ensemble)
+                                  else m.booster_.model_to_string()).encode()).hexdigest()
     hs, he = pd.Timestamp(start, tz="UTC"), pd.Timestamp(end, tz="UTC") + pd.Timedelta(days=1)
     ledger_dir.mkdir(parents=True, exist_ok=True)
     ledger = ledger_dir / "holdout_reads.jsonl"
@@ -260,9 +280,10 @@ def confirm_stage(tab: pd.DataFrame, config: str, tau: float, dev_oof_mean: floa
     else:
         pass_conf = HL.point_ok(mean, se, bar)
         pass_dev = dev_oof_mean is not None and dev_oof_mean > 0
-        v = "pass" if (pass_conf and pass_dev) else "fail"
+        pass_margin = mean is not None and mean >= min_mean      # an extra registered floor (default 0 = the plain rule): e.g. the seed-noise margin
+        v = "pass" if (pass_conf and pass_dev and pass_margin) else "fail"
         why = (f"confirm mean net R {mean:+.4f} (se {se:.4f}, deflated point bar t_min {bar['point_t_min']}, N={bar['n_tries']}) "
-               f"at n={n}; dev OOF mean {dev_oof_mean:+.4f}")
+               f"at n={n}; dev OOF mean {dev_oof_mean:+.4f}" + (f"; registered margin floor {min_mean:+.3f} {'met' if pass_margin else 'NOT met'}" if min_mean else ""))
     mo = tk.assign(m=pd.to_datetime(tk.ts, utc=True).dt.strftime("%Y-%m")).groupby("m").net_r.agg(["count", "mean"]) if n else None
     clustered_se = None
     if mo is not None and len(mo) > 1:
@@ -313,7 +334,8 @@ def export_stage(tab: pd.DataFrame, config: str, tau: float, pool: list[str], ex
            "costs": {"fee_bps": 0.0, "slippage_bps": 5.0, "regulatory_bps": S.REGULATORY_BPS, "slippage_status": "PROVISIONAL"},
            "pool_rule_sha256": S.POOL_RULE_SHA256, "pool_symbols": list(pool), "proxies": PROXIES, "lgb_params": params,
            "confirm_booster_sha256_expected": expect_sha, "sha_match_confirm": match, "a_vs_b_delta": delta,
-           "evidence": ["RQ-20261105-e9a1-01 (dev walk-forward, run 42119511272)", "RQ-20261105-e9a1-02 (confirming read, run 42143223941: n 858, net +0.0392 R)"],
+           "evidence": (["RQ-20261106-98e3-01 (structure-label dev + confirming read)"] if struct else
+                        ["RQ-20261105-e9a1-01 (dev walk-forward, run 42119511272)", "RQ-20261105-e9a1-02 (confirming read, run 42143223941: n 858, net +0.0392 R)"]),
            "booster_txt": {"long": text}}
     out.mkdir(parents=True, exist_ok=True)
     (out / "model.json").write_text(json.dumps(art))
@@ -359,17 +381,19 @@ def _pool_and_bars(a, end_day: str):
 
 def structure_stage(tab: pd.DataFrame, unit: str, ledger_dir: Path, end: str, symbols, spec: str = STRUCT_SPEC,
                     configs: dict = None, train_end: str = TRAIN_END, start: str = CONFIRM_START, folds: list = None,
-                    taus=TAUS, min_oof_n: int = MIN_OOF_N, claim: bool = True, log=print) -> dict:
+                    taus=TAUS, min_oof_n: int = MIN_OOF_N, claim: bool = True, log=print, ens_seeds=None, min_mean: float = 0.0) -> dict:
     """RQ-20261106-98e3-01: the equity ENTRY model RE-TRAINED on structure-exit labels (config B fixed), tau re-selected on the
     dev walk-forward by the registered rule (4 draws), then ONE confirming read of the same window as the fixed-bracket confirm
     (ledger N counts it: N=2). ``tab`` must already carry the structure-exit net_long/gross_long/cost_long."""
     configs = configs or {"B": CONFIGS["B"]}
+    if ens_seeds:   # ONE served model = the mean of pinned fits at these seeds (RQ-20261107-98e3-06); config name stays "B"
+        configs = {k: {"features": v["features"], "params": {**v["params"], "_ens_seeds": [int(x) for x in ens_seeds]}} for k, v in configs.items()}
     d = dev_stage(tab, folds=folds or DEV_FOLDS, train_end=train_end, taus=taus, configs=configs, min_oof_n=min_oof_n, log=log)
     sel = d["selected"]
     if sel is None:
         return {"verdict": "indeterminate", "note": "dev stage selected nothing (no tau with >= %d OOF trades)" % min_oof_n, "dev": d}
     c = confirm_stage(tab, sel["config"], float(sel["tau"]), float(sel["mean_net_r"]), unit, ledger_dir, train_end=train_end,
-                      start=start, end=end, symbols=symbols, configs=configs, claim=claim, model_tag="-STRUCT-" + spec.replace(";", "-").replace("=", ""))
+                      start=start, end=end, symbols=symbols, configs=configs, claim=claim, model_tag="-STRUCT-" + spec.replace(";", "-").replace("=", "") + (f"-ENS{len(ens_seeds)}" if ens_seeds else ""), min_mean=min_mean)
     c["dev"] = d
     c["structure_exit"] = spec
     return c
@@ -403,15 +427,24 @@ def main_run(a) -> int:
     tab = build_table(bars, pool, slip, fee, struct=STRUCT_SPEC if (a.cmd == "structure" or getattr(a, "structure", False)) else "")
     print(f"[table] {len(tab)} decision rows, {tab.symbol.nunique()} symbols t={time.strftime('%H:%M:%S')}", flush=True)
     if a.cmd == "dev":
-        d = dev_stage(tab, taus=[float(x) for x in a.taus.split(",")] if getattr(a, "taus", "") else TAUS,
-                      configs={k: CONFIGS[k] for k in a.configs.split(",")} if getattr(a, "configs", "") else CONFIGS)
+        cfgs = {k: CONFIGS[k] for k in a.configs.split(",")} if getattr(a, "configs", "") else CONFIGS
+        if getattr(a, "seeds", ""):   # seed-variance read: each config refit under PINNED determinism and every seed in the list
+            cfgs = {f"{k}_s{sd}": {"features": v["features"], "params": {**v["params"], **PINNED, "random_state": int(sd), "bagging_seed": int(sd),
+                                                                          "feature_fraction_seed": int(sd), "data_random_seed": int(sd)}}
+                    for k, v in cfgs.items() for sd in a.seeds.split(",")}
+        if getattr(a, "ensemble_seeds", ""):   # one 5-seed-average model per config (variance-reduction read), alongside nothing else
+            cfgs = {f"{k}_ens": {"features": v["features"], "params": {**v["params"], "_ens_seeds": [int(x) for x in a.ensemble_seeds.split(",")]}}
+                    for k, v in cfgs.items()}
+        d = dev_stage(tab, taus=[float(x) for x in a.taus.split(",")] if getattr(a, "taus", "") else TAUS, configs=cfgs)
         d.update({"structure_exit": STRUCT_SPEC if getattr(a, "structure", False) else None, "train_end": TRAIN_END, "pool": {k: v for k, v in prep.items() if k != "excluded"}, "n_pool": len(pool),
                   "costs": {"slippage_bps": slip, "fee_bps": fee, "regulatory_bps": S.REGULATORY_BPS},
                   "configs": {k: {"features": v["features"], "params": v["params"]} for k, v in CONFIGS.items()},
                   "alpaca_calls": client.calls, "runtime_s": round(time.time() - t0, 1)})
         row = dev_row(d, a.unit, a.where)
     elif a.cmd == "structure":
-        c = structure_stage(tab, a.unit, out / "ledger", end_day, pool)
+        c = structure_stage(tab, a.unit, out / "ledger", end_day, pool,
+                            taus=[float(x) for x in a.taus.split(",")] if a.taus else TAUS,
+                            ens_seeds=a.ensemble_seeds.split(",") if a.ensemble_seeds else None, min_mean=float(a.min_mean))
         row = {"schema_version": 1, "research_unit": a.unit, "read_state": "measured", "verdict": c["verdict"], "note": c["note"],
                "generated_at": pd.Timestamp.now(tz="UTC").strftime("%Y-%m-%dT%H:%M:%SZ"),
                "decision_rule": {"id": a.rule_id, "registered_at": a.registered_at, "registered_before_run": True},
@@ -527,6 +560,10 @@ def self_test() -> int:
         r = structure_stage(ts_tab, "RQ-T", Path(td), "2023-08-31", pool, configs=sm, train_end="2023-04-30", start="2023-05-20",
                             folds=["2022-09-01", "2023-01-01"], taus=[0.0, 0.05], min_oof_n=1, log=lambda *_: None)
         assert r["verdict"] in ("pass", "fail", "indeterminate") and r["structure_exit"] == STRUCT_SPEC and r["dev"]["n_selection_draws"] == 2, r
+    with tempfile.TemporaryDirectory() as td:
+        r = structure_stage(ts_tab, "RQ-T", Path(td), "2023-08-31", pool, configs=sm, train_end="2023-04-30", start="2023-05-20",
+                            folds=["2022-09-01", "2023-01-01"], taus=[0.0, 0.05], min_oof_n=1, log=lambda *_: None, ens_seeds=["1", "2"])
+        assert r["verdict"] in ("pass", "fail", "indeterminate") and len(r["booster_sha256"]) == 64 and r["ledger_record"]["model_id"].endswith("-ENS2"), r
     print("self-test ok")
     return 0
 
@@ -551,7 +588,12 @@ def main(argv=None) -> int:
             p.add_argument("--structure", action="store_true", help="label with the live structure exit (pivot=5;sl_only)")
             p.add_argument("--taus", default="", help="comma list overriding the registered tau grid (dev-only iteration)")
             p.add_argument("--configs", default="", help="comma list of configs to run (default all)")
+            p.add_argument("--ensemble-seeds", dest="ensemble_seeds", default="", help="comma list of seeds: ONE model per config = the mean of pinned fits at these seeds")
+            p.add_argument("--seeds", default="", help="comma list of LightGBM seeds: refit every config under PINNED determinism per seed (variance read)")
         if name == "structure":
+            p.add_argument("--taus", default="", help="comma list overriding the tau grid (registered in the unit)")
+            p.add_argument("--ensemble-seeds", dest="ensemble_seeds", default="", help="serve ONE model = mean of pinned fits at these seeds")
+            p.add_argument("--min-mean", dest="min_mean", default="0", help="extra registered floor on the confirm mean (seed-noise margin)")
             p.add_argument("--rule-id", required=True)
             p.add_argument("--registered-at", required=True)
         if name == "confirm":
