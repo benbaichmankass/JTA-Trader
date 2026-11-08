@@ -315,3 +315,29 @@ def test_ping_message_is_parseable_shell_argv(fake_deploy):
     assert fields[3] == "--target"
     assert fields[4] == "trader"
     assert fields[5].startswith("DEPLOY FAILURE (JC-CA-05):")
+
+
+def test_sha_same_commit_prefix_rule():
+    """2026-11-08 20:10Z false URGENT DEPLOY FAILURE: the deploy expected
+    9ab32c9f3 and web-api reported 9ab32c9f34 (same commit, different
+    `git rev-parse --short` lengths). The comparison must treat a hex prefix
+    of >= 7 chars as the same commit and still refuse a different SHA."""
+    import subprocess as sp
+    script = Path(__file__).resolve().parents[1] / "scripts" / "deploy_pull_restart.sh"
+    src = script.read_text()
+    start = src.index("sha_same_commit() {")
+    end = src.index("\n}\n", start) + 3
+    fn = src[start:end]
+
+    def same(a, b):
+        r = sp.run(["bash", "-c", fn + f'\nsha_same_commit "{a}" "{b}"'], check=False)
+        return r.returncode == 0
+
+    assert same("9ab32c9f3", "9ab32c9f34")          # tonight's case
+    assert same("9ab32c9f34", "9ab32c9f3")
+    assert same("newsha8", "newsha8")               # exact match always holds
+    assert not same("9ab32c9f3", "941cd8990")       # a different commit
+    assert not same("9ab32c", "9ab32c9f34")         # too short to trust
+    assert not same("unknown", "unknown1")          # non-hex sentinel
+    assert not same("", "")
+    assert not same("parse_error", "9ab32c9f34")
