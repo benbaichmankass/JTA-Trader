@@ -27,7 +27,7 @@ import pandas as pd
 
 REPO = Path(__file__).resolve().parents[2]
 sys.path[:0] = [str(REPO), str(REPO / "scripts" / "research")]
-import ml_decision_entry as E
+import ml_decision_entry as E  # noqa: E402
 
 START, END, STEP_DAYS = "2025-10-01", "2026-09-30", 28
 LEVER_N, LEVER_DELTA = 300, 0.03
@@ -120,7 +120,9 @@ def self_test() -> int:
     syms = C._synthetic_cache(root)
     tab = E.build_table(root, syms)
     train = tab[tab.ts < tab.ts.max() - pd.Timedelta(days=60)]
-    fit = lambda t: E.fit_models(t.sample(min(len(t), 15000), random_state=0))
+    def fit(t):
+        return E.fit_models(t.sample(min(len(t), 15000), random_state=0))
+
     frozen = fit(train)
     start = (tab.ts.max() - pd.Timedelta(days=56)).strftime("%Y-%m-%d")
     end = (tab.ts.max() - pd.Timedelta(days=1)).strftime("%Y-%m-%d")
