@@ -305,6 +305,40 @@ PINNED = {"deterministic": True, "force_row_wise": True, "n_jobs": 1, "bagging_s
           "data_random_seed": 20261105}   # LightGBM thread/hardware nondeterminism pin (lane ML-FS-RECIPE heads-up 2026-11-06)
 
 
+def export_ensemble(tab: pd.DataFrame, config: str, tau: float, pool: list[str], expect_sha: str, out: Path, seeds, train_end: str = TRAIN_END,
+                    configs: dict = CONFIGS, n_fixture: int = 60, struct: str = "") -> dict:
+    """ENSEMBLE EXPORT (lane ML-ENTRY-EQ-STRUCT-LIVE, 2026-11-08): refit the graded mean-of-pinned-seeds model EXACTLY as ``confirm_stage`` did (same
+    ``_lgb`` ensemble, same rows) and write the N booster texts. sha256 = sha of the concatenated texts (the confirm stage's rule); ``sha_match`` says
+    whether it reproduces ``expect_sha``. The caller must NOT ship a model whose sha does not match. Writes model.json + parity_fixture.json (mean preds)."""
+    cfg = configs[config]
+    feats = cfg["features"]
+    seeds = [int(x) for x in seeds]
+    te = pd.Timestamp(train_end, tz="UTC") + pd.Timedelta(days=1)
+    tr = purge(tab[tab.ts < te], te).dropna(subset=feats + ["net_long"])
+    m = _lgb({**cfg["params"], "_ens_seeds": seeds}).fit(tr[feats], tr["net_long"])
+    texts = [x.booster_.model_to_string() for x in m.models]
+    sha = hashlib.sha256("".join(texts).encode()).hexdigest()
+    match = bool(expect_sha) and sha.startswith(expect_sha)
+    model_id = f"ENTRY-EQ-v3-{config}-tau{tau}-STRUCT-{struct.replace(';', '-').replace('=', '')}-ENS{len(seeds)}"
+    art = {"model_id": model_id, "schema": "ml_entry_eq_model/2", "features": feats, "structure_exit": struct or None, "tau": float(tau), "side": "long",
+           "train_end_exclusive": str(te), "train_rows": int(len(tr)), "booster_sha256": sha, "shipped": "ENSEMBLE_PINNED_SEEDS", "ensemble_seeds": seeds,
+           "n_boosters": len(texts), "bracket": {"sl_atr": 2.0, "tp_atr": 3.0, "atr_n": 14, "horizon_bars": H, "decision_every_h": 4, "bar": "alpaca 1Hour RTH, hour-aligned"},
+           "costs": {"fee_bps": 0.0, "slippage_bps": 5.0, "regulatory_bps": S.REGULATORY_BPS, "slippage_status": "PROVISIONAL"},
+           "pool_rule_sha256": S.POOL_RULE_SHA256, "pool_symbols": list(pool), "proxies": PROXIES,
+           "lgb_params": {**BASE_PARAMS, **cfg["params"], **PINNED}, "confirm_booster_sha256_expected": expect_sha, "sha_match_confirm": match,
+           "evidence": ["RQ-20261107-98e3-06 (structure ensemble dev + confirming read, run 42432561069: n 207, net +0.4922 R, PASS)"],
+           "booster_txt": {"long": texts}}
+    out.mkdir(parents=True, exist_ok=True)
+    (out / "model.json").write_text(json.dumps(art))
+    tail = tr.sort_values("ts").tail(20000).sample(n_fixture, random_state=7)
+    fx = {"model_id": model_id, "shipped": art["shipped"], "features": feats,
+          "rows": [{"symbol": r.symbol, "ts": str(r.ts), **{f: float(getattr(r, f)) for f in feats}, "pred": float(p)}  # provenance: predict -- mean regressed net R
+                   for r, p in zip(tail.itertuples(index=False), m.predict(tail[feats]))]}
+    (out / "parity_fixture.json").write_text(json.dumps(fx))
+    return {"model_id": model_id, "booster_sha256": sha, "expect_sha": expect_sha, "sha_match": match, "shipped": art["shipped"], "train_rows": int(len(tr)),
+            "n_features": len(feats), "n_boosters": len(texts), "model_json_bytes": (out / "model.json").stat().st_size, "n_fixture_rows": n_fixture}
+
+
 def export_stage(tab: pd.DataFrame, config: str, tau: float, pool: list[str], expect_sha: str, out: Path, train_end: str = TRAIN_END,
                  configs: dict = CONFIGS, n_fixture: int = 60, struct: str = "") -> dict:
     """EXPORT (row ML-ENTRY-EQUITY-NATIVE, manager 2026-11-06): refit the confirmed config and write a servable model.json. Reads NO date after
@@ -486,7 +520,11 @@ def main_run(a) -> int:
                                "alpaca_calls": client.calls, "runtime_s": round(time.time() - t0, 1)},
                "n": c.get("stats", {}).get("n"), "produced_by": {"tool": "python3 scripts/research/ml_entry_equity.py forward", "where": a.where}}
     elif a.cmd == "export":
-        e = export_stage(tab, a.config, float(a.tau), pool, a.expect_sha, out, struct=STRUCT_SPEC if a.structure else "")
+        if a.ensemble_seeds:
+            e = export_ensemble(tab, a.config, float(a.tau), pool, a.expect_sha, out, a.ensemble_seeds.split(","), struct=STRUCT_SPEC if a.structure else "")
+            e.setdefault("a_vs_b_delta", {"n_rows": 0, "max_abs": 0.0, "spearman": 1.0, "decision_agreement_at_tau": 1.0})
+        else:
+            e = export_stage(tab, a.config, float(a.tau), pool, a.expect_sha, out, struct=STRUCT_SPEC if a.structure else "")
         row = {"schema_version": 1, "research_unit": a.unit, "read_state": "measured", "verdict": "indeterminate",
                "population": f"EXPORT of {e['model_id']}: refit on rows < {TRAIN_END} over the {len(pool)}-ETF pool; no outcome after train_end read",
                "note": (f"export {e['model_id']}: confirm-params refit sha256 {e['booster_sha256_a'][:16]} "
@@ -575,6 +613,9 @@ def self_test() -> int:
         assert set(ex["a_vs_b_delta"]) >= {"max_abs", "mean_abs", "spearman", "decision_agreement_at_tau"}
         ex3 = export_stage(tab, "A", 0.0, pool, ex["booster_sha256_a"][:16], Path(td) / "c", train_end="2023-04-30", configs=small, n_fixture=10)
         assert ex3["sha_match"] and ex3["shipped"] == "A_confirm_params"       # a matching confirm hash ships the graded model itself
+        ee = export_ensemble(tab, "A", 0.0, pool, "", Path(td) / "e", [1, 2], train_end="2023-04-30", configs=small, n_fixture=10)
+        ee2 = export_ensemble(tab, "A", 0.0, pool, ee["booster_sha256"][:16], Path(td) / "e2", [1, 2], train_end="2023-04-30", configs=small, n_fixture=10)
+        assert ee["n_boosters"] == 2 and ee2["sha_match"], "the pinned seed ensemble must reproduce its own sha"
         import lightgbm as lgb
         fx = json.loads((Path(td) / "parity_fixture.json").read_text())
         bst = lgb.Booster(model_str=art["booster_txt"]["long"])
@@ -623,6 +664,7 @@ def main(argv=None) -> int:
         if name == "export":
             p.add_argument("--expect-sha", required=True, help="booster sha256 (prefix ok) of the confirm run to reproduce")
             p.add_argument("--structure", action="store_true", help="relabel with the live structure exit (pivot=5;sl_only) before the refit")
+            p.add_argument("--ensemble-seeds", dest="ensemble_seeds", default="", help="export the mean of pinned fits at these seeds (N boosters; sha = concatenated texts)")
         if name == "dev":
             p.add_argument("--structure", action="store_true", help="label with the live structure exit (pivot=5;sl_only)")
             p.add_argument("--struct-spec", dest="struct_spec", default="", help="dev-only: structure-exit spec overriding pivot=5;sl_only (needs --structure), e.g. pivot=3;sl_only")
