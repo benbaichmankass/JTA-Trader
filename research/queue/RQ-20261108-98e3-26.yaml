@@ -1,0 +1,94 @@
+id: RQ-20261108-98e3-26
+title: Is the served ml_entry decline age (a monthly refit recovers it) or regime (it does not)? Frozen v1 vs monthly-origin refits of the same recipe over the held-out
+  year
+status: queued
+cadence: once
+theme: ml_health
+priority: 2
+roadmap:
+- L-ML-LIVE
+kind: experiment
+practice_precedent: 'none: no external precedent; operator protocol 2026-11-08 (.claude/skills/drift-remediation/SKILL.md): transient drift self-corrects on retrain,
+  persistent failure needs a different fix.'
+question: 'Unit 23 read DECAY inside the 14-day window (first 7d -0.054 -> last 7d -0.179). Over 2025-10-01..2026-09-30 in 28-day windows, replay the frozen v1 (train_end
+  2025-09-22) and a refit at each window''s origin (same recipe, purged, tau carried) on the same decision rows: (a) does the monthly refit beat frozen, (b) does
+  the frozen window mean fall with months since train_end, (c) does it track pool realised vol instead.'
+why_this_matters: The weekly retrain job (ML-ENTRY-RETRAIN-CADENCE) assumes refit cadence is the lever. A CADENCE-LEVER reading supports promoting weekly candidates
+  sooner; NO-LEVER with REGIME-LINKED says the decline is regime and the answer is a vol-aware tau or sizing, not retraining. Nothing is changed by this unit.
+power:
+  expected_n: 900
+  min_detectable_effect: 0.1
+  effect_units: metric
+  sd: 1.0
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: 'ESTIMATE: the v1 held-out record took 907 restricted decisions on 5 symbols; on 48 symbols over 12 months the pooled both-sides policy should read in the
+    thousands, the long side a few hundred. Each rule carries its own n floor and reads INDETERMINATE below it.'
+  feasibility:
+    source: none
+    accrual_basis: Replays Binance 1h history through 2026-11-07; nothing accrues.
+decision_rule:
+  id: RULE-RQ20261108-98e3-26-CADENCE
+  registered_at: '2026-11-08'
+  registered_before_run: true
+  statistic: 'scripts/research/ml_entry_cadence.py run: frozen v1 vs per-window refit (E.fit_models on E.purge_train(tab[ts<origin])), both-sides policy at tau 0.1,
+    13 consecutive 28-day windows; pooled means; Spearman across windows.'
+  rule: CADENCE-LEVER iff refit n >= 300 and frozen n >= 300 and refit pooled mean net R >= frozen pooled mean + 0.03; NO-LEVER otherwise; INDETERMINATE below the
+    n floor. AGE-DECAY iff >= 10 windows with frozen n >= 30 and Spearman(months since v1 train_end, frozen window mean) <= -0.40; NOT-AGE otherwise. REGIME-LINKED
+    iff >= 10 windows and |Spearman(window pool-mean vol24, frozen window mean)| >= 0.50 and age is not AGE-DECAY; NOT-REGIME otherwise. Thresholds are not changed
+    after any result.
+  what_it_does_not_do: Changes no served model, tau, side_filter, roster or config; a CADENCE-LEVER only informs promotion timing of weekly candidates (the operator's
+    Tier-3 call). Refits are one seed; per-window means are noisy (declared). The window was read by v1 before (declared).
+  min_n: 300 pooled per arm; 10 windows with n >= 30
+compute: cpu_long
+value:
+  bucket: ai_trader
+  usd_at_stake_per_month: 60
+  confidence: 0.2
+  basis: 'stand-in: informs the cadence of the ML entry retrain on real money; not a P&L measurement.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 8.0
+  est_minutes: 150
+  why_runner: Binance public klines plus 13 LightGBM refits; no trainer-resident data.
+  basis: 'ESTIMATE, not measured: one 48-symbol fetch (~25 min per the retrain job) plus 13 refits of the c692-01 recipe plus scoring.'
+run:
+  workflow: research-script-run.yml
+  command:
+  - python3
+  - scripts/research/ml_entry_cadence.py
+  - run
+  - --cache
+  - /tmp/ml_entry_klines
+  - --out
+  - '{out_dir}'
+  - --unit
+  - '{unit}'
+  - --where
+  - research-script-run
+  - --run-date
+  - '2026-11-08'
+  - --rule-id
+  - RULE-RQ20261108-98e3-26-CADENCE
+  - --registered-at
+  - '2026-11-08'
+  timeout_minutes: 240
+  inputs:
+    research_unit: RQ-20261108-98e3-26
+ml_consumer:
+  consumer: src/units/strategies/ml_entry.py
+  decision: whether weekly candidate retrains are promoted on a cadence or the decline is handled as regime; no change from this unit
+  legs:
+  - ml_entry
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- RQ-20261108-98e3-23
+- RQ-20261108-98e3-25
+- ML-ENTRY-RETRAIN-CADENCE
+population: The ml_decision_entry universe (48 Binance USD-M perps), both-sides at tau 0.1 over 2025-10-01..2026-09-30; descriptive about the recipe, not a promotion
+  read.
