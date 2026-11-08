@@ -1,89 +1,143 @@
-# Hand-authored 2026-11-08 by lane ML-ENTRY-EQ-STRUCT-LIVE (Tier 1): ENSEMBLE export of the model that PASSED RQ-20261107-98e3-06 (operator decision 2026-11-08, row ML-ENTRY-EQ-STRUCT-LIVE).
 id: RQ-20261108-98e3-17
-title: 'ENTRY-EQ structure ENSEMBLE export: refit of the 5-seed (1-5) structure-trained config B (tau 0.25) on rows <= 2025-06-30 as a servable 5-booster model.json + parity fixture; concatenated-booster sha256 must reproduce the graded 0afc49948a41671a'
+title: 'Direction head at 15m, same-asset (BTC/ETH/SOL): does default LightGBM beat the class prior at 15m, where the 1h recipe lost to it?'
 status: queued
 cadence: once
 theme: ml_health
-priority: 1
-roadmap:
-- L-ML-LIVE
+priority: 2
 kind: experiment
-practice_precedent: 'M13 (docs/reference/trading-and-model-practice-principles.md): unlimited iteration on the training-period walk-forward; the confirming window
-  is loaded by NO code path of this unit.'
-question: Does the pinned 5-seed ensemble refit reproduce the graded sha 0afc49948a41671a... (sha256 of the concatenated booster texts, RQ-20261107-98e3-06 run 42432561069), and write model.json + parity_fixture.json for serving? A mismatch is reported loudly and the model is NOT shipped.
-why_this_matters: The operator put the PASSED ensemble on alpaca_live + alpaca_portfolio (2026-11-08); it must be the graded model, not a different fit.
+programme: P2
+roadmap:
+- M25
+question: Units 08/10/11 found no direction skill at 1h. Is that horizon-specific? Same six same-asset features at 15m on BTC, ETH and SOL, purged 5-fold CV embargo
+  24, tail 60000 rows, metric logloss, baseline = class prior.
+why_this_matters: Direction-head skill over the prior is the precondition for any direction signal feeding a leg; a PASS at 15m would redirect the line to the shorter
+  horizon, a FAIL closes the price-only direction line at 15m too.
+ml_consumer:
+  consumer: src/runtime/regime_shadow.py
+  decision: whether the direction head line is extended to the 15m horizon or closed at price-only features
+  legs:
+  - trend_donchian_eth_4h
+  - trend_donchian_xrp_4h
+  - xrp_pullback_2h
+  - ada_pullback_2h
+  book: money
 power:
-  expected_n: 1
-  min_detectable_effect: 1.0
-  effect_units: metric
-  sd: 1.0
+  expected_n: 36000
+  min_detectable_effect: 0.1
+  effect_units: sd
   design: one_sample
   alpha: 0.05
   power: 0.8
-  basis: 'DESCRIPTIVE tooling unit: no statistical test; the check is an exact sha256 reproduction.'
+  basis: 'tail_rows 60000 with min_train_frac 0.4 leaves ~36000 out-of-sample rows over 5 folds per symbol; d=0.1 paired needs ~785 rows; bars are autocorrelated
+    so effective n is lower: the rule requires the same-direction CV mean on EVERY symbol. expected_n is an ESTIMATE, not a measurement.'
   feasibility:
     source: none
-    accrual_basis: Replays Alpaca 1h RTH history 2021-01-01 .. 2025-06-30; nothing accrues.
+    accrual_basis: 'Fixed by construction (tail_rows of a nightly-rebuilt shard): n does not grow with waiting, so an underpowered result is reported as such and
+      the follow-up is a different dataset, not a re-run.'
 decision_rule:
-  id: RULE-RQ20261108-98e3-17-EXPORT
-  registered_at: '2026-11-07'
+  id: RULE-RQ2026110898e317-REG
+  registered_at: '2026-11-08'
   registered_before_run: true
-  statistic: 'scripts/research/ml_entry_equity.py export --config B --tau 0.25 --ensemble-seeds 1,2,3,4,5 --structure --expect-sha 0afc49948a41671a: booster_sha256 (concatenated texts), sha_match, train_rows, model_json_bytes.'
-  rule: 'Descriptive: no pass bar. sha_match must be true (graded train_rows 368757) or the model is not shipped. Training rows stop at 2025-06-30; the table is built from full bars like the graded confirm stage (the first export, run 42468362616, built it to 2025-06-30 only and got sha 5babdb6e.../368752 rows).'
-  what_it_does_not_do: Reads no date after 2025-06-30 (data fetched to 2025-06-30 only). No scoring, no config change, no order, no roster change.
-  min_n: n/a (artifact export)
-compute: cpu_long
-value:
-  bucket: ai_trader
-  usd_at_stake_per_month: 60
-  confidence: 0.2
-  basis: 'stand-in: the operator goal (an ML decision maker live on the Alpaca book); not a P&L measurement.'
+  statistic: 'scripts/research/ml_bakeoff.py: per-group (BTCUSDT_15m, ETHUSDT_15m, SOLUSDT_15m) paired CV mean logloss delta of lgbm vs the class prior (positive
+    = lgbm better), 5 folds, embargo 24, tail 60000 rows.'
+  rule: 'PASS IF lgbm beats the class prior by >= +0.002 nats on the CV mean on ALL of BTCUSDT_15m, ETHUSDT_15m, SOLUSDT_15m. FAIL IF it does not beat it by >= 0
+    on ANY group. INDETERMINATE otherwise, or if folds < 3 or a shard is stale/unavailable. Stated n: ~60,000 tail rows per group (about 36,000 out-of-sample), 5
+    folds. Thresholds are not changed after any result.'
+  what_it_does_not_do: No served model, roster or config is read or changed; a research bake-off recipe, not any deployed head. Nothing here touches the ENTRY-EQ
+    confirm window.
+  min_n: 5 purged CV folds on the tail shard, >= 3 folds
+intervention_controls:
+  not_applicable: a model-quality bake-off on a static published shard, not an in-trade action or active-management intervention
+compute: auto
 routing:
   needs_trainer_resident_data: false
   needs_gpu: false
-  peak_memory_gb: 6.0
-  est_minutes: 60
-  why_runner: Alpaca market data (read-only, paper key) + LightGBM fits; 4 vCPU / 16 GB runner.
-  basis: 'MEASURED: the dev run took 58 min for data to 2025-06-30; one LightGBM fit adds ~1 min.'
+  published_data: metis-market-data
+  peak_memory_gb: 3.0
+  est_minutes: 30
+  basis: 'Estimate, NOT measured: 3 shards x 2 arms x 5 folds on published shards, comparable to RQ-20261030-41cc-26; compute: auto routes it to the Kaggle CPU kernel.'
+value:
+  bucket: ai_trader
+  usd_at_stake_per_month: 150
+  confidence: 0.2
+  basis: 'stand-in: gates whether the head is worth advancing on the money legs; not a measured P&L'
 run:
-  workflow: research-script-run.yml
   command:
   - python3
-  - scripts/research/ml_entry_equity.py
-  - export
-  - --cache
-  - /tmp/ml_entry_equity
-  - --out
-  - '{out_dir}'
+  - scripts/research/ml_bakeoff.py
   - --unit
   - '{unit}'
-  - --where
-  - research-script-run
-  - --config
-  - B
-  - --tau
-  - '0.25'
-  - --expect-sha
-  - 0afc49948a41671a
-  - --structure
-  - --ensemble-seeds
-  - 1,2,3,4,5
-  - --full-bars
-  timeout_minutes: 180
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 60
   inputs:
     research_unit: RQ-20261108-98e3-17
-ml_consumer:
-  consumer: ML-ENTRY-EQ-STRUCT-LIVE
-  decision: whether ml/candidates/ml_entry_eq_v3_struct_ens5/model.json may be committed as the servable artifact of ml_entry_eq_struct (sha reproduces)
-  legs:
-  - iaum_pullback_1d
+ml_bakeoff:
+  task: classification
+  metric: logloss
+  higher_is_better: false
+  dataset:
+    kind: jsonl
+    groups:
+      BTCUSDT_15m:
+        path: datasets-out/market_features/BTCUSDT/15m/v002/data.jsonl
+      ETHUSDT_15m:
+        path: datasets-out/market_features/ETHUSDT/15m/v002/data.jsonl
+      SOLUSDT_15m:
+        path: datasets-out/market_features/SOLUSDT/15m/v002/data.jsonl
+    ts_col: ts
+    target: direction_label
+    features:
+    - rolling_log_return_vol
+    - log_return
+    - log_return_lag_1
+    - log_return_lag_2
+    - hour_of_day
+    - dayofweek
+    tail_rows: 60000
+  cv:
+    folds: 5
+    embargo_rows: 24
+    min_train_frac: 0.4
+  baseline: prior
+  controls: []
+  candidates:
+  - lgbm
+  learners:
+    prior:
+      kind: prior
+    lgbm:
+      kind: lightgbm
+      params:
+        learning_rate: 0.05
+        min_child_samples: 50
+        n_estimators: 200
+        num_leaves: 31
+  rule:
+    min_folds: 3
+    pass_if:
+    - group:
+      - BTCUSDT_15m
+      - ETHUSDT_15m
+      - SOLUSDT_15m
+      vs: prior
+      window: cv
+      op: '>='
+      value: 0.002
+    fail_if_no_candidate_reaches:
+    - group: any
+      vs: prior
+      window: cv
+      op: '>='
+      value: 0.0
 lands:
   store: research/results/
   assert_field: read_state
   min_rows: 1
+practice_precedent: 'M6 (docs/reference/trading-and-model-practice-principles.md): purged, embargoed walk-forward CV; a log-loss lift is reported per symbol, never
+  pooled; the control arm is the strongest classical feature set, not only the class prior.'
 related:
 - ML-ENTRY-EQ-STRUCTURE-RETEST
-- RQ-20261107-98e3-06
-population: 'The registered POOL_RULE of scripts/research/ml_entry_alpaca_score.py, UNCHANGED (sha256 e9702661d1a596a0f7e84e632c0ca8b5c2743a728f02147477c003644a0858e2):
-  active, tradable, us_equity ETFs (nasdaqtraded ETF=Y) with median daily dollar volume >= 50M USD over 2019-01-01..2020-12-31. The module refuses to run if the rule
-  hash differs.'
+- RQ-20261108-98e3-11
+- RQ-20261108-98e3-12
+last_dispatched_at: '2026-11-08T13:06:39+00:00'

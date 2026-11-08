@@ -1,0 +1,40 @@
+[pool] 173 ETFs; 124 calls
+[alpaca] 1h 1/173 AAXJ raw_bars=9279 rth_bars=7875 ~calls=181 total_calls=305 429s=68 t=13:12:08
+Traceback (most recent call last):
+  File "/home/runner/work/JTA-Trader/JTA-Trader/scripts/research/ml_entry_equity.py", line 660, in <module>
+    sys.exit(main())
+             ^^^^^^
+  File "/home/runner/work/JTA-Trader/JTA-Trader/scripts/research/ml_entry_equity.py", line 656, in main
+    return main_run(a) if a.cmd in ("dev", "confirm", "export", "structure", "forward") else 2
+           ^^^^^^^^^^^
+  File "/home/runner/work/JTA-Trader/JTA-Trader/scripts/research/ml_entry_equity.py", line 446, in main_run
+    pool, prep, bars, client = _pool_and_bars(a, end_day)
+                               ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/work/JTA-Trader/JTA-Trader/scripts/research/ml_entry_equity.py", line 378, in _pool_and_bars
+    bars = S.fetch_alpaca_1h(client, want, Path(a.cache), end, start=DATA_START)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/work/JTA-Trader/JTA-Trader/scripts/research/ml_entry_alpaca_score.py", line 477, in fetch_alpaca_1h
+    for s, df, nraw, ncalls in ex.map(one, need):
+  File "/opt/hostedtoolcache/Python/3.11.18/x64/lib/python3.11/concurrent/futures/_base.py", line 619, in result_iterator
+    yield _result_or_cancel(fs.pop())
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/hostedtoolcache/Python/3.11.18/x64/lib/python3.11/concurrent/futures/_base.py", line 317, in _result_or_cancel
+    return fut.result(timeout)
+           ^^^^^^^^^^^^^^^^^^^
+  File "/opt/hostedtoolcache/Python/3.11.18/x64/lib/python3.11/concurrent/futures/_base.py", line 456, in result
+    return self.__get_result()
+           ^^^^^^^^^^^^^^^^^^^
+  File "/opt/hostedtoolcache/Python/3.11.18/x64/lib/python3.11/concurrent/futures/_base.py", line 401, in __get_result
+    raise self._exception
+  File "/opt/hostedtoolcache/Python/3.11.18/x64/lib/python3.11/concurrent/futures/thread.py", line 58, in run
+    result = self.fn(*self.args, **self.kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/work/JTA-Trader/JTA-Trader/scripts/research/ml_entry_alpaca_score.py", line 469, in one
+    got = client.bars([s], "1Hour", f"{start}T00:00:00Z", f"{end}T00:00:00Z")
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/work/JTA-Trader/JTA-Trader/scripts/research/alpaca_readonly.py", line 113, in bars
+    j = self.get(DATA_HOST, BARS_PATH, p)
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/work/JTA-Trader/JTA-Trader/scripts/research/alpaca_readonly.py", line 99, in get
+    raise RuntimeError(f"alpaca GET {path}: still throttled/unavailable after {self.max_retries} attempts")
+RuntimeError: alpaca GET /v2/stocks/bars: still throttled/unavailable after 8 attempts

@@ -1,0 +1,61 @@
+[pool] 173 ETFs; 122 calls
+[alpaca] 1h 1/173 AAXJ raw_bars=9279 rth_bars=7875 ~calls=314 total_calls=436 429s=137 t=13:13:17
+[alpaca] 1h 2/173 ACWI raw_bars=9447 rth_bars=7876 ~calls=267 total_calls=436 429s=137 t=13:13:17
+[alpaca] 1h 3/173 ACWX raw_bars=9193 rth_bars=7875 ~calls=265 total_calls=436 429s=137 t=13:13:17
+[alpaca] 1h 4/173 AGG raw_bars=10473 rth_bars=7879 ~calls=283 total_calls=436 429s=137 t=13:13:17
+[alpaca] 1h 5/173 AMLP raw_bars=10477 rth_bars=7876 ~calls=405 total_calls=792 429s=290 t=13:16:09
+[alpaca] 1h 6/173 ASHR raw_bars=13092 rth_bars=7879 ~calls=303 total_calls=792 429s=290 t=13:16:09
+[alpaca] 1h 7/173 BIL raw_bars=14080 rth_bars=7886 ~calls=354 total_calls=792 429s=290 t=13:16:09
+[alpaca] 1h 8/173 BIV raw_bars=9643 rth_bars=7876 ~calls=278 total_calls=792 429s=290 t=13:16:09
+[alpaca] 1h 9/173 BKLN raw_bars=10178 rth_bars=7877 ~calls=425 total_calls=1117 429s=457 t=13:18:27
+[alpaca] 1h 10/173 BND raw_bars=11866 rth_bars=7881 ~calls=198 total_calls=1117 429s=457 t=13:18:27
+[alpaca] 1h 11/173 BNDX raw_bars=9629 rth_bars=7878 ~calls=349 total_calls=1117 429s=457 t=13:18:27
+[alpaca] 1h 12/173 BSV raw_bars=9953 rth_bars=7876 ~calls=375 total_calls=1167 429s=469 t=13:18:47
+[alpaca] 1h 13/173 DGRO raw_bars=10565 rth_bars=7876 ~calls=311 total_calls=1223 429s=486 t=13:19:09
+[alpaca] 1h 14/173 DIA raw_bars=17077 rth_bars=7887 ~calls=383 total_calls=1491 429s=604 t=13:21:05
+[alpaca] 1h 15/173 DUST raw_bars=15179 rth_bars=7884 ~calls=320 total_calls=1491 429s=604 t=13:21:05
+[alpaca] 1h 16/173 DVY raw_bars=9397 rth_bars=7875 ~calls=265 total_calls=1491 429s=604 t=13:21:05
+[alpaca] 1h 17/173 EEM raw_bars=14830 rth_bars=7888 ~calls=297 total_calls=1520 429s=623 t=13:21:17
+[alpaca] 1h 18/173 EFA raw_bars=12441 rth_bars=7881 ~calls=268 total_calls=1700 429s=695 t=13:22:36
+[alpaca] 1h 19/173 EFAV raw_bars=9053 rth_bars=7875 ~calls=207 total_calls=1700 429s=695 t=13:22:36
+[alpaca] 1h 20/173 EMB raw_bars=9693 rth_bars=7876 ~calls=271 total_calls=1762 429s=713 t=13:23:02
+[alpaca] 1h 21/173 EMLC raw_bars=9437 rth_bars=7876 ~calls=421 total_calls=1941 429s=804 t=13:24:22
+[alpaca] 1h 22/173 EWC raw_bars=9409 rth_bars=7877 ~calls=275 total_calls=1941 429s=804 t=13:24:22
+Traceback (most recent call last):
+  File "/home/runner/work/JTA-Trader/JTA-Trader/scripts/research/ml_entry_equity.py", line 660, in <module>
+    sys.exit(main())
+             ^^^^^^
+  File "/home/runner/work/JTA-Trader/JTA-Trader/scripts/research/ml_entry_equity.py", line 656, in main
+    return main_run(a) if a.cmd in ("dev", "confirm", "export", "structure", "forward") else 2
+           ^^^^^^^^^^^
+  File "/home/runner/work/JTA-Trader/JTA-Trader/scripts/research/ml_entry_equity.py", line 446, in main_run
+    pool, prep, bars, client = _pool_and_bars(a, end_day)
+                               ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/work/JTA-Trader/JTA-Trader/scripts/research/ml_entry_equity.py", line 378, in _pool_and_bars
+    bars = S.fetch_alpaca_1h(client, want, Path(a.cache), end, start=DATA_START)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/work/JTA-Trader/JTA-Trader/scripts/research/ml_entry_alpaca_score.py", line 477, in fetch_alpaca_1h
+    for s, df, nraw, ncalls in ex.map(one, need):
+  File "/opt/hostedtoolcache/Python/3.11.18/x64/lib/python3.11/concurrent/futures/_base.py", line 619, in result_iterator
+    yield _result_or_cancel(fs.pop())
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/hostedtoolcache/Python/3.11.18/x64/lib/python3.11/concurrent/futures/_base.py", line 317, in _result_or_cancel
+    return fut.result(timeout)
+           ^^^^^^^^^^^^^^^^^^^
+  File "/opt/hostedtoolcache/Python/3.11.18/x64/lib/python3.11/concurrent/futures/_base.py", line 456, in result
+    return self.__get_result()
+           ^^^^^^^^^^^^^^^^^^^
+  File "/opt/hostedtoolcache/Python/3.11.18/x64/lib/python3.11/concurrent/futures/_base.py", line 401, in __get_result
+    raise self._exception
+  File "/opt/hostedtoolcache/Python/3.11.18/x64/lib/python3.11/concurrent/futures/thread.py", line 58, in run
+    result = self.fn(*self.args, **self.kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/work/JTA-Trader/JTA-Trader/scripts/research/ml_entry_alpaca_score.py", line 469, in one
+    got = client.bars([s], "1Hour", f"{start}T00:00:00Z", f"{end}T00:00:00Z")
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/work/JTA-Trader/JTA-Trader/scripts/research/alpaca_readonly.py", line 113, in bars
+    j = self.get(DATA_HOST, BARS_PATH, p)
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/work/JTA-Trader/JTA-Trader/scripts/research/alpaca_readonly.py", line 99, in get
+    raise RuntimeError(f"alpaca GET {path}: still throttled/unavailable after {self.max_retries} attempts")
+RuntimeError: alpaca GET /v2/stocks/bars: still throttled/unavailable after 8 attempts

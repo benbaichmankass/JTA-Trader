@@ -1,0 +1,94 @@
+id: RQ-20261108-98e3-23
+title: 'Served ml_entry replay (-0.13 R, n=317) vs the live book (5 closed shorts, +$4.93): decompose the replay window by side, symbol, live population, live structure
+  exit and time (drift-remediation step 2)'
+status: queued
+cadence: once
+theme: ml_health
+priority: 1
+roadmap:
+- L-ML-LIVE
+kind: experiment
+practice_precedent: 'none: no external precedent; operator protocol 2026-11-08 (.claude/skills/drift-remediation/SKILL.md, PR #24266), drift-remediation skill: a replay or retrain grade that says negative while the live book is positive is decomposed before anything is demoted
+  (PR #24266).'
+question: 'The served-model replay grade 42473814600 (window 2026-10-25..2026-11-07, 48 symbols, both sides, fixed 2/3 ATR bracket) reads -0.13 R net; longs -0.90
+  R (n=51), shorts +0.02 R (n=266). bybit_2 live: 5 closed trades since 2026-11-02, all shorts, +$4.93, 3 winners. Not a demotion signal. Re-cut the SAME frozen served
+  boosters, tau, table and cost stack five ways: (a) side, (b) symbol, (c) the live book population (bybit_2 roster BTC/ETH/XRP/ADA/SOL, both sides) and why every
+  live trade is short, (d) the live structure exit pivot=5;sl_only instead of the bracket, (e) first 7 days vs last 7 days; print one verdict line per cut.'
+why_this_matters: Decides whether the replay-vs-live disagreement is a population, exit, side, decay or noise effect, so each confirmed driver gets its own iteration
+  unit feeding the next candidate after unit 22; no config or served-model change comes from this unit.
+power:
+  expected_n: 317
+  min_detectable_effect: 0.2
+  effect_units: metric
+  sd: 1.0
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: 'DESCRIPTIVE decomposition of a population already graded (n=317 taken trades, 14 days). Sub-cuts are smaller (longs n=51; the live-population cut is a handful
+    to ~100): each rule carries its own n floor and returns INDETERMINATE below it; nothing is promoted on this unit.'
+  feasibility:
+    source: none
+    accrual_basis: Replays Binance 1h history through 2026-11-07; nothing accrues.
+decision_rule:
+  id: RULE-RQ20261108-98e3-23-DECOMPOSE
+  registered_at: '2026-11-08'
+  registered_before_run: true
+  statistic: 'scripts/research/ml_entry_replay_decompose.py run: frozen served boosters + tau scored on every decision row of 2026-10-25..2026-11-07; E.policy takes
+    trades; stats (n, mean net R, se, 95% CI) per cut; the structure arm replays both sides under pivot=5;sl_only with the canonical cost stack.'
+  rule: Five mechanical verdicts. SIDE-DRIVER iff n_long >= 30 and long mean net R <= -0.30 and short mean >= -0.05. POPULATION-DRIVER iff live-population (BTC/ETH/XRP/ADA/SOL,
+    both sides) n >= 30 and its mean >= 0 and the 48-symbol pool mean < 0. EXIT-DRIVER iff structure-exit pool mean minus bracket pool mean >= +0.05 and structure
+    mean >= 0 (EXIT-PARTIAL if only the +0.05 holds). DECAY iff both 7-day halves have n >= 100 and (last 7d mean - first 7d mean) <= -0.10. NOISE-COMPATIBLE iff
+    P(>= 3 winners of 5 | replay short win share) >= 0.05. Any cut under its n floor reads INDETERMINATE. Thresholds are not changed after any result.
+  what_it_does_not_do: 'Changes no served model, tau, roster or config and reads no holdout. The side split restates numbers already published in the grade (declared:
+    a mechanical confirmation, not new evidence); the live TP revision (extend-only) is not modelled; the live record is n=5 so no CI is claimed.'
+  min_n: 'per cut: 30 (side/population), 100 per half (decay)'
+compute: cpu_long
+value:
+  bucket: ai_trader
+  usd_at_stake_per_month: 60
+  confidence: 0.2
+  basis: 'stand-in: the operator goal (an ML decision maker live on the Alpaca book); not a P&L measurement.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 6.0
+  est_minutes: 60
+  why_runner: Binance public klines (monthly + daily archives, as the retrain job fetches) and a scoring pass; no training.
+  basis: 'INFERRED: the retrain+grade workflow fetches the same 48-symbol cache in ~25 min; scoring ~3k rows and replaying ~3k structure paths is minutes.'
+run:
+  workflow: research-script-run.yml
+  command:
+  - python3
+  - scripts/research/ml_entry_replay_decompose.py
+  - run
+  - --cache
+  - /tmp/ml_entry_klines
+  - --out
+  - '{out_dir}'
+  - --unit
+  - '{unit}'
+  - --where
+  - research-script-run
+  - --run-date
+  - '2026-11-08'
+  - --rule-id
+  - RULE-RQ20261108-98e3-23-DECOMPOSE
+  - --registered-at
+  - '2026-11-08'
+  timeout_minutes: 120
+  inputs:
+    research_unit: RQ-20261108-98e3-23
+ml_consumer:
+  consumer: src/units/strategies/ml_entry.py
+  decision: which confirmed driver (side / population / exit / decay) gets an iteration unit; no change to the served model or roster
+  legs:
+  - ml_entry
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- CRYPTO-ENTRY-RETRAIN-UNIT
+- RQ-20261108-98e3-22
+population: The ml_decision_entry universe (48 Binance USD-M perps) replay window 2026-10-25..2026-11-07 decisions the served model takes at tau (the grade 42473814600
+  population, n=317), plus its live-book subset.

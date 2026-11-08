@@ -1,0 +1,90 @@
+# Re-id 2026-11-08: was RQ-20261108-98e3-17 in the first PR commits; that id was taken on main by another lane. Run 42492596157 (full-bars) is the run that reproduced the graded sha.
+# Hand-authored 2026-11-08 by lane ML-ENTRY-EQ-STRUCT-LIVE (Tier 1): ENSEMBLE export of the model that PASSED RQ-20261107-98e3-06 (operator decision 2026-11-08, row ML-ENTRY-EQ-STRUCT-LIVE).
+id: RQ-20261108-a7d3-01
+title: 'ENTRY-EQ structure ENSEMBLE export: refit of the 5-seed (1-5) structure-trained config B (tau 0.25) on rows <= 2025-06-30 as a servable 5-booster model.json + parity fixture; concatenated-booster sha256 must reproduce the graded 0afc49948a41671a'
+status: done
+cadence: once
+theme: ml_health
+priority: 1
+roadmap:
+- L-ML-LIVE
+kind: experiment
+practice_precedent: 'M13 (docs/reference/trading-and-model-practice-principles.md): unlimited iteration on the training-period walk-forward; the confirming window
+  is loaded by NO code path of this unit.'
+question: Does the pinned 5-seed ensemble refit reproduce the graded sha 0afc49948a41671a... (sha256 of the concatenated booster texts, RQ-20261107-98e3-06 run 42432561069), and write model.json + parity_fixture.json for serving? A mismatch is reported loudly and the model is NOT shipped.
+why_this_matters: The operator put the PASSED ensemble on alpaca_live + alpaca_portfolio (2026-11-08); it must be the graded model, not a different fit.
+power:
+  expected_n: 1
+  min_detectable_effect: 1.0
+  effect_units: metric
+  sd: 1.0
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: 'DESCRIPTIVE tooling unit: no statistical test; the check is an exact sha256 reproduction.'
+  feasibility:
+    source: none
+    accrual_basis: Replays Alpaca 1h RTH history 2021-01-01 .. 2025-06-30; nothing accrues.
+decision_rule:
+  id: RULE-RQ20261108-a7d3-01-EXPORT
+  registered_at: '2026-11-07'
+  registered_before_run: true
+  statistic: 'scripts/research/ml_entry_equity.py export --config B --tau 0.25 --ensemble-seeds 1,2,3,4,5 --structure --expect-sha 0afc49948a41671a: booster_sha256 (concatenated texts), sha_match, train_rows, model_json_bytes.'
+  rule: 'Descriptive: no pass bar. sha_match must be true (graded train_rows 368757) or the model is not shipped. Training rows stop at 2025-06-30; the table is built from full bars like the graded confirm stage (the first export, run 42468362616, built it to 2025-06-30 only and got sha 5babdb6e.../368752 rows).'
+  what_it_does_not_do: Reads no date after 2025-06-30 (data fetched to 2025-06-30 only). No scoring, no config change, no order, no roster change.
+  min_n: n/a (artifact export)
+compute: cpu_long
+value:
+  bucket: ai_trader
+  usd_at_stake_per_month: 60
+  confidence: 0.2
+  basis: 'stand-in: the operator goal (an ML decision maker live on the Alpaca book); not a P&L measurement.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 6.0
+  est_minutes: 60
+  why_runner: Alpaca market data (read-only, paper key) + LightGBM fits; 4 vCPU / 16 GB runner.
+  basis: 'MEASURED: the dev run took 58 min for data to 2025-06-30; one LightGBM fit adds ~1 min.'
+run:
+  workflow: research-script-run.yml
+  command:
+  - python3
+  - scripts/research/ml_entry_equity.py
+  - export
+  - --cache
+  - /tmp/ml_entry_equity
+  - --out
+  - '{out_dir}'
+  - --unit
+  - '{unit}'
+  - --where
+  - research-script-run
+  - --config
+  - B
+  - --tau
+  - '0.25'
+  - --expect-sha
+  - 0afc49948a41671a
+  - --structure
+  - --ensemble-seeds
+  - 1,2,3,4,5
+  - --full-bars
+  timeout_minutes: 180
+  inputs:
+    research_unit: RQ-20261108-a7d3-01
+ml_consumer:
+  consumer: ML-ENTRY-EQ-STRUCT-LIVE
+  decision: whether ml/candidates/ml_entry_eq_v3_struct_ens5/model.json may be committed as the servable artifact of ml_entry_eq_struct (sha reproduces)
+  legs:
+  - iaum_pullback_1d
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- ML-ENTRY-EQ-STRUCTURE-RETEST
+- RQ-20261107-98e3-06
+population: 'The registered POOL_RULE of scripts/research/ml_entry_alpaca_score.py, UNCHANGED (sha256 e9702661d1a596a0f7e84e632c0ca8b5c2743a728f02147477c003644a0858e2):
+  active, tradable, us_equity ETFs (nasdaqtraded ETF=Y) with median daily dollar volume >= 50M USD over 2019-01-01..2020-12-31. The module refuses to run if the rule
+  hash differs.'
