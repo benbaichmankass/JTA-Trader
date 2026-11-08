@@ -19,14 +19,14 @@ import json
 import re
 import sys
 
-LANE_MARKERS = re.compile(r"You are lane\b|dispatched by Manager Session|From Manager\b|lane:[A-Z0-9-]{3,}", re.I)
+LANE_MARKERS = re.compile(r"You are lane\b|dispatched by Manager Session|From Manager\b|lane:[A-Z0-9-]{3,}", re.IGNORECASE)
 MANAGER_ID = re.compile(r"(?:Manager[^\n]{0,80}?|manager:)(session_[A-Za-z0-9]{16,})")
-REPORT_TOOLS = re.compile(r"fire_trigger|send_later|add_issue_comment|add_reply_to_pull_request_comment|send_message", re.I)
+REPORT_TOOLS = re.compile(r"fire_trigger|send_later|add_issue_comment|add_reply_to_pull_request_comment|send_message", re.IGNORECASE)
 WAITING = re.compile(
     r"\b(awaits?|awaiting|waiting (?:on|for)|go[- ]ahead|needs? (?:your|the manager'?s?|an? operator|operator)|"
     r"blocked (?:on|by)|is blocked|am blocked|need input|needs input|should I|shall I|want me to|"
     r"please (?:confirm|approve|advise)|(?:confirm|approve) (?:to|before)|say go)\b",
-    re.I,
+    re.IGNORECASE,
 )
 
 
@@ -109,7 +109,7 @@ def main() -> int:
         if hook.get("stop_hook_active"):
             return 0
         reason = decide(_load(hook["transcript_path"]))
-    except Exception:                                # fail open: never trap a session
+    except Exception:  # noqa: BLE001 -- fail open: a hook error must never trap a session
         return 0
     if reason:
         print(json.dumps({"decision": "block", "reason": reason}))
@@ -160,7 +160,8 @@ def self_test() -> int:
         bad += got != want
     r = decide(cases[0][1])
     if not r or "session_01AFoLuJ3yguifJsDomuAzGx" not in r:
-        print("FAIL block reason names the manager session id"); bad += 1
+        print("FAIL block reason names the manager session id")
+        bad += 1
     else:
         print("PASS block reason names the manager session id")
     print(f"{len(cases) + 1 - bad}/{len(cases) + 1} ok")
