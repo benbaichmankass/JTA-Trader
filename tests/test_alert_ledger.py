@@ -242,6 +242,20 @@ def test_ltr_compaction_only_old_oversized(monkeypatch):
     assert out["compacted"] == 1 and len(patched) == 1       # fresh one kept whole (the lane still needs the packet); small kept
 
 
+def test_alert_watch_pass_never_edits_comments(monkeypatch, tmp_path):
+    """Every PATCH on the ops-flags PR wakes the subscribed manager (LTR-COMPACT-EDIT-WAKES): the pass must not edit."""
+    monkeypatch.setattr(aw, "ALERT_STATE", tmp_path / "state.json")
+    monkeypatch.setattr(aw, "ALERT_RECEIPT", tmp_path / "receipt.json")
+    calls = []
+
+    def http(method, url, body, auth):
+        calls.append(method)
+        return (200, []) if method == "GET" else (201, None)
+    rec = aw.alert_watch(NOW, rows_override={"read_state": "read", "rows": []}, github=("a", http, "https://api.github.com"))
+    assert "PATCH" not in calls
+    assert rec["ltr_compact"] == {"state": "disabled_wakes_manager"}
+
+
 # ── REPORT-ONLY detector (operator 2026-11-04: non-blocking) ───────────────────────
 _CHOKE = re.compile(r"send_telegram_direct|telegram_channels|tc\.send|send_to_operator|send_via_alert_manager|notify_operator|send_ping|enqueue")
 _LEDGERED = re.compile(r"alerts_ledger|post_alert\.sh|/api/bot/alerts")

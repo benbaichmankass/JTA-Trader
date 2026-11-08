@@ -1359,10 +1359,11 @@ def alert_watch(now: datetime | None = None, *, dry_run: bool = False, rows_over
                         rec.update(state="could_not_post", http_code=code)
             elif summary["held_kinds"]:
                 rec.update(state="held_cooldown")
-        if not dry_run:
-            auth, http, api = github or _alert_github()
-            if auth:
-                rec["ltr_compact"] = compact_ltr_comments(auth, http, api, now)
+        # LTR compaction is OFF in the pass (operator 2026-11-08, usage cut, row LTR-COMPACT-EDIT-WAKES): every PATCH of an
+        # old wake comment on the ops-flags PR is an issue_comment.edited event that WAKES the subscribed manager session;
+        # ~40 stale-edit wakes overnight 2026-11-07/08 each re-read the manager's whole context. compact_ltr_comments()
+        # stays for a one-off manual run; the packets are already on live-review/rows either way.
+        rec["ltr_compact"] = {"state": "disabled_wakes_manager"}
     except Exception as exc:  # noqa: BLE001 — the alert pass must never fail the digest unit
         rec.update(state="error", reason=f"{type(exc).__name__}: {exc}")
     try:
