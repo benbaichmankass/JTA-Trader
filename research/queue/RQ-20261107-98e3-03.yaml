@@ -2,7 +2,7 @@
 id: RQ-20261107-98e3-03
 title: 'ENTRY-EQ structure-label DEV tau extension: does the pooled dev OOF mean net R of the structure-trained config B keep rising above tau 0.20 (the grid edge
   of RQ-20261106-98e3-01), at tau 0.25 / 0.30 / 0.40?'
-status: queued
+status: done
 cadence: once
 theme: ml_health
 priority: 1
@@ -94,3 +94,17 @@ population: 'The registered POOL_RULE of scripts/research/ml_entry_alpaca_score.
   active, tradable, us_equity ETFs (nasdaqtraded ETF=Y) with median daily dollar volume >= 50M USD over 2019-01-01..2020-12-31. The module refuses to run if the rule
   hash differs.'
 last_dispatched_at: '2026-11-07T20:12:11+00:00'
+grading:
+  attested: RULE-RQ20261107-98e3-03-TAU-EXT
+  auto: true
+  awaiting: more_data
+  decision_rule_id: RULE-RQ20261107-98e3-03-TAU-EXT
+  evidence:
+  - research/results/RQ-20261107-98e3-03/42396313667.jsonl
+  graded_at: '2026-11-08'
+  grader: scripts/research/queue_grade.py
+  note: 'indeterminate is the pre-registered under-powered/null outcome: complete, but NOT a pass and
+    NOT a kill'
+  reason: 1 row(s), all measured, all indeterminate
+  rows: 1
+  verdict: indeterminate
