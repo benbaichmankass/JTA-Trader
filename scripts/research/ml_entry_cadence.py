@@ -119,7 +119,7 @@ def self_test() -> int:
     syms = C._synthetic_cache(root)
     tab = E.build_table(root, syms)
     train = tab[tab.ts < tab.ts.max() - pd.Timedelta(days=60)]
-    fit = lambda t: E.fit_models(t.sample(min(len(t), 15000), random_state=0))  # noqa: E731
+    fit = lambda t: E.fit_models(t.sample(min(len(t), 15000), random_state=0))
     frozen = fit(train)
     start = (tab.ts.max() - pd.Timedelta(days=56)).strftime("%Y-%m-%d")
     end = (tab.ts.max() - pd.Timedelta(days=1)).strftime("%Y-%m-%d")
