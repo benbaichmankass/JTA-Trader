@@ -144,3 +144,22 @@ def test_trainer_workload_names_the_biggest_consumer():
     b = tq.breakdown(tq.load())
     assert b["rows"][0]["service"] == "ict-drift-retrain"
     assert abs(sum(r["share_of_service_cpu"] for r in b["rows"]) - 1.0) < 0.01
+
+
+def test_lake_manifest_only_target_is_declared_and_routes_to_the_runner_twin():
+    """The lake mirror is a manifest-only published_data target (PROP-ML-NEW-DATA step 1): the router accepts a unit that names it with
+    no ml_bakeoff dataset path, an ordinary target still needs one, an undeclared name is still refused, and the Kaggle-kernel
+    route refuses it (it would otherwise mount a ~7 GB shard)."""
+    cfg = cr.load_config()
+    spec = cfg["published_data"]["metis-market-lake"]
+    assert spec["fetch"] == "manifest_only" and spec["kaggle_dataset_prefix"] == "metis-market-lake-p"
+    lake = {"routing": {"published_data": "metis-market-lake"}}
+    assert cr.published_problem(lake, cfg) is None and cr.uses_published_data(lake, cfg)
+    assert "no ml_bakeoff.dataset path" in cr.published_problem({"routing": {"published_data": "metis-market-data"}}, cfg)
+    assert "not declared" in cr.published_problem({"routing": {"published_data": "nope"}}, cfg)
+
+
+def test_manifest_only_fetch_fails_closed_and_downloads_only_the_manifest():
+    from scripts.research import published_data as pd_
+
+    assert pd_._self_test() == 0   # includes the manifest-only cases: zipped manifest, one unreadable part, nothing listed

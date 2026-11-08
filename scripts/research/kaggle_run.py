@@ -75,6 +75,8 @@ def bundle(unit: str, run_id: str, username: str, out: Path, *, repo: Path = _RE
         problem = cr.published_problem(raw, cr.load_config())
         if problem:
             raise SystemExit("kaggle bundle refused: " + problem)
+        if (pcfg[name] or {}).get("fetch") == "manifest_only":
+            raise SystemExit(f"kaggle bundle refused: published_data {name!r} is manifest_only and runs on the runner twin only")
         published.append(pcfg[name]["kaggle_dataset"])
     # KAGGLE-CANDLES: a unit whose run-time candle fetch the published candle dataset covers gets it mounted too.
     try:
