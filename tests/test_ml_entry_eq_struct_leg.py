@@ -109,7 +109,6 @@ def test_roster_is_alpaca_live_and_its_mirror_only_and_the_leg_is_registered():
     st = yaml.safe_load((REPO / "config" / "strategies.yaml").read_text())
     st = st.get("strategies", st)["ml_entry_eq_struct"]
     assert st["execution"] == "live" and st["structure_exit"] == "pivot=5;sl_only" and (REPO / st["artifact"]).exists()
-    from src.runtime.intent_multiplexer import strategy_builders  # noqa: F401
     from src.runtime import pipeline
     assert pipeline.monitor_unit_for("ml_entry_eq_struct") == "ml_entry_eq"
 
