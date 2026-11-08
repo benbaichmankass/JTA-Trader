@@ -243,7 +243,8 @@ def _fold_of(ts: pd.Series, bounds) -> np.ndarray:
 
 def confirm_stage(tab: pd.DataFrame, config: str, tau: float, dev_oof_mean: float, unit: str, ledger_dir: Path,
                   train_end: str = TRAIN_END, start: str = CONFIRM_START, end: str = "2026-10-31", symbols=None,
-                  configs: dict = CONFIGS, claim: bool = True, model_tag: str = "", min_mean: float = 0.0) -> dict:
+                  configs: dict = CONFIGS, claim: bool = True, model_tag: str = "", min_mean: float = 0.0,
+                  min_n: int = 0, lb_z: float = 0.0) -> dict:
     """Refit on rows <= train_end, score [start, end] ONCE, grade against the deflated bar. The read is recorded in the ledger."""
     HL.check_window_disjoint(train_end, start)
     if pd.Timestamp(start) < pd.Timestamp(train_end) + pd.Timedelta(days=EMBARGO_DAYS):
@@ -275,15 +276,17 @@ def confirm_stage(tab: pd.DataFrame, config: str, tau: float, dev_oof_mean: floa
     tk = taken_trades(test, pred, tau)
     st = _stats(tk)
     n, mean, se = st["n"], st["mean_net_r"], st.get("se")
-    if n < S.N_FLOOR:
-        v, why = "indeterminate", f"confirm n={n} < {S.N_FLOOR}"
+    if n < max(S.N_FLOOR, int(min_n)):
+        v, why = "indeterminate", f"confirm n={n} < {max(S.N_FLOOR, int(min_n))}"
     else:
         pass_conf = HL.point_ok(mean, se, bar)
         pass_dev = dev_oof_mean is not None and dev_oof_mean > 0
         pass_margin = mean is not None and mean >= min_mean      # an extra registered floor (default 0 = the plain rule): e.g. the seed-noise margin
-        v = "pass" if (pass_conf and pass_dev and pass_margin) else "fail"
+        pass_lb = (not lb_z) or (mean is not None and se is not None and mean - lb_z * se > 0)   # one-sided lower bound above 0 (forward unit)
+        v = "pass" if (pass_conf and pass_dev and pass_margin and pass_lb) else "fail"
         why = (f"confirm mean net R {mean:+.4f} (se {se:.4f}, deflated point bar t_min {bar['point_t_min']}, N={bar['n_tries']}) "
-               f"at n={n}; dev OOF mean {dev_oof_mean:+.4f}" + (f"; registered margin floor {min_mean:+.3f} {'met' if pass_margin else 'NOT met'}" if min_mean else ""))
+               f"at n={n}; dev OOF mean {dev_oof_mean:+.4f}" + (f"; registered margin floor {min_mean:+.3f} {'met' if pass_margin else 'NOT met'}" if min_mean else "")
+               + (f"; lower bound mean-{lb_z:g}*se {'> 0' if pass_lb else '<= 0'}" if lb_z else ""))
     mo = tk.assign(m=pd.to_datetime(tk.ts, utc=True).dt.strftime("%Y-%m")).groupby("m").net_r.agg(["count", "mean"]) if n else None
     clustered_se = None
     if mo is not None and len(mo) > 1:
@@ -399,6 +402,23 @@ def structure_stage(tab: pd.DataFrame, unit: str, ledger_dir: Path, end: str, sy
     return c
 
 
+FWD_START = "2026-11-01"     # the first bar AFTER the 2025-07-15..2026-10-31 window every earlier ENTRY-EQ read used
+
+
+def forward_stage(tab: pd.DataFrame, unit: str, ledger_dir: Path, end: str, symbols, tau: float, dev_oof_mean: float, ens_seeds,
+                  spec: str = STRUCT_SPEC, configs: dict = None, train_end: str = TRAIN_END, start: str = FWD_START, min_mean: float = 0.0,
+                  min_n: int = 0, lb_z: float = 0.0, claim: bool = True) -> dict:
+    """RQ-20261108-98e3-13: the FROZEN structure ensemble (config B, mean of pinned fits at ``ens_seeds`` refit on rows <= train_end -- deterministic, so
+    the graded model reproduces) scored ONCE at the fixed ``tau`` on bars AFTER every earlier read's window. No dev selection, no re-tuning."""
+    configs = configs or {"B": CONFIGS["B"]}
+    configs = {k: {"features": v["features"], "params": {**v["params"], "_ens_seeds": [int(x) for x in ens_seeds]}} for k, v in configs.items()}
+    c = confirm_stage(tab, "B", float(tau), float(dev_oof_mean), unit, ledger_dir, train_end=train_end, start=start, end=end, symbols=symbols,
+                      configs=configs, claim=claim, model_tag="-STRUCT-" + spec.replace(";", "-").replace("=", "") + f"-ENS{len(ens_seeds)}-FWD",
+                      min_mean=min_mean, min_n=min_n, lb_z=lb_z)
+    c["structure_exit"] = spec
+    return c
+
+
 def dev_row(d: dict, unit: str, where: str) -> dict:
     """The dev record in the runner's verdict.json contract (script_run.VERDICTS / READ_STATES): a descriptive stage carries
     verdict 'indeterminate' (run 42119511272 wrote 'descriptive' -> malformed; run 42166322024 wrote 'not_applicable' with read_state measured ->
@@ -424,7 +444,7 @@ def main_run(a) -> int:
     fee = resolve_fee_bps_roundtrip("SPY")
     end_day = TRAIN_END if a.cmd in ("dev", "export") else (pd.Timestamp.now(tz="UTC").normalize().replace(day=1) - pd.Timedelta(days=1)).strftime("%Y-%m-%d")
     pool, prep, bars, client = _pool_and_bars(a, end_day)
-    tab = build_table(bars, pool, slip, fee, struct=STRUCT_SPEC if (a.cmd == "structure" or getattr(a, "structure", False)) else "")
+    tab = build_table(bars, pool, slip, fee, struct=STRUCT_SPEC if (a.cmd in ("structure", "forward") or getattr(a, "structure", False)) else "")
     print(f"[table] {len(tab)} decision rows, {tab.symbol.nunique()} symbols t={time.strftime('%H:%M:%S')}", flush=True)
     if a.cmd == "dev":
         cfgs = {k: CONFIGS[k] for k in a.configs.split(",")} if getattr(a, "configs", "") else CONFIGS
@@ -453,6 +473,17 @@ def main_run(a) -> int:
                "measurement": {**c, "pool": {k: v for k, v in prep.items() if k != "excluded"}, "n_pool": len(pool),
                                "alpaca_calls": client.calls, "runtime_s": round(time.time() - t0, 1)},
                "n": c.get("stats", {}).get("n"), "produced_by": {"tool": "python3 scripts/research/ml_entry_equity.py structure", "where": a.where}}
+    elif a.cmd == "forward":
+        c = forward_stage(tab, a.unit, out / "ledger", end_day, pool, float(a.tau), float(a.dev_oof_mean), a.ensemble_seeds.split(","),
+                          start=a.fwd_start, min_mean=float(a.min_mean), min_n=int(a.min_n), lb_z=float(a.lb_z))
+        row = {"schema_version": 1, "research_unit": a.unit, "read_state": "measured", "verdict": c["verdict"], "note": c["note"],
+               "generated_at": pd.Timestamp.now(tz="UTC").strftime("%Y-%m-%dT%H:%M:%SZ"),
+               "decision_rule": {"id": a.rule_id, "registered_at": a.registered_at, "registered_before_run": True},
+               "population": {"n": c.get("stats", {}).get("n"), "description": f"FORWARD read of the frozen structure ensemble (tau {a.tau}, seeds {a.ensemble_seeds}), "
+                              f"restricted-LONG on the {len(pool)}-ETF Alpaca liquidity pool, bars {a.fwd_start}..{end_day} only, net of the Alpaca cost stack"},
+               "measurement": {**c, "pool": {k: v for k, v in prep.items() if k != "excluded"}, "n_pool": len(pool),
+                               "alpaca_calls": client.calls, "runtime_s": round(time.time() - t0, 1)},
+               "n": c.get("stats", {}).get("n"), "produced_by": {"tool": "python3 scripts/research/ml_entry_equity.py forward", "where": a.where}}
     elif a.cmd == "export":
         e = export_stage(tab, a.config, float(a.tau), pool, a.expect_sha, out, struct=STRUCT_SPEC if a.structure else "")
         row = {"schema_version": 1, "research_unit": a.unit, "read_state": "measured", "verdict": "indeterminate",
@@ -564,6 +595,13 @@ def self_test() -> int:
         r = structure_stage(ts_tab, "RQ-T", Path(td), "2023-08-31", pool, configs=sm, train_end="2023-04-30", start="2023-05-20",
                             folds=["2022-09-01", "2023-01-01"], taus=[0.0, 0.05], min_oof_n=1, log=lambda *_: None, ens_seeds=["1", "2"])
         assert r["verdict"] in ("pass", "fail", "indeterminate") and len(r["booster_sha256"]) == 64 and r["ledger_record"]["model_id"].endswith("-ENS2"), r
+    with tempfile.TemporaryDirectory() as td:   # forward: a frozen ensemble at a fixed tau on a window with the n floor and lower-bound clauses
+        r = forward_stage(ts_tab, "RQ-T", Path(td), "2023-08-31", pool, 0.0, 0.01, ["1", "2"], configs=sm, train_end="2023-04-30", start="2023-05-20",
+                          min_mean=0.0, min_n=10**6, lb_z=1.2816)
+        assert r["verdict"] == "indeterminate" and "< 1000000" in r["note"], r["note"]       # n floor binds
+        r2 = forward_stage(ts_tab, "RQ-T", Path(td), "2023-08-31", pool, 0.0, 0.01, ["1", "2"], configs=sm, train_end="2023-04-30", start="2023-05-20",
+                           min_mean=0.0, min_n=5, lb_z=1.2816)
+        assert r2["verdict"] in ("pass", "fail") and r2["ledger_record"]["model_id"].endswith("-ENS2-FWD") and "lower bound" in r2["note"], r2["note"]
     print("self-test ok")
     return 0
 
@@ -572,7 +610,7 @@ def main(argv=None) -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--self-test", action="store_true")
     sub = ap.add_subparsers(dest="cmd")
-    for name in ("dev", "confirm", "export", "structure"):
+    for name in ("dev", "confirm", "export", "structure", "forward"):
         p = sub.add_parser(name)
         p.add_argument("--cache", required=True)
         p.add_argument("--out", required=True)
@@ -590,6 +628,16 @@ def main(argv=None) -> int:
             p.add_argument("--configs", default="", help="comma list of configs to run (default all)")
             p.add_argument("--ensemble-seeds", dest="ensemble_seeds", default="", help="comma list of seeds: ONE model per config = the mean of pinned fits at these seeds")
             p.add_argument("--seeds", default="", help="comma list of LightGBM seeds: refit every config under PINNED determinism per seed (variance read)")
+        if name == "forward":
+            p.add_argument("--tau", required=True)
+            p.add_argument("--dev-oof-mean", required=True)
+            p.add_argument("--ensemble-seeds", dest="ensemble_seeds", required=True)
+            p.add_argument("--fwd-start", dest="fwd_start", default=FWD_START)
+            p.add_argument("--min-mean", dest="min_mean", default="0")
+            p.add_argument("--min-n", dest="min_n", default="0")
+            p.add_argument("--lb-z", dest="lb_z", default="0")
+            p.add_argument("--rule-id", required=True)
+            p.add_argument("--registered-at", required=True)
         if name == "structure":
             p.add_argument("--taus", default="", help="comma list overriding the tau grid (registered in the unit)")
             p.add_argument("--ensemble-seeds", dest="ensemble_seeds", default="", help="serve ONE model = mean of pinned fits at these seeds")
@@ -603,7 +651,7 @@ def main(argv=None) -> int:
     a = ap.parse_args(argv)
     if a.self_test:
         return self_test()
-    return main_run(a) if a.cmd in ("dev", "confirm", "export", "structure") else 2
+    return main_run(a) if a.cmd in ("dev", "confirm", "export", "structure", "forward") else 2
 
 
 if __name__ == "__main__":
