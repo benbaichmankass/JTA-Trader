@@ -1,5 +1,7 @@
 {
   "tier": 1,
-  "landing": "self",
-  "why": "Research only: registers two pre-registered Kaggle-CPU bake-off units (RQ-20261108-98e3-11 cross-asset 1h direction head, -12 HAR-RV on the 15m regime head) with not_before dates so the queue spreads them over Sun/Mon. No config change, no order path, no served model touched. Revert: git revert."
+  "landing": "hold",
+  "hold_reason": "unvouchable_paths",
+  "hold_text": "Research only: registers dev-only bake-off units RQ-20261108-98e3-11 (done: test-run record, FAIL) and -12 (HAR-RV on the 15m regime head, queued with not_before 2026-11-09T14:00Z). R5 cannot vouch for research/queue/RQ-20261108-98e3-11.yaml (a new queue unit), so the manager merges. No config change, no order path, no served model touched. Revert: git revert.",
+  "why": "Operator 2026-11-07: an ML lane is always running; queue the next pre-registered ML test so the pipeline has work through Wed 18:00Z."
 }
