@@ -1419,7 +1419,8 @@ accounts:
     # tests/test_paper_portfolio_accounts.py::_SANCTIONED_DIVERGENCE. The venue login is margin with shorting
     # enabled (MEASURED 2026-11-01 broker_account_status: ACTIVE, shorting_enabled true, multiplier 4, flat).
     # ROLLBACK: add `side_filter: long` back (Tier 3).
-    strategies: [tqqq_trend_long_1d]   # 2026-11-06 ALPACA-LIVE-MECHANICS (Tier-3; OPERATOR popup ~11:10Z, relayed by Manager Session 2026-11-06a, verbatim "Probe with tqqq_trend_long (Recommended)"):
+    # 2026-11-08 ML-ENTRY-EQ-STRUCT-LIVE (Tier-3): ml_entry_eq_struct mirrors alpaca_live (superset rule; see alpaca_live's roster comment). ROLLBACK with alpaca_live's line.
+    strategies: [tqqq_trend_long_1d, ml_entry_eq_struct]   # 2026-11-06 ALPACA-LIVE-MECHANICS (Tier-3; OPERATOR popup ~11:10Z, relayed by Manager Session 2026-11-06a, verbatim "Probe with tqqq_trend_long (Recommended)"):
                                        # MECHANICS-ONLY EXCEPTION (kind=mechanics), NOT an edge bet and NOT a promotion (no committed DSR/trial-ledger record for tqqq_trend_long_1d; PROD-LEGS-DSR-DECISION did not measure it). Mirror of alpaca_live (superset rule: alpaca_portfolio carries every alpaca_live leg).
                                        # Purpose: ONE real-money GTC-bracket trade on alpaca_live (entry booked at the venue fill once #23777 lands, bracket at
                                        # the broker, venue exit, correct close reason, graded). REMOVE after that ONE trade closes and is graded: set this back
@@ -1461,7 +1462,7 @@ accounts:
       # What ends is their record at the PORTFOLIO risk basis (risk_pct 0.02 vs
       # alpaca_paper's 0.015) and their presence in /api/bot/performance's
       # paperPortfolio block.
-    symbols: [SPY, QQQ, GLD, IWM, TLT, IEF, SLV, USO, GDX, TQQQ]  # alpaca_live.symbols minus the SPYM/IAUM proxies. (TQQQ: 2026-11-06 probe, pull list only)
+    symbols: [SPY, QQQ, GLD, IWM, TLT, IEF, SLV, USO, GDX, TQQQ, QLD]  # alpaca_live.symbols minus the SPYM/IAUM proxies. (TQQQ: 2026-11-06 probe, pull list only; QLD: 2026-11-08 ml_entry_eq_struct, pull list only)
     risk:
       max_dd_pct: 0.10                 # = alpaca_live's caps (operator, 2026-08-25:
       daily_loss_pct: 0.10             # "10% max drawdown" / "daily to 10% as well").
@@ -1544,7 +1545,11 @@ accounts:
     alpaca_env: live                   # selects api.alpaca.markets (vs paper).
     api_key_env: ALPACA_API_KEY_ID_LIVE        # this account's OWN key pair, so
     api_secret_env: ALPACA_API_SECRET_KEY_LIVE # paper + live run concurrently.
-    strategies: [tqqq_trend_long_1d]   # 2026-11-06 ALPACA-LIVE-MECHANICS (Tier-3; OPERATOR popup ~11:10Z, relayed by Manager Session 2026-11-06a, verbatim "Probe with tqqq_trend_long (Recommended)"):
+    # 2026-11-08 ML-ENTRY-EQ-STRUCT-LIVE (Tier-3; operator verbatim "If it passed it's backtest why isn't it going to real money?", popup "Build now"): ml_entry_eq_struct, the
+    # 5-seed structure-exit ensemble that PASSED RQ-20261107-98e3-06 (evidence docs/research/ml-entry-eq-structure-ensemble-evidence-and-proposal-2026-11-08.md), on REAL MONEY + its
+    # mirror (alpaca_portfolio). NOT alpaca_paper. New mechanics (5-booster serve + SL-only structure stop) prove themselves on ONE small trade: sizing is the account's existing risk_pct
+    # on a cash book (whole shares, 0.9 cash wall), no new knob. ROLLBACK: delete `ml_entry_eq_struct` from this list AND alpaca_portfolio's (strict equality) and `enabled: false` on the leg.
+    strategies: [tqqq_trend_long_1d, ml_entry_eq_struct]   # 2026-11-06 ALPACA-LIVE-MECHANICS (Tier-3; OPERATOR popup ~11:10Z, relayed by Manager Session 2026-11-06a, verbatim "Probe with tqqq_trend_long (Recommended)"):
                                        # MECHANICS-ONLY EXCEPTION (kind=mechanics), NOT an edge bet and NOT a promotion (no committed DSR/trial-ledger record for tqqq_trend_long_1d; PROD-LEGS-DSR-DECISION did not measure it). Long-only via side_filter; existing risk_pct sizing; no new knob.
                                        # Purpose: ONE real-money GTC-bracket trade on alpaca_live (entry booked at the venue fill once #23777 lands, bracket at
                                        # the broker, venue exit, correct close reason, graded). REMOVE after that ONE trade closes and is graded: set this back
@@ -1790,7 +1795,7 @@ accounts:
       # ROLLBACK (Option A only): delete the four entries above, leaving
       # `[tlt_pullback_1h]`. That is the entire gate — there is no mode flip in
       # front of it, and no deploy step beyond ict-git-sync pulling the change.
-    symbols: [SPY, QQQ, GLD, IWM, TLT, IEF, SLV, USO, GDX, SPYM, IAUM, TQQQ]   # instrument identity (TQQQ: 2026-11-06 ALPACA-LIVE-MECHANICS probe, pull list only)
+    symbols: [SPY, QQQ, GLD, IWM, TLT, IEF, SLV, USO, GDX, SPYM, IAUM, TQQQ, QLD]   # instrument identity (TQQQ: 2026-11-06 ALPACA-LIVE-MECHANICS probe, pull list only; QLD: 2026-11-08 ml_entry_eq_struct, pull list only)
                                        # (mirrors alpaca_paper; sub-$100 proxies SPYM/IAUM
                                        # added 2026-07-07 for the promotion).
     risk:

@@ -6781,9 +6781,23 @@ def ml_entry_v2_signal_builder(settings: dict) -> Dict[str, Any]:
 
 # ── ml_entry_eq — the EQUITY-NATIVE entry model, alpaca_paper testing leg (row ML-ENTRY-EQUITY-NATIVE, Tier 2) ──
 _ML_ENTRY_EQ_DECIDED: set = set()
+_ML_ENTRY_EQ_STRUCT_DECIDED: set = set()
 
 
 def ml_entry_eq_signal_builder(settings: dict) -> Dict[str, Any]:
+    return _ml_entry_eq_build(settings, "ml_entry_eq", _ML_ENTRY_EQ_DECIDED)
+
+
+def ml_entry_eq_struct_signal_builder(settings: dict) -> Dict[str, Any]:
+    """ml_entry_eq_struct: the SAME module/snapshot as ml_entry_eq with its own artifact (5-booster structure ensemble), config block and SL-only structure exit."""
+    return _ml_entry_eq_build(settings, "ml_entry_eq_struct", _ML_ENTRY_EQ_STRUCT_DECIDED)
+
+
+for _b, _mu in ((ml_entry_eq_struct_signal_builder, "ml_entry_eq"),):   # monitor_unit alias, same form as the table above (tp-doctrine-guard reads it)
+    _b.monitor_unit = _mu
+
+
+def _ml_entry_eq_build(settings: dict, NAME: str, _DECIDED: set) -> Dict[str, Any]:
     """ml_entry_eq: restricted LONG per pool ETF at each decision close, scored from the POOL SNAPSHOT only.
 
     NO network and no candle fetch on this tick: the 173-symbol pass is the refresher thread's job (src/runtime/ml_entry_eq_refresher.py, MEASURED
@@ -6794,8 +6808,6 @@ def ml_entry_eq_signal_builder(settings: dict) -> Dict[str, Any]:
     from src.units.strategies import ml_entry_eq as L
     from src.runtime import ml_entry_eq_features as EF
     from src.runtime.ml_entry_eq_refresher import snapshot_path
-
-    NAME = L.NAME
 
     def _none(reason: str, symbol: str) -> Dict[str, Any]:
         return _with_signal_package(NAME, {"symbol": symbol, "side": "none", "meta": {"strategy_name": NAME, "reason": reason}})
@@ -6811,17 +6823,17 @@ def ml_entry_eq_signal_builder(settings: dict) -> Dict[str, Any]:
     if snap is None:
         return _none(why or EF.REFUSE_MISSING, symbol)
     memo = (symbol, snap["bar_close"])
-    if memo in _ML_ENTRY_EQ_DECIDED:
+    if memo in _DECIDED:
         return _none("already_decided_this_bar", symbol)
     try:
         pkg = L.order_package({"symbol": symbol, **vcfg}, snap)
     except ValueError as exc:
         if str(exc) != "not_a_decision_bar":
-            _ML_ENTRY_EQ_DECIDED.add(memo)
-        if len(_ML_ENTRY_EQ_DECIDED) > 4096:
-            _ML_ENTRY_EQ_DECIDED.clear()
+            _DECIDED.add(memo)
+        if len(_DECIDED) > 4096:
+            _DECIDED.clear()
         return _none(str(exc), symbol)
-    _ML_ENTRY_EQ_DECIDED.add(memo)
+    _DECIDED.add(memo)
     try:
         log_signal({"event": f"{NAME}_eval", "strategy": NAME, "symbol": symbol, "timeframe": "1h", "side": "buy", "entry": pkg["entry"],
                     "stop_loss": pkg["sl"], "take_profit": pkg["tp"], "pred_net_r": pkg["meta"]["pred_net_r"]})

@@ -79,6 +79,12 @@ legs:
     path: alpaca_equity_bracket_v1
     exchange: alpaca
     delta: none
+  # 2026-11-08 ML-ENTRY-EQ-STRUCT-LIVE: the 5-booster ensemble serve + SL-only structure stop on an Alpaca bracket is NEW code on the proven path:
+  # its ONE clean small trade (alpaca_live whole-share cash-book sizing) proves it. Mechanics only; edge is decided offline (RQ-20261107-98e3-06).
+  ml_entry_eq_struct:
+    path: alpaca_equity_bracket_v1
+    exchange: alpaca
+    delta: new_code
 #  example_leg:
 #    path: bybit_perp_bracket_v1
 #    exchange: bybit
