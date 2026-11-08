@@ -90,6 +90,7 @@ def test_registry_roster_is_exactly_turtle_soup_and_vwap():
         "mhg_pullback_1d",
         "ml_entry",  # 2026-11-01 ML-ENTRY-LIVE-ADAPTER (#22079, Tier-3 held)
         "ml_entry_eq",  # 2026-11-06 ML-ENTRY-ALL-ACCOUNTS (#23715): equity-native ENTRY, alpaca_paper only
+        "ml_entry_eq_struct",  # 2026-11-08 ML-ENTRY-EQ-STRUCT-LIVE: structure-exit ensemble, alpaca_live + alpaca_portfolio
         "ml_entry_v2",  # 2026-11-01 ENTRY v2 testing leg (bybit_1 demo only)
         "qld_trend_long_1d",
         "qqq_pullback_1h",

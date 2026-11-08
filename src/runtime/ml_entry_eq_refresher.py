@@ -129,7 +129,8 @@ def ensure_started() -> bool:
             return False
         try:
             from src.units.strategies import load_strategy_config
-            if not bool((load_strategy_config().get("ml_entry_eq") or {}).get("enabled", False)):
+            _cfg = load_strategy_config()
+            if not any(bool((_cfg.get(k) or {}).get("enabled", False)) for k in ("ml_entry_eq", "ml_entry_eq_struct")):
                 return False
         except Exception:  # noqa: BLE001
             return False

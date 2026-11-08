@@ -1520,6 +1520,28 @@ strategies:
     tp_r: 1.5
     shadow_model_ids: []
 
+  # ML ENTRY EQUITY structure-exit 5-seed ENSEMBLE as a REAL-MONEY leg (row ML-ENTRY-EQ-STRUCT-LIVE, Tier 3; operator 2026-11-08 verbatim "If it passed it's backtest why isn't it
+  # going to real money?", popup "Build now"). Evidence: RQ-20261107-98e3-06 (run 42432561069) PASS at ledger N=3: n 207, net +0.4922 R, month-clustered t 2.06; caveats in
+  # docs/research/ml-entry-eq-structure-ensemble-evidence-and-proposal-2026-11-08.md. Roster: alpaca_live + alpaca_portfolio (NOT alpaca_paper). tau 0.25 lives in the artifact.
+  # Artifact sha = sha256 of the 5 concatenated boosters = the graded 0afc49948a41671a... (verified at load). ml_entry_eq (fixed bracket, paper) is unchanged.
+  # ROLLBACK: enabled: false (and drop the roster lines on alpaca_live + alpaca_portfolio together).
+  ml_entry_eq_struct:
+    model: ml-entry-eq-struct-ens5-v1
+    signal_prefixes: [ml_entry_eq_struct]
+    enabled: true
+    execution: live
+    timeframe: "1h"
+    decision_bar: closed
+    session: auto
+    max_snapshot_age_h: 4.0
+    structure_exit: "pivot=5;sl_only"
+    artifact: ml/candidates/ml_entry_eq_v3_struct_ens5/model.json
+    symbols: [SPY, QQQ, IWM, TLT, IEF, SLV, USO, GDX, TQQQ, QLD]   # the tick-cost rollout stage of ml_entry_eq; the model's tested population is the 173-ETF pool
+    atr_period: 14
+    atr_stop_mult: 2.0
+    tp_r: 1.5                  # 3 ATR on a 2 ATR stop, the arm that was scored
+    shadow_model_ids: []
+
   trend_donchian_eth_4h:
     model: null
     signal_prefixes: [trend_donchian_eth_4h, donchian_eth_4h]
