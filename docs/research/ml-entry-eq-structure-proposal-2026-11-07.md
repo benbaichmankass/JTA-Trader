@@ -53,3 +53,13 @@ Holdout governs real money (OPERATING-PLAN § 2, 2026-11-06): the configuration 
 **Tau extension (rule fixed before the run: plateau / cliff / rising edge).** Dev OOF pooled mean net R: tau 0.20 +0.083 (n 3191), 0.25 +0.109 (1943), 0.30 +0.197 (1122), 0.40 +0.204 (342, only 10 trades in fold 4). Outcome by the registered rule: **RISING EDGE** (tau 0.30, n>=300, reads >= +0.15). Fold 3 reads -0.35..-0.44 at every tau. This is a hypothesis for a later N=3 confirm unit, never an adopted tau; the graded record and the proposed tau 0.20 are unchanged.
 
 **What this changes for the operator.** The PASS stands as recorded. Before real money, the evidence gap is the served pinned model: it is a different fit from the one graded, and the fit-to-fit spread is large relative to the edge.
+
+## 6. Addendum 2026-11-08 — seed variance (04) and 5-seed ensemble (05), registered rules applied
+
+Records: `comms/research/RQ-20261107-98e3-04/42417906259/`, `comms/research/RQ-20261107-98e3-05/42417908525/` (dev stage only; no confirming window loaded).
+
+**04, seed variance (pinned seeds 1-5, config B, structure labels).** Pooled dev OOF mean net R at tau 0.20 per seed: +0.108, +0.082, +0.063, +0.110, +0.098 (n 2990-3254 each): range **0.047**, 5-seed mean **+0.092**. At tau 0.30: +0.194, +0.129, +0.061, +0.213, +0.169: range **0.152**, mean +0.153 (n 936-1144). Registered reading: **SEED-NOISE-DOMINATED** at tau 0.20 (range >= 0.04); the 5-seed mean is above 0, so the graded dev selection is not purely a fit artifact. Higher tau is far noisier (range 0.15 at 0.30 with a third of the trades).
+
+**05, 5-seed ensemble (mean of 5 pinned fits).** Dev OOF at tau 0.20 **+0.092** (n 2879), 0.25 +0.118 (1688), 0.30 +0.190 (954); folds at 0.20: +0.131, +0.196, -0.044, -0.230, +0.295. Registered reading: **ENSEMBLE-ADMITTED** (tau-0.20 mean >= +0.083, and only 1 of 5 folds below -0.10, fold 3). Admission is only the right to run the N=3 confirm unit `RQ-20261107-98e3-06`; it adopts no tau, model or roster.
+
+**Caveats carried into 06.** (1) Fold 3 is negative at every seed, tau and the ensemble (-0.2 to -0.4). (2) 06 selects tau on dev over {0.20, 0.25, 0.30} by max pooled OOF mean, so it will pick the noisiest tau (0.30, ~950 dev trades, so ~1/3 as many confirm trades): its iid se will be ~0.08 and the N=3 point bar (t_min 0.853) ~0.07 R. (3) The +0.04 R margin floor registered in 06 understates the single-fit noise at tau 0.30 (range 0.15); the ensemble averages that noise down but the unit does not measure by how much on the confirm window.
