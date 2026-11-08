@@ -20,18 +20,18 @@ why_this_matters: 'A forward read is the only evidence a favourable-window expla
   0 or below. It is the evidence the Tier-3 decision on a Stage-1 testing leg should be weighed against.'
 power:
   expected_n: 67
-  min_detectable_effect: 0.17
+  min_detectable_effect: 0.33
   effect_units: metric
   sd: 1.09
   design: one_sample
   alpha: 0.1
-  power: 0.6
-  basis: 'INFERRED from run 42432561069: 207 trades over 15.5 months = ~13.4/month, per-trade sd ~1.09 R (iid se 0.0758 x sqrt(207)). By 2026-04-01 five forward months
+  power: 0.8
+  basis: 'The power block uses the 0.80 the queue tabulates: at n=67, alpha 0.10 one-sided-equivalent z 1.645, sd 1.09, an 80%-power effect is ~0.33 R (the decision rule itself needs only mean >= +0.10 and the lower bound > 0, see P(PASS) below). INFERRED from run 42432561069: 207 trades over 15.5 months = ~13.4/month, per-trade sd ~1.09 R (iid se 0.0758 x sqrt(207)). By 2026-04-01 five forward months
     (Nov-Mar) give ~67 trades (plausible range 30-100: trades cluster, 2026-03 alone was 75 of 207), iid se ~0.133, so the lower-bound clause needs mean >= ~0.17
     R. P(PASS) at n=67 is about 10% if the true edge is 0, about 59% if +0.20 (the single-seed structure confirm) and about 99% if +0.49 (this read). UNDERPOWERED
     for a modest edge: a PASS is strong, a FAIL is weak, INDETERMINATE (n<60) means wait.'
   feasibility:
-    source: research/results/RQ-20261107-98e3-06 comms record (trade rate)
+    source: none
     accrual_basis: Forward Alpaca 1h RTH bars accrue ~21 trading days a month; the unit replays them after not_before, so nothing is waited on inside the run.
 decision_rule:
   id: RULE-RQ20261108-98e3-13-ENS-FORWARD
