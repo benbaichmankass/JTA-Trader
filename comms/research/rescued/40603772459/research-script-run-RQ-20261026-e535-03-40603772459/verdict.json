@@ -1,0 +1,201 @@
+{
+  "verdict": "indeterminate",
+  "read_state": "measured",
+  "population": "entry generation, subset=all: 732 filled proposals from 1498 judged of 1498 masked packets over ADAUSDT, AVAXUSDT, BTCUSDT, ETHUSDT, SOLUSDT, XRPUSDT",
+  "n": 732,
+  "measurement": {
+    "verdict": "indeterminate",
+    "reasons": [
+      "the judged packets break the registered stopping rule (not a schedule prefix, or judging continued past 800 valid proposals): {\"packets_judged\": 1498, \"is_schedule_prefix\": false, \"batch\": 200, \"stop_proposals\": 800, \"valid_proposals_before_last_batch\": 679, \"valid_proposals_total\": 732, \"schedule_exhausted\": false, \"stopping_rule_respected\": false}",
+      "subset=all: not met: mean net R CI lower bound > 0; net R per capital-day > 0 with the CI lower bound > 0; beats random-entry timing with the paired CI excluding 0; net R > 0 in >= 3 of 4 folds (each with n >= 20)"
+    ],
+    "subset": "all",
+    "stats": {
+      "n": 732,
+      "weeks": 33,
+      "mean_net_r": 0.15886636006268712,
+      "sd_net_r": 1.5568273861691047,
+      "mean_ci95": [
+        -0.05295740325039341,
+        0.35536657937567945
+      ],
+      "net_r_per_capital_day": 0.31362672362976596,
+      "per_capital_day_ci95": [
+        -0.11511283264471318,
+        0.6537666496375986
+      ],
+      "capital_days": 370.79166666666663,
+      "n_paired": 732,
+      "paired_diff_vs_random": 0.00628993111859637,
+      "paired_diff_ci95": [
+        -0.19170503030332564,
+        0.19394699549177521
+      ],
+      "folds": {
+        "1": {
+          "n": 219,
+          "mean_net_r": -0.019383503669465743
+        },
+        "2": {
+          "n": 459,
+          "mean_net_r": 0.2609096265254526
+        },
+        "3": {
+          "n": 43,
+          "mean_net_r": 0.15942753675814902
+        },
+        "4": {
+          "n": 11,
+          "mean_net_r": -0.5525217987530148
+        }
+      },
+      "folds_positive": 2,
+      "post_cutoff": {
+        "state": "measured",
+        "n": 27,
+        "mean": 0.2488034289803149
+      },
+      "by_exit": {
+        "sl": 432,
+        "timeout": 28,
+        "tp": 272
+      },
+      "by_symbol": {
+        "ADAUSDT": {
+          "n": 382,
+          "mean_net_r": 0.1724606751840543
+        },
+        "AVAXUSDT": {
+          "n": 152,
+          "mean_net_r": 0.5267633063112037
+        },
+        "BTCUSDT": {
+          "n": 23,
+          "mean_net_r": 0.10881777794837862
+        },
+        "ETHUSDT": {
+          "n": 8,
+          "mean_net_r": -0.7748713654348035
+        },
+        "SOLUSDT": {
+          "n": 107,
+          "mean_net_r": -0.14952150962944535
+        },
+        "XRPUSDT": {
+          "n": 60,
+          "mean_net_r": -0.16604768921180615
+        }
+      },
+      "by_side": {
+        "long": 9,
+        "short": 723
+      },
+      "b_r_mean_net_r": 0.1525764289440908,
+      "n_to_resolve": {
+        "+0.10R": 1901,
+        "+0.20R": 476
+      }
+    },
+    "counts": {
+      "proposals_valid": 732,
+      "filled": 732,
+      "unfilled": 0,
+      "refused": 0,
+      "unresolved": 0,
+      "novelty": {
+        "unclassifiable": 457,
+        "duplicates_system_package": 265,
+        "duplicates_near_signal": 10
+      },
+      "excluded_by_subset": 0
+    },
+    "design": {
+      "packets_judged": 1498,
+      "is_schedule_prefix": false,
+      "batch": 200,
+      "stop_proposals": 800,
+      "valid_proposals_before_last_batch": 679,
+      "valid_proposals_total": 732,
+      "schedule_exhausted": false,
+      "stopping_rule_respected": false
+    },
+    "fill_rate": 1.0,
+    "selfcheck_verdict_path": "/home/runner/work/Metis-Insights/Metis-Insights/comms/research/RQ-20261026-e535-01/40396667351/verdict.json",
+    "intake": {
+      "rows": 1724,
+      "no_trade": 992,
+      "propose_entry": 732,
+      "refused": 0,
+      "refused_reasons": {},
+      "over_cap": 0,
+      "duplicate_symbol": 0,
+      "packets_with_rows": 1498
+    },
+    "n_packets": 1498,
+    "n_packets_judged": 1498,
+    "strategy_list_gaps": [
+      "claude_desk (XRPUSDT): rostered, no committed evidence record",
+      "fade_breakout_4h (BTCUSDT): trade rows lack ['exit_time']",
+      "turtle_soup (BTCUSDT): no fold_detail / timeframe"
+    ]
+  },
+  "note": "the judged packets break the registered stopping rule (not a schedule prefix, or judging continued past 800 valid proposals): {\"packets_judged\": 1498, \"is_schedule_prefix\": false, \"batch\": 200, \"stop_proposals\": 800, \"valid_proposals_before_last_batch\": 679, \"valid_proposals_total\": 732, \"schedule_exhausted\": false, \"stopping_rule_respected\": false}; subset=all: not met: mean net R CI lower bound > 0; net R per capital-day > 0 with the CI lower bound > 0; beats random-entry timing with the paired CI excluding 0; net R > 0 in >= 3 of 4 folds (each with n >= 20) | ",
+  "data_inputs": [
+    "binance_vision:ADAUSDT:1h:rows=12289:first=2025-05-01T00:last=2026-09-25T00:sha256=5bc998ed2d2923de",
+    "binance_vision:AVAXUSDT:1h:rows=12289:first=2025-05-01T00:last=2026-09-25T00:sha256=741b5bc998860b2b",
+    "binance_vision:BTCUSDT:1h:rows=12289:first=2025-05-01T00:last=2026-09-25T00:sha256=4ccfbdb07a15564d",
+    "binance_vision:ETHUSDT:1h:rows=12289:first=2025-05-01T00:last=2026-09-25T00:sha256=332ef731893dabf8",
+    "binance_vision:SOLUSDT:1h:rows=12289:first=2025-05-01T00:last=2026-09-25T00:sha256=f4ac5beea2e52ee6",
+    "binance_vision:XRPUSDT:1h:rows=12289:first=2025-05-01T00:last=2026-09-25T00:sha256=9da6d04627522a41"
+  ],
+  "records": [
+    {
+      "leg": "ADAUSDT",
+      "population": "ADAUSDT entry generation",
+      "n": 382,
+      "verdict": "indeterminate",
+      "read_state": "measured",
+      "mean_net_r": 0.1724606751840543
+    },
+    {
+      "leg": "AVAXUSDT",
+      "population": "AVAXUSDT entry generation",
+      "n": 152,
+      "verdict": "indeterminate",
+      "read_state": "measured",
+      "mean_net_r": 0.5267633063112037
+    },
+    {
+      "leg": "BTCUSDT",
+      "population": "BTCUSDT entry generation",
+      "n": 23,
+      "verdict": "indeterminate",
+      "read_state": "measured",
+      "mean_net_r": 0.10881777794837862
+    },
+    {
+      "leg": "ETHUSDT",
+      "population": "ETHUSDT entry generation",
+      "n": 8,
+      "verdict": "not_applicable",
+      "read_state": "no_data",
+      "mean_net_r": -0.7748713654348035
+    },
+    {
+      "leg": "SOLUSDT",
+      "population": "SOLUSDT entry generation",
+      "n": 107,
+      "verdict": "indeterminate",
+      "read_state": "measured",
+      "mean_net_r": -0.14952150962944535
+    },
+    {
+      "leg": "XRPUSDT",
+      "population": "XRPUSDT entry generation",
+      "n": 60,
+      "verdict": "indeterminate",
+      "read_state": "measured",
+      "mean_net_r": -0.16604768921180615
+    }
+  ]
+}
