@@ -29,7 +29,7 @@ decision_rule:
   registered_at: '2026-11-07'
   registered_before_run: true
   statistic: 'scripts/research/ml_entry_equity.py export --config B --tau 0.25 --ensemble-seeds 1,2,3,4,5 --structure --expect-sha 0afc49948a41671a: booster_sha256 (concatenated texts), sha_match, train_rows, model_json_bytes.'
-  rule: 'Descriptive: no pass bar. sha_match must be true (graded train_rows 368757) or the model is not shipped. No date after 2025-06-30 is read.'
+  rule: 'Descriptive: no pass bar. sha_match must be true (graded train_rows 368757) or the model is not shipped. Training rows stop at 2025-06-30; the table is built from full bars like the graded confirm stage (the first export, run 42468362616, built it to 2025-06-30 only and got sha 5babdb6e.../368752 rows).'
   what_it_does_not_do: Reads no date after 2025-06-30 (data fetched to 2025-06-30 only). No scoring, no config change, no order, no roster change.
   min_n: n/a (artifact export)
 compute: cpu_long
@@ -68,6 +68,7 @@ run:
   - --structure
   - --ensemble-seeds
   - 1,2,3,4,5
+  - --full-bars
   timeout_minutes: 180
   inputs:
     research_unit: RQ-20261108-98e3-17

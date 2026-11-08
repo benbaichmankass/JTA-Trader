@@ -476,7 +476,8 @@ def main_run(a) -> int:
     out.mkdir(parents=True, exist_ok=True)
     slip, _fund = resolve_cost_policy("SPY")
     fee = resolve_fee_bps_roundtrip("SPY")
-    end_day = TRAIN_END if a.cmd in ("dev", "export") else (pd.Timestamp.now(tz="UTC").normalize().replace(day=1) - pd.Timedelta(days=1)).strftime("%Y-%m-%d")
+    # --full-bars (export): build the table from the SAME bars the graded confirm stage used (to the last complete month); training still takes rows < train_end only
+    end_day = TRAIN_END if (a.cmd == "dev" or (a.cmd == "export" and not getattr(a, "full_bars", False))) else (pd.Timestamp.now(tz="UTC").normalize().replace(day=1) - pd.Timedelta(days=1)).strftime("%Y-%m-%d")
     pool, prep, bars, client = _pool_and_bars(a, end_day)
     spec_used = getattr(a, "struct_spec", "") or STRUCT_SPEC   # dev-only override (pivot 3 / pivot 8 variants); default = the live exit
     tab = build_table(bars, pool, slip, fee, struct=spec_used if (a.cmd in ("structure", "forward") or getattr(a, "structure", False)) else "")
@@ -527,7 +528,7 @@ def main_run(a) -> int:
             e = export_stage(tab, a.config, float(a.tau), pool, a.expect_sha, out, struct=STRUCT_SPEC if a.structure else "")
         row = {"schema_version": 1, "research_unit": a.unit, "read_state": "measured", "verdict": "indeterminate",
                "population": f"EXPORT of {e['model_id']}: refit on rows < {TRAIN_END} over the {len(pool)}-ETF pool; no outcome after train_end read",
-               "note": (f"export {e['model_id']}: confirm-params refit sha256 {e['booster_sha256_a'][:16]} "
+               "note": (f"export {e['model_id']}: confirm-params refit sha256 {e.get('booster_sha256_a', e['booster_sha256'])[:16]} "
                         f"{'MATCHES' if e['sha_match'] else 'DOES NOT MATCH'} the confirm run's {a.expect_sha}; shipped {e['shipped']}; "
                         f"A-vs-B on {e['a_vs_b_delta']['n_rows']} training-tail rows: max|d|={e['a_vs_b_delta']['max_abs']:.4f} "
                         f"spearman={e['a_vs_b_delta']['spearman']:.5f} decision agreement={e['a_vs_b_delta']['decision_agreement_at_tau']:.4f}"),
@@ -664,6 +665,7 @@ def main(argv=None) -> int:
         if name == "export":
             p.add_argument("--expect-sha", required=True, help="booster sha256 (prefix ok) of the confirm run to reproduce")
             p.add_argument("--structure", action="store_true", help="relabel with the live structure exit (pivot=5;sl_only) before the refit")
+            p.add_argument("--full-bars", dest="full_bars", action="store_true", help="build the table from full bars (to the last complete month), as the graded confirm stage did; training rows stay < train_end")
             p.add_argument("--ensemble-seeds", dest="ensemble_seeds", default="", help="export the mean of pinned fits at these seeds (N boosters; sha = concatenated texts)")
         if name == "dev":
             p.add_argument("--structure", action="store_true", help="label with the live structure exit (pivot=5;sl_only)")
