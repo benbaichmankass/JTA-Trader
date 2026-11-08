@@ -1,0 +1,79 @@
+name: research-artifact-rescue
+
+# Copies the artifacts of named research runs onto main before GitHub expires them
+# (operator, 2026-11-08: "let's save those. No reason to let those go to waste").
+# The research-loss-detector (section C) lists research-workflow artifacts expiring
+# within 72h with no landed copy; this workflow is the manual rescue for that list.
+#
+# Gates this adds or changes: none.
+#
+# Input: run_ids, comma-separated GitHub Actions run ids. Each run's artifacts land
+# under comms/research/rescued/<run_id>/<artifact-name>/ through the shared
+# commit-to-main action (one auto-merging PR for the batch). Data only: no config,
+# no runtime, no order path.
+
+on:
+  workflow_dispatch:
+    inputs:
+      run_ids:
+        description: "Comma-separated run ids whose artifacts to land"
+        required: true
+        type: string
+
+permissions:
+  contents: write
+  pull-requests: write
+  actions: read
+
+concurrency:
+  group: research-artifact-rescue
+  cancel-in-progress: false
+
+jobs:
+  rescue:
+    runs-on: ubuntu-latest
+    timeout-minutes: 100
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.BRANCH_PROTECTION_TOKEN }}
+
+      - name: Download the named runs' artifacts
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RUN_IDS: ${{ inputs.run_ids }}
+        run: |
+          set -euo pipefail
+          landed=0
+          for rid in $(echo "${RUN_IDS}" | tr ',' ' '); do
+            case "${rid}" in (*[!0-9]*|'') echo "::error::not a run id: '${rid}'"; exit 1 ;; esac
+            dest="comms/research/rescued/${rid}"
+            mkdir -p "${dest}"
+            if gh run download "${rid}" --repo "${GITHUB_REPOSITORY}" --dir "${dest}"; then
+              n=$(find "${dest}" -type f | wc -l)
+              echo "run ${rid}: ${n} file(s) -> ${dest}"
+              gh run view "${rid}" --repo "${GITHUB_REPOSITORY}" \
+                --json databaseId,workflowName,headSha,conclusion,createdAt,url > "${dest}/RESCUE-run.json"
+              landed=$((landed + 1))
+            else
+              echo "::warning::run ${rid}: download failed (expired or no artifacts)"
+              rmdir "${dest}" 2>/dev/null || true
+            fi
+          done
+          echo "LANDED=${landed}" >> "$GITHUB_ENV"
+          [ "${landed}" -gt 0 ] || { echo "::error::nothing rescued"; exit 1; }
+
+      - name: Land the rescued artifacts on main
+        uses: ./.github/actions/commit-to-main
+        with:
+          token: ${{ secrets.BRANCH_PROTECTION_TOKEN }}
+          verify-merged: "true"
+          close-on-fail: "true"
+          paths: comms/research/rescued
+          message: "research: rescue ${{ env.LANDED }} expiring run artifact set(s) (runs ${{ inputs.run_ids }})"
+          pr-title: "research: rescue expiring artifacts (runs ${{ inputs.run_ids }})"
+          pr-body: >-
+            Artifacts of research runs the research-loss-detector listed as expiring with
+            no landed copy, copied verbatim to comms/research/rescued/<run_id>/ before
+            GitHub deletes them. Data only.
+          branch-prefix: automation/research-artifact-rescue
