@@ -1,0 +1,193 @@
+{
+ "schema_version": 1,
+ "review_id": "LR-20261108T2005Z-pkg-766db8d357b5478f",
+ "reviewed_at": "2026-11-08T20:14:00Z",
+ "order_package_id": "pkg-766db8d357b5478f",
+ "trade_id": null,
+ "leg": "ml_entry",
+ "accounts": [
+  "bybit_2",
+  "bybit_portfolio"
+ ],
+ "trigger": {
+  "event": "judgement_cadence",
+  "level": "2026-11-08T20:00:00Z",
+  "l0_snapshot_at": "2026-11-08T20:05:33Z"
+ },
+ "info_cutoff_at": "2026-11-08T20:05:33Z",
+ "state": {
+  "atr_now_over_entry": null,
+  "bars_held": 2,
+  "giveback_r": 0.2952,
+  "open_r": 0.0286,
+  "peak_provenance": "estimated",
+  "peak_r": 0.3238,
+  "regime_cell_entry": null,
+  "regime_cell_now": null,
+  "sl": 90.61,
+  "tp": 87.985
+ },
+ "features_at_review": {
+  "atr_now_over_entry": null,
+  "bars_since_peak": 1,
+  "giveback_r": 0.2952,
+  "open_r": 0.0286,
+  "peak_r": 0.3238,
+  "r_to_stop": 1.0286,
+  "r_to_target": 1.4714
+ },
+ "mechanics": {
+  "evidence": "package sl 90.61 / tp 87.985 agree with every readable account",
+  "verdict": "match"
+ },
+ "options": [
+  {
+   "action": "hold",
+   "level": null,
+   "n": 468,
+   "mean_r": 0.3022,
+   "sd_r": 1.2911,
+   "worst_r": -1.2395,
+   "net": true
+  },
+  {
+   "action": "tighten_sl",
+   "level": null,
+   "n": 468,
+   "mean_r": 0.2904,
+   "sd_r": 0.5443,
+   "worst_r": -1.2395,
+   "net": true
+  },
+  {
+   "action": "tighten_sl",
+   "level": null,
+   "n": 468,
+   "mean_r": 0.3123,
+   "sd_r": 0.7655,
+   "worst_r": -1.2395,
+   "net": true
+  },
+  {
+   "action": "tighten_sl",
+   "level": null,
+   "n": 468,
+   "mean_r": 0.3105,
+   "sd_r": 0.8804,
+   "worst_r": -1.2395,
+   "net": true
+  },
+  {
+   "action": "tighten_sl",
+   "level": null,
+   "n": 468,
+   "mean_r": 0.3176,
+   "sd_r": 0.8303,
+   "worst_r": -1.2395,
+   "net": true
+  },
+  {
+   "action": "tighten_sl",
+   "level": null,
+   "n": 468,
+   "mean_r": 0.3129,
+   "sd_r": 0.8182,
+   "worst_r": -1.2395,
+   "net": true
+  },
+  {
+   "action": "close",
+   "level": null,
+   "n": 468,
+   "mean_r": -0.052,
+   "sd_r": 0.0331,
+   "worst_r": -0.2418,
+   "net": true
+  }
+ ],
+ "outcome_table_source": "comms/live_review/tables/LR-20261108T2005Z-pkg-766db8d357b5478f.json",
+ "recommendation": {
+  "action": "hold",
+  "level": null,
+  "level_atr": null,
+  "ev_delta_r": null,
+  "worst_case_delta_r": null,
+  "basis": "judgement",
+  "confidence": "suggestive",
+  "evidence_source": "judgement",
+  "judgement_confidence": 0.55,
+  "reason": "First review of this package (previous_review null). Short SOL 2 bars in, open +0.029R, peak 0.324R (ESTIMATED, a lower bound), giveback 0.295R, price 89.56 = entry after the 18:00 bar spiked to 90.02 then closed 89.53. 1h is chop (ADX 17.9) inside 88.83-90.02; 4h (ADX 25.6, trending) swing lows 88.67 and 88.24 sit under the 88.83 hourly low and above the 87.985 TP, 4h highs are lower (91.55 -> 90.02). The 90.02 spike did not reach the stop 90.61 (0.59 above it, 1.1 ATR) and was sold back, which is the rejection the short wanted; SL 90.61 is above both the 90.02 and 89.89 swing highs. HOLD already expresses the view: TP 87.985 is +1.5R (~3 ATR) past 4h lows 88.67/88.24, stop 1.0R above. Priced from the leg's own history, net (hold n=468 +0.3022R sd 1.2911 worst -1.2395; one-factor arms): close -0.0520R (ev cost +0.354R, throws away edge from a flat trade; not the close-on-adverse default); tighten atr:1.0 +0.2904, atr:1.5 +0.3123, atr:2.0 +0.3105, r:0 +0.3176, r:0.01 +0.3129, all within 0.3 se of hold (ev_cost se 0.042-0.054), worst case unchanged at -1.2395 (the gain is only p05 -1.13 -> -0.26..-0.69). The one real tail effect is small and the atr:1.0/r:0 stops (0.18R/0.0R away from price) are inside the last hour's 1.8 ATR range, under the 1 ATR minimum buffer and noise-stop prone on a chop 1h, so no tighten beats hold, and tightening class evidence (981 stop-tightens -0.097R) leans the same way. No ATR expansion for a widen/move_tp. Book: SOL ml_entry short duplicates the SOL sol_pullback_2h (+0.229R) and trend_donchian_sol_4h (+2.44R) shorts and the ETH/ADA ml_entry shorts, one crypto-beta short bet across about a dozen packages, flagged not sized. XRP from the same signal was refused by Bybit (110007 insufficient margin), so it has no position and is not part of this book. -0.13 R/decision 14d is a whole-table replay and Unit 23 puts shorts about flat; not weighed. Revisit if a 1h bar closes above 90.02 or the 4h swing low 88.67 breaks (then trail toward structure).",
+  "size_fraction": null,
+  "size_multiplier": null
+ },
+ "context_flags": [
+  "table: hold n=468 mean +0.3022R sd 1.2911 worst -1.2395 (measured; ml_entry short-only Stage-0 corpus, 907 trades, SOL-set 5 symbols)",
+  "table: close -0.052R ev_cost +0.3542; tighten arms atr:1.0 +0.2904 (ev_cost +0.0118, se 0.0538), atr:1.5 +0.3123 (ev_cost -0.0101, se 0.0485), atr:2.0 +0.3105 (ev_cost -0.0083, se 0.0422), r:0 +0.3176 (ev_cost -0.0154, se 0.0456), r:0.01 +0.3129 (ev_cost -0.0108, se 0.0461)",
+  "tighten_bias: stop fills at stop price and SL-first replay flatter every tighten; real cost is, if anything, larger",
+  "min_buffer: atr:1.0 / r:0 stops sit inside the last hour's range, under the 1 ATR minimum buffer",
+  "htf: 4h ADX 25.64 trending; 4h swing lows 88.67/88.24, highs 91.55 -> 90.02; 1h ADX 17.86 chop",
+  "correlated_book: ~12-13 other crypto/metal shorts open (ETH x3, SOL x2, AVAX x2, XRP, BTC, ADA ml_entry, plus GDX/GLD/MHG/MGC); one crypto-beta short bet; sibling XRPUSDT order refused 110007 so XRP has no position",
+  "live_vs_backtest: NO_BACKTEST for ml_entry (source_run not a committed file); live 5 closed trades realMoney +1.5452R, mirror +2.2213R (thin)",
+  "model_grade: -0.13R/decision 14d is a whole-table replay (comms/research/ml_entry_grade/42473814600), not this leg's live record, not weighed; Unit 23 shorts about flat, not weighed",
+  "missing_input: regime.atr_now_over_entry, regime.vol_now, regime.cell_entry, context.funding, chart.since_entry not available",
+  "packet_health: ok",
+  "trigger_level_assumed: judgement_cadence slot 2026-11-08T20:00:00Z (wake entry not seen by lane)"
+ ],
+ "forecast": {
+  "thesis": "The 18:00 spike to 90.02 was rejected (closed 89.53) under lower 4h highs, so SOL rotates back to the 88.83 hourly low / 4h swing 88.67 before any close above 90.02; the 87.985 TP lies beyond the 4h lows.",
+  "direction": "with_trade",
+  "target_px": 88.83,
+  "p_target": 0.55,
+  "invalidation_px": 90.02,
+  "horizon_bars": 12,
+  "timeframe": "1h",
+  "evidence": [
+   "chart.since_entry: unavailable; last close 89.56 = entry",
+   "chart.swings: highs 89.89, 90.02 (18:00 bar); lows 88.83 (3 bars ago)",
+   "chart.htf: 4h ADX 25.64, swing lows 88.67/88.24",
+   "exit_plan: sl_now 90.61 / tp_now 87.985",
+   "priced_options: hold n468 +0.3022 vs close -0.052, tighten arms within 0.3 se",
+   "book: ~12 crypto-beta shorts, concentrated"
+  ]
+ },
+ "judge_prior": null,
+ "applied": false,
+ "apply_policy": {
+  "bound_r": 0.25,
+  "within_bound": null,
+  "tighten_r": null
+ },
+ "shadow_policy": {
+  "bound_r": 0.5,
+  "within_bound": null,
+  "would_apply": null,
+  "tighten_r": null
+ },
+ "account_reads": [
+  {
+   "account_id": "bybit_2",
+   "account_class": "real_money",
+   "read": "no_action",
+   "evidence": "hold: nothing to apply; bybit_orders: SL 90.61 / TP 87.99, position True, matched by order_id; apply paths close, move_tp, reduce, tighten, widen_sl; would_apply = an executor reaches this leg, NOT that its RiskManager approved (LTR-6 gap)"
+  },
+  {
+   "account_id": "bybit_portfolio",
+   "account_class": "paper",
+   "read": "no_action",
+   "evidence": "hold: nothing to apply; bybit_orders: SL 90.61 / TP 87.99, position True, matched by order_id; apply paths close, move_tp, reduce, tighten, widen_sl; would_apply = an executor reaches this leg, NOT that its RiskManager approved (LTR-6 gap)"
+  }
+ ],
+ "disposition": {
+  "route": "none",
+  "mandate": null,
+  "action_issue": null,
+  "applied_at": null,
+  "verified_readback": null
+ },
+ "model": "sonnet-tier",
+ "session": "session_01AFoLuMz87Z2zGybqCrEGXR",
+ "prompt_sha": null,
+ "skill_sha": "fcbbce42e2b614d237ea6b999a77be43412f6ed8",
+ "packet_defects": [],
+ "packet_sha": "c00bb42f273df73d11617700837ad52f670305c89cbf4e61adf309cc5ea70fc0"
+}

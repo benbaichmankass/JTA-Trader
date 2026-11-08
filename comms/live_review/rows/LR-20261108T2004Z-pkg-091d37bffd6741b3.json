@@ -1,0 +1,192 @@
+{
+ "schema_version": 1,
+ "review_id": "LR-20261108T2004Z-pkg-091d37bffd6741b3",
+ "reviewed_at": "2026-11-08T20:14:00Z",
+ "order_package_id": "pkg-091d37bffd6741b3",
+ "trade_id": null,
+ "leg": "ml_entry",
+ "accounts": [
+  "bybit_2",
+  "bybit_portfolio"
+ ],
+ "trigger": {
+  "event": "judgement_cadence",
+  "level": "2026-11-08T20:00:00Z",
+  "l0_snapshot_at": "2026-11-08T20:04:50Z"
+ },
+ "info_cutoff_at": "2026-11-08T20:04:50Z",
+ "state": {
+  "atr_now_over_entry": null,
+  "bars_held": 2,
+  "giveback_r": 0.0388,
+  "open_r": 0.036,
+  "peak_provenance": "estimated",
+  "peak_r": 0.0748,
+  "regime_cell_entry": null,
+  "regime_cell_now": null,
+  "sl": 2245.6042857142857,
+  "tp": 2210.1685714285713
+ },
+ "features_at_review": {
+  "atr_now_over_entry": null,
+  "bars_since_peak": 1,
+  "giveback_r": 0.0388,
+  "open_r": 0.036,
+  "peak_r": 0.0748,
+  "r_to_stop": 1.036,
+  "r_to_target": 1.464
+ },
+ "mechanics": {
+  "evidence": "package sl 2245.6042857142857 / tp 2210.1685714285713 agree with every readable account",
+  "verdict": "match"
+ },
+ "options": [
+  {
+   "action": "hold",
+   "level": null,
+   "n": 527,
+   "mean_r": 0.1528,
+   "sd_r": 1.2895,
+   "worst_r": -1.2395,
+   "net": true
+  },
+  {
+   "action": "tighten_sl",
+   "level": null,
+   "n": 527,
+   "mean_r": 0.1269,
+   "sd_r": 0.5902,
+   "worst_r": -1.998,
+   "net": true
+  },
+  {
+   "action": "tighten_sl",
+   "level": null,
+   "n": 527,
+   "mean_r": 0.1568,
+   "sd_r": 0.8027,
+   "worst_r": -1.998,
+   "net": true
+  },
+  {
+   "action": "tighten_sl",
+   "level": null,
+   "n": 527,
+   "mean_r": 0.1529,
+   "sd_r": 0.9197,
+   "worst_r": -1.998,
+   "net": true
+  },
+  {
+   "action": "tighten_sl",
+   "level": null,
+   "n": 527,
+   "mean_r": 0.1471,
+   "sd_r": 0.7589,
+   "worst_r": -1.998,
+   "net": true
+  },
+  {
+   "action": "tighten_sl",
+   "level": null,
+   "n": 527,
+   "mean_r": 0.1499,
+   "sd_r": 0.7449,
+   "worst_r": -1.998,
+   "net": true
+  },
+  {
+   "action": "close",
+   "level": null,
+   "n": 527,
+   "mean_r": -0.0434,
+   "sd_r": 0.0331,
+   "worst_r": -0.2344,
+   "net": true
+  }
+ ],
+ "outcome_table_source": "comms/live_review/tables/LR-20261108T2004Z-pkg-091d37bffd6741b3.json",
+ "recommendation": {
+  "action": "hold",
+  "level": null,
+  "level_atr": null,
+  "ev_delta_r": null,
+  "worst_case_delta_r": null,
+  "basis": "judgement",
+  "confidence": "suggestive",
+  "evidence_source": "judgement",
+  "judgement_confidence": 0.55,
+  "reason": "First review of this package (previous_review null, nothing to grade). Short ETH 2 bars in, open +0.036R, peak 0.075R, price (2231.43) = entry after a 16-bar 1h chop (ADX 17) that ranged 2223.4-2242.7. Structure supports the short without a break: 1h highs are stepping down (2245.04 -> 2242.73, 12 bars ago 2241.91) and the stop 2245.60 sits just above the 2245.04 swing high, so it is a structure stop, not arbitrary; 4h (ADX 27) is still lower-highs (2253.3, 2250.6, 2245.0, 2242.7) with a 4h swing low 2221.5 under the 2223.4 hourly low. Nothing has resolved: price is exactly at entry, so I see no thesis change in either direction. HOLD already expresses the view (SL 1.0R above, TP 2210.17 = +1.5R, about 3 ATR below, past both swing lows). Priced from the leg's own history, net, ml_entry short corpus (hold n=527 +0.1528R sd 1.2895 worst -1.2395; one-factor arms): close -0.0434R (ev cost +0.196R vs hold, so exiting a flat trade now just pays away the edge; this is not the close-on-adverse default and I do not take it); tighten arms atr:1.0 +0.1269, atr:1.5 +0.1568, atr:2.0 +0.1529, r:0 +0.1471, r:0.02 +0.1499, all within about 0.6 se of hold (ev_cost se 0.038-0.050) and every one has a WORSE worst case in the replay (-1.998 vs -1.2395), so no tighten is supported, and the class evidence (981 stop-tightens -0.097R) points the same way but does not decide it. Tightening to r:0/atr:1.0 would also put the stop inside the 1.14 ATR bar range of the last hour, i.e. under the 1 ATR minimum buffer. Widen/move_tp: no ATR expansion (htf ATR 16.7 vs 1h 7.1 is normal), TP is behind structure already, so no bracket move beats hold. Book: ETH ml_entry short is the same signal as SOL (reviewed together) and ADA ml_entry, on top of ETH x3 existing shorts, SOL x2, AVAX x2, XRP, BTC, so about a dozen crypto-beta shorts are one concentrated bet; that is flagged, not sized here (account-level risk is each account's own). The -0.13 R/decision 14d figure is the whole-table replay, not this leg's live record, and Unit 23 puts shorts about flat; neither is weighed, hold cell is short-only n=527. Revisit if a 1h bar closes above 2242.7 (lower-high structure broken) or the 4h swing low 2221.5 is lost with momentum toward the TP.",
+  "size_fraction": null,
+  "size_multiplier": null
+ },
+ "context_flags": [
+  "table: hold n=527 mean +0.1528R sd 1.2895 worst -1.2395 (measured; ml_entry short-only Stage-0 corpus, 907 trades, ETH-set 5 symbols)",
+  "table: close -0.0434R ev_cost +0.1962; tighten arms atr:1.0 +0.1269 (ev_cost +0.0259, se 0.0499), atr:1.5 +0.1568 (ev_cost -0.004, se 0.0443), atr:2.0 +0.1529 (ev_cost -0.0001, se 0.0384), r:0 +0.1471 (ev_cost +0.0057, se 0.046), r:0.02 +0.1499 (ev_cost +0.0029, se 0.0465)",
+  "tighten_bias: stop fills at stop price and SL-first replay flatter every tighten; real cost is, if anything, larger",
+  "min_buffer: atr:1.0 / r:0 stops sit inside the last hour's range, under the 1 ATR minimum buffer",
+  "htf: 4h ADX 27.45 trending, lower highs 2253.3/2250.6; 1h ADX 16.98 chop",
+  "correlated_book: ~12-13 other crypto/metal shorts open (ETH x3, SOL x2, AVAX x2, XRP, BTC, ADA ml_entry, plus GDX/GLD/MHG/MGC); one crypto-beta short bet; sibling XRPUSDT order refused 110007 so XRP has no position",
+  "live_vs_backtest: NO_BACKTEST for ml_entry (source_run not a committed file); live 5 closed trades realMoney +1.5452R, mirror +2.2213R (thin)",
+  "model_grade: -0.13R/decision 14d is a whole-table replay (comms/research/ml_entry_grade/42473814600), not this leg's live record, not weighed; Unit 23 shorts about flat, not weighed",
+  "missing_input: regime.atr_now_over_entry, regime.vol_now, regime.cell_entry, context.funding, chart.since_entry not available",
+  "packet_health: ok",
+  "trigger_level_assumed: judgement_cadence slot 2026-11-08T20:00:00Z (wake entry not seen by lane)"
+ ],
+ "forecast": {
+  "thesis": "Sell-the-rally structure holds: 1h highs keep stepping down (2245.04, 2242.73) under a 4h lower-high series, so ETH retests the 2223.4 hourly low (and 4h swing 2221.5) before any close above 2242.7; the 2210.17 TP is the stretch beyond it.",
+  "direction": "with_trade",
+  "target_px": 2223.4,
+  "p_target": 0.55,
+  "invalidation_px": 2242.7,
+  "horizon_bars": 12,
+  "timeframe": "1h",
+  "evidence": [
+   "chart.swings: highs 2242.73 (3 bars ago), 2245.04; low 2223.36 (2 bars ago)",
+   "chart.htf: 4h ADX 27.45, lower highs",
+   "exit_plan: sl_now 2245.6 / tp_now 2210.17",
+   "priced_options: hold n527 +0.1528 vs close -0.0434, tighten arms within 0.6 se",
+   "book: ~12 crypto-beta shorts, concentrated"
+  ]
+ },
+ "judge_prior": null,
+ "applied": false,
+ "apply_policy": {
+  "bound_r": 0.25,
+  "within_bound": null,
+  "tighten_r": null
+ },
+ "shadow_policy": {
+  "bound_r": 0.5,
+  "within_bound": null,
+  "would_apply": null,
+  "tighten_r": null
+ },
+ "account_reads": [
+  {
+   "account_id": "bybit_2",
+   "account_class": "real_money",
+   "read": "no_action",
+   "evidence": "hold: nothing to apply; bybit_orders: SL 2245.6 / TP 2210.17, position True, matched by order_id; apply paths close, move_tp, reduce, tighten, widen_sl; would_apply = an executor reaches this leg, NOT that its RiskManager approved (LTR-6 gap)"
+  },
+  {
+   "account_id": "bybit_portfolio",
+   "account_class": "paper",
+   "read": "no_action",
+   "evidence": "hold: nothing to apply; bybit_orders: SL 2245.6 / TP 2210.17, position True, matched by order_id; apply paths close, move_tp, reduce, tighten, widen_sl; would_apply = an executor reaches this leg, NOT that its RiskManager approved (LTR-6 gap)"
+  }
+ ],
+ "disposition": {
+  "route": "none",
+  "mandate": null,
+  "action_issue": null,
+  "applied_at": null,
+  "verified_readback": null
+ },
+ "model": "sonnet-tier",
+ "session": "session_01AFoLuMz87Z2zGybqCrEGXR",
+ "prompt_sha": null,
+ "skill_sha": "fcbbce42e2b614d237ea6b999a77be43412f6ed8",
+ "packet_defects": [],
+ "packet_sha": "1d59d109c3edba97ae8a55537de82b231de79cb59e6fa3e6354879ee1c3cff23"
+}
