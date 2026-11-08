@@ -1,0 +1,191 @@
+{
+ "schema_version": 1,
+ "review_id": "LR-20261108T1802Z-pkg-8ff06c8f1ed8462e",
+ "reviewed_at": "2026-11-08T18:15:00Z",
+ "order_package_id": "pkg-8ff06c8f1ed8462e",
+ "trade_id": null,
+ "leg": "ml_entry",
+ "accounts": [
+  "bybit_2",
+  "bybit_portfolio"
+ ],
+ "trigger": {
+  "event": "giveback",
+  "level": 1.0,
+  "l0_snapshot_at": "2026-11-08T18:01:49.172945+00:00"
+ },
+ "info_cutoff_at": "2026-11-08T18:02:42Z",
+ "state": {
+  "atr_now_over_entry": null,
+  "bars_held": 8,
+  "giveback_r": 0.5072,
+  "open_r": 0.7101,
+  "peak_provenance": "estimated",
+  "peak_r": 1.2174,
+  "regime_cell_entry": null,
+  "regime_cell_now": null,
+  "sl": 0.18257142857142858,
+  "tp": 0.17468571
+ },
+ "features_at_review": {
+  "atr_now_over_entry": null,
+  "bars_since_peak": 1,
+  "giveback_r": 0.5072,
+  "open_r": 0.7101,
+  "peak_r": 1.2174,
+  "r_to_stop": 1.7101,
+  "r_to_target": 2.2899
+ },
+ "mechanics": {
+  "evidence": "package sl 0.18257142857142858 / tp 0.17468571 agree with every readable account",
+  "verdict": "match"
+ },
+ "options": [
+  {
+   "action": "hold",
+   "level": null,
+   "n": 261,
+   "mean_r": 1.0416,
+   "sd_r": 1.2016,
+   "worst_r": -1.1844,
+   "net": true
+  },
+  {
+   "action": "tighten_sl",
+   "level": null,
+   "n": 261,
+   "mean_r": null,
+   "sd_r": null,
+   "worst_r": null,
+   "net": true
+  },
+  {
+   "action": "tighten_sl",
+   "level": null,
+   "n": 261,
+   "mean_r": 1.1038,
+   "sd_r": 0.6981,
+   "worst_r": -0.0586,
+   "net": true
+  },
+  {
+   "action": "tighten_sl",
+   "level": null,
+   "n": 261,
+   "mean_r": 1.0728,
+   "sd_r": 0.7281,
+   "worst_r": -0.0586,
+   "net": true
+  },
+  {
+   "action": "tighten_sl",
+   "level": null,
+   "n": 261,
+   "mean_r": 1.0865,
+   "sd_r": 1.0031,
+   "worst_r": -0.182,
+   "net": true
+  },
+  {
+   "action": "tighten_sl",
+   "level": null,
+   "n": 261,
+   "mean_r": 1.1021,
+   "sd_r": 0.8684,
+   "worst_r": -0.0586,
+   "net": true
+  },
+  {
+   "action": "close",
+   "level": null,
+   "n": 261,
+   "mean_r": 0.6222,
+   "sd_r": 0.0355,
+   "worst_r": 0.4397,
+   "net": true
+  }
+ ],
+ "outcome_table_source": "comms/live_review/tables/LR-20261108T1802Z-pkg-8ff06c8f1ed8462e.json",
+ "recommendation": {
+  "action": "hold",
+  "level": null,
+  "level_atr": null,
+  "ev_delta_r": null,
+  "worst_case_delta_r": null,
+  "basis": "judgement",
+  "confidence": "suggestive",
+  "evidence_source": "judgement",
+  "judgement_confidence": 0.55,
+  "reason": "One row covering both due triggers: new_peak (peak_r 1.22 vs 0.66 last reviewed) and giveback (0.51R off the 1.22R peak). Supersedes my 18:00Z row on the same package (same call, older packet). Prior 16:03Z forecast (target 0.17764, invalidation 0.18257) neither touched; the view moved with_trade (open -0.20R -> peak +1.22R -> +0.71R now), so I carry it forward with the target extended to the +3R TP 0.17469 and p_target 0.27. Price: short ADA, 8 bars in, 1h low 0.1782 (the peak) then a bounce, last closed bar 0.1790; 1h swing highs 0.1813/0.1818 untouched, 4h still trending (ADX 28, swing low 0.1775). The giveback is 0.51R of a 1.22R peak, a normal retrace inside a 0.002-0.0023 hourly range (ATR 0.00114), not a structure break. Priced, leg's own history, net (hold n=261 +1.0416R sd 1.20 worst -1.18): close +0.6222R (-0.419R vs hold, se 0.074, >5 se: the giveback shrank closing value from +0.72 to +0.62, so closing now is worse than at 18:00Z); tighten atr:1.5 +1.1038 (+0.062, se 0.062), atr:2.0 +1.0728 (+0.031, se 0.056), r:0 +1.0865 (+0.045, se 0.036), r:0.36 +1.1021 (+0.060, se 0.047), atr:1.0 unpriced (invalid level, stop not below price). All tighten gains are within 1.3 se of hold on mean; they only buy the tail (worst -1.18 -> -0.06). Lock-in arms after the new peak: atr:1.5 (stop +0.47R) and r:0.36 sit 0.24-0.35R from price, about 0.4-0.6 ATR, inside the 1 ATR min buffer and inside one hourly bar's noise; atr:2.0 (+0.22R, ~0.1802) is 1.06 ATR away but under the highs of the last 3 hourly bars (up to 0.1812), so a noise stop-out is likelier than the SL-first replay shows (that replay is biased toward tightens); r:0 same. With no arm clearly beating hold, hold keeps the +3R target and the full tail (stop 0.18257 is 1.71R from open), which I accept. Not defaulting to close-on-adverse and not tilting to hold: every arm priced. If a 1h close returns above 0.1807 with 0.1775 unbroken, lock-in becomes the better call. The -0.13R/decision 14d model grade is a whole-48-symbol replay, not this leg's live record; not weighed."
+ },
+ "judge_prior": null,
+ "applied": false,
+ "apply_policy": {
+  "bound_r": 0.25,
+  "within_bound": null,
+  "tighten_r": null
+ },
+ "shadow_policy": {
+  "bound_r": 0.5,
+  "within_bound": null,
+  "would_apply": null,
+  "tighten_r": null
+ },
+ "context_flags": [
+  "covers_triggers: new_peak (peak_r 1.22 vs 0.66) and giveback (0.51R of 1.22R peak); manager notification 18:03Z, packet f6391fec67f7",
+  "table: hold n=261 +1.0416R sd 1.2016 worst -1.1844 (measured; ml_entry pooled short corpus, hold = extend-only TP exit, no structure SL)",
+  "table: close n=261 +0.6222R (ev_cost +0.4195, se 0.074); tighten atr:1.5 +1.1038, atr:2.0 +1.0728, r:0 +1.0865, r:0.36 +1.1021, worst -0.0586..-0.182, each gain within 1.3 se; atr:1.0 not priced (invalid_level)",
+  "tighten_bias: stop-at-price fills and SL-first replay flatter any tighten; tighten is advice-only (operator 2026-10-28)",
+  "min_buffer: atr:1.5 and r:0.36 stops are 0.4-0.6 ATR from price, under the 1 ATR minimum",
+  "tp_revised: TP 0.17469 (+3R) since 16:43Z first-passage revision; trust sl_now/tp_now",
+  "correlated_book: 12 other packages open short (ETH x3, SOL x2, AVAX x2, XRP, BTC, GDX, GLD, MHG); crypto-beta short is one concentrated bet",
+  "live_vs_backtest: NO_BACKTEST for ml_entry (source_run not a committed file); live 5 closed trades realMoney +1.55R, mirror +2.22R (thin)",
+  "model_grade: -0.13R/decision 14d is a whole-48-symbol replay (comms/research/ml_entry_grade/42473814600); not this leg's live record, not weighed",
+  "missing_input: regime.atr_now_over_entry, regime.vol_now, regime.cell_entry, context.funding not available",
+  "packet_health: ok",
+  "supersedes_row: LR-20261108T1800Z-pkg-8ff06c8f1ed8462e (same call, older packet)"
+ ],
+ "account_reads": [
+  {
+   "account_id": "bybit_2",
+   "account_class": "real_money",
+   "read": "no_action",
+   "evidence": "hold: nothing to apply; bybit_orders: SL 0.1826 / TP 0.1747, position True, matched by order_id; apply paths close, move_tp, reduce, tighten, widen_sl; would_apply = an executor reaches this leg, NOT that its RiskManager approved (LTR-6 gap)"
+  },
+  {
+   "account_id": "bybit_portfolio",
+   "account_class": "paper",
+   "read": "no_action",
+   "evidence": "hold: nothing to apply; bybit_orders: SL 0.1826 / TP 0.1747, position True, matched by order_id; apply paths close, move_tp, reduce, tighten, widen_sl; would_apply = an executor reaches this leg, NOT that its RiskManager approved (LTR-6 gap)"
+  }
+ ],
+ "disposition": {
+  "route": "none",
+  "mandate": null,
+  "action_issue": null,
+  "applied_at": null,
+  "verified_readback": null
+ },
+ "model": "sonnet-tier",
+ "session": "session_01AFoLuKFhupzhgHyZ21W8Yc_lane",
+ "prompt_sha": null,
+ "skill_sha": "fcbbce42e2b614d237ea6b999a77be43412f6ed8",
+ "packet_defects": [],
+ "packet_sha": "f6391fec67f7a4e6320b19638b86c08da0618c352df6cb94ab1b7aab406d5ffa",
+ "forecast": {
+  "thesis": "4h stays trending down (ADX 28) and the 1h low 0.1782 is intact; the bounce to 0.1790 is a retrace inside normal hourly range with 1h swing highs 0.1813/0.1818 untouched, so the leg resumes toward the 3R target 0.17469 (4h swing low 0.1775 on the way) before a move back through 0.1813. Carried from 16:03Z with the target extended with the TP.",
+  "direction": "with_trade",
+  "target_px": 0.17469,
+  "p_target": 0.27,
+  "invalidation_px": 0.1813,
+  "horizon_bars": 12,
+  "timeframe": "1h",
+  "evidence": [
+   "chart.since_entry: low 0.1782, last close 0.1790",
+   "chart.htf: 4h trending, ADX 28, swing low 0.1775",
+   "exit_plan: sl_now 0.182571 / tp_now 0.174686",
+   "priced_options: hold n261 +1.0416 vs close +0.6222, tighten arms within 1.3 se",
+   "book: 12 other shorts"
+  ]
+ }
+}
