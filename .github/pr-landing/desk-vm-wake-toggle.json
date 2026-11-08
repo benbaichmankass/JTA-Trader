@@ -1,0 +1,7 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "hold_reason": "operator_asked_to_hold",
+  "hold_text": "Operator 2026-11-07: wake notifications must be switchable from the console; this closes the gap where the VM desk-wake poster ignored the desk_wake switch. Touches the trader import closure, so the manager merges it in the operator's auto-off window.",
+  "why": "src/runtime/desk_packet_wake.py now checks wake_toggles desk_wake before posting the ops-flags comment (the packet still lands); test proves no comment with the switch off and fails without the fix."
+}

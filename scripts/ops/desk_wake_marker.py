@@ -346,6 +346,15 @@ def main(argv: Optional[List[str]] = None) -> int:
     print(f"desk-wake-marker {a.cmd}: {verdict}")
     if verdict != "post":
         return 0
+    # Console wake switches (read live over HTTP; unreadable => post). The packet is already landed by the
+    # workflow; only the comment is withheld.
+    from src.runtime import wake_toggles as wt
+    tkey = "desk_wake" if a.cmd == "post" else "desk_could_not_build"
+    if not wt.is_on(tkey):
+        subject = entry["packet_id"] if a.cmd == "post" else bar
+        wt.log_suppressed(tkey, subject)
+        print(f"desk-wake-marker {a.cmd}: suppressed_by_wake_toggle ({tkey} is off; packet/data untouched)")
+        return 0
     print(body)
     if a.live and not _comment(repo, pr, body):
         print("::error::posting the ops-flags comment failed", file=sys.stderr)

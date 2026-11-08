@@ -397,3 +397,24 @@ def test_workflow_post_step_skips_an_unchanged_packet(tmp_path, capsys, gate_on,
     monkeypatch.setattr("live_review_wake.ops_flags_pr", lambda: 17895, raising=False)
     assert mm.main(["post", "--stage", str(stage), "--commit", "c" * 40, "--pr", "17895", "--live"]) == 0
     assert "skipped_nothing_new" in capsys.readouterr().out
+
+
+@pytest.fixture(autouse=True)
+def _wake_switches_all_on(tmp_path, monkeypatch):
+    """These tests exercise posting; the console switches default desk_wake OFF (src/runtime/wake_toggles.py)."""
+    from src.runtime import wake_toggles as _wt
+    monkeypatch.setenv("RUNTIME_STATE_DIR", str(tmp_path / "_wt_state"))
+    monkeypatch.setenv("RUNTIME_LOGS_DIR", str(tmp_path / "_wt_logs"))
+    monkeypatch.delenv("WAKE_TOGGLES_REMOTE", raising=False)
+    for _k in _wt.TOGGLES:
+        _wt.set_toggle(_k, True, "test")
+
+
+def test_desk_wake_switch_off_withholds_the_comment_but_lands_the_packet(tmp_path, monkeypatch):
+    """Operator 2026-11-07: with desk_wake off the VM poster lands the packet and posts NO comment."""
+    from src.runtime import wake_toggles as _wt
+    _wt.set_toggle("desk_wake", False, "test")
+    net = Net()
+    rec = produce(tmp_path, net)
+    assert rec["state"] == "suppressed_by_wake_toggle" and rec["commit"] == "c" * 40
+    assert net.posts == []

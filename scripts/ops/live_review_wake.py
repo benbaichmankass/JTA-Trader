@@ -335,6 +335,34 @@ def land_evidence(p: Dict[str, Any], bundles: Dict[str, Dict[str, Any]], auth: s
     return out
 
 
+def apply_toggles(p: Dict[str, Any], bundles: Optional[Dict[str, Dict[str, Any]]] = None) -> List[Dict[str, Any]]:
+    """Console wake switches (src/runtime/wake_toggles.py). Called AFTER the packets are built and the evidence is
+    landed, so the data path is untouched: entries whose every account class is OFF are removed from the comment
+    (their bundles too) and logged ``suppressed_by_wake_toggle``. Returns the suppressed entries. Unreadable switch
+    state keeps every entry (post). Mutates ``p``; ``kind`` becomes ``quiet`` when nothing is left to post."""
+    if p.get("kind") != "wake":
+        return []
+    for q in (str(ROOT),):
+        if q not in sys.path:
+            sys.path.insert(0, q)
+    from src.runtime import wake_toggles as wt
+    st = wt.read()
+    keep, drop = [], []
+    for e in p.get("entries") or []:
+        (keep if wt.ltr_entry_on(e, st) else drop).append(e)
+    for e in drop:
+        wt.log_suppressed("ltr", _key(e), accounts=e.get("accounts"),
+                          toggles=wt.ltr_keys_for_accounts(e.get("accounts") or []))
+    p["entries"] = keep
+    if bundles is not None:
+        live = {e.get("order_package_id") for e in keep}
+        for k in [k for k in bundles if k not in live]:
+            bundles.pop(k)
+    if drop and not keep:
+        p["kind"], p["why"] = "quiet", f"{len(drop)} wake(s) suppressed_by_wake_toggle"
+    return drop
+
+
 def _bundle_block(pkg: str, b: Dict[str, Any]) -> str:
     doc = {k: b.get(k) for k in ("packet_sha", "table_path", "packet", "table")}
     return (f"<details><summary>review packet <code>{(b.get('packet') or {}).get('review_id')}</code> "
@@ -378,7 +406,14 @@ def render(p: Dict[str, Any], now: datetime, run_url: str,
                 f"next flag no sooner than {COULD_NOT_LOOK_COOLDOWN_MIN} min.")
         lines = []
     else:
-        head = (f"**LTR wake: {len(p['entries'])} live-review event(s) newly due** on real-money/prop "
+        try:
+            if str(ROOT) not in sys.path:
+                sys.path.insert(0, str(ROOT))
+            from src.runtime import wake_toggles as _wt
+            cls = _wt.ltr_label(p["entries"])
+        except Exception:  # noqa: BLE001
+            cls = "real-money/prop"
+        head = (f"**LTR wake: {len(p['entries'])} live-review event(s) newly due** on {cls} "
                 "packages. Manager: dispatch ONE Sonnet LIVE-REVIEW lane per package "
                 "(`.claude/skills/manager/SKILL.md` § Live-review wake).")
         lines = [f"- `{e['order_package_id']}` {e['leg']} {e['symbol']} on {', '.join(map(str, e['accounts']))}: "
@@ -446,6 +481,9 @@ def main(argv: Optional[List[str]] = None) -> int:
         token = os.environ.get("GH_TOKEN") or os.environ.get("GITHUB_TOKEN") or ""
         ev = land_evidence(p, bundles, f"token {token}")
         print(f"ltr-wake: evidence {json.dumps(ev, sort_keys=True)}")
+    dropped = apply_toggles(p, bundles) if (p["kind"] == "wake" and args.live) else []
+    if dropped:
+        print(f"ltr-wake: suppressed_by_wake_toggle x{len(dropped)} (packets/evidence still landed)")
     body = render(p, now, os.environ.get("RUN_URL", ""), bundles) if p["kind"] != "quiet" else ""
     print(f"ltr-wake: {p['kind']} — {p.get('why') or p.get('reason')}")
     if body:

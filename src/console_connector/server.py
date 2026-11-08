@@ -114,7 +114,15 @@ TOOLS: list[dict[str, Any]] = [
      "description": "Work-store items (WORK-STORE S1). Reports could_not_look until that route is live.",
      "inputSchema": {"type": "object", "properties": {}}, "annotations": _RO},
 ]
-_TOOL_NAMES = {t["name"] for t in TOOLS}
+#: The ONLY write tool on this otherwise read-only connector (operator 2026-11-07: wake switches must be flippable
+#: from the console). Listed and callable only when write_enabled() (Google sign-in + a configured write token);
+#: it changes which comments wake a session, nothing else. Gates this adds or changes: none.
+WRITE_TOOL = {"name": "set_wake_toggle", "title": "Flip a wake switch",
+              "description": "Turn one wake-notification switch on or off on the trader VM (POST /api/bot/wake-toggles). Logged with who/when.",
+              "inputSchema": {"type": "object", "required": ["key", "on"], "properties": {
+                  "key": {"type": "string"}, "on": {"type": "boolean"}}},
+              "annotations": {"readOnlyHint": False, "destructiveHint": False, "idempotentHint": True, "openWorldHint": True}}
+_TOOL_NAMES = {t["name"] for t in TOOLS} | {WRITE_TOOL["name"]}
 
 
 WAKE_API = os.environ.get("WAKE_TOGGLES_API") or "https://ict-bot.duckdns.org/api/bot/wake-toggles"
@@ -128,11 +136,39 @@ def wake_toggles_read() -> dict[str, Any]:
         with urllib.request.urlopen(req, timeout=8) as r:  # noqa: S310 fixed https URL
             doc = json.loads(r.read())
         doc["as_of"] = data._iso(data._now())
+        doc["write_enabled"] = write_enabled()
         return doc
     except Exception as exc:  # noqa: BLE001
         return {"as_of": data._iso(data._now()), "read_state": "could_not_look", "error": type(exc).__name__,
-                "toggles": None, "rows": [],
+                "toggles": None, "rows": [], "write_enabled": write_enabled(),
                 "population": {"switches": None}, "note": "could not reach the trader VM; posters post when unreadable"}
+
+
+def write_enabled() -> bool:
+    """The ONE write tool is offered only behind the Google sign-in AND a configured write token."""
+    return auth_active() and bool(os.environ.get("WAKE_TOGGLES_WRITE_TOKEN", "").strip())
+
+
+def wake_toggle_write(args: dict[str, Any]) -> dict[str, Any]:
+    import urllib.request
+    if not write_enabled():
+        return {"as_of": data._iso(data._now()), "read_state": "auth_required", "tool": "set_wake_toggle",
+                "reason": "needs CONSOLE_CONNECTOR_AUTH=google and WAKE_TOGGLES_WRITE_TOKEN on the connector host"}
+    key, on = args.get("key"), args.get("on")
+    if not isinstance(key, str) or not isinstance(on, bool):
+        return {"as_of": data._iso(data._now()), "read_state": "bad_request", "reason": "key (string) and on (boolean) required"}
+    body = json.dumps({"key": key, "on": on, "by": "console (operator Google sign-in)"}).encode()
+    req = urllib.request.Request(WAKE_API, data=body, method="POST", headers={
+        "Authorization": "Bearer " + os.environ["WAKE_TOGGLES_WRITE_TOKEN"].strip(),
+        "Content-Type": "application/json", "User-Agent": "jta-console-connector"})
+    try:
+        with urllib.request.urlopen(req, timeout=10) as r:  # noqa: S310
+            doc = json.loads(r.read())
+        CACHE.get("wake_toggles", 0.0, lambda: doc)  # next read is fresh
+        doc["as_of"] = data._iso(data._now())
+        return doc
+    except Exception as exc:  # noqa: BLE001
+        return {"as_of": data._iso(data._now()), "read_state": "could_not_write", "error": type(exc).__name__}
 
 
 def _clamp(v: Any, lo: int, hi: int, default: int) -> int:
@@ -202,6 +238,8 @@ def _call_tool(name: str, args: dict[str, Any]) -> dict[str, Any]:
                          lambda: tabs.research_queue(REPO, a))
     if name == "wake_toggles":
         return CACHE.get("wake_toggles", TTL_S[name], lambda: wake_toggles_read())
+    if name == "set_wake_toggle":
+        return wake_toggle_write(args)
     if name == "work_items":
         return CACHE.get("work_items", TTL_S["work_items"], data.work_items)
     if name in GATED_TOOLS and not auth_active():
@@ -243,7 +281,8 @@ def handle(msg: dict[str, Any]) -> dict[str, Any] | None:
     elif method == "ping":
         result = {}
     elif method == "tools/list":
-        result = {"tools": [t for t in TOOLS if t["name"] not in GATED_TOOLS or auth_active()]}
+        result = {"tools": [t for t in TOOLS if t["name"] not in GATED_TOOLS or auth_active()]
+                  + ([WRITE_TOOL] if write_enabled() else [])}
     elif method == "tools/call":
         p = msg.get("params") or {}
         name = p.get("name")
