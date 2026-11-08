@@ -41,7 +41,7 @@ def test_tradeify_goes_live_with_the_eth_sol_roster_at_half_percent():
     # 2026-10-29 (Tier-3, operator): trend_donchian_sol_prop pulled from tradeify_1 (V2 prop gate EV < 0,
     # comms/prop_survival/v2/). `symbols:` keeps SOLUSDT (additive pull list, not a gate). REVERT: re-add sol_prop here.
     # 2026-11-05 (Tier-3, operator 'Pull from prop (Recommended)', row PROP-PULL-ETHPROP): trend_donchian_eth_prop pulled (RQ-20261031-422a-01 FAIL); roster is an explicit []. REVERT: re-add eth_prop here.
-    assert t["strategies"] == ["trend_donchian_eth_4h", "trend_donchian_sol_4h"]  # 2026-11-05 ~21:05Z (Tier-3, operator "Baseline at min size (Rec.)" + "Both now, waive both"): min-size BASELINE roster. REVERT: [].
+    assert t["strategies"] == ["trend_donchian_eth_4h", "trend_donchian_sol_4h", "ml_entry"]  # +ml_entry 2026-11-08 ML-ENTRY-PROP-BASELINE;  # 2026-11-05 ~21:05Z (Tier-3, operator "Baseline at min size (Rec.)" + "Both now, waive both"): min-size BASELINE roster. REVERT: [].
     assert t["symbols"] == ["ETHUSDT", "SOLUSDT"]
     assert t["risk"]["risk_pct"] == 0.005
     assert t["risk"]["max_dd_pct"] == 0.06 and t["risk"]["daily_loss_pct"] == 0.03
@@ -62,11 +62,25 @@ def test_one_leg_per_symbol_so_our_own_legs_cannot_hedge():
     blocks = strat.get("strategies", strat)
     syms = []
     for leg in ACCOUNTS["tradeify_1"]["strategies"]:
+        if leg == "ml_entry":
+            continue   # 2026-11-08 ML-ENTRY-PROP-BASELINE: shares ETH/SOL with the trend legs by design; see the netting test below
         s = blocks[leg].get("symbols") or [blocks[leg].get("symbol")]
         syms.extend(x for x in s if x)
     # one leg per symbol: no symbol may appear twice (0 legs since the 2026-11-05 eth_prop pull, PROP-PULL-ETHPROP)
     assert len(syms) == len(set(syms)), syms
     assert set(syms) <= set(ACCOUNTS["tradeify_1"]["symbols"])
+    # ml_entry's tradeify slice is pinned to symbols the account declares, so it can only overlap the trend legs on ETH/SOL
+    assert set(blocks["ml_entry"]["account_symbols"]["tradeify_1"]) <= set(ACCOUNTS["tradeify_1"]["symbols"])
+
+
+def test_ml_entry_overlap_cannot_hedge_an_open_position():
+    """Tradeify forbids long+short in one instrument. ml_entry shares ETH/SOL with the trend legs, so the opposite-side signal must resolve to NO order
+    against an open position (default FLIP_POLICY hold; coordinator netting guard: opposite direction -> refuse)."""
+    from src.runtime import intents as I
+    d = I.DesiredPosition(symbol="ETHUSDT", side="short", target_qty=1.0, contributing_intents=(), winning_intent=None, reason="t", meta={})
+    for pol in (None, "hold"):
+        r = I.compute_execution_delta(1.0, d, flip_policy=pol)
+        assert r.action == "noop" and r.qty_delta == 0.0, (pol, r)
 
 
 def test_ruleset_is_tradeify_and_unconfirmed():

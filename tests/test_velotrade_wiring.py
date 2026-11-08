@@ -37,7 +37,7 @@ def test_velotrade_1_is_live_with_the_fit_roster():
     # VELOTRADE-GOLIVE roster (RQ-20261006-002 / RULE-RQ1006-VELOTRADE-FIT)
     # 2026-10-29 (Tier-3, operator): sol_prop pulled (V2 prop gate). REVERT: re-add it here.
     # 2026-11-05 (Tier-3, operator 'Pull from prop (Recommended)', row PROP-PULL-ETHPROP): trend_donchian_eth_prop pulled (RQ-20261031-422a-01 FAIL); roster is an explicit []. REVERT: re-add eth_prop here.
-    assert a["strategies"] == ["trend_donchian_eth_4h", "trend_donchian_sol_4h"]  # 2026-11-05 ~21:05Z (Tier-3, operator "Baseline at min size (Rec.)" + "Both now, waive both"): min-size BASELINE roster. REVERT: [].
+    assert a["strategies"] == ["trend_donchian_eth_4h", "trend_donchian_sol_4h", "ml_entry"]  # +ml_entry 2026-11-08 ML-ENTRY-PROP-BASELINE;  # 2026-11-05 ~21:05Z (Tier-3, operator "Baseline at min size (Rec.)" + "Both now, waive both"): min-size BASELINE roster. REVERT: [].
     assert a["symbols"] == ["ETHUSDT", "SOLUSDT"]
     assert a["exchange"] == "breakout" and a["type"] == "prop" and a["account_class"] == "prop"
     assert a["backtest_ruleset"] == "prop_rulesets/velotrade_classic_1step.yaml"

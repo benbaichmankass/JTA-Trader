@@ -67,5 +67,19 @@
  },
  "population": "ml_entry served ENTRY v1 (extend-only TP), held-out 2025-10-01..2026-09-30, ETHUSDT+SOLUSDT only (176+205 trades of the 907-trade evidence record; 5-symbol replay reproduces its +0.027130 R exactly)",
  "source": "docs/research/ml-entry-prop-gate-2026-11-02/ (ledgers/, cells/, result.json)",
- "note": "FAIL on all three firms: V2 fails on EV (< 0 at every seed on the firm arm) and V3 edge CI lower bound is about -0.10 R. No roster change. Fail-closed record: verdict 'fail' is refused by prop-roster-gate-guard."
+ "note": "FAIL on all three firms: V2 fails on EV (< 0 at every seed on the firm arm) and V3 edge CI lower bound is about -0.10 R. No roster change. Fail-closed record: verdict 'fail' is refused by prop-roster-gate-guard.",
+ "operator_exception": {
+  "kind": "baseline",
+  "decided_by": "operator",
+  "decided_at": "2026-11-08T23:35Z",
+  "relayed_by": "session_01AFoLuJ3yguifJsDomuAzGx (Manager Session 2026-11-07a)",
+  "accounts": [
+   "breakout_2",
+   "tradeify_1",
+   "velotrade_1"
+  ],
+  "quote": "We should continue working on prop- specific mls, but I want the same ml entry model on bybit to be set live on the prop accounts until we build something that beats it - it's been doing really good so far the risk is worth it to not let those accounts sit idle",
+  "option_text": "Run the SAME served ml_entry leg (one implementation, never a fork) on breakout_2, tradeify_1 and velotrade_1 at the account's configured min-size risk_pct with the daily drawdown switch armed, as a baseline until a prop-specific ML beats it. The verdict above stays the TRUE grade (FAIL on all three firms); this is the operator's exception to the prop gate, not a pass.",
+  "references": "Same exception shape as comms/prop_survival/trend_donchian_eth_4h.json (operator 2026-11-05 ~18:55Z, 'Baseline at min size (Rec.)', whose option text names 'the ML variants as they're built'; PR #23460)."
+ }
 }
