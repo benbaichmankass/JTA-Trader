@@ -1,0 +1,114 @@
+# Hand-authored 2026-11-08 by lane ML-ENTRY-EQ-STRUCTURE-RETEST (Tier 1). FORWARD-DATA unit: rule registered before the run; not_before 2027-04-01 so enough forward trades exist. Rule/thresholds fixed today.
+id: RQ-20261108-98e3-13
+title: 'ENTRY-EQ structure ensemble FORWARD read: does the frozen 5-seed structure ensemble (tau 0.25) earn a positive net R on bars AFTER 2026-10-31, the first data
+  no earlier ENTRY-EQ read has seen?'
+status: queued
+cadence: once
+theme: ml_health
+priority: 1
+roadmap:
+- L-ML-LIVE
+kind: experiment
+practice_precedent: 'M13 (docs/reference/trading-and-model-practice-principles.md): unlimited iteration on the training-period walk-forward; the confirming window
+  is loaded by NO code path of this unit.'
+question: 'RQ-20261107-98e3-06 (the third read of 2025-07-15..2026-10-31) was a registered PASS (n=207, mean net R +0.4922, month-clustered t about 2.06) but on a
+  window every earlier read shared and with the confirm mean about 4x the dev mean. No further read of that window is allowed. This unit is the NEXT evidence: the
+  SAME frozen model (config B, mean of 5 pinned LightGBM fits at seeds 1-5, refit on rows <= 2025-06-30 with purge 10 d, structure-exit labels pivot=5;sl_only, SL
+  2 / TP 3 ATR14, 24-bar stop, same costs: fee 0 + slippage 5 bps PROVISIONAL + regulatory 0.5 bps round trip) scored ONCE at the fixed tau 0.25 on decisions closing
+  on or after 2026-11-01 up to the last complete month before the run. No dev selection, no re-tuning, no new tau.'
+why_this_matters: 'A forward read is the only evidence a favourable-window explanation cannot produce: if the +0.49 R was the window, it shows up here as a mean near
+  0 or below. It is the evidence the Tier-3 decision on a Stage-1 testing leg should be weighed against.'
+power:
+  expected_n: 67
+  min_detectable_effect: 0.33
+  effect_units: metric
+  sd: 1.09
+  design: one_sample
+  alpha: 0.1
+  power: 0.8
+  basis: 'The power block uses the 0.80 the queue tabulates: at n=67, alpha 0.10 one-sided-equivalent z 1.645, sd 1.09, an 80%-power effect is ~0.33 R (the decision rule itself needs only mean >= +0.10 and the lower bound > 0, see P(PASS) below). INFERRED from run 42432561069: 207 trades over 15.5 months = ~13.4/month, per-trade sd ~1.09 R (iid se 0.0758 x sqrt(207)). By 2026-04-01 five forward months
+    (Nov-Mar) give ~67 trades (plausible range 30-100: trades cluster, 2026-03 alone was 75 of 207), iid se ~0.133, so the lower-bound clause needs mean >= ~0.17
+    R. P(PASS) at n=67 is about 10% if the true edge is 0, about 59% if +0.20 (the single-seed structure confirm) and about 99% if +0.49 (this read). UNDERPOWERED
+    for a modest edge: a PASS is strong, a FAIL is weak, INDETERMINATE (n<60) means wait.'
+  feasibility:
+    source: none
+    accrual_basis: Forward Alpaca 1h RTH bars accrue ~21 trading days a month; the unit replays them after not_before, so nothing is waited on inside the run.
+decision_rule:
+  id: RULE-RQ20261108-98e3-13-ENS-FORWARD
+  registered_at: '2026-11-08'
+  registered_before_run: true
+  statistic: 'scripts/research/ml_entry_equity.py forward --tau 0.25 --ensemble-seeds 1,2,3,4,5 --dev-oof-mean 0.1323 --min-mean 0.10 --min-n 60 --lb-z 1.2816: pooled restricted-long
+    mean net R per decision under the structure exit, n, n_symbols, iid se, month-clustered se (reported), by month, over decisions closing in 2026-11-01 .. the last
+    complete month before the run; model refit on rows <= 2025-06-30 (deterministic pinned fits, so the graded model reproduces). Ledger family ENTRY-EQ: the window
+    is disjoint from every earlier read''s, so the ledger N is 1 and the bar is the plain point bar.'
+  rule: 'INDETERMINATE IF pooled n < 60 (not a result: re-queue after one more month with the same rule). Otherwise PASS IF (a) the forward mean net R >= +0.10 AND
+    (b) mean - 1.2816 x iid se > 0 (one-sided lower bound above 0 at the 10% level) AND (c) the dev OOF mean of tau 0.25 (+0.1323, fixed from RQ-20261107-98e3-06)
+    > 0. FAIL otherwise. The +0.10 floor is about 2x the seed-to-seed spread measured in RQ-20261107-98e3-04 (0.047) and half of the single-seed structure confirm
+    (+0.21). Thresholds never change after any result. A PASS is evidence for a Tier-3 proposal, never a config change by itself.'
+  what_it_does_not_do: No dev selection, no tau or config change, no export, no order, no roster change. It reads only bars on or after 2026-11-01; it must not be
+    dispatched before 2027-04-01 (not_before) so enough forward trades exist. A second forward read of an overlapping window would be a new ledger read and is not
+    registered.
+  min_n: 60 pooled decisions
+compute: cpu_long
+value:
+  bucket: ai_trader
+  usd_at_stake_per_month: 60
+  confidence: 0.2
+  basis: 'stand-in: the operator goal (an ML decision maker live on the Alpaca book); not a P&L measurement.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 6.0
+  est_minutes: 130
+  why_runner: Alpaca market data (read-only, paper key) + LightGBM fits; 4 vCPU / 16 GB runner.
+  basis: INFERRED - a41f-01 re-run took 25 min for 173 ETFs of 1h bars; 15 LightGBM fits on ~0.3M rows add ~15-30 min.
+run:
+  workflow: research-script-run.yml
+  command:
+  - python3
+  - scripts/research/ml_entry_equity.py
+  - forward
+  - --cache
+  - /tmp/ml_entry_equity
+  - --out
+  - '{out_dir}'
+  - --unit
+  - '{unit}'
+  - --where
+  - research-script-run
+  - --tau
+  - '0.25'
+  - --ensemble-seeds
+  - 1,2,3,4,5
+  - --dev-oof-mean
+  - '0.1323'
+  - --min-mean
+  - '0.10'
+  - --min-n
+  - '60'
+  - --lb-z
+  - '1.2816'
+  - --rule-id
+  - RULE-RQ20261108-98e3-13-ENS-FORWARD
+  - --registered-at
+  - '2026-11-08'
+  timeout_minutes: 330
+  inputs:
+    research_unit: RQ-20261108-98e3-13
+ml_consumer:
+  consumer: ML-ENTRY-EQUITY-NATIVE
+  decision: whether a Tier-3 Stage-1 testing leg for the structure ensemble on alpaca_paper is justified by data no earlier read saw
+  legs:
+  - iaum_pullback_1d
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- ML-ENTRY-EQ-STRUCTURE-RETEST
+- RQ-20261107-98e3-06
+- RQ-20261107-98e3-04
+population: 'The registered POOL_RULE of scripts/research/ml_entry_alpaca_score.py, UNCHANGED (sha256 e9702661d1a596a0f7e84e632c0ca8b5c2743a728f02147477c003644a0858e2):
+  active, tradable, us_equity ETFs (nasdaqtraded ETF=Y) with median daily dollar volume >= 50M USD over 2019-01-01..2020-12-31. The module refuses to run if the rule
+  hash differs.'
+not_before: '2027-04-01T00:00:00Z'

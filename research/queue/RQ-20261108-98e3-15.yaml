@@ -1,0 +1,92 @@
+# Hand-authored 2026-11-08 by lane ML-ENTRY-EQ-STRUCTURE-RETEST (Tier 1). Dev-only; rule registered before the run.
+id: RQ-20261108-98e3-15
+title: 'ENTRY-EQ structure exit pivot=3 variant (dev): relabel config-B 5-seed ensemble with the pivot=3;sl_only structure exit; does dev OOF at tau 0.25 beat the pivot=5 read (+0.1323) by a registered margin?'
+status: queued
+not_before: '2026-11-10T12:00:00Z'
+cadence: once
+theme: ml_health
+priority: 1
+roadmap:
+- L-ML-LIVE
+kind: experiment
+practice_precedent: 'M13 (docs/reference/trading-and-model-practice-principles.md): unlimited iteration on the training-period walk-forward; the confirming window
+  is loaded by NO code path of this unit.'
+question: 'Reference: the 98e3-05/06 config-B 5-seed ensemble, dev OOF mean +0.1323 at tau 0.25 (the graded dev figure). Dev-only: labels from the structure exit pivot=3;sl_only instead of the live pivot=5 (--struct-spec); config B 5-seed ensemble at tau 0.20/0.25.'
+why_this_matters: If the ensemble reads at least as high and is fold-stable, it is the candidate to export and confirm once (N=3) instead of a single unpinned fit;
+  if not, the single-fit edge is not robust. Descriptive; no record changes.
+power:
+  expected_n: 1000
+  min_detectable_effect: 0.1
+  effect_units: metric
+  sd: 1.0
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: 'DESCRIPTIVE dev stage (no pass bar). INFERRED: the v1 read took 1099 restricted-long trades over 13 months on this pool; the walk-forward OOF window is
+    ~30 months, so several thousand OOF decisions per config/tau before the tau filter. Selection needs >= 300.'
+  feasibility:
+    source: none
+    accrual_basis: Replays Alpaca 1h RTH history 2021-01-01 .. 2025-06-30; nothing accrues.
+decision_rule:
+  id: RULE-RQ20261108-98e3-15-PIVOT3
+  registered_at: '2026-11-08'
+  registered_before_run: true
+  statistic: 'scripts/research/ml_entry_equity.py dev --structure --struct-spec pivot=3;sl_only --configs B --ensemble-seeds 1,2,3,4,5 --taus 0.2,0.25: pooled purged walk-forward OOF restricted-long mean net R, n, by_fold; rows <= 2025-06-30.'
+  rule: 'Descriptive, no promotion consumes it. PIVOT-3-ADMITTED as a variant worth a later registered comparison iff at tau 0.25 pooled OOF mean >= +0.1623 (pivot=5 read 0.1323 + 0.03) AND n >= 300 AND no more than 1 of 5 folds below -0.10; otherwise NOT ADMITTED and the live pivot=5 exit stays the only one. A different exit also changes the live wiring (Tier 3) so admission adopts nothing. Thresholds never change after any result.'
+  what_it_does_not_do: No confirming window; no export; no change to any record or roster. Shares the dev data with 98e3-01/03/04 (declared).
+  min_n: 300 OOF decisions per tau
+compute: cpu_long
+value:
+  bucket: ai_trader
+  usd_at_stake_per_month: 60
+  confidence: 0.2
+  basis: 'stand-in: the operator goal (an ML decision maker live on the Alpaca book); not a P&L measurement.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 6.0
+  est_minutes: 100
+  why_runner: Alpaca market data (read-only, paper key) + LightGBM fits; 4 vCPU / 16 GB runner.
+  basis: INFERRED - a41f-01 re-run took 25 min for 173 ETFs of 1h bars; 15 LightGBM fits on ~0.3M rows add ~15-30 min.
+run:
+  workflow: research-script-run.yml
+  command:
+  - python3
+  - scripts/research/ml_entry_equity.py
+  - dev
+  - --cache
+  - /tmp/ml_entry_equity
+  - --out
+  - '{out_dir}'
+  - --unit
+  - '{unit}'
+  - --where
+  - research-script-run
+  - --structure
+  - --configs
+  - B
+  - --ensemble-seeds
+  - 1,2,3,4,5
+  - --taus
+  - 0.2,0.25
+  - --struct-spec
+  - pivot=3;sl_only
+  timeout_minutes: 180
+  inputs:
+    research_unit: RQ-20261108-98e3-15
+ml_consumer:
+  consumer: ML-ENTRY-EQUITY-NATIVE
+  decision: whether a 5-seed ensemble of the structure-trained model is registered for one N=3 confirm
+  legs:
+  - iaum_pullback_1d
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- ML-ENTRY-EQ-STRUCTURE-RETEST
+- RQ-20261107-98e3-05
+- RQ-20261108-98e3-06
+population: 'The registered POOL_RULE of scripts/research/ml_entry_alpaca_score.py, UNCHANGED (sha256 e9702661d1a596a0f7e84e632c0ca8b5c2743a728f02147477c003644a0858e2):
+  active, tradable, us_equity ETFs (nasdaqtraded ETF=Y) with median daily dollar volume >= 50M USD over 2019-01-01..2020-12-31. The module refuses to run if the rule
+  hash differs.'
