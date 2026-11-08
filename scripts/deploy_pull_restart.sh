@@ -991,6 +991,25 @@ fi
 # without writing into the real /etc/systemd/system.
 WEB_API_UNIT_FILE="${WEB_API_UNIT_FILE:-/etc/systemd/system/ict-web-api.service}"
 
+# Two abbreviated SHAs name the same commit when one is a prefix of the other
+# (both hex, both >= 7 chars). `git rev-parse --short` auto-sizes the
+# abbreviation per process, so the deploy shell and ict-web-api can print the
+# same commit at different lengths: 2026-11-08 20:10Z the deploy expected
+# 9ab32c9f3 while web-api reported 9ab32c9f34 (both 9ab32c9f3421...), and the
+# exact-string compare raised a false URGENT DEPLOY FAILURE that recommended a
+# rollback of a healthy deploy. JC-CA-05 still fails on a genuinely different
+# or unreachable SHA.
+sha_same_commit() {
+    local a="$1" b="$2"
+    [ -n "$a" ] && [ "$a" = "$b" ] && return 0
+    case "$a" in (*[!0-9a-f]*|'') return 1 ;; esac
+    case "$b" in (*[!0-9a-f]*|'') return 1 ;; esac
+    [ "${#a}" -ge 7 ] && [ "${#b}" -ge 7 ] || return 1
+    case "$a" in ("$b"*) return 0 ;; esac
+    case "$b" in ("$a"*) return 0 ;; esac
+    return 1
+}
+
 if ! command -v curl >/dev/null 2>&1; then
     echo ">>> Skipping post-deploy version assertion (curl not installed)."
 elif [ ! -f "${WEB_API_UNIT_FILE}" ]; then
@@ -1016,7 +1035,7 @@ else
         fi
         REPORTED_SHA="$(printf '%s' "${VERSION_JSON}" \
             | /usr/bin/python3 -c 'import json,sys; print(json.load(sys.stdin).get("git_sha","unknown"))' 2>/dev/null || echo parse_error)"
-        if [ "${REPORTED_SHA}" = "${EXPECTED_SHA}" ]; then
+        if sha_same_commit "${REPORTED_SHA}" "${EXPECTED_SHA}"; then
             echo ">>>   web-api git_sha=${REPORTED_SHA} matches HEAD — OK"
             ASSERT_OK=1
             break
