@@ -186,7 +186,7 @@ A Tier-1 lane self-lands: `.github/pr-landing/<slug>.json` (`tier: 1`, `landing:
 `python3 scripts/ops/claim_merge_slot.py --branch-claim --branch <branch> --held-by <session_id>`, then arm auto-merge with
 `gh api -X PUT repos/<owner>/<repo>/pulls/<n>/ccr/auto_merge -f merge_method=squash`. If the classifier refuses the arming ("Merge Without
 Review"), the lane re-declares `landing: hold` with `hold_reason: operator_asked_to_hold`, reports the exact refused command in one line, and the
-manager lands it. Tier-2/3 lane PRs always carry `landing: hold` (manager for Tier 2, the operator's recorded approval for Tier 3).
+manager lands it — in auto mode, no operator window (allow rules for the JTA-Trader merge path + `mcp__github__merge_pull_request`, #24221; proven on #24236, 2026-11-08): touch `/tmp/.claude-merge-claim-<session>-<PR>`, un-draft, merge with `expectedHeadSha`. A merge refusal after a repo rename means `.claude/settings.json` allow rules still name the old slug. Tier-2/3 lane PRs always carry `landing: hold` (manager for Tier 2, the operator's recorded approval for Tier 3).
 **Push less, push checked** (a habit, not a gate; CI-THROUGHPUT-20261029): before every push `python3 scripts/ci/prepush.py`; never push to a PR while its CI runs unless fixing a red check;
 batch register commits into one push. **No new gates** (operator, 2026-10-29, binding): never add, or dispatch a lane to add, a gate without the
 operator's explicit permission; canonical § "No new gates without the operator's permission".
