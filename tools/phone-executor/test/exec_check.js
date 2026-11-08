@@ -168,6 +168,15 @@ function eq(a, b, m) { if (JSON.stringify(a) !== JSON.stringify(b)) { console.er
   const pn5 = await onNL(NL(true));
   await pn5.evaluate("Object.defineProperty(window, 'innerHeight', {get: function () { throw new Error('boom'); }})");
   eq(await pn5.evaluate("var r; try { r = __ex.terminal(); } catch (e) { r = {threw: String(e)}; } [r.threw || '', r.ready, r.err]"), ["", false, "boom"], "terminal() never throws: the error is reported in err and the page is simply not ready");
+  // PHONE-EXECUTOR-ANOMALY (2026-11-08): the captured post-submit page has NO tr / [role=row]; Positions and Open orders are div grids and
+  // the venue answers a submit with a role=alertdialog toast. rows() must (a) surface that toast as ONE row naming side + symbol, so the
+  // app's confirm read can match it, and (b) never turn a div-grid row into a row (the opposite-side containment path reads rows()).
+  const pt = await onNL('<body><main><div role=tablist><button>Order form</button><button>Positions</button><button>Open orders<span>1</span></button></div>' +
+    '<div><div><span>SOL 5x</span><span>Short</span><span>6.82</span><span>87.64</span></div></div>' +
+    '<div role=alertdialog><div>Order submitted</div><div>Short 6.82 SOL @ Limit 87.64 USD</div><button>View order</button></div></main></body>');
+  eq(await pt.evaluate("__ex.rows()"), [["ORDER SUBMITTED", "Order submitted Short 6.82 SOL @ Limit 87.64 USD View order"]], "rows(): no table rows and the grid row is NOT surfaced; the venue's 'Order submitted' toast is the one row");
+  const pt2 = await onNL('<body><main><div role=alertdialog><div>Confirm</div><div>Short 6.82 SOL</div><button>OK</button></div></main></body>');
+  eq(await pt2.evaluate("__ex.rows()"), [], "rows(): a confirmation dialog that is not an 'Order submitted' toast is not a row");
   const dump5 = await pn5.evaluate("__ex.controls()");
   eq([/^shape:[0-9a-f]{8}$/.test(dump5[0]), /^term:r0 n0 v0 /.test(dump5[1]) && /e:boom/.test(dump5[1])], [true, true], "the dump carries a term: line with the error, so the next miss explains itself");
   const dump3 = await pn3.evaluate("__ex.controls()");

@@ -1354,11 +1354,19 @@ class MainActivity : Activity() {
         if (js("__ex.submit()") != "clicked") { ledger.append(id, "refused"); return refuse(id, "submit not clickable", tk, cap) }
         delay(1500)
         cap(cap, cur, "submit_click", null, "")
+        // PHONE-EXECUTOR-ANOMALY (2026-11-08): Breakout answers a submit with a role=alertdialog TOAST, "Order submitted /
+        // Short <qty> SOL @ Limit <px> USD / View order" (MEASURED on prop-manual-c1391d5720b1 and -ed6dc04db93b, both
+        // submitted and both read back "not found after 3 reads"). That toast is the VENUE's own acknowledgement, naming
+        // our side and symbol; it was only ever used to decide whether to click. Kept here as the confirmation of last resort.
+        var venueAck = false
         jsObj("__ex.dialog()")?.let { d ->
-            if (sideRe.containsMatchIn(d.optString("text")) && !oppRe.containsMatchIn(d.optString("text"))) js("__ex.dialogClick('confirm|place|submit|yes|ok')")
+            val dtxt = d.optString("text")
+            if (sideRe.containsMatchIn(dtxt) && !oppRe.containsMatchIn(dtxt)) js("__ex.dialogClick('confirm|place|submit|yes|ok')")
             else { js("__ex.dialogClick('cancel|close|no')"); api.event("mismatch", "unexpected confirmation dialog; cancelled", id); return refuse(id, "unexpected confirmation dialog", tk, cap) }
+            venueAck = Regex("order (submitted|placed|created)", RegexOption.IGNORE_CASE).containsMatchIn(dtxt) &&
+                (dtxt.uppercase().contains(base) || (venue.isNotEmpty() && dtxt.uppercase().contains(venue.uppercase())))
             delay(1500)
-            cap(cap, cur, "confirm_dialog", null, "")
+            cap(cap, cur, "confirm_dialog", null, if (venueAck) "venue ack" else "")
         }
         // 7. confirm by re-read
         for (attempt in 0 until 3) {
@@ -1366,6 +1374,9 @@ class MainActivity : Activity() {
                 js("__ex.clickText(${q(view)})"); delay(1500)
                 val rows = js("JSON.stringify(__ex.rows())").uppercase()
                 val hit = rows.split("],[").any { r -> (r.contains(venue.uppercase()) || r.contains(base)) && sideRe.containsMatchIn(r) }
+                // MEASURE the Open orders panel once per ticket (the page has no tr / role=row, so rows() cannot see it and
+                // no capture has ever shown it): the image + sanitised DOM of the list the read just failed on.
+                if (attempt == 0 && view == "^open orders$") cap(cap, cur, "open_orders", null, "rows ${rows.length}")
                 // BREAKOUT-UNTRACKED-1014: Positions is a DIV grid (no <tr>), invisible to rows(); a clean grid read
                 // showing this symbol on this side also confirms the submit. Read-only; the opp/flatten path stays rows()-only.
                 val grid = if (view == "^positions$") jsObj("__ex.positionsRead()")?.takeIf { it.optString("state") == "read" }?.optJSONArray("rows") else null
@@ -1392,6 +1403,18 @@ class MainActivity : Activity() {
                     return
                 }
             }
+        }
+        if (venueAck) {
+            // The lists could not be read but the venue said "Order submitted" for OUR side and symbol: that is placed,
+            // not unconfirmed. Reported exactly like a list hit; the event text says which evidence it was.
+            ledger.append(id, "placed")
+            cap(cap, cur, "placed", true, "venue ack toast; Open orders/Positions not readable")
+            api.post("report", JSONObject().put("kind", "fill").put("status", "placed").put("ticket_id", id)
+                .put("symbol", sym).put("direction", if (long) "long" else "short")
+                .put("entry", entry).put("sl", sl).put("tp", tp).put("qty", qty).put("source", "phone_executor"))
+            api.event("submitted", engTag() + "placed $sideTab ${fmt(qty, qStep)} $venue lim ${fmt(entry, pStep)} (venue 'Order submitted' toast; Open orders list not readable)", id)
+            setStatus("LIVE ticket $id placed (venue ack)")
+            return
         }
         ledger.append(id, "unconfirmed")
         api.event("mismatch", "submitted but not found in Open orders/Positions after 3 reads; CHECK the terminal", id)

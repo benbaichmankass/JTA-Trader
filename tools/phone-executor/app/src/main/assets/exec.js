@@ -6,7 +6,7 @@
   // PHONE-EXEC-OBSERVABLE-1018: this file is also served SIGNED by our own API and swapped in at runtime
   // (RemoteJs.kt): a newer version replaces the installed helpers on the next ensure(); the same version is
   // never injected twice. Bump on every change (CI signs the file; the app pins by version).
-  var EXEC_VERSION = "2026-11-07.5";
+  var EXEC_VERSION = "2026-11-08.1";
   if (window.__ex && window.__ex.version === EXEC_VERSION) return;
   function hostOk() { return /(^|\.)breakoutprop\.com$/.test(location.hostname || ""); }
   function vis(el) { if (!el) return false; var r = el.getBoundingClientRect(); return r.width > 0 && r.height > 0; }
@@ -1792,10 +1792,19 @@
       if (!b) return "none"; b.click(); return "clicked";
     },
     // Rows of the currently shown table-like list (Positions / Open orders): visible text per row.
+    // PHONE-EXECUTOR-ANOMALY (2026-11-08): the new layout has NO tr / [role=row] anywhere, so this read is empty on both
+    // Open orders and Positions (both are div grids). After a submit the venue's own role=alertdialog toast ("Order
+    // submitted", "Short 6.82 SOL @ Limit 87.64 USD") is therefore added as ONE row: it names our side and symbol, which
+    // is all the app's confirm read matches on. Only ever the toast; a grid row is NEVER added here (this read also feeds
+    // the opposite-side containment path, which must stay table-only).
     rows: function () {
       var rs = all("tr,[role=row]");
-      return rs.map(function (r) { return Array.prototype.slice.call(r.querySelectorAll("td,th,[role=cell],[role=gridcell],[role=columnheader]")).map(t); })
+      var out = rs.map(function (r) { return Array.prototype.slice.call(r.querySelectorAll("td,th,[role=cell],[role=gridcell],[role=columnheader]")).map(t); })
         .filter(function (c) { return c.length > 1; }).slice(0, 40);
+      all("[role=alertdialog]").forEach(function (d) {
+        var x = t(d); if (/^order (submitted|placed|created)\b/i.test(x)) out.push(["ORDER SUBMITTED", x.slice(0, 120)]);
+      });
+      return out;
     },
     // AMEND: the ONE open-position row for (symbol, side): {n, sl, tp (column text or null), headers, controls}.
     // controls are the row's own control texts (digits masked) for the refusal dump; never values beyond SL/TP.

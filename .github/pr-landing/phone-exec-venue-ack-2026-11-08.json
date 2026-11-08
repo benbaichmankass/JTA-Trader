@@ -1,0 +1,7 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "hold_reason": "tier_2_3_needs_approval",
+  "hold_text": "Phone-executor entry confirmation for the breakout_2 prop account (order path, Tier 2). exec.js 2026-11-08.1: rows() adds the venue's 'Order submitted' alertdialog toast as ONE row (never a grid row: rows() also feeds the opposite-side containment path). MainActivity.kt: a venue ack naming our side and symbol counts as placed when the Open orders/Positions lists cannot be read (same report as a list hit), plus one open_orders capture step. No order, amend or cancel path is added; the submit path, read-back, go-token and refusals are unchanged. The exec.js part ships via phone-exec-js-sign with no APK; the two Kotlin changes need the phone-executor-apk build and an operator install. Kotlin was NOT compiled in the lane container.",
+  "why": "Both tickets of 2026-11-08 21:52Z were submitted and acknowledged by the venue (toast 'Order submitted', Open orders badge appeared) but the confirm read, which only sees tr / [role=row], found nothing on a page of div grids and posted a false mismatch + a 6 h foreground fallback."
+}
