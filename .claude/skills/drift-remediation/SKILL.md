@@ -50,6 +50,37 @@ self-heals; and a capability gap never heals from a retrain. So:
    fail-permissive (reverts to the frozen label, strands nothing). A stopgap
    while the fix trains, never the endpoint. Still Tier-3.
 
+## A replay or retrain grade says "negative" while the live book is positive (operator, 2026-11-08, binding)
+
+Case that set it: the daily `ml_entry` grade replayed the served model at **-0.13 R net** (25 Oct–7 Nov, 48 symbols, both sides,
+fixed 2/3 ATR bracket, n=317; longs -0.90 R, shorts +0.02 R) while bybit_2's live `ml_entry` record was positive (5 shorts, +$4.93).
+Operator: *"we're not going to take it off because it failed the back test after its live record shows that it's doing well ... it's
+not demotion, so what do we do with it? ... it should feed into iterating and improving."*
+
+**Three different numbers, three different jobs. Never quote one as another; always name the population.**
+
+| Number | What it measures | What it may decide |
+|---|---|---|
+| Retrain-candidate grade (`comms/research/ml_entry_grade/<run>`) | does a NEW candidate beat the served model on the same replay | only whether to SWAP models; a fail keeps the served model |
+| Served-model replay on the recent window | the model's signal over the WHOLE table, both sides, the replay's exits | nothing by itself; it is a FLAG and a diagnosis input |
+| The live book + its mirror, net of cost | what the account actually earns | the DEMOTION signal (OPERATING-PLAN § 2), never a replay |
+
+**Protocol when the replay is negative and the live book is not:**
+
+1. **Flag, don't act.** It goes in the brief under "what moved" with both numbers and their populations. No demotion, no roster change,
+   no popup.
+2. **Decompose the gap within a day** (one runner job, no session needed): re-cut the same replay by (a) side, (b) symbol, (c) the live
+   book's own population (the symbols and sides the account actually trades), (d) the live exit (structure exit, not the fixed bracket),
+   (e) time (is it the last days only?), and put the live record's CI next to it. Each cut gets a one-line verdict:
+   *population* (the account trades a better slice), *exit* (the live exit rescues it), *side* (one side carries the loss),
+   *decay* (it is getting worse everywhere), or *noise* (live n too small to say).
+3. **Every confirmed driver becomes an iteration unit** in `research/queue/`, its rule registered before the run, feeding the NEXT
+   candidate: e.g. a side lever (gate the losing side), a label lever (structure-exit labels), a population lever. The served model is
+   untouched until a candidate PASSES its registered rule.
+4. **Demotion only from the live mirror's net-of-cost window** (or active harm per step 5 above), never from the replay.
+5. **Weekly:** the `/ml-review` reads the decomposition and the units it spawned, and grades whether the live book and the replay are
+   converging or diverging.
+
 ## Report
 
 Record the triage verdict (transient vs persistent), the diagnosed root cause,
