@@ -1536,7 +1536,9 @@ strategies:
     max_snapshot_age_h: 4.0
     structure_exit: "pivot=5;sl_only"
     artifact: ml/candidates/ml_entry_eq_v3_struct_ens5/model.json
-    symbols: [SPY, QQQ, IWM, TLT, IEF, SLV, USO, GDX, TQQQ, QLD]   # the tick-cost rollout stage of ml_entry_eq; the model's tested population is the 173-ETF pool
+    # The tick-cost rollout stage of ml_entry_eq MINUS TQQQ: tqqq_trend_long_1d already owns TQQQ's net position on alpaca_live + its mirror and the account has no
+    # slice support (same-symbol-allocation-guard). The model's tested population is the 173-ETF pool; widening is a later staged step, not a narrowing of the test.
+    symbols: [SPY, QQQ, IWM, TLT, IEF, SLV, USO, GDX, QLD]
     atr_period: 14
     atr_stop_mult: 2.0
     tp_r: 1.5                  # 3 ATR on a 2 ATR stop, the arm that was scored

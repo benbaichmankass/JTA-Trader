@@ -1462,7 +1462,7 @@ accounts:
       # What ends is their record at the PORTFOLIO risk basis (risk_pct 0.02 vs
       # alpaca_paper's 0.015) and their presence in /api/bot/performance's
       # paperPortfolio block.
-    symbols: [SPY, QQQ, GLD, IWM, TLT, IEF, SLV, USO, GDX, TQQQ]  # alpaca_live.symbols minus the SPYM/IAUM proxies. (TQQQ: 2026-11-06 probe, pull list only)
+    symbols: [SPY, QQQ, GLD, IWM, TLT, IEF, SLV, USO, GDX, TQQQ, QLD]  # alpaca_live.symbols minus the SPYM/IAUM proxies. (TQQQ: 2026-11-06 probe, pull list only; QLD: 2026-11-08 ml_entry_eq_struct, pull list only)
     risk:
       max_dd_pct: 0.10                 # = alpaca_live's caps (operator, 2026-08-25:
       daily_loss_pct: 0.10             # "10% max drawdown" / "daily to 10% as well").
@@ -1795,7 +1795,7 @@ accounts:
       # ROLLBACK (Option A only): delete the four entries above, leaving
       # `[tlt_pullback_1h]`. That is the entire gate — there is no mode flip in
       # front of it, and no deploy step beyond ict-git-sync pulling the change.
-    symbols: [SPY, QQQ, GLD, IWM, TLT, IEF, SLV, USO, GDX, SPYM, IAUM, TQQQ]   # instrument identity (TQQQ: 2026-11-06 ALPACA-LIVE-MECHANICS probe, pull list only)
+    symbols: [SPY, QQQ, GLD, IWM, TLT, IEF, SLV, USO, GDX, SPYM, IAUM, TQQQ, QLD]   # instrument identity (TQQQ: 2026-11-06 ALPACA-LIVE-MECHANICS probe, pull list only; QLD: 2026-11-08 ml_entry_eq_struct, pull list only)
                                        # (mirrors alpaca_paper; sub-$100 proxies SPYM/IAUM
                                        # added 2026-07-07 for the promotion).
     risk:

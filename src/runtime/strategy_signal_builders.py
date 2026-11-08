@@ -6793,7 +6793,8 @@ def ml_entry_eq_struct_signal_builder(settings: dict) -> Dict[str, Any]:
     return _ml_entry_eq_build(settings, "ml_entry_eq_struct", _ML_ENTRY_EQ_STRUCT_DECIDED)
 
 
-ml_entry_eq_struct_signal_builder.monitor_unit = "ml_entry_eq"
+for _b, _mu in ((ml_entry_eq_struct_signal_builder, "ml_entry_eq"),):   # monitor_unit alias, same form as the table above (tp-doctrine-guard reads it)
+    _b.monitor_unit = _mu
 
 
 def _ml_entry_eq_build(settings: dict, NAME: str, _DECIDED: set) -> Dict[str, Any]:

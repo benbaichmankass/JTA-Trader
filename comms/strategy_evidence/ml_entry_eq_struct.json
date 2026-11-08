@@ -1,0 +1,57 @@
+{
+ "schema_version": 2,
+ "strategy": "ml_entry_eq_struct",
+ "symbol": "173-ETF Alpaca liquidity pool (113 symbols traded in the window); the leg's staged rollout list is a subset of the pool",
+ "timeframe": "1h (decision at every 4th closed RTH bar)",
+ "config_fingerprint": "sha256:070b60e4e25102e0e4c5f2798150f39f",
+ "basis": "heldout_window",
+ "coverage_state": "measured",
+ "fidelity": "faithful",
+ "omitted_levers": [],
+ "fidelity_basis": "The harness (scripts/research/ml_entry_equity.py structure, ensemble seeds 1-5, config B) models every lever the leg declares: timeframe 1h, decision at the 4th closed bar, entry at the next open, SL 2 x ATR14, TP 3 x ATR14 fixed at entry (tp_r 1.5), 24-bar stop, the live SL-only structure stop (pivot=5;sl_only, via src/runtime/structure_exit_live.replay), tau 0.25 (dev-selected from {0.20,0.25} on the purged walk-forward before the confirming read), restricted LONG, session gate. The served artifact reproduces the graded booster sha256 exactly (export run 42492596157: 0afc49948a41671a...).",
+ "known_gaps_not_levers": [
+  "slippage is PROVISIONAL (5 bps for every ETF, one number; a per-symbol read exists only after fills)",
+  "the leg's rollout symbol list (strategies.yaml) is a subset of the 173-ETF pool the model was scored on; per-symbol results never gate",
+  "live whole-share cash-book sizing on alpaca_live is not modelled (the harness reports R, not dollars)",
+  "one window, third read of it (declared; the bar is deflated for it): 2026-03 carries 75 of 207 trades; dev folds 2 and 3 are negative; month-clustered t about 2.06"
+ ],
+ "net_r_oos": 101.8869,
+ "expectancy_r_oos": 0.4922070639835765,
+ "n_trades_oos": 207,
+ "mean_gross_r": 0.542747638408497,
+ "mean_cost_r": 0.05054057442492052,
+ "expectancy_se_iid": 0.07584025051818984,
+ "month_clustered_se": 0.23891689981898992,
+ "window": [
+  "2025-07-15",
+  "2026-10-31"
+ ],
+ "population": "RQ-20261107-98e3-06 confirming read: restricted-LONG decisions of the 5-seed structure ensemble (tau 0.25) on the 173-ETF pool, bars 2025-07-15..2026-10-31, trained on rows <= 2025-06-30 (purge 10 d); n 207 trades, 113 symbols",
+ "fee_bps_roundtrip": 0.0,
+ "cost_stack": {
+  "fees": 0.0,
+  "slippage": 5.0,
+  "funding": 0.0,
+  "regulatory": 0.5,
+  "unit": "bps_roundtrip (Alpaca equities: no commission; funding n/a for cash ETFs)",
+  "source": "scripts/research/ml_entry_equity.py cost stack as run in RQ-20261107-98e3-06 (slippage PROVISIONAL)"
+ },
+ "decision_rule": {
+  "id": "RULE-RQ20261108-98e3-06-ENS-DECISION",
+  "rule": "INDETERMINATE IF pooled n < 30. PASS IF (a) confirm mean net R >= bar.point_t_min * iid se (N=3: t_min 0.8528) AND (b) the selected tau's dev pooled OOF mean net R > 0 AND (c) confirm mean >= +0.04 R. FAIL otherwise.",
+  "registered_at": "2026-11-08",
+  "registered_at_source": "research/queue/RQ-20261107-98e3-06.yaml decision_rule.registered_at / amended_registration (2026-11-08 ~00:50Z, before dispatch)",
+  "verdict": "pass"
+ },
+ "generated_at": "2026-11-08T03:22:32Z",
+ "generated_by": "scripts/research/ml_entry_equity.py structure --ensemble-seeds 1,2,3,4,5 --taus 0.2,0.25 --min-mean 0.04 (research-script-run)",
+ "source_run": "https://github.com/benbaichmankass/JTA-Trader/actions/runs/42432561069",
+ "harness": "ml_entry_equity structure (5-seed ensemble, structure-exit labels, LONG, pool 173)",
+ "evidence_doc": "docs/research/ml-entry-eq-structure-ensemble-evidence-and-proposal-2026-11-08.md",
+ "artifact": {
+  "path": "ml/candidates/ml_entry_eq_v3_struct_ens5/model.json",
+  "booster_sha256": "0afc49948a41671add8880d180e8924c45b8c087ceec496e2359869fbaf199d3",
+  "reproduced_by": "research-script-run 42492596157 (RQ-20261108-a7d3-01)"
+ },
+ "error": null
+}
