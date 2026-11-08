@@ -1,4 +1,4 @@
-# ML lane grades, 2026-11-08 (units 16, 18, 19, 20, 22; unit 12 config fix)
+# ML lane grades, 2026-11-08 (units 16, 18, 19, 20, 22, 24; unit 12 config fix)
 
 > **Doc status:** `unknown` · category `evidence` · last verified `never` · lane ML-ENTRY-EQ-STRUCTURE-RETEST
 > Gates this adds or changes: none. Each grade applies the rule registered in the unit before its run. Results: `research/results/<unit>/`.
@@ -10,6 +10,7 @@
 | 98e3-19 | 15m regime head, BTC cross-asset (lgbm_xa) vs same-asset lgbm on ETH+SOL, >= +0.002 on both? | lgbm_xa minus lgbm, mean CV logloss delta: ETH +0.0008, SOL -0.0018 (each vs the prior: ETH 0.04721 vs 0.04644, SOL 0.06035 vs 0.06210) | **FAIL** (SOL below 0). Engine printed INDETERMINATE: config error below |
 | 98e3-20 | same at 1h | ETH -0.0024, SOL -0.0019 (1h: ETH 0.09161 vs 0.09401, SOL 0.11843 vs 0.12032) | **FAIL** (both below 0). Engine printed INDETERMINATE: config error below |
 | 98e3-22 | crypto structure-label ENTRY (5-seed ensemble): dev OOF then ONE confirm 2025-10-01..2026-09-30 | dev picked B at tau 0.30 (grid edge), OOF +0.0608 n=2892 (ETH+SOL subset -0.0437 n=103); confirm mean net R **-0.0487** (se 0.0751) at n=212, 52 symbols; months swing -0.82 to +0.97 | **FAIL** (margin floor +0.05 not met; the confirm is negative). No prop candidate |
+| 98e3-24 | 15m direction head, same-asset (BTC/ETH/SOL): default LightGBM beats the class prior by >= +0.002 nats on the CV mean on all three? | lgbm minus prior, mean CV logloss (positive = lgbm better): BTC -0.0089, ETH -0.0085, SOL -0.0110; lgbm worse than the prior in 15 of 15 folds (5 per group); n = 108,000 OOS rows (kaggle run 42513199234, engine verdict fail) | **FAIL** (all three below 0). The price-only direction line is closed at 15m as at 1h (units 08/10/11) |
 
 **Why units 19 and 20 read INDETERMINATE and 12 would have:** the bake-off engine pairs each learner only with the config's `baseline` and `controls`. These units set `baseline: prior` and wrote `vs: lgbm`, so the lgbm-reference clause had no measured folds. Prior art (RQ-20261012-75b2-22) uses `baseline: lgbm`, `controls: [prior]`, `vs: baseline`. The grades above compute the registered statistic by hand: the mean of a paired difference equals the difference of the two means vs the prior (same folds), so the mean criterion is exact; the paired CI is not available. Unit 12 (not yet run) is corrected before its run (thresholds unchanged).
 
