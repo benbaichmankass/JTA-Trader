@@ -63,3 +63,16 @@ Records: `comms/research/RQ-20261107-98e3-04/42417906259/`, `comms/research/RQ-2
 **05, 5-seed ensemble (mean of 5 pinned fits).** Dev OOF at tau 0.20 **+0.092** (n 2879), 0.25 +0.118 (1688), 0.30 +0.190 (954); folds at 0.20: +0.131, +0.196, -0.044, -0.230, +0.295. Registered reading: **ENSEMBLE-ADMITTED** (tau-0.20 mean >= +0.083, and only 1 of 5 folds below -0.10, fold 3). Admission is only the right to run the N=3 confirm unit `RQ-20261107-98e3-06`; it adopts no tau, model or roster.
 
 **Caveats carried into 06.** (1) Fold 3 is negative at every seed, tau and the ensemble (-0.2 to -0.4). (2) 06 selects tau on dev over {0.20, 0.25, 0.30} by max pooled OOF mean, so it will pick the noisiest tau (0.30, ~950 dev trades, so ~1/3 as many confirm trades): its iid se will be ~0.08 and the N=3 point bar (t_min 0.853) ~0.07 R. (3) The +0.04 R margin floor registered in 06 understates the single-fit noise at tau 0.30 (range 0.15); the ensemble averages that noise down but the unit does not measure by how much on the confirm window.
+
+## 7. Addendum 2026-11-08 — re-queued regime/direction-head questions (07-10), Kaggle CPU route
+
+`RQ-20261107-98e3-07..10` re-ask four `ml_bakeoff` questions whose only runs (2026-11-02) ended `producer_failed` (never measured). Units with `routing.published_data` must run on `research-script-run-kaggle-cpu.yml` (a plain GitHub-runner dispatch fails with `dataset path datasets-out/... not found`, run 42432563196, not a record). Sign convention, from `build_deltas`: `deltas[group][window][LEARNER][REF]`, positive = LEARNER better than REF. Records: `comms/research/RQ-20261107-98e3-{07,08,09,10}/<run>/` (runs 42432760067, 42434161072, 42435164154, 42436008571).
+
+| Unit | Question (BTC/ETH/SOL 1h, 5-fold CV) | Result (registered rule) |
+|---|---|---|
+| 07 | regime head: does HAR-RV lift sklearn HGB? | indeterminate; plain HGB beats the class prior by 0.095-0.12 nats |
+| 08 | direction head: does HAR-RV lift default LightGBM? | **FAIL** (lgbm_har below lgbm by 0.0013/0.0029/0.0074); the class prior beats default LightGBM by 0.006-0.007 nats (CIs exclude 0) |
+| 09 | regime head, latest 25,000 bars: does the HAR-RV lift persist? | indeterminate (lgbm_har vs lgbm +0.001/+0.004/+0.008, CIs include 0); lgbm beats the prior by 0.089/0.095/0.122 |
+| 10 | direction head: does a small sklearn MLP beat the class prior? | **FAIL** (mlp vs prior -0.0004/-0.0008/-0.0373, CIs include 0) |
+
+Reading: the 1h REGIME head has clear skill over the prior (HGB and LightGBM, ~0.09-0.12 nats) and HAR-RV adds at most ~0.001-0.008 (not distinguishable from 0); the 1h DIRECTION head has no skill over the prior for LightGBM (slightly negative) or a small MLP (indistinguishable from 0). These are research bake-off recipes, not any deployed head; no served model was read or changed.
