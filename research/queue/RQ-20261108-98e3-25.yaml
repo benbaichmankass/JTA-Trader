@@ -1,0 +1,94 @@
+id: RQ-20261108-98e3-25
+title: 'Frozen ml_entry v1 replayed over its clean held-out year in 14-day windows: is the long side persistently negative, does a short-only policy beat both-sides,
+  and is the current -0.13 R fortnight outside the normal band?'
+status: queued
+cadence: once
+theme: ml_health
+priority: 1
+roadmap:
+- L-ML-LIVE
+kind: experiment
+practice_precedent: 'none: no external precedent; operator protocol 2026-11-08 (.claude/skills/drift-remediation/SKILL.md, PR #24266), drift-remediation skill: a
+  replay or retrain grade that says negative while the live book is positive is decomposed before anything is demoted (PR #24266).'
+question: 'Unit 23 (decomposition of the served replay, -0.13 R n=317) read SIDE-DRIVER (longs -0.90 R n=51, shorts +0.017 n=266), DECAY (first 7d -0.054 -> last
+  7d -0.179), NOISE-COMPATIBLE for the live 5 trades, and the live population INDETERMINATE (n=21 < 30). Iterate on the two confirmed drivers with the frozen v1 (train_end
+  2025-09-22) over its clean held-out year 2025-10-01..2026-09-30 in consecutive 14-day windows: (a) is the long side negative across the year, (b) does a short-only
+  policy beat both-sides, (c) where does the current fortnight mean (-0.1316) sit in the distribution of 14-day windows.'
+why_this_matters: 'A persistent long-side loss with a short-only lever would be the evidence for a side_filter: short Tier-3 proposal on bybit_2/bybit_portfolio;
+  a window-specific loss means the current fortnight is noise or regime, and nothing is changed. Feeds the next candidate after unit 22.'
+power:
+  expected_n: 900
+  min_detectable_effect: 0.1
+  effect_units: metric
+  sd: 1.0
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: 'ESTIMATE: the v1 held-out record took 907 restricted decisions on 5 symbols; on 48 symbols over 12 months the pooled both-sides policy should read in the
+    thousands, the long side a few hundred. Each rule carries its own n floor and reads INDETERMINATE below it.'
+  feasibility:
+    source: none
+    accrual_basis: Replays Binance 1h history through 2026-11-07; nothing accrues.
+decision_rule:
+  id: RULE-RQ20261108-98e3-25-ROLLING
+  registered_at: '2026-11-08'
+  registered_before_run: true
+  statistic: 'scripts/research/ml_entry_replay_decompose.py rolling: frozen v1 boosters + tau on every decision row of 2025-10-01..2026-09-30; E.policy both-sides,
+    short-only and long-only; pooled stats and 26 consecutive 14-day windows.'
+  rule: 'SIDE-PERSISTENT iff pooled long-side n >= 300 and long mean net R <= -0.10 and (short mean - long mean) >= +0.15; SIDE-WINDOW-SPECIFIC if n_long >= 300 and
+    not; INDETERMINATE below. SHORT-ONLY-LEVER iff short-only policy n >= 300 and its mean >= both-sides mean + 0.02; NO-LEVER otherwise. FORTNIGHT-BAND: ANOMALOUS
+    iff -0.1316 is below the 5th percentile of the 14-day both-sides window means (>= 20 windows with n >= 30), WITHIN-BAND otherwise, INDETERMINATE if fewer windows.
+    Thresholds are not changed after any result.'
+  what_it_does_not_do: Changes no served model, tau, side_filter, roster or config; a SHORT-ONLY-LEVER reading only opens a Tier-3 proposal for the operator. The
+    window was read by v1 before and by other families (declared). The live TP revision is not modelled.
+  min_n: 300 per side/policy; 20 windows with n >= 30
+compute: cpu_long
+value:
+  bucket: ai_trader
+  usd_at_stake_per_month: 60
+  confidence: 0.2
+  basis: 'stand-in: the operator goal (an ML decision maker live on the Alpaca book); not a P&L measurement.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 6.0
+  est_minutes: 70
+  why_runner: Binance public klines (monthly + daily archives, as the retrain job fetches) and a scoring pass; no training.
+  basis: 'INFERRED: the retrain+grade workflow fetches the same 48-symbol cache in ~25 min; scoring ~3k rows and replaying ~3k structure paths is minutes.'
+run:
+  workflow: research-script-run.yml
+  command:
+  - python3
+  - scripts/research/ml_entry_replay_decompose.py
+  - rolling
+  - --cache
+  - /tmp/ml_entry_klines
+  - --out
+  - '{out_dir}'
+  - --unit
+  - '{unit}'
+  - --where
+  - research-script-run
+  - --run-date
+  - '2026-11-08'
+  - --rule-id
+  - RULE-RQ20261108-98e3-25-ROLLING
+  - --registered-at
+  - '2026-11-08'
+  timeout_minutes: 180
+  inputs:
+    research_unit: RQ-20261108-98e3-25
+ml_consumer:
+  consumer: src/units/strategies/ml_entry.py
+  decision: whether a short-side-only restriction (side_filter) is proposed to the operator for bybit_2/bybit_portfolio; no change from this unit
+  legs:
+  - ml_entry
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- RQ-20261108-98e3-23
+- CRYPTO-ENTRY-RETRAIN-UNIT
+population: The ml_decision_entry universe (48 Binance USD-M perps), frozen ml_decision_entry_v1 decisions at tau 0.1 over 2025-10-01..2026-09-30 (the window the
+  v1 record was read on; descriptive about the incumbent, not a promotion read).
