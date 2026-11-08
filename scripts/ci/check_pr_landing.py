@@ -470,6 +470,20 @@ def stamp_only_violation(root: Path, base: str, path: str) -> Optional[str]:
             if m and m.group(1):
                 removed_comments.add(m.group(1))
     added_re = re.compile(base_re + r"(\s+#.*)?\s*$")
+    # DONE-FLIP, 2026-11-08 (operator, Manager Session 2026-11-07a chat: "so then why do you need to be off of auto mode
+    # to merge them?" then "yes" to removing that friction). Marking an EXISTING unit `status: done` self-lands ONLY when
+    # a result for that unit is already on HEAD (research/results/<id>/ or comms/research/<id>/): closing a unit that has
+    # run cannot rewrite its pre-registered rule. Any other status value, and every rule/threshold line, still holds.
+    # Gates this adds or changes: removes a hold; adds none.
+    done_ok = False
+    stem = path.rsplit("/", 1)[-1][: -len(".yaml")] if path.endswith(".yaml") else ""
+    if stem:
+        for d in (f"research/results/{stem}", f"comms/research/{stem}"):
+            rc2, ls = _git(root, "ls-tree", "--name-only", "HEAD", f"{d}/")
+            if rc2 == 0 and ls.strip():
+                done_ok = True
+    status_added_re = re.compile(r"^status: done\s*$")
+    status_removed_re = re.compile(r"^status: [A-Za-z_]+\s*$")
     changed = 0
     for ln in out.splitlines():
         if ln.startswith(("+++", "---")) or not ln.startswith(("+", "-")):
@@ -477,9 +491,10 @@ def stamp_only_violation(root: Path, base: str, path: str) -> Optional[str]:
         changed += 1
         if ln.startswith("+"):
             am = added_re.match(ln[1:])
-            ok = bool(am) and (not am.group(1) or am.group(1) in removed_comments)
+            ok = (bool(am) and (not am.group(1) or am.group(1) in removed_comments)) or \
+                (done_ok and bool(status_added_re.match(ln[1:])))
         else:
-            ok = bool(removed_re.match(ln[1:]))
+            ok = bool(removed_re.match(ln[1:])) or (done_ok and bool(status_removed_re.match(ln[1:])))
         if not ok:
             return (f"changes a line other than {'/'.join(fields)}: {ln[:80]!r} -- "
                     f"a pre-registered decision rule may not self-land")
@@ -2148,6 +2163,7 @@ def self_test() -> int:
              "  pass_if: net_r_oos > 0.25\n"
              "last_dispatched_at: null\n")
     _rearmed = _unit.replace("last_dispatched_at: null", "last_dispatched_at: null   # re-armed 2026-11-01: why")
+    _status_unit = _unit.replace("decision_rule:", "status: queued\ndecision_rule:")
     e57_cases = [
         ("research/results/** self-lands", None,
          {"research/results/_unattributed/1.jsonl": "{}\n"}, True),
@@ -2181,6 +2197,18 @@ def self_test() -> int:
                           "last_dispatched_at: '2026-11-01T19:25:00+00:00'   # re-armed 2026-11-01: why\n"
                           "last_dispatched_at: null   # re-armed 2026-11-01: why").replace(
                               "decision_rule:", "decision_rule:\n  extra: 1"), {}, False),
+        # DONE-FLIP 2026-11-08: `status: done` on an existing unit self-lands only with its result on HEAD.
+        ("a DONE-flip with the unit's result on HEAD self-lands",
+         _status_unit.replace("status: queued", "status: done"),
+         {"comms/research/RQ-SELFTEST-001/1/verdict.json": "{}\n"}, True),
+        ("a DONE-flip with NO result for the unit is refused",
+         _status_unit.replace("status: queued", "status: done"), {}, False),
+        ("a DONE-flip PLUS a rule edit is refused even with a result",
+         _status_unit.replace("status: queued", "status: done").replace("net_r_oos > 0.25", "net_r_oos > 0.0"),
+         {"comms/research/RQ-SELFTEST-001/1/verdict.json": "{}\n"}, False),
+        ("a DONE-unit status flip to anything but done is refused even with a result",
+         _status_unit.replace("status: queued", "status: blocked"),
+         {"comms/research/RQ-SELFTEST-001/1/verdict.json": "{}\n"}, False),
         ("a NEW queue unit is refused", None,
          {"research/queue/RQ-SELFTEST-002.yaml": _unit}, False),
         ("runtime_logs/ OUTSIDE replay_pregate is still refused", None,
@@ -2194,7 +2222,8 @@ def self_test() -> int:
             g("checkout", "-q", "main")
             (root / "research/queue").mkdir(parents=True, exist_ok=True)
             (root / "research/queue/RQ-SELFTEST-001.yaml").write_text(
-                _rearmed if "RE-ARMED" in name.upper() else _unit, encoding="utf-8")
+                _rearmed if "RE-ARMED" in name.upper() else (_status_unit if "DONE-" in name.upper() else _unit),
+                encoding="utf-8")
             g("add", "-A")
             g("commit", "-qm", "seed a queue unit")
             g("checkout", "-q", "claude/demo")
