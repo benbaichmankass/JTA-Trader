@@ -1,7 +1,7 @@
 {
- "bar": "2026-11-08T21:45:00Z",
- "bar_close": "2026-11-08T21:50:00Z",
- "built_at": "2026-11-08T21:50:53Z",
+ "bar": "2026-11-08T21:50:00Z",
+ "bar_close": "2026-11-08T21:55:00Z",
+ "built_at": "2026-11-08T21:55:50Z",
  "closed": false,
  "order_package_id": "pkg-eebfa0550d9248e0",
  "packet": {
@@ -16,11 +16,11 @@
      "tighten",
      "widen_sl"
     ],
-    "evidence": "bybit_orders: SL 8.512 / TP 7.83, position True, matched by order_id, 1 sibling package(s) on AVAXUSDT; apply paths close, move_tp, reduce, tighten, widen_sl; would_apply = an executor reaches this leg, NOT that its RiskManager approved (LTR-6 gap)",
-    "own_position": true,
+    "evidence": "bybit_orders: SL None / TP None, position False, matched by order_id, 2 sibling package(s) on AVAXUSDT; this package is closed, the venue AVAXUSDT position belongs to pkg-2642ee23b2d449c2, pkg-ff1d6ff206554edf; apply paths close, move_tp, reduce, tighten, widen_sl; would_apply = an executor reaches this leg, NOT that its RiskManager approved (LTR-6 gap)",
+    "own_position": false,
     "read": null,
     "read_basis": "depends on the recommendation: no_action for hold/no_recommendation, else see read_if_amend",
-    "read_if_amend": "would_apply"
+    "read_if_amend": "unknown"
    }
   ],
   "assembled_by": "generator scripts/ops/live_review_packet.py",
@@ -87,8 +87,18 @@
     },
     {
      "direction": "short",
+     "order_package_id": "pkg-f306fdcdee9d4659",
+     "symbol": "ETHUSDT"
+    },
+    {
+     "direction": "short",
      "order_package_id": "pkg-f76bb92289d143e5",
      "symbol": "SOLUSDT"
+    },
+    {
+     "direction": "short",
+     "order_package_id": "pkg-ff1d6ff206554edf",
+     "symbol": "AVAXUSDT"
     }
    ],
    "direction": "short",
@@ -96,7 +106,7 @@
    "news": {
     "adjustment": 0.0,
     "decision": "neutral",
-    "ts": "2026-11-08T00:31:12.489622+00:00",
+    "ts": "2026-11-08T21:53:11.365513+00:00",
     "veto": false
    },
    "previous_review": {
@@ -135,37 +145,37 @@
      "ETHUSDT",
      "short",
      "eth_pullback_prop_2h",
-     0.254
+     0.722
     ],
     [
      "ETHUSDT",
      "short",
      "trend_donchian_eth",
-     0.593
+     1.06
     ],
     [
      "AVAXUSDT",
      "short",
      "avax_pullback_2h",
-     0.765
+     0.964
     ],
     [
      "SOLUSDT",
      "short",
      "sol_pullback_2h",
-     0.498
+     0.722
     ],
     [
      "ETHUSDT",
      "short",
      "eth_pullback_2h",
-     0.254
+     0.722
     ],
     [
      "ADAUSDT",
      "short",
      "ml_entry",
-     1.01
+     1.88
     ],
     [
      "GDX",
@@ -189,7 +199,7 @@
      "XRPUSDT",
      "short",
      "xrp_pullback_2h",
-     0.941
+     1.31
     ],
     [
      "TLT",
@@ -201,13 +211,25 @@
      "BTCUSDT",
      "short",
      "trend_donchian_1h",
-     0.417
+     0.543
+    ],
+    [
+     "ETHUSDT",
+     "short",
+     "trend_donchian_eth_4h",
+     0.0
     ],
     [
      "SOLUSDT",
      "short",
      "trend_donchian_sol_4h",
-     2.76
+     3.07
+    ],
+    [
+     "AVAXUSDT",
+     "short",
+     "trend_donchian_avax_4h",
+     0.0
     ]
    ],
    "book_note": "[symbol, direction, leg, open_r (null = not measured)] per OTHER open package, either side",
@@ -643,10 +665,10 @@
    "head": "ee33b2ed4b",
    "state": "current"
   },
-  "info_cutoff_at": "2026-11-08T21:51:12Z",
+  "info_cutoff_at": "2026-11-08T21:56:08Z",
   "leg": "claude_desk",
   "mechanics": {
-   "evidence": "bybit_1: AVAXUSDT is NETTED across 2 open packages on this account (per side) (this one + pkg-2642ee23b2d449c2); each package's own qty-scoped Partial SL/TP legs are matched by order id, never by level alone",
+   "evidence": "bybit_1: AVAXUSDT is NETTED across 3 open packages on this account (per side) (this one + pkg-2642ee23b2d449c2, pkg-ff1d6ff206554edf); each package's own qty-scoped Partial SL/TP legs are matched by order id, never by level alone; bybit_1: this package's own TP leg e0cf6be1-4acf-4d71-9035-8b21fc13d1fd FILLED at the venue at 2026-11-08T21:55:36Z (trigger 7.83, avg 7.83); the bracket closed the package at the venue, the journal close lags this read; bybit_1: venue holds AVAXUSDT for sibling package(s) pkg-2642ee23b2d449c2, pkg-ff1d6ff206554edf; this package's trade row is not open",
    "verdict": "match"
   },
   "missing_inputs": [
@@ -703,25 +725,18 @@
    "cell_now": null,
    "trend_now": "transitional"
   },
-  "review_id": "LR-20261108T2150Z-pkg-eebfa0550d9248e0",
+  "review_id": "LR-20261108T2155Z-pkg-eebfa0550d9248e0",
   "short_hold": {
-   "atr": 0.01807142857142858,
-   "bar": "2026-11-08T21:45:00Z",
-   "bar_close": "2026-11-08T21:50:00Z",
+   "atr": 0.029642857142857144,
+   "bar": "2026-11-08T21:50:00Z",
+   "bar_close": "2026-11-08T21:55:00Z",
    "entry": 8.284,
-   "mark": 8.091,
-   "minutes_held": 4063.7,
-   "open_r_at_mark": 0.8465,
+   "mark": 7.939,
+   "minutes_held": 4068.6,
+   "open_r_at_mark": 1.5132,
    "r_unit": "entry_to_current_sl",
    "read_state": "read",
    "recent_bars": [
-    {
-     "close": 8.18,
-     "high": 8.182,
-     "low": 8.173,
-     "open": 8.173,
-     "t": "2026-11-08T20:50:00Z"
-    },
     {
      "close": 8.174,
      "high": 8.18,
@@ -798,6 +813,13 @@
      "low": 8.064,
      "open": 8.127,
      "t": "2026-11-08T21:45:00Z"
+    },
+    {
+     "close": 7.939,
+     "high": 8.096,
+     "low": 7.924,
+     "open": 8.091,
+     "t": "2026-11-08T21:50:00Z"
     }
    ],
    "risk_per_unit": null,
@@ -816,25 +838,18 @@
    "tp": 7.83
   }
  },
- "packet_sha": "8bb8c270fab714880c8c8172ba4c18fbf4186b5608a6f6a02ff7181406ac5475",
+ "packet_sha": "5e8990a313f4cb711cce99346b4a60da7ce0a92774018cf9ebee53c6885c1e4b",
  "short_hold": {
-  "atr": 0.01807142857142858,
-  "bar": "2026-11-08T21:45:00Z",
-  "bar_close": "2026-11-08T21:50:00Z",
+  "atr": 0.029642857142857144,
+  "bar": "2026-11-08T21:50:00Z",
+  "bar_close": "2026-11-08T21:55:00Z",
   "entry": 8.284,
-  "mark": 8.091,
-  "minutes_held": 4063.7,
-  "open_r_at_mark": 0.8465,
+  "mark": 7.939,
+  "minutes_held": 4068.6,
+  "open_r_at_mark": 1.5132,
   "r_unit": "entry_to_current_sl",
   "read_state": "read",
   "recent_bars": [
-   {
-    "close": 8.18,
-    "high": 8.182,
-    "low": 8.173,
-    "open": 8.173,
-    "t": "2026-11-08T20:50:00Z"
-   },
    {
     "close": 8.174,
     "high": 8.18,
@@ -911,6 +926,13 @@
     "low": 8.064,
     "open": 8.127,
     "t": "2026-11-08T21:45:00Z"
+   },
+   {
+    "close": 7.939,
+    "high": 8.096,
+    "low": 7.924,
+    "open": 8.091,
+    "t": "2026-11-08T21:50:00Z"
    }
   ],
   "risk_per_unit": null,
