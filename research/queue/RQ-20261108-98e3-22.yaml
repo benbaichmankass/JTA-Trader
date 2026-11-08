@@ -1,0 +1,101 @@
+id: RQ-20261108-98e3-22
+title: 'Crypto ENTRY re-trained on structure-exit labels (5-seed ensemble), dev walk-forward then ONE confirm on 2025-10-01..2026-09-30: does it earn a net edge the
+  served ml_entry v1 does not?'
+status: queued
+cadence: once
+theme: ml_health
+priority: 1
+roadmap:
+- L-ML-LIVE
+kind: experiment
+practice_precedent: 'M13 (docs/reference/trading-and-model-practice-principles.md): unlimited iteration on the training-period walk-forward; ONE confirming read graded
+  against the deflated bar (holdout_lock).'
+question: The served crypto ENTRY model reads -0.13 R net over 14 days (grade 42473814600) and ml_entry failed the prop gate V3 on all three firms (edge +0.017 R,
+  CI95 [-0.106,+0.140]). The equity structure recipe (pivot=5;sl_only labels, mean of 5 pinned LightGBM seeds) is the one ENTRY variant with a registered pass. Port
+  it to the 48-symbol Binance-perp table (ml_decision_entry universe, canonical cost stack fee 11 bps + slippage + funding), purged walk-forward on dates <= 2025-09-16
+  selects (config A|B, tau) by the registered rule, then ONE confirming read of 2025-10-01..2026-09-30.
+why_this_matters: 'A net-edge crypto ENTRY model is the precondition for (a) keeping bybit_2 and bybit_portfolio honest and (b) any ml_entry leg on the prop accounts
+  (ML-ENTRY-PROP: ETH+SOL subset graded here, then the V3 per-firm gate). A FAIL closes the structure-label line for crypto at this recipe.'
+power:
+  expected_n: 1500
+  min_detectable_effect: 0.1
+  effect_units: metric
+  sd: 1.0
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: 'ESTIMATE, not measured: the served-model record took 907 restricted-long trades on 5 symbols over the 12-month window and the 14-day grade n=317 over 48
+    symbols, so a 12-month, 48-symbol read at tau >= 0.05 should land at 1,000-3,000 trades; d=0.1 needs ~785 trades iid and the registered margin floor +0.05 is
+    below the MDE, so a PASS is strong evidence, a FAIL at the floor is weaker.'
+  feasibility:
+    source: none
+    accrual_basis: Replays Binance 1h history 2020-07-01 .. 2026-09-30; nothing accrues.
+decision_rule:
+  id: RULE-RQ20261108-98e3-22-CRYPTO-STRUCT
+  registered_at: '2026-11-08'
+  registered_before_run: true
+  statistic: 'scripts/research/ml_entry_crypto_struct.py full --ensemble-seeds 1,2,3,4,5 --min-mean 0.05: dev OOF (rows <= 2025-09-16, 8 purged folds, 2 configs x
+    5 taus = 10 draws) picks (config, tau) by max pooled mean net R subject to >= 300 OOF trades; one refit on rows <= 2025-09-16; restricted-long confirm trades
+    on 2025-10-01..2026-09-30, mean net R, se, n, n_symbols, by-month, and the ETH+SOL subset reported (never selected on).'
+  rule: PASS IF confirm n >= 300 AND n_symbols >= 10 AND confirm mean net R >= +0.05 AND it clears the deflated point bar holdout_lock.bar_for(N) for family ENTRY-CRYPTO-STRUCT
+    at the recorded N AND the selected dev OOF mean > 0. FAIL IF n >= 300 and any of those is missed. INDETERMINATE if n < 300 or the dev stage selects nothing. The
+    ETH+SOL subset is a prop-eligibility READ for ML-ENTRY-PROP (its own gate V3 is a separate unit), not part of this verdict. Thresholds are not changed after any
+    result; no second read of this window under this model without the manager OK.
+  what_it_does_not_do: Changes no served model, roster, tau or config. The window 2025-10-01..2026-09-30 was read by the served ml_entry records (other model families),
+    so this read is a first read for family ENTRY-CRYPTO-STRUCT only; the cross-family reuse of the window is declared, not deflated. The equity ENTRY-EQ forward
+    window is untouched.
+  min_n: 300 confirm trades and 10 symbols
+compute: cpu_long
+value:
+  bucket: ai_trader
+  usd_at_stake_per_month: 60
+  confidence: 0.2
+  basis: 'stand-in: the operator goal (an ML decision maker live on the Alpaca book); not a P&L measurement.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 8.0
+  est_minutes: 220
+  why_runner: Binance public klines (data.binance.vision, as ml_decision_entry fetch) + ~160 LightGBM fits on ~0.6M rows; 4 vCPU / 16 GB runner.
+  basis: INFERRED from the ENTRY-EQ structure unit (15 fits ~30 min on 0.3M rows); 2 configs x 8 folds x 5 seeds plus the confirm refit is ~2-3 h.
+run:
+  workflow: research-script-run.yml
+  command:
+  - python3
+  - scripts/research/ml_entry_crypto_struct.py
+  - full
+  - --cache
+  - /tmp/ml_decision_klines
+  - --out
+  - '{out_dir}'
+  - --unit
+  - '{unit}'
+  - --where
+  - research-script-run
+  - --ensemble-seeds
+  - 1,2,3,4,5
+  - --min-mean
+  - '0.05'
+  - --rule-id
+  - RULE-RQ20261108-98e3-22-CRYPTO-STRUCT
+  - --registered-at
+  - '2026-11-08'
+  timeout_minutes: 340
+  inputs:
+    research_unit: RQ-20261108-98e3-22
+ml_consumer:
+  consumer: ML-ENTRY-PROP
+  decision: whether a crypto structure-trained ENTRY candidate exists for the V3 prop gate (ETH+SOL) and whether it replaces the served ml_entry v1 on bybit_2 (Tier
+    3 proposal only)
+  legs:
+  - ml_entry
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- CRYPTO-ENTRY-RETRAIN-UNIT
+- ML-ENTRY-PROP
+- ML-ENTRY-EQ-STRUCTURE-RETEST
+population: The ml_decision_entry universe (comms/research/broad_paths/bp2-f4271084b120/manifest.json symbols, 48 Binance USD-M perps), 1h klines from data.binance.vision,
+  decisions every 4h, restricted-LONG, entry next open, SL 2 / TP 3 ATR14 / 24-bar stop with the live structure exit pivot=5;sl_only.
