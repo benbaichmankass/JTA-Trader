@@ -1,1 +1,108 @@
 # Hand-authored 2026-11-07 by lane ML-ENTRY-EQ-STRUCTURE-RETEST (Tier 1). Rule registered before the run; UNBLOCKED 2026-11-08 after 05 admitted the ensemble. Rule/command/thresholds unchanged.
+id: RQ-20261107-98e3-06
+title: 'ENTRY-EQ structure DECISION: does the 5-seed-ensemble structure-trained model show edge beyond seed noise -- dev-selected tau, then the confirm window ONCE
+  at ledger N=3 against the deflated bar plus a seed-noise margin?'
+status: queued
+cadence: once
+theme: ml_health
+priority: 1
+roadmap:
+- L-ML-LIVE
+kind: experiment
+practice_precedent: 'M13 (docs/reference/trading-and-model-practice-principles.md): unlimited iteration on the training-period walk-forward; the confirming window
+  is loaded by NO code path of this unit.'
+question: 'Manager 2026-11-07 steer: the unpinned-fit spread (~0.04 R, tau 0.20 read +0.083 vs the graded +0.1222) equals the edge, so the question is whether the
+  structure-trained ENTRY-EQ model has edge beyond fit noise. ONE served model: the mean of 5 pinned-seed fits (seeds 1-5) of config B on the structure-exit labels
+  (pivot=5;sl_only, SL 2 / TP 3 ATR14, 24-bar stop, same costs); tau selected on the purged dev walk-forward over {0.20, 0.25, 0.30} by the registered rule (max pooled
+  OOF mean net R, >= 300 OOF trades); refit on rows <= 2025-06-30 (purge 10 d); the confirming window 2025-07-15..last complete month read ONCE. The pinned single-seed
+  sibling is NOT separately scored on the confirm window.'
+why_this_matters: 'This is the evidence the Tier-3 ml_entry_eq structure-exit proposal should rest on: a model that is one reproducible artifact (pinned seeds), judged
+  at the deflated N=3 bar plus a margin above the measured fit noise, not a single lucky unpinned fit.'
+power:
+  expected_n: 1000
+  min_detectable_effect: 0.1
+  effect_units: metric
+  sd: 1.0
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: 'DESCRIPTIVE dev stage (no pass bar). INFERRED: the v1 read took 1099 restricted-long trades over 13 months on this pool; the walk-forward OOF window is
+    ~30 months, so several thousand OOF decisions per config/tau before the tau filter. Selection needs >= 300.'
+  feasibility:
+    source: none
+    accrual_basis: Replays Alpaca 1h RTH history 2021-01-01 .. 2025-06-30; nothing accrues.
+decision_rule:
+  id: RULE-RQ20261107-98e3-06-ENS-DECISION
+  registered_at: '2026-11-07'
+  registered_before_run: true
+  statistic: 'scripts/research/ml_entry_equity.py structure --ensemble-seeds 1,2,3,4,5 --taus 0.2,0.25,0.3 --min-mean 0.04: pooled restricted-long mean net R per
+    decision under the structure exit over decisions closing in 2025-07-15 .. last complete month, n, n_symbols, iid se, month-clustered se (reported), by month,
+    by symbol; ledger family ENTRY-EQ, N = prior ENTRY-EQ reads on this window and symbol set + 1 (= 3), bar = holdout_lock.bar_for(N).'
+  rule: 'INDETERMINATE IF pooled n < 30. PASS IF (a) confirm mean net R >= bar.point_t_min * iid se (N=3: t_min 0.8528) AND (b) the selected tau''s dev pooled OOF
+    mean net R > 0 AND (c) confirm mean >= +0.04 R (the registered seed-noise margin: the observed unpinned-fit spread at tau 0.20, +0.083 vs +0.1222). FAIL otherwise.
+    PASS is a holdout pass and a real-money CANDIDATE only; the month-clustered t is reported beside it; no config is changed by this unit. If RQ-20261107-98e3-04
+    reads SEED-NOISE-DOMINATED with range R > 0.04, the lane reports that the margin understates the noise and the operator decides whether the pass is enough. Thresholds
+    never change after any result.'
+  what_it_does_not_do: No config or roster change, no export, no order. Does not re-score the pinned single-seed sibling. This is the third read of the window (declared;
+    the bar is deflated for it).
+  min_n: 30 pooled decisions
+compute: cpu_long
+value:
+  bucket: ai_trader
+  usd_at_stake_per_month: 60
+  confidence: 0.2
+  basis: 'stand-in: the operator goal (an ML decision maker live on the Alpaca book); not a P&L measurement.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 6.0
+  est_minutes: 150
+  why_runner: Alpaca market data (read-only, paper key) + LightGBM fits; 4 vCPU / 16 GB runner.
+  basis: INFERRED - a41f-01 re-run took 25 min for 173 ETFs of 1h bars; 15 LightGBM fits on ~0.3M rows add ~15-30 min.
+run:
+  workflow: research-script-run.yml
+  command:
+  - python3
+  - scripts/research/ml_entry_equity.py
+  - structure
+  - --cache
+  - /tmp/ml_entry_equity
+  - --out
+  - '{out_dir}'
+  - --unit
+  - '{unit}'
+  - --where
+  - research-script-run
+  - --ensemble-seeds
+  - 1,2,3,4,5
+  - --taus
+  - 0.2,0.25,0.3
+  - --min-mean
+  - '0.04'
+  - --rule-id
+  - RULE-RQ20261107-98e3-06-ENS-DECISION
+  - --registered-at
+  - '2026-11-07'
+  timeout_minutes: 360
+  inputs:
+    research_unit: RQ-20261107-98e3-06
+ml_consumer:
+  consumer: ML-ENTRY-EQUITY-NATIVE
+  decision: whether the structure-trained ml_entry_eq is proposed (Tier 3) as a pinned 5-seed-ensemble artifact for alpaca_live + alpaca_portfolio
+  legs:
+  - iaum_pullback_1d
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- ML-ENTRY-EQ-STRUCTURE-RETEST
+- RQ-20261106-98e3-01
+- RQ-20261107-98e3-04
+- RQ-20261107-98e3-05
+population: 'The registered POOL_RULE of scripts/research/ml_entry_alpaca_score.py, UNCHANGED (sha256 e9702661d1a596a0f7e84e632c0ca8b5c2743a728f02147477c003644a0858e2):
+  active, tradable, us_equity ETFs (nasdaqtraded ETF=Y) with median daily dollar volume >= 50M USD over 2019-01-01..2020-12-31. The module refuses to run if the rule
+  hash differs.'
+unblocked_at: '2026-11-08: RQ-20261107-98e3-05 (run 42417908525) read ENSEMBLE-ADMITTED by its registered rule (tau-0.20 mean +0.0919 >= +0.083; 1 of 5 folds below
+  -0.10); RQ-20261107-98e3-04 (run 42417906259) read SEED-NOISE-DOMINATED at tau 0.20 (range 0.047) and the 5-seed mean +0.0923 > 0. The rule, command and thresholds
+  of this unit are unchanged since registration (2026-11-07).'
