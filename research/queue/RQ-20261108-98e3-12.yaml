@@ -1,4 +1,3 @@
-# Hand-authored 2026-11-08 by lane ML-ENTRY-EQ-STRUCTURE-RETEST (Tier 1). Rule registered before the run; dispatched by the queue after not_before.
 id: RQ-20261108-98e3-12
 title: 'Regime head at 15m (the deployed regime-head timeframe): does adding HAR-RV regressors lift LightGBM log-loss over the default LightGBM on BTCUSDT, ETHUSDT
   and SOLUSDT, where the 1h reads (07/09) were indeterminate (+0.001..+0.008)?'
@@ -46,8 +45,9 @@ decision_rule:
   rule: 'PASS IF lgbm_har beats lgbm by >= +0.003 nats on the CV mean on ALL of BTCUSDT_15m, ETHUSDT_15m and SOLUSDT_15m. FAIL IF lgbm_har does not beat lgbm by >=
     0 on ANY symbol. INDETERMINATE otherwise, or if folds < 3 or a shard is stale/unavailable. Stated n: 60,000 tail rows per group, 5 folds. Thresholds are not changed
     after any result.'
-  what_it_does_not_do: No served model, roster or config is read or changed; a research bake-off recipe, not any deployed head. Nothing here touches the ENTRY-EQ
-    confirm window.
+  what_it_does_not_do: 'No served model, roster or config is read or changed; a research bake-off recipe, not any deployed head. Nothing here touches the ENTRY-EQ
+    confirm window. Amended 2026-11-08 (before this unit ran): bake-off config baseline prior -> lgbm (the engine only pairs learners with the baseline and controls;
+    the first config would have read INDETERMINATE, as units 19/20 did). Thresholds and statistic unchanged.'
   min_n: 5 purged CV folds on the tail shard, >= 3 folds
 intervention_controls:
   not_applicable: a model-quality bake-off on a static published shard, not an in-trade action or active-management intervention
@@ -102,7 +102,7 @@ ml_bakeoff:
     folds: 5
     embargo_rows: 24
     min_train_frac: 0.4
-  baseline: prior
+  baseline: lgbm
   controls:
   - prior
   candidates:
@@ -131,13 +131,13 @@ ml_bakeoff:
       - BTCUSDT_15m
       - ETHUSDT_15m
       - SOLUSDT_15m
-      vs: lgbm
+      vs: baseline
       window: cv
       op: '>='
       value: 0.003
     fail_if_no_candidate_reaches:
     - group: any
-      vs: lgbm
+      vs: baseline
       window: cv
       op: '>='
       value: 0.0
