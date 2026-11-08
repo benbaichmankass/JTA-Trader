@@ -98,17 +98,17 @@ def check_sample(df: pd.DataFrame, stream: str, file_lo: date, file_hi: date) ->
     """Point-in-time sanity of one parsed sample file."""
     cols = [c for c in VALUE_COLS[stream] if c in df.columns]
     if len(df) == 0 or not cols:
-        return {"ok": False, "rows": int(len(df)), "reason": "empty or value columns missing"}
+        return {"ok": False, "rows": len(df), "reason": "empty or value columns missing"}
     nonnull = float(df[cols].notna().all(axis=1).mean())
     ts = pd.to_datetime(df["ts"], utc=True)
     monotone = bool(ts.sort_values().is_monotonic_increasing)
-    future = bool((ts.max() > pd.Timestamp(file_hi + timedelta(days=1), tz="UTC") + pd.Timedelta(hours=1)))
+    future = bool(ts.max() > pd.Timestamp(file_hi + timedelta(days=1), tz="UTC") + pd.Timedelta(hours=1))
     days = (file_hi - file_lo).days + 1
     rpd = len(df) / max(days, 1)
     nominal = NOMINAL_ROWS_PER_DAY.get(stream)
     rows_ok = True if nominal is None else (rpd >= nominal if stream == "fundingRate" else abs(rpd - nominal) / nominal <= 0.05)
     ok = nonnull >= MIN_NONNULL and monotone and not future and rows_ok
-    return {"ok": ok, "rows": int(len(df)), "nonnull_share": nonnull, "monotone": monotone, "future_dated": future,
+    return {"ok": ok, "rows": len(df), "nonnull_share": nonnull, "monotone": monotone, "future_dated": future,
             "rows_per_day": rpd, "rows_ok": rows_ok, "ts_min": str(ts.min()), "ts_max": str(ts.max())}
 
 
