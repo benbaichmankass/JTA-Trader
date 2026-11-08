@@ -1,7 +1,7 @@
 # Hand-authored 2026-11-08 by lane ML-ENTRY-EQ-STRUCTURE-RETEST (Tier 1). Dev-only; rule registered before the run.
 id: RQ-20261108-98e3-14
 title: 'ENTRY-EQ structure-label 5-seed ensemble, feature config A vs B (dev): does the own-features-only ensemble (A) beat the own+cross-sectional ensemble (B, +0.1323 at tau 0.25) by a registered margin?'
-status: queued
+status: done
 cadence: once
 theme: ml_health
 priority: 1
@@ -88,3 +88,19 @@ population: 'The registered POOL_RULE of scripts/research/ml_entry_alpaca_score.
   active, tradable, us_equity ETFs (nasdaqtraded ETF=Y) with median daily dollar volume >= 50M USD over 2019-01-01..2020-12-31. The module refuses to run if the rule
   hash differs.'
 last_dispatched_at: '2026-11-08T13:06:39+00:00'
+grading:
+  attested: RULE-RQ20261108-98e3-14-A-VS-B
+  auto: true
+  awaiting: more_data
+  decision_rule_id: RULE-RQ20261108-98e3-14-A-VS-B
+  evidence:
+  - research/results/RQ-20261108-98e3-14/42483500650.jsonl
+  - research/results/RQ-20261108-98e3-14/42492878242.jsonl
+  graded_at: '2026-11-08'
+  grader: scripts/research/queue_grade.py
+  note: 'indeterminate is the pre-registered under-powered/null outcome: complete, but NOT a pass and
+    NOT a kill'
+  reason: 1 row(s), all measured, all indeterminate (1 earlier producer_failed / re-graded wiring_only
+    row(s) superseded)
+  rows: 1
+  verdict: indeterminate
