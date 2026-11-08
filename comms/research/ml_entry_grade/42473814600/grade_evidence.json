@@ -1,0 +1,172 @@
+{
+ "rule_id": "RULE-ENTRY-PROMOTE-20261106",
+ "rule_doc_sha256": "37cf075e87a80f9438b0a7a498abc28a4628cf5df8d2a977b1046fc9eba24a20",
+ "plan": {
+  "run_date": "2026-11-08",
+  "asof": "2026-10-25",
+  "window_start": "2026-10-25",
+  "window_end": "2026-11-07",
+  "window_days": 14
+ },
+ "tau": 0.1,
+ "served": {
+  "path": "ml/served/ml_decision_entry_v1r20261106/model.json",
+  "model_id": "ml-decision-entry-v1r20261106",
+  "train_end_exclusive": "2026-10-14 19:00:00+00:00",
+  "result": {
+   "n": 317,
+   "mean_net_r": -0.13160400027397443,
+   "sum_net_r": -41.71846808684989,
+   "se_net_r": 0.05963081144507018,
+   "mean_gross_r": -0.06122783009923588,
+   "mean_cost_r": 0.0703761701747385,
+   "n_symbols": 48,
+   "by_side": {
+    "long": {
+     "n": 51,
+     "mean_net_r": -0.9044530134440996
+    },
+    "short": {
+     "n": 266,
+     "mean_net_r": 0.01657381804059845
+    }
+   },
+   "exit_reason_counts": {
+    "sl": 157,
+    "tp": 84,
+    "time": 76
+   },
+   "ex_max_symbol": {
+    "symbol": "UNIUSDT",
+    "n": 307,
+    "mean_net_r": -0.11317371471731623
+   },
+   "bootstrap_ci95_mean_net_r_reported_not_gating": [
+    -0.25817439644512585,
+    -0.00684807077473213
+   ]
+  }
+ },
+ "cost_stack": "ml_decision_entry.label_symbol net R: fee 11.0 bps rt + slippage 3.0 bps + funding 1.0 bps/8h (src/runtime/execution_costs)",
+ "read_state": "measured",
+ "diagnostics": {
+  "table_rows": 788445,
+  "table_max_ts": "2026-11-06 23:00:00+00:00",
+  "rows_per_day_last_14": {
+   "2026-10-22": 294,
+   "2026-10-23": 294,
+   "2026-10-24": 294,
+   "2026-10-25": 294,
+   "2026-10-26": 294,
+   "2026-10-29": 294,
+   "2026-10-30": 294,
+   "2026-10-31": 294,
+   "2026-11-01": 294,
+   "2026-11-02": 294,
+   "2026-11-03": 294,
+   "2026-11-04": 294,
+   "2026-11-05": 294,
+   "2026-11-06": 294
+  },
+  "last_labelled_ts_by_symbol": {
+   "min": "2024-06-11 19:00:00+00:00",
+   "median": "2026-11-06 23:00:00+00:00",
+   "max": "2026-11-06 23:00:00+00:00",
+   "n_symbols": 60
+  },
+  "plan_train_end_bound_for_run_date": "2026-10-30 23:00:00+00:00",
+  "bar_gaps_last_30d": {
+   "BTCUSDT": [
+    {
+     "after": "2026-10-27 23:00:00+00:00",
+     "before": "2026-10-29 00:00:00+00:00"
+    }
+   ],
+   "ETHUSDT": [
+    {
+     "after": "2026-10-27 23:00:00+00:00",
+     "before": "2026-10-29 00:00:00+00:00"
+    }
+   ],
+   "SOLUSDT": [
+    {
+     "after": "2026-10-27 23:00:00+00:00",
+     "before": "2026-10-29 00:00:00+00:00"
+    }
+   ]
+  }
+ },
+ "today_candidate": {
+  "window_start": "2026-11-08",
+  "labelled_rows_in_window": 0,
+  "verdict": "insufficient_n",
+  "candidate_json_sha256": "0c979aa1470577ca3d2fde4a07230ebe0ea58e3f203ced22895940dce75695ce"
+ },
+ "refit_reproduces_retrain_candidate": false,
+ "candidate": {
+  "asof": "2026-10-25",
+  "train_rows": 782810,
+  "train_end_exclusive": "2026-10-16 19:00:00+00:00",
+  "result": {
+   "n": 311,
+   "mean_net_r": -0.22050155181910983,
+   "sum_net_r": -68.57598261574316,
+   "se_net_r": 0.05871674972296056,
+   "mean_gross_r": -0.14929452497753348,
+   "mean_cost_r": 0.07120702684157633,
+   "n_symbols": 49,
+   "by_side": {
+    "long": {
+     "n": 16,
+     "mean_net_r": -0.6281354253290645
+    },
+    "short": {
+     "n": 295,
+     "mean_net_r": -0.19839259596772246
+    }
+   },
+   "exit_reason_counts": {
+    "sl": 163,
+    "time": 76,
+    "tp": 72
+   },
+   "ex_max_symbol": {
+    "symbol": "BATUSDT",
+    "n": 304,
+    "mean_net_r": -0.24631429216836045
+   },
+   "bootstrap_ci95_mean_net_r_reported_not_gating": [
+    -0.33602112348476826,
+    -0.10772952292991465
+   ],
+   "deflated_ci_lower_reported_not_gating": -0.375202572314194
+  }
+ },
+ "window_rows": 3234,
+ "holdout_claim": {
+  "model_id": "ENTRY-v1-cand-asof-2026-10-25",
+  "family": "ENTRY",
+  "start": "2026-10-25",
+  "end": "2026-11-07",
+  "train_end": "2026-10-16",
+  "n_tries": 6,
+  "variants_on_window": 8,
+  "read_at": "2026-11-08T11:07:12Z"
+ },
+ "bar": {
+  "n_tries": 6,
+  "alpha_one_sided": 0.004211,
+  "ci_level": 0.991579,
+  "ci_z": 2.6347,
+  "ci_lo_percentile": 0.4211,
+  "point_t_min": 1.3001,
+  "method": "Sidak-corrected CI (alpha_N = 1-(1-0.025)^(1/N), one-sided) for CI bars; Bailey-Lopez de Prado expected max of N null t-stats for point bars"
+ },
+ "verdict": "fail",
+ "why": [
+  "worse than served: -0.2205 < -0.1316 (candidate n=311, served n=317)",
+  "absolute deflated bar, information only: does not clear (mean -0.2205, se 0.05871674972296056, read 6, point_t_min 1.3001)"
+ ],
+ "graded_dir": "ml_decision_entry_v1r20261108",
+ "graded_model_sha256": "ecbf2d5fd0d547e65a4d09881ad46d11415ccfce4a71563bd0c3fe627b9f04af"
+}
