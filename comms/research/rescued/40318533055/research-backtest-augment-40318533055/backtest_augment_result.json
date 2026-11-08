@@ -1,0 +1,152 @@
+{
+  "generated_at": "2026-10-26T12:01:01.468123+00:00",
+  "run_tag": "a1-crypto-weekly",
+  "db": "artifacts/a1/backtest_trades.db",
+  "days": 730,
+  "roster": [
+    "trend_donchian",
+    "squeeze_breakout_4h",
+    "htf_pullback_trend_2h"
+  ],
+  "symbols": [
+    "BTCUSDT",
+    "ETHUSDT",
+    "SOLUSDT"
+  ],
+  "manifest": "ml/configs/setup-candidates-metalabel-p2pool-v1.yaml",
+  "legs_total": 9,
+  "legs_ok": 9,
+  "legs_failed": 0,
+  "total_recorded_is_backtest_rows": 1033,
+  "legs": [
+    {
+      "strategy": "trend_donchian",
+      "symbol": "BTCUSDT",
+      "timeframe": "1h",
+      "harness": "trend",
+      "fidelity": "approximate",
+      "feed": "binance",
+      "fee_bps_roundtrip": 7.5,
+      "omitted_levers": [
+        "exit_head_action",
+        "exit_head_model",
+        "exit_head_threshold"
+      ],
+      "n_emitted": 146,
+      "recorded": 146,
+      "skipped": 0
+    },
+    {
+      "strategy": "trend_donchian",
+      "symbol": "ETHUSDT",
+      "timeframe": "1h",
+      "harness": "trend",
+      "fidelity": "approximate",
+      "feed": "binance",
+      "fee_bps_roundtrip": 7.5,
+      "omitted_levers": [
+        "exit_head_action",
+        "exit_head_model",
+        "exit_head_threshold"
+      ],
+      "n_emitted": 150,
+      "recorded": 150,
+      "skipped": 0
+    },
+    {
+      "strategy": "trend_donchian",
+      "symbol": "SOLUSDT",
+      "timeframe": "1h",
+      "harness": "trend",
+      "fidelity": "approximate",
+      "feed": "binance",
+      "fee_bps_roundtrip": 7.5,
+      "omitted_levers": [
+        "exit_head_action",
+        "exit_head_model",
+        "exit_head_threshold"
+      ],
+      "n_emitted": 144,
+      "recorded": 144,
+      "skipped": 0
+    },
+    {
+      "strategy": "squeeze_breakout_4h",
+      "symbol": "BTCUSDT",
+      "timeframe": "4h",
+      "harness": "squeeze",
+      "fidelity": "faithful",
+      "feed": "binance",
+      "fee_bps_roundtrip": 7.5,
+      "omitted_levers": [],
+      "n_emitted": 32,
+      "recorded": 32,
+      "skipped": 0
+    },
+    {
+      "strategy": "squeeze_breakout_4h",
+      "symbol": "ETHUSDT",
+      "timeframe": "4h",
+      "harness": "squeeze",
+      "fidelity": "faithful",
+      "feed": "binance",
+      "fee_bps_roundtrip": 7.5,
+      "omitted_levers": [],
+      "n_emitted": 32,
+      "recorded": 32,
+      "skipped": 0
+    },
+    {
+      "strategy": "squeeze_breakout_4h",
+      "symbol": "SOLUSDT",
+      "timeframe": "4h",
+      "harness": "squeeze",
+      "fidelity": "faithful",
+      "feed": "binance",
+      "fee_bps_roundtrip": 7.5,
+      "omitted_levers": [],
+      "n_emitted": 24,
+      "recorded": 24,
+      "skipped": 0
+    },
+    {
+      "strategy": "htf_pullback_trend_2h",
+      "symbol": "BTCUSDT",
+      "timeframe": "2h",
+      "harness": "pullback",
+      "fidelity": "faithful",
+      "feed": "binance",
+      "fee_bps_roundtrip": 7.5,
+      "omitted_levers": [],
+      "n_emitted": 153,
+      "recorded": 153,
+      "skipped": 0
+    },
+    {
+      "strategy": "htf_pullback_trend_2h",
+      "symbol": "ETHUSDT",
+      "timeframe": "2h",
+      "harness": "pullback",
+      "fidelity": "faithful",
+      "feed": "binance",
+      "fee_bps_roundtrip": 7.5,
+      "omitted_levers": [],
+      "n_emitted": 174,
+      "recorded": 174,
+      "skipped": 0
+    },
+    {
+      "strategy": "htf_pullback_trend_2h",
+      "symbol": "SOLUSDT",
+      "timeframe": "2h",
+      "harness": "pullback",
+      "fidelity": "faithful",
+      "feed": "binance",
+      "fee_bps_roundtrip": 7.5,
+      "omitted_levers": [],
+      "n_emitted": 178,
+      "recorded": 178,
+      "skipped": 0
+    }
+  ]
+}
