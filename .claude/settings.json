@@ -83,6 +83,16 @@
             "timeout": 30
           }
         ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "_comment": "LANE STUCK-WAKE BACKSTOP (operator 2026-11-08): a dispatched lane that ends a turn waiting on a decision without waking the manager is blocked once and told the exact create_trigger+fire_trigger call. Fails open; never blocks twice; never blocks a non-lane or the manager. scripts/ops/lane_report_stop_hook.py",
+            "command": "cd \"$CLAUDE_PROJECT_DIR\" && python3 scripts/ops/lane_report_stop_hook.py",
+            "timeout": 15
+          }
+        ]
       }
     ]
   }

@@ -372,6 +372,9 @@ a short work-plan status in-session and on the Workflow page, NOT to Telegram (T
 1. **PUSH (primary).** A lane wakes the manager when it finishes, is blocked or has something to act on: `create_trigger(persistent_session_id=
    <manager>)` then `fire_trigger`; fallback a PR comment; the manager acts on a wake immediately. **The wake works only from lineage depth ≤ 7 (limit 8)**; `get_session` shows `lineage`.
    The manager must sit at depth ≤ 6, a rotation is created by a shallow session never by the manager, a lane at 8 reports by PR comment.
+   **Backstop (operator, 2026-11-08):** lane ML-ENTRY-EQ-STRUCT-LIVE ended a turn on "awaits go-ahead" without the wake and sat ~2.5 h
+   unseen until the operator asked for status. The Stop hook `scripts/ops/lane_report_stop_hook.py` now blocks, once, any lane turn that ends
+   waiting on a decision with no `fire_trigger` / `send_later` / PR comment that turn, and names the exact wake call.
 2. **POLL (backup).** The 3-hourly check-in runs the operating loop; restart or re-dispatch any lane dead, stalled, finished without pinging, or over
    ceiling. **The manager subscribes ONLY to (a) the ops-flags PR and (b) PRs it opens itself** (each subscribed PR injects ~3k tokens per event); the
    lane fixes its own red CI, wakes the manager when green and waiting (for a held PR set one `send_later` ~35 min out), and the check-in lands every green waiting PR. Decisions go out **batched**
@@ -388,6 +391,9 @@ create_trigger(persistent_session_id="<manager session id>", prompt=<what merged
 what is blocked and on what>) then fire_trigger(<id>). Never set run_once_at (it fires twice).
 If your PR waits on the manager (landing: hold), wake it AGAIN once CI on your head is green, with the PR
 number and head sha; you stay subscribed to your own PR and fix red CI yourself. If that prompts, comment on your PR instead.
+NEVER END A TURN WAITING SILENTLY: if you need a decision, a go-ahead or a merge, wake the manager FIRST (above);
+if you are only waiting on a run, schedule your own wake with send_later. The repo Stop hook
+(scripts/ops/lane_report_stop_hook.py) blocks a lane turn that ends waiting without either.
 Then continue, or run close-out. Never stop to wait for direction.
 Before EVERY push run `python3 scripts/ci/prepush.py` (guards on your diff + affected tests, locally); never push to a PR while its
 CI runs unless fixing red; batch your commits into one push.

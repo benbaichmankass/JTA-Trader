@@ -1,0 +1,7 @@
+{
+  "tier": 1,
+  "landing": "hold",
+  "hold_reason": "operator_asked_to_hold",
+  "hold_text": "Touches .claude/settings.json (hooks). Adds one Stop hook: a dispatched lane that ends a turn waiting on a decision without waking the manager is blocked once and given the exact wake call. Fails open, never blocks twice, never blocks a non-lane session or the manager. Revert: git revert.",
+  "why": "Operator 2026-11-08: lanes must be able to tell the manager they are stuck without the operator asking for status; STRUCT-LIVE sat ~2.5 h on an unseen go-ahead."
+}
