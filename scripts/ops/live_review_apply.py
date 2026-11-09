@@ -75,7 +75,8 @@ pinged once on a real-money or prop account:
 * alpaca: close, only when the leg is the account's ONLY open trade on the symbol (the venue
   flatten closes the whole symbol); move_tp (``alpaca_amend.tighten(new_tp=...)``: PATCH this
   trade's own target leg, read back, and refused unless this trade's stop leg still rests);
-* phone: move_tp (``phone_trail.request_tp_amend``, the one-slot amend channel); close / reduce
+* phone: move_tp (``phone_trail.request_tp_amend``, the one-slot amend channel); widen_sl
+  (``phone_trail.request_sl_widen``, declared so the app applies a looser stop); close / reduce
   (``phone_cancel.request_close``, the server-issued action channel, operator 2026-11-09);
 * prop_vm: none yet (the VM executor reads only ``meta.sl_floor``); other / IB: none;
 * any account: add_entry / change_size > 1 -- none: no add-to-an-open-position executor exists yet
@@ -620,7 +621,7 @@ def _save_state(st: Dict[str, Any]) -> None:
 ACTION_PATHS: Dict[str, frozenset] = {
     "bybit": frozenset({"close", "reduce", "move_tp", "widen_sl"}),
     "alpaca": frozenset({"close", "move_tp"}),
-    "phone": frozenset({"move_tp", "close", "reduce"}),
+    "phone": frozenset({"move_tp", "close", "reduce", "widen_sl"}),
     "prop_vm": frozenset(),
     "other": frozenset(),
 }
@@ -936,6 +937,23 @@ def _exec_phone_tp(leg: Dict[str, Any], v: lri.AmendVerdict, intent: lri.LiveRev
             "detail": "TP amend emitted; the phone verifies it against the venue before any click"}
 
 
+def _exec_phone_sl_widen(leg: Dict[str, Any], v: lri.AmendVerdict, intent: lri.LiveReviewIntent) -> Dict[str, Any]:
+    """Publish a reviewed stop WIDEN through the phone's amend channel, declared ``widen_sl`` so the app applies it
+    (operator 2026-11-09); the account RiskManager's bound already approved ``v.level``. Read back the emitted amend."""
+    from src.prop.phone_trail import KEY, request_sl_widen
+
+    tk = leg["row"]
+    r = request_sl_widen(tk["account_id"], tk["ticket_id"], v.level,
+                         reason=f"mandate {intent.mandate}", review_id=intent.review_id)
+    if not r.get("ok"):
+        return {"result": X_REFUSED, "detail": r.get("why")}
+    am = ((_ticket_meta(tk["ticket_id"]) or {}).get(KEY) or {}).get("amend") or {}
+    if am.get("id") != r.get("amend_id") or am.get("kind") != "sl" or not am.get("widen"):
+        return {"result": X_APPLY_FAILED, "detail": f"emitted amend reads {am!r}"}
+    return {"result": X_APPLIED, "amend_id": r.get("amend_id"), "sl": am.get("sl"),
+            "detail": "widen_sl amend emitted; the phone verifies it against the venue before any click"}
+
+
 def _exec_phone_close(leg: Dict[str, Any], key: str, intent: lri.LiveReviewIntent) -> Dict[str, Any]:
     """Issue a close / reduce through the phone's server-issued action channel (PHONE-ENTRY-CANCEL, operator
     2026-11-09); read back the emitted request. The phone executes it on the terminal and reports done / not_found /
@@ -971,6 +989,8 @@ def _exec_trade_action(db, leg: Dict[str, Any], pkg: Dict[str, Any], cls: str, v
         return _exec_alpaca_tp(db, leg, pkg, v, intent)
     if cls == "phone" and key == "move_tp":
         return _exec_phone_tp(leg, v, intent)
+    if cls == "phone" and key == "widen_sl":
+        return _exec_phone_sl_widen(leg, v, intent)
     if cls == "phone" and key in ("close", "reduce"):
         return _exec_phone_close(leg, key, intent)
     return {"result": X_REFUSED, "detail": f"{lri.R_NO_ACTION_PATH}:{key}"}
