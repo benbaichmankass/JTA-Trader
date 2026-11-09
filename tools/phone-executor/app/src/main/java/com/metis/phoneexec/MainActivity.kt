@@ -1140,7 +1140,7 @@ class MainActivity : Activity() {
         if (now < claimBackoffUntilMs) { setStatus("logged in · VM busy (5xx); backing off ${(claimBackoffUntilMs - now) / 1000 + 1} s (no claim)"); return }
         // accepts amend: this build executes trail amends (PROP-TRAIL-PHONE); the VM serves them to no older build.
         // PHONE-FGS-EXEC step 2: the background engine claims ENTRIES only (accepts=[]); amends are claimed on the kiosk.
-        val r = api.post("claim", JSONObject().put("accepts", JSONArray().apply { if (cur === fg) put("amend") })) ?: run { setStatus("logged in · VM unreachable (no claim, no click)"); return }
+        val r = api.post("claim", JSONObject().put("accepts", JSONArray().apply { if (cur === fg) { put("amend"); put("cancel"); put("close") } })) ?: run { setStatus("logged in · VM unreachable (no claim, no click)"); return }
         if (!r.optBoolean("ok")) {
             // 5xx (e.g. the API restarting for a deploy): ONE attempt, no in-tick retry, and no execution -- we hold no
             // ticket, so nothing can be filled or submitted. Back off 1 -> 2 -> 4 -> 5 min. If the server committed the
@@ -1161,8 +1161,29 @@ class MainActivity : Activity() {
             if (cur === fg && tryDrill(r.optJSONObject("config") ?: JSONObject())) return
             setStatus("logged in · waiting for a ticket (none queued) · ${java.text.DateFormat.getTimeInstance().format(Date())}"); return
         }
-        lastClaimKind = if (t.optString("kind") == "amend") "amend" else "entry"
-        lastClaimId = if (lastClaimKind == "amend") t.optString("amend_id") else t.optString("ticket_id")
+        // a cancel is served to the foreground only, like an amend, and counts as one for the background routing (BgTicket)
+        lastClaimKind = when (t.optString("kind")) { "amend" -> "amend"; "cancel", "close" -> "amend"; else -> "entry" }
+        lastClaimId = when (t.optString("kind")) { "amend" -> t.optString("amend_id"); "cancel" -> t.optString("cancel_id"); "close" -> t.optString("close_id"); else -> t.optString("ticket_id") }
+        if (t.optString("kind") == "close") {
+            val xid = t.optString("close_id")
+            try { executeClose(t) }
+            catch (e: JsTimeout) {
+                // after the close click the position is UNKNOWN (reported ambiguous: the next attempt re-reads Positions afresh)
+                if (ledger.last(xid) == "submitted") { ledger.append(xid, "unconfirmed"); closeResult(t, "ambiguous", "page stopped answering after the close click; the position may be closed") }
+                else if (ledger.last(xid) == "intended") { ledger.append(xid, "refused"); closeResult(t, "failed", "page stopped answering before any click (nothing clicked)") }
+            }
+            return
+        }
+        if (t.optString("kind") == "cancel") {
+            val cid = t.optString("cancel_id")
+            try { executeCancel(t) }
+            catch (e: JsTimeout) {
+                // after the cancel click the order is UNKNOWN (reported ambiguous: the next attempt re-reads the rows afresh)
+                if (ledger.last(cid) == "submitted") { ledger.append(cid, "unconfirmed"); cancelResult(t, "ambiguous", "page stopped answering after the cancel click; the order may be gone") }
+                else if (ledger.last(cid) == "intended") { ledger.append(cid, "refused"); cancelResult(t, "refused", "page stopped answering before any click (nothing clicked)") }
+            }
+            return
+        }
         if (t.optString("kind") == "amend") {
             val aid = t.optString("amend_id")
             try { executeAmend(t, r.optJSONObject("config") ?: JSONObject()) }
@@ -1431,6 +1452,150 @@ class MainActivity : Activity() {
      *  save button, then the position re-read (row column, else the edit dialog re-opened read-only and cancelled).
      *  Anything unread or ambiguous before the save is "refused" (nothing changed); after it, "mismatch" (the VM
      *  locks this ticket's trail and pings). One attempt per amend id (the ledger), never retried here. */
+    // ---- PHONE-ENTRY-CANCEL (operator 2026-11-09): withdraw ONE stale resting ENTRY order the VM issued. The VM sends the
+    // order's facts (venue symbol, side, quantity, limit price) and the reason it is stale; the page helper matches the
+    // Open orders row by those facts and clicks that row's cancel control ONLY when exactly one row and exactly one
+    // cancel-type control match; ONLY an anchored confirm is ever pressed; the Open orders list is then re-read. Nothing
+    // here can touch a position, an SL/TP leg or an order the server did not issue (exec.js DENY_WORDS still forbids
+    // every other cancel/close). The panel / control / confirmation DOM is UNMEASURED: every step is captured, and any
+    // doubt reports ambiguous and clicks nothing. Results: cancelled | not_found | placed | ambiguous | refused.
+    private suspend fun cancelResult(t: JSONObject, result: String, why: String, cap: CaptureRun? = null) {
+        api.post("report", JSONObject().put("kind", "cancel_result").put("ticket_id", t.optString("ticket_id"))
+            .put("cancel_id", t.optString("cancel_id")).put("result", result).put("reason", why.take(280))
+            .put("submit", t.optString("submit")).put("capture_run", cap?.takeIf { it.posted > 0 }?.id ?: ""))
+        setStatus("cancel ${t.optString("cancel_id")}: $result ($why)".take(160))
+    }
+
+    private suspend fun cancelRefuse(t: JSONObject, why: String, cap: CaptureRun? = null) {
+        ledger.append(t.optString("cancel_id"), "refused")
+        cancelResult(t, "refused", why, cap)
+    }
+
+    private suspend fun executeCancel(t: JSONObject) {
+        val cid = t.getString("cancel_id")
+        if (ledger.seen(cid)) return cancelResult(t, "refused", "ledger already holds this cancel")
+        ledger.append(cid, "intended")
+        val live = t.optString("submit") == "live"   // the server decides (ARMED-GATE: no device-local switch)
+        val spec = t.optJSONObject("spec") ?: return cancelRefuse(t, "cancel request carries no spec")
+        val venue = spec.optString("venue_symbol")
+        val side = spec.optString("side")
+        if (venue.isEmpty() || (side != "buy" && side != "sell") || !(spec.optDouble("qty", 0.0) > 0) || !(spec.optDouble("price", 0.0) > 0))
+            return cancelRefuse(t, "cancel spec is incomplete (symbol/side/qty/price)")
+        val sj = spec.toString()   // a JSON object literal is a JS object literal
+        val cap = CaptureRun("cancel", cid)
+        setStatus("cancel $cid: ${if (live) "LIVE" else "DRY"} $side $venue (${t.optString("reason")})")
+        // 1. the Open orders view (a read-only tab switch); a stray modal is dismissed first, never anything else
+        if ((jsObj("__ex.modalsOpen()")?.optInt("n") ?: 0) > 0) { dismissModal(cur); ensure() }
+        if (jsObj("__ex.terminal()")?.optBoolean("ticketOpen") == true) { js("__ex.closeTicket()"); delay(1200); ensure() }
+        if (js("__ex.clickTab(${q("^open orders$")})") != "clicked") { cap(cap, cur, "no_orders_tab", false, "Open orders tab not found"); return cancelRefuse(t, "Open orders tab not found", cap) }
+        delay(1500); ensure()
+        // 2. the list, read twice at most: "unread" is never "not found"
+        var rd = jsObj("__ex.ordersRead($sj)")
+        if (rd?.optString("state") != "read") { delay(1500); ensure(); rd = jsObj("__ex.ordersRead($sj)") }
+        cap(cap, cur, "orders_read", rd?.optString("state") == "read", "state ${rd?.optString("state")} match ${rd?.optInt("match", -1)} ctls ${rd?.optInt("controls", -1)} ${rd?.optJSONArray("ctls") ?: ""}")
+        if (rd == null || rd.optString("state") != "read") { ledger.append(cid, "refused"); return cancelResult(t, "ambiguous", "Open orders view unread (${rd?.optString("why") ?: "no answer"}); nothing clicked", cap) }
+        val match = rd.optInt("match", -1)
+        if (match == 0) { ledger.append(cid, "not_found"); return cancelResult(t, "not_found", "Open orders read (${if (rd.optBoolean("empty")) "empty" else "rows listed"}); no row matches $side $venue ${spec.optDouble("qty")} @ ${spec.optDouble("price")}", cap) }
+        if (match != 1) { ledger.append(cid, "refused"); return cancelResult(t, "ambiguous", "$match rows match; nothing clicked", cap) }
+        if (rd.optInt("controls", 0) != 1) { ledger.append(cid, "refused"); return cancelResult(t, "ambiguous", "the matching row has ${rd.optInt("controls", 0)} cancel-type controls (need 1): ${rd.optJSONArray("ctls") ?: ""}; nothing clicked", cap) }
+        if (!live) { ledger.append(cid, "refused"); return cancelResult(t, "refused", "dry: one row and one cancel control matched; nothing clicked", cap) }
+        // 3. click -> (a confirmation, if the venue asks) -> the ONLY anchored confirm; the click is journaled BEFORE it is made
+        ledger.append(cid, "submitted")
+        var ck = js("__ex.orderCancelClick($sj, 'click')"); delay(1000); ensure()
+        var ov = jsObj("__ex.cancelOverlay()")
+        if (ck == "cancel_clicked" && (ov?.optInt("n") ?: 0) == 0 && jsObj("__ex.ordersRead($sj)")?.optInt("match", 0) == 1) {
+            // click() reached nothing: the same control once more as a touch-style tap (the row is still there, so nothing changed)
+            ck = js("__ex.orderCancelClick($sj, 'tap')"); delay(1000); ensure(); ov = jsObj("__ex.cancelOverlay()")
+        }
+        cap(cap, cur, "cancel_clicked", ck.endsWith("clicked"), "$ck overlays ${ov?.optInt("n")} ${ov?.optJSONArray("text") ?: ""} ${ov?.optJSONArray("buttons") ?: ""}")
+        if (!ck.endsWith("clicked")) { ledger.append(cid, "refused"); return cancelResult(t, "ambiguous", "cancel control not clicked ($ck); nothing changed", cap) }
+        if ((ov?.optInt("n") ?: 0) > 0) {
+            val cf = js("__ex.cancelConfirm()"); delay(1500); ensure()
+            cap(cap, cur, "confirm", cf == "confirm_clicked", cf)
+            if (cf != "confirm_clicked") {
+                // a dialog we will not press is reported, then dismissed through the shared Cancel-text dismissal (never a confirm)
+                val dm = dismissModal(cur)
+                ledger.append(cid, "unconfirmed")
+                return cancelResult(t, "ambiguous", "confirmation not pressed ($cf; dialog dismissal: $dm): ${ov?.optJSONArray("text") ?: ""} ${ov?.optJSONArray("buttons") ?: ""}", cap)
+            }
+        }
+        // 4. re-read Open orders: the row must be gone, and the list must have been positively read
+        delay(1000)
+        val after = jsObj("__ex.ordersRead($sj)")
+        cap(cap, cur, "orders_after", after?.optInt("match", -1) == 0, "state ${after?.optString("state")} match ${after?.optInt("match", -1)}")
+        when {
+            after?.optString("state") != "read" -> { ledger.append(cid, "unconfirmed"); cancelResult(t, "ambiguous", "clicked, but the Open orders list could not be re-read; the next attempt re-reads", cap) }
+            after?.optInt("match", 0) == 0 -> { ledger.append(cid, "cancelled"); cancelResult(t, "cancelled", "row clicked${if ((ov?.optInt("n") ?: 0) > 0) ", anchored confirm pressed" else ""}; Open orders re-read: row gone", cap) }
+            else -> { ledger.append(cid, "unconfirmed"); cancelResult(t, "placed", "row still on Open orders after the click", cap) }
+        }
+    }
+
+    // ---- PHONE-ENTRY-CANCEL, the general server-issued action channel: CLOSE / REDUCE a named ticket's open position
+    // (operator 2026-11-09: "the system must be able to take whatever actions necessary to ensure smooth autonomous
+    // operation"). Precision, not prohibition: Positions is read first and EXACTLY ONE row for the symbol must exist
+    // (none -> not_found, several -> ambiguous: re-read and retried with backoff, never a silent no-op, never a halt);
+    // a full close then runs the position sheet's own Close position flow (drillCloseTest: sheet, Close position,
+    // its confirmation, Positions re-read until the row is gone). A REDUCE needs the close dialog's quantity input,
+    // which no capture has shown: it opens the dialog, captures it, dismisses it and reports failed (measure first).
+    private suspend fun closeResult(t: JSONObject, result: String, why: String, cap: CaptureRun? = null) {
+        api.post("report", JSONObject().put("kind", "close_result").put("ticket_id", t.optString("ticket_id"))
+            .put("close_id", t.optString("close_id")).put("result", result).put("reason", why.take(280))
+            .put("capture_run", cap?.takeIf { it.posted > 0 }?.id ?: ""))
+        setStatus("${t.optString("action")} ${t.optString("close_id")}: $result ($why)".take(160))
+    }
+
+    private suspend fun executeClose(t: JSONObject) {
+        val xid = t.getString("close_id")
+        if (ledger.seen(xid)) return closeResult(t, "failed", "ledger already holds this request")
+        ledger.append(xid, "intended")
+        val live = t.optString("submit") == "live"
+        val spec = t.optJSONObject("spec")
+        val venue = spec?.optString("venue_symbol") ?: ""
+        if (spec == null || venue.isEmpty()) { ledger.append(xid, "refused"); return closeResult(t, "failed", "request carries no venue symbol") }
+        val baseSym = venue.uppercase().replace(Regex("(USD[TC]?|PERP)$"), "")
+        val reduce = t.optString("action") == "reduce"
+        val cap = CaptureRun("cancel", xid)
+        setStatus("${t.optString("action")} $xid: ${if (live) "LIVE" else "DRY"} $venue (${t.optString("reason")})")
+        if ((jsObj("__ex.modalsOpen()")?.optInt("n") ?: 0) > 0) { dismissModal(cur); ensure() }
+        // 1. Positions: exactly one row for the symbol
+        js("__ex.clickText('^positions$')"); delay(1500); ensure()
+        val p0 = jsObj("__ex.positionsRead()")
+        val rs0 = p0?.optJSONArray("rows") ?: JSONArray()
+        val n0 = (0 until rs0.length()).count { k ->
+            val s = rs0.optJSONObject(k)?.optString("symbol")?.uppercase() ?: ""
+            s.isNotEmpty() && (s.contains(venue.uppercase()) || (baseSym.isNotEmpty() && s.contains(baseSym)))
+        }
+        cap(cap, cur, "positions_read", p0?.optString("state") == "read", "state ${p0?.optString("state")} rows for symbol $n0")
+        if (p0?.optString("state") != "read") { ledger.append(xid, "refused"); return closeResult(t, "ambiguous", "Positions unread (${p0?.optString("state")}); nothing clicked", cap) }
+        if (n0 == 0) { ledger.append(xid, "not_found"); return closeResult(t, "not_found", "Positions read; no row for $venue", cap) }
+        if (n0 > 1) { ledger.append(xid, "refused"); return closeResult(t, "ambiguous", "$n0 Positions rows for $venue; nothing clicked", cap) }
+        if (!live) { ledger.append(xid, "refused"); return closeResult(t, "failed", "dry: one position row matched; nothing clicked", cap) }
+        if (reduce) {
+            // measure the close dialog (its quantity input is unmeasured): open it, capture it, dismiss it, change nothing
+            ledger.append(xid, "refused")
+            if (jsObj("__ex.sheetInfo(${q(venue)})")?.optBoolean("open") != true) {
+                val sd = sheetRead(cur, venue, cap)
+                if (!sd.optBoolean("ok")) return closeResult(t, "failed", "reduce: sheet not open (${sd.optString("why")})", cap)
+            }
+            cur.js("__ex.sheetTab('details')"); delay(600); ensure()
+            js("__ex.allowClose(${q(venue)})")
+            val r = js("__ex.sheetClosePosition(${q(venue)})"); delay(1200); ensure()
+            val dg = jsObj("__ex.dialog()")
+            cap(cap, cur, "reduce_dialog", null, "$r ${dg?.optString("text")?.take(120) ?: "no dialog"} ${dg?.optJSONArray("buttons") ?: ""}")
+            val dm = dismissModal(cur)
+            return closeResult(t, "failed", "reduce: the close dialog's quantity input is unmeasured; dialog captured and dismissed ($r; $dm); position unchanged", cap)
+        }
+        // 2. the full close, journaled BEFORE the click
+        ledger.append(xid, "submitted")
+        val r = drillCloseTest(venue, baseSym, cap)
+        cap(cap, cur, "close_result", r == "closed", r)
+        when {
+            r == "closed" -> { ledger.append(xid, "done"); closeResult(t, "done", "position sheet Close position confirmed; Positions re-read: no $venue row", cap) }
+            r == "still_open" -> { ledger.append(xid, "unconfirmed"); closeResult(t, "failed", "close clicked but a $venue row is still on Positions", cap) }
+            else -> { ledger.append(xid, "refused"); closeResult(t, "ambiguous", "close not completed ($r); the next attempt re-reads", cap) }
+        }
+    }
+
     private suspend fun executeAmend(t: JSONObject, cfg: JSONObject) {
         val aid = t.getString("amend_id")
         if (ledger.seen(aid)) return amendResult(t, "refused", "ledger already holds this amend", null, null, null)
@@ -1452,8 +1617,13 @@ class MainActivity : Activity() {
         // the sheet's pencil / Confirm gate is the SERVER's claim config (PHONE-EXEC-OBSERVABLE-1018), never a build constant
         val sheetEdit = cfg.optBoolean("sheet_edit", false)
         val tpChange = !tp.isNaN() && !(!fromTp.isNaN() && close(tp, fromTp, pStep))
-        // never loosen: the trail only tightens; a TP revision carries the SL unchanged
-        if (if (long) sl < fromSl - pStep / 2 else sl > fromSl + pStep / 2) return amendRefuse(t, "amend would loosen the stop", null)
+        // INTENT-BOUND (operator 2026-11-09 ~08:22Z, verbatim: "I never directed there to be a forbidden actions list, nor
+        // do I want one - the system must be able to take whatever actions necessary to ensure smooth autonomous
+        // operation"). A wider stop is applied when the SERVER declares it (action widen_sl / widen=true, e.g. a reviewed
+        // widen bounded by the account's RiskManager, widen_within_1r). A trail or TP amend that would loosen the stop
+        // did not ask for a widen, so it is reported as a mismatch rather than applied (precision, not a prohibition).
+        val widen = t.optString("action").lowercase() == "widen_sl" || t.optBoolean("widen", false)
+        if (!widen && (if (long) sl < fromSl - pStep / 2 else sl > fromSl + pStep / 2)) return amendRefuse(t, "amend would loosen the stop but did not declare widen_sl", null)
         setStatus("amend $aid: ${if (live) "LIVE" else "DRY"} $venue SL ${fmt(fromSl, pStep)} -> ${fmt(sl, pStep)}${if (tpChange) " TP -> ${fmt(tp, pStep)}" else ""}")
         // 1. the position row
         js("__ex.clickText('^positions$')"); delay(1500); ensure()

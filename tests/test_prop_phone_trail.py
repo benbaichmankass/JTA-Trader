@@ -727,3 +727,39 @@ def test_gated_plans_do_not_consume_the_exec_js_waiver(_iso, monkeypatch):
     monkeypatch.setattr(ptr, "_sheet_edit_gate", lambda acct: {"enabled": True, "source": "drills", "passes": 3, "needed": 3})
     out = ptr.plan_amends("breakout_2", now=NOW + timedelta(hours=3, minutes=5), candles_fn=lambda s, tf: later)
     assert out["emitted"] == ["T1#a3"] and _trail()["backoff"]["exec_js"] == "2026-10-18.4"
+
+
+def test_a_declared_widen_is_emitted_and_served_with_its_intent():
+    """Operator 2026-11-09: a reviewed widen_sl reaches the phone declared, so the app applies a looser stop."""
+    _parent()                                           # long, entry 2500, resting SL 2450
+    r = ptr.request_sl_widen("breakout_2", "T1", 2400.0, reason="r", review_id="R1", now=NOW)
+    assert r["ok"] and r["sl"] == 2400.0
+    am = _trail()["amend"]
+    assert am["kind"] == "sl" and am["widen"] is True and am["action"] == "widen_sl" and am["from_sl"] == 2450.0
+    got = ptr.claim_amend(_dev(), now=NOW)
+    assert got["action"] == "widen_sl" and got["widen"] is True and got["sl"] == 2400.0 and got["from_sl"] == 2450.0
+
+
+def test_a_widen_must_loosen_and_never_duplicates():
+    _parent()
+    assert not ptr.request_sl_widen("breakout_2", "T1", 2460.0, reason="r", review_id="R1", now=NOW)["ok"]   # tighter
+    assert ptr.request_sl_widen("breakout_2", "T1", 2400.0, reason="r", review_id="R1", now=NOW)["ok"]
+    assert "outstanding" in ptr.request_sl_widen("breakout_2", "T1", 2380.0, reason="r", review_id="R2", now=NOW)["why"]
+
+
+def test_an_ordinary_trail_amend_carries_no_widen_declaration():
+    _parent()
+    ptr.plan_amends("breakout_2", now=NOW, candles_fn=lambda s, tf: UP)
+    got = ptr.claim_amend(_dev(), now=NOW)
+    assert got["widen"] is False and not got["action"]
+
+
+def test_live_review_widen_reaches_the_phone():
+    from scripts.ops import live_review_apply as lra
+    from src.runtime import live_review_intent as lri
+    assert "widen_sl" in lra.ACTION_PATHS["phone"]
+    _parent()
+    intent = type("I", (), {"mandate": "MD-TRADE-DESK", "review_id": "R9"})()
+    v = lri.AmendVerdict("breakout_2", lri.V_APPROVE, 2400.0, "within_bounds")
+    out = lra._exec_phone_sl_widen({"row": prop_journal.get_ticket("T1")}, v, intent)
+    assert out["result"] == lra.X_APPLIED and out["sl"] == 2400.0

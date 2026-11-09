@@ -918,6 +918,13 @@ document.getElementById('mok').onclick=function(){window.__saved++;document.getE
     ["deny_close_position", "deny_glyph", "deny_glyph", 0], "denylist: safeClick refuses all three, nothing clicked");
   const dn = await onHost(`<!doctype html><html><body><button id=a aria-label="Cancel order"><svg></svg></button><button id=b title="Close"></button><button id=c><svg><title>remove</title></svg></button><button id=d class="btn-close-icon"></button><button id=e>Confirm</button><button id=f aria-label="Edit">✎</button></body></html>`);
   eq(await dn.evaluate("['#a','#b','#c','#d','#e','#f'].map(function(s){return __ex.deniedSel(s)})"), ["deny_word", "deny_word", "deny_word", "deny_word", "", ""], "denylist: cancel/close/remove words in aria, title, svg title and class are refused; Confirm and Edit are not");
+  // INTENT-BOUND (operator 2026-11-09, no forbidden actions): the same controls are clicked when the caller DECLARES the
+  // matching action; a mismatched intent still does not click (precision), and no intent still does not click
+  eq(await ev("__ex.deniedSel('#pd > button', 'close_position')"), "", "intent close_position: 'Close position' is the target");
+  eq(await ev("__ex.deniedSel('#slrow [data-danger]', 'cancel_order')"), "", "intent cancel_order: the SL row's ⓧ is the target");
+  eq(await ev("__ex.deniedSel('#pd > button', 'cancel_order')"), "deny_close_position", "intent cancel_order: 'Close position' is not a cancel control");
+  eq(await dn.evaluate("__ex.deniedSel('#a', 'cancel_order')"), "", "intent cancel_order: 'Cancel order' word control is the target");
+  eq(await dn.evaluate("__ex.deniedSel('#a', 'close_position')"), "deny_word", "intent close_position: 'Cancel order' is not a close control");
   // 1. the CHILD row opens the sheet (never the ✕); the sheet's title is the symbol
   eq(await ev("__ex.sheetInfo('ETHUSD').open"), false, "sheet: closed at start");
   eq(await ev("__ex.sheetOpen('ETHUSD','child')"), "clicked", "sheet: the child row 'ETH 5x' tapped");
@@ -1142,5 +1149,64 @@ document.getElementById('mok').onclick=function(){window.__saved++;document.getE
   await tc.evaluate("__ex.allowClose('ETHUSD')");
   eq([await tc.evaluate("__ex.sheetClosePosition('ETHUSD')"), await tc.evaluate("window.__danger")], ["clicked", 1], "test close: armed for the sheet's symbol -> the ONE Close position button is clicked");
   eq(await tc.evaluate("__ex.sheetClosePosition('ETHUSD')"), "not_armed", "test close: one arm, one click");
+
+  // ENTRY-ORDER CANCEL (PHONE-ENTRY-CANCEL): a SYNTHETIC Open-orders panel. Breakout's real one has never been captured
+  // (no row, cancel control or confirmation DOM exists), so this proves the matcher / refusal MECHANICS only; the first
+  // live cancel is the measurement (the app captures the panel at every step).
+  const SPEC = { venue_symbol: "ETHUSD", side: "sell", qty: 0.3936, price: 2193.86, price_step: 0.01 };
+  const ordersPage = (rows, extra) => `<!doctype html><html><body><div><button>Positions</button><button>Open orders</button></div>
+    <div id=panel>${rows}</div><div id=ov></div><script>
+    window.__c = []; document.addEventListener("click", (e) => { const b = e.target.closest("[data-act]"); if (b) { window.__c.push(b.dataset.act);
+      if (b.dataset.act === "cancel") document.getElementById("ov").innerHTML = ${JSON.stringify(extra || '<div role=dialog><p>Cancel this order?</p><button data-act=dismiss>Cancel</button><button data-act=confirm>Confirm</button></div>')}; } });
+    </script></body></html>`;
+  const row = (sym, side, typ, qty, px, ctls) => `<div class=r><span>${sym}</span><span>${side}</span><span>${typ}</span><span>${qty}</span><span>${px}</span>${ctls === undefined ? '<button aria-label="Edit order" data-act=edit>E</button><button aria-label="Cancel order" data-act=cancel>x</button>' : ctls}</div>`;
+  const good = row("ETH", "Sell", "Limit", "0.3936", "2,193.86");
+  const legs = row("ETH", "Buy", "Stop", "0.3936", "2,260.00") + row("SOL", "Sell", "Limit", "6.82", "87.64");
+  const cp = await onHost(ordersPage(good + legs));
+  let rd = await cp.evaluate((sp) => __ex.ordersRead(sp), SPEC);
+  eq([rd.state, rd.match, rd.controls], ["read", 1, 1], "cancel: the ONE row matching symbol+side+qty+price, with its ONE cancel control");
+  eq(await cp.evaluate("window.__c.length"), 0, "cancel: reading clicks nothing");
+  eq(await cp.evaluate((sp) => __ex.orderCancelClick(sp), SPEC), "cancel_clicked", "cancel: the cancel control of that row is clicked");
+  eq(await cp.evaluate("window.__c"), ["cancel"], "cancel: only the cancel control was clicked (never the edit control)");
+  eq(await cp.evaluate((sp) => __ex.orderCancelClick(sp), SPEC), "overlay_already_open", "cancel: no second click while the confirmation is open");
+  eq(await cp.evaluate("__ex.cancelConfirm()"), "confirm_clicked", "cancel: the ANCHORED confirm is pressed");
+  eq(await cp.evaluate("window.__c"), ["cancel", "confirm"], "cancel: confirm pressed, the dialog's bare Cancel dismiss never");
+  for (const [name, html, want] of [
+    ["two identical resting rows -> ambiguous", good + good, "rows_2"],
+    ["a different quantity (partial remainder)", row("ETH", "Sell", "Limit", "0.2", "2,193.86"), "rows_0"],
+    ["a different limit price", row("ETH", "Sell", "Limit", "0.3936", "2,200.00"), "rows_0"],
+    ["the opposite side", row("ETH", "Buy", "Limit", "0.3936", "2,193.86"), "rows_0"],
+    ["a stop leg with the same numbers is never an entry", row("ETH", "Sell", "Stop", "0.3936", "2,193.86"), "rows_0"],
+    ["two cancel-type controls in the row", row("ETH", "Sell", "Limit", "0.3936", "2,193.86", '<button aria-label="Cancel order" data-act=cancel>x</button><button aria-label="Remove" data-act=cancel>y</button>'), "controls_2"],
+    ["no cancel-type control in the row", row("ETH", "Sell", "Limit", "0.3936", "2,193.86", '<button aria-label="Edit order" data-act=edit>E</button>'), "controls_0"],
+    ["a control that names the position is never a cancel", row("ETH", "Sell", "Limit", "0.3936", "2,193.86", '<button aria-label="Close position" data-act=close>x</button>'), "controls_0"],
+  ]) {
+    const pg = await onHost(ordersPage(html));
+    eq([await pg.evaluate((sp) => __ex.orderCancelClick(sp), SPEC), await pg.evaluate("window.__c.length")], [want, 0], "cancel refuses, clicks nothing: " + name);
+    await pg.close();
+  }
+  const pEmpty = await onHost(ordersPage('<div>No open orders</div>'));
+  rd = await pEmpty.evaluate((sp) => __ex.ordersRead(sp), SPEC);
+  eq([rd.state, rd.empty, rd.match], ["read", true, 0], "cancel: the empty list is a positive read (not_found is then a real answer)");
+  const pUnread = await onHost(ordersPage('<div>Loading</div>'));
+  rd = await pUnread.evaluate((sp) => __ex.ordersRead(sp), SPEC);
+  eq([rd.state, rd.match], ["unread", 0], "cancel: a page that shows no list is UNREAD, never 'not found'");
+  const pOth = await onHost(ordersPage(row("SOL", "Sell", "Limit", "6.82", "87.64")));
+  eq((await pOth.evaluate((sp) => __ex.ordersRead(sp), SPEC)).state, "read", "cancel: other orders listed and none matching is a positive read");
+  for (const [name, ov, want] of [
+    ["an overlay that does not say cancel", '<div role=dialog><p>Are you sure?</p><button data-act=confirm>Confirm</button></div>', "not_cancel"],
+    ["an overlay that names a position", '<div role=dialog><p>Cancel and close position?</p><button data-act=confirm>Confirm</button></div>', "bad_overlay"],
+    ["only a bare Cancel button", '<div role=dialog><p>Cancel this order?</p><button data-act=dismiss>Cancel</button></div>', "confirm_0"],
+    ["two confirm buttons", '<div role=dialog><p>Cancel this order?</p><button data-act=a>Confirm</button><button data-act=b>OK</button></div>', "confirm_2"],
+    ["two dialogs", '<div role=dialog><p>Cancel?</p><button>OK</button></div><div role=alertdialog><p>Cancel?</p><button>OK</button></div>', "overlays_2"],
+  ]) {
+    const pg = await onHost(ordersPage(good, ov));
+    await pg.evaluate((sp) => __ex.orderCancelClick(sp), SPEC);
+    eq([await pg.evaluate("__ex.cancelConfirm()"), await pg.evaluate("window.__c.filter((a) => a !== 'cancel').length")], [want, 0], "confirm refuses, presses nothing: " + name);
+    await pg.close();
+  }
+  const pPos = await onHost(sheetPage().replace("</body>", good + "</body>"));
+  eq(await pPos.evaluate((sp) => __ex.orderCancelClick(sp), SPEC), "positions_grid_showing", "cancel: nothing is read or clicked while the Positions grid is on screen");
+  eq(["/close|cancel|remove|delete|flatten|reverse|liquidat|discard/i", "/close|flatten|reverse|cancel|remove|delete|partial/i"].every((r) => src.includes(r.slice(1, -2))), true, "the destructive-control classifier (DENY_WORDS) and the amend-control selector (NOT_EDIT) are unchanged: they pick the control an action means; whether one is clicked is decided by the declared intent (operator 2026-11-09), covered by the intent cases above");
   await b.close(); console.log("exec_check: all passed");
 })().catch((e) => { console.error(e); process.exit(1); });

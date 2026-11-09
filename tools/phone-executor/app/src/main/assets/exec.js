@@ -6,7 +6,7 @@
   // PHONE-EXEC-OBSERVABLE-1018: this file is also served SIGNED by our own API and swapped in at runtime
   // (RemoteJs.kt): a newer version replaces the installed helpers on the next ensure(); the same version is
   // never injected twice. Bump on every change (CI signs the file; the app pins by version).
-  var EXEC_VERSION = "2026-11-08.1";
+  var EXEC_VERSION = "2026-11-09.1";
   if (window.__ex && window.__ex.version === EXEC_VERSION) return;
   function hostOk() { return /(^|\.)breakoutprop\.com$/.test(location.hostname || ""); }
   function vis(el) { if (!el) return false; var r = el.getBoundingClientRect(); return r.width > 0 && r.height > 0; }
@@ -237,6 +237,8 @@
   // UNMEASURED on Breakout's terminal: no capture has shown the Positions row's edit control or its dialog. So every
   // helper finds things by text/label/role only, demands exactly ONE match, and returns a dump (our own UI labels,
   // digits masked) when it cannot; the app refuses before any click it cannot verify. Never a close control.
+  // NOT_EDIT is control SELECTION for an amend (an edit control is not a close/cancel control), not a prohibition:
+  // close / cancel / reduce are their own declared intents (see INTENT-BOUND CLICKS, operator 2026-11-09).
   var NOT_EDIT = /close|flatten|reverse|cancel|remove|delete|partial/i;
   // BREAKOUT-POS-UNPARSED (2026-10-14): the live Positions view is a DIV GRID (no tr / [role=row]), so posRows found
   // nothing and every trail amend reported no_position while the ETH short was open. With no table row, the ONE
@@ -691,6 +693,52 @@
   }
   function sig(s) { var h = 5381; for (var i = 0; i < s.length; i++) h = ((h * 33) ^ s.charCodeAt(i)) >>> 0; return h.toString(36); }
 
+
+  // ---- ENTRY-ORDER CANCEL (PHONE-ENTRY-CANCEL, operator 2026-11-09): withdraw ONE stale resting ENTRY order the server
+  // issued. Other closes / cancels are their own declared intents (INTENT-BOUND CLICKS below, operator 2026-11-09); this
+  // block clicks nothing but a cancel control inside the ONE Open-orders row that matches the
+  // request's facts (venue symbol + side + quantity + limit price). UNMEASURED on Breakout: no capture has shown the
+  // Open orders panel, its row, its cancel control or a confirmation, so every read demands exactly one match and
+  // answers a short digit-masked reason otherwise; the app then does NOTHING (ambiguous) and captures the panel.
+  var CANCEL_CTL = /cancel|remove|delete|trash|close|[×✕✖Ⓧ⊗]/i;
+  var CANCEL_NOT = /position|flatten|reverse|liquidat|edit|modify|amend|pencil|tp\s*\/\s*sl|protection/i;
+  var CANCEL_CONFIRM = /^(confirm|ok|yes|yes, cancel|cancel order|yes, cancel order)$/i;
+  var CANCEL_BAD_OVERLAY = /position|flatten|reverse|liquidat|close all|cancel all/i;
+  // a row's text as its visible LEAF texts joined by spaces: inline cells with no whitespace between them must not glue
+  // their numbers together ("0.3936" + "2,193.86"), which innerText does
+  function rowText(e) {
+    var out = []; Array.prototype.slice.call(e.querySelectorAll("*")).forEach(function (x) { if (!x.children.length && vis(x)) { var s = t(x); if (s) out.push(s); } });
+    return out.length ? out.join(" ") : t(e);
+  }
+  function nums(s) { return (String(s || "").match(/\d[\d,]*\.?\d*/g) || []).map(function (x) { return parseFloat(x.replace(/,/g, "")); }).filter(function (v) { return isFinite(v); }); }
+  function sideWords(side) { return side === "buy" ? [/\b(buy|long)\b/i, /\b(sell|short)\b/i] : [/\b(sell|short)\b/i, /\b(buy|long)\b/i]; }
+  function hasNum(list, want, tol) { return list.some(function (v) { return Math.abs(v - want) <= tol; }); }
+  // the Open-orders rows that carry ALL of the request's facts: the innermost visible elements whose own text names the
+  // base asset and the entry side (and not the other), holds the quantity and the limit price, is no stop / take-profit
+  // leg (a stop or take-profit word without "limit"), is outside the order form, and holds at least one control.
+  function entryRows(spec) {
+    var b = base(spec.venue_symbol), sw = sideWords(spec.side), qtol = Math.max(1e-9, spec.qty * 1e-3);
+    var ptol = spec.price_step ? spec.price_step * 0.51 : spec.price * 1e-4;
+    var c = all("div,li,tr,[role=row],section,article").filter(function (e) {
+      var s = rowText(e); if (!s || s.length > 220 || inForm(e)) return false;
+      if (norm(s).indexOf(b) < 0 || !sw[0].test(s) || sw[1].test(s)) return false;
+      if (/\bstop\b|take.?profit/i.test(s) && !/\blimit\b/i.test(s)) return false;
+      var n = nums(s); return hasNum(n, spec.qty, qtol) && hasNum(n, spec.price, ptol) && rowCtls(e).length > 0;
+    });
+    return innermost(c);
+  }
+  // the positions grid is on screen: the Open orders view is NOT the one shown, so nothing is read or clicked
+  function positionsShown() { try { return gridHeaders(POS_COLS).length > 0; } catch (e) { return false; } }
+  // every control of the row, as a masked dump for a refusal / capture
+  function cancelCtlDump(row) { return rowCtls(row).map(function (x) { return ctlWords(x).replace(/\d/g, "#").slice(0, 60); }).slice(0, 8); }
+  function cancelCtls(row) {
+    return rowCtls(row).filter(function (x) {
+      var w = ctlWords(x), tx = t(x);
+      return (CANCEL_CTL.test(w) || DENY_GLYPH.test(tx) || DENY_GLYPH.test((x.getAttribute("aria-label") || "").trim())) && !CANCEL_NOT.test(w);
+    });
+  }
+  function overlayRoots() { return all("[role=dialog],[role=alertdialog],[aria-modal=true]").filter(function (d) { return !/^order (submitted|placed|created)\b/i.test(t(d)); }); }
+
   // ---- POSITION SHEET (BREAKOUT-SL-AMEND-CLICK, 2026-10-14). The flow is operator-MEASURED from screenshots (~21:41Z,
   // phone width); its DOM is NOT measured yet, so every helper finds things by visible text / attribute words, demands
   // exactly ONE match and otherwise returns a digit-masked dump. Tapping the Positions row opens a bottom sheet titled
@@ -698,10 +746,16 @@
   // Position details: Side "Short", "Total open volume" 0.54 ETH, "Avg. opening price", "Current price", "uPnL", and a
   // RED "Close position" button. [1 TP / 1 SL]: SIDE | TYPE | TRIGGER PRICE rows ("Long | Stop l… | 2,504.25 USD | ✎ |
   // ⓧ"): that SIDE is the CLOSING order's side, never the position's. ✎ opens "Edit Stop loss"; ⓧ CANCELS the order.
-  // DENYLIST: every click goes through safeClick, which refuses "Close position", any control whose words say
-  // close / cancel / remove / delete / flatten / reverse, and the ⓧ ✕ × glyph icons (a Positions row's ✕ closes the
-  // position; an order row's ⓧ cancels the stop). The two dismissals (the modal's "Cancel" text button, the sheet's
-  // header ✕) are separate, narrower paths: dlgDismiss / sheetCloseX.
+  // INTENT-BOUND CLICKS (operator 2026-11-09 ~08:22Z, verbatim: "I never directed there to be a forbidden actions
+  // list, nor do I want one - the system must be able to take whatever actions necessary to ensure smooth autonomous
+  // operation"). This replaces the former deny-list (NOT_EDIT #16980 2026-10-08, DENY_WORDS/DENY_GLYPH #18114
+  // 2026-10-15, both session-authored, never operator-directed). Every click still goes through safeClick/safeTap, but
+  // a destructive control (close / cancel / remove / delete / flatten / reverse, "Close position", the ⓧ ✕ × glyphs)
+  // is now clicked whenever the caller DECLARES that action as its intent (cancel_order, close_position, reduce) and
+  // the control matches that intent. Without an intent (a place or amend flow) such a control is not the target, so it
+  // is reported as a mismatch rather than clicked: that is precision (click what the action means), not a prohibition.
+  // The two dismissals (the modal's "Cancel" text button, the sheet's header ✕) stay separate paths: dlgDismiss /
+  // sheetCloseX.
   var DENY_WORDS = /close|cancel|remove|delete|flatten|reverse|liquidat|discard/i;
   var DENY_GLYPH = /^[✕✖✗✘×ⓧ⊗⊘❌❎⨯☒xX]$/;
   var PENCIL_GLYPH = /^[✎✏✐\u{1f589}\u{1f58a}\u{1f58b}]$/u;
@@ -717,18 +771,25 @@
   }
   // why a control must never be clicked, or null. Words are matched in text AND attributes (class names included), so
   // a false refusal ("closeable") is possible and safe; a missed ✕ is not.
-  function denied(x) {
+  // does a destructive control match the action the caller declared? (operator 2026-11-09: no forbidden actions)
+  var INTENT_OK = {
+    cancel_order: function (w, txt) { return !/close\s*position/i.test(txt) && !/\bposition\b|flatten|reverse|liquidat/i.test(w); },
+    close_position: function (w, txt) { return !/cancel\s*order|reverse/i.test(w + " " + txt); },
+    reduce: function (w, txt) { return !/cancel\s*order|reverse/i.test(w + " " + txt); }
+  };
+  function denied(x, intent) {
     if (!x || !x.getAttribute) return "none";
-    var txt = t(x);
-    if (/close\s*position/i.test(txt)) return "deny_close_position";
-    if (DENY_GLYPH.test(txt) || DENY_GLYPH.test((x.getAttribute("aria-label") || "").trim())) return "deny_glyph";
-    if (DENY_WORDS.test(ctlWords(x))) return "deny_word";
-    return null;
+    var txt = t(x), hit = null;
+    if (/close\s*position/i.test(txt)) hit = "deny_close_position";
+    else if (DENY_GLYPH.test(txt) || DENY_GLYPH.test((x.getAttribute("aria-label") || "").trim())) hit = "deny_glyph";
+    else if (DENY_WORDS.test(ctlWords(x))) hit = "deny_word";
+    if (hit && intent && INTENT_OK[intent] && INTENT_OK[intent](ctlWords(x), txt)) return null;   // the declared action
+    return hit;
   }
-  function safeClick(x) { var d = denied(x); if (d) return d; x.click(); return "clicked"; }
+  function safeClick(x, intent) { var d = denied(x, intent); if (d) return d; x.click(); return "clicked"; }
   // a touch-style tap at the element's centre: pointer + mouse down/up, then click (BREAKOUT-SHEET-PROBE)
-  function safeTap(x) {
-    var d = denied(x); if (d) return d;
+  function safeTap(x, intent) {
+    var d = denied(x, intent); if (d) return d;
     var r = x.getBoundingClientRect(), o = {bubbles: true, cancelable: true, clientX: r.left + r.width / 2, clientY: r.top + r.height / 2, button: 0};
     var P = typeof PointerEvent === "function" ? PointerEvent : MouseEvent;
     x.dispatchEvent(new P("pointerdown", Object.assign({pointerType: "touch", isPrimary: true, pointerId: 1}, o)));
@@ -1791,6 +1852,59 @@
       var b = Array.prototype.slice.call(d.querySelectorAll("button")).filter(function (x) { return vis(x) && rx.test(t(x)); })[0];
       if (!b) return "none"; b.click(); return "clicked";
     },
+    // PHONE-ENTRY-CANCEL read: is the Open orders view showing, and which rows carry the request's facts?
+    // state: read (>= 1 order-like row or the empty text seen, so "no match" is a real answer) | unread (nothing proves
+    // the view was read, or the positions grid is showing). match = rows carrying every fact; controls = cancel-type
+    // controls in the ONE matching row. Never clicks.
+    ordersRead: function (spec) {
+      if (!hostOk() || !spec || !spec.venue_symbol || !spec.qty || !spec.price) return {state: "unread", why: "bad_args"};
+      if (positionsShown()) return {state: "unread", why: "positions_grid_showing"};
+      var rs = entryRows(spec), empty = all("div,span,p").some(function (e) { return !e.children.length && /^no\b[^.]{0,24}\borders?\b/i.test(t(e)); });
+      var any = rs.length > 0 || all("div,li,tr,[role=row]").some(function (e) {
+        var s = rowText(e); return s && s.length <= 220 && /\b(buy|sell|long|short)\b/i.test(s) && /\b(limit|market|stop)\b/i.test(s) && nums(s).length >= 2 && !inForm(e);
+      });
+      var out = {state: (empty || any) ? "read" : "unread", empty: empty, match: rs.length};
+      if (rs.length === 1) { out.controls = cancelCtls(rs[0]).length; out.ctls = cancelCtlDump(rs[0]); }
+      return out;
+    },
+    // click the ONE cancel control of the ONE matching row. cancel_clicked | tap_clicked | <why it did not>.
+    // mode "tap" dispatches a touch-style pointer sequence at the control's centre instead of click().
+    orderCancelClick: function (spec, mode) {
+      if (!hostOk() || !spec || !spec.venue_symbol || !spec.qty || !spec.price) return "bad_args";
+      if (positionsShown()) return "positions_grid_showing";
+      if (overlayRoots().length) return "overlay_already_open";
+      var rs = entryRows(spec); if (rs.length !== 1) return "rows_" + rs.length;
+      var cs = cancelCtls(rs[0]); if (cs.length !== 1) return "controls_" + cs.length;
+      var x = cs[0]; if (!vis(x)) return "control_hidden";
+      if (mode === "tap") {
+        var r = x.getBoundingClientRect(), o = {bubbles: true, cancelable: true, clientX: r.left + r.width / 2, clientY: r.top + r.height / 2, button: 0};
+        var P = typeof PointerEvent === "function" ? PointerEvent : MouseEvent;
+        x.dispatchEvent(new P("pointerdown", Object.assign({pointerType: "touch", isPrimary: true, pointerId: 1}, o)));
+        x.dispatchEvent(new MouseEvent("mousedown", o));
+        x.dispatchEvent(new P("pointerup", Object.assign({pointerType: "touch", isPrimary: true, pointerId: 1}, o)));
+        x.dispatchEvent(new MouseEvent("mouseup", o)); x.dispatchEvent(new MouseEvent("click", o));
+        return "tap_clicked";
+      }
+      x.click(); return "cancel_clicked";
+    },
+    // what the click PRODUCED: the open dialogs (not the "Order submitted" toast) with their masked text and buttons
+    cancelOverlay: function () {
+      var rs = overlayRoots();
+      return {n: rs.length, text: rs.map(function (d) { return t(d).replace(/\d/g, "#").slice(0, 160); }),
+        buttons: rs.map(function (d) { return Array.prototype.slice.call(d.querySelectorAll("button,[role=button]")).filter(vis).map(function (b) { return t(b).slice(0, 30); }); })};
+    },
+    // press ONLY an anchored confirm, and only when exactly ONE overlay is open, its text says "cancel", it does not
+    // mention a position / close-all / flatten, and exactly one of its buttons is an anchored confirm label.
+    // confirm_clicked | no_overlay | overlays_<n> | not_cancel | bad_overlay | confirm_<n>
+    cancelConfirm: function () {
+      if (!hostOk()) return "bad_host";
+      var rs = overlayRoots(); if (!rs.length) return "no_overlay"; if (rs.length > 1) return "overlays_" + rs.length;
+      var d = rs[0], s = t(d);
+      if (!/\bcancel/i.test(s)) return "not_cancel"; if (CANCEL_BAD_OVERLAY.test(s)) return "bad_overlay";
+      var bs = Array.prototype.slice.call(d.querySelectorAll("button,[role=button]")).filter(function (b) { return vis(b) && CANCEL_CONFIRM.test(t(b).trim()); });
+      if (bs.length !== 1) return "confirm_" + bs.length;
+      bs[0].click(); return "confirm_clicked";
+    },
     // Rows of the currently shown table-like list (Positions / Open orders): visible text per row.
     // PHONE-EXECUTOR-ANOMALY (2026-11-08): the new layout has NO tr / [role=row] anywhere, so this read is empty on both
     // Open orders and Positions (both are div grids). After a submit the venue's own role=alertdialog toast ("Order
@@ -2139,8 +2253,8 @@
       c[0].click(); return "clicked";
     },
     // the denylist, exposed for the test: why `sel`'s ONE element must never be clicked, or "" when it may be
-    deniedSel: function (sel) { var e = document.querySelectorAll(sel); return e.length === 1 ? (denied(e[0]) || "") : "n" + e.length; },
-    safeClickSel: function (sel) { var e = document.querySelectorAll(sel); return e.length === 1 ? safeClick(e[0]) : "n" + e.length; },
+    deniedSel: function (sel, intent) { var e = document.querySelectorAll(sel); return e.length === 1 ? (denied(e[0], intent) || "") : "n" + e.length; },
+    safeClickSel: function (sel, intent) { var e = document.querySelectorAll(sel); return e.length === 1 ? safeClick(e[0], intent) : "n" + e.length; },
     // TEST-TRADE CLOSE (MD-EXEC-DEV-TEST-TRADES, operator grant 2026-10-18): the ONE deliberate exception to the denylist.
     // The app arms it for exactly one symbol right before the click (allowClose); sheetClosePosition then clicks the
     // open sheet's ONE "Close position" text button only if that sheet is titled with the armed symbol. The arm is

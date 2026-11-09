@@ -41,7 +41,8 @@ def _run(db, w, intent):
 def test_the_cell_table():
     assert lra.ACTION_PATHS["alpaca"] == frozenset({"close", "move_tp"})
     assert lra.ACTION_PATHS["bybit"] == frozenset({"close", "reduce", "move_tp", "widen_sl"})
-    assert lra.ACTION_PATHS["phone"] == frozenset({"move_tp"})
+    # phone: the amend channel (move_tp, widen_sl) plus the server-issued action channel (close, reduce), operator 2026-11-09
+    assert lra.ACTION_PATHS["phone"] == frozenset({"move_tp", "close", "reduce", "widen_sl"})
     assert lra.ACTION_PATHS["prop_vm"] == frozenset() and lra.ACTION_PATHS["other"] == frozenset()
     assert lra.close_reason_for(DESK_PKG) == "strategy_close"
     assert lra.close_reason_for(tla.PKG) == lra.LIVE_REVIEW_CLOSE

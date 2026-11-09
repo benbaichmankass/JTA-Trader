@@ -1,0 +1,5 @@
+{"checks": [
+  {"call": "__ex.cancelOverlay().n", "expect": 0, "note": "PHONE-ENTRY-CANCEL: the REAL 'Order submitted' toast (role=alertdialog) is not a cancel confirmation overlay"},
+  {"call": "__ex.cancelConfirm()", "expect": "no_overlay", "note": "the toast is never pressed as a confirm"},
+  {"call": "__ex.orderCancelClick({venue_symbol:'ETHUSD',side:'sell',qty:0.3936,price:2193.86,price_step:0.01})", "expect": "rows_0", "note": "the order FORM and toast carry the symbol, side and numbers: still never an Open orders row (rows inside the form are excluded)"}
+]}

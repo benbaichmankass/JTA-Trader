@@ -656,6 +656,60 @@ def request_sl_tighten(account_id: str, ticket_id: str, sl: float, *, reason: st
         conn.close()
 
 
+def request_sl_widen(account_id: str, ticket_id: str, sl: float, *, reason: str, review_id: str,
+                     now: Optional[datetime] = None) -> Dict[str, Any]:
+    """Publish a reviewed stop WIDEN for one open phone ticket through the one-slot amend channel (operator
+    2026-11-09: no forbidden actions; the account's own ``RiskManager`` bound, ``widen_within_1r``, has already
+    approved the level and stays the policy). The amend declares ``action: widen_sl`` / ``widen: true`` so the app
+    applies a looser stop (an undeclared loosen is reported as a mismatch). No ``sl_floor`` is recorded (a floor is
+    a tighten-to level). Refused, never queued, when an amend is outstanding, a human's stop is held, or the level
+    would not loosen the resting SL. Stated limit: a widened stop on a trailing leg can be re-tightened by the
+    trail's next plan, which ratchets from the running extreme."""
+    from src.prop import prop_trail
+
+    now = now or _now()
+    slf = _f(sl)
+    if slf is None or slf <= 0:
+        raise ValueError("sl must be a positive price")
+    conn = prop_journal._connect()
+    try:
+        prop_journal.ensure_tables(conn)
+        r = conn.execute("SELECT * FROM prop_tickets WHERE ticket_id = ? AND account_id = ?",
+                         (ticket_id, account_id)).fetchone()
+        if r is None or r["status"] not in PARENT_STATUSES:
+            return {"ok": False, "why": "no placed/filled ticket with that id on this account"}
+        m = _meta(r["meta"])
+        if m.get("test"):
+            return {"ok": False, "why": "test ticket"}
+        tr = _load_trail(m, ticket_id)
+        if tr.get("human_hold"):
+            return {"ok": False, "why": f"a human's stop is held: {tr['human_hold']}"}
+        if (tr.get("amend") or {}).get("status") in ("emitted", "claimed"):
+            return {"ok": False, "why": "an amend is outstanding for this ticket"}
+        step = _price_step(account_id, r["symbol"])
+        cur_sl, cur_tp = _levels(r, tr, step)
+        direction = str(r["direction"] or "").lower()
+        # Round on the TIGHT side so the typed stop is never looser than what the account approved.
+        if step and step > 0:
+            new_sl = (round(math.ceil(slf / step - 1e-9) * step, 10) if direction == "long"
+                      else round(math.floor(slf / step + 1e-9) * step, 10))
+        else:
+            new_sl = slf
+        if cur_sl is None or not prop_trail.tightens(direction, new_sl, cur_sl, step):
+            return {"ok": False, "why": f"{new_sl} does not loosen the resting SL {cur_sl}"}
+        seq = int(tr.get("seq") or 0) + 1
+        tr["seq"] = seq
+        tr["amend"] = {"id": f"{ticket_id}#a{seq}", "status": "emitted", "kind": "sl", "action": "widen_sl", "widen": True,
+                       "from_sl": cur_sl, "sl": new_sl, "from_tp": cur_tp, "tp": cur_tp, "emitted_at": now.isoformat(),
+                       "valid_until": (now + timedelta(seconds=AMEND_VALID_S)).isoformat(),
+                       "reason": f"live review {review_id}: {reason}"[:200]}
+        ok = _cas(conn, ticket_id, r["meta"], {**m, KEY: tr})
+        return {"ok": ok, "amend_id": tr["amend"]["id"] if ok else None, "sl": new_sl,
+                "why": "" if ok else "concurrent write"}
+    finally:
+        conn.close()
+
+
 def pending_amends(account_id: str, now: Optional[datetime] = None) -> int:
     """How many emitted, still-valid amends the next amend-capable claim would find. Read-only."""
     now = now or _now()
@@ -703,6 +757,7 @@ def claim_amend(device: Any, now: Optional[datetime] = None) -> Optional[Dict[st
                     "symbol": r["symbol"], "venue_symbol": pe.venue_symbol(acct, r["symbol"]),
                     "direction": r["direction"], "qty": _venue_qty(acct, r["symbol"], r["qty"]), "from_sl": am.get("from_sl"), "sl": am.get("sl"),
                     "from_tp": am.get("from_tp"), "tp": am.get("tp"), "reason": am.get("reason"),
+                    "action": am.get("action"), "widen": bool(am.get("widen")),
                     "submit": pe.submit_mode(acct, test=False), "claimed_at": now.isoformat()}
         return None
     finally:

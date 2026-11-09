@@ -5,7 +5,7 @@ position -- Positions tab, row target and native touch, the sheet, [Position det
 its pencil, the "Edit Stop loss" modal, ONLY the Trigger typed and read back -- up to the final Confirm, then CANCEL
 the modal, re-read the stop unchanged and close the sheet. The app reports pass/fail PER STEP with a capture of
 each step (``src.prop.phone_captures``). No order ever changes: the app never calls Confirm in a drill, the
-denylist refuses every close / cancel-order control, and nothing is journaled as an amend.
+a drill declares no action intent, so no close / cancel-order control is its target, and nothing is journaled as an amend.
 
 Why it exists. Four APKs guessed one click each over three days; the operator's "done when" is *the drill passes
 3 times in a row on the operator's phone, then the live amend runs on the same logic*. So the pass streak is also

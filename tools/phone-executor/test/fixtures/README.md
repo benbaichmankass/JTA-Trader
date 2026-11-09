@@ -41,6 +41,9 @@ capture: it proves the tooling end to end and is replaced by the first real one.
 
 | `breakout-modal-edit-stop-loss` | breakout_2, app 1b.300 + exec.js .5, 2026-10-18 19:00Z, drill 2 step `010-modal_open` | the REAL "Edit Stop loss" modal: the ONE Trigger input is the PRICE field (`name=protectionStopLossPrice`, text, unit USD); the "Stop loss Entry distance" slider (`input type=range` in `div.ds-slider`) is seen (`sliders: 1`) and never a target — `modalSetTrigger` types only into the price input and the slider's value is untouched (exec.js ≥ 2026-10-18.6); no sheet root while the modal is up (`sheetOrders` → `no_sheet`), which is why drill 2 read null after Cancel |
 
+| `breakout-trade-view-no-open-orders-panel` | breakout_2, app 1b.345, 2026-11-08 21:53Z, entry c1391 step `008-unconfirmed` | PHONE-ENTRY-CANCEL: the REAL Trade view with the Positions chip selected and no Open orders list: `ordersRead` answers `unread` (never "read, no match"), `orderCancelClick` finds no row and clicks nothing, `cancelConfirm` has nothing to press. No real Open orders panel has been captured yet; the matching itself is proven on `exec_check.js`'s SYNTHETIC panel |
+| `breakout-order-submitted-toast` | breakout_2, app 1b.345, 2026-11-08 21:52Z, entry c1391 step `007-confirm_dialog` | PHONE-ENTRY-CANCEL: the REAL role=alertdialog "Order submitted" toast over the order form is not a cancel confirmation (`cancelOverlay().n` 0, `cancelConfirm` -> `no_overlay`), and the order form's own symbol/side/numbers never read as an Open orders row |
+
 **Geometry (fixed 2026-10-18):** every rendered node is `position:absolute`, so a node's `left/top` are relative to
 its rendered PARENT (the containing block), not the viewport; the tool subtracts the parent's rect. Fixtures built
 before that fix placed nested nodes at accumulated offsets (the Stop row's Edit button at 1383,4926 instead of

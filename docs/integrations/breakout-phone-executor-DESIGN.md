@@ -754,7 +754,7 @@ is ever outstanding. The claim serves it ONLY to an app that posts `accepts: ["a
 1. Find the ONE Positions row for the symbol and side.
 2. The terminal must show the stop (and target) the server believes is resting. If it shows anything else, report
    `human_moved` and never override it.
-3. Click the row's ONE edit control (text, aria-label or title naming edit / modify / TP-SL). Never a close control.
+3. Click the row's ONE edit control (text, aria-label or title naming edit / modify / TP-SL): an amend selects the edit control, it never targets a close control (superseded as a PROHIBITION on 2026-11-09, see the action channel below: close / cancel are their own declared intents).
 4. Find the ONE dialog, then the SL (and TP) fields by label. Type the values and read every one back; the kept TP must
    read back unchanged.
 5. **DRY:** cancel and report `dry_amended`. **LIVE:** click the ONE save button, then read the result back on the terminal:
@@ -1128,3 +1128,9 @@ red flag after five failures and the recovery ping are unchanged.
 (JSON tree ≤ 600 KB). Stored as `NNN-<step>.json` (meta) + `.jpg|.png|.webp` + `.dom.json`. Caps: 80 steps per
 run, 400 runs per account (oldest dropped), 400 MB per account (refused with `ok: false`, the flow carries on).
 The write's `ok` and the step's `ok` are two fields (`{"ok": true, "stored": true, "capture": {... "ok": false}}`).
+
+## Server-issued action channel, and the end of the deny-list (2026-11-09)
+
+Operator, ~08:22Z 2026-11-09, verbatim: "I never directed there to be a forbidden actions list, nor do I want one - the system must be able to take whatever actions necessary to ensure smooth autonomous operation".
+
+The click deny-list in exec.js (`NOT_EDIT` #16980 2026-10-08, `DENY_WORDS` / `DENY_GLYPH` #18114 2026-10-15) was session-authored and is replaced by **intent-bound clicks**: every click names the action it serves (`cancel_order`, `close_position`, `reduce`; an amend or a place declares none) and a destructive control matching that action is clicked. The server issues each action for a named ticket (`src/prop/phone_cancel.py`: `cancel`, `close`, `reduce`; amends stay on the trail amend channel); the phone matches the exact row, acts, re-reads the tab and reports `done` / `not_found` / `failed`. Precision stays (exactly one matching row and control); an ambiguous match is retried with backoff and one flag, never silent, never a halt. Runbook: `docs/runbooks/phone-executor-anomaly.md` section 7c.
