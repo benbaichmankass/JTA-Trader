@@ -106,14 +106,20 @@ def fetch_manifests(api: Any, user: str, spec: Dict[str, Any], dest: Path, name:
     prefix = spec["kaggle_dataset_prefix"]
     pat = re.compile("^" + re.escape(prefix) + r"\d{3}$")
     found: Dict[str, str] = {}
-    for page in range(1, 6):
-        batch = list(api.dataset_list(user=user, search=prefix, page=page) or [])
-        if not batch:
+    # The lake parts are PRIVATE datasets. Kaggle's `user=` listing is the public view of a user's datasets, so it never
+    # shows them (MEASURED 2026-11-09, run 42562200115: "0 part(s) listed"); `mine=True` lists the token owner's OWN datasets,
+    # private included. Try `mine` first and fall back to the public listing, stopping at the first that lists any part.
+    for kwargs in ({"mine": True}, {"user": user}):
+        for page in range(1, 6):
+            batch = list(api.dataset_list(search=prefix, page=page, **kwargs) or [])
+            if not batch:
+                break
+            for d in batch:
+                ref = str(getattr(d, "ref", ""))
+                if pat.match(ref.split("/")[-1]):
+                    found[ref.split("/")[-1]] = ref
+        if found:
             break
-        for d in batch:
-            ref = str(getattr(d, "ref", ""))
-            if pat.match(ref.split("/")[-1]):
-                found[ref.split("/")[-1]] = ref
     got: Dict[str, Any] = {}
     failed: Dict[str, str] = {}
     for slug, ref in sorted(found.items()):
@@ -214,15 +220,28 @@ def _self_test_manifest_only() -> int:
             self.ref = ref
 
     class _Api:
-        def __init__(self, bad: Optional[str] = None, empty: bool = False) -> None:
+        """Behaves like the real service: PRIVATE parts are visible only to the owner's own listing (`mine=True`); the public
+        `user=` listing shows only public datasets (here the decoys). `public_parts` makes the public listing carry the parts too."""
+        def __init__(self, bad: Optional[str] = None, empty: bool = False, mine_empty: bool = False, public_parts: bool = False) -> None:
             self.bad = bad
             self.empty = empty
+            self.mine_empty = mine_empty
+            self.public_parts = public_parts
             self.asked: list = []
+            self.listed: list = []
 
-        def dataset_list(self, user: str = "", search: str = "", page: int = 1):
-            assert user == "u" and search == "metis-market-lake-p", (user, search)   # the listing must be scoped to the token user + prefix
-            return [] if (page > 1 or self.empty) else [_D("u/metis-market-lake-p000"), _D("u/metis-market-lake-p001"),
-                                                        _D("u/metis-market-lake-filecount-probe"), _D("u/metis-market-lake-p0000")]
+        def dataset_list(self, user: str = "", search: str = "", page: int = 1, mine: bool = False):
+            assert search == "metis-market-lake-p", search                              # the listing must be scoped to the prefix
+            self.listed.append(("mine" if mine else "user", user, page))
+            decoys = [_D("u/metis-market-lake-filecount-probe"), _D("u/metis-market-lake-p0000")]
+            parts = [_D("u/metis-market-lake-p000"), _D("u/metis-market-lake-p001")]
+            if page > 1 or self.empty:
+                return []
+            if mine:
+                assert user == "", user                                                 # `mine` replaces the user filter, never combined with it
+                return decoys if self.mine_empty else parts + decoys
+            assert user == "u", user                                                    # the public listing must be scoped to the token user
+            return parts + decoys if self.public_parts else decoys
 
         def dataset_download_file(self, ref: str, file_name: str, path: str = "", force: bool = False, quiet: bool = True) -> None:
             assert force is True and quiet is True, (force, quiet)   # a stale cached manifest must never be reused
@@ -253,6 +272,13 @@ def _self_test_manifest_only() -> int:
         assert "metis-market-lake-p001" in json.loads((td / "o2" / "published-data.json").read_text())["failed"]
 
         assert fetch_manifests(_Api(empty=True), "u", spec, td / "d3", "metis-market-lake") == 5     # nothing listed is a refusal, not an empty lake
+        assert api.listed[0][0] == "mine", api.listed                       # the owner's own listing is asked FIRST (the private parts live there)
+        fb = _Api(mine_empty=True, public_parts=True)                       # fallback: nothing private listed, the public listing has the parts
+        assert fetch_manifests(fb, "u", spec, td / "d4", "metis-market-lake") == 0, "the public listing is the fallback"
+        kinds = [k for i, (k, _, _) in enumerate(fb.listed) if i == 0 or fb.listed[i - 1][0] != k]
+        assert kinds == ["mine", "user"], fb.listed
+        pub_only = _Api(mine_empty=True)                                    # THE 2026-11-09 FAILURE: private parts invisible to a public-only listing
+        assert fetch_manifests(pub_only, "u", spec, td / "d5", "metis-market-lake") == 5, "a listing that cannot see the parts must refuse"
     return 0
 
 
