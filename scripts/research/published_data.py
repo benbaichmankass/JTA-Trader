@@ -109,17 +109,28 @@ def fetch_manifests(api: Any, user: str, spec: Dict[str, Any], dest: Path, name:
     # The lake parts are PRIVATE datasets. Kaggle's `user=` listing is the public view of a user's datasets, so it never
     # shows them (MEASURED 2026-11-09, run 42562200115: "0 part(s) listed"); `mine=True` lists the token owner's OWN datasets,
     # private included. Try `mine` first and fall back to the public listing, stopping at the first that lists any part.
+    # Kaggle's `search=` is a word search, not a prefix match, so the prefix-scoped query can list nothing while the parts exist
+    # (run 42572391629 listed 0 with mine=True). Last resort per listing: no search, every dataset, filtered by the exact pattern here.
+    seen: Dict[str, int] = {}
     for kwargs in ({"mine": True}, {"user": user}):
-        for page in range(1, 6):
-            batch = list(api.dataset_list(search=prefix, page=page, **kwargs) or [])
-            if not batch:
+        for search in (prefix, ""):
+            n_seen = 0
+            for page in range(1, 11):
+                batch = list(api.dataset_list(search=search, page=page, **kwargs) or [])
+                if not batch:
+                    break
+                n_seen += len(batch)
+                for d in batch:
+                    ref = str(getattr(d, "ref", ""))
+                    if pat.match(ref.split("/")[-1]):
+                        found[ref.split("/")[-1]] = ref
+            seen[f"{next(iter(kwargs))}:{'prefix' if search else 'all'}"] = n_seen
+            if found:
                 break
-            for d in batch:
-                ref = str(getattr(d, "ref", ""))
-                if pat.match(ref.split("/")[-1]):
-                    found[ref.split("/")[-1]] = ref
         if found:
             break
+    if not found:
+        print(f"listing diagnostic (datasets seen per query, none matched {prefix}NNN): {seen}", file=sys.stderr)
     got: Dict[str, Any] = {}
     failed: Dict[str, str] = {}
     for slug, ref in sorted(found.items()):
@@ -222,7 +233,8 @@ def _self_test_manifest_only() -> int:
     class _Api:
         """Behaves like the real service: PRIVATE parts are visible only to the owner's own listing (`mine=True`); the public
         `user=` listing shows only public datasets (here the decoys). `public_parts` makes the public listing carry the parts too."""
-        def __init__(self, bad: Optional[str] = None, empty: bool = False, mine_empty: bool = False, public_parts: bool = False) -> None:
+        def __init__(self, bad: Optional[str] = None, empty: bool = False, mine_empty: bool = False, public_parts: bool = False, word_search: bool = False) -> None:
+            self.word_search = word_search
             self.bad = bad
             self.empty = empty
             self.mine_empty = mine_empty
@@ -231,11 +243,13 @@ def _self_test_manifest_only() -> int:
             self.listed: list = []
 
         def dataset_list(self, user: str = "", search: str = "", page: int = 1, mine: bool = False):
-            assert search == "metis-market-lake-p", search                              # the listing must be scoped to the prefix
+            assert search in ("metis-market-lake-p", ""), search                        # prefix-scoped first, then the unscoped last resort
             self.listed.append(("mine" if mine else "user", user, page))
             decoys = [_D("u/metis-market-lake-filecount-probe"), _D("u/metis-market-lake-p0000")]
             parts = [_D("u/metis-market-lake-p000"), _D("u/metis-market-lake-p001")]
             if page > 1 or self.empty:
+                return []
+            if self.word_search and search:      # Kaggle's search is a word match: a prefix finds nothing, only the unscoped list shows the parts
                 return []
             if mine:
                 assert user == "", user                                                 # `mine` replaces the user filter, never combined with it
@@ -279,6 +293,9 @@ def _self_test_manifest_only() -> int:
         assert kinds == ["mine", "user"], fb.listed
         pub_only = _Api(mine_empty=True)                                    # THE 2026-11-09 FAILURE: private parts invisible to a public-only listing
         assert fetch_manifests(pub_only, "u", spec, td / "d5", "metis-market-lake") == 5, "a listing that cannot see the parts must refuse"
+        ws = _Api(word_search=True)                                         # THE 2026-11-09 06:21Z FAILURE: mine=True + prefix search listed 0
+        assert fetch_manifests(ws, "u", spec, td / "d6", "metis-market-lake") == 0, "the unscoped listing must find the parts"
+        assert [x[0] for x in ws.listed][:2] == ["mine", "mine"], ws.listed  # prefix-scoped first, then unscoped, same (owner's) listing
     return 0
 
 
