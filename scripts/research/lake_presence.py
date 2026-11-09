@@ -127,7 +127,10 @@ def run(a) -> int:
 
 
 def _row(a, verdict_: str, note: str, measurement: dict, n=None) -> dict:
-    return {"schema_version": 1, "research_unit": a.unit, "read_state": "measured" if verdict_ == "pass" else "not_measured",
+    # read_state is the HARNESS's vocabulary (script_run.READ_STATES): "not_attempted" is the only value for a run that never read the manifests
+    # (the verdict not_applicable, NEVER MEASURED); every verdict reached by reading them (pass / fail / indeterminate) is "measured". Writing
+    # "not_measured" here (2026-11-09, runs 42551423143 and 42562200115) made the harness reject the record as malformed and grade it producer_failed.
+    return {"schema_version": 1, "research_unit": a.unit, "read_state": "not_attempted" if verdict_ == "not_applicable" else "measured",
             "verdict": verdict_,
             "population": ("members listed in the per-part MANIFEST.json of the private Kaggle lake mirror metis-market-lake-pNNN (frozen crypto "
                            "history); a CLAIM of copy, not a read of any shard"),
@@ -160,6 +163,14 @@ def self_test() -> int:
             (d / "MANIFEST.json").write_text(json.dumps({"files": [{"path": "a.tar", "members": [{"path": p} for p in members]}]}))
         parts, paths = read_members(Path(td))
         assert parts == 2 and sorted(paths) == sorted(ok)
+    import script_run as SR       # the harness's own vocabulary: a record that uses a word outside it is graded producer_failed
+    class _A:
+        unit, where, rule_id, registered_at = "RQ-X", "local", "RULE-X", "2026-11-08"
+    for v_ in ("pass", "fail", "indeterminate", "not_applicable"):
+        r_ = _row(_A, v_, "n", {})
+        assert r_["read_state"] in SR.READ_STATES and r_["verdict"] in SR.VERDICTS, (v_, r_["read_state"])
+    assert _row(_A, "not_applicable", "n", {})["read_state"] == "not_attempted"     # NEVER MEASURED: the manifests were not read
+    assert _row(_A, "indeterminate", "n", {})["read_state"] == "measured"            # read, but the layout was not understood: a measurement
     print("self-test ok")
     return 0
 
