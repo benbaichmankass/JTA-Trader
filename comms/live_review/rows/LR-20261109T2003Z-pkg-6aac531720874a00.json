@@ -1,0 +1,162 @@
+{
+ "schema_version": 1,
+ "review_id": "LR-20261109T2003Z-pkg-6aac531720874a00",
+ "reviewed_at": "2026-11-09T20:12:00Z",
+ "order_package_id": "pkg-6aac531720874a00",
+ "trade_id": null,
+ "leg": "ml_entry",
+ "accounts": [
+  "bybit_2",
+  "bybit_portfolio"
+ ],
+ "trigger": {
+  "event": "momentum_flip",
+  "level": null,
+  "l0_snapshot_at": "2026-11-09T19:59:56Z"
+ },
+ "info_cutoff_at": "2026-11-09T20:03:24Z",
+ "state": {
+  "atr_now_over_entry": null,
+  "bars_held": 18,
+  "giveback_r": 0.7068,
+  "open_r": -0.4258,
+  "peak_provenance": "estimated",
+  "peak_r": 0.281,
+  "regime_cell_entry": null,
+  "regime_cell_now": null,
+  "sl": 85.08142857142857,
+  "tp": 90.95285714285716
+ },
+ "features_at_review": {
+  "atr_now_over_entry": null,
+  "bars_since_peak": 17,
+  "giveback_r": 0.7068,
+  "open_r": -0.4258,
+  "peak_r": 0.281,
+  "r_to_stop": 0.5742,
+  "r_to_target": 1.9258
+ },
+ "mechanics": {
+  "evidence": "package sl 85.08142857142857 / tp 90.95285714285716 agree with every readable account",
+  "verdict": "match"
+ },
+ "options": [
+  {
+   "action": "hold",
+   "level": null,
+   "n": 221,
+   "mean_r": 0.4883,
+   "sd_r": 1.1366,
+   "worst_r": -1.1269,
+   "net": true
+  },
+  {
+   "action": "tighten_sl",
+   "level": null,
+   "spec": "atr:1.5",
+   "n": 221,
+   "mean_r": 0.3908,
+   "sd_r": 0.782,
+   "worst_r": -0.6852,
+   "net": true
+  },
+  {
+   "action": "tighten_sl",
+   "level": null,
+   "spec": "atr:2.0",
+   "n": 221,
+   "mean_r": 0.4404,
+   "sd_r": 0.9071,
+   "worst_r": -0.8019,
+   "net": true
+  },
+  {
+   "action": "close",
+   "level": null,
+   "spec": "close",
+   "n": 221,
+   "mean_r": -0.487,
+   "sd_r": 0.0241,
+   "worst_r": -0.5816,
+   "net": true
+  }
+ ],
+ "outcome_table_source": "comms/live_review/tables/LR-20261109T2003Z-pkg-6aac531720874a00.json",
+ "recommendation": {
+  "action": "hold",
+  "level": null,
+  "level_atr": null,
+  "ev_delta_r": null,
+  "worst_case_delta_r": null,
+  "basis": "ev_positive",
+  "confidence": "suggestive",
+  "evidence_source": "table",
+  "judgement_confidence": null,
+  "reason": "Momentum flip is real: last 3 closed 1h bars 87.88->86.49 = -1.39 (1.35 ATR), long at -0.426R (entry 87.43, peak +0.28R est., 18 bars), SL 85.08 0.57R (~1.37 ATR) away, TP 90.95. Measured hold cell (n=221, +0.488R, worst -1.127) beats close (-0.487R) and both measured tightens (atr:1.5 +0.391, atr:2.0 +0.440; ev cost 0.098/0.048 R). Any tighten tool-priced is inside the 1x ATR noise floor: atr:2.0 stop ~85.74 is 0.75 (0.73 ATR) below price 86.49, atr:1.5 ~86.33 is 0.16 below; a stop at >=1 ATR (<=85.46) is unpriced and only ~0.38 above the existing SL. So no eligible tighten; hold. Caveat: hold cell is peak/open-R conditioned, not full-state matched, and 1h chop (ADX 17.2) with 4h trending down (lower highs 91.55/90.02/88.43) leans against the long. A 1h close below 85.77 flips this to close/ask."
+ },
+ "judge_prior": null,
+ "applied": false,
+ "apply_policy": {
+  "bound_r": 0.25,
+  "within_bound": null,
+  "tighten_r": null
+ },
+ "shadow_policy": {
+  "bound_r": 0.5,
+  "within_bound": null,
+  "would_apply": null,
+  "tighten_r": null
+ },
+ "context_flags": [
+  "forecast_grade: LR-20261109T1804Z (against_trade, target 85.77 p 0.5, invalidation 88.01, 8 x 1h) -> target NOT yet reached (low since 86.09 vs 85.77), invalidation NOT hit (high since 87.07 vs 88.01), stop untouched; price still ranging 86.1-87.1; open R -0.379 -> -0.426. Direction right so far, horizon open (~2 of 8 bars elapsed).",
+  "table: packet hold n=221 mean +0.488R sd 1.137 worst -1.127 (peak-conditioned, not full-state matched); tighten atr:1.5 +0.391 (cost 0.098, worst gain +0.442), atr:2.0 +0.440 (cost 0.048, worst gain +0.325), atr:1.0 invalid_level; close -0.487; quoted from the packet table",
+  "tighten_bias: stop-at-price fills flatter any tighten; peak_r is a lower bound on true MFE",
+  "noise_floor: priced tighten stops 85.74 (atr:2.0) and 86.33 (atr:1.5) are inside the 1x ATR (1.026) min buffer from last close 86.49, so no tighten is eligible",
+  "regime: 1h ADX 17.2 chop; 4h ADX 35.4 trending, lower highs; cells/ATR ratio not available",
+  "correlated: other open longs BTC, AVAX, SLV, TLT; SOL also short on sol_pullback_2h and trend_donchian_sol_4h (net-offsetting on SOL at account scope, not sized here)",
+  "missing: regime.atr_now_over_entry, regime.cell_entry, regime.cell_now, funding not available (packet missing_inputs)"
+ ],
+ "account_reads": [
+  {
+   "account_id": "bybit_2",
+   "account_class": "real_money",
+   "read": "no_action",
+   "evidence": "hold changes nothing; bybit_orders SL 85.08 / TP 90.95 match package"
+  },
+  {
+   "account_id": "bybit_portfolio",
+   "account_class": "paper",
+   "read": "no_action",
+   "evidence": "hold changes nothing; bybit_orders SL 85.08 / TP 90.95 match package"
+  }
+ ],
+ "disposition": {
+  "route": "none",
+  "mandate": null,
+  "action_issue": null,
+  "applied_at": null,
+  "verified_readback": null
+ },
+ "model": "sonnet-tier (repo lane)",
+ "session": "session_01AFoLuJ6yG212T12DbxVFBE",
+ "prompt_sha": null,
+ "skill_sha": "67deaf99b5450ca46ad5f8ab40d0a89cba9581e1",
+ "packet_sha": "b9c73130f96441a998bcf7fff37a32746c604c69b5fab415607f2937076ae149",
+ "packet_defects": [],
+ "forecast": {
+  "thesis": "1h chop with 4h lower highs and a 1.35 ATR three-bar fade: I expect the bounce to fail and a test of the 85.77 swing low, with a roughly even chance the 85.08 stop survives; a recovery above 88.01 is the minority path.",
+  "direction": "against_trade",
+  "target_px": 85.77,
+  "p_target": 0.5,
+  "invalidation_px": 88.01,
+  "horizon_bars": 8,
+  "timeframe": "1h",
+  "evidence": [
+   "chart: last 3 closed bars 87.88->86.49, since-entry high 88.01 low 85.10",
+   "chart.swings: lower highs 88.01/87.26, lows 85.77/85.10",
+   "htf 4h ADX 35.4 trending, highs 91.55/90.02/88.43; 1h ADX 17.2 chop",
+   "exit_plan: SL 85.08 TP 90.95",
+   "priced_options: hold +0.488R vs close -0.487R, tighten inside noise floor"
+  ]
+ }
+}
