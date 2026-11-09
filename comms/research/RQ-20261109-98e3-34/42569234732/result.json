@@ -1,0 +1,125 @@
+{
+ "schema": "prop_ml_leg/1",
+ "profile": "bv",
+ "smoke": false,
+ "rehearsal": false,
+ "bar_hours": 8,
+ "taus": [
+  0.35,
+  0.4,
+  0.45,
+  0.5,
+  0.55
+ ],
+ "horizon_bars": 6,
+ "arms_run": [
+  "F0",
+  "F0+BASIS"
+ ],
+ "arms_unavailable": [
+  "F0+F1",
+  "F0+F1+F2",
+  "F0+F1+F2+F3"
+ ],
+ "require_positive_sum": true,
+ "arm_denominator_registered": 10,
+ "arms_graded": 10,
+ "discovery_table": [
+  {
+   "arm": "F0",
+   "tau": 0.35,
+   "n": 586,
+   "sum_net_r": 5.687,
+   "folds_with_trades": 9,
+   "folds_positive": 4,
+   "eligible": false
+  },
+  {
+   "arm": "F0",
+   "tau": 0.4,
+   "n": 447,
+   "sum_net_r": -13.302,
+   "folds_with_trades": 9,
+   "folds_positive": 3,
+   "eligible": false
+  },
+  {
+   "arm": "F0",
+   "tau": 0.45,
+   "n": 295,
+   "sum_net_r": 14.679,
+   "folds_with_trades": 9,
+   "folds_positive": 4,
+   "eligible": false
+  },
+  {
+   "arm": "F0",
+   "tau": 0.5,
+   "n": 193,
+   "sum_net_r": 1.094,
+   "folds_with_trades": 9,
+   "folds_positive": 3,
+   "eligible": false
+  },
+  {
+   "arm": "F0",
+   "tau": 0.55,
+   "n": 103,
+   "sum_net_r": 7.034,
+   "folds_with_trades": 9,
+   "folds_positive": 5,
+   "eligible": false
+  },
+  {
+   "arm": "F0+BASIS",
+   "tau": 0.35,
+   "n": 573,
+   "sum_net_r": -4.503,
+   "folds_with_trades": 9,
+   "folds_positive": 4,
+   "eligible": false
+  },
+  {
+   "arm": "F0+BASIS",
+   "tau": 0.4,
+   "n": 417,
+   "sum_net_r": -9.989,
+   "folds_with_trades": 9,
+   "folds_positive": 3,
+   "eligible": false
+  },
+  {
+   "arm": "F0+BASIS",
+   "tau": 0.45,
+   "n": 272,
+   "sum_net_r": 6.607,
+   "folds_with_trades": 9,
+   "folds_positive": 3,
+   "eligible": false
+  },
+  {
+   "arm": "F0+BASIS",
+   "tau": 0.5,
+   "n": 169,
+   "sum_net_r": 1.69,
+   "folds_with_trades": 9,
+   "folds_positive": 4,
+   "eligible": false
+  },
+  {
+   "arm": "F0+BASIS",
+   "tau": 0.55,
+   "n": 87,
+   "sum_net_r": -0.579,
+   "folds_with_trades": 9,
+   "folds_positive": 5,
+   "eligible": false
+  }
+ ],
+ "folds": 19,
+ "data_rows": 10365,
+ "elapsed_s": 202,
+ "verdict": "FAIL",
+ "read_state": "measured",
+ "reason": "no arm x tau eligible on discovery (>= 100 trades and >= 2/3 of folds net-positive and discovery sum > 0)"
+}
