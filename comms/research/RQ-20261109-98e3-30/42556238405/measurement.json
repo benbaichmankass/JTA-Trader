@@ -1,0 +1,384 @@
+{
+  "detail": {
+    "funding_basis_usable_streams": [
+      "premiumIndexKlines"
+    ]
+  },
+  "table": [
+    {
+      "symbol": "ETHUSDT",
+      "stream": "fundingRate",
+      "verdict": "USABLE",
+      "why": "58 complete files in the grade window pass; 0 finding(s) listed",
+      "listing": {
+        "files": 82,
+        "monthly_files": 82,
+        "daily_files": 0,
+        "first_month": "2020-01",
+        "last_monthly": "2026-10",
+        "last_day": "2026-10-31"
+      },
+      "n_files_checked": 59,
+      "partial_first_file": null,
+      "findings": [],
+      "unreadable": [],
+      "covers": {
+        "backward_heldout_2020-07_2021-12": 1.0,
+        "discovery_2022_to_2026-09": 1.0,
+        "forward_2025-10_2026-09": 1.0
+      }
+    },
+    {
+      "symbol": "ETHUSDT",
+      "stream": "premiumIndexKlines",
+      "verdict": "USABLE",
+      "why": "58 complete files in the grade window pass; 4 finding(s) listed",
+      "listing": {
+        "files": 2554,
+        "monthly_files": 82,
+        "daily_files": 2472,
+        "first_month": "2020-01",
+        "last_monthly": "2026-10",
+        "last_day": "2026-11-07"
+      },
+      "n_files_checked": 59,
+      "partial_first_file": null,
+      "findings": [
+        {
+          "month": "2022-10",
+          "rows": 43200,
+          "expected_rows": 44640,
+          "shortfall": 1440,
+          "shortfall_share": 0.03225806451612903,
+          "gaps": [
+            {
+              "from": "2022-10-01 23:59:00+00:00",
+              "to": "2022-10-03 00:00:00+00:00",
+              "span": "1 days 00:01:00"
+            }
+          ]
+        },
+        {
+          "month": "2023-04",
+          "rows": 41760,
+          "expected_rows": 43200,
+          "shortfall": 1440,
+          "shortfall_share": 0.03333333333333333,
+          "gaps": [
+            {
+              "from": "2023-04-08 23:59:00+00:00",
+              "to": "2023-04-10 00:00:00+00:00",
+              "span": "1 days 00:01:00"
+            }
+          ]
+        },
+        {
+          "month": "2026-06",
+          "rows": 41760,
+          "expected_rows": 43200,
+          "shortfall": 1440,
+          "shortfall_share": 0.03333333333333333,
+          "gaps": [
+            {
+              "from": "2026-06-28 23:59:00+00:00",
+              "to": "2026-06-30 00:00:00+00:00",
+              "span": "1 days 00:01:00"
+            }
+          ]
+        },
+        {
+          "month": "2026-10",
+          "rows": 41760,
+          "expected_rows": 44640,
+          "shortfall": 2880,
+          "shortfall_share": 0.06451612903225806,
+          "gaps": [
+            {
+              "from": "2026-10-27 23:59:00+00:00",
+              "to": "2026-10-30 00:00:00+00:00",
+              "span": "2 days 00:01:00"
+            }
+          ]
+        }
+      ],
+      "unreadable": [],
+      "covers": {
+        "backward_heldout_2020-07_2021-12": 1.0,
+        "discovery_2022_to_2026-09": 1.0,
+        "forward_2025-10_2026-09": 1.0
+      }
+    },
+    {
+      "symbol": "SOLUSDT",
+      "stream": "fundingRate",
+      "verdict": "NOT-USABLE",
+      "why": "gaps: shortfall 0.0350 of expected, longest in-file gap 8.0 h",
+      "listing": {
+        "files": 74,
+        "monthly_files": 74,
+        "daily_files": 0,
+        "first_month": "2020-09",
+        "last_monthly": "2026-10",
+        "last_day": "2026-10-31"
+      },
+      "n_files_checked": 59,
+      "partial_first_file": {
+        "month": "2020-09",
+        "rows": 52,
+        "expected_rows": 90,
+        "ts_min": "2020-09-13 16:00:00.004000+00:00"
+      },
+      "findings": [
+        {
+          "month": "2022-11",
+          "rows": 165,
+          "expected_rows": 360,
+          "shortfall": 195,
+          "shortfall_share": 0.5416666666666666,
+          "gaps": [
+            {
+              "from": "2022-11-01 00:00:00+00:00",
+              "to": "2022-11-01 08:00:00+00:00",
+              "span": "0 days 08:00:00"
+            },
+            {
+              "from": "2022-11-01 08:00:00+00:00",
+              "to": "2022-11-01 16:00:00+00:00",
+              "span": "0 days 08:00:00"
+            },
+            {
+              "from": "2022-11-01 16:00:00+00:00",
+              "to": "2022-11-02 00:00:00+00:00",
+              "span": "0 days 08:00:00"
+            },
+            {
+              "from": "2022-11-02 00:00:00+00:00",
+              "to": "2022-11-02 08:00:00+00:00",
+              "span": "0 days 08:00:00"
+            },
+            {
+              "from": "2022-11-02 08:00:00+00:00",
+              "to": "2022-11-02 16:00:00.019000+00:00",
+              "span": "0 days 08:00:00.019000"
+            },
+            {
+              "from": "2022-11-02 16:00:00.019000+00:00",
+              "to": "2022-11-03 00:00:00.011000+00:00",
+              "span": "0 days 07:59:59.992000"
+            },
+            {
+              "from": "2022-11-03 00:00:00.011000+00:00",
+              "to": "2022-11-03 08:00:00.016000+00:00",
+              "span": "0 days 08:00:00.005000"
+            },
+            {
+              "from": "2022-11-03 08:00:00.016000+00:00",
+              "to": "2022-11-03 16:00:00.005000+00:00",
+              "span": "0 days 07:59:59.989000"
+            },
+            {
+              "from": "2022-11-03 16:00:00.005000+00:00",
+              "to": "2022-11-04 00:00:00+00:00",
+              "span": "0 days 07:59:59.995000"
+            },
+            {
+              "from": "2022-11-04 00:00:00+00:00",
+              "to": "2022-11-04 08:00:00.004000+00:00",
+              "span": "0 days 08:00:00.004000"
+            }
+          ]
+        }
+      ],
+      "unreadable": [],
+      "covers": {
+        "backward_heldout_2020-07_2021-12": 0.8627,
+        "discovery_2022_to_2026-09": 1.0,
+        "forward_2025-10_2026-09": 1.0
+      }
+    },
+    {
+      "symbol": "SOLUSDT",
+      "stream": "premiumIndexKlines",
+      "verdict": "USABLE",
+      "why": "58 complete files in the grade window pass; 3 finding(s) listed",
+      "listing": {
+        "files": 2288,
+        "monthly_files": 74,
+        "daily_files": 2214,
+        "first_month": "2020-09",
+        "last_monthly": "2026-10",
+        "last_day": "2026-11-07"
+      },
+      "n_files_checked": 59,
+      "partial_first_file": {
+        "month": "2020-09",
+        "rows": 24059,
+        "expected_rows": 43200,
+        "ts_min": "2020-09-14 07:01:00+00:00"
+      },
+      "findings": [
+        {
+          "month": "2023-04",
+          "rows": 41760,
+          "expected_rows": 43200,
+          "shortfall": 1440,
+          "shortfall_share": 0.03333333333333333,
+          "gaps": [
+            {
+              "from": "2023-04-08 23:59:00+00:00",
+              "to": "2023-04-10 00:00:00+00:00",
+              "span": "1 days 00:01:00"
+            }
+          ]
+        },
+        {
+          "month": "2026-06",
+          "rows": 41760,
+          "expected_rows": 43200,
+          "shortfall": 1440,
+          "shortfall_share": 0.03333333333333333,
+          "gaps": [
+            {
+              "from": "2026-06-28 23:59:00+00:00",
+              "to": "2026-06-30 00:00:00+00:00",
+              "span": "1 days 00:01:00"
+            }
+          ]
+        },
+        {
+          "month": "2026-10",
+          "rows": 41760,
+          "expected_rows": 44640,
+          "shortfall": 2880,
+          "shortfall_share": 0.06451612903225806,
+          "gaps": [
+            {
+              "from": "2026-10-27 23:59:00+00:00",
+              "to": "2026-10-30 00:00:00+00:00",
+              "span": "2 days 00:01:00"
+            }
+          ]
+        }
+      ],
+      "unreadable": [],
+      "covers": {
+        "backward_heldout_2020-07_2021-12": 0.8609,
+        "discovery_2022_to_2026-09": 1.0,
+        "forward_2025-10_2026-09": 1.0
+      }
+    },
+    {
+      "symbol": "BTCUSDT",
+      "stream": "fundingRate",
+      "verdict": "USABLE",
+      "why": "58 complete files in the grade window pass; 0 finding(s) listed",
+      "listing": {
+        "files": 82,
+        "monthly_files": 82,
+        "daily_files": 0,
+        "first_month": "2020-01",
+        "last_monthly": "2026-10",
+        "last_day": "2026-10-31"
+      },
+      "n_files_checked": 59,
+      "partial_first_file": null,
+      "findings": [],
+      "unreadable": [],
+      "covers": {
+        "backward_heldout_2020-07_2021-12": 1.0,
+        "discovery_2022_to_2026-09": 1.0,
+        "forward_2025-10_2026-09": 1.0
+      }
+    },
+    {
+      "symbol": "BTCUSDT",
+      "stream": "premiumIndexKlines",
+      "verdict": "USABLE",
+      "why": "58 complete files in the grade window pass; 4 finding(s) listed",
+      "listing": {
+        "files": 2585,
+        "monthly_files": 82,
+        "daily_files": 2503,
+        "first_month": "2020-01",
+        "last_monthly": "2026-10",
+        "last_day": "2026-11-07"
+      },
+      "n_files_checked": 59,
+      "partial_first_file": null,
+      "findings": [
+        {
+          "month": "2022-10",
+          "rows": 43200,
+          "expected_rows": 44640,
+          "shortfall": 1440,
+          "shortfall_share": 0.03225806451612903,
+          "gaps": [
+            {
+              "from": "2022-10-01 23:59:00+00:00",
+              "to": "2022-10-03 00:00:00+00:00",
+              "span": "1 days 00:01:00"
+            }
+          ]
+        },
+        {
+          "month": "2023-02",
+          "rows": 38880,
+          "expected_rows": 40320,
+          "shortfall": 1440,
+          "shortfall_share": 0.03571428571428571,
+          "gaps": [
+            {
+              "from": "2023-02-23 23:59:00+00:00",
+              "to": "2023-02-25 00:00:00+00:00",
+              "span": "1 days 00:01:00"
+            }
+          ]
+        },
+        {
+          "month": "2026-06",
+          "rows": 41760,
+          "expected_rows": 43200,
+          "shortfall": 1440,
+          "shortfall_share": 0.03333333333333333,
+          "gaps": [
+            {
+              "from": "2026-06-28 23:59:00+00:00",
+              "to": "2026-06-30 00:00:00+00:00",
+              "span": "1 days 00:01:00"
+            }
+          ]
+        },
+        {
+          "month": "2026-10",
+          "rows": 41760,
+          "expected_rows": 44640,
+          "shortfall": 2880,
+          "shortfall_share": 0.06451612903225806,
+          "gaps": [
+            {
+              "from": "2026-10-27 23:59:00+00:00",
+              "to": "2026-10-30 00:00:00+00:00",
+              "span": "2 days 00:01:00"
+            }
+          ]
+        }
+      ],
+      "unreadable": [],
+      "covers": {
+        "backward_heldout_2020-07_2021-12": 1.0,
+        "discovery_2022_to_2026-09": 1.0,
+        "forward_2025-10_2026-09": 1.0
+      }
+    }
+  ],
+  "supersedes": "the funding_basis GRADE of RQ-20261108-98e3-28 (which is not edited)",
+  "rule_constants": {
+    "grade_start": "2022-01-01",
+    "max_shortfall_share": 0.01,
+    "max_gap_premium_h": 72.0,
+    "max_gap_funding_h": 24.0,
+    "finding_share": 0.005,
+    "min_nonnull": 0.99,
+    "premium_stale_days": 5
+  }
+}
