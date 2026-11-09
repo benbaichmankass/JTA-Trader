@@ -3,13 +3,12 @@
 """ml-registry-consistency-guard (lane ML-REGISTRY-CONSOLIDATE, 2026-11-09). A repo-consistency check, NOT a trading gate.
 
 Fails when (1) a model id referenced by a config consumer (strategies.yaml model / exit_head_model / tp_revision,
-overlay_policy.yaml artifact) is absent from the GET /api/bot/ml/registry feed or its repo artifact is missing,
+overlay_policy.yaml artifact) is absent from the registry feed (the inventory rows the route appends) or its repo artifact is missing,
 (2) a model that is served or consumed at shadow or above has no docs/reference/model_names.yaml entry, or has slot
-"unassigned", (3) a breed/model `slot:` is not D1..D10. Reads the real route against the repo tree and an empty mirror.
+"unassigned", (3) a breed/model `slot:` is not D1..D10. 
 """
 from __future__ import annotations
 
-import os
 import sys
 import tempfile
 from pathlib import Path
@@ -21,10 +20,9 @@ sys.path.insert(0, str(REPO))
 def scan(root: Path) -> list[str]:
     from src.runtime import ml_serving_inventory as inv
     errs: list[str] = []
-    with tempfile.TemporaryDirectory() as tmp:
-        os.environ["RUNTIME_LOGS_DIR"], os.environ["ICT_REPO_ROOT"] = tmp, str(root)
-        from src.web.api.routers import training_center as tc
-        feed = {r["model_id"]: r for r in tc.get_registry()["rows"]}
+    # The route appends exactly inventory_rows(); reading it directly keeps the guard free of the web stack (the
+    # guards job has no fastapi). tests/test_ml_registry_inventory.py covers the route itself.
+    feed = {r["model_id"]: r for r in inv.inventory_rows(root)}
     breeds, models = inv.load_names(root)
     for mid, ref in inv.referenced_model_ids(root).items():
         row = feed.get(mid)
