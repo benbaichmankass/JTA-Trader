@@ -6,7 +6,7 @@
   },
   "hold": {
    "mean_d_hold": 0.0,
-   "n_rows": 138
+   "n_rows": 140
   },
   "partial_close": {
    "mean_d_hold": 0.9042,
@@ -17,15 +17,15 @@
    "n_rows": 0
   }
  },
- "computed_at": "2026-11-09T14:16:34Z",
+ "computed_at": "2026-11-09T16:18:32Z",
  "forecast": {
-  "brier": 0.2248,
+  "brier": 0.2285,
   "brier_ref_constant_0_5": 0.25,
-  "hits": 44,
-  "n_scored": 158,
-  "unresolved": 65
+  "hits": 48,
+  "n_scored": 165,
+  "unresolved": 59
  },
- "population": "live-review rows with a forecast reviewed from 2026-10-31T00:00:00Z: 223 rows, 74 packages",
+ "population": "live-review rows with a forecast reviewed from 2026-10-31T00:00:00Z: 224 rows, 74 packages",
  "rows": [
   {
    "action": "hold",
@@ -1325,12 +1325,12 @@
   },
   {
    "action": "hold",
-   "d_hold": null,
-   "d_mech": null,
-   "forecast_outcome": null,
+   "d_hold": 0.0,
+   "d_mech": 0.0,
+   "forecast_outcome": "miss",
    "order_package_id": "pkg-9663649fad564d71",
    "p_target": 0.3,
-   "price_reason": "no_path_change_trade_open_or_unjoined",
+   "price_reason": "no_path_change",
    "price_state": "not_a_call",
    "review_id": "LR-20261105T1523Z-pkg-9663649fad564d71",
    "trigger": "judgement_cadence"
@@ -1798,7 +1798,7 @@
    "forecast_outcome": "expired",
    "order_package_id": "pkg-58b6ef451e684836",
    "p_target": 0.55,
-   "price_reason": "hold_replay_unresolved_before_close",
+   "price_reason": "replay_mismatch",
    "price_state": "could_not_price",
    "review_id": "LR-20261106T0322Z-pkg-58b6ef451e684836",
    "trigger": "r_milestone"
@@ -2215,7 +2215,7 @@
    "action": "hold",
    "d_hold": null,
    "d_mech": null,
-   "forecast_outcome": null,
+   "forecast_outcome": "miss",
    "order_package_id": "pkg-bb19c76e257046a8",
    "p_target": 0.4,
    "price_reason": "no_path_change_trade_open_or_unjoined",
@@ -2369,12 +2369,12 @@
   },
   {
    "action": "hold",
-   "d_hold": null,
-   "d_mech": null,
-   "forecast_outcome": null,
+   "d_hold": 0.0,
+   "d_mech": 0.0,
+   "forecast_outcome": "miss",
    "order_package_id": "pkg-9663649fad564d71",
    "p_target": 0.3,
-   "price_reason": "no_path_change_trade_open_or_unjoined",
+   "price_reason": "no_path_change",
    "price_state": "not_a_call",
    "review_id": "LR-20261106T1904Z-pkg-9663649fad564d71",
    "trigger": "daily_floor"
@@ -2587,7 +2587,7 @@
    "action": "hold",
    "d_hold": null,
    "d_mech": null,
-   "forecast_outcome": null,
+   "forecast_outcome": "hit",
    "order_package_id": "pkg-6aac531720874a00",
    "p_target": 0.4,
    "price_reason": "no_path_change_trade_open_or_unjoined",
@@ -2611,7 +2611,7 @@
    "action": "hold",
    "d_hold": null,
    "d_mech": null,
-   "forecast_outcome": null,
+   "forecast_outcome": "hit",
    "order_package_id": "pkg-6aac531720874a00",
    "p_target": 0.3,
    "price_reason": "no_path_change_trade_open_or_unjoined",
@@ -2647,7 +2647,7 @@
    "action": "hold",
    "d_hold": null,
    "d_mech": null,
-   "forecast_outcome": null,
+   "forecast_outcome": "hit",
    "order_package_id": "pkg-6aac531720874a00",
    "p_target": 0.3,
    "price_reason": "no_path_change_trade_open_or_unjoined",
@@ -2671,7 +2671,7 @@
    "action": "hold",
    "d_hold": null,
    "d_mech": null,
-   "forecast_outcome": null,
+   "forecast_outcome": "hit",
    "order_package_id": "pkg-6aac531720874a00",
    "p_target": 0.3,
    "price_reason": "no_path_change_trade_open_or_unjoined",
@@ -2702,19 +2702,31 @@
    "price_state": "not_a_call",
    "review_id": "LR-20261109T1306Z-pkg-50f5eed272f64197",
    "trigger": "judgement_cadence"
+  },
+  {
+   "action": "hold",
+   "d_hold": null,
+   "d_mech": null,
+   "forecast_outcome": null,
+   "order_package_id": "pkg-6aac531720874a00",
+   "p_target": 0.35,
+   "price_reason": "no_path_change_trade_open_or_unjoined",
+   "price_state": "not_a_call",
+   "review_id": "LR-20261109T1525Z-pkg-6aac531720874a00",
+   "trigger": "stall"
   }
  ],
  "rule": "RULE-DESK-AM-JUDGEMENT-V1",
  "verdict": {
   "ci95_d_hold": [
    0.0,
-   0.0269
+   0.0264
   ],
-  "mean_d_hold": 0.0119,
-  "mean_d_mech": 0.0366,
+  "mean_d_hold": 0.0117,
+  "mean_d_mech": 0.0358,
   "min_packages": 30,
-  "n_packages": 47,
-  "n_packages_mech": 44,
+  "n_packages": 48,
+  "n_packages_mech": 45,
   "rule": "RULE-DESK-AM-JUDGEMENT-V1",
   "verdict": "indeterminate"
  }
