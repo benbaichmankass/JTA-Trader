@@ -345,6 +345,21 @@ def claim_next(device: PhoneDevice, now: Optional[datetime] = None,
                     conn.commit()
                     logger.warning("phone_executor: exec test ticket %s refused at claim: %s", r["ticket_id"], v["refusals"])
                     continue
+            if not m.get("test") and m.get("origin") != "exec_test":
+                # CLAIM-TIME RE-CHECK (manager 2026-11-09): a phone ticket is claimed minutes after emission and a position another leg holds can
+                # open in between. Never serve the opposite side of a symbol this account now holds. A transient unreadable journal just defers.
+                from src.prop.breakout_executor import _opposite_direction_block_reason
+                opp = _opposite_direction_block_reason(acct, r["symbol"], r["direction"], r["strategy"], now=now, include_emitted=False)
+                if opp and opp.startswith("opposite_check_unreadable"):
+                    logger.warning("phone_executor: claim of %s deferred (%s)", r["ticket_id"], opp)
+                    continue
+                if opp:
+                    m["claim_block"] = {"reason": f"opposite_direction_blocked - {opp}", "blocked_at": now.isoformat()}
+                    conn.execute("UPDATE prop_tickets SET status = 'refused', meta = ? WHERE ticket_id = ? AND status = 'emitted'",
+                                 (json.dumps(m), r["ticket_id"]))
+                    conn.commit()
+                    logger.warning("phone_executor: ticket %s refused at claim: %s", r["ticket_id"], opp)
+                    continue
             m["phone"] = {"device_id": device.device_id, "claimed_at": now.isoformat()}
             cur = conn.execute(
                 "UPDATE prop_tickets SET status = 'claimed', meta = ? "
