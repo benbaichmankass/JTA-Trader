@@ -1,0 +1,161 @@
+{
+ "schema_version": 1,
+ "review_id": "LR-20261109T1608Z-pkg-633f05fad1ee4c1d",
+ "reviewed_at": "2026-11-09T16:16:00Z",
+ "order_package_id": "pkg-633f05fad1ee4c1d",
+ "trade_id": null,
+ "leg": "trend_donchian_xrp_4h",
+ "accounts": [
+  "bybit_2",
+  "bybit_portfolio"
+ ],
+ "trigger": {
+  "event": "structure_break",
+  "level": "2026-11-09T12:00:00+00:00",
+  "l0_snapshot_at": "2026-11-09T16:08:43Z"
+ },
+ "info_cutoff_at": "2026-11-09T16:08:43Z",
+ "state": {
+  "atr_now_over_entry": 1.1068,
+  "bars_held": 5,
+  "giveback_r": 1.1333,
+  "open_r": 0.1649,
+  "peak_provenance": "estimated",
+  "peak_r": 1.2982,
+  "regime_cell_entry": null,
+  "regime_cell_now": null,
+  "sl": 1.1411,
+  "tp": 1.0271
+ },
+ "features_at_review": {
+  "atr_now_over_entry": 1.1068,
+  "bars_since_peak": 1,
+  "giveback_r": 1.1333,
+  "open_r": 0.1649,
+  "peak_r": 1.2982,
+  "r_to_stop": 1.1649,
+  "r_to_target": 2.8351
+ },
+ "mechanics": {
+  "evidence": "package sl 1.1411 / tp 1.0271 agree with every readable account",
+  "verdict": "match"
+ },
+ "options": [
+  {
+   "action": "hold",
+   "level": null,
+   "n": 17,
+   "mean_r": null,
+   "sd_r": null,
+   "worst_r": null,
+   "net": true
+  },
+  {
+   "action": "tighten_sl",
+   "level": null,
+   "spec": "atr:1.0",
+   "n": 17,
+   "mean_r": null,
+   "sd_r": null,
+   "worst_r": null,
+   "net": true
+  },
+  {
+   "action": "tighten_sl",
+   "level": null,
+   "spec": "atr:1.5",
+   "n": 17,
+   "mean_r": null,
+   "sd_r": null,
+   "worst_r": null,
+   "net": true
+  }
+ ],
+ "outcome_table_source": "comms/live_review/tables/LR-20261109T1608Z-pkg-633f05fad1ee4c1d.json",
+ "recommendation": {
+  "action": "hold",
+  "level": null,
+  "level_atr": null,
+  "ev_delta_r": null,
+  "worst_case_delta_r": null,
+  "basis": "judgement",
+  "confidence": "suggestive",
+  "evidence_source": "judgement",
+  "judgement_confidence": 0.5,
+  "reason": "HALF position short at +0.16R (peak +1.30R est.), after a 4h bounce bar from 1.0805 to 1.1139 (high 1.1160) that broke the since-entry high close by > 0.1 ATR. Giveback is 1.13R, but the stop 1.1411 is still 1.16R away (about 1.4 ATR), TP 1.0271 is 2.84R away, and the 4h trend is intact (ADX 51, lower highs, the 1.1691 swing high 2.6 ATR above). One counter bar after a new low (1.0756) is a retrace, not yet a failed trend; closing now banks only +0.16R on the remaining half and forfeits a 2.8:1 setup. Nothing is priced (hold n=17 < floor 20, all 6 options unpriced), so this is judgement; I did not default to close-on-adverse. A second 4h close above 1.116 would change the call. All amends advice-only.",
+  "size_fraction": null,
+  "size_multiplier": null
+ },
+ "judge_prior": null,
+ "applied": false,
+ "apply_policy": {
+  "bound_r": 0.25,
+  "within_bound": null,
+  "tighten_r": null
+ },
+ "shadow_policy": {
+  "bound_r": 0.5,
+  "within_bound": null,
+  "would_apply": null,
+  "tighten_r": null
+ },
+ "context_flags": [
+  "forecast_grade: LR-20261109T1224Z (with_trade, target 1.0271 p 0.30, invalidation 1.1411, 14 x 4h to ~Nov 12; ~4 bars elapsed) -> target NOT reached, stop NOT touched (since-entry high 1.1160 vs 1.1411). The forecast said a retrace toward flat was likelier than a stop reclaim or the 3R target: open R fell +0.71 -> +0.16 (peak 1.30), which fits that part; the low was not retested below 1.0756. Horizon open; hold did not beat the 12:24Z partial_close alternative by much, and the giveback is real (-0.55R vs last review).",
+  "packet_defect: priced_options.options all_options_unpriced:insufficient_n+stop_level_not_below_price 6/6",
+  "thin_cell: hold n=17 (floor 20); no table numbers quoted this session, the 12:24Z indicative replay is not re-quoted",
+  "size: package is a HALF position (bybit_2 53.8 left, bybit_portfolio 16239.3 left after partial closes 09:51Z/10:52Z); known: venue SL/TP legs carry the pre-partial qty (reduce-only, bybit_over_cover 15:52Z, TRADE-ACTION-FAST-PATH), not re-raised",
+  "tighten_bias: any tighten is flattered by stop-at-price fills; the 1 ATR min buffer puts the nearest valid stop near mark + 1 ATR (~1.129), inside the 4h bounce range; atr:1.0/1.5 levels were not below price in the packet",
+  "book: one crypto-beta short among many shorts, incl. xrp_adx25 and e4_oi_shock_1h shorts; account-level, not sized here",
+  "missing: regime.cell_entry/cell_now, funding not available"
+ ],
+ "account_reads": [
+  {
+   "account_id": "bybit_2",
+   "account_class": "real_money",
+   "read": "no_action",
+   "evidence": "hold changes nothing; bybit_orders SL 1.1411 / TP 1.0271 match package"
+  },
+  {
+   "account_id": "bybit_portfolio",
+   "account_class": "paper",
+   "read": "no_action",
+   "evidence": "hold changes nothing; bybit_orders SL 1.1411 / TP 1.0271 match package"
+  }
+ ],
+ "disposition": {
+  "route": "none",
+  "mandate": null,
+  "action_issue": null,
+  "applied_at": null,
+  "verified_readback": null
+ },
+ "model": "sonnet-tier (repo lane)",
+ "session": "session_01AFoLuLDxWHssgnNvEyz5GH",
+ "prompt_sha": null,
+ "skill_sha": "fcbbce42e2b614d237ea6b999a77be43412f6ed8",
+ "packet_sha": "86691727b9c10d4846e608c24bd9b34c2f4f972933f4c060452b09e74e8efa21",
+ "packet_defects": [
+  {
+   "field": "priced_options.options",
+   "reason": "all_options_unpriced:insufficient_n+stop_level_not_below_price",
+   "count": 6,
+   "denominator": 6
+  }
+ ],
+ "forecast": {
+  "thesis": "One 4h counter bar bounced off the new low 1.0756 but is still under the 1.1691 swing high, with ADX 51; I expect a rejection below ~1.116 and a drift back toward 1.08, with a real minority chance of a squeeze that tests the 1.1411 stop. The 3R target is a long shot.",
+  "direction": "with_trade",
+  "target_px": 1.0756,
+  "p_target": 0.4,
+  "invalidation_px": 1.1411,
+  "horizon_bars": 6,
+  "timeframe": "4h",
+  "evidence": [
+   "chart.since_entry: low 1.0756, high 1.1160, last 4h close 1.1139",
+   "chart.swings: lower high 1.1691, broken lows 1.1482/1.1512",
+   "htf: 4h ADX 51, 1d ADX 20.2",
+   "exit_plan: SL 1.1411 TP 1.0271",
+   "packet could not price options; judgement only"
+  ]
+ }
+}
