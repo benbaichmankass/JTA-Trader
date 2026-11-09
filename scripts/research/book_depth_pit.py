@@ -157,13 +157,13 @@ def asof_table(feat: pd.DataFrame, span: tuple[str, str], bar_hours: int, tol_s:
         m[c] = m[c].where(fresh)
     # window mean of imb1 over (T - bar, T], needing at least half of the nominal snapshots
     bar_s = bar_hours * 3600
-    cnt = np.zeros(len(m)); mean = np.full(len(m), np.nan)
     ts_int = f["snap_ts"].astype("datetime64[ns, UTC]").astype("int64").to_numpy() // 10**9
     v = f["imb1"].to_numpy()
     tc = m["T"].astype("datetime64[ns, UTC]").astype("int64").to_numpy() // 10**9
     lo = np.searchsorted(ts_int, tc - bar_s, side="right")      # first snapshot with ts > T - bar
     hi = np.searchsorted(ts_int, tc, side="right")              # first snapshot with ts > T, i.e. snapshots <= T are [.., hi)
-    csum = np.concatenate([[0.0], np.cumsum(np.nan_to_num(v))]); cok = np.concatenate([[0], np.cumsum(~np.isnan(v))])
+    csum = np.concatenate([[0.0], np.cumsum(np.nan_to_num(v))])
+    cok = np.concatenate([[0], np.cumsum(~np.isnan(v))])
     cnt = (cok[hi] - cok[lo]).astype(float)
     with np.errstate(invalid="ignore", divide="ignore"):
         mean = (csum[hi] - csum[lo]) / cnt
@@ -186,11 +186,13 @@ def audit(snaps: pd.DataFrame, table: pd.DataFrame, bar_hours: int, n: int = 100
         if upto.empty:
             exp_imb = exp_lq = np.nan
         else:
-            last = upto.iloc[-1]; ts = upto.index[-1]
+            last = upto.iloc[-1]
+            ts = upto.index[-1]
             if (T - ts).total_seconds() > TOL_S:
                 exp_imb = exp_lq = np.nan
             else:
-                exp_imb = (last["n-1"] - last["n1"]) / (last["n-1"] + last["n1"]); exp_lq = np.log(last["n-1"] + last["n1"])
+                exp_imb = (last["n-1"] - last["n1"]) / (last["n-1"] + last["n1"])
+                exp_lq = np.log(last["n-1"] + last["n1"])
         got_imb, got_lq = table["imb1"].iloc[i], table["lq1"].iloc[i]
         same = (np.isnan(exp_imb) and np.isnan(got_imb)) or (not np.isnan(exp_imb) and not np.isnan(got_imb) and abs(exp_imb - got_imb) < 1e-12 and abs(exp_lq - got_lq) < 1e-9)
         checked += 1
@@ -244,8 +246,10 @@ def census_symbol(sym: str, parts: list[tuple[pd.DataFrame, dict]]) -> tuple[pd.
 
 def run(a) -> int:
     span = tuple(a.span.split(":")) if a.span else SPAN
-    out = Path(a.out); out.mkdir(parents=True, exist_ok=True)
-    cache = Path(a.cache); cache.mkdir(parents=True, exist_ok=True)
+    out = Path(a.out)
+    out.mkdir(parents=True, exist_ok=True)
+    cache = Path(a.cache)
+    cache.mkdir(parents=True, exist_ok=True)
     days = days_in(span)
     res: dict = {"schema": SCHEMA, "span": list(span), "symbols": list(SYMBOLS), "tol_s": TOL_S, "bands": list(BANDS), "bar_hours": list(BAR_HOURS),
                  "assumption": "the CSV timestamp is the snapshot capture time; not provable from the file", "per_symbol": {}}
@@ -358,7 +362,8 @@ def _self_test() -> int:
     r8 = t2[t2["T"] == pd.Timestamp("2023-01-02 08:00:00", tz="UTC")].iloc[0]
     check("a bar closing long after the last snapshot is stale -> NaN, not forward-filled", np.isnan(r8["imb1"]) and r8["age_s"] > TOL_S)
     # planted look-ahead: shift the recorded snapshot timestamps back 60 s and the audit must notice
-    shifted = w.copy(); shifted.index = shifted.index - pd.Timedelta(seconds=60)
+    shifted = w.copy()
+    shifted.index = shifted.index - pd.Timedelta(seconds=60)
     au_ok = audit(w, t, 4, n=1000)
     au_bad = audit(shifted, t, 4, n=1000)
     check("audit passes on the honest table", au_ok["mismatch"] == 0 and au_ok["lookahead"] == 0)
