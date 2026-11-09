@@ -1098,6 +1098,21 @@ does not suppress the next signal for the same key.
 
 **tradeify_1 instrument specs and how to read them (TRADEIFY-INSTR-SPECS, 2026-10-15).** The terminal has only Watchlist and Positions widgets, so the info-panel probe (`instrument-info-*`) cannot open and `link-state-dump` reads no rows. Two read-only paths exist instead: `breakout-login-check` mode `quote-spread` (`DXtradeAdapter.quote_spread` over the executor's own `read_quote`: spread in bps of mid, no click, no account figure) and `velotrade-api-probe` with `account: tradeify_1` (REST login, account-scoped instrument rows: `marginRate`, min order and step, trading hours; GETs retry on 429). The REST row carries no swap or commission field, so those stay firm-declared and unconfirmed. Measured values and run links: `docs/research/tradeify-platforms-2026-10-15.md` § 2c. The watchlist now also holds SILVER/USD, XYZ100/USD, SP500/USD and USOIL/USD (watchlist only; no roster or order path references them).
 
+### One direction per (account, symbol) across legs (manager 2026-11-09 04:07Z)
+
+> Gates this adds or changes: one ticket-emission block, directed by the manager after an incident; nothing else. `breakout_executor.emit_prop_ticket` refuses to ticket
+> the OPPOSITE side of a symbol that ANOTHER leg holds on the same prop account: an open position (`prop_fills`) or a live outstanding ticket (`placed` / `awaiting_report` /
+> `claimed`, or `emitted` while valid). The row is journaled `suppressed` with `opposite_direction_blocked — <why>` and nothing is pushed. A same-leg reversal is not blocked. An
+> unreadable journal blocks that one entry (named `opposite_check_unreadable`) and the next tick retries; nothing halts.
+
+Why: 2026-11-09 04:02Z `ml_entry` fired a SOL LONG against open trend SOL SHORTs on breakout_2, tradeify_1 and velotrade_1. The phone filled the buy form and only the read-back
+`cushion_unknown` gate stopped it; the REST executor accounts were stopped by their own terminal "one bracket per symbol" check. The older reticket guard keys on the SAME direction only.
+On a netting venue a buy against the short flips the position; on a hedging venue it opens a hedge, which Tradeify forbids. Code: `_opposite_direction_block_reason` in
+`src/prop/breakout_executor.py`; tests: `tests/test_prop_opposite_direction_block.py`.
+
+**Claim-time re-check (phone accounts, manager 2026-11-09):** `phone_executor.claim_next` runs the same check just before it claims an entry ticket, because a phone ticket is claimed minutes after emission and a position another leg holds can open in between (other still-`emitted` tickets are ignored there). A blocked ticket becomes terminal `refused` with `meta.claim_block`, and is never re-offered; an unreadable journal only DEFERS the claim (the ticket stays `emitted` and is retried while valid). Server-side, so no APK change. Tests: `tests/test_phone_claim_opposite_block.py`.
+
+
 ## Operator Communication Pipeline
 
 The flow is repo-driven and auditable.
