@@ -5,8 +5,8 @@ halts, no trade is blocked, and a cancel the phone cannot verify is simply not d
 never stops).
 
 Why. ``breakout_2`` runs only through the operator's phone app. The strategy exited ETH at 02:35Z and the ticket's
-``valid_until`` (01:52Z) passed, but its limit sell still rested at the venue: exec.js ``DENY_WORDS`` / ``NOT_EDIT`` forbid
-every cancel by design, the app had no supersede/cancel code, and the VM cancel path (``prop_executor.cancel_expired_resting``
+``valid_until`` (01:52Z) passed, but its limit sell still rested at the venue: exec.js ``DENY_WORDS`` / ``NOT_EDIT`` refused
+every cancel (a session-authored deny-list, replaced by intent-bound clicks on 2026-11-09), the app had no supersede/cancel code, and the VM cancel path (``prop_executor.cancel_expired_resting``
 / ``_supersede_resting``, PROP-CANCEL-FIX) serves VM-executed accounts only.
 
 What it is. One request per ticket, stored in ``prop_tickets.meta.phone_cancel`` (the same store and compare-and-set as the
