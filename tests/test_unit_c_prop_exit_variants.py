@@ -191,7 +191,7 @@ def test_routed_to_breakout_2_and_breakout_1_retired():
     a = _accounts()["breakout_2"]
     # 2026-10-29 (Tier-3, operator): sol_prop pulled from breakout_2 (V2 prop gate); the variant stays defined.
     # 2026-11-05 (Tier-3, operator 'Pull from prop (Recommended)', row PROP-PULL-ETHPROP): trend_donchian_eth_prop pulled (RQ-20261031-422a-01 FAIL); roster is an explicit []. REVERT: re-add eth_prop here.
-    assert a["strategies"] == ["trend_donchian_eth_4h", "trend_donchian_sol_4h"]  # ml_entry pulled from breakout_2 2026-11-09 (ML-ENTRY-PROP-BASELINE); was ["trend_donchian_eth_4h", "trend_donchian_sol_4h"] # 2026-11-05 ~21:05Z (Tier-3, operator "Baseline at min size (Rec.)" + "Both now, waive both"): min-size BASELINE roster. 2026-11-06 ~20:18Z operator "Keep sol_4h on all prop books (Recommended)" (supersedes the ~19:40Z pull). REVERT: [].
+    assert a["strategies"] == ["trend_donchian_eth_4h", "trend_donchian_sol_4h", "ml_entry"]  # +ml_entry 2026-11-08 ML-ENTRY-PROP-BASELINE (operator chat ~23:35Z); was ["trend_donchian_eth_4h", "trend_donchian_sol_4h"] # 2026-11-05 ~21:05Z (Tier-3, operator "Baseline at min size (Rec.)" + "Both now, waive both"): min-size BASELINE roster. 2026-11-06 ~20:18Z operator "Keep sol_4h on all prop books (Recommended)" (supersedes the ~19:40Z pull). REVERT: [].
     assert "trend_donchian_eth_prop" not in a["strategies"]
     assert "trend_donchian_sol_prop" not in a["strategies"]
 
