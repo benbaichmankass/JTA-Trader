@@ -1,0 +1,124 @@
+{
+ "schema_version": 1,
+ "review_id": "LR-20261109T0715Z-pkg-952ef4e57ae3441e",
+ "reviewed_at": "2026-11-09T07:25:00Z",
+ "order_package_id": "pkg-952ef4e57ae3441e",
+ "trade_id": null,
+ "leg": "ml_entry",
+ "accounts": [
+  "bybit_2",
+  "bybit_portfolio"
+ ],
+ "trigger": {
+  "event": "adverse_r",
+  "level": -0.75,
+  "l0_snapshot_at": "2026-11-09T07:14:00Z"
+ },
+ "info_cutoff_at": "2026-11-09T07:15:51Z",
+ "state": {
+  "atr_now_over_entry": null,
+  "bars_held": 5,
+  "giveback_r": 1.2528,
+  "open_r": -0.8352,
+  "peak_provenance": "estimated",
+  "peak_r": 0.4176,
+  "regime_cell_entry": null,
+  "regime_cell_now": null,
+  "sl": 0.17127142857142857,
+  "tp": 0.18384285714285717
+ },
+ "features_at_review": {
+  "atr_now_over_entry": null,
+  "bars_since_peak": 4,
+  "giveback_r": 1.2528,
+  "open_r": -0.8352,
+  "peak_r": 0.4176,
+  "r_to_stop": 0.1648,
+  "r_to_target": 2.3352
+ },
+ "mechanics": {
+  "evidence": "order_packages status=closed close_reason=sl; bybit_2: journal trade 6993 is closed (sl at 2026-11-09T07:13:37.544000+00:00); position_telemetry still reads open (lags the close), not read as an open trade",
+  "verdict": "match"
+ },
+ "options": [
+  {
+   "action": "hold",
+   "level": null,
+   "n": 192,
+   "mean_r": 0.6861,
+   "sd_r": 1.0781,
+   "worst_r": -1.1065,
+   "net": true
+  },
+  {
+   "action": "close",
+   "level": null,
+   "n": 192,
+   "mean_r": -0.8963,
+   "sd_r": 0.024,
+   "worst_r": -0.991,
+   "net": true
+  }
+ ],
+ "outcome_table_source": "comms/live_review/tables/LR-20261109T0715Z-pkg-952ef4e57ae3441e.json",
+ "recommendation": {
+  "action": "no_recommendation",
+  "level": null,
+  "level_atr": null,
+  "ev_delta_r": null,
+  "worst_case_delta_r": null,
+  "basis": "could_not_look",
+  "confidence": "anecdote",
+  "evidence_source": "none",
+  "judgement_confidence": null,
+  "reason": "Package already closed: order_packages status=closed close_reason=sl, bybit_2 journal trade 6993 stopped at 07:13:37Z (before this 07:15Z review); venue shows no ADAUSDT position on bybit_2 and telemetry lifecycle=closed. Nothing open to hold, close or amend; the adverse_r -0.75 trigger answered a stop-out. Packet open_r -0.835 is the pre-stop reading.",
+  "size_fraction": null,
+  "size_multiplier": null
+ },
+ "judge_prior": null,
+ "applied": false,
+ "apply_policy": {
+  "bound_r": 0.25,
+  "within_bound": null,
+  "tighten_r": null
+ },
+ "shadow_policy": {
+  "bound_r": 0.5,
+  "within_bound": null,
+  "would_apply": null,
+  "tighten_r": null
+ },
+ "context_flags": [
+  "closed_before_review: sl fill 2026-11-09T07:13:37Z on bybit_2; packet mechanics evidence says so; position_telemetry lags then reads closed",
+  "table (not decision-relevant): hold n=192 mean +0.686R; close n=192 mean -0.896R",
+  "book: ADA ml_entry long stopped with SOL ml_entry long still open (-0.93R); both against a mostly-short book",
+  "missing: regime.atr_now_over_entry, regime.vol_now, regime.cell_entry, context.funding"
+ ],
+ "account_reads": [
+  {
+   "account_id": "bybit_2",
+   "account_class": "real_money",
+   "read": "no_action",
+   "evidence": "package already closed at SL; no position on venue, nothing to apply"
+  },
+  {
+   "account_id": "bybit_portfolio",
+   "account_class": "paper",
+   "read": "no_action",
+   "evidence": "package already closed at SL; no position on venue, nothing to apply"
+  }
+ ],
+ "disposition": {
+  "route": "none",
+  "mandate": null,
+  "action_issue": null,
+  "applied_at": null,
+  "verified_readback": null
+ },
+ "model": "sonnet-tier (repo lane)",
+ "session": "session_01AFoLuKEsYoK6SUdqye43hE",
+ "prompt_sha": null,
+ "skill_sha": "fcbbce42e2b614d237ea6b999a77be43412f6ed8",
+ "packet_defects": [],
+ "packet_sha": "2ae6be238616a1073a5a5a6c0ea5656e2f8764e63f91cd26bdaabdbc5f4ab37d"
+}

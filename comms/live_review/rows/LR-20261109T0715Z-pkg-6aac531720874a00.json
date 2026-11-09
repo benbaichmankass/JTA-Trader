@@ -1,0 +1,141 @@
+{
+ "schema_version": 1,
+ "review_id": "LR-20261109T0715Z-pkg-6aac531720874a00",
+ "reviewed_at": "2026-11-09T07:25:00Z",
+ "order_package_id": "pkg-6aac531720874a00",
+ "trade_id": null,
+ "leg": "ml_entry",
+ "accounts": [
+  "bybit_2",
+  "bybit_portfolio"
+ ],
+ "trigger": {
+  "event": "adverse_r",
+  "level": -0.75,
+  "l0_snapshot_at": "2026-11-09T07:14:00Z"
+ },
+ "info_cutoff_at": "2026-11-09T07:15:27Z",
+ "state": {
+  "atr_now_over_entry": null,
+  "bars_held": 5,
+  "giveback_r": 1.2092,
+  "open_r": -0.9282,
+  "peak_provenance": "estimated",
+  "peak_r": 0.281,
+  "regime_cell_entry": null,
+  "regime_cell_now": null,
+  "sl": 85.08142857142857,
+  "tp": 90.95285714285716
+ },
+ "features_at_review": {
+  "atr_now_over_entry": null,
+  "bars_since_peak": 4,
+  "giveback_r": 1.2092,
+  "open_r": -0.9282,
+  "peak_r": 0.281,
+  "r_to_stop": 0.0718,
+  "r_to_target": 2.4282
+ },
+ "mechanics": {
+  "evidence": "package sl 85.08142857142857 / tp 90.95285714285716 agree with every readable account",
+  "verdict": "match"
+ },
+ "options": [
+  {
+   "action": "hold",
+   "level": null,
+   "n": 221,
+   "mean_r": 0.4883,
+   "sd_r": 1.1366,
+   "worst_r": -1.1269,
+   "net": true
+  },
+  {
+   "action": "close",
+   "level": null,
+   "n": 221,
+   "mean_r": -0.9894,
+   "sd_r": 0.0241,
+   "worst_r": -1.084,
+   "net": true
+  }
+ ],
+ "outcome_table_source": "comms/live_review/tables/LR-20261109T0715Z-pkg-6aac531720874a00.json",
+ "recommendation": {
+  "action": "hold",
+  "level": null,
+  "level_atr": null,
+  "ev_delta_r": null,
+  "worst_case_delta_r": null,
+  "basis": "judgement",
+  "confidence": "anecdote",
+  "evidence_source": "judgement",
+  "judgement_confidence": 0.55,
+  "reason": "Prev forecast (target 87.43 / invalid 85.08, 1h) held in the sense that invalidation was NOT touched: low since entry 85.66, last 1h close 86.02, live now ~85.42 (-0.86R), stop 85.08 resting and only ~0.28 ATR away, 84.94 flush low just below it; I carry the structure-stop view, p_target cut to 0.3. Close now locks ~-0.86R vs stop -1.0R: only 0.14R saved if stopped, but forfeits any bounce; with zero drift P(stop before entry retest) ~0.7 < 0.86 break-even, and the stop is already the venue protection. Table is not state-conditioned: pooled hold +0.452R (n=53 SOL longs at peak 0.281) but the at-pullback cell is thin (n=7), so this is a judgement call, modest confidence.",
+  "size_fraction": null,
+  "size_multiplier": null
+ },
+ "judge_prior": null,
+ "applied": false,
+ "apply_policy": {
+  "bound_r": 0.25,
+  "within_bound": null,
+  "tighten_r": null
+ },
+ "shadow_policy": {
+  "bound_r": 0.5,
+  "within_bound": null,
+  "would_apply": null,
+  "tighten_r": null
+ },
+ "context_flags": [
+  "table: hold n=221 mean +0.488R (leg-wide, packet); SOL-only peak-conditioned hold n=53 mean +0.452R sd 1.18 worst -1.127; at-pullback cell n=7 insufficient_n (thin, not measured); close mean -0.989R n=53; tighten atr:1.0/1.5/2.0 invalid_level (stop not below price)",
+  "state_now: live telemetry 07:19Z last 85.42 open_r -0.856, r_to_stop 0.144; venue bybit_2 SL 85.08 / TP 90.95 resting, position open",
+  "book: SOL ml_entry long (-0.93R) and ADA ml_entry long are one crypto-beta bet against a mostly-short book; sol_pullback_2h short +1.32R and eth/avax shorts positive, so the long's loss is hedged by the book moving the book's way; closing the long raises net short beta",
+  "tighten_bias: stop-at-price fills flatter any tighten",
+  "missing: regime.atr_now_over_entry, regime.vol_now, regime.cell_entry, context.funding"
+ ],
+ "account_reads": [
+  {
+   "account_id": "bybit_2",
+   "account_class": "real_money",
+   "read": "no_action",
+   "evidence": "hold changes nothing; bybit_orders: SL 85.08 / TP 90.95, position True, matched by order_id"
+  },
+  {
+   "account_id": "bybit_portfolio",
+   "account_class": "paper",
+   "read": "no_action",
+   "evidence": "hold changes nothing; bybit_orders: SL 85.08 / TP 90.95, position True, matched by order_id"
+  }
+ ],
+ "disposition": {
+  "route": "none",
+  "mandate": null,
+  "action_issue": null,
+  "applied_at": null,
+  "verified_readback": null
+ },
+ "model": "sonnet-tier (repo lane)",
+ "session": "session_01AFoLuKEsYoK6SUdqye43hE",
+ "prompt_sha": null,
+ "skill_sha": "fcbbce42e2b614d237ea6b999a77be43412f6ed8",
+ "packet_defects": [],
+ "packet_sha": "a7737113a8b9262b58b693cc56eb28cc69de51d92bcc71a6af2cdb2d36fa12fb",
+ "forecast": {
+  "thesis": "1h lower closes under the broken 87.18 higher-low inside a 4h lower-high downtrend; expect probe of the 85.08 structure stop area with a minority chance of a bounce to entry 87.43 first",
+  "direction": "against_trade",
+  "target_px": 87.43,
+  "p_target": 0.3,
+  "invalidation_px": 85.08,
+  "horizon_bars": 8,
+  "timeframe": "1h",
+  "evidence": [
+   "chart.since_entry: low 85.66, last close 86.02",
+   "chart.htf: 4h lower highs 90.02/91.55",
+   "exit_plan: SL 85.08 TP 90.95",
+   "position_telemetry live: last 85.42 open_r -0.856",
+   "book: mostly short crypto"
+  ]
+ }
+}
